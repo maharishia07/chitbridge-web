@@ -96,7 +96,7 @@ const ChitCard = ({ chit, onSwipeLeft, onSwipeRight }) => {
 };
 
 export default function InboxPage() {
-  const [tab, setTab]         = useState('open');
+  const [tab, setTab]         = useState(() => sessionStorage.getItem('inboxTab') || 'open');
   const [chits, setChits]     = useState([]);
   const [loading, setLoading] = useState(true);
   const { entity }            = useAuth();
@@ -155,7 +155,7 @@ export default function InboxPage() {
             { id: 'act',   label: 'Act' },
             { id: 'close', label: `Close [${closedChits.length}]` },
           ].map(t => (
-            <button key={t.id} onClick={() => setTab(t.id)}
+            <button key={t.id} onClick={() => { setTab(t.id); sessionStorage.setItem('inboxTab', t.id); }}
               className={`flex-1 py-3 text-xs font-medium border-b-2 transition-colors ${
                 tab === t.id ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500'
               }`}>
