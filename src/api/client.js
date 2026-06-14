@@ -75,10 +75,10 @@ export const healthCheck = () =>
 
 // Schema endpoints
 export const getMySchema = () =>
-  apiClient.get('/schemas/my');
+  apiClient.get('/api/schemas/my');
 
 export const createDefaultSchema = () =>
-  apiClient.post('/schemas/create-default');
+  apiClient.post('/api/schemas/create-default');
 
 export const getSchemaFields = () =>
-  apiClient.get('/schemas/fields');
+  apiClient.get('/api/schemas/fields');
