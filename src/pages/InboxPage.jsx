@@ -38,7 +38,7 @@ const ChitCard = ({ chit, onSwipeLeft, onSwipeRight }) => {
     onTap:         () => navigate(`/chit/${chit.chit_id}`),
     delta: 60,
     preventScrollOnSwipe: true,
-    trackMouse: false,
+    trackMouse: true,
   });
 
   const formatDate = (d) => {
