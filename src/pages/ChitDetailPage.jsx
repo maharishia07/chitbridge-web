@@ -209,7 +209,7 @@ export default function ChitDetailPage() {
                 </div>
                 {lineItems.map((item, i) => (
                   <div key={i} className="bg-white rounded-xl border border-gray-100 p-3 mb-3">
-                    <div className="font-medium text-sm text-gray-900 mb-2">{item.name}</div>
+                    <div className="font-medium text-sm text-gray-900 mb-2">{item.name || item.product || '—'}</div>
                     <div className="space-y-1">
                       <div className="flex justify-between text-xs">
                         <span className="text-gray-500">Quantity</span>

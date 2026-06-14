@@ -93,6 +93,8 @@ export default function SendChitPage() {
         line_items: validItems.map(item => {
           const mapped = {};
           schemaFields.forEach(f => { mapped[f.field_key] = item[f.field_key]; });
+          const nameField = schemaFields.find(f => f.field_type === 'text');
+          if (nameField) mapped.name = item[nameField.field_key];
           mapped.total = calcTotal(item);
           mapped.currency_code = 'INR';
           return mapped;
