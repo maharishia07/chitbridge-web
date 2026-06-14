@@ -1,27 +1,59 @@
-// src/pages/SendChitPage.jsx — Compose screen — full lifecycle
+// src/pages/SendChitPage.jsx — Compose screen reads from schema
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { sendChit, searchEntities } from '../api/client';
+import { sendChit, searchEntities, getSchemaFields } from '../api/client';
 
-const emptyItem = () => ({ id: Date.now() + Math.random(), name: '', quantity: 1, price: 0 });
-
-const calcTotal = (item) => Math.round(item.quantity * item.price * 100) / 100;
-
-const TEST_ITEMS = [
-  { id: 1, name: 'Test Product A', quantity: 10, price: 100 },
-  { id: 2, name: 'Test Product B', quantity: 5, price: 250 },
+const DEFAULT_FIELDS = [
+  { field_key: 'product',  field_name: 'Product',  field_type: 'text',   required: true, min_value: null },
+  { field_key: 'quantity', field_name: 'Quantity', field_type: 'number', required: true, min_value: 1 },
+  { field_key: 'price',    field_name: 'Price',    field_type: 'number', required: true, min_value: 0 },
 ];
 
+const emptyItem = (fields) => {
+  const item = { id: Date.now() + Math.random() };
+  fields.forEach(f => { item[f.field_key] = f.field_type === 'number' ? 0 : ''; });
+  return item;
+};
+
+const TEST_DATA = [
+  { product: 'Paracetamol 500mg', quantity: 100, price: 4.50 },
+  { product: 'Amoxicillin 250mg', quantity: 50,  price: 12.00 },
+];
+
+const calcTotal = (item) => {
+  const qty   = parseFloat(item.quantity)  || 0;
+  const price = parseFloat(item.price)     || 0;
+  return Math.round(qty * price * 100) / 100;
+};
+
 export default function SendChitPage() {
-  const navigate = useNavigate();
+  const navigate              = useNavigate();
+  const [schemaFields, setSchemaFields] = useState(DEFAULT_FIELDS);
   const [receivers, setReceivers] = useState([]);
   const [searchQ, setSearchQ]     = useState('');
   const [results, setResults]     = useState([]);
-  const [lineItems, setLineItems] = useState([emptyItem()]);
+  const [lineItems, setLineItems] = useState([]);
   const [purpose, setPurpose]     = useState('order');
   const [sending, setSending]     = useState(false);
   const [error, setError]         = useState('');
   const timerRef = useRef(null);
+
+  useEffect(() => {
+    // Load schema fields — fallback to defaults if no schema
+    getSchemaFields()
+      .then(res => {
+        const fields = res.data.fields || [];
+        if (fields.length > 0) {
+          setSchemaFields(fields);
+          setLineItems([emptyItem(fields)]);
+        } else {
+          setLineItems([emptyItem(DEFAULT_FIELDS)]);
+        }
+      })
+      .catch(() => {
+        setLineItems([emptyItem(DEFAULT_FIELDS)]);
+      });
+  }, []);
 
   useEffect(() => {
     if (searchQ.length < 2) { setResults([]); return; }
@@ -37,27 +69,34 @@ export default function SendChitPage() {
   const addReceiver = (r) => { setReceivers(p => [...p, r]); setSearchQ(''); setResults([]); };
   const removeReceiver = (id) => setReceivers(p => p.filter(r => r.identity_id !== id));
 
-  const updateItem = (id, field, val) => {
-    setLineItems(p => p.map(i => i.id === id ? { ...i, [field]: field === 'name' ? val : parseFloat(val) || 0 } : i));
+  const updateItem = (id, field_key, val) => {
+    setLineItems(p => p.map(i => i.id === id ? { ...i, [field_key]: val } : i));
   };
 
-  const autoPopulate = () => setLineItems(TEST_ITEMS);
+  const autoPopulate = () => {
+    setLineItems(TEST_DATA.map((d, i) => ({ id: i + 1, ...d })));
+  };
 
   const grandTotal = lineItems.reduce((s, i) => s + calcTotal(i), 0);
 
   const handleSend = async () => {
     setError('');
     if (receivers.length === 0) { setError('Add at least one receiver'); return; }
-    const valid = lineItems.filter(i => i.name.trim());
+    const validItems = lineItems.filter(i =>
+      schemaFields.some(f => f.field_type === 'text' && i[f.field_key]?.toString().trim())
+    );
     setSending(true);
     try {
       await sendChit({
         receivers: receivers.map(r => ({ entity_id: r.identity_id })),
         purpose,
-        line_items: valid.map(i => ({
-          name: i.name, quantity: i.quantity, price: i.price,
-          total: calcTotal(i), currency_code: 'INR'
-        })),
+        line_items: validItems.map(item => {
+          const mapped = {};
+          schemaFields.forEach(f => { mapped[f.field_key] = item[f.field_key]; });
+          mapped.total = calcTotal(item);
+          mapped.currency_code = 'INR';
+          return mapped;
+        }),
       });
       navigate('/inbox');
     } catch (err) {
@@ -97,7 +136,7 @@ export default function SendChitPage() {
             )}
             <div className="relative">
               <input type="text" value={searchQ} onChange={e => setSearchQ(e.target.value)}
-                placeholder="Search by name... (add multiple)"
+                placeholder="Search by name — add multiple"
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400"/>
               {results.length > 0 && (
                 <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-10 mt-1 overflow-hidden">
@@ -105,13 +144,11 @@ export default function SendChitPage() {
                     <button key={r.identity_id} onClick={() => addReceiver(r)}
                       className="w-full text-left px-4 py-3 hover:bg-gray-50 border-b border-gray-50 last:border-none">
                       <div className="text-sm font-medium text-gray-800">{r.display_name}</div>
-                      <div className="text-xs text-gray-400 font-mono">{r.bridge_id}</div>
                     </button>
                   ))}
                 </div>
               )}
             </div>
-            <div className="text-xs text-gray-400 mt-1.5">Search and select — you can add multiple receivers</div>
           </div>
 
           {/* Purpose */}
@@ -123,13 +160,13 @@ export default function SendChitPage() {
                   className={`text-xs px-3 py-1.5 rounded-full capitalize transition-colors ${
                     purpose === p ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                   }`}>
-                  {p.replace('_', ' ')}
+                  {p.replace('_',' ')}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Line items */}
+          {/* Line items — dynamic from schema */}
           <div className="bg-white rounded-xl border border-gray-100 p-4">
             <div className="flex items-center justify-between mb-3">
               <div className="text-xs text-gray-400 uppercase tracking-wide">Line items</div>
@@ -148,36 +185,38 @@ export default function SendChitPage() {
                       className="text-xs text-red-400">Remove</button>
                   )}
                 </div>
-                <input type="text" value={item.name} placeholder="Product name *"
-                  onChange={e => updateItem(item.id, 'name', e.target.value)}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mb-2 focus:outline-none focus:border-blue-400"/>
-                <div className="grid grid-cols-2 gap-2 mb-1">
-                  <div>
-                    <div className="text-xs text-gray-400 mb-1">Quantity</div>
-                    <input type="number" min="1" step="1" value={item.quantity}
-                      onChange={e => updateItem(item.id, 'quantity', e.target.value)}
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400"/>
+                {/* Render fields from schema */}
+                {schemaFields.map(field => (
+                  <div key={field.field_key} className="mb-2">
+                    <div className="text-xs text-gray-400 mb-1">
+                      {field.field_name}{field.required && <span className="text-red-400 ml-0.5">*</span>}
+                    </div>
+                    <input
+                      type={field.field_type === 'number' ? 'number' : 'text'}
+                      min={field.min_value ?? undefined}
+                      value={item[field.field_key] || ''}
+                      onChange={e => updateItem(item.id, field.field_key, e.target.value)}
+                      placeholder={field.field_name}
+                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400"
+                    />
                   </div>
-                  <div>
-                    <div className="text-xs text-gray-400 mb-1">Price (INR)</div>
-                    <input type="number" min="0" step="0.01" value={item.price}
-                      onChange={e => updateItem(item.id, 'price', e.target.value)}
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400"/>
+                ))}
+                {/* Show total if qty and price exist */}
+                {item.quantity !== undefined && item.price !== undefined && (
+                  <div className="flex justify-between items-center pt-2 border-t border-gray-200 mt-1">
+                    <span className="text-xs text-gray-400">Total</span>
+                    <span className="text-sm font-semibold text-blue-700">INR {calcTotal(item).toFixed(2)}</span>
                   </div>
-                </div>
-                <div className="flex justify-between items-center pt-2 border-t border-gray-200">
-                  <span className="text-xs text-gray-400">Total</span>
-                  <span className="text-sm font-semibold text-blue-700">INR {calcTotal(item).toFixed(2)}</span>
-                </div>
+                )}
               </div>
             ))}
 
-            <button onClick={() => setLineItems(p => [...p, emptyItem()])}
+            <button onClick={() => setLineItems(p => [...p, emptyItem(schemaFields)])}
               className="w-full border-2 border-dashed border-blue-200 text-blue-500 text-sm py-3 rounded-xl hover:border-blue-400 transition-colors">
               + Add item
             </button>
 
-            {lineItems.length > 0 && (
+            {grandTotal > 0 && (
               <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-200">
                 <span className="text-sm text-gray-600 font-medium">Grand total</span>
                 <span className="text-base font-bold text-blue-700">INR {grandTotal.toFixed(2)}</span>

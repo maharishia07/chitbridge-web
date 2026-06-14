@@ -3,9 +3,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSwipeable } from 'react-swipeable';
 import { Layout } from '../components/Layout';
-import { DevBadge } from '../components/DevBadge';
-import { useAppMode } from '../context/AppModeContext';
-import { FEATURES } from '../config/features';
+import { useAuth } from '../context/AuthContext';
 import { getInbox, updateChitStatus } from '../api/client';
 
 const STATUS_BORDER = {
@@ -31,7 +29,7 @@ const STATUS_PILL = {
   cancelled:   'bg-gray-100 text-gray-600',
 };
 
-const ChitCard = ({ chit, onSwipeLeft, onSwipeRight, onLongPress }) => {
+const ChitCard = ({ chit, onSwipeLeft, onSwipeRight }) => {
   const navigate = useNavigate();
 
   const handlers = useSwipeable({
@@ -45,24 +43,24 @@ const ChitCard = ({ chit, onSwipeLeft, onSwipeRight, onLongPress }) => {
 
   const formatDate = (d) => {
     const date = new Date(d);
-    const now = new Date();
+    const now  = new Date();
     const diff = now - date;
-    if (diff < 86400000) return date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
-    if (diff < 604800000) return date.toLocaleDateString('en-IN', { weekday: 'short' });
+    if (diff < 86400000)   return date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+    if (diff < 604800000)  return date.toLocaleDateString('en-IN', { weekday: 'short' });
     return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
   };
 
-  const summary = typeof chit.summary_json === 'string'
-    ? JSON.parse(chit.summary_json || '{}')
-    : chit.summary_json || {};
+  const summary = (() => {
+    try { return typeof chit.summary_json === 'string' ? JSON.parse(chit.summary_json || '{}') : (chit.summary_json || {}); }
+    catch { return {}; }
+  })();
 
   const isUnread = !chit.read_at;
 
   return (
     <div
       {...handlers}
-      onContextMenu={(e) => { e.preventDefault(); onLongPress(chit); }}
-      className={`border-l-4 ${STATUS_BORDER[chit.current_status] || 'border-l-gray-200'} 
+      className={`border-l-4 ${STATUS_BORDER[chit.current_status] || 'border-l-gray-200'}
                   bg-white border-b border-gray-100 px-3 py-2.5 active:bg-gray-50
                   select-none cursor-pointer`}
     >
@@ -86,9 +84,9 @@ const ChitCard = ({ chit, onSwipeLeft, onSwipeRight, onLongPress }) => {
         <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${STATUS_PILL[chit.current_status] || 'bg-gray-100 text-gray-600'}`}>
           {chit.current_status}
         </span>
-        {summary.line_item_count && (
+        {summary.line_item_count > 0 && (
           <span className="text-xs text-gray-400">
-            {summary.line_item_count} items
+            {summary.line_item_count} item{summary.line_item_count !== 1 ? 's' : ''}
             {summary.total_value && ` · INR ${parseFloat(summary.total_value).toLocaleString('en-IN', { minimumFractionDigits: 0 })}`}
           </span>
         )}
@@ -98,21 +96,28 @@ const ChitCard = ({ chit, onSwipeLeft, onSwipeRight, onLongPress }) => {
 };
 
 export default function InboxPage() {
-  const [tab, setTab]     = useState('open');
-  const [chits, setChits] = useState([]);
+  const [tab, setTab]         = useState('open');
+  const [chits, setChits]     = useState([]);
   const [loading, setLoading] = useState(true);
-  const { isVisible, showDevBadges } = useAppMode();
-  const navigate = useNavigate();
+  const { entity }            = useAuth();
+  const navigate              = useNavigate();
 
-  useEffect(() => { loadChits(); }, [tab]);
+  useEffect(() => { loadChits(); }, [tab, entity]);
 
   const loadChits = async () => {
     try {
       setLoading(true);
-      const params = {};
-      if (tab === 'closed') params.status = 'completed';
-      const res = await getInbox(params);
-      setChits(res.data.chits || []);
+      const res = await getInbox({ limit: 100 });
+      const all = res.data.chits || [];
+
+      // All Task shows RECEIVED chits only — not ones I sent
+      // Filter out chits where I am the sender
+      const received = all.filter(c =>
+        c.sender_entity_display_name !== entity?.display_name &&
+        c.sender_entity_bridge_id    !== entity?.bridge_id
+      );
+
+      setChits(received);
     } catch (err) {
       console.error('Inbox error:', err);
     } finally {
@@ -121,7 +126,8 @@ export default function InboxPage() {
   };
 
   const handleSwipeLeft = async (chit) => {
-    if (['pending', 'delivered', 'read', 'accepted'].includes(chit.current_status)) {
+    const allowed = ['pending','delivered','read','accepted','in_progress'];
+    if (allowed.includes(chit.current_status)) {
       try {
         await updateChitStatus(chit.chit_id, 'completed');
         loadChits();
@@ -130,75 +136,49 @@ export default function InboxPage() {
   };
 
   const handleSwipeRight = (chit) => {
-    console.log('Swipe right — reopen:', chit.chit_id);
+    // Reopen — future feature
+    console.log('Swipe right:', chit.chit_id);
   };
 
-  const handleLongPress = (chit) => {
-    console.log('Long press — assignment panel for:', chit.chit_id);
-    // Assignment bottom sheet — IT-2
-  };
-
-  const openChits = chits.filter(c => !['completed','cancelled','rejected'].includes(c.current_status));
-  const actChits  = chits.filter(c => c.assigned_to_actor_id);
-  const closedChits = chits.filter(c => ['completed','cancelled','rejected'].includes(c.current_status));
-  const tabChits  = tab === 'open' ? openChits : tab === 'act' ? actChits : closedChits;
+  const openChits   = chits.filter(c => !['completed','cancelled','rejected'].includes(c.current_status));
+  const actChits    = chits.filter(c =>  c.assigned_to_actor_id);
+  const closedChits = chits.filter(c =>  ['completed','cancelled','rejected'].includes(c.current_status));
+  const tabChits    = tab === 'open' ? openChits : tab === 'act' ? actChits : closedChits;
 
   return (
     <Layout title="All Task">
       <div className="flex flex-col h-full">
-
-        {/* Dev badges */}
-        {showDevBadges && (
-          <div className="px-3 pt-2">
-            <DevBadge feature={FEATURES.inbox_all_task} />
-            <DevBadge feature={FEATURES.inbox_tabs} />
-            <DevBadge feature={FEATURES.inbox_swipe_gestures} />
-            {isVisible(FEATURES.inbox_long_press_assign) && (
-              <DevBadge feature={FEATURES.inbox_long_press_assign} />
-            )}
-          </div>
-        )}
-
         {/* Tabs */}
         <div className="flex border-b border-gray-200 bg-white flex-shrink-0">
           {[
-            { id: 'open', label: `Open [${openChits.length}]` },
-            { id: 'act',  label: 'Act' },
-            { id: 'close', label: 'Close' },
+            { id: 'open',  label: `Open [${openChits.length}]` },
+            { id: 'act',   label: 'Act' },
+            { id: 'close', label: `Close [${closedChits.length}]` },
           ].map(t => (
-            <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
+            <button key={t.id} onClick={() => setTab(t.id)}
               className={`flex-1 py-3 text-xs font-medium border-b-2 transition-colors ${
-                tab === t.id
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500'
-              }`}
-            >
+                tab === t.id ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500'
+              }`}>
               {t.label}
             </button>
           ))}
         </div>
 
-        {/* Chit list */}
+        {/* List */}
         <div className="flex-1 overflow-y-auto">
           {loading ? (
-            <div className="flex items-center justify-center py-16 text-gray-400 text-sm">
-              Loading...
-            </div>
+            <div className="flex items-center justify-center py-16 text-gray-400 text-sm">Loading...</div>
           ) : tabChits.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-gray-400">
               <div className="text-4xl mb-3">📭</div>
               <div className="text-sm">Nothing here</div>
+              {tab === 'act' && <div className="text-xs mt-1">Pull tasks from Open tab</div>}
             </div>
           ) : (
             tabChits.map(chit => (
-              <ChitCard
-                key={chit.chit_id}
-                chit={chit}
+              <ChitCard key={chit.chit_id} chit={chit}
                 onSwipeLeft={handleSwipeLeft}
                 onSwipeRight={handleSwipeRight}
-                onLongPress={handleLongPress}
               />
             ))
           )}
@@ -207,12 +187,10 @@ export default function InboxPage() {
         {/* FAB */}
         <button
           onClick={() => navigate('/send')}
-          className="fixed bottom-6 right-6 w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg text-2xl flex items-center justify-center active:scale-95 transition-transform"
-          aria-label="New chit"
-        >
+          className="fixed bottom-6 right-6 w-14 h-14 bg-blue-600 text-white rounded-full shadow-lg text-2xl flex items-center justify-center active:scale-95 transition-transform md:hidden"
+          aria-label="Compose">
           +
         </button>
-
       </div>
     </Layout>
   );

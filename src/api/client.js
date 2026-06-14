@@ -72,3 +72,13 @@ export const updateChitStatus = (chitId, status, note) =>
 // Health
 export const healthCheck = () =>
   apiClient.get('/health');
+
+// Schema endpoints
+export const getMySchema = () =>
+  apiClient.get('/schemas/my');
+
+export const createDefaultSchema = () =>
+  apiClient.post('/schemas/create-default');
+
+export const getSchemaFields = () =>
+  apiClient.get('/schemas/fields');
