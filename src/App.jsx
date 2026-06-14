@@ -12,6 +12,8 @@ import SettingsPage    from './pages/SettingsPage';
 import MISPage         from './pages/MISPage';
 import OrderPage       from './pages/OrderPage';
 import StubPage        from './pages/StubPage';
+import CoAssistsPage   from './pages/CoAssistsPage';
+import MyTasksPage     from './pages/MyTasksPage';
 import NotFoundPage    from './pages/NotFoundPage';
 
 const Protected = ({ children }) => {
@@ -31,8 +33,9 @@ const AppRoutes = () => {
       <Route path="/settings"       element={<Protected><SettingsPage/></Protected>}/>
       <Route path="/mis"            element={<Protected><MISPage/></Protected>}/>
       <Route path="/order"          element={<Protected><OrderPage/></Protected>}/>
-      <Route path="/my-tasks"       element={<Protected><StubPage title="My Task" phase="IT-2" description="Tasks assigned to you from the entity queue."/></Protected>}/>
-      <Route path="/employees"      element={<Protected><StubPage title="Employees" phase="IT-2" description="Manage actors under your entity."/></Protected>}/>
+      <Route path="/my-tasks"       element={<Protected><MyTasksPage/></Protected>}/>
+      <Route path="/co-assists"     element={<Protected><CoAssistsPage/></Protected>}/>
+      <Route path="/employees"      element={<Protected><CoAssistsPage/></Protected>}/>
       <Route path="/my-catalogue"   element={<Protected><StubPage title="My Catalogue" phase="Phase 1" description="Publish your product catalogue for buyers."/></Protected>}/>
       <Route path="/my-catalogue/upload" element={<Protected><StubPage title="Bulk Upload" phase="Phase 1" description="Upload products from CSV or Excel."/></Protected>}/>
       <Route path="/" element={<Navigate to="/inbox" replace/>}/>

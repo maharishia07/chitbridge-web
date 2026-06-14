@@ -3,8 +3,16 @@ import { createContext, useContext, useState } from 'react';
 
 const AuthContext = createContext(null);
 
+// Parse JWT payload without library
+const parseJWT = (token) => {
+  try {
+    const base64 = token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');
+    return JSON.parse(atob(base64));
+  } catch { return {}; }
+};
+
 export const AuthProvider = ({ children }) => {
-  const [token, setToken]   = useState(localStorage.getItem('cb_token') || null);
+  const [token, setToken] = useState(localStorage.getItem('cb_token') || null);
   const [entity, setEntity] = useState(() => {
     try { return JSON.parse(localStorage.getItem('cb_entity') || 'null'); }
     catch { return null; }
@@ -24,8 +32,21 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('cb_entity');
   };
 
+  // Parse identity_type from JWT
+  const tokenPayload = token ? parseJWT(token) : {};
+  const isActor       = tokenPayload.identity_type === 'actor';
+  const identityType  = tokenPayload.identity_type || 'entity';
+  const parentEntity  = tokenPayload.parent_entity_name || null;
+  const actorKey      = tokenPayload.actor_key || null;
+  const actorRole     = tokenPayload.actor_role || null;
+
   return (
-    <AuthContext.Provider value={{ token, entity, login, logout, isLoggedIn: !!token }}>
+    <AuthContext.Provider value={{
+      token, entity, login, logout,
+      isLoggedIn: !!token,
+      isActor, identityType,
+      parentEntity, actorKey, actorRole,
+    }}>
       {children}
     </AuthContext.Provider>
   );

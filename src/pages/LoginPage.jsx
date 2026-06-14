@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { registerEntity, verifyOTP } from '../api/client';
+import { registerEntity, verifyOTP, actorLogin } from '../api/client';
 
 export default function LoginPage() {
   const [tab, setTab]         = useState('login');
@@ -48,8 +48,16 @@ export default function LoginPage() {
     e.preventDefault();
     setError(''); setLoading(true);
     try {
-      const res = await verifyOTP({ email: username, otp });
-      login(res.data.token, res.data.entity);
+      let res;
+      if (isActorFormat) {
+        // Actor login — POST /api/actors/login
+        res = await actorLogin({ username: username.toLowerCase(), otp });
+        login(res.data.token, res.data.actor);
+      } else {
+        // Entity login
+        res = await verifyOTP({ email: username, otp });
+        login(res.data.token, res.data.entity);
+      }
       navigate('/inbox');
     } catch (err) {
       setError(err.response?.data?.message || 'Incorrect code — try again');

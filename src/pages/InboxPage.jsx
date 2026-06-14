@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useSwipeable } from 'react-swipeable';
 import { Layout } from '../components/Layout';
 import { useAuth } from '../context/AuthContext';
-import { getInbox, updateChitStatus } from '../api/client';
+import { getInbox, updateChitStatus, assignChit } from '../api/client';
 
 const STATUS_BORDER = {
   pending:     'border-l-amber-400',

@@ -82,3 +82,38 @@ export const createDefaultSchema = () =>
 
 export const getSchemaFields = () =>
   apiClient.get('/api/schemas/fields');
+
+// ── Actor / Co-Assist endpoints ──────────────────────────────
+
+export const actorLogin = (data) =>
+  apiClient.post('/api/actors/login', data);
+
+export const suggestActorKey = (display_name) =>
+  apiClient.post('/api/actors/suggest-key', { display_name });
+
+export const checkActorKey = (actor_key) =>
+  apiClient.post('/api/actors/check-key', { actor_key });
+
+export const createActor = (data) =>
+  apiClient.post('/api/actors', data);
+
+export const listActors = (params = {}) =>
+  apiClient.get('/api/actors', { params });
+
+export const resetActorOTP = (actor_id) =>
+  apiClient.post(`/api/actors/${actor_id}/otp`);
+
+export const updateActorStatus = (actor_id, data) =>
+  apiClient.put(`/api/actors/${actor_id}/status`, data);
+
+export const actorBreak = (data) =>
+  apiClient.put('/api/actors/break', data);
+
+export const assignChit = (chit_id, data) =>
+  apiClient.put(`/api/actors/assign/${chit_id}`, data);
+
+export const getActorSettings = () =>
+  apiClient.get('/api/actors/settings');
+
+export const updateActorSettings = (data) =>
+  apiClient.put('/api/actors/settings', data);
