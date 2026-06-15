@@ -17,6 +17,7 @@ export default function LoginPage() {
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState('');
   const [actorHasPin, setActorHasPin] = useState(false);
+  const [resolvedEmail, setResolvedEmail] = useState('');
   const { login }               = useAuth();
   const navigate                = useNavigate();
 
@@ -33,6 +34,7 @@ export default function LoginPage() {
       if (tab === 'register') {
         const res = await registerEntity({ display_name: displayName, email: username });
         if (res.data.dev_otp) setDevOtp(res.data.dev_otp);
+        if (res.data.email) setResolvedEmail(res.data.email);
         setStep('otp');
       } else if (isActorFormat) {
         // Actor login — check if PIN is set
@@ -53,6 +55,7 @@ export default function LoginPage() {
         // Entity login — send OTP to email
         const res = await registerEntity({ display_name: username, email: username });
         if (res.data.dev_otp) setDevOtp(res.data.dev_otp);
+        if (res.data.email) setResolvedEmail(res.data.email);
         setStep('otp');
       }
     } catch (err) {
@@ -69,7 +72,7 @@ export default function LoginPage() {
         login(res.data.token, res.data.actor);
         navigate(res.data.requires_pin_setup ? '/set-pin' : '/inbox');
       } else {
-        const res = await verifyOTP({ email: username, otp });
+        const res = await verifyOTP({ email: resolvedEmail || username, otp });
         login(res.data.token, res.data.entity);
         navigate('/inbox');
       }
@@ -92,7 +95,7 @@ export default function LoginPage() {
 
   const reset = () => {
     setStep('username'); setOtp(''); setPin('');
-    setDevOtp(''); setError(''); setActorHasPin(false);
+    setDevOtp(''); setError(''); setActorHasPin(false); setResolvedEmail('');
   };
 
   return (
