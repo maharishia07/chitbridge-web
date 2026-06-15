@@ -1,79 +1,104 @@
-// src/pages/LoginPage.jsx — One screen two tabs Login and Register
+// src/pages/LoginPage.jsx — PIN aware login
+// Entity: email or name → OTP → in
+// Actor: ravik@athi (no dot after @) → first time OTP → set PIN → next time PIN
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { registerEntity, verifyOTP, actorLogin } from '../api/client';
+import { registerEntity, verifyOTP, actorLogin, checkActorLogin } from '../api/client';
 
 export default function LoginPage() {
-  const [tab, setTab]         = useState('login');
-  const [step, setStep]       = useState('credentials');
-  const [displayName, setName]= useState('');
-  const [username, setUsername]= useState('');
-  const [otp, setOtp]         = useState('');
-  const [devOtp, setDevOtp]   = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError]     = useState('');
-  const { login }             = useAuth();
-  const navigate              = useNavigate();
+  const [tab, setTab]           = useState('login');
+  const [step, setStep]         = useState('username'); // username | otp | pin
+  const [displayName, setName]  = useState('');
+  const [username, setUsername] = useState('');
+  const [otp, setOtp]           = useState('');
+  const [pin, setPin]           = useState('');
+  const [devOtp, setDevOtp]     = useState('');
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState('');
+  const [actorHasPin, setActorHasPin] = useState(false);
+  const { login }               = useAuth();
+  const navigate                = useNavigate();
 
-  // Detect actor format ravik@yogit
-  const isActorFormat = username.includes('@') && username.split('@').length === 2;
+  // Actor format: ravik@yogit — no dot in part after @
+  // Entity email: athi@test.com — has dot in part after @
+  // Entity name: Athi — no @ at all
+  const atParts = username.split('@');
+  const isActorFormat = username.includes('@') && atParts.length === 2 && !atParts[1].includes('.');
 
-  const handleGetCode = async (e) => {
+  const handleNext = async (e) => {
     e.preventDefault();
     setError(''); setLoading(true);
     try {
       if (tab === 'register') {
-        // New entity registration
         const res = await registerEntity({ display_name: displayName, email: username });
         if (res.data.dev_otp) setDevOtp(res.data.dev_otp);
         setStep('otp');
+      } else if (isActorFormat) {
+        // Actor login — check if PIN is set
+        const res = await checkActorLogin(username);
+        if (!res.data.valid) {
+          setError('Co-assist not found — check username and entity name');
+          return;
+        }
+        if (res.data.has_pin) {
+          setActorHasPin(true);
+          setStep('pin'); // returning actor — ask for PIN
+        } else {
+          setActorHasPin(false);
+          setStep('otp'); // first time — ask for OTP from admin
+          setDevOtp('123456');
+        }
       } else {
-        // Login — existing entity or actor
-        // Actor format: ravik@yogit
-        // Entity format: yogit
-        const res = await registerEntity({
-          display_name: isActorFormat ? username.split('@')[0] : username,
-          email: username
-        });
+        // Entity login — send OTP to email
+        const res = await registerEntity({ display_name: username, email: username });
         if (res.data.dev_otp) setDevOtp(res.data.dev_otp);
         setStep('otp');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed — please try again');
+      setError(err.response?.data?.message || 'Something went wrong');
     } finally { setLoading(false); }
   };
 
-  const handleVerify = async (e) => {
+  const handleVerifyOTP = async (e) => {
     e.preventDefault();
     setError(''); setLoading(true);
     try {
-      let res;
       if (isActorFormat) {
-        // Actor login — POST /api/actors/login
-        res = await actorLogin({ username: username.toLowerCase(), otp });
+        const res = await actorLogin({ username: username.toLowerCase(), otp });
         login(res.data.token, res.data.actor);
+        navigate(res.data.requires_pin_setup ? '/set-pin' : '/inbox');
       } else {
-        // Entity login
-        res = await verifyOTP({ email: username, otp });
+        const res = await verifyOTP({ email: username, otp });
         login(res.data.token, res.data.entity);
+        navigate('/inbox');
       }
-      navigate('/inbox');
     } catch (err) {
       setError(err.response?.data?.message || 'Incorrect code — try again');
     } finally { setLoading(false); }
   };
 
+  const handlePinLogin = async (e) => {
+    e.preventDefault();
+    setError(''); setLoading(true);
+    try {
+      const res = await actorLogin({ username: username.toLowerCase(), pin });
+      login(res.data.token, res.data.actor);
+      navigate('/inbox');
+    } catch (err) {
+      setError(err.response?.data?.message || 'Incorrect PIN');
+    } finally { setLoading(false); }
+  };
+
   const reset = () => {
-    setStep('credentials');
-    setOtp(''); setDevOtp(''); setError('');
+    setStep('username'); setOtp(''); setPin('');
+    setDevOtp(''); setError(''); setActorHasPin(false);
   };
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 w-full max-w-sm">
 
-        {/* Logo */}
         <div className="text-center mb-5">
           <div className="w-14 h-14 rounded-full border-2 border-blue-600 flex items-center justify-center mx-auto mb-3">
             <span className="text-blue-600 font-bold text-base">CB</span>
@@ -82,19 +107,18 @@ export default function LoginPage() {
           <p className="text-xs text-gray-400 mt-0.5">Business execution platform</p>
         </div>
 
-        {/* Error */}
         {error && (
           <div className="bg-red-50 text-red-700 text-xs p-3 rounded-lg mb-4 border border-red-200">
             {error}
           </div>
         )}
 
-        {step === 'credentials' ? (
+        {/* ── USERNAME STEP ── */}
+        {step === 'username' && (
           <>
-            {/* Tabs */}
             <div className="flex border-b border-gray-200 mb-4">
               {['login','register'].map(t => (
-                <button key={t} onClick={() => { setTab(t); setError(''); }}
+                <button key={t} onClick={() => { setTab(t); setError(''); setUsername(''); }}
                   className={`flex-1 py-2.5 text-xs font-medium border-b-2 capitalize transition-colors ${
                     tab === t ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500'
                   }`}>
@@ -103,7 +127,7 @@ export default function LoginPage() {
               ))}
             </div>
 
-            <form onSubmit={handleGetCode} className="flex flex-col gap-3">
+            <form onSubmit={handleNext} className="flex flex-col gap-3">
               {tab === 'register' && (
                 <div>
                   <label className="text-xs text-gray-500 mb-1 block">Entity name</label>
@@ -112,37 +136,32 @@ export default function LoginPage() {
                     className="border border-gray-300 rounded-lg px-3 py-2.5 text-sm w-full focus:outline-none focus:border-blue-500"/>
                 </div>
               )}
-
               <div>
                 <label className="text-xs text-gray-500 mb-1 block">
                   {tab === 'login' ? 'Username' : 'Email address'}
                 </label>
                 <input
                   type={tab === 'register' ? 'email' : 'text'}
-                  placeholder={tab === 'login' ? 'yogit  or  ravik@yogit' : 'email@example.com'}
+                  placeholder={tab === 'login' ? 'athi@test.com  or  ravik@athi' : 'email@example.com'}
                   value={username} onChange={e => setUsername(e.target.value)} required
                   className="border border-gray-300 rounded-lg px-3 py-2.5 text-sm w-full focus:outline-none focus:border-blue-500"/>
                 {tab === 'login' && username.length > 2 && (
-                  <div className={`text-xs mt-1 px-2 py-1 rounded ${
-                    isActorFormat
-                      ? 'bg-green-50 text-green-700'
-                      : 'bg-blue-50 text-blue-700'
+                  <div className={`text-xs mt-1.5 px-2.5 py-1.5 rounded-lg ${
+                    isActorFormat ? 'bg-green-50 text-green-700' : 'bg-blue-50 text-blue-700'
                   }`}>
                     {isActorFormat
-                      ? `Employee login detected — ${username.split('@')[0]} under ${username.split('@')[1]}`
-                      : 'Entity login detected'
+                      ? `👤 Co-Assist — ${atParts[0]} under ${atParts[1]}`
+                      : '🏢 Entity login'
                     }
                   </div>
                 )}
               </div>
-
               <button type="submit" disabled={loading}
                 className="bg-blue-600 text-white rounded-lg py-2.5 text-sm font-medium disabled:opacity-50 mt-1">
-                {loading ? 'Sending code...' : 'Get verification code'}
+                {loading ? 'Checking...' : 'Continue →'}
               </button>
             </form>
 
-            {/* Hint */}
             <div className="text-center mt-4">
               {tab === 'login' ? (
                 <p className="text-xs text-gray-400">
@@ -157,28 +176,30 @@ export default function LoginPage() {
               )}
             </div>
           </>
-        ) : (
-          /* OTP Step */
-          <form onSubmit={handleVerify} className="flex flex-col gap-3">
-            <div className="text-center">
-              <div className={`inline-flex items-center gap-2 text-xs px-3 py-1.5 rounded-full mb-3 ${
+        )}
+
+        {/* ── OTP STEP ── */}
+        {step === 'otp' && (
+          <form onSubmit={handleVerifyOTP} className="flex flex-col gap-3">
+            <div className="text-center mb-2">
+              <div className={`inline-flex items-center gap-2 text-xs px-3 py-1.5 rounded-full mb-2 ${
                 isActorFormat ? 'bg-green-50 text-green-700' : 'bg-blue-50 text-blue-700'
               }`}>
-                {isActorFormat ? '👤 Employee' : '🏢 Entity'} — {username}
+                {isActorFormat ? '👤 Co-Assist' : '🏢 Entity'} — {username}
               </div>
-              <p className="text-xs text-gray-500">Enter your verification code</p>
+              <p className="text-xs text-gray-500">
+                {isActorFormat ? 'Enter the OTP your admin shared with you' : 'Enter your verification code'}
+              </p>
             </div>
 
-            {/* Dev OTP amber box */}
             {devOtp && (
               <div className="bg-amber-50 border border-amber-200 text-amber-800 text-xs p-3 rounded-lg text-center">
                 <div className="text-amber-600 text-xs mb-1">Dev mode — use this code</div>
-                <div className="font-mono font-bold text-xl tracking-widest">{devOtp}</div>
+                <div className="font-mono font-bold text-2xl tracking-widest">{devOtp}</div>
               </div>
             )}
 
-            <input
-              type="text" placeholder="6-digit code"
+            <input type="text" placeholder="6-digit code"
               value={otp} onChange={e => setOtp(e.target.value)}
               maxLength={6} required
               className="border border-gray-300 rounded-lg px-3 py-2.5 text-sm text-center tracking-widest text-lg font-mono focus:outline-none focus:border-blue-500"/>
@@ -187,17 +208,42 @@ export default function LoginPage() {
               className="bg-blue-600 text-white rounded-lg py-2.5 text-sm font-medium disabled:opacity-50">
               {loading ? 'Verifying...' : 'Verify and continue'}
             </button>
-
-            <button type="button" onClick={reset}
-              className="text-xs text-blue-600 text-center">
-              ← Back
-            </button>
+            <button type="button" onClick={reset} className="text-xs text-blue-600 text-center">← Back</button>
           </form>
         )}
 
-        <p className="text-xs text-gray-400 text-center mt-5">
-          Powered by Chit and Bridge
-        </p>
+        {/* ── PIN STEP ── */}
+        {step === 'pin' && (
+          <form onSubmit={handlePinLogin} className="flex flex-col gap-3">
+            <div className="text-center mb-2">
+              <div className="inline-flex items-center gap-2 text-xs px-3 py-1.5 rounded-full mb-2 bg-green-50 text-green-700">
+                👤 Co-Assist — {username}
+              </div>
+              <p className="text-xs text-gray-500">Enter your 4 digit PIN</p>
+            </div>
+
+            <input type="password" inputMode="numeric"
+              placeholder="• • • •"
+              value={pin} onChange={e => setPin(e.target.value.replace(/\D/g,'').slice(0,4))}
+              maxLength={4} required
+              className="border border-gray-300 rounded-lg px-3 py-3 text-center text-2xl tracking-widest font-mono focus:outline-none focus:border-green-500"/>
+
+            <button type="submit" disabled={loading || pin.length !== 4}
+              className="bg-green-600 text-white rounded-lg py-2.5 text-sm font-medium disabled:opacity-50">
+              {loading ? 'Logging in...' : 'Login'}
+            </button>
+            <button type="button" onClick={reset} className="text-xs text-blue-600 text-center">← Back</button>
+            <div className="text-center">
+              <button type="button"
+                onClick={() => { setStep('otp'); setActorHasPin(false); setDevOtp('123456'); }}
+                className="text-xs text-gray-400 underline">
+                Forgot PIN? Use OTP from admin
+              </button>
+            </div>
+          </form>
+        )}
+
+        <p className="text-xs text-gray-400 text-center mt-5">Powered by Chit and Bridge</p>
       </div>
     </div>
   );
