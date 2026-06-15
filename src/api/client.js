@@ -117,3 +117,17 @@ export const getActorSettings = () =>
 
 export const updateActorSettings = (data) =>
   apiClient.put('/api/actors/settings', data);
+
+// ── PIN management ───────────────────────────────────────────
+
+export const checkActorLogin = (username) =>
+  apiClient.get(`/api/actors/check-login?username=${encodeURIComponent(username)}`);
+
+export const setActorPin = (data) =>
+  apiClient.post('/api/actors/set-pin', data);
+
+export const changeActorPin = (data) =>
+  apiClient.put('/api/actors/change-pin', data);
+
+export const clearActorPin = (actor_id) =>
+  apiClient.delete(`/api/actors/${actor_id}/pin`);
