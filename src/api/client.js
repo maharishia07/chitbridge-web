@@ -131,3 +131,11 @@ export const changeActorPin = (data) =>
 
 export const clearActorPin = (actor_id) =>
   apiClient.delete(`/api/actors/${actor_id}/pin`);
+
+// ── B3.3 — Actor task management ────────────────────────────
+
+export const getActorTasks = (actor_id) =>
+  apiClient.get(`/api/actors/${actor_id}/tasks`);
+
+export const routeActorTask = (actor_id, data) =>
+  apiClient.put(`/api/actors/${actor_id}/tasks/route`, data);

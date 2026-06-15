@@ -5,7 +5,8 @@ import { useAuth } from '../context/AuthContext';
 import { useAppMode } from '../context/AppModeContext';
 import {
   listActors, createActor, suggestActorKey, checkActorKey,
-  resetActorOTP, updateActorStatus
+  resetActorOTP, updateActorStatus, clearActorPin,
+  getActorTasks, routeActorTask
 } from '../api/client';
 
 const ROLES = ['Purchase','Sales','Dispatch','Accounts','Operations','Management'];
@@ -53,6 +54,9 @@ export default function CoAssistsPage() {
   const [loginFormat, setLoginFormat] = useState('');
   const [creating, setCreating]   = useState(false);
   const [confirmRemove, setConfirmRemove] = useState('');
+  const [actorTasks, setActorTasks]       = useState(null);
+  const [tasksLoading, setTasksLoading]   = useState(false);
+  const [routeMsg, setRouteMsg]           = useState('');
   const timerRef = useRef(null);
 
   useEffect(() => { loadActors(); }, [filter]);
@@ -68,6 +72,32 @@ export default function CoAssistsPage() {
   };
 
   const showMsg = (text) => { setMsg(text); setTimeout(() => setMsg(''), 3000); };
+  const showRouteMsg = (text) => { setRouteMsg(text); setTimeout(() => setRouteMsg(''), 3000); };
+
+  const loadActorTasks = async (actor_id) => {
+    setTasksLoading(true);
+    try {
+      const res = await getActorTasks(actor_id);
+      setActorTasks(res.data);
+    } catch { setActorTasks(null); }
+    setTasksLoading(false);
+  };
+
+  const handleRouteToPool = async (chit_id) => {
+    try {
+      await routeActorTask(selected.identity_id, { chit_id, action: 'pool' });
+      showRouteMsg('Task returned to pool ✅');
+      loadActorTasks(selected.identity_id);
+    } catch (err) { showRouteMsg(err.response?.data?.message || 'Failed'); }
+  };
+
+  const handleRouteToPerson = async (chit_id, to_actor_id, name) => {
+    try {
+      await routeActorTask(selected.identity_id, { chit_id, action: 'push', to_actor_id });
+      showRouteMsg(`Task routed to ${name} ✅`);
+      loadActorTasks(selected.identity_id);
+    } catch (err) { showRouteMsg(err.response?.data?.message || 'Failed'); }
+  };
 
   // Suggest key as name typed
   const handleNameChange = async (name) => {
@@ -347,6 +377,21 @@ export default function CoAssistsPage() {
         <div className="bg-white rounded-xl border border-gray-100 p-4">
           <div className="text-xs text-gray-400 uppercase tracking-wide mb-3">Actions</div>
           <div className="flex flex-col gap-2">
+            <button onClick={async () => {
+                try {
+                  await clearActorPin(selected.identity_id);
+                  showMsg('PIN cleared — co-assist must set new PIN on next OTP login');
+                } catch(err) {
+                  showMsg(err.response?.data?.message || 'Clear PIN failed');
+                }
+              }}
+              className="w-full text-left text-sm text-gray-700 border border-gray-200 px-4 py-2.5 rounded-lg bg-gray-50">
+              🔓 Clear PIN — co-assist sets new PIN on next login
+            </button>
+            <button onClick={() => loadActorTasks(selected.identity_id)}
+              className="w-full text-left text-sm text-blue-700 border border-blue-200 px-4 py-2.5 rounded-lg bg-blue-50">
+              📋 View tasks — see and route this actor's work
+            </button>
             <button onClick={() => handleResetOTP(selected.identity_id)}
               className="w-full text-left text-sm text-blue-600 border border-blue-200 px-4 py-2.5 rounded-lg bg-blue-50">
               🔑 Reset OTP — generate new access code
@@ -379,7 +424,58 @@ export default function CoAssistsPage() {
           </div>
         </div>
 
-        <button onClick={() => setView('list')}
+        {/* Actor Task Panel */}
+        {actorTasks !== null && (
+          <div className="bg-white rounded-xl border border-gray-100 p-4">
+            <div className="text-xs text-gray-400 uppercase tracking-wide mb-3">
+              Tasks assigned to {actorTasks.actor?.display_name}
+              {' '}({actorTasks.count || 0})
+            </div>
+            {routeMsg && (
+              <div className="bg-blue-50 text-blue-700 text-xs p-2 rounded-lg mb-3">
+                {routeMsg}
+              </div>
+            )}
+            {tasksLoading ? (
+              <div className="text-xs text-gray-400 text-center py-4">Loading tasks...</div>
+            ) : (actorTasks.tasks || []).length === 0 ? (
+              <div className="text-xs text-gray-400 text-center py-4">
+                No active tasks assigned to this co-assist
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {(actorTasks.tasks || []).map(task => (
+                  <div key={task.chit_id}
+                    className="border border-gray-100 rounded-lg p-3">
+                    <div className="text-xs font-medium text-gray-800 mb-1 truncate">
+                      {task.sender_entity_display_name}
+                    </div>
+                    <div className="text-xs text-gray-500 mb-2 truncate">
+                      {task.auto_subject}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">
+                        {task.current_status}
+                      </span>
+                      <span className="text-xs text-gray-400 ml-auto">
+                        {new Date(task.created_at).toLocaleDateString('en-IN',{day:'2-digit',month:'short'})}
+                      </span>
+                    </div>
+                    <div className="flex gap-2 mt-2">
+                      <button
+                        onClick={() => handleRouteToPool(task.chit_id)}
+                        className="flex-1 text-xs text-amber-700 border border-amber-200 bg-amber-50 py-1.5 rounded-lg">
+                        ↩ Return to pool
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        <button onClick={() => { setView('list'); setActorTasks(null); }}
           className="text-blue-600 text-sm text-center">
           ← Back to Co-Assists
         </button>

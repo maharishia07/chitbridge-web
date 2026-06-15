@@ -158,6 +158,7 @@ export const Layout = ({ children, title }) => {
           <>
             <div className="border-t border-gray-100 my-2"/>
             <div className="text-xs text-gray-400 uppercase tracking-wide px-2 py-1">My status</div>
+            <NavItem icon="👤" label="My profile" to="/profile" onClick={close}/>
             <NavItem icon="☕" label="Go on break" to="/break" onClick={close}/>
           </>
         )}
