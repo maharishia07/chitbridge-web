@@ -9,7 +9,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useAppMode } from '../context/AppModeContext';
-import { getConnections, getPendingConnections, getInbox, listActors } from '../api/client';
+import { getConnections, getPendingConnections, getInbox, listActors, actorBreak } from '../api/client';
 
 // Language options — B3.4
 const LANGUAGES = [
@@ -120,7 +120,7 @@ const LangSwitcher = ({ current, onChange }) => (
 
 // ── Main Layout ──────────────────────────────────────────────
 export const Layout = ({ children, title, unreadCount = 0 }) => {
-  const { entity, logout, isActor, parentEntity, actorKey, actorRole } = useAuth();
+  const { entity, logout, isActor, parentEntity, actorKey, actorRole, updateEntity } = useAuth();
   const { mode } = useAppMode();
   const [drawerOpen, setDrawerOpen]       = useState(false);
   const [showNotif, setShowNotif]         = useState(false);
@@ -158,6 +158,13 @@ export const Layout = ({ children, title, unreadCount = 0 }) => {
     : 'bg-blue-600';
 
   const close = () => setDrawerOpen(false);
+
+  const handleEndBreak = async () => {
+    try {
+      await actorBreak({ break_type: 'end_break' });
+      updateEntity({ break_status: 'active' });
+    } catch {}
+  };
 
   const Sidebar = () => (
     <div className="flex flex-col h-full bg-white">
@@ -204,7 +211,7 @@ export const Layout = ({ children, title, unreadCount = 0 }) => {
             <div className="text-xs font-medium text-amber-800">On break — tasks held</div>
           </div>
           <button
-            onClick={() => navigate('/break')}
+            onClick={handleEndBreak}
             className="text-xs bg-amber-600 text-white px-2 py-1 rounded font-medium">
             End
           </button>
