@@ -53,6 +53,8 @@ const getAgeLabel = (dateStr) => {
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
   const hrs  = Math.floor(mins / 60);
+  const days = Math.floor(hrs / 24);
+  if (days >= 1)  return { label: `${days}d`, colour: 'text-red-500' };
   if (hrs >= 2)   return { label: `${hrs}h`, colour: 'text-red-500' };
   if (mins >= 30) return { label: `${mins}m`, colour: 'text-amber-500' };
   return { label: `${mins}m`, colour: 'text-green-600' };
@@ -104,8 +106,10 @@ export default function MyTasksPage() {
   const formatDate = (d) => {
     const date = new Date(d);
     const now  = new Date();
-    if (now - date < 86400000) return date.toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' });
-    return date.toLocaleDateString('en-IN', { day:'2-digit', month:'short' });
+    const diff = now - date;
+    if (diff < 86400000)  return date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+    if (diff < 604800000) return date.toLocaleDateString('en-IN', { weekday: 'short' });
+    return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
   };
 
   const openTasks  = tasks.filter(t => OPEN_STATUSES.includes(t.current_status));
