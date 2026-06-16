@@ -105,8 +105,13 @@ export const Layout = ({ children, title }) => {
             </span>
           )}
           {isActor && (
-            <span className="bg-green-300 text-green-900 text-xs px-2 py-0.5 rounded-full font-medium ml-2 flex-shrink-0">
-              Active
+            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ml-2 flex-shrink-0 ${
+              entity?.break_status === 'short_break' ? 'bg-amber-200 text-amber-900' :
+              entity?.break_status === 'leave'       ? 'bg-orange-200 text-orange-900' :
+                                                       'bg-green-300 text-green-900'
+            }`}>
+              {entity?.break_status === 'short_break' ? 'Break' :
+               entity?.break_status === 'leave'       ? 'Leave' : 'Active'}
             </span>
           )}
         </div>
@@ -159,7 +164,7 @@ export const Layout = ({ children, title }) => {
             <div className="border-t border-gray-100 my-2"/>
             <div className="text-xs text-gray-400 uppercase tracking-wide px-2 py-1">My status</div>
             <NavItem icon="👤" label="My profile" to="/profile" onClick={close}/>
-            <NavItem icon="☕" label="Go on break" to="/break" onClick={close}/>
+            <NavItem icon="☕" label="Go on break" to="/my-tasks" onClick={close}/>
           </>
         )}
 
@@ -185,8 +190,13 @@ export const Layout = ({ children, title }) => {
               {isActor ? `${actorKey}@${parentEntity}` : entity?.display_name}
             </div>
             <div className="flex items-center gap-1 text-xs text-gray-400">
-              <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${isActor ? 'bg-green-500' : 'bg-green-500'}`}/>
-              {isActor ? 'Co-Assist · active' : 'Entity · active'}
+              <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
+                isActor && entity?.break_status && entity.break_status !== 'active'
+                  ? 'bg-amber-400' : 'bg-green-500'
+              }`}/>
+              {isActor
+                ? `Co-Assist · ${entity?.break_status === 'short_break' ? 'on break' : entity?.break_status === 'leave' ? 'on leave' : 'active'}`
+                : 'Entity · active'}
             </div>
           </div>
         </div>

@@ -32,6 +32,12 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('cb_entity');
   };
 
+  const updateEntity = (updates) => {
+    const updated = { ...entity, ...updates };
+    setEntity(updated);
+    localStorage.setItem('cb_entity', JSON.stringify(updated));
+  };
+
   // Parse identity_type from JWT
   const tokenPayload = token ? parseJWT(token) : {};
   const isActor        = tokenPayload.identity_type === 'actor';
@@ -43,7 +49,7 @@ export const AuthProvider = ({ children }) => {
 
   return (
     <AuthContext.Provider value={{
-      token, entity, login, logout,
+      token, entity, login, logout, updateEntity,
       isLoggedIn: !!token,
       isActor, identityType,
       parentEntity, parentEntityId, actorKey, actorRole,
