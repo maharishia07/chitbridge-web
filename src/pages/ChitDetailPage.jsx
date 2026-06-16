@@ -244,27 +244,42 @@ export default function ChitDetailPage() {
                 <div className="text-xs text-gray-400 uppercase tracking-wide mb-3">
                   Line items — {lineItems.length}
                 </div>
-                {lineItems.map((item, i) => (
-                  <div key={i} className="bg-white rounded-xl border border-gray-100 p-3 mb-3">
-                    <div className="font-medium text-sm text-gray-900 mb-2">{item.name || item.product || '—'}</div>
-                    <div className="space-y-1">
-                      <div className="flex justify-between text-xs">
-                        <span className="text-gray-500">Quantity</span>
-                        <span className="text-gray-800">{item.quantity} {item.unit || ''}</span>
+                {lineItems.map((item, i) => {
+                  const cur = detail?.currency_code || 'INR';
+                  const qty = item.quantity != null ? item.quantity
+                    : (item.qty_min != null ? `${item.qty_min}–${item.qty_max}` : '—');
+                  const unitPrice = item.price != null ? item.price
+                    : (item.price_min != null ? `${item.price_min}–${item.price_max}` : null);
+                  const lineTotal = parseFloat(item.total || 0) ||
+                    (item.price && item.quantity ? item.price * item.quantity : null);
+                  return (
+                    <div key={i} className="bg-white rounded-xl border border-gray-100 p-3 mb-3">
+                      <div className="font-medium text-sm text-gray-900 mb-2">
+                        {item.particulars || item.name || item.product || '—'}
                       </div>
-                      <div className="flex justify-between text-xs">
-                        <span className="text-gray-500">Unit price</span>
-                        <span className="text-gray-800">INR {parseFloat(item.price || 0).toFixed(2)}</span>
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-xs">
+                          <span className="text-gray-500">Quantity</span>
+                          <span className="text-gray-800">{qty}</span>
+                        </div>
+                        {unitPrice != null && (
+                          <div className="flex justify-between text-xs">
+                            <span className="text-gray-500">Unit price</span>
+                            <span className="text-gray-800">{cur} {typeof unitPrice === 'number' ? parseFloat(unitPrice).toFixed(2) : unitPrice}</span>
+                          </div>
+                        )}
                       </div>
+                      {lineTotal != null && (
+                        <div className="flex justify-between items-center mt-2 pt-2 border-t border-gray-100">
+                          <span className="text-xs text-gray-400">Total</span>
+                          <span className="text-sm font-semibold text-blue-700">
+                            {cur} {parseFloat(lineTotal).toFixed(2)}
+                          </span>
+                        </div>
+                      )}
                     </div>
-                    <div className="flex justify-between items-center mt-2 pt-2 border-t border-gray-100">
-                      <span className="text-xs text-gray-400">Total</span>
-                      <span className="text-sm font-semibold text-blue-700">
-                        INR {parseFloat(item.total || item.price * item.quantity || 0).toFixed(2)}
-                      </span>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </>
             ) : detail?.payload_deleted_at ? (
               <div className="text-center py-8">
