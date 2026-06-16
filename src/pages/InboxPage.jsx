@@ -195,6 +195,32 @@ const FilterSheet = ({ filters, onChange, onClose, onClear }) => (
         </div>
       </div>
 
+      {/* Date range */}
+      <div className="px-4 py-3 border-b border-gray-100">
+        <div className="text-xs text-gray-400 uppercase tracking-wide mb-2">Date range</div>
+        <div className="flex items-center gap-2">
+          <div className="flex-1">
+            <div className="text-xs text-gray-400 mb-1">From</div>
+            <input type="date" value={filters.dateFrom || ''}
+              onChange={e => onChange('dateFrom', e.target.value)}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500"/>
+          </div>
+          <div className="text-xs text-gray-300 mt-4">—</div>
+          <div className="flex-1">
+            <div className="text-xs text-gray-400 mb-1">To</div>
+            <input type="date" value={filters.dateTo || ''}
+              onChange={e => onChange('dateTo', e.target.value)}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500"/>
+          </div>
+        </div>
+        {(filters.dateFrom || filters.dateTo) && (
+          <button onClick={() => { onChange('dateFrom', ''); onChange('dateTo', ''); }}
+            className="mt-2 text-xs text-blue-600">
+            Clear dates
+          </button>
+        )}
+      </div>
+
       {/* Special */}
       <div className="px-4 py-3">
         <div className="text-xs text-gray-400 uppercase tracking-wide mb-2">Show only</div>
@@ -401,6 +427,7 @@ const ChitCard = ({
 const DEFAULT_FILTERS = {
   status: 'all', purpose: 'all',
   minAmount: '', maxAmount: '',
+  dateFrom: '', dateTo: '',
   unreadOnly: false, highValue: false,
 };
 
@@ -511,6 +538,15 @@ export default function InboxPage() {
       );
     }
     if (filters.purpose !== 'all') out = out.filter(c => c.purpose === filters.purpose);
+    if (filters.dateFrom) {
+      const from = new Date(filters.dateFrom);
+      out = out.filter(c => new Date(c.created_at) >= from);
+    }
+    if (filters.dateTo) {
+      const to = new Date(filters.dateTo);
+      to.setHours(23, 59, 59, 999);
+      out = out.filter(c => new Date(c.created_at) <= to);
+    }
     if (filters.unreadOnly) out = out.filter(c => !c.read_at);
     if (filters.highValue) {
       out = out.filter(c => {
