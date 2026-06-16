@@ -24,34 +24,32 @@ const OPEN_STATUSES  = ['pending', 'delivered', 'read'];
 const ACT_STATUSES   = ['accepted', 'in_progress', 'partial'];
 const CLOSE_STATUSES = ['completed', 'cancelled', 'rejected'];
 
-const VALID_TRANSITIONS = {
-  pending:     ['accepted', 'rejected', 'cancelled'],
-  delivered:   ['accepted', 'rejected', 'cancelled'],
-  read:        ['accepted', 'rejected', 'cancelled'],
-  accepted:    ['in_progress', 'rejected', 'cancelled'],
-  in_progress: ['partial', 'completed', 'accepted', 'cancelled'],
-  partial:     ['in_progress', 'completed', 'cancelled'],
-  completed:   ['in_progress'],
-  rejected:    ['accepted'],
-  cancelled:   ['accepted'],
+const ADVANCE_TO = {
+  pending:     'in_progress',
+  delivered:   'in_progress',
+  read:        'in_progress',
+  accepted:    'in_progress',
+  in_progress: 'completed',
+  partial:     'completed',
 };
 
-const ACTION_LABELS = {
-  accepted:    '✓ Accept',
-  rejected:    '✗ Reject',
-  in_progress: '▶ Start',
-  partial:     '◑ Partial',
-  completed:   '✓✓ Complete',
-  cancelled:   '✕ Cancel',
+const REGRESS_TO = {
+  accepted:    'pending',
+  in_progress: 'pending',
+  partial:     'in_progress',
+  completed:   'in_progress',
 };
 
-const ACTION_STYLE = {
-  accepted:    'bg-green-50 text-green-800 border-green-200 hover:bg-green-100',
-  rejected:    'bg-red-50 text-red-800 border-red-200 hover:bg-red-100',
-  in_progress: 'bg-purple-50 text-purple-800 border-purple-200 hover:bg-purple-100',
-  partial:     'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100',
-  completed:   'bg-green-100 text-green-900 border-green-300 hover:bg-green-200',
-  cancelled:   'bg-gray-100 text-gray-600 border-gray-300 hover:bg-gray-200',
+const STATUS_LABEL = {
+  pending:     'Open',
+  delivered:   'Delivered',
+  read:        'Seen',
+  accepted:    'Accepted',
+  in_progress: 'In Progress',
+  partial:     'Partial',
+  completed:   'Done',
+  rejected:    'Rejected',
+  cancelled:   'Cancelled',
 };
 
 const STATUS_BORDER = {
@@ -161,7 +159,7 @@ const FilterSheet = ({ filters, onChange, onClose, onClear }) => (
                 filters.status === s
                   ? 'bg-blue-600 text-white border-blue-600'
                   : 'border-gray-200 text-gray-600'
-              }`}>{s === 'all' ? 'All statuses' : s === 'open' ? 'Open' : 'Active'}</button>
+              }`}>{s === 'all' ? 'All statuses' : s === 'open' ? 'Open' : 'Progress'}</button>
           ))}
         </div>
       </div>
@@ -254,7 +252,7 @@ const ChitCard = ({
   chit, onSwipeLeft, onSwipeRight,
   isActor, actorId, onPull, onAssignOpen,
   assigningChitId, actorList, onPushToActor,
-  onStatusChange,
+  onAdvance, onRegress,
 }) => {
   const navigate = useNavigate();
 
@@ -273,8 +271,6 @@ const ChitCard = ({
   const showPicker      = assigningChitId === chit.chit_id;
   const isUnread        = !chit.read_at;
 
-  const statusActions = !isActor ? (VALID_TRANSITIONS[chit.current_status] || []) : [];
-
   const summary = (() => {
     try { return typeof chit.summary_json === 'string'
       ? JSON.parse(chit.summary_json || '{}')
@@ -289,15 +285,6 @@ const ChitCard = ({
   const avColour   = avatarColour(senderName);
 
   const pickableActors = actorList.filter(a => !isActor || a.identity_id !== actorId);
-
-  const btn = (handler, className, label) => (
-    <button
-      onClick={e => { e.stopPropagation(); handler(); }}
-      onMouseDown={e => e.stopPropagation()}
-      className={`flex-1 text-xs font-medium py-1.5 rounded-lg border transition-colors ${className}`}>
-      {label}
-    </button>
-  );
 
   return (
     <div
@@ -335,7 +322,7 @@ const ChitCard = ({
           {/* Status + value row */}
           <div className="flex items-center gap-1.5 mt-1 flex-wrap">
             <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${STATUS_PILL[chit.current_status] || 'bg-gray-100 text-gray-600'}`}>
-              {chit.current_status}
+              {STATUS_LABEL[chit.current_status] || chit.current_status}
             </span>
             {summary.line_item_count > 0 && (
               <span className="text-xs text-gray-400">
@@ -372,53 +359,71 @@ const ChitCard = ({
         </div>
       )}
 
-      {/* Status actions — entity only */}
-      {statusActions.length > 0 && (
-        <div className="mt-2 ml-9 pt-2 border-t border-gray-100 flex flex-wrap gap-1.5">
-          {statusActions.map(action => (
-            <button key={action}
-              onClick={e => { e.stopPropagation(); onStatusChange(chit.chit_id, action); }}
+      {/* Arrow action row */}
+      <div className="mt-2 ml-9 pt-2 border-t border-gray-100 flex items-center gap-1.5">
+        <button
+          onClick={e => { e.stopPropagation(); if (REGRESS_TO[chit.current_status]) onRegress(chit.chit_id, REGRESS_TO[chit.current_status]); }}
+          onMouseDown={e => e.stopPropagation()}
+          disabled={!REGRESS_TO[chit.current_status]}
+          title={REGRESS_TO[chit.current_status] ? `Back to ${STATUS_LABEL[REGRESS_TO[chit.current_status]]}` : 'Cannot go back'}
+          className={`w-9 h-9 flex items-center justify-center rounded-lg border text-base font-bold transition-colors ${
+            REGRESS_TO[chit.current_status]
+              ? 'text-gray-600 border-gray-200 bg-gray-50 hover:bg-gray-100'
+              : 'text-gray-200 border-gray-100 cursor-not-allowed'
+          }`}>←</button>
+
+        <button
+          onClick={e => { e.stopPropagation(); if (ADVANCE_TO[chit.current_status]) onAdvance(chit.chit_id, ADVANCE_TO[chit.current_status], chit.current_status); }}
+          onMouseDown={e => e.stopPropagation()}
+          disabled={!ADVANCE_TO[chit.current_status]}
+          title={ADVANCE_TO[chit.current_status] ? `Move to ${STATUS_LABEL[ADVANCE_TO[chit.current_status]]}` : 'Already closed'}
+          className={`w-9 h-9 flex items-center justify-center rounded-lg border text-base font-bold transition-colors ${
+            ADVANCE_TO[chit.current_status]
+              ? 'text-blue-600 border-blue-200 bg-blue-50 hover:bg-blue-100'
+              : 'text-gray-200 border-gray-100 cursor-not-allowed'
+          }`}>→</button>
+
+        <div className="flex-1"/>
+
+        {isActor && (
+          <button
+            onClick={e => { e.stopPropagation(); onPull(chit.chit_id); }}
+            onMouseDown={e => e.stopPropagation()}
+            title="Pull to My Task"
+            className="w-9 h-9 flex items-center justify-center rounded-lg border text-base font-bold text-green-700 border-green-200 bg-green-50 hover:bg-green-100 transition-colors">
+            ↑
+          </button>
+        )}
+
+        {!isActor && (
+          <button
+            onClick={e => { e.stopPropagation(); onAssignOpen(chit.chit_id); }}
+            onMouseDown={e => e.stopPropagation()}
+            title={isUnassigned ? 'Assign to co-assist' : 'Reassign'}
+            className={`w-9 h-9 flex items-center justify-center rounded-lg border text-base font-bold transition-colors ${
+              showPicker ? 'bg-blue-600 text-white border-blue-600' : 'text-blue-700 border-blue-200 bg-blue-50 hover:bg-blue-100'
+            }`}>
+            ↓
+          </button>
+        )}
+      </div>
+
+      {showPicker && !isActor && (
+        <div className="mt-2 ml-9 flex flex-col gap-1 max-h-36 overflow-y-auto">
+          {pickableActors.length === 0 ? (
+            <div className="text-xs text-gray-400 text-center py-2">No active co-assists</div>
+          ) : pickableActors.map(actor => (
+            <button key={actor.identity_id}
+              onClick={e => { e.stopPropagation(); onPushToActor(chit.chit_id, actor.identity_id, actor.display_name); }}
               onMouseDown={e => e.stopPropagation()}
-              className={`text-xs px-2.5 py-1.5 rounded-lg border font-medium transition-colors ${ACTION_STYLE[action]}`}>
-              {ACTION_LABELS[action]}
+              className="text-left text-xs px-3 py-2 rounded-lg bg-gray-50 border border-gray-200 hover:bg-blue-50 hover:border-blue-200">
+              <span className="font-medium text-gray-800">{actor.display_name}</span>
+              {actor.actor_role && <span className="text-gray-400 ml-1.5">· {actor.actor_role}</span>}
+              <span className="text-gray-400 ml-1.5">({actor.current_task_count || 0}/{actor.max_tasks || 10})</span>
             </button>
           ))}
         </div>
       )}
-
-      {/* Assignment ribbon */}
-      <div className="mt-2 ml-9 pt-2 border-t border-gray-100">
-        <div className="flex gap-2">
-          {isActor && btn(
-            () => onPull(chit.chit_id),
-            'bg-green-50 text-green-800 border-green-200 hover:bg-green-100',
-            '↙ Pull to My Task'
-          )}
-          {btn(
-            () => onAssignOpen(chit.chit_id),
-            showPicker
-              ? 'bg-blue-600 text-white border-blue-600'
-              : 'bg-blue-50 text-blue-800 border-blue-200 hover:bg-blue-100',
-            showPicker ? '✕ Cancel' : isUnassigned ? '→ Assign to...' : '⇄ Reassign'
-          )}
-        </div>
-        {showPicker && (
-          <div className="mt-2 flex flex-col gap-1 max-h-36 overflow-y-auto">
-            {pickableActors.length === 0 ? (
-              <div className="text-xs text-gray-400 text-center py-2">No active co-assists</div>
-            ) : pickableActors.map(actor => (
-              <button key={actor.identity_id}
-                onClick={e => { e.stopPropagation(); onPushToActor(chit.chit_id, actor.identity_id, actor.display_name); }}
-                onMouseDown={e => e.stopPropagation()}
-                className="text-left text-xs px-3 py-2 rounded-lg bg-gray-50 border border-gray-200 hover:bg-blue-50 hover:border-blue-200">
-                <span className="font-medium text-gray-800">{actor.display_name}</span>
-                {actor.actor_role && <span className="text-gray-400 ml-1.5">· {actor.actor_role}</span>}
-                <span className="text-gray-400 ml-1.5">({actor.current_task_count || 0}/{actor.max_tasks || 10})</span>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
     </div>
   );
 };
@@ -493,13 +498,21 @@ export default function InboxPage() {
     setActiveUndo(null);
   };
 
-  const handleStatusChange = async (chitId, status) => {
+  const handleAdvance = async (chitId, newStatus, previousStatus) => {
     try {
-      await updateChitStatus(chitId, status);
+      await updateChitStatus(chitId, newStatus);
       loadChits();
-    } catch (err) {
-      console.error('Status change failed:', err);
-    }
+      if (newStatus === 'completed') {
+        setActiveUndo({ chitId, previousStatus, msg: 'Marked as done' });
+      }
+    } catch {}
+  };
+
+  const handleRegress = async (chitId, newStatus) => {
+    try {
+      await updateChitStatus(chitId, newStatus);
+      loadChits();
+    } catch {}
   };
 
   const handlePull = async (chitId) => {
@@ -642,7 +655,7 @@ export default function InboxPage() {
         <div className="flex border-b border-gray-200 bg-white flex-shrink-0">
           {[
             { id: 'open',  label: 'Open',  count: openChits.length },
-            { id: 'act',   label: 'Act',   count: actChits.length },
+            { id: 'act',   label: 'Progress', count: actChits.length },
             { id: 'close', label: 'Close', count: closedChits.length },
           ].map(t => (
             <button key={t.id}
@@ -683,7 +696,7 @@ export default function InboxPage() {
                 {search || hasActiveFilter
                   ? 'Try clearing your search or filters'
                   : tab === 'open' ? 'No pending tasks — great work!'
-                  : tab === 'act'  ? 'No active tasks'
+                  : tab === 'act'  ? 'Nothing in progress'
                   : 'No closed transactions yet'}
               </div>
               {!search && !hasActiveFilter && tab === 'open' && (
@@ -714,7 +727,8 @@ export default function InboxPage() {
                       assigningChitId={assigningChitId}
                       actorList={actorList}
                       onPushToActor={handlePushToActor}
-                      onStatusChange={handleStatusChange}
+                      onAdvance={handleAdvance}
+                      onRegress={handleRegress}
                     />
                   ))}
                 </div>

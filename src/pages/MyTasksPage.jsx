@@ -9,34 +9,32 @@ const OPEN_STATUSES  = ['pending', 'delivered', 'read'];
 const ACT_STATUSES   = ['accepted', 'in_progress', 'partial'];
 const CLOSE_STATUSES = ['completed', 'cancelled', 'rejected'];
 
-const VALID_TRANSITIONS = {
-  pending:     ['accepted', 'rejected', 'cancelled'],
-  delivered:   ['accepted', 'rejected', 'cancelled'],
-  read:        ['accepted', 'rejected', 'cancelled'],
-  accepted:    ['in_progress', 'rejected', 'cancelled'],
-  in_progress: ['partial', 'completed', 'accepted', 'cancelled'],
-  partial:     ['in_progress', 'completed', 'cancelled'],
-  completed:   ['in_progress'],
-  rejected:    ['accepted'],
-  cancelled:   ['accepted'],
+const ADVANCE_TO = {
+  pending:     'in_progress',
+  delivered:   'in_progress',
+  read:        'in_progress',
+  accepted:    'in_progress',
+  in_progress: 'completed',
+  partial:     'completed',
 };
 
-const ACTION_LABELS = {
-  accepted:    '✓ Accept',
-  rejected:    '✗ Reject',
-  in_progress: '▶ Start',
-  partial:     '◑ Partial',
-  completed:   '✓✓ Complete',
-  cancelled:   '✕ Cancel',
+const REGRESS_TO = {
+  accepted:    'pending',
+  in_progress: 'pending',
+  partial:     'in_progress',
+  completed:   'in_progress',
 };
 
-const ACTION_STYLE = {
-  accepted:    'bg-green-50 text-green-800 border-green-200 hover:bg-green-100',
-  rejected:    'bg-red-50 text-red-800 border-red-200 hover:bg-red-100',
-  in_progress: 'bg-purple-50 text-purple-800 border-purple-200 hover:bg-purple-100',
-  partial:     'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100',
-  completed:   'bg-green-100 text-green-900 border-green-300 hover:bg-green-200',
-  cancelled:   'bg-gray-100 text-gray-600 border-gray-300 hover:bg-gray-200',
+const STATUS_LABEL = {
+  pending:     'Open',
+  delivered:   'Delivered',
+  read:        'Seen',
+  accepted:    'Accepted',
+  in_progress: 'In Progress',
+  partial:     'Partial',
+  completed:   'Done',
+  rejected:    'Rejected',
+  cancelled:   'Cancelled',
 };
 
 const STATUS_PILL = {
@@ -199,7 +197,7 @@ export default function MyTasksPage() {
         <div className="flex border-b border-gray-200 bg-white mt-3 flex-shrink-0">
           {[
             { id: 'open',  label: `Open [${openTasks.length}]` },
-            { id: 'act',   label: `Act [${actTasks.length}]` },
+            { id: 'act',   label: `Progress [${actTasks.length}]` },
             { id: 'close', label: `Close [${closeTasks.length}]` },
           ].map(t => (
             <button key={t.id} onClick={() => setTab(t.id)}
@@ -219,7 +217,7 @@ export default function MyTasksPage() {
             <div className="flex flex-col items-center justify-center py-16 text-gray-400">
               <div className="text-4xl mb-3">✅</div>
               <div className="text-sm font-medium text-gray-700">
-                {tab === 'open' ? 'No open tasks' : tab === 'act' ? 'No active tasks' : 'No closed tasks'}
+                {tab === 'open' ? 'No open tasks' : tab === 'act' ? 'Nothing in progress' : 'No closed tasks'}
               </div>
               {tab === 'open' && (
                 <button onClick={() => navigate('/inbox')}
@@ -231,7 +229,6 @@ export default function MyTasksPage() {
           ) : (
             tabTasks.map(task => {
               const age = getAgeLabel(task.created_at);
-              const actions = VALID_TRANSITIONS[task.current_status] || [];
               return (
                 <div key={task.chit_id}
                   className="bg-white rounded-xl border border-gray-100 mb-3 overflow-hidden">
@@ -250,7 +247,7 @@ export default function MyTasksPage() {
                     <div className="text-xs text-gray-500 mb-2 truncate">{task.auto_subject}</div>
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className={`text-xs px-1.5 py-0.5 rounded ${STATUS_PILL[task.current_status] || 'bg-gray-100 text-gray-600'}`}>
-                        {task.current_status}
+                        {STATUS_LABEL[task.current_status] || task.current_status}
                       </span>
                       <span className="text-xs text-gray-400 ml-auto">
                         {formatDate(task.created_at)}
@@ -265,34 +262,37 @@ export default function MyTasksPage() {
                     </div>
                   </div>
 
-                  {/* Action bar — status transitions + return */}
-                  {tab !== 'close' && (
-                    <div className="border-t border-gray-100 px-3 py-2 flex flex-wrap gap-1.5">
-                      {actions.map(action => (
-                        <button
-                          key={action}
-                          onClick={() => handleStatusChange(task.chit_id, action)}
-                          className={`text-xs px-2.5 py-1.5 rounded-lg border font-medium transition-colors ${ACTION_STYLE[action]}`}
-                        >
-                          {ACTION_LABELS[action]}
-                        </button>
-                      ))}
-                      <button
-                        onClick={() => handleReturn(task.chit_id)}
-                        className="text-xs px-2.5 py-1.5 rounded-lg border font-medium bg-gray-50 text-gray-500 border-gray-200 hover:bg-gray-100 transition-colors ml-auto"
-                      >
-                        ↩ Return
-                      </button>
-                    </div>
-                  )}
-                  {tab === 'close' && (
-                    <div className="border-t border-gray-100 px-3 py-2">
-                      <button onClick={() => navigate(`/chit/${task.chit_id}`)}
-                        className="text-xs text-blue-600">
-                        View details →
-                      </button>
-                    </div>
-                  )}
+                  {/* Arrow action row */}
+                  <div className="border-t border-gray-100 px-3 py-2 flex items-center gap-1.5">
+                    <button
+                      onClick={() => REGRESS_TO[task.current_status] && handleStatusChange(task.chit_id, REGRESS_TO[task.current_status])}
+                      disabled={!REGRESS_TO[task.current_status]}
+                      title={REGRESS_TO[task.current_status] ? `Back to ${STATUS_LABEL[REGRESS_TO[task.current_status]]}` : 'Cannot go back'}
+                      className={`w-9 h-9 flex items-center justify-center rounded-lg border text-base font-bold transition-colors ${
+                        REGRESS_TO[task.current_status]
+                          ? 'text-gray-600 border-gray-200 bg-gray-50 hover:bg-gray-100'
+                          : 'text-gray-200 border-gray-100 cursor-not-allowed'
+                      }`}>←</button>
+
+                    <button
+                      onClick={() => ADVANCE_TO[task.current_status] && handleStatusChange(task.chit_id, ADVANCE_TO[task.current_status])}
+                      disabled={!ADVANCE_TO[task.current_status]}
+                      title={ADVANCE_TO[task.current_status] ? `Move to ${STATUS_LABEL[ADVANCE_TO[task.current_status]]}` : 'Already closed'}
+                      className={`w-9 h-9 flex items-center justify-center rounded-lg border text-base font-bold transition-colors ${
+                        ADVANCE_TO[task.current_status]
+                          ? 'text-blue-600 border-blue-200 bg-blue-50 hover:bg-blue-100'
+                          : 'text-gray-200 border-gray-100 cursor-not-allowed'
+                      }`}>→</button>
+
+                    <div className="flex-1"/>
+
+                    <button
+                      onClick={() => handleReturn(task.chit_id)}
+                      title="Return to entity pool"
+                      className="w-9 h-9 flex items-center justify-center rounded-lg border text-base font-bold text-amber-700 border-amber-200 bg-amber-50 hover:bg-amber-100 transition-colors">
+                      ↑
+                    </button>
+                  </div>
                 </div>
               );
             })
