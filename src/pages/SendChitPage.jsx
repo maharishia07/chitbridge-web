@@ -155,7 +155,7 @@ export default function SendChitPage() {
     const t = setTimeout(async () => {
       try {
         const res = await searchEntities(toSearch);
-        setResults(res.data.entities || []);
+        setResults(res.data.results || []);
       } catch {}
     }, 300);
     return () => clearTimeout(t);
