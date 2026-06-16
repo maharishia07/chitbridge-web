@@ -179,16 +179,20 @@ export default function SendChitPage() {
     setLoading(true);
     try {
       const filled = items.filter(i => i.particulars);
-      const lineItems = filled.map(i => ({
-        particulars: i.particulars,
-        quantity:    rangeMode === 'qty_range' || rangeMode === 'both' ? null : parseFloat(i.quantity || 0),
-        qty_min:     rangeMode === 'qty_range' || rangeMode === 'both' ? parseFloat(i.qty_min||0) : null,
-        qty_max:     rangeMode === 'qty_range' || rangeMode === 'both' ? parseFloat(i.qty_max||0) : null,
-        price:       rangeMode === 'price_range' || rangeMode === 'both' ? null : parseFloat(i.price || 0),
-        price_min:   rangeMode === 'price_range' || rangeMode === 'both' ? parseFloat(i.price_min||0) : null,
-        price_max:   rangeMode === 'price_range' || rangeMode === 'both' ? parseFloat(i.price_max||0) : null,
-        total:       parseFloat(i.total || 0),
-      }));
+      const lineItems = filled.map(i => {
+        const qty   = parseFloat(i.quantity  || 0);
+        const price = parseFloat(i.price     || 0);
+        return {
+          particulars: i.particulars,
+          quantity:  rangeMode === 'qty_range'   || rangeMode === 'both' ? null : qty,
+          qty_min:   rangeMode === 'qty_range'   || rangeMode === 'both' ? parseFloat(i.qty_min||0)   : null,
+          qty_max:   rangeMode === 'qty_range'   || rangeMode === 'both' ? parseFloat(i.qty_max||0)   : null,
+          price:     rangeMode === 'price_range' || rangeMode === 'both' ? null : price,
+          price_min: rangeMode === 'price_range' || rangeMode === 'both' ? parseFloat(i.price_min||0) : null,
+          price_max: rangeMode === 'price_range' || rangeMode === 'both' ? parseFloat(i.price_max||0) : null,
+          total:     rangeMode === 'fixed' ? qty * price : 0,
+        };
+      });
 
       await sendChit({
         receivers:      toEntities.map(e => ({ entity_id: e.identity_id })),
