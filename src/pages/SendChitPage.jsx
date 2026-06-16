@@ -133,14 +133,14 @@ export default function SendChitPage() {
   const { entity, isActor, parentEntity } = useAuth();
   const navigate = useNavigate();
 
-  const [purpose,   setPurpose]   = useState('order');
-  const [toSearch,  setToSearch]  = useState('');
-  const [toEntity,  setToEntity]  = useState(null);
-  const [results,   setResults]   = useState([]);
-  const [subject,   setSubject]   = useState('');
-  const [items,     setItems]     = useState([emptyItem()]);
-  const [loading,   setLoading]   = useState(false);
-  const [error,     setError]     = useState('');
+  const [purpose,     setPurpose]     = useState('order');
+  const [toSearch,    setToSearch]    = useState('');
+  const [toEntities,  setToEntities]  = useState([]);
+  const [results,     setResults]     = useState([]);
+  const [subject,     setSubject]     = useState('');
+  const [items,       setItems]       = useState([emptyItem()]);
+  const [loading,     setLoading]     = useState(false);
+  const [error,       setError]       = useState('');
 
   // B3.4
   const [currency,   setCurrency]   = useState('INR');
@@ -168,7 +168,7 @@ export default function SendChitPage() {
 
   const handleSubmitClick = (e) => {
     e.preventDefault();
-    if (!toEntity) { setError('Select a receiver'); return; }
+    if (toEntities.length === 0) { setError('Select at least one receiver'); return; }
     const filled = items.filter(i => i.particulars);
     if (filled.length === 0) { setError('Add at least one item'); return; }
     setError('');
@@ -191,7 +191,7 @@ export default function SendChitPage() {
       }));
 
       await sendChit({
-        receivers:      [{ entity_id: toEntity.identity_id }],
+        receivers:      toEntities.map(e => ({ entity_id: e.identity_id })),
         purpose,
         manual_subject: subject,
         line_items:     lineItems,
@@ -223,32 +223,45 @@ export default function SendChitPage() {
 
         {/* To */}
         <div>
-          <label className="text-xs text-gray-500 mb-1.5 block">To</label>
-          {toEntity ? (
-            <div className="flex items-center gap-2 border border-green-300 bg-green-50 rounded-lg px-3 py-2.5">
-              <span className="text-xs font-medium text-green-800 flex-1">{toEntity.display_name}</span>
-              <button type="button" onClick={() => { setToEntity(null); setToSearch(''); }}
-                className="text-green-600 text-sm">✕</button>
+          <label className="text-xs text-gray-500 mb-1.5 block">
+            To {toEntities.length > 1 && <span className="text-blue-600">({toEntities.length} receivers)</span>}
+          </label>
+
+          {/* Selected entity chips */}
+          {toEntities.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {toEntities.map(e => (
+                <div key={e.identity_id} className="flex items-center gap-1 bg-green-50 border border-green-200 rounded-full px-2.5 py-1">
+                  <span className="text-xs font-medium text-green-800">{e.display_name}</span>
+                  <button type="button"
+                    onClick={() => setToEntities(p => p.filter(x => x.identity_id !== e.identity_id))}
+                    className="text-green-500 text-xs leading-none ml-0.5 hover:text-red-500">✕</button>
+                </div>
+              ))}
             </div>
-          ) : (
-            <div className="relative">
-              <input type="text" placeholder="Search by entity name..."
-                value={toSearch} onChange={e => setToSearch(e.target.value)}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-blue-500"/>
-              {results.length > 0 && (
-                <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-10 mt-1 max-h-48 overflow-y-auto">
-                  {results.map(r => (
+          )}
+
+          {/* Search input — always visible */}
+          <div className="relative">
+            <input type="text"
+              placeholder={toEntities.length === 0 ? 'Search by entity name...' : 'Add another receiver...'}
+              value={toSearch} onChange={e => setToSearch(e.target.value)}
+              className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-blue-500"/>
+            {results.filter(r => !toEntities.some(e => e.identity_id === r.identity_id)).length > 0 && (
+              <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg z-10 mt-1 max-h-48 overflow-y-auto">
+                {results
+                  .filter(r => !toEntities.some(e => e.identity_id === r.identity_id))
+                  .map(r => (
                     <button key={r.identity_id} type="button"
-                      onClick={() => { setToEntity(r); setToSearch(r.display_name); setResults([]); }}
+                      onClick={() => { setToEntities(p => [...p, r]); setToSearch(''); setResults([]); }}
                       className="w-full text-left px-4 py-2.5 text-sm hover:bg-blue-50 border-b border-gray-50 last:border-0">
                       <div className="font-medium text-gray-800">{r.display_name}</div>
                       {r.bridge_id && <div className="text-xs text-gray-400">{r.bridge_id}</div>}
                     </button>
                   ))}
-                </div>
-              )}
-            </div>
-          )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Currency — B3.4 */}
@@ -400,7 +413,9 @@ export default function SendChitPage() {
       {showConfirm && (
         <ConfirmModal
           data={{
-            to:        toEntity?.display_name,
+            to: toEntities.length === 1
+              ? toEntities[0].display_name
+              : `${toEntities.length} receivers`,
             purpose:   purpose.replace('_',' '),
             itemCount: items.filter(i => i.particulars).length,
             currency,
