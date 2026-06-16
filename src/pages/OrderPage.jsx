@@ -38,7 +38,7 @@ export default function OrderPage() {
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(null);
   const [msg, setMsg] = useState('');
-  const { entity } = useAuth();
+  const { entity, isActor, parentEntity } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => { loadOrders(); }, []);
@@ -46,14 +46,12 @@ export default function OrderPage() {
   const loadOrders = async () => {
     setLoading(true);
     try {
-      // Get all chits — filter to ones where I am the sender
+      // Get all chits — filter to ones where the entity is the sender
+      // For actors, compare against the parent entity name (not the actor's own name)
       const res = await getInbox({ limit: 100 });
       const all = res.data.chits || [];
-      // Sender = chits where sender_entity_display_name matches my name
-      // We filter by checking if current entity sent it
-      // API returns chits for my entity_id — we check sender
-      const sent = all.filter(c => c.sender_entity_bridge_id === entity?.bridge_id ||
-                                    c.sender_entity_display_name === entity?.display_name);
+      const senderName = isActor ? parentEntity : entity?.display_name;
+      const sent = all.filter(c => c.sender_entity_display_name === senderName);
       setOrders(sent);
     } catch (err) {
       console.error('Order load error:', err);
@@ -147,8 +145,7 @@ export default function OrderPage() {
                           <div className="flex items-center gap-1.5">
                             <div className={`w-2 h-2 rounded-full flex-shrink-0 ${STATUS_DOT[order.current_status] || 'bg-gray-400'}`}/>
                             <span className="text-xs text-gray-500">
-                              To: {order.sender_entity_display_name !== entity?.display_name
-                                ? order.sender_entity_display_name : 'receiver'}
+                              Sent by {order.sender_entity_display_name}
                             </span>
                             <span className={`text-xs px-1.5 py-0.5 rounded ml-auto ${STATUS_PILL[order.current_status] || 'bg-gray-100 text-gray-600'}`}>
                               {order.current_status}
