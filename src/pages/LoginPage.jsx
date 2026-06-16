@@ -32,7 +32,7 @@ export default function LoginPage() {
     setError(''); setLoading(true);
     try {
       if (tab === 'register') {
-        const res = await registerEntity({ display_name: displayName, email: username });
+        const res = await registerEntity({ display_name: displayName, email: username, mode: 'register' });
         if (res.data.dev_otp) setDevOtp(res.data.dev_otp);
         if (res.data.email) setResolvedEmail(res.data.email);
         setStep('otp');
@@ -52,8 +52,8 @@ export default function LoginPage() {
           setDevOtp('123456');
         }
       } else {
-        // Entity login — send OTP to email
-        const res = await registerEntity({ display_name: username, email: username });
+        // Entity login — only allows existing accounts
+        const res = await registerEntity({ display_name: username, email: username, mode: 'login' });
         if (res.data.dev_otp) setDevOtp(res.data.dev_otp);
         if (res.data.email) setResolvedEmail(res.data.email);
         setStep('otp');
