@@ -173,7 +173,7 @@ const ChitCard = ({
 };
 
 export default function InboxPage() {
-  const [tab, setTab]             = useState(() => sessionStorage.getItem('inboxTab') || 'open');
+  const [tab, setTab]             = useState(() => { const t = sessionStorage.getItem('inboxTab'); return (t === 'open' || t === 'close') ? t : 'open'; });
   const [chits, setChits]         = useState([]);
   const [loading, setLoading]     = useState(true);
   const [actionMsg, setActionMsg] = useState('');
@@ -198,7 +198,11 @@ export default function InboxPage() {
       const res = await getInbox({ limit: 100 });
       const all = res.data.chits || [];
       const senderName = isActor ? parentEntity : entity?.display_name;
-      setChits(all.filter(c => c.sender_entity_display_name !== senderName));
+      // All Task = unassigned pool only — assigned tasks live exclusively in My Task
+      setChits(all.filter(c =>
+        c.sender_entity_display_name !== senderName &&
+        !c.assigned_to_actor_id
+      ));
     } catch (err) {
       console.error('Inbox error:', err);
     } finally {
@@ -243,21 +247,19 @@ export default function InboxPage() {
   };
 
   const isClosed = c => ['completed','cancelled','rejected'].includes(c.current_status);
-  // Mutually exclusive — a task lives in exactly one tab
-  const openChits   = chits.filter(c => !isClosed(c) && !c.assigned_to_actor_id);
-  const actChits    = chits.filter(c => !isClosed(c) &&  c.assigned_to_actor_id);
+  // All Task only ever has unassigned chits — open = active pool, close = done
+  const openChits   = chits.filter(c => !isClosed(c));
   const closedChits = chits.filter(c =>  isClosed(c));
-  const tabChits    = tab === 'open' ? openChits : tab === 'act' ? actChits : closedChits;
+  const tabChits    = tab === 'open' ? openChits : closedChits;
 
   return (
     <Layout title="All Task">
       <div className="flex flex-col h-full">
 
-        {/* Tabs */}
+        {/* Tabs — Open = unassigned pool, Close = done */}
         <div className="flex border-b border-gray-200 bg-white flex-shrink-0">
           {[
             { id: 'open',  label: `Open [${openChits.length}]` },
-            { id: 'act',   label: `Act [${actChits.length}]` },
             { id: 'close', label: `Close [${closedChits.length}]` },
           ].map(t => (
             <button key={t.id} onClick={() => { setTab(t.id); sessionStorage.setItem('inboxTab', t.id); }}
