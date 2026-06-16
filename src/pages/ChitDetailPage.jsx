@@ -178,7 +178,7 @@ export default function ChitDetailPage() {
           )}
           {summary.total_value && (
             <span className="bg-blue-500 text-white text-xs px-2 py-1 rounded-full whitespace-nowrap flex-shrink-0">
-              INR {parseFloat(summary.total_value).toLocaleString('en-IN')}
+              {summary.currency_code || 'INR'} {parseFloat(summary.total_value).toLocaleString('en-IN')}
             </span>
           )}
           <span className="bg-blue-500 text-white text-xs px-2 py-1 rounded-full whitespace-nowrap flex-shrink-0">
@@ -336,7 +336,7 @@ export default function ChitDetailPage() {
                 ['From', header?.sender_entity_display_name],
                 ['Sent', fmt(header?.created_at)],
                 ['Items', detail?.line_item_count || summary.line_item_count || '—'],
-                ['Total', detail?.total_value ? `INR ${parseFloat(detail.total_value).toFixed(2)}` : '—'],
+                ['Total', detail?.total_value ? `${detail.currency_code || summary.currency_code || 'INR'} ${parseFloat(detail.total_value).toFixed(2)}` : '—'],
                 ['Currency', detail?.currency_code || 'INR'],
                 ['Reference', header?.chit_id?.slice(0,8) + '...'],
               ].map(([label, value]) => (
