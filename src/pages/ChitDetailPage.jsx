@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { getChitDetail, updateChitStatus } from '../api/client';
+import { getChitDetail, updateChitStatus, assignChit } from '../api/client';
 
 const STATUS_PILL = {
   pending:     'bg-amber-100 text-amber-800',
@@ -16,12 +16,15 @@ const STATUS_PILL = {
 };
 
 const VALID_TRANSITIONS = {
-  pending:     ['accepted','rejected'],
-  delivered:   ['accepted','rejected'],
-  read:        ['accepted','rejected'],
-  accepted:    ['in_progress','completed','cancelled'],
-  in_progress: ['partial','completed','cancelled'],
-  partial:     ['completed','cancelled'],
+  pending:     ['accepted', 'rejected', 'cancelled'],
+  delivered:   ['accepted', 'rejected', 'cancelled'],
+  read:        ['accepted', 'rejected', 'cancelled'],
+  accepted:    ['in_progress', 'rejected', 'cancelled'],
+  in_progress: ['partial', 'completed', 'accepted', 'cancelled'],
+  partial:     ['in_progress', 'completed', 'cancelled'],
+  completed:   ['in_progress'],
+  rejected:    ['accepted'],
+  cancelled:   ['accepted'],
 };
 
 const ACTION_LABELS = {
@@ -54,7 +57,7 @@ const parseJSON = (v) => {
 export default function ChitDetailPage() {
   const { chitId } = useParams();
   const navigate = useNavigate();
-  const { entity } = useAuth();
+  const { entity, isActor, parentEntityId } = useAuth();
   const [data, setData]       = useState(null);
   const [tab, setTab]         = useState('details');
   const [loading, setLoading] = useState(true);
@@ -84,6 +87,28 @@ export default function ChitDetailPage() {
     } finally { setUpdating(false); }
   };
 
+  const doPull = async () => {
+    setUpdating(true); setMsg('');
+    try {
+      await assignChit(chitId, { action: 'pull' });
+      setMsg('Pulled to My Task');
+      await load();
+    } catch (err) {
+      setMsg(err.response?.data?.message || 'Pull failed');
+    } finally { setUpdating(false); }
+  };
+
+  const doReturn = async () => {
+    setUpdating(true); setMsg('');
+    try {
+      await assignChit(chitId, { action: 'return' });
+      setMsg('Returned to entity pool');
+      await load();
+    } catch (err) {
+      setMsg(err.response?.data?.message || 'Return failed');
+    } finally { setUpdating(false); }
+  };
+
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center text-gray-400 text-sm">Loading...</div>
   );
@@ -104,11 +129,23 @@ export default function ChitDetailPage() {
     catch { return []; }
   })();
 
-  const myParticipant = participants?.find(p => p.entity_id === entity?.identity_id);
+  // Actors are keyed by their parent entity in chit_status — use parentEntityId for lookup
+  const effectiveEntityId = isActor ? parentEntityId : entity?.identity_id;
+  const myParticipant = participants?.find(p => p.entity_id === effectiveEntityId);
   const myStatus = myParticipant?.current_status || header?.current_status || 'pending';
-  const isSender = header?.sender_entity_bridge_id === entity?.bridge_id ||
-                   header?.sender_entity_display_name === entity?.display_name;
+
+  // Actors never send chits in the current model; entities check by bridge_id
+  const isSender = isActor ? false : (
+    header?.sender_entity_bridge_id === entity?.bridge_id ||
+    header?.sender_entity_display_name === entity?.display_name
+  );
   const validActions = isSender ? [] : (VALID_TRANSITIONS[myStatus] || []);
+
+  // Actor pull/return state — is this chit assigned, and is it assigned to me?
+  const assignedActorId = myParticipant?.assigned_to_actor_id;
+  const isAssignedToMe  = assignedActorId === entity?.identity_id;
+  const isUnassigned    = !assignedActorId;
+
   const sortedLog = [...(state_log || [])].reverse();
 
   return (
