@@ -242,9 +242,11 @@ export default function InboxPage() {
     }
   };
 
-  const openChits   = chits.filter(c => !['completed','cancelled','rejected'].includes(c.current_status));
-  const actChits    = chits.filter(c => c.assigned_to_actor_id);
-  const closedChits = chits.filter(c =>  ['completed','cancelled','rejected'].includes(c.current_status));
+  const isClosed = c => ['completed','cancelled','rejected'].includes(c.current_status);
+  // Mutually exclusive — a task lives in exactly one tab
+  const openChits   = chits.filter(c => !isClosed(c) && !c.assigned_to_actor_id);
+  const actChits    = chits.filter(c => !isClosed(c) &&  c.assigned_to_actor_id);
+  const closedChits = chits.filter(c =>  isClosed(c));
   const tabChits    = tab === 'open' ? openChits : tab === 'act' ? actChits : closedChits;
 
   return (

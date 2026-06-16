@@ -38,10 +38,10 @@ export default function MyTasksPage() {
     try {
       const res = await getInbox({ limit: 100 });
       const all = res.data.chits || [];
-      // My Task = chits assigned to me specifically
+      // My Task = assigned to this actor + not closed
       const mine = all.filter(c =>
-        c.assigned_to_actor_display_name === entity?.display_name ||
-        c.assigned_to_actor_id === entity?.identity_id
+        c.assigned_to_actor_id === entity?.identity_id &&
+        !['completed','cancelled','rejected'].includes(c.current_status)
       );
       setTasks(mine);
     } catch {}
