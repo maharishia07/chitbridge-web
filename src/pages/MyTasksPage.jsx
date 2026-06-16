@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import { useAuth } from '../context/AuthContext';
-import { getInbox, assignChit, actorBreak, updateChitStatus } from '../api/client';
+import { getInbox, assignChit, updateChitStatus } from '../api/client';
 
 const OPEN_STATUSES  = ['pending', 'delivered', 'read'];
 const ACT_STATUSES   = ['accepted', 'in_progress', 'partial'];
@@ -59,16 +59,12 @@ const getAgeLabel = (dateStr) => {
 };
 
 export default function MyTasksPage() {
-  const { entity, isActor, updateEntity } = useAuth();
-  const [tasks, setTasks]           = useState([]);
-  const [loading, setLoading]       = useState(true);
-  const [tab, setTab]               = useState('open');
-  const [breakModal, setBreakModal] = useState(false);
-  const [breakStatus, setBreakStatus] = useState(entity?.break_status || 'active');
-  const [msg, setMsg]               = useState('');
+  const { entity, isActor } = useAuth();
+  const [tasks, setTasks]     = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [tab, setTab]         = useState('open');
+  const [msg, setMsg]         = useState('');
   const navigate = useNavigate();
-
-  const isOnBreak = breakStatus === 'short_break' || breakStatus === 'leave';
 
   useEffect(() => { loadTasks(); }, [entity]);
 
@@ -102,27 +98,6 @@ export default function MyTasksPage() {
       loadTasks();
     } catch (err) {
       showMsg(err.response?.data?.message || 'Update failed');
-    }
-  };
-
-  const handleBreak = async (breakType) => {
-    try {
-      await actorBreak({
-        break_type: breakType,
-        task_action: breakType === 'leave' ? 'pool' : undefined,
-      });
-      const newStatus = breakType === 'end_break' ? 'active' : breakType;
-      setBreakStatus(newStatus);
-      updateEntity({ break_status: newStatus });
-      showMsg(
-        breakType === 'end_break'    ? 'You are back to work' :
-        breakType === 'short_break'  ? 'Short break started — tasks held' :
-                                       'Leave started — tasks returned to pool'
-      );
-      setBreakModal(false);
-      loadTasks();
-    } catch (err) {
-      showMsg(err.response?.data?.message || 'Break failed');
     }
   };
 
@@ -163,33 +138,6 @@ export default function MyTasksPage() {
         {msg && (
           <div className="mx-3 mt-2 text-xs bg-blue-50 text-blue-700 px-3 py-2 rounded-lg border border-blue-200 flex-shrink-0">
             {msg}
-          </div>
-        )}
-
-        {/* Break toggle */}
-        {isActor && (
-          <div className="mx-4 mt-3 flex-shrink-0">
-            <button onClick={() => setBreakModal(true)}
-              className={`w-full flex items-center justify-between rounded-xl px-4 py-3 border ${
-                isOnBreak
-                  ? 'bg-amber-50 border-amber-200'
-                  : 'bg-white border-gray-200'
-              }`}>
-              <div className="flex items-center gap-2">
-                <span className="text-lg">{isOnBreak ? '🟡' : '☕'}</span>
-                <div>
-                  <div className={`text-sm font-medium ${isOnBreak ? 'text-amber-700' : 'text-gray-800'}`}>
-                    {isOnBreak ? 'On break — tap to return' : 'Go on break'}
-                  </div>
-                  <div className={`text-xs ${isOnBreak ? 'text-amber-500' : 'text-gray-400'}`}>
-                    {isOnBreak
-                      ? breakStatus === 'short_break' ? 'Short break active' : 'On leave'
-                      : 'Short break or leave'}
-                  </div>
-                </div>
-              </div>
-              <span className={`text-xs ${isOnBreak ? 'text-amber-500' : 'text-gray-400'}`}>→</span>
-            </button>
           </div>
         )}
 
@@ -299,58 +247,6 @@ export default function MyTasksPage() {
           )}
         </div>
 
-        {/* Break modal */}
-        {breakModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-40 z-50 flex items-end">
-            <div className="bg-white w-full rounded-t-2xl p-6">
-              <div className="w-8 h-1 bg-gray-200 rounded-full mx-auto mb-5"/>
-              <div className="text-sm font-medium text-gray-800 text-center mb-5">
-                {isOnBreak ? 'You are on break' : 'Going on break?'}
-              </div>
-
-              {isOnBreak ? (
-                /* On break — only show "Return to work" */
-                <button onClick={() => handleBreak('end_break')}
-                  className="w-full flex items-center gap-3 border border-green-200 bg-green-50 rounded-xl p-4 mb-3">
-                  <span className="text-2xl">✅</span>
-                  <div className="text-left">
-                    <div className="text-sm font-medium text-green-700">Return to work</div>
-                    <div className="text-xs text-green-500">
-                      {breakStatus === 'short_break'
-                        ? 'End your short break and resume tasks'
-                        : 'End leave and return to active status'}
-                    </div>
-                  </div>
-                </button>
-              ) : (
-                /* Not on break — show break options */
-                <>
-                  <button onClick={() => handleBreak('short_break')}
-                    className="w-full flex items-center gap-3 border border-blue-200 bg-blue-50 rounded-xl p-4 mb-3">
-                    <span className="text-2xl">☕</span>
-                    <div className="text-left">
-                      <div className="text-sm font-medium text-blue-700">Short break</div>
-                      <div className="text-xs text-blue-500">Tasks stay with you — back soon</div>
-                    </div>
-                  </button>
-                  <button onClick={() => handleBreak('leave')}
-                    className="w-full flex items-center gap-3 border border-amber-200 bg-amber-50 rounded-xl p-4 mb-3">
-                    <span className="text-2xl">🏖️</span>
-                    <div className="text-left">
-                      <div className="text-sm font-medium text-amber-700">Leave or absent</div>
-                      <div className="text-xs text-amber-500">Tasks returned to entity pool</div>
-                    </div>
-                  </button>
-                </>
-              )}
-
-              <button onClick={() => setBreakModal(false)}
-                className="w-full border border-gray-200 text-gray-600 text-sm py-3 rounded-xl mt-1">
-                Cancel
-              </button>
-            </div>
-          </div>
-        )}
       </div>
     </Layout>
   );

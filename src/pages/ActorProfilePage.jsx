@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { changeActorPin, actorBreak } from '../api/client';
 
 export default function ActorProfilePage() {
-  const { entity, actorKey, actorRole, parentEntity, logout } = useAuth();
+  const { entity, actorKey, actorRole, parentEntity, logout, updateEntity } = useAuth();
   const navigate = useNavigate();
 
   const [currentPin, setCurrentPin] = useState('');
@@ -39,9 +39,11 @@ export default function ActorProfilePage() {
     try {
       if (type === 'end') {
         await actorBreak({ break_type: 'end_break' });
+        updateEntity({ break_status: 'active' });
         setBreakMsg('Break ended — you are now active');
       } else {
         await actorBreak({ break_type: type, task_action: type === 'leave' ? 'pool' : undefined });
+        updateEntity({ break_status: type });
         setBreakMsg(type === 'short_break' ? 'Short break started' : 'Leave started — tasks returned to pool');
       }
     } catch (err) {
