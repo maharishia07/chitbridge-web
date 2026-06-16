@@ -6,6 +6,7 @@ import { Layout } from '../components/Layout';
 import { useAuth } from '../context/AuthContext';
 import { getInbox, updateChitStatus, assignChit } from '../api/client';
 
+
 const STATUS_BORDER = {
   pending:     'border-l-amber-400',
   delivered:   'border-l-blue-500',
@@ -29,7 +30,7 @@ const STATUS_PILL = {
   cancelled:   'bg-gray-100 text-gray-600',
 };
 
-const ChitCard = ({ chit, onSwipeLeft, onSwipeRight }) => {
+const ChitCard = ({ chit, onSwipeLeft, onSwipeRight, isActor, actorId, onPull }) => {
   const navigate = useNavigate();
 
   const handlers = useSwipeable({
@@ -40,6 +41,9 @@ const ChitCard = ({ chit, onSwipeLeft, onSwipeRight }) => {
     preventScrollOnSwipe: true,
     trackMouse: true,
   });
+
+  const isAssignedToMe = chit.assigned_to_actor_id === actorId;
+  const isAssignedOther = chit.assigned_to_actor_id && !isAssignedToMe;
 
   const formatDate = (d) => {
     const date = new Date(d);
@@ -90,7 +94,35 @@ const ChitCard = ({ chit, onSwipeLeft, onSwipeRight }) => {
             {summary.total_value && ` · INR ${parseFloat(summary.total_value).toLocaleString('en-IN', { minimumFractionDigits: 0 })}`}
           </span>
         )}
+        {isAssignedToMe && (
+          <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded ml-auto">mine</span>
+        )}
+        {isAssignedOther && (
+          <span className="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded ml-auto truncate max-w-24">
+            {chit.assigned_to_actor_display_name}
+          </span>
+        )}
       </div>
+
+      {/* Actor pull row — header-level action, no need to open detail */}
+      {isActor && !isAssignedOther && (
+        <div className="mt-2 pt-2 border-t border-gray-100 flex gap-2">
+          {!chit.assigned_to_actor_id && (
+            <button
+              onClick={e => { e.stopPropagation(); onPull(chit.chit_id); }}
+              className="flex-1 text-xs font-medium py-1.5 rounded-lg bg-green-100 text-green-800 border border-green-200 hover:bg-green-200 transition-colors">
+              ↙ Pull to My Task
+            </button>
+          )}
+          {isAssignedToMe && (
+            <button
+              onClick={e => { e.stopPropagation(); onPull(chit.chit_id, 'return'); }}
+              className="flex-1 text-xs font-medium py-1.5 rounded-lg bg-amber-100 text-amber-800 border border-amber-200 hover:bg-amber-200 transition-colors">
+              ↩ Return to pool
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 };
@@ -99,6 +131,7 @@ export default function InboxPage() {
   const [tab, setTab]         = useState(() => sessionStorage.getItem('inboxTab') || 'open');
   const [chits, setChits]     = useState([]);
   const [loading, setLoading] = useState(true);
+  const [actionMsg, setActionMsg] = useState('');
   const { entity, isActor, parentEntity } = useAuth();
   const navigate              = useNavigate();
 
@@ -136,8 +169,19 @@ export default function InboxPage() {
   };
 
   const handleSwipeRight = (chit) => {
-    // Reopen — future feature
     console.log('Swipe right:', chit.chit_id);
+  };
+
+  const handlePull = async (chitId, action = 'pull') => {
+    try {
+      await assignChit(chitId, { action });
+      setActionMsg(action === 'pull' ? 'Pulled to My Task' : 'Returned to pool');
+      setTimeout(() => setActionMsg(''), 2500);
+      loadChits();
+    } catch (err) {
+      setActionMsg(err.response?.data?.message || 'Action failed');
+      setTimeout(() => setActionMsg(''), 2500);
+    }
   };
 
   const openChits   = chits.filter(c => !['completed','cancelled','rejected'].includes(c.current_status));
@@ -164,6 +208,13 @@ export default function InboxPage() {
           ))}
         </div>
 
+        {/* Action feedback */}
+        {actionMsg && (
+          <div className="mx-3 mt-2 text-xs bg-blue-50 text-blue-700 px-3 py-2 rounded-lg border border-blue-200">
+            {actionMsg}
+          </div>
+        )}
+
         {/* List */}
         <div className="flex-1 overflow-y-auto">
           {loading ? (
@@ -179,6 +230,9 @@ export default function InboxPage() {
               <ChitCard key={chit.chit_id} chit={chit}
                 onSwipeLeft={handleSwipeLeft}
                 onSwipeRight={handleSwipeRight}
+                isActor={isActor}
+                actorId={entity?.identity_id}
+                onPull={handlePull}
               />
             ))
           )}

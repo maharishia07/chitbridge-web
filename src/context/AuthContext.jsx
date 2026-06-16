@@ -34,18 +34,19 @@ export const AuthProvider = ({ children }) => {
 
   // Parse identity_type from JWT
   const tokenPayload = token ? parseJWT(token) : {};
-  const isActor       = tokenPayload.identity_type === 'actor';
-  const identityType  = tokenPayload.identity_type || 'entity';
-  const parentEntity  = tokenPayload.parent_entity_name || null;
-  const actorKey      = tokenPayload.actor_key || null;
-  const actorRole     = tokenPayload.actor_role || null;
+  const isActor        = tokenPayload.identity_type === 'actor';
+  const identityType   = tokenPayload.identity_type || 'entity';
+  const parentEntity   = tokenPayload.parent_entity_name || null;
+  const parentEntityId = tokenPayload.parent_entity_id   || null;
+  const actorKey       = tokenPayload.actor_key  || null;
+  const actorRole      = tokenPayload.actor_role || null;
 
   return (
     <AuthContext.Provider value={{
       token, entity, login, logout,
       isLoggedIn: !!token,
       isActor, identityType,
-      parentEntity, actorKey, actorRole,
+      parentEntity, parentEntityId, actorKey, actorRole,
     }}>
       {children}
     </AuthContext.Provider>
