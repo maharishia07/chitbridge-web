@@ -2,7 +2,8 @@
 // B3.4 additions: Load bars per actor, summary counts, age of tasks
 import { useState, useEffect } from 'react';
 import { Layout } from '../components/Layout';
-import { listActors, updateActorStatus, resetActorOTP, createActor, suggestActorKey } from '../api/client';
+import { listActors, updateActorStatus, resetActorOTP, createActor, suggestActorKey,
+         getActorTasks, routeActorTask, clearActorPin } from '../api/client';
 
 const LoadBar = ({ current, max }) => {
   const pct = max > 0 ? Math.round((current / max) * 100) : 0;
@@ -48,6 +49,8 @@ export default function CoAssistsPage() {
   const [creating, setCreating] = useState(false);
   const [latestOTP, setLatestOTP] = useState(null);
   const [msg, setMsg]           = useState('');
+  const [expandedActorId, setExpandedActorId] = useState(null);
+  const [actorTasksMap, setActorTasksMap]     = useState({});
 
   useEffect(() => { load(); }, [filter]);
 
@@ -90,6 +93,73 @@ export default function CoAssistsPage() {
       setLatestOTP({ name: actorName, otp: res.data.otp, format: res.data.login_format });
       flash(`OTP reset for ${actorName}`);
     } catch { flash('OTP reset failed'); }
+  };
+
+  const handleViewTasks = async (actorId) => {
+    if (expandedActorId === actorId) {
+      setExpandedActorId(null);
+      return;
+    }
+    setExpandedActorId(actorId);
+    if (actorTasksMap[actorId] === undefined) {
+      try {
+        const res = await getActorTasks(actorId);
+        setActorTasksMap(m => ({ ...m, [actorId]: res.data.tasks || [] }));
+      } catch {
+        setActorTasksMap(m => ({ ...m, [actorId]: [] }));
+      }
+    }
+  };
+
+  const handleRouteTask = async (actorId, chitId) => {
+    try {
+      await routeActorTask(actorId, { chit_id: chitId, action: 'pool' });
+      const res = await getActorTasks(actorId);
+      setActorTasksMap(m => ({ ...m, [actorId]: res.data.tasks || [] }));
+      load();
+    } catch (err) {
+      flash(err.response?.data?.message || 'Failed to return task');
+    }
+  };
+
+  const handleDeactivate = async (actor) => {
+    const taskNote = actor.current_task_count > 0
+      ? ` Their ${actor.current_task_count} active task(s) will be returned to the pool.`
+      : '';
+    if (!window.confirm(`Deactivate ${actor.display_name}?${taskNote}`)) return;
+    try {
+      await updateActorStatus(actor.identity_id, {
+        action: 'deactivate',
+        ...(actor.current_task_count > 0 ? { task_action: 'pool' } : {}),
+      });
+      flash(`${actor.display_name} deactivated`);
+      load();
+    } catch (err) {
+      flash(err.response?.data?.message || 'Deactivate failed');
+    }
+  };
+
+  const handleReactivate = async (actor) => {
+    try {
+      const res = await updateActorStatus(actor.identity_id, { action: 'reactivate' });
+      setLatestOTP({ name: actor.display_name, key: actor.actor_key, otp: res.data.otp, format: res.data.login_format });
+      flash(`${actor.display_name} reactivated — new OTP generated`);
+      load();
+    } catch (err) {
+      flash(err.response?.data?.message || 'Reactivate failed');
+    }
+  };
+
+  const handleClearPin = async (actor) => {
+    if (!window.confirm(`Clear PIN for ${actor.display_name}? A new OTP will be generated so they can log in and set a new PIN.`)) return;
+    try {
+      await clearActorPin(actor.identity_id);
+      const otpRes = await resetActorOTP(actor.identity_id);
+      setLatestOTP({ name: actor.display_name, key: actor.actor_key, otp: otpRes.data.otp, format: otpRes.data.login_format });
+      flash(`PIN cleared for ${actor.display_name} — new OTP generated`);
+    } catch (err) {
+      flash(err.response?.data?.message || 'Clear PIN failed');
+    }
   };
 
   return (
@@ -155,43 +225,112 @@ export default function CoAssistsPage() {
             <button onClick={() => setShowCreate(true)} className="mt-3 text-xs text-blue-600">Add first co-assist</button>
           </div>
         ) : actors.map(actor => (
-          <div key={actor.identity_id} className="bg-white rounded-xl border border-gray-100 p-4 mb-3">
-            <div className="flex items-start gap-3">
-              <div className="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center text-green-700 text-xs font-bold flex-shrink-0">
-                {actor.display_name.slice(0,2).toUpperCase()}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-baseline justify-between gap-1">
-                  <span className="text-sm font-medium text-gray-800 truncate">{actor.display_name}</span>
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${STATUS_BADGE[actor.break_status] || 'bg-gray-100 text-gray-500'}`}>
-                    {STATUS_LABEL[actor.break_status] || actor.break_status}
-                  </span>
+          <div key={actor.identity_id} className="bg-white rounded-xl border border-gray-100 mb-3 overflow-hidden">
+            <div className="p-4">
+              <div className="flex items-start gap-3">
+                <div className="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center text-green-700 text-xs font-bold flex-shrink-0">
+                  {actor.display_name.slice(0,2).toUpperCase()}
                 </div>
-                <div className="text-xs text-gray-400 mt-0.5">
-                  {actor.actor_key}
-                  {actor.actor_role && <span> · {actor.actor_role}</span>}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-baseline justify-between gap-1">
+                    <span className="text-sm font-medium text-gray-800 truncate">{actor.display_name}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${STATUS_BADGE[actor.break_status] || 'bg-gray-100 text-gray-500'}`}>
+                      {STATUS_LABEL[actor.break_status] || actor.break_status}
+                    </span>
+                  </div>
+                  <div className="text-xs text-gray-400 mt-0.5">
+                    {actor.actor_key}
+                    {actor.actor_role && <span> · {actor.actor_role}</span>}
+                  </div>
+                  {/* Load bar — B3.4 */}
+                  <LoadBar current={actor.current_task_count || 0} max={actor.max_tasks || 10}/>
                 </div>
-                {/* Load bar — B3.4 */}
-                <LoadBar current={actor.current_task_count || 0} max={actor.max_tasks || 10}/>
               </div>
-            </div>
-            <div className="flex gap-2 mt-3 pt-3 border-t border-gray-100">
-              <button onClick={() => handleResetOTP(actor.identity_id, actor.display_name)}
-                className="flex-1 text-xs border border-gray-200 rounded-lg py-1.5 text-gray-600 hover:bg-gray-50">
-                Reset OTP
-              </button>
-              {actor.break_status !== 'removed' && (
+
+              {/* Primary actions */}
+              <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-gray-100">
                 <button
-                  onClick={async () => {
-                    if (!window.confirm(`Remove ${actor.display_name}? This cannot be undone.`)) return;
-                    try { await updateActorStatus(actor.identity_id, { action: 'remove', confirm: 'REMOVE' }); load(); }
-                    catch (err) { flash(err.response?.data?.message || 'Remove failed'); }
-                  }}
-                  className="flex-1 text-xs border border-red-200 rounded-lg py-1.5 text-red-600 hover:bg-red-50">
-                  Remove
+                  onClick={() => handleViewTasks(actor.identity_id)}
+                  className={`text-xs border rounded-lg py-1.5 font-medium transition-colors ${
+                    expandedActorId === actor.identity_id
+                      ? 'bg-blue-600 text-white border-blue-600'
+                      : 'border-blue-200 text-blue-700 hover:bg-blue-50'
+                  }`}>
+                  Tasks ({actor.current_task_count || 0})
                 </button>
-              )}
+                {actor.break_status === 'deactivated' ? (
+                  <button onClick={() => handleReactivate(actor)}
+                    className="text-xs border border-green-200 rounded-lg py-1.5 text-green-700 hover:bg-green-50">
+                    Reactivate
+                  </button>
+                ) : actor.break_status !== 'removed' ? (
+                  <button onClick={() => handleDeactivate(actor)}
+                    className="text-xs border border-gray-200 rounded-lg py-1.5 text-gray-600 hover:bg-gray-50">
+                    Deactivate
+                  </button>
+                ) : (
+                  <div/>
+                )}
+                <button onClick={() => handleClearPin(actor)}
+                  className="text-xs border border-gray-200 rounded-lg py-1.5 text-gray-600 hover:bg-gray-50">
+                  Clear PIN
+                </button>
+              </div>
+
+              {/* Secondary actions */}
+              <div className="flex gap-2 mt-2">
+                <button onClick={() => handleResetOTP(actor.identity_id, actor.display_name)}
+                  className="flex-1 text-xs border border-gray-200 rounded-lg py-1.5 text-gray-600 hover:bg-gray-50">
+                  Reset OTP
+                </button>
+                {actor.break_status !== 'removed' && (
+                  <button
+                    onClick={async () => {
+                      if (!window.confirm(`Remove ${actor.display_name}? This cannot be undone.`)) return;
+                      try {
+                        await updateActorStatus(actor.identity_id, {
+                          action: 'remove',
+                          confirm: 'REMOVE',
+                          ...(actor.current_task_count > 0 ? { task_action: 'pool' } : {}),
+                        });
+                        load();
+                      } catch (err) { flash(err.response?.data?.message || 'Remove failed'); }
+                    }}
+                    className="flex-1 text-xs border border-red-200 rounded-lg py-1.5 text-red-600 hover:bg-red-50">
+                    Remove
+                  </button>
+                )}
+              </div>
             </div>
+
+            {/* Inline task list — expanded when Tasks button clicked */}
+            {expandedActorId === actor.identity_id && (
+              <div className="border-t border-gray-100 bg-gray-50 px-4 py-3">
+                <div className="text-xs font-medium text-gray-500 mb-2">
+                  Active tasks for {actor.display_name}
+                </div>
+                {actorTasksMap[actor.identity_id] === undefined ? (
+                  <div className="text-xs text-gray-400 py-2 text-center">Loading...</div>
+                ) : actorTasksMap[actor.identity_id].length === 0 ? (
+                  <div className="text-xs text-gray-400 py-2 text-center">No active tasks</div>
+                ) : (
+                  actorTasksMap[actor.identity_id].map(task => (
+                    <div key={task.chit_id}
+                      className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+                      <div className="flex-1 min-w-0 mr-3">
+                        <div className="text-xs text-gray-800 truncate">{task.auto_subject}</div>
+                        <div className="text-xs text-gray-400">{task.sender_entity_display_name}</div>
+                      </div>
+                      <button
+                        onClick={() => handleRouteTask(actor.identity_id, task.chit_id)}
+                        className="text-xs text-amber-700 border border-amber-200 bg-white px-2 py-1 rounded-lg flex-shrink-0 hover:bg-amber-50">
+                        Return
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
           </div>
         ))}
 
