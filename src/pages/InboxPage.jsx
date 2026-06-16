@@ -99,7 +99,7 @@ export default function InboxPage() {
   const [tab, setTab]         = useState(() => sessionStorage.getItem('inboxTab') || 'open');
   const [chits, setChits]     = useState([]);
   const [loading, setLoading] = useState(true);
-  const { entity }            = useAuth();
+  const { entity, isActor, parentEntity } = useAuth();
   const navigate              = useNavigate();
 
   useEffect(() => { loadChits(); }, [tab, entity]);
@@ -110,11 +110,11 @@ export default function InboxPage() {
       const res = await getInbox({ limit: 100 });
       const all = res.data.chits || [];
 
-      // All Task shows RECEIVED chits only — not ones I sent
-      // Filter out chits where I am the sender
+      // All Task shows RECEIVED chits only — not ones the entity sent
+      // For actors, compare against the parent entity name (not the actor's own name)
+      const senderName = isActor ? parentEntity : entity?.display_name;
       const received = all.filter(c =>
-        c.sender_entity_display_name !== entity?.display_name &&
-        c.sender_entity_bridge_id    !== entity?.bridge_id
+        c.sender_entity_display_name !== senderName
       );
 
       setChits(received);
