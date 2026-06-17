@@ -19,7 +19,25 @@ export default function ProductsManager() {
   const load = async () => { const r = await listProducts(q); setItems(r.data.items || []); };
   useEffect(() => { loadSchema(); load(); }, []);          // eslint-disable-line
 
+  // Same rules as the API: required not empty · numbers valid, not negative, respect min_value
+  const validate = () => {
+    for (const f of productFields) {
+      const v = (form[f.field_key] ?? '').toString().trim();
+      if (f.required && !v) return `${f.field_name} is required`;
+      if (f.field_type === 'number' && v !== '') {
+        const n = Number(v);
+        if (Number.isNaN(n)) return `${f.field_name} must be a number`;
+        if (n < 0)           return `${f.field_name} cannot be negative`;
+        if (f.min_value != null && n < Number(f.min_value))
+                             return `${f.field_name} must be at least ${f.min_value}`;
+      }
+    }
+    return null;
+  };
+
   const save = async () => {
+    const verr = validate();
+    if (verr) { setMsg(verr); return; }
     try {
       if (editId) await updateProduct(editId, form);
       else        await addProduct(form);
@@ -39,6 +57,7 @@ export default function ProductsManager() {
           <div key={f.field_key} className="mb-2">
             <label className="text-xs text-gray-500">{f.field_name}</label>
             <input type={f.field_type === 'number' ? 'number' : 'text'}
+              min={f.field_type === 'number' ? (f.min_value ?? 0) : undefined}
               value={form[f.field_key] || ''}
               onChange={e => setForm({ ...form, [f.field_key]: e.target.value })}
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mt-1" />
