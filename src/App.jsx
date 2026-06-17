@@ -18,6 +18,7 @@ import SetPinPage         from './pages/SetPinPage';
 import ActorProfilePage   from './pages/ActorProfilePage';
 import DisputesPage    from './pages/DisputesPage';
 import MyCataloguePage from './pages/MyCataloguePage';
+import PublicCataloguePage from './pages/PublicCataloguePage';
 import NotFoundPage    from './pages/NotFoundPage';
 
 const Protected = ({ children }) => {
@@ -30,6 +31,8 @@ const AppRoutes = () => {
   return (
     <Routes>
       <Route path="/login" element={isLoggedIn ? <Navigate to="/inbox" replace/> : <LoginPage/>}/>
+      {/* B3.7 — public storefront, no auth gate */}
+      <Route path="/c/:bridgeId" element={<PublicCataloguePage/>}/>
       <Route path="/inbox"          element={<Protected><InboxPage/></Protected>}/>
       <Route path="/chit/:chitId"   element={<Protected><ChitDetailPage/></Protected>}/>
       <Route path="/send"           element={<Protected><SendChitPage/></Protected>}/>

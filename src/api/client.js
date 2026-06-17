@@ -28,6 +28,13 @@ apiClient.interceptors.response.use(
   }
 );
 
+// Public (no-auth) instance — for the customer-facing catalogue.
+// Deliberately has NO token interceptor and NO 401 redirect.
+export const pub = axios.create({
+  baseURL: API_BASE,
+  headers: { 'Content-Type': 'application/json' },
+});
+
 // ── API functions — one per endpoint ────────────────────────
 
 // Entities
@@ -83,6 +90,13 @@ export const getCustomers     = (segment) =>
   apiClient.get(`/api/relationships/customers${segment ? `?segment=${segment}` : ''}`);
 export const setCustomerSegment = (id, segment_override) =>
   apiClient.patch(`/api/relationships/customers/${id}`, { segment_override });
+
+// B3.7 — Public catalogue + end-customer order (no auth)
+export const getPublicCatalogue = (bridgeId)       => pub.get(`/api/catalogue/${bridgeId}`);
+export const startOrder         = (bridgeId, data) => pub.post(`/api/catalogue/${bridgeId}/order/start`, data);
+export const confirmOrder       = (bridgeId, data) => pub.post(`/api/catalogue/${bridgeId}/order/confirm`, data);
+// B3.7 — Entity sets catalogue visibility (auth)
+export const setCatalogueVisibility = (visibility) => apiClient.patch('/api/schemas/visibility', { visibility });
 
 // Health
 export const healthCheck = () =>

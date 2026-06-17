@@ -3,23 +3,33 @@
 // buyers who add you as a supplier see an "Order" button (has_catalogue = true).
 import { useState, useEffect } from 'react';
 import { Layout } from '../components/Layout';
-import { getMySchema, createDefaultSchema } from '../api/client';
+import { getMySchema, createDefaultSchema, getMyProfile, setCatalogueVisibility } from '../api/client';
 
 export default function MyCataloguePage() {
   const [schema, setSchema]   = useState(null);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [msg, setMsg]         = useState('');
+  const [vis, setVis]         = useState('private');   // B3.7 catalogue visibility
+  const [bridge, setBridge]   = useState('');
 
   const load = async () => {
     setLoading(true);
     try {
       const res = await getMySchema();
       setSchema(res.data.schema);
+      setVis(res.data.schema?.visibility || 'private');
+      try { const me = await getMyProfile(); setBridge(me.data.entity?.bridge_id || ''); } catch {}
     } catch { setSchema(null); }
     setLoading(false);
   };
   useEffect(() => { load(); }, []);
+
+  const toggleVisibility = async () => {
+    const next = vis === 'public' ? 'private' : 'public';
+    try { await setCatalogueVisibility(next); setVis(next); }
+    catch (err) { setMsg(err.response?.data?.message || 'Could not change visibility'); }
+  };
 
   const publish = async () => {
     setCreating(true); setMsg('');
@@ -77,6 +87,35 @@ export default function MyCataloguePage() {
               </div>
               <div className="text-xs text-gray-400 mt-3">
                 ✓ Buyers who add you as a supplier now see an <span className="font-medium text-gray-600">Order</span> button.
+              </div>
+
+              {/* B3.7 — public storefront link */}
+              <div className="mt-4 pt-3 border-t border-gray-100">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-sm font-medium text-gray-800">Public storefront</div>
+                    <div className="text-xs text-gray-400">
+                      {vis === 'public'
+                        ? 'Anyone with the link can place an order'
+                        : 'Only you can see this catalogue'}
+                    </div>
+                  </div>
+                  <button onClick={toggleVisibility}
+                    className={`text-xs font-medium px-3 py-1.5 rounded-lg border ${
+                      vis === 'public'
+                        ? 'bg-gray-50 text-gray-600 border-gray-200'
+                        : 'bg-blue-600 text-white border-blue-600'}`}>
+                    {vis === 'public' ? 'Make private' : 'Make public'}
+                  </button>
+                </div>
+                {vis === 'public' && bridge && (
+                  <div className="mt-2 bg-blue-50 border border-blue-100 rounded-lg p-2.5">
+                    <div className="text-xs text-gray-400 mb-0.5">Share this link with customers:</div>
+                    <div className="text-xs text-blue-700 break-all font-mono">
+                      {window.location.origin}/c/{bridge}
+                    </div>
+                  </div>
+                )}
               </div>
             </>
           ) : (
