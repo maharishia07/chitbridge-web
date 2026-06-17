@@ -2,6 +2,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { addSupplier, getSuppliers, removeSupplier, searchEntities } from '../api/client';
+import ListControls from '../components/ListControls';
+import { filterList } from '../utils/filterList';
 
 export default function SupplierListView() {
   const navigate = useNavigate();
@@ -11,6 +13,8 @@ export default function SupplierListView() {
   const [selected, setSelected] = useState(null); // chosen { identity_id, display_name, bridge_id }
   const [cat, setCat]       = useState('');
   const [msg, setMsg]       = useState('');
+  const [q, setQ]           = useState('');          // filter the displayed list
+  const [supFilter, setSupFilter] = useState('all'); // all | catalogue
   const timerRef = useRef(null);
 
   const load = async () => {
@@ -55,6 +59,9 @@ export default function SupplierListView() {
     navigate('/send?supplier=1');
   };
 
+  let shown = filterList(list, q, ['display_name', 'category', 'bridge_id']);
+  if (supFilter === 'catalogue') shown = shown.filter(s => s.has_catalogue);
+
   return (
     <div>
       <form onSubmit={add} className="mb-4">
@@ -98,9 +105,16 @@ export default function SupplierListView() {
         )}
       </form>
       {msg && <div className="text-red-600 text-xs mb-3">{msg}</div>}
+      {list.length > 0 && (
+        <ListControls query={q} onQuery={setQ} placeholder="Filter your suppliers…"
+          filters={[{ value: 'all', label: 'All' }, { value: 'catalogue', label: 'Has catalogue' }]}
+          value={supFilter} onFilter={setSupFilter}/>
+      )}
       {list.length === 0
         ? <div className="text-gray-400 text-sm text-center py-8">No suppliers yet. Search by name or paste a bridge ID.</div>
-        : list.map(s => (
+        : shown.length === 0
+        ? <div className="text-gray-400 text-sm text-center py-6">No suppliers match your filter.</div>
+        : shown.map(s => (
           <div key={s.supplier_list_id}
             className="flex items-center justify-between border border-gray-200 rounded-lg p-3 mb-2 bg-white">
             <div className="min-w-0">

@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import { useAuth } from '../context/AuthContext';
 import { getDisputeQueue } from '../api/client';
+import ListControls from '../components/ListControls';
+import { filterList } from '../utils/filterList';
 
 const CATEGORY_LABEL = {
   quality:  'Quality issue',
@@ -34,6 +36,7 @@ export default function DisputesPage() {
   const [disputes, setDisputes] = useState([]);
   const [loading, setLoading]   = useState(true);
   const [tab, setTab]           = useState('all');
+  const [q, setQ]               = useState('');
 
   const effectiveEntityId = isActor ? parentEntityId : entity?.identity_id;
 
@@ -58,7 +61,8 @@ export default function DisputesPage() {
     { id: 'other',  label: `Other party (${counterparty.length})` },
   ];
 
-  const shown = tab === 'raised' ? raised : tab === 'other' ? counterparty : openDisputes;
+  const tabList = tab === 'raised' ? raised : tab === 'other' ? counterparty : openDisputes;
+  const shown = filterList(tabList, q, ['auto_subject','category','raised_by_display_name']);
 
   return (
     <Layout title="Disputes">
@@ -78,6 +82,7 @@ export default function DisputesPage() {
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto px-4 py-3">
+          <ListControls query={q} onQuery={setQ} placeholder="Search disputes by subject, category or who raised…"/>
           {loading ? (
             <div className="text-center py-12 text-gray-400 text-sm">Loading…</div>
           ) : shown.length === 0 ? (

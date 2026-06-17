@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import { useAuth } from '../context/AuthContext';
 import { getInbox, assignChit, updateChitStatus } from '../api/client';
+import ListControls from '../components/ListControls';
+import { filterList } from '../utils/filterList';
 
 const OPEN_STATUSES  = ['pending', 'delivered', 'read'];
 const ACT_STATUSES   = ['accepted', 'in_progress', 'partial'];
@@ -65,6 +67,7 @@ export default function MyTasksPage() {
   const [tasks, setTasks]     = useState([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab]         = useState('open');
+  const [q, setQ]             = useState('');
   const [msg, setMsg]         = useState('');
   const navigate = useNavigate();
 
@@ -112,9 +115,10 @@ export default function MyTasksPage() {
     return date.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
   };
 
-  const openTasks  = tasks.filter(t => OPEN_STATUSES.includes(t.current_status));
-  const actTasks   = tasks.filter(t => ACT_STATUSES.includes(t.current_status));
-  const closeTasks = tasks.filter(t => CLOSE_STATUSES.includes(t.current_status));
+  const shown = filterList(tasks, q, ['auto_subject','manual_subject','sender_entity_display_name']);
+  const openTasks  = shown.filter(t => OPEN_STATUSES.includes(t.current_status));
+  const actTasks   = shown.filter(t => ACT_STATUSES.includes(t.current_status));
+  const closeTasks = shown.filter(t => CLOSE_STATUSES.includes(t.current_status));
   const tabTasks   = tab === 'open' ? openTasks : tab === 'act' ? actTasks : closeTasks;
 
   // Non-actor landing
@@ -145,8 +149,13 @@ export default function MyTasksPage() {
           </div>
         )}
 
+        {/* Search */}
+        <div className="px-3 mt-3 flex-shrink-0">
+          <ListControls query={q} onQuery={setQ} placeholder="Search tasks by subject or sender…"/>
+        </div>
+
         {/* Tabs */}
-        <div className="flex border-b border-gray-200 bg-white mt-3 flex-shrink-0">
+        <div className="flex border-b border-gray-200 bg-white flex-shrink-0">
           {[
             { id: 'open',  label: `Open [${openTasks.length}]` },
             { id: 'act',   label: `Progress [${actTasks.length}]` },

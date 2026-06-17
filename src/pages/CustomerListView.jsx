@@ -2,6 +2,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getCustomers, setCustomerSegment } from '../api/client';
+import ListControls from '../components/ListControls';
+import { filterList } from '../utils/filterList';
 
 const SEGMENTS = ['all','high_value','regular','new','inactive'];
 const OVERRIDES = ['high_value','regular','new','inactive'];
@@ -19,6 +21,7 @@ export default function CustomerListView() {
   const [list, setList] = useState([]);
   const [picked, setPicked] = useState([]);   // [{ identity_id, display_name }]
   const [editing, setEditing] = useState(null); // customer_list_id whose override is open
+  const [q, setQ]           = useState('');   // search on top of the segment filter
 
   const load = async (s) => {
     try { const r = await getCustomers(s === 'all' ? '' : s); setList(r.data.customers || []); } catch {}
@@ -40,6 +43,8 @@ export default function CustomerListView() {
     try { await setCustomerSegment(id, value); setEditing(null); load(seg); } catch {}
   };
 
+  const shown = filterList(list, q, ['display_name', 'bridge_id']);
+
   return (
     <div>
       <div className="flex gap-1.5 mb-4 flex-wrap">
@@ -52,6 +57,8 @@ export default function CustomerListView() {
         ))}
       </div>
 
+      <ListControls query={q} onQuery={setQ} placeholder="Search customers by name or bridge ID…"/>
+
       {picked.length > 0 && (
         <button onClick={promote}
           className="bg-green-600 text-white rounded-lg px-4 py-2 text-sm mb-3 w-full">
@@ -59,9 +66,11 @@ export default function CustomerListView() {
         </button>
       )}
 
-      {list.length === 0
-        ? <div className="text-gray-400 text-sm text-center py-8">No customers in this segment yet.</div>
-        : list.map(c => {
+      {shown.length === 0
+        ? <div className="text-gray-400 text-sm text-center py-8">
+            {list.length === 0 ? 'No customers in this segment yet.' : 'No customers match your search.'}
+          </div>
+        : shown.map(c => {
           const isPicked = picked.some(x => x.identity_id === c.customer_identity_id);
           return (
             <div key={c.customer_list_id}

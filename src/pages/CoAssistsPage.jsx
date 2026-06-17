@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { Layout } from '../components/Layout';
 import { listActors, updateActorStatus, resetActorOTP, createActor, suggestActorKey,
          getActorTasks, routeActorTask, clearActorPin } from '../api/client';
+import ListControls from '../components/ListControls';
+import { filterList } from '../utils/filterList';
 
 const LoadBar = ({ current, max }) => {
   const pct = max > 0 ? Math.round((current / max) * 100) : 0;
@@ -42,6 +44,7 @@ export default function CoAssistsPage() {
   const [summary, setSummary]   = useState({});
   const [loading, setLoading]   = useState(true);
   const [filter, setFilter]     = useState('all');
+  const [q, setQ]               = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName]   = useState('');
   const [newKey, setNewKey]     = useState('');
@@ -162,6 +165,8 @@ export default function CoAssistsPage() {
     }
   };
 
+  const shown = filterList(actors, q, ['display_name', 'actor_key']);
+
   return (
     <Layout title="Co-Assists">
       <div className="max-w-lg mx-auto p-4">
@@ -197,6 +202,9 @@ export default function CoAssistsPage() {
           </button>
         </div>
 
+        {/* Search */}
+        <ListControls query={q} onQuery={setQ} placeholder="Search co-assists by name or login…"/>
+
         {msg && (
           <div className="mb-3 text-xs bg-blue-50 text-blue-700 px-3 py-2 rounded-lg border border-blue-200">{msg}</div>
         )}
@@ -224,7 +232,9 @@ export default function CoAssistsPage() {
             <div className="text-sm">No co-assists yet</div>
             <button onClick={() => setShowCreate(true)} className="mt-3 text-xs text-blue-600">Add first co-assist</button>
           </div>
-        ) : actors.map(actor => (
+        ) : shown.length === 0 ? (
+          <div className="text-center py-12 text-gray-400 text-sm">No co-assists match your search</div>
+        ) : shown.map(actor => (
           <div key={actor.identity_id} className="bg-white rounded-xl border border-gray-100 mb-3 overflow-hidden">
             <div className="p-4">
               <div className="flex items-start gap-3">

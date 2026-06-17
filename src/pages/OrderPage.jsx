@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import { getInbox, updateChitStatus } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import ListControls from '../components/ListControls';
+import { filterList } from '../utils/filterList';
 
 const STATUS_PILL = {
   pending:     'bg-amber-100 text-amber-800',
@@ -38,6 +40,7 @@ export default function OrderPage() {
   const [loading, setLoading] = useState(true);
   const [cancelling, setCancelling] = useState(null);
   const [msg, setMsg] = useState('');
+  const [q, setQ] = useState('');
   const { entity, isActor, parentEntity } = useAuth();
   const navigate = useNavigate();
 
@@ -82,8 +85,9 @@ export default function OrderPage() {
     catch { return {}; }
   };
 
-  const openOrders   = orders.filter(o => !['completed','cancelled','rejected'].includes(o.current_status));
-  const closedOrders = orders.filter(o => ['completed','cancelled','rejected'].includes(o.current_status));
+  const shown = filterList(orders, q, ['auto_subject','manual_subject','sender_entity_display_name']);
+  const openOrders   = shown.filter(o => !['completed','cancelled','rejected'].includes(o.current_status));
+  const closedOrders = shown.filter(o => ['completed','cancelled','rejected'].includes(o.current_status));
 
   return (
     <Layout title="Order">
@@ -106,6 +110,9 @@ export default function OrderPage() {
           </div>
         ) : (
           <>
+            <div className="px-4 pt-3">
+              <ListControls query={q} onQuery={setQ} placeholder="Search orders by subject or sender…"/>
+            </div>
             {/* Open orders */}
             {openOrders.length > 0 && (
               <>
