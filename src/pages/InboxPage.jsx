@@ -168,6 +168,25 @@ const DeleteConfirmModal = ({ chit, onCancel, onConfirm, deleting }) => (
   </div>
 );
 
+// ── Dispute-block Notice Popup ───────────────────────────────
+const DisputeBlockModal = ({ onClose }) => (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-6"
+    onClick={onClose}>
+    <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-5 text-center"
+      onClick={e => e.stopPropagation()}>
+      <div className="text-3xl mb-2">⚠️</div>
+      <div className="text-sm font-semibold text-gray-900 mb-1">Cannot delete this chit</div>
+      <p className="text-xs text-gray-600 leading-relaxed mb-4">
+        Disputed chits cannot be deleted until the dispute is resolved.
+      </p>
+      <button onClick={onClose}
+        className="w-full py-2.5 rounded-xl bg-blue-600 text-white text-sm font-medium">
+        Got it
+      </button>
+    </div>
+  </div>
+);
+
 // ── Advanced Filter Sheet ────────────────────────────────────
 const FilterSheet = ({ filters, onChange, onClose, onClear }) => (
   <div className="fixed inset-0 z-50 flex flex-col justify-end" onClick={onClose}>
@@ -281,7 +300,7 @@ const ChitCard = ({
   chit, onSwipeLeft, onSwipeRight,
   isActor, actorId, onPull, onAssignOpen,
   assigningChitId, actorList, onPushToActor,
-  onAdvance, onRegress, onDelete,
+  onAdvance, onRegress, onDelete, onDisputeBlock,
 }) => {
   const navigate = useNavigate();
 
@@ -453,15 +472,15 @@ const ChitCard = ({
           </button>
         )}
 
-        {/* Delete — disabled while an open dispute is registered */}
+        {/* Delete — looks disabled while an open dispute is registered;
+            clicking it still pops a notice instead of deleting */}
         <button
-          onClick={e => { e.stopPropagation(); if (!hasDispute) onDelete(chit); }}
+          onClick={e => { e.stopPropagation(); hasDispute ? onDisputeBlock() : onDelete(chit); }}
           onMouseDown={e => e.stopPropagation()}
-          disabled={hasDispute}
-          title={hasDispute ? 'Cannot delete — open dispute registered' : 'Delete chit'}
+          title={hasDispute ? 'Disputed chits cannot be deleted until the dispute is resolved' : 'Delete chit'}
           className={`w-9 h-9 flex items-center justify-center rounded-lg border text-base transition-colors ${
             hasDispute
-              ? 'text-gray-200 border-gray-100 cursor-not-allowed'
+              ? 'text-gray-300 border-gray-100 bg-gray-50 cursor-not-allowed'
               : 'text-red-600 border-red-200 bg-red-50 hover:bg-red-100'
           }`}>
           🗑
@@ -511,6 +530,7 @@ export default function InboxPage() {
   const [activeUndo, setActiveUndo] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null); // chit pending delete confirm
   const [deleting, setDeleting]     = useState(false);
+  const [disputeBlock, setDisputeBlock] = useState(false); // show "cannot delete" notice
 
   const { entity, isActor, parentEntity } = useAuth();
   const navigate = useNavigate();
@@ -807,6 +827,7 @@ export default function InboxPage() {
                       onAdvance={handleAdvance}
                       onRegress={handleRegress}
                       onDelete={setDeleteTarget}
+                      onDisputeBlock={() => setDisputeBlock(true)}
                     />
                   ))}
                 </div>
@@ -842,6 +863,11 @@ export default function InboxPage() {
           onCancel={() => !deleting && setDeleteTarget(null)}
           onConfirm={handleConfirmDelete}
         />
+      )}
+
+      {/* Dispute-block notice */}
+      {disputeBlock && (
+        <DisputeBlockModal onClose={() => setDisputeBlock(false)} />
       )}
     </Layout>
   );
