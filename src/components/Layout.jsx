@@ -41,11 +41,10 @@ const NavItem = ({ icon, label, to, badge, badgeColour = 'blue', onClick }) => {
 
 // ── Notification Centre ──────────────────────────────────────
 const NotificationCentre = ({ chits = [], onClose, onNavigate }) => {
-  const notifications = chits
+  const chitNotifs = chits
     .filter(c => !c.read_at)
-    .slice(0, 20)
     .map(c => ({
-      id: c.chit_id,
+      id: `chit-${c.chit_id}`,
       icon: c.current_status === 'pending' ? '📦'
           : c.current_status === 'completed' ? '✅'
           : c.current_status === 'rejected' ? '✗'
@@ -54,7 +53,28 @@ const NotificationCentre = ({ chits = [], onClose, onNavigate }) => {
       sub: c.auto_subject,
       time: c.created_at,
       chitId: c.chit_id,
+      tab: '',
     }));
+
+  const msgNotifs = chits
+    .filter(c => {
+      if (!c.last_message_at) return false;
+      if (!c.read_at) return false; // already in chitNotifs as unread
+      return new Date(c.last_message_at) > new Date(c.read_at);
+    })
+    .map(c => ({
+      id: `msg-${c.chit_id}`,
+      icon: '💬',
+      title: `New message on ${c.purpose || 'transaction'} from ${c.sender_entity_display_name}`,
+      sub: c.auto_subject,
+      time: c.last_message_at,
+      chitId: c.chit_id,
+      tab: '?tab=status',
+    }));
+
+  const notifications = [...chitNotifs, ...msgNotifs]
+    .sort((a, b) => new Date(b.time) - new Date(a.time))
+    .slice(0, 20);
 
   return (
     <div className="fixed inset-0 z-50 flex" onClick={onClose}>
@@ -72,7 +92,7 @@ const NotificationCentre = ({ chits = [], onClose, onNavigate }) => {
             </div>
           ) : notifications.map(n => (
             <button key={n.id}
-              onClick={() => { onNavigate(`/chit/${n.chitId}`); onClose(); }}
+              onClick={() => { onNavigate(`/chit/${n.chitId}${n.tab || ''}`); onClose(); }}
               className="w-full text-left px-4 py-3 border-b border-gray-50 hover:bg-blue-50 flex gap-3 items-start">
               <span className="text-lg flex-shrink-0">{n.icon}</span>
               <div className="flex-1 min-w-0">
@@ -151,7 +171,11 @@ export const Layout = ({ children, title, unreadCount = 0 }) => {
     if (entity) loadCounts();
   }, [entity, isActor]);
 
-  const unread = unreadCount || allChits.filter(c => !c.read_at).length;
+  const unreadChits = allChits.filter(c => !c.read_at).length;
+  const unreadMsgs  = allChits.filter(c =>
+    c.last_message_at && c.read_at && new Date(c.last_message_at) > new Date(c.read_at)
+  ).length;
+  const unread = unreadCount || (unreadChits + unreadMsgs);
   const isOnBreak = isActor && entity?.break_status && entity.break_status !== 'active';
   const headerBg = isActor
     ? (entity?.break_status === 'short_break' || entity?.break_status === 'leave' ? 'bg-amber-600' : 'bg-green-700')
