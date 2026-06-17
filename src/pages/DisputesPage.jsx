@@ -18,6 +18,16 @@ const fmtShort = (d) => d
   ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })
   : '';
 
+const getAge = (dateStr) => {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const days = Math.floor(diff / 86400000);
+  const hrs  = Math.floor(diff / 3600000);
+  if (days >= 3)  return { label: `${days}d old`, colour: 'text-red-600 bg-red-50 border-red-200' };
+  if (days >= 1)  return { label: `${days}d old`, colour: 'text-amber-600 bg-amber-50 border-amber-200' };
+  if (hrs >= 1)   return { label: `${hrs}h old`,  colour: 'text-gray-500 bg-gray-50 border-gray-200' };
+  return           { label: 'Recent',              colour: 'text-gray-500 bg-gray-50 border-gray-200' };
+};
+
 export default function DisputesPage() {
   const { entity, isActor, parentEntityId } = useAuth();
   const navigate = useNavigate();
@@ -77,38 +87,39 @@ export default function DisputesPage() {
               <div className="text-xs text-gray-400 mt-1">All clear</div>
             </div>
           ) : (
-            shown.map(d => (
-              <button
-                key={d.dispute_id}
-                onClick={() => navigate(`/chit/${d.chit_id}?tab=status`)}
-                className="w-full text-left bg-white rounded-xl border border-gray-100 p-4 mb-3 active:bg-gray-50">
-                <div className="flex items-start justify-between gap-2 mb-2">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-red-500 text-base">⚠️</span>
-                    <span className="text-xs font-semibold text-red-700">
-                      {CATEGORY_LABEL[d.category] || d.category}
+            shown.map(d => {
+              const age = getAge(d.created_at);
+              return (
+                <button
+                  key={d.dispute_id}
+                  onClick={() => navigate(`/chit/${d.chit_id}?tab=status`)}
+                  className={`w-full text-left rounded-xl border p-4 mb-3 active:opacity-80 ${age.colour}`}>
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-base">⚠️</span>
+                      <span className="text-xs font-semibold text-red-700">
+                        {CATEGORY_LABEL[d.category] || d.category}
+                      </span>
+                    </div>
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full border flex-shrink-0 ${age.colour}`}>
+                      {age.label}
                     </span>
                   </div>
-                  <span className="text-xs text-gray-400 flex-shrink-0">{fmtShort(d.created_at)}</span>
-                </div>
-                <div className="text-xs text-gray-700 leading-snug mb-2 line-clamp-2">
-                  {d.reason}
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="text-xs text-gray-500">
-                    Raised by <span className="font-medium text-gray-700">{d.raised_by_display_name}</span>
+                  {d.auto_subject && (
+                    <div className="text-xs font-medium text-gray-700 mb-1 truncate">{d.auto_subject}</div>
+                  )}
+                  <div className="text-xs text-gray-600 leading-snug mb-2 line-clamp-2">
+                    {d.reason}
                   </div>
-                  <div className="text-xs text-blue-600 font-medium">
-                    View chit →
+                  <div className="flex items-center justify-between">
+                    <div className="text-xs text-gray-500">
+                      Raised by <span className="font-medium text-gray-700">{d.raised_by_display_name}</span>
+                    </div>
+                    <div className="text-xs text-blue-600 font-medium">View chit →</div>
                   </div>
-                </div>
-                {d.chit_subject && (
-                  <div className="mt-1.5 text-xs text-gray-400 truncate">
-                    {d.chit_subject}
-                  </div>
-                )}
-              </button>
-            ))
+                </button>
+              );
+            })
           )}
         </div>
       </div>
