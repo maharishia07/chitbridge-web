@@ -17,6 +17,7 @@ import MyTasksPage        from './pages/MyTasksPage';
 import SetPinPage         from './pages/SetPinPage';
 import ActorProfilePage   from './pages/ActorProfilePage';
 import DisputesPage    from './pages/DisputesPage';
+import MyCataloguePage from './pages/MyCataloguePage';
 import NotFoundPage    from './pages/NotFoundPage';
 
 const Protected = ({ children }) => {
@@ -42,7 +43,7 @@ const AppRoutes = () => {
       <Route path="/profile"        element={<Protected><ActorProfilePage/></Protected>}/>
       <Route path="/disputes"       element={<Protected><DisputesPage/></Protected>}/>
       <Route path="/employees"      element={<Protected><CoAssistsPage/></Protected>}/>
-      <Route path="/my-catalogue"   element={<Protected><StubPage title="My Catalogue" phase="Phase 1" description="Publish your product catalogue for buyers."/></Protected>}/>
+      <Route path="/my-catalogue"   element={<Protected><MyCataloguePage/></Protected>}/>
       <Route path="/my-catalogue/upload" element={<Protected><StubPage title="Bulk Upload" phase="Phase 1" description="Upload products from CSV or Excel."/></Protected>}/>
       <Route path="/break" element={<Protected><StubPage title="Go on Break" phase="Under Development" description="View which co-assists are currently on break and manage break schedules. Use the Go on break button in My Task to manage your own break status."/></Protected>}/>
       <Route path="/" element={<Navigate to="/inbox" replace/>}/>
