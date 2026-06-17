@@ -69,6 +69,9 @@ export const getChitDetail = (chitId) =>
 export const updateChitStatus = (chitId, status, note) =>
   apiClient.put(`/api/chits/${chitId}/status`, { status, note });
 
+export const deleteChit = (chitId) =>
+  apiClient.delete(`/api/chits/${chitId}`);
+
 // Health
 export const healthCheck = () =>
   apiClient.get('/health');

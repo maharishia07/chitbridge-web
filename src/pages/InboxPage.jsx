@@ -17,7 +17,7 @@ import { useNavigate } from 'react-router-dom';
 import { useSwipeable } from 'react-swipeable';
 import { Layout } from '../components/Layout';
 import { useAuth } from '../context/AuthContext';
-import { getInbox, updateChitStatus, assignChit, listActors } from '../api/client';
+import { getInbox, updateChitStatus, assignChit, listActors, deleteChit } from '../api/client';
 
 // ── Constants ────────────────────────────────────────────────
 const OPEN_STATUSES  = ['pending', 'delivered', 'read'];
@@ -139,6 +139,35 @@ const UndoToast = ({ message, onUndo, onDismiss }) => {
   );
 };
 
+// ── Delete Confirm Modal ─────────────────────────────────────
+const DeleteConfirmModal = ({ chit, onCancel, onConfirm, deleting }) => (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-6"
+    onClick={onCancel}>
+    <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-5"
+      onClick={e => e.stopPropagation()}>
+      <div className="flex items-center gap-2 mb-2">
+        <span className="text-xl">🗑</span>
+        <span className="text-sm font-semibold text-gray-900">Delete this chit?</span>
+      </div>
+      <p className="text-xs text-gray-600 leading-relaxed mb-1">
+        <span className="font-medium text-gray-800">{chit?.auto_subject || 'This transaction'}</span> will
+        be removed from your inbox. The other party keeps their copy.
+      </p>
+      <p className="text-xs text-gray-400 mb-4">This only affects your view.</p>
+      <div className="flex gap-2">
+        <button onClick={onCancel} disabled={deleting}
+          className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 disabled:opacity-50">
+          Cancel
+        </button>
+        <button onClick={onConfirm} disabled={deleting}
+          className="flex-1 py-2.5 rounded-xl bg-red-600 text-white text-sm font-medium disabled:opacity-50">
+          {deleting ? 'Deleting…' : 'Delete'}
+        </button>
+      </div>
+    </div>
+  </div>
+);
+
 // ── Advanced Filter Sheet ────────────────────────────────────
 const FilterSheet = ({ filters, onChange, onClose, onClear }) => (
   <div className="fixed inset-0 z-50 flex flex-col justify-end" onClick={onClose}>
@@ -252,7 +281,7 @@ const ChitCard = ({
   chit, onSwipeLeft, onSwipeRight,
   isActor, actorId, onPull, onAssignOpen,
   assigningChitId, actorList, onPushToActor,
-  onAdvance, onRegress,
+  onAdvance, onRegress, onDelete,
 }) => {
   const navigate = useNavigate();
 
@@ -423,6 +452,20 @@ const ChitCard = ({
             ↓
           </button>
         )}
+
+        {/* Delete — disabled while an open dispute is registered */}
+        <button
+          onClick={e => { e.stopPropagation(); if (!hasDispute) onDelete(chit); }}
+          onMouseDown={e => e.stopPropagation()}
+          disabled={hasDispute}
+          title={hasDispute ? 'Cannot delete — open dispute registered' : 'Delete chit'}
+          className={`w-9 h-9 flex items-center justify-center rounded-lg border text-base transition-colors ${
+            hasDispute
+              ? 'text-gray-200 border-gray-100 cursor-not-allowed'
+              : 'text-red-600 border-red-200 bg-red-50 hover:bg-red-100'
+          }`}>
+          🗑
+        </button>
       </div>
 
       {showPicker && !isActor && (
@@ -466,6 +509,8 @@ export default function InboxPage() {
   const [showFilter, setShowFilter] = useState(false);
   const [undoQueue, setUndoQueue]   = useState([]); // [{id, msg, previousStatus}]
   const [activeUndo, setActiveUndo] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null); // chit pending delete confirm
+  const [deleting, setDeleting]     = useState(false);
 
   const { entity, isActor, parentEntity } = useAuth();
   const navigate = useNavigate();
@@ -545,6 +590,21 @@ export default function InboxPage() {
       setAssigningChitId(null);
       loadChits();
     } catch (err) { console.error(err); }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await deleteChit(deleteTarget.chit_id);
+      setDeleteTarget(null);
+      loadChits();
+    } catch (err) {
+      // Backend blocks delete while a dispute is open (409)
+      alert(err?.response?.data?.message || 'Delete failed');
+    } finally {
+      setDeleting(false);
+    }
   };
 
   // ── Filter logic ────────────────────────────────────────────
@@ -746,6 +806,7 @@ export default function InboxPage() {
                       onPushToActor={handlePushToActor}
                       onAdvance={handleAdvance}
                       onRegress={handleRegress}
+                      onDelete={setDeleteTarget}
                     />
                   ))}
                 </div>
@@ -770,6 +831,16 @@ export default function InboxPage() {
           onChange={filterChange}
           onClose={() => setShowFilter(false)}
           onClear={() => { clearFilters(); setShowFilter(false); }}
+        />
+      )}
+
+      {/* Delete confirm modal */}
+      {deleteTarget && (
+        <DeleteConfirmModal
+          chit={deleteTarget}
+          deleting={deleting}
+          onCancel={() => !deleting && setDeleteTarget(null)}
+          onConfirm={handleConfirmDelete}
         />
       )}
     </Layout>
