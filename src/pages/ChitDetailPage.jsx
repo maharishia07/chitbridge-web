@@ -151,7 +151,7 @@ function DisputeBanner({ disputes, myEntityId, onResolve, resolving }) {
 function ResolveInline({ dispute, myEntityId, onResolve, resolving }) {
   const [resolutionNote, setResolutionNote] = useState('');
   const [expanded, setExpanded] = useState(false);
-  const canResolve = dispute.raised_by_entity_id !== myEntityId;
+  const canResolve = dispute.raised_by_entity_id === myEntityId;
 
   const categoryLabel = DISPUTE_CATEGORIES.find(c => c.value === dispute.category)?.label || dispute.category;
 
@@ -160,7 +160,7 @@ function ResolveInline({ dispute, myEntityId, onResolve, resolving }) {
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
           <div className="text-xs font-medium text-red-700">{categoryLabel}</div>
-          <div className="text-xs text-gray-600 mt-0.5 leading-snug">{dispute.description}</div>
+          <div className="text-xs text-gray-600 mt-0.5 leading-snug">{dispute.reason}</div>
           <div className="text-xs text-gray-400 mt-1">
             Raised by {dispute.raised_by_display_name} · {fmtShort(dispute.created_at)}
           </div>
@@ -196,131 +196,138 @@ function ResolveInline({ dispute, myEntityId, onResolve, resolving }) {
 
 function InternalSeparator() {
   return (
-    <div className="flex items-center gap-2 my-3 px-1">
-      <div className="flex-1 h-px bg-purple-200"/>
-      <span className="text-xs text-purple-500 font-medium">Internal</span>
-      <div className="flex-1 h-px bg-purple-200"/>
+    <div className="flex items-center gap-2 my-3">
+      <div className="flex-1 border-t-2 border-dashed border-green-300"/>
+      <div className="flex items-center gap-1.5 bg-green-50 border border-green-200 rounded-full px-2.5 py-1 flex-shrink-0">
+        <span className="text-xs font-medium text-green-700">Internal — your team only</span>
+        <span className="text-xs bg-green-200 text-green-800 px-1.5 py-0.5 rounded-full font-medium">never seen by customer</span>
+      </div>
+      <div className="flex-1 border-t-2 border-dashed border-green-300"/>
     </div>
   );
 }
 
-function MessageThread({ messages, myEntityId, thread }) {
-  const filtered = thread === 'all' ? messages
-    : thread === 'internal' ? messages.filter(m => m.visibility_entity_id != null)
-    : messages.filter(m => m.visibility_entity_id == null);
-
-  if (filtered.length === 0) {
-    return (
-      <div className="text-xs text-gray-400 text-center py-6">
-        {thread === 'internal' ? 'No internal notes yet' : thread === 'external' ? 'No messages yet' : 'No messages yet'}
-      </div>
-    );
-  }
-
+function MessageBubbles({ msgs, myEntityId, isInternalSection }) {
   let lastDate = null;
-  const items = [];
-  filtered.forEach((m, i) => {
+  return msgs.map((m) => {
     const msgDate = new Date(m.created_at).toLocaleDateString('en-IN', { day:'2-digit', month:'short' });
-    if (msgDate !== lastDate) {
-      items.push(<div key={`d-${i}`} className="text-center text-xs text-gray-400 my-2">{msgDate}</div>);
-      lastDate = msgDate;
-    }
+    const showDate = msgDate !== lastDate;
+    lastDate = msgDate;
     const isMe = m.sender_entity_id === myEntityId;
-    const isInternal = m.visibility_entity_id != null;
-    if (thread === 'all' && isInternal && i > 0 && !filtered[i-1]?.visibility_entity_id) {
-      items.push(<InternalSeparator key={`sep-${i}`}/>);
-    }
-    items.push(
-      <div key={m.message_id} className={`flex mb-2 ${isMe ? 'justify-end' : 'justify-start'}`}>
-        <div className={`max-w-xs rounded-2xl px-3 py-2 ${
-          isInternal
-            ? 'bg-purple-50 border border-purple-200 text-purple-900'
-            : isMe
-              ? 'bg-blue-600 text-white'
-              : 'bg-white border border-gray-200 text-gray-800'
-        }`}>
-          {!isMe && (
-            <div className={`text-xs font-medium mb-0.5 ${isInternal ? 'text-purple-600' : 'text-gray-500'}`}>
-              {m.sender_display_name}
-              {isInternal && <span className="ml-1 text-purple-400">(internal)</span>}
-            </div>
-          )}
-          <div className="text-xs leading-relaxed break-words">{m.message_text}</div>
-          <div className={`text-xs mt-1 text-right ${
-            isInternal ? 'text-purple-400' : isMe ? 'text-blue-200' : 'text-gray-400'
+    const isInternal = isInternalSection || m.visibility_entity_id != null;
+    return (
+      <div key={m.message_id}>
+        {showDate && <div className="text-center text-xs text-gray-400 my-2">{msgDate}</div>}
+        <div className={`flex mb-2 ${isMe ? 'justify-end' : 'justify-start'}`}>
+          <div className={`max-w-xs rounded-2xl px-3 py-2 ${
+            isInternal
+              ? 'bg-green-50 border border-green-200 text-green-900'
+              : isMe
+                ? 'bg-blue-600 text-white'
+                : 'bg-white border border-gray-200 text-gray-800'
           }`}>
-            {fmtTime(m.created_at)}
+            {!isMe && (
+              <div className={`text-xs font-medium mb-0.5 ${isInternal ? 'text-green-700' : 'text-gray-500'}`}>
+                {m.sender_display_name}
+              </div>
+            )}
+            <div className="text-xs leading-relaxed break-words">{m.message_text}</div>
+            <div className={`text-xs mt-1 text-right ${
+              isInternal ? 'text-green-500' : isMe ? 'text-blue-200' : 'text-gray-400'
+            }`}>
+              {fmtTime(m.created_at)}
+            </div>
           </div>
         </div>
       </div>
     );
   });
-
-  return <div className="px-4 py-2">{items}</div>;
 }
 
-function MessageBar({ onSend, isActor, sending }) {
-  const [text, setText] = useState('');
-  const [isInternal, setIsInternal] = useState(false);
-  const textRef = useRef(null);
+function MessageThread({ messages, myEntityId, thread }) {
+  const externals = messages.filter(m => m.visibility_entity_id == null);
+  const internals = messages.filter(m => m.visibility_entity_id != null);
 
-  const handleSend = () => {
-    const trimmed = text.trim();
-    if (!trimmed) return;
-    onSend(trimmed, isInternal);
-    setText('');
-    textRef.current?.focus();
+  if (thread === 'external') {
+    if (externals.length === 0)
+      return <div className="text-xs text-gray-400 text-center py-6">No messages yet</div>;
+    return <div className="px-4 py-2"><MessageBubbles msgs={externals} myEntityId={myEntityId} isInternalSection={false}/></div>;
+  }
+
+  if (thread === 'internal') {
+    if (internals.length === 0)
+      return <div className="text-xs text-gray-400 text-center py-6">No internal messages yet</div>;
+    return <div className="px-4 py-2"><MessageBubbles msgs={internals} myEntityId={myEntityId} isInternalSection={true}/></div>;
+  }
+
+  // All — externals first, separator, then internals
+  if (externals.length === 0 && internals.length === 0)
+    return <div className="text-xs text-gray-400 text-center py-6">No messages yet</div>;
+
+  return (
+    <div className="px-4 py-2">
+      <MessageBubbles msgs={externals} myEntityId={myEntityId} isInternalSection={false}/>
+      {internals.length > 0 && <InternalSeparator/>}
+      <MessageBubbles msgs={internals} myEntityId={myEntityId} isInternalSection={true}/>
+    </div>
+  );
+}
+
+function MessageBar({ onSend, sending }) {
+  const [extText, setExtText] = useState('');
+  const [intText, setIntText] = useState('');
+  const extRef = useRef(null);
+  const intRef = useRef(null);
+
+  const handleExt = () => {
+    if (!extText.trim() || sending) return;
+    onSend(extText.trim(), false);
+    setExtText('');
+    extRef.current?.focus();
   };
 
-  const handleKey = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
+  const handleInt = () => {
+    if (!intText.trim() || sending) return;
+    onSend(intText.trim(), true);
+    setIntText('');
+    intRef.current?.focus();
   };
 
   return (
-    <div className="border-t border-gray-200 bg-white px-3 py-2 flex-shrink-0">
-      {isActor && (
-        <div className="flex items-center gap-2 mb-1.5">
-          <button
-            onClick={() => setIsInternal(false)}
-            className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
-              !isInternal ? 'bg-blue-600 text-white border-blue-600' : 'text-gray-500 border-gray-200'
-            }`}>
-            External
-          </button>
-          <button
-            onClick={() => setIsInternal(true)}
-            className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
-              isInternal ? 'bg-purple-600 text-white border-purple-600' : 'text-gray-500 border-gray-200'
-            }`}>
-            Internal
-          </button>
-          {isInternal && <span className="text-xs text-purple-500">Only visible to your team</span>}
+    <div className="border-t border-gray-200 bg-white px-3 pt-2 pb-3 flex-shrink-0 space-y-2">
+      {/* External bar — blue */}
+      <div className="flex items-center gap-2">
+        <div className="flex-1 flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-2xl px-3 py-2">
+          <span className="text-xs font-semibold text-blue-500 flex-shrink-0">Ext</span>
+          <input
+            ref={extRef}
+            value={extText}
+            onChange={e => setExtText(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleExt(); } }}
+            placeholder="Message all parties…"
+            className="flex-1 bg-transparent text-xs text-blue-900 placeholder-blue-300 focus:outline-none"
+          />
         </div>
-      )}
-      <div className="flex items-end gap-2">
-        <textarea
-          ref={textRef}
-          value={text}
-          onChange={e => setText(e.target.value)}
-          onKeyDown={handleKey}
-          rows={1}
-          placeholder={isInternal ? 'Internal note…' : 'Type a message…'}
-          className={`flex-1 border rounded-2xl px-3 py-2 text-sm resize-none max-h-24 overflow-y-auto focus:outline-none focus:ring-2 ${
-            isInternal
-              ? 'border-purple-200 focus:ring-purple-300'
-              : 'border-gray-200 focus:ring-blue-300'
-          }`}
-          style={{ minHeight: '36px' }}
-        />
-        <button
-          onClick={handleSend}
-          disabled={sending || !text.trim()}
-          className={`w-9 h-9 flex items-center justify-center rounded-full flex-shrink-0 disabled:opacity-40 transition-colors ${
-            isInternal ? 'bg-purple-600 text-white' : 'bg-blue-600 text-white'
-          }`}>
+        <button onClick={handleExt} disabled={sending || !extText.trim()}
+          className="w-9 h-9 flex-shrink-0 flex items-center justify-center rounded-full bg-blue-600 text-white disabled:opacity-40">
+          ↑
+        </button>
+      </div>
+      {/* Internal bar — green */}
+      <div className="flex items-center gap-2">
+        <div className="flex-1 flex items-center gap-2 bg-green-50 border border-green-200 rounded-2xl px-3 py-2">
+          <span className="text-xs font-semibold text-green-600 flex-shrink-0">Int</span>
+          <input
+            ref={intRef}
+            value={intText}
+            onChange={e => setIntText(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleInt(); } }}
+            placeholder="Your team only — never sent to customer…"
+            className="flex-1 bg-transparent text-xs text-green-900 placeholder-green-400 focus:outline-none"
+          />
+        </div>
+        <button onClick={handleInt} disabled={sending || !intText.trim()}
+          className="w-9 h-9 flex-shrink-0 flex items-center justify-center rounded-full bg-green-600 text-white disabled:opacity-40">
           ↑
         </button>
       </div>
@@ -724,7 +731,6 @@ export default function ChitDetailPage() {
             {/* Message bar pinned to bottom of status tab */}
             <MessageBar
               onSend={handleSendMessage}
-              isActor={isActor}
               sending={sending}
             />
           </div>

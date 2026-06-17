@@ -288,6 +288,7 @@ const ChitCard = ({
 
   const hasDispute = parseInt(chit.open_dispute_count || 0) > 0;
   const disputeCount = parseInt(chit.open_dispute_count || 0);
+  const msgCount = parseInt(chit.message_count || 0);
 
   return (
     <div
@@ -331,6 +332,14 @@ const ChitCard = ({
               <span className="text-xs px-1.5 py-0.5 rounded font-medium bg-red-100 text-red-700">
                 ⚠️ disputed · {disputeCount}
               </span>
+            )}
+            {msgCount > 0 && (
+              <button
+                onClick={e => { e.stopPropagation(); navigate(`/chit/${chit.chit_id}?tab=status`); }}
+                onMouseDown={e => e.stopPropagation()}
+                className="text-xs px-1.5 py-0.5 rounded font-medium bg-blue-50 text-blue-600 border border-blue-100">
+                💬 {msgCount}
+              </button>
             )}
             {summary.line_item_count > 0 && (
               <span className="text-xs text-gray-400">
