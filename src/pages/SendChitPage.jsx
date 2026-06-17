@@ -136,6 +136,7 @@ export default function SendChitPage() {
 
   // B3.6 — prefill receivers when arriving from a supplier "Order" or a customer promotion
   const [prefillBanner, setPrefillBanner] = useState('');
+  const [isPromo, setIsPromo] = useState(false); // promotion = one private chit per customer
 
   const [purpose,     setPurpose]     = useState('order');
   const [toSearch,    setToSearch]    = useState('');
@@ -183,7 +184,8 @@ export default function SendChitPage() {
         const valid = recvs.filter(r => r?.identity_id);
         if (valid.length) {
           setToEntities(valid);
-          setPrefillBanner(`Promotion to ${valid.length} customer${valid.length !== 1 ? 's' : ''}`);
+          setIsPromo(true);
+          setPrefillBanner(`Promotion to ${valid.length} customer${valid.length !== 1 ? 's' : ''} — each gets a separate private chit`);
         }
       } catch {}
       sessionStorage.removeItem('cb_promote_receivers');
@@ -223,13 +225,20 @@ export default function SendChitPage() {
         };
       });
 
-      await sendChit({
-        receivers:      toEntities.map(e => ({ entity_id: e.identity_id })),
+      const base = {
         purpose,
         manual_subject: subject,
         line_items:     lineItems,
         business_json:  { currency, range_mode: rangeMode },
-      });
+      };
+      if (isPromo) {
+        // One separate, private guaranteed chit per customer — they never see each other (D-066)
+        for (const e of toEntities) {
+          await sendChit({ ...base, receivers: [{ entity_id: e.identity_id }] });
+        }
+      } else {
+        await sendChit({ ...base, receivers: toEntities.map(e => ({ entity_id: e.identity_id })) });
+      }
       navigate('/inbox');
     } catch (err) {
       setError(err.response?.data?.message || 'Send failed');
