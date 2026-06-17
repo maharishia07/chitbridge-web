@@ -376,6 +376,11 @@ const ChitCard = ({
             <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${STATUS_PILL[chit.current_status] || 'bg-gray-100 text-gray-600'}`}>
               {STATUS_LABEL[chit.current_status] || chit.current_status}
             </span>
+            {summary.is_promotion && (
+              <span className="text-xs px-1.5 py-0.5 rounded font-medium bg-pink-100 text-pink-700">
+                🎁 Offer
+              </span>
+            )}
             {hasDispute && (
               <span className="text-xs px-1.5 py-0.5 rounded font-medium bg-red-100 text-red-700">
                 ⚠️ disputed · {disputeCount}

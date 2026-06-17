@@ -229,7 +229,7 @@ export default function SendChitPage() {
         purpose,
         manual_subject: subject,
         line_items:     lineItems,
-        business_json:  { currency, range_mode: rangeMode },
+        business_json:  { currency, range_mode: rangeMode, ...(isPromo ? { is_promotion: true } : {}) },
       };
       if (isPromo) {
         // One separate, private guaranteed chit per customer — they never see each other (D-066)
