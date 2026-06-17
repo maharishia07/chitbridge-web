@@ -419,7 +419,7 @@ export default function ChitDetailPage() {
   const handleSendMessage = async (text, isInternal) => {
     setSending(true);
     try {
-      await sendMessage(chitId, { message_text: text, is_internal: isInternal });
+      await sendMessage(chitId, { message_text: text, thread_type: isInternal ? 'internal' : 'external' });
       const res = await getMessages(chitId, 'all');
       setMessages(res.data.messages || []);
     } catch (err) {
