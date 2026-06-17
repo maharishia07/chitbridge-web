@@ -72,6 +72,18 @@ export const updateChitStatus = (chitId, status, note) =>
 export const deleteChit = (chitId) =>
   apiClient.delete(`/api/chits/${chitId}`);
 
+// Relationships — Suppliers (B3.6)
+export const addSupplier      = (data) => apiClient.post('/api/relationships/suppliers', data);
+export const getSuppliers     = ()     => apiClient.get('/api/relationships/suppliers');
+export const removeSupplier   = (id)   => apiClient.delete(`/api/relationships/suppliers/${id}`);
+export const getSupplierCatalogue = (supplierEntityId) =>
+  apiClient.get(`/api/relationships/suppliers/${supplierEntityId}/catalogue`);
+// Relationships — Customers (B3.6)
+export const getCustomers     = (segment) =>
+  apiClient.get(`/api/relationships/customers${segment ? `?segment=${segment}` : ''}`);
+export const setCustomerSegment = (id, segment_override) =>
+  apiClient.patch(`/api/relationships/customers/${id}`, { segment_override });
+
 // Health
 export const healthCheck = () =>
   apiClient.get('/health');

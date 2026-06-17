@@ -6,7 +6,7 @@
 //   Min-max fields per line item when range mode active
 //   Total shows range when applicable
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import { sendChit, getConnections, searchEntities } from '../api/client';
 import { useAuth } from '../context/AuthContext';
@@ -132,6 +132,10 @@ const ConfirmModal = ({ data, onConfirm, onEdit, loading }) => {
 export default function SendChitPage() {
   const { entity, isActor, parentEntity } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // B3.6 — prefill receivers when arriving from a supplier "Order" or a customer promotion
+  const [prefillBanner, setPrefillBanner] = useState('');
 
   const [purpose,     setPurpose]     = useState('order');
   const [toSearch,    setToSearch]    = useState('');
@@ -160,6 +164,31 @@ export default function SendChitPage() {
     }, 300);
     return () => clearTimeout(t);
   }, [toSearch]);
+
+  // B3.6 — pick up a supplier order or a customer promotion handed over via sessionStorage
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('supplier')) {
+      try {
+        const s = JSON.parse(sessionStorage.getItem('cb_order_supplier') || 'null');
+        if (s?.identity_id) {
+          setToEntities([s]);
+          setPrefillBanner(`Ordering from ${s.display_name}`);
+        }
+      } catch {}
+      sessionStorage.removeItem('cb_order_supplier');
+    } else if (params.get('promote')) {
+      try {
+        const recvs = JSON.parse(sessionStorage.getItem('cb_promote_receivers') || '[]');
+        const valid = recvs.filter(r => r?.identity_id);
+        if (valid.length) {
+          setToEntities(valid);
+          setPrefillBanner(`Promotion to ${valid.length} customer${valid.length !== 1 ? 's' : ''}`);
+        }
+      } catch {}
+      sessionStorage.removeItem('cb_promote_receivers');
+    }
+  }, []);
 
   const updateItem = (id, field, val) =>
     setItems(prev => prev.map(i => i.id === id ? { ...i, [field]: val } : i));
@@ -211,6 +240,12 @@ export default function SendChitPage() {
   return (
     <Layout title="Compose">
       <form onSubmit={handleSubmitClick} className="max-w-lg mx-auto p-4 space-y-4">
+
+        {prefillBanner && (
+          <div className="text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded-lg px-3 py-2 flex items-center gap-2">
+            <span>📦</span><span className="font-medium">{prefillBanner}</span>
+          </div>
+        )}
 
         {/* Purpose */}
         <div>

@@ -3,6 +3,14 @@ import { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Layout } from '../components/Layout';
 import { getConnections, getPendingConnections, requestConnection, respondToConnection, searchEntities } from '../api/client';
+import SupplierListView from './SupplierListView';
+import CustomerListView from './CustomerListView';
+
+const RIBBON = [
+  { id: 'suppliers', label: 'Suppliers' },
+  { id: 'customers', label: 'Customers' },
+  { id: 'network',   label: 'Network' },
+];
 
 const formatDate = (d) => new Date(d).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' });
 
@@ -17,7 +25,11 @@ const Avatar = ({ name, size = 'md' }) => {
 
 export default function ConnectionsPage() {
   const location = useLocation();
-  const initialTab = new URLSearchParams(location.search).get('tab') === 'pending' ? 'pending' : 'partners';
+  const urlTab = new URLSearchParams(location.search).get('tab');
+  // Network deep-links (?tab=pending / ?tab=partners) land on the Network ribbon
+  const [ribbon, setRibbon]     = useState(
+    urlTab === 'pending' || urlTab === 'partners' ? 'network' : 'suppliers');
+  const initialTab = urlTab === 'pending' ? 'pending' : 'partners';
   const [tab, setTab]           = useState(initialTab);
   const [connections, setConns] = useState([]);
   const [pending, setPending]   = useState([]);
@@ -98,6 +110,22 @@ export default function ConnectionsPage() {
           <div className={`text-xs px-3 py-2 rounded-lg border ${msgStyle}`}>{msg.text}</div>
         )}
 
+        {/* Three-ribbon — Suppliers / Customers / Network (D-063) */}
+        <div className="flex border-b border-gray-200">
+          {RIBBON.map(r => (
+            <button key={r.id} onClick={() => setRibbon(r.id)}
+              className={`flex-1 py-2.5 text-xs font-medium border-b-2 transition-colors ${
+                ribbon === r.id ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500'
+              }`}>
+              {r.label}
+            </button>
+          ))}
+        </div>
+
+        {ribbon === 'suppliers' && <SupplierListView/>}
+        {ribbon === 'customers' && <CustomerListView/>}
+
+        {ribbon === 'network' && (<>
         {/* Search and connect */}
         <div className="bg-white rounded-xl border border-gray-100 p-4">
           <div className="text-xs text-gray-400 uppercase tracking-wide mb-2">Find and connect</div>
@@ -233,6 +261,7 @@ export default function ConnectionsPage() {
             </div>
           )
         )}
+        </>)}
       </div>
     </Layout>
   );
