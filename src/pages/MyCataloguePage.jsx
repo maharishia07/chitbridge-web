@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react';
 import { Layout } from '../components/Layout';
 import { getMySchema, createDefaultSchema, getMyProfile, setCatalogueVisibility } from '../api/client';
+import ProductsManager from './ProductsManager';
 
 export default function MyCataloguePage() {
   const [schema, setSchema]   = useState(null);
@@ -145,6 +146,9 @@ export default function MyCataloguePage() {
             </>
           )}
         </div>
+
+        {/* B3.7a — manage the products in the catalogue (only when published) */}
+        {schema && <ProductsManager />}
 
       </div>
     </Layout>

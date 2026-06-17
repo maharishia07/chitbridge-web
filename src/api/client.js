@@ -98,6 +98,12 @@ export const confirmOrder       = (bridgeId, data) => pub.post(`/api/catalogue/$
 // B3.7 — Entity sets catalogue visibility (auth)
 export const setCatalogueVisibility = (visibility) => apiClient.patch('/api/schemas/visibility', { visibility });
 
+// B3.7a — Catalogue items (products) CRUD + search
+export const listProducts  = (q)              => apiClient.get('/api/products', { params: q ? { q } : {} });
+export const addProduct    = (item_data)      => apiClient.post('/api/products', { item_data });
+export const updateProduct = (id, item_data)  => apiClient.patch(`/api/products/${id}`, { item_data });
+export const deleteProduct = (id)             => apiClient.delete(`/api/products/${id}`);
+
 // Health
 export const healthCheck = () =>
   apiClient.get('/health');

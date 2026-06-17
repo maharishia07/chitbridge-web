@@ -7,7 +7,8 @@ export default function PublicCataloguePage() {
   const { bridgeId } = useParams();
   const [shop, setShop]     = useState(null);
   const [fields, setFields] = useState([]);
-  const [values, setValues] = useState({});
+  const [items, setItems]   = useState([]);          // B3.7a products
+  const [qty, setQty]       = useState({});          // { item_id: quantity }
   const [step, setStep]     = useState('browse');   // browse | phone | otp | done
   const [phone, setPhone]   = useState('');
   const [name, setName]     = useState('');
@@ -21,27 +22,30 @@ export default function PublicCataloguePage() {
     (async () => {
       try {
         const r = await getPublicCatalogue(bridgeId);
-        setShop(r.data.shop); setFields(r.data.fields || []);
+        setShop(r.data.shop); setFields(r.data.fields || []); setItems(r.data.items || []);
       } catch (e) { setErr(e.response?.data?.message || 'Catalogue not available'); }
       setLoading(false);
     })();
   }, [bridgeId]);
 
-  const lineItem = () => {
-    const item = {}; fields.forEach(f => { item[f.field_key] = values[f.field_key] ?? ''; });
-    const price = parseFloat(values.price || 0), qty = parseFloat(values.quantity || 1);
-    if (!isNaN(price)) item.total = Math.round(price * qty * 100) / 100;
-    // map the product/first text field to `particulars` so the shop's chit detail renders it
-    const firstText = fields.find(f => f.field_type !== 'number');
-    item.particulars = values.product ?? (firstText ? values[firstText.field_key] : '') ?? '';
-    item.quantity = qty;
-    if (!isNaN(price)) item.price = price;
-    return item;
-  };
+  // product fields = schema fields minus quantity (qty is chosen by the customer)
+  const productFields = fields.filter(f => f.field_key !== 'quantity');
+  const labelOf = (it) => productFields.map(f => it.item_data[f.field_key]).filter(Boolean).join(' · ');
+
+  // build line items from products the customer gave a quantity to
+  const lineItems = () => items
+    .filter(it => parseFloat(qty[it.item_id] || 0) > 0)
+    .map(it => {
+      const q = parseFloat(qty[it.item_id]);
+      const price = parseFloat(it.item_data.price || 0);
+      const firstText = productFields.find(f => f.field_type !== 'number');
+      // map to `particulars` so the shop's chit detail shows the product name
+      const particulars = it.item_data.product ?? (firstText ? it.item_data[firstText.field_key] : '') ?? '';
+      return { ...it.item_data, particulars, quantity: q, price, total: Math.round(price * q * 100) / 100 };
+    });
 
   const beginPhone = () => {
-    const missing = fields.filter(f => f.required && !values[f.field_key]);
-    if (missing.length) return setErr(`Please fill: ${missing.map(f => f.field_name).join(', ')}`);
+    if (lineItems().length === 0) return setErr('Add a quantity to at least one product');
     setErr(''); setStep('phone');
   };
   const sendOtp = async () => {
@@ -50,7 +54,7 @@ export default function PublicCataloguePage() {
   };
   const placeOrder = async () => {
     try {
-      const r = await confirmOrder(bridgeId, { phone, otp, line_items: [lineItem()] });
+      const r = await confirmOrder(bridgeId, { phone, otp, line_items: lineItems() });
       setDone(r.data); setStep('done');
     } catch (e) { setErr(e.response?.data?.message || 'Order failed'); }
   };
@@ -65,16 +69,19 @@ export default function PublicCataloguePage() {
       {err && <div className="bg-red-50 text-red-700 text-xs p-2 rounded-lg mb-3">{err}</div>}
 
       {step === 'browse' && (<>
-        {fields.map(f => (
-          <div key={f.field_key} className="mb-3">
-            <label className="text-xs text-gray-500">{f.field_name}{f.required && ' *'}</label>
-            <input type={f.field_type === 'number' ? 'number' : 'text'}
-              value={values[f.field_key] || ''}
-              onChange={e => setValues({ ...values, [f.field_key]: e.target.value })}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mt-1" />
+        {items.length === 0 ? (
+          <p className="text-sm text-gray-400">This shop hasn't added any products yet.</p>
+        ) : items.map(it => (
+          <div key={it.item_id} className="flex justify-between items-center py-2 border-b border-gray-100">
+            <div className="text-sm text-gray-700">{labelOf(it)}</div>
+            <input type="number" min="0" placeholder="Qty" value={qty[it.item_id] || ''}
+              onChange={e => setQty({ ...qty, [it.item_id]: e.target.value })}
+              className="w-16 border border-gray-200 rounded-lg px-2 py-1 text-sm text-right" />
           </div>
         ))}
-        <button onClick={beginPhone} className="w-full bg-blue-600 text-white text-sm font-medium py-3 rounded-lg mt-2">Continue</button>
+        {items.length > 0 && (
+          <button onClick={beginPhone} className="w-full bg-blue-600 text-white text-sm font-medium py-3 rounded-lg mt-3">Continue</button>
+        )}
       </>)}
 
       {step === 'phone' && (<>
