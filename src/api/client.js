@@ -139,3 +139,23 @@ export const getActorTasks = (actor_id) =>
 
 export const routeActorTask = (actor_id, data) =>
   apiClient.put(`/api/actors/${actor_id}/tasks/route`, data);
+
+// ── B3.5 — Messaging ────────────────────────────────────────
+export const sendMessage = (chit_id, data) =>
+  apiClient.post(`/api/chits/${chit_id}/messages`, data);
+
+export const getMessages = (chit_id, thread_type = 'all') =>
+  apiClient.get(`/api/chits/${chit_id}/messages`, { params: { thread_type } });
+
+// ── B3.5 — Disputes ─────────────────────────────────────────
+export const raiseDispute = (chit_id, data) =>
+  apiClient.post(`/api/chits/${chit_id}/disputes`, data);
+
+export const getDisputes = (chit_id) =>
+  apiClient.get(`/api/chits/${chit_id}/disputes`);
+
+export const resolveDispute = (chit_id, dispute_id, data) =>
+  apiClient.put(`/api/chits/${chit_id}/disputes/${dispute_id}/resolve`, data);
+
+export const getDisputeQueue = () =>
+  apiClient.get('/api/chits/disputes/queue');

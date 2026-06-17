@@ -231,6 +231,7 @@ export const Layout = ({ children, title, unreadCount = 0 }) => {
         <NavItem icon="📥" label="All Task"  to="/inbox"    badge={counts.open} onClick={close}/>
         <NavItem icon="✅" label="My Task"   to="/my-tasks" onClick={close}/>
         <NavItem icon="📋" label="Order"     to="/order"    onClick={close}/>
+        <NavItem icon="⚠️" label="Disputes"  to="/disputes" onClick={close}/>
 
         <div className="border-t border-gray-100 my-2"/>
 
