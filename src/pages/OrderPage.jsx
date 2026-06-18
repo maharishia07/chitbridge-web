@@ -122,7 +122,7 @@ export default function OrderPage() {
         ) : (
           <>
             <div className="px-4 pt-3">
-              <ListControls query={q} onQuery={setQ} placeholder="Search orders by subject or sender…"/>
+              <ListControls query={q} onQuery={setQ} placeholder="Search orders by subject…"/>
             </div>
             {/* Open orders */}
             {openOrders.length > 0 && (
@@ -133,6 +133,10 @@ export default function OrderPage() {
                 {openOrders.map(order => {
                   const summary = parseSummary(order.summary_json);
                   const canCancel = ['pending','delivered','read','accepted','in_progress'].includes(order.current_status);
+                  const recvs = receiverNames(order.all_recipients);
+                  const recvLabel = recvs.length ? recvs.join(', ') : '—';
+                  const byActor = order.placed_by_type === 'actor';
+                  const dateStr = new Date(order.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
                   return (
                     <div key={order.chit_id}
                       className="mx-4 mb-3 bg-white rounded-xl border border-gray-100 overflow-hidden">
@@ -142,7 +146,7 @@ export default function OrderPage() {
                         <div className="flex items-start justify-between mb-1">
                           <div className="flex-1 min-w-0">
                             <div className="text-xs font-medium text-gray-800 truncate">
-                              {order.auto_subject}
+                              Order to {recvLabel} — {dateStr}
                             </div>
                             {order.manual_subject && (
                               <div className="text-xs text-gray-400 italic truncate">"{order.manual_subject}"</div>
@@ -158,32 +162,16 @@ export default function OrderPage() {
                             {summary.total_value && ` · INR ${parseFloat(summary.total_value).toLocaleString('en-IN')}`}
                           </div>
                         )}
-                        {/* Recipient + who placed it */}
-                        {(() => {
-                          const recvs = receiverNames(order.all_recipients);
-                          const byActor = order.placed_by_type === 'actor';
-                          return (
-                            <div className="flex flex-col gap-1">
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                <div className={`w-2 h-2 rounded-full flex-shrink-0 ${STATUS_DOT[order.current_status] || 'bg-gray-400'}`}/>
-                                <span className="text-xs text-gray-600">
-                                  To <span className="font-medium text-gray-800">{recvs.length ? recvs.join(', ') : '—'}</span>
-                                </span>
-                                <span className={`text-xs px-1.5 py-0.5 rounded ml-auto ${STATUS_PILL[order.current_status] || 'bg-gray-100 text-gray-600'}`}>
-                                  {order.current_status}
-                                </span>
-                              </div>
-                              {order.placed_by_name && (
-                                <div className="text-xs text-gray-400 flex items-center gap-1">
-                                  Placed by {order.placed_by_name}
-                                  <span className={`px-1 py-0.5 rounded ${byActor ? 'bg-purple-50 text-purple-700' : 'bg-blue-50 text-blue-700'}`}>
-                                    {byActor ? 'co-assist' : 'entity'}
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })()}
+                        {/* Order status + who placed it (no repeated names) */}
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <div className={`w-2 h-2 rounded-full flex-shrink-0 ${STATUS_DOT[order.current_status] || 'bg-gray-400'}`}/>
+                          <span className={`text-xs px-1.5 py-0.5 rounded font-medium ${STATUS_PILL[order.current_status] || 'bg-gray-100 text-gray-600'}`}>
+                            Order: {order.current_status}
+                          </span>
+                          <span className={`text-xs px-1.5 py-0.5 rounded ml-auto ${byActor ? 'bg-purple-50 text-purple-700' : 'bg-blue-50 text-blue-700'}`}>
+                            {byActor ? 'co-assist' : 'entity'}
+                          </span>
+                        </div>
                       </div>
                       {/* Cancel button */}
                       {canCancel && (
@@ -210,17 +198,19 @@ export default function OrderPage() {
                 </div>
                 {closedOrders.map(order => {
                   const summary = parseSummary(order.summary_json);
+                  const recvs = receiverNames(order.all_recipients);
+                  const recvLabel = recvs.length ? recvs.join(', ') : '—';
                   return (
                     <div key={order.chit_id}
                       className="mx-4 mb-3 bg-white rounded-xl border border-gray-100 p-3 opacity-70 cursor-pointer active:opacity-100"
                       onClick={() => navigate(`/chit/${order.chit_id}`)}>
                       <div className="flex items-start justify-between mb-1">
-                        <div className="text-xs font-medium text-gray-600 truncate flex-1">{order.auto_subject}</div>
+                        <div className="text-xs font-medium text-gray-600 truncate flex-1">Order to {recvLabel}</div>
                         <span className="text-xs text-gray-400 ml-2 flex-shrink-0">{formatDate(order.created_at)}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <span className={`text-xs px-1.5 py-0.5 rounded ${STATUS_PILL[order.current_status] || 'bg-gray-100 text-gray-600'}`}>
-                          {order.current_status}
+                          Order: {order.current_status}
                         </span>
                         {summary.total_value && (
                           <span className="text-xs text-gray-400">INR {parseFloat(summary.total_value).toLocaleString('en-IN')}</span>
