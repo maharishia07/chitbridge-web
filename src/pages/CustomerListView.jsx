@@ -81,9 +81,14 @@ export default function CustomerListView() {
                   <div className="text-sm font-medium text-gray-900 truncate">{c.display_name}</div>
                   <div className="text-xs text-gray-400">
                     {c.customer_type} · {c.txn_count} order{c.txn_count !== 1 ? 's' : ''} · via {c.added_via}</div>
-                  <div className="text-xs text-gray-300 truncate">
-                    {c.identity_type || 'entity'} · scope {c.owner_scope || 'entity'}
-                    {c.email ? ` · ${c.email}` : ''}
+                  <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                    <span className="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">
+                      {c.identity_type || 'entity'}
+                    </span>
+                    <span className="text-xs bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded">
+                      scope: {c.owner_scope || 'entity'}
+                    </span>
+                    {c.email && <span className="text-xs text-gray-400 truncate">{c.email}</span>}
                   </div>
                 </div>
                 <button onClick={() => setEditing(p => p === c.customer_list_id ? null : c.customer_list_id)}
