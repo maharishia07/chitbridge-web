@@ -3,7 +3,7 @@
 // buyers who add you as a supplier see an "Order" button (has_catalogue = true).
 import { useState, useEffect } from 'react';
 import { Layout } from '../components/Layout';
-import { getMySchema, createDefaultSchema, getMyProfile, setCatalogueVisibility } from '../api/client';
+import { getMySchema, createDefaultSchema, getMyProfile, setCatalogueVisibility, updateEntityProfile } from '../api/client';
 import ProductsManager from './ProductsManager';
 
 export default function MyCataloguePage() {
@@ -13,6 +13,9 @@ export default function MyCataloguePage() {
   const [msg, setMsg]         = useState('');
   const [vis, setVis]         = useState('private');   // B3.7 catalogue visibility
   const [bridge, setBridge]   = useState('');
+  const [gstn, setGstn]       = useState('');          // B3.9 shop identity
+  const [logoUrl, setLogoUrl] = useState('');
+  const [profMsg, setProfMsg] = useState('');
 
   const load = async () => {
     setLoading(true);
@@ -20,11 +23,22 @@ export default function MyCataloguePage() {
       const res = await getMySchema();
       setSchema(res.data.schema);
       setVis(res.data.schema?.visibility || 'private');
-      try { const me = await getMyProfile(); setBridge(me.data.entity?.bridge_id || ''); } catch {}
+      try {
+        const me = await getMyProfile();
+        setBridge(me.data.entity?.bridge_id || '');
+        setGstn(me.data.entity?.gstn || '');
+        setLogoUrl(me.data.entity?.logo_url || '');
+      } catch {}
     } catch { setSchema(null); }
     setLoading(false);
   };
   useEffect(() => { load(); }, []);
+
+  const saveProfile = async () => {
+    setProfMsg('');
+    try { await updateEntityProfile({ gstn, logo_url: logoUrl }); setProfMsg('Saved'); }
+    catch (err) { setProfMsg(err.response?.data?.message || 'Save failed'); }
+  };
 
   const toggleVisibility = async () => {
     const next = vis === 'public' ? 'private' : 'public';
@@ -110,13 +124,37 @@ export default function MyCataloguePage() {
                   </button>
                 </div>
                 {vis === 'public' && bridge && (
-                  <div className="mt-2 bg-blue-50 border border-blue-100 rounded-lg p-2.5">
-                    <div className="text-xs text-gray-400 mb-0.5">Share this link with customers:</div>
-                    <div className="text-xs text-blue-700 break-all font-mono">
-                      {window.location.origin}/c/{bridge}
+                  <>
+                    <div className="mt-2 bg-blue-50 border border-blue-100 rounded-lg p-2.5">
+                      <div className="text-xs text-gray-400 mb-0.5">Share this link with customers:</div>
+                      <div className="text-xs text-blue-700 break-all font-mono">
+                        {window.location.origin}/c/{bridge}
+                      </div>
                     </div>
-                  </div>
+                    <div className="mt-2 bg-gray-50 border border-gray-100 rounded-lg p-2.5">
+                      <div className="text-xs text-gray-400 mb-0.5">Embed on your website (copy-paste):</div>
+                      <code className="text-xs text-gray-600 break-all block whitespace-pre-wrap">{`<iframe src="${window.location.origin}/c/${bridge}?embed=1" style="width:100%;max-width:480px;height:640px;border:0" loading="lazy"></iframe>`}</code>
+                    </div>
+                  </>
                 )}
+              </div>
+
+              {/* B3.9 — shop identity (GSTN + logo) shown on the storefront */}
+              <div className="mt-4 pt-3 border-t border-gray-100">
+                <div className="text-sm font-medium text-gray-800 mb-2">Shop identity</div>
+                <label className="text-xs text-gray-500">GSTIN</label>
+                <input value={gstn} onChange={e => setGstn(e.target.value)} maxLength={15}
+                  placeholder="22AAAAA0000A1Z5"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mt-1 mb-2" />
+                <label className="text-xs text-gray-500">Logo URL</label>
+                <input value={logoUrl} onChange={e => setLogoUrl(e.target.value)}
+                  placeholder="https://…/logo.png"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mt-1 mb-2" />
+                <div className="flex items-center gap-2">
+                  <button onClick={saveProfile}
+                    className="bg-blue-600 text-white text-xs font-medium px-4 py-2 rounded-lg">Save identity</button>
+                  {profMsg && <span className="text-xs text-gray-500">{profMsg}</span>}
+                </div>
               </div>
             </>
           ) : (

@@ -98,6 +98,13 @@ export const confirmOrder       = (bridgeId, data) => pub.post(`/api/catalogue/$
 // B3.7 — Entity sets catalogue visibility (auth)
 export const setCatalogueVisibility = (visibility) => apiClient.patch('/api/schemas/visibility', { visibility });
 
+// B3.9 — Customer storefront sign-in + order history (public; token passed explicitly)
+export const loginVerify = (bridgeId, data)  => pub.post(`/api/catalogue/${bridgeId}/login/verify`, data);
+export const myOrders    = (bridgeId, token) =>
+  pub.get(`/api/catalogue/${bridgeId}/my-orders`, { headers: { Authorization: `Bearer ${token}` } });
+// B3.9 — Entity sets its GSTN / logo / address (auth)
+export const updateEntityProfile = (data)    => apiClient.patch('/api/entities/profile', data);
+
 // B3.7a — Catalogue items (products) CRUD + search
 export const listProducts  = (q)              => apiClient.get('/api/products', { params: q ? { q } : {} });
 export const addProduct    = (item_data)      => apiClient.post('/api/products', { item_data });

@@ -1,10 +1,11 @@
 // src/pages/PublicCataloguePage.jsx — B3.7 public storefront + order-first flow
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { getPublicCatalogue, startOrder, confirmOrder } from '../api/client';
+import { getPublicCatalogue, startOrder, confirmOrder, loginVerify, myOrders } from '../api/client';
 
 export default function PublicCataloguePage() {
   const { bridgeId } = useParams();
+  const embed = new URLSearchParams(window.location.search).get('embed') === '1';
   const [shop, setShop]     = useState(null);
   const [fields, setFields] = useState([]);
   const [items, setItems]   = useState([]);          // B3.7a products
@@ -17,6 +18,12 @@ export default function PublicCataloguePage() {
   const [done, setDone]     = useState(null);
   const [err, setErr]       = useState('');
   const [loading, setLoading] = useState(true);
+  // B3.9 — customer sign-in to view orders
+  const [account, setAccount]   = useState('menu');  // menu | signin-phone | signin-otp | orders
+  const [orders, setOrders]     = useState([]);
+  const [siPhone, setSiPhone]   = useState('');
+  const [siOtp, setSiOtp]       = useState('');
+  const [siDevOtp, setSiDevOtp] = useState('');
 
   useEffect(() => {
     (async () => {
@@ -59,14 +66,86 @@ export default function PublicCataloguePage() {
     } catch (e) { setErr(e.response?.data?.message || 'Order failed'); }
   };
 
+  // B3.9 — sign in (phone OTP, no order) and load my orders
+  const doSignInStart = async () => {
+    try { const r = await startOrder(bridgeId, { phone: siPhone }); setSiDevOtp(r.data.dev_otp || ''); setErr(''); setAccount('signin-otp'); }
+    catch (e) { setErr(e.response?.data?.message || 'Could not send code'); }
+  };
+  const doSignInVerify = async () => {
+    try {
+      const r = await loginVerify(bridgeId, { phone: siPhone, otp: siOtp });
+      const o = await myOrders(bridgeId, r.data.token);
+      setOrders(o.data.orders || []); setErr(''); setAccount('orders');
+    } catch (e) { setErr(e.response?.data?.message || 'Sign-in failed'); }
+  };
+
   if (loading) return <Shell><p className="text-sm text-gray-400">Loading…</p></Shell>;
   if (!shop)   return <Shell><p className="text-sm text-red-600">{err || 'Shop not found'}</p></Shell>;
 
   return (
     <Shell>
-      <div className="text-xs text-blue-600 uppercase tracking-wide font-semibold">{shop.display_name}</div>
-      <h1 className="text-lg font-semibold text-gray-800 mb-3">Place an order</h1>
+      {/* Shop identity + trust (B3.9) */}
+      <div className="flex items-center gap-3 mb-3">
+        {shop.logo_url && <img src={shop.logo_url} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />}
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="text-base font-semibold text-gray-800 truncate">{shop.display_name}</span>
+            {shop.is_verified && (
+              <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full border border-blue-200 flex-shrink-0">✓ Verified</span>
+            )}
+          </div>
+          {shop.gstn && <div className="text-xs text-gray-400">GSTIN: {shop.gstn}</div>}
+          {shop.address && <div className="text-xs text-gray-400">{shop.address}</div>}
+        </div>
+      </div>
+
+      {/* Sign in to see your order (hidden in embed mode) */}
+      {!embed && account === 'menu' && (
+        <div className="text-right mb-2">
+          <button onClick={() => { setErr(''); setAccount('signin-phone'); }} className="text-xs text-blue-600 underline">
+            Sign in to see your order
+          </button>
+        </div>
+      )}
+
       {err && <div className="bg-red-50 text-red-700 text-xs p-2 rounded-lg mb-3">{err}</div>}
+
+      {account === 'signin-phone' && (<>
+        <h2 className="text-sm font-medium text-gray-700 mb-2">Sign in to see your orders</h2>
+        <label className="text-xs text-gray-500">Phone number *</label>
+        <input value={siPhone} onChange={e => setSiPhone(e.target.value)}
+          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mt-1" />
+        <button onClick={doSignInStart} className="w-full bg-blue-600 text-white text-sm font-medium py-3 rounded-lg mt-3">Send code</button>
+        <button onClick={() => setAccount('menu')} className="w-full text-xs text-gray-400 mt-2">Back</button>
+      </>)}
+
+      {account === 'signin-otp' && (<>
+        {siDevOtp && <div className="bg-amber-50 text-amber-700 text-xs p-2 rounded-lg mb-2">Dev OTP: <b>{siDevOtp}</b></div>}
+        <label className="text-xs text-gray-500">Enter the 6-digit code</label>
+        <input value={siOtp} onChange={e => setSiOtp(e.target.value)} maxLength={6}
+          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mt-1 tracking-widest" />
+        <button onClick={doSignInVerify} className="w-full bg-blue-600 text-white text-sm font-medium py-3 rounded-lg mt-3">Sign in</button>
+        <button onClick={() => setAccount('menu')} className="w-full text-xs text-gray-400 mt-2">Back</button>
+      </>)}
+
+      {account === 'orders' && (
+        <div className="bg-white border border-gray-100 rounded-xl p-3 mb-4">
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-xs text-gray-400">Your orders</div>
+            <button onClick={() => setAccount('menu')} className="text-xs text-blue-600">Close</button>
+          </div>
+          {orders.length === 0 ? <div className="text-xs text-gray-400">No orders yet.</div> :
+            orders.map(o => (
+              <div key={o.chit_id} className="flex justify-between py-1.5 border-b border-gray-100 last:border-none">
+                <span className="text-xs text-gray-700">{o.auto_subject}</span>
+                <span className="text-xs font-medium text-blue-600">{o.current_status}</span>
+              </div>
+            ))}
+        </div>
+      )}
+
+      {(account === 'menu' || account === 'orders') && (<>
+      <h1 className="text-lg font-semibold text-gray-800 mb-3">Place an order</h1>
 
       {step === 'browse' && (<>
         {items.length === 0 ? (
@@ -107,6 +186,7 @@ export default function PublicCataloguePage() {
           <div className="text-xs text-gray-400 mt-2">Ref: {done.chit_id?.slice(0, 8)}</div>
         </div>
       )}
+      </>)}
     </Shell>
   );
 }
