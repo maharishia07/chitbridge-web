@@ -85,6 +85,17 @@ export default function OrderPage() {
     catch { return {}; }
   };
 
+  // receivers from all_recipients (sender + receivers snapshot)
+  const receiverNames = (raw) => {
+    try {
+      const arr = typeof raw === 'string' ? JSON.parse(raw) : (raw || []);
+      return (Array.isArray(arr) ? arr : [])
+        .filter(r => r.role === 'receiver')
+        .map(r => r.display_name)
+        .filter(Boolean);
+    } catch { return []; }
+  };
+
   const shown = filterList(orders, q, ['auto_subject','manual_subject','sender_entity_display_name']);
   const openOrders   = shown.filter(o => !['completed','cancelled','rejected'].includes(o.current_status));
   const closedOrders = shown.filter(o => ['completed','cancelled','rejected'].includes(o.current_status));
@@ -147,18 +158,32 @@ export default function OrderPage() {
                             {summary.total_value && ` · INR ${parseFloat(summary.total_value).toLocaleString('en-IN')}`}
                           </div>
                         )}
-                        {/* Status per receiver */}
-                        <div className="flex flex-col gap-1">
-                          <div className="flex items-center gap-1.5">
-                            <div className={`w-2 h-2 rounded-full flex-shrink-0 ${STATUS_DOT[order.current_status] || 'bg-gray-400'}`}/>
-                            <span className="text-xs text-gray-500">
-                              Sent by {order.sender_entity_display_name}
-                            </span>
-                            <span className={`text-xs px-1.5 py-0.5 rounded ml-auto ${STATUS_PILL[order.current_status] || 'bg-gray-100 text-gray-600'}`}>
-                              {order.current_status}
-                            </span>
-                          </div>
-                        </div>
+                        {/* Recipient + who placed it */}
+                        {(() => {
+                          const recvs = receiverNames(order.all_recipients);
+                          const byActor = order.placed_by_type === 'actor';
+                          return (
+                            <div className="flex flex-col gap-1">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <div className={`w-2 h-2 rounded-full flex-shrink-0 ${STATUS_DOT[order.current_status] || 'bg-gray-400'}`}/>
+                                <span className="text-xs text-gray-600">
+                                  To <span className="font-medium text-gray-800">{recvs.length ? recvs.join(', ') : '—'}</span>
+                                </span>
+                                <span className={`text-xs px-1.5 py-0.5 rounded ml-auto ${STATUS_PILL[order.current_status] || 'bg-gray-100 text-gray-600'}`}>
+                                  {order.current_status}
+                                </span>
+                              </div>
+                              {order.placed_by_name && (
+                                <div className="text-xs text-gray-400 flex items-center gap-1">
+                                  Placed by {order.placed_by_name}
+                                  <span className={`px-1 py-0.5 rounded ${byActor ? 'bg-purple-50 text-purple-700' : 'bg-blue-50 text-blue-700'}`}>
+                                    {byActor ? 'co-assist' : 'entity'}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </div>
                       {/* Cancel button */}
                       {canCancel && (
