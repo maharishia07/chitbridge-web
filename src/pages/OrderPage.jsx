@@ -5,7 +5,6 @@ import { Layout } from '../components/Layout';
 import { getInbox, updateChitStatus } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import ListControls from '../components/ListControls';
-import { filterList } from '../utils/filterList';
 
 const STATUS_PILL = {
   pending:     'bg-amber-100 text-amber-800',
@@ -96,7 +95,14 @@ export default function OrderPage() {
     } catch { return []; }
   };
 
-  const shown = filterList(orders, q, ['auto_subject','manual_subject','sender_entity_display_name']);
+  // Search by subject or recipient name (recipient lives in all_recipients, so a
+  // plain key filter can't reach it — match it explicitly).
+  const ql = q.trim().toLowerCase();
+  const shown = !ql ? orders : orders.filter(o =>
+    (o.auto_subject || '').toLowerCase().includes(ql) ||
+    (o.manual_subject || '').toLowerCase().includes(ql) ||
+    receiverNames(o.all_recipients).join(' ').toLowerCase().includes(ql)
+  );
   const openOrders   = shown.filter(o => !['completed','cancelled','rejected'].includes(o.current_status));
   const closedOrders = shown.filter(o => ['completed','cancelled','rejected'].includes(o.current_status));
 
@@ -122,7 +128,7 @@ export default function OrderPage() {
         ) : (
           <>
             <div className="px-4 pt-3">
-              <ListControls query={q} onQuery={setQ} placeholder="Search orders by subject…"/>
+              <ListControls query={q} onQuery={setQ} placeholder="Search orders by subject or recipient…"/>
             </div>
             {/* Open orders */}
             {openOrders.length > 0 && (
