@@ -80,7 +80,11 @@ export default function CustomerListView() {
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium text-gray-900 truncate">{c.display_name}</div>
                   <div className="text-xs text-gray-400">
-                    {c.customer_type} · {c.txn_count} order{c.txn_count !== 1 ? 's' : ''}</div>
+                    {c.customer_type} · {c.txn_count} order{c.txn_count !== 1 ? 's' : ''} · via {c.added_via}</div>
+                  <div className="text-xs text-gray-300 truncate">
+                    {c.identity_type || 'entity'} · scope {c.owner_scope || 'entity'}
+                    {c.email ? ` · ${c.email}` : ''}
+                  </div>
                 </div>
                 <button onClick={() => setEditing(p => p === c.customer_list_id ? null : c.customer_list_id)}
                   className={`text-xs px-2 py-0.5 rounded-full capitalize ${SEG_BADGE[c.segment] || 'bg-gray-100 text-gray-500'}`}>
