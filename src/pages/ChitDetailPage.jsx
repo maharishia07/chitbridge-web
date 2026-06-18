@@ -71,17 +71,27 @@ const parseJSON = (v) => {
 
 // ── Sub-components ───────────────────────────────────────────
 
-function RaiseDisputeModal({ onClose, onSubmit, submitting }) {
+function RaiseDisputeModal({ onClose, onSubmit, submitting, participants = [], myEntityId }) {
+  const others = (participants || []).filter(p => p.entity_id !== myEntityId);
   const [category, setCategory] = useState('quality');
   const [reason, setReason] = useState('');
+  const [target, setTarget] = useState(others.length === 1 ? others[0].entity_id : '');
+  const [chitWide, setChitWide] = useState(false);
   const MIN_CHARS = 10;
   const charCount = reason.trim().length;
   const tooShort = charCount < MIN_CHARS;
+  const needsTarget = others.length > 1 && !chitWide && !target;
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (tooShort) return;
-    onSubmit({ category, reason: reason.trim() });
+    if (tooShort || needsTarget) return;
+    onSubmit({
+      category,
+      reason: reason.trim(),
+      target_entity_id: chitWide ? null : (target || (others.length === 1 ? others[0].entity_id : null)),
+      chit_wide: chitWide,
+      via: 'chit',
+    });
   };
 
   return (
@@ -92,6 +102,20 @@ function RaiseDisputeModal({ onClose, onSubmit, submitting }) {
           <button onClick={onClose} className="text-gray-400 text-xl leading-none">×</button>
         </div>
         <form onSubmit={handleSubmit} className="space-y-3">
+          {/* Target selector — only when more than one other party */}
+          {others.length > 1 && (
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">Who is this with?</label>
+              <select value={chitWide ? '__all__' : target}
+                onChange={e => { const v = e.target.value; setChitWide(v === '__all__'); if (v !== '__all__') setTarget(v); }}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm">
+                <option value="">Select a party…</option>
+                {others.map(p => <option key={p.entity_id} value={p.entity_id}>{p.display_name}</option>)}
+                <option value="__all__">All parties on this chit</option>
+              </select>
+              {needsTarget && <div className="text-xs text-red-500 mt-1">Pick a party (or "all").</div>}
+            </div>
+          )}
           {/* Category chips */}
           <div>
             <label className="text-xs text-gray-500 mb-2 block">Category</label>
@@ -131,7 +155,7 @@ function RaiseDisputeModal({ onClose, onSubmit, submitting }) {
           </div>
           <button
             type="submit"
-            disabled={submitting || tooShort}
+            disabled={submitting || tooShort || needsTarget}
             className="w-full bg-red-500 text-white text-sm font-medium py-2.5 rounded-xl disabled:opacity-50">
             {submitting ? 'Raising…' : 'Raise Dispute'}
           </button>
@@ -191,7 +215,17 @@ function ResolveInline({ dispute, myEntityId, onResolve, resolving }) {
     <div className="bg-white rounded-lg border border-red-100 p-3 mb-2 last:mb-0">
       <div className="flex items-start justify-between gap-2">
         <div className="flex-1 min-w-0">
-          <div className="text-xs font-medium text-red-700">{categoryLabel}</div>
+          <div className="text-xs font-medium text-red-700">
+            {categoryLabel}
+            {dispute.target_display_name && (
+              <span className="text-gray-500 font-normal"> · with {dispute.target_display_name}</span>
+            )}
+            {dispute.mode === 'one_sided' && (
+              <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                record-only
+              </span>
+            )}
+          </div>
           <div className="text-xs text-gray-600 mt-0.5 leading-snug">{dispute.reason}</div>
           <div className="text-xs text-gray-400 mt-1">
             Raised by {dispute.raised_by_display_name} · {fmtShort(dispute.created_at)}
@@ -459,14 +493,14 @@ export default function ChitDetailPage() {
     } finally { setSending(false); }
   };
 
-  const handleRaiseDispute = async ({ category, reason }) => {
+  const handleRaiseDispute = async (payload) => {
     setSubmitDispute(true);
     try {
-      await raiseDispute(chitId, { category, reason });
+      const res = await raiseDispute(chitId, payload);
       setShowDispute(false);
-      showFlash('Dispute raised');
-      const res = await getDisputes(chitId);
-      setDisputes(res.data.disputes || []);
+      showFlash(res.data?.alert || 'Dispute raised');
+      const d = await getDisputes(chitId);
+      setDisputes(d.data.disputes || []);
     } catch (err) {
       showFlash(err.response?.data?.message || 'Failed to raise dispute');
     } finally { setSubmitDispute(false); }
@@ -849,6 +883,8 @@ export default function ChitDetailPage() {
           onClose={() => setShowDispute(false)}
           onSubmit={handleRaiseDispute}
           submitting={submitDispute}
+          participants={participants}
+          myEntityId={effectiveEntityId}
         />
       )}
     </div>

@@ -65,12 +65,13 @@ export default function DisputesPage() {
 
   const openDisputes  = disputes.filter(d => d.status === 'open');
   const raised        = openDisputes.filter(d => d.raised_by_entity_id === effectiveEntityId);
-  const counterparty  = openDisputes.filter(d => d.raised_by_entity_id !== effectiveEntityId);
+  // B3.10 — "against me" = disputes that target me (the API already hides ones I'm not party to)
+  const counterparty  = openDisputes.filter(d => d.target_entity_id === effectiveEntityId);
 
   const tabs = [
     { id: 'all',    label: `All (${openDisputes.length})` },
     { id: 'raised', label: `You raised (${raised.length})` },
-    { id: 'other',  label: `Other party (${counterparty.length})` },
+    { id: 'other',  label: `Against me (${counterparty.length})` },
   ];
 
   const tabList = tab === 'raised' ? raised : tab === 'other' ? counterparty : openDisputes;
@@ -115,11 +116,17 @@ export default function DisputesPage() {
                   onClick={() => navigate(`/chit/${d.chit_id}?tab=status`)}
                   className={`w-full text-left rounded-xl border p-4 mb-3 active:opacity-80 ${age.colour}`}>
                   <div className="flex items-start justify-between gap-2 mb-2">
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="text-base">⚠️</span>
                       <span className="text-xs font-semibold text-red-700">
                         {CATEGORY_LABEL[d.category] || d.category}
                       </span>
+                      {d.target_display_name && (
+                        <span className="text-xs text-gray-500">· with {d.target_display_name}</span>
+                      )}
+                      {d.mode === 'one_sided' && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">record-only</span>
+                      )}
                     </div>
                     <span className={`text-xs font-medium px-2 py-0.5 rounded-full border flex-shrink-0 ${age.colour}`}>
                       {age.label}
