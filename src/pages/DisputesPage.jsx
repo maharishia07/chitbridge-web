@@ -16,6 +16,17 @@ const CATEGORY_LABEL = {
   other:    'Other',
 };
 
+// Cause/category filter chips (S-06)
+const CAT_FILTERS = [
+  { value: 'all',      label: 'All causes' },
+  { value: 'quality',  label: 'Quality' },
+  { value: 'quantity', label: 'Quantity' },
+  { value: 'delivery', label: 'Delivery' },
+  { value: 'payment',  label: 'Payment' },
+  { value: 'docs',     label: 'Docs' },
+  { value: 'other',    label: 'Other' },
+];
+
 const fmtShort = (d) => d
   ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })
   : '';
@@ -37,6 +48,7 @@ export default function DisputesPage() {
   const [loading, setLoading]   = useState(true);
   const [tab, setTab]           = useState('all');
   const [q, setQ]               = useState('');
+  const [cat, setCat]           = useState('all');   // cause/category filter
 
   const effectiveEntityId = isActor ? parentEntityId : entity?.identity_id;
 
@@ -62,7 +74,8 @@ export default function DisputesPage() {
   ];
 
   const tabList = tab === 'raised' ? raised : tab === 'other' ? counterparty : openDisputes;
-  const shown = filterList(tabList, q, ['auto_subject','category','raised_by_display_name']);
+  const searched = filterList(tabList, q, ['auto_subject','category','raised_by_display_name']);
+  const shown = cat === 'all' ? searched : searched.filter(d => d.category === cat);
 
   return (
     <Layout title="Disputes">
@@ -82,7 +95,9 @@ export default function DisputesPage() {
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto px-4 py-3">
-          <ListControls query={q} onQuery={setQ} placeholder="Search disputes by subject, category or who raised…"/>
+          <ListControls query={q} onQuery={setQ}
+            placeholder="Search disputes by subject or who raised…"
+            filters={CAT_FILTERS} value={cat} onFilter={setCat}/>
           {loading ? (
             <div className="text-center py-12 text-gray-400 text-sm">Loading…</div>
           ) : shown.length === 0 ? (
