@@ -16,7 +16,7 @@ export default function ProductsManager() {
     const r = await getMySchema();
     setFields((r.data.schema?.fields || []).filter(Boolean));
   };
-  const load = async () => { const r = await listProducts(q); setItems(r.data.items || []); };
+  const load = async (query = q) => { const r = await listProducts(query); setItems(r.data.items || []); };
   useEffect(() => { loadSchema(); load(); }, []);          // eslint-disable-line
 
   // Same rules as the API: required not empty · numbers valid, not negative, respect min_value
@@ -72,9 +72,16 @@ export default function ProductsManager() {
       </div>
 
       {/* search */}
-      <input value={q} onChange={e => setQ(e.target.value)} onKeyUp={e => e.key === 'Enter' && load()}
-        placeholder="Search products…"
-        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mb-3" />
+      <div className="relative mb-3">
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">🔍</span>
+        <input value={q} onChange={e => setQ(e.target.value)} onKeyUp={e => e.key === 'Enter' && load()}
+          placeholder="Search products…"
+          className="w-full border border-gray-200 rounded-lg pl-9 pr-9 py-2 text-sm" />
+        {q && (
+          <button onClick={() => { setQ(''); load(''); }}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">✕</button>
+        )}
+      </div>
 
       {/* list */}
       {items.length === 0 ? (
