@@ -42,10 +42,18 @@ export default function MyCataloguePage() {
     catch (err) { setProfMsg(err.response?.data?.message || 'Save failed'); }
   };
 
-  // B3.11 — flip the shop's "open sign" (saves immediately)
+  // B3.11 — flip the shop's "open sign" (confirm first, then save)
   const setShopStatus = async (s) => {
+    if (s === bizStatus) return;
+    const confirmMsg = s === 'closed'
+      ? 'Set shop to CLOSED? Customers will NOT be able to place orders until you reopen.'
+      : s === 'away'
+        ? 'Set shop to AWAY? Customers can still order but will see an "away" notice.'
+        : 'Set shop to OPEN? Customers can place orders normally.';
+    if (!window.confirm(confirmMsg)) return;
     setBizStatus(s);
-    try { await updateEntityProfile({ business_status: s }); } catch {}
+    try { await updateEntityProfile({ business_status: s }); }
+    catch (err) { setProfMsg(err.response?.data?.message || 'Could not change status'); }
   };
 
   const toggleVisibility = async () => {
