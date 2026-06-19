@@ -199,5 +199,8 @@ export const getDisputes = (chit_id) =>
 export const resolveDispute = (chit_id, dispute_id, data) =>
   apiClient.put(`/api/chits/${chit_id}/disputes/${dispute_id}/resolve`, data);
 
+export const getDiagnosis = (chit_id) =>
+  apiClient.get(`/api/chits/${chit_id}/diagnosis`);
+
 export const getDisputeQueue = () =>
   apiClient.get('/api/chits/disputes/queue');

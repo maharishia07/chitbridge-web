@@ -6,6 +6,7 @@ import {
   getChitDetail, updateChitStatus, assignChit,
   sendMessage, getMessages, raiseDispute, getDisputes, resolveDispute,
 } from '../api/client';
+import DiagnosisPanel from './DiagnosisPanel';
 
 // ── Constants ────────────────────────────────────────────────
 
@@ -727,6 +728,9 @@ export default function ChitDetailPage() {
                 onResolve={handleResolveDispute}
                 resolving={resolving}
               />
+
+              {/* DEMO-5 — diagnosis panel (probe → localise → route) */}
+              <DiagnosisPanel chitId={chitId} key={disputes.length} />
 
               {/* Thread toggle + raise dispute */}
               <div className="flex items-center gap-2 px-4 pt-3 pb-2">
