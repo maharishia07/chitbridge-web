@@ -79,6 +79,22 @@ export default function MyCataloguePage() {
     <Layout title="My Catalogue">
       <div className="p-4 max-w-lg mx-auto flex flex-col gap-4">
 
+        {/* B3.11 — prominent current shop status, colour-coded */}
+        <div className={`rounded-xl border-2 p-3 flex items-center gap-3 ${
+          bizStatus === 'open'  ? 'bg-green-50 border-green-400 text-green-800'
+          : bizStatus === 'away' ? 'bg-amber-50 border-amber-400 text-amber-800'
+          :                        'bg-red-50 border-red-400 text-red-800'}`}>
+          <span className="text-2xl">{bizStatus === 'open' ? '🟢' : bizStatus === 'away' ? '🟡' : '🔴'}</span>
+          <div>
+            <div className="text-sm font-bold uppercase tracking-wide">Shop is {bizStatus}</div>
+            <div className="text-xs opacity-90">
+              {bizStatus === 'open'  ? 'Customers can place orders.'
+               : bizStatus === 'away' ? 'Customers can order but see an "away" notice.'
+               :                        'Customers cannot place orders.'}
+            </div>
+          </div>
+        </div>
+
         <div className="bg-white rounded-xl border border-gray-100 p-4">
           <div className="text-xs text-gray-400 uppercase tracking-wide mb-3">Product catalogue</div>
 
