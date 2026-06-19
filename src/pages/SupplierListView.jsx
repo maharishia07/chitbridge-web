@@ -50,14 +50,8 @@ export default function SupplierListView() {
     } catch (err) { setMsg(err.response?.data?.message || 'Could not add'); }
   };
 
-  // Preselect this supplier on the Compose page, then send a guaranteed chit
-  const order = (s) => {
-    sessionStorage.setItem('cb_order_supplier', JSON.stringify({
-      identity_id: s.supplier_entity_id,
-      display_name: s.display_name,
-    }));
-    navigate('/send?supplier=1');
-  };
+  // Open the supplier's catalogue to draft an order chit (mirrors PHP supplierCompose)
+  const order = (s) => navigate(`/supplier-order/${s.supplier_entity_id}`);
 
   let shown = filterList(list, q, ['display_name', 'category', 'bridge_id']);
   if (supFilter === 'catalogue') shown = shown.filter(s => s.has_catalogue);
