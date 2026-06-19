@@ -5,8 +5,10 @@ import { useState, useEffect } from 'react';
 import { Layout } from '../components/Layout';
 import { getMySchema, createDefaultSchema, getMyProfile, setCatalogueVisibility, updateEntityProfile } from '../api/client';
 import ProductsManager from './ProductsManager';
+import { useAuth } from '../context/AuthContext';
 
 export default function MyCataloguePage() {
+  const { updateEntity } = useAuth();
   const [schema, setSchema]   = useState(null);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -29,7 +31,9 @@ export default function MyCataloguePage() {
         setBridge(me.data.entity?.bridge_id || '');
         setGstn(me.data.entity?.gstn || '');
         setLogoUrl(me.data.entity?.logo_url || '');
-        setBizStatus(me.data.entity?.business_status || 'open');
+        const bs = me.data.entity?.business_status || 'open';
+        setBizStatus(bs);
+        updateEntity({ business_status: bs });   // sync the top-left header badge
       } catch {}
     } catch { setSchema(null); }
     setLoading(false);
@@ -52,7 +56,7 @@ export default function MyCataloguePage() {
         : 'Set shop to OPEN? Customers can place orders normally.';
     if (!window.confirm(confirmMsg)) return;
     setBizStatus(s);
-    try { await updateEntityProfile({ business_status: s }); }
+    try { await updateEntityProfile({ business_status: s }); updateEntity({ business_status: s }); }
     catch (err) { setProfMsg(err.response?.data?.message || 'Could not change status'); }
   };
 

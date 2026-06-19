@@ -217,13 +217,27 @@ export const Layout = ({ children, title, unreadCount = 0 }) => {
               </>
             )}
           </div>
-          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ml-2 flex-shrink-0 ${
-            isOnBreak ? 'bg-amber-200 text-amber-900' : 'bg-green-300 text-green-900'
-          }`}>
-            {isOnBreak
-              ? (entity?.break_status === 'short_break' ? '☕ Break' : '🏖 Leave')
-              : 'Active'}
-          </span>
+          {(() => {
+            // Actors: break status. Entities: SHOP status (open/away/closed) — updates live from My Catalogue.
+            if (isActor) {
+              return (
+                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ml-2 flex-shrink-0 ${
+                  isOnBreak ? 'bg-amber-200 text-amber-900' : 'bg-green-300 text-green-900'}`}>
+                  {isOnBreak ? (entity?.break_status === 'short_break' ? '☕ Break' : '🏖 Leave') : 'Active'}
+                </span>
+              );
+            }
+            const ss = entity?.business_status || 'open';
+            const cls = ss === 'open' ? 'bg-green-300 text-green-900'
+              : ss === 'away' ? 'bg-amber-200 text-amber-900'
+              : 'bg-red-300 text-red-900';
+            const label = ss === 'open' ? '🟢 Open' : ss === 'away' ? '🟡 Away' : '🔴 Closed';
+            return (
+              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ml-2 flex-shrink-0 ${cls}`}>
+                {label}
+              </span>
+            );
+          })()}
         </div>
       </div>
 
