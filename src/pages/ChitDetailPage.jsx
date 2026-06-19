@@ -76,23 +76,21 @@ function RaiseDisputeModal({ onClose, onSubmit, submitting, participants = [], m
   const others = (participants || []).filter(p => p.entity_id !== myEntityId);
   const [category, setCategory] = useState('quality');
   const [reason, setReason] = useState('');
-  const [target, setTarget] = useState(others.length === 1 ? others[0].entity_id : '');
-  const [chitWide, setChitWide] = useState(false);
+  // multi-select: raise against one OR MORE concerned parties at once (PARK-05 #1)
+  const [targets, setTargets] = useState(others.length === 1 ? [others[0].entity_id] : []);
   const MIN_CHARS = 10;
   const charCount = reason.trim().length;
   const tooShort = charCount < MIN_CHARS;
-  const needsTarget = others.length > 1 && !chitWide && !target;
+  const needsTarget = others.length > 1 && targets.length === 0;
+
+  const toggleTarget = (id) =>
+    setTargets(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (tooShort || needsTarget) return;
-    onSubmit({
-      category,
-      reason: reason.trim(),
-      target_entity_id: chitWide ? null : (target || (others.length === 1 ? others[0].entity_id : null)),
-      chit_wide: chitWide,
-      via: 'chit',
-    });
+    const finalTargets = others.length === 1 ? [others[0].entity_id] : targets;
+    onSubmit({ category, reason: reason.trim(), targets: finalTargets, via: 'chit' });
   };
 
   return (
@@ -103,18 +101,34 @@ function RaiseDisputeModal({ onClose, onSubmit, submitting, participants = [], m
           <button onClick={onClose} className="text-gray-400 text-xl leading-none">×</button>
         </div>
         <form onSubmit={handleSubmit} className="space-y-3">
-          {/* Target selector — only when more than one other party */}
+          {/* Target multi-select — raise with one or more concerned parties */}
           {others.length > 1 && (
             <div>
-              <label className="text-xs text-gray-500 mb-1 block">Who is this with?</label>
-              <select value={chitWide ? '__all__' : target}
-                onChange={e => { const v = e.target.value; setChitWide(v === '__all__'); if (v !== '__all__') setTarget(v); }}
-                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm">
-                <option value="">Select a party…</option>
-                {others.map(p => <option key={p.entity_id} value={p.entity_id}>{p.display_name}</option>)}
-                <option value="__all__">All parties on this chit</option>
-              </select>
-              {needsTarget && <div className="text-xs text-red-500 mt-1">Pick a party (or "all").</div>}
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs text-gray-500">Who is this with? (tick the concerned parties)</label>
+                <button type="button"
+                  onClick={() => setTargets(targets.length === others.length ? [] : others.map(p => p.entity_id))}
+                  className="text-xs text-blue-600">
+                  {targets.length === others.length ? 'Clear all' : 'Select all'}
+                </button>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                {others.map(p => {
+                  const checked = targets.includes(p.entity_id);
+                  return (
+                    <label key={p.entity_id}
+                      className={`flex items-center gap-2 text-sm border rounded-lg px-3 py-2 cursor-pointer ${
+                        checked ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}>
+                      <input type="checkbox" checked={checked} onChange={() => toggleTarget(p.entity_id)}/>
+                      <span className="text-gray-800">{p.display_name}</span>
+                    </label>
+                  );
+                })}
+              </div>
+              {targets.length > 1 && (
+                <div className="text-xs text-gray-400 mt-1">A separate dispute is raised with each selected party.</div>
+              )}
+              {needsTarget && <div className="text-xs text-red-500 mt-1">Pick at least one party.</div>}
             </div>
           )}
           {/* Category chips */}
@@ -494,16 +508,22 @@ export default function ChitDetailPage() {
     } finally { setSending(false); }
   };
 
-  const handleRaiseDispute = async (payload) => {
+  const handleRaiseDispute = async ({ category, reason, targets = [], via }) => {
     setSubmitDispute(true);
     try {
-      const res = await raiseDispute(chitId, payload);
+      // one targeted dispute per selected party; [null] => chit-wide fallback (no selection)
+      const list = targets.length ? targets : [null];
+      let ok = 0, lastAlert = '', lastErr = '';
+      for (const t of list) {
+        try {
+          const res = await raiseDispute(chitId, { category, reason, target_entity_id: t, chit_wide: t == null, via });
+          lastAlert = res.data?.alert || ''; ok++;
+        } catch (err) { lastErr = err.response?.data?.message || 'Failed to raise dispute'; }
+      }
       setShowDispute(false);
-      showFlash(res.data?.alert || 'Dispute raised');
+      showFlash(ok > 1 ? `Dispute raised with ${ok} parties` : (ok === 1 ? (lastAlert || 'Dispute raised') : lastErr));
       const d = await getDisputes(chitId);
       setDisputes(d.data.disputes || []);
-    } catch (err) {
-      showFlash(err.response?.data?.message || 'Failed to raise dispute');
     } finally { setSubmitDispute(false); }
   };
 
