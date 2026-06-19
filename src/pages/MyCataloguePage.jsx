@@ -16,6 +16,7 @@ export default function MyCataloguePage() {
   const [gstn, setGstn]       = useState('');          // B3.9 shop identity
   const [logoUrl, setLogoUrl] = useState('');
   const [profMsg, setProfMsg] = useState('');
+  const [bizStatus, setBizStatus] = useState('open');  // B3.11 shop status
 
   const load = async () => {
     setLoading(true);
@@ -28,6 +29,7 @@ export default function MyCataloguePage() {
         setBridge(me.data.entity?.bridge_id || '');
         setGstn(me.data.entity?.gstn || '');
         setLogoUrl(me.data.entity?.logo_url || '');
+        setBizStatus(me.data.entity?.business_status || 'open');
       } catch {}
     } catch { setSchema(null); }
     setLoading(false);
@@ -38,6 +40,12 @@ export default function MyCataloguePage() {
     setProfMsg('');
     try { await updateEntityProfile({ gstn, logo_url: logoUrl }); setProfMsg('Saved'); }
     catch (err) { setProfMsg(err.response?.data?.message || 'Save failed'); }
+  };
+
+  // B3.11 — flip the shop's "open sign" (saves immediately)
+  const setShopStatus = async (s) => {
+    setBizStatus(s);
+    try { await updateEntityProfile({ business_status: s }); } catch {}
   };
 
   const toggleVisibility = async () => {
@@ -137,6 +145,27 @@ export default function MyCataloguePage() {
                     </div>
                   </>
                 )}
+              </div>
+
+              {/* B3.11 — shop status (open sign) */}
+              <div className="mt-4 pt-3 border-t border-gray-100">
+                <div className="text-sm font-medium text-gray-800 mb-1">Shop status</div>
+                <div className="text-xs text-gray-400 mb-2">
+                  Closed blocks customers from ordering. Away shows a notice but still lets them order.
+                </div>
+                <div className="flex gap-2">
+                  {[
+                    { v: 'open',   label: 'Open',   on: 'bg-green-600 text-white border-green-600' },
+                    { v: 'away',   label: 'Away',   on: 'bg-amber-500 text-white border-amber-500' },
+                    { v: 'closed', label: 'Closed', on: 'bg-red-600 text-white border-red-600' },
+                  ].map(s => (
+                    <button key={s.v} onClick={() => setShopStatus(s.v)}
+                      className={`flex-1 text-xs font-medium py-2 rounded-lg border ${
+                        bizStatus === s.v ? s.on : 'border-gray-200 text-gray-600'}`}>
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {/* B3.9 — shop identity (GSTN + logo) shown on the storefront */}

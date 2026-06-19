@@ -99,6 +99,18 @@ export default function PublicCataloguePage() {
         </div>
       </div>
 
+      {/* B3.11 — shop status banner */}
+      {shop.business_status === 'closed' && (
+        <div className="bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg p-2.5 mb-3 text-center font-medium">
+          🔴 This shop is currently <b>Closed</b> — not accepting orders right now.
+        </div>
+      )}
+      {shop.business_status === 'away' && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-700 text-xs rounded-lg p-2.5 mb-3 text-center">
+          🟡 This shop is <b>Away</b> — you can still order, but replies may take longer.
+        </div>
+      )}
+
       {/* Sign in to see your order (hidden in embed mode) */}
       {!embed && account === 'menu' && (
         <div className="text-right mb-2">
@@ -144,7 +156,13 @@ export default function PublicCataloguePage() {
         </div>
       )}
 
-      {(account === 'menu' || account === 'orders') && (<>
+      {(account === 'menu' || account === 'orders') && shop.business_status === 'closed' && (
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center text-sm text-gray-500">
+          🔒 This shop is closed right now — ordering is disabled. Please check back later.
+        </div>
+      )}
+
+      {(account === 'menu' || account === 'orders') && shop.business_status !== 'closed' && (<>
       <h1 className="text-lg font-semibold text-gray-800 mb-3">Place an order</h1>
 
       {step === 'browse' && (<>
