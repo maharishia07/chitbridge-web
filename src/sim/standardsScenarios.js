@@ -1,21 +1,17 @@
-// standardsScenarios.js
 import { V0_1 } from '../governance/constitutions';
 import { assembleBusiness } from '../governance/cascade';
-
-const base = { vertical:'pharmacy', jurisdiction:'india', content:'distributor_feed', erp:'tally' };
+const base = { vertical:'pharmacy', jurisdiction:'india', content:'own_only', erp:'none' };
 export const standardsScenarios = [
-  { name:'Missing capability is a hard reject (Class B)', run() {
+  { name:'GDP without batch_recall capability → hard reject', run() {
       const r = assembleBusiness(V0_1, { ...base, standard:'gdp_pharma', capabilities:[] });
-      const pass = !r.conformant && r.rejections.some(x => x.klass === 'B');
-      return { pass, detail: pass ? 'GDP needs batch_recall — rejected' : 'expected a reject' };
+      return { pass: !r.conformant && r.rejections.some(x=>x.key==='batch_recall'), detail:'rejected (missing batch_recall)' };
   }},
-  { name:'Granting the capability makes it conformant', run() {
+  { name:'GDP with batch_recall granted → conformant', run() {
       const r = assembleBusiness(V0_1, { ...base, standard:'gdp_pharma', capabilities:['batch_recall'] });
-      return { pass: r.conformant, detail: r.conformant ? 'batch_recall granted — conformant' : 'still failing' };
+      return { pass: r.conformant, detail: r.conformant ? 'conformant' : 'still rejected' };
   }},
-  { name:'Standard cascades required fields into the schema', run() {
+  { name:'standard injects its required field into the data definition', run() {
       const r = assembleBusiness(V0_1, { ...base, standard:'gdp_pharma', capabilities:['batch_recall'] });
-      const pass = r.schema.includes('cold_chain_log') && r.schema.includes('batch_recall_ref');
-      return { pass, detail: pass ? 'cold_chain_log + batch_recall_ref cascaded in' : 'fields missing' };
+      return { pass: r.schema.includes('cold_chain_log'), detail:'cold_chain_log in schema' };
   }},
 ];

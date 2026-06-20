@@ -7,11 +7,11 @@ import { saveBlueprint, cloneInstance, applyUpdate } from '../governance/bluepri
 const initialState = {
   constitutionVersions: [V0_1], activeVersion: '0.1',
   draftOverride: {}, entities: [],
-  selectedLayer: 'constitution',
+  selectedLayer: 'showcase',
   selectedVertical: 'pharmacy', selectedJurisdiction: 'india', selectedStandard: 'none',
   selectedContent: 'own_only', selectedErp: 'none', capabilities: [], selectedPreset: null,
-  mode: 'with', lastRejection: null,
   blueprints: [], instances: [],
+  mode: 'with', lastRejection: null,
 };
 const activeOf = s => s.constitutionVersions.find(c => c.version === s.activeVersion);
 

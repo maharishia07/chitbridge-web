@@ -1,81 +1,63 @@
 import React from 'react';
 import { useSim } from './simStore';
-import { resolve } from '../governance/resolver';
 import { ModeToggle } from './ModeToggle';
 import { ScenarioRunner } from './ScenarioRunner';
 import { constitutionScenarios } from './constitutionScenarios';
-
-const PAIN = `Without a shared constitution: anyone can quietly loosen a safety rule, every org reinvents the rulebook, and a cross-org deal half-completes with no one accountable.`;
-const PLEASURE = `One sealed root everyone inherits. You can't loosen a ceiling. A rule change never rewrites a deal already in flight — it drifts and waits for re-attest.`;
+import { resolve } from '../governance/resolver';
 
 export function ConstitutionScreen() {
   const { state, dispatch, activeConstitution, viewEntity } = useSim();
-  const ac = activeConstitution();
-  const live = resolve(ac, state.draftOverride);
-  const set = (key, value) => dispatch({ type: 'SET_PARAM', key, value });
-
+  const c = activeConstitution();
+  const r = resolve(c, state.draftOverride);
+  if (state.mode === 'without') {
+    return (<div className="layer-screen">
+      <div className="layer-header"><h2>Constitution <small>the root rulebook</small></h2><ModeToggle /></div>
+      <div className="pain-card"><b>Without CB:</b> every business writes its own rules in code. Change a rule → a developer, a release, a migration. Nothing stops a tenant loosening a limit it shouldn't, and you can't say which rules a record was created under.</div>
+    </div>);
+  }
   return (
     <div className="layer-screen">
-      <div className="layer-header"><h2>Constitution</h2><ModeToggle /></div>
-
-      {state.mode === 'without' ? (
-        <div className="pain-card">{PAIN}</div>
-      ) : (
-        <>
-          <div className="grid">
-            <div className="panel">
-              <h4>Inputs (what a business chooses)</h4>
-              <label>currency_code
-                <select value={state.draftOverride.currency_code ?? ac.params.currency_code.value}
-                        onChange={e => set('currency_code', e.target.value)}>
-                  <option>INR</option><option>USD</option><option>EUR</option>
-                </select>
-              </label>
-              <label>languages (ctrl/cmd-click)
-                <select multiple value={state.draftOverride.allowed_languages ?? ['en']}
-                        onChange={e => set('allowed_languages', Array.from(e.target.selectedOptions, o => o.value))}>
-                  <option value="en">en</option><option value="ta">ta</option><option value="hi">hi</option>
-                </select>
-              </label>
-              <label>catalogue_visibility
-                <select value={state.draftOverride.catalogue_visibility ?? 'private'}
-                        onChange={e => set('catalogue_visibility', e.target.value)}>
-                  <option>private</option><option>restricted</option><option>public</option>
-                </select>
-              </label>
-              <div className="actions">
-                <button onClick={() => dispatch({ type: 'MINT_ENTITY', plan: 'free' })}>Mint entity</button>
-                <button onClick={() => dispatch({ type: 'ACTIVATE_V02' })}>Activate v0.2 (USD; en/ta/hi)</button>
-              </div>
-            </div>
-
-            <div className="panel">
-              <h4>Resolved · active constitution v{ac.version}</h4>
-              <pre>{JSON.stringify(live.effective, null, 2)}</pre>
-              {live.rejections.length > 0 && <div className="reject">REJECTED: {live.rejections.map(r => r.reason).join('; ')}</div>}
-              {live.exceptions.length > 0 && <div className="exception">FLAGGED (Class C): {live.exceptions.map(x => x.reason).join('; ')}</div>}
-            </div>
+      <div className="layer-header"><h2>Constitution <small>v{c.version} active</small></h2><ModeToggle /></div>
+      <div className="grid">
+        <div className="panel">
+          <h4>Your override <small>(tighten-only)</small></h4>
+          <label>currency_code
+            <input value={state.draftOverride.currency_code || ''} placeholder={c.params.currency_code.value}
+              onChange={e => dispatch({ type:'SET_PARAM', key:'currency_code', value:e.target.value })} /></label>
+          <label>language
+            <select value={(state.draftOverride.allowed_languages||[''])[0] || ''}
+              onChange={e => dispatch({ type:'SET_PARAM', key:'allowed_languages', value:[e.target.value] })}>
+              <option value="">(default {c.params.allowed_languages.value.join(',')})</option>
+              <option value="en">en</option><option value="ta">ta</option><option value="hi">hi</option></select></label>
+          <label>catalogue_visibility
+            <select value={state.draftOverride.catalogue_visibility || ''}
+              onChange={e => dispatch({ type:'SET_PARAM', key:'catalogue_visibility', value:e.target.value })}>
+              <option value="">(default {c.params.catalogue_visibility.value})</option>
+              <option value="private">private</option><option value="restricted">restricted</option><option value="public">public</option></select></label>
+          <div className="actions">
+            <button onClick={() => dispatch({ type:'MINT_ENTITY', plan:'free' })}>Mint entity</button>
+            <button onClick={() => dispatch({ type:'RESET_DRAFT' })}>Reset</button>
+            <button onClick={() => dispatch({ type:'ACTIVATE_V02' })}>Activate v0.2</button>
           </div>
-
-          <div className="pleasure-card">{PLEASURE}</div>
-
-          {state.entities.length > 0 && (
-            <div className="panel">
-              <h4>Entities</h4>
-              {state.entities.map(e => {
-                const v = viewEntity(e, ac);
-                return (
-                  <div key={e.id} className="entity-row">
-                    <span>{e.id} · minted v{e.mintedVersion} · currency {v.effective.currency_code} {v.drift ? '· DRIFT' : ''}</span>
-                    {v.drift && <button onClick={() => dispatch({ type: 'REATTEST', id: e.id })}>re-attest</button>}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </>
-      )}
-
+          {r.rejections.map((x,i) => <div className="reject" key={i}>✗ {x.key}: {x.reason}</div>)}
+          {r.exceptions.map((x,i) => <div className="exception" key={i}>⚑ {x.key}: {x.reason}</div>)}
+          {state.lastRejection && state.lastRejection.map((x,i)=><div className="reject" key={'m'+i}>✗ mint blocked — {x.reason}</div>)}
+        </div>
+        <div className="panel">
+          <h4>Resolved (effective)</h4>
+          <table className="prov"><tbody>
+            {Object.entries(r.effective).map(([k,v]) => <tr key={k}><td>{k}</td><td className="src-v">{Array.isArray(v)?v.join(','):String(v)}</td></tr>)}
+          </tbody></table>
+          <h4>Entities ({state.entities.length})</h4>
+          {state.entities.map(e => {
+            const v = viewEntity(e, c);
+            return <div className="entity-row" key={e.id}>
+              <span>{e.id} · minted v{e.mintedVersion} · {v.effective.currency_code}/{(v.effective.allowed_languages||[]).join(',')}</span>
+              {v.drift ? <button onClick={() => dispatch({ type:'REATTEST', id:e.id })}>drift → re-attest</button> : <span className="pass">current</span>}
+            </div>;
+          })}
+        </div>
+      </div>
       <ScenarioRunner scenarios={constitutionScenarios} />
     </div>
   );

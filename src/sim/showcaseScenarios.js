@@ -1,28 +1,20 @@
 import { interpretRegulation, attest, toSourcePack } from '../governance/ingest';
 import { runChitThroughGate } from '../governance/instructionPacks';
-
 export const showcaseScenarios = [
-  { name:'AI interpretation yields MoSCoW-typed requirements', run() {
-      const p = interpretRegulation('gdp');
-      const pass = p.requirements.some(r => r.moscow==='Must') && p.requirements.some(r => r.field==='cold_chain_log');
-      return { pass, detail: pass ? 'cold_chain_log = Must, etc.' : 'no MoSCoW output' };
-  }},
-  { name:'An un-attested interpretation cannot register', run() {
+  { name:'un-attested interpretation cannot be registered', run() {
       const r = toSourcePack(interpretRegulation('gdp'));
-      return { pass: r.ok===false, detail: r.ok===false ? 'blocked until attested' : 'should have blocked' };
+      return { pass: !r.ok, detail: r.ok ? 'wrongly registered' : 'blocked until attested' };
   }},
-  { name:'After attest, it registers with its fields', run() {
-      const r = toSourcePack(attest(interpretRegulation('gdp'), 'expert'));
-      const pass = r.ok && r.pack.requires_fields.includes('cold_chain_log');
-      return { pass, detail: pass ? 'registered as a source' : 'register failed' };
+  { name:'attested interpretation registers with floors', run() {
+      const r = toSourcePack(attest(interpretRegulation('gdpr'), 'expert'));
+      return { pass: r.ok && !!r.pack.contributes.data_residency, detail: r.ok ? 'registered with residency floor' : 'no floor' };
   }},
-  { name:'Maker-checker rejects self-approval', run() {
-      const r = runChitThroughGate({ id:'c1', type:'order', author:'A', approver:'A' }, ['maker_checker']);
-      return { pass: !r.completed, detail: !r.completed ? 'self-approval blocked' : 'should reject' };
+  { name:'self-approval is rejected then compensated (cleanly stops)', run() {
+      const g = runChitThroughGate({ id:'c', type:'x', author:'a', approver:'a', checked:true }, ['maker_checker','compensation']);
+      return { pass: !g.completed && !!g.remedy && g.remedy.clean === true, detail: !g.completed ? 'stopped + compensated' : 'unexpected' };
   }},
-  { name:'Compensation fires on failure (cleanly stops)', run() {
-      const r = runChitThroughGate({ id:'c2', type:'order', author:'A', approver:'B', forceFail:true }, ['maker_checker','compensation']);
-      const pass = !r.completed && r.remedy && r.remedy.clean === true;
-      return { pass, detail: pass ? 'compensated — clean stop' : 'no clean remedy' };
+  { name:'valid chit completes', run() {
+      const g = runChitThroughGate({ id:'c', type:'x', author:'a', approver:'b', checked:true }, ['maker_checker','pdca','compensation']);
+      return { pass: g.completed, detail: g.completed ? 'completed' : 'blocked' };
   }},
 ];

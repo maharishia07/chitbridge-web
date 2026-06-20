@@ -1,4 +1,3 @@
-// Instruction packs STRENGTHEN the gate. Each may only ADD or TIGHTEN (never loosen).
 export const INSTRUCTION_PACKS = {
   maker_checker: { id:'maker_checker', label:'Maker-checker (separation of duties)', primitives:['accountability','evidence'],
     gate:(chit) => (chit.approver && chit.approver !== chit.author)
@@ -9,8 +8,6 @@ export const INSTRUCTION_PACKS = {
   compensation: { id:'compensation', label:'Compensation (cleanly stops)', primitives:['remedy'],
     onFailure:(chit) => ({ action:`compensate — reverse ${chit.type} ${chit.id}`, clean:true }) },
 };
-
-// run a chit through attached packs; on any gate failure (or a forced failure), fire compensation if present.
 export function runChitThroughGate(chit, packIds = []) {
   const steps = []; let ok = true;
   for (const id of packIds) {
@@ -18,8 +15,6 @@ export function runChitThroughGate(chit, packIds = []) {
     if (p?.gate) { const r = p.gate(chit); steps.push({ pack:p.label, ...r }); if (!r.ok) ok = false; }
   }
   let remedy = null;
-  if (!ok || chit.forceFail) {
-    remedy = packIds.includes('compensation') ? INSTRUCTION_PACKS.compensation.onFailure(chit) : { action:'reject', clean:false };
-  }
+  if (!ok || chit.forceFail) remedy = packIds.includes('compensation') ? INSTRUCTION_PACKS.compensation.onFailure(chit) : { action:'reject', clean:false };
   return { completed: ok && !chit.forceFail, steps, remedy };
 }

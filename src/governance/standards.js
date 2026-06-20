@@ -1,5 +1,3 @@
-// Standards = certifications. CASCADED. Required fields cascade into the schema;
-// required capabilities are Class B (must be granted, else hard reject); advisories are Class C.
 export const STANDARDS = {
   none:       { id:'none', label:'(none)', requires_fields:[], requires_capabilities:[], advisories:[] },
   gdp_pharma: { id:'gdp_pharma', label:'GDP (pharma distribution)',

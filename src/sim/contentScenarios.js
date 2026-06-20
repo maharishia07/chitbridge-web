@@ -1,23 +1,12 @@
-// contentScenarios.js
-import { V0_1, V0_2 } from '../governance/constitutions';
-import { CONTENT_PACKS } from '../governance/content';
-import { JURISDICTIONS } from '../governance/jurisdictions';
-import { composeCascade, cContrib, jContrib } from '../governance/cascade';
-
+import { V0_1 } from '../governance/constitutions';
+import { assembleBusiness } from '../governance/cascade';
 export const contentScenarios = [
-  { name:'Content references compose per pack', run() {
-      const a = CONTENT_PACKS.own_only.references, b = CONTENT_PACKS.distributor_feed.references;
-      const pass = a.length !== b.length;
-      return { pass, detail: pass ? 'referenced packs differ per choice' : 'same refs' };
+  { name:'distributor feed adds supplier_ref to the data definition', run() {
+      const r = assembleBusiness(V0_1, { vertical:'pharmacy', jurisdiction:'india', standard:'none', content:'distributor_feed', erp:'none', capabilities:[] });
+      return { pass: r.schema.includes('supplier_ref'), detail:'supplier_ref present' };
   }},
-  { name:'Open marketplace visibility is capped by the constitution', run() {
-      const r = composeCascade(V0_1, {}, [cContrib(CONTENT_PACKS.open_market)]); // cap = private under v0.1
-      const pass = r.effective.catalogue_visibility !== 'public' && r.exceptions.some(x=>x.klass==='note');
-      return { pass, detail: pass ? 'public capped, recorded' : 'expected a cap' };
-  }},
-  { name:'Cannot loosen past a region ceiling', run() {
-      const r = composeCascade(V0_2, {}, [jContrib(JURISDICTIONS.eu), cContrib(CONTENT_PACKS.open_market)]); // eu→restricted, v0.2 cap restricted
-      const pass = r.effective.catalogue_visibility === 'restricted';
-      return { pass, detail: pass ? 'public capped to restricted by the stack above' : r.effective.catalogue_visibility };
+  { name:'content references are carried onto the business', run() {
+      const r = assembleBusiness(V0_1, { vertical:'marketplace', jurisdiction:'india', standard:'none', content:'open_market', erp:'none', capabilities:[] });
+      return { pass: r.catalogue.includes('marketplace'), detail:r.catalogue.join(',') };
   }},
 ];

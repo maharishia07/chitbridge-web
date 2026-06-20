@@ -1,45 +1,31 @@
-// JurisdictionScreen.jsx
 import React from 'react';
 import { useSim } from './simStore';
-import { composeCascade, jContrib } from '../governance/cascade';
-import { JURISDICTIONS } from '../governance/jurisdictions';
 import { ModeToggle } from './ModeToggle';
 import { ScenarioRunner } from './ScenarioRunner';
 import { jurisdictionScenarios } from './jurisdictionScenarios';
-
-const PAIN = `Go cross-border and the legal floor moves under you — data residency, tax, invoice format, retention — and generic software just lets you break it silently.`;
-const PLEASURE = `Pick a region and the legal envelope is pinned as a floor. Nothing below can loosen it; switch country and the whole envelope snaps to the new regime.`;
+import { JURISDICTIONS } from '../governance/jurisdictions';
 
 export function JurisdictionScreen() {
-  const { state, dispatch, activeConstitution } = useSim();
-  const ac = activeConstitution();
-  const j = JURISDICTIONS[state.selectedJurisdiction] || JURISDICTIONS.india;
-  const r = composeCascade(ac, state.draftOverride, [jContrib(j)]);
+  const { state, dispatch } = useSim();
+  const j = JURISDICTIONS[state.selectedJurisdiction];
+  if (state.mode === 'without') {
+    return (<div className="layer-screen">
+      <div className="layer-header"><h2>Jurisdiction <small>legal floor</small></h2><ModeToggle /></div>
+      <div className="pain-card"><b>Without CB:</b> tax, invoice format, data-residency and retention rules are wired by hand per country, and silently go stale when the law changes.</div>
+    </div>);
+  }
   return (
     <div className="layer-screen">
-      <div className="layer-header"><h2>Jurisdiction</h2><ModeToggle /></div>
-      {state.mode === 'without' ? <div className="pain-card">{PAIN}</div> : (
-        <>
-          <div className="grid">
-            <div className="panel">
-              <h4>Region & law (pinned at install)</h4>
-              <select value={state.selectedJurisdiction} onChange={e => dispatch({type:'SET_JURISDICTION', value:e.target.value})}>
-                {Object.values(JURISDICTIONS).map(x => <option key={x.id} value={x.id}>{x.label}</option>)}
-              </select>
-              <p className="hint">Switch region → the legal envelope snaps. These are floors (Class A).</p>
-            </div>
-            <div className="panel">
-              <h4>Legal envelope</h4>
-              <table className="prov"><tbody>
-                {Object.entries(j.envelope).map(([k,v]) => <tr key={k}><td>{k}</td><td>{String(v)}</td></tr>)}
-              </tbody></table>
-              <h4 style={{marginTop:10}}>Floors (cannot be loosened below)</h4>
-              <div>{Object.entries(r.floors).map(([k,f]) => `${k}=${f.value}`).join(' · ') || '—'}</div>
-            </div>
-          </div>
-          <div className="pleasure-card">{PLEASURE}</div>
-        </>
-      )}
+      <div className="layer-header"><h2>Jurisdiction <small>{j.label}</small></h2><ModeToggle /></div>
+      <div className="actions">
+        {Object.values(JURISDICTIONS).map(x => <button key={x.id} className={x.id===state.selectedJurisdiction?'on':''} onClick={() => dispatch({ type:'SET_JURISDICTION', value:x.id })}>{x.label}</button>)}
+      </div>
+      <div className="grid">
+        <div className="panel"><h4>Legal envelope (floor)</h4>
+          <table className="prov"><tbody>{Object.entries(j.envelope).map(([k,v]) => <tr key={k}><td>{k}</td><td className="src-v">{String(v)}</td></tr>)}</tbody></table></div>
+        <div className="panel"><h4>Fields it requires</h4><ul>{j.requires_fields.map(f=><li key={f}>{f}</li>)}</ul>
+          <div className="hint">These floors only tighten — a business can add stricter handling, never loosen below them.</div></div>
+      </div>
       <ScenarioRunner scenarios={jurisdictionScenarios} />
     </div>
   );

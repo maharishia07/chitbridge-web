@@ -1,43 +1,33 @@
-// ErpScreen.jsx
 import React from 'react';
 import { useSim } from './simStore';
-import { composeCascade, eContrib, jContrib } from '../governance/cascade';
-import { ERP_SOURCES } from '../governance/erp';
-import { JURISDICTIONS } from '../governance/jurisdictions';
 import { ModeToggle } from './ModeToggle';
 import { ScenarioRunner } from './ScenarioRunner';
 import { erpScenarios } from './erpScenarios';
-
-const PAIN = `Connect an external system and it drags in its own rules — or quietly overrides yours. Integrations become the hole in the floor.`;
-const PLEASURE = `Connect your system through a governed membrane: objects flow in and are added, but every one passes conformance. It can add, never override a floor.`;
+import { ERP_SOURCES } from '../governance/erp';
 
 export function ErpScreen() {
-  const { state, dispatch, activeConstitution } = useSim();
-  const ac = activeConstitution();
-  const e = ERP_SOURCES[state.selectedErp] || ERP_SOURCES.none;
-  const r = composeCascade(ac, state.draftOverride, [jContrib(JURISDICTIONS[state.selectedJurisdiction] || JURISDICTIONS.india), eContrib(e)]);
+  const { state, dispatch } = useSim();
+  const e = ERP_SOURCES[state.selectedErp];
+  if (state.mode === 'without') {
+    return (<div className="layer-screen">
+      <div className="layer-header"><h2>ERP / source <small>system of record</small></h2><ModeToggle /></div>
+      <div className="pain-card"><b>Without CB:</b> integrating an ERP is a bespoke project each time, and the external data lands ungoverned — no conformance check at the boundary.</div>
+    </div>);
+  }
   return (
     <div className="layer-screen">
-      <div className="layer-header"><h2>ERP / connect your system</h2><ModeToggle /></div>
-      {state.mode === 'without' ? <div className="pain-card">{PAIN}</div> : (
-        <>
-          <div className="grid">
-            <div className="panel">
-              <h4>External system</h4>
-              <select value={state.selectedErp} onChange={ev => dispatch({type:'SET_ERP', value:ev.target.value})}>
-                {Object.values(ERP_SOURCES).map(x => <option key={x.id} value={x.id}>{x.label}</option>)}
-              </select>
-            </div>
-            <div className="panel">
-              <h4>Governed membrane (additive)</h4>
-              <div><b>Object source:</b> {e.adds.object_source || '—'}</div>
-              <div><b>Synced objects:</b> {(e.adds.synced_objects||[]).join(', ') || '—'}</div>
-              {r.rejections.length > 0 && <div className="reject">REJECTED: {r.rejections.map(x=>x.reason).join('; ')}</div>}
-            </div>
-          </div>
-          <div className="pleasure-card">{PLEASURE}</div>
-        </>
-      )}
+      <div className="layer-header"><h2>ERP / source <small>{e.label}</small></h2><ModeToggle /></div>
+      <div className="actions">
+        {Object.values(ERP_SOURCES).map(x => <button key={x.id} className={x.id===state.selectedErp?'on':''} onClick={() => dispatch({ type:'SET_ERP', value:x.id })}>{x.label}</button>)}
+      </div>
+      <div className="grid">
+        <div className="panel"><h4>What it adds (additive)</h4>
+          {e.adds.object_source ? <div className="src-v">object_source = {e.adds.object_source}</div> : <div className="hint">nothing — no external system</div>}
+          {e.adds.synced_objects && <ul>{e.adds.synced_objects.map(o=><li key={o}>{o}</li>)}</ul>}</div>
+        <div className="panel"><h4>Fields it makes available</h4>
+          <ul>{e.requires_fields.map(f=><li key={f}>{f} <span className="hint">(from your system)</span></li>)}</ul>
+          <div className="hint">Additive only — a source may add data, never loosen a floor.</div></div>
+      </div>
       <ScenarioRunner scenarios={erpScenarios} />
     </div>
   );
