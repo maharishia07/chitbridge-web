@@ -5,7 +5,7 @@ import { mint, viewEntity, reattest } from '../governance/resolver';
 const initialState = {
   constitutionVersions: [V0_1], activeVersion: '0.1',
   draftOverride: {}, entities: [],
-  selectedLayer: 'constitution', mode: 'with',
+  selectedLayer: 'constitution', selectedVertical: 'pharma', mode: 'with',
   scenarioResults: {}, painLog: [], lastRejection: null,
 };
 const activeOf = s => s.constitutionVersions.find(c => c.version === s.activeVersion);
@@ -13,6 +13,7 @@ const activeOf = s => s.constitutionVersions.find(c => c.version === s.activeVer
 function reducer(state, a) {
   switch (a.type) {
     case 'SELECT_LAYER': return { ...state, selectedLayer: a.layer };
+    case 'SELECT_VERTICAL': return { ...state, selectedVertical: a.id };
     case 'TOGGLE_MODE':  return { ...state, mode: state.mode === 'with' ? 'without' : 'with' };
     case 'SET_PARAM':    return { ...state, draftOverride: { ...state.draftOverride, [a.key]: a.value } };
     case 'RESET_DRAFT':  return { ...state, draftOverride: {}, lastRejection: null };

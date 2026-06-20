@@ -20,3 +20,10 @@
 .scenario-row { margin:6px 0; }
 .scenario-row .pass { color:#2c6b2c; margin-left:8px; }
 .scenario-row .fail { color:#b3261e; margin-left:8px; }
+.vertical-picker { display:flex; gap:6px; margin-top:10px; flex-wrap:wrap; }
+.vertical-picker button { padding:6px 12px; border:1px solid #cdd9dd; background:#fff; border-radius:6px; cursor:pointer; }
+.vertical-picker button.active { background:#0f2e3d; color:#fff; }
+.muted { color:#5f6b70; font-size:12px; margin:4px 0 8px; }
+.prov-table { width:100%; border-collapse:collapse; font-size:12px; margin-top:6px; }
+.prov-table th, .prov-table td { text-align:left; padding:4px 8px; border-bottom:1px solid #eef3f5; }
+.prov-table th { color:#5f6b70; font-weight:600; }

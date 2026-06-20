@@ -1,6 +1,7 @@
 import React from 'react';
 import { SimProvider, useSim } from './simStore';
 import { ConstitutionScreen } from './ConstitutionScreen';
+import { VerticalScreen } from './VerticalScreen';
 import './simulator.css';
 
 const LAYERS = [
@@ -23,9 +24,9 @@ function LayerRail() {
 }
 function ScreenSwitch() {
   const { state } = useSim();
-  return state.selectedLayer === 'constitution'
-    ? <ConstitutionScreen />
-    : <div className="layer-screen placeholder">{state.selectedLayer} — coming next (same pattern)</div>;
+  if (state.selectedLayer === 'constitution') return <ConstitutionScreen />;
+  if (state.selectedLayer === 'vertical')     return <VerticalScreen />;
+  return <div className="layer-screen placeholder">{state.selectedLayer} — coming next (same pattern)</div>;
 }
 export default function SimulatorTab() {
   return <SimProvider><div className="simulator"><LayerRail /><ScreenSwitch /></div></SimProvider>;
