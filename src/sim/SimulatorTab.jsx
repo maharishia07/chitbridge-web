@@ -7,6 +7,7 @@ import { StandardsScreen } from './StandardsScreen';
 import { ContentScreen } from './ContentScreen';
 import { ErpScreen } from './ErpScreen';
 import { PayoffScreen } from './PayoffScreen';
+import { BlueprintScreen } from './BlueprintScreen';
 import './simulator.css';
 
 const LAYERS = [
@@ -14,6 +15,7 @@ const LAYERS = [
   { id:'jurisdiction', label:'Jurisdiction' }, { id:'standards', label:'Standards' },
   { id:'content', label:'Content' }, { id:'erp', label:'ERP' },
   { id:'payoff', label:'▶ Spin a business' },
+  { id:'blueprint', label:'Blueprint ⧉' },
 ];
 
 function LayerRail() {
@@ -38,6 +40,7 @@ function ScreenSwitch() {
     case 'content':      return <ContentScreen />;
     case 'erp':          return <ErpScreen />;
     case 'payoff':       return <PayoffScreen />;
+    case 'blueprint':    return <BlueprintScreen />;
     default: return <div className="layer-screen placeholder">pick a layer</div>;
   }
 }

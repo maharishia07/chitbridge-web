@@ -35,3 +35,8 @@
 .prov .src-c { color:#5f6b70; }
 .prov .src-v { color:#0f2e3d; font-weight:600; }
 .hint { color:#5f6b70; font-size:12px; margin:6px 0; }
+.card { border:1px solid #eef3f5; border-radius:6px; padding:8px; margin:8px 0; }
+.clone-row { display:flex; gap:6px; margin-top:6px; flex-wrap:wrap; }
+.clone-row input, .panel input { padding:5px; border:1px solid #cdd9dd; border-radius:4px; }
+h2 small { color:#5f6b70; font-size:13px; font-weight:400; }
+.panel h4 small { color:#5f6b70; font-weight:400; }

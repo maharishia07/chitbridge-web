@@ -2,6 +2,7 @@ import React, { createContext, useContext, useReducer } from 'react';
 import { V0_1, V0_2 } from '../governance/constitutions';
 import { mint, viewEntity, reattest } from '../governance/resolver';
 import { PRESETS } from '../governance/presets';
+import { saveBlueprint, cloneInstance, applyUpdate } from '../governance/blueprint';
 
 const initialState = {
   constitutionVersions: [V0_1], activeVersion: '0.1',
@@ -10,6 +11,7 @@ const initialState = {
   selectedVertical: 'pharmacy', selectedJurisdiction: 'india', selectedStandard: 'none',
   selectedContent: 'own_only', selectedErp: 'none', capabilities: [], selectedPreset: null,
   mode: 'with', lastRejection: null,
+  blueprints: [], instances: [],
 };
 const activeOf = s => s.constitutionVersions.find(c => c.version === s.activeVersion);
 
@@ -45,6 +47,21 @@ function reducer(state, a) {
     }
     case 'REATTEST':
       return { ...state, entities: state.entities.map(e => { if (e.id !== a.id) return e; const r = reattest(e, activeOf(state)); return r.ok ? r.entity : e; }) };
+    case 'SAVE_BLUEPRINT': {
+      const sel = { vertical:state.selectedVertical, jurisdiction:state.selectedJurisdiction, standard:state.selectedStandard,
+                    content:state.selectedContent, erp:state.selectedErp, capabilities:state.capabilities };
+      return { ...state, blueprints: [...state.blueprints, saveBlueprint(activeOf(state), sel, a.name)] };
+    }
+    case 'CLONE_INSTANCE': {
+      const bp = state.blueprints.find(b => b.id === a.blueprintId); if (!bp) return state;
+      return { ...state, instances: [...state.instances, cloneInstance(bp, activeOf(state), a.overlay || {}, a.name)] };
+    }
+    case 'APPLY_UPDATE':
+      return { ...state, instances: state.instances.map(inst => {
+        if (inst.id !== a.id) return inst;
+        const bp = state.blueprints.find(b => b.id === inst.blueprintId);
+        return bp ? applyUpdate(inst, bp.selection, activeOf(state)) : inst;
+      }) };
     default: return state;
   }
 }

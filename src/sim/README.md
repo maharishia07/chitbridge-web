@@ -62,6 +62,7 @@ Keep every layer **client-side only**: no backend, no secrets, **no new dependen
 - [x] Content
 - [x] ERP
 - [x] Payoff — stacks all six ("spin a compliant business in minutes")
+- [x] Blueprint (template → instance)
 - [ ] Movement 2 — Operate (entity → supplier → network → completion → MIS)
 - [ ] Model presets (Amazon-style marketplace / closed distributor / manufacturer chain / service network)
 - [ ] "Price being paid today" meter (deferred; hook = `painLog`)
