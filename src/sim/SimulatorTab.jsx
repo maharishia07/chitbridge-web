@@ -8,9 +8,11 @@ import { ContentScreen } from './ContentScreen';
 import { ErpScreen } from './ErpScreen';
 import { PayoffScreen } from './PayoffScreen';
 import { BlueprintScreen } from './BlueprintScreen';
+import { ShowcaseScreen } from './ShowcaseScreen';
 import './simulator.css';
 
 const LAYERS = [
+  { id:'showcase', label:'★ Showcase' },
   { id:'constitution', label:'Constitution' }, { id:'vertical', label:'Vertical' },
   { id:'jurisdiction', label:'Jurisdiction' }, { id:'standards', label:'Standards' },
   { id:'content', label:'Content' }, { id:'erp', label:'ERP' },
@@ -33,6 +35,7 @@ function LayerRail() {
 function ScreenSwitch() {
   const { state } = useSim();
   switch (state.selectedLayer) {
+    case 'showcase':     return <ShowcaseScreen />;
     case 'constitution': return <ConstitutionScreen />;
     case 'vertical':     return <VerticalScreen />;
     case 'jurisdiction': return <JurisdictionScreen />;

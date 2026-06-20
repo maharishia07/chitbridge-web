@@ -40,3 +40,5 @@
 .clone-row input, .panel input { padding:5px; border:1px solid #cdd9dd; border-radius:4px; }
 h2 small { color:#5f6b70; font-size:13px; font-weight:400; }
 .panel h4 small { color:#5f6b70; font-weight:400; }
+.layer-rail button:first-of-type { background:#6b2d8f; color:#fff; }
+.panel h4 small { color:#5f6b70; font-weight:400; margin-left:6px; }
