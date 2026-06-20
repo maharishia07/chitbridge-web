@@ -285,6 +285,7 @@ export const Layout = ({ children, title, unreadCount = 0 }) => {
             <div className="text-xs text-gray-400 uppercase tracking-wide px-2 py-1">Admin</div>
             <NavItem icon="📊" label="MIS dashboard" to="/mis"          onClick={close}/>
             <NavItem icon="🤖" label="Co-Assists"    to="/co-assists"   badge={counts.coAssists} onClick={close}/>
+            <NavItem icon="🧪" label="Simulator"     to="/simulator"    onClick={close}/>
             <NavItem icon="⚙️" label="Settings"      to="/settings"     onClick={close}/>
           </>
         )}

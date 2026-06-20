@@ -1,0 +1,22 @@
+.simulator { display:flex; gap:16px; font:14px/1.5 system-ui; padding:16px; }
+.layer-rail { width:170px; display:flex; flex-direction:column; gap:4px; }
+.layer-rail button { text-align:left; padding:8px 10px; border:1px solid #d7e2e6; background:#fff; border-radius:6px; cursor:pointer; }
+.layer-rail button.active { background:#0f2e3d; color:#fff; }
+.rail-foot { margin-top:auto; font-size:12px; color:#5f6b70; }
+.layer-screen { flex:1; }
+.layer-header { display:flex; justify-content:space-between; align-items:center; }
+.mode-toggle button { padding:6px 12px; border:1px solid #cdd9dd; background:#fff; cursor:pointer; }
+.mode-toggle button.on { background:#0f2e3d; color:#fff; }
+.grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:10px; }
+.panel { border:1px solid #d7e2e6; border-radius:8px; padding:12px; }
+.panel label { display:block; margin:6px 0; }
+.actions { margin-top:10px; display:flex; gap:8px; }
+.reject { color:#b3261e; margin-top:8px; font-weight:600; }
+.exception { color:#9a6b15; margin-top:8px; }
+.pain-card { background:#fdecea; border-left:3px solid #b3261e; padding:12px; margin-top:10px; }
+.pleasure-card { background:#eef6ef; border-left:3px solid #2c6b2c; padding:12px; margin-top:10px; }
+.entity-row { display:flex; justify-content:space-between; padding:4px 0; border-bottom:1px solid #eef3f5; }
+.scenarios { margin-top:16px; }
+.scenario-row { margin:6px 0; }
+.scenario-row .pass { color:#2c6b2c; margin-left:8px; }
+.scenario-row .fail { color:#b3261e; margin-left:8px; }

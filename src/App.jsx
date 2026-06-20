@@ -1,5 +1,6 @@
 // src/App.jsx
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Suspense, lazy } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AppModeProvider } from './context/AppModeContext';
 
@@ -22,6 +23,9 @@ import SupplierOrderPage from './pages/SupplierOrderPage';
 import PublicCataloguePage from './pages/PublicCataloguePage';
 import NotFoundPage    from './pages/NotFoundPage';
 
+// Layer Simulator — self-contained client-side teaching/QA tool (no auth, no API)
+const SimulatorTab = lazy(() => import('./sim/SimulatorTab'));
+
 const Protected = ({ children }) => {
   const { isLoggedIn } = useAuth();
   return isLoggedIn ? children : <Navigate to="/login" replace />;
@@ -34,6 +38,15 @@ const AppRoutes = () => {
       <Route path="/login" element={isLoggedIn ? <Navigate to="/inbox" replace/> : <LoginPage/>}/>
       {/* B3.7 — public storefront, no auth gate */}
       <Route path="/c/:bridgeId" element={<PublicCataloguePage/>}/>
+      {/* Layer Simulator — public, no auth gate (client-side demo) */}
+      <Route path="/simulator" element={
+        <Suspense fallback={<div style={{padding:24}}>Loading simulator…</div>}>
+          <div style={{padding:'10px 16px',borderBottom:'1px solid #e5e7eb'}}>
+            <Link to="/inbox" style={{fontSize:13,color:'#2563eb',textDecoration:'none'}}>← Back to app</Link>
+          </div>
+          <SimulatorTab/>
+        </Suspense>
+      }/>
       <Route path="/inbox"          element={<Protected><InboxPage/></Protected>}/>
       <Route path="/chit/:chitId"   element={<Protected><ChitDetailPage/></Protected>}/>
       <Route path="/send"           element={<Protected><SendChitPage/></Protected>}/>
