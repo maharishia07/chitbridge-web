@@ -1,98 +1,99 @@
-// governance/cascade.js — PURE. The left-fold that layers governance one layer onto the
-// previous result, in precedence order:
-//   Constitution → Jurisdiction → Vertical → Standards → Content → ERP
-// Higher-precedence layers set FLOORS/CEILINGS that lower layers may only TIGHTEN, never
-// loosen. It records provenance (which layer decided each value) and flags loosening.
-//
-//   cascade(layers, override) -> { ok, effective, provenance, exceptions, rejections }
-//     layers: [{ name, params }]  in precedence order, highest authority first
-//     params[key]: { klass, value?, cap?, scale?, set? }   (same shape as resolver/constitution)
+import { resolve } from './resolver';
+import { VERTICALS } from './verticals';
+import { JURISDICTIONS } from './jurisdictions';
+import { STANDARDS } from './standards';
+import { CONTENT_PACKS } from './content';
+import { ERP_SOURCES } from './erp';
 
-const tighter = (scale, a, b) => (scale.indexOf(a) <= scale.indexOf(b) ? a : b);
+const SCALES = { catalogue_visibility: ['private','restricted','public'] };
+const mapTighten = obj => Object.fromEntries(Object.entries(obj||{}).map(([k,v]) => [k,{value:v,mode:'tighten'}]));
 
-export function cascade(layers, override = {}) {
-  const effective = {};   // key -> resolved value
-  const provenance = {};  // key -> { source, klass, cap?, set? }
-  const exceptions = [];  // Class C — loosening clamped / advisory mismatch (allowed, flagged)
-  const rejections = [];  // Class A/B — hard rejects (floor holds)
+// Generic fold: layers = contributors in PRECEDENCE order, each { id, layer, contributes:{key:{value,mode}} }
+// modes: floor (bound/Class A), tighten (chosen, capped), advise (Class C), add (additive/ERP)
+export function composeCascade(constitution, override, layers = []) {
+  const base = resolve(constitution, override);
+  const effective = { ...base.effective };
+  const exceptions = [...base.exceptions];
+  const rejections = [...base.rejections];
+  const provenance = {};
+  for (const k of Object.keys(base.effective))
+    provenance[k] = { value: base.effective[k], source_layer:'constitution', source_version: constitution.version };
+  const floors = {};
 
-  for (const layer of layers) {
-    for (const [key, p] of Object.entries(layer.params || {})) {
-      const chose = Object.prototype.hasOwnProperty.call(override, key) ? override[key] : undefined;
-      const prior = provenance[key]; // already set by a higher-precedence layer?
-
-      switch (p.klass) {
-        case 'bound': {
-          // a lower layer cannot re-bind what a higher layer already bound
-          if (prior && prior.klass === 'bound' && effective[key] !== p.value) {
-            rejections.push({ key, klass: 'A', layer: layer.name,
-              reason: `${layer.name} cannot rebind '${key}' — floored by ${prior.source} = ${JSON.stringify(effective[key])}` });
-            break;
-          }
-          if (chose !== undefined && chose !== p.value)
-            rejections.push({ key, klass: 'A', layer: layer.name,
-              reason: `'${key}' is bound by ${layer.name}; cannot override`, attempted: chose });
-          effective[key] = p.value;
-          provenance[key] = { source: layer.name, klass: 'bound' };
-          break;
+  for (const L of layers) {
+    if (!L) continue;
+    for (const [key, c] of Object.entries(L.contributes || {})) {
+      const p = constitution.params[key];
+      const scale = SCALES[key];
+      if (c.mode === 'floor') {
+        if (floors[key] && scale && scale.indexOf(c.value) > scale.indexOf(floors[key].value)) {
+          rejections.push({ key, klass:'A', reason:`${L.layer} cannot loosen floor set by ${floors[key].by}` }); continue;
         }
-        case 'bound_set': {
-          const floorSet = prior && prior.set ? prior.set : null;
-          const mySet = floorSet ? p.set.filter(v => floorSet.includes(v)) : p.set.slice(); // intersect = tighten
-          const want = chose === undefined ? (effective[key] !== undefined ? effective[key] : p.value) : chose;
-          const arr = Array.isArray(want) ? want : [want];
-          const outside = arr.filter(v => !mySet.includes(v));
-          if (outside.length)
-            rejections.push({ key, klass: 'B', layer: layer.name,
-              reason: `${outside.join(', ')} not in ${layer.name} allowed set`, allowed: mySet });
-          effective[key] = outside.length ? mySet.slice() : arr.slice();
-          provenance[key] = { source: prior ? `${prior.source} → ${layer.name}` : layer.name, klass: 'bound_set', set: mySet };
-          break;
+        floors[key] = { value: c.value, by: L.layer };
+        effective[key] = c.value;
+        provenance[key] = { value:c.value, source_layer:L.layer, source_version:L.id, floor:true };
+      } else if (c.mode === 'tighten') {
+        let ceiling = (p && p.klass === 'chosen') ? p.cap : undefined;
+        const floorV = floors[key]?.value;
+        if (scale && floorV && (!ceiling || scale.indexOf(floorV) < scale.indexOf(ceiling))) ceiling = floorV;
+        if (scale && ceiling && scale.indexOf(c.value) > scale.indexOf(ceiling)) {
+          exceptions.push({ key, klass:'note', reason:`${L.layer} proposed '${c.value}', capped at '${ceiling}' — kept '${effective[key]}'` });
+        } else {
+          effective[key] = c.value;
+          provenance[key] = { value:c.value, source_layer:L.layer, source_version:L.id };
         }
-        case 'chosen': {
-          // ceiling tightens across layers
-          let cap = p.cap;
-          if (prior && prior.cap) {
-            cap = tighter(p.scale, prior.cap, p.cap);
-            if (p.scale.indexOf(p.cap) > p.scale.indexOf(prior.cap))
-              exceptions.push({ key, klass: 'C', layer: layer.name,
-                reason: `${layer.name} ceiling '${p.cap}' loosens ${prior.source} '${prior.cap}' — clamped to '${cap}'` });
-          }
-          let value = chose !== undefined ? chose
-                    : (effective[key] !== undefined ? effective[key] : (p.value !== undefined ? p.value : cap));
-          if (p.scale.indexOf(value) > p.scale.indexOf(cap)) {
-            rejections.push({ key, klass: 'A', layer: layer.name,
-              reason: `'${value}' loosens past ceiling '${cap}'`, attempted: value });
-            value = cap;
-          }
-          effective[key] = value;
-          provenance[key] = { source: prior ? `${prior.source} → ${layer.name}` : layer.name, klass: 'chosen', cap };
-          break;
-        }
-        case 'advisory': {
-          const val = chose !== undefined ? chose : (effective[key] !== undefined ? effective[key] : p.value);
-          if (chose !== undefined && chose !== p.value)
-            exceptions.push({ key, klass: 'C', layer: layer.name,
-              reason: `advisory '${chose}' vs ${layer.name} reference '${p.value}'` });
-          effective[key] = val;
-          provenance[key] = provenance[key] || { source: layer.name, klass: 'advisory' };
-          break;
-        }
-        default:
-          if (effective[key] === undefined) {
-            effective[key] = p.value;
-            provenance[key] = { source: layer.name, klass: 'default' };
-          }
+      } else if (c.mode === 'advise') {
+        effective[key] = c.value;
+        provenance[key] = { value:c.value, source_layer:L.layer, source_version:L.id };
+      } else if (c.mode === 'add') {
+        if (floors[key]) { rejections.push({ key, klass:'A', reason:`${L.layer} (additive) cannot override floor by ${floors[key].by}` }); continue; }
+        effective[key] = c.value;
+        provenance[key] = { value:c.value, source_layer:L.layer, source_version:L.id, additive:true };
       }
     }
   }
-  return { ok: rejections.length === 0, effective, provenance, exceptions, rejections };
+  return { effective, provenance, floors, exceptions, rejections };
 }
 
-// Build the ordered layer list from the active constitution + an optional vertical.
-// (As more layers land, insert them here in precedence order.)
-export function layersFor(constitution, vertical) {
-  const layers = [{ name: 'Constitution', params: constitution.params }];
-  if (vertical) layers.push({ name: vertical.label, params: vertical.contributes });
-  return layers;
+// contributor builders
+export const vContrib = v => v && ({ id:v.id, layer:'vertical', contributes: mapTighten(v.contributes) });
+export const jContrib = j => j && ({ id:j.id, layer:'jurisdiction', contributes: j.contributes });
+export const cContrib = c => c && ({ id:c.id, layer:'content', contributes: c.visibility_contribution ? { catalogue_visibility:{value:c.visibility_contribution, mode:'tighten'} } : {} });
+export const eContrib = e => e && ({ id:e.id, layer:'erp', contributes: e.adds.object_source ? { object_source:{value:e.adds.object_source, mode:'add'} } : {} });
+
+// back-compat for the Vertical slice
+export function composeVertical(constitution, override, vertical) {
+  const r = composeCascade(constitution, override, vertical ? [vContrib(vertical)] : []);
+  return { ...r, schema: vertical?vertical.schema:[], chitTypes: vertical?vertical.chit_types:[], lenses: vertical?vertical.preset_lenses:{} };
+}
+
+// full stack in precedence order from a selection set
+export function buildStack(sel) {
+  const out = [];
+  if (JURISDICTIONS[sel.jurisdiction]) out.push(jContrib(JURISDICTIONS[sel.jurisdiction]));
+  if (VERTICALS[sel.vertical])         out.push(vContrib(VERTICALS[sel.vertical]));
+  if (CONTENT_PACKS[sel.content])      out.push(cContrib(CONTENT_PACKS[sel.content]));
+  if (ERP_SOURCES[sel.erp])            out.push(eContrib(ERP_SOURCES[sel.erp]));
+  return out.filter(Boolean);
+}
+
+// assemble a whole "business" from all six layers (used by Payoff)
+export function assembleBusiness(constitution, sel) {
+  const cascade = composeCascade(constitution, {}, buildStack(sel));
+  const v = VERTICALS[sel.vertical], j = JURISDICTIONS[sel.jurisdiction];
+  const std = STANDARDS[sel.standard], c = CONTENT_PACKS[sel.content], e = ERP_SOURCES[sel.erp];
+  const required = std?.requires_capabilities || [];
+  const granted = sel.capabilities || [];
+  const missing = required.filter(r => !granted.includes(r));
+  const rejections = [...cascade.rejections, ...missing.map(m => ({ key:m, klass:'B', reason:`standard '${std.label}' requires '${m}' (not granted)` }))];
+  return {
+    ...cascade, rejections,
+    schema: [...(v?.schema||[]), ...((std?.requires_fields)||[])],
+    chitTypes: v?.chit_types || [],
+    envelope: j?.envelope || {},
+    certifications: std && std.id !== 'none' ? [std.label] : [],
+    catalogue: c?.references || [],
+    connectors: (e && e.adds.object_source) ? [e.adds.object_source] : [],
+    conformant: rejections.length === 0,
+  };
 }

@@ -27,3 +27,11 @@
 .prov-table { width:100%; border-collapse:collapse; font-size:12px; margin-top:6px; }
 .prov-table th, .prov-table td { text-align:left; padding:4px 8px; border-bottom:1px solid #eef3f5; }
 .prov-table th { color:#5f6b70; font-weight:600; }
+.layer-rail button:last-of-type { margin-top:6px; background:#0f2e3d; color:#fff; }
+.pass { color:#2c6b2c; font-weight:600; }
+.actions button.on { background:#0f2e3d; color:#fff; }
+.prov { width:100%; border-collapse:collapse; font-size:12px; margin-top:6px; }
+.prov td { text-align:left; padding:4px 8px; border-bottom:1px solid #eef3f5; }
+.prov .src-c { color:#5f6b70; }
+.prov .src-v { color:#0f2e3d; font-weight:600; }
+.hint { color:#5f6b70; font-size:12px; margin:6px 0; }

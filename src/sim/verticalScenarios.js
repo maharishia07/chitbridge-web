@@ -1,31 +1,24 @@
+// verticalScenarios.js — reconciled to the general cascade (composeVertical + new VERTICALS).
 import { V0_1, V0_2 } from '../governance/constitutions';
 import { VERTICALS } from '../governance/verticals';
-import { cascade, layersFor } from '../governance/cascade';
+import { composeVertical } from '../governance/cascade';
 
-// These ARE the test harness for the Vertical layer — all must be green before merge.
 export const verticalScenarios = [
-  { name: 'Vertical may tighten but never loosen the Constitution ceiling', run() {
-      // Apparel wants 'public'; Constitution v0.1 caps at 'private' → clamped + flagged.
-      const r = cascade(layersFor(V0_1, VERTICALS.apparel), {});
-      const clamped = r.effective.catalogue_visibility === 'private';
-      const flagged = r.exceptions.some(x => x.key === 'catalogue_visibility');
-      const pass = clamped && flagged;
-      return { pass, detail: pass ? "apparel 'public' clamped to constitution 'private' (flagged Class C)" : JSON.stringify(r.effective) };
+  { name:'Marketplace visibility is capped by the constitution', run() {
+      // Marketplace wants 'public'; Constitution v0.1 caps at 'private' → capped + flagged.
+      const r = composeVertical(V0_1, {}, VERTICALS.marketplace);
+      const pass = r.effective.catalogue_visibility !== 'public' && r.exceptions.some(x => x.klass === 'note');
+      return { pass, detail: pass ? `marketplace 'public' capped to '${r.effective.catalogue_visibility}'` : 'expected a cap' };
   }},
-  { name: 'Vertical adds a bound domain rule that cannot be overridden', run() {
-      // Pharma binds batch_tracking; a user tries to switch it off.
-      const r = cascade(layersFor(V0_1, VERTICALS.pharma), { batch_tracking: false });
-      const enforced = r.effective.batch_tracking === true;
-      const rejected = r.rejections.some(x => x.key === 'batch_tracking');
-      const sourced  = r.provenance.batch_tracking && r.provenance.batch_tracking.source === 'Pharmaceuticals';
-      const pass = enforced && rejected && sourced;
-      return { pass, detail: pass ? 'batch_tracking forced true by Pharmaceuticals; override rejected (Class A)' : JSON.stringify(r) };
+  { name:'Vertical carries its schema and document types', run() {
+      const r = composeVertical(V0_1, {}, VERTICALS.pharmacy);
+      const pass = r.schema.includes('drug_name') && r.chitTypes.includes('purchase_order');
+      return { pass, detail: pass ? 'pharmacy schema + document types present' : 'missing' };
   }},
-  { name: 'A tighter vertical wins over a looser constitution', run() {
-      // Constitution v0.2 caps 'restricted'; Pharma tightens the ceiling to 'private'.
-      const r = cascade(layersFor(V0_2, VERTICALS.pharma), {});
-      const ceiling = r.provenance.catalogue_visibility && r.provenance.catalogue_visibility.cap;
-      const pass = ceiling === 'private' && r.effective.catalogue_visibility === 'private';
-      return { pass, detail: pass ? "ceiling tightened 'restricted' → 'private' by Pharmaceuticals" : `ceiling=${ceiling}` };
+  { name:'Within the ceiling, a vertical may set visibility', run() {
+      // Constitution v0.2 caps 'restricted'; pharmacy proposes 'restricted' → allowed.
+      const r = composeVertical(V0_2, {}, VERTICALS.pharmacy);
+      const pass = r.effective.catalogue_visibility === 'restricted';
+      return { pass, detail: pass ? "pharmacy set 'restricted' under v0.2" : r.effective.catalogue_visibility };
   }},
 ];

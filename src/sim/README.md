@@ -57,11 +57,11 @@ Keep every layer **client-side only**: no backend, no secrets, **no new dependen
 ## Roadmap (update this list as it grows)
 - [x] Constitution  _(live on Vercel — proven 20 Jun 2026)_
 - [x] Vertical
-- [ ] Jurisdiction
-- [ ] Standards
-- [ ] Content
-- [ ] ERP
-- [ ] Payoff — stacks all six ("spin a compliant business in minutes")
+- [x] Jurisdiction
+- [x] Standards
+- [x] Content
+- [x] ERP
+- [x] Payoff — stacks all six ("spin a compliant business in minutes")
 - [ ] Movement 2 — Operate (entity → supplier → network → completion → MIS)
 - [ ] Model presets (Amazon-style marketplace / closed distributor / manufacturer chain / service network)
 - [ ] "Price being paid today" meter (deferred; hook = `painLog`)
