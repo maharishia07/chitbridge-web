@@ -25,6 +25,8 @@ import NotFoundPage    from './pages/NotFoundPage';
 
 // Layer Simulator — self-contained client-side teaching/QA tool (no auth, no API)
 const SimulatorTab = lazy(() => import('./sim/SimulatorTab'));
+// Public showcase tour — DB-backed, lead-gated marketing page (calls /api/simulator)
+const SimulatorPage = lazy(() => import('./sim/SimulatorPage'));
 // NET — network connect (self-contained demo) + live catalogue (needs deployed NET API)
 const NetworkConnect = lazy(() => import('./sim/NetworkConnect'));
 const Catalogue      = lazy(() => import('./sim/Catalogue'));
@@ -65,6 +67,12 @@ const AppRoutes = () => {
             <Link to="/inbox" style={{fontSize:13,color:'#2563eb',textDecoration:'none'}}>← Back to app</Link>
           </div>
           <SimulatorTab/>
+        </Suspense>
+      }/>
+      {/* Public showcase tour — lead-gated, DB-backed; the SimulatorTab above stays as-is */}
+      <Route path="/tour" element={
+        <Suspense fallback={<div style={{padding:24}}>Loading…</div>}>
+          <SimulatorPage/>
         </Suspense>
       }/>
       {/* NET — network connect (self-contained demo) + live catalogue */}
