@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chit &amp; Bridge — app (build)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{--ink:#0F2E3D;--blue:#3F66A6;--blue-d:#345488;--gold:#C9A86A;--gold-soft:#F7F1E4;--gold-line:#E8D9BC;--paper:#FAF8F4;--card:#fff;--line:#E7E2D8;--grey:#7C8085;--ok:#2f8f5b;--prog:#9a7b34;--disp:#b4453f;--shadow:0 1px 2px rgba(15,46,61,.05),0 12px 34px rgba(15,46,61,.08)}
+  *{box-sizing:border-box}html,body{margin:0;height:100%}
+  body{background:var(--paper);color:var(--ink);font-family:Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  button,input,select{font:inherit}button{cursor:pointer}
+  ::-webkit-scrollbar{width:9px;height:9px}::-webkit-scrollbar-thumb{background:#cfc7b8;border-radius:6px}
+  #root{height:100vh;display:flex;flex-direction:column}
+  .mono{font-family:'Space Mono'}.disp{font-family:'Space Grotesk'}
+
+  /* mode ribbon */
+  .moderibbon{background:var(--gold-soft);border-bottom:1px solid var(--gold-line);color:#6b5a36;font-size:11px;font-weight:600;padding:5px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .moderibbon b{font-family:'Space Grotesk'}
+  .moderibbon .pill{background:#fff;border:1px solid var(--gold-line);border-radius:20px;padding:2px 9px;font-size:10px}
+  .moderibbon .sw{margin-left:auto;display:flex;gap:6px}
+  .moderibbon .sw button{border:1px solid var(--gold-line);background:#fff;border-radius:7px;font-size:10.5px;font-weight:700;padding:4px 9px;color:#6b5a36}
+  .moderibbon .sw button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+
+  /* auth screens */
+  .auth{flex:1;display:flex;align-items:center;justify-content:center;padding:24px;overflow-y:auto;background:linear-gradient(160deg,#0F2E3D,#143b4e 60%,#1d4d61)}
+  .card{width:440px;max-width:100%;background:#fff;border-radius:18px;box-shadow:var(--shadow);overflow:hidden}
+  .card .top{padding:22px 26px 8px;text-align:center}
+  .brand{display:inline-flex;align-items:center;gap:10px;font-family:'Space Grotesk';font-weight:700;font-size:18px}
+  .card h1{font-family:'Space Grotesk';font-size:20px;margin:14px 0 4px}.card .sub{font-size:12.5px;color:var(--grey);margin:0}
+  .card .body{padding:8px 26px 24px}
+  .tabs{display:flex;gap:4px;background:var(--paper);border:1px solid var(--line);border-radius:11px;padding:4px;margin:14px 0}
+  .tabs button{flex:1;border:0;background:none;color:var(--grey);font-size:12px;font-weight:700;padding:9px 6px;border-radius:8px}
+  .tabs button.on{background:#fff;color:var(--blue);box-shadow:0 1px 3px rgba(0,0,0,.07)}
+  label.fl{display:block;font-size:11px;font-weight:700;color:var(--grey);margin:12px 0 5px;text-transform:uppercase;letter-spacing:.04em}
+  .inp{width:100%;border:1px solid var(--line);border-radius:10px;padding:11px 13px;font-size:14px;outline:0;background:var(--paper)}
+  .inp:focus{border-color:var(--blue);background:#fff}
+  .row2{display:flex;gap:10px}.row2>div{flex:1}
+  .btn{width:100%;border:0;border-radius:11px;padding:13px;font-weight:700;font-size:14px;margin-top:16px;background:var(--ink);color:#fff}
+  .btn.gold{background:linear-gradient(90deg,var(--gold),#b8945a);color:#3a2e16}
+  .btn:disabled{opacity:.5}
+  .swap{text-align:center;font-size:12.5px;color:var(--grey);margin-top:14px}.swap a{color:var(--blue);font-weight:700;cursor:pointer}
+  .hint{font-size:11px;color:#9a7b34;background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;margin-top:12px;line-height:1.5}
+  .err{font-size:12px;color:var(--disp);background:#fbeeed;border:1px solid #e7b9b5;border-radius:9px;padding:9px 11px;margin-top:12px}
+
+  /* app shell */
+  .shell{flex:1;display:grid;grid-template-columns:212px 1fr;grid-template-rows:auto 1fr;min-height:0}
+  .topbar{grid-column:1/3;height:52px;display:flex;align-items:center;gap:12px;padding:0 16px;background:var(--ink);color:#fff}
+  .topbar .b{display:flex;align-items:center;gap:9px;font-family:'Space Grotesk';font-weight:700;font-size:14px}
+  .topbar .who{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:12px}
+  .topbar .who .nm{font-weight:700}.topbar .who .rl{color:#9fb4bf;font-size:11px}
+  .topbar .who .av{width:30px;height:30px;border-radius:50%;background:var(--gold);color:#3a2e16;display:flex;align-items:center;justify-content:center;font-weight:700;font-family:'Space Grotesk'}
+  .topbar .so{border:1px solid rgba(255,255,255,.25);background:none;color:#cfe0e8;border-radius:8px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+  .topbar .so:hover{background:rgba(255,255,255,.08)}
+  .dutytog,.shoptog{display:flex;border-radius:9px;overflow:hidden;border:1px solid rgba(255,255,255,.18)}
+  .dutytog button,.shoptog button{border:0;background:rgba(255,255,255,.05);color:#bcccd6;font-size:11px;font-weight:700;padding:6px 10px;display:flex;align-items:center;gap:5px;cursor:pointer;white-space:nowrap}
+  .dutytog button.on.duty,.shoptog button.on.open{background:#1f7a4d;color:#fff}
+  .dutytog button.on.brk,.shoptog button.on.away{background:var(--gold);color:#2c2410}
+  .shoptog button.on.closed{background:#9a4040;color:#fff}
+  .topbar .b .bt{margin-left:2px}
+  .topbar .lo{border:1px solid rgba(255,255,255,.25);background:none;color:#cfe0e8;border-radius:8px;font-size:11px;font-weight:700;padding:6px 10px}
+  .topbar .ham{display:none;border:0;background:none;color:#fff;font-size:20px}
+
+  .menu{background:#0F2E3D;color:#bcccd6;padding:12px 10px;display:flex;flex-direction:column;overflow-y:auto;border-top:1px solid rgba(255,255,255,.06)}
+  .menu .grp{font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#5f7d8c;margin:10px 8px 5px}
+  .menu button{display:flex;align-items:center;gap:10px;border:0;background:none;color:#bcccd6;text-align:left;font-size:13px;font-weight:500;padding:9px 10px;border-radius:9px;width:100%}
+  .menu button .ic{width:16px;text-align:center}.menu button .ct{margin-left:auto;font-size:9.5px;background:rgba(255,255,255,.12);border-radius:10px;padding:1px 6px}
+  .menu button:hover{background:rgba(255,255,255,.06)}.menu button.on{background:var(--blue);color:#fff}
+  .menu .tagl{margin-top:auto;font-size:9.5px;color:#6f8b99;line-height:1.5;padding:8px}
+
+  .main{min-width:0;display:flex;flex-direction:column;overflow:hidden;background:var(--paper)}
+  .purpose{display:flex;align-items:center;gap:10px;padding:0 16px;max-height:0;overflow:hidden;background:#fff;font-size:12px;color:var(--mut,#5d6b73);transition:max-height .22s ease,padding .22s ease}
+  .purpose.open{max-height:90px;padding:9px 16px;border-bottom:1px solid var(--line)}
+  .purpose b{font-family:'Space Grotesk';color:var(--ink)}
+  .purpose .x{margin-left:auto;border:0;background:none;color:var(--grey);font-size:14px;cursor:pointer}
+  .topbar .info{border:0;background:none;color:#9fb4bf;font-size:16px;cursor:pointer;padding:2px 5px;line-height:1}
+  .topbar .info.on{color:var(--gold)}
+
+  .panel{flex:1;display:grid;grid-template-columns:var(--lw,340px) 7px minmax(0,1fr);min-height:0;position:relative}
+  .list{display:flex;flex-direction:column;min-width:0;min-height:0;background:#fff}
+  .lh{padding:10px 12px;border-bottom:1px solid var(--line)}
+  .folders{display:flex;gap:4px;margin-bottom:8px}
+  .folders button{flex:1;border:1px solid var(--line);background:var(--paper);color:var(--grey);font-size:12px;font-weight:700;padding:8px;border-radius:8px}
+  .folders button.on{background:var(--blue);color:#fff;border-color:var(--blue)}
+  .statetabs{display:flex;gap:3px;background:var(--paper);border:1px solid var(--line);border-radius:9px;padding:3px;margin-bottom:8px}
+  .statetabs button{flex:1;border:0;background:none;color:var(--grey);font-size:11px;font-weight:700;padding:6px;border-radius:6px;display:flex;align-items:center;justify-content:center;gap:5px}
+  .statetabs button.on{background:#E3EDF8;color:var(--blue);box-shadow:inset 0 0 0 1.6px var(--blue);font-weight:800}
+  .statetabs button.on .n{background:var(--blue);color:#fff}
+  .statetabs .n{font-size:9px;background:rgba(0,0,0,.06);border-radius:9px;padding:0 5px}
+  .srch{display:flex;align-items:center;gap:7px;background:var(--paper);border:1px solid var(--line);border-radius:9px;padding:8px 10px;font-size:12.5px;color:var(--grey)}
+  .srch input{border:0;background:none;outline:0;font-size:12.5px;width:100%;color:var(--ink)}
+  .tools{display:flex;gap:5px;margin-top:8px;flex-wrap:wrap}
+  .tool{width:30px;height:30px;border:1px solid var(--line);background:#fff;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;color:#54616a;position:relative}
+  .tool.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .topbar .bell{position:relative;border:0;background:none;color:#cfe0e8;font-size:16px;cursor:pointer;padding:2px 4px;line-height:1}
+  .topbar .bell .bdot{position:absolute;top:-2px;right:-3px;background:#d65a5a;color:#fff;font-size:8px;font-weight:800;min-width:13px;height:13px;border-radius:7px;display:flex;align-items:center;justify-content:center;padding:0 3px}
+  .filterpanel{margin-top:8px;border:1px solid var(--line);border-radius:9px;background:#fff;padding:9px 11px;display:flex;flex-direction:column;gap:7px;font-size:12px}
+  .filterpanel .fp-row{display:flex;align-items:center;gap:9px;justify-content:space-between}
+  .filterpanel select{font-size:12px;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:#fff}
+  .filterpanel label{display:flex;align-items:center;gap:6px;cursor:pointer}
+  .filterpanel .fp-foot{display:flex;align-items:center;gap:10px;border-top:1px solid var(--line);padding-top:7px}
+  .filterpanel .fp-foot button{border:1px solid var(--line);background:#fff;border-radius:7px;font-size:11px;font-weight:700;padding:4px 10px;color:var(--blue);cursor:pointer}
+  .filterpanel .fp-note{margin-left:auto;font-size:9px;color:var(--grey);font-family:'Space Mono',monospace}
+  .notifover{position:fixed;inset:0;z-index:250;background:rgba(8,24,32,.18)}
+  .notifpanel{position:absolute;top:54px;right:14px;width:300px;max-width:88vw;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);overflow:hidden}
+  .notifhd{display:flex;align-items:center;font-family:'Space Grotesk';font-weight:700;font-size:13px;color:var(--ink);padding:11px 13px;border-bottom:1px solid var(--line)}
+  .notifrow{display:flex;gap:10px;padding:10px 13px;border-bottom:1px solid var(--line)}
+  .notifrow .ni{font-size:15px}.notifrow .nt{font-size:12.5px;color:var(--ink);line-height:1.35}.notifrow .ns{font-size:10px;color:var(--grey);margin-top:2px}
+  .notiffoot{padding:8px 13px;font-size:10px;color:var(--grey);background:var(--paper)}
+  .mover{position:fixed;inset:0;z-index:280;background:rgba(8,24,32,.45);display:flex;align-items:flex-start;justify-content:center;padding:56px 16px;overflow-y:auto}
+  .modal{width:360px;max-width:94vw;background:#fff;border-radius:14px;overflow:hidden;box-shadow:var(--shadow)}
+  .modal .mhd{padding:13px 16px;border-bottom:1px solid var(--line)}
+  .modal .mhd .t{font-family:'Space Grotesk';font-weight:700;font-size:15px;color:var(--ink)}
+  .modal .mhd .s{font-size:12px;color:var(--grey);margin-top:2px}
+  .modal .mbody{padding:11px 12px;max-height:54vh;overflow-y:auto}
+  .modal .mfoot{display:flex;gap:8px;padding:11px 13px;border-top:1px solid var(--line)}
+  .modal .mfoot button{flex:1;border:1px solid var(--line);background:#fff;border-radius:9px;font-size:13px;font-weight:700;padding:9px;cursor:pointer;color:var(--ink)}
+  .modal .mfoot button.pri{background:var(--blue);color:#fff;border-color:var(--blue)}
+  .modal .mfoot button.danger{background:var(--disp);color:#fff;border-color:var(--disp)}
+  .modal .mfoot button:disabled{opacity:.45;cursor:not-allowed}
+  .modal textarea{width:100%;border:1px solid var(--line);border-radius:9px;padding:9px;font:inherit;font-size:13px;resize:vertical;min-height:62px;box-sizing:border-box}
+  .optrow{display:flex;align-items:center;gap:11px;padding:10px 11px;border:1px solid var(--line);border-radius:10px;margin-bottom:6px;cursor:pointer}
+  .optrow.sel{border:2px solid var(--blue);background:#EAF1F8}
+  .optrow.dis{opacity:.5;cursor:not-allowed}
+  .optrow .rdo{width:16px;height:16px;border-radius:50%;border:2px solid var(--line);flex:0 0 auto;display:flex;align-items:center;justify-content:center}
+  .optrow.sel .rdo{border-color:var(--blue)}
+  .optrow.sel .rdo::after{content:'';width:8px;height:8px;border-radius:50%;background:var(--blue)}
+  .optrow .oc{flex:1;min-width:0}.optrow .on{font-size:13px;font-weight:700;color:var(--ink)}.optrow .om{font-size:11px;color:var(--grey)}
+  .optchip{font-size:9.5px;font-weight:700;border-radius:8px;padding:2px 8px;white-space:nowrap}
+  .optchip.on{color:#1f7a4d;background:#e3f3ea}.optchip.brk{color:#8a6d1f;background:#f6edd6}.optchip.off{color:#777;background:#eee}
+  .dtabs{flex-wrap:wrap}
+  .dh{position:relative}
+  .dmsg{position:absolute;top:0;right:0;border:1px solid #cfe0ec;background:#EAF1F6;color:var(--blue);font-size:11px;font-weight:700;border-radius:8px;padding:3px 9px;cursor:pointer}
+  .rowmsg{font-size:9px;font-weight:700;color:#3f66a6;background:#EAF1F6;border:0.5px solid #cfe0ec;border-radius:5px;padding:0 5px;white-space:nowrap;cursor:pointer}
+  .msglink{border:1px solid var(--line);background:#fff;color:var(--blue);font-size:12px;font-weight:700;border-radius:9px;padding:8px 13px;cursor:pointer}
+  .msgtab{display:flex;flex-direction:column}
+  .msgfilter{display:flex;gap:6px;margin-bottom:10px}
+  .msgfilter button{border:1px solid var(--line);background:#fff;border-radius:8px;font-size:11px;font-weight:700;padding:5px 10px;color:var(--grey);cursor:pointer}
+  .msgfilter button.on{background:#EAF1F8;color:var(--blue);border-color:var(--blue)}
+  .thread{display:flex;flex-direction:column;margin-bottom:8px}
+  .bubble{border:1px solid var(--line);padding:8px 11px;margin-bottom:8px;border-radius:0 10px 10px 0}
+  .bubble.int{background:#f3f5f7;border-left:3px solid #8aa0ad}
+  .bubble.ext{background:#eef5ff;border-left:3px solid var(--blue)}
+  .bubble .bh{display:flex;align-items:center;gap:8px;margin-bottom:3px}
+  .mbadge{font-size:9px;font-weight:700;border-radius:7px;padding:1px 7px}
+  .mbadge.int{background:#e2e8ec;color:#4a5e6a}.mbadge.ext{background:#dbeafe;color:var(--blue)}
+  .bubble .ath{font-size:11px;font-weight:700;color:var(--ink)}.bubble .tm{font-size:10px;color:var(--grey);margin-left:auto}
+  .bubble .bb{font-size:13px;color:var(--ink);line-height:1.45}
+  .msgempty{text-align:center;color:var(--grey);font-size:12px;padding:20px}
+  .composer{border-top:1px solid var(--line);padding-top:10px;margin-top:2px}
+  .chtoggle{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-bottom:7px}
+  .chtoggle button{border:0;background:#fff;font-size:11px;font-weight:700;padding:5px 11px;color:var(--grey);cursor:pointer}
+  .chtoggle button.int.on{background:#5f7682;color:#fff}.chtoggle button.ext.on{background:var(--blue);color:#fff}
+  .chlabel{font-size:11px;font-weight:700;margin-bottom:7px}.chlabel.ext{color:var(--blue)}
+  .composer textarea{width:100%;border:1px solid var(--line);border-radius:9px;padding:9px;font:inherit;font-size:13px;min-height:54px;resize:vertical;box-sizing:border-box}
+  .composer .send{margin-top:7px;border:0;color:#fff;border-radius:9px;font-size:12.5px;font-weight:700;padding:8px 14px;cursor:pointer}
+  .composer .send.int{background:#5f7682}.composer .send.ext{background:var(--blue)}
+  .msghd{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+  .msghd .mh-t{font-size:12px;font-weight:700;color:var(--ink)}
+  .composebtn{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--blue);background:var(--blue);color:#fff;font-size:11.5px;font-weight:700;border-radius:8px;padding:5px 11px;cursor:pointer}
+  .composebtn.on{background:#fff;color:var(--blue)}
+  .msgtab .composer{margin-top:0;margin-bottom:12px;border-top:0;border:1px solid var(--line);border-radius:11px;padding:11px;background:#fbfcfe}
+  .topbar .msgc{position:relative;border:0;background:none;color:#cfe0e8;font-size:15px;cursor:pointer;padding:2px 4px;line-height:1}
+  .topbar .msgc .bdot{position:absolute;top:-2px;right:-3px;background:#d65a5a;color:#fff;font-size:8px;font-weight:800;min-width:13px;height:13px;border-radius:7px;display:flex;align-items:center;justify-content:center;padding:0 3px}
+  .unreadtag{font-size:8.5px;font-weight:800;color:#fff;background:#d65a5a;border-radius:7px;padding:0 5px;margin-left:4px}
+  .unreaddot{width:7px;height:7px;border-radius:50%;background:#d65a5a;margin-left:2px}
+  .mtype{font-size:9px;font-weight:700;border-radius:6px;padding:1px 6px}
+  .mtype.info{background:#eef2f6;color:#5a6b78}.mtype.query{background:#fbeede;color:#9a6b16}.mtype.decision{background:#e3f3ea;color:#1f7a4d}
+  .typesel{display:flex;gap:5px;margin-bottom:7px}
+  .typesel button{border:1px solid var(--line);background:#fff;border-radius:7px;font-size:10.5px;font-weight:700;padding:4px 9px;color:var(--grey);cursor:pointer}
+  .typesel button.on.info{background:#eef2f6;color:#46566a;border-color:#9fb0bd}.typesel button.on.query{background:#fbeede;color:#9a6b16;border-color:#e0b878}.typesel button.on.decision{background:#e3f3ea;color:#1f7a4d;border-color:#8fc7a8}
+  .msgfilter button.on.info{background:#eef2f6;color:#46566a;border-color:#9fb0bd}.msgfilter button.on.query{background:#fbeede;color:#9a6b16;border-color:#e0b878}.msgfilter button.on.decision{background:#e3f3ea;color:#1f7a4d;border-color:#8fc7a8}
+  .mtype.risk{background:#fbe3d4;color:#b5531a}.mtype.assumption{background:#ece9f6;color:#6a5aa0}.mtype.issue{background:#fbe0e0;color:#c0392b}.mtype.dependency{background:#dff0f3;color:#1f6f7e}.mtype.action{background:#e2e9fb;color:#3a52b0}
+  .typesel button.on.risk{background:#fbe3d4;color:#b5531a;border-color:#e8b48e}.typesel button.on.assumption{background:#ece9f6;color:#6a5aa0;border-color:#b9aede}.typesel button.on.issue{background:#fbe0e0;color:#c0392b;border-color:#e7a3a3}.typesel button.on.dependency{background:#dff0f3;color:#1f6f7e;border-color:#9cccd5}.typesel button.on.action{background:#e2e9fb;color:#3a52b0;border-color:#a7b6ea}
+  .msgfilter button.on.risk{background:#fbe3d4;color:#b5531a;border-color:#e8b48e}.msgfilter button.on.assumption{background:#ece9f6;color:#6a5aa0;border-color:#b9aede}.msgfilter button.on.issue{background:#fbe0e0;color:#c0392b;border-color:#e7a3a3}.msgfilter button.on.dependency{background:#dff0f3;color:#1f6f7e;border-color:#9cccd5}.msgfilter button.on.action{background:#e2e9fb;color:#3a52b0;border-color:#a7b6ea}
+  .notifpanel.raid{max-width:380px}
+  .raidbody{padding:8px 12px 2px;max-height:46vh;overflow:auto}
+  .raidrow{margin-bottom:12px}
+  .raidrow .rl{display:flex;align-items:center;gap:8px;margin-bottom:4px;font-size:12px}
+  .raidrow .rl b{margin-left:auto;font-size:13px;color:var(--ink)}
+  .rbar{height:7px;background:#eef1f4;border-radius:5px;overflow:hidden}
+  .rbarfill{display:block;height:100%;border-radius:5px;background:var(--blue)}
+  .rbarfill.info{background:#8aa0ad}.rbarfill.query{background:#d6a93a}.rbarfill.decision{background:#3fae6f}.rbarfill.risk{background:#d98a3a}.rbarfill.assumption{background:#8a78c0}.rbarfill.issue{background:#d6584f}.rbarfill.dependency{background:#3a93a3}.rbarfill.action{background:#5b72cf}
+  .rsamp{font-size:10.5px;color:var(--grey);margin-top:4px;line-height:1.5}
+  .raidtoggle{padding:9px 12px;border-top:1px solid var(--line);font-size:11px;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .raidtoggle button{border:1px solid var(--line);background:#fff;border-radius:7px;font-size:10.5px;font-weight:700;padding:4px 9px;color:var(--grey);cursor:pointer}
+  .raidtoggle button.on{background:var(--blue);color:#fff;border-color:var(--blue)}
+  .raidtoggle .hint{flex-basis:100%;font-weight:400;color:var(--grey);font-size:9.5px}
+  .custflag{color:#c0392b;font-weight:800;margin-right:4px}
+  .prichip{font-size:9px;font-weight:700;border-radius:5px;padding:0 6px;white-space:nowrap}
+  .prichip.pri-urgent{background:#FCEBEB;color:#A32D2D}.prichip.pri-low{background:#F1EFE8;color:#5F5E5A}
+  .dchips{display:flex;gap:8px;align-items:center;margin-top:8px}
+  .prichip-btn{font-size:10px;font-weight:700;border-radius:6px;padding:3px 9px;cursor:pointer;border:1px solid var(--line);background:#fff;color:var(--ink)}
+  .prichip-btn.pri-urgent{background:#FCEBEB;color:#A32D2D;border-color:#e3a0a0}.prichip-btn.pri-low{background:#F1EFE8;color:#5F5E5A}
+  .custflag-tag{font-size:10px;font-weight:700;color:#A32D2D;background:#FCEBEB;border-radius:6px;padding:3px 8px}
+  .prisel{display:flex;gap:6px;margin:4px 0 2px}
+  .prisel button{flex:1;border:1px solid var(--line);background:#fff;border-radius:8px;font-size:11.5px;font-weight:700;padding:6px 0;color:var(--grey);cursor:pointer}
+  .prisel button.on.pri-urgent{background:#FCEBEB;color:#A32D2D;border-color:#E24B4A}.prisel button.on.pri-normal{background:#EAF1F8;color:var(--blue);border-color:var(--blue)}.prisel button.on.pri-low{background:#F1EFE8;color:#444441;border-color:#B4B2A9}
+  .msec{font-size:11px;font-weight:700;color:var(--ink);margin:11px 0 4px}.msec .rh{font-weight:400;color:var(--grey)}
+  .mreason{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:9px;padding:8px;font:inherit;font-size:13px;min-height:46px;resize:vertical}
+  .custreq{font-size:11.5px;font-weight:700;color:#A32D2D;background:#FCEBEB;border-radius:8px;padding:7px 10px;margin-bottom:8px}
+  .rows{flex:1;overflow-y:auto}
+  .row{padding:11px 13px;border-bottom:1px solid var(--line);cursor:pointer;display:flex;gap:9px}
+  .row:hover{background:#FCFBF8}.row.sel{background:#F2F6F4;box-shadow:inset 3px 0 0 var(--blue)}
+  .row .cbx{width:16px;height:16px;border:1.5px solid var(--line);border-radius:4px;flex:0 0 auto;margin-top:2px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;background:#fff}
+  .row .cbx.on{background:var(--blue);border-color:var(--blue)}
+  .row .main2{flex:1;min-width:0}
+  .row .l1{display:flex;align-items:center;gap:7px}.row .code{font-family:'Space Grotesk';font-weight:700;font-size:12.5px}
+  .row .party{font-size:11.5px;color:#42525a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .row .amt{margin-left:auto;font-family:'Space Grotesk';font-weight:700;font-size:12px}
+  .row .l2{font-size:11px;color:var(--grey);margin-top:3px;display:flex;align-items:center;gap:7px}
+  .proof{font-size:8.5px;font-weight:700;border-radius:5px;padding:1px 5px}
+  .proof.ok{background:#E9F4EE;color:var(--ok)}.proof.wait{background:var(--gold-soft);color:var(--prog)}
+  .chipst{font-size:9px;font-weight:700;border-radius:20px;padding:2px 9px;border:1px solid transparent;cursor:pointer;white-space:nowrap}
+  .st-open{background:#E8F0F4;color:var(--blue);border-color:#cfe0ec}.st-act{background:var(--gold-soft);color:var(--prog);border-color:var(--gold-line)}.st-close{background:#E9F4EE;color:var(--ok);border-color:#bfe0cd}
+  .rowacts{display:flex;gap:6px;margin-top:8px}
+  .rowacts button{flex:1;font-size:10px;font-weight:700;border:1px solid var(--line);background:#fff;border-radius:7px;padding:5px;color:var(--ink)}
+  .rowacts button.go{border:0;background:var(--blue);color:#fff}
+  .selbar{display:flex;align-items:center;gap:8px;background:#EAF1F6;border:1px solid #cfe0ec;border-radius:9px;padding:7px 10px;margin-top:8px;font-size:11.5px;font-weight:600}
+  .selbar .sp{margin-left:auto;display:flex;gap:6px}.selbar .sp button{border:1px solid #cfe0ec;background:#fff;border-radius:7px;font-size:10.5px;font-weight:700;padding:5px 9px;color:var(--blue)}
+  .selbar .sp button.pri{border:0;background:var(--blue);color:#fff}
+
+  .detail{display:flex;flex-direction:column;min-width:0;min-height:0;background:#fff;border-left:0.5px solid var(--line)}
+  .dh{padding:13px 16px;border-bottom:1px solid var(--line)}
+  .dh .dt{font-family:'Space Grotesk';font-weight:700;font-size:16px}.dh .ds{font-size:12px;color:var(--grey);margin-top:2px}
+  .parties{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap;font-size:10.5px}
+  .ptag{background:var(--paper);border:1px solid var(--line);border-radius:7px;padding:3px 8px}.ptag b{font-family:'Space Mono';font-size:10px}
+  .dtabs{display:flex;gap:2px;padding:0 12px;border-bottom:1px solid var(--line)}
+  .dtabs button{border:0;background:none;color:var(--grey);font-size:12.5px;font-weight:600;padding:11px 13px;border-bottom:2px solid transparent;margin-bottom:-1px}
+  .dtabs button.on{color:var(--ink);border-bottom-color:var(--blue)}
+  .db{flex:1;overflow-y:auto;padding:15px 16px}
+  .itab{border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-bottom:12px}
+  .itab .ir{display:flex;padding:9px 12px;border-bottom:1px solid var(--line);font-size:12.5px}.itab .ir:last-child{border-bottom:0}
+  .itab .ir .qt{margin-left:auto;color:var(--grey)}.itab .tot{background:var(--paper);font-weight:700}
+  .sec{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--grey);margin:14px 0 8px}
+  .tl{position:relative;padding-left:15px}.tl .ev{position:relative;padding:0 0 12px}
+  .tl .ev::before{content:"";position:absolute;left:-13px;top:3px;width:8px;height:8px;border-radius:50%;background:var(--blue)}
+  .tl .ev::after{content:"";position:absolute;left:-10px;top:11px;bottom:-2px;width:1.5px;background:var(--line)}.tl .ev:last-child::after{display:none}
+  .tl .ea{font-family:'Space Grotesk';font-weight:600;font-size:13px}.tl .em{font-size:11.5px;color:var(--grey)}
+  .parity{display:flex;align-items:center;gap:8px;background:#E9F4EE;border:1px solid #bfe0cd;border-radius:9px;padding:10px 12px;font-size:12px;color:#2f6043}
+  .actbar{display:flex;gap:8px;padding:10px 16px;border-top:1px solid var(--line);flex-wrap:wrap;background:#FCFBF8}
+  .actbar button{font-size:12px;font-weight:700;border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 12px;color:var(--ink)}
+  .actbar button.pri{border:0;background:var(--ink);color:#fff}.actbar button.warn{border-color:#e7b9b5;color:var(--disp)}
+  .actbar button.pend{border-style:dashed;border-color:var(--gold-line);color:#9a7b34;background:var(--gold-soft)}
+  .dback{display:none;align-items:center;gap:4px;border:0;background:none;color:var(--blue);font-weight:700;font-size:13px;margin-bottom:8px;padding:5px 0;cursor:pointer}
+  .empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:var(--grey);padding:30px;gap:8px}
+  .empty .big{font-size:34px}.empty .t{font-family:'Space Grotesk';font-weight:700;font-size:15px;color:var(--ink)}
+  .stub{padding:34px;text-align:center;color:var(--grey)}.stub .t{font-family:'Space Grotesk';font-weight:700;font-size:17px;color:var(--ink);margin-bottom:6px}
+  .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ink);color:#fff;border-radius:11px;padding:11px 16px;font-size:12.5px;font-weight:600;box-shadow:var(--shadow);display:flex;align-items:center;gap:14px;z-index:200}
+  .toast button{border:0;background:none;color:var(--gold);font-weight:700}
+  .spin{display:inline-block;width:15px;height:15px;border:2px solid #cfe0ec;border-top-color:var(--blue);border-radius:50%;animation:sp .7s linear infinite}@keyframes sp{to{transform:rotate(360deg)}}
+  .loadwrap{flex:1;display:flex;align-items:center;justify-content:center;gap:10px;color:var(--grey);font-size:13px}
+
+  .appwrap{flex:1;min-height:0;display:flex;flex-direction:column}
+  .appwrap.m{background:#dcd5c8}
+  .appwrap.m .shell{max-width:440px;width:100%;margin:0 auto;border-left:1px solid var(--line);border-right:1px solid var(--line)}
+  .divider{background:var(--line);display:flex;align-items:center;justify-content:center;cursor:col-resize;transition:background .15s}
+  .divider:hover{background:var(--blue)}
+  .divider .grip{width:3px;height:26px;border-radius:3px;background:var(--grey);opacity:.55}
+  .appwrap.m .divider{cursor:row-resize}.appwrap.m .divider .grip{width:26px;height:3px}
+  .appwrap.m .shell{grid-template-columns:1fr;position:relative;overflow:hidden}
+  .appwrap.m .topbar .ham{display:block}
+  .appwrap.m .menu{position:absolute;top:52px;bottom:0;left:0;width:230px;z-index:80;transform:translateX(-100%);transition:.25s}
+  .appwrap.m .menu.open{transform:translateX(0)}
+  .appwrap.m .panel{grid-template-columns:1fr;grid-template-rows:1fr}
+  .appwrap.m .divider{display:none}
+  .appwrap.m .detail{display:none;border-left:0}
+  .appwrap.m .panel.showdetail .list{display:none}
+  .appwrap.m .panel.showdetail .detail{display:flex}
+  .appwrap.m .dback{display:inline-flex}
+  .row .rowgo{display:none}
+  .appwrap.m .row .rowgo{display:flex;align-items:center;color:var(--grey);font-size:22px;line-height:1;padding-left:6px;align-self:center}
+  .appwrap.m .row{align-items:center}.appwrap.m .main2{flex:1;min-width:0}
+  .appwrap.m .who .rl{display:none}
+  .appwrap.m .who .nmwrap{display:none}
+  .appwrap.m .topbar .b .bt{display:none}
+  .appwrap.m .dutytog button,.appwrap.m .shoptog button{padding:6px 8px;font-size:10.5px}
+  .attHero{margin:4px 0 8px;cursor:pointer;border:0.5px solid var(--line);border-radius:10px;overflow:hidden}
+  .attImg{display:flex;align-items:center;justify-content:center;position:relative;color:#5a6b73;width:100%;height:100%}
+  .attImg.big{height:150px}
+  .attHero .attName{font-size:11px;color:var(--grey);padding:6px 9px;border-top:0.5px solid var(--line);display:flex;align-items:center;gap:6px}
+  .attStrip{display:flex;gap:7px;overflow-x:auto;padding-bottom:4px}
+  .attThumb{flex:0 0 auto;width:62px;height:62px;border:0.5px solid var(--line);border-radius:8px;overflow:hidden;cursor:pointer}
+  .attImg .vlen{position:absolute;bottom:4px;right:6px;font-size:10px;background:rgba(0,0,0,.45);color:#fff;border-radius:4px;padding:0 4px}
+  .attNote{font-size:10.5px;color:var(--grey);margin-top:8px;line-height:1.5}
+  .itab .ir.hasatt{cursor:pointer}
+  .lineclip{margin-left:10px;font-size:10px;font-weight:700;color:var(--blue);background:#EAF1F6;border:0.5px solid #cfe0ec;border-radius:6px;padding:1px 7px;cursor:pointer;white-space:nowrap}
+  .lineImgs{display:flex;gap:7px;padding:9px 11px;background:#FBFAF6;border-bottom:0.5px solid var(--line);overflow-x:auto}
+  .rowclip{font-size:9px;font-weight:700;color:var(--blue);background:#EAF1F6;border:0.5px solid #cfe0ec;border-radius:5px;padding:0 5px;white-space:nowrap}
+  .lbover{position:fixed;inset:0;background:rgba(8,24,32,.85);z-index:300;display:flex;align-items:center;justify-content:center;padding:18px}
+  .lbbox{width:560px;max-width:100%;background:#0f2530;border-radius:14px;overflow:hidden}
+  .lbtop{display:flex;align-items:center;gap:14px;padding:11px 14px;color:#cfe0e8;font-size:12.5px;font-weight:600}
+  .lbtop .x{cursor:pointer}
+  .lbstage{background:#0a1b24;display:flex;align-items:center;justify-content:center}
+  .lbstage .attImg{height:300px}
+  .lbnav{display:flex;align-items:center;gap:12px;padding:10px 14px}
+  .lbnav button{border:0;background:none;color:#cfe0e8;font-size:22px;cursor:pointer}
+  .lbdots{flex:1;display:flex;gap:6px;justify-content:center}.lbdots span{width:7px;height:7px;border-radius:50%;background:#3a4d57}.lbdots span.on{background:var(--gold)}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<div id="toast"></div>
+
+<script>
+/* =========================================================================
+   CHIT & BRIDGE — separate build (Registration → Login → Menu → Task Panel)
+   Single self-contained SPA. Deploy to its OWN URL (does not touch the
+   existing front end). Runs standalone in DEMO; flip to LIVE for the real API.
+   ========================================================================= */
+
+/* ---- CONFIG: the only block to edit when wiring to the backend ---- */
+const CFG = {
+  MODE: "live",          // "demo" (standalone, mock data) | "live" (real API)
+  API_BASE: "https://chitbridge-api-production.up.railway.app",          // e.g. "https://api.chitandbridge.com"  (LIVE only)
+};
+/* Endpoint map. ✓ = matches build registry · ? = ASSUMED, confirm before live.
+   Correct any path here in ONE place. */
+const EP = {
+  // --- repointed to real chitbridge-api routes (trace 2026-06-25). See FINDINGS.md. ---
+  register:        {m:"POST", p:"/api/entities/register",        ok:"✓"},  // OTP request (register doubles as owner login)
+  ownerLogin:      {m:"POST", p:"/api/entities/register",        ok:"✓"},  // same route — returning owner requests OTP (pass mode:'login')
+  ownerVerify:     {m:"POST", p:"/api/entities/verify",          ok:"✓"},  // verify OTP → token
+  actorLogin:      {m:"POST", p:"/api/actors/login",             ok:"✓"},  // actor PIN
+  custCatalogue:   {m:"GET",  p:"/api/catalogue/:bridgeId",      ok:"✓"},
+  custVerify:      {m:"POST", p:"/api/catalogue/:bridgeId/login/verify", ok:"✓"},
+  custOrders:      {m:"GET",  p:"/api/catalogue/:bridgeId/my-orders",     ok:"✓"},
+  inbox:           {m:"GET",  p:"/api/chits/inbox",              ok:"✓"},  // ?status= ?page= ?limit=
+  sent:            {m:"GET",  p:"/api/chits/inbox",              ok:"◐"},  // NO /sent route — inbox is entity-keyed (incl. sent); filter client-side
+  chit:            {m:"GET",  p:"/api/chits/:id",                ok:"✓"},
+  advance:         {m:"PUT",  p:"/api/chits/:id/status",         ok:"✓"},  // state change is via PUT /status (no /advance route)
+  status:          {m:"PUT",  p:"/api/chits/:id/status",         ok:"✓"},
+  assign:          {m:"PUT",  p:"/api/actors/assign/:id",        ok:"✓"},  // body {action:'push', target_actor_id}
+  unassign:        {m:"PUT",  p:"/api/actors/assign/:id",        ok:"✓"},  // SAME route — body {action:'return'}
+  setPriority:     {m:"PUT",  p:"/api/chits/:id/priority",       ok:"○"},  // {priority,reason} internal (fp01 §7 — build in Phase 1)
+  custFlag:        {m:"PUT",  p:"/api/chits/:id/priority-flag",  ok:"○"},  // {flag} customer request, write-once (fp01 §7)
+  actors:          {m:"GET",  p:"/api/actors",                   ok:"✓"},
+  actorBreak:      {m:"PUT",  p:"/api/actors/break",             ok:"✓"},
+  shopStatus:      {m:"PATCH",p:"/api/entities/profile",         ok:"✓"},  // shop status = PATCH profile {business_status}
+  dispute:         {m:"POST", p:"/api/chits/:id/disputes",       ok:"✓"},  // raise dispute (built)
+  delChit:         {m:"DELETE",p:"/api/chits/:id",               ok:"✓"},  // exists (soft-void/trash)
+  assignBulk:      {m:"POST", p:"/api/chits/assign-bulk",        ok:"○"},  // not built — ATH-109 §5
+  filters:         {m:"GET",  p:"/api/chits/inbox?kind&dispute&sort", ok:"◐"}, // inbox exists; query-param support unverified
+  notifications:   {m:"GET",  p:"/api/notifications",            ok:"○"},  // not mounted — ATH-109 §11
+  // §2 messages ALREADY EXIST (chits.js); §7 priority + raid-report are new (build in Phase 1):
+  messages:        {m:"GET",  p:"/api/chits/:id/messages",       ok:"✓"},  // ?type= (msg_type after fp01)
+  sendMsg:         {m:"POST", p:"/api/chits/:id/messages",       ok:"✓"},  // body {thread_type, message_text, msg_type}
+  voidChit:        {m:"PUT",  p:"/api/chits/:id/void",           ok:"○"},  // not built
+  rollup:          {m:"POST", p:"/api/chits/rollup",             ok:"○"},  // not built
+  archive:         {m:"POST", p:"/api/chits/:id/archive",        ok:"○"},  // not built
+};
+
+/* ---------------- DEMO STORE ---------------- */
+const DEMO = {
+  entity:{name:"Raghavan Timber", owner:"Raghavan", bridgeId:"rt-001"},
+  actors:[{id:"a1",name:"Priya",shift:"on_shift",load:2},{id:"a2",name:"Kumar",shift:"on_break",load:0},{id:"a3",name:"Devi",shift:"off",load:1}],
+  chits:[
+    {id:1,code:"PO #4471",party:"Saravana Traders",cust:"Saravana Traders",area:"T. Nagar",kind:"order",amt:124000,state:"open",assignTo:"a1",folder:"task",dispute:false,proof:"ok",pri:"urgent",custPri:true,items:[["Teak plank 8ft","20 × ₹3,200 = ₹64,000",[{n:"Plank photo",t:"image",scope:"external"},{n:"Grain close-up",t:"image",scope:"internal"}]],["Polish 5L","4 × ₹1,500 = ₹6,000",[{n:"Polish tin photo",t:"image",scope:"external"}]]],atts:[{n:"Signed challan",t:"doc",scope:"external"},{n:"Unloading clip",t:"video",scope:"internal"}],msgs:[{id:"m1",scope:"internal",author:"Priya",body:"Stock checked — 20 planks ready to load.",at:"10:14",type:"info"},{id:"m2",scope:"external",author:"Raghavan Timber",body:"Dispatching today by 4 pm.",at:"10:20",type:"info"},{id:"m3",scope:"external",author:"Saravana Traders",body:"Please share the signed challan with the delivery.",at:"10:31",type:"query",unread:true},{id:"m4",scope:"external",author:"Raghavan Timber",body:"Approved 5% loyalty discount on this order.",at:"10:34",type:"decision"},{id:"m6",scope:"internal",author:"Priya",body:"Monsoon may delay transport next week.",at:"10:40",type:"risk"},{id:"m7",scope:"internal",author:"Kumar",body:"Kumar to arrange 2 replacement planks by Thursday.",at:"10:42",type:"action",unread:true}]},
+    {id:2,code:"CS #4470",party:"walk-in · Asha",cust:"Asha",area:"Anna Nagar",kind:"counter",amt:62000,state:"act",assignTo:"a1",folder:"task",dispute:false,proof:"ok",pri:"low",items:[["Door frame","1 × ₹62,000"]],msgs:[{id:"m20",scope:"internal",author:"Priya",body:"Waiting on Asha to confirm the delivery address.",at:"11:05",type:"dependency",unread:true},{id:"m21",scope:"external",author:"You",body:"Could you confirm the delivery address?",at:"11:06",type:"query"}]},
+    {id:3,code:"SR #4468",party:"Madurai branch",cust:"Madurai branch",area:"Madurai",kind:"service",amt:0,state:"open",assignTo:null,folder:"task",dispute:false,proof:"wait",custPri:true,items:[["Site inspection","—"]],msgs:[{id:"m30",scope:"internal",author:"Devi",body:"Site access may be restricted on weekends — risk to the timeline.",at:"09:20",type:"risk"}]},
+    {id:4,code:"PO #4460",party:"Saravana Traders",cust:"Saravana Traders",area:"T. Nagar",kind:"order",amt:38000,state:"act",assignTo:null,folder:"task",dispute:true,proof:"ok",items:[["Plywood 12mm","30 × ₹1,266"]],msgs:[{id:"m40",scope:"external",author:"Saravana Traders",body:"6 sheets delivered warped — raising a dispute.",at:"08:50",type:"issue",unread:true},{id:"m41",scope:"internal",author:"Kumar",body:"Assume replacement is covered under warranty.",at:"08:55",type:"assumption"}]},
+    {id:5,code:"CS #4465",party:"walk-in · Murugan",cust:"Murugan",area:"Anna Nagar",kind:"counter",amt:38000,state:"close",assignTo:"a1",folder:"task",dispute:false,proof:"ok",items:[["Teak door","1 × ₹38,000",[{n:"Door photo",t:"image",scope:"external"}]]],atts:[{n:"Handover photo",t:"image",scope:"external"}],msgs:[{id:"m5",scope:"internal",author:"Kumar",body:"Customer paid cash, handover done.",at:"09:02",type:"info"}]},
+    {id:6,code:"PO #4455",party:"TimberMart",cust:"TimberMart",area:"Guindy",kind:"order",amt:90000,state:"close",assignTo:null,folder:"task",dispute:false,proof:"ok",items:[["Beams","6 × ₹15,000"]]},
+    {id:7,code:"PO #4459",party:"TimberMart",cust:"TimberMart",area:"Guindy",kind:"order",amt:54000,state:"open",assignTo:null,folder:"order",dispute:false,proof:"wait",items:[["Rafters","12 × ₹4,500"]]},
+    {id:8,code:"PO #4452",party:"Saravana Traders",cust:"Saravana Traders",area:"T. Nagar",kind:"order",amt:71000,state:"close",assignTo:null,folder:"order",dispute:false,proof:"ok",items:[["Hinges lot","—"]]},
+  ],
+};
+function deepClone(x){return JSON.parse(JSON.stringify(x));}
+let STORE = deepClone(DEMO);
+
+/* ---------------- API CLIENT ---------------- */
+function fill(path,params){return path.replace(/:(\w+)/g,(_,k)=>encodeURIComponent((params&&params[k])??""));}
+async function api(key, {params, query, body}={}){
+  const ep = EP[key]; if(!ep) throw new Error("no endpoint "+key);
+  if(CFG.MODE==="demo"){ await new Promise(r=>setTimeout(r,140)); return demoApi(key,{params,query,body}); }
+  // LIVE
+  let url = CFG.API_BASE + fill(ep.p, params);
+  if(query){const q=new URLSearchParams(Object.entries(query).filter(([,v])=>v!=null&&v!=="")); if([...q].length)url+="?"+q;}
+  const res = await fetch(url, {method:ep.m, headers:{"Content-Type":"application/json", ...(SESSION.token?{Authorization:"Bearer "+SESSION.token}:{})}, body: body?JSON.stringify(body):undefined});
+  if(!res.ok){ let msg=""; try{ const j=await res.json(); msg=j.message||j.error||""; }catch(_){} throw new Error(msg||("API "+res.status+" "+ep.m+" "+ep.p)); }
+  return res.status===204?null:res.json();
+}
+/* DEMO responder — mimics the API so the whole flow works standalone */
+function demoApi(key,{params,query,body}){
+  switch(key){
+    case "register": return {ok:true, entityId:"e_demo", bridgeId:"rt-001"};
+    case "ownerLogin": case "custVerify": return {otpSent:true};
+    case "ownerVerify": return {token:"demo-owner", role:"entity", name:DEMO.entity.owner, entity:DEMO.entity.name};
+    case "actorLogin": return {token:"demo-actor", role:"actor", name:"Priya", entity:DEMO.entity.name};
+    case "custCatalogue": return {bridgeId:params.bridgeId, shop:"Raghavan Timber", products:[["Teak plank 8ft",3200],["Plywood 12mm",1266]]};
+    case "custOrders": return {chits: STORE.chits.filter(c=>c.folder==="order").map(stripChit)};
+    case "inbox": {
+      let r = STORE.chits.filter(c=>c.folder==="task");
+      if(SESSION.role==="actor" && query && query.assigned_to==="me") r=r.filter(c=>c.assignTo==="a1");
+      if(query && query.status) r=r.filter(c=>c.state===query.status);
+      return {chits:r.map(stripChit)};
+    }
+    case "sent": return {chits: STORE.chits.filter(c=>c.folder==="order").map(stripChit)};
+    case "chit": return {chit: STORE.chits.find(c=>c.id==params.id)};
+    case "advance": { const c=STORE.chits.find(x=>x.id==params.id); const o=["open","act","close"]; const i=o.indexOf(c.state); if(i<o.length-1)c.state=o[i+1]; return {chit:c}; }
+    case "status": { const c=STORE.chits.find(x=>x.id==params.id); c.state=body.to; return {chit:c}; }
+    case "assign": { const c=STORE.chits.find(x=>x.id==params.id); c.assignTo=body.assignee_id; if(body.priority)c.pri=body.priority; if(body.reason){ const an=(STORE.actors.find(a=>a.id===body.assignee_id)||{}).name||"actor"; const pl=body.priority?body.priority[0].toUpperCase()+body.priority.slice(1):"Normal"; c.msgs=c.msgs||[]; c.msgs.push({id:"m"+Date.now(),scope:"internal",author:SESSION.name||"You",body:"Assigned to "+an+" · "+pl+" — "+body.reason,at:"just now",type:"action",unread:false}); } return {chit:c}; }
+    case "setPriority": { const c=STORE.chits.find(x=>x.id==params.id); if(c){ c.pri=body.priority; if(body.reason){ c.msgs=c.msgs||[]; c.msgs.push({id:"m"+Date.now(),scope:"internal",author:SESSION.name||"You",body:"Re-prioritised to "+(body.priority?body.priority[0].toUpperCase()+body.priority.slice(1):"Normal")+" — "+body.reason,at:"just now",type:"action",unread:false}); } } return {chit:c}; }
+    case "custFlag": { const c=STORE.chits.find(x=>x.id==params.id); if(c)c.custPri=!!body.flag; return {chit:c}; }
+    case "unassign": { const c=STORE.chits.find(x=>x.id==params.id); c.assignTo=null; return {chit:c}; }
+    case "actors": return {actors: STORE.actors};
+    case "messages": { const c=STORE.chits.find(x=>x.id==params.id); let ms=(c&&c.msgs)||[]; const sc=query&&query.scope; if(sc&&sc!=="all")ms=ms.filter(m=>m.scope===sc); return {messages:ms}; }
+    case "sendMsg": { const c=STORE.chits.find(x=>x.id==params.id); if(c){ c.msgs=c.msgs||[]; c.msgs.push({id:"m"+Date.now(),scope:body.scope,author:SESSION.name||"You",body:body.body,at:"just now",type:body.type||"info",unread:false}); } return {ok:true}; }
+    case "dispute": { const c=STORE.chits.find(x=>x.id==params.id); if(c)c.dispute=true; return {chit:c}; }
+    case "delChit": { STORE.chits=STORE.chits.filter(x=>x.id!=params.id); return {ok:true, trashed:params.id}; }
+    default: return {ok:true, demo:true};
+  }
+}
+function stripChit(c){return {id:c.id,code:c.code,party:c.party,cust:c.cust,area:c.area,kind:c.kind,amt:c.amt,state:c.state,assignTo:c.assignTo,folder:c.folder,dispute:c.dispute,proof:c.proof,att:((c.atts?c.atts.length:0)+((c.items||[]).reduce((x,it)=>x+((it[2]&&it[2].length)||0),0))),msg:((c.msgs||[]).filter(m=>SESSION.role==="customer"?m.scope==="external":true).length),pri:(c.pri||"normal"),custPri:!!c.custPri};}
+
+/* ---------------- SESSION + ROUTER ---------------- */
+let SESSION = {token:null, role:null, name:null, entity:null, bridgeId:null};
+const inr=n=>"₹"+(n||0).toLocaleString("en-IN");
+function go(hash){location.hash=hash;}
+function toast(msg, undo){
+  const t=document.getElementById("toast");
+  t.innerHTML=`<div class="toast">${msg}${undo?'<button id="undoBtn">Undo</button>':''}</div>`;
+  if(undo){document.getElementById("undoBtn").onclick=()=>{undo();t.innerHTML="";};}
+  clearTimeout(toast._t); toast._t=setTimeout(()=>t.innerHTML="",4500);
+}
+
+window.addEventListener("hashchange", route);
+function route(){
+  const h=location.hash||"#/";
+  if(!SESSION.token && !h.startsWith("#/register") && !h.startsWith("#/login")) return go("#/login");
+  if(h.startsWith("#/register")) return renderRegister();
+  if(h.startsWith("#/login")) return renderLogin();
+  return renderApp();
+}
+
+/* ---------------- AUTH: REGISTER ---------------- */
+let regBusy=false, regErr="";
+function renderRegister(){
+  document.getElementById("root").innerHTML = modeRibbon() + `
+  <div class="auth"><div class="card">
+    <div class="top">${logo()}<h1>Create your entity</h1><p class="sub">Register your business on Chit &amp; Bridge</p></div>
+    <div class="body">
+      <label class="fl">Business / entity name</label><input class="inp" id="r_name" placeholder="Raghavan Timber">
+      <div class="row2"><div><label class="fl">Owner name</label><input class="inp" id="r_owner" placeholder="Raghavan"></div>
+      <div><label class="fl">Type</label><select class="inp" id="r_type"><option>Trader</option><option>Manufacturer</option><option>Service</option><option>Distributor</option></select></div></div>
+      <div class="row2"><div><label class="fl">Mobile</label><input class="inp" id="r_phone" placeholder="+91…"></div>
+      <div><label class="fl">Email</label><input class="inp" id="r_email" placeholder="you@business.in"></div></div>
+      ${regErr?`<div class="err">${regErr}</div>`:""}
+      <button class="btn gold" id="r_go" ${regBusy?"disabled":""}>${regBusy?'<span class="spin"></span> Creating…':"Create entity →"}</button>
+      <div class="hint">Reuses the existing registration flow. In <b>demo</b> this simulates success; in <b>live</b> it calls <span class="mono">${EP.register.p}</span> <b>(${EP.register.ok})</b>.</div>
+      <div class="swap">Already registered? <a onclick="go('#/login')">Sign in</a></div>
+    </div>
+  </div></div>`;
+  document.getElementById("r_go").onclick=doRegister;
+}
+async function doRegister(){
+  const name=val("r_name"), owner=val("r_owner");
+  if(!name||!owner){regErr="Entity name and owner are required.";return renderRegister();}
+  regErr=""; regBusy=true; renderRegister();
+  try{ await api("register",{body:{name,owner,type:val("r_type"),phone:val("r_phone"),email:val("r_email")}});
+    regBusy=false; toast("Entity created — sign in to continue"); go("#/login");
+  }catch(e){ regBusy=false; regErr="Could not register: "+e.message+" (check endpoint / mode)"; renderRegister(); }
+}
+
+/* ---------------- AUTH: LOGIN ---------------- */
+let loginTab="entity", otpStage=false, loginBusy=false, loginErr="", loginEmail="";
+function renderLogin(){
+  const tab=loginTab;
+  let form="";
+  if(tab==="entity") form = otpStage
+    ? `<label class="fl">OTP sent to your email</label><input class="inp" id="l_otp" placeholder="6-digit code">
+       <button class="btn" id="l_go">${loginBusy?'<span class="spin"></span> Verifying…':"Verify & enter →"}</button>`
+    : `<label class="fl">Email</label><input class="inp" id="l_email" placeholder="you@business.in">
+       <button class="btn" id="l_go">${loginBusy?'<span class="spin"></span> Sending…':"Send OTP →"}</button>`;
+  if(tab==="actor") form = `<label class="fl">Your PIN</label><input class="inp" id="l_pin" placeholder="••••" type="password">
+       <button class="btn" id="l_go">${loginBusy?'<span class="spin"></span> …':"Start shift →"}</button>`;
+  if(tab==="customer") form = `<label class="fl">Shop link / bridge id</label><input class="inp" id="l_bridge" placeholder="rt-001" value="rt-001">
+       <label class="fl">Your mobile OTP</label><input class="inp" id="l_cotp" placeholder="6-digit code">
+       <button class="btn" id="l_go">${loginBusy?'<span class="spin"></span> …':"View my orders →"}</button>`;
+  document.getElementById("root").innerHTML = modeRibbon() + `
+  <div class="auth"><div class="card">
+    <div class="top">${logo()}<h1>Sign in</h1><p class="sub">Chit &amp; Bridge — one network, three doors</p></div>
+    <div class="body">
+      <div class="tabs">
+        <button class="${tab==='entity'?'on':''}" onclick="setLoginTab('entity')">🏢 Owner</button>
+        <button class="${tab==='actor'?'on':''}" onclick="setLoginTab('actor')">🧑‍💼 Actor</button>
+        <button class="${tab==='customer'?'on':''}" onclick="setLoginTab('customer')">🛍️ Customer</button>
+      </div>
+      ${form}
+      ${loginErr?`<div class="err">${loginErr}</div>`:""}
+      <div class="hint">${CFG.MODE==="demo"?"<b>Demo mode</b> — any value signs you in so you can walk the flow.":"<b>Live mode</b> — real OTP/PIN against the API."}</div>
+      <div class="swap">New here? <a onclick="go('#/register')">Create an entity</a></div>
+    </div>
+  </div></div>`;
+  const b=document.getElementById("l_go"); if(b) b.onclick=doLogin;
+}
+function setLoginTab(t){loginTab=t;otpStage=false;loginErr="";renderLogin();}
+async function doLogin(){
+  // capture inputs BEFORE the busy re-render — renderLogin() rebuilds the form and clears typed values.
+  const fEmail=val("l_email"), fOtp=val("l_otp"), fPin=val("l_pin"), fBridge=val("l_bridge")||"rt-001", fCotp=val("l_cotp");
+  if(loginTab==="entity" && !otpStage && fEmail) loginEmail=fEmail;   // remember the email across the OTP stage
+  loginErr=""; loginBusy=true; renderLogin();
+  try{
+    if(loginTab==="entity"){
+      if(!otpStage){ await api("ownerLogin",{body:{email:loginEmail}}); loginBusy=false; otpStage=true; return renderLogin(); }
+      const r=await api("ownerVerify",{body:{email:loginEmail,otp:fOtp}});
+      setSession({token:r.token||"t",role:"entity",name:r.name||DEMO.entity.owner,entity:r.entity||DEMO.entity.name,shop:"open"});
+    } else if(loginTab==="actor"){
+      const r=await api("actorLogin",{body:{pin:fPin}});
+      setSession({token:r.token||"t",role:"actor",name:r.name||"Priya",entity:r.entity||DEMO.entity.name,duty:"duty"});
+    } else {
+      await api("custVerify",{params:{bridgeId:fBridge},body:{otp:fCotp}});
+      setSession({token:"t",role:"customer",name:"Asha",entity:DEMO.entity.name,bridgeId:fBridge});
+    }
+    loginBusy=false; go("#/app");
+  }catch(e){ loginBusy=false; loginErr="Sign-in failed: "+e.message; renderLogin(); }
+}
+function setSession(s){SESSION={...SESSION,...s};}
+function statusControl(role){
+  if(role==="actor"){const d=SESSION.duty||"duty";
+    return `<div class="dutytog" role="group" aria-label="Duty status">
+      <button data-d="duty" class="${d==='duty'?'on duty':''}" onclick="setDuty('duty')">● Duty</button>
+      <button data-d="break" class="${d==='break'?'on brk':''}" onclick="setDuty('break')">❚❚ Break</button></div>`;}
+  if(role==="entity"){const sh=SESSION.shop||"open";
+    return `<div class="shoptog" role="group" aria-label="Shop status">
+      <button data-s="open" class="${sh==='open'?'on open':''}" onclick="setShop('open')">Open</button>
+      <button data-s="closed" class="${sh==='closed'?'on closed':''}" onclick="setShop('closed')">Closed</button>
+      <button data-s="away" class="${sh==='away'?'on away':''}" onclick="setShop('away')">Away</button></div>`;}
+  return "";
+}
+function setDuty(d){SESSION.duty=d;
+  document.querySelectorAll('.dutytog button').forEach(b=>{b.classList.remove('on','duty','brk');if(b.dataset.d===d){b.classList.add('on',d==='duty'?'duty':'brk');}});
+  toast(d==='break'?"On break — chits won't route to you.":"Back on duty.");
+}
+function setShop(s){SESSION.shop=s;
+  document.querySelectorAll('.shoptog button').forEach(b=>{b.classList.remove('on','open','closed','away');if(b.dataset.s===s){b.classList.add('on',s);}});
+  toast({open:"Shop Open — accepting orders.",closed:"Shop Closed — new orders are blocked.",away:"Away — orders still accepted; customer is told service may be delayed."}[s]);
+}
+function logout(){SESSION={token:null,role:null,name:null,entity:null,bridgeId:null};STORE=deepClone(DEMO);UI={...UI0,selected:new Set(),aggStates:new Set(["open","act","close"])};applyPrefs();go("#/login");}
+
+/* ---------------- APP SHELL + TASK PANEL ---------------- */
+const UI0 = {nav:"task", folder:"task", sub:"my", state:"open", dtab:"content", sel:null, selectMode:false, selected:new Set(), aggStates:new Set(["open","act","close"]), drawer:false, mdetail:false, purpose:false, loading:false, rows:[], detail:null, actors:[], busy:false, vp:"lap", lw:340, lh:300, lb:null, lbGroup:null, openLines:new Set(), attGroups:{}, filterOpen:false, filter:{}, notifOpen:false, msgFilter:"all", msgChan:"internal", msgType:"all", msgKind:"info", msgcOpen:false, composeOpen:false};
+const MTYPES = {
+  info:      {label:"Information",short:"Info", icon:"ℹ️", cls:"info"},
+  query:     {label:"Query",      short:"Query",icon:"❓", cls:"query"},
+  decision:  {label:"Decision",   short:"Decn", icon:"✅", cls:"decision"},
+  risk:      {label:"Risk",       short:"Risk", icon:"⚠️", cls:"risk"},
+  assumption:{label:"Assumption", short:"Assm", icon:"📌", cls:"assumption"},
+  issue:     {label:"Issue",      short:"Issue",icon:"🔴", cls:"issue"},
+  dependency:{label:"Dependency", short:"Dep",  icon:"🔗", cls:"dependency"},
+  action:    {label:"Action",     short:"Actn", icon:"➡️", cls:"action"}
+};
+const MT_LEAN=["info","query","action"];
+const MT_GOV=["info","query","risk","assumption","issue","dependency","decision","action"];
+function surfacedTypes(){ return SESSION.msgTypes==="gov"?MT_GOV:MT_LEAN; }
+const PRI={urgent:{label:"Urgent",rank:0},normal:{label:"Normal",rank:1},low:{label:"Low",rank:2}};
+function priRank(p){return (PRI[p]||PRI.normal).rank;}
+function priChip(p){ return (!p||p==="normal")?"":`<span class="prichip pri-${p}">${PRI[p].label}</span>`; }
+let UI = {...UI0, selected:new Set(), aggStates:new Set(["open","act","close"])};
+
+const MENUS = {
+  entity:{top:[["compose","✉️","Compose",""],["task","📥","Task",""],["order","📤","Order",""]], rest:[["network","🔗","Network"],["suppliers","🏭","Suppliers"],["catalogue","🗂️","Catalogue"],["coassists","🧑‍🤝‍🧑","Co-assists"],["mis","📊","MIS"],["disputes","⚖️","Disputes"],["settings","⚙️","Settings"]], tag:"Owner does structure."},
+  actor:{top:[["compose","✉️","Compose",""],["task","📥","Task",""],["order","📤","Order",""]], rest:[["suppliers","🏭","Suppliers"],["profile","👤","Profile"]], tag:"Commerce yes, structure no."},
+  customer:{top:[["order","📤","My orders",""]], rest:[["shops","🏬","Find a shop"]], tag:"You see only your orders."},
+};
+const PURPOSE = {
+  task:"Your work folder — chits that need you. Press a state chip ▸ to advance.",
+  order:"Chits you've sent — track them to close.",
+  compose:"Start a new chit — defaults to a counter-sale from your catalogue.",
+  network:"Your governance edges — who you're connected to.",
+  suppliers:"Suppliers you buy from — pull their catalogue into a cart.",
+  catalogue:"What you sell — products and price.",
+  coassists:"Your actors — shifts, load, assignment.",
+  mis:"Numbers — performance across the network.",
+  disputes:"Chits flagged for resolution.",
+  settings:"Toolbar, saved views, archive schedule, your drive, status table.",
+  shops:"Find a shop you have a bridge with.",
+  profile:"Your shift and assignment.",
+};
+
+function renderApp(){
+  const role=SESSION.role, M=MENUS[role]||MENUS.entity;
+  if(role==="customer" && (UI.nav==="task"||UI.nav==="compose")) UI.nav="order";
+  document.getElementById("root").innerHTML = modeRibbon() + `
+  <div class="appwrap ${UI.vp==='mob'?'m':''}"><div class="shell">
+    <div class="topbar">
+      <button class="ham" onclick="UI.drawer=!UI.drawer;renderApp()">☰</button>
+      <div class="b">${logoMark(20)} <span class="bt">Chit &amp; Bridge</span></div>
+      <button class="info ${UI.purpose?'on':''}" id="infobtn" onclick="togglePurpose()" title="About this screen" aria-label="About this screen">ⓘ</button>
+      <button class="msgc" id="msgcbtn" onclick="openMsgCenter()" title="Messages" aria-label="Messages">💬<span class="bdot" id="msgcdot" style="${unreadCount()?'':'display:none'}">${unreadCount()}</span></button>
+      ${role!=="customer"?`<button class="bell" id="bellbtn" onclick="openNotifications()" title="Notifications" aria-label="Notifications">🔔<span class="bdot">3</span></button>`:''}
+      <div class="who">${statusControl(role)}<div class="nmwrap" style="text-align:right"><div class="nm">${SESSION.name}</div><div class="rl">${role} · ${SESSION.entity||""}</div></div>
+        <div class="av">${(SESSION.name||"?")[0]}</div>
+        <button class="so" onclick="logout()" title="Sign out" aria-label="Sign out"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button></div>
+    </div>
+    <div class="menu ${UI.drawer?'open':''}">
+      <div class="grp">Mailbox</div>${M.top.map(menuBtn).join("")}
+      <div class="grp">${role==="customer"?"More":"Manage"}</div>${M.rest.map(menuBtn).join("")}
+      <div class="tagl">${M.tag}</div>
+    </div>
+    <div class="main">
+      <div class="purpose ${UI.purpose?'open':''}" id="purposebar"><b>${navTitle()}</b> · ${PURPOSE[UI.nav]||""}<button class="x" onclick="togglePurpose()" aria-label="Hide">✕</button></div>
+      <div id="mainbody" style="flex:1;display:flex;flex-direction:column;min-height:0">${mainBody()}</div>
+    </div>
+  </div></div><div id="lbhost"></div><div id="modalhost"></div>`;
+  if(["task","order"].includes(UI.nav)) loadList();
+}
+function togglePurpose(){UI.purpose=!UI.purpose;const el=document.getElementById('purposebar');if(el)el.classList.toggle('open',UI.purpose);const ic=document.getElementById('infobtn');if(ic)ic.classList.toggle('on',UI.purpose);}
+function navTitle(){const all={...Object.fromEntries(Object.values(MENUS).flatMap(m=>[...m.top,...m.rest]).map(x=>[x[0],x[2]]))};return all[UI.nav]||UI.nav;}
+function menuBtn(x){const[key,ic,label]=x;const on=UI.nav===key;const click=key==="compose"?`compose()`:`navTo('${key}')`;return `<button class="${on?'on':''}" onclick="${click}"><span class="ic">${ic}</span>${label}</button>`;}
+function navTo(k){UI.nav=k;UI.drawer=false;UI.mdetail=false;UI.sel=null;UI.detail=null;if(k==="task")UI.folder="task";if(k==="order")UI.folder="order";renderApp();}
+function compose(){UI.drawer=false;toast("Compose → new counter-sale (self-chit). Wired next iteration.");}
+
+function mainBody(){
+  if(["task","order"].includes(UI.nav)) return taskPanel();
+  return `<div class="stub"><div class="t">${navTitle()}</div><div>This screen is on the build roadmap — we walk it in a later iteration. The menu &amp; routing are live so you can see where it lives.</div></div>`;
+}
+
+/* ----- TASK PANEL ----- */
+function taskPanel(){
+  const role=SESSION.role;
+  const isCust=role==="customer";
+  const folders = "";  /* Task/Order live in the left menu / mobile drawer — no duplicate toggle here */
+  const sub = (role==="actor"&&UI.folder==="task") ? `<div class="folders"><button class="${UI.sub==='my'?'on':''}" onclick="setSub('my')">My Task</button><button class="${UI.sub==='all'?'on':''}" onclick="setSub('all')">All Task</button></div>` : "";
+  const counts = countStates();
+  const stTabs = `<div class="statetabs">${["open","act","close"].map(s=>`<button class="${UI.state===s?'on '+s:''}" onclick="setState('${s}')">${UI.selectMode&&!isCust?`<span class="cbx ${UI.aggStates.has(s)?'on':''}" style="width:13px;height:13px;margin:0" onclick="event.stopPropagation();toggleAgg('${s}')">${UI.aggStates.has(s)?'✓':''}</span>`:''}${cap(s)} <span class="n">${counts[s]}</span></button>`).join("")}</div>`;
+  const funnel = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>`;
+  const tools = isCust ? "" : `<div class="tools">
+      <div class="tool" title="Change status" onclick="quickStatus()">◧</div>
+      <div class="tool" title="Assign to actor" onclick="quickAssign()">👤</div>
+      <div class="tool ${UI.filterOpen?'on':''}" title="Filter" onclick="openFilter()">${funnel}</div>
+      <div class="tool ${UI.selectMode?'on':''}" title="Select" onclick="toggleSelect()">☑</div>
+      <div class="tool" title="Raise dispute" onclick="quickDispute()">⚑</div>
+      <div class="tool" title="Delete (move to trash)" onclick="quickDelete()">🗑️</div>
+    </div>${UI.filterOpen?filterPanel():""}`;
+  const sel = (UI.selectMode&&!isCust)?selBar():"";
+  const list = `<div class="list">
+    <div class="lh">${folders}${sub}${stTabs}
+      <div class="srch">🔍 <input placeholder="${isCust?'Search my orders':'Search chits, party, item'}"></div>
+      ${tools}${sel}
+    </div>
+    <div class="rows" id="rows">${UI.loading?'<div class="loadwrap"><span class="spin"></span> loading…</div>':renderRows()}</div>
+  </div>`;
+  const detail = `<div class="detail" id="detailpane">${renderDetail()}</div>`;
+  const divider = `<div class="divider" id="divider" onmousedown="startDrag(event)" ontouchstart="startDrag(event)" role="separator" aria-label="Resize panes"><span class="grip"></span></div>`;
+  const showDetail = (UI.vp==='mob') && UI.mdetail;
+  return `<div class="panel ${showDetail?'showdetail':''}" id="panel" style="--lw:${UI.lw}px;--lh:${UI.lh}px">${list}${divider}${detail}</div>`;
+}
+function countStates(){const o={open:0,act:0,close:0};UI.rows.forEach(c=>{if(o[c.state]!=null)o[c.state]++});return o;}
+function cap(s){return s[0].toUpperCase()+s.slice(1);}
+function setSub(s){UI.sub=s;UI.sel=null;UI.detail=null;renderApp();}
+function setState(s){UI.state=s;renderApp();}
+function toggleAgg(s){UI.aggStates.has(s)?(UI.aggStates.size>1&&UI.aggStates.delete(s)):UI.aggStates.add(s);renderApp();}
+function toggleSelect(){UI.selectMode=!UI.selectMode;if(!UI.selectMode)UI.selected.clear();renderApp();}
+function actionTargets(){ if(UI.selectMode && UI.selected.size) return [...UI.selected]; if(UI.sel) return [UI.sel]; return []; }
+function needTarget(){ const t=actionTargets(); if(!t.length) toast("Open a chit — or tick some in Select — first."); return t; }
+let MODALS={};
+function modal(html){ const h=document.getElementById("modalhost"); if(!h)return; h.innerHTML=`<div class="mover" onclick="closeModal()"><div class="modal" onclick="event.stopPropagation()">${html}</div></div>`; }
+function closeModal(){ const h=document.getElementById("modalhost"); if(h)h.innerHTML=""; }
+function quickStatus(){ const ids=needTarget(); if(!ids.length)return; MODALS.stat={ids,to:null};
+  const opts=[["open","Open"],["act","Act"],["close","Close"]].map(([v,l])=>`<div class="optrow" data-v="${v}" onclick="pickStatus('${v}')"><span class="rdo"></span><div class="oc"><div class="on">${l}</div></div></div>`).join("");
+  modal(`<div class="mhd"><div class="t">Change status</div><div class="s">${ids.length} chit${ids.length>1?'s':''}</div></div><div class="mbody">${opts}</div><div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="pri" id="mok" disabled onclick="confirmStatus()">Set status</button></div>`);
+}
+function pickStatus(v){ MODALS.stat.to=v; document.querySelectorAll('.optrow').forEach(r=>r.classList.toggle('sel',r.dataset.v===v)); const b=document.getElementById('mok'); if(b)b.disabled=false; }
+async function confirmStatus(){ const {ids,to}=MODALS.stat; if(!to)return; closeModal();
+  for(const id of ids){ try{ await api("status",{params:{id},body:{status:({open:'pending',act:'in_progress',close:'completed'}[to]||to)}}); const i=UI.rows.findIndex(x=>x.id===id); if(i>=0)UI.rows[i].state=to; if(UI.detail&&UI.detail.id===id)UI.detail.state=to; }catch(e){ toast("Status failed: "+e.message); return; } }
+  renderApp(); toast(ids.length+" → "+to.toUpperCase());
+}
+function quickAssign(){ const ids=needTarget(); if(!ids.length)return;
+  if(ids.length===1){ pickAssign(ids[0]); }
+  else { toast("Bulk-assign "+ids.length+" chits — "+EP.assignBulk.ok+" "+EP.assignBulk.p+" (ATH-109 §5)"); }
+}
+function quickDispute(){ const ids=needTarget(); if(!ids.length)return; MODALS.disp={ids};
+  modal(`<div class="mhd"><div class="t">⚑ Raise dispute</div><div class="s">${ids.length} chit${ids.length>1?'s':''}</div></div><div class="mbody"><div style="font-size:12px;color:var(--grey);margin-bottom:7px">Pick a category and give a reason (min 10 characters). Both parties will see this dispute.</div><select id="dispcat" style="width:100%;margin-bottom:8px;padding:8px;border:1px solid var(--line);border-radius:6px"><option value="quality">Quality</option><option value="quantity">Quantity</option><option value="delivery">Delivery</option><option value="payment">Payment</option><option value="docs">Docs</option><option value="other" selected>Other</option></select><textarea id="dispreason" placeholder="e.g. Quantity short by 2 units — please replace"></textarea></div><div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="danger" onclick="confirmDispute()">Raise dispute</button></div>`);
+}
+async function confirmDispute(){ const ids=MODALS.disp.ids; const el=document.getElementById('dispreason'); const reason=(el?el.value:"").trim(); const cat=(document.getElementById('dispcat')||{}).value||'other';
+  if(reason.length<10){ toast("Reason must be at least 10 characters"); return; }
+  closeModal();
+  for(const id of ids){ try{ await api("dispute",{params:{id},body:{category:cat,reason}}); const i=UI.rows.findIndex(x=>x.id===id); if(i>=0)UI.rows[i].dispute=true; if(UI.detail&&UI.detail.id===id)UI.detail.dispute=true; }catch(e){ toast("Dispute failed: "+e.message); return; } }
+  renderApp(); toast("⚑ Dispute raised on "+ids.length);
+}
+function quickDelete(){ let ids=needTarget(); if(!ids.length)return;
+  if(SESSION.role==="actor"){ const drafts=ids.filter(id=>{const c=UI.rows.find(x=>x.id===id)||UI.detail; return c&&c.state==="draft";}); if(drafts.length!==ids.length){ toast("Only the owner can delete a sent (co-signed) chit — actors delete their own drafts only."); return; } ids=drafts; }
+  MODALS.del={ids};
+  modal(`<div class="mhd"><div class="t">🗑️ Delete ${ids.length} chit${ids.length>1?'s':''}?</div></div><div class="mbody"><div style="font-size:13px;color:var(--ink);line-height:1.6">They move to <b>Trash</b> and can be recovered for a set period — not erased immediately.</div></div><div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="danger" onclick="confirmDelete()">Move to Trash</button></div>`);
+}
+async function confirmDelete(){ const ids=MODALS.del.ids; closeModal();
+  for(const id of ids){ try{ await api("delChit",{params:{id}}); }catch(e){ toast("Delete failed: "+e.message); return; } }
+  UI.rows=UI.rows.filter(c=>!ids.includes(c.id)); if(UI.sel&&ids.includes(UI.sel)){UI.sel=null;UI.detail=null;UI.mdetail=false;} UI.selected.clear();
+  renderApp(); toast("Moved to Trash · recoverable", ()=>toast("Restore from Trash — wired with the retention model."));
+}
+function openFilter(){ UI.filterOpen=!UI.filterOpen; renderApp(); }
+function setFilter(k,v){ UI.filter={...(UI.filter||{}),[k]:v}; paintRowsOnly(); }
+function clearFilter(){ UI.filter={}; renderApp(); }
+function filterPanel(){ const f=UI.filter||{};
+  return `<div class="filterpanel">
+    <div class="fp-row"><span>Kind</span><select onchange="setFilter('kind',this.value)">
+      <option value=""${!f.kind?' selected':''}>All</option>
+      <option value="order"${f.kind==='order'?' selected':''}>Order</option>
+      <option value="counter"${f.kind==='counter'?' selected':''}>Counter</option>
+      <option value="service"${f.kind==='service'?' selected':''}>Service</option></select></div>
+    <div class="fp-row"><label><input type="checkbox" ${f.disputeOnly?'checked':''} onchange="setFilter('disputeOnly',this.checked)"> Disputed only</label></div>
+    <div class="fp-row"><span>Sort</span><select onchange="setFilter('sort',this.value)">
+      <option value=""${!f.sort?' selected':''}>Default</option>
+      <option value="priority"${f.sort==='priority'?' selected':''}>Priority (queue)</option>
+      <option value="amount"${f.sort==='amount'?' selected':''}>Amount (high → low)</option>
+      <option value="code"${f.sort==='code'?' selected':''}>Code</option></select></div>
+    <div class="fp-foot"><button onclick="clearFilter()">Clear</button><span class="fp-note">→ ${EP.filters.p} (§1)</span></div>
+  </div>`;
+}
+function openNotifications(){ const host=document.getElementById("lbhost"); if(!host)return;
+  if(UI.notifOpen){ closeNotif(); return; }
+  UI.notifOpen=true;
+  const items=[
+    {i:"✅",t:"PO #4471 counter-signed by Saravana Traders",s:"2m ago"},
+    {i:"✍️",t:"SR #4468 awaiting your signature",s:"18m ago"},
+    {i:"⚑",t:"PO #4460 flagged for dispute",s:"1h ago"},
+  ];
+  host.innerHTML=`<div class="notifover" onclick="closeNotif()"><div class="notifpanel" onclick="event.stopPropagation()">
+    <div class="notifhd">Notifications<span style="margin-left:auto;font-size:9px;color:var(--grey);font-family:'Space Mono',monospace">${EP.notifications.ok} ${EP.notifications.p}</span></div>
+    ${items.map(x=>`<div class="notifrow"><span class="ni">${x.i}</span><div><div class="nt">${x.t}</div><div class="ns">${x.s}</div></div></div>`).join("")}
+    <div class="notiffoot">Demo notifications — endpoint pending (ATH-109 §11).</div>
+  </div></div>`;
+}
+function closeNotif(){ UI.notifOpen=false; const h=document.getElementById("lbhost"); if(h)h.innerHTML=""; }
+
+// map a LIVE API chit (chit_id/current_status/summary_json/…) into the UI row shape.
+// demo rows already have .id, so they pass straight through.
+function mapApiChit(c){
+  if(!c || c.id!==undefined) return c;
+  const ST={pending:'open',delivered:'open',read:'open',accepted:'act',in_progress:'act',partial:'act',completed:'close',cancelled:'close',rejected:'close'};
+  const recips=c.all_recipients||[];
+  const other=recips.find(r=>r.role!=='sender')||recips.find(r=>r.role==='sender')||{};
+  const sum=c.summary_json||{};
+  return { id:c.chit_id, code:c.manual_subject||c.auto_subject||(c.purpose||'chit'),
+    party:other.display_name||c.sender_entity_display_name||'—', cust:other.display_name||'', area:'',
+    kind:c.purpose||'order', amt:sum.total_value||0, state:ST[c.current_status]||'open',
+    assignTo:c.assigned_to_actor_id||null, folder:'task', dispute:Number(c.open_dispute_count||0)>0,
+    proof:'ok', pri:c.priority_flag||'normal', custPri:!!c.customer_priority, items:[], atts:[], msgs:[] };
+}
+function fmtAt(ts){ try{ return new Date(ts).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}); }catch(_){ return ''; } }
+function inr_(v){ return '₹'+Number(v||0).toLocaleString('en-IN'); }
+function fmtLine(li){ return [li.particulars||'Item', (li.quantity||0)+' × '+inr_(li.price)+' = '+inr_(li.total||(li.quantity*li.price)), []]; }
+function mapApiMsg(m){ if(!m||m.scope!==undefined) return m; return { id:m.message_id, scope:m.thread_type||'internal', author:m.sender_display_name||'—', body:m.message_text||'', at:fmtAt(m.created_at), type:m.msg_type||'info', unread:false }; }
+function mapApiActor(a){ if(!a||a.shift!==undefined) return a; const S={active:'on_shift',on_break:'on_break',break:'on_break',off:'off',deactivated:'off'}; return { id:a.identity_id, name:a.display_name, shift:S[a.break_status]||'on_shift', load:a.current_task_count||0 }; }
+async function loadList(){
+  UI.loading=true; const body=document.getElementById("rows"); if(body)body.innerHTML='<div class="loadwrap"><span class="spin"></span> loading…</div>';
+  try{
+    let res;
+    if(UI.folder==="order"||SESSION.role==="customer"){ res= SESSION.role==="customer" ? await api("custOrders",{params:{bridgeId:SESSION.bridgeId}}) : await api("sent"); }
+    else { const q={}; if(SESSION.role==="actor"&&UI.sub==="my")q.assigned_to="me"; res=await api("inbox",{query:q}); }
+    UI.rows = (res.chits||[]).map(mapApiChit);
+    UI.loading=false;
+    if(!UI.sel && UI.rows.length){ const first=UI.rows.find(c=>c.state===UI.state)||UI.rows[0]; if(first)openChit(first.id,true); }
+    paintRowsOnly();
+  }catch(e){ UI.loading=false; const b=document.getElementById("rows"); if(b)b.innerHTML=`<div class="empty"><div class="big">⚠</div><div class="t">Couldn't load</div><div>${e.message}</div><div style="font-size:11px">Check mode/endpoint, then retry.</div></div>`; }
+}
+function paintRowsOnly(){const b=document.getElementById("rows"); if(b)b.innerHTML=renderRows(); const cs=countStates(); document.querySelectorAll(".statetabs .n").forEach((el,i)=>{el.textContent=cs[["open","act","close"][i]];});}
+function visibleRows(){
+  let rows = (UI.selectMode&&SESSION.role!=="customer") ? UI.rows.filter(c=>UI.aggStates.has(c.state)) : UI.rows.filter(c=>c.state===UI.state);
+  const f=UI.filter||{};
+  if(f.kind) rows=rows.filter(c=>c.kind===f.kind);
+  if(f.disputeOnly) rows=rows.filter(c=>c.dispute);
+  if(f.sort==='amount') rows=[...rows].sort((a,b)=>(b.amt||0)-(a.amt||0));
+  if(f.sort==='code') rows=[...rows].sort((a,b)=>String(a.code).localeCompare(String(b.code)));
+  if(f.sort==='priority') rows=[...rows].sort((a,b)=>priRank(a.pri)-priRank(b.pri) || (b.custPri?1:0)-(a.custPri?1:0));
+  return rows;
+}
+function renderRows(){
+  const rows=visibleRows();
+  if(!rows.length) return `<div class="empty"><div class="big">📭</div><div class="t">Nothing here yet</div><div>No chits in ${UI.selectMode?'the ticked states':cap(UI.state)}.</div></div>`;
+  return rows.map(rowHTML).join("");
+}
+function rowHTML(c){
+  const cbx=UI.selectMode&&SESSION.role!=="customer"?`<div class="cbx ${UI.selected.has(c.id)?'on':''}" onclick="event.stopPropagation();toggleSel(${c.id})">${UI.selected.has(c.id)?'✓':''}</div>`:"";
+  const proof=`<span class="proof ${c.proof==='ok'?'ok':'wait'}">${c.proof==='ok'?'✓ both-signed':'⚠ awaiting'}</span>`;
+  const acts=(SESSION.role==="actor"&&UI.folder==="task")?(UI.sub==="all"?`<div class="rowacts"><button class="go" onclick="event.stopPropagation();assignChit(${c.id},'a1')">⤵ Pull to me</button><button onclick="event.stopPropagation();unassignChit(${c.id})">⤴ Push</button></div>`:`<div class="rowacts"><button onclick="event.stopPropagation();unassignChit(${c.id})">↩ Push back</button><button class="go" onclick="event.stopPropagation();pickAssign(${c.id})">👥 Assign</button></div>`):"";
+  return `<div class="row ${c.id===UI.sel?'sel':''}" onclick="openChit(${c.id})">${cbx}
+    <div class="main2"><div class="l1">${c.custPri?'<span class="custflag" title="Customer flagged priority">⚑</span>':''}<span class="code">${c.code}</span><span class="party">· ${c.party}</span><span class="amt">${c.amt?inr(c.amt):'—'}</span></div>
+      <div class="l2">${c.area} · ${c.kind} ${priChip(c.pri)} ${c.att?`<span class="rowclip">📎 ${c.att}</span>`:''} ${c.msg?`<span class="rowmsg" onclick="event.stopPropagation();openChitMsgs(${c.id})">💬 ${c.msg}</span>`:''} ${proof} ${c.dispute?'<b style="color:var(--disp)">dispute</b>':''}
+        <span class="chipst st-${c.state}" onclick="event.stopPropagation();advanceChit(${c.id})" title="advance">${c.state.toUpperCase()} ▸</span></div>${acts}</div>
+    <div class="rowgo" aria-hidden="true">›</div>
+  </div>`;
+}
+function toggleSel(id){UI.selected.has(id)?UI.selected.delete(id):UI.selected.add(id);paintRowsOnly();updateSelBar();}
+function selBar(){const ids=UI.selected;const sum=UI.rows.filter(c=>ids.has(c.id)).reduce((a,c)=>a+c.amt,0);const ticked=UI.rows.filter(c=>UI.aggStates.has(c.state)).reduce((a,c)=>a+c.amt,0);const lbl=ids.size?`☑ ${ids.size} selected · Σ ${inr(sum)}`:`states ✓ ${[...UI.aggStates].map(cap).join(" · ")} · Σ ${inr(ticked)}`;return `<div class="selbar" id="selbar">${lbl}<span class="sp"><button onclick="sumScope()">Sum →</button><button class="pri" onclick="toast('Mass-assign — wired with ATH-109 bulk endpoint.')">Assign</button><button onclick="UI.selected.clear();renderApp()">Clear</button></span></div>`;}
+function updateSelBar(){const el=document.getElementById("selbar");if(el)el.outerHTML=selBar();}
+function sumScope(){
+  const sel=UI.rows.filter(c=>UI.selected.has(c.id));
+  const tabs=UI.rows.filter(c=>UI.aggStates.has(c.state));
+  let arr=sel.length?sel:tabs;
+  if(sel.length&&tabs.length){ arr = confirm("OK = your "+sel.length+" selected\nCancel = ticked state tabs ("+[...UI.aggStates].join(", ")+")")?sel:tabs; }
+  const kinds=[...new Set(arr.map(c=>c.kind))];
+  if(kinds.length>1){ const lines=kinds.map(k=>k+": "+inr(arr.filter(c=>c.kind===k).reduce((a,c)=>a+c.amt,0))); toast("Mixed kinds — no grand total. "+lines.join(" · ")); }
+  else toast("Roll-up · "+arr.length+" chits · Σ "+inr(arr.reduce((a,c)=>a+c.amt,0))+" (push-to-draft wired with ATH-109)");
+}
+
+/* detail */
+async function openChit(id, silent){
+  UI.sel=id;
+  if((UI.vp==='mob') && !silent){ UI.mdetail=true; const p=document.getElementById("panel"); if(p)p.classList.add("showdetail"); }
+  if(!silent){ const dp=document.getElementById("detailpane"); if(dp){dp.innerHTML=`<div class="loadwrap"><span class="spin"></span> opening…</div>`;} }
+  try{ const r=await api("chit",{params:{id}});
+        if(r.chit){ UI.detail=r.chit; }
+        else { const h=r.header||{}, det=r.detail||{};
+          const base=UI.rows.find(c=>c.id===id)||mapApiChit({chit_id:h.chit_id,summary_json:h.summary_json,all_recipients:h.all_recipients,sender_entity_display_name:h.sender_entity_display_name,purpose:h.purpose,manual_subject:h.manual_subject,auto_subject:h.auto_subject,current_status:'delivered',open_dispute_count:0});
+          UI.detail={...base, items:(det.line_items||[]).map(fmtLine), atts:[], msgs:[]};
+          try{ const mr=await api("messages",{params:{id}}); UI.detail.msgs=(mr.messages||[]).map(mapApiMsg); }catch(_){}
+        }
+        UI.openLines=new Set(); const fi=(UI.detail.items||[]).findIndex(it=>attsVis(it[2]).length); if(fi>=0)UI.openLines.add('line'+fi);
+        paintDetail(); paintRowsOnly(); }
+  catch(e){ const dp=document.getElementById("detailpane"); if(dp)dp.innerHTML=`<div class="empty"><div class="big">⚠</div><div>${e.message}</div></div>`; }
+}
+function paintDetail(){const dp=document.getElementById("detailpane");if(dp){dp.className="detail";dp.innerHTML=detailInner();}}
+function backToList(){UI.mdetail=false;const p=document.getElementById("panel");if(p)p.classList.remove("showdetail");}
+function renderDetail(){return detailInner();}
+function detailInner(){
+  const c=UI.detail;
+  if(!c) return `<div class="empty"><div class="big">🧾</div><div class="t">Select a chit</div><div>Pick one from the list to see its content, status and summary.</div></div>`;
+  const back="";
+  const proof = c.proof==='ok' ? `<span class="parity">⚖️ Two-sided proof: both parties hold matching, co-signed records.</span>` : `<span class="parity" style="background:var(--gold-soft);border-color:var(--gold-line);color:#6b5a36">⚖️ Awaiting counter-signature — one side hasn't co-signed yet.</span>`;
+  buildAttGroups(c);
+  const items=contentItems(c);
+  let body="";
+  if(UI.dtab==="content") body=`<div class="itab">${items}<div class="ir tot"><span>Total</span><span class="qt">${inr(c.amt)}</span></div></div>
+     ${chitAttBlock(c)}`;
+  if(UI.dtab==="messages") body=messagesTab(c);
+  if(UI.dtab==="status") body=`<div class="sec">Lifecycle</div><div class="tl">
+     <div class="ev"><div class="ea">Created</div><div class="em">today 10:02</div></div>
+     <div class="ev"><div class="ea">Sent · landed</div><div class="em">with ${c.party}</div></div>
+     ${c.state!=="open"?'<div class="ev"><div class="ea">Moved to Act</div><div class="em">10:25</div></div>':''}
+     ${c.state==="close"?'<div class="ev"><div class="ea">Closed</div><div class="em">delivery confirmed</div></div>':`<div class="ev"><div class="ea" style="color:var(--grey)">Next: ${({open:"Act",act:"Close",close:"Archive"})[c.state]}</div><div class="em">advance from the row chip ▸</div></div>`}
+     </div>
+     <div class="sec" style="margin-top:14px">💬 Messages (${msgCount(c)})</div>
+     ${((c.msgs||[]).filter(m=>SESSION.role==="customer"?m.scope==="external":true).slice(-3).reverse().map(msgBubble).join(""))||'<div class="msgempty" style="padding:10px">No messages yet.</div>'}
+     <div style="margin-top:4px"><button class="msglink" onclick="setDtab('messages')">Open conversation →</button></div>`;
+  if(UI.dtab==="summary") body=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
+     <div class="itab" style="padding:10px"><div class="sec" style="margin:0">Value</div><div class="disp" style="font-size:17px;font-weight:700">${inr(c.amt)}</div></div>
+     <div class="itab" style="padding:10px"><div class="sec" style="margin:0">State</div><div class="disp" style="font-size:15px;font-weight:700">${c.state.toUpperCase()}</div></div></div>
+     <div style="margin-top:10px">${proof}</div>`;
+  const actbar = SESSION.role==="customer"
+    ? `<button onclick="toggleCustPri(${c.id})">⚑ ${c.custPri?'Priority requested':'Request priority'}</button><button class="warn">⚑ Dispute</button><button>⬇ PDF</button>`
+    : `<button class="pri" onclick="advanceChit(${c.id})">Advance ▸</button>${SESSION.role==="actor"?`<button onclick="pickAssign(${c.id})">👥 Assign</button>`:""}<button class="warn">⚑ Dispute</button>${SESSION.role==="entity"?`<button class="warn pend" onclick="toast('Void — owner soft-void, ${EP.voidChit.ok} (ATH-109 §3)')">⊘ Void</button>`:""}<button>⬇ PDF</button>`;
+  const dtabs=[["content","Content"],["status","Status"],["summary","Summary"],["messages","💬 Messages"+(msgCount(c)?" ("+msgCount(c)+")":"")]];
+  return `<div class="dh"><button class="dback" onclick="backToList()">‹ Back to list</button><button class="dmsg" onclick="setDtab('messages')" title="Messages" aria-label="Messages">💬${msgCount(c)?' '+msgCount(c):''}</button><div class="dt">${c.code} · ${c.party}</div><div class="ds">${c.area} · ${c.kind} · ${inr(c.amt)} · ${c.state.toUpperCase()}</div>
+     <div class="parties"><span class="ptag">from <b>${SESSION.entity||"You"}</b></span><span class="ptag">to <b>${c.kind==='counter'?(SESSION.entity||'You'):c.party}</b></span>${c.kind==='counter'?`<span class="ptag">for <b>${c.cust}</b></span>`:''}</div><div class="dchips">${SESSION.role!=="customer"?`<button class="prichip-btn pri-${c.pri||'normal'}" onclick="repriority(${c.id})" title="Priority — tap to change">${(c.pri&&c.pri!=='normal')?PRI[c.pri].label:'Normal'} ▾</button>`:''}${c.custPri?'<span class="custflag-tag">⚑ Customer priority</span>':''}</div></div>
+   <div class="dtabs">${dtabs.map(([k,l])=>`<button class="${UI.dtab===k?'on':''}" onclick="setDtab('${k}')">${l}</button>`).join("")}</div>
+   <div class="db">${body}</div><div class="actbar">${actbar}</div>`;
+}
+function setDtab(t){UI.dtab=t;paintDetail();}
+function openChitMsgs(id){ UI.dtab="messages"; markChitRead(id); openChit(id); setTimeout(refreshMsgBadge,0); }
+function msgCount(c){ return ((c&&c.msgs)?c.msgs:[]).filter(m=>SESSION.role==="customer"?m.scope==="external":true).length; }
+function setMsgFilter(f){ UI.msgFilter=f; paintDetail(); }
+function setMsgChan(ch){ UI.msgChan=ch; paintDetail(); }
+function toggleCompose(){ UI.composeOpen=!UI.composeOpen; paintDetail(); if(UI.composeOpen)setTimeout(()=>{const t=document.getElementById('msgbody');if(t)t.focus();},30); }
+function setMsgType(t){ UI.msgType=t; paintDetail(); }
+function setMsgKind(k){ UI.msgKind=k; paintDetail(); }
+function msgBubble(m){ const ext=m.scope==="external"; const d=MTYPES[m.type]||MTYPES.info; return `<div class="bubble ${ext?'ext':'int'}"><div class="bh"><span class="mbadge ${ext?'ext':'int'}">${ext?'↔ External':'🔒 Internal'}</span><span class="mtype ${d.cls}">${d.icon} ${d.label}</span><span class="ath">${m.author}</span><span class="tm">${m.at}</span>${m.unread?'<span class="unreaddot"></span>':''}</div><div class="bb">${m.body}</div></div>`; }
+function messagesTab(c){
+  markChitRead(c.id); setTimeout(refreshMsgBadge,0);
+  const isCust=SESSION.role==="customer";
+  const all=(c.msgs||[]); const visible=isCust?all.filter(m=>m.scope==="external"):all;
+  const f=UI.msgFilter||"all"; const t=UI.msgType||"all";
+  let shown=f==="all"?visible:visible.filter(m=>m.scope===f);
+  if(t!=="all") shown=shown.filter(m=>(m.type||"info")===t);
+  const scopeFilter=isCust?"":`<div class="msgfilter"><button class="${f==='all'?'on':''}" onclick="setMsgFilter('all')">All</button><button class="${f==='internal'?'on':''}" onclick="setMsgFilter('internal')">🔒 Internal</button><button class="${f==='external'?'on':''}" onclick="setMsgFilter('external')">↔ External</button></div>`;
+  const tset=surfacedTypes(); const ctypes=isCust?["info","query"]:tset;
+  const typeFilter=`<div class="msgfilter">${[["all","All types"]].concat(tset.map(k=>[k,MTYPES[k].short])).map(([v,l])=>`<button class="${t===v?'on '+(v==='all'?'':MTYPES[v].cls):''}" onclick="setMsgType('${v}')">${v==='all'?l:MTYPES[v].icon+' '+l}</button>`).join("")}</div>`;
+  const ordered=shown.slice().reverse();
+  const thread=ordered.length?ordered.map(msgBubble).join(""):`<div class="msgempty">No messages yet — use ✏️ New message above to start one.</div>`;
+  const ch=UI.msgChan||(isCust?"external":"internal"); let kind=UI.msgKind||"info"; if(!ctypes.includes(kind))kind=ctypes[0];
+  const typeSel=`<div class="typesel">${ctypes.map(k=>`<button class="${kind===k?'on '+MTYPES[k].cls:''}" title="${MTYPES[k].label}" onclick="setMsgKind('${k}')">${MTYPES[k].icon} ${MTYPES[k].short}</button>`).join("")}</div>`;
+  const open=!!UI.composeOpen;
+  const composer=isCust
+    ? `<div class="composer">${typeSel}<div class="chlabel ext">↔ External · ${c.party||'the shop'} will see this</div><textarea id="msgbody" placeholder="Message to ${c.party||'the shop'}…"></textarea><button class="send ext" onclick="sendMessage(${c.id})">Send ${MTYPES[kind].label} ↔ external</button></div>`
+    : `<div class="composer"><div class="chtoggle"><button class="int ${ch==='internal'?'on':''}" onclick="setMsgChan('internal')">🔒 Internal</button><button class="ext ${ch==='external'?'on':''}" onclick="setMsgChan('external')">↔ External</button></div>${typeSel}<textarea id="msgbody" placeholder="${ch==='internal'?'Note for your team — stays internal':'Message to '+(c.party||'the other party')+' — they will see this'}"></textarea><button class="send ${ch==='internal'?'int':'ext'}" onclick="sendMessage(${c.id})">Send ${MTYPES[kind].label} · ${ch==='internal'?'🔒 internal':'↔ external'}</button></div>`;
+  const head=`<div class="msghd"><span class="mh-t">Messages (${msgCount(c)})</span><button class="composebtn ${open?'on':''}" onclick="toggleCompose()">${open?'✕ Close':'✏️ New message'}</button></div>`;
+  return `<div class="msgtab">${head}${open?composer:''}${scopeFilter}${typeFilter}<div class="thread">${thread}</div></div>`;
+}
+function sendMessage(id){
+  const el=document.getElementById('msgbody'); const body=(el?el.value:"").trim(); if(!body){ toast("Type a message first."); return; }
+  const ch=UI.msgChan||(SESSION.role==="customer"?"external":"internal");
+  if(ch==="external"){ const c=UI.detail||{}; modal(`<div class="mhd"><div class="t">↔ Send external message</div><div class="s">to ${c.party||'the other party'}</div></div><div class="mbody"><div style="font-size:13px;color:var(--ink);line-height:1.55">This <b>crosses the edge</b> — ${c.party||'they'} will see it and be notified. Internal notes never leave your team.</div></div><div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="pri" onclick="closeModal();doSendMessage(${id},'external')">Send to ${c.party||'them'}</button></div>`); }
+  else { doSendMessage(id,'internal'); }
+}
+async function doSendMessage(id, scope){
+  const el=document.getElementById('msgbody'); const body=(el?el.value:"").trim(); if(!body)return;
+  try{ await api("sendMsg",{params:{id},body:{thread_type:scope,message_text:body,msg_type:UI.msgKind||"info"}}); await openChit(id,true); }catch(e){ toast("Send failed: "+e.message); return; }
+  const i=UI.rows.findIndex(x=>x.id===id); if(i>=0)UI.rows[i].msg=msgCount(UI.detail);
+  paintDetail(); paintRowsOnly();
+  toast(scope==='external'?'↔ Sent — '+((UI.detail&&UI.detail.party)||'the other party')+' notified':'🔒 Internal note added (team only)');
+}
+function unreadCount(){ let n=0; (STORE.chits||[]).forEach(c=>{ (c.msgs||[]).forEach(m=>{ if(m.unread && (SESSION.role!=="customer"||m.scope==="external")) n++; }); }); return n; }
+function markChitRead(id){ const c=(STORE.chits||[]).find(x=>x.id==id); if(c)(c.msgs||[]).forEach(m=>m.unread=false); }
+function refreshMsgBadge(){ const n=unreadCount(); const d=document.getElementById('msgcdot'); if(d){ d.textContent=n; d.style.display=n?'flex':'none'; } }
+function openMsgCenter(){ const host=document.getElementById("lbhost"); if(!host)return; if(UI.msgcOpen){ closeMsgCenter(); return; } UI.msgcOpen=true;
+  const items=(STORE.chits||[]).map(c=>{ const ms=(c.msgs||[]).filter(m=>SESSION.role!=="customer"||m.scope==="external"); if(!ms.length)return null; const last=ms[ms.length-1]; const unread=ms.filter(m=>m.unread).length; return {id:c.id,code:c.code,party:c.party,last,unread}; }).filter(Boolean).reverse();
+  host.innerHTML=`<div class="notifover" onclick="closeMsgCenter()"><div class="notifpanel" onclick="event.stopPropagation()"><div class="notifhd">💬 Messages<span style="margin-left:auto;font-size:9px;color:var(--grey)">across all chits</span></div><div style="padding:8px 12px;border-bottom:1px solid var(--line)"><button class="msglink" style="width:100%" onclick="openRaidReport()">📊 RAID report — governance overview</button></div>${items.length?items.map(x=>`<div class="notifrow" style="cursor:pointer" onclick="openFromCenter(${x.id})"><span class="ni">${x.unread?'🔵':'💬'}</span><div style="flex:1;min-width:0"><div class="nt"><b>${x.code}</b> · ${x.party}${x.unread?` <span class="unreadtag">${x.unread} new</span>`:''}</div><div class="ns">${x.last?((x.last.scope==='external'?'↔ ':'🔒 ')+(x.last.body.length>44?x.last.body.slice(0,44)+'…':x.last.body)):''}</div></div></div>`).join(""):'<div class="notiffoot">No messages yet.</div>'}<div class="notiffoot">Tap a chit to open its conversation. External messages also land in the other party's message centre.</div><div class="raidtoggle">⚙ Message types: <button class="${SESSION.msgTypes!=='gov'?'on':''}" onclick="setMsgTypeSet('lean')">Lean</button><button class="${SESSION.msgTypes==='gov'?'on':''}" onclick="setMsgTypeSet('gov')">Governance (RAID)</button><div class="hint">A Settings preview — configurable per entity in production.</div></div></div></div>`;
+}
+function closeMsgCenter(){ UI.msgcOpen=false; const h=document.getElementById("lbhost"); if(h)h.innerHTML=""; }
+function openFromCenter(id){ closeMsgCenter(); openChitMsgs(id); }
+function setMsgTypeSet(mode){ SESSION.msgTypes=mode; if(!surfacedTypes().includes(UI.msgKind))UI.msgKind=surfacedTypes()[0]; if(UI.msgType!=="all" && !surfacedTypes().includes(UI.msgType))UI.msgType="all"; closeMsgCenter(); openMsgCenter(); paintDetail(); }
+function openRaidReport(){ const host=document.getElementById("lbhost"); if(!host)return; UI.msgcOpen=false;
+  const counts={}, samples={}; (STORE.chits||[]).forEach(c=>{ (c.msgs||[]).forEach(m=>{ if(SESSION.role==="customer"&&m.scope!=="external")return; const k=m.type||"info"; counts[k]=(counts[k]||0)+1; (samples[k]=samples[k]||[]); if(samples[k].length<3)samples[k].push({code:c.code,body:m.body}); }); });
+  const keys=Object.keys(MTYPES).filter(k=>counts[k]); const total=keys.reduce((a,k)=>a+counts[k],0); const max=Math.max(1,...keys.map(k=>counts[k]));
+  const rows=keys.length?keys.map(k=>{ const d=MTYPES[k]; const w=Math.round(counts[k]/max*100); return `<div class="raidrow"><div class="rl"><span class="mtype ${d.cls}">${d.icon} ${d.label}</span><b>${counts[k]}</b></div><div class="rbar"><span class="rbarfill ${d.cls}" style="width:${w}%"></span></div><div class="rsamp">${samples[k].map(x=>`<div>· <b>${x.code}</b> ${x.body.length>50?x.body.slice(0,50)+'…':x.body}</div>`).join("")}</div></div>`; }).join(""):'<div class="msgempty">No tagged messages in this period yet.</div>';
+  host.innerHTML=`<div class="notifover" onclick="closeMsgCenter()"><div class="notifpanel raid" onclick="event.stopPropagation()"><div class="notifhd">📊 RAID report<span style="margin-left:auto;font-size:9px;color:var(--grey)">this period · ${total} items</span></div><div class="raidbody">${rows}</div><div class="notiffoot">Governance register rolled up from tagged messages across all chits. In production this is a backend report over a chosen period, per entity / oversight scope.</div></div></div>`;
+}
+
+/* actions wired to API */
+async function advanceChit(id){
+  const c=UI.rows.find(x=>x.id===id)||UI.detail; if(c&&c.state==="close"){toast("At Close — next is Archive (sunset model).");return;}
+  const order=["open","act","close"], cur=(c&&c.state)||"open", next=order[Math.min(order.indexOf(cur)+1,2)], SB={open:'pending',act:'in_progress',close:'completed'};
+  try{ await api("advance",{params:{id},body:{status:SB[next]}}); const i=UI.rows.findIndex(x=>x.id===id); if(i>=0)UI.rows[i].state=next; if(UI.detail&&UI.detail.id===id)UI.detail.state=next; UI.state=next; renderApp(); toast((c?c.code:"Chit")+" → "+next.toUpperCase()); }
+  catch(e){ toast("Advance failed: "+e.message); }
+}
+async function assignChit(id, actorId, pri, reason){
+  try{ const body={action:'push',target_actor_id:actorId}; if(pri)body.priority=pri; if(reason)body.reason=reason; await api("assign",{params:{id},body}); const i=UI.rows.findIndex(x=>x.id===id); if(i>=0){UI.rows[i].assignTo=actorId; if(pri)UI.rows[i].pri=pri;} if(UI.detail&&UI.detail.id===id)await openChit(id,true); renderApp();
+    const a=(UI.actors||STORE.actors||[]).find(x=>x.id===actorId); const c=UI.rows.find(x=>x.id===id)||UI.detail; toast((c?c.code:"Chit")+" → "+(a?a.name:"actor")+(pri&&pri!=="normal"?" · "+PRI[pri].label:"")+" ✓", ()=>unassignChit(id)); }
+  catch(e){ toast("Assign failed: "+e.message); }
+}
+async function unassignChit(id){ try{ await api("unassign",{params:{id},body:{action:'return'}}); const i=UI.rows.findIndex(x=>x.id===id); if(i>=0)UI.rows[i].assignTo=null; renderApp(); toast("Pushed back to pool"); }catch(e){toast("Failed: "+e.message);} }
+async function pickAssign(id){
+  let actors=[];
+  try{ const r=await api("actors"); actors=(r.actors||[]).map(mapApiActor); }catch(e){ toast("Couldn't load actors: "+e.message); return; }
+  UI.actors=actors; const c=UI.rows.find(x=>x.id===id)||UI.detail||{}; MODALS.pick={id, actorId:null, pri:(c.custPri?'urgent':'normal'), reason:''};
+  const rows=actors.map(a=>{ const off=a.shift==="off";
+    const chip=a.shift==="on_shift"?'<span class="optchip on">on shift</span>':a.shift==="on_break"?'<span class="optchip brk">on break</span>':'<span class="optchip off">off</span>';
+    return `<div class="optrow ${off?'dis':''}" data-a="${a.id}" ${off?'':`onclick="pickActor('${a.id}')"`}><span class="rdo"></span><div class="oc"><div class="on">${a.name}</div><div class="om">load ${a.load}${off?' · off duty — cannot assign':''}</div></div>${chip}</div>`;
+  }).join("");
+  const prisel=`<div class="msec">Priority</div><div class="prisel">${["urgent","normal","low"].map(p=>`<button class="pri-${p} ${MODALS.pick.pri===p?'on':''}" data-p="${p}" onclick="pickPri('${p}')">${PRI[p].label}</button>`).join("")}</div>`;
+  const reasonbox=`<div class="msec">Reason <span id="reasonhint" class="rh">${MODALS.pick.pri==='urgent'?'— Urgent needs one':'(optional)'}</span></div><textarea id="assignreason" class="mreason" placeholder="Why this assignment / this urgency…" oninput="MODALS.pick.reason=this.value;syncAssignOk()"></textarea>`;
+  const custnote=c.custPri?`<div class="custreq">⚑ Customer flagged this as priority — consider Urgent.</div>`:'';
+  modal(`<div class="mhd"><div class="t">Assign ${c.code||'chit'}</div><div class="s">${c.party||''}${c.amt?' · '+inr(c.amt):''}</div></div><div class="mbody">${custnote}${rows||'<div style="padding:14px;color:var(--grey);font-size:13px">No actors found.</div>'}${prisel}${reasonbox}</div><div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="pri" id="mok" disabled onclick="confirmAssign()">Assign</button></div>`);
+}
+function pickActor(aid){ MODALS.pick.actorId=aid; document.querySelectorAll('.optrow').forEach(r=>r.classList.toggle('sel',r.dataset.a===aid)); syncAssignOk(); }
+function pickPri(p){ MODALS.pick.pri=p; document.querySelectorAll('.prisel button').forEach(b=>b.classList.toggle('on',b.dataset.p===p)); const h=document.getElementById('reasonhint'); if(h)h.textContent=p==='urgent'?'— Urgent needs one':'(optional)'; syncAssignOk(); }
+function syncAssignOk(){ const p=MODALS.pick; const b=document.getElementById('mok'); if(!b)return; const ok=p.actorId&&(p.pri!=='urgent'||(p.reason&&p.reason.trim())); b.disabled=!ok; const a=(UI.actors||[]).find(x=>x.id===p.actorId); b.textContent=p.actorId?("Assign · "+PRI[p.pri].label+" → "+(a?a.name:"actor")):"Assign"; }
+function confirmAssign(){ const p=MODALS.pick; if(!p||!p.actorId)return; closeModal(); assignChit(p.id, p.actorId, p.pri, p.reason); }
+function repriority(id){ const c=UI.detail||UI.rows.find(x=>x.id===id)||{}; MODALS.repri={id,pri:c.pri||"normal",reason:""};
+  modal(`<div class="mhd"><div class="t">Priority — ${c.code||'chit'}</div><div class="s">internal routing in your queue</div></div><div class="mbody">${c.custPri?'<div class="custreq">⚑ Customer flagged this as priority.</div>':''}<div class="prisel">${["urgent","normal","low"].map(p=>`<button class="pri-${p} ${MODALS.repri.pri===p?'on':''}" data-p="${p}" onclick="pickRepri('${p}')">${PRI[p].label}</button>`).join("")}</div><div class="msec">Reason <span id="repriHint" class="rh">${MODALS.repri.pri==='urgent'?'— Urgent needs one':'(optional)'}</span></div><textarea id="reprireason" class="mreason" placeholder="Why this priority…" oninput="MODALS.repri.reason=this.value;syncRepriOk()"></textarea></div><div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="pri" id="repriok" ${MODALS.repri.pri==='urgent'?'disabled':''} onclick="confirmRepri()">Set ${PRI[MODALS.repri.pri].label}</button></div>`); }
+function pickRepri(p){ MODALS.repri.pri=p; document.querySelectorAll('.prisel button').forEach(b=>b.classList.toggle('on',b.dataset.p===p)); const h=document.getElementById('repriHint'); if(h)h.textContent=p==='urgent'?'— Urgent needs one':'(optional)'; syncRepriOk(); }
+function syncRepriOk(){ const p=MODALS.repri; const b=document.getElementById('repriok'); if(!b)return; b.disabled=!(p.pri!=='urgent'||(p.reason&&p.reason.trim())); b.textContent="Set "+PRI[p.pri].label; }
+async function confirmRepri(){ const p=MODALS.repri; closeModal(); try{ await api("setPriority",{params:{id:p.id},body:{priority:p.pri,reason:p.reason}}); const r=await api("chit",{params:{id:p.id}}); UI.detail=r.chit; const i=UI.rows.findIndex(x=>x.id===p.id); if(i>=0){UI.rows[i].pri=r.chit.pri; UI.rows[i].msg=msgCount(r.chit);} renderApp(); toast("Priority → "+PRI[p.pri].label); }catch(e){ toast("Failed: "+e.message); } }
+async function toggleCustPri(id){ const c=UI.detail||{}; const nf=!c.custPri; try{ await api("custFlag",{params:{id},body:{flag:nf}}); const r=await api("chit",{params:{id}}); UI.detail=r.chit; const i=UI.rows.findIndex(x=>x.id===id); if(i>=0)UI.rows[i].custPri=r.chit.custPri; renderApp(); toast(nf?"⚑ Priority requested — the shop will see this":"Priority request removed"); }catch(e){ toast("Failed: "+e.message); } }
+
+/* ---------------- bits ---------------- */
+function val(id){const el=document.getElementById(id);return el?el.value.trim():"";}
+function logoMark(s){return `<svg width="${s}" height="${s}" viewBox="0 0 32 32"><circle cx="16" cy="16" r="12.5" fill="none" stroke="#C9A86A" stroke-width="1.6"/><path d="M7 19 Q16 9 25 19" fill="none" stroke="#C9A86A" stroke-width="2.4" stroke-linecap="round"/><circle cx="7" cy="19" r="1.6" fill="#C9A86A"/><circle cx="25" cy="19" r="1.6" fill="#C9A86A"/></svg>`;}
+function logo(){return `<div class="brand">${logoMark(26)} Chit &amp; Bridge</div>`;}
+function modeRibbon(){
+  const vpsw = SESSION.token ? `<span class="sw" style="margin-left:auto"><button class="${UI.vp==='lap'?'on':''}" onclick="setVP('lap')">💻 Laptop</button><button class="${UI.vp==='mob'?'on':''}" onclick="setVP('mob')">📱 Mobile</button></span>` : '';
+  return `<div class="moderibbon">
+    <b>Build preview</b><span class="pill">${CFG.MODE.toUpperCase()} mode</span>
+    <span style="font-size:10.5px">${CFG.MODE==="demo"?"standalone · mock data":"hitting "+(CFG.API_BASE||"(API_BASE not set!)")}</span>
+    ${vpsw}
+    <span class="sw" style="${SESSION.token?'':'margin-left:auto'}"><button class="${CFG.MODE==='demo'?'on':''}" onclick="CFG.MODE='demo';STORE=deepClone(DEMO);route()">Demo</button><button class="${CFG.MODE==='live'?'on':''}" onclick="CFG.MODE='live';route()">Live</button></span>
+  </div>`;
+}
+
+/* viewport + divider prefs (local; durable home = entity Settings, backlog) */
+function lsGet(k,def){try{const v=localStorage.getItem(k);return v==null?def:v;}catch(e){return def;}}
+function lsSet(k,v){try{localStorage.setItem(k,v);}catch(e){}}
+function applyPrefs(){UI.vp=lsGet('cb_vp',(window.innerWidth<=820?'mob':'lap'));UI.lw=parseInt(lsGet('cb_lw',340),10)||340;UI.lh=parseInt(lsGet('cb_lh',300),10)||300;}
+function setVP(v){UI.vp=v;lsSet('cb_vp',v);renderApp();}
+let DRAG=false;
+function startDrag(e){DRAG=true;e.preventDefault();document.body.style.userSelect='none';}
+function onDrag(e){
+  if(!DRAG)return;const panel=document.getElementById("panel");if(!panel)return;
+  const r=panel.getBoundingClientRect();const pt=e.touches?e.touches[0]:e;
+  if(UI.vp==='mob'){let h=pt.clientY-r.top;h=Math.max(120,Math.min(r.height-150,h));UI.lh=Math.round(h);panel.style.setProperty('--lh',UI.lh+'px');}
+  else{let w=pt.clientX-r.left;w=Math.max(210,Math.min(r.width-260,w));UI.lw=Math.round(w);panel.style.setProperty('--lw',UI.lw+'px');}
+}
+function endDrag(){if(!DRAG)return;DRAG=false;document.body.style.userSelect='';lsSet('cb_lw',UI.lw);lsSet('cb_lh',UI.lh);}
+document.addEventListener('mousemove',onDrag);document.addEventListener('touchmove',onDrag,{passive:false});
+document.addEventListener('mouseup',endDrag);document.addEventListener('touchend',endDrag);
+
+/* attachments + lightbox */
+function attsVis(atts){return (atts||[]);}  /* DEC: customer sees the full co-signed set — both parties co-hold every attachment */
+function attIcon(t){return t==='video'?'▶':t==='doc'?'📄':'🖼️';}
+function attMedia(a,size){
+  const big=size==='hero'||size==='lb';
+  const bg=a.t==='image'?'#E8F0F4':a.t==='video'?'#F7F1E4':'#F1EFE8';
+  return `<div class="attImg ${big?'big':''}" style="background:${bg}"><span style="font-size:${big?'40px':'20px'}">${attIcon(a.t)}</span>${a.t==='video'?'<span class="vlen">0:12</span>':''}</div>`;
+}
+/* build the visible attachment groups for the current chit: line0, line1 … + chit */
+function buildAttGroups(c){
+  const g={};
+  (c.items||[]).forEach((it,idx)=>{const a=attsVis(it[2]);if(a.length)g['line'+idx]=a;});
+  const chit=attsVis(c.atts); if(chit.length)g['chit']=chit;
+  UI.attGroups=g;
+}
+/* items table — each line shows a clip + expandable image strip scoped to that line */
+function contentItems(c){
+  return (c.items||[]).map((it,idx)=>{
+    const atts=attsVis(it[2]);
+    const open=UI.openLines.has('line'+idx);
+    const clip=atts.length?`<span class="lineclip" onclick="event.stopPropagation();toggleLine(${idx})">📎 ${atts.length} ${open?'▾':'▸'}</span>`:"";
+    const strip=(atts.length&&open)?`<div class="lineImgs">${atts.map((a,i)=>`<div class="attThumb" onclick="openLightbox('line${idx}',${i})" title="${a.n}">${attMedia(a,'thumb')}</div>`).join("")}</div>`:"";
+    return `<div class="ir ${atts.length?'hasatt':''}" ${atts.length?`onclick="toggleLine(${idx})"`:''}><span class="nm">${it[0]}</span><span class="qt">${it[1]}</span>${clip}</div>${strip}`;
+  }).join("");
+}
+function toggleLine(idx){const k='line'+idx;UI.openLines.has(k)?UI.openLines.delete(k):UI.openLines.add(k);paintDetail();}
+/* whole-chit attachments (documents, clips not tied to one line) */
+function chitAttBlock(c){
+  const atts=attsVis(c.atts);
+  if(!atts.length) return "";
+  const hero=atts[0], rest=atts.slice(1);
+  return `<div class="sec" style="display:flex;align-items:center;gap:7px">📎 Whole-chit attachments · ${atts.length}<span style="margin-left:auto;font-size:9px;color:var(--ok);font-weight:700">✓ co-signed</span></div>
+    <div class="attHero" onclick="openLightbox('chit',0)">${attMedia(hero,'hero')}<div class="attName">${attIcon(hero.t)} ${hero.n} · tap to open</div></div>
+    ${rest.length?`<div class="attStrip">${rest.map((a,i)=>`<div class="attThumb" onclick="openLightbox('chit',${i+1})" title="${a.n}">${attMedia(a,'thumb')}</div>`).join("")}</div>`:""}
+    <div class="attNote">Part of the co-signed record — both parties hold the same set &amp; leaves with the chit on sunset.</div>`;
+}
+function openLightbox(group,i){UI.lbGroup=group;UI.lb=i;paintLB();}
+function closeLightbox(){UI.lb=null;paintLB();}
+function lbNav(d){const atts=UI.attGroups[UI.lbGroup]||[];if(!atts.length)return;UI.lb=(UI.lb+d+atts.length)%atts.length;paintLB();}
+function paintLB(){
+  const host=document.getElementById("lbhost");if(!host)return;
+  const atts=UI.attGroups[UI.lbGroup]||[];
+  if(UI.lb==null||!atts.length){host.innerHTML="";return;}
+  const i=Math.min(UI.lb,atts.length-1),a=atts[i];
+  host.innerHTML=`<div class="lbover" onclick="closeLightbox()"><div class="lbbox" onclick="event.stopPropagation()">
+    <div class="lbtop"><span>${a.n}</span><span style="font-weight:400;color:#9fb4bf">${i+1} / ${atts.length}</span><span style="margin-left:auto;cursor:pointer" onclick="toast('Download — wired live (GET attachment)')">⬇</span><span class="x" onclick="closeLightbox()">✕</span></div>
+    <div class="lbstage">${attMedia(a,'lb')}</div>
+    <div class="lbnav"><button onclick="lbNav(-1)" aria-label="Previous">‹</button><div class="lbdots">${atts.map((_,k)=>`<span class="${k===i?'on':''}"></span>`).join("")}</div><button onclick="lbNav(1)" aria-label="Next">›</button></div>
+  </div></div>`;
+}
+
+/* boot */
+applyPrefs();
+if(!location.hash) location.hash="#/login";
+route();
+</script>
+</body>
+</html>
