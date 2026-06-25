@@ -11,7 +11,7 @@ function fill(path, params){ return path.replace(/:(\w+)/g, (_, k) => encodeURIC
 function unwrap(j){
   if(j==null||typeof j!=="object"||Array.isArray(j)) return j;
   if("ok" in j && ("data" in j || "error" in j)){ if(j.ok===false) throw new Error(j.error||"Request failed"); return j.data; }
-  if("my_disputes" in j || "header" in j) return j;                 // structured/compound payloads pass through whole
+  if("token" in j || "my_disputes" in j || "header" in j) return j; // auth (token) / structured / compound -> whole, untouched
   for(const k of ["chits","messages","connections","requests","suppliers","items","results","actors"]) if(Array.isArray(j[k])) return j[k];
   if(j.entity) return j.entity;
   if(j.settings) return j.settings;
