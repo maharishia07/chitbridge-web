@@ -350,6 +350,8 @@ const EP = {
   voidChit:        {m:"PUT",  p:"/api/chits/:id/void",           ok:"○"},  // not built
   rollup:          {m:"POST", p:"/api/chits/rollup",             ok:"○"},  // not built
   archive:         {m:"POST", p:"/api/chits/:id/archive",        ok:"○"},  // not built
+  createChit:      {m:"POST", p:"/api/chits/send",               ok:"✓"},  // compose a new chit
+  addActor:        {m:"POST", p:"/api/actors",                   ok:"✓"},  // create an actor
 };
 
 /* ---------------- DEMO STORE ---------------- */
@@ -611,7 +613,39 @@ function togglePurpose(){UI.purpose=!UI.purpose;const el=document.getElementById
 function navTitle(){const all={...Object.fromEntries(Object.values(MENUS).flatMap(m=>[...m.top,...m.rest]).map(x=>[x[0],x[2]]))};return all[UI.nav]||UI.nav;}
 function menuBtn(x){const[key,ic,label]=x;const on=UI.nav===key;const click=key==="compose"?`compose()`:`navTo('${key}')`;return `<button class="${on?'on':''}" onclick="${click}"><span class="ic">${ic}</span>${label}</button>`;}
 function navTo(k){UI.nav=k;UI.drawer=false;UI.mdetail=false;UI.sel=null;UI.detail=null;if(k==="task")UI.folder="task";if(k==="order")UI.folder="order";renderApp();}
-function compose(){UI.drawer=false;toast("Compose → new counter-sale (self-chit). Wired next iteration.");}
+function compose(){ UI.drawer=false;
+  modal(`<div class="mhd"><div class="t">✉️ New chit</div><div class="s">create an order to send</div></div>
+   <div class="mbody">
+     <label class="fl">Receiver — business name</label><input class="inp" id="cc_to" placeholder="e.g. Buyer Co">
+     <label class="fl">Subject</label><input class="inp" id="cc_subj" placeholder="e.g. PO #5001">
+     <label class="fl">Purpose</label><select class="inp" id="cc_purp"><option>order</option><option>invoice</option><option>receipt</option><option>inquiry</option><option>delivery_note</option><option>general</option></select>
+     <label class="fl">Item (optional)</label><input class="inp" id="cc_item" placeholder="particulars, e.g. Teak plank">
+     <div style="display:flex;gap:8px"><input class="inp" id="cc_qty" placeholder="qty" inputmode="numeric"><input class="inp" id="cc_price" placeholder="price" inputmode="numeric"></div>
+     <div class="err" id="cc_err"></div>
+   </div>
+   <div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="pri" onclick="submitCompose()">Send chit</button></div>`);
+}
+async function submitCompose(){
+  const to=val("cc_to"), subj=val("cc_subj"), purp=val("cc_purp")||"order", item=val("cc_item"), qty=+val("cc_qty")||0, price=+val("cc_price")||0;
+  const err=document.getElementById("cc_err"); if(err)err.textContent="";
+  if(!to){ if(err)err.textContent="A receiver business name is required."; return; }
+  const line_items=item?[{particulars:item,quantity:qty,price:price,total:qty*price}]:[];
+  try{ await api("createChit",{body:{receivers:[{display_name:to}],purpose:purp,manual_subject:subj||undefined,line_items}}); closeModal(); toast("Chit sent ✓"); UI.nav="task"; UI.folder="task"; UI.sel=null; UI.detail=null; await loadList(); renderApp(); }
+  catch(e){ if(err)err.textContent=e.message; }
+}
+function addActorModal(){
+  modal(`<div class="mhd"><div class="t">🧑‍💼 Add actor</div><div class="s">staff who can handle deals</div></div>
+   <div class="mbody"><label class="fl">Name</label><input class="inp" id="ac_name" placeholder="e.g. Priya">
+     <label class="fl">Login key (min 4 chars)</label><input class="inp" id="ac_key" placeholder="e.g. priya1">
+     <div class="err" id="ac_err"></div></div>
+   <div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="pri" onclick="submitActor()">Create</button></div>`);
+}
+async function submitActor(){
+  const name=val("ac_name"), key=val("ac_key"); const err=document.getElementById("ac_err"); if(err)err.textContent="";
+  if(!name||key.length<4){ if(err)err.textContent="Name and a key of 4+ chars are required."; return; }
+  try{ await api("addActor",{body:{display_name:name,actor_key:key}}); closeModal(); toast("Actor "+name+" added ✓"); }
+  catch(e){ if(err)err.textContent=e.message; }
+}
 
 function mainBody(){
   if(["task","order"].includes(UI.nav)) return taskPanel();
@@ -936,7 +970,7 @@ async function pickAssign(id){
   const prisel=`<div class="msec">Priority</div><div class="prisel">${["urgent","normal","low"].map(p=>`<button class="pri-${p} ${MODALS.pick.pri===p?'on':''}" data-p="${p}" onclick="pickPri('${p}')">${PRI[p].label}</button>`).join("")}</div>`;
   const reasonbox=`<div class="msec">Reason <span id="reasonhint" class="rh">${MODALS.pick.pri==='urgent'?'— Urgent needs one':'(optional)'}</span></div><textarea id="assignreason" class="mreason" placeholder="Why this assignment / this urgency…" oninput="MODALS.pick.reason=this.value;syncAssignOk()"></textarea>`;
   const custnote=c.custPri?`<div class="custreq">⚑ Customer flagged this as priority — consider Urgent.</div>`:'';
-  modal(`<div class="mhd"><div class="t">Assign ${c.code||'chit'}</div><div class="s">${c.party||''}${c.amt?' · '+inr(c.amt):''}</div></div><div class="mbody">${custnote}${rows||'<div style="padding:14px;color:var(--grey);font-size:13px">No actors found.</div>'}${prisel}${reasonbox}</div><div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="pri" id="mok" disabled onclick="confirmAssign()">Assign</button></div>`);
+  modal(`<div class="mhd"><div class="t">Assign ${c.code||'chit'}</div><div class="s">${c.party||''}${c.amt?' · '+inr(c.amt):''}</div></div><div class="mbody">${custnote}${rows||'<div style="padding:14px;color:var(--grey);font-size:13px">No actors yet.</div>'}<div style="padding:6px 0 2px"><button class="composebtn" onclick="addActorModal()">+ New actor</button></div>${prisel}${reasonbox}</div><div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="pri" id="mok" disabled onclick="confirmAssign()">Assign</button></div>`);
 }
 function pickActor(aid){ MODALS.pick.actorId=aid; document.querySelectorAll('.optrow').forEach(r=>r.classList.toggle('sel',r.dataset.a===aid)); syncAssignOk(); }
 function pickPri(p){ MODALS.pick.pri=p; document.querySelectorAll('.prisel button').forEach(b=>b.classList.toggle('on',b.dataset.p===p)); const h=document.getElementById('reasonhint'); if(h)h.textContent=p==='urgent'?'— Urgent needs one':'(optional)'; syncAssignOk(); }
