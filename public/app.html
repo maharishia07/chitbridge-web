@@ -354,6 +354,21 @@ const EP = {
   addActor:        {m:"POST", p:"/api/actors",                   ok:"✓"},  // create an actor
   disputeQueue:    {m:"GET",  p:"/api/chits/disputes/queue",     ok:"✓"},  // all open disputes
   resolveDispute:  {m:"PUT",  p:"/api/chits/:id/disputes/:disputeId/resolve", ok:"✓"},  // {resolution_note}
+  me:              {m:"GET",   p:"/api/entities/me",             ok:"✓"},
+  saveProfile:     {m:"PATCH", p:"/api/entities/profile",        ok:"✓"},  // {gstn,address,business_status}
+  getSettings:     {m:"GET",   p:"/api/actors/settings",         ok:"✓"},
+  saveSettings:    {m:"PUT",   p:"/api/actors/settings",         ok:"✓"},
+  entitySearch:    {m:"GET",   p:"/api/entities/search",         ok:"✓"},  // ?q=
+  connList:        {m:"GET",   p:"/api/connections/list",        ok:"✓"},
+  connPending:     {m:"GET",   p:"/api/connections/pending",     ok:"✓"},
+  connRequest:     {m:"POST",  p:"/api/connections/request",     ok:"✓"},  // {to_entity_id}
+  connRespond:     {m:"PUT",   p:"/api/connections/:id/respond", ok:"✓"},  // {action:accept|reject}
+  supList:         {m:"GET",   p:"/api/relationships/suppliers", ok:"✓"},
+  supAdd:          {m:"POST",  p:"/api/relationships/suppliers", ok:"✓"},  // {supplier_bridge_id}
+  supDel:          {m:"DELETE",p:"/api/relationships/suppliers/:id", ok:"✓"},
+  prodList:        {m:"GET",   p:"/api/products",                ok:"✓"},
+  prodAdd:         {m:"POST",  p:"/api/products",                ok:"✓"},  // {item_data:{name,price}}
+  prodDel:         {m:"DELETE",p:"/api/products/:id",            ok:"✓"},
 };
 
 /* ---------------- DEMO STORE ---------------- */
@@ -611,6 +626,11 @@ function renderApp(){
   </div></div><div id="lbhost"></div><div id="modalhost"></div>`;
   if(["task","order"].includes(UI.nav)) loadList();
   if(UI.nav==="disputes") loadDisputes();
+  if(UI.nav==="profile") loadProfile();
+  if(UI.nav==="settings") loadSettings();
+  if(UI.nav==="network") loadNetwork();
+  if(UI.nav==="suppliers") loadSuppliers();
+  if(UI.nav==="catalogue") loadCatalogue();
 }
 function togglePurpose(){UI.purpose=!UI.purpose;const el=document.getElementById('purposebar');if(el)el.classList.toggle('open',UI.purpose);const ic=document.getElementById('infobtn');if(ic)ic.classList.toggle('on',UI.purpose);}
 function navTitle(){const all={...Object.fromEntries(Object.values(MENUS).flatMap(m=>[...m.top,...m.rest]).map(x=>[x[0],x[2]]))};return all[UI.nav]||UI.nav;}
@@ -672,10 +692,81 @@ async function submitResolve(chitId, disputeId){
   try{ await api("resolveDispute",{params:{id:chitId,disputeId},body:{resolution_note:note}}); closeModal(); toast("Dispute resolved ✓"); loadDisputes(); }
   catch(e){ if(err)err.textContent=e.message; }
 }
+/* ---------------- shared screen helpers ---------------- */
+function scr(title,id){ return `<div style="padding:14px;max-width:640px;margin:0 auto"><div class="sec" style="font-size:15px;margin-bottom:10px">${title}</div><div id="${id}"><div class="loadwrap"><span class="spin"></span> loading…</div></div></div>`; }
+function esc(v){ return String(v==null?'':v).replace(/[<>"&]/g,c=>({'<':'&lt;','>':'&gt;','"':'&quot;','&':'&amp;'}[c])); }
+function opt(arr,sel){ return arr.map(o=>`<option ${o===sel?'selected':''}>${o}</option>`).join(""); }
+function scrErr(e){ return `<div class="empty"><div class="t">Couldn't load</div><div>${esc(e&&e.message)}</div></div>`; }
+const _CARD='border:1px solid var(--line);border-radius:11px;padding:13px;margin-bottom:9px';
+const _BTN='border:0;border-radius:9px;padding:0 14px;color:#fff;background:var(--blue);font-weight:700;cursor:pointer';
+/* PROFILE */
+function profileScreen(){ return scr("👤 Profile","profbody"); }
+async function loadProfile(){ const h=document.getElementById("profbody"); if(!h)return;
+  try{ const e=(await api("me")).entity||{};
+    h.innerHTML=`<div style="${_CARD}"><div class="kv"><b>Name</b> · ${esc(e.display_name)}</div><div class="kv"><b>Bridge ID</b> · ${esc(e.bridge_id)}</div><div class="kv"><b>Email</b> · ${esc(e.email)}</div>
+      <label class="fl">GSTN</label><input class="inp" id="pf_gstn" value="${esc(e.gstn)}">
+      <label class="fl">Address</label><input class="inp" id="pf_addr" value="${esc(e.address)}">
+      <label class="fl">Shop status</label><select class="inp" id="pf_bs">${opt(["open","closed","away"],e.business_status)}</select>
+      <div class="err" id="pf_err"></div><button class="composebtn" style="margin-top:9px" onclick="saveProfile()">Save profile</button></div>`;
+  }catch(e){ h.innerHTML=scrErr(e); } }
+async function saveProfile(){ const x=document.getElementById("pf_err"); if(x)x.textContent="";
+  try{ await api("saveProfile",{body:{gstn:val("pf_gstn")||null,address:val("pf_addr")||null,business_status:val("pf_bs")}}); toast("Profile saved ✓"); }catch(e){ if(x)x.textContent=e.message; } }
+/* SETTINGS */
+function settingsScreen(){ return scr("⚙️ Settings","setbody"); }
+async function loadSettings(){ const h=document.getElementById("setbody"); if(!h)return;
+  try{ const s=(await api("getSettings")).settings||{};
+    h.innerHTML=`<div style="${_CARD}">
+      <label class="fl">Assignment model</label><select class="inp" id="st_am">${opt(["pull","push","both"],s.assignment_model||"both")}</select>
+      <label class="fl">Default max tasks per actor</label><input class="inp" id="st_mt" inputmode="numeric" value="${esc(s.default_max_tasks||10)}">
+      <label class="fl" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="st_av" ${s.all_task_visible?'checked':''}> All tasks visible to all actors</label>
+      <label class="fl" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="st_ar" ${s.auto_return_on_short_break?'checked':''}> Auto-return tasks on short break</label>
+      <div class="err" id="st_err"></div><button class="composebtn" style="margin-top:9px" onclick="saveSettings()">Save settings</button></div>`;
+  }catch(e){ h.innerHTML=scrErr(e); } }
+async function saveSettings(){ const x=document.getElementById("st_err"); if(x)x.textContent="";
+  try{ await api("saveSettings",{body:{assignment_model:val("st_am"),default_max_tasks:+val("st_mt")||10,all_task_visible:document.getElementById("st_av").checked,auto_return_on_short_break:document.getElementById("st_ar").checked}}); toast("Settings saved ✓"); }catch(e){ if(x)x.textContent=e.message; } }
+/* NETWORK */
+function networkScreen(){ return scr("🔗 Network","netbody"); }
+async function loadNetwork(){ const h=document.getElementById("netbody"); if(!h)return;
+  try{ const [cl,pn]=await Promise.all([api("connList"),api("connPending")]); const conns=cl.connections||[], reqs=pn.requests||[];
+    h.innerHTML=`<div style="${_CARD}"><label class="fl">Connect a business (name or bridge id)</label><div style="display:flex;gap:8px"><input class="inp" id="nw_to" placeholder="Buyer Co or CB…"><button style="${_BTN}" onclick="connectReq()">Request</button></div><div class="err" id="nw_err"></div></div>
+      <div class="sec" style="font-size:12px;color:var(--grey);margin:8px 0 4px">Pending requests (${reqs.length})</div>${reqs.map(r=>`<div style="${_CARD}"><b>${esc(r.from_display_name||r.display_name||'—')}</b> · ${esc(r.bridge_id||'')}<div style="margin-top:6px"><button class="composebtn" onclick="respondConn('${r.connection_id||r.id}','accept')">Accept</button> <button class="composebtn" onclick="respondConn('${r.connection_id||r.id}','reject')">Reject</button></div></div>`).join("")||'<div style="color:var(--grey);font-size:13px;padding:6px">None.</div>'}
+      <div class="sec" style="font-size:12px;color:var(--grey);margin:12px 0 4px">Connections (${conns.length})</div>${conns.map(c=>`<div style="${_CARD}"><b>${esc(c.display_name||c.other_display_name||'—')}</b> · ${esc(c.bridge_id||'')} <span class="optchip on">${esc(c.status||'active')}</span></div>`).join("")||'<div style="color:var(--grey);font-size:13px;padding:6px">No connections yet.</div>'}`;
+  }catch(e){ h.innerHTML=scrErr(e); } }
+async function connectReq(){ const x=document.getElementById("nw_err"); if(x)x.textContent=""; const q=val("nw_to"); if(!q){ if(x)x.textContent="Enter a business name or bridge id."; return; }
+  try{ let to=q;
+    if(!/^[0-9a-f-]{30,}$/i.test(q)){ const sr=await api("entitySearch",{query:{q}}); const hit=(sr.results||[])[0]; if(!hit){ if(x)x.textContent='No business found for "'+q+'".'; return; } to=hit.identity_id; }
+    await api("connRequest",{body:{to_entity_id:to}}); toast("Connection request sent ✓"); loadNetwork();
+  }catch(e){ if(x)x.textContent=e.message; } }
+async function respondConn(id,action){ try{ await api("connRespond",{params:{id},body:{action}}); toast(action==='accept'?"Connected ✓":"Rejected"); loadNetwork(); }catch(e){ toast("Failed: "+e.message); } }
+/* SUPPLIERS */
+function suppliersScreen(){ return scr("🏭 Suppliers","supbody"); }
+async function loadSuppliers(){ const h=document.getElementById("supbody"); if(!h)return;
+  try{ const s=(await api("supList")).suppliers||[];
+    h.innerHTML=`<div style="${_CARD}"><label class="fl">Add supplier (bridge id)</label><div style="display:flex;gap:8px"><input class="inp" id="sp_bid" placeholder="CB…"><button style="${_BTN}" onclick="addSupplier()">Add</button></div><div class="err" id="sp_err"></div></div>
+      ${s.map(x=>`<div style="${_CARD}"><div style="display:flex;justify-content:space-between;align-items:center"><b>${esc(x.display_name||x.supplier_display_name||'—')}</b><button class="composebtn" onclick="delSupplier('${x.supplier_list_id||x.id}')">Remove</button></div><div style="font-size:11.5px;color:var(--grey)">${esc(x.bridge_id||'')}${x.category?(' · '+esc(x.category)):''}</div></div>`).join("")||'<div style="color:var(--grey);font-size:13px;padding:6px">No suppliers yet.</div>'}`;
+  }catch(e){ h.innerHTML=scrErr(e); } }
+async function addSupplier(){ const x=document.getElementById("sp_err"); if(x)x.textContent=""; const bid=val("sp_bid"); if(!bid){ if(x)x.textContent="Enter a supplier bridge id."; return; }
+  try{ await api("supAdd",{body:{supplier_bridge_id:bid}}); toast("Supplier added ✓"); loadSuppliers(); }catch(e){ if(x)x.textContent=e.message; } }
+async function delSupplier(id){ try{ await api("supDel",{params:{id}}); toast("Removed ✓"); loadSuppliers(); }catch(e){ toast("Failed: "+e.message); } }
+/* CATALOGUE (own products) */
+function catalogueScreen(){ return scr("🗂️ Catalogue","catbody"); }
+async function loadCatalogue(){ const h=document.getElementById("catbody"); if(!h)return;
+  try{ const items=(await api("prodList")).items||[];
+    h.innerHTML=`<div style="${_CARD}"><label class="fl">Add product</label><input class="inp" id="ct_name" placeholder="name"><div style="display:flex;gap:8px;margin-top:6px"><input class="inp" id="ct_price" inputmode="numeric" placeholder="price"><button style="${_BTN}" onclick="addProduct()">Add</button></div><div class="err" id="ct_err"></div></div>
+      ${items.map(x=>{const d=x.item_data||x; return `<div style="${_CARD}"><div style="display:flex;justify-content:space-between;align-items:center"><b>${esc(d.name||'item')}</b><span>${d.price!=null?inr(d.price):''} <button class="composebtn" onclick="delProduct('${x.item_id||x.id}')">Delete</button></span></div></div>`}).join("")||'<div style="color:var(--grey);font-size:13px;padding:6px">No products yet.</div>'}`;
+  }catch(e){ h.innerHTML=scrErr(e); } }
+async function addProduct(){ const x=document.getElementById("ct_err"); if(x)x.textContent=""; const name=val("ct_name"); if(!name){ if(x)x.textContent="Enter a product name."; return; }
+  try{ await api("prodAdd",{body:{item_data:{name,price:+val("ct_price")||0}}}); toast("Product added ✓"); loadCatalogue(); }catch(e){ if(x)x.textContent=e.message; } }
+async function delProduct(id){ try{ await api("prodDel",{params:{id}}); toast("Deleted ✓"); loadCatalogue(); }catch(e){ toast("Failed: "+e.message); } }
 
 function mainBody(){
   if(["task","order"].includes(UI.nav)) return taskPanel();
   if(UI.nav==="disputes") return disputesScreen();
+  if(UI.nav==="profile") return profileScreen();
+  if(UI.nav==="settings") return settingsScreen();
+  if(UI.nav==="network") return networkScreen();
+  if(UI.nav==="suppliers") return suppliersScreen();
+  if(UI.nav==="catalogue") return catalogueScreen();
   return `<div class="stub"><div class="t">${navTitle()}</div><div>This screen is on the build roadmap — we walk it in a later iteration. The menu &amp; routing are live so you can see where it lives.</div></div>`;
 }
 
