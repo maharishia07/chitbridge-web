@@ -736,7 +736,7 @@ function mapApiChit(c){
   const sum=c.summary_json||{};
   return { id:c.chit_id, code:c.manual_subject||c.auto_subject||(c.purpose||'chit'),
     party:other.display_name||c.sender_entity_display_name||'—', cust:other.display_name||'', area:'',
-    kind:c.purpose||'order', amt:sum.total_value||0, state:ST[c.current_status]||'open',
+    kind:c.purpose||'order', amt:sum.total_value||0, state:ST[c.current_status]||'open', _status:c.current_status||'pending',
     assignTo:c.assigned_to_actor_id||null, folder:'task', dispute:Number(c.open_dispute_count||0)>0,
     proof:'ok', pri:c.priority_flag||'normal', custPri:!!c.customer_priority, items:[], atts:[], msgs:[] };
 }
@@ -912,8 +912,11 @@ function openRaidReport(){ const host=document.getElementById("lbhost"); if(!hos
 /* actions wired to API */
 async function advanceChit(id){
   const c=UI.rows.find(x=>x.id===id)||UI.detail; if(c&&c.state==="close"){toast("At Close — next is Archive (sunset model).");return;}
-  const order=["open","act","close"], cur=(c&&c.state)||"open", next=order[Math.min(order.indexOf(cur)+1,2)], SB={open:'pending',act:'in_progress',close:'completed'};
-  try{ await api("advance",{params:{id},body:{status:SB[next]}}); const i=UI.rows.findIndex(x=>x.id===id); if(i>=0)UI.rows[i].state=next; if(UI.detail&&UI.detail.id===id)UI.detail.state=next; UI.state=next; renderApp(); toast((c?c.code:"Chit")+" → "+next.toUpperCase()); }
+  const NB={pending:'accepted',delivered:'accepted',read:'accepted',accepted:'in_progress',in_progress:'completed',partial:'completed',finished:'completed'};
+  const UIS={pending:'open',delivered:'open',read:'open',accepted:'act',in_progress:'act',partial:'act',completed:'close',cancelled:'close',rejected:'close'};
+  const curB=(c&&c._status)||'pending', nextB=NB[curB];
+  if(!nextB){ toast("Already at the final state."); return; }
+  try{ await api("advance",{params:{id},body:{status:nextB}}); const i=UI.rows.findIndex(x=>x.id===id); if(i>=0){UI.rows[i]._status=nextB; UI.rows[i].state=UIS[nextB];} if(UI.detail&&UI.detail.id===id){UI.detail._status=nextB; UI.detail.state=UIS[nextB];} UI.state=UIS[nextB]; renderApp(); toast((c?c.code:"Chit")+" → "+(UIS[nextB]||nextB).toUpperCase()); }
   catch(e){ toast("Advance failed: "+e.message); }
 }
 async function assignChit(id, actorId, pri, reason){
