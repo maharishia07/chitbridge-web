@@ -631,6 +631,8 @@ function renderApp(){
   if(UI.nav==="network") loadNetwork();
   if(UI.nav==="suppliers") loadSuppliers();
   if(UI.nav==="catalogue") loadCatalogue();
+  if(UI.nav==="mis") loadMIS();
+  if(UI.nav==="coassists") loadCoassists();
 }
 function togglePurpose(){UI.purpose=!UI.purpose;const el=document.getElementById('purposebar');if(el)el.classList.toggle('open',UI.purpose);const ic=document.getElementById('infobtn');if(ic)ic.classList.toggle('on',UI.purpose);}
 function navTitle(){const all={...Object.fromEntries(Object.values(MENUS).flatMap(m=>[...m.top,...m.rest]).map(x=>[x[0],x[2]]))};return all[UI.nav]||UI.nav;}
@@ -666,7 +668,7 @@ function addActorModal(){
 async function submitActor(){
   const name=val("ac_name"), key=val("ac_key"); const err=document.getElementById("ac_err"); if(err)err.textContent="";
   if(!name||key.length<4){ if(err)err.textContent="Name and a key of 4+ chars are required."; return; }
-  try{ await api("addActor",{body:{display_name:name,actor_key:key}}); closeModal(); toast("Actor "+name+" added ✓"); }
+  try{ await api("addActor",{body:{display_name:name,actor_key:key}}); closeModal(); toast("Actor "+name+" added ✓"); if(UI.nav==="coassists")loadCoassists(); }
   catch(e){ if(err)err.textContent=e.message; }
 }
 /* ---------------- DISPUTES screen ---------------- */
@@ -758,6 +760,27 @@ async function loadCatalogue(){ const h=document.getElementById("catbody"); if(!
 async function addProduct(){ const x=document.getElementById("ct_err"); if(x)x.textContent=""; const name=val("ct_name"); if(!name){ if(x)x.textContent="Enter a product name."; return; }
   try{ await api("prodAdd",{body:{item_data:{name,price:+val("ct_price")||0}}}); toast("Product added ✓"); loadCatalogue(); }catch(e){ if(x)x.textContent=e.message; } }
 async function delProduct(id){ try{ await api("prodDel",{params:{id}}); toast("Deleted ✓"); loadCatalogue(); }catch(e){ toast("Failed: "+e.message); } }
+/* MIS — computed client-side (no MIS route on the legacy backend) */
+function misScreen(){ return scr("📊 MIS","misbody"); }
+async function loadMIS(){ const h=document.getElementById("misbody"); if(!h)return;
+  try{ const [inb,dq,ac,sp]=await Promise.all([api("inbox"),api("disputeQueue").catch(()=>({})),api("actors").catch(()=>({})),api("supList").catch(()=>({}))]);
+    const chits=(inb.chits||[]).map(mapApiChit); const byState={open:0,act:0,close:0}; let value=0; chits.forEach(c=>{byState[c.state]=(byState[c.state]||0)+1; value+=c.amt||0;});
+    const openDisp=dq.total_open!=null?dq.total_open:((dq.my_disputes||[]).length+(dq.other_disputes||[]).length);
+    const stat=(label,v)=>`<div style="${_CARD};text-align:center;margin:0"><div style="font-size:21px;font-weight:800;font-family:'Space Grotesk'">${v}</div><div style="font-size:11px;color:var(--grey)">${label}</div></div>`;
+    h.innerHTML=`<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:9px">
+      ${stat("Chits",chits.length)}${stat("Deal value",inr(value))}
+      ${stat("Open",byState.open)}${stat("In progress",byState.act)}
+      ${stat("Closed",byState.close)}${stat("Open disputes",openDisp)}
+      ${stat("Actors",(ac.actors||[]).length)}${stat("Suppliers",(sp.suppliers||[]).length)}</div>
+      <div style="margin-top:10px;color:var(--grey);font-size:11px">Computed on view from your live data — there is no MIS route on the legacy backend yet (a server-side rollup is the production model).</div>`;
+  }catch(e){ h.innerHTML=scrErr(e); } }
+/* CO-ASSISTS — the actor roster */
+function coassistsScreen(){ return scr("🧑‍🤝‍🧑 Co-assists","cobody"); }
+async function loadCoassists(){ const h=document.getElementById("cobody"); if(!h)return;
+  try{ const actors=((await api("actors")).actors||[]).map(mapApiActor);
+    h.innerHTML=`<div style="${_CARD}"><button class="composebtn" onclick="addActorModal()">+ New actor</button></div>
+      ${actors.map(a=>`<div style="${_CARD}"><div style="display:flex;justify-content:space-between;align-items:center"><b>${esc(a.name)}</b><span class="optchip ${a.shift==='on_shift'?'on':a.shift==='on_break'?'brk':'off'}">${esc((a.shift||'').replace('_',' '))}</span></div><div style="font-size:11.5px;color:var(--grey)">load ${a.load}</div></div>`).join("")||'<div style="color:var(--grey);font-size:13px;padding:6px">No actors yet — add one above.</div>'}`;
+  }catch(e){ h.innerHTML=scrErr(e); } }
 
 function mainBody(){
   if(["task","order"].includes(UI.nav)) return taskPanel();
@@ -767,6 +790,8 @@ function mainBody(){
   if(UI.nav==="network") return networkScreen();
   if(UI.nav==="suppliers") return suppliersScreen();
   if(UI.nav==="catalogue") return catalogueScreen();
+  if(UI.nav==="mis") return misScreen();
+  if(UI.nav==="coassists") return coassistsScreen();
   return `<div class="stub"><div class="t">${navTitle()}</div><div>This screen is on the build roadmap — we walk it in a later iteration. The menu &amp; routing are live so you can see where it lives.</div></div>`;
 }
 
