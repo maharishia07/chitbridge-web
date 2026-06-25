@@ -352,6 +352,8 @@ const EP = {
   archive:         {m:"POST", p:"/api/chits/:id/archive",        ok:"○"},  // not built
   createChit:      {m:"POST", p:"/api/chits/send",               ok:"✓"},  // compose a new chit
   addActor:        {m:"POST", p:"/api/actors",                   ok:"✓"},  // create an actor
+  disputeQueue:    {m:"GET",  p:"/api/chits/disputes/queue",     ok:"✓"},  // all open disputes
+  resolveDispute:  {m:"PUT",  p:"/api/chits/:id/disputes/:disputeId/resolve", ok:"✓"},  // {resolution_note}
 };
 
 /* ---------------- DEMO STORE ---------------- */
@@ -608,6 +610,7 @@ function renderApp(){
     </div>
   </div></div><div id="lbhost"></div><div id="modalhost"></div>`;
   if(["task","order"].includes(UI.nav)) loadList();
+  if(UI.nav==="disputes") loadDisputes();
 }
 function togglePurpose(){UI.purpose=!UI.purpose;const el=document.getElementById('purposebar');if(el)el.classList.toggle('open',UI.purpose);const ic=document.getElementById('infobtn');if(ic)ic.classList.toggle('on',UI.purpose);}
 function navTitle(){const all={...Object.fromEntries(Object.values(MENUS).flatMap(m=>[...m.top,...m.rest]).map(x=>[x[0],x[2]]))};return all[UI.nav]||UI.nav;}
@@ -646,9 +649,33 @@ async function submitActor(){
   try{ await api("addActor",{body:{display_name:name,actor_key:key}}); closeModal(); toast("Actor "+name+" added ✓"); }
   catch(e){ if(err)err.textContent=e.message; }
 }
+/* ---------------- DISPUTES screen ---------------- */
+function disputesScreen(){ return `<div style="padding:14px;max-width:760px;margin:0 auto"><div class="sec" style="font-size:15px;margin-bottom:10px">⚖️ Disputes</div><div id="disprows"><div class="loadwrap"><span class="spin"></span> loading…</div></div></div>`; }
+async function loadDisputes(){
+  const host=document.getElementById("disprows"); if(!host)return;
+  try{ const q=await api("disputeQueue"); const mine=q.my_disputes||[], other=q.other_disputes||[];
+    const card=(d,canResolve)=>`<div class="card" style="border:1px solid var(--line);border-radius:11px;padding:12px;margin-bottom:9px">
+      <div style="display:flex;justify-content:space-between;gap:8px"><b>${d.auto_subject||d.purpose||'chit'}</b><span class="optchip ${d.status==='open'?'brk':'on'}">${d.status}</span></div>
+      <div style="font-size:13px;color:var(--ink);margin:5px 0"><b>${cap(d.category||'')}</b> — ${d.reason||''}</div>
+      <div style="font-size:11.5px;color:var(--grey)">raised by ${d.raised_by_display_name||'—'} · ${d.scope||''}${d.resolution_note?(' · ✓ '+d.resolution_note):''}</div>
+      ${canResolve&&d.status==='open'?`<div style="margin-top:8px"><button class="composebtn" onclick="resolveDispute('${d.chit_id}','${d.dispute_id}')">Resolve</button></div>`:''}</div>`;
+    host.innerHTML = `<div class="sec" style="font-size:12px;color:var(--grey);margin:4px 0">Raised by you (${mine.length})</div>${mine.map(d=>card(d,true)).join("")||'<div style="color:var(--grey);font-size:13px;padding:6px">None.</div>'}
+      <div class="sec" style="font-size:12px;color:var(--grey);margin:14px 0 4px">Against you / awaiting (${other.length})</div>${other.map(d=>card(d,false)).join("")||'<div style="color:var(--grey);font-size:13px;padding:6px">None.</div>'}`;
+  }catch(e){ host.innerHTML=`<div class="empty"><div class="t">Couldn't load disputes</div><div>${e.message}</div></div>`; }
+}
+function resolveDispute(chitId, disputeId){
+  modal(`<div class="mhd"><div class="t">Resolve dispute</div></div><div class="mbody"><label class="fl">Resolution note (required)</label><textarea id="resnote" placeholder="How was this resolved…"></textarea><div class="err" id="res_err"></div></div><div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="pri" onclick="submitResolve('${chitId}','${disputeId}')">Resolve</button></div>`);
+}
+async function submitResolve(chitId, disputeId){
+  const note=val("resnote"); const err=document.getElementById("res_err"); if(err)err.textContent="";
+  if(!note){ if(err)err.textContent="A resolution note is required."; return; }
+  try{ await api("resolveDispute",{params:{id:chitId,disputeId},body:{resolution_note:note}}); closeModal(); toast("Dispute resolved ✓"); loadDisputes(); }
+  catch(e){ if(err)err.textContent=e.message; }
+}
 
 function mainBody(){
   if(["task","order"].includes(UI.nav)) return taskPanel();
+  if(UI.nav==="disputes") return disputesScreen();
   return `<div class="stub"><div class="t">${navTitle()}</div><div>This screen is on the build roadmap — we walk it in a later iteration. The menu &amp; routing are live so you can see where it lives.</div></div>`;
 }
 
