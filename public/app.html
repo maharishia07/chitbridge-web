@@ -391,15 +391,33 @@ let STORE = deepClone(DEMO);
 
 /* ---------------- API CLIENT ---------------- */
 function fill(path,params){return path.replace(/:(\w+)/g,(_,k)=>encodeURIComponent((params&&params[k])??""));}
+// Single response envelope. api() unwraps the payload centrally — it accepts a real
+// {ok,data,error} envelope, or normalises the legacy wrappers ({chits,…}, {entity}, …) —
+// so feature code uses `data` directly (no per-feature r.chits / r.entity unwrap).
+function unwrap(j){
+  if(j==null||typeof j!=="object"||Array.isArray(j)) return j;
+  if("ok" in j && ("data" in j || "error" in j)){ if(j.ok===false) throw new Error(j.error||"Request failed"); return j.data; }
+  if("my_disputes" in j || "header" in j) return j;                 // structured/compound payloads pass through whole
+  for(const k of ["chits","messages","connections","requests","suppliers","items","results","actors"]) if(Array.isArray(j[k])) return j[k];
+  if(j.entity) return j.entity;
+  if(j.settings) return j.settings;
+  if(j.chit) return j.chit;
+  return j;
+}
 async function api(key, {params, query, body}={}){
   const ep = EP[key]; if(!ep) throw new Error("no endpoint "+key);
-  if(CFG.MODE==="demo"){ await new Promise(r=>setTimeout(r,140)); return demoApi(key,{params,query,body}); }
-  // LIVE
+  if(CFG.MODE==="demo"){ await new Promise(r=>setTimeout(r,140)); return unwrap(demoApi(key,{params,query,body})); }
   let url = CFG.API_BASE + fill(ep.p, params);
   if(query){const q=new URLSearchParams(Object.entries(query).filter(([,v])=>v!=null&&v!=="")); if([...q].length)url+="?"+q;}
   const res = await fetch(url, {method:ep.m, headers:{"Content-Type":"application/json", ...(SESSION.token?{Authorization:"Bearer "+SESSION.token}:{})}, body: body?JSON.stringify(body):undefined});
-  if(!res.ok){ let msg=""; try{ const j=await res.json(); msg=j.message||j.error||""; }catch(_){} throw new Error(msg||("API "+res.status+" "+ep.m+" "+ep.p)); }
-  return res.status===204?null:res.json();
+  if(!res.ok){
+    let msg=""; try{ const j=await res.json(); msg=j.message||j.error||""; }catch(_){}
+    if(res.status===401){ SESSION={}; try{localStorage.removeItem("cb_token");}catch(_){} if(typeof go==="function") go("#/login"); throw new Error(msg||"Session expired — please sign in again."); }
+    if(res.status===422){ throw new Error(msg||"Please check the form and try again."); }          // validation
+    if(res.status>=500){ throw new Error(msg||"Server error — please try again."); }                 // generic
+    throw new Error(msg||("API "+res.status+" "+ep.m+" "+ep.p));
+  }
+  return unwrap(res.status===204?null:await res.json());
 }
 /* DEMO responder — mimics the API so the whole flow works standalone */
 function demoApi(key,{params,query,body}){
@@ -704,7 +722,7 @@ const _BTN='border:0;border-radius:9px;padding:0 14px;color:#fff;background:var(
 /* PROFILE */
 function profileScreen(){ return scr("👤 Profile","profbody"); }
 async function loadProfile(){ const h=document.getElementById("profbody"); if(!h)return;
-  try{ const e=(await api("me")).entity||{};
+  try{ const e=(await api("me"))||{};
     h.innerHTML=`<div style="${_CARD}"><div class="kv"><b>Name</b> · ${esc(e.display_name)}</div><div class="kv"><b>Bridge ID</b> · ${esc(e.bridge_id)}</div><div class="kv"><b>Email</b> · ${esc(e.email)}</div>
       <label class="fl">GSTN</label><input class="inp" id="pf_gstn" value="${esc(e.gstn)}">
       <label class="fl">Address</label><input class="inp" id="pf_addr" value="${esc(e.address)}">
@@ -716,7 +734,7 @@ async function saveProfile(){ const x=document.getElementById("pf_err"); if(x)x.
 /* SETTINGS */
 function settingsScreen(){ return scr("⚙️ Settings","setbody"); }
 async function loadSettings(){ const h=document.getElementById("setbody"); if(!h)return;
-  try{ const s=(await api("getSettings")).settings||{};
+  try{ const s=(await api("getSettings"))||{};
     h.innerHTML=`<div style="${_CARD}">
       <label class="fl">Assignment model</label><select class="inp" id="st_am">${opt(["pull","push","both"],s.assignment_model||"both")}</select>
       <label class="fl">Default max tasks per actor</label><input class="inp" id="st_mt" inputmode="numeric" value="${esc(s.default_max_tasks||10)}">
@@ -729,21 +747,21 @@ async function saveSettings(){ const x=document.getElementById("st_err"); if(x)x
 /* NETWORK */
 function networkScreen(){ return scr("🔗 Network","netbody"); }
 async function loadNetwork(){ const h=document.getElementById("netbody"); if(!h)return;
-  try{ const [cl,pn]=await Promise.all([api("connList"),api("connPending")]); const conns=cl.connections||[], reqs=pn.requests||[];
+  try{ const [cl,pn]=await Promise.all([api("connList"),api("connPending")]); const conns=cl||[], reqs=pn||[];
     h.innerHTML=`<div style="${_CARD}"><label class="fl">Connect a business (name or bridge id)</label><div style="display:flex;gap:8px"><input class="inp" id="nw_to" placeholder="Buyer Co or CB…"><button style="${_BTN}" onclick="connectReq()">Request</button></div><div class="err" id="nw_err"></div></div>
       <div class="sec" style="font-size:12px;color:var(--grey);margin:8px 0 4px">Pending requests (${reqs.length})</div>${reqs.map(r=>`<div style="${_CARD}"><b>${esc(r.from_display_name||r.display_name||'—')}</b> · ${esc(r.bridge_id||'')}<div style="margin-top:6px"><button class="composebtn" onclick="respondConn('${r.connection_id||r.id}','accept')">Accept</button> <button class="composebtn" onclick="respondConn('${r.connection_id||r.id}','reject')">Reject</button></div></div>`).join("")||'<div style="color:var(--grey);font-size:13px;padding:6px">None.</div>'}
       <div class="sec" style="font-size:12px;color:var(--grey);margin:12px 0 4px">Connections (${conns.length})</div>${conns.map(c=>`<div style="${_CARD}"><b>${esc(c.display_name||c.other_display_name||'—')}</b> · ${esc(c.bridge_id||'')} <span class="optchip on">${esc(c.status||'active')}</span></div>`).join("")||'<div style="color:var(--grey);font-size:13px;padding:6px">No connections yet.</div>'}`;
   }catch(e){ h.innerHTML=scrErr(e); } }
 async function connectReq(){ const x=document.getElementById("nw_err"); if(x)x.textContent=""; const q=val("nw_to"); if(!q){ if(x)x.textContent="Enter a business name or bridge id."; return; }
   try{ let to=q;
-    if(!/^[0-9a-f-]{30,}$/i.test(q)){ const sr=await api("entitySearch",{query:{q}}); const hit=(sr.results||[])[0]; if(!hit){ if(x)x.textContent='No business found for "'+q+'".'; return; } to=hit.identity_id; }
+    if(!/^[0-9a-f-]{30,}$/i.test(q)){ const sr=await api("entitySearch",{query:{q}}); const hit=(sr||[])[0]; if(!hit){ if(x)x.textContent='No business found for "'+q+'".'; return; } to=hit.identity_id; }
     await api("connRequest",{body:{to_entity_id:to}}); toast("Connection request sent ✓"); loadNetwork();
   }catch(e){ if(x)x.textContent=e.message; } }
 async function respondConn(id,action){ try{ await api("connRespond",{params:{id},body:{action}}); toast(action==='accept'?"Connected ✓":"Rejected"); loadNetwork(); }catch(e){ toast("Failed: "+e.message); } }
 /* SUPPLIERS */
 function suppliersScreen(){ return scr("🏭 Suppliers","supbody"); }
 async function loadSuppliers(){ const h=document.getElementById("supbody"); if(!h)return;
-  try{ const s=(await api("supList")).suppliers||[];
+  try{ const s=(await api("supList"))||[];
     h.innerHTML=`<div style="${_CARD}"><label class="fl">Add supplier (bridge id)</label><div style="display:flex;gap:8px"><input class="inp" id="sp_bid" placeholder="CB…"><button style="${_BTN}" onclick="addSupplier()">Add</button></div><div class="err" id="sp_err"></div></div>
       ${s.map(x=>`<div style="${_CARD}"><div style="display:flex;justify-content:space-between;align-items:center"><b>${esc(x.display_name||x.supplier_display_name||'—')}</b><button class="composebtn" onclick="delSupplier('${x.supplier_list_id||x.id}')">Remove</button></div><div style="font-size:11.5px;color:var(--grey)">${esc(x.bridge_id||'')}${x.category?(' · '+esc(x.category)):''}</div></div>`).join("")||'<div style="color:var(--grey);font-size:13px;padding:6px">No suppliers yet.</div>'}`;
   }catch(e){ h.innerHTML=scrErr(e); } }
@@ -753,7 +771,7 @@ async function delSupplier(id){ try{ await api("supDel",{params:{id}}); toast("R
 /* CATALOGUE (own products) */
 function catalogueScreen(){ return scr("🗂️ Catalogue","catbody"); }
 async function loadCatalogue(){ const h=document.getElementById("catbody"); if(!h)return;
-  try{ const items=(await api("prodList")).items||[];
+  try{ const items=(await api("prodList"))||[];
     h.innerHTML=`<div style="${_CARD}"><label class="fl">Add product</label><input class="inp" id="ct_name" placeholder="name"><div style="display:flex;gap:8px;margin-top:6px"><input class="inp" id="ct_price" inputmode="numeric" placeholder="price"><button style="${_BTN}" onclick="addProduct()">Add</button></div><div class="err" id="ct_err"></div></div>
       ${items.map(x=>{const d=x.item_data||x; return `<div style="${_CARD}"><div style="display:flex;justify-content:space-between;align-items:center"><b>${esc(d.name||'item')}</b><span>${d.price!=null?inr(d.price):''} <button class="composebtn" onclick="delProduct('${x.item_id||x.id}')">Delete</button></span></div></div>`}).join("")||'<div style="color:var(--grey);font-size:13px;padding:6px">No products yet.</div>'}`;
   }catch(e){ h.innerHTML=scrErr(e); } }
@@ -764,20 +782,20 @@ async function delProduct(id){ try{ await api("prodDel",{params:{id}}); toast("D
 function misScreen(){ return scr("📊 MIS","misbody"); }
 async function loadMIS(){ const h=document.getElementById("misbody"); if(!h)return;
   try{ const [inb,dq,ac,sp]=await Promise.all([api("inbox"),api("disputeQueue").catch(()=>({})),api("actors").catch(()=>({})),api("supList").catch(()=>({}))]);
-    const chits=(inb.chits||[]).map(mapApiChit); const byState={open:0,act:0,close:0}; let value=0; chits.forEach(c=>{byState[c.state]=(byState[c.state]||0)+1; value+=c.amt||0;});
+    const chits=(inb||[]).map(mapApiChit); const byState={open:0,act:0,close:0}; let value=0; chits.forEach(c=>{byState[c.state]=(byState[c.state]||0)+1; value+=c.amt||0;});
     const openDisp=dq.total_open!=null?dq.total_open:((dq.my_disputes||[]).length+(dq.other_disputes||[]).length);
     const stat=(label,v)=>`<div style="${_CARD};text-align:center;margin:0"><div style="font-size:21px;font-weight:800;font-family:'Space Grotesk'">${v}</div><div style="font-size:11px;color:var(--grey)">${label}</div></div>`;
     h.innerHTML=`<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:9px">
       ${stat("Chits",chits.length)}${stat("Deal value",inr(value))}
       ${stat("Open",byState.open)}${stat("In progress",byState.act)}
       ${stat("Closed",byState.close)}${stat("Open disputes",openDisp)}
-      ${stat("Actors",(ac.actors||[]).length)}${stat("Suppliers",(sp.suppliers||[]).length)}</div>
+      ${stat("Actors",(ac||[]).length)}${stat("Suppliers",(sp||[]).length)}</div>
       <div style="margin-top:10px;color:var(--grey);font-size:11px">Computed on view from your live data — there is no MIS route on the legacy backend yet (a server-side rollup is the production model).</div>`;
   }catch(e){ h.innerHTML=scrErr(e); } }
 /* CO-ASSISTS — the actor roster */
 function coassistsScreen(){ return scr("🧑‍🤝‍🧑 Co-assists","cobody"); }
 async function loadCoassists(){ const h=document.getElementById("cobody"); if(!h)return;
-  try{ const actors=((await api("actors")).actors||[]).map(mapApiActor);
+  try{ const actors=((await api("actors"))||[]).map(mapApiActor);
     h.innerHTML=`<div style="${_CARD}"><button class="composebtn" onclick="addActorModal()">+ New actor</button></div>
       ${actors.map(a=>`<div style="${_CARD}"><div style="display:flex;justify-content:space-between;align-items:center"><b>${esc(a.name)}</b><span class="optchip ${a.shift==='on_shift'?'on':a.shift==='on_break'?'brk':'off'}">${esc((a.shift||'').replace('_',' '))}</span></div><div style="font-size:11.5px;color:var(--grey)">load ${a.load}</div></div>`).join("")||'<div style="color:var(--grey);font-size:13px;padding:6px">No actors yet — add one above.</div>'}`;
   }catch(e){ h.innerHTML=scrErr(e); } }
@@ -928,7 +946,7 @@ async function loadList(){
     let res;
     if(UI.folder==="order"||SESSION.role==="customer"){ res= SESSION.role==="customer" ? await api("custOrders",{params:{bridgeId:SESSION.bridgeId}}) : await api("sent"); }
     else { const q={}; if(SESSION.role==="actor"&&UI.sub==="my")q.assigned_to="me"; res=await api("inbox",{query:q}); }
-    UI.rows = (res.chits||[]).map(mapApiChit);
+    UI.rows = (res||[]).map(mapApiChit);
     UI.loading=false;
     if(!UI.sel && UI.rows.length){ const first=UI.rows.find(c=>c.state===UI.state)||UI.rows[0]; if(first)openChit(first.id,true); }
     paintRowsOnly();
@@ -980,12 +998,11 @@ async function openChit(id, silent){
   if((UI.vp==='mob') && !silent){ UI.mdetail=true; const p=document.getElementById("panel"); if(p)p.classList.add("showdetail"); }
   if(!silent){ const dp=document.getElementById("detailpane"); if(dp){dp.innerHTML=`<div class="loadwrap"><span class="spin"></span> opening…</div>`;} }
   try{ const r=await api("chit",{params:{id}});
-        if(r.chit){ UI.detail=r.chit; }
-        else { const h=r.header||{}, det=r.detail||{};
+        if(r && r.header){ const h=r.header, det=r.detail||{};
           const base=UI.rows.find(c=>c.id===id)||mapApiChit({chit_id:h.chit_id,summary_json:h.summary_json,all_recipients:h.all_recipients,sender_entity_display_name:h.sender_entity_display_name,purpose:h.purpose,manual_subject:h.manual_subject,auto_subject:h.auto_subject,current_status:'delivered',open_dispute_count:0});
           UI.detail={...base, items:(det.line_items||[]).map(fmtLine), atts:[], msgs:[]};
-          try{ const mr=await api("messages",{params:{id}}); UI.detail.msgs=(mr.messages||[]).map(mapApiMsg); }catch(_){}
-        }
+          try{ const mr=await api("messages",{params:{id}}); UI.detail.msgs=(mr||[]).map(mapApiMsg); }catch(_){}
+        } else { UI.detail=r; }
         UI.openLines=new Set(); const fi=(UI.detail.items||[]).findIndex(it=>attsVis(it[2]).length); if(fi>=0)UI.openLines.add('line'+fi);
         paintDetail(); paintRowsOnly(); }
   catch(e){ const dp=document.getElementById("detailpane"); if(dp)dp.innerHTML=`<div class="empty"><div class="big">⚠</div><div>${e.message}</div></div>`; }
@@ -1104,7 +1121,7 @@ async function assignChit(id, actorId, pri, reason){
 async function unassignChit(id){ try{ await api("unassign",{params:{id},body:{action:'return'}}); const i=UI.rows.findIndex(x=>x.id===id); if(i>=0)UI.rows[i].assignTo=null; renderApp(); toast("Pushed back to pool"); }catch(e){toast("Failed: "+e.message);} }
 async function pickAssign(id){
   let actors=[];
-  try{ const r=await api("actors"); actors=(r.actors||[]).map(mapApiActor); }catch(e){ toast("Couldn't load actors: "+e.message); return; }
+  try{ const r=await api("actors"); actors=(r||[]).map(mapApiActor); }catch(e){ toast("Couldn't load actors: "+e.message); return; }
   UI.actors=actors; const c=UI.rows.find(x=>x.id===id)||UI.detail||{}; MODALS.pick={id, actorId:null, pri:(c.custPri?'urgent':'normal'), reason:''};
   const rows=actors.map(a=>{ const off=a.shift==="off";
     const chip=a.shift==="on_shift"?'<span class="optchip on">on shift</span>':a.shift==="on_break"?'<span class="optchip brk">on break</span>':'<span class="optchip off">off</span>';
