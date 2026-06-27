@@ -939,7 +939,24 @@ function renderApp(){
   if(UI.nav==="catalogue") loadCatalogue();
   if(UI.nav==="mis") loadMIS();
   if(UI.nav==="coassists") loadCoassists();
+  if(!_autoRefreshTimer) startAutoRefresh(20);
 }
+var _autoRefreshTimer = null;
+// Auto-refresh the active list so new chits appear without a manual reload.
+// Skips while you're typing, reading a chit, composing, in a modal, or the tab is hidden.
+function autoRefresh(){
+  try{
+    if(CFG.STAGE==='web_demo' || document.hidden || UI.nav==='compose') return;
+    const mh=document.getElementById('modalhost'); if(mh && mh.innerHTML.trim()) return;
+    const lb=document.getElementById('lbhost');    if(lb && lb.innerHTML.trim()) return;
+    const ae=document.activeElement; if(ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) return;
+    if(UI.detail || UI.mdetail) return;
+    if(['task','order'].includes(UI.nav)) loadList();
+    else if(UI.nav==='disputes') loadDisputes();
+    else if(UI.nav==='coassists') loadCoassists();
+  }catch(e){}
+}
+function startAutoRefresh(sec){ if(_autoRefreshTimer) clearInterval(_autoRefreshTimer); _autoRefreshTimer=setInterval(autoRefresh,(sec||20)*1000); }
 function togglePurpose(){UI.purpose=!UI.purpose;const el=document.getElementById('purposebar');if(el)el.classList.toggle('open',UI.purpose);const ic=document.getElementById('infobtn');if(ic)ic.classList.toggle('on',UI.purpose);}
 function navTitle(){const all={...Object.fromEntries(Object.values(MENUS).flatMap(m=>[...m.top,...m.rest]).map(x=>[x[0],x[2]]))};return all[UI.nav]||UI.nav;}
 function menuBtn(x){const[key,ic,label]=x;const on=UI.nav===key;const click=key==="compose"?`compose()`:`navTo('${key}')`;return `<button class="${on?'on':''}" onclick="${click}"><span class="ic">${ic}</span>${label}</button>`;}
