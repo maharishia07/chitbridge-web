@@ -981,7 +981,12 @@ function ccSendAsOptions(){
   (STORE.actors||[]).forEach(a=>{ o+=`<option value="${esc(a.id)}">${esc(a.name)} · ${esc(a.uid||'actor')}</option>`; });
   return o;
 }
-function compose(){ UI.drawer=false; CC={items:[]};
+async function compose(){ UI.drawer=false; CC={items:[]};
+  // Load YOUR real catalogue so Compose shows the items you added — not demo defaults.
+  try{
+    const _prods=(await api("prodList"))||[];
+    STORE.catalogue=_prods.map(x=>{const d=x.item_data||x; return {particulars:d.name||d.product||'item', unit:d.unit||'unit', price:+d.price||0};});
+  }catch(e){ STORE.catalogue=STORE.catalogue||[]; }
   modal(`<div class="mhd"><div class="t">✉️ Compose — author a chit</div><div class="s">create your own record, then bridge it</div></div>
    <div class="mbody">
      <div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:11px;padding:10px 12px;font-size:12.5px;color:#6b5a36;line-height:1.5;margin-bottom:10px"><b style="font-family:'Space Grotesk'">Author your own chit — it becomes shared the moment you bridge it.</b> A self-addressed chit is a real chit: one copy in <b>Order</b> (sent), one in <b>Task</b> (received), same thread. <span style="font-family:'Space Mono';font-size:10px;background:#fbeceb;color:#b4453f;border:1px solid #f0c9c6;border-radius:5px;padding:1px 6px">⏳ execute &amp; test pending</span></div>
@@ -1000,7 +1005,9 @@ function compose(){ UI.drawer=false; CC={items:[]};
      <div style="font-family:'Space Grotesk';font-weight:600;font-size:12px;color:var(--grey);margin:12px 0 2px">Chit fields · from your <b>${esc((STORE.chitSchema||DEMO.chitSchema).schema_name)}</b> schema</div>
      ${ccSchema().map(cfField).join("")}
      <div style="font-family:'Space Grotesk';font-weight:600;font-size:12px;color:var(--grey);margin:12px 0 4px">Line items · from your catalogue</div>
-     <div style="display:flex;gap:8px"><select class="inp" id="cc_pick">${(STORE.catalogue||[]).map((p,i)=>`<option value="${i}">${esc(p.particulars)} · ${inr(p.price)}/${esc(p.unit||'unit')}</option>`).join("")}</select><button class="composebtn" onclick="ccAddItem()">+ Add</button></div>
+     ${(STORE.catalogue||[]).length
+        ? `<div style="display:flex;gap:8px"><select class="inp" id="cc_pick">${STORE.catalogue.map((p,i)=>`<option value="${i}">${esc(p.particulars)} · ${inr(p.price)}/${esc(p.unit||'unit')}</option>`).join("")}</select><button class="composebtn" onclick="ccAddItem()">+ Add</button></div>`
+        : `<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:10px 12px;font-size:12.5px;color:#6b5a36">Your catalogue is empty — a chit needs at least one line item. <a onclick="closeModal();navTo('catalogue')" style="color:#3F66A6;cursor:pointer;font-weight:600">Add a product in Catalogue first &rarr;</a></div>`}
      <div id="cc_items" style="margin-top:8px"></div>
      <div id="cc_total" style="text-align:right;font-weight:700;font-size:13px;margin-top:6px"></div>
      <div class="err" id="cc_err"></div>
