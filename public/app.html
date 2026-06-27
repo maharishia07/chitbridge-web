@@ -23,6 +23,45 @@
   .moderibbon .sw{margin-left:auto;display:flex;gap:6px}
   .moderibbon .sw button{border:1px solid var(--gold-line);background:#fff;border-radius:7px;font-size:10.5px;font-weight:700;padding:4px 9px;color:#6b5a36}
   .moderibbon .sw button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .moderibbon .sw button:disabled{opacity:.42;cursor:not-allowed}
+  /* Welcome (pre-register) */
+  .welwrap{max-width:860px;margin:0 auto;padding:6px 18px 70px}
+  .weltop{display:flex;align-items:center;justify-content:space-between;padding:10px 0 6px}
+  .welsignin{font-size:13px;color:var(--blue);border:1px solid var(--line);border-radius:8px;padding:7px 13px;background:#fff;cursor:pointer}
+  .welhero{text-align:center;padding:14px 0 6px}
+  .welhero h1{font-family:'Space Grotesk';font-size:26px;font-weight:600;letter-spacing:-.02em;margin:6px auto;line-height:1.15;max-width:24ch}
+  .welhero p{color:var(--grey);font-size:14.5px;max-width:60ch;margin:0 auto}
+  .welcaps{display:flex;gap:12px;flex-wrap:wrap;margin:20px 0}
+  .welcap{flex:1;min-width:200px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:15px}
+  .welcap .ci{font-size:20px}.welcap .cn{font-family:'Space Grotesk';font-weight:600;font-size:14.5px;margin:7px 0 3px}.welcap .cd{font-size:12.5px;color:var(--grey)}
+  .welsec{background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px;margin:14px 0}
+  .welh2{font-family:'Space Grotesk';font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--grey);font-weight:700;margin-bottom:4px}
+  .welsub{font-size:12.5px;color:var(--grey);margin-bottom:12px}
+  .welgrid{display:flex;gap:12px;flex-wrap:wrap}
+  .welrole,.welbp{flex:1;min-width:220px;border:1.5px solid var(--line);border-radius:13px;padding:15px;cursor:pointer;transition:.15s;background:#fff}
+  .welrole:hover,.welbp:hover{border-color:var(--blue);transform:translateY(-1px)}
+  .welrole.sel,.welbp.sel{border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,168,106,.22)}
+  .welrole .ci{font-size:21px}.welrole .cn,.welbp .cn{font-family:'Space Grotesk';font-weight:600;font-size:15px;margin:5px 0 2px}
+  .welrole .cd,.welbp .cd{font-size:12.5px;color:var(--grey)}.welbp .bt{font-size:11px;color:var(--grey);font-family:'Space Mono'}
+  .welbtns{display:flex;gap:10px;justify-content:center;margin-top:16px;flex-wrap:wrap}
+  .welwrap .btn.ghost{background:transparent;color:var(--blue);border:1px solid var(--line)}
+  .welwrap .btn:disabled{background:#c7cdd2;cursor:not-allowed}
+  .welfoot{color:var(--grey);font-size:11.5px;margin-top:20px;text-align:center;border-top:1px solid var(--line);padding-top:12px}
+  .rchosen{background:#f3f6fb;border:1px solid #d7e2f1;border-radius:11px;padding:10px 13px;font-size:13px;margin-bottom:14px}
+  .welpips{display:flex;justify-content:center;gap:7px;flex-wrap:wrap;margin:8px 0 2px}
+  .welpip{font-size:11px;font-family:'Space Mono';color:var(--grey);background:#fff;border:1px solid var(--line);border-radius:999px;padding:4px 11px}
+  .welpip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .welsplit{display:flex;gap:12px;flex-wrap:wrap;margin:14px 0}
+  .welcol{flex:1;min-width:240px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:15px}
+  .welcol.is{border-top:4px solid var(--blue)}.welcol.isnot{border-top:4px solid var(--gold)}
+  .welcol ul{margin:8px 0 0;padding-left:17px}.welcol li{font-size:12.5px;margin:5px 0}
+  .welask{background:#fff;border:1px solid var(--line);border-radius:14px;padding:15px;margin:14px 0}
+  .welask-tag{font-size:10.5px;font-family:'Space Mono';background:var(--gold-soft);color:#7a5e22;border-radius:5px;padding:1px 7px;margin-left:6px}
+  .welchips{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0}
+  .welchip{font-size:12px;border:1px solid var(--line);background:#fff;border-radius:999px;padding:5px 11px;cursor:pointer;color:var(--ink)}
+  .welchip:hover{border-color:var(--blue)}
+  .welask-row{display:flex;gap:8px;margin-top:6px}.welask-row .inp{flex:1}
+  .welask-ans{font-size:13px;color:var(--ink);margin-top:10px;line-height:1.5}
 
   /* auth screens */
   .auth{flex:1;display:flex;align-items:center;justify-content:center;padding:24px;overflow-y:auto;background:linear-gradient(160deg,#0F2E3D,#143b4e 60%,#1d4d61)}
@@ -310,13 +349,24 @@
 /* =========================================================================
    CHIT & BRIDGE — separate build (Registration → Login → Menu → Task Panel)
    Single self-contained SPA. Deploy to its OWN URL (does not touch the
-   existing front end). Runs standalone in DEMO; flip to LIVE for the real API.
+   existing front end). Runs standalone in WEB DEMO (mock data); switch stage (Dev/UAT/Live) for the real API.
    ========================================================================= */
 
-/* ---- CONFIG: the only block to edit when wiring to the backend ---- */
+/* ---- CONFIG: the only block to edit when wiring to the backend ----
+   STAGE = the promotion ladder. ONE source of truth: CFG.STAGE.
+     web_demo → front-end only, mock data (no API)
+     dev / uat / live → the SAME real-API code path, pointed at three backends (differ only by base URL)
+   MODE + API_BASE are DERIVED from STAGE, so the shared client (core.js) needs no change. */
+const STAGES = {
+  web_demo: { label:"Web Demo", mock:true,  base:null,                                               note:"front-end only · mock data" },
+  dev:      { label:"Dev",      mock:false, base:"https://chitbridge-api-production.up.railway.app",  note:"real API · dev database" },
+  uat:      { label:"UAT",      mock:false, base:"",   /* TODO: UAT cloud API base */                 note:"real API · UAT cloud" },
+  live:     { label:"Live",     mock:false, base:"",   /* TODO: production API base */                note:"production" },
+};
 const CFG = {
-  MODE: "live",          // "demo" (standalone, mock data) | "live" (real API)
-  API_BASE: "https://chitbridge-api-production.up.railway.app",          // e.g. "https://api.chitandbridge.com"  (LIVE only)
+  STAGE: "dev",                                                     // points at the live dev API (Railway). Flip in the build-preview ribbon if present.
+  get MODE(){ return STAGES[this.STAGE].mock ? "demo" : "live"; },  // compat shim: core.js still reads CFG.MODE
+  get API_BASE(){ return STAGES[this.STAGE].base || ""; },          // derived from the current stage
 };
 /* Endpoint map. ✓ = matches build registry · ? = ASSUMED, confirm before live.
    Correct any path here in ONE place. */
@@ -326,6 +376,8 @@ const EP = {
   ownerLogin:      {m:"POST", p:"/api/entities/register",        ok:"✓"},  // same route — returning owner requests OTP (pass mode:'login')
   ownerVerify:     {m:"POST", p:"/api/entities/verify",          ok:"✓"},  // verify OTP → token
   actorLogin:      {m:"POST", p:"/api/actors/login",             ok:"✓"},  // actor PIN
+  actorCheck:      {m:"GET",  p:"/api/actors/check-login",      ok:"✓"},  // ?username= -> {valid,has_pin}
+  setPin:          {m:"POST", p:"/api/actors/set-pin",          ok:"✓"},  // first-time actor sets PIN
   custCatalogue:   {m:"GET",  p:"/api/catalogue/:bridgeId",      ok:"✓"},
   custVerify:      {m:"POST", p:"/api/catalogue/:bridgeId/login/verify", ok:"✓"},
   custOrders:      {m:"GET",  p:"/api/catalogue/:bridgeId/my-orders",     ok:"✓"},
@@ -371,12 +423,24 @@ const EP = {
   prodList:        {m:"GET",   p:"/api/products",                ok:"✓"},
   prodAdd:         {m:"POST",  p:"/api/products",                ok:"✓"},  // {item_data:{name,price}}
   prodDel:         {m:"DELETE",p:"/api/products/:id",            ok:"✓"},
+  // --- NET tree (NET-01 Spine) · live /api/network · cb_entity/cb_edge. NOTE: cb_* id-space — resolve self via netLookup(bridge_id); Dev needs backfill ---
+  netLookup:      {m:"GET",  p:"/api/network/entities/lookup",            ok:"✓"},
+  netSubtree:     {m:"GET",  p:"/api/network/entities/:id/subtree",       ok:"✓"},
+  netConnections: {m:"GET",  p:"/api/network/entities/:id/connections",   ok:"✓"},
+  netRegister:    {m:"POST", p:"/api/network/entities",                   ok:"✓"},
+  netClaim:       {m:"POST", p:"/api/network/entities/:id/claim",         ok:"✓"},
+  netConnect:     {m:"POST", p:"/api/network/connections",                ok:"✓"},
+  netApprove:     {m:"POST", p:"/api/network/connections/:id/approve",    ok:"✓"},
+  netDecline:     {m:"POST", p:"/api/network/connections/:id/decline",    ok:"✓"},
+  netSuspend:     {m:"POST", p:"/api/network/connections/:id/suspend",    ok:"✓"},
+  netResume:      {m:"POST", p:"/api/network/connections/:id/resume",     ok:"✓"},
+  netDisconnect:  {m:"POST", p:"/api/network/connections/:id/disconnect", ok:"✓"},
 };
 
 /* ---------------- DEMO STORE ---------------- */
 const DEMO = {
-  entity:{name:"Raghavan Timber", owner:"Raghavan", bridgeId:"rt-001"},
-  actors:[{id:"a1",name:"Priya",shift:"on_shift",load:2},{id:"a2",name:"Kumar",shift:"on_break",load:0},{id:"a3",name:"Devi",shift:"off",load:1}],
+  entity:{name:"Raghavan Timber", owner:"Raghavan", bridgeId:"rt-001", user_id:"raghavan-timber"},
+  actors:[{id:"a1",name:"Priya",uid:"priya@raghavan-timber",shift:"on_shift",load:2,atype:"human",cap:"act",node:"North Branch"},{id:"a2",name:"Kumar",uid:"kumar@raghavan-timber",shift:"on_break",load:0,atype:"human",cap:"view-only",node:"Head Office"},{id:"a3",name:"Devi",uid:"devi@raghavan-timber",shift:"off",load:1,atype:"human",cap:"audit",node:"South Branch"}],
   chits:[
     {id:"1",code:"PO #4471",party:"Saravana Traders",cust:"Saravana Traders",area:"T. Nagar",kind:"order",amt:124000,state:"open",assignTo:"a1",folder:"task",dispute:false,proof:"ok",pri:"urgent",custPri:true,items:[["Teak plank 8ft","20 × ₹3,200 = ₹64,000",[{n:"Plank photo",t:"image",scope:"external"},{n:"Grain close-up",t:"image",scope:"internal"}]],["Polish 5L","4 × ₹1,500 = ₹6,000",[{n:"Polish tin photo",t:"image",scope:"external"}]]],atts:[{n:"Signed challan",t:"doc",scope:"external"},{n:"Unloading clip",t:"video",scope:"internal"}],msgs:[{id:"m1",scope:"internal",author:"Priya",body:"Stock checked — 20 planks ready to load.",at:"10:14",type:"info"},{id:"m2",scope:"external",author:"Raghavan Timber",body:"Dispatching today by 4 pm.",at:"10:20",type:"info"},{id:"m3",scope:"external",author:"Saravana Traders",body:"Please share the signed challan with the delivery.",at:"10:31",type:"query",unread:true},{id:"m4",scope:"external",author:"Raghavan Timber",body:"Approved 5% loyalty discount on this order.",at:"10:34",type:"decision"},{id:"m6",scope:"internal",author:"Priya",body:"Monsoon may delay transport next week.",at:"10:40",type:"risk"},{id:"m7",scope:"internal",author:"Kumar",body:"Kumar to arrange 2 replacement planks by Thursday.",at:"10:42",type:"action",unread:true}]},
     {id:"2",code:"CS #4470",party:"walk-in · Asha",cust:"Asha",area:"Anna Nagar",kind:"counter",amt:62000,state:"act",assignTo:"a1",folder:"task",dispute:false,proof:"ok",pri:"low",items:[["Door frame","1 × ₹62,000"]],msgs:[{id:"m20",scope:"internal",author:"Priya",body:"Waiting on Asha to confirm the delivery address.",at:"11:05",type:"dependency",unread:true},{id:"m21",scope:"external",author:"You",body:"Could you confirm the delivery address?",at:"11:06",type:"query"}]},
@@ -387,9 +451,59 @@ const DEMO = {
     {id:"7",code:"PO #4459",party:"TimberMart",cust:"TimberMart",area:"Guindy",kind:"order",amt:54000,state:"open",assignTo:null,folder:"order",dispute:false,proof:"wait",items:[["Rafters","12 × ₹4,500"]]},
     {id:"8",code:"PO #4452",party:"Saravana Traders",cust:"Saravana Traders",area:"T. Nagar",kind:"order",amt:71000,state:"close",assignTo:null,folder:"order",dispute:false,proof:"ok",items:[["Hinges lot","—"]]},
   ],
+  net:{
+    self:{id:"e_self", bridgeId:"CB-0001", name:"Head Office", mode:"b2b", claimed:true},
+    reg:{},
+    nodes:[
+      {id:"e_self", bridge_id:"CB-0001", name:"Head Office", depth:0, act:1, cap:"owner"},
+      {id:"e_b1",   bridge_id:"CB-0002", name:"Branch A",    depth:1, act:2, cap:"chit.create", demo:true},
+      {id:"e_c1",   bridge_id:"CB-0003", name:"Counter 1",   depth:2, act:1, cap:"chit.create", demo:true},
+      {id:"e_b2",   bridge_id:"CB-0004", name:"Branch B",    depth:1, act:1, cap:"catalogue.write", demo:true}
+    ],
+    edges:[
+      {id:"ed1", parent_name:"Head Office", child_name:"Branch C", state:"requested"},
+      {id:"ed2", parent_name:"Head Office", child_name:"Branch A", state:"active"},
+      {id:"ed3", parent_name:"Head Office", child_name:"Branch D", state:"suspended"}
+    ]
+  },
+  /* ATH-119 — demo chit-schema: compose renders its fields (subject + delivery + note); line items come from the catalogue */
+  chitSchema:{ schema_name:"Supply Chit", schema_type:"product", fields:[
+    {field_key:"subject",     field_name:"Subject",     field_type:"text", required:true,  placeholder:"e.g. June teak lot"},
+    {field_key:"delivery_by", field_name:"Delivery by", field_type:"date", required:false},
+    {field_key:"deliver_to",  field_name:"Deliver to",  field_type:"text", required:false, placeholder:"yard / site"},
+    {field_key:"note",        field_name:"Note",        field_type:"text", required:false, placeholder:"instructions"}
+  ]},
+  catalogue:[
+    {particulars:"Teak plank 8ft",    unit:"pc",    price:3200},
+    {particulars:"Rosewood beam 10ft",unit:"pc",    price:9800},
+    {particulars:"Plywood 12mm 8×4",  unit:"sheet", price:1266},
+    {particulars:"Pine batten 6ft",   unit:"pc",    price:320},
+    {particulars:"Wood polish 5L",    unit:"can",   price:1500}
+  ],
+  /* ATH-117 — Suppliers demo data (other businesses you buy from; keyed by User ID) */
+  suppliers:[
+    {id:"s1", display_name:"Anand Sawmills",    bridge_id:"anand-sawmills",  category:"Timber"},
+    {id:"s2", display_name:"Coromandel Ply Co", bridge_id:"coromandel-ply",  category:"Plywood"},
+    {id:"s3", display_name:"Salem Hardware",    bridge_id:"salem-hardware",  category:"Fittings"}
+  ],
+  /* ATH-117 — Disputes demo data (flag model; category uses canonical 'docs' per INC-04) */
+  disputes:{
+    mine:[
+      {dispute_id:"d1", chit_id:"4", auto_subject:"PO #4460 · Saravana Traders", status:"open", category:"quality", reason:"6 plywood sheets delivered warped — replacement requested.", raised_by_display_name:"Raghavan Timber", scope:"external"}
+    ],
+    other:[
+      {dispute_id:"d2", chit_id:"1", auto_subject:"PO #4471 · Saravana Traders", status:"open", category:"docs", reason:"Signed challan not shared with the delivery.", raised_by_display_name:"Saravana Traders", scope:"external"},
+      {dispute_id:"d3", chit_id:"6", auto_subject:"PO #4455 · TimberMart", status:"resolved", category:"delivery", reason:"Two beams short on the first drop.", raised_by_display_name:"TimberMart", scope:"external", resolution_note:"Shortfall delivered next morning; confirmed received."}
+    ]
+  },
 };
 function deepClone(x){return JSON.parse(JSON.stringify(x));}
 let STORE = deepClone(DEMO);
+/* ATH-114 — Co-Assist external identity: id = <handle>@<entity.user_id>. bridge_id stays internal. */
+function entUid(){return (typeof SESSION!=="undefined"&&SESSION.entity_user_id)||DEMO.entity.user_id;}
+function coId(h){return String(h||"").trim()+"@"+entUid();}
+function defActorHandle(){return "coassist"+String(((STORE.actors||[]).length)+1).padStart(2,"0");}
+function acIdPrev(){const e=document.getElementById("ac_idprev"); if(e)e.textContent=coId(val("ac_handle")||defActorHandle());}
 
 /* ---------------- API CLIENT — extracted to /app/core.js (module 1) ----------------
    fill(), unwrap() (the {ok,data,error} envelope), and api() (auth + 401/422/500 branching)
@@ -397,10 +511,23 @@ let STORE = deepClone(DEMO);
 /* DEMO responder — mimics the API so the whole flow works standalone */
 function demoApi(key,{params,query,body}){
   switch(key){
+    case "netLookup": return {found:true, entity:STORE.net.self};
+    case "netSubtree": return STORE.net.nodes;
+    case "netConnections": return STORE.net.edges.filter(e=>["requested","active","suspended"].includes(e.state));
+    case "netConnect": { const reg=STORE.net.reg||{}; const ch=(body&&body.childId&&reg[body.childId])||null; const nm=ch?ch.name:((body&&body.childBridgeId)||"new node"); const e={id:"ed"+Date.now(), parent_name:STORE.net.self.name, child_name:nm, child_id:(body&&body.childId)||null, child_bid:ch?ch.bridgeId:((body&&body.childBridgeId)||""), state:"requested"}; STORE.net.edges.unshift(e); return e; }
+    case "netApprove": { const e=STORE.net.edges.find(x=>x.id==params.id); if(e){ e.state="active"; STORE.net.nodes.push({id:"e"+Date.now(), bridge_id:e.child_bid||"", name:e.child_name, depth:1, act:0, cap:"—", isnew:true}); } return e||{}; }
+    case "netDecline": { const e=STORE.net.edges.find(x=>x.id==params.id); if(e)e.state="declined"; return e||{}; }
+    case "netSuspend": { const e=STORE.net.edges.find(x=>x.id==params.id); if(e)e.state="suspended"; return e||{}; }
+    case "netResume": { const e=STORE.net.edges.find(x=>x.id==params.id); if(e)e.state="active"; return e||{}; }
+    case "netDisconnect": { const e=STORE.net.edges.find(x=>x.id==params.id); if(e)e.state="disconnected"; return e||{}; }
+    case "netRegister": { const nm=(body&&body.name)||"New branch"; const e={id:"e"+Date.now()+Math.floor(Math.random()*99), bridgeId:"CB-"+(1000+Math.floor(Math.random()*9000)), name:nm, mode:"b2b", claimed:true}; STORE.net.reg=STORE.net.reg||{}; STORE.net.reg[e.id]=e; return e; }
+    case "netClaim": { STORE.net.self.claimed=true; return STORE.net.self; }
     case "register": return {ok:true, entityId:"e_demo", bridgeId:"rt-001"};
     case "ownerLogin": case "custVerify": return {otpSent:true};
     case "ownerVerify": return {token:"demo-owner", role:"entity", name:DEMO.entity.owner, entity:DEMO.entity.name};
     case "actorLogin": return {token:"demo-actor", role:"actor", name:"Priya", entity:DEMO.entity.name};
+    case "actorCheck": return {valid:true, has_pin:true};
+    case "setPin": return {ok:true, token:"demo-actor", role:"actor", name:"Priya", entity:DEMO.entity.name};
     case "custCatalogue": return {bridgeId:params.bridgeId, shop:"Raghavan Timber", products:[["Teak plank 8ft",3200],["Plywood 12mm",1266]]};
     case "custOrders": return {chits: STORE.chits.filter(c=>c.folder==="order").map(stripChit)};
     case "inbox": {
@@ -418,14 +545,52 @@ function demoApi(key,{params,query,body}){
     case "custFlag": { const c=STORE.chits.find(x=>x.id==params.id); if(c)c.custPri=!!body.flag; return {chit:c}; }
     case "unassign": { const c=STORE.chits.find(x=>x.id==params.id); c.assignTo=null; return {chit:c}; }
     case "actors": return {actors: STORE.actors};
+    case "actorBreak": { const a=(STORE.actors||[]).find(x=>x.id==(body&&body.actor_id)); if(a&&body.break_status)a.shift=body.break_status; return {actor:a||{}}; }
+    case "addActor": { const nm=(body&&body.display_name)||"New co-assist"; const uid=(body&&body.user_id)||(((body&&body.handle)||"coassist")+"@"+DEMO.entity.user_id); const a={id:"a"+Date.now(), name:nm, uid:uid, shift:"on_shift", load:0, atype:"human", cap:"act", node:(STORE.net&&STORE.net.self&&STORE.net.self.name)||"Head Office", isnew:true}; STORE.actors=STORE.actors||[]; STORE.actors.push(a); return {actor:a, identity_id:a.id, display_name:nm, user_id:uid}; }
     case "messages": { const c=STORE.chits.find(x=>x.id==params.id); let ms=(c&&c.msgs)||[]; const sc=query&&query.scope; if(sc&&sc!=="all")ms=ms.filter(m=>m.scope===sc); return {messages:ms}; }
     case "sendMsg": { const c=STORE.chits.find(x=>x.id==params.id); if(c){ c.msgs=c.msgs||[]; c.msgs.push({id:"m"+Date.now(),scope:body.scope,author:SESSION.name||"You",body:body.body,at:"just now",type:body.type||"info",unread:false}); } return {ok:true}; }
     case "dispute": { const c=STORE.chits.find(x=>x.id==params.id); if(c)c.dispute=true; return {chit:c}; }
     case "delChit": { STORE.chits=STORE.chits.filter(x=>x.id!=params.id); return {ok:true, trashed:params.id}; }
+    case "createChit": {      const b=body||{}; const li=(b.line_items||[]);
+      const amt=li.reduce((s,it)=>s+(+it.total||0),0);
+      const items=li.map(it=>[it.particulars, (it.quantity||0)+" × "+inr(it.price||0)+" = "+inr(it.total||0)]);
+      const oid="oc"+Date.now();                                   // originator_id = thread root
+      const sender=b.send_as_label||SESSION.entity||DEMO.entity.name;
+      let rcpts=(b.recipients||[]);                                // [{name, role: to|cc|for, self}]
+      // server-side cap re-check (UI also enforces) — clamp per role
+      const seen={to:0,cc:0,for:0}; rcpts=rcpts.filter(r=>{ const role=r.role||"to"; if(seen[role]==null)return false; if(seen[role]>=(LIMITS[role]||99))return false; seen[role]++; return true; });
+      const byRole=role=>rcpts.filter(r=>r.role===role);
+      const nm=a=>a.map(r=>r.name).join(", ")||"—";
+      const rsummary="To: "+nm(byRole("to"))+(byRole("cc").length?" · CC: "+nm(byRole("cc")):"")+(byRole("for").length?" · For: "+nm(byRole("for")):"");
+      const primaryTo=byRole("to")[0]; const party=primaryTo?(primaryTo.self?sender:primaryTo.name):sender;
+      const anySelf=rcpts.some(r=>r.self);
+      const subj=(b.subject&&b.subject.trim())||"Self-chit";
+      const code="SC #"+(4470+STORE.chits.length+1);
+      const roleMap={to:"Act",cc:"Info",for:"For"};
+      const mk=(folder,role)=>({ id:"c"+Date.now()+Math.floor(Math.random()*99999), code:code, subject:subj, originator_id:oid, party:party, cust:party, area:"—", kind:"order", amt:amt, state:"open", assignTo:null, folder:folder, dispute:false, proof:"wait", items:items, selfChit:anySelf, role:role, recipients:rcpts, rsummary:rsummary, isDraft:!!b.is_draft, msgs:[{id:"m"+Date.now(),scope:"internal",author:sender,body:(anySelf?"Self-chit authored — ":"Chit authored — ")+rsummary,at:"just now",type:"info"}] });
+      if(b.is_draft){ const d=mk("order","Draft"); STORE.chits.unshift(d); return {chit:d, draft:true}; }
+      const sent=mk("order","sender"); STORE.chits.unshift(sent);                    // our sent (Order) copy
+      let selfCopies=0;                                                              // one Task copy per SELF recipient, role per To/CC/For
+      rcpts.filter(r=>r.self).forEach(r=>{ const t=mk("task", roleMap[r.role]||"Act"); t.party=t.cust=sender; STORE.chits.unshift(t); selfCopies++; });
+      const externalCount=rcpts.filter(r=>!r.self).length;                           // their copies fan out elsewhere (not in our store) — execute & test pending
+      return {chits:[sent], copies:1+selfCopies+externalCount, selfCopies:selfCopies, externalCount:externalCount, self:anySelf, originator_id:oid};
+    }
+    case "supList": return (STORE.suppliers||[]).map(s=>({supplier_list_id:s.id, id:s.id, display_name:s.display_name, supplier_display_name:s.display_name, bridge_id:s.bridge_id, category:s.category}));
+    case "supAdd": { const bid=((body&&body.supplier_bridge_id)||"new-supplier"); const nm=String(bid).split("@")[0].replace(/[-_.]+/g," ").replace(/\b\w/g,c=>c.toUpperCase()); const s={id:"s"+Date.now(), display_name:nm, bridge_id:bid, category:"New", isnew:true}; STORE.suppliers=STORE.suppliers||[]; STORE.suppliers.push(s); return {ok:true, supplier:s}; }
+    case "supDel": { STORE.suppliers=(STORE.suppliers||[]).filter(x=>x.id!=params.id); return {ok:true}; }
+    case "disputeQueue": { const d=STORE.disputes||{mine:[],other:[]}; return {my_disputes:(d.mine||[]), other_disputes:(d.other||[])}; }
+    case "resolveDispute": { const d=STORE.disputes||{mine:[],other:[]}; const hit=[...(d.mine||[]),...(d.other||[])].find(x=>x.dispute_id==(params&&params.disputeId)); if(hit){ hit.status="resolved"; hit.resolution_note=(body&&body.resolution_note)||""; } return {ok:true, dispute:hit||{}}; }
+    case "prodList": return (STORE.catalogue||[]).map((p,i)=>({item_id:"p"+i, id:"p"+i, item_data:{name:p.particulars, price:p.price, unit:p.unit}}));
+    case "prodAdd": { const d=(body&&body.item_data)||{}; STORE.catalogue=STORE.catalogue||[]; STORE.catalogue.push({particulars:d.name||"New product", unit:d.unit||"unit", price:+d.price||0}); return {ok:true}; }
+    case "prodDel": { const i=parseInt(String(params&&params.id).replace(/^p/,""),10); if(!isNaN(i)&&STORE.catalogue)STORE.catalogue.splice(i,1); return {ok:true}; }
+    case "me": return {display_name:DEMO.entity.name, bridge_id:DEMO.entity.user_id, email:"raghavan@timber.example", gstn:"33ABCDE1234F1Z5", address:"12 Mill Road, Chennai", business_status:"open"};
+    case "saveProfile": return {ok:true};
+    case "getSettings": return {assignment_model:"both", default_max_tasks:10, all_task_visible:false, auto_return_on_short_break:true};
+    case "saveSettings": return {ok:true};
     default: return {ok:true, demo:true};
   }
 }
-function stripChit(c){return {id:c.id,code:c.code,party:c.party,cust:c.cust,area:c.area,kind:c.kind,amt:c.amt,state:c.state,assignTo:c.assignTo,folder:c.folder,dispute:c.dispute,proof:c.proof,att:((c.atts?c.atts.length:0)+((c.items||[]).reduce((x,it)=>x+((it[2]&&it[2].length)||0),0))),msg:((c.msgs||[]).filter(m=>SESSION.role==="customer"?m.scope==="external":true).length),pri:(c.pri||"normal"),custPri:!!c.custPri};}
+function stripChit(c){return {id:c.id,code:c.code,party:c.party,cust:c.cust,area:c.area,kind:c.kind,amt:c.amt,state:c.state,assignTo:c.assignTo,folder:c.folder,dispute:c.dispute,proof:c.proof,selfChit:!!c.selfChit,isDraft:!!c.isDraft,originator_id:c.originator_id,rcc:((c.recipients||[]).filter(r=>r.role==="cc").length),rfor:((c.recipients||[]).filter(r=>r.role==="for").length),att:((c.atts?c.atts.length:0)+((c.items||[]).reduce((x,it)=>x+((it[2]&&it[2].length)||0),0))),msg:((c.msgs||[]).filter(m=>SESSION.role==="customer"?m.scope==="external":true).length),pri:(c.pri||"normal"),custPri:!!c.custPri};}
 
 /* ---------------- SESSION + ROUTER ---------------- */
 let SESSION = {token:null, role:null, name:null, entity:null, bridgeId:null};
@@ -441,94 +606,241 @@ function toast(msg, undo){
 window.addEventListener("hashchange", route);
 function route(){
   const h=location.hash||"#/";
-  if(!SESSION.token && !h.startsWith("#/register") && !h.startsWith("#/login")) return go("#/login");
+  if(!SESSION.token && !h.startsWith("#/register") && !h.startsWith("#/login") && !h.startsWith("#/welcome")) return go("#/login");
+  if(h.startsWith("#/welcome")) return renderWelcome();
   if(h.startsWith("#/register")) return renderRegister();
   if(h.startsWith("#/login")) return renderLogin();
   return renderApp();
 }
 
 /* ---------------- AUTH: REGISTER ---------------- */
-let regBusy=false, regErr="";
+/* SCREEN: Welcome (#/welcome) · module target: auth.js · pre-register flow: preview -> select (role + vertical/Blueprint) -> register.
+   Source: Drive "Landing->choose->register mock". JUNCTURE (design later): Blueprint -> settings/schema cascade.
+   For now the selection is CAPTURED and DEFAULTS to one Blueprint (J-BLUEPRINT / feeds J-FIELDTYPES). */
+let ONB = {role:null, bp:null};
+let WSTEP = "intro"; // intro | select
+const ONB_BP = {
+  business:[
+    {k:"pharma", n:"Pharmacy distributor", t:"regulated · sell",  d:"Medicine supply with batch, expiry, prescription control."},
+    {k:"flats",  n:"Flat promoter",        t:"visits · landlord", d:"Visits — capacity per day, customer picks 2–4 flats."},
+    {k:"whole",  n:"Wholesale mart",       t:"range match",       d:"Post price/qty ranges; customer sets theirs; match by overlap."},
+  ],
+  agent:[
+    {k:"agent",  n:"Agent / Introducer",   t:"bring businesses · earn", d:"Onboard shops, set them up, run your book — earn recurring rent share."},
+  ]
+};
+const ONB_CAP = [
+  ["🧾","Signed order records","Every order becomes a chit both sides confirm — no more he-said-she-said."],
+  ["💬","Conversations on the deal","Messages live on the chit, not scattered across chat and email."],
+  ["⚖️","Disputes on the record","A disagreement is logged against the signed record — resolution starts from agreed facts."],
+  ["🛍️","Your catalogue, your customers","Show what you sell; customers connect to you. The platform never takes them over."],
+];
+const ONB_FAQ = [
+  {q:"Is it for my business?", a:"Very likely — if you deal with other businesses or customers and want your orders on a trustworthy shared record, it fits. What do you sell, and to whom? I can tell you how it would look."},
+  {q:"Do you take my customers?", a:"No — your customers stay yours. The platform carries and co-signs the record; it never holds or sells your customers or your data. That is a hard line, not a setting."},
+  {q:"What does it cost?", a:"Pricing depends on how you use it — I can't quote a final number here, but the team can set it to fit your trade. Want me to note your details for the right person?"},
+  {q:"Can it fit my industry?", a:"It is built to bend to your trade — you start from the closest vertical and adjust what a deal looks like. Tell me your industry and I'll point you to the closest starting point."},
+];
+function welPips(){ const steps=["What is this","Who you are","Your vertical","Register"]; const active=WSTEP==="intro"?0:(!ONB.role?1:2); return `<div class="welpips">${steps.map((x,i)=>`<span class="welpip ${i===active?'on':''}">${i+1}. ${x}</span>`).join("")}</div>`; }
+function askPick(i){ const f=ONB_FAQ[i]; const inp=document.getElementById("ask_in"); if(inp)inp.value=f.q; const o=document.getElementById("ask_ans"); if(o)o.innerHTML="<b>"+esc(f.q)+"</b><br>"+esc(f.a); }
+function askAssist(){ const q=(val("ask_in")||"").toLowerCase(); let a; if(/cost|price|pay|fee|charge/.test(q))a=ONB_FAQ[2].a; else if(/customer|data|own|take|sell/.test(q))a=ONB_FAQ[1].a; else if(/industry|vertical|fit|trade|sector/.test(q))a=ONB_FAQ[3].a; else if(q.trim())a="I don't have that detail here — but I can connect you with the team. Tell me a little about your business and I'll point you the right way."; else a="Ask me anything about what Chit & Bridge does for your business."; const o=document.getElementById("ask_ans"); if(o)o.innerHTML=esc(a); }
+function onbBpName(){ const a=ONB.role&&ONB_BP[ONB.role]; const b=a&&a.find(x=>x.k===ONB.bp); return b?b.n:""; }
+function onbBanner(){ if(!(ONB.role&&ONB.bp)) return ""; return '<div class="rchosen">Registering as <b>'+(ONB.role==="agent"?"an Agent":"a Business")+'</b> · vertical <b>'+onbBpName()+'</b> — <span style="color:var(--grey)">defaults to one Blueprint for now</span></div>'; }
+function welReset(){ ONB={role:null,bp:null}; WSTEP="intro"; }
+function setWStep(x){ WSTEP=x; renderWelcome(); }
+function pickRole(r){ ONB.role=r; ONB.bp=null; renderWelcome(); }
+function pickBP(k){ ONB.bp=k; renderWelcome(); }
+function welToRegister(){ if(ONB.bp) go("#/register"); }
+function renderWelcome(){
+  let body="";
+  if(WSTEP==="intro"){
+    body = `
+      <div class="welhero"><h1>A shared, signed record between you and the people you deal with.</h1>
+        <p>Chit &amp; Bridge is the rail — you bring the business. Every order, message, and dispute becomes one record both sides signed, and you decide who you connect with.</p></div>
+      <div class="welcaps">${ONB_CAP.map(c=>`<div class="welcap"><div class="ci">${c[0]}</div><div class="cn">${c[1]}</div><div class="cd">${c[2]}</div></div>`).join("")}</div>
+      <div class="welsplit">
+        <div class="welcol is"><div class="welh2">What Chit &amp; Bridge is</div><ul><li>The rail that carries and co-signs your records, A to B.</li><li>One shared, signed record per deal — order, message, dispute.</li><li>Yours to control: your prices, catalogue, customers and rules.</li></ul></div>
+        <div class="welcol isnot"><div class="welh2">What it's not — not our aim</div><ul><li>We don't hold or sell your customers or your data.</li><li>We don't take over your relationships or become the marketplace.</li><li>Not a place that owns what's yours — disconnect any time.</li></ul></div>
+      </div>
+      <div class="welask">
+        <div class="welh2">Ask Chit &amp; Bridge <span class="welask-tag">Web Demo · sample answers</span></div>
+        <div class="welsub">A product guide can answer whether it fits your business. (Real version: answers from the Prospect Knowledge Base, with its guardrails.)</div>
+        <div class="welchips">${ONB_FAQ.map((f,i)=>`<button class="welchip" onclick="askPick(${i})">${f.q}</button>`).join("")}</div>
+        <div class="welask-row"><input id="ask_in" class="inp" placeholder="Type a question…"><button class="btn" onclick="askAssist()">Ask</button></div>
+        <div class="welask-ans" id="ask_ans"></div>
+      </div>
+      <div class="welbtns"><button class="btn" onclick="setWStep('select')">Get started →</button></div>`;
+  } else {
+    const roles=[["business","🏪","Run my business","I sell, supply, or serve customers and want my orders on a signed rail."],["agent","🤝","Bring businesses (Agent)","I onboard shops, set them up, and earn from each one I bring that stays active."]];
+    const bps = ONB.role ? ONB_BP[ONB.role] : [];
+    body = `
+      <div class="welsec"><div class="welh2">I am here to…</div>
+        <div class="welgrid">${roles.map(r=>`<div class="welrole ${ONB.role===r[0]?'sel':''}" onclick="pickRole('${r[0]}')"><div class="ci">${r[1]}</div><div class="cn">${r[2]}</div><div class="cd">${r[3]}</div></div>`).join("")}</div></div>
+      ${ONB.role?`<div class="welsec"><div class="welh2">Choose your vertical</div><div class="welsub">Pick a starting point — it shapes what a deal looks like. You can refine later.</div>
+        <div class="welgrid">${bps.map(b=>`<div class="welbp ${ONB.bp===b.k?'sel':''}" onclick="pickBP('${b.k}')"><div class="cn">${b.n}</div><div class="bt">${b.t}</div><div class="cd">${b.d}</div></div>`).join("")}</div></div>`:""}
+      <div class="welbtns"><button class="btn ghost" onclick="setWStep('intro')">← back</button><button class="btn" ${ONB.bp?"":"disabled"} onclick="welToRegister()">Continue to register →</button></div>`;
+  }
+  document.getElementById("root").innerHTML = modeRibbon() + `
+  <div class="welwrap">
+    <div class="weltop">${logo()}<button class="welsignin" onclick="go('#/login')">Sign in</button></div>
+    ${welPips()}
+    ${body}
+    <div class="welfoot">Preview → vertical → register · selection defaults to one Blueprint for now (the settings/schema cascade is a later juncture).</div>
+  </div>`;
+}
+let REG = {step:"form", name:"", email:"", busy:false, err:""};
+function regReset(){ REG={step:"form", name:"", email:"", busy:false, err:""}; renderRegister(); }
+/* SCREEN: Register (#/register) · module target: auth.js
+   Real flow: POST EP.register {display_name, email} -> OTP -> POST EP.ownerVerify {email, otp} -> token + active entity (signed in).
+   GAPS (API-side, for CLI): STEP 2 role/blueprint carry (not stored yet) · STEP 3 schema gate (fresh entity needs a default entity_schemas, else catalogue 404s). */
 function renderRegister(){
+  const R=REG; const who='style="font-size:12px;color:var(--grey);margin-bottom:8px"'; const muted='style="color:var(--grey);font-weight:400"';
+  let form="";
+  if(R.step==="form"){
+    form = `${onbBanner()}<label class="fl">Business / entity name <span ${muted}>(Register.Name)</span></label><input class="inp" id="r_name" placeholder="Raghavan Timber" value="${esc(R.name)}">
+       <label class="fl">Email <span ${muted}>(Register.Email)</span></label><input class="inp" id="r_email" placeholder="you@business.in" value="${esc(R.email)}">
+       ${R.err?`<div class="err">${R.err}</div>`:""}
+       <button class="btn gold" id="r_go" ${R.busy?"disabled":""}>${R.busy?'<span class="spin"></span> Creating…':"Create entity →"}</button>`;
+  } else {
+    form = `<div ${who}>Entity <b>${esc(R.name)}</b> — verify to enter · <a onclick="regReset()">change</a></div>
+       <label class="fl">OTP sent to ${esc(R.email)}</label><input class="inp" id="r_otp" placeholder="6-digit code">
+       ${R.err?`<div class="err">${R.err}</div>`:""}
+       <button class="btn gold" id="r_go" ${R.busy?"disabled":""}>${R.busy?'<span class="spin"></span> Verifying…':"Verify & enter →"}</button>`;
+  }
   document.getElementById("root").innerHTML = modeRibbon() + `
   <div class="auth"><div class="card">
     <div class="top">${logo()}<h1>Create your entity</h1><p class="sub">Register your business on Chit &amp; Bridge</p></div>
     <div class="body">
-      <label class="fl">Business / entity name</label><input class="inp" id="r_name" placeholder="Raghavan Timber">
-      <div class="row2"><div><label class="fl">Owner name</label><input class="inp" id="r_owner" placeholder="Raghavan"></div>
-      <div><label class="fl">Type</label><select class="inp" id="r_type"><option>Trader</option><option>Manufacturer</option><option>Service</option><option>Distributor</option></select></div></div>
-      <div class="row2"><div><label class="fl">Mobile</label><input class="inp" id="r_phone" placeholder="+91…"></div>
-      <div><label class="fl">Email</label><input class="inp" id="r_email" placeholder="you@business.in"></div></div>
-      ${regErr?`<div class="err">${regErr}</div>`:""}
-      <button class="btn gold" id="r_go" ${regBusy?"disabled":""}>${regBusy?'<span class="spin"></span> Creating…':"Create entity →"}</button>
-      <div class="hint">Reuses the existing registration flow. In <b>demo</b> this simulates success; in <b>live</b> it calls <span class="mono">${EP.register.p}</span> <b>(${EP.register.ok})</b>.</div>
+      ${form}
+      <div class="hint">${STAGES[CFG.STAGE].mock?"<b>Web Demo</b> — any values create + sign you in so you can walk the flow.":'<b>'+STAGES[CFG.STAGE].label+'</b> — real OTP to your email via <span class="mono">'+EP.register.p+'</span>.'}</div>
       <div class="swap">Already registered? <a onclick="go('#/login')">Sign in</a></div>
     </div>
   </div></div>`;
-  document.getElementById("r_go").onclick=doRegister;
+  const b=document.getElementById("r_go"); if(b) b.onclick=doRegister;
+}
+/* Normalise the verify response (real API returns entity as an OBJECT; demo returns flat strings) -> fixes the [object Object] header bug. */
+function entFromVerify(r, fallbackName){
+  let nm, ent, bridge;
+  if(r && r.entity && typeof r.entity==="object"){ nm = r.entity.display_name||fallbackName; ent = nm; bridge = r.entity.bridge_id||null; }
+  else { nm = (r&&r.name)||fallbackName; ent = (r&&r.entity)||nm; bridge = (r&&r.bridgeId)||null; }
+  return {token:(r&&r.token)||"t", role:"entity", name:nm, entity:ent, bridgeId:bridge, shop:"open"};
 }
 async function doRegister(){
-  const name=val("r_name"), owner=val("r_owner");
-  if(!name||!owner){regErr="Entity name and owner are required.";return renderRegister();}
-  regErr=""; regBusy=true; renderRegister();
-  try{ await api("register",{body:{name,owner,type:val("r_type"),phone:val("r_phone"),email:val("r_email")}});
-    regBusy=false; toast("Entity created — sign in to continue"); go("#/login");
-  }catch(e){ regBusy=false; regErr="Could not register: "+e.message+" (check endpoint / mode)"; renderRegister(); }
+  const R=REG;
+  const v_name=val("r_name"), v_email=val("r_email"), v_otp=val("r_otp");
+  if(R.step==="form"){
+    if(!v_name || !v_email){ R.err="Entity name and email are required."; return renderRegister(); }
+    R.name=v_name.trim(); R.email=v_email.trim();
+  }
+  R.err=""; R.busy=true; renderRegister();
+  try{
+    if(R.step==="form"){
+      const r=await api("register",{body:{display_name:R.name, email:R.email}});
+      R.email=(r&&r.email)||R.email; R.busy=false; R.step="otp"; return renderRegister();
+    }
+    const r=await api("ownerVerify",{body:{email:R.email, otp:v_otp}});
+    setSession(entFromVerify(r, R.name)); R.busy=false; go("#/app");
+  }catch(e){ R.busy=false; R.err="Could not register: "+e.message+" (check endpoint / stage)"; renderRegister(); }
 }
 
-/* ---------------- AUTH: LOGIN ---------------- */
-let loginTab="entity", otpStage=false, loginBusy=false, loginErr="", loginEmail="";
+/* SCREEN: Login (#/login) · module target: auth.js · smart single-login.
+   Resolver (ported from web/src/pages/LoginPage.jsx): no '@' or email-with-dot => ENTITY (OTP);
+   name@entity with no dot => ACTOR (PIN if set, else first-time OTP -> set PIN).
+   Customer is NOT a login -> secondary shop-link entry (Login.Bridge).
+   EP keys: ownerLogin, ownerVerify, actorCheck, actorLogin, setPin, custVerify. See NAMING.md / Linear "Working Canon". */
+let LOGIN = {step:"id", id:"", kind:null, email:"", hasPin:false, busy:false, err:"", cust:false};
+function loginIsActor(id){ const p=id.split("@"); return id.includes("@") && p.length===2 && !p[1].includes("."); }
+function setLoginCust(on){ LOGIN.cust=!!on; LOGIN.err=""; renderLogin(); }
+function loginReset(){ LOGIN={step:"id", id:"", kind:null, email:"", hasPin:false, busy:false, err:"", cust:false}; renderLogin(); }
 function renderLogin(){
-  const tab=loginTab;
+  const L=LOGIN; const muted='style="color:var(--grey);font-weight:400"'; const who='style="font-size:12px;color:var(--grey);margin-bottom:8px"';
   let form="";
-  if(tab==="entity") form = otpStage
-    ? `<label class="fl">OTP sent to your email</label><input class="inp" id="l_otp" placeholder="6-digit code">
-       <button class="btn" id="l_go">${loginBusy?'<span class="spin"></span> Verifying…':"Verify & enter →"}</button>`
-    : `<label class="fl">Email</label><input class="inp" id="l_email" placeholder="you@business.in">
-       <button class="btn" id="l_go">${loginBusy?'<span class="spin"></span> Sending…':"Send OTP →"}</button>`;
-  if(tab==="actor") form = `<label class="fl">Your PIN</label><input class="inp" id="l_pin" placeholder="••••" type="password">
-       <button class="btn" id="l_go">${loginBusy?'<span class="spin"></span> …':"Start shift →"}</button>`;
-  if(tab==="customer") form = `<label class="fl">Shop link / bridge id</label><input class="inp" id="l_bridge" placeholder="rt-001" value="rt-001">
+  if(L.cust){
+    form = `<label class="fl">Shop link / User ID <span ${muted}>(Login.Bridge)</span></label><input class="inp" id="l_bridge" placeholder="your User ID or email" value="${esc(L.id||'')}">
        <label class="fl">Your mobile OTP</label><input class="inp" id="l_cotp" placeholder="6-digit code">
-       <button class="btn" id="l_go">${loginBusy?'<span class="spin"></span> …':"View my orders →"}</button>`;
+       <button class="btn" id="l_go">${L.busy?'<span class="spin"></span> …':"View my orders →"}</button>
+       <div class="swap"><a onclick="setLoginCust(false)">← Back to sign in</a></div>`;
+  } else if(L.step==="id"){
+    form = `<label class="fl">User ID <span ${muted}>(email or 8+ char id · co-assist: name@entity)</span></label><input class="inp" id="l_id" placeholder="you@business.com   ·   or your User ID" value="${esc(L.id)}">
+       <button class="btn" id="l_go">${L.busy?'<span class="spin"></span> …':"Continue →"}</button>`;
+  } else if(L.step==="otp"){
+    form = `<div ${who}>Signing in as <b>${esc(L.id)}</b> · ${L.kind} · <a onclick="loginReset()">change</a></div>
+       <label class="fl">OTP ${L.kind==="entity"?"sent to your email":"from your admin"}</label><input class="inp" id="l_otp" placeholder="6-digit code">
+       <button class="btn" id="l_go">${L.busy?'<span class="spin"></span> Verifying…':"Verify & enter →"}</button>`;
+  } else if(L.step==="pin"){
+    form = `<div ${who}>Signing in as <b>${esc(L.id)}</b> · actor · <a onclick="loginReset()">change</a></div>
+       <label class="fl">Your PIN</label><input class="inp" id="l_pin" placeholder="••••" type="password">
+       <button class="btn" id="l_go">${L.busy?'<span class="spin"></span> …':"Start shift →"}</button>`;
+  } else if(L.step==="setpin"){
+    form = `<div ${who}>First time — set a PIN for <b>${esc(L.id)}</b></div>
+       <label class="fl">Choose a PIN</label><input class="inp" id="l_setpin" placeholder="4–6 digits" type="password">
+       <button class="btn" id="l_go">${L.busy?'<span class="spin"></span> …':"Set PIN & enter →"}</button>`;
+  }
   document.getElementById("root").innerHTML = modeRibbon() + `
   <div class="auth"><div class="card">
-    <div class="top">${logo()}<h1>Sign in</h1><p class="sub">Chit &amp; Bridge — one network, three doors</p></div>
+    <div class="top">${logo()}<h1>Sign in</h1><p class="sub">Chit &amp; Bridge — one field, the system knows who you are</p></div>
     <div class="body">
-      <div class="tabs">
-        <button class="${tab==='entity'?'on':''}" onclick="setLoginTab('entity')">🏢 Owner</button>
-        <button class="${tab==='actor'?'on':''}" onclick="setLoginTab('actor')">🧑‍💼 Actor</button>
-        <button class="${tab==='customer'?'on':''}" onclick="setLoginTab('customer')">🛍️ Customer</button>
-      </div>
       ${form}
-      ${loginErr?`<div class="err">${loginErr}</div>`:""}
-      <div class="hint">${CFG.MODE==="demo"?"<b>Demo mode</b> — any value signs you in so you can walk the flow.":"<b>Live mode</b> — real OTP/PIN against the API."}</div>
-      <div class="swap">New here? <a onclick="go('#/register')">Create an entity</a></div>
+      ${L.err?`<div class="err">${L.err}</div>`:""}
+      <div class="hint">${STAGES[CFG.STAGE].mock?"<b>Web Demo</b> — any value signs you in so you can walk the flow.":"<b>"+STAGES[CFG.STAGE].label+"</b> — real OTP/PIN against the API."}</div>
+      ${L.cust?"":`<div class="swap">New here? <a onclick="go('#/welcome')">Create an entity</a> · <a onclick="setLoginCust(true)">Have a shop link?</a></div>`}
     </div>
   </div></div>`;
   const b=document.getElementById("l_go"); if(b) b.onclick=doLogin;
 }
-function setLoginTab(t){loginTab=t;otpStage=false;loginErr="";renderLogin();}
 async function doLogin(){
-  // capture inputs BEFORE the busy re-render — renderLogin() rebuilds the form and clears typed values.
-  const fEmail=val("l_email"), fOtp=val("l_otp"), fPin=val("l_pin"), fBridge=val("l_bridge")||"rt-001", fCotp=val("l_cotp");
-  if(loginTab==="entity" && !otpStage && fEmail) loginEmail=fEmail;   // remember the email across the OTP stage
-  loginErr=""; loginBusy=true; renderLogin();
+  const L=LOGIN;
+  // capture inputs BEFORE the busy re-render (renderLogin rebuilds the form)
+  const v_id=val("l_id"), v_otp=val("l_otp"), v_pin=val("l_pin"), v_setpin=val("l_setpin"), v_bridge=val("l_bridge")||"rt-001", v_cotp=val("l_cotp");
+  if(L.step==="id" && v_id) L.id=v_id.trim();
+  if(L.cust && v_bridge) L.id=v_bridge.trim();
+  L.err=""; L.busy=true; renderLogin();
   try{
-    if(loginTab==="entity"){
-      if(!otpStage){ await api("ownerLogin",{body:{email:loginEmail}}); loginBusy=false; otpStage=true; return renderLogin(); }
-      const r=await api("ownerVerify",{body:{email:loginEmail,otp:fOtp}});
-      setSession({token:r.token||"t",role:"entity",name:r.name||DEMO.entity.owner,entity:r.entity||DEMO.entity.name,shop:"open"});
-    } else if(loginTab==="actor"){
-      const r=await api("actorLogin",{body:{pin:fPin}});
-      setSession({token:r.token||"t",role:"actor",name:r.name||"Priya",entity:r.entity||DEMO.entity.name,duty:"duty"});
-    } else {
-      await api("custVerify",{params:{bridgeId:fBridge},body:{otp:fCotp}});
-      setSession({token:"t",role:"customer",name:"Asha",entity:DEMO.entity.name,bridgeId:fBridge});
+    if(L.cust){
+      await api("custVerify",{params:{bridgeId:L.id},body:{otp:v_cotp}});
+      setSession({token:"t",role:"customer",name:"Customer",entity:"",bridgeId:L.id});
+      L.busy=false; return go("#/app");
     }
-    loginBusy=false; go("#/app");
-  }catch(e){ loginBusy=false; loginErr="Sign-in failed: "+e.message; renderLogin(); }
+    if(L.step==="id"){
+      const id=L.id;
+      if(loginIsActor(id)){
+        L.kind="actor";
+        const r=await api("actorCheck",{query:{username:id.toLowerCase()}});
+        if(r && r.valid===false){ L.busy=false; L.err="Co-assist not found — check username and entity name."; return renderLogin(); }
+        L.hasPin = !!(r && r.has_pin);
+        L.step = L.hasPin ? "pin" : "otp";
+      } else {
+        L.kind="entity";
+        const r=await api("ownerLogin",{body:{display_name:id, email:id, mode:"login"}});
+        L.email = (r && r.email) || id;
+        L.step="otp";
+      }
+      L.busy=false; return renderLogin();
+    }
+    if(L.step==="otp"){
+      if(L.kind==="actor"){
+        const r=await api("actorLogin",{body:{username:L.id.toLowerCase(), otp:v_otp}});
+        if(r && r.requires_pin_setup){ L.busy=false; L.step="setpin"; return renderLogin(); }
+        setSession({token:r.token||"t",role:"actor",name:r.name||L.id.split("@")[0],entity:r.entity||L.id.split("@")[1]||"",duty:"duty"});
+      } else {
+        const r=await api("ownerVerify",{body:{email:L.email||L.id, otp:v_otp}});
+        setSession(entFromVerify(r, L.id));
+      }
+      L.busy=false; return go("#/app");
+    }
+    if(L.step==="pin"){
+      const r=await api("actorLogin",{body:{username:L.id.toLowerCase(), pin:v_pin}});
+      setSession({token:r.token||"t",role:"actor",name:r.name||L.id.split("@")[0],entity:r.entity||L.id.split("@")[1]||"",duty:"duty"});
+      L.busy=false; return go("#/app");
+    }
+    if(L.step==="setpin"){
+      const r=await api("setPin",{body:{username:L.id.toLowerCase(), pin:v_setpin}});
+      setSession({token:(r&&r.token)||"t",role:"actor",name:(r&&r.name)||L.id.split("@")[0],entity:(r&&r.entity)||L.id.split("@")[1]||"",duty:"duty"});
+      L.busy=false; return go("#/app");
+    }
+  }catch(e){ L.busy=false; L.err="Sign-in failed: "+e.message; renderLogin(); }
 }
+
 function setSession(s){SESSION={...SESSION,...s};}
 function statusControl(role){
   if(role==="actor"){const d=SESSION.duty||"duty";
@@ -553,7 +865,7 @@ function setShop(s){SESSION.shop=s;
 function logout(){SESSION={token:null,role:null,name:null,entity:null,bridgeId:null};STORE=deepClone(DEMO);UI={...UI0,selected:new Set(),aggStates:new Set(["open","act","close"])};applyPrefs();go("#/login");}
 
 /* ---------------- APP SHELL + TASK PANEL ---------------- */
-const UI0 = {nav:"task", folder:"task", sub:"my", state:"open", dtab:"content", sel:null, selectMode:false, selected:new Set(), aggStates:new Set(["open","act","close"]), drawer:false, mdetail:false, purpose:false, loading:false, rows:[], detail:null, actors:[], busy:false, vp:"lap", lw:340, lh:300, lb:null, lbGroup:null, openLines:new Set(), attGroups:{}, filterOpen:false, filter:{}, notifOpen:false, msgFilter:"all", msgChan:"internal", msgType:"all", msgKind:"info", msgcOpen:false, composeOpen:false};
+const UI0 = {nav:"task", folder:"task", sub:"my", state:"open", dtab:"content", sel:null, selectMode:false, selected:new Set(), aggStates:new Set(["open","act","close"]), drawer:false, mdetail:false, purpose:false, orgHelp:false, loading:false, rows:[], detail:null, actors:[], busy:false, vp:"lap", lw:340, lh:300, lb:null, lbGroup:null, openLines:new Set(), attGroups:{}, filterOpen:false, filter:{}, notifOpen:false, msgFilter:"all", msgChan:"internal", msgType:"all", msgKind:"info", msgcOpen:false, composeOpen:false, listHelp:false};
 const MTYPES = {
   info:      {label:"Information",short:"Info", icon:"ℹ️", cls:"info"},
   query:     {label:"Query",      short:"Query",icon:"❓", cls:"query"},
@@ -580,11 +892,12 @@ const MENUS = {
 const PURPOSE = {
   task:"Your work folder — chits that need you. Press a state chip ▸ to advance.",
   order:"Chits you've sent — track them to close.",
-  compose:"Start a new chit — defaults to a counter-sale from your catalogue.",
-  network:"Your governance edges — who you're connected to.",
+  compose:"Author your own chit (a self-chit) — send it to yourself or a counterparty; line items come from your catalogue.",
+  network:"Design your organisation here — your own branches and units, up to the lead node. Internal structure; for other businesses use Connections.",
+  connections:"Connect with other businesses — suppliers, customers, agents. External; for your own structure use Network.",
   suppliers:"Suppliers you buy from — pull their catalogue into a cart.",
   catalogue:"What you sell — products and price.",
-  coassists:"Your actors — shifts, load, assignment.",
+  coassists:"Manage who acts for you — people now; connectors, devices, processes, agents next. For structure use Network.",
   mis:"Numbers — performance across the network.",
   disputes:"Chits flagged for resolution.",
   settings:"Toolbar, saved views, archive schedule, your drive, status table.",
@@ -631,37 +944,238 @@ function togglePurpose(){UI.purpose=!UI.purpose;const el=document.getElementById
 function navTitle(){const all={...Object.fromEntries(Object.values(MENUS).flatMap(m=>[...m.top,...m.rest]).map(x=>[x[0],x[2]]))};return all[UI.nav]||UI.nav;}
 function menuBtn(x){const[key,ic,label]=x;const on=UI.nav===key;const click=key==="compose"?`compose()`:`navTo('${key}')`;return `<button class="${on?'on':''}" onclick="${click}"><span class="ic">${ic}</span>${label}</button>`;}
 function navTo(k){UI.nav=k;UI.drawer=false;UI.mdetail=false;UI.sel=null;UI.detail=null;if(k==="task")UI.folder="task";if(k==="order")UI.folder="order";renderApp();}
-function compose(){ UI.drawer=false;
-  modal(`<div class="mhd"><div class="t">✉️ New chit</div><div class="s">create an order to send</div></div>
-   <div class="mbody">
-     <label class="fl">Receiver — business name</label><input class="inp" id="cc_to" placeholder="e.g. Buyer Co">
-     <label class="fl">Subject</label><input class="inp" id="cc_subj" placeholder="e.g. PO #5001">
-     <label class="fl">Purpose</label><select class="inp" id="cc_purp"><option>order</option><option>invoice</option><option>receipt</option><option>inquiry</option><option>delivery_note</option><option>general</option></select>
-     <label class="fl">Item (optional)</label><input class="inp" id="cc_item" placeholder="particulars, e.g. Teak plank">
-     <div style="display:flex;gap:8px"><input class="inp" id="cc_qty" placeholder="qty" inputmode="numeric"><input class="inp" id="cc_price" placeholder="price" inputmode="numeric"></div>
-     <div class="err" id="cc_err"></div>
-   </div>
-   <div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="pri" onclick="submitCompose()">Send chit</button></div>`);
+/* ATH-119 — Compose / self-chit. Compose = author your own chit (the "Chit"); bridging = addressing it to a counterparty.
+   Schema-driven fields + Send-as (entity|actor) + To (self|counterparty) + catalogue line items + two-copy self-chit fan-out. */
+/* ATH-119 / ATH-116 — caps for every "any number" field, one place, per-entity-overridable later.
+   Unbounded fan-out is a real cost (each recipient = its own copy on the thread). UI enforces; server must re-check. */
+const LIMITS = { to:5, cc:5, for:1, items:50, attachments:10 };
+let CC={items:[], rcpts:[]};
+function ccSchema(){ return (STORE.chitSchema&&STORE.chitSchema.fields)||DEMO.chitSchema.fields; }
+function cfField(f){
+  const id="cf_"+f.field_key; const req=f.required?' <span style="color:#b4453f">*</span>':'';
+  const ph=f.placeholder?` placeholder="${esc(f.placeholder)}"`:'';
+  const inp=f.field_type==="date" ? `<input class="inp" type="date" id="${id}">`
+    : `<input class="inp" id="${id}"${ph}>`;
+  return `<label class="fl">${esc(f.field_name)}${req}</label>${inp}`;
 }
-async function submitCompose(){
-  const to=val("cc_to"), subj=val("cc_subj"), purp=val("cc_purp")||"order", item=val("cc_item"), qty=+val("cc_qty")||0, price=+val("cc_price")||0;
+function ccSendAsOptions(){
+  const ent=(typeof SESSION!=="undefined"&&SESSION.entity)||DEMO.entity.name;
+  let o=`<option value="entity">${esc(ent)} · entity</option>`;
+  (STORE.actors||[]).forEach(a=>{ o+=`<option value="${esc(a.id)}">${esc(a.name)} · ${esc(a.uid||'actor')}</option>`; });
+  return o;
+}
+function compose(){ UI.drawer=false; CC={items:[]};
+  modal(`<div class="mhd"><div class="t">✉️ Compose — author a chit</div><div class="s">create your own record, then bridge it</div></div>
+   <div class="mbody">
+     <div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:11px;padding:10px 12px;font-size:12.5px;color:#6b5a36;line-height:1.5;margin-bottom:10px"><b style="font-family:'Space Grotesk'">Author your own chit — it becomes shared the moment you bridge it.</b> A self-addressed chit is a real chit: one copy in <b>Order</b> (sent), one in <b>Task</b> (received), same thread. <span style="font-family:'Space Mono';font-size:10px;background:#fbeceb;color:#b4453f;border:1px solid #f0c9c6;border-radius:5px;padding:1px 6px">⏳ execute &amp; test pending</span></div>
+     <div style="display:flex;gap:8px;flex-wrap:wrap">
+       <div style="flex:1;min-width:150px"><label class="fl">Send as</label><select class="inp" id="cc_sendas">${ccSendAsOptions()}</select></div>
+     </div>
+     <div style="font-family:'Space Grotesk';font-weight:600;font-size:12px;color:var(--grey);margin:12px 0 4px">Recipients · <b>To</b> acts · <b>CC</b> is informed · <b>For</b> = on behalf of</div>
+     <div style="display:flex;gap:6px">
+       <select class="inp" id="cc_rrole" style="max-width:74px"><option value="to">To</option><option value="cc">CC</option><option value="for">For</option></select>
+       <input class="inp" id="cc_rname" placeholder="Self, a co-assist, or a business" onkeydown="if(event.key==='Enter'){event.preventDefault();ccAddRcpt();}">
+       <button class="composebtn" onclick="ccAddRcpt()">+ Add</button>
+     </div>
+     <button class="composebtn" style="margin-top:6px" onclick="ccAddSelf()">+ Self (own record)</button>
+     <div id="cc_rcpts" style="margin-top:8px"></div>
+     <div id="cc_rcap" style="font-size:11px;color:var(--grey);margin-top:4px"></div>
+     <div style="font-family:'Space Grotesk';font-weight:600;font-size:12px;color:var(--grey);margin:12px 0 2px">Chit fields · from your <b>${esc((STORE.chitSchema||DEMO.chitSchema).schema_name)}</b> schema</div>
+     ${ccSchema().map(cfField).join("")}
+     <div style="font-family:'Space Grotesk';font-weight:600;font-size:12px;color:var(--grey);margin:12px 0 4px">Line items · from your catalogue</div>
+     <div style="display:flex;gap:8px"><select class="inp" id="cc_pick">${(STORE.catalogue||[]).map((p,i)=>`<option value="${i}">${esc(p.particulars)} · ${inr(p.price)}/${esc(p.unit||'unit')}</option>`).join("")}</select><button class="composebtn" onclick="ccAddItem()">+ Add</button></div>
+     <div id="cc_items" style="margin-top:8px"></div>
+     <div id="cc_total" style="text-align:right;font-weight:700;font-size:13px;margin-top:6px"></div>
+     <div class="err" id="cc_err"></div>
+     ${composeHelpBox()}
+   </div>
+   <div class="mfoot"><button onclick="closeModal()">Cancel</button><button onclick="submitCompose(true)">Save draft</button><button class="pri" onclick="submitCompose(false)">Send chit</button></div>`);
+  ccRenderItems(); ccRenderRcpts();
+}
+/* Recipients — To (Act) / CC (Info) / For (on-behalf), capped, flippable */
+function ccIsSelf(name){ const n=String(name||"").trim().toLowerCase(); if(!n)return false; if(n==="self"||n==="me")return true; const ent=String((typeof SESSION!=="undefined"&&SESSION.entity)||DEMO.entity.name).toLowerCase(); if(n===ent)return true; return (STORE.actors||[]).some(a=>String(a.name||"").toLowerCase()===n||String(a.uid||"").toLowerCase()===n); }
+function ccRoleCount(role){ return CC.rcpts.filter(r=>r.role===role).length; }
+function ccAddRcpt(){ const role=val("cc_rrole")||"to"; const name=val("cc_rname"); const e=document.getElementById("cc_err"); if(e)e.textContent="";
+  if(!name){ if(e)e.textContent="Enter a recipient name (or Self)."; return; }
+  if(ccRoleCount(role)>=(LIMITS[role]||99)){ if(e)e.textContent=role.toUpperCase()+" is capped at "+LIMITS[role]+"."; return; }
+  CC.rcpts.push({name:name, role:role, self:ccIsSelf(name)}); const ne=document.getElementById("cc_rname"); if(ne)ne.value=""; ccRenderRcpts(); }
+function ccAddSelf(){ if(ccRoleCount("to")>=(LIMITS.to||99))return; if(CC.rcpts.some(r=>r.self&&r.role==="to"))return; CC.rcpts.push({name:"Self", role:"to", self:true}); ccRenderRcpts(); }
+function ccDelRcpt(i){ CC.rcpts.splice(i,1); ccRenderRcpts(); }
+function ccFlipRcpt(i){ const order=["to","cc","for"]; const r=CC.rcpts[i]; if(!r)return; for(let k=1;k<=order.length;k++){ const nx=order[(order.indexOf(r.role)+k)%order.length]; if(nx===r.role||ccRoleCount(nx)<(LIMITS[nx]||99)){ r.role=nx; break; } } ccRenderRcpts(); }
+function ccRenderRcpts(){ const h=document.getElementById("cc_rcpts");
+  if(h){ h.innerHTML = CC.rcpts.length ? CC.rcpts.map((r,i)=>{ const col=r.role==="to"?"#3F66A6":r.role==="cc"?"#7a5e22":"#5F6B70"; const bg=r.role==="to"?"#EEF3FB":r.role==="cc"?"#F4ECD8":"#EFEBE2"; return `<span style="display:inline-flex;align-items:center;gap:5px;border:0.5px solid var(--line);border-radius:8px;padding:3px 7px;margin:0 5px 5px 0;font-size:11.5px"><span onclick="ccFlipRcpt(${i})" title="Flip role (To/CC/For)" style="cursor:pointer;font-family:'Space Mono';font-size:9.5px;background:${bg};color:${col};border-radius:5px;padding:1px 5px">${r.role.toUpperCase()}</span>${esc(r.name)}${r.self?'<span style="color:#3F66A6;font-size:10px"> · self</span>':''}<span onclick="ccDelRcpt(${i})" style="cursor:pointer;color:#9aa3a7">✕</span></span>`; }).join("") : `<div style="font-size:12px;color:var(--grey)">No recipients yet — add To / CC / For above.</div>`; }
+  const capEl=document.getElementById("cc_rcap"); if(capEl) capEl.textContent="To "+ccRoleCount("to")+"/"+LIMITS.to+" · CC "+ccRoleCount("cc")+"/"+LIMITS.cc+" · For "+ccRoleCount("for")+"/"+LIMITS.for+" — tap a role chip to flip"; }
+function ccAddItem(){ const e=document.getElementById("cc_err"); if(e)e.textContent=""; if(CC.items.length>=(LIMITS.items||999)){ if(e)e.textContent="Line items capped at "+LIMITS.items+"."; return; } const i=+val("cc_pick"); const p=(STORE.catalogue||[])[i]; if(!p)return; CC.items.push({particulars:p.particulars,unit:p.unit||"unit",price:+p.price||0,qty:1}); ccRenderItems(); }
+function ccDelItem(i){ CC.items.splice(i,1); ccRenderItems(); }
+function ccQty(i,v){ if(CC.items[i])CC.items[i].qty=Math.max(0,+v||0); ccRenderTotal(); }
+function ccLineTotal(it){ return (+it.qty||0)*(+it.price||0); }
+function ccRenderItems(){ const h=document.getElementById("cc_items"); if(!h)return;
+  h.innerHTML = CC.items.length ? CC.items.map((it,i)=>`<div style="display:flex;gap:6px;align-items:center;margin-bottom:5px"><span style="flex:1;font-size:12.5px">${esc(it.particulars)}</span><input class="inp" style="width:60px" inputmode="numeric" value="${it.qty}" oninput="ccQty(${i},this.value)"><span style="font-size:11.5px;color:var(--grey);width:64px;text-align:right">${inr(it.price)}</span><span style="font-size:12px;width:80px;text-align:right;font-family:'Space Mono'">${inr(ccLineTotal(it))}</span><button class="composebtn" onclick="ccDelItem(${i})">✕</button></div>`).join("")
+    : `<div style="font-size:12px;color:var(--grey);padding:4px 0">No items yet — pick from the catalogue above.</div>`;
+  ccRenderTotal();
+}
+function ccRenderTotal(){ const t=document.getElementById("cc_total"); if(!t)return; const sum=CC.items.reduce((s,it)=>s+ccLineTotal(it),0); t.textContent=CC.items.length?("Total "+inr(sum)):""; }
+async function submitCompose(isDraft){
   const err=document.getElementById("cc_err"); if(err)err.textContent="";
-  if(!to){ if(err)err.textContent="A receiver business name is required."; return; }
-  const line_items=item?[{particulars:item,quantity:qty,price:price,total:qty*price}]:[];
-  try{ await api("createChit",{body:{receivers:[{display_name:to}],purpose:purp,manual_subject:subj||undefined,line_items}}); closeModal(); toast("Chit sent ✓"); UI.nav="task"; UI.folder="task"; UI.sel=null; UI.detail=null; await loadList(); renderApp(); }
-  catch(e){ if(err)err.textContent=e.message; }
+  const subject=val("cf_subject");
+  const sendasV=val("cc_sendas"); const ent=(typeof SESSION!=="undefined"&&SESSION.entity)||DEMO.entity.name;
+  const actor=(STORE.actors||[]).find(a=>a.id===sendasV); const send_as_label=actor?(actor.name+" ("+(actor.uid||"actor")+")"):ent;
+  const tos=CC.rcpts.filter(r=>r.role==="to");
+  if(!subject){ if(err)err.textContent="Subject is required."; return; }
+  if(!isDraft && !tos.length){ if(err)err.textContent="Add at least one To recipient (or Save draft)."; return; }
+  if(!isDraft && !CC.items.length){ if(err)err.textContent="Add at least one line item to send (or Save draft)."; return; }
+  const schema_values={}; ccSchema().forEach(f=>{ schema_values[f.field_key]=val("cf_"+f.field_key); });
+  const line_items=CC.items.map(it=>({particulars:it.particulars,quantity:+it.qty||0,price:+it.price||0,total:ccLineTotal(it)}));
+  const recipients=CC.rcpts.map(r=>({name:r.name,role:r.role,self:!!r.self}));
+  try{
+    const r=await api("createChit",{body:{recipients,is_draft:!!isDraft,send_as_label,subject,schema_values,line_items}});
+    closeModal(); CC={items:[],rcpts:[]};
+    if(isDraft){ toast("Draft saved ✓"); UI.nav="order"; UI.folder="order"; }
+    else if(r&&r.selfCopies){ toast("Chit bridged — "+r.copies+" copies on the thread ("+r.selfCopies+" to you) ✓"); UI.nav="task"; UI.folder="task"; }
+    else { toast("Chit bridged — "+(r&&r.copies||1)+" copies on the thread ✓"); UI.nav="order"; UI.folder="order"; }
+    UI.sel=null; UI.detail=null; await loadList(); renderApp();
+  }catch(e){ if(err)err.textContent=e.message; }
+}
+/* Compose embedded assistant (ATH-117 pattern) */
+const COMPOSE_HELP=[
+  {q:"What is a self-chit?", a:"Compose creates a self-chit — you author your own record first. It becomes a shared truth the moment you bridge it (address it to a counterparty). With no counterparty it's your own record / draft."},
+  {q:"Why two copies?", a:"Every party keeps its own copy. Address a chit to yourself and it lands as one copy in Order (sent) and one in Task (received) — same thread (originator_id), each with its own status. That's Chit & Bridge's core on a single identity."},
+  {q:"Send as entity or actor?", a:"You can author as the entity itself or as one of its co-assists (actors). Both can author and self-address; the mechanism is identical. The actor acts FOR the entity, which stays the party."},
+  {q:"Where do line items come from?", a:"Items are picked from your catalogue, not free-typed — pick a product, set the quantity; price flows from the catalogue and the total computes. Whatever catalogue exists feeds the picker."},
+  {q:"What's a draft?", a:"A draft is the un-sent state before bridging. Save as draft keeps your authored chit privately; sending it — to self or a counterparty — makes it real and fans out the copies."},
+  {q:"Where do the fields come from?", a:"Compose renders from your entity's schema — the fields your chit type carries (subject, delivery, note) plus your line items. That's how a chit is born: the data definition projected onto the compose screen."},
+];
+function composeHelpBox(){ return `<div style="${_CARD};margin-top:12px"><div style="font-family:'Space Grotesk';font-weight:600;font-size:13px;margin-bottom:2px">Compose assistant <span style="font-size:10.5px;font-family:'Space Mono';background:var(--gold-soft);color:#7a5e22;border-radius:5px;padding:1px 7px">Web Demo · sample answers</span></div><div style="font-size:12.5px;color:var(--grey);margin-bottom:10px">What a self-chit is, why it makes two copies, and how items flow from your catalogue. (Real version: an AI handler over your schema and catalogue.)</div><div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px">${COMPOSE_HELP.map((f,i)=>`<button class="composebtn" onclick="composeAsk(${i})">${esc(f.q)}</button>`).join("")}</div><div style="display:flex;gap:8px"><input class="inp" id="cm_in" placeholder="e.g. why does it appear in both lists?"><button style="${_BTN}" onclick="composeAskFree()">Ask</button></div><div id="cm_ans" style="font-size:13px;color:var(--ink);margin-top:10px;line-height:1.55"></div></div>`; }
+function composeAsk(i){ const f=COMPOSE_HELP[i]; const inp=document.getElementById("cm_in"); if(inp)inp.value=f.q; const o=document.getElementById("cm_ans"); if(o)o.innerHTML="<b>"+esc(f.q)+"</b><br>"+esc(f.a); }
+function composeAskFree(){ const q=(val("cm_in")||"").toLowerCase(); let a;
+  if(/two copies|both list|order.*task|task.*order|sent.*received|fan.?out/.test(q))a=COMPOSE_HELP[1].a;
+  else if(/draft|unsent|un-sent|save/.test(q))a=COMPOSE_HELP[4].a;
+  else if(/item|catalogue|product|line|price|qty|quantity/.test(q))a=COMPOSE_HELP[3].a;
+  else if(/send as|entity|actor|co.?assist|on behalf|behalf/.test(q))a=COMPOSE_HELP[2].a;
+  else if(/field|schema|blueprint|born|subject|delivery|note/.test(q))a=COMPOSE_HELP[5].a;
+  else if(/self.?chit|what is|bridge|shared|own record|compose/.test(q))a=COMPOSE_HELP[0].a;
+  else if(q.trim())a="Tell me what you're authoring — to self or a counterparty — and I'll show how the copies and statuses work.";
+  else a="Pick a question above, or ask your own.";
+  const o=document.getElementById("cm_ans"); if(o)o.innerHTML=a?("<b>"+esc(val("cm_in"))+"</b><br>"+esc(a)):"";
+}
+/* ATH-117 — shared embedded-assistant engine + per-menu knowledge packs.
+   One handler (menuAssist / mAsk / mAskFree); each menu supplies a distinguishing message + Q&A pack. */
+const HELP_PACKS = {
+  task:{ msg:"<b>Task — chits received.</b> Work others have addressed to you: orders to fulfil, queries to answer, disputes to act on. (Order is what you've sent.)", qa:[
+    {q:"What lands in Task?", a:"Every chit a counterparty addresses TO you — orders to fulfil, queries to answer, disputes to resolve. It's your received inbox; Order is the sent side."},
+    {q:"How do I act on one?", a:"Open it to advance its status (open → in progress → closed), assign it to a co-assist, message the other party, or raise/resolve a dispute. Each action is recorded on the shared chit."},
+    {q:"Task vs Order?", a:"Same chit, two copies: the receiver's copy sits in Task, the sender's in Order. Each side carries its own status — the Chit & Bridge two-copy model."},
+    {q:"Who can see my tasks?", a:"Your co-assists, scoped by their grant. Assignment and visibility follow your Settings — pull/push, all-visible, and max load."},
+    {q:"Why is one flagged priority?", a:"A ⚑ means the customer flagged it, or you re-prioritised it. Priority is internal routing in your queue — it doesn't change the other party's copy."} ]},
+  order:{ msg:"<b>Order — chits sent.</b> What you've authored and bridged to a counterparty (or to yourself). Drafts live here until you bridge them. (Task is what you've received.)", qa:[
+    {q:"What's in Order?", a:"Chits you've sent — your copy of each deal you originated. Self-chits show both here and in Task; drafts stay here until bridged."},
+    {q:"What's a draft?", a:"An authored-but-unsent chit. Save a draft in Compose, then send it later to bridge it into a real chit and fan out the copies."},
+    {q:"Can I send to myself?", a:"Yes — a self-chit. It lands once in Order (sent) and once in Task (received), same thread, each with its own status."},
+    {q:"How do I start one?", a:"Use Compose — pick Send-as (entity or actor), To (self or a counterparty), add catalogue line items, then Send."} ]},
+  suppliers:{ msg:"<b>Suppliers — businesses you buy from.</b> Add a supplier by their User ID to pull their catalogue and place orders. (Suppliers are other businesses — Connections; your own branches are Network.)", qa:[
+    {q:"How do I add a supplier?", a:"Enter the supplier's User ID (8+ characters or email) and add them. They appear here so you can pull their catalogue into an order."},
+    {q:"Supplier or branch?", a:"A supplier is a different business you buy from — a Connection. A branch is part of your own business — Network. Same language, different relationship."},
+    {q:"Do they have to approve?", a:"Adding a supplier to your list is your own reference — no consent needed. Placing an order is a chit, which they receive and act on."},
+    {q:"Where do orders to them go?", a:"An order you send a supplier is a chit — it sits in your Order list and in their Task list, same thread."} ]},
+  catalogue:{ msg:"<b>Catalogue — what you sell.</b> Your products and prices. These feed Compose line items and, when public, your storefront. (This is your own list; Suppliers is what you buy.)", qa:[
+    {q:"What's the catalogue for?", a:"It's your products and prices. Compose pulls line items from it, and a public catalogue is what customers see in your storefront."},
+    {q:"How do items reach a chit?", a:"In Compose, the line-item picker reads this catalogue — pick a product, set quantity; price flows from here and the total computes."},
+    {q:"Is it visible to customers?", a:"Only if you make it public. A catalogue is private by default; visibility is private / restricted / public, set per schema."},
+    {q:"Catalogue vs line items?", a:"Deliberately distinct: catalogue items are the products you offer; line items are the lines on a specific chit. One feeds the other."} ]},
+  disputes:{ msg:"<b>Disputes — a flag on a chit, not a lock.</b> Raise or resolve issues on a deal; the chit keeps moving, but it can't be deleted while a dispute is open and won't complete until it's resolved.", qa:[
+    {q:"Does a dispute freeze the chit?", a:"No — it's a flag, not a lock. The lifecycle continues, but the chit can't be deleted while a dispute is open, and it won't complete until the dispute is resolved."},
+    {q:"Who can resolve it?", a:"The party who raised it resolves it, and a resolution note is required. Disputes against you wait on the raiser."},
+    {q:"What are the categories?", a:"Quality, delivery, docs and the like — a short reason describes the specifics. Categories drive routing and reporting."},
+    {q:"Raised by me vs against me?", a:"The top list is disputes you raised (you can resolve those); the second is disputes against you or awaiting the other side."} ]},
+  mis:{ msg:"<b>MIS — your numbers at a glance.</b> Chits, deal value, status mix, open disputes, co-assists and suppliers — computed live from your data.", qa:[
+    {q:"Where do these come from?", a:"They're computed live from your chits, disputes, co-assists and suppliers — a client-side roll-up, not a separate report you maintain."},
+    {q:"What's deal value?", a:"The summed amount across your chits. Status counts (open / in progress / closed) show where work sits."},
+    {q:"Can I drill in?", a:"Full reporting and filters are upcoming. For now MIS is the at-a-glance summary; the lists hold the detail."} ]},
+  profile:{ msg:"<b>Profile — your business identity.</b> Your User ID, the name and details others see, and your shop status. Your internal bridge_id stays hidden.", qa:[
+    {q:"What's my User ID?", a:"Your external identity — an 8+ character id or your email. Others connect to you by it. Your internal bridge_id is plumbing and isn't shown."},
+    {q:"What is shop status?", a:"Your customer-facing open sign — open, closed or away — separate from account status and catalogue visibility."},
+    {q:"Who sees this?", a:"Counterparties see your public details (name, User ID, what you choose to share). Sensitive internal identifiers stay hidden."} ]},
+  settings:{ msg:"<b>Settings — how work routes to your team.</b> Assignment model, task limits and visibility for your co-assists.", qa:[
+    {q:"Pull, push or both?", a:"Pull lets co-assists take tasks; push assigns to them; both allows either. It sets how work reaches your team."},
+    {q:"What's max tasks per actor?", a:"A load ceiling per co-assist, so no one is over-assigned. Combined with shift status, it shapes routing."},
+    {q:"All tasks visible?", a:"If on, every co-assist sees the full queue; if off, they see what's theirs. Use it to match how open your floor is."} ]},
+};
+function menuAssist(key){ const p=HELP_PACKS[key]; if(!p) return "";
+  return `<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:12px;padding:11px 13px;margin-bottom:11px;font-size:12.5px;color:#6b5a36;line-height:1.5">${p.msg}</div>`+
+    `<div style="${_CARD}"><div style="font-family:'Space Grotesk';font-weight:600;font-size:13px;margin-bottom:2px">Assistant <span style="font-size:10.5px;font-family:'Space Mono';background:var(--gold-soft);color:#7a5e22;border-radius:5px;padding:1px 7px">Web Demo · sample answers</span></div><div style="font-size:12.5px;color:var(--grey);margin-bottom:10px">What this menu is for and how to use it. (Real version: an AI handler reading your live data.)</div><div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px">${p.qa.map((f,i)=>`<button class="composebtn" onclick="mAsk('${key}',${i})">${esc(f.q)}</button>`).join("")}</div><div style="display:flex;gap:8px"><input class="inp" id="m_in_${key}" placeholder="Ask about ${esc(key)}…"><button style="${_BTN}" onclick="mAskFree('${key}')">Ask</button></div><div id="m_ans_${key}" style="font-size:13px;color:var(--ink);margin-top:10px;line-height:1.55"></div></div>`;
+}
+function mAsk(key,i){ const p=HELP_PACKS[key]; if(!p)return; const f=p.qa[i]; const inp=document.getElementById("m_in_"+key); if(inp)inp.value=f.q; const o=document.getElementById("m_ans_"+key); if(o)o.innerHTML="<b>"+esc(f.q)+"</b><br>"+esc(f.a); }
+function mAskFree(key){ const p=HELP_PACKS[key]; if(!p)return; const raw=val("m_in_"+key)||""; const q=raw.toLowerCase(); let best=p.qa[0], score=0;
+  p.qa.forEach(f=>{ const words=f.q.toLowerCase().split(/\W+/).filter(w=>w.length>3); let s=0; words.forEach(w=>{ if(q.includes(w))s++; }); if(s>score){score=s;best=f;} });
+  const o=document.getElementById("m_ans_"+key); if(!o)return;
+  o.innerHTML = raw.trim()? ("<b>"+esc(raw)+"</b><br>"+esc(score?best.a:("Closest I have: "+best.a))) : "Pick a question above, or ask your own.";
+}
+/* ATH-117 — full assistance page for the rich Task/Order surfaces (capability map by goal). Built from the panel's real controls. */
+const ASSIST_PAGES = {
+  task:{ intro:"The Task panel is where you work the chits addressed to you — find the right one, act on it, hand it to your team, talk on the record, and keep the evidence. One shared chit per deal; every action is recorded on it.", groups:[
+    {title:"Find the right work", rows:[
+      ["Task / Order","Received vs sent. Task is what others addressed to you; Order is what you sent."],
+      ["My / All Task","As a co-assist, switch between your queue and the whole floor."],
+      ["Open · Act · Close","State tabs with live counts — see where work sits by lifecycle stage."],
+      ["Search · Filter","Jump to a chit, party or item; narrow by party, kind or priority."] ]},
+    {title:"Act on a chit", rows:[
+      ["Change status","Advance the lifecycle: Open to In progress to Closed."],
+      ["Priority","Set Urgent / Normal / Low (with a reason) to order your queue."],
+      ["Customer flag","See and toggle what the customer flagged as priority."],
+      ["Raise / resolve dispute","Flag an issue — the chit keeps moving, but can't be deleted while open."],
+      ["Delete","Move a chit to trash."] ]},
+    {title:"Coordinate your team", rows:[
+      ["Assign to co-assist","Hand a chit to a co-assist with a priority and a reason — recorded on the chit."],
+      ["Select mode","Tick chits — or whole states — to act on many at once."],
+      ["Aggregate · Sum","Choose states and read the running total value; bulk-assign the selection."] ]},
+    {title:"Communicate on the record", rows:[
+      ["Internal / External","A note for your team, or a message the other party sees."],
+      ["Message types","Tag each as Information, Query, Decision, Risk, Assumption, Issue, Dependency or Action."],
+      ["Lean / Governance set","Surface just info-query-action, or the full eight — to match your team's rigour."] ]},
+    {title:"Keep the evidence", rows:[
+      ["Line items","Particulars, qty times price equals total, each with its own attachments."],
+      ["Attachments","View photos, docs and clips in a lightbox — internal or external scope."],
+      ["RAID report","Roll up Risks, Assumptions, Issues and Dependencies from the thread."],
+      ["Proof status","Track the delivery / evidence state of the chit."] ]} ]},
+  order:{ intro:"The Order panel is your sent side — the chits you've authored and bridged. Track each one, talk on the record, and keep the evidence. Drafts live here until you bridge them.", groups:[
+    {title:"Find the right sent chit", rows:[
+      ["Order / Task","Sent vs received. Order is what you sent; Task is what came to you."],
+      ["Open · Act · Close","State tabs with live counts — see where each sent chit stands."],
+      ["Search · Filter","Jump to a chit, party or item; narrow by party, kind or priority."] ]},
+    {title:"Author and track", rows:[
+      ["Compose","Author a new chit — Send-as entity or co-assist, To self or a counterparty."],
+      ["Drafts","An un-sent chit waits here; send it to bridge it and fan out the copies."],
+      ["Change status","Advance the lifecycle as the deal progresses."],
+      ["Raise / resolve dispute","Flag an issue on a sent chit without locking it."] ]},
+    {title:"Communicate on the record", rows:[
+      ["Internal / External","A note for your team, or a message the counterparty sees."],
+      ["Message types","Information, Query, Decision, Risk, Assumption, Issue, Dependency, Action."],
+      ["Lean / Governance set","Surface a lean set or the full eight, per your team."] ]},
+    {title:"Keep the evidence", rows:[
+      ["Line items","Particulars, qty times price equals total, each with its own attachments."],
+      ["Attachments","View photos, docs and clips — internal or external scope."],
+      ["Proof status","Track the delivery / evidence state."] ]} ]},
+};
+function assistPage(key){ const p=ASSIST_PAGES[key]; if(!p) return menuAssist(key);
+  const groups=p.groups.map(g=>`<div style="${_CARD}"><div style="font-family:'Space Grotesk';font-weight:600;font-size:12.5px;color:var(--ink);display:flex;align-items:center;gap:7px;margin-bottom:6px"><span style="color:var(--blue)">▸</span>${esc(g.title)}</div>${g.rows.map((r,i)=>`<div style="display:flex;gap:9px;align-items:baseline;padding:4px 0;${i?'border-top:0.5px solid #F0ECE2':''}"><span style="font-family:'Space Mono';font-size:11px;color:var(--blue);min-width:118px;flex-shrink:0">${esc(r[0])}</span><span style="font-size:12px;color:var(--ink);line-height:1.5">${esc(r[1])}</span></div>`).join("")}</div>`).join("");
+  return `<div style="background:var(--gold-soft);border:0.5px solid var(--gold-line);border-radius:11px;padding:9px 11px;font-size:12px;color:#6b5a36;line-height:1.5;margin-bottom:9px"><b style="font-family:'Space Grotesk'">${key==='order'?'Order':'Task'} — what it is &amp; how to use it</b> <span style="font-size:9.5px;font-family:'Space Mono';background:#fff;color:#7a5e22;border:0.5px solid var(--gold-line);border-radius:5px;padding:1px 6px">assistance page</span><div style="margin-top:4px">${esc(p.intro)}</div></div>${groups}<div style="${_CARD}"><div style="font-size:11.5px;color:var(--grey);margin-bottom:6px">Ask the assistant <span style="font-size:9.5px;font-family:'Space Mono';background:var(--gold-soft);color:#7a5e22;border-radius:5px;padding:1px 6px">web demo</span></div><div style="display:flex;gap:8px"><input class="inp" id="m_in_${key}" placeholder="Ask about ${esc(key)}…"><button style="${_BTN}" onclick="mAskFree('${key}')">Ask</button></div><div id="m_ans_${key}" style="font-size:13px;color:var(--ink);margin-top:9px;line-height:1.55"></div></div>`;
 }
 function addActorModal(){
-  modal(`<div class="mhd"><div class="t">🧑‍💼 Add actor</div><div class="s">staff who can handle deals</div></div>
+  const ent=(typeof SESSION!=="undefined"&&SESSION.entity)||DEMO.entity.name;
+  const dh=defActorHandle(); const uid=entUid();
+  modal(`<div class="mhd"><div class="t">🧑‍💼 Add co-assist</div><div class="s">someone who acts for you</div></div>
    <div class="mbody"><label class="fl">Name</label><input class="inp" id="ac_name" placeholder="e.g. Priya">
      <label class="fl">Login key (min 4 chars)</label><input class="inp" id="ac_key" placeholder="e.g. priya1">
+     <label class="fl">Handle</label><input class="inp" id="ac_handle" value="${esc(dh)}" oninput="acIdPrev()" placeholder="e.g. priya">
+     <div style="font-size:11.5px;color:var(--grey);margin-top:6px">Co-assist ID: <span id="ac_idprev" style="font-family:'Space Mono';font-size:11.5px;color:#3F66A6">${esc(coId(dh))}</span></div>
+     <div style="font-size:11.5px;color:var(--grey);margin-top:8px;line-height:1.5">Registered under <b>${esc(ent)}</b> <span style="font-family:'Space Mono';font-size:11px;color:var(--grey)">(${esc(uid)})</span> · starts as <b>human · act · on shift</b>. Engagement &amp; scope are set after (next iteration).</div>
      <div class="err" id="ac_err"></div></div>
    <div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="pri" onclick="submitActor()">Create</button></div>`);
 }
 async function submitActor(){
-  const name=val("ac_name"), key=val("ac_key"); const err=document.getElementById("ac_err"); if(err)err.textContent="";
+  const name=val("ac_name"), key=val("ac_key"); const handle=val("ac_handle")||defActorHandle(); const err=document.getElementById("ac_err"); if(err)err.textContent="";
   if(!name||key.length<4){ if(err)err.textContent="Name and a key of 4+ chars are required."; return; }
-  try{ await api("addActor",{body:{display_name:name,actor_key:key}}); closeModal(); toast("Actor "+name+" added ✓"); if(UI.nav==="coassists")loadCoassists(); }
+  try{ await api("addActor",{body:{display_name:name,actor_key:key,handle:handle,user_id:coId(handle)}}); closeModal(); toast("Co-assist "+name+" registered as "+coId(handle)+" ✓"); if(UI.nav==="coassists")loadCoassists(); }
   catch(e){ if(err)err.textContent=e.message; }
 }
 /* ---------------- DISPUTES screen ---------------- */
@@ -674,7 +1188,7 @@ async function loadDisputes(){
       <div style="font-size:13px;color:var(--ink);margin:5px 0"><b>${cap(d.category||'')}</b> — ${d.reason||''}</div>
       <div style="font-size:11.5px;color:var(--grey)">raised by ${d.raised_by_display_name||'—'} · ${d.scope||''}${d.resolution_note?(' · ✓ '+d.resolution_note):''}</div>
       ${canResolve&&d.status==='open'?`<div style="margin-top:8px"><button class="composebtn" onclick="resolveDispute('${d.chit_id}','${d.dispute_id}')">Resolve</button></div>`:''}</div>`;
-    host.innerHTML = `<div class="sec" style="font-size:12px;color:var(--grey);margin:4px 0">Raised by you (${mine.length})</div>${mine.map(d=>card(d,true)).join("")||'<div style="color:var(--grey);font-size:13px;padding:6px">None.</div>'}
+    host.innerHTML = `${menuAssist('disputes')}<div class="sec" style="font-size:12px;color:var(--grey);margin:4px 0">Raised by you (${mine.length})</div>${mine.map(d=>card(d,true)).join("")||'<div style="color:var(--grey);font-size:13px;padding:6px">None.</div>'}
       <div class="sec" style="font-size:12px;color:var(--grey);margin:14px 0 4px">Against you / awaiting (${other.length})</div>${other.map(d=>card(d,false)).join("")||'<div style="color:var(--grey);font-size:13px;padding:6px">None.</div>'}`;
   }catch(e){ host.innerHTML=`<div class="empty"><div class="t">Couldn't load disputes</div><div>${e.message}</div></div>`; }
 }
@@ -698,7 +1212,7 @@ const _BTN='border:0;border-radius:9px;padding:0 14px;color:#fff;background:var(
 function profileScreen(){ return scr("👤 Profile","profbody"); }
 async function loadProfile(){ const h=document.getElementById("profbody"); if(!h)return;
   try{ const e=(await api("me"))||{};
-    h.innerHTML=`<div style="${_CARD}"><div class="kv"><b>Name</b> · ${esc(e.display_name)}</div><div class="kv"><b>Bridge ID</b> · ${esc(e.bridge_id)}</div><div class="kv"><b>Email</b> · ${esc(e.email)}</div>
+    h.innerHTML=`${menuAssist('profile')}<div style="${_CARD}"><div class="kv"><b>Name</b> · ${esc(e.display_name)}</div><div class="kv"><b>User ID</b> · ${esc(e.bridge_id)}</div><div class="kv"><b>Email</b> · ${esc(e.email)}</div>
       <label class="fl">GSTN</label><input class="inp" id="pf_gstn" value="${esc(e.gstn)}">
       <label class="fl">Address</label><input class="inp" id="pf_addr" value="${esc(e.address)}">
       <label class="fl">Shop status</label><select class="inp" id="pf_bs">${opt(["open","closed","away"],e.business_status)}</select>
@@ -710,7 +1224,7 @@ async function saveProfile(){ const x=document.getElementById("pf_err"); if(x)x.
 function settingsScreen(){ return scr("⚙️ Settings","setbody"); }
 async function loadSettings(){ const h=document.getElementById("setbody"); if(!h)return;
   try{ const s=(await api("getSettings"))||{};
-    h.innerHTML=`<div style="${_CARD}">
+    h.innerHTML=`${menuAssist('settings')}<div style="${_CARD}">
       <label class="fl">Assignment model</label><select class="inp" id="st_am">${opt(["pull","push","both"],s.assignment_model||"both")}</select>
       <label class="fl">Default max tasks per actor</label><input class="inp" id="st_mt" inputmode="numeric" value="${esc(s.default_max_tasks||10)}">
       <label class="fl" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="st_av" ${s.all_task_visible?'checked':''}> All tasks visible to all actors</label>
@@ -720,14 +1234,127 @@ async function loadSettings(){ const h=document.getElementById("setbody"); if(!h
 async function saveSettings(){ const x=document.getElementById("st_err"); if(x)x.textContent="";
   try{ await api("saveSettings",{body:{assignment_model:val("st_am"),default_max_tasks:+val("st_mt")||10,all_task_visible:document.getElementById("st_av").checked,auto_return_on_short_break:document.getElementById("st_ar").checked}}); toast("Settings saved ✓"); }catch(e){ if(x)x.textContent=e.message; } }
 /* NETWORK */
-function networkScreen(){ return scr("🔗 Network","netbody"); }
+function networkScreen(){ return scr("🔗 Network — internal architecture","netbody"); }
 async function loadNetwork(){ const h=document.getElementById("netbody"); if(!h)return;
-  try{ const [cl,pn]=await Promise.all([api("connList"),api("connPending")]); const conns=cl||[], reqs=pn||[];
-    h.innerHTML=`<div style="${_CARD}"><label class="fl">Connect a business (name or bridge id)</label><div style="display:flex;gap:8px"><input class="inp" id="nw_to" placeholder="Buyer Co or CB…"><button style="${_BTN}" onclick="connectReq()">Request</button></div><div class="err" id="nw_err"></div></div>
-      <div class="sec" style="font-size:12px;color:var(--grey);margin:8px 0 4px">Pending requests (${reqs.length})</div>${reqs.map(r=>`<div style="${_CARD}"><b>${esc(r.from_display_name||r.display_name||'—')}</b> · ${esc(r.bridge_id||'')}<div style="margin-top:6px"><button class="composebtn" onclick="respondConn('${r.connection_id||r.id}','accept')">Accept</button> <button class="composebtn" onclick="respondConn('${r.connection_id||r.id}','reject')">Reject</button></div></div>`).join("")||'<div style="color:var(--grey);font-size:13px;padding:6px">None.</div>'}
-      <div class="sec" style="font-size:12px;color:var(--grey);margin:12px 0 4px">Connections (${conns.length})</div>${conns.map(c=>`<div style="${_CARD}"><b>${esc(c.display_name||c.other_display_name||'—')}</b> · ${esc(c.bridge_id||'')} <span class="optchip on">${esc(c.status||'active')}</span></div>`).join("")||'<div style="color:var(--grey);font-size:13px;padding:6px">No connections yet.</div>'}`;
-  }catch(e){ h.innerHTML=scrErr(e); } }
-async function connectReq(){ const x=document.getElementById("nw_err"); if(x)x.textContent=""; const q=val("nw_to"); if(!q){ if(x)x.textContent="Enter a business name or bridge id."; return; }
+  try{
+    const self = await api("netLookup",{query:{bridgeId:SESSION.bridgeId||""}}).catch(()=>null);
+    if(!self || !self.id){ h.innerHTML = netNotInModel(SESSION.bridgeId); return; }
+    const [tree,edges] = await Promise.all([ api("netSubtree",{params:{id:self.id}}), api("netConnections",{params:{id:self.id}}) ]);
+    h.innerHTML = netView(self, tree||[], edges||[]);
+  }catch(e){ h.innerHTML=scrErr(e); }
+}
+const ORG_HELP = [
+  {q:"I have multiple branches", a:"Model each branch as a sub-entity: register it, then from your head office use Connect a sub-entity with the branch's bridge id, and have the branch approve. Each branch can have its own counters beneath it — a tree, not a flat list."},
+  {q:"What's the lead node?", a:"Your lead node is the top of your tree — usually your head office. Everything links upward to it, and a node can have only one live parent (tree-only)."},
+  {q:"Where do I set actors?", a:"Actors (Co-Assist) belong to a node — your head office or a branch. Add them in Co-Assist and they're scoped to that node here. A branch can have many actors; each works within their node."},
+  {q:"What access do actors get?", a:"An actor acts FOR the owner — the owner stays the party. Their access is a scoped grant: a capacity (e.g. create chits, edit catalogue) and how deep in the tree it reaches. Default-deny — they only get what you grant, checked live on every action."},
+  {q:"How do branches & actors coordinate?", a:"Each branch runs its own chits with its own actors. A head-office actor can be granted down across branches; a branch actor stays scoped to their branch. You can only delegate access you hold."},
+  {q:"If a branch leaves?", a:"On Disconnect, any access granted from outside that branch is cascade-revoked, and the paths and grant scopes re-stamp in one transaction. Open chits settle first."},
+  {q:"Branch or supplier?", a:"A branch is part of YOUR business — Network. A supplier is a different business you buy from — Connections. Same language, different relationship."},
+  {q:"How do I create a branch?", a:"Create branches one at a time: name the branch (we register it as a sub-entity), link it to its parent, then approve. You can't build the whole tree at once — each node is created, then connected, in order. Repeat down the tree."},
+  {q:"Build a whole new structure?", a:"Starting from scratch? List your branches and their levels, and we can register and link them in order automatically — that's an upcoming automation. For now, add them one at a time with Create branch."},
+  {q:"Internal or customer-facing?", a:"Every node is internal-B2B by default (mode b2b). A node turns customer-facing (b2c) only when its mode is b2c — which needs a customer-facing plan — plus a public catalogue and the shop's open sign on. One network runs one shape: you don't mix business and consumer in the same network."},
+];
+function orgBanner(){ return `<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:12px;padding:12px 14px;margin-bottom:12px;font-size:13px;color:#6b5a36;line-height:1.5"><b style="font-family:'Space Grotesk'">Design your organisation here.</b> Add your own branches, units and counters as sub-entities, up to your lead node — your <b>internal</b> structure. Place your <b>actors (Co-Assist)</b> at each node; their access flows through the tree. To deal with other businesses, use <b>Connections</b>.</div>${orgHelpBox()}`; }
+function orgHelpBox(){ return `<div style="${_CARD}"><div style="font-family:'Space Grotesk';font-weight:600;font-size:13px;margin-bottom:2px">Structure &amp; access assistant <span style="font-size:10.5px;font-family:'Space Mono';background:var(--gold-soft);color:#7a5e22;border-radius:5px;padding:1px 7px">Web Demo · sample answers</span></div><div style="font-size:12.5px;color:var(--grey);margin-bottom:10px">How your branches and actors coordinate — where to set actors, and what access they get. (Real version: an AI handler that reads your structure, employees and grants.)</div><div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px">${ORG_HELP.map((f,i)=>`<button class="composebtn" onclick="orgAsk(${i})">${esc(f.q)}</button>`).join("")}</div><div style="display:flex;gap:8px"><input class="inp" id="org_in" placeholder="e.g. where do my branch managers fit?"><button style="${_BTN}" onclick="orgAskFree()">Ask</button></div><div id="org_ans" style="font-size:13px;color:var(--ink);margin-top:10px;line-height:1.55"></div></div>`; }
+function orgAsk(i){ const f=ORG_HELP[i]; const inp=document.getElementById("org_in"); if(inp)inp.value=f.q; const o=document.getElementById("org_ans"); if(o)o.innerHTML="<b>"+esc(f.q)+"</b><br>"+esc(f.a); }
+function orgAskFree(){ const q=(val("org_in")||"").toLowerCase(); let a;
+  if(/scratch|whole|automate|auto.?build|all at once|bulk|entire/.test(q))a=ORG_HELP[8].a;
+  else if(/create|add a branch|register|how.*(create|add)|set up a branch/.test(q))a=ORG_HELP[7].a;
+  else if(/coordinate|together|across branch|delegate|head office.*branch|branch.*head/.test(q))a=ORG_HELP[4].a;
+  else if(/actor|staff|employee|manager|co.?assist|who works|where.*(set|put|place)/.test(q))a=ORG_HELP[2].a;
+  else if(/access|privilege|grant|permission|capacity|can do|allowed|rights/.test(q))a=ORG_HELP[3].a;
+  else if(/leave|remove|disconnect|detach|exit|revoke/.test(q))a=ORG_HELP[5].a;
+  else if(/b2c|customer.?facing|internal.?b2b|storefront|consumer|public catalogue|open sign|sell.*customer/.test(q))a=ORG_HELP[9].a;
+  else if(/supplier|customer|external|connection/.test(q))a=ORG_HELP[6].a;
+  else if(/branch|multiple|location|outlet|sub.?entity/.test(q))a=ORG_HELP[0].a;
+  else if(/lead|head|top|root|parent/.test(q))a=ORG_HELP[1].a;
+  else if(q.trim())a="Tell me how your business is laid out and who works where, and I'll show how to model it — and remember, branches are added one at a time.";
+  else a="Ask me how to structure your organisation, create branches, set actors, and what access they get.";
+  const o=document.getElementById("org_ans"); if(o)o.innerHTML=esc(a); }
+function netStChip(s){ return `<span class="optchip ${s==='active'?'on':(s==='suspended'?'brk':'')}">${esc(s)}</span>`; }
+const NET_MODELS = {
+  b2b:{ self:{id:"e_self", bridgeId:"agg.main", name:"Aggregator", mode:"b2b", claimed:true}, reg:{},
+    nodes:[ {id:"e_self",bridge_id:"agg.main",name:"Aggregator",depth:0,act:1,cap:"owner"},
+            {id:"d1",bridge_id:"distrib.one",name:"Distributor",depth:1,act:2,cap:"chit.create"},
+            {id:"r1",bridge_id:"retail.one",name:"Retailer",depth:2,act:1,cap:"chit.create"} ],
+    edges:[ {id:"m1",parent_name:"Aggregator",child_name:"Distributor",state:"active"},
+            {id:"m2",parent_name:"Distributor",child_name:"Retailer",state:"active"} ] },
+  b2b2c:{ self:{id:"e_self", bridgeId:"factory.main", name:"Iron-Gate Factory", mode:"b2b", claimed:true}, reg:{},
+    nodes:[ {id:"e_self",bridge_id:"factory.main",name:"Iron-Gate Factory",depth:0,act:1,cap:"owner"},
+            {id:"sf",bridge_id:"shop@irongate.com",name:"Storefront",depth:1,act:1,cap:"catalogue.write",mode:"b2c"},
+            {id:"cut",bridge_id:"cutting.unit",name:"Cutting",depth:1,act:2,cap:"chit.create"},
+            {id:"weld",bridge_id:"welding.unit",name:"Welding",depth:1,act:2,cap:"chit.create"},
+            {id:"paint",bridge_id:"painting.unit",name:"Painting",depth:1,act:1,cap:"chit.create"},
+            {id:"disp",bridge_id:"dispatch.unit",name:"Dispatch",depth:1,act:1,cap:"chit.create"} ],
+    edges:[ {id:"f1",parent_name:"Iron-Gate Factory",child_name:"Storefront",state:"active"},
+            {id:"f2",parent_name:"Iron-Gate Factory",child_name:"Cutting",state:"active"},
+            {id:"f3",parent_name:"Iron-Gate Factory",child_name:"Welding",state:"active"},
+            {id:"f4",parent_name:"Iron-Gate Factory",child_name:"Painting",state:"active"} ] },
+  b2c:{ self:{id:"e_self", bridgeId:"shop@retail.com", name:"Retail Shop", mode:"b2c", claimed:true}, reg:{},
+    nodes:[ {id:"e_self",bridge_id:"shop@retail.com",name:"Retail Shop",depth:0,act:1,cap:"owner",mode:"b2c"},
+            {id:"c1",bridge_id:"counter.one",name:"Counter 1",depth:1,act:1,cap:"chit.create"},
+            {id:"c2",bridge_id:"counter.two",name:"Counter 2",depth:1,act:1,cap:"chit.create"} ],
+    edges:[ {id:"s1",parent_name:"Retail Shop",child_name:"Counter 1",state:"active"},
+            {id:"s2",parent_name:"Retail Shop",child_name:"Counter 2",state:"active"} ] }
+};
+const NET_MODEL_NOTE = {
+  sample:"A generic org tree — head office, branches, a counter. Build it with the create flow below.",
+  b2b:"Distribution chain: aggregator \u2192 distributor \u2192 retailer. All internal-B2B; a chit routes down one chain (NET-02).",
+  b2b2c:"Storefront (b2c) on a b2b make tree \u2014 the iron-gate case. Orders land at the Storefront and fan out to internal units; the fan-out is a future shape (ATH-116).",
+  b2c:"A single shopfront (b2c) with internal counters. Customers buy directly; no upstream distribution."
+};
+function loadNetModel(key){ UI.netModel=key; STORE.net = (key==="sample")?deepClone(DEMO.net):deepClone(NET_MODELS[key]); loadNetwork(); }
+function netModelBar(){ const cur=UI.netModel||"sample";
+  const opt=(k,l)=>`<button class="composebtn" style="${cur===k?'background:var(--ink);color:#fff;border-color:var(--ink)':''}" onclick="loadNetModel('${k}')">${l}</button>`;
+  return `<div style="${_CARD};border-style:dashed"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><div style="font-size:12px;font-weight:600">Network model showcase <span style="font-size:10px;font-family:'Space Mono';background:#fbeceb;color:#b4453f;border:1px solid #f0c9c6;border-radius:5px;padding:1px 6px">\u23f3 execute &amp; test pending</span></div><div style="display:flex;gap:6px;flex-wrap:wrap">${opt("sample","Sample org")}${opt("b2b","Pure B2B")}${opt("b2b2c","B2B2C")}${opt("b2c","Pure B2C")}</div></div><div style="font-size:11.5px;color:var(--grey);margin-top:8px;line-height:1.5">${NET_MODEL_NOTE[cur]||""}</div></div>`;
+}
+function netView(self, tree, edges){
+  const nodes = tree.map(n=>`<div style="padding:3px 0 3px ${(n.depth||0)*20}px;font-size:13.5px">${n.depth>0?'<span style="color:var(--grey)">└ </span>':''}<b>${esc(n.name)}</b> <span style="font-family:'Space Mono';font-size:11px;color:var(--grey)">${esc(n.bridge_id||'')}</span>${n.act!=null?` <span class="optchip" style="background:#eef3fb;color:#345488;border-color:#cfe0f4">👥 ${n.act} · ${esc(n.cap||'')}</span>`:''}${n.mode==='b2c'?` <span class="optchip" style="background:var(--gold-soft);color:#7a5e22;border-color:var(--gold-line);font-size:10px">b2c</span>`:''}${n.demo?` <span class="optchip" style="font-size:10px">demo</span>`:''}${n.isnew?` <span class="optchip" style="font-size:10px;background:#eaf3ee;color:#2f8f5b;border-color:#bfe0cd">new</span>`:''}</div>`).join("");
+  const edgeRows = edges.map(e=>{
+    const a = e.state==='requested' ? `<button class="composebtn pri" onclick="netApprove('${e.id}')">Approve</button> <button class="composebtn" onclick="netDecline('${e.id}')">Decline</button>`
+      : e.state==='active' ? `<button class="composebtn" onclick="netSuspend('${e.id}')">Suspend</button> <button class="composebtn" style="color:var(--disp)" onclick="netDisconnect('${e.id}')">Disconnect</button>`
+      : e.state==='suspended' ? `<button class="composebtn" onclick="netResume('${e.id}')">Resume</button> <button class="composebtn" style="color:var(--disp)" onclick="netDisconnect('${e.id}')">Disconnect</button>` : '';
+    return `<div style="${_CARD}"><div style="display:flex;justify-content:space-between;align-items:center"><span><b>${esc(e.parent_name)}</b> <span style="color:var(--grey)">&rarr;</span> <b>${esc(e.child_name)}</b></span>${netStChip(e.state)}</div>${a?`<div style="margin-top:8px;display:flex;gap:6px">${a}</div>`:''}</div>`;
+  }).join("")||'<div style="color:var(--grey);font-size:13px;padding:6px">No connections.</div>';
+  return `${CFG.MODE==="demo"?netModelBar():""}${orgBanner()}<div style="${_CARD}"><div style="display:flex;justify-content:space-between;align-items:center"><span><b>${esc(self.name)}</b> · <span style="font-family:\'Space Mono\';font-size:12px">${esc(self.bridgeId||self.bridge_id||'')}</span></span><span class="optchip ${self.claimed?'on':'brk'}">${self.claimed?'claimed':'unclaimed'}</span></div><div style="font-size:11.5px;color:var(--grey);margin-top:4px">mode ${esc(self.mode||'b2b')} · ${self.mode==='b2c'?'customer-facing':'internal-B2B'} · NET-01 Spine · live /api/network</div></div>
+    <div class="sec" style="font-size:12px;color:var(--grey);margin:10px 0 4px">Your network — entities under you (up to the lead node)</div>
+    <div style="${_CARD}">${nodes||'<div style="color:var(--grey);font-size:13px;padding:4px">Just you so far.</div>'}</div>
+    <div style="font-size:11.5px;color:var(--grey);margin:-2px 0 10px;line-height:1.5">👥 = actors (Co-Assist) at that node, with their access. Set actors in <b>Co-Assist</b>; their grant flows down the tree, default-deny.</div>
+    <div style="${_CARD}"><div style="font-family:'Space Grotesk';font-weight:600;font-size:13px;margin-bottom:8px">➕ Create a branch</div>
+      <label class="fl">Branch name</label><input class="inp" id="nb_name" placeholder="e.g. Branch C">
+      <label class="fl" style="margin-top:8px">Under which node</label><select class="inp" id="nb_parent">${tree.map(n=>`<option value="${n.id}">${'— '.repeat(n.depth||0)}${esc(n.name)}</option>`).join("")}</select>
+      <div style="margin-top:10px"><button style="${_BTN}" onclick="netCreateBranch()">➕ Create branch</button></div>
+      <div id="nb_status" style="font-size:12px;color:var(--blue);margin-top:8px"></div><div class="err" id="nb_err"></div>
+      <div style="font-size:11.5px;color:var(--grey);margin-top:8px;line-height:1.5">Branches are created <b>one at a time</b> — register → link → approve. Building a whole new structure? <i>Auto-build (create &amp; link the tree in order) is coming.</i></div></div>
+    <div style="${_CARD}"><label class="fl">Or connect an entity that already exists (User ID)</label><div style="display:flex;gap:8px"><input class="inp" id="net_child" placeholder="User ID or email"><button class="composebtn" onclick="netConnect('${self.id}')">🔗 Request link</button></div><div class="err" id="net_err"></div></div>
+    <div class="sec" style="font-size:12px;color:var(--grey);margin:12px 0 4px">Connections / edges (${edges.length})</div>${edgeRows}`;
+}
+function netNotInModel(bid){ return `<div style="${_CARD}"><div style="font-family:\'Space Grotesk\';font-weight:600;margin-bottom:6px">Not in the network model yet</div><div style="font-size:13px;color:var(--grey);line-height:1.6">Your entity ${bid?('('+esc(bid)+') '):''}isn't in the <b>cb_*</b> network tree yet — the production backfill (legacy &rarr; cb_entity) hasn't run for it, so the live tree is empty here. Register it into the network now, or it lights up after backfill.</div><button class="composebtn pri" style="margin-top:10px" onclick="netRegisterSelf()">Register into network</button></div>`; }
+async function netCreateBranch(){
+  const x=document.getElementById("nb_err"); if(x)x.textContent="";
+  const name=val("nb_name"); const parentId=val("nb_parent");
+  if(!name){ if(x)x.textContent="Enter a branch name."; return; }
+  const st=document.getElementById("nb_status");
+  try{
+    if(st)st.textContent="1/3 · Registering the branch…";
+    const ent=await api("netRegister",{body:{name}});
+    if(st)st.textContent="2/3 · Requesting the link…";
+    const edge=await api("netConnect",{body:{parentId, childId:ent.id}});
+    if(st)st.textContent="3/3 · Approving the link…";
+    await api("netApprove",{params:{id:edge.id},body:{actingEntityId:ent.id}});
+    toast("Branch created & linked ✓"); loadNetwork();
+  }catch(e){ if(st)st.textContent=""; if(x)x.textContent=e.message; }
+}
+async function netConnect(parentId){ const x=document.getElementById("net_err"); if(x)x.textContent=""; const bid=val("net_child"); if(!bid){ if(x)x.textContent="Enter the sub-entity's User ID."; return; } if(!isUserId(bid)){ if(x)x.textContent="User ID must be at least 8 characters, or an email."; return; }
+  try{ await api("netConnect",{body:{parentId, childBridgeId:bid}}); toast("Link requested ✓ — awaiting the child's consent"); loadNetwork(); }catch(e){ if(x)x.textContent=e.message; } }
+async function netApprove(id){ try{ await api("netApprove",{params:{id},body:{}}); toast("Approved ✓ — child reparented under you"); loadNetwork(); }catch(e){ toast("Failed: "+e.message); } }
+async function netDecline(id){ try{ await api("netDecline",{params:{id},body:{}}); toast("Declined"); loadNetwork(); }catch(e){ toast("Failed: "+e.message); } }
+async function netSuspend(id){ try{ await api("netSuspend",{params:{id}}); toast("Suspended"); loadNetwork(); }catch(e){ toast("Failed: "+e.message); } }
+async function netResume(id){ try{ await api("netResume",{params:{id}}); toast("Resumed ✓"); loadNetwork(); }catch(e){ toast("Failed: "+e.message); } }
+async function netDisconnect(id){ if(!confirm("Disconnect this edge? The child subtree detaches to its own root.")) return; try{ await api("netDisconnect",{params:{id},body:{settle:false}}); toast("Disconnected"); loadNetwork(); }catch(e){ toast(/settle/.test(e.message)?"Open chit on this edge — settle first (NET-01 T6)":("Failed: "+e.message)); } }
+async function netRegisterSelf(){ try{ await api("netRegister",{body:{name:SESSION.entity||SESSION.name||"My entity", businessType:"Aggregator"}}); toast("Registered into network ✓"); loadNetwork(); }catch(e){ toast("Failed: "+e.message); } }
+async function connectReq(){ const x=document.getElementById("nw_err"); if(x)x.textContent=""; const q=val("nw_to"); if(!q){ if(x)x.textContent="Enter a business name or User ID."; return; }
   try{ let to=q;
     if(!/^[0-9a-f-]{30,}$/i.test(q)){ const sr=await api("entitySearch",{query:{q}}); const hit=(sr||[])[0]; if(!hit){ if(x)x.textContent='No business found for "'+q+'".'; return; } to=hit.identity_id; }
     await api("connRequest",{body:{to_entity_id:to}}); toast("Connection request sent ✓"); loadNetwork();
@@ -737,17 +1364,17 @@ async function respondConn(id,action){ try{ await api("connRespond",{params:{id}
 function suppliersScreen(){ return scr("🏭 Suppliers","supbody"); }
 async function loadSuppliers(){ const h=document.getElementById("supbody"); if(!h)return;
   try{ const s=(await api("supList"))||[];
-    h.innerHTML=`<div style="${_CARD}"><label class="fl">Add supplier (bridge id)</label><div style="display:flex;gap:8px"><input class="inp" id="sp_bid" placeholder="CB…"><button style="${_BTN}" onclick="addSupplier()">Add</button></div><div class="err" id="sp_err"></div></div>
+    h.innerHTML=`${menuAssist('suppliers')}<div style="${_CARD}"><label class="fl">Add supplier (User ID)</label><div style="display:flex;gap:8px"><input class="inp" id="sp_bid" placeholder="User ID or email"><button style="${_BTN}" onclick="addSupplier()">Add</button></div><div class="err" id="sp_err"></div></div>
       ${s.map(x=>`<div style="${_CARD}"><div style="display:flex;justify-content:space-between;align-items:center"><b>${esc(x.display_name||x.supplier_display_name||'—')}</b><button class="composebtn" onclick="delSupplier('${x.supplier_list_id||x.id}')">Remove</button></div><div style="font-size:11.5px;color:var(--grey)">${esc(x.bridge_id||'')}${x.category?(' · '+esc(x.category)):''}</div></div>`).join("")||'<div style="color:var(--grey);font-size:13px;padding:6px">No suppliers yet.</div>'}`;
   }catch(e){ h.innerHTML=scrErr(e); } }
-async function addSupplier(){ const x=document.getElementById("sp_err"); if(x)x.textContent=""; const bid=val("sp_bid"); if(!bid){ if(x)x.textContent="Enter a supplier bridge id."; return; }
+async function addSupplier(){ const x=document.getElementById("sp_err"); if(x)x.textContent=""; const bid=val("sp_bid"); if(!bid){ if(x)x.textContent="Enter a supplier's User ID."; return; } if(!isUserId(bid)){ if(x)x.textContent="User ID must be at least 8 characters, or an email."; return; }
   try{ await api("supAdd",{body:{supplier_bridge_id:bid}}); toast("Supplier added ✓"); loadSuppliers(); }catch(e){ if(x)x.textContent=e.message; } }
 async function delSupplier(id){ try{ await api("supDel",{params:{id}}); toast("Removed ✓"); loadSuppliers(); }catch(e){ toast("Failed: "+e.message); } }
 /* CATALOGUE (own products) */
 function catalogueScreen(){ return scr("🗂️ Catalogue","catbody"); }
 async function loadCatalogue(){ const h=document.getElementById("catbody"); if(!h)return;
   try{ const items=(await api("prodList"))||[];
-    h.innerHTML=`<div style="${_CARD}"><label class="fl">Add product</label><input class="inp" id="ct_name" placeholder="name"><div style="display:flex;gap:8px;margin-top:6px"><input class="inp" id="ct_price" inputmode="numeric" placeholder="price"><button style="${_BTN}" onclick="addProduct()">Add</button></div><div class="err" id="ct_err"></div></div>
+    h.innerHTML=`${menuAssist('catalogue')}<div style="${_CARD}"><label class="fl">Add product</label><input class="inp" id="ct_name" placeholder="name"><div style="display:flex;gap:8px;margin-top:6px"><input class="inp" id="ct_price" inputmode="numeric" placeholder="price"><button style="${_BTN}" onclick="addProduct()">Add</button></div><div class="err" id="ct_err"></div></div>
       ${items.map(x=>{const d=x.item_data||x; return `<div style="${_CARD}"><div style="display:flex;justify-content:space-between;align-items:center"><b>${esc(d.name||'item')}</b><span>${d.price!=null?inr(d.price):''} <button class="composebtn" onclick="delProduct('${x.item_id||x.id}')">Delete</button></span></div></div>`}).join("")||'<div style="color:var(--grey);font-size:13px;padding:6px">No products yet.</div>'}`;
   }catch(e){ h.innerHTML=scrErr(e); } }
 async function addProduct(){ const x=document.getElementById("ct_err"); if(x)x.textContent=""; const name=val("ct_name"); if(!name){ if(x)x.textContent="Enter a product name."; return; }
@@ -760,7 +1387,7 @@ async function loadMIS(){ const h=document.getElementById("misbody"); if(!h)retu
     const chits=(inb||[]).map(mapApiChit); const byState={open:0,act:0,close:0}; let value=0; chits.forEach(c=>{byState[c.state]=(byState[c.state]||0)+1; value+=c.amt||0;});
     const openDisp=dq.total_open!=null?dq.total_open:((dq.my_disputes||[]).length+(dq.other_disputes||[]).length);
     const stat=(label,v)=>`<div style="${_CARD};text-align:center;margin:0"><div style="font-size:21px;font-weight:800;font-family:'Space Grotesk'">${v}</div><div style="font-size:11px;color:var(--grey)">${label}</div></div>`;
-    h.innerHTML=`<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:9px">
+    h.innerHTML=`${menuAssist('mis')}<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:9px">
       ${stat("Chits",chits.length)}${stat("Deal value",inr(value))}
       ${stat("Open",byState.open)}${stat("In progress",byState.act)}
       ${stat("Closed",byState.close)}${stat("Open disputes",openDisp)}
@@ -769,10 +1396,38 @@ async function loadMIS(){ const h=document.getElementById("misbody"); if(!h)retu
   }catch(e){ h.innerHTML=scrErr(e); } }
 /* CO-ASSISTS — the actor roster */
 function coassistsScreen(){ return scr("🧑‍🤝‍🧑 Co-assists","cobody"); }
+const CO_HELP = [
+ {q:"What is a co-assist?", a:"Anyone — or anything — that acts FOR you. Today people; soon connectors, IoT devices, process rules and AI agents. The owner stays the party; the co-assist acts on your behalf under access you grant."},
+ {q:"What can they do?", a:"Access is an engagement type — a scoped grant: view-only, act-on-it, audit (review/sign-off), MIS (aggregates only), and more. Default-deny: they only get what you grant, scoped to a node. (Shown as placeholders now; wired next.)"},
+ {q:"Push or pull?", a:"Assignment model: pull (actors take work), push (you assign), or both — set in Settings. With a process map, push/pull stop being manual and draw from the order's processes (next iteration)."},
+ {q:"Shifts & load?", a:"Each co-assist has a shift — on shift / on break / off — and a load (open tasks). Auto-return-on-break brings them back. Toggle shift on each card."},
+ {q:"Can a co-assist be a machine?", a:"Yes — actor_type can be connector (ERP / system-to-system), iot_device (a machine triggers a chit), process_rule, or ai_agent. Each has its own auth and handling; these are the next slices."},
+ {q:"Where does access come from?", a:"You can only grant what you hold; access flows down the Network tree and is checked live. Set participants here; their scope ties to their node in Network."}
+];
+function coBanner(){ return `<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:12px;padding:12px 14px;margin-bottom:12px;font-size:13px;color:#6b5a36;line-height:1.5"><b style="font-family:'Space Grotesk'">Manage who acts for you.</b> Co-Assist is the <b>people and systems that act for you</b> — people now; connectors, devices, processes and agents are participant types coming next. The owner stays the party; participants act <i>for</i> you under scoped access. For your structure use <b>Network</b>; for other businesses use <b>Connections</b>.</div>${coHelpBox()}`; }
+function coHelpBox(){ return `<div style="${_CARD}"><div style="font-family:'Space Grotesk';font-weight:600;font-size:13px;margin-bottom:2px">Co-Assist assistant <span style="font-size:10.5px;font-family:'Space Mono';background:var(--gold-soft);color:#7a5e22;border-radius:5px;padding:1px 7px">Web Demo · sample answers</span></div><div style="font-size:12.5px;color:var(--grey);margin-bottom:10px">Who acts for you, what they can do, and how work is assigned. (Real version: an AI handler over your participants and grants.)</div><div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px">${CO_HELP.map((f,i)=>`<button class="composebtn" onclick="coAsk(${i})">${esc(f.q)}</button>`).join("")}</div><div style="display:flex;gap:8px"><input class="inp" id="co_in" placeholder="e.g. can a machine raise an order?"><button style="${_BTN}" onclick="coAskFree()">Ask</button></div><div id="co_ans" style="font-size:13px;color:var(--ink);margin-top:10px;line-height:1.55"></div></div>`; }
+function coAsk(i){ const f=CO_HELP[i]; const inp=document.getElementById("co_in"); if(inp)inp.value=f.q; const o=document.getElementById("co_ans"); if(o)o.innerHTML="<b>"+esc(f.q)+"</b><br>"+esc(f.a); }
+function coAskFree(){ const q=(val("co_in")||"").toLowerCase(); let a;
+ if(/push|pull|assign|distribute/.test(q))a=CO_HELP[2].a;
+ else if(/machine|connector|iot|device|erp|agent|process|non.?human|sensor/.test(q))a=CO_HELP[4].a;
+ else if(/shift|break|load|roster/.test(q))a=CO_HELP[3].a;
+ else if(/engage|view.?only|act|audit|mis|capabilit/.test(q))a=CO_HELP[1].a;
+ else if(/grant|scope|access|permission|privilege/.test(q))a=CO_HELP[5].a;
+ else if(/participant|actor|staff|employee|who|co.?assist/.test(q))a=CO_HELP[0].a;
+ else if(q.trim())a="Ask about participants, engagement types (view-only/act/audit/MIS), push/pull, shifts, or non-human actors.";
+ else a="Ask me what a participant is, what they can do, and how push/pull works.";
+ const o=document.getElementById("co_ans"); if(o)o.innerHTML=esc(a); }
+function coTypeRow(){ const t=(k,on)=>`<span class="optchip" style="font-size:10px;${on?'background:#eef3fb;color:#345488;border-color:#cfe0f4':''}">${k}</span>`;
+ return `<div style="${_CARD}"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><b style="font-size:13px">Your co-assists</b><button class="composebtn" onclick="addActorModal()">+ New co-assist</button></div><div style="font-size:11px;color:var(--grey);margin-top:8px;display:flex;gap:5px;flex-wrap:wrap;align-items:center">Types: ${t('human',true)}${t('customer')}${t('connector')}${t('iot_device')}${t('process_rule')}${t('ai_agent')}<span style="color:#a9853f">· human now, others next</span></div></div>`; }
+function coActorCard(a){ const at=a.atype||"human", cap=a.cap||"act", node=a.node||"", sh=a.shift||"on_shift";
+ const shc=sh==='on_shift'?'on':sh==='on_break'?'brk':'off';
+ return `<div style="${_CARD}"><div style="display:flex;justify-content:space-between;align-items:center"><span><b>${esc(a.name)}</b> <span class="optchip" style="font-size:10px;background:#eef3fb;color:#345488;border-color:#cfe0f4">${esc(at)}</span>${a.isnew?` <span class="optchip" style="font-size:10px;background:#eaf3ee;color:#2f8f5b;border-color:#bfe0cd">new</span>`:``}</span><span class="optchip ${shc}">${esc(sh.replace('_',' '))}</span></div>${a.uid?`<div style="font-family:'Space Mono';font-size:11px;color:#3F66A6;margin-top:2px">${esc(a.uid)}</div>`:''}<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:7px;align-items:center"><span class="optchip" style="font-size:10.5px;background:var(--gold-soft);color:#7a5e22;border-color:var(--gold-line)">${esc(cap)}</span>${node?`<span style="font-size:11.5px;color:var(--grey)">@ ${esc(node)}</span>`:''}<span style="font-size:11.5px;color:var(--grey)">load ${a.load==null?0:a.load}</span></div><div style="margin-top:9px;display:flex;gap:6px"><button class="composebtn" onclick="actorShift('${a.id}','${sh}')">Toggle shift</button><button class="composebtn" onclick="todo('coassistEngage')">Set engagement</button></div></div>`; }
+async function actorShift(id,cur){ const order=["on_shift","on_break","off"]; const next=order[(order.indexOf(cur)+1)%3];
+ try{ await api("actorBreak",{body:{actor_id:id, break_status:next}}); toast("Shift → "+next.replace("_"," ")+" ✓"); loadCoassists(); }catch(e){ toast("Failed: "+e.message); } }
 async function loadCoassists(){ const h=document.getElementById("cobody"); if(!h)return;
   try{ const actors=((await api("actors"))||[]).map(mapApiActor);
-    h.innerHTML=`<div style="${_CARD}"><button class="composebtn" onclick="addActorModal()">+ New actor</button></div>
-      ${actors.map(a=>`<div style="${_CARD}"><div style="display:flex;justify-content:space-between;align-items:center"><b>${esc(a.name)}</b><span class="optchip ${a.shift==='on_shift'?'on':a.shift==='on_break'?'brk':'off'}">${esc((a.shift||'').replace('_',' '))}</span></div><div style="font-size:11.5px;color:var(--grey)">load ${a.load}</div></div>`).join("")||'<div style="color:var(--grey);font-size:13px;padding:6px">No actors yet — add one above.</div>'}`;
+    h.innerHTML = coBanner() + coTypeRow() +
+      (actors.map(coActorCard).join("") || '<div style="color:var(--grey);font-size:13px;padding:6px">No co-assists yet — add one above.</div>');
   }catch(e){ h.innerHTML=scrErr(e); } }
 
 function mainBody(){
@@ -806,7 +1461,9 @@ function taskPanel(){
       <div class="tool" title="Delete (move to trash)" onclick="quickDelete()">🗑️</div>
     </div>${UI.filterOpen?filterPanel():""}`;
   const sel = (UI.selectMode&&!isCust)?selBar():"";
-  const list = `<div class="list">
+  const _ak = (UI.folder==='order')?'order':'task';
+  const helpStrip = isCust ? "" : `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line);background:var(--gold-soft);font-size:12px;color:#6b5a36"><b style="font-family:'Space Grotesk'">${_ak==='order'?"Order — chits you've sent":"Task — chits received"}</b><button class="composebtn" style="margin-left:auto" onclick="toggleListHelp()">${UI.listHelp?'✕ Close':'❓ Help'}</button></div>${UI.listHelp?`<div style="padding:11px 12px;border-bottom:1px solid var(--line);overflow-y:auto;max-height:52%">${assistPage(_ak)}</div>`:''}`;
+  const list = `<div class="list">${helpStrip}
     <div class="lh">${folders}${sub}${stTabs}
       <div class="srch">🔍 <input placeholder="${isCust?'Search my orders':'Search chits, party, item'}"></div>
       ${tools}${sel}
@@ -821,6 +1478,7 @@ function taskPanel(){
 function countStates(){const o={open:0,act:0,close:0};UI.rows.forEach(c=>{if(o[c.state]!=null)o[c.state]++});return o;}
 function cap(s){return s[0].toUpperCase()+s.slice(1);}
 function setSub(s){UI.sub=s;UI.sel=null;UI.detail=null;renderApp();}
+function toggleListHelp(){ UI.listHelp=!UI.listHelp; renderApp(); }
 function setState(s){UI.state=s;renderApp();}
 function toggleAgg(s){UI.aggStates.has(s)?(UI.aggStates.size>1&&UI.aggStates.delete(s)):UI.aggStates.add(s);renderApp();}
 function toggleSelect(){UI.selectMode=!UI.selectMode;if(!UI.selectMode)UI.selected.clear();renderApp();}
@@ -914,7 +1572,7 @@ function fmtAt(ts){ try{ return new Date(ts).toLocaleTimeString([], {hour:'2-dig
 function inr_(v){ return '₹'+Number(v||0).toLocaleString('en-IN'); }
 function fmtLine(li){ return [li.particulars||'Item', (li.quantity||0)+' × '+inr_(li.price)+' = '+inr_(li.total||(li.quantity*li.price)), []]; }
 function mapApiMsg(m){ if(!m||m.scope!==undefined) return m; return { id:m.message_id, scope:m.thread_type||'internal', author:m.sender_display_name||'—', body:m.message_text||'', at:fmtAt(m.created_at), type:m.msg_type||'info', unread:false }; }
-function mapApiActor(a){ if(!a||a.shift!==undefined) return a; const S={active:'on_shift',on_break:'on_break',break:'on_break',off:'off',deactivated:'off'}; return { id:a.identity_id, name:a.display_name, shift:S[a.break_status]||'on_shift', load:a.current_task_count||0 }; }
+function mapApiActor(a){ if(!a||a.shift!==undefined) return a; const S={active:'on_shift',on_break:'on_break',break:'on_break',off:'off',deactivated:'off'}; return { id:a.identity_id, name:a.display_name, uid:a.user_id||a.uid, shift:S[a.break_status]||'on_shift', load:a.current_task_count||0 }; }
 async function loadList(){
   UI.loading=true; const body=document.getElementById("rows"); if(body)body.innerHTML='<div class="loadwrap"><span class="spin"></span> loading…</div>';
   try{
@@ -948,14 +1606,26 @@ function rowHTML(c){
   const proof=`<span class="proof ${c.proof==='ok'?'ok':'wait'}">${c.proof==='ok'?'✓ both-signed':'⚠ awaiting'}</span>`;
   const acts=(SESSION.role==="actor"&&UI.folder==="task")?(UI.sub==="all"?`<div class="rowacts"><button class="go" onclick="event.stopPropagation();assignChit('${c.id}','a1')">⤵ Pull to me</button><button onclick="event.stopPropagation();unassignChit('${c.id}')">⤴ Push</button></div>`:`<div class="rowacts"><button onclick="event.stopPropagation();unassignChit('${c.id}')">↩ Push back</button><button class="go" onclick="event.stopPropagation();pickAssign('${c.id}')">👥 Assign</button></div>`):"";
   return `<div class="row ${c.id===UI.sel?'sel':''}" onclick="openChit('${c.id}')">${cbx}
-    <div class="main2"><div class="l1">${c.custPri?'<span class="custflag" title="Customer flagged priority">⚑</span>':''}<span class="code">${c.code}</span><span class="party">· ${c.party}</span><span class="amt">${c.amt?inr(c.amt):'—'}</span></div>
-      <div class="l2">${c.area} · ${c.kind} ${priChip(c.pri)} ${c.att?`<span class="rowclip">📎 ${c.att}</span>`:''} ${c.msg?`<span class="rowmsg" onclick="event.stopPropagation();openChitMsgs('${c.id}')">💬 ${c.msg}</span>`:''} ${proof} ${c.dispute?'<b style="color:var(--disp)">dispute</b>':''}
+    <div class="main2"><div class="l1">${c.custPri?'<span class="custflag" title="Customer flagged priority">⚑</span>':''}<span class="code">${c.code}</span>${c.isDraft?' <span class="optchip" style="font-size:9.5px;background:#f3f0e8;color:#7a5e22;border-color:var(--gold-line)">draft</span>':''}${c.selfChit&&!c.isDraft?' <span class="optchip" style="font-size:9.5px;background:#eef3fb;color:#345488;border-color:#cfe0f4" title="Self-chit · '+( c.folder==="order"?"sent copy":"received copy")+'">self-chit</span>':''}<span class="party">· ${c.party}</span><span class="amt">${c.amt?inr(c.amt):'—'}</span></div>
+      <div class="l2">${c.area} · ${c.kind} ${priChip(c.pri)} ${c.rcc?`<span class="optchip" style="font-size:9px;background:#F4ECD8;color:#7a5e22;border-color:#E4D3A8">CC ${c.rcc}</span>`:''}${c.rfor?`<span class="optchip" style="font-size:9px;background:#EFEBE2;color:#5F6B70;border-color:#E0DACF">For ${c.rfor}</span>`:''} ${c.att?`<span class="rowclip">📎 ${c.att}</span>`:''} ${c.msg?`<span class="rowmsg" onclick="event.stopPropagation();openChitMsgs('${c.id}')">💬 ${c.msg}</span>`:''} ${proof} ${c.dispute?'<b style="color:var(--disp)">dispute</b>':''}
         <span class="chipst st-${c.state}" onclick="event.stopPropagation();advanceChit('${c.id}')" title="advance">${c.state.toUpperCase()} ▸</span></div>${acts}</div>
     <div class="rowgo" aria-hidden="true">›</div>
   </div>`;
 }
 function toggleSel(id){UI.selected.has(id)?UI.selected.delete(id):UI.selected.add(id);paintRowsOnly();updateSelBar();}
-function selBar(){const ids=UI.selected;const sum=UI.rows.filter(c=>ids.has(c.id)).reduce((a,c)=>a+c.amt,0);const ticked=UI.rows.filter(c=>UI.aggStates.has(c.state)).reduce((a,c)=>a+c.amt,0);const lbl=ids.size?`☑ ${ids.size} selected · Σ ${inr(sum)}`:`states ✓ ${[...UI.aggStates].map(cap).join(" · ")} · Σ ${inr(ticked)}`;return `<div class="selbar" id="selbar">${lbl}<span class="sp"><button onclick="sumScope()">Sum →</button><button class="pri" onclick="toast('Mass-assign — wired with ATH-109 bulk endpoint.')">Assign</button><button onclick="UI.selected.clear();renderApp()">Clear</button></span></div>`;}
+/* PENDING — not built on the backend yet. One place so we remember to build them (mirrors TASK-PANEL-WIRING.md ○ items). */
+const PENDING = {
+  coassistEngage:{label:"Set engagement (view-only/act/audit/MIS) as a scoped grant",ref:"ATH-118"},
+  voidChit:     {label:"Void (owner soft-void)",   ref:"ATH-109 §3"},
+  pdf:          {label:"PDF export",                ref:"next iteration"},
+  setPriority:  {label:"Re-prioritise",             ref:"ATH-109 §7"},
+  custFlag:     {label:"Customer priority flag",    ref:"ATH-109 §7"},
+  rollup:       {label:"Sum / roll-up (persist)",   ref:"ATH-109 §5"},
+  assignBulk:   {label:"Mass-assign",               ref:"ATH-109 §5"},
+  notifications:{label:"Notifications",             ref:"ATH-109 §11"},
+};
+function todo(k){ const t=PENDING[k]||{label:k,ref:""}; toast("⏳ "+t.label+" — placeholder, build next iteration"+(t.ref?" ("+t.ref+")":"")); }
+function selBar(){const ids=UI.selected;const sum=UI.rows.filter(c=>ids.has(c.id)).reduce((a,c)=>a+c.amt,0);const ticked=UI.rows.filter(c=>UI.aggStates.has(c.state)).reduce((a,c)=>a+c.amt,0);const lbl=ids.size?`☑ ${ids.size} selected · Σ ${inr(sum)}`:`states ✓ ${[...UI.aggStates].map(cap).join(" · ")} · Σ ${inr(ticked)}`;return `<div class="selbar" id="selbar">${lbl}<span class="sp"><button onclick="sumScope()">Sum →</button><button class="pri" onclick="todo('assignBulk')">Assign</button><button onclick="UI.selected.clear();renderApp()">Clear</button></span></div>`;}
 function updateSelBar(){const el=document.getElementById("selbar");if(el)el.outerHTML=selBar();}
 function sumScope(){
   const sel=UI.rows.filter(c=>UI.selected.has(c.id));
@@ -964,7 +1634,7 @@ function sumScope(){
   if(sel.length&&tabs.length){ arr = confirm("OK = your "+sel.length+" selected\nCancel = ticked state tabs ("+[...UI.aggStates].join(", ")+")")?sel:tabs; }
   const kinds=[...new Set(arr.map(c=>c.kind))];
   if(kinds.length>1){ const lines=kinds.map(k=>k+": "+inr(arr.filter(c=>c.kind===k).reduce((a,c)=>a+c.amt,0))); toast("Mixed kinds — no grand total. "+lines.join(" · ")); }
-  else toast("Roll-up · "+arr.length+" chits · Σ "+inr(arr.reduce((a,c)=>a+c.amt,0))+" (push-to-draft wired with ATH-109)");
+  else toast("Roll-up · "+arr.length+" chits · Σ "+inr(arr.reduce((a,c)=>a+c.amt,0))+" · push-to-draft: next iteration (ATH-109 §5)");
 }
 
 /* detail */
@@ -1010,8 +1680,8 @@ function detailInner(){
      <div class="itab" style="padding:10px"><div class="sec" style="margin:0">State</div><div class="disp" style="font-size:15px;font-weight:700">${c.state.toUpperCase()}</div></div></div>
      <div style="margin-top:10px">${proof}</div>`;
   const actbar = SESSION.role==="customer"
-    ? `<button onclick="toggleCustPri('${c.id}')">⚑ ${c.custPri?'Priority requested':'Request priority'}</button><button class="warn" onclick="quickDispute()">⚑ Dispute</button><button>⬇ PDF</button>`
-    : `<button class="pri" onclick="advanceChit('${c.id}')">Advance ▸</button>${SESSION.role==="actor"?`<button onclick="pickAssign('${c.id}')">👥 Assign</button>`:""}<button class="warn" onclick="quickDispute()">⚑ Dispute</button>${SESSION.role==="entity"?`<button class="warn pend" onclick="toast('Void — owner soft-void, ${EP.voidChit.ok} (ATH-109 §3)')">⊘ Void</button>`:""}<button>⬇ PDF</button>`;
+    ? `<button onclick="toggleCustPri('${c.id}')">⚑ ${c.custPri?'Priority requested':'Request priority'}</button><button class="warn" onclick="quickDispute()">⚑ Dispute</button><button onclick="todo('pdf')">⬇ PDF</button>`
+    : `<button class="pri" onclick="advanceChit('${c.id}')">Advance ▸</button>${SESSION.role==="actor"?`<button onclick="pickAssign('${c.id}')">👥 Assign</button>`:""}<button class="warn" onclick="quickDispute()">⚑ Dispute</button>${SESSION.role==="entity"?`<button class="warn pend" onclick="todo('voidChit')">⊘ Void</button>`:""}<button onclick="todo('pdf')">⬇ PDF</button>`;
   const dtabs=[["content","Content"],["status","Status"],["summary","Summary"],["messages","💬 Messages"+(msgCount(c)?" ("+msgCount(c)+")":"")]];
   return `<div class="dh"><button class="dback" onclick="backToList()">‹ Back to list</button><button class="dmsg" onclick="setDtab('messages')" title="Messages" aria-label="Messages">💬${msgCount(c)?' '+msgCount(c):''}</button><div class="dt">${c.code} · ${c.party}</div><div class="ds">${c.area} · ${c.kind} · ${inr(c.amt)} · ${c.state.toUpperCase()}</div>
      <div class="parties"><span class="ptag">from <b>${SESSION.entity||"You"}</b></span><span class="ptag">to <b>${c.kind==='counter'?(SESSION.entity||'You'):c.party}</b></span>${c.kind==='counter'?`<span class="ptag">for <b>${c.cust}</b></span>`:''}</div><div class="dchips">${SESSION.role!=="customer"?`<button class="prichip-btn pri-${c.pri||'normal'}" onclick="repriority('${c.id}')" title="Priority — tap to change">${(c.pri&&c.pri!=='normal')?PRI[c.pri].label:'Normal'} ▾</button>`:''}${c.custPri?'<span class="custflag-tag">⚑ Customer priority</span>':''}</div></div>
@@ -1105,7 +1775,7 @@ async function pickAssign(id){
   const prisel=`<div class="msec">Priority</div><div class="prisel">${["urgent","normal","low"].map(p=>`<button class="pri-${p} ${MODALS.pick.pri===p?'on':''}" data-p="${p}" onclick="pickPri('${p}')">${PRI[p].label}</button>`).join("")}</div>`;
   const reasonbox=`<div class="msec">Reason <span id="reasonhint" class="rh">${MODALS.pick.pri==='urgent'?'— Urgent needs one':'(optional)'}</span></div><textarea id="assignreason" class="mreason" placeholder="Why this assignment / this urgency…" oninput="MODALS.pick.reason=this.value;syncAssignOk()"></textarea>`;
   const custnote=c.custPri?`<div class="custreq">⚑ Customer flagged this as priority — consider Urgent.</div>`:'';
-  modal(`<div class="mhd"><div class="t">Assign ${c.code||'chit'}</div><div class="s">${c.party||''}${c.amt?' · '+inr(c.amt):''}</div></div><div class="mbody">${custnote}${rows||'<div style="padding:14px;color:var(--grey);font-size:13px">No actors yet.</div>'}<div style="padding:6px 0 2px"><button class="composebtn" onclick="addActorModal()">+ New actor</button></div>${prisel}${reasonbox}</div><div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="pri" id="mok" disabled onclick="confirmAssign()">Assign</button></div>`);
+  modal(`<div class="mhd"><div class="t">Assign ${c.code||'chit'}</div><div class="s">${c.party||''}${c.amt?' · '+inr(c.amt):''}</div></div><div class="mbody">${custnote}${rows||'<div style="padding:14px;color:var(--grey);font-size:13px">No co-assists yet.</div>'}<div style="padding:6px 0 2px"><button class="composebtn" onclick="addActorModal()">+ New co-assist</button></div>${prisel}${reasonbox}</div><div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="pri" id="mok" disabled onclick="confirmAssign()">Assign</button></div>`);
 }
 function pickActor(aid){ MODALS.pick.actorId=aid; document.querySelectorAll('.optrow').forEach(r=>r.classList.toggle('sel',r.dataset.a===aid)); syncAssignOk(); }
 function pickPri(p){ MODALS.pick.pri=p; document.querySelectorAll('.prisel button').forEach(b=>b.classList.toggle('on',b.dataset.p===p)); const h=document.getElementById('reasonhint'); if(h)h.textContent=p==='urgent'?'— Urgent needs one':'(optional)'; syncAssignOk(); }
@@ -1120,15 +1790,22 @@ async function toggleCustPri(id){ const c=UI.detail||{}; const nf=!c.custPri; tr
 
 /* ---------------- bits ---------------- */
 function val(id){const el=document.getElementById(id);return el?el.value.trim():"";}
+function isUserId(v){ v=(v||"").trim(); return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) || v.length>=8; }
 function logoMark(s){return `<svg width="${s}" height="${s}" viewBox="0 0 32 32"><circle cx="16" cy="16" r="12.5" fill="none" stroke="#C9A86A" stroke-width="1.6"/><path d="M7 19 Q16 9 25 19" fill="none" stroke="#C9A86A" stroke-width="2.4" stroke-linecap="round"/><circle cx="7" cy="19" r="1.6" fill="#C9A86A"/><circle cx="25" cy="19" r="1.6" fill="#C9A86A"/></svg>`;}
 function logo(){return `<div class="brand">${logoMark(26)} Chit &amp; Bridge</div>`;}
+function setStage(k){ const s=STAGES[k]; if(!s) return; if(!s.mock && !s.base){ toast(s.label+" — API base not set yet (config)."); return; } CFG.STAGE=k; if(s.mock) STORE=deepClone(DEMO); route(); }
 function modeRibbon(){
+  const st = STAGES[CFG.STAGE];
   const vpsw = SESSION.token ? `<span class="sw" style="margin-left:auto"><button class="${UI.vp==='lap'?'on':''}" onclick="setVP('lap')">💻 Laptop</button><button class="${UI.vp==='mob'?'on':''}" onclick="setVP('mob')">📱 Mobile</button></span>` : '';
+  const stageBtns = Object.entries(STAGES).map(([k,s])=>{
+    const usable = s.mock || !!s.base;
+    return `<button class="${CFG.STAGE===k?'on':''}"${usable?'':' disabled title="API base not set"'} onclick="setStage('${k}')">${s.label}</button>`;
+  }).join("");
   return `<div class="moderibbon">
-    <b>Build preview</b><span class="pill">${CFG.MODE.toUpperCase()} mode</span>
-    <span style="font-size:10.5px">${CFG.MODE==="demo"?"standalone · mock data":"hitting "+(CFG.API_BASE||"(API_BASE not set!)")}</span>
+    <b>Build preview</b><span class="pill">${st.label}</span>
+    <span style="font-size:10.5px">${st.mock?st.note:(st.base?"hitting "+st.base:"(API base not set!)")}</span>
     ${vpsw}
-    <span class="sw" style="${SESSION.token?'':'margin-left:auto'}"><button class="${CFG.MODE==='demo'?'on':''}" onclick="CFG.MODE='demo';STORE=deepClone(DEMO);route()">Demo</button><button class="${CFG.MODE==='live'?'on':''}" onclick="CFG.MODE='live';route()">Live</button></span>
+    <span class="sw" style="${SESSION.token?'':'margin-left:auto'}">${stageBtns}</span>
   </div>`;
 }
 
