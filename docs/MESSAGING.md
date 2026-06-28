@@ -18,18 +18,18 @@ Convention by channel (kept as-is, only the text is standardised):
 - **Row / icon actions → `toast(...)`** (success + `MSG.fail`).
 - **Form actions → inline `err.textContent`** (validation + submit error).
 
-## 3. Status (2026-06-28)
-**Wired to `MSG`:** task panel — assign, bulk-assign, push-back, status, advance, dispute, delete (+Undo/
-trash), restore, priority (internal + customer); compose — draft/bridged, schema-default banner,
-catalogue load-error vs empty.
+## 3. Status (2026-06-28) — COMPLETE
+**Every panel is routed to `MSG`** (0 generic `Failed:`/`failed:` toasts remain; 37 catalogue entries):
+task panel (assign, bulk, push-back, status, advance, dispute, delete+Undo/trash, restore, priority),
+compose (draft/bridged, schema-default banner, catalogue load-error vs empty), disputes (resolve),
+suppliers, catalogue, co-assists (shift), profile/settings, all `net*`, connections, and messages
+(send — external/internal/empty).
 
-**MSG entries ready, handlers not yet routed (do after copy review):** suppliers (`addSupplier`/`delSupplier`),
-catalogue (`addProduct`/`delProduct`), co-assists (`actorShift`), profile/settings save, all `net*`,
-connections. These still show their current working toasts; switching them to `MSG` is mechanical.
+**Authored copy added:** `todo()` placeholders → `MSG.comingSoon(label)`; silent stops now nudge —
+recipient/self caps (`MSG.capHit`, `MSG.alreadySelf`), no-pick line item (`MSG.pickItemFirst`),
+empty message (`MSG.msgEmpty`).
 
-**Authored copy still to add** (needs words, not just wiring): placeholder actions calling `todo()`
-(e.g. co-assist "Set engagement") → `MSG.comingSoon('Set engagement')`; silent returns (role caps,
-`ccAddItem` no-pick) → brief toast.
+To change any wording: edit the string in `const MSG` (app.html) — one place, every panel updates.
 
 ## Review me
 Open `MSG` in `app.html` to read/adjust every string in one place. After copy is confirmed, finish
