@@ -119,6 +119,24 @@ both sides via the notifications feed (state_log `dispute_resolved` → bell). R
   path, an admin/platform force-resolve, or an auto-expire — otherwise a deadlock is possible.
 - Minor: the diagnosis/parity probe (`answerable`, one-sided vs two-sided) isn't surfaced in the panel.
 
+## Catalogue panel — audit 2026-06-28
+Traced backend `products.js` (CRUD) + web `loadCatalogue`/`addProduct`/`delProduct`; feeds Compose line items.
+
+**Healthy (notably clean):** backend is **tenant-scoped** (`ctx(req)` from token; every CRUD filters `entity_id`;
+UPDATE/DELETE check `WHERE item_id AND entity_id` → no IDOR), **schema-driven validation** (`validateItem`:
+required + number/min), **soft-delete** (`is_active=false`), parameterized search, `safeErr`. Web is escaped,
+messaged (`MSG.productAdded/Deleted`), with loading/empty/error states + name validation.
+
+**QUEUED (minor / feature):**
+- **No EDIT in the UI** — backend has `PATCH /:id`, but the panel only Adds + Deletes; can't edit a product
+  (delete + re-add). Wire an edit.
+- **Add form is minimal** — captures only `name` + `price` (no `unit`/other schema fields); if the entity's product
+  schema requires more, create fails validation. (Also `unit` defaults to "unit" in Compose.)
+- **Unbounded list read** (`GET /` has no LIMIT) — covered by the max-`?limit=` cap backlog item.
+- **No catalogue-items quota** — products are unlimited (not in the subscription quota set); decide if they should be.
+- Schema dependency: with no default `entity_schema`, validation is skipped (products added unvalidated) — same
+  fresh-entity schema gap flagged in the Compose audit.
+
 ## Build order (all HELD until reviewed; nothing pushed)
 1. Backend first (api batch): restore endpoint (`baseline-11`) + `chit_reads` migration + inbox unread + mark-read.
 2. Then frontend (this branch): badge, bulk-assign, actor-id, restore wire, row unread colour.
