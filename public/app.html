@@ -395,6 +395,7 @@ const EP = {
   shopStatus:      {m:"PATCH",p:"/api/entities/profile",         ok:"✓"},  // shop status = PATCH profile {business_status}
   dispute:         {m:"POST", p:"/api/chits/:id/disputes",       ok:"✓"},  // raise dispute (built)
   delChit:         {m:"DELETE",p:"/api/chits/:id",               ok:"✓"},  // exists (soft-void/trash)
+  restore:         {m:"POST", p:"/api/chits/:id/restore",        ok:"✓"},  // undo soft-delete — baseline-11
   assignBulk:      {m:"POST", p:"/api/chits/assign-bulk",        ok:"✓"},  // built (baseline-4); frontend wire pending — panel-fixes #2
   filters:         {m:"GET",  p:"/api/chits/inbox?kind&dispute&sort", ok:"◐"}, // inbox exists; query-param support unverified
   notifications:   {m:"GET",  p:"/api/notifications",            ok:"✓"},  // mounted (baseline-4); enhanced baseline-8/9; wired to bell — panel-fixes #1
@@ -1549,7 +1550,14 @@ function quickDelete(){ let ids=needTarget(); if(!ids.length)return;
 async function confirmDelete(){ const ids=MODALS.del.ids; closeModal();
   for(const id of ids){ try{ await api("delChit",{params:{id}}); }catch(e){ toast("Delete failed: "+e.message); return; } }
   UI.rows=UI.rows.filter(c=>!ids.includes(c.id)); if(UI.sel&&ids.includes(UI.sel)){UI.sel=null;UI.detail=null;UI.mdetail=false;} UI.selected.clear();
-  renderApp(); toast("Moved to Trash · recoverable", ()=>toast("Restore from Trash — wired with the retention model."));
+  renderApp(); toast("Moved to Trash · recoverable", ()=>restoreChits(ids));
+}
+// Undo a just-deleted batch via the real restore endpoint. (A full Trash browse view is queued.)
+async function restoreChits(ids){
+  let ok=0;
+  for(const id of ids){ try{ await api("restore",{params:{id}}); ok++; }catch(_){} }
+  try{ await loadList(); }catch(_){}
+  toast(ok?("Restored "+ok+" from Trash ✓"):"Couldn't restore — check Trash");
 }
 function openFilter(){ UI.filterOpen=!UI.filterOpen; renderApp(); }
 function setFilter(k,v){ UI.filter={...(UI.filter||{}),[k]:v}; paintRowsOnly(); }
