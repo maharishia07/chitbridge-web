@@ -137,6 +137,22 @@ messaged (`MSG.productAdded/Deleted`), with loading/empty/error states + name va
 - Schema dependency: with no default `entity_schema`, validation is skipped (products added unvalidated) — same
   fresh-entity schema gap flagged in the Compose audit.
 
+## Suppliers panel — audit 2026-06-28
+Traced backend `relationships.js` (supplier list) + web `loadSuppliers`/`addSupplier`/`delSupplier`.
+
+**FIXED now (api 522b400):** add-supplier resolved by **bridge_id only**, but the panel prompts "User ID or email"
+→ adding by user_id/email 404'd. Now resolves by **bridge_id OR user_id OR email** (matches ATH-114) + clearer message.
+
+**Healthy:** tenant-scoped (`owner` from token; all queries filter `owner_entity_id`); good validation (self-add 400,
+duplicate 409, not-found 404); **IDOR-safe delete** (`WHERE supplier_list_id AND owner_entity_id`); `safeErr`; web
+escaped + messaged + loading/empty/error. The supplier list is a **private bookmark** (no-consent, D-056) — adding X
+does NOT grant access to X's data (that needs connections/chits), so no privacy issue.
+
+**QUEUED (minor):**
+- **No suppliers quota enforced** — `lib/plans.js` has a `suppliers` quota but it isn't checked on add (subscription
+  enforcement is the broader backlog).
+- `has_catalogue` is surfaced (nice) — could drive a "browse their catalogue" action later.
+
 ## Build order (all HELD until reviewed; nothing pushed)
 1. Backend first (api batch): restore endpoint (`baseline-11`) + `chit_reads` migration + inbox unread + mark-read.
 2. Then frontend (this branch): badge, bulk-assign, actor-id, restore wire, row unread colour.
