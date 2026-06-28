@@ -382,28 +382,28 @@ const EP = {
   custVerify:      {m:"POST", p:"/api/catalogue/:bridgeId/login/verify", ok:"✓"},
   custOrders:      {m:"GET",  p:"/api/catalogue/:bridgeId/my-orders",     ok:"✓"},
   inbox:           {m:"GET",  p:"/api/chits/inbox",              ok:"✓"},  // ?status= ?page= ?limit=
-  sent:            {m:"GET",  p:"/api/chits/inbox",              ok:"◐"},  // NO /sent route — inbox is entity-keyed (incl. sent); filter client-side
+  sent:            {m:"GET",  p:"/api/chits/sent",               ok:"✓"},  // real sent copies (direction='sent') — baseline-4. (was wrongly /inbox = received copies)
   chit:            {m:"GET",  p:"/api/chits/:id",                ok:"✓"},
   advance:         {m:"PUT",  p:"/api/chits/:id/status",         ok:"✓"},  // state change is via PUT /status (no /advance route)
   status:          {m:"PUT",  p:"/api/chits/:id/status",         ok:"✓"},
   assign:          {m:"PUT",  p:"/api/actors/assign/:id",        ok:"✓"},  // body {action:'push', target_actor_id}
   unassign:        {m:"PUT",  p:"/api/actors/assign/:id",        ok:"✓"},  // SAME route — body {action:'return'}
-  setPriority:     {m:"PUT",  p:"/api/chits/:id/priority",       ok:"○"},  // {priority,reason} internal (fp01 §7 — build in Phase 1)
-  custFlag:        {m:"PUT",  p:"/api/chits/:id/priority-flag",  ok:"○"},  // {flag} customer request, write-once (fp01 §7)
+  setPriority:     {m:"PUT",  p:"/api/chits/:id/priority",       ok:"✓"},  // {priority,reason} internal — built (baseline-2)
+  custFlag:        {m:"PUT",  p:"/api/chits/:id/priority-flag",  ok:"✓"},  // {flag} customer request, write-once — built (baseline-2)
   actors:          {m:"GET",  p:"/api/actors",                   ok:"✓"},
   actorBreak:      {m:"PUT",  p:"/api/actors/break",             ok:"✓"},
   shopStatus:      {m:"PATCH",p:"/api/entities/profile",         ok:"✓"},  // shop status = PATCH profile {business_status}
   dispute:         {m:"POST", p:"/api/chits/:id/disputes",       ok:"✓"},  // raise dispute (built)
   delChit:         {m:"DELETE",p:"/api/chits/:id",               ok:"✓"},  // exists (soft-void/trash)
-  assignBulk:      {m:"POST", p:"/api/chits/assign-bulk",        ok:"○"},  // not built — ATH-109 §5
+  assignBulk:      {m:"POST", p:"/api/chits/assign-bulk",        ok:"✓"},  // built (baseline-4); frontend wire pending — panel-fixes #2
   filters:         {m:"GET",  p:"/api/chits/inbox?kind&dispute&sort", ok:"◐"}, // inbox exists; query-param support unverified
-  notifications:   {m:"GET",  p:"/api/notifications",            ok:"○"},  // not mounted — ATH-109 §11
+  notifications:   {m:"GET",  p:"/api/notifications",            ok:"✓"},  // mounted (baseline-4); enhanced baseline-8/9; wired to bell — panel-fixes #1
   // §2 messages ALREADY EXIST (chits.js); §7 priority + raid-report are new (build in Phase 1):
   messages:        {m:"GET",  p:"/api/chits/:id/messages",       ok:"✓"},  // ?type= (msg_type after fp01)
   sendMsg:         {m:"POST", p:"/api/chits/:id/messages",       ok:"✓"},  // body {thread_type, message_text, msg_type}
-  voidChit:        {m:"PUT",  p:"/api/chits/:id/void",           ok:"○"},  // not built
-  rollup:          {m:"POST", p:"/api/chits/rollup",             ok:"○"},  // not built
-  archive:         {m:"POST", p:"/api/chits/:id/archive",        ok:"○"},  // not built
+  voidChit:        {m:"PUT",  p:"/api/chits/:id/void",           ok:"✓"},  // built (baseline-4)
+  rollup:          {m:"GET",  p:"/api/chits/rollup",             ok:"✓"},  // built (baseline-4) — GET ?group_by=counterparty|state (was wrongly POST)
+  archive:         {m:"POST", p:"/api/chits/:id/archive",        ok:"✓"},  // built (baseline-4)
   createChit:      {m:"POST", p:"/api/chits/send",               ok:"✓"},  // compose a new chit
   addActor:        {m:"POST", p:"/api/actors",                   ok:"✓"},  // create an actor
   disputeQueue:    {m:"GET",  p:"/api/chits/disputes/queue",     ok:"✓"},  // all open disputes
