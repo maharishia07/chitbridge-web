@@ -1325,6 +1325,7 @@ function settingsScreen(){ return scr("⚙️ Settings","setbody"); }
 async function loadSettings(){ const h=document.getElementById("setbody"); if(!h)return;
   try{ const s=(await api("getSettings"))||{};
     h.innerHTML=`${menuAssist('settings')}<div style="${_CARD}">
+      <div style="background:#fbeceb;border:1px solid #f0c9c6;border-radius:8px;padding:8px 11px;font-size:11.5px;color:#b4453f;margin-bottom:11px">⏳ These preferences are saved but <b>not yet active</b> — they don't change behaviour yet.</div>
       <label class="fl">Assignment model</label><select class="inp" id="st_am">${opt(["pull","push","both"],s.assignment_model||"both")}</select>
       <label class="fl">Default max tasks per actor</label><input class="inp" id="st_mt" inputmode="numeric" value="${esc(s.default_max_tasks||10)}">
       <label class="fl" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="st_av" ${s.all_task_visible?'checked':''}> All tasks visible to all actors</label>
