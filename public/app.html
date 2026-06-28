@@ -617,6 +617,13 @@ function toastLevel(m){ const s=String(m);
 let _logFilter = 'all';
 function openMsgConsole(){ const host=document.getElementById("lbhost"); if(!host)return; if(UI.logOpen){ closeMsgConsole(); return; } UI.logOpen=true; renderMsgConsole(); }
 function closeMsgConsole(){ UI.logOpen=false; const h=document.getElementById("lbhost"); if(h)h.innerHTML=""; }
+/* Per-screen help — the assistant / Q&A moved behind a "?" so the window stays clean (banner stays inline). */
+let _helpOpen=false;
+function helpFor(key){ if(key==='coassists') return coHelpBox(); if(key==='compose') return composeHelpBox(); return (typeof menuHelp==='function'?menuHelp(key):''); }
+function openHelp(key){ const host=document.getElementById("lbhost"); if(!host)return; if(_helpOpen){ closeHelp(); return; } _helpOpen=true;
+  host.innerHTML=`<div class="notifover" onclick="closeHelp()"><div class="notifpanel" style="max-width:560px;width:94vw" onclick="event.stopPropagation()"><div class="notifhd">❓ About this screen<button onclick="closeHelp()" style="margin-left:auto;border:0;background:none;cursor:pointer;font-size:15px;color:var(--grey)" aria-label="Close">✕</button></div><div style="padding:13px;max-height:72vh;overflow:auto">${helpFor(key)}</div></div></div>`;
+}
+function closeHelp(){ _helpOpen=false; const h=document.getElementById("lbhost"); if(h)h.innerHTML=""; }
 function setLogFilter(k){ _logFilter=k; renderMsgConsole(); }
 function clearMsgLog(){ if(window.__cblog) window.__cblog.length=0; renderMsgConsole(); }
 function renderMsgConsole(){ const host=document.getElementById("lbhost"); if(!host||!UI.logOpen)return;
@@ -1326,7 +1333,11 @@ async function submitResolve(chitId, disputeId){
   catch(e){ if(err)err.textContent=e.message; }
 }
 /* ---------------- shared screen helpers ---------------- */
-function scr(title,id){ return `<div style="padding:14px;max-width:640px;margin:0 auto"><div class="sec" style="font-size:15px;margin-bottom:10px">${title}</div><div id="${id}"><div class="loadwrap"><span class="spin"></span> loading…</div></div></div>`; }
+function scr(title,id,helpKey){
+  const q = helpKey?`<button onclick="openHelp('${helpKey}')" title="About this screen" style="border:1px solid var(--line);background:#fff;color:#3F66A6;border-radius:50%;width:22px;height:22px;font-weight:800;cursor:pointer;font-size:13px;line-height:1;flex:none">?</button>`:'';
+  const hint = helpKey?`<div style="font-size:11px;color:var(--grey);margin-bottom:10px">Explore <b onclick="openHelp('${helpKey}')" style="cursor:pointer;color:#3F66A6">?</b> to know more about this screen.</div>`:'';
+  return `<div style="padding:14px;max-width:640px;margin:0 auto"><div class="sec" style="font-size:15px;margin-bottom:${helpKey?'3px':'10px'};display:flex;align-items:center;gap:9px">${title}${q}</div>${hint}<div id="${id}"><div class="loadwrap"><span class="spin"></span> loading…</div></div></div>`;
+}
 function esc(v){ return String(v==null?'':v).replace(/[<>"&]/g,c=>({'<':'&lt;','>':'&gt;','"':'&quot;','&':'&amp;'}[c])); }
 function opt(arr,sel){ return arr.map(o=>`<option ${o===sel?'selected':''}>${o}</option>`).join(""); }
 function scrErr(e){ return `<div class="empty"><div class="t">Couldn't load</div><div>${esc(e&&e.message)}</div></div>`; }
@@ -1521,7 +1532,7 @@ async function loadMIS(){ const h=document.getElementById("misbody"); if(!h)retu
       <div style="margin-top:10px;color:var(--grey);font-size:11px">Computed on view from your live data — there is no MIS route on the legacy backend yet (a server-side rollup is the production model).</div>`;
   }catch(e){ h.innerHTML=scrErr(e); } }
 /* CO-ASSISTS — the actor roster */
-function coassistsScreen(){ return scr("🧑‍🤝‍🧑 Co-assists","cobody"); }
+function coassistsScreen(){ return scr("🧑‍🤝‍🧑 Co-assists","cobody","coassists"); }
 const CO_HELP = [
  {q:"What is a co-assist?", a:"Anyone — or anything — that acts FOR you. Today people; soon connectors, IoT devices, process rules and AI agents. The owner stays the party; the co-assist acts on your behalf under access you grant."},
  {q:"What can they do?", a:"Access is an engagement type — a scoped grant: view-only, act-on-it, audit (review/sign-off), MIS (aggregates only), and more. Default-deny: they only get what you grant, scoped to a node. (Shown as placeholders now; wired next.)"},
@@ -1530,7 +1541,7 @@ const CO_HELP = [
  {q:"Can a co-assist be a machine?", a:"Yes — actor_type can be connector (ERP / system-to-system), iot_device (a machine triggers a chit), process_rule, or ai_agent. Each has its own auth and handling; these are the next slices."},
  {q:"Where does access come from?", a:"You can only grant what you hold; access flows down the Network tree and is checked live. Set participants here; their scope ties to their node in Network."}
 ];
-function coBanner(){ return `<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:12px;padding:12px 14px;margin-bottom:12px;font-size:13px;color:#6b5a36;line-height:1.5"><b style="font-family:'Space Grotesk'">Manage who acts for you.</b> Co-Assist is the <b>people and systems that act for you</b> — people now; connectors, devices, processes and agents are participant types coming next. The owner stays the party; participants act <i>for</i> you under scoped access. For your structure use <b>Network</b>; for other businesses use <b>Connections</b>.</div>${coHelpBox()}`; }
+function coBanner(){ return `<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:12px;padding:12px 14px;margin-bottom:12px;font-size:13px;color:#6b5a36;line-height:1.5"><b style="font-family:'Space Grotesk'">Manage who acts for you.</b> Co-Assist is the <b>people and systems that act for you</b> — people now; connectors, devices, processes and agents are participant types coming next. The owner stays the party; participants act <i>for</i> you under scoped access. For your structure use <b>Network</b>; for other businesses use <b>Connections</b>.</div>`; }
 function coHelpBox(){ return `<div style="${_CARD}"><div style="font-family:'Space Grotesk';font-weight:600;font-size:13px;margin-bottom:2px">Co-Assist assistant <span style="font-size:10.5px;font-family:'Space Mono';background:var(--gold-soft);color:#7a5e22;border-radius:5px;padding:1px 7px">Web Demo · sample answers</span></div><div style="font-size:12.5px;color:var(--grey);margin-bottom:10px">Who acts for you, what they can do, and how work is assigned. (Real version: an AI handler over your participants and grants.)</div><div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px">${CO_HELP.map((f,i)=>`<button class="composebtn" onclick="coAsk(${i})">${esc(f.q)}</button>`).join("")}</div><div style="display:flex;gap:8px"><input class="inp" id="co_in" placeholder="e.g. can a machine raise an order?"><button style="${_BTN}" onclick="coAskFree()">Ask</button></div><div id="co_ans" style="font-size:13px;color:var(--ink);margin-top:10px;line-height:1.55"></div></div>`; }
 function coAsk(i){ const f=CO_HELP[i]; const inp=document.getElementById("co_in"); if(inp)inp.value=f.q; const o=document.getElementById("co_ans"); if(o)o.innerHTML="<b>"+esc(f.q)+"</b><br>"+esc(f.a); }
 function coAskFree(){ const q=(val("co_in")||"").toLowerCase(); let a;
