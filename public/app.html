@@ -644,6 +644,27 @@ const MSG = {
   supplierRemoved:()            => `Supplier removed ✓`,
   profileSaved:   ()            => `Profile saved ✓`,
   settingsSaved:  ()            => `Settings saved ✓`,
+  // network / connections
+  linkRequested:  ()            => `Link requested ✓ — awaiting the child's consent`,
+  netApproved:    ()            => `Approved ✓ — child reparented under you`,
+  netDeclined:    ()            => `Declined`,
+  netSuspended:   ()            => `Suspended`,
+  netResumed:     ()            => `Resumed ✓`,
+  netDisconnected:()            => `Disconnected`,
+  netRegistered:  ()            => `Registered into the network ✓`,
+  settleFirst:    ()            => `Open chit on this edge — settle it first.`,
+  connRequested:  ()            => `Connection request sent ✓`,
+  connected:      ()            => `Connected ✓`,
+  connRejected:   ()            => `Rejected`,
+  removed:        ()            => `Removed ✓`,
+  // nudges for silent stops
+  capHit:         (role,n)      => `${String(role).toUpperCase()} is capped at ${n}.`,
+  pickItemFirst:  ()            => `Pick a product from the list first.`,
+  alreadySelf:    ()            => `Self is already a recipient.`,
+  // messages
+  msgSentExternal:(party)       => `↔ Sent — ${party||'the other party'} notified`,
+  msgSentInternal:()            => `🔒 Internal note added (team only)`,
+  msgEmpty:       ()            => `Type a message first.`,
   // generic
   comingSoon:     (what)        => `${what||'This'} is coming next — not wired yet.`,
   fail:           (verb,e)      => `Couldn't ${verb} — ${friendlyErr(e)}`,
@@ -1078,13 +1099,13 @@ function ccAddRcpt(){ const role=val("cc_rrole")||"to"; const name=val("cc_rname
   if(!name){ if(e)e.textContent="Enter a recipient name (or Self)."; return; }
   if(ccRoleCount(role)>=(LIMITS[role]||99)){ if(e)e.textContent=role.toUpperCase()+" is capped at "+LIMITS[role]+"."; return; }
   CC.rcpts.push({name:name, role:role, self:ccIsSelf(name)}); const ne=document.getElementById("cc_rname"); if(ne)ne.value=""; ccRenderRcpts(); }
-function ccAddSelf(){ if(ccRoleCount("to")>=(LIMITS.to||99))return; if(CC.rcpts.some(r=>r.self&&r.role==="to"))return; CC.rcpts.push({name:"Self", role:"to", self:true}); ccRenderRcpts(); }
+function ccAddSelf(){ if(ccRoleCount("to")>=(LIMITS.to||99)){ toast(MSG.capHit("to", LIMITS.to)); return; } if(CC.rcpts.some(r=>r.self&&r.role==="to")){ toast(MSG.alreadySelf()); return; } CC.rcpts.push({name:"Self", role:"to", self:true}); ccRenderRcpts(); }
 function ccDelRcpt(i){ CC.rcpts.splice(i,1); ccRenderRcpts(); }
 function ccFlipRcpt(i){ const order=["to","cc","for"]; const r=CC.rcpts[i]; if(!r)return; for(let k=1;k<=order.length;k++){ const nx=order[(order.indexOf(r.role)+k)%order.length]; if(nx===r.role||ccRoleCount(nx)<(LIMITS[nx]||99)){ r.role=nx; break; } } ccRenderRcpts(); }
 function ccRenderRcpts(){ const h=document.getElementById("cc_rcpts");
   if(h){ h.innerHTML = CC.rcpts.length ? CC.rcpts.map((r,i)=>{ const col=r.role==="to"?"#3F66A6":r.role==="cc"?"#7a5e22":"#5F6B70"; const bg=r.role==="to"?"#EEF3FB":r.role==="cc"?"#F4ECD8":"#EFEBE2"; return `<span style="display:inline-flex;align-items:center;gap:5px;border:0.5px solid var(--line);border-radius:8px;padding:3px 7px;margin:0 5px 5px 0;font-size:11.5px"><span onclick="ccFlipRcpt(${i})" title="Flip role (To/CC/For)" style="cursor:pointer;font-family:'Space Mono';font-size:9.5px;background:${bg};color:${col};border-radius:5px;padding:1px 5px">${r.role.toUpperCase()}</span>${esc(r.name)}${r.self?'<span style="color:#3F66A6;font-size:10px"> · self</span>':''}<span onclick="ccDelRcpt(${i})" style="cursor:pointer;color:#9aa3a7">✕</span></span>`; }).join("") : `<div style="font-size:12px;color:var(--grey)">No recipients yet — add To / CC / For above.</div>`; }
   const capEl=document.getElementById("cc_rcap"); if(capEl) capEl.textContent="To "+ccRoleCount("to")+"/"+LIMITS.to+" · CC "+ccRoleCount("cc")+"/"+LIMITS.cc+" · For "+ccRoleCount("for")+"/"+LIMITS.for+" — tap a role chip to flip"; }
-function ccAddItem(){ const e=document.getElementById("cc_err"); if(e)e.textContent=""; if(CC.items.length>=(LIMITS.items||999)){ if(e)e.textContent="Line items capped at "+LIMITS.items+"."; return; } const i=+val("cc_pick"); const p=(STORE.catalogue||[])[i]; if(!p)return; CC.items.push({particulars:p.particulars,unit:p.unit||"unit",price:+p.price||0,qty:1}); ccRenderItems(); }
+function ccAddItem(){ const e=document.getElementById("cc_err"); if(e)e.textContent=""; if(CC.items.length>=(LIMITS.items||999)){ if(e)e.textContent="Line items capped at "+LIMITS.items+"."; return; } const i=+val("cc_pick"); const p=(STORE.catalogue||[])[i]; if(!p){ if(e)e.textContent=MSG.pickItemFirst(); return; } CC.items.push({particulars:p.particulars,unit:p.unit||"unit",price:+p.price||0,qty:1}); ccRenderItems(); }
 function ccDelItem(i){ CC.items.splice(i,1); ccRenderItems(); }
 function ccQty(i,v){ if(CC.items[i])CC.items[i].qty=Math.max(0,+v||0); ccRenderTotal(); }
 function ccLineTotal(it){ return (+it.qty||0)*(+it.price||0); }
@@ -1277,7 +1298,7 @@ function resolveDispute(chitId, disputeId){
 async function submitResolve(chitId, disputeId){
   const note=val("resnote"); const err=document.getElementById("res_err"); if(err)err.textContent="";
   if(!note){ if(err)err.textContent="A resolution note is required."; return; }
-  try{ await api("resolveDispute",{params:{id:chitId,disputeId},body:{resolution_note:note}}); closeModal(); toast("Dispute resolved ✓"); loadDisputes(); }
+  try{ await api("resolveDispute",{params:{id:chitId,disputeId},body:{resolution_note:note}}); closeModal(); toast(MSG.disputeResolved()); loadDisputes(); }
   catch(e){ if(err)err.textContent=e.message; }
 }
 /* ---------------- shared screen helpers ---------------- */
@@ -1311,7 +1332,7 @@ async function loadSettings(){ const h=document.getElementById("setbody"); if(!h
       <div class="err" id="st_err"></div><button class="composebtn" style="margin-top:9px" onclick="saveSettings()">Save settings</button></div>`;
   }catch(e){ h.innerHTML=scrErr(e); } }
 async function saveSettings(){ const x=document.getElementById("st_err"); if(x)x.textContent="";
-  try{ await api("saveSettings",{body:{assignment_model:val("st_am"),default_max_tasks:+val("st_mt")||10,all_task_visible:document.getElementById("st_av").checked,auto_return_on_short_break:document.getElementById("st_ar").checked}}); toast("Settings saved ✓"); }catch(e){ if(x)x.textContent=e.message; } }
+  try{ await api("saveSettings",{body:{assignment_model:val("st_am"),default_max_tasks:+val("st_mt")||10,all_task_visible:document.getElementById("st_av").checked,auto_return_on_short_break:document.getElementById("st_ar").checked}}); toast(MSG.settingsSaved()); }catch(e){ if(x)x.textContent=e.message; } }
 /* NETWORK */
 function networkScreen(){ return scr("🔗 Network — internal architecture","netbody"); }
 async function loadNetwork(){ const h=document.getElementById("netbody"); if(!h)return;
@@ -1426,19 +1447,19 @@ async function netCreateBranch(){
   }catch(e){ if(st)st.textContent=""; if(x)x.textContent=e.message; }
 }
 async function netConnect(parentId){ const x=document.getElementById("net_err"); if(x)x.textContent=""; const bid=val("net_child"); if(!bid){ if(x)x.textContent="Enter the sub-entity's User ID."; return; } if(!isUserId(bid)){ if(x)x.textContent="User ID must be at least 8 characters, or an email."; return; }
-  try{ await api("netConnect",{body:{parentId, childBridgeId:bid}}); toast("Link requested ✓ — awaiting the child's consent"); loadNetwork(); }catch(e){ if(x)x.textContent=e.message; } }
-async function netApprove(id){ try{ await api("netApprove",{params:{id},body:{}}); toast("Approved ✓ — child reparented under you"); loadNetwork(); }catch(e){ toast("Failed: "+e.message); } }
-async function netDecline(id){ try{ await api("netDecline",{params:{id},body:{}}); toast("Declined"); loadNetwork(); }catch(e){ toast("Failed: "+e.message); } }
-async function netSuspend(id){ try{ await api("netSuspend",{params:{id}}); toast("Suspended"); loadNetwork(); }catch(e){ toast("Failed: "+e.message); } }
-async function netResume(id){ try{ await api("netResume",{params:{id}}); toast("Resumed ✓"); loadNetwork(); }catch(e){ toast("Failed: "+e.message); } }
-async function netDisconnect(id){ if(!confirm("Disconnect this edge? The child subtree detaches to its own root.")) return; try{ await api("netDisconnect",{params:{id},body:{settle:false}}); toast("Disconnected"); loadNetwork(); }catch(e){ toast(/settle/.test(e.message)?"Open chit on this edge — settle first (NET-01 T6)":("Failed: "+e.message)); } }
-async function netRegisterSelf(){ try{ await api("netRegister",{body:{name:SESSION.entity||SESSION.name||"My entity", businessType:"Aggregator"}}); toast("Registered into network ✓"); loadNetwork(); }catch(e){ toast("Failed: "+e.message); } }
+  try{ await api("netConnect",{body:{parentId, childBridgeId:bid}}); toast(MSG.linkRequested()); loadNetwork(); }catch(e){ if(x)x.textContent=e.message; } }
+async function netApprove(id){ try{ await api("netApprove",{params:{id},body:{}}); toast(MSG.netApproved()); loadNetwork(); }catch(e){ toast(MSG.fail("approve", e)); } }
+async function netDecline(id){ try{ await api("netDecline",{params:{id},body:{}}); toast(MSG.netDeclined()); loadNetwork(); }catch(e){ toast(MSG.fail("decline", e)); } }
+async function netSuspend(id){ try{ await api("netSuspend",{params:{id}}); toast(MSG.netSuspended()); loadNetwork(); }catch(e){ toast(MSG.fail("suspend", e)); } }
+async function netResume(id){ try{ await api("netResume",{params:{id}}); toast(MSG.netResumed()); loadNetwork(); }catch(e){ toast(MSG.fail("resume", e)); } }
+async function netDisconnect(id){ if(!confirm("Disconnect this edge? The child subtree detaches to its own root.")) return; try{ await api("netDisconnect",{params:{id},body:{settle:false}}); toast(MSG.netDisconnected()); loadNetwork(); }catch(e){ toast(/settle/.test(e.message)?MSG.settleFirst():MSG.fail("disconnect", e)); } }
+async function netRegisterSelf(){ try{ await api("netRegister",{body:{name:SESSION.entity||SESSION.name||"My entity", businessType:"Aggregator"}}); toast(MSG.netRegistered()); loadNetwork(); }catch(e){ toast(MSG.fail("register", e)); } }
 async function connectReq(){ const x=document.getElementById("nw_err"); if(x)x.textContent=""; const q=val("nw_to"); if(!q){ if(x)x.textContent="Enter a business name or User ID."; return; }
   try{ let to=q;
     if(!/^[0-9a-f-]{30,}$/i.test(q)){ const sr=await api("entitySearch",{query:{q}}); const hit=(sr||[])[0]; if(!hit){ if(x)x.textContent='No business found for "'+q+'".'; return; } to=hit.identity_id; }
-    await api("connRequest",{body:{to_entity_id:to}}); toast("Connection request sent ✓"); loadNetwork();
+    await api("connRequest",{body:{to_entity_id:to}}); toast(MSG.connRequested()); loadNetwork();
   }catch(e){ if(x)x.textContent=e.message; } }
-async function respondConn(id,action){ try{ await api("connRespond",{params:{id},body:{action}}); toast(action==='accept'?"Connected ✓":"Rejected"); loadNetwork(); }catch(e){ toast("Failed: "+e.message); } }
+async function respondConn(id,action){ try{ await api("connRespond",{params:{id},body:{action}}); toast(action==='accept'?MSG.connected():MSG.connRejected()); loadNetwork(); }catch(e){ toast(MSG.fail("respond", e)); } }
 /* SUPPLIERS */
 function suppliersScreen(){ return scr("🏭 Suppliers","supbody"); }
 async function loadSuppliers(){ const h=document.getElementById("supbody"); if(!h)return;
@@ -1448,7 +1469,7 @@ async function loadSuppliers(){ const h=document.getElementById("supbody"); if(!
   }catch(e){ h.innerHTML=scrErr(e); } }
 async function addSupplier(){ const x=document.getElementById("sp_err"); if(x)x.textContent=""; const bid=val("sp_bid"); if(!bid){ if(x)x.textContent="Enter a supplier's User ID."; return; } if(!isUserId(bid)){ if(x)x.textContent="User ID must be at least 8 characters, or an email."; return; }
   try{ await api("supAdd",{body:{supplier_bridge_id:bid}}); toast("Supplier added ✓"); loadSuppliers(); }catch(e){ if(x)x.textContent=e.message; } }
-async function delSupplier(id){ try{ await api("supDel",{params:{id}}); toast("Removed ✓"); loadSuppliers(); }catch(e){ toast("Failed: "+e.message); } }
+async function delSupplier(id){ try{ await api("supDel",{params:{id}}); toast(MSG.supplierRemoved()); loadSuppliers(); }catch(e){ toast(MSG.fail("remove the supplier", e)); } }
 /* CATALOGUE (own products) */
 function catalogueScreen(){ return scr("🗂️ Catalogue","catbody"); }
 async function loadCatalogue(){ const h=document.getElementById("catbody"); if(!h)return;
@@ -1458,7 +1479,7 @@ async function loadCatalogue(){ const h=document.getElementById("catbody"); if(!
   }catch(e){ h.innerHTML=scrErr(e); } }
 async function addProduct(){ const x=document.getElementById("ct_err"); if(x)x.textContent=""; const name=val("ct_name"); if(!name){ if(x)x.textContent="Enter a product name."; return; }
   try{ await api("prodAdd",{body:{item_data:{name,price:+val("ct_price")||0}}}); toast("Product added ✓"); loadCatalogue(); }catch(e){ if(x)x.textContent=e.message; } }
-async function delProduct(id){ try{ await api("prodDel",{params:{id}}); toast("Deleted ✓"); loadCatalogue(); }catch(e){ toast("Failed: "+e.message); } }
+async function delProduct(id){ try{ await api("prodDel",{params:{id}}); toast(MSG.productDeleted()); loadCatalogue(); }catch(e){ toast(MSG.fail("delete the product", e)); } }
 /* MIS — computed client-side (no MIS route on the legacy backend) */
 function misScreen(){ return scr("📊 MIS","misbody"); }
 async function loadMIS(){ const h=document.getElementById("misbody"); if(!h)return;
@@ -1502,7 +1523,7 @@ function coActorCard(a){ const at=a.atype||"human", cap=a.cap||"act", node=a.nod
  const shc=sh==='on_shift'?'on':sh==='on_break'?'brk':'off';
  return `<div style="${_CARD}"><div style="display:flex;justify-content:space-between;align-items:center"><span><b>${esc(a.name)}</b> <span class="optchip" style="font-size:10px;background:#eef3fb;color:#345488;border-color:#cfe0f4">${esc(at)}</span>${a.isnew?` <span class="optchip" style="font-size:10px;background:#eaf3ee;color:#2f8f5b;border-color:#bfe0cd">new</span>`:``}</span><span class="optchip ${shc}">${esc(sh.replace('_',' '))}</span></div>${a.uid?`<div style="font-family:'Space Mono';font-size:11px;color:#3F66A6;margin-top:2px">${esc(a.uid)}</div>`:''}<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:7px;align-items:center"><span class="optchip" style="font-size:10.5px;background:var(--gold-soft);color:#7a5e22;border-color:var(--gold-line)">${esc(cap)}</span>${node?`<span style="font-size:11.5px;color:var(--grey)">@ ${esc(node)}</span>`:''}<span style="font-size:11.5px;color:var(--grey)">load ${a.load==null?0:a.load}</span></div><div style="margin-top:9px;display:flex;gap:6px"><button class="composebtn" onclick="actorShift('${a.id}','${sh}')">Toggle shift</button><button class="composebtn" onclick="todo('coassistEngage')">Set engagement</button></div></div>`; }
 async function actorShift(id,cur){ const order=["on_shift","on_break","off"]; const next=order[(order.indexOf(cur)+1)%3];
- try{ await api("actorBreak",{body:{actor_id:id, break_status:next}}); toast("Shift → "+next.replace("_"," ")+" ✓"); loadCoassists(); }catch(e){ toast("Failed: "+e.message); } }
+ try{ await api("actorBreak",{body:{actor_id:id, break_status:next}}); toast(MSG.shiftSet(next)); loadCoassists(); }catch(e){ toast(MSG.fail("change shift", e)); } }
 async function loadCoassists(){ const h=document.getElementById("cobody"); if(!h)return;
   try{ const actors=((await api("actors"))||[]).map(mapApiActor);
     h.innerHTML = coBanner() + coTypeRow() +
@@ -1729,7 +1750,7 @@ const PENDING = {
   assignBulk:   {label:"Mass-assign",               ref:"ATH-109 §5"},
   notifications:{label:"Notifications",             ref:"ATH-109 §11"},
 };
-function todo(k){ const t=PENDING[k]||{label:k,ref:""}; toast("⏳ "+t.label+" — placeholder, build next iteration"+(t.ref?" ("+t.ref+")":"")); }
+function todo(k){ const t=PENDING[k]||{label:k,ref:""}; toast(MSG.comingSoon(t.label)+(t.ref?" ("+t.ref+")":"")); }
 function selBar(){const ids=UI.selected;const sum=UI.rows.filter(c=>ids.has(c.id)).reduce((a,c)=>a+c.amt,0);const ticked=UI.rows.filter(c=>UI.aggStates.has(c.state)).reduce((a,c)=>a+c.amt,0);const lbl=ids.size?`☑ ${ids.size} selected · Σ ${inr(sum)}`:`states ✓ ${[...UI.aggStates].map(cap).join(" · ")} · Σ ${inr(ticked)}`;return `<div class="selbar" id="selbar">${lbl}<span class="sp"><button onclick="sumScope()">Sum →</button><button class="pri" onclick="todo('assignBulk')">Assign</button><button onclick="UI.selected.clear();renderApp()">Clear</button></span></div>`;}
 function updateSelBar(){const el=document.getElementById("selbar");if(el)el.outerHTML=selBar();}
 function sumScope(){
@@ -1830,11 +1851,11 @@ function sendMessage(id){
   else { doSendMessage(id,'internal'); }
 }
 async function doSendMessage(id, scope){
-  const el=document.getElementById('msgbody'); const body=(el?el.value:"").trim(); if(!body)return;
-  try{ await api("sendMsg",{params:{id},body:{thread_type:scope,message_text:body,msg_type:UI.msgKind||"info"}}); await openChit(id,true); }catch(e){ toast("Send failed: "+e.message); return; }
+  const el=document.getElementById('msgbody'); const body=(el?el.value:"").trim(); if(!body){ toast(MSG.msgEmpty()); return; }
+  try{ await api("sendMsg",{params:{id},body:{thread_type:scope,message_text:body,msg_type:UI.msgKind||"info"}}); await openChit(id,true); }catch(e){ toast(MSG.fail("send the message", e)); return; }
   const i=UI.rows.findIndex(x=>x.id===id); if(i>=0)UI.rows[i].msg=msgCount(UI.detail);
   paintDetail(); paintRowsOnly();
-  toast(scope==='external'?'↔ Sent — '+((UI.detail&&UI.detail.party)||'the other party')+' notified':'🔒 Internal note added (team only)');
+  toast(scope==='external'?MSG.msgSentExternal(UI.detail&&UI.detail.party):MSG.msgSentInternal());
 }
 function unreadCount(){ let n=0; (STORE.chits||[]).forEach(c=>{ (c.msgs||[]).forEach(m=>{ if(m.unread && (SESSION.role!=="customer"||m.scope==="external")) n++; }); }); return n; }
 function markChitRead(id){ const c=(STORE.chits||[]).find(x=>x.id==id); if(c)(c.msgs||[]).forEach(m=>m.unread=false); }
