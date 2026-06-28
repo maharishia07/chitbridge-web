@@ -1283,9 +1283,9 @@ async function loadDisputes(){
   const host=document.getElementById("disprows"); if(!host)return;
   try{ const q=await api("disputeQueue"); const mine=q.my_disputes||[], other=q.other_disputes||[];
     const card=(d,canResolve)=>`<div class="card" style="border:1px solid var(--line);border-radius:11px;padding:12px;margin-bottom:9px">
-      <div style="display:flex;justify-content:space-between;gap:8px"><b>${d.auto_subject||d.purpose||'chit'}</b><span class="optchip ${d.status==='open'?'brk':'on'}">${d.status}</span></div>
-      <div style="font-size:13px;color:var(--ink);margin:5px 0"><b>${cap(d.category||'')}</b> — ${d.reason||''}</div>
-      <div style="font-size:11.5px;color:var(--grey)">raised by ${d.raised_by_display_name||'—'} · ${d.scope||''}${d.resolution_note?(' · ✓ '+d.resolution_note):''}</div>
+      <div style="display:flex;justify-content:space-between;gap:8px"><b>${esc(d.auto_subject||d.purpose||'chit')}</b><span class="optchip ${d.status==='open'?'brk':'on'}">${esc(d.status)}</span></div>
+      <div style="font-size:13px;color:var(--ink);margin:5px 0"><b>${esc(cap(d.category||''))}</b> — ${esc(d.reason||'')}</div>
+      <div style="font-size:11.5px;color:var(--grey)">raised by ${esc(d.raised_by_display_name||'—')} · ${esc(d.scope||'')}${d.resolution_note?(' · ✓ '+esc(d.resolution_note)):''}</div>
       ${canResolve&&d.status==='open'?`<div style="margin-top:8px"><button class="composebtn" onclick="resolveDispute('${d.chit_id}','${d.dispute_id}')">Resolve</button></div>`:''}</div>`;
     host.innerHTML = `${menuAssist('disputes')}<div class="sec" style="font-size:12px;color:var(--grey);margin:4px 0">Raised by you (${mine.length})</div>${mine.map(d=>card(d,true)).join("")||'<div style="color:var(--grey);font-size:13px;padding:6px">None.</div>'}
       <div class="sec" style="font-size:12px;color:var(--grey);margin:14px 0 4px">Against you / awaiting (${other.length})</div>${other.map(d=>card(d,false)).join("")||'<div style="color:var(--grey);font-size:13px;padding:6px">None.</div>'}`;
@@ -1793,7 +1793,7 @@ function detailInner(){
   if(UI.dtab==="messages") body=messagesTab(c);
   if(UI.dtab==="status") body=`<div class="sec">Lifecycle</div><div class="tl">
      <div class="ev"><div class="ea">Created</div><div class="em">today 10:02</div></div>
-     <div class="ev"><div class="ea">Sent · landed</div><div class="em">with ${c.party}</div></div>
+     <div class="ev"><div class="ea">Sent · landed</div><div class="em">with ${esc(c.party)}</div></div>
      ${c.state!=="open"?'<div class="ev"><div class="ea">Moved to Act</div><div class="em">10:25</div></div>':''}
      ${c.state==="close"?'<div class="ev"><div class="ea">Closed</div><div class="em">delivery confirmed</div></div>':`<div class="ev"><div class="ea" style="color:var(--grey)">Next: ${({open:"Act",act:"Close",close:"Archive"})[c.state]}</div><div class="em">advance from the row chip ▸</div></div>`}
      </div>
@@ -1808,8 +1808,8 @@ function detailInner(){
     ? `<button onclick="toggleCustPri('${c.id}')">⚑ ${c.custPri?'Priority requested':'Request priority'}</button><button class="warn" onclick="quickDispute()">⚑ Dispute</button><button onclick="todo('pdf')">⬇ PDF</button>`
     : `<button class="pri" onclick="advanceChit('${c.id}')">Advance ▸</button>${SESSION.role==="actor"?`<button onclick="pickAssign('${c.id}')">👥 Assign</button>`:""}<button class="warn" onclick="quickDispute()">⚑ Dispute</button>${SESSION.role==="entity"?`<button class="warn pend" onclick="todo('voidChit')">⊘ Void</button>`:""}<button onclick="todo('pdf')">⬇ PDF</button>`;
   const dtabs=[["content","Content"],["status","Status"],["summary","Summary"],["messages","💬 Messages"+(msgCount(c)?" ("+msgCount(c)+")":"")]];
-  return `<div class="dh"><button class="dback" onclick="backToList()">‹ Back to list</button><button class="dmsg" onclick="setDtab('messages')" title="Messages" aria-label="Messages">💬${msgCount(c)?' '+msgCount(c):''}</button><div class="dt">${c.code} · ${c.party}</div><div class="ds">${c.area} · ${c.kind} · ${inr(c.amt)} · ${c.state.toUpperCase()}</div>
-     <div class="parties"><span class="ptag">from <b>${SESSION.entity||"You"}</b></span><span class="ptag">to <b>${c.kind==='counter'?(SESSION.entity||'You'):c.party}</b></span>${c.kind==='counter'?`<span class="ptag">for <b>${c.cust}</b></span>`:''}</div><div class="dchips">${SESSION.role!=="customer"?`<button class="prichip-btn pri-${c.pri||'normal'}" onclick="repriority('${c.id}')" title="Priority — tap to change">${(c.pri&&c.pri!=='normal')?PRI[c.pri].label:'Normal'} ▾</button>`:''}${c.custPri?'<span class="custflag-tag">⚑ Customer priority</span>':''}</div></div>
+  return `<div class="dh"><button class="dback" onclick="backToList()">‹ Back to list</button><button class="dmsg" onclick="setDtab('messages')" title="Messages" aria-label="Messages">💬${msgCount(c)?' '+msgCount(c):''}</button><div class="dt">${esc(c.code)} · ${esc(c.party)}</div><div class="ds">${esc(c.area)} · ${esc(c.kind)} · ${inr(c.amt)} · ${c.state.toUpperCase()}</div>
+     <div class="parties"><span class="ptag">from <b>${SESSION.entity||"You"}</b></span><span class="ptag">to <b>${c.kind==='counter'?esc(SESSION.entity||'You'):esc(c.party)}</b></span>${c.kind==='counter'?`<span class="ptag">for <b>${esc(c.cust)}</b></span>`:''}</div><div class="dchips">${SESSION.role!=="customer"?`<button class="prichip-btn pri-${c.pri||'normal'}" onclick="repriority('${c.id}')" title="Priority — tap to change">${(c.pri&&c.pri!=='normal')?PRI[c.pri].label:'Normal'} ▾</button>`:''}${c.custPri?'<span class="custflag-tag">⚑ Customer priority</span>':''}</div></div>
    <div class="dtabs">${dtabs.map(([k,l])=>`<button class="${UI.dtab===k?'on':''}" onclick="setDtab('${k}')">${l}</button>`).join("")}</div>
    <div class="db">${body}</div><div class="actbar">${actbar}</div>`;
 }
@@ -1821,7 +1821,7 @@ function setMsgChan(ch){ UI.msgChan=ch; paintDetail(); }
 function toggleCompose(){ UI.composeOpen=!UI.composeOpen; paintDetail(); if(UI.composeOpen)setTimeout(()=>{const t=document.getElementById('msgbody');if(t)t.focus();},30); }
 function setMsgType(t){ UI.msgType=t; paintDetail(); }
 function setMsgKind(k){ UI.msgKind=k; paintDetail(); }
-function msgBubble(m){ const ext=m.scope==="external"; const d=MTYPES[m.type]||MTYPES.info; return `<div class="bubble ${ext?'ext':'int'}"><div class="bh"><span class="mbadge ${ext?'ext':'int'}">${ext?'↔ External':'🔒 Internal'}</span><span class="mtype ${d.cls}">${d.icon} ${d.label}</span><span class="ath">${m.author}</span><span class="tm">${m.at}</span>${m.unread?'<span class="unreaddot"></span>':''}</div><div class="bb">${m.body}</div></div>`; }
+function msgBubble(m){ const ext=m.scope==="external"; const d=MTYPES[m.type]||MTYPES.info; return `<div class="bubble ${ext?'ext':'int'}"><div class="bh"><span class="mbadge ${ext?'ext':'int'}">${ext?'↔ External':'🔒 Internal'}</span><span class="mtype ${d.cls}">${d.icon} ${d.label}</span><span class="ath">${esc(m.author)}</span><span class="tm">${m.at}</span>${m.unread?'<span class="unreaddot"></span>':''}</div><div class="bb">${esc(m.body)}</div></div>`; }
 function messagesTab(c){
   markChitRead(c.id); setTimeout(refreshMsgBadge,0);
   const isCust=SESSION.role==="customer";
@@ -1900,7 +1900,7 @@ async function pickAssign(id){
   const prisel=`<div class="msec">Priority</div><div class="prisel">${["urgent","normal","low"].map(p=>`<button class="pri-${p} ${MODALS.pick.pri===p?'on':''}" data-p="${p}" onclick="pickPri('${p}')">${PRI[p].label}</button>`).join("")}</div>`;
   const reasonbox=`<div class="msec">Reason <span id="reasonhint" class="rh">${MODALS.pick.pri==='urgent'?'— Urgent needs one':'(optional)'}</span></div><textarea id="assignreason" class="mreason" placeholder="Why this assignment / this urgency…" oninput="MODALS.pick.reason=this.value;syncAssignOk()"></textarea>`;
   const custnote=c.custPri?`<div class="custreq">⚑ Customer flagged this as priority — consider Urgent.</div>`:'';
-  modal(`<div class="mhd"><div class="t">Assign ${c.code||'chit'}</div><div class="s">${c.party||''}${c.amt?' · '+inr(c.amt):''}</div></div><div class="mbody">${custnote}${rows||'<div style="padding:14px;color:var(--grey);font-size:13px">No co-assists yet.</div>'}<div style="padding:6px 0 2px"><button class="composebtn" onclick="addActorModal()">+ New co-assist</button></div>${prisel}${reasonbox}</div><div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="pri" id="mok" disabled onclick="confirmAssign()">Assign</button></div>`);
+  modal(`<div class="mhd"><div class="t">Assign ${esc(c.code||'chit')}</div><div class="s">${esc(c.party||'')}${c.amt?' · '+inr(c.amt):''}</div></div><div class="mbody">${custnote}${rows||'<div style="padding:14px;color:var(--grey);font-size:13px">No co-assists yet.</div>'}<div style="padding:6px 0 2px"><button class="composebtn" onclick="addActorModal()">+ New co-assist</button></div>${prisel}${reasonbox}</div><div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="pri" id="mok" disabled onclick="confirmAssign()">Assign</button></div>`);
 }
 function pickActor(aid){ MODALS.pick.actorId=aid; document.querySelectorAll('.optrow').forEach(r=>r.classList.toggle('sel',r.dataset.a===aid)); syncAssignOk(); }
 function pickPri(p){ MODALS.pick.pri=p; document.querySelectorAll('.prisel button').forEach(b=>b.classList.toggle('on',b.dataset.p===p)); const h=document.getElementById('reasonhint'); if(h)h.textContent=p==='urgent'?'— Urgent needs one':'(optional)'; syncAssignOk(); }
@@ -1997,8 +1997,8 @@ function contentItems(c){
     const atts=attsVis(it[2]);
     const open=UI.openLines.has('line'+idx);
     const clip=atts.length?`<span class="lineclip" onclick="event.stopPropagation();toggleLine(${idx})">📎 ${atts.length} ${open?'▾':'▸'}</span>`:"";
-    const strip=(atts.length&&open)?`<div class="lineImgs">${atts.map((a,i)=>`<div class="attThumb" onclick="openLightbox('line${idx}',${i})" title="${a.n}">${attMedia(a,'thumb')}</div>`).join("")}</div>`:"";
-    return `<div class="ir ${atts.length?'hasatt':''}" ${atts.length?`onclick="toggleLine(${idx})"`:''}><span class="nm">${it[0]}</span><span class="qt">${it[1]}</span>${clip}</div>${strip}`;
+    const strip=(atts.length&&open)?`<div class="lineImgs">${atts.map((a,i)=>`<div class="attThumb" onclick="openLightbox('line${idx}',${i})" title="${esc(a.n)}">${attMedia(a,'thumb')}</div>`).join("")}</div>`:"";
+    return `<div class="ir ${atts.length?'hasatt':''}" ${atts.length?`onclick="toggleLine(${idx})"`:''}><span class="nm">${esc(it[0])}</span><span class="qt">${esc(it[1])}</span>${clip}</div>${strip}`;
   }).join("");
 }
 function toggleLine(idx){const k='line'+idx;UI.openLines.has(k)?UI.openLines.delete(k):UI.openLines.add(k);paintDetail();}
@@ -2009,7 +2009,7 @@ function chitAttBlock(c){
   const hero=atts[0], rest=atts.slice(1);
   return `<div class="sec" style="display:flex;align-items:center;gap:7px">📎 Whole-chit attachments · ${atts.length}<span style="margin-left:auto;font-size:9px;color:var(--ok);font-weight:700">✓ co-signed</span></div>
     <div class="attHero" onclick="openLightbox('chit',0)">${attMedia(hero,'hero')}<div class="attName">${attIcon(hero.t)} ${hero.n} · tap to open</div></div>
-    ${rest.length?`<div class="attStrip">${rest.map((a,i)=>`<div class="attThumb" onclick="openLightbox('chit',${i+1})" title="${a.n}">${attMedia(a,'thumb')}</div>`).join("")}</div>`:""}
+    ${rest.length?`<div class="attStrip">${rest.map((a,i)=>`<div class="attThumb" onclick="openLightbox('chit',${i+1})" title="${esc(a.n)}">${attMedia(a,'thumb')}</div>`).join("")}</div>`:""}
     <div class="attNote">Part of the co-signed record — both parties hold the same set &amp; leaves with the chit on sunset.</div>`;
 }
 function openLightbox(group,i){UI.lbGroup=group;UI.lb=i;paintLB();}
