@@ -18,6 +18,15 @@ Convention by channel (kept as-is, only the text is standardised):
 - **Row / icon actions → `toast(...)`** (success + `MSG.fail`).
 - **Form actions → inline `err.textContent`** (validation + submit error).
 
+## Tester Message console (2026-06-28)
+A **🧪 Log** button in the build-preview ribbon (next to demo/live) opens an in-app **Message console**:
+- Captures **every `toast()`** (level inferred: info / warning / critical) **and every API call** (`core.js`
+  pushes request + HTTP-error events) into an in-memory ring buffer (`window.__cblog`, last 300).
+- Filter chips: **All / Info / Warning / Critical / Requests**, with Clear. Time-stamped, newest first.
+- Lets a tester see what's rolling out in the background. Lives in the dev ribbon → not shown in production.
+- Severity model: this is the FRONTEND tier (toasts). Server-side severity is `lib/logger.js` (Railway logs);
+  a client-error beacon to unify them is in OBSERVABILITY-AND-SAFETY.md.
+
 ## 3. Status (2026-06-28) — COMPLETE
 **Every panel is routed to `MSG`** (0 generic `Failed:`/`failed:` toasts remain; 37 catalogue entries):
 task panel (assign, bulk, push-back, status, advance, dispute, delete+Undo/trash, restore, priority),
