@@ -50,6 +50,26 @@ and new activity should re-flag unread. Read state is currently per-ENTITY and t
 - **Frontend (this branch):** surface chit-level unread as a row colour/dot in `rowHTML` (`app.html:1628`)
   from the per-actor flag; reuse `.unreaddot` (`:206-207`).
 
+## Order (sent) panel — investigation 2026-06-28
+Traced the whole Order flow (`navTo('order')` → `loadList()` → `api("sent")` → `mapApiChit` → `rowHTML`).
+
+**FIXED now (commit 89808d8):**
+- **`EP.sent` pointed at `/api/chits/inbox`** (stale, pre-two-copy). Since inbox now returns only
+  `direction='received'` (Task) copies, the live Order panel was fetching the WRONG copies. Repointed to
+  the real `GET /api/chits/sent` (`direction='sent'`, baseline-4). Also corrected `rollup` (GET, not POST)
+  and refreshed stale `ok:"○"` "not built/not mounted" markers (void/rollup/archive/assignBulk/notifications/
+  priority are all built) so the test team isn't misled.
+
+**QUEUED (live mapper gaps — `mapApiChit`, app.html ~1609; affects BOTH panels):**
+- `proof:'ok'` is **hardcoded** → every live row shows "✓ both-signed" even when awaiting. Needs a real
+  proof/both-signed signal from the API (or derive from `all_recipients` roles). **Misleading in testing.**
+- `folder:'task'` is **hardcoded** → no visible effect today (no folder filter + `selfChit` unmapped), but
+  latent: self-chit chip would mislabel an Order copy. Set folder from context when `selfChit` is mapped.
+- Not mapped from the API: `selfChit`, `rcc`/`rfor` (CC/For chips), `att` (attachment count), `msg`
+  (message count), `area`. So live rows are sparser than demo rows. Enrich the mapper + backend fields.
+- **`/api/chits/sent` does not return `open_dispute_count`** (inbox does) → Order rows can't show the
+  dispute badge. Small backend add to the `/sent` SELECT.
+
 ## Build order (all HELD until reviewed; nothing pushed)
 1. Backend first (api batch): restore endpoint (`baseline-11`) + `chit_reads` migration + inbox unread + mark-read.
 2. Then frontend (this branch): badge, bulk-assign, actor-id, restore wire, row unread colour.
