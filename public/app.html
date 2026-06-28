@@ -1093,7 +1093,7 @@ async function compose(){ UI.drawer=false; CC={items:[]}; let _catErr=false;
     const _prods=(await api("prodList"))||[];
     STORE.catalogue=_prods.map(x=>{const d=x.item_data||x; return {particulars:d.name||d.product||'item', unit:d.unit||'unit', price:+d.price||0};});
   }catch(e){ STORE.catalogue=STORE.catalogue||[]; _catErr=true; }
-  modal(`<div class="mhd"><div class="t">✉️ Compose — author a chit</div><div class="s">create your own record, then bridge it</div></div>
+  modal(`<div class="mhd"><div class="t">✉️ Compose — author a chit <button onclick="openHelp('compose')" title="About composing" style="border:1px solid var(--line);background:#fff;color:#3F66A6;border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;vertical-align:middle">?</button></div><div class="s">create your own record, then bridge it</div></div>
    <div class="mbody">
      <div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:11px;padding:10px 12px;font-size:12.5px;color:#6b5a36;line-height:1.5;margin-bottom:10px"><b style="font-family:'Space Grotesk'">Author your own chit — it becomes shared the moment you bridge it.</b> A self-addressed chit is a real chit: one copy in <b>Order</b> (sent), one in <b>Task</b> (received), same thread. <span style="font-family:'Space Mono';font-size:10px;background:#fbeceb;color:#b4453f;border:1px solid #f0c9c6;border-radius:5px;padding:1px 6px">⏳ execute &amp; test pending</span></div>
      <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -1118,7 +1118,6 @@ async function compose(){ UI.drawer=false; CC={items:[]}; let _catErr=false;
      <div id="cc_items" style="margin-top:8px"></div>
      <div id="cc_total" style="text-align:right;font-weight:700;font-size:13px;margin-top:6px"></div>
      <div class="err" id="cc_err"></div>
-     ${composeHelpBox()}
    </div>
    <div class="mfoot"><button onclick="closeModal()">Cancel</button><button onclick="submitCompose(true)">Save draft</button><button class="pri" onclick="submitCompose(false)">Send chit</button></div>`);
   ccRenderItems(); ccRenderRcpts();
@@ -1232,8 +1231,10 @@ const HELP_PACKS = {
     {q:"All tasks visible?", a:"If on, every co-assist sees the full queue; if off, they see what's theirs. Use it to match how open your floor is."} ]},
 };
 function menuAssist(key){ const p=HELP_PACKS[key]; if(!p) return "";
-  return `<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:12px;padding:11px 13px;margin-bottom:11px;font-size:12.5px;color:#6b5a36;line-height:1.5">${p.msg}</div>`+
-    `<div style="${_CARD}"><div style="font-family:'Space Grotesk';font-weight:600;font-size:13px;margin-bottom:2px">Assistant <span style="font-size:10.5px;font-family:'Space Mono';background:var(--gold-soft);color:#7a5e22;border-radius:5px;padding:1px 7px">Web Demo · sample answers</span></div><div style="font-size:12.5px;color:var(--grey);margin-bottom:10px">What this menu is for and how to use it. (Real version: an AI handler reading your live data.)</div><div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px">${p.qa.map((f,i)=>`<button class="composebtn" onclick="mAsk('${key}',${i})">${esc(f.q)}</button>`).join("")}</div><div style="display:flex;gap:8px"><input class="inp" id="m_in_${key}" placeholder="Ask about ${esc(key)}…"><button style="${_BTN}" onclick="mAskFree('${key}')">Ask</button></div><div id="m_ans_${key}" style="font-size:13px;color:var(--ink);margin-top:10px;line-height:1.55"></div></div>`;
+  return `<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:12px;padding:11px 13px;margin-bottom:11px;font-size:12.5px;color:#6b5a36;line-height:1.5">${p.msg}</div>`;
+}
+function menuHelp(key){ const p=HELP_PACKS[key]; if(!p) return "";
+  return `<div style="${_CARD}"><div style="font-family:'Space Grotesk';font-weight:600;font-size:13px;margin-bottom:2px">Assistant <span style="font-size:10.5px;font-family:'Space Mono';background:var(--gold-soft);color:#7a5e22;border-radius:5px;padding:1px 7px">Web Demo · sample answers</span></div><div style="font-size:12.5px;color:var(--grey);margin-bottom:10px">What this menu is for and how to use it. (Real version: an AI handler reading your live data.)</div><div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px">${p.qa.map((f,i)=>`<button class="composebtn" onclick="mAsk('${key}',${i})">${esc(f.q)}</button>`).join("")}</div><div style="display:flex;gap:8px"><input class="inp" id="m_in_${key}" placeholder="Ask about ${esc(key)}…"><button style="${_BTN}" onclick="mAskFree('${key}')">Ask</button></div><div id="m_ans_${key}" style="font-size:13px;color:var(--ink);margin-top:10px;line-height:1.55"></div></div>`;
 }
 function mAsk(key,i){ const p=HELP_PACKS[key]; if(!p)return; const f=p.qa[i]; const inp=document.getElementById("m_in_"+key); if(inp)inp.value=f.q; const o=document.getElementById("m_ans_"+key); if(o)o.innerHTML="<b>"+esc(f.q)+"</b><br>"+esc(f.a); }
 function mAskFree(key){ const p=HELP_PACKS[key]; if(!p)return; const raw=val("m_in_"+key)||""; const q=raw.toLowerCase(); let best=p.qa[0], score=0;
@@ -1310,7 +1311,7 @@ async function submitActor(){
   catch(e){ if(err)err.textContent=e.message; }
 }
 /* ---------------- DISPUTES screen ---------------- */
-function disputesScreen(){ return `<div style="padding:14px;max-width:760px;margin:0 auto"><div class="sec" style="font-size:15px;margin-bottom:10px">⚖️ Disputes</div><div id="disprows"><div class="loadwrap"><span class="spin"></span> loading…</div></div></div>`; }
+function disputesScreen(){ return `<div style="padding:14px;max-width:760px;margin:0 auto"><div class="sec" style="font-size:15px;margin-bottom:3px;display:flex;align-items:center;gap:9px">⚖️ Disputes<button onclick="openHelp('disputes')" title="About this screen" style="border:1px solid var(--line);background:#fff;color:#3F66A6;border-radius:50%;width:22px;height:22px;font-weight:800;cursor:pointer;font-size:13px;line-height:1;flex:none">?</button></div><div style="font-size:11px;color:var(--grey);margin-bottom:10px">Explore <b onclick="openHelp('disputes')" style="cursor:pointer;color:#3F66A6">?</b> to know more about this screen.</div><div id="disprows"><div class="loadwrap"><span class="spin"></span> loading…</div></div></div>`; }
 async function loadDisputes(){
   const host=document.getElementById("disprows"); if(!host)return;
   try{ const q=await api("disputeQueue"); const mine=q.my_disputes||[], other=q.other_disputes||[];
@@ -1344,7 +1345,7 @@ function scrErr(e){ return `<div class="empty"><div class="t">Couldn't load</div
 const _CARD='border:1px solid var(--line);border-radius:11px;padding:13px;margin-bottom:9px';
 const _BTN='border:0;border-radius:9px;padding:0 14px;color:#fff;background:var(--blue);font-weight:700;cursor:pointer';
 /* PROFILE */
-function profileScreen(){ return scr("👤 Profile","profbody"); }
+function profileScreen(){ return scr("👤 Profile","profbody","profile"); }
 async function loadProfile(){ const h=document.getElementById("profbody"); if(!h)return;
   try{ const e=(await api("me"))||{};
     h.innerHTML=`${menuAssist('profile')}<div style="${_CARD}"><div class="kv"><b>Name</b> · ${esc(e.display_name)}</div><div class="kv"><b>Bridge ID</b> · ${esc(e.bridge_id)}</div><div class="kv"><b>Email</b> · ${esc(e.email)}</div>
@@ -1357,7 +1358,7 @@ async function loadProfile(){ const h=document.getElementById("profbody"); if(!h
 async function saveProfile(){ const x=document.getElementById("pf_err"); if(x)x.textContent="";
   try{ await api("saveProfile",{body:{user_id:val("pf_uid")||null,gstn:val("pf_gstn")||null,address:val("pf_addr")||null,business_status:val("pf_bs")}}); toast(MSG.profileSaved()); }catch(e){ if(x)x.textContent=e.message; } }
 /* SETTINGS */
-function settingsScreen(){ return scr("⚙️ Settings","setbody"); }
+function settingsScreen(){ return scr("⚙️ Settings","setbody","settings"); }
 async function loadSettings(){ const h=document.getElementById("setbody"); if(!h)return;
   try{ const s=(await api("getSettings"))||{};
     h.innerHTML=`${menuAssist('settings')}<div style="${_CARD}">
@@ -1371,7 +1372,7 @@ async function loadSettings(){ const h=document.getElementById("setbody"); if(!h
 async function saveSettings(){ const x=document.getElementById("st_err"); if(x)x.textContent="";
   try{ await api("saveSettings",{body:{assignment_model:val("st_am"),default_max_tasks:+val("st_mt")||10,all_task_visible:document.getElementById("st_av").checked,auto_return_on_short_break:document.getElementById("st_ar").checked}}); toast(MSG.settingsSaved()); }catch(e){ if(x)x.textContent=e.message; } }
 /* NETWORK */
-function networkScreen(){ return scr("🔗 Network — internal architecture","netbody"); }
+function networkScreen(){ return scr("🔗 Network — internal architecture","netbody","network"); }
 async function loadNetwork(){ const h=document.getElementById("netbody"); if(!h)return;
   try{
     const self = await api("netLookup",{query:{bridgeId:SESSION.bridgeId||""}}).catch(()=>null);
@@ -1498,7 +1499,7 @@ async function connectReq(){ const x=document.getElementById("nw_err"); if(x)x.t
   }catch(e){ if(x)x.textContent=e.message; } }
 async function respondConn(id,action){ try{ await api("connRespond",{params:{id},body:{action}}); toast(action==='accept'?MSG.connected():MSG.connRejected()); loadNetwork(); }catch(e){ toast(MSG.fail("respond", e)); } }
 /* SUPPLIERS */
-function suppliersScreen(){ return scr("🏭 Suppliers","supbody"); }
+function suppliersScreen(){ return scr("🏭 Suppliers","supbody","suppliers"); }
 async function loadSuppliers(){ const h=document.getElementById("supbody"); if(!h)return;
   try{ const s=(await api("supList"))||[];
     h.innerHTML=`${menuAssist('suppliers')}<div style="${_CARD}"><label class="fl">Add supplier (User ID)</label><div style="display:flex;gap:8px"><input class="inp" id="sp_bid" placeholder="User ID or email"><button style="${_BTN}" onclick="addSupplier()">Add</button></div><div class="err" id="sp_err"></div></div>
@@ -1508,7 +1509,7 @@ async function addSupplier(){ const x=document.getElementById("sp_err"); if(x)x.
   try{ await api("supAdd",{body:{supplier_bridge_id:bid}}); toast("Supplier added ✓"); loadSuppliers(); }catch(e){ if(x)x.textContent=e.message; } }
 async function delSupplier(id){ try{ await api("supDel",{params:{id}}); toast(MSG.supplierRemoved()); loadSuppliers(); }catch(e){ toast(MSG.fail("remove the supplier", e)); } }
 /* CATALOGUE (own products) */
-function catalogueScreen(){ return scr("🗂️ Catalogue","catbody"); }
+function catalogueScreen(){ return scr("🗂️ Catalogue","catbody","catalogue"); }
 async function loadCatalogue(){ const h=document.getElementById("catbody"); if(!h)return;
   try{ const items=(await api("prodList"))||[];
     h.innerHTML=`${menuAssist('catalogue')}<div style="${_CARD}"><label class="fl">Add product</label><input class="inp" id="ct_name" placeholder="name"><div style="display:flex;gap:8px;margin-top:6px"><input class="inp" id="ct_price" inputmode="numeric" placeholder="price"><button style="${_BTN}" onclick="addProduct()">Add</button></div><div class="err" id="ct_err"></div></div>
@@ -1518,7 +1519,7 @@ async function addProduct(){ const x=document.getElementById("ct_err"); if(x)x.t
   try{ await api("prodAdd",{body:{item_data:{name,price:+val("ct_price")||0}}}); toast("Product added ✓"); loadCatalogue(); }catch(e){ if(x)x.textContent=e.message; } }
 async function delProduct(id){ try{ await api("prodDel",{params:{id}}); toast(MSG.productDeleted()); loadCatalogue(); }catch(e){ toast(MSG.fail("delete the product", e)); } }
 /* MIS — computed client-side (no MIS route on the legacy backend) */
-function misScreen(){ return scr("📊 MIS","misbody"); }
+function misScreen(){ return scr("📊 MIS","misbody","mis"); }
 async function loadMIS(){ const h=document.getElementById("misbody"); if(!h)return;
   try{ const [inb,dq,ac,sp]=await Promise.all([api("inbox"),api("disputeQueue").catch(()=>({})),api("actors").catch(()=>({})),api("supList").catch(()=>({}))]);
     const chits=(inb||[]).map(mapApiChit); const byState={open:0,act:0,close:0}; let value=0; chits.forEach(c=>{byState[c.state]=(byState[c.state]||0)+1; value+=c.amt||0;});
