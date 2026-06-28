@@ -166,6 +166,17 @@ panel lets a user toggle controls with **zero effect** — will read as bugs in 
 
 **QUEUED:** wire the 4 settings (or label) · add self_copy_pref + dispute_handler UI · (future) subscription/plan + entitlement controls.
 
+## Profile panel — audit 2026-06-28
+Self-scoped (`/me` + `/profile` use `req.identity`), escaped, `scrErr`, backend validation (409 on duplicate user_id).
+
+**FIXED now (web 47dcad4):** the panel showed the **bridge_id labeled "User ID"** but had **no way to set the
+external `user_id` (ATH-114)** — the id others use to add you, and that the supplier/connection add resolves by.
+The add-by-user_id loop was half-open. Added an **editable User ID field** + included it in save; relabeled the
+read-only id as **Bridge ID**; routed save to `MSG.profileSaved`.
+
+**QUEUED:** `logo_url`, `self_copy_pref`, `dispute_handler_actor_id` editable in Profile/Settings (backend supports;
+no UI) — same missing-settings-UI as the Settings panel.
+
 ## Build order (all HELD until reviewed; nothing pushed)
 1. Backend first (api batch): restore endpoint (`baseline-11`) + `chit_reads` migration + inbox unread + mark-read.
 2. Then frontend (this branch): badge, bulk-assign, actor-id, restore wire, row unread colour.
