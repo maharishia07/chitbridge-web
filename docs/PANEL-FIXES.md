@@ -78,6 +78,27 @@ Traced the whole Order flow (`navTo('order')` → `loadList()` → `api("sent")`
 - **`/api/chits/sent` does not return `open_dispute_count`** (inbox does) → Order rows can't show the
   dispute badge. Small backend add to the `/sent` SELECT.
 
+## Co-assists / Actors panel — audit 2026-06-28
+Traced create (`addActorModal`/`submitActor`), roster (`loadCoassists`/`coActorCard`), shifts (`actorShift`),
+login/PIN (`doLogin`), engagement.
+
+**FIXED now (web 19f2bc2):**
+- **Central toast XSS** — `toast()` rendered its message via `innerHTML` unescaped; many toasts interpolate
+  API/user data (`MSG.assigned(code,who)`, party names, co-assist name). Now `esc()`-wrapped once inside
+  `toast()` → closes XSS across **every** toast/MSG at the source. (The earlier esc audit missed toasts.)
+- Co-assist create routed to `MSG.coassistAdded`.
+
+**OK:** create modal + roster card escaped; loader has loading/empty/error (scr/scrErr); shift→MSG; login flow
+messaged (actor-not-found, sign-in-failed); "Set engagement" is a documented placeholder (ATH-118) → comingSoon.
+
+**QUEUED:**
+- **No remove/offboard a co-assist in the panel** — the card only has Toggle-shift + Set-engagement, but the
+  **backend already supports deactivate/remove/reactivate WITH task reassignment** (`actors.js` status-change,
+  `task_action: pool|actor`). Wire a remove/deactivate action (with the pool-vs-reassign choice). Essential for real use.
+- **Engagement / scoped grants** (view-only/act/audit/MIS, ATH-118) — whole model is a placeholder; ties to the
+  permissions/"view-hat" + entitlements work. Big feature.
+- Minor: `doLogin` inline error uses raw `e.message` (already api()-friendly); esc `L.err` in renderLogin opportunistically.
+
 ## Build order (all HELD until reviewed; nothing pushed)
 1. Backend first (api batch): restore endpoint (`baseline-11`) + `chit_reads` migration + inbox unread + mark-read.
 2. Then frontend (this branch): badge, bulk-assign, actor-id, restore wire, row unread colour.
