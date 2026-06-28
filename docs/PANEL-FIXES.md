@@ -99,6 +99,26 @@ messaged (actor-not-found, sign-in-failed); "Set engagement" is a documented pla
   permissions/"view-hat" + entitlements work. Big feature.
 - Minor: `doLogin` inline error uses raw `e.message` (already api()-friendly); esc `L.err` in renderLogin opportunistically.
 
+## Disputes panel — audit 2026-06-28
+Traced raise (`quickDispute`/`confirmDispute` → POST `/chits/:id/disputes`), queue (`loadDisputes` → `/disputes/queue`),
+resolve (`resolveDispute`/`submitResolve` → PUT `/:id/disputes/:disputeId/resolve`).
+
+**Healthy / reflects baseline-8/9:** queue shows one-row-per-dispute (the cartesian fix) scoped to participants;
+raise + resolve are messaged (`MSG.disputeRaised`/`disputeResolved`) and escaped; **resolve is raiser-only**
+(`chits.js:1081`) and the panel correctly shows the Resolve button ONLY on "Raised by you"; resolution surfaces to
+both sides via the notifications feed (state_log `dispute_resolved` → bell). Raise is transactional.
+
+**FIXED now (api 34ffd5d):** dispute-resolve writes (update + state_log) wrapped in `withTransaction` (were separate).
+
+**QUEUED (gaps):**
+- **Targeted disputes not exposed in the UI** — the raise modal only does **chit-wide** (category + reason); the
+  backend supports `target_entity_id` (scope `targeted`). On multi-party chits (CC/For) you can't dispute a specific
+  party from the UI. Add a target picker.
+- **No path for the TARGET to act** — resolve is raiser-only; "Against you" disputes have **no action** (view only).
+  An abandoned dispute stays open forever and **blocks delete**. Design decision: add a target respond/acknowledge
+  path, an admin/platform force-resolve, or an auto-expire — otherwise a deadlock is possible.
+- Minor: the diagnosis/parity probe (`answerable`, one-sided vs two-sided) isn't surfaced in the panel.
+
 ## Build order (all HELD until reviewed; nothing pushed)
 1. Backend first (api batch): restore endpoint (`baseline-11`) + `chit_reads` migration + inbox unread + mark-read.
 2. Then frontend (this branch): badge, bulk-assign, actor-id, restore wire, row unread colour.
