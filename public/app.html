@@ -368,12 +368,15 @@ const STAGES = {
 };
 const CFG = {
   STAGE: "dev",                                                     // points at the live dev API (Railway). Flip in the build-preview ribbon if present.
+  ASSIST_LLM: false,                                                // tier-1 LLM for the assistant — OFF until the /api/assist proxy exists; answer() falls through to the library floor.
   get MODE(){ return STAGES[this.STAGE].mock ? "demo" : "live"; },  // compat shim: core.js still reads CFG.MODE
   get API_BASE(){ return STAGES[this.STAGE].base || ""; },          // derived from the current stage
 };
 /* Endpoint map. ✓ = matches build registry · ? = ASSUMED, confirm before live.
    Correct any path here in ONE place. */
 const EP = {
+  // --- assistant tier-1 LLM proxy — NOT BUILT yet; gated off via CFG.ASSIST_LLM. The model key stays SERVER-side. ---
+  assist:          {m:"POST", p:"/api/assist",                  ok:"?"},  // backend proxies to the model (no-oversell prompt + library grounding)
   // --- repointed to real chitbridge-api routes (trace 2026-06-25). See FINDINGS.md. ---
   register:        {m:"POST", p:"/api/entities/register",        ok:"✓"},  // OTP request (register doubles as owner login)
   ownerLogin:      {m:"POST", p:"/api/entities/register",        ok:"✓"},  // same route — returning owner requests OTP (pass mode:'login')
@@ -641,10 +644,26 @@ function helpPick(id){ const e=ASSIST_LIB.find(x=>x.id===id); const o=document.g
      tier 3  the caller's own static fallback (suggested Q&A buttons + curated overlay) when tier 2 finds nothing.
    answer() is async on purpose so the LLM tier can slot in later WITHOUT changing a single caller. */
 async function answer(question, contextKey){
-  // tier 1 — the LLM goes here later, e.g.:
-  //   try { const a = await Promise.race([askLLM(question, contextKey), _timeout(6000)]); if(a) return a; }
-  //   catch(_){ /* swallow — NEVER surface the failure; fall through to the floor */ }
-  return matchLibrary(question, contextKey);          // tier 2 — the floor
+  if(typeof CFG!=="undefined" && CFG.ASSIST_LLM){                         // tier 1 — only when explicitly enabled
+    try {
+      const a = await Promise.race([ askLLM(question, contextKey), _timeout(6000) ]);
+      if(a) return a;                                                     // got a model answer — use it
+    } catch(_){ /* swallow — NEVER surface the failure; fall through to the floor */ }
+  }
+  return matchLibrary(question, contextKey);                              // tier 2 — the floor (cannot be "down")
+}
+function _timeout(ms){ return new Promise((_,rej)=> setTimeout(()=>rej(new Error("assist-timeout")), ms)); }
+/* tier-1 LLM call — STUB, gated by CFG.ASSIST_LLM (off by default). The model key NEVER lives in the client:
+   this calls OUR backend proxy (EP.assist → POST /api/assist), which attaches the no-oversell system prompt +
+   the library as grounding and talks to the model server-side. Returns a normalized library-shaped entry
+   {q,a,fit?,media?} or null. answer() wraps this so ANY failure (disabled / demo / endpoint missing / timeout /
+   network / bad shape) falls through to matchLibrary — the assistant degrades, it never breaks. */
+async function askLLM(question, contextKey){
+  if(!(typeof CFG!=="undefined" && CFG.ASSIST_LLM)) return null;          // disabled → instant fall-through
+  if(typeof CFG!=="undefined" && CFG.MODE==="demo") return null;          // never call the model from the no-login mock
+  const r = await api('assist', { body:{ q:question, context:contextKey||curScreen(), stage:CFG.STAGE } });
+  if(!r || !r.answer) return null;                                        // honest empty → fall through to the floor
+  return { q:question, a:String(r.answer), fit:r.fit, media:r.media };    // shape it like a library entry for assistEntryHTML
 }
 function matchLibrary(question, contextKey){
   const q=(question||"").toLowerCase(); if(!q) return null;
