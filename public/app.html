@@ -621,7 +621,7 @@ function closeMsgConsole(){ UI.logOpen=false; const h=document.getElementById("l
 let _helpOpen=false;
 function helpFor(key){ if(key==='coassists') return coHelpBox(); if(key==='compose') return composeHelpBox(); return (typeof menuHelp==='function'?menuHelp(key):''); }
 function openHelp(key){ const host=document.getElementById("lbhost"); if(!host)return; if(_helpOpen){ closeHelp(); return; } _helpOpen=true;
-  host.innerHTML=`<div class="notifover" onclick="closeHelp()"><div class="notifpanel" style="max-width:560px;width:94vw" onclick="event.stopPropagation()"><div class="notifhd">❓ About this screen<button onclick="closeHelp()" style="margin-left:auto;border:0;background:none;cursor:pointer;font-size:15px;color:var(--grey)" aria-label="Close">✕</button></div><div style="padding:13px;max-height:72vh;overflow:auto">${helpFor(key)}</div></div></div>`;
+  host.innerHTML=`<div class="notifover" onclick="closeHelp()"><div class="notifpanel" style="max-width:560px;width:94vw" onclick="event.stopPropagation()"><div class="notifhd">❓ About this screen<button onclick="closeHelp()" style="margin-left:auto;border:0;background:none;cursor:pointer;font-size:15px;color:var(--grey)" aria-label="Close">✕</button></div><div style="padding:13px;max-height:72vh;overflow:auto">${(typeof PURPOSE!=='undefined'&&PURPOSE[key])?`<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:10px;padding:10px 12px;font-size:12.5px;color:#6b5a36;line-height:1.5;margin-bottom:12px">${esc(PURPOSE[key])}</div>`:''}${helpFor(key)||((typeof PURPOSE!=='undefined'&&PURPOSE[key])?'':'<div style="color:var(--grey);font-size:12.5px">More about this screen is coming.</div>')}</div></div></div>`;
 }
 function closeHelp(){ _helpOpen=false; const h=document.getElementById("lbhost"); if(h)h.innerHTML=""; }
 function setLogFilter(k){ _logFilter=k; renderMsgConsole(); }
@@ -1018,7 +1018,7 @@ function renderApp(){
     <div class="topbar">
       <button class="ham" onclick="UI.drawer=!UI.drawer;renderApp()">☰</button>
       <div class="b">${logoMark(20)} <span class="bt">Chit &amp; Bridge</span></div>
-      <button class="info ${UI.purpose?'on':''}" id="infobtn" onclick="togglePurpose()" title="About this screen" aria-label="About this screen">ⓘ</button>
+      <button class="info" id="infobtn" onclick="openHelp(UI.nav)" title="About this screen" aria-label="About this screen">ⓘ</button>
       <button class="msgc" id="msgcbtn" onclick="openMsgCenter()" title="Messages" aria-label="Messages">💬<span class="bdot" id="msgcdot" style="${unreadCount()?'':'display:none'}">${unreadCount()}</span></button>
       ${role!=="customer"?`<button class="bell" id="bellbtn" onclick="openNotifications()" title="Notifications" aria-label="Notifications">🔔<span class="bdot" id="belldot" style="${notifBadge()?'':'display:none'}">${notifBadge()}</span></button>`:''}
       <div class="who">${statusControl(role)}<div class="nmwrap" style="text-align:right"><div class="nm">${SESSION.name}</div><div class="rl">${role} · ${SESSION.entity||""}</div></div>
@@ -1031,7 +1031,6 @@ function renderApp(){
       <div class="tagl">${M.tag}</div>
     </div>
     <div class="main">
-      <div class="purpose ${UI.purpose?'open':''}" id="purposebar"><b>${navTitle()}</b> · ${PURPOSE[UI.nav]||""}<button class="x" onclick="togglePurpose()" aria-label="Hide">✕</button></div>
       <div id="mainbody" style="flex:1;display:flex;flex-direction:column;min-height:0">${mainBody()}</div>
     </div>
   </div></div><div id="lbhost"></div><div id="modalhost"></div>`;
