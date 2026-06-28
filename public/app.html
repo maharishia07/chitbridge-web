@@ -841,7 +841,14 @@ async function doLogin(){
   }catch(e){ L.busy=false; L.err="Sign-in failed: "+e.message; renderLogin(); }
 }
 
-function setSession(s){SESSION={...SESSION,...s};}
+function jwtPayload(t){ try{ const p=String(t||"").split('.')[1]; if(!p) return null; return JSON.parse(atob(p.replace(/-/g,'+').replace(/_/g,'/'))); }catch(_){ return null; } }
+function setSession(s){ SESSION={...SESSION,...s};
+  // Live tokens are JWTs — derive the REAL actor/entity id from the token so the UI never hardcodes ids.
+  const p=jwtPayload(SESSION.token);
+  if(p){ if(p.identity_type==='actor') SESSION.actorId=p.identity_id; SESSION.entityId=p.parent_entity_id||p.identity_id; }
+}
+// Live: the logged-in actor's real id (from the JWT). Demo: the seed actor 'a1' so the mock flow still works.
+function myActorId(){ return SESSION.actorId || (CFG.MODE==='demo' ? 'a1' : null); }
 function statusControl(role){
   if(role==="actor"){const d=SESSION.duty||"duty";
     return `<div class="dutytog" role="group" aria-label="Duty status">
@@ -915,7 +922,7 @@ function renderApp(){
       <div class="b">${logoMark(20)} <span class="bt">Chit &amp; Bridge</span></div>
       <button class="info ${UI.purpose?'on':''}" id="infobtn" onclick="togglePurpose()" title="About this screen" aria-label="About this screen">ⓘ</button>
       <button class="msgc" id="msgcbtn" onclick="openMsgCenter()" title="Messages" aria-label="Messages">💬<span class="bdot" id="msgcdot" style="${unreadCount()?'':'display:none'}">${unreadCount()}</span></button>
-      ${role!=="customer"?`<button class="bell" id="bellbtn" onclick="openNotifications()" title="Notifications" aria-label="Notifications">🔔<span class="bdot">3</span></button>`:''}
+      ${role!=="customer"?`<button class="bell" id="bellbtn" onclick="openNotifications()" title="Notifications" aria-label="Notifications">🔔<span class="bdot" id="belldot" style="${notifBadge()?'':'display:none'}">${notifBadge()}</span></button>`:''}
       <div class="who">${statusControl(role)}<div class="nmwrap" style="text-align:right"><div class="nm">${SESSION.name}</div><div class="rl">${role} · ${SESSION.entity||""}</div></div>
         <div class="av">${(SESSION.name||"?")[0]}</div>
         <button class="so" onclick="logout()" title="Sign out" aria-label="Sign out"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button></div>
@@ -947,6 +954,7 @@ var _autoRefreshTimer = null;
 function autoRefresh(){
   try{
     if(CFG.STAGE==='web_demo' || document.hidden || UI.nav==='compose') return;
+    loadNotifs();   // keep the bell badge current (no-op in demo)
     const mh=document.getElementById('modalhost'); if(mh && mh.innerHTML.trim()) return;
     const lb=document.getElementById('lbhost');    if(lb && lb.innerHTML.trim()) return;
     const ae=document.activeElement; if(ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) return;
@@ -956,7 +964,7 @@ function autoRefresh(){
     else if(UI.nav==='coassists') loadCoassists();
   }catch(e){}
 }
-function startAutoRefresh(sec){ if(_autoRefreshTimer) clearInterval(_autoRefreshTimer); _autoRefreshTimer=setInterval(autoRefresh,(sec||20)*1000); }
+function startAutoRefresh(sec){ if(_autoRefreshTimer) clearInterval(_autoRefreshTimer); _autoRefreshTimer=setInterval(autoRefresh,(sec||20)*1000); if(CFG.MODE!=='demo') loadNotifs(); }
 function togglePurpose(){UI.purpose=!UI.purpose;const el=document.getElementById('purposebar');if(el)el.classList.toggle('open',UI.purpose);const ic=document.getElementById('infobtn');if(ic)ic.classList.toggle('on',UI.purpose);}
 function navTitle(){const all={...Object.fromEntries(Object.values(MENUS).flatMap(m=>[...m.top,...m.rest]).map(x=>[x[0],x[2]]))};return all[UI.nav]||UI.nav;}
 function menuBtn(x){const[key,ic,label]=x;const on=UI.nav===key;const click=key==="compose"?`compose()`:`navTo('${key}')`;return `<button class="${on?'on':''}" onclick="${click}"><span class="ic">${ic}</span>${label}</button>`;}
@@ -1562,18 +1570,36 @@ function filterPanel(){ const f=UI.filter||{};
     <div class="fp-foot"><button onclick="clearFilter()">Clear</button><span class="fp-note">→ ${EP.filters.p} (§1)</span></div>
   </div>`;
 }
-function openNotifications(){ const host=document.getElementById("lbhost"); if(!host)return;
+let _notifs=[];
+function notifBadge(){ return CFG.MODE==='demo' ? 3 : (UI.notifCount||0); }   // demo keeps its showcase count
+async function loadNotifs(){ if(CFG.MODE==='demo') return;
+  try{ const r=await api("notifications"); _notifs=(r&&r.notifications)||[]; UI.notifCount=(r&&r.count!=null)?r.count:_notifs.length;
+    const d=document.getElementById('belldot'); if(d){ d.textContent=UI.notifCount||""; d.style.display=UI.notifCount?'':'none'; } }catch(_){}
+}
+function mapNotif(n){
+  const ICON={dispute_raised:'⚑',dispute_resolved:'✅',voided:'🚫',accepted:'✍️',completed:'✅',assigned:'👤'};
+  const subj=n.manual_subject||n.auto_subject||'a chit';
+  return { i: ICON[n.action]||'•',
+           t: (n.action_by_display_name?esc(n.action_by_display_name)+' · ':'')+esc(String(n.action||'update').replace(/_/g,' '))+' — '+esc(subj),
+           s: n.created_at?new Date(n.created_at).toLocaleString():'' };
+}
+async function openNotifications(){ const host=document.getElementById("lbhost"); if(!host)return;
   if(UI.notifOpen){ closeNotif(); return; }
   UI.notifOpen=true;
-  const items=[
+  const live = CFG.MODE!=='demo';
+  if(live) await loadNotifs();
+  if(!UI.notifOpen) return;   // user may have closed it during the await
+  const demoItems=[
     {i:"✅",t:"PO #4471 counter-signed by Saravana Traders",s:"2m ago"},
     {i:"✍️",t:"SR #4468 awaiting your signature",s:"18m ago"},
     {i:"⚑",t:"PO #4460 flagged for dispute",s:"1h ago"},
   ];
+  const items = live ? _notifs.map(mapNotif) : demoItems;
+  const foot  = live ? (items.length+" recent") : "Demo notifications — endpoint pending (ATH-109 §11).";
   host.innerHTML=`<div class="notifover" onclick="closeNotif()"><div class="notifpanel" onclick="event.stopPropagation()">
-    <div class="notifhd">Notifications<span style="margin-left:auto;font-size:9px;color:var(--grey);font-family:'Space Mono',monospace">${EP.notifications.ok} ${EP.notifications.p}</span></div>
-    ${items.map(x=>`<div class="notifrow"><span class="ni">${x.i}</span><div><div class="nt">${x.t}</div><div class="ns">${x.s}</div></div></div>`).join("")}
-    <div class="notiffoot">Demo notifications — endpoint pending (ATH-109 §11).</div>
+    <div class="notifhd">Notifications<span style="margin-left:auto;font-size:9px;color:var(--grey);font-family:'Space Mono',monospace">${EP.notifications.p}</span></div>
+    ${items.length?items.map(x=>`<div class="notifrow"><span class="ni">${x.i}</span><div><div class="nt">${x.t}</div><div class="ns">${x.s}</div></div></div>`).join(""):'<div class="notifrow"><div class="nt" style="color:var(--grey)">No notifications yet.</div></div>'}
+    <div class="notiffoot">${foot}</div>
   </div></div>`;
 }
 function closeNotif(){ UI.notifOpen=false; const h=document.getElementById("lbhost"); if(h)h.innerHTML=""; }
@@ -1628,7 +1654,7 @@ function renderRows(){
 function rowHTML(c){
   const cbx=UI.selectMode&&SESSION.role!=="customer"?`<div class="cbx ${UI.selected.has(c.id)?'on':''}" onclick="event.stopPropagation();toggleSel('${c.id}')">${UI.selected.has(c.id)?'✓':''}</div>`:"";
   const proof=`<span class="proof ${c.proof==='ok'?'ok':'wait'}">${c.proof==='ok'?'✓ both-signed':'⚠ awaiting'}</span>`;
-  const acts=(SESSION.role==="actor"&&UI.folder==="task")?(UI.sub==="all"?`<div class="rowacts"><button class="go" onclick="event.stopPropagation();assignChit('${c.id}','a1')">⤵ Pull to me</button><button onclick="event.stopPropagation();unassignChit('${c.id}')">⤴ Push</button></div>`:`<div class="rowacts"><button onclick="event.stopPropagation();unassignChit('${c.id}')">↩ Push back</button><button class="go" onclick="event.stopPropagation();pickAssign('${c.id}')">👥 Assign</button></div>`):"";
+  const acts=(SESSION.role==="actor"&&UI.folder==="task")?(UI.sub==="all"?`<div class="rowacts"><button class="go" onclick="event.stopPropagation();assignChit('${c.id}','${myActorId()||''}')">⤵ Pull to me</button><button onclick="event.stopPropagation();unassignChit('${c.id}')">⤴ Push</button></div>`:`<div class="rowacts"><button onclick="event.stopPropagation();unassignChit('${c.id}')">↩ Push back</button><button class="go" onclick="event.stopPropagation();pickAssign('${c.id}')">👥 Assign</button></div>`):"";
   return `<div class="row ${c.id===UI.sel?'sel':''}" onclick="openChit('${c.id}')">${cbx}
     <div class="main2"><div class="l1">${c.custPri?'<span class="custflag" title="Customer flagged priority">⚑</span>':''}<span class="code">${c.code}</span>${c.isDraft?' <span class="optchip" style="font-size:9.5px;background:#f3f0e8;color:#7a5e22;border-color:var(--gold-line)">draft</span>':''}${c.selfChit&&!c.isDraft?' <span class="optchip" style="font-size:9.5px;background:#eef3fb;color:#345488;border-color:#cfe0f4" title="Self-chit · '+( c.folder==="order"?"sent copy":"received copy")+'">self-chit</span>':''}<span class="party">· ${c.party}</span><span class="amt">${c.amt?inr(c.amt):'—'}</span></div>
       <div class="l2">${c.area} · ${c.kind} ${priChip(c.pri)} ${c.rcc?`<span class="optchip" style="font-size:9px;background:#F4ECD8;color:#7a5e22;border-color:#E4D3A8">CC ${c.rcc}</span>`:''}${c.rfor?`<span class="optchip" style="font-size:9px;background:#EFEBE2;color:#5F6B70;border-color:#E0DACF">For ${c.rfor}</span>`:''} ${c.att?`<span class="rowclip">📎 ${c.att}</span>`:''} ${c.msg?`<span class="rowmsg" onclick="event.stopPropagation();openChitMsgs('${c.id}')">💬 ${c.msg}</span>`:''} ${proof} ${c.dispute?'<b style="color:var(--disp)">dispute</b>':''}
