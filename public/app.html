@@ -635,6 +635,15 @@ const ASSIST_LIB = [
   { id:"dispute", topics:["dispute","disagree","problem with order","wrong","complaint"], q:"What if something goes wrong with a deal?", a:"Either side can raise a dispute inside the system. It is recorded, both sides see it, and it is resolved on the record — not in a lost email thread.", context:["disputes","task","order"] }
 ];
 let _assistOpen=false;
+let _assistBuilt=false;
+// Consolidate the per-screen help (HELP_PACKS / CO_HELP / COMPOSE_HELP) into ASSIST_LIB once, at first open —
+// so the floating assistant draws from the SAME content as the per-screen "?" overlays (one library).
+function buildAssistLib(){ if(_assistBuilt) return; _assistBuilt=true;
+  const kw=(s)=> String(s||"").toLowerCase().split(/\W+/).filter(w=>w.length>3);
+  try{ if(typeof HELP_PACKS!=="undefined") Object.keys(HELP_PACKS).forEach(key=>{ (HELP_PACKS[key].qa||[]).forEach((f,i)=> ASSIST_LIB.push({ id:"hp_"+key+"_"+i, topics:kw(f.q), q:f.q, a:f.a, context:[key] })); }); }catch(_){}
+  try{ if(typeof CO_HELP!=="undefined") CO_HELP.forEach((f,i)=> ASSIST_LIB.push({ id:"co_"+i, topics:kw(f.q), q:f.q, a:f.a, context:["coassists"] })); }catch(_){}
+  try{ if(typeof COMPOSE_HELP!=="undefined") COMPOSE_HELP.forEach((f,i)=> ASSIST_LIB.push({ id:"cmp_"+i, topics:kw(f.q), q:f.q, a:f.a, context:["compose"] })); }catch(_){}
+}
 function curScreen(){ try{ if(typeof SESSION!=="undefined" && SESSION.token) return (typeof UI!=="undefined" && UI.nav) || "task"; const h=location.hash||""; if(h.indexOf("register")>=0) return "register"; if(h.indexOf("login")>=0) return "login"; return "welcome"; }catch(_){ return "welcome"; } }
 function mountAssist(){ if(document.getElementById("assistfab")) return;
   const b=document.createElement("div"); b.id="assistfab"; b.style.cssText="position:fixed;right:16px;bottom:16px;z-index:300";
@@ -642,7 +651,7 @@ function mountAssist(){ if(document.getElementById("assistfab")) return;
   document.body.appendChild(b);
   const h=document.createElement("div"); h.id="assisthost"; document.body.appendChild(h);
 }
-function openAssist(){ if(!document.getElementById("assisthost")) mountAssist(); if(_assistOpen){ closeAssist(); return; } _assistOpen=true; renderAssist(); }
+function openAssist(){ if(!document.getElementById("assisthost")) mountAssist(); buildAssistLib(); if(_assistOpen){ closeAssist(); return; } _assistOpen=true; renderAssist(); }
 function closeAssist(){ _assistOpen=false; const h=document.getElementById("assisthost"); if(h)h.innerHTML=""; }
 function assistSuggest(){ const sc=curScreen(); const pre=!(typeof SESSION!=="undefined" && SESSION.token);
   return ASSIST_LIB.filter(e=> (e.context||[]).indexOf("*")>=0 || (e.context||[]).indexOf(sc)>=0 || (pre && e.fit) ).slice(0,5);
