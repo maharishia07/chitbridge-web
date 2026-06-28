@@ -622,7 +622,7 @@ const MSG = {
   assigned:       (code,who)    => `${code||'Chit'} assigned to ${who||'co-assist'} ✓`,
   bulkAssigned:   (n,who,sk)    => `${n} chit${n>1?'s':''} assigned to ${who||'co-assist'} ✓${sk?` · ${sk} skipped`:''}`,
   pushedBack:     (code)        => `${code||'Chit'} pushed back to the pool`,
-  statusSet:      (n,st)        => `${n>1?n+' chits':'Chit'} → ${String(st).toUpperCase()} ✓`,
+  statusSet:      (n,st,code)   => `${n>1?n+' chits':(code||'Chit')} → ${String(st).toUpperCase()} ✓`,
   advanced:       (code,st)     => `${code||'Chit'} → ${String(st).toUpperCase()} ✓`,
   disputeRaised:  (n)           => `Dispute raised on ${n} chit${n>1?'s':''} ⚑ — both parties notified`,
   disputeResolved:()            => `Dispute resolved ✓`,
@@ -634,7 +634,7 @@ const MSG = {
   // compose
   draftSaved:     ()            => `Draft saved ✓`,
   chitBridged:    (copies,self) => self?`Chit bridged — ${copies} copies on the thread (${self} to you) ✓`:`Chit bridged — ${copies||1} copies on the thread ✓`,
-  schemaDefault:  ()            => `Using a default chit template — your entity schema isn't configured yet.`,
+  schemaDefault:  ()            => `Using a default chit template — your chit fields aren't set up yet.`,
   catalogueLoadErr:()           => `Couldn't load your catalogue — reopen Compose to retry.`,
   // roster / catalogue / suppliers / settings / network
   shiftSet:       (s)           => `Shift → ${String(s).replace('_',' ')} ✓`,
@@ -646,7 +646,7 @@ const MSG = {
   settingsSaved:  ()            => `Settings saved ✓`,
   // network / connections
   linkRequested:  ()            => `Link requested ✓ — awaiting the child's consent`,
-  netApproved:    ()            => `Approved ✓ — child reparented under you`,
+  netApproved:    ()            => `Approved — now sits under you ✓`,
   netDeclined:    ()            => `Declined`,
   netSuspended:   ()            => `Suspended`,
   netResumed:     ()            => `Resumed ✓`,
@@ -656,9 +656,8 @@ const MSG = {
   connRequested:  ()            => `Connection request sent ✓`,
   connected:      ()            => `Connected ✓`,
   connRejected:   ()            => `Rejected`,
-  removed:        ()            => `Removed ✓`,
   // nudges for silent stops
-  capHit:         (role,n)      => `${String(role).toUpperCase()} is capped at ${n}.`,
+  capHit:         (role,n)      => `You can add up to ${n} ${String(role).toUpperCase()} recipients.`,
   pickItemFirst:  ()            => `Pick a product from the list first.`,
   alreadySelf:    ()            => `Self is already a recipient.`,
   // messages
@@ -666,7 +665,7 @@ const MSG = {
   msgSentInternal:()            => `🔒 Internal note added (team only)`,
   msgEmpty:       ()            => `Type a message first.`,
   // generic
-  comingSoon:     (what)        => `${what||'This'} is coming next — not wired yet.`,
+  comingSoon:     (what)        => `${what||'This'} is coming soon.`,
   fail:           (verb,e)      => `Couldn't ${verb} — ${friendlyErr(e)}`,
 };
 
@@ -1594,7 +1593,7 @@ function quickStatus(){ const ids=needTarget(); if(!ids.length)return; MODALS.st
 function pickStatus(v){ MODALS.stat.to=v; document.querySelectorAll('.optrow').forEach(r=>r.classList.toggle('sel',r.dataset.v===v)); const b=document.getElementById('mok'); if(b)b.disabled=false; }
 async function confirmStatus(){ const {ids,to}=MODALS.stat; if(!to)return; closeModal();
   for(const id of ids){ try{ await api("status",{params:{id},body:{status:({open:'pending',act:'in_progress',close:'completed'}[to]||to)}}); const i=UI.rows.findIndex(x=>x.id===id); if(i>=0)UI.rows[i].state=to; if(UI.detail&&UI.detail.id===id)UI.detail.state=to; }catch(e){ toast(MSG.fail("change status", e)); return; } }
-  renderApp(); toast(MSG.statusSet(ids.length, to));
+  renderApp(); toast(MSG.statusSet(ids.length, to, ids.length===1?((UI.rows.find(x=>x.id===ids[0])||UI.detail||{}).code):null));
 }
 function quickAssign(){ const ids=needTarget(); if(!ids.length)return;
   if(ids.length===1){ pickAssign(ids[0]); }
