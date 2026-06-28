@@ -624,6 +624,54 @@ function openHelp(key){ const host=document.getElementById("lbhost"); if(!host)r
   host.innerHTML=`<div class="notifover" onclick="closeHelp()"><div class="notifpanel" style="max-width:560px;width:94vw" onclick="event.stopPropagation()"><div class="notifhd">❓ About this screen<button onclick="closeHelp()" style="margin-left:auto;border:0;background:none;cursor:pointer;font-size:15px;color:var(--grey)" aria-label="Close">✕</button></div><div style="padding:13px;max-height:72vh;overflow:auto">${(typeof PURPOSE!=='undefined'&&PURPOSE[key])?`<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:10px;padding:10px 12px;font-size:12.5px;color:#6b5a36;line-height:1.5;margin-bottom:12px">${esc(PURPOSE[key])}</div>`:''}${helpFor(key)||((typeof PURPOSE!=='undefined'&&PURPOSE[key])?'':'<div style="color:var(--grey);font-size:12.5px">More about this screen is coming.</div>')}</div></div></div>`;
 }
 function closeHelp(){ _helpOpen=false; const h=document.getElementById("lbhost"); if(h)h.innerHTML=""; }
+/* ── Floating AI assistant — context-sensitive, library-backed, pre + post auth, honest (no overselling). ──
+   First version: keyword match over a seed library (consolidates HELP_PACKS / KB). Real NLU/AI is the next phase. */
+const ASSIST_LIB = [
+  { id:"fit", topics:["fit","suitable","right for me","useful","help my business","should i use","is this for me"], q:"Is this right for my business?", a:"Chit & Bridge fits businesses that exchange orders or deals with other businesses and want a trustworthy, shared record — supply, trade, services, networks. It may NOT fit if you only need a simple invoice app or a consumer storefront. Tell me your business and I will be honest about the fit.", fit:"maybe", context:["welcome","login","register"] },
+  { id:"trust", topics:["trust","reliable","safe","secure","privacy","hacked","lose data"], q:"How do I know it is reliable?", a:"Your records are yours alone (no other business can see them), every deal keeps a copy for both sides like a signed receipt, and there is a full time-stamped audit trail. We answer the hard questions up front rather than ask you to trust a reputation we have not earned yet.", context:["*"] },
+  { id:"schema", topics:["customize","schema","fields","my business","different","flexible","adapt"], q:"Can it adapt to my business?", a:"Yes. The trustworthy container — the record, your privacy, the audit — stays fixed. What a deal CONTAINS is your schema: your fields, your rules. Same engine, different schema = different behaviour. You configure, you do not write code.", context:["*"] },
+  { id:"coassist", topics:["co-assist","coassist","actor","staff","employee","team","who acts","assign work"], q:"What is a co-assist?", a:"Anyone — or anything — that acts for you. People now; connectors, devices, process rules and AI agents next. You stay the party; they act for you under scoped access you grant.", context:["coassists","task"] },
+  { id:"chit", topics:["chit","create order","compose","new order","author","place order","send"], q:"What is a chit and how do I make one?", a:"A chit is a sealed, shared record of a deal. In Compose you author your own record, then bridge it to a counterparty — each side gets its own copy with its own status.", context:["compose","order","task"] },
+  { id:"dispute", topics:["dispute","disagree","problem with order","wrong","complaint"], q:"What if something goes wrong with a deal?", a:"Either side can raise a dispute inside the system. It is recorded, both sides see it, and it is resolved on the record — not in a lost email thread.", context:["disputes","task","order"] }
+];
+let _assistOpen=false;
+function curScreen(){ try{ if(typeof SESSION!=="undefined" && SESSION.token) return (typeof UI!=="undefined" && UI.nav) || "task"; const h=location.hash||""; if(h.indexOf("register")>=0) return "register"; if(h.indexOf("login")>=0) return "login"; return "welcome"; }catch(_){ return "welcome"; } }
+function mountAssist(){ if(document.getElementById("assistfab")) return;
+  const b=document.createElement("div"); b.id="assistfab"; b.style.cssText="position:fixed;right:16px;bottom:16px;z-index:300";
+  b.innerHTML=`<button onclick="openAssist()" title="Ask the assistant" style="border:0;border-radius:24px;padding:10px 16px;background:#3F66A6;color:#fff;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.18);font-size:14px">💬 Assistant</button>`;
+  document.body.appendChild(b);
+  const h=document.createElement("div"); h.id="assisthost"; document.body.appendChild(h);
+}
+function openAssist(){ if(!document.getElementById("assisthost")) mountAssist(); if(_assistOpen){ closeAssist(); return; } _assistOpen=true; renderAssist(); }
+function closeAssist(){ _assistOpen=false; const h=document.getElementById("assisthost"); if(h)h.innerHTML=""; }
+function assistSuggest(){ const sc=curScreen(); const pre=!(typeof SESSION!=="undefined" && SESSION.token);
+  return ASSIST_LIB.filter(e=> (e.context||[]).indexOf("*")>=0 || (e.context||[]).indexOf(sc)>=0 || (pre && e.fit) ).slice(0,5);
+}
+function assistEntryHTML(e){ if(!e) return "I am not sure yet — try rephrasing, or pick a suggestion. I will not guess or oversell.";
+  let html = "<b>"+esc(e.q)+"</b><br>"+esc(e.a);
+  if(e.fit) html += `<div style="margin-top:6px;font-size:11px;color:${e.fit==="good"?"#2f8f5b":e.fit==="no"?"#b4453f":"#a9791f"}">Fit: ${e.fit==="good"?"strong":e.fit==="no"?"probably not":"depends — tell me more"}</div>`;
+  if(e.media && e.media.type==="img") html += `<div style="margin-top:8px"><img src="${esc(e.media.src)}" style="max-width:100%;border-radius:8px" alt=""></div>`;
+  if(e.media && e.media.type==="video") html += `<div style="margin-top:8px"><video src="${esc(e.media.src)}" controls style="max-width:100%;border-radius:8px"></video></div>`;
+  return html;
+}
+function assistPick(id){ const e=ASSIST_LIB.find(x=>x.id===id); renderAssist(assistEntryHTML(e)); }
+function assistAsk(){ const inp=document.getElementById("assist_in"); const raw=(inp?inp.value:"").trim(); if(!raw) return;
+  const q=raw.toLowerCase(); let best=null, score=0;
+  ASSIST_LIB.forEach(e=>{ let s=0; (e.topics||[]).forEach(t=>{ if(q.indexOf(t.toLowerCase())>=0) s+=2; }); q.split(/\W+/).filter(w=>w.length>3).forEach(w=>{ if((e.q+" "+e.a).toLowerCase().indexOf(w)>=0) s++; }); if(s>score){ score=s; best=e; } });
+  renderAssist(score>0 ? assistEntryHTML(best) : "I am not certain about that yet — try a suggestion, or rephrase. (I will be honest about fit rather than oversell.)");
+}
+function renderAssist(ans){ const h=document.getElementById("assisthost"); if(!h||!_assistOpen) return; const pre=!(typeof SESSION!=="undefined" && SESSION.token); const sugg=assistSuggest();
+  h.innerHTML=`<div style="position:fixed;right:16px;bottom:70px;z-index:301;width:360px;max-width:92vw;background:#fff;border:1px solid #e3e0d8;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.22);overflow:hidden">
+    <div style="display:flex;align-items:center;gap:8px;padding:11px 13px;border-bottom:1px solid #e3e0d8;font-family:'Space Grotesk';font-weight:700;font-size:13px">💬 Assistant <span style="font-size:9.5px;font-family:'Space Mono';background:#f3f0e8;color:#7a5e22;border-radius:5px;padding:1px 6px">${pre?"fit check":"help"}</span><button onclick="closeAssist()" style="margin-left:auto;border:0;background:none;cursor:pointer;color:#9aa3a7;font-size:15px">✕</button></div>
+    <div style="padding:11px 13px;max-height:52vh;overflow:auto">
+      <div style="font-size:12px;color:#777;margin-bottom:8px">${pre?"Tell me your business and I will be honest about whether this fits.":"Describe what you are trying to do."}</div>
+      <div id="assist_ans" style="font-size:12.5px;color:#222;line-height:1.55;margin-bottom:10px">${ans||""}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">${sugg.map(e=>`<button onclick="assistPick('${e.id}')" style="border:0.5px solid #e3e0d8;border-radius:8px;padding:3px 8px;font-size:11px;background:#fff;cursor:pointer">${esc(e.q)}</button>`).join("")}</div>
+      <div style="display:flex;gap:7px"><input id="assist_in" placeholder="${pre?"e.g. I run a timber yard…":"e.g. how do I assign a task?"}" style="flex:1;border:1px solid #e3e0d8;border-radius:8px;padding:7px 9px;font-size:12.5px" onkeydown="if(event.key==='Enter')assistAsk()"><button onclick="assistAsk()" style="border:0;border-radius:8px;padding:0 12px;background:#3F66A6;color:#fff;font-weight:700;cursor:pointer">Ask</button></div>
+    </div>
+    <div style="padding:7px 13px;font-size:9.5px;color:#9aa3a7;background:#faf8f3">Honest by design · sample answers from the library · richer AI coming.</div>
+  </div>`;
+}
 function setLogFilter(k){ _logFilter=k; renderMsgConsole(); }
 function clearMsgLog(){ if(window.__cblog) window.__cblog.length=0; renderMsgConsole(); }
 function renderMsgConsole(){ const host=document.getElementById("lbhost"); if(!host||!UI.logOpen)return;
@@ -703,6 +751,7 @@ const MSG = {
 
 window.addEventListener("hashchange", route);
 function route(){
+  try{ mountAssist(); }catch(_){}   // floating assistant on every page (auth + pre-auth)
   const h=location.hash||"#/";
   if(!SESSION.token && !h.startsWith("#/register") && !h.startsWith("#/login") && !h.startsWith("#/welcome")) return go("#/login");
   if(h.startsWith("#/welcome")) return renderWelcome();
