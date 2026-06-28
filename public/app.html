@@ -619,7 +619,23 @@ function openMsgConsole(){ const host=document.getElementById("lbhost"); if(!hos
 function closeMsgConsole(){ UI.logOpen=false; const h=document.getElementById("lbhost"); if(h)h.innerHTML=""; }
 /* Per-screen help — the assistant / Q&A moved behind a "?" so the window stays clean (banner stays inline). */
 let _helpOpen=false;
-function helpFor(key){ if(key==='coassists') return coHelpBox(); if(key==='compose') return composeHelpBox(); return (typeof menuHelp==='function'?menuHelp(key):''); }
+function helpFor(key){ return helpBoxFromLib(key); }
+// Render the per-screen "?" help from the SAME ASSIST_LIB the floating assistant uses (one render path).
+function helpBoxFromLib(key){ try{ buildAssistLib(); }catch(_){}
+  const own = ASSIST_LIB.filter(e=> (e.context||[]).indexOf(key)>=0 );
+  const list = (own.length?own:ASSIST_LIB.filter(e=>(e.context||[]).indexOf("*")>=0)).slice(0,8);
+  return `<div style="${_CARD}"><div style="font-family:'Space Grotesk';font-weight:600;font-size:13px;margin-bottom:2px">Assistant <span style="font-size:10.5px;font-family:'Space Mono';background:var(--gold-soft);color:#7a5e22;border-radius:5px;padding:1px 7px">sample answers</span></div>
+    <div style="font-size:12.5px;color:var(--grey);margin-bottom:10px">What this screen is for and how to use it.</div>
+    <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px">${list.map(e=>`<button class="composebtn" onclick="helpPick('${e.id}')">${esc(e.q)}</button>`).join("")||'<span style="font-size:12px;color:var(--grey)">No tips yet.</span>'}</div>
+    <div style="display:flex;gap:8px"><input class="inp" id="help_in" placeholder="Ask about this screen…" onkeydown="if(event.key==='Enter')helpAsk('${key}')"><button style="${_BTN}" onclick="helpAsk('${key}')">Ask</button></div>
+    <div id="help_ans" style="font-size:13px;color:var(--ink);margin-top:10px;line-height:1.55"></div></div>`;
+}
+function helpPick(id){ const e=ASSIST_LIB.find(x=>x.id===id); const o=document.getElementById("help_ans"); if(o)o.innerHTML=assistEntryHTML(e); }
+function helpAsk(key){ const inp=document.getElementById("help_in"); const raw=(inp?inp.value:"").trim(); if(!raw)return; const q=raw.toLowerCase();
+  const pool=ASSIST_LIB.filter(e=>(e.context||[]).indexOf(key)>=0 || (e.context||[]).indexOf("*")>=0); let best=null,score=0;
+  pool.forEach(e=>{ let s=0; (e.topics||[]).forEach(t=>{ if(q.indexOf(t.toLowerCase())>=0)s+=2; }); q.split(/\W+/).filter(w=>w.length>3).forEach(w=>{ if((e.q+" "+e.a).toLowerCase().indexOf(w)>=0)s++; }); if(s>score){score=s;best=e;} });
+  const o=document.getElementById("help_ans"); if(o)o.innerHTML = score>0 ? assistEntryHTML(best) : "I am not certain — try a suggestion above, or rephrase.";
+}
 function openHelp(key){ const host=document.getElementById("lbhost"); if(!host)return; if(_helpOpen){ closeHelp(); return; } _helpOpen=true;
   host.innerHTML=`<div class="notifover" onclick="closeHelp()"><div class="notifpanel" style="max-width:560px;width:94vw" onclick="event.stopPropagation()"><div class="notifhd">❓ About this screen<button onclick="closeHelp()" style="margin-left:auto;border:0;background:none;cursor:pointer;font-size:15px;color:var(--grey)" aria-label="Close">✕</button></div><div style="padding:13px;max-height:72vh;overflow:auto">${(typeof PURPOSE!=='undefined'&&PURPOSE[key])?`<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:10px;padding:10px 12px;font-size:12.5px;color:#6b5a36;line-height:1.5;margin-bottom:12px">${esc(PURPOSE[key])}</div>`:''}${helpFor(key)||((typeof PURPOSE!=='undefined'&&PURPOSE[key])?'':'<div style="color:var(--grey);font-size:12.5px">More about this screen is coming.</div>')}</div></div></div>`;
 }
