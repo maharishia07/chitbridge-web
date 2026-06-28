@@ -1312,14 +1312,15 @@ const _BTN='border:0;border-radius:9px;padding:0 14px;color:#fff;background:var(
 function profileScreen(){ return scr("👤 Profile","profbody"); }
 async function loadProfile(){ const h=document.getElementById("profbody"); if(!h)return;
   try{ const e=(await api("me"))||{};
-    h.innerHTML=`${menuAssist('profile')}<div style="${_CARD}"><div class="kv"><b>Name</b> · ${esc(e.display_name)}</div><div class="kv"><b>User ID</b> · ${esc(e.bridge_id)}</div><div class="kv"><b>Email</b> · ${esc(e.email)}</div>
+    h.innerHTML=`${menuAssist('profile')}<div style="${_CARD}"><div class="kv"><b>Name</b> · ${esc(e.display_name)}</div><div class="kv"><b>Bridge ID</b> · ${esc(e.bridge_id)}</div><div class="kv"><b>Email</b> · ${esc(e.email)}</div>
+      <label class="fl">User ID <span style="color:var(--grey);font-size:11px">— others add you with this</span></label><input class="inp" id="pf_uid" value="${esc(e.user_id||'')}" placeholder="e.g. yourname or you@email.com">
       <label class="fl">GSTN</label><input class="inp" id="pf_gstn" value="${esc(e.gstn)}">
       <label class="fl">Address</label><input class="inp" id="pf_addr" value="${esc(e.address)}">
       <label class="fl">Shop status</label><select class="inp" id="pf_bs">${opt(["open","closed","away"],e.business_status)}</select>
       <div class="err" id="pf_err"></div><button class="composebtn" style="margin-top:9px" onclick="saveProfile()">Save profile</button></div>`;
   }catch(e){ h.innerHTML=scrErr(e); } }
 async function saveProfile(){ const x=document.getElementById("pf_err"); if(x)x.textContent="";
-  try{ await api("saveProfile",{body:{gstn:val("pf_gstn")||null,address:val("pf_addr")||null,business_status:val("pf_bs")}}); toast("Profile saved ✓"); }catch(e){ if(x)x.textContent=e.message; } }
+  try{ await api("saveProfile",{body:{user_id:val("pf_uid")||null,gstn:val("pf_gstn")||null,address:val("pf_addr")||null,business_status:val("pf_bs")}}); toast(MSG.profileSaved()); }catch(e){ if(x)x.textContent=e.message; } }
 /* SETTINGS */
 function settingsScreen(){ return scr("⚙️ Settings","setbody"); }
 async function loadSettings(){ const h=document.getElementById("setbody"); if(!h)return;
