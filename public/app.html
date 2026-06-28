@@ -603,7 +603,7 @@ const inr=n=>"₹"+(n||0).toLocaleString("en-IN");
 function go(hash){location.hash=hash;}
 function toast(msg, undo){
   const t=document.getElementById("toast");
-  t.innerHTML=`<div class="toast">${msg}${undo?'<button id="undoBtn">Undo</button>':''}</div>`;
+  t.innerHTML=`<div class="toast">${esc(msg)}${undo?'<button id="undoBtn">Undo</button>':''}</div>`;
   if(undo){document.getElementById("undoBtn").onclick=()=>{undo();t.innerHTML="";};}
   clearTimeout(toast._t); toast._t=setTimeout(()=>t.innerHTML="",4500);
 }
@@ -638,6 +638,7 @@ const MSG = {
   catalogueLoadErr:()           => `Couldn't load your catalogue — reopen Compose to retry.`,
   // roster / catalogue / suppliers / settings / network
   shiftSet:       (s)           => `Shift → ${String(s).replace('_',' ')} ✓`,
+  coassistAdded:  (name,id)     => `Co-assist ${name} registered as ${id} ✓`,
   productAdded:   ()            => `Product added ✓`,
   productDeleted: ()            => `Product deleted ✓`,
   supplierAdded:  ()            => `Supplier added ✓`,
@@ -1274,7 +1275,7 @@ function addActorModal(){
 async function submitActor(){
   const name=val("ac_name"), key=val("ac_key"); const handle=val("ac_handle")||defActorHandle(); const err=document.getElementById("ac_err"); if(err)err.textContent="";
   if(!name||key.length<4){ if(err)err.textContent="Name and a key of 4+ chars are required."; return; }
-  try{ await api("addActor",{body:{display_name:name,actor_key:key,handle:handle,user_id:coId(handle)}}); closeModal(); toast("Co-assist "+name+" registered as "+coId(handle)+" ✓"); if(UI.nav==="coassists")loadCoassists(); }
+  try{ await api("addActor",{body:{display_name:name,actor_key:key,handle:handle,user_id:coId(handle)}}); closeModal(); toast(MSG.coassistAdded(name, coId(handle))); if(UI.nav==="coassists")loadCoassists(); }
   catch(e){ if(err)err.textContent=e.message; }
 }
 /* ---------------- DISPUTES screen ---------------- */
