@@ -1,7 +1,15 @@
 # PANEL-FIXES — task-panel divergences (HELD, branch `feat/panel-fixes`)
 
-**Status: SPEC only, no code yet** — held for review + backend deps. Web repo `chitbridge-react`,
-file `public/app.html` (1881-line monolith; can't unit-test here — implement carefully, eyeball in browser).
+**Status (2026-06-28): #1–#5 BUILT + Order-endpoint fix. All HELD, syntax-checked (`node --check`), demo untouched.**
+- #1 bell badge → real `/api/notifications` count — DONE (web `7a8223a`)
+- #2 bulk-assign → real `/api/chits/assign-bulk` picker — DONE (web `4a2ebf2`)
+- #3 "Pull to me" → logged-in actor id from JWT — DONE (web `7a8223a`)
+- Order panel → repointed to `/api/chits/sent` (+ stale EP markers) — DONE (web `89808d8`)
+- #4 restore → backend `POST /:id/restore` (api `dcdecaa`) + delete **Undo** wired (web `1bdc94e`); Trash *browse* view QUEUED
+- #5 per-actor unread → `chit_reads` + mark-read + `GET /unread` (api `31c6b48`) + row colour/dot (web `452f75b`)
+- STILL QUEUED: Trash browse view; `mapApiChit` live-mapper enrichment (`proof:'ok'`/folder hardcodes, CC/For/att/msg/area, `/sent` dispute count). Needs `migration_chit_reads.sql` run.
+
+Web repo `chitbridge-react`, file `public/app.html` (1881-line monolith; can't unit-test here — eyeball in browser).
 Audited 2026-06-28. Full icon inventory lives in the api repo `docs/CB-SYNC.md`.
 
 Four divergences found in the icon audit + one new model (per-actor unread, chosen by Athi).
