@@ -1530,7 +1530,7 @@ async function confirmStatus(){ const {ids,to}=MODALS.stat; if(!to)return; close
 }
 function quickAssign(){ const ids=needTarget(); if(!ids.length)return;
   if(ids.length===1){ pickAssign(ids[0]); }
-  else { toast("Bulk-assign "+ids.length+" chits — "+EP.assignBulk.ok+" "+EP.assignBulk.p+" (ATH-109 §5)"); }
+  else { pickAssignBulk(ids); }
 }
 function quickDispute(){ const ids=needTarget(); if(!ids.length)return; MODALS.disp={ids};
   modal(`<div class="mhd"><div class="t">⚑ Raise dispute</div><div class="s">${ids.length} chit${ids.length>1?'s':''}</div></div><div class="mbody"><div style="font-size:12px;color:var(--grey);margin-bottom:7px">Pick a category and give a reason (min 10 characters). Both parties will see this dispute.</div><select id="dispcat" style="width:100%;margin-bottom:8px;padding:8px;border:1px solid var(--line);border-radius:6px"><option value="quality">Quality</option><option value="quantity">Quantity</option><option value="delivery">Delivery</option><option value="payment">Payment</option><option value="docs">Docs</option><option value="other" selected>Other</option></select><textarea id="dispreason" placeholder="e.g. Quantity short by 2 units — please replace"></textarea></div><div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="danger" onclick="confirmDispute()">Raise dispute</button></div>`);
@@ -1829,8 +1829,33 @@ async function pickAssign(id){
 }
 function pickActor(aid){ MODALS.pick.actorId=aid; document.querySelectorAll('.optrow').forEach(r=>r.classList.toggle('sel',r.dataset.a===aid)); syncAssignOk(); }
 function pickPri(p){ MODALS.pick.pri=p; document.querySelectorAll('.prisel button').forEach(b=>b.classList.toggle('on',b.dataset.p===p)); const h=document.getElementById('reasonhint'); if(h)h.textContent=p==='urgent'?'— Urgent needs one':'(optional)'; syncAssignOk(); }
-function syncAssignOk(){ const p=MODALS.pick; const b=document.getElementById('mok'); if(!b)return; const ok=p.actorId&&(p.pri!=='urgent'||(p.reason&&p.reason.trim())); b.disabled=!ok; const a=(UI.actors||[]).find(x=>x.id===p.actorId); b.textContent=p.actorId?("Assign · "+PRI[p.pri].label+" → "+(a?a.name:"actor")):"Assign"; }
-function confirmAssign(){ const p=MODALS.pick; if(!p||!p.actorId)return; closeModal(); assignChit(p.id, p.actorId, p.pri, p.reason); }
+function syncAssignOk(){ const p=MODALS.pick; const b=document.getElementById('mok'); if(!b)return;
+  if(p.bulk){ b.disabled=!p.actorId; const a=(UI.actors||[]).find(x=>x.id===p.actorId); b.textContent=p.actorId?("Assign "+p.ids.length+" → "+(a?a.name:"actor")):"Assign all"; return; }
+  const ok=p.actorId&&(p.pri!=='urgent'||(p.reason&&p.reason.trim())); b.disabled=!ok; const a=(UI.actors||[]).find(x=>x.id===p.actorId); b.textContent=p.actorId?("Assign · "+PRI[p.pri].label+" → "+(a?a.name:"actor")):"Assign"; }
+function confirmAssign(){ const p=MODALS.pick; if(!p||!p.actorId)return; closeModal();
+  if(p.bulk){ assignBulkChits(p.ids, p.actorId); return; }
+  assignChit(p.id, p.actorId, p.pri, p.reason); }
+// Bulk-assign many chits to ONE co-assist. Reuses the actor picker (pickActor/syncAssignOk).
+// Backend /api/chits/assign-bulk takes {chit_ids, target_actor_id} only (no priority/reason).
+async function pickAssignBulk(ids){
+  let actors=[];
+  try{ const r=await api("actors"); actors=(r||[]).map(mapApiActor); }catch(e){ toast("Couldn't load actors: "+e.message); return; }
+  UI.actors=actors; MODALS.pick={ids, actorId:null, bulk:true};
+  const rows=actors.map(a=>{ const off=a.shift==="off";
+    const chip=a.shift==="on_shift"?'<span class="optchip on">on shift</span>':a.shift==="on_break"?'<span class="optchip brk">on break</span>':'<span class="optchip off">off</span>';
+    return `<div class="optrow ${off?'dis':''}" data-a="${a.id}" ${off?'':`onclick="pickActor('${a.id}')"`}><span class="rdo"></span><div class="oc"><div class="on">${a.name}</div><div class="om">load ${a.load}${off?' · off duty — cannot assign':''}</div></div>${chip}</div>`;
+  }).join("");
+  modal(`<div class="mhd"><div class="t">Assign ${ids.length} chit${ids.length>1?'s':''}</div><div class="s">to one co-assist (bulk)</div></div><div class="mbody">${rows||'<div style="padding:14px;color:var(--grey);font-size:13px">No co-assists yet.</div>'}<div style="padding:6px 0 2px"><button class="composebtn" onclick="addActorModal()">+ New co-assist</button></div></div><div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="pri" id="mok" disabled onclick="confirmAssign()">Assign all</button></div>`);
+}
+async function assignBulkChits(ids, actorId){
+  try{ const r=await api("assignBulk",{body:{chit_ids:ids, target_actor_id:actorId}});
+    const a=(UI.actors||STORE.actors||[]).find(x=>x.id===actorId);
+    UI.selectMode=false; UI.selected.clear();
+    await loadList();
+    const n=(r&&r.assigned!=null)?r.assigned:ids.length; const sk=(r&&r.skipped&&r.skipped.length)?(" · "+r.skipped.length+" skipped"):"";
+    toast(n+" chit"+(n>1?'s':'')+" → "+(a?a.name:"actor")+" ✓"+sk);
+  }catch(e){ toast("Bulk assign failed: "+e.message); }
+}
 function repriority(id){ const c=UI.detail||UI.rows.find(x=>x.id===id)||{}; MODALS.repri={id,pri:c.pri||"normal",reason:""};
   modal(`<div class="mhd"><div class="t">Priority — ${c.code||'chit'}</div><div class="s">internal routing in your queue</div></div><div class="mbody">${c.custPri?'<div class="custreq">⚑ Customer flagged this as priority.</div>':''}<div class="prisel">${["urgent","normal","low"].map(p=>`<button class="pri-${p} ${MODALS.repri.pri===p?'on':''}" data-p="${p}" onclick="pickRepri('${p}')">${PRI[p].label}</button>`).join("")}</div><div class="msec">Reason <span id="repriHint" class="rh">${MODALS.repri.pri==='urgent'?'— Urgent needs one':'(optional)'}</span></div><textarea id="reprireason" class="mreason" placeholder="Why this priority…" oninput="MODALS.repri.reason=this.value;syncRepriOk()"></textarea></div><div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="pri" id="repriok" ${MODALS.repri.pri==='urgent'?'disabled':''} onclick="confirmRepri()">Set ${PRI[MODALS.repri.pri].label}</button></div>`); }
 function pickRepri(p){ MODALS.repri.pri=p; document.querySelectorAll('.prisel button').forEach(b=>b.classList.toggle('on',b.dataset.p===p)); const h=document.getElementById('repriHint'); if(h)h.textContent=p==='urgent'?'— Urgent needs one':'(optional)'; syncRepriOk(); }
