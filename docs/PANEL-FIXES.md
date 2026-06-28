@@ -153,6 +153,19 @@ does NOT grant access to X's data (that needs connections/chits), so no privacy 
   enforcement is the broader backlog).
 - `has_catalogue` is surfaced (nice) — could drive a "browse their catalogue" action later.
 
+## Settings panel — audit 2026-06-28
+Exposes exactly the 4 `entity_actor_settings` (`assignment_model`, `default_max_tasks`, `all_task_visible`,
+`auto_return_on_short_break`). Structurally clean (escaped, scrErr, `MSG.settingsSaved`, backend `entity_id`-scoped + validated).
+
+**Headline:** **all 4 are dead settings** — stored/saved but NOT enforced (see `ACTOR-SETTINGS-BEHAVIOUR.md`). The
+panel lets a user toggle controls with **zero effect** — will read as bugs in testing. Decide: **wire them**, or
+**label them "not yet active."**
+
+**Also missing:** the settings that DO work have **no UI** — `self_copy_pref` (baseline-7) and
+`dispute_handler_actor_id` (baseline-9) are backend-only. Add them to this panel.
+
+**QUEUED:** wire the 4 settings (or label) · add self_copy_pref + dispute_handler UI · (future) subscription/plan + entitlement controls.
+
 ## Build order (all HELD until reviewed; nothing pushed)
 1. Backend first (api batch): restore endpoint (`baseline-11`) + `chit_reads` migration + inbox unread + mark-read.
 2. Then frontend (this branch): badge, bulk-assign, actor-id, restore wire, row unread colour.
