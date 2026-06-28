@@ -602,10 +602,34 @@ let SESSION = {token:null, role:null, name:null, entity:null, bridgeId:null};
 const inr=n=>"₹"+(n||0).toLocaleString("en-IN");
 function go(hash){location.hash=hash;}
 function toast(msg, undo){
+  if(typeof cblog==='function') cblog(toastLevel(msg), msg);
   const t=document.getElementById("toast");
   t.innerHTML=`<div class="toast">${esc(msg)}${undo?'<button id="undoBtn">Undo</button>':''}</div>`;
   if(undo){document.getElementById("undoBtn").onclick=()=>{undo();t.innerHTML="";};}
   clearTimeout(toast._t); toast._t=setTimeout(()=>t.innerHTML="",4500);
+}
+function toastLevel(m){ const s=String(m);
+  if(/couldn't|failed|server error|session expired|not allowed|something went wrong|⚠|🚫/i.test(s)) return 'error';
+  if(/already|only |capped|required|first\.|coming soon|⏳|not yet|pick a|type a/i.test(s)) return 'warn';
+  return 'info';
+}
+/* Message console — tester view of every message/event (info / warning / critical / requests), filterable. */
+let _logFilter = 'all';
+function openMsgConsole(){ const host=document.getElementById("lbhost"); if(!host)return; if(UI.logOpen){ closeMsgConsole(); return; } UI.logOpen=true; renderMsgConsole(); }
+function closeMsgConsole(){ UI.logOpen=false; const h=document.getElementById("lbhost"); if(h)h.innerHTML=""; }
+function setLogFilter(k){ _logFilter=k; renderMsgConsole(); }
+function clearMsgLog(){ if(window.__cblog) window.__cblog.length=0; renderMsgConsole(); }
+function renderMsgConsole(){ const host=document.getElementById("lbhost"); if(!host||!UI.logOpen)return;
+  const COL={debug:'#9aa3a7',info:'#3F66A6',warn:'#a9791f',error:'#b4453f'};
+  const all=(window.__cblog||[]);
+  const rows=all.filter(e=>_logFilter==='all'||e.level===_logFilter).slice(-200).reverse();
+  const chip=(k,lbl)=>`<button onclick="setLogFilter('${k}')" style="border:0.5px solid var(--line);border-radius:7px;padding:2px 8px;font-size:11px;background:${_logFilter===k?'var(--ink)':'#fff'};color:${_logFilter===k?'#fff':'var(--ink)'};cursor:pointer">${lbl}</button>`;
+  host.innerHTML=`<div class="notifover" onclick="closeMsgConsole()"><div class="notifpanel" style="max-width:560px;width:94vw" onclick="event.stopPropagation()">
+    <div class="notifhd">🧪 Message log<span style="margin-left:auto;font-size:10px;color:var(--grey)">${rows.length}/${all.length}</span></div>
+    <div style="display:flex;gap:5px;padding:8px 13px;flex-wrap:wrap;align-items:center">${chip('all','All')}${chip('info','Info')}${chip('warn','Warning')}${chip('error','Critical')}${chip('debug','Requests')}<button onclick="clearMsgLog()" style="margin-left:auto;border:0.5px solid var(--line);border-radius:7px;padding:2px 8px;font-size:11px;background:#fff;cursor:pointer">Clear</button></div>
+    <div style="max-height:52vh;overflow:auto">${rows.length?rows.map(e=>`<div style="display:flex;gap:8px;padding:6px 13px;border-top:1px solid var(--line);font-size:11.5px;align-items:baseline"><span style="color:var(--grey);font-family:'Space Mono';font-size:9.5px;white-space:nowrap">${new Date(e.t).toLocaleTimeString()}</span><span style="color:${COL[e.level]||'#3F66A6'};font-weight:800;font-size:8.5px;text-transform:uppercase;white-space:nowrap">${esc(e.level)}</span><span style="color:var(--ink);word-break:break-word">${esc(e.text)}</span></div>`).join(""):'<div style="padding:16px;color:var(--grey);font-size:12.5px">No messages yet — interact with the app and they appear here.</div>'}</div>
+    <div class="notiffoot">Tester view · captures every toast + API call. Not shown in production.</div>
+  </div></div>`;
 }
 /* ===================== MESSAGE CATALOGUE =====================
    ALL user-facing action/feedback copy lives here — review & edit text in ONE place.
@@ -1957,6 +1981,7 @@ function modeRibbon(){
   return `<div class="moderibbon">
     <b>Build preview</b><span class="pill">${st.label}</span>
     <span style="font-size:10.5px">${st.mock?st.note:(st.base?"hitting "+st.base:"(API base not set!)")}</span>
+    <button onclick="openMsgConsole()" title="Message log — info / warning / critical / requests" style="border:0.5px solid var(--line);border-radius:7px;padding:2px 8px;font-size:11px;background:#fff;cursor:pointer;margin-left:8px">🧪 Log</button>
     ${vpsw}
     <span class="sw" style="${SESSION.token?'':'margin-left:auto'}">${stageBtns}</span>
   </div>`;
