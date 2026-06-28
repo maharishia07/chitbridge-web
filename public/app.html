@@ -1750,7 +1750,7 @@ const PENDING = {
   notifications:{label:"Notifications",             ref:"ATH-109 §11"},
 };
 function todo(k){ const t=PENDING[k]||{label:k,ref:""}; toast(MSG.comingSoon(t.label)+(t.ref?" ("+t.ref+")":"")); }
-function selBar(){const ids=UI.selected;const sum=UI.rows.filter(c=>ids.has(c.id)).reduce((a,c)=>a+c.amt,0);const ticked=UI.rows.filter(c=>UI.aggStates.has(c.state)).reduce((a,c)=>a+c.amt,0);const lbl=ids.size?`☑ ${ids.size} selected · Σ ${inr(sum)}`:`states ✓ ${[...UI.aggStates].map(cap).join(" · ")} · Σ ${inr(ticked)}`;return `<div class="selbar" id="selbar">${lbl}<span class="sp"><button onclick="sumScope()">Sum →</button><button class="pri" onclick="todo('assignBulk')">Assign</button><button onclick="UI.selected.clear();renderApp()">Clear</button></span></div>`;}
+function selBar(){const ids=UI.selected;const sum=UI.rows.filter(c=>ids.has(c.id)).reduce((a,c)=>a+c.amt,0);const ticked=UI.rows.filter(c=>UI.aggStates.has(c.state)).reduce((a,c)=>a+c.amt,0);const lbl=ids.size?`☑ ${ids.size} selected · Σ ${inr(sum)}`:`states ✓ ${[...UI.aggStates].map(cap).join(" · ")} · Σ ${inr(ticked)}`;return `<div class="selbar" id="selbar">${lbl}<span class="sp"><button onclick="sumScope()">Sum →</button><button class="pri" onclick="quickAssign()">Assign</button><button onclick="UI.selected.clear();renderApp()">Clear</button></span></div>`;}
 function updateSelBar(){const el=document.getElementById("selbar");if(el)el.outerHTML=selBar();}
 function sumScope(){
   const sel=UI.rows.filter(c=>UI.selected.has(c.id));
