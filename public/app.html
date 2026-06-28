@@ -607,6 +607,47 @@ function toast(msg, undo){
   if(undo){document.getElementById("undoBtn").onclick=()=>{undo();t.innerHTML="";};}
   clearTimeout(toast._t); toast._t=setTimeout(()=>t.innerHTML="",4500);
 }
+/* ===================== MESSAGE CATALOGUE =====================
+   ALL user-facing action/feedback copy lives here — review & edit text in ONE place.
+   Handlers call MSG.x(...). Contextual params: code = chit code (e.g. "PO #4471"), who = actor name.
+   Failures go through MSG.fail(verb, err) so wording is uniform across every panel. */
+function friendlyErr(e){ const m=(e&&e.message)||String(e||"");
+  if(/Already working/i.test(m))            return "still finishing the last one — one moment";
+  if(/session expired|sign in/i.test(m))    return "your session expired — please sign in again";
+  if(/Failed to fetch|network/i.test(m))    return "network hiccup — check your connection and retry";
+  return m || "something went wrong";
+}
+const MSG = {
+  // chit / task actions (contextual) — "#task assigned to #so-and-so"
+  assigned:       (code,who)    => `${code||'Chit'} assigned to ${who||'co-assist'} ✓`,
+  bulkAssigned:   (n,who,sk)    => `${n} chit${n>1?'s':''} assigned to ${who||'co-assist'} ✓${sk?` · ${sk} skipped`:''}`,
+  pushedBack:     (code)        => `${code||'Chit'} pushed back to the pool`,
+  statusSet:      (n,st)        => `${n>1?n+' chits':'Chit'} → ${String(st).toUpperCase()} ✓`,
+  advanced:       (code,st)     => `${code||'Chit'} → ${String(st).toUpperCase()} ✓`,
+  disputeRaised:  (n)           => `Dispute raised on ${n} chit${n>1?'s':''} ⚑ — both parties notified`,
+  disputeResolved:()            => `Dispute resolved ✓`,
+  trashed:        (n)           => `${n} chit${n>1?'s':''} moved to Trash · recoverable`,
+  restored:       (n)           => `Restored ${n} from Trash ✓`,
+  prioritySet:    (label)       => `Priority → ${label} ✓`,
+  custPriOn:      ()            => `⚑ Priority requested — the shop will see this`,
+  custPriOff:     ()            => `Priority request removed`,
+  // compose
+  draftSaved:     ()            => `Draft saved ✓`,
+  chitBridged:    (copies,self) => self?`Chit bridged — ${copies} copies on the thread (${self} to you) ✓`:`Chit bridged — ${copies||1} copies on the thread ✓`,
+  schemaDefault:  ()            => `Using a default chit template — your entity schema isn't configured yet.`,
+  catalogueLoadErr:()           => `Couldn't load your catalogue — reopen Compose to retry.`,
+  // roster / catalogue / suppliers / settings / network
+  shiftSet:       (s)           => `Shift → ${String(s).replace('_',' ')} ✓`,
+  productAdded:   ()            => `Product added ✓`,
+  productDeleted: ()            => `Product deleted ✓`,
+  supplierAdded:  ()            => `Supplier added ✓`,
+  supplierRemoved:()            => `Supplier removed ✓`,
+  profileSaved:   ()            => `Profile saved ✓`,
+  settingsSaved:  ()            => `Settings saved ✓`,
+  // generic
+  comingSoon:     (what)        => `${what||'This'} is coming next — not wired yet.`,
+  fail:           (verb,e)      => `Couldn't ${verb} — ${friendlyErr(e)}`,
+};
 
 window.addEventListener("hashchange", route);
 function route(){
@@ -994,12 +1035,12 @@ function ccSendAsOptions(){
   (STORE.actors||[]).forEach(a=>{ o+=`<option value="${esc(a.id)}">${esc(a.name)} · ${esc(a.uid||'actor')}</option>`; });
   return o;
 }
-async function compose(){ UI.drawer=false; CC={items:[]};
+async function compose(){ UI.drawer=false; CC={items:[]}; let _catErr=false;
   // Load YOUR real catalogue so Compose shows the items you added — not demo defaults.
   try{
     const _prods=(await api("prodList"))||[];
     STORE.catalogue=_prods.map(x=>{const d=x.item_data||x; return {particulars:d.name||d.product||'item', unit:d.unit||'unit', price:+d.price||0};});
-  }catch(e){ STORE.catalogue=STORE.catalogue||[]; }
+  }catch(e){ STORE.catalogue=STORE.catalogue||[]; _catErr=true; }
   modal(`<div class="mhd"><div class="t">✉️ Compose — author a chit</div><div class="s">create your own record, then bridge it</div></div>
    <div class="mbody">
      <div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:11px;padding:10px 12px;font-size:12.5px;color:#6b5a36;line-height:1.5;margin-bottom:10px"><b style="font-family:'Space Grotesk'">Author your own chit — it becomes shared the moment you bridge it.</b> A self-addressed chit is a real chit: one copy in <b>Order</b> (sent), one in <b>Task</b> (received), same thread. <span style="font-family:'Space Mono';font-size:10px;background:#fbeceb;color:#b4453f;border:1px solid #f0c9c6;border-radius:5px;padding:1px 6px">⏳ execute &amp; test pending</span></div>
@@ -1016,11 +1057,12 @@ async function compose(){ UI.drawer=false; CC={items:[]};
      <div id="cc_rcpts" style="margin-top:8px"></div>
      <div id="cc_rcap" style="font-size:11px;color:var(--grey);margin-top:4px"></div>
      <div style="font-family:'Space Grotesk';font-weight:600;font-size:12px;color:var(--grey);margin:12px 0 2px">Chit fields · from your <b>${esc((STORE.chitSchema||DEMO.chitSchema).schema_name)}</b> schema</div>
+     ${!STORE.chitSchema?`<div style="background:#fbeceb;border:1px solid #f0c9c6;border-radius:8px;padding:7px 10px;font-size:11.5px;color:#b4453f;margin-bottom:6px">${esc(MSG.schemaDefault())}</div>`:''}
      ${ccSchema().map(cfField).join("")}
      <div style="font-family:'Space Grotesk';font-weight:600;font-size:12px;color:var(--grey);margin:12px 0 4px">Line items · from your catalogue</div>
      ${(STORE.catalogue||[]).length
         ? `<div style="display:flex;gap:8px"><select class="inp" id="cc_pick">${STORE.catalogue.map((p,i)=>`<option value="${i}">${esc(p.particulars)} · ${inr(p.price)}/${esc(p.unit||'unit')}</option>`).join("")}</select><button class="composebtn" onclick="ccAddItem()">+ Add</button></div>`
-        : `<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:10px 12px;font-size:12.5px;color:#6b5a36">Your catalogue is empty — a chit needs at least one line item. <a onclick="closeModal();navTo('catalogue')" style="color:#3F66A6;cursor:pointer;font-weight:600">Add a product in Catalogue first &rarr;</a></div>`}
+        : `<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:10px 12px;font-size:12.5px;color:#6b5a36">${_catErr?esc(MSG.catalogueLoadErr()):'Your catalogue is empty — a chit needs at least one line item. <a onclick="closeModal();navTo(\'catalogue\')" style="color:#3F66A6;cursor:pointer;font-weight:600">Add a product in Catalogue first &rarr;</a>'}</div>`}
      <div id="cc_items" style="margin-top:8px"></div>
      <div id="cc_total" style="text-align:right;font-weight:700;font-size:13px;margin-top:6px"></div>
      <div class="err" id="cc_err"></div>
@@ -1067,9 +1109,9 @@ async function submitCompose(isDraft){
   try{
     const r=await api("createChit",{body:{recipients,is_draft:!!isDraft,send_as_label,subject,schema_values,line_items}});
     closeModal(); CC={items:[],rcpts:[]};
-    if(isDraft){ toast("Draft saved ✓"); UI.nav="order"; UI.folder="order"; }
-    else if(r&&r.selfCopies){ toast("Chit bridged — "+r.copies+" copies on the thread ("+r.selfCopies+" to you) ✓"); UI.nav="task"; UI.folder="task"; }
-    else { toast("Chit bridged — "+(r&&r.copies||1)+" copies on the thread ✓"); UI.nav="order"; UI.folder="order"; }
+    if(isDraft){ toast(MSG.draftSaved()); UI.nav="order"; UI.folder="order"; }
+    else if(r&&r.selfCopies){ toast(MSG.chitBridged(r.copies, r.selfCopies)); UI.nav="task"; UI.folder="task"; }
+    else { toast(MSG.chitBridged(r&&r.copies)); UI.nav="order"; UI.folder="order"; }
     UI.sel=null; UI.detail=null; await loadList(); renderApp();
   }catch(e){ if(err)err.textContent=e.message; }
 }
@@ -1530,8 +1572,8 @@ function quickStatus(){ const ids=needTarget(); if(!ids.length)return; MODALS.st
 }
 function pickStatus(v){ MODALS.stat.to=v; document.querySelectorAll('.optrow').forEach(r=>r.classList.toggle('sel',r.dataset.v===v)); const b=document.getElementById('mok'); if(b)b.disabled=false; }
 async function confirmStatus(){ const {ids,to}=MODALS.stat; if(!to)return; closeModal();
-  for(const id of ids){ try{ await api("status",{params:{id},body:{status:({open:'pending',act:'in_progress',close:'completed'}[to]||to)}}); const i=UI.rows.findIndex(x=>x.id===id); if(i>=0)UI.rows[i].state=to; if(UI.detail&&UI.detail.id===id)UI.detail.state=to; }catch(e){ toast("Status failed: "+e.message); return; } }
-  renderApp(); toast(ids.length+" → "+to.toUpperCase());
+  for(const id of ids){ try{ await api("status",{params:{id},body:{status:({open:'pending',act:'in_progress',close:'completed'}[to]||to)}}); const i=UI.rows.findIndex(x=>x.id===id); if(i>=0)UI.rows[i].state=to; if(UI.detail&&UI.detail.id===id)UI.detail.state=to; }catch(e){ toast(MSG.fail("change status", e)); return; } }
+  renderApp(); toast(MSG.statusSet(ids.length, to));
 }
 function quickAssign(){ const ids=needTarget(); if(!ids.length)return;
   if(ids.length===1){ pickAssign(ids[0]); }
@@ -1543,8 +1585,8 @@ function quickDispute(){ const ids=needTarget(); if(!ids.length)return; MODALS.d
 async function confirmDispute(){ const ids=MODALS.disp.ids; const el=document.getElementById('dispreason'); const reason=(el?el.value:"").trim(); const cat=(document.getElementById('dispcat')||{}).value||'other';
   if(reason.length<10){ toast("Reason must be at least 10 characters"); return; }
   closeModal();
-  for(const id of ids){ try{ await api("dispute",{params:{id},body:{category:cat,reason}}); const i=UI.rows.findIndex(x=>x.id===id); if(i>=0)UI.rows[i].dispute=true; if(UI.detail&&UI.detail.id===id)UI.detail.dispute=true; }catch(e){ toast("Dispute failed: "+e.message); return; } }
-  renderApp(); toast("⚑ Dispute raised on "+ids.length);
+  for(const id of ids){ try{ await api("dispute",{params:{id},body:{category:cat,reason}}); const i=UI.rows.findIndex(x=>x.id===id); if(i>=0)UI.rows[i].dispute=true; if(UI.detail&&UI.detail.id===id)UI.detail.dispute=true; }catch(e){ toast(MSG.fail("raise the dispute", e)); return; } }
+  renderApp(); toast(MSG.disputeRaised(ids.length));
 }
 function quickDelete(){ let ids=needTarget(); if(!ids.length)return;
   if(SESSION.role==="actor"){ const drafts=ids.filter(id=>{const c=UI.rows.find(x=>x.id===id)||UI.detail; return c&&c.state==="draft";}); if(drafts.length!==ids.length){ toast("Only the owner can delete a sent (co-signed) chit — actors delete their own drafts only."); return; } ids=drafts; }
@@ -1552,16 +1594,16 @@ function quickDelete(){ let ids=needTarget(); if(!ids.length)return;
   modal(`<div class="mhd"><div class="t">🗑️ Delete ${ids.length} chit${ids.length>1?'s':''}?</div></div><div class="mbody"><div style="font-size:13px;color:var(--ink);line-height:1.6">They move to <b>Trash</b> and can be recovered for a set period — not erased immediately.</div></div><div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="danger" onclick="confirmDelete()">Move to Trash</button></div>`);
 }
 async function confirmDelete(){ const ids=MODALS.del.ids; closeModal();
-  for(const id of ids){ try{ await api("delChit",{params:{id}}); }catch(e){ toast("Delete failed: "+e.message); return; } }
+  for(const id of ids){ try{ await api("delChit",{params:{id}}); }catch(e){ toast(MSG.fail("delete", e)); return; } }
   UI.rows=UI.rows.filter(c=>!ids.includes(c.id)); if(UI.sel&&ids.includes(UI.sel)){UI.sel=null;UI.detail=null;UI.mdetail=false;} UI.selected.clear();
-  renderApp(); toast("Moved to Trash · recoverable", ()=>restoreChits(ids));
+  renderApp(); toast(MSG.trashed(ids.length), ()=>restoreChits(ids));
 }
 // Undo a just-deleted batch via the real restore endpoint. (A full Trash browse view is queued.)
 async function restoreChits(ids){
   let ok=0;
   for(const id of ids){ try{ await api("restore",{params:{id}}); ok++; }catch(_){} }
   try{ await loadList(); }catch(_){}
-  toast(ok?("Restored "+ok+" from Trash ✓"):"Couldn't restore — check Trash");
+  toast(ok?MSG.restored(ok):MSG.fail("restore","check Trash"));
 }
 function openFilter(){ UI.filterOpen=!UI.filterOpen; renderApp(); }
 function setFilter(k,v){ UI.filter={...(UI.filter||{}),[k]:v}; paintRowsOnly(); }
@@ -1818,18 +1860,18 @@ async function advanceChit(id){
   const UIS={pending:'open',delivered:'open',read:'open',accepted:'act',in_progress:'act',partial:'act',completed:'close',cancelled:'close',rejected:'close'};
   const curB=(c&&c._status)||'pending', nextB=NB[curB];
   if(!nextB){ toast("Already at the final state."); return; }
-  try{ await api("advance",{params:{id},body:{status:nextB}}); const i=UI.rows.findIndex(x=>x.id===id); if(i>=0){UI.rows[i]._status=nextB; UI.rows[i].state=UIS[nextB];} if(UI.detail&&UI.detail.id===id){UI.detail._status=nextB; UI.detail.state=UIS[nextB];} UI.state=UIS[nextB]; renderApp(); toast((c?c.code:"Chit")+" → "+(UIS[nextB]||nextB).toUpperCase()); }
-  catch(e){ toast("Advance failed: "+e.message); }
+  try{ await api("advance",{params:{id},body:{status:nextB}}); const i=UI.rows.findIndex(x=>x.id===id); if(i>=0){UI.rows[i]._status=nextB; UI.rows[i].state=UIS[nextB];} if(UI.detail&&UI.detail.id===id){UI.detail._status=nextB; UI.detail.state=UIS[nextB];} UI.state=UIS[nextB]; renderApp(); toast(MSG.advanced(c&&c.code, UIS[nextB]||nextB)); }
+  catch(e){ toast(MSG.fail("advance", e)); }
 }
 async function assignChit(id, actorId, pri, reason){
   try{ const body={action:'push',target_actor_id:actorId}; if(pri)body.priority=pri; if(reason)body.reason=reason; await api("assign",{params:{id},body}); const i=UI.rows.findIndex(x=>x.id===id); if(i>=0){UI.rows[i].assignTo=actorId; if(pri)UI.rows[i].pri=pri;} if(UI.detail&&UI.detail.id===id)await openChit(id,true); renderApp();
-    const a=(UI.actors||STORE.actors||[]).find(x=>x.id===actorId); const c=UI.rows.find(x=>x.id===id)||UI.detail; toast((c?c.code:"Chit")+" → "+(a?a.name:"actor")+(pri&&pri!=="normal"?" · "+PRI[pri].label:"")+" ✓", ()=>unassignChit(id)); }
-  catch(e){ toast("Assign failed: "+e.message); }
+    const a=(UI.actors||STORE.actors||[]).find(x=>x.id===actorId); const c=UI.rows.find(x=>x.id===id)||UI.detail; toast(MSG.assigned(c&&c.code, a&&a.name), ()=>unassignChit(id)); }
+  catch(e){ toast(MSG.fail("assign", e)); }
 }
-async function unassignChit(id){ try{ await api("unassign",{params:{id},body:{action:'return'}}); const i=UI.rows.findIndex(x=>x.id===id); if(i>=0)UI.rows[i].assignTo=null; renderApp(); toast("Pushed back to pool"); }catch(e){toast("Failed: "+e.message);} }
+async function unassignChit(id){ try{ await api("unassign",{params:{id},body:{action:'return'}}); const i=UI.rows.findIndex(x=>x.id===id); if(i>=0)UI.rows[i].assignTo=null; renderApp(); toast(MSG.pushedBack((UI.rows.find(x=>x.id===id)||{}).code)); }catch(e){toast(MSG.fail("push back", e));} }
 async function pickAssign(id){
   let actors=[];
-  try{ const r=await api("actors"); actors=(r||[]).map(mapApiActor); }catch(e){ toast("Couldn't load actors: "+e.message); return; }
+  try{ const r=await api("actors"); actors=(r||[]).map(mapApiActor); }catch(e){ toast(MSG.fail("load co-assists", e)); return; }
   UI.actors=actors; const c=UI.rows.find(x=>x.id===id)||UI.detail||{}; MODALS.pick={id, actorId:null, pri:(c.custPri?'urgent':'normal'), reason:''};
   const rows=actors.map(a=>{ const off=a.shift==="off";
     const chip=a.shift==="on_shift"?'<span class="optchip on">on shift</span>':a.shift==="on_break"?'<span class="optchip brk">on break</span>':'<span class="optchip off">off</span>';
@@ -1866,15 +1908,15 @@ async function assignBulkChits(ids, actorId){
     UI.selectMode=false; UI.selected.clear();
     await loadList();
     const n=(r&&r.assigned!=null)?r.assigned:ids.length; const sk=(r&&r.skipped&&r.skipped.length)?(" · "+r.skipped.length+" skipped"):"";
-    toast(n+" chit"+(n>1?'s':'')+" → "+(a?a.name:"actor")+" ✓"+sk);
-  }catch(e){ toast("Bulk assign failed: "+e.message); }
+    toast(MSG.bulkAssigned(n, a&&a.name, (r&&r.skipped&&r.skipped.length)||0));
+  }catch(e){ toast(MSG.fail("assign those", e)); }
 }
 function repriority(id){ const c=UI.detail||UI.rows.find(x=>x.id===id)||{}; MODALS.repri={id,pri:c.pri||"normal",reason:""};
   modal(`<div class="mhd"><div class="t">Priority — ${c.code||'chit'}</div><div class="s">internal routing in your queue</div></div><div class="mbody">${c.custPri?'<div class="custreq">⚑ Customer flagged this as priority.</div>':''}<div class="prisel">${["urgent","normal","low"].map(p=>`<button class="pri-${p} ${MODALS.repri.pri===p?'on':''}" data-p="${p}" onclick="pickRepri('${p}')">${PRI[p].label}</button>`).join("")}</div><div class="msec">Reason <span id="repriHint" class="rh">${MODALS.repri.pri==='urgent'?'— Urgent needs one':'(optional)'}</span></div><textarea id="reprireason" class="mreason" placeholder="Why this priority…" oninput="MODALS.repri.reason=this.value;syncRepriOk()"></textarea></div><div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="pri" id="repriok" ${MODALS.repri.pri==='urgent'?'disabled':''} onclick="confirmRepri()">Set ${PRI[MODALS.repri.pri].label}</button></div>`); }
 function pickRepri(p){ MODALS.repri.pri=p; document.querySelectorAll('.prisel button').forEach(b=>b.classList.toggle('on',b.dataset.p===p)); const h=document.getElementById('repriHint'); if(h)h.textContent=p==='urgent'?'— Urgent needs one':'(optional)'; syncRepriOk(); }
 function syncRepriOk(){ const p=MODALS.repri; const b=document.getElementById('repriok'); if(!b)return; b.disabled=!(p.pri!=='urgent'||(p.reason&&p.reason.trim())); b.textContent="Set "+PRI[p.pri].label; }
-async function confirmRepri(){ const p=MODALS.repri; closeModal(); try{ await api("setPriority",{params:{id:p.id},body:{priority:p.pri,reason:p.reason}}); const r=await api("chit",{params:{id:p.id}}); UI.detail=r.chit; const i=UI.rows.findIndex(x=>x.id===p.id); if(i>=0){UI.rows[i].pri=r.chit.pri; UI.rows[i].msg=msgCount(r.chit);} renderApp(); toast("Priority → "+PRI[p.pri].label); }catch(e){ toast("Failed: "+e.message); } }
-async function toggleCustPri(id){ const c=UI.detail||{}; const nf=!c.custPri; try{ await api("custFlag",{params:{id},body:{flag:nf}}); const r=await api("chit",{params:{id}}); UI.detail=r.chit; const i=UI.rows.findIndex(x=>x.id===id); if(i>=0)UI.rows[i].custPri=r.chit.custPri; renderApp(); toast(nf?"⚑ Priority requested — the shop will see this":"Priority request removed"); }catch(e){ toast("Failed: "+e.message); } }
+async function confirmRepri(){ const p=MODALS.repri; closeModal(); try{ await api("setPriority",{params:{id:p.id},body:{priority:p.pri,reason:p.reason}}); const r=await api("chit",{params:{id:p.id}}); UI.detail=r.chit; const i=UI.rows.findIndex(x=>x.id===p.id); if(i>=0){UI.rows[i].pri=r.chit.pri; UI.rows[i].msg=msgCount(r.chit);} renderApp(); toast(MSG.prioritySet(PRI[p.pri].label)); }catch(e){ toast(MSG.fail("set priority", e)); } }
+async function toggleCustPri(id){ const c=UI.detail||{}; const nf=!c.custPri; try{ await api("custFlag",{params:{id},body:{flag:nf}}); const r=await api("chit",{params:{id}}); UI.detail=r.chit; const i=UI.rows.findIndex(x=>x.id===id); if(i>=0)UI.rows[i].custPri=r.chit.custPri; renderApp(); toast(nf?MSG.custPriOn():MSG.custPriOff()); }catch(e){ toast(MSG.fail("update priority", e)); } }
 
 /* ---------------- bits ---------------- */
 function val(id){const el=document.getElementById(id);return el?el.value.trim():"";}
