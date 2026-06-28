@@ -205,6 +205,9 @@
   .topbar .msgc .bdot{position:absolute;top:-2px;right:-3px;background:#d65a5a;color:#fff;font-size:8px;font-weight:800;min-width:13px;height:13px;border-radius:7px;display:flex;align-items:center;justify-content:center;padding:0 3px}
   .unreadtag{font-size:8.5px;font-weight:800;color:#fff;background:#d65a5a;border-radius:7px;padding:0 5px;margin-left:4px}
   .unreaddot{width:7px;height:7px;border-radius:50%;background:#d65a5a;margin-left:2px}
+  .row .unreaddot{display:inline-block;vertical-align:middle;margin:0 5px 0 0}
+  .row.unread{background:#fbf7ee}
+  .row.unread .code{font-weight:800}
   .mtype{font-size:9px;font-weight:700;border-radius:6px;padding:1px 6px}
   .mtype.info{background:#eef2f6;color:#5a6b78}.mtype.query{background:#fbeede;color:#9a6b16}.mtype.decision{background:#e3f3ea;color:#1f7a4d}
   .typesel{display:flex;gap:5px;margin-bottom:7px}
@@ -396,6 +399,7 @@ const EP = {
   dispute:         {m:"POST", p:"/api/chits/:id/disputes",       ok:"✓"},  // raise dispute (built)
   delChit:         {m:"DELETE",p:"/api/chits/:id",               ok:"✓"},  // exists (soft-void/trash)
   restore:         {m:"POST", p:"/api/chits/:id/restore",        ok:"✓"},  // undo soft-delete — baseline-11
+  unread:          {m:"GET",  p:"/api/chits/unread",             ok:"✓"},  // per-actor unread chit_ids — baseline-11
   assignBulk:      {m:"POST", p:"/api/chits/assign-bulk",        ok:"✓"},  // built (baseline-4); frontend wire pending — panel-fixes #2
   filters:         {m:"GET",  p:"/api/chits/inbox?kind&dispute&sort", ok:"◐"}, // inbox exists; query-param support unverified
   notifications:   {m:"GET",  p:"/api/notifications",            ok:"✓"},  // mounted (baseline-4); enhanced baseline-8/9; wired to bell — panel-fixes #1
@@ -1638,6 +1642,7 @@ async function loadList(){
     if(UI.folder==="order"||SESSION.role==="customer"){ res= SESSION.role==="customer" ? await api("custOrders",{params:{bridgeId:SESSION.bridgeId}}) : await api("sent"); }
     else { const q={}; if(SESSION.role==="actor"&&UI.sub==="my")q.assigned_to="me"; res=await api("inbox",{query:q}); }
     UI.rows = (res||[]).map(mapApiChit);
+    if(SESSION.role==="actor" && CFG.MODE!=='demo'){ try{ const u=await api("unread"); const set=new Set((u&&u.unread)||[]); UI.rows.forEach(r=>{ r.unread=set.has(r.id); }); }catch(_){} }
     UI.loading=false;
     if(!UI.sel && UI.rows.length){ const first=UI.rows.find(c=>c.state===UI.state)||UI.rows[0]; if(first)openChit(first.id,true); }
     paintRowsOnly();
@@ -1663,8 +1668,8 @@ function rowHTML(c){
   const cbx=UI.selectMode&&SESSION.role!=="customer"?`<div class="cbx ${UI.selected.has(c.id)?'on':''}" onclick="event.stopPropagation();toggleSel('${c.id}')">${UI.selected.has(c.id)?'✓':''}</div>`:"";
   const proof=`<span class="proof ${c.proof==='ok'?'ok':'wait'}">${c.proof==='ok'?'✓ both-signed':'⚠ awaiting'}</span>`;
   const acts=(SESSION.role==="actor"&&UI.folder==="task")?(UI.sub==="all"?`<div class="rowacts"><button class="go" onclick="event.stopPropagation();assignChit('${c.id}','${myActorId()||''}')">⤵ Pull to me</button><button onclick="event.stopPropagation();unassignChit('${c.id}')">⤴ Push</button></div>`:`<div class="rowacts"><button onclick="event.stopPropagation();unassignChit('${c.id}')">↩ Push back</button><button class="go" onclick="event.stopPropagation();pickAssign('${c.id}')">👥 Assign</button></div>`):"";
-  return `<div class="row ${c.id===UI.sel?'sel':''}" onclick="openChit('${c.id}')">${cbx}
-    <div class="main2"><div class="l1">${c.custPri?'<span class="custflag" title="Customer flagged priority">⚑</span>':''}<span class="code">${c.code}</span>${c.isDraft?' <span class="optchip" style="font-size:9.5px;background:#f3f0e8;color:#7a5e22;border-color:var(--gold-line)">draft</span>':''}${c.selfChit&&!c.isDraft?' <span class="optchip" style="font-size:9.5px;background:#eef3fb;color:#345488;border-color:#cfe0f4" title="Self-chit · '+( c.folder==="order"?"sent copy":"received copy")+'">self-chit</span>':''}<span class="party">· ${c.party}</span><span class="amt">${c.amt?inr(c.amt):'—'}</span></div>
+  return `<div class="row ${c.id===UI.sel?'sel':''} ${c.unread?'unread':''}" onclick="openChit('${c.id}')">${cbx}
+    <div class="main2"><div class="l1">${c.unread?'<span class="unreaddot" title="Unread — new activity"></span>':''}${c.custPri?'<span class="custflag" title="Customer flagged priority">⚑</span>':''}<span class="code">${c.code}</span>${c.isDraft?' <span class="optchip" style="font-size:9.5px;background:#f3f0e8;color:#7a5e22;border-color:var(--gold-line)">draft</span>':''}${c.selfChit&&!c.isDraft?' <span class="optchip" style="font-size:9.5px;background:#eef3fb;color:#345488;border-color:#cfe0f4" title="Self-chit · '+( c.folder==="order"?"sent copy":"received copy")+'">self-chit</span>':''}<span class="party">· ${c.party}</span><span class="amt">${c.amt?inr(c.amt):'—'}</span></div>
       <div class="l2">${c.area} · ${c.kind} ${priChip(c.pri)} ${c.rcc?`<span class="optchip" style="font-size:9px;background:#F4ECD8;color:#7a5e22;border-color:#E4D3A8">CC ${c.rcc}</span>`:''}${c.rfor?`<span class="optchip" style="font-size:9px;background:#EFEBE2;color:#5F6B70;border-color:#E0DACF">For ${c.rfor}</span>`:''} ${c.att?`<span class="rowclip">📎 ${c.att}</span>`:''} ${c.msg?`<span class="rowmsg" onclick="event.stopPropagation();openChitMsgs('${c.id}')">💬 ${c.msg}</span>`:''} ${proof} ${c.dispute?'<b style="color:var(--disp)">dispute</b>':''}
         <span class="chipst st-${c.state}" onclick="event.stopPropagation();advanceChit('${c.id}')" title="advance">${c.state.toUpperCase()} ▸</span></div>${acts}</div>
     <div class="rowgo" aria-hidden="true">›</div>
