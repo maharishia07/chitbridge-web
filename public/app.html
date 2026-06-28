@@ -631,10 +631,30 @@ function helpBoxFromLib(key){ try{ buildAssistLib(); }catch(_){}
     <div id="help_ans" style="font-size:13px;color:var(--ink);margin-top:10px;line-height:1.55"></div></div>`;
 }
 function helpPick(id){ const e=ASSIST_LIB.find(x=>x.id===id); const o=document.getElementById("help_ans"); if(o)o.innerHTML=assistEntryHTML(e); }
-function helpAsk(key){ const inp=document.getElementById("help_in"); const raw=(inp?inp.value:"").trim(); if(!raw)return; const q=raw.toLowerCase();
-  const pool=ASSIST_LIB.filter(e=>(e.context||[]).indexOf(key)>=0 || (e.context||[]).indexOf("*")>=0); let best=null,score=0;
-  pool.forEach(e=>{ let s=0; (e.topics||[]).forEach(t=>{ if(q.indexOf(t.toLowerCase())>=0)s+=2; }); q.split(/\W+/).filter(w=>w.length>3).forEach(w=>{ if((e.q+" "+e.a).toLowerCase().indexOf(w)>=0)s++; }); if(s>score){score=s;best=e;} });
-  const o=document.getElementById("help_ans"); if(o)o.innerHTML = score>0 ? assistEntryHTML(best) : "I am not certain — try a suggestion above, or rephrase.";
+/* ── answer() — the single answer seam (the floating assistant AND the "?" overlays both go through this) ──────
+   Tiered BY DESIGN so the assistant DEGRADES, never breaks — continuity beats cleverness:
+     tier 1  (future) LLM over the library + live context — added ABOVE matchLibrary, wrapped in a timeout +
+             try/catch, and it MUST fall through to tier 2 on ANY error/timeout/rate-limit (user sees no error,
+             just a slightly less-smart answer in the same turn);
+     tier 2  matchLibrary — deterministic keyword match over ASSIST_LIB. Pure client-side, zero network: the
+             always-on FLOOR. It cannot be "down" (works offline / API down / LLM down);
+     tier 3  the caller's own static fallback (suggested Q&A buttons + curated overlay) when tier 2 finds nothing.
+   answer() is async on purpose so the LLM tier can slot in later WITHOUT changing a single caller. */
+async function answer(question, contextKey){
+  // tier 1 — the LLM goes here later, e.g.:
+  //   try { const a = await Promise.race([askLLM(question, contextKey), _timeout(6000)]); if(a) return a; }
+  //   catch(_){ /* swallow — NEVER surface the failure; fall through to the floor */ }
+  return matchLibrary(question, contextKey);          // tier 2 — the floor
+}
+function matchLibrary(question, contextKey){
+  const q=(question||"").toLowerCase(); if(!q) return null;
+  const pool = contextKey ? ASSIST_LIB.filter(e=>(e.context||[]).indexOf(contextKey)>=0 || (e.context||[]).indexOf("*")>=0) : ASSIST_LIB.slice();
+  let best=null, score=0;
+  pool.forEach(e=>{ let s=0; (e.topics||[]).forEach(t=>{ if(q.indexOf(t.toLowerCase())>=0) s+=2; }); q.split(/\W+/).filter(w=>w.length>3).forEach(w=>{ if((e.q+" "+e.a).toLowerCase().indexOf(w)>=0) s++; }); if(s>score){ score=s; best=e; } });
+  return score>0 ? best : null;
+}
+function helpAsk(key){ const inp=document.getElementById("help_in"); const raw=(inp?inp.value:"").trim(); if(!raw)return;
+  answer(raw, key).then(best=>{ const o=document.getElementById("help_ans"); if(o)o.innerHTML = best ? assistEntryHTML(best) : "I am not certain — try a suggestion above, or rephrase."; });
 }
 function openHelp(key){ const host=document.getElementById("lbhost"); if(!host)return; if(_helpOpen){ closeHelp(); return; } _helpOpen=true;
   host.innerHTML=`<div class="notifover" onclick="closeHelp()"><div class="notifpanel" style="max-width:560px;width:94vw" onclick="event.stopPropagation()"><div class="notifhd">❓ About this screen<button onclick="closeHelp()" style="margin-left:auto;border:0;background:none;cursor:pointer;font-size:15px;color:var(--grey)" aria-label="Close">✕</button></div><div style="padding:13px;max-height:72vh;overflow:auto">${(typeof PURPOSE!=='undefined'&&PURPOSE[key])?`<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:10px;padding:10px 12px;font-size:12.5px;color:#6b5a36;line-height:1.5;margin-bottom:12px">${esc(PURPOSE[key])}</div>`:''}${helpFor(key)||((typeof PURPOSE!=='undefined'&&PURPOSE[key])?'':'<div style="color:var(--grey);font-size:12.5px">More about this screen is coming.</div>')}</div></div></div>`;
@@ -694,9 +714,7 @@ function assistEntryHTML(e){ if(!e) return "I am not sure yet — try rephrasing
 }
 function assistPick(id){ const e=ASSIST_LIB.find(x=>x.id===id); renderAssist(assistEntryHTML(e)); }
 function assistAsk(){ const inp=document.getElementById("assist_in"); const raw=(inp?inp.value:"").trim(); if(!raw) return;
-  const q=raw.toLowerCase(); let best=null, score=0;
-  ASSIST_LIB.forEach(e=>{ let s=0; (e.topics||[]).forEach(t=>{ if(q.indexOf(t.toLowerCase())>=0) s+=2; }); q.split(/\W+/).filter(w=>w.length>3).forEach(w=>{ if((e.q+" "+e.a).toLowerCase().indexOf(w)>=0) s++; }); if(s>score){ score=s; best=e; } });
-  renderAssist(score>0 ? assistEntryHTML(best) : "I am not certain about that yet — try a suggestion, or rephrase. (I will be honest about fit rather than oversell.)");
+  answer(raw, null).then(best=> renderAssist(best ? assistEntryHTML(best) : "I am not certain about that yet — try a suggestion, or rephrase. (I will be honest about fit rather than oversell.)"));
 }
 function renderAssist(ans){ const h=document.getElementById("assisthost"); if(!h||!_assistOpen) return; const pre=!(typeof SESSION!=="undefined" && SESSION.token); const sugg=assistSuggest();
   h.innerHTML=`<div style="position:fixed;right:16px;bottom:70px;z-index:301;width:360px;max-width:92vw;background:#fff;border:1px solid #e3e0d8;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.22);overflow:hidden">
@@ -1261,19 +1279,8 @@ const COMPOSE_HELP=[
   {q:"What's a draft?", a:"A draft is the un-sent state before bridging. Save as draft keeps your authored chit privately; sending it — to self or a counterparty — makes it real and fans out the copies."},
   {q:"Where do the fields come from?", a:"Compose renders from your entity's schema — the fields your chit type carries (subject, delivery, note) plus your line items. That's how a chit is born: the data definition projected onto the compose screen."},
 ];
-function composeHelpBox(){ return `<div style="${_CARD};margin-top:12px"><div style="font-family:'Space Grotesk';font-weight:600;font-size:13px;margin-bottom:2px">Compose assistant <span style="font-size:10.5px;font-family:'Space Mono';background:var(--gold-soft);color:#7a5e22;border-radius:5px;padding:1px 7px">Web Demo · sample answers</span></div><div style="font-size:12.5px;color:var(--grey);margin-bottom:10px">What a self-chit is, why it makes two copies, and how items flow from your catalogue. (Real version: an AI handler over your schema and catalogue.)</div><div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px">${COMPOSE_HELP.map((f,i)=>`<button class="composebtn" onclick="composeAsk(${i})">${esc(f.q)}</button>`).join("")}</div><div style="display:flex;gap:8px"><input class="inp" id="cm_in" placeholder="e.g. why does it appear in both lists?"><button style="${_BTN}" onclick="composeAskFree()">Ask</button></div><div id="cm_ans" style="font-size:13px;color:var(--ink);margin-top:10px;line-height:1.55"></div></div>`; }
-function composeAsk(i){ const f=COMPOSE_HELP[i]; const inp=document.getElementById("cm_in"); if(inp)inp.value=f.q; const o=document.getElementById("cm_ans"); if(o)o.innerHTML="<b>"+esc(f.q)+"</b><br>"+esc(f.a); }
-function composeAskFree(){ const q=(val("cm_in")||"").toLowerCase(); let a;
-  if(/two copies|both list|order.*task|task.*order|sent.*received|fan.?out/.test(q))a=COMPOSE_HELP[1].a;
-  else if(/draft|unsent|un-sent|save/.test(q))a=COMPOSE_HELP[4].a;
-  else if(/item|catalogue|product|line|price|qty|quantity/.test(q))a=COMPOSE_HELP[3].a;
-  else if(/send as|entity|actor|co.?assist|on behalf|behalf/.test(q))a=COMPOSE_HELP[2].a;
-  else if(/field|schema|blueprint|born|subject|delivery|note/.test(q))a=COMPOSE_HELP[5].a;
-  else if(/self.?chit|what is|bridge|shared|own record|compose/.test(q))a=COMPOSE_HELP[0].a;
-  else if(q.trim())a="Tell me what you're authoring — to self or a counterparty — and I'll show how the copies and statuses work.";
-  else a="Pick a question above, or ask your own.";
-  const o=document.getElementById("cm_ans"); if(o)o.innerHTML=a?("<b>"+esc(val("cm_in"))+"</b><br>"+esc(a)):"";
-}
+/* (removed) composeHelpBox + composeAsk + composeAskFree — the Compose "?" now renders from ASSIST_LIB via
+   helpBoxFromLib. COMPOSE_HELP is still folded into ASSIST_LIB by buildAssistLib. */
 /* ATH-117 — shared embedded-assistant engine + per-menu knowledge packs.
    One handler (menuAssist / mAsk / mAskFree); each menu supplies a distinguishing message + Q&A pack. */
 const HELP_PACKS = {
@@ -1319,10 +1326,8 @@ const HELP_PACKS = {
 function menuAssist(key){ const p=HELP_PACKS[key]; if(!p) return "";
   return `<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:12px;padding:11px 13px;margin-bottom:11px;font-size:12.5px;color:#6b5a36;line-height:1.5">${p.msg}</div>`;
 }
-function menuHelp(key){ const p=HELP_PACKS[key]; if(!p) return "";
-  return `<div style="${_CARD}"><div style="font-family:'Space Grotesk';font-weight:600;font-size:13px;margin-bottom:2px">Assistant <span style="font-size:10.5px;font-family:'Space Mono';background:var(--gold-soft);color:#7a5e22;border-radius:5px;padding:1px 7px">Web Demo · sample answers</span></div><div style="font-size:12.5px;color:var(--grey);margin-bottom:10px">What this menu is for and how to use it. (Real version: an AI handler reading your live data.)</div><div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px">${p.qa.map((f,i)=>`<button class="composebtn" onclick="mAsk('${key}',${i})">${esc(f.q)}</button>`).join("")}</div><div style="display:flex;gap:8px"><input class="inp" id="m_in_${key}" placeholder="Ask about ${esc(key)}…"><button style="${_BTN}" onclick="mAskFree('${key}')">Ask</button></div><div id="m_ans_${key}" style="font-size:13px;color:var(--ink);margin-top:10px;line-height:1.55"></div></div>`;
-}
-function mAsk(key,i){ const p=HELP_PACKS[key]; if(!p)return; const f=p.qa[i]; const inp=document.getElementById("m_in_"+key); if(inp)inp.value=f.q; const o=document.getElementById("m_ans_"+key); if(o)o.innerHTML="<b>"+esc(f.q)+"</b><br>"+esc(f.a); }
+/* (removed) menuHelp + mAsk — the per-menu "?" now renders from ASSIST_LIB via helpBoxFromLib.
+   menuAssist (the inline banner, above) and mAskFree (used by assistPage's Ask box) are retained. */
 function mAskFree(key){ const p=HELP_PACKS[key]; if(!p)return; const raw=val("m_in_"+key)||""; const q=raw.toLowerCase(); let best=p.qa[0], score=0;
   p.qa.forEach(f=>{ const words=f.q.toLowerCase().split(/\W+/).filter(w=>w.length>3); let s=0; words.forEach(w=>{ if(q.includes(w))s++; }); if(s>score){score=s;best=f;} });
   const o=document.getElementById("m_ans_"+key); if(!o)return;
@@ -1629,18 +1634,8 @@ const CO_HELP = [
  {q:"Where does access come from?", a:"You can only grant what you hold; access flows down the Network tree and is checked live. Set participants here; their scope ties to their node in Network."}
 ];
 function coBanner(){ return `<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:12px;padding:12px 14px;margin-bottom:12px;font-size:13px;color:#6b5a36;line-height:1.5"><b style="font-family:'Space Grotesk'">Manage who acts for you.</b> Co-Assist is the <b>people and systems that act for you</b> — people now; connectors, devices, processes and agents are participant types coming next. The owner stays the party; participants act <i>for</i> you under scoped access. For your structure use <b>Network</b>; for other businesses use <b>Connections</b>.</div>`; }
-function coHelpBox(){ return `<div style="${_CARD}"><div style="font-family:'Space Grotesk';font-weight:600;font-size:13px;margin-bottom:2px">Co-Assist assistant <span style="font-size:10.5px;font-family:'Space Mono';background:var(--gold-soft);color:#7a5e22;border-radius:5px;padding:1px 7px">Web Demo · sample answers</span></div><div style="font-size:12.5px;color:var(--grey);margin-bottom:10px">Who acts for you, what they can do, and how work is assigned. (Real version: an AI handler over your participants and grants.)</div><div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px">${CO_HELP.map((f,i)=>`<button class="composebtn" onclick="coAsk(${i})">${esc(f.q)}</button>`).join("")}</div><div style="display:flex;gap:8px"><input class="inp" id="co_in" placeholder="e.g. can a machine raise an order?"><button style="${_BTN}" onclick="coAskFree()">Ask</button></div><div id="co_ans" style="font-size:13px;color:var(--ink);margin-top:10px;line-height:1.55"></div></div>`; }
-function coAsk(i){ const f=CO_HELP[i]; const inp=document.getElementById("co_in"); if(inp)inp.value=f.q; const o=document.getElementById("co_ans"); if(o)o.innerHTML="<b>"+esc(f.q)+"</b><br>"+esc(f.a); }
-function coAskFree(){ const q=(val("co_in")||"").toLowerCase(); let a;
- if(/push|pull|assign|distribute/.test(q))a=CO_HELP[2].a;
- else if(/machine|connector|iot|device|erp|agent|process|non.?human|sensor/.test(q))a=CO_HELP[4].a;
- else if(/shift|break|load|roster/.test(q))a=CO_HELP[3].a;
- else if(/engage|view.?only|act|audit|mis|capabilit/.test(q))a=CO_HELP[1].a;
- else if(/grant|scope|access|permission|privilege/.test(q))a=CO_HELP[5].a;
- else if(/participant|actor|staff|employee|who|co.?assist/.test(q))a=CO_HELP[0].a;
- else if(q.trim())a="Ask about participants, engagement types (view-only/act/audit/MIS), push/pull, shifts, or non-human actors.";
- else a="Ask me what a participant is, what they can do, and how push/pull works.";
- const o=document.getElementById("co_ans"); if(o)o.innerHTML=esc(a); }
+/* (removed) coHelpBox + coAsk + coAskFree — the Co-Assist "?" now renders from ASSIST_LIB via helpBoxFromLib.
+   CO_HELP is still folded into ASSIST_LIB by buildAssistLib; coBanner (the inline banner) is retained. */
 function coTypeRow(){ const t=(k,on)=>`<span class="optchip" style="font-size:10px;${on?'background:#eef3fb;color:#345488;border-color:#cfe0f4':''}">${k}</span>`;
  return `<div style="${_CARD}"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><b style="font-size:13px">Your co-assists</b><button class="composebtn" onclick="addActorModal()">+ New co-assist</button></div><div style="font-size:11px;color:var(--grey);margin-top:8px;display:flex;gap:5px;flex-wrap:wrap;align-items:center">Types: ${t('human',true)}${t('customer')}${t('connector')}${t('iot_device')}${t('process_rule')}${t('ai_agent')}<span style="color:#a9853f">· human now, others next</span></div></div>`; }
 function coActorCard(a){ const at=a.atype||"human", cap=a.cap||"act", node=a.node||"", sh=a.shift||"on_shift";
