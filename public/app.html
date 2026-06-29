@@ -1714,10 +1714,14 @@ function mapApiChit(c){
   if(!c || c.id!==undefined) return c;
   const ST={pending:'open',delivered:'open',read:'open',accepted:'act',in_progress:'act',partial:'act',completed:'close',cancelled:'close',rejected:'close'};
   const recips=c.all_recipients||[];
-  const other=recips.find(r=>r.role!=='sender')||recips.find(r=>r.role==='sender')||{};
+  const senderR=recips.find(r=>r.role==='sender')||{};
+  const tos=recips.filter(r=>r.role==='receiver').map(r=>r.display_name);
+  const ccs=recips.filter(r=>r.role==='cc').map(r=>r.display_name);
+  const fors=recips.filter(r=>r.role==='for').map(r=>r.display_name);
+  const rsummary=[tos.length?('To: '+tos.join(', ')):'', ccs.length?('CC: '+ccs.join(', ')):'', fors.length?('For: '+fors.join(', ')):''].filter(Boolean).join(' · ');
   const sum=c.summary_json||{};
   return { id:c.chit_id, code:c.manual_subject||c.auto_subject||(c.purpose||'chit'),
-    party:other.display_name||c.sender_entity_display_name||'—', cust:other.display_name||'', area:'',
+    party:(tos.join(', '))||senderR.display_name||c.sender_entity_display_name||'—', cust:tos.join(', '), area:'', rcc:ccs.length, rfor:fors.length, rsummary:rsummary, sender:senderR.display_name||c.sender_entity_display_name||'',
     kind:c.purpose||'order', amt:sum.total_value||0, state:ST[c.current_status]||'open', _status:c.current_status||'pending',
     assignTo:c.assigned_to_actor_id||null, folder:'task', dispute:Number(c.open_dispute_count||0)>0,
     proof:'ok', pri:c.priority_flag||'normal', custPri:!!c.customer_priority, items:[], atts:[], msgs:[] };
@@ -1839,7 +1843,7 @@ function detailInner(){
     : `<button class="pri" onclick="advanceChit('${c.id}')">Advance ▸</button>${SESSION.role==="actor"?`<button onclick="pickAssign('${c.id}')">👥 Assign</button>`:""}<button class="warn" onclick="quickDispute()">⚑ Dispute</button>${SESSION.role==="entity"?`<button class="warn pend" onclick="todo('voidChit')">⊘ Void</button>`:""}<button onclick="todo('pdf')">⬇ PDF</button>`;
   const dtabs=[["content","Content"],["status","Status"],["summary","Summary"],["messages","💬 Messages"+(msgCount(c)?" ("+msgCount(c)+")":"")]];
   return `<div class="dh"><button class="dback" onclick="backToList()">‹ Back to list</button><button class="dmsg" onclick="setDtab('messages')" title="Messages" aria-label="Messages">💬${msgCount(c)?' '+msgCount(c):''}</button><div class="dt">${esc(c.code)} · ${esc(c.party)}</div><div class="ds">${esc(c.area)} · ${esc(c.kind)} · ${inr(c.amt)} · ${c.state.toUpperCase()}</div>
-     <div class="parties"><span class="ptag">from <b>${SESSION.entity||"You"}</b></span><span class="ptag">to <b>${c.kind==='counter'?esc(SESSION.entity||'You'):esc(c.party)}</b></span>${c.kind==='counter'?`<span class="ptag">for <b>${esc(c.cust)}</b></span>`:''}</div><div class="dchips">${SESSION.role!=="customer"?`<button class="prichip-btn pri-${c.pri||'normal'}" onclick="repriority('${c.id}')" title="Priority — tap to change">${(c.pri&&c.pri!=='normal')?PRI[c.pri].label:'Normal'} ▾</button>`:''}${c.custPri?'<span class="custflag-tag">⚑ Customer priority</span>':''}</div></div>
+     <div class="parties"><span class="ptag">from <b>${esc(c.sender||SESSION.entity||"You")}</b></span><span class="ptag">${c.kind==='counter'?('to <b>'+esc(SESSION.entity||'You')+'</b>'):esc(c.rsummary||('to '+(c.party||'—')))}</span>${c.kind==='counter'?`<span class="ptag">for <b>${esc(c.cust)}</b></span>`:''}</div><div class="dchips">${SESSION.role!=="customer"?`<button class="prichip-btn pri-${c.pri||'normal'}" onclick="repriority('${c.id}')" title="Priority — tap to change">${(c.pri&&c.pri!=='normal')?PRI[c.pri].label:'Normal'} ▾</button>`:''}${c.custPri?'<span class="custflag-tag">⚑ Customer priority</span>':''}</div></div>
    <div class="dtabs">${dtabs.map(([k,l])=>`<button class="${UI.dtab===k?'on':''}" onclick="setDtab('${k}')">${l}</button>`).join("")}</div>
    <div class="db">${body}</div><div class="actbar">${actbar}</div>`;
 }
