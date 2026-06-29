@@ -1893,6 +1893,12 @@ function orgAskFree(){ const q=(val("org_in")||"").toLowerCase(); let a;
   const o=document.getElementById("org_ans"); if(o)o.innerHTML=esc(a); }
 function netStChip(s){ return `<span class="optchip ${s==='active'?'on':(s==='suspended'?'brk':'')}">${esc(s)}</span>`; }
 const NET_MODELS = {
+  sample:{ self:{id:"e_self", bridgeId:"head.office", name:"Head Office", mode:"b2b", claimed:true}, reg:{},
+    nodes:[ {id:"e_self",bridge_id:"head.office",name:"Head Office",depth:0,act:1,cap:"owner"},
+            {id:"b1",bridge_id:"north.branch",name:"North Branch",depth:1,act:2,cap:"chit.create"},
+            {id:"b2",bridge_id:"south.branch",name:"South Branch",depth:1,act:1,cap:"chit.create"} ],
+    edges:[ {id:"e1",parent_name:"Head Office",child_name:"North Branch",state:"active"},
+            {id:"e2",parent_name:"Head Office",child_name:"South Branch",state:"active"} ] },
   b2b:{ self:{id:"e_self", bridgeId:"agg.main", name:"Aggregator", mode:"b2b", claimed:true}, reg:{},
     nodes:[ {id:"e_self",bridge_id:"agg.main",name:"Aggregator",depth:0,act:1,cap:"owner"},
             {id:"d1",bridge_id:"distrib.one",name:"Distributor",depth:1,act:2,cap:"chit.create"},
@@ -1923,7 +1929,7 @@ const NET_MODEL_NOTE = {
   b2b2c:"Storefront (b2c) on a b2b make tree \u2014 the iron-gate case. Orders land at the Storefront and fan out to internal units; the fan-out is a future shape (ATH-116).",
   b2c:"A single shopfront (b2c) with internal counters. Customers buy directly; no upstream distribution."
 };
-function loadNetModel(key){ UI.netModel=key; STORE.net = (key==="sample")?deepClone(DEMO.net):deepClone(NET_MODELS[key]); loadNetwork(); }
+function loadNetModel(key){ UI.netModel=key; STORE.net = deepClone(NET_MODELS[key]||NET_MODELS.sample); loadNetwork(); }
 function netModelBar(){ const cur=UI.netModel||"sample";
   const opt=(k,l)=>`<button class="composebtn" style="${cur===k?'background:var(--ink);color:#fff;border-color:var(--ink)':''}" onclick="loadNetModel('${k}')">${l}</button>`;
   return `<div style="${_CARD};border-style:dashed"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><div style="font-size:12px;font-weight:600">Network model showcase <span style="font-size:10px;font-family:'Space Mono';background:#fbeceb;color:#b4453f;border:1px solid #f0c9c6;border-radius:5px;padding:1px 6px">\u23f3 execute &amp; test pending</span></div><div style="display:flex;gap:6px;flex-wrap:wrap">${opt("sample","Sample org")}${opt("b2b","Pure B2B")}${opt("b2b2c","B2B2C")}${opt("b2c","Pure B2C")}</div></div><div style="font-size:11.5px;color:var(--grey);margin-top:8px;line-height:1.5">${NET_MODEL_NOTE[cur]||""}</div></div>`;
