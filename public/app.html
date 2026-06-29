@@ -508,7 +508,12 @@ const DEMO = {
   },
 };
 function deepClone(x){return JSON.parse(JSON.stringify(x));}
-let STORE = deepClone(DEMO);
+/* In LIVE mode STORE must hold NO demo data — start empty so a demo constant
+   (actors / chits / suppliers / catalogue / schema) can never be read while
+   logged into a real entity. Demo mode keeps the full DEMO dataset. */
+function blankStore(){ return { actors:[], chits:[], catalogue:[], suppliers:[], disputes:{mine:[],other:[]}, chitSchema:{schema_name:"Order",schema_type:"product",fields:[]}, net:(typeof DEMO!=="undefined")?deepClone(DEMO.net):{} }; }
+function freshStore(){ return (typeof CFG!=="undefined" && CFG.MODE!=="demo") ? blankStore() : deepClone(DEMO); }
+let STORE = freshStore();
 /* ATH-114 — Co-Assist external identity: id = <handle>@<entity.user_id>. bridge_id stays internal. */
 function entUid(){return (typeof SESSION!=="undefined"&&SESSION.entity_user_id)||DEMO.entity.user_id;}
 /* The entity's BUSINESS NAME — the co-assist login domain (matches the API: actor_key @ display_name). */
@@ -1449,7 +1454,7 @@ function setShop(s){SESSION.shop=s;
   document.querySelectorAll('.shoptog button').forEach(b=>{b.classList.remove('on','open','closed','away');if(b.dataset.s===s){b.classList.add('on',s);}});
   toast({open:"Shop Open — accepting orders.",closed:"Shop Closed — new orders are blocked.",away:"Away — orders still accepted; customer is told service may be delayed."}[s]);
 }
-function logout(){SESSION={token:null,role:null,name:null,entity:null,bridgeId:null};STORE=deepClone(DEMO);UI={...UI0,selected:new Set(),aggStates:new Set(["open","act","close"])};applyPrefs();go("#/login");}
+function logout(){SESSION={token:null,role:null,name:null,entity:null,bridgeId:null};STORE=freshStore();UI={...UI0,selected:new Set(),aggStates:new Set(["open","act","close"])};applyPrefs();go("#/login");}
 
 /* ---------------- APP SHELL + TASK PANEL ---------------- */
 const UI0 = {nav:"task", folder:"task", sub:"my", state:"open", dtab:"content", sel:null, selectMode:false, selected:new Set(), aggStates:new Set(["open","act","close"]), drawer:false, mdetail:false, purpose:false, orgHelp:false, loading:false, rows:[], detail:null, actors:[], busy:false, vp:"lap", lw:340, lh:300, lb:null, lbGroup:null, openLines:new Set(), attGroups:{}, filterOpen:false, filter:{}, notifOpen:false, msgFilter:"all", msgChan:"internal", msgType:"all", msgKind:"info", msgcOpen:false, composeOpen:false, listHelp:false};
@@ -2029,7 +2034,7 @@ function coActorCard(a){ const at=a.atype||"human", cap=a.cap||"act", node=a.nod
 async function actorShift(id,cur){ const order=["on_shift","on_break","off"]; const next=order[(order.indexOf(cur)+1)%3];
  try{ await api("actorBreak",{body:{actor_id:id, break_status:next}}); toast(MSG.shiftSet(next)); loadCoassists(); }catch(e){ toast(MSG.fail("change shift", e)); } }
 async function loadCoassists(){ const h=document.getElementById("cobody"); if(!h)return;
-  try{ const actors=((await api("actors"))||[]).map(mapApiActor);
+  try{ const actors=((await api("actors"))||[]).map(mapApiActor); STORE.actors=actors;
     h.innerHTML = coBanner() + coTypeRow() +
       (actors.map(coActorCard).join("") || '<div style="color:var(--grey);font-size:13px;padding:6px">No co-assists yet — add one above.</div>');
   }catch(e){ h.innerHTML=scrErr(e); } }
