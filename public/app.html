@@ -512,7 +512,7 @@ let STORE = deepClone(DEMO);
 /* ATH-114 — Co-Assist external identity: id = <handle>@<entity.user_id>. bridge_id stays internal. */
 function entUid(){return (typeof SESSION!=="undefined"&&SESSION.entity_user_id)||DEMO.entity.user_id;}
 /* The entity's BUSINESS NAME — the co-assist login domain (matches the API: actor_key @ display_name). */
-function entBiz(){return (typeof SESSION!=="undefined"&&SESSION.entity)||(typeof DEMO!=="undefined"&&DEMO.entity&&DEMO.entity.name)||"";}
+function entBiz(){return (typeof SESSION!=="undefined"&&SESSION.entity)||"";}
 /* Co-assist login id = <login key>@<business name>. */
 function coId(k){return String(k||"").trim()+"@"+entBiz();}
 function defActorHandle(){return "coassist"+String(((STORE.actors||[]).length)+1).padStart(2,"0");}
@@ -1554,7 +1554,14 @@ function navTo(k){UI.nav=k;UI.drawer=false;UI.mdetail=false;UI.sel=null;UI.detai
    Unbounded fan-out is a real cost (each recipient = its own copy on the thread). UI enforces; server must re-check. */
 const LIMITS = { to:5, cc:5, for:1, items:50, attachments:10 };
 let CC={items:[], rcpts:[]};
-function ccSchema(){ return (STORE.chitSchema&&STORE.chitSchema.fields)||DEMO.chitSchema.fields; }
+const DEFAULT_SCHEMA_FIELDS=[
+  {field_key:"subject",     field_name:"Subject",     field_type:"text", required:true,  placeholder:"e.g. order summary"},
+  {field_key:"delivery_by", field_name:"Delivery by", field_type:"date", required:false},
+  {field_key:"deliver_to",  field_name:"Deliver to",  field_type:"text", required:false, placeholder:"address / site"},
+  {field_key:"note",        field_name:"Note",        field_type:"text", required:false, placeholder:"instructions"}
+];
+/* Live uses a neutral default schema (never demo data); demo mode keeps its sample schema. */
+function ccSchema(){ if(typeof CFG!=="undefined" && CFG.MODE!=="demo") return DEFAULT_SCHEMA_FIELDS; return (STORE.chitSchema&&STORE.chitSchema.fields)||DEMO.chitSchema.fields; }
 function cfField(f){
   const id="cf_"+f.field_key; const req=f.required?' <span style="color:#b4453f">*</span>':'';
   const ph=f.placeholder?` placeholder="${esc(f.placeholder)}"`:'';
@@ -1563,7 +1570,7 @@ function cfField(f){
   return `<label class="fl">${esc(f.field_name)}${req}</label>${inp}`;
 }
 function ccSendAsOptions(){
-  const ent=(typeof SESSION!=="undefined"&&SESSION.entity)||DEMO.entity.name;
+  const ent=(typeof SESSION!=="undefined"&&SESSION.entity)||"";
   let o=`<option value="entity">${esc(ent)} · entity</option>`;
   (STORE.actors||[]).forEach(a=>{ o+=`<option value="${esc(a.id)}">${esc(a.name)} · ${esc(a.uid||'actor')}</option>`; });
   return o;
@@ -1629,7 +1636,7 @@ function ccRenderTotal(){ const t=document.getElementById("cc_total"); if(!t)ret
 async function submitCompose(isDraft){
   const err=document.getElementById("cc_err"); if(err)err.textContent="";
   const subject=val("cf_subject");
-  const sendasV=val("cc_sendas"); const ent=(typeof SESSION!=="undefined"&&SESSION.entity)||DEMO.entity.name;
+  const sendasV=val("cc_sendas"); const ent=(typeof SESSION!=="undefined"&&SESSION.entity)||"";
   const actor=(STORE.actors||[]).find(a=>a.id===sendasV); const send_as_label=actor?(actor.name+" ("+(actor.uid||"actor")+")"):ent;
   const tos=CC.rcpts.filter(r=>r.role==="to");
   if(!subject){ if(err)err.textContent="Subject is required."; return; }
@@ -1761,7 +1768,7 @@ function assistPage(key){ const p=ASSIST_PAGES[key]; if(!p) return menuAssist(ke
   return `<div style="background:var(--gold-soft);border:0.5px solid var(--gold-line);border-radius:11px;padding:9px 11px;font-size:12px;color:#6b5a36;line-height:1.5;margin-bottom:9px"><b style="font-family:'Space Grotesk'">${key==='order'?'Order':'Task'} — what it is &amp; how to use it</b> <span style="font-size:9.5px;font-family:'Space Mono';background:#fff;color:#7a5e22;border:0.5px solid var(--gold-line);border-radius:5px;padding:1px 6px">assistance page</span><div style="margin-top:4px">${esc(p.intro)}</div></div>${groups}<div style="${_CARD}"><div style="font-size:11.5px;color:var(--grey);margin-bottom:6px">Ask the assistant <span style="font-size:9.5px;font-family:'Space Mono';background:var(--gold-soft);color:#7a5e22;border-radius:5px;padding:1px 6px">web demo</span></div><div style="display:flex;gap:8px"><input class="inp" id="m_in_${key}" placeholder="Ask about ${esc(key)}…"><button style="${_BTN}" onclick="mAskFree('${key}')">Ask</button></div><div id="m_ans_${key}" style="font-size:13px;color:var(--ink);margin-top:9px;line-height:1.55"></div></div>`;
 }
 function addActorModal(){
-  const ent=(typeof SESSION!=="undefined"&&SESSION.entity)||DEMO.entity.name;
+  const ent=(typeof SESSION!=="undefined"&&SESSION.entity)||"";
   modal(`<div class="mhd"><div class="t">🧑‍💼 Add co-assist</div><div class="s">someone who acts for you</div></div>
    <div class="mbody"><label class="fl">Name</label><input class="inp" id="ac_name" placeholder="e.g. Priya">
      <label class="fl">Login key (lowercase letters/numbers, min 4)</label><input class="inp" id="ac_key" oninput="acIdPrev()" placeholder="e.g. priya1">
