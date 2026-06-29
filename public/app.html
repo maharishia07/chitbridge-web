@@ -947,7 +947,7 @@ function jwtPayload(t){ try{ const p=String(t||"").split('.')[1]; if(!p) return 
 function setSession(s){ SESSION={...SESSION,...s};
   // Live tokens are JWTs — derive the REAL actor/entity id from the token so the UI never hardcodes ids.
   const p=jwtPayload(SESSION.token);
-  if(p){ if(p.identity_type==='actor') SESSION.actorId=p.identity_id; SESSION.entityId=p.parent_entity_id||p.identity_id; }
+  if(p){ if(p.identity_type==='actor'){ SESSION.actorId=p.identity_id; SESSION.name=p.display_name||SESSION.name; SESSION.entity=p.parent_entity_name||SESSION.entity; } SESSION.entityId=p.parent_entity_id||p.identity_id; }
 }
 // Live: the logged-in actor's real id (from the JWT). Demo: the seed actor 'a1' so the mock flow still works.
 function myActorId(){ return SESSION.actorId || (CFG.MODE==='demo' ? 'a1' : null); }
@@ -1125,6 +1125,7 @@ async function compose(){ UI.drawer=false; CC={items:[]}; let _catErr=false;
      ${(STORE.catalogue||[]).length
         ? `<div style="display:flex;gap:8px"><select class="inp" id="cc_pick">${STORE.catalogue.map((p,i)=>`<option value="${i}">${esc(p.particulars)} · ${inr(p.price)}/${esc(p.unit||'unit')}</option>`).join("")}</select><button class="composebtn" onclick="ccAddItem()">+ Add</button></div>`
         : `<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:10px 12px;font-size:12.5px;color:#6b5a36">${_catErr?esc(MSG.catalogueLoadErr()):'Your catalogue is empty — a chit needs at least one line item. <a onclick="closeModal();navTo(\'catalogue\')" style="color:#3F66A6;cursor:pointer;font-weight:600">Add a product in Catalogue first &rarr;</a>'}</div>`}
+     <div style="display:flex;gap:6px;margin-top:6px"><input class="inp" id="cc_mname" placeholder="Or type an item name" style="flex:1"><input class="inp" id="cc_mqty" inputmode="numeric" value="1" style="width:50px" title="Qty"><input class="inp" id="cc_mprice" inputmode="numeric" placeholder="Price" style="width:74px"><button class="composebtn" onclick="ccAddManual()">+ Add</button></div>
      <div id="cc_items" style="margin-top:8px"></div>
      <div id="cc_total" style="text-align:right;font-weight:700;font-size:13px;margin-top:6px"></div>
      <div class="err" id="cc_err"></div>
@@ -1146,12 +1147,13 @@ function ccRenderRcpts(){ const h=document.getElementById("cc_rcpts");
   if(h){ h.innerHTML = CC.rcpts.length ? CC.rcpts.map((r,i)=>{ const col=r.role==="to"?"#3F66A6":r.role==="cc"?"#7a5e22":"#5F6B70"; const bg=r.role==="to"?"#EEF3FB":r.role==="cc"?"#F4ECD8":"#EFEBE2"; return `<span style="display:inline-flex;align-items:center;gap:5px;border:0.5px solid var(--line);border-radius:8px;padding:3px 7px;margin:0 5px 5px 0;font-size:11.5px"><span onclick="ccFlipRcpt(${i})" title="Flip role (To/CC/For)" style="cursor:pointer;font-family:'Space Mono';font-size:9.5px;background:${bg};color:${col};border-radius:5px;padding:1px 5px">${r.role.toUpperCase()}</span>${esc(r.name)}${r.self?'<span style="color:#3F66A6;font-size:10px"> · self</span>':''}<span onclick="ccDelRcpt(${i})" style="cursor:pointer;color:#9aa3a7">✕</span></span>`; }).join("") : `<div style="font-size:12px;color:var(--grey)">No recipients yet — add To / CC / For above.</div>`; }
   const capEl=document.getElementById("cc_rcap"); if(capEl) capEl.textContent="To "+ccRoleCount("to")+"/"+LIMITS.to+" · CC "+ccRoleCount("cc")+"/"+LIMITS.cc+" · For "+ccRoleCount("for")+"/"+LIMITS.for+" — tap a role chip to flip"; }
 function ccAddItem(){ const e=document.getElementById("cc_err"); if(e)e.textContent=""; if(CC.items.length>=(LIMITS.items||999)){ if(e)e.textContent="Line items capped at "+LIMITS.items+"."; return; } const i=+val("cc_pick"); const p=(STORE.catalogue||[])[i]; if(!p){ if(e)e.textContent=MSG.pickItemFirst(); return; } CC.items.push({particulars:p.particulars,unit:p.unit||"unit",price:+p.price||0,qty:1}); ccRenderItems(); }
+function ccAddManual(){ const e=document.getElementById("cc_err"); if(e)e.textContent=""; if(CC.items.length>=(LIMITS.items||999)){ if(e)e.textContent="Line items capped at "+LIMITS.items+"."; return; } const nm=(val("cc_mname")||"").trim(); if(!nm){ if(e)e.textContent="Enter an item name."; return; } CC.items.push({particulars:nm,unit:"unit",price:+val("cc_mprice")||0,qty:Math.max(1,+val("cc_mqty")||1)}); var a=document.getElementById("cc_mname"); if(a)a.value=""; var b=document.getElementById("cc_mprice"); if(b)b.value=""; ccRenderItems(); }
 function ccDelItem(i){ CC.items.splice(i,1); ccRenderItems(); }
 function ccQty(i,v){ if(CC.items[i])CC.items[i].qty=Math.max(0,+v||0); ccRenderTotal(); }
 function ccLineTotal(it){ return (+it.qty||0)*(+it.price||0); }
 function ccRenderItems(){ const h=document.getElementById("cc_items"); if(!h)return;
   h.innerHTML = CC.items.length ? CC.items.map((it,i)=>`<div style="display:flex;gap:6px;align-items:center;margin-bottom:5px"><span style="flex:1;font-size:12.5px">${esc(it.particulars)}</span><input class="inp" style="width:60px" inputmode="numeric" value="${it.qty}" oninput="ccQty(${i},this.value)"><span style="font-size:11.5px;color:var(--grey);width:64px;text-align:right">${inr(it.price)}</span><span style="font-size:12px;width:80px;text-align:right;font-family:'Space Mono'">${inr(ccLineTotal(it))}</span><button class="composebtn" onclick="ccDelItem(${i})">✕</button></div>`).join("")
-    : `<div style="font-size:12px;color:var(--grey);padding:4px 0">No items yet — pick from the catalogue above.</div>`;
+    : `<div style="font-size:12px;color:var(--grey);padding:4px 0">No items yet — pick from the catalogue or type one above.</div>`;
   ccRenderTotal();
 }
 function ccRenderTotal(){ const t=document.getElementById("cc_total"); if(!t)return; const sum=CC.items.reduce((s,it)=>s+ccLineTotal(it),0); t.textContent=CC.items.length?("Total "+inr(sum)):""; }
