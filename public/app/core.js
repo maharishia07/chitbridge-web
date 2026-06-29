@@ -45,7 +45,6 @@ async function api(key, {params, query, body}={}){
   if(lockKey){ if(_lockKeys.has(lockKey)) throw new Error("Already working on that — one moment."); _lockKeys.add(lockKey); }
   _inflight++; _netBusy(true);
   try{
-    if(CFG.MODE==="demo"){ await new Promise(r=>setTimeout(r,140)); return unwrap(demoApi(key,{params,query,body})); }
     let url = CFG.API_BASE + fill(ep.p, params);
     if(query){const q=new URLSearchParams(Object.entries(query).filter(([,v])=>v!=null&&v!=="")); if([...q].length)url+="?"+q;}
     const res = await fetch(url, {method:ep.m, headers:{"Content-Type":"application/json", ...(SESSION.token?{Authorization:"Bearer "+SESSION.token}:{})}, body: body?JSON.stringify(body):undefined});

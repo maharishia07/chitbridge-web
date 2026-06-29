@@ -31,8 +31,11 @@ const zones = [
   { name: 'demoApi + stripChit', start: at('function demoApi'),  end: at('DEMO THEATRE') },
   { name: 'Theatre / Player',   start: at('DEMO THEATRE'),       end: at('SESSION + ROUTER') }
 ];
-for (const z of zones) if (z.start < 0 || z.end < 0) { console.error('check-demo-leak: could not locate zone "' + z.name + '" — markers moved; update this script.'); process.exit(2); }
-const inDemoZone = (i) => zones.some(z => i >= z.start && i < z.end);
+// After the demo is fully stripped from app.html these zones no longer exist — that's the goal.
+// Keep only zones that are present; if none, EVERY sentinel is a leak (structural pass = zero sentinels).
+const validZones = zones.filter(z => z.start >= 0 && z.end > z.start);
+console.log('demo zones present in app.html: ' + validZones.length + (validZones.length ? '' : '  (fully stripped — structural mode)'));
+const inDemoZone = (i) => validZones.some(z => i >= z.start && i < z.end);
 
 // A line is "gated" if it only uses the sentinel inside a demo-mode branch.
 const isGated = (line) => /MODE\s*===?\s*['"]demo['"]/.test(line) || /STAGES\[[^\]]*\]\.mock/.test(line) || /\bmock\s*:/.test(line);
