@@ -31,6 +31,8 @@
   .welhero{text-align:center;padding:14px 0 6px}
   .welhero h1{font-family:'Space Grotesk';font-size:26px;font-weight:600;letter-spacing:-.02em;margin:6px auto;line-height:1.15;max-width:24ch}
   .welhero p{color:var(--grey);font-size:14.5px;max-width:60ch;margin:0 auto}
+.welhero-cta{display:flex;flex-direction:column;align-items:center;gap:6px;margin-top:18px}
+.welhero-cta-sub{color:var(--grey);font-size:12px}
   .welcaps{display:flex;gap:12px;flex-wrap:wrap;margin:20px 0}
   .welcap{flex:1;min-width:200px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:15px}
   .welcap .ci{font-size:20px}.welcap .cn{font-family:'Space Grotesk';font-weight:600;font-size:14.5px;margin:7px 0 3px}.welcap .cd{font-size:12.5px;color:var(--grey)}
@@ -1230,7 +1232,8 @@ function renderWelcome(){
   if(WSTEP==="intro"){
     body = `
       <div class="welhero"><h1>A shared, signed record between you and the people you deal with.</h1>
-        <p>Chit &amp; Bridge is the rail — you bring the business. Every order, message, and dispute becomes one record both sides signed, and you decide who you connect with.</p></div>
+        <p>Chit &amp; Bridge is the rail — you bring the business. Every order, message, and dispute becomes one record both sides signed, and you decide who you connect with.</p>
+        <div class="welhero-cta"><button class="btn" onclick="openTheatre()">▶ Watch how it works</button><span class="welhero-cta-sub">90-second narrated demo — see one order travel between two businesses.</span></div></div>
       <div class="welcaps">${ONB_CAP.map(c=>`<div class="welcap"><div class="ci">${c[0]}</div><div class="cn">${c[1]}</div><div class="cd">${c[2]}</div></div>`).join("")}</div>
       <div class="welsplit">
         <div class="welcol is"><div class="welh2">What Chit &amp; Bridge is</div><ul><li>The rail that carries and co-signs your records, A to B.</li><li>One shared, signed record per deal — order, message, dispute.</li><li>Yours to control: your prices, catalogue, customers and rules.</li></ul></div>
