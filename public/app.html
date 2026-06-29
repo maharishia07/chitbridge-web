@@ -342,6 +342,13 @@
   .lbnav{display:flex;align-items:center;gap:12px;padding:10px 14px}
   .lbnav button{border:0;background:none;color:#cfe0e8;font-size:22px;cursor:pointer}
   .lbdots{flex:1;display:flex;gap:6px;justify-content:center}.lbdots span{width:7px;height:7px;border-radius:50%;background:#3a4d57}.lbdots span.on{background:var(--gold)}
+/* D2 press/focus feedback + D4 modal close X */
+.composebtn,.pri,.mfoot button,.btn{transition:transform .06s ease, filter .12s ease}
+.composebtn:active,.pri:active,.mfoot button:active,.btn:active{transform:translateY(1px);filter:brightness(.96)}
+button:focus-visible,.composebtn:focus-visible,.pri:focus-visible{outline:2px solid #9bb6e0;outline-offset:1px}
+.modal{position:relative}
+.mx{position:absolute;top:7px;right:9px;width:26px;height:26px;border:0;background:none;color:#9aa3a7;font-size:15px;line-height:1;cursor:pointer;border-radius:50%;z-index:3}
+.mx:hover{background:#f0f0f0;color:#555}
 </style>
 </head>
 <body>
@@ -611,7 +618,7 @@ function assistEntryHTML(e){ if(!e) return "I am not sure yet — try rephrasing
 }
 function assistPick(id){ const e=ASSIST_LIB.find(x=>x.id===id); renderAssist(assistEntryHTML(e)); }
 function assistAsk(){ const inp=document.getElementById("assist_in"); const raw=(inp?inp.value:"").trim(); if(!raw) return;
-  answer(raw, null).then(best=> renderAssist(best ? assistEntryHTML(best) : "I am not certain about that yet — try a suggestion, or rephrase. (I will be honest about fit rather than oversell.)"));
+  answer(raw, curScreen()).then(best=> renderAssist(best ? assistEntryHTML(best) : "I am not certain about that yet — try a suggestion, or rephrase. (I will be honest about fit rather than oversell.)"));
 }
 function renderAssist(ans){ const h=document.getElementById("assisthost"); if(!h||!_assistOpen) return; const pre=!(typeof SESSION!=="undefined" && SESSION.token); const sugg=assistSuggest();
   h.innerHTML=`<div style="position:fixed;right:16px;bottom:70px;z-index:301;width:360px;max-width:92vw;background:#fff;border:1px solid #e3e0d8;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.22);overflow:hidden">
@@ -948,7 +955,10 @@ function setSession(s){ SESSION={...SESSION,...s};
   // Live tokens are JWTs — derive the REAL actor/entity id from the token so the UI never hardcodes ids.
   const p=jwtPayload(SESSION.token);
   if(p){ if(p.identity_type==='actor'){ SESSION.actorId=p.identity_id; SESSION.name=p.display_name||SESSION.name; SESSION.entity=p.parent_entity_name||SESSION.entity; } SESSION.entityId=p.parent_entity_id||p.identity_id; }
+  try{ if(SESSION.token) localStorage.setItem('cb_sess', JSON.stringify({token:SESSION.token, role:SESSION.role, name:SESSION.name, entity:SESSION.entity, duty:SESSION.duty, shop:SESSION.shop})); }catch(_){}
 }
+// Restore a persisted session on boot so a browser refresh stays signed-in. Drops an expired token.
+function restoreSession(){ try{ if(SESSION.token) return; const raw=localStorage.getItem('cb_sess'); if(!raw) return; const s=JSON.parse(raw); if(!s||!s.token) return; const p=jwtPayload(s.token); if(p&&p.exp&&(p.exp*1000)<Date.now()){ localStorage.removeItem('cb_sess'); return; } setSession(s); }catch(_){ } }
 // Live: the logged-in actor's real id (from the JWT). Demo: the seed actor 'a1' so the mock flow still works.
 function myActorId(){ return SESSION.actorId || (CFG.MODE==='demo' ? 'a1' : null); }
 function statusControl(role){
@@ -971,7 +981,7 @@ function setShop(s){SESSION.shop=s;
   document.querySelectorAll('.shoptog button').forEach(b=>{b.classList.remove('on','open','closed','away');if(b.dataset.s===s){b.classList.add('on',s);}});
   toast({open:"Shop Open — accepting orders.",closed:"Shop Closed — new orders are blocked.",away:"Away — orders still accepted; customer is told service may be delayed."}[s]);
 }
-function logout(){SESSION={token:null,role:null,name:null,entity:null,bridgeId:null};STORE=freshStore();UI={...UI0,selected:new Set(),aggStates:new Set(["open","act","close"])};applyPrefs();go("#/login");}
+function logout(){try{localStorage.removeItem('cb_sess');}catch(_){}SESSION={token:null,role:null,name:null,entity:null,bridgeId:null};STORE=freshStore();UI={...UI0,selected:new Set(),aggStates:new Set(["open","act","close"])};applyPrefs();go("#/login");}
 
 /* ---------------- APP SHELL + TASK PANEL ---------------- */
 const UI0 = {nav:"task", folder:"task", sub:"my", state:"open", dtab:"content", sel:null, selectMode:false, selected:new Set(), aggStates:new Set(["open","act","close"]), drawer:false, mdetail:false, purpose:false, orgHelp:false, loading:false, rows:[], detail:null, actors:[], busy:false, vp:"lap", lw:340, lh:300, lb:null, lbGroup:null, openLines:new Set(), attGroups:{}, filterOpen:false, filter:{}, notifOpen:false, msgFilter:"all", msgChan:"internal", msgType:"all", msgKind:"info", msgcOpen:false, composeOpen:false, listHelp:false};
@@ -1548,11 +1558,11 @@ const CO_HELP = [
  {q:"Can a co-assist be a machine?", a:"Yes — actor_type can be connector (ERP / system-to-system), iot_device (a machine triggers a chit), process_rule, or ai_agent. Each has its own auth and handling; these are the next slices."},
  {q:"Where does access come from?", a:"You can only grant what you hold; access flows down the Network tree and is checked live. Set participants here; their scope ties to their node in Network."}
 ];
-function coBanner(){ return `<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:12px;padding:12px 14px;margin-bottom:12px;font-size:13px;color:#6b5a36;line-height:1.5"><b style="font-family:'Space Grotesk'">Manage who acts for you.</b> Co-Assist is the <b>people and systems that act for you</b> — people now; connectors, devices, processes and agents are participant types coming next. The owner stays the party; participants act <i>for</i> you under scoped access. For your structure use <b>Network</b>; for other businesses use <b>Connections</b>.</div>`; }
+function coBanner(){ return `<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:12px;padding:12px 14px;margin-bottom:12px;font-size:13px;color:#6b5a36;line-height:1.5"><b style="font-family:'Space Grotesk'">Manage who acts for you.</b> Co-Assist is the <b>people and systems that act for you</b> — people now; connectors, devices and AI agents are participant types coming next. The owner stays the party; participants act <i>for</i> you under scoped access. For your structure use <b>Network</b>; for other businesses use <b>Connections</b>.</div>`; }
 /* (removed) coHelpBox + coAsk + coAskFree — the Co-Assist "?" now renders from ASSIST_LIB via helpBoxFromLib.
    CO_HELP is still folded into ASSIST_LIB by buildAssistLib; coBanner (the inline banner) is retained. */
 function coTypeRow(){ const t=(k,on)=>`<span class="optchip" style="font-size:10px;${on?'background:#eef3fb;color:#345488;border-color:#cfe0f4':''}">${k}</span>`;
- return `<div style="${_CARD}"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><b style="font-size:13px">Your co-assists</b><button class="composebtn" onclick="addActorModal()">+ New co-assist</button></div><div style="font-size:11px;color:var(--grey);margin-top:8px;display:flex;gap:5px;flex-wrap:wrap;align-items:center">Types: ${t('human',true)}${t('customer')}${t('connector')}${t('iot_device')}${t('process_rule')}${t('ai_agent')}<span style="color:#a9853f">· human now, others next</span></div></div>`; }
+ return `<div style="${_CARD}"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><b style="font-size:13px">Your co-assists</b><button class="composebtn" onclick="addActorModal()">+ New co-assist</button></div><div style="font-size:11px;color:var(--grey);margin-top:8px;display:flex;gap:5px;flex-wrap:wrap;align-items:center">Types: ${t('human',true)}${t('connector')}${t('iot_device')}${t('ai_agent')}<span style="color:#a9853f">· human now, others next</span></div></div>`; }
 function coActorCard(a){ const at=a.atype||"human", cap=a.cap||"act", node=a.node||"", sh=a.shift||"on_shift";
  const shc=sh==='on_shift'?'on':sh==='on_break'?'brk':'off';
  return `<div style="${_CARD}"><div style="display:flex;justify-content:space-between;align-items:center"><span><b>${esc(a.name)}</b> <span class="optchip" style="font-size:10px;background:#eef3fb;color:#345488;border-color:#cfe0f4">${esc(at)}</span>${a.isnew?` <span class="optchip" style="font-size:10px;background:#eaf3ee;color:#2f8f5b;border-color:#bfe0cd">new</span>`:``}</span><span class="optchip ${shc}">${esc(sh.replace('_',' '))}</span></div>${a.uid?`<div style="font-family:'Space Mono';font-size:11px;color:#3F66A6;margin-top:2px">${esc(a.uid)}</div>`:''}<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:7px;align-items:center"><span class="optchip" style="font-size:10.5px;background:var(--gold-soft);color:#7a5e22;border-color:var(--gold-line)">${esc(cap)}</span>${node?`<span style="font-size:11.5px;color:var(--grey)">@ ${esc(node)}</span>`:''}<span style="font-size:11.5px;color:var(--grey)">load ${a.load==null?0:a.load}</span></div><div style="margin-top:9px;display:flex;gap:6px"><button class="composebtn" onclick="actorShift('${a.id}','${sh}')">Toggle shift</button><button class="composebtn" onclick="todo('coassistEngage')">Set engagement</button></div></div>`; }
@@ -1619,7 +1629,7 @@ function toggleSelect(){UI.selectMode=!UI.selectMode;if(!UI.selectMode)UI.select
 function actionTargets(){ if(UI.selectMode && UI.selected.size) return [...UI.selected]; if(UI.sel) return [UI.sel]; return []; }
 function needTarget(){ const t=actionTargets(); if(!t.length) toast("Open a chit — or tick some in Select — first."); return t; }
 let MODALS={};
-function modal(html){ const h=document.getElementById("modalhost"); if(!h)return; h.innerHTML=`<div class="mover" onclick="closeModal()"><div class="modal" onclick="event.stopPropagation()">${html}</div></div>`; }
+function modal(html){ const h=document.getElementById("modalhost"); if(!h)return; h.innerHTML=`<div class="mover" onclick="closeModal()"><div class="modal" onclick="event.stopPropagation()"><button class="mx" onclick="closeModal()" aria-label="Close" title="Close">✕</button>${html}</div></div>`; }
 function closeModal(){ const h=document.getElementById("modalhost"); if(h)h.innerHTML=""; }
 function quickStatus(){ const ids=needTarget(); if(!ids.length)return; MODALS.stat={ids,to:null};
   const opts=[["open","Open"],["act","Act"],["close","Close"]].map(([v,l])=>`<div class="optrow" data-v="${v}" onclick="pickStatus('${v}')"><span class="rdo"></span><div class="oc"><div class="on">${l}</div></div></div>`).join("");
@@ -2064,7 +2074,8 @@ function paintLB(){
 
 /* boot */
 applyPrefs();
-if(!location.hash) location.hash="#/login";
+restoreSession();
+if(!location.hash) location.hash=SESSION.token?"#/":"#/login";
 route();
 </script>
 </body>
