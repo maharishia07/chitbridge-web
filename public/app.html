@@ -511,7 +511,7 @@ function deepClone(x){return JSON.parse(JSON.stringify(x));}
 /* In LIVE mode STORE must hold NO demo data — start empty so a demo constant
    (actors / chits / suppliers / catalogue / schema) can never be read while
    logged into a real entity. Demo mode keeps the full DEMO dataset. */
-function blankStore(){ return { actors:[], chits:[], catalogue:[], suppliers:[], disputes:{mine:[],other:[]}, chitSchema:{schema_name:"Order",schema_type:"product",fields:[]}, net:(typeof DEMO!=="undefined")?deepClone(DEMO.net):{} }; }
+function blankStore(){ return { actors:[], chits:[], catalogue:[], suppliers:[], disputes:{mine:[],other:[]}, chitSchema:{schema_name:"Order",schema_type:"product",fields:[]}, net:{self:{id:"e_self",name:"",bridgeId:"",mode:"b2b",claimed:false},nodes:[],edges:[],reg:{}} }; }
 function freshStore(){ return (typeof CFG!=="undefined" && CFG.MODE!=="demo") ? blankStore() : deepClone(DEMO); }
 let STORE = freshStore();
 /* ATH-114 — Co-Assist external identity: id = <handle>@<entity.user_id>. bridge_id stays internal. */
