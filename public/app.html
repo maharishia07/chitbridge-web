@@ -511,9 +511,12 @@ function deepClone(x){return JSON.parse(JSON.stringify(x));}
 let STORE = deepClone(DEMO);
 /* ATH-114 — Co-Assist external identity: id = <handle>@<entity.user_id>. bridge_id stays internal. */
 function entUid(){return (typeof SESSION!=="undefined"&&SESSION.entity_user_id)||DEMO.entity.user_id;}
-function coId(h){return String(h||"").trim()+"@"+entUid();}
+/* The entity's BUSINESS NAME — the co-assist login domain (matches the API: actor_key @ display_name). */
+function entBiz(){return (typeof SESSION!=="undefined"&&SESSION.entity)||(typeof DEMO!=="undefined"&&DEMO.entity&&DEMO.entity.name)||"";}
+/* Co-assist login id = <login key>@<business name>. */
+function coId(k){return String(k||"").trim()+"@"+entBiz();}
 function defActorHandle(){return "coassist"+String(((STORE.actors||[]).length)+1).padStart(2,"0");}
-function acIdPrev(){const e=document.getElementById("ac_idprev"); if(e)e.textContent=coId(val("ac_handle")||defActorHandle());}
+function acIdPrev(){const e=document.getElementById("ac_idprev"); if(e)e.textContent=coId(val("ac_key"));}
 
 /* ---------------- API CLIENT — extracted to /app/core.js (module 1) ----------------
    fill(), unwrap() (the {ok,data,error} envelope), and api() (auth + 401/422/500 branching)
@@ -1759,20 +1762,21 @@ function assistPage(key){ const p=ASSIST_PAGES[key]; if(!p) return menuAssist(ke
 }
 function addActorModal(){
   const ent=(typeof SESSION!=="undefined"&&SESSION.entity)||DEMO.entity.name;
-  const dh=defActorHandle(); const uid=entUid();
   modal(`<div class="mhd"><div class="t">🧑‍💼 Add co-assist</div><div class="s">someone who acts for you</div></div>
    <div class="mbody"><label class="fl">Name</label><input class="inp" id="ac_name" placeholder="e.g. Priya">
-     <label class="fl">Login key (min 4 chars)</label><input class="inp" id="ac_key" placeholder="e.g. priya1">
-     <label class="fl">Handle</label><input class="inp" id="ac_handle" value="${esc(dh)}" oninput="acIdPrev()" placeholder="e.g. priya">
-     <div style="font-size:11.5px;color:var(--grey);margin-top:6px">Co-assist ID: <span id="ac_idprev" style="font-family:'Space Mono';font-size:11.5px;color:#3F66A6">${esc(coId(dh))}</span></div>
-     <div style="font-size:11.5px;color:var(--grey);margin-top:8px;line-height:1.5">Registered under <b>${esc(ent)}</b> <span style="font-family:'Space Mono';font-size:11px;color:var(--grey)">(${esc(uid)})</span> · starts as <b>human · act · on shift</b>. Engagement &amp; scope are set after (next iteration).</div>
+     <label class="fl">Login key (lowercase letters/numbers, min 4)</label><input class="inp" id="ac_key" oninput="acIdPrev()" placeholder="e.g. priya1">
+     <div style="font-size:11.5px;color:var(--grey);margin-top:6px">Login ID: <span id="ac_idprev" style="font-family:'Space Mono';font-size:11.5px;color:#3F66A6">${esc(coId(''))}</span></div>
+     <div style="font-size:11.5px;color:var(--grey);margin-top:8px;line-height:1.5">They sign in with this Login ID under <b>${esc(ent)}</b> + a one-time code, then set a PIN. Starts as <b>human · on shift</b>. Engagement &amp; scope are set later.</div>
      <div class="err" id="ac_err"></div></div>
    <div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="pri" onclick="submitActor()">Create</button></div>`);
 }
 async function submitActor(){
-  const name=val("ac_name"), key=val("ac_key"); const handle=val("ac_handle")||defActorHandle(); const err=document.getElementById("ac_err"); if(err)err.textContent="";
-  if(!name||key.length<4){ if(err)err.textContent="Name and a key of 4+ chars are required."; return; }
-  try{ await api("addActor",{body:{display_name:name,actor_key:key,handle:handle,user_id:coId(handle)}}); closeModal(); toast(MSG.coassistAdded(name, coId(handle))); if(UI.nav==="coassists")loadCoassists(); }
+  const name=val("ac_name"), key=(val("ac_key")||"").toLowerCase().trim(); const err=document.getElementById("ac_err"); if(err)err.textContent="";
+  if(!name||key.length<4){ if(err)err.textContent="Name and a login key of 4+ chars are required."; return; }
+  if(!/^[a-z0-9]+$/.test(key)){ if(err)err.textContent="Login key: lowercase letters and numbers only."; return; }
+  try{ const r=await api("addActor",{body:{display_name:name,actor_key:key}});
+    const lf=(r&&(r.login_format||(r.actor&&r.actor.login_format)))||coId(key);   // API truth: <key>@<Business Name>
+    closeModal(); toast(MSG.coassistAdded(name, lf)); if(UI.nav==="coassists")loadCoassists(); }
   catch(e){ if(err)err.textContent=e.message; }
 }
 /* ---------------- DISPUTES screen ---------------- */
