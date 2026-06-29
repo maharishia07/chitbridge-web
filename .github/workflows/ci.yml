@@ -1,0 +1,25 @@
+name: web-ci
+
+# Guards the DEV web app on every push/PR:
+#  - syntax: app.html inline JS + public/app/*.js must parse
+#  - demo-leak: app.html must contain NO demo data/code (structural no-leak guarantee).
+# A red check here means the demo/dev split was broken — do not merge/deploy.
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: ['**']
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Syntax (app.html inline + app/*.js)
+        run: node scripts/check-syntax.js
+      - name: Demo-leak tripwire (app.html must be demo-free)
+        run: node scripts/check-demo-leak.js

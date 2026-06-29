@@ -7,7 +7,10 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "build:demo": "node scripts/build-demo.js"
+    "build:demo": "node scripts/build-demo.js",
+    "check:demo-leak": "node scripts/check-demo-leak.js",
+    "check:syntax": "node scripts/check-syntax.js",
+    "check": "node scripts/check-syntax.js && node scripts/check-demo-leak.js"
   },
   "dependencies": {
     "react": "^18.2.0",
