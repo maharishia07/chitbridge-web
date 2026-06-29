@@ -600,6 +600,178 @@ function demoApi(key,{params,query,body}){
 }
 function stripChit(c){return {id:c.id,code:c.code,party:c.party,cust:c.cust,area:c.area,kind:c.kind,amt:c.amt,state:c.state,assignTo:c.assignTo,folder:c.folder,dispute:c.dispute,proof:c.proof,selfChit:!!c.selfChit,isDraft:!!c.isDraft,originator_id:c.originator_id,rcc:((c.recipients||[]).filter(r=>r.role==="cc").length),rfor:((c.recipients||[]).filter(r=>r.role==="for").length),att:((c.atts?c.atts.length:0)+((c.items||[]).reduce((x,it)=>x+((it[2]&&it[2].length)||0),0))),msg:((c.msgs||[]).filter(m=>SESSION.role==="customer"?m.scope==="external":true).length),pri:(c.pri||"normal"),custPri:!!c.custPri};}
 
+/* ============================================================================
+   DEMO THEATRE (P0+P1) — side-by-side two-entity showcase. Demo-only and fully
+   self-contained: reads NO STORE/demoApi, makes NO real API call. One canonical
+   two-entity dataset + viewAs() resolver + a consistency check, rendered as a
+   two-column "two browsers, one store each" stage. Narrated playback = P2.
+   ========================================================================== */
+const THEATRE = {
+  entities: {
+    rt: { id:"rt", name:"Raghavan Timber", trade:"Timber merchant", owner:"Raghavan", bridge:"rt-001",
+          private:[
+            {code:"CS #4470", with:"walk-in · Asha",   kind:"Counter sale", amt:62000, state:"In progress"},
+            {code:"SR #4468", with:"Madurai branch",   kind:"Service req",  amt:0,     state:"Open"}
+          ] },
+    st: { id:"st", name:"Saravana Traders", trade:"Furniture workshop", owner:"Saravana", bridge:"st-001",
+          private:[
+            {code:"PO #9012", with:"Velan Hardware",    kind:"Purchase",     amt:45000, state:"Open"},
+            {code:"CS #9008", with:"walk-in · Lakshmi", kind:"Counter sale", amt:12000, state:"Closed"}
+          ] }
+  },
+  shared: [
+    { deal:"D-4471", title:"Teak planks + polish", amt:124000, a:"rt", b:"st",
+      copies:{ rt:{role:"Order", dir:"You sent →", state:"Delivered"},
+               st:{role:"Task",  dir:"← Received",  state:"Pending · accept?"} },
+      msgs:[
+        {scope:"external", by:"rt", who:"Raghavan Timber",   body:"Dispatching today by 4 pm."},
+        {scope:"external", by:"st", who:"Saravana Traders",  body:"Please send the signed challan."},
+        {scope:"internal", by:"rt", who:"Priya (Raghavan)",  body:"Stock checked — 20 planks ready."},
+        {scope:"internal", by:"st", who:"Vikram (Saravana)", body:"Inspect the grain before we accept."}
+      ] },
+    { deal:"D-4460", title:"Plywood 12mm", amt:38000, a:"rt", b:"st",
+      copies:{ rt:{role:"Order", dir:"You sent →", state:"Dispute open"},
+               st:{role:"Task",  dir:"← Received",  state:"Disputed"} },
+      msgs:[
+        {scope:"external", by:"st", who:"Saravana Traders",  body:"6 sheets warped — raising a dispute."},
+        {scope:"external", by:"rt", who:"Raghavan Timber",   body:"Sending 6 replacements Thursday."},
+        {scope:"internal", by:"rt", who:"Kumar (Raghavan)",  body:"Covered under warranty — no charge."}
+      ] }
+  ],
+  ticker: [
+    "🔒 Each business sees only its own books — isolation is enforced on the server.",
+    "🆔 No one can read another tenant's data, even by guessing an ID.",
+    "🔁 One deal, two copies — each side controls its own status independently.",
+    "✉️ External messages reach both parties; internal notes stay with you.",
+    "🧾 Every change lands on the shared record — no he-said-she-said.",
+    "🤝 Disputes are raised and resolved on the one deal both sides can see."
+  ],
+  fmt(n){ return "₹" + Number(n||0).toLocaleString("en-IN"); }
+};
+
+// What ONE entity actually sees (mirrors the dev isolation rule): its private
+// chits + shared deals as its OWN copy; messages = external (both) OR own internal.
+function viewAs(side){
+  const e = THEATRE.entities[side];
+  const shared = THEATRE.shared.filter(d => d.a===side || d.b===side).map(d => ({
+    shared:true, deal:d.deal, title:d.title, amt:d.amt,
+    role:d.copies[side].role, dir:d.copies[side].dir, state:d.copies[side].state,
+    other: THEATRE.entities[d.a===side ? d.b : d.a].name,
+    msgs: d.msgs.filter(m => m.scope==="external" || m.by===side)
+  }));
+  const priv = e.private.map(c => ({shared:false, code:c.code, title:c.with, kind:c.kind, amt:c.amt, state:c.state}));
+  return { entity:e, chits: priv.concat(shared) };
+}
+
+// "Done = this passes." Asserts two-copy completeness, message scoping, isolation.
+function theatreConsistency(){
+  const p=[];
+  THEATRE.shared.forEach(d=>{
+    if(!d.copies[d.a] || !d.copies[d.b]) p.push(d.deal+": missing a side copy");
+    d.msgs.forEach(m=>{
+      if(m.scope!=="external" && m.scope!=="internal") p.push(d.deal+": bad scope "+m.scope);
+      if(m.by!==d.a && m.by!==d.b) p.push(d.deal+": message owner "+m.by+" is not a party");
+    });
+  });
+  const rCodes=viewAs("rt").chits.map(c=>c.code).filter(Boolean);
+  const sCodes=viewAs("st").chits.map(c=>c.code).filter(Boolean);
+  THEATRE.entities.rt.private.forEach(c=>{ if(sCodes.includes(c.code)) p.push("ISOLATION leak: st sees rt private "+c.code); });
+  THEATRE.entities.st.private.forEach(c=>{ if(rCodes.includes(c.code)) p.push("ISOLATION leak: rt sees st private "+c.code); });
+  return {ok:p.length===0, problems:p};
+}
+
+function theatreColumnHTML(side){
+  const v=viewAs(side), e=v.entity;
+  const rows = v.chits.map(c=>{
+    if(c.shared){
+      const msgs = c.msgs.map(m=>`<div class="tco-msg tco-${m.scope}"><span class="tco-scope">${m.scope}</span><b>${esc(m.who)}</b> ${esc(m.body)}</div>`).join("");
+      return `<div class="tco-chit tco-sh">
+        <div class="tco-ch-h"><span class="tco-code">${esc(c.deal)} · ${esc(c.role)}</span><span class="tco-amt">${THEATRE.fmt(c.amt)}</span></div>
+        <div class="tco-sub">${esc(c.dir)} ${esc(c.other)} · <b>${esc(c.state)}</b> <span class="tco-tag tco-tsh">shared</span></div>
+        <div class="tco-msgs">${msgs}</div></div>`;
+    }
+    return `<div class="tco-chit">
+      <div class="tco-ch-h"><span class="tco-code">${esc(c.code)} · ${esc(c.kind)}</span><span class="tco-amt">${c.amt?THEATRE.fmt(c.amt):"—"}</span></div>
+      <div class="tco-sub">${esc(c.title)} · <b>${esc(c.state)}</b> <span class="tco-tag tco-tpv">private</span></div></div>`;
+  }).join("");
+  return `<div class="tco-col">
+    <div class="tco-ctop"><div class="tco-ent">${esc(e.name)}</div><div class="tco-trade">${esc(e.trade)} · signed in as ${esc(e.owner)} · ${esc(e.bridge)}</div></div>
+    <div class="tco-list">${rows}</div></div>`;
+}
+
+function theatreStageHTML(){
+  const chk=theatreConsistency();
+  const tick=THEATRE.ticker.concat(THEATRE.ticker).map(t=>`<span class="tco-tk">${esc(t)}</span>`).join("");
+  return `<div class="tco-bar">
+      <div class="tco-ttl">🎬 Live demo — one network, two businesses</div>
+      <div class="tco-play">▶ Narrated playback (Guided · Auto · Hybrid) — arriving in the next build</div>
+      <button class="tco-x" onclick="closeTheatre()" aria-label="Close">✕</button>
+    </div>
+    <div class="tco-explain">Both businesses at once — like two browsers, one signed in as each. A <span class="tco-tag tco-tsh">shared</span> deal shows on <b>both</b> sides (an <b>Order</b> for one, a <b>Task</b> for the other, each with its own status). Each side's <span class="tco-tag tco-tpv">private</span> chits never cross. External messages show to both; internal notes stay put.</div>
+    <div class="tco-stage">${theatreColumnHTML("rt")}<div class="tco-vs">↔</div>${theatreColumnHTML("st")}</div>
+    ${chk.ok ? '<div class="tco-ok">✓ demo data consistency check passed — two-copy, message scoping &amp; isolation all hold.</div>' : '<div class="tco-warn">⚠ data check: '+esc(chk.problems.join("; "))+'</div>'}
+    <div class="tco-ticker"><div class="tco-track">${tick}</div></div>`;
+}
+
+function ensureTheatreCSS(){
+  if(document.getElementById("tco-css")) return;
+  const s=document.createElement("style"); s.id="tco-css";
+  s.textContent = `
+  .tco-host{position:fixed;inset:0;z-index:4000;background:#eef1f4;display:flex;flex-direction:column;font-family:inherit;overflow:hidden}
+  .tco-bar{display:flex;align-items:center;gap:12px;padding:10px 16px;background:#1f3a5f;color:#fff}
+  .tco-ttl{font-weight:700;font-size:15px}
+  .tco-play{margin-left:auto;font-size:11.5px;opacity:.82}
+  .tco-x{background:rgba(255,255,255,.15);border:0;color:#fff;width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:15px}
+  .tco-x:hover{background:rgba(255,255,255,.3)}
+  .tco-explain{padding:10px 18px;font-size:12.5px;color:#33414f;background:#fff;border-bottom:1px solid #dfe4ea;line-height:1.5}
+  .tco-stage{flex:1;display:flex;gap:14px;padding:16px;align-items:stretch;overflow:auto;justify-content:center}
+  .tco-vs{display:flex;align-items:center;font-size:22px;color:#8aa0b6}
+  .tco-col{flex:1;max-width:540px;min-width:300px;background:#fff;border:1px solid #d7dde4;border-radius:12px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 6px 20px rgba(20,40,70,.08)}
+  .tco-ctop{padding:12px 14px;background:#f5f8fb;border-bottom:1px solid #e3e9ef}
+  .tco-ent{font-weight:700;font-size:15px;color:#1f3a5f}
+  .tco-trade{font-size:11px;color:#6b7a89;margin-top:2px}
+  .tco-list{padding:12px;display:flex;flex-direction:column;gap:10px;overflow:auto}
+  .tco-chit{border:1px solid #e3e9ef;border-radius:10px;padding:10px 12px;background:#fff}
+  .tco-sh{border-color:#bcd0ea;background:#f3f8ff}
+  .tco-ch-h{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;font-weight:600;color:#22303d}
+  .tco-amt{color:#1f3a5f}
+  .tco-sub{font-size:11.5px;color:#5a6976;margin-top:3px}
+  .tco-tag{display:inline-block;font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:20px;vertical-align:middle;margin-left:4px}
+  .tco-tsh{background:#d6e6ff;color:#1f5fbf}
+  .tco-tpv{background:#eceff2;color:#7a8794}
+  .tco-msgs{margin-top:8px;display:flex;flex-direction:column;gap:5px}
+  .tco-msg{font-size:11px;color:#3a4856;padding:5px 8px;border-radius:7px;line-height:1.4}
+  .tco-external{background:#eafaf0;border-left:3px solid #46b475}
+  .tco-internal{background:#fff4e3;border-left:3px solid #e0a04a}
+  .tco-scope{display:inline-block;font-size:8.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-right:5px;opacity:.7}
+  .tco-ok{padding:7px 18px;font-size:11.5px;color:#1f7a48;background:#eafaf0;border-top:1px solid #cdeede}
+  .tco-warn{padding:7px 18px;font-size:11.5px;color:#9a3412;background:#fdeee6;border-top:1px solid #f6cfb8}
+  .tco-ticker{overflow:hidden;background:#1f3a5f;color:#cfe0f2;white-space:nowrap;padding:7px 0}
+  .tco-track{display:inline-block;white-space:nowrap;animation:tco-marquee 38s linear infinite}
+  .tco-tk{font-size:11.5px;margin:0 26px}
+  @keyframes tco-marquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+  .tco-launch{position:fixed;left:16px;bottom:16px;z-index:3000;background:#1f3a5f;color:#fff;border:0;border-radius:24px;padding:10px 16px;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 6px 18px rgba(20,40,70,.28)}
+  .tco-launch:hover{background:#27496f}
+  @media(max-width:760px){.tco-stage{flex-direction:column;align-items:stretch}.tco-vs{transform:rotate(90deg)}}
+  `;
+  document.head.appendChild(s);
+}
+function openTheatre(){
+  ensureTheatreCSS();
+  let h=document.getElementById("tco-host");
+  if(!h){ h=document.createElement("div"); h.id="tco-host"; h.className="tco-host"; document.body.appendChild(h); }
+  h.style.display="flex"; h.innerHTML=theatreStageHTML();
+}
+function closeTheatre(){ const h=document.getElementById("tco-host"); if(h){ h.style.display="none"; h.innerHTML=""; } }
+function mountTheatreLauncher(){
+  try{ if(!(typeof CFG!=="undefined" && CFG.MODE==="demo")) return; }catch(_){ return; }
+  if(document.getElementById("tco-launch")) return;
+  ensureTheatreCSS();
+  const b=document.createElement("button"); b.id="tco-launch"; b.className="tco-launch";
+  b.textContent="🎬 See both sides"; b.title="Live side-by-side demo — two businesses at once";
+  b.onclick=openTheatre; document.body.appendChild(b);
+}
+
 /* ---------------- SESSION + ROUTER ---------------- */
 let SESSION = {token:null, role:null, name:null, entity:null, bridgeId:null};
 const inr=n=>"₹"+(n||0).toLocaleString("en-IN");
@@ -839,6 +1011,7 @@ const MSG = {
 window.addEventListener("hashchange", route);
 function route(){
   try{ mountAssist(); }catch(_){}   // floating assistant on every page (auth + pre-auth)
+  try{ mountTheatreLauncher(); }catch(_){}   // demo-only "See both sides" side-by-side launcher
   const h=location.hash||"#/";
   if(!SESSION.token && !h.startsWith("#/register") && !h.startsWith("#/login") && !h.startsWith("#/welcome")) return go("#/login");
   if(h.startsWith("#/welcome")) return renderWelcome();
