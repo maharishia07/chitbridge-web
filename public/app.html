@@ -922,7 +922,7 @@ async function doLogin(){
     if(L.step==="otp"){
       if(L.kind==="actor"){
         const r=await api("actorLogin",{body:{username:L.id.toLowerCase(), otp:v_otp}});
-        if(r && r.requires_pin_setup){ L.busy=false; L.step="setpin"; return renderLogin(); }
+        if(r && r.requires_pin_setup){ setSession({token:r.token||"",role:"actor"}); L.busy=false; L.step="setpin"; return renderLogin(); }
         setSession({token:r.token||"t",role:"actor",name:r.name||L.id.split("@")[0],entity:r.entity||L.id.split("@")[1]||"",duty:"duty"});
       } else {
         const r=await api("ownerVerify",{body:{email:L.email||L.id, otp:v_otp}});
@@ -936,8 +936,8 @@ async function doLogin(){
       L.busy=false; return go("#/app");
     }
     if(L.step==="setpin"){
-      const r=await api("setPin",{body:{username:L.id.toLowerCase(), pin:v_setpin}});
-      setSession({token:(r&&r.token)||"t",role:"actor",name:(r&&r.name)||L.id.split("@")[0],entity:(r&&r.entity)||L.id.split("@")[1]||"",duty:"duty"});
+      await api("setPin",{body:{pin:v_setpin, confirm_pin:v_setpin}});
+      /* session already established from the OTP login (real token set above) */
       L.busy=false; return go("#/app");
     }
   }catch(e){ L.busy=false; L.err="Sign-in failed: "+e.message; renderLogin(); }
