@@ -362,7 +362,7 @@
      web_demo → front-end only, mock data (no API)
      dev / uat / live → the SAME real-API code path, pointed at three backends (differ only by base URL)
    MODE + API_BASE are DERIVED from STAGE, so the shared client (core.js) needs no change. */
-const STAGES = {
+const STAGES = {
   dev:      { label:"Dev",      mock:false, base:"https://chitbridge-api-production.up.railway.app",  note:"real API · dev database" },
   uat:      { label:"UAT",      mock:false, base:"",   /* TODO: UAT cloud API base */                 note:"real API · UAT cloud" },
   live:     { label:"Live",     mock:false, base:"",   /* TODO: production API base */                note:"production" },
