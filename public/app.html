@@ -1097,7 +1097,7 @@ function ccSendAsOptions(){
   (STORE.actors||[]).forEach(a=>{ o+=`<option value="${esc(a.id)}">${esc(a.name)} · ${esc(a.uid||'actor')}</option>`; });
   return o;
 }
-async function compose(){ UI.drawer=false; CC={items:[]}; let _catErr=false;
+async function compose(){ UI.drawer=false; CC={items:[],rcpts:[]}; let _catErr=false;
   // Load YOUR real catalogue so Compose shows the items you added — not demo defaults.
   try{
     const _prods=(await api("prodList"))||[];
