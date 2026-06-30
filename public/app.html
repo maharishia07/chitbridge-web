@@ -388,6 +388,14 @@ img.attImg{object-fit:cover;display:block}
 .starcell{cursor:pointer;color:#cfd6da;font-size:14px;display:inline-block}
 .starcell.on{color:#e8b923}
 .starcell:hover{color:#e8b923}
+.srch{position:relative}
+.advbtn{border:1px solid var(--line);background:#fff;border-radius:7px;padding:1px 7px;font-size:12px;cursor:pointer;color:var(--grey);margin-left:4px}
+.advbtn.on{background:#E3EDF8;color:var(--blue);border-color:var(--blue)}
+.advpanel{position:absolute;right:0;top:34px;z-index:7;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 26px rgba(0,0,0,.16);padding:11px 13px;width:300px;display:flex;flex-direction:column;gap:8px}
+.advttl{font-size:11px;font-weight:700;color:var(--grey);text-transform:uppercase;letter-spacing:.3px}.advttl span{font-weight:400;text-transform:none;font-size:10px;color:#9aa3a7}
+.advrow{display:flex;align-items:center;gap:6px}.advrow label{width:60px;font-size:11.5px;color:var(--grey);font-weight:600}
+.advin{flex:1;border:1px solid var(--line);border-radius:7px;padding:4px 7px;font-size:12px;min-width:0;font-family:inherit}
+.advdash{font-size:11px;color:var(--grey)}.advfoot{display:flex;justify-content:flex-end;gap:7px;margin-top:3px}
 </style>
 </head>
 <body>
@@ -1677,7 +1685,7 @@ function taskPanel(){
   const helpStrip = isCust ? "" : `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line);background:var(--gold-soft);font-size:12px;color:#6b5a36"><b style="font-family:'Space Grotesk'">${_ak==='order'?"Order — chits you've sent":"Task — chits received"}</b><button class="composebtn" onclick="toggleMockAtt()" title="Toggle sample attachments (demo)">📎 demo</button><button class="composebtn" style="margin-left:auto" onclick="toggleListHelp()">${UI.listHelp?'✕ Close':'❓ Help'}</button></div>${UI.listHelp?`<div style="padding:11px 12px;border-bottom:1px solid var(--line);overflow-y:auto;max-height:52%">${assistPage(_ak)}</div>`:''}`;
   const list = `<div class="list">${helpStrip}
     <div class="lh">${folders}${sub}${stTabs}
-      <div class="srch">🔍 <input placeholder="${isCust?'Search my orders':'Search chits, party, item'}" id="listsrch" value="${esc(UI.search||'')}" oninput="onSrch('list', this.value)"></div>
+      <div class="srch">🔍 <input placeholder="${isCust?'Search my orders':'Search chits, party, item'}" id="listsrch" value="${esc(UI.search||'')}" oninput="onSrch('list', this.value)">${advBtnHtml()}</div>
       ${tools}${sel}
     </div>
     <div class="listtotal" id="listtotal"></div>
@@ -1842,7 +1850,23 @@ pgInit('list', { el:()=>document.getElementById("rows"), limit:50, map:mapApiChi
   store:(rows,first)=>{ if(first){ UI.rows=rows; } else { const seen=new Set(UI.rows.map(r=>r.id)); for(const r of rows){ if(!seen.has(r.id)) UI.rows.push(r); } } } });
 /* common list search — server lists route q through the pager; client (lazyWrap) lists filter in place */
 function onSrch(scope, q){ clearTimeout(UI._srchT); UI._srchT=setTimeout(function(){ q=(q||'').trim(); if(scope==='list'){ UI.search=q; UI.sel=null; UI.detail=null; loadList(); } else if(typeof lazyFilter==='function'){ lazyFilter(scope, q); } }, 300); }
-function fetchPage(page){ const limit=UI.pageLimit||50; if(["drafts","trash","archive"].indexOf(UI.folder)>=0){ return api("folder",{query:{view:UI.folder,page,limit,q:UI.search||undefined,sort:UI.sort||undefined,dir:UI.dir||undefined}}); } if(UI.folder==="order"||SESSION.role==="customer"){ return SESSION.role==="customer" ? api("custOrders",{params:{bridgeId:SESSION.bridgeId},query:{page,limit,q:UI.search||undefined,sort:UI.sort||undefined,dir:UI.dir||undefined}}) : api("sent",{query:{page,limit,q:UI.search||undefined,sort:UI.sort||undefined,dir:UI.dir||undefined}}); } const q={page,limit}; if(UI.search)q.q=UI.search; if(UI.sort){q.sort=UI.sort;q.dir=UI.dir;} if(SESSION.role==="actor"&&UI.sub==="my")q.assigned_to="me"; return api("inbox",{query:q}); }
+/* ── advanced search (header-level only): amount range, date range, status, priority ──────── */
+function advParams(){ const a=UI.adv||{}; const o={}; ['amount_min','amount_max','date_from','date_to','priority','fstatus'].forEach(function(k){ if(a[k])o[k]=a[k]; }); return o; }
+function advActive(){ const a=UI.adv||{}; return !!(a.amount_min||a.amount_max||a.date_from||a.date_to||a.fstatus||a.priority); }
+function toggleAdv(){ UI.advOpen=!UI.advOpen; renderApp(); }
+function applyAdv(){ UI.adv={ amount_min:val("adv_amin")||undefined, amount_max:val("adv_amax")||undefined, date_from:val("adv_dfrom")||undefined, date_to:val("adv_dto")||undefined, fstatus:val("adv_status")||undefined, priority:val("adv_pri")||undefined }; UI.advOpen=false; UI.sel=null; UI.detail=null; loadList(); }
+function clearAdv(){ UI.adv={}; UI.advOpen=false; UI.sel=null; UI.detail=null; loadList(); }
+function advBtnHtml(){ return '<button class="advbtn '+(advActive()?'on':'')+'" onclick="event.stopPropagation();toggleAdv()" title="Advanced search">▾</button>'+(UI.advOpen?advPanel():''); }
+function advPanel(){ const a=UI.adv||{};
+  return `<div class="advpanel" onclick="event.stopPropagation()">
+    <div class="advttl">Advanced search <span>header-level</span></div>
+    <div class="advrow"><label>Amount</label><input class="advin" id="adv_amin" inputmode="numeric" placeholder="min" value="${a.amount_min||''}"><span class="advdash">to</span><input class="advin" id="adv_amax" inputmode="numeric" placeholder="max" value="${a.amount_max||''}"></div>
+    <div class="advrow"><label>Date</label><input class="advin" id="adv_dfrom" type="date" value="${a.date_from||''}"><span class="advdash">to</span><input class="advin" id="adv_dto" type="date" value="${a.date_to||''}"></div>
+    <div class="advrow"><label>Status</label><select class="advin" id="adv_status"><option value="">Any</option><option value="open" ${a.fstatus==='open'?'selected':''}>Open</option><option value="act" ${a.fstatus==='act'?'selected':''}>Act</option><option value="close" ${a.fstatus==='close'?'selected':''}>Close</option></select></div>
+    <div class="advrow"><label>Priority</label><select class="advin" id="adv_pri"><option value="">Any</option><option value="urgent" ${a.priority==='urgent'?'selected':''}>Urgent</option><option value="high" ${a.priority==='high'?'selected':''}>High</option><option value="normal" ${a.priority==='normal'?'selected':''}>Normal</option></select></div>
+    <div class="advfoot"><button class="composebtn" onclick="clearAdv()">Clear</button><button class="composebtn pri" onclick="applyAdv()">Apply</button></div>
+  </div>`; }
+function fetchPage(page){ const limit=UI.pageLimit||50; if(["drafts","trash","archive"].indexOf(UI.folder)>=0){ return api("folder",{query:Object.assign({view:UI.folder,page,limit,q:UI.search||undefined,sort:UI.sort||undefined,dir:UI.dir||undefined}, advParams())}); } if(UI.folder==="order"||SESSION.role==="customer"){ return SESSION.role==="customer" ? api("custOrders",{params:{bridgeId:SESSION.bridgeId},query:{page,limit,q:UI.search||undefined,sort:UI.sort||undefined,dir:UI.dir||undefined}}) : api("sent",{query:Object.assign({page,limit,q:UI.search||undefined,sort:UI.sort||undefined,dir:UI.dir||undefined}, advParams())}); } const q={page,limit}; if(UI.search)q.q=UI.search; if(UI.sort){q.sort=UI.sort;q.dir=UI.dir;} Object.assign(q, advParams()); if(SESSION.role==="actor"&&UI.sub==="my")q.assigned_to="me"; return api("inbox",{query:q}); }
 function onRowsScroll(){ if(UI.loading)return; pgScroll("list"); }
 function ensureFilled(){ if(UI.loading)return; pgFill("list"); }
 function loadNextPage(){ return pgNext("list"); }
