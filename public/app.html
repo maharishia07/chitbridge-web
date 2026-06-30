@@ -385,6 +385,9 @@ img.attImg{object-fit:cover;display:block}
 .colmenu label:has(input:checked){background:#E3EDF8;color:var(--blue);font-weight:600}
 .colmenu input[type=checkbox]{width:14px;height:14px;accent-color:var(--blue)}
 .prichip.pri-high{background:#fdeccc;color:#8a5a12;border-color:#e6c98f}
+.starcell{cursor:pointer;color:#cfd6da;font-size:14px;display:inline-block}
+.starcell.on{color:#e8b923}
+.starcell:hover{color:#e8b923}
 </style>
 </head>
 <body>
@@ -457,6 +460,8 @@ const EP = {
   rollup:          {m:"GET",  p:"/api/chits/rollup",             ok:"✓"},  // built (baseline-4) — GET ?group_by=counterparty|state (was wrongly POST)
   archive:         {m:"POST", p:"/api/chits/:id/archive",        ok:"✓"},  // built (baseline-4)
   folder:          {m:"GET",  p:"/api/chits/folder",            ok:"y"},
+  star:            {m:"PUT",  p:"/api/chits/:id/star",          ok:"y"},
+  markUnread:      {m:"POST", p:"/api/chits/:id/unread",        ok:"y"},
   unarchive:       {m:"POST", p:"/api/chits/:id/unarchive",     ok:"y"},
   restore:         {m:"POST", p:"/api/chits/:id/restore",       ok:"y"},
   createChit:      {m:"POST", p:"/api/chits/send",               ok:"✓"},  // compose a new chit
@@ -1798,7 +1803,7 @@ function mapApiChit(c){
     party:(tos.join(', '))||senderR.display_name||c.sender_entity_display_name||'—', cust:tos.join(', '), area:'', rcc:ccs.length, rfor:fors.length, rsummary:rsummary, sender:senderR.display_name||c.sender_entity_display_name||'',
     kind:c.purpose||'order', amt:sum.total_value||0, state:ST[c.current_status]||'open', _status:c.current_status||'pending',
     assignTo:c.assigned_to_actor_id||null, folder:'task', dispute:Number(c.open_dispute_count||0)>0,
-    proof:'ok', pri:c.priority_flag||'normal', custPri:!!c.customer_priority, items:[], atts:_mockAtts(c.chit_id), msgs:[] };
+    proof:'ok', pri:c.priority_flag||'normal', custPri:!!c.customer_priority, star:!!c.star_flag, unread:(c.read_at!==undefined ? !c.read_at : false), items:[], atts:_mockAtts(c.chit_id), msgs:[] };
 }
 function fmtAt(ts){ try{ return new Date(ts).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}); }catch(_){ return ''; } }
 function inr_(v){ return '₹'+Number(v||0).toLocaleString('en-IN'); }
@@ -1868,6 +1873,7 @@ function visibleRows(){
 /* ── columnar, sortable, configurable list (mailbox-style) — Cluster L/M ───────────────────
    Column registry = the mechanism: any column can be shown via the chooser; headings sort (server-side). */
 const LISTCOLS = [
+  { key:'star',     label:'★',        sort:null,       w:'34px',  cell:function(c){ return '<span class="starcell'+(c.star?' on':'')+'" onclick="event.stopPropagation();toggleStar(\''+c.id+'\')" title="Star">'+(c.star?'★':'☆')+'</span>'; } },
   { key:'from',     label:'From',     sort:'from',     w:'minmax(110px,1.2fr)', cell:function(c){ return esc((UI.folder==='order' ? (c.party||'') : (c.sender||c.party||'')) || '—'); } },
   { key:'subject',  label:'Subject',  sort:'subject',  w:'minmax(150px,2fr)',   cell:function(c){ return (c.unread?'<span class="unreaddot"></span>':'')+(c.custPri?'<span class="custflag" title="Customer priority">⚑</span> ':'')+'<b>'+esc(c.code||'—')+'</b>'+(c.isDraft?' <span class="optchip mini">draft</span>':'')+(c.dispute?' <span class="optchip mini r">dispute</span>':''); } },
   { key:'date',     label:'Date',     sort:'date',     w:'128px',  cell:function(c){ return esc(lcDate(c.created_at)); } },
@@ -1878,7 +1884,7 @@ const LISTCOLS = [
   { key:'msgs',     label:'💬',       sort:null,       w:'46px',  cell:function(c){ return c.msg? ('💬 '+c.msg) : ''; } },
   { key:'att',      label:'📎',       sort:null,       w:'46px',  cell:function(c){ return (c.atts&&c.atts.length)? ('📎 '+c.atts.length) : ''; } }
 ];
-const DEFCOLS = ['from','subject','date','amount','status'];
+const DEFCOLS = ['star','from','subject','date','amount','status'];
 function getCols(){ try{ const s=JSON.parse(localStorage.getItem('cb_cols')||'null'); if(Array.isArray(s)&&s.length) return s; }catch(_){ } return DEFCOLS.slice(); }
 function visibleCols(){ const set=UI.cols||getCols(); return LISTCOLS.filter(function(c){ return set.indexOf(c.key)>=0; }); }
 function colTemplate(){ const sel = (UI.selectMode&&SESSION.role!=='customer') ? '26px ' : ''; return sel + visibleCols().map(function(c){ return (UI.colW&&UI.colW[c.key]) ? UI.colW[c.key] : c.w; }).join(' '); }
@@ -1989,7 +1995,7 @@ function detailInner(){
      <div style="margin-top:10px">${proof}</div>`;
   const actbar = (UI.folder==='trash') ? `<button class="pri" onclick="restoreChit('${c.id}')">↩ Restore</button>` : (UI.folder==='archive') ? `<button class="pri" onclick="unarchiveChit('${c.id}')">↩ Unarchive</button>` : SESSION.role==="customer"
     ? `<button onclick="toggleCustPri('${c.id}')">⚑ ${c.custPri?'Priority requested':'Request priority'}</button><button class="warn" onclick="quickDispute()">⚑ Dispute</button><button onclick="todo('pdf')">⬇ PDF</button>`
-    : `<button onclick="forwardChit('${c.id}')" title="Forward as a new chit">➤ Forward</button><button class="pri" onclick="advanceChit('${c.id}')">Advance ▸</button>${SESSION.role==="actor"?`<button onclick="pickAssign('${c.id}')">👥 Assign</button>`:""}<button class="warn" onclick="quickDispute()">⚑ Dispute</button>${SESSION.role==="entity"?`<button class="warn pend" onclick="todo('voidChit')">⊘ Void</button>`:""}<button onclick="todo('pdf')">⬇ PDF</button>`;
+    : `<button onclick="forwardChit('${c.id}')" title="Forward as a new chit">➤ Forward</button><button onclick="markUnread('${c.id}')" title="Mark as unread">✉ Unread</button><button class="pri" onclick="advanceChit('${c.id}')">Advance ▸</button>${SESSION.role==="actor"?`<button onclick="pickAssign('${c.id}')">👥 Assign</button>`:""}<button class="warn" onclick="quickDispute()">⚑ Dispute</button>${SESSION.role==="entity"?`<button class="warn pend" onclick="todo('voidChit')">⊘ Void</button>`:""}<button onclick="todo('pdf')">⬇ PDF</button>`;
   const dtabs=[["content","Content"],["status","Status"],["summary","Summary"],["messages","💬 Messages"+(msgCount(c)?" ("+msgCount(c)+")":"")]];
   return `<div class="dh"><button class="dback" onclick="backToList()">‹ Back to list</button><button class="dmsg" onclick="setDtab('messages')" title="Messages" aria-label="Messages">💬${msgCount(c)?' '+msgCount(c):''}</button><div class="dt">${esc(c.code)} · ${esc(c.party)}</div><div class="ds">${esc(c.area)} · ${esc(c.kind)} · ${inr(c.amt)} · ${c.state.toUpperCase()}</div>
      <div class="parties"><span class="ptag">from <b>${esc(c.sender||SESSION.entity||"You")}</b></span><span class="ptag">${c.kind==='counter'?('to <b>'+esc(SESSION.entity||'You')+'</b>'):esc(c.rsummary||('to '+(c.party||'—')))}</span>${c.kind==='counter'?`<span class="ptag">for <b>${esc(c.cust)}</b></span>`:''}</div><div class="dchips">${SESSION.role!=="customer"?`<button class="prichip-btn pri-${c.pri||'normal'}" onclick="repriority('${c.id}')" title="Priority — tap to change">${(c.pri&&c.pri!=='normal')?PRI[c.pri].label:'Normal'} ▾</button>`:''}${c.custPri?'<span class="custflag-tag">⚑ Customer priority</span>':''}</div></div>
@@ -2057,6 +2063,8 @@ function openRaidReport(){ const host=document.getElementById("lbhost"); if(!hos
 }
 
 /* actions wired to API */
+async function toggleStar(id){ try{ const r=await api("star",{params:{id}}); const c=UI.rows.find(function(x){return x.id===id;}); if(c)c.star=!!(r&&r.star_flag); if(UI.detail&&UI.detail.id===id)UI.detail.star=!!(r&&r.star_flag); paintRowsKeepScroll(); }catch(e){ toast(MSG.fail("star", e)); } }
+async function markUnread(id){ try{ await api("markUnread",{params:{id}}); const c=UI.rows.find(function(x){return x.id===id;}); if(c)c.unread=true; toast("Marked unread"); paintRowsKeepScroll(); }catch(e){ toast(MSG.fail("mark unread", e)); } }
 async function restoreChit(id){ try{ await api("restore",{params:{id}}); toast("Restored to active"); UI.detail=null; UI.sel=null; loadList(); }catch(e){ toast(MSG.fail("restore", e)); } }
 async function unarchiveChit(id){ try{ await api("unarchive",{params:{id}}); toast("Unarchived"); UI.detail=null; UI.sel=null; loadList(); }catch(e){ toast(MSG.fail("unarchive", e)); } }
 async function forwardChit(id){ try{ const r=await api("chit",{params:{id}}); const h=(r&&r.header)||r||{}; const det=(r&&r.detail)||{}; const items=(det.line_items||[]).map(function(li){ return {particulars:li.particulars||'item', unit:'unit', price:+li.price||0, qty:+li.quantity||0}; }); const subj=(h.manual_subject||h.auto_subject||'chit'); compose({items:items, subject:'Fwd: '+subj, forwardFrom:id}); }catch(e){ toast(MSG.fail("forward", e)); } }
