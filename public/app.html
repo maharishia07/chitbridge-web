@@ -377,6 +377,10 @@ img.attImg{object-fit:cover;display:block}
 .colcog{font-size:11px;color:var(--blue);font-family:inherit;border:0;background:none;cursor:pointer}
 .colcog:hover{text-decoration:underline}
 .lttools .colmenu{right:0;top:24px}
+.lhcell{position:relative}
+.colrz{position:absolute;right:0;top:0;bottom:0;width:7px;cursor:col-resize;z-index:2}
+.colrz:hover{background:var(--blue);opacity:.5}
+.sortpreset{font-size:11px;border:1px solid var(--line);border-radius:7px;padding:2px 5px;background:#fff;color:var(--ink);cursor:pointer;font-family:inherit}
 </style>
 </head>
 <body>
@@ -1663,7 +1667,7 @@ function taskPanel(){
       ${tools}${sel}
     </div>
     <div class="listtotal" id="listtotal"></div>
-    <div class="rows" id="rows" onscroll="onRowsScroll()">${UI.loading?'<div class="loadwrap"><span class="spin"></span> loading…</div>':renderRows()}</div>
+    <div class="rows" id="rows" onscroll="onRowsScroll()" style="--coltpl:${colTemplate()}">${UI.loading?'<div class="loadwrap"><span class="spin"></span> loading…</div>':renderRows()}</div>
   </div>`;
   const detail = `<div class="detail" id="detailpane">${renderDetail()}</div>`;
   const divider = `<div class="divider" id="divider" onmousedown="startDrag(event)" ontouchstart="startDrag(event)" role="separator" aria-label="Resize panes"><span class="grip"></span></div>`;
@@ -1819,7 +1823,7 @@ function pgFooter(id){ const p=PG[id]; if(!p)return ''; const c=p.cfg.count();
 /* static footer for small, non-paginated lists (count + end marker, no Load more) */
 function staticFooter(n){ return n>0 ? '<div class="listend">'+n+' total · end of list</div>' : ''; }
 /* the Task/Order list bar */
-function pgPaintTotal(){ const lt=document.getElementById("listtotal"); if(!lt)return; lt.innerHTML='<span class="lttxt">'+esc(pgTotalText('list'))+'</span><span class="lttools"><button class="colcog" onclick="event.stopPropagation();toggleColMenu()" title="Choose columns">⚙ columns</button>'+(UI.colMenu?colChooser():'')+'</span>'; }
+function pgPaintTotal(){ const lt=document.getElementById("listtotal"); if(!lt)return; lt.innerHTML='<span class="lttxt">'+esc(pgTotalText('list'))+'</span><span class="lttools">'+sortPresetSelect()+'<button class="colcog" onclick="event.stopPropagation();toggleColMenu()" title="Choose columns">⚙ columns</button>'+(UI.colMenu?colChooser():'')+'</span>'; }
 pgInit('list', { el:()=>document.getElementById("rows"), limit:50, map:mapApiChit, count:()=>UI.rows.length, repaint:paintRowsKeepScroll, fetch:(page)=>fetchPage(page),
   store:(rows,first)=>{ if(first){ UI.rows=rows; } else { const seen=new Set(UI.rows.map(r=>r.id)); for(const r of rows){ if(!seen.has(r.id)) UI.rows.push(r); } } } });
 /* common list search — server lists route q through the pager; client (lazyWrap) lists filter in place */
@@ -1828,7 +1832,7 @@ function fetchPage(page){ const limit=UI.pageLimit||50; if(UI.folder==="order"||
 function onRowsScroll(){ if(UI.loading)return; pgScroll("list"); }
 function ensureFilled(){ if(UI.loading)return; pgFill("list"); }
 function loadNextPage(){ return pgNext("list"); }
-function paintRowsKeepScroll(){ const b=document.getElementById("rows"); if(!b)return; const st=b.scrollTop; b.innerHTML=renderRows(); b.scrollTop=st; const cs=countStates(); document.querySelectorAll(".statetabs .n").forEach((el,i)=>{ el.textContent=cs[["open","act","close"][i]]; }); pgPaintTotal(); }
+function paintRowsKeepScroll(){ const b=document.getElementById("rows"); if(!b)return; const st=b.scrollTop; b.innerHTML=renderRows(); b.scrollTop=st; const cs=countStates(); document.querySelectorAll(".statetabs .n").forEach((el,i)=>{ el.textContent=cs[["open","act","close"][i]]; }); pgPaintTotal(); applyColTpl(); }
 function updateListTotal(){ const lt=document.getElementById("listtotal"); if(!lt)return; if(!UI.total){ lt.textContent=""; return; } const shown=Math.min(UI.rows.length,UI.total); lt.textContent='Showing '+shown+' of '+UI.total+(UI.allLoaded?' \u00b7 all loaded':' \u00b7 scroll for more'); }
 function paginationFooter(){ if(UI.loadingMore) return '<div class="listend"><span class="spin"></span> loading more\u2026 ('+UI.rows.length+'/'+UI.total+')</div>'; if(!UI.allLoaded) return '<div class="listend"><button class="composebtn" onclick="loadNextPage()">\u2193 Load more</button><span style="color:var(--grey)">'+UI.rows.length+' of '+UI.total+' loaded</span></div>'; if((UI.total||0)<=0) return ''; return '<div class="listend">\u2014 end of list \u00b7 '+UI.total+' total \u2014</div>'; }
 async function loadList(){
@@ -1841,7 +1845,7 @@ async function loadList(){
     paintRowsOnly();
   }catch(e){ UI.loading=false; const b=document.getElementById("rows"); if(b)b.innerHTML=`<div class="empty"><div class="big">⚠</div><div class="t">Couldn't load</div><div>${e.message}</div><div style="font-size:11px">Check mode/endpoint, then retry.</div></div>`; }
 }
-function paintRowsOnly(){const b=document.getElementById("rows"); if(b)b.innerHTML=renderRows(); const cs=countStates(); document.querySelectorAll(".statetabs .n").forEach((el,i)=>{el.textContent=cs[["open","act","close"][i]];}); pgPaintTotal();}
+function paintRowsOnly(){const b=document.getElementById("rows"); if(b)b.innerHTML=renderRows(); const cs=countStates(); document.querySelectorAll(".statetabs .n").forEach((el,i)=>{el.textContent=cs[["open","act","close"][i]];}); pgPaintTotal(); applyColTpl();}
 function visibleRows(){
   let rows = (UI.selectMode&&SESSION.role!=="customer") ? UI.rows.filter(c=>UI.aggStates.has(c.state)) : UI.rows.filter(c=>c.state===UI.state);
   const f=UI.filter||{};
@@ -1868,19 +1872,29 @@ const LISTCOLS = [
 const DEFCOLS = ['from','subject','date','amount','status'];
 function getCols(){ try{ const s=JSON.parse(localStorage.getItem('cb_cols')||'null'); if(Array.isArray(s)&&s.length) return s; }catch(_){ } return DEFCOLS.slice(); }
 function visibleCols(){ const set=UI.cols||getCols(); return LISTCOLS.filter(function(c){ return set.indexOf(c.key)>=0; }); }
-function colTemplate(){ const sel = (UI.selectMode&&SESSION.role!=='customer') ? '26px ' : ''; return sel + visibleCols().map(function(c){ return c.w; }).join(' '); }
+function colTemplate(){ const sel = (UI.selectMode&&SESSION.role!=='customer') ? '26px ' : ''; return sel + visibleCols().map(function(c){ return (UI.colW&&UI.colW[c.key]) ? UI.colW[c.key] : c.w; }).join(' '); }
 function lcDate(ts){ try{ const d=new Date(ts); if(isNaN(d)) return ''; const sameY=d.getFullYear()===new Date().getFullYear(); return d.toLocaleDateString([], sameY?{day:'2-digit',month:'short'}:{day:'2-digit',month:'short',year:'2-digit'}); }catch(_){ return ''; } }
 function listHeader(){ const tpl=colTemplate(); const sel = (UI.selectMode&&SESSION.role!=='customer') ? '<span></span>' : '';
-  const cells = visibleCols().map(function(c){ const active = UI.sort===c.sort && c.sort; const arrow = active ? (UI.dir==='asc'?' ▲':' ▼') : (c.sort?' ⇅':''); return '<span class="lhcell'+(c.sort?' sortable':'')+'" '+(c.sort?('onclick="sortBy(\''+c.sort+'\')"'):'')+'>'+esc(c.label)+'<span class="sarr">'+arrow+'</span></span>'; }).join('');
-  return '<div class="lhead" style="grid-template-columns:'+tpl+'">'+sel+cells+'</div>'; }
+  const cells = visibleCols().map(function(c){ const active = UI.sort===c.sort && c.sort; const arrow = active ? (UI.dir==='asc'?' ▲':' ▼') : (c.sort?' ⇅':''); return '<span class="lhcell'+(c.sort?' sortable':'')+'" '+(c.sort?('onclick="sortBy(\''+c.sort+'\')"'):'')+'>'+esc(c.label)+'<span class="sarr">'+arrow+'</span><span class="colrz" onmousedown="colResizeStart(event,\''+c.key+'\')" onclick="event.stopPropagation()"></span></span>'; }).join('');
+  return '<div class="lhead" style="grid-template-columns:var(--coltpl)">'+sel+cells+'</div>'; }
 function rowGrid(c){ const tpl=colTemplate();
   const cbx = (UI.selectMode&&SESSION.role!=='customer') ? '<span class="cbx '+(UI.selected.has(c.id)?'on':'')+'" onclick="event.stopPropagation();toggleSel(\''+c.id+'\')">'+(UI.selected.has(c.id)?'✓':'')+'</span>' : '';
   const cells = visibleCols().map(function(col){ return '<span class="lcell">'+col.cell(c)+'</span>'; }).join('');
-  return '<div class="lrow '+(c.id===UI.sel?'sel':'')+' '+(c.unread?'unread':'')+'" style="grid-template-columns:'+tpl+'" onclick="openChit(\''+c.id+'\')">'+cbx+cells+'</div>'; }
-function sortBy(key){ if(UI.sort===key){ UI.dir = (UI.dir==='asc'?'desc':'asc'); } else { UI.sort=key; UI.dir = (key==='date'?'desc':'asc'); } UI.colMenu=false; UI.sel=null; UI.detail=null; loadList(); }
+  return '<div class="lrow '+(c.id===UI.sel?'sel':'')+' '+(c.unread?'unread':'')+'" style="grid-template-columns:var(--coltpl)" onclick="openChit(\''+c.id+'\')">'+cbx+cells+'</div>'; }
+function sortBy(key){ if(UI.sort===key){ UI.dir = (UI.dir==='asc'?'desc':'asc'); } else { UI.sort=key; UI.dir = (key==='date'?'desc':'asc'); } UI.colMenu=false; UI.sel=null; UI.detail=null; persistSort(); loadList(); }
 function toggleColMenu(){ UI.colMenu=!UI.colMenu; paintRowsKeepScroll(); }
 function colChooser(){ const set=UI.cols||getCols(); return '<div class="colmenu">'+LISTCOLS.map(function(c){ return '<label><input type="checkbox" '+(set.indexOf(c.key)>=0?'checked':'')+' onchange="toggleCol(\''+c.key+'\')"> '+esc(c.label||c.key)+'</label>'; }).join('')+'</div>'; }
 function toggleCol(key){ let set=(UI.cols||getCols()).slice(); const i=set.indexOf(key); if(i>=0){ if(set.length>1) set.splice(i,1); } else { set.push(key); } UI.cols=set; try{ localStorage.setItem('cb_cols', JSON.stringify(set)); }catch(_){ } paintRowsKeepScroll(); }
+/* ── column resize + sort presets + persistence (Cluster L/M) ─────────────────────────── */
+function applyColTpl(){ const r=document.getElementById("rows"); if(r) r.style.setProperty("--coltpl", colTemplate()); }
+let _rz=null;
+function colResizeStart(e,key){ e.preventDefault(); e.stopPropagation(); const cell=e.target.closest(".lhcell"); const w=cell?cell.offsetWidth:120; _rz={key:key, x:e.clientX, w:w}; document.addEventListener("mousemove",colResizeMove); document.addEventListener("mouseup",colResizeEnd); document.body.style.userSelect="none"; }
+function colResizeMove(e){ if(!_rz)return; const dx=e.clientX-_rz.x; const nw=Math.max(48,_rz.w+dx); UI.colW=UI.colW||{}; UI.colW[_rz.key]=nw+"px"; applyColTpl(); }
+function colResizeEnd(){ document.removeEventListener("mousemove",colResizeMove); document.removeEventListener("mouseup",colResizeEnd); document.body.style.userSelect=""; if(_rz){ try{ localStorage.setItem("cb_colw", JSON.stringify(UI.colW||{})); }catch(_){ } } _rz=null; }
+function persistSort(){ try{ localStorage.setItem("cb_sort", JSON.stringify({sort:UI.sort,dir:UI.dir})); }catch(_){ } }
+function setSortPreset(v){ if(v==='latest'||v==='oldest'){ UI.sort='date'; UI.dir=(v==='oldest'?'asc':'desc'); persistSort(); UI.sel=null; UI.detail=null; loadList(); } }
+function sortPresetOptions(){ const cur=(UI.sort==='date')?(UI.dir==='asc'?'oldest':'latest'):''; let o=''; if(cur===''){ o+='<option value="" selected>Sorted: '+esc(UI.sort||'')+' '+(UI.dir==='asc'?'↑':'↓')+'</option>'; } o+='<option value="latest"'+(cur==='latest'?' selected':'')+'>Latest on top</option>'; o+='<option value="oldest"'+(cur==='oldest'?' selected':'')+'>Oldest on top</option>'; return o; }
+function sortPresetSelect(){ return '<select class="sortpreset" title="Sort order" onchange="setSortPreset(this.value)">'+sortPresetOptions()+'</select>'; }
 function renderRows(){
   const rows=visibleRows();
   if(!rows.length && pgDone('list')) return `<div class="empty"><div class="big">📭</div><div class="t">Nothing here yet</div><div>No chits in ${UI.selectMode?'the ticked states':cap(UI.state)}.</div></div>`;
@@ -2213,6 +2227,7 @@ function paintLB(){
 /* boot */
 applyPrefs();
 restoreSession();
+try{ const _cw=JSON.parse(localStorage.getItem("cb_colw")||"null"); if(_cw) UI.colW=_cw; const _so=JSON.parse(localStorage.getItem("cb_sort")||"null"); if(_so&&_so.sort){ UI.sort=_so.sort; UI.dir=_so.dir||"desc"; } }catch(_){ }
 if(!location.hash) location.hash=SESSION.token?"#/":"#/login";
 route();
 </script>
