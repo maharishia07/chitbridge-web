@@ -361,6 +361,17 @@ button:focus-visible,.composebtn:focus-visible,.pri:focus-visible{outline:2px so
 img.attImg{object-fit:cover;display:block}
 .attpdf{width:100%;height:60vh;border:0;background:#fff}
 .attfile{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;min-height:160px;padding:24px;text-align:center;color:#46566a}
+.lhead{display:grid;align-items:center;gap:8px;position:sticky;top:0;z-index:3;background:#fff;border-bottom:1.5px solid var(--line);padding:7px 12px;font-size:10px;font-weight:700;color:var(--grey);text-transform:uppercase;letter-spacing:.3px}
+.lhcell{display:flex;align-items:center;white-space:nowrap;overflow:hidden}
+.lhcell.sortable{cursor:pointer}.lhcell.sortable:hover{color:var(--blue)}
+.sarr{font-size:9px;margin-left:3px;color:var(--blue)}
+.lrow{display:grid;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--line);cursor:pointer;font-size:12.5px}
+.lrow:hover{background:var(--paper)}.lrow.sel{background:#E3EDF8}.lrow.unread{font-weight:600}
+.lcell{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.colcog{border:0;background:none;cursor:pointer;font-size:13px;color:var(--grey);justify-self:end;padding:0 2px}
+.colmenu{position:absolute;right:10px;top:30px;z-index:6;background:#fff;border:1px solid var(--line);border-radius:9px;box-shadow:0 8px 24px rgba(0,0,0,.16);padding:8px 11px;display:flex;flex-direction:column;gap:5px;font-size:12px;text-transform:none;font-weight:400;color:var(--ink)}
+.colmenu label{display:flex;gap:7px;align-items:center;cursor:pointer;white-space:nowrap}
+.optchip.mini{font-size:9px;padding:0 5px}.optchip.mini.r{background:#fbeceb;color:#b4453f;border-color:#f0c9c6}
 </style>
 </head>
 <body>
@@ -996,7 +1007,7 @@ function setShop(s){SESSION.shop=s;
 function logout(){try{localStorage.removeItem('cb_sess');}catch(_){}SESSION={token:null,role:null,name:null,entity:null,bridgeId:null};STORE=freshStore();UI={...UI0,selected:new Set(),aggStates:new Set(["open","act","close"])};applyPrefs();go("#/login");}
 
 /* ---------------- APP SHELL + TASK PANEL ---------------- */
-const UI0 = {nav:"task", folder:"task", sub:"my", state:"open", dtab:"content", sel:null, selectMode:false, selected:new Set(), aggStates:new Set(["open","act","close"]), drawer:false, mdetail:false, purpose:false, orgHelp:false, loading:false, rows:[], detail:null, actors:[], busy:false, vp:"lap", lw:340, lh:300, lb:null, lbGroup:null, openLines:new Set(), attGroups:{}, filterOpen:false, filter:{}, notifOpen:false, msgFilter:"all", msgChan:"internal", msgType:"all", msgKind:"info", msgcOpen:false, composeOpen:false, listHelp:false, total:0, page:1, pageLimit:50, loadingMore:false, allLoaded:false};
+const UI0 = {nav:"task", folder:"task", sub:"my", state:"open", dtab:"content", sel:null, selectMode:false, selected:new Set(), aggStates:new Set(["open","act","close"]), drawer:false, mdetail:false, purpose:false, orgHelp:false, loading:false, rows:[], detail:null, actors:[], busy:false, vp:"lap", lw:340, lh:300, lb:null, lbGroup:null, openLines:new Set(), attGroups:{}, filterOpen:false, filter:{}, notifOpen:false, msgFilter:"all", msgChan:"internal", msgType:"all", msgKind:"info", msgcOpen:false, composeOpen:false, listHelp:false, total:0, page:1, pageLimit:50, loadingMore:false, allLoaded:false, sort:"date", dir:"desc", cols:null, colMenu:false, search:""};
 const MTYPES = {
   info:      {label:"Information",short:"Info", icon:"ℹ️", cls:"info"},
   query:     {label:"Query",      short:"Query",icon:"❓", cls:"query"},
@@ -1765,7 +1776,7 @@ function mapApiChit(c){
   const fors=recips.filter(r=>r.role==='for').map(r=>r.display_name);
   const rsummary=[tos.length?('To: '+tos.join(', ')):'', ccs.length?('CC: '+ccs.join(', ')):'', fors.length?('For: '+fors.join(', ')):''].filter(Boolean).join(' · ');
   const sum=c.summary_json||{};
-  return { id:c.chit_id, code:c.manual_subject||c.auto_subject||(c.purpose||'chit'),
+  return { id:c.chit_id, created_at:c.created_at, code:c.manual_subject||c.auto_subject||(c.purpose||'chit'),
     party:(tos.join(', '))||senderR.display_name||c.sender_entity_display_name||'—', cust:tos.join(', '), area:'', rcc:ccs.length, rfor:fors.length, rsummary:rsummary, sender:senderR.display_name||c.sender_entity_display_name||'',
     kind:c.purpose||'order', amt:sum.total_value||0, state:ST[c.current_status]||'open', _status:c.current_status||'pending',
     assignTo:c.assigned_to_actor_id||null, folder:'task', dispute:Number(c.open_dispute_count||0)>0,
@@ -1808,7 +1819,7 @@ pgInit('list', { el:()=>document.getElementById("rows"), limit:50, map:mapApiChi
   store:(rows,first)=>{ if(first){ UI.rows=rows; } else { const seen=new Set(UI.rows.map(r=>r.id)); for(const r of rows){ if(!seen.has(r.id)) UI.rows.push(r); } } } });
 /* common list search — server lists route q through the pager; client (lazyWrap) lists filter in place */
 function onSrch(scope, q){ clearTimeout(UI._srchT); UI._srchT=setTimeout(function(){ q=(q||'').trim(); if(scope==='list'){ UI.search=q; UI.sel=null; UI.detail=null; loadList(); } else if(typeof lazyFilter==='function'){ lazyFilter(scope, q); } }, 300); }
-function fetchPage(page){ const limit=UI.pageLimit||50; if(UI.folder==="order"||SESSION.role==="customer"){ return SESSION.role==="customer" ? api("custOrders",{params:{bridgeId:SESSION.bridgeId},query:{page,limit,q:UI.search||undefined}}) : api("sent",{query:{page,limit,q:UI.search||undefined}}); } const q={page,limit}; if(UI.search)q.q=UI.search; if(SESSION.role==="actor"&&UI.sub==="my")q.assigned_to="me"; return api("inbox",{query:q}); }
+function fetchPage(page){ const limit=UI.pageLimit||50; if(UI.folder==="order"||SESSION.role==="customer"){ return SESSION.role==="customer" ? api("custOrders",{params:{bridgeId:SESSION.bridgeId},query:{page,limit,q:UI.search||undefined,sort:UI.sort||undefined,dir:UI.dir||undefined}}) : api("sent",{query:{page,limit,q:UI.search||undefined,sort:UI.sort||undefined,dir:UI.dir||undefined}}); } const q={page,limit}; if(UI.search)q.q=UI.search; if(UI.sort){q.sort=UI.sort;q.dir=UI.dir;} if(SESSION.role==="actor"&&UI.sub==="my")q.assigned_to="me"; return api("inbox",{query:q}); }
 function onRowsScroll(){ if(UI.loading)return; pgScroll("list"); }
 function ensureFilled(){ if(UI.loading)return; pgFill("list"); }
 function loadNextPage(){ return pgNext("list"); }
@@ -1836,10 +1847,39 @@ function visibleRows(){
   if(f.sort==='priority') rows=[...rows].sort((a,b)=>priRank(a.pri)-priRank(b.pri) || (b.custPri?1:0)-(a.custPri?1:0));
   return rows;
 }
+/* ── columnar, sortable, configurable list (mailbox-style) — Cluster L/M ───────────────────
+   Column registry = the mechanism: any column can be shown via the chooser; headings sort (server-side). */
+const LISTCOLS = [
+  { key:'from',     label:'From',     sort:'from',     w:'minmax(110px,1.2fr)', cell:function(c){ return esc((UI.folder==='order' ? (c.party||'') : (c.sender||c.party||'')) || '—'); } },
+  { key:'subject',  label:'Subject',  sort:'subject',  w:'minmax(150px,2fr)',   cell:function(c){ return (c.unread?'<span class="unreaddot"></span>':'')+(c.custPri?'<span class="custflag" title="Customer priority">⚑</span> ':'')+'<b>'+esc(c.code||'—')+'</b>'+(c.isDraft?' <span class="optchip mini">draft</span>':'')+(c.dispute?' <span class="optchip mini r">dispute</span>':''); } },
+  { key:'date',     label:'Date',     sort:'date',     w:'92px',  cell:function(c){ return esc(lcDate(c.created_at)); } },
+  { key:'amount',   label:'Amount',   sort:'amount',   w:'96px',  cell:function(c){ return '<span style="font-family:\'Space Mono\'">'+(c.amt?inr(c.amt):'—')+'</span>'; } },
+  { key:'status',   label:'Status',   sort:'status',   w:'92px',  cell:function(c){ return '<span class="chipst st-'+c.state+'" onclick="event.stopPropagation();advanceChit(\''+c.id+'\')" title="advance">'+String(c.state||'').toUpperCase()+' ▸</span>'; } },
+  { key:'type',     label:'Type',     sort:null,       w:'80px',  cell:function(c){ return esc(c.kind||''); } },
+  { key:'priority', label:'Priority', sort:'priority', w:'86px',  cell:function(c){ return priChip(c.pri); } },
+  { key:'msgs',     label:'💬',       sort:null,       w:'46px',  cell:function(c){ return c.msg? ('💬 '+c.msg) : ''; } },
+  { key:'att',      label:'📎',       sort:null,       w:'46px',  cell:function(c){ return (c.atts&&c.atts.length)? ('📎 '+c.atts.length) : ''; } }
+];
+const DEFCOLS = ['from','subject','date','amount','status'];
+function getCols(){ try{ const s=JSON.parse(localStorage.getItem('cb_cols')||'null'); if(Array.isArray(s)&&s.length) return s; }catch(_){ } return DEFCOLS.slice(); }
+function visibleCols(){ const set=UI.cols||getCols(); return LISTCOLS.filter(function(c){ return set.indexOf(c.key)>=0; }); }
+function colTemplate(){ const sel = (UI.selectMode&&SESSION.role!=='customer') ? '26px ' : ''; return sel + visibleCols().map(function(c){ return c.w; }).join(' '); }
+function lcDate(ts){ try{ const d=new Date(ts); if(isNaN(d)) return ''; const sameY=d.getFullYear()===new Date().getFullYear(); return d.toLocaleDateString([], sameY?{day:'2-digit',month:'short'}:{day:'2-digit',month:'short',year:'2-digit'}); }catch(_){ return ''; } }
+function listHeader(){ const tpl=colTemplate(); const sel = (UI.selectMode&&SESSION.role!=='customer') ? '<span></span>' : '';
+  const cells = visibleCols().map(function(c){ const active = UI.sort===c.sort && c.sort; const arrow = active ? (UI.dir==='asc'?' ▲':' ▼') : (c.sort?' ⇅':''); return '<span class="lhcell'+(c.sort?' sortable':'')+'" '+(c.sort?('onclick="sortBy(\''+c.sort+'\')"'):'')+'>'+esc(c.label)+'<span class="sarr">'+arrow+'</span></span>'; }).join('');
+  return '<div class="lhead" style="grid-template-columns:'+tpl+'">'+sel+cells+'<button class="colcog" onclick="event.stopPropagation();toggleColMenu()" title="Choose columns">⚙</button></div>'+(UI.colMenu?colChooser():''); }
+function rowGrid(c){ const tpl=colTemplate();
+  const cbx = (UI.selectMode&&SESSION.role!=='customer') ? '<span class="cbx '+(UI.selected.has(c.id)?'on':'')+'" onclick="event.stopPropagation();toggleSel(\''+c.id+'\')">'+(UI.selected.has(c.id)?'✓':'')+'</span>' : '';
+  const cells = visibleCols().map(function(col){ return '<span class="lcell">'+col.cell(c)+'</span>'; }).join('');
+  return '<div class="lrow '+(c.id===UI.sel?'sel':'')+' '+(c.unread?'unread':'')+'" style="grid-template-columns:'+tpl+'" onclick="openChit(\''+c.id+'\')">'+cbx+cells+'</div>'; }
+function sortBy(key){ if(UI.sort===key){ UI.dir = (UI.dir==='asc'?'desc':'asc'); } else { UI.sort=key; UI.dir = (key==='date'?'desc':'asc'); } UI.colMenu=false; UI.sel=null; UI.detail=null; loadList(); }
+function toggleColMenu(){ UI.colMenu=!UI.colMenu; paintRowsKeepScroll(); }
+function colChooser(){ const set=UI.cols||getCols(); return '<div class="colmenu">'+LISTCOLS.map(function(c){ return '<label><input type="checkbox" '+(set.indexOf(c.key)>=0?'checked':'')+' onchange="toggleCol(\''+c.key+'\')"> '+esc(c.label||c.key)+'</label>'; }).join('')+'</div>'; }
+function toggleCol(key){ let set=(UI.cols||getCols()).slice(); const i=set.indexOf(key); if(i>=0){ if(set.length>1) set.splice(i,1); } else { set.push(key); } UI.cols=set; try{ localStorage.setItem('cb_cols', JSON.stringify(set)); }catch(_){ } paintRowsKeepScroll(); }
 function renderRows(){
   const rows=visibleRows();
   if(!rows.length && pgDone('list')) return `<div class="empty"><div class="big">📭</div><div class="t">Nothing here yet</div><div>No chits in ${UI.selectMode?'the ticked states':cap(UI.state)}.</div></div>`;
-  return rows.map(rowHTML).join("") + pgFooter('list');
+  return listHeader() + rows.map(rowGrid).join("") + pgFooter('list');
 }
 function rowHTML(c){
   const cbx=UI.selectMode&&SESSION.role!=="customer"?`<div class="cbx ${UI.selected.has(c.id)?'on':''}" onclick="event.stopPropagation();toggleSel('${c.id}')">${UI.selected.has(c.id)?'✓':''}</div>`:"";
