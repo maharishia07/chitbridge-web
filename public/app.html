@@ -384,6 +384,7 @@ img.attImg{object-fit:cover;display:block}
 .colmenu label{padding:3px 8px;border-radius:6px;cursor:pointer}
 .colmenu label:has(input:checked){background:#E3EDF8;color:var(--blue);font-weight:600}
 .colmenu input[type=checkbox]{width:14px;height:14px;accent-color:var(--blue)}
+.prichip.pri-high{background:#fdeccc;color:#8a5a12;border-color:#e6c98f}
 </style>
 </head>
 <body>
@@ -1033,7 +1034,7 @@ const MTYPES = {
 const MT_LEAN=["info","query","action"];
 const MT_GOV=["info","query","risk","assumption","issue","dependency","decision","action"];
 function surfacedTypes(){ return SESSION.msgTypes==="gov"?MT_GOV:MT_LEAN; }
-const PRI={urgent:{label:"Urgent",rank:0},normal:{label:"Normal",rank:1},low:{label:"Low",rank:2}};
+const PRI={urgent:{label:"Urgent",rank:0},high:{label:"High",rank:0.5},normal:{label:"Normal",rank:1},low:{label:"Low",rank:2}};
 function priRank(p){return (PRI[p]||PRI.normal).rank;}
 function priChip(p){ return (!p||p==="normal")?"":`<span class="prichip pri-${p}">${PRI[p].label}</span>`; }
 let UI = {...UI0, selected:new Set(), aggStates:new Set(["open","act","close"])};
@@ -1153,6 +1154,7 @@ async function compose(){ UI.drawer=false; CC={items:[],rcpts:[]}; let _catErr=f
      <div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:11px;padding:10px 12px;font-size:12.5px;color:#6b5a36;line-height:1.5;margin-bottom:10px"><b style="font-family:'Space Grotesk'">Author your own chit — it becomes shared the moment you bridge it.</b> A self-addressed chit is a real chit: one copy in <b>Order</b> (sent), one in <b>Task</b> (received), same thread. <span style="font-family:'Space Mono';font-size:10px;background:#fbeceb;color:#b4453f;border:1px solid #f0c9c6;border-radius:5px;padding:1px 6px">⏳ execute &amp; test pending</span></div>
      <div style="display:flex;gap:8px;flex-wrap:wrap">
        <div style="flex:1;min-width:150px"><label class="fl">Send as</label><select class="inp" id="cc_sendas">${ccSendAsOptions()}</select></div>
+       <div style="min-width:120px"><label class="fl">Importance</label><select class="inp" id="cc_priority"><option value="normal">Normal</option><option value="high">High</option><option value="urgent">Urgent</option></select></div>
      </div>
      <div style="font-family:'Space Grotesk';font-weight:600;font-size:12px;color:var(--grey);margin:12px 0 4px">Recipients · <b>To</b> acts · <b>CC</b> is informed · <b>For</b> = on behalf of</div>
      <div style="display:flex;gap:6px">
@@ -1215,7 +1217,7 @@ async function submitCompose(isDraft){
   const line_items=CC.items.map(it=>({particulars:it.particulars,quantity:+it.qty||0,price:+it.price||0,total:ccLineTotal(it)}));
   const recipients=CC.rcpts.map(r=>({name:r.name,role:r.role,self:!!r.self}));
   try{
-    const r=await api("createChit",{body:{recipients,is_draft:!!isDraft,send_as_label,subject,schema_values,line_items}});
+    const r=await api("createChit",{body:{recipients,is_draft:!!isDraft,send_as_label,subject,schema_values,line_items,priority:val("cc_priority")||"normal"}});
     closeModal(); CC={items:[],rcpts:[]};
     if(isDraft){ toast(MSG.draftSaved()); UI.nav="order"; UI.folder="order"; }
     else if(r&&r.selfCopies){ toast(MSG.chitBridged(r.copies, r.selfCopies)); UI.nav="task"; UI.folder="task"; }
