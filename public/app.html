@@ -1772,7 +1772,7 @@ function mapApiChit(c){
 }
 function fmtAt(ts){ try{ return new Date(ts).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}); }catch(_){ return ''; } }
 function inr_(v){ return '₹'+Number(v||0).toLocaleString('en-IN'); }
-function fmtLine(li){ return [li.particulars||'Item', (li.quantity||0)+' × '+inr_(li.price)+' = '+inr_(li.total||(li.quantity*li.price)), []]; }
+function fmtLine(li){ return [li.particulars||'Item', (li.quantity||0)+' × '+inr_(li.price)+' = '+inr_(li.total||(li.quantity*li.price)), _mockAtts(String((li&&li.particulars)||'')+((li&&li.total)||''))]; }
 function mapApiMsg(m){ if(!m||m.scope!==undefined) return m; return { id:m.message_id, scope:m.thread_type||'internal', author:m.sender_display_name||'—', body:m.message_text||'', at:fmtAt(m.created_at), type:m.msg_type||'info', unread:false }; }
 function mapApiActor(a){ if(!a||a.shift!==undefined) return a; const S={active:'on_shift',on_break:'on_break',break:'on_break',off:'off',deactivated:'off'}; return { id:a.identity_id, name:a.display_name, uid:a.user_id||a.uid, shift:S[a.break_status]||'on_shift', load:a.current_task_count||0 }; }
 /* ── generic lazy-list pager — ONE implementation for every scrollable list ────────────────
