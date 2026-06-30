@@ -1751,28 +1751,54 @@ function inr_(v){ return '₹'+Number(v||0).toLocaleString('en-IN'); }
 function fmtLine(li){ return [li.particulars||'Item', (li.quantity||0)+' × '+inr_(li.price)+' = '+inr_(li.total||(li.quantity*li.price)), []]; }
 function mapApiMsg(m){ if(!m||m.scope!==undefined) return m; return { id:m.message_id, scope:m.thread_type||'internal', author:m.sender_display_name||'—', body:m.message_text||'', at:fmtAt(m.created_at), type:m.msg_type||'info', unread:false }; }
 function mapApiActor(a){ if(!a||a.shift!==undefined) return a; const S={active:'on_shift',on_break:'on_break',break:'on_break',off:'off',deactivated:'off'}; return { id:a.identity_id, name:a.display_name, uid:a.user_id||a.uid, shift:S[a.break_status]||'on_shift', load:a.current_task_count||0 }; }
+/* ── generic lazy-list pager — ONE implementation for every scrollable list ────────────────
+   pgInit(id,cfg): cfg = { el:()=>HTMLElement (scroll container), fetch:(page,limit)=>Promise(array, maybe .total),
+     map:(row)=>row, store:(rows,first)=>void, count:()=>number, repaint:()=>void, limit:int }
+   Behaviour: page 1 then more on scroll; total when the endpoint sends it, else "short page == last";
+   never stuck (Load more fallback + ensure-filled); end-of-list marker. Used by: list (Task/Order), notif, msg. */
+const PG = {};
+function pgInit(id, cfg){ PG[id] = { cfg, page:0, total:0, loading:false, done:false }; }
+function pgReset(id){ const p=PG[id]; if(p){ p.page=0; p.total=0; p.loading=false; p.done=false; } }
+function pgDone(id){ const p=PG[id]; return !p || p.done; }
+async function pgNext(id){ const p=PG[id]; if(!p||p.loading||p.done) return;
+  p.loading=true; try{ p.cfg.repaint&&p.cfg.repaint(); }catch(_){}
+  try{ const lim=p.cfg.limit||50; const res=await p.cfg.fetch(p.page+1, lim); const raw=(res||[]); const rows=p.cfg.map?raw.map(p.cfg.map):raw.slice();
+    if(res&&res.total!=null) p.total=res.total; p.page++; p.cfg.store(rows, p.page===1);
+    if(raw.length===0 || raw.length<lim || (p.total>0 && p.cfg.count()>=p.total)) p.done=true;
+  }catch(_){ }
+  finally{ p.loading=false; try{ p.cfg.repaint&&p.cfg.repaint(); }catch(_){}; pgFill(id); } }
+function pgFirst(id){ pgReset(id); return pgNext(id); }
+function pgScroll(id){ const p=PG[id]; if(!p||p.loading||p.done)return; const el=p.cfg.el&&p.cfg.el(); if(!el)return; if(el.scrollTop+el.clientHeight >= el.scrollHeight-220) pgNext(id); }
+function pgFill(id){ const p=PG[id]; if(!p||p.loading||p.done)return; const el=p.cfg.el&&p.cfg.el(); if(!el)return; if(el.scrollHeight <= el.clientHeight+8) pgNext(id); }
+function pgTotalText(id){ const p=PG[id]; if(!p||!p.total)return ''; const shown=Math.min(p.cfg.count(),p.total); return 'Showing '+shown+' of '+p.total+(p.done?' · all loaded':' · scroll for more'); }
+function pgFooter(id){ const p=PG[id]; if(!p)return ''; const c=p.cfg.count();
+  if(p.loading) return '<div class="listend"><span class="spin"></span> loading more…'+(p.total>0?(' ('+c+'/'+p.total+')'):'')+'</div>';
+  if(!p.done) return '<div class="listend"><button class="composebtn" onclick="pgNext(\''+id+'\')">↓ Load more</button>'+(p.total>0?('<span style="color:var(--grey)">'+c+' of '+p.total+' loaded</span>'):'')+'</div>';
+  return '<div class="listend">— end of list'+(p.total>0?(' · '+p.total+' total'):'')+' —</div>'; }
+/* static footer for small, non-paginated lists (count + end marker, no Load more) */
+function staticFooter(n){ return n>0 ? '<div class="listend">'+n+' total · end of list</div>' : ''; }
+/* the Task/Order list bar */
+function pgPaintTotal(){ const lt=document.getElementById("listtotal"); if(lt) lt.textContent=pgTotalText('list'); }
+pgInit('list', { el:()=>document.getElementById("rows"), limit:50, map:mapApiChit, count:()=>UI.rows.length, repaint:paintRowsKeepScroll, fetch:(page)=>fetchPage(page),
+  store:(rows,first)=>{ if(first){ UI.rows=rows; } else { const seen=new Set(UI.rows.map(r=>r.id)); for(const r of rows){ if(!seen.has(r.id)) UI.rows.push(r); } } } });
 function fetchPage(page){ const limit=UI.pageLimit||50; if(UI.folder==="order"||SESSION.role==="customer"){ return SESSION.role==="customer" ? api("custOrders",{params:{bridgeId:SESSION.bridgeId},query:{page,limit}}) : api("sent",{query:{page,limit}}); } const q={page,limit}; if(SESSION.role==="actor"&&UI.sub==="my")q.assigned_to="me"; return api("inbox",{query:q}); }
-function onRowsScroll(){ const el=document.getElementById("rows"); if(!el||UI.allLoaded||UI.loadingMore||UI.loading)return; if(el.scrollTop+el.clientHeight >= el.scrollHeight-220) loadNextPage(); }
-function ensureFilled(){ const el=document.getElementById("rows"); if(!el||UI.allLoaded||UI.loadingMore||UI.loading)return; if(el.scrollHeight <= el.clientHeight+8) loadNextPage(); }
-async function loadNextPage(){ if(UI.allLoaded||UI.loadingMore)return; UI.loadingMore=true; paintRowsKeepScroll(); try{ const next=(UI.page||1)+1; const res=await fetchPage(next); const more=(res||[]).map(mapApiChit); if(res&&res.total!=null)UI.total=res.total; if(!more.length){ UI.allLoaded=true; } else { const seen=new Set(UI.rows.map(r=>r.id)); let added=0; for(const r of more){ if(!seen.has(r.id)){ UI.rows.push(r); added++; } } UI.page=next; if(added===0 || more.length < (UI.pageLimit||50) || (UI.total>0 && UI.rows.length>=UI.total)) UI.allLoaded=true; } }catch(_){ } finally{ UI.loadingMore=false; paintRowsKeepScroll(); ensureFilled(); } }
-function paintRowsKeepScroll(){ const b=document.getElementById("rows"); if(!b)return; const st=b.scrollTop; b.innerHTML=renderRows(); b.scrollTop=st; const cs=countStates(); document.querySelectorAll(".statetabs .n").forEach((el,i)=>{ el.textContent=cs[["open","act","close"][i]]; }); updateListTotal(); }
+function onRowsScroll(){ if(UI.loading)return; pgScroll("list"); }
+function ensureFilled(){ if(UI.loading)return; pgFill("list"); }
+function loadNextPage(){ return pgNext("list"); }
+function paintRowsKeepScroll(){ const b=document.getElementById("rows"); if(!b)return; const st=b.scrollTop; b.innerHTML=renderRows(); b.scrollTop=st; const cs=countStates(); document.querySelectorAll(".statetabs .n").forEach((el,i)=>{ el.textContent=cs[["open","act","close"][i]]; }); pgPaintTotal(); }
 function updateListTotal(){ const lt=document.getElementById("listtotal"); if(!lt)return; if(!UI.total){ lt.textContent=""; return; } const shown=Math.min(UI.rows.length,UI.total); lt.textContent='Showing '+shown+' of '+UI.total+(UI.allLoaded?' \u00b7 all loaded':' \u00b7 scroll for more'); }
 function paginationFooter(){ if(UI.loadingMore) return '<div class="listend"><span class="spin"></span> loading more\u2026 ('+UI.rows.length+'/'+UI.total+')</div>'; if(!UI.allLoaded) return '<div class="listend"><button class="composebtn" onclick="loadNextPage()">\u2193 Load more</button><span style="color:var(--grey)">'+UI.rows.length+' of '+UI.total+' loaded</span></div>'; if((UI.total||0)<=0) return ''; return '<div class="listend">\u2014 end of list \u00b7 '+UI.total+' total \u2014</div>'; }
 async function loadList(){
   UI.loading=true; const body=document.getElementById("rows"); if(body)body.innerHTML='<div class="loadwrap"><span class="spin"></span> loading…</div>';
   try{
-    UI.page=1; UI.allLoaded=false; UI.loadingMore=false; UI.total=0;
-    const res = await fetchPage(1);
-    UI.rows = (res||[]).map(mapApiChit);
-    UI.total = (res&&res.total!=null) ? res.total : 0;
-    UI.allLoaded = (res&&res.total!=null) ? (UI.rows.length>=res.total) : (UI.rows.length < (UI.pageLimit||50));
+    UI.rows=[]; await pgFirst('list');
     if(SESSION.role==="actor" && CFG.MODE!=='demo'){ try{ const u=await api("unread"); const set=new Set((u&&u.unread)||[]); UI.rows.forEach(r=>{ r.unread=set.has(r.id); }); }catch(_){} }
     UI.loading=false;
     if(!UI.sel && UI.rows.length){ const first=UI.rows.find(c=>c.state===UI.state)||UI.rows[0]; if(first)openChit(first.id,true); }
     paintRowsOnly(); ensureFilled();
   }catch(e){ UI.loading=false; const b=document.getElementById("rows"); if(b)b.innerHTML=`<div class="empty"><div class="big">⚠</div><div class="t">Couldn't load</div><div>${e.message}</div><div style="font-size:11px">Check mode/endpoint, then retry.</div></div>`; }
 }
-function paintRowsOnly(){const b=document.getElementById("rows"); if(b)b.innerHTML=renderRows(); const cs=countStates(); document.querySelectorAll(".statetabs .n").forEach((el,i)=>{el.textContent=cs[["open","act","close"][i]];}); updateListTotal();}
+function paintRowsOnly(){const b=document.getElementById("rows"); if(b)b.innerHTML=renderRows(); const cs=countStates(); document.querySelectorAll(".statetabs .n").forEach((el,i)=>{el.textContent=cs[["open","act","close"][i]];}); pgPaintTotal();}
 function visibleRows(){
   let rows = (UI.selectMode&&SESSION.role!=="customer") ? UI.rows.filter(c=>UI.aggStates.has(c.state)) : UI.rows.filter(c=>c.state===UI.state);
   const f=UI.filter||{};
@@ -1785,8 +1811,8 @@ function visibleRows(){
 }
 function renderRows(){
   const rows=visibleRows();
-  if(!rows.length && UI.allLoaded) return `<div class="empty"><div class="big">📭</div><div class="t">Nothing here yet</div><div>No chits in ${UI.selectMode?'the ticked states':cap(UI.state)}.</div></div>`;
-  return rows.map(rowHTML).join("") + paginationFooter();
+  if(!rows.length && pgDone('list')) return `<div class="empty"><div class="big">📭</div><div class="t">Nothing here yet</div><div>No chits in ${UI.selectMode?'the ticked states':cap(UI.state)}.</div></div>`;
+  return rows.map(rowHTML).join("") + pgFooter('list');
 }
 function rowHTML(c){
   const cbx=UI.selectMode&&SESSION.role!=="customer"?`<div class="cbx ${UI.selected.has(c.id)?'on':''}" onclick="event.stopPropagation();toggleSel('${c.id}')">${UI.selected.has(c.id)?'✓':''}</div>`:"";
