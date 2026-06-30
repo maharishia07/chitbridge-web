@@ -386,6 +386,8 @@ img.attImg{object-fit:cover;display:block}
 .lrow{display:grid;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--line);cursor:pointer;font-size:12.5px}
 .lrow:hover{background:var(--paper)}.lrow.sel{background:#E3EDF8}.lrow.unread{font-weight:600}
 .lcell{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lcell.ra{text-align:right}
+.lhcell.ra{justify-content:flex-end}
 .colcog{border:0;background:none;cursor:pointer;font-size:13px;color:var(--grey);justify-self:end;padding:0 2px}
 .colmenu{position:absolute;right:10px;top:30px;z-index:6;background:#fff;border:1px solid var(--line);border-radius:9px;box-shadow:0 8px 24px rgba(0,0,0,.16);padding:8px 11px;display:flex;flex-direction:column;gap:5px;font-size:12px;text-transform:none;font-weight:400;color:var(--ink)}
 .colmenu label{display:flex;gap:7px;align-items:center;cursor:pointer;white-space:nowrap}
@@ -568,6 +570,9 @@ function acIdPrev(){const e=document.getElementById("ac_idprev"); if(e)e.textCon
 /* ---------------- SESSION + ROUTER ---------------- */
 let SESSION = {token:null, role:null, name:null, entity:null, bridgeId:null};
 const inr=n=>"₹"+(n||0).toLocaleString("en-IN");
+const CCY_LOCALE={INR:'en-IN',USD:'en-US',EUR:'de-DE',GBP:'en-GB',JPY:'ja-JP',CNY:'zh-CN',AUD:'en-AU',CAD:'en-CA',CHF:'de-CH',SGD:'en-SG',AED:'ar-AE',SAR:'ar-SA',KWD:'ar-KW',BHD:'ar-BH',OMR:'ar-OM',KRW:'ko-KR',VND:'vi-VN',THB:'th-TH',MYR:'ms-MY',IDR:'id-ID',ZAR:'en-ZA',BRL:'pt-BR',RUB:'ru-RU',NGN:'en-NG',KES:'en-KE',LKR:'si-LK',BDT:'bn-BD',PKR:'ur-PK',NPR:'ne-NP'};
+function fmtMoney(amount,code){ code=(code||'INR'); amount=Number(amount||0); try{ return new Intl.NumberFormat(CCY_LOCALE[code]||undefined,{style:'currency',currency:code,currencyDisplay:'narrowSymbol'}).format(amount); }catch(e){ try{ return new Intl.NumberFormat(CCY_LOCALE[code]||undefined,{style:'currency',currency:code}).format(amount); }catch(_){ return code+' '+amount.toLocaleString(); } } }
+const CURRENCIES=[['INR','₹ Indian Rupee · 2dp'],['USD','$ US Dollar · 2dp'],['EUR','€ Euro · 2dp'],['GBP','£ British Pound · 2dp'],['JPY','¥ Japanese Yen · 0dp'],['KRW','₩ Korean Won · 0dp'],['VND','₫ Vietnam Dong · 0dp'],['BHD','Bahraini Dinar · 3dp'],['KWD','Kuwaiti Dinar · 3dp'],['OMR','Omani Rial · 3dp'],['AED','UAE Dirham · 2dp'],['SAR','Saudi Riyal · 2dp'],['CNY','¥ Chinese Yuan · 2dp'],['SGD','$ Singapore Dollar · 2dp'],['AUD','$ Australian Dollar · 2dp'],['CHF','Swiss Franc · 2dp']];
 function go(hash){location.hash=hash;}
 function toast(msg, undo){
   if(typeof cblog==='function') cblog(toastLevel(msg), msg);
@@ -1210,6 +1215,7 @@ async function compose(prefill){ UI.drawer=false; CC={items:(prefill&&prefill.it
      <div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:11px;padding:10px 12px;font-size:12.5px;color:#6b5a36;line-height:1.5;margin-bottom:10px"><b style="font-family:'Space Grotesk'">Author your own chit — it becomes shared the moment you bridge it.</b> A self-addressed chit is a real chit: one copy in <b>Order</b> (sent), one in <b>Task</b> (received), same thread. <span style="font-family:'Space Mono';font-size:10px;background:#fbeceb;color:#b4453f;border:1px solid #f0c9c6;border-radius:5px;padding:1px 6px">⏳ execute &amp; test pending</span></div>
      <div style="display:flex;gap:8px;flex-wrap:wrap">
        <div style="flex:1;min-width:150px"><label class="fl">Send as</label><select class="inp" id="cc_sendas">${ccSendAsOptions()}</select></div>
+       <div style="flex:0 0 auto;min-width:150px"><label class="fl">Currency</label><select class="inp" id="cc_currency" onchange="ccRenderTotal()">${CURRENCIES.map(function(x){return '<option value="'+x[0]+'">'+x[0]+' · '+x[1]+'</option>';}).join('')}</select></div>
        <div style="min-width:120px"><label class="fl">Importance</label><select class="inp" id="cc_priority"><option value="normal">Normal</option><option value="high">High</option><option value="urgent">Urgent</option></select></div>
      </div>
      <div style="font-family:'Space Grotesk';font-weight:600;font-size:12px;color:var(--grey);margin:12px 0 4px">Recipients · <b>To</b> acts · <b>CC</b> is informed · <b>For</b> = on behalf of</div>
@@ -1266,7 +1272,7 @@ function ccRenderItems(){ const h=document.getElementById("cc_items"); if(!h)ret
 function ccItemChips(i){ var it=CC.items[i]||{}; var fs=it.files||[]; return fs.map(function(f,k){ return '<span style="display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:7px;padding:2px 7px;margin:2px 5px 0 0;font-size:11px;background:#fff">'+attIcon(attType(f.type,f.name))+' '+esc(f.name.length>20?f.name.slice(0,20)+'…':f.name)+' <span onclick="ccDelItemFile('+i+','+k+')" style="cursor:pointer;color:#9aa3a7">✕</span></span>'; }).join(''); }
 function ccAddItemFiles(i,files){ var it=CC.items[i]; if(!it)return; it.files=it.files||[]; for(var k=0;k<files.length;k++){ var f=files[k]; if(f.size>6*1024*1024){ toast(f.name+' is over 6MB — skipped.'); continue; } it.files.push(f); } var el=document.getElementById('cc_itf_'+i); if(el)el.innerHTML=ccItemChips(i); }
 function ccDelItemFile(i,k){ var it=CC.items[i]; if(it&&it.files){ it.files.splice(k,1); } var el=document.getElementById('cc_itf_'+i); if(el)el.innerHTML=ccItemChips(i); }
-function ccRenderTotal(){ const t=document.getElementById("cc_total"); if(!t)return; const sum=CC.items.reduce((s,it)=>s+ccLineTotal(it),0); t.textContent=CC.items.length?("Total "+inr(sum)):""; }
+function ccRenderTotal(){ const t=document.getElementById("cc_total"); if(!t)return; const sum=CC.items.reduce((s,it)=>s+ccLineTotal(it),0); const ccy=(val("cc_currency")||"INR"); t.textContent=CC.items.length?("Total "+fmtMoney(sum,ccy)):""; }
 async function submitCompose(isDraft){
   const err=document.getElementById("cc_err"); if(err)err.textContent="";
   const subject=val("cf_subject");
@@ -1281,7 +1287,7 @@ async function submitCompose(isDraft){
   const recipients=CC.rcpts.map(r=>({name:r.name,role:r.role,self:!!r.self}));
   try{
     busyShow(isDraft?'Saving draft…':'Sending chit…');
-    const r=await api("createChit",{body:{recipients,is_draft:!!isDraft,send_as_label,subject,schema_values,line_items,priority:val("cc_priority")||"normal",forwarded_from:UI._forwardFrom||undefined}});
+    const r=await api("createChit",{body:{recipients,is_draft:!!isDraft,send_as_label,subject,schema_values,line_items,priority:val("cc_priority")||"normal",currency:val("cc_currency")||"INR",forwarded_from:UI._forwardFrom||undefined}});
     const _newId=r&&r.chit_id;
     if(_newId && (CC.files||[]).length){ busyShow('Attaching files…'); for(const f of CC.files){ try{ await attUpload(_newId, f); }catch(e){ toast('Attachment "'+f.name+'" failed.'); } } }
     if(_newId){ for(let _li=0;_li<CC.items.length;_li++){ const _it=CC.items[_li]; if(_it&&_it.files&&_it.files.length){ busyShow('Attaching files…'); for(const f of _it.files){ try{ await attUpload(_newId, f, {line_index:_li}); }catch(e){ toast('Attachment "'+f.name+'" failed.'); } } } } }
@@ -1867,7 +1873,7 @@ function mapApiChit(c){
   const sum=c.summary_json||{};
   return { id:c.chit_id, created_at:c.created_at, code:c.manual_subject||c.auto_subject||(c.purpose||'chit'),
     party:(tos.join(', '))||senderR.display_name||c.sender_entity_display_name||'—', cust:tos.join(', '), area:'', rcc:ccs.length, rfor:fors.length, rsummary:rsummary, sender:senderR.display_name||c.sender_entity_display_name||'',
-    kind:c.purpose||'order', amt:sum.total_value||0, state:ST[c.current_status]||'open', _status:c.current_status||'pending',
+    kind:c.purpose||'order', amt:sum.total_value||0, currency:sum.currency_code||'INR', state:ST[c.current_status]||'open', _status:c.current_status||'pending',
     assignTo:c.assigned_to_actor_id||null, folder:'task', dispute:Number(c.open_dispute_count||0)>0,
     proof:'ok', pri:c.priority_flag||'normal', custPri:!!c.customer_priority, star:!!c.star_flag, unread:(c.read_at!==undefined ? !c.read_at : false), nitems:(c.summary_json&&c.summary_json.line_item_count)||0, items:[], atts:[], msgs:[] };
 }
@@ -1962,7 +1968,7 @@ const LISTCOLS = [
   { key:'from',     label:'From',     sort:'from',     w:'minmax(110px,1.2fr)', cell:function(c){ return esc((UI.folder==='order' ? (c.party||'') : (c.sender||c.party||'')) || '—'); } },
   { key:'subject',  label:'Subject',  sort:'subject',  w:'minmax(150px,2fr)',   cell:function(c){ return (c.unread?'<span class="unreaddot"></span>':'')+(c.custPri?'<span class="custflag" title="Customer priority">⚑</span> ':'')+'<b>'+esc(c.code||'—')+'</b>'+(c.isDraft?' <span class="optchip mini">draft</span>':'')+(c.dispute?' <span class="optchip mini r">dispute</span>':''); } },
   { key:'date',     label:'Date',     sort:'date',     w:'128px',  cell:function(c){ return esc(lcDate(c.created_at)); } },
-  { key:'amount',   label:'Amount',   sort:'amount',   w:'96px',  cell:function(c){ return '<span style="font-family:\'Space Mono\'">'+(c.amt?inr(c.amt):'—')+'</span>'; } },
+  { key:'amount',   label:'Amount',   sort:'amount',   w:'108px', align:'right', cell:function(c){ return '<span style="font-family:\'Space Mono\'">'+(c.amt?fmtMoney(c.amt,c.currency):'—')+'</span>'; } },
   { key:'status',   label:'Status',   sort:'status',   w:'92px',  cell:function(c){ return '<span class="chipst st-'+c.state+'" onclick="event.stopPropagation();advanceChit(\''+c.id+'\')" title="advance">'+String(c.state||'').toUpperCase()+' ▸</span>'; } },
   { key:'type',     label:'Type',     sort:null,       w:'80px',  cell:function(c){ return esc(c.kind||''); } },
   { key:'items',    label:'Items',    sort:null,       w:'58px',  cell:function(c){ return (c.nitems||'')+''; } },
@@ -1976,11 +1982,11 @@ function visibleCols(){ const set=UI.cols||getCols(); return LISTCOLS.filter(fun
 function colTemplate(){ const sel = (UI.selectMode&&SESSION.role!=='customer') ? '26px ' : ''; return sel + visibleCols().map(function(c){ return (UI.colW&&UI.colW[c.key]) ? UI.colW[c.key] : c.w; }).join(' '); }
 function lcDate(ts){ try{ const d=new Date(ts); if(isNaN(d)) return ''; const sameY=d.getFullYear()===new Date().getFullYear(); return d.toLocaleString([], sameY?{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}:{day:'2-digit',month:'short',year:'2-digit',hour:'2-digit',minute:'2-digit'}); }catch(_){ return ''; } }
 function listHeader(){ const tpl=colTemplate(); const sel = (UI.selectMode&&SESSION.role!=='customer') ? '<span></span>' : '';
-  const cells = visibleCols().map(function(c){ const active = UI.sort===c.sort && c.sort; const arrow = active ? (UI.dir==='asc'?' ▲':' ▼') : (c.sort?' ⇅':''); return '<span class="lhcell'+(c.sort?' sortable':'')+'" '+(c.sort?('onclick="sortBy(\''+c.sort+'\')"'):'')+'>'+esc(c.label)+'<span class="sarr">'+arrow+'</span><span class="colrz" onmousedown="colResizeStart(event,\''+c.key+'\')" onclick="event.stopPropagation()"></span></span>'; }).join('');
+  const cells = visibleCols().map(function(c){ const active = UI.sort===c.sort && c.sort; const arrow = active ? (UI.dir==='asc'?' ▲':' ▼') : (c.sort?' ⇅':''); return '<span class="lhcell'+(c.sort?' sortable':'')+(c.align==='right'?' ra':'')+'" '+(c.sort?('onclick="sortBy(\''+c.sort+'\')"'):'')+'>'+esc(c.label)+'<span class="sarr">'+arrow+'</span><span class="colrz" onmousedown="colResizeStart(event,\''+c.key+'\')" onclick="event.stopPropagation()"></span></span>'; }).join('');
   return '<div class="lhead" style="grid-template-columns:var(--coltpl)">'+sel+cells+'</div>'; }
 function rowGrid(c){ const tpl=colTemplate();
   const cbx = (UI.selectMode&&SESSION.role!=='customer') ? '<span class="cbx '+(UI.selected.has(c.id)?'on':'')+'" onclick="event.stopPropagation();toggleSel(\''+c.id+'\')">'+(UI.selected.has(c.id)?'✓':'')+'</span>' : '';
-  const cells = visibleCols().map(function(col){ return '<span class="lcell">'+col.cell(c)+'</span>'; }).join('');
+  const cells = visibleCols().map(function(col){ return '<span class="lcell'+(col.align==='right'?' ra':'')+'">'+col.cell(c)+'</span>'; }).join('');
   return '<div class="lrow '+(c.id===UI.sel?'sel':'')+' '+(c.unread?'unread':'')+'" style="grid-template-columns:var(--coltpl)" onclick="openChit(\''+c.id+'\')">'+cbx+cells+'</div>'; }
 function sortBy(key){ if(UI.sort===key){ UI.dir = (UI.dir==='asc'?'desc':'asc'); } else { UI.sort=key; UI.dir = ((key==='date'||key==='priority')?'desc':'asc'); } UI.colMenu=false; UI.sel=null; UI.detail=null; persistSort(); loadList(); }
 function toggleColMenu(){ UI.colMenu=!UI.colMenu; paintRowsKeepScroll(); }
@@ -2066,7 +2072,7 @@ function detailInner(){
   buildAttGroups(c);
   const items=contentItems(c);
   let body="";
-  if(UI.dtab==="content") body=`<div class="itab">${items}<div class="ir tot"><span>Total</span><span class="qt">${inr(c.amt)}</span></div></div>
+  if(UI.dtab==="content") body=`<div class="itab">${items}<div class="ir tot"><span>Total</span><span class="qt">${fmtMoney(c.amt,c.currency)}</span></div></div>
      ${chitAttBlock(c)}`;
   if(UI.dtab==="messages") body=messagesTab(c);
   if(UI.dtab==="status") body=statusTabHtml(c); if(false) body=`<div class="sec">Lifecycle</div><div class="tl">
