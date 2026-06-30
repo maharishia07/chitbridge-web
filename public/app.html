@@ -1503,10 +1503,43 @@ async function loadProfile(){ const h=document.getElementById("profbody"); if(!h
 async function saveProfile(){ const x=document.getElementById("pf_err"); if(x)x.textContent="";
   try{ await api("saveProfile",{body:{user_id:val("pf_uid")||null,gstn:val("pf_gstn")||null,address:val("pf_addr")||null,business_status:val("pf_bs")}}); toast(MSG.profileSaved()); }catch(e){ if(x)x.textContent=e.message; } }
 /* SETTINGS */
+/* Governance · 7 layers — perception stub. Each tab = one layer (Constitution..ERP) + the 7th = THIS entity
+   (blueprint/effective). klass shows the inherit-vs-mutate flow: bound=locked, bound_set=pick, advisory=entity may
+   change, chosen=tighten-only, free=not configured yet, inherited=frozen at blueprint, entity=entity's own setting. */
+const GOV=[
+  { n:'1 · Constitution', tag:'platform · top layer', desc:'Platform-wide rules every entity inherits at mint.', rows:[
+    ['Currency','INR (₹)','advisory'],['Allowed languages','en','bound_set'],['Timezone','Asia/Kolkata','advisory'],
+    ['Message max length','unbounded','advisory'],['Max schemas / entity','2','bound'],
+    ['Catalogue visibility','private (cap)','chosen'],['Attachment types','image, pdf, docx, xlsx, csv, zip','advisory'],
+    ['Attachment max size','10 MB','advisory'] ] },
+  { n:'2 · Jurisdiction', tag:'country / legal', desc:'Country-specific legal & tax frame (locale bundle lands partly here).', rows:[
+    ['Country','—','free'],['Tax regime (GST / VAT)','—','free'],['Legal framework','—','free'],
+    ['Date / number format','—','free'] ] },
+  { n:'3 · Vertical', tag:'business type', desc:'Defaults for your line of business.', rows:[
+    ['Business vertical','—','free'],['Default units','—','free'],['Vertical currency default','—','free'] ] },
+  { n:'4 · Standards', tag:'codes / units', desc:'Measurement & coding standards.', rows:[
+    ['Units of measure','—','free'],['Code standards (HSN / SKU)','—','free'] ] },
+  { n:'5 · Content', tag:'schema / packs', desc:'Schema fields & content packs that compose the chit.', rows:[
+    ['Chit schema fields','—','free'],['Content packs','—','free'] ] },
+  { n:'6 · ERP', tag:'integration', desc:'System integration adapters.', rows:[
+    ['ERP adapter','—','free'],['Sync mode','—','free'] ] },
+  { n:'7 · This Entity', tag:'blueprint · effective', desc:'What THIS entity inherited at blueprint (frozen) + its own operational settings.', rows:[
+    ['Currency (effective)','INR (₹) · from Constitution','inherited'],['Language (effective)','en · from Constitution','inherited'],
+    ['Timezone (effective)','Asia/Kolkata · from Constitution','inherited'],['Assignment model','both · entity setting','entity'],
+    ['Default max tasks / actor','10 · entity setting','entity'] ] }
+];
+function govKlass(k){ var M={bound:['lock · bound','#fbeceb','#b4453f'],bound_set:['pick-from-set','#EEF3FB','#3F66A6'],advisory:['advisory · mutable','#E4F0E9','#2F6B49'],chosen:['tighten-only','#F5ECD6','#7a5e22'],free:['free · TBD','#efeee9','#8a8a82'],inherited:['inherited · frozen','#EEF3FB','#3F66A6'],entity:['entity setting','#E4F0E9','#2F6B49']}; var x=M[k]||M.free; return '<span style="font-size:9.5px;font-family:\'Space Mono\';background:'+x[1]+';color:'+x[2]+';border-radius:5px;padding:1px 6px;white-space:nowrap">'+x[0]+'</span>'; }
+function govSetTab(i){ UI.govTab=i; var h=document.getElementById('govblock'); if(h)h.outerHTML=govLayersBlock(); }
+function govLayersBlock(){ var t=UI.govTab||0; var L=GOV[t];
+  var tabs=GOV.map(function(g,i){ return '<button class="composebtn'+(i===t?' on':'')+'" style="font-size:11px;padding:5px 9px" onclick="govSetTab('+i+')">'+esc(g.n)+'</button>'; }).join('');
+  var rows=L.rows.map(function(r){ return '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--line)"><span style="flex:1;font-size:12.5px;color:var(--ink)">'+esc(r[0])+'</span><span style="font-size:12px;color:var(--grey);font-family:\'Space Mono\'">'+esc(r[1])+'</span>'+govKlass(r[2])+'</div>'; }).join('');
+  var foot=(t===6)?'Effective values are <b>frozen at blueprint</b>; the entity rows are this entity\'s own settings. Upstream layers can re-bind later.':'<b>bound</b> = inherited &amp; locked · <b>advisory</b> = entity may change when upstream leaves it free · <b>free</b> = not configured yet, lands here later.';
+  return '<div id="govblock" style="'+_CARD+'"><div class="sec" style="margin:0 0 8px">🏛️ Governance · 7 layers <span style="font-size:10px;font-family:\'Space Mono\';background:#f3f0e8;color:#7a5e22;border-radius:5px;padding:1px 6px">stub · perception</span></div><div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:11px">'+tabs+'</div><div style="font-family:\'Space Grotesk\';font-weight:700;font-size:14px">'+esc(L.n)+' <span style="font-size:10.5px;color:var(--grey);font-weight:400">· '+esc(L.tag)+'</span></div><div style="font-size:12px;color:var(--grey);margin:2px 0 9px">'+esc(L.desc)+'</div>'+rows+'<div style="font-size:11px;color:var(--grey);margin-top:9px;line-height:1.5">'+foot+'</div></div>';
+}
 function settingsScreen(){ return scr("⚙️ Settings","setbody","settings"); }
 async function loadSettings(){ const h=document.getElementById("setbody"); if(!h)return;
   try{ const s=(await api("getSettings"))||{};
-    h.innerHTML=`${menuAssist('settings')}<div style="${_CARD}">
+    h.innerHTML=`${menuAssist('settings')}${govLayersBlock()}<div style="${_CARD}">
       <div style="background:#fbeceb;border:1px solid #f0c9c6;border-radius:8px;padding:8px 11px;font-size:11.5px;color:#b4453f;margin-bottom:11px">⏳ These preferences are saved but <b>not yet active</b> — they don't change behaviour yet.</div>
       <label class="fl">Assignment model</label><select class="inp" id="st_am">${opt(["pull","push","both"],s.assignment_model||"both")}</select>
       <label class="fl">Default max tasks per actor</label><input class="inp" id="st_mt" inputmode="numeric" value="${esc(s.default_max_tasks||10)}">
