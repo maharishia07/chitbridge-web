@@ -1146,7 +1146,7 @@ function ccSendAsOptions(){
   (STORE.actors||[]).forEach(a=>{ o+=`<option value="${esc(a.id)}">${esc(a.name)} · ${esc(a.uid||'actor')}</option>`; });
   return o;
 }
-async function compose(){ UI.drawer=false; CC={items:[],rcpts:[]}; let _catErr=false;
+async function compose(prefill){ UI.drawer=false; CC={items:(prefill&&prefill.items)?prefill.items.slice():[],rcpts:[]}; UI._forwardFrom=(prefill&&prefill.forwardFrom)||null; let _catErr=false;
   // Load YOUR real catalogue so Compose shows the items you added — not demo defaults.
   try{
     const _prods=(await api("prodList"))||[];
@@ -1182,6 +1182,7 @@ async function compose(){ UI.drawer=false; CC={items:[],rcpts:[]}; let _catErr=f
    </div>
    <div class="mfoot"><button onclick="closeModal()">Cancel</button><button onclick="submitCompose(true)">Save draft</button><button class="pri" onclick="submitCompose(false)">Send chit</button></div>`);
   ccRenderItems(); ccRenderRcpts();
+  if(prefill&&prefill.subject){ const sf=document.getElementById("cf_subject"); if(sf)sf.value=prefill.subject; }
 }
 /* Recipients — To (Act) / CC (Info) / For (on-behalf), capped, flippable */
 function ccIsSelf(name){ const n=String(name||"").trim().toLowerCase(); if(!n)return false; if(n==="self"||n==="me")return true; const ent=String((typeof SESSION!=="undefined"&&SESSION.entity)||"").toLowerCase(); if(n===ent)return true; return (STORE.actors||[]).some(a=>String(a.name||"").toLowerCase()===n||String(a.uid||"").toLowerCase()===n); }
@@ -1220,7 +1221,7 @@ async function submitCompose(isDraft){
   const line_items=CC.items.map(it=>({particulars:it.particulars,quantity:+it.qty||0,price:+it.price||0,total:ccLineTotal(it)}));
   const recipients=CC.rcpts.map(r=>({name:r.name,role:r.role,self:!!r.self}));
   try{
-    const r=await api("createChit",{body:{recipients,is_draft:!!isDraft,send_as_label,subject,schema_values,line_items,priority:val("cc_priority")||"normal"}});
+    const r=await api("createChit",{body:{recipients,is_draft:!!isDraft,send_as_label,subject,schema_values,line_items,priority:val("cc_priority")||"normal",forwarded_from:UI._forwardFrom||undefined}});
     closeModal(); CC={items:[],rcpts:[]};
     if(isDraft){ toast(MSG.draftSaved()); UI.nav="order"; UI.folder="order"; }
     else if(r&&r.selfCopies){ toast(MSG.chitBridged(r.copies, r.selfCopies)); UI.nav="task"; UI.folder="task"; }
@@ -1988,7 +1989,7 @@ function detailInner(){
      <div style="margin-top:10px">${proof}</div>`;
   const actbar = SESSION.role==="customer"
     ? `<button onclick="toggleCustPri('${c.id}')">⚑ ${c.custPri?'Priority requested':'Request priority'}</button><button class="warn" onclick="quickDispute()">⚑ Dispute</button><button onclick="todo('pdf')">⬇ PDF</button>`
-    : `<button class="pri" onclick="advanceChit('${c.id}')">Advance ▸</button>${SESSION.role==="actor"?`<button onclick="pickAssign('${c.id}')">👥 Assign</button>`:""}<button class="warn" onclick="quickDispute()">⚑ Dispute</button>${SESSION.role==="entity"?`<button class="warn pend" onclick="todo('voidChit')">⊘ Void</button>`:""}<button onclick="todo('pdf')">⬇ PDF</button>`;
+    : `<button onclick="forwardChit('${c.id}')" title="Forward as a new chit">➤ Forward</button><button class="pri" onclick="advanceChit('${c.id}')">Advance ▸</button>${SESSION.role==="actor"?`<button onclick="pickAssign('${c.id}')">👥 Assign</button>`:""}<button class="warn" onclick="quickDispute()">⚑ Dispute</button>${SESSION.role==="entity"?`<button class="warn pend" onclick="todo('voidChit')">⊘ Void</button>`:""}<button onclick="todo('pdf')">⬇ PDF</button>`;
   const dtabs=[["content","Content"],["status","Status"],["summary","Summary"],["messages","💬 Messages"+(msgCount(c)?" ("+msgCount(c)+")":"")]];
   return `<div class="dh"><button class="dback" onclick="backToList()">‹ Back to list</button><button class="dmsg" onclick="setDtab('messages')" title="Messages" aria-label="Messages">💬${msgCount(c)?' '+msgCount(c):''}</button><div class="dt">${esc(c.code)} · ${esc(c.party)}</div><div class="ds">${esc(c.area)} · ${esc(c.kind)} · ${inr(c.amt)} · ${c.state.toUpperCase()}</div>
      <div class="parties"><span class="ptag">from <b>${esc(c.sender||SESSION.entity||"You")}</b></span><span class="ptag">${c.kind==='counter'?('to <b>'+esc(SESSION.entity||'You')+'</b>'):esc(c.rsummary||('to '+(c.party||'—')))}</span>${c.kind==='counter'?`<span class="ptag">for <b>${esc(c.cust)}</b></span>`:''}</div><div class="dchips">${SESSION.role!=="customer"?`<button class="prichip-btn pri-${c.pri||'normal'}" onclick="repriority('${c.id}')" title="Priority — tap to change">${(c.pri&&c.pri!=='normal')?PRI[c.pri].label:'Normal'} ▾</button>`:''}${c.custPri?'<span class="custflag-tag">⚑ Customer priority</span>':''}</div></div>
@@ -2056,6 +2057,7 @@ function openRaidReport(){ const host=document.getElementById("lbhost"); if(!hos
 }
 
 /* actions wired to API */
+async function forwardChit(id){ try{ const r=await api("chit",{params:{id}}); const h=(r&&r.header)||r||{}; const det=(r&&r.detail)||{}; const items=(det.line_items||[]).map(function(li){ return {particulars:li.particulars||'item', unit:'unit', price:+li.price||0, qty:+li.quantity||0}; }); const subj=(h.manual_subject||h.auto_subject||'chit'); compose({items:items, subject:'Fwd: '+subj, forwardFrom:id}); }catch(e){ toast(MSG.fail("forward", e)); } }
 async function advanceChit(id){
   const c=UI.rows.find(x=>x.id===id)||UI.detail; if(c&&c.state==="close"){toast("At Close — next is Archive (sunset model).");return;}
   const NB={pending:'accepted',delivered:'accepted',read:'accepted',accepted:'in_progress',in_progress:'completed',partial:'completed',finished:'completed'};
