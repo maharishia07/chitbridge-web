@@ -2013,7 +2013,8 @@ const LISTCOLS = [
   { key:'status',   label:'Status',   sort:'status',   w:'92px',  cell:function(c){ return '<span class="chipst st-'+c.state+'" onclick="event.stopPropagation();advanceChit(\''+c.id+'\')" title="advance">'+String(c.state||'').toUpperCase()+' ▸</span>'; } },
   { key:'type',     label:'Type',     sort:null,       w:'80px',  cell:function(c){ return esc(c.kind||''); } },
   { key:'items',    label:'Items',    sort:null,       w:'58px',  cell:function(c){ return (c.nitems||'')+''; } },
-  { key:'priority', label:'Priority', sort:'priority', w:'92px',  cell:function(c){ return priChip(c.priExt)||'<span style="color:var(--grey)">—</span>'; } },
+  { key:'priority', label:'Int pri', sort:'priority', w:'88px',  cell:function(c){ return priChip(c.pri)||'<span style="color:var(--grey)">—</span>'; } },
+  { key:'priext',   label:'Ext pri', sort:null,       w:'88px',  cell:function(c){ return priChip(c.priExt)||'<span style="color:var(--grey)">—</span>'; } },
   { key:'msgs',     label:'💬',       sort:null,       w:'46px',  cell:function(c){ return c.msg? ('💬 '+c.msg) : ''; } },
   { key:'att',      label:'📎',       sort:null,       w:'46px',  cell:function(c){ return (c.atts&&c.atts.length)? ('📎 '+c.atts.length) : ''; } }
 ];
