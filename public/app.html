@@ -358,6 +358,8 @@ button:focus-visible,.composebtn:focus-visible,.pri:focus-visible{outline:2px so
 .composer .chtoggle + .typesel::before{content:"|";color:var(--line);font-weight:700;margin-right:10px;display:flex;align-items:center}
 .tl .ev.next::before{background:#fff;border:1.5px dashed #b9c2c7;width:7px;height:7px}
 .tl .ev.next .ea::after{content:" (upcoming)";font-size:9px;font-family:'Space Mono';color:#9aa3a7;font-weight:400}
+img.attImg{object-fit:cover;display:block}
+.attpdf{width:100%;height:60vh;border:0;background:#fff}
 </style>
 </head>
 <body>
@@ -1637,7 +1639,7 @@ function taskPanel(){
     </div>${UI.filterOpen?filterPanel():""}`;
   const sel = (UI.selectMode&&!isCust)?selBar():"";
   const _ak = (UI.folder==='order')?'order':'task';
-  const helpStrip = isCust ? "" : `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line);background:var(--gold-soft);font-size:12px;color:#6b5a36"><b style="font-family:'Space Grotesk'">${_ak==='order'?"Order — chits you've sent":"Task — chits received"}</b><button class="composebtn" style="margin-left:auto" onclick="toggleListHelp()">${UI.listHelp?'✕ Close':'❓ Help'}</button></div>${UI.listHelp?`<div style="padding:11px 12px;border-bottom:1px solid var(--line);overflow-y:auto;max-height:52%">${assistPage(_ak)}</div>`:''}`;
+  const helpStrip = isCust ? "" : `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line);background:var(--gold-soft);font-size:12px;color:#6b5a36"><b style="font-family:'Space Grotesk'">${_ak==='order'?"Order — chits you've sent":"Task — chits received"}</b><button class="composebtn" onclick="toggleMockAtt()" title="Toggle sample attachments (demo)">📎 demo</button><button class="composebtn" style="margin-left:auto" onclick="toggleListHelp()">${UI.listHelp?'✕ Close':'❓ Help'}</button></div>${UI.listHelp?`<div style="padding:11px 12px;border-bottom:1px solid var(--line);overflow-y:auto;max-height:52%">${assistPage(_ak)}</div>`:''}`;
   const list = `<div class="list">${helpStrip}
     <div class="lh">${folders}${sub}${stTabs}
       <div class="srch">🔍 <input placeholder="${isCust?'Search my orders':'Search chits, party, item'}"></div>
@@ -1766,7 +1768,7 @@ function mapApiChit(c){
     party:(tos.join(', '))||senderR.display_name||c.sender_entity_display_name||'—', cust:tos.join(', '), area:'', rcc:ccs.length, rfor:fors.length, rsummary:rsummary, sender:senderR.display_name||c.sender_entity_display_name||'',
     kind:c.purpose||'order', amt:sum.total_value||0, state:ST[c.current_status]||'open', _status:c.current_status||'pending',
     assignTo:c.assigned_to_actor_id||null, folder:'task', dispute:Number(c.open_dispute_count||0)>0,
-    proof:'ok', pri:c.priority_flag||'normal', custPri:!!c.customer_priority, items:[], atts:[], msgs:[] };
+    proof:'ok', pri:c.priority_flag||'normal', custPri:!!c.customer_priority, items:[], atts:_mockAtts(c.chit_id), msgs:[] };
 }
 function fmtAt(ts){ try{ return new Date(ts).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}); }catch(_){ return ''; } }
 function inr_(v){ return '₹'+Number(v||0).toLocaleString('en-IN'); }
@@ -1880,7 +1882,7 @@ async function openChit(id, silent){
   try{ const r=await api("chit",{params:{id}});
         if(r && r.header){ const h=r.header, det=r.detail||{};
           const base=UI.rows.find(c=>c.id===id)||mapApiChit({chit_id:h.chit_id,summary_json:h.summary_json,all_recipients:h.all_recipients,sender_entity_display_name:h.sender_entity_display_name,purpose:h.purpose,manual_subject:h.manual_subject,auto_subject:h.auto_subject,current_status:'delivered',open_dispute_count:0});
-          UI.detail={...base, items:(det.line_items||[]).map(fmtLine), atts:[], msgs:[]};
+          UI.detail={...base, items:(det.line_items||[]).map(fmtLine), atts:_mockAtts(id), msgs:[]};
           try{ const mr=await api("messages",{params:{id}}); UI.detail.msgs=(mr||[]).map(mapApiMsg); }catch(_){}
         } else { UI.detail=r; }
         UI.openLines=new Set(); const fi=(UI.detail.items||[]).findIndex(it=>attsVis(it[2]).length); if(fi>=0)UI.openLines.add('line'+fi);
@@ -2090,8 +2092,25 @@ document.addEventListener('mouseup',endDrag);document.addEventListener('touchend
 /* attachments + lightbox */
 function attsVis(atts){return (atts||[]);}  /* DEC: customer sees the full co-signed set — both parties co-hold every attachment */
 function attIcon(t){return t==='video'?'▶':t==='doc'?'📄':'🖼️';}
+/* MOCK attachments — visualise the lightbox/strip without a backend. Gated by localStorage 'cb_mock_att'.
+   Platform-INDEPENDENT by design: an attachment is just { t, n, src } where src is an opaque URL.
+   The real storage (AWS S3 / Azure Blob / GCP / in-house) sits behind that URL via a swappable adapter —
+   the app never imports a cloud SDK; it only renders a ref and fetches on demand (image lazy, pdf on click). */
+function _mockAtts(id){ try{ if(!localStorage.getItem('cb_mock_att')) return []; }catch(_){ return []; }
+  id = String(id||'x');
+  const S = [
+    { t:'image', n:'site-photo.jpg',    src:'https://picsum.photos/seed/'+encodeURIComponent(id)+'/1000/700' },
+    { t:'image', n:'delivery-note.jpg', src:'https://picsum.photos/seed/'+encodeURIComponent(id+'b')+'/1000/700' },
+    { t:'pdf',   n:'invoice.pdf',       src:'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf' }
+  ];
+  let h=0; for(let i=0;i<id.length;i++) h=(h+id.charCodeAt(i))%997; return S.slice(0, (h%3)+1); }
+/* visible toggle (lives on the Task/Order list header) so attachments can be switched on without devtools */
+function toggleMockAtt(){ try{ if(localStorage.getItem('cb_mock_att')){ localStorage.removeItem('cb_mock_att'); toast('Sample attachments OFF'); } else { localStorage.setItem('cb_mock_att','1'); toast('Sample attachments ON — open a chit to see them'); } }catch(_){ }
+  UI.detail=null; UI.sel=null; if(typeof loadList==='function') loadList(); }
 function attMedia(a,size){
   const big=size==='hero'||size==='lb';
+  if(a&&a.src&&a.t==='image') return '<img class="attImg '+(big?'big':'')+'" src="'+esc(a.src)+'" loading="lazy" alt="'+esc(a.n||'')+'" style="object-fit:cover">';
+  if(a&&a.src&&a.t==='pdf'&&big) return '<iframe class="attpdf" src="'+esc(a.src)+'" title="'+esc(a.n||'pdf')+'"></iframe>';
   const bg=a.t==='image'?'#E8F0F4':a.t==='video'?'#F7F1E4':'#F1EFE8';
   return `<div class="attImg ${big?'big':''}" style="background:${bg}"><span style="font-size:${big?'40px':'20px'}">${attIcon(a.t)}</span>${a.t==='video'?'<span class="vlen">0:12</span>':''}</div>`;
 }
