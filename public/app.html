@@ -408,6 +408,10 @@ img.attImg{object-fit:cover;display:block}
 .msgtab .msgfilter{display:inline-flex;flex-wrap:wrap;vertical-align:middle}
 .msgtab .msgfilter + .msgfilter{margin-left:10px}
 .msgtab .msgfilter + .msgfilter::before{content:"|";color:var(--line);font-weight:700;margin-right:10px;align-self:center}
+.msgfilters{display:flex;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.msgfilters .msgfilter{margin-bottom:0}
+.msgfilters .msgfilter + .msgfilter{margin-left:10px}
+.msgfilters .msgfilter + .msgfilter::before{content:"|";color:var(--line);font-weight:700;margin-right:10px;align-self:center}
 </style>
 </head>
 <body>
@@ -2070,7 +2074,7 @@ function messagesTab(c){
     ? `<div class="composer">${typeSel}<div class="chlabel ext">↔ External · ${c.party||'the shop'} will see this</div><textarea id="msgbody" placeholder="Message to ${c.party||'the shop'}…"></textarea><button class="send ext" onclick="sendMessage('${c.id}')">Send ${MTYPES[kind].label} ↔ external</button></div>`
     : `<div class="composer"><div class="chtoggle"><button class="int ${ch==='internal'?'on':''}" onclick="setMsgChan('internal')">🔒 Internal</button><button class="ext ${ch==='external'?'on':''}" onclick="setMsgChan('external')">↔ External</button></div>${typeSel}<textarea id="msgbody" placeholder="${ch==='internal'?'Note for your team — stays internal':'Message to '+(c.party||'the other party')+' — they will see this'}"></textarea><button class="send ${ch==='internal'?'int':'ext'}" onclick="sendMessage('${c.id}')">Send ${MTYPES[kind].label} · ${ch==='internal'?'🔒 internal':'↔ external'}</button></div>`;
   const head=`<div class="msghd"><span class="mh-t">Messages (${msgCount(c)})</span><button class="composebtn ${open?'on':''}" onclick="toggleCompose()">${open?'✕ Close':'✏️ New message'}</button></div>`;
-  return `<div class="msgtab">${head}${open?composer:''}${scopeFilter}${typeFilter}<div class="thread">${thread}</div></div>`;
+  return `<div class="msgtab">${head}${open?composer:''}<div class="msgfilters">${scopeFilter}${typeFilter}</div><div class="thread">${thread}</div></div>`;
 }
 function sendMessage(id){
   const el=document.getElementById('msgbody'); const body=(el?el.value:"").trim(); if(!body){ toast("Type a message first."); return; }
