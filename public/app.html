@@ -1987,7 +1987,7 @@ function detailInner(){
      <div class="itab" style="padding:10px"><div class="sec" style="margin:0">Value</div><div class="disp" style="font-size:17px;font-weight:700">${inr(c.amt)}</div></div>
      <div class="itab" style="padding:10px"><div class="sec" style="margin:0">State</div><div class="disp" style="font-size:15px;font-weight:700">${c.state.toUpperCase()}</div></div></div>
      <div style="margin-top:10px">${proof}</div>`;
-  const actbar = SESSION.role==="customer"
+  const actbar = (UI.folder==='trash') ? `<button class="pri" onclick="restoreChit('${c.id}')">↩ Restore</button>` : (UI.folder==='archive') ? `<button class="pri" onclick="unarchiveChit('${c.id}')">↩ Unarchive</button>` : SESSION.role==="customer"
     ? `<button onclick="toggleCustPri('${c.id}')">⚑ ${c.custPri?'Priority requested':'Request priority'}</button><button class="warn" onclick="quickDispute()">⚑ Dispute</button><button onclick="todo('pdf')">⬇ PDF</button>`
     : `<button onclick="forwardChit('${c.id}')" title="Forward as a new chit">➤ Forward</button><button class="pri" onclick="advanceChit('${c.id}')">Advance ▸</button>${SESSION.role==="actor"?`<button onclick="pickAssign('${c.id}')">👥 Assign</button>`:""}<button class="warn" onclick="quickDispute()">⚑ Dispute</button>${SESSION.role==="entity"?`<button class="warn pend" onclick="todo('voidChit')">⊘ Void</button>`:""}<button onclick="todo('pdf')">⬇ PDF</button>`;
   const dtabs=[["content","Content"],["status","Status"],["summary","Summary"],["messages","💬 Messages"+(msgCount(c)?" ("+msgCount(c)+")":"")]];
@@ -2057,6 +2057,8 @@ function openRaidReport(){ const host=document.getElementById("lbhost"); if(!hos
 }
 
 /* actions wired to API */
+async function restoreChit(id){ try{ await api("restore",{params:{id}}); toast("Restored to active"); UI.detail=null; UI.sel=null; loadList(); }catch(e){ toast(MSG.fail("restore", e)); } }
+async function unarchiveChit(id){ try{ await api("unarchive",{params:{id}}); toast("Unarchived"); UI.detail=null; UI.sel=null; loadList(); }catch(e){ toast(MSG.fail("unarchive", e)); } }
 async function forwardChit(id){ try{ const r=await api("chit",{params:{id}}); const h=(r&&r.header)||r||{}; const det=(r&&r.detail)||{}; const items=(det.line_items||[]).map(function(li){ return {particulars:li.particulars||'item', unit:'unit', price:+li.price||0, qty:+li.quantity||0}; }); const subj=(h.manual_subject||h.auto_subject||'chit'); compose({items:items, subject:'Fwd: '+subj, forwardFrom:id}); }catch(e){ toast(MSG.fail("forward", e)); } }
 async function advanceChit(id){
   const c=UI.rows.find(x=>x.id===id)||UI.detail; if(c&&c.state==="close"){toast("At Close — next is Archive (sunset model).");return;}
