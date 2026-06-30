@@ -1670,7 +1670,7 @@ function taskPanel(){
   const folders = "";  /* Task/Order live in the left menu / mobile drawer — no duplicate toggle here */
   const sub = (role==="actor"&&UI.folder==="task") ? `<div class="folders"><button class="${UI.sub==='my'?'on':''}" onclick="setSub('my')">My Task</button><button class="${UI.sub==='all'?'on':''}" onclick="setSub('all')">All Task</button></div>` : "";
   const counts = countStates();
-  const stTabs = (["drafts","trash","archive"].indexOf(UI.folder)>=0) ? "" : `<div class="statetabs">${["open","act","close"].map(s=>`<button class="${UI.state===s?'on '+s:''}" onclick="setState('${s}')">${UI.selectMode&&!isCust?`<span class="cbx ${UI.aggStates.has(s)?'on':''}" style="width:13px;height:13px;margin:0" onclick="event.stopPropagation();toggleAgg('${s}')">${UI.aggStates.has(s)?'✓':''}</span>`:''}${cap(s)} <span class="n">${counts[s]}</span></button>`).join("")}</div>`;
+  const stTabs = (["drafts","trash","archive"].indexOf(UI.folder)>=0 || UI.search || advActive()) ? "" : `<div class="statetabs">${["open","act","close"].map(s=>`<button class="${UI.state===s?'on '+s:''}" onclick="setState('${s}')">${UI.selectMode&&!isCust?`<span class="cbx ${UI.aggStates.has(s)?'on':''}" style="width:13px;height:13px;margin:0" onclick="event.stopPropagation();toggleAgg('${s}')">${UI.aggStates.has(s)?'✓':''}</span>`:''}${cap(s)} <span class="n">${counts[s]}</span></button>`).join("")}</div>`;
   const funnel = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>`;
   const tools = isCust ? "" : `<div class="tools">
       <div class="tool" title="Change status" onclick="quickStatus()">◧</div>
@@ -1854,8 +1854,8 @@ function onSrch(scope, q){ clearTimeout(UI._srchT); UI._srchT=setTimeout(functio
 function advParams(){ const a=UI.adv||{}; const o={}; ['amount_min','amount_max','date_from','date_to','priority','fstatus'].forEach(function(k){ if(a[k])o[k]=a[k]; }); return o; }
 function advActive(){ const a=UI.adv||{}; return !!(a.amount_min||a.amount_max||a.date_from||a.date_to||a.fstatus||a.priority); }
 function toggleAdv(){ UI.advOpen=!UI.advOpen; renderApp(); }
-function applyAdv(){ UI.adv={ amount_min:val("adv_amin")||undefined, amount_max:val("adv_amax")||undefined, date_from:val("adv_dfrom")||undefined, date_to:val("adv_dto")||undefined, fstatus:val("adv_status")||undefined, priority:val("adv_pri")||undefined }; UI.advOpen=false; UI.sel=null; UI.detail=null; loadList(); }
-function clearAdv(){ UI.adv={}; UI.advOpen=false; UI.sel=null; UI.detail=null; loadList(); }
+function applyAdv(){ UI.adv={ amount_min:val("adv_amin")||undefined, amount_max:val("adv_amax")||undefined, date_from:val("adv_dfrom")||undefined, date_to:val("adv_dto")||undefined, fstatus:val("adv_status")||undefined, priority:val("adv_pri")||undefined }; UI.advOpen=false; UI.sel=null; UI.detail=null; renderApp(); }
+function clearAdv(){ UI.adv={}; UI.advOpen=false; UI.sel=null; UI.detail=null; renderApp(); }
 function advBtnHtml(){ return '<button class="advbtn '+(advActive()?'on':'')+'" onclick="event.stopPropagation();toggleAdv()" title="Advanced search">▾</button>'+(UI.advOpen?advPanel():''); }
 function advPanel(){ const a=UI.adv||{};
   return `<div class="advpanel" onclick="event.stopPropagation()">
@@ -1885,7 +1885,7 @@ async function loadList(){
 }
 function paintRowsOnly(){const b=document.getElementById("rows"); if(b)b.innerHTML=renderRows(); const cs=countStates(); document.querySelectorAll(".statetabs .n").forEach((el,i)=>{el.textContent=cs[["open","act","close"][i]];}); pgPaintTotal(); applyColTpl();}
 function visibleRows(){
-  let rows = (["drafts","trash","archive"].indexOf(UI.folder)>=0) ? UI.rows.slice() : ((UI.selectMode&&SESSION.role!=="customer") ? UI.rows.filter(c=>UI.aggStates.has(c.state)) : UI.rows.filter(c=>c.state===UI.state));
+  let rows = (["drafts","trash","archive"].indexOf(UI.folder)>=0 || UI.search || advActive()) ? UI.rows.slice() : ((UI.selectMode&&SESSION.role!=="customer") ? UI.rows.filter(c=>UI.aggStates.has(c.state)) : UI.rows.filter(c=>c.state===UI.state));
   const f=UI.filter||{};
   if(f.kind) rows=rows.filter(c=>c.kind===f.kind);
   if(f.disputeOnly) rows=rows.filter(c=>c.dispute);
