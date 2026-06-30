@@ -1245,7 +1245,7 @@ async function submitCompose(isDraft){
   try{
     const r=await api("createChit",{body:{recipients,is_draft:!!isDraft,send_as_label,subject,schema_values,line_items,priority:val("cc_priority")||"normal",forwarded_from:UI._forwardFrom||undefined}});
     closeModal(); CC={items:[],rcpts:[]};
-    if(isDraft){ toast(MSG.draftSaved()); UI.nav="order"; UI.folder="order"; }
+    if(isDraft){ toast(MSG.draftSaved()); UI.nav="drafts"; UI.folder="drafts"; try{localStorage.setItem("cb_nav","drafts");}catch(_){} }
     else if(r&&r.selfCopies){ toast(MSG.chitBridged(r.copies, r.selfCopies)); UI.nav="task"; UI.folder="task"; }
     else { toast(MSG.chitBridged(r&&r.copies)); UI.nav="order"; UI.folder="order"; }
     UI.sel=null; UI.detail=null; await loadList(); renderApp();
