@@ -1210,7 +1210,7 @@ async function compose(prefill){ UI.drawer=false; CC={items:(prefill&&prefill.it
         : `<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:10px 12px;font-size:12.5px;color:#6b5a36">${_catErr?esc(MSG.catalogueLoadErr()):'Your catalogue is empty — a chit needs at least one line item. <a onclick="closeModal();navTo(\'catalogue\')" style="color:#3F66A6;cursor:pointer;font-weight:600">Add a product in Catalogue first &rarr;</a>'}</div>`}
      <div style="display:flex;gap:6px;margin-top:6px"><input class="inp" id="cc_mname" placeholder="Or type an item name" style="flex:1"><input class="inp" id="cc_mqty" inputmode="numeric" value="1" style="width:50px" title="Qty"><input class="inp" id="cc_mprice" inputmode="numeric" placeholder="Price" style="width:74px"><button class="composebtn" onclick="ccAddManual()">+ Add</button></div>
      <div id="cc_items" style="margin-top:8px"></div>
-     <div style="font-family:'Space Grotesk';font-weight:600;font-size:12px;color:var(--grey);margin:12px 0 4px">Attachments · <span style="font-weight:400">co-signed with the chit</span></div>
+     <div style="font-family:'Space Grotesk';font-weight:600;font-size:12px;color:var(--grey);margin:12px 0 4px">Whole-chit attachments · <span style="font-weight:400">co-signed (use 📎 on a line for item-specific files)</span></div>
      <label class="composebtn" style="cursor:pointer">📎 Attach files<input type="file" multiple style="display:none" onchange="ccAddFiles(this.files);this.value=''"></label>
      <div id="cc_files" style="margin-top:6px"></div>
      <div id="cc_total" style="text-align:right;font-weight:700;font-size:13px;margin-top:6px"></div>
@@ -1239,10 +1239,13 @@ function ccDelItem(i){ CC.items.splice(i,1); ccRenderItems(); }
 function ccQty(i,v){ if(CC.items[i])CC.items[i].qty=Math.max(0,+v||0); ccRenderTotal(); }
 function ccLineTotal(it){ return (+it.qty||0)*(+it.price||0); }
 function ccRenderItems(){ const h=document.getElementById("cc_items"); if(!h)return;
-  h.innerHTML = CC.items.length ? CC.items.map((it,i)=>`<div style="display:flex;gap:6px;align-items:center;margin-bottom:5px"><span style="flex:1;font-size:12.5px">${esc(it.particulars)}</span><input class="inp" style="width:60px" inputmode="numeric" value="${it.qty}" oninput="ccQty(${i},this.value)"><span style="font-size:11.5px;color:var(--grey);width:64px;text-align:right">${inr(it.price)}</span><span style="font-size:12px;width:80px;text-align:right;font-family:'Space Mono'">${inr(ccLineTotal(it))}</span><button class="composebtn" onclick="ccDelItem(${i})">✕</button></div>`).join("")
+  h.innerHTML = CC.items.length ? CC.items.map((it,i)=>`<div style="display:flex;gap:6px;align-items:center;margin-bottom:2px"><span style="flex:1;font-size:12.5px">${esc(it.particulars)}</span><input class="inp" style="width:60px" inputmode="numeric" value="${it.qty}" oninput="ccQty(${i},this.value)"><span style="font-size:11.5px;color:var(--grey);width:64px;text-align:right">${inr(it.price)}</span><span style="font-size:12px;width:80px;text-align:right;font-family:'Space Mono'">${inr(ccLineTotal(it))}</span><label class="composebtn" title="Attach to this item" style="cursor:pointer;padding:4px 7px">📎<input type="file" multiple style="display:none" onchange="ccAddItemFiles(${i},this.files);this.value=''"></label><button class="composebtn" onclick="ccDelItem(${i})">✕</button></div><div id="cc_itf_${i}" style="margin:1px 0 7px 0">${ccItemChips(i)}</div>`).join("")
     : `<div style="font-size:12px;color:var(--grey);padding:4px 0">No items yet — pick from the catalogue or type one above.</div>`;
   ccRenderTotal();
 }
+function ccItemChips(i){ var it=CC.items[i]||{}; var fs=it.files||[]; return fs.map(function(f,k){ return '<span style="display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:7px;padding:2px 7px;margin:2px 5px 0 0;font-size:11px;background:#fff">'+attIcon(attType(f.type,f.name))+' '+esc(f.name.length>20?f.name.slice(0,20)+'…':f.name)+' <span onclick="ccDelItemFile('+i+','+k+')" style="cursor:pointer;color:#9aa3a7">✕</span></span>'; }).join(''); }
+function ccAddItemFiles(i,files){ var it=CC.items[i]; if(!it)return; it.files=it.files||[]; for(var k=0;k<files.length;k++){ var f=files[k]; if(f.size>6*1024*1024){ toast(f.name+' is over 6MB — skipped.'); continue; } it.files.push(f); } var el=document.getElementById('cc_itf_'+i); if(el)el.innerHTML=ccItemChips(i); }
+function ccDelItemFile(i,k){ var it=CC.items[i]; if(it&&it.files){ it.files.splice(k,1); } var el=document.getElementById('cc_itf_'+i); if(el)el.innerHTML=ccItemChips(i); }
 function ccRenderTotal(){ const t=document.getElementById("cc_total"); if(!t)return; const sum=CC.items.reduce((s,it)=>s+ccLineTotal(it),0); t.textContent=CC.items.length?("Total "+inr(sum)):""; }
 async function submitCompose(isDraft){
   const err=document.getElementById("cc_err"); if(err)err.textContent="";
@@ -1260,6 +1263,7 @@ async function submitCompose(isDraft){
     const r=await api("createChit",{body:{recipients,is_draft:!!isDraft,send_as_label,subject,schema_values,line_items,priority:val("cc_priority")||"normal",forwarded_from:UI._forwardFrom||undefined}});
     const _newId=r&&r.chit_id;
     if(_newId && (CC.files||[]).length){ for(const f of CC.files){ try{ await attUpload(_newId, f); }catch(e){ toast('Attachment "'+f.name+'" failed.'); } } }
+    if(_newId){ for(let _li=0;_li<CC.items.length;_li++){ const _it=CC.items[_li]; if(_it&&_it.files&&_it.files.length){ for(const f of _it.files){ try{ await attUpload(_newId, f, {line_index:_li}); }catch(e){ toast('Attachment "'+f.name+'" failed.'); } } } } }
     closeModal(); CC={items:[],rcpts:[]};
     if(isDraft){ toast(MSG.draftSaved()); UI.nav="drafts"; UI.folder="drafts"; try{localStorage.setItem("cb_nav","drafts");}catch(_){} }
     else if(r&&r.selfCopies){ toast(MSG.chitBridged(r.copies, r.selfCopies)); UI.nav="task"; UI.folder="task"; }
@@ -1710,7 +1714,7 @@ function taskPanel(){
     </div>${UI.filterOpen?filterPanel():""}`;
   const sel = (UI.selectMode&&!isCust)?selBar():"";
   const _ak = (UI.folder==='order')?'order':'task';
-  const helpStrip = isCust ? "" : `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line);background:var(--gold-soft);font-size:12px;color:#6b5a36"><b style="font-family:'Space Grotesk'">${_ak==='order'?"Order — chits you've sent":"Task — chits received"}</b><button class="composebtn" onclick="toggleMockAtt()" title="Toggle sample attachments (demo)">📎 demo</button><button class="composebtn" style="margin-left:auto" onclick="toggleListHelp()">${UI.listHelp?'✕ Close':'❓ Help'}</button></div>${UI.listHelp?`<div style="padding:11px 12px;border-bottom:1px solid var(--line);overflow-y:auto;max-height:52%">${assistPage(_ak)}</div>`:''}`;
+  const helpStrip = isCust ? "" : `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line);background:var(--gold-soft);font-size:12px;color:#6b5a36"><b style="font-family:'Space Grotesk'">${_ak==='order'?"Order — chits you've sent":"Task — chits received"}</b><button class="composebtn" style="margin-left:auto" onclick="toggleListHelp()">${UI.listHelp?'✕ Close':'❓ Help'}</button></div>${UI.listHelp?`<div style="padding:11px 12px;border-bottom:1px solid var(--line);overflow-y:auto;max-height:52%">${assistPage(_ak)}</div>`:''}`;
   const list = `<div class="list">${helpStrip}
     <div class="lh">${folders}${sub}${stTabs}
       <div class="srch">🔍 <input placeholder="${isCust?'Search my orders':'Search chits, party, item'}" id="listsrch" value="${esc(UI.search||'')}" oninput="onSrch('list', this.value)">${advBtnHtml()}</div>
@@ -1839,11 +1843,11 @@ function mapApiChit(c){
     party:(tos.join(', '))||senderR.display_name||c.sender_entity_display_name||'—', cust:tos.join(', '), area:'', rcc:ccs.length, rfor:fors.length, rsummary:rsummary, sender:senderR.display_name||c.sender_entity_display_name||'',
     kind:c.purpose||'order', amt:sum.total_value||0, state:ST[c.current_status]||'open', _status:c.current_status||'pending',
     assignTo:c.assigned_to_actor_id||null, folder:'task', dispute:Number(c.open_dispute_count||0)>0,
-    proof:'ok', pri:c.priority_flag||'normal', custPri:!!c.customer_priority, star:!!c.star_flag, unread:(c.read_at!==undefined ? !c.read_at : false), nitems:(c.summary_json&&c.summary_json.line_item_count)||0, items:[], atts:_mockAtts(c.chit_id), msgs:[] };
+    proof:'ok', pri:c.priority_flag||'normal', custPri:!!c.customer_priority, star:!!c.star_flag, unread:(c.read_at!==undefined ? !c.read_at : false), nitems:(c.summary_json&&c.summary_json.line_item_count)||0, items:[], atts:[], msgs:[] };
 }
 function fmtAt(ts){ try{ return new Date(ts).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}); }catch(_){ return ''; } }
 function inr_(v){ return '₹'+Number(v||0).toLocaleString('en-IN'); }
-function fmtLine(li){ return [li.particulars||'Item', (li.quantity||0)+' × '+inr_(li.price)+' = '+inr_(li.total||(li.quantity*li.price)), _mockAtts(String((li&&li.particulars)||'')+((li&&li.total)||''))]; }
+function fmtLine(li){ return [li.particulars||'Item', (li.quantity||0)+' × '+inr_(li.price)+' = '+inr_(li.total||(li.quantity*li.price)), []]; }
 function mapApiMsg(m){ if(!m||m.scope!==undefined) return m; return { id:m.message_id, scope:m.thread_type||'internal', author:m.sender_display_name||'—', body:m.message_text||'', at:fmtAt(m.created_at), type:m.msg_type||'info', unread:false, atts:(m.attachments||[]).map(mapAtt) }; }
 function mapApiActor(a){ if(!a||a.shift!==undefined) return a; const S={active:'on_shift',on_break:'on_break',break:'on_break',off:'off',deactivated:'off'}; return { id:a.identity_id, name:a.display_name, uid:a.user_id||a.uid, shift:S[a.break_status]||'on_shift', load:a.current_task_count||0 }; }
 /* ── generic lazy-list pager — ONE implementation for every scrollable list ────────────────
@@ -2018,7 +2022,7 @@ async function openChit(id, silent){
           const _items=(det.line_items||[]).map(fmtLine);
           const _ratts=(r.attachments||[]).map(mapAtt);
           _ratts.filter(a=>a.line_index!=null).forEach(a=>{ const it=_items[a.line_index]; if(it){ it[2]=it[2]||[]; it[2].push(a); } });
-          UI.detail={...base, items:_items, atts:_mockAtts(id).concat(_ratts.filter(a=>a.line_index==null)), msgs:[], log:(r.state_log||[])};
+          UI.detail={...base, items:_items, atts:_ratts.filter(a=>a.line_index==null), msgs:[], log:(r.state_log||[])};
           try{ const mr=await api("messages",{params:{id}}); UI.detail.msgs=(mr||[]).map(mapApiMsg); }catch(_){}
         } else { UI.detail=r; }
         UI.openLines=new Set(); const fi=(UI.detail.items||[]).findIndex(it=>attsVis(it[2]).length); if(fi>=0)UI.openLines.add('line'+fi);
