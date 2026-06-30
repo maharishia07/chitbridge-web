@@ -151,6 +151,7 @@
   .notifrow .ni{font-size:15px}.notifrow .nt{font-size:12.5px;color:var(--ink);line-height:1.35}.notifrow .ns{font-size:10px;color:var(--grey);margin-top:2px}
   .notiffoot{padding:8px 13px;font-size:10px;color:var(--grey);background:var(--paper)}
   .mover{position:fixed;inset:0;z-index:280;background:rgba(8,24,32,.45);display:flex;align-items:flex-start;justify-content:center;padding:56px 16px;overflow-y:auto}
+  .composepill{position:fixed;left:16px;bottom:16px;z-index:300;background:var(--blue);color:#fff;border-radius:999px;padding:9px 15px;font-size:13px;font-weight:700;box-shadow:0 8px 22px rgba(0,0,0,.28);display:flex;align-items:center;gap:10px}
   .modal{width:360px;max-width:94vw;background:#fff;border-radius:14px;overflow:hidden;box-shadow:var(--shadow)}
   .modal .mhd{padding:13px 16px;border-bottom:1px solid var(--line)}
   .modal .mhd .t{font-family:'Space Grotesk';font-weight:700;font-size:15px;color:var(--ink)}
@@ -1225,7 +1226,7 @@ async function compose(prefill){ UI.drawer=false; CC={items:(prefill&&prefill.it
      <div class="err" id="cc_err"></div>
    </div>
    <div class="mfoot"><button onclick="closeModal()">Cancel</button><button onclick="submitCompose(true)">Save draft</button><button class="pri" onclick="submitCompose(false)">Send chit</button></div>`);
-  ccRenderItems(); ccRenderRcpts(); ccRenderFiles();
+  ccRenderItems(); ccRenderRcpts(); ccRenderFiles(); UI._composeModal=true;
   if(prefill&&prefill.subject){ const sf=document.getElementById("cf_subject"); if(sf)sf.value=prefill.subject; }
 }
 /* Recipients — To (Act) / CC (Info) / For (on-behalf), capped, flippable */
@@ -1747,8 +1748,13 @@ function toggleSelect(){UI.selectMode=!UI.selectMode;if(!UI.selectMode)UI.select
 function actionTargets(){ if(UI.selectMode && UI.selected.size) return [...UI.selected]; if(UI.sel) return [UI.sel]; return []; }
 function needTarget(){ const t=actionTargets(); if(!t.length) toast("Open a chit — or tick some in Select — first."); return t; }
 let MODALS={};
-function modal(html){ const h=document.getElementById("modalhost"); if(!h)return; h.innerHTML=`<div class="mover" onclick="closeModal()"><div class="modal" onclick="event.stopPropagation()"><button class="mx" onclick="closeModal()" aria-label="Close" title="Close">✕</button>${html}</div></div>`; }
-function closeModal(){ const h=document.getElementById("modalhost"); if(h)h.innerHTML=""; }
+function modal(html){ const h=document.getElementById("modalhost"); if(!h)return; UI._composeModal=false; h.style.display=''; h.innerHTML=`<div class="mover" onclick="modalBackdrop()"><div class="modal" onclick="event.stopPropagation()"><button class="mx" onclick="closeModal()" aria-label="Close" title="Close">✕</button>${html}</div></div>`; }
+function modalBackdrop(){ if(UI._composeModal){ minimiseCompose(); } else { closeModal(); } }
+function minimiseCompose(){ const h=document.getElementById("modalhost"); if(!h)return; h.style.display='none'; UI._composeMin=true; renderComposePill(); toast('Compose minimised — tap “Resume compose” to continue.'); }
+function resumeCompose(){ const h=document.getElementById("modalhost"); if(h)h.style.display=''; UI._composeMin=false; const p=document.getElementById('composepill'); if(p)p.remove(); setTimeout(function(){ var t=document.getElementById('cf_subject'); if(t)t.focus(); },20); }
+function renderComposePill(){ var p=document.getElementById('composepill'); if(!p){ p=document.createElement('div'); p.id='composepill'; document.body.appendChild(p); } p.className='composepill'; p.innerHTML='<span onclick="resumeCompose()" style="cursor:pointer">✏️ Resume compose</span><span onclick="discardCompose()" title="Discard draft" style="cursor:pointer;opacity:.75;font-weight:800">✕</span>'; }
+function discardCompose(){ var p=document.getElementById('composepill'); if(p)p.remove(); CC={items:[],rcpts:[]}; closeModal(); }
+function closeModal(){ const h=document.getElementById("modalhost"); if(h){ h.style.display=''; h.innerHTML=""; } UI._composeModal=false; UI._composeMin=false; const p=document.getElementById('composepill'); if(p)p.remove(); }
 function quickStatus(){ const ids=needTarget(); if(!ids.length)return; MODALS.stat={ids,to:null};
   const opts=[["open","Open"],["act","Act"],["close","Close"]].map(([v,l])=>`<div class="optrow" data-v="${v}" onclick="pickStatus('${v}')"><span class="rdo"></span><div class="oc"><div class="on">${l}</div></div></div>`).join("");
   modal(`<div class="mhd"><div class="t">Change status</div><div class="s">${ids.length} chit${ids.length>1?'s':''}</div></div><div class="mbody">${opts}</div><div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="pri" id="mok" disabled onclick="confirmStatus()">Set status</button></div>`);
