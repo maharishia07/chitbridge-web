@@ -400,6 +400,9 @@ img.attImg{object-fit:cover;display:block}
 .advchip{display:inline-flex;align-items:center;gap:5px;background:#E3EDF8;color:#345488;border:1px solid #cfe0f4;border-radius:12px;padding:1px 8px;font-size:11px;margin:0 5px 0 0;white-space:nowrap}
 .advchip b{cursor:pointer;font-weight:700;color:#7a8aa0}
 .advchip b:hover{color:#b4453f}
+.lhead .lhcell:not(:last-child){border-right:1px solid var(--line)}
+.lhcell{padding-right:4px}
+.colrz:hover{background:var(--blue);opacity:.35}
 </style>
 </head>
 <body>
@@ -1815,7 +1818,7 @@ function mapApiChit(c){
     party:(tos.join(', '))||senderR.display_name||c.sender_entity_display_name||'—', cust:tos.join(', '), area:'', rcc:ccs.length, rfor:fors.length, rsummary:rsummary, sender:senderR.display_name||c.sender_entity_display_name||'',
     kind:c.purpose||'order', amt:sum.total_value||0, state:ST[c.current_status]||'open', _status:c.current_status||'pending',
     assignTo:c.assigned_to_actor_id||null, folder:'task', dispute:Number(c.open_dispute_count||0)>0,
-    proof:'ok', pri:c.priority_flag||'normal', custPri:!!c.customer_priority, star:!!c.star_flag, unread:(c.read_at!==undefined ? !c.read_at : false), items:[], atts:_mockAtts(c.chit_id), msgs:[] };
+    proof:'ok', pri:c.priority_flag||'normal', custPri:!!c.customer_priority, star:!!c.star_flag, unread:(c.read_at!==undefined ? !c.read_at : false), nitems:(c.summary_json&&c.summary_json.line_item_count)||0, items:[], atts:_mockAtts(c.chit_id), msgs:[] };
 }
 function fmtAt(ts){ try{ return new Date(ts).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}); }catch(_){ return ''; } }
 function inr_(v){ return '₹'+Number(v||0).toLocaleString('en-IN'); }
@@ -1911,6 +1914,7 @@ const LISTCOLS = [
   { key:'amount',   label:'Amount',   sort:'amount',   w:'96px',  cell:function(c){ return '<span style="font-family:\'Space Mono\'">'+(c.amt?inr(c.amt):'—')+'</span>'; } },
   { key:'status',   label:'Status',   sort:'status',   w:'92px',  cell:function(c){ return '<span class="chipst st-'+c.state+'" onclick="event.stopPropagation();advanceChit(\''+c.id+'\')" title="advance">'+String(c.state||'').toUpperCase()+' ▸</span>'; } },
   { key:'type',     label:'Type',     sort:null,       w:'80px',  cell:function(c){ return esc(c.kind||''); } },
+  { key:'items',    label:'Items',    sort:null,       w:'58px',  cell:function(c){ return (c.nitems||'')+''; } },
   { key:'priority', label:'Priority', sort:'priority', w:'86px',  cell:function(c){ return priChip(c.pri); } },
   { key:'msgs',     label:'💬',       sort:null,       w:'46px',  cell:function(c){ return c.msg? ('💬 '+c.msg) : ''; } },
   { key:'att',      label:'📎',       sort:null,       w:'46px',  cell:function(c){ return (c.atts&&c.atts.length)? ('📎 '+c.atts.length) : ''; } }
