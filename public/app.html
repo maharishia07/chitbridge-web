@@ -456,6 +456,9 @@ const EP = {
   voidChit:        {m:"PUT",  p:"/api/chits/:id/void",           ok:"✓"},  // built (baseline-4)
   rollup:          {m:"GET",  p:"/api/chits/rollup",             ok:"✓"},  // built (baseline-4) — GET ?group_by=counterparty|state (was wrongly POST)
   archive:         {m:"POST", p:"/api/chits/:id/archive",        ok:"✓"},  // built (baseline-4)
+  folder:          {m:"GET",  p:"/api/chits/folder",            ok:"y"},
+  unarchive:       {m:"POST", p:"/api/chits/:id/unarchive",     ok:"y"},
+  restore:         {m:"POST", p:"/api/chits/:id/restore",       ok:"y"},
   createChit:      {m:"POST", p:"/api/chits/send",               ok:"✓"},  // compose a new chit
   addActor:        {m:"POST", p:"/api/actors",                   ok:"✓"},  // create an actor
   disputeQueue:    {m:"GET",  p:"/api/chits/disputes/queue",     ok:"✓"},  // all open disputes
@@ -1040,8 +1043,8 @@ function priChip(p){ return (!p||p==="normal")?"":`<span class="prichip pri-${p}
 let UI = {...UI0, selected:new Set(), aggStates:new Set(["open","act","close"])};
 
 const MENUS = {
-  entity:{top:[["compose","✉️","Compose",""],["task","📥","Task",""],["order","📤","Order",""]], rest:[["network","🔗","Network"],["suppliers","🏭","Suppliers"],["catalogue","🗂️","Catalogue"],["coassists","🧑‍🤝‍🧑","Co-assists"],["mis","📊","MIS"],["disputes","⚖️","Disputes"],["profile","👤","Profile"],["settings","⚙️","Settings"]], tag:"Owner does structure."},
-  actor:{top:[["compose","✉️","Compose",""],["task","📥","Task",""],["order","📤","Order",""]], rest:[["suppliers","🏭","Suppliers"],["profile","👤","Profile"]], tag:"Commerce yes, structure no."},
+  entity:{top:[["compose","✉️","Compose",""],["task","📥","Task",""],["order","📤","Order",""],["drafts","📝","Drafts",""],["trash","🗑️","Trash",""],["archive","🗄️","Archive",""]], rest:[["network","🔗","Network"],["suppliers","🏭","Suppliers"],["catalogue","🗂️","Catalogue"],["coassists","🧑‍🤝‍🧑","Co-assists"],["mis","📊","MIS"],["disputes","⚖️","Disputes"],["profile","👤","Profile"],["settings","⚙️","Settings"]], tag:"Owner does structure."},
+  actor:{top:[["compose","✉️","Compose",""],["task","📥","Task",""],["order","📤","Order",""],["drafts","📝","Drafts",""],["trash","🗑️","Trash",""],["archive","🗄️","Archive",""]], rest:[["suppliers","🏭","Suppliers"],["profile","👤","Profile"]], tag:"Commerce yes, structure no."},
   customer:{top:[["order","📤","My orders",""]], rest:[["shops","🏬","Find a shop"]], tag:"You see only your orders."},
 };
 const PURPOSE = {
@@ -1084,7 +1087,7 @@ function renderApp(){
       <div id="mainbody" style="flex:1;display:flex;flex-direction:column;min-height:0">${mainBody()}</div>
     </div>
   </div></div><div id="lbhost"></div><div id="modalhost"></div>`;
-  if(["task","order"].includes(UI.nav)) loadList();
+  if(["task","order","drafts","trash","archive"].includes(UI.nav)) loadList();
   if(UI.nav==="disputes") loadDisputes();
   if(UI.nav==="profile") loadProfile();
   if(UI.nav==="settings") loadSettings();
@@ -1106,7 +1109,7 @@ function autoRefresh(){
     const lb=document.getElementById('lbhost');    if(lb && lb.innerHTML.trim()) return;
     const ae=document.activeElement; if(ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) return;
     if(UI.detail || UI.mdetail) return;
-    if(['task','order'].includes(UI.nav)) loadList();
+    if(['task','order','drafts','trash','archive'].includes(UI.nav)) loadList();
     else if(UI.nav==='disputes') loadDisputes();
     else if(UI.nav==='coassists') loadCoassists();
   }catch(e){}
@@ -1115,7 +1118,7 @@ function startAutoRefresh(sec){ if(_autoRefreshTimer) clearInterval(_autoRefresh
 function togglePurpose(){UI.purpose=!UI.purpose;const el=document.getElementById('purposebar');if(el)el.classList.toggle('open',UI.purpose);const ic=document.getElementById('infobtn');if(ic)ic.classList.toggle('on',UI.purpose);}
 function navTitle(){const all={...Object.fromEntries(Object.values(MENUS).flatMap(m=>[...m.top,...m.rest]).map(x=>[x[0],x[2]]))};return all[UI.nav]||UI.nav;}
 function menuBtn(x){const[key,ic,label]=x;const on=UI.nav===key;const click=key==="compose"?`compose()`:`navTo('${key}')`;return `<button class="${on?'on':''}" onclick="${click}"><span class="ic">${ic}</span>${label}</button>`;}
-function navTo(k){UI.nav=k;UI.drawer=false;UI.mdetail=false;UI.sel=null;UI.detail=null;if(k==="task")UI.folder="task";if(k==="order")UI.folder="order";renderApp();}
+function navTo(k){UI.nav=k;UI.drawer=false;UI.mdetail=false;UI.sel=null;UI.detail=null;if(k==="task")UI.folder="task";if(k==="order")UI.folder="order";if(["drafts","trash","archive"].indexOf(k)>=0)UI.folder=k;renderApp();}
 /* ATH-119 — Compose / self-chit. Compose = author your own chit (the "Chit"); bridging = addressing it to a counterparty.
    Schema-driven fields + Send-as (entity|actor) + To (self|counterparty) + catalogue line items + two-copy self-chit fan-out. */
 /* ATH-119 / ATH-116 — caps for every "any number" field, one place, per-entity-overridable later.
@@ -1653,7 +1656,7 @@ function taskPanel(){
   const folders = "";  /* Task/Order live in the left menu / mobile drawer — no duplicate toggle here */
   const sub = (role==="actor"&&UI.folder==="task") ? `<div class="folders"><button class="${UI.sub==='my'?'on':''}" onclick="setSub('my')">My Task</button><button class="${UI.sub==='all'?'on':''}" onclick="setSub('all')">All Task</button></div>` : "";
   const counts = countStates();
-  const stTabs = `<div class="statetabs">${["open","act","close"].map(s=>`<button class="${UI.state===s?'on '+s:''}" onclick="setState('${s}')">${UI.selectMode&&!isCust?`<span class="cbx ${UI.aggStates.has(s)?'on':''}" style="width:13px;height:13px;margin:0" onclick="event.stopPropagation();toggleAgg('${s}')">${UI.aggStates.has(s)?'✓':''}</span>`:''}${cap(s)} <span class="n">${counts[s]}</span></button>`).join("")}</div>`;
+  const stTabs = (["drafts","trash","archive"].indexOf(UI.folder)>=0) ? "" : `<div class="statetabs">${["open","act","close"].map(s=>`<button class="${UI.state===s?'on '+s:''}" onclick="setState('${s}')">${UI.selectMode&&!isCust?`<span class="cbx ${UI.aggStates.has(s)?'on':''}" style="width:13px;height:13px;margin:0" onclick="event.stopPropagation();toggleAgg('${s}')">${UI.aggStates.has(s)?'✓':''}</span>`:''}${cap(s)} <span class="n">${counts[s]}</span></button>`).join("")}</div>`;
   const funnel = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>`;
   const tools = isCust ? "" : `<div class="tools">
       <div class="tool" title="Change status" onclick="quickStatus()">◧</div>
@@ -1833,7 +1836,7 @@ pgInit('list', { el:()=>document.getElementById("rows"), limit:50, map:mapApiChi
   store:(rows,first)=>{ if(first){ UI.rows=rows; } else { const seen=new Set(UI.rows.map(r=>r.id)); for(const r of rows){ if(!seen.has(r.id)) UI.rows.push(r); } } } });
 /* common list search — server lists route q through the pager; client (lazyWrap) lists filter in place */
 function onSrch(scope, q){ clearTimeout(UI._srchT); UI._srchT=setTimeout(function(){ q=(q||'').trim(); if(scope==='list'){ UI.search=q; UI.sel=null; UI.detail=null; loadList(); } else if(typeof lazyFilter==='function'){ lazyFilter(scope, q); } }, 300); }
-function fetchPage(page){ const limit=UI.pageLimit||50; if(UI.folder==="order"||SESSION.role==="customer"){ return SESSION.role==="customer" ? api("custOrders",{params:{bridgeId:SESSION.bridgeId},query:{page,limit,q:UI.search||undefined,sort:UI.sort||undefined,dir:UI.dir||undefined}}) : api("sent",{query:{page,limit,q:UI.search||undefined,sort:UI.sort||undefined,dir:UI.dir||undefined}}); } const q={page,limit}; if(UI.search)q.q=UI.search; if(UI.sort){q.sort=UI.sort;q.dir=UI.dir;} if(SESSION.role==="actor"&&UI.sub==="my")q.assigned_to="me"; return api("inbox",{query:q}); }
+function fetchPage(page){ const limit=UI.pageLimit||50; if(["drafts","trash","archive"].indexOf(UI.folder)>=0){ return api("folder",{query:{view:UI.folder,page,limit,q:UI.search||undefined,sort:UI.sort||undefined,dir:UI.dir||undefined}}); } if(UI.folder==="order"||SESSION.role==="customer"){ return SESSION.role==="customer" ? api("custOrders",{params:{bridgeId:SESSION.bridgeId},query:{page,limit,q:UI.search||undefined,sort:UI.sort||undefined,dir:UI.dir||undefined}}) : api("sent",{query:{page,limit,q:UI.search||undefined,sort:UI.sort||undefined,dir:UI.dir||undefined}}); } const q={page,limit}; if(UI.search)q.q=UI.search; if(UI.sort){q.sort=UI.sort;q.dir=UI.dir;} if(SESSION.role==="actor"&&UI.sub==="my")q.assigned_to="me"; return api("inbox",{query:q}); }
 function onRowsScroll(){ if(UI.loading)return; pgScroll("list"); }
 function ensureFilled(){ if(UI.loading)return; pgFill("list"); }
 function loadNextPage(){ return pgNext("list"); }
@@ -1852,7 +1855,7 @@ async function loadList(){
 }
 function paintRowsOnly(){const b=document.getElementById("rows"); if(b)b.innerHTML=renderRows(); const cs=countStates(); document.querySelectorAll(".statetabs .n").forEach((el,i)=>{el.textContent=cs[["open","act","close"][i]];}); pgPaintTotal(); applyColTpl();}
 function visibleRows(){
-  let rows = (UI.selectMode&&SESSION.role!=="customer") ? UI.rows.filter(c=>UI.aggStates.has(c.state)) : UI.rows.filter(c=>c.state===UI.state);
+  let rows = (["drafts","trash","archive"].indexOf(UI.folder)>=0) ? UI.rows.slice() : ((UI.selectMode&&SESSION.role!=="customer") ? UI.rows.filter(c=>UI.aggStates.has(c.state)) : UI.rows.filter(c=>c.state===UI.state));
   const f=UI.filter||{};
   if(f.kind) rows=rows.filter(c=>c.kind===f.kind);
   if(f.disputeOnly) rows=rows.filter(c=>c.dispute);
