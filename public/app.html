@@ -372,6 +372,11 @@ img.attImg{object-fit:cover;display:block}
 .colmenu{position:absolute;right:10px;top:30px;z-index:6;background:#fff;border:1px solid var(--line);border-radius:9px;box-shadow:0 8px 24px rgba(0,0,0,.16);padding:8px 11px;display:flex;flex-direction:column;gap:5px;font-size:12px;text-transform:none;font-weight:400;color:var(--ink)}
 .colmenu label{display:flex;gap:7px;align-items:center;cursor:pointer;white-space:nowrap}
 .optchip.mini{font-size:9px;padding:0 5px}.optchip.mini.r{background:#fbeceb;color:#b4453f;border-color:#f0c9c6}
+.listtotal{display:flex;align-items:center;justify-content:space-between;position:relative}
+.lttools{position:relative;display:flex;align-items:center;gap:6px}
+.colcog{font-size:11px;color:var(--blue);font-family:inherit;border:0;background:none;cursor:pointer}
+.colcog:hover{text-decoration:underline}
+.lttools .colmenu{right:0;top:24px}
 </style>
 </head>
 <body>
@@ -1814,7 +1819,7 @@ function pgFooter(id){ const p=PG[id]; if(!p)return ''; const c=p.cfg.count();
 /* static footer for small, non-paginated lists (count + end marker, no Load more) */
 function staticFooter(n){ return n>0 ? '<div class="listend">'+n+' total · end of list</div>' : ''; }
 /* the Task/Order list bar */
-function pgPaintTotal(){ const lt=document.getElementById("listtotal"); if(lt) lt.textContent=pgTotalText('list'); }
+function pgPaintTotal(){ const lt=document.getElementById("listtotal"); if(!lt)return; lt.innerHTML='<span class="lttxt">'+esc(pgTotalText('list'))+'</span><span class="lttools"><button class="colcog" onclick="event.stopPropagation();toggleColMenu()" title="Choose columns">⚙ columns</button>'+(UI.colMenu?colChooser():'')+'</span>'; }
 pgInit('list', { el:()=>document.getElementById("rows"), limit:50, map:mapApiChit, count:()=>UI.rows.length, repaint:paintRowsKeepScroll, fetch:(page)=>fetchPage(page),
   store:(rows,first)=>{ if(first){ UI.rows=rows; } else { const seen=new Set(UI.rows.map(r=>r.id)); for(const r of rows){ if(!seen.has(r.id)) UI.rows.push(r); } } } });
 /* common list search — server lists route q through the pager; client (lazyWrap) lists filter in place */
@@ -1867,7 +1872,7 @@ function colTemplate(){ const sel = (UI.selectMode&&SESSION.role!=='customer') ?
 function lcDate(ts){ try{ const d=new Date(ts); if(isNaN(d)) return ''; const sameY=d.getFullYear()===new Date().getFullYear(); return d.toLocaleDateString([], sameY?{day:'2-digit',month:'short'}:{day:'2-digit',month:'short',year:'2-digit'}); }catch(_){ return ''; } }
 function listHeader(){ const tpl=colTemplate(); const sel = (UI.selectMode&&SESSION.role!=='customer') ? '<span></span>' : '';
   const cells = visibleCols().map(function(c){ const active = UI.sort===c.sort && c.sort; const arrow = active ? (UI.dir==='asc'?' ▲':' ▼') : (c.sort?' ⇅':''); return '<span class="lhcell'+(c.sort?' sortable':'')+'" '+(c.sort?('onclick="sortBy(\''+c.sort+'\')"'):'')+'>'+esc(c.label)+'<span class="sarr">'+arrow+'</span></span>'; }).join('');
-  return '<div class="lhead" style="grid-template-columns:'+tpl+'">'+sel+cells+'<button class="colcog" onclick="event.stopPropagation();toggleColMenu()" title="Choose columns">⚙</button></div>'+(UI.colMenu?colChooser():''); }
+  return '<div class="lhead" style="grid-template-columns:'+tpl+'">'+sel+cells+'</div>'; }
 function rowGrid(c){ const tpl=colTemplate();
   const cbx = (UI.selectMode&&SESSION.role!=='customer') ? '<span class="cbx '+(UI.selected.has(c.id)?'on':'')+'" onclick="event.stopPropagation();toggleSel(\''+c.id+'\')">'+(UI.selected.has(c.id)?'✓':'')+'</span>' : '';
   const cells = visibleCols().map(function(col){ return '<span class="lcell">'+col.cell(c)+'</span>'; }).join('');
