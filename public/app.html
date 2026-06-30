@@ -1979,7 +1979,7 @@ function rowGrid(c){ const tpl=colTemplate();
   const cbx = (UI.selectMode&&SESSION.role!=='customer') ? '<span class="cbx '+(UI.selected.has(c.id)?'on':'')+'" onclick="event.stopPropagation();toggleSel(\''+c.id+'\')">'+(UI.selected.has(c.id)?'✓':'')+'</span>' : '';
   const cells = visibleCols().map(function(col){ return '<span class="lcell">'+col.cell(c)+'</span>'; }).join('');
   return '<div class="lrow '+(c.id===UI.sel?'sel':'')+' '+(c.unread?'unread':'')+'" style="grid-template-columns:var(--coltpl)" onclick="openChit(\''+c.id+'\')">'+cbx+cells+'</div>'; }
-function sortBy(key){ if(UI.sort===key){ UI.dir = (UI.dir==='asc'?'desc':'asc'); } else { UI.sort=key; UI.dir = (key==='date'?'desc':'asc'); } UI.colMenu=false; UI.sel=null; UI.detail=null; persistSort(); loadList(); }
+function sortBy(key){ if(UI.sort===key){ UI.dir = (UI.dir==='asc'?'desc':'asc'); } else { UI.sort=key; UI.dir = ((key==='date'||key==='priority')?'desc':'asc'); } UI.colMenu=false; UI.sel=null; UI.detail=null; persistSort(); loadList(); }
 function toggleColMenu(){ UI.colMenu=!UI.colMenu; paintRowsKeepScroll(); }
 function colChooser(){ const set=UI.cols||getCols(); return '<div class="colmenu">'+LISTCOLS.map(function(c){ return '<label><input type="checkbox" '+(set.indexOf(c.key)>=0?'checked':'')+' onchange="toggleCol(\''+c.key+'\')"> '+esc(c.label||c.key)+'</label>'; }).join('')+'</div>'; }
 function toggleCol(key){ let set=(UI.cols||getCols()).slice(); const i=set.indexOf(key); if(i>=0){ if(set.length>1) set.splice(i,1); } else { set.push(key); } UI.cols=set; try{ localStorage.setItem('cb_cols', JSON.stringify(set)); }catch(_){ } paintRowsKeepScroll(); }
