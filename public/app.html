@@ -403,6 +403,8 @@ img.attImg{object-fit:cover;display:block}
 .lhead .lhcell:not(:last-child){border-right:1px solid var(--line)}
 .lhcell{padding-right:4px}
 .colrz:hover{background:var(--blue);opacity:.35}
+.composebtn,.pri,.mfoot button,.btn,.advbtn{box-shadow:0 1.5px 0 rgba(0,0,0,.13)}
+.composebtn:active,.pri:active,.mfoot button:active,.btn:active,.advbtn:active{transform:translateY(1.5px);box-shadow:0 0 0 rgba(0,0,0,0);filter:brightness(.95)}
 </style>
 </head>
 <body>
@@ -1606,7 +1608,7 @@ async function loadSuppliers(){ const h=document.getElementById("supbody"); if(!
   }catch(e){ h.innerHTML=scrErr(e); } }
 async function addSupplier(){ const x=document.getElementById("sp_err"); if(x)x.textContent=""; const bid=val("sp_bid"); if(!bid){ if(x)x.textContent="Enter a supplier's User ID."; return; } if(!isUserId(bid)){ if(x)x.textContent="User ID must be at least 8 characters, or an email."; return; }
   try{ await api("supAdd",{body:{supplier_bridge_id:bid}}); toast("Supplier added ✓"); loadSuppliers(); }catch(e){ if(x)x.textContent=e.message; } }
-async function delSupplier(id){ try{ await api("supDel",{params:{id}}); toast(MSG.supplierRemoved()); loadSuppliers(); }catch(e){ toast(MSG.fail("remove the supplier", e)); } }
+async function delSupplier(id){ if(!confirm("Remove this supplier? This cannot be undone.")) return; try{ await api("supDel",{params:{id}}); toast(MSG.supplierRemoved()); loadSuppliers(); }catch(e){ toast(MSG.fail("remove the supplier", e)); } }
 /* CATALOGUE (own products) */
 function catalogueScreen(){ return scr("🗂️ Catalogue","catbody","catalogue"); }
 async function loadCatalogue(){ const h=document.getElementById("catbody"); if(!h)return;
@@ -1616,7 +1618,7 @@ async function loadCatalogue(){ const h=document.getElementById("catbody"); if(!
   }catch(e){ h.innerHTML=scrErr(e); } }
 async function addProduct(){ const x=document.getElementById("ct_err"); if(x)x.textContent=""; const name=val("ct_name"); if(!name){ if(x)x.textContent="Enter a product name."; return; }
   try{ await api("prodAdd",{body:{item_data:{name,price:+val("ct_price")||0}}}); toast("Product added ✓"); loadCatalogue(); }catch(e){ if(x)x.textContent=e.message; } }
-async function delProduct(id){ try{ await api("prodDel",{params:{id}}); toast(MSG.productDeleted()); loadCatalogue(); }catch(e){ toast(MSG.fail("delete the product", e)); } }
+async function delProduct(id){ if(!confirm("Delete this product? This cannot be undone.")) return; try{ await api("prodDel",{params:{id}}); toast(MSG.productDeleted()); loadCatalogue(); }catch(e){ toast(MSG.fail("delete the product", e)); } }
 /* MIS — computed client-side (no MIS route on the legacy backend) */
 function misScreen(){ return scr("📊 MIS","misbody","mis"); }
 async function loadMIS(){ const h=document.getElementById("misbody"); if(!h)return;
