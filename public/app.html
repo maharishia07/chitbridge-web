@@ -203,6 +203,14 @@
   .composebtn{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--blue);background:var(--blue);color:#fff;font-size:11.5px;font-weight:700;border-radius:8px;padding:5px 11px;cursor:pointer}
   .composebtn.on{background:#fff;color:var(--blue)}
   .msgtab .composer{margin-top:0;margin-bottom:12px;border-top:0;border:1px solid var(--line);border-radius:11px;padding:11px;background:#fbfcfe}
+  .msglist{position:relative;flex:1;min-height:0}
+  .composeov{position:absolute;left:0;right:0;top:0;bottom:0;background:rgba(22,32,42,.16);display:flex;align-items:flex-start;justify-content:center;z-index:20;padding:6px;border-radius:8px}
+  .composeov-card{width:100%;max-width:640px;max-height:100%;overflow:auto;box-shadow:0 14px 34px rgba(0,0,0,.22);border-radius:12px}
+  .composeov-card .composer{margin:0;border:1px solid var(--blue);border-radius:12px;background:#fff}
+  .busyov{position:fixed;inset:0;background:rgba(20,30,40,.30);display:flex;align-items:center;justify-content:center;z-index:9999}
+  .busybox{background:#fff;border-radius:12px;padding:15px 22px;display:flex;align-items:center;gap:12px;font-size:13.5px;font-weight:700;color:var(--ink);box-shadow:0 14px 36px rgba(0,0,0,.24)}
+  .bspin{width:18px;height:18px;border:3px solid #D8E4F4;border-top-color:var(--blue);border-radius:50%;animation:bspin .7s linear infinite;flex:none}
+  @keyframes bspin{to{transform:rotate(360deg)}}
   .topbar .msgc{position:relative;border:0;background:none;color:#cfe0e8;font-size:15px;cursor:pointer;padding:2px 4px;line-height:1}
   .topbar .msgc .bdot{position:absolute;top:-2px;right:-3px;background:#d65a5a;color:#fff;font-size:8px;font-weight:800;min-width:13px;height:13px;border-radius:7px;display:flex;align-items:center;justify-content:center;padding:0 3px}
   .unreadtag{font-size:8.5px;font-weight:800;color:#fff;background:#d65a5a;border-radius:7px;padding:0 5px;margin-left:4px}
@@ -1260,16 +1268,17 @@ async function submitCompose(isDraft){
   const line_items=CC.items.map(it=>({particulars:it.particulars,quantity:+it.qty||0,price:+it.price||0,total:ccLineTotal(it)}));
   const recipients=CC.rcpts.map(r=>({name:r.name,role:r.role,self:!!r.self}));
   try{
+    busyShow(isDraft?'Saving draft…':'Sending chit…');
     const r=await api("createChit",{body:{recipients,is_draft:!!isDraft,send_as_label,subject,schema_values,line_items,priority:val("cc_priority")||"normal",forwarded_from:UI._forwardFrom||undefined}});
     const _newId=r&&r.chit_id;
-    if(_newId && (CC.files||[]).length){ for(const f of CC.files){ try{ await attUpload(_newId, f); }catch(e){ toast('Attachment "'+f.name+'" failed.'); } } }
-    if(_newId){ for(let _li=0;_li<CC.items.length;_li++){ const _it=CC.items[_li]; if(_it&&_it.files&&_it.files.length){ for(const f of _it.files){ try{ await attUpload(_newId, f, {line_index:_li}); }catch(e){ toast('Attachment "'+f.name+'" failed.'); } } } } }
+    if(_newId && (CC.files||[]).length){ busyShow('Attaching files…'); for(const f of CC.files){ try{ await attUpload(_newId, f); }catch(e){ toast('Attachment "'+f.name+'" failed.'); } } }
+    if(_newId){ for(let _li=0;_li<CC.items.length;_li++){ const _it=CC.items[_li]; if(_it&&_it.files&&_it.files.length){ busyShow('Attaching files…'); for(const f of _it.files){ try{ await attUpload(_newId, f, {line_index:_li}); }catch(e){ toast('Attachment "'+f.name+'" failed.'); } } } } }
     closeModal(); CC={items:[],rcpts:[]};
     if(isDraft){ toast(MSG.draftSaved()); UI.nav="drafts"; UI.folder="drafts"; try{localStorage.setItem("cb_nav","drafts");}catch(_){} }
     else if(r&&r.selfCopies){ toast(MSG.chitBridged(r.copies, r.selfCopies)); UI.nav="task"; UI.folder="task"; }
     else { toast(MSG.chitBridged(r&&r.copies)); UI.nav="order"; UI.folder="order"; }
-    UI.sel=null; UI.detail=null; await loadList(); renderApp();
-  }catch(e){ if(err)err.textContent=e.message; }
+    UI.sel=null; UI.detail=null; await loadList(); busyHide(); renderApp();
+  }catch(e){ busyHide(); if(err)err.textContent=e.message; }
 }
 function ccAddFiles(files){ CC.files=CC.files||[]; for(var k=0;k<files.length;k++){ var f=files[k]; if(f.size>6*1024*1024){ toast(f.name+' is over 6MB — skipped.'); continue; } CC.files.push(f); } ccRenderFiles(); }
 function ccDelFile(i){ (CC.files||[]).splice(i,1); ccRenderFiles(); }
@@ -2070,7 +2079,7 @@ function openChitMsgs(id){ UI.dtab="messages"; markChitRead(id); openChit(id); s
 function msgCount(c){ return ((c&&c.msgs)?c.msgs:[]).filter(m=>SESSION.role==="customer"?m.scope==="external":true).length; }
 function setMsgFilter(f){ UI.msgFilter=f; paintDetail(); }
 function setMsgChan(ch){ UI.msgChan=ch; paintDetail(); }
-function toggleCompose(){ UI.composeOpen=!UI.composeOpen; paintDetail(); if(UI.composeOpen)setTimeout(()=>{const t=document.getElementById('msgbody');if(t)t.focus();},30); }
+function toggleCompose(){ UI.composeOpen=!UI.composeOpen; paintDetail(); if(UI.composeOpen)setTimeout(()=>{const dp=document.getElementById('detailpane'); if(dp)dp.scrollTop=0; const t=document.getElementById('msgbody');if(t)t.focus();},30); }
 function setMsgType(t){ UI.msgType=t; paintDetail(); }
 function setMsgKind(k){ UI.msgKind=k; paintDetail(); }
 /* messages + status: real data + search + Latest/Oldest sort (latest default) ───────────────── */
@@ -2105,11 +2114,13 @@ function messagesTab(c){
     ? `<div class="composer">${typeSel}<div class="chlabel ext">↔ External · ${c.party||'the shop'} will see this</div><textarea id="msgbody" placeholder="Message to ${c.party||'the shop'}…"></textarea>${attachRow}<button class="send ext" onclick="sendMessage('${c.id}')">Send ${MTYPES[kind].label} ↔ external</button></div>`
     : `<div class="composer"><div class="chtoggle"><button class="int ${ch==='internal'?'on':''}" onclick="setMsgChan('internal')">🔒 Internal</button><button class="ext ${ch==='external'?'on':''}" onclick="setMsgChan('external')">↔ External</button></div>${typeSel}<textarea id="msgbody" placeholder="${ch==='internal'?'Note for your team — stays internal':'Message to '+(c.party||'the other party')+' — they will see this'}"></textarea>${attachRow}<button class="send ${ch==='internal'?'int':'ext'}" onclick="sendMessage('${c.id}')">Send ${MTYPES[kind].label} · ${ch==='internal'?'🔒 internal':'↔ external'}</button></div>`;
   const head=`<div class="msghd"><span class="mh-t">Messages (${msgCount(c)})</span><button class="composebtn ${open?'on':''}" onclick="toggleCompose()">${open?'✕ Close':'✏️ New message'}</button></div>`;
-  return `<div class="msgtab">${head}${open?composer:''}<div class="msgfilters">${scopeFilter}${typeFilter}${msgSearchSort()}</div><div class="thread">${thread}</div></div>`;
+  return `<div class="msgtab">${head}<div class="msglist"><div class="msgfilters">${scopeFilter}${typeFilter}${msgSearchSort()}</div><div class="thread">${thread}</div>${open?`<div class="composeov" onclick="if(event.target===this)toggleCompose()"><div class="composeov-card">${composer}</div></div>`:''}</div></div>`;
 }
 function msgChips(){ var fs=UI.msgFiles||[]; return fs.map(function(f,i){ return '<span style="display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:7px;padding:2px 7px;font-size:11px;background:#fff">'+attIcon(attType(f.type,f.name))+' '+esc(f.name.length>18?f.name.slice(0,18)+'…':f.name)+' <span onclick="msgDelFile('+i+')" style="cursor:pointer;color:#9aa3a7">✕</span></span>'; }).join(''); }
 function msgAddFiles(files){ UI.msgFiles=UI.msgFiles||[]; for(var k=0;k<files.length;k++){ var f=files[k]; if(f.size>6*1024*1024){ toast(f.name+' is over 6MB — skipped.'); continue; } UI.msgFiles.push(f); } var el=document.getElementById('msgfileschips'); if(el)el.innerHTML=msgChips(); }
 function msgDelFile(i){ (UI.msgFiles||[]).splice(i,1); var el=document.getElementById('msgfileschips'); if(el)el.innerHTML=msgChips(); }
+function busyShow(msg){ var h=document.getElementById('busyhost'); if(!h){ h=document.createElement('div'); h.id='busyhost'; document.body.appendChild(h); } h.innerHTML='<div class="busyov"><div class="busybox"><span class="bspin"></span><span>'+esc(msg||'Working…')+'</span></div></div>'; }
+function busyHide(){ var h=document.getElementById('busyhost'); if(h)h.innerHTML=''; }
 function sendMessage(id){
   const el=document.getElementById('msgbody'); const body=(el?el.value:"").trim(); if(!body){ toast("Type a message first."); return; }
   const ch=UI.msgChan||(SESSION.role==="customer"?"external":"internal");
@@ -2118,12 +2129,15 @@ function sendMessage(id){
 }
 async function doSendMessage(id, scope){
   const el=document.getElementById('msgbody'); const body=(el?el.value:"").trim(); if(!body){ toast(MSG.msgEmpty()); return; }
-  let _mr; try{ _mr=await api("sendMsg",{params:{id},body:{thread_type:scope,message_text:body,msg_type:UI.msgKind||"info"}}); }catch(e){ toast(MSG.fail("send the message", e)); return; }
+  busyShow('Sending message…');
+  let _mr; try{ _mr=await api("sendMsg",{params:{id},body:{thread_type:scope,message_text:body,msg_type:UI.msgKind||"info"}}); }catch(e){ busyHide(); toast(MSG.fail("send the message", e)); return; }
   const _mid=_mr&&_mr.message_id;
-  if(_mid && (UI.msgFiles||[]).length){ for(const f of UI.msgFiles){ try{ await attUpload(id, f, {message_id:_mid}); }catch(e){ toast('Attachment "'+f.name+'" failed.'); } } }
+  if(_mid && (UI.msgFiles||[]).length){ busyShow('Attaching '+UI.msgFiles.length+' file(s)…'); for(const f of UI.msgFiles){ try{ await attUpload(id, f, {message_id:_mid}); }catch(e){ toast('Attachment "'+f.name+'" failed.'); } } }
   UI.msgFiles=[];
+  UI.composeOpen=false;
   try{ await openChit(id,true); }catch(_){}
   const i=UI.rows.findIndex(x=>x.id===id); if(i>=0)UI.rows[i].msg=msgCount(UI.detail);
+  busyHide();
   paintDetail(); paintRowsOnly();
   toast(scope==='external'?MSG.msgSentExternal(UI.detail&&UI.detail.party):MSG.msgSentInternal());
 }
