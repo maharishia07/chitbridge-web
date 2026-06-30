@@ -396,6 +396,10 @@ img.attImg{object-fit:cover;display:block}
 .advrow{display:flex;align-items:center;gap:6px}.advrow label{width:60px;font-size:11.5px;color:var(--grey);font-weight:600}
 .advin{flex:1;border:1px solid var(--line);border-radius:7px;padding:4px 7px;font-size:12px;min-width:0;font-family:inherit}
 .advdash{font-size:11px;color:var(--grey)}.advfoot{display:flex;justify-content:flex-end;gap:7px;margin-top:3px}
+.advx{position:absolute;top:6px;right:9px;border:0;background:none;font-size:14px;color:#9aa3a7;cursor:pointer;line-height:1}
+.advchip{display:inline-flex;align-items:center;gap:5px;background:#E3EDF8;color:#345488;border:1px solid #cfe0f4;border-radius:12px;padding:1px 8px;font-size:11px;margin:0 5px 0 0;white-space:nowrap}
+.advchip b{cursor:pointer;font-weight:700;color:#7a8aa0}
+.advchip b:hover{color:#b4453f}
 </style>
 </head>
 <body>
@@ -1853,13 +1857,16 @@ function onSrch(scope, q){ clearTimeout(UI._srchT); UI._srchT=setTimeout(functio
 /* ── advanced search (header-level only): amount range, date range, status, priority ──────── */
 function advParams(){ const a=UI.adv||{}; const o={}; ['amount_min','amount_max','date_from','date_to','priority','fstatus'].forEach(function(k){ if(a[k])o[k]=a[k]; }); return o; }
 function advActive(){ const a=UI.adv||{}; return !!(a.amount_min||a.amount_max||a.date_from||a.date_to||a.fstatus||a.priority); }
-function toggleAdv(){ UI.advOpen=!UI.advOpen; renderApp(); }
+function toggleAdv(){ const host=document.querySelector(".srch"); if(!host)return; const p=host.querySelector(".advpanel"); if(p){ p.remove(); } else { host.insertAdjacentHTML("beforeend", advPanel()); } }
+function closeAdvPanel(){ const p=document.querySelector(".advpanel"); if(p)p.remove(); }
 function applyAdv(){ UI.adv={ amount_min:val("adv_amin")||undefined, amount_max:val("adv_amax")||undefined, date_from:val("adv_dfrom")||undefined, date_to:val("adv_dto")||undefined, fstatus:val("adv_status")||undefined, priority:val("adv_pri")||undefined }; UI.advOpen=false; UI.sel=null; UI.detail=null; renderApp(); }
 function clearAdv(){ UI.adv={}; UI.advOpen=false; UI.sel=null; UI.detail=null; renderApp(); }
-function advBtnHtml(){ return '<button class="advbtn '+(advActive()?'on':'')+'" onclick="event.stopPropagation();toggleAdv()" title="Advanced search">▾</button>'+(UI.advOpen?advPanel():''); }
+function advBtnHtml(){ return advChips()+'<button class="advbtn '+(advActive()?'on':'')+'" onclick="event.stopPropagation();toggleAdv()" title="Advanced search">▾</button>'; }
+function advChips(){ if(!advActive())return ''; const a=UI.adv||{}; const ch=[]; if(a.amount_min||a.amount_max)ch.push(['amt','Amt '+(a.amount_min||'0')+'–'+(a.amount_max||'max')]); if(a.date_from||a.date_to)ch.push(['date',(a.date_from||'…')+'→'+(a.date_to||'…')]); if(a.fstatus)ch.push(['fstatus',a.fstatus]); if(a.priority)ch.push(['priority',a.priority]); return ch.map(function(x){ return '<span class="advchip">'+esc(x[1])+'<b onclick="event.stopPropagation();delAdv(\''+x[0]+'\')">✕</b></span>'; }).join(''); }
+function delAdv(k){ const a=UI.adv||{}; if(k==='amt'){delete a.amount_min;delete a.amount_max;} else if(k==='date'){delete a.date_from;delete a.date_to;} else delete a[k]; UI.adv=a; UI.sel=null; UI.detail=null; renderApp(); }
 function advPanel(){ const a=UI.adv||{};
   return `<div class="advpanel" onclick="event.stopPropagation()">
-    <div class="advttl">Advanced search <span>header-level</span></div>
+    <button class="advx" onclick="closeAdvPanel()" title="Close">✕</button><div class="advttl">Advanced search <span>header-level</span></div>
     <div class="advrow"><label>Amount</label><input class="advin" id="adv_amin" inputmode="numeric" placeholder="min" value="${a.amount_min||''}"><span class="advdash">to</span><input class="advin" id="adv_amax" inputmode="numeric" placeholder="max" value="${a.amount_max||''}"></div>
     <div class="advrow"><label>Date</label><input class="advin" id="adv_dfrom" type="date" value="${a.date_from||''}"><span class="advdash">to</span><input class="advin" id="adv_dto" type="date" value="${a.date_to||''}"></div>
     <div class="advrow"><label>Status</label><select class="advin" id="adv_status"><option value="">Any</option><option value="open" ${a.fstatus==='open'?'selected':''}>Open</option><option value="act" ${a.fstatus==='act'?'selected':''}>Act</option><option value="close" ${a.fstatus==='close'?'selected':''}>Close</option></select></div>
