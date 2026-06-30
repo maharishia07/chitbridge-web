@@ -2335,24 +2335,7 @@ document.addEventListener('mouseup',endDrag);document.addEventListener('touchend
 /* attachments + lightbox */
 function attsVis(atts){return (atts||[]);}  /* DEC: customer sees the full co-signed set — both parties co-hold every attachment */
 function attIcon(t){return t==='video'?'▶':t==='doc'?'📄':'🖼️';}
-/* MOCK attachments — visualise the lightbox/strip without a backend. Gated by localStorage 'cb_mock_att'.
-   Platform-INDEPENDENT by design: an attachment is just { t, n, src } where src is an opaque URL.
-   The real storage (AWS S3 / Azure Blob / GCP / in-house) sits behind that URL via a swappable adapter —
-   the app never imports a cloud SDK; it only renders a ref and fetches on demand (image lazy, pdf on click). */
-function _mockAtts(id){ try{ if(!localStorage.getItem('cb_mock_att')) return []; }catch(_){ return []; }
-  id = String(id||'x');
-  const S = [
-    { t:'image', n:'site-photo.jpg',    src:'data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="640" height="440"><rect width="640" height="440" fill="#cfe0f4"/><text x="320" y="215" font-size="30" text-anchor="middle" fill="#345488" font-family="sans-serif">SAMPLE IMAGE</text><text x="320" y="255" font-size="16" text-anchor="middle" fill="#5a749c" font-family="sans-serif">'+id.slice(0,8)+'</text></svg>') },
-    { t:'image', n:'delivery-note.jpg', src:'data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="640" height="440"><rect width="640" height="440" fill="#e6dcc2"/><text x="320" y="230" font-size="30" text-anchor="middle" fill="#7a5e22" font-family="sans-serif">DELIVERY PHOTO</text></svg>') },
-    { t:'pdf',   n:'invoice.pdf',       src:'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf' },
-    { t:'xlsx', n:'price-list.xlsx', src:'https://file-examples.com/wp-content/storage/2017/02/file_example_XLSX_10.xlsx' },
-    { t:'docx', n:'purchase-agreement.docx', src:'https://file-examples.com/wp-content/storage/2017/02/file_example_DOCX_100kB.docx' },
-    { t:'zip',  n:'evidence-bundle.zip', src:'https://file-examples.com/wp-content/storage/2017/02/zip_2MB.zip' }
-  ];
-  let h=0; for(let i=0;i<id.length;i++) h=(h+id.charCodeAt(i))%997; const k=(h%3)+1, out=[]; for(let j=0;j<k;j++) out.push(S[(h+j)%S.length]); return out; }
-/* visible toggle (lives on the Task/Order list header) so attachments can be switched on without devtools */
-function toggleMockAtt(){ try{ if(localStorage.getItem('cb_mock_att')){ localStorage.removeItem('cb_mock_att'); toast('Sample attachments OFF'); } else { localStorage.setItem('cb_mock_att','1'); toast('Sample attachments ON — open a chit to see them'); } }catch(_){ }
-  UI.detail=null; if(UI.sel && typeof openChit==='function'){ openChit(UI.sel); } else if(typeof loadList==='function'){ loadList(); } }
+/* (removed dead _mockAtts / toggleMockAtt demo stub — real attachments are live) */
 function attMedia(a,size){
   const big=size==='hero'||size==='lb';
   if(a&&a.src&&a.t==='image') return '<img class="attImg '+(big?'big':'')+'" src="'+esc(a.src)+'" loading="lazy" alt="'+esc(a.n||'')+'" style="object-fit:cover">';
