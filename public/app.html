@@ -353,6 +353,11 @@ button:focus-visible,.composebtn:focus-visible,.pri:focus-visible{outline:2px so
 .listtotal:empty{display:none}
 .listend{text-align:center;padding:12px 10px;font-size:11px;color:var(--grey);font-family:'Space Mono'}
 .listend button{margin-right:8px}
+.composer .chtoggle{display:inline-flex;vertical-align:middle}
+.composer .chtoggle + .typesel{display:inline-flex;vertical-align:middle;margin-left:10px}
+.composer .chtoggle + .typesel::before{content:"|";color:var(--line);font-weight:700;margin-right:10px;display:flex;align-items:center}
+.tl .ev.next::before{background:#fff;border:1.5px dashed #b9c2c7;width:7px;height:7px}
+.tl .ev.next .ea::after{content:" (upcoming)";font-size:9px;font-family:'Space Mono';color:#9aa3a7;font-weight:400}
 </style>
 </head>
 <body>
@@ -1852,7 +1857,7 @@ function detailInner(){
      <div class="ev"><div class="ea">Created</div><div class="em">today 10:02</div></div>
      <div class="ev"><div class="ea">Sent · landed</div><div class="em">with ${esc(c.party)}</div></div>
      ${c.state!=="open"?'<div class="ev"><div class="ea">Moved to Act</div><div class="em">10:25</div></div>':''}
-     ${c.state==="close"?'<div class="ev"><div class="ea">Closed</div><div class="em">delivery confirmed</div></div>':`<div class="ev"><div class="ea" style="color:var(--grey)">Next: ${({open:"Act",act:"Close",close:"Archive"})[c.state]}</div><div class="em">advance from the row chip ▸</div></div>`}
+     ${c.state==="close"?'<div class="ev"><div class="ea">Closed</div><div class="em">delivery confirmed</div></div>':`<div class="ev next"><div class="ea" style="color:var(--grey)">Next: ${({open:"Act",act:"Close",close:"Archive"})[c.state]}</div><div class="em">advance from the row chip ▸</div></div>`}
      </div>
      <div class="sec" style="margin-top:14px">💬 Messages (${msgCount(c)})</div>
      ${((c.msgs||[]).filter(m=>SESSION.role==="customer"?m.scope==="external":true).slice(-3).reverse().map(msgBubble).join(""))||'<div class="msgempty" style="padding:10px">No messages yet.</div>'}
