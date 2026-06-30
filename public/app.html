@@ -1411,7 +1411,7 @@ async function loadSettings(){ const h=document.getElementById("setbody"); if(!h
       <label class="fl">Default max tasks per actor</label><input class="inp" id="st_mt" inputmode="numeric" value="${esc(s.default_max_tasks||10)}">
       <label class="fl" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="st_av" ${s.all_task_visible?'checked':''}> All tasks visible to all actors</label>
       <label class="fl" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="st_ar" ${s.auto_return_on_short_break?'checked':''}> Auto-return tasks on short break</label>
-      <div class="err" id="st_err"></div><button class="composebtn" style="margin-top:9px" onclick="saveSettings()">Save settings</button></div>`;
+      <div class="err" id="st_err"></div><button class="composebtn" style="margin-top:9px" onclick="saveSettings()">Save settings</button></div><div style="border:1px solid var(--line);border-radius:11px;padding:13px;margin-top:10px"><div class="sec" style="margin:0 0 6px">📎 Attachment policy <span style="font-size:10px;font-family:'Space Mono';background:#f3f0e8;color:#7a5e22;border-radius:5px;padding:1px 6px">governance · stub</span></div><label class="fl">Allowed types</label><input class="inp" id="st_atttypes" value="image, pdf, docx, xlsx, csv, zip"><label class="fl">Max size per file (MB)</label><input class="inp" id="st_attsize" inputmode="numeric" value="10"><label class="fl">Max attachments per chit</label><input class="inp" id="st_attcount" inputmode="numeric" value="10"><div style="font-size:11px;color:var(--grey);margin-top:6px">Where allowed-types / size / count rules live (enforced backend-side). Not active yet.</div></div>`;
   }catch(e){ h.innerHTML=scrErr(e); } }
 async function saveSettings(){ const x=document.getElementById("st_err"); if(x)x.textContent="";
   try{ await api("saveSettings",{body:{assignment_model:val("st_am"),default_max_tasks:+val("st_mt")||10,all_task_visible:document.getElementById("st_av").checked,auto_return_on_short_break:document.getElementById("st_ar").checked}}); toast(MSG.settingsSaved()); }catch(e){ if(x)x.textContent=e.message; } }
@@ -2150,13 +2150,14 @@ function chitAttBlock(c){
 function openLightbox(group,i){UI.lbGroup=group;UI.lb=i;paintLB();}
 function closeLightbox(){UI.lb=null;paintLB();}
 function lbNav(d){const atts=UI.attGroups[UI.lbGroup]||[];if(!atts.length)return;UI.lb=(UI.lb+d+atts.length)%atts.length;paintLB();}
+function lbDownload(){ try{ const atts=UI.attGroups[UI.lbGroup]||[]; const a=atts[UI.lb]; if(a&&a.src) window.open(a.src,'_blank','noopener'); else toast('No file URL (stub).'); }catch(_){} }
 function paintLB(){
   const host=document.getElementById("lbhost");if(!host)return;
   const atts=UI.attGroups[UI.lbGroup]||[];
   if(UI.lb==null||!atts.length){host.innerHTML="";return;}
   const i=Math.min(UI.lb,atts.length-1),a=atts[i];
   host.innerHTML=`<div class="lbover" onclick="closeLightbox()"><div class="lbbox" onclick="event.stopPropagation()">
-    <div class="lbtop"><span>${a.n}</span><span style="font-weight:400;color:#9fb4bf">${i+1} / ${atts.length}</span><span style="margin-left:auto;cursor:pointer" onclick="toast('Download — wired live (GET attachment)')">⬇</span><span class="x" onclick="closeLightbox()">✕</span></div>
+    <div class="lbtop"><span>${a.n}</span><span style="font-weight:400;color:#9fb4bf">${i+1} / ${atts.length}</span><span style="margin-left:auto;cursor:pointer" onclick="lbDownload()">⬇</span><span class="x" onclick="closeLightbox()">✕</span></div>
     <div class="lbstage">${attMedia(a,'lb')}</div>
     <div class="lbnav"><button onclick="lbNav(-1)" aria-label="Previous">‹</button><div class="lbdots">${atts.map((_,k)=>`<span class="${k===i?'on':''}"></span>`).join("")}</div><button onclick="lbNav(1)" aria-label="Next">›</button></div>
   </div></div>`;
