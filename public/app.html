@@ -1643,7 +1643,7 @@ function taskPanel(){
   const helpStrip = isCust ? "" : `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line);background:var(--gold-soft);font-size:12px;color:#6b5a36"><b style="font-family:'Space Grotesk'">${_ak==='order'?"Order — chits you've sent":"Task — chits received"}</b><button class="composebtn" onclick="toggleMockAtt()" title="Toggle sample attachments (demo)">📎 demo</button><button class="composebtn" style="margin-left:auto" onclick="toggleListHelp()">${UI.listHelp?'✕ Close':'❓ Help'}</button></div>${UI.listHelp?`<div style="padding:11px 12px;border-bottom:1px solid var(--line);overflow-y:auto;max-height:52%">${assistPage(_ak)}</div>`:''}`;
   const list = `<div class="list">${helpStrip}
     <div class="lh">${folders}${sub}${stTabs}
-      <div class="srch">🔍 <input placeholder="${isCust?'Search my orders':'Search chits, party, item'}"></div>
+      <div class="srch">🔍 <input placeholder="${isCust?'Search my orders':'Search chits, party, item'}" id="listsrch" value="${esc(UI.search||'')}" oninput="onSrch('list', this.value)"></div>
       ${tools}${sel}
     </div>
     <div class="listtotal" id="listtotal"></div>
@@ -1806,7 +1806,9 @@ function staticFooter(n){ return n>0 ? '<div class="listend">'+n+' total · end 
 function pgPaintTotal(){ const lt=document.getElementById("listtotal"); if(lt) lt.textContent=pgTotalText('list'); }
 pgInit('list', { el:()=>document.getElementById("rows"), limit:50, map:mapApiChit, count:()=>UI.rows.length, repaint:paintRowsKeepScroll, fetch:(page)=>fetchPage(page),
   store:(rows,first)=>{ if(first){ UI.rows=rows; } else { const seen=new Set(UI.rows.map(r=>r.id)); for(const r of rows){ if(!seen.has(r.id)) UI.rows.push(r); } } } });
-function fetchPage(page){ const limit=UI.pageLimit||50; if(UI.folder==="order"||SESSION.role==="customer"){ return SESSION.role==="customer" ? api("custOrders",{params:{bridgeId:SESSION.bridgeId},query:{page,limit}}) : api("sent",{query:{page,limit}}); } const q={page,limit}; if(SESSION.role==="actor"&&UI.sub==="my")q.assigned_to="me"; return api("inbox",{query:q}); }
+/* common list search — server lists route q through the pager; client (lazyWrap) lists filter in place */
+function onSrch(scope, q){ clearTimeout(UI._srchT); UI._srchT=setTimeout(function(){ q=(q||'').trim(); if(scope==='list'){ UI.search=q; UI.sel=null; UI.detail=null; loadList(); } else if(typeof lazyFilter==='function'){ lazyFilter(scope, q); } }, 300); }
+function fetchPage(page){ const limit=UI.pageLimit||50; if(UI.folder==="order"||SESSION.role==="customer"){ return SESSION.role==="customer" ? api("custOrders",{params:{bridgeId:SESSION.bridgeId},query:{page,limit,q:UI.search||undefined}}) : api("sent",{query:{page,limit,q:UI.search||undefined}}); } const q={page,limit}; if(UI.search)q.q=UI.search; if(SESSION.role==="actor"&&UI.sub==="my")q.assigned_to="me"; return api("inbox",{query:q}); }
 function onRowsScroll(){ if(UI.loading)return; pgScroll("list"); }
 function ensureFilled(){ if(UI.loading)return; pgFill("list"); }
 function loadNextPage(){ return pgNext("list"); }
