@@ -338,6 +338,12 @@
   .attHero .attName{font-size:11px;color:var(--grey);padding:6px 9px;border-top:0.5px solid var(--line);display:flex;align-items:center;gap:6px}
   .attStrip{display:flex;gap:7px;overflow-x:auto;padding-bottom:4px}
   .attThumb{flex:0 0 auto;width:62px;height:62px;border:0.5px solid var(--line);border-radius:8px;overflow:hidden;cursor:pointer}
+  .attGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:8px;margin:6px 0 8px;width:100%}
+  .attTile{border:1px solid var(--line);border-radius:10px;background:#fff;padding:12px 8px;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;text-align:center}
+  .attTile:hover{background:#F4F8FB;border-color:var(--blue)}
+  .attTileIcon{font-size:30px;line-height:1}
+  .attTileName{font-size:11.5px;color:var(--ink);font-weight:600;word-break:break-word;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .attTileMeta{font-size:9.5px;color:var(--grey);text-transform:uppercase;letter-spacing:.04em}
   .attImg .vlen{position:absolute;bottom:4px;right:6px;font-size:10px;background:rgba(0,0,0,.45);color:#fff;border-radius:4px;padding:0 4px}
   .attNote{font-size:10.5px;color:var(--grey);margin-top:8px;line-height:1.5}
   .itab .ir.hasatt{cursor:pointer}
@@ -2314,6 +2320,10 @@ async function attBlobUrl(id){ if(_attUrls[id])return _attUrls[id]; var res=awai
 async function attResolveSrc(a){ try{ a.src=await attBlobUrl(a.id); paintLB(); }catch(e){ /* keep icon placeholder */ } }
 function openMsgAtt(mid,i){ var m=((UI.detail&&UI.detail.msgs)||[]).find(function(x){return String(x.id)===String(mid);}); if(!m)return; UI.attGroups=UI.attGroups||{}; UI.attGroups['msg:'+mid]=(m.atts||[]); openLightbox('msg:'+mid,i); }
 /* build the visible attachment groups for the current chit: line0, line1 … + chit */
+function attGlyph(t){ return ({image:'🖼️',video:'🎬',pdf:'📄',xlsx:'📊',csv:'📊',docx:'📝',doc:'📝',ppt:'📑',zip:'🗜️'})[t]||'📎'; }
+function fmtSize(b){ b=+b||0; if(b<1024)return b+' B'; if(b<1048576)return Math.round(b/1024)+' KB'; return (b/1048576).toFixed(1)+' MB'; }
+function attTile(a,group,i){ return `<div class="attTile" onclick="openLightbox('${group}',${i})" title="${esc(a.n)}"><div class="attTileIcon">${attGlyph(a.t)}</div><div class="attTileName">${esc(a.n)}</div><div class="attTileMeta">${esc((a.t||'file').toUpperCase())}${a.size?(' · '+fmtSize(a.size)):''}</div></div>`; }
+function attTileGrid(atts,group){ return `<div class="attGrid">${atts.map((a,i)=>attTile(a,group,i)).join('')}</div>`; }
 function buildAttGroups(c){
   const g={};
   (c.items||[]).forEach((it,idx)=>{const a=attsVis(it[2]);if(a.length)g['line'+idx]=a;});
@@ -2326,7 +2336,7 @@ function contentItems(c){
     const atts=attsVis(it[2]);
     const open=UI.openLines.has('line'+idx);
     const clip=atts.length?`<span class="lineclip" onclick="event.stopPropagation();toggleLine(${idx})">📎 ${atts.length} ${open?'▾':'▸'}</span>`:"";
-    const strip=(atts.length&&open)?`<div class="lineImgs">${atts.map((a,i)=>`<div class="attThumb" onclick="openLightbox('line${idx}',${i})" title="${esc(a.n)}">${attMedia(a,'thumb')}</div>`).join("")}</div>`:"";
+    const strip=(atts.length&&open)?`<div class="lineImgs">${attTileGrid(atts,'line'+idx)}</div>`:"";
     return `<div class="ir ${atts.length?'hasatt':''}" ${atts.length?`onclick="toggleLine(${idx})"`:''}><span class="nm">${esc(it[0])}</span><span class="qt">${esc(it[1])}</span>${clip}</div>${strip}`;
   }).join("");
 }
@@ -2335,10 +2345,8 @@ function toggleLine(idx){const k='line'+idx;UI.openLines.has(k)?UI.openLines.del
 function chitAttBlock(c){
   const atts=attsVis(c.atts);
   if(!atts.length) return "";
-  const hero=atts[0], rest=atts.slice(1);
   return `<div class="sec" style="display:flex;align-items:center;gap:7px">📎 Whole-chit attachments · ${atts.length}<span style="margin-left:auto;font-size:9px;color:var(--ok);font-weight:700">✓ co-signed</span></div>
-    <div class="attHero" onclick="openLightbox('chit',0)">${attMedia(hero,'hero')}<div class="attName">${attIcon(hero.t)} ${hero.n} · tap to open</div></div>
-    ${rest.length?`<div class="attStrip">${rest.map((a,i)=>`<div class="attThumb" onclick="openLightbox('chit',${i+1})" title="${esc(a.n)}">${attMedia(a,'thumb')}</div>`).join("")}</div>`:""}
+    ${attTileGrid(atts,'chit')}
     <div class="attNote">Part of the co-signed record — both parties hold the same set &amp; leaves with the chit on sunset.</div>`;
 }
 function openLightbox(group,i){UI.lbGroup=group;UI.lb=i;paintLB();}
