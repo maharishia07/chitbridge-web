@@ -152,6 +152,14 @@
   .notiffoot{padding:8px 13px;font-size:10px;color:var(--grey);background:var(--paper)}
   .mover{position:fixed;inset:0;z-index:280;background:rgba(8,24,32,.45);display:flex;align-items:flex-start;justify-content:center;padding:56px 16px;overflow-y:auto}
   .composepill{position:fixed;left:16px;bottom:16px;z-index:300;background:var(--blue);color:#fff;border-radius:999px;padding:9px 15px;font-size:13px;font-weight:700;box-shadow:0 8px 22px rgba(0,0,0,.28);display:flex;align-items:center;gap:10px}
+  .ccsugg{margin-top:4px;max-height:200px;overflow-y:auto}
+  .ccsugg-item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 10px;cursor:pointer;border:1px solid var(--line);border-top:0;background:#fff}
+  .ccsugg-item:first-child{border-top:1px solid var(--line);border-radius:8px 8px 0 0}
+  .ccsugg-item:last-child{border-radius:0 0 8px 8px}
+  .ccsugg-item:hover{background:#EEF3FB}
+  .ccsugg-nm{font-size:12.5px;color:var(--ink)}
+  .ccsugg-id{font-size:10px;font-family:monospace;color:var(--grey);white-space:nowrap}
+  .ccsugg-empty{padding:6px 10px;font-size:11px;color:var(--grey);border:1px solid var(--line);border-radius:8px;background:#fff}
   .modal{width:360px;max-width:94vw;background:#fff;border-radius:14px;overflow:hidden;box-shadow:var(--shadow)}
   .modal .mhd{padding:13px 16px;border-bottom:1px solid var(--line)}
   .modal .mhd .t{font-family:'Space Grotesk';font-weight:700;font-size:15px;color:var(--ink)}
@@ -535,6 +543,7 @@ const EP = {
   prodDel:         {m:"DELETE",p:"/api/products/:id",            ok:"✓"},
   // --- NET tree (NET-01 Spine) · live /api/network · cb_entity/cb_edge. NOTE: cb_* id-space — resolve self via netLookup(bridge_id); Dev needs backfill ---
   netLookup:      {m:"GET",  p:"/api/network/entities/lookup",            ok:"✓"},
+  entitySearch:   {m:"GET",  p:"/api/entities/search",                    ok:"✓"},  // ?q= live recipient lookup (name/bridge_id)
   netSubtree:     {m:"GET",  p:"/api/network/entities/:id/subtree",       ok:"✓"},
   netConnections: {m:"GET",  p:"/api/network/entities/:id/connections",   ok:"✓"},
   netRegister:    {m:"POST", p:"/api/network/entities",                   ok:"✓"},
@@ -1220,9 +1229,10 @@ async function compose(prefill){ UI.drawer=false; CC={items:(prefill&&prefill.it
      <div style="font-family:'Space Grotesk';font-weight:600;font-size:12px;color:var(--grey);margin:12px 0 4px">Recipients · <b>To</b> acts · <b>CC</b> is informed · <b>For</b> = on behalf of</div>
      <div style="display:flex;gap:6px">
        <select class="inp" id="cc_rrole" style="max-width:74px"><option value="to">To</option><option value="cc">CC</option><option value="for">For</option></select>
-       <input class="inp" id="cc_rname" placeholder="Self, a co-assist, or a business" onkeydown="if(event.key==='Enter'){event.preventDefault();ccAddRcpt();}">
+       <input class="inp" id="cc_rname" autocomplete="off" placeholder="Type a name — matches pop up with the bridge id" oninput="ccRcptSearch(this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();ccAddRcpt();}">
        <button class="composebtn" onclick="ccAddRcpt()">+ Add</button>
      </div>
+     <div id="cc_sugg" class="ccsugg"></div>
      <button class="composebtn" style="margin-top:6px" onclick="ccAddSelf()">+ Self (own record)</button>
      <div id="cc_rcpts" style="margin-top:8px"></div>
      <div id="cc_rcap" style="font-size:11px;color:var(--grey);margin-top:4px"></div>
@@ -1248,15 +1258,20 @@ async function compose(prefill){ UI.drawer=false; CC={items:(prefill&&prefill.it
 /* Recipients — To (Act) / CC (Info) / For (on-behalf), capped, flippable */
 function ccIsSelf(name){ const n=String(name||"").trim().toLowerCase(); if(!n)return false; if(n==="self"||n==="me")return true; const ent=String((typeof SESSION!=="undefined"&&SESSION.entity)||"").toLowerCase(); if(n===ent)return true; return (STORE.actors||[]).some(a=>String(a.name||"").toLowerCase()===n||String(a.uid||"").toLowerCase()===n); }
 function ccRoleCount(role){ return CC.rcpts.filter(r=>r.role===role).length; }
+let _ccSearchT=null;
+function ccRcptSearch(q){ clearTimeout(_ccSearchT); q=(q||'').trim(); if(q.length<2){ ccClearSugg(); return; } _ccSearchT=setTimeout(async function(){ try{ const r=await api("entitySearch",{query:{q:q}}); ccRenderSugg(Array.isArray(r)?r:((r&&r.results)||[])); }catch(_){ ccClearSugg(); } }, 250); }
+function ccRenderSugg(list){ UI._ccSugg=list||[]; const h=document.getElementById("cc_sugg"); if(!h)return; if(!UI._ccSugg.length){ h.innerHTML='<div class="ccsugg-empty">No matching business found</div>'; return; } h.innerHTML=UI._ccSugg.map(function(e,i){ return '<div class="ccsugg-item" onclick="ccPickRcptIdx('+i+')"><span class="ccsugg-nm">'+esc(e.display_name||'')+'</span><span class="ccsugg-id">'+esc(e.bridge_id||'')+'</span></div>'; }).join(''); }
+function ccClearSugg(){ const h=document.getElementById("cc_sugg"); if(h)h.innerHTML=''; }
+function ccPickRcptIdx(i){ const e=(UI._ccSugg||[])[i]; if(!e)return; const role=val("cc_rrole")||"to"; const er=document.getElementById("cc_err"); if(er)er.textContent=""; if(ccRoleCount(role)>=(LIMITS[role]||99)){ if(er)er.textContent=role.toUpperCase()+" is capped at "+LIMITS[role]+"."; return; } CC.rcpts.push({name:e.display_name, role:role, self:ccIsSelf(e.display_name), bridge:e.bridge_id||null}); const ne=document.getElementById("cc_rname"); if(ne)ne.value=""; ccClearSugg(); ccRenderRcpts(); }
 function ccAddRcpt(){ const role=val("cc_rrole")||"to"; const name=val("cc_rname"); const e=document.getElementById("cc_err"); if(e)e.textContent="";
   if(!name){ if(e)e.textContent="Enter a recipient name (or Self)."; return; }
   if(ccRoleCount(role)>=(LIMITS[role]||99)){ if(e)e.textContent=role.toUpperCase()+" is capped at "+LIMITS[role]+"."; return; }
-  CC.rcpts.push({name:name, role:role, self:ccIsSelf(name)}); const ne=document.getElementById("cc_rname"); if(ne)ne.value=""; ccRenderRcpts(); }
+  CC.rcpts.push({name:name, role:role, self:ccIsSelf(name)}); const ne=document.getElementById("cc_rname"); if(ne)ne.value=""; ccClearSugg(); ccRenderRcpts(); }
 function ccAddSelf(){ if(ccRoleCount("to")>=(LIMITS.to||99)){ toast(MSG.capHit("to", LIMITS.to)); return; } if(CC.rcpts.some(r=>r.self&&r.role==="to")){ toast(MSG.alreadySelf()); return; } CC.rcpts.push({name:"Self", role:"to", self:true}); ccRenderRcpts(); }
 function ccDelRcpt(i){ CC.rcpts.splice(i,1); ccRenderRcpts(); }
 function ccFlipRcpt(i){ const order=["to","cc","for"]; const r=CC.rcpts[i]; if(!r)return; for(let k=1;k<=order.length;k++){ const nx=order[(order.indexOf(r.role)+k)%order.length]; if(nx===r.role||ccRoleCount(nx)<(LIMITS[nx]||99)){ r.role=nx; break; } } ccRenderRcpts(); }
 function ccRenderRcpts(){ const h=document.getElementById("cc_rcpts");
-  if(h){ h.innerHTML = CC.rcpts.length ? CC.rcpts.map((r,i)=>{ const col=r.role==="to"?"#3F66A6":r.role==="cc"?"#7a5e22":"#5F6B70"; const bg=r.role==="to"?"#EEF3FB":r.role==="cc"?"#F4ECD8":"#EFEBE2"; return `<span style="display:inline-flex;align-items:center;gap:5px;border:0.5px solid var(--line);border-radius:8px;padding:3px 7px;margin:0 5px 5px 0;font-size:11.5px"><span onclick="ccFlipRcpt(${i})" title="Flip role (To/CC/For)" style="cursor:pointer;font-family:'Space Mono';font-size:9.5px;background:${bg};color:${col};border-radius:5px;padding:1px 5px">${r.role.toUpperCase()}</span>${esc(r.name)}${r.self?'<span style="color:#3F66A6;font-size:10px"> · self</span>':''}<span onclick="ccDelRcpt(${i})" style="cursor:pointer;color:#9aa3a7">✕</span></span>`; }).join("") : `<div style="font-size:12px;color:var(--grey)">No recipients yet — add To / CC / For above.</div>`; }
+  if(h){ h.innerHTML = CC.rcpts.length ? CC.rcpts.map((r,i)=>{ const col=r.role==="to"?"#3F66A6":r.role==="cc"?"#7a5e22":"#5F6B70"; const bg=r.role==="to"?"#EEF3FB":r.role==="cc"?"#F4ECD8":"#EFEBE2"; return `<span style="display:inline-flex;align-items:center;gap:5px;border:0.5px solid var(--line);border-radius:8px;padding:3px 7px;margin:0 5px 5px 0;font-size:11.5px"><span onclick="ccFlipRcpt(${i})" title="Flip role (To/CC/For)" style="cursor:pointer;font-family:'Space Mono';font-size:9.5px;background:${bg};color:${col};border-radius:5px;padding:1px 5px">${r.role.toUpperCase()}</span>${esc(r.name)}${r.bridge?'<span style="font-family:monospace;font-size:9px;color:#9aa3a7"> · '+esc(r.bridge)+'</span>':''}${r.self?'<span style="color:#3F66A6;font-size:10px"> · self</span>':''}<span onclick="ccDelRcpt(${i})" style="cursor:pointer;color:#9aa3a7">✕</span></span>`; }).join("") : `<div style="font-size:12px;color:var(--grey)">No recipients yet — add To / CC / For above.</div>`; }
   const capEl=document.getElementById("cc_rcap"); if(capEl) capEl.textContent="To "+ccRoleCount("to")+"/"+LIMITS.to+" · CC "+ccRoleCount("cc")+"/"+LIMITS.cc+" · For "+ccRoleCount("for")+"/"+LIMITS.for+" — tap a role chip to flip"; }
 function ccAddItem(){ const e=document.getElementById("cc_err"); if(e)e.textContent=""; if(CC.items.length>=(LIMITS.items||999)){ if(e)e.textContent="Line items capped at "+LIMITS.items+"."; return; } const i=+val("cc_pick"); const p=(STORE.catalogue||[])[i]; if(!p){ if(e)e.textContent=MSG.pickItemFirst(); return; } CC.items.push({particulars:p.particulars,unit:p.unit||"unit",price:+p.price||0,qty:1}); ccRenderItems(); }
 function ccAddManual(){ const e=document.getElementById("cc_err"); if(e)e.textContent=""; if(CC.items.length>=(LIMITS.items||999)){ if(e)e.textContent="Line items capped at "+LIMITS.items+"."; return; } const nm=(val("cc_mname")||"").trim(); if(!nm){ if(e)e.textContent="Enter an item name."; return; } CC.items.push({particulars:nm,unit:"unit",price:+val("cc_mprice")||0,qty:Math.max(1,+val("cc_mqty")||1)}); var a=document.getElementById("cc_mname"); if(a)a.value=""; var b=document.getElementById("cc_mprice"); if(b)b.value=""; ccRenderItems(); }
