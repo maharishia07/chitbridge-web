@@ -1339,8 +1339,8 @@ async function loadDisputes(){
       <div style="font-size:13px;color:var(--ink);margin:5px 0"><b>${esc(cap(d.category||''))}</b> — ${esc(d.reason||'')}</div>
       <div style="font-size:11.5px;color:var(--grey)">raised by ${esc(d.raised_by_display_name||'—')} · ${esc(d.scope||'')}${d.resolution_note?(' · ✓ '+esc(d.resolution_note)):''}</div>
       ${canResolve&&d.status==='open'?`<div style="margin-top:8px"><button class="composebtn" onclick="resolveDispute('${d.chit_id}','${d.dispute_id}')">Resolve</button></div>`:''}</div>`;
-    host.innerHTML = `${menuAssist('disputes')}<div class="sec" style="font-size:12px;color:var(--grey);margin:4px 0">Raised by you (${mine.length})</div>${mine.map(d=>card(d,true)).join("")||'<div style="color:var(--grey);font-size:13px;padding:6px">None.</div>'}
-      <div class="sec" style="font-size:12px;color:var(--grey);margin:14px 0 4px">Against you / awaiting (${other.length})</div>${other.map(d=>card(d,false)).join("")||'<div style="color:var(--grey);font-size:13px;padding:6px">None.</div>'}`;
+    host.innerHTML = `${menuAssist('disputes')}<div class="sec" style="font-size:12px;color:var(--grey);margin:4px 0">Raised by you (${mine.length})</div>${lazyWrap('dm', mine, d=>card(d,true), '<div style="color:var(--grey);font-size:13px;padding:6px">None.</div>')}
+      <div class="sec" style="font-size:12px;color:var(--grey);margin:14px 0 4px">Against you / awaiting (${other.length})</div>${lazyWrap('do', other, d=>card(d,false), '<div style="color:var(--grey);font-size:13px;padding:6px">None.</div>')}`;
   }catch(e){ host.innerHTML=`<div class="empty"><div class="t">Couldn't load disputes</div><div>${e.message}</div></div>`; }
 }
 function resolveDispute(chitId, disputeId){
@@ -1353,6 +1353,28 @@ async function submitResolve(chitId, disputeId){
   catch(e){ if(err)err.textContent=e.message; }
 }
 /* ---------------- shared screen helpers ---------------- */
+/* ── universal client-side lazy list — reveals N rows at a time in ANY container ────────────
+   IntersectionObserver auto-reveal + a "Show more" button fallback (never stuck) + total/end marker.
+   For lists whose endpoint returns everything at once: lazyWrap(id, items, cardFn, emptyHtml). */
+const LAZY = {};
+function lazyWrap(id, items, cardFn, empty){ items = items || [];
+  if(LAZY[id] && LAZY[id]._io){ try{ LAZY[id]._io.disconnect(); }catch(_){} }
+  if(!items.length) return empty || '';
+  const chunk = 50;
+  LAZY[id] = { items, cardFn, chunk, shown: Math.min(chunk, items.length), total: items.length, _io:null };
+  setTimeout(function(){ lazyAttach(id); }, 0);
+  return items.slice(0, LAZY[id].shown).map(cardFn).join("") + lazyBar(id); }
+function lazyBar(id){ const s=LAZY[id]; if(!s) return ''; const left=s.total-s.shown;
+  const inner = left<=0 ? ('<div class="listend">'+s.total+' total · end of list</div>')
+    : ('<div class="listend"><button class="composebtn" onclick="lazyReveal(\''+id+'\')">↓ Show '+Math.min(s.chunk,left)+' more</button> <span style="color:var(--grey)">'+s.shown+' of '+s.total+'</span></div>');
+  return '<div class="lazysent" id="lzs_'+id+'">'+inner+'</div>'; }
+function lazyReveal(id){ const s=LAZY[id]; if(!s) return; const sent=document.getElementById('lzs_'+id); if(!sent) return;
+  const next=s.items.slice(s.shown, s.shown+s.chunk); if(next.length){ sent.insertAdjacentHTML('beforebegin', next.map(s.cardFn).join("")); s.shown+=next.length; }
+  const left=s.total-s.shown;
+  if(left<=0){ sent.innerHTML='<div class="listend">'+s.total+' total · end of list</div>'; if(s._io){ try{s._io.disconnect();}catch(_){} s._io=null; } }
+  else sent.innerHTML='<div class="listend"><button class="composebtn" onclick="lazyReveal(\''+id+'\')">↓ Show '+Math.min(s.chunk,left)+' more</button> <span style="color:var(--grey)">'+s.shown+' of '+s.total+'</span></div>'; }
+function lazyAttach(id){ const s=LAZY[id]; if(!s || s.shown>=s.total) return; const sent=document.getElementById('lzs_'+id); if(!sent) return;
+  try{ s._io = new IntersectionObserver(function(es){ if(es.some(function(e){return e.isIntersecting;})) lazyReveal(id); }, {rootMargin:'300px'}); s._io.observe(sent); }catch(_){} }
 function scr(title,id,helpKey){
   const q = helpKey?`<button onclick="openHelp('${helpKey}')" title="About this screen" style="border:1px solid var(--line);background:#fff;color:#3F66A6;border-radius:50%;width:22px;height:22px;font-weight:800;cursor:pointer;font-size:13px;line-height:1;flex:none">?</button>`:'';
   const hint = helpKey?`<div style="font-size:11px;color:var(--grey);margin-bottom:10px">Explore <b onclick="openHelp('${helpKey}')" style="cursor:pointer;color:#3F66A6">?</b> to know more about this screen.</div>`:'';
@@ -1528,7 +1550,7 @@ function suppliersScreen(){ return scr("🏭 Suppliers","supbody","suppliers"); 
 async function loadSuppliers(){ const h=document.getElementById("supbody"); if(!h)return;
   try{ const s=(await api("supList"))||[];
     h.innerHTML=`${menuAssist('suppliers')}<div style="${_CARD}"><label class="fl">Add supplier (User ID)</label><div style="display:flex;gap:8px"><input class="inp" id="sp_bid" placeholder="User ID or email"><button style="${_BTN}" onclick="addSupplier()">Add</button></div><div class="err" id="sp_err"></div></div>
-      ${s.map(x=>`<div style="${_CARD}"><div style="display:flex;justify-content:space-between;align-items:center"><b>${esc(x.display_name||x.supplier_display_name||'—')}</b><button class="composebtn" onclick="delSupplier('${x.supplier_list_id||x.id}')">Remove</button></div><div style="font-size:11.5px;color:var(--grey)">${esc(x.bridge_id||'')}${x.category?(' · '+esc(x.category)):''}</div></div>`).join("")||'<div style="color:var(--grey);font-size:13px;padding:6px">No suppliers yet.</div>'}`;
+      ${lazyWrap('sup', s, x=>`<div style="${_CARD}"><div style="display:flex;justify-content:space-between;align-items:center"><b>${esc(x.display_name||x.supplier_display_name||'—')}</b><button class="composebtn" onclick="delSupplier('${x.supplier_list_id||x.id}')">Remove</button></div><div style="font-size:11.5px;color:var(--grey)">${esc(x.bridge_id||'')}${x.category?(' · '+esc(x.category)):''}</div></div>`, '<div style="color:var(--grey);font-size:13px;padding:6px">No suppliers yet.</div>')}`;
   }catch(e){ h.innerHTML=scrErr(e); } }
 async function addSupplier(){ const x=document.getElementById("sp_err"); if(x)x.textContent=""; const bid=val("sp_bid"); if(!bid){ if(x)x.textContent="Enter a supplier's User ID."; return; } if(!isUserId(bid)){ if(x)x.textContent="User ID must be at least 8 characters, or an email."; return; }
   try{ await api("supAdd",{body:{supplier_bridge_id:bid}}); toast("Supplier added ✓"); loadSuppliers(); }catch(e){ if(x)x.textContent=e.message; } }
@@ -1538,7 +1560,7 @@ function catalogueScreen(){ return scr("🗂️ Catalogue","catbody","catalogue"
 async function loadCatalogue(){ const h=document.getElementById("catbody"); if(!h)return;
   try{ const items=(await api("prodList"))||[];
     h.innerHTML=`${menuAssist('catalogue')}<div style="${_CARD}"><label class="fl">Add product</label><input class="inp" id="ct_name" placeholder="name"><div style="display:flex;gap:8px;margin-top:6px"><input class="inp" id="ct_price" inputmode="numeric" placeholder="price"><button style="${_BTN}" onclick="addProduct()">Add</button></div><div class="err" id="ct_err"></div></div>
-      ${items.map(x=>{const d=x.item_data||x; return `<div style="${_CARD}"><div style="display:flex;justify-content:space-between;align-items:center"><b>${esc(d.name||'item')}</b><span>${d.price!=null?inr(d.price):''} <button class="composebtn" onclick="delProduct('${x.item_id||x.id}')">Delete</button></span></div></div>`}).join("")||'<div style="color:var(--grey);font-size:13px;padding:6px">No products yet.</div>'}`;
+      ${lazyWrap('cat', items, x=>{const d=x.item_data||x; return `<div style="${_CARD}"><div style="display:flex;justify-content:space-between;align-items:center"><b>${esc(d.name||'item')}</b><span>${d.price!=null?inr(d.price):''} <button class="composebtn" onclick="delProduct('${x.item_id||x.id}')">Delete</button></span></div></div>`}, '<div style="color:var(--grey);font-size:13px;padding:6px">No products yet.</div>')}`;
   }catch(e){ h.innerHTML=scrErr(e); } }
 async function addProduct(){ const x=document.getElementById("ct_err"); if(x)x.textContent=""; const name=val("ct_name"); if(!name){ if(x)x.textContent="Enter a product name."; return; }
   try{ await api("prodAdd",{body:{item_data:{name,price:+val("ct_price")||0}}}); toast("Product added ✓"); loadCatalogue(); }catch(e){ if(x)x.textContent=e.message; } }
@@ -1580,7 +1602,7 @@ async function actorShift(id,cur){ const order=["on_shift","on_break","off"]; co
 async function loadCoassists(){ const h=document.getElementById("cobody"); if(!h)return;
   try{ const actors=((await api("actors"))||[]).map(mapApiActor); STORE.actors=actors;
     h.innerHTML = coBanner() + coTypeRow() +
-      (actors.map(coActorCard).join("") || '<div style="color:var(--grey);font-size:13px;padding:6px">No co-assists yet — add one above.</div>');
+      lazyWrap('co', actors, coActorCard, '<div style="color:var(--grey);font-size:13px;padding:6px">No co-assists yet — add one above.</div>');
   }catch(e){ h.innerHTML=scrErr(e); } }
 
 function mainBody(){
@@ -1722,7 +1744,7 @@ async function openNotifications(){ const host=document.getElementById("lbhost")
   const foot  = live ? (items.length+" recent") : "Demo notifications — endpoint pending (ATH-109 §11).";
   host.innerHTML=`<div class="notifover" onclick="closeNotif()"><div class="notifpanel" onclick="event.stopPropagation()">
     <div class="notifhd">Notifications<span style="margin-left:auto;font-size:9px;color:var(--grey);font-family:'Space Mono',monospace">${EP.notifications.p}</span></div>
-    ${items.length?items.map(x=>`<div class="notifrow"><span class="ni">${x.i}</span><div><div class="nt">${x.t}</div><div class="ns">${x.s}</div></div></div>`).join(""):'<div class="notifrow"><div class="nt" style="color:var(--grey)">No notifications yet.</div></div>'}
+    ${items.length?lazyWrap('notif', items, x=>`<div class="notifrow"><span class="ni">${x.i}</span><div><div class="nt">${x.t}</div><div class="ns">${x.s}</div></div></div>`, ''):'<div class="notifrow"><div class="nt" style="color:var(--grey)">No notifications yet.</div></div>'}
     <div class="notiffoot">${foot}</div>
   </div></div>`;
 }
@@ -1921,7 +1943,7 @@ function messagesTab(c){
   const tset=surfacedTypes(); const ctypes=isCust?["info","query"]:tset;
   const typeFilter=`<div class="msgfilter">${[["all","All types"]].concat(tset.map(k=>[k,MTYPES[k].short])).map(([v,l])=>`<button class="${t===v?'on '+(v==='all'?'':MTYPES[v].cls):''}" onclick="setMsgType('${v}')">${v==='all'?l:MTYPES[v].icon+' '+l}</button>`).join("")}</div>`;
   const ordered=shown.slice().reverse();
-  const thread=ordered.length?ordered.map(msgBubble).join(""):`<div class="msgempty">No messages yet — use ✏️ New message above to start one.</div>`;
+  const thread=ordered.length?lazyWrap('msg', ordered, msgBubble, ''):`<div class="msgempty">No messages yet — use ✏️ New message above to start one.</div>`;
   const ch=UI.msgChan||(isCust?"external":"internal"); let kind=UI.msgKind||"info"; if(!ctypes.includes(kind))kind=ctypes[0];
   const typeSel=`<div class="typesel">${ctypes.map(k=>`<button class="${kind===k?'on '+MTYPES[k].cls:''}" title="${MTYPES[k].label}" onclick="setMsgKind('${k}')">${MTYPES[k].icon} ${MTYPES[k].short}</button>`).join("")}</div>`;
   const open=!!UI.composeOpen;
