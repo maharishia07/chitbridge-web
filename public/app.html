@@ -381,6 +381,9 @@ img.attImg{object-fit:cover;display:block}
 .colrz{position:absolute;right:0;top:0;bottom:0;width:7px;cursor:col-resize;z-index:2}
 .colrz:hover{background:var(--blue);opacity:.5}
 .sortpreset{font-size:11px;border:1px solid var(--line);border-radius:7px;padding:2px 5px;background:#fff;color:var(--ink);cursor:pointer;font-family:inherit}
+.colmenu label{padding:3px 8px;border-radius:6px;cursor:pointer}
+.colmenu label:has(input:checked){background:#E3EDF8;color:var(--blue);font-weight:600}
+.colmenu input[type=checkbox]{width:14px;height:14px;accent-color:var(--blue)}
 </style>
 </head>
 <body>
@@ -1861,7 +1864,7 @@ function visibleRows(){
 const LISTCOLS = [
   { key:'from',     label:'From',     sort:'from',     w:'minmax(110px,1.2fr)', cell:function(c){ return esc((UI.folder==='order' ? (c.party||'') : (c.sender||c.party||'')) || '—'); } },
   { key:'subject',  label:'Subject',  sort:'subject',  w:'minmax(150px,2fr)',   cell:function(c){ return (c.unread?'<span class="unreaddot"></span>':'')+(c.custPri?'<span class="custflag" title="Customer priority">⚑</span> ':'')+'<b>'+esc(c.code||'—')+'</b>'+(c.isDraft?' <span class="optchip mini">draft</span>':'')+(c.dispute?' <span class="optchip mini r">dispute</span>':''); } },
-  { key:'date',     label:'Date',     sort:'date',     w:'92px',  cell:function(c){ return esc(lcDate(c.created_at)); } },
+  { key:'date',     label:'Date',     sort:'date',     w:'128px',  cell:function(c){ return esc(lcDate(c.created_at)); } },
   { key:'amount',   label:'Amount',   sort:'amount',   w:'96px',  cell:function(c){ return '<span style="font-family:\'Space Mono\'">'+(c.amt?inr(c.amt):'—')+'</span>'; } },
   { key:'status',   label:'Status',   sort:'status',   w:'92px',  cell:function(c){ return '<span class="chipst st-'+c.state+'" onclick="event.stopPropagation();advanceChit(\''+c.id+'\')" title="advance">'+String(c.state||'').toUpperCase()+' ▸</span>'; } },
   { key:'type',     label:'Type',     sort:null,       w:'80px',  cell:function(c){ return esc(c.kind||''); } },
@@ -1873,7 +1876,7 @@ const DEFCOLS = ['from','subject','date','amount','status'];
 function getCols(){ try{ const s=JSON.parse(localStorage.getItem('cb_cols')||'null'); if(Array.isArray(s)&&s.length) return s; }catch(_){ } return DEFCOLS.slice(); }
 function visibleCols(){ const set=UI.cols||getCols(); return LISTCOLS.filter(function(c){ return set.indexOf(c.key)>=0; }); }
 function colTemplate(){ const sel = (UI.selectMode&&SESSION.role!=='customer') ? '26px ' : ''; return sel + visibleCols().map(function(c){ return (UI.colW&&UI.colW[c.key]) ? UI.colW[c.key] : c.w; }).join(' '); }
-function lcDate(ts){ try{ const d=new Date(ts); if(isNaN(d)) return ''; const sameY=d.getFullYear()===new Date().getFullYear(); return d.toLocaleDateString([], sameY?{day:'2-digit',month:'short'}:{day:'2-digit',month:'short',year:'2-digit'}); }catch(_){ return ''; } }
+function lcDate(ts){ try{ const d=new Date(ts); if(isNaN(d)) return ''; const sameY=d.getFullYear()===new Date().getFullYear(); return d.toLocaleString([], sameY?{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}:{day:'2-digit',month:'short',year:'2-digit',hour:'2-digit',minute:'2-digit'}); }catch(_){ return ''; } }
 function listHeader(){ const tpl=colTemplate(); const sel = (UI.selectMode&&SESSION.role!=='customer') ? '<span></span>' : '';
   const cells = visibleCols().map(function(c){ const active = UI.sort===c.sort && c.sort; const arrow = active ? (UI.dir==='asc'?' ▲':' ▼') : (c.sort?' ⇅':''); return '<span class="lhcell'+(c.sort?' sortable':'')+'" '+(c.sort?('onclick="sortBy(\''+c.sort+'\')"'):'')+'>'+esc(c.label)+'<span class="sarr">'+arrow+'</span><span class="colrz" onmousedown="colResizeStart(event,\''+c.key+'\')" onclick="event.stopPropagation()"></span></span>'; }).join('');
   return '<div class="lhead" style="grid-template-columns:var(--coltpl)">'+sel+cells+'</div>'; }
