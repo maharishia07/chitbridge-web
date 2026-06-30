@@ -1374,7 +1374,7 @@ function lazyReveal(id){ const s=LAZY[id]; if(!s) return; const sent=document.ge
   if(left<=0){ sent.innerHTML='<div class="listend">'+s.total+' total · end of list</div>'; if(s._io){ try{s._io.disconnect();}catch(_){} s._io=null; } }
   else sent.innerHTML='<div class="listend"><button class="composebtn" onclick="lazyReveal(\''+id+'\')">↓ Show '+Math.min(s.chunk,left)+' more</button> <span style="color:var(--grey)">'+s.shown+' of '+s.total+'</span></div>'; }
 function lazyAttach(id){ const s=LAZY[id]; if(!s || s.shown>=s.total) return; const sent=document.getElementById('lzs_'+id); if(!sent) return;
-  try{ s._io = new IntersectionObserver(function(es){ if(es.some(function(e){return e.isIntersecting;})) lazyReveal(id); }, {rootMargin:'300px'}); s._io.observe(sent); }catch(_){} }
+  try{ s._io = new IntersectionObserver(function(es){ if(es.some(function(e){return e.isIntersecting;})) lazyReveal(id); }, {rootMargin:'0px'}); s._io.observe(sent); }catch(_){} }
 function scr(title,id,helpKey){
   const q = helpKey?`<button onclick="openHelp('${helpKey}')" title="About this screen" style="border:1px solid var(--line);background:#fff;color:#3F66A6;border-radius:50%;width:22px;height:22px;font-weight:800;cursor:pointer;font-size:13px;line-height:1;flex:none">?</button>`:'';
   const hint = helpKey?`<div style="font-size:11px;color:var(--grey);margin-bottom:10px">Explore <b onclick="openHelp('${helpKey}')" style="cursor:pointer;color:#3F66A6">?</b> to know more about this screen.</div>`:'';
@@ -1655,7 +1655,7 @@ function countStates(){const o={open:0,act:0,close:0};UI.rows.forEach(c=>{if(o[c
 function cap(s){return s[0].toUpperCase()+s.slice(1);}
 function setSub(s){UI.sub=s;UI.sel=null;UI.detail=null;renderApp();}
 function toggleListHelp(){ UI.listHelp=!UI.listHelp; renderApp(); }
-function setState(s){UI.state=s;renderApp();ensureFilled();}
+function setState(s){UI.state=s;renderApp();}
 function toggleAgg(s){UI.aggStates.has(s)?(UI.aggStates.size>1&&UI.aggStates.delete(s)):UI.aggStates.add(s);renderApp();}
 function toggleSelect(){UI.selectMode=!UI.selectMode;if(!UI.selectMode)UI.selected.clear();renderApp();}
 function actionTargets(){ if(UI.selectMode && UI.selected.size) return [...UI.selected]; if(UI.sel) return [UI.sel]; return []; }
@@ -1788,7 +1788,7 @@ async function pgNext(id){ const p=PG[id]; if(!p||p.loading||p.done) return;
     if(res&&res.total!=null) p.total=res.total; p.page++; p.cfg.store(rows, p.page===1);
     if(raw.length===0 || raw.length<lim || (p.total>0 && p.cfg.count()>=p.total)) p.done=true;
   }catch(_){ }
-  finally{ p.loading=false; try{ p.cfg.repaint&&p.cfg.repaint(); }catch(_){}; pgFill(id); } }
+  finally{ p.loading=false; try{ p.cfg.repaint&&p.cfg.repaint(); }catch(_){}; } }
 function pgFirst(id){ pgReset(id); return pgNext(id); }
 function pgScroll(id){ const p=PG[id]; if(!p||p.loading||p.done)return; const el=p.cfg.el&&p.cfg.el(); if(!el)return; if(el.scrollTop+el.clientHeight >= el.scrollHeight-220) pgNext(id); }
 function pgFill(id){ const p=PG[id]; if(!p||p.loading||p.done)return; const el=p.cfg.el&&p.cfg.el(); if(!el)return; if(el.scrollHeight <= el.clientHeight+8) pgNext(id); }
@@ -1817,7 +1817,7 @@ async function loadList(){
     if(SESSION.role==="actor" && CFG.MODE!=='demo'){ try{ const u=await api("unread"); const set=new Set((u&&u.unread)||[]); UI.rows.forEach(r=>{ r.unread=set.has(r.id); }); }catch(_){} }
     UI.loading=false;
     if(!UI.sel && UI.rows.length){ const first=UI.rows.find(c=>c.state===UI.state)||UI.rows[0]; if(first)openChit(first.id,true); }
-    paintRowsOnly(); ensureFilled();
+    paintRowsOnly();
   }catch(e){ UI.loading=false; const b=document.getElementById("rows"); if(b)b.innerHTML=`<div class="empty"><div class="big">⚠</div><div class="t">Couldn't load</div><div>${e.message}</div><div style="font-size:11px">Check mode/endpoint, then retry.</div></div>`; }
 }
 function paintRowsOnly(){const b=document.getElementById("rows"); if(b)b.innerHTML=renderRows(); const cs=countStates(); document.querySelectorAll(".statetabs .n").forEach((el,i)=>{el.textContent=cs[["open","act","close"][i]];}); pgPaintTotal();}
