@@ -12,7 +12,7 @@ function unwrap(j){
   if(j==null||typeof j!=="object"||Array.isArray(j)) return j;
   if("ok" in j && ("data" in j || "error" in j)){ if(j.ok===false) throw new Error(j.error||"Request failed"); return j.data; }
   if("token" in j || "my_disputes" in j || "header" in j) return j; // auth (token) / structured / compound -> whole, untouched
-  for(const k of ["chits","messages","connections","requests","suppliers","items","results","actors"]) if(Array.isArray(j[k])) return j[k];
+  for(const k of ["chits","messages","connections","requests","suppliers","items","results","actors"]) if(Array.isArray(j[k])){ const a=j[k]; for(const mk of ["total","page","limit"]) if(mk in j){ try{ Object.defineProperty(a, mk, {value:j[mk], enumerable:false, configurable:true, writable:true}); }catch(_){ a[mk]=j[mk]; } } return a; }
   if(j.entity) return j.entity;
   if(j.settings) return j.settings;
   if(j.chit) return j.chit;
@@ -51,7 +51,7 @@ async function api(key, {params, query, body}={}){
     if(!res.ok){
       let msg=""; try{ const j=await res.json(); msg=j.message||j.error||""; }catch(_){}
       cblog(res.status>=500?'error':'warn', ep.m+' '+key+' → '+res.status+(msg?' · '+msg:''));
-      if(res.status===401){ SESSION={}; try{localStorage.removeItem("cb_token");}catch(_){} if(typeof go==="function") go("#/login"); throw new Error(msg||"Session expired — please sign in again."); }
+      if(res.status===401){ SESSION={}; try{localStorage.removeItem("cb_token");localStorage.removeItem("cb_sess");}catch(_){} if(typeof go==="function") go("#/login"); throw new Error(msg||"Session expired — please sign in again."); }
       if(res.status===422){ throw new Error(msg||"Please check the form and try again."); }          // validation
       if(res.status>=500){ throw new Error(msg||"Server error — please try again."); }                 // generic
       throw new Error(msg||("API "+res.status+" "+ep.m+" "+ep.p));

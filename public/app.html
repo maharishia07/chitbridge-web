@@ -349,6 +349,10 @@ button:focus-visible,.composebtn:focus-visible,.pri:focus-visible{outline:2px so
 .modal{position:relative}
 .mx{position:absolute;top:7px;right:9px;width:26px;height:26px;border:0;background:none;color:#9aa3a7;font-size:15px;line-height:1;cursor:pointer;border-radius:50%;z-index:3}
 .mx:hover{background:#f0f0f0;color:#555}
+.listtotal{padding:5px 12px;font-size:10.5px;color:var(--grey);font-family:'Space Mono';border-bottom:1px solid var(--line);background:var(--paper)}
+.listtotal:empty{display:none}
+.listend{text-align:center;padding:12px 10px;font-size:11px;color:var(--grey);font-family:'Space Mono'}
+.listend button{margin-right:8px}
 </style>
 </head>
 <body>
@@ -984,7 +988,7 @@ function setShop(s){SESSION.shop=s;
 function logout(){try{localStorage.removeItem('cb_sess');}catch(_){}SESSION={token:null,role:null,name:null,entity:null,bridgeId:null};STORE=freshStore();UI={...UI0,selected:new Set(),aggStates:new Set(["open","act","close"])};applyPrefs();go("#/login");}
 
 /* ---------------- APP SHELL + TASK PANEL ---------------- */
-const UI0 = {nav:"task", folder:"task", sub:"my", state:"open", dtab:"content", sel:null, selectMode:false, selected:new Set(), aggStates:new Set(["open","act","close"]), drawer:false, mdetail:false, purpose:false, orgHelp:false, loading:false, rows:[], detail:null, actors:[], busy:false, vp:"lap", lw:340, lh:300, lb:null, lbGroup:null, openLines:new Set(), attGroups:{}, filterOpen:false, filter:{}, notifOpen:false, msgFilter:"all", msgChan:"internal", msgType:"all", msgKind:"info", msgcOpen:false, composeOpen:false, listHelp:false};
+const UI0 = {nav:"task", folder:"task", sub:"my", state:"open", dtab:"content", sel:null, selectMode:false, selected:new Set(), aggStates:new Set(["open","act","close"]), drawer:false, mdetail:false, purpose:false, orgHelp:false, loading:false, rows:[], detail:null, actors:[], busy:false, vp:"lap", lw:340, lh:300, lb:null, lbGroup:null, openLines:new Set(), attGroups:{}, filterOpen:false, filter:{}, notifOpen:false, msgFilter:"all", msgChan:"internal", msgType:"all", msgKind:"info", msgcOpen:false, composeOpen:false, listHelp:false, total:0, page:1, pageLimit:50, loadingMore:false, allLoaded:false};
 const MTYPES = {
   info:      {label:"Information",short:"Info", icon:"ℹ️", cls:"info"},
   query:     {label:"Query",      short:"Query",icon:"❓", cls:"query"},
@@ -1612,7 +1616,8 @@ function taskPanel(){
       <div class="srch">🔍 <input placeholder="${isCust?'Search my orders':'Search chits, party, item'}"></div>
       ${tools}${sel}
     </div>
-    <div class="rows" id="rows">${UI.loading?'<div class="loadwrap"><span class="spin"></span> loading…</div>':renderRows()}</div>
+    <div class="listtotal" id="listtotal"></div>
+    <div class="rows" id="rows" onscroll="onRowsScroll()">${UI.loading?'<div class="loadwrap"><span class="spin"></span> loading…</div>':renderRows()}</div>
   </div>`;
   const detail = `<div class="detail" id="detailpane">${renderDetail()}</div>`;
   const divider = `<div class="divider" id="divider" onmousedown="startDrag(event)" ontouchstart="startDrag(event)" role="separator" aria-label="Resize panes"><span class="grip"></span></div>`;
@@ -1623,7 +1628,7 @@ function countStates(){const o={open:0,act:0,close:0};UI.rows.forEach(c=>{if(o[c
 function cap(s){return s[0].toUpperCase()+s.slice(1);}
 function setSub(s){UI.sub=s;UI.sel=null;UI.detail=null;renderApp();}
 function toggleListHelp(){ UI.listHelp=!UI.listHelp; renderApp(); }
-function setState(s){UI.state=s;renderApp();}
+function setState(s){UI.state=s;renderApp();ensureFilled();}
 function toggleAgg(s){UI.aggStates.has(s)?(UI.aggStates.size>1&&UI.aggStates.delete(s)):UI.aggStates.add(s);renderApp();}
 function toggleSelect(){UI.selectMode=!UI.selectMode;if(!UI.selectMode)UI.selected.clear();renderApp();}
 function actionTargets(){ if(UI.selectMode && UI.selected.size) return [...UI.selected]; if(UI.sel) return [UI.sel]; return []; }
@@ -1741,20 +1746,28 @@ function inr_(v){ return '₹'+Number(v||0).toLocaleString('en-IN'); }
 function fmtLine(li){ return [li.particulars||'Item', (li.quantity||0)+' × '+inr_(li.price)+' = '+inr_(li.total||(li.quantity*li.price)), []]; }
 function mapApiMsg(m){ if(!m||m.scope!==undefined) return m; return { id:m.message_id, scope:m.thread_type||'internal', author:m.sender_display_name||'—', body:m.message_text||'', at:fmtAt(m.created_at), type:m.msg_type||'info', unread:false }; }
 function mapApiActor(a){ if(!a||a.shift!==undefined) return a; const S={active:'on_shift',on_break:'on_break',break:'on_break',off:'off',deactivated:'off'}; return { id:a.identity_id, name:a.display_name, uid:a.user_id||a.uid, shift:S[a.break_status]||'on_shift', load:a.current_task_count||0 }; }
+function fetchPage(page){ const limit=UI.pageLimit||50; if(UI.folder==="order"||SESSION.role==="customer"){ return SESSION.role==="customer" ? api("custOrders",{params:{bridgeId:SESSION.bridgeId},query:{page,limit}}) : api("sent",{query:{page,limit}}); } const q={page,limit}; if(SESSION.role==="actor"&&UI.sub==="my")q.assigned_to="me"; return api("inbox",{query:q}); }
+function onRowsScroll(){ const el=document.getElementById("rows"); if(!el||UI.allLoaded||UI.loadingMore||UI.loading)return; if(el.scrollTop+el.clientHeight >= el.scrollHeight-220) loadNextPage(); }
+function ensureFilled(){ const el=document.getElementById("rows"); if(!el||UI.allLoaded||UI.loadingMore||UI.loading)return; if(el.scrollHeight <= el.clientHeight+8) loadNextPage(); }
+async function loadNextPage(){ if(UI.allLoaded||UI.loadingMore)return; UI.loadingMore=true; paintRowsKeepScroll(); try{ const next=(UI.page||1)+1; const res=await fetchPage(next); const more=(res||[]).map(mapApiChit); if(res&&res.total!=null)UI.total=res.total; if(!more.length){ UI.allLoaded=true; } else { const seen=new Set(UI.rows.map(r=>r.id)); let added=0; for(const r of more){ if(!seen.has(r.id)){ UI.rows.push(r); added++; } } UI.page=next; if(added===0||UI.rows.length>=UI.total) UI.allLoaded=true; } }catch(_){ } finally{ UI.loadingMore=false; paintRowsKeepScroll(); ensureFilled(); } }
+function paintRowsKeepScroll(){ const b=document.getElementById("rows"); if(!b)return; const st=b.scrollTop; b.innerHTML=renderRows(); b.scrollTop=st; const cs=countStates(); document.querySelectorAll(".statetabs .n").forEach((el,i)=>{ el.textContent=cs[["open","act","close"][i]]; }); updateListTotal(); }
+function updateListTotal(){ const lt=document.getElementById("listtotal"); if(!lt)return; if(!UI.total){ lt.textContent=""; return; } const shown=Math.min(UI.rows.length,UI.total); lt.textContent='Showing '+shown+' of '+UI.total+(UI.allLoaded?' \u00b7 all loaded':' \u00b7 scroll for more'); }
+function paginationFooter(){ if(UI.loadingMore) return '<div class="listend"><span class="spin"></span> loading more\u2026 ('+UI.rows.length+'/'+UI.total+')</div>'; if(!UI.allLoaded) return '<div class="listend"><button class="composebtn" onclick="loadNextPage()">\u2193 Load more</button><span style="color:var(--grey)">'+UI.rows.length+' of '+UI.total+' loaded</span></div>'; if((UI.total||0)<=0) return ''; return '<div class="listend">\u2014 end of list \u00b7 '+UI.total+' total \u2014</div>'; }
 async function loadList(){
   UI.loading=true; const body=document.getElementById("rows"); if(body)body.innerHTML='<div class="loadwrap"><span class="spin"></span> loading…</div>';
   try{
-    let res;
-    if(UI.folder==="order"||SESSION.role==="customer"){ res= SESSION.role==="customer" ? await api("custOrders",{params:{bridgeId:SESSION.bridgeId}}) : await api("sent"); }
-    else { const q={}; if(SESSION.role==="actor"&&UI.sub==="my")q.assigned_to="me"; res=await api("inbox",{query:q}); }
+    UI.page=1; UI.allLoaded=false; UI.loadingMore=false; UI.total=0;
+    const res = await fetchPage(1);
     UI.rows = (res||[]).map(mapApiChit);
+    UI.total = (res&&res.total!=null) ? res.total : UI.rows.length;
+    UI.allLoaded = UI.rows.length >= UI.total;
     if(SESSION.role==="actor" && CFG.MODE!=='demo'){ try{ const u=await api("unread"); const set=new Set((u&&u.unread)||[]); UI.rows.forEach(r=>{ r.unread=set.has(r.id); }); }catch(_){} }
     UI.loading=false;
     if(!UI.sel && UI.rows.length){ const first=UI.rows.find(c=>c.state===UI.state)||UI.rows[0]; if(first)openChit(first.id,true); }
-    paintRowsOnly();
+    paintRowsOnly(); ensureFilled();
   }catch(e){ UI.loading=false; const b=document.getElementById("rows"); if(b)b.innerHTML=`<div class="empty"><div class="big">⚠</div><div class="t">Couldn't load</div><div>${e.message}</div><div style="font-size:11px">Check mode/endpoint, then retry.</div></div>`; }
 }
-function paintRowsOnly(){const b=document.getElementById("rows"); if(b)b.innerHTML=renderRows(); const cs=countStates(); document.querySelectorAll(".statetabs .n").forEach((el,i)=>{el.textContent=cs[["open","act","close"][i]];});}
+function paintRowsOnly(){const b=document.getElementById("rows"); if(b)b.innerHTML=renderRows(); const cs=countStates(); document.querySelectorAll(".statetabs .n").forEach((el,i)=>{el.textContent=cs[["open","act","close"][i]];}); updateListTotal();}
 function visibleRows(){
   let rows = (UI.selectMode&&SESSION.role!=="customer") ? UI.rows.filter(c=>UI.aggStates.has(c.state)) : UI.rows.filter(c=>c.state===UI.state);
   const f=UI.filter||{};
@@ -1767,8 +1780,8 @@ function visibleRows(){
 }
 function renderRows(){
   const rows=visibleRows();
-  if(!rows.length) return `<div class="empty"><div class="big">📭</div><div class="t">Nothing here yet</div><div>No chits in ${UI.selectMode?'the ticked states':cap(UI.state)}.</div></div>`;
-  return rows.map(rowHTML).join("");
+  if(!rows.length && UI.allLoaded) return `<div class="empty"><div class="big">📭</div><div class="t">Nothing here yet</div><div>No chits in ${UI.selectMode?'the ticked states':cap(UI.state)}.</div></div>`;
+  return rows.map(rowHTML).join("") + paginationFooter();
 }
 function rowHTML(c){
   const cbx=UI.selectMode&&SESSION.role!=="customer"?`<div class="cbx ${UI.selected.has(c.id)?'on':''}" onclick="event.stopPropagation();toggleSel('${c.id}')">${UI.selected.has(c.id)?'✓':''}</div>`:"";
