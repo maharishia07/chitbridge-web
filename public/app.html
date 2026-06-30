@@ -412,6 +412,9 @@ img.attImg{object-fit:cover;display:block}
 .msgfilters .msgfilter{margin-bottom:0}
 .msgfilters .msgfilter + .msgfilter{margin-left:10px}
 .msgfilters .msgfilter + .msgfilter::before{content:"|";color:var(--line);font-weight:700;margin-right:10px;align-self:center}
+.msgss{display:inline-flex;align-items:center;gap:6px;margin-left:auto}
+.msgsi{border:1px solid var(--line);border-radius:7px;padding:3px 8px;font-size:11.5px;min-width:120px;font-family:inherit}
+.msgord{border:1px solid var(--line);background:#fff;border-radius:7px;padding:3px 8px;font-size:11px;cursor:pointer;color:var(--blue);font-weight:600;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -1052,7 +1055,7 @@ function setShop(s){SESSION.shop=s;
 function logout(){try{localStorage.removeItem('cb_sess');localStorage.removeItem('cb_nav');}catch(_){}SESSION={token:null,role:null,name:null,entity:null,bridgeId:null};STORE=freshStore();UI={...UI0,selected:new Set(),aggStates:new Set(["open","act","close"])};applyPrefs();go("#/login");}
 
 /* ---------------- APP SHELL + TASK PANEL ---------------- */
-const UI0 = {nav:"task", folder:"task", sub:"my", state:"open", dtab:"content", sel:null, selectMode:false, selected:new Set(), aggStates:new Set(["open","act","close"]), drawer:false, mdetail:false, purpose:false, orgHelp:false, loading:false, rows:[], detail:null, actors:[], busy:false, vp:"lap", lw:340, lh:300, lb:null, lbGroup:null, openLines:new Set(), attGroups:{}, filterOpen:false, filter:{}, notifOpen:false, msgFilter:"all", msgChan:"internal", msgType:"all", msgKind:"info", msgcOpen:false, composeOpen:false, listHelp:false, total:0, page:1, pageLimit:50, loadingMore:false, allLoaded:false, sort:"date", dir:"desc", cols:null, colMenu:false, search:""};
+const UI0 = {nav:"task", folder:"task", sub:"my", state:"open", dtab:"content", sel:null, selectMode:false, selected:new Set(), aggStates:new Set(["open","act","close"]), drawer:false, mdetail:false, purpose:false, orgHelp:false, loading:false, rows:[], detail:null, actors:[], busy:false, vp:"lap", lw:340, lh:300, lb:null, lbGroup:null, openLines:new Set(), attGroups:{}, filterOpen:false, filter:{}, notifOpen:false, msgFilter:"all", msgChan:"internal", msgType:"all", msgKind:"info", msgcOpen:false, composeOpen:false, listHelp:false, total:0, page:1, pageLimit:50, loadingMore:false, allLoaded:false, sort:"date", dir:"desc", cols:null, colMenu:false, search:"", msgSearch:"", msgOrder:"latest", statusSearch:"", statusOrder:"latest"};
 const MTYPES = {
   info:      {label:"Information",short:"Info", icon:"ℹ️", cls:"info"},
   query:     {label:"Query",      short:"Query",icon:"❓", cls:"query"},
@@ -2003,7 +2006,7 @@ async function openChit(id, silent){
   try{ const r=await api("chit",{params:{id}});
         if(r && r.header){ const h=r.header, det=r.detail||{};
           const base=UI.rows.find(c=>c.id===id)||mapApiChit({chit_id:h.chit_id,summary_json:h.summary_json,all_recipients:h.all_recipients,sender_entity_display_name:h.sender_entity_display_name,purpose:h.purpose,manual_subject:h.manual_subject,auto_subject:h.auto_subject,current_status:'delivered',open_dispute_count:0});
-          UI.detail={...base, items:(det.line_items||[]).map(fmtLine), atts:_mockAtts(id), msgs:[]};
+          UI.detail={...base, items:(det.line_items||[]).map(fmtLine), atts:_mockAtts(id), msgs:[], log:(r.state_log||[])};
           try{ const mr=await api("messages",{params:{id}}); UI.detail.msgs=(mr||[]).map(mapApiMsg); }catch(_){}
         } else { UI.detail=r; }
         UI.openLines=new Set(); const fi=(UI.detail.items||[]).findIndex(it=>attsVis(it[2]).length); if(fi>=0)UI.openLines.add('line'+fi);
@@ -2024,7 +2027,7 @@ function detailInner(){
   if(UI.dtab==="content") body=`<div class="itab">${items}<div class="ir tot"><span>Total</span><span class="qt">${inr(c.amt)}</span></div></div>
      ${chitAttBlock(c)}`;
   if(UI.dtab==="messages") body=messagesTab(c);
-  if(UI.dtab==="status") body=`<div class="sec">Lifecycle</div><div class="tl">
+  if(UI.dtab==="status") body=statusTabHtml(c); if(false) body=`<div class="sec">Lifecycle</div><div class="tl">
      <div class="ev"><div class="ea">Created</div><div class="em">today 10:02</div></div>
      <div class="ev"><div class="ea">Sent · landed</div><div class="em">with ${esc(c.party)}</div></div>
      ${c.state!=="open"?'<div class="ev"><div class="ea">Moved to Act</div><div class="em">10:25</div></div>':''}
@@ -2054,6 +2057,17 @@ function setMsgChan(ch){ UI.msgChan=ch; paintDetail(); }
 function toggleCompose(){ UI.composeOpen=!UI.composeOpen; paintDetail(); if(UI.composeOpen)setTimeout(()=>{const t=document.getElementById('msgbody');if(t)t.focus();},30); }
 function setMsgType(t){ UI.msgType=t; paintDetail(); }
 function setMsgKind(k){ UI.msgKind=k; paintDetail(); }
+/* messages + status: real data + search + Latest/Oldest sort (latest default) ───────────────── */
+function msgSearchSort(){ return '<div class="msgss"><input id="msgsrch" class="msgsi" placeholder="Search messages" value="'+esc(UI.msgSearch||'')+'" oninput="setMsgSearch(this.value)"><button class="msgord" onclick="setMsgOrder(UI.msgOrder===\'oldest\'?\'latest\':\'oldest\')" title="Sort order">'+((UI.msgOrder==='oldest')?'↑ Oldest':'↓ Latest')+'</button></div>'; }
+function setMsgSearch(v){ clearTimeout(UI._msgT); UI._msgT=setTimeout(function(){ UI.msgSearch=(v||'').trim(); paintDetail(); var s=document.getElementById('msgsrch'); if(s){ s.focus(); var n=s.value.length; try{s.setSelectionRange(n,n);}catch(_){ } } }, 300); }
+function setMsgOrder(o){ UI.msgOrder=o; paintDetail(); }
+function fmtLogTime(ts){ try{ var d=new Date(ts); if(isNaN(d))return ''; return d.toLocaleString([], {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}); }catch(_){ return ''; } }
+function statusLabel(e){ var a=e.action||''; if(a==='created') return 'Created'; if(a==='message_sent') return 'Message sent'; if(a.indexOf('status_')===0) return 'Status → '+a.slice(7); if(e.new_status) return (a||'updated')+' → '+e.new_status; return a||'event'; }
+function statusEv(e){ return '<div class="ev"><div class="ea">'+esc(statusLabel(e))+'</div><div class="em">'+esc(e.action_by_display_name||'')+' · '+esc(fmtLogTime(e.created_at))+(e.detail?(' · '+esc(String(e.detail).slice(0,80))):'')+'</div></div>'; }
+function statusSearchSort(){ return '<div class="msgss"><input id="stsrch" class="msgsi" placeholder="Search status history" value="'+esc(UI.statusSearch||'')+'" oninput="setStatusSearch(this.value)"><button class="msgord" onclick="setStatusOrder(UI.statusOrder===\'oldest\'?\'latest\':\'oldest\')" title="Sort order">'+((UI.statusOrder==='oldest')?'↑ Oldest':'↓ Latest')+'</button></div>'; }
+function setStatusSearch(v){ clearTimeout(UI._stT); UI._stT=setTimeout(function(){ UI.statusSearch=(v||'').trim(); paintDetail(); var s=document.getElementById('stsrch'); if(s){ s.focus(); var n=s.value.length; try{s.setSelectionRange(n,n);}catch(_){ } } }, 300); }
+function setStatusOrder(o){ UI.statusOrder=o; paintDetail(); }
+function statusTabHtml(c){ var log=(c.log||[]); var sl=log.slice(); var q=(UI.statusSearch||'').toLowerCase(); if(q) sl=sl.filter(function(e){ return (String(statusLabel(e))+' '+(e.action_by_display_name||'')+' '+(e.detail||'')).toLowerCase().indexOf(q)>=0; }); var ordered=(UI.statusOrder==='oldest')?sl:sl.slice().reverse(); var inner=ordered.length?lazyWrap('status', ordered, statusEv, '<div class="msgempty">No matching history.</div>'):'<div class="msgempty">No status history yet.</div>'; return '<div class="msghd"><span class="mh-t">Lifecycle ('+log.length+')</span></div>'+statusSearchSort()+'<div class="tl">'+inner+'</div>'; }
 function msgBubble(m){ const ext=m.scope==="external"; const d=MTYPES[m.type]||MTYPES.info; return `<div class="bubble ${ext?'ext':'int'}"><div class="bh"><span class="mbadge ${ext?'ext':'int'}">${ext?'↔ External':'🔒 Internal'}</span><span class="mtype ${d.cls}">${d.icon} ${d.label}</span><span class="ath">${esc(m.author)}</span><span class="tm">${m.at}</span>${m.unread?'<span class="unreaddot"></span>':''}</div><div class="bb">${esc(m.body)}</div></div>`; }
 function messagesTab(c){
   markChitRead(c.id); setTimeout(refreshMsgBadge,0);
@@ -2065,7 +2079,7 @@ function messagesTab(c){
   const scopeFilter=isCust?"":`<div class="msgfilter"><button class="${f==='all'?'on':''}" onclick="setMsgFilter('all')">All</button><button class="${f==='internal'?'on':''}" onclick="setMsgFilter('internal')">🔒 Internal</button><button class="${f==='external'?'on':''}" onclick="setMsgFilter('external')">↔ External</button></div>`;
   const tset=surfacedTypes(); const ctypes=isCust?["info","query"]:tset;
   const typeFilter=`<div class="msgfilter">${[["all","All types"]].concat(tset.map(k=>[k,MTYPES[k].short])).map(([v,l])=>`<button class="${t===v?'on '+(v==='all'?'':MTYPES[v].cls):''}" onclick="setMsgType('${v}')">${v==='all'?l:MTYPES[v].icon+' '+l}</button>`).join("")}</div>`;
-  const ordered=shown.slice().reverse();
+  if(UI.msgSearch){var _mq=UI.msgSearch.toLowerCase(); shown=shown.filter(function(m){return String((m.body||"")+" "+(m.author||"")).toLowerCase().indexOf(_mq)>=0;});} const ordered=(UI.msgOrder==="oldest")?shown.slice():shown.slice().reverse();
   const thread=ordered.length?lazyWrap('msg', ordered, msgBubble, ''):`<div class="msgempty">No messages yet — use ✏️ New message above to start one.</div>`;
   const ch=UI.msgChan||(isCust?"external":"internal"); let kind=UI.msgKind||"info"; if(!ctypes.includes(kind))kind=ctypes[0];
   const typeSel=`<div class="typesel">${ctypes.map(k=>`<button class="${kind===k?'on '+MTYPES[k].cls:''}" title="${MTYPES[k].label}" onclick="setMsgKind('${k}')">${MTYPES[k].icon} ${MTYPES[k].short}</button>`).join("")}</div>`;
@@ -2074,7 +2088,7 @@ function messagesTab(c){
     ? `<div class="composer">${typeSel}<div class="chlabel ext">↔ External · ${c.party||'the shop'} will see this</div><textarea id="msgbody" placeholder="Message to ${c.party||'the shop'}…"></textarea><button class="send ext" onclick="sendMessage('${c.id}')">Send ${MTYPES[kind].label} ↔ external</button></div>`
     : `<div class="composer"><div class="chtoggle"><button class="int ${ch==='internal'?'on':''}" onclick="setMsgChan('internal')">🔒 Internal</button><button class="ext ${ch==='external'?'on':''}" onclick="setMsgChan('external')">↔ External</button></div>${typeSel}<textarea id="msgbody" placeholder="${ch==='internal'?'Note for your team — stays internal':'Message to '+(c.party||'the other party')+' — they will see this'}"></textarea><button class="send ${ch==='internal'?'int':'ext'}" onclick="sendMessage('${c.id}')">Send ${MTYPES[kind].label} · ${ch==='internal'?'🔒 internal':'↔ external'}</button></div>`;
   const head=`<div class="msghd"><span class="mh-t">Messages (${msgCount(c)})</span><button class="composebtn ${open?'on':''}" onclick="toggleCompose()">${open?'✕ Close':'✏️ New message'}</button></div>`;
-  return `<div class="msgtab">${head}${open?composer:''}<div class="msgfilters">${scopeFilter}${typeFilter}</div><div class="thread">${thread}</div></div>`;
+  return `<div class="msgtab">${head}${open?composer:''}<div class="msgfilters">${scopeFilter}${typeFilter}${msgSearchSort()}</div><div class="thread">${thread}</div></div>`;
 }
 function sendMessage(id){
   const el=document.getElementById('msgbody'); const body=(el?el.value:"").trim(); if(!body){ toast("Type a message first."); return; }
