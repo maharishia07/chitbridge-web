@@ -205,8 +205,9 @@
   .composebtn.on{background:#fff;color:var(--blue)}
   .msgtab .composer{margin-top:0;margin-bottom:12px;border-top:0;border:1px solid var(--line);border-radius:11px;padding:11px;background:#fbfcfe}
   .msglist{position:relative;flex:1;min-height:0}
-  .composeov{position:absolute;left:0;right:0;top:0;bottom:0;background:rgba(22,32,42,.16);display:flex;align-items:flex-start;justify-content:center;z-index:20;padding:6px;border-radius:8px}
-  .composeov-card{width:100%;max-width:640px;max-height:100%;overflow:auto;box-shadow:0 14px 34px rgba(0,0,0,.22);border-radius:12px;background:#fff;border:1px solid var(--blue);padding:8px}
+  .composeov{position:absolute;left:0;right:0;top:0;min-height:100%;background:rgba(22,32,42,.16);display:flex;align-items:flex-start;justify-content:center;z-index:20;padding:6px;border-radius:8px}
+  .composeov-card{width:100%;max-width:640px;max-height:80vh;overflow:auto;box-shadow:0 14px 34px rgba(0,0,0,.22);border-radius:12px;background:#fff;border:1px solid var(--blue);padding:8px}
+  .composeov-card .composer textarea{min-height:64px;resize:vertical}
   .composeov-card .composer{margin:0;border:0;border-radius:0;background:#fff;padding-top:2px}
   .composeov-bar{display:flex;align-items:center;justify-content:flex-end;padding:0 0 4px}
   .composeov-x{border:1px solid var(--line);background:#fff;color:var(--grey);width:28px;height:28px;border-radius:50%;font-size:14px;font-weight:800;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center}
