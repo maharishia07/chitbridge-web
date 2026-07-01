@@ -1792,7 +1792,7 @@ async function loadCoassists(){ const h=document.getElementById("cobody"); if(!h
   }catch(e){ h.innerHTML=scrErr(e); } }
 
 function mainBody(){
-  if(["task","order"].includes(UI.nav)) return taskPanel();
+  if(["task","order","drafts","trash","archive"].includes(UI.nav)) return taskPanel();
   if(UI.nav==="disputes") return disputesScreen();
   if(UI.nav==="profile") return profileScreen();
   if(UI.nav==="settings") return settingsScreen();
