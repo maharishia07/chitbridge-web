@@ -1820,7 +1820,7 @@ function taskPanel(){
       <div class="tool ${UI.filterOpen?'on':''}" title="Filter" onclick="openFilter()">${funnel}</div>
       <div class="tool ${UI.selectMode?'on':''}" title="Select" onclick="toggleSelect()">☑</div>
       <div class="tool" title="Raise dispute" onclick="quickDispute()">⚑</div>
-      <div class="tool" title="Delete (move to trash)" onclick="quickDelete()">🗑️</div>
+      ${(UI.folder==='trash'||UI.folder==='archive')?'':`<div class="tool" title="Delete (move to trash)" onclick="quickDelete()">🗑️</div>`}
     </div>${UI.filterOpen?filterPanel():""}`;
   const sel = (UI.selectMode&&!isCust)?selBar():"";
   const _ak = (UI.folder==='order')?'order':'task';
