@@ -515,6 +515,10 @@ const EP = {
   custFlag:        {m:"PUT",  p:"/api/chits/:id/priority-flag",  ok:"✓"},  // {flag} customer request, write-once — built (baseline-2)
   actors:          {m:"GET",  p:"/api/actors",                   ok:"✓"},
   actorBreak:      {m:"PUT",  p:"/api/actors/break",             ok:"✓"},
+  actorStatus:     {m:"PUT",  p:"/api/actors/:id/status",        ok:"✓"},  // deactivate/remove/reactivate (+ task routing)
+  actorOtp:        {m:"POST", p:"/api/actors/:id/otp",           ok:"✓"},  // regenerate OTP (re-invite)
+  actorPinReset:   {m:"DELETE",p:"/api/actors/:id/pin",          ok:"✓"},  // reset PIN
+  actorEdit:       {m:"PATCH", p:"/api/actors/:id",              ok:"y"},  // Stage B — edit profile (name/role/max_tasks/phone)
   shopStatus:      {m:"PATCH",p:"/api/entities/profile",         ok:"✓"},  // shop status = PATCH profile {business_status}
   dispute:         {m:"POST", p:"/api/chits/:id/disputes",       ok:"✓"},  // raise dispute (built)
   delChit:         {m:"DELETE",p:"/api/chits/:id",               ok:"✓"},  // exists (soft-void/trash)
@@ -552,9 +556,12 @@ const EP = {
   supList:         {m:"GET",   p:"/api/relationships/suppliers", ok:"✓"},
   supAdd:          {m:"POST",  p:"/api/relationships/suppliers", ok:"✓"},  // {supplier_bridge_id}
   supDel:          {m:"DELETE",p:"/api/relationships/suppliers/:id", ok:"✓"},
+  supPatch:        {m:"PATCH", p:"/api/relationships/suppliers/:id", ok:"y"},           // Stage B — owner-side fields (nickname/preferred/notes/category)
+  supCatalogue:    {m:"GET",   p:"/api/relationships/suppliers/:sid/catalogue", ok:"✓"},// their catalogue → compose line items
   prodList:        {m:"GET",   p:"/api/products",                ok:"✓"},
   prodAdd:         {m:"POST",  p:"/api/products",                ok:"✓"},  // {item_data:{name,price}}
   prodDel:         {m:"DELETE",p:"/api/products/:id",            ok:"✓"},
+  prodEdit:        {m:"PATCH", p:"/api/products/:id",            ok:"✓"},  // {item_data} — full edit (already live)
   // --- NET tree (NET-01 Spine) · live /api/network · cb_entity/cb_edge. NOTE: cb_* id-space — resolve self via netLookup(bridge_id); Dev needs backfill ---
   netLookup:      {m:"GET",  p:"/api/network/entities/lookup",            ok:"✓"},
   entitySearch:   {m:"GET",  p:"/api/entities/search",                    ok:"✓"},  // ?q= live recipient lookup (name/bridge_id)
@@ -1227,11 +1234,12 @@ function ccSendAsOptions(){
   (STORE.actors||[]).forEach(a=>{ o+=`<option value="${esc(a.id)}">${esc(a.name)} · ${esc(a.uid||'actor')}</option>`; });
   return o;
 }
-async function compose(prefill){ UI.drawer=false; CC={items:(prefill&&prefill.items)?prefill.items.slice():[],rcpts:(prefill&&prefill.recipients)?prefill.recipients.slice():[]}; UI._forwardFrom=(prefill&&prefill.forwardFrom)||null; UI._draftId=(prefill&&prefill.draftId)||null; let _catErr=false;
-  // Load YOUR real catalogue so Compose shows the items you added — not demo defaults.
+async function compose(prefill){ UI.drawer=false; CC={items:(prefill&&prefill.items)?prefill.items.slice():[],rcpts:(prefill&&prefill.recipients)?prefill.recipients.slice():[]}; UI._forwardFrom=(prefill&&prefill.forwardFrom)||null; UI._draftId=(prefill&&prefill.draftId)||null; UI._supplier=(prefill&&prefill.supplier)?prefill.supplier:null; let _catErr=false;
+  // Line-item catalogue: in SUPPLIER mode it's THEIR catalogue (passed in); otherwise load YOUR own products.
   try{
-    const _prods=(await api("prodList"))||[];
-    STORE.catalogue=_prods.map(x=>{const d=x.item_data||x; return {particulars:d.name||d.product||'item', unit:d.unit||'unit', price:+d.price||0};});
+    if(UI._supplier && prefill && prefill.catalogue){ STORE.catalogue = prefill.catalogue.slice(); }
+    else { const _prods=(await api("prodList"))||[];
+      STORE.catalogue=_prods.map(x=>{const d=x.item_data||x; return {particulars:d.name||d.product||'item', unit:d.unit||'unit', price:+d.price||0};}); }
   }catch(e){ STORE.catalogue=STORE.catalogue||[]; _catErr=true; }
   modal(`<div class="mhd"><div class="t">✉️ Compose — author a chit <button onclick="openHelp('compose')" title="About composing" style="border:1px solid var(--line);background:#fff;color:#3F66A6;border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;vertical-align:middle">?</button></div><div class="s">create your own record, then bridge it</div></div>
    <div class="mbody">
@@ -1241,7 +1249,11 @@ async function compose(prefill){ UI.drawer=false; CC={items:(prefill&&prefill.it
        <div style="min-width:120px"><label class="fl">External priority <span style="font-weight:400;color:var(--grey)">· informed, locked once sent</span></label><select class="inp" id="cc_priority"><option value="normal">Normal</option><option value="high">High</option><option value="urgent">Urgent</option></select></div>
      </div>
      <div class="cc-cols"><div class="cc-col">
-     <div style="font-family:'Space Grotesk';font-weight:600;font-size:12px;color:var(--grey);margin:12px 0 4px">Recipients · <b>To</b> acts · <b>CC</b> is informed · <b>For</b> = on behalf of</div>
+     ${UI._supplier
+       ? `<div style="font-family:'Space Grotesk';font-weight:600;font-size:12px;color:var(--grey);margin:12px 0 4px">Recipient · <b>supplier order</b> <span style="font-weight:400">— locked, no CC/For</span></div>
+     <div id="cc_rcpts" style="margin-top:4px"></div>
+     <div id="cc_rcap" style="display:none"></div>`
+       : `<div style="font-family:'Space Grotesk';font-weight:600;font-size:12px;color:var(--grey);margin:12px 0 4px">Recipients · <b>To</b> acts · <b>CC</b> is informed · <b>For</b> = on behalf of</div>
      <div style="display:flex;gap:6px">
        <select class="inp" id="cc_rrole" style="max-width:74px"><option value="to">To</option><option value="cc">CC</option><option value="for">For</option></select>
        <input class="inp" id="cc_rname" autocomplete="off" placeholder="Type a name — matches pop up with the bridge id" oninput="ccRcptSearch(this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();ccAddRcpt();}">
@@ -1250,14 +1262,14 @@ async function compose(prefill){ UI.drawer=false; CC={items:(prefill&&prefill.it
      <div id="cc_sugg" class="ccsugg"></div>
      <button class="composebtn" style="margin-top:6px" onclick="ccAddSelf()">+ Self (own record)</button>
      <div id="cc_rcpts" style="margin-top:8px"></div>
-     <div id="cc_rcap" style="font-size:11px;color:var(--grey);margin-top:4px"></div>
+     <div id="cc_rcap" style="font-size:11px;color:var(--grey);margin-top:4px"></div>`}
      <div style="font-family:'Space Grotesk';font-weight:600;font-size:12px;color:var(--grey);margin:12px 0 2px">Chit fields · from your <b>${esc((STORE.chitSchema||{schema_name:"Order"}).schema_name)}</b> schema</div>
      ${!STORE.chitSchema?`<div style="background:#fbeceb;border:1px solid #f0c9c6;border-radius:8px;padding:7px 10px;font-size:11.5px;color:#b4453f;margin-bottom:6px">${esc(MSG.schemaDefault())}</div>`:''}
      ${ccSchema().map(cfField).join("")}
      </div><div class="cc-gutter" onmousedown="ccSplitStart(event)" title="Drag to resize the two panels"></div><div class="cc-col">
      <div class="cc-rtabs"><button class="cc-rtab on" data-t="items" onclick="ccSetRTab('items')">Line items</button><button class="cc-rtab" data-t="atts" onclick="ccSetRTab('atts')">Attachments</button><button class="cc-rtab" data-t="delivery" onclick="ccSetRTab('delivery')">Delivery</button><button class="cc-rtab" data-t="summary" onclick="ccSetRTab('summary')">Summary</button></div>
      <div class="cc-rpane" data-p="items">
-     <div style="font-family:'Space Grotesk';font-weight:600;font-size:12px;color:var(--grey);margin:12px 0 4px">Line items · from your catalogue</div>
+     <div style="font-family:'Space Grotesk';font-weight:600;font-size:12px;color:var(--grey);margin:12px 0 4px">Line items · from ${UI._supplier?('<b>'+esc(UI._supplier.name)+'</b>&rsquo;s catalogue'):'your catalogue'}</div>
      ${(STORE.catalogue||[]).length
         ? `<div style="display:flex;gap:8px"><select class="inp" id="cc_pick">${STORE.catalogue.map((p,i)=>`<option value="${i}">${esc(p.particulars)} · ${inr(p.price)}/${esc(p.unit||'unit')}</option>`).join("")}</select><button class="composebtn" onclick="ccAddItem()">+ Add</button></div>`
         : `<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:10px 12px;font-size:12.5px;color:#6b5a36">${_catErr?esc(MSG.catalogueLoadErr()):'Your catalogue is empty — a chit needs at least one line item. <a onclick="closeModal();navTo(\'catalogue\')" style="color:#3F66A6;cursor:pointer;font-weight:600">Add a product in Catalogue first &rarr;</a>'}</div>`}
@@ -1297,7 +1309,9 @@ function ccAddSelf(){ if(ccRoleCount("to")>=(LIMITS.to||99)){ toast(MSG.capHit("
 function ccDelRcpt(i){ CC.rcpts.splice(i,1); ccRenderRcpts(); }
 function ccFlipRcpt(i){ const order=["to","cc","for"]; const r=CC.rcpts[i]; if(!r)return; for(let k=1;k<=order.length;k++){ const nx=order[(order.indexOf(r.role)+k)%order.length]; if(nx===r.role||ccRoleCount(nx)<(LIMITS[nx]||99)){ r.role=nx; break; } } ccRenderRcpts(); }
 function ccRenderRcpts(){ const h=document.getElementById("cc_rcpts");
-  if(h){ h.innerHTML = CC.rcpts.length ? CC.rcpts.map((r,i)=>{ const col=r.role==="to"?"#3F66A6":r.role==="cc"?"#7a5e22":"#5F6B70"; const bg=r.role==="to"?"#EEF3FB":r.role==="cc"?"#F4ECD8":"#EFEBE2"; return `<span style="display:inline-flex;align-items:center;gap:5px;border:0.5px solid var(--line);border-radius:8px;padding:3px 7px;margin:0 5px 5px 0;font-size:11.5px"><span onclick="ccFlipRcpt(${i})" title="Flip role (To/CC/For)" style="cursor:pointer;font-family:'Space Mono';font-size:9.5px;background:${bg};color:${col};border-radius:5px;padding:1px 5px">${r.role.toUpperCase()}</span>${esc(r.name)}${r.bridge?'<span style="font-family:monospace;font-size:9px;color:#9aa3a7"> · '+esc(r.bridge)+'</span>':''}${r.self?'<span style="color:#3F66A6;font-size:10px"> · self</span>':''}<span onclick="ccDelRcpt(${i})" style="cursor:pointer;color:#9aa3a7">✕</span></span>`; }).join("") : `<div style="font-size:12px;color:var(--grey)">No recipients yet — add To / CC / For above.</div>`; }
+  if(h){ h.innerHTML = CC.rcpts.length ? CC.rcpts.map((r,i)=>{ const col=r.role==="to"?"#3F66A6":r.role==="cc"?"#7a5e22":"#5F6B70"; const bg=r.role==="to"?"#EEF3FB":r.role==="cc"?"#F4ECD8":"#EFEBE2";
+    if(UI._supplier){ return `<span style="display:inline-flex;align-items:center;gap:5px;border:0.5px solid #cfe0f4;background:#EEF3FB;border-radius:8px;padding:4px 9px;margin:0 5px 5px 0;font-size:12px;font-weight:600;color:#3F66A6">🏭 ${esc(r.name)}${r.bridge?'<span style="font-family:monospace;font-size:9px;opacity:.8"> · '+esc(r.bridge)+'</span>':''} <span style="font-weight:400;color:var(--grey)">· locked</span></span>`; }
+    return `<span style="display:inline-flex;align-items:center;gap:5px;border:0.5px solid var(--line);border-radius:8px;padding:3px 7px;margin:0 5px 5px 0;font-size:11.5px"><span onclick="ccFlipRcpt(${i})" title="Flip role (To/CC/For)" style="cursor:pointer;font-family:'Space Mono';font-size:9.5px;background:${bg};color:${col};border-radius:5px;padding:1px 5px">${r.role.toUpperCase()}</span>${esc(r.name)}${r.bridge?'<span style="font-family:monospace;font-size:9px;color:#9aa3a7"> · '+esc(r.bridge)+'</span>':''}${r.self?'<span style="color:#3F66A6;font-size:10px"> · self</span>':''}<span onclick="ccDelRcpt(${i})" style="cursor:pointer;color:#9aa3a7">✕</span></span>`; }).join("") : `<div style="font-size:12px;color:var(--grey)">No recipients yet — add To / CC / For above.</div>`; }
   const capEl=document.getElementById("cc_rcap"); if(capEl) capEl.textContent="To "+ccRoleCount("to")+"/"+LIMITS.to+" · CC "+ccRoleCount("cc")+"/"+LIMITS.cc+" · For "+ccRoleCount("for")+"/"+LIMITS.for+" — tap a role chip to flip"; }
 function ccAddItem(){ const e=document.getElementById("cc_err"); if(e)e.textContent=""; if(CC.items.length>=(LIMITS.items||999)){ if(e)e.textContent="Line items capped at "+LIMITS.items+"."; return; } const i=+val("cc_pick"); const p=(STORE.catalogue||[])[i]; if(!p){ if(e)e.textContent=MSG.pickItemFirst(); return; } CC.items.push({particulars:p.particulars,unit:p.unit||"unit",price:+p.price||0,qty:1}); ccRenderItems(); }
 function ccAddManual(){ const e=document.getElementById("cc_err"); if(e)e.textContent=""; if(CC.items.length>=(LIMITS.items||999)){ if(e)e.textContent="Line items capped at "+LIMITS.items+"."; return; } const nm=(val("cc_mname")||"").trim(); if(!nm){ if(e)e.textContent="Enter an item name."; return; } CC.items.push({particulars:nm,unit:"unit",price:+val("cc_mprice")||0,qty:Math.max(1,+val("cc_mqty")||1)}); var a=document.getElementById("cc_mname"); if(a)a.value=""; var b=document.getElementById("cc_mprice"); if(b)b.value=""; ccRenderItems(); }
@@ -1734,25 +1748,186 @@ async function connectReq(){ const x=document.getElementById("nw_err"); if(x)x.t
   }catch(e){ if(x)x.textContent=e.message; } }
 async function respondConn(id,action){ try{ await api("connRespond",{params:{id},body:{action}}); toast(action==='accept'?MSG.connected():MSG.connRejected()); loadNetwork(); }catch(e){ toast(MSG.fail("respond", e)); } }
 /* SUPPLIERS */
-function suppliersScreen(){ return scr("🏭 Suppliers","supbody","suppliers"); }
-async function loadSuppliers(){ const h=document.getElementById("supbody"); if(!h)return;
-  try{ const s=(await api("supList"))||[];
-    h.innerHTML=`${menuAssist('suppliers')}<div style="${_CARD}"><label class="fl">Add supplier (User ID)</label><div style="display:flex;gap:8px"><input class="inp" id="sp_bid" placeholder="User ID or email"><button style="${_BTN}" onclick="addSupplier()">Add</button></div><div class="err" id="sp_err"></div></div>
-      ${lazyWrap('sup', s, x=>`<div style="${_CARD}"><div style="display:flex;justify-content:space-between;align-items:center"><b>${esc(x.display_name||x.supplier_display_name||'—')}</b><button class="composebtn" onclick="delSupplier('${x.supplier_list_id||x.id}')">Remove</button></div><div style="font-size:11.5px;color:var(--grey)">${esc(x.bridge_id||'')}${x.category?(' · '+esc(x.category)):''}</div></div>`, '<div style="color:var(--grey);font-size:13px;padding:6px">No suppliers yet.</div>')}`;
-  }catch(e){ h.innerHTML=scrErr(e); } }
-async function addSupplier(){ const x=document.getElementById("sp_err"); if(x)x.textContent=""; const bid=val("sp_bid"); if(!bid){ if(x)x.textContent="Enter a supplier's User ID."; return; } if(!isUserId(bid)){ if(x)x.textContent="User ID must be at least 8 characters, or an email."; return; }
-  try{ await api("supAdd",{body:{supplier_bridge_id:bid}}); toast("Supplier added ✓"); loadSuppliers(); }catch(e){ if(x)x.textContent=e.message; } }
-async function delSupplier(id){ if(!confirm("Remove this supplier? This cannot be undone.")) return; try{ await api("supDel",{params:{id}}); toast(MSG.supplierRemoved()); loadSuppliers(); }catch(e){ toast(MSG.fail("remove the supplier", e)); } }
-/* CATALOGUE (own products) */
-function catalogueScreen(){ return scr("🗂️ Catalogue","catbody","catalogue"); }
-async function loadCatalogue(){ const h=document.getElementById("catbody"); if(!h)return;
-  try{ const items=(await api("prodList"))||[];
-    h.innerHTML=`${menuAssist('catalogue')}<div style="${_CARD}"><label class="fl">Add product</label><input class="inp" id="ct_name" placeholder="name"><div style="display:flex;gap:8px;margin-top:6px"><input class="inp" id="ct_price" inputmode="numeric" placeholder="price"><button style="${_BTN}" onclick="addProduct()">Add</button></div><div class="err" id="ct_err"></div></div>
-      ${lazyWrap('cat', items, x=>{const d=x.item_data||x; return `<div style="${_CARD}"><div style="display:flex;justify-content:space-between;align-items:center"><b>${esc(d.name||'item')}</b><span>${d.price!=null?inr(d.price):''} <button class="composebtn" onclick="delProduct('${x.item_id||x.id}')">Delete</button></span></div></div>`}, '<div style="color:var(--grey);font-size:13px;padding:6px">No products yet.</div>')}`;
-  }catch(e){ h.innerHTML=scrErr(e); } }
-async function addProduct(){ const x=document.getElementById("ct_err"); if(x)x.textContent=""; const name=val("ct_name"); if(!name){ if(x)x.textContent="Enter a product name."; return; }
-  try{ await api("prodAdd",{body:{item_data:{name,price:+val("ct_price")||0}}}); toast("Product added ✓"); loadCatalogue(); }catch(e){ if(x)x.textContent=e.message; } }
-async function delProduct(id){ if(!confirm("Delete this product? This cannot be undone.")) return; try{ await api("prodDel",{params:{id}}); toast(MSG.productDeleted()); loadCatalogue(); }catch(e){ toast(MSG.fail("delete the product", e)); } }
+/* SUPPLIERS — two-sided master/detail (Stage A). Same .panel/.list/.divider/.detail skeleton as task/order,
+   so it inherits the draggable divider (startDrag/UI.lw) and the mobile collapse (.appwrap.m + UI.mdetail). */
+function suppliersScreen(){
+  const list = `<div class="list">
+    <div class="lh">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:14px">🏭 Suppliers</span><button onclick="openHelp('suppliers')" title="About this screen" style="border:1px solid var(--line);background:#fff;color:#3F66A6;border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button></div>
+      <div style="display:flex;gap:7px"><input class="inp" id="sp_add" placeholder="Add supplier — User ID or email" style="flex:1" onkeydown="if(event.key==='Enter')addSupplier()"><button class="composebtn" onclick="addSupplier()">Add</button></div>
+      <div class="err" id="sp_err" style="margin-top:6px"></div>
+      <div class="srch" style="margin-top:8px">🔍 <input placeholder="Search suppliers, category, ID" value="${esc(UI.supQ||'')}" oninput="UI.supQ=this.value;paintSupList()"></div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:11px;color:var(--grey)"><span id="sp_count">${supCount()} supplier(s)</span><span style="margin-left:auto;display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden"><button onclick="setSupSort(true)" style="border:0;background:${supPrefFirst()?'var(--blue)':'#fff'};color:${supPrefFirst()?'#fff':'var(--grey)'};font-size:11px;font-weight:700;padding:4px 9px">★ Preferred</button><button onclick="setSupSort(false)" style="border:0;background:${!supPrefFirst()?'var(--blue)':'#fff'};color:${!supPrefFirst()?'#fff':'var(--grey)'};font-size:11px;font-weight:700;padding:4px 9px">A–Z</button></span></div>
+    </div>
+    <div class="rows" id="sup_rows">${UI._supLoading?'<div class="loadwrap"><span class="spin"></span> loading…</div>':supRowsHTML()}</div>
+  </div>`;
+  const detail = `<div class="detail" id="detailpane">${supDetailHTML()}</div>`;
+  const divider = `<div class="divider" id="divider" onmousedown="startDrag(event)" ontouchstart="startDrag(event)" role="separator" aria-label="Resize panes"><span class="grip"></span></div>`;
+  const showDetail = (UI.vp==='mob') && UI.mdetail;
+  return `<div class="panel ${showDetail?'showdetail':''}" id="panel" style="--lw:${UI.lw}px;--lh:${UI.lh}px">${list}${divider}${detail}</div>`;
+}
+function supPrefFirst(){ return UI.supPrefFirst!==false; }   // default: preferred first
+function setSupSort(v){ UI.supPrefFirst=v; paintSupList(); }
+function supName(x){ return (x&&(x.nickname||x.display_name))||'—'; }
+function supVisible(){
+  let s=(UI.sups||[]).slice();
+  const q=(UI.supQ||'').trim().toLowerCase();
+  if(q) s=s.filter(x=>((x.nickname||'')+' '+(x.display_name||'')+' '+(x.category||'')+' '+(x.bridge_id||'')).toLowerCase().includes(q));
+  if(supPrefFirst()) s.sort((a,b)=>(b.preferred?1:0)-(a.preferred?1:0));
+  else s.sort((a,b)=>String(supName(a)).localeCompare(String(supName(b))));
+  return s;
+}
+function supCount(){ return supVisible().length; }
+function supRowHTML(x){
+  const id=x.supplier_list_id, label=supName(x), sub=x.nickname?x.display_name:(x.bridge_id||'');
+  const cat=x.has_catalogue?'<span class="optchip" style="background:#E8F0F4;color:#3F66A6;border-color:#cfe0ec">📕 catalogue</span>':'<span class="optchip" style="background:#F1EFE8;color:#8a857a">no catalogue</span>';
+  return `<div class="row ${id===UI.supSel?'sel':''}" onclick="selectSupplier('${id}')">
+    <button title="Preferred — tap to toggle" onclick="event.stopPropagation();toggleSupPref('${id}')" style="background:none;border:0;font-size:15px;line-height:1;padding:0;color:${x.preferred?'#e0a92b':'#d9c88f'};flex:0 0 auto;margin-top:1px">${x.preferred?'★':'☆'}</button>
+    <div class="main2"><div class="l1"><span class="code">${esc(label)}</span>${x.category?`<span class="optchip" style="background:var(--gold-soft);color:#7a5e22;border-color:var(--gold-line)">${esc(x.category)}</span>`:''}<span class="amt">${cat}</span></div>
+      <div class="l2">${esc(sub)}${x.nickname?` · <span class="mono">${esc(x.bridge_id||'')}</span>`:''}</div></div>
+    <div class="rowgo" aria-hidden="true">›</div></div>`;
+}
+function supRowsHTML(){ const rows=supVisible(); if(!rows.length) return '<div class="empty"><div class="big">🏭</div><div class="t">No suppliers yet</div><div>Add one above by their User ID or email.</div></div>'; return rows.map(supRowHTML).join(''); }
+function paintSupList(){ const b=document.getElementById('sup_rows'); if(b)b.innerHTML=supRowsHTML(); const c=document.getElementById('sp_count'); if(c)c.textContent=supCount()+' supplier(s)'; }
+function paintSupDetail(){ const dp=document.getElementById('detailpane'); if(dp){ dp.className='detail'; dp.innerHTML=supDetailHTML(); } }
+async function loadSuppliers(){
+  UI._supLoading=true; const rb=document.getElementById('sup_rows'); if(rb)rb.innerHTML='<div class="loadwrap"><span class="spin"></span> loading…</div>';
+  try{
+    const r=await api("supList"); UI.sups=Array.isArray(r)?r:((r&&r.suppliers)||[]);
+    UI._supLoading=false; paintSupList();
+    if(UI.supSel && !UI.sups.some(s=>s.supplier_list_id===UI.supSel)){ UI.supSel=null; UI.supDet=null; }
+    if(!UI.supSel && UI.sups.length && UI.vp!=='mob'){ selectSupplier(UI.sups[0].supplier_list_id, true); }
+    else paintSupDetail();
+  }catch(e){ UI._supLoading=false; const rb2=document.getElementById('sup_rows'); if(rb2)rb2.innerHTML=`<div class="empty"><div class="t">Couldn't load suppliers</div><div>${esc(e.message)}</div></div>`; }
+}
+async function selectSupplier(id, silent){
+  UI.supSel=id; UI.supMode='view';
+  if((UI.vp==='mob') && !silent){ UI.mdetail=true; const p=document.getElementById('panel'); if(p)p.classList.add('showdetail'); }
+  paintSupList();
+  const x=(UI.sups||[]).find(s=>s.supplier_list_id===id); if(!x){ return; }
+  UI.supDet={supplier:x, items:null, loading:!!x.has_catalogue}; paintSupDetail();
+  if(x.has_catalogue){
+    try{ const it=await api("supCatalogue",{params:{sid:x.supplier_entity_id}}); const arr=Array.isArray(it)?it:((it&&it.items)||[]);
+      UI.supDet={supplier:x, items:arr.map(p=>{const d=p.item_data||p; return {particulars:d.name||d.product||'item', unit:d.unit||'unit', price:+d.price||0};}), loading:false};
+    }catch(e){ UI.supDet={supplier:x, items:[], loading:false, err:e.message}; }
+    if(UI.supSel===id) paintSupDetail();
+  }
+}
+function setSupMode(m){ UI.supMode=m; paintSupDetail(); }
+function supDetailHTML(){
+  const d=UI.supDet, x=d&&d.supplier;
+  if(!x) return `<div class="empty"><div class="big">🏭</div><div class="t">Select a supplier</div><div>Pick one to see their profile and catalogue, then compose an order.</div></div>`;
+  const back=`<button class="dback" onclick="backToList()">‹ Suppliers</button>`;
+  const seg=(m,l)=>`<button onclick="setSupMode('${m}')" style="border:0;background:${(UI.supMode==='edit'?'edit':'view')===m?'var(--ink)':'#fff'};color:${(UI.supMode==='edit'?'edit':'view')===m?'#fff':'var(--grey)'};font-size:12px;font-weight:700;padding:6px 15px">${l}</button>`;
+  const toggle=`<div style="display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-top:10px">${seg('view','View')}${seg('edit','Edit')}</div>`;
+  const head=`<div class="dh">${back}<div class="dt">${esc(supName(x))} ${x.preferred?'<span style="color:#e0a92b">★</span>':''}</div><div class="ds">${x.category?esc(x.category)+' · ':''}<span class="mono">${esc(x.bridge_id||'')}</span></div>${toggle}</div>`;
+  let body, bar;
+  if(UI.supMode==='edit'){
+    body=`<div class="sec">Edit — your details for this supplier</div>
+      <label class="fl">Your name for them</label><input class="inp" id="sp_nick" value="${esc(x.nickname||'')}" placeholder="e.g. Acme (local yard)">
+      <label class="fl">Category / tag</label><input class="inp" id="sp_cat" value="${esc(x.category||'')}">
+      <label class="fl">Notes</label><input class="inp" id="sp_notes" value="${esc(x.notes||'')}" placeholder="contact person, terms…">
+      <label class="fl" style="margin-top:12px">Preferred</label>
+      <div><button onclick="toggleSupPref('${x.supplier_list_id}')" style="border:1px solid var(--line);border-radius:8px;background:${x.preferred?'var(--blue)':'#fff'};color:${x.preferred?'#fff':'var(--grey)'};font-size:12px;font-weight:700;padding:6px 13px">★ ${x.preferred?'Preferred':'Not preferred'}</button></div>
+      <div class="err" id="sp_ederr" style="margin-top:8px"></div>`;
+    bar=`<button class="pri" onclick="saveSupplier('${x.supplier_list_id}')">Save</button><button onclick="setSupMode('view')">Cancel</button>`;
+  } else {
+    const prof=`<div class="sec">Profile</div><div class="itab" style="padding:4px 12px">
+      <div class="kv" style="display:flex;gap:8px;padding:6px 0;border-bottom:1px dashed var(--line)"><b style="min-width:92px;color:var(--grey);font-weight:600;font-size:11px;text-transform:uppercase">Legal name</b><span>${esc(x.display_name||'—')}</span></div>
+      <div class="kv" style="display:flex;gap:8px;padding:6px 0;border-bottom:1px dashed var(--line)"><b style="min-width:92px;color:var(--grey);font-weight:600;font-size:11px;text-transform:uppercase">Your name</b><span>${esc(x.nickname||'—')}</span></div>
+      <div class="kv" style="display:flex;gap:8px;padding:6px 0;border-bottom:1px dashed var(--line)"><b style="min-width:92px;color:var(--grey);font-weight:600;font-size:11px;text-transform:uppercase">User ID</b><span class="mono">${esc(x.bridge_id||'')}</span></div>
+      <div class="kv" style="display:flex;gap:8px;padding:6px 0;border-bottom:1px dashed var(--line)"><b style="min-width:92px;color:var(--grey);font-weight:600;font-size:11px;text-transform:uppercase">Category</b><span>${esc(x.category||'—')}</span></div>
+      <div class="kv" style="display:flex;gap:8px;padding:6px 0"><b style="min-width:92px;color:var(--grey);font-weight:600;font-size:11px;text-transform:uppercase">Notes</b><span>${esc(x.notes||'—')}</span></div></div>`;
+    let catcard;
+    if(!x.has_catalogue) catcard=`<div class="sec">Order from them</div><div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;font-size:12px;color:#6b5a36">No catalogue published yet — nothing to order.</div>`;
+    else if(d.loading) catcard=`<div class="sec">Order from them</div><div class="loadwrap" style="justify-content:flex-start;padding:6px 0"><span class="spin"></span> loading catalogue…</div>`;
+    else catcard=`<div class="sec">Order from them</div><div class="itab" style="padding:12px"><div style="font-size:12.5px"><b>${(d.items||[]).length}</b> item(s) in their catalogue.</div><div style="font-size:11.5px;color:var(--grey);margin-top:5px">▸ Compose opens with <b>${esc(supName(x))}</b> as recipient (no CC) and their catalogue as line items — full draft &rarr; send lifecycle.</div></div>`;
+    body=prof+catcard;
+    bar=`<button class="pri" ${x.has_catalogue?'':'disabled'} onclick="composeFromSupplier('${x.supplier_list_id}')">🛒 Compose order</button><button class="warn" onclick="delSupplier('${x.supplier_list_id}')">Remove from list</button>`;
+  }
+  return `${head}<div class="db">${body}</div><div class="actbar">${bar}</div>`;
+}
+async function addSupplier(){ const x=document.getElementById("sp_err"); if(x)x.textContent=""; const bid=(val("sp_add")||"").trim(); if(!bid){ if(x)x.textContent="Enter a supplier's User ID or email."; return; } if(!isUserId(bid)){ if(x)x.textContent="User ID must be at least 8 characters, or an email."; return; }
+  try{ await api("supAdd",{body:{supplier_bridge_id:bid}}); toast("Supplier added ✓"); const a=document.getElementById('sp_add'); if(a)a.value=''; await loadSuppliers(); }catch(e){ if(x)x.textContent=e.message; } }
+async function delSupplier(id){ if(!confirm("Remove this supplier from your list?")) return; try{ await api("supDel",{params:{id}}); UI.supSel=null; UI.supDet=null; UI.mdetail=false; toast(MSG.supplierRemoved()); await loadSuppliers(); }catch(e){ toast(MSG.fail("remove the supplier", e)); } }
+async function toggleSupPref(id){ const x=(UI.sups||[]).find(s=>s.supplier_list_id===id); if(!x)return; const nv=!x.preferred;
+  try{ await api("supPatch",{params:{id},body:{preferred:nv}}); x.preferred=nv; if(UI.supDet&&UI.supDet.supplier&&UI.supDet.supplier.supplier_list_id===id)UI.supDet.supplier.preferred=nv; paintSupList(); paintSupDetail(); toast(nv?"Marked preferred ★":"Removed preferred"); }
+  catch(e){ toast(MSG.fail("update the supplier", e)+" — needs the Stage-B migration"); } }
+async function saveSupplier(id){ const err=document.getElementById("sp_ederr"); if(err)err.textContent="";
+  const body={ nickname:val("sp_nick")||null, category:val("sp_cat")||null, notes:val("sp_notes")||null };
+  try{ await api("supPatch",{params:{id},body}); const x=(UI.sups||[]).find(s=>s.supplier_list_id===id); if(x){ x.nickname=body.nickname; x.category=body.category; x.notes=body.notes; } if(UI.supDet&&UI.supDet.supplier)Object.assign(UI.supDet.supplier, body); UI.supMode='view'; paintSupList(); paintSupDetail(); toast("Supplier updated ✓"); }
+  catch(e){ if(err)err.textContent=e.message+" — this needs the Stage-B migration applied."; } }
+async function composeFromSupplier(id){ const d=UI.supDet, x=d&&d.supplier; if(!x||x.supplier_list_id!==id)return;
+  let items=d.items;
+  if(items==null){ try{ const it=await api("supCatalogue",{params:{sid:x.supplier_entity_id}}); const arr=Array.isArray(it)?it:((it&&it.items)||[]); items=arr.map(p=>{const dd=p.item_data||p; return {particulars:dd.name||dd.product||'item', unit:dd.unit||'unit', price:+dd.price||0};}); }catch(e){ items=[]; } }
+  compose({ supplier:{name:supName(x), bridge:x.bridge_id, entity_id:x.supplier_entity_id}, recipients:[{name:supName(x), role:'to', bridge:x.bridge_id||null}], catalogue:items });
+}
+/* CATALOGUE (own products) — two-sided master/detail. Full CRUD is live (PATCH /products/:id), so Edit persists. */
+function catalogueScreen(){
+  const list = `<div class="list">
+    <div class="lh">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:14px">🗂️ Catalogue</span><button onclick="openHelp('catalogue')" title="About this screen" style="border:1px solid var(--line);background:#fff;color:#3F66A6;border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button></div>
+      <button class="composebtn" style="width:100%;justify-content:center" onclick="newProduct()">+ New product</button>
+      <div class="srch" style="margin-top:8px">🔍 <input placeholder="Search name, code, unit" value="${esc(UI.prodQ||'')}" oninput="UI.prodQ=this.value;paintProdList()"></div>
+      <div style="margin-top:8px;font-size:11px;color:var(--grey)" id="ct_count">${prodVisible().length} product(s)</div>
+    </div>
+    <div class="rows" id="ct_rows">${UI._prodLoading?'<div class="loadwrap"><span class="spin"></span> loading…</div>':prodRowsHTML()}</div>
+  </div>`;
+  const detail = `<div class="detail" id="detailpane">${prodDetailHTML()}</div>`;
+  const divider = `<div class="divider" id="divider" onmousedown="startDrag(event)" ontouchstart="startDrag(event)" role="separator" aria-label="Resize panes"><span class="grip"></span></div>`;
+  const showDetail = (UI.vp==='mob') && UI.mdetail;
+  return `<div class="panel ${showDetail?'showdetail':''}" id="panel" style="--lw:${UI.lw}px;--lh:${UI.lh}px">${list}${divider}${detail}</div>`;
+}
+function pData(p){ return (p&&(p.item_data||p.data))||{}; }
+function pName(d){ return d.name||d.product||'item'; }
+function pUnit(d){ return d.unit||'unit'; }
+function pPrice(d){ return +d.price||0; }
+function pCode(d){ return d.code||d.hsn||d.sku||''; }
+function pDesc(d){ return d.desc||d.description||d.note||''; }
+function prodId(p){ return p.item_id||p.id; }
+function prodVisible(){ const a=(UI.prods||[]); const q=(UI.prodQ||'').trim().toLowerCase(); if(!q)return a; return a.filter(p=>{const d=pData(p); return (pName(d)+' '+pCode(d)+' '+pUnit(d)+' '+pDesc(d)).toLowerCase().includes(q);}); }
+function prodRowHTML(p){ const d=pData(p), id=prodId(p); return `<div class="row ${id===UI.prodSel?'sel':''}" onclick="selectProduct('${id}')">
+  <div class="main2"><div class="l1"><span class="code">${esc(pName(d))}</span><span class="optchip" style="background:var(--gold-soft);color:#7a5e22;border-color:var(--gold-line)">${esc(pUnit(d))}</span><span class="amt" style="margin-left:auto">${inr(pPrice(d))}</span></div>
+    <div class="l2">${pCode(d)?'<span class="mono">'+esc(pCode(d))+'</span> · ':''}${esc(pDesc(d)||'—')}</div></div>
+  <div class="rowgo" aria-hidden="true">›</div></div>`; }
+function prodRowsHTML(){ const r=prodVisible(); if(!r.length) return '<div class="empty"><div class="big">🗂️</div><div class="t">No products yet</div><div>Add one with <b>+ New product</b>.</div></div>'; return r.map(prodRowHTML).join(''); }
+function paintProdList(){ const b=document.getElementById('ct_rows'); if(b)b.innerHTML=prodRowsHTML(); const c=document.getElementById('ct_count'); if(c)c.textContent=prodVisible().length+' product(s)'; }
+function paintProdDetail(){ const dp=document.getElementById('detailpane'); if(dp){ dp.className='detail'; dp.innerHTML=prodDetailHTML(); } }
+async function loadCatalogue(){
+  UI._prodLoading=true; const rb=document.getElementById('ct_rows'); if(rb)rb.innerHTML='<div class="loadwrap"><span class="spin"></span> loading…</div>';
+  try{ const items=(await api("prodList"))||[]; UI.prods=items; UI._prodLoading=false; paintProdList();
+    if(UI.prodSel && !UI.prods.some(p=>prodId(p)===UI.prodSel)){ UI.prodSel=null; }
+    if(UI.prodMode!=='new'){ if(!UI.prodSel && UI.prods.length && UI.vp!=='mob'){ selectProduct(prodId(UI.prods[0]), true); } else paintProdDetail(); }
+  }catch(e){ UI._prodLoading=false; const rb2=document.getElementById('ct_rows'); if(rb2)rb2.innerHTML=`<div class="empty"><div class="t">Couldn't load</div><div>${esc(e.message)}</div></div>`; }
+}
+function selectProduct(id, silent){ UI.prodSel=id; UI.prodMode='view';
+  if((UI.vp==='mob') && !silent){ UI.mdetail=true; const p=document.getElementById('panel'); if(p)p.classList.add('showdetail'); }
+  paintProdList(); paintProdDetail(); }
+function setProdMode(m){ UI.prodMode=m; paintProdDetail(); }
+function newProduct(){ UI.prodSel=null; UI.prodMode='new'; if(UI.vp==='mob'){ UI.mdetail=true; const p=document.getElementById('panel'); if(p)p.classList.add('showdetail'); } paintProdList(); paintProdDetail(); }
+function ctField(k,label,v,extra){ return `<label class="fl">${label}</label><input class="inp" id="ct_${k}" value="${esc(v==null?'':v)}" ${extra||''}>`; }
+function prodEditForm(d){ return ctField('name','Name',d.name||'')+`<div style="display:flex;gap:10px"><div style="flex:1">`+ctField('unit','Unit',d.unit||'',"placeholder=\"piece / kg / tonne\"")+`</div><div style="flex:1"><label class="fl">Price</label><input class="inp" id="ct_price" inputmode="numeric" value="${d.price!=null?d.price:''}"></div></div>`+ctField('code','Code / HSN',pCode(d))+`<label class="fl">Description</label><textarea class="inp" id="ct_desc" style="width:100%;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13.5px;min-height:58px;resize:vertical;background:var(--paper)">${esc(pDesc(d))}</textarea>`; }
+function prodViewFields(d){ const kv=(l,v)=>`<div class="kv" style="display:flex;gap:8px;padding:8px 12px;border-bottom:1px dashed var(--line);font-size:13px"><b style="min-width:96px;color:var(--grey);font-weight:600;font-size:11px;text-transform:uppercase">${l}</b><span style="font-weight:600">${v===''||v==null?'—':esc(v)}</span></div>`;
+  return `<div class="itab">${kv('Name',pName(d))}<div class="kv" style="display:flex;gap:8px;padding:8px 12px;border-bottom:1px dashed var(--line);font-size:13px"><b style="min-width:96px;color:var(--grey);font-weight:600;font-size:11px;text-transform:uppercase">Price</b><span style="font-weight:600">${inr(pPrice(d))} <span style="color:var(--grey);font-weight:400">/ ${esc(pUnit(d))}</span></span></div>${kv('Unit',pUnit(d))}${kv('Code / HSN',pCode(d))}${kv('Description',pDesc(d))}</div>`; }
+function prodDetailHTML(){
+  if(UI.prodMode==='new'){ return `<div class="dh"><button class="dback" onclick="backToList()">‹ Catalogue</button><div class="dt">New product</div><div class="ds">add to your catalogue</div></div><div class="db"><div class="sec">Product details</div>${prodEditForm({})}<div class="err" id="ct_err" style="margin-top:8px"></div></div><div class="actbar"><button class="pri" onclick="saveNewProduct()">Add product</button><button onclick="backToList()">Cancel</button></div>`; }
+  const p=(UI.prods||[]).find(x=>prodId(x)===UI.prodSel);
+  if(!p) return `<div class="empty"><div class="big">🗂️</div><div class="t">Select a product</div><div>Pick one to view or edit — or add a new one.</div></div>`;
+  const d=pData(p), id=prodId(p);
+  const back=`<button class="dback" onclick="backToList()">‹ Catalogue</button>`;
+  const seg=(m,l)=>`<button onclick="setProdMode('${m}')" style="border:0;background:${(UI.prodMode==='edit'?'edit':'view')===m?'var(--ink)':'#fff'};color:${(UI.prodMode==='edit'?'edit':'view')===m?'#fff':'var(--grey)'};font-size:12px;font-weight:700;padding:6px 15px">${l}</button>`;
+  const head=`<div class="dh">${back}<div class="dt">${esc(pName(d))}</div><div class="ds">${inr(pPrice(d))} / ${esc(pUnit(d))}${pCode(d)?' · '+esc(pCode(d)):''}</div><div style="display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-top:10px">${seg('view','View')}${seg('edit','Edit')}</div></div>`;
+  let body, bar;
+  if(UI.prodMode==='edit'){ body=`<div class="sec">Edit product</div>${prodEditForm(d)}<div class="err" id="ct_err" style="margin-top:8px"></div>`; bar=`<button class="pri" onclick="saveProduct('${id}')">Save</button><button onclick="setProdMode('view')">Cancel</button>`; }
+  else { body=`<div class="sec">Product</div>${prodViewFields(d)}`; bar=`<button class="pri" onclick="setProdMode('edit')">✎ Edit</button><button class="warn" onclick="delProduct('${id}')">Delete</button>`; }
+  return `${head}<div class="db">${body}</div><div class="actbar">${bar}</div>`;
+}
+function ctReadForm(orig){ return Object.assign({}, orig||{}, { name:(val("ct_name")||'').trim(), unit:(val("ct_unit")||'').trim()||'unit', price:+val("ct_price")||0, code:(val("ct_code")||'').trim(), desc:(val("ct_desc")||'').trim() }); }
+async function saveNewProduct(){ const err=document.getElementById("ct_err"); if(err)err.textContent=""; const data=ctReadForm({}); if(!data.name){ if(err)err.textContent="Name is required."; return; }
+  try{ const r=await api("prodAdd",{body:{item_data:data}}); const nid=(r&&r.item&&r.item.item_id)||null; toast("Product added ✓"); UI.prodMode='view'; UI.prodSel=nid; await loadCatalogue(); if(nid){ UI.prodSel=nid; paintProdList(); paintProdDetail(); } }catch(e){ if(err)err.textContent=e.message; } }
+async function saveProduct(id){ const err=document.getElementById("ct_err"); if(err)err.textContent=""; const p=(UI.prods||[]).find(x=>prodId(x)===id); const data=ctReadForm(pData(p)); if(!data.name){ if(err)err.textContent="Name is required."; return; }
+  try{ await api("prodEdit",{params:{id},body:{item_data:data}}); toast("Product updated ✓"); UI.prodMode='view'; await loadCatalogue(); UI.prodSel=id; paintProdList(); paintProdDetail(); }catch(e){ if(err)err.textContent=e.message; } }
+async function delProduct(id){ if(!confirm("Delete this product? This cannot be undone.")) return; try{ await api("prodDel",{params:{id}}); UI.prodSel=null; UI.mdetail=false; toast(MSG.productDeleted()); await loadCatalogue(); }catch(e){ toast(MSG.fail("delete the product", e)); } }
 /* MIS — computed client-side (no MIS route on the legacy backend) */
 function misScreen(){ return scr("📊 MIS","misbody","mis"); }
 async function loadMIS(){ const h=document.getElementById("misbody"); if(!h)return;
@@ -1768,8 +1943,105 @@ async function loadMIS(){ const h=document.getElementById("misbody"); if(!h)retu
       <div style="margin-top:10px;color:var(--grey);font-size:11px">Computed on view from your live data — there is no MIS route on the legacy backend yet (a server-side rollup is the production model).</div>`;
   }catch(e){ h.innerHTML=scrErr(e); } }
 /* CO-ASSISTS — the actor roster */
-function coassistsScreen(){ return scr("🧑‍🤝‍🧑 Co-assists","cobody","coassists"); }
-const CO_HELP = [
+/* CO-ASSISTS — two-sided master/detail (Stage A). Same skeleton as task/order + suppliers,
+   so the draggable divider and mobile collapse come for free. */
+const AC_TYPE={human:'🧑 human', iot_device:'⚙️ device', connector:'🔌 connector', ai_agent:'🤖 AI', process_rule:'📋 rule'};
+function acType(t){ return AC_TYPE[t]||esc(t||'human'); }
+function acShc(sh){ return sh==='on_shift'?'on':sh==='on_break'?'brk':'off'; }
+function acShLabel(sh){ return sh==='on_shift'?'on shift':sh==='on_break'?'on break':'off'; }
+function acFlt(){ return UI.acFlt||'active'; }
+function acDate(ts){ if(!ts)return '—'; try{ return new Date(ts).toLocaleDateString(); }catch(_){ return '—'; } }
+function acLogin(x){ return esc(x.key)+'@'+esc((SESSION.entity||'').toLowerCase()); }
+function coassistsScreen(){
+  const list = `<div class="list">
+    <div class="lh">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:14px">🧑‍🤝‍🧑 Co-assists</span><button onclick="openHelp('coassists')" title="About this screen" style="border:1px solid var(--line);background:#fff;color:#3F66A6;border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button></div>
+      <div style="display:flex;gap:7px"><input class="inp" id="ac_add" placeholder="New co-assist — opens the invite form" style="flex:1" readonly onclick="addActorModal()"><button class="composebtn" onclick="addActorModal()">+ New</button></div>
+      <div class="srch" style="margin-top:8px">🔍 <input placeholder="Search name, role, key" value="${esc(UI.acQ||'')}" oninput="UI.acQ=this.value;paintAcList()"></div>
+      <div style="display:flex;align-items:center;gap:6px;margin-top:8px;font-size:11px;color:var(--grey)">
+        <span style="display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden">${['active','inactive','all'].map(f=>`<button onclick="setAcFlt('${f}')" style="border:0;background:${acFlt()===f?'var(--blue)':'#fff'};color:${acFlt()===f?'#fff':'var(--grey)'};font-weight:700;font-size:11px;padding:4px 9px;text-transform:capitalize">${f}</button>`).join('')}</span>
+        <span style="margin-left:auto" id="ac_count">${acVisible().length}</span></div>
+    </div>
+    <div class="rows" id="ac_rows">${UI._acLoading?'<div class="loadwrap"><span class="spin"></span> loading…</div>':acRowsHTML()}</div>
+  </div>`;
+  const detail = `<div class="detail" id="detailpane">${acDetailHTML()}</div>`;
+  const divider = `<div class="divider" id="divider" onmousedown="startDrag(event)" ontouchstart="startDrag(event)" role="separator" aria-label="Resize panes"><span class="grip"></span></div>`;
+  const showDetail = (UI.vp==='mob') && UI.mdetail;
+  return `<div class="panel ${showDetail?'showdetail':''}" id="panel" style="--lw:${UI.lw}px;--lh:${UI.lh}px">${list}${divider}${detail}</div>`;
+}
+function acVisible(){ let a=(UI.acts||[]).filter(x=>acFlt()==='all'?true:(acFlt()==='inactive'?x.status!=='active':x.status==='active'));
+  const q=(UI.acQ||'').trim().toLowerCase(); if(q)a=a.filter(x=>((x.name||'')+' '+(x.role||'')+' '+(x.key||'')+' '+(x.type||'')).toLowerCase().includes(q)); return a; }
+function acRowHTML(x){ const dim=x.status!=='active'?'opacity:.55':'';
+  return `<div class="row ${x.id===UI.acSel?'sel':''}" style="${dim}" onclick="selectActor('${x.id}')">
+    <div style="width:9px;height:9px;border-radius:50%;flex:0 0 auto;margin-top:5px;background:${x.shift==='on_shift'?'#2f8f5b':x.shift==='on_break'?'#c9a441':'#b9b9b9'}"></div>
+    <div class="main2"><div class="l1"><span class="code">${esc(x.name)}</span><span class="optchip">${acType(x.type)}</span><span class="amt" style="margin-left:auto;font-size:11.5px;color:var(--grey)">${x.load}/${x.max||'∞'}</span></div>
+      <div class="l2">${esc(x.role||'—')} · <span class="mono">${acLogin(x)}</span> <span class="optchip ${acShc(x.shift)}">${acShLabel(x.shift)}</span>${x.status!=='active'?'<span class="optchip off">'+esc(x.status)+'</span>':''}</div></div>
+    <div class="rowgo" aria-hidden="true">›</div></div>`; }
+function acRowsHTML(){ const r=acVisible(); if(!r.length) return '<div class="empty"><div class="big">🧑‍🤝‍🧑</div><div class="t">No co-assists</div><div>Add one with <b>+ New</b> above.</div></div>'; return r.map(acRowHTML).join(''); }
+function paintAcList(){ const b=document.getElementById('ac_rows'); if(b)b.innerHTML=acRowsHTML(); const c=document.getElementById('ac_count'); if(c)c.textContent=acVisible().length; }
+function paintAcDetail(){ const dp=document.getElementById('detailpane'); if(dp){ dp.className='detail'; dp.innerHTML=acDetailHTML(); } }
+function selectActor(id, silent){ UI.acSel=id; UI.acMode='view'; UI.acDet=(UI.acts||[]).find(a=>a.id===id)||null;
+  if((UI.vp==='mob') && !silent){ UI.mdetail=true; const p=document.getElementById('panel'); if(p)p.classList.add('showdetail'); }
+  paintAcList(); paintAcDetail(); }
+function setAcMode(m){ UI.acMode=m; paintAcDetail(); }
+function setAcFlt(f){ UI.acFlt=f; UI.acSel=null; UI.acDet=null; paintAcList(); paintAcDetail(); }
+function acDetailHTML(){ const x=UI.acDet;
+  if(!x) return `<div class="empty"><div class="big">🧑‍🤝‍🧑</div><div class="t">Select a co-assist</div><div>Pick one to see their profile, shift and access — or manage them.</div></div>`;
+  const back=`<button class="dback" onclick="backToList()">‹ Co-assists</button>`;
+  const seg=(m,l)=>`<button onclick="setAcMode('${m}')" style="border:0;background:${(UI.acMode==='edit'?'edit':'view')===m?'var(--ink)':'#fff'};color:${(UI.acMode==='edit'?'edit':'view')===m?'#fff':'var(--grey)'};font-size:12px;font-weight:700;padding:6px 15px">${l}</button>`;
+  const toggle=`<div style="display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-top:10px">${seg('view','View')}${seg('edit','Edit')}</div>`;
+  const head=`<div class="dh">${back}<div class="dt">${esc(x.name)} <span class="optchip ${acShc(x.shift)}">${acShLabel(x.shift)}</span></div><div class="ds">${esc(x.role||'—')} · <span class="mono">${acLogin(x)}</span></div>${toggle}</div>`;
+  let body, bar;
+  if(UI.acMode==='edit'){
+    body=`<div class="sec">Edit — co-assist profile</div>
+      <label class="fl">Display name</label><input class="inp" id="ac_ename" value="${esc(x.name)}">
+      <label class="fl">Role</label><input class="inp" id="ac_erole" value="${esc(x.role||'')}" placeholder="e.g. Dispatch, Accounts">
+      <label class="fl">Max concurrent tasks</label><input class="inp" id="ac_emax" inputmode="numeric" value="${x.max||''}" style="width:120px">
+      <label class="fl">Phone</label><input class="inp" id="ac_ephone" value="${esc(x.phone||'')}" placeholder="optional">
+      <div class="err" id="ac_ederr" style="margin-top:8px"></div>
+      <div style="font-size:11px;color:#9a7b34;background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;margin-top:10px;line-height:1.5"><b>Stage B</b> — profile edit needs <span class="mono">PATCH /api/actors/:id</span> (no migration). Save shows an error until that endpoint is deployed.</div>`;
+    bar=`<button class="pri" onclick="saveActor('${x.id}')">Save</button><button onclick="setAcMode('view')">Cancel</button>`;
+  } else {
+    const pct=x.max?Math.min(100,Math.round(x.load/x.max*100)):0;
+    const prof=`<div class="sec">Profile</div><div class="itab">
+      <div class="kv"><b>Name</b><span>${esc(x.name)}</span></div>
+      <div class="kv"><b>Login</b><span class="mono">${acLogin(x)}</span></div>
+      <div class="kv"><b>Role</b><span>${esc(x.role||'—')}</span></div>
+      <div class="kv"><b>Type</b><span>${acType(x.type)}</span></div>
+      ${x.phone?`<div class="kv"><b>Phone</b><span>${esc(x.phone)}</span></div>`:''}
+      <div class="kv"><b>Joined</b><span>${acDate(x.created)}</span></div>
+      <div class="kv"><b>Last active</b><span>${acDate(x.last)}</span></div></div>`;
+    const work=`<div class="sec">Shift &amp; load</div><div class="itab" style="padding:11px 12px">
+      <div style="display:flex;align-items:center;gap:8px"><span class="optchip ${acShc(x.shift)}">${acShLabel(x.shift)}</span><span style="font-size:12px;color:var(--grey)">${x.status==='active'?'active':esc(x.status)}</span></div>
+      <div style="font-size:12.5px;margin-top:9px">Load · <b>${x.load}</b> / ${x.max||'∞'} tasks</div><div style="height:8px;background:#eef1f4;border-radius:5px;overflow:hidden;margin-top:6px"><span style="display:block;height:100%;background:var(--blue);border-radius:5px;width:${pct}%"></span></div></div>`;
+    const eng=`<div class="sec">Access / engagement</div><div style="font-size:11px;color:#9a7b34;background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;line-height:1.5">Per-actor engagement (view-only · act · audit · MIS) is <b>planned, not enforced yet</b> — today a co-assist acts within the entity's scope. Default-deny per node is the roadmap.</div>`;
+    body=prof+work+eng;
+    if(x.status==='active'){
+      bar=`<button class="pri" onclick="acShift('${x.id}')">🔄 Toggle shift</button>`+
+          (x.type==='human'?`<button onclick="acReinvite('${x.id}')">✉️ Re-invite</button><button onclick="acResetPin('${x.id}')">🔑 Reset PIN</button>`:'')+
+          `<button class="pend" onclick="todo('coassistEngage')">Set engagement</button><button class="warn" onclick="acStatus('${x.id}','deactivate')">Deactivate</button>`;
+    } else {
+      bar=`<button class="pri" onclick="acStatus('${x.id}','reactivate')">↩ Reactivate</button><button class="warn" onclick="acStatus('${x.id}','remove')">Remove permanently</button>`;
+    }
+  }
+  return `${head}<div class="db">${body}</div><div class="actbar">${bar}</div>`;
+}
+async function acShift(id){ const x=(UI.acts||[]).find(a=>a.id===id); if(!x)return; const o=['on_shift','on_break','off']; const next=o[(o.indexOf(x.shift)+1)%3];
+  try{ await api("actorBreak",{body:{actor_id:id, break_status:next}}); x.shift=next; if(UI.acDet&&UI.acDet.id===id)UI.acDet.shift=next; paintAcList(); paintAcDetail(); toast(MSG.shiftSet(next)); }catch(e){ toast(MSG.fail("change shift", e)); } }
+async function acReinvite(id){ try{ const r=await api("actorOtp",{params:{id}}); const otp=(r&&(r.otp||r.dev_otp))||''; toast(otp?('New code: '+otp+' — share with the co-assist'):'New invite code generated — share it with the co-assist.'); }catch(e){ toast(MSG.fail("re-invite", e)); } }
+async function acResetPin(id){ if(!confirm("Reset this co-assist's PIN? They set a new one on next login.")) return; try{ await api("actorPinReset",{params:{id}}); toast('PIN reset — they set a new one next login.'); }catch(e){ toast(MSG.fail("reset the PIN", e)); } }
+async function acStatus(id, action){ const x=(UI.acts||[]).find(a=>a.id===id); if(!x)return;
+  const routed = x.load>0 ? ` Their ${x.load} active task(s) return to the pool.` : '';
+  if(action==='deactivate' && !confirm('Deactivate '+x.name+'?'+routed)) return;
+  if(action==='remove' && !confirm('Permanently remove '+x.name+'? This cannot be undone.'+routed)) return;
+  const body={action}; if(x.load>0)body.task_action='pool'; if(action==='remove')body.confirm='REMOVE';
+  try{ await api("actorStatus",{params:{id},body}); UI.acSel=null; UI.acDet=null; UI.mdetail=false;
+    toast(action==='remove'?'Co-assist removed':(action==='deactivate'?'Deactivated':'Reactivated — new invite code issued')); await loadCoassists(); }
+  catch(e){ toast(MSG.fail("update the co-assist", e)); } }
+async function saveActor(id){ const err=document.getElementById("ac_ederr"); if(err)err.textContent="";
+  const body={ display_name:val("ac_ename")||undefined, actor_role:val("ac_erole")||null, max_tasks:(+val("ac_emax")||undefined), phone:val("ac_ephone")||null };
+  try{ await api("actorEdit",{params:{id},body}); const x=(UI.acts||[]).find(a=>a.id===id); if(x){ if(body.display_name)x.name=body.display_name; x.role=body.actor_role; if(body.max_tasks)x.max=body.max_tasks; x.phone=body.phone; } UI.acMode='view'; paintAcList(); paintAcDetail(); toast('Co-assist updated ✓'); }
+  catch(e){ if(err)err.textContent=e.message+" — this needs the Stage-B PATCH endpoint deployed."; } }const CO_HELP = [
  {q:"What is a co-assist?", a:"Anyone — or anything — that acts FOR you. Today people; soon connectors, IoT devices, process rules and AI agents. The owner stays the party; the co-assist acts on your behalf within your entity's scope (per-actor limits are coming)."},
  {q:"What can they do?", a:"Today a co-assist acts WITHIN your entity's scope — they can see and act on the entity's work; entity-level isolation is enforced. Per-actor engagement TYPES (view-only, act, audit, MIS) that limit what an individual can do are PLANNED, not yet enforced — so don't rely on per-actor limits yet. The roadmap is default-deny per node; the granular scoping is coming."},
  {q:"Push or pull?", a:"Assignment model: pull (actors take work), push (you assign), or both — set in Settings. With a process map, push/pull stop being manual and draw from the order's processes (next iteration)."},
@@ -1777,21 +2049,16 @@ const CO_HELP = [
  {q:"Can a co-assist be a machine?", a:"Yes — actor_type can be connector (ERP / system-to-system), iot_device (a machine triggers a chit), process_rule, or ai_agent. Each has its own auth and handling; these are the next slices."},
  {q:"Where does access come from?", a:"You can only grant what you hold; access flows down the Network tree and is checked live. Set participants here; their scope ties to their node in Network."}
 ];
-function coBanner(){ return `<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:12px;padding:12px 14px;margin-bottom:12px;font-size:13px;color:#6b5a36;line-height:1.5"><b style="font-family:'Space Grotesk'">Manage who acts for you.</b> Co-Assist is the <b>people and systems that act for you</b> — people now; connectors, devices and AI agents are participant types coming next. The owner stays the party; participants act <i>for</i> you under scoped access. For your structure use <b>Network</b>; for other businesses use <b>Connections</b>.</div>`; }
-/* (removed) coHelpBox + coAsk + coAskFree — the Co-Assist "?" now renders from ASSIST_LIB via helpBoxFromLib.
-   CO_HELP is still folded into ASSIST_LIB by buildAssistLib; coBanner (the inline banner) is retained. */
-function coTypeRow(){ const t=(k,on)=>`<span class="optchip" style="font-size:10px;${on?'background:#eef3fb;color:#345488;border-color:#cfe0f4':''}">${k}</span>`;
- return `<div style="${_CARD}"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><b style="font-size:13px">Your co-assists</b><button class="composebtn" onclick="addActorModal()">+ New co-assist</button></div><div style="font-size:11px;color:var(--grey);margin-top:8px;display:flex;gap:5px;flex-wrap:wrap;align-items:center">Types: ${t('human',true)}${t('connector')}${t('iot_device')}${t('ai_agent')}<span style="color:#a9853f">· human now, others next</span></div></div>`; }
-function coActorCard(a){ const at=a.atype||"human", cap=a.cap||"act", node=a.node||"", sh=a.shift||"on_shift";
- const shc=sh==='on_shift'?'on':sh==='on_break'?'brk':'off';
- return `<div style="${_CARD}"><div style="display:flex;justify-content:space-between;align-items:center"><span><b>${esc(a.name)}</b> <span class="optchip" style="font-size:10px;background:#eef3fb;color:#345488;border-color:#cfe0f4">${esc(at)}</span>${a.isnew?` <span class="optchip" style="font-size:10px;background:#eaf3ee;color:#2f8f5b;border-color:#bfe0cd">new</span>`:``}</span><span class="optchip ${shc}">${esc(sh.replace('_',' '))}</span></div>${a.uid?`<div style="font-family:'Space Mono';font-size:11px;color:#3F66A6;margin-top:2px">${esc(a.uid)}</div>`:''}<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:7px;align-items:center"><span class="optchip" style="font-size:10.5px;background:var(--gold-soft);color:#7a5e22;border-color:var(--gold-line)">${esc(cap)}</span>${node?`<span style="font-size:11.5px;color:var(--grey)">@ ${esc(node)}</span>`:''}<span style="font-size:11.5px;color:var(--grey)">load ${a.load==null?0:a.load}</span></div><div style="margin-top:9px;display:flex;gap:6px"><button class="composebtn" onclick="actorShift('${a.id}','${sh}')">Toggle shift</button><button class="composebtn" onclick="todo('coassistEngage')">Set engagement</button></div></div>`; }
-async function actorShift(id,cur){ const order=["on_shift","on_break","off"]; const next=order[(order.indexOf(cur)+1)%3];
- try{ await api("actorBreak",{body:{actor_id:id, break_status:next}}); toast(MSG.shiftSet(next)); loadCoassists(); }catch(e){ toast(MSG.fail("change shift", e)); } }
-async function loadCoassists(){ const h=document.getElementById("cobody"); if(!h)return;
-  try{ const actors=((await api("actors"))||[]).map(mapApiActor); STORE.actors=actors;
-    h.innerHTML = coBanner() + coTypeRow() +
-      lazyWrap('co', actors, coActorCard, '<div style="color:var(--grey);font-size:13px;padding:6px">No co-assists yet — add one above.</div>');
-  }catch(e){ h.innerHTML=scrErr(e); } }
+/* (superseded) coBanner / coTypeRow / coActorCard / actorShift — replaced by the two-pane co-assist panel above.
+   CO_HELP is still folded into ASSIST_LIB by buildAssistLib. */
+async function loadCoassists(){
+  UI._acLoading=true; const rb=document.getElementById('ac_rows'); if(rb)rb.innerHTML='<div class="loadwrap"><span class="spin"></span> loading…</div>';
+  try{ const actors=((await api("actors"))||[]).map(mapApiActor); UI.acts=actors; STORE.actors=actors; UI._acLoading=false; paintAcList();
+    if(UI.acSel && !UI.acts.some(a=>a.id===UI.acSel)){ UI.acSel=null; UI.acDet=null; }
+    if(!UI.acSel && UI.acts.length && UI.vp!=='mob'){ const f=acVisible()[0]; if(f)selectActor(f.id, true); else paintAcDetail(); }
+    else paintAcDetail();
+  }catch(e){ UI._acLoading=false; const rb2=document.getElementById('ac_rows'); if(rb2)rb2.innerHTML=`<div class="empty"><div class="t">Couldn't load co-assists</div><div>${esc(e.message)}</div></div>`; }
+}
 
 function mainBody(){
   if(["task","order","drafts","trash","archive"].includes(UI.nav)) return taskPanel();
@@ -1855,7 +2122,7 @@ function minimiseCompose(){ const h=document.getElementById("modalhost"); if(!h)
 function resumeCompose(){ const h=document.getElementById("modalhost"); if(h)h.style.display=''; UI._composeMin=false; const p=document.getElementById('composepill'); if(p)p.remove(); setTimeout(function(){ var t=document.getElementById('cf_subject'); if(t)t.focus(); },20); }
 function renderComposePill(){ var p=document.getElementById('composepill'); if(!p){ p=document.createElement('div'); p.id='composepill'; document.body.appendChild(p); } p.className='composepill'; p.innerHTML='<span onclick="resumeCompose()" style="cursor:pointer">✏️ Resume compose</span><span onclick="discardCompose()" title="Discard draft" style="cursor:pointer;opacity:.75;font-weight:800">✕</span>'; }
 function discardCompose(){ var p=document.getElementById('composepill'); if(p)p.remove(); CC={items:[],rcpts:[]}; closeModal(); }
-function closeModal(){ const h=document.getElementById("modalhost"); if(h){ h.style.display=''; h.innerHTML=""; } UI._composeModal=false; UI._composeMin=false; UI._draftId=null; const p=document.getElementById('composepill'); if(p)p.remove(); }
+function closeModal(){ const h=document.getElementById("modalhost"); if(h){ h.style.display=''; h.innerHTML=""; } UI._composeModal=false; UI._composeMin=false; UI._draftId=null; UI._supplier=null; const p=document.getElementById('composepill'); if(p)p.remove(); }
 function quickStatus(){ const ids=needTarget(); if(!ids.length)return; MODALS.stat={ids,to:null};
   const opts=[["open","Open"],["act","Act"],["close","Close"]].map(([v,l])=>`<div class="optrow" data-v="${v}" onclick="pickStatus('${v}')"><span class="rdo"></span><div class="oc"><div class="on">${l}</div></div></div>`).join("");
   modal(`<div class="mhd"><div class="t">Change status</div><div class="s">${ids.length} chit${ids.length>1?'s':''}</div></div><div class="mbody">${opts}</div><div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="pri" id="mok" disabled onclick="confirmStatus()">Set status</button></div>`);
@@ -1965,7 +2232,7 @@ function fmtAt(ts){ try{ return new Date(ts).toLocaleTimeString([], {hour:'2-dig
 function inr_(v){ return '₹'+Number(v||0).toLocaleString('en-IN'); }
 function fmtLine(li){ return [li.particulars||'Item', (li.quantity||0)+' × '+inr_(li.price)+' = '+inr_(li.total||(li.quantity*li.price)), []]; }
 function mapApiMsg(m){ if(!m||m.scope!==undefined) return m; return { id:m.message_id, scope:m.thread_type||'internal', author:m.sender_display_name||'—', body:m.message_text||'', at:fmtAt(m.created_at), type:m.msg_type||'info', unread:false, atts:(m.attachments||[]).map(mapAtt) }; }
-function mapApiActor(a){ if(!a||a.shift!==undefined) return a; const S={active:'on_shift',on_break:'on_break',break:'on_break',off:'off',deactivated:'off'}; return { id:a.identity_id, name:a.display_name, uid:a.user_id||a.uid, shift:S[a.break_status]||'on_shift', load:a.current_task_count||0 }; }
+function mapApiActor(a){ if(!a||a.shift!==undefined) return a; const S={active:'on_shift',short_break:'on_break',on_break:'on_break',break:'on_break',leave:'on_break',off:'off',deactivated:'off',removed:'off'}; const st=(a.break_status==='deactivated')?'deactivated':(a.break_status==='removed'?'removed':'active'); return { id:a.identity_id, name:a.display_name, uid:a.user_id||a.uid, key:a.actor_key||'', role:a.actor_role||'', type:a.actor_type||'human', shift:S[a.break_status]||'on_shift', status:st, load:a.current_task_count||0, max:a.max_tasks||0, phone:a.phone||'', bridge:a.bridge_id||'', created:a.created_at||null, last:a.last_active_at||null }; }
 /* ── generic lazy-list pager — ONE implementation for every scrollable list ────────────────
    pgInit(id,cfg): cfg = { el:()=>HTMLElement (scroll container), fetch:(page,limit)=>Promise(array, maybe .total),
      map:(row)=>row, store:(rows,first)=>void, count:()=>number, repaint:()=>void, limit:int }
