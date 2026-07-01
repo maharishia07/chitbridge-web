@@ -164,6 +164,10 @@
   .modal.wide{width:820px;max-width:94vw}
   .cc-cols{display:grid;grid-template-columns:var(--cc-lw,1fr) 14px minmax(0,1fr);gap:0;align-items:start}
   .cc-col{min-width:0}
+  .cc-rtabs{display:flex;gap:5px;margin:2px 0 8px;flex-wrap:wrap}
+  .cc-rtab{border:1px solid var(--line);background:#fff;border-radius:7px;font-size:11px;font-weight:700;padding:4px 9px;color:var(--grey);cursor:pointer}
+  .cc-rtab.on{background:#EEF3FB;color:var(--blue);border-color:var(--blue)}
+  .ccsum-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:12.5px;color:var(--ink)}
   .cc-gutter{align-self:stretch;width:14px;cursor:col-resize;position:relative}
   .cc-gutter::before{content:"";position:absolute;left:6px;top:2px;bottom:2px;width:2px;background:var(--line);border-radius:2px}
   .cc-gutter:hover::before{background:var(--blue);width:3px;left:5px}
@@ -1250,15 +1254,18 @@ async function compose(prefill){ UI.drawer=false; CC={items:(prefill&&prefill.it
      ${!STORE.chitSchema?`<div style="background:#fbeceb;border:1px solid #f0c9c6;border-radius:8px;padding:7px 10px;font-size:11.5px;color:#b4453f;margin-bottom:6px">${esc(MSG.schemaDefault())}</div>`:''}
      ${ccSchema().map(cfField).join("")}
      </div><div class="cc-gutter" onmousedown="ccSplitStart(event)" title="Drag to resize the two panels"></div><div class="cc-col">
+     <div class="cc-rtabs"><button class="cc-rtab on" data-t="items" onclick="ccSetRTab('items')">Line items</button><button class="cc-rtab" data-t="atts" onclick="ccSetRTab('atts')">Attachments</button><button class="cc-rtab" data-t="summary" onclick="ccSetRTab('summary')">Summary</button></div>
+     <div class="cc-rpane" data-p="items">
      <div style="font-family:'Space Grotesk';font-weight:600;font-size:12px;color:var(--grey);margin:12px 0 4px">Line items · from your catalogue</div>
      ${(STORE.catalogue||[]).length
         ? `<div style="display:flex;gap:8px"><select class="inp" id="cc_pick">${STORE.catalogue.map((p,i)=>`<option value="${i}">${esc(p.particulars)} · ${inr(p.price)}/${esc(p.unit||'unit')}</option>`).join("")}</select><button class="composebtn" onclick="ccAddItem()">+ Add</button></div>`
         : `<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:10px 12px;font-size:12.5px;color:#6b5a36">${_catErr?esc(MSG.catalogueLoadErr()):'Your catalogue is empty — a chit needs at least one line item. <a onclick="closeModal();navTo(\'catalogue\')" style="color:#3F66A6;cursor:pointer;font-weight:600">Add a product in Catalogue first &rarr;</a>'}</div>`}
      <div style="display:flex;gap:6px;margin-top:6px"><input class="inp" id="cc_mname" placeholder="Or type an item name" style="flex:1"><input class="inp" id="cc_mqty" inputmode="numeric" value="1" style="width:50px" title="Qty"><input class="inp" id="cc_mprice" inputmode="numeric" placeholder="Price" style="width:74px"><button class="composebtn" onclick="ccAddManual()">+ Add</button></div>
      <div id="cc_items" style="margin-top:8px"></div>
+     </div><div class="cc-rpane" data-p="atts" style="display:none">
      <div style="font-family:'Space Grotesk';font-weight:600;font-size:12px;color:var(--grey);margin:12px 0 4px">Whole-chit attachments · <span style="font-weight:400">co-signed (use 📎 on a line for item-specific files)</span></div>
      <label class="composebtn" style="cursor:pointer">📎 Attach files<input type="file" multiple style="display:none" onchange="ccAddFiles(this.files);this.value=''"></label>
-     <div id="cc_files" style="margin-top:6px"></div>
+     <div id="cc_files" style="margin-top:6px"></div></div><div class="cc-rpane" data-p="summary" style="display:none"><div id="cc_summary"></div></div>
      <div id="cc_total" style="text-align:right;font-weight:700;font-size:13px;margin-top:6px"></div></div></div>
      <div class="err" id="cc_err"></div>
    </div>
@@ -1303,6 +1310,8 @@ function ccRenderItems(){ const h=document.getElementById("cc_items"); if(!h)ret
 function ccItemChips(i){ var it=CC.items[i]||{}; var fs=it.files||[]; return fs.map(function(f,k){ return '<span style="display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:7px;padding:2px 7px;margin:2px 5px 0 0;font-size:11px;background:#fff">'+attIcon(attType(f.type,f.name))+' '+esc(f.name.length>20?f.name.slice(0,20)+'…':f.name)+' <span onclick="ccDelItemFile('+i+','+k+')" style="cursor:pointer;color:#9aa3a7">✕</span></span>'; }).join(''); }
 function ccAddItemFiles(i,files){ var it=CC.items[i]; if(!it)return; it.files=it.files||[]; for(var k=0;k<files.length;k++){ var f=files[k]; if(f.size>6*1024*1024){ toast(f.name+' is over 6MB — skipped.'); continue; } it.files.push(f); } var el=document.getElementById('cc_itf_'+i); if(el)el.innerHTML=ccItemChips(i); }
 function ccDelItemFile(i,k){ var it=CC.items[i]; if(it&&it.files){ it.files.splice(k,1); } var el=document.getElementById('cc_itf_'+i); if(el)el.innerHTML=ccItemChips(i); }
+function ccSetRTab(t){ UI.ccRTab=t; document.querySelectorAll('.cc-rtab').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-t')===t); }); document.querySelectorAll('.cc-rpane').forEach(function(p){ p.style.display=(p.getAttribute('data-p')===t)?'':'none'; }); if(t==='summary')ccRenderSummary(); }
+function ccRenderSummary(){ var h=document.getElementById('cc_summary'); if(!h)return; var nItems=(CC.items||[]).length; var nAtt=(CC.files||[]).length+(CC.items||[]).reduce(function(a,it){return a+((it.files||[]).length);},0); var nRcpt=(CC.rcpts||[]).length; var sum=(CC.items||[]).reduce(function(s,it){return s+ccLineTotal(it);},0); h.innerHTML='<div class="ccsum-row"><span>Line items</span><b>'+nItems+'</b></div><div class="ccsum-row"><span>Attachments</span><b>'+nAtt+'</b></div><div class="ccsum-row"><span>Recipients</span><b>'+nRcpt+'</b></div><div class="ccsum-row" style="border-top:1px solid var(--line);margin-top:4px;padding-top:6px"><span><b>Total</b></span><b>'+fmtMoney(sum,'INR')+'</b></div><div style="font-size:10.5px;color:var(--grey);margin-top:9px;line-height:1.5">This rollup rides on the chit <b>header</b> (summary_json) at send — line-item count + total already; attachment count is a small add if you want it stored.</div>'; }
 function ccRenderTotal(){ const t=document.getElementById("cc_total"); if(!t)return; const sum=CC.items.reduce((s,it)=>s+ccLineTotal(it),0); t.textContent=CC.items.length?("Total "+fmtMoney(sum,'INR')):""; }
 async function submitCompose(isDraft){
   const err=document.getElementById("cc_err"); if(err)err.textContent="";
