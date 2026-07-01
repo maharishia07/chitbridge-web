@@ -161,6 +161,9 @@
   .ccsugg-id{font-size:10px;font-family:monospace;color:var(--grey);white-space:nowrap}
   .ccsugg-empty{padding:6px 10px;font-size:11px;color:var(--grey);border:1px solid var(--line);border-radius:8px;background:#fff}
   .modal{width:360px;max-width:94vw;background:#fff;border-radius:14px;overflow:hidden;box-shadow:var(--shadow)}
+  .modal.wide{width:820px;max-width:94vw}
+  .modal.wide .mbody{max-height:72vh}
+  @media (max-width:680px){ .mover{padding:18px 7px} .modal.wide{width:97vw;max-width:97vw} .modal.wide .mbody{max-height:80vh} .modal .mbody{max-height:74vh} }
   .modal .mhd{padding:13px 16px;border-bottom:1px solid var(--line)}
   .modal .mhd .t{font-family:'Space Grotesk';font-weight:700;font-size:15px;color:var(--ink)}
   .modal .mhd .s{font-size:12px;color:var(--grey);margin-top:2px}
@@ -1251,7 +1254,7 @@ async function compose(prefill){ UI.drawer=false; CC={items:(prefill&&prefill.it
      <div id="cc_total" style="text-align:right;font-weight:700;font-size:13px;margin-top:6px"></div>
      <div class="err" id="cc_err"></div>
    </div>
-   <div class="mfoot"><button onclick="closeModal()">Cancel</button><button onclick="submitCompose(true)">Save draft</button><button class="pri" onclick="submitCompose(false)">Send chit</button></div>`);
+   <div class="mfoot"><button onclick="closeModal()">Cancel</button><button onclick="submitCompose(true)">Save draft</button><button class="pri" onclick="submitCompose(false)">Send chit</button></div>`, true);
   ccRenderItems(); ccRenderRcpts(); ccRenderFiles(); UI._composeModal=true;
   if(prefill&&prefill.subject){ const sf=document.getElementById("cf_subject"); if(sf)sf.value=prefill.subject; }
 }
@@ -1823,7 +1826,7 @@ function toggleSelect(){UI.selectMode=!UI.selectMode;if(!UI.selectMode)UI.select
 function actionTargets(){ if(UI.selectMode && UI.selected.size) return [...UI.selected]; if(UI.sel) return [UI.sel]; return []; }
 function needTarget(){ const t=actionTargets(); if(!t.length) toast("Open a chit — or tick some in Select — first."); return t; }
 let MODALS={};
-function modal(html){ const h=document.getElementById("modalhost"); if(!h)return; UI._composeModal=false; h.style.display=''; h.innerHTML=`<div class="mover" onclick="modalBackdrop()"><div class="modal" onclick="event.stopPropagation()"><button class="mx" onclick="closeModal()" aria-label="Close" title="Close">✕</button>${html}</div></div>`; }
+function modal(html, wide){ const h=document.getElementById("modalhost"); if(!h)return; UI._composeModal=false; h.style.display=''; h.innerHTML=`<div class="mover" onclick="modalBackdrop()"><div class="modal${wide?' wide':''}" onclick="event.stopPropagation()"><button class="mx" onclick="closeModal()" aria-label="Close" title="Close">✕</button>${html}</div></div>`; }
 function modalBackdrop(){ if(UI._composeModal){ minimiseCompose(); } else { closeModal(); } }
 function minimiseCompose(){ const h=document.getElementById("modalhost"); if(!h)return; h.style.display='none'; UI._composeMin=true; renderComposePill(); toast('Compose minimised — tap “Resume compose” to continue.'); }
 function resumeCompose(){ const h=document.getElementById("modalhost"); if(h)h.style.display=''; UI._composeMin=false; const p=document.getElementById('composepill'); if(p)p.remove(); setTimeout(function(){ var t=document.getElementById('cf_subject'); if(t)t.focus(); },20); }
