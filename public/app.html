@@ -1227,7 +1227,7 @@ function ccSendAsOptions(){
   (STORE.actors||[]).forEach(a=>{ o+=`<option value="${esc(a.id)}">${esc(a.name)} · ${esc(a.uid||'actor')}</option>`; });
   return o;
 }
-async function compose(prefill){ UI.drawer=false; CC={items:(prefill&&prefill.items)?prefill.items.slice():[],rcpts:[]}; UI._forwardFrom=(prefill&&prefill.forwardFrom)||null; let _catErr=false;
+async function compose(prefill){ UI.drawer=false; CC={items:(prefill&&prefill.items)?prefill.items.slice():[],rcpts:(prefill&&prefill.recipients)?prefill.recipients.slice():[]}; UI._forwardFrom=(prefill&&prefill.forwardFrom)||null; UI._draftId=(prefill&&prefill.draftId)||null; let _catErr=false;
   // Load YOUR real catalogue so Compose shows the items you added — not demo defaults.
   try{
     const _prods=(await api("prodList"))||[];
@@ -1273,6 +1273,7 @@ async function compose(prefill){ UI.drawer=false; CC={items:(prefill&&prefill.it
    <div class="mfoot"><button onclick="closeModal()">Cancel</button><button onclick="submitCompose(true)">Save draft</button><button class="pri" onclick="submitCompose(false)">Send chit</button></div>`, true);
   ccRenderItems(); ccRenderRcpts(); ccRenderFiles(); UI._composeModal=true; try{ var _s=localStorage.getItem('cb_cc_split'); if(_s){ var _c=document.querySelector('.cc-cols'); if(_c)_c.style.setProperty('--cc-lw',_s); } }catch(_){ }
   if(prefill&&prefill.subject){ const sf=document.getElementById("cf_subject"); if(sf)sf.value=prefill.subject; }
+  if(prefill&&prefill.priority){ const pf=document.getElementById("cc_priority"); if(pf)pf.value=prefill.priority; }
 }
 /* Recipients — To (Act) / CC (Info) / For (on-behalf), capped, flippable */
 function ccIsSelf(name){ const n=String(name||"").trim().toLowerCase(); if(!n)return false; if(n==="self"||n==="me")return true; const ent=String((typeof SESSION!=="undefined"&&SESSION.entity)||"").toLowerCase(); if(n===ent)return true; return (STORE.actors||[]).some(a=>String(a.name||"").toLowerCase()===n||String(a.uid||"").toLowerCase()===n); }
@@ -1328,7 +1329,7 @@ async function submitCompose(isDraft){
   const recipients=CC.rcpts.map(r=>({name:r.name,role:r.role,self:!!r.self}));
   try{
     busyShow(isDraft?'Saving draft…':'Sending chit…');
-    const r=await api("createChit",{body:{recipients,is_draft:!!isDraft,send_as_label,subject,schema_values,line_items,external_priority:val("cc_priority")||"normal",forwarded_from:UI._forwardFrom||undefined}});
+    const r=await api("createChit",{body:{recipients,is_draft:!!isDraft,send_as_label,subject,schema_values,line_items,external_priority:val("cc_priority")||"normal",promote_draft_id:UI._draftId||undefined,forwarded_from:UI._forwardFrom||undefined}});
     const _newId=r&&r.chit_id;
     if(_newId && (CC.files||[]).length){ busyShow('Attaching files…'); for(const f of CC.files){ try{ await attUpload(_newId, f); }catch(e){ toast('Attachment "'+f.name+'" failed.'); } } }
     if(_newId){ for(let _li=0;_li<CC.items.length;_li++){ const _it=CC.items[_li]; if(_it&&_it.files&&_it.files.length){ busyShow('Attaching files…'); for(const f of _it.files){ try{ await attUpload(_newId, f, {line_index:_li}); }catch(e){ toast('Attachment "'+f.name+'" failed.'); } } } } }
@@ -1854,7 +1855,7 @@ function minimiseCompose(){ const h=document.getElementById("modalhost"); if(!h)
 function resumeCompose(){ const h=document.getElementById("modalhost"); if(h)h.style.display=''; UI._composeMin=false; const p=document.getElementById('composepill'); if(p)p.remove(); setTimeout(function(){ var t=document.getElementById('cf_subject'); if(t)t.focus(); },20); }
 function renderComposePill(){ var p=document.getElementById('composepill'); if(!p){ p=document.createElement('div'); p.id='composepill'; document.body.appendChild(p); } p.className='composepill'; p.innerHTML='<span onclick="resumeCompose()" style="cursor:pointer">✏️ Resume compose</span><span onclick="discardCompose()" title="Discard draft" style="cursor:pointer;opacity:.75;font-weight:800">✕</span>'; }
 function discardCompose(){ var p=document.getElementById('composepill'); if(p)p.remove(); CC={items:[],rcpts:[]}; closeModal(); }
-function closeModal(){ const h=document.getElementById("modalhost"); if(h){ h.style.display=''; h.innerHTML=""; } UI._composeModal=false; UI._composeMin=false; const p=document.getElementById('composepill'); if(p)p.remove(); }
+function closeModal(){ const h=document.getElementById("modalhost"); if(h){ h.style.display=''; h.innerHTML=""; } UI._composeModal=false; UI._composeMin=false; UI._draftId=null; const p=document.getElementById('composepill'); if(p)p.remove(); }
 function quickStatus(){ const ids=needTarget(); if(!ids.length)return; MODALS.stat={ids,to:null};
   const opts=[["open","Open"],["act","Act"],["close","Close"]].map(([v,l])=>`<div class="optrow" data-v="${v}" onclick="pickStatus('${v}')"><span class="rdo"></span><div class="oc"><div class="on">${l}</div></div></div>`).join("");
   modal(`<div class="mhd"><div class="t">Change status</div><div class="s">${ids.length} chit${ids.length>1?'s':''}</div></div><div class="mbody">${opts}</div><div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="pri" id="mok" disabled onclick="confirmStatus()">Set status</button></div>`);
@@ -2172,7 +2173,7 @@ function detailInner(){
      <div class="itab" style="padding:10px"><div class="sec" style="margin:0">Value</div><div class="disp" style="font-size:17px;font-weight:700">${inr(c.amt)}</div></div>
      <div class="itab" style="padding:10px"><div class="sec" style="margin:0">State</div><div class="disp" style="font-size:15px;font-weight:700">${c.state.toUpperCase()}</div></div></div>
      <div style="margin-top:10px">${proof}</div>`;
-  const actbar = (UI.folder==='trash') ? `<button class="pri" onclick="restoreChit('${c.id}')">↩ Restore</button>${c.isDraft?`<button class="pri" style="background:#b4453f;border-color:#b4453f;margin-left:8px" onclick="purgeChit('${c.id}')">🗑 Delete forever</button>`:''}` : (UI.folder==='archive') ? `<button class="pri" onclick="unarchiveChit('${c.id}')">↩ Unarchive</button>` : SESSION.role==="customer"
+  const actbar = (UI.folder==='drafts') ? `<button class="pri" onclick="resumeDraft('${c.id}')">✏️ Resume &amp; edit</button>` : (UI.folder==='trash') ? `<button class="pri" onclick="restoreChit('${c.id}')">↩ Restore</button>${c.isDraft?`<button class="pri" style="background:#b4453f;border-color:#b4453f;margin-left:8px" onclick="purgeChit('${c.id}')">🗑 Delete forever</button>`:''}` : (UI.folder==='archive') ? `<button class="pri" onclick="unarchiveChit('${c.id}')">↩ Unarchive</button>` : SESSION.role==="customer"
     ? `<button onclick="toggleCustPri('${c.id}')">⚑ ${c.custPri?'Priority requested':'Request priority'}</button><button class="warn" onclick="quickDispute()">⚑ Dispute</button><button onclick="todo('pdf')">⬇ PDF</button>`
     : `<button onclick="forwardChit('${c.id}')" title="Forward as a new chit">➤ Forward</button><button onclick="markUnread('${c.id}')" title="Mark as unread">✉ Unread</button><button class="pri" onclick="advanceChit('${c.id}')">Advance ▸</button>${SESSION.role==="actor"?`<button onclick="pickAssign('${c.id}')">👥 Assign</button>`:""}<button class="warn" onclick="quickDispute()">⚑ Dispute</button>${SESSION.role==="entity"?`<button class="warn pend" onclick="todo('voidChit')">⊘ Void</button>`:""}<button onclick="todo('pdf')">⬇ PDF</button>`;
   const dtabs=[["content","Content"],["status","Status"],["summary","Summary"],["messages","💬 Messages"+(msgCount(c)?" ("+msgCount(c)+")":"")]];
@@ -2268,6 +2269,7 @@ function openRaidReport(){ const host=document.getElementById("lbhost"); if(!hos
 /* actions wired to API */
 async function toggleStar(id){ try{ const r=await api("star",{params:{id}}); const c=UI.rows.find(function(x){return x.id===id;}); if(c)c.star=!!(r&&r.star_flag); if(UI.detail&&UI.detail.id===id)UI.detail.star=!!(r&&r.star_flag); paintRowsKeepScroll(); }catch(e){ toast(MSG.fail("star", e)); } }
 async function markUnread(id){ try{ await api("markUnread",{params:{id}}); const c=UI.rows.find(function(x){return x.id===id;}); if(c)c.unread=true; toast("Marked unread"); paintRowsKeepScroll(); }catch(e){ toast(MSG.fail("mark unread", e)); } }
+async function resumeDraft(id){ try{ const r=await api("chit",{params:{id}}); const h=(r&&r.header)||{}, det=(r&&r.detail)||{}; const allr=h.all_recipients||[]; const rcpts=allr.filter(function(x){return x.role!=='sender';}).map(function(x){ return {name:x.display_name, role:(x.role==='receiver'?'to':x.role), self:ccIsSelf(x.display_name), bridge:x.bridge_id||null}; }); const items=(det.line_items||[]).map(function(li){ return {particulars:li.particulars, unit:li.unit||'unit', price:+li.price||0, qty:+li.quantity||1}; }); const pri=(h.summary_json&&h.summary_json.priority_external)||'normal'; compose({draftId:id, subject:h.manual_subject||'', items:items, recipients:rcpts, priority:pri}); }catch(e){ toast(MSG.fail("open the draft", e)); } }
 async function purgeChit(id){ if(!confirm("Delete this draft permanently? This cannot be undone.")) return; try{ await api("purgeChit",{params:{id}}); toast("Draft deleted permanently"); UI.detail=null; UI.sel=null; await loadList(); renderApp(); }catch(e){ toast(MSG.fail("delete the draft", e)); } }
 async function restoreChit(id){ try{ await api("restore",{params:{id}}); toast("Restored to active"); UI.detail=null; UI.sel=null; loadList(); }catch(e){ toast(MSG.fail("restore", e)); } }
 async function unarchiveChit(id){ try{ await api("unarchive",{params:{id}}); toast("Unarchived"); UI.detail=null; UI.sel=null; loadList(); }catch(e){ toast(MSG.fail("unarchive", e)); } }
