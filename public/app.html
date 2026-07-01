@@ -1319,7 +1319,7 @@ async function submitCompose(isDraft){
   const sendasV=val("cc_sendas"); const ent=(typeof SESSION!=="undefined"&&SESSION.entity)||"";
   const actor=(STORE.actors||[]).find(a=>a.id===sendasV); const send_as_label=actor?(actor.name+" ("+(actor.uid||"actor")+")"):ent;
   const tos=CC.rcpts.filter(r=>r.role==="to");
-  if(!subject){ if(err)err.textContent="Subject is required."; return; }
+  if(!isDraft && !subject){ if(err)err.textContent="Subject is required."; return; }
   if(!isDraft && !tos.length){ if(err)err.textContent="Add at least one To recipient (or Save draft)."; return; }
   if(!isDraft && !CC.items.length){ if(err)err.textContent="Add at least one line item to send (or Save draft)."; return; }
   const schema_values={}; ccSchema().forEach(f=>{ schema_values[f.field_key]=val("cf_"+f.field_key); });
