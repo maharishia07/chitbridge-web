@@ -2332,7 +2332,7 @@ function fetchPage(page){ const limit=UI.pageLimit||50; if(["drafts","trash","ar
 function onRowsScroll(){ if(UI.loading)return; pgScroll("list"); }
 function ensureFilled(){ if(UI.loading)return; pgFill("list"); }
 function loadNextPage(){ return pgNext("list"); }
-function paintRowsKeepScroll(){ const b=document.getElementById("rows"); if(!b)return; const st=b.scrollTop; b.innerHTML=renderRows(); b.scrollTop=st; const cs=countStates(); document.querySelectorAll(".statetabs .n").forEach((el,i)=>{ el.textContent=cs[["open","act","close"][i]]; }); pgPaintTotal(); applyColTpl(); }
+function paintRowsKeepScroll(){ const b=document.getElementById("rows"); if(!b)return; const st=b.scrollTop; b.innerHTML=renderRows(); b.scrollTop=st; document.querySelectorAll(".statetabs .n").forEach((el,i)=>{ el.textContent=stCount(["open","act","close"][i]); }); pgPaintTotal(); applyColTpl(); }
 function updateListTotal(){ const lt=document.getElementById("listtotal"); if(!lt)return; if(!UI.total){ lt.textContent=""; return; } const shown=Math.min(UI.rows.length,UI.total); lt.textContent='Showing '+shown+' of '+UI.total+(UI.allLoaded?' \u00b7 all loaded':' \u00b7 scroll for more'); }
 function paginationFooter(){ if(UI.loadingMore) return '<div class="listend"><span class="spin"></span> loading more\u2026 ('+UI.rows.length+'/'+UI.total+')</div>'; if(!UI.allLoaded) return '<div class="listend"><button class="composebtn" onclick="loadNextPage()">\u2193 Load more</button><span style="color:var(--grey)">'+UI.rows.length+' of '+UI.total+' loaded</span></div>'; if((UI.total||0)<=0) return ''; return '<div class="listend">\u2014 end of list \u00b7 '+UI.total+' total \u2014</div>'; }
 async function loadList(){
