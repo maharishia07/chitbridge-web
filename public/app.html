@@ -2183,7 +2183,7 @@ async function confirmDispute(){ const ids=MODALS.disp.ids; const el=document.ge
   if(reason.length<10){ toast("Reason must be at least 10 characters"); return; }
   closeModal();
   for(const id of ids){ try{ await api("dispute",{params:{id},body:{category:cat,reason}}); const i=UI.rows.findIndex(x=>x.id===id); if(i>=0)UI.rows[i].dispute=true; if(UI.detail&&UI.detail.id===id)UI.detail.dispute=true; }catch(e){ toast(MSG.fail("raise the dispute", e)); return; } }
-  renderApp(); toast(MSG.disputeRaised(ids.length));
+  renderApp(); toast(MSG.disputeRaised(ids.length)); announce('Dispute raised on '+ids.length+' chit'+(ids.length>1?'s':''));
 }
 // Deletion policy: only DRAFTS can be deleted (→ Trash → restore or delete-forever). Sent/received chits are
 // co-held records the counterparty also holds — they cannot be deleted (removal is governed by the deletion
@@ -2219,7 +2219,7 @@ async function bulkPurge(){ const ids=actionTargets(); if(!ids.length){ toast("T
 async function confirmDelete(){ const ids=MODALS.del.ids; closeModal();
   for(const id of ids){ try{ await api("delChit",{params:{id}}); }catch(e){ toast(MSG.fail("delete", e)); return; } }
   UI.rows=UI.rows.filter(c=>!ids.includes(c.id)); if(UI.sel&&ids.includes(UI.sel)){UI.sel=null;UI.detail=null;UI.mdetail=false;} UI.selected.clear();
-  renderApp(); toast(MSG.trashed(ids.length), ()=>restoreChits(ids));
+  renderApp(); toast(MSG.trashed(ids.length), ()=>restoreChits(ids)); announce(ids.length+' chit'+(ids.length>1?'s':'')+' moved to trash');
 }
 // Undo a just-deleted batch via the real restore endpoint. (A full Trash browse view is queued.)
 async function restoreChits(ids){
@@ -2629,8 +2629,8 @@ function openRaidReport(){ const host=document.getElementById("lbhost"); if(!hos
 }
 
 /* actions wired to API */
-async function toggleStar(id){ try{ const r=await api("star",{params:{id}}); const c=UI.rows.find(function(x){return x.id===id;}); if(c)c.star=!!(r&&r.star_flag); if(UI.detail&&UI.detail.id===id)UI.detail.star=!!(r&&r.star_flag); paintRowsKeepScroll(); }catch(e){ toast(MSG.fail("star", e)); } }
-async function markUnread(id){ try{ await api("markUnread",{params:{id}}); const c=UI.rows.find(function(x){return x.id===id;}); if(c)c.unread=true; toast("Marked unread"); paintRowsKeepScroll(); }catch(e){ toast(MSG.fail("mark unread", e)); } }
+async function toggleStar(id){ try{ const r=await api("star",{params:{id}}); const c=UI.rows.find(function(x){return x.id===id;}); if(c)c.star=!!(r&&r.star_flag); if(UI.detail&&UI.detail.id===id)UI.detail.star=!!(r&&r.star_flag); announce(((c&&c.code)||'Chit')+((c&&c.star)?' starred':' unstarred')); paintRowsKeepScroll(); }catch(e){ toast(MSG.fail("star", e)); } }
+async function markUnread(id){ try{ await api("markUnread",{params:{id}}); const c=UI.rows.find(function(x){return x.id===id;}); if(c)c.unread=true; toast("Marked unread"); announce(((c&&c.code)||'This chit')+' marked unread'); paintRowsKeepScroll(); }catch(e){ toast(MSG.fail("mark unread", e)); } }
 async function resumeDraft(id){ try{ const r=await api("chit",{params:{id}}); const h=(r&&r.header)||{}, det=(r&&r.detail)||{}; const allr=h.all_recipients||[]; const rcpts=allr.filter(function(x){return x.role!=='sender';}).map(function(x){ return {name:x.display_name, role:(x.role==='receiver'?'to':x.role), self:ccIsSelf(x.display_name), bridge:x.bridge_id||null}; }); const items=(det.line_items||[]).map(function(li){ return {particulars:li.particulars, unit:li.unit||'unit', price:+li.price||0, qty:+li.quantity||1}; }); const pri=(h.summary_json&&h.summary_json.priority_external)||'normal'; compose({draftId:id, subject:h.manual_subject||'', items:items, recipients:rcpts, priority:pri}); }catch(e){ toast(MSG.fail("open the draft", e)); } }
 async function purgeChit(id){ if(!confirm("Delete this draft permanently? This cannot be undone.")) return; try{ await api("purgeChit",{params:{id}}); toast("Draft deleted permanently"); UI.detail=null; UI.sel=null; await loadList(); renderApp(); }catch(e){ toast(MSG.fail("delete the draft", e)); } }
 async function restoreChit(id){ try{ await api("restore",{params:{id}}); toast("Restored to active"); UI.detail=null; UI.sel=null; loadList(); }catch(e){ toast(MSG.fail("restore", e)); } }
@@ -2698,8 +2698,8 @@ function repriority(id){ const c=UI.detail||UI.rows.find(x=>x.id===id)||{}; MODA
   modal(`<div class="mhd"><div class="t">Priority — ${c.code||'chit'}</div><div class="s">internal routing in your queue</div></div><div class="mbody">${c.custPri?'<div class="custreq">⚑ Customer flagged this as priority.</div>':''}<div class="prisel">${["urgent","normal","low"].map(p=>`<button class="pri-${p} ${MODALS.repri.pri===p?'on':''}" data-p="${p}" onclick="pickRepri('${p}')">${PRI[p].label}</button>`).join("")}</div><div class="msec">Reason <span id="repriHint" class="rh">${MODALS.repri.pri==='urgent'?'— Urgent needs one':'(optional)'}</span></div><textarea id="reprireason" class="mreason" placeholder="Why this priority…" oninput="MODALS.repri.reason=this.value;syncRepriOk()"></textarea></div><div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="pri" id="repriok" ${MODALS.repri.pri==='urgent'?'disabled':''} onclick="confirmRepri()">Set ${PRI[MODALS.repri.pri].label}</button></div>`); }
 function pickRepri(p){ MODALS.repri.pri=p; document.querySelectorAll('.prisel button').forEach(b=>b.classList.toggle('on',b.dataset.p===p)); const h=document.getElementById('repriHint'); if(h)h.textContent=p==='urgent'?'— Urgent needs one':'(optional)'; syncRepriOk(); }
 function syncRepriOk(){ const p=MODALS.repri; const b=document.getElementById('repriok'); if(!b)return; b.disabled=!(p.pri!=='urgent'||(p.reason&&p.reason.trim())); b.textContent="Set "+PRI[p.pri].label; }
-async function confirmRepri(){ const p=MODALS.repri; closeModal(); try{ await api("setPriority",{params:{id:p.id},body:{priority:p.pri,reason:p.reason}}); const i=UI.rows.findIndex(x=>x.id===p.id); if(i>=0)UI.rows[i].pri=p.pri; if(UI.detail&&UI.detail.id===p.id)UI.detail.pri=p.pri; paintDetail(); paintRowsOnly(); toast(MSG.prioritySet(PRI[p.pri].label)); }catch(e){ toast(MSG.fail("set priority", e)); } }
-async function toggleCustPri(id){ const c=UI.detail||{}; const nf=!c.custPri; try{ await api("custFlag",{params:{id},body:{flag:nf}}); const i=UI.rows.findIndex(x=>x.id===id); if(i>=0)UI.rows[i].custPri=nf; if(UI.detail&&UI.detail.id===id)UI.detail.custPri=nf; paintDetail(); paintRowsOnly(); toast(nf?MSG.custPriOn():MSG.custPriOff()); }catch(e){ toast(MSG.fail("update priority", e)); } }
+async function confirmRepri(){ const p=MODALS.repri; closeModal(); try{ await api("setPriority",{params:{id:p.id},body:{priority:p.pri,reason:p.reason}}); const i=UI.rows.findIndex(x=>x.id===p.id); if(i>=0)UI.rows[i].pri=p.pri; if(UI.detail&&UI.detail.id===p.id)UI.detail.pri=p.pri; paintDetail(); paintRowsOnly(); toast(MSG.prioritySet(PRI[p.pri].label)); announce('Internal priority set to '+PRI[p.pri].label); }catch(e){ toast(MSG.fail("set priority", e)); } }
+async function toggleCustPri(id){ const c=UI.detail||{}; const nf=!c.custPri; try{ await api("custFlag",{params:{id},body:{flag:nf}}); const i=UI.rows.findIndex(x=>x.id===id); if(i>=0)UI.rows[i].custPri=nf; if(UI.detail&&UI.detail.id===id)UI.detail.custPri=nf; paintDetail(); paintRowsOnly(); toast(nf?MSG.custPriOn():MSG.custPriOff()); announce('Customer flag '+(nf?'set':'cleared')); }catch(e){ toast(MSG.fail("update priority", e)); } }
 
 /* ---------------- bits ---------------- */
 function val(id){const el=document.getElementById(id);return el?el.value.trim():"";}
