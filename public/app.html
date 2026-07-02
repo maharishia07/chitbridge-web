@@ -413,7 +413,7 @@ img.attImg{object-fit:cover;display:block}
 .lrow.acc-unread{box-shadow:inset 3px 0 0 var(--blue)}
 .lrow.acc-disp{box-shadow:inset 3px 0 0 var(--disp)}
 .lrow.acc-urg{box-shadow:inset 3px 0 0 #d98a3a}
-.lrow.sel{background:#E3EDF8}
+.lrow.sel{background:#cfe0f2;box-shadow:inset 0 0 0 2px var(--blue), inset 4px 0 0 var(--blue-d);position:relative;z-index:1}
 .subjwrap{display:flex;align-items:center;gap:5px;min-width:0}
 .subjwrap .lead{flex:0 0 auto;display:flex;align-items:center;gap:4px}
 .subjtext{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
@@ -2640,6 +2640,11 @@ async function purgeChit(id){ if(!confirm("Delete this draft permanently? This c
 async function restoreChit(id){ try{ await api("restore",{params:{id}}); toast("Restored to active"); UI.detail=null; UI.sel=null; loadList(); }catch(e){ toast(MSG.fail("restore", e)); } }
 async function unarchiveChit(id){ try{ await api("unarchive",{params:{id}}); toast("Unarchived"); UI.detail=null; UI.sel=null; loadList(); }catch(e){ toast(MSG.fail("unarchive", e)); } }
 async function forwardChit(id){ try{ const r=await api("chit",{params:{id}}); const h=(r&&r.header)||r||{}; const det=(r&&r.detail)||{}; const items=(det.line_items||[]).map(function(li){ return {particulars:li.particulars||'item', unit:'unit', price:+li.price||0, qty:+li.quantity||0}; }); const subj=(h.manual_subject||h.auto_subject||'chit'); compose({items:items, subject:'Fwd: '+subj, forwardFrom:id}); }catch(e){ toast(MSG.fail("forward", e)); } }
+// Action-state discipline: if an action drops the acted chit out of the current view, move the cursor AND the
+// detail together to the next visible row — never leave the detail stuck on a row that's gone from the list.
+function focusNextAfter(id, prevIdx){ const vis=visibleRows(); if(vis.some(function(x){return x.id===id;})) return;
+  const nxt=vis[Math.min((prevIdx==null||prevIdx<0)?0:prevIdx, vis.length-1)];
+  if(nxt){ openChit(nxt.id); } else { UI.sel=null; UI.detail=null; UI.mdetail=false; paintDetail(); } }
 async function advanceChit(id){
   const c=UI.rows.find(x=>x.id===id)||UI.detail; if(c&&c.state==="close"){toast("At Close — next is Archive (sunset model).");return;}
   const NB={pending:'accepted',delivered:'accepted',read:'accepted',accepted:'in_progress',in_progress:'completed',partial:'completed',finished:'completed'};
@@ -2647,7 +2652,8 @@ async function advanceChit(id){
   const curB=(c&&c._status)||'pending', nextB=NB[curB];
   if(!nextB){ toast("Already at the final state."); return; }
   const fromUI=(c&&c.state)||UIS[curB]||'open';
-  try{ await api("advance",{params:{id},body:{status:nextB}}); const i=UI.rows.findIndex(x=>x.id===id); if(i>=0){UI.rows[i]._status=nextB; UI.rows[i].state=UIS[nextB];} if(UI.detail&&UI.detail.id===id){UI.detail._status=nextB; UI.detail.state=UIS[nextB];} renderApp(); const toUI=UIS[nextB]||nextB; toast(MSG.advanced(c&&c.code, toUI)); announce(((c&&c.code)||'This chit')+' moved from '+cap(fromUI)+' to '+cap(toUI)); }
+  const prevIdx=visibleRows().findIndex(function(x){return x.id===id;});
+  try{ await api("advance",{params:{id},body:{status:nextB}}); const i=UI.rows.findIndex(x=>x.id===id); if(i>=0){UI.rows[i]._status=nextB; UI.rows[i].state=UIS[nextB];} if(UI.detail&&UI.detail.id===id){UI.detail._status=nextB; UI.detail.state=UIS[nextB];} renderApp(); focusNextAfter(id, prevIdx); const toUI=UIS[nextB]||nextB; toast(MSG.advanced(c&&c.code, toUI)); announce(((c&&c.code)||'This chit')+' moved from '+cap(fromUI)+' to '+cap(toUI)); }
   catch(e){ toast(MSG.fail("advance", e)); }
 }
 async function assignChit(id, actorId, pri, reason){
