@@ -2169,8 +2169,10 @@ function quickStatus(){ const ids=needTarget(); if(!ids.length)return; MODALS.st
 }
 function pickStatus(v){ MODALS.stat.to=v; document.querySelectorAll('.optrow').forEach(r=>r.classList.toggle('sel',r.dataset.v===v)); const b=document.getElementById('mok'); if(b)b.disabled=false; }
 async function confirmStatus(){ const {ids,to}=MODALS.stat; if(!to)return; closeModal();
-  for(const id of ids){ try{ await api("status",{params:{id},body:{status:({open:'pending',act:'in_progress',close:'completed'}[to]||to)}}); const i=UI.rows.findIndex(x=>x.id===id); if(i>=0)UI.rows[i].state=to; if(UI.detail&&UI.detail.id===id)UI.detail.state=to; }catch(e){ toast(MSG.fail("change status", e)); return; } }
-  renderApp(); toast(MSG.statusSet(ids.length, to, ids.length===1?((UI.rows.find(x=>x.id===ids[0])||UI.detail||{}).code):null));
+  if(ids.length>1) showBusy('Moving '+ids.length+' records to '+cap(to)+'…');
+  try{ for(const id of ids){ try{ await api("status",{params:{id},body:{status:({open:'pending',act:'in_progress',close:'completed'}[to]||to)}}); const i=UI.rows.findIndex(x=>x.id===id); if(i>=0)UI.rows[i].state=to; if(UI.detail&&UI.detail.id===id)UI.detail.state=to; }catch(e){ toast(MSG.fail("change status", e)); return; } }
+    UI.selectMode=false; UI.selected.clear(); renderApp(); toast(MSG.statusSet(ids.length, to, ids.length===1?((UI.rows.find(x=>x.id===ids[0])||UI.detail||{}).code):null)); announce('Moved '+ids.length+' record'+(ids.length>1?'s':'')+' to '+cap(to));
+  } finally { hideBusy(); }
 }
 function quickAssign(){ const ids=needTarget(); if(!ids.length)return;
   if(ids.length===1){ pickAssign(ids[0]); }
@@ -2338,6 +2340,8 @@ function listLegend(){ return '<div class="keypanel" onclick="event.stopPropagat
  +'</div></div>'; }
 function toggleVoice(){ UI.voice=!UI.voice; try{ localStorage.setItem('cb_voice', UI.voice?'1':''); }catch(_){ } if(UI.voice) announce('Voice announcements on'); }
 function announce(msg){ var el=document.getElementById('live'); if(el)el.textContent=msg; if(UI.voice && window.speechSynthesis){ try{ speechSynthesis.cancel(); speechSynthesis.speak(new SpeechSynthesisUtterance(msg)); }catch(_){ } } }
+function showBusy(msg){ let h=document.getElementById('busyhost'); if(!h){ h=document.createElement('div'); h.id='busyhost'; document.body.appendChild(h); } h.innerHTML='<div class="busyov"><div class="busybox"><span class="bspin"></span> '+esc(msg||'Working…')+'</div></div>'; }
+function hideBusy(){ const h=document.getElementById('busyhost'); if(h)h.innerHTML=''; }
 pgInit('list', { el:()=>document.getElementById("rows"), limit:50, map:mapApiChit, count:()=>UI.rows.length, repaint:paintRowsKeepScroll, fetch:(page)=>fetchPage(page),
   store:(rows,first)=>{ if(first){ UI.rows=rows; } else { const seen=new Set(UI.rows.map(r=>r.id)); for(const r of rows){ if(!seen.has(r.id)) UI.rows.push(r); } } } });
 /* common list search — server lists route q through the pager; client (lazyWrap) lists filter in place */
@@ -2444,7 +2448,7 @@ function sortPresetOptions(){ const cur=(UI.sort==='date')?(UI.dir==='asc'?'olde
 function sortPresetSelect(){ return '<select class="sortpreset" title="Sort order" onchange="setSortPreset(this.value)">'+sortPresetOptions()+'</select>'; }
 function renderRows(){
   const rows=visibleRows();
-  if(!rows.length && pgDone('list')) return `<div class="empty"><div class="big">📭</div><div class="t">Nothing here yet</div><div>No chits in ${UI.selectMode?'the ticked states':cap(UI.state)}.</div></div>`;
+  if(!rows.length) return listHeader()+`<div class="empty"><div class="big">📭</div><div class="t">Nothing in ${UI.selectMode?'the ticked states':cap(UI.state||'this view')}</div><div>${pgDone('list')?'No chits here — try another tab.':'More may be further down — Load more.'}</div></div>`+(pgDone('list')?'':pgFooter('list'));
   return listHeader() + rows.map(rowGrid).join("") + pgFooter('list');
 }
 function rowHTML(c){
@@ -2474,7 +2478,7 @@ function todo(k){ const t=PENDING[k]||{label:k,ref:""}; toast(MSG.comingSoon(t.l
 function selBar(){const ids=UI.selected;const all=`<button onclick="selectAllRows()">☑ All</button>`;const clr=`<button onclick="UI.selected.clear();renderApp()">Clear</button>`;
   if(UI.folder==='trash'){ return `<div class="selbar" id="selbar">☑ ${ids.size} selected<span class="sp">${all}<button class="pri" onclick="bulkRestore()">↩ Restore</button><button onclick="bulkPurge()">🗑 Delete forever</button>${clr}</span></div>`; }
   if(UI.folder==='archive'){ return `<div class="selbar" id="selbar">☑ ${ids.size} selected<span class="sp">${all}<button class="pri" onclick="bulkUnarchive()">↩ Unarchive</button>${clr}</span></div>`; }
-  const sum=UI.rows.filter(c=>ids.has(c.id)).reduce((a,c)=>a+c.amt,0);const rb=rollupBuckets();const ticked=hasRollup()?[...UI.aggStates].reduce((a,s)=>a+((rb[s]&&rb[s].s)||0),0):UI.rows.filter(c=>UI.aggStates.has(c.state)).reduce((a,c)=>a+c.amt,0);const lbl=ids.size?`☑ ${ids.size} selected · Σ ${inr(sum)}`:`states ✓ ${[...UI.aggStates].map(cap).join(" · ")||'none'} · Σ(all) ${inr(ticked)}`;return `<div class="selbar" id="selbar">${lbl}<span class="sp">${all}<button onclick="sumScope()">Sum →</button><button class="pri" onclick="quickAssign()">Assign</button>${clr}</span></div>`;}
+  const sum=UI.rows.filter(c=>ids.has(c.id)).reduce((a,c)=>a+c.amt,0);const rb=rollupBuckets();const ticked=hasRollup()?[...UI.aggStates].reduce((a,s)=>a+((rb[s]&&rb[s].s)||0),0):UI.rows.filter(c=>UI.aggStates.has(c.state)).reduce((a,c)=>a+c.amt,0);const lbl=ids.size?`☑ ${ids.size} selected · Σ ${inr(sum)}`:`states ✓ ${[...UI.aggStates].map(cap).join(" · ")||'none'} · Σ(all) ${inr(ticked)}`;return `<div class="selbar" id="selbar">${lbl}<span class="sp">${all}<button onclick="sumScope()">Sum →</button><button onclick="quickStatus()">Status</button><button class="pri" onclick="quickAssign()">Assign</button>${clr}</span></div>`;}
 function updateSelBar(){const el=document.getElementById("selbar");if(el)el.outerHTML=selBar();}
 function sumScope(){
   const sel=UI.rows.filter(c=>UI.selected.has(c.id));
@@ -2643,7 +2647,7 @@ async function advanceChit(id){
   const curB=(c&&c._status)||'pending', nextB=NB[curB];
   if(!nextB){ toast("Already at the final state."); return; }
   const fromUI=(c&&c.state)||UIS[curB]||'open';
-  try{ await api("advance",{params:{id},body:{status:nextB}}); const i=UI.rows.findIndex(x=>x.id===id); if(i>=0){UI.rows[i]._status=nextB; UI.rows[i].state=UIS[nextB];} if(UI.detail&&UI.detail.id===id){UI.detail._status=nextB; UI.detail.state=UIS[nextB];} UI.state=UIS[nextB]; renderApp(); const toUI=UIS[nextB]||nextB; toast(MSG.advanced(c&&c.code, toUI)); announce(((c&&c.code)||'This chit')+' moved from '+cap(fromUI)+' to '+cap(toUI)); }
+  try{ await api("advance",{params:{id},body:{status:nextB}}); const i=UI.rows.findIndex(x=>x.id===id); if(i>=0){UI.rows[i]._status=nextB; UI.rows[i].state=UIS[nextB];} if(UI.detail&&UI.detail.id===id){UI.detail._status=nextB; UI.detail.state=UIS[nextB];} renderApp(); const toUI=UIS[nextB]||nextB; toast(MSG.advanced(c&&c.code, toUI)); announce(((c&&c.code)||'This chit')+' moved from '+cap(fromUI)+' to '+cap(toUI)); }
   catch(e){ toast(MSG.fail("advance", e)); }
 }
 async function assignChit(id, actorId, pri, reason){
@@ -2686,13 +2690,16 @@ async function pickAssignBulk(ids){
   modal(`<div class="mhd"><div class="t">Assign ${ids.length} chit${ids.length>1?'s':''}</div><div class="s">to one co-assist (bulk)</div></div><div class="mbody">${rows||'<div style="padding:14px;color:var(--grey);font-size:13px">No co-assists yet.</div>'}<div style="padding:6px 0 2px"><button class="composebtn" onclick="addActorModal()">+ New co-assist</button></div></div><div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="pri" id="mok" disabled onclick="confirmAssign()">Assign all</button></div>`);
 }
 async function assignBulkChits(ids, actorId){
+  const a=(UI.actors||STORE.actors||[]).find(x=>x.id===actorId); const who=a?a.name:'the co-assist';
+  showBusy('Assigning '+ids.length+' record'+(ids.length>1?'s':'')+' to '+who+'…');
+  announce('Moving '+ids.length+' record'+(ids.length>1?'s':'')+' to '+who);
   try{ const r=await api("assignBulk",{body:{chit_ids:ids, target_actor_id:actorId}});
-    const a=(UI.actors||STORE.actors||[]).find(x=>x.id===actorId);
     UI.selectMode=false; UI.selected.clear();
-    await loadList();
-    const n=(r&&r.assigned!=null)?r.assigned:ids.length; const sk=(r&&r.skipped&&r.skipped.length)?(" · "+r.skipped.length+" skipped"):"";
+    await loadList(); renderApp();
+    const n=(r&&r.assigned!=null)?r.assigned:ids.length;
     toast(MSG.bulkAssigned(n, a&&a.name, (r&&r.skipped&&r.skipped.length)||0));
   }catch(e){ toast(MSG.fail("assign those", e)); }
+  finally{ hideBusy(); }
 }
 function repriority(id){ const c=UI.detail||UI.rows.find(x=>x.id===id)||{}; MODALS.repri={id,pri:c.pri||"normal",reason:""};
   modal(`<div class="mhd"><div class="t">Priority — ${c.code||'chit'}</div><div class="s">internal routing in your queue</div></div><div class="mbody">${c.custPri?'<div class="custreq">⚑ Customer flagged this as priority.</div>':''}<div class="prisel">${["urgent","normal","low"].map(p=>`<button class="pri-${p} ${MODALS.repri.pri===p?'on':''}" data-p="${p}" onclick="pickRepri('${p}')">${PRI[p].label}</button>`).join("")}</div><div class="msec">Reason <span id="repriHint" class="rh">${MODALS.repri.pri==='urgent'?'— Urgent needs one':'(optional)'}</span></div><textarea id="reprireason" class="mreason" placeholder="Why this priority…" oninput="MODALS.repri.reason=this.value;syncRepriOk()"></textarea></div><div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="pri" id="repriok" ${MODALS.repri.pri==='urgent'?'disabled':''} onclick="confirmRepri()">Set ${PRI[MODALS.repri.pri].label}</button></div>`); }
