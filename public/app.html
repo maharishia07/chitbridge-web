@@ -238,6 +238,7 @@
   @keyframes bspin{to{transform:rotate(360deg)}}
   .topbar .msgc{position:relative;border:0;background:none;color:#cfe0e8;font-size:15px;cursor:pointer;padding:2px 4px;line-height:1}
   .topbar .msgc .bdot{position:absolute;top:-2px;right:-3px;background:#d65a5a;color:#fff;font-size:8px;font-weight:800;min-width:13px;height:13px;border-radius:7px;display:flex;align-items:center;justify-content:center;padding:0 3px}
+  .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
   .unreadtag{font-size:8.5px;font-weight:800;color:#fff;background:#d65a5a;border-radius:7px;padding:0 5px;margin-left:4px}
   .unreaddot{width:7px;height:7px;border-radius:50%;background:#d65a5a;margin-left:2px}
   .row .unreaddot{display:inline-block;vertical-align:middle;margin:0 5px 0 0}
@@ -407,7 +408,28 @@ img.attImg{object-fit:cover;display:block}
 .lhcell.sortable{cursor:pointer}.lhcell.sortable:hover{color:var(--blue)}
 .sarr{font-size:9px;margin-left:3px;color:var(--blue)}
 .lrow{display:grid;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--line);cursor:pointer;font-size:12.5px}
-.lrow:hover{background:var(--paper)}.lrow.sel{background:#E3EDF8}.lrow.unread{font-weight:600}
+.lrow:hover{background:var(--paper)}
+.lrow.unread{background:#f5f9fd}
+.lrow.acc-unread{box-shadow:inset 3px 0 0 var(--blue)}
+.lrow.acc-disp{box-shadow:inset 3px 0 0 var(--disp)}
+.lrow.acc-urg{box-shadow:inset 3px 0 0 #d98a3a}
+.lrow.sel{background:#E3EDF8}
+.subjwrap{display:flex;align-items:center;gap:5px;min-width:0}
+.subjwrap .lead{flex:0 0 auto;display:flex;align-items:center;gap:4px}
+.subjtext{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.lrow.unread .subjtext{font-weight:800}
+.udot{width:8px;height:8px;border-radius:50%;background:var(--blue);flex:0 0 auto;display:inline-block}
+.rflag{font-size:9px;font-weight:800;border-radius:5px;padding:1px 6px;white-space:nowrap;border:1px solid;flex:0 0 auto}
+.rflag.disp{background:#fbeceb;color:#b4453f;border-color:#f0c9c6}
+.rflag.cust{background:#FCEBEB;color:#A32D2D;border-color:#e3a0a0}
+.rflag.urg{background:#FCEBEB;color:#A32D2D;border-color:#e3a0a0}
+.rflag.high{background:#fdeccc;color:#8a5a12;border-color:#e6c98f}
+.keypanel{position:absolute;right:0;top:26px;z-index:30;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:12px;width:520px;max-width:88vw;max-height:70vh;overflow-y:auto}
+.keypanel h4{font-family:'Space Grotesk';font-size:11px;margin:0 0 8px;text-transform:uppercase;letter-spacing:.4px;color:var(--grey)}
+.keygrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.kbox{border:1px solid var(--line);border-radius:9px;padding:9px 11px;font-size:11.5px;line-height:1.5}
+.kbox .kt{font-family:'Space Grotesk';font-weight:700;margin-bottom:3px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.kbox .kd{color:var(--grey)}
 .lcell{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lcell.ra{text-align:right}
 .lhcell.ra{justify-content:flex-end}
@@ -1176,7 +1198,7 @@ function renderApp(){
     <div class="main">
       <div id="mainbody" style="flex:1;display:flex;flex-direction:column;min-height:0">${mainBody()}</div>
     </div>
-  </div></div><div id="lbhost"></div><div id="modalhost"></div>`;
+  </div></div><div id="lbhost"></div><div id="modalhost"></div><div class="sr" id="live" aria-live="polite" role="status"></div>`;
   if(["task","order","drafts","trash","archive"].includes(UI.nav)) loadList();
   if(UI.nav==="disputes") loadDisputes();
   if(UI.nav==="profile") loadProfile();
@@ -2304,7 +2326,18 @@ function pgFooter(id){ const p=PG[id]; if(!p)return ''; const c=p.cfg.count();
 /* static footer for small, non-paginated lists (count + end marker, no Load more) */
 function staticFooter(n){ return n>0 ? '<div class="listend">'+n+' total · end of list</div>' : ''; }
 /* the Task/Order list bar */
-function pgPaintTotal(){ const lt=document.getElementById("listtotal"); if(!lt)return; lt.innerHTML='<span class="lttxt">'+esc(pgTotalText('list'))+'</span><span class="lttools">'+sortPresetSelect()+'<button class="colcog" onclick="event.stopPropagation();toggleColMenu()" title="Choose columns">⚙ columns</button>'+(UI.colMenu?colChooser():'')+'</span>'; }
+function pgPaintTotal(){ const lt=document.getElementById("listtotal"); if(!lt)return; lt.innerHTML='<span class="lttxt">'+esc(pgTotalText('list'))+'</span><span class="lttools">'+sortPresetSelect()+'<button class="colcog" onclick="event.stopPropagation();toggleLegend()" title="Legend / key">🔑 key</button>'+(UI.legendOpen?listLegend():'')+'<button class="colcog" onclick="event.stopPropagation();toggleColMenu()" title="Choose columns">⚙ columns</button>'+(UI.colMenu?colChooser():'')+'</span>'; }
+function toggleLegend(){ UI.legendOpen=!UI.legendOpen; UI.colMenu=false; pgPaintTotal(); }
+function listLegend(){ return '<div class="keypanel" onclick="event.stopPropagation()"><h4>Legend / key</h4><div class="keygrid">'
+ +'<div class="kbox"><div class="kt"><span class="udot"></span> Unread</div><div class="kd">New activity you haven\'t opened — blue bar + bold subject + dot.</div></div>'
+ +'<div class="kbox"><div class="kt"><span class="rflag disp">⚑ dispute</span></div><div class="kd">An open dispute (red bar). Resolve from the chit.</div></div>'
+ +'<div class="kbox"><div class="kt"><span class="rflag urg">⚑ urgent</span> <span class="rflag high">⚑ high</span></div><div class="kd">Attention flag — Ext or Int priority is above Normal, or the customer flagged it. Exact values are in the Ext/Int columns; act per your business rules.</div></div>'
+ +'<div class="kbox"><div class="kt">Ext / Int pri</div><div class="kd">Ext = sender-set at compose, locked · Int = your own queue, you change it. Shown as their own columns.</div></div>'
+ +'<div class="kbox"><div class="kt"><span class="chipst st-open">OPEN</span> <span class="chipst st-act">ACT</span> <span class="chipst st-close">CLOSE</span></div><div class="kd">Lifecycle stage — tap the chip to advance.</div></div>'
+ +'<div class="kbox"><div class="kt">♿ Voice</div><div class="kd"><label style="cursor:pointer"><input type="checkbox" '+(UI.voice?'checked':'')+' onchange="toggleVoice()"> Speak status changes aloud</label>. Screen-reader announcements are always on.</div></div>'
+ +'</div></div>'; }
+function toggleVoice(){ UI.voice=!UI.voice; try{ localStorage.setItem('cb_voice', UI.voice?'1':''); }catch(_){ } if(UI.voice) announce('Voice announcements on'); }
+function announce(msg){ var el=document.getElementById('live'); if(el)el.textContent=msg; if(UI.voice && window.speechSynthesis){ try{ speechSynthesis.cancel(); speechSynthesis.speak(new SpeechSynthesisUtterance(msg)); }catch(_){ } } }
 pgInit('list', { el:()=>document.getElementById("rows"), limit:50, map:mapApiChit, count:()=>UI.rows.length, repaint:paintRowsKeepScroll, fetch:(page)=>fetchPage(page),
   store:(rows,first)=>{ if(first){ UI.rows=rows; } else { const seen=new Set(UI.rows.map(r=>r.id)); for(const r of rows){ if(!seen.has(r.id)) UI.rows.push(r); } } } });
 /* common list search — server lists route q through the pager; client (lazyWrap) lists filter in place */
@@ -2360,10 +2393,18 @@ function visibleRows(){
 }
 /* ── columnar, sortable, configurable list (mailbox-style) — Cluster L/M ───────────────────
    Column registry = the mechanism: any column can be shown via the chooser; headings sort (server-side). */
+// subject-bar attention flag — appears when Ext OR Int priority is non-normal, or the customer flagged it.
+// A glance cue; the exact values live in the Ext/Int columns. Worker acts per business rules.
+function attnFlag(c){ var ext=c.priExt||'normal', int=c.pri||'normal', cust=!!c.custPri;
+  var urgent=(ext==='urgent'||int==='urgent'), high=(ext==='high'||int==='high');
+  if(!urgent && !high && !cust) return '';
+  var cls=urgent?'urg':(high?'high':'cust'), lbl=urgent?'urgent':(high?'high':'flagged');
+  var title='Priority — Ext: '+cap(ext)+' · Int: '+cap(int)+(cust?' · Customer flagged':'');
+  return '<span class="rflag '+cls+'" title="'+esc(title)+'">⚑ '+lbl+'</span>'; }
 const LISTCOLS = [
   { key:'star',     label:'★',        sort:null,       w:'34px',  cell:function(c){ return '<span class="starcell'+(c.star?' on':'')+'" onclick="event.stopPropagation();toggleStar(\''+c.id+'\')" title="Star">'+(c.star?'★':'☆')+'</span>'; } },
   { key:'from',     label:'From',     sort:'from',     w:'minmax(110px,1.2fr)', cell:function(c){ return esc((UI.folder==='order' ? (c.party||'') : (c.sender||c.party||'')) || '—'); } },
-  { key:'subject',  label:'Subject',  sort:'subject',  w:'minmax(150px,2fr)',   cell:function(c){ return (c.unread?'<span class="unreaddot"></span>':'')+(c.custPri?'<span class="custflag" title="Customer priority">⚑</span> ':'')+'<b>'+esc(c.code||'—')+'</b>'+(c.isDraft?' <span class="optchip mini">draft</span>':'')+(c.dispute?' <span class="optchip mini r">dispute</span>':''); } },
+  { key:'subject',  label:'Subject',  sort:'subject',  w:'minmax(150px,2fr)',   cell:function(c){ var lead=(c.unread?'<span class="udot" title="Unread"></span>':'')+(c.dispute?'<span class="rflag disp" title="Open dispute">⚑ dispute</span>':'')+attnFlag(c); return '<div class="subjwrap">'+(lead?'<span class="lead">'+lead+'</span>':'')+'<span class="subjtext" title="'+esc(c.code||'')+'"><b>'+esc(c.code||'—')+'</b>'+(c.isDraft?' <span class="optchip mini">draft</span>':'')+'</span></div>'; } },
   { key:'date',     label:'Date',     sort:'date',     w:'128px',  cell:function(c){ return esc(lcDate(c.created_at)); } },
   { key:'amount',   label:'Amount',   sort:'amount',   w:'108px', align:'right', cell:function(c){ return '<span style="font-family:\'Space Mono\'">'+(c.amt?fmtMoney(c.amt,c.currency):'—')+'</span>'; } },
   { key:'status',   label:'Status',   sort:'status',   w:'92px',  cell:function(c){ return '<span class="chipst st-'+c.state+'" onclick="event.stopPropagation();advanceChit(\''+c.id+'\')" title="advance">'+String(c.state||'').toUpperCase()+' ▸</span>'; } },
@@ -2374,7 +2415,7 @@ const LISTCOLS = [
   { key:'msgs',     label:'💬',       sort:null,       w:'46px',  cell:function(c){ return c.msg? ('💬 '+c.msg) : ''; } },
   { key:'att',      label:'📎',       sort:null,       w:'46px',  cell:function(c){ return (c.atts&&c.atts.length)? ('📎 '+c.atts.length) : ''; } }
 ];
-const DEFCOLS = ['star','from','subject','date','amount','status'];
+const DEFCOLS = ['star','from','subject','date','amount','priext','priority','status'];
 function getCols(){ try{ const s=JSON.parse(localStorage.getItem('cb_cols')||'null'); if(Array.isArray(s)&&s.length) return s; }catch(_){ } return DEFCOLS.slice(); }
 function visibleCols(){ const set=UI.cols||getCols(); return LISTCOLS.filter(function(c){ return set.indexOf(c.key)>=0; }); }
 function colTemplate(){ const sel = (UI.selectMode&&SESSION.role!=='customer') ? '26px ' : ''; return sel + visibleCols().map(function(c){ return (UI.colW&&UI.colW[c.key]) ? UI.colW[c.key] : c.w; }).join(' '); }
@@ -2385,7 +2426,8 @@ function listHeader(){ const tpl=colTemplate(); const sel = (UI.selectMode&&SESS
 function rowGrid(c){ const tpl=colTemplate();
   const cbx = (UI.selectMode&&SESSION.role!=='customer') ? '<span class="cbx '+(UI.selected.has(c.id)?'on':'')+'" onclick="event.stopPropagation();toggleSel(\''+c.id+'\')">'+(UI.selected.has(c.id)?'✓':'')+'</span>' : '';
   const cells = visibleCols().map(function(col){ return '<span class="lcell'+(col.align==='right'?' ra':'')+'">'+col.cell(c)+'</span>'; }).join('');
-  return '<div class="lrow '+(c.id===UI.sel?'sel':'')+' '+(c.unread?'unread':'')+'" style="grid-template-columns:var(--coltpl)" onclick="openChit(\''+c.id+'\')">'+cbx+cells+'</div>'; }
+  const acc = c.dispute?'acc-disp':(c.unread?'acc-unread':((c.priExt==='urgent'||c.pri==='urgent')?'acc-urg':''));
+  return '<div class="lrow '+(c.id===UI.sel?'sel':'')+' '+(c.unread?'unread':'')+' '+acc+'" style="grid-template-columns:var(--coltpl)" onclick="'+(UI.selectMode?'toggleSel':'openChit')+'(\''+c.id+'\')">'+cbx+cells+'</div>'; }
 function sortBy(key){ if(UI.sort===key){ UI.dir = (UI.dir==='asc'?'desc':'asc'); } else { UI.sort=key; UI.dir = ((key==='date'||key==='priority')?'desc':'asc'); } UI.colMenu=false; UI.sel=null; UI.detail=null; persistSort(); loadList(); }
 function toggleColMenu(){ UI.colMenu=!UI.colMenu; paintRowsKeepScroll(); }
 function colChooser(){ const set=UI.cols||getCols(); return '<div class="colmenu">'+LISTCOLS.map(function(c){ return '<label><input type="checkbox" '+(set.indexOf(c.key)>=0?'checked':'')+' onchange="toggleCol(\''+c.key+'\')"> '+esc(c.label||c.key)+'</label>'; }).join('')+'</div>'; }
@@ -2600,7 +2642,8 @@ async function advanceChit(id){
   const UIS={pending:'open',delivered:'open',read:'open',accepted:'act',in_progress:'act',partial:'act',completed:'close',cancelled:'close',rejected:'close'};
   const curB=(c&&c._status)||'pending', nextB=NB[curB];
   if(!nextB){ toast("Already at the final state."); return; }
-  try{ await api("advance",{params:{id},body:{status:nextB}}); const i=UI.rows.findIndex(x=>x.id===id); if(i>=0){UI.rows[i]._status=nextB; UI.rows[i].state=UIS[nextB];} if(UI.detail&&UI.detail.id===id){UI.detail._status=nextB; UI.detail.state=UIS[nextB];} UI.state=UIS[nextB]; renderApp(); toast(MSG.advanced(c&&c.code, UIS[nextB]||nextB)); }
+  const fromUI=(c&&c.state)||UIS[curB]||'open';
+  try{ await api("advance",{params:{id},body:{status:nextB}}); const i=UI.rows.findIndex(x=>x.id===id); if(i>=0){UI.rows[i]._status=nextB; UI.rows[i].state=UIS[nextB];} if(UI.detail&&UI.detail.id===id){UI.detail._status=nextB; UI.detail.state=UIS[nextB];} UI.state=UIS[nextB]; renderApp(); const toUI=UIS[nextB]||nextB; toast(MSG.advanced(c&&c.code, toUI)); announce(((c&&c.code)||'This chit')+' moved from '+cap(fromUI)+' to '+cap(toUI)); }
   catch(e){ toast(MSG.fail("advance", e)); }
 }
 async function assignChit(id, actorId, pri, reason){
@@ -2683,7 +2726,7 @@ function modeRibbon(){
 /* viewport + divider prefs (local; durable home = entity Settings, backlog) */
 function lsGet(k,def){try{const v=localStorage.getItem(k);return v==null?def:v;}catch(e){return def;}}
 function lsSet(k,v){try{localStorage.setItem(k,v);}catch(e){}}
-function applyPrefs(){UI.vp=lsGet('cb_vp',(window.innerWidth<=820?'mob':'lap'));UI.lw=parseInt(lsGet('cb_lw',340),10)||340;UI.lh=parseInt(lsGet('cb_lh',300),10)||300;}
+function applyPrefs(){UI.vp=lsGet('cb_vp',(window.innerWidth<=820?'mob':'lap'));UI.lw=parseInt(lsGet('cb_lw',340),10)||340;UI.lh=parseInt(lsGet('cb_lh',300),10)||300;try{UI.voice=(localStorage.getItem('cb_voice')==='1');}catch(_){UI.voice=false;}}
 function setVP(v){UI.vp=v;lsSet('cb_vp',v);renderApp();}
 let DRAG=false;
 function startDrag(e){DRAG=true;e.preventDefault();document.body.style.userSelect='none';}
