@@ -2640,11 +2640,10 @@ async function purgeChit(id){ if(!confirm("Delete this draft permanently? This c
 async function restoreChit(id){ try{ await api("restore",{params:{id}}); toast("Restored to active"); UI.detail=null; UI.sel=null; loadList(); }catch(e){ toast(MSG.fail("restore", e)); } }
 async function unarchiveChit(id){ try{ await api("unarchive",{params:{id}}); toast("Unarchived"); UI.detail=null; UI.sel=null; loadList(); }catch(e){ toast(MSG.fail("unarchive", e)); } }
 async function forwardChit(id){ try{ const r=await api("chit",{params:{id}}); const h=(r&&r.header)||r||{}; const det=(r&&r.detail)||{}; const items=(det.line_items||[]).map(function(li){ return {particulars:li.particulars||'item', unit:'unit', price:+li.price||0, qty:+li.quantity||0}; }); const subj=(h.manual_subject||h.auto_subject||'chit'); compose({items:items, subject:'Fwd: '+subj, forwardFrom:id}); }catch(e){ toast(MSG.fail("forward", e)); } }
-// Action-state discipline: if an action drops the acted chit out of the current view, move the cursor AND the
-// detail together to the next visible row — never leave the detail stuck on a row that's gone from the list.
-function focusNextAfter(id, prevIdx){ const vis=visibleRows(); if(vis.some(function(x){return x.id===id;})) return;
-  const nxt=vis[Math.min((prevIdx==null||prevIdx<0)?0:prevIdx, vis.length-1)];
-  if(nxt){ openChit(nxt.id); } else { UI.sel=null; UI.detail=null; UI.mdetail=false; paintDetail(); } }
+// Refresh true per-state totals (rule: counts = server truth) WITHOUT reloading the list — keeps cursor + position.
+async function refreshRollup(){ if(["task","order"].indexOf(UI.folder)<0 || SESSION.role==="customer") return;
+  try{ const rl=await api("rollup",{query:{group_by:'state',direction:UI.folder==='order'?'sent':'received'}}); UI.rollup=(rl&&rl.groups)||[];
+    document.querySelectorAll(".statetabs .n").forEach(function(el,i){ el.textContent=stCount(["open","act","close"][i]); }); }catch(_){ } }
 async function advanceChit(id){
   const c=UI.rows.find(x=>x.id===id)||UI.detail; if(c&&c.state==="close"){toast("At Close — next is Archive (sunset model).");return;}
   const NB={pending:'accepted',delivered:'accepted',read:'accepted',accepted:'in_progress',in_progress:'completed',partial:'completed',finished:'completed'};
@@ -2653,7 +2652,19 @@ async function advanceChit(id){
   if(!nextB){ toast("Already at the final state."); return; }
   const fromUI=(c&&c.state)||UIS[curB]||'open';
   const prevIdx=visibleRows().findIndex(function(x){return x.id===id;});
-  try{ await api("advance",{params:{id},body:{status:nextB}}); const i=UI.rows.findIndex(x=>x.id===id); if(i>=0){UI.rows[i]._status=nextB; UI.rows[i].state=UIS[nextB];} if(UI.detail&&UI.detail.id===id){UI.detail._status=nextB; UI.detail.state=UIS[nextB];} renderApp(); focusNextAfter(id, prevIdx); const toUI=UIS[nextB]||nextB; toast(MSG.advanced(c&&c.code, toUI)); announce(((c&&c.code)||'This chit')+' moved from '+cap(fromUI)+' to '+cap(toUI)); }
+  try{ await api("advance",{params:{id},body:{status:nextB}});
+    const i=UI.rows.findIndex(x=>x.id===id); if(i>=0){UI.rows[i]._status=nextB; UI.rows[i].state=UIS[nextB];}
+    if(UI.detail&&UI.detail.id===id){UI.detail._status=nextB; UI.detail.state=UIS[nextB];}
+    const toUI=UIS[nextB]||nextB;
+    // surgical: repaint rows in place (no reload → keeps position), then move cursor+detail email-style
+    paintRowsOnly();
+    const vis=visibleRows();
+    if(vis.some(function(x){return x.id===id;})){ paintDetail(); }               // still in view → detail follows in place
+    else { const nxt=vis[Math.min(prevIdx<0?0:prevIdx, vis.length-1)];           // left view → next in queue (row now at its old slot)
+      if(nxt){ openChit(nxt.id); } else { UI.sel=null; UI.detail=null; UI.mdetail=false; paintDetail(); } }
+    refreshRollup();                                                              // counts = server truth, without disturbing the list
+    toast(MSG.advanced(c&&c.code, toUI)); announce(((c&&c.code)||'This chit')+' moved from '+cap(fromUI)+' to '+cap(toUI));
+  }
   catch(e){ toast(MSG.fail("advance", e)); }
 }
 async function assignChit(id, actorId, pri, reason){
