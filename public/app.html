@@ -2169,9 +2169,12 @@ function quickStatus(){ const ids=needTarget(); if(!ids.length)return; MODALS.st
 }
 function pickStatus(v){ MODALS.stat.to=v; document.querySelectorAll('.optrow').forEach(r=>r.classList.toggle('sel',r.dataset.v===v)); const b=document.getElementById('mok'); if(b)b.disabled=false; }
 async function confirmStatus(){ const {ids,to}=MODALS.stat; if(!to)return; closeModal();
+  const single = ids.length===1 ? ids[0] : null; const pos = single ? chitPos(single) : null;
   if(ids.length>1) showBusy('Moving '+ids.length+' records to '+cap(to)+'…');
   try{ for(const id of ids){ try{ await api("status",{params:{id},body:{status:({open:'pending',act:'in_progress',close:'completed'}[to]||to)}}); const i=UI.rows.findIndex(x=>x.id===id); if(i>=0)UI.rows[i].state=to; if(UI.detail&&UI.detail.id===id)UI.detail.state=to; }catch(e){ toast(MSG.fail("change status", e)); return; } }
-    UI.selectMode=false; UI.selected.clear(); renderApp(); toast(MSG.statusSet(ids.length, to, ids.length===1?((UI.rows.find(x=>x.id===ids[0])||UI.detail||{}).code):null)); announce('Moved '+ids.length+' record'+(ids.length>1?'s':'')+' to '+cap(to));
+    if(single){ afterChitAction(single, pos); }                             // same email-style cursor as advance
+    else { UI.selectMode=false; UI.selected.clear(); renderApp(); }         // bulk: clear selection, full re-render
+    toast(MSG.statusSet(ids.length, to, single?((UI.rows.find(x=>x.id===single)||UI.detail||{}).code):null)); announce('Moved '+ids.length+' record'+(ids.length>1?'s':'')+' to '+cap(to));
   } finally { hideBusy(); }
 }
 function quickAssign(){ const ids=needTarget(); if(!ids.length)return;
@@ -2640,6 +2643,19 @@ async function purgeChit(id){ if(!confirm("Delete this draft permanently? This c
 async function restoreChit(id){ try{ await api("restore",{params:{id}}); toast("Restored to active"); UI.detail=null; UI.sel=null; loadList(); }catch(e){ toast(MSG.fail("restore", e)); } }
 async function unarchiveChit(id){ try{ await api("unarchive",{params:{id}}); toast("Unarchived"); UI.detail=null; UI.sel=null; loadList(); }catch(e){ toast(MSG.fail("unarchive", e)); } }
 async function forwardChit(id){ try{ const r=await api("chit",{params:{id}}); const h=(r&&r.header)||r||{}; const det=(r&&r.detail)||{}; const items=(det.line_items||[]).map(function(li){ return {particulars:li.particulars||'item', unit:'unit', price:+li.price||0, qty:+li.quantity||0}; }); const subj=(h.manual_subject||h.auto_subject||'chit'); compose({items:items, subject:'Fwd: '+subj, forwardFrom:id}); }catch(e){ toast(MSG.fail("forward", e)); } }
+// ── THE single definition of "what cursor/detail/counts do after ANY single-chit action" ──
+// Usage: pos = chitPos(id) BEFORE the action; update local state; then afterChitAction(id, pos).
+// Every action calls this, so the behaviour (email-style: keep if still visible, else next in queue) is identical
+// everywhere — never re-implemented per action. See C:\dev\ASSOCIATION-RULES.md.
+function chitPos(id){ return visibleRows().findIndex(function(x){return x.id===id;}); }
+function afterChitAction(id, pos){
+  paintRowsOnly();                                                        // repaint rows + tab counts in place (no reload)
+  const vis=visibleRows();
+  if(vis.some(function(x){return x.id===id;})){ paintDetail(); }          // still in view → detail follows it
+  else { const nxt=vis[Math.min((pos==null||pos<0)?0:pos, vis.length-1)]; // left view → next in queue
+    if(nxt){ openChit(nxt.id); } else { UI.sel=null; UI.detail=null; UI.mdetail=false; paintDetail(); } }
+  refreshRollup();                                                        // counts = server truth, list undisturbed
+}
 // Refresh true per-state totals (rule: counts = server truth) WITHOUT reloading the list — keeps cursor + position.
 async function refreshRollup(){ if(["task","order"].indexOf(UI.folder)<0 || SESSION.role==="customer") return;
   try{ const rl=await api("rollup",{query:{group_by:'state',direction:UI.folder==='order'?'sent':'received'}}); UI.rollup=(rl&&rl.groups)||[];
@@ -2651,18 +2667,12 @@ async function advanceChit(id){
   const curB=(c&&c._status)||'pending', nextB=NB[curB];
   if(!nextB){ toast("Already at the final state."); return; }
   const fromUI=(c&&c.state)||UIS[curB]||'open';
-  const prevIdx=visibleRows().findIndex(function(x){return x.id===id;});
+  const pos=chitPos(id);
   try{ await api("advance",{params:{id},body:{status:nextB}});
     const i=UI.rows.findIndex(x=>x.id===id); if(i>=0){UI.rows[i]._status=nextB; UI.rows[i].state=UIS[nextB];}
     if(UI.detail&&UI.detail.id===id){UI.detail._status=nextB; UI.detail.state=UIS[nextB];}
     const toUI=UIS[nextB]||nextB;
-    // surgical: repaint rows in place (no reload → keeps position), then move cursor+detail email-style
-    paintRowsOnly();
-    const vis=visibleRows();
-    if(vis.some(function(x){return x.id===id;})){ paintDetail(); }               // still in view → detail follows in place
-    else { const nxt=vis[Math.min(prevIdx<0?0:prevIdx, vis.length-1)];           // left view → next in queue (row now at its old slot)
-      if(nxt){ openChit(nxt.id); } else { UI.sel=null; UI.detail=null; UI.mdetail=false; paintDetail(); } }
-    refreshRollup();                                                              // counts = server truth, without disturbing the list
+    afterChitAction(id, pos);
     toast(MSG.advanced(c&&c.code, toUI)); announce(((c&&c.code)||'This chit')+' moved from '+cap(fromUI)+' to '+cap(toUI));
   }
   catch(e){ toast(MSG.fail("advance", e)); }
