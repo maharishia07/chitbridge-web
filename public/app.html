@@ -280,7 +280,7 @@
   .custreq{font-size:11.5px;font-weight:700;color:#A32D2D;background:#FCEBEB;border-radius:8px;padding:7px 10px;margin-bottom:8px}
   .rows{flex:1;overflow-y:auto}
   .row{padding:11px 13px;border-bottom:1px solid var(--line);cursor:pointer;display:flex;gap:9px}
-  .row:hover{background:#FCFBF8}.row.sel{background:#F2F6F4;box-shadow:inset 3px 0 0 var(--blue)}
+  .row:hover{background:#FCFBF8}.row.sel{background:#F2F6F4;box-shadow:inset 3px 0 0 var(--blue)}.row.picked{background:#EAF1F8}
   .row .cbx{width:16px;height:16px;border:1.5px solid var(--line);border-radius:4px;flex:0 0 auto;margin-top:2px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;background:#fff}
   .row .cbx.on{background:var(--blue);border-color:var(--blue)}
   .row .main2{flex:1;min-width:0}
@@ -2080,15 +2080,25 @@ function taskPanel(){
   const folders = "";  /* Task/Order live in the left menu / mobile drawer — no duplicate toggle here */
   const sub = (role==="actor"&&UI.folder==="task") ? `<div class="folders"><button class="${UI.sub==='my'?'on':''}" onclick="setSub('my')">My Task</button><button class="${UI.sub==='all'?'on':''}" onclick="setSub('all')">All Task</button></div>` : "";
   const counts = countStates();
-  const stTabs = (["drafts","trash","archive"].indexOf(UI.folder)>=0 || UI.search || advActive()) ? "" : `<div class="statetabs">${["open","act","close"].map(s=>`<button class="${UI.state===s?'on '+s:''}" onclick="setState('${s}')">${UI.selectMode&&!isCust?`<span class="cbx ${UI.aggStates.has(s)?'on':''}" style="width:13px;height:13px;margin:0" onclick="event.stopPropagation();toggleAgg('${s}')">${UI.aggStates.has(s)?'✓':''}</span>`:''}${cap(s)} <span class="n">${counts[s]}</span></button>`).join("")}</div>`;
+  const stTabs = (["drafts","trash","archive"].indexOf(UI.folder)>=0 || UI.search || advActive()) ? "" : `<div class="statetabs">${["open","act","close"].map(s=>`<button class="${UI.state===s?'on '+s:''}" onclick="setState('${s}')">${cap(s)} <span class="n">${counts[s]}</span></button>`).join("")}</div>`;
   const funnel = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>`;
-  const tools = isCust ? "" : `<div class="tools">
+  const tools = isCust ? "" :
+    (UI.folder==='trash') ? `<div class="tools">
+      <div class="tool ${UI.selectMode?'on':''}" title="Select records" onclick="toggleSelect()">☑</div>
+      <div class="tool" title="Restore (redo)" onclick="bulkRestore()">↩</div>
+      <div class="tool" title="Delete forever (drafts only)" onclick="bulkPurge()">🗑</div>
+    </div>` :
+    (UI.folder==='archive') ? `<div class="tools">
+      <div class="tool ${UI.selectMode?'on':''}" title="Select records" onclick="toggleSelect()">☑</div>
+      <div class="tool" title="Unarchive (redo)" onclick="bulkUnarchive()">↩</div>
+    </div>` :
+    `<div class="tools">
       <div class="tool" title="Change status" onclick="quickStatus()">◧</div>
       <div class="tool" title="Assign to actor" onclick="quickAssign()">👤</div>
       <div class="tool ${UI.filterOpen?'on':''}" title="Filter" onclick="openFilter()">${funnel}</div>
       <div class="tool ${UI.selectMode?'on':''}" title="Select" onclick="toggleSelect()">☑</div>
       <div class="tool" title="Raise dispute" onclick="quickDispute()">⚑</div>
-      ${(UI.folder==='trash'||UI.folder==='archive')?'':`<div class="tool" title="Delete (move to trash)" onclick="quickDelete()">🗑️</div>`}
+      <div class="tool" title="Delete (drafts → trash; sent/received → archive)" onclick="quickDelete()">🗑️</div>
     </div>${UI.filterOpen?filterPanel():""}`;
   const sel = (UI.selectMode&&!isCust)?selBar():"";
   const _ak = (UI.folder==='order')?'order':'task';
@@ -2145,11 +2155,37 @@ async function confirmDispute(){ const ids=MODALS.disp.ids; const el=document.ge
   for(const id of ids){ try{ await api("dispute",{params:{id},body:{category:cat,reason}}); const i=UI.rows.findIndex(x=>x.id===id); if(i>=0)UI.rows[i].dispute=true; if(UI.detail&&UI.detail.id===id)UI.detail.dispute=true; }catch(e){ toast(MSG.fail("raise the dispute", e)); return; } }
   renderApp(); toast(MSG.disputeRaised(ids.length));
 }
-function quickDelete(){ let ids=needTarget(); if(!ids.length)return;
-  if(SESSION.role==="actor"){ const drafts=ids.filter(id=>{const c=UI.rows.find(x=>x.id===id)||UI.detail; return c&&c.state==="draft";}); if(drafts.length!==ids.length){ toast("Only the owner can delete a sent (co-signed) chit — actors delete their own drafts only."); return; } ids=drafts; }
-  MODALS.del={ids};
-  modal(`<div class="mhd"><div class="t">🗑️ Delete ${ids.length} chit${ids.length>1?'s':''}?</div></div><div class="mbody"><div style="font-size:13px;color:var(--ink);line-height:1.6">They move to <b>Trash</b> and can be recovered for a set period — not erased immediately.</div></div><div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="danger" onclick="confirmDelete()">Move to Trash</button></div>`);
+// Deletion policy: only DRAFTS can be deleted (→ Trash → restore or delete-forever). Sent/received chits are
+// co-held records the counterparty also holds — they cannot be deleted (removal is governed by the deletion
+// policy, a later layer); offer Archive instead.
+function quickDelete(){ const ids=needTarget(); if(!ids.length)return;
+  const isDraft=c=>!!(c&&(c.isDraft||c.state==="draft"));
+  const rows=ids.map(id=>UI.rows.find(x=>x.id===id)||UI.detail).filter(Boolean);
+  const drafts=rows.filter(isDraft).map(c=>c.id);
+  const sent  =rows.filter(c=>!isDraft(c)).map(c=>c.id);
+  if(sent.length){
+    MODALS.arch={ids:sent};
+    modal(`<div class="mhd"><div class="t">Sent / received chit — can't delete</div></div><div class="mbody"><div style="font-size:13px;color:var(--ink);line-height:1.6">${sent.length>1?sent.length+' of these are':'This is'} a <b>co-held record</b> — the counterparty holds a matching copy, so ${sent.length>1?'they':'it'} can't be deleted (removal is governed by the <b>deletion policy</b>). You can <b>Archive</b> ${sent.length>1?'them':'it'} to clear ${sent.length>1?'them':'it'} from your list.${drafts.length?`<br><br><span style="color:var(--grey)">${drafts.length} draft${drafts.length>1?'s':''} in your selection can still be deleted separately.</span>`:''}</div></div><div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="pri" onclick="archiveSelected()">Archive ${sent.length}</button></div>`);
+    return;
+  }
+  MODALS.del={ids:drafts};
+  modal(`<div class="mhd"><div class="t">🗑️ Delete ${drafts.length} draft${drafts.length>1?'s':''}?</div></div><div class="mbody"><div style="font-size:13px;color:var(--ink);line-height:1.6">${drafts.length>1?'They move':'It moves'} to <b>Trash</b> — from there you can Restore or delete forever.</div></div><div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="danger" onclick="confirmDelete()">Move to Trash</button></div>`);
 }
+async function archiveSelected(){ const ids=(MODALS.arch||{}).ids||[]; if(!ids.length)return; closeModal();
+  let ok=0; for(const id of ids){ try{ await api("archive",{params:{id}}); ok++; }catch(e){ toast(MSG.fail("archive", e)); break; } }
+  UI.selected.clear(); if(UI.sel&&ids.includes(UI.sel)){UI.sel=null;UI.detail=null;UI.mdetail=false;} await loadList(); toast(ok+" archived");
+}
+/* bulk actions for Trash / Archive — operate on ticked rows, else the open chit */
+function selectAllRows(){ visibleRows().forEach(c=>UI.selected.add(c.id)); if(!UI.selectMode)UI.selectMode=true; renderApp(); }
+async function bulkRestore(){ const ids=actionTargets(); if(!ids.length){ toast("Tick some records first (☑), or open one."); return; }
+  let ok=0; for(const id of ids){ try{ await api("restore",{params:{id}}); ok++; }catch(_){} } UI.selected.clear(); UI.sel=null; UI.detail=null; UI.mdetail=false; await loadList(); toast(MSG.restored?MSG.restored(ok):(ok+" restored")); }
+async function bulkUnarchive(){ const ids=actionTargets(); if(!ids.length){ toast("Tick some records first (☑), or open one."); return; }
+  let ok=0; for(const id of ids){ try{ await api("unarchive",{params:{id}}); ok++; }catch(_){} } UI.selected.clear(); UI.sel=null; UI.detail=null; UI.mdetail=false; await loadList(); toast(ok+" unarchived"); }
+async function bulkPurge(){ const ids=actionTargets(); if(!ids.length){ toast("Tick some records first (☑), or open one."); return; }
+  if(!confirm("Delete "+ids.length+" item(s) permanently? This can't be undone. (Only drafts can be purged — sent/received chits stay.)")) return;
+  let ok=0, blocked=0; for(const id of ids){ try{ await api("purgeChit",{params:{id}}); ok++; }catch(e){ blocked++; } }
+  UI.selected.clear(); UI.sel=null; UI.detail=null; UI.mdetail=false; await loadList();
+  toast(ok+" deleted"+(blocked?` · ${blocked} kept (sent/received — not removable)`:"")); }
 async function confirmDelete(){ const ids=MODALS.del.ids; closeModal();
   for(const id of ids){ try{ await api("delChit",{params:{id}}); }catch(e){ toast(MSG.fail("delete", e)); return; } }
   UI.rows=UI.rows.filter(c=>!ids.includes(c.id)); if(UI.sel&&ids.includes(UI.sel)){UI.sel=null;UI.detail=null;UI.mdetail=false;} UI.selected.clear();
@@ -2303,7 +2339,7 @@ async function loadList(){
 }
 function paintRowsOnly(){const b=document.getElementById("rows"); if(b)b.innerHTML=renderRows(); const cs=countStates(); document.querySelectorAll(".statetabs .n").forEach((el,i)=>{el.textContent=cs[["open","act","close"][i]];}); pgPaintTotal(); applyColTpl();}
 function visibleRows(){
-  let rows = (["drafts","trash","archive"].indexOf(UI.folder)>=0 || UI.search || advActive()) ? UI.rows.slice() : ((UI.selectMode&&SESSION.role!=="customer") ? UI.rows.filter(c=>UI.aggStates.has(c.state)) : UI.rows.filter(c=>c.state===UI.state));
+  let rows = (["drafts","trash","archive"].indexOf(UI.folder)>=0 || UI.search || advActive()) ? UI.rows.slice() : UI.rows.filter(c=>c.state===UI.state);
   const f=UI.filter||{};
   if(f.kind) rows=rows.filter(c=>c.kind===f.kind);
   if(f.disputeOnly) rows=rows.filter(c=>c.dispute);
@@ -2363,7 +2399,7 @@ function rowHTML(c){
   const cbx=UI.selectMode&&SESSION.role!=="customer"?`<div class="cbx ${UI.selected.has(c.id)?'on':''}" onclick="event.stopPropagation();toggleSel('${c.id}')">${UI.selected.has(c.id)?'✓':''}</div>`:"";
   const proof=`<span class="proof ${c.proof==='ok'?'ok':'wait'}">${c.proof==='ok'?'✓ both-signed':'⚠ awaiting'}</span>`;
   const acts=(SESSION.role==="actor"&&UI.folder==="task")?(UI.sub==="all"?`<div class="rowacts"><button class="go" onclick="event.stopPropagation();assignChit('${c.id}','${myActorId()||''}')">⤵ Pull to me</button><button onclick="event.stopPropagation();unassignChit('${c.id}')">⤴ Push</button></div>`:`<div class="rowacts"><button onclick="event.stopPropagation();unassignChit('${c.id}')">↩ Push back</button><button class="go" onclick="event.stopPropagation();pickAssign('${c.id}')">👥 Assign</button></div>`):"";
-  return `<div class="row ${c.id===UI.sel?'sel':''} ${c.unread?'unread':''}" onclick="openChit('${c.id}')">${cbx}
+  return `<div class="row ${c.id===UI.sel?'sel':''} ${c.unread?'unread':''} ${UI.selectMode&&UI.selected.has(c.id)?'picked':''}" onclick="${UI.selectMode?`toggleSel('${c.id}')`:`openChit('${c.id}')`}">${cbx}
     <div class="main2"><div class="l1">${c.unread?'<span class="unreaddot" title="Unread — new activity"></span>':''}${c.custPri?'<span class="custflag" title="Customer flagged priority">⚑</span>':''}<span class="code">${esc(c.code)}</span>${c.isDraft?' <span class="optchip" style="font-size:9.5px;background:#f3f0e8;color:#7a5e22;border-color:var(--gold-line)">draft</span>':''}${c.selfChit&&!c.isDraft?' <span class="optchip" style="font-size:9.5px;background:#eef3fb;color:#345488;border-color:#cfe0f4" title="Self-chit · '+( c.folder==="order"?"sent copy":"received copy")+'">self-chit</span>':''}<span class="party">· ${esc(c.party)}</span><span class="amt">${c.amt?inr(c.amt):'—'}</span></div>
       <div class="l2">${esc(c.area)} · ${esc(c.kind)} ${priChip(c.priExt)} ${c.rcc?`<span class="optchip" style="font-size:9px;background:#F4ECD8;color:#7a5e22;border-color:#E4D3A8">CC ${c.rcc}</span>`:''}${c.rfor?`<span class="optchip" style="font-size:9px;background:#EFEBE2;color:#5F6B70;border-color:#E0DACF">For ${c.rfor}</span>`:''} ${c.att?`<span class="rowclip">📎 ${c.att}</span>`:''} ${c.msg?`<span class="rowmsg" onclick="event.stopPropagation();openChitMsgs('${c.id}')">💬 ${c.msg}</span>`:''} ${proof} ${c.dispute?'<b style="color:var(--disp)">dispute</b>':''}
         <span class="chipst st-${c.state}" onclick="event.stopPropagation();advanceChit('${c.id}')" title="advance">${c.state.toUpperCase()} ▸</span></div>${acts}</div>
@@ -2383,13 +2419,14 @@ const PENDING = {
   notifications:{label:"Notifications",             ref:"ATH-109 §11"},
 };
 function todo(k){ const t=PENDING[k]||{label:k,ref:""}; toast(MSG.comingSoon(t.label)+(t.ref?" ("+t.ref+")":"")); }
-function selBar(){const ids=UI.selected;const sum=UI.rows.filter(c=>ids.has(c.id)).reduce((a,c)=>a+c.amt,0);const ticked=UI.rows.filter(c=>UI.aggStates.has(c.state)).reduce((a,c)=>a+c.amt,0);const lbl=ids.size?`☑ ${ids.size} selected · Σ ${inr(sum)}`:`states ✓ ${[...UI.aggStates].map(cap).join(" · ")} · Σ ${inr(ticked)}`;return `<div class="selbar" id="selbar">${lbl}<span class="sp"><button onclick="sumScope()">Sum →</button><button class="pri" onclick="quickAssign()">Assign</button><button onclick="UI.selected.clear();renderApp()">Clear</button></span></div>`;}
+function selBar(){const ids=UI.selected;const all=`<button onclick="selectAllRows()">☑ All</button>`;const clr=`<button onclick="UI.selected.clear();renderApp()">Clear</button>`;
+  if(UI.folder==='trash'){ return `<div class="selbar" id="selbar">☑ ${ids.size} selected<span class="sp">${all}<button class="pri" onclick="bulkRestore()">↩ Restore</button><button onclick="bulkPurge()">🗑 Delete forever</button>${clr}</span></div>`; }
+  if(UI.folder==='archive'){ return `<div class="selbar" id="selbar">☑ ${ids.size} selected<span class="sp">${all}<button class="pri" onclick="bulkUnarchive()">↩ Unarchive</button>${clr}</span></div>`; }
+  const sum=UI.rows.filter(c=>ids.has(c.id)).reduce((a,c)=>a+c.amt,0);const lbl=ids.size?`☑ ${ids.size} selected · Σ ${inr(sum)}`:`Tick rows to select`;return `<div class="selbar" id="selbar">${lbl}<span class="sp">${all}<button onclick="sumScope()">Sum →</button><button class="pri" onclick="quickAssign()">Assign</button>${clr}</span></div>`;}
 function updateSelBar(){const el=document.getElementById("selbar");if(el)el.outerHTML=selBar();}
 function sumScope(){
-  const sel=UI.rows.filter(c=>UI.selected.has(c.id));
-  const tabs=UI.rows.filter(c=>UI.aggStates.has(c.state));
-  let arr=sel.length?sel:tabs;
-  if(sel.length&&tabs.length){ arr = confirm("OK = your "+sel.length+" selected\nCancel = ticked state tabs ("+[...UI.aggStates].join(", ")+")")?sel:tabs; }
+  const arr=UI.rows.filter(c=>UI.selected.has(c.id));
+  if(!arr.length){ toast("Tick some rows first (☑)."); return; }
   const kinds=[...new Set(arr.map(c=>c.kind))];
   if(kinds.length>1){ const lines=kinds.map(k=>k+": "+inr(arr.filter(c=>c.kind===k).reduce((a,c)=>a+c.amt,0))); toast("Mixed kinds — no grand total. "+lines.join(" · ")); }
   else toast("Roll-up · "+arr.length+" chits · Σ "+inr(arr.reduce((a,c)=>a+c.amt,0))+" · push-to-draft: next iteration (ATH-109 §5)");
