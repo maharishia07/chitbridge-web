@@ -2082,7 +2082,7 @@ function taskPanel(){
   const folders = "";  /* Task/Order live in the left menu / mobile drawer — no duplicate toggle here */
   const sub = (role==="actor"&&UI.folder==="task") ? `<div class="folders"><button class="${UI.sub==='my'?'on':''}" onclick="setSub('my')">My Task</button><button class="${UI.sub==='all'?'on':''}" onclick="setSub('all')">All Task</button></div>` : "";
   const counts = countStates();
-  const stTabs = (["drafts","trash","archive"].indexOf(UI.folder)>=0 || UI.search || advActive()) ? "" : `<div class="statetabs">${["open","act","close"].map(s=>`<button class="${UI.state===s?'on '+s:''}" onclick="setState('${s}')">${UI.selectMode&&!isCust?`<span class="cbx ${UI.aggStates.has(s)?'on':''}" style="width:15px;height:15px;margin:0 5px 0 0" onclick="event.stopPropagation();toggleAgg('${s}')">${UI.aggStates.has(s)?'✓':''}</span>`:''}${cap(s)} <span class="n">${counts[s]}</span></button>`).join("")}</div>`;
+  const stTabs = (["drafts","trash","archive"].indexOf(UI.folder)>=0 || UI.search || advActive()) ? "" : `<div class="statetabs">${["open","act","close"].map(s=>`<button class="${UI.state===s?'on '+s:''}" onclick="setState('${s}')">${UI.selectMode&&!isCust?`<span class="cbx ${UI.aggStates.has(s)?'on':''}" style="width:15px;height:15px;margin:0 5px 0 0" onclick="event.stopPropagation();toggleAgg('${s}')">${UI.aggStates.has(s)?'✓':''}</span>`:''}${cap(s)} <span class="n">${stCount(s)}</span></button>`).join("")}</div>`;
   const funnel = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>`;
   const tools = isCust ? "" :
     (UI.folder==='trash') ? `<div class="tools">
@@ -2119,6 +2119,12 @@ function taskPanel(){
   return `<div class="panel ${showDetail?'showdetail':''}" id="panel" style="--lw:${UI.lw}px;--lh:${UI.lh}px">${list}${divider}${detail}</div>`;
 }
 function countStates(){const o={open:0,act:0,close:0};UI.rows.forEach(c=>{if(o[c.state]!=null)o[c.state]++});return o;}
+// Full-set per-state totals from the server rollup (independent of what's loaded in the panel).
+function rollupBuckets(){ const ST={pending:'open',delivered:'open',read:'open',accepted:'act',in_progress:'act',partial:'act',completed:'close',cancelled:'close',rejected:'close'};
+  const b={open:{c:0,s:0},act:{c:0,s:0},close:{c:0,s:0}}; (UI.rollup||[]).forEach(g=>{ const k=ST[g.key]||'open'; if(b[k]){ b[k].c+=(+g.chits||0); b[k].s+=(+g.total_value||0); } }); return b; }
+function hasRollup(){ return !!(UI.rollup && UI.rollup.length); }
+// tab label: loaded / true-total (nn/mmmm) — true total from the rollup, loaded from the current page
+function stCount(s){ const loaded=countStates()[s]; const t=hasRollup()?rollupBuckets()[s].c:loaded; return loaded+'/'+t; }
 function cap(s){return s[0].toUpperCase()+s.slice(1);}
 function setSub(s){UI.sub=s;UI.sel=null;UI.detail=null;renderApp();}
 function toggleListHelp(){ UI.listHelp=!UI.listHelp; renderApp(); }
@@ -2333,13 +2339,15 @@ async function loadList(){
   UI.loading=true; const body=document.getElementById("rows"); if(body)body.innerHTML='<div class="loadwrap"><span class="spin"></span> loading…</div>';
   try{
     UI.rows=[]; await pgFirst('list');
+    // full-set per-state rollup (true counts + sums, independent of the loaded page) — Task/Order only
+    if(["task","order"].includes(UI.folder) && SESSION.role!=="customer"){ try{ const rl=await api("rollup",{query:{group_by:'state',direction:UI.folder==='order'?'sent':'received'}}); UI.rollup=(rl&&rl.groups)||[]; }catch(_){ UI.rollup=[]; } } else { UI.rollup=[]; }
     if(SESSION.role==="actor" && CFG.MODE!=='demo'){ try{ const u=await api("unread"); const set=new Set((u&&u.unread)||[]); UI.rows.forEach(r=>{ r.unread=set.has(r.id); }); }catch(_){} }
     UI.loading=false;
     if(!UI.sel && UI.rows.length){ const first=UI.rows.find(c=>c.state===UI.state)||UI.rows[0]; if(first)openChit(first.id,true); }
     paintRowsOnly();
   }catch(e){ UI.loading=false; const b=document.getElementById("rows"); if(b)b.innerHTML=`<div class="empty"><div class="big">⚠</div><div class="t">Couldn't load</div><div>${e.message}</div><div style="font-size:11px">Check mode/endpoint, then retry.</div></div>`; }
 }
-function paintRowsOnly(){const b=document.getElementById("rows"); if(b)b.innerHTML=renderRows(); const cs=countStates(); document.querySelectorAll(".statetabs .n").forEach((el,i)=>{el.textContent=cs[["open","act","close"][i]];}); pgPaintTotal(); applyColTpl();}
+function paintRowsOnly(){const b=document.getElementById("rows"); if(b)b.innerHTML=renderRows(); document.querySelectorAll(".statetabs .n").forEach((el,i)=>{el.textContent=stCount(["open","act","close"][i]);}); pgPaintTotal(); applyColTpl();}
 function visibleRows(){
   let rows = (["drafts","trash","archive"].indexOf(UI.folder)>=0 || UI.search || advActive()) ? UI.rows.slice() : ((UI.selectMode&&SESSION.role!=="customer") ? UI.rows.filter(c=>UI.aggStates.has(c.state)) : UI.rows.filter(c=>c.state===UI.state));
   const f=UI.filter||{};
@@ -2424,17 +2432,20 @@ function todo(k){ const t=PENDING[k]||{label:k,ref:""}; toast(MSG.comingSoon(t.l
 function selBar(){const ids=UI.selected;const all=`<button onclick="selectAllRows()">☑ All</button>`;const clr=`<button onclick="UI.selected.clear();renderApp()">Clear</button>`;
   if(UI.folder==='trash'){ return `<div class="selbar" id="selbar">☑ ${ids.size} selected<span class="sp">${all}<button class="pri" onclick="bulkRestore()">↩ Restore</button><button onclick="bulkPurge()">🗑 Delete forever</button>${clr}</span></div>`; }
   if(UI.folder==='archive'){ return `<div class="selbar" id="selbar">☑ ${ids.size} selected<span class="sp">${all}<button class="pri" onclick="bulkUnarchive()">↩ Unarchive</button>${clr}</span></div>`; }
-  const sum=UI.rows.filter(c=>ids.has(c.id)).reduce((a,c)=>a+c.amt,0);const ticked=UI.rows.filter(c=>UI.aggStates.has(c.state)).reduce((a,c)=>a+c.amt,0);const lbl=ids.size?`☑ ${ids.size} selected · Σ ${inr(sum)}`:`states ✓ ${[...UI.aggStates].map(cap).join(" · ")||'none'} · Σ ${inr(ticked)}`;return `<div class="selbar" id="selbar">${lbl}<span class="sp">${all}<button onclick="sumScope()">Sum →</button><button class="pri" onclick="quickAssign()">Assign</button>${clr}</span></div>`;}
+  const sum=UI.rows.filter(c=>ids.has(c.id)).reduce((a,c)=>a+c.amt,0);const rb=rollupBuckets();const ticked=hasRollup()?[...UI.aggStates].reduce((a,s)=>a+((rb[s]&&rb[s].s)||0),0):UI.rows.filter(c=>UI.aggStates.has(c.state)).reduce((a,c)=>a+c.amt,0);const lbl=ids.size?`☑ ${ids.size} selected · Σ ${inr(sum)}`:`states ✓ ${[...UI.aggStates].map(cap).join(" · ")||'none'} · Σ(all) ${inr(ticked)}`;return `<div class="selbar" id="selbar">${lbl}<span class="sp">${all}<button onclick="sumScope()">Sum →</button><button class="pri" onclick="quickAssign()">Assign</button>${clr}</span></div>`;}
 function updateSelBar(){const el=document.getElementById("selbar");if(el)el.outerHTML=selBar();}
 function sumScope(){
   const sel=UI.rows.filter(c=>UI.selected.has(c.id));
-  const tabs=UI.rows.filter(c=>UI.aggStates.has(c.state));
-  let arr=sel.length?sel:tabs;
-  if(sel.length&&tabs.length){ arr = confirm("OK = your "+sel.length+" selected record(s)\nCancel = the ticked state groups ("+[...UI.aggStates].map(cap).join(", ")+")")?sel:tabs; }
-  if(!arr.length){ toast("Tick a state (Open/Act/Close) or some records first."); return; }
-  const kinds=[...new Set(arr.map(c=>c.kind))];
-  if(kinds.length>1){ const lines=kinds.map(k=>k+": "+inr(arr.filter(c=>c.kind===k).reduce((a,c)=>a+c.amt,0))); toast("Mixed kinds — no grand total. "+lines.join(" · ")); }
-  else toast("Roll-up · "+arr.length+" chits · Σ "+inr(arr.reduce((a,c)=>a+c.amt,0))+" · push-to-draft: next iteration (ATH-109 §5)");
+  if(sel.length){ // explicit picks → exact sum of the selected (loaded) records
+    const kinds=[...new Set(sel.map(c=>c.kind))];
+    if(kinds.length>1){ const lines=kinds.map(k=>k+": "+inr(sel.filter(c=>c.kind===k).reduce((a,c)=>a+c.amt,0))); toast("Selected "+sel.length+" · mixed kinds — "+lines.join(" · ")); }
+    else toast("Selected · "+sel.length+" chit(s) · Σ "+inr(sel.reduce((a,c)=>a+c.amt,0)));
+    return;
+  }
+  // no explicit picks → full-set roll-up over the ticked state groups (server totals, not just the loaded page)
+  const states=[...UI.aggStates]; if(!states.length){ toast("Tick a state (Open/Act/Close) or some records first."); return; }
+  const rb=rollupBuckets(); const cnt=states.reduce((a,s)=>a+((rb[s]&&rb[s].c)||0),0); const tot=states.reduce((a,s)=>a+((rb[s]&&rb[s].s)||0),0);
+  toast("Roll-up (all) · "+states.map(cap).join("+")+" · "+cnt+" chit(s) · Σ "+inr(tot));
 }
 
 /* detail */
