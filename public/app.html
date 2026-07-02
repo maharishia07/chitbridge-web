@@ -2102,7 +2102,8 @@ function taskPanel(){
   const role=SESSION.role;
   const isCust=role==="customer";
   const folders = "";  /* Task/Order live in the left menu / mobile drawer — no duplicate toggle here */
-  const sub = (role==="actor"&&UI.folder==="task") ? `<div class="folders"><button class="${UI.sub==='my'?'on':''}" onclick="setSub('my')">My Task</button><button class="${UI.sub==='all'?'on':''}" onclick="setSub('all')">All Task</button></div>` : "";
+  const sub = (role==="actor"&&UI.folder==="task") ? `<div class="folders"><button class="${UI.sub==='my'?'on':''}" onclick="setSub('my')">My Task</button><button class="${UI.sub==='all'?'on':''}" onclick="setSub('all')">All Task</button></div>`
+    : (role!=="customer"&&UI.folder==="task") ? `<div class="folders"><button class="${taskScope()==='unassigned'?'on':''}" onclick="setTaskScope('unassigned')">Unassigned</button><button class="${taskScope()==='assigned'?'on':''}" onclick="setTaskScope('assigned')">Assigned</button></div>` : "";
   const counts = countStates();
   const stTabs = (["drafts","trash","archive"].indexOf(UI.folder)>=0 || UI.search || advActive()) ? "" : `<div class="statetabs">${["open","act","close"].map(s=>`<button class="${UI.state===s?'on '+s:''}" onclick="setState('${s}')">${UI.selectMode&&!isCust?`<span class="cbx ${UI.aggStates.has(s)?'on':''}" style="width:15px;height:15px;margin:0 5px 0 0" onclick="event.stopPropagation();toggleAgg('${s}')">${UI.aggStates.has(s)?'✓':''}</span>`:''}${cap(s)} <span class="n">${stCount(s)}</span></button>`).join("")}</div>`;
   const funnel = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>`;
@@ -2368,7 +2369,9 @@ function advPanel(){ const a=UI.adv||{};
     <div class="advrow"><label>Priority</label><select class="advin" id="adv_pri"><option value="">Any</option><option value="urgent" ${a.priority==='urgent'?'selected':''}>Urgent</option><option value="high" ${a.priority==='high'?'selected':''}>High</option><option value="normal" ${a.priority==='normal'?'selected':''}>Normal</option></select></div>
     <div class="advfoot"><button class="composebtn" onclick="clearAdv()">Clear</button><button class="composebtn pri" onclick="applyAdv()">Apply</button></div>
   </div>`; }
-function fetchPage(page){ const limit=UI.pageLimit||50; if(["drafts","trash","archive"].indexOf(UI.folder)>=0){ return api("folder",{query:Object.assign({view:UI.folder,page,limit,q:UI.search||undefined,sort:UI.sort||undefined,dir:UI.dir||undefined}, advParams())}); } if(UI.folder==="order"||SESSION.role==="customer"){ return SESSION.role==="customer" ? api("custOrders",{params:{bridgeId:SESSION.bridgeId},query:{page,limit,q:UI.search||undefined,sort:UI.sort||undefined,dir:UI.dir||undefined}}) : api("sent",{query:Object.assign({page,limit,q:UI.search||undefined,sort:UI.sort||undefined,dir:UI.dir||undefined}, advParams())}); } const q={page,limit}; if(UI.search)q.q=UI.search; if(UI.sort){q.sort=UI.sort;q.dir=UI.dir;} Object.assign(q, advParams()); if(SESSION.role==="actor"&&UI.sub==="my")q.assigned_to="me"; return api("inbox",{query:q}); }
+function fetchPage(page){ const limit=UI.pageLimit||50; if(["drafts","trash","archive"].indexOf(UI.folder)>=0){ return api("folder",{query:Object.assign({view:UI.folder,page,limit,q:UI.search||undefined,sort:UI.sort||undefined,dir:UI.dir||undefined}, advParams())}); } if(UI.folder==="order"||SESSION.role==="customer"){ return SESSION.role==="customer" ? api("custOrders",{params:{bridgeId:SESSION.bridgeId},query:{page,limit,q:UI.search||undefined,sort:UI.sort||undefined,dir:UI.dir||undefined}}) : api("sent",{query:Object.assign({page,limit,q:UI.search||undefined,sort:UI.sort||undefined,dir:UI.dir||undefined}, advParams())}); } const q={page,limit}; if(UI.search)q.q=UI.search; if(UI.sort){q.sort=UI.sort;q.dir=UI.dir;} Object.assign(q, advParams());
+  if(SESSION.role==="actor"){ if(UI.sub==="my")q.assigned_to="me"; } else { q.assignment=taskScope(); }   // entity: unassigned pool (default) / assigned
+  return api("inbox",{query:q}); }
 function onRowsScroll(){ if(UI.loading)return; pgScroll("list"); }
 function ensureFilled(){ if(UI.loading)return; pgFill("list"); }
 function loadNextPage(){ return pgNext("list"); }
@@ -2380,7 +2383,7 @@ async function loadList(){
   try{
     UI.rows=[]; await pgFirst('list');
     // full-set per-state rollup (true counts + sums, independent of the loaded page) — Task/Order only
-    if(["task","order"].includes(UI.folder) && SESSION.role!=="customer"){ try{ const rl=await api("rollup",{query:{group_by:'state',direction:UI.folder==='order'?'sent':'received'}}); UI.rollup=(rl&&rl.groups)||[]; }catch(_){ UI.rollup=[]; } } else { UI.rollup=[]; }
+    if(["task","order"].includes(UI.folder) && SESSION.role!=="customer"){ try{ const rl=await api("rollup",{query:rollupQuery()}); UI.rollup=(rl&&rl.groups)||[]; }catch(_){ UI.rollup=[]; } } else { UI.rollup=[]; }
     if(SESSION.role==="actor" && CFG.MODE!=='demo'){ try{ const u=await api("unread"); const set=new Set((u&&u.unread)||[]); UI.rows.forEach(r=>{ r.unread=set.has(r.id); }); }catch(_){} }
     UI.loading=false;
     if(!UI.sel && UI.rows.length){ const first=UI.rows.find(c=>c.state===UI.state)||UI.rows[0]; if(first)openChit(first.id,true); }
@@ -2656,9 +2659,14 @@ function afterChitAction(id, pos){
     if(nxt){ openChit(nxt.id); } else { UI.sel=null; UI.detail=null; UI.mdetail=false; paintDetail(); } }
   refreshRollup();                                                        // counts = server truth, list undisturbed
 }
+// Delegation scope for the entity's Task pool: 'unassigned' (default) shows work you still hold; 'assigned' shows delegated.
+function taskScope(){ return UI.taskScope||'unassigned'; }
+function setTaskScope(v){ UI.taskScope=v; UI.sel=null; UI.detail=null; UI.selectMode=false; UI.selected.clear(); renderApp(); }
+// Rollup scope MUST match the list scope (counts = exactly what's shown).
+function rollupQuery(){ const rq={group_by:'state', direction:UI.folder==='order'?'sent':'received'}; if(UI.folder==='task'){ if(SESSION.role==='actor'){ if(UI.sub==='my')rq.assigned_to='me'; } else rq.assignment=taskScope(); } return rq; }
 // Refresh true per-state totals (rule: counts = server truth) WITHOUT reloading the list — keeps cursor + position.
 async function refreshRollup(){ if(["task","order"].indexOf(UI.folder)<0 || SESSION.role==="customer") return;
-  try{ const rl=await api("rollup",{query:{group_by:'state',direction:UI.folder==='order'?'sent':'received'}}); UI.rollup=(rl&&rl.groups)||[];
+  try{ const rl=await api("rollup",{query:rollupQuery()}); UI.rollup=(rl&&rl.groups)||[];
     document.querySelectorAll(".statetabs .n").forEach(function(el,i){ el.textContent=stCount(["open","act","close"][i]); }); }catch(_){ } }
 async function advanceChit(id){
   const c=UI.rows.find(x=>x.id===id)||UI.detail; if(c&&c.state==="close"){toast("At Close — next is Archive (sunset model).");return;}
