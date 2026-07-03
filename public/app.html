@@ -1588,7 +1588,7 @@ function lazyAttach(id){ const s=LAZY[id]; if(!s || s.shown>=s.total) return; co
 function scr(title,id,helpKey){
   const q = helpKey?`<button onclick="openHelp('${helpKey}')" title="About this screen" style="border:1px solid var(--line);background:#fff;color:#3F66A6;border-radius:50%;width:22px;height:22px;font-weight:800;cursor:pointer;font-size:13px;line-height:1;flex:none">?</button>`:'';
   const hint = helpKey?`<div style="font-size:11px;color:var(--grey);margin-bottom:10px">Explore <b onclick="openHelp('${helpKey}')" style="cursor:pointer;color:#3F66A6">?</b> to know more about this screen.</div>`:'';
-  return `<div style="padding:14px;max-width:640px;margin:0 auto"><div class="sec" style="font-size:15px;margin-bottom:${helpKey?'3px':'10px'};display:flex;align-items:center;gap:9px">${title}${q}</div>${hint}<div id="${id}"><div class="loadwrap"><span class="spin"></span> loading…</div></div></div>`;
+  return `<div style="flex:1;min-height:0;overflow-y:auto"><div style="padding:14px;max-width:640px;margin:0 auto"><div class="sec" style="font-size:15px;margin-bottom:${helpKey?'3px':'10px'};display:flex;align-items:center;gap:9px">${title}${q}</div>${hint}<div id="${id}"><div class="loadwrap"><span class="spin"></span> loading…</div></div></div></div>`;
 }
 /* esc + opt + scrErr → app/helpers.js */
 const _CARD='border:1px solid var(--line);border-radius:11px;padding:13px;margin-bottom:9px';
