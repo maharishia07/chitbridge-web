@@ -2027,8 +2027,6 @@ function acDetailHTML(){ const x=UI.acDet;
       ${kv('Role',esc(x.role||''))}
       ${kv('Type',acType(x.type))}
       ${kv('Hat',hatV)}
-      ${kv('Covered by',delV+' <span style="color:var(--grey);font-weight:400;font-size:10px">— covers them when away</span>')}
-      ${kv('Covers for',(coversFor.length?esc(coversFor.join(', ')):'—')+' <span style="color:var(--grey);font-weight:400;font-size:10px">— they cover these</span>')}
       ${kv('Max tasks',(x.max||'∞')+'')}
       ${kv('Last got task',x.lastAssigned?acDate(x.lastAssigned):'—')}
       ${kv('Phone',x.phone?esc(x.phone):'')}
@@ -2039,12 +2037,17 @@ function acDetailHTML(){ const x=UI.acDet;
       ${(x.shift!=='on_shift' && (x.breakSince||x.returnDate)) ? '<div style="font-size:11.5px;color:var(--grey);margin-top:6px">'+(x.breakSince?('On break since '+acDate(x.breakSince)):'')+(x.returnDate?((x.breakSince?' · ':'')+'returns '+acDate(x.returnDate)):'')+'</div>' : ''}
       <div style="font-size:12.5px;margin-top:9px">Load · <b>${x.load}</b> / ${x.max||'∞'} tasks</div><div style="height:8px;background:#eef1f4;border-radius:5px;overflow:hidden;margin-top:6px"><span style="display:block;height:100%;background:var(--blue);border-radius:5px;width:${pct}%"></span></div></div>`;
     const eng=`<div class="sec">Access / engagement</div><div style="font-size:11px;color:#9a7b34;background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;line-height:1.5">Per-actor engagement (view-only · act · audit · MIS) is <b>planned, not enforced yet</b> — today a co-assist acts within the entity's scope. Default-deny per node is the roadmap.</div>`;
+    const coverName = x.del?esc(((UI.acts||[]).find(a=>a.id===x.del)||{}).name||'—'):'';
+    const coverSection = '<div class="sec">Leave cover</div><div class="itab" style="border:1px solid var(--line);border-radius:11px;overflow:hidden;margin-bottom:10px">'
+      +'<div style="padding:10px 13px;border-bottom:1px dashed var(--line)"><div style="font-size:10.5px;color:#345488;text-transform:uppercase;letter-spacing:.4px;font-weight:700">🛡 Covered by</div><div style="font-size:13px;margin-top:3px;line-height:1.45">'+(x.del?('<b>'+coverName+'</b> takes over <b>'+esc(x.name)+'</b>&rsquo;s work when '+esc(x.name)+' is away.'):'<span style="color:var(--grey)">No cover set — nobody takes '+esc(x.name)+'&rsquo;s work when away.</span>')+'</div></div>'
+      +'<div style="padding:10px 13px"><div style="font-size:10.5px;color:#2e6b3f;text-transform:uppercase;letter-spacing:.4px;font-weight:700">🤝 Covers for</div><div style="font-size:13px;margin-top:3px;line-height:1.45">'+(coversFor.length?('<b>'+esc(x.name)+'</b> takes over <b>'+esc(coversFor.join(', '))+'</b>&rsquo;s work when they&rsquo;re away.'):'<span style="color:var(--grey)">'+esc(x.name)+' isn&rsquo;t anyone&rsquo;s cover yet.</span>')+'</div></div>'
+      +'</div>';
     const loginState = x.pinSet
       ? '<div class="sec">Login</div><div style="'+_CARD+';background:#e7f3ea;border-color:#bfe0cd"><div style="font-size:13px;color:#2e6b3f;font-weight:600">✓ Active — PIN set. They sign in with their User ID + PIN.</div></div>'
       : (x.otp
           ? '<div class="sec">Login — pending invite</div><div style="'+_CARD+';background:#eef3fb;border-color:#cfe0f4"><div style="font-size:10.5px;color:#345488;text-transform:uppercase;letter-spacing:.4px;font-weight:700">User ID</div><div class="mono" style="font-weight:700;font-size:13px;word-break:break-all">'+esc(acLogin(x))+'</div><div style="font-size:10.5px;color:#345488;text-transform:uppercase;letter-spacing:.4px;font-weight:700;margin-top:7px">One-time code</div><div class="mono" style="font-weight:800;font-size:20px;letter-spacing:3px;color:#345488">'+esc(x.otp)+'</div><div style="font-size:11px;color:#345488;margin-top:6px">Share these so they can sign in &amp; set their PIN. Not set a PIN yet.</div></div>'
           : '<div class="sec">Login — pending</div><div style="'+_CARD+';background:#fbf7ea;border-color:#e6d9a8"><div style="font-size:12.5px;color:#7a5e22">No active one-time code and no PIN yet — use <b>Re-invite</b> below to issue a code.</div></div>');
-    body=prof+loginState+work+eng;
+    body=prof+coverSection+loginState+work+eng;
     if(x.status==='active'){
       bar=`<button class="pri" onclick="acShift('${x.id}')">🔄 Toggle shift</button>`+
           (x.type==='human'?`<button onclick="acReinvite('${x.id}')">✉️ Re-invite</button><button onclick="acResetPin('${x.id}')">🔑 Reset PIN</button>`:'')+
