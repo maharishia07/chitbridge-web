@@ -1984,8 +1984,8 @@ function acVisible(){ let a=(UI.acts||[]).filter(x=>acFlt()==='all'?true:(acFlt(
 function acRowHTML(x){ const dim=x.status!=='active'?'opacity:.55':'';
   return `<div class="row ${x.id===UI.acSel?'sel':''}" data-ac="${x.id}" style="${dim}" onclick="selectActor('${x.id}')">
     <div style="width:9px;height:9px;border-radius:50%;flex:0 0 auto;margin-top:5px;background:${x.shift==='on_shift'?'#2f8f5b':x.shift==='on_break'?'#c9a441':'#b9b9b9'}"></div>
-    <div class="main2"><div class="l1"><span class="code">${esc(x.name)}</span><span class="optchip">${acType(x.type)}</span><span class="amt" style="margin-left:auto;font-size:11.5px;color:var(--grey)">${x.load}/${x.max||'∞'}</span></div>
-      <div class="l2">${esc(x.role||'—')} · <span class="mono">${acLogin(x)}</span> <span class="optchip ${acShc(x.shift)}">${acShLabel(x.shift)}</span>${x.status!=='active'?'<span class="optchip off">'+esc(x.status)+'</span>':''}</div></div>
+    <div class="main2"><div class="l1"><span class="code">${esc(x.name)}</span><span class="optchip" style="background:#eef3fb;color:#345488;border-color:#cfe0f4">${hatLabel(x.hat)}</span>${x.pinSet?'':(x.otp?'<span class="optchip" style="background:#fbf7ea;color:#7a5e22;border-color:#e6d9a8">⏳ invite</span>':'')}<span class="amt" style="margin-left:auto;font-size:11.5px;color:var(--grey)">${x.load}/${x.max||'∞'}</span></div>
+      <div class="l2">${esc(x.role||'—')} · <span class="mono">${acLogin(x)}</span> <span class="optchip ${acShc(x.shift)}">${acShLabel(x.shift)}</span>${x.status!=='active'?'<span class="optchip off">'+esc(x.status)+'</span>':''}${(x.shift!=='on_shift'&&x.returnDate)?' · returns '+acDate(x.returnDate):''}</div></div>
     <div class="rowgo" aria-hidden="true">›</div></div>`; }
 function acRowsHTML(){ const r=acVisible(); if(!r.length) return '<div class="empty"><div class="big">🧑‍🤝‍🧑</div><div class="t">No co-assists</div><div>Add one with <b>+ New</b> above.</div></div>'; return r.map(acRowHTML).join(''); }
 function paintAcList(){ const b=document.getElementById('ac_rows'); if(b)b.innerHTML=acRowsHTML(); const c=document.getElementById('ac_count'); if(c)c.textContent=acVisible().length; }
