@@ -1535,11 +1535,15 @@ function addActorModal(){
 }
 async function submitActor(){
   const name=val("ac_name"), key=(val("ac_key")||"").toLowerCase().trim(); const err=document.getElementById("ac_err"); if(err)err.textContent="";
-  if(!name||key.length<4){ if(err)err.textContent="Name and a login key of 4+ chars are required."; return; }
-  if(!/^[a-z0-9]+$/.test(key)){ if(err)err.textContent="Login key: lowercase letters and numbers only."; return; }
+  if(!name||key.length<4){ if(err)err.textContent="A display name and a User ID of 4+ characters are required."; return; }
+  if(!/^[a-z0-9]+$/.test(key)){ if(err)err.textContent="User ID: lowercase letters and numbers only."; return; }
   try{ const r=await api("addActor",{body:{display_name:name,actor_key:key,hat:val("ac_hat")||'act'}});
     const lf=(r&&(r.login_format||(r.actor&&r.actor.login_format)))||coId(key);   // API truth: <key>@<Business Name>
-    closeModal(); toast(MSG.coassistAdded(name, lf)); if(UI.nav==="coassists")loadCoassists(); }
+    const newId=r&&(r.identity_id||(r.actor&&r.actor.identity_id)||r.id||(r.actor&&r.actor.id));
+    closeModal(); toast(MSG.coassistAdded(name, lf));
+    if(UI.nav==="coassists"){ await loadCoassists();   // land the cursor on the NEW co-assist, not the first row
+      let sel=newId; if(!sel){ const m=(UI.acts||[]).find(a=>String(a.key||'').toLowerCase()===key); if(m)sel=m.id; }
+      if(sel && (UI.acts||[]).some(a=>a.id===sel)) selectActor(sel); } }
   catch(e){ if(err)err.textContent=e.message; }
 }
 /* ---------------- DISPUTES screen ---------------- */
