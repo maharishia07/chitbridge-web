@@ -542,7 +542,8 @@ const EP = {
   actorStatus:     {m:"PUT",  p:"/api/actors/:id/status",        ok:"✓"},  // deactivate/remove/reactivate (+ task routing)
   actorOtp:        {m:"POST", p:"/api/actors/:id/otp",           ok:"✓"},  // regenerate OTP (re-invite)
   actorPinReset:   {m:"DELETE",p:"/api/actors/:id/pin",          ok:"✓"},  // reset PIN
-  actorEdit:       {m:"PATCH", p:"/api/actors/:id",              ok:"y"},  // Stage B — edit profile (name/role/max_tasks/phone)
+  actorEdit:       {m:"PATCH", p:"/api/actors/:id",              ok:"y"},  // Stage B — edit profile (name/role/max_tasks/phone/hat)
+  actorDelegate:   {m:"PUT",   p:"/api/actors/:id/delegate",     ok:"y"},  // D1 — set leave-cover delegate (loop-checked)
   shopStatus:      {m:"PATCH",p:"/api/entities/profile",         ok:"✓"},  // shop status = PATCH profile {business_status}
   dispute:         {m:"POST", p:"/api/chits/:id/disputes",       ok:"✓"},  // raise dispute (built)
   delChit:         {m:"DELETE",p:"/api/chits/:id",               ok:"✓"},  // exists (soft-void/trash)
@@ -1500,7 +1501,8 @@ function addActorModal(){
    <div class="mbody"><label class="fl">Name</label><input class="inp" id="ac_name" placeholder="e.g. Anita">
      <label class="fl">Login key (lowercase letters/numbers, min 4)</label><input class="inp" id="ac_key" oninput="acIdPrev()" placeholder="e.g. priya1">
      <div style="font-size:11.5px;color:var(--grey);margin-top:6px">Login ID: <span id="ac_idprev" style="font-family:'Space Mono';font-size:11.5px;color:#3F66A6">${esc(coId(''))}</span></div>
-     <div style="font-size:11.5px;color:var(--grey);margin-top:8px;line-height:1.5">They sign in with this Login ID under <b>${esc(ent)}</b> + a one-time code, then set a PIN. Starts as <b>human · on shift</b>. Engagement &amp; scope are set later.</div>
+     <label class="fl">Hat (what they do)</label><select class="inp" id="ac_hat"><option value="act">Act — does the work (assignable)</option><option value="manager">Manager — acts + assigns/manages</option><option value="audit">Audit — review only</option><option value="mis">MIS — reports only</option><option value="view_only">View-only</option></select>
+     <div style="font-size:11.5px;color:var(--grey);margin-top:8px;line-height:1.5">They sign in with this Login ID under <b>${esc(ent)}</b> + a one-time code, then set a PIN. Starts <b>on shift</b>. Only <b>Act / Manager</b> hats can be assigned work.</div>
      <div class="err" id="ac_err"></div></div>
    <div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="pri" onclick="submitActor()">Create</button></div>`);
 }
@@ -1508,7 +1510,7 @@ async function submitActor(){
   const name=val("ac_name"), key=(val("ac_key")||"").toLowerCase().trim(); const err=document.getElementById("ac_err"); if(err)err.textContent="";
   if(!name||key.length<4){ if(err)err.textContent="Name and a login key of 4+ chars are required."; return; }
   if(!/^[a-z0-9]+$/.test(key)){ if(err)err.textContent="Login key: lowercase letters and numbers only."; return; }
-  try{ const r=await api("addActor",{body:{display_name:name,actor_key:key}});
+  try{ const r=await api("addActor",{body:{display_name:name,actor_key:key,hat:val("ac_hat")||'act'}});
     const lf=(r&&(r.login_format||(r.actor&&r.actor.login_format)))||coId(key);   // API truth: <key>@<Business Name>
     closeModal(); toast(MSG.coassistAdded(name, lf)); if(UI.nav==="coassists")loadCoassists(); }
   catch(e){ if(err)err.textContent=e.message; }
@@ -1627,17 +1629,34 @@ function govLayersBlock(){ var t=UI.govTab||0; var L=GOV[t];
 }
 function settingsScreen(){ return scr("⚙️ Settings","setbody","settings"); }
 async function loadSettings(){ const h=document.getElementById("setbody"); if(!h)return;
-  try{ const s=(await api("getSettings"))||{};
+  try{ const [s,_acts]=await Promise.all([api("getSettings").then(r=>r||{}), api("actors").then(r=>(r||[]).map(mapApiActor)).catch(()=>[])]);
+    const _assign=_acts.filter(a=>hatAssignable(a.hat));
+    const _daOpts='<option value="">— none (leave in pool) —</option>'+_assign.map(a=>`<option value="${a.id}"${s.default_assignee_actor_id===a.id?' selected':''}>${esc(a.name)}</option>`).join('');
     h.innerHTML=`${menuAssist('settings')}${govLayersBlock()}<div style="${_CARD}">
       <div style="background:#fbeceb;border:1px solid #f0c9c6;border-radius:8px;padding:8px 11px;font-size:11.5px;color:#b4453f;margin-bottom:11px">⏳ These preferences are saved but <b>not yet active</b> — they don't change behaviour yet.</div>
       <label class="fl">Assignment model</label><select class="inp" id="st_am">${opt(["pull","push","both"],s.assignment_model||"both")}</select>
       <label class="fl">Default max tasks per actor</label><input class="inp" id="st_mt" inputmode="numeric" value="${esc(s.default_max_tasks||10)}">
       <label class="fl" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="st_av" ${s.all_task_visible?'checked':''}> All tasks visible to all actors</label>
       <label class="fl" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="st_ar" ${s.auto_return_on_short_break?'checked':''}> Auto-return tasks on short break</label>
-      <div class="err" id="st_err"></div><button class="composebtn" style="margin-top:9px" onclick="saveSettings()">Save settings</button></div><div style="border:1px solid var(--line);border-radius:11px;padding:13px;margin-top:10px"><div class="sec" style="margin:0 0 6px">📎 Attachment policy <span style="font-size:10px;font-family:'Space Mono';background:#f3f0e8;color:#7a5e22;border-radius:5px;padding:1px 6px">governance · stub</span></div><label class="fl">Allowed types</label><input class="inp" id="st_atttypes" value="image, pdf, docx, xlsx, csv, zip"><label class="fl">Max size per file (MB)</label><input class="inp" id="st_attsize" inputmode="numeric" value="10"><label class="fl">Max attachments per chit</label><input class="inp" id="st_attcount" inputmode="numeric" value="10"><div style="font-size:11px;color:var(--grey);margin-top:6px">Where allowed-types / size / count rules live (enforced backend-side). Not active yet.</div></div>`;
+      <div class="err" id="st_err"></div><button class="composebtn" style="margin-top:9px" onclick="saveSettings()">Save settings</button></div>${autoAssignCard(s,_daOpts)}<div style="border:1px solid var(--line);border-radius:11px;padding:13px;margin-top:10px"><div class="sec" style="margin:0 0 6px">📎 Attachment policy <span style="font-size:10px;font-family:'Space Mono';background:#f3f0e8;color:#7a5e22;border-radius:5px;padding:1px 6px">governance · stub</span></div><label class="fl">Allowed types</label><input class="inp" id="st_atttypes" value="image, pdf, docx, xlsx, csv, zip"><label class="fl">Max size per file (MB)</label><input class="inp" id="st_attsize" inputmode="numeric" value="10"><label class="fl">Max attachments per chit</label><input class="inp" id="st_attcount" inputmode="numeric" value="10"><div style="font-size:11px;color:var(--grey);margin-top:6px">Where allowed-types / size / count rules live (enforced backend-side). Not active yet.</div></div>`;
   }catch(e){ h.innerHTML=scrErr(e); } }
 async function saveSettings(){ const x=document.getElementById("st_err"); if(x)x.textContent="";
   try{ await api("saveSettings",{body:{assignment_model:val("st_am"),default_max_tasks:+val("st_mt")||10,all_task_visible:document.getElementById("st_av").checked,auto_return_on_short_break:document.getElementById("st_ar").checked}}); toast(MSG.settingsSaved()); }catch(e){ if(x)x.textContent=e.message; } }
+function autoAssignCard(s, daOpts){ const m=s.auto_assign_mode||'off';
+  return `<div style="${_CARD};margin-top:10px"><div class="sec" style="margin:0 0 6px">🧭 Auto-assign on receipt <span style="font-size:10px;font-family:'Space Mono';background:#e7f3ea;color:#2e6b3f;border-radius:5px;padding:1px 6px">active</span></div>
+    <label class="fl">Mode</label><select class="inp" id="st_aam">
+      <option value="off"${m==='off'?' selected':''}>Off — received chits wait in the pool</option>
+      <option value="default_assignee"${m==='default_assignee'?' selected':''}>Default assignee — all to one person</option>
+      <option value="least_loaded"${m==='least_loaded'?' selected':''}>Least-loaded — balance across the team</option>
+    </select>
+    <label class="fl">Default / overflow assignee</label><select class="inp" id="st_ada">${daOpts}</select>
+    <div style="font-size:11px;color:var(--grey);margin-top:6px;line-height:1.55">Only <b>Act / Manager</b> co-assists can be assigned. In <b>least-loaded</b>, ties break to whoever went longest without a new task; when everyone is at capacity it overflows to the default assignee. Anyone <b>on leave</b> routes to their delegate.</div>
+    <div class="err" id="st_aerr"></div><button class="composebtn" style="margin-top:9px" onclick="saveAutoAssign()">Save auto-assign</button></div>`;
+}
+async function saveAutoAssign(){ const x=document.getElementById("st_aerr"); if(x)x.textContent="";
+  const mode=val("st_aam"), da=val("st_ada");
+  if(mode==='default_assignee' && !da){ if(x)x.textContent="Pick a default assignee for this mode."; return; }
+  try{ await api("saveSettings",{body:{auto_assign_mode:mode, default_assignee_actor_id:da||null}}); toast("Auto-assign saved ✓"); }catch(e){ if(x)x.textContent=e.message; } }
 /* NETWORK */
 function networkScreen(){ return scr("🔗 Network — internal architecture","netbody","network"); }
 async function loadNetwork(){ const h=document.getElementById("netbody"); if(!h)return;
@@ -1778,7 +1797,8 @@ function suppliersScreen(){
   const list = `<div class="list">
     <div class="lh">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:14px">🏭 Suppliers</span><button onclick="openHelp('suppliers')" title="About this screen" style="border:1px solid var(--line);background:#fff;color:#3F66A6;border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button></div>
-      <div style="display:flex;gap:7px"><input class="inp" id="sp_add" placeholder="Add supplier — User ID or email" style="flex:1" onkeydown="if(event.key==='Enter')addSupplier()"><button class="composebtn" onclick="addSupplier()">Add</button></div>
+      <div style="display:flex;gap:7px"><input class="inp" id="sp_add" placeholder="Add supplier — type a name, User ID or email" style="flex:1" autocomplete="off" oninput="supSearch(this.value)" onkeydown="if(event.key==='Enter')addSupplier()"><button class="composebtn" onclick="addSupplier()">Add</button></div>
+      <div id="sp_sugg" class="ccsugg"></div>
       <div class="err" id="sp_err" style="margin-top:6px"></div>
       <div class="srch" style="margin-top:8px">🔍 <input placeholder="Search suppliers, category, ID" value="${esc(UI.supQ||'')}" oninput="UI.supQ=this.value;paintSupList()"></div>
       <div style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:11px;color:var(--grey)"><span id="sp_count">${supCount()} supplier(s)</span><span style="margin-left:auto;display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden"><button onclick="setSupSort(true)" style="border:0;background:${supPrefFirst()?'var(--blue)':'#fff'};color:${supPrefFirst()?'#fff':'var(--grey)'};font-size:11px;font-weight:700;padding:4px 9px">★ Preferred</button><button onclick="setSupSort(false)" style="border:0;background:${!supPrefFirst()?'var(--blue)':'#fff'};color:${!supPrefFirst()?'#fff':'var(--grey)'};font-size:11px;font-weight:700;padding:4px 9px">A–Z</button></span></div>
@@ -1871,7 +1891,11 @@ function supDetailHTML(){
   }
   return `${head}<div class="db">${body}</div><div class="actbar">${bar}</div>`;
 }
-async function addSupplier(){ const x=document.getElementById("sp_err"); if(x)x.textContent=""; const bid=(val("sp_add")||"").trim(); if(!bid){ if(x)x.textContent="Enter a supplier's User ID or email."; return; } if(!isUserId(bid)){ if(x)x.textContent="User ID must be at least 8 characters, or an email."; return; }
+let _spSearchT=null;
+function supSearch(q){ clearTimeout(_spSearchT); q=(q||'').trim(); const h=document.getElementById('sp_sugg'); if(q.length<2){ if(h)h.innerHTML=''; return; } _spSearchT=setTimeout(async function(){ try{ const r=await api("entitySearch",{query:{q:q}}); supRenderSugg(Array.isArray(r)?r:((r&&r.results)||[])); }catch(_){ const hh=document.getElementById('sp_sugg'); if(hh)hh.innerHTML=''; } }, 250); }
+function supRenderSugg(list){ UI._supSugg=list||[]; const h=document.getElementById('sp_sugg'); if(!h)return; if(!UI._supSugg.length){ h.innerHTML='<div class="ccsugg-empty">No matching business found</div>'; return; } h.innerHTML=UI._supSugg.slice(0,8).map(function(e,i){ return '<div class="ccsugg-item" onclick="supPick('+i+')"><span class="ccsugg-nm">'+esc(e.display_name||'')+'</span><span class="ccsugg-id">'+esc(e.bridge_id||'')+'</span></div>'; }).join(''); }
+async function supPick(i){ const e=(UI._supSugg||[])[i]; if(!e)return; const h=document.getElementById('sp_sugg'); if(h)h.innerHTML=''; const err=document.getElementById('sp_err'); if(err)err.textContent=''; const a=document.getElementById('sp_add'); if(a)a.value=e.display_name||''; try{ await api("supAdd",{body:{supplier_bridge_id:e.bridge_id}}); toast('Supplier added ✓'); if(a)a.value=''; await loadSuppliers(); }catch(ex){ if(err)err.textContent=ex.message; } }
+async function addSupplier(){ const x=document.getElementById("sp_err"); if(x)x.textContent=""; const bid=(val("sp_add")||"").trim(); if(!bid){ if(x)x.textContent="Enter a supplier's name, User ID or email."; return; } const h=document.getElementById('sp_sugg'); if(h)h.innerHTML=''; if(!isUserId(bid)){ if(x)x.textContent="Type a name and pick from the list, or enter a User ID (8+ chars) / email."; return; }
   try{ await api("supAdd",{body:{supplier_bridge_id:bid}}); toast("Supplier added ✓"); const a=document.getElementById('sp_add'); if(a)a.value=''; await loadSuppliers(); }catch(e){ if(x)x.textContent=e.message; } }
 async function delSupplier(id){ if(!confirm("Remove this supplier from your list?")) return; try{ await api("supDel",{params:{id}}); UI.supSel=null; UI.supDet=null; UI.mdetail=false; toast(MSG.supplierRemoved()); await loadSuppliers(); }catch(e){ toast(MSG.fail("remove the supplier", e)); } }
 async function toggleSupPref(id){ const x=(UI.sups||[]).find(s=>s.supplier_list_id===id); if(!x)return; const nv=!x.preferred;
@@ -1970,6 +1994,9 @@ async function loadMIS(){ const h=document.getElementById("misbody"); if(!h)retu
 /* CO-ASSISTS — two-sided master/detail (Stage A). Same skeleton as task/order + suppliers,
    so the draggable divider and mobile collapse come for free. */
 const AC_TYPE={human:'🧑 human', iot_device:'⚙️ device', connector:'🔌 connector', ai_agent:'🤖 AI', process_rule:'📋 rule'};
+const HAT_LABEL={view_only:'View-only', act:'Act', audit:'Audit', mis:'MIS', manager:'Manager'};
+function hatLabel(h){ return HAT_LABEL[h]||h||'Act'; }
+function hatAssignable(h){ return h==='act'||h==='manager'; }
 function acType(t){ return AC_TYPE[t]||esc(t||'human'); }
 function acShc(sh){ return sh==='on_shift'?'on':sh==='on_break'?'brk':'off'; }
 function acShLabel(sh){ return sh==='on_shift'?'on shift':sh==='on_break'?'on break':'off'; }
@@ -2020,6 +2047,8 @@ function acDetailHTML(){ const x=UI.acDet;
     body=`<div class="sec">Edit — co-assist profile</div>
       <label class="fl">Display name</label><input class="inp" id="ac_ename" value="${esc(x.name)}">
       <label class="fl">Role</label><input class="inp" id="ac_erole" value="${esc(x.role||'')}" placeholder="e.g. Dispatch, Accounts">
+      <label class="fl">Hat (only Act / Manager can be assigned work)</label><select class="inp" id="ac_ehat" style="max-width:240px">${['act','manager','audit','mis','view_only'].map(h=>'<option value="'+h+'"'+(x.hat===h?' selected':'')+'>'+hatLabel(h)+'</option>').join('')}</select>
+      <label class="fl">Leave-cover delegate (covers auto-assigned work while on leave)</label><select class="inp" id="ac_edel" style="max-width:240px"><option value="">— none —</option>${(UI.acts||[]).filter(a=>a.id!==x.id && hatAssignable(a.hat)).map(a=>'<option value="'+a.id+'"'+(x.del===a.id?' selected':'')+'>'+esc(a.name)+'</option>').join('')}</select>
       <label class="fl">Max concurrent tasks</label><input class="inp" id="ac_emax" inputmode="numeric" value="${x.max||''}" style="width:120px">
       <label class="fl">Phone</label><input class="inp" id="ac_ephone" value="${esc(x.phone||'')}" placeholder="optional">
       <div class="err" id="ac_ederr" style="margin-top:8px"></div>
@@ -2032,6 +2061,8 @@ function acDetailHTML(){ const x=UI.acDet;
       <div class="kv"><b>Login</b><span class="mono">${acLogin(x)}</span></div>
       <div class="kv"><b>Role</b><span>${esc(x.role||'—')}</span></div>
       <div class="kv"><b>Type</b><span>${acType(x.type)}</span></div>
+      <div class="kv"><b>Hat</b><span>${hatLabel(x.hat)}${hatAssignable(x.hat)?'':' <span style="color:var(--grey)">· not assignable</span>'}</span></div>
+      ${x.del?`<div class="kv"><b>Leave-cover</b><span>${esc(((UI.acts||[]).find(a=>a.id===x.del)||{}).name||'—')}</span></div>`:''}
       ${x.phone?`<div class="kv"><b>Phone</b><span>${esc(x.phone)}</span></div>`:''}
       <div class="kv"><b>Joined</b><span>${acDate(x.created)}</span></div>
       <div class="kv"><b>Last active</b><span>${acDate(x.last)}</span></div></div>`;
@@ -2063,9 +2094,12 @@ async function acStatus(id, action){ const x=(UI.acts||[]).find(a=>a.id===id); i
     toast(action==='remove'?'Co-assist removed':(action==='deactivate'?'Deactivated':'Reactivated — new invite code issued')); await loadCoassists(); }
   catch(e){ toast(MSG.fail("update the co-assist", e)); } }
 async function saveActor(id){ const err=document.getElementById("ac_ederr"); if(err)err.textContent="";
-  const body={ display_name:val("ac_ename")||undefined, actor_role:val("ac_erole")||null, max_tasks:(+val("ac_emax")||undefined), phone:val("ac_ephone")||null };
-  try{ await api("actorEdit",{params:{id},body}); const x=(UI.acts||[]).find(a=>a.id===id); if(x){ if(body.display_name)x.name=body.display_name; x.role=body.actor_role; if(body.max_tasks)x.max=body.max_tasks; x.phone=body.phone; } UI.acMode='view'; paintAcList(); paintAcDetail(); toast('Co-assist updated ✓'); }
-  catch(e){ if(err)err.textContent=e.message+" — this needs the Stage-B PATCH endpoint deployed."; } }const CO_HELP = [
+  const body={ display_name:val("ac_ename")||undefined, actor_role:val("ac_erole")||null, max_tasks:(+val("ac_emax")||undefined), phone:val("ac_ephone")||null, hat:val("ac_ehat")||undefined };
+  try{ await api("actorEdit",{params:{id},body}); const x=(UI.acts||[]).find(a=>a.id===id);
+    const delEl=document.getElementById("ac_edel");
+    if(delEl && delEl.value!==((x&&x.del)||'')){ await api("actorDelegate",{params:{id},body:{delegate_actor_id:delEl.value||null}}); if(x)x.del=delEl.value||null; }
+    if(x){ if(body.display_name)x.name=body.display_name; x.role=body.actor_role; if(body.max_tasks)x.max=body.max_tasks; x.phone=body.phone; if(body.hat)x.hat=body.hat; } UI.acMode='view'; paintAcList(); paintAcDetail(); toast('Co-assist updated ✓'); }
+  catch(e){ if(err)err.textContent=e.message; } }const CO_HELP = [
  {q:"What is a co-assist?", a:"Anyone — or anything — that acts FOR you. Today people; soon connectors, IoT devices, process rules and AI agents. The owner stays the party; the co-assist acts on your behalf within your entity's scope (per-actor limits are coming)."},
  {q:"What can they do?", a:"Today a co-assist acts WITHIN your entity's scope — they can see and act on the entity's work; entity-level isolation is enforced. Per-actor engagement TYPES (view-only, act, audit, MIS) that limit what an individual can do are PLANNED, not yet enforced — so don't rely on per-actor limits yet. The roadmap is default-deny per node; the granular scoping is coming."},
  {q:"Push or pull?", a:"Assignment model: pull (actors take work), push (you assign), or both — set in Settings. With a process map, push/pull stop being manual and draw from the order's processes (next iteration)."},
@@ -2130,7 +2164,7 @@ function taskPanel(){
   const helpStrip = isCust ? "" : `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line);background:var(--gold-soft);font-size:12px;color:#6b5a36"><b style="font-family:'Space Grotesk'">${({order:"Order — chits you've sent",task:"Task — chits received",drafts:"Drafts — unsent chits",trash:"Trash — deleted chits",archive:"Archive — archived chits"}[UI.folder]||"Task — chits received")}</b><button class="composebtn" style="margin-left:auto" onclick="toggleListHelp()">${UI.listHelp?'✕ Close':'❓ Help'}</button></div>${UI.listHelp?`<div style="padding:11px 12px;border-bottom:1px solid var(--line);overflow-y:auto;max-height:52%">${assistPage(_ak)}</div>`:''}`;
   const list = `<div class="list">${helpStrip}
     <div class="lh">${folders}${sub}${stTabs}
-      <div class="srch">🔍 <input placeholder="${isCust?'Search my orders':'Search chits, party, item'}" id="listsrch" value="${esc(UI.search||'')}" oninput="onSrch('list', this.value)">${advBtnHtml()}</div>
+      <div class="srch">🔍 <input placeholder="${isCust?'Search my orders':'Search chits, party, item'}" id="listsrch" value="${esc(UI.search||'')}" oninput="onSrch('list', this.value)"><span id="srchadv">${advBtnHtml()}</span></div>
       ${tools}${sel}
     </div>
     <div class="listtotal" id="listtotal"></div>
@@ -2182,14 +2216,26 @@ function quickAssign(){ const ids=needTarget(); if(!ids.length)return;
   if(ids.length===1){ pickAssign(ids[0]); }
   else { pickAssignBulk(ids); }
 }
-function quickDispute(){ const ids=needTarget(); if(!ids.length)return; MODALS.disp={ids};
-  modal(`<div class="mhd"><div class="t">⚑ Raise dispute</div><div class="s">${ids.length} chit${ids.length>1?'s':''}</div></div><div class="mbody"><div style="font-size:12px;color:var(--grey);margin-bottom:7px">Pick a category and give a reason (min 10 characters). Both parties will see this dispute.</div><select id="dispcat" style="width:100%;margin-bottom:8px;padding:8px;border:1px solid var(--line);border-radius:6px"><option value="quality">Quality</option><option value="quantity">Quantity</option><option value="delivery">Delivery</option><option value="payment">Payment</option><option value="docs">Docs</option><option value="other" selected>Other</option></select><textarea id="dispreason" placeholder="e.g. Quantity short by 2 units — please replace"></textarea></div><div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="danger" onclick="confirmDispute()">Raise dispute</button></div>`);
+async function quickDispute(){ const ids=needTarget(); if(!ids.length)return;
+  // A dispute is raised on ONE chit against its own parties — each transaction is a separate matter,
+  // so there is no bulk dispute. Open the specific chit (or select just one) to raise it.
+  if(ids.length>1){ toast("Raise a dispute on one chit at a time — each is its own matter."); return; }
+  const id=ids[0]; MODALS.disp={id, parties:[]};
+  let partyRows='';
+  try{ const r=await api("chit",{params:{id}}); const h=(r&&r.header)||r||{}; const seen={};
+    const parties=(h.all_recipients||[]).filter(x=>x&&x.entity_id&&!seen[x.entity_id]&&(seen[x.entity_id]=1));
+    MODALS.disp.parties=parties;
+    if(parties.length){ partyRows='<div style="font-size:12px;color:var(--grey);margin:9px 0 3px">Between which parties? <span style="color:#9aa3ad">(none ticked = everyone involved)</span></div>'+parties.map(p=>`<label style="display:flex;gap:8px;align-items:center;padding:3px 0;font-size:13px;cursor:pointer"><input type="checkbox" class="dispparty" value="${p.entity_id}"> ${esc(p.display_name||'party')} <span style="font-size:10px;color:var(--grey);text-transform:uppercase">${esc(p.role||'')}</span></label>`).join(''); }
+  }catch(_){}
+  modal(`<div class="mhd"><div class="t">⚑ Raise dispute</div></div><div class="mbody"><div style="font-size:12px;color:var(--grey);margin-bottom:7px">Pick a category and give a reason (min 10 characters). The parties you select are notified and carry the dispute status.</div><select id="dispcat" style="width:100%;margin-bottom:8px;padding:8px;border:1px solid var(--line);border-radius:6px"><option value="quality">Quality</option><option value="quantity">Quantity</option><option value="delivery">Delivery</option><option value="payment">Payment</option><option value="docs">Docs</option><option value="other" selected>Other</option></select>${partyRows}<textarea id="dispreason" placeholder="e.g. Quantity short by 2 units — please replace"></textarea></div><div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="danger" onclick="confirmDispute()">Raise dispute</button></div>`);
 }
-async function confirmDispute(){ const ids=MODALS.disp.ids; const el=document.getElementById('dispreason'); const reason=(el?el.value:"").trim(); const cat=(document.getElementById('dispcat')||{}).value||'other';
+async function confirmDispute(){ const id=MODALS.disp.id; const el=document.getElementById('dispreason'); const reason=(el?el.value:"").trim(); const cat=(document.getElementById('dispcat')||{}).value||'other';
   if(reason.length<10){ toast("Reason must be at least 10 characters"); return; }
+  const parties=[...document.querySelectorAll('.dispparty:checked')].map(e=>e.value);
   closeModal();
-  for(const id of ids){ try{ await api("dispute",{params:{id},body:{category:cat,reason}}); const i=UI.rows.findIndex(x=>x.id===id); if(i>=0)UI.rows[i].dispute=true; if(UI.detail&&UI.detail.id===id)UI.detail.dispute=true; }catch(e){ toast(MSG.fail("raise the dispute", e)); return; } }
-  renderApp(); toast(MSG.disputeRaised(ids.length)); announce('Dispute raised on '+ids.length+' chit'+(ids.length>1?'s':''));
+  const body={category:cat,reason}; if(parties.length)body.participant_entity_ids=parties;
+  try{ await api("dispute",{params:{id},body}); const i=UI.rows.findIndex(x=>x.id===id); if(i>=0)UI.rows[i].dispute=true; if(UI.detail&&UI.detail.id===id)UI.detail.dispute=true; }catch(e){ toast(MSG.fail("raise the dispute", e)); return; }
+  renderApp(); if(typeof refreshRollup==='function')refreshRollup(); toast(MSG.disputeRaised(1)); announce('Dispute raised');
 }
 // Deletion policy: only DRAFTS can be deleted (→ Trash → restore or delete-forever). Sent/received chits are
 // co-held records the counterparty also holds — they cannot be deleted (removal is governed by the deletion
@@ -2208,20 +2254,22 @@ function quickDelete(){ const ids=needTarget(); if(!ids.length)return;
   modal(`<div class="mhd"><div class="t">🗑️ Delete ${drafts.length} draft${drafts.length>1?'s':''}?</div></div><div class="mbody"><div style="font-size:13px;color:var(--ink);line-height:1.6">${drafts.length>1?'They move':'It moves'} to <b>Trash</b> — from there you can Restore or delete forever.</div></div><div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="danger" onclick="confirmDelete()">Move to Trash</button></div>`);
 }
 async function archiveSelected(){ const ids=(MODALS.arch||{}).ids||[]; if(!ids.length)return; closeModal();
-  let ok=0; for(const id of ids){ try{ await api("archive",{params:{id}}); ok++; }catch(e){ toast(MSG.fail("archive", e)); break; } }
-  UI.selected.clear(); if(UI.sel&&ids.includes(UI.sel)){UI.sel=null;UI.detail=null;UI.mdetail=false;} await loadList(); toast(ok+" archived");
+  if(ids.length>1) showBusy('Archiving '+ids.length+' records…');
+  try{ let ok=0; for(const id of ids){ try{ await api("archive",{params:{id}}); ok++; }catch(e){ toast(MSG.fail("archive", e)); break; } }
+  UI.selected.clear(); if(UI.sel&&ids.includes(UI.sel)){UI.sel=null;UI.detail=null;UI.mdetail=false;} await loadList(); toast(ok+" archived"); announce(ok+" record"+(ok===1?"":"s")+" archived"); } finally { hideBusy(); }
 }
 /* bulk actions for Trash / Archive — operate on ticked rows, else the open chit */
 function selectAllRows(){ visibleRows().forEach(c=>UI.selected.add(c.id)); if(!UI.selectMode)UI.selectMode=true; renderApp(); }
 async function bulkRestore(){ const ids=actionTargets(); if(!ids.length){ toast("Tick some records first (☑), or open one."); return; }
-  let ok=0; for(const id of ids){ try{ await api("restore",{params:{id}}); ok++; }catch(_){} } UI.selected.clear(); UI.sel=null; UI.detail=null; UI.mdetail=false; await loadList(); toast(MSG.restored?MSG.restored(ok):(ok+" restored")); }
+  if(ids.length>1) showBusy('Restoring '+ids.length+' records…'); try{ let ok=0; for(const id of ids){ try{ await api("restore",{params:{id}}); ok++; }catch(_){} } UI.selected.clear(); UI.sel=null; UI.detail=null; UI.mdetail=false; await loadList(); toast(MSG.restored?MSG.restored(ok):(ok+" restored")); announce(ok+" record"+(ok===1?"":"s")+" restored"); } finally { hideBusy(); } }
 async function bulkUnarchive(){ const ids=actionTargets(); if(!ids.length){ toast("Tick some records first (☑), or open one."); return; }
-  let ok=0; for(const id of ids){ try{ await api("unarchive",{params:{id}}); ok++; }catch(_){} } UI.selected.clear(); UI.sel=null; UI.detail=null; UI.mdetail=false; await loadList(); toast(ok+" unarchived"); }
+  if(ids.length>1) showBusy('Unarchiving '+ids.length+' records…'); try{ let ok=0; for(const id of ids){ try{ await api("unarchive",{params:{id}}); ok++; }catch(_){} } UI.selected.clear(); UI.sel=null; UI.detail=null; UI.mdetail=false; await loadList(); toast(ok+" unarchived"); announce(ok+" record"+(ok===1?"":"s")+" unarchived"); } finally { hideBusy(); } }
 async function bulkPurge(){ const ids=actionTargets(); if(!ids.length){ toast("Tick some records first (☑), or open one."); return; }
   if(!confirm("Delete "+ids.length+" item(s) permanently? This can't be undone. (Only drafts can be purged — sent/received chits stay.)")) return;
-  let ok=0, blocked=0; for(const id of ids){ try{ await api("purgeChit",{params:{id}}); ok++; }catch(e){ blocked++; } }
+  if(ids.length>1) showBusy('Deleting '+ids.length+' records…');
+  try{ let ok=0, blocked=0; for(const id of ids){ try{ await api("purgeChit",{params:{id}}); ok++; }catch(e){ blocked++; } }
   UI.selected.clear(); UI.sel=null; UI.detail=null; UI.mdetail=false; await loadList();
-  toast(ok+" deleted"+(blocked?` · ${blocked} kept (sent/received — not removable)`:"")); }
+  toast(ok+" deleted"+(blocked?` · ${blocked} kept (sent/received — not removable)`:"")); announce(ok+" record"+(ok===1?"":"s")+" deleted"); } finally { hideBusy(); } }
 async function confirmDelete(){ const ids=MODALS.del.ids; closeModal();
   for(const id of ids){ try{ await api("delChit",{params:{id}}); }catch(e){ toast(MSG.fail("delete", e)); return; } }
   UI.rows=UI.rows.filter(c=>!ids.includes(c.id)); if(UI.sel&&ids.includes(UI.sel)){UI.sel=null;UI.detail=null;UI.mdetail=false;} UI.selected.clear();
@@ -2304,7 +2352,7 @@ function fmtAt(ts){ try{ return new Date(ts).toLocaleTimeString([], {hour:'2-dig
 function inr_(v){ return '₹'+Number(v||0).toLocaleString('en-IN'); }
 function fmtLine(li){ return [li.particulars||'Item', (li.quantity||0)+' × '+inr_(li.price)+' = '+inr_(li.total||(li.quantity*li.price)), []]; }
 function mapApiMsg(m){ if(!m||m.scope!==undefined) return m; return { id:m.message_id, scope:m.thread_type||'internal', author:m.sender_display_name||'—', body:m.message_text||'', at:fmtAt(m.created_at), type:m.msg_type||'info', unread:false, atts:(m.attachments||[]).map(mapAtt) }; }
-function mapApiActor(a){ if(!a||a.shift!==undefined) return a; const S={active:'on_shift',short_break:'on_break',on_break:'on_break',break:'on_break',leave:'on_break',off:'off',deactivated:'off',removed:'off'}; const st=(a.break_status==='deactivated')?'deactivated':(a.break_status==='removed'?'removed':'active'); return { id:a.identity_id, name:a.display_name, uid:a.user_id||a.uid, key:a.actor_key||'', role:a.actor_role||'', type:a.actor_type||'human', shift:S[a.break_status]||'on_shift', status:st, load:a.current_task_count||0, max:a.max_tasks||0, phone:a.phone||'', bridge:a.bridge_id||'', created:a.created_at||null, last:a.last_active_at||null }; }
+function mapApiActor(a){ if(!a||a.shift!==undefined) return a; const S={active:'on_shift',short_break:'on_break',on_break:'on_break',break:'on_break',leave:'on_break',off:'off',deactivated:'off',removed:'off'}; const st=(a.break_status==='deactivated')?'deactivated':(a.break_status==='removed'?'removed':'active'); return { id:a.identity_id, name:a.display_name, uid:a.user_id||a.uid, key:a.actor_key||'', role:a.actor_role||'', type:a.actor_type||'human', shift:S[a.break_status]||'on_shift', status:st, load:a.current_task_count||0, max:a.max_tasks||0, phone:a.phone||'', hat:a.hat||'act', del:a.delegate_actor_id||null, lastAssigned:a.last_assigned_at||null, bridge:a.bridge_id||'', created:a.created_at||null, last:a.last_active_at||null }; }
 /* ── generic lazy-list pager — ONE implementation for every scrollable list ────────────────
    pgInit(id,cfg): cfg = { el:()=>HTMLElement (scroll container), fetch:(page,limit)=>Promise(array, maybe .total),
      map:(row)=>row, store:(rows,first)=>void, count:()=>number, repaint:()=>void, limit:int }
@@ -2351,14 +2399,17 @@ pgInit('list', { el:()=>document.getElementById("rows"), limit:50, map:mapApiChi
 /* common list search — server lists route q through the pager; client (lazyWrap) lists filter in place */
 function onSrch(scope, q){ clearTimeout(UI._srchT); UI._srchT=setTimeout(function(){ q=(q||'').trim(); if(scope==='list'){ UI.search=q; UI.sel=null; UI.detail=null; loadList(); } else if(typeof lazyFilter==='function'){ lazyFilter(scope, q); } }, 300); }
 /* ── advanced search (header-level only): amount range, date range, status, priority ──────── */
-function advParams(){ const a=UI.adv||{}; const o={}; ['amount_min','amount_max','date_from','date_to','priority','fstatus'].forEach(function(k){ if(a[k])o[k]=a[k]; }); return o; }
-function advActive(){ const a=UI.adv||{}; return !!(a.amount_min||a.amount_max||a.date_from||a.date_to||a.fstatus||a.priority); }
+function advParams(){ const a=UI.adv||{}; const o={}; ['amount_min','amount_max','date_from','date_to','priority','fstatus'].forEach(function(k){ if(a[k])o[k]=a[k]; }); if(a.dispute)o.dispute=a.dispute; return o; }
+function advActive(){ const a=UI.adv||{}; return !!(a.amount_min||a.amount_max||a.date_from||a.date_to||a.fstatus||a.priority||a.dispute); }
+// D4 — dispute quick-filter chip in the search bar (server-truth count from the rollup) + toggle.
+function dispChipHtml(){ if(["task","order"].indexOf(UI.folder)<0 || SESSION.role==="customer") return ''; const n=UI.disputeOpen||0; const on=(UI.adv||{}).dispute; if(!n && !on) return ''; return '<button class="advbtn'+(on?' on':'')+'" style="color:#b4453f;border-color:#f0c9c6'+(on?';background:#fbeceb':'')+'" onclick="event.stopPropagation();toggleDisputeFilter()" title="Chits with an open dispute">⚠ '+n+'</button>'; }
+function toggleDisputeFilter(){ const a=UI.adv||{}; if(a.dispute){delete a.dispute;}else{a.dispute='open';} UI.adv=a; UI.sel=null; UI.detail=null; renderApp(); }
 function toggleAdv(){ const host=document.querySelector(".srch"); if(!host)return; const p=host.querySelector(".advpanel"); if(p){ p.remove(); } else { host.insertAdjacentHTML("beforeend", advPanel()); } }
 function closeAdvPanel(){ const p=document.querySelector(".advpanel"); if(p)p.remove(); }
-function applyAdv(){ UI.adv={ amount_min:val("adv_amin")||undefined, amount_max:val("adv_amax")||undefined, date_from:val("adv_dfrom")||undefined, date_to:val("adv_dto")||undefined, fstatus:val("adv_status")||undefined, priority:val("adv_pri")||undefined }; UI.advOpen=false; UI.sel=null; UI.detail=null; renderApp(); }
+function applyAdv(){ const dc=document.getElementById("adv_disp"); UI.adv={ amount_min:val("adv_amin")||undefined, amount_max:val("adv_amax")||undefined, date_from:val("adv_dfrom")||undefined, date_to:val("adv_dto")||undefined, fstatus:val("adv_status")||undefined, priority:val("adv_pri")||undefined, dispute:(dc&&dc.checked)?'open':undefined }; UI.advOpen=false; UI.sel=null; UI.detail=null; renderApp(); }
 function clearAdv(){ UI.adv={}; UI.advOpen=false; UI.sel=null; UI.detail=null; renderApp(); }
-function advBtnHtml(){ return advChips()+'<button class="advbtn '+(advActive()?'on':'')+'" onclick="event.stopPropagation();toggleAdv()" title="Advanced search">▾</button>'; }
-function advChips(){ if(!advActive())return ''; const a=UI.adv||{}; const ch=[]; if(a.amount_min||a.amount_max)ch.push(['amt','Amt '+(a.amount_min||'0')+'–'+(a.amount_max||'max')]); if(a.date_from||a.date_to)ch.push(['date',(a.date_from||'…')+'→'+(a.date_to||'…')]); if(a.fstatus)ch.push(['fstatus',a.fstatus]); if(a.priority)ch.push(['priority',a.priority]); return ch.map(function(x){ return '<span class="advchip">'+esc(x[1])+'<b onclick="event.stopPropagation();delAdv(\''+x[0]+'\')">✕</b></span>'; }).join(''); }
+function advBtnHtml(){ return dispChipHtml()+advChips()+'<button class="advbtn '+(advActive()?'on':'')+'" onclick="event.stopPropagation();toggleAdv()" title="Advanced search">▾</button>'; }
+function advChips(){ if(!advActive())return ''; const a=UI.adv||{}; const ch=[]; if(a.amount_min||a.amount_max)ch.push(['amt','Amt '+(a.amount_min||'0')+'–'+(a.amount_max||'max')]); if(a.date_from||a.date_to)ch.push(['date',(a.date_from||'…')+'→'+(a.date_to||'…')]); if(a.fstatus)ch.push(['fstatus',a.fstatus]); if(a.priority)ch.push(['priority',a.priority]); if(a.dispute)ch.push(['dispute','⚠ dispute']); return ch.map(function(x){ return '<span class="advchip">'+esc(x[1])+'<b onclick="event.stopPropagation();delAdv(\''+x[0]+'\')">✕</b></span>'; }).join(''); }
 function delAdv(k){ const a=UI.adv||{}; if(k==='amt'){delete a.amount_min;delete a.amount_max;} else if(k==='date'){delete a.date_from;delete a.date_to;} else delete a[k]; UI.adv=a; UI.sel=null; UI.detail=null; renderApp(); }
 function advPanel(){ const a=UI.adv||{};
   return `<div class="advpanel" onclick="event.stopPropagation()">
@@ -2367,6 +2418,7 @@ function advPanel(){ const a=UI.adv||{};
     <div class="advrow"><label>Date</label><input class="advin" id="adv_dfrom" type="date" value="${a.date_from||''}"><span class="advdash">to</span><input class="advin" id="adv_dto" type="date" value="${a.date_to||''}"></div>
     <div class="advrow"><label>Status</label><select class="advin" id="adv_status"><option value="">Any</option><option value="open" ${a.fstatus==='open'?'selected':''}>Open</option><option value="act" ${a.fstatus==='act'?'selected':''}>Act</option><option value="close" ${a.fstatus==='close'?'selected':''}>Close</option></select></div>
     <div class="advrow"><label>Priority</label><select class="advin" id="adv_pri"><option value="">Any</option><option value="urgent" ${a.priority==='urgent'?'selected':''}>Urgent</option><option value="high" ${a.priority==='high'?'selected':''}>High</option><option value="normal" ${a.priority==='normal'?'selected':''}>Normal</option></select></div>
+    <div class="advrow"><label>Dispute</label><label style="display:flex;gap:7px;align-items:center;font-size:12px;color:#b4453f;cursor:pointer"><input type="checkbox" id="adv_disp" ${a.dispute?'checked':''}> ⚠ Only chits with an open dispute</label></div>
     <div class="advfoot"><button class="composebtn" onclick="clearAdv()">Clear</button><button class="composebtn pri" onclick="applyAdv()">Apply</button></div>
   </div>`; }
 function fetchPage(page){ const limit=UI.pageLimit||50; if(["drafts","trash","archive"].indexOf(UI.folder)>=0){ return api("folder",{query:Object.assign({view:UI.folder,page,limit,q:UI.search||undefined,sort:UI.sort||undefined,dir:UI.dir||undefined}, advParams())}); } if(UI.folder==="order"||SESSION.role==="customer"){ return SESSION.role==="customer" ? api("custOrders",{params:{bridgeId:SESSION.bridgeId},query:{page,limit,q:UI.search||undefined,sort:UI.sort||undefined,dir:UI.dir||undefined}}) : api("sent",{query:Object.assign({page,limit,q:UI.search||undefined,sort:UI.sort||undefined,dir:UI.dir||undefined}, advParams())}); } const q={page,limit}; if(UI.search)q.q=UI.search; if(UI.sort){q.sort=UI.sort;q.dir=UI.dir;} Object.assign(q, advParams());
@@ -2383,7 +2435,7 @@ async function loadList(){
   try{
     UI.rows=[]; await pgFirst('list');
     // full-set per-state rollup (true counts + sums, independent of the loaded page) — Task/Order only
-    if(["task","order"].includes(UI.folder) && SESSION.role!=="customer"){ try{ const rl=await api("rollup",{query:rollupQuery()}); UI.rollup=(rl&&rl.groups)||[]; }catch(_){ UI.rollup=[]; } } else { UI.rollup=[]; }
+    if(["task","order"].includes(UI.folder) && SESSION.role!=="customer"){ try{ const rl=await api("rollup",{query:rollupQuery()}); UI.rollup=(rl&&rl.groups)||[]; UI.disputeOpen=(rl&&rl.dispute_open)||0; }catch(_){ UI.rollup=[]; UI.disputeOpen=0; } } else { UI.rollup=[]; UI.disputeOpen=0; }
     if(SESSION.role==="actor" && CFG.MODE!=='demo'){ try{ const u=await api("unread"); const set=new Set((u&&u.unread)||[]); UI.rows.forEach(r=>{ r.unread=set.has(r.id); }); }catch(_){} }
     UI.loading=false;
     if(!UI.sel && UI.rows.length){ const first=UI.rows.find(c=>c.state===UI.state)||UI.rows[0]; if(first)openChit(first.id,true); }
@@ -2666,8 +2718,9 @@ function setTaskScope(v){ UI.taskScope=v; UI.sel=null; UI.detail=null; UI.select
 function rollupQuery(){ const rq={group_by:'state', direction:UI.folder==='order'?'sent':'received'}; if(UI.folder==='task'){ if(SESSION.role==='actor'){ if(UI.sub==='my')rq.assigned_to='me'; } else rq.assignment=taskScope(); } return rq; }
 // Refresh true per-state totals (rule: counts = server truth) WITHOUT reloading the list — keeps cursor + position.
 async function refreshRollup(){ if(["task","order"].indexOf(UI.folder)<0 || SESSION.role==="customer") return;
-  try{ const rl=await api("rollup",{query:rollupQuery()}); UI.rollup=(rl&&rl.groups)||[];
-    document.querySelectorAll(".statetabs .n").forEach(function(el,i){ el.textContent=stCount(["open","act","close"][i]); }); }catch(_){ } }
+  try{ const rl=await api("rollup",{query:rollupQuery()}); UI.rollup=(rl&&rl.groups)||[]; UI.disputeOpen=(rl&&rl.dispute_open)||0;
+    document.querySelectorAll(".statetabs .n").forEach(function(el,i){ el.textContent=stCount(["open","act","close"][i]); });
+    const _sa=document.getElementById("srchadv"); if(_sa)_sa.innerHTML=advBtnHtml(); }catch(_){ } }
 async function advanceChit(id){
   const c=UI.rows.find(x=>x.id===id)||UI.detail; if(c&&c.state==="close"){toast("At Close — next is Archive (sunset model).");return;}
   const NB={pending:'accepted',delivered:'accepted',read:'accepted',accepted:'in_progress',in_progress:'completed',partial:'completed',finished:'completed'};
@@ -2687,7 +2740,7 @@ async function advanceChit(id){
 }
 async function assignChit(id, actorId, pri, reason){
   try{ const body={action:'push',target_actor_id:actorId}; if(pri)body.priority=pri; if(reason)body.reason=reason; await api("assign",{params:{id},body}); const i=UI.rows.findIndex(x=>x.id===id); if(i>=0){UI.rows[i].assignTo=actorId; if(pri)UI.rows[i].pri=pri;} if(UI.detail&&UI.detail.id===id)await openChit(id,true); renderApp();
-    const a=(UI.actors||STORE.actors||[]).find(x=>x.id===actorId); const c=UI.rows.find(x=>x.id===id)||UI.detail; toast(MSG.assigned(c&&c.code, a&&a.name), ()=>unassignChit(id)); }
+    const a=(UI.actors||STORE.actors||[]).find(x=>x.id===actorId); const c=UI.rows.find(x=>x.id===id)||UI.detail; toast(MSG.assigned(c&&c.code, a&&a.name), ()=>unassignChit(id)); announce(((c&&c.code)||'Chit')+' assigned to '+((a&&a.name)||'the co-assist')); }
   catch(e){ toast(MSG.fail("assign", e)); }
 }
 async function unassignChit(id){ try{ await api("unassign",{params:{id},body:{action:'return'}}); const i=UI.rows.findIndex(x=>x.id===id); if(i>=0)UI.rows[i].assignTo=null; renderApp(); toast(MSG.pushedBack((UI.rows.find(x=>x.id===id)||{}).code)); }catch(e){toast(MSG.fail("push back", e));} }
@@ -2695,9 +2748,9 @@ async function pickAssign(id){
   let actors=[];
   try{ const r=await api("actors"); actors=(r||[]).map(mapApiActor); }catch(e){ toast(MSG.fail("load co-assists", e)); return; }
   UI.actors=actors; const c=UI.rows.find(x=>x.id===id)||UI.detail||{}; MODALS.pick={id, actorId:null, pri:(c.custPri?'urgent':'normal'), reason:''};
-  const rows=actors.map(a=>{ const off=a.shift==="off";
+  const rows=actors.map(a=>{ const off=(a.shift==="off"); const max=a.max||0; const full=(max>0 && a.load>=max); const assignable=hatAssignable(a.hat); const dis=off||full||!assignable;
     const chip=a.shift==="on_shift"?'<span class="optchip on">on shift</span>':a.shift==="on_break"?'<span class="optchip brk">on break</span>':'<span class="optchip off">off</span>';
-    return `<div class="optrow ${off?'dis':''}" data-a="${a.id}" ${off?'':`onclick="pickActor('${a.id}')"`}><span class="rdo"></span><div class="oc"><div class="on">${a.name}</div><div class="om">load ${a.load}${off?' · off duty — cannot assign':''}</div></div>${chip}</div>`;
+    return `<div class="optrow ${dis?'dis':''}" data-a="${a.id}" ${dis?'':`onclick="pickActor('${a.id}')"`}><span class="rdo"></span><div class="oc"><div class="on">${esc(a.name)} <span class="optchip" style="font-size:9px;background:#eef3fb;color:#345488;border-color:#cfe0f4">${hatLabel(a.hat)}</span></div><div class="om">load ${a.load}${max?'/'+max:''}${!assignable?' · not assignable (hat)':off?' · off duty':full?' · at capacity':''}</div></div>${chip}</div>`;
   }).join("");
   const prisel=`<div class="msec">Priority</div><div class="prisel">${["urgent","normal","low"].map(p=>`<button class="pri-${p} ${MODALS.pick.pri===p?'on':''}" data-p="${p}" onclick="pickPri('${p}')">${PRI[p].label}</button>`).join("")}</div>`;
   const reasonbox=`<div class="msec">Reason <span id="reasonhint" class="rh">${MODALS.pick.pri==='urgent'?'— Urgent needs one':'(optional)'}</span></div><textarea id="assignreason" class="mreason" placeholder="Why this assignment / this urgency…" oninput="MODALS.pick.reason=this.value;syncAssignOk()"></textarea>`;
@@ -2718,9 +2771,9 @@ async function pickAssignBulk(ids){
   let actors=[];
   try{ const r=await api("actors"); actors=(r||[]).map(mapApiActor); }catch(e){ toast("Couldn't load actors: "+e.message); return; }
   UI.actors=actors; MODALS.pick={ids, actorId:null, bulk:true};
-  const rows=actors.map(a=>{ const off=a.shift==="off";
+  const rows=actors.map(a=>{ const off=(a.shift==="off"); const max=a.max||0; const full=(max>0 && a.load>=max); const assignable=hatAssignable(a.hat); const dis=off||full||!assignable;
     const chip=a.shift==="on_shift"?'<span class="optchip on">on shift</span>':a.shift==="on_break"?'<span class="optchip brk">on break</span>':'<span class="optchip off">off</span>';
-    return `<div class="optrow ${off?'dis':''}" data-a="${a.id}" ${off?'':`onclick="pickActor('${a.id}')"`}><span class="rdo"></span><div class="oc"><div class="on">${a.name}</div><div class="om">load ${a.load}${off?' · off duty — cannot assign':''}</div></div>${chip}</div>`;
+    return `<div class="optrow ${dis?'dis':''}" data-a="${a.id}" ${dis?'':`onclick="pickActor('${a.id}')"`}><span class="rdo"></span><div class="oc"><div class="on">${esc(a.name)} <span class="optchip" style="font-size:9px;background:#eef3fb;color:#345488;border-color:#cfe0f4">${hatLabel(a.hat)}</span></div><div class="om">load ${a.load}${max?'/'+max:''}${!assignable?' · not assignable (hat)':off?' · off duty':full?' · at capacity':''}</div></div>${chip}</div>`;
   }).join("");
   modal(`<div class="mhd"><div class="t">Assign ${ids.length} chit${ids.length>1?'s':''}</div><div class="s">to one co-assist (bulk)</div></div><div class="mbody">${rows||'<div style="padding:14px;color:var(--grey);font-size:13px">No co-assists yet.</div>'}<div style="padding:6px 0 2px"><button class="composebtn" onclick="addActorModal()">+ New co-assist</button></div></div><div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="pri" id="mok" disabled onclick="confirmAssign()">Assign all</button></div>`);
 }
