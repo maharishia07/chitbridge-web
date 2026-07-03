@@ -9,7 +9,7 @@
 function coassistsScreen(){
   const list = `<div class="list">
     <div class="lh">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:14px">🧑‍🤝‍🧑 Co-assists</span><button onclick="openHelp('coassists')" title="About this screen" style="border:1px solid var(--line);background:#fff;color:#3F66A6;border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button></div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:14px">🧑‍🤝‍🧑 Co-assists</span><button onclick="openAssist('coassists')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:#fff;color:#3F66A6;border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button></div>
       <div style="display:flex;gap:7px"><input class="inp" id="ac_add" placeholder="New co-assist — opens the invite form" style="flex:1" readonly onclick="addActorModal()"><button class="composebtn" onclick="addActorModal()">+ New</button></div>
       <div class="srch" style="margin-top:8px">🔍 <input placeholder="Search name, role, key" value="${esc(UI.acQ||'')}" oninput="UI.acQ=this.value;paintAcList()"></div>
       <div style="display:flex;align-items:center;gap:6px;margin-top:8px;font-size:11px;color:var(--grey)">

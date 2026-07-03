@@ -649,20 +649,7 @@ function toastLevel(m){ const s=String(m);
 let _logFilter = 'all';
 function openMsgConsole(){ const host=document.getElementById("lbhost"); if(!host)return; if(UI.logOpen){ closeMsgConsole(); return; } UI.logOpen=true; renderMsgConsole(); }
 function closeMsgConsole(){ UI.logOpen=false; const h=document.getElementById("lbhost"); if(h)h.innerHTML=""; }
-/* Per-screen help — the assistant / Q&A moved behind a "?" so the window stays clean (banner stays inline). */
-let _helpOpen=false;
-function helpFor(key){ return helpBoxFromLib(key); }
-// Render the per-screen "?" help from the SAME ASSIST_LIB the floating assistant uses (one render path).
-function helpBoxFromLib(key){ try{ buildAssistLib(); }catch(_){}
-  const own = ASSIST_LIB.filter(e=> (e.context||[]).indexOf(key)>=0 );
-  const list = (own.length?own:ASSIST_LIB.filter(e=>(e.context||[]).indexOf("*")>=0)).slice(0,8);
-  return `<div style="${_CARD}"><div style="font-family:'Space Grotesk';font-weight:600;font-size:13px;margin-bottom:2px">Assistant <span style="font-size:10.5px;font-family:'Space Mono';background:var(--gold-soft);color:#7a5e22;border-radius:5px;padding:1px 7px">sample answers</span></div>
-    <div style="font-size:12.5px;color:var(--grey);margin-bottom:10px">What this screen is for and how to use it.</div>
-    <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px">${list.map(e=>`<button class="composebtn" onclick="helpPick('${e.id}')">${esc(e.q)}</button>`).join("")||'<span style="font-size:12px;color:var(--grey)">No tips yet.</span>'}</div>
-    <div style="display:flex;gap:8px"><input class="inp" id="help_in" placeholder="Ask about this screen…" onkeydown="if(event.key==='Enter')helpAsk('${key}')"><button style="${_BTN}" onclick="helpAsk('${key}')">Ask</button></div>
-    <div id="help_ans" style="font-size:13px;color:var(--ink);margin-top:10px;line-height:1.55"></div></div>`;
-}
-function helpPick(id){ const e=ASSIST_LIB.find(x=>x.id===id); const o=document.getElementById("help_ans"); if(o)o.innerHTML=assistEntryHTML(e); }
+/* The per-screen "?" help overlay was REMOVED — one context-sensitive Assistant (openAssist) now covers it. */
 /* ── answer() — the single answer seam (the floating assistant AND the "?" overlays both go through this) ──────
    Tiered BY DESIGN so the assistant DEGRADES, never breaks — continuity beats cleverness:
      tier 1  (future) LLM over the library + live context — added ABOVE matchLibrary, wrapped in a timeout +
@@ -701,15 +688,7 @@ function matchLibrary(question, contextKey){
   pool.forEach(e=>{ let s=0; (e.topics||[]).forEach(t=>{ if(q.indexOf(t.toLowerCase())>=0) s+=2; }); q.split(/\W+/).filter(w=>w.length>3).forEach(w=>{ if((e.q+" "+e.a).toLowerCase().indexOf(w)>=0) s++; }); if(s>score){ score=s; best=e; } });
   return score>0 ? best : null;
 }
-function helpAsk(key){ const inp=document.getElementById("help_in"); const raw=(inp?inp.value:"").trim(); if(!raw)return;
-  answer(raw, key).then(best=>{ const o=document.getElementById("help_ans"); if(o)o.innerHTML = best ? assistEntryHTML(best) : "I am not certain — try a suggestion above, or rephrase."; });
-}
-function openHelp(key){ if(_helpOpen){ closeHelp(); return; }   // gate: help CONTENT (ASSIST_LIB etc.) lives in app/cap-help.js — loaded on demand, never eagerly
-  ensureCap('help').then(function(){ _openHelpImpl(key); }).catch(function(){ if(typeof toast==='function')toast('Help unavailable — check your connection.'); }); }
-function _openHelpImpl(key){ const host=document.getElementById("lbhost"); if(!host)return; if(_helpOpen){ closeHelp(); return; } _helpOpen=true;
-  host.innerHTML=`<div class="notifover" onclick="closeHelp()"><div class="notifpanel" style="max-width:560px;width:94vw" onclick="event.stopPropagation()"><div class="notifhd">❓ About this screen<button onclick="closeHelp()" style="margin-left:auto;border:0;background:none;cursor:pointer;font-size:15px;color:var(--grey)" aria-label="Close">✕</button></div><div style="padding:13px;max-height:72vh;overflow:auto">${(typeof PURPOSE!=='undefined'&&PURPOSE[key])?`<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:10px;padding:10px 12px;font-size:12.5px;color:#6b5a36;line-height:1.5;margin-bottom:12px">${esc(PURPOSE[key])}</div>`:''}${helpFor(key)||((typeof PURPOSE!=='undefined'&&PURPOSE[key])?'':'<div style="color:var(--grey);font-size:12.5px">More about this screen is coming.</div>')}</div></div></div>`;
-}
-function closeHelp(){ _helpOpen=false; const h=document.getElementById("lbhost"); if(h)h.innerHTML=""; }
+// (helpAsk / openHelp / closeHelp removed — folded into the one Assistant.)
 /* Capability/feature LEGEND — the 🔑 map of "what we serve". Content + render live in app/cap-legend.js (lazy,
    loaded on first 🔑 — it's rarely opened, so it dogfoods the on-demand principle). Core keeps only the gated stub. */
 let _legendOpen=false;
@@ -729,19 +708,26 @@ function buildAssistLib(){ if(_assistBuilt) return; _assistBuilt=true;
   try{ if(typeof CO_HELP!=="undefined") CO_HELP.forEach((f,i)=> ASSIST_LIB.push({ id:"co_"+i, topics:kw(f.q), q:f.q, a:f.a, context:["coassists"] })); }catch(_){}
   try{ if(typeof COMPOSE_HELP!=="undefined") COMPOSE_HELP.forEach((f,i)=> ASSIST_LIB.push({ id:"cmp_"+i, topics:kw(f.q), q:f.q, a:f.a, context:["compose"] })); }catch(_){}
 }
-function curScreen(){ try{ if(typeof SESSION!=="undefined" && SESSION.token) return (typeof UI!=="undefined" && UI.nav) || "task"; const h=location.hash||""; if(h.indexOf("register")>=0) return "register"; if(h.indexOf("login")>=0) return "login"; return "welcome"; }catch(_){ return "welcome"; } }
+function curScreen(){ try{ if(_assistCtx) return _assistCtx; if(typeof SESSION!=="undefined" && SESSION.token) return (typeof UI!=="undefined" && UI.nav) || "task"; const h=location.hash||""; if(h.indexOf("register")>=0) return "register"; if(h.indexOf("login")>=0) return "login"; return "welcome"; }catch(_){ return "welcome"; } }
 function mountAssist(){ if(document.getElementById("assistfab")) return;
   const b=document.createElement("div"); b.id="assistfab"; b.style.cssText="position:fixed;right:16px;bottom:16px;z-index:300";
   b.innerHTML=`<button onclick="openAssist()" title="Ask the assistant" style="border:0;border-radius:24px;padding:10px 16px;background:#3F66A6;color:#fff;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.18);font-size:14px">💬 Assistant</button>`;
   document.body.appendChild(b);
   const h=document.createElement("div"); h.id="assisthost"; document.body.appendChild(h);
 }
-function openAssist(){ if(_assistOpen){ closeAssist(); return; }   // gate: assistant library lives in app/cap-help.js — loaded on first open
+let _assistCtx=null;   // optional screen/modal context from a per-screen "?" (else curScreen() derives it)
+function openAssist(ctx){ _assistCtx = (typeof ctx==='string' && ctx) ? ctx : null;   // the ONE context-sensitive Assistant (replaced the old "?" help overlay)
+  if(_assistOpen){ closeAssist(); return; }   // gate: assistant library lives in app/cap-help.js — loaded on first open
   ensureCap('help').then(function(){ _openAssistImpl(); }).catch(function(){ if(typeof toast==='function')toast('Assistant unavailable.'); }); }
 function _openAssistImpl(){ if(!document.getElementById("assisthost")) mountAssist(); buildAssistLib(); if(_assistOpen){ closeAssist(); return; } _assistOpen=true; renderAssist(); }
-function closeAssist(){ _assistOpen=false; const h=document.getElementById("assisthost"); if(h)h.innerHTML=""; }
+function closeAssist(){ _assistOpen=false; _assistCtx=null; const h=document.getElementById("assisthost"); if(h)h.innerHTML=""; }
 function assistSuggest(){ const sc=curScreen(); const pre=!(typeof SESSION!=="undefined" && SESSION.token);
-  return ASSIST_LIB.filter(e=> (e.context||[]).indexOf("*")>=0 || (e.context||[]).indexOf(sc)>=0 || (pre && e.fit) ).slice(0,5);
+  // screen-specific first, then generic; DEDUPE by question so repeats (e.g. "What is a co-assist?") collapse to one.
+  const own = ASSIST_LIB.filter(e=> (e.context||[]).indexOf(sc)>=0 );
+  const gen = ASSIST_LIB.filter(e=> (e.context||[]).indexOf("*")>=0 || (pre && e.fit) );
+  const seen={}, out=[];
+  own.concat(gen).forEach(e=>{ const k=(e.q||'').toLowerCase().trim(); if(k && !seen[k]){ seen[k]=1; out.push(e); } });
+  return out.slice(0,5);
 }
 function assistEntryHTML(e){ if(!e) return "I am not sure yet — try rephrasing, or pick a suggestion. I will not guess or oversell.";
   let html = "<b>"+esc(e.q)+"</b><br>"+esc(e.a);
@@ -756,10 +742,11 @@ function assistAsk(){ const inp=document.getElementById("assist_in"); const raw=
   answer(raw, curScreen()).then(best=> renderAssist(best ? assistEntryHTML(best) : "I am not certain about that yet — try a suggestion, or rephrase. (I will be honest about fit rather than oversell.)"));
 }
 function renderAssist(ans){ const h=document.getElementById("assisthost"); if(!h||!_assistOpen) return; const pre=!(typeof SESSION!=="undefined" && SESSION.token); const sugg=assistSuggest();
+  const _pb=(typeof PURPOSE!=='undefined'&&PURPOSE[curScreen()])?PURPOSE[curScreen()]:''; const purposeHTML=_pb?`<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:8px 10px;font-size:11.5px;color:#6b5a36;line-height:1.5;margin-bottom:9px">${esc(_pb)}</div>`:'';
   h.innerHTML=`<div style="position:fixed;right:16px;bottom:70px;z-index:301;width:360px;max-width:92vw;background:#fff;border:1px solid #e3e0d8;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.22);overflow:hidden">
     <div style="display:flex;align-items:center;gap:8px;padding:11px 13px;border-bottom:1px solid #e3e0d8;font-family:'Space Grotesk';font-weight:700;font-size:13px">💬 Assistant <span style="font-size:9.5px;font-family:'Space Mono';background:#f3f0e8;color:#7a5e22;border-radius:5px;padding:1px 6px">${pre?"fit check":"help"}</span><button onclick="closeAssist()" style="margin-left:auto;border:0;background:none;cursor:pointer;color:#9aa3a7;font-size:15px">✕</button></div>
     <div style="padding:11px 13px;max-height:52vh;overflow:auto">
-      <div style="font-size:12px;color:#777;margin-bottom:8px">${pre?"Tell me your business and I will be honest about whether this fits.":"Describe what you are trying to do."}</div>
+      ${purposeHTML}<div style="font-size:12px;color:#777;margin-bottom:8px">${pre?"Tell me your business and I will be honest about whether this fits.":"Describe what you are trying to do."}</div>
       <div id="assist_ans" style="font-size:12.5px;color:#222;line-height:1.55;margin-bottom:10px">${ans||""}</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">${sugg.map(e=>`<button onclick="assistPick('${e.id}')" style="border:0.5px solid #e3e0d8;border-radius:8px;padding:3px 8px;font-size:11px;background:#fff;cursor:pointer">${esc(e.q)}</button>`).join("")}</div>
       <div style="display:flex;gap:7px"><input id="assist_in" placeholder="${pre?"e.g. I run a timber yard…":"e.g. how do I assign a task?"}" style="flex:1;border:1px solid #e3e0d8;border-radius:8px;padding:7px 9px;font-size:12.5px" onkeydown="if(event.key==='Enter')assistAsk()"><button onclick="assistAsk()" style="border:0;border-radius:8px;padding:0 12px;background:#3F66A6;color:#fff;font-weight:700;cursor:pointer">Ask</button></div>
@@ -1191,7 +1178,6 @@ function renderApp(){
     <div class="topbar">
       <button class="ham" onclick="UI.drawer=!UI.drawer;renderApp()">☰</button>
       <div class="b">${logoMark(20)} <span class="bt">Chit &amp; Bridge</span></div>
-      <button class="info" id="infobtn" onclick="openHelp(UI.nav)" title="About this screen" aria-label="About this screen">ⓘ</button>
       <button class="info" id="legendbtn" onclick="openLegend()" title="What we serve — capabilities &amp; features" aria-label="Capabilities and features map">🔑</button>
       <button class="msgc" id="msgcbtn" onclick="openMsgCenter()" title="Messages" aria-label="Messages">💬<span class="bdot" id="msgcdot" style="${unreadCount()?'':'display:none'}">${unreadCount()}</span></button>
       ${role!=="customer"?`<button class="bell" id="bellbtn" onclick="openNotifications()" title="Notifications" aria-label="Notifications">🔔<span class="bdot" id="belldot" style="${notifBadge()?'':'display:none'}">${notifBadge()}</span></button>`:''}
@@ -1277,7 +1263,7 @@ async function compose(prefill){ UI.drawer=false; CC={items:(prefill&&prefill.it
     else { const _prods=(await api("prodList"))||[];
       STORE.catalogue=_prods.map(x=>{const d=x.item_data||x; return {particulars:d.name||d.product||'item', unit:d.unit||'unit', price:+d.price||0};}); }
   }catch(e){ STORE.catalogue=STORE.catalogue||[]; _catErr=true; }
-  modal(`<div class="mhd"><div class="t">✉️ Compose — author a chit <button onclick="openHelp('compose')" title="About composing" style="border:1px solid var(--line);background:#fff;color:#3F66A6;border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;vertical-align:middle">?</button></div><div class="s">create your own record, then bridge it</div></div>
+  modal(`<div class="mhd"><div class="t">✉️ Compose — author a chit <button onclick="openAssist('compose')" title="Ask the assistant about composing" style="border:1px solid var(--line);background:#fff;color:#3F66A6;border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;vertical-align:middle">?</button></div><div class="s">create your own record, then bridge it</div></div>
    <div class="mbody">
      <div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:11px;padding:10px 12px;font-size:12.5px;color:#6b5a36;line-height:1.5;margin-bottom:10px"><b style="font-family:'Space Grotesk'">Author your own chit — it becomes shared the moment you bridge it.</b> A self-addressed chit is a real chit: one copy in <b>Order</b> (sent), one in <b>Task</b> (received), same thread. <span style="font-family:'Space Mono';font-size:10px;background:#fbeceb;color:#b4453f;border:1px solid #f0c9c6;border-radius:5px;padding:1px 6px">⏳ execute &amp; test pending</span></div>
      <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -1558,7 +1544,7 @@ function actorCleanupModal(action, name, parts){
   if(typeof announce==='function') announce((name||'Co-assist')+' '+(action==='remove'?'removed':'deactivated')+(parts&&parts.length?'. '+parts.join('. '):'.'));
 }
 /* ---------------- DISPUTES screen ---------------- */
-function disputesScreen(){ return `<div style="padding:14px;max-width:760px;margin:0 auto"><div class="sec" style="font-size:15px;margin-bottom:3px;display:flex;align-items:center;gap:9px">⚖️ Disputes<button onclick="openHelp('disputes')" title="About this screen" style="border:1px solid var(--line);background:#fff;color:#3F66A6;border-radius:50%;width:22px;height:22px;font-weight:800;cursor:pointer;font-size:13px;line-height:1;flex:none">?</button></div><div style="font-size:11px;color:var(--grey);margin-bottom:10px">Explore <b onclick="openHelp('disputes')" style="cursor:pointer;color:#3F66A6">?</b> to know more about this screen.</div><div id="disprows"><div class="loadwrap"><span class="spin"></span> loading…</div></div></div>`; }
+function disputesScreen(){ return `<div style="padding:14px;max-width:760px;margin:0 auto"><div class="sec" style="font-size:15px;margin-bottom:3px;display:flex;align-items:center;gap:9px">⚖️ Disputes<button onclick="openAssist('disputes')" title="About this screen" style="border:1px solid var(--line);background:#fff;color:#3F66A6;border-radius:50%;width:22px;height:22px;font-weight:800;cursor:pointer;font-size:13px;line-height:1;flex:none">?</button></div><div style="font-size:11px;color:var(--grey);margin-bottom:10px">Explore <b onclick="openAssist('disputes')" style="cursor:pointer;color:#3F66A6">?</b> to know more about this screen.</div><div id="disprows"><div class="loadwrap"><span class="spin"></span> loading…</div></div></div>`; }
 async function loadDisputes(){
   const host=document.getElementById("disprows"); if(!host)return;
   try{ const q=await api("disputeQueue"); const mine=q.my_disputes||[], other=q.other_disputes||[];
@@ -1604,8 +1590,8 @@ function lazyReveal(id){ const s=LAZY[id]; if(!s) return; const sent=document.ge
 function lazyAttach(id){ const s=LAZY[id]; if(!s || s.shown>=s.total) return; const sent=document.getElementById('lzs_'+id); if(!sent) return;
   try{ s._io = new IntersectionObserver(function(es){ if(es.some(function(e){return e.isIntersecting;})) lazyReveal(id); }, {rootMargin:'0px'}); s._io.observe(sent); }catch(_){} }
 function scr(title,id,helpKey){
-  const q = helpKey?`<button onclick="openHelp('${helpKey}')" title="About this screen" style="border:1px solid var(--line);background:#fff;color:#3F66A6;border-radius:50%;width:22px;height:22px;font-weight:800;cursor:pointer;font-size:13px;line-height:1;flex:none">?</button>`:'';
-  const hint = helpKey?`<div style="font-size:11px;color:var(--grey);margin-bottom:10px">Explore <b onclick="openHelp('${helpKey}')" style="cursor:pointer;color:#3F66A6">?</b> to know more about this screen.</div>`:'';
+  const q = helpKey?`<button onclick="openAssist('${helpKey}')" title="About this screen" style="border:1px solid var(--line);background:#fff;color:#3F66A6;border-radius:50%;width:22px;height:22px;font-weight:800;cursor:pointer;font-size:13px;line-height:1;flex:none">?</button>`:'';
+  const hint = helpKey?`<div style="font-size:11px;color:var(--grey);margin-bottom:10px">Explore <b onclick="openAssist('${helpKey}')" style="cursor:pointer;color:#3F66A6">?</b> to know more about this screen.</div>`:'';
   return `<div style="flex:1;min-height:0;overflow-y:auto"><div style="padding:14px;max-width:640px;margin:0 auto"><div class="sec" style="font-size:15px;margin-bottom:${helpKey?'3px':'10px'};display:flex;align-items:center;gap:9px">${title}${q}</div>${hint}<div id="${id}"><div class="loadwrap"><span class="spin"></span> loading…</div></div></div></div>`;
 }
 /* esc + opt + scrErr → app/helpers.js */
@@ -1753,7 +1739,7 @@ async function respondConn(id,action){ try{ await api("connRespond",{params:{id}
 function suppliersScreen(){
   const list = `<div class="list">
     <div class="lh">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:14px">🏭 Suppliers</span><button onclick="openHelp('suppliers')" title="About this screen" style="border:1px solid var(--line);background:#fff;color:#3F66A6;border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button></div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:14px">🏭 Suppliers</span><button onclick="openAssist('suppliers')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:#fff;color:#3F66A6;border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button></div>
       <div style="display:flex;gap:7px"><input class="inp" id="sp_add" placeholder="Add supplier — type a name, User ID or email" style="flex:1" autocomplete="off" oninput="supSearch(this.value)" onkeydown="if(event.key==='Enter')addSupplier()"><button class="composebtn" onclick="addSupplier()">Add</button></div>
       <div id="sp_sugg" class="ccsugg"></div>
       <div class="err" id="sp_err" style="margin-top:6px"></div>
@@ -1871,7 +1857,7 @@ async function composeFromSupplier(id){ const d=UI.supDet, x=d&&d.supplier; if(!
 function catalogueScreen(){
   const list = `<div class="list">
     <div class="lh">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:14px">🗂️ Catalogue</span><button onclick="openHelp('catalogue')" title="About this screen" style="border:1px solid var(--line);background:#fff;color:#3F66A6;border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button></div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:14px">🗂️ Catalogue</span><button onclick="openAssist('catalogue')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:#fff;color:#3F66A6;border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button></div>
       <button class="composebtn" style="width:100%;justify-content:center" onclick="newProduct()">+ New product</button>
       <div class="srch" style="margin-top:8px">🔍 <input placeholder="Search name, code, unit" value="${esc(UI.prodQ||'')}" oninput="UI.prodQ=this.value;paintProdList()"></div>
       <div style="margin-top:8px;font-size:11px;color:var(--grey)" id="ct_count">${prodVisible().length} product(s)</div>
