@@ -131,3 +131,36 @@ async function saveAutoAssign(){ const x=document.getElementById("st_aerr"); if(
   const mode=val("st_aam"), da=val("st_ada");
   if(mode==='default_assignee' && !da){ if(x)x.textContent="Pick a default assignee for this mode."; return; }
   try{ await api("saveSettings",{body:{auto_assign_mode:mode, default_assignee_actor_id:da||null}}); toast("Auto-assign saved ✓"); }catch(e){ if(x)x.textContent=e.message; } }
+
+/* ---- ASSISTANT REVIEW (#3 triage) — turn captured gaps into live, served answers ---- */
+function assistReviewScreen(){ return scr("🧠 Assistant — review","gapsbody","assistreview"); }
+async function loadGaps(){ const h=document.getElementById("gapsbody"); if(!h)return;
+  h.innerHTML='<div class="loadwrap"><span class="spin"></span> loading…</div>';
+  try{
+    try{ const all=await api("assistQuestions"); if(Array.isArray(all)) ASSIST_LIB=all; }catch(_){}   // live library for near-dup hints
+    const gaps=(await api("assistGaps"))||[];
+    if(!gaps.length){ h.innerHTML='<div class="empty"><div class="big">🧠</div><div class="t">Nothing to review</div><div>When the assistant can\'t answer a question, it lands here for you to add.</div></div>'; return; }
+    h.innerHTML='<div style="font-size:11.5px;color:var(--grey);margin-bottom:9px">'+gaps.length+' question'+(gaps.length>1?'s':'')+' the assistant couldn\'t answer — write an answer to serve it, or reject.</div>'+gaps.map(gapCard).join('');
+  }catch(e){ h.innerHTML=scrErr(e); } }
+function gapCard(g){
+  let ctx=''; try{ ctx=Array.isArray(g.context)?g.context.join(', '):(g.context?String(g.context).replace(/[\[\]"]/g,''):''); }catch(_){}
+  let dup=''; try{ if(typeof matchLibrary==='function'){ const m=matchLibrary(g.question,null); if(m) dup='<div style="font-size:11px;color:#a9791f;margin:6px 0;line-height:1.45">↔ Similar exists: <b>'+esc(m.q)+'</b> — consider refining that instead of adding a duplicate.</div>'; } }catch(_){}
+  const at=(typeof fmtAt==='function')?fmtAt(g.created_at):'';
+  return '<div style="'+_CARD+'">'
+    +'<div style="font-weight:700;font-family:\'Space Grotesk\';font-size:13.5px;margin-bottom:2px">'+esc(g.question)+'</div>'
+    +'<div style="font-size:11px;color:var(--grey);margin-bottom:6px">asked on '+esc(ctx||'—')+(at?' · '+at:'')+'</div>'
+    +dup
+    +'<textarea class="inp" id="ga_'+g.qa_id+'" rows="3" placeholder="Write the answer…" style="width:100%;resize:vertical"></textarea>'
+    +'<div style="display:flex;gap:7px;margin-top:7px;flex-wrap:wrap">'
+    +'<input class="inp" id="gc_'+g.qa_id+'" placeholder="context (comma sep: task, order…)" value="'+esc(ctx||'')+'" style="flex:1;min-width:150px">'
+    +'<button class="composebtn" onclick="gapApprove(\''+g.qa_id+'\')">✓ Approve &amp; serve</button>'
+    +'<button class="composebtn" style="background:#fff;color:#b4453f;border-color:#e6c4c1" onclick="gapReject(\''+g.qa_id+'\')">✕ Reject</button>'
+    +'</div></div>';
+}
+async function gapApprove(qa_id){ const ta=document.getElementById("ga_"+qa_id); const ans=(ta?ta.value:"").trim();
+  if(!ans){ toast("Write an answer first"); return; }
+  const ce=document.getElementById("gc_"+qa_id); const context=(ce?ce.value:"").split(',').map(function(s){return s.trim();}).filter(Boolean);
+  try{ await api("assistResolve",{body:{qa_id:qa_id, action:'approve', answer:ans, context:context, topics:[]}}); toast("Answer is live ✓"); loadGaps(); }
+  catch(e){ toast(e.message||"Could not approve"); } }
+async function gapReject(qa_id){ try{ await api("assistResolve",{body:{qa_id:qa_id, action:'reject'}}); toast("Rejected"); loadGaps(); }
+  catch(e){ toast(e.message||"Could not reject"); } }

@@ -524,6 +524,8 @@ const EP = {
   assist:          {m:"POST", p:"/api/assist",                  ok:"?"},  // backend proxies to the model (no-oversell prompt + library grounding)
   assistQuestions: {m:"GET",  p:"/api/assist/questions",        ok:"y"},  // DB-backed Q&A library, context-filtered (?context=screen). Single source; feeds the AI too.
   assistGap:       {m:"POST", p:"/api/assist/gap",              ok:"y"},  // capture an unanswered question as a draft (learning feedback)
+  assistGaps:      {m:"GET",  p:"/api/assist/gaps",             ok:"y"},  // review queue — captured gaps awaiting an answer
+  assistResolve:   {m:"POST", p:"/api/assist/resolve",          ok:"y"},  // approve (with answer) / reject a gap
   // --- repointed to real chitbridge-api routes (trace 2026-06-25). See FINDINGS.md. ---
   register:        {m:"POST", p:"/api/entities/register",        ok:"✓"},  // OTP request (register doubles as owner login)
   ownerLogin:      {m:"POST", p:"/api/entities/register",        ok:"✓"},  // same route — returning owner requests OTP (pass mode:'login')
@@ -1144,7 +1146,7 @@ function priChip(p){ return (!p||p==="normal")?"":`<span class="prichip pri-${p}
 let UI = {...UI0, selected:new Set(), aggStates:new Set(["open","act","close"])};
 
 const MENUS = {
-  entity:{top:[["compose","✉️","Compose",""],["task","📥","Task",""],["order","📤","Order",""],["drafts","📝","Drafts",""],["trash","🗑️","Trash",""],["archive","🗄️","Archive",""]], rest:[["network","🔗","Network"],["suppliers","🏭","Suppliers"],["catalogue","🗂️","Catalogue"],["coassists","🧑‍🤝‍🧑","Co-assists"],["mis","📊","MIS"],["disputes","⚖️","Disputes"],["profile","👤","Profile"],["settings","⚙️","Settings"]], tag:"Owner does structure."},
+  entity:{top:[["compose","✉️","Compose",""],["task","📥","Task",""],["order","📤","Order",""],["drafts","📝","Drafts",""],["trash","🗑️","Trash",""],["archive","🗄️","Archive",""]], rest:[["network","🔗","Network"],["suppliers","🏭","Suppliers"],["catalogue","🗂️","Catalogue"],["coassists","🧑‍🤝‍🧑","Co-assists"],["mis","📊","MIS"],["disputes","⚖️","Disputes"],["profile","👤","Profile"],["settings","⚙️","Settings"],["assistreview","🧠","Assistant"]], tag:"Owner does structure."},
   actor:{top:[["compose","✉️","Compose",""],["task","📥","Task",""],["order","📤","Order",""],["drafts","📝","Drafts",""],["trash","🗑️","Trash",""],["archive","🗄️","Archive",""]], rest:[["suppliers","🏭","Suppliers"],["profile","👤","Profile"]], tag:"Commerce yes, structure no."},
   customer:{top:[["order","📤","My orders",""]], rest:[["shops","🏬","Find a shop"]], tag:"You see only your orders."},
 };
@@ -1160,6 +1162,7 @@ const PURPOSE = {
   mis:"Numbers — performance across the network.",
   disputes:"Chits flagged for resolution.",
   settings:"Toolbar, saved views, archive schedule, your drive, status table.",
+  assistreview:"Questions the assistant couldn't answer, captured for review. Write an answer to serve it live, or reject — approved answers appear in the assistant instantly.",
   shops:"Find a shop you have a bridge with.",
   profile:"Your shift and assignment.",
 };
@@ -1168,7 +1171,7 @@ const PURPOSE = {
    /app/cap-<name>.js (classic script, shared global scope). CAP_OF maps a screen to its
    capability; unlisted screens are Core (eager, always loaded). renderApp shows "Loading…"
    and re-renders once the capability arrives. Grow CAP_OF as screens migrate out. */
-const CAP_OF = { mis:'admin', profile:'admin', settings:'admin', coassists:'workforce' };
+const CAP_OF = { mis:'admin', profile:'admin', settings:'admin', coassists:'workforce', assistreview:'admin' };
 const CAP_LOADED = {};
 const _capPromise = {};
 function ensureCap(name){
@@ -1219,6 +1222,7 @@ function renderApp(){
     if(UI.nav==="catalogue") loadCatalogue();
     if(UI.nav==="mis" && typeof loadMIS==="function") loadMIS();
     if(UI.nav==="coassists") loadCoassists();
+    if(UI.nav==="assistreview" && typeof loadGaps==="function") loadGaps();
   }
   if(!_autoRefreshTimer) startAutoRefresh(20);
 }
@@ -1930,6 +1934,7 @@ function mainBody(){
   if(UI.nav==="catalogue") return catalogueScreen();
   if(UI.nav==="mis") return misScreen();
   if(UI.nav==="coassists") return coassistsScreen();
+  if(UI.nav==="assistreview") return assistReviewScreen();
   return `<div class="stub"><div class="t">${navTitle()}</div><div>This screen is on the build roadmap — we walk it in a later iteration. The menu &amp; routing are live so you can see where it lives.</div></div>`;
 }
 
