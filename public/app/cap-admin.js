@@ -132,35 +132,26 @@ async function saveAutoAssign(){ const x=document.getElementById("st_aerr"); if(
   if(mode==='default_assignee' && !da){ if(x)x.textContent="Pick a default assignee for this mode."; return; }
   try{ await api("saveSettings",{body:{auto_assign_mode:mode, default_assignee_actor_id:da||null}}); toast("Auto-assign saved ✓"); }catch(e){ if(x)x.textContent=e.message; } }
 
-/* ---- ASSISTANT REVIEW (#3 triage) — turn captured gaps into live, served answers ---- */
-function assistReviewScreen(){ return scr("🧠 Assistant — review","gapsbody","assistreview"); }
-async function loadGaps(){ const h=document.getElementById("gapsbody"); if(!h)return;
-  h.innerHTML='<div class="loadwrap"><span class="spin"></span> loading…</div>';
-  try{
-    try{ const all=await api("assistQuestions"); if(Array.isArray(all)) ASSIST_LIB=all; }catch(_){}   // live library for near-dup hints
-    const gaps=(await api("assistGaps"))||[];
-    if(!gaps.length){ h.innerHTML='<div class="empty"><div class="big">🧠</div><div class="t">Nothing to review</div><div>When the assistant can\'t answer a question, it lands here for you to add.</div></div>'; return; }
-    h.innerHTML='<div style="font-size:11.5px;color:var(--grey);margin-bottom:9px">'+gaps.length+' question'+(gaps.length>1?'s':'')+' the assistant couldn\'t answer — write an answer to serve it, or reject.</div>'+gaps.map(gapCard).join('');
-  }catch(e){ h.innerHTML=scrErr(e); } }
-function gapCard(g){
-  let ctx=''; try{ ctx=Array.isArray(g.context)?g.context.join(', '):(g.context?String(g.context).replace(/[\[\]"]/g,''):''); }catch(_){}
-  let dup=''; try{ if(typeof matchLibrary==='function'){ const m=matchLibrary(g.question,null); if(m) dup='<div style="font-size:11px;color:#a9791f;margin:6px 0;line-height:1.45">↔ Similar exists: <b>'+esc(m.q)+'</b> — consider refining that instead of adding a duplicate.</div>'; } }catch(_){}
-  const at=(typeof fmtAt==='function')?fmtAt(g.created_at):'';
-  return '<div style="'+_CARD+'">'
-    +'<div style="font-weight:700;font-family:\'Space Grotesk\';font-size:13.5px;margin-bottom:2px">'+esc(g.question)+'</div>'
-    +'<div style="font-size:11px;color:var(--grey);margin-bottom:6px">asked on '+esc(ctx||'—')+(at?' · '+at:'')+'</div>'
-    +dup
-    +'<textarea class="inp" id="ga_'+g.qa_id+'" rows="3" placeholder="Write the answer…" style="width:100%;resize:vertical"></textarea>'
-    +'<div style="display:flex;gap:7px;margin-top:7px;flex-wrap:wrap">'
-    +'<input class="inp" id="gc_'+g.qa_id+'" placeholder="context (comma sep: task, order…)" value="'+esc(ctx||'')+'" style="flex:1;min-width:150px">'
-    +'<button class="composebtn" onclick="gapApprove(\''+g.qa_id+'\')">✓ Approve &amp; serve</button>'
-    +'<button class="composebtn" style="background:#fff;color:#b4453f;border-color:#e6c4c1" onclick="gapReject(\''+g.qa_id+'\')">✕ Reject</button>'
-    +'</div></div>';
-}
-async function gapApprove(qa_id){ const ta=document.getElementById("ga_"+qa_id); const ans=(ta?ta.value:"").trim();
-  if(!ans){ toast("Write an answer first"); return; }
-  const ce=document.getElementById("gc_"+qa_id); const context=(ce?ce.value:"").split(',').map(function(s){return s.trim();}).filter(Boolean);
-  try{ await api("assistResolve",{body:{qa_id:qa_id, action:'approve', answer:ans, context:context, topics:[]}}); toast("Answer is live ✓"); loadGaps(); }
-  catch(e){ toast(e.message||"Could not approve"); } }
-async function gapReject(qa_id){ try{ await api("assistResolve",{body:{qa_id:qa_id, action:'reject'}}); toast("Rejected"); loadGaps(); }
-  catch(e){ toast(e.message||"Could not reject"); } }
+/* ---- ASSISTANT — knowledge base: the help desk publishes answers to its own catalogue -> served live ----
+   Queries are handled the hard way (chits in GOV-01-Help's Task inbox: message + close). This screen is the
+   one new atom: Publish-to-catalogue. loadGaps() name kept (renderApp dispatch) — it now loads the KB screen. */
+function assistReviewScreen(){ return scr("🧠 Assistant — knowledge base","kbbody","assistreview"); }
+async function loadGaps(){ const h=document.getElementById("kbbody"); if(!h)return;
+  const me=(typeof SESSION!=='undefined')?SESSION:{}; const isHelp=(me.name==='GOV-01-Help');
+  const form = isHelp
+    ? '<div style="'+_CARD+'"><div class="sec" style="margin:0 0 6px">Publish an answer</div>'
+      +'<label class="fl">Question</label><input class="inp" id="kb_q" placeholder="e.g. How do I export to Excel?">'
+      +'<label class="fl">Answer</label><textarea class="inp" id="kb_a" rows="4" placeholder="The answer the assistant should give…" style="width:100%;resize:vertical"></textarea>'
+      +'<label class="fl">Context <span style="color:var(--grey);font-size:11px">— screens (comma), or * for everywhere</span></label><input class="inp" id="kb_c" placeholder="e.g. task, order  (or *)" value="*">'
+      +'<div class="err" id="kb_err"></div><button class="composebtn" style="margin-top:9px" onclick="publishAnswer()">📣 Publish to catalogue</button>'
+      +'<div style="font-size:11px;color:var(--grey);margin-top:6px">Answer + close the query chit in your Task inbox first; then publish it here for everyone. Served to the assistant instantly (catalogue → projection).</div></div>'
+    : '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:10px;padding:11px 13px;font-size:12.5px;color:#6b5a36;margin-bottom:11px">This is the help-desk knowledge base. Queries arrive as chits in <b>GOV-01-Help</b>\'s Task inbox — operate as GOV-01-Help to answer, close, and publish here.</div>';
+  h.innerHTML=form+'<div style="font-size:12px;color:var(--grey);margin:12px 0 6px">Published answers (<span id="kb_n">…</span>)</div><div id="kb_list"><div class="loadwrap"><span class="spin"></span> loading…</div></div>';
+  try{ const all=(await api("assistQuestions"))||[]; const n=document.getElementById("kb_n"); if(n)n.textContent=all.length;
+    const L=document.getElementById("kb_list"); if(L) L.innerHTML = all.length ? all.map(function(e){ return '<div style="'+_CARD+';padding:9px 11px"><div style="font-weight:600;font-size:12.5px">'+esc(e.q)+'</div><div style="font-size:11.5px;color:var(--grey);margin-top:2px">'+esc(e.a)+'</div><div style="font-size:10.5px;color:#9aa3a7;margin-top:3px">'+esc(Array.isArray(e.context)?e.context.join(', '):'')+'</div></div>'; }).join('') : '<div style="color:var(--grey);font-size:12px">None yet.</div>';
+  }catch(e){ const L=document.getElementById("kb_list"); if(L)L.innerHTML=scrErr(e); } }
+async function publishAnswer(){ const x=document.getElementById("kb_err"); if(x)x.textContent="";
+  const q=val("kb_q"), a=val("kb_a"); const c=(val("kb_c")||"").split(',').map(function(s){return s.trim();}).filter(Boolean);
+  if(!q||!a){ if(x)x.textContent="Question and answer are both required."; return; }
+  try{ await api("assistPublish",{body:{question:q, answer:a, context:c}}); toast("Published ✓ — live in the assistant"); loadGaps(); }
+  catch(e){ if(x)x.textContent=(e&&e.message)||"Could not publish"; } }

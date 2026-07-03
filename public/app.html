@@ -526,6 +526,7 @@ const EP = {
   assistGap:       {m:"POST", p:"/api/assist/gap",              ok:"y"},  // capture an unanswered question as a draft (learning feedback)
   assistGaps:      {m:"GET",  p:"/api/assist/gaps",             ok:"y"},  // review queue — captured gaps awaiting an answer
   assistResolve:   {m:"POST", p:"/api/assist/resolve",          ok:"y"},  // approve (with answer) / reject a gap
+  assistPublish:   {m:"POST", p:"/api/assist/publish",          ok:"y"},  // help desk publishes a Q&A to its catalogue (serves live)
   // --- repointed to real chitbridge-api routes (trace 2026-06-25). See FINDINGS.md. ---
   register:        {m:"POST", p:"/api/entities/register",        ok:"✓"},  // OTP request (register doubles as owner login)
   ownerLogin:      {m:"POST", p:"/api/entities/register",        ok:"✓"},  // same route — returning owner requests OTP (pass mode:'login')
