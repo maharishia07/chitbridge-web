@@ -1539,13 +1539,26 @@ async function submitActor(){
   if(!/^[a-z0-9]+$/.test(key)){ if(err)err.textContent="User ID: lowercase letters and numbers only."; return; }
   try{ const r=await api("addActor",{body:{display_name:name,actor_key:key,hat:val("ac_hat")||'act'}});
     const lf=(r&&(r.login_format||(r.actor&&r.actor.login_format)))||coId(key);   // API truth: <key>@<Business Name>
+    const otp=(r&&(r.otp||r.dev_otp))||'';                                        // first-time one-time code — admin relays it
     const newId=r&&(r.identity_id||(r.actor&&r.actor.identity_id)||r.id||(r.actor&&r.actor.id));
-    closeModal(); toast(MSG.coassistAdded(name, lf));
+    closeModal();
     if(UI.nav==="coassists"){ await loadCoassists();   // land the cursor on the NEW co-assist, not the first/previous row
       const _m=(UI.acts||[]).find(a=>String(a.key||'').toLowerCase()===key); const sel=(_m&&_m.id)||newId;   // match by the just-created User ID (deterministic); response id as backup
       if(sel && (UI.acts||[]).some(a=>a.id===sel)){ selectActor(sel);
-        const _row=document.querySelector('.row[data-ac="'+sel+'"]'); if(_row&&_row.scrollIntoView) _row.scrollIntoView({block:'nearest'}); } } }
+        const _row=document.querySelector('.row[data-ac="'+sel+'"]'); if(_row&&_row.scrollIntoView) _row.scrollIntoView({block:'nearest'}); } }
+    actorInviteModal('✅ '+name+' added', name, lf, otp); }
   catch(e){ if(err)err.textContent=e.message; }
+}
+// One dialog for onboarding codes — reused by create, re-invite, and reset-PIN. Shows the User ID + the
+// one-time code the admin must relay (the actor uses it once, then sets their own PIN).
+function actorInviteModal(head, name, login, otp){
+  modal(`<div class="mhd"><div class="t">${esc(head)}</div><div class="s">share these so ${esc(name||'they')} can sign in</div></div>
+   <div class="mbody">
+     <div style="${_CARD};margin-bottom:8px"><div style="font-size:10.5px;color:var(--grey);text-transform:uppercase;letter-spacing:.4px">User ID</div><div style="font-family:'Space Mono';font-weight:700;font-size:14px;margin-top:2px;word-break:break-all">${esc(login||'—')}</div></div>
+     <div style="${_CARD};background:#eef3fb;border-color:#cfe0f4;margin-bottom:8px"><div style="font-size:10.5px;color:#345488;text-transform:uppercase;letter-spacing:.4px">One-time code</div><div style="font-family:'Space Mono';font-weight:800;font-size:24px;color:#345488;margin-top:2px;letter-spacing:3px">${esc(otp||'—')}</div></div>
+     <div style="font-size:11.5px;color:var(--grey);line-height:1.5">They sign in at the login screen with the <b>User ID</b> + this <b>one-time code</b>, then set their own PIN. Lost it? Use <b>Re-invite</b> on their card for a fresh code.</div>
+   </div>
+   <div class="mfoot"><button class="pri" onclick="closeModal()">Got it</button></div>`);
 }
 /* ---------------- DISPUTES screen ---------------- */
 function disputesScreen(){ return `<div style="padding:14px;max-width:760px;margin:0 auto"><div class="sec" style="font-size:15px;margin-bottom:3px;display:flex;align-items:center;gap:9px">⚖️ Disputes<button onclick="openHelp('disputes')" title="About this screen" style="border:1px solid var(--line);background:#fff;color:#3F66A6;border-radius:50%;width:22px;height:22px;font-weight:800;cursor:pointer;font-size:13px;line-height:1;flex:none">?</button></div><div style="font-size:11px;color:var(--grey);margin-bottom:10px">Explore <b onclick="openHelp('disputes')" style="cursor:pointer;color:#3F66A6">?</b> to know more about this screen.</div><div id="disprows"><div class="loadwrap"><span class="spin"></span> loading…</div></div></div>`; }
@@ -2022,8 +2035,8 @@ function acDetailHTML(){ const x=UI.acDet;
 }
 async function acShift(id){ const x=(UI.acts||[]).find(a=>a.id===id); if(!x)return; const o=['on_shift','on_break','off']; const next=o[(o.indexOf(x.shift)+1)%3];
   try{ await api("actorBreak",{body:{actor_id:id, break_status:next}}); x.shift=next; if(UI.acDet&&UI.acDet.id===id)UI.acDet.shift=next; paintAcList(); paintAcDetail(); toast(MSG.shiftSet(next)); }catch(e){ toast(MSG.fail("change shift", e)); } }
-async function acReinvite(id){ try{ const r=await api("actorOtp",{params:{id}}); const otp=(r&&(r.otp||r.dev_otp))||''; toast(otp?('New code: '+otp+' — share with the co-assist'):'New invite code generated — share it with the co-assist.'); }catch(e){ toast(MSG.fail("re-invite", e)); } }
-async function acResetPin(id){ if(!confirm("Reset this co-assist's PIN? They set a new one on next login.")) return; try{ await api("actorPinReset",{params:{id}}); toast('PIN reset — they set a new one next login.'); }catch(e){ toast(MSG.fail("reset the PIN", e)); } }
+async function acReinvite(id){ const x=(UI.acts||[]).find(a=>a.id===id)||{}; try{ const r=await api("actorOtp",{params:{id}}); const otp=(r&&(r.otp||r.dev_otp))||''; const lf=(r&&r.login_format)||acLogin(x); actorInviteModal('✉️ New code — '+(x.name||'co-assist'), x.name, lf, otp); }catch(e){ toast(MSG.fail("re-invite", e)); } }
+async function acResetPin(id){ const x=(UI.acts||[]).find(a=>a.id===id)||{}; if(!confirm("Reset "+(x.name||"this co-assist")+"'s PIN? A new one-time code is issued and they set a new PIN on next login.")) return; try{ const r=await api("actorPinReset",{params:{id}}); const otp=(r&&(r.otp||r.dev_otp))||''; const lf=(r&&r.login_format)||acLogin(x); actorInviteModal('🔑 PIN reset — '+(x.name||'co-assist'), x.name, lf, otp); }catch(e){ toast(MSG.fail("reset the PIN", e)); } }
 async function acStatus(id, action){ const x=(UI.acts||[]).find(a=>a.id===id); if(!x)return;
   const routed = x.load>0 ? ` Their ${x.load} active task(s) return to the pool.` : '';
   if(action==='deactivate' && !confirm('Deactivate '+x.name+'?'+routed)) return;
