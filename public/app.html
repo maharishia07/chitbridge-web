@@ -1962,9 +1962,17 @@ async function saveProduct(id){ const err=document.getElementById("ct_err"); if(
 async function delProduct(id){ if(!confirm("Delete this product? This cannot be undone.")) return; try{ await api("prodDel",{params:{id}}); UI.prodSel=null; UI.mdetail=false; toast(MSG.productDeleted()); await loadCatalogue(); }catch(e){ toast(MSG.fail("delete the product", e)); } }
 /* MIS — computed client-side (no MIS route on the legacy backend) */
 /* misScreen + loadMIS → app/cap-admin.js (admin capability, lazy-loaded via ensureCap) */
-/* CO-ASSISTS — the actor roster */
-/* CO-ASSISTS — two-sided master/detail (Stage A). Same skeleton as task/order + suppliers,
-   so the draggable divider and mobile collapse come for free. */
+/* ============================================================================================
+ * CO-ASSISTS (ACTOR) MODULE
+ * PURPOSE: manage the people/systems that act for an entity — the actor roster + their lifecycle.
+ * ACTIVITIES: create/invite (User ID + one-time code) · first-login → set-PIN · re-invite · reset-PIN ·
+ *   edit profile/hat · leave-cover (buddy pairs, concurrency-checked) · actor Duty/Break · deactivate/
+ *   reactivate/remove with full binding cleanup (tasks, cover both ways, default-assignee, dispute-handler).
+ * SPEC + TESTS: chitbridge-api/docs/COASSIST-USECASES.md (U1-U18) + COASSIST-REGRESSION.md (R-U*).
+ * SHARED (stay in Core, used by assign pickers): mapApiActor, hatLabel, hatAssignable, HAT_LABEL, acType.
+ * GROWTH: other actor types, leave module, shift rotation, wage/salary → target lazy `cap-workforce`.
+ * UI: two-sided master/detail (same skeleton as task/order/suppliers — draggable divider + mobile collapse).
+ * ============================================================================================ */
 const AC_TYPE={human:'🧑 human', iot_device:'⚙️ device', connector:'🔌 connector', ai_agent:'🤖 AI', process_rule:'📋 rule'};
 const HAT_LABEL={view_only:'View-only', act:'Act', audit:'Audit', mis:'MIS', manager:'Manager'};
 function hatLabel(h){ return HAT_LABEL[h]||h||'Act'; }
