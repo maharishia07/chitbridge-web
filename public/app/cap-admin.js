@@ -138,7 +138,7 @@ async function saveAutoAssign(){ const x=document.getElementById("st_aerr"); if(
 function assistReviewScreen(){ return scr("🧠 Assistant — knowledge base","kbbody","assistreview"); }
 var _kbItems=[], _kbEditId='';
 async function loadGaps(){ const h=document.getElementById("kbbody"); if(!h)return;
-  const me=(typeof SESSION!=='undefined')?SESSION:{}; const isHelp=(me.name==='GOV-01-Help');
+  const me=(typeof SESSION!=='undefined')?SESSION:{}; const isHelp=(me.name==='GOV-01-Help'||me.isHelpdesk);
   const form = isHelp
     ? '<div style="'+_CARD+'"><div class="sec" id="kb_formhd" style="margin:0 0 6px">Publish an answer</div>'
       +'<label class="fl">Question</label><input class="inp" id="kb_q" placeholder="e.g. How do I export to Excel?">'
