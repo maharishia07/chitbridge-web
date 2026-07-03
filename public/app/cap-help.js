@@ -1,22 +1,12 @@
-/* app/cap-help.js — the HELP / ASSISTANT capability (content, not functionality).
- * Loaded lazily by ensureCap('help') the FIRST time a user opens the "?" screen-help or the 💬 Assistant —
- * NOT shipped with the working screens. Help is not always called, so its (large) Q&A libraries only download
- * on demand. Classic script, shared global scope. Core keeps thin stubs (openHelp/openAssist) that ensureCap('help')
- * before rendering, plus HELP_PACKS/menuAssist (small, rendered inline in a few screens).
- * Holds: CO_HELP (co-assist Q&A) — Stage 2 adds ASSIST_LIB seed + COMPOSE_HELP + the assistant machinery.
- * buildAssistLib folds these into ASSIST_LIB on first open. Spec pointer: chitbridge-api/docs/COASSIST-USECASES.md. */
+/* app/cap-help.js — the HELP / ASSISTANT capability: the SINGLE Q&A library (ASSIST_LIB).
+ * Loaded lazily by ensureCap('help') on first 💬 Assistant / per-screen "?" — help is not always called,
+ * so its (large) library only downloads on demand. Classic script, shared global scope.
+ * SINGLE SOURCE OF TRUTH: every entry is {id, topics[], q, a, context[]}; context tags which screen(s) it
+ * surfaces on ("*" = everywhere; welcome/login/register = pre-auth). The former CO_HELP / COMPOSE_HELP /
+ * per-screen HELP_PACKS.qa were MERGED here (deduped) — nothing is folded at runtime anymore.
+ * Read by the assist engine in Core (answer/matchLibrary/assistSuggest); menuAssist's banner uses PURPOSE.
+ * Keep it TRUE to the product. Spec: chitbridge-api/docs/COASSIST-USECASES.md. */
 
-const CO_HELP = [
- {q:"What is a co-assist?", a:"Anyone — or anything — that acts FOR you. Today people; soon connectors, IoT devices, process rules and AI agents. The owner stays the party; the co-assist acts on your behalf within your entity's scope (per-actor limits are coming)."},
- {q:"What can they do?", a:"Today a co-assist acts WITHIN your entity's scope — they can see and act on the entity's work; entity-level isolation is enforced. Per-actor engagement TYPES (view-only, act, audit, MIS) that limit what an individual can do are PLANNED, not yet enforced — so don't rely on per-actor limits yet. The roadmap is default-deny per node; the granular scoping is coming."},
- {q:"Push or pull?", a:"Assignment model: pull (actors take work), push (you assign), or both — set in Settings. With a process map, push/pull stop being manual and draw from the order's processes (next iteration)."},
- {q:"Shifts & load?", a:"Each co-assist has a shift — on shift / on break / off — and a load (open tasks). Auto-return-on-break brings them back. Toggle shift on each card."},
- {q:"Can a co-assist be a machine?", a:"Yes — actor_type can be connector (ERP / system-to-system), iot_device (a machine triggers a chit), process_rule, or ai_agent. Each has its own auth and handling; these are the next slices."},
- {q:"Where does access come from?", a:"You can only grant what you hold; access flows down the Network tree and is checked live. Set participants here; their scope ties to their node in Network."}
-];
-
-
-// -- Assistant seed library (was app.html inline) — deterministic Q&A floor; Core's assist engine reads/folds it. --
 const ASSIST_LIB = [
   { id:"fit", topics:["fit","suitable","right for me","useful","help my business","should i use","is this for me"], q:"Is this right for my business?", a:"Chit & Bridge fits businesses that exchange orders or deals with other businesses and want a trustworthy, shared record — supply, trade, services, networks. It may NOT fit if you only need a simple invoice app or a consumer storefront. Tell me your business and I will be honest about the fit.", fit:"maybe", context:["welcome","login","register"] },
   { id:"trust", topics:["trust","reliable","safe","secure","privacy","hacked","lose data"], q:"How do I know it is reliable?", a:"Your records are yours alone (no other business can see them), every deal keeps a copy for both sides like a signed receipt, and there is a full time-stamped audit trail. We answer the hard questions up front rather than ask you to trust a reputation we have not earned yet.", context:["*"] },
@@ -36,8 +26,7 @@ const ASSIST_LIB = [
   { id:"uc_services", topics:["service","services","site work","contractor","project","milestone","sla"], q:"Does it work for a services or site-work business?", a:"Yes. A service deal does not need line-item prices the same way — your schema can carry scope, milestones and timelines instead, and disputes-on-the-record matter most here. Same engine, a services schema.", media:{ type:"img", src:"app/assets/usecase-services.png", caption:"Example: a service request chit — screen clip coming." }, context:["*","welcome","login","register"] },
   { id:"uc_aggregator", topics:["aggregator","network","group","branches","head office","franchise","parent"], q:"Does it work for an aggregator or a group with branches?", a:"Yes. Network lets you arrange your branches or members as a tree under a top node, and deals can flow down that structure. Each node keeps its own record; the top node sees its own subtree. Same engine, your structure.", media:{ type:"img", src:"app/assets/usecase-aggregator.png", caption:"Example: a network tree — screen clip coming." }, context:["*","welcome","login","register"] },
   { id:"uc_compare", topics:["different businesses","same product","how does it adapt","one tool","verticals"], q:"How can one tool fit very different businesses?", a:"The container is the same for everyone — the sealed record, your privacy, the audit. What differs is the schema. A timber yard and a pharmacy use the same chit engine with different fields and rules, so the product behaves differently for each without being a different product. That is the whole idea.", media:{ type:"img", src:"app/assets/usecase-compare.png", caption:"Same chit, two schemas — example coming." }, context:["*","welcome","login","register"] },
-  // ── Co-assist (actors) — screen-specific, sharper than the generic entry (context: coassists) ──
-  { id:"ca_what", topics:["co-assist","coassist","what is","participant","who acts","staff","team member"], q:"What is a co-assist?", a:"Someone — or, in time, something — that acts for you. You stay the party of record; they act FOR you within your entity's scope. Today these are people on your team; connectors, devices and AI agents are planned participant types, not live yet.", context:["coassists"] },
+  // ── Co-assist (actors) — screen-specific (context: coassists); the generic "coassist" entry above covers "what is". ──
   { id:"ca_assign", topics:["assign","push","pull","give work","distribute","bulk","queue","pool"], q:"How do I give work to a co-assist?", a:"Two ways: PUSH (you hand a chit to a specific co-assist) or PULL (they take from the shared pool themselves). You can also bulk-assign several chits at once. Either way the chit stays the same shared record — assignment just decides who works it.", context:["coassists"] },
   { id:"ca_scope", topics:["limit","scope","access","permission","restrict","what can they do","control"], q:"Can I limit what a co-assist can do?", a:"A co-assist always acts inside YOUR entity's scope — never another business's work. Being honest: per-actor limits (restricting one co-assist to only some of your chits) are planned, NOT yet enforced — today a co-assist can see all of your entity's chits. Entity-level isolation is solid; finer per-actor scoping is coming.", context:["coassists"] },
   { id:"ca_break", topics:["break","leave","absent","off","holiday","reassign","return","shift"], q:"What happens when a co-assist takes a break or leaves?", a:"Their open work returns to the shared pool so nothing is stranded, and the move is recorded. They sign in with a username and PIN and can work shifts; when they are away, others (or you) can pick the work up.", context:["coassists"] },
@@ -47,16 +36,43 @@ const ASSIST_LIB = [
   { id:"sc_fields", topics:["change fields","add field","edit schema","customize","configure","my fields","rules"], q:"How do I change what a deal carries?", a:"You configure the schema — add or change the fields and rules a chit type uses. The same engine then renders those fields wherever you compose. It is configuration, so the behaviour follows your definition without a rebuild.", context:["schema","compose","register"] },
   { id:"sc_nodev", topics:["developer","code","coding","technical","set up myself","no code","without developer"], q:"Do I need a developer to set up my schema?", a:"No. The schema is configuration, not code — you define the fields and rules your deals carry and the same engine adapts. The engineering that has to be right (privacy, the honest record, safe failure) is already built into the container.", context:["schema","compose","register"] },
   { id:"sc_seal", topics:["change schema","old chits","existing","past deals","history","versions","what happens"], q:"If I change my schema, what about existing chits?", a:"Each chit is SEALED with the fields it carried when it was made — that snapshot stays on the record, so your history is never rewritten. Schema changes shape NEW chits going forward. The sealed, time-stamped record is the point.", context:["schema","compose"] },
-  { id:"sc_examples", topics:["example","timber","pharma","services","how different","vertical","industry"], q:"How do schemas differ across businesses?", a:"Same engine, different fields. A timber yard carries item/quantity/delivery yard; a pharmacy can require batch and expiry; a services firm carries scope and milestones instead of line-item prices. One product, your schema.", context:["schema","compose","register"] }
+  { id:"sc_examples", topics:["example","timber","pharma","services","how different","vertical","industry"], q:"How do schemas differ across businesses?", a:"Same engine, different fields. A timber yard carries item/quantity/delivery yard; a pharmacy can require batch and expiry; a services firm carries scope and milestones instead of line-item prices. One product, your schema.", context:["schema","compose","register"] },
+  // ── Co-assist — access (merged from CO_HELP) ──
+  { id:"ca_access", topics:["access","grant","scope","network","node","permission","where"], q:"Where does a co-assist's access come from?", a:"You can only grant what you hold; access flows down the Network tree and is checked live. Set participants here; their scope ties to their node in Network.", context:["coassists"] },
+  // ── Task (received inbox) — merged from HELP_PACKS.qa ──
+  { id:"tk_what", topics:["task","received","inbox","lands"], q:"What lands in Task?", a:"Every chit a counterparty addresses TO you — orders to fulfil, queries to answer, disputes to resolve. It's your received inbox; Order is the sent side.", context:["task"] },
+  { id:"tk_act", topics:["act","advance","status","assign","message","dispute"], q:"How do I act on a task?", a:"Open it to advance its status (open → in progress → closed), assign it to a co-assist, message the other party, or raise/resolve a dispute. Each action is recorded on the shared chit.", context:["task"] },
+  { id:"tk_vs", topics:["task","order","difference","copies"], q:"Task vs Order?", a:"Same chit, two copies: the receiver's copy sits in Task, the sender's in Order. Each side carries its own status — the Chit & Bridge two-copy model.", context:["task","order"] },
+  { id:"tk_pri", topics:["priority","flag","urgent","queue"], q:"Why is one flagged priority?", a:"A ⚑ means the customer flagged it, or you re-prioritised it. Priority is internal routing in your queue — it doesn't change the other party's copy.", context:["task"] },
+  // ── Order (sent) ──
+  { id:"or_what", topics:["order","sent","authored","bridged"], q:"What's in Order?", a:"Chits you've sent — your copy of each deal you originated. Self-chits show both here and in Task; drafts stay here until bridged.", context:["order"] },
+  { id:"or_self", topics:["send","myself","self-chit"], q:"Can I send an order to myself?", a:"Yes — a self-chit. It lands once in Order (sent) and once in Task (received), same thread, each with its own status.", context:["order"] },
+  { id:"or_start", topics:["start","compose","new order","send-as"], q:"How do I start an order?", a:"Use Compose — pick Send-as (entity or actor), To (self or a counterparty), add catalogue line items, then Send.", context:["order"] },
+  // ── Suppliers ──
+  { id:"sp_add", topics:["add","supplier","user id","pull catalogue"], q:"How do I add a supplier?", a:"Enter the supplier's User ID (8+ characters or email) and add them. They appear here so you can pull their catalogue into an order.", context:["suppliers"] },
+  { id:"sp_branch", topics:["supplier","branch","network","connection"], q:"Supplier or branch?", a:"A supplier is a different business you buy from — a Connection. A branch is part of your own business — Network. Same language, different relationship.", context:["suppliers"] },
+  // ── Catalogue ──
+  { id:"cat_for", topics:["catalogue","products","prices","storefront"], q:"What's the catalogue for?", a:"It's your products and prices. Compose pulls line items from it, and a public catalogue is what customers see in your storefront.", context:["catalogue"] },
+  { id:"cat_vis", topics:["visible","customers","public","private","restricted"], q:"Is my catalogue visible to customers?", a:"Only if you make it public. A catalogue is private by default; visibility is private / restricted / public, set per schema.", context:["catalogue"] },
+  // ── Disputes ──
+  { id:"dp_freeze", topics:["dispute","freeze","lock","complete","delete"], q:"Does a dispute freeze the chit?", a:"No — it's a flag, not a lock. The lifecycle continues, but the chit can't be deleted while a dispute is open, and it won't complete until the dispute is resolved.", context:["disputes"] },
+  { id:"dp_resolve", topics:["resolve","raiser","note","who"], q:"Who can resolve a dispute?", a:"The party who raised it resolves it, and a resolution note is required. Disputes against you wait on the raiser.", context:["disputes"] },
+  // ── MIS ──
+  { id:"mis_src", topics:["mis","numbers","computed","rollup"], q:"Where do the MIS numbers come from?", a:"They're computed live from your chits, disputes, co-assists and suppliers — a client-side roll-up, not a separate report you maintain.", context:["mis"] },
+  // ── Profile ──
+  { id:"pf_uid", topics:["user id","identity","bridge id","external"], q:"What's my User ID?", a:"Your external identity — an 8+ character id or your email. Others connect to you by it. Your internal bridge_id is plumbing and isn't shown.", context:["profile"] },
+  { id:"pf_shop", topics:["shop status","open","closed","away"], q:"What is shop status?", a:"Your customer-facing open sign — open, closed or away — separate from account status and catalogue visibility.", context:["profile"] },
+  // ── Settings ──
+  { id:"st_model", topics:["pull","push","both","assignment","route"], q:"Pull, push or both?", a:"Pull lets co-assists take tasks; push assigns to them; both allows either. It sets how work reaches your team.", context:["settings"] },
+  { id:"st_max", topics:["max tasks","load","ceiling"], q:"What's max tasks per actor?", a:"A load ceiling per co-assist, so no one is over-assigned. Combined with shift status, it shapes routing.", context:["settings"] },
+  // ── Compose (merged from COMPOSE_HELP) ──
+  { id:"cmp_self", topics:["self-chit","author","bridge","own record"], q:"What is a self-chit?", a:"Compose creates a self-chit — you author your own record first. It becomes a shared truth the moment you bridge it (address it to a counterparty). With no counterparty it's your own record / draft.", context:["compose"] },
+  { id:"cmp_two", topics:["two copies","order","task","thread"], q:"Why two copies?", a:"Every party keeps its own copy. Address a chit to yourself and it lands as one copy in Order (sent) and one in Task (received) — same thread, each with its own status.", context:["compose"] },
+  { id:"cmp_as", topics:["send as","entity","actor","author"], q:"Send as entity or actor?", a:"You can author as the entity itself or as one of its co-assists (actors). Both can author and self-address; the mechanism is identical. The actor acts FOR the entity, which stays the party.", context:["compose"] },
+  { id:"cmp_items", topics:["line items","catalogue","picker","quantity","price"], q:"Where do line items come from?", a:"Items are picked from your catalogue, not free-typed — pick a product, set the quantity; price flows from the catalogue and the total computes.", context:["compose"] },
+  { id:"cmp_draft", topics:["draft","unsent","save","bridge"], q:"What's a draft?", a:"A draft is the un-sent state before bridging. Save as draft keeps your authored chit privately; sending it — to self or a counterparty — makes it real and fans out the copies.", context:["compose"] },
+  { id:"cmp_fields", topics:["fields","schema","subject","delivery","note"], q:"Where do the compose fields come from?", a:"Compose renders from your entity's schema — the fields your chit type carries (subject, delivery, note) plus your line items.", context:["compose"] }
 ];
 
 
-// -- Compose help (was app.html inline) — folded into ASSIST_LIB by buildAssistLib. --
-const COMPOSE_HELP=[
-  {q:"What is a self-chit?", a:"Compose creates a self-chit — you author your own record first. It becomes a shared truth the moment you bridge it (address it to a counterparty). With no counterparty it's your own record / draft."},
-  {q:"Why two copies?", a:"Every party keeps its own copy. Address a chit to yourself and it lands as one copy in Order (sent) and one in Task (received) — same thread (originator_id), each with its own status. That's Chit & Bridge's core on a single identity."},
-  {q:"Send as entity or actor?", a:"You can author as the entity itself or as one of its co-assists (actors). Both can author and self-address; the mechanism is identical. The actor acts FOR the entity, which stays the party."},
-  {q:"Where do line items come from?", a:"Items are picked from your catalogue, not free-typed — pick a product, set the quantity; price flows from the catalogue and the total computes. Whatever catalogue exists feeds the picker."},
-  {q:"What's a draft?", a:"A draft is the un-sent state before bridging. Save as draft keeps your authored chit privately; sending it — to self or a counterparty — makes it real and fans out the copies."},
-  {q:"Where do the fields come from?", a:"Compose renders from your entity's schema — the fields your chit type carries (subject, delivery, note) plus your line items. That's how a chit is born: the data definition projected onto the compose screen."},
-];
+// (CO_HELP + COMPOSE_HELP merged into ASSIST_LIB above — single source.)

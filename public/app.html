@@ -700,14 +700,8 @@ function closeLegend(){ _legendOpen=false; const h=document.getElementById("lbho
 // ASSIST_LIB (assistant seed library) -> app/cap-help.js (lazy; loaded on first openHelp/openAssist).
 let _assistOpen=false;
 let _assistBuilt=false;
-// Consolidate the per-screen help (HELP_PACKS / CO_HELP / COMPOSE_HELP) into ASSIST_LIB once, at first open —
-// so the floating assistant draws from the SAME content as the per-screen "?" overlays (one library).
-function buildAssistLib(){ if(_assistBuilt) return; _assistBuilt=true;
-  const kw=(s)=> String(s||"").toLowerCase().split(/\W+/).filter(w=>w.length>3);
-  try{ if(typeof HELP_PACKS!=="undefined") Object.keys(HELP_PACKS).forEach(key=>{ (HELP_PACKS[key].qa||[]).forEach((f,i)=> ASSIST_LIB.push({ id:"hp_"+key+"_"+i, topics:kw(f.q), q:f.q, a:f.a, context:[key] })); }); }catch(_){}
-  try{ if(typeof CO_HELP!=="undefined") CO_HELP.forEach((f,i)=> ASSIST_LIB.push({ id:"co_"+i, topics:kw(f.q), q:f.q, a:f.a, context:["coassists"] })); }catch(_){}
-  try{ if(typeof COMPOSE_HELP!=="undefined") COMPOSE_HELP.forEach((f,i)=> ASSIST_LIB.push({ id:"cmp_"+i, topics:kw(f.q), q:f.q, a:f.a, context:["compose"] })); }catch(_){}
-}
+// Single-source now: ASSIST_LIB (app/cap-help.js) holds every entry, context-tagged. Nothing to fold at runtime.
+function buildAssistLib(){ /* no-op — kept so existing callers don't change; the library is already complete. */ }
 function curScreen(){ try{ if(_assistCtx) return _assistCtx; if(typeof SESSION!=="undefined" && SESSION.token) return (typeof UI!=="undefined" && UI.nav) || "task"; const h=location.hash||""; if(h.indexOf("register")>=0) return "register"; if(h.indexOf("login")>=0) return "login"; return "welcome"; }catch(_){ return "welcome"; } }
 function mountAssist(){ if(document.getElementById("assistfab")) return;
   const b=document.createElement("div"); b.id="assistfab"; b.style.cssText="position:fixed;right:16px;bottom:16px;z-index:300";
@@ -1385,55 +1379,14 @@ function ccRenderFiles(){ var h=document.getElementById('cc_files'); if(!h)retur
    helpBoxFromLib. COMPOSE_HELP is still folded into ASSIST_LIB by buildAssistLib. */
 /* ATH-117 — shared embedded-assistant engine + per-menu knowledge packs.
    One handler (menuAssist / mAsk / mAskFree); each menu supplies a distinguishing message + Q&A pack. */
-const HELP_PACKS = {
-  task:{ msg:"<b>Task — chits received.</b> Work others have addressed to you: orders to fulfil, queries to answer, disputes to act on. (Order is what you've sent.)", qa:[
-    {q:"What lands in Task?", a:"Every chit a counterparty addresses TO you — orders to fulfil, queries to answer, disputes to resolve. It's your received inbox; Order is the sent side."},
-    {q:"How do I act on one?", a:"Open it to advance its status (open → in progress → closed), assign it to a co-assist, message the other party, or raise/resolve a dispute. Each action is recorded on the shared chit."},
-    {q:"Task vs Order?", a:"Same chit, two copies: the receiver's copy sits in Task, the sender's in Order. Each side carries its own status — the Chit & Bridge two-copy model."},
-    {q:"Who can see my tasks?", a:"Your co-assists, scoped by their grant. Assignment and visibility follow your Settings — pull/push, all-visible, and max load."},
-    {q:"Why is one flagged priority?", a:"A ⚑ means the customer flagged it, or you re-prioritised it. Priority is internal routing in your queue — it doesn't change the other party's copy."} ]},
-  order:{ msg:"<b>Order — chits sent.</b> What you've authored and bridged to a counterparty (or to yourself). Drafts live here until you bridge them. (Task is what you've received.)", qa:[
-    {q:"What's in Order?", a:"Chits you've sent — your copy of each deal you originated. Self-chits show both here and in Task; drafts stay here until bridged."},
-    {q:"What's a draft?", a:"An authored-but-unsent chit. Save a draft in Compose, then send it later to bridge it into a real chit and fan out the copies."},
-    {q:"Can I send to myself?", a:"Yes — a self-chit. It lands once in Order (sent) and once in Task (received), same thread, each with its own status."},
-    {q:"How do I start one?", a:"Use Compose — pick Send-as (entity or actor), To (self or a counterparty), add catalogue line items, then Send."} ]},
-  suppliers:{ msg:"<b>Suppliers — businesses you buy from.</b> Add a supplier by their User ID to pull their catalogue and place orders. (Suppliers are other businesses — Connections; your own branches are Network.)", qa:[
-    {q:"How do I add a supplier?", a:"Enter the supplier's User ID (8+ characters or email) and add them. They appear here so you can pull their catalogue into an order."},
-    {q:"Supplier or branch?", a:"A supplier is a different business you buy from — a Connection. A branch is part of your own business — Network. Same language, different relationship."},
-    {q:"Do they have to approve?", a:"Adding a supplier to your list is your own reference — no consent needed. Placing an order is a chit, which they receive and act on."},
-    {q:"Where do orders to them go?", a:"An order you send a supplier is a chit — it sits in your Order list and in their Task list, same thread."} ]},
-  catalogue:{ msg:"<b>Catalogue — what you sell.</b> Your products and prices. These feed Compose line items and, when public, your storefront. (This is your own list; Suppliers is what you buy.)", qa:[
-    {q:"What's the catalogue for?", a:"It's your products and prices. Compose pulls line items from it, and a public catalogue is what customers see in your storefront."},
-    {q:"How do items reach a chit?", a:"In Compose, the line-item picker reads this catalogue — pick a product, set quantity; price flows from here and the total computes."},
-    {q:"Is it visible to customers?", a:"Only if you make it public. A catalogue is private by default; visibility is private / restricted / public, set per schema."},
-    {q:"Catalogue vs line items?", a:"Deliberately distinct: catalogue items are the products you offer; line items are the lines on a specific chit. One feeds the other."} ]},
-  disputes:{ msg:"<b>Disputes — a flag on a chit, not a lock.</b> Raise or resolve issues on a deal; the chit keeps moving, but it can't be deleted while a dispute is open and won't complete until it's resolved.", qa:[
-    {q:"Does a dispute freeze the chit?", a:"No — it's a flag, not a lock. The lifecycle continues, but the chit can't be deleted while a dispute is open, and it won't complete until the dispute is resolved."},
-    {q:"Who can resolve it?", a:"The party who raised it resolves it, and a resolution note is required. Disputes against you wait on the raiser."},
-    {q:"What are the categories?", a:"Quality, delivery, docs and the like — a short reason describes the specifics. Categories drive routing and reporting."},
-    {q:"Raised by me vs against me?", a:"The top list is disputes you raised (you can resolve those); the second is disputes against you or awaiting the other side."} ]},
-  mis:{ msg:"<b>MIS — your numbers at a glance.</b> Chits, deal value, status mix, open disputes, co-assists and suppliers — computed live from your data.", qa:[
-    {q:"Where do these come from?", a:"They're computed live from your chits, disputes, co-assists and suppliers — a client-side roll-up, not a separate report you maintain."},
-    {q:"What's deal value?", a:"The summed amount across your chits. Status counts (open / in progress / closed) show where work sits."},
-    {q:"Can I drill in?", a:"Full reporting and filters are upcoming. For now MIS is the at-a-glance summary; the lists hold the detail."} ]},
-  profile:{ msg:"<b>Profile — your business identity.</b> Your User ID, the name and details others see, and your shop status. Your internal bridge_id stays hidden.", qa:[
-    {q:"What's my User ID?", a:"Your external identity — an 8+ character id or your email. Others connect to you by it. Your internal bridge_id is plumbing and isn't shown."},
-    {q:"What is shop status?", a:"Your customer-facing open sign — open, closed or away — separate from account status and catalogue visibility."},
-    {q:"Who sees this?", a:"Counterparties see your public details (name, User ID, what you choose to share). Sensitive internal identifiers stay hidden."} ]},
-  settings:{ msg:"<b>Settings — how work routes to your team.</b> Assignment model, task limits and visibility for your co-assists.", qa:[
-    {q:"Pull, push or both?", a:"Pull lets co-assists take tasks; push assigns to them; both allows either. It sets how work reaches your team."},
-    {q:"What's max tasks per actor?", a:"A load ceiling per co-assist, so no one is over-assigned. Combined with shift status, it shapes routing."},
-    {q:"All tasks visible?", a:"If on, every co-assist sees the full queue; if off, they see what's theirs. Use it to match how open your floor is."} ]},
-};
-function menuAssist(key){ const p=HELP_PACKS[key]; if(!p) return "";
-  return `<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:12px;padding:11px 13px;margin-bottom:11px;font-size:12.5px;color:#6b5a36;line-height:1.5">${p.msg}</div>`;
+// HELP_PACKS removed — per-screen Q&A merged into ASSIST_LIB (app/cap-help.js); menuAssist banner now uses PURPOSE.
+function menuAssist(key){ const m=(typeof PURPOSE!=='undefined'&&PURPOSE[key])?PURPOSE[key]:''; if(!m) return "";   // banner reads PURPOSE (single source; Q&A lives in ASSIST_LIB)
+  return `<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:12px;padding:11px 13px;margin-bottom:11px;font-size:12.5px;color:#6b5a36;line-height:1.5">${esc(m)}</div>`;
 }
-/* (removed) menuHelp + mAsk — the per-menu "?" now renders from ASSIST_LIB via helpBoxFromLib.
-   menuAssist (the inline banner, above) and mAskFree (used by assistPage's Ask box) are retained. */
-function mAskFree(key){ const p=HELP_PACKS[key]; if(!p)return; const raw=val("m_in_"+key)||""; const q=raw.toLowerCase(); let best=p.qa[0], score=0;
-  p.qa.forEach(f=>{ const words=f.q.toLowerCase().split(/\W+/).filter(w=>w.length>3); let s=0; words.forEach(w=>{ if(q.includes(w))s++; }); if(s>score){score=s;best=f;} });
-  const o=document.getElementById("m_ans_"+key); if(!o)return;
-  o.innerHTML = raw.trim()? ("<b>"+esc(raw)+"</b><br>"+esc(score?best.a:("Closest I have: "+best.a))) : "Pick a question above, or ask your own.";
+// mAskFree (assistPage Ask box) now goes through the shared answer() engine over the single ASSIST_LIB.
+function mAskFree(key){ const raw=val("m_in_"+key)||""; const o=document.getElementById("m_ans_"+key); if(!o)return;
+  if(!raw.trim()){ o.innerHTML="Pick a question above, or ask your own."; return; }
+  o.innerHTML="…"; ensureCap('help').then(function(){ answer(raw, key).then(function(best){ o.innerHTML = best ? assistEntryHTML(best) : ("<b>"+esc(raw)+"</b><br>I am not certain — try rephrasing."); }); }).catch(function(){ o.innerHTML="Assistant unavailable."; });
 }
 /* ATH-117 — full assistance page for the rich Task/Order surfaces (capability map by goal). Built from the panel's real controls. */
 const ASSIST_PAGES = {
