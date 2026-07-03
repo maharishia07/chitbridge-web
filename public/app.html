@@ -2025,8 +2025,8 @@ function acDetailHTML(){ const x=UI.acDet;
       ${kv('Role',esc(x.role||''))}
       ${kv('Type',acType(x.type))}
       ${kv('Hat',hatV)}
-      ${kv('Leave-cover',delV)}
-      ${kv('Covers for',coversFor.length?esc(coversFor.join(', ')):'—')}
+      ${kv('Covered by',delV+' <span style="color:var(--grey);font-weight:400;font-size:10px">— covers them when away</span>')}
+      ${kv('Covers for',(coversFor.length?esc(coversFor.join(', ')):'—')+' <span style="color:var(--grey);font-weight:400;font-size:10px">— they cover these</span>')}
       ${kv('Max tasks',(x.max||'∞')+'')}
       ${kv('Last got task',x.lastAssigned?acDate(x.lastAssigned):'—')}
       ${kv('Phone',x.phone?esc(x.phone):'')}
