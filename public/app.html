@@ -1573,6 +1573,17 @@ function confirmAsk(title, bodyHtml, okLabel, onOk, danger){
    <div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="${danger?'danger':'pri'}" id="_cfmok">${esc(okLabel||'Confirm')}</button></div>`);
   const b=document.getElementById('_cfmok'); if(b)b.onclick=function(){ closeModal(); onOk(); };
 }
+// Legible deactivate/remove result — spells out every binding that was cleaned (tasks, cover both ways,
+// default assignee, dispute hand-offs) so nothing quietly dangles.
+function actorCleanupModal(action, name, parts){
+  const rows=(parts&&parts.length)?parts.map(function(p){ return '<div style="display:flex;gap:8px;align-items:flex-start;font-size:12.5px;padding:5px 0;border-bottom:1px dashed var(--line)"><span style="color:#2e6b3f;font-weight:700">✓</span><span>'+esc(p)+'</span></div>'; }).join(''):'<div style="font-size:12.5px;color:var(--grey)">No active tasks, cover links, or assignments — nothing to clean.</div>';
+  modal(`<div class="mhd"><div class="t">${action==='remove'?'🗑 Removed':'🚫 Deactivated'} — ${esc(name||'co-assist')}</div></div>
+   <div class="mbody"><div style="font-size:13px;line-height:1.55;color:var(--ink)">${esc(name||'They')} can no longer sign in.${action==='deactivate'?' Reactivate any time to restore access — note the bindings below are <b>not</b> auto-restored.':''}</div>
+     <div style="${_CARD};margin-top:9px"><div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--grey);font-weight:700;margin-bottom:4px">Bindings cleaned</div>${rows}</div>
+   </div>
+   <div class="mfoot"><button class="pri" onclick="closeModal()">Got it</button></div>`);
+  if(typeof announce==='function') announce((name||'Co-assist')+' '+(action==='remove'?'removed':'deactivated')+(parts&&parts.length?'. '+parts.join('. '):'.'));
+}
 /* ---------------- DISPUTES screen ---------------- */
 function disputesScreen(){ return `<div style="padding:14px;max-width:760px;margin:0 auto"><div class="sec" style="font-size:15px;margin-bottom:3px;display:flex;align-items:center;gap:9px">⚖️ Disputes<button onclick="openHelp('disputes')" title="About this screen" style="border:1px solid var(--line);background:#fff;color:#3F66A6;border-radius:50%;width:22px;height:22px;font-weight:800;cursor:pointer;font-size:13px;line-height:1;flex:none">?</button></div><div style="font-size:11px;color:var(--grey);margin-bottom:10px">Explore <b onclick="openHelp('disputes')" style="cursor:pointer;color:#3F66A6">?</b> to know more about this screen.</div><div id="disprows"><div class="loadwrap"><span class="spin"></span> loading…</div></div></div>`; }
 async function loadDisputes(){
@@ -2078,7 +2089,13 @@ function acStatus(id, action){ const x=(UI.acts||[]).find(a=>a.id===id); if(!x)r
   const run=async function(){ const body={action}; if(x.load>0)body.task_action='pool'; if(action==='remove')body.confirm='REMOVE';
     try{ const r=await api("actorStatus",{params:{id},body}); UI.acSel=null; UI.acDet=null; UI.mdetail=false; await loadCoassists();
       if(action==='reactivate'){ const otp=(r&&(r.otp||r.dev_otp))||''; const lf=(r&&r.login_format)||acLogin(x); actorInviteModal('↩ '+(x.name||'co-assist')+' reactivated', x.name, lf, otp); }
-      else toast(action==='remove'?'Co-assist removed':'Deactivated'); }
+      else { const parts=[];
+        if(r&&r.tasks_routed>0) parts.push(r.tasks_routed+' task'+(r.tasks_routed>1?'s':'')+(body.task_action==='actor'?' reassigned to a colleague':' returned to the pool'));
+        if(r&&r.had_cover) parts.push('own leave-cover cleared');
+        if(r&&r.covers_removed>0) parts.push('was leave-cover for '+r.covers_removed+' — those cover links removed');
+        if(r&&r.was_default_assignee) parts.push('was the default auto-assign assignee — cleared');
+        if(r&&r.disputes_cleared>0) parts.push(r.disputes_cleared+' dispute hand-off'+(r.disputes_cleared>1?'s':'')+' cleared');
+        actorCleanupModal(action, x.name, parts); } }
     catch(e){ toast(MSG.fail("update the co-assist", e)); } };
   if(action==='deactivate') confirmAsk('Deactivate co-assist', 'Deactivate <b>'+esc(x.name)+'</b>? They can no longer sign in until reactivated.'+esc(routed), 'Deactivate', run, true);
   else if(action==='remove') confirmAsk('Remove permanently', 'Permanently remove <b>'+esc(x.name)+'</b>? This cannot be undone.'+esc(routed), 'Remove', run, true);
