@@ -1248,7 +1248,8 @@ function autoRefresh(){
     if(UI.detail || UI.mdetail) return;
     if(['task','order','drafts','trash','archive'].includes(UI.nav)) loadList();
     else if(UI.nav==='disputes') loadDisputes();
-    else if(UI.nav==='coassists') loadCoassists();
+    // Co-assist roster is NOT real-time — no auto-poll. It refreshed the whole left panel on a timer (disruptive
+    // while viewing someone). It reloads on navigation and after an add/deactivate action, which is enough.
   }catch(e){}
 }
 function startAutoRefresh(sec){ if(_autoRefreshTimer) clearInterval(_autoRefreshTimer); _autoRefreshTimer=setInterval(autoRefresh,(sec||20)*1000); if(CFG.MODE!=='demo') loadNotifs(); }
