@@ -1541,9 +1541,10 @@ async function submitActor(){
     const lf=(r&&(r.login_format||(r.actor&&r.actor.login_format)))||coId(key);   // API truth: <key>@<Business Name>
     const newId=r&&(r.identity_id||(r.actor&&r.actor.identity_id)||r.id||(r.actor&&r.actor.id));
     closeModal(); toast(MSG.coassistAdded(name, lf));
-    if(UI.nav==="coassists"){ await loadCoassists();   // land the cursor on the NEW co-assist, not the first row
-      let sel=newId; if(!sel){ const m=(UI.acts||[]).find(a=>String(a.key||'').toLowerCase()===key); if(m)sel=m.id; }
-      if(sel && (UI.acts||[]).some(a=>a.id===sel)) selectActor(sel); } }
+    if(UI.nav==="coassists"){ await loadCoassists();   // land the cursor on the NEW co-assist, not the first/previous row
+      const _m=(UI.acts||[]).find(a=>String(a.key||'').toLowerCase()===key); const sel=(_m&&_m.id)||newId;   // match by the just-created User ID (deterministic); response id as backup
+      if(sel && (UI.acts||[]).some(a=>a.id===sel)){ selectActor(sel);
+        const _row=document.querySelector('.row[data-ac="'+sel+'"]'); if(_row&&_row.scrollIntoView) _row.scrollIntoView({block:'nearest'}); } } }
   catch(e){ if(err)err.textContent=e.message; }
 }
 /* ---------------- DISPUTES screen ---------------- */
