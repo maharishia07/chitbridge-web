@@ -2002,7 +2002,7 @@ function selectActor(id, silent){ UI.acSel=id; UI.acMode='view'; UI.acDet=(UI.ac
   if((UI.vp==='mob') && !silent){ UI.mdetail=true; const p=document.getElementById('panel'); if(p)p.classList.add('showdetail'); }
   paintAcList(); paintAcDetail(); }
 function setAcMode(m){ UI.acMode=m; paintAcDetail(); }
-function setAcFlt(f){ UI.acFlt=f; UI.acSel=null; UI.acDet=null; paintAcList(); paintAcDetail(); }
+function setAcFlt(f){ UI.acFlt=f; UI.acSel=null; UI.acDet=null; const mb=document.getElementById('mainbody'); if(mb)mb.innerHTML=mainBody(); }   // re-render tabs+rows together (was repainting rows only -> stale highlight)
 function acDetailHTML(){ const x=UI.acDet;
   if(!x) return `<div class="empty"><div class="big">🧑‍🤝‍🧑</div><div class="t">Select a co-assist</div><div>Pick one to see their profile, shift and access — or manage them.</div></div>`;
   const back=`<button class="dback" onclick="backToList()">‹ Co-assists</button>`;
