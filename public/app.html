@@ -1962,6 +1962,8 @@ function acShLabel(sh){ return sh==='on_shift'?'on shift':sh==='on_break'?'on br
 function acFlt(){ return UI.acFlt||'active'; }
 function acDate(ts){ if(!ts)return '—'; try{ return new Date(ts).toLocaleDateString(); }catch(_){ return '—'; } }
 function acLogin(x){ return esc(x.key)+'@'+esc((SESSION.entity||'').toLowerCase()); }
+// Unambiguous label — name + User ID (names collide; the key is unique). Returns HTML (already escaped).
+function acLbl(a){ return a?(esc(a.name)+' <span class="mono" style="color:var(--grey);font-weight:400;font-size:11px">'+esc(a.key||'')+'</span>'):'—'; }
 function coassistsScreen(){
   const list = `<div class="list">
     <div class="lh">
@@ -1981,14 +1983,16 @@ function coassistsScreen(){
 }
 function acVisible(){ let a=(UI.acts||[]).filter(x=>acFlt()==='all'?true:(acFlt()==='inactive'?x.status!=='active':x.status==='active'));
   const q=(UI.acQ||'').trim().toLowerCase(); if(q)a=a.filter(x=>((x.name||'')+' '+(x.role||'')+' '+(x.key||'')+' '+(x.type||'')).toLowerCase().includes(q)); return a; }
-function acRowHTML(x){ const dim=x.status!=='active'?'opacity:.55':''; const coversN=(UI._coversCount||{})[x.id]||0;
+function acRowHTML(x){ const dim=x.status!=='active'?'opacity:.55':'';
+  const coverNm=x.del?((UI._acNames||{})[x.del]||'—'):''; const coversNames=(UI._coversNames||{})[x.id]||[];
+  const coverLines=(x.del||coversNames.length)?'<div style="font-size:11px;color:var(--grey);margin-top:3px;line-height:1.45">'+(x.del?('🛡 Covered by <b style="color:var(--ink);font-weight:600">'+coverNm+'</b>'):'')+((x.del&&coversNames.length)?'<br>':'')+(coversNames.length?('🤝 Covers for <b style="color:var(--ink);font-weight:600">'+coversNames.join(', ')+'</b>'):'')+'</div>':'';
   return `<div class="row ${x.id===UI.acSel?'sel':''}" data-ac="${x.id}" style="${dim}" onclick="selectActor('${x.id}')">
     <div style="width:9px;height:9px;border-radius:50%;flex:0 0 auto;margin-top:5px;background:${x.shift==='on_shift'?'#2f8f5b':x.shift==='on_break'?'#c9a441':'#b9b9b9'}"></div>
-    <div class="main2"><div class="l1"><span class="code">${esc(x.name)}</span><span class="optchip" style="background:#eef3fb;color:#345488;border-color:#cfe0f4">${hatLabel(x.hat)}</span>${x.pinSet?'':(x.otp?'<span class="optchip" style="background:#fbf7ea;color:#7a5e22;border-color:#e6d9a8">⏳ invite</span>':'')}${coversN?'<span class="optchip" style="font-size:9.5px;background:#e7f3ea;color:#2e6b3f;border-color:#bfe0cd" title="Covers for '+coversN+' co-assist(s) on leave">🛡 covers '+coversN+'</span>':''}<span class="amt" style="margin-left:auto;font-size:11.5px;color:var(--grey)">${x.load}/${x.max||'∞'}</span></div>
-      <div class="l2">${esc(x.role||'—')} · <span class="mono">${acLogin(x)}</span> <span class="optchip ${acShc(x.shift)}">${acShLabel(x.shift)}</span>${x.status!=='active'?'<span class="optchip off">'+esc(x.status)+'</span>':''}${(x.shift!=='on_shift'&&x.returnDate)?' · returns '+acDate(x.returnDate):''}</div></div>
+    <div class="main2"><div class="l1"><span class="code">${esc(x.name)}</span><span class="optchip" style="background:#eef3fb;color:#345488;border-color:#cfe0f4">${hatLabel(x.hat)}</span>${x.pinSet?'':(x.otp?'<span class="optchip" style="background:#fbf7ea;color:#7a5e22;border-color:#e6d9a8">⏳ invite</span>':'')}<span class="amt" style="margin-left:auto;font-size:11.5px;color:var(--grey)">${x.load}/${x.max||'∞'}</span></div>
+      <div class="l2">${esc(x.role||'—')} · <span class="mono">${acLogin(x)}</span> <span class="optchip ${acShc(x.shift)}">${acShLabel(x.shift)}</span>${x.status!=='active'?'<span class="optchip off">'+esc(x.status)+'</span>':''}${(x.shift!=='on_shift'&&x.returnDate)?' · returns '+acDate(x.returnDate):''}</div>${coverLines}</div>
     <div class="rowgo" aria-hidden="true">›</div></div>`; }
 function acRowsHTML(){ const r=acVisible(); if(!r.length) return '<div class="empty"><div class="big">🧑‍🤝‍🧑</div><div class="t">No co-assists</div><div>Add one with <b>+ New</b> above.</div></div>';
-  const cc={}; (UI.acts||[]).forEach(a=>{ if(a.del)cc[a.del]=(cc[a.del]||0)+1; }); UI._coversCount=cc;   // reverse-delegate counts, once
+  const cc={},cn={},nm={}; (UI.acts||[]).forEach(a=>{ const _l=acLbl(a); nm[a.id]=_l; if(a.del){ cc[a.del]=(cc[a.del]||0)+1; (cn[a.del]=cn[a.del]||[]).push(_l); } }); UI._coversCount=cc; UI._coversNames=cn; UI._acNames=nm;   // reverse-delegate maps (name+userid labels), once
   return r.map(acRowHTML).join(''); }
 function paintAcList(){ const b=document.getElementById('ac_rows'); if(b)b.innerHTML=acRowsHTML(); const c=document.getElementById('ac_count'); if(c)c.textContent=acVisible().length; }
 function paintAcDetail(){ const dp=document.getElementById('detailpane'); if(dp){ dp.className='detail'; dp.innerHTML=acDetailHTML(); } }
@@ -2020,7 +2024,7 @@ function acDetailHTML(){ const x=UI.acDet;
     const kv=(l,v)=>`<div style="display:flex;gap:10px;padding:9px 13px;border-bottom:1px dashed var(--line);font-size:13px;align-items:baseline"><b style="min-width:104px;color:var(--grey);font-weight:600;font-size:10.5px;text-transform:uppercase;letter-spacing:.4px">${l}</b><span style="font-weight:600;flex:1">${(v==null||v==='')?'—':v}</span></div>`;
     const hatV='<span class="optchip" style="background:#eef3fb;color:#345488;border-color:#cfe0f4">'+hatLabel(x.hat)+'</span>'+(hatAssignable(x.hat)?'':' <span style="font-size:11px;color:var(--grey)">not assignable</span>');
     const delV=x.del?esc(((UI.acts||[]).find(a=>a.id===x.del)||{}).name||'—'):'—';
-    const coversFor=(UI.acts||[]).filter(a=>a.del===x.id).map(a=>a.name);
+    const coversFor=(UI.acts||[]).filter(a=>a.del===x.id).map(a=>acLbl(a));
     const prof=`<div class="sec">Profile</div><div class="itab" style="border:1px solid var(--line);border-radius:11px;overflow:hidden">
       ${kv('Name',esc(x.name))}
       ${kv('Login','<span class="mono">'+acLogin(x)+'</span>')}
@@ -2037,10 +2041,10 @@ function acDetailHTML(){ const x=UI.acDet;
       ${(x.shift!=='on_shift' && (x.breakSince||x.returnDate)) ? '<div style="font-size:11.5px;color:var(--grey);margin-top:6px">'+(x.breakSince?('On break since '+acDate(x.breakSince)):'')+(x.returnDate?((x.breakSince?' · ':'')+'returns '+acDate(x.returnDate)):'')+'</div>' : ''}
       <div style="font-size:12.5px;margin-top:9px">Load · <b>${x.load}</b> / ${x.max||'∞'} tasks</div><div style="height:8px;background:#eef1f4;border-radius:5px;overflow:hidden;margin-top:6px"><span style="display:block;height:100%;background:var(--blue);border-radius:5px;width:${pct}%"></span></div></div>`;
     const eng=`<div class="sec">Access / engagement</div><div style="font-size:11px;color:#9a7b34;background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;line-height:1.5">Per-actor engagement (view-only · act · audit · MIS) is <b>planned, not enforced yet</b> — today a co-assist acts within the entity's scope. Default-deny per node is the roadmap.</div>`;
-    const coverName = x.del?esc(((UI.acts||[]).find(a=>a.id===x.del)||{}).name||'—'):'';
+    const coverName = x.del?acLbl((UI.acts||[]).find(a=>a.id===x.del)):'';
     const coverSection = '<div class="sec">Leave cover</div><div class="itab" style="border:1px solid var(--line);border-radius:11px;overflow:hidden;margin-bottom:10px">'
       +'<div style="padding:10px 13px;border-bottom:1px dashed var(--line)"><div style="font-size:10.5px;color:#345488;text-transform:uppercase;letter-spacing:.4px;font-weight:700">🛡 Covered by</div><div style="font-size:13px;margin-top:3px;line-height:1.45">'+(x.del?('<b>'+coverName+'</b> takes over <b>'+esc(x.name)+'</b>&rsquo;s work when '+esc(x.name)+' is away.'):'<span style="color:var(--grey)">No cover set — nobody takes '+esc(x.name)+'&rsquo;s work when away.</span>')+'</div></div>'
-      +'<div style="padding:10px 13px"><div style="font-size:10.5px;color:#2e6b3f;text-transform:uppercase;letter-spacing:.4px;font-weight:700">🤝 Covers for</div><div style="font-size:13px;margin-top:3px;line-height:1.45">'+(coversFor.length?('<b>'+esc(x.name)+'</b> takes over <b>'+esc(coversFor.join(', '))+'</b>&rsquo;s work when they&rsquo;re away.'):'<span style="color:var(--grey)">'+esc(x.name)+' isn&rsquo;t anyone&rsquo;s cover yet.</span>')+'</div></div>'
+      +'<div style="padding:10px 13px"><div style="font-size:10.5px;color:#2e6b3f;text-transform:uppercase;letter-spacing:.4px;font-weight:700">🤝 Covers for</div><div style="font-size:13px;margin-top:3px;line-height:1.45">'+(coversFor.length?('<b>'+esc(x.name)+'</b> takes over <b>'+coversFor.join(', ')+'</b>&rsquo;s work when they&rsquo;re away.'):'<span style="color:var(--grey)">'+esc(x.name)+' isn&rsquo;t anyone&rsquo;s cover yet.</span>')+'</div></div>'
       +'</div>';
     const loginState = x.pinSet
       ? '<div class="sec">Login</div><div style="'+_CARD+';background:#e7f3ea;border-color:#bfe0cd"><div style="font-size:13px;color:#2e6b3f;font-weight:600">✓ Active — PIN set. They sign in with their User ID + PIN.</div></div>'
