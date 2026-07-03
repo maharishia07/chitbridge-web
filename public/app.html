@@ -2082,7 +2082,7 @@ async function saveActor(id){ const err=document.getElementById("ac_ederr"); if(
    CO_HELP is still folded into ASSIST_LIB by buildAssistLib. */
 async function loadCoassists(){
   UI._acLoading=true; const rb=document.getElementById('ac_rows'); if(rb)rb.innerHTML='<div class="loadwrap"><span class="spin"></span> loading…</div>';
-  try{ const actors=((await api("actors"))||[]).map(mapApiActor); UI.acts=actors; STORE.actors=actors; UI._acLoading=false; paintAcList();
+  try{ const actors=((await api("actors",{query:{status:'all'}}))||[]).map(mapApiActor); UI.acts=actors; STORE.actors=actors; UI._acLoading=false; paintAcList();   // fetch ALL — client acFlt tabs categorize (active incl. on-break, inactive=deactivated/removed)
     if(UI.acSel && !UI.acts.some(a=>a.id===UI.acSel)){ UI.acSel=null; UI.acDet=null; }
     if(!UI.acSel && UI.acts.length && UI.vp!=='mob'){ const f=acVisible()[0]; if(f)selectActor(f.id, true); else paintAcDetail(); }
     else paintAcDetail();
