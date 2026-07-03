@@ -688,7 +688,7 @@ function matchLibrary(question, contextKey){
   const pool = contextKey ? ASSIST_LIB.filter(e=>(e.context||[]).indexOf(contextKey)>=0 || (e.context||[]).indexOf("*")>=0) : ASSIST_LIB.slice();
   let best=null, score=0;
   pool.forEach(e=>{ let s=0; (e.topics||[]).forEach(t=>{ if(q.indexOf(t.toLowerCase())>=0) s+=2; }); q.split(/\W+/).filter(w=>w.length>3).forEach(w=>{ if((e.q+" "+e.a).toLowerCase().indexOf(w)>=0) s++; }); if(s>score){ score=s; best=e; } });
-  return score>0 ? best : null;
+  return score>=2 ? best : null;   // relevance floor: a topic hit (+2) or >=2 content words. Weak single-word matches -> no answer (so it captures the gap instead of answering wrongly).
 }
 // (helpAsk / openHelp / closeHelp removed — folded into the one Assistant.)
 /* Capability/feature LEGEND — the 🔑 map of "what we serve". Content + render live in app/cap-legend.js (lazy,
