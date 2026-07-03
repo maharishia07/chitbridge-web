@@ -710,6 +710,12 @@ function _openHelpImpl(key){ const host=document.getElementById("lbhost"); if(!h
   host.innerHTML=`<div class="notifover" onclick="closeHelp()"><div class="notifpanel" style="max-width:560px;width:94vw" onclick="event.stopPropagation()"><div class="notifhd">❓ About this screen<button onclick="closeHelp()" style="margin-left:auto;border:0;background:none;cursor:pointer;font-size:15px;color:var(--grey)" aria-label="Close">✕</button></div><div style="padding:13px;max-height:72vh;overflow:auto">${(typeof PURPOSE!=='undefined'&&PURPOSE[key])?`<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:10px;padding:10px 12px;font-size:12.5px;color:#6b5a36;line-height:1.5;margin-bottom:12px">${esc(PURPOSE[key])}</div>`:''}${helpFor(key)||((typeof PURPOSE!=='undefined'&&PURPOSE[key])?'':'<div style="color:var(--grey);font-size:12.5px">More about this screen is coming.</div>')}</div></div></div>`;
 }
 function closeHelp(){ _helpOpen=false; const h=document.getElementById("lbhost"); if(h)h.innerHTML=""; }
+/* Capability/feature LEGEND — the 🔑 map of "what we serve". Content + render live in app/cap-legend.js (lazy,
+   loaded on first 🔑 — it's rarely opened, so it dogfoods the on-demand principle). Core keeps only the gated stub. */
+let _legendOpen=false;
+function openLegend(){ if(_legendOpen){ closeLegend(); return; }
+  ensureCap('legend').then(function(){ _openLegendImpl(); }).catch(function(){ if(typeof toast==='function')toast('Legend unavailable — check your connection.'); }); }
+function closeLegend(){ _legendOpen=false; const h=document.getElementById("lbhost"); if(h)h.innerHTML=""; }
 /* ── Floating AI assistant — context-sensitive, library-backed, pre + post auth, honest (no overselling). ──
    First version: keyword match over a seed library (consolidates HELP_PACKS / KB). Real NLU/AI is the next phase. */
 // ASSIST_LIB (assistant seed library) -> app/cap-help.js (lazy; loaded on first openHelp/openAssist).
@@ -1186,6 +1192,7 @@ function renderApp(){
       <button class="ham" onclick="UI.drawer=!UI.drawer;renderApp()">☰</button>
       <div class="b">${logoMark(20)} <span class="bt">Chit &amp; Bridge</span></div>
       <button class="info" id="infobtn" onclick="openHelp(UI.nav)" title="About this screen" aria-label="About this screen">ⓘ</button>
+      <button class="info" id="legendbtn" onclick="openLegend()" title="What we serve — capabilities &amp; features" aria-label="Capabilities and features map">🔑</button>
       <button class="msgc" id="msgcbtn" onclick="openMsgCenter()" title="Messages" aria-label="Messages">💬<span class="bdot" id="msgcdot" style="${unreadCount()?'':'display:none'}">${unreadCount()}</span></button>
       ${role!=="customer"?`<button class="bell" id="bellbtn" onclick="openNotifications()" title="Notifications" aria-label="Notifications">🔔<span class="bdot" id="belldot" style="${notifBadge()?'':'display:none'}">${notifBadge()}</span></button>`:''}
       <div class="who">${statusControl(role)}<div class="nmwrap" style="text-align:right"><div class="nm">${SESSION.name}</div><div class="rl">${role} · ${SESSION.entity||""}</div></div>
