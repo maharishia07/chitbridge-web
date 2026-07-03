@@ -752,12 +752,22 @@ function assistEntryHTML(e){ if(!e) return "I am not sure yet — try rephrasing
   return html;
 }
 function assistPick(id){ const e=ASSIST_LIB.find(x=>x.id===id); renderAssist(assistEntryHTML(e)); }
+let _assistPending='';
 function assistAsk(){ const inp=document.getElementById("assist_in"); const raw=(inp?inp.value:"").trim(); if(!raw) return;
   answer(raw, curScreen()).then(best=>{
-    renderAssist(best ? assistEntryHTML(best) : "I am not certain about that yet — I've noted your question so we can add it. Try a suggestion, or rephrase. (I will be honest about fit rather than oversell.)");
-    if(!best){ try{ api('assistGap',{body:{q:raw, context:curScreen()}}); }catch(_){} }   // learning feedback: capture the gap (fire-and-forget)
+    if(best){ renderAssist(assistEntryHTML(best)); return; }
+    _assistPending = raw;   // no library answer — offer to send it to the help desk (a real chit, if signed in)
+    const me=(typeof SESSION!=='undefined')?SESSION:{};
+    const canAsk = !!(me.token && me.role!=='customer' && me.name!=='GOV-01-Help');
+    const btn = canAsk ? '<button class="composebtn" style="margin-top:8px" onclick="askHelpDesk()">📮 Send this to the help desk</button>' : '';
+    renderAssist("I couldn't find that in the library. "+(canAsk?"Send it to the help desk and they'll add an answer.":"Try a suggestion, or rephrase.")+(btn?('<br>'+btn):''));
   });
 }
+// Ask the help desk = a genuine query chit FROM you TO GOV-01-Help (their Task inbox). Their answer comes back as a message on it.
+async function askHelpDesk(){ const q=(_assistPending||'').trim(); if(!q) return;
+  try{ await api("createChit",{body:{recipients:[{name:'GOV-01-Help', role:'to'}], subject:q, purpose:'inquiry', line_items:[]}});
+    _assistPending=''; renderAssist("Sent to the help desk ✓ — their answer comes back on this chit's messages (find it in your Order list).");
+  }catch(e){ renderAssist("Couldn't reach the help desk: "+esc((e&&e.message)||'please try again')); } }
 function renderAssist(ans){ const h=document.getElementById("assisthost"); if(!h||!_assistOpen) return; const pre=!(typeof SESSION!=="undefined" && SESSION.token); const sugg=assistSuggest();
   const _pb=(typeof PURPOSE!=='undefined'&&PURPOSE[curScreen()])?PURPOSE[curScreen()]:''; const purposeHTML=_pb?`<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:8px 10px;font-size:11.5px;color:#6b5a36;line-height:1.5;margin-bottom:9px">${esc(_pb)}</div>`:'';
   h.innerHTML=`<div style="position:fixed;right:16px;bottom:70px;z-index:301;width:360px;max-width:92vw;background:#fff;border:1px solid #e3e0d8;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.22);overflow:hidden">
