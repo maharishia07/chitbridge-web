@@ -1950,7 +1950,7 @@ function coassistsScreen(){
 function acVisible(){ let a=(UI.acts||[]).filter(x=>acFlt()==='all'?true:(acFlt()==='inactive'?x.status!=='active':x.status==='active'));
   const q=(UI.acQ||'').trim().toLowerCase(); if(q)a=a.filter(x=>((x.name||'')+' '+(x.role||'')+' '+(x.key||'')+' '+(x.type||'')).toLowerCase().includes(q)); return a; }
 function acRowHTML(x){ const dim=x.status!=='active'?'opacity:.55':'';
-  return `<div class="row ${x.id===UI.acSel?'sel':''}" style="${dim}" onclick="selectActor('${x.id}')">
+  return `<div class="row ${x.id===UI.acSel?'sel':''}" data-ac="${x.id}" style="${dim}" onclick="selectActor('${x.id}')">
     <div style="width:9px;height:9px;border-radius:50%;flex:0 0 auto;margin-top:5px;background:${x.shift==='on_shift'?'#2f8f5b':x.shift==='on_break'?'#c9a441':'#b9b9b9'}"></div>
     <div class="main2"><div class="l1"><span class="code">${esc(x.name)}</span><span class="optchip">${acType(x.type)}</span><span class="amt" style="margin-left:auto;font-size:11.5px;color:var(--grey)">${x.load}/${x.max||'∞'}</span></div>
       <div class="l2">${esc(x.role||'—')} · <span class="mono">${acLogin(x)}</span> <span class="optchip ${acShc(x.shift)}">${acShLabel(x.shift)}</span>${x.status!=='active'?'<span class="optchip off">'+esc(x.status)+'</span>':''}</div></div>
@@ -1983,16 +1983,20 @@ function acDetailHTML(){ const x=UI.acDet;
     bar=`<button class="pri" onclick="saveActor('${x.id}')">Save</button><button onclick="setAcMode('view')">Cancel</button>`;
   } else {
     const pct=x.max?Math.min(100,Math.round(x.load/x.max*100)):0;
-    const prof=`<div class="sec">Profile</div><div class="itab">
-      <div class="kv"><b>Name</b><span>${esc(x.name)}</span></div>
-      <div class="kv"><b>Login</b><span class="mono">${acLogin(x)}</span></div>
-      <div class="kv"><b>Role</b><span>${esc(x.role||'—')}</span></div>
-      <div class="kv"><b>Type</b><span>${acType(x.type)}</span></div>
-      <div class="kv"><b>Hat</b><span>${hatLabel(x.hat)}${hatAssignable(x.hat)?'':' <span style="color:var(--grey)">· not assignable</span>'}</span></div>
-      ${x.del?`<div class="kv"><b>Leave-cover</b><span>${esc(((UI.acts||[]).find(a=>a.id===x.del)||{}).name||'—')}</span></div>`:''}
-      ${x.phone?`<div class="kv"><b>Phone</b><span>${esc(x.phone)}</span></div>`:''}
-      <div class="kv"><b>Joined</b><span>${acDate(x.created)}</span></div>
-      <div class="kv"><b>Last active</b><span>${acDate(x.last)}</span></div></div>`;
+    const kv=(l,v)=>`<div style="display:flex;gap:10px;padding:9px 13px;border-bottom:1px dashed var(--line);font-size:13px;align-items:baseline"><b style="min-width:104px;color:var(--grey);font-weight:600;font-size:10.5px;text-transform:uppercase;letter-spacing:.4px">${l}</b><span style="font-weight:600;flex:1">${(v==null||v==='')?'—':v}</span></div>`;
+    const hatV='<span class="optchip" style="background:#eef3fb;color:#345488;border-color:#cfe0f4">'+hatLabel(x.hat)+'</span>'+(hatAssignable(x.hat)?'':' <span style="font-size:11px;color:var(--grey)">not assignable</span>');
+    const delV=x.del?esc(((UI.acts||[]).find(a=>a.id===x.del)||{}).name||'—'):'—';
+    const prof=`<div class="sec">Profile</div><div class="itab" style="border:1px solid var(--line);border-radius:11px;overflow:hidden">
+      ${kv('Name',esc(x.name))}
+      ${kv('Login','<span class="mono">'+acLogin(x)+'</span>')}
+      ${kv('Role',esc(x.role||''))}
+      ${kv('Type',acType(x.type))}
+      ${kv('Hat',hatV)}
+      ${kv('Leave-cover',delV)}
+      ${kv('Max tasks',(x.max||'∞')+'')}
+      ${kv('Phone',x.phone?esc(x.phone):'')}
+      ${kv('Joined',acDate(x.created))}
+      ${kv('Last active',acDate(x.last))}</div>`;
     const work=`<div class="sec">Shift &amp; load</div><div class="itab" style="padding:11px 12px">
       <div style="display:flex;align-items:center;gap:8px"><span class="optchip ${acShc(x.shift)}">${acShLabel(x.shift)}</span><span style="font-size:12px;color:var(--grey)">${x.status==='active'?'active':esc(x.status)}</span></div>
       <div style="font-size:12.5px;margin-top:9px">Load · <b>${x.load}</b> / ${x.max||'∞'} tasks</div><div style="height:8px;background:#eef1f4;border-radius:5px;overflow:hidden;margin-top:6px"><span style="display:block;height:100%;background:var(--blue);border-radius:5px;width:${pct}%"></span></div></div>`;
@@ -2025,7 +2029,10 @@ async function saveActor(id){ const err=document.getElementById("ac_ederr"); if(
   try{ await api("actorEdit",{params:{id},body}); const x=(UI.acts||[]).find(a=>a.id===id);
     const delEl=document.getElementById("ac_edel");
     if(delEl && delEl.value!==((x&&x.del)||'')){ await api("actorDelegate",{params:{id},body:{delegate_actor_id:delEl.value||null}}); if(x)x.del=delEl.value||null; }
-    if(x){ if(body.display_name)x.name=body.display_name; x.role=body.actor_role; if(body.max_tasks)x.max=body.max_tasks; x.phone=body.phone; if(body.hat)x.hat=body.hat; } UI.acMode='view'; paintAcList(); paintAcDetail(); toast('Co-assist updated ✓'); }
+    if(x){ if(body.display_name)x.name=body.display_name; x.role=body.actor_role; if(body.max_tasks)x.max=body.max_tasks; x.phone=body.phone; if(body.hat)x.hat=body.hat; } UI.acMode='view';
+    // Action-state discipline: only this record's row + the detail change — the rest of the list is untouched (no reload).
+    const _r=document.querySelector('.row[data-ac="'+id+'"]'); if(_r&&x){ _r.outerHTML=acRowHTML(x); } else { paintAcList(); }
+    paintAcDetail(); toast('Co-assist updated ✓'); if(typeof announce==='function')announce(((x&&x.name)||'Co-assist')+' updated'); }
   catch(e){ if(err)err.textContent=e.message; } }const CO_HELP = [
  {q:"What is a co-assist?", a:"Anyone — or anything — that acts FOR you. Today people; soon connectors, IoT devices, process rules and AI agents. The owner stays the party; the co-assist acts on your behalf within your entity's scope (per-actor limits are coming)."},
  {q:"What can they do?", a:"Today a co-assist acts WITHIN your entity's scope — they can see and act on the entity's work; entity-level isolation is enforced. Per-actor engagement TYPES (view-only, act, audit, MIS) that limit what an individual can do are PLANNED, not yet enforced — so don't rely on per-actor limits yet. The roadmap is default-deny per node; the granular scoping is coming."},
