@@ -490,6 +490,8 @@ img.attImg{object-fit:cover;display:block}
 
 <!-- module 1 of the app split: the shared client (api + envelope + auth/status branching) -->
 <script src="/app/core.js"></script>
+<!-- module 2: generic dependency-free helpers (esc/opt/scrErr/cap/inr_/fmtAt/fmtMoney/deepClone/jwtPayload) -->
+<script src="/app/helpers.js"></script>
 <script>
 /* =========================================================================
    CHIT & BRIDGE — separate build (Registration → Login → Menu → Task Panel)
@@ -602,7 +604,7 @@ const EP = {
   netDisconnect:  {m:"POST", p:"/api/network/connections/:id/disconnect", ok:"✓"},
 };
 
-function deepClone(x){return JSON.parse(JSON.stringify(x));}
+/* deepClone → app/helpers.js */
 /* In LIVE mode STORE must hold NO demo data — start empty so a demo constant
    (actors / chits / suppliers / catalogue / schema) can never be read while
    logged into a real entity. Demo mode keeps the full DEMO dataset. */
@@ -625,8 +627,7 @@ function acIdPrev(){const e=document.getElementById("ac_idprev"); if(e)e.textCon
 /* ---------------- SESSION + ROUTER ---------------- */
 let SESSION = {token:null, role:null, name:null, entity:null, bridgeId:null};
 const inr=n=>"₹"+(n||0).toLocaleString("en-IN");
-const CCY_LOCALE={INR:'en-IN',USD:'en-US',EUR:'de-DE',GBP:'en-GB',JPY:'ja-JP',CNY:'zh-CN',AUD:'en-AU',CAD:'en-CA',CHF:'de-CH',SGD:'en-SG',AED:'ar-AE',SAR:'ar-SA',KWD:'ar-KW',BHD:'ar-BH',OMR:'ar-OM',KRW:'ko-KR',VND:'vi-VN',THB:'th-TH',MYR:'ms-MY',IDR:'id-ID',ZAR:'en-ZA',BRL:'pt-BR',RUB:'ru-RU',NGN:'en-NG',KES:'en-KE',LKR:'si-LK',BDT:'bn-BD',PKR:'ur-PK',NPR:'ne-NP'};
-function fmtMoney(amount,code){ code=(code||'INR'); amount=Number(amount||0); try{ return new Intl.NumberFormat(CCY_LOCALE[code]||undefined,{style:'currency',currency:code,currencyDisplay:'narrowSymbol'}).format(amount); }catch(e){ try{ return new Intl.NumberFormat(CCY_LOCALE[code]||undefined,{style:'currency',currency:code}).format(amount); }catch(_){ return code+' '+amount.toLocaleString(); } } }
+/* CCY_LOCALE + fmtMoney → app/helpers.js */
 const CURRENCIES=[['INR','₹ Indian Rupee · 2dp'],['USD','$ US Dollar · 2dp'],['EUR','€ Euro · 2dp'],['GBP','£ British Pound · 2dp'],['JPY','¥ Japanese Yen · 0dp'],['KRW','₩ Korean Won · 0dp'],['VND','₫ Vietnam Dong · 0dp'],['BHD','Bahraini Dinar · 3dp'],['KWD','Kuwaiti Dinar · 3dp'],['OMR','Omani Rial · 3dp'],['AED','UAE Dirham · 2dp'],['SAR','Saudi Riyal · 2dp'],['CNY','¥ Chinese Yuan · 2dp'],['SGD','$ Singapore Dollar · 2dp'],['AUD','$ Australian Dollar · 2dp'],['CHF','Swiss Franc · 2dp']];
 function go(hash){location.hash=hash;}
 function toast(msg, undo){
@@ -1102,7 +1103,7 @@ async function doLogin(){
   }catch(e){ L.busy=false; L.err="Sign-in failed: "+e.message; renderLogin(); }
 }
 
-function jwtPayload(t){ try{ const p=String(t||"").split('.')[1]; if(!p) return null; return JSON.parse(atob(p.replace(/-/g,'+').replace(/_/g,'/'))); }catch(_){ return null; } }
+/* jwtPayload → app/helpers.js */
 function setSession(s){ SESSION={...SESSION,...s};
   // Live tokens are JWTs — derive the REAL actor/entity id from the token so the UI never hardcodes ids.
   const p=jwtPayload(SESSION.token);
@@ -1566,9 +1567,7 @@ function scr(title,id,helpKey){
   const hint = helpKey?`<div style="font-size:11px;color:var(--grey);margin-bottom:10px">Explore <b onclick="openHelp('${helpKey}')" style="cursor:pointer;color:#3F66A6">?</b> to know more about this screen.</div>`:'';
   return `<div style="padding:14px;max-width:640px;margin:0 auto"><div class="sec" style="font-size:15px;margin-bottom:${helpKey?'3px':'10px'};display:flex;align-items:center;gap:9px">${title}${q}</div>${hint}<div id="${id}"><div class="loadwrap"><span class="spin"></span> loading…</div></div></div>`;
 }
-function esc(v){ return String(v==null?'':v).replace(/[<>"&]/g,c=>({'<':'&lt;','>':'&gt;','"':'&quot;','&':'&amp;'}[c])); }
-function opt(arr,sel){ return arr.map(o=>`<option ${o===sel?'selected':''}>${o}</option>`).join(""); }
-function scrErr(e){ return `<div class="empty"><div class="t">Couldn't load</div><div>${esc(e&&e.message)}</div></div>`; }
+/* esc + opt + scrErr → app/helpers.js */
 const _CARD='border:1px solid var(--line);border-radius:11px;padding:13px;margin-bottom:9px';
 const _BTN='border:0;border-radius:9px;padding:0 14px;color:#fff;background:var(--blue);font-weight:700;cursor:pointer';
 /* PROFILE */
@@ -2182,7 +2181,7 @@ function rollupBuckets(){ const ST={pending:'open',delivered:'open',read:'open',
 function hasRollup(){ return !!(UI.rollup && UI.rollup.length); }
 // tab label: loaded / true-total (nn/mmmm) — true total from the rollup, loaded from the current page
 function stCount(s){ const loaded=countStates()[s]; const t=hasRollup()?rollupBuckets()[s].c:loaded; return loaded+'/'+t; }
-function cap(s){return s[0].toUpperCase()+s.slice(1);}
+/* cap → app/helpers.js */
 function setSub(s){UI.sub=s;UI.sel=null;UI.detail=null;renderApp();}
 function toggleListHelp(){ UI.listHelp=!UI.listHelp; renderApp(); }
 function setState(s){UI.state=s;renderApp();}
@@ -2348,8 +2347,7 @@ function mapApiChit(c){
     assignTo:c.assigned_to_actor_id||null, folder:'task', dispute:Number(c.open_dispute_count||0)>0,
     proof:'ok', pri:c.priority_flag||'normal', priExt:(c.summary_json&&c.summary_json.priority_external)||'normal', custPri:!!c.customer_priority, star:!!c.star_flag, unread:(c.read_at!==undefined ? !c.read_at : false), nitems:(c.summary_json&&c.summary_json.line_item_count)||0, items:[], atts:[], msgs:[] };
 }
-function fmtAt(ts){ try{ return new Date(ts).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}); }catch(_){ return ''; } }
-function inr_(v){ return '₹'+Number(v||0).toLocaleString('en-IN'); }
+/* fmtAt + inr_ → app/helpers.js */
 function fmtLine(li){ return [li.particulars||'Item', (li.quantity||0)+' × '+inr_(li.price)+' = '+inr_(li.total||(li.quantity*li.price)), []]; }
 function mapApiMsg(m){ if(!m||m.scope!==undefined) return m; return { id:m.message_id, scope:m.thread_type||'internal', author:m.sender_display_name||'—', body:m.message_text||'', at:fmtAt(m.created_at), type:m.msg_type||'info', unread:false, atts:(m.attachments||[]).map(mapAtt) }; }
 function mapApiActor(a){ if(!a||a.shift!==undefined) return a; const S={active:'on_shift',short_break:'on_break',on_break:'on_break',break:'on_break',leave:'on_break',off:'off',deactivated:'off',removed:'off'}; const st=(a.break_status==='deactivated')?'deactivated':(a.break_status==='removed'?'removed':'active'); return { id:a.identity_id, name:a.display_name, uid:a.user_id||a.uid, key:a.actor_key||'', role:a.actor_role||'', type:a.actor_type||'human', shift:S[a.break_status]||'on_shift', status:st, load:a.current_task_count||0, max:a.max_tasks||0, phone:a.phone||'', hat:a.hat||'act', del:a.delegate_actor_id||null, lastAssigned:a.last_assigned_at||null, bridge:a.bridge_id||'', created:a.created_at||null, last:a.last_active_at||null }; }
