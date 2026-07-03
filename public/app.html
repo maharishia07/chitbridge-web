@@ -2421,9 +2421,27 @@ function detailInner(){
   return `<div class="dh"><button class="dback" onclick="backToList()">‹ Back to list</button><button class="dmsg" onclick="setDtab('messages')" title="Messages" aria-label="Messages">💬${msgCount(c)?' '+msgCount(c):''}</button><div class="dt">${esc(c.code)} · ${esc(c.party)}</div><div class="ds">${esc(c.area)} · ${esc(c.kind)} · ${inr(c.amt)} · ${c.state.toUpperCase()}</div>
      <div class="parties"><span class="ptag">from <b>${esc(c.sender||SESSION.entity||"You")}</b></span><span class="ptag">${c.kind==='counter'?('to <b>'+esc(SESSION.entity||'You')+'</b>'):esc(c.rsummary||('to '+(c.party||'—')))}</span>${c.kind==='counter'?`<span class="ptag">for <b>${esc(c.cust)}</b></span>`:''}</div><div class="dchips"><span class="prichip-btn pri-${c.priExt||'normal'}" style="cursor:default" title="External priority — set by the drafter at compose, locked once sent">↔ ext: ${PRI[c.priExt||'normal'].label}</span>${SESSION.role!=="customer"?`<button class="prichip-btn pri-${c.pri||'normal'}" onclick="repriority('${c.id}')" title="Internal priority — your own queue; tap to change">⚙ int: ${PRI[c.pri||'normal'].label} ▾</button>`:''}${c.custPri?'<span class="custflag-tag">⚑ Customer priority</span>':''}</div></div>
    <div class="dtabs">${dtabs.map(([k,l])=>`<button class="${UI.dtab===k?'on':''}" onclick="setDtab('${k}')">${l}</button>`).join("")}</div>
-   <div class="db">${body}</div><div class="actbar">${actbar}</div>`;
+   <div class="db">${body}</div><div class="actbar">${(typeof SESSION!=='undefined'&&SESSION.name==='GOV-01-Help'&&c.kind==='inquiry')?'<button class="pri" onclick="answerPublish(\''+c.id+'\')">🧠 Answer &amp; publish</button>':''}${actbar}</div>`;
 }
 function setDtab(t){UI.dtab=t;paintDetail();}
+// (a) The query-chit detail as the ASSISTANCE PAGE: reply on the chit (message) + publish the Q&A to the KB, in one act.
+function answerPublish(id){ const c=UI.detail; if(!c)return; const subj=c.code||c.subject||'';
+  modal('<div class="mhd"><div class="t">🧠 Answer &amp; publish</div><div class="s">reply to the asker + add it to the knowledge base</div></div>'
+    +'<div class="mbody">'
+    +'<label class="fl">Question <span style="color:var(--grey);font-size:11px">— as it will read in the KB</span></label><input class="inp" id="ap_q" value="'+esc(subj)+'">'
+    +'<label class="fl">Answer</label><textarea class="inp" id="ap_a" rows="4" placeholder="Write the answer…" style="width:100%;resize:vertical"></textarea>'
+    +'<label class="fl">Context <span style="color:var(--grey);font-size:11px">— screens (comma) or * for everywhere</span></label><input class="inp" id="ap_c" value="*">'
+    +'<div class="err" id="ap_err"></div>'
+    +'<div style="display:flex;gap:8px;margin-top:11px"><button class="composebtn" onclick="closeModal()">Cancel</button><button class="composebtn" style="background:var(--blue);color:#fff" onclick="doAnswerPublish(\''+id+'\')">🧠 Answer &amp; publish</button></div>'
+    +'</div>'); }
+async function doAnswerPublish(id){ const x=document.getElementById("ap_err"); if(x)x.textContent="";
+  const q=val("ap_q"), a=val("ap_a"); const ctx=(val("ap_c")||"").split(',').map(function(s){return s.trim();}).filter(Boolean);
+  if(!a.trim()){ if(x)x.textContent="Write an answer first."; return; }
+  try{
+    await api("sendMsg",{params:{id},body:{thread_type:'external', message_text:a, msg_type:'info'}});   // the reply the asker sees on the chit
+    await api("assistPublish",{body:{question:q, answer:a, context:ctx}});                                // -> catalogue -> served live
+    closeModal(); toast("Answered + published ✓ — now close the query when done"); openChit(id);
+  }catch(e){ if(x)x.textContent=(e&&e.message)||"Failed"; } }
 function openChitMsgs(id){ UI.dtab="messages"; markChitRead(id); openChit(id); setTimeout(refreshMsgBadge,0); }
 function msgCount(c){ return ((c&&c.msgs)?c.msgs:[]).filter(m=>SESSION.role==="customer"?m.scope==="external":true).length; }
 function setMsgFilter(f){ UI.msgFilter=f; paintDetail(); }
