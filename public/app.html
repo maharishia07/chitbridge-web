@@ -2018,6 +2018,7 @@ function acDetailHTML(){ const x=UI.acDet;
     const kv=(l,v)=>`<div style="display:flex;gap:10px;padding:9px 13px;border-bottom:1px dashed var(--line);font-size:13px;align-items:baseline"><b style="min-width:104px;color:var(--grey);font-weight:600;font-size:10.5px;text-transform:uppercase;letter-spacing:.4px">${l}</b><span style="font-weight:600;flex:1">${(v==null||v==='')?'—':v}</span></div>`;
     const hatV='<span class="optchip" style="background:#eef3fb;color:#345488;border-color:#cfe0f4">'+hatLabel(x.hat)+'</span>'+(hatAssignable(x.hat)?'':' <span style="font-size:11px;color:var(--grey)">not assignable</span>');
     const delV=x.del?esc(((UI.acts||[]).find(a=>a.id===x.del)||{}).name||'—'):'—';
+    const coversFor=(UI.acts||[]).filter(a=>a.del===x.id).map(a=>a.name);
     const prof=`<div class="sec">Profile</div><div class="itab" style="border:1px solid var(--line);border-radius:11px;overflow:hidden">
       ${kv('Name',esc(x.name))}
       ${kv('Login','<span class="mono">'+acLogin(x)+'</span>')}
@@ -2025,12 +2026,15 @@ function acDetailHTML(){ const x=UI.acDet;
       ${kv('Type',acType(x.type))}
       ${kv('Hat',hatV)}
       ${kv('Leave-cover',delV)}
+      ${kv('Covers for',coversFor.length?esc(coversFor.join(', ')):'—')}
       ${kv('Max tasks',(x.max||'∞')+'')}
+      ${kv('Last got task',x.lastAssigned?acDate(x.lastAssigned):'—')}
       ${kv('Phone',x.phone?esc(x.phone):'')}
       ${kv('Joined',acDate(x.created))}
       ${kv('Last active',acDate(x.last))}</div>`;
     const work=`<div class="sec">Shift &amp; load</div><div class="itab" style="padding:11px 12px">
       <div style="display:flex;align-items:center;gap:8px"><span class="optchip ${acShc(x.shift)}">${acShLabel(x.shift)}</span><span style="font-size:12px;color:var(--grey)">${x.status==='active'?'active':esc(x.status)}</span></div>
+      ${(x.shift!=='on_shift' && (x.breakSince||x.returnDate)) ? '<div style="font-size:11.5px;color:var(--grey);margin-top:6px">'+(x.breakSince?('On break since '+acDate(x.breakSince)):'')+(x.returnDate?((x.breakSince?' · ':'')+'returns '+acDate(x.returnDate)):'')+'</div>' : ''}
       <div style="font-size:12.5px;margin-top:9px">Load · <b>${x.load}</b> / ${x.max||'∞'} tasks</div><div style="height:8px;background:#eef1f4;border-radius:5px;overflow:hidden;margin-top:6px"><span style="display:block;height:100%;background:var(--blue);border-radius:5px;width:${pct}%"></span></div></div>`;
     const eng=`<div class="sec">Access / engagement</div><div style="font-size:11px;color:#9a7b34;background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;line-height:1.5">Per-actor engagement (view-only · act · audit · MIS) is <b>planned, not enforced yet</b> — today a co-assist acts within the entity's scope. Default-deny per node is the roadmap.</div>`;
     const loginState = x.pinSet
@@ -2327,7 +2331,7 @@ function mapApiChit(c){
 /* fmtAt + inr_ → app/helpers.js */
 function fmtLine(li){ return [li.particulars||'Item', (li.quantity||0)+' × '+inr_(li.price)+' = '+inr_(li.total||(li.quantity*li.price)), []]; }
 function mapApiMsg(m){ if(!m||m.scope!==undefined) return m; return { id:m.message_id, scope:m.thread_type||'internal', author:m.sender_display_name||'—', body:m.message_text||'', at:fmtAt(m.created_at), type:m.msg_type||'info', unread:false, atts:(m.attachments||[]).map(mapAtt) }; }
-function mapApiActor(a){ if(!a||a.shift!==undefined) return a; const S={active:'on_shift',short_break:'on_break',on_break:'on_break',break:'on_break',leave:'on_break',off:'off',deactivated:'off',removed:'off'}; const st=(a.break_status==='deactivated')?'deactivated':(a.break_status==='removed'?'removed':'active'); return { id:a.identity_id, name:a.display_name, uid:a.user_id||a.uid, key:a.actor_key||'', role:a.actor_role||'', type:a.actor_type||'human', shift:S[a.break_status]||'on_shift', status:st, load:a.current_task_count||0, max:a.max_tasks||0, phone:a.phone||'', hat:a.hat||'act', del:a.delegate_actor_id||null, lastAssigned:a.last_assigned_at||null, pinSet:!!a.pin_set_at, otp:a.otp_code||'', otpExp:a.otp_expires_at||null, bridge:a.bridge_id||'', created:a.created_at||null, last:a.last_active_at||null }; }
+function mapApiActor(a){ if(!a||a.shift!==undefined) return a; const S={active:'on_shift',short_break:'on_break',on_break:'on_break',break:'on_break',leave:'on_break',off:'off',deactivated:'off',removed:'off'}; const st=(a.break_status==='deactivated')?'deactivated':(a.break_status==='removed'?'removed':'active'); return { id:a.identity_id, name:a.display_name, uid:a.user_id||a.uid, key:a.actor_key||'', role:a.actor_role||'', type:a.actor_type||'human', shift:S[a.break_status]||'on_shift', status:st, load:a.current_task_count||0, max:a.max_tasks||0, phone:a.phone||'', hat:a.hat||'act', del:a.delegate_actor_id||null, lastAssigned:a.last_assigned_at||null, pinSet:!!a.pin_set_at, otp:a.otp_code||'', otpExp:a.otp_expires_at||null, breakType:a.break_type||null, breakSince:a.break_started_at||null, returnDate:a.return_date||null, bridge:a.bridge_id||'', created:a.created_at||null, last:a.last_active_at||null }; }
 /* ── generic lazy-list pager — ONE implementation for every scrollable list ────────────────
    pgInit(id,cfg): cfg = { el:()=>HTMLElement (scroll container), fetch:(page,limit)=>Promise(array, maybe .total),
      map:(row)=>row, store:(rows,first)=>void, count:()=>number, repaint:()=>void, limit:int }
