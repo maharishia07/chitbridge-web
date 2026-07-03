@@ -136,22 +136,31 @@ async function saveAutoAssign(){ const x=document.getElementById("st_aerr"); if(
    Queries are handled the hard way (chits in GOV-01-Help's Task inbox: message + close). This screen is the
    one new atom: Publish-to-catalogue. loadGaps() name kept (renderApp dispatch) — it now loads the KB screen. */
 function assistReviewScreen(){ return scr("🧠 Assistant — knowledge base","kbbody","assistreview"); }
+var _kbItems=[], _kbEditId='';
 async function loadGaps(){ const h=document.getElementById("kbbody"); if(!h)return;
   const me=(typeof SESSION!=='undefined')?SESSION:{}; const isHelp=(me.name==='GOV-01-Help');
   const form = isHelp
-    ? '<div style="'+_CARD+'"><div class="sec" style="margin:0 0 6px">Publish an answer</div>'
+    ? '<div style="'+_CARD+'"><div class="sec" id="kb_formhd" style="margin:0 0 6px">Publish an answer</div>'
       +'<label class="fl">Question</label><input class="inp" id="kb_q" placeholder="e.g. How do I export to Excel?">'
       +'<label class="fl">Answer</label><textarea class="inp" id="kb_a" rows="4" placeholder="The answer the assistant should give…" style="width:100%;resize:vertical"></textarea>'
       +'<label class="fl">Context <span style="color:var(--grey);font-size:11px">— screens (comma), or * for everywhere</span></label><input class="inp" id="kb_c" placeholder="e.g. task, order  (or *)" value="*">'
-      +'<div class="err" id="kb_err"></div><button class="composebtn" style="margin-top:9px" onclick="publishAnswer()">📣 Publish to catalogue</button>'
-      +'<div style="font-size:11px;color:var(--grey);margin-top:6px">Answer + close the query chit in your Task inbox first; then publish it here for everyone. Served to the assistant instantly (catalogue → projection).</div></div>'
+      +'<div class="err" id="kb_err"></div><div style="display:flex;gap:7px;margin-top:9px"><button class="composebtn" id="kb_pub" onclick="publishAnswer()">📣 Publish to catalogue</button><button class="composebtn" style="background:#fff" onclick="kbNew()">＋ New / clear</button></div>'
+      +'<div style="font-size:11px;color:var(--grey);margin-top:6px">Add a new answer, or press <b>Edit</b> on one below to refine it. Served to the assistant instantly (catalogue → projection).</div></div>'
     : '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:10px;padding:11px 13px;font-size:12.5px;color:#6b5a36;margin-bottom:11px">This is the help-desk knowledge base. Queries arrive as chits in <b>GOV-01-Help</b>\'s Task inbox — operate as GOV-01-Help to answer, close, and publish here.</div>';
   h.innerHTML=form+'<div style="font-size:12px;color:var(--grey);margin:12px 0 6px">Published answers (<span id="kb_n">…</span>)</div><div id="kb_list"><div class="loadwrap"><span class="spin"></span> loading…</div></div>';
-  try{ const all=(await api("assistQuestions"))||[]; const n=document.getElementById("kb_n"); if(n)n.textContent=all.length;
-    const L=document.getElementById("kb_list"); if(L) L.innerHTML = all.length ? all.map(function(e){ return '<div style="'+_CARD+';padding:9px 11px"><div style="font-weight:600;font-size:12.5px">'+esc(e.q)+'</div><div style="font-size:11.5px;color:var(--grey);margin-top:2px">'+esc(e.a)+'</div><div style="font-size:10.5px;color:#9aa3a7;margin-top:3px">'+esc(Array.isArray(e.context)?e.context.join(', '):'')+'</div></div>'; }).join('') : '<div style="color:var(--grey);font-size:12px">None yet.</div>';
+  try{ _kbItems=(await api("assistQuestions"))||[]; const n=document.getElementById("kb_n"); if(n)n.textContent=_kbItems.length;
+    const L=document.getElementById("kb_list"); if(L) L.innerHTML = _kbItems.length ? _kbItems.map(function(e){
+      const eb = isHelp ? '<button class="composebtn" style="padding:2px 9px;font-size:11px;flex:none" onclick="kbEdit(\''+esc(e.id)+'\')">Edit</button>' : '';
+      return '<div style="'+_CARD+';padding:9px 11px"><div style="display:flex;gap:8px;align-items:flex-start"><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:12.5px">'+esc(e.q)+'</div><div style="font-size:11.5px;color:var(--grey);margin-top:2px">'+esc(e.a)+'</div><div style="font-size:10.5px;color:#9aa3a7;margin-top:3px">'+esc(Array.isArray(e.context)?e.context.join(', '):'')+'</div></div>'+eb+'</div></div>'; }).join('') : '<div style="color:var(--grey);font-size:12px">None yet.</div>';
   }catch(e){ const L=document.getElementById("kb_list"); if(L)L.innerHTML=scrErr(e); } }
+function kbEdit(id){ const it=_kbItems.find(function(x){return x.id===id;}); if(!it)return; _kbEditId=id;
+  const q=document.getElementById("kb_q"),a=document.getElementById("kb_a"),c=document.getElementById("kb_c"),hd=document.getElementById("kb_formhd"),pb=document.getElementById("kb_pub");
+  if(q)q.value=it.q||''; if(a)a.value=it.a||''; if(c)c.value=(Array.isArray(it.context)?it.context.join(', '):'*'); if(hd)hd.textContent='Edit answer'; if(pb)pb.textContent='💾 Update';
+  if(q&&q.scrollIntoView)q.scrollIntoView({behavior:'smooth',block:'center'}); }
+function kbNew(){ _kbEditId=''; const q=document.getElementById("kb_q"),a=document.getElementById("kb_a"),c=document.getElementById("kb_c"),hd=document.getElementById("kb_formhd"),pb=document.getElementById("kb_pub"),x=document.getElementById("kb_err");
+  if(q)q.value=''; if(a)a.value=''; if(c)c.value='*'; if(hd)hd.textContent='Publish an answer'; if(pb)pb.textContent='📣 Publish to catalogue'; if(x)x.textContent=''; }
 async function publishAnswer(){ const x=document.getElementById("kb_err"); if(x)x.textContent="";
   const q=val("kb_q"), a=val("kb_a"); const c=(val("kb_c")||"").split(',').map(function(s){return s.trim();}).filter(Boolean);
   if(!q||!a){ if(x)x.textContent="Question and answer are both required."; return; }
-  try{ await api("assistPublish",{body:{question:q, answer:a, context:c}}); toast("Published ✓ — live in the assistant"); loadGaps(); }
+  try{ await api("assistPublish",{body:{question:q, answer:a, context:c, qa_id:_kbEditId||undefined}}); toast(_kbEditId?"Updated ✓ — live":"Published ✓ — live in the assistant"); kbNew(); loadGaps(); }
   catch(e){ if(x)x.textContent=(e&&e.message)||"Could not publish"; } }
