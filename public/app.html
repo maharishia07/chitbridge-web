@@ -522,6 +522,7 @@ const CFG = {
 const EP = {
   // --- assistant tier-1 LLM proxy — NOT BUILT yet; gated off via CFG.ASSIST_LLM. The model key stays SERVER-side. ---
   assist:          {m:"POST", p:"/api/assist",                  ok:"?"},  // backend proxies to the model (no-oversell prompt + library grounding)
+  assistQuestions: {m:"GET",  p:"/api/assist/questions",        ok:"y"},  // DB-backed Q&A library, context-filtered (?context=screen). Single source; feeds the AI too.
   // --- repointed to real chitbridge-api routes (trace 2026-06-25). See FINDINGS.md. ---
   register:        {m:"POST", p:"/api/entities/register",        ok:"✓"},  // OTP request (register doubles as owner login)
   ownerLogin:      {m:"POST", p:"/api/entities/register",        ok:"✓"},  // same route — returning owner requests OTP (pass mode:'login')
@@ -697,11 +698,19 @@ function openLegend(){ if(_legendOpen){ closeLegend(); return; }
 function closeLegend(){ _legendOpen=false; const h=document.getElementById("lbhost"); if(h)h.innerHTML=""; }
 /* ── Floating AI assistant — context-sensitive, library-backed, pre + post auth, honest (no overselling). ──
    First version: keyword match over a seed library (consolidates HELP_PACKS / KB). Real NLU/AI is the next phase. */
-// ASSIST_LIB (assistant seed library) -> app/cap-help.js (lazy; loaded on first openHelp/openAssist).
+// ASSIST_LIB is now DB-served (GET /api/assist/questions), fetched per-screen + cached for the session —
+// nothing static in the frontend. loadAssistQ() fills it before render; it is also the AI grounding feed.
+let ASSIST_LIB=[];        // current-context Q&A set (from the DB)
+let _assistCache={};      // per-context session cache (runtime only — NOT a source of truth)
+let _assistLoading=false;
+function loadAssistQ(ctx){ ctx = ctx || '*';
+  if(_assistCache[ctx]){ ASSIST_LIB=_assistCache[ctx]; return Promise.resolve(); }
+  _assistLoading=true; ASSIST_LIB=[];
+  return api('assistQuestions',{query:{context:ctx}})
+    .then(function(rows){ ASSIST_LIB=_assistCache[ctx]=(rows||[]); _assistLoading=false; })
+    .catch(function(){ _assistLoading=false; ASSIST_LIB=_assistCache[ctx]||[]; }); }
 let _assistOpen=false;
-let _assistBuilt=false;
-// Single-source now: ASSIST_LIB (app/cap-help.js) holds every entry, context-tagged. Nothing to fold at runtime.
-function buildAssistLib(){ /* no-op — kept so existing callers don't change; the library is already complete. */ }
+// (buildAssistLib + _assistBuilt removed — the library is DB-served now; there is nothing to fold at runtime.)
 function curScreen(){ try{ if(_assistCtx) return _assistCtx; if(typeof SESSION!=="undefined" && SESSION.token) return (typeof UI!=="undefined" && UI.nav) || "task"; const h=location.hash||""; if(h.indexOf("register")>=0) return "register"; if(h.indexOf("login")>=0) return "login"; return "welcome"; }catch(_){ return "welcome"; } }
 function mountAssist(){ if(document.getElementById("assistfab")) return;
   const b=document.createElement("div"); b.id="assistfab"; b.style.cssText="position:fixed;right:16px;bottom:16px;z-index:300";
@@ -710,10 +719,12 @@ function mountAssist(){ if(document.getElementById("assistfab")) return;
   const h=document.createElement("div"); h.id="assisthost"; document.body.appendChild(h);
 }
 let _assistCtx=null;   // optional screen/modal context from a per-screen "?" (else curScreen() derives it)
-function openAssist(ctx){ _assistCtx = (typeof ctx==='string' && ctx) ? ctx : null;   // the ONE context-sensitive Assistant (replaced the old "?" help overlay)
-  if(_assistOpen){ closeAssist(); return; }   // gate: assistant library lives in app/cap-help.js — loaded on first open
-  ensureCap('help').then(function(){ _openAssistImpl(); }).catch(function(){ if(typeof toast==='function')toast('Assistant unavailable.'); }); }
-function _openAssistImpl(){ if(!document.getElementById("assisthost")) mountAssist(); buildAssistLib(); if(_assistOpen){ closeAssist(); return; } _assistOpen=true; renderAssist(); }
+function openAssist(ctx){ _assistCtx = (typeof ctx==='string' && ctx) ? ctx : null;   // the ONE context-sensitive Assistant
+  if(_assistOpen){ closeAssist(); return; }
+  if(!document.getElementById("assisthost")) mountAssist();
+  _assistOpen=true; const c=_assistCtx||curScreen();
+  renderAssist();                                          // immediate — shows "loading…" until the DB set arrives
+  loadAssistQ(c).then(function(){ if(_assistOpen) renderAssist(); }); }
 function closeAssist(){ _assistOpen=false; _assistCtx=null; const h=document.getElementById("assisthost"); if(h)h.innerHTML=""; }
 function assistSuggest(){ const sc=curScreen(); const pre=!(typeof SESSION!=="undefined" && SESSION.token);
   // screen-specific first, then generic; DEDUPE by question so repeats (e.g. "What is a co-assist?") collapse to one.
@@ -742,7 +753,7 @@ function renderAssist(ans){ const h=document.getElementById("assisthost"); if(!h
     <div style="padding:11px 13px;max-height:52vh;overflow:auto">
       ${purposeHTML}<div style="font-size:12px;color:#777;margin-bottom:8px">${pre?"Tell me your business and I will be honest about whether this fits.":"Describe what you are trying to do."}</div>
       <div id="assist_ans" style="font-size:12.5px;color:#222;line-height:1.55;margin-bottom:10px">${ans||""}</div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">${sugg.map(e=>`<button onclick="assistPick('${e.id}')" style="border:0.5px solid #e3e0d8;border-radius:8px;padding:3px 8px;font-size:11px;background:#fff;cursor:pointer">${esc(e.q)}</button>`).join("")}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">${(_assistLoading && !sugg.length)?'<span style="font-size:11px;color:#9aa3a7">loading questions…</span>':sugg.map(e=>`<button onclick="assistPick('${e.id}')" style="border:0.5px solid #e3e0d8;border-radius:8px;padding:3px 8px;font-size:11px;background:#fff;cursor:pointer">${esc(e.q)}</button>`).join("")}</div>
       <div style="display:flex;gap:7px"><input id="assist_in" placeholder="${pre?"e.g. I run a timber yard…":"e.g. how do I assign a task?"}" style="flex:1;border:1px solid #e3e0d8;border-radius:8px;padding:7px 9px;font-size:12.5px" onkeydown="if(event.key==='Enter')assistAsk()"><button onclick="assistAsk()" style="border:0;border-radius:8px;padding:0 12px;background:#3F66A6;color:#fff;font-weight:700;cursor:pointer">Ask</button></div>
     </div>
     <div style="padding:7px 13px;font-size:9.5px;color:#9aa3a7;background:#faf8f3">Honest by design · sample answers from the library · richer AI coming.</div>
@@ -1386,7 +1397,7 @@ function menuAssist(key){ const m=(typeof PURPOSE!=='undefined'&&PURPOSE[key])?P
 // mAskFree (assistPage Ask box) now goes through the shared answer() engine over the single ASSIST_LIB.
 function mAskFree(key){ const raw=val("m_in_"+key)||""; const o=document.getElementById("m_ans_"+key); if(!o)return;
   if(!raw.trim()){ o.innerHTML="Pick a question above, or ask your own."; return; }
-  o.innerHTML="…"; ensureCap('help').then(function(){ answer(raw, key).then(function(best){ o.innerHTML = best ? assistEntryHTML(best) : ("<b>"+esc(raw)+"</b><br>I am not certain — try rephrasing."); }); }).catch(function(){ o.innerHTML="Assistant unavailable."; });
+  o.innerHTML="…"; loadAssistQ(key).then(function(){ answer(raw, key).then(function(best){ o.innerHTML = best ? assistEntryHTML(best) : ("<b>"+esc(raw)+"</b><br>I am not certain — try rephrasing."); }); }).catch(function(){ o.innerHTML="Assistant unavailable."; });
 }
 /* ATH-117 — full assistance page for the rich Task/Order surfaces (capability map by goal). Built from the panel's real controls. */
 const ASSIST_PAGES = {
