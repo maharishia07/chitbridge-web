@@ -546,6 +546,7 @@ const EP = {
   actorPinReset:   {m:"DELETE",p:"/api/actors/:id/pin",          ok:"✓"},  // reset PIN
   actorEdit:       {m:"PATCH", p:"/api/actors/:id",              ok:"y"},  // Stage B — edit profile (name/role/max_tasks/phone/hat)
   actorDelegate:   {m:"PUT",   p:"/api/actors/:id/delegate",     ok:"y"},  // D1 — set leave-cover delegate (loop-checked)
+  changePin:       {m:"PUT",   p:"/api/actors/change-pin",       ok:"✓"},  // actor changes own PIN (current -> new)
   shopStatus:      {m:"PATCH",p:"/api/entities/profile",         ok:"✓"},  // shop status = PATCH profile {business_status}
   dispute:         {m:"POST", p:"/api/chits/:id/disputes",       ok:"✓"},  // raise dispute (built)
   delChit:         {m:"DELETE",p:"/api/chits/:id",               ok:"✓"},  // exists (soft-void/trash)
@@ -1083,7 +1084,7 @@ async function doLogin(){
       if(L.kind==="actor"){
         const r=await api("actorLogin",{body:{username:L.id.toLowerCase(), otp:v_otp}});
         if(r && r.requires_pin_setup){ setSession({token:r.token||"",role:"actor"}); L.busy=false; L.step="setpin"; return renderLogin(); }
-        setSession({token:r.token||"t",role:"actor",name:r.name||L.id.split("@")[0],entity:r.entity||L.id.split("@")[1]||"",duty:"duty"});
+        setSession({token:r.token||"t",role:"actor",name:(r.actor&&r.actor.display_name)||r.name||L.id.split("@")[0],entity:(r.actor&&r.actor.parent_entity)||r.entity||L.id.split("@")[1]||"",duty:((r.actor&&r.actor.break_status&&r.actor.break_status!=='active')?'break':'duty')});
       } else {
         const r=await api("ownerVerify",{body:{email:L.email||L.id, otp:v_otp}});
         setSession(entFromVerify(r, L.id));
@@ -1092,7 +1093,7 @@ async function doLogin(){
     }
     if(L.step==="pin"){
       const r=await api("actorLogin",{body:{username:L.id.toLowerCase(), pin:v_pin}});
-      setSession({token:r.token||"t",role:"actor",name:r.name||L.id.split("@")[0],entity:r.entity||L.id.split("@")[1]||"",duty:"duty"});
+      setSession({token:r.token||"t",role:"actor",name:(r.actor&&r.actor.display_name)||r.name||L.id.split("@")[0],entity:(r.actor&&r.actor.parent_entity)||r.entity||L.id.split("@")[1]||"",duty:((r.actor&&r.actor.break_status&&r.actor.break_status!=='active')?'break':'duty')});
       L.busy=false; return go("#/app");
     }
     if(L.step==="setpin"){
@@ -1126,9 +1127,12 @@ function statusControl(role){
       <button data-s="away" class="${sh==='away'?'on away':''}" onclick="setShop('away')">Away</button></div>`;}
   return "";
 }
-function setDuty(d){SESSION.duty=d;
+async function setDuty(d){ const prev=SESSION.duty||'duty';
   document.querySelectorAll('.dutytog button').forEach(b=>{b.classList.remove('on','duty','brk');if(b.dataset.d===d){b.classList.add('on',d==='duty'?'duty':'brk');}});
-  toast(d==='break'?"On break — chits won't route to you.":"Back on duty.");
+  // Persist to the break API (so it survives refresh AND the entity panel sees break_status), then save the session.
+  try{ await api("actorBreak",{body:{break_type:(d==='break'?'short_break':'end_break')}}); setSession({duty:d});
+    toast(d==='break'?"On break — chits won't route to you.":"Back on duty."); }
+  catch(e){ setSession({duty:prev}); document.querySelectorAll('.dutytog button').forEach(b=>{b.classList.remove('on','duty','brk');if(b.dataset.d===prev){b.classList.add('on',prev==='duty'?'duty':'brk');}}); toast(MSG.fail("update your status", e)); }
 }
 function setShop(s){SESSION.shop=s;
   document.querySelectorAll('.shoptog button').forEach(b=>{b.classList.remove('on','open','closed','away');if(b.dataset.s===s){b.classList.add('on',s);}});

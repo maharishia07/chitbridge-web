@@ -23,6 +23,7 @@ async function loadMIS(){ const h=document.getElementById("misbody"); if(!h)retu
 /* ---- PROFILE ---- */
 function profileScreen(){ return scr("👤 Profile","profbody","profile"); }
 async function loadProfile(){ const h=document.getElementById("profbody"); if(!h)return;
+  if(SESSION.role==='actor') return loadActorProfile(h);   // actors get their own profile, not the entity's
   try{ const e=(await api("me"))||{};
     h.innerHTML=`${menuAssist('profile')}<div style="${_CARD}"><div class="kv"><b>Name</b> · ${esc(e.display_name)}</div><div class="kv"><b>Bridge ID</b> · ${esc(e.bridge_id)}</div><div class="kv"><b>Email</b> · ${esc(e.email)}</div>
       <label class="fl">User ID <span style="color:var(--grey);font-size:11px">— others add you with this</span></label><input class="inp" id="pf_uid" value="${esc(e.user_id||'')}" placeholder="e.g. yourname or you@email.com">
@@ -34,6 +35,32 @@ async function loadProfile(){ const h=document.getElementById("profbody"); if(!h
 async function saveProfile(){ const x=document.getElementById("pf_err"); if(x)x.textContent="";
   try{ await api("saveProfile",{body:{user_id:val("pf_uid")||null,gstn:val("pf_gstn")||null,address:val("pf_addr")||null,business_status:val("pf_bs")}}); toast(MSG.profileSaved()); }catch(e){ if(x)x.textContent=e.message; } }
 
+// Actor's own profile — their identity (from the JWT) + self-service Change PIN. Hat/shift/access are set by
+// the entity; the actor sets Duty/Break from the top bar.
+function loadActorProfile(h){
+  const p=(typeof jwtPayload==='function'&&jwtPayload(SESSION.token))||{};
+  const login=(p.actor_key&&p.parent_entity_name)?(p.actor_key+'@'+p.parent_entity_name):(SESSION.name||'');
+  const kv=(l,v)=>`<div style="display:flex;gap:10px;padding:9px 13px;border-bottom:1px dashed var(--line);font-size:13px;align-items:baseline"><b style="min-width:104px;color:var(--grey);font-weight:600;font-size:10.5px;text-transform:uppercase;letter-spacing:.4px">${l}</b><span style="font-weight:600;flex:1">${(v==null||v==='')?'—':v}</span></div>`;
+  h.innerHTML=`${menuAssist('profile')}<div class="sec">Your profile</div>
+    <div class="itab" style="border:1px solid var(--line);border-radius:11px;overflow:hidden;margin-bottom:10px">
+      ${kv('Name',esc(SESSION.name||p.display_name||''))}
+      ${kv('Login','<span class="mono">'+esc(login)+'</span>')}
+      ${kv('Role',esc(p.actor_role||''))}
+      ${kv('Works for',esc(p.parent_entity_name||SESSION.entity||''))}
+      ${kv('Status',SESSION.duty==='break'?'On break':'On duty')}</div>
+    <div style="${_CARD}"><div class="sec" style="margin:0 0 8px">🔑 Change your PIN</div>
+      <label class="fl">Current PIN</label><input class="inp" id="pf_cpin" inputmode="numeric" maxlength="4" style="max-width:150px" placeholder="4 digits">
+      <label class="fl">New PIN</label><input class="inp" id="pf_npin" inputmode="numeric" maxlength="4" style="max-width:150px" placeholder="4 digits">
+      <label class="fl">Confirm new PIN</label><input class="inp" id="pf_npin2" inputmode="numeric" maxlength="4" style="max-width:150px" placeholder="4 digits">
+      <div class="err" id="pf_err"></div><button class="composebtn" style="margin-top:9px" onclick="saveActorPin()">Change PIN</button></div>
+    <div style="font-size:11px;color:var(--grey);margin-top:8px;line-height:1.5">Your <b>hat</b>, shift and access are managed by your entity. Set your <b>Duty / Break</b> from the top bar.</div>`;
+}
+async function saveActorPin(){ const x=document.getElementById("pf_err"); if(x)x.textContent="";
+  const c=val("pf_cpin"), n=val("pf_npin"), n2=val("pf_npin2");
+  if(!/^\d{4}$/.test(n)){ if(x)x.textContent="New PIN must be 4 digits."; return; }
+  if(n!==n2){ if(x)x.textContent="New PINs don't match."; return; }
+  try{ await api("changePin",{body:{current_pin:c,new_pin:n,confirm_pin:n2}}); toast("PIN changed ✓"); ['pf_cpin','pf_npin','pf_npin2'].forEach(function(i){ var el=document.getElementById(i); if(el)el.value=''; }); }
+  catch(e){ if(x)x.textContent=e.message; } }
 /* ---- SETTINGS + governance (7-layer perception stub) ---- */
 const GOV=[
   { n:'1 · Constitution', tag:'platform · top layer', desc:'Platform-wide rules every entity inherits at mint. Set the locale here → it flows down into the boilerplate.', rows:[
