@@ -2055,7 +2055,10 @@ function acDetailHTML(){ const x=UI.acDet;
           : '<div class="sec">Login — pending</div><div style="'+_CARD+';background:#fbf7ea;border-color:#e6d9a8"><div style="font-size:12.5px;color:#7a5e22">No active one-time code and no PIN yet — use <b>Re-invite</b> below to issue a code.</div></div>');
     body=prof+coverSection+loginState+work+eng;
     if(x.status==='active'){
-      bar=(x.type==='human'?`<button onclick="acReinvite('${x.id}')" title="Generate a fresh one-time code (if they lost theirs). They use it to sign in and set their PIN.">✉️ Re-invite</button><button onclick="acResetPin('${x.id}')" title="Clear their PIN and issue a new one-time code — for a forgotten or locked PIN.">🔑 Reset PIN</button>`:'')+
+      bar=(x.type==='human'?(x.pinSet
+            ? `<button onclick="acResetPin('${x.id}')" title="They have a PIN but forgot or locked it — clear it and issue a fresh one-time code so they set a new PIN.">🔑 Reset PIN</button>`
+            : `<button onclick="acReinvite('${x.id}')" title="They haven't set a PIN yet — re-issue their one-time code (e.g. if they lost it). A new code won't help once a PIN is set.">✉️ Re-invite</button>`)
+          :'')+
           `<button class="warn" onclick="acStatus('${x.id}','deactivate')" title="Suspend access — they can no longer sign in and their active tasks return to the pool. Reversible via Reactivate.">🚫 Deactivate</button>`;
     } else {
       bar=`<button class="pri" onclick="acStatus('${x.id}','reactivate')" title="Restore access and issue a fresh one-time code so they can sign in again.">↩ Reactivate</button><button class="warn" onclick="acStatus('${x.id}','remove')" title="Permanently remove this co-assist. This cannot be undone.">🗑 Remove permanently</button>`;
