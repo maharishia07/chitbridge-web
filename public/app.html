@@ -202,6 +202,29 @@
   .msgfilter{display:flex;gap:6px;margin-bottom:10px}
   .msgfilter button{border:1px solid var(--line);background:#fff;border-radius:8px;font-size:11px;font-weight:700;padding:5px 10px;color:var(--grey);cursor:pointer}
   .msgfilter button.on{background:#EAF1F8;color:var(--blue);border-color:var(--blue)}
+  .msgfilter button.on.disp{background:#fbeceb;color:#b4453f;border-color:#e0a9a4}
+  /* compact type filter — a checkbox dropdown instead of a row of buttons */
+  .tdwrap{position:relative;display:inline-block}
+  .msgfbtn{border:1px solid var(--line);background:#fff;border-radius:8px;font-size:11px;font-weight:700;padding:5px 10px;color:var(--grey);cursor:pointer}
+  .msgfbtn.on{background:#EAF1F8;color:var(--blue);border-color:var(--blue)}
+  .tdrop{position:absolute;top:30px;left:0;z-index:8;background:#fff;border:1px solid var(--line);border-radius:9px;box-shadow:0 8px 24px rgba(0,0,0,.14);padding:7px;min-width:160px;display:flex;flex-direction:column;gap:1px}
+  .tdrow{display:flex;align-items:center;gap:8px;font-size:12px;padding:5px 7px;border-radius:6px;cursor:pointer}
+  .tdrow:hover{background:var(--paper)}
+  .tdclear{margin-top:3px;border:0;background:none;color:var(--blue);font-size:11px;font-weight:700;cursor:pointer;text-align:left;padding:5px 7px}
+  .bubble.disp{border-left:3px solid var(--disp);background:#fdf3f2}
+  .mbadge.disp{background:#fbe3e1;color:#b4453f}
+  /* dispute banner on the record — the USP surfaced in context */
+  .dispbanner{padding:11px 16px;background:#fdf3f2;border-bottom:1px solid #f0c9c6}
+  .dispbanner .db-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .dispbanner .db-tag{font-weight:800;color:#b4453f;font-size:12px}
+  .dispbanner .db-cat{font-size:11px;font-weight:700;color:#8a3a35;background:#fbe3e1;border-radius:6px;padding:2px 8px}
+  .dispbanner .db-proof{font-size:11px;color:#2f6043;background:#E9F4EE;border:1px solid #bfe0cd;border-radius:6px;padding:2px 8px}
+  .dispbanner .db-reason{font-size:12.5px;color:var(--ink);margin:5px 0}
+  .dispbanner .db-meta{font-size:11px;color:var(--grey);display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  .dispbanner .dpchip{background:#fff;border:1px solid #e0b6b2;border-radius:6px;padding:1px 7px;font-size:10.5px;color:#8a3a35}
+  .dispbanner .dpchip.ok{background:#E9F4EE;border-color:#bfe0cd;color:#2f6043}
+  .dispbanner .db-acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+  .dispbanner .db-acts button,.dispbanner .db-res{border:1px solid #e0a9a4;background:#fff;color:#b4453f;border-radius:7px;font-size:11px;font-weight:700;padding:5px 10px;cursor:pointer}
   .thread{display:flex;flex-direction:column;margin-bottom:8px}
   .bubble{border:1px solid var(--line);padding:8px 11px;margin-bottom:8px;border-radius:0 10px 10px 0}
   .bubble.int{background:#f3f5f7;border-left:3px solid #8aa0ad}
@@ -591,6 +614,7 @@ const EP = {
   attUpload:       {m:"POST", p:"/api/attachments",             ok:"✓"},  // upload a file (base64) after a chit/message exists
   addActor:        {m:"POST", p:"/api/actors",                   ok:"✓"},  // create an actor
   disputeQueue:    {m:"GET",  p:"/api/chits/disputes/queue",     ok:"✓"},  // all open disputes
+  disputes:        {m:"GET",  p:"/api/chits/:id/disputes",       ok:"✓"},  // disputes + roster for one chit
   resolveDispute:  {m:"PUT",  p:"/api/chits/:id/disputes/:disputeId/resolve", ok:"✓"},  // {resolution_note}
   me:              {m:"GET",   p:"/api/entities/me",             ok:"✓"},
   saveProfile:     {m:"PATCH", p:"/api/entities/profile",        ok:"✓"},  // {gstn,address,business_status}
@@ -1553,22 +1577,33 @@ function disputesScreen(){ return `<div style="padding:14px;max-width:760px;marg
 async function loadDisputes(){
   const host=document.getElementById("disprows"); if(!host)return;
   try{ const q=await api("disputeQueue"); const mine=q.my_disputes||[], other=q.other_disputes||[];
-    const card=(d,canResolve)=>`<div class="card" style="border:1px solid var(--line);border-radius:11px;padding:12px;margin-bottom:9px">
-      <div style="display:flex;justify-content:space-between;gap:8px"><b>${esc(d.auto_subject||d.purpose||'chit')}</b><span class="optchip ${d.status==='open'?'brk':'on'}">${esc(d.status)}</span></div>
-      <div style="font-size:13px;color:var(--ink);margin:5px 0"><b>${esc(cap(d.category||''))}</b> — ${esc(d.reason||'')}</div>
-      <div style="font-size:11.5px;color:var(--grey)">raised by ${esc(d.raised_by_display_name||'—')} · ${esc(d.scope||'')}${d.resolution_note?(' · ✓ '+esc(d.resolution_note)):''}</div>
-      ${canResolve&&d.status==='open'?`<div style="margin-top:8px"><button class="composebtn" onclick="resolveDispute('${d.chit_id}','${d.dispute_id}')">Resolve</button></div>`:''}</div>`;
+    const card=(d,canResolve)=>{
+      const parties=(d.participants||[]).filter(p=>p.role==='party');
+      const roster=parties.length?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:7px">${parties.map(p=>`<span class="optchip ${p.dispute_status==='resolved'?'on':'brk'}">${esc(p.display_name||'party')} · ${p.dispute_status==='resolved'?'✓ resolved':'open'}</span>`).join('')}</div>`:'';
+      const openParties=parties.filter(p=>p.dispute_status!=='resolved');
+      const resolveBtns=canResolve&&d.status==='open'?`<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">${openParties.length?openParties.map(p=>`<button class="composebtn" onclick="resolveDispute('${d.chit_id}','${d.dispute_id}','${p.entity_id}','${encodeURIComponent(p.display_name||'party')}')">Resolve ${esc(p.display_name||'party')}</button>`).join(''):`<button class="composebtn" onclick="resolveDispute('${d.chit_id}','${d.dispute_id}')">Resolve</button>`}</div>`:'';
+      return `<div class="card" style="border:1px solid var(--line);border-radius:11px;padding:12px;margin-bottom:9px">
+        <div style="display:flex;justify-content:space-between;gap:8px"><b>${esc(d.auto_subject||d.purpose||'chit')}</b><span class="optchip ${d.status==='open'?'brk':'on'}">${esc(d.status)}</span></div>
+        <div style="font-size:13px;color:var(--ink);margin:5px 0"><b>${esc(cap(d.category||''))}</b> — ${esc(d.reason||'')}</div>
+        <div style="font-size:11.5px;color:var(--grey)">raised by ${esc(d.raised_by_display_name||'—')} · ${esc(d.scope||'')}${d.resolution_note?(' · ✓ '+esc(d.resolution_note)):''}</div>
+        ${roster}${resolveBtns}</div>`;
+    };
     host.innerHTML = `${menuAssist('disputes')}<div class="sec" style="font-size:12px;color:var(--grey);margin:4px 0">Raised by you (${mine.length})</div>${lazyWrap('dm', mine, d=>card(d,true), '<div style="color:var(--grey);font-size:13px;padding:6px">None.</div>')}
       <div class="sec" style="font-size:12px;color:var(--grey);margin:14px 0 4px">Against you / awaiting (${other.length})</div>${lazyWrap('do', other, d=>card(d,false), '<div style="color:var(--grey);font-size:13px;padding:6px">None.</div>')}`;
   }catch(e){ host.innerHTML=`<div class="empty"><div class="t">Couldn't load disputes</div><div>${e.message}</div></div>`; }
 }
-function resolveDispute(chitId, disputeId){
-  modal(`<div class="mhd"><div class="t">Resolve dispute</div></div><div class="mbody"><label class="fl">Resolution note (required)</label><textarea id="resnote" placeholder="How was this resolved…"></textarea><div class="err" id="res_err"></div></div><div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="pri" onclick="submitResolve('${chitId}','${disputeId}')">Resolve</button></div>`);
+function resolveDispute(chitId, disputeId, partyId, partyNameEnc){
+  const partyName=partyNameEnc?decodeURIComponent(partyNameEnc):'';
+  const who=partyName?`<div style="font-size:12px;color:var(--grey);margin-bottom:8px">Resolving with <b>${esc(partyName)}</b>. Any other parties stay open until you resolve them too.</div>`:'';
+  modal(`<div class="mhd"><div class="t">Resolve dispute${partyName?' — '+esc(partyName):''}</div></div><div class="mbody">${who}<label class="fl">Resolution note (required)</label><textarea id="resnote" placeholder="How was this resolved…"></textarea><div class="err" id="res_err"></div></div><div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="pri" onclick="submitResolve('${chitId}','${disputeId}','${partyId||''}')">Resolve</button></div>`);
 }
-async function submitResolve(chitId, disputeId){
+async function submitResolve(chitId, disputeId, partyId){
   const note=val("resnote"); const err=document.getElementById("res_err"); if(err)err.textContent="";
   if(!note){ if(err)err.textContent="A resolution note is required."; return; }
-  try{ await api("resolveDispute",{params:{id:chitId,disputeId},body:{resolution_note:note}}); closeModal(); toast(MSG.disputeResolved()); loadDisputes(); }
+  const body={resolution_note:note}; if(partyId)body.target_entity_id=partyId;
+  try{ await api("resolveDispute",{params:{id:chitId,disputeId},body}); closeModal(); toast(MSG.disputeResolved());
+    if(document.getElementById("disprows"))loadDisputes();
+    if(UI.sel===chitId){ const i=UI.rows.findIndex(x=>x.id===chitId); if(i>=0)UI.rows[i].dispute=false; await openChit(chitId); } }
   catch(e){ if(err)err.textContent=e.message; }
 }
 /* ---------------- shared screen helpers ---------------- */
@@ -2062,7 +2097,8 @@ async function quickDispute(){ const ids=needTarget(); if(!ids.length)return;
   const id=ids[0]; MODALS.disp={id, parties:[]};
   let partyRows='';
   try{ const r=await api("chit",{params:{id}}); const h=(r&&r.header)||r||{}; const seen={};
-    const parties=(h.all_recipients||[]).filter(x=>x&&x.entity_id&&!seen[x.entity_id]&&(seen[x.entity_id]=1));
+    // Everyone on the chit EXCEPT me — the raiser is implicit and must not be a selectable target.
+    const parties=(h.all_recipients||[]).filter(x=>x&&x.entity_id&&x.entity_id!==SESSION.entityId&&!seen[x.entity_id]&&(seen[x.entity_id]=1));
     MODALS.disp.parties=parties;
     if(parties.length){ partyRows='<div style="font-size:12px;color:var(--grey);margin:9px 0 3px">Between which parties? <span style="color:#9aa3ad">(none ticked = everyone involved)</span></div>'+parties.map(p=>`<label style="display:flex;gap:8px;align-items:center;padding:3px 0;font-size:13px;cursor:pointer"><input type="checkbox" class="dispparty" value="${p.entity_id}"> ${esc(p.display_name||'party')} <span style="font-size:10px;color:var(--grey);text-transform:uppercase">${esc(p.role||'')}</span></label>`).join(''); }
   }catch(_){}
@@ -2073,8 +2109,10 @@ async function confirmDispute(){ const id=MODALS.disp.id; const el=document.getE
   const parties=[...document.querySelectorAll('.dispparty:checked')].map(e=>e.value);
   closeModal();
   const body={category:cat,reason}; if(parties.length)body.participant_entity_ids=parties;
-  try{ await api("dispute",{params:{id},body}); const i=UI.rows.findIndex(x=>x.id===id); if(i>=0)UI.rows[i].dispute=true; if(UI.detail&&UI.detail.id===id)UI.detail.dispute=true; }catch(e){ toast(MSG.fail("raise the dispute", e)); return; }
-  renderApp(); if(typeof refreshRollup==='function')refreshRollup(); toast(MSG.disputeRaised(1)); announce('Dispute raised');
+  try{ await api("dispute",{params:{id},body}); const i=UI.rows.findIndex(x=>x.id===id); if(i>=0)UI.rows[i].dispute=true; }catch(e){ toast(MSG.fail("raise the dispute", e)); return; }
+  if(typeof refreshRollup==='function')refreshRollup(); toast(MSG.disputeRaised(1)); announce('Dispute raised');
+  // reload the detail so the scoped dispute message + banner appear; surface it on the Messages tab.
+  if(UI.sel===id){ UI.dtab='messages'; UI.msgFilter='dispute'; await openChit(id); } else { renderApp(); }
 }
 // Deletion policy: only DRAFTS can be deleted (→ Trash → restore or delete-forever). Sent/received chits are
 // co-held records the counterparty also holds — they cannot be deleted (removal is governed by the deletion
@@ -2189,7 +2227,7 @@ function mapApiChit(c){
 }
 /* fmtAt + inr_ → app/helpers.js */
 function fmtLine(li){ return [li.particulars||'Item', (li.quantity||0)+' × '+inr_(li.price)+' = '+inr_(li.total||(li.quantity*li.price)), []]; }
-function mapApiMsg(m){ if(!m||m.scope!==undefined) return m; return { id:m.message_id, scope:m.thread_type||'internal', author:m.sender_display_name||'—', body:m.message_text||'', at:fmtAt(m.created_at), type:m.msg_type||'info', unread:false, atts:(m.attachments||[]).map(mapAtt) }; }
+function mapApiMsg(m){ if(!m||m.scope!==undefined) return m; return { id:m.message_id, scope:m.thread_type||'internal', author:m.sender_display_name||'—', body:m.message_text||'', at:fmtAt(m.created_at), type:m.msg_type||'info', isDispute:!!m.is_dispute, disputeId:m.dispute_id||null, unread:false, atts:(m.attachments||[]).map(mapAtt) }; }
 function mapApiActor(a){ if(!a||a.shift!==undefined) return a; const S={active:'on_shift',short_break:'on_break',on_break:'on_break',break:'on_break',leave:'on_break',off:'off',deactivated:'off',removed:'off'}; const st=(a.break_status==='deactivated')?'deactivated':(a.break_status==='removed'?'removed':'active'); return { id:a.identity_id, name:a.display_name, uid:a.user_id||a.uid, key:a.actor_key||'', role:a.actor_role||'', type:a.actor_type||'human', shift:S[a.break_status]||'on_shift', status:st, load:a.current_task_count||0, max:a.max_tasks||0, phone:a.phone||'', hat:a.hat||'act', del:a.delegate_actor_id||null, lastAssigned:a.last_assigned_at||null, pinSet:!!a.pin_set_at, otp:a.otp_code||'', otpExp:a.otp_expires_at||null, breakType:a.break_type||null, breakSince:a.break_started_at||null, returnDate:a.return_date||null, bridge:a.bridge_id||'', created:a.created_at||null, last:a.last_active_at||null }; }
 /* ── generic lazy-list pager — ONE implementation for every scrollable list ────────────────
    pgInit(id,cfg): cfg = { el:()=>HTMLElement (scroll container), fetch:(page,limit)=>Promise(array, maybe .total),
@@ -2419,6 +2457,8 @@ async function openChit(id, silent){
   if(rowBase){ UI.detail={...rowBase, items:[], atts:[], msgs:[], log:[], _loading:true}; paintDetail(); }
   else { const dp=document.getElementById("detailpane"); if(dp){dp.className="detail"; dp.innerHTML=detailSkeleton();} }
   try{ const chitP=api("chit",{params:{id}}); const msgP=api("messages",{params:{id}}).catch(()=>null);
+        // only disputed records pay for the dispute roster fetch (drives the banner + per-party status)
+        const dispP=(rowBase && rowBase.dispute) ? api("disputes",{params:{id}}).catch(()=>null) : null;
         const r=await chitP;
         if(r && r.header){ const h=r.header, det=r.detail||{};
           const base=rowBase||mapApiChit({chit_id:h.chit_id,summary_json:h.summary_json,all_recipients:h.all_recipients,sender_entity_display_name:h.sender_entity_display_name,purpose:h.purpose,manual_subject:h.manual_subject,auto_subject:h.auto_subject,current_status:'delivered',open_dispute_count:0});
@@ -2427,6 +2467,7 @@ async function openChit(id, silent){
           _ratts.filter(a=>a.line_index!=null).forEach(a=>{ const it=_items[a.line_index]; if(it){ it[2]=it[2]||[]; it[2].push(a); } });
           UI.detail={...base, items:_items, atts:_ratts.filter(a=>a.line_index==null), msgs:[], log:(r.state_log||[])};
           try{ const mr=await msgP; UI.detail.msgs=(mr||[]).map(mapApiMsg); }catch(_){}
+          if(dispP){ try{ const dr=await dispP; UI.detail.disputes=(dr&&dr.disputes)||[]; }catch(_){} }
         } else { UI.detail=r; }
         UI.openLines=new Set(); const fi=(UI.detail.items||[]).findIndex(it=>attsVis(it[2]).length); if(fi>=0)UI.openLines.add('line'+fi);
         paintDetail(); paintRowsOnly(); }
@@ -2463,10 +2504,21 @@ function detailInner(){
   const actbar = (UI.folder==='drafts') ? `<button class="pri" onclick="resumeDraft('${c.id}')">✏️ Resume &amp; edit</button>` : (UI.folder==='trash') ? `<button class="pri" onclick="restoreChit('${c.id}')">↩ Restore</button>${c.isDraft?`<button class="pri" style="background:#b4453f;border-color:#b4453f;margin-left:8px" onclick="purgeChit('${c.id}')">🗑 Delete forever</button>`:''}` : (UI.folder==='archive') ? `<button class="pri" onclick="unarchiveChit('${c.id}')">↩ Unarchive</button>` : SESSION.role==="customer"
     ? `<button onclick="toggleCustPri('${c.id}')">⚑ ${c.custPri?'Priority requested':'Request priority'}</button><button class="warn" onclick="quickDispute()">⚑ Dispute</button><button onclick="todo('pdf')">⬇ PDF</button>`
     : `<button onclick="forwardChit('${c.id}')" title="Forward as a new chit">➤ Forward</button>${UI.folder!=='order'?`<button onclick="markUnread('${c.id}')" title="Mark as unread">✉ Unread</button>`:''}${UI.folder!=='order'?`<button class="pri" onclick="pickChitStatus('${c.id}')">Status ▾</button>`:''}${SESSION.role==="actor"&&UI.folder!=='order'?`<button onclick="pickAssign('${c.id}')">👥 Assign</button>`:""}<button class="warn" onclick="quickDispute()">⚑ Dispute</button>${SESSION.role==="entity"?`<button class="warn pend" onclick="todo('voidChit')">⊘ Void</button>`:""}<button onclick="todo('pdf')">⬇ PDF</button>`;
+  // Dispute banner — the USP made visible on the record itself: category, reason, per-party status, the
+  // both-signed parity badge, a jump to the scoped thread, and (for the raiser) per-party resolve.
+  const _od=(c.disputes||[]).filter(d=>d.status==='open');
+  let dispBanner='';
+  if(_od.length){ const d=_od[0]; const dparties=(d.participants||[]).filter(p=>p.role==='party');
+    const dchips=dparties.map(p=>`<span class="dpchip${p.dispute_status==='resolved'?' ok':''}">${esc(p.display_name||'party')}${p.dispute_status==='resolved'?' ✓':''}</span>`).join('');
+    const dmine=d.raised_by_entity_id===SESSION.entityId;
+    const dopen=dparties.filter(p=>p.dispute_status!=='resolved');
+    const dres=dmine?(dopen.length?dopen.map(p=>`<button class="db-res" onclick="resolveDispute('${c.id}','${d.dispute_id}','${p.entity_id}','${encodeURIComponent(p.display_name||'party')}')">Resolve ${esc(p.display_name||'party')}</button>`).join(''):`<button class="db-res" onclick="resolveDispute('${c.id}','${d.dispute_id}')">Resolve</button>`):'';
+    dispBanner=`<div class="dispbanner"><div class="db-row"><span class="db-tag">⚑ Open dispute</span><span class="db-cat">${esc(cap(d.category||''))}</span>${c.proof==='ok'?'<span class="db-proof">⚖️ both-signed record</span>':''}</div><div class="db-reason">${esc(d.reason||'')}</div><div class="db-meta">raised by ${esc(d.raised_by_display_name||'—')}${dparties.length?' · ':''}${dchips}</div><div class="db-acts"><button onclick="setDtab('messages');setMsgFilter('dispute')">Open dispute thread →</button>${dres}</div></div>`;
+  }
   const dtabs=[["content","Content"],["status","Status"],["summary","Summary"],["messages","💬 Messages"+(msgCount(c)?" ("+msgCount(c)+")":"")]];
   return `<div class="dh"><button class="dback" onclick="backToList()">‹ Back to list</button><button class="dmsg" onclick="setDtab('messages')" title="Messages" aria-label="Messages">💬${msgCount(c)?' '+msgCount(c):''}</button><div class="dt">${esc(c.code)} · ${esc(c.party)}</div><div class="ds">${esc(c.area)} · ${esc(c.kind)} · ${inr(c.amt)} · ${c.state.toUpperCase()}</div>
      <div class="parties"><span class="ptag">from <b>${esc(c.sender||SESSION.entity||"You")}</b></span><span class="ptag">${c.kind==='counter'?('to <b>'+esc(SESSION.entity||'You')+'</b>'):esc(c.rsummary||('to '+(c.party||'—')))}</span>${c.kind==='counter'?`<span class="ptag">for <b>${esc(c.cust)}</b></span>`:''}</div><div class="dchips"><span class="prichip-btn pri-${c.priExt||'normal'}" style="cursor:default" title="External priority — set by the drafter at compose, locked once sent">↔ ext: ${PRI[c.priExt||'normal'].label}</span>${SESSION.role!=="customer"?`<button class="prichip-btn pri-${c.pri||'normal'}" onclick="repriority('${c.id}')" title="Internal priority — your own queue; tap to change">⚙ int: ${PRI[c.pri||'normal'].label} ▾</button>`:''}${c.custPri?'<span class="custflag-tag">⚑ Customer priority</span>':''}</div></div>
-   <div class="dtabs">${dtabs.map(([k,l])=>`<button class="${UI.dtab===k?'on':''}" onclick="setDtab('${k}')">${l}</button>`).join("")}</div>
+   ${dispBanner}<div class="dtabs">${dtabs.map(([k,l])=>`<button class="${UI.dtab===k?'on':''}" onclick="setDtab('${k}')">${l}</button>`).join("")}</div>
    <div class="db">${body}</div><div class="actbar">${(typeof SESSION!=='undefined'&&(SESSION.name==='GOV-01-Help'||SESSION.isHelpdesk)&&c.kind==='inquiry')?'<button class="pri" onclick="answerPublish(\''+c.id+'\')">🧠 Answer &amp; publish</button>':''}${actbar}</div>`;
 }
 function setDtab(t){UI.dtab=t;paintDetail();}
@@ -2494,6 +2546,9 @@ function setMsgFilter(f){ UI.msgFilter=f; paintDetail(); }
 function setMsgChan(ch){ UI.msgChan=ch; paintDetail(); }
 function toggleCompose(){ UI.composeOpen=!UI.composeOpen; paintDetail(); if(UI.composeOpen)setTimeout(()=>{const dp=document.getElementById('detailpane'); if(dp)dp.scrollTop=0; const t=document.getElementById('msgbody');if(t)t.focus();},30); }
 function setMsgType(t){ UI.msgType=t; paintDetail(); }
+function toggleMsgTypeMenu(){ UI.msgTypeMenu=!UI.msgTypeMenu; paintDetail(); }
+function toggleMsgType(k){ const s=new Set(UI.msgTypeSel||[]); s.has(k)?s.delete(k):s.add(k); UI.msgTypeSel=[...s]; paintDetail(); }
+function clearMsgTypes(){ UI.msgTypeSel=[]; UI.msgTypeMenu=false; paintDetail(); }
 function setMsgKind(k){ UI.msgKind=k; paintDetail(); }
 /* messages + status: real data + search + Latest/Oldest sort (latest default) ───────────────── */
 function msgSearchSort(){ return '<div class="msgss"><input id="msgsrch" class="msgsi" placeholder="Search messages" value="'+esc(UI.msgSearch||'')+'" oninput="setMsgSearch(this.value)"><button class="msgord" onclick="setMsgOrder(UI.msgOrder===\'oldest\'?\'latest\':\'oldest\')" title="Sort order">'+((UI.msgOrder==='oldest')?'↑ Oldest':'↓ Latest')+'</button></div>'; }
@@ -2506,17 +2561,18 @@ function statusSearchSort(){ return '<div class="msgss"><input id="stsrch" class
 function setStatusSearch(v){ clearTimeout(UI._stT); UI._stT=setTimeout(function(){ UI.statusSearch=(v||'').trim(); paintDetail(); var s=document.getElementById('stsrch'); if(s){ s.focus(); var n=s.value.length; try{s.setSelectionRange(n,n);}catch(_){ } } }, 300); }
 function setStatusOrder(o){ UI.statusOrder=o; paintDetail(); }
 function statusTabHtml(c){ var log=(c.log||[]); var sl=log.slice(); var q=(UI.statusSearch||'').toLowerCase(); if(q) sl=sl.filter(function(e){ return (String(statusLabel(e))+' '+(e.action_by_display_name||'')+' '+(e.detail||'')).toLowerCase().indexOf(q)>=0; }); var ordered=(UI.statusOrder==='oldest')?sl:sl.slice().reverse(); var inner=ordered.length?lazyWrap('status', ordered, statusEv, '<div class="msgempty">No matching history.</div>'):'<div class="msgempty">No status history yet.</div>'; return '<div class="msghd"><span class="mh-t">Lifecycle ('+log.length+')</span></div>'+statusSearchSort()+'<div class="tl">'+inner+'</div>'; }
-function msgBubble(m){ const ext=m.scope==="external"; const d=MTYPES[m.type]||MTYPES.info; return `<div class="bubble ${ext?'ext':'int'}"><div class="bh"><span class="mbadge ${ext?'ext':'int'}">${ext?'↔ External':'🔒 Internal'}</span><span class="mtype ${d.cls}">${d.icon} ${d.label}</span><span class="ath">${esc(m.author)}</span><span class="tm">${m.at}</span>${m.unread?'<span class="unreaddot"></span>':''}</div><div class="bb">${esc(m.body)}</div>${(m.atts&&m.atts.length)?`<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px">${m.atts.map((a,i)=>`<span onclick="openMsgAtt('${m.id}',${i})" title="${esc(a.n)}" style="display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:7px;padding:2px 7px;font-size:11px;background:#fff;cursor:pointer">${attIcon(a.t)} ${esc(a.n.length>22?a.n.slice(0,22)+'…':a.n)}</span>`).join('')}</div>`:''}</div>`; }
+function msgBubble(m){ const ext=m.scope==="external"; const d=MTYPES[m.type]||MTYPES.info; const disp=m.isDispute; const head=disp?'<span class="mbadge disp">⚑ Dispute</span>':`<span class="mbadge ${ext?'ext':'int'}">${ext?'↔ External':'🔒 Internal'}</span><span class="mtype ${d.cls}">${d.icon} ${d.label}</span>`; return `<div class="bubble ${ext?'ext':'int'}${disp?' disp':''}"><div class="bh">${head}<span class="ath">${esc(m.author)}</span><span class="tm">${m.at}</span>${m.unread?'<span class="unreaddot"></span>':''}</div><div class="bb">${esc(m.body)}</div>${(m.atts&&m.atts.length)?`<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px">${m.atts.map((a,i)=>`<span onclick="openMsgAtt('${m.id}',${i})" title="${esc(a.n)}" style="display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:7px;padding:2px 7px;font-size:11px;background:#fff;cursor:pointer">${attIcon(a.t)} ${esc(a.n.length>22?a.n.slice(0,22)+'…':a.n)}</span>`).join('')}</div>`:''}</div>`; }
 function messagesTab(c){
   markChitRead(c.id); setTimeout(refreshMsgBadge,0);
   const isCust=SESSION.role==="customer";
   const all=(c.msgs||[]); const visible=isCust?all.filter(m=>m.scope==="external"):all;
-  const f=UI.msgFilter||"all"; const t=UI.msgType||"all";
-  let shown=f==="all"?visible:visible.filter(m=>m.scope===f);
-  if(t!=="all") shown=shown.filter(m=>(m.type||"info")===t);
-  const scopeFilter=isCust?"":`<div class="msgfilter"><button class="${f==='all'?'on':''}" onclick="setMsgFilter('all')">All</button><button class="${f==='internal'?'on':''}" onclick="setMsgFilter('internal')">🔒 Internal</button><button class="${f==='external'?'on':''}" onclick="setMsgFilter('external')">↔ External</button></div>`;
+  const f=UI.msgFilter||"all"; const sel=UI.msgTypeSel||[];
+  let shown = f==='all'?visible : f==='dispute'?visible.filter(m=>m.isDispute) : visible.filter(m=>m.scope===f);
+  if(sel.length) shown=shown.filter(m=>sel.includes(m.type||"info"));
+  const scopeFilter=isCust?"":`<div class="msgfilter"><button class="${f==='all'?'on':''}" onclick="setMsgFilter('all')">All</button><button class="${f==='internal'?'on':''}" onclick="setMsgFilter('internal')">🔒 Internal</button><button class="${f==='external'?'on':''}" onclick="setMsgFilter('external')">↔ External</button><button class="${f==='dispute'?'on disp':''}" onclick="setMsgFilter('dispute')">⚑ Disputes</button></div>`;
   const tset=surfacedTypes(); const ctypes=isCust?["info","query"]:tset;
-  const typeFilter=`<div class="msgfilter">${[["all","All types"]].concat(tset.map(k=>[k,MTYPES[k].short])).map(([v,l])=>`<button class="${t===v?'on '+(v==='all'?'':MTYPES[v].cls):''}" onclick="setMsgType('${v}')">${v==='all'?l:MTYPES[v].icon+' '+l}</button>`).join("")}</div>`;
+  const typeMenu=UI.msgTypeMenu?`<div class="tdrop" onclick="event.stopPropagation()">${tset.map(k=>`<label class="tdrow"><input type="checkbox" ${sel.includes(k)?'checked':''} onchange="toggleMsgType('${k}')"> ${MTYPES[k].icon} ${MTYPES[k].label}</label>`).join("")}${sel.length?`<button class="tdclear" onclick="clearMsgTypes()">✕ Clear types</button>`:''}</div>`:'';
+  const typeFilter=isCust?'':`<div class="tdwrap"><button class="msgfbtn${sel.length?' on':''}" onclick="event.stopPropagation();toggleMsgTypeMenu()">⚙ Types${sel.length?' ('+sel.length+')':''} ▾</button>${typeMenu}</div>`;
   if(UI.msgSearch){var _mq=UI.msgSearch.toLowerCase(); shown=shown.filter(function(m){return String((m.body||"")+" "+(m.author||"")).toLowerCase().indexOf(_mq)>=0;});} const ordered=(UI.msgOrder==="oldest")?shown.slice():shown.slice().reverse();
   const thread=ordered.length?lazyWrap('msg', ordered, msgBubble, ''):`<div class="msgempty">No messages yet — use ✏️ New message above to start one.</div>`;
   const ch=UI.msgChan||(isCust?"external":"internal"); let kind=UI.msgKind||"info"; if(!ctypes.includes(kind))kind=ctypes[0];
