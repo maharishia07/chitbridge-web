@@ -1971,7 +1971,7 @@ function taskPanel(){
   const sub = (role==="actor"&&UI.folder==="task") ? `<div class="folders"><button class="${UI.sub==='my'?'on':''}" onclick="setSub('my')">My Task</button><button class="${UI.sub==='all'?'on':''}" onclick="setSub('all')">All Task</button></div>`
     : (role!=="customer"&&UI.folder==="task") ? `<div class="folders"><button class="${taskScope()==='unassigned'?'on':''}" onclick="setTaskScope('unassigned')">Unassigned</button><button class="${taskScope()==='assigned'?'on':''}" onclick="setTaskScope('assigned')">Assigned</button></div>` : "";
   const counts = countStates();
-  const stTabs = (["drafts","trash","archive"].indexOf(UI.folder)>=0 || UI.search || advActive()) ? "" : `<div class="statetabs">${["open","act","close"].map(s=>`<button class="${UI.state===s?'on '+s:''}" onclick="setState('${s}')">${UI.selectMode&&!isCust?`<span class="cbx ${UI.aggStates.has(s)?'on':''}" style="width:15px;height:15px;margin:0 5px 0 0" onclick="event.stopPropagation();toggleAgg('${s}')">${UI.aggStates.has(s)?'✓':''}</span>`:''}${cap(s)} <span class="n">${stCount(s)}</span></button>`).join("")}</div>`;
+  const stTabs = (["drafts","trash","archive","order"].indexOf(UI.folder)>=0 || UI.search || advActive()) ? "" : `<div class="statetabs">${["open","act","close"].map(s=>`<button class="${UI.state===s?'on '+s:''}" onclick="setState('${s}')">${UI.selectMode&&!isCust?`<span class="cbx ${UI.aggStates.has(s)?'on':''}" style="width:15px;height:15px;margin:0 5px 0 0" onclick="event.stopPropagation();toggleAgg('${s}')">${UI.aggStates.has(s)?'✓':''}</span>`:''}${cap(s)} <span class="n">${stCount(s)}</span></button>`).join("")}</div>`;
   const funnel = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>`;
   const tools = isCust ? "" :
     (UI.folder==='trash') ? `<div class="tools">
@@ -1984,8 +1984,8 @@ function taskPanel(){
       <div class="tool" title="Unarchive (redo)" onclick="bulkUnarchive()">↩</div>
     </div>` :
     `<div class="tools">
-      <div class="tool" title="Change status" onclick="quickStatus()">◧</div>
-      <div class="tool" title="Assign to actor" onclick="quickAssign()">👤</div>
+      ${UI.folder!=='order'?`<div class="tool" title="Change status" onclick="quickStatus()">◧</div>
+      <div class="tool" title="Assign to actor" onclick="quickAssign()">👤</div>`:''}
       <div class="tool ${UI.filterOpen?'on':''}" title="Filter" onclick="openFilter()">${funnel}</div>
       <div class="tool ${UI.selectMode?'on':''}" title="Select" onclick="toggleSelect()">☑</div>
       <div class="tool" title="Raise dispute" onclick="quickDispute()">⚑</div>
@@ -2283,7 +2283,7 @@ async function loadList(){
 }
 function paintRowsOnly(){const b=document.getElementById("rows"); if(b)b.innerHTML=renderRows(); document.querySelectorAll(".statetabs .n").forEach((el,i)=>{el.textContent=stCount(["open","act","close"][i]);}); pgPaintTotal(); applyColTpl();}
 function visibleRows(){
-  let rows = (["drafts","trash","archive"].indexOf(UI.folder)>=0 || UI.search || advActive()) ? UI.rows.slice() : ((UI.selectMode&&SESSION.role!=="customer") ? UI.rows.filter(c=>UI.aggStates.has(c.state)) : UI.rows.filter(c=>c.state===UI.state));
+  let rows = (["drafts","trash","archive","order"].indexOf(UI.folder)>=0 || UI.search || advActive()) ? UI.rows.slice() : ((UI.selectMode&&SESSION.role!=="customer") ? UI.rows.filter(c=>UI.aggStates.has(c.state)) : UI.rows.filter(c=>c.state===UI.state));
   const f=UI.filter||{};
   if(f.kind) rows=rows.filter(c=>c.kind===f.kind);
   if(f.disputeOnly) rows=rows.filter(c=>c.dispute);
@@ -2308,7 +2308,7 @@ const LISTCOLS = [
   { key:'subject',  label:'Subject',  sort:'subject',  w:'minmax(150px,2fr)',   cell:function(c){ var lead=(c.unread?'<span class="udot" title="Unread"></span>':'')+(c.dispute?'<span class="rflag disp" title="Open dispute">⚑ dispute</span>':'')+attnFlag(c); return '<div class="subjwrap">'+(lead?'<span class="lead">'+lead+'</span>':'')+'<span class="subjtext" title="'+esc(c.code||'')+'"><b>'+esc(c.code||'—')+'</b>'+(c.isDraft?' <span class="optchip mini">draft</span>':'')+'</span></div>'; } },
   { key:'date',     label:'Date',     sort:'date',     w:'128px',  cell:function(c){ return esc(lcDate(c.created_at)); } },
   { key:'amount',   label:'Amount',   sort:'amount',   w:'108px', align:'right', cell:function(c){ return '<span style="font-family:\'Space Mono\'">'+(c.amt?fmtMoney(c.amt,c.currency):'—')+'</span>'; } },
-  { key:'status',   label:'Status',   sort:'status',   w:'92px',  cell:function(c){ return '<span class="chipst st-'+c.state+'" onclick="event.stopPropagation();pickChitStatus(\''+c.id+'\')" title="change status">'+String(c.state||'').toUpperCase()+' ▾</span>'; } },
+  { key:'status',   label:'Status',   sort:'status',   w:'92px',  cell:function(c){ return statusChip(c); } },
   { key:'type',     label:'Type',     sort:null,       w:'80px',  cell:function(c){ return esc(c.kind||''); } },
   { key:'items',    label:'Items',    sort:null,       w:'58px',  cell:function(c){ return (c.nitems||'')+''; } },
   { key:'priority', label:'Int pri', sort:'priority', w:'88px',  cell:function(c){ return priChip(c.pri)||'<span style="color:var(--grey)">—</span>'; } },
@@ -2343,6 +2343,12 @@ function persistSort(){ try{ localStorage.setItem("cb_sort", JSON.stringify({sor
 function setSortPreset(v){ if(v==='latest'||v==='oldest'){ UI.sort='date'; UI.dir=(v==='oldest'?'asc':'desc'); persistSort(); UI.sel=null; UI.detail=null; loadList(); } }
 function sortPresetOptions(){ const cur=(UI.sort==='date')?(UI.dir==='asc'?'oldest':'latest'):''; let o=''; if(cur===''){ o+='<option value="" selected>Sorted: '+esc(UI.sort||'')+' '+(UI.dir==='asc'?'↑':'↓')+'</option>'; } o+='<option value="latest"'+(cur==='latest'?' selected':'')+'>Latest on top</option>'; o+='<option value="oldest"'+(cur==='oldest'?' selected':'')+'>Oldest on top</option>'; return o; }
 function sortPresetSelect(){ return '<select class="sortpreset" title="Sort order" onchange="setSortPreset(this.value)">'+sortPresetOptions()+'</select>'; }
+// Status chip: interactive (advance status) on the Task/received side; STATIC on Order (sent) —
+// the orderer can't drive the receiver's workflow, so it's a read-only label there.
+function statusChip(c){
+  if(UI.folder==='order') return '<span class="chipst st-'+c.state+'" title="status — set by the receiver">'+String(c.state||'').toUpperCase()+'</span>';
+  return '<span class="chipst st-'+c.state+'" onclick="event.stopPropagation();pickChitStatus(\''+c.id+'\')" title="change status">'+String(c.state||'').toUpperCase()+' ▾</span>';
+}
 function renderRows(){
   const rows=visibleRows();
   if(!rows.length) return listHeader()+`<div class="empty"><div class="big">📭</div><div class="t">Nothing in ${UI.selectMode?'the ticked states':cap(UI.state||'this view')}</div><div>${pgDone('list')?'No chits here — try another tab.':'More may be further down — Load more.'}</div></div>`+(pgDone('list')?'':pgFooter('list'));
@@ -2355,7 +2361,7 @@ function rowHTML(c){
   return `<div class="row ${c.id===UI.sel?'sel':''} ${c.unread?'unread':''} ${UI.selectMode&&UI.selected.has(c.id)?'picked':''}" onclick="${UI.selectMode?`toggleSel('${c.id}')`:`openChit('${c.id}')`}">${cbx}
     <div class="main2"><div class="l1">${c.unread?'<span class="unreaddot" title="Unread — new activity"></span>':''}${c.custPri?'<span class="custflag" title="Customer flagged priority">⚑</span>':''}<span class="code">${esc(c.code)}</span>${c.isDraft?' <span class="optchip" style="font-size:9.5px;background:#f3f0e8;color:#7a5e22;border-color:var(--gold-line)">draft</span>':''}${c.selfChit&&!c.isDraft?' <span class="optchip" style="font-size:9.5px;background:#eef3fb;color:#345488;border-color:#cfe0f4" title="Self-chit · '+( c.folder==="order"?"sent copy":"received copy")+'">self-chit</span>':''}<span class="party">· ${esc(c.party)}</span><span class="amt">${c.amt?inr(c.amt):'—'}</span></div>
       <div class="l2">${esc(c.area)} · ${esc(c.kind)} ${priChip(c.priExt)} ${c.rcc?`<span class="optchip" style="font-size:9px;background:#F4ECD8;color:#7a5e22;border-color:#E4D3A8">CC ${c.rcc}</span>`:''}${c.rfor?`<span class="optchip" style="font-size:9px;background:#EFEBE2;color:#5F6B70;border-color:#E0DACF">For ${c.rfor}</span>`:''} ${c.att?`<span class="rowclip">📎 ${c.att}</span>`:''} ${c.msg?`<span class="rowmsg" onclick="event.stopPropagation();openChitMsgs('${c.id}')">💬 ${c.msg}</span>`:''} ${proof} ${c.dispute?'<b style="color:var(--disp)">dispute</b>':''}
-        <span class="chipst st-${c.state}" onclick="event.stopPropagation();pickChitStatus('${c.id}')" title="change status">${c.state.toUpperCase()} ▾</span></div>${acts}</div>
+        ${statusChip(c)}</div>${acts}</div>
     <div class="rowgo" aria-hidden="true">›</div>
   </div>`;
 }
@@ -2454,7 +2460,7 @@ function detailInner(){
   if(c._loading){ body=`<div class="dbload"><span class="spin"></span> loading details…</div>`; }
   const actbar = (UI.folder==='drafts') ? `<button class="pri" onclick="resumeDraft('${c.id}')">✏️ Resume &amp; edit</button>` : (UI.folder==='trash') ? `<button class="pri" onclick="restoreChit('${c.id}')">↩ Restore</button>${c.isDraft?`<button class="pri" style="background:#b4453f;border-color:#b4453f;margin-left:8px" onclick="purgeChit('${c.id}')">🗑 Delete forever</button>`:''}` : (UI.folder==='archive') ? `<button class="pri" onclick="unarchiveChit('${c.id}')">↩ Unarchive</button>` : SESSION.role==="customer"
     ? `<button onclick="toggleCustPri('${c.id}')">⚑ ${c.custPri?'Priority requested':'Request priority'}</button><button class="warn" onclick="quickDispute()">⚑ Dispute</button><button onclick="todo('pdf')">⬇ PDF</button>`
-    : `<button onclick="forwardChit('${c.id}')" title="Forward as a new chit">➤ Forward</button><button onclick="markUnread('${c.id}')" title="Mark as unread">✉ Unread</button><button class="pri" onclick="pickChitStatus('${c.id}')">Status ▾</button>${SESSION.role==="actor"?`<button onclick="pickAssign('${c.id}')">👥 Assign</button>`:""}<button class="warn" onclick="quickDispute()">⚑ Dispute</button>${SESSION.role==="entity"?`<button class="warn pend" onclick="todo('voidChit')">⊘ Void</button>`:""}<button onclick="todo('pdf')">⬇ PDF</button>`;
+    : `<button onclick="forwardChit('${c.id}')" title="Forward as a new chit">➤ Forward</button><button onclick="markUnread('${c.id}')" title="Mark as unread">✉ Unread</button>${UI.folder!=='order'?`<button class="pri" onclick="pickChitStatus('${c.id}')">Status ▾</button>`:''}${SESSION.role==="actor"&&UI.folder!=='order'?`<button onclick="pickAssign('${c.id}')">👥 Assign</button>`:""}<button class="warn" onclick="quickDispute()">⚑ Dispute</button>${SESSION.role==="entity"?`<button class="warn pend" onclick="todo('voidChit')">⊘ Void</button>`:""}<button onclick="todo('pdf')">⬇ PDF</button>`;
   const dtabs=[["content","Content"],["status","Status"],["summary","Summary"],["messages","💬 Messages"+(msgCount(c)?" ("+msgCount(c)+")":"")]];
   return `<div class="dh"><button class="dback" onclick="backToList()">‹ Back to list</button><button class="dmsg" onclick="setDtab('messages')" title="Messages" aria-label="Messages">💬${msgCount(c)?' '+msgCount(c):''}</button><div class="dt">${esc(c.code)} · ${esc(c.party)}</div><div class="ds">${esc(c.area)} · ${esc(c.kind)} · ${inr(c.amt)} · ${c.state.toUpperCase()}</div>
      <div class="parties"><span class="ptag">from <b>${esc(c.sender||SESSION.entity||"You")}</b></span><span class="ptag">${c.kind==='counter'?('to <b>'+esc(SESSION.entity||'You')+'</b>'):esc(c.rsummary||('to '+(c.party||'—')))}</span>${c.kind==='counter'?`<span class="ptag">for <b>${esc(c.cust)}</b></span>`:''}</div><div class="dchips"><span class="prichip-btn pri-${c.priExt||'normal'}" style="cursor:default" title="External priority — set by the drafter at compose, locked once sent">↔ ext: ${PRI[c.priExt||'normal'].label}</span>${SESSION.role!=="customer"?`<button class="prichip-btn pri-${c.pri||'normal'}" onclick="repriority('${c.id}')" title="Internal priority — your own queue; tap to change">⚙ int: ${PRI[c.pri||'normal'].label} ▾</button>`:''}${c.custPri?'<span class="custflag-tag">⚑ Customer priority</span>':''}</div></div>
