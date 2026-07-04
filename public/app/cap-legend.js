@@ -5,19 +5,20 @@
  * feature's status (done / partial / backlog). Core keeps only the gated stub (openLegend/closeLegend/_legendOpen).
  * Update this whenever a capability or feature lands. Mirrors the catalogue in project-capability-modularisation. */
 
+// maturity 1-5 (CB Capability Maturity Model): 1 Proven · 2 Packaged · 3 Itemised&Isolated · 4 Governed · 5 Productized.
 const CAP_CATALOGUE = [
-  { id:'core', name:'Core — Mailbox', icon:'📥', load:'eager',
+  { id:'core', name:'Core — Mailbox', icon:'📥', load:'eager', maturity:2, target:3,
     blurb:'The lean always-on shell every role starts with. Loaded with app.html.',
     features:[
       {n:'Mailbox lists — Task / Order / Drafts / Trash / Archive', s:'done'},
       {n:'Read & advance — open a chit, mark read/unread, single-step advance', s:'done'},
       {n:'Compose — author a chit (line items, attachments, delivery, live summary)', s:'done'},
       {n:'Assign — single push, bulk, pool pull, hat-gate', s:'done'},
-      {n:'Disputes — raise multi-party, resolve, filter, dispute-tagged messages', s:'done'},
+      {n:'Disputes — per-party scoped raise/resolve, filter, tagged messages (→ own cap-dispute toggle at L3)', s:'done'},
       {n:'Relations — Suppliers, Catalogue, Network', s:'done'},
       {n:'Message centre + Notifications bell (derived from state_log)', s:'partial'},
     ]},
-  { id:'admin', name:'Admin', icon:'⚙️', load:'lazy',
+  { id:'admin', name:'Admin', icon:'⚙️', load:'lazy', maturity:2, target:3,
     blurb:'Loads on first open of MIS / Profile / Settings.',
     features:[
       {n:'MIS dashboard (client-side rollup — summary endpoint pending)', s:'partial'},
@@ -25,7 +26,7 @@ const CAP_CATALOGUE = [
       {n:'Settings — assignment model + auto-assign on receipt', s:'done'},
       {n:'Governance — 7-layer stub', s:'partial'},
     ]},
-  { id:'workforce', name:'Co-assists — Workforce', icon:'🧑‍🤝‍🧑', load:'lazy',
+  { id:'workforce', name:'Co-assists — Workforce', icon:'🧑‍🤝‍🧑', load:'lazy', maturity:2, target:3,
     blurb:'Loads on first open of Co-assists. Grows into leave / shift / wage.',
     features:[
       {n:'Create + invite (OTP) → set-PIN → PIN login', s:'done'},
@@ -38,16 +39,25 @@ const CAP_CATALOGUE = [
       {n:'Leave calendar · shift rotation · wage / salary', s:'backlog'},
       {n:'Non-human actor types (connector / iot / ai) auth', s:'backlog'},
     ]},
-  { id:'help', name:'Assistant', icon:'💬', load:'eager',
+  { id:'connector', name:'Connector / IoT', icon:'🛰️', load:'lazy', maturity:1, target:2,
+    blurb:'Non-human co-assist actors (connector/iot) that emit + handle Device Signal chits over the rail. Blueprint b55 = the schema; a capability toggle gates it. L1 = one signal crosses A→B by hand; L5 = real devices, governed + billed.',
+    features:[
+      {n:'Device Signal blueprint minted via the unified path (b55)', s:'done'},
+      {n:'Emit a signal → a Device Signal chit A→B; receiver log/ack', s:'partial'},
+      {n:'connector / iot actor type in co-assist', s:'partial'},
+      {n:'Per-entity capability toggle (UI + API gated)', s:'backlog'},
+      {n:'Adapter seam → real device (MQTT/HTTP), rules/AI, metering', s:'backlog'},
+    ]},
+  { id:'help', name:'Assistant', icon:'💬', load:'eager', maturity:1, target:3,
     blurb:'One context-sensitive Assistant (engine in Core). Q&A is served from the DB (GET /api/assist/questions) — nothing static in the frontend; the same store feeds the AI when wired.',
     features:[
       {n:'Context-sensitive Q&A per screen — served from the DB', s:'done'},
       {n:'Honest tiered answer (deterministic library floor → LLM)', s:'done'},
       {n:'Tier-1 LLM over the /api/assist proxy', s:'backlog'},
     ]},
-  { id:'legend', name:'Legend (this map)', icon:'🔑', load:'lazy',
+  { id:'legend', name:'Legend (this map)', icon:'🔑', load:'lazy', maturity:2, target:2,
     blurb:'You are here. The live capability/feature catalogue — loads on demand.',
-    features:[ {n:'Capability → feature map with load + status', s:'done'} ]},
+    features:[ {n:'Capability → feature map with load + status + maturity', s:'done'} ]},
   // ── Planned capabilities (not built yet) — so the map also shows what is coming ──
   { id:'relations-x', name:'Relations (extract)', icon:'🔗', load:'planned',
     blurb:'Suppliers / Catalogue / Network to move OUT of Core into their own lazy cap.',
@@ -77,10 +87,11 @@ function _openLegendImpl(){
     const on=!!LOADED[c.id];
     return `<span style="font-size:10px;font-weight:700;color:${on?'#345488':'#8a8f98'};background:${on?'#eef3fb':'#f4f4f2'};border:1px solid ${on?'#cfe0f4':'var(--line)'};border-radius:6px;padding:1px 7px">lazy · ${on?'loaded ✓':'on demand'}</span>`;
   };
+  const matBadge=(c)=>{ if(!c.maturity) return ''; const t=(c.target&&c.target>c.maturity)?`→L${c.target}`:''; return `<span title="Capability maturity — 1 Proven · 2 Packaged · 3 Itemised · 4 Governed · 5 Productized" style="font-size:10px;font-weight:800;color:#4b3b8f;background:#efeaf9;border:1px solid #cabdf0;border-radius:6px;padding:1px 7px">L${c.maturity}${t}</span>`; };
   const featRow=(f)=>{ const [col,ic]=SC[f.s]||SC.backlog;
     return `<div style="display:flex;gap:7px;align-items:flex-start;font-size:12px;color:var(--ink);padding:3px 0;line-height:1.4"><span style="color:${col};flex:none">${ic}</span><span>${esc(f.n)}</span></div>`; };
   const card=(c)=>`<div style="border:1px solid var(--line);border-radius:11px;padding:11px 13px;margin-bottom:10px;background:${c.load==='planned'?'#faf9f5':'#fff'}">
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px"><span style="font-size:15px">${c.icon}</span><span style="font-family:'Space Grotesk';font-weight:700;font-size:13.5px">${esc(c.name)}</span><span style="margin-left:auto">${loadBadge(c)}</span></div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px"><span style="font-size:15px">${c.icon}</span><span style="font-family:'Space Grotesk';font-weight:700;font-size:13.5px">${esc(c.name)}</span><span style="margin-left:auto;display:flex;gap:6px;align-items:center">${matBadge(c)}${loadBadge(c)}</span></div>
     <div style="font-size:11.5px;color:var(--grey);margin-bottom:8px;line-height:1.45">${esc(c.blurb)}</div>
     ${c.features.map(featRow).join('')}
   </div>`;
@@ -91,7 +102,7 @@ function _openLegendImpl(){
       <span style="margin-left:auto">Status: <span style="color:#2f8f5b">✅ done ${d}</span> · <span style="color:#a9791f">◐ partial ${p}</span> · <span style="color:#9aa3a7">○ backlog ${b}</span></span>
     </div>
     <div style="padding:12px 13px;max-height:70vh;overflow:auto">${CAP_CATALOGUE.map(card).join('')}
-      <div style="font-size:10.5px;color:var(--grey);text-align:center;padding-top:4px">Load: <b>always on</b> ships with the app · <b>lazy</b> loads on first use · <b>planned</b> not built yet. Kept true to the code.</div>
+      <div style="font-size:10.5px;color:var(--grey);text-align:center;padding-top:4px">Load: <b>always on</b> ships with the app · <b>lazy</b> loads on first use · <b>planned</b> not built yet. · <b>L1–5</b> maturity: 1 Proven · 2 Packaged · 3 Itemised · 4 Governed · 5 Productized (→ = target). Kept true to the code.</div>
     </div>
   </div></div>`;
 }
