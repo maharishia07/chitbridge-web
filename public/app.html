@@ -1242,7 +1242,7 @@ function renderApp(){
     api('assistWhoami').then(function(r){ const was=SESSION.isHelpdesk; SESSION.isHelpdesk=!!(r&&r.is_helpdesk); if(SESSION.isHelpdesk&&!was) renderApp(); }).catch(function(){}); }
   // once per session: the entity's capability SELECTION (drives the itemised nav toggles, e.g. Connectors).
   if(SESSION.token && role!=="customer" && SESSION._capsChecked===undefined){ SESSION._capsChecked=true;
-    api('me').then(function(r){ SESSION.capabilities=(r&&r.capabilities)||[]; SESSION._capdbg=(r&&r.capabilities_debug)||'(no debug field → API stale)'; renderApp(); }).catch(function(e){ SESSION.capabilities=SESSION.capabilities||[]; SESSION._capdbg='fetch failed: '+((e&&e.message)||e); }); }
+    api('me',{query:{_t:Date.now()}}).then(function(r){ SESSION.capabilities=(r&&r.capabilities)||[]; SESSION._capdbg=(r&&r.capabilities_debug)||'(no debug field → API stale)'; renderApp(); }).catch(function(e){ SESSION.capabilities=SESSION.capabilities||[]; SESSION._capdbg='fetch failed: '+((e&&e.message)||e); }); }
   const _cap = CAP_OF[UI.nav];
   const _capLoading = !!(_cap && !CAP_LOADED[_cap]);
   if(_capLoading){ ensureCap(_cap).then(function(){ if(CAP_OF[UI.nav]===_cap) renderApp(); })
