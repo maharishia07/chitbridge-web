@@ -2267,15 +2267,17 @@ function updateListTotal(){ const lt=document.getElementById("listtotal"); if(!l
 function paginationFooter(){ if(UI.loadingMore) return '<div class="listend"><span class="spin"></span> loading more\u2026 ('+UI.rows.length+'/'+UI.total+')</div>'; if(!UI.allLoaded) return '<div class="listend"><button class="composebtn" onclick="loadNextPage()">\u2193 Load more</button><span style="color:var(--grey)">'+UI.rows.length+' of '+UI.total+' loaded</span></div>'; if((UI.total||0)<=0) return ''; return '<div class="listend">\u2014 end of list \u00b7 '+UI.total+' total \u2014</div>'; }
 async function loadList(){
   UI.loading=true; const body=document.getElementById("rows"); if(body)body.innerHTML='<div class="loadwrap"><span class="spin"></span> loading…</div>';
-  { const dp0=document.getElementById("detailpane"); if(dp0)dp0.innerHTML=detailSkeleton(); }
+  { const dp0=document.getElementById("detailpane"); if(dp0){dp0.className="detail"; dp0.innerHTML=detailSkeleton();} }
   try{
     UI.rows=[]; await pgFirst('list');
-    // full-set per-state rollup (true counts + sums, independent of the loaded page) — Task/Order only
-    if(["task","order"].includes(UI.folder) && SESSION.role!=="customer"){ try{ const rl=await api("rollup",{query:rollupQuery()}); UI.rollup=(rl&&rl.groups)||[]; UI.disputeOpen=(rl&&rl.dispute_open)||0; }catch(_){ UI.rollup=[]; UI.disputeOpen=0; } } else { UI.rollup=[]; UI.disputeOpen=0; }
-    if(SESSION.role==="actor" && CFG.MODE!=='demo'){ try{ const u=await api("unread"); const set=new Set((u&&u.unread)||[]); UI.rows.forEach(r=>{ r.unread=set.has(r.id); }); }catch(_){} }
     UI.loading=false;
+    // select the first record and kick off its detail load IMMEDIATELY — don't wait on the rollup below.
+    // The rollup only refines the per-state counts; it must not sit between "list shown" and "record selected".
     if(!UI.sel && UI.rows.length){ const first=UI.rows.find(c=>c.state===UI.state)||UI.rows[0]; if(first)openChit(first.id,true); }
     paintRowsOnly();
+    // full-set per-state rollup (true counts + sums) — independent enrichment; repaint counts when it lands.
+    if(["task","order"].includes(UI.folder) && SESSION.role!=="customer"){ try{ const rl=await api("rollup",{query:rollupQuery()}); UI.rollup=(rl&&rl.groups)||[]; UI.disputeOpen=(rl&&rl.dispute_open)||0; paintRowsOnly(); }catch(_){ UI.rollup=[]; UI.disputeOpen=0; } } else { UI.rollup=[]; UI.disputeOpen=0; }
+    if(SESSION.role==="actor" && CFG.MODE!=='demo'){ try{ const u=await api("unread"); const set=new Set((u&&u.unread)||[]); UI.rows.forEach(r=>{ r.unread=set.has(r.id); }); paintRowsOnly(); }catch(_){} }
   }catch(e){ UI.loading=false; const b=document.getElementById("rows"); if(b)b.innerHTML=`<div class="empty"><div class="big">⚠</div><div class="t">Couldn't load</div><div>${e.message}</div><div style="font-size:11px">Check mode/endpoint, then retry.</div></div>`; }
 }
 function paintRowsOnly(){const b=document.getElementById("rows"); if(b)b.innerHTML=renderRows(); document.querySelectorAll(".statetabs .n").forEach((el,i)=>{el.textContent=stCount(["open","act","close"][i]);}); pgPaintTotal(); applyColTpl();}
@@ -2402,7 +2404,7 @@ function detailSkeleton(){
 async function openChit(id, silent){
   UI.sel=id;
   if((UI.vp==='mob') && !silent){ UI.mdetail=true; const p=document.getElementById("panel"); if(p)p.classList.add("showdetail"); }
-  { const dp=document.getElementById("detailpane"); if(dp){dp.innerHTML=detailSkeleton();} }
+  { const dp=document.getElementById("detailpane"); if(dp){dp.className="detail"; dp.innerHTML=detailSkeleton();} }
   try{ const chitP=api("chit",{params:{id}}); const msgP=api("messages",{params:{id}}).catch(()=>null);
         const r=await chitP;
         if(r && r.header){ const h=r.header, det=r.detail||{};
