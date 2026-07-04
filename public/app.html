@@ -1194,7 +1194,7 @@ function priChip(p){ return (!p||p==="normal")?"":`<span class="prichip pri-${p}
 let UI = {...UI0, selected:new Set(), aggStates:new Set(["open","act","close"])};
 
 const MENUS = {
-  entity:{top:[["compose","✉️","Compose",""],["task","📥","Task",""],["order","📤","Order",""],["drafts","📝","Drafts",""],["trash","🗑️","Trash",""],["archive","🗄️","Archive",""]], rest:[["network","🔗","Network"],["suppliers","🏭","Suppliers"],["catalogue","🗂️","Catalogue"],["coassists","🧑‍🤝‍🧑","Co-assists"],["connectors","🛰️","Connectors"],["mis","📊","MIS"],["disputes","⚖️","Disputes"],["profile","👤","Profile"],["settings","⚙️","Settings"],["assistreview","🧠","Assistant"]], tag:"Owner does structure."},
+  entity:{top:[["compose","✉️","Compose",""],["task","📥","Task",""],["order","📤","Order",""],["drafts","📝","Drafts",""],["trash","🗑️","Trash",""],["archive","🗄️","Archive",""]], rest:[["_diag","🧪","Diag (deploy test)"],["network","🔗","Network"],["suppliers","🏭","Suppliers"],["catalogue","🗂️","Catalogue"],["coassists","🧑‍🤝‍🧑","Co-assists"],["connectors","🛰️","Connectors"],["mis","📊","MIS"],["disputes","⚖️","Disputes"],["profile","👤","Profile"],["settings","⚙️","Settings"],["assistreview","🧠","Assistant"]], tag:"Owner does structure."},
   actor:{top:[["compose","✉️","Compose",""],["task","📥","Task",""],["order","📤","Order",""],["drafts","📝","Drafts",""],["trash","🗑️","Trash",""],["archive","🗄️","Archive",""]], rest:[["suppliers","🏭","Suppliers"],["profile","👤","Profile"]], tag:"Commerce yes, structure no."},
   customer:{top:[["order","📤","My orders",""]], rest:[["shops","🏬","Find a shop"]], tag:"You see only your orders."},
 };
@@ -1262,6 +1262,7 @@ function renderApp(){
     <div class="menu ${UI.drawer?'open':''}">
       <div class="grp">Mailbox</div>${M.top.map(menuBtn).join("")}
       <div class="grp">${role==="customer"?"More":"Manage"}</div>${M.rest.filter(function(it){ var g=CAP_GATED[it[0]]; return !g || ((SESSION.capabilities||[]).indexOf(g)>=0); }).map(menuBtn).join("")}
+      <div style="font-size:9px;color:#8a8f98;padding:3px 8px;font-family:'Space Mono',monospace;word-break:break-all">caps: ${esc(JSON.stringify(SESSION.capabilities===undefined?'unset':SESSION.capabilities))}</div>
       <div class="tagl">${M.tag}</div>
     </div>
     <div class="main">
