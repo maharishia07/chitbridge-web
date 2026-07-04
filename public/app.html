@@ -1194,7 +1194,7 @@ function priChip(p){ return (!p||p==="normal")?"":`<span class="prichip pri-${p}
 let UI = {...UI0, selected:new Set(), aggStates:new Set(["open","act","close"])};
 
 const MENUS = {
-  entity:{top:[["compose","✉️","Compose",""],["task","📥","Task",""],["order","📤","Order",""],["drafts","📝","Drafts",""],["trash","🗑️","Trash",""],["archive","🗄️","Archive",""]], rest:[["_diag","🧪","Diag (deploy test)"],["network","🔗","Network"],["suppliers","🏭","Suppliers"],["catalogue","🗂️","Catalogue"],["coassists","🧑‍🤝‍🧑","Co-assists"],["connectors","🛰️","Connectors"],["mis","📊","MIS"],["disputes","⚖️","Disputes"],["profile","👤","Profile"],["settings","⚙️","Settings"],["assistreview","🧠","Assistant"]], tag:"Owner does structure."},
+  entity:{top:[["compose","✉️","Compose",""],["task","📥","Task",""],["order","📤","Order",""],["drafts","📝","Drafts",""],["trash","🗑️","Trash",""],["archive","🗄️","Archive",""]], rest:[["network","🔗","Network"],["suppliers","🏭","Suppliers"],["catalogue","🗂️","Catalogue"],["coassists","🧑‍🤝‍🧑","Co-assists"],["connectors","🛰️","Connectors"],["mis","📊","MIS"],["disputes","⚖️","Disputes"],["profile","👤","Profile"],["settings","⚙️","Settings"],["assistreview","🧠","Assistant"]], tag:"Owner does structure."},
   actor:{top:[["compose","✉️","Compose",""],["task","📥","Task",""],["order","📤","Order",""],["drafts","📝","Drafts",""],["trash","🗑️","Trash",""],["archive","🗄️","Archive",""]], rest:[["suppliers","🏭","Suppliers"],["profile","👤","Profile"]], tag:"Commerce yes, structure no."},
   customer:{top:[["order","📤","My orders",""]], rest:[["shops","🏬","Find a shop"]], tag:"You see only your orders."},
 };
@@ -1242,7 +1242,7 @@ function renderApp(){
     api('assistWhoami').then(function(r){ const was=SESSION.isHelpdesk; SESSION.isHelpdesk=!!(r&&r.is_helpdesk); if(SESSION.isHelpdesk&&!was) renderApp(); }).catch(function(){}); }
   // once per session: the entity's capability SELECTION (drives the itemised nav toggles, e.g. Connectors).
   if(SESSION.token && role!=="customer" && SESSION._capsChecked===undefined){ SESSION._capsChecked=true;
-    api('me',{query:{_t:Date.now()}}).then(function(r){ SESSION.capabilities=(r&&r.capabilities)||[]; SESSION._capdbg=(r&&r.capabilities_debug)||'(no debug field → API stale)'; renderApp(); }).catch(function(e){ SESSION.capabilities=SESSION.capabilities||[]; SESSION._capdbg='fetch failed: '+((e&&e.message)||e); }); }
+    api('me',{query:{_t:Date.now()}}).then(function(r){ SESSION.capabilities=(r&&r.capabilities)||[]; renderApp(); }).catch(function(e){ SESSION.capabilities=SESSION.capabilities||[]; }); }
   const _cap = CAP_OF[UI.nav];
   const _capLoading = !!(_cap && !CAP_LOADED[_cap]);
   if(_capLoading){ ensureCap(_cap).then(function(){ if(CAP_OF[UI.nav]===_cap) renderApp(); })
@@ -1262,7 +1262,6 @@ function renderApp(){
     <div class="menu ${UI.drawer?'open':''}">
       <div class="grp">Mailbox</div>${M.top.map(menuBtn).join("")}
       <div class="grp">${role==="customer"?"More":"Manage"}</div>${M.rest.filter(function(it){ var g=CAP_GATED[it[0]]; return !g || ((SESSION.capabilities||[]).indexOf(g)>=0); }).map(menuBtn).join("")}
-      <div style="font-size:9px;color:#8a8f98;padding:3px 8px;font-family:'Space Mono',monospace;word-break:break-all">caps: ${esc(JSON.stringify(SESSION.capabilities===undefined?'unset':SESSION.capabilities))}<br>dbg: ${esc(SESSION._capdbg||'(pending)')}</div>
       <div class="tagl">${M.tag}</div>
     </div>
     <div class="main">
