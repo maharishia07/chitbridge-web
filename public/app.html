@@ -334,6 +334,15 @@
   .toast button{border:0;background:none;color:var(--gold);font-weight:700}
   .spin{display:inline-block;width:15px;height:15px;border:2px solid #cfe0ec;border-top-color:var(--blue);border-radius:50%;animation:sp .7s linear infinite}@keyframes sp{to{transform:rotate(360deg)}}
   .loadwrap{flex:1;display:flex;align-items:center;justify-content:center;gap:10px;color:var(--grey);font-size:13px}
+  /* skeleton loader — shimmer that mimics the detail layout so the panel reads as "a record is loading here" */
+  .skel{flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+  .skb{background:linear-gradient(90deg,#edf1f5 25%,#f7f9fb 37%,#edf1f5 63%);background-size:400% 100%;animation:shim 1.25s ease-in-out infinite;border-radius:6px}
+  @keyframes shim{0%{background-position:100% 0}100%{background-position:0 0}}
+  .skh{padding:14px 16px;border-bottom:1px solid var(--line)}
+  .skt{display:flex;gap:18px;padding:12px 16px;border-bottom:1px solid var(--line)}
+  .skbody{padding:15px 16px;overflow:hidden}
+  .skrow{display:flex;align-items:center;gap:10px;padding:11px 12px;border:1px solid var(--line);border-top:0}
+  .skrow:first-child{border-top:1px solid var(--line);border-radius:10px 10px 0 0}.skrow:last-child{border-radius:0 0 10px 10px}
 
   .appwrap{flex:1;min-height:0;display:flex;flex-direction:column}
   .appwrap.m{background:#dcd5c8}
@@ -2258,7 +2267,7 @@ function updateListTotal(){ const lt=document.getElementById("listtotal"); if(!l
 function paginationFooter(){ if(UI.loadingMore) return '<div class="listend"><span class="spin"></span> loading more\u2026 ('+UI.rows.length+'/'+UI.total+')</div>'; if(!UI.allLoaded) return '<div class="listend"><button class="composebtn" onclick="loadNextPage()">\u2193 Load more</button><span style="color:var(--grey)">'+UI.rows.length+' of '+UI.total+' loaded</span></div>'; if((UI.total||0)<=0) return ''; return '<div class="listend">\u2014 end of list \u00b7 '+UI.total+' total \u2014</div>'; }
 async function loadList(){
   UI.loading=true; const body=document.getElementById("rows"); if(body)body.innerHTML='<div class="loadwrap"><span class="spin"></span> loading…</div>';
-  { const dp0=document.getElementById("detailpane"); if(dp0)dp0.innerHTML='<div class="loadwrap"><span class="spin"></span> loading…</div>'; }
+  { const dp0=document.getElementById("detailpane"); if(dp0)dp0.innerHTML=detailSkeleton(); }
   try{
     UI.rows=[]; await pgFirst('list');
     // full-set per-state rollup (true counts + sums, independent of the loaded page) — Task/Order only
@@ -2380,10 +2389,29 @@ function sumScope(){
 }
 
 /* detail */
+function detailSkeleton(){
+  const row = w => `<div class="skrow"><div class="skb" style="width:${w}%;height:13px"></div><div class="skb" style="width:56px;height:13px;margin-left:auto"></div></div>`;
+  return `<div class="skel" aria-busy="true" aria-label="Loading record">
+    <div class="skh">
+      <div class="skb" style="width:42%;height:18px"></div>
+      <div class="skb" style="width:28%;height:11px;margin-top:9px"></div>
+      <div style="display:flex;gap:6px;margin-top:12px">
+        <div class="skb" style="width:92px;height:22px;border-radius:7px"></div>
+        <div class="skb" style="width:92px;height:22px;border-radius:7px"></div>
+      </div>
+    </div>
+    <div class="skt">
+      <div class="skb" style="width:58px;height:13px"></div>
+      <div class="skb" style="width:58px;height:13px"></div>
+      <div class="skb" style="width:58px;height:13px"></div>
+    </div>
+    <div class="skbody">${row(46)+row(62)+row(38)+row(54)}</div>
+  </div>`;
+}
 async function openChit(id, silent){
   UI.sel=id;
   if((UI.vp==='mob') && !silent){ UI.mdetail=true; const p=document.getElementById("panel"); if(p)p.classList.add("showdetail"); }
-  { const dp=document.getElementById("detailpane"); if(dp){dp.innerHTML=`<div class="loadwrap"><span class="spin"></span> opening…</div>`;} }
+  { const dp=document.getElementById("detailpane"); if(dp){dp.innerHTML=detailSkeleton();} }
   try{ const chitP=api("chit",{params:{id}}); const msgP=api("messages",{params:{id}}).catch(()=>null);
         const r=await chitP;
         if(r && r.header){ const h=r.header, det=r.detail||{};
