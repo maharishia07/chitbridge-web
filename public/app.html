@@ -1242,7 +1242,7 @@ function renderApp(){
     api('assistWhoami').then(function(r){ const was=SESSION.isHelpdesk; SESSION.isHelpdesk=!!(r&&r.is_helpdesk); if(SESSION.isHelpdesk&&!was) renderApp(); }).catch(function(){}); }
   // once per session: the entity's capability SELECTION (drives the itemised nav toggles, e.g. Connectors).
   if(SESSION.token && role!=="customer" && SESSION._capsChecked===undefined){ SESSION._capsChecked=true;
-    api('me').then(function(r){ SESSION.capabilities=(r&&r.capabilities)||[]; renderApp(); }).catch(function(){ SESSION.capabilities=SESSION.capabilities||[]; }); }
+    api('me').then(function(r){ SESSION.capabilities=(r&&r.capabilities)||[]; SESSION._capdbg=(r&&r.capabilities_debug)||'(no debug field → API stale)'; renderApp(); }).catch(function(e){ SESSION.capabilities=SESSION.capabilities||[]; SESSION._capdbg='fetch failed: '+((e&&e.message)||e); }); }
   const _cap = CAP_OF[UI.nav];
   const _capLoading = !!(_cap && !CAP_LOADED[_cap]);
   if(_capLoading){ ensureCap(_cap).then(function(){ if(CAP_OF[UI.nav]===_cap) renderApp(); })
@@ -1262,7 +1262,7 @@ function renderApp(){
     <div class="menu ${UI.drawer?'open':''}">
       <div class="grp">Mailbox</div>${M.top.map(menuBtn).join("")}
       <div class="grp">${role==="customer"?"More":"Manage"}</div>${M.rest.filter(function(it){ var g=CAP_GATED[it[0]]; return !g || ((SESSION.capabilities||[]).indexOf(g)>=0); }).map(menuBtn).join("")}
-      <div style="font-size:9px;color:#8a8f98;padding:3px 8px;font-family:'Space Mono',monospace;word-break:break-all">caps: ${esc(JSON.stringify(SESSION.capabilities===undefined?'unset':SESSION.capabilities))}</div>
+      <div style="font-size:9px;color:#8a8f98;padding:3px 8px;font-family:'Space Mono',monospace;word-break:break-all">caps: ${esc(JSON.stringify(SESSION.capabilities===undefined?'unset':SESSION.capabilities))}<br>dbg: ${esc(SESSION._capdbg||'(pending)')}</div>
       <div class="tagl">${M.tag}</div>
     </div>
     <div class="main">
