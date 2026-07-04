@@ -334,15 +334,15 @@
   .toast button{border:0;background:none;color:var(--gold);font-weight:700}
   .spin{display:inline-block;width:15px;height:15px;border:2px solid #cfe0ec;border-top-color:var(--blue);border-radius:50%;animation:sp .7s linear infinite}@keyframes sp{to{transform:rotate(360deg)}}
   .loadwrap{flex:1;display:flex;align-items:center;justify-content:center;gap:10px;color:var(--grey);font-size:13px}
-  /* skeleton loader — shimmer that mimics the detail layout so the panel reads as "a record is loading here" */
-  .skel{flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden}
-  .skb{background:linear-gradient(90deg,#edf1f5 25%,#f7f9fb 37%,#edf1f5 63%);background-size:400% 100%;animation:shim 1.25s ease-in-out infinite;border-radius:6px}
-  @keyframes shim{0%{background-position:100% 0}100%{background-position:0 0}}
-  .skh{padding:14px 16px;border-bottom:1px solid var(--line)}
-  .skt{display:flex;gap:18px;padding:12px 16px;border-bottom:1px solid var(--line)}
-  .skbody{padding:15px 16px;overflow:hidden}
-  .skrow{display:flex;align-items:center;gap:10px;padding:11px 12px;border:1px solid var(--line);border-top:0}
-  .skrow:first-child{border-top:1px solid var(--line);border-radius:10px 10px 0 0}.skrow:last-child{border-radius:0 0 10px 10px}
+  /* boxed loader — a card with a spinner and a blue/white ribbon running across the middle */
+  .loadbox{flex:1;display:flex;align-items:center;justify-content:center;padding:24px}
+  .loadcard{width:min(300px,82%);background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 12px 34px rgba(8,24,32,.10);padding:24px 24px 20px;text-align:center}
+  .spin-lg{width:26px;height:26px;border-width:3px}
+  .lc-t{font-family:'Space Grotesk';font-weight:700;font-size:14px;color:var(--ink);margin:13px 0 3px}
+  .lc-s{font-size:12px;color:var(--grey);margin-bottom:15px}
+  .ribbon{height:5px;border-radius:5px;background:#e8eef4;overflow:hidden;position:relative}
+  .ribbon::before{content:"";position:absolute;top:0;height:100%;width:42%;border-radius:5px;background:linear-gradient(90deg,transparent,var(--blue),#8dbbe4,transparent);animation:rib 1.15s ease-in-out infinite}
+  @keyframes rib{0%{left:-42%}100%{left:100%}}
 
   .appwrap{flex:1;min-height:0;display:flex;flex-direction:column}
   .appwrap.m{background:#dcd5c8}
@@ -2390,22 +2390,13 @@ function sumScope(){
 
 /* detail */
 function detailSkeleton(){
-  const row = w => `<div class="skrow"><div class="skb" style="width:${w}%;height:13px"></div><div class="skb" style="width:56px;height:13px;margin-left:auto"></div></div>`;
-  return `<div class="skel" aria-busy="true" aria-label="Loading record">
-    <div class="skh">
-      <div class="skb" style="width:42%;height:18px"></div>
-      <div class="skb" style="width:28%;height:11px;margin-top:9px"></div>
-      <div style="display:flex;gap:6px;margin-top:12px">
-        <div class="skb" style="width:92px;height:22px;border-radius:7px"></div>
-        <div class="skb" style="width:92px;height:22px;border-radius:7px"></div>
-      </div>
+  return `<div class="loadbox" aria-busy="true" aria-label="Loading record">
+    <div class="loadcard">
+      <span class="spin spin-lg"></span>
+      <div class="lc-t">Loading record</div>
+      <div class="lc-s">fetching the latest details…</div>
+      <div class="ribbon"></div>
     </div>
-    <div class="skt">
-      <div class="skb" style="width:58px;height:13px"></div>
-      <div class="skb" style="width:58px;height:13px"></div>
-      <div class="skb" style="width:58px;height:13px"></div>
-    </div>
-    <div class="skbody">${row(46)+row(62)+row(38)+row(54)}</div>
   </div>`;
 }
 async function openChit(id, silent){
