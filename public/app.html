@@ -1194,7 +1194,7 @@ function priChip(p){ return (!p||p==="normal")?"":`<span class="prichip pri-${p}
 let UI = {...UI0, selected:new Set(), aggStates:new Set(["open","act","close"])};
 
 const MENUS = {
-  entity:{top:[["compose","✉️","Compose",""],["task","📥","Task",""],["order","📤","Order",""],["drafts","📝","Drafts",""],["trash","🗑️","Trash",""],["archive","🗄️","Archive",""]], rest:[["network","🔗","Network"],["suppliers","🏭","Suppliers"],["catalogue","🗂️","Catalogue"],["coassists","🧑‍🤝‍🧑","Co-assists"],["mis","📊","MIS"],["disputes","⚖️","Disputes"],["profile","👤","Profile"],["settings","⚙️","Settings"],["assistreview","🧠","Assistant"]], tag:"Owner does structure."},
+  entity:{top:[["compose","✉️","Compose",""],["task","📥","Task",""],["order","📤","Order",""],["drafts","📝","Drafts",""],["trash","🗑️","Trash",""],["archive","🗄️","Archive",""]], rest:[["network","🔗","Network"],["suppliers","🏭","Suppliers"],["catalogue","🗂️","Catalogue"],["coassists","🧑‍🤝‍🧑","Co-assists"],["connectors","🛰️","Connectors"],["mis","📊","MIS"],["disputes","⚖️","Disputes"],["profile","👤","Profile"],["settings","⚙️","Settings"],["assistreview","🧠","Assistant"]], tag:"Owner does structure."},
   actor:{top:[["compose","✉️","Compose",""],["task","📥","Task",""],["order","📤","Order",""],["drafts","📝","Drafts",""],["trash","🗑️","Trash",""],["archive","🗄️","Archive",""]], rest:[["suppliers","🏭","Suppliers"],["profile","👤","Profile"]], tag:"Commerce yes, structure no."},
   customer:{top:[["order","📤","My orders",""]], rest:[["shops","🏬","Find a shop"]], tag:"You see only your orders."},
 };
@@ -1219,7 +1219,9 @@ const PURPOSE = {
    /app/cap-<name>.js (classic script, shared global scope). CAP_OF maps a screen to its
    capability; unlisted screens are Core (eager, always loaded). renderApp shows "Loading…"
    and re-renders once the capability arrives. Grow CAP_OF as screens migrate out. */
-const CAP_OF = { mis:'admin', profile:'admin', settings:'admin', coassists:'workforce', assistreview:'admin' };
+const CAP_OF = { mis:'admin', profile:'admin', settings:'admin', coassists:'workforce', assistreview:'admin', connectors:'connector' };
+// nav items gated by an entity capability (the itemised toggle) — hidden unless SESSION.capabilities holds the key.
+const CAP_GATED = { connectors:'connector' };
 const CAP_LOADED = {};
 const _capPromise = {};
 function ensureCap(name){
@@ -1238,6 +1240,9 @@ function renderApp(){
   // once per session: is this entity a helpdesk? (generalises the helpdesk business-layer gate off the hardcoded name)
   if(SESSION.token && role!=="customer" && SESSION._hdChecked===undefined){ SESSION._hdChecked=true;
     api('assistWhoami').then(function(r){ const was=SESSION.isHelpdesk; SESSION.isHelpdesk=!!(r&&r.is_helpdesk); if(SESSION.isHelpdesk&&!was) renderApp(); }).catch(function(){}); }
+  // once per session: the entity's capability SELECTION (drives the itemised nav toggles, e.g. Connectors).
+  if(SESSION.token && role!=="customer" && SESSION._capsChecked===undefined){ SESSION._capsChecked=true;
+    api('me').then(function(r){ SESSION.capabilities=(r&&r.capabilities)||[]; renderApp(); }).catch(function(){ SESSION.capabilities=SESSION.capabilities||[]; }); }
   const _cap = CAP_OF[UI.nav];
   const _capLoading = !!(_cap && !CAP_LOADED[_cap]);
   if(_capLoading){ ensureCap(_cap).then(function(){ if(CAP_OF[UI.nav]===_cap) renderApp(); })
@@ -1256,7 +1261,7 @@ function renderApp(){
     </div>
     <div class="menu ${UI.drawer?'open':''}">
       <div class="grp">Mailbox</div>${M.top.map(menuBtn).join("")}
-      <div class="grp">${role==="customer"?"More":"Manage"}</div>${M.rest.map(menuBtn).join("")}
+      <div class="grp">${role==="customer"?"More":"Manage"}</div>${M.rest.filter(function(it){ var g=CAP_GATED[it[0]]; return !g || ((SESSION.capabilities||[]).indexOf(g)>=0); }).map(menuBtn).join("")}
       <div class="tagl">${M.tag}</div>
     </div>
     <div class="main">
@@ -1996,6 +2001,7 @@ function mainBody(){
   if(UI.nav==="catalogue") return catalogueScreen();
   if(UI.nav==="mis") return misScreen();
   if(UI.nav==="coassists") return coassistsScreen();
+  if(UI.nav==="connectors") return connectorsScreen();
   if(UI.nav==="assistreview") return assistReviewScreen();
   return `<div class="stub"><div class="t">${navTitle()}</div><div>This screen is on the build roadmap — we walk it in a later iteration. The menu &amp; routing are live so you can see where it lives.</div></div>`;
 }
