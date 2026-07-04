@@ -2258,6 +2258,7 @@ function updateListTotal(){ const lt=document.getElementById("listtotal"); if(!l
 function paginationFooter(){ if(UI.loadingMore) return '<div class="listend"><span class="spin"></span> loading more\u2026 ('+UI.rows.length+'/'+UI.total+')</div>'; if(!UI.allLoaded) return '<div class="listend"><button class="composebtn" onclick="loadNextPage()">\u2193 Load more</button><span style="color:var(--grey)">'+UI.rows.length+' of '+UI.total+' loaded</span></div>'; if((UI.total||0)<=0) return ''; return '<div class="listend">\u2014 end of list \u00b7 '+UI.total+' total \u2014</div>'; }
 async function loadList(){
   UI.loading=true; const body=document.getElementById("rows"); if(body)body.innerHTML='<div class="loadwrap"><span class="spin"></span> loading…</div>';
+  { const dp0=document.getElementById("detailpane"); if(dp0)dp0.innerHTML='<div class="loadwrap"><span class="spin"></span> loading…</div>'; }
   try{
     UI.rows=[]; await pgFirst('list');
     // full-set per-state rollup (true counts + sums, independent of the loaded page) — Task/Order only
@@ -2382,7 +2383,7 @@ function sumScope(){
 async function openChit(id, silent){
   UI.sel=id;
   if((UI.vp==='mob') && !silent){ UI.mdetail=true; const p=document.getElementById("panel"); if(p)p.classList.add("showdetail"); }
-  if(!silent){ const dp=document.getElementById("detailpane"); if(dp){dp.innerHTML=`<div class="loadwrap"><span class="spin"></span> opening…</div>`;} }
+  { const dp=document.getElementById("detailpane"); if(dp){dp.innerHTML=`<div class="loadwrap"><span class="spin"></span> opening…</div>`;} }
   try{ const r=await api("chit",{params:{id}});
         if(r && r.header){ const h=r.header, det=r.detail||{};
           const base=UI.rows.find(c=>c.id===id)||mapApiChit({chit_id:h.chit_id,summary_json:h.summary_json,all_recipients:h.all_recipients,sender_entity_display_name:h.sender_entity_display_name,purpose:h.purpose,manual_subject:h.manual_subject,auto_subject:h.auto_subject,current_status:'delivered',open_dispute_count:0});
