@@ -336,6 +336,7 @@
   .loadwrap{flex:1;display:flex;align-items:center;justify-content:center;gap:10px;color:var(--grey);font-size:13px}
   /* boxed loader — a card with a spinner and a blue/white ribbon running across the middle */
   .loadbox{flex:1;display:flex;align-items:center;justify-content:center;padding:24px}
+  .dbload{display:flex;align-items:center;justify-content:center;gap:10px;color:var(--grey);font-size:13px;padding:52px 0}
   .loadcard{width:min(300px,82%);background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 12px 34px rgba(8,24,32,.10);padding:24px 24px 20px;text-align:center}
   .spin-lg{width:26px;height:26px;border-width:3px}
   .lc-t{font-family:'Space Grotesk';font-weight:700;font-size:14px;color:var(--ink);margin:13px 0 3px}
@@ -2404,11 +2405,15 @@ function detailSkeleton(){
 async function openChit(id, silent){
   UI.sel=id;
   if((UI.vp==='mob') && !silent){ UI.mdetail=true; const p=document.getElementById("panel"); if(p)p.classList.add("showdetail"); }
-  { const dp=document.getElementById("detailpane"); if(dp){dp.className="detail"; dp.innerHTML=detailSkeleton();} }
+  // OPTIMISTIC: the list row already holds every header field the detail header shows — paint it NOW and load
+  // only the body, so on laptop the record appears instantly and just the line-items/messages fill a beat later.
+  const rowBase=UI.rows.find(c=>c.id===id);
+  if(rowBase){ UI.detail={...rowBase, items:[], atts:[], msgs:[], log:[], _loading:true}; paintDetail(); }
+  else { const dp=document.getElementById("detailpane"); if(dp){dp.className="detail"; dp.innerHTML=detailSkeleton();} }
   try{ const chitP=api("chit",{params:{id}}); const msgP=api("messages",{params:{id}}).catch(()=>null);
         const r=await chitP;
         if(r && r.header){ const h=r.header, det=r.detail||{};
-          const base=UI.rows.find(c=>c.id===id)||mapApiChit({chit_id:h.chit_id,summary_json:h.summary_json,all_recipients:h.all_recipients,sender_entity_display_name:h.sender_entity_display_name,purpose:h.purpose,manual_subject:h.manual_subject,auto_subject:h.auto_subject,current_status:'delivered',open_dispute_count:0});
+          const base=rowBase||mapApiChit({chit_id:h.chit_id,summary_json:h.summary_json,all_recipients:h.all_recipients,sender_entity_display_name:h.sender_entity_display_name,purpose:h.purpose,manual_subject:h.manual_subject,auto_subject:h.auto_subject,current_status:'delivered',open_dispute_count:0});
           const _items=(det.line_items||[]).map(fmtLine);
           const _ratts=(r.attachments||[]).map(mapAtt);
           _ratts.filter(a=>a.line_index!=null).forEach(a=>{ const it=_items[a.line_index]; if(it){ it[2]=it[2]||[]; it[2].push(a); } });
@@ -2446,6 +2451,7 @@ function detailInner(){
      <div class="itab" style="padding:10px"><div class="sec" style="margin:0">Value</div><div class="disp" style="font-size:17px;font-weight:700">${inr(c.amt)}</div></div>
      <div class="itab" style="padding:10px"><div class="sec" style="margin:0">State</div><div class="disp" style="font-size:15px;font-weight:700">${c.state.toUpperCase()}</div></div></div>
      <div style="margin-top:10px">${proof}</div>`;
+  if(c._loading){ body=`<div class="dbload"><span class="spin"></span> loading details…</div>`; }
   const actbar = (UI.folder==='drafts') ? `<button class="pri" onclick="resumeDraft('${c.id}')">✏️ Resume &amp; edit</button>` : (UI.folder==='trash') ? `<button class="pri" onclick="restoreChit('${c.id}')">↩ Restore</button>${c.isDraft?`<button class="pri" style="background:#b4453f;border-color:#b4453f;margin-left:8px" onclick="purgeChit('${c.id}')">🗑 Delete forever</button>`:''}` : (UI.folder==='archive') ? `<button class="pri" onclick="unarchiveChit('${c.id}')">↩ Unarchive</button>` : SESSION.role==="customer"
     ? `<button onclick="toggleCustPri('${c.id}')">⚑ ${c.custPri?'Priority requested':'Request priority'}</button><button class="warn" onclick="quickDispute()">⚑ Dispute</button><button onclick="todo('pdf')">⬇ PDF</button>`
     : `<button onclick="forwardChit('${c.id}')" title="Forward as a new chit">➤ Forward</button><button onclick="markUnread('${c.id}')" title="Mark as unread">✉ Unread</button><button class="pri" onclick="pickChitStatus('${c.id}')">Status ▾</button>${SESSION.role==="actor"?`<button onclick="pickAssign('${c.id}')">👥 Assign</button>`:""}<button class="warn" onclick="quickDispute()">⚑ Dispute</button>${SESSION.role==="entity"?`<button class="warn pend" onclick="todo('voidChit')">⊘ Void</button>`:""}<button onclick="todo('pdf')">⬇ PDF</button>`;
