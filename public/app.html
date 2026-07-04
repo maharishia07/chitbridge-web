@@ -2111,8 +2111,9 @@ async function confirmDispute(){ const id=MODALS.disp.id; const el=document.getE
   const body={category:cat,reason}; if(parties.length)body.participant_entity_ids=parties;
   try{ await api("dispute",{params:{id},body}); const i=UI.rows.findIndex(x=>x.id===id); if(i>=0)UI.rows[i].dispute=true; }catch(e){ toast(MSG.fail("raise the dispute", e)); return; }
   if(typeof refreshRollup==='function')refreshRollup(); toast(MSG.disputeRaised(1)); announce('Dispute raised');
-  // reload the detail so the scoped dispute message + banner appear; surface it on the Messages tab.
-  if(UI.sel===id){ UI.dtab='messages'; UI.msgFilter='dispute'; await openChit(id); } else { renderApp(); }
+  // reload the detail so the scoped dispute message + banner appear; surface it on the Messages tab
+  // (the new ⚑ message shows on top; the banner's "Open dispute thread" is the explicit dispute filter).
+  if(UI.sel===id){ UI.dtab='messages'; await openChit(id); } else { renderApp(); }
 }
 // Deletion policy: only DRAFTS can be deleted (→ Trash → restore or delete-forever). Sent/received chits are
 // co-held records the counterparty also holds — they cannot be deleted (removal is governed by the deletion
@@ -2487,15 +2488,7 @@ function detailInner(){
   if(UI.dtab==="content") body=`<div class="itab">${items}<div class="ir tot"><span>Total</span><span class="qt">${fmtMoney(c.amt,c.currency)}</span></div></div>
      ${chitAttBlock(c)}`;
   if(UI.dtab==="messages") body=messagesTab(c);
-  if(UI.dtab==="status") body=statusTabHtml(c); if(false) body=`<div class="sec">Lifecycle</div><div class="tl">
-     <div class="ev"><div class="ea">Created</div><div class="em">today 10:02</div></div>
-     <div class="ev"><div class="ea">Sent · landed</div><div class="em">with ${esc(c.party)}</div></div>
-     ${c.state!=="open"?'<div class="ev"><div class="ea">Moved to Act</div><div class="em">10:25</div></div>':''}
-     ${c.state==="close"?'<div class="ev"><div class="ea">Closed</div><div class="em">delivery confirmed</div></div>':`<div class="ev next"><div class="ea" style="color:var(--grey)">Next: ${({open:"Act",act:"Close",close:"Archive"})[c.state]}</div><div class="em">advance from the row chip ▸</div></div>`}
-     </div>
-     <div class="sec" style="margin-top:14px">💬 Messages (${msgCount(c)})</div>
-     ${((c.msgs||[]).filter(m=>SESSION.role==="customer"?m.scope==="external":true).slice(-3).reverse().map(msgBubble).join(""))||'<div class="msgempty" style="padding:10px">No messages yet.</div>'}
-     <div style="margin-top:4px"><button class="msglink" onclick="setDtab('messages')">Open conversation →</button></div>`;
+  if(UI.dtab==="status") body=statusTabHtml(c);
   if(UI.dtab==="summary") body=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
      <div class="itab" style="padding:10px"><div class="sec" style="margin:0">Value</div><div class="disp" style="font-size:17px;font-weight:700">${inr(c.amt)}</div></div>
      <div class="itab" style="padding:10px"><div class="sec" style="margin:0">State</div><div class="disp" style="font-size:15px;font-weight:700">${c.state.toUpperCase()}</div></div></div>
@@ -2545,7 +2538,6 @@ function msgCount(c){ return ((c&&c.msgs)?c.msgs:[]).filter(m=>SESSION.role==="c
 function setMsgFilter(f){ UI.msgFilter=f; paintDetail(); }
 function setMsgChan(ch){ UI.msgChan=ch; paintDetail(); }
 function toggleCompose(){ UI.composeOpen=!UI.composeOpen; paintDetail(); if(UI.composeOpen)setTimeout(()=>{const dp=document.getElementById('detailpane'); if(dp)dp.scrollTop=0; const t=document.getElementById('msgbody');if(t)t.focus();},30); }
-function setMsgType(t){ UI.msgType=t; paintDetail(); }
 function toggleMsgTypeMenu(){ UI.msgTypeMenu=!UI.msgTypeMenu; paintDetail(); }
 function toggleMsgType(k){ const s=new Set(UI.msgTypeSel||[]); s.has(k)?s.delete(k):s.add(k); UI.msgTypeSel=[...s]; paintDetail(); }
 function clearMsgTypes(){ UI.msgTypeSel=[]; UI.msgTypeMenu=false; paintDetail(); }
@@ -2619,7 +2611,7 @@ function openMsgCenter(){ const host=document.getElementById("lbhost"); if(!host
 }
 function closeMsgCenter(){ UI.msgcOpen=false; const h=document.getElementById("lbhost"); if(h)h.innerHTML=""; }
 function openFromCenter(id){ closeMsgCenter(); openChitMsgs(id); }
-function setMsgTypeSet(mode){ SESSION.msgTypes=mode; if(!surfacedTypes().includes(UI.msgKind))UI.msgKind=surfacedTypes()[0]; if(UI.msgType!=="all" && !surfacedTypes().includes(UI.msgType))UI.msgType="all"; closeMsgCenter(); openMsgCenter(); paintDetail(); }
+function setMsgTypeSet(mode){ SESSION.msgTypes=mode; if(!surfacedTypes().includes(UI.msgKind))UI.msgKind=surfacedTypes()[0]; if(UI.msgTypeSel&&UI.msgTypeSel.length)UI.msgTypeSel=UI.msgTypeSel.filter(k=>surfacedTypes().includes(k)); closeMsgCenter(); openMsgCenter(); paintDetail(); }
 function openRaidReport(){ const host=document.getElementById("lbhost"); if(!host)return; UI.msgcOpen=false;
   const counts={}, samples={}; (STORE.chits||[]).forEach(c=>{ (c.msgs||[]).forEach(m=>{ if(SESSION.role==="customer"&&m.scope!=="external")return; const k=m.type||"info"; counts[k]=(counts[k]||0)+1; (samples[k]=samples[k]||[]); if(samples[k].length<3)samples[k].push({code:c.code,body:m.body}); }); });
   const keys=Object.keys(MTYPES).filter(k=>counts[k]); const total=keys.reduce((a,k)=>a+counts[k],0); const max=Math.max(1,...keys.map(k=>counts[k]));
