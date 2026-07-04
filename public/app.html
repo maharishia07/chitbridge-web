@@ -2007,7 +2007,7 @@ function stCount(s){ const loaded=countStates()[s]; const t=hasRollup()?rollupBu
 /* cap → app/helpers.js */
 function setSub(s){UI.sub=s;UI.sel=null;UI.detail=null;renderApp();}
 function toggleListHelp(){ UI.listHelp=!UI.listHelp; renderApp(); }
-function setState(s){UI.state=s;renderApp();}
+function setState(s){UI.state=s; UI.sel=null; UI.detail=null; renderApp(); const first=UI.rows.find(c=>c.state===s); if(first)openChit(first.id,true);}
 function toggleAgg(s){UI.aggStates.has(s)?(UI.aggStates.size>1&&UI.aggStates.delete(s)):UI.aggStates.add(s);renderApp();}
 function toggleSelect(){UI.selectMode=!UI.selectMode;if(!UI.selectMode)UI.selected.clear();renderApp();}
 function actionTargets(){ if(UI.selectMode && UI.selected.size) return [...UI.selected]; if(UI.sel) return [UI.sel]; return []; }
