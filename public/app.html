@@ -2384,14 +2384,15 @@ async function openChit(id, silent){
   UI.sel=id;
   if((UI.vp==='mob') && !silent){ UI.mdetail=true; const p=document.getElementById("panel"); if(p)p.classList.add("showdetail"); }
   { const dp=document.getElementById("detailpane"); if(dp){dp.innerHTML=`<div class="loadwrap"><span class="spin"></span> opening…</div>`;} }
-  try{ const r=await api("chit",{params:{id}});
+  try{ const chitP=api("chit",{params:{id}}); const msgP=api("messages",{params:{id}}).catch(()=>null);
+        const r=await chitP;
         if(r && r.header){ const h=r.header, det=r.detail||{};
           const base=UI.rows.find(c=>c.id===id)||mapApiChit({chit_id:h.chit_id,summary_json:h.summary_json,all_recipients:h.all_recipients,sender_entity_display_name:h.sender_entity_display_name,purpose:h.purpose,manual_subject:h.manual_subject,auto_subject:h.auto_subject,current_status:'delivered',open_dispute_count:0});
           const _items=(det.line_items||[]).map(fmtLine);
           const _ratts=(r.attachments||[]).map(mapAtt);
           _ratts.filter(a=>a.line_index!=null).forEach(a=>{ const it=_items[a.line_index]; if(it){ it[2]=it[2]||[]; it[2].push(a); } });
           UI.detail={...base, items:_items, atts:_ratts.filter(a=>a.line_index==null), msgs:[], log:(r.state_log||[])};
-          try{ const mr=await api("messages",{params:{id}}); UI.detail.msgs=(mr||[]).map(mapApiMsg); }catch(_){}
+          try{ const mr=await msgP; UI.detail.msgs=(mr||[]).map(mapApiMsg); }catch(_){}
         } else { UI.detail=r; }
         UI.openLines=new Set(); const fi=(UI.detail.items||[]).findIndex(it=>attsVis(it[2]).length); if(fi>=0)UI.openLines.add('line'+fi);
         paintDetail(); paintRowsOnly(); }
