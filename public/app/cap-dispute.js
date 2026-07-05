@@ -116,6 +116,20 @@ function dispCell(c){
   return '<span class="rowdisp" style="font-size:11px">'+p.join(' <span style="color:var(--line)">·</span> ')+'</span>';
 }
 
+/* ── Advanced-search dispute filter (was inline in Core toolbar + adv modal). The ⚠ N chip surfaces on
+ *    task/order lists when open disputes exist (or the filter is on); toggling adds dispute='open' to
+ *    UI.adv. dispSearchRow = the checkbox inside the advanced-search modal. Core calls both via typeof,
+ *    so a customer / dispute-blind Core just omits them.
+ *    NOTE (FR-D12): a stricter hasCap('dispute') gate is deliberately NOT applied — a non-opted entity can
+ *    still be a dispute TARGET and needs to find the disputed record. Revisit if opt-in must fully hide it. */
+function dispChipHtml(){
+  if(["task","order"].indexOf(UI.folder)<0) return '';
+  var n=UI.disputeOpen||0, on=(UI.adv||{}).dispute; if(!n && !on) return '';
+  return '<button class="advbtn'+(on?' on':'')+'" style="color:#b4453f;border-color:#f0c9c6'+(on?';background:#fbeceb':'')+'" onclick="event.stopPropagation();toggleDisputeFilter()" title="Chits with an open dispute">⚠ '+n+'</button>';
+}
+function toggleDisputeFilter(){ var a=UI.adv||{}; if(a.dispute){delete a.dispute;}else{a.dispute='open';} UI.adv=a; UI.sel=null; UI.detail=null; renderApp(); }
+function dispSearchRow(a){ a=a||{}; return '<div class="advrow"><label>Dispute</label><label class="advchk"><input type="checkbox" id="adv_disp" '+(a.dispute?'checked':'')+'> ⚠ Only open disputes</label></div>'; }
+
 /* ── On-record banner (was inline in Core detailInner) — the USP surfaced ON the chit.
  *    MULTI-PARTY: renders ALL concurrent open disputes on one record "under one roof" — e.g. on an A→B,C chit
  *    the viewer B may be party to BOTH an A↔B dispute AND a B↔C dispute; both show at once (previously only
