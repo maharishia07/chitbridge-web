@@ -33,29 +33,8 @@ function disputeResolveBtns(parties, chitId, disputeId, show, btnCls){
   return inner;
 }
 
-/* Opponent label from the viewer's side: the parties (targets) excluding self; if the viewer IS the
- * target (so no party chip is theirs), the opponent is the raiser. Used by the per-dispute thread chips. */
-function disputeOppLabel(d){
-  var p=disputeParties(d);
-  if(p.length) return p.map(function(x){ return x.display_name||'party'; }).join(', ');
-  return nm(d.raised_by_display_name,'party');
-}
-/* ── Per-dispute thread filter chips — the "manage each group separately" control. Keyed on dispute_id
- *    (the identifier already on every chit_messages row). Renders ONLY when 2+ disputes are open; with 0/1
- *    Core's single ⚑ Disputes button suffices. "All" clears the selection; each chip narrows the thread to
- *    that one dispute AND (via setMsgDisp) binds the composer reply to the SAME dispute — so read-thread and
- *    reply-thread never diverge (closes the "reply lands in the first dispute" ambiguity). */
-function disputeFilterChips(c, sel, f){
-  var od=((c&&c.disputes)||[]).filter(function(d){ return d.status==='open'; });
-  if(od.length<2) return '';
-  var allOn=(f==='dispute'&&!sel);
-  var chips=od.map(function(d){
-    var on=(f==='dispute'&&String(sel)===String(d.dispute_id));
-    var lb=disputeOppLabel(d); if(lb.length>16) lb=lb.slice(0,15)+'…';
-    return '<button class="'+(on?'on disp':'')+'" onclick="setMsgDisp(\''+d.dispute_id+'\')">⚑ '+esc(lb)+'</button>';
-  }).join('');
-  return '<button class="'+(allOn?'on disp':'')+'" onclick="setMsgDisp(\'\')">⚑ All</button>'+chips;
-}
+/* (disputeOppLabel + disputeFilterChips removed 2026-07-05 — the general-thread per-dispute chips are
+ *  superseded by the Open|Closed dispute panel + per-dispute rooms below.) */
 
 /* ═══════════════════════════════════════════════════════════════════════════════════════════
  * MESSAGING + LIST HOOKS — 2nd lazy pass (2026-07-05). Every dispute-specific branch that used to
@@ -130,43 +109,82 @@ function dispChipHtml(){
 function toggleDisputeFilter(){ var a=UI.adv||{}; if(a.dispute){delete a.dispute;}else{a.dispute='open';} UI.adv=a; UI.sel=null; UI.detail=null; renderApp(); }
 function dispSearchRow(a){ a=a||{}; return '<div class="advrow"><label>Dispute</label><label class="advchk"><input type="checkbox" id="adv_disp" '+(a.dispute?'checked':'')+'> ⚠ Only open disputes</label></div>'; }
 
-/* ── On-record banner (was inline in Core detailInner) — the USP surfaced ON the chit.
- *    MULTI-PARTY: renders ALL concurrent open disputes on one record "under one roof" — e.g. on an A→B,C chit
- *    the viewer B may be party to BOTH an A↔B dispute AND a B↔C dispute; both show at once (previously only
- *    od[0] rendered, so the second was hidden until the first resolved). Each dispute is its own block with its
- *    own parties + raiser-only resolve; a count header shows how many are locked. */
-function disputeBannerRow(c, d){
-  var parties=disputeParties(d);                                          // the opponent(s) — self excluded
-  var mine=chitIsSelf(d.raised_by_entity_id, d.raised_by_display_name);   // only the raiser resolves (BR-D3)
-  var chips=disputeChips(parties, 'dpchip');
-  var res=disputeResolveBtns(parties, c.id, d.dispute_id, mine, 'db-res');
-  return '<div class="db-drow" style="padding:7px 0 2px;border-top:1px dashed #f0c9c6">'
-    +'<div class="db-row"><span class="db-cat">'+esc(cap(d.category||''))+'</span>'+(parties.length?'<span style="font-size:11.5px;color:var(--grey)">with '+chips+'</span>':'')+'</div>'
-    +'<div class="db-reason">'+esc(d.reason||'')+'</div>'
-    +'<div class="db-meta">raised by '+nm(d.raised_by_display_name,'—')+'</div>'
-    +'<div class="db-acts"><button onclick="setDtab(\'messages\');setMsgDisp(\''+d.dispute_id+'\')">Open this thread →</button>'+res+'</div>'
-    +'</div>';
-}
+/* ── On-record DISPUTE PANEL (was the banner) — the USP as a self-contained space ON the chit.
+ *    Open|Closed tabs; each dispute is a selectable row that expands into its OWN ROOM: reason + its own
+ *    message thread (only THIS dispute's messages) + an external-only compose + raiser resolve. A CLOSED
+ *    dispute keeps its thread READ-ONLY (messages live forever — chit_messages are never deleted and stay
+ *    visible to participants regardless of status). 1 or many disputes = identical interaction: pick → room.
+ *    Dispute messaging is external-only (participant-scoped); internal team notes use the normal Messages tab. */
+function setDispTab(t){ UI.dispTab=t; UI.dispRoom=null; paintDetail(); }
+function toggleDispRoom(did){ UI.dispRoom=(String(UI.dispRoom)===String(did))?null:did; paintDetail(); }
 function disputeBanner(c){
-  var od=((c&&c.disputes)||[]).filter(function(d){ return d.status==='open'; });
-  if(!od.length) return '';
+  var all=((c&&c.disputes)||[]);
+  var open=all.filter(function(d){ return d.status==='open'; });
+  var closed=all.filter(function(d){ return d.status!=='open'; });
+  if(!open.length && !closed.length) return '';
+  var tab=UI.dispTab||'open';
+  if(tab==='closed' && !closed.length) tab='open';
+  if(tab==='open'   && !open.length)   tab='closed';
+  var list=(tab==='open')?open:closed;
   var proof=c.proof==='ok'?'<span class="db-proof">⚖️ both-signed record</span>':'';
-  var head=od.length>1                                                    // count header only when >1 (multi-party)
-    ? '<div class="db-row"><span class="db-tag">⚑ '+od.length+' disputes open on this record</span>'+proof+'</div>'
-    : '<div class="db-row"><span class="db-tag">⚑ Open dispute</span>'+proof+'</div>';
-  var rows=od.map(function(d){ return disputeBannerRow(c,d); }).join('');   // each block deep-links to its OWN thread
+  var pill=function(t,label,n,on){ return '<button onclick="setDispTab(\''+t+'\')" style="border:1px solid '+(on?'#d98a84':'var(--line)')+';background:'+(on?'#fbeceb':'#fff')+';color:'+(on?'#b4453f':'var(--grey)')+';font-weight:'+(on?'700':'500')+';border-radius:7px;padding:2px 10px;font-size:11.5px;cursor:pointer">'+label+' '+n+'</button>'; };
+  var head='<div class="db-row" style="align-items:center"><span class="db-tag">⚑ Disputes</span>'+proof
+    +'<span style="margin-left:auto;display:inline-flex;gap:6px">'+pill('open','Open',open.length,tab==='open')+pill('closed','Closed',closed.length,tab==='closed')+'</span></div>';
+  var expanded=UI.dispRoom||(list.length===1?list[0].dispute_id:null);   // single → auto-open; many → pick one
+  var rows=list.length
+    ? list.map(function(d){ return disputeRow(c,d,String(expanded)===String(d.dispute_id)); }).join('')
+    : '<div style="font-size:12px;color:var(--grey);padding:8px 2px">No '+tab+' disputes.</div>';
   return '<div class="dispbanner">'+head+rows+'</div>';
 }
-
-/* ── Composer "reply in the dispute" toggle (was inline in Core messagesTab). Only on an open-dispute
- *    chit and never for a customer; posts the reply as is_dispute against the open dispute (FR-D6). */
-function disputeToggleHtml(c, isCust){
-  var openDisp=((c&&c.disputes)||[]).find(function(d){ return (d.status||'open')==='open'; });
-  if(isCust||!openDisp){ UI.msgAsDispute=false; return ''; }
-  return '<button class="msgfbtn'+(UI.msgAsDispute?' on':'')+'" style="margin:2px 0 4px" onclick="toggleMsgDispute()">⚑ '
-    +(UI.msgAsDispute?'Posting as DISPUTE reply — click to stop':'Reply in the dispute')+'</button>';
+/* one dispute = a clickable header that expands into its room (accordion — one at a time) */
+function disputeRow(c, d, isOpen){
+  var parties=disputeParties(d);
+  var chips=disputeChips(parties, 'dpchip');
+  var resolved=d.status!=='open';
+  var stPill=resolved?'<span style="color:#3c8a52;font-size:11px;font-weight:700">✓ resolved</span>'
+                     :'<span style="color:#b4453f;font-size:11px;font-weight:700">● open</span>';
+  var hdr='<div onclick="toggleDispRoom(\''+d.dispute_id+'\')" style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:7px 0">'
+    +'<span style="color:var(--grey);width:12px;flex:none">'+(isOpen?'▾':'▸')+'</span>'
+    +'<span class="db-cat">'+esc(cap(d.category||''))+'</span>'
+    +(parties.length?'<span style="font-size:11.5px;color:var(--grey)">with '+chips+'</span>':'')
+    +'<span style="margin-left:auto">'+stPill+'</span></div>';
+  return '<div style="border-top:1px dashed #f0c9c6">'+hdr+(isOpen?disputeRoom(c,d,resolved):'')+'</div>';
 }
-function toggleMsgDispute(){ UI.msgAsDispute=!UI.msgAsDispute; paintDetail(); }
+/* the room: reason + (resolution note if closed) + THIS dispute's thread + external compose (open only) + resolve */
+function disputeRoom(c, d, readonly){
+  var mine=chitIsSelf(d.raised_by_entity_id, d.raised_by_display_name);
+  var parties=disputeParties(d);
+  var msgs=(typeof disputeFilterMsgs==='function')?(disputeFilterMsgs((c.msgs||[]),'dispute',d.dispute_id)||[]):[];
+  var thread=msgs.length?msgs.map(function(m){ return (typeof msgBubble==='function')?msgBubble(m):''; }).join('')
+    :'<div style="font-size:12px;color:var(--grey);padding:6px 2px">No messages in this dispute yet.</div>';
+  var reason='<div class="db-reason">'+esc(d.reason||'')+'</div><div class="db-meta" style="margin-bottom:6px">raised by '+nm(d.raised_by_display_name,'—')+'</div>';
+  var resnote=(readonly&&d.resolution_note)?'<div style="font-size:12px;color:#2f7a45;background:#eef7f0;border:1px solid #cde7d4;border-radius:8px;padding:6px 9px;margin-bottom:6px">✓ Resolution: '+esc(d.resolution_note)+'</div>':'';
+  var to=parties.length?esc(parties.map(function(p){ return p.display_name||'party'; }).join(", ")):'participants';
+  var compose=readonly?'':'<div style="display:flex;gap:6px;align-items:flex-end;margin-top:8px">'
+    +'<textarea id="droom-'+d.dispute_id+'" placeholder="Reply to this dispute — '+to+' will see this" style="flex:1;min-height:44px;border:1px solid var(--line);border-radius:8px;padding:7px;font:inherit;font-size:13px;resize:vertical"></textarea>'
+    +'<button onclick="sendDisputeMsg(\''+c.id+'\',\''+d.dispute_id+'\')" style="border:none;background:#b4453f;color:#fff;border-radius:8px;padding:9px 13px;font-weight:600;cursor:pointer;white-space:nowrap">Send ↔</button></div>';
+  var res=readonly?'':disputeResolveBtns(parties, c.id, d.dispute_id, mine, 'db-res');
+  return '<div style="padding:2px 0 10px 20px">'+reason+resnote
+    +'<div style="border:1px solid var(--line);border-radius:9px;padding:6px;background:#fbfbfa;max-height:280px;overflow:auto">'+thread+'</div>'
+    +compose+(res?'<div class="db-acts" style="margin-top:8px">'+res+'</div>':'')+'</div>';
+}
+/* external-only send scoped to THIS dispute (its own compose box → is_dispute + dispute_id, no channel toggle) */
+async function sendDisputeMsg(chitId, disputeId){
+  var el=document.getElementById('droom-'+disputeId); var body=(el?el.value:'').trim();
+  if(!body){ toast('Type a reply first.'); return; }
+  var txt=SESSION.actorId?(body+"  — "+(SESSION.name||"actor")+"@"+(SESSION.entity||"")):body;
+  var mb={ thread_type:'external', message_text:txt, msg_type:'info', is_dispute:true, dispute_id:disputeId };
+  busyShow('Sending…');
+  try{ await api("sendMsg",{params:{id:chitId},body:mb}); }catch(e){ busyHide(); toast(MSG.fail("send the reply", e)); return; }
+  UI.dispRoom=disputeId;                                  // keep this room open after posting
+  try{ await openChit(chitId, true); }catch(_){}
+  busyHide(); paintDetail();
+  toast('Reply sent');
+}
+
+/* Composer "reply in the dispute" toggle + per-dispute filter chips REMOVED 2026-07-05 — dispute messaging
+ * moved INTO each dispute's room (see disputeRoom/sendDisputeMsg above). The general Messages tab is now
+ * normal (Internal/External only, dispute messages hidden). Dispute channel = external-only, in the room. */
 
 /* ── Disputes screen (the opt-in queue, BR-D4): every disputed record, split raised-by-you / against-you,
  *    each card reusing the shared roster renderers. Loaded lazily; the nav is capability-gated. */

@@ -2410,7 +2410,7 @@ async function openChit(id, silent){
   else { const dp=document.getElementById("detailpane"); if(dp){dp.className="detail"; dp.innerHTML=detailSkeleton();} }
   try{ const chitP=api("chit",{params:{id}}); const msgP=api("messages",{params:{id}}).catch(()=>null);
         // only disputed records pay for the dispute roster fetch (drives the banner + per-party status)
-        const dispP=(rowBase && rowBase.dispute) ? api("disputes",{params:{id}}).catch(()=>null) : null;
+        const dispP=(rowBase && (rowBase.dispute || rowBase.dispResolved>0)) ? api("disputes",{params:{id}}).catch(()=>null) : null;
         const r=await chitP;
         if(r && r.header){ const h=r.header, det=r.detail||{};
           const base=rowBase||mapApiChit({chit_id:h.chit_id,summary_json:h.summary_json,all_recipients:h.all_recipients,sender_entity_display_name:h.sender_entity_display_name,purpose:h.purpose,manual_subject:h.manual_subject,auto_subject:h.auto_subject,current_status:'delivered',open_dispute_count:0});
@@ -2474,7 +2474,7 @@ async function doAnswerPublish(id){ const x=document.getElementById("ap_err"); i
     closeModal(); toast("Answered + published ✓ — now close the query when done"); openChit(id);
   }catch(e){ if(x)x.textContent=(e&&e.message)||"Failed"; } }
 function openChitMsgs(id){ UI.dtab="messages"; markChitRead(id); openChit(id); setTimeout(refreshMsgBadge,0); }
-function msgCount(c){ return ((c&&c.msgs)?c.msgs:[]).filter(m=>SESSION.role==="customer"?m.scope==="external":true).length; }
+function msgCount(c){ return ((c&&c.msgs)?c.msgs:[]).filter(m=>!m.isDispute&&(SESSION.role==="customer"?m.scope==="external":true)).length; }
 function setMsgFilter(f){ UI.msgFilter=f; UI.msgDispSel=''; paintDetail(); }
 function setMsgDisp(did){ UI.msgDispSel=did||''; UI.msgFilter='dispute'; paintDetail(); }   // per-dispute thread select
 function setMsgChan(ch){ UI.msgChan=ch; paintDetail(); }
@@ -2502,11 +2502,9 @@ function messagesTab(c){
   const isCust=SESSION.role==="customer";
   const all=(c.msgs||[]); const visible=isCust?all.filter(m=>m.scope==="external"):all;
   const f=UI.msgFilter||"all"; const sel=UI.msgTypeSel||[];
-  const _dchips=(typeof disputeFilterChips==='function')?disputeFilterChips(c, UI.msgDispSel, f):'';
-  var _dm=(typeof disputeFilterMsgs==='function')?disputeFilterMsgs(visible, f, UI.msgDispSel):undefined;
-  let shown = (_dm!==undefined)?_dm:(f==='all'?visible:visible.filter(m=>m.scope===f));
+  let shown = ((f==='internal'||f==='external')?visible.filter(m=>m.scope===f):visible).filter(m=>!m.isDispute);   // dispute msgs live in the dispute panel, not the general thread
   if(sel.length) shown=shown.filter(m=>sel.includes(m.type||"info"));
-  const scopeFilter=isCust?"":`<div class="msgfilter"><button class="${f==='all'?'on':''}" onclick="setMsgFilter('all')">All</button><button class="${f==='internal'?'on':''}" onclick="setMsgFilter('internal')">🔒 Internal</button><button class="${f==='external'?'on':''}" onclick="setMsgFilter('external')">↔ External</button>${_dchips||`<button class="${f==='dispute'?'on disp':''}" onclick="setMsgFilter('dispute')">⚑ Disputes</button>`}</div>`;
+  const scopeFilter=isCust?"":`<div class="msgfilter"><button class="${f==='all'?'on':''}" onclick="setMsgFilter('all')">All</button><button class="${f==='internal'?'on':''}" onclick="setMsgFilter('internal')">🔒 Internal</button><button class="${f==='external'?'on':''}" onclick="setMsgFilter('external')">↔ External</button></div>`;
   const tset=surfacedTypes(); const ctypes=isCust?["info","query"]:tset;
   const typeMenu=UI.msgTypeMenu?`<div class="tdrop" onclick="event.stopPropagation()">${tset.map(k=>`<label class="tdrow"><input type="checkbox" ${sel.includes(k)?'checked':''} onchange="toggleMsgType('${k}')"> ${MTYPES[k].icon} ${MTYPES[k].label}</label>`).join("")}${sel.length?`<button class="tdclear" onclick="clearMsgTypes()">✕ Clear types</button>`:''}</div>`:'';
   const typeFilter=isCust?'':`<div class="tdwrap"><button class="msgfbtn${sel.length?' on':''}" onclick="event.stopPropagation();toggleMsgTypeMenu()">⚙ Types${sel.length?' ('+sel.length+')':''} ▾</button>${typeMenu}</div>`;
