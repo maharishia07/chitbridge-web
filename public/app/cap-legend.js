@@ -126,7 +126,7 @@ const SEC_POSTURE = [
 function _lbTabBar(){
   const tab=(typeof _lbTab!=='undefined')?_lbTab:'cap';
   const btn=(id,label)=>`<button onclick="setLbTab('${id}')" style="border:0;background:none;cursor:pointer;padding:7px 12px;font-size:12.5px;font-weight:${tab===id?'700':'500'};color:${tab===id?'var(--ink)':'var(--grey)'};border-bottom:2px solid ${tab===id?'var(--accent,#3F66A6)':'transparent'}">${label}</button>`;
-  return `<div style="display:flex;gap:2px;border-bottom:1px solid var(--line);padding:0 8px">${btn('cap','⬢ Capabilities')}${btn('life','🔀 Lifecycle')}${btn('sec','🔒 Security')}</div>`;
+  return `<div style="display:flex;gap:2px;border-bottom:1px solid var(--line);padding:0 8px;flex-wrap:wrap">${btn('cap','⬢ Capabilities')}${btn('life','🔀 Lifecycle')}${btn('sec','🔒 Security')}${btn('edge','🎯 Edge')}</div>`;
 }
 function setLbTab(t){ _lbTab=t; _openLegendImpl(); }
 
@@ -163,6 +163,31 @@ function _secTabHtml(){
   </div>`;
 }
 
+/* ── EDGE tab — positioning hypothesis vs alternatives (NOT a scoreboard; our dot is a TARGET) ── */
+function _edgeTabHtml(){
+  const pt=(x,y,label,hl)=>'<div style="position:absolute;left:'+x+'%;bottom:'+y+'%;transform:translate(-50%,50%);text-align:center;z-index:2">'
+    +'<div style="width:'+(hl?15:10)+'px;height:'+(hl?15:10)+'px;border-radius:50%;margin:0 auto;background:'+(hl?'#3F66A6':'#9aa3a7')+';'+(hl?'box-shadow:0 0 0 5px rgba(63,102,166,.16)':'')+'"></div>'
+    +'<div style="font-size:9.5px;margin-top:3px;white-space:nowrap;color:'+(hl?'#2b4a72':'var(--grey)')+';font-weight:'+(hl?'700':'500')+'">'+esc(label)+'</div></div>';
+  return '<div style="padding:14px 16px;max-height:70vh;overflow:auto">'
+    +'<div style="font-size:11.5px;color:var(--grey);margin-bottom:8px">Where we aim vs the alternatives. <b>This is a positioning hypothesis</b> — our dot is a <b>target</b> (we are early/unproven); the others are established.</div>'
+    +'<div style="position:relative;height:270px;margin:22px 34px 30px;border-left:1.5px solid var(--line);border-bottom:1.5px solid var(--line)">'
+      +'<div style="position:absolute;left:50%;top:0;bottom:0;border-left:1px dashed var(--line)"></div>'
+      +'<div style="position:absolute;top:50%;left:0;right:0;border-top:1px dashed var(--line)"></div>'
+      +'<div style="position:absolute;right:4px;top:4px;font-size:9px;color:#8fae86;font-weight:700;text-align:right">governed<br>+ accessible<br>= the gap</div>'
+      + pt(15,84,'Email · chat · sheets',false)
+      + pt(84,15,'ServiceNow · SAP · EDI',false)
+      + pt(68,27,'Blockchain B2B',false)
+      + pt(80,80,'Chit & Bridge',true)
+      +'<div style="position:absolute;left:-2px;bottom:-22px;font-size:10px;color:var(--grey)">weak ← <b>governance &amp; trust</b> → strong</div>'
+      +'<div style="position:absolute;left:-24px;top:-16px;font-size:10px;color:var(--grey)">↑ accessible / leveling</div>'
+    +'</div>'
+    +'<div style="font-size:11px;color:var(--ink);line-height:1.5">'
+      +'<b>The edge:</b> the top-right — <b>enterprise-grade governance a small player can actually use</b> — is empty. Email is accessible but ungoverned; SAP/ServiceNow/EDI are governed but heavy &amp; costly; blockchain B2B is trust-heavy but hard. We aim at <b>governed AND leveling</b>: a solo trader transacts on the same rail as a multinational.'
+    +'</div>'
+    +'<div style="font-size:10.5px;color:var(--grey);text-align:center;padding-top:10px;border-top:1px solid var(--line);margin-top:10px">Closest analog: <b>ServiceNow</b> — one records/workflow facility, many classified lifecycles (ITSM/HR/dev). It proves the model has takers — and it won by starting <i>narrow</i> (an ITIL desk) then generalizing. Our claimed differentiator vs it: accessibility &amp; cost for the small player. <b>Unproven until one blueprint ships + gets a user.</b></div>'
+  +'</div>';
+}
+
 function _openLegendImpl(){
   const host=document.getElementById("lbhost"); if(!host)return; _legendOpen=true;
   if(typeof _lbTab==='undefined') _lbTab='cap';
@@ -193,8 +218,8 @@ function _openLegendImpl(){
     <div style="padding:12px 13px;max-height:70vh;overflow:auto">${CAP_CATALOGUE.map(card).join('')}
       <div style="font-size:10.5px;color:var(--grey);text-align:center;padding-top:4px">Load: <b>always on</b> ships with the app · <b>lazy</b> loads on first use · <b>planned</b> not built yet. · <b>L1–5</b> maturity: 1 Proven · 2 Packaged · 3 Itemised · 4 Governed · 5 Productized (→ = target). Kept true to the code.</div>
     </div>`;
-  const body = (_lbTab==='life') ? _lifeTabHtml() : (_lbTab==='sec') ? _secTabHtml() : capBody;
-  const titles = { cap:'capabilities &amp; features', life:'lifecycle &amp; traceability', sec:'security posture' };
+  const body = (_lbTab==='life') ? _lifeTabHtml() : (_lbTab==='sec') ? _secTabHtml() : (_lbTab==='edge') ? _edgeTabHtml() : capBody;
+  const titles = { cap:'capabilities &amp; features', life:'lifecycle &amp; traceability', sec:'security posture', edge:'positioning &amp; edge' };
   host.innerHTML=`<div class="notifover" onclick="closeLegend()"><div class="notifpanel" style="max-width:640px;width:95vw" onclick="event.stopPropagation()">
     <div class="notifhd">🔑 What we serve — ${titles[_lbTab]||titles.cap}<button onclick="closeLegend()" style="margin-left:auto;border:0;background:none;cursor:pointer;font-size:15px;color:var(--grey)" aria-label="Close">✕</button></div>
     ${_lbTabBar()}
