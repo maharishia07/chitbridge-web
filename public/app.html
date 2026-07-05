@@ -1222,10 +1222,11 @@ const PURPOSE = {
    /app/cap-<name>.js (classic script, shared global scope). CAP_OF maps a screen to its
    capability; unlisted screens are Core (eager, always loaded). renderApp shows "Loading…"
    and re-renders once the capability arrives. Grow CAP_OF as screens migrate out. */
-const CAP_OF = { mis:'admin', profile:'admin', settings:'admin', coassists:'workforce', assistreview:'admin', connectors:'connector' };
+const CAP_OF = { mis:'admin', profile:'admin', settings:'admin', coassists:'workforce', assistreview:'admin', connectors:'connector', disputes:'dispute' };
 // nav items gated by an entity capability (the itemised toggle) — hidden unless SESSION.capabilities holds the key.
-const CAP_GATED = { connectors:'connector' };
+const CAP_GATED = { connectors:'connector', disputes:'dispute' };
 const CAP_LOADED = {};
+function hasCap(k){ return (SESSION.capabilities||[]).indexOf(k)>=0; }   // one capability check, used by all gates
 const _capPromise = {};
 function ensureCap(name){
   if(CAP_LOADED[name]) return Promise.resolve();
@@ -1245,7 +1246,7 @@ function renderApp(){
     api('assistWhoami').then(function(r){ const was=SESSION.isHelpdesk; SESSION.isHelpdesk=!!(r&&r.is_helpdesk); if(SESSION.isHelpdesk&&!was) renderApp(); }).catch(function(){}); }
   // once per session: the entity's capability SELECTION (drives the itemised nav toggles, e.g. Connectors).
   if(SESSION.token && role!=="customer" && SESSION._capsChecked===undefined){ SESSION._capsChecked=true;
-    api('me',{query:{_t:Date.now()}}).then(function(r){ SESSION.capabilities=(r&&r.capabilities)||[]; renderApp(); }).catch(function(e){ SESSION.capabilities=SESSION.capabilities||[]; }); }
+    api('me',{query:{_t:Date.now()}}).then(function(r){ SESSION.capabilities=(r&&r.capabilities)||[]; if(SESSION.role!=='customer')ensureCap('dispute').then(renderApp).catch(function(){}); renderApp(); }).catch(function(e){ SESSION.capabilities=SESSION.capabilities||[]; }); }
   const _cap = CAP_OF[UI.nav];
   const _capLoading = !!(_cap && !CAP_LOADED[_cap]);
   if(_capLoading){ ensureCap(_cap).then(function(){ if(CAP_OF[UI.nav]===_cap) renderApp(); })
@@ -1579,40 +1580,6 @@ function actorCleanupModal(action, name, parts){
    </div>
    <div class="mfoot"><button class="pri" onclick="closeModal()">Got it</button></div>`);
   if(typeof announce==='function') announce((name||'Co-assist')+' '+(action==='remove'?'removed':'deactivated')+(parts&&parts.length?'. '+parts.join('. '):'.'));
-}
-/* ---------------- DISPUTES screen ---------------- */
-function disputesScreen(){ return `<div style="padding:14px;max-width:760px;margin:0 auto"><div class="sec" style="font-size:15px;margin-bottom:3px;display:flex;align-items:center;gap:9px">⚖️ Disputes<button onclick="openAssist('disputes')" title="About this screen" style="border:1px solid var(--line);background:#fff;color:#3F66A6;border-radius:50%;width:22px;height:22px;font-weight:800;cursor:pointer;font-size:13px;line-height:1;flex:none">?</button></div><div style="font-size:11px;color:var(--grey);margin-bottom:10px">Explore <b onclick="openAssist('disputes')" style="cursor:pointer;color:#3F66A6">?</b> to know more about this screen.</div><div id="disprows"><div class="loadwrap"><span class="spin"></span> loading…</div></div></div>`; }
-async function loadDisputes(){
-  const host=document.getElementById("disprows"); if(!host)return;
-  try{ const q=await api("disputeQueue"); const mine=q.my_disputes||[], other=q.other_disputes||[];
-    const card=(d,canResolve)=>{
-      const parties=(d.participants||[]).filter(p=>p.role==='party');
-      const roster=parties.length?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:7px">${parties.map(p=>`<span class="optchip ${p.dispute_status==='resolved'?'on':'brk'}">${nm(p.display_name,'party')} · ${p.dispute_status==='resolved'?'✓ resolved':'open'}</span>`).join('')}</div>`:'';
-      const openParties=parties.filter(p=>p.dispute_status!=='resolved');
-      const resolveBtns=canResolve&&d.status==='open'?`<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">${openParties.length?openParties.map(p=>`<button class="composebtn" onclick="resolveDispute('${d.chit_id}','${d.dispute_id}','${p.entity_id}','${encodeURIComponent(p.display_name||'party')}')">Resolve ${nm(p.display_name,'party')}</button>`).join(''):`<button class="composebtn" onclick="resolveDispute('${d.chit_id}','${d.dispute_id}')">Resolve</button>`}</div>`:'';
-      return `<div class="card" style="border:1px solid var(--line);border-radius:11px;padding:12px;margin-bottom:9px">
-        <div style="display:flex;justify-content:space-between;gap:8px"><b>${esc(d.auto_subject||d.purpose||'chit')}</b><span class="optchip ${d.status==='open'?'brk':'on'}">${esc(d.status)}</span></div>
-        <div style="font-size:13px;color:var(--ink);margin:5px 0"><b>${esc(cap(d.category||''))}</b> — ${esc(d.reason||'')}</div>
-        <div style="font-size:11.5px;color:var(--grey)">raised by ${esc(d.raised_by_display_name||'—')} · ${esc(d.scope||'')}${d.resolution_note?(' · ✓ '+esc(d.resolution_note)):''}</div>
-        ${roster}${resolveBtns}</div>`;
-    };
-    host.innerHTML = `${menuAssist('disputes')}<div class="sec" style="font-size:12px;color:var(--grey);margin:4px 0">Raised by you (${mine.length})</div>${lazyWrap('dm', mine, d=>card(d,true), '<div style="color:var(--grey);font-size:13px;padding:6px">None.</div>')}
-      <div class="sec" style="font-size:12px;color:var(--grey);margin:14px 0 4px">Against you / awaiting (${other.length})</div>${lazyWrap('do', other, d=>card(d,false), '<div style="color:var(--grey);font-size:13px;padding:6px">None.</div>')}`;
-  }catch(e){ host.innerHTML=`<div class="empty"><div class="t">Couldn't load disputes</div><div>${e.message}</div></div>`; }
-}
-function resolveDispute(chitId, disputeId, partyId, partyNameEnc){
-  const partyName=partyNameEnc?decodeURIComponent(partyNameEnc):'';
-  const who=partyName?`<div style="font-size:12px;color:var(--grey);margin-bottom:8px">Resolving with <b>${esc(partyName)}</b>. Any other parties stay open until you resolve them too.</div>`:'';
-  modal(`<div class="mhd"><div class="t">Resolve dispute${partyName?' — '+esc(partyName):''}</div></div><div class="mbody">${who}<label class="fl">Resolution note (required)</label><textarea id="resnote" placeholder="How was this resolved…"></textarea><div class="err" id="res_err"></div></div><div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="pri" onclick="submitResolve('${chitId}','${disputeId}','${partyId||''}')">Resolve</button></div>`);
-}
-async function submitResolve(chitId, disputeId, partyId){
-  const note=val("resnote"); const err=document.getElementById("res_err"); if(err)err.textContent="";
-  if(!note){ if(err)err.textContent="A resolution note is required."; return; }
-  const body={resolution_note:note}; if(partyId)body.target_entity_id=partyId;
-  try{ await api("resolveDispute",{params:{id:chitId,disputeId},body}); closeModal(); toast(MSG.disputeResolved());
-    if(document.getElementById("disprows"))loadDisputes();
-    if(UI.sel===chitId){ const i=UI.rows.findIndex(x=>x.id===chitId); if(i>=0)UI.rows[i].dispute=false; await openChit(chitId); } }
-  catch(e){ if(err)err.textContent=e.message; }
 }
 /* ---------------- shared screen helpers ---------------- */
 /* ── universal client-side lazy list — reveals N rows at a time in ANY container ────────────
@@ -2099,31 +2066,6 @@ function quickAssign(){ const ids=needTarget(); if(!ids.length)return;
   if(ids.length===1){ pickAssign(ids[0]); }
   else { pickAssignBulk(ids); }
 }
-async function quickDispute(){ const ids=needTarget(); if(!ids.length)return;
-  // A dispute is raised on ONE chit against its own parties — each transaction is a separate matter,
-  // so there is no bulk dispute. Open the specific chit (or select just one) to raise it.
-  if(ids.length>1){ toast("Raise a dispute on one chit at a time — each is its own matter."); return; }
-  const id=ids[0]; MODALS.disp={id, parties:[]};
-  let partyRows='';
-  try{ const r=await api("chit",{params:{id}}); const h=(r&&r.header)||r||{}; const seen={};
-    // Everyone on the chit EXCEPT me — the raiser is implicit and must not be a selectable target.
-    const parties=(h.all_recipients||[]).filter(x=>x&&x.entity_id&&!chitIsSelf(x.entity_id,x.display_name)&&!seen[x.entity_id]&&(seen[x.entity_id]=1));
-    MODALS.disp.parties=parties;
-    if(parties.length){ partyRows='<div style="font-size:12px;color:var(--grey);margin:9px 0 3px">Between which parties? <span style="color:#9aa3ad">(none ticked = everyone involved)</span></div>'+parties.map(p=>`<label style="display:flex;gap:8px;align-items:center;padding:3px 0;font-size:13px;cursor:pointer"><input type="checkbox" class="dispparty" value="${p.entity_id}"> ${nm(p.display_name,'party')} <span style="font-size:10px;color:var(--grey);text-transform:uppercase">${esc(p.role||'')}</span></label>`).join(''); }
-  }catch(_){}
-  modal(`<div class="mhd"><div class="t">⚑ Raise dispute</div></div><div class="mbody"><div style="font-size:12px;color:var(--grey);margin-bottom:7px">Pick a category and give a reason (min 10 characters). The parties you select are notified and carry the dispute status.</div><select id="dispcat" style="width:100%;margin-bottom:8px;padding:8px;border:1px solid var(--line);border-radius:6px"><option value="quality">Quality</option><option value="quantity">Quantity</option><option value="delivery">Delivery</option><option value="payment">Payment</option><option value="docs">Docs</option><option value="other" selected>Other</option></select>${partyRows}<textarea id="dispreason" placeholder="e.g. Quantity short by 2 units — please replace"></textarea></div><div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="danger" onclick="confirmDispute()">Raise dispute</button></div>`);
-}
-async function confirmDispute(){ const id=MODALS.disp.id; const el=document.getElementById('dispreason'); const reason=(el?el.value:"").trim(); const cat=(document.getElementById('dispcat')||{}).value||'other';
-  if(reason.length<10){ toast("Reason must be at least 10 characters"); return; }
-  const parties=[...document.querySelectorAll('.dispparty:checked')].map(e=>e.value);
-  closeModal();
-  const body={category:cat,reason}; if(parties.length)body.participant_entity_ids=parties;
-  try{ const _dr2=await api("dispute",{params:{id},body}); if(_dr2&&_dr2.warning)toast(_dr2.warning); const i=UI.rows.findIndex(x=>x.id===id); if(i>=0)UI.rows[i].dispute=true; }catch(e){ toast(MSG.fail("raise the dispute", e)); return; }
-  if(typeof refreshRollup==='function')refreshRollup(); toast(MSG.disputeRaised(1)); announce('Dispute raised');
-  // reload the detail so the scoped dispute message + banner appear; surface it on the Messages tab
-  // (the new ⚑ message shows on top; the banner's "Open dispute thread" is the explicit dispute filter).
-  if(UI.sel===id){ UI.dtab='messages'; await openChit(id); } else { renderApp(); }
-}
 // Deletion policy: only DRAFTS can be deleted (→ Trash → restore or delete-forever). Sent/received chits are
 // co-held records the counterparty also holds — they cannot be deleted (removal is governed by the deletion
 // policy, a later layer); offer Archive instead.
@@ -2507,21 +2449,10 @@ function detailInner(){
   const actbar = (UI.folder==='drafts') ? `<button class="pri" onclick="resumeDraft('${c.id}')">✏️ Resume &amp; edit</button>` : (UI.folder==='trash') ? `<button class="pri" onclick="restoreChit('${c.id}')">↩ Restore</button>${c.isDraft?`<button class="pri" style="background:#b4453f;border-color:#b4453f;margin-left:8px" onclick="purgeChit('${c.id}')">🗑 Delete forever</button>`:''}` : (UI.folder==='archive') ? `<button class="pri" onclick="unarchiveChit('${c.id}')">↩ Unarchive</button>` : SESSION.role==="customer"
     ? `<button onclick="toggleCustPri('${c.id}')">⚑ ${c.custPri?'Priority requested':'Request priority'}</button><button class="warn" onclick="quickDispute()">⚑ Dispute</button><button onclick="todo('pdf')">⬇ PDF</button>`
     : `<button onclick="forwardChit('${c.id}')" title="Forward as a new chit">➤ Forward</button>${UI.folder!=='order'?`<button onclick="markUnread('${c.id}')" title="Mark as unread">✉ Unread</button>`:''}${UI.folder!=='order'?`<button class="pri" onclick="pickChitStatus('${c.id}')">Status ▾</button>`:''}${SESSION.role==="actor"&&UI.folder!=='order'?`<button onclick="pickAssign('${c.id}')">👥 Assign</button>`:""}<button class="warn" onclick="quickDispute()">⚑ Dispute</button>${SESSION.role==="entity"?`<button class="warn pend" onclick="todo('voidChit')">⊘ Void</button>`:""}<button onclick="todo('pdf')">⬇ PDF</button>`;
-  // Dispute banner — the USP made visible on the record itself: category, reason, per-party status, the
-  // both-signed parity badge, a jump to the scoped thread, and (for the raiser) per-party resolve.
-  const _od=(c.disputes||[]).filter(d=>d.status==='open');
-  let dispBanner='';
-  if(_od.length){ const d=_od[0]; const dparties=(d.participants||[]).filter(p=>p.role==='party'&&!chitIsSelf(p.entity_id,p.display_name));
-    const dchips=dparties.map(p=>`<span class="dpchip${p.dispute_status==='resolved'?' ok':''}">${nm(p.display_name,'party')}${p.dispute_status==='resolved'?' ✓':''}</span>`).join('');
-    const dmine=chitIsSelf(d.raised_by_entity_id,d.raised_by_display_name);
-    const dopen=dparties.filter(p=>p.dispute_status!=='resolved');
-    const dres=dmine?(dopen.length?dopen.map(p=>`<button class="db-res" onclick="resolveDispute('${c.id}','${d.dispute_id}','${p.entity_id}','${encodeURIComponent(p.display_name||'party')}')">Resolve ${nm(p.display_name,'party')}</button>`).join(''):`<button class="db-res" onclick="resolveDispute('${c.id}','${d.dispute_id}')">Resolve</button>`):'';
-    dispBanner=`<div class="dispbanner"><div class="db-row"><span class="db-tag">⚑ Open dispute</span><span class="db-cat">${esc(cap(d.category||''))}</span>${c.proof==='ok'?'<span class="db-proof">⚖️ both-signed record</span>':''}</div><div class="db-reason">${esc(d.reason||'')}</div><div class="db-meta">raised by ${esc(d.raised_by_display_name||'—')}${dparties.length?' · ':''}${dchips}</div><div class="db-acts"><button onclick="setDtab('messages');setMsgFilter('dispute')">Open dispute thread →</button>${dres}</div></div>`;
-  }
   const dtabs=[["content","Content"],["status","Status"],["summary","Summary"],["messages","💬 Messages"+(msgCount(c)?" ("+msgCount(c)+")":"")]];
   return `<div class="dh"><button class="dback" onclick="backToList()">‹ Back to list</button><button class="dmsg" onclick="setDtab('messages')" title="Messages" aria-label="Messages">💬${msgCount(c)?' '+msgCount(c):''}</button><div class="dt">${esc(c.code)} · ${esc(c.party)}</div><div class="ds">${esc(c.area)} · ${esc(c.kind)} · ${inr(c.amt)} · ${c.state.toUpperCase()}</div>
      <div class="parties"><span class="ptag">from <b>${esc(c.sender||SESSION.entity||"You")}</b></span><span class="ptag">${c.kind==='counter'?('to <b>'+esc(SESSION.entity||'You')+'</b>'):esc(c.rsummary||('to '+(c.party||'—')))}</span>${c.kind==='counter'?`<span class="ptag">for <b>${esc(c.cust)}</b></span>`:''}</div><div class="dchips"><span class="prichip-btn pri-${c.priExt||'normal'}" style="cursor:default" title="External priority — set by the drafter at compose, locked once sent">↔ ext: ${PRI[c.priExt||'normal'].label}</span>${SESSION.role!=="customer"?`<button class="prichip-btn pri-${c.pri||'normal'}" onclick="repriority('${c.id}')" title="Internal priority — your own queue; tap to change">⚙ int: ${PRI[c.pri||'normal'].label} ▾</button>`:''}${c.custPri?'<span class="custflag-tag">⚑ Customer priority</span>':''}<span class="prichip-btn" style="cursor:default;margin-left:auto;background:#eef3fb;color:#345488;border-color:#cfe0f4" title="Currently assigned to">👤 ${c.assignee?esc(c.assignee):'Unassigned'}</span></div></div>
-   ${dispBanner}<div class="dtabs">${dtabs.map(([k,l])=>`<button class="${UI.dtab===k?'on':''}" onclick="setDtab('${k}')">${l}</button>`).join("")}</div>
+   ${(typeof disputeBanner==='function')?disputeBanner(c):''}<div class="dtabs">${dtabs.map(([k,l])=>`<button class="${UI.dtab===k?'on':''}" onclick="setDtab('${k}')">${l}</button>`).join("")}</div>
    <div class="db">${body}</div><div class="actbar">${(typeof SESSION!=='undefined'&&(SESSION.name==='GOV-01-Help'||SESSION.isHelpdesk)&&c.kind==='inquiry')?'<button class="pri" onclick="answerPublish(\''+c.id+'\')">🧠 Answer &amp; publish</button>':''}${actbar}</div>`;
 }
 function setDtab(t){UI.dtab=t;paintDetail();}
@@ -2552,7 +2483,7 @@ function toggleMsgTypeMenu(){ UI.msgTypeMenu=!UI.msgTypeMenu; paintDetail(); }
 function toggleMsgType(k){ const s=new Set(UI.msgTypeSel||[]); s.has(k)?s.delete(k):s.add(k); UI.msgTypeSel=[...s]; paintDetail(); }
 function clearMsgTypes(){ UI.msgTypeSel=[]; UI.msgTypeMenu=false; paintDetail(); }
 function setMsgKind(k){ UI.msgKind=k; paintDetail(); }
-function toggleMsgDispute(){ UI.msgAsDispute=!UI.msgAsDispute; paintDetail(); }
+
 /* messages + status: real data + search + Latest/Oldest sort (latest default) ───────────────── */
 function msgSearchSort(){ return '<div class="msgss"><input id="msgsrch" class="msgsi" placeholder="Search messages" value="'+esc(UI.msgSearch||'')+'" oninput="setMsgSearch(this.value)"><button class="msgord" onclick="setMsgOrder(UI.msgOrder===\'oldest\'?\'latest\':\'oldest\')" title="Sort order">'+((UI.msgOrder==='oldest')?'↑ Oldest':'↓ Latest')+'</button></div>'; }
 function setMsgSearch(v){ clearTimeout(UI._msgT); UI._msgT=setTimeout(function(){ UI.msgSearch=(v||'').trim(); paintDetail(); var s=document.getElementById('msgsrch'); if(s){ s.focus(); var n=s.value.length; try{s.setSelectionRange(n,n);}catch(_){ } } }, 300); }
@@ -2582,7 +2513,7 @@ function messagesTab(c){
   const typeSel=`<div class="typesel">${ctypes.map(k=>`<button class="${kind===k?'on '+MTYPES[k].cls:''}" title="${MTYPES[k].label}" onclick="setMsgKind('${k}')">${MTYPES[k].icon} ${MTYPES[k].short}</button>`).join("")}</div>`;
   const open=!!UI.composeOpen;
   const attachRow=`<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:4px 0"><label title="Attach files" style="cursor:pointer;border:1px solid var(--line);border-radius:7px;padding:3px 9px;font-size:11px;background:#fff">📎 Attach<input type="file" multiple style="display:none" onchange="msgAddFiles(this.files);this.value=''"></label><span id="msgfileschips">${msgChips()}</span></div>`;
-  const _openDisp=((c.disputes)||[]).find(function(d){return (d.status||'open')==='open';}); if(isCust||!_openDisp)UI.msgAsDispute=false; const dispToggle=(!isCust&&_openDisp)?('<button class="msgfbtn'+(UI.msgAsDispute?' on':'')+'" style="margin:2px 0 4px" onclick="toggleMsgDispute()">⚑ '+(UI.msgAsDispute?'Posting as DISPUTE reply — click to stop':'Reply in the dispute')+'</button>'):'';
+  const dispToggle=(typeof disputeToggleHtml==='function')?disputeToggleHtml(c,isCust):'';
   const composer=isCust
     ? `<div class="composer">${typeSel}<div class="chlabel ext">↔ External · ${c.party||'the shop'} will see this</div><textarea id="msgbody" placeholder="Message to ${c.party||'the shop'}…"></textarea>${attachRow}<button class="send ext" onclick="sendMessage('${c.id}')">Send ${MTYPES[kind].label} ↔ external</button></div>`
     : `<div class="composer"><div class="chtoggle"><button class="int ${ch==='internal'?'on':''}" onclick="setMsgChan('internal')">🔒 Internal</button><button class="ext ${ch==='external'?'on':''}" onclick="setMsgChan('external')">↔ External</button></div>${typeSel}${dispToggle}<textarea id="msgbody" placeholder="${ch==='internal'?'Note for your team — stays internal':'Message to '+recipTo(c, UI.msgAsDispute)+' — they will see this'}"></textarea>${attachRow}<button class="send ${ch==='internal'?'int':'ext'}" onclick="sendMessage('${c.id}')">Send ${MTYPES[kind].label} · ${ch==='internal'?'🔒 internal':'↔ external'}</button></div>`;
