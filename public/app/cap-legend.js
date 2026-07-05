@@ -124,9 +124,9 @@ const SEC_POSTURE = [
 ];
 
 function _lbTabBar(){
-  const tab=(typeof _lbTab!=='undefined')?_lbTab:'cap';
+  const tab=(typeof _lbTab!=='undefined')?_lbTab:'edge';
   const btn=(id,label)=>`<button onclick="setLbTab('${id}')" style="border:0;background:none;cursor:pointer;padding:7px 12px;font-size:12.5px;font-weight:${tab===id?'700':'500'};color:${tab===id?'var(--ink)':'var(--grey)'};border-bottom:2px solid ${tab===id?'var(--accent,#3F66A6)':'transparent'}">${label}</button>`;
-  return `<div style="display:flex;gap:2px;border-bottom:1px solid var(--line);padding:0 8px;flex-wrap:wrap">${btn('cap','⬢ Capabilities')}${btn('life','🔀 Lifecycle')}${btn('sec','🔒 Security')}${btn('edge','🎯 Edge')}${btn('real','🔬 Reality')}</div>`;
+  return `<div style="display:flex;gap:2px;border-bottom:1px solid var(--line);padding:0 8px;flex-wrap:wrap">${btn('edge','🎯 The edge')}${btn('cap','⬢ Capabilities')}${btn('life','🔀 Lifecycle')}${btn('sec','🔒 Security')}${btn('real','🔬 Reality')}</div>`;
 }
 function setLbTab(t){ _lbTab=t; _openLegendImpl(); }
 
@@ -244,8 +244,10 @@ function _realTabHtml(){
 }
 
 function _openLegendImpl(){
-  const host=document.getElementById("lbhost"); if(!host)return; _legendOpen=true;
-  if(typeof _lbTab==='undefined') _lbTab='cap';
+  let host=document.getElementById("lbhost");
+  if(!host){ host=document.createElement('div'); host.id='lbhost'; document.body.appendChild(host); }  // pre-auth: create the host if the app shell isn't mounted (shareable /#/legend)
+  _legendOpen=true;
+  if(typeof _lbTab==='undefined') _lbTab='edge';   // open on the comparison (the hook) — then people explore the rest
   const LOADED=(typeof CAP_LOADED!=='undefined')?CAP_LOADED:{};
   const SC={ done:['#2f8f5b','✅'], partial:['#a9791f','◐'], backlog:['#9aa3a7','○'] };
   // tallies across every feature
@@ -275,8 +277,12 @@ function _openLegendImpl(){
     </div>`;
   const body = (_lbTab==='life') ? _lifeTabHtml() : (_lbTab==='sec') ? _secTabHtml() : (_lbTab==='edge') ? _edgeTabHtml() : (_lbTab==='real') ? _realTabHtml() : capBody;
   const titles = { cap:'capabilities &amp; features', life:'lifecycle &amp; traceability', sec:'security posture', edge:'positioning &amp; edge', real:'reality &amp; how we earn it' };
-  host.innerHTML=`<div class="notifover" onclick="closeLegend()"><div class="notifpanel" style="max-width:640px;width:95vw" onclick="event.stopPropagation()">
-    <div class="notifhd">🔑 What we serve — ${titles[_lbTab]||titles.cap}<button onclick="closeLegend()" style="margin-left:auto;border:0;background:none;cursor:pointer;font-size:15px;color:var(--grey)" aria-label="Close">✕</button></div>
+  host.innerHTML=`<div class="notifover" onclick="closeLegend()"><div class="notifpanel" style="max-width:660px;width:95vw;border-radius:14px;overflow:hidden" onclick="event.stopPropagation()">
+    <div style="display:flex;align-items:center;gap:10px;padding:14px 16px;background:linear-gradient(180deg,#f7f9fc,#fff);border-bottom:1px solid var(--line)">
+      <span style="font-size:18px">🔑</span>
+      <div style="line-height:1.15"><div style="font-family:'Space Grotesk';font-weight:700;font-size:15px;color:var(--ink)">What we serve</div><div style="font-size:10.5px;color:var(--grey)">${titles[_lbTab]||titles.cap}</div></div>
+      <button onclick="closeLegend()" style="margin-left:auto;border:0;background:none;cursor:pointer;font-size:17px;color:var(--grey)" aria-label="Close">✕</button>
+    </div>
     ${_lbTabBar()}
     ${body}
   </div></div>`;

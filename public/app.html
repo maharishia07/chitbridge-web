@@ -902,8 +902,9 @@ function route(){
   try{ mountAssist(); }catch(_){}   // floating assistant on every page (auth + pre-auth)
   
   const h=location.hash||"#/";
-  if(!SESSION.token && !h.startsWith("#/register") && !h.startsWith("#/login") && !h.startsWith("#/welcome")) return go("#/login");
+  if(!SESSION.token && !h.startsWith("#/register") && !h.startsWith("#/login") && !h.startsWith("#/welcome") && !h.startsWith("#/legend")) return go("#/login");
   if(h.startsWith("#/welcome")) return renderWelcome();
+  if(h.startsWith("#/legend")){ renderWelcome(); return openLegend(); }
   if(h.startsWith("#/register")) return renderRegister();
   if(h.startsWith("#/login")) return renderLogin();
   return renderApp();
@@ -979,7 +980,7 @@ function renderWelcome(){
   }
   document.getElementById("root").innerHTML = modeRibbon() + `
   <div class="welwrap">
-    <div class="weltop">${logo()}<button class="welsignin" onclick="go('#/login')">Sign in</button></div>
+    <div class="weltop">${logo()}<button class="welsignin" onclick="openLegend()" title="See what we serve — no login" style="margin-right:8px">🔑 What we serve</button><button class="welsignin" onclick="go('#/login')">Sign in</button></div>
     ${welPips()}
     ${body}
     <div class="welfoot">Preview → vertical → register · selection defaults to one Blueprint for now (the settings/schema cascade is a later juncture).</div>
