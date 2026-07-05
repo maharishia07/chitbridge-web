@@ -30,7 +30,7 @@ function acRowHTML(x){ const dim=x.status!=='active'?'opacity:.55':'';
   const coverLines=(x.del||coversNames.length)?'<div style="font-size:11px;color:var(--grey);margin-top:3px;line-height:1.45">'+(x.del?('🛡 Covered by <b style="color:var(--ink);font-weight:600">'+coverNm+'</b>'):'')+((x.del&&coversNames.length)?'<br>':'')+(coversNames.length?('🤝 Covers for <b style="color:var(--ink);font-weight:600">'+coversNames.join(', ')+'</b>'):'')+'</div>':'';
   return `<div class="row ${x.id===UI.acSel?'sel':''}" data-ac="${x.id}" style="${dim}" onclick="selectActor('${x.id}')">
     <div style="width:9px;height:9px;border-radius:50%;flex:0 0 auto;margin-top:5px;background:${x.shift==='on_shift'?'#2f8f5b':x.shift==='on_break'?'#c9a441':'#b9b9b9'}"></div>
-    <div class="main2"><div class="l1"><span class="code">${esc(x.name)}</span><span class="optchip" style="background:#eef3fb;color:#345488;border-color:#cfe0f4">${hatLabel(x.hat)}</span>${x.pinSet?'':(x.otp?'<span class="optchip" style="background:#fbf7ea;color:#7a5e22;border-color:#e6d9a8">⏳ invite</span>':'')}<span class="amt" style="margin-left:auto;font-size:11.5px;color:var(--grey)">${x.load}/${x.max||'∞'}</span></div>
+    <div class="main2"><div class="l1"><span class="code">${esc(x.name)}</span><span class="optchip" style="background:#eef3fb;color:#345488;border-color:#cfe0f4">${hatLabel(x.hat)}</span>${_connChip(x.id)}${x.pinSet?'':(x.otp?'<span class="optchip" style="background:#fbf7ea;color:#7a5e22;border-color:#e6d9a8">⏳ invite</span>':'')}<span class="amt" style="margin-left:auto;font-size:11.5px;color:var(--grey)">${x.load}/${x.max||'∞'}</span></div>
       <div class="l2">${esc(x.role||'—')} · <span class="mono">${acLogin(x)}</span> <span class="optchip ${acShc(x.shift)}">${acShLabel(x.shift)}</span>${x.status!=='active'?'<span class="optchip off">'+esc(x.status)+'</span>':''}${(x.shift!=='on_shift'&&x.returnDate)?' · returns '+acDate(x.returnDate):''}</div>${coverLines}</div>
     <div class="rowgo" aria-hidden="true">›</div></div>`; }
 function acRowsHTML(){ const r=acVisible(); if(!r.length) return '<div class="empty"><div class="big">🧑‍🤝‍🧑</div><div class="t">No co-assists</div><div>Add one with <b>+ New</b> above.</div></div>';
@@ -92,7 +92,8 @@ function acDetailHTML(){ const x=UI.acDet;
       : (x.otp
           ? '<div class="sec">Login — pending invite</div><div style="'+_CARD+';background:#eef3fb;border-color:#cfe0f4"><div style="font-size:10.5px;color:#345488;text-transform:uppercase;letter-spacing:.4px;font-weight:700">User ID</div><div class="mono" style="font-weight:700;font-size:13px;word-break:break-all">'+esc(acLogin(x))+'</div><div style="font-size:10.5px;color:#345488;text-transform:uppercase;letter-spacing:.4px;font-weight:700;margin-top:7px">One-time code</div><div class="mono" style="font-weight:800;font-size:20px;letter-spacing:3px;color:#345488">'+esc(x.otp)+'</div><div style="font-size:11px;color:#345488;margin-top:6px">Share these so they can sign in &amp; set their PIN. Not set a PIN yet.</div></div>'
           : '<div class="sec">Login — pending</div><div style="'+_CARD+';background:#fbf7ea;border-color:#e6d9a8"><div style="font-size:12.5px;color:#7a5e22">No active one-time code and no PIN yet — use <b>Re-invite</b> below to issue a code.</div></div>');
-    body=prof+coverSection+loginState+work+eng;
+    const connSec=(UI._connMap||{})[x.id]?('<div class="sec">Connector endpoints</div><div class="itab" style="padding:11px 12px"><div style="font-size:12.5px;color:var(--grey);margin-bottom:9px">This co-assist is a '+(UI._connMap[x.id]==='iot'?'🛰️ IoT device':'🔌 ERP / API')+' connector — manage its endpoints (devices / integrations) and emit signals over the rail.</div><button class="composebtn pri" onclick="manageConnector(\''+x.id+'\')">Manage endpoints →</button></div>'):'';
+    body=prof+connSec+coverSection+loginState+work+eng;
     if(x.status==='active'){
       bar=(x.type==='human'?(x.pinSet
             ? `<button onclick="acResetPin('${x.id}')" title="They have a PIN but forgot or locked it — clear it and issue a fresh one-time code so they set a new PIN.">🔑 Reset PIN</button>`
@@ -143,5 +144,21 @@ async function loadCoassists(){
     if(UI.acSel && !UI.acts.some(a=>a.id===UI.acSel)){ UI.acSel=null; UI.acDet=null; }
     if(!UI.acSel && UI.acts.length && UI.vp!=='mob'){ const f=acVisible()[0]; if(f)selectActor(f.id, true); else paintAcDetail(); }
     else paintAcDetail();
+    loadConnMap();   // annotate which co-assists are CONNECTORS (graceful; needs the connector capability + b57)
   }catch(e){ UI._acLoading=false; const rb2=document.getElementById('ac_rows'); if(rb2)rb2.innerHTML=`<div class="empty"><div class="t">Couldn't load co-assists</div><div>${esc(e.message)}</div></div>`; }
 }
+/* A connector is a non-human co-assist. Annotate the actor list with its connector type (iot/erp) by fetching the
+   connector register. Graceful no-op if the capability is off or b57 isn't applied (so this never breaks the page). */
+async function loadConnMap(){
+  try{
+    if(!((SESSION.capabilities||[]).indexOf('connector')>=0)){ UI._connMap={}; return; }
+    if(typeof ensureCap==='function'){ await ensureCap('connector'); }   // registers the connectorList EP + selectConnector for Manage
+    const r=await api('connectorList'); const map={};
+    ((r&&r.connectors)||[]).forEach(function(c){ map[c.identity_id]=c.connector_type; });
+    UI._connMap=map; paintAcList(); if(UI.acDet)paintAcDetail();
+  }catch(_){ UI._connMap=UI._connMap||{}; }   // b57 not applied / capability off -> simply don't annotate
+}
+function _connChip(id){ const t=(UI._connMap||{})[id]; if(!t)return ''; const iot=t==='iot';
+  return '<span class="optchip" style="background:'+(iot?'#E7F0FB':'#F0EAF9')+';color:'+(iot?'#2b5c9c':'#6a44a8')+';border-color:transparent">'+(iot?'🛰️ IoT':'🔌 ERP')+'</span>'; }
+function manageConnector(id){ UI.nav='connectors';
+  if(typeof ensureCap==='function'){ ensureCap('connector').then(function(){ if(typeof renderApp==='function')renderApp(); if(typeof selectConnector==='function')selectConnector(id); }); } }
