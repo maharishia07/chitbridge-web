@@ -168,6 +168,12 @@ function _edgeTabHtml(){
   const pt=(x,y,label,hl)=>'<div style="position:absolute;left:'+x+'%;bottom:'+y+'%;transform:translate(-50%,50%);text-align:center;z-index:2">'
     +'<div style="width:'+(hl?15:10)+'px;height:'+(hl?15:10)+'px;border-radius:50%;margin:0 auto;background:'+(hl?'#3F66A6':'#9aa3a7')+';'+(hl?'box-shadow:0 0 0 5px rgba(63,102,166,.16)':'')+'"></div>'
     +'<div style="font-size:9.5px;margin-top:3px;white-space:nowrap;color:'+(hl?'#2b4a72':'var(--grey)')+';font-weight:'+(hl?'700':'500')+'">'+esc(label)+'</div></div>';
+  const stage=(l,s,k)=>{ const on=k==='now', nx=k==='next', dn=k==='done';
+    const bg=on?'#eef3fb':(nx?'#fff':'#f6f6f4'), bd=on?'#3F66A6':'var(--line)', col=on?'#2b4a72':(dn?'#8a8f98':'var(--ink)');
+    return '<div style="border:1px solid '+bd+';background:'+bg+';border-radius:8px;padding:5px 8px;text-align:center;min-width:66px">'
+      +'<div style="font-size:9.5px;font-weight:700;color:'+col+'">'+(dn?'✓ ':'')+esc(l)+'</div>'
+      +'<div style="font-size:8px;color:var(--grey)">'+esc(s)+'</div></div>'; };
+  const arrow=()=>'<span style="color:var(--grey);font-size:10px">→</span>';
   return '<div style="padding:14px 16px;max-height:70vh;overflow:auto">'
     +'<div style="font-size:11.5px;color:var(--grey);margin-bottom:8px">Where we aim vs the alternatives. <b>This is a positioning hypothesis</b> — our dot is a <b>target</b> (we are early/unproven); the others are established.</div>'
     +'<div style="position:relative;height:270px;margin:22px 34px 30px;border-left:1.5px solid var(--line);border-bottom:1.5px solid var(--line)">'
@@ -184,7 +190,21 @@ function _edgeTabHtml(){
     +'<div style="font-size:11px;color:var(--ink);line-height:1.5">'
       +'<b>The edge:</b> the top-right — <b>enterprise-grade governance a small player can actually use</b> — is empty. Email is accessible but ungoverned; SAP/ServiceNow/EDI are governed but heavy &amp; costly; blockchain B2B is trust-heavy but hard. We aim at <b>governed AND leveling</b>: a solo trader transacts on the same rail as a multinational.'
     +'</div>'
-    +'<div style="font-size:10.5px;color:var(--grey);text-align:center;padding-top:10px;border-top:1px solid var(--line);margin-top:10px">Closest analog: <b>ServiceNow</b> — one records/workflow facility, many classified lifecycles (ITSM/HR/dev). It proves the model has takers — and it won by starting <i>narrow</i> (an ITIL desk) then generalizing. Our claimed differentiator vs it: accessibility &amp; cost for the small player. <b>Unproven until one blueprint ships + gets a user.</b></div>'
+    +'<div style="font-size:10.5px;color:var(--grey);text-align:center;padding-top:10px;border-top:1px solid var(--line);margin-top:10px">Closest analog: <b>ServiceNow</b> — one records/workflow facility, many classified lifecycles (ITSM/HR/dev). It proves the model has takers — and it won by starting <i>narrow</i> (an ITIL desk) then generalizing. Our claimed differentiator vs it: accessibility &amp; cost for the small player.</div>'
+    +'<div style="border:1px solid var(--line);border-radius:10px;padding:11px 12px;margin-top:14px;background:#faf9f6">'
+      +'<div style="font-size:11px;font-weight:700;color:#8a6d1f;margin-bottom:5px">🧭 Critic&rsquo;s lens (we hold ourselves to it)</div>'
+      +'<div style="font-size:10.8px;color:var(--ink);line-height:1.5">The honest risk: the <b>model is ahead of adoption</b> — elegant &ne; adopted. The proof that counts is <b>one real user on one blueprint</b>, not a better diagram. As a <b>concept/POC this existed for years</b>; as a <b>product it is ~2 weeks old</b> — so it is early <i>by timeline</i>, and we name what is unproven rather than oversell it.</div>'
+    +'</div>'
+    +'<div style="margin-top:13px"><div style="font-size:11px;font-weight:700;color:var(--ink);margin-bottom:6px">Path to confident validation</div>'
+      +'<div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center">'
+        + stage('Concept / POC','years','done') + arrow()
+        + stage('Product build','~2 wks · now','now') + arrow()
+        + stage('One test lifecycle','prove it works','next') + arrow()
+        + stage('Volume test','scale','') + arrow()
+        + stage('Pen test','security','') + arrow()
+        + stage('External validation','confident sign-off','')
+      +'</div></div>'
+    +'<div style="font-size:10.5px;color:var(--grey);margin-top:11px"><b>First taker?</b> The one who feels the gap most — a small supplier who needs credible, governed dealings with a large buyer, or a service desk wanting ITIL-grade handling without ServiceNow cost.</div>'
   +'</div>';
 }
 
