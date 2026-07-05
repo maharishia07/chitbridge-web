@@ -2107,7 +2107,7 @@ async function quickDispute(){ const ids=needTarget(); if(!ids.length)return;
   let partyRows='';
   try{ const r=await api("chit",{params:{id}}); const h=(r&&r.header)||r||{}; const seen={};
     // Everyone on the chit EXCEPT me — the raiser is implicit and must not be a selectable target.
-    const parties=(h.all_recipients||[]).filter(x=>x&&x.entity_id&&x.entity_id!==SESSION.entityId&&!seen[x.entity_id]&&(seen[x.entity_id]=1));
+    const parties=(h.all_recipients||[]).filter(x=>x&&x.entity_id&&!chitIsSelf(x.entity_id,x.display_name)&&!seen[x.entity_id]&&(seen[x.entity_id]=1));
     MODALS.disp.parties=parties;
     if(parties.length){ partyRows='<div style="font-size:12px;color:var(--grey);margin:9px 0 3px">Between which parties? <span style="color:#9aa3ad">(none ticked = everyone involved)</span></div>'+parties.map(p=>`<label style="display:flex;gap:8px;align-items:center;padding:3px 0;font-size:13px;cursor:pointer"><input type="checkbox" class="dispparty" value="${p.entity_id}"> ${esc(p.display_name||'party')} <span style="font-size:10px;color:var(--grey);text-transform:uppercase">${esc(p.role||'')}</span></label>`).join(''); }
   }catch(_){}
@@ -2511,9 +2511,9 @@ function detailInner(){
   // both-signed parity badge, a jump to the scoped thread, and (for the raiser) per-party resolve.
   const _od=(c.disputes||[]).filter(d=>d.status==='open');
   let dispBanner='';
-  if(_od.length){ const d=_od[0]; const dparties=(d.participants||[]).filter(p=>p.role==='party');
+  if(_od.length){ const d=_od[0]; const dparties=(d.participants||[]).filter(p=>p.role==='party'&&!chitIsSelf(p.entity_id,p.display_name));
     const dchips=dparties.map(p=>`<span class="dpchip${p.dispute_status==='resolved'?' ok':''}">${esc(p.display_name||'party')}${p.dispute_status==='resolved'?' ✓':''}</span>`).join('');
-    const dmine=d.raised_by_entity_id===SESSION.entityId;
+    const dmine=chitIsSelf(d.raised_by_entity_id,d.raised_by_display_name);
     const dopen=dparties.filter(p=>p.dispute_status!=='resolved');
     const dres=dmine?(dopen.length?dopen.map(p=>`<button class="db-res" onclick="resolveDispute('${c.id}','${d.dispute_id}','${p.entity_id}','${encodeURIComponent(p.display_name||'party')}')">Resolve ${esc(p.display_name||'party')}</button>`).join(''):`<button class="db-res" onclick="resolveDispute('${c.id}','${d.dispute_id}')">Resolve</button>`):'';
     dispBanner=`<div class="dispbanner"><div class="db-row"><span class="db-tag">⚑ Open dispute</span><span class="db-cat">${esc(cap(d.category||''))}</span>${c.proof==='ok'?'<span class="db-proof">⚖️ both-signed record</span>':''}</div><div class="db-reason">${esc(d.reason||'')}</div><div class="db-meta">raised by ${esc(d.raised_by_display_name||'—')}${dparties.length?' · ':''}${dchips}</div><div class="db-acts"><button onclick="setDtab('messages');setMsgFilter('dispute')">Open dispute thread →</button>${dres}</div></div>`;
@@ -2594,7 +2594,8 @@ function msgAddFiles(files){ UI.msgFiles=UI.msgFiles||[]; for(var k=0;k<files.le
 function msgDelFile(i){ (UI.msgFiles||[]).splice(i,1); var el=document.getElementById('msgfileschips'); if(el)el.innerHTML=msgChips(); }
 function busyShow(msg){ var h=document.getElementById('busyhost'); if(!h){ h=document.createElement('div'); h.id='busyhost'; document.body.appendChild(h); } h.innerHTML='<div class="busyov"><div class="busybox"><span class="bspin"></span><span>'+esc(msg||'Working…')+'</span></div></div>'; }
 function busyHide(){ var h=document.getElementById('busyhost'); if(h)h.innerHTML=''; }
-function recipTo(c, isDispute){ c=c||{}; var _self=function(e,n){ return (SESSION.entityId&&e===SESSION.entityId)||(SESSION.entity&&String(n||"")===String(SESSION.entity)); }; var seen={}; var all=(((c.recips)||[]).filter(function(r){return r&&r.entity_id&&!_self(r.entity_id,r.display_name)&&!seen[r.entity_id]&&(seen[r.entity_id]=1);}).map(function(r){return r.display_name||"party";})); var rn=all; if(isDispute){ var od=((c.disputes)||[]).find(function(d){return (d.status||"open")==="open";}); var dp=(((od&&od.participants)||[]).filter(function(p){return p&&!_self(p.entity_id,p.display_name);}).map(function(p){return p.display_name||"party";})); if(dp.length) rn=dp; } return rn.length?rn.join(", "):(c.party||"the other party"); }
+function chitIsSelf(e,n){ return (SESSION.entityId&&e===SESSION.entityId)||(SESSION.entity&&String(n||"")===String(SESSION.entity)); }
+function recipTo(c, isDispute){ c=c||{}; var _self=chitIsSelf; var seen={}; var all=(((c.recips)||[]).filter(function(r){return r&&r.entity_id&&!_self(r.entity_id,r.display_name)&&!seen[r.entity_id]&&(seen[r.entity_id]=1);}).map(function(r){return r.display_name||"party";})); var rn=all; if(isDispute){ var od=((c.disputes)||[]).find(function(d){return (d.status||"open")==="open";}); var dp=(((od&&od.participants)||[]).filter(function(p){return p&&!_self(p.entity_id,p.display_name);}).map(function(p){return p.display_name||"party";})); if(dp.length) rn=dp; } return rn.length?rn.join(", "):(c.party||"the other party"); }
 function sendMessage(id){
   const el=document.getElementById('msgbody'); const body=(el?el.value:"").trim(); if(!body){ toast("Type a message first."); return; }
   const ch=UI.msgChan||(SESSION.role==="customer"?"external":"internal");
