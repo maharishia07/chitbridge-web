@@ -2308,7 +2308,7 @@ function advPanel(){ const a=UI.adv||{};
     <div class="advfoot"><button class="composebtn" onclick="clearAdv()">Clear</button><button class="composebtn pri" onclick="applyAdv()">Apply</button></div>
   </div>`; }
 function fetchPage(page){ const limit=UI.pageLimit||50; if(["drafts","trash","archive"].indexOf(UI.folder)>=0){ return api("folder",{query:Object.assign({view:UI.folder,page,limit,q:UI.search||undefined,sort:UI.sort||undefined,dir:UI.dir||undefined}, advParams())}); } if(UI.folder==="order"||SESSION.role==="customer"){ return SESSION.role==="customer" ? api("custOrders",{params:{bridgeId:SESSION.bridgeId},query:{page,limit,q:UI.search||undefined,sort:UI.sort||undefined,dir:UI.dir||undefined}}) : api("sent",{query:Object.assign({page,limit,q:UI.search||undefined,sort:UI.sort||undefined,dir:UI.dir||undefined}, advParams())}); } const q={page,limit}; if(UI.search)q.q=UI.search; if(UI.sort){q.sort=UI.sort;q.dir=UI.dir;} Object.assign(q, advParams());
-  if(SESSION.role==="actor"){ if(UI.sub==="my")q.assigned_to="me"; } else { q.assignment=taskScope(); }   // entity: unassigned pool (default) / assigned
+  var _dispF=!!(UI.adv&&UI.adv.dispute); if(!_dispF){ if(SESSION.role==="actor"){ if(UI.sub==="my")q.assigned_to="me"; } else { q.assignment=taskScope(); } }   // entity: unassigned pool (default) / assigned
   return api("inbox",{query:q}); }
 function onRowsScroll(){ if(UI.loading)return; pgScroll("list"); }
 function ensureFilled(){ if(UI.loading)return; pgFill("list"); }
