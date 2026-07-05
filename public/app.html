@@ -672,7 +672,7 @@ function acIdPrev(){const e=document.getElementById("ac_idprev"); if(e){ const k
 /* DEMO responder — mimics the API so the whole flow works standalone */
 /* ---------------- SESSION + ROUTER ---------------- */
 let SESSION = {token:null, role:null, name:null, entity:null, bridgeId:null};
-const inr=n=>"₹"+(n||0).toLocaleString("en-IN");
+const inr=n=>fmtMoney(n,'INR');
 /* CCY_LOCALE + fmtMoney → app/helpers.js */
 const CURRENCIES=[['INR','₹ Indian Rupee · 2dp'],['USD','$ US Dollar · 2dp'],['EUR','€ Euro · 2dp'],['GBP','£ British Pound · 2dp'],['JPY','¥ Japanese Yen · 0dp'],['KRW','₩ Korean Won · 0dp'],['VND','₫ Vietnam Dong · 0dp'],['BHD','Bahraini Dinar · 3dp'],['KWD','Kuwaiti Dinar · 3dp'],['OMR','Omani Rial · 3dp'],['AED','UAE Dirham · 2dp'],['SAR','Saudi Riyal · 2dp'],['CNY','¥ Chinese Yuan · 2dp'],['SGD','$ Singapore Dollar · 2dp'],['AUD','$ Australian Dollar · 2dp'],['CHF','Swiss Franc · 2dp']];
 function go(hash){location.hash=hash;}

@@ -11,7 +11,7 @@ function opt(arr,sel){ return arr.map(o=>`<option ${o===sel?'selected':''}>${o}<
 function scrErr(e){ return `<div class="empty"><div class="t">Couldn't load</div><div>${esc(e&&e.message)}</div></div>`; }
 
 function cap(s){ return s[0].toUpperCase()+s.slice(1); }
-function inr_(v){ return '₹'+Number(v||0).toLocaleString('en-IN'); }
+function inr_(v){ return fmtMoney(v,'INR'); }   /* R1: one money formatter — alias to fmtMoney (currency-aware) */
 function fmtAt(ts){ try{ return new Date(ts).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}); }catch(_){ return ''; } }
 
 const CCY_LOCALE={INR:'en-IN',USD:'en-US',EUR:'de-DE',GBP:'en-GB',JPY:'ja-JP',CNY:'zh-CN',AUD:'en-AU',CAD:'en-CA',CHF:'de-CH',SGD:'en-SG',AED:'ar-AE',SAR:'ar-SA',KWD:'ar-KW',BHD:'ar-BH',OMR:'ar-OM',KRW:'ko-KR',VND:'vi-VN',THB:'th-TH',MYR:'ms-MY',IDR:'id-ID',ZAR:'en-ZA',BRL:'pt-BR',RUB:'ru-RU',NGN:'en-NG',KES:'en-KE',LKR:'si-LK',BDT:'bn-BD',PKR:'ur-PK',NPR:'ne-NP'};
