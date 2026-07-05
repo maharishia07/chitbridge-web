@@ -266,8 +266,12 @@ async function submitResolve(chitId, disputeId, partyId){
   var note=val("resnote"); var err=document.getElementById("res_err"); if(err)err.textContent="";
   if(!note){ if(err)err.textContent="A resolution note is required."; return; }
   var body={resolution_note:note}; if(partyId)body.target_entity_id=partyId;
-  try{ await api("resolveDispute",{params:{id:chitId,disputeId},body}); closeModal(); toast(MSG.disputeResolved());
+  try{ var _rr=await api("resolveDispute",{params:{id:chitId,disputeId},body}); closeModal(); toast(MSG.disputeResolved());
     if(document.getElementById("disprows"))loadDisputes();
-    if(UI.sel===chitId){ var i=UI.rows.findIndex(function(x){return x.id===chitId;}); if(i>=0)UI.rows[i].dispute=false; await openChit(chitId); } }
+    if(UI.sel===chitId){ var i=UI.rows.findIndex(function(x){return x.id===chitId;});
+      // FULLY resolved → 0 open, but bump the resolved count so openChit STILL fetches disputes (else the Closed
+      // dispute + its wall vanish). Partial (per-party) resolve leaves dispute=true, so the fetch already fires.
+      if(i>=0 && _rr && _rr.status==='resolved'){ UI.rows[i].dispute=false; UI.rows[i].dispResolved=(UI.rows[i].dispResolved||0)+1; }
+      await openChit(chitId); } }
   catch(e){ if(err)err.textContent=e.message; }
 }
