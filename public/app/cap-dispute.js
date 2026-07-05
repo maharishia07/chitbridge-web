@@ -142,13 +142,17 @@ function disputeRow(c, d, isOpen){
   var parties=disputeParties(d);
   var chips=disputeChips(parties, 'dpchip');
   var resolved=d.status!=='open';
+  var mine=chitIsSelf(d.raised_by_entity_id, d.raised_by_display_name);
   var stPill=resolved?'<span style="color:#3c8a52;font-size:11px;font-weight:700">✓ resolved</span>'
                      :'<span style="color:#b4453f;font-size:11px;font-weight:700">● open</span>';
-  var hdr='<div onclick="toggleDispRoom(\''+d.dispute_id+'\')" style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:7px 0">'
+  // Resolve lives in the ALWAYS-VISIBLE header (evident even when collapsed) — stopPropagation so it doesn't toggle the room
+  var resolve=resolved?'':disputeResolveBtns(parties, c.id, d.dispute_id, mine, 'db-res');
+  var resolveWrap=resolve?'<span onclick="event.stopPropagation()" style="display:inline-flex;gap:6px">'+resolve+'</span>':'';
+  var hdr='<div onclick="toggleDispRoom(\''+d.dispute_id+'\')" style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:7px 0;flex-wrap:wrap">'
     +'<span style="color:var(--grey);width:12px;flex:none">'+(isOpen?'▾':'▸')+'</span>'
     +'<span class="db-cat">'+esc(cap(d.category||''))+'</span>'
     +(parties.length?'<span style="font-size:11.5px;color:var(--grey)">with '+chips+'</span>':'')
-    +'<span style="margin-left:auto">'+stPill+'</span></div>';
+    +'<span style="margin-left:auto;display:inline-flex;align-items:center;gap:8px">'+stPill+resolveWrap+'</span></div>';
   return '<div style="border-top:1px dashed #f0c9c6">'+hdr+(isOpen?disputeRoom(c,d,resolved):'')+'</div>';
 }
 /* the room: THIS dispute's thread + external compose (open) / read-only (closed) + raiser resolve.
@@ -156,7 +160,6 @@ function disputeRow(c, d, isOpen){
  * resolution posts "[resolved] note" (chits.js), and msgBubble already badges them [raised]/[resolved].
  * Repeating them as headers (the first cut) showed each twice — removed. */
 function disputeRoom(c, d, readonly){
-  var mine=chitIsSelf(d.raised_by_entity_id, d.raised_by_display_name);
   var parties=disputeParties(d);
   var msgs=(typeof disputeFilterMsgs==='function')?(disputeFilterMsgs((c.msgs||[]),'dispute',d.dispute_id)||[]):[];
   var thread=msgs.length?msgs.map(function(m){ return (typeof msgBubble==='function')?msgBubble(m):''; }).join('')
@@ -167,10 +170,10 @@ function disputeRoom(c, d, readonly){
     : '<div style="display:flex;gap:6px;align-items:flex-end;margin-top:8px">'
       +'<textarea id="droom-'+d.dispute_id+'" placeholder="Reply to this dispute — '+to+' will see this" style="flex:1;min-height:44px;border:1px solid var(--line);border-radius:8px;padding:7px;font:inherit;font-size:13px;resize:vertical"></textarea>'
       +'<button onclick="sendDisputeMsg(\''+c.id+'\',\''+d.dispute_id+'\')" style="border:none;background:#b4453f;color:#fff;border-radius:8px;padding:9px 13px;font-weight:600;cursor:pointer;white-space:nowrap">Send ↔</button></div>';
-  var res=readonly?'':disputeResolveBtns(parties, c.id, d.dispute_id, mine, 'db-res');
+  // Resolve is NOT here anymore — it lives in the always-visible row header (disputeRow), so it's evident without expanding.
   return '<div style="padding:2px 0 10px 20px">'
     +'<div style="border:1px solid var(--line);border-radius:9px;padding:6px;background:#fbfbfa;max-height:280px;overflow:auto">'+thread+'</div>'
-    +compose+(res?'<div class="db-acts" style="margin-top:8px">'+res+'</div>':'')+'</div>';
+    +compose+'</div>';
 }
 /* external-only send scoped to THIS dispute (its own compose box → is_dispute + dispute_id, no channel toggle) */
 async function sendDisputeMsg(chitId, disputeId){
