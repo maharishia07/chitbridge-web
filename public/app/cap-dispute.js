@@ -51,9 +51,12 @@ function disputeResolveBtns(parties, chitId, disputeId, show, btnCls){
  * '' for a non-dispute message, so Core falls back to its normal external/internal + type badges. */
 function disputeBadge(m){
   if(!m||!m.isDispute) return '';
-  return /^\[resolved\]/i.test(String(m.body||''))
-    ? '<span class="mbadge disp ok">⚑ Dispute [resolved]</span>'
-    : '<span class="mbadge disp">⚑ Dispute [raised]</span>';
+  var b=String(m.body||'');
+  // Only the RAISE and the RESOLUTION carry a badge. The backend prefixes the raise with "[category]" and the
+  // resolution with "[resolved]"; ordinary replies have no prefix → no badge, just the sender + message.
+  if(/^\[resolved\]/i.test(b)) return '<span class="mbadge disp ok">⚑ Dispute [resolved]</span>';
+  if(/^\[(quality|quantity|delivery|payment|docs|other)\]/i.test(b)) return '<span class="mbadge disp">⚑ Dispute [raised]</span>';
+  return '<span></span>';   // truthy-but-empty so msgBubble shows no int/ext fallback badge — just the reply
 }
 /* mapApiMsg → split the trailing "— actor@entity" provenance a dispute message carries into a byline.
  * Returns {by, body}; on a plain message (or no marker) by=null and body is unchanged. */
