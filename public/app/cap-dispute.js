@@ -51,20 +51,23 @@ function disputeResolveBtns(parties, chitId, disputeId, show, btnCls){
  * '' for a non-dispute message, so Core falls back to its normal external/internal + type badges. */
 function disputeBadge(m){
   if(!m||!m.isDispute) return '';
-  var b=String(m.body||'');
-  // Only the RAISE and the RESOLUTION carry a badge. The backend prefixes the raise with "[category]" and the
-  // resolution with "[resolved]"; ordinary replies have no prefix → no badge, just the sender + message.
-  if(/^\[resolved\]/i.test(b)) return '<span class="mbadge disp ok">⚑ Dispute [resolved]</span>';
-  if(/^\[(quality|quantity|delivery|payment|docs|other)\]/i.test(b)) return '<span class="mbadge disp">⚑ Dispute [raised]</span>';
-  return '<span></span>';   // truthy-but-empty so msgBubble shows no int/ext fallback badge — just the reply
+  // dispKind is set at map time from the (now-stripped) body prefix: only the raise/resolution carry a badge;
+  // an ordinary reply gets a truthy-but-empty span so msgBubble shows no int/ext fallback — just sender + message.
+  if(m.dispKind==='resolved') return '<span class="mbadge disp ok">⚑ Dispute [resolved]</span>';
+  if(m.dispKind==='raised') return '<span class="mbadge disp">⚑ Dispute [raised]</span>';
+  return '<span></span>';
 }
 /* mapApiMsg → split the trailing "— actor@entity" provenance a dispute message carries into a byline.
  * Returns {by, body}; on a plain message (or no marker) by=null and body is unchanged. */
 function disputeByline(body){
-  var b=body||''; if(!b) return { by:null, body:b };
-  var mm=b.match(/\s+[—-]\s+(\S+@.+?)\s*$/);
-  if(mm) return { by:mm[1].trim(), body:b.slice(0,mm.index).replace(/\s+$/,'') };
-  return { by:null, body:b };
+  var b=body||''; if(!b) return { by:null, body:b, kind:null };
+  var by=null;
+  var mm=b.match(/\s+[—-]\s+(\S+@.+?)\s*$/);                                        // actor provenance "— name@entity" → byline (KEEP: shows as "· by …")
+  if(mm){ by=mm[1].trim(); b=b.slice(0,mm.index).replace(/\s+$/,''); }
+  var kind=null;
+  var pm=b.match(/^\[(resolved|quality|quantity|delivery|payment|docs|other)\]\s*/i);   // dispute prefix → strip (the badge already says it)
+  if(pm){ kind=/resolved/i.test(pm[1])?'resolved':'raised'; b=b.slice(pm[0].length); }
+  return { by:by, body:b, kind:kind };
 }
 /* messagesTab → the dispute thread filter. Returns the filtered list when f==='dispute' (all dispute
  * messages, narrowed to one dispute group when a chip is selected); undefined = "not mine, Core handles
