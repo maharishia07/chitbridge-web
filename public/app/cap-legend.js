@@ -126,7 +126,7 @@ const SEC_POSTURE = [
 function _lbTabBar(){
   const tab=(typeof _lbTab!=='undefined')?_lbTab:'cap';
   const btn=(id,label)=>`<button onclick="setLbTab('${id}')" style="border:0;background:none;cursor:pointer;padding:7px 12px;font-size:12.5px;font-weight:${tab===id?'700':'500'};color:${tab===id?'var(--ink)':'var(--grey)'};border-bottom:2px solid ${tab===id?'var(--accent,#3F66A6)':'transparent'}">${label}</button>`;
-  return `<div style="display:flex;gap:2px;border-bottom:1px solid var(--line);padding:0 8px;flex-wrap:wrap">${btn('cap','⬢ Capabilities')}${btn('life','🔀 Lifecycle')}${btn('sec','🔒 Security')}${btn('edge','🎯 Edge')}</div>`;
+  return `<div style="display:flex;gap:2px;border-bottom:1px solid var(--line);padding:0 8px;flex-wrap:wrap">${btn('cap','⬢ Capabilities')}${btn('life','🔀 Lifecycle')}${btn('sec','🔒 Security')}${btn('edge','🎯 Edge')}${btn('real','🔬 Reality')}</div>`;
 }
 function setLbTab(t){ _lbTab=t; _openLegendImpl(); }
 
@@ -174,6 +174,8 @@ function _edgeTabHtml(){
       +'<div style="font-size:9.5px;font-weight:700;color:'+col+'">'+(dn?'✓ ':'')+esc(l)+'</div>'
       +'<div style="font-size:8px;color:var(--grey)">'+esc(s)+'</div></div>'; };
   const arrow=()=>'<span style="color:var(--grey);font-size:10px">→</span>';
+  const _mk=(v)=>{ const m={y:['#2f8f5b','✓'],p:['#a9791f','~'],n:['#c0453b','✗']}, c=m[v]||m.n; return '<span style="color:'+c[0]+';font-weight:700">'+c[1]+'</span>'; };
+  const crow=(n,a,b,c,d,hl)=>'<tr style="'+(hl?'background:#eef3fb;':'')+'border-top:1px solid var(--line)"><td style="text-align:left;padding:4px;font-weight:'+(hl?'700':'500')+';color:'+(hl?'#2b4a72':'var(--ink)')+'">'+n+'</td><td style="text-align:center;padding:4px">'+_mk(a)+'</td><td style="text-align:center;padding:4px">'+_mk(b)+'</td><td style="text-align:center;padding:4px">'+_mk(c)+'</td><td style="text-align:center;padding:4px">'+_mk(d)+'</td></tr>';
   return '<div style="padding:14px 16px;max-height:70vh;overflow:auto">'
     +'<div style="font-size:11.5px;color:var(--grey);margin-bottom:8px">Where we aim vs the alternatives. <b>This is a positioning hypothesis</b> — our dot is a <b>target</b> (we are early/unproven); the others are established.</div>'
     +'<div style="position:relative;height:270px;margin:22px 34px 30px;border-left:1.5px solid var(--line);border-bottom:1.5px solid var(--line)">'
@@ -190,7 +192,20 @@ function _edgeTabHtml(){
     +'<div style="font-size:11px;color:var(--ink);line-height:1.5">'
       +'<b>The edge:</b> the top-right — <b>enterprise-grade governance a small player can actually use</b> — is empty. Email is accessible but ungoverned; SAP/ServiceNow/EDI are governed but heavy &amp; costly; blockchain B2B is trust-heavy but hard. We aim at <b>governed AND leveling</b>: a solo trader transacts on the same rail as a multinational.'
     +'</div>'
-    +'<div style="font-size:10.5px;color:var(--grey);text-align:center;padding-top:10px;border-top:1px solid var(--line);margin-top:10px">Closest analog: <b>ServiceNow</b> — one records/workflow facility, many classified lifecycles (ITSM/HR/dev). It proves the model has takers — and it won by starting <i>narrow</i> (an ITIL desk) then generalizing. Our claimed differentiator vs it: accessibility &amp; cost for the small player.</div>'
+    +'<div style="margin-top:16px"><div style="font-size:11px;font-weight:700;color:var(--ink);margin-bottom:5px">Communication lens — two-way between entities</div>'
+      +'<div style="font-size:10.5px;color:var(--grey);margin-bottom:6px">Two-way exists elsewhere; being two-way <i>and</i> peer <i>and</i> governed <i>and</i> affordable does not.</div>'
+      +'<table style="width:100%;border-collapse:collapse;font-size:10.5px">'
+        +'<tr style="color:var(--grey);font-weight:700;font-size:9.5px"><td style="text-align:left;padding:3px 4px">Channel</td><td style="padding:3px 4px">2-way</td><td style="padding:3px 4px">Peer</td><td style="padding:3px 4px">Governed</td><td style="padding:3px 4px">Affordable</td></tr>'
+        + crow('Email','y','y','n','y',false)
+        + crow('Slack Connect / Teams','y','p','n','y',false)
+        + crow('EDI','y','n','p','n',false)
+        + crow('Ariba / Coupa / Tradeshift','y','n','p','n',false)
+        + crow('Blockchain B2B','y','y','y','n',false)
+        + crow('Chit &amp; Bridge','y','y','y','p',true)
+      +'</table>'
+      +'<div style="font-size:9.5px;color:var(--grey);margin-top:5px">✓ yes · ~ partial · ✗ no. Ours is the only row combining <b>governed + peer + two-way</b> (all real/built); <b>affordability is the aim</b>, not yet proven — hence the ~.</div>'
+    +'</div>'
+    +'<div style="font-size:10.5px;color:var(--grey);text-align:center;padding-top:10px;border-top:1px solid var(--line);margin-top:14px">Closest analog: <b>ServiceNow</b> — one records/workflow facility, many classified lifecycles (ITSM/HR/dev). It proves the model has takers — and it won by starting <i>narrow</i> (an ITIL desk) then generalizing. Our claimed differentiator vs it: accessibility &amp; cost for the small player.</div>'
     +'<div style="border:1px solid var(--line);border-radius:10px;padding:11px 12px;margin-top:14px;background:#faf9f6">'
       +'<div style="font-size:11px;font-weight:700;color:#8a6d1f;margin-bottom:5px">🧭 Critic&rsquo;s lens (we hold ourselves to it)</div>'
       +'<div style="font-size:10.8px;color:var(--ink);line-height:1.5">The honest risk: the <b>model is ahead of adoption</b> — elegant &ne; adopted. The proof that counts is <b>one real user on one blueprint</b>, not a better diagram. As a <b>concept/POC this existed for years</b>; as a <b>product it is ~2 weeks old</b> — so it is early <i>by timeline</i>, and we name what is unproven rather than oversell it.</div>'
@@ -205,6 +220,26 @@ function _edgeTabHtml(){
         + stage('External validation','confident sign-off','')
       +'</div></div>'
     +'<div style="font-size:10.5px;color:var(--grey);margin-top:11px"><b>First taker?</b> The one who feels the gap most — a small supplier who needs credible, governed dealings with a large buyer, or a service desk wanting ITIL-grade handling without ServiceNow cost.</div>'
+  +'</div>';
+}
+
+/* ── REALITY tab — full-honesty writedown: where each edge stands + how we EARN it ── */
+function _realTabHtml(){
+  const S={ real:['#2f8f5b','LIVE'], built:['#a9791f','BUILT · unverified'], part:['#a9791f','PARTIAL'], aim:['#c0453b','ASPIRATION'] };
+  const row=(claim,st,now,earn)=>{ const [c,lbl]=S[st]||S.aim;
+    return '<div style="border:1px solid var(--line);border-radius:10px;padding:11px 12px;margin-bottom:9px">'
+      +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:3px"><span style="font-size:12px;font-weight:700">'+esc(claim)+'</span><span style="margin-left:auto;font-size:9px;font-weight:800;color:'+c+';white-space:nowrap">'+lbl+'</span></div>'
+      +'<div style="font-size:10.6px;color:var(--ink);line-height:1.45;margin-bottom:3px"><b>Now:</b> '+esc(now)+'</div>'
+      +'<div style="font-size:10.4px;color:var(--grey);line-height:1.4"><b>To earn it:</b> '+esc(earn)+'</div></div>'; };
+  return '<div style="padding:14px 16px;max-height:70vh;overflow:auto">'
+    +'<div style="font-size:11.5px;color:var(--grey);margin-bottom:10px">Full honesty — for each edge, where we genuinely stand and what it takes to <b>earn</b> that level. Nothing counts as done until a human proved it (our review-gate rule).</div>'
+    + row('Governed peer two-way (the communication edge)','built','Two-copy co-held chit, messages both ways, per-party dispute threads — the rail exists in the product.','Run one live A↔B loop with a real user; then volume-test it.')
+    + row('Multitenant isolation (RLS)','real','Live in prod — the app runs as a non-superuser role that cannot bypass RLS; a script verified cross-entity read = 0.','Commission an external pen-test to move from self-verified to attested (the L5 gate).')
+    + row('Sealed co-held record + provenance','part','Freeze-at-send + an append-only state log exist.','Add an immutability / tamper test proving history cannot be rewritten.')
+    + row('Dispute confidentiality (the USP)','built','Per-party roster + scoped visibility + per-party resolve — built.','The pending multi-party live pass: a 3rd entity must see nothing.')
+    + row('Governed + accessible (the quadrant)','aim','The rail is governed; affordability/ease for a solo player is designed, not proven.','One real small-player user completes a real loop cheaply — the decisive wedge.')
+    + row('Self-measuring maturity (this Legend)','part','An honest hand-authored scoreboard (these very tabs).','Wire it to real Delivery Records + test results so it reads automatically (the L4 step).')
+    +'<div style="font-size:10.4px;color:var(--grey);text-align:center;padding-top:9px;border-top:1px solid var(--line);margin-top:6px">The ladder that earns all of it: <b>one test lifecycle → volume → pen-test → external validation.</b> Concept: years · Product: ~2 weeks. Early by timeline, honest by choice.</div>'
   +'</div>';
 }
 
@@ -238,8 +273,8 @@ function _openLegendImpl(){
     <div style="padding:12px 13px;max-height:70vh;overflow:auto">${CAP_CATALOGUE.map(card).join('')}
       <div style="font-size:10.5px;color:var(--grey);text-align:center;padding-top:4px">Load: <b>always on</b> ships with the app · <b>lazy</b> loads on first use · <b>planned</b> not built yet. · <b>L1–5</b> maturity: 1 Proven · 2 Packaged · 3 Itemised · 4 Governed · 5 Productized (→ = target). Kept true to the code.</div>
     </div>`;
-  const body = (_lbTab==='life') ? _lifeTabHtml() : (_lbTab==='sec') ? _secTabHtml() : (_lbTab==='edge') ? _edgeTabHtml() : capBody;
-  const titles = { cap:'capabilities &amp; features', life:'lifecycle &amp; traceability', sec:'security posture', edge:'positioning &amp; edge' };
+  const body = (_lbTab==='life') ? _lifeTabHtml() : (_lbTab==='sec') ? _secTabHtml() : (_lbTab==='edge') ? _edgeTabHtml() : (_lbTab==='real') ? _realTabHtml() : capBody;
+  const titles = { cap:'capabilities &amp; features', life:'lifecycle &amp; traceability', sec:'security posture', edge:'positioning &amp; edge', real:'reality &amp; how we earn it' };
   host.innerHTML=`<div class="notifover" onclick="closeLegend()"><div class="notifpanel" style="max-width:640px;width:95vw" onclick="event.stopPropagation()">
     <div class="notifhd">🔑 What we serve — ${titles[_lbTab]||titles.cap}<button onclick="closeLegend()" style="margin-left:auto;border:0;background:none;cursor:pointer;font-size:15px;color:var(--grey)" aria-label="Close">✕</button></div>
     ${_lbTabBar()}
