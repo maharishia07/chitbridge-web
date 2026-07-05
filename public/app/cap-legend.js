@@ -74,8 +74,98 @@ const CAP_CATALOGUE = [
     ]},
 ];
 
+/* ── LIFECYCLE tab — requirements traceability (BR→SR→FR→Test). Mirrors C:\dev\TRACEABILITY.md.
+ *    st: ok = verified-live · built = built, runtime-unverified (human gate) · todo = backlog. ── */
+const TRACE_MATRIX = [
+  { area:'Dispute (the USP)', br:'Two parties resolve a disagreement confidentially & per-party, no third party sees it.',
+    sr:'Per-party scoping (participant roster + visibility predicate) + per-party resolution on the isolated rail.',
+    rows:[
+      { id:'FR-D1', fr:'Only the raiser can resolve', test:'Non-raiser resolve → 403', st:'built' },
+      { id:'FR-D2', fr:'Dispute message visible to participants only', test:'3rd entity sees nothing', st:'built' },
+      { id:'FR-D3', fr:'Entity-name + who-raised attribution', test:'Message shows entity + raiser', st:'built' },
+      { id:'FR-D4', fr:'Dispute [raised]/[resolved] + colour', test:'Resolve → badge flips green', st:'built' },
+      { id:'FR-D5', fr:'Composer can reply AS a dispute', test:'Toggle → stored is_dispute', st:'built' },
+      { id:'FR-D6', fr:'Close disputed = warn (allow); archive = block', test:'Close → warning; archive → 409', st:'built' },
+      { id:'FR-D7', fr:'dispute_id referential integrity', test:'FK to chit_disputes (b58)', st:'ok' },
+    ]},
+  { area:'Connector (IoT / ERP)', br:'External systems exchange records over the rail, processing then FORGETTING raw payloads (receipt-only).',
+    sr:'Connector = first-class actor (identities row) + connections; capability-gated (API-enforced); per-connection retention.',
+    rows:[
+      { id:'FR-C1', fr:'Create connector actor → shows in Co-assists', test:'Create → lists + visible', st:'todo' },
+      { id:'FR-C2', fr:'Add endpoint (direction, ref, retention)', test:'Add → endpoint shows', st:'todo' },
+      { id:'FR-C3', fr:'Enable/disable endpoint (kill switch)', test:'Toggle → state flips', st:'todo' },
+      { id:'FR-C4', fr:'Emit signal → chit lands in Task', test:'Emit → received co-held', st:'built' },
+      { id:'FR-C5', fr:'Routes capability-gated (403 if off)', test:'Capability off → 403', st:'built' },
+    ]},
+  { area:'Foundation — RLS isolation', br:'Every entity\'s data is its own — a governance leveler, same isolation solo→multinational.',
+    sr:'Postgres RLS: app = cb_app (NOBYPASSRLS); withEntity() sets app.current_entity; 6 tables enforce rls_entity.',
+    rows:[
+      { id:'FR-F1', fr:'Entity reads only its own rows', test:'rls-context-test → cross-read = 0', st:'ok' },
+      { id:'FR-F2', fr:'Cross-entity write only via governed fns', test:'chit_deliver rejects bad sender', st:'ok' },
+      { id:'FR-F3', fr:'Schema reproducible + change-controlled', test:'Baseline rebuilds prod on scratch DB', st:'todo' },
+    ]},
+  { area:'Core — the mailbox rail', br:'Parties exchange sealed, co-held shared records ("chits") with a clear lifecycle.',
+    sr:'Two-copy chit keyed (chit_id, entity_id, direction); one status enum; append-only state_log; seal = schema snapshot.',
+    rows:[
+      { id:'FR-M1', fr:'Compose → deliver co-held chit', test:'Send → both copies, right direction', st:'built' },
+      { id:'FR-M2', fr:'Advance status (direction-scoped) + logged', test:'Advance → state_log + badge', st:'built' },
+      { id:'FR-M3', fr:'Assign (push/bulk/pool, hat-gated)', test:'Assign → bound, gate respected', st:'built' },
+    ]},
+];
+
+/* ── SECURITY tab — verified from code/package-lock 2026-07-05. lvl: strong ✓ · partial ◐ · gap ○ ── */
+const SEC_POSTURE = [
+  { area:'In transit', lvl:'strong', what:'TLS everywhere — HTTPS on web (Vercel) + API (Railway); TLS to Postgres (Supabase).', raise:'DB uses rejectUnauthorized:false (encrypted, cert NOT verified) — pin the cert to fully close MITM.' },
+  { area:'At rest', lvl:'partial', what:'Provider disk encryption (Supabase/AWS, AES-256). No app/column-level encryption — payloads, messages, PII (GSTN/address/phone) are plaintext in Postgres, protected by RLS + disk crypto.', raise:'Add column-level encryption (pgcrypto/pgsodium) for PII + chit payloads.' },
+  { area:'Auth secrets', lvl:'strong', what:'PINs & passwords bcrypt-hashed (bcryptjs). JWT HS256, server-side only, never in browser, boot-time secret guard. OTP is ephemeral (6-digit, expiring) + attempt-capped + rate-limited.', raise:'Hash/short-TTL OTP is fine; consider rotating JWT to asymmetric (RS256) for multi-service.' },
+  { area:'Perimeter', lvl:'strong', what:'helmet security headers + express-rate-limit (auth + assist brute-force blunting).', raise:'Add per-account lockout metrics + WAF at the edge.' },
+  { area:'Access control', lvl:'strong', what:'RLS entity isolation LIVE — cb_app is NOSUPERUSER NOBYPASSRLS; every query scoped by app.current_entity.', raise:'Extend RLS beyond the 6 Direct tables (identities/messages/disputes are app-scoped carve-outs).' },
+  { area:'Secrets & audit', lvl:'gap', what:'Secrets in Railway env vars, not a vault/KMS. No external pen-test yet (so security honestly ≤ L4).', raise:'Move secrets to a KMS/vault; commission an external pen-test → the L5 gate.' },
+];
+
+function _lbTabBar(){
+  const tab=(typeof _lbTab!=='undefined')?_lbTab:'cap';
+  const btn=(id,label)=>`<button onclick="setLbTab('${id}')" style="border:0;background:none;cursor:pointer;padding:7px 12px;font-size:12.5px;font-weight:${tab===id?'700':'500'};color:${tab===id?'var(--ink)':'var(--grey)'};border-bottom:2px solid ${tab===id?'var(--accent,#3F66A6)':'transparent'}">${label}</button>`;
+  return `<div style="display:flex;gap:2px;border-bottom:1px solid var(--line);padding:0 8px">${btn('cap','⬢ Capabilities')}${btn('life','🔀 Lifecycle')}${btn('sec','🔒 Security')}</div>`;
+}
+function setLbTab(t){ _lbTab=t; _openLegendImpl(); }
+
+function _lifeTabHtml(){
+  const SS={ ok:['#2f8f5b','✅'], built:['#a9791f','◐'], todo:['#9aa3a7','○'] };
+  const row=(r)=>{ const [c,ic]=SS[r.st]||SS.todo;
+    return `<div style="display:flex;gap:8px;align-items:flex-start;font-size:11.5px;padding:3px 0;border-bottom:1px dashed var(--line)"><span style="color:${c};flex:none">${ic}</span><span class="mono" style="flex:none;color:var(--grey);width:46px">${esc(r.id)}</span><span style="flex:1">${esc(r.fr)}</span><span style="flex:1;color:var(--grey)">${esc(r.test)}</span></div>`; };
+  const grp=(g)=>`<div style="border:1px solid var(--line);border-radius:11px;padding:12px 13px;margin-bottom:11px">
+      <div style="font-family:'Space Grotesk';font-weight:700;font-size:13px;margin-bottom:4px">${esc(g.area)}</div>
+      <div style="font-size:11px;color:var(--grey);margin-bottom:2px"><b>BR:</b> ${esc(g.br)}</div>
+      <div style="font-size:11px;color:var(--grey);margin-bottom:8px"><b>SR:</b> ${esc(g.sr)}</div>
+      <div style="display:flex;gap:8px;font-size:10px;color:var(--grey);font-weight:700;padding-bottom:2px"><span style="width:54px">&nbsp;</span><span style="flex:1">FUNCTIONAL (FR)</span><span style="flex:1">TEST</span></div>
+      ${g.rows.map(row).join('')}
+    </div>`;
+  return `<div style="padding:12px 13px;max-height:70vh;overflow:auto">
+    <div style="font-size:11.5px;color:var(--grey);margin-bottom:10px">How we work the lifecycle: every behaviour traces <b>Business → System → Functional → Test</b>. <span style="color:#2f8f5b">✅ verified-live</span> · <span style="color:#a9791f">◐ built, needs a live run</span> · <span style="color:#9aa3a7">○ backlog</span>.</div>
+    ${TRACE_MATRIX.map(grp).join('')}
+    <div style="font-size:10.5px;color:var(--grey);text-align:center;padding-top:2px">Most rows are ◐ — built + parse/boot-checked; each ✅ needed a human live-run or a script. Automated tests turn ◐ → ✅ at scale.</div>
+  </div>`;
+}
+
+function _secTabHtml(){
+  const LV={ strong:['#2f8f5b','✓ strong'], partial:['#a9791f','◐ partial'], gap:['#c0453b','○ gap'] };
+  const row=(s)=>{ const [c,lbl]=LV[s.lvl]||LV.gap;
+    return `<div style="border:1px solid var(--line);border-radius:11px;padding:11px 13px;margin-bottom:9px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:13px">${esc(s.area)}</span><span style="margin-left:auto;font-size:10.5px;font-weight:800;color:${c}">${lbl}</span></div>
+      <div style="font-size:11.5px;color:var(--ink);line-height:1.45;margin-bottom:4px">${esc(s.what)}</div>
+      <div style="font-size:10.5px;color:var(--grey);line-height:1.4"><b>Raise it:</b> ${esc(s.raise)}</div>
+    </div>`; };
+  return `<div style="padding:12px 13px;max-height:70vh;overflow:auto">
+    <div style="font-size:11.5px;color:var(--grey);margin-bottom:10px">What protects your data today (verified from code, 2026-07-05). Honest levels: <span style="color:#2f8f5b">✓ strong</span> · <span style="color:#a9791f">◐ partial</span> · <span style="color:#c0453b">○ gap</span>.</div>
+    ${SEC_POSTURE.map(row).join('')}
+    <div style="font-size:10.5px;color:var(--grey);text-align:center;padding-top:2px">Encryption in transit (TLS) is solid; at-rest is provider disk-level (not per-column) and there is no external pen-test yet — so security is honestly capped ≤ L4 until audited.</div>
+  </div>`;
+}
+
 function _openLegendImpl(){
   const host=document.getElementById("lbhost"); if(!host)return; _legendOpen=true;
+  if(typeof _lbTab==='undefined') _lbTab='cap';
   const LOADED=(typeof CAP_LOADED!=='undefined')?CAP_LOADED:{};
   const SC={ done:['#2f8f5b','✅'], partial:['#a9791f','◐'], backlog:['#9aa3a7','○'] };
   // tallies across every feature
@@ -95,14 +185,19 @@ function _openLegendImpl(){
     <div style="font-size:11.5px;color:var(--grey);margin-bottom:8px;line-height:1.45">${esc(c.blurb)}</div>
     ${c.features.map(featRow).join('')}
   </div>`;
-  host.innerHTML=`<div class="notifover" onclick="closeLegend()"><div class="notifpanel" style="max-width:600px;width:95vw" onclick="event.stopPropagation()">
-    <div class="notifhd">🔑 What we serve — capabilities &amp; features<button onclick="closeLegend()" style="margin-left:auto;border:0;background:none;cursor:pointer;font-size:15px;color:var(--grey)" aria-label="Close">✕</button></div>
+  const capBody=`
     <div style="padding:11px 13px 6px;font-size:11.5px;color:var(--grey);border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;gap:10px;align-items:center">
       <span><b style="color:var(--ink)">${built}</b> live capabilities · <b style="color:var(--ink)">${nf}</b> features</span>
       <span style="margin-left:auto">Status: <span style="color:#2f8f5b">✅ done ${d}</span> · <span style="color:#a9791f">◐ partial ${p}</span> · <span style="color:#9aa3a7">○ backlog ${b}</span></span>
     </div>
     <div style="padding:12px 13px;max-height:70vh;overflow:auto">${CAP_CATALOGUE.map(card).join('')}
       <div style="font-size:10.5px;color:var(--grey);text-align:center;padding-top:4px">Load: <b>always on</b> ships with the app · <b>lazy</b> loads on first use · <b>planned</b> not built yet. · <b>L1–5</b> maturity: 1 Proven · 2 Packaged · 3 Itemised · 4 Governed · 5 Productized (→ = target). Kept true to the code.</div>
-    </div>
+    </div>`;
+  const body = (_lbTab==='life') ? _lifeTabHtml() : (_lbTab==='sec') ? _secTabHtml() : capBody;
+  const titles = { cap:'capabilities &amp; features', life:'lifecycle &amp; traceability', sec:'security posture' };
+  host.innerHTML=`<div class="notifover" onclick="closeLegend()"><div class="notifpanel" style="max-width:640px;width:95vw" onclick="event.stopPropagation()">
+    <div class="notifhd">🔑 What we serve — ${titles[_lbTab]||titles.cap}<button onclick="closeLegend()" style="margin-left:auto;border:0;background:none;cursor:pointer;font-size:15px;color:var(--grey)" aria-label="Close">✕</button></div>
+    ${_lbTabBar()}
+    ${body}
   </div></div>`;
 }
