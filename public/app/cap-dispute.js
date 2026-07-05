@@ -130,7 +130,8 @@ function disputeBanner(c){
   var pill=function(t,label,n,on){ return '<button onclick="setDispTab(\''+t+'\')" style="border:1px solid '+(on?'#d98a84':'var(--line)')+';background:'+(on?'#fbeceb':'#fff')+';color:'+(on?'#b4453f':'var(--grey)')+';font-weight:'+(on?'700':'500')+';border-radius:7px;padding:2px 10px;font-size:11.5px;cursor:pointer">'+label+' '+n+'</button>'; };
   var head='<div class="db-row" style="align-items:center"><span class="db-tag">⚑ Disputes</span>'+proof
     +'<span style="margin-left:auto;display:inline-flex;gap:6px">'+pill('open','Open',open.length,tab==='open')+pill('closed','Closed',closed.length,tab==='closed')+'</span></div>';
-  var expanded=UI.dispRoom||(list.length===1?list[0].dispute_id:null);   // single → auto-open; many → pick one
+  var inList=UI.dispRoom&&list.some(function(d){ return String(d.dispute_id)===String(UI.dispRoom); });
+  var expanded=inList?UI.dispRoom:(list.length===1?list[0].dispute_id:null);   // single → auto-open; many → pick one; ignore a stale id from another chit
   var rows=list.length
     ? list.map(function(d){ return disputeRow(c,d,String(expanded)===String(d.dispute_id)); }).join('')
     : '<div style="font-size:12px;color:var(--grey);padding:8px 2px">No '+tab+' disputes.</div>';
@@ -150,21 +151,24 @@ function disputeRow(c, d, isOpen){
     +'<span style="margin-left:auto">'+stPill+'</span></div>';
   return '<div style="border-top:1px dashed #f0c9c6">'+hdr+(isOpen?disputeRoom(c,d,resolved):'')+'</div>';
 }
-/* the room: reason + (resolution note if closed) + THIS dispute's thread + external compose (open only) + resolve */
+/* the room: THIS dispute's thread + external compose (open) / read-only (closed) + raiser resolve.
+ * NO reason/resolution headers — the thread IS the record: the raise posts "[category] reason" and each
+ * resolution posts "[resolved] note" (chits.js), and msgBubble already badges them [raised]/[resolved].
+ * Repeating them as headers (the first cut) showed each twice — removed. */
 function disputeRoom(c, d, readonly){
   var mine=chitIsSelf(d.raised_by_entity_id, d.raised_by_display_name);
   var parties=disputeParties(d);
   var msgs=(typeof disputeFilterMsgs==='function')?(disputeFilterMsgs((c.msgs||[]),'dispute',d.dispute_id)||[]):[];
   var thread=msgs.length?msgs.map(function(m){ return (typeof msgBubble==='function')?msgBubble(m):''; }).join('')
     :'<div style="font-size:12px;color:var(--grey);padding:6px 2px">No messages in this dispute yet.</div>';
-  var reason='<div class="db-reason">'+esc(d.reason||'')+'</div><div class="db-meta" style="margin-bottom:6px">raised by '+nm(d.raised_by_display_name,'—')+'</div>';
-  var resnote=(readonly&&d.resolution_note)?'<div style="font-size:12px;color:#2f7a45;background:#eef7f0;border:1px solid #cde7d4;border-radius:8px;padding:6px 9px;margin-bottom:6px">✓ Resolution: '+esc(d.resolution_note)+'</div>':'';
   var to=parties.length?esc(parties.map(function(p){ return p.display_name||'party'; }).join(", ")):'participants';
-  var compose=readonly?'':'<div style="display:flex;gap:6px;align-items:flex-end;margin-top:8px">'
-    +'<textarea id="droom-'+d.dispute_id+'" placeholder="Reply to this dispute — '+to+' will see this" style="flex:1;min-height:44px;border:1px solid var(--line);border-radius:8px;padding:7px;font:inherit;font-size:13px;resize:vertical"></textarea>'
-    +'<button onclick="sendDisputeMsg(\''+c.id+'\',\''+d.dispute_id+'\')" style="border:none;background:#b4453f;color:#fff;border-radius:8px;padding:9px 13px;font-weight:600;cursor:pointer;white-space:nowrap">Send ↔</button></div>';
+  var compose=readonly
+    ? '<div style="font-size:11px;color:#2f7a45;margin-top:7px">✓ Resolved — this thread is read-only.</div>'
+    : '<div style="display:flex;gap:6px;align-items:flex-end;margin-top:8px">'
+      +'<textarea id="droom-'+d.dispute_id+'" placeholder="Reply to this dispute — '+to+' will see this" style="flex:1;min-height:44px;border:1px solid var(--line);border-radius:8px;padding:7px;font:inherit;font-size:13px;resize:vertical"></textarea>'
+      +'<button onclick="sendDisputeMsg(\''+c.id+'\',\''+d.dispute_id+'\')" style="border:none;background:#b4453f;color:#fff;border-radius:8px;padding:9px 13px;font-weight:600;cursor:pointer;white-space:nowrap">Send ↔</button></div>';
   var res=readonly?'':disputeResolveBtns(parties, c.id, d.dispute_id, mine, 'db-res');
-  return '<div style="padding:2px 0 10px 20px">'+reason+resnote
+  return '<div style="padding:2px 0 10px 20px">'
     +'<div style="border:1px solid var(--line);border-radius:9px;padding:6px;background:#fbfbfa;max-height:280px;overflow:auto">'+thread+'</div>'
     +compose+(res?'<div class="db-acts" style="margin-top:8px">'+res+'</div>':'')+'</div>';
 }
