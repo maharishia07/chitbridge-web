@@ -33,6 +33,30 @@ function disputeResolveBtns(parties, chitId, disputeId, show, btnCls){
   return inner;
 }
 
+/* Opponent label from the viewer's side: the parties (targets) excluding self; if the viewer IS the
+ * target (so no party chip is theirs), the opponent is the raiser. Used by the per-dispute thread chips. */
+function disputeOppLabel(d){
+  var p=disputeParties(d);
+  if(p.length) return p.map(function(x){ return x.display_name||'party'; }).join(', ');
+  return nm(d.raised_by_display_name,'party');
+}
+/* ── Per-dispute thread filter chips — the "manage each group separately" control. Keyed on dispute_id
+ *    (the identifier already on every chit_messages row). Renders ONLY when 2+ disputes are open; with 0/1
+ *    Core's single ⚑ Disputes button suffices. "All" clears the selection; each chip narrows the thread to
+ *    that one dispute AND (via setMsgDisp) binds the composer reply to the SAME dispute — so read-thread and
+ *    reply-thread never diverge (closes the "reply lands in the first dispute" ambiguity). */
+function disputeFilterChips(c, sel, f){
+  var od=((c&&c.disputes)||[]).filter(function(d){ return d.status==='open'; });
+  if(od.length<2) return '';
+  var allOn=(f==='dispute'&&!sel);
+  var chips=od.map(function(d){
+    var on=(f==='dispute'&&String(sel)===String(d.dispute_id));
+    var lb=disputeOppLabel(d); if(lb.length>16) lb=lb.slice(0,15)+'…';
+    return '<button class="'+(on?'on disp':'')+'" onclick="setMsgDisp(\''+d.dispute_id+'\')">⚑ '+esc(lb)+'</button>';
+  }).join('');
+  return '<button class="'+(allOn?'on disp':'')+'" onclick="setMsgDisp(\'\')">⚑ All</button>'+chips;
+}
+
 /* ── On-record banner (was inline in Core detailInner) — the USP surfaced ON the chit.
  *    MULTI-PARTY: renders ALL concurrent open disputes on one record "under one roof" — e.g. on an A→B,C chit
  *    the viewer B may be party to BOTH an A↔B dispute AND a B↔C dispute; both show at once (previously only
@@ -47,7 +71,8 @@ function disputeBannerRow(c, d){
     +'<div class="db-row"><span class="db-cat">'+esc(cap(d.category||''))+'</span>'+(parties.length?'<span style="font-size:11.5px;color:var(--grey)">with '+chips+'</span>':'')+'</div>'
     +'<div class="db-reason">'+esc(d.reason||'')+'</div>'
     +'<div class="db-meta">raised by '+nm(d.raised_by_display_name,'—')+'</div>'
-    +(res?'<div class="db-acts">'+res+'</div>':'')+'</div>';
+    +'<div class="db-acts"><button onclick="setDtab(\'messages\');setMsgDisp(\''+d.dispute_id+'\')">Open this thread →</button>'+res+'</div>'
+    +'</div>';
 }
 function disputeBanner(c){
   var od=((c&&c.disputes)||[]).filter(function(d){ return d.status==='open'; });
@@ -56,9 +81,8 @@ function disputeBanner(c){
   var head=od.length>1                                                    // count header only when >1 (multi-party)
     ? '<div class="db-row"><span class="db-tag">⚑ '+od.length+' disputes open on this record</span>'+proof+'</div>'
     : '<div class="db-row"><span class="db-tag">⚑ Open dispute</span>'+proof+'</div>';
-  var rows=od.map(function(d){ return disputeBannerRow(c,d); }).join('');
-  var thread='<div class="db-acts"><button onclick="setDtab(\'messages\');setMsgFilter(\'dispute\')">Open dispute thread →</button></div>';
-  return '<div class="dispbanner">'+head+rows+thread+'</div>';
+  var rows=od.map(function(d){ return disputeBannerRow(c,d); }).join('');   // each block deep-links to its OWN thread
+  return '<div class="dispbanner">'+head+rows+'</div>';
 }
 
 /* ── Composer "reply in the dispute" toggle (was inline in Core messagesTab). Only on an open-dispute

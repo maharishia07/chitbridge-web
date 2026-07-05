@@ -2476,7 +2476,8 @@ async function doAnswerPublish(id){ const x=document.getElementById("ap_err"); i
   }catch(e){ if(x)x.textContent=(e&&e.message)||"Failed"; } }
 function openChitMsgs(id){ UI.dtab="messages"; markChitRead(id); openChit(id); setTimeout(refreshMsgBadge,0); }
 function msgCount(c){ return ((c&&c.msgs)?c.msgs:[]).filter(m=>SESSION.role==="customer"?m.scope==="external":true).length; }
-function setMsgFilter(f){ UI.msgFilter=f; paintDetail(); }
+function setMsgFilter(f){ UI.msgFilter=f; UI.msgDispSel=''; paintDetail(); }
+function setMsgDisp(did){ UI.msgDispSel=did||''; UI.msgFilter='dispute'; paintDetail(); }   // per-dispute thread select
 function setMsgChan(ch){ UI.msgChan=ch; paintDetail(); }
 function toggleCompose(){ UI.composeOpen=!UI.composeOpen; paintDetail(); if(UI.composeOpen)setTimeout(()=>{const dp=document.getElementById('detailpane'); if(dp)dp.scrollTop=0; const t=document.getElementById('msgbody');if(t)t.focus();},30); }
 function toggleMsgTypeMenu(){ UI.msgTypeMenu=!UI.msgTypeMenu; paintDetail(); }
@@ -2498,12 +2499,15 @@ function statusTabHtml(c){ var log=(c.log||[]); var sl=log.slice(); var q=(UI.st
 function msgBubble(m){ const ext=m.scope==="external"; const d=MTYPES[m.type]||MTYPES.info; const disp=m.isDispute; const _dobj=disp?((UI.detail&&UI.detail.disputes)||[]).find(function(x){return String(x.dispute_id)===String(m.disputeId);}):null; const _dres=/^\[resolved\]/i.test(String(m.body||'')); const head=disp?(_dres?'<span class="mbadge disp ok">⚑ Dispute [resolved]</span>':'<span class="mbadge disp">⚑ Dispute [raised]</span>'):`<span class="mbadge ${ext?'ext':'int'}">${ext?'↔ External':'🔒 Internal'}</span><span class="mtype ${d.cls}">${d.icon} ${d.label}</span>`; return `<div class="bubble ${ext?'ext':'int'}${disp?' disp':''}"><div class="bh">${head}<span class="ath">${esc(m.author)}</span>${m.byline?'<span class="ath" style="color:var(--grey);font-weight:400">&nbsp;· by '+esc(m.byline)+'</span>':''}<span class="tm">${m.at}</span>${m.unread?'<span class="unreaddot"></span>':''}</div><div class="bb">${esc(m.body)}</div>${(m.atts&&m.atts.length)?`<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px">${m.atts.map((a,i)=>`<span onclick="openMsgAtt('${m.id}',${i})" title="${esc(a.n)}" style="display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:7px;padding:2px 7px;font-size:11px;background:#fff;cursor:pointer">${attIcon(a.t)} ${esc(a.n.length>22?a.n.slice(0,22)+'…':a.n)}</span>`).join('')}</div>`:''}</div>`; }
 function messagesTab(c){
   markChitRead(c.id); setTimeout(refreshMsgBadge,0);
+  if(UI.msgDispSel && !((c.disputes||[]).some(function(d){return String(d.dispute_id)===String(UI.msgDispSel);}))) UI.msgDispSel='';
   const isCust=SESSION.role==="customer";
   const all=(c.msgs||[]); const visible=isCust?all.filter(m=>m.scope==="external"):all;
   const f=UI.msgFilter||"all"; const sel=UI.msgTypeSel||[];
+  const _dchips=(typeof disputeFilterChips==='function')?disputeFilterChips(c, UI.msgDispSel, f):'';
   let shown = f==='all'?visible : f==='dispute'?visible.filter(m=>m.isDispute) : visible.filter(m=>m.scope===f);
+  if(f==='dispute' && UI.msgDispSel) shown = shown.filter(m=>String(m.disputeId)===String(UI.msgDispSel));
   if(sel.length) shown=shown.filter(m=>sel.includes(m.type||"info"));
-  const scopeFilter=isCust?"":`<div class="msgfilter"><button class="${f==='all'?'on':''}" onclick="setMsgFilter('all')">All</button><button class="${f==='internal'?'on':''}" onclick="setMsgFilter('internal')">🔒 Internal</button><button class="${f==='external'?'on':''}" onclick="setMsgFilter('external')">↔ External</button><button class="${f==='dispute'?'on disp':''}" onclick="setMsgFilter('dispute')">⚑ Disputes</button></div>`;
+  const scopeFilter=isCust?"":`<div class="msgfilter"><button class="${f==='all'?'on':''}" onclick="setMsgFilter('all')">All</button><button class="${f==='internal'?'on':''}" onclick="setMsgFilter('internal')">🔒 Internal</button><button class="${f==='external'?'on':''}" onclick="setMsgFilter('external')">↔ External</button>${_dchips||`<button class="${f==='dispute'?'on disp':''}" onclick="setMsgFilter('dispute')">⚑ Disputes</button>`}</div>`;
   const tset=surfacedTypes(); const ctypes=isCust?["info","query"]:tset;
   const typeMenu=UI.msgTypeMenu?`<div class="tdrop" onclick="event.stopPropagation()">${tset.map(k=>`<label class="tdrow"><input type="checkbox" ${sel.includes(k)?'checked':''} onchange="toggleMsgType('${k}')"> ${MTYPES[k].icon} ${MTYPES[k].label}</label>`).join("")}${sel.length?`<button class="tdclear" onclick="clearMsgTypes()">✕ Clear types</button>`:''}</div>`:'';
   const typeFilter=isCust?'':`<div class="tdwrap"><button class="msgfbtn${sel.length?' on':''}" onclick="event.stopPropagation();toggleMsgTypeMenu()">⚙ Types${sel.length?' ('+sel.length+')':''} ▾</button>${typeMenu}</div>`;
@@ -2536,7 +2540,7 @@ function sendMessage(id){
 async function doSendMessage(id, scope){
   const el=document.getElementById('msgbody'); const body=(el?el.value:"").trim(); if(!body){ toast(MSG.msgEmpty()); return; }
   busyShow('Sending message…');
-  let _mr; try{ var _sendBody=(UI.msgAsDispute&&SESSION.actorId)?(body+"  — "+(SESSION.name||"actor")+"@"+(SESSION.entity||"")):body; var _mb={thread_type:scope,message_text:_sendBody,msg_type:UI.msgKind||"info"}; if(UI.msgAsDispute){ var _od=((UI.detail&&UI.detail.disputes)||[]).find(function(d){return (d.status||"open")==="open";}); if(_od){ _mb.is_dispute=true; _mb.dispute_id=_od.dispute_id; } } _mr=await api("sendMsg",{params:{id},body:_mb}); }catch(e){ busyHide(); toast(MSG.fail("send the message", e)); return; }
+  let _mr; try{ var _sendBody=(UI.msgAsDispute&&SESSION.actorId)?(body+"  — "+(SESSION.name||"actor")+"@"+(SESSION.entity||"")):body; var _mb={thread_type:scope,message_text:_sendBody,msg_type:UI.msgKind||"info"}; if(UI.msgAsDispute){ var _dl=((UI.detail&&UI.detail.disputes)||[]); var _od=UI.msgDispSel?_dl.find(function(d){return String(d.dispute_id)===String(UI.msgDispSel)&&(d.status||"open")==="open";}):_dl.find(function(d){return (d.status||"open")==="open";}); if(_od){ _mb.is_dispute=true; _mb.dispute_id=_od.dispute_id; } } _mr=await api("sendMsg",{params:{id},body:_mb}); }catch(e){ busyHide(); toast(MSG.fail("send the message", e)); return; }
   const _mid=_mr&&_mr.message_id;
   if(_mid && (UI.msgFiles||[]).length){ busyShow('Attaching '+UI.msgFiles.length+' file(s)…'); for(const f of UI.msgFiles){ try{ await attUpload(id, f, {message_id:_mid}); }catch(e){ toast('Attachment "'+f.name+'" failed.'); } } }
   UI.msgFiles=[];
