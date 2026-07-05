@@ -1082,7 +1082,7 @@ function renderLogin(){
       ${L.err?`<div class="err">${L.err}</div>`:""}
       <div class="hint">${STAGES[CFG.STAGE].mock?"<b>Web Demo</b> — any value signs you in so you can walk the flow.":"<b>"+STAGES[CFG.STAGE].label+"</b> — real OTP/PIN against the API."}</div>
       ${L.cust?"":`<div class="swap">New here? <a onclick="go('#/welcome')">Create an entity</a> · <a onclick="setLoginCust(true)">Have a shop link?</a></div>`}
-      <div style="text-align:center;margin-top:13px;padding-top:13px;border-top:1px solid var(--line)"><button onclick="openLegend()" title="See what we serve — no login" style="border:1px solid var(--line);background:#f7f9fc;border-radius:20px;padding:7px 15px;cursor:pointer;font-size:12.5px;font-weight:600;color:var(--ink)">🔑 What we serve — no sign-in needed</button></div>
+      <div style="text-align:center;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)"><button onclick="openLegend()" title="See what we serve — no login" style="border:0;background:linear-gradient(180deg,#4a72b0,#3F66A6);color:#fff;border-radius:22px;padding:11px 22px;cursor:pointer;font-size:13.5px;font-weight:700;box-shadow:0 3px 12px rgba(63,102,166,.32)">🔑 See what we serve — no sign-in</button><div style="font-size:10.5px;color:var(--grey);margin-top:6px">A 60-second look at where we&rsquo;re different.</div></div>
     </div>
   </div></div>`;
   const b=document.getElementById("l_go"); if(b) b.onclick=doLogin;
