@@ -115,78 +115,95 @@ function dispSearchRow(a){ a=a||{}; return '<div class="advrow"><label>Dispute</
  *    dispute keeps its thread READ-ONLY (messages live forever — chit_messages are never deleted and stay
  *    visible to participants regardless of status). 1 or many disputes = identical interaction: pick → room.
  *    Dispute messaging is external-only (participant-scoped); internal team notes use the normal Messages tab. */
-function setDispTab(t){ UI.dispTab=t; UI.dispRoom=null; paintDetail(); }
-function toggleDispRoom(did){ UI.dispRoom=(String(UI.dispRoom)===String(did))?null:did; paintDetail(); }
+/* Pick a dispute from the dropdown → its ROOM opens as an overlay over the detail pane; ✕ closes it.
+ * Nothing open by default (UI.dispSel=null). One room at a time — 1 or N disputes look identical. */
+function disputeSelect(did){
+  UI.dispSel=did||null; UI.dispCompose=false; UI.dispFiles=[];
+  var dp=document.getElementById('detailpane'); if(dp) dp.style.position='relative';   // anchor the absolute overlay to the pane
+  paintDetail();
+}
+function disputeClose(){ UI.dispSel=null; UI.dispCompose=false; UI.dispFiles=[]; paintDetail(); }
+function disputeToggleCompose(){ UI.dispCompose=!UI.dispCompose; if(!UI.dispCompose)UI.dispFiles=[]; paintDetail(); }
+function dispOpp(d){ var p=disputeParties(d); return p.length?p.map(function(x){ return x.display_name||'party'; }).join(', '):nm(d.raised_by_display_name,'party'); }
+function dispOptGroup(list, label){
+  if(!list.length) return '';
+  return '<optgroup label="'+label+'">'+list.map(function(d){
+    return '<option value="'+d.dispute_id+'"'+(String(UI.dispSel)===String(d.dispute_id)?' selected':'')+'>'+esc(cap(d.category||'')+' · with '+dispOpp(d)+' · '+(d.status==='open'?'● open':'✓ resolved'))+'</option>';
+  }).join('')+'</optgroup>';
+}
+/* the DETAIL dropdown (always shown when disputes exist) + the overlay when one is picked */
 function disputeBanner(c){
   var all=((c&&c.disputes)||[]);
   var open=all.filter(function(d){ return d.status==='open'; });
   var closed=all.filter(function(d){ return d.status!=='open'; });
   if(!open.length && !closed.length) return '';
-  var tab=UI.dispTab||'open';
-  if(tab==='closed' && !closed.length) tab='open';
-  if(tab==='open'   && !open.length)   tab='closed';
-  var list=(tab==='open')?open:closed;
   var proof=c.proof==='ok'?'<span class="db-proof">⚖️ both-signed record</span>':'';
-  var pill=function(t,label,n,on){ return '<button onclick="setDispTab(\''+t+'\')" style="border:1px solid '+(on?'#d98a84':'var(--line)')+';background:'+(on?'#fbeceb':'#fff')+';color:'+(on?'#b4453f':'var(--grey)')+';font-weight:'+(on?'700':'500')+';border-radius:7px;padding:2px 10px;font-size:11.5px;cursor:pointer">'+label+' '+n+'</button>'; };
-  var head='<div class="db-row" style="align-items:center"><span class="db-tag">⚑ Disputes</span>'+proof
-    +'<span style="margin-left:auto;display:inline-flex;gap:6px">'+pill('open','Open',open.length,tab==='open')+pill('closed','Closed',closed.length,tab==='closed')+'</span></div>';
-  var inList=UI.dispRoom&&list.some(function(d){ return String(d.dispute_id)===String(UI.dispRoom); });
-  var expanded=inList?UI.dispRoom:(list.length===1?list[0].dispute_id:null);   // single → auto-open; many → pick one; ignore a stale id from another chit
-  var rows=list.length
-    ? list.map(function(d){ return disputeRow(c,d,String(expanded)===String(d.dispute_id)); }).join('')
-    : '<div style="font-size:12px;color:var(--grey);padding:8px 2px">No '+tab+' disputes.</div>';
-  return '<div class="dispbanner">'+head+rows+'</div>';
+  var head='<div class="db-row"><span class="db-tag">⚑ '+(open.length?open.length+' dispute'+(open.length>1?'s':'')+' open on this record':'Disputes (resolved)')+'</span>'+proof+'</div>';
+  var dd='<select onchange="disputeSelect(this.value)" style="width:100%;margin-top:9px;padding:10px 12px;border:1px solid #e5c9c6;border-radius:9px;font-size:13px;background:#fff;color:#1e2226;cursor:pointer">'
+    +'<option value="">— select a dispute to open —</option>'+dispOptGroup(open,'OPEN')+dispOptGroup(closed,'CLOSED')+'</select>';
+  var sel=UI.dispSel?all.filter(function(d){ return String(d.dispute_id)===String(UI.dispSel); })[0]:null;   // stale id (other chit) → no overlay
+  return '<div class="dispbanner">'+head+dd+'</div>'+(sel?disputeOverlay(c, sel, open, closed):'');
 }
-/* one dispute = a clickable header that expands into its room (accordion — one at a time) */
-function disputeRow(c, d, isOpen){
-  var parties=disputeParties(d);
-  var chips=disputeChips(parties, 'dpchip');
-  var resolved=d.status!=='open';
+/* the overlay frame over the detail pane: header + ✕, a dropdown to switch, and the room */
+function disputeOverlay(c, d, open, closed){
+  var proof=c.proof==='ok'?'<span class="db-proof">⚖️ both-signed record</span>':'';
+  var dd='<select onchange="disputeSelect(this.value)" style="width:100%;margin-bottom:12px;padding:8px 11px;border:1px solid #e5c9c6;border-radius:9px;font-size:12.5px;background:#fff;color:#1e2226;cursor:pointer">'
+    +dispOptGroup(open,'OPEN')+dispOptGroup(closed,'CLOSED')+'</select>';
+  return '<div style="position:absolute;inset:0;background:#fff;display:flex;flex-direction:column;z-index:30">'
+    +'<div style="display:flex;align-items:center;gap:8px;padding:13px 16px;border-bottom:1px solid var(--line);background:#fdf0ef">'
+      +'<span style="font-weight:700;color:#b4453f;font-size:14px">⚑ '+esc(cap(d.category||''))+'</span>'+proof
+      +'<button onclick="disputeClose()" style="margin-left:auto;border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:12.5px">✕ Close</button></div>'
+    +'<div style="padding:15px 16px;overflow:auto;flex:1">'+dd+disputeRoomBox(c,d)+'</div></div>';
+}
+/* one dispute's room: participants · own message wall (latest first, attachments) · New-message (text+attach) · Resolve */
+function disputeRoomBox(c, d){
+  var readonly=d.status!=='open';
   var mine=chitIsSelf(d.raised_by_entity_id, d.raised_by_display_name);
-  var stPill=resolved?'<span style="color:#3c8a52;font-size:11px;font-weight:700">✓ resolved</span>'
-                     :'<span style="color:#b4453f;font-size:11px;font-weight:700">● open</span>';
-  // Resolve lives in the ALWAYS-VISIBLE header (evident even when collapsed) — stopPropagation so it doesn't toggle the room
-  var resolve=resolved?'':disputeResolveBtns(parties, c.id, d.dispute_id, mine, 'db-res');
-  var resolveWrap=resolve?'<span onclick="event.stopPropagation()" style="display:inline-flex;gap:6px">'+resolve+'</span>':'';
-  var hdr='<div onclick="toggleDispRoom(\''+d.dispute_id+'\')" style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:7px 0;flex-wrap:wrap">'
-    +'<span style="color:var(--grey);width:12px;flex:none">'+(isOpen?'▾':'▸')+'</span>'
-    +'<span class="db-cat">'+esc(cap(d.category||''))+'</span>'
-    +(parties.length?'<span style="font-size:11.5px;color:var(--grey)">with '+chips+'</span>':'')
-    +'<span style="margin-left:auto;display:inline-flex;align-items:center;gap:8px">'+stPill+resolveWrap+'</span></div>';
-  return '<div style="border-top:1px dashed #f0c9c6">'+hdr+(isOpen?disputeRoom(c,d,resolved):'')+'</div>';
-}
-/* the room: THIS dispute's thread + external compose (open) / read-only (closed) + raiser resolve.
- * NO reason/resolution headers — the thread IS the record: the raise posts "[category] reason" and each
- * resolution posts "[resolved] note" (chits.js), and msgBubble already badges them [raised]/[resolved].
- * Repeating them as headers (the first cut) showed each twice — removed. */
-function disputeRoom(c, d, readonly){
   var parties=disputeParties(d);
+  var st=readonly?'<span style="color:#2f7a45;font-size:11.5px;font-weight:700">✓ resolved</span>':'<span style="color:#b4453f;font-size:11.5px;font-weight:700">● open</span>';
+  var resolve=readonly?'':disputeResolveBtns(parties, c.id, d.dispute_id, mine, 'db-res');
+  var resolveWrap=resolve?'<span style="display:inline-flex;gap:6px">'+resolve+'</span>':'';
+  var roster=[nm(d.raised_by_display_name,'—')+' (raiser)'].concat(parties.map(function(p){ return nm(p.display_name,'party'); })).join(' · ');
   var msgs=(typeof disputeFilterMsgs==='function')?(disputeFilterMsgs((c.msgs||[]),'dispute',d.dispute_id)||[]):[];
+  msgs=msgs.slice().reverse();   // latest first (the wall)
   var thread=msgs.length?msgs.map(function(m){ return (typeof msgBubble==='function')?msgBubble(m):''; }).join('')
     :'<div style="font-size:12px;color:var(--grey);padding:6px 2px">No messages in this dispute yet.</div>';
   var to=parties.length?esc(parties.map(function(p){ return p.display_name||'party'; }).join(", ")):'participants';
-  var compose=readonly
-    ? '<div style="font-size:11px;color:#2f7a45;margin-top:7px">✓ Resolved — this thread is read-only.</div>'
-    : '<div style="display:flex;gap:6px;align-items:flex-end;margin-top:8px">'
-      +'<textarea id="droom-'+d.dispute_id+'" placeholder="Reply to this dispute — '+to+' will see this" style="flex:1;min-height:44px;border:1px solid var(--line);border-radius:8px;padding:7px;font:inherit;font-size:13px;resize:vertical"></textarea>'
-      +'<button onclick="sendDisputeMsg(\''+c.id+'\',\''+d.dispute_id+'\')" style="border:none;background:#b4453f;color:#fff;border-radius:8px;padding:9px 13px;font-weight:600;cursor:pointer;white-space:nowrap">Send ↔</button></div>';
-  // Resolve is NOT here anymore — it lives in the always-visible row header (disputeRow), so it's evident without expanding.
-  return '<div style="padding:2px 0 10px 20px">'
-    +'<div style="border:1px solid var(--line);border-radius:9px;padding:6px;background:#fbfbfa;max-height:280px;overflow:auto">'+thread+'</div>'
-    +compose+'</div>';
+  var newBtn=readonly?'':'<button onclick="disputeToggleCompose()" style="margin-left:auto;border:1px solid var(--line);background:#fff;border-radius:8px;padding:5px 11px;font-size:12px;cursor:pointer">'+(UI.dispCompose?'✕ Cancel':'✏️ New message')+'</button>';
+  var compose=(!readonly&&UI.dispCompose)?disputeComposeBox(c,d,to):'';
+  return '<div style="border:1px solid #f0c9c6;border-radius:11px;padding:13px 14px">'
+    +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="db-cat">'+esc(cap(d.category||''))+'</span>'
+      +(parties.length?'<span style="font-size:12px;color:var(--grey)">with '+disputeChips(parties,'dpchip')+'</span>':'')
+      +'<span style="margin-left:auto;display:inline-flex;gap:9px;align-items:center">'+st+resolveWrap+'</span></div>'
+    +'<div style="font-size:12px;color:#5a6066;margin:10px 0 2px">Participants: <b>'+esc(roster)+'</b></div>'
+    +'<div style="display:flex;align-items:center;margin:13px 0 7px"><span style="font-size:12px;font-weight:700;color:#5a6066">Messages · latest first</span>'+newBtn+'</div>'
+    +compose
+    +'<div style="border:1px solid var(--line);border-radius:9px;background:#fbfbfa;padding:6px;max-height:340px;overflow:auto">'+thread+'</div></div>';
 }
-/* external-only send scoped to THIS dispute (its own compose box → is_dispute + dispute_id, no channel toggle) */
+function disputeComposeBox(c, d, to){
+  return '<div style="border:1px solid #e5c9c6;border-radius:9px;padding:9px;margin-bottom:10px;background:#fffdfd">'
+    +'<div style="font-size:11px;color:#b4453f;font-weight:700;margin-bottom:6px">New message to '+to+'</div>'
+    +'<textarea id="droom-'+d.dispute_id+'" placeholder="Message — '+to+' will see this" style="width:100%;box-sizing:border-box;min-height:46px;border:1px solid var(--line);border-radius:8px;padding:7px;font:inherit;font-size:13px;resize:vertical"></textarea>'
+    +'<div style="display:flex;align-items:center;gap:8px;margin-top:7px;flex-wrap:wrap">'
+      +'<label style="border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 11px;font-size:12px;cursor:pointer">📎 Attach<input type="file" multiple style="display:none" onchange="disputeAddFiles(this.files);this.value=\'\'"></label>'
+      +'<span id="dispfiles">'+disputeFileChips()+'</span>'
+      +'<button onclick="sendDisputeMsg(\''+c.id+'\',\''+d.dispute_id+'\')" style="margin-left:auto;background:#b4453f;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-weight:600;cursor:pointer">Send ↔</button></div></div>';
+}
+function disputeFileChips(){ return (UI.dispFiles||[]).map(function(f,i){ return '<span style="display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:7px;padding:2px 7px;font-size:11px;background:#fff;margin-right:4px">📎 '+esc(f.name.length>18?f.name.slice(0,18)+'…':f.name)+' <span onclick="disputeDelFile('+i+')" style="cursor:pointer;color:#9aa3a7">✕</span></span>'; }).join(''); }
+function disputeAddFiles(files){ UI.dispFiles=UI.dispFiles||[]; for(var i=0;i<files.length;i++){ var f=files[i]; if(f.size>6*1024*1024){ toast(f.name+' is over 6MB — skipped.'); continue; } UI.dispFiles.push(f); } var el=document.getElementById('dispfiles'); if(el)el.innerHTML=disputeFileChips(); }
+function disputeDelFile(i){ (UI.dispFiles||[]).splice(i,1); var el=document.getElementById('dispfiles'); if(el)el.innerHTML=disputeFileChips(); }
+/* external-only send scoped to THIS dispute (is_dispute + dispute_id) + attach staged files by message_id */
 async function sendDisputeMsg(chitId, disputeId){
   var el=document.getElementById('droom-'+disputeId); var body=(el?el.value:'').trim();
-  if(!body){ toast('Type a reply first.'); return; }
+  if(!body){ toast('Type a message first.'); return; }
   var txt=SESSION.actorId?(body+"  — "+(SESSION.name||"actor")+"@"+(SESSION.entity||"")):body;
   var mb={ thread_type:'external', message_text:txt, msg_type:'info', is_dispute:true, dispute_id:disputeId };
-  busyShow('Sending…');
-  try{ await api("sendMsg",{params:{id:chitId},body:mb}); }catch(e){ busyHide(); toast(MSG.fail("send the reply", e)); return; }
-  UI.dispRoom=disputeId;                                  // keep this room open after posting
+  busyShow('Sending…'); var mid=null;
+  try{ var mr=await api("sendMsg",{params:{id:chitId},body:mb}); mid=mr&&mr.message_id; }catch(e){ busyHide(); toast(MSG.fail("send the message", e)); return; }
+  if(mid && (UI.dispFiles||[]).length){ busyShow('Attaching '+UI.dispFiles.length+' file(s)…'); for(var i=0;i<UI.dispFiles.length;i++){ try{ await attUpload(chitId, UI.dispFiles[i], {message_id:mid}); }catch(e){ toast('Attachment failed.'); } } }
+  UI.dispFiles=[]; UI.dispCompose=false; UI.dispSel=disputeId;   // keep this room open after posting
   try{ await openChit(chitId, true); }catch(_){}
-  busyHide(); paintDetail();
-  toast('Reply sent');
+  busyHide(); paintDetail(); toast('Message sent');
 }
 
 /* Composer "reply in the dispute" toggle + per-dispute filter chips REMOVED 2026-07-05 — dispute messaging
