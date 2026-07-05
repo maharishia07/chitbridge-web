@@ -57,6 +57,65 @@ function disputeFilterChips(c, sel, f){
   return '<button class="'+(allOn?'on disp':'')+'" onclick="setMsgDisp(\'\')">⚑ All</button>'+chips;
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════════════════════
+ * MESSAGING + LIST HOOKS — 2nd lazy pass (2026-07-05). Every dispute-specific branch that used to
+ * live inside Core's msgBubble / mapApiMsg / messagesTab / doSendMessage / row-cell now lives HERE.
+ * Core calls each via (typeof fn==='function'), so a customer — or Core before this module finishes
+ * loading — degrades to plain messaging with ZERO dispute knowledge. cap-dispute loads for every
+ * non-customer on boot, so these resolve wherever a dispute message can surface.
+ * RULE (Athi): from here on, ALL dispute behaviour lands in THIS file only — Core stays dispute-blind.
+ * These five are the "messaging helper API" a message-type capability plugs into (badge / byline /
+ * filter / send-decorator / row-cell); a future cap could register the same way.
+ * ═══════════════════════════════════════════════════════════════════════════════════════════ */
+
+/* msgBubble → the header badge for a dispute message: ⚑ Dispute [raised] (red) / [resolved] (green).
+ * '' for a non-dispute message, so Core falls back to its normal external/internal + type badges. */
+function disputeBadge(m){
+  if(!m||!m.isDispute) return '';
+  return /^\[resolved\]/i.test(String(m.body||''))
+    ? '<span class="mbadge disp ok">⚑ Dispute [resolved]</span>'
+    : '<span class="mbadge disp">⚑ Dispute [raised]</span>';
+}
+/* mapApiMsg → split the trailing "— actor@entity" provenance a dispute message carries into a byline.
+ * Returns {by, body}; on a plain message (or no marker) by=null and body is unchanged. */
+function disputeByline(body){
+  var b=body||''; if(!b) return { by:null, body:b };
+  var mm=b.match(/\s+[—-]\s+(\S+@.+?)\s*$/);
+  if(mm) return { by:mm[1].trim(), body:b.slice(0,mm.index).replace(/\s+$/,'') };
+  return { by:null, body:b };
+}
+/* messagesTab → the dispute thread filter. Returns the filtered list when f==='dispute' (all dispute
+ * messages, narrowed to one dispute group when a chip is selected); undefined = "not mine, Core handles
+ * all/internal/external as usual". */
+function disputeFilterMsgs(visible, f, sel){
+  if(f!=='dispute') return undefined;
+  var s=(visible||[]).filter(function(m){ return m.isDispute; });
+  if(sel) s=s.filter(function(m){ return String(m.disputeId)===String(sel); });
+  return s;
+}
+/* doSendMessage → when the composer is in dispute mode, stamp the outgoing message: attach is_dispute +
+ * the SELECTED (else first open) dispute_id and append the acting actor's "— name@entity" provenance.
+ * Mutates mb in place, returns the decorated text; no-op returning body when not in dispute mode. */
+function disputeDecorateSend(mb, body){
+  if(!UI.msgAsDispute) return body;
+  var txt=SESSION.actorId ? (body+"  — "+(SESSION.name||"actor")+"@"+(SESSION.entity||"")) : body;
+  var dl=((UI.detail&&UI.detail.disputes)||[]);
+  var od=UI.msgDispSel
+    ? dl.find(function(d){ return String(d.dispute_id)===String(UI.msgDispSel)&&(d.status||'open')==='open'; })
+    : dl.find(function(d){ return (d.status||'open')==='open'; });
+  if(od){ mb.is_dispute=true; mb.dispute_id=od.dispute_id; }
+  mb.message_text=txt;
+  return txt;
+}
+/* list row → the one-glance dispute count: N open (red) · M resolved (green); '' when neither. */
+function dispCell(c){
+  var o=(c&&c.dispOpen)||0, r=(c&&c.dispResolved)||0; if(!o&&!r) return '';
+  var p=[];
+  if(o) p.push('<b style="color:var(--disp)">⚑ '+o+' open</b>');
+  if(r) p.push('<span style="color:#3c8a52">✓ '+r+' resolved</span>');
+  return '<span class="rowdisp" style="font-size:11px">'+p.join(' <span style="color:var(--line)">·</span> ')+'</span>';
+}
+
 /* ── On-record banner (was inline in Core detailInner) — the USP surfaced ON the chit.
  *    MULTI-PARTY: renders ALL concurrent open disputes on one record "under one roof" — e.g. on an A→B,C chit
  *    the viewer B may be party to BOTH an A↔B dispute AND a B↔C dispute; both show at once (previously only
