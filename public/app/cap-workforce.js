@@ -106,10 +106,14 @@ function awRender(){
       foot='<button onclick="awBack()" style="flex:0 0 92px;border:1px solid #e0ded9;background:#fff;color:#5a6066;border-radius:12px;padding:14px;font-size:15px;font-weight:600;cursor:pointer">‹ Back</button><button onclick="awNext()" style="flex:1;border:1px solid #3F66A6;background:#3F66A6;color:#fff;border-radius:12px;padding:14px;font-size:15px;font-weight:600;cursor:pointer">'+nextLbl+'</button>';
     }
   }
-  h.innerHTML='<div style="position:fixed;top:'+barH+'px;left:0;right:0;bottom:0;background:#fff;z-index:400;display:flex;flex-direction:column">'
-    +'<div style="padding:14px 18px;border-bottom:1px solid #f0efec"><div style="max-width:560px;margin:0 auto;display:flex;align-items:flex-start;gap:10px"><div style="flex:1"><div style="font-size:16px;font-weight:700">'+title+'</div>'+(sub?'<div style="font-size:12px;color:#8a8f98;margin-top:2px">'+sub+'</div>':'')+'</div><button onclick="awClose()" style="border:1px solid #e5e2dd;background:#fff;border-radius:8px;width:30px;height:30px;cursor:pointer;flex:none">✕</button></div>'+(dots?'<div style="max-width:560px;margin:0 auto">'+dots+'</div>':'')+'</div>'
-    +'<div style="flex:1;overflow:auto;padding:16px 18px"><div style="max-width:560px;margin:0 auto">'+body+'</div></div>'
-    +'<div style="border-top:1px solid #f0efec;padding:12px 18px"><div style="max-width:560px;margin:0 auto;display:flex;gap:10px">'+foot+'</div></div></div>';
+  // BACKDROP below the top bar + a CENTRED, BORDERED, BOUNDED card (near-full-width on phones, a 560 card on
+  // laptop; max-height keeps it within the screen with the body scrolling). Fixes the full-bleed white sheet.
+  h.innerHTML='<div style="position:fixed;top:'+barH+'px;left:0;right:0;bottom:0;background:rgba(20,25,30,.35);z-index:400;display:flex;align-items:flex-start;justify-content:center;padding:16px;box-sizing:border-box">'
+    +'<div style="width:100%;max-width:560px;max-height:100%;background:#fff;border:1px solid #d8d8d3;border-radius:16px;box-shadow:0 16px 46px rgba(0,0,0,.24);display:flex;flex-direction:column;overflow:hidden">'
+      +'<div style="padding:14px 18px;border-bottom:1px solid #f0efec"><div style="display:flex;align-items:flex-start;gap:10px"><div style="flex:1"><div style="font-size:16px;font-weight:700">'+title+'</div>'+(sub?'<div style="font-size:12px;color:#8a8f98;margin-top:2px">'+sub+'</div>':'')+'</div><button onclick="awClose()" style="border:1px solid #e5e2dd;background:#fff;border-radius:8px;width:30px;height:30px;cursor:pointer;flex:none">✕</button></div>'+dots+'</div>'
+      +'<div style="flex:1;overflow:auto;padding:16px 18px">'+body+'</div>'
+      +'<div style="border-top:1px solid #f0efec;padding:12px 18px;display:flex;gap:10px">'+foot+'</div>'
+    +'</div></div>';
 }
 function acVisible(){ let a=(UI.acts||[]).filter(x=>acFlt()==='all'?true:(acFlt()==='inactive'?x.status!=='active':x.status==='active'));
   const q=(UI.acQ||'').trim().toLowerCase(); if(q)a=a.filter(x=>((x.name||'')+' '+(x.role||'')+' '+(x.key||'')+' '+(x.type||'')).toLowerCase().includes(q)); return a; }
