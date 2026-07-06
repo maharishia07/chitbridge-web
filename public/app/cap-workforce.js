@@ -176,6 +176,7 @@ function _addDeviceForm(x,iot){
                  : '<label class="fl">Resource path</label><input class="inp" id="ad_path" placeholder="/odata/PurchaseOrders" style="width:100%">';
   return '<div style="border:1px dashed #c9d2dd;border-radius:10px;padding:12px;margin:10px 0;background:#fbfcfe"><div style="font-weight:700;font-size:12.5px;margin-bottom:2px">Add '+(iot?'device':'endpoint')+'</div>'
     +'<label class="fl">Name</label><input class="inp" id="ad_ref" placeholder="'+(iot?'Cold-store temp':'PO inbound')+'" style="width:100%">'+spec
+    +'<label class="fl">Send signals to — counterparty entity id (optional)</label><input class="inp" id="ad_cp" placeholder="receiving entity id — signals become chits to them" style="width:100%">'
     +'<div class="err" id="ad_err" style="margin-top:6px"></div>'
     +'<div style="display:flex;gap:8px;margin-top:10px"><button class="composebtn pri" onclick="acAddDevice(\''+x.id+'\','+(iot?'true':'false')+')">Add</button><button class="composebtn" onclick="UI.acAddDev=false;paintAcDetail()">Cancel</button></div></div>';
 }
@@ -183,7 +184,8 @@ async function acAddDevice(id, iot){
   var ref=(val('ad_ref')||'').trim(), err=document.getElementById('ad_err'); if(err)err.textContent='';
   if(!ref){ if(err)err.textContent='A name is required.'; return; }
   var config = iot ? {protocol:'mqtts', topic:(val('ad_topic')||'').trim()||undefined, device_id:(val('ad_dev')||'').trim()||undefined} : {path:(val('ad_path')||'').trim()||undefined};
-  try{ await api('connectorConnAdd',{params:{actorId:id},body:{ref:ref,direction:'in',config:config}}); UI.acAddDev=false; if(typeof toast==='function')toast('Added.'); await acLoadDevices(id); }
+  var cp = (val('ad_cp')||'').trim()||undefined;   // counterparty entity id — where this device's signals route as chits
+  try{ await api('connectorConnAdd',{params:{actorId:id},body:{ref:ref,direction:'in',config:config,counterparty_entity_id:cp}}); UI.acAddDev=false; if(typeof toast==='function')toast('Added.'); await acLoadDevices(id); }
   catch(e){ if(err)err.textContent=(e&&e.message)||'Add failed'; }
 }
 async function acToggleDevice(id, connId, enabled){
