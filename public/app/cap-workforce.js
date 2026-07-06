@@ -113,7 +113,13 @@ function awRender(){
   var footbar='<div style="border-top:1px solid #f0efec;padding:14px 18px"><div style="max-width:520px;margin:0 auto;display:flex;gap:12px">'+foot+'</div></div>';
   // ONE comfortable centred card, both mobile & laptop: sized to its content (never a full-screen sheet), dim
   // backdrop, bounded height with the body scrolling if a step ever gets long. Near-full-width on a phone.
-  host.innerHTML='<div style="position:fixed;top:'+barH+'px;left:0;right:0;bottom:0;background:rgba(20,25,30,.4);z-index:400;display:flex;align-items:center;justify-content:center;padding:20px 16px;box-sizing:border-box"><div style="width:100%;max-width:480px;height:min(620px,100%);background:#fff;border:1px solid #d8d8d3;border-radius:16px;box-shadow:0 16px 46px rgba(0,0,0,.26);display:flex;flex-direction:column;overflow:hidden">'+head+mid+footbar+'</div></div>';
+  // Fill the SAME region the co-assist screens use: measure #panel (the current screen container) and match its
+  // exact start/end. Mobile → the full screen below the header; laptop → the content pane (NOT the whole viewport).
+  // Reuses the app's own coordinates instead of guessing — content lives inside via head/mid(scroll)/footbar.
+  var pane=document.getElementById('panel')||document.querySelector('.panel');
+  var r=pane?pane.getBoundingClientRect():null;
+  var pos=(r&&r.height>240)?('top:'+Math.round(r.top)+'px;left:'+Math.round(r.left)+'px;width:'+Math.round(r.width)+'px;height:'+Math.round(r.height)+'px'):('top:'+barH+'px;left:0;right:0;bottom:0');
+  host.innerHTML='<div style="position:fixed;'+pos+';background:#fff;z-index:400;display:flex;flex-direction:column;overflow:hidden;box-shadow:-8px 0 24px rgba(0,0,0,.08)">'+head+mid+footbar+'</div>';
 }
 function acVisible(){ let a=(UI.acts||[]).filter(x=>acFlt()==='all'?true:(acFlt()==='inactive'?x.status!=='active':x.status==='active'));
   const q=(UI.acQ||'').trim().toLowerCase(); if(q)a=a.filter(x=>((x.name||'')+' '+(x.role||'')+' '+(x.key||'')+' '+(x.type||'')).toLowerCase().includes(q)); return a; }
