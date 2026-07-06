@@ -32,8 +32,7 @@ var AW_STEPS={ human:['who','hat'], iot:['gw','mode'], erp:['sys','conn'], ai:['
 function _awCap(k){ return ((typeof SESSION!=='undefined'&&SESSION.capabilities)||[]).indexOf(k)>=0; }
 function _awReady(t){ return t==='human'?true:(t==='ai'?_awCap('ai'):_awCap('connector')); }
 function openActorWiz(){ UI.awType=null; UI.awStep=0; UI.awData={}; UI.awErr=null; UI.awResult=null; awRender(); }
-function awClose(){ var h=document.getElementById('actorwiz'); if(h)h.remove(); }
-function awHost(){ var h=document.getElementById('actorwiz'); if(!h){ h=document.createElement('div'); h.id='actorwiz'; document.body.appendChild(h); } return h; }
+function awClose(){ if(typeof closeModal==='function') closeModal(); }   // close via the same helper that opened it (modal)
 function awCapture(){ UI.awData=UI.awData||{}; ['aw_name','aw_key','aw_hat','aw_site','aw_mode','aw_baseurl','aw_authref','aw_role','aw_under'].forEach(function(id){ var el=document.getElementById(id); if(el) UI.awData[id]=el.value; }); }
 function awPick(t){ UI.awType=t; UI.awStep=0; UI.awErr=null; awRender(); }
 function awNext(){ awCapture(); var s=AW_STEPS[UI.awType]||[]; if(UI.awStep>=s.length-1){ awFinish(); } else { UI.awStep++; UI.awErr=null; awRender(); } }
@@ -69,11 +68,10 @@ function _awPreviewHtml(t){
   return '<div style="text-align:center"><div style="font-size:34px;margin:8px 0 6px">'+m.ic+'</div><div style="font-weight:700;font-size:16px">'+m.nm+' — how it works</div><div style="font-size:13px;color:#3a4048;line-height:1.6;margin-top:10px">'+m.how+'</div><div style="font-size:11.5px;color:#2c5aa0;background:#eef3fb;border:1px solid #cfe0f4;border-radius:9px;padding:9px 11px;margin-top:14px">✨ Explore mode — not activated for your entity yet.</div></div>';
 }
 function awRender(){
-  var h=awHost(); var d=UI.awData||{};
-  var barH=((document.querySelector('.topbar')||{}).offsetHeight)||52;   // MEASURED → fits any device/font, not a hardcoded 52
-  function fld(id,label,ph){ return '<label style="display:block;font-size:11px;color:#5a6066;font-weight:600;margin:14px 0 4px">'+label+'</label><input id="'+id+'" placeholder="'+ph+'" value="'+esc(d[id]||'')+'" style="width:100%;box-sizing:border-box;padding:12px;border:1px solid #d8d8d3;border-radius:11px;font-size:15px"></input>'; }
-  function selF(id,label,opts){ return '<label style="display:block;font-size:11px;color:#5a6066;font-weight:600;margin:14px 0 4px">'+label+'</label><select id="'+id+'" style="width:100%;box-sizing:border-box;padding:12px;border:1px solid #d8d8d3;border-radius:11px;font-size:15px">'+opts.map(function(o){ return '<option value="'+o[0]+'"'+(String(d[id])===o[0]?' selected':'')+'>'+o[1]+'</option>'; }).join('')+'</select>'; }
-  function how(x){ return '<div style="font-size:12px;color:#8a8f98;background:#f7f7f5;border:1px solid #eee;border-radius:11px;padding:11px 13px;line-height:1.5;margin-top:14px">'+x+'</div>'; }
+  var d=UI.awData||{};   // render THROUGH the app's shared modal() → same placement/backdrop/responsive as every other dialog
+  function fld(id,label,ph){ return '<label class="fl">'+label+'</label><input class="inp" id="'+id+'" placeholder="'+ph+'" value="'+esc(d[id]||'')+'" style="width:100%">'; }
+  function selF(id,label,opts){ return '<label class="fl">'+label+'</label><select class="inp" id="'+id+'" style="width:100%">'+opts.map(function(o){ return '<option value="'+o[0]+'"'+(String(d[id])===o[0]?' selected':'')+'>'+o[1]+'</option>'; }).join('')+'</select>'; }
+  function how(x){ return '<div style="font-size:12px;color:var(--grey);background:#f7f7f5;border:1px solid var(--line);border-radius:10px;padding:10px 12px;line-height:1.5;margin-top:12px">'+x+'</div>'; }
   var body='', title='', sub='', dots='', foot='';
   if(UI.awType===null){
     title='Add to your workforce'; sub='What kind of actor? People, devices, systems and agents can all act for you.';
@@ -81,15 +79,15 @@ function awRender(){
     body='<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'+types.map(function(t){ var rdy=_awReady(t[0]);
       return '<div onclick="awPick(\''+t[0]+'\')" onmouseover="this.style.borderColor=\'#3F66A6\'" onmouseout="this.style.borderColor=\'#e5e2dd\'" style="border:1px solid #e5e2dd;border-radius:14px;padding:14px;cursor:pointer;'+(rdy?'':'opacity:.72')+'"><div style="font-size:24px">'+t[1]+'</div><div style="font-weight:700;font-size:14px;margin-top:6px">'+t[2]+'</div><div style="font-size:11.5px;color:#6a707a;margin-top:2px;line-height:1.35">'+t[3]+'</div><span style="display:inline-block;margin-top:9px;font-size:10px;font-weight:700;border-radius:20px;padding:1px 9px;'+(rdy?'background:#e8f3ec;color:#2f7a45':'background:#eef3fb;color:#2c5aa0')+'">'+(rdy?'ready':'explore')+'</span></div>';
     }).join('')+'</div>';
-    foot='<button onclick="awClose()" style="flex:1;border:1px solid #e0ded9;background:#fff;border-radius:12px;padding:14px;font-size:15px;font-weight:600;cursor:pointer">Cancel</button>';
+    foot='<button onclick="awClose()">Cancel</button>';
   } else {
     var steps=AW_STEPS[UI.awType]||[], rdy=_awReady(UI.awType);
     var icN={human:['👤','Human'],iot:['🛰️','IoT device'],erp:['🔌','ERP / API'],ai:['🤖','AI agent']}[UI.awType];
     title=icN[0]+' '+icN[1]+(rdy?'':' · explore');
-    dots='<div style="display:flex;gap:6px;margin-top:12px">'+steps.map(function(s,i){ var st=(UI.awStep==='done'||i<UI.awStep)?'#9cc0ea':(i===UI.awStep?'#3F66A6':'#eceae6'); return '<span style="height:4px;flex:1;border-radius:3px;background:'+st+'"></span>'; }).join('')+'<span style="height:4px;flex:1;border-radius:3px;background:'+(UI.awStep==='done'?'#3F66A6':'#eceae6')+'"></span></div>';
+    dots='<div style="display:flex;gap:6px;margin:0 0 14px">'+steps.map(function(s,i){ var st=(UI.awStep==='done'||i<UI.awStep)?'#9cc0ea':(i===UI.awStep?'#3F66A6':'#eceae6'); return '<span style="height:4px;flex:1;border-radius:3px;background:'+st+'"></span>'; }).join('')+'<span style="height:4px;flex:1;border-radius:3px;background:'+(UI.awStep==='done'?'#3F66A6':'#eceae6')+'"></span></div>';
     if(UI.awStep==='done'){
       sub=rdy?'Done':'Preview'; body=UI.awResult||'';
-      foot='<button onclick="awBack()" style="flex:0 0 92px;border:1px solid #e0ded9;background:#fff;color:#5a6066;border-radius:12px;padding:14px;font-size:15px;font-weight:600;cursor:pointer">‹ Back</button><button onclick="awClose()" style="flex:1;border:1px solid #3F66A6;background:#3F66A6;color:#fff;border-radius:12px;padding:14px;font-size:15px;font-weight:600;cursor:pointer">'+(rdy?'Done':'Got it')+'</button>';
+      foot='<button onclick="awBack()">‹ Back</button><button class="pri" onclick="awClose()">'+(rdy?'Done':'Got it')+'</button>';
     } else {
       var sk=steps[UI.awStep];
       if(sk==='who') body=fld('aw_name','Display name','Anitha')+fld('aw_key','User ID (sign-in)','anitha')+how('They sign in with this User ID under your entity + a one-time code, then set a PIN.');
@@ -103,17 +101,13 @@ function awRender(){
       sub=(UI.awStep+1)+' of '+steps.length;
       if(UI.awErr) body+='<div style="color:#c0453b;font-size:12.5px;margin-top:10px">'+esc(UI.awErr)+'</div>';
       var nextLbl=(UI.awStep===steps.length-1)?(rdy?'Create':'See result'):'Next ›';
-      foot='<button onclick="awBack()" style="flex:0 0 92px;border:1px solid #e0ded9;background:#fff;color:#5a6066;border-radius:12px;padding:14px;font-size:15px;font-weight:600;cursor:pointer">‹ Back</button><button onclick="awNext()" style="flex:1;border:1px solid #3F66A6;background:#3F66A6;color:#fff;border-radius:12px;padding:14px;font-size:15px;font-weight:600;cursor:pointer">'+nextLbl+'</button>';
+      foot='<button onclick="awBack()">‹ Back</button><button class="pri" onclick="awNext()">'+nextLbl+'</button>';
     }
   }
-  // BACKDROP below the top bar + a CENTRED, BORDERED, BOUNDED card (near-full-width on phones, a 560 card on
-  // laptop; max-height keeps it within the screen with the body scrolling). Fixes the full-bleed white sheet.
-  h.innerHTML='<div style="position:fixed;top:'+barH+'px;left:0;right:0;bottom:0;background:rgba(20,25,30,.35);z-index:400;display:flex;align-items:flex-start;justify-content:center;padding:16px;box-sizing:border-box">'
-    +'<div style="width:100%;max-width:560px;max-height:100%;background:#fff;border:1px solid #d8d8d3;border-radius:16px;box-shadow:0 16px 46px rgba(0,0,0,.24);display:flex;flex-direction:column;overflow:hidden">'
-      +'<div style="padding:14px 18px;border-bottom:1px solid #f0efec"><div style="display:flex;align-items:flex-start;gap:10px"><div style="flex:1"><div style="font-size:16px;font-weight:700">'+title+'</div>'+(sub?'<div style="font-size:12px;color:#8a8f98;margin-top:2px">'+sub+'</div>':'')+'</div><button onclick="awClose()" style="border:1px solid #e5e2dd;background:#fff;border-radius:8px;width:30px;height:30px;cursor:pointer;flex:none">✕</button></div>'+dots+'</div>'
-      +'<div style="flex:1;overflow:auto;padding:16px 18px">'+body+'</div>'
-      +'<div style="border-top:1px solid #f0efec;padding:12px 18px;display:flex;gap:10px">'+foot+'</div>'
-    +'</div></div>';
+  // one call → the app's standard dialog placement (centred, backdrop, responsive on mobile+laptop). Same as every screen.
+  modal('<div class="mhd"><div class="t">'+title+'</div>'+(sub?'<div class="s">'+sub+'</div>':'')+'</div>'
+    +'<div class="mbody">'+dots+body+'</div>'
+    +'<div class="mfoot">'+foot+'</div>');
 }
 function acVisible(){ let a=(UI.acts||[]).filter(x=>acFlt()==='all'?true:(acFlt()==='inactive'?x.status!=='active':x.status==='active'));
   const q=(UI.acQ||'').trim().toLowerCase(); if(q)a=a.filter(x=>((x.name||'')+' '+(x.role||'')+' '+(x.key||'')+' '+(x.type||'')).toLowerCase().includes(q)); return a; }
