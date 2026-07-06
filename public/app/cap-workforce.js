@@ -10,7 +10,7 @@ function coassistsScreen(){
   const list = `<div class="list">
     <div class="lh">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:14px">🧑‍🤝‍🧑 Co-assists</span><button onclick="openAssist('coassists')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:#fff;color:#3F66A6;border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button></div>
-      <div style="display:flex;gap:7px"><input class="inp" id="ac_add" placeholder="New co-assist — opens the invite form" style="flex:1" readonly onclick="addActorModal()"><button class="composebtn" onclick="addActorModal()">+ New</button></div>
+      <div style="display:flex;gap:7px"><input class="inp" id="ac_add" placeholder="New actor — person, device, system or agent" style="flex:1" readonly onclick="addActorPicker()"><button class="composebtn" onclick="addActorPicker()">+ New</button></div>
       <div class="srch" style="margin-top:8px">🔍 <input placeholder="Search name, role, key" value="${esc(UI.acQ||'')}" oninput="UI.acQ=this.value;paintAcList()"></div>
       <div style="display:flex;align-items:center;gap:6px;margin-top:8px;font-size:11px;color:var(--grey)">
         <span style="display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden">${['active','inactive','all'].map(f=>`<button onclick="setAcFlt('${f}')" style="border:0;background:${acFlt()===f?'var(--blue)':'#fff'};color:${acFlt()===f?'#fff':'var(--grey)'};font-weight:700;font-size:11px;padding:4px 9px;text-transform:capitalize">${f}</button>`).join('')}</span>
@@ -22,6 +22,49 @@ function coassistsScreen(){
   const divider = `<div class="divider" id="divider" onmousedown="startDrag(event)" ontouchstart="startDrag(event)" role="separator" aria-label="Resize panes"><span class="grip"></span></div>`;
   const showDetail = (UI.vp==='mob') && UI.mdetail;
   return `<div class="panel ${showDetail?'showdetail':''}" id="panel" style="--lw:${UI.lw}px;--lh:${UI.lh}px">${list}${divider}${detail}</div>`;
+}
+/* ── Add-actor TYPE PICKER (2026-07-06) — "Add co-assist" is really "add an actor of some TYPE".
+ *    Person / device / system / agent all act for you. Gated by the entity's capabilities: ready = live setup,
+ *    explore = walk it to see how it works (no sell yet). Branches to the existing forms (Human invite /
+ *    connector create); stepped-panes-per-type is the next refinement (rule: more detail → more panes). */
+function addActorPicker(){
+  var caps=(typeof SESSION!=='undefined'&&SESSION.capabilities)||[];
+  var hasConn=caps.indexOf('connector')>=0, hasAI=caps.indexOf('ai')>=0;
+  var types=[
+    {id:'human', ic:'👤', nm:'Human',      ln:'A person who acts for you',        ready:true},
+    {id:'iot',   ic:'🛰️', nm:'IoT device', ln:'A Pi / gateway that sends signals', ready:hasConn},
+    {id:'erp',   ic:'🔌', nm:'ERP / API',  ln:'Connect a business system',         ready:hasConn},
+    {id:'ai',    ic:'🤖', nm:'AI agent',   ln:'An autonomous actor',               ready:hasAI},
+  ];
+  var cards=types.map(function(t){
+    var oc = t.ready ? "addActorGo('"+t.id+"')" : "addActorExplore('"+t.id+"')";
+    return '<div onclick="'+oc+'" onmouseover="this.style.borderColor=\'#3F66A6\'" onmouseout="this.style.borderColor=\'var(--line)\'" style="border:1px solid var(--line);border-radius:12px;padding:13px;cursor:pointer;'+(t.ready?'':'opacity:.72;')+'">'
+      +'<div style="font-size:22px">'+t.ic+'</div><div style="font-weight:700;font-size:13.5px;margin-top:5px">'+t.nm+'</div>'
+      +'<div style="font-size:11px;color:var(--grey);margin-top:2px;line-height:1.35">'+t.ln+'</div>'
+      +'<span style="display:inline-block;margin-top:8px;font-size:9.5px;font-weight:700;border-radius:20px;padding:1px 8px;'+(t.ready?'background:#e8f3ec;color:#2f7a45':'background:#eef3fb;color:#2c5aa0')+'">'+(t.ready?'ready':'explore')+'</span></div>';
+  }).join('');
+  modal('<div class="mhd"><div class="t">Add to your workforce</div></div>'
+    +'<div class="mbody"><div style="font-size:12px;color:var(--grey);margin-bottom:12px">What kind of actor? People, devices, systems and agents can all act for you.</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+cards+'</div></div>'
+    +'<div class="mfoot"><button onclick="closeModal()">Cancel</button></div>');
+}
+function addActorGo(type){
+  closeModal();
+  if(type==='human'){ if(typeof addActorModal==='function') addActorModal(); return; }
+  // iot / erp → the connector create we built, on the Connectors screen
+  navTo('connectors'); UI.connNew=true; UI.connNewType=type;
+  if(typeof renderApp==='function') renderApp();
+}
+function addActorExplore(type){
+  var info={
+    iot:{ic:'🛰️',nm:'IoT device',how:'Create a gateway (a Pi) → we issue a connection string → flash it on the device → its readings become chits over the governed rail.'},
+    erp:{ic:'🔌',nm:'ERP / API',how:'Add a business system (SAP / Tally) with its URL + an auth reference → its endpoints exchange records over the rail. Processed then forgotten (receipt only).'},
+    ai:{ic:'🤖',nm:'AI agent',how:'A governed AI actor that drafts / answers on your behalf under your rules — every action it takes is a chit you can see and dispute.'},
+  }[type]||{ic:'',nm:type,how:''};
+  modal('<div class="mhd"><div class="t">'+info.ic+' '+info.nm+' — how it works</div></div>'
+    +'<div class="mbody"><div style="font-size:13px;color:#3a4048;line-height:1.6">'+esc(info.how)+'</div>'
+    +'<div style="font-size:11.5px;color:#2c5aa0;background:#eef3fb;border:1px solid #cfe0f4;border-radius:9px;padding:9px 11px;margin-top:12px">✨ Explore mode — this is how it would work. Not activated for your entity yet.</div></div>'
+    +'<div class="mfoot"><button class="pri" onclick="addActorPicker()">‹ Back to types</button><button onclick="closeModal()">Close</button></div>');
 }
 function acVisible(){ let a=(UI.acts||[]).filter(x=>acFlt()==='all'?true:(acFlt()==='inactive'?x.status!=='active':x.status==='active'));
   const q=(UI.acQ||'').trim().toLowerCase(); if(q)a=a.filter(x=>((x.name||'')+' '+(x.role||'')+' '+(x.key||'')+' '+(x.type||'')).toLowerCase().includes(q)); return a; }
