@@ -6,6 +6,18 @@
  * addActorModal/submitActor/actorInviteModal/actorCleanupModal/confirmAsk, scr, esc, val, opt, toast,
  * modal/closeModal, announce, coId/acIdPrev, startDrag, openHelp, UI/SESSION/STORE.
  * Spec: chitbridge-api/docs/COASSIST-USECASES.md . Tests: COASSIST-REGRESSION.md. */
+/* connector endpoints — registered here too (Connectors page is dismounted; connectors live in Co-assists) */
+if (typeof EP !== 'undefined') {
+  Object.assign(EP, {
+    connectorConns:      {m:'GET',   p:'/api/connectors/:actorId/connections',         ok:'y'},
+    connectorConnAdd:    {m:'POST',  p:'/api/connectors/:actorId/connections',         ok:'y'},
+    connectorConnToggle: {m:'PATCH', p:'/api/connectors/:actorId/connections/:connId', ok:'y'},
+    connectorProvision:  {m:'GET',   p:'/api/connectors/:actorId/provisioning',        ok:'y'},
+    connectorPing:       {m:'POST',  p:'/api/connectors/:actorId/ping',                ok:'y'},
+    connectorCreate:     {m:'POST',  p:'/api/connectors',                              ok:'y'},
+    connectorList:       {m:'GET',   p:'/api/connectors',                              ok:'y'},
+  });
+}
 function coassistsScreen(){
   const list = `<div class="list">
     <div class="lh">
@@ -123,6 +135,65 @@ function awRender(){
   var pos=(r&&r.height>240)?('top:'+Math.round(r.top)+'px;left:'+Math.round(r.left)+'px;width:'+Math.round(r.width)+'px;height:'+Math.round(r.height)+'px'):('top:'+barH+'px;left:0;right:0;bottom:0');
   host.innerHTML='<div style="position:fixed;'+pos+';background:#fff;z-index:400;display:flex;flex-direction:column;overflow:hidden;box-shadow:-8px 0 24px rgba(0,0,0,.08)">'+head+mid+footbar+'</div>';
 }
+/* ══ CONNECTOR (Pi / system) handled IN Co-assists — the separate Connectors page is dismounted. When the
+ *    selected actor is a connector, acDetailHTML renders this COCKPIT instead of the human profile. Principle:
+ *    STATIC stuff (health · connection string · add) lives in the STICKY TOP as icons; the DEVICE LIST scrolls
+ *    below (so 15 devices never bury the connection string). Reuses the connector API (b62). ══ */
+async function acLoadDevices(id){
+  try{ var r=await api('connectorConns',{params:{actorId:id}}); UI.acConns=(r&&r.connections)||[]; UI.acHealth=(r&&r.actor_health)||'offline'; }catch(e){ UI.acConns=[]; UI.acHealth='offline'; }
+  try{ UI.acProv=await api('connectorProvision',{params:{actorId:id}}); }catch(_){ UI.acProv=null; }
+  if(UI.acSel===id) paintAcDetail();
+}
+function _hdot(h){ var m={live:'#2f8f5b',slow:'#c9962a',offline:'#c0453b'}; return '<span title="'+esc(h||'')+'" style="display:inline-block;width:9px;height:9px;border-radius:50%;background:'+(m[h]||'#9aa3a7')+'"></span>'; }
+function _sig(s){ if(s==='no_signal')return '<span style="color:#c0453b;font-weight:700;font-size:11px">○ no signal</span>'; if(s==='live')return '<span style="color:#2f8f5b;font-weight:700;font-size:11px">● live</span>'; if(s==='slow')return '<span style="color:#c9962a;font-weight:700;font-size:11px">◐ slow</span>'; return '<span style="color:#9aa3a7;font-weight:700;font-size:11px">○ silent</span>'; }
+function piCockpit(x){
+  var iot=acTypeOf(x)==='iot', health=UI.acHealth||'offline';
+  var tchip=iot?'<span class="optchip" style="background:#eaf2fb;color:#2c5aa0;border-color:#cfe0f4">🛰️ IoT</span>':'<span class="optchip" style="background:#f1ecf9;color:#6b3fa0;border-color:#ddcff2">🔌 ERP</span>';
+  var ico=function(t,title,on){ return '<button title="'+title+'" onclick="'+on+'" style="border:1px solid var(--line);background:#fff;border-radius:9px;width:34px;height:34px;cursor:pointer;font-size:15px">'+t+'</button>'; };
+  var header='<div style="position:sticky;top:0;background:#fff;z-index:5;padding-bottom:10px;border-bottom:1px solid var(--line)">'
+    +'<button class="dback" onclick="backToList()">‹ Co-assists</button>'
+    +'<div style="display:flex;align-items:center;gap:9px;margin-top:6px"><span style="font-size:16px;font-weight:700">'+esc(x.name)+'</span> '+tchip+' '+_hdot(health)
+      +'<span style="margin-left:auto;display:inline-flex;gap:7px">'+ico('⚡','Test connection',"acPing('"+x.id+"')")+ico('🔑','Connection string',"UI.acProvOpen=!UI.acProvOpen;paintAcDetail()")+ico('＋','Add '+(iot?'device':'endpoint'),"UI.acAddDev=!UI.acAddDev;paintAcDetail()")+'</span></div>'
+    +'<div style="font-size:11.5px;color:var(--grey);margin-top:3px">📍 '+esc(x.site||'no site')+' · '+esc(health)+'</div></div>';
+  var offline = health==='offline' ? '<div style="background:#fbeceb;border:1px solid #f0c9c6;color:#b4453f;border-radius:10px;padding:9px 11px;font-size:12px;font-weight:600;margin:10px 0">⚠ '+(iot?'Gateway':'System')+' OFFLINE — no '+(iot?'device':'endpoint')+' below can signal until it is back.</div>' : '';
+  var prov = UI.acProvOpen ? _provPanel(iot) : '';
+  var addf = UI.acAddDev ? _addDeviceForm(x,iot) : '';
+  var conns=UI.acConns, list;
+  if(conns===undefined) list='<div style="padding:16px;color:var(--grey);font-size:12.5px">Loading…</div>';
+  else if(!conns.length) list='<div style="padding:10px 2px;color:var(--grey);font-size:12.5px">No '+(iot?'devices':'endpoints')+' yet. Tap ＋ to add one.</div>';
+  else list=conns.map(function(c){ var cfg=c.conn_config||{}; var det=iot?[cfg.topic,cfg.device_id].filter(Boolean).join(' · '):(cfg.path||'');
+    return '<div style="display:flex;align-items:center;gap:9px;padding:10px 0;border-bottom:1px dashed var(--line);font-size:12.5px"><div style="flex:1;min-width:0"><b>'+esc(c.ref)+'</b>'+(c.bridge_id?' <code style="background:#f6f6f4;border:1px solid #eee;border-radius:5px;padding:0 5px;font-size:10.5px;color:var(--grey)">'+esc(c.bridge_id)+'</code>':'')+(det?'<div style="color:var(--grey);font-size:11px;margin-top:1px">'+esc(det)+'</div>':'')+'</div>'+_sig(c.enabled===false?'silent':c.signal)+'<button class="composebtn" style="padding:2px 9px;font-size:11px" onclick="acToggleDevice(\''+x.id+'\','+c.connection_id+','+(c.enabled?'false':'true')+')">'+(c.enabled?'Disable':'Enable')+'</button></div>';
+  }).join('');
+  return header+offline+prov+addf+'<div class="sec" style="margin-top:14px">'+(iot?'Devices':'Endpoints')+(conns?(' <span style="color:var(--grey);font-weight:400">('+conns.length+')</span>'):'')+'</div>'+list;
+}
+function _provPanel(iot){
+  var p=UI.acProv; if(!p) return '<div style="padding:10px 2px;color:var(--grey);font-size:12px">Loading connection string…</div>';
+  var lines = iot ? 'Endpoint = '+esc(p.endpoint||'')+'\nActorKey = ••••••••  (shown once at creation · Regenerate to re-issue)\nBridgeIds:\n'+((p.publishes||[]).map(function(z){return '  '+esc(z.bridge_id||'—')+'  '+esc(z.ref||'');}).join('\n')||'  (none yet)') : 'Base URL = '+esc(p.base_url||'—')+'\nAuth = '+esc(p.auth_type||'none')+(p.auth_ref?(' (ref: '+esc(p.auth_ref)+')'):'');
+  return '<div style="border:1px solid #cfe0f4;background:#f2f7fd;border-radius:10px;padding:10px 12px;margin:10px 0"><div style="font-weight:700;font-size:12px;color:#2c5aa0;margin-bottom:4px">🔑 Connection string</div><pre style="background:#0f1b2d;color:#cfe0f4;border-radius:7px;padding:9px 11px;font-size:11px;overflow:auto;margin:0;line-height:1.5">'+lines+'</pre></div>';
+}
+function _addDeviceForm(x,iot){
+  var spec = iot ? '<label class="fl">Topic</label><input class="inp" id="ad_topic" placeholder="sensors/line1/temp" style="width:100%"><label class="fl">Device id</label><input class="inp" id="ad_dev" placeholder="edge-gw-01" style="width:100%">'
+                 : '<label class="fl">Resource path</label><input class="inp" id="ad_path" placeholder="/odata/PurchaseOrders" style="width:100%">';
+  return '<div style="border:1px dashed #c9d2dd;border-radius:10px;padding:12px;margin:10px 0;background:#fbfcfe"><div style="font-weight:700;font-size:12.5px;margin-bottom:2px">Add '+(iot?'device':'endpoint')+'</div>'
+    +'<label class="fl">Name</label><input class="inp" id="ad_ref" placeholder="'+(iot?'Cold-store temp':'PO inbound')+'" style="width:100%">'+spec
+    +'<div class="err" id="ad_err" style="margin-top:6px"></div>'
+    +'<div style="display:flex;gap:8px;margin-top:10px"><button class="composebtn pri" onclick="acAddDevice(\''+x.id+'\','+(iot?'true':'false')+')">Add</button><button class="composebtn" onclick="UI.acAddDev=false;paintAcDetail()">Cancel</button></div></div>';
+}
+async function acAddDevice(id, iot){
+  var ref=(val('ad_ref')||'').trim(), err=document.getElementById('ad_err'); if(err)err.textContent='';
+  if(!ref){ if(err)err.textContent='A name is required.'; return; }
+  var config = iot ? {protocol:'mqtts', topic:(val('ad_topic')||'').trim()||undefined, device_id:(val('ad_dev')||'').trim()||undefined} : {path:(val('ad_path')||'').trim()||undefined};
+  try{ await api('connectorConnAdd',{params:{actorId:id},body:{ref:ref,direction:'in',config:config}}); UI.acAddDev=false; if(typeof toast==='function')toast('Added.'); await acLoadDevices(id); }
+  catch(e){ if(err)err.textContent=(e&&e.message)||'Add failed'; }
+}
+async function acToggleDevice(id, connId, enabled){
+  try{ await api('connectorConnToggle',{params:{actorId:id,connId:connId},body:{enabled:enabled}}); await acLoadDevices(id); }
+  catch(e){ if(typeof toast==='function')toast((e&&e.message)||'Update failed'); }
+}
+async function acPing(id){
+  try{ await api('connectorPing',{params:{actorId:id},body:{}}); if(typeof toast==='function')toast('Ping sent — marked live.'); await acLoadDevices(id); }
+  catch(e){ if(typeof toast==='function')toast((e&&e.message)||'Ping failed'); }
+}
 function setAcTypeF(t){ UI.acTypeF=t; if(typeof renderApp==='function')renderApp(); }   // filter the panel by actor TYPE (human/iot/erp)
 function acTypeOf(x){ return ((UI._connMap||{})[x.id]) || (x.type||'human'); }            // connector_type (iot/erp) wins, else the actor type
 function acVisible(){ let a=(UI.acts||[]).filter(x=>acFlt()==='all'?true:(acFlt()==='inactive'?x.status!=='active':x.status==='active'));
@@ -143,11 +214,14 @@ function paintAcList(){ const b=document.getElementById('ac_rows'); if(b)b.inner
 function paintAcDetail(){ const dp=document.getElementById('detailpane'); if(dp){ dp.className='detail'; dp.innerHTML=acDetailHTML(); } }
 function selectActor(id, silent){ UI.acSel=id; UI.acMode='view'; UI.acDet=(UI.acts||[]).find(a=>a.id===id)||null;
   if((UI.vp==='mob') && !silent){ UI.mdetail=true; const p=document.getElementById('panel'); if(p)p.classList.add('showdetail'); }
-  paintAcList(); paintAcDetail(); }
+  paintAcList(); paintAcDetail();
+  if(UI.acDet && typeof acTypeOf==='function' && (acTypeOf(UI.acDet)==='iot'||acTypeOf(UI.acDet)==='erp')){ UI.acConns=undefined; UI.acProv=undefined; UI.acProvOpen=false; UI.acAddDev=false; acLoadDevices(id); }   // Pi selected → load its devices
+}
 function setAcMode(m){ UI.acMode=m; paintAcDetail(); }
 function setAcFlt(f){ UI.acFlt=f; UI.acSel=null; UI.acDet=null; const mb=document.getElementById('mainbody'); if(mb)mb.innerHTML=mainBody(); }   // re-render tabs+rows together (was repainting rows only -> stale highlight)
 function acDetailHTML(){ const x=UI.acDet;
   if(!x) return `<div class="empty"><div class="big">🧑‍🤝‍🧑</div><div class="t">Select a co-assist</div><div>Pick one to see their profile, shift and access — or manage them.</div></div>`;
+  if(typeof acTypeOf==='function' && (acTypeOf(x)==='iot'||acTypeOf(x)==='erp')) return piCockpit(x);   // a Pi / system → its device cockpit (not the human profile)
   const back=`<button class="dback" onclick="backToList()">‹ Co-assists</button>`;
   const seg=(m,l)=>`<button onclick="setAcMode('${m}')" style="border:0;background:${(UI.acMode==='edit'?'edit':'view')===m?'var(--ink)':'#fff'};color:${(UI.acMode==='edit'?'edit':'view')===m?'#fff':'var(--grey)'};font-size:12px;font-weight:700;padding:6px 15px">${l}</button>`;
   const toggle=`<div style="display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-top:10px">${seg('view','View')}${seg('edit','Edit')}</div>`;
