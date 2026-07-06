@@ -10,7 +10,7 @@ function coassistsScreen(){
   const list = `<div class="list">
     <div class="lh">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:14px">🧑‍🤝‍🧑 Co-assists</span><button onclick="openAssist('coassists')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:#fff;color:#3F66A6;border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button></div>
-      <div style="display:flex;gap:7px"><input class="inp" id="ac_add" placeholder="New actor — person, device, system or agent" style="flex:1" readonly onclick="addActorPicker()"><button class="composebtn" onclick="addActorPicker()">+ New</button></div>
+      <div style="display:flex;gap:7px"><input class="inp" id="ac_add" placeholder="New actor — person, device, system or agent" style="flex:1" readonly onclick="openActorWiz()"><button class="composebtn" onclick="openActorWiz()">+ New</button></div>
       <div class="srch" style="margin-top:8px">🔍 <input placeholder="Search name, role, key" value="${esc(UI.acQ||'')}" oninput="UI.acQ=this.value;paintAcList()"></div>
       <div style="display:flex;align-items:center;gap:6px;margin-top:8px;font-size:11px;color:var(--grey)">
         <span style="display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden">${['active','inactive','all'].map(f=>`<button onclick="setAcFlt('${f}')" style="border:0;background:${acFlt()===f?'var(--blue)':'#fff'};color:${acFlt()===f?'#fff':'var(--grey)'};font-weight:700;font-size:11px;padding:4px 9px;text-transform:capitalize">${f}</button>`).join('')}</span>
@@ -23,48 +23,93 @@ function coassistsScreen(){
   const showDetail = (UI.vp==='mob') && UI.mdetail;
   return `<div class="panel ${showDetail?'showdetail':''}" id="panel" style="--lw:${UI.lw}px;--lh:${UI.lh}px">${list}${divider}${detail}</div>`;
 }
-/* ── Add-actor TYPE PICKER (2026-07-06) — "Add co-assist" is really "add an actor of some TYPE".
- *    Person / device / system / agent all act for you. Gated by the entity's capabilities: ready = live setup,
- *    explore = walk it to see how it works (no sell yet). Branches to the existing forms (Human invite /
- *    connector create); stepped-panes-per-type is the next refinement (rule: more detail → more panes). */
-function addActorPicker(){
-  var caps=(typeof SESSION!=='undefined'&&SESSION.capabilities)||[];
-  var hasConn=caps.indexOf('connector')>=0, hasAI=caps.indexOf('ai')>=0;
-  var types=[
-    {id:'human', ic:'👤', nm:'Human',      ln:'A person who acts for you',        ready:true},
-    {id:'iot',   ic:'🛰️', nm:'IoT device', ln:'A Pi / gateway that sends signals', ready:hasConn},
-    {id:'erp',   ic:'🔌', nm:'ERP / API',  ln:'Connect a business system',         ready:hasConn},
-    {id:'ai',    ic:'🤖', nm:'AI agent',   ln:'An autonomous actor',               ready:hasAI},
-  ];
-  var cards=types.map(function(t){
-    var oc = t.ready ? "addActorGo('"+t.id+"')" : "addActorExplore('"+t.id+"')";
-    return '<div onclick="'+oc+'" onmouseover="this.style.borderColor=\'#3F66A6\'" onmouseout="this.style.borderColor=\'var(--line)\'" style="border:1px solid var(--line);border-radius:12px;padding:13px;cursor:pointer;'+(t.ready?'':'opacity:.72;')+'">'
-      +'<div style="font-size:22px">'+t.ic+'</div><div style="font-weight:700;font-size:13.5px;margin-top:5px">'+t.nm+'</div>'
-      +'<div style="font-size:11px;color:var(--grey);margin-top:2px;line-height:1.35">'+t.ln+'</div>'
-      +'<span style="display:inline-block;margin-top:8px;font-size:9.5px;font-weight:700;border-radius:20px;padding:1px 8px;'+(t.ready?'background:#e8f3ec;color:#2f7a45':'background:#eef3fb;color:#2c5aa0')+'">'+(t.ready?'ready':'explore')+'</span></div>';
-  }).join('');
-  modal('<div class="mhd"><div class="t">Add to your workforce</div></div>'
-    +'<div class="mbody"><div style="font-size:12px;color:var(--grey);margin-bottom:12px">What kind of actor? People, devices, systems and agents can all act for you.</div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+cards+'</div></div>'
-    +'<div class="mfoot"><button onclick="closeModal()">Cancel</button></div>');
+/* ── Full-panel Add-actor WIZARD (2026-07-06) — one responsive frame BELOW the top bar, same on every step,
+ *    back/forth, ≤2-3 fields per pane (rule: more detail → more panes). Type picker → type-specific steps →
+ *    result. Panel top is MEASURED from .topbar at render (not hardcoded 52px) so it fits any device/font;
+ *    content sits in a centred ≤560px column so 4"/6"/tablet/desktop all read right. Ready types create for
+ *    real (Human→addActor · IoT→connectorCreate); explore types walk to a "how it works" preview. */
+var AW_STEPS={ human:['who','hat'], iot:['gw','mode'], erp:['sys','conn'], ai:['agent','guard'] };
+function _awCap(k){ return ((typeof SESSION!=='undefined'&&SESSION.capabilities)||[]).indexOf(k)>=0; }
+function _awReady(t){ return t==='human'?true:(t==='ai'?_awCap('ai'):_awCap('connector')); }
+function openActorWiz(){ UI.awType=null; UI.awStep=0; UI.awData={}; UI.awErr=null; UI.awResult=null; awRender(); }
+function awClose(){ var h=document.getElementById('actorwiz'); if(h)h.remove(); }
+function awHost(){ var h=document.getElementById('actorwiz'); if(!h){ h=document.createElement('div'); h.id='actorwiz'; document.body.appendChild(h); } return h; }
+function awCapture(){ UI.awData=UI.awData||{}; ['aw_name','aw_key','aw_hat','aw_site','aw_mode','aw_baseurl','aw_authref','aw_role','aw_under'].forEach(function(id){ var el=document.getElementById(id); if(el) UI.awData[id]=el.value; }); }
+function awPick(t){ UI.awType=t; UI.awStep=0; UI.awErr=null; awRender(); }
+function awNext(){ awCapture(); var s=AW_STEPS[UI.awType]||[]; if(UI.awStep>=s.length-1){ awFinish(); } else { UI.awStep++; UI.awErr=null; awRender(); } }
+function awBack(){ awCapture(); UI.awErr=null; if(UI.awStep==='done'){ UI.awStep=(AW_STEPS[UI.awType]||[]).length-1; UI.awResult=null; } else if(UI.awStep===0){ UI.awType=null; } else { UI.awStep--; } awRender(); }
+async function awFinish(){
+  awCapture(); var t=UI.awType, d=UI.awData||{};
+  if(!_awReady(t)){ UI.awResult=_awPreviewHtml(t); UI.awStep='done'; UI.awErr=null; awRender(); return; }
+  if(t==='human'){
+    var name=(d.aw_name||'').trim(), key=(d.aw_key||'').toLowerCase().trim();
+    if(!name||key.length<4){ UI.awErr='A display name and a User ID of 4+ characters are required.'; awRender(); return; }
+    if(!/^[a-z0-9]+$/.test(key)){ UI.awErr='User ID: lowercase letters and numbers only.'; awRender(); return; }
+    try{ var r=await api('addActor',{body:{display_name:name,actor_key:key,hat:d.aw_hat||'act'}});
+      var lf=(r&&(r.login_format||(r.actor&&r.actor.login_format)))||(typeof coId==='function'?coId(key):key);
+      var otp=(r&&(r.otp||r.dev_otp))||'';
+      UI.awResult='<div style="text-align:center"><div style="font-size:34px;margin:8px 0 6px">✉️</div><div style="font-weight:700;font-size:16px">Invite ready</div><div style="font-size:13px;color:#3a4048;line-height:1.7;margin-top:10px">User ID <b>'+esc(lf)+'</b><br>one-time code <b>'+esc(otp||'—')+'</b><br><br>Share these — they set a PIN and start on shift.</div></div>';
+      UI.awStep='done'; UI.awErr=null; awRender();
+      if(UI.nav==='coassists' && typeof loadCoassists==='function') loadCoassists();
+    }catch(e){ UI.awErr=(e&&e.message)||'Create failed'; awRender(); }
+    return;
+  }
+  var cfg = t==='iot' ? {mode:d.aw_mode||'push'} : {base_url:(d.aw_baseurl||'').trim()||undefined, auth_ref:(d.aw_authref||'').trim()||undefined};
+  var nm2=(d.aw_name||'').trim(); if(nm2.length<2){ UI.awErr='A name of at least 2 characters is required.'; awRender(); return; }
+  try{ var r2=await api('connectorCreate',{body:{display_name:nm2,type:t,site:(d.aw_site||'').trim()||undefined,config:cfg}});
+    var pk=r2&&r2.provision_key;
+    UI.awResult='<div style="text-align:center"><div style="font-size:34px;margin:8px 0 6px">'+(t==='iot'?'🔑':'🔌')+'</div><div style="font-weight:700;font-size:16px">'+(t==='iot'?'Connection string issued':'System connected')+'</div>'+(pk?('<div style="font-size:12px;color:#3a4048;margin-top:10px">ActorKey — shown once, copy it to the Pi:</div><pre style="background:#0f1b2d;color:#cfe0f4;border-radius:8px;padding:10px 12px;font-size:12px;overflow:auto;margin:8px 0 0;user-select:all">'+esc(pk)+'</pre>'):('<div style="font-size:12.5px;color:#3a4048;margin-top:10px">Add its '+(t==='iot'?'devices':'endpoints')+' in Connectors.</div>'))+'</div>';
+    UI.awStep='done'; UI.awErr=null; UI.connectors=undefined; awRender();
+  }catch(e){ UI.awErr=(e&&e.message)||'Create failed'; awRender(); }
 }
-function addActorGo(type){
-  closeModal();
-  if(type==='human'){ if(typeof addActorModal==='function') addActorModal(); return; }
-  // iot / erp → the connector create we built, on the Connectors screen
-  navTo('connectors'); UI.connNew=true; UI.connNewType=type;
-  if(typeof renderApp==='function') renderApp();
+function _awPreviewHtml(t){
+  var m={ erp:{ic:'🔌',nm:'ERP / API',how:'The system\'s endpoints exchange records over the governed rail — processed then forgotten (receipt only).'},
+          ai:{ic:'🤖',nm:'AI agent',how:'A governed AI drafts / answers under your rules — every action it takes is a chit you can see and dispute.'},
+          iot:{ic:'🛰️',nm:'IoT device',how:'A Pi publishes readings to the connection string we issue — they become chits over the rail.'} }[t]||{ic:'',nm:t,how:''};
+  return '<div style="text-align:center"><div style="font-size:34px;margin:8px 0 6px">'+m.ic+'</div><div style="font-weight:700;font-size:16px">'+m.nm+' — how it works</div><div style="font-size:13px;color:#3a4048;line-height:1.6;margin-top:10px">'+m.how+'</div><div style="font-size:11.5px;color:#2c5aa0;background:#eef3fb;border:1px solid #cfe0f4;border-radius:9px;padding:9px 11px;margin-top:14px">✨ Explore mode — not activated for your entity yet.</div></div>';
 }
-function addActorExplore(type){
-  var info={
-    iot:{ic:'🛰️',nm:'IoT device',how:'Create a gateway (a Pi) → we issue a connection string → flash it on the device → its readings become chits over the governed rail.'},
-    erp:{ic:'🔌',nm:'ERP / API',how:'Add a business system (SAP / Tally) with its URL + an auth reference → its endpoints exchange records over the rail. Processed then forgotten (receipt only).'},
-    ai:{ic:'🤖',nm:'AI agent',how:'A governed AI actor that drafts / answers on your behalf under your rules — every action it takes is a chit you can see and dispute.'},
-  }[type]||{ic:'',nm:type,how:''};
-  modal('<div class="mhd"><div class="t">'+info.ic+' '+info.nm+' — how it works</div></div>'
-    +'<div class="mbody"><div style="font-size:13px;color:#3a4048;line-height:1.6">'+esc(info.how)+'</div>'
-    +'<div style="font-size:11.5px;color:#2c5aa0;background:#eef3fb;border:1px solid #cfe0f4;border-radius:9px;padding:9px 11px;margin-top:12px">✨ Explore mode — this is how it would work. Not activated for your entity yet.</div></div>'
-    +'<div class="mfoot"><button class="pri" onclick="addActorPicker()">‹ Back to types</button><button onclick="closeModal()">Close</button></div>');
+function awRender(){
+  var h=awHost(); var d=UI.awData||{};
+  var barH=((document.querySelector('.topbar')||{}).offsetHeight)||52;   // MEASURED → fits any device/font, not a hardcoded 52
+  function fld(id,label,ph){ return '<label style="display:block;font-size:11px;color:#5a6066;font-weight:600;margin:14px 0 4px">'+label+'</label><input id="'+id+'" placeholder="'+ph+'" value="'+esc(d[id]||'')+'" style="width:100%;box-sizing:border-box;padding:12px;border:1px solid #d8d8d3;border-radius:11px;font-size:15px"></input>'; }
+  function selF(id,label,opts){ return '<label style="display:block;font-size:11px;color:#5a6066;font-weight:600;margin:14px 0 4px">'+label+'</label><select id="'+id+'" style="width:100%;box-sizing:border-box;padding:12px;border:1px solid #d8d8d3;border-radius:11px;font-size:15px">'+opts.map(function(o){ return '<option value="'+o[0]+'"'+(String(d[id])===o[0]?' selected':'')+'>'+o[1]+'</option>'; }).join('')+'</select>'; }
+  function how(x){ return '<div style="font-size:12px;color:#8a8f98;background:#f7f7f5;border:1px solid #eee;border-radius:11px;padding:11px 13px;line-height:1.5;margin-top:14px">'+x+'</div>'; }
+  var body='', title='', sub='', dots='', foot='';
+  if(UI.awType===null){
+    title='Add to your workforce'; sub='What kind of actor? People, devices, systems and agents can all act for you.';
+    var types=[['human','👤','Human','A person who acts for you'],['iot','🛰️','IoT device','A Pi / gateway that sends signals'],['erp','🔌','ERP / API','Connect a business system'],['ai','🤖','AI agent','An autonomous actor']];
+    body='<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'+types.map(function(t){ var rdy=_awReady(t[0]);
+      return '<div onclick="awPick(\''+t[0]+'\')" onmouseover="this.style.borderColor=\'#3F66A6\'" onmouseout="this.style.borderColor=\'#e5e2dd\'" style="border:1px solid #e5e2dd;border-radius:14px;padding:14px;cursor:pointer;'+(rdy?'':'opacity:.72')+'"><div style="font-size:24px">'+t[1]+'</div><div style="font-weight:700;font-size:14px;margin-top:6px">'+t[2]+'</div><div style="font-size:11.5px;color:#6a707a;margin-top:2px;line-height:1.35">'+t[3]+'</div><span style="display:inline-block;margin-top:9px;font-size:10px;font-weight:700;border-radius:20px;padding:1px 9px;'+(rdy?'background:#e8f3ec;color:#2f7a45':'background:#eef3fb;color:#2c5aa0')+'">'+(rdy?'ready':'explore')+'</span></div>';
+    }).join('')+'</div>';
+    foot='<button onclick="awClose()" style="flex:1;border:1px solid #e0ded9;background:#fff;border-radius:12px;padding:14px;font-size:15px;font-weight:600;cursor:pointer">Cancel</button>';
+  } else {
+    var steps=AW_STEPS[UI.awType]||[], rdy=_awReady(UI.awType);
+    var icN={human:['👤','Human'],iot:['🛰️','IoT device'],erp:['🔌','ERP / API'],ai:['🤖','AI agent']}[UI.awType];
+    title=icN[0]+' '+icN[1]+(rdy?'':' · explore');
+    dots='<div style="display:flex;gap:6px;margin-top:12px">'+steps.map(function(s,i){ var st=(UI.awStep==='done'||i<UI.awStep)?'#9cc0ea':(i===UI.awStep?'#3F66A6':'#eceae6'); return '<span style="height:4px;flex:1;border-radius:3px;background:'+st+'"></span>'; }).join('')+'<span style="height:4px;flex:1;border-radius:3px;background:'+(UI.awStep==='done'?'#3F66A6':'#eceae6')+'"></span></div>';
+    if(UI.awStep==='done'){
+      sub=rdy?'Done':'Preview'; body=UI.awResult||'';
+      foot='<button onclick="awBack()" style="flex:0 0 92px;border:1px solid #e0ded9;background:#fff;color:#5a6066;border-radius:12px;padding:14px;font-size:15px;font-weight:600;cursor:pointer">‹ Back</button><button onclick="awClose()" style="flex:1;border:1px solid #3F66A6;background:#3F66A6;color:#fff;border-radius:12px;padding:14px;font-size:15px;font-weight:600;cursor:pointer">'+(rdy?'Done':'Got it')+'</button>';
+    } else {
+      var sk=steps[UI.awStep];
+      if(sk==='who') body=fld('aw_name','Display name','Anitha')+fld('aw_key','User ID (sign-in)','anitha')+how('They sign in with this User ID under your entity + a one-time code, then set a PIN.');
+      else if(sk==='hat') body=selF('aw_hat','Hat (what they do)',[['act','Act — does the work'],['manager','Manager — acts + assigns'],['audit','Audit — review only'],['mis','MIS — reports'],['view_only','View-only']])+how('Only Act / Manager hats can be assigned work.');
+      else if(sk==='gw') body=fld('aw_name','Gateway name','Line-1 Gateway')+fld('aw_site','Site','Chennai')+how('One Pi = one gateway; its sensors are connections (BridgeIds) under it.');
+      else if(sk==='mode') body=selF('aw_mode','How it connects',[['push','push — we issue the key (Pi sends to us)'],['pull','pull — your broker (we subscribe)']])+how('Push is simplest for a Pi — we hand you a string to flash on it.');
+      else if(sk==='sys') body=fld('aw_name','System name','Acme SAP')+fld('aw_site','Site','HQ')+how('One system = one actor; its endpoints are connections under it.');
+      else if(sk==='conn') body=fld('aw_baseurl','Base URL','https://sap.acme.com/api')+fld('aw_authref','Auth reference (secret NAME)','ACME_SAP_KEY')+how('We store a reference to the secret, never the raw key.');
+      else if(sk==='agent') body=fld('aw_name','Agent name','Draft-bot')+fld('aw_role','Role','drafts replies for review')+how('Every action it takes is a chit you can see and dispute.');
+      else if(sk==='guard') body=selF('aw_under','Acts under',[['rules','your rules only'],['approval','your rules + human approval']])+how('Governed: it can only do what your rules allow.');
+      sub=(UI.awStep+1)+' of '+steps.length;
+      if(UI.awErr) body+='<div style="color:#c0453b;font-size:12.5px;margin-top:10px">'+esc(UI.awErr)+'</div>';
+      var nextLbl=(UI.awStep===steps.length-1)?(rdy?'Create':'See result'):'Next ›';
+      foot='<button onclick="awBack()" style="flex:0 0 92px;border:1px solid #e0ded9;background:#fff;color:#5a6066;border-radius:12px;padding:14px;font-size:15px;font-weight:600;cursor:pointer">‹ Back</button><button onclick="awNext()" style="flex:1;border:1px solid #3F66A6;background:#3F66A6;color:#fff;border-radius:12px;padding:14px;font-size:15px;font-weight:600;cursor:pointer">'+nextLbl+'</button>';
+    }
+  }
+  h.innerHTML='<div style="position:fixed;top:'+barH+'px;left:0;right:0;bottom:0;background:#fff;z-index:400;display:flex;flex-direction:column">'
+    +'<div style="padding:14px 18px;border-bottom:1px solid #f0efec"><div style="max-width:560px;margin:0 auto;display:flex;align-items:flex-start;gap:10px"><div style="flex:1"><div style="font-size:16px;font-weight:700">'+title+'</div>'+(sub?'<div style="font-size:12px;color:#8a8f98;margin-top:2px">'+sub+'</div>':'')+'</div><button onclick="awClose()" style="border:1px solid #e5e2dd;background:#fff;border-radius:8px;width:30px;height:30px;cursor:pointer;flex:none">✕</button></div>'+(dots?'<div style="max-width:560px;margin:0 auto">'+dots+'</div>':'')+'</div>'
+    +'<div style="flex:1;overflow:auto;padding:16px 18px"><div style="max-width:560px;margin:0 auto">'+body+'</div></div>'
+    +'<div style="border-top:1px solid #f0efec;padding:12px 18px"><div style="max-width:560px;margin:0 auto;display:flex;gap:10px">'+foot+'</div></div></div>';
 }
 function acVisible(){ let a=(UI.acts||[]).filter(x=>acFlt()==='all'?true:(acFlt()==='inactive'?x.status!=='active':x.status==='active'));
   const q=(UI.acQ||'').trim().toLowerCase(); if(q)a=a.filter(x=>((x.name||'')+' '+(x.role||'')+' '+(x.key||'')+' '+(x.type||'')).toLowerCase().includes(q)); return a; }
