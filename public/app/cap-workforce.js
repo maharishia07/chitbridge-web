@@ -88,7 +88,7 @@ function awRender(){
     dots='<div style="display:flex;gap:6px;margin:0 0 14px">'+steps.map(function(s,i){ var st=(UI.awStep==='done'||i<UI.awStep)?'#9cc0ea':(i===UI.awStep?'#3F66A6':'#eceae6'); return '<span style="height:4px;flex:1;border-radius:3px;background:'+st+'"></span>'; }).join('')+'<span style="height:4px;flex:1;border-radius:3px;background:'+(UI.awStep==='done'?'#3F66A6':'#eceae6')+'"></span></div>';
     if(UI.awStep==='done'){
       sub=rdy?'Done':'Preview'; body=UI.awResult||'';
-      foot='<button class="composebtn" onclick="awBack()">‹ Back</button><button class="composebtn pri" style="flex:1" onclick="awClose()">'+(rdy?'Done':'Got it')+'</button>';
+      foot='<button class="composebtn" style="flex:1" onclick="awBack()">‹ Back</button><button class="composebtn pri" style="flex:1" onclick="awClose()">'+(rdy?'Done':'Got it')+'</button>';
     } else {
       var sk=steps[UI.awStep];
       if(sk==='who') body=fld('aw_name','Display name','Anitha')+fld('aw_key','User ID (sign-in)','anitha')+how('They sign in with this User ID under your entity + a one-time code, then set a PIN.');
@@ -102,7 +102,7 @@ function awRender(){
       sub=(UI.awStep+1)+' of '+steps.length;
       if(UI.awErr) body+='<div style="color:#c0453b;font-size:12.5px;margin-top:10px">'+esc(UI.awErr)+'</div>';
       var nextLbl=(UI.awStep===steps.length-1)?(rdy?'Create':'See result'):'Next ›';
-      foot='<button class="composebtn" onclick="awBack()">‹ Back</button><button class="composebtn pri" style="flex:1" onclick="awNext()">'+nextLbl+'</button>';
+      foot='<button class="composebtn" style="flex:1" onclick="awBack()">‹ Back</button><button class="composebtn pri" style="flex:1" onclick="awNext()">'+nextLbl+'</button>';
     }
   }
   // RESPONSIVE placement: FULL-SCREEN on mobile (fill · generous gaps · buttons in a bottom bar — like the
