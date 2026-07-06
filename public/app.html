@@ -1955,7 +1955,7 @@ function acType(t){ return AC_TYPE[t]||esc(t||'human'); }
 function acShc(sh){ return sh==='on_shift'?'on':sh==='on_break'?'brk':'off'; }
 function acShLabel(sh){ return sh==='on_shift'?'on shift':sh==='on_break'?'on break':'off'; }
 function acFlt(){ return UI.acFlt||'active'; }
-function acDate(ts){ if(!ts)return '—'; try{ return new Date(ts).toLocaleDateString(); }catch(_){ return '—'; } }
+function acDate(ts){ if(!ts)return '—'; try{ return new Date(ts).toLocaleDateString('en-IN', {day:'2-digit',month:'2-digit',year:'numeric'}); }catch(_){ return '—'; } }
 function acLogin(x){ return esc(x.key)+'@'+esc((SESSION.entity||'').toLowerCase()); }
 // Unambiguous label — name + User ID (names collide; the key is unique). Returns HTML (already escaped).
 function acLbl(a){ return a?(esc(a.name)+' <span class="mono" style="color:var(--grey);font-weight:400;font-size:11px">'+esc(a.key||'')+'</span>'):'—'; }
@@ -2141,7 +2141,7 @@ function mapNotif(n){
   const subj=n.manual_subject||n.auto_subject||'a chit';
   return { i: ICON[n.action]||'•',
            t: (n.action_by_display_name?esc(n.action_by_display_name)+' · ':'')+esc(String(n.action||'update').replace(/_/g,' '))+' — '+esc(subj),
-           s: n.created_at?new Date(n.created_at).toLocaleString():'' };
+           s: n.created_at?new Date(n.created_at).toLocaleString('en-IN', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'' };
 }
 async function openNotifications(){ const host=document.getElementById("lbhost"); if(!host)return;
   if(UI.notifOpen){ closeNotif(); return; }
@@ -2312,7 +2312,7 @@ const DEFCOLS = ['star','from','subject','date','amount','priext','priority','as
 function getCols(){ try{ const s=JSON.parse(localStorage.getItem('cb_cols')||'null'); if(Array.isArray(s)&&s.length) return s; }catch(_){ } return DEFCOLS.slice(); }
 function visibleCols(){ const set=UI.cols||getCols(); return LISTCOLS.filter(function(c){ return set.indexOf(c.key)>=0; }); }
 function colTemplate(){ const sel = (UI.selectMode&&SESSION.role!=='customer') ? '26px ' : ''; return sel + visibleCols().map(function(c){ return (UI.colW&&UI.colW[c.key]) ? UI.colW[c.key] : c.w; }).join(' '); }
-function lcDate(ts){ try{ const d=new Date(ts); if(isNaN(d)) return ''; const sameY=d.getFullYear()===new Date().getFullYear(); return d.toLocaleString([], sameY?{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}:{day:'2-digit',month:'short',year:'2-digit',hour:'2-digit',minute:'2-digit'}); }catch(_){ return ''; } }
+function lcDate(ts){ try{ const d=new Date(ts); if(isNaN(d)) return ''; const sameY=d.getFullYear()===new Date().getFullYear(); return d.toLocaleString('en-IN', sameY?{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}:{day:'2-digit',month:'short',year:'2-digit',hour:'2-digit',minute:'2-digit'}); }catch(_){ return ''; } }
 function listHeader(){ const tpl=colTemplate(); const sel = (UI.selectMode&&SESSION.role!=='customer') ? '<span></span>' : '';
   const cells = visibleCols().map(function(c){ const active = UI.sort===c.sort && c.sort; const arrow = active ? (UI.dir==='asc'?' ▲':' ▼') : (c.sort?' ⇅':''); return '<span class="lhcell'+(c.sort?' sortable':'')+(c.align==='right'?' ra':'')+'" '+(c.sort?('onclick="sortBy(\''+c.sort+'\')"'):'')+'>'+esc(c.key==='from'&&UI.folder==='order'?'To':c.label)+'<span class="sarr">'+arrow+'</span><span class="colrz" onmousedown="colResizeStart(event,\''+c.key+'\')" onclick="event.stopPropagation()"></span></span>'; }).join('');
   return '<div class="lhead" style="grid-template-columns:var(--coltpl)">'+sel+cells+'</div>'; }
@@ -2488,7 +2488,7 @@ function setMsgKind(k){ UI.msgKind=k; paintDetail(); }
 function msgSearchSort(){ return '<div class="msgss"><input id="msgsrch" class="msgsi" placeholder="Search messages" value="'+esc(UI.msgSearch||'')+'" oninput="setMsgSearch(this.value)"><button class="msgord" onclick="setMsgOrder(UI.msgOrder===\'oldest\'?\'latest\':\'oldest\')" title="Sort order">'+((UI.msgOrder==='oldest')?'↑ Oldest':'↓ Latest')+'</button></div>'; }
 function setMsgSearch(v){ clearTimeout(UI._msgT); UI._msgT=setTimeout(function(){ UI.msgSearch=(v||'').trim(); paintDetail(); var s=document.getElementById('msgsrch'); if(s){ s.focus(); var n=s.value.length; try{s.setSelectionRange(n,n);}catch(_){ } } }, 300); }
 function setMsgOrder(o){ UI.msgOrder=o; paintDetail(); }
-function fmtLogTime(ts){ try{ var d=new Date(ts); if(isNaN(d))return ''; return d.toLocaleString([], {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}); }catch(_){ return ''; } }
+function fmtLogTime(ts){ try{ var d=new Date(ts); if(isNaN(d))return ''; return d.toLocaleString('en-IN', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}); }catch(_){ return ''; } }
 function statusLabel(e){ var a=e.action||''; if(a==='created') return 'Created'; if(a==='message_sent') return 'Message sent'; if(a.indexOf('status_')===0) return 'Status → '+a.slice(7); if(e.new_status) return (a||'updated')+' → '+e.new_status; return a||'event'; }
 function statusEv(e){ return '<div class="ev"><div class="ea">'+esc(statusLabel(e))+'</div><div class="em">'+esc(e.action_by_display_name||'')+' · '+esc(fmtLogTime(e.created_at))+(e.detail?(' · '+esc(String(e.detail).slice(0,80))):'')+'</div></div>'; }
 function statusSearchSort(){ return '<div class="msgss"><input id="stsrch" class="msgsi" placeholder="Search status history" value="'+esc(UI.statusSearch||'')+'" oninput="setStatusSearch(this.value)"><button class="msgord" onclick="setStatusOrder(UI.statusOrder===\'oldest\'?\'latest\':\'oldest\')" title="Sort order">'+((UI.statusOrder==='oldest')?'↑ Oldest':'↓ Latest')+'</button></div>'; }

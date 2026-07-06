@@ -13,7 +13,7 @@ function scrErr(e){ return `<div class="empty"><div class="t">Couldn't load</div
 function cap(s){ return s[0].toUpperCase()+s.slice(1); }
 function inr_(v){ return fmtMoney(v,'INR'); }   /* R1: one money formatter — alias to fmtMoney (currency-aware) */
 function nm(v, fb){ return esc(v||fb||'—'); }   /* R3: one name-with-fallback — esc(display_name || fallback) */
-function fmtAt(ts){ try{ return new Date(ts).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}); }catch(_){ return ''; } }
+function fmtAt(ts){ try{ return new Date(ts).toLocaleTimeString('en-IN', {hour:'2-digit',minute:'2-digit'}); }catch(_){ return ''; } }   /* R4: pin en-IN (12h) so time is deterministic across browsers */
 
 const CCY_LOCALE={INR:'en-IN',USD:'en-US',EUR:'de-DE',GBP:'en-GB',JPY:'ja-JP',CNY:'zh-CN',AUD:'en-AU',CAD:'en-CA',CHF:'de-CH',SGD:'en-SG',AED:'ar-AE',SAR:'ar-SA',KWD:'ar-KW',BHD:'ar-BH',OMR:'ar-OM',KRW:'ko-KR',VND:'vi-VN',THB:'th-TH',MYR:'ms-MY',IDR:'id-ID',ZAR:'en-ZA',BRL:'pt-BR',RUB:'ru-RU',NGN:'en-NG',KES:'en-KE',LKR:'si-LK',BDT:'bn-BD',PKR:'ur-PK',NPR:'ne-NP'};
 function fmtMoney(amount,code){ code=(code||'INR'); amount=Number(amount||0); try{ return new Intl.NumberFormat(CCY_LOCALE[code]||undefined,{style:'currency',currency:code,currencyDisplay:'narrowSymbol'}).format(amount); }catch(e){ try{ return new Intl.NumberFormat(CCY_LOCALE[code]||undefined,{style:'currency',currency:code}).format(amount); }catch(_){ return code+' '+amount.toLocaleString(); } } }
