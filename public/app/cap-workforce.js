@@ -111,11 +111,9 @@ function awRender(){
   var head='<div style="padding:16px 18px;border-bottom:1px solid #f0efec"><div style="max-width:520px;margin:0 auto;display:flex;align-items:flex-start;gap:10px"><div style="flex:1"><div style="font-size:17px;font-weight:700">'+title+'</div>'+(sub?'<div style="font-size:12.5px;color:var(--grey);margin-top:3px">'+sub+'</div>':'')+'</div><button onclick="awClose()" style="border:1px solid var(--line);background:#fff;border-radius:8px;width:32px;height:32px;cursor:pointer;flex:none">✕</button></div>'+(dots?'<div style="max-width:520px;margin:0 auto">'+dots+'</div>':'')+'</div>';
   var mid='<div style="flex:1;overflow:auto;padding:22px 18px"><div style="max-width:520px;margin:0 auto">'+body+'</div></div>';
   var footbar='<div style="border-top:1px solid #f0efec;padding:14px 18px"><div style="max-width:520px;margin:0 auto;display:flex;gap:12px">'+foot+'</div></div>';
-  if(mob){
-    host.innerHTML='<div style="position:fixed;top:'+barH+'px;left:0;right:0;bottom:0;background:#fff;z-index:400;display:flex;flex-direction:column">'+head+mid+footbar+'</div>';
-  } else {
-    host.innerHTML='<div style="position:fixed;top:'+barH+'px;left:0;right:0;bottom:0;background:rgba(20,25,30,.35);z-index:400;display:flex;align-items:center;justify-content:center;padding:24px;box-sizing:border-box"><div style="width:100%;max-width:560px;max-height:100%;background:#fff;border:1px solid #d8d8d3;border-radius:16px;box-shadow:0 16px 46px rgba(0,0,0,.24);display:flex;flex-direction:column;overflow:hidden">'+head+mid+footbar+'</div></div>';
-  }
+  // ONE comfortable centred card, both mobile & laptop: sized to its content (never a full-screen sheet), dim
+  // backdrop, bounded height with the body scrolling if a step ever gets long. Near-full-width on a phone.
+  host.innerHTML='<div style="position:fixed;top:'+barH+'px;left:0;right:0;bottom:0;background:rgba(20,25,30,.4);z-index:400;display:flex;align-items:center;justify-content:center;padding:20px 16px;box-sizing:border-box"><div style="width:100%;max-width:480px;max-height:calc(100% - 40px);background:#fff;border:1px solid #d8d8d3;border-radius:16px;box-shadow:0 16px 46px rgba(0,0,0,.26);display:flex;flex-direction:column;overflow:hidden">'+head+mid+footbar+'</div></div>';
 }
 function acVisible(){ let a=(UI.acts||[]).filter(x=>acFlt()==='all'?true:(acFlt()==='inactive'?x.status!=='active':x.status==='active'));
   const q=(UI.acQ||'').trim().toLowerCase(); if(q)a=a.filter(x=>((x.name||'')+' '+(x.role||'')+' '+(x.key||'')+' '+(x.type||'')).toLowerCase().includes(q)); return a; }
