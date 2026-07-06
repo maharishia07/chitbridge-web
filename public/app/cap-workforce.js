@@ -13,6 +13,7 @@ if (typeof EP !== 'undefined') {
     connectorConnAdd:    {m:'POST',  p:'/api/connectors/:actorId/connections',         ok:'y'},
     connectorConnToggle: {m:'PATCH', p:'/api/connectors/:actorId/connections/:connId', ok:'y'},
     connectorProvision:  {m:'GET',   p:'/api/connectors/:actorId/provisioning',        ok:'y'},
+    connectorRegen:      {m:'POST',  p:'/api/connectors/:actorId/regenerate-key',      ok:'y'},
     connectorPing:       {m:'POST',  p:'/api/connectors/:actorId/ping',                ok:'y'},
     connectorCreate:     {m:'POST',  p:'/api/connectors',                              ok:'y'},
     connectorList:       {m:'GET',   p:'/api/connectors',                              ok:'y'},
@@ -156,7 +157,7 @@ function piCockpit(x){
       +'<span style="margin-left:auto;display:inline-flex;gap:7px">'+ico('⚡','Test connection',"acPing('"+x.id+"')")+ico('🔑','Connection string',"UI.acProvOpen=!UI.acProvOpen;paintAcDetail()")+ico('＋','Add '+(iot?'device':'endpoint'),"UI.acAddDev=!UI.acAddDev;paintAcDetail()")+'</span></div>'
     +'<div style="font-size:11.5px;color:var(--grey);margin-top:3px">📍 '+esc(x.site||'no site')+' · '+esc(health)+'</div></div>';
   var offline = health==='offline' ? '<div style="background:#fbeceb;border:1px solid #f0c9c6;color:#b4453f;border-radius:10px;padding:9px 11px;font-size:12px;font-weight:600;margin:10px 0">⚠ '+(iot?'Gateway':'System')+' OFFLINE — no '+(iot?'device':'endpoint')+' below can signal until it is back.</div>' : '';
-  var prov = UI.acProvOpen ? _provPanel(iot) : '';
+  var prov = UI.acProvOpen ? _provPanel(iot, x.id) : '';
   var addf = UI.acAddDev ? _addDeviceForm(x,iot) : '';
   var conns=UI.acConns, list;
   if(conns===undefined) list='<div style="padding:16px;color:var(--grey);font-size:12.5px">Loading…</div>';
@@ -166,10 +167,18 @@ function piCockpit(x){
   }).join('');
   return header+offline+prov+addf+'<div class="sec" style="margin-top:14px">'+(iot?'Devices':'Endpoints')+(conns?(' <span style="color:var(--grey);font-weight:400">('+conns.length+')</span>'):'')+'</div>'+list;
 }
-function _provPanel(iot){
+function _provPanel(iot, aid){
   var p=UI.acProv; if(!p) return '<div style="padding:10px 2px;color:var(--grey);font-size:12px">Loading connection string…</div>';
-  var lines = iot ? 'Endpoint = '+esc(p.endpoint||'')+'\nActorKey = ••••••••  (shown once at creation · Regenerate to re-issue)\nBridgeIds:\n'+((p.publishes||[]).map(function(z){return '  '+esc(z.bridge_id||'—')+'  '+esc(z.ref||'');}).join('\n')||'  (none yet)') : 'Base URL = '+esc(p.base_url||'—')+'\nAuth = '+esc(p.auth_type||'none')+(p.auth_ref?(' (ref: '+esc(p.auth_ref)+')'):'');
-  return '<div style="border:1px solid #cfe0f4;background:#f2f7fd;border-radius:10px;padding:10px 12px;margin:10px 0"><div style="font-weight:700;font-size:12px;color:#2c5aa0;margin-bottom:4px">🔑 Connection string</div><pre style="background:#0f1b2d;color:#cfe0f4;border-radius:7px;padding:9px 11px;font-size:11px;overflow:auto;margin:0;line-height:1.5">'+lines+'</pre></div>';
+  var lines = iot ? 'Endpoint = '+esc(p.endpoint||'')+'\nActorKey = ••••••••  (secret — Regenerate to issue a fresh one)\nBridgeIds:\n'+((p.publishes||[]).map(function(z){return '  '+esc(z.bridge_id||'—')+'  '+esc(z.ref||'');}).join('\n')||'  (none yet)') : 'Base URL = '+esc(p.base_url||'—')+'\nAuth = '+esc(p.auth_type||'none')+(p.auth_ref?(' (ref: '+esc(p.auth_ref)+')'):'');
+  var fresh = (iot && UI.acFreshKey) ? '<div style="border:1px solid #bfe6c9;background:#eefaf0;border-radius:8px;padding:9px 11px;margin-top:9px"><div style="font-size:11.5px;font-weight:700;color:#1f7a3d;margin-bottom:5px">✅ New ActorKey — copy it to the Pi NOW, it will not be shown again:</div><pre style="background:#0f1b2d;color:#cfe0f4;border-radius:7px;padding:9px 11px;font-size:12px;overflow:auto;margin:0;user-select:all">'+esc(UI.acFreshKey)+'</pre></div>' : '';
+  var regen = (iot && aid) ? '<div style="margin-top:9px;display:flex;align-items:center;gap:10px;flex-wrap:wrap"><button class="composebtn" onclick="acRegenKey(\''+esc(aid)+'\')">♻ Regenerate ActorKey</button><span style="font-size:11px;color:var(--grey)">Issues a new key; any Pi on the old key stops until reflashed.</span></div>' : '';
+  return '<div style="border:1px solid #cfe0f4;background:#f2f7fd;border-radius:10px;padding:10px 12px;margin:10px 0"><div style="font-weight:700;font-size:12px;color:#2c5aa0;margin-bottom:4px">🔑 Connection string</div><pre style="background:#0f1b2d;color:#cfe0f4;border-radius:7px;padding:9px 11px;font-size:11px;overflow:auto;margin:0;line-height:1.5">'+lines+'</pre>'+fresh+regen+'</div>';
+}
+async function acRegenKey(id){
+  try{ var r=await api('connectorRegen',{params:{actorId:id},body:{}}); UI.acFreshKey=(r&&r.provision_key)||null;
+    if(!UI.acFreshKey && typeof toast==='function')toast('No key returned.'); else if(typeof toast==='function')toast('New ActorKey issued — copy it now.');
+    paintAcDetail(); }
+  catch(e){ if(typeof toast==='function')toast((e&&e.message)||'Regenerate failed'); }
 }
 function _addDeviceForm(x,iot){
   var spec = iot ? '<label class="fl">Topic</label><input class="inp" id="ad_topic" placeholder="sensors/line1/temp" style="width:100%"><label class="fl">Device id</label><input class="inp" id="ad_dev" placeholder="edge-gw-01" style="width:100%">'
@@ -217,7 +226,7 @@ function paintAcDetail(){ const dp=document.getElementById('detailpane'); if(dp)
 function selectActor(id, silent){ UI.acSel=id; UI.acMode='view'; UI.acDet=(UI.acts||[]).find(a=>a.id===id)||null;
   if((UI.vp==='mob') && !silent){ UI.mdetail=true; const p=document.getElementById('panel'); if(p)p.classList.add('showdetail'); }
   paintAcList(); paintAcDetail();
-  if(UI.acDet && typeof acTypeOf==='function' && (acTypeOf(UI.acDet)==='iot'||acTypeOf(UI.acDet)==='erp')){ UI.acConns=undefined; UI.acProv=undefined; UI.acProvOpen=false; UI.acAddDev=false; acLoadDevices(id); }   // Pi selected → load its devices
+  if(UI.acDet && typeof acTypeOf==='function' && (acTypeOf(UI.acDet)==='iot'||acTypeOf(UI.acDet)==='erp')){ UI.acConns=undefined; UI.acProv=undefined; UI.acProvOpen=false; UI.acAddDev=false; UI.acFreshKey=null; acLoadDevices(id); }   // Pi selected → load its devices
 }
 function setAcMode(m){ UI.acMode=m; paintAcDetail(); }
 function setAcFlt(f){ UI.acFlt=f; UI.acSel=null; UI.acDet=null; const mb=document.getElementById('mainbody'); if(mb)mb.innerHTML=mainBody(); }   // re-render tabs+rows together (was repainting rows only -> stale highlight)
