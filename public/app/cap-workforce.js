@@ -12,8 +12,9 @@ function coassistsScreen(){
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:14px">🧑‍🤝‍🧑 Co-assists</span><button onclick="openAssist('coassists')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:#fff;color:#3F66A6;border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button></div>
       <div style="display:flex;gap:7px"><input class="inp" id="ac_add" placeholder="New actor — person, device, system or agent" style="flex:1" readonly onclick="openActorWiz()"><button class="composebtn" onclick="openActorWiz()">+ New</button></div>
       <div class="srch" style="margin-top:8px">🔍 <input placeholder="Search name, role, key" value="${esc(UI.acQ||'')}" oninput="UI.acQ=this.value;paintAcList()"></div>
-      <div style="display:flex;align-items:center;gap:6px;margin-top:8px;font-size:11px;color:var(--grey)">
+      <div style="display:flex;align-items:center;gap:6px;margin-top:8px;font-size:11px;color:var(--grey);flex-wrap:wrap">
         <span style="display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden">${['active','inactive','all'].map(f=>`<button onclick="setAcFlt('${f}')" style="border:0;background:${acFlt()===f?'var(--blue)':'#fff'};color:${acFlt()===f?'#fff':'var(--grey)'};font-weight:700;font-size:11px;padding:4px 9px;text-transform:capitalize">${f}</button>`).join('')}</span>
+        <span style="display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden">${[['all','All'],['human','👤'],['iot','🛰️'],['erp','🔌']].map(t=>`<button onclick="setAcTypeF('${t[0]}')" title="${t[0]==='all'?'all types':t[0]}" style="border:0;background:${(UI.acTypeF||'all')===t[0]?'var(--blue)':'#fff'};color:${(UI.acTypeF||'all')===t[0]?'#fff':'var(--grey)'};font-weight:700;font-size:11px;padding:4px 9px">${t[1]}</button>`).join('')}</span>
         <span style="margin-left:auto" id="ac_count">${acVisible().length}</span></div>
     </div>
     <div class="rows" id="ac_rows">${UI._acLoading?'<div class="loadwrap"><span class="spin"></span> loading…</div>':acRowsHTML()}</div>
@@ -60,6 +61,7 @@ async function awFinish(){
     var pk=r2&&r2.provision_key;
     UI.awResult='<div style="text-align:center"><div style="font-size:34px;margin:8px 0 6px">'+(t==='iot'?'🔑':'🔌')+'</div><div style="font-weight:700;font-size:16px">'+(t==='iot'?'Connection string issued':'System connected')+'</div>'+(pk?('<div style="font-size:12px;color:#3a4048;margin-top:10px">ActorKey — shown once, copy it to the Pi:</div><pre style="background:#0f1b2d;color:#cfe0f4;border-radius:8px;padding:10px 12px;font-size:12px;overflow:auto;margin:8px 0 0;user-select:all">'+esc(pk)+'</pre>'):('<div style="font-size:12.5px;color:#3a4048;margin-top:10px">Add its '+(t==='iot'?'devices':'endpoints')+' in Connectors.</div>'))+'</div>';
     UI.awStep='done'; UI.awErr=null; UI.connectors=undefined; awRender();
+    if(UI.nav==='coassists' && typeof loadCoassists==='function') loadCoassists();   // refresh the panel so the new Pi/system shows immediately
   }catch(e){ UI.awErr=(e&&e.message)||'Create failed'; awRender(); }
 }
 function _awPreviewHtml(t){
@@ -121,7 +123,10 @@ function awRender(){
   var pos=(r&&r.height>240)?('top:'+Math.round(r.top)+'px;left:'+Math.round(r.left)+'px;width:'+Math.round(r.width)+'px;height:'+Math.round(r.height)+'px'):('top:'+barH+'px;left:0;right:0;bottom:0');
   host.innerHTML='<div style="position:fixed;'+pos+';background:#fff;z-index:400;display:flex;flex-direction:column;overflow:hidden;box-shadow:-8px 0 24px rgba(0,0,0,.08)">'+head+mid+footbar+'</div>';
 }
+function setAcTypeF(t){ UI.acTypeF=t; if(typeof renderApp==='function')renderApp(); }   // filter the panel by actor TYPE (human/iot/erp)
+function acTypeOf(x){ return ((UI._connMap||{})[x.id]) || (x.type||'human'); }            // connector_type (iot/erp) wins, else the actor type
 function acVisible(){ let a=(UI.acts||[]).filter(x=>acFlt()==='all'?true:(acFlt()==='inactive'?x.status!=='active':x.status==='active'));
+  const tf=UI.acTypeF||'all'; if(tf!=='all')a=a.filter(x=>acTypeOf(x)===tf);
   const q=(UI.acQ||'').trim().toLowerCase(); if(q)a=a.filter(x=>((x.name||'')+' '+(x.role||'')+' '+(x.key||'')+' '+(x.type||'')).toLowerCase().includes(q)); return a; }
 function acRowHTML(x){ const dim=x.status!=='active'?'opacity:.55':'';
   const coverNm=x.del?((UI._acNames||{})[x.del]||'—'):''; const coversNames=(UI._coversNames||{})[x.id]||[];
