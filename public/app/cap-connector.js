@@ -168,18 +168,21 @@ function _buildInstaller(cfg){
   L.push('echo "Spool: drop <event>.json (and image) into $DIR/spool to raise an exception"');
   return L.join('\n')+'\n';
 }
-async function acCreatePackage(id){
-  if(!window.confirm('Create package REGENERATES the key (the old one stops working). The Pi must run the new file. Continue?')) return;
-  try{
-    var rk=await api('connectorRegen',{params:{actorId:id},body:{}}); var key=rk&&rk.provision_key;
-    if(!key){ if(typeof toast==='function')toast('No key issued.'); return; }
-    var r=await api('connectorConns',{params:{actorId:id}});
-    var devs=((r&&r.connections)||[]).filter(function(c){return c.enabled!==false;}).map(function(c){ var cf=c.conn_config||{}; return {bridge_id:c.bridge_id, ref:c.ref, folder:cf.folder||null, classes:cf.classes||null}; });
-    var cfg={ endpoint:'https://chitbridge-api-production.up.railway.app', key:key, heartbeat_sec:60, spool_dir:'/opt/chitbridge/spool', devices:devs };
-    _download('chitbridge-install.sh', _buildInstaller(cfg));
-    UI.acFreshKey=key; UI.acProvOpen=true; paintAcDetail();
-    if(typeof toast==='function')toast('Package downloaded — copy it to the Pi and run: sudo bash chitbridge-install.sh');
-  }catch(e){ if(typeof toast==='function')toast((e&&e.message)||'Package failed'); }
+function acCreatePackage(id){
+  var run=async function(){
+    try{
+      var rk=await api('connectorRegen',{params:{actorId:id},body:{}}); var key=rk&&rk.provision_key;
+      if(!key){ if(typeof toast==='function')toast('No key issued.'); return; }
+      var r=await api('connectorConns',{params:{actorId:id}});
+      var devs=((r&&r.connections)||[]).filter(function(c){return c.enabled!==false;}).map(function(c){ var cf=c.conn_config||{}; return {bridge_id:c.bridge_id, ref:c.ref, folder:cf.folder||null, classes:cf.classes||null}; });
+      var cfg={ endpoint:'https://chitbridge-api-production.up.railway.app', key:key, heartbeat_sec:60, spool_dir:'/opt/chitbridge/spool', devices:devs };
+      _download('chitbridge-install.sh', _buildInstaller(cfg));
+      UI.acFreshKey=key; UI.acProvOpen=true; paintAcDetail();
+      if(typeof toast==='function')toast('Package downloaded — copy it to the Pi and run: sudo bash chitbridge-install.sh');
+    }catch(e){ if(typeof toast==='function')toast((e&&e.message)||'Package failed'); }
+  };
+  if(typeof confirmAsk==='function') confirmAsk('Create package', 'This <b>reissues the device key</b> — the old key stops working, so the Pi must run the new installer. Continue?', 'Create &amp; download', run, true);
+  else if(window.confirm('Create package reissues the key (the old one stops). Continue?')) run();
 }
 
 /* self-register the Tier-2 renderer so the generic dispatcher (acOpenManage) finds it after this module lazy-loads */
