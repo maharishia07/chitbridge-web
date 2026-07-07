@@ -21,13 +21,22 @@ if(typeof piCockpit==='function'){ ACTOR_MANAGE.iot=ACTOR_MANAGE.iot||piCockpit;
 // GOVERNANCE hook (invisible to end users): merge governed type defs (with their constraints) into the registry — no core change.
 function acMergeTypes(defs){ if(defs&&typeof defs==='object'){ Object.keys(defs).forEach(function(k){ window.ACTOR_TYPES[k]=Object.assign({},window.ACTOR_TYPES[k]||{},defs[k]); }); if(typeof paintAcList==='function')paintAcList(); if(typeof renderApp==='function')renderApp(); } }
 // generic showcase opener — loads a STANDALONE HTML page FROM THE SERVER in an overlay iframe (no showcase markup in JS; content is an asset, fetched on demand). Reusable: openShowcase('/iot-howitworks.html','How IoT works').
-function openShowcase(url, title){
+// paneFrame — REUSABLE overlay sizing. Reuses the app's OWN two-panel coordinates (no guessing): laptop = fit the
+// RIGHT/detail pane's MEASURED rect (the proven co-assist technique); mobile = bottom-HALF sheet. Any overlay uses this.
+function paneFrame(){
   var mob=(typeof UI!=='undefined' && UI.vp==='mob');
-  // size to the DEVICE, not content: laptop = near-full overlay; mobile = bottom-HALF sheet.
-  var pos = mob ? 'top:50%;left:0;right:0;bottom:0;border-radius:16px 16px 0 0' : 'top:22px;left:22px;right:22px;bottom:22px;border-radius:14px';
+  if(mob) return {css:'top:50%;left:0;right:0;bottom:0', radius:'16px 16px 0 0'};   // mobile: half-view sheet
+  var pane=document.getElementById('detailpane')||document.getElementById('panel')||document.querySelector('.panel');
+  var r=pane?pane.getBoundingClientRect():null;
+  if(r && r.width>240 && r.height>200) return {css:'top:'+Math.round(r.top)+'px;left:'+Math.round(r.left)+'px;width:'+Math.round(r.width)+'px;height:'+Math.round(r.height)+'px', radius:'14px'};
+  var bar=document.querySelector('.topbar'); var barH=bar?Math.round(bar.getBoundingClientRect().height):52;
+  return {css:'top:'+barH+'px;right:0;bottom:0;width:60%', radius:'14px'};   // fallback: right pane region
+}
+function openShowcase(url, title){
+  var f=paneFrame();
   var host=document.getElementById('showcaseHost')||document.createElement('div'); host.id='showcaseHost';
   host.innerHTML='<div style="position:fixed;inset:0;background:rgba(15,22,32,.45);z-index:600" onclick="closeShowcase()"></div>'
-    +'<div style="position:fixed;'+pos+';background:#fff;z-index:601;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.3);display:flex;flex-direction:column">'
+    +'<div style="position:fixed;'+f.css+';border-radius:'+f.radius+';background:#fff;z-index:601;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.3);display:flex;flex-direction:column">'
     +'<div style="display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line);flex:none"><b style="font-size:15px">'+esc(title||'How it works')+'</b><button onclick="closeShowcase()" title="Close" style="margin-left:auto;border:0;background:transparent;font-size:22px;line-height:1;cursor:pointer;color:var(--grey)">×</button></div>'
     +'<iframe src="'+esc(url)+'" title="'+esc(title||'')+'" style="flex:1;width:100%;border:0;display:block;background:#f4f6f8"></iframe></div>';
   document.body.appendChild(host);
