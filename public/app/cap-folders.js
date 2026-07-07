@@ -55,9 +55,14 @@ function _folderView(){
   if(UI.folderChits===undefined) list='<div style="padding:16px;color:var(--grey);font-size:12.5px">Loading…</div>';
   else if(!UI.folderChits.length) list='<div style="padding:22px 18px;color:var(--grey);font-size:12.5px">Nothing '+(arch?'in Archive':'here')+' yet. From Task, use 📁 Move to file a chit into this folder.</div>';
   else list=UI.folderChits.map(function(c){
-    var subj=esc(c.manual_subject||c.auto_subject||'(no subject)'); var from=esc(c.sender_entity_display_name||''); var when=(typeof fmtAt==='function'?esc(fmtAt(c.created_at)):'');
+    var bj=c.business_json; if(typeof bj==='string'){ try{ bj=JSON.parse(bj); }catch(e){ bj=null; } }
+    var isDev=!!(bj&&bj.kind==='device_signal');
+    var subj=esc(c.manual_subject||c.auto_subject||'(no subject)');
+    var raiser=esc(c.raiser_name||(isDev&&bj.device_id)||c.sender_entity_display_name||'—');
+    var line2 = isDev ? ('🛰️ '+esc(bj.sub_type||bj.signal||'signal')+((bj.value!=null&&bj.value!=='')?(' = '+esc(String(bj.value))+esc(bj.unit||'')):'')+' · raised by <b>'+raiser+'</b>') : ('from '+esc(c.sender_entity_display_name||raiser));
+    var when=(typeof fmtAt==='function'?esc(fmtAt(c.created_at)):'');
     var openA=(typeof openChit==='function')?('openChit(\''+c.chit_id+'\')'):'';
-    return '<div style="display:flex;gap:11px;padding:12px 18px;border-bottom:1px solid #f0f2f4;cursor:pointer" onclick="'+openA+'"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13.5px">'+subj+'</div><div style="font-size:11.5px;color:var(--grey);margin-top:2px">from '+from+'</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex:0 0 auto"><span style="font-size:11px;color:var(--grey)">'+when+'</span><span style="font-size:11px;color:var(--blue);border:1px solid #cfe0f4;background:#f2f7fd;border-radius:8px;padding:2px 8px" onclick="event.stopPropagation();moveChit(\''+c.chit_id+'\')">📁 Move</span></div></div>';
+    return '<div style="display:flex;gap:11px;padding:12px 18px;border-bottom:1px solid #f0f2f4;cursor:pointer" onclick="'+openA+'"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13.5px">'+(isDev?'🛢️ ':'')+subj+'</div><div style="font-size:11.5px;color:var(--grey);margin-top:2px">'+line2+'</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex:0 0 auto"><span style="font-size:11px;color:var(--grey)">'+when+'</span><span style="font-size:11px;color:var(--blue);border:1px solid #cfe0f4;background:#f2f7fd;border-radius:8px;padding:2px 8px" onclick="event.stopPropagation();moveChit(\''+c.chit_id+'\')">📁 Move</span></div></div>';
   }).join('');
   return head+'<div style="overflow:auto">'+list+'</div>';
 }
