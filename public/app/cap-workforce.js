@@ -20,19 +20,6 @@ window.ACTOR_MANAGE = window.ACTOR_MANAGE || {};                     // type -> 
 if(typeof piCockpit==='function'){ ACTOR_MANAGE.iot=ACTOR_MANAGE.iot||piCockpit; ACTOR_MANAGE.erp=ACTOR_MANAGE.erp||piCockpit; }
 // GOVERNANCE hook (invisible to end users): merge governed type defs (with their constraints) into the registry — no core change.
 function acMergeTypes(defs){ if(defs&&typeof defs==='object'){ Object.keys(defs).forEach(function(k){ window.ACTOR_TYPES[k]=Object.assign({},window.ACTOR_TYPES[k]||{},defs[k]); }); if(typeof paintAcList==='function')paintAcList(); if(typeof renderApp==='function')renderApp(); } }
-/* connector endpoints — registered here too (Connectors page is dismounted; connectors live in Co-assists) */
-if (typeof EP !== 'undefined') {
-  Object.assign(EP, {
-    connectorConns:      {m:'GET',   p:'/api/connectors/:actorId/connections',         ok:'y'},
-    connectorConnAdd:    {m:'POST',  p:'/api/connectors/:actorId/connections',         ok:'y'},
-    connectorConnToggle: {m:'PATCH', p:'/api/connectors/:actorId/connections/:connId', ok:'y'},
-    connectorProvision:  {m:'GET',   p:'/api/connectors/:actorId/provisioning',        ok:'y'},
-    connectorRegen:      {m:'POST',  p:'/api/connectors/:actorId/regenerate-key',      ok:'y'},
-    connectorPing:       {m:'POST',  p:'/api/connectors/:actorId/ping',                ok:'y'},
-    connectorCreate:     {m:'POST',  p:'/api/connectors',                              ok:'y'},
-    connectorList:       {m:'GET',   p:'/api/connectors',                              ok:'y'},
-  });
-}
 function coassistsScreen(){
   const list = `<div class="list">
     <div class="lh">
@@ -154,176 +141,12 @@ function awRender(){
  *    selected actor is a connector, acDetailHTML renders this COCKPIT instead of the human profile. Principle:
  *    STATIC stuff (health · connection string · add) lives in the STICKY TOP as icons; the DEVICE LIST scrolls
  *    below (so 15 devices never bury the connection string). Reuses the connector API (b62). ══ */
-async function acLoadDevices(id){
-  UI.acConnsErr=null;
-  var ok=false, lastErr=null;                          // retry once — a cold-start blip must NOT silently show "no devices"
-  for(var i=0;i<2 && !ok;i++){
-    try{ var r=await api('connectorConns',{params:{actorId:id}}); UI.acConns=(r&&r.connections)||[]; UI.acHealth=(r&&r.actor_health)||'offline'; UI.acLastSeen=(r&&r.actor_last_seen)||null; ok=true; }
-    catch(e){ lastErr=e; }
-  }
-  if(!ok){ UI.acConns=[]; UI.acHealth='offline'; UI.acConnsErr=(lastErr&&lastErr.message)||'Could not load devices'; }
-  try{ UI.acProv=await api('connectorProvision',{params:{actorId:id}}); }catch(_){ UI.acProv=null; }
-  if(UI.acSel===id) paintAcDetail();
-}
-function _hdot(h){ var m={live:'#2f8f5b',slow:'#c9962a',offline:'#c0453b'}; return '<span title="'+esc(h||'')+'" style="display:inline-block;width:9px;height:9px;border-radius:50%;background:'+(m[h]||'#9aa3a7')+'"></span>'; }
-function _sig(s){ if(s==='no_signal')return '<span style="color:#c0453b;font-weight:700;font-size:11px">○ no signal</span>'; if(s==='live')return '<span style="color:#2f8f5b;font-weight:700;font-size:11px">● live</span>'; if(s==='slow')return '<span style="color:#c9962a;font-weight:700;font-size:11px">◐ slow</span>'; return '<span style="color:#9aa3a7;font-weight:700;font-size:11px">○ silent</span>'; }
-function piCockpit(x){
-  var iot=acTypeOf(x)==='iot', health=UI.acHealth||'offline';
-  var tchip=iot?'<span class="optchip" style="background:#eaf2fb;color:#2c5aa0;border-color:#cfe0f4">🛰️ IoT</span>':'<span class="optchip" style="background:#f1ecf9;color:#6b3fa0;border-color:#ddcff2">🔌 ERP</span>';
-  var ico=function(t,title,on){ return '<button title="'+title+'" onclick="'+on+'" style="border:1px solid var(--line);background:#fff;border-radius:9px;width:34px;height:34px;cursor:pointer;font-size:15px">'+t+'</button>'; };
-  var header='<div style="position:sticky;top:0;background:#fff;z-index:5;padding-bottom:10px;border-bottom:1px solid var(--line)">'
-    +'<button class="dback" onclick="backToList()">‹ Co-assists</button>'
-    +'<div style="display:flex;align-items:center;gap:9px;margin-top:6px"><span style="font-size:16px;font-weight:700">'+esc(x.name)+'</span> '+tchip+' '+_hdot(health)
-      +'<span style="margin-left:auto;display:inline-flex;gap:7px">'+ico('⚡','Test connection',"acPing('"+x.id+"')")+ico('🔑','Connection string',"UI.acProvOpen=!UI.acProvOpen;paintAcDetail()")+(iot?ico('📦','Create package — one-drop Pi installer',"acCreatePackage('"+x.id+"')"):'')+ico('＋','Add '+(iot?'device':'endpoint'),"UI.acAddDev=!UI.acAddDev;paintAcDetail()")+'</span></div>'
-    +'<div style="font-size:11.5px;color:var(--grey);margin-top:3px">📍 '+esc(x.site||'no site')+' · '+esc(health)+'</div></div>';
-  var offline = health==='offline' ? '<div style="background:#fbeceb;border:1px solid #f0c9c6;color:#b4453f;border-radius:10px;padding:9px 11px;font-size:12px;font-weight:600;margin:10px 0">⚠ '+(iot?'Gateway':'System')+' OFFLINE — no '+(iot?'device':'endpoint')+' below can signal until it is back.</div>' : '';
-  var prov = UI.acProvOpen ? _provPanel(iot, x.id) : '';
-  var addf = UI.acAddDev ? _addDeviceForm(x,iot) : '';
-  var _loadingT=(UI.acConns===undefined); var _cn=_loadingT?[]:(UI.acConns||[]); var _live=_cn.filter(function(c){return c.signal==='live';}).length; var _agoT=_ago(UI.acLastSeen);
-  var tiles='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:14px 0">'
-    +_tile(iot?'Devices':'Endpoints', _loadingT?'—':_cn.length)
-    +_tile('Live now', _loadingT?'—':('<span style="display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:middle;background:'+(_live>0?'#2f8f5b':'#c0453b')+';margin-right:6px"></span>'+_live+' <small style="font-size:12px;color:#586069;font-weight:600">/ '+_cn.length+'</small>'))
-    +_tile('Last signal', _loadingT?'—':(_agoT||'—'))
-    +'</div>';
-  var conns=UI.acConns, list;
-  if(conns===undefined) list='<div style="padding:16px;color:var(--grey);font-size:12.5px">Loading…</div>';
-  else if(UI.acConnsErr) list='<div style="padding:10px 2px;color:#c0453b;font-size:12px">⚠ '+esc(UI.acConnsErr)+' <button class="composebtn" style="padding:2px 9px;font-size:11px;margin-left:6px" onclick="acLoadDevices(\''+x.id+'\')">Retry</button></div>';
-  else if(!conns.length) list='<div style="padding:10px 2px;color:var(--grey);font-size:12.5px">No '+(iot?'devices':'endpoints')+' yet. Tap ＋ to add one.</div>';
-  else list=conns.map(function(c){ var cfg=c.conn_config||{}; var det=iot?[cfg.folder?('📁 '+cfg.folder):null,(cfg.classes&&cfg.classes.length)?('🏷 '+cfg.classes.join('/')):null,cfg.topic,cfg.device_id].filter(Boolean).join(' · '):(cfg.path||'');
-    return '<div style="display:flex;align-items:center;gap:9px;padding:10px 0;border-bottom:1px dashed var(--line);font-size:12.5px"><div style="flex:1;min-width:0"><b>'+esc(c.ref)+'</b>'+(c.bridge_id?' <code style="background:#f6f6f4;border:1px solid #eee;border-radius:5px;padding:0 5px;font-size:10.5px;color:var(--grey)">'+esc(c.bridge_id)+'</code>':'')+(det?'<div style="color:var(--grey);font-size:11px;margin-top:1px">'+esc(det)+'</div>':'')+'</div>'+_sig(c.enabled===false?'silent':c.signal)+'<button class="composebtn" style="padding:2px 9px;font-size:11px" onclick="acToggleDevice(\''+x.id+'\','+c.connection_id+','+(c.enabled?'false':'true')+')">'+(c.enabled?'Disable':'Enable')+'</button></div>';
-  }).join('');
-  return header+tiles+offline+prov+addf+'<div class="sec" style="margin-top:14px">'+(iot?'Devices':'Endpoints')+(conns?(' <span style="color:var(--grey);font-weight:400">('+conns.length+')</span>'):'')+'</div>'+list;
-}
-function _provPanel(iot, aid){
-  var p=UI.acProv; if(!p) return '<div style="padding:10px 2px;color:var(--grey);font-size:12px">Loading connection string…</div>';
-  var lines = iot ? 'Endpoint = '+esc(p.endpoint||'')+'\nActorKey = ••••••••  (secret — Regenerate to issue a fresh one)\nBridgeIds:\n'+((p.publishes||[]).map(function(z){return '  '+esc(z.bridge_id||'—')+'  '+esc(z.ref||'');}).join('\n')||'  (none yet)') : 'Base URL = '+esc(p.base_url||'—')+'\nAuth = '+esc(p.auth_type||'none')+(p.auth_ref?(' (ref: '+esc(p.auth_ref)+')'):'');
-  var fresh = (iot && UI.acFreshKey) ? '<div style="border:1px solid #bfe6c9;background:#eefaf0;border-radius:8px;padding:9px 11px;margin-top:9px"><div style="font-size:11.5px;font-weight:700;color:#1f7a3d;margin-bottom:5px">✅ New ActorKey — copy it to the Pi NOW, it will not be shown again:</div><pre style="background:#0f1b2d;color:#cfe0f4;border-radius:7px;padding:9px 11px;font-size:12px;overflow:auto;margin:0;user-select:all">'+esc(UI.acFreshKey)+'</pre></div>' : '';
-  var regen = (iot && aid) ? '<div style="margin-top:9px;display:flex;align-items:center;gap:10px;flex-wrap:wrap"><button class="composebtn" onclick="acRegenKey(\''+esc(aid)+'\')">♻ Regenerate ActorKey</button><span style="font-size:11px;color:var(--grey)">Issues a new key; any Pi on the old key stops until reflashed.</span></div>' : '';
-  return '<div style="border:1px solid #cfe0f4;background:#f2f7fd;border-radius:10px;padding:10px 12px;margin:10px 0"><div style="font-weight:700;font-size:12px;color:#2c5aa0;margin-bottom:4px">🔑 Connection string</div><pre style="background:#0f1b2d;color:#cfe0f4;border-radius:7px;padding:9px 11px;font-size:11px;overflow:auto;margin:0;line-height:1.5">'+lines+'</pre>'+fresh+regen+'</div>';
-}
-async function acRegenKey(id){
-  try{ var r=await api('connectorRegen',{params:{actorId:id},body:{}}); UI.acFreshKey=(r&&r.provision_key)||null;
-    if(!UI.acFreshKey && typeof toast==='function')toast('No key returned.'); else if(typeof toast==='function')toast('New ActorKey issued — copy it now.');
-    paintAcDetail(); }
-  catch(e){ if(typeof toast==='function')toast((e&&e.message)||'Regenerate failed'); }
-}
-function _addDeviceForm(x,iot){
-  var spec = iot ? '<label class="fl">Topic</label><input class="inp" id="ad_topic" placeholder="sensors/line1/temp" style="width:100%"><label class="fl">Device id</label><input class="inp" id="ad_dev" placeholder="edge-gw-01" style="width:100%">'
-                 : '<label class="fl">Resource path</label><input class="inp" id="ad_path" placeholder="/odata/PurchaseOrders" style="width:100%">';
-  return '<div style="border:1px dashed #c9d2dd;border-radius:10px;padding:12px;margin:10px 0;background:#fbfcfe"><div style="font-weight:700;font-size:12.5px;margin-bottom:2px">Add '+(iot?'device':'endpoint')+'</div>'
-    +'<label class="fl">Name</label><input class="inp" id="ad_ref" placeholder="'+(iot?'Cold-store temp':'PO inbound')+'" style="width:100%">'+spec
-    +(iot?('<label class="fl">Folder — file its exceptions here <span style="font-weight:400;color:var(--grey)">(a name you choose, under this entity)</span></label><input class="inp" id="ad_folder" placeholder="e.g. Gate log" style="width:100%">'
-         +'<label class="fl">Keep — exception classes <span style="font-weight:400;color:var(--grey)">(comma-sep · blank = all; group / count by these)</span></label><input class="inp" id="ad_classes" placeholder="lorry, tanker" style="width:100%">'):'')
-    +'<label class="fl">CC <span style="font-weight:400;color:var(--grey)">(optional — another entity id who also co-holds the proof)</span></label><input class="inp" id="ad_cp" placeholder="another entity id" style="width:100%">'
-    +'<div class="err" id="ad_err" style="margin-top:6px"></div>'
-    +'<div style="display:flex;gap:8px;margin-top:10px"><button class="composebtn pri" onclick="acAddDevice(\''+x.id+'\','+(iot?'true':'false')+')">Add</button><button class="composebtn" onclick="UI.acAddDev=false;paintAcDetail()">Cancel</button></div></div>';
-}
-async function acAddDevice(id, iot){
-  var ref=(val('ad_ref')||'').trim(), err=document.getElementById('ad_err'); if(err)err.textContent='';
-  if(!ref){ if(err)err.textContent='A name is required.'; return; }
-  var _cls=(val('ad_classes')||'').split(',').map(function(s){return s.trim();}).filter(Boolean);
-  var config = iot ? {protocol:'mqtts', topic:(val('ad_topic')||'').trim()||undefined, device_id:(val('ad_dev')||'').trim()||undefined, folder:(val('ad_folder')||'').trim()||undefined, classes:_cls.length?_cls:undefined} : {path:(val('ad_path')||'').trim()||undefined};
-  var cp = (val('ad_cp')||'').trim()||undefined;   // counterparty entity id — where this device's signals route as chits
-  try{ await api('connectorConnAdd',{params:{actorId:id},body:{ref:ref,direction:'in',config:config,counterparty_entity_id:cp}}); UI.acAddDev=false; if(typeof toast==='function')toast('Added.'); await acLoadDevices(id); }
-  catch(e){ if(err)err.textContent=(e&&e.message)||'Add failed'; }
-}
-async function acToggleDevice(id, connId, enabled){
-  try{ await api('connectorConnToggle',{params:{actorId:id,connId:connId},body:{enabled:enabled}}); await acLoadDevices(id); }
-  catch(e){ if(typeof toast==='function')toast((e&&e.message)||'Update failed'); }
-}
-async function acPing(id){
-  try{ await api('connectorPing',{params:{actorId:id},body:{}}); if(typeof toast==='function')toast('Ping sent — marked live.'); await acLoadDevices(id); }
-  catch(e){ if(typeof toast==='function')toast((e&&e.message)||'Ping failed'); }
-}
-// ═══ #3 · CREATE PACKAGE → one-drop installer. Rotates the key (only a fresh key can be embedded — we store only the
-//     hash), bundles endpoint + key + device routing + a long-running AGENT (heartbeat + spool drain w/ store-and-forward)
-//     + a systemd service, all as an install.sh generated in-browser (key never sits at a URL). Run: sudo bash it on the Pi.
-function _download(name, text){
-  try{ var b=new Blob([text],{type:'text/x-shellscript'}); var u=URL.createObjectURL(b); var a=document.createElement('a');
-    a.href=u; a.download=name; document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(u); a.remove(); },600); }
-  catch(e){ if(typeof toast==='function')toast('Download failed'); }
-}
-function _agentJs(){ return [
-  '#!/usr/bin/env node',
-  '// Chit & Bridge IoT agent (long-running). Heartbeats each device + drains a SPOOL directory (store-and-forward).',
-  '// Your edge AI writes <name>.json into the spool, e.g:  {"bridge_id":"CB..","sub_type":"tanker","value":"1","image":"/path/frame.jpg"}',
-  'var fs=require("fs"), path=require("path"), https=require("https"), URL=require("url").URL;',
-  'var CFG=JSON.parse(fs.readFileSync(path.join(__dirname,"config.json"),"utf8"));',
-  'var SPOOL=CFG.spool_dir||path.join(__dirname,"spool"), SENT=path.join(__dirname,"sent");',
-  'try{ fs.mkdirSync(SPOOL,{recursive:true}); fs.mkdirSync(SENT,{recursive:true}); }catch(e){}',
-  'function post(body){ return new Promise(function(res,rej){ var base=String(CFG.endpoint); if(base.slice(-1)==="/")base=base.slice(0,-1);',
-  '  var u=new URL(base+"/api/connectors/ingest"); var data=JSON.stringify(body);',
-  '  var r=https.request({method:"POST",hostname:u.hostname,port:u.port||443,path:u.pathname,headers:{"Content-Type":"application/json","X-Bridge-Key":CFG.key,"Content-Length":Buffer.byteLength(data)}},function(x){ var b=""; x.on("data",function(c){b+=c;}); x.on("end",function(){ if(x.statusCode>=400)rej(new Error("HTTP "+x.statusCode+" "+b.slice(0,120))); else{ try{res(JSON.parse(b));}catch(e){res(b);} } }); }); r.on("error",rej); r.write(data); r.end(); }); }',
-  'function heartbeat(){ (CFG.devices||[]).forEach(function(d){ post({bridge_id:d.bridge_id,heartbeat_only:true}).catch(function(e){ console.error("[hb]",d.bridge_id,e.message); }); }); }',
-  'function drain(){ var files=[]; try{ files=fs.readdirSync(SPOOL).filter(function(f){return f.slice(-5)===".json";}); }catch(e){ return; }',
-  '  files.forEach(function(f){ var fp=path.join(SPOOL,f), ev; try{ ev=JSON.parse(fs.readFileSync(fp,"utf8")); }catch(e){ return; }',
-  '    var proof; if(ev.image){ try{ proof=fs.readFileSync(path.isAbsolute(ev.image)?ev.image:path.join(SPOOL,ev.image)).toString("base64"); }catch(e){} }',
-  '    post({bridge_id:ev.bridge_id,sub_type:ev.sub_type,signal:ev.signal||"exception",value:ev.value,unit:ev.unit,device_id:ev.device_id,proof:proof,proof_name:ev.image?path.basename(ev.image):undefined})',
-  '      .then(function(out){ console.log("[sent]",f,(out&&out.chit_id)||""); try{ fs.renameSync(fp,path.join(SENT,f)); }catch(e){} if(ev.image){ try{ fs.unlinkSync(path.isAbsolute(ev.image)?ev.image:path.join(SPOOL,ev.image)); }catch(e){} } })',
-  '      .catch(function(e){ console.error("[retry]",f,e.message); }); });',
-  '}',
-  'console.log("[chitbridge] agent up · devices",(CFG.devices||[]).length,"· spool",SPOOL);',
-  'heartbeat(); drain(); setInterval(function(){ heartbeat(); drain(); }, (CFG.heartbeat_sec||60)*1000);'
-].join('\n'); }
-function _buildInstaller(cfg){
-  var ndev=(cfg.devices||[]).length, cfgJson=JSON.stringify(cfg,null,2), agent=_agentJs();
-  var L=[];
-  L.push('#!/usr/bin/env bash');
-  L.push('set -e');
-  L.push('echo "== Chit and Bridge IoT agent installer =="');
-  L.push('if ! command -v node >/dev/null 2>&1; then');
-  L.push('  echo "Installing Node.js...";');
-  L.push('  (command -v apt-get >/dev/null 2>&1 && sudo apt-get update -y && sudo apt-get install -y nodejs) || { echo "Please install Node.js manually, then re-run."; exit 1; }');
-  L.push('fi');
-  L.push('DIR=/opt/chitbridge');
-  L.push('sudo mkdir -p "$DIR/spool" "$DIR/sent"');
-  L.push("sudo tee \"$DIR/config.json\" >/dev/null <<'CBCFG'");
-  L.push(cfgJson);
-  L.push('CBCFG');
-  L.push("sudo tee \"$DIR/agent.js\" >/dev/null <<'CBAGENT'");
-  L.push(agent);
-  L.push('CBAGENT');
-  L.push("sudo tee /etc/systemd/system/chitbridge.service >/dev/null <<'CBSVC'");
-  L.push('[Unit]');
-  L.push('Description=Chit and Bridge IoT agent');
-  L.push('After=network-online.target');
-  L.push('Wants=network-online.target');
-  L.push('[Service]');
-  L.push('ExecStart=/usr/bin/env node /opt/chitbridge/agent.js');
-  L.push('Restart=always');
-  L.push('RestartSec=5');
-  L.push('[Install]');
-  L.push('WantedBy=multi-user.target');
-  L.push('CBSVC');
-  L.push('sudo systemctl daemon-reload');
-  L.push('sudo systemctl enable chitbridge >/dev/null 2>&1 || true');
-  L.push('sudo systemctl restart chitbridge');
-  L.push('echo ""');
-  L.push('echo "Installed and running. Devices: '+ndev+'"');
-  L.push('echo "Logs:  journalctl -u chitbridge -f"');
-  L.push('echo "Spool: drop <event>.json (and image) into $DIR/spool to raise an exception"');
-  return L.join('\n')+'\n';
-}
-async function acCreatePackage(id){
-  if(!window.confirm('Create package REGENERATES the key (the old one stops working). The Pi must run the new file. Continue?')) return;
-  try{
-    var rk=await api('connectorRegen',{params:{actorId:id},body:{}}); var key=rk&&rk.provision_key;
-    if(!key){ if(typeof toast==='function')toast('No key issued.'); return; }
-    var r=await api('connectorConns',{params:{actorId:id}});
-    var devs=((r&&r.connections)||[]).filter(function(c){return c.enabled!==false;}).map(function(c){ var cf=c.conn_config||{}; return {bridge_id:c.bridge_id, ref:c.ref, folder:cf.folder||null, classes:cf.classes||null}; });
-    var cfg={ endpoint:'https://chitbridge-api-production.up.railway.app', key:key, heartbeat_sec:60, spool_dir:'/opt/chitbridge/spool', devices:devs };
-    _download('chitbridge-install.sh', _buildInstaller(cfg));
-    UI.acFreshKey=key; UI.acProvOpen=true; paintAcDetail();
-    if(typeof toast==='function')toast('Package downloaded — copy it to the Pi and run: sudo bash chitbridge-install.sh');
-  }catch(e){ if(typeof toast==='function')toast((e&&e.message)||'Package failed'); }
-}
 function setAcTypeF(t){ UI.acTypeF=t; if(typeof renderApp==='function')renderApp(); }   // filter the panel by actor TYPE (human/iot/erp)
 function acTypeOf(x){ return ((UI._connMap||{})[x.id]) || (x.type||'human'); }            // connector_type (iot/erp) wins, else the actor type
 function acVisible(){ let a=(UI.acts||[]).filter(x=>acFlt()==='all'?true:(acFlt()==='inactive'?x.status!=='active':x.status==='active'));
   const tf=UI.acTypeF||'all'; if(tf!=='all')a=a.filter(x=>acTypeOf(x)===tf);
   const q=(UI.acQ||'').trim().toLowerCase(); if(q)a=a.filter(x=>((x.name||'')+' '+(x.role||'')+' '+(x.key||'')+' '+(x.type||'')).toLowerCase().includes(q)); return a; }
 function _ago(ts){ if(!ts)return ''; var s=Math.floor((Date.now()-new Date(ts).getTime())/1000); if(s<0)s=0; if(s<60)return s+'s ago'; var m=Math.floor(s/60); if(m<60)return m+'m ago'; var h=Math.floor(m/60); if(h<24)return h+'h ago'; return Math.floor(h/24)+'d ago'; }
-function _tile(k,v){ return '<div style="background:#f4f6f8;border:1px solid var(--line);border-radius:11px;padding:10px 11px;min-width:0"><div style="font-size:10.5px;color:var(--grey);text-transform:uppercase;letter-spacing:.03em">'+k+'</div><div style="font-size:19px;font-weight:800;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+v+'</div></div>'; }
 // IoT/ERP list row — health + last-active + device count (NOT the human hat/shift/invite/tasks row)
 function _iotRowHTML(x){ var info=(UI._connInfo||{})[x.id]||{}; var t=(info.type||(typeof acTypeOf==='function'&&acTypeOf(x))||'iot'); var iot=t!=='erp';
   var h=info.health||'offline'; var hc={live:'#2f8f5b',slow:'#c9962a',offline:'#c0453b'}[h]||'#b9b9b9'; var ago=_ago(info.last_seen);
@@ -351,13 +174,50 @@ function paintAcDetail(){ const dp=document.getElementById('detailpane'); if(dp)
 function selectActor(id, silent){ UI.acSel=id; UI.acMode='view'; UI.acDet=(UI.acts||[]).find(a=>a.id===id)||null;
   if((UI.vp==='mob') && !silent){ UI.mdetail=true; const p=document.getElementById('panel'); if(p)p.classList.add('showdetail'); }
   paintAcList(); paintAcDetail();
-  if(UI.acDet && typeof acTypeOf==='function' && (acTypeOf(UI.acDet)==='iot'||acTypeOf(UI.acDet)==='erp')){ UI.acConns=undefined; UI.acProv=undefined; UI.acProvOpen=false; UI.acAddDev=false; UI.acFreshKey=null; acLoadDevices(id); }   // Pi selected → load its devices
+  if(UI.acDet && typeof acTypeOf==='function'){ var _st=acTypeOf(UI.acDet); var _sreg=(window.ACTOR_TYPES||{})[_st]||{}; if(_sreg.capability){ UI.acManageOpen=false; UI.acManageLoading=false; UI.acManageErr=null; UI.acConns=undefined; UI.acProv=undefined; UI.acProvOpen=false; UI.acAddDev=false; UI.acFreshKey=null; } }   // connector selected: instant Tier-1, management loads on drill
 }
 function setAcMode(m){ UI.acMode=m; paintAcDetail(); }
 function setAcFlt(f){ UI.acFlt=f; UI.acSel=null; UI.acDet=null; const mb=document.getElementById('mainbody'); if(mb)mb.innerHTML=mainBody(); }   // re-render tabs+rows together (was repainting rows only -> stale highlight)
+/* ═══ TWO-TIER DISPATCHER (view layer) — Tier-1 = instant header summary from flags; Tier-2 = lazy management.
+ *     acOpenManage is the invocation: show spinner → ensureCap(module) → per-type data load → render the cockpit. ═══ */
+async function acOpenManage(id){
+  var x=(UI.acts||[]).find(function(a){return a.id===id;})||UI.acDet; if(!x) return;
+  UI.acSel=id; UI.acDet=x; UI.acManageOpen=true; UI.acManageErr=null;
+  var _t=(typeof acTypeOf==='function'?acTypeOf(x):'human'); var reg=(window.ACTOR_TYPES||{})[_t]||{};
+  if(!(window.ACTOR_MANAGE||{})[_t] && reg.module && typeof ensureCap==='function'){
+    UI.acManageLoading=true; paintAcDetail();
+    try{ await ensureCap(reg.module); }catch(e){ UI.acManageErr=(e&&e.message)||'Could not load management'; }
+    UI.acManageLoading=false;
+  }
+  if(reg.load && typeof window[reg.load]==='function'){ try{ window[reg.load](id); }catch(_){} }   // per-type data fetch (repaints when done)
+  paintAcDetail();
+}
+function _acTierSummary(x){
+  var _t=(typeof acTypeOf==='function'?acTypeOf(x):'human'); var reg=(window.ACTOR_TYPES||{})[_t]||{};
+  var info=(UI._connInfo||{})[x.id]||{}; var h=info.health||'offline';
+  var hc={live:'#2f8f5b',slow:'#c9962a',offline:'#c0453b'}[h]||'#9aa3a7'; var cnt=(info.count!=null?info.count:0);
+  return '<div style="padding:16px">'
+    +'<button class="dback" onclick="backToList()">‹ Co-assists</button>'
+    +'<div style="display:flex;align-items:center;gap:11px;margin-top:8px"><span style="font-size:26px">'+(reg.icon||'🔌')+'</span>'
+      +'<div style="min-width:0"><div style="font-size:17px;font-weight:800">'+esc(x.name)+'</div><div style="font-size:12px;color:var(--grey)">'+esc(reg.label||'')+' · 📍 '+esc(info.site||x.site||'no site')+'</div></div>'
+      +'<span style="margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:12.5px;color:'+hc+'"><span style="width:9px;height:9px;border-radius:50%;background:'+hc+';display:inline-block"></span>'+esc(h)+'</span></div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:15px 0">'
+      +'<div style="background:#f4f6f8;border:1px solid var(--line);border-radius:11px;padding:11px 12px"><div style="font-size:10.5px;color:var(--grey);text-transform:uppercase;letter-spacing:.03em">Devices</div><div style="font-size:20px;font-weight:800;margin-top:2px">'+cnt+'</div></div>'
+      +'<div style="background:#f4f6f8;border:1px solid var(--line);border-radius:11px;padding:11px 12px"><div style="font-size:10.5px;color:var(--grey);text-transform:uppercase;letter-spacing:.03em">Health</div><div style="font-size:16px;font-weight:800;margin-top:4px;color:'+hc+'">'+esc(h)+'</div></div>'
+    +'</div>'
+    +'<button class="composebtn pri" style="width:100%;padding:11px" onclick="acOpenManage(\''+x.id+'\')">Open '+esc(reg.label||'management')+' cockpit →</button>'
+    +'<div style="font-size:11px;color:var(--grey);margin-top:8px;text-align:center">Loads its devices, connection string &amp; package on demand.</div></div>';
+}
+function _acTierLoader(x){
+  var _t=(typeof acTypeOf==='function'?acTypeOf(x):''); var reg=(window.ACTOR_TYPES||{})[_t]||{};
+  return '<div style="padding:16px"><button class="dback" onclick="backToList()">‹ Co-assists</button>'
+    +'<div style="padding:46px 16px;text-align:center;color:var(--grey)"><span class="spin" style="display:inline-block;margin-bottom:12px"></span><div>Loading '+esc(reg.label||'')+' cockpit…</div>'
+    +(UI.acManageErr?('<div style="color:#c0453b;margin-top:12px;font-size:12.5px">'+esc(UI.acManageErr)+' <button class="composebtn" style="padding:2px 9px;font-size:11px;margin-left:6px" onclick="acOpenManage(\''+x.id+'\')">Retry</button></div>'):'')+'</div></div>';
+}
 function acDetailHTML(){ const x=UI.acDet;
   if(!x) return `<div class="empty"><div class="big">🧑‍🤝‍🧑</div><div class="t">Select a co-assist</div><div>Pick one to see their profile, shift and access — or manage them.</div></div>`;
-  if(typeof acTypeOf==='function' && (acTypeOf(x)==='iot'||acTypeOf(x)==='erp')) return piCockpit(x);   // a Pi / system → its device cockpit (not the human profile)
+  var _dt=(typeof acTypeOf==='function'?acTypeOf(x):'human'); var _dreg=(window.ACTOR_TYPES||{})[_dt]||{};
+  if(_dreg.capability){ if(!(UI.acManageOpen && UI.acSel===x.id)) return _acTierSummary(x); var _mh=(window.ACTOR_MANAGE||{})[_dt]; if(UI.acManageLoading || typeof _mh!=='function') return _acTierLoader(x); return _mh(x); }   // TWO-TIER: instant summary, management loads on drill
   const back=`<button class="dback" onclick="backToList()">‹ Co-assists</button>`;
   const seg=(m,l)=>`<button onclick="setAcMode('${m}')" style="border:0;background:${(UI.acMode==='edit'?'edit':'view')===m?'var(--ink)':'#fff'};color:${(UI.acMode==='edit'?'edit':'view')===m?'#fff':'var(--grey)'};font-size:12px;font-weight:700;padding:6px 15px">${l}</button>`;
   const toggle=`<div style="display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-top:10px">${seg('view','View')}${seg('edit','Edit')}</div>`;
