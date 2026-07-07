@@ -144,7 +144,7 @@ async function acLoadDevices(id){
   UI.acConnsErr=null;
   var ok=false, lastErr=null;                          // retry once — a cold-start blip must NOT silently show "no devices"
   for(var i=0;i<2 && !ok;i++){
-    try{ var r=await api('connectorConns',{params:{actorId:id}}); UI.acConns=(r&&r.connections)||[]; UI.acHealth=(r&&r.actor_health)||'offline'; ok=true; }
+    try{ var r=await api('connectorConns',{params:{actorId:id}}); UI.acConns=(r&&r.connections)||[]; UI.acHealth=(r&&r.actor_health)||'offline'; UI.acLastSeen=(r&&r.actor_last_seen)||null; ok=true; }
     catch(e){ lastErr=e; }
   }
   if(!ok){ UI.acConns=[]; UI.acHealth='offline'; UI.acConnsErr=(lastErr&&lastErr.message)||'Could not load devices'; }
@@ -165,6 +165,12 @@ function piCockpit(x){
   var offline = health==='offline' ? '<div style="background:#fbeceb;border:1px solid #f0c9c6;color:#b4453f;border-radius:10px;padding:9px 11px;font-size:12px;font-weight:600;margin:10px 0">⚠ '+(iot?'Gateway':'System')+' OFFLINE — no '+(iot?'device':'endpoint')+' below can signal until it is back.</div>' : '';
   var prov = UI.acProvOpen ? _provPanel(iot, x.id) : '';
   var addf = UI.acAddDev ? _addDeviceForm(x,iot) : '';
+  var _loadingT=(UI.acConns===undefined); var _cn=_loadingT?[]:(UI.acConns||[]); var _live=_cn.filter(function(c){return c.signal==='live';}).length; var _agoT=_ago(UI.acLastSeen);
+  var tiles='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:14px 0">'
+    +_tile(iot?'Devices':'Endpoints', _loadingT?'—':_cn.length)
+    +_tile('Live now', _loadingT?'—':('<span style="display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:middle;background:'+(_live>0?'#2f8f5b':'#c0453b')+';margin-right:6px"></span>'+_live+' <small style="font-size:12px;color:#586069;font-weight:600">/ '+_cn.length+'</small>'))
+    +_tile('Last signal', _loadingT?'—':(_agoT||'—'))
+    +'</div>';
   var conns=UI.acConns, list;
   if(conns===undefined) list='<div style="padding:16px;color:var(--grey);font-size:12.5px">Loading…</div>';
   else if(UI.acConnsErr) list='<div style="padding:10px 2px;color:#c0453b;font-size:12px">⚠ '+esc(UI.acConnsErr)+' <button class="composebtn" style="padding:2px 9px;font-size:11px;margin-left:6px" onclick="acLoadDevices(\''+x.id+'\')">Retry</button></div>';
@@ -172,7 +178,7 @@ function piCockpit(x){
   else list=conns.map(function(c){ var cfg=c.conn_config||{}; var det=iot?[cfg.topic,cfg.device_id].filter(Boolean).join(' · '):(cfg.path||'');
     return '<div style="display:flex;align-items:center;gap:9px;padding:10px 0;border-bottom:1px dashed var(--line);font-size:12.5px"><div style="flex:1;min-width:0"><b>'+esc(c.ref)+'</b>'+(c.bridge_id?' <code style="background:#f6f6f4;border:1px solid #eee;border-radius:5px;padding:0 5px;font-size:10.5px;color:var(--grey)">'+esc(c.bridge_id)+'</code>':'')+(det?'<div style="color:var(--grey);font-size:11px;margin-top:1px">'+esc(det)+'</div>':'')+'</div>'+_sig(c.enabled===false?'silent':c.signal)+'<button class="composebtn" style="padding:2px 9px;font-size:11px" onclick="acToggleDevice(\''+x.id+'\','+c.connection_id+','+(c.enabled?'false':'true')+')">'+(c.enabled?'Disable':'Enable')+'</button></div>';
   }).join('');
-  return header+offline+prov+addf+'<div class="sec" style="margin-top:14px">'+(iot?'Devices':'Endpoints')+(conns?(' <span style="color:var(--grey);font-weight:400">('+conns.length+')</span>'):'')+'</div>'+list;
+  return header+tiles+offline+prov+addf+'<div class="sec" style="margin-top:14px">'+(iot?'Devices':'Endpoints')+(conns?(' <span style="color:var(--grey);font-weight:400">('+conns.length+')</span>'):'')+'</div>'+list;
 }
 function _provPanel(iot, aid){
   var p=UI.acProv; if(!p) return '<div style="padding:10px 2px;color:var(--grey);font-size:12px">Loading connection string…</div>';
@@ -217,7 +223,20 @@ function acTypeOf(x){ return ((UI._connMap||{})[x.id]) || (x.type||'human'); }  
 function acVisible(){ let a=(UI.acts||[]).filter(x=>acFlt()==='all'?true:(acFlt()==='inactive'?x.status!=='active':x.status==='active'));
   const tf=UI.acTypeF||'all'; if(tf!=='all')a=a.filter(x=>acTypeOf(x)===tf);
   const q=(UI.acQ||'').trim().toLowerCase(); if(q)a=a.filter(x=>((x.name||'')+' '+(x.role||'')+' '+(x.key||'')+' '+(x.type||'')).toLowerCase().includes(q)); return a; }
-function acRowHTML(x){ const dim=x.status!=='active'?'opacity:.55':'';
+function _ago(ts){ if(!ts)return ''; var s=Math.floor((Date.now()-new Date(ts).getTime())/1000); if(s<0)s=0; if(s<60)return s+'s ago'; var m=Math.floor(s/60); if(m<60)return m+'m ago'; var h=Math.floor(m/60); if(h<24)return h+'h ago'; return Math.floor(h/24)+'d ago'; }
+function _tile(k,v){ return '<div style="background:#f4f6f8;border:1px solid var(--line);border-radius:11px;padding:10px 11px;min-width:0"><div style="font-size:10.5px;color:var(--grey);text-transform:uppercase;letter-spacing:.03em">'+k+'</div><div style="font-size:19px;font-weight:800;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+v+'</div></div>'; }
+// IoT/ERP list row — health + last-active + device count (NOT the human hat/shift/invite/tasks row)
+function _iotRowHTML(x){ var info=(UI._connInfo||{})[x.id]||{}; var t=(info.type||(typeof acTypeOf==='function'&&acTypeOf(x))||'iot'); var iot=t!=='erp';
+  var h=info.health||'offline'; var hc={live:'#2f8f5b',slow:'#c9962a',offline:'#c0453b'}[h]||'#b9b9b9'; var ago=_ago(info.last_seen);
+  var cnt=(info.count!=null?info.count:0); var dim=x.status!=='active'?'opacity:.55':'';
+  var typechip='<span class="optchip" style="background:'+(iot?'#E7F0FB':'#F0EAF9')+';color:'+(iot?'#2b5c9c':'#6a44a8')+';border-color:transparent">'+(iot?'🛰️ IoT':'🔌 ERP')+'</span>';
+  return `<div class="row ${x.id===UI.acSel?'sel':''}" data-ac="${x.id}" style="${dim}" onclick="selectActor('${x.id}')">
+    <div style="width:9px;height:9px;border-radius:50%;flex:0 0 auto;margin-top:5px;background:${hc}"></div>
+    <div class="main2"><div class="l1"><span class="code">${esc(x.name)}</span>${typechip}<span class="amt" style="margin-left:auto;font-size:11px;color:${hc};font-weight:600">${esc(h)}${ago?(' · '+esc(ago)):''}</span></div>
+      <div class="l2">📍 ${esc(info.site||x.site||'no site')} · <b>${cnt}</b> ${iot?(cnt===1?'device':'devices'):(cnt===1?'endpoint':'endpoints')}</div></div>
+    <div class="rowgo" aria-hidden="true">›</div></div>`; }
+function acRowHTML(x){ if(typeof acTypeOf==='function'){ var _ct=acTypeOf(x); if(_ct==='iot'||_ct==='erp') return _iotRowHTML(x); }
+  const dim=x.status!=='active'?'opacity:.55':'';
   const coverNm=x.del?((UI._acNames||{})[x.del]||'—'):''; const coversNames=(UI._coversNames||{})[x.id]||[];
   const coverLines=(x.del||coversNames.length)?'<div style="font-size:11px;color:var(--grey);margin-top:3px;line-height:1.45">'+(x.del?('🛡 Covered by <b style="color:var(--ink);font-weight:600">'+coverNm+'</b>'):'')+((x.del&&coversNames.length)?'<br>':'')+(coversNames.length?('🤝 Covers for <b style="color:var(--ink);font-weight:600">'+coversNames.join(', ')+'</b>'):'')+'</div>':'';
   return `<div class="row ${x.id===UI.acSel?'sel':''}" data-ac="${x.id}" style="${dim}" onclick="selectActor('${x.id}')">
@@ -348,9 +367,9 @@ async function loadConnMap(){
   try{
     if(!((SESSION.capabilities||[]).indexOf('connector')>=0)){ UI._connMap={}; return; }
     if(typeof ensureCap==='function'){ await ensureCap('connector'); }   // registers the connectorList EP + selectConnector for Manage
-    const r=await api('connectorList'); const map={};
-    ((r&&r.connectors)||[]).forEach(function(c){ map[c.identity_id]=c.connector_type; });
-    UI._connMap=map; paintAcList(); if(UI.acDet)paintAcDetail();
+    const r=await api('connectorList'); const map={}, info={};
+    ((r&&r.connectors)||[]).forEach(function(c){ map[c.identity_id]=c.connector_type; info[c.identity_id]={type:c.connector_type,health:c.health,count:c.connection_count,last_seen:c.last_seen,site:c.site}; });
+    UI._connMap=map; UI._connInfo=info; paintAcList(); if(UI.acDet)paintAcDetail();
   }catch(_){ UI._connMap=UI._connMap||{}; }   // b57 not applied / capability off -> simply don't annotate
 }
 function _connChip(id){ const t=(UI._connMap||{})[id]; if(!t)return ''; const iot=t==='iot';
