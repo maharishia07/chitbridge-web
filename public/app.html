@@ -1197,8 +1197,8 @@ function priChip(p){ return (!p||p==="normal")?"":`<span class="prichip pri-${p}
 let UI = {...UI0, selected:new Set(), aggStates:new Set(["open","act","close"])};
 
 const MENUS = {
-  entity:{top:[["compose","✉️","Compose",""],["task","📥","Task",""],["order","📤","Order",""],["drafts","📝","Drafts",""],["trash","🗑️","Trash",""],["archive","🗄️","Archive",""]], rest:[["network","🔗","Network"],["suppliers","🏭","Suppliers"],["catalogue","🗂️","Catalogue"],["coassists","🧑‍🤝‍🧑","Co-assists"],["mis","📊","MIS"],["disputes","⚖️","Disputes"],["profile","👤","Profile"],["settings","⚙️","Settings"],["assistreview","🧠","Assistant"]], tag:"Owner does structure."},
-  actor:{top:[["compose","✉️","Compose",""],["task","📥","Task",""],["order","📤","Order",""],["drafts","📝","Drafts",""],["trash","🗑️","Trash",""],["archive","🗄️","Archive",""]], rest:[["suppliers","🏭","Suppliers"],["profile","👤","Profile"]], tag:"Commerce yes, structure no."},
+  entity:{top:[["compose","✉️","Compose",""],["task","📥","Task",""],["order","📤","Order",""],["folders","📁","Folders",""],["drafts","📝","Drafts",""],["trash","🗑️","Trash",""],["archive","🗄️","Archive",""]], rest:[["network","🔗","Network"],["suppliers","🏭","Suppliers"],["catalogue","🗂️","Catalogue"],["coassists","🧑‍🤝‍🧑","Co-assists"],["mis","📊","MIS"],["disputes","⚖️","Disputes"],["profile","👤","Profile"],["settings","⚙️","Settings"],["assistreview","🧠","Assistant"]], tag:"Owner does structure."},
+  actor:{top:[["compose","✉️","Compose",""],["task","📥","Task",""],["order","📤","Order",""],["folders","📁","Folders",""],["drafts","📝","Drafts",""],["trash","🗑️","Trash",""],["archive","🗄️","Archive",""]], rest:[["suppliers","🏭","Suppliers"],["profile","👤","Profile"]], tag:"Commerce yes, structure no."},
   customer:{top:[["order","📤","My orders",""]], rest:[["shops","🏬","Find a shop"]], tag:"You see only your orders."},
 };
 const PURPOSE = {
@@ -1222,7 +1222,7 @@ const PURPOSE = {
    /app/cap-<name>.js (classic script, shared global scope). CAP_OF maps a screen to its
    capability; unlisted screens are Core (eager, always loaded). renderApp shows "Loading…"
    and re-renders once the capability arrives. Grow CAP_OF as screens migrate out. */
-const CAP_OF = { mis:'admin', profile:'admin', settings:'admin', coassists:'workforce', assistreview:'admin', connectors:'connector', disputes:'dispute' };
+const CAP_OF = { mis:'admin', profile:'admin', settings:'admin', coassists:'workforce', assistreview:'admin', connectors:'connector', disputes:'dispute', folders:'folders' };
 // nav items gated by an entity capability (the itemised toggle) — hidden unless SESSION.capabilities holds the key.
 const CAP_GATED = { connectors:'connector', disputes:'dispute' };
 const CAP_LOADED = {};
@@ -1963,7 +1963,8 @@ function acLbl(a){ return a?(esc(a.name)+' <span class="mono" style="color:var(-
 
 function mainBody(){
   if(["task","order","drafts","trash","archive"].includes(UI.nav)) return taskPanel();
-  if(UI.nav==="disputes") return disputesScreen();
+  if(UI.nav==="folders") return foldersScreen();
+      if(UI.nav==="disputes") return disputesScreen();
   if(UI.nav==="profile") return profileScreen();
   if(UI.nav==="settings") return settingsScreen();
   if(UI.nav==="network") return networkScreen();
