@@ -147,10 +147,10 @@ function acTypeOf(x){ return ((UI._connMap||{})[x.id]) || (x.type||'human'); }  
 function acVisible(){ let a=(UI.acts||[]).filter(x=>acFlt()==='all'?true:(acFlt()==='inactive'?x.status!=='active':x.status==='active'));
   const tf=UI.acTypeF||'all'; if(tf!=='all')a=a.filter(x=>acTypeOf(x)===tf);
   const q=(UI.acQ||'').trim().toLowerCase(); if(q)a=a.filter(x=>((x.name||'')+' '+(x.role||'')+' '+(x.key||'')+' '+(x.type||'')).toLowerCase().includes(q)); return a; }
-function _ago(ts){ if(!ts)return ''; var s=Math.floor((Date.now()-new Date(ts).getTime())/1000); if(s<0)s=0; if(s<60)return s+'s ago'; var m=Math.floor(s/60); if(m<60)return m+'m ago'; var h=Math.floor(m/60); if(h<24)return h+'h ago'; return Math.floor(h/24)+'d ago'; }
+function _ago(ts){ return timeAgo(ts); }   // shared: helpers.js timeAgo
 // IoT/ERP list row — health + last-active + device count (NOT the human hat/shift/invite/tasks row)
 function _iotRowHTML(x){ var info=(UI._connInfo||{})[x.id]||{}; var t=(info.type||(typeof acTypeOf==='function'&&acTypeOf(x))||'iot'); var iot=t!=='erp';
-  var h=info.health||'offline'; var hc={live:'#2f8f5b',slow:'#c9962a',offline:'#c0453b'}[h]||'#b9b9b9'; var ago=_ago(info.last_seen);
+  var h=info.health||'offline'; var hc=healthColor(h); var ago=_ago(info.last_seen);
   var cnt=(info.count!=null?info.count:0); var dim=x.status!=='active'?'opacity:.55':'';
   var typechip='<span class="optchip" style="background:'+(iot?'#E7F0FB':'#F0EAF9')+';color:'+(iot?'#2b5c9c':'#6a44a8')+';border-color:transparent">'+(iot?'🛰️ IoT':'🔌 ERP')+'</span>';
   return `<div class="row ${x.id===UI.acSel?'sel':''}" data-ac="${x.id}" style="${dim}" onclick="selectActor('${x.id}')">
@@ -196,7 +196,7 @@ async function acOpenManage(id){
 function _acTierSummary(x){
   var _t=(typeof acTypeOf==='function'?acTypeOf(x):'human'); var reg=(window.ACTOR_TYPES||{})[_t]||{};
   var info=(UI._connInfo||{})[x.id]||{}; var h=info.health||'offline';
-  var hc={live:'#2f8f5b',slow:'#c9962a',offline:'#c0453b'}[h]||'#9aa3a7'; var cnt=(info.count!=null?info.count:0);
+  var hc=healthColor(h); var cnt=(info.count!=null?info.count:0);
   return '<div style="padding:16px">'
     +'<button class="dback" onclick="backToList()">‹ Co-assists</button>'
     +'<div style="display:flex;align-items:center;gap:11px;margin-top:8px"><span style="font-size:26px">'+(reg.icon||'🔌')+'</span>'

@@ -28,8 +28,8 @@ async function acLoadDevices(id){
   try{ UI.acProv=await api('connectorProvision',{params:{actorId:id}}); }catch(_){ UI.acProv=null; }
   if(UI.acSel===id) paintAcDetail();
 }
-function _hdot(h){ var m={live:'#2f8f5b',slow:'#c9962a',offline:'#c0453b'}; return '<span title="'+esc(h||'')+'" style="display:inline-block;width:9px;height:9px;border-radius:50%;background:'+(m[h]||'#9aa3a7')+'"></span>'; }
-function _sig(s){ if(s==='no_signal')return '<span style="color:#c0453b;font-weight:700;font-size:11px">○ no signal</span>'; if(s==='live')return '<span style="color:#2f8f5b;font-weight:700;font-size:11px">● live</span>'; if(s==='slow')return '<span style="color:#c9962a;font-weight:700;font-size:11px">◐ slow</span>'; return '<span style="color:#9aa3a7;font-weight:700;font-size:11px">○ silent</span>'; }
+function _hdot(h){ return healthDot(h); }   // shared: helpers.js healthDot/sigLabel
+function _sig(s){ return sigLabel(s); }
 function _tile(k,v){ return '<div style="background:#f4f6f8;border:1px solid var(--line);border-radius:11px;padding:10px 11px;min-width:0"><div style="font-size:10.5px;color:var(--grey);text-transform:uppercase;letter-spacing:.03em">'+k+'</div><div style="font-size:19px;font-weight:800;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+v+'</div></div>'; }
 function piCockpit(x){
   var iot=acTypeOf(x)==='iot', health=UI.acHealth||'offline';
