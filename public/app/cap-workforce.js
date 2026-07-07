@@ -206,8 +206,8 @@ function _acTierSummary(x){
       +'<div style="background:#f4f6f8;border:1px solid var(--line);border-radius:11px;padding:11px 12px"><div style="font-size:10.5px;color:var(--grey);text-transform:uppercase;letter-spacing:.03em">Devices</div><div style="font-size:20px;font-weight:800;margin-top:2px">'+cnt+'</div></div>'
       +'<div style="background:#f4f6f8;border:1px solid var(--line);border-radius:11px;padding:11px 12px"><div style="font-size:10.5px;color:var(--grey);text-transform:uppercase;letter-spacing:.03em">Health</div><div style="font-size:16px;font-weight:800;margin-top:4px;color:'+hc+'">'+esc(h)+'</div></div>'
     +'</div>'
-    +'<button class="composebtn pri" style="width:100%;padding:11px" onclick="acOpenManage(\''+x.id+'\')">Open '+esc(reg.label||'management')+' cockpit →</button>'
-    +'<div style="font-size:11px;color:var(--grey);margin-top:8px;text-align:center">Loads its devices, connection string &amp; package on demand.</div></div>';
+    +'<button class="composebtn pri" style="width:100%;padding:13px;font-size:13.5px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="acOpenManage(\''+x.id+'\')"><span style="font-size:16px">🛠️</span> Click to open the '+esc(reg.label||'')+' cockpit <span style="opacity:.85">→</span></button>'
+    +'<div style="font-size:11px;color:var(--grey);margin-top:8px;text-align:center">👆 Opens its devices, connection string &amp; package — loaded on click.</div></div>';
 }
 function _acTierLoader(x){
   var _t=(typeof acTypeOf==='function'?acTypeOf(x):''); var reg=(window.ACTOR_TYPES||{})[_t]||{};
