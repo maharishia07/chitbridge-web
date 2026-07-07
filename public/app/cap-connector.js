@@ -14,6 +14,7 @@ if (typeof EP !== 'undefined') {
     connectorPing:       {m:'POST',  p:'/api/connectors/:actorId/ping',                ok:'y'},
     connectorCreate:     {m:'POST',  p:'/api/connectors',                              ok:'y'},
     connectorList:       {m:'GET',   p:'/api/connectors',                              ok:'y'},
+    connectorDelete:     {m:'DELETE',p:'/api/connectors/:actorId',                     ok:'y'},
   });
 }
 
@@ -38,7 +39,7 @@ function piCockpit(x){
   var header='<div style="position:sticky;top:0;background:#fff;z-index:5;padding-bottom:10px;border-bottom:1px solid var(--line)">'
     +'<button class="dback" onclick="backToList()">‹ Co-assists</button>'
     +'<div style="display:flex;align-items:center;gap:9px;margin-top:6px"><span style="font-size:16px;font-weight:700">'+esc(x.name)+'</span> '+tchip+' '+_hdot(health)
-      +'<span style="margin-left:auto;display:inline-flex;gap:7px">'+ico('⚡','Test connection',"acPing('"+x.id+"')")+ico('🔑','Connection string',"UI.acProvOpen=!UI.acProvOpen;paintAcDetail()")+(iot?ico('📦','Create package — one-drop Pi installer',"acCreatePackage('"+x.id+"')"):'')+ico('＋','Add '+(iot?'device':'endpoint'),"UI.acAddDev=!UI.acAddDev;paintAcDetail()")+'</span></div>'
+      +'<span style="margin-left:auto;display:inline-flex;gap:7px">'+ico('⚡','Test connection',"acPing('"+x.id+"')")+ico('🔑','Connection string',"UI.acProvOpen=!UI.acProvOpen;paintAcDetail()")+(iot?ico('📦','Create package — one-drop Pi installer',"acCreatePackage('"+x.id+"')"):'')+ico('＋','Add '+(iot?'device':'endpoint'),"UI.acAddDev=!UI.acAddDev;paintAcDetail()")+ico('🗑','Delete this '+(iot?'gateway':'system'),"acDeleteConnector('"+x.id+"','"+esc(x.name).replace(/'/g,"\\'")+"')")+'</span></div>'
     +'<div style="font-size:11.5px;color:var(--grey);margin-top:3px">📍 '+esc(x.site||'no site')+' · '+esc(health)+'</div></div>';
   var offline = health==='offline' ? '<div style="background:#fbeceb;border:1px solid #f0c9c6;color:#b4453f;border-radius:10px;padding:9px 11px;font-size:12px;font-weight:600;margin:10px 0">⚠ '+(iot?'Gateway':'System')+' OFFLINE — no '+(iot?'device':'endpoint')+' below can signal until it is back.</div>' : '';
   var prov = UI.acProvOpen ? _provPanel(iot, x.id) : '';
@@ -64,6 +65,20 @@ function _provPanel(iot, aid){
   var fresh = (iot && UI.acFreshKey) ? '<div style="border:1px solid #bfe6c9;background:#eefaf0;border-radius:8px;padding:9px 11px;margin-top:9px"><div style="font-size:11.5px;font-weight:700;color:#1f7a3d;margin-bottom:5px">✅ New ActorKey — copy it to the Pi NOW, it will not be shown again:</div><pre style="background:#0f1b2d;color:#cfe0f4;border-radius:7px;padding:9px 11px;font-size:12px;overflow:auto;margin:0;user-select:all">'+esc(UI.acFreshKey)+'</pre></div>' : '';
   var regen = (iot && aid) ? '<div style="margin-top:9px;display:flex;align-items:center;gap:10px;flex-wrap:wrap"><button class="composebtn" onclick="acRegenKey(\''+esc(aid)+'\')">♻ Regenerate ActorKey</button><span style="font-size:11px;color:var(--grey)">Issues a new key; any Pi on the old key stops until reflashed.</span></div>' : '';
   return '<div style="border:1px solid #cfe0f4;background:#f2f7fd;border-radius:10px;padding:10px 12px;margin:10px 0"><div style="font-weight:700;font-size:12px;color:#2c5aa0;margin-bottom:4px">🔑 Connection string</div><pre style="background:#0f1b2d;color:#cfe0f4;border-radius:7px;padding:9px 11px;font-size:11px;overflow:auto;margin:0;line-height:1.5">'+lines+'</pre>'+fresh+regen+'</div>';
+}
+// Delete a connector — RULE: only when it has NO devices attached; the backend returns 409 otherwise (we surface it).
+function acDeleteConnector(id, name){
+  var run=async function(){
+    try{
+      await api('connectorDelete',{params:{actorId:id}});
+      if(typeof toast==='function')toast('Deleted '+(name||'connector'));
+      UI.acSel=null; UI.connectors=undefined;
+      if(typeof backToList==='function') backToList();
+      if(typeof loadCoassists==='function') loadCoassists();
+    }catch(e){ if(typeof toast==='function')toast((e&&e.message)||'Delete failed — it may have devices attached.'); }
+  };
+  if(typeof confirmAsk==='function') confirmAsk('Delete connector', 'Delete <b>'+esc(name||'this connector')+'</b>? Only allowed if it has <b>no devices attached</b> — remove its devices first otherwise. This cannot be undone.', 'Delete', run, true);
+  else if(window.confirm('Delete '+(name||'this connector')+'? Only if it has no devices attached.')) run();
 }
 async function acRegenKey(id){
   try{ var r=await api('connectorRegen',{params:{actorId:id},body:{}}); UI.acFreshKey=(r&&r.provision_key)||null;
