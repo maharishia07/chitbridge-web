@@ -77,14 +77,17 @@ function deleteFolder(id){
   if(typeof confirmAsk==='function') confirmAsk('Delete folder','Delete this folder? Its chits are <b>not</b> deleted — they return to the main mailbox.','Delete',run,true);
   else if(window.confirm('Delete folder? Its chits return to the mailbox.')) run();
 }
-function moveChit(chitId){
+async function moveChit(chitId){
+  if(UI.folders===undefined){ try{ var rr=await api('foldersList'); UI.folders=(rr&&rr.folders)||[]; }catch(e){ UI.folders=[]; } }   // self-load so Move works from Task, not just the Folders screen
   var opts=(UI.folders||[]).map(function(f){ return '<div style="padding:9px 12px;border-bottom:1px solid #f0f2f4;cursor:pointer" onclick="_doMove(\''+chitId+'\',\''+f.folder_id+'\')">📁 '+esc(f.name)+'</div>'; }).join('');
   var body='<div style="max-height:320px;overflow:auto">'+(opts||'<div style="padding:12px;color:var(--grey);font-size:12px">No folders yet — create one first.</div>')+'<div style="padding:10px 12px;color:#c0453b;cursor:pointer;border-top:1px solid var(--line)" onclick="_doMove(\''+chitId+'\',null)">↩ Remove from folder (back to mailbox)</div></div>';
   if(typeof modal==='function') modal('<div class="mhd"><div class="t">📁 Move to folder</div></div><div class="mbody" style="padding:0">'+body+'</div>');
 }
 async function _doMove(chitId, folderId){
-  if(folderId==='null')folderId=null;
+  if(folderId==='null'||folderId==='')folderId=null;
   if(typeof closeModal==='function')closeModal();
-  try{ await api('folderMove',{body:{chit_id:chitId, folder_id:folderId}}); UI.folderChits=undefined; UI.folders=undefined; loadFolders(); if(typeof toast==='function')toast(folderId?'Filed.':'Removed from folder.'); }
-  catch(e){ if(typeof toast==='function')toast((e&&e.message)||'Move failed'); }
+  try{ await api('folderMove',{body:{chit_id:chitId, folder_id:folderId}}); if(typeof toast==='function')toast(folderId?'Filed into folder.':'Removed from folder.');
+    UI.folders=undefined; UI.folderChits=undefined;
+    if(UI.nav==='folders'){ loadFolders(); } else if(typeof loadList==='function'){ loadList(); }   // refresh Task (moved chit leaves the main list) or the folder view
+  }catch(e){ if(typeof toast==='function')toast((e&&e.message)||'Move failed'); }
 }
