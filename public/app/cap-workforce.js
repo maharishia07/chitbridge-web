@@ -6,6 +6,20 @@
  * addActorModal/submitActor/actorInviteModal/actorCleanupModal/confirmAsk, scr, esc, val, opt, toast,
  * modal/closeModal, announce, coId/acIdPrev, startDrag, openHelp, UI/SESSION/STORE.
  * Spec: chitbridge-api/docs/COASSIST-USECASES.md . Tests: COASSIST-REGRESSION.md. */
+/* ═══ ACTOR TYPE REGISTRY — build-one-add-more. The SINGLE list the core reads (filter · picker · detail · dispatch).
+ *     Seeded built-in; DESIGNED to be fed by the GOVERNANCE layer later (merge via acMergeTypes) with zero core change.
+ *     A type = {label, icon, capability, module, load, comingSoon}. New type = one entry (+ a lazy module, unless it's a
+ *     variant of an existing module). comingSoon:true → the icon shows + a "coming soon" path, before any capability exists. ═══ */
+window.ACTOR_TYPES = Object.assign({
+  human: { label:'Person',             icon:'👤', capability:null,        module:null,        load:null },
+  iot:   { label:'IoT device',         icon:'🛰️', capability:'connector', module:'connector', load:'acLoadDevices' },
+  erp:   { label:'ERP / API',          icon:'🔌', capability:'connector', module:'connector', load:'acLoadDevices' },
+  cloud: { label:'Cloud (Azure / AWS)', icon:'☁️', capability:'cloud',    module:null,        load:null, comingSoon:true },
+}, window.ACTOR_TYPES||{});
+window.ACTOR_MANAGE = window.ACTOR_MANAGE || {};                     // type -> Tier-2 management renderer (lazy modules self-register)
+if(typeof piCockpit==='function'){ ACTOR_MANAGE.iot=ACTOR_MANAGE.iot||piCockpit; ACTOR_MANAGE.erp=ACTOR_MANAGE.erp||piCockpit; }
+// GOVERNANCE hook (invisible to end users): merge governed type defs (with their constraints) into the registry — no core change.
+function acMergeTypes(defs){ if(defs&&typeof defs==='object'){ Object.keys(defs).forEach(function(k){ window.ACTOR_TYPES[k]=Object.assign({},window.ACTOR_TYPES[k]||{},defs[k]); }); if(typeof paintAcList==='function')paintAcList(); if(typeof renderApp==='function')renderApp(); } }
 /* connector endpoints — registered here too (Connectors page is dismounted; connectors live in Co-assists) */
 if (typeof EP !== 'undefined') {
   Object.assign(EP, {
@@ -27,7 +41,7 @@ function coassistsScreen(){
       <div class="srch" style="margin-top:8px">🔍 <input placeholder="Search name, role, key" value="${esc(UI.acQ||'')}" oninput="UI.acQ=this.value;paintAcList()"></div>
       <div style="display:flex;align-items:center;gap:6px;margin-top:8px;font-size:11px;color:var(--grey);flex-wrap:wrap">
         <span style="display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden">${['active','inactive','all'].map(f=>`<button onclick="setAcFlt('${f}')" style="border:0;background:${acFlt()===f?'var(--blue)':'#fff'};color:${acFlt()===f?'#fff':'var(--grey)'};font-weight:700;font-size:11px;padding:4px 9px;text-transform:capitalize">${f}</button>`).join('')}</span>
-        <span style="display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden">${[['all','All'],['human','👤'],['iot','🛰️'],['erp','🔌']].map(t=>`<button onclick="setAcTypeF('${t[0]}')" title="${t[0]==='all'?'all types':t[0]}" style="border:0;background:${(UI.acTypeF||'all')===t[0]?'var(--blue)':'#fff'};color:${(UI.acTypeF||'all')===t[0]?'#fff':'var(--grey)'};font-weight:700;font-size:11px;padding:4px 9px">${t[1]}</button>`).join('')}</span>
+        <span style="display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden">${['all'].concat(Object.keys(window.ACTOR_TYPES||{})).map(t=>{var reg=(window.ACTOR_TYPES||{})[t]||{};var on=(UI.acTypeF||'all')===t;var lbl=t==='all'?'All':(reg.icon||t);return `<button onclick="setAcTypeF('${t}')" title="${t==='all'?'all types':(reg.label||t)}${reg.comingSoon?' — coming soon':''}" style="border:0;background:${on?'var(--blue)':'#fff'};color:${on?'#fff':'var(--grey)'};font-weight:700;font-size:11px;padding:4px 9px${reg.comingSoon?';opacity:.55':''}">${lbl}</button>`;}).join('')}</span>
         <span style="margin-left:auto" id="ac_count">${acVisible().length}</span></div>
     </div>
     <div class="rows" id="ac_rows">${UI._acLoading?'<div class="loadwrap"><span class="spin"></span> loading…</div>':acRowsHTML()}</div>
@@ -329,7 +343,7 @@ function acRowHTML(x){ if(typeof acTypeOf==='function'){ var _ct=acTypeOf(x); if
     <div class="main2"><div class="l1"><span class="code">${esc(x.name)}</span><span class="optchip" style="background:#eef3fb;color:#345488;border-color:#cfe0f4">${hatLabel(x.hat)}</span>${_connChip(x.id)}${x.pinSet?'':(x.otp?'<span class="optchip" style="background:#fbf7ea;color:#7a5e22;border-color:#e6d9a8">⏳ invite</span>':'')}<span class="amt" style="margin-left:auto;font-size:11.5px;color:var(--grey)">${x.load}/${x.max||'∞'}</span></div>
       <div class="l2">${esc(x.role||'—')} · <span class="mono">${acLogin(x)}</span> <span class="optchip ${acShc(x.shift)}">${acShLabel(x.shift)}</span>${x.status!=='active'?'<span class="optchip off">'+esc(x.status)+'</span>':''}${(x.shift!=='on_shift'&&x.returnDate)?' · returns '+acDate(x.returnDate):''}</div>${coverLines}</div>
     <div class="rowgo" aria-hidden="true">›</div></div>`; }
-function acRowsHTML(){ const r=acVisible(); if(!r.length) return '<div class="empty"><div class="big">🧑‍🤝‍🧑</div><div class="t">No co-assists</div><div>Add one with <b>+ New</b> above.</div></div>';
+function acRowsHTML(){ const r=acVisible(); if(!r.length){ const _tf=UI.acTypeF||'all'; const _reg=(window.ACTOR_TYPES||{})[_tf]; if(_reg&&_reg.comingSoon) return '<div class="empty"><div class="big">'+(_reg.icon||'✨')+'</div><div class="t">'+esc(_reg.label)+' — coming soon</div><div>This capability is not enabled yet. When it is, you will add '+esc(_reg.label)+' co-assists right here — same flow, new type. <span style="color:var(--blue);font-weight:600">Notify me →</span></div></div>'; return '<div class="empty"><div class="big">🧑‍🤝‍🧑</div><div class="t">No co-assists</div><div>Add one with <b>+ New</b> above.</div></div>'; }
   const cc={},cn={},nm={}; (UI.acts||[]).forEach(a=>{ const _l=acLbl(a); nm[a.id]=_l; if(a.del){ cc[a.del]=(cc[a.del]||0)+1; (cn[a.del]=cn[a.del]||[]).push(_l); } }); UI._coversCount=cc; UI._coversNames=cn; UI._acNames=nm;   // reverse-delegate maps (name+userid labels), once
   return r.map(acRowHTML).join(''); }
 function paintAcList(){ const b=document.getElementById('ac_rows'); if(b)b.innerHTML=acRowsHTML(); const c=document.getElementById('ac_count'); if(c)c.textContent=acVisible().length; }
