@@ -141,7 +141,8 @@ function awRender(){
  *    selected actor is a connector, acDetailHTML renders this COCKPIT instead of the human profile. Principle:
  *    STATIC stuff (health · connection string · add) lives in the STICKY TOP as icons; the DEVICE LIST scrolls
  *    below (so 15 devices never bury the connection string). Reuses the connector API (b62). ══ */
-function setAcTypeF(t){ UI.acTypeF=t; if(typeof renderApp==='function')renderApp(); }   // filter the panel by actor TYPE (human/iot/erp)
+function acRefilter(){ UI.acSel=null; UI.acDet=null; UI.acManageOpen=false; UI.acManageLoading=false; UI.acManageErr=null; var mb=document.getElementById('mainbody'); if(mb)mb.innerHTML=mainBody(); if(UI.vp!=='mob'){ var f=(typeof acVisible==='function'?acVisible()[0]:null); if(f) selectActor(f.id, true); } }   // UNIFORM: any filter change resets the detail + lands on the first record header (desktop)
+function setAcTypeF(t){ UI.acTypeF=t; acRefilter(); }   // filter by actor TYPE
 function acTypeOf(x){ return ((UI._connMap||{})[x.id]) || (x.type||'human'); }            // connector_type (iot/erp) wins, else the actor type
 function acVisible(){ let a=(UI.acts||[]).filter(x=>acFlt()==='all'?true:(acFlt()==='inactive'?x.status!=='active':x.status==='active'));
   const tf=UI.acTypeF||'all'; if(tf!=='all')a=a.filter(x=>acTypeOf(x)===tf);
@@ -177,7 +178,7 @@ function selectActor(id, silent){ UI.acSel=id; UI.acMode='view'; UI.acDet=(UI.ac
   if(UI.acDet && typeof acTypeOf==='function'){ var _st=acTypeOf(UI.acDet); var _sreg=(window.ACTOR_TYPES||{})[_st]||{}; if(_sreg.capability){ UI.acManageOpen=false; UI.acManageLoading=false; UI.acManageErr=null; UI.acConns=undefined; UI.acProv=undefined; UI.acProvOpen=false; UI.acAddDev=false; UI.acFreshKey=null; } }   // connector selected: instant Tier-1, management loads on drill
 }
 function setAcMode(m){ UI.acMode=m; paintAcDetail(); }
-function setAcFlt(f){ UI.acFlt=f; UI.acSel=null; UI.acDet=null; const mb=document.getElementById('mainbody'); if(mb)mb.innerHTML=mainBody(); }   // re-render tabs+rows together (was repainting rows only -> stale highlight)
+function setAcFlt(f){ UI.acFlt=f; acRefilter(); }   // active/inactive filter - same uniform reset + reselect
 /* ═══ TWO-TIER DISPATCHER (view layer) — Tier-1 = instant header summary from flags; Tier-2 = lazy management.
  *     acOpenManage is the invocation: show spinner → ensureCap(module) → per-type data load → render the cockpit. ═══ */
 async function acOpenManage(id){
