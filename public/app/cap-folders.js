@@ -9,7 +9,7 @@ if (typeof EP !== 'undefined') {
     folderRename: {m:'PATCH',  p:'/api/folders/:id',  ok:'y'},
     folderDelete: {m:'DELETE', p:'/api/folders/:id',  ok:'y'},
     folderMove:   {m:'POST',   p:'/api/folders/move', ok:'y'},
-    folderChits:  {m:'GET',    p:'/api/chits/inbox',  ok:'y'},
+    folderChits:  {m:'GET',    p:'/api/folders/:id/chits', ok:'y'},
   });
 }
 async function loadFolders(){
@@ -38,7 +38,7 @@ function selectFolder(id){ UI.folderSel=id; UI.folderArch=false; UI.folderChits=
 function setFolderArch(a){ UI.folderArch=a; UI.folderChits=undefined; var dp=document.getElementById('detailpane'); if(dp)dp.innerHTML=_folderView(); loadFolderChits(); }
 async function loadFolderChits(){
   var id=UI.folderSel; if(!id) return;
-  try{ var r=await api('folderChits',{query:{folder:id, archived:UI.folderArch?1:0}}); UI.folderChits=(r&&(r.chits||r.rows||r.data||r.inbox))||[]; }
+  try{ var r=await api('folderChits',{params:{id:id}, query:{archived:UI.folderArch?1:0}}); UI.folderChits=(r&&(r.chits||r.rows||r.data))||[]; }
   catch(e){ UI.folderChits=[]; }
   var dp=document.getElementById('detailpane'); if(dp)dp.innerHTML=_folderView();
 }
