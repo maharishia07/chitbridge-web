@@ -24,9 +24,9 @@ function _folderTree(parentId, depth){
   }).join('');
 }
 function foldersScreen(){
-  if(UI.folders===undefined){ loadFolders(); return '<div class="empty"><div class="t">Loading folders…</div></div>'; }
+  if(UI.folders===undefined){ loadFolders(); return loader('Loading folders…'); }
   var tree=_folderTree(null,0)||'<div style="color:var(--grey);font-size:12px;padding:8px 6px">No folders yet — create one below.</div>';
-  var right= UI.folderSel ? _folderView() : '<div class="empty" style="padding:44px 16px;text-align:center;color:var(--grey)"><div style="font-size:34px">📁</div><div style="font-weight:700;margin-top:6px">Pick a folder</div><div style="font-size:12.5px;margin-top:4px">Or create one, then file chits into it with 📁 Move.</div></div>';
+  var right= UI.folderSel ? _folderView() : emptyState('📁','Pick a folder','Or create one, then file chits into it with 📁 Move.');
   return '<div style="display:flex;height:100%;min-height:0">'
     +'<div style="width:250px;border-right:1px solid var(--line);overflow:auto;padding:12px 8px;flex:0 0 auto">'
       +'<div style="font-size:11px;font-weight:800;color:var(--grey);letter-spacing:.05em;padding:2px 8px 8px">FOLDERS</div>'
