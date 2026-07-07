@@ -160,7 +160,7 @@ function piCockpit(x){
   var header='<div style="position:sticky;top:0;background:#fff;z-index:5;padding-bottom:10px;border-bottom:1px solid var(--line)">'
     +'<button class="dback" onclick="backToList()">‹ Co-assists</button>'
     +'<div style="display:flex;align-items:center;gap:9px;margin-top:6px"><span style="font-size:16px;font-weight:700">'+esc(x.name)+'</span> '+tchip+' '+_hdot(health)
-      +'<span style="margin-left:auto;display:inline-flex;gap:7px">'+ico('⚡','Test connection',"acPing('"+x.id+"')")+ico('🔑','Connection string',"UI.acProvOpen=!UI.acProvOpen;paintAcDetail()")+ico('＋','Add '+(iot?'device':'endpoint'),"UI.acAddDev=!UI.acAddDev;paintAcDetail()")+'</span></div>'
+      +'<span style="margin-left:auto;display:inline-flex;gap:7px">'+ico('⚡','Test connection',"acPing('"+x.id+"')")+ico('🔑','Connection string',"UI.acProvOpen=!UI.acProvOpen;paintAcDetail()")+(iot?ico('📦','Create package — one-drop Pi installer',"acCreatePackage('"+x.id+"')"):'')+ico('＋','Add '+(iot?'device':'endpoint'),"UI.acAddDev=!UI.acAddDev;paintAcDetail()")+'</span></div>'
     +'<div style="font-size:11.5px;color:var(--grey);margin-top:3px">📍 '+esc(x.site||'no site')+' · '+esc(health)+'</div></div>';
   var offline = health==='offline' ? '<div style="background:#fbeceb;border:1px solid #f0c9c6;color:#b4453f;border-radius:10px;padding:9px 11px;font-size:12px;font-weight:600;margin:10px 0">⚠ '+(iot?'Gateway':'System')+' OFFLINE — no '+(iot?'device':'endpoint')+' below can signal until it is back.</div>' : '';
   var prov = UI.acProvOpen ? _provPanel(iot, x.id) : '';
@@ -220,6 +220,88 @@ async function acToggleDevice(id, connId, enabled){
 async function acPing(id){
   try{ await api('connectorPing',{params:{actorId:id},body:{}}); if(typeof toast==='function')toast('Ping sent — marked live.'); await acLoadDevices(id); }
   catch(e){ if(typeof toast==='function')toast((e&&e.message)||'Ping failed'); }
+}
+// ═══ #3 · CREATE PACKAGE → one-drop installer. Rotates the key (only a fresh key can be embedded — we store only the
+//     hash), bundles endpoint + key + device routing + a long-running AGENT (heartbeat + spool drain w/ store-and-forward)
+//     + a systemd service, all as an install.sh generated in-browser (key never sits at a URL). Run: sudo bash it on the Pi.
+function _download(name, text){
+  try{ var b=new Blob([text],{type:'text/x-shellscript'}); var u=URL.createObjectURL(b); var a=document.createElement('a');
+    a.href=u; a.download=name; document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(u); a.remove(); },600); }
+  catch(e){ if(typeof toast==='function')toast('Download failed'); }
+}
+function _agentJs(){ return [
+  '#!/usr/bin/env node',
+  '// Chit & Bridge IoT agent (long-running). Heartbeats each device + drains a SPOOL directory (store-and-forward).',
+  '// Your edge AI writes <name>.json into the spool, e.g:  {"bridge_id":"CB..","sub_type":"tanker","value":"1","image":"/path/frame.jpg"}',
+  'var fs=require("fs"), path=require("path"), https=require("https"), URL=require("url").URL;',
+  'var CFG=JSON.parse(fs.readFileSync(path.join(__dirname,"config.json"),"utf8"));',
+  'var SPOOL=CFG.spool_dir||path.join(__dirname,"spool"), SENT=path.join(__dirname,"sent");',
+  'try{ fs.mkdirSync(SPOOL,{recursive:true}); fs.mkdirSync(SENT,{recursive:true}); }catch(e){}',
+  'function post(body){ return new Promise(function(res,rej){ var base=String(CFG.endpoint); if(base.slice(-1)==="/")base=base.slice(0,-1);',
+  '  var u=new URL(base+"/api/connectors/ingest"); var data=JSON.stringify(body);',
+  '  var r=https.request({method:"POST",hostname:u.hostname,port:u.port||443,path:u.pathname,headers:{"Content-Type":"application/json","X-Bridge-Key":CFG.key,"Content-Length":Buffer.byteLength(data)}},function(x){ var b=""; x.on("data",function(c){b+=c;}); x.on("end",function(){ if(x.statusCode>=400)rej(new Error("HTTP "+x.statusCode+" "+b.slice(0,120))); else{ try{res(JSON.parse(b));}catch(e){res(b);} } }); }); r.on("error",rej); r.write(data); r.end(); }); }',
+  'function heartbeat(){ (CFG.devices||[]).forEach(function(d){ post({bridge_id:d.bridge_id,heartbeat_only:true}).catch(function(e){ console.error("[hb]",d.bridge_id,e.message); }); }); }',
+  'function drain(){ var files=[]; try{ files=fs.readdirSync(SPOOL).filter(function(f){return f.slice(-5)===".json";}); }catch(e){ return; }',
+  '  files.forEach(function(f){ var fp=path.join(SPOOL,f), ev; try{ ev=JSON.parse(fs.readFileSync(fp,"utf8")); }catch(e){ return; }',
+  '    var proof; if(ev.image){ try{ proof=fs.readFileSync(path.isAbsolute(ev.image)?ev.image:path.join(SPOOL,ev.image)).toString("base64"); }catch(e){} }',
+  '    post({bridge_id:ev.bridge_id,sub_type:ev.sub_type,signal:ev.signal||"exception",value:ev.value,unit:ev.unit,device_id:ev.device_id,proof:proof,proof_name:ev.image?path.basename(ev.image):undefined})',
+  '      .then(function(out){ console.log("[sent]",f,(out&&out.chit_id)||""); try{ fs.renameSync(fp,path.join(SENT,f)); }catch(e){} if(ev.image){ try{ fs.unlinkSync(path.isAbsolute(ev.image)?ev.image:path.join(SPOOL,ev.image)); }catch(e){} } })',
+  '      .catch(function(e){ console.error("[retry]",f,e.message); }); });',
+  '}',
+  'console.log("[chitbridge] agent up · devices",(CFG.devices||[]).length,"· spool",SPOOL);',
+  'heartbeat(); drain(); setInterval(function(){ heartbeat(); drain(); }, (CFG.heartbeat_sec||60)*1000);'
+].join('\n'); }
+function _buildInstaller(cfg){
+  var ndev=(cfg.devices||[]).length, cfgJson=JSON.stringify(cfg,null,2), agent=_agentJs();
+  var L=[];
+  L.push('#!/usr/bin/env bash');
+  L.push('set -e');
+  L.push('echo "== Chit and Bridge IoT agent installer =="');
+  L.push('if ! command -v node >/dev/null 2>&1; then');
+  L.push('  echo "Installing Node.js...";');
+  L.push('  (command -v apt-get >/dev/null 2>&1 && sudo apt-get update -y && sudo apt-get install -y nodejs) || { echo "Please install Node.js manually, then re-run."; exit 1; }');
+  L.push('fi');
+  L.push('DIR=/opt/chitbridge');
+  L.push('sudo mkdir -p "$DIR/spool" "$DIR/sent"');
+  L.push("sudo tee \"$DIR/config.json\" >/dev/null <<'CBCFG'");
+  L.push(cfgJson);
+  L.push('CBCFG');
+  L.push("sudo tee \"$DIR/agent.js\" >/dev/null <<'CBAGENT'");
+  L.push(agent);
+  L.push('CBAGENT');
+  L.push("sudo tee /etc/systemd/system/chitbridge.service >/dev/null <<'CBSVC'");
+  L.push('[Unit]');
+  L.push('Description=Chit and Bridge IoT agent');
+  L.push('After=network-online.target');
+  L.push('Wants=network-online.target');
+  L.push('[Service]');
+  L.push('ExecStart=/usr/bin/env node /opt/chitbridge/agent.js');
+  L.push('Restart=always');
+  L.push('RestartSec=5');
+  L.push('[Install]');
+  L.push('WantedBy=multi-user.target');
+  L.push('CBSVC');
+  L.push('sudo systemctl daemon-reload');
+  L.push('sudo systemctl enable chitbridge >/dev/null 2>&1 || true');
+  L.push('sudo systemctl restart chitbridge');
+  L.push('echo ""');
+  L.push('echo "Installed and running. Devices: '+ndev+'"');
+  L.push('echo "Logs:  journalctl -u chitbridge -f"');
+  L.push('echo "Spool: drop <event>.json (and image) into $DIR/spool to raise an exception"');
+  return L.join('\n')+'\n';
+}
+async function acCreatePackage(id){
+  if(!window.confirm('Create package REGENERATES the key (the old one stops working). The Pi must run the new file. Continue?')) return;
+  try{
+    var rk=await api('connectorRegen',{params:{actorId:id},body:{}}); var key=rk&&rk.provision_key;
+    if(!key){ if(typeof toast==='function')toast('No key issued.'); return; }
+    var r=await api('connectorConns',{params:{actorId:id}});
+    var devs=((r&&r.connections)||[]).filter(function(c){return c.enabled!==false;}).map(function(c){ var cf=c.conn_config||{}; return {bridge_id:c.bridge_id, ref:c.ref, folder:cf.folder||null, classes:cf.classes||null}; });
+    var cfg={ endpoint:'https://chitbridge-api-production.up.railway.app', key:key, heartbeat_sec:60, spool_dir:'/opt/chitbridge/spool', devices:devs };
+    _download('chitbridge-install.sh', _buildInstaller(cfg));
+    UI.acFreshKey=key; UI.acProvOpen=true; paintAcDetail();
+    if(typeof toast==='function')toast('Package downloaded — copy it to the Pi and run: sudo bash chitbridge-install.sh');
+  }catch(e){ if(typeof toast==='function')toast((e&&e.message)||'Package failed'); }
 }
 function setAcTypeF(t){ UI.acTypeF=t; if(typeof renderApp==='function')renderApp(); }   // filter the panel by actor TYPE (human/iot/erp)
 function acTypeOf(x){ return ((UI._connMap||{})[x.id]) || (x.type||'human'); }            // connector_type (iot/erp) wins, else the actor type
