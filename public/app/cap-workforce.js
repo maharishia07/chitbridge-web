@@ -24,13 +24,13 @@ function acMergeTypes(defs){ if(defs&&typeof defs==='object'){ Object.keys(defs)
 // paneFrame — REUSABLE overlay sizing. Reuses the app's OWN two-panel coordinates (no guessing): laptop = fit the
 // RIGHT/detail pane's MEASURED rect (the proven co-assist technique); mobile = bottom-HALF sheet. Any overlay uses this.
 function paneFrame(){
-  var mob=(typeof UI!=='undefined' && UI.vp==='mob');
-  if(mob) return {css:'top:50%;left:0;right:0;bottom:0', radius:'16px 16px 0 0'};   // mobile: half-view sheet
-  var pane=document.getElementById('detailpane')||document.getElementById('panel')||document.querySelector('.panel');
-  var r=pane?pane.getBoundingClientRect():null;
-  if(r && r.width>240 && r.height>200) return {css:'top:'+Math.round(r.top)+'px;left:'+Math.round(r.left)+'px;width:'+Math.round(r.width)+'px;height:'+Math.round(r.height)+'px', radius:'14px'};
-  var bar=document.querySelector('.topbar'); var barH=bar?Math.round(bar.getBoundingClientRect().height):52;
-  return {css:'top:'+barH+'px;right:0;bottom:0;width:60%', radius:'14px'};   // fallback: right pane region
+  // Fit the app's OWN frame (measured), NEVER the raw viewport. Laptop two-panel → the detail (right) pane rect;
+  // single-column/mobile → the bottom HALF of the panel column (stays inside the app frame, not the whole monitor).
+  var d=document.getElementById('detailpane'); var dr=d?d.getBoundingClientRect():null;
+  if(dr && dr.width>240 && dr.height>200) return {css:'top:'+Math.round(dr.top)+'px;left:'+Math.round(dr.left)+'px;width:'+Math.round(dr.width)+'px;height:'+Math.round(dr.height)+'px', radius:'14px'};
+  var p=document.getElementById('panel')||document.querySelector('.panel'); var pr=p?p.getBoundingClientRect():null;
+  if(pr && pr.width>80 && pr.height>200){ var top=Math.round(pr.top+pr.height*0.45); return {css:'top:'+top+'px;left:'+Math.round(pr.left)+'px;width:'+Math.round(pr.width)+'px;height:'+Math.round(pr.height*0.55)+'px', radius:'16px 16px 0 0'}; }
+  return {css:'top:50%;left:0;right:0;bottom:0', radius:'16px 16px 0 0'};   // last-resort fallback
 }
 function openShowcase(url, title){
   var f=paneFrame();
