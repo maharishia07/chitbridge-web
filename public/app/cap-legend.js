@@ -165,22 +165,25 @@ const FOUNDATION_CATALOGUE = [
 function _subjectTabHtml(){
   const vs=(them,us)=>'<tr style="border-top:1px solid var(--line)"><td style="padding:6px 9px;color:var(--grey);vertical-align:top">'+them+'</td><td style="padding:6px 9px;color:var(--ink);font-weight:600;vertical-align:top">'+us+'</td></tr>';
   return '<div style="padding:14px 16px;max-height:70vh;overflow:auto">'
-    +'<div style="border:1px solid #cbd8ec;background:linear-gradient(180deg,#f6f9fe,#fff);border-radius:13px;padding:15px 16px;margin-bottom:14px">'
-      +'<div style="font-size:22px">📜</div>'
-      +'<div style="font-family:\'Space Grotesk\';font-weight:800;font-size:17px;color:var(--ink);margin-top:4px">The subject — the sealed, co-held record <span style="color:var(--grey);font-weight:600">(the &ldquo;chit&rdquo;)</span></div>'
-      +'<div style="font-size:12.5px;color:var(--ink);line-height:1.55;margin-top:6px">It is <b>not a shared document</b>. It is a <b>governed obligation, replicated per party</b> — each entity holds its <b>own sealed copy</b>, disputable on divergence. Everything else in this app is a <b>lifecycle that acts on this subject</b> (compose, deliver, advance, dispute, resolve). <b>The subject is the noun; the capabilities are the verbs.</b></div>'
+    // RAIL — the hero picture (public asset; scalable vector)
+    +'<img src="/rail-metaphor.svg" alt="Chit &amp; Bridge — a governed rail: two tracks (Task, Order), wagon = schema, private yards, dispute siding, network" loading="lazy" style="width:100%;height:auto;display:block;border:1px solid var(--line);border-radius:12px;background:#fff"/>'
+    +'<div style="border:1px solid #cbd8ec;background:linear-gradient(180deg,#f6f9fe,#fff);border-radius:13px;padding:14px 16px;margin:10px 0 14px">'
+      +'<div style="font-family:\'Space Grotesk\';font-weight:800;font-size:18px;color:var(--ink)">Chit &amp; Bridge is a governed rail</div>'
+      +'<div style="font-size:12.5px;color:var(--ink);line-height:1.55;margin-top:6px"><b>Content-neutral, governance-absolute.</b> You decide <b>what</b> moves between two entities — the business defines that; we guarantee that <b>whatever moves is governed</b>. A train can\'t leave the track.</div>'
+      +'<div style="font-size:12px;color:#2b4a72;background:#eef3fb;border:1px solid #cfe0f4;border-radius:9px;padding:8px 11px;margin-top:10px">🧭 <b>As easy as a mailbox</b> for the end user — zero learning curve. The mailbox is how it <i>feels</i>; the rail is what it <i>is</i>.</div>'
     +'</div>'
-    +'<div style="font-size:11px;font-weight:700;color:var(--ink);margin-bottom:5px">Why it matters — a mailbox, not a workspace</div>'
-    +'<div style="font-size:10.5px;color:var(--grey);margin-bottom:7px">The sharpest contrast is a shared-document tool (Confluence / SharePoint / Google Docs).</div>'
+    +'<div style="font-size:11px;font-weight:700;color:var(--ink);margin-bottom:5px">The subject — the sealed, co-held record <span style="color:var(--grey);font-weight:600">(the &ldquo;chit&rdquo;)</span></div>'
+    +'<div style="font-size:12px;color:var(--ink);line-height:1.55;margin-bottom:11px">Each item is a <b>governed obligation, replicated per party</b> — your own sealed copy, disputable on divergence. It is the <b>noun</b> everything else acts on; the capabilities are the <b>verbs</b>. Two tracks — <b>Task</b> (coming to you) and <b>Order</b> (going from you) — carry it; the <b>wagon is your schema</b>, and the rail never opens it.</div>'
+    +'<div style="font-size:11px;font-weight:700;color:var(--ink);margin-bottom:5px">Why it isn&rsquo;t just email — or a shared workspace</div>'
     +'<table style="width:100%;border-collapse:collapse;font-size:11px;border:1px solid var(--line);border-radius:8px;overflow:hidden">'
-      +'<tr style="background:#f4f4f2;color:var(--grey);font-weight:700;font-size:10px"><td style="padding:6px 9px">Them — a shared workspace</td><td style="padding:6px 9px">Chit &amp; Bridge — a mailbox of sealed records</td></tr>'
-      + vs('One shared document, permissioned','N sealed copies — one per party')
+      +'<tr style="background:#f4f4f2;color:var(--grey);font-weight:700;font-size:10px"><td style="padding:6px 9px">Them</td><td style="padding:6px 9px">Chit &amp; Bridge — the governed rail</td></tr>'
+      + vs('<b>Email:</b> carries anything, guarantees nothing','Every item <b>sealed, isolated, disputable</b>')
+      + vs('<b>Confluence:</b> one shared document','N sealed copies — one per party')
       + vs('Edit-in-place, last-writer-wins','Append-only; atomic per-copy fan-out')
-      + vs('Access control = who may see the doc','Isolation = you only ever hold YOUR copy')
-      + vs('Divergence is a merge conflict','Divergence is a DISPUTE — per-party, confidential')
-      + vs('A workspace you share','A mailbox you own')
+      + vs('Access control = who may see it','Isolation = you only ever hold YOUR copy')
+      + vs('Divergence is a merge conflict','Divergence is a DISPUTE — a private siding')
     +'</table>'
-    +'<div style="font-size:10.5px;color:var(--grey);margin-top:11px;line-height:1.5">The distinction the whole product turns on: we <b>replicate ownership</b> instead of <b>sharing access</b>. See <b>🧱 Foundations</b> for the proofs that make it real, and <b>⬢ Capabilities</b> for the lifecycles built on it.</div>'
+    +'<div style="font-size:10.5px;color:var(--grey);margin-top:11px;line-height:1.5">We <b>replicate ownership</b> instead of <b>sharing access</b> — and it still feels like an inbox. See <b>🧱 Foundations</b> for the proofs, and <b>⬢ Capabilities</b> for the lifecycles built on it.</div>'
   +'</div>';
 }
 
