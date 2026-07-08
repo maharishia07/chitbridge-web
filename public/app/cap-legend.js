@@ -139,10 +139,70 @@ const SEC_POSTURE = [
   { area:'Secrets & audit', lvl:'gap', what:'Secrets in Railway env vars, not a vault/KMS. No external pen-test yet (so security honestly ≤ L4).', raise:'Move secrets to a KMS/vault; commission an external pen-test → the L5 gate.' },
 ];
 
+/* ── FOUNDATIONS — the SECOND axis: what the subject STANDS ON. Capabilities need only WORK; a foundation needs
+ *    EVIDENCE, so each carries a PROOF. Ladder (security flavor): L1 exists · L2 clean mechanism · L3 enforced &
+ *    isolated · L4 governed & provable · L5 audited/certified. Mirrors C:\dev\FOUNDATIONS-SCORECARD.md. ── */
+const FOUNDATION_CATALOGUE = [
+  { name:'Multitenant isolation (RLS)', icon:'🔒', level:4, target:5,
+    what:'App connects as cb_app (NOSUPERUSER NOBYPASSRLS); EVERY entity-data table has FORCE RLS + an rls_entity policy; every query runs on withEntity(app.current_entity); cross-entity writes ONLY via SECURITY DEFINER fns.',
+    proof:'Live regression suite (100+ assertions across regression / dispute-scope / actor / lifecycle-iot / erp) — a non-participant reads 0. Live in prod since 2026-07-04; per-copy hardened 2026-07-08 (b48–b69).' },
+  { name:'Sealed co-held record (the rail)', icon:'📜', level:3, target:4,
+    what:'A chit is delivered as per-entity REPLICATED copies (nothing shared) + an append-only state_log; delivery via chit_deliver / chit_message_deliver / chit_dispute_deliver.',
+    proof:'regression.js — per-copy delivery, cross-entity isolation, and INDEPENDENT delete (one party deletes; the other party’s copy survives).' },
+  { name:'Transaction atomicity', icon:'⚛️', level:3, target:4,
+    what:'The per-copy fan-out is ALL-OR-NOTHING: a SECURITY DEFINER delivery fn writes every participant’s copy inside ONE transaction, so a mid-fan-out failure leaves NO partial copies. Dispute + timeline commit together (INV-2); the ERP path uses a receipt-as-lock for exactly-once.',
+    proof:'chit_deliver / chit_dispute_deliver are single-statement definer calls (one tx); the regression suite never observes a partial delivery; erp-connector.js proves receipt-lock idempotency (retry = one receipt, one effect).' },
+  { name:'Dispute confidentiality (the USP)', icon:'⚑', level:3, target:4,
+    what:'Per-copy: each party holds its OWN chit_disputes copy (b68, FORCE RLS); dispute_participants retired; dispute messages replicated to the roster ONLY.',
+    proof:'dispute-scope.js — a 3-party chit + a targeted dispute → the chit party NOT in the dispute sees 0 (7/0).' },
+  { name:'Governance cascade', icon:'🏛️', level:2, target:4,
+    what:'Constitution + version-freeze + provenance; unified mint path (b47). Tighten-only intent across the 7 governance layers.',
+    proof:'To build: tighten-only enforcement test + provenance on minted entities (design specced, not yet enforced).' },
+];
+
+/* ── SUBJECT tab — the core reframe: the sealed co-held record is a SUBJECT (a noun), not a functionality. The
+ *    capabilities are lifecycles (verbs) that act ON it. The clearest contrast is a shared-document tool. ── */
+function _subjectTabHtml(){
+  const vs=(them,us)=>'<tr style="border-top:1px solid var(--line)"><td style="padding:6px 9px;color:var(--grey);vertical-align:top">'+them+'</td><td style="padding:6px 9px;color:var(--ink);font-weight:600;vertical-align:top">'+us+'</td></tr>';
+  return '<div style="padding:14px 16px;max-height:70vh;overflow:auto">'
+    +'<div style="border:1px solid #cbd8ec;background:linear-gradient(180deg,#f6f9fe,#fff);border-radius:13px;padding:15px 16px;margin-bottom:14px">'
+      +'<div style="font-size:22px">📜</div>'
+      +'<div style="font-family:\'Space Grotesk\';font-weight:800;font-size:17px;color:var(--ink);margin-top:4px">The subject — the sealed, co-held record <span style="color:var(--grey);font-weight:600">(the &ldquo;chit&rdquo;)</span></div>'
+      +'<div style="font-size:12.5px;color:var(--ink);line-height:1.55;margin-top:6px">It is <b>not a shared document</b>. It is a <b>governed obligation, replicated per party</b> — each entity holds its <b>own sealed copy</b>, disputable on divergence. Everything else in this app is a <b>lifecycle that acts on this subject</b> (compose, deliver, advance, dispute, resolve). <b>The subject is the noun; the capabilities are the verbs.</b></div>'
+    +'</div>'
+    +'<div style="font-size:11px;font-weight:700;color:var(--ink);margin-bottom:5px">Why it matters — a mailbox, not a workspace</div>'
+    +'<div style="font-size:10.5px;color:var(--grey);margin-bottom:7px">The sharpest contrast is a shared-document tool (Confluence / SharePoint / Google Docs).</div>'
+    +'<table style="width:100%;border-collapse:collapse;font-size:11px;border:1px solid var(--line);border-radius:8px;overflow:hidden">'
+      +'<tr style="background:#f4f4f2;color:var(--grey);font-weight:700;font-size:10px"><td style="padding:6px 9px">Them — a shared workspace</td><td style="padding:6px 9px">Chit &amp; Bridge — a mailbox of sealed records</td></tr>'
+      + vs('One shared document, permissioned','N sealed copies — one per party')
+      + vs('Edit-in-place, last-writer-wins','Append-only; atomic per-copy fan-out')
+      + vs('Access control = who may see the doc','Isolation = you only ever hold YOUR copy')
+      + vs('Divergence is a merge conflict','Divergence is a DISPUTE — per-party, confidential')
+      + vs('A workspace you share','A mailbox you own')
+    +'</table>'
+    +'<div style="font-size:10.5px;color:var(--grey);margin-top:11px;line-height:1.5">The distinction the whole product turns on: we <b>replicate ownership</b> instead of <b>sharing access</b>. See <b>🧱 Foundations</b> for the proofs that make it real, and <b>⬢ Capabilities</b> for the lifecycles built on it.</div>'
+  +'</div>';
+}
+
+/* ── FOUNDATIONS tab — the trust floor as maturity + PROOF (core hardening + atomicity now first-class). ── */
+function _foundTabHtml(){
+  const lvlBadge=(l,t)=>{ const tt=(t&&t>l)?('→L'+t):''; return '<span title="Foundation maturity — L1 exists · L2 clean mechanism · L3 enforced+isolated · L4 governed+provable · L5 audited/certified" style="font-size:10px;font-weight:800;color:#1f6f4a;background:#e7f4ee;border:1px solid #bfe0cf;border-radius:6px;padding:1px 7px">L'+l+tt+'</span>'; };
+  const card=(f)=>'<div style="border:1px solid var(--line);border-radius:11px;padding:11px 13px;margin-bottom:10px">'
+    +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><span style="font-size:15px">'+f.icon+'</span><span style="font-family:\'Space Grotesk\';font-weight:700;font-size:13.5px">'+esc(f.name)+'</span><span style="margin-left:auto">'+lvlBadge(f.level,f.target)+'</span></div>'
+    +'<div style="font-size:11.5px;color:var(--ink);line-height:1.45;margin-bottom:6px">'+esc(f.what)+'</div>'
+    +'<div style="font-size:10.8px;color:var(--grey);line-height:1.42;background:#f7f9fc;border:1px solid var(--line);border-radius:8px;padding:7px 9px"><b style="color:#2f8f5b">PROOF:</b> '+esc(f.proof)+'</div>'
+  +'</div>';
+  return '<div style="padding:12px 13px;max-height:70vh;overflow:auto">'
+    +'<div style="font-size:11.5px;color:var(--grey);margin-bottom:10px">What the <b>subject</b> stands on — the trust floor. A capability needs only to WORK; a <b>foundation needs EVIDENCE</b>, so each carries the PROOF that makes its level evident, not asserted. Ladder: L1 exists · L2 clean mechanism · L3 enforced &amp; isolated · L4 governed &amp; provable · L5 audited/certified.</div>'
+    +FOUNDATION_CATALOGUE.map(card).join('')
+    +'<div style="font-size:10.5px;color:var(--grey);text-align:center;padding-top:2px">Security foundations are honestly capped <b>≤ L4</b> until an external pen-test exists — that’s the L5 gate.</div>'
+  +'</div>';
+}
+
 function _lbTabBar(){
-  const tab=(typeof _lbTab!=='undefined')?_lbTab:'edge';
+  const tab=(typeof _lbTab!=='undefined')?_lbTab:'subject';
   const btn=(id,label)=>`<button onclick="setLbTab('${id}')" style="border:0;background:none;cursor:pointer;padding:7px 12px;font-size:12.5px;font-weight:${tab===id?'700':'500'};color:${tab===id?'var(--ink)':'var(--grey)'};border-bottom:2px solid ${tab===id?'var(--accent,#3F66A6)':'transparent'}">${label}</button>`;
-  return `<div style="display:flex;gap:2px;border-bottom:1px solid var(--line);padding:0 8px;flex-wrap:wrap">${btn('edge','🎯 The edge')}${btn('cap','⬢ Capabilities')}${btn('life','🔀 Lifecycle')}${btn('sec','🔒 Security')}${btn('real','🔬 Reality')}</div>`;
+  return `<div style="display:flex;gap:2px;border-bottom:1px solid var(--line);padding:0 8px;flex-wrap:wrap">${btn('subject','📜 The subject')}${btn('found','🧱 Foundations')}${btn('cap','⬢ Capabilities')}${btn('edge','🎯 The edge')}${btn('life','🔀 Lifecycle')}${btn('sec','🔒 Security')}${btn('real','🔬 Reality')}</div>`;
 }
 function setLbTab(t){ _lbTab=t; _openLegendImpl(); }
 
@@ -263,7 +323,7 @@ function _openLegendImpl(){
   let host=document.getElementById("lbhost");
   if(!host){ host=document.createElement('div'); host.id='lbhost'; document.body.appendChild(host); }  // pre-auth: create the host if the app shell isn't mounted (shareable /#/legend)
   _legendOpen=true;
-  if(typeof _lbTab==='undefined') _lbTab='edge';   // open on the comparison (the hook) — then people explore the rest
+  if(typeof _lbTab==='undefined') _lbTab='subject';   // open on THE SUBJECT (the conceptual anchor) — the sealed co-held record everything else acts on
   const LOADED=(typeof CAP_LOADED!=='undefined')?CAP_LOADED:{};
   const SC={ done:['#2f8f5b','✅'], partial:['#a9791f','◐'], backlog:['#9aa3a7','○'] };
   // tallies across every feature
@@ -291,9 +351,9 @@ function _openLegendImpl(){
     <div style="padding:12px 13px;max-height:70vh;overflow:auto">${CAP_CATALOGUE.map(card).join('')}
       <div style="font-size:10.5px;color:var(--grey);text-align:center;padding-top:4px">Load: <b>always on</b> ships with the app · <b>lazy</b> loads on first use · <b>planned</b> not built yet. · <b>L1–5</b> maturity: 1 Proven · 2 Packaged · 3 Itemised · 4 Governed · 5 Productized (→ = target). Kept true to the code.</div>
     </div>`;
-  const body = (_lbTab==='life') ? _lifeTabHtml() : (_lbTab==='sec') ? _secTabHtml() : (_lbTab==='edge') ? _edgeTabHtml() : (_lbTab==='real') ? _realTabHtml() : capBody;
-  const titles = { cap:'capabilities &amp; features', life:'lifecycle &amp; traceability', sec:'security posture', edge:'positioning &amp; edge', real:'reality &amp; how we earn it' };
-  host.innerHTML=`<div class="notifover" onclick="closeLegend()"><div class="notifpanel" style="max-width:660px;width:95vw;border-radius:14px;overflow:hidden" onclick="event.stopPropagation()">
+  const body = (_lbTab==='subject') ? _subjectTabHtml() : (_lbTab==='found') ? _foundTabHtml() : (_lbTab==='life') ? _lifeTabHtml() : (_lbTab==='sec') ? _secTabHtml() : (_lbTab==='edge') ? _edgeTabHtml() : (_lbTab==='real') ? _realTabHtml() : capBody;
+  const titles = { subject:'the subject — the sealed co-held record', found:'foundations — the trust floor + proof', cap:'capabilities &amp; features', life:'lifecycle &amp; traceability', sec:'security posture', edge:'positioning &amp; edge', real:'reality &amp; how we earn it' };
+  host.innerHTML=`<div class="notifover" onclick="closeLegend()"><div class="notifpanel" style="max-width:820px;width:96vw;border-radius:14px;overflow:hidden" onclick="event.stopPropagation()">
     <div style="display:flex;align-items:center;gap:10px;padding:14px 16px;background:linear-gradient(180deg,#f7f9fc,#fff);border-bottom:1px solid var(--line)">
       <span style="font-size:18px">🔑</span>
       <div style="line-height:1.15"><div style="font-family:'Space Grotesk';font-weight:700;font-size:15px;color:var(--ink)">What we serve</div><div style="font-size:10.5px;color:var(--grey)">${titles[_lbTab]||titles.cap}</div></div>
