@@ -70,6 +70,7 @@ function _awCap(k){ return ((typeof SESSION!=='undefined'&&SESSION.capabilities)
 function _awReady(t){ return t==='human'?true:(t==='ai'?_awCap('ai'):_awCap('connector')); }
 function openActorWiz(){ UI.awType=null; UI.awStep=0; UI.awData={}; UI.awErr=null; UI.awResult=null; awRender(); }
 function awClose(){ var h=document.getElementById('actorwiz'); if(h)h.remove(); }
+function awDownloadPkg(){ try{ if(UI.awInstaller && typeof _download==='function') _download('chitbridge-install.sh', UI.awInstaller); else if(typeof toast==='function') toast('Package not ready — open the gateway and hit 📦 Create package (it re-creates the same installer).'); }catch(_){ } }
 function awHost(){ var h=document.getElementById('actorwiz'); if(!h){ h=document.createElement('div'); h.id='actorwiz'; document.body.appendChild(h); } return h; }
 function awCapture(){ UI.awData=UI.awData||{}; ['aw_name','aw_key','aw_hat','aw_site','aw_mode','aw_baseurl','aw_authref','aw_role','aw_under'].forEach(function(id){ var el=document.getElementById(id); if(el) UI.awData[id]=el.value; }); }
 function awPick(t){ UI.awType=t; UI.awStep=0; UI.awErr=null; awRender(); }
@@ -101,14 +102,19 @@ async function awFinish(){
   try{ var r2=await api('connectorCreate',{body:{display_name:nm2,type:t,site:(d.aw_site||'').trim()||undefined,config:cfg}});
     var pk=r2&&r2.provision_key;
     if(t==='iot' && pk){
-      // MERGE create + package: build the one-drop installer NOW with the key we just received (no regenerate, no
-      // dangling key to copy). The agent forwards exceptions immediately; devices (added later) enable per-device heartbeats.
+      // Build the one-drop installer NOW (with the key we just received) but HOLD it — do NOT auto-download. The user
+      // clicks 'Download' when they're ready to run it on the Pi. Same key, so nothing gets invalidated.
+      UI.awInstaller=null;
       try{
         if(typeof ensureCap==='function') await ensureCap('connector');
-        if(typeof _buildInstaller==='function' && typeof _download==='function')
-          _download('chitbridge-install.sh', _buildInstaller({ endpoint:'https://chitbridge-api-production.up.railway.app', key:pk, heartbeat_sec:60, spool_dir:'/opt/chitbridge/spool', devices:[] }));
+        if(typeof _buildInstaller==='function')
+          UI.awInstaller=_buildInstaller({ endpoint:'https://chitbridge-api-production.up.railway.app', key:pk, heartbeat_sec:60, spool_dir:'/opt/chitbridge/spool', devices:[] });
       }catch(_){}
-      UI.awResult='<div style="text-align:center"><div style="font-size:34px;margin:8px 0 6px">🛰️</div><div style="font-weight:700;font-size:16px">Gateway created — installer downloaded</div><div style="font-size:12.5px;color:#3a4048;line-height:1.6;margin-top:10px">Run it on the Pi: <span style="background:#0f1b2d;color:#cfe0f4;border-radius:6px;padding:1px 6px;font:11.5px ui-monospace,Consolas,monospace">sudo bash chitbridge-install.sh</span><br>Then add its <b>devices</b> here (each gets a BridgeId your edge writes into the spool). Re-download / rotate the key any time with <b>📦 Create package</b>.</div></div>';
+      UI.awResult='<div style="text-align:center"><div style="font-size:34px;margin:8px 0 6px">🛰️</div><div style="font-weight:700;font-size:16px">Gateway created</div>'
+        +(UI.awInstaller
+          ? '<div style="font-size:12.5px;color:#3a4048;line-height:1.6;margin-top:10px">Its one-drop installer is <b>ready</b> (key inside). Download it whenever you\'re ready to set up the Pi:</div><button class="composebtn pri" style="margin-top:12px" onclick="awDownloadPkg()">📦 Download install package</button><div style="font-size:11.5px;color:var(--grey);margin-top:10px">Then run <span style="background:#0f1b2d;color:#cfe0f4;border-radius:6px;padding:1px 6px;font:11px ui-monospace,Consolas,monospace">sudo bash chitbridge-install.sh</span> on the Pi, and add its <b>devices</b> here.<br><b>Didn\'t download, or lost it?</b> Open the gateway → <b>📦 Create package</b> — a re-created package is identical (same gateway, fresh key). Re-creation and creation give you the exact same thing.</div>'
+          : '<div style="font-size:12.5px;color:#3a4048;margin-top:10px">Open it in Co-assists → <b>📦 Create package</b> to get the installer.</div>')
+        +'</div>';
     } else {
       UI.awResult='<div style="text-align:center"><div style="font-size:34px;margin:8px 0 6px">🔌</div><div style="font-weight:700;font-size:16px">System connected</div><div style="font-size:12.5px;color:#3a4048;margin-top:10px">Add its endpoints in Connectors.</div></div>';
     }
