@@ -16,7 +16,7 @@ const CAP_CATALOGUE = [
       {n:'Assign to the crew — the workforce as co-assists (human, and machine: IoT · ERP · AI): single push · bulk · pool pull · hat-gated', s:'done'},
       {n:'Disputes — the private siding, extracted to its own lazy Disputes capability (Core is dispute-blind, 2026-07-05)', s:'done'},
       {n:'Relations — your network: Suppliers · Catalogue · Network (reachable destinations — public map, private yards)', s:'done'},
-      {n:'Retention & cold-archive — move old settled chits hot→cold with a retention period (specified — backlog)', s:'backlog'},
+      {n:'Retention & auto-purge — per-record retention period → governed auto-delete (settled-only · hold-aware · keep a receipt) + cold-archive (specified — backlog)', s:'backlog'},
       {n:'Message centre + Notifications bell (derived from state_log)', s:'partial'},
     ]},
   { id:'dispute', name:'Disputes — the USP', icon:'⚑', load:'lazy', maturity:3, target:4,
