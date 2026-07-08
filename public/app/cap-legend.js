@@ -167,6 +167,7 @@ const FOUNDATION_CATALOGUE = [
  *    capabilities are lifecycles (verbs) that act ON it. The clearest contrast is a shared-document tool. ── */
 function _subjectTabHtml(){
   const vs=(them,us)=>'<tr style="border-top:1px solid var(--line)"><td style="padding:6px 9px;color:var(--grey);vertical-align:top">'+them+'</td><td style="padding:6px 9px;color:var(--ink);font-weight:600;vertical-align:top">'+us+'</td></tr>';
+  const g=(t,m,alt)=>'<div style="display:flex;gap:10px;padding:6px 10px;font-size:11px;'+(alt?'background:#f6f9fd;':'')+'"><span style="flex:0 0 122px;font-weight:700;color:#2b4a72">'+t+'</span><span style="color:var(--ink);line-height:1.45">'+m+'</span></div>';
   return '<div style="padding:14px 16px;max-height:70vh;overflow:auto">'
     // RAIL — the hero picture (public asset; scalable vector)
     +'<img src="/rail-metaphor.svg" alt="Chit &amp; Bridge — a governed rail: two tracks (Task, Order), wagon = your business, private yards, dispute siding, network" loading="lazy" style="width:100%;height:auto;display:block;border:1px solid var(--line);border-radius:12px;background:#fff"/>'
@@ -186,6 +187,21 @@ function _subjectTabHtml(){
       + vs('Access control = who may see it','Isolation = you only ever hold YOUR copy')
       + vs('Divergence is a merge conflict','Divergence is a DISPUTE — a private siding')
     +'</table>'
+    +'<div style="font-size:11px;font-weight:700;color:var(--ink);margin:14px 0 5px">Rail glossary — the whole vocabulary in one place</div>'
+    +'<div style="border:1px solid var(--line);border-radius:10px;overflow:hidden">'
+      + g('🛤️ Rail','governance itself — the track a train cannot leave', false)
+      + g('Two tracks','Task (coming to you) · Order (going from you)', true)
+      + g('Wagon / bogie','your business — the form you define; the rail never opens it', false)
+      + g('Cargo','your data inside the wagon — never inspected', true)
+      + g('Private yard','your isolated copy (RLS) — your wagons, yours alone', false)
+      + g('Travel together','coupled on the journey, yet each keeps its own wagon (co-held AND per-copy)', true)
+      + g('Signals','statuses — open · act · close · reopen; governed, stamped on the log', false)
+      + g('Service','a scheduled multi-stop run (vs a one-hop parcel = a goods order)', true)
+      + g('Private siding','a dispute — confidential, per-party; the network runs past', false)
+      + g('Network','reachable destinations — public map, private yards', true)
+      + g('Crew','co-assists: human · IoT · ERP · AI — same rail, same rules', false)
+      + g('Roam the bogies','one connection, many facilities — never tied to one', true)
+    +'</div>'
     +'<div style="font-size:10.5px;color:var(--grey);margin-top:11px;line-height:1.5">We <b>replicate ownership</b> instead of <b>sharing access</b> — and it still feels like an inbox. See <b>🧱 Foundations</b> for the proofs, and <b>⬢ Capabilities</b> for the lifecycles built on it.</div>'
   +'</div>';
 }
