@@ -8,14 +8,15 @@
 // maturity 1-5 (CB Capability Maturity Model): 1 Proven · 2 Packaged · 3 Itemised&Isolated · 4 Governed · 5 Productized.
 const CAP_CATALOGUE = [
   { id:'core', name:'Core — Mailbox', icon:'📥', load:'eager', maturity:2, target:3,
-    blurb:'The lean always-on shell every role starts with. Loaded with app.html.',
+    blurb:'The governance RAIL in the familiar form of a MAILBOX — the lean always-on shell every role starts with (loaded with app.html). As easy as an inbox; governed underneath.',
     features:[
-      {n:'Mailbox lists — Task / Order / Drafts / Trash / Archive', s:'done'},
-      {n:'Read & advance — open a chit, mark read/unread, single-step advance', s:'done'},
-      {n:'Compose — author a chit (line items, attachments, delivery, live summary)', s:'done'},
-      {n:'Assign — single push, bulk, pool pull, hat-gate', s:'done'},
-      {n:'Disputes — extracted OUT to its own lazy Disputes capability (Core is now dispute-blind, 2026-07-05)', s:'done'},
-      {n:'Relations — Suppliers, Catalogue, Network', s:'done'},
+      {n:'The tracks + lists — Task (coming to you) · Order (going from you) · Drafts · Trash · Archive', s:'done'},
+      {n:'Read & advance — open a chit and move it through its statuses (open · act · close · reopen): single-step, governed, stamped on the append-only log', s:'done'},
+      {n:'Compose — load a wagon: author a chit = your business (line items, attachments, delivery, live summary)', s:'done'},
+      {n:'Assign to the crew — the workforce as co-assists (human, and machine: IoT · ERP · AI): single push · bulk · pool pull · hat-gated', s:'done'},
+      {n:'Disputes — the private siding, extracted to its own lazy Disputes capability (Core is dispute-blind, 2026-07-05)', s:'done'},
+      {n:'Relations — your network: Suppliers · Catalogue · Network (reachable destinations — public map, private yards)', s:'done'},
+      {n:'Retention & cold-archive — move old settled chits hot→cold with a retention period (specified — backlog)', s:'backlog'},
       {n:'Message centre + Notifications bell (derived from state_log)', s:'partial'},
     ]},
   { id:'dispute', name:'Disputes — the USP', icon:'⚑', load:'lazy', maturity:3, target:4,
