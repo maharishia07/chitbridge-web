@@ -760,7 +760,19 @@ function loadAssistQ(ctx){ ctx = ctx || '*';
     .catch(function(){ _assistLoading=false; ASSIST_LIB=_assistCache[ctx]||[]; }); }
 let _assistOpen=false;
 // (buildAssistLib + _assistBuilt removed — the library is DB-served now; there is nothing to fold at runtime.)
-function curScreen(){ try{ if(_assistCtx) return _assistCtx; if(typeof SESSION!=="undefined" && SESSION.token) return (typeof UI!=="undefined" && UI.nav) || "task"; const h=location.hash||""; if(h.indexOf("register")>=0) return "register"; if(h.indexOf("login")>=0) return "login"; return "welcome"; }catch(_){ return "welcome"; } }
+// Fine-grained current context: the SUB-VIEW you're actually in (an open chit, or a co-assist/connector cockpit),
+// not just the top nav tab — so the assistant answers for the page you're on. Falls back to UI.nav.
+function _fineScreen(){ try{ var U=(typeof UI!=="undefined")?UI:{};
+    if(U.detail) return (U.dtab==='messages')?'chit-messages':'chit-detail';
+    if(U.acSel){ var t=(U._connMap||{})[U.acSel]; return (t==='erp')?'connector-erp':(t==='iot')?'connector-iot':'coassist-actor'; }
+    return U.nav || 'task'; }catch(_){ return (typeof UI!=="undefined" && UI.nav) || 'task'; } }
+// The query CHAIN: fine → parent → nav (comma-list). A sub-page ADDS its Q&A without losing the broader curated set;
+// the backend matches any-of + '*'. curScreen() stays the single most-specific tag (for suggest ordering + the LLM steer).
+function _screenChain(){ var sc=curScreen(); var chain=[sc];
+  var parents={ 'connector-erp':['connector','coassists'], 'connector-iot':['connector','coassists'], 'coassist-actor':['coassists'],
+                'chit-detail':['task'], 'chit-messages':['chit-detail','task'] };
+  (parents[sc]||[]).forEach(function(p){ if(chain.indexOf(p)<0) chain.push(p); }); return chain.join(','); }
+function curScreen(){ try{ if(_assistCtx) return _assistCtx; if(typeof SESSION!=="undefined" && SESSION.token) return _fineScreen(); const h=location.hash||""; if(h.indexOf("register")>=0) return "register"; if(h.indexOf("login")>=0) return "login"; return "welcome"; }catch(_){ return "welcome"; } }
 function mountAssist(){ if(document.getElementById("assistfab")) return;
   const b=document.createElement("div"); b.id="assistfab"; b.style.cssText="position:fixed;right:16px;bottom:16px;z-index:300";
   b.innerHTML=`<button onclick="openAssist()" title="Ask the assistant" style="border:0;border-radius:24px;padding:10px 16px;background:#3F66A6;color:#fff;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.18);font-size:14px">💬 Assistant</button>`;
@@ -773,7 +785,7 @@ function openAssist(ctx){ _assistCtx = (typeof ctx==='string' && ctx) ? ctx : nu
   if(!document.getElementById("assisthost")) mountAssist();
   _assistOpen=true; const c=_assistCtx||curScreen();
   renderAssist();                                          // immediate — shows "loading…" until the DB set arrives
-  loadAssistQ(c).then(function(){ if(_assistOpen) renderAssist(); }); }
+  loadAssistQ(_assistCtx ? c : _screenChain()).then(function(){ if(_assistOpen) renderAssist(); }); }
 function closeAssist(){ _assistOpen=false; _assistCtx=null; const h=document.getElementById("assisthost"); if(h)h.innerHTML=""; }
 function assistSuggest(){ const sc=curScreen(); const pre=!(typeof SESSION!=="undefined" && SESSION.token);
   // screen-specific first, then generic; DEDUPE by question so repeats (e.g. "What is a co-assist?") collapse to one.
