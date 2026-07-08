@@ -7,8 +7,8 @@
 
 // maturity 1-5 (CB Capability Maturity Model): 1 Proven · 2 Packaged · 3 Itemised&Isolated · 4 Governed · 5 Productized.
 const CAP_CATALOGUE = [
-  { id:'core', name:'Core — Mailbox', icon:'📥', load:'eager', maturity:2, target:3,
-    blurb:'The governance RAIL in the familiar form of a MAILBOX — the lean always-on shell every role starts with (loaded with app.html). As easy as an inbox; governed underneath.',
+  { id:'core', name:'Core — Governance rail', icon:'🛤️', load:'eager', maturity:2, target:3,
+    blurb:'The governance RAIL, in the familiar form of a mailbox — the lean always-on shell every role starts with (loaded with app.html). As easy as an inbox; governed underneath.',
     features:[
       {n:'The tracks + lists — Task (coming to you) · Order (going from you) · Drafts · Trash · Archive', s:'done'},
       {n:'Read & advance — open a chit and move it through its statuses (open · act · close · reopen): single-step, governed, stamped on the append-only log', s:'done'},
