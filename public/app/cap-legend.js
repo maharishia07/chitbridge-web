@@ -169,7 +169,7 @@ const FOUNDATION_CATALOGUE = [
 function _subjectTabHtml(){
   const vs=(them,us)=>'<tr style="border-top:1px solid var(--line)"><td style="padding:6px 9px;color:var(--grey);vertical-align:top">'+them+'</td><td style="padding:6px 9px;color:var(--ink);font-weight:600;vertical-align:top">'+us+'</td></tr>';
   const g=(t,m,alt)=>'<div style="display:flex;gap:10px;padding:6px 10px;font-size:11px;'+(alt?'background:#f6f9fd;':'')+'"><span style="flex:0 0 122px;font-weight:700;color:#2b4a72">'+t+'</span><span style="color:var(--ink);line-height:1.45">'+m+'</span></div>';
-  return '<div style="padding:14px 16px;max-height:70vh;overflow:auto">'
+  return '<div style="padding:14px 16px;overflow:visible">'
     // RAIL — the hero picture (public asset; scalable vector)
     +'<img src="/rail-metaphor.svg" alt="Chit &amp; Bridge — a governed rail: two tracks (Task, Order), wagon = your business, private yards, dispute siding, network" loading="lazy" style="width:100%;height:auto;display:block;border:1px solid var(--line);border-radius:12px;background:#fff"/>'
     +'<div style="border:1px solid #cbd8ec;background:linear-gradient(180deg,#f6f9fe,#fff);border-radius:13px;padding:14px 16px;margin:10px 0 14px">'
@@ -212,11 +212,11 @@ function _foundTabHtml(){
   const lvlBadge=(l,t)=>{ const tt=(t&&t>l)?('→L'+t):''; return '<span title="Foundation maturity — L1 exists · L2 clean mechanism · L3 enforced+isolated · L4 governed+provable · L5 audited/certified" style="font-size:10px;font-weight:800;color:#1f6f4a;background:#e7f4ee;border:1px solid #bfe0cf;border-radius:6px;padding:1px 7px">L'+l+tt+'</span>'; };
   const card=(f)=>'<div style="border:1px solid var(--line);border-radius:11px;padding:11px 13px;margin-bottom:10px">'
     +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><span style="font-size:15px">'+f.icon+'</span><span style="font-family:\'Space Grotesk\';font-weight:700;font-size:13.5px">'+esc(f.name)+'</span><span style="margin-left:auto">'+lvlBadge(f.level,f.target)+'</span></div>'
-    +'<div style="font-size:11.5px;color:var(--ink);line-height:1.45;margin-bottom:6px">'+esc(f.what)+'</div>'
-    +'<div style="font-size:10.8px;color:var(--grey);line-height:1.42;background:#f7f9fc;border:1px solid var(--line);border-radius:8px;padding:7px 9px"><b style="color:#2f8f5b">PROOF:</b> '+esc(f.proof)+'</div>'
+    +'<div style="font-size:13px;color:var(--ink);line-height:1.5;margin-bottom:6px">'+esc(f.what)+'</div>'
+    +'<div style="font-size:12px;color:var(--grey);line-height:1.5;background:#f7f9fc;border:1px solid var(--line);border-radius:8px;padding:8px 10px"><b style="color:#2f8f5b">PROOF:</b> '+esc(f.proof)+'</div>'
   +'</div>';
-  return '<div style="padding:12px 13px;max-height:70vh;overflow:auto">'
-    +'<div style="font-size:11.5px;color:var(--grey);margin-bottom:10px">What the <b>subject</b> stands on — the trust floor. A capability needs only to WORK; a <b>foundation needs EVIDENCE</b>, so each carries the PROOF that makes its level evident, not asserted. Ladder: L1 exists · L2 clean mechanism · L3 enforced &amp; isolated · L4 governed &amp; provable · L5 audited/certified.</div>'
+  return '<div style="padding:12px 13px;overflow:visible">'
+    +'<div style="font-size:13px;color:var(--grey);margin-bottom:10px">What the <b>subject</b> stands on — the trust floor. A capability needs only to WORK; a <b>foundation needs EVIDENCE</b>, so each carries the PROOF that makes its level evident, not asserted. Ladder: L1 exists · L2 clean mechanism · L3 enforced &amp; isolated · L4 governed &amp; provable · L5 audited/certified.</div>'
     +FOUNDATION_CATALOGUE.map(card).join('')
     +'<div style="font-size:10.5px;color:var(--grey);text-align:center;padding-top:2px">Security foundations are honestly capped <b>≤ L4</b> until an external pen-test exists — that’s the L5 gate.</div>'
   +'</div>';
@@ -224,7 +224,7 @@ function _foundTabHtml(){
 
 function _lbTabBar(){
   const tab=(typeof _lbTab!=='undefined')?_lbTab:'subject';
-  const btn=(id,label)=>`<button onclick="setLbTab('${id}')" style="border:0;background:none;cursor:pointer;padding:7px 12px;font-size:12.5px;font-weight:${tab===id?'700':'500'};color:${tab===id?'var(--ink)':'var(--grey)'};border-bottom:2px solid ${tab===id?'var(--accent,#3F66A6)':'transparent'}">${label}</button>`;
+  const btn=(id,label)=>`<button onclick="setLbTab('${id}')" style="border:0;background:none;cursor:pointer;padding:8px 15px;font-size:13.5px;font-weight:${tab===id?'700':'500'};color:${tab===id?'var(--ink)':'var(--grey)'};border-bottom:2px solid ${tab===id?'var(--accent,#3F66A6)':'transparent'}">${label}</button>`;
   return `<div style="display:flex;gap:2px;border-bottom:1px solid var(--line);padding:0 8px;flex-wrap:wrap">${btn('subject','📜 The subject')}${btn('found','🧱 Foundations')}${btn('cap','⬢ Capabilities')}${btn('edge','🎯 The edge')}${btn('life','🔀 Lifecycle')}${btn('sec','🔒 Security')}${btn('real','🔬 Reality')}</div>`;
 }
 function setLbTab(t){ _lbTab=t; _openLegendImpl(); }
@@ -240,7 +240,7 @@ function _lifeTabHtml(){
       <div style="display:flex;gap:8px;font-size:10px;color:var(--grey);font-weight:700;padding-bottom:2px"><span style="width:54px">&nbsp;</span><span style="flex:1">FUNCTIONAL (FR)</span><span style="flex:1">TEST</span></div>
       ${g.rows.map(row).join('')}
     </div>`;
-  return `<div style="padding:12px 13px;max-height:70vh;overflow:auto">
+  return `<div style="padding:12px 13px;overflow:visible">
     <div style="font-size:11.5px;color:var(--grey);margin-bottom:10px">How we work the lifecycle: every behaviour traces <b>Business → System → Functional → Test</b>. <span style="color:#2f8f5b">✅ verified-live</span> · <span style="color:#a9791f">◐ built, needs a live run</span> · <span style="color:#9aa3a7">○ backlog</span>.</div>
     ${TRACE_MATRIX.map(grp).join('')}
     <div style="font-size:10.5px;color:var(--grey);text-align:center;padding-top:2px">Most rows are ◐ — built + parse/boot-checked; each ✅ needed a human live-run or a script. Automated tests turn ◐ → ✅ at scale.</div>
@@ -255,7 +255,7 @@ function _secTabHtml(){
       <div style="font-size:11.5px;color:var(--ink);line-height:1.45;margin-bottom:4px">${esc(s.what)}</div>
       <div style="font-size:10.5px;color:var(--grey);line-height:1.4"><b>Raise it:</b> ${esc(s.raise)}</div>
     </div>`; };
-  return `<div style="padding:12px 13px;max-height:70vh;overflow:auto">
+  return `<div style="padding:12px 13px;overflow:visible">
     <div style="font-size:11.5px;color:var(--grey);margin-bottom:10px">What protects your data today (verified from code, 2026-07-05). Honest levels: <span style="color:#2f8f5b">✓ strong</span> · <span style="color:#a9791f">◐ partial</span> · <span style="color:#c0453b">○ gap</span>.</div>
     ${SEC_POSTURE.map(row).join('')}
     <div style="font-size:10.5px;color:var(--grey);text-align:center;padding-top:2px">Encryption in transit (TLS) is solid; at-rest is provider disk-level (not per-column) and there is no external pen-test yet — so security is honestly capped ≤ L4 until audited.</div>
@@ -275,7 +275,7 @@ function _edgeTabHtml(){
   const arrow=()=>'<span style="color:var(--grey);font-size:10px">→</span>';
   const _mk=(v)=>{ const m={y:['#2f8f5b','✓'],p:['#a9791f','~'],n:['#c0453b','✗']}, c=m[v]||m.n; return '<span style="color:'+c[0]+';font-weight:700">'+c[1]+'</span>'; };
   const crow=(n,a,b,c,d,hl)=>'<tr style="'+(hl?'background:#eef3fb;':'')+'border-top:1px solid var(--line)"><td style="text-align:left;padding:4px;font-weight:'+(hl?'700':'500')+';color:'+(hl?'#2b4a72':'var(--ink)')+'">'+n+'</td><td style="text-align:center;padding:4px">'+_mk(a)+'</td><td style="text-align:center;padding:4px">'+_mk(b)+'</td><td style="text-align:center;padding:4px">'+_mk(c)+'</td><td style="text-align:center;padding:4px">'+_mk(d)+'</td></tr>';
-  return '<div style="padding:14px 16px;max-height:70vh;overflow:auto">'
+  return '<div style="padding:14px 16px;overflow:visible">'
     +'<div style="font-size:11.5px;color:var(--grey);margin-bottom:8px">Where we aim vs the alternatives. <b>This is a positioning hypothesis</b> — our dot is a <b>target</b> (we are early/unproven); the others are established.</div>'
     +'<div style="position:relative;height:270px;margin:22px 34px 30px;border-left:1.5px solid var(--line);border-bottom:1.5px solid var(--line)">'
       +'<div style="position:absolute;left:50%;top:0;bottom:0;border-left:1px dashed var(--line)"></div>'
@@ -330,7 +330,7 @@ function _realTabHtml(){
       +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:3px"><span style="font-size:12px;font-weight:700">'+esc(claim)+'</span><span style="margin-left:auto;font-size:9px;font-weight:800;color:'+c+';white-space:nowrap">'+lbl+'</span></div>'
       +'<div style="font-size:10.6px;color:var(--ink);line-height:1.45;margin-bottom:3px"><b>Now:</b> '+esc(now)+'</div>'
       +'<div style="font-size:10.4px;color:var(--grey);line-height:1.4"><b>To earn it:</b> '+esc(earn)+'</div></div>'; };
-  return '<div style="padding:14px 16px;max-height:70vh;overflow:auto">'
+  return '<div style="padding:14px 16px;overflow:visible">'
     +'<div style="font-size:11.5px;color:var(--grey);margin-bottom:10px">Full honesty — for each edge, where we genuinely stand and what it takes to <b>earn</b> that level. Nothing counts as done until a human proved it (our review-gate rule).</div>'
     + row('Governed peer two-way (the communication edge)','built','Per-entity co-held copies, messages both ways, per-party dispute threads — ALL replicated per-copy (nothing shared), proven by the regression suite.','Run one live A↔B loop with a real user; then volume-test it.')
     + row('Multitenant isolation (RLS)','real','Live in prod, PER-COPY across ALL entity tables — cb_app cannot bypass RLS; the regression suite proves a non-participant reads 0 (100+ assertions).','Commission an external pen-test to move from self-verified to attested (the L5 gate).')
@@ -360,10 +360,10 @@ function _openLegendImpl(){
   };
   const matBadge=(c)=>{ if(!c.maturity) return ''; const t=(c.target&&c.target>c.maturity)?`→L${c.target}`:''; return `<span title="Capability maturity — 1 Proven · 2 Packaged · 3 Itemised · 4 Governed · 5 Productized" style="font-size:10px;font-weight:800;color:#4b3b8f;background:#efeaf9;border:1px solid #cabdf0;border-radius:6px;padding:1px 7px">L${c.maturity}${t}</span>`; };
   const featRow=(f)=>{ const [col,ic]=SC[f.s]||SC.backlog;
-    return `<div style="display:flex;gap:7px;align-items:flex-start;font-size:12px;color:var(--ink);padding:3px 0;line-height:1.4"><span style="color:${col};flex:none">${ic}</span><span>${esc(f.n)}</span></div>`; };
+    return `<div style="display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--ink);padding:4px 0;line-height:1.45"><span style="color:${col};flex:none">${ic}</span><span>${esc(f.n)}</span></div>`; };
   const card=(c)=>`<div style="border:1px solid var(--line);border-radius:11px;padding:11px 13px;margin-bottom:10px;background:${c.load==='planned'?'#faf9f5':'#fff'}">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px"><span style="font-size:15px">${c.icon}</span><span style="font-family:'Space Grotesk';font-weight:700;font-size:13.5px">${esc(c.name)}</span><span style="margin-left:auto;display:flex;gap:6px;align-items:center">${matBadge(c)}${loadBadge(c)}</span></div>
-    <div style="font-size:11.5px;color:var(--grey);margin-bottom:8px;line-height:1.45">${esc(c.blurb)}</div>
+    <div style="font-size:12.5px;color:var(--grey);margin-bottom:8px;line-height:1.5">${esc(c.blurb)}</div>
     ${c.features.map(featRow).join('')}
   </div>`;
   const capBody=`
@@ -371,18 +371,18 @@ function _openLegendImpl(){
       <span><b style="color:var(--ink)">${built}</b> live capabilities · <b style="color:var(--ink)">${nf}</b> features</span>
       <span style="margin-left:auto">Status: <span style="color:#2f8f5b">✅ done ${d}</span> · <span style="color:#a9791f">◐ partial ${p}</span> · <span style="color:#9aa3a7">○ backlog ${b}</span></span>
     </div>
-    <div style="padding:12px 13px;max-height:70vh;overflow:auto">${CAP_CATALOGUE.map(card).join('')}
+    <div style="padding:12px 13px;overflow:visible">${CAP_CATALOGUE.map(card).join('')}
       <div style="font-size:10.5px;color:var(--grey);text-align:center;padding-top:4px">Load: <b>always on</b> ships with the app · <b>lazy</b> loads on first use · <b>planned</b> not built yet. · <b>L1–5</b> maturity: 1 Proven · 2 Packaged · 3 Itemised · 4 Governed · 5 Productized (→ = target). Kept true to the code.</div>
     </div>`;
   const body = (_lbTab==='subject') ? _subjectTabHtml() : (_lbTab==='found') ? _foundTabHtml() : (_lbTab==='life') ? _lifeTabHtml() : (_lbTab==='sec') ? _secTabHtml() : (_lbTab==='edge') ? _edgeTabHtml() : (_lbTab==='real') ? _realTabHtml() : capBody;
   const titles = { subject:'the subject — the sealed co-held record', found:'foundations — the trust floor + proof', cap:'capabilities &amp; features', life:'lifecycle &amp; traceability', sec:'security posture', edge:'positioning &amp; edge', real:'reality &amp; how we earn it' };
-  host.innerHTML=`<div class="notifover" onclick="closeLegend()"><div class="notifpanel" style="max-width:820px;width:96vw;border-radius:14px;overflow:hidden" onclick="event.stopPropagation()">
-    <div style="display:flex;align-items:center;gap:10px;padding:14px 16px;background:linear-gradient(180deg,#f7f9fc,#fff);border-bottom:1px solid var(--line)">
-      <span style="font-size:18px">🔑</span>
-      <div style="line-height:1.15"><div style="font-family:'Space Grotesk';font-weight:700;font-size:15px;color:var(--ink)">What we serve</div><div style="font-size:10.5px;color:var(--grey)">${titles[_lbTab]||titles.cap}</div></div>
-      <button onclick="closeLegend()" style="margin-left:auto;border:0;background:none;cursor:pointer;font-size:17px;color:var(--grey)" aria-label="Close">✕</button>
+  host.innerHTML=`<div class="notifover" onclick="closeLegend()"><div class="notifpanel" style="position:fixed;inset:0;width:100vw;height:100vh;max-width:none;max-height:none;border-radius:0;overflow:hidden;display:flex;flex-direction:column;background:#fff" onclick="event.stopPropagation()">
+    <div style="display:flex;align-items:center;gap:12px;padding:16px 20px;background:linear-gradient(180deg,#f7f9fc,#fff);border-bottom:1px solid var(--line);flex:none">
+      <span style="font-size:22px">🔑</span>
+      <div style="line-height:1.15"><div style="font-family:'Space Grotesk';font-weight:700;font-size:19px;color:var(--ink)">What we serve</div><div style="font-size:12.5px;color:var(--grey)">${titles[_lbTab]||titles.cap}</div></div>
+      <button onclick="closeLegend()" style="margin-left:auto;border:0;background:none;cursor:pointer;font-size:26px;line-height:1;color:var(--grey)" aria-label="Close">✕</button>
     </div>
-    ${_lbTabBar()}
-    ${body}
+    <div style="flex:none">${_lbTabBar()}</div>
+    <div style="flex:1;overflow:auto;min-height:0"><div style="max-width:1040px;margin:0 auto">${body}</div></div>
   </div></div>`;
 }
