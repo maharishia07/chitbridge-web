@@ -83,7 +83,7 @@ function disputeFilterMsgs(visible, f, sel){
  * Mutates mb in place, returns the decorated text; no-op returning body when not in dispute mode. */
 function disputeDecorateSend(mb, body){
   if(!UI.msgAsDispute) return body;
-  var txt=SESSION.actorId ? (body+"  — "+(SESSION.name||"actor")+"@"+(SESSION.entity||"")) : body;
+  var txt=SESSION.actorId ? (body+"  — "+(SESSION.name||"co-assist")+"@"+(SESSION.entity||"")) : body;
   var dl=((UI.detail&&UI.detail.disputes)||[]);
   var od=UI.msgDispSel
     ? dl.find(function(d){ return String(d.dispute_id)===String(UI.msgDispSel)&&(d.status||'open')==='open'; })
@@ -202,7 +202,7 @@ function disputeDelFile(i){ (UI.dispFiles||[]).splice(i,1); var el=document.getE
 async function sendDisputeMsg(chitId, disputeId){
   var el=document.getElementById('droom-'+disputeId); var body=(el?el.value:'').trim();
   if(!body){ toast('Type a message first.'); return; }
-  var txt=SESSION.actorId?(body+"  — "+(SESSION.name||"actor")+"@"+(SESSION.entity||"")):body;
+  var txt=SESSION.actorId?(body+"  — "+(SESSION.name||"co-assist")+"@"+(SESSION.entity||"")):body;
   var mb={ thread_type:'external', message_text:txt, msg_type:'info', is_dispute:true, dispute_id:disputeId };
   busyShow('Sending…'); var mid=null;
   try{ var mr=await api("sendMsg",{params:{id:chitId},body:mb}); mid=mr&&mr.message_id; }catch(e){ busyHide(); toast(MSG.fail("send the message", e)); return; }

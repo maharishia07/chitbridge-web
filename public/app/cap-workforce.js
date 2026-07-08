@@ -18,6 +18,18 @@ window.ACTOR_TYPES = Object.assign({
 }, window.ACTOR_TYPES||{});
 window.ACTOR_MANAGE = window.ACTOR_MANAGE || {};                     // type -> Tier-2 management renderer (lazy modules self-register)
 if(typeof piCockpit==='function'){ ACTOR_MANAGE.iot=ACTOR_MANAGE.iot||piCockpit; ACTOR_MANAGE.erp=ACTOR_MANAGE.erp||piCockpit; }
+// Per-type "how it works" — the ℹ️/i info affordance, uniform across EVERY co-assist type (was IoT-only). All are co-assists.
+window.AC_TYPE_HOW = window.AC_TYPE_HOW || {
+  human:{how:'A person on your team who acts for the entity — with a hat that scopes what they can do. They log in, take Tasks, and advance chits on the same governed rail.'},
+  iot:{how:'A Pi or gateway that authenticates with its OWN key and PUSHES readings onto the rail — each exception becomes a co-held chit, filed into your folder. Same rail, same governance as a person.'},
+  erp:{how:'A business system that pushes documents over the rail — PROCESS-THEN-FORGET: we keep a receipt (hash + outcome), never the raw payload, and forward only the summary as a co-held chit.'},
+  cloud:{how:'A cloud account (Azure / AWS) as a co-assist — coming soon. Same rail, same governance.'}
+};
+function acTypeInfo(t){ var reg=(window.ACTOR_TYPES||{})[t]||{}, h=(window.AC_TYPE_HOW||{})[t]; if(!h||typeof modal!=='function')return;
+  var lbl=(reg.label||t).split(/[ \/]/)[0];
+  var extra=(t==='iot')?'<div style="margin-top:12px"><button class="composebtn" onclick="closeModal();openShowcase(\'/iot-howitworks.html\',\'How IoT works\')">See the full walkthrough →</button></div>':'';
+  modal('<div style="padding:2px 2px"><div style="font-size:26px">'+(reg.icon||'')+'</div><div style="font-weight:800;font-size:16px;margin-top:4px">'+esc(lbl)+' — as a co-assist</div><div style="font-size:13px;color:#3a4048;line-height:1.6;margin-top:8px">'+esc(h.how)+'</div>'+extra+'<div style="display:flex;margin-top:16px"><button class="composebtn pri" style="flex:1" onclick="closeModal()">Got it</button></div></div>', false);
+}
 // GOVERNANCE hook (invisible to end users): merge governed type defs (with their constraints) into the registry — no core change.
 function acMergeTypes(defs){ if(defs&&typeof defs==='object'){ Object.keys(defs).forEach(function(k){ window.ACTOR_TYPES[k]=Object.assign({},window.ACTOR_TYPES[k]||{},defs[k]); }); if(typeof paintAcList==='function')paintAcList(); if(typeof renderApp==='function')renderApp(); } }
 // generic showcase opener — loads a STANDALONE HTML page FROM THE SERVER in an overlay iframe (no showcase markup in JS; content is an asset, fetched on demand). Reusable: openShowcase('/iot-howitworks.html','How IoT works').
@@ -43,9 +55,14 @@ function openShowcase(url, title){
 }
 function closeShowcase(){ var h=document.getElementById('showcaseHost'); if(h) h.remove(); }
 function coassistsScreen(){
+  const _tf=UI.acTypeF||'all';
+  const _treg=(window.ACTOR_TYPES||{})[_tf]||null;
+  const _shortLbl=_treg?(_treg.label||_tf).split(/[ \/]/)[0]:'';
+  const _title=(_tf!=='all'&&_treg)?((_treg.icon?_treg.icon+' ':'')+esc(_shortLbl)+' · co-assists'):'🧑‍🤝‍🧑 Co-assists';
+  const _typeInfoBtn=(_tf!=='all'&&(window.AC_TYPE_HOW||{})[_tf])?`<button onclick="acTypeInfo('${_tf}')" title="How ${esc(_shortLbl)} co-assists work" style="border:1px solid #cfe0f4;background:#eef4fc;color:#2c5aa0;border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">i</button>`:'';
   const list = `<div class="list">
     <div class="lh">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:14px">🧑‍🤝‍🧑 Co-assists</span><button onclick="openAssist('coassists')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:#fff;color:#3F66A6;border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button>${(UI.acTypeF==='iot')?`<button onclick="openShowcase('/iot-howitworks.html','How IoT works')" title="How IoT works" style="border:1px solid #cfe0f4;background:#eef4fc;color:#2c5aa0;border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">i</button>`:''}</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:14px">${_title}</span><button onclick="openAssist('coassists')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:#fff;color:#3F66A6;border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button>${_typeInfoBtn}</div>
       <div style="display:flex;gap:7px"><input class="inp" id="ac_add" placeholder="New co-assist — person, device, system or agent" style="flex:1" readonly onclick="openActorWiz()"><button class="composebtn" onclick="openActorWiz()">+ New</button></div>
       <div class="srch" style="margin-top:8px">🔍 <input placeholder="Search name, role, key" value="${esc(UI.acQ||'')}" oninput="UI.acQ=this.value;paintAcList()"></div>
       <div style="display:flex;align-items:center;gap:6px;margin-top:8px;font-size:11px;color:var(--grey);flex-wrap:wrap">
@@ -136,7 +153,7 @@ function awRender(){
   var body='', title='', sub='', dots='', foot='';
   if(UI.awType===null){
     title='Add a co-assist'; sub='What kind of co-assist? People, devices, systems and agents can all act for you.';
-    var types=[['human','👤','Human','A person who acts for you'],['iot','🛰️','IoT device','A Pi / gateway that sends signals'],['erp','🔌','ERP / API','Connect a business system'],['ai','🤖','AI agent','An autonomous actor']];
+    var types=[['human','👤','Human','A person who acts for you'],['iot','🛰️','IoT device','A Pi / gateway that sends signals'],['erp','🔌','ERP / API','Connect a business system'],['ai','🤖','AI agent','An autonomous co-assist']];
     body='<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'+types.map(function(t){ var rdy=_awReady(t[0]);
       return '<div onclick="awPick(\''+t[0]+'\')" onmouseover="this.style.borderColor=\'#3F66A6\'" onmouseout="this.style.borderColor=\'#e5e2dd\'" style="border:1px solid #e5e2dd;border-radius:14px;padding:14px;cursor:pointer;'+(rdy?'':'opacity:.72')+'"><div style="font-size:24px">'+t[1]+'</div><div style="font-weight:700;font-size:14px;margin-top:6px">'+t[2]+'</div><div style="font-size:11.5px;color:#6a707a;margin-top:2px;line-height:1.35">'+t[3]+'</div><span style="display:inline-block;margin-top:9px;font-size:10px;font-weight:700;border-radius:20px;padding:1px 9px;'+(rdy?'background:#e8f3ec;color:#2f7a45':'background:#eef3fb;color:#2c5aa0')+'">'+(rdy?'ready':'explore')+'</span></div>';
     }).join('')+'</div>';
@@ -158,7 +175,7 @@ function awRender(){
       else if(sk==='hat') body=selF('aw_hat','Hat (what they do)',[['act','Act — does the work'],['manager','Manager — acts + assigns'],['audit','Audit — review only'],['mis','MIS — reports'],['view_only','View-only']])+how('Only Act / Manager hats can be assigned work.');
       else if(sk==='gw') body=fld('aw_name','Gateway name','Line-1 Gateway')+fld('aw_site','Site','Chennai')+how('One Pi = one gateway; its sensors are connections (BridgeIds) under it.');
       else if(sk==='mode') body=selF('aw_mode','What is sending the data?',[['push','📟 A Pi / edge box I will set up — recommended'],['pull','🔌 My existing MQTT broker / cloud — coming soon']])+how('Push: we generate a one-line installer to flash on the Pi. Pull (we subscribe to your broker) is on the roadmap — not live yet.');
-      else if(sk==='sys') body=fld('aw_name','System name','Acme SAP')+fld('aw_site','Site','HQ')+how('One system = one actor; its endpoints are connections under it.');
+      else if(sk==='sys') body=fld('aw_name','System name','Acme SAP')+fld('aw_site','Site','HQ')+how('One system = one co-assist; its endpoints are connections under it.');
       else if(sk==='conn') body=fld('aw_baseurl','Base URL','https://sap.acme.com/api')+fld('aw_authref','Auth reference (secret NAME)','ACME_SAP_KEY')+how('We store a reference to the secret, never the raw key.');
       else if(sk==='agent') body=fld('aw_name','Agent name','Draft-bot')+fld('aw_role','Role','drafts replies for review')+how('Every action it takes is a chit you can see and dispute.');
       else if(sk==='guard') body=selF('aw_under','Acts under',[['rules','your rules only'],['approval','your rules + human approval']])+how('Governed: it can only do what your rules allow.');
@@ -302,7 +319,7 @@ function acDetailHTML(){ const x=UI.acDet;
       <div style="display:flex;align-items:center;gap:8px"><span class="optchip ${acShc(x.shift)}">${acShLabel(x.shift)}</span><span style="font-size:12px;color:var(--grey)">${x.status==='active'?'active':esc(x.status)}</span></div>
       ${(x.shift!=='on_shift' && (x.breakSince||x.returnDate)) ? '<div style="font-size:11.5px;color:var(--grey);margin-top:6px">'+(x.breakSince?('On break since '+acDate(x.breakSince)):'')+(x.returnDate?((x.breakSince?' · ':'')+'returns '+acDate(x.returnDate)):'')+'</div>' : ''}
       <div style="font-size:12.5px;margin-top:9px">Load · <b>${x.load}</b> / ${x.max||'∞'} tasks</div><div style="height:8px;background:#eef1f4;border-radius:5px;overflow:hidden;margin-top:6px"><span style="display:block;height:100%;background:var(--blue);border-radius:5px;width:${pct}%"></span></div></div>`;
-    const eng=`<div class="sec">Access / engagement</div><div style="font-size:11px;color:#9a7b34;background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;line-height:1.5">Per-actor engagement (view-only · act · audit · MIS) is <b>planned, not enforced yet</b> — today a co-assist acts within the entity's scope. Default-deny per node is the roadmap.</div>`;
+    const eng=`<div class="sec">Access / engagement</div><div style="font-size:11px;color:#9a7b34;background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;line-height:1.5">Per-co-assist engagement (view-only · act · audit · MIS) is <b>planned, not enforced yet</b> — today a co-assist acts within the entity's scope. Default-deny per node is the roadmap.</div>`;
     const coverName = x.del?acLbl((UI.acts||[]).find(a=>a.id===x.del)):'';
     const coverSection = '<div class="sec">Leave cover</div><div class="itab" style="border:1px solid var(--line);border-radius:11px;overflow:hidden;margin-bottom:10px">'
       +'<div style="padding:10px 13px;border-bottom:1px dashed var(--line)"><div style="font-size:10.5px;color:#345488;text-transform:uppercase;letter-spacing:.4px;font-weight:700">🛡 Covered by</div><div style="font-size:13px;margin-top:3px;line-height:1.45">'+(x.del?('<b>'+coverName+'</b> takes over <b>'+esc(x.name)+'</b>&rsquo;s work when '+esc(x.name)+' is away.'):'<span style="color:var(--grey)">No cover set — nobody takes '+esc(x.name)+'&rsquo;s work when away.</span>')+'</div></div>'

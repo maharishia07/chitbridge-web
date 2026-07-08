@@ -47,7 +47,7 @@ function _folderView(){
   var arch=!!UI.folderArch;
   var tab=function(on,label,onclick){ return '<span onclick="'+onclick+'" style="cursor:pointer;font-size:12px;font-weight:700;padding:5px 13px;border-radius:16px;'+(on?'background:var(--blue);color:#fff':'border:1px solid var(--line);color:#586069')+'">'+label+'</span>'; };
   var head='<div style="padding:14px 18px;border-bottom:1px solid var(--line)"><div style="font-size:17px;font-weight:800">📁 '+esc(f.name)+'</div>'
-    +'<div style="font-size:11.5px;color:var(--grey);margin-top:2px">source = the sender / actor · destination = this folder</div>'
+    +'<div style="font-size:11.5px;color:var(--grey);margin-top:2px">source = the sender / co-assist · destination = this folder</div>'
     +'<div style="display:flex;gap:6px;margin-top:11px;align-items:center">'+tab(!arch,'Current','setFolderArch(false)')+tab(arch,'Archive','setFolderArch(true)')
     +'<span style="margin-left:auto;font-size:11px;color:var(--blue);cursor:pointer" onclick="renameFolder(\''+UI.folderSel+'\')">Rename</span>'
     +'<span style="font-size:11px;color:#c0453b;cursor:pointer;margin-left:14px" onclick="deleteFolder(\''+UI.folderSel+'\')">Delete</span></div></div>';

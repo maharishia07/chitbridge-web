@@ -1079,7 +1079,7 @@ function renderLogin(){
        <label class="fl">OTP ${L.kind==="entity"?"sent to your email":"from your admin"}</label><input class="inp" id="l_otp" placeholder="6-digit code">
        <button class="btn" id="l_go">${L.busy?'<span class="spin"></span> Verifying…':"Verify & enter →"}</button>`;
   } else if(L.step==="pin"){
-    form = `<div ${who}>Signing in as <b>${esc(L.id)}</b> · actor · <a onclick="loginReset()">change</a></div>
+    form = `<div ${who}>Signing in as <b>${esc(L.id)}</b> · co-assist · <a onclick="loginReset()">change</a></div>
        <label class="fl">Your PIN</label><input class="inp" id="l_pin" placeholder="••••" type="password">
        <button class="btn" id="l_go">${L.busy?'<span class="spin"></span> …':"Start shift →"}</button>`;
   } else if(L.step==="setpin"){
@@ -1345,7 +1345,7 @@ function cfField(f){
 function ccSendAsOptions(){
   const ent=(typeof SESSION!=="undefined"&&SESSION.entity)||"";
   let o=`<option value="entity">${esc(ent)} · entity</option>`;
-  (STORE.actors||[]).forEach(a=>{ o+=`<option value="${esc(a.id)}">${esc(a.name)} · ${esc(a.uid||'actor')}</option>`; });
+  (STORE.actors||[]).forEach(a=>{ o+=`<option value="${esc(a.id)}">${esc(a.name)} · ${esc(a.uid||'co-assist')}</option>`; });
   return o;
 }
 async function compose(prefill){ UI.drawer=false; CC={items:(prefill&&prefill.items)?prefill.items.slice():[],rcpts:(prefill&&prefill.recipients)?prefill.recipients.slice():[]}; UI._forwardFrom=(prefill&&prefill.forwardFrom)||null; UI._draftId=(prefill&&prefill.draftId)||null; UI._supplier=(prefill&&prefill.supplier)?prefill.supplier:null; let _catErr=false;
@@ -1447,7 +1447,7 @@ async function submitCompose(isDraft){
   const err=document.getElementById("cc_err"); if(err)err.textContent="";
   const subject=val("cf_subject");
   const sendasV=val("cc_sendas"); const ent=(typeof SESSION!=="undefined"&&SESSION.entity)||"";
-  const actor=(STORE.actors||[]).find(a=>a.id===sendasV); const send_as_label=actor?(actor.name+" ("+(actor.uid||"actor")+")"):ent;
+  const actor=(STORE.actors||[]).find(a=>a.id===sendasV); const send_as_label=actor?(actor.name+" ("+(actor.uid||"co-assist")+")"):ent;
   const tos=CC.rcpts.filter(r=>r.role==="to");
   if(!isDraft && !subject){ if(err)err.textContent="Subject is required."; return; }
   if(!isDraft && !tos.length){ if(err)err.textContent="Add at least one To recipient (or Save draft)."; return; }
@@ -1641,9 +1641,9 @@ async function loadNetwork(){ const h=document.getElementById("netbody"); if(!h)
 const ORG_HELP = [
   {q:"I have multiple branches", a:"Model each branch as a sub-entity: register it, then from your head office use Connect a sub-entity with the branch's bridge id, and have the branch approve. Each branch can have its own counters beneath it — a tree, not a flat list."},
   {q:"What's the lead node?", a:"Your lead node is the top of your tree — usually your head office. Everything links upward to it, and a node can have only one live parent (tree-only)."},
-  {q:"Where do I set actors?", a:"Actors (Co-Assist) belong to a node — your head office or a branch. Add them in Co-Assist and they're scoped to that node here. A branch can have many actors; each works within their node."},
-  {q:"What access do actors get?", a:"An actor acts FOR the owner — the owner stays the party. Their access is a scoped grant: a capacity (e.g. create chits, edit catalogue) and how deep in the tree it reaches. Default-deny — they only get what you grant, checked live on every action."},
-  {q:"How do branches & actors coordinate?", a:"Each branch runs its own chits with its own actors. A head-office actor can be granted down across branches; a branch actor stays scoped to their branch. You can only delegate access you hold."},
+  {q:"Where do I set co-assists?", a:"Co-assists belong to a node — your head office or a branch. Add them in Co-assists and they're scoped to that node here. A branch can have many co-assists; each works within their node."},
+  {q:"What access do co-assists get?", a:"A co-assist acts FOR the owner — the owner stays the party. Their access is a scoped grant: a capacity (e.g. create chits, edit catalogue) and how deep in the tree it reaches. Default-deny — they only get what you grant, checked live on every action."},
+  {q:"How do branches & co-assists coordinate?", a:"Each branch runs its own chits with its own co-assists. A head-office co-assist can be granted down across branches; a branch co-assist stays scoped to their branch. You can only delegate access you hold."},
   {q:"If a branch leaves?", a:"On Disconnect, any access granted from outside that branch is cascade-revoked, and the paths and grant scopes re-stamp in one transaction. Open chits settle first."},
   {q:"Branch or supplier?", a:"A branch is part of YOUR business — Network. A supplier is a different business you buy from — Connections. Same language, different relationship."},
   {q:"How do I create a branch?", a:"Create branches one at a time: name the branch (we register it as a sub-entity), link it to its parent, then approve. You can't build the whole tree at once — each node is created, then connected, in order. Repeat down the tree."},
@@ -1665,7 +1665,7 @@ function orgAskFree(){ const q=(val("org_in")||"").toLowerCase(); let a;
   else if(/branch|multiple|location|outlet|sub.?entity/.test(q))a=ORG_HELP[0].a;
   else if(/lead|head|top|root|parent/.test(q))a=ORG_HELP[1].a;
   else if(q.trim())a="Tell me how your business is laid out and who works where, and I'll show how to model it — and remember, branches are added one at a time.";
-  else a="Ask me how to structure your organisation, create branches, set actors, and what access they get.";
+  else a="Ask me how to structure your organisation, create branches, set co-assists, and what access they get.";
   const o=document.getElementById("org_ans"); if(o)o.innerHTML=esc(a); }
 function netStChip(s){ return `<span class="optchip ${s==='active'?'on':(s==='suspended'?'brk':'')}">${esc(s)}</span>`; }
 const NET_MODELS = {
@@ -1721,7 +1721,7 @@ function netView(self, tree, edges){
   return `${CFG.MODE==="demo"?netModelBar():""}${orgBanner()}<div style="${_CARD}"><div style="display:flex;justify-content:space-between;align-items:center"><span><b>${esc(self.name)}</b> · <span style="font-family:\'Space Mono\';font-size:12px">${esc(self.bridgeId||self.bridge_id||'')}</span></span><span class="optchip ${self.claimed?'on':'brk'}">${self.claimed?'claimed':'unclaimed'}</span></div><div style="font-size:11.5px;color:var(--grey);margin-top:4px">mode ${esc(self.mode||'b2b')} · ${self.mode==='b2c'?'customer-facing':'internal-B2B'} · NET-01 Spine · /api/network (preview — editing not yet live)</div></div>
     <div class="sec" style="font-size:12px;color:var(--grey);margin:10px 0 4px">Your network — entities under you (up to the lead node)</div>
     <div style="${_CARD}">${nodes||'<div style="color:var(--grey);font-size:13px;padding:4px">Just you so far.</div>'}</div>
-    <div style="font-size:11.5px;color:var(--grey);margin:-2px 0 10px;line-height:1.5">👥 = actors (Co-Assist) at that node. Set actors in <b>Co-Assist</b>. <i>Per-node access grants that cascade down the tree are planned — not enforced yet.</i></div>
+    <div style="font-size:11.5px;color:var(--grey);margin:-2px 0 10px;line-height:1.5">👥 = co-assists at that node. Set them in <b>Co-assists</b>. <i>Per-node access grants that cascade down the tree are planned — not enforced yet.</i></div>
     <div style="${_CARD}"><div style="font-family:'Space Grotesk';font-weight:600;font-size:13px;margin-bottom:8px">➕ Create a branch</div>
       <label class="fl">Branch name</label><input class="inp" id="nb_name" placeholder="e.g. Branch C">
       <label class="fl" style="margin-top:8px">Under which node</label><select class="inp" id="nb_parent">${tree.map(n=>`<option value="${n.id}">${'— '.repeat(n.depth||0)}${esc(n.name)}</option>`).join("")}</select>
@@ -2012,7 +2012,7 @@ function taskPanel(){
     </div>` :
     `<div class="tools">
       ${UI.folder!=='order'?`<div class="tool" title="Change status" onclick="quickStatus()">◧</div>
-      <div class="tool" title="Assign to actor" onclick="quickAssign()">👤</div>`:''}
+      <div class="tool" title="Assign to co-assist" onclick="quickAssign()">👤</div>`:''}
       <div class="tool ${UI.filterOpen?'on':''}" title="Filter" onclick="openFilter()">${funnel}</div>
       <div class="tool ${UI.selectMode?'on':''}" title="Select" onclick="toggleSelect()">☑</div>
       <div class="tool" title="Raise dispute" onclick="quickDispute()">⚑</div>
@@ -2374,7 +2374,7 @@ function rowHTML(c){
 function toggleSel(id){UI.selected.has(id)?UI.selected.delete(id):UI.selected.add(id);paintRowsOnly();updateSelBar();}
 /* PENDING — not built on the backend yet. One place so we remember to build them (mirrors TASK-PANEL-WIRING.md ○ items). */
 const PENDING = {
-  coassistEngage:{label:"Set engagement (view-only/act/audit/MIS) — per-actor scoping, planned",ref:"ATH-118"},
+  coassistEngage:{label:"Set engagement (view-only/act/audit/MIS) — per-co-assist scoping, planned",ref:"ATH-118"},
   voidChit:     {label:"Void (owner soft-void)",   ref:"ATH-109 §3"},
   pdf:          {label:"PDF export",                ref:"next iteration"},
   setPriority:  {label:"Re-prioritise",             ref:"ATH-109 §7"},
@@ -2649,8 +2649,8 @@ async function pickAssign(id){
 function pickActor(aid){ MODALS.pick.actorId=aid; document.querySelectorAll('.optrow').forEach(r=>r.classList.toggle('sel',r.dataset.a===aid)); syncAssignOk(); }
 function pickPri(p){ MODALS.pick.pri=p; document.querySelectorAll('.prisel button').forEach(b=>b.classList.toggle('on',b.dataset.p===p)); const h=document.getElementById('reasonhint'); if(h)h.textContent=p==='urgent'?'— Urgent needs one':'(optional)'; syncAssignOk(); }
 function syncAssignOk(){ const p=MODALS.pick; const b=document.getElementById('mok'); if(!b)return;
-  if(p.bulk){ b.disabled=!p.actorId; const a=(UI.actors||[]).find(x=>x.id===p.actorId); b.textContent=p.actorId?("Assign "+p.ids.length+" → "+(a?a.name:"actor")):"Assign all"; return; }
-  const ok=p.actorId&&(p.pri!=='urgent'||(p.reason&&p.reason.trim())); b.disabled=!ok; const a=(UI.actors||[]).find(x=>x.id===p.actorId); b.textContent=p.actorId?("Assign · "+PRI[p.pri].label+" → "+(a?a.name:"actor")):"Assign"; }
+  if(p.bulk){ b.disabled=!p.actorId; const a=(UI.actors||[]).find(x=>x.id===p.actorId); b.textContent=p.actorId?("Assign "+p.ids.length+" → "+(a?a.name:"co-assist")):"Assign all"; return; }
+  const ok=p.actorId&&(p.pri!=='urgent'||(p.reason&&p.reason.trim())); b.disabled=!ok; const a=(UI.actors||[]).find(x=>x.id===p.actorId); b.textContent=p.actorId?("Assign · "+PRI[p.pri].label+" → "+(a?a.name:"co-assist")):"Assign"; }
 function confirmAssign(){ const p=MODALS.pick; if(!p||!p.actorId)return; closeModal();
   if(p.bulk){ assignBulkChits(p.ids, p.actorId); return; }
   assignChit(p.id, p.actorId, p.pri, p.reason); }
@@ -2658,7 +2658,7 @@ function confirmAssign(){ const p=MODALS.pick; if(!p||!p.actorId)return; closeMo
 // Backend /api/chits/assign-bulk takes {chit_ids, target_actor_id} only (no priority/reason).
 async function pickAssignBulk(ids){
   let actors=[];
-  try{ const r=await api("actors"); actors=(r||[]).map(mapApiActor); }catch(e){ toast("Couldn't load actors: "+e.message); return; }
+  try{ const r=await api("actors"); actors=(r||[]).map(mapApiActor); }catch(e){ toast("Couldn't load co-assists: "+e.message); return; }
   UI.actors=actors; MODALS.pick={ids, actorId:null, bulk:true};
   const rows=actors.map(a=>{ const off=(a.shift==="off"); const max=a.max||0; const full=(max>0 && a.load>=max); const assignable=hatAssignable(a.hat); const dis=off||full||!assignable;
     const chip=a.shift==="on_shift"?'<span class="optchip on">on shift</span>':a.shift==="on_break"?'<span class="optchip brk">on break</span>':'<span class="optchip off">off</span>';
