@@ -91,11 +91,20 @@ async function awFinish(){
     }catch(e){ UI.awErr=(e&&e.message)||'Create failed'; awRender(); }
     return;
   }
+  // Pull mode (subscribe to the customer's broker) is not built yet — gate it as coming-soon, never create a dead connector.
+  if(t==='iot' && (d.aw_mode||'push')==='pull'){
+    UI.awResult='<div style="text-align:center"><div style="font-size:34px;margin:8px 0 6px">🔌</div><div style="font-weight:700;font-size:16px">Pull mode — coming soon</div><div style="font-size:13px;color:#3a4048;line-height:1.6;margin-top:10px">Subscribing to <b>your</b> MQTT broker is on the roadmap — not live yet. For now use <b>Push</b>: a Pi / edge box we hand a one-line installer to. ‹ Back one step to switch to Push.</div><div style="font-size:11.5px;color:#2c5aa0;background:#eef3fb;border:1px solid #cfe0f4;border-radius:9px;padding:9px 11px;margin-top:14px">✨ Explore mode — not activated yet.</div></div>';
+    UI.awStep='done'; UI.awErr=null; awRender(); return;
+  }
   var cfg = t==='iot' ? {mode:d.aw_mode||'push'} : {base_url:(d.aw_baseurl||'').trim()||undefined, auth_ref:(d.aw_authref||'').trim()||undefined};
   var nm2=(d.aw_name||'').trim(); if(nm2.length<2){ UI.awErr='A name of at least 2 characters is required.'; awRender(); return; }
   try{ var r2=await api('connectorCreate',{body:{display_name:nm2,type:t,site:(d.aw_site||'').trim()||undefined,config:cfg}});
     var pk=r2&&r2.provision_key;
-    UI.awResult='<div style="text-align:center"><div style="font-size:34px;margin:8px 0 6px">'+(t==='iot'?'🔑':'🔌')+'</div><div style="font-weight:700;font-size:16px">'+(t==='iot'?'Connection string issued':'System connected')+'</div>'+(pk?('<div style="font-size:12px;color:#3a4048;margin-top:10px">ActorKey — shown once, copy it to the Pi:</div><pre style="background:#0f1b2d;color:#cfe0f4;border-radius:8px;padding:10px 12px;font-size:12px;overflow:auto;margin:8px 0 0;user-select:all">'+esc(pk)+'</pre>'):('<div style="font-size:12.5px;color:#3a4048;margin-top:10px">Add its '+(t==='iot'?'devices':'endpoints')+' in Connectors.</div>'))+'</div>';
+    UI.awResult='<div style="text-align:center"><div style="font-size:34px;margin:8px 0 6px">'+(t==='iot'?'🛰️':'🔌')+'</div><div style="font-weight:700;font-size:16px">'+(t==='iot'?'Gateway created':'System connected')+'</div>'
+      +(t==='iot'
+        ? '<div style="font-size:12.5px;color:#3a4048;line-height:1.6;margin-top:10px">Next: open it in <b>Co-assists</b> and hit <b>📦 Create package</b> — that issues its key and a one-line installer for the Pi.</div>'+(pk?('<details style="margin-top:12px;text-align:left"><summary style="font-size:11.5px;color:#2c5aa0;cursor:pointer">Advanced — a direct HTTPS device (ESP32 etc.)? use this ActorKey</summary><div style="font-size:11px;color:#8a6d1e;margin:6px 0 4px">⚠ Using 📦 Create package later reissues the key and this one stops working — pick ONE path.</div><pre style="background:#0f1b2d;color:#cfe0f4;border-radius:8px;padding:9px 11px;font-size:11.5px;overflow:auto;margin:0;user-select:all">'+esc(pk)+'</pre></details>'):'')
+        : '<div style="font-size:12.5px;color:#3a4048;margin-top:10px">Add its endpoints in Connectors.</div>')
+      +'</div>';
     UI.awStep='done'; UI.awErr=null; UI.connectors=undefined; awRender();
     if(UI.nav==='coassists' && typeof loadCoassists==='function') loadCoassists();   // refresh the panel so the new Pi/system shows immediately
   }catch(e){ UI.awErr=(e&&e.message)||'Create failed'; awRender(); }
@@ -135,7 +144,7 @@ function awRender(){
       if(sk==='who') body=fld('aw_name','Display name','Anitha')+fld('aw_key','User ID (sign-in)','anitha')+how('They sign in with this User ID under your entity + a one-time code, then set a PIN.');
       else if(sk==='hat') body=selF('aw_hat','Hat (what they do)',[['act','Act — does the work'],['manager','Manager — acts + assigns'],['audit','Audit — review only'],['mis','MIS — reports'],['view_only','View-only']])+how('Only Act / Manager hats can be assigned work.');
       else if(sk==='gw') body=fld('aw_name','Gateway name','Line-1 Gateway')+fld('aw_site','Site','Chennai')+how('One Pi = one gateway; its sensors are connections (BridgeIds) under it.');
-      else if(sk==='mode') body=selF('aw_mode','How it connects',[['push','push — we issue the key (Pi sends to us)'],['pull','pull — your broker (we subscribe)']])+how('Push is simplest for a Pi — we hand you a string to flash on it.');
+      else if(sk==='mode') body=selF('aw_mode','What is sending the data?',[['push','📟 A Pi / edge box I will set up — recommended'],['pull','🔌 My existing MQTT broker / cloud — coming soon']])+how('Push: we generate a one-line installer to flash on the Pi. Pull (we subscribe to your broker) is on the roadmap — not live yet.');
       else if(sk==='sys') body=fld('aw_name','System name','Acme SAP')+fld('aw_site','Site','HQ')+how('One system = one actor; its endpoints are connections under it.');
       else if(sk==='conn') body=fld('aw_baseurl','Base URL','https://sap.acme.com/api')+fld('aw_authref','Auth reference (secret NAME)','ACME_SAP_KEY')+how('We store a reference to the secret, never the raw key.');
       else if(sk==='agent') body=fld('aw_name','Agent name','Draft-bot')+fld('aw_role','Role','drafts replies for review')+how('Every action it takes is a chit you can see and dispute.');
