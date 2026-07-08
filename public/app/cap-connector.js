@@ -15,6 +15,7 @@ if (typeof EP !== 'undefined') {
     connectorCreate:     {m:'POST',  p:'/api/connectors',                              ok:'y'},
     connectorList:       {m:'GET',   p:'/api/connectors',                              ok:'y'},
     connectorDelete:     {m:'DELETE',p:'/api/connectors/:actorId',                     ok:'y'},
+    connectorReissueCode:{m:'POST',  p:'/api/connectors/reissue-code',                 ok:'y'},
   });
 }
 
@@ -83,12 +84,7 @@ function acDeleteConnector(id, name){
   if(typeof confirmAsk==='function') confirmAsk('Delete connector', 'Delete <b>'+esc(name||'this connector')+'</b>? Only allowed if it has <b>no devices attached</b> — remove its devices first otherwise. This cannot be undone.', 'Delete', run, true);
   else if(window.confirm('Delete '+(name||'this connector')+'? Only if it has no devices attached.')) run();
 }
-async function acRegenKey(id){
-  try{ var r=await api('connectorRegen',{params:{actorId:id},body:{}}); UI.acFreshKey=(r&&r.provision_key)||null;
-    if(!UI.acFreshKey && typeof toast==='function')toast('No key returned.'); else if(typeof toast==='function')toast('New ActorKey issued — copy it now.');
-    paintAcDetail(); }
-  catch(e){ if(typeof toast==='function')toast((e&&e.message)||'Regenerate failed'); }
-}
+function acRegenKey(id){ acReissueGate(id, 'key'); }   // gated: name + one-time code (see acReissueGate)
 function _addDeviceForm(x,iot){
   var spec = iot ? '<label class="fl">Topic</label><input class="inp" id="ad_topic" placeholder="sensors/line1/temp" style="width:100%"><label class="fl">Device id</label><input class="inp" id="ad_dev" placeholder="edge-gw-01" style="width:100%">'
                  : '<label class="fl">Resource path</label><input class="inp" id="ad_path" placeholder="/odata/PurchaseOrders" style="width:100%">';
@@ -186,21 +182,45 @@ function _buildInstaller(cfg){
   L.push('echo "Spool: drop <event>.json (and image) into $DIR/spool to raise an exception"');
   return L.join('\n')+'\n';
 }
-function acCreatePackage(id){
-  var run=async function(){
-    try{
-      var rk=await api('connectorRegen',{params:{actorId:id},body:{}}); var key=rk&&rk.provision_key;
-      if(!key){ if(typeof toast==='function')toast('No key issued.'); return; }
+function acCreatePackage(id){ acReissueGate(id, 'package'); }
+// ── Reissue step-up (destructive): re-type the gateway name (the QUESTION) + a one-time code emailed to the ENTITY
+//    (the PASSWORD). Only the entity or a manager delegate can reissue; the code always goes to the account email.
+function acReissueGate(id, mode){ UI.acReissue={id:id, mode:mode||'package'};
+  if(typeof modal!=='function'){ if(typeof toast==='function')toast('Cannot open the reissue dialog.'); return; }
+  modal('<div style="padding:2px 2px"><div style="font-weight:800;font-size:16px;margin-bottom:4px">⚠ Reissue device key</div>'
+    +'<div style="font-size:12.5px;color:#586069;line-height:1.5;margin-bottom:12px">This issues a <b>new key</b> — any device already running this gateway <b>stops</b> until you reflash it with the new installer. Only the entity or a manager may do this.</div>'
+    +'<label class="fl">1 · Type the gateway\'s exact name</label><input class="inp" id="rg_name" placeholder="gateway name" style="width:100%;margin-bottom:12px">'
+    +'<label class="fl">2 · One-time code (sent to the account email)</label><div style="display:flex;gap:8px;align-items:center;margin-bottom:4px"><input class="inp" id="rg_otp" inputmode="numeric" maxlength="6" placeholder="6-digit code" style="flex:1"><button class="composebtn" onclick="acReissueSendCode()">Send code</button></div>'
+    +'<div id="rg_msg" style="font-size:11.5px;color:#2c5aa0;min-height:15px;margin-bottom:10px"></div>'
+    +'<div style="display:flex;gap:10px"><button class="composebtn" style="flex:1" onclick="closeModal()">Cancel</button><button class="composebtn pri" style="flex:1" onclick="acReissueSubmit()">Reissue</button></div>'
+    +'</div>', false);
+}
+async function acReissueSendCode(){ var m=document.getElementById('rg_msg'); if(m)m.textContent='Sending…';
+  try{ var r=await api('connectorReissueCode',{body:{}});
+    if(m) m.innerHTML='Code sent to <b>'+esc((r&&r.email)||'the account email')+'</b>.'+((r&&r.dev_otp)?(' <span style="color:#8a6d1e">Dev code <b>'+esc(r.dev_otp)+'</b></span>'):'');
+  }catch(e){ if(m)m.textContent=(e&&e.message)||'Could not send the code.'; }
+}
+async function acReissueSubmit(){ var g=UI.acReissue||{}, id=g.id, mode=g.mode;
+  var name=((document.getElementById('rg_name')||{}).value||'').trim(), otp=((document.getElementById('rg_otp')||{}).value||'').trim();
+  var m=document.getElementById('rg_msg');
+  if(!name){ if(m)m.textContent='Type the gateway name.'; return; }
+  if(!/^[0-9]{6}$/.test(otp)){ if(m)m.textContent='Enter the 6-digit code.'; return; }
+  if(m)m.textContent='Verifying…';
+  try{
+    var rk=await api('connectorRegen',{params:{actorId:id},body:{name:name,otp:otp}}); var key=rk&&rk.provision_key;
+    if(!key){ if(m)m.textContent='No key issued.'; return; }
+    closeModal();
+    if(mode==='package'){
       var r=await api('connectorConns',{params:{actorId:id}});
       var devs=((r&&r.connections)||[]).filter(function(c){return c.enabled!==false;}).map(function(c){ var cf=c.conn_config||{}; return {bridge_id:c.bridge_id, ref:c.ref, folder:cf.folder||null, classes:cf.classes||null}; });
-      var cfg={ endpoint:'https://chitbridge-api-production.up.railway.app', key:key, heartbeat_sec:60, spool_dir:'/opt/chitbridge/spool', devices:devs };
-      _download('chitbridge-install.sh', _buildInstaller(cfg));
-      UI.acFreshKey=key; UI.acProvOpen=true; paintAcDetail();
-      if(typeof toast==='function')toast('Package downloaded — copy it to the Pi and run: sudo bash chitbridge-install.sh');
-    }catch(e){ if(typeof toast==='function')toast((e&&e.message)||'Package failed'); }
-  };
-  if(typeof confirmAsk==='function') confirmAsk('Reissue key &amp; download installer', '⚠ This issues a <b>NEW device key</b> and the current one <b>STOPS working immediately</b>. Any device already running this gateway will go <b>silent</b> until you reflash it with this new installer.<br><br>Only continue if you are setting up (or re-flashing) a device right now.', 'Reissue &amp; download', run, true);
-  else if(window.confirm('This reissues the device key — any device currently running this gateway STOPS until reflashed with the new installer. Continue?')) run();
+      _download('chitbridge-install.sh', _buildInstaller({ endpoint:'https://chitbridge-api-production.up.railway.app', key:key, heartbeat_sec:60, spool_dir:'/opt/chitbridge/spool', devices:devs }));
+      UI.acFreshKey=key; UI.acProvOpen=true; if(typeof paintAcDetail==='function')paintAcDetail();
+      if(typeof toast==='function')toast('Key reissued — installer downloaded. Reflash the Pi: sudo bash chitbridge-install.sh');
+    } else {
+      UI.acFreshKey=key; UI.acProvOpen=true; if(typeof paintAcDetail==='function')paintAcDetail();
+      if(typeof toast==='function')toast('New ActorKey issued — copy it now.');
+    }
+  }catch(e){ if(m)m.textContent=(e&&e.message)||'Reissue failed.'; }
 }
 
 /* self-register the Tier-2 renderer so the generic dispatcher (acOpenManage) finds it after this module lazy-loads */
