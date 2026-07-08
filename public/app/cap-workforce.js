@@ -100,11 +100,18 @@ async function awFinish(){
   var nm2=(d.aw_name||'').trim(); if(nm2.length<2){ UI.awErr='A name of at least 2 characters is required.'; awRender(); return; }
   try{ var r2=await api('connectorCreate',{body:{display_name:nm2,type:t,site:(d.aw_site||'').trim()||undefined,config:cfg}});
     var pk=r2&&r2.provision_key;
-    UI.awResult='<div style="text-align:center"><div style="font-size:34px;margin:8px 0 6px">'+(t==='iot'?'🛰️':'🔌')+'</div><div style="font-weight:700;font-size:16px">'+(t==='iot'?'Gateway created':'System connected')+'</div>'
-      +(t==='iot'
-        ? '<div style="font-size:12.5px;color:#3a4048;line-height:1.6;margin-top:10px">Next: open it in <b>Co-assists</b> and hit <b>📦 Create package</b> — that issues its key and a one-line installer for the Pi.</div>'+(pk?('<details style="margin-top:12px;text-align:left"><summary style="font-size:11.5px;color:#2c5aa0;cursor:pointer">Advanced — a direct HTTPS device (ESP32 etc.)? use this ActorKey</summary><div style="font-size:11px;color:#8a6d1e;margin:6px 0 4px">⚠ Using 📦 Create package later reissues the key and this one stops working — pick ONE path.</div><pre style="background:#0f1b2d;color:#cfe0f4;border-radius:8px;padding:9px 11px;font-size:11.5px;overflow:auto;margin:0;user-select:all">'+esc(pk)+'</pre></details>'):'')
-        : '<div style="font-size:12.5px;color:#3a4048;margin-top:10px">Add its endpoints in Connectors.</div>')
-      +'</div>';
+    if(t==='iot' && pk){
+      // MERGE create + package: build the one-drop installer NOW with the key we just received (no regenerate, no
+      // dangling key to copy). The agent forwards exceptions immediately; devices (added later) enable per-device heartbeats.
+      try{
+        if(typeof ensureCap==='function') await ensureCap('connector');
+        if(typeof _buildInstaller==='function' && typeof _download==='function')
+          _download('chitbridge-install.sh', _buildInstaller({ endpoint:'https://chitbridge-api-production.up.railway.app', key:pk, heartbeat_sec:60, spool_dir:'/opt/chitbridge/spool', devices:[] }));
+      }catch(_){}
+      UI.awResult='<div style="text-align:center"><div style="font-size:34px;margin:8px 0 6px">🛰️</div><div style="font-weight:700;font-size:16px">Gateway created — installer downloaded</div><div style="font-size:12.5px;color:#3a4048;line-height:1.6;margin-top:10px">Run it on the Pi: <span style="background:#0f1b2d;color:#cfe0f4;border-radius:6px;padding:1px 6px;font:11.5px ui-monospace,Consolas,monospace">sudo bash chitbridge-install.sh</span><br>Then add its <b>devices</b> here (each gets a BridgeId your edge writes into the spool). Re-download / rotate the key any time with <b>📦 Create package</b>.</div></div>';
+    } else {
+      UI.awResult='<div style="text-align:center"><div style="font-size:34px;margin:8px 0 6px">🔌</div><div style="font-weight:700;font-size:16px">System connected</div><div style="font-size:12.5px;color:#3a4048;margin-top:10px">Add its endpoints in Connectors.</div></div>';
+    }
     UI.awStep='done'; UI.awErr=null; UI.connectors=undefined; awRender();
     if(UI.nav==='coassists' && typeof loadCoassists==='function') loadCoassists();   // refresh the panel so the new Pi/system shows immediately
   }catch(e){ UI.awErr=(e&&e.message)||'Create failed'; awRender(); }
