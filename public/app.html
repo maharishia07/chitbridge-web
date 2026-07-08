@@ -352,7 +352,8 @@
   .empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:var(--grey);padding:30px;gap:8px}
   .empty .big{font-size:34px}.empty .t{font-family:'Space Grotesk';font-weight:700;font-size:15px;color:var(--ink)}
   .stub{padding:34px;text-align:center;color:var(--grey)}.stub .t{font-family:'Space Grotesk';font-weight:700;font-size:17px;color:var(--ink);margin-bottom:6px}
-  .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);max-width:min(560px,92vw);background:var(--ink);color:#fff;border-radius:11px;padding:12px 18px;font-size:13px;font-weight:600;line-height:1.4;box-shadow:0 12px 34px rgba(8,24,32,.30);display:flex;align-items:center;gap:14px;z-index:9999}
+  .toast{position:fixed;left:50%;top:64px;transform:translateX(-50%);max-width:min(560px,92vw);background:var(--ink);color:#fff;border-radius:11px;padding:12px 18px;font-size:13px;font-weight:600;line-height:1.4;box-shadow:0 12px 34px rgba(8,24,32,.30);display:flex;align-items:center;gap:14px;z-index:9999;animation:toastIn .18s ease-out}
+  @keyframes toastIn{from{opacity:0;transform:translate(-50%,-8px)}to{opacity:1;transform:translate(-50%,0)}}
   .toast.err{background:#b4453f}
   .toast.warn{background:#8a6d1f}
   .toast button{border:0;background:none;color:var(--gold);font-weight:700}
