@@ -16,6 +16,8 @@ if (typeof EP !== 'undefined') {
     connectorList:       {m:'GET',   p:'/api/connectors',                              ok:'y'},
     connectorDelete:     {m:'DELETE',p:'/api/connectors/:actorId',                     ok:'y'},
     connectorReissueCode:{m:'POST',  p:'/api/connectors/reissue-code',                 ok:'y'},
+    connectorErpTest:    {m:'POST',  p:'/api/connectors/:actorId/erp-test',            ok:'y'},
+    connectorReceipts:   {m:'GET',   p:'/api/connectors/:actorId/receipts',            ok:'y'},
   });
 }
 
@@ -29,6 +31,48 @@ async function acLoadDevices(id){
   if(!ok){ UI.acConns=[]; UI.acHealth='offline'; UI.acConnsErr=(lastErr&&lastErr.message)||'Could not load devices'; }
   try{ UI.acProv=await api('connectorProvision',{params:{actorId:id}}); }catch(_){ UI.acProv=null; }
   if(UI.acSel===id) paintAcDetail();
+  // ERP: the receipt ledger is the ERP-specific value — lazy-load it on cockpit open (on-demand, never pre-loaded).
+  if(((UI._connMap||{})[id])==='erp'){ UI.acReceipts=undefined; UI.acReceiptsErr=null; acLoadReceipts(id); }
+}
+async function acLoadReceipts(id){
+  try{ var r=await api('connectorReceipts',{params:{actorId:id}}); UI.acReceipts=(r&&r.receipts)||[]; UI.acReceiptsErr=null; }
+  catch(e){ UI.acReceipts=[]; UI.acReceiptsErr=(e&&e.message)||'Could not load receipts'; }
+  if(UI.acSel===id) paintAcDetail();
+}
+// OWNER-authed test cycle: fire the real process-then-forget loop with a sample doc, then refresh the ledger + health.
+async function acErpTest(id){
+  try{ var r=await api('connectorErpTest',{params:{actorId:id}});
+    var oc=(r&&r.outcome)||'processed';
+    if(typeof toast==='function')toast('Processed '+((r&&r.doc_type)||'document')+' '+((r&&r.doc_ref)||'')+' — receipt kept'+(oc==='processed'?', chit sent':'')+'.');
+    UI.acReceipts=undefined; if(UI.acSel===id) paintAcDetail();
+    await acLoadReceipts(id); await acLoadDevices(id);
+  }catch(e){ if(typeof toast==='function')toast((e&&e.message)||'Test failed'); }
+}
+// Type-aware "how it works" — the per-service info affordance (the ℹ️ header icon).
+function acHowItWorks(iot){
+  if(typeof modal!=='function'){ if(typeof toast==='function')toast('Cannot open help.'); return; }
+  var body = iot
+    ? '<div style="font-weight:800;font-size:16px;margin-bottom:8px">🛰️ How an IoT connector works</div><div style="font-size:13px;color:#3a4048;line-height:1.6">A Pi or gateway holds its own key and <b>pushes</b> readings to the rail. Each exception becomes a <b>co-held chit</b> filed into your folder — the reading itself is the retained record. Health goes live by heartbeat.</div>'
+    : '<div style="font-weight:800;font-size:16px;margin-bottom:8px">🔌 How an ERP connector works</div><div style="font-size:13px;color:#3a4048;line-height:1.6">Your ERP or middleware <b>pushes a document</b> over the governed rail. We <b>process then forget</b>: only the <b>summary</b> travels on as a co-held chit, and we keep a <b>receipt</b> — a hash of the payload plus the outcome — <b>never the raw document</b>. Retries are safe (idempotent by hash). It stays auditable and disputable against the hash, with neither side holding your ERP data.</div>'
+      +'<div style="font-size:11.5px;color:#2c5aa0;background:#eef3fb;border:1px solid #cfe0f4;border-radius:9px;padding:9px 11px;margin-top:12px">Tap <b>📄 Send a test document</b> below to run the whole loop once and watch a receipt appear.</div>';
+  modal('<div style="padding:2px 2px">'+body+'<div style="display:flex;margin-top:16px"><button class="composebtn pri" style="flex:1" onclick="closeModal()">Got it</button></div></div>', false);
+}
+// The ERP receipt ledger — hash + outcome only, NEVER the raw payload. Chit link opens the co-held record.
+function _erpReceiptsHTML(){
+  var rs=UI.acReceipts;
+  var head='<div class="sec" style="margin-top:16px">Receipts'+(Array.isArray(rs)?(' <span style="color:var(--grey);font-weight:400">('+rs.length+')</span>'):'')+'</div>';
+  if(rs===undefined) return head+'<div style="padding:10px 2px;color:var(--grey);font-size:12.5px">Loading…</div>';
+  if(UI.acReceiptsErr) return head+'<div style="padding:10px 2px;color:#c0453b;font-size:12px">⚠ '+esc(UI.acReceiptsErr)+' <button class="composebtn" style="padding:2px 9px;font-size:11px;margin-left:6px" onclick="acLoadReceipts(\''+esc(UI.acSel)+'\')">Retry</button></div>';
+  if(!rs.length) return head+'<div style="padding:10px 2px;color:var(--grey);font-size:12.5px">No documents yet. Tap <b>📄 Send a test document</b> to run the cycle.</div>';
+  var rows=rs.map(function(r){
+    var oc=r.outcome||'', col=oc==='processed'?'#2f8f5b':(oc==='failed'?'#c0453b':(oc==='duplicate'?'#8a6d1e':'#586069'));
+    return '<div style="display:flex;align-items:center;gap:9px;padding:9px 0;border-bottom:1px dashed var(--line);font-size:12.5px">'
+      +'<div style="flex:1;min-width:0"><b>'+esc(r.doc_ref||r.doc_type||'document')+'</b>'+(r.doc_type?' <span style="color:var(--grey);font-size:11px">'+esc(r.doc_type)+'</span>':'')
+      +'<div style="color:var(--grey);font-size:10.5px;margin-top:1px;font-family:monospace">#'+esc(String(r.payload_hash||'').slice(0,12))+'… · '+esc((typeof _ago==='function'?_ago(r.received_at):'')||'')+'</div></div>'
+      +'<span style="font-weight:700;font-size:11px;color:'+col+'">'+esc(oc)+'</span>'
+      +(r.chit_id?'<button class="composebtn" style="padding:2px 9px;font-size:11px" onclick="openChit(\''+esc(r.chit_id)+'\')">Open chit</button>':'')+'</div>';
+  }).join('');
+  return head+'<div style="font-size:11px;color:var(--grey);margin:4px 0 2px">Hash + outcome only — the raw payload is never stored.</div>'+rows;
 }
 function _hdot(h){ return healthDot(h); }   // shared: helpers.js healthDot/sigLabel
 function _sig(s){ return sigLabel(s); }
@@ -40,7 +84,7 @@ function piCockpit(x){
   var header='<div style="position:sticky;top:0;background:#fff;z-index:5;padding-bottom:10px;border-bottom:1px solid var(--line)">'
     +'<button class="dback" onclick="backToList()">‹ Co-assists</button>'
     +'<div style="display:flex;align-items:center;gap:9px;margin-top:6px"><span style="font-size:16px;font-weight:700">'+esc(x.name)+'</span> '+tchip+' '+_hdot(health)
-      +'<span style="margin-left:auto;display:inline-flex;gap:7px">'+ico('⚡','Test connection',"acPing('"+x.id+"')")+ico('🔑','Connection string',"UI.acProvOpen=!UI.acProvOpen;paintAcDetail()")+(iot?ico('📦','Create package — one-drop Pi installer',"acCreatePackage('"+x.id+"')"):'')+ico('＋','Add '+(iot?'device':'endpoint'),"UI.acAddDev=!UI.acAddDev;paintAcDetail()")+ico('🗑','Delete this '+(iot?'gateway':'system'),"acDeleteConnector('"+x.id+"','"+esc(x.name).replace(/'/g,"\\'")+"')")+'</span></div>'
+      +'<span style="margin-left:auto;display:inline-flex;gap:7px">'+ico('ℹ️','How it works',"acHowItWorks("+(iot?'true':'false')+")")+ico('⚡',(iot?'Test connection':'Ping — mark live'),"acPing('"+x.id+"')")+ico('🔑','Connection string',"UI.acProvOpen=!UI.acProvOpen;paintAcDetail()")+(iot?ico('📦','Create package — one-drop Pi installer',"acCreatePackage('"+x.id+"')"):'')+ico('＋','Add '+(iot?'device':'endpoint'),"UI.acAddDev=!UI.acAddDev;paintAcDetail()")+ico('🗑','Delete this '+(iot?'gateway':'system'),"acDeleteConnector('"+x.id+"','"+esc(x.name).replace(/'/g,"\\'")+"')")+'</span></div>'
     +'<div style="font-size:11.5px;color:var(--grey);margin-top:3px">📍 '+esc(x.site||'no site')+' · '+esc(health)+'</div></div>';
   var offline = health==='offline' ? '<div style="background:#fbeceb;border:1px solid #f0c9c6;color:#b4453f;border-radius:10px;padding:9px 11px;font-size:12px;font-weight:600;margin:10px 0">⚠ '+(iot?'Gateway':'System')+' OFFLINE — no '+(iot?'device':'endpoint')+' below can signal until it is back.</div>' : '';
   var prov = UI.acProvOpen ? _provPanel(iot, x.id) : '';
@@ -61,7 +105,9 @@ function piCockpit(x){
   // Obvious, labelled installer button (the bare 📦 header icon was too easy to miss) + an inline caution: this DOWNLOAD
   // reissues the key, so any device already running this gateway goes silent until reflashed. The confirm gates it too.
   var installerBtn = iot ? '<button class="composebtn pri" style="width:100%;margin:8px 0 3px" onclick="acCreatePackage(\''+x.id+'\')">📦 Get the Pi installer</button><div style="font-size:11px;color:#8a6d1e;text-align:center;margin-bottom:8px;line-height:1.45">⚠ Downloading <b>reissues the key</b> — a device already running this gateway goes silent until you reflash it with the new installer.</div>' : '';
-  return header+tiles+installerBtn+offline+prov+addf+'<div class="sec" style="margin-top:14px">'+(iot?'Devices':'Endpoints')+(conns?(' <span style="color:var(--grey);font-weight:400">('+conns.length+')</span>'):'')+'</div>'+list;
+  // ERP has no installer; its one-tap live-run is a sample document through the real process-then-forget cycle.
+  var erpTestBtn = !iot ? '<button class="composebtn pri" style="width:100%;margin:8px 0 3px" onclick="acErpTest(\''+x.id+'\')">📄 Send a test document</button><div style="font-size:11px;color:var(--grey);text-align:center;margin-bottom:8px;line-height:1.45">Runs the real <b>process-then-forget</b> cycle with a sample doc — a receipt (hash + outcome) is kept and a co-held chit is sent. The raw payload is never stored.</div>' : '';
+  return header+tiles+installerBtn+erpTestBtn+offline+prov+addf+'<div class="sec" style="margin-top:14px">'+(iot?'Devices':'Endpoints')+(conns?(' <span style="color:var(--grey);font-weight:400">('+conns.length+')</span>'):'')+'</div>'+list+(iot?'':_erpReceiptsHTML());
 }
 function _provPanel(iot, aid){
   var p=UI.acProv; if(!p) return '<div style="padding:10px 2px;color:var(--grey);font-size:12px">Loading connection string…</div>';
