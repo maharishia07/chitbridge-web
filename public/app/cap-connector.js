@@ -67,7 +67,7 @@ function _provPanel(iot, aid){
   var p=UI.acProv; if(!p) return '<div style="padding:10px 2px;color:var(--grey);font-size:12px">Loading connection string…</div>';
   var lines = iot ? 'Endpoint = '+esc(p.endpoint||'')+'\nActorKey = ••••••••  (secret — Regenerate to issue a fresh one)\nBridgeIds:\n'+((p.publishes||[]).map(function(z){return '  '+esc(z.bridge_id||'—')+'  '+esc(z.ref||'');}).join('\n')||'  (none yet)') : 'Base URL = '+esc(p.base_url||'—')+'\nAuth = '+esc(p.auth_type||'none')+(p.auth_ref?(' (ref: '+esc(p.auth_ref)+')'):'');
   var fresh = (iot && UI.acFreshKey) ? '<div style="border:1px solid #bfe6c9;background:#eefaf0;border-radius:8px;padding:9px 11px;margin-top:9px"><div style="font-size:11.5px;font-weight:700;color:#1f7a3d;margin-bottom:5px">✅ New ActorKey — copy it to the Pi NOW, it will not be shown again:</div><pre style="background:#0f1b2d;color:#cfe0f4;border-radius:7px;padding:9px 11px;font-size:12px;overflow:auto;margin:0;user-select:all">'+esc(UI.acFreshKey)+'</pre></div>' : '';
-  var regen = (iot && aid) ? '<div style="margin-top:9px;display:flex;align-items:center;gap:10px;flex-wrap:wrap"><button class="composebtn" onclick="acRegenKey(\''+esc(aid)+'\')">♻ Regenerate ActorKey</button><span style="font-size:11px;color:var(--grey)">Issues a new key; any Pi on the old key stops until reflashed.</span></div>' : '';
+  var regen = (iot && aid) ? '<div style="margin-top:9px"><button class="composebtn" onclick="acRegenKey(\''+esc(aid)+'\')">♻ Reissue raw key (advanced)</button><div style="font-size:11px;color:var(--grey);margin-top:4px">For a <b>direct HTTPS device</b> (ESP32 etc.) that can\'t run the installer — shows the raw key once. For a Pi, use <b>📦 Get the Pi installer</b> above instead. Either way, reissuing stops any device on the old key until reflashed.</div></div>' : '';
   return '<div style="border:1px solid #cfe0f4;background:#f2f7fd;border-radius:10px;padding:10px 12px;margin:10px 0"><div style="font-weight:700;font-size:12px;color:#2c5aa0;margin-bottom:4px">🔑 Connection string</div><pre style="background:#0f1b2d;color:#cfe0f4;border-radius:7px;padding:9px 11px;font-size:11px;overflow:auto;margin:0;line-height:1.5">'+lines+'</pre>'+fresh+regen+'</div>';
 }
 // Delete a connector — RULE: only when it has NO devices attached; the backend returns 409 otherwise (we surface it).
@@ -214,10 +214,10 @@ async function acReissueSubmit(){ var g=UI.acReissue||{}, id=g.id, mode=g.mode;
       var r=await api('connectorConns',{params:{actorId:id}});
       var devs=((r&&r.connections)||[]).filter(function(c){return c.enabled!==false;}).map(function(c){ var cf=c.conn_config||{}; return {bridge_id:c.bridge_id, ref:c.ref, folder:cf.folder||null, classes:cf.classes||null}; });
       _download('chitbridge-install.sh', _buildInstaller({ endpoint:'https://chitbridge-api-production.up.railway.app', key:key, heartbeat_sec:60, spool_dir:'/opt/chitbridge/spool', devices:devs }));
-      UI.acFreshKey=key; UI.acProvOpen=true; if(typeof paintAcDetail==='function')paintAcDetail();
-      if(typeof toast==='function')toast('Key reissued — installer downloaded. Reflash the Pi: sudo bash chitbridge-install.sh');
+      UI.acFreshKey=null; if(typeof paintAcDetail==='function')paintAcDetail();   // key is INSIDE the installer — never shown raw
+      if(typeof toast==='function')toast('Key reissued — installer downloaded (key is inside it). Reflash the Pi: sudo bash chitbridge-install.sh');
     } else {
-      UI.acFreshKey=key; UI.acProvOpen=true; if(typeof paintAcDetail==='function')paintAcDetail();
+      UI.acFreshKey=key; UI.acProvOpen=true; if(typeof paintAcDetail==='function')paintAcDetail();   // direct-device path: the raw key IS the deliverable, shown once
       if(typeof toast==='function')toast('New ActorKey issued — copy it now.');
     }
   }catch(e){ if(m)m.textContent=(e&&e.message)||'Reissue failed.'; }
