@@ -57,7 +57,10 @@ function piCockpit(x){
   else list=conns.map(function(c){ var cfg=c.conn_config||{}; var det=iot?[cfg.folder?('📁 '+cfg.folder):null,(cfg.classes&&cfg.classes.length)?('🏷 '+cfg.classes.join('/')):null,cfg.topic,cfg.device_id].filter(Boolean).join(' · '):(cfg.path||'');
     return '<div style="display:flex;align-items:center;gap:9px;padding:10px 0;border-bottom:1px dashed var(--line);font-size:12.5px"><div style="flex:1;min-width:0"><b>'+esc(c.ref)+'</b>'+(c.bridge_id?' <code style="background:#f6f6f4;border:1px solid #eee;border-radius:5px;padding:0 5px;font-size:10.5px;color:var(--grey)">'+esc(c.bridge_id)+'</code>':'')+(det?'<div style="color:var(--grey);font-size:11px;margin-top:1px">'+esc(det)+'</div>':'')+'</div>'+_sig(c.enabled===false?'silent':c.signal)+'<button class="composebtn" style="padding:2px 9px;font-size:11px" onclick="acToggleDevice(\''+x.id+'\','+c.connection_id+','+(c.enabled?'false':'true')+')">'+(c.enabled?'Disable':'Enable')+'</button></div>';
   }).join('');
-  return header+tiles+offline+prov+addf+'<div class="sec" style="margin-top:14px">'+(iot?'Devices':'Endpoints')+(conns?(' <span style="color:var(--grey);font-weight:400">('+conns.length+')</span>'):'')+'</div>'+list;
+  // Obvious, labelled installer button (the bare 📦 header icon was too easy to miss) + an inline caution: this DOWNLOAD
+  // reissues the key, so any device already running this gateway goes silent until reflashed. The confirm gates it too.
+  var installerBtn = iot ? '<button class="composebtn pri" style="width:100%;margin:8px 0 3px" onclick="acCreatePackage(\''+x.id+'\')">📦 Get the Pi installer</button><div style="font-size:11px;color:#8a6d1e;text-align:center;margin-bottom:8px;line-height:1.45">⚠ Downloading <b>reissues the key</b> — a device already running this gateway goes silent until you reflash it with the new installer.</div>' : '';
+  return header+tiles+installerBtn+offline+prov+addf+'<div class="sec" style="margin-top:14px">'+(iot?'Devices':'Endpoints')+(conns?(' <span style="color:var(--grey);font-weight:400">('+conns.length+')</span>'):'')+'</div>'+list;
 }
 function _provPanel(iot, aid){
   var p=UI.acProv; if(!p) return '<div style="padding:10px 2px;color:var(--grey);font-size:12px">Loading connection string…</div>';
@@ -196,8 +199,8 @@ function acCreatePackage(id){
       if(typeof toast==='function')toast('Package downloaded — copy it to the Pi and run: sudo bash chitbridge-install.sh');
     }catch(e){ if(typeof toast==='function')toast((e&&e.message)||'Package failed'); }
   };
-  if(typeof confirmAsk==='function') confirmAsk('Create package', 'This <b>reissues the device key</b> — the old key stops working, so the Pi must run the new installer. Continue?', 'Create &amp; download', run, true);
-  else if(window.confirm('Create package reissues the key (the old one stops). Continue?')) run();
+  if(typeof confirmAsk==='function') confirmAsk('Reissue key &amp; download installer', '⚠ This issues a <b>NEW device key</b> and the current one <b>STOPS working immediately</b>. Any device already running this gateway will go <b>silent</b> until you reflash it with this new installer.<br><br>Only continue if you are setting up (or re-flashing) a device right now.', 'Reissue &amp; download', run, true);
+  else if(window.confirm('This reissues the device key — any device currently running this gateway STOPS until reflashed with the new installer. Continue?')) run();
 }
 
 /* self-register the Tier-2 renderer so the generic dispatcher (acOpenManage) finds it after this module lazy-loads */
