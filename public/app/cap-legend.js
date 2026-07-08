@@ -18,17 +18,18 @@ const CAP_CATALOGUE = [
       {n:'Relations — Suppliers, Catalogue, Network', s:'done'},
       {n:'Message centre + Notifications bell (derived from state_log)', s:'partial'},
     ]},
-  { id:'dispute', name:'Disputes — the USP', icon:'⚑', load:'lazy', maturity:2, target:3,
-    blurb:'The confidential, per-party dispute rail — now its OWN lazy, capability-gated module (cap-dispute.js). Core is fully dispute-blind after the 2nd lazy pass (2026-07-05): every dispute branch — banner, threading, badges, composer, row-count, advanced-search — calls in via typeof hooks. L3 (itemised & isolated) is structurally COMPLETE; the gate to LOCK L3 is Athi\'s live-run of the lazy module (review-gate). L4 = automated regression + governed provenance.',
+  { id:'dispute', name:'Disputes — the USP', icon:'⚑', load:'lazy', maturity:3, target:4,
+    blurb:'The confidential, per-party dispute rail — its own lazy, capability-gated module (cap-dispute.js); Core is dispute-blind. HARDENED PER-COPY (b68, 2026-07-08): each party holds its OWN chit_disputes copy (FORCE RLS), dispute_participants retired, dispute messages replicated to the roster only. L3 (itemised & isolated) is now PROVEN by automated regression (dispute-scope 7/0 — a chit party NOT in the dispute sees nothing). L4 gate = governed provenance + the frontend module live-run.',
     features:[
       {n:'Per-party scoped raise / resolve (raiser-only) + duplicate guard (Model A — SPEC-dispute)', s:'done'},
+      {n:'Per-ENTITY dispute copies + roster-scoped messages — PROVEN (b68, dispute-scope 7/0)', s:'done'},
       {n:'On-record banner — ALL concurrent disputes under one roof (multi-party count header)', s:'done'},
       {n:'Per-dispute threading keyed on dispute_id (filter chips + composer binds to the selection)', s:'done'},
       {n:'Dispute [raised]/[resolved] badges · entity-name + actor byline · dispute-mode composer', s:'done'},
       {n:'List-row count — ⚑ N open · M resolved at a glance', s:'done'},
       {n:'Advanced-search dispute filter (chip + modal) + capability-gated nav', s:'done'},
-      {n:'Live-run of the lazy module (Athi) → locks L3', s:'partial'},
-      {n:'Automated regression suite + governed provenance → L4', s:'backlog'},
+      {n:'Live-run of the lazy FRONTEND module (Athi) → locks the UI at L3', s:'partial'},
+      {n:'Automated regression suite (dispute-scope/regression) — DONE; governed provenance → L4', s:'partial'},
     ]},
   { id:'admin', name:'Admin', icon:'⚙️', load:'lazy', maturity:2, target:3,
     blurb:'Loads on first open of MIS / Profile / Settings.',
@@ -96,12 +97,12 @@ const TRACE_MATRIX = [
     sr:'Per-party scoping (participant roster + visibility predicate) + per-party resolution on the isolated rail.',
     rows:[
       { id:'FR-D1', fr:'Only the raiser can resolve', test:'Non-raiser resolve → 403', st:'built' },
-      { id:'FR-D2', fr:'Dispute message visible to participants only', test:'3rd entity sees nothing', st:'built' },
+      { id:'FR-D2', fr:'Dispute message visible to participants only', test:'dispute-scope.js: 3rd chit-party sees 0 (7/0)', st:'ok' },
       { id:'FR-D3', fr:'Entity-name + who-raised attribution', test:'Message shows entity + raiser', st:'built' },
       { id:'FR-D4', fr:'Dispute [raised]/[resolved] + colour', test:'Resolve → badge flips green', st:'built' },
       { id:'FR-D5', fr:'Composer can reply AS a dispute', test:'Toggle → stored is_dispute', st:'built' },
       { id:'FR-D6', fr:'Close disputed = warn (allow); archive = block', test:'Close → warning; archive → 409', st:'built' },
-      { id:'FR-D7', fr:'dispute_id referential integrity', test:'FK to chit_disputes (b58)', st:'ok' },
+      { id:'FR-D7', fr:'Per-entity dispute copies (nothing shared)', test:'b68: own copy per party; cross-entity FK dropped', st:'ok' },
     ]},
   { area:'Connector (IoT / ERP)', br:'External systems exchange records over the rail, processing then FORGETTING raw payloads (receipt-only).',
     sr:'Connector = first-class actor (identities row) + connections; capability-gated (API-enforced); per-connection retention.',
@@ -113,14 +114,14 @@ const TRACE_MATRIX = [
       { id:'FR-C5', fr:'Routes capability-gated (403 if off)', test:'Capability off → 403', st:'built' },
     ]},
   { area:'Foundation — RLS isolation', br:'Every entity\'s data is its own — a governance leveler, same isolation solo→multinational.',
-    sr:'Postgres RLS: app = cb_app (NOBYPASSRLS); withEntity() sets app.current_entity; 6 tables enforce rls_entity.',
+    sr:'Postgres RLS: app = cb_app (NOBYPASSRLS); withEntity() sets app.current_entity; ALL entity-data tables enforce FORCE rls_entity, per-copy (b48-b68).',
     rows:[
-      { id:'FR-F1', fr:'Entity reads only its own rows', test:'rls-context-test → cross-read = 0', st:'ok' },
+      { id:'FR-F1', fr:'Entity reads only its own rows', test:'regression suite: non-participant sees 0 across all tables', st:'ok' },
       { id:'FR-F2', fr:'Cross-entity write only via governed fns', test:'chit_deliver rejects bad sender', st:'ok' },
       { id:'FR-F3', fr:'Schema reproducible + change-controlled', test:'Baseline rebuilds prod on scratch DB', st:'todo' },
     ]},
-  { area:'Core — the mailbox rail', br:'Parties exchange sealed, co-held shared records ("chits") with a clear lifecycle.',
-    sr:'Two-copy chit keyed (chit_id, entity_id, direction); one status enum; append-only state_log; seal = schema snapshot.',
+  { area:'Core — the mailbox rail', br:'Parties exchange sealed, co-held REPLICATED records ("chits") — each holds its own copy, nothing shared.',
+    sr:'Per-entity copy keyed (chit_id, entity_id, direction); every related table per-copy too (messages/attachments/disputes); append-only state_log; seal = schema snapshot.',
     rows:[
       { id:'FR-M1', fr:'Compose → deliver co-held chit', test:'Send → both copies, right direction', st:'built' },
       { id:'FR-M2', fr:'Advance status (direction-scoped) + logged', test:'Advance → state_log + badge', st:'built' },
@@ -134,7 +135,7 @@ const SEC_POSTURE = [
   { area:'At rest', lvl:'partial', what:'Provider disk encryption (Supabase/AWS, AES-256). No app/column-level encryption — payloads, messages, PII (GSTN/address/phone) are plaintext in Postgres, protected by RLS + disk crypto.', raise:'Add column-level encryption (pgcrypto/pgsodium) for PII + chit payloads.' },
   { area:'Auth secrets', lvl:'strong', what:'PINs & passwords bcrypt-hashed (bcryptjs). JWT HS256, server-side only, never in browser, boot-time secret guard. OTP is ephemeral (6-digit, expiring) + attempt-capped + rate-limited.', raise:'Hash/short-TTL OTP is fine; consider rotating JWT to asymmetric (RS256) for multi-service.' },
   { area:'Perimeter', lvl:'strong', what:'helmet security headers + express-rate-limit (auth + assist brute-force blunting).', raise:'Add per-account lockout metrics + WAF at the edge.' },
-  { area:'Access control', lvl:'strong', what:'RLS entity isolation LIVE — cb_app is NOSUPERUSER NOBYPASSRLS; every query scoped by app.current_entity.', raise:'Extend RLS beyond the 6 Direct tables (identities/messages/disputes are app-scoped carve-outs).' },
+  { area:'Access control', lvl:'strong', what:'RLS entity isolation LIVE + per-copy — cb_app is NOSUPERUSER NOBYPASSRLS; every query scoped by app.current_entity; ALL entity tables FORCE-RLS (b48-b68).', raise:'DONE 2026-07-08 — RLS now covers folder/attachments/messages/disputes too (per-copy); only identities is the deliberate directory carve-out. Next: external pen-test → L5.' },
   { area:'Secrets & audit', lvl:'gap', what:'Secrets in Railway env vars, not a vault/KMS. No external pen-test yet (so security honestly ≤ L4).', raise:'Move secrets to a KMS/vault; commission an external pen-test → the L5 gate.' },
 ];
 
@@ -248,10 +249,10 @@ function _realTabHtml(){
       +'<div style="font-size:10.4px;color:var(--grey);line-height:1.4"><b>To earn it:</b> '+esc(earn)+'</div></div>'; };
   return '<div style="padding:14px 16px;max-height:70vh;overflow:auto">'
     +'<div style="font-size:11.5px;color:var(--grey);margin-bottom:10px">Full honesty — for each edge, where we genuinely stand and what it takes to <b>earn</b> that level. Nothing counts as done until a human proved it (our review-gate rule).</div>'
-    + row('Governed peer two-way (the communication edge)','built','Two-copy co-held chit, messages both ways, per-party dispute threads — the rail exists in the product.','Run one live A↔B loop with a real user; then volume-test it.')
-    + row('Multitenant isolation (RLS)','real','Live in prod — the app runs as a non-superuser role that cannot bypass RLS; a script verified cross-entity read = 0.','Commission an external pen-test to move from self-verified to attested (the L5 gate).')
+    + row('Governed peer two-way (the communication edge)','built','Per-entity co-held copies, messages both ways, per-party dispute threads — ALL replicated per-copy (nothing shared), proven by the regression suite.','Run one live A↔B loop with a real user; then volume-test it.')
+    + row('Multitenant isolation (RLS)','real','Live in prod, PER-COPY across ALL entity tables — cb_app cannot bypass RLS; the regression suite proves a non-participant reads 0 (100+ assertions).','Commission an external pen-test to move from self-verified to attested (the L5 gate).')
     + row('Sealed co-held record + provenance','part','Freeze-at-send + an append-only state log exist.','Add an immutability / tamper test proving history cannot be rewritten.')
-    + row('Dispute confidentiality (the USP)','built','Per-party roster + scoped visibility + per-party resolve — built.','The pending multi-party live pass: a 3rd entity must see nothing.')
+    + row('Dispute confidentiality (the USP)','real','Per-COPY: each party owns its dispute; messages scoped to the roster — PROVEN (dispute-scope 7/0: in a 3-party chit the non-dispute party sees 0).','Human live-run of the dispute UI; then external pen-test.')
     + row('Governed + accessible (the quadrant)','aim','The rail is governed; affordability/ease for a solo player is designed, not proven.','One real small-player user completes a real loop cheaply — the decisive wedge.')
     + row('Self-measuring maturity (this Legend)','part','An honest hand-authored scoreboard (these very tabs).','Wire it to real Delivery Records + test results so it reads automatically (the L4 step).')
     +'<div style="font-size:10.4px;color:var(--grey);text-align:center;padding-top:9px;border-top:1px solid var(--line);margin-top:6px">The ladder that earns all of it: <b>one test lifecycle → volume → pen-test → external validation.</b> Concept: years · Product: ~2 weeks. Early by timeline, honest by choice.</div>'
