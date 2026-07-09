@@ -2112,16 +2112,34 @@ function prodRowHTML(p){ const d=pData(p), id=prodId(p); return `<div class="row
   <div class="rowgo" aria-hidden="true">›</div></div>`; }
 /* BRIDGE — the reference catalogue (Royale Play finishes adopted via 🤖 Catalogue builder) surfaces HERE, resolved
    live from catalogue-mine (shared design/colour BY REFERENCE + the entity's commercials). NOT copied into products. */
-function refFinishRow(it){ var price=(it.commercials&&it.commercials.price_per_litre!=null)?it.commercials.price_per_litre:null;
+function refFinishRow(it,i){ var price=(it.commercials&&it.commercials.price_per_litre!=null)?it.commercials.price_per_litre:null;
   var combos=(it.combinations||[]);
   var sw=combos.map(function(cm){ return '<span title="'+esc(cm.name||'')+'" style="display:inline-flex;gap:2px;margin-right:6px">'+((cm.colours||[]).map(function(c){return '<span title="'+esc((c.name||'')+' '+(c.hex||''))+'" style="display:inline-block;width:14px;height:14px;border-radius:50%;background:'+esc(c.hex)+';border:1px solid rgba(0,0,0,.15)"></span>';}).join(''))+'</span>'; }).join('');
-  return '<div class="row" style="cursor:pointer" onclick="openCatalogueBuilder()"><div class="main2"><div class="l1"><span class="code">'+esc(it.name)+'</span><span style="display:inline-flex;margin-left:4px">'+sw+'</span><span class="optchip" style="background:#F0EAF9;color:#6a44a8;border-color:transparent">🎨 referenced</span><span class="amt" style="margin-left:auto">'+(price!=null?('₹'+esc(String(price))+'/L'):'<span style="color:#9aa3a7">no price</span>')+'</span></div><div class="l2">'+esc(it.texture_family||'')+(it.region?(' · '+esc(it.region)):'')+(combos.length?(' · '+combos.length+' combos'):'')+'</div></div><div class="rowgo" aria-hidden="true">›</div></div>'; }
+  return '<div class="row '+(UI.refSel===i?'sel':'')+'" style="cursor:pointer" onclick="selectRefFinish('+i+')"><div class="main2"><div class="l1"><span class="code">'+esc(it.name)+'</span><span style="display:inline-flex;margin-left:4px">'+sw+'</span><span class="optchip" style="background:#F0EAF9;color:#6a44a8;border-color:transparent">🎨 referenced</span><span class="amt" style="margin-left:auto">'+(price!=null?('₹'+esc(String(price))+'/L'):'<span style="color:#9aa3a7">no price</span>')+'</span></div><div class="l2">'+esc(it.texture_family||'')+(it.region?(' · '+esc(it.region)):'')+(combos.length?(' · '+combos.length+' combos'):'')+'</div></div><div class="rowgo" aria-hidden="true">›</div></div>'; }
 function refCatRowsHTML(){ var rc=UI.refCat||[]; if(!rc.length) return '';
-  return '<div style="padding:9px 13px 4px;font-size:10.5px;color:#6a44a8;text-transform:uppercase;letter-spacing:.4px;font-weight:800">🎨 Designer finishes · referenced</div>'+rc.map(refFinishRow).join('')+'<div style="padding:5px 13px 9px;font-size:10.5px;color:#9aa3a7;border-bottom:1px solid var(--line)">Shared design &amp; colour by reference · your prices · <span style="color:var(--blue);cursor:pointer;font-weight:600" onclick="openCatalogueBuilder()">manage in 🤖 Catalogue builder</span></div>'; }
+  return '<div style="padding:9px 13px 4px;font-size:10.5px;color:#6a44a8;text-transform:uppercase;letter-spacing:.4px;font-weight:800">🎨 Designer finishes · referenced</div>'+rc.map(function(it,i){return refFinishRow(it,i);}).join('')+'<div style="padding:5px 13px 9px;font-size:10.5px;color:#9aa3a7;border-bottom:1px solid var(--line)">Shared design &amp; colour by reference · your prices · <span style="color:var(--blue);cursor:pointer;font-weight:600" onclick="openCatalogueBuilder()">manage in 🤖 Catalogue builder</span></div>'; }
 function prodRowsHTML(){ const ref=refCatRowsHTML(); const r=prodVisible();
   if(!ref && !r.length) return '<div class="empty"><div class="big">🗂️</div><div class="t">No products yet</div><div>Add one with <b>+ New product</b>, or adopt a catalogue via 🤖 AI.</div></div>';
   const prods = r.length ? ('<div style="padding:9px 13px 4px;font-size:10.5px;color:#9aa3a7;text-transform:uppercase;letter-spacing:.4px;font-weight:800">🗂️ Your products</div>'+r.map(prodRowHTML).join('')) : '';
   return ref + prods; }
+function selectRefFinish(i){ UI.refSel=i; UI.prodSel=null; UI.prodMode='view'; if(UI.vp==='mob'){ UI.mdetail=true; var p=document.getElementById('panel'); if(p)p.classList.add('showdetail'); } paintProdList(); paintProdDetail(); }
+function backToRefList(){ UI.refSel=null; UI.mdetail=false; var p=document.getElementById('panel'); if(p)p.classList.remove('showdetail'); paintProdList(); paintProdDetail(); }
+// The RICH showcase in the detail pane — the exact Royale Play format (story · chips · colour combinations w/ named
+// swatches · application · price). Design/colour by reference; only the price is the retailer's.
+function refFinishDetail(it){
+  var price=(it.commercials&&it.commercials.price_per_litre!=null)?it.commercials.price_per_litre:null;
+  var chips='<span class="optchip" style="background:#F0EAF9;color:#6a44a8;border-color:transparent">'+esc(it.texture_family||'')+'</span>'+(it.region?'<span class="optchip" style="background:#eef3fb;color:#345488;border-color:#cfe0f4">'+esc(it.region)+'</span>':'')+((it.effect||[]).map(function(e){return '<span class="optchip" style="background:#f3f0e8;color:#7a5e22;border-color:#e6d9a8">'+esc(e)+'</span>';}).join(''));
+  var head='<div class="dh"><button class="dback" onclick="backToRefList()">‹ Catalogue</button><div class="dt">'+esc(it.name)+'</div><div class="ds">'+esc(it.scale||'')+(it.sheen?(' · '+esc(it.sheen)):'')+'</div></div>';
+  var body='<div class="db">'
+    +'<div style="font-size:13px;color:#3a4048;line-height:1.6;margin-bottom:10px">'+esc(it.inspiration||'')+'</div>'
+    +'<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px">'+chips+'</div>'
+    +'<div class="sec">Colour combinations</div>'+((it.combinations||[]).map(_combo).join(''))
+    +'<div style="font-size:11.5px;color:#9aa3a7;margin-top:10px">Applied with '+((it.tools||[]).join(', '))+' · '+esc(it.coats||'')+'</div>'
+    +'<div class="sec" style="margin-top:14px">Price</div><div style="font-size:17px;font-weight:800">'+(price!=null?('₹'+esc(String(price))+' <span style="font-size:12px;color:#9aa3a7;font-weight:400">/ litre</span>'):'<span style="color:#9aa3a7;font-size:13px">not priced yet</span>')+'</div>'
+    +'<div style="font-size:10.5px;color:#9aa3a7;margin-top:12px;font-family:\'Space Mono\'">🎨 design &amp; colour referenced from the shared source · no copy · <span style="color:var(--blue);cursor:pointer" onclick="openCatalogueBuilder()">manage prices</span></div>'
+  +'</div>';
+  return head+body;
+}
 function paintProdList(){ const b=document.getElementById('ct_rows'); if(b)b.innerHTML=prodRowsHTML(); const c=document.getElementById('ct_count'); if(c)c.textContent=prodVisible().length+' product(s)'; }
 function paintProdDetail(){ const dp=document.getElementById('detailpane'); if(dp){ dp.className='detail'; dp.innerHTML=prodDetailHTML(); } }
 async function loadCatalogue(){
@@ -2133,7 +2151,7 @@ async function loadCatalogue(){
     if(UI.prodMode!=='new'){ if(!UI.prodSel && UI.prods.length && UI.vp!=='mob'){ selectProduct(prodId(UI.prods[0]), true); } else paintProdDetail(); }
   }catch(e){ UI._prodLoading=false; const rb2=document.getElementById('ct_rows'); if(rb2)rb2.innerHTML=`<div class="empty"><div class="t">Couldn't load</div><div>${esc(e.message)}</div></div>`; }
 }
-function selectProduct(id, silent){ UI.prodSel=id; UI.prodMode='view';
+function selectProduct(id, silent){ UI.refSel=null; UI.prodSel=id; UI.prodMode='view';
   if((UI.vp==='mob') && !silent){ UI.mdetail=true; const p=document.getElementById('panel'); if(p)p.classList.add('showdetail'); }
   paintProdList(); paintProdDetail(); }
 function setProdMode(m){ UI.prodMode=m; paintProdDetail(); }
@@ -2143,6 +2161,7 @@ function prodEditForm(d){ return ctField('name','Name',d.name||'')+`<div style="
 function prodViewFields(d){ const kv=(l,v)=>`<div class="kv" style="display:flex;gap:8px;padding:8px 12px;border-bottom:1px dashed var(--line);font-size:13px"><b style="min-width:96px;color:var(--grey);font-weight:600;font-size:11px;text-transform:uppercase">${l}</b><span style="font-weight:600">${v===''||v==null?'—':esc(v)}</span></div>`;
   return `<div class="itab">${kv('Name',pName(d))}<div class="kv" style="display:flex;gap:8px;padding:8px 12px;border-bottom:1px dashed var(--line);font-size:13px"><b style="min-width:96px;color:var(--grey);font-weight:600;font-size:11px;text-transform:uppercase">Price</b><span style="font-weight:600">${inr(pPrice(d))} <span style="color:var(--grey);font-weight:400">/ ${esc(pUnit(d))}</span></span></div>${kv('Unit',pUnit(d))}${kv('Code / HSN',pCode(d))}${kv('Description',pDesc(d))}</div>`; }
 function prodDetailHTML(){
+  if(UI.refSel!=null && (UI.refCat||[])[UI.refSel]) return refFinishDetail(UI.refCat[UI.refSel]);   // BRIDGE: rich finish showcase
   if(UI.prodMode==='new'){ return `<div class="dh"><button class="dback" onclick="backToList()">‹ Catalogue</button><div class="dt">New product</div><div class="ds">add to your catalogue</div></div><div class="db"><div class="sec">Product details</div>${prodEditForm({})}<div class="err" id="ct_err" style="margin-top:8px"></div></div><div class="actbar"><button class="pri" onclick="saveNewProduct()">Add product</button><button onclick="backToList()">Cancel</button></div>`; }
   const p=(UI.prods||[]).find(x=>prodId(x)===UI.prodSel);
   if(!p) return `<div class="empty"><div class="big">🗂️</div><div class="t">Select a product</div><div>Pick one to view or edit — or add a new one.</div></div>`;
