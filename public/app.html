@@ -2536,7 +2536,7 @@ function detailInner(){
   const c=UI.detail;
   if(!c) return (UI.rows && UI.rows.length)
     ? `<div class="empty"><div class="big">🧾</div><div class="t">Select a chit</div><div>Pick one from the list to see its content, status and summary.</div></div>`
-    : `<div class="empty"><div class="big">🧾</div><div class="t">Your mailbox is empty</div><div>No chits yet — use <b>Compose</b> to create your first one.</div></div>`;
+    : `<div class="empty"><div class="big">🚃</div><div class="t">Your bogie is empty</div><div>Nothing on your rail yet — use <b>Compose</b> to add your first chit.</div></div>`;
   const back="";
   const proof = c.proof==='ok' ? `<span class="parity">⚖️ Two-sided proof: both parties hold matching, co-signed records.</span>` : `<span class="parity" style="background:var(--gold-soft);border-color:var(--gold-line);color:#6b5a36">⚖️ Awaiting counter-signature — one side hasn't co-signed yet.</span>`;
   buildAttGroups(c);
