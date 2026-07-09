@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shop — Chit &amp; Bridge</title>
+<style>
+  :root{ --ink:#20303b; --grey:#8a949c; --line:#e7e3d8; --blue:#3F66A6; --gold-soft:#f7f2e3; --gold-line:#e6d9a8; --paper:#faf8f3; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; color:var(--ink); background:var(--paper); }
+  .wrap{ max-width:860px; margin:0 auto; padding:20px 16px 60px; }
+  .sg{ font-family:'Space Grotesk',-apple-system,sans-serif; }
+  .hd{ display:flex; align-items:center; gap:12px; padding:14px 0 16px; border-bottom:1px solid var(--line); margin-bottom:18px; }
+  .logo{ width:44px; height:44px; border-radius:12px; background:#eef3fb; display:flex; align-items:center; justify-content:center; font-size:22px; }
+  .shopname{ font-weight:800; font-size:20px; }
+  .badge{ font-size:11px; font-weight:700; border-radius:20px; padding:2px 9px; }
+  .b-ver{ background:#e8f3ec; color:#2f7a45; } .b-open{ background:#e8f3ec; color:#2f7a45; } .b-closed{ background:#fbeae9; color:#b4453f; } .b-away{ background:#f7f2e3; color:#7a5e22; }
+  .sechd{ font-size:11px; font-weight:800; color:#6a44a8; text-transform:uppercase; letter-spacing:.5px; margin:22px 0 10px; }
+  .card{ border:1px solid var(--line); border-radius:14px; padding:15px 16px; margin-bottom:12px; background:#fff; }
+  .fname{ font-weight:800; font-size:17px; }
+  .meta{ font-size:12px; color:var(--grey); }
+  .story{ font-size:13px; color:#3a4048; line-height:1.6; margin:6px 0 9px; }
+  .chip{ display:inline-block; font-size:11px; border-radius:8px; padding:2px 9px; margin:0 5px 5px 0; }
+  .c-tex{ background:#F0EAF9; color:#6a44a8; } .c-reg{ background:#eef3fb; color:#345488; } .c-eff{ background:#f3f0e8; color:#7a5e22; }
+  .cclabel{ font-size:10px; color:var(--grey); text-transform:uppercase; letter-spacing:.4px; font-weight:700; margin:8px 0 3px; }
+  .combo{ display:flex; align-items:center; gap:8px; margin-top:5px; }
+  .dot{ display:inline-block; width:18px; height:18px; border-radius:50%; border:1px solid rgba(0,0,0,.15); }
+  .cbname{ font-size:12.5px; font-weight:600; } .cbcols{ font-size:11px; color:var(--grey); }
+  .apply{ font-size:11.5px; color:var(--grey); margin-top:8px; }
+  .price{ font-size:17px; font-weight:800; margin-top:10px; }
+  .price small{ font-size:12px; color:var(--grey); font-weight:400; }
+  .prow{ display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px dashed var(--line); }
+  .foot{ margin-top:26px; font-size:11px; color:var(--grey); text-align:center; line-height:1.6; }
+  .msg{ padding:40px 16px; text-align:center; color:var(--grey); }
+  .enq{ margin-top:12px; font-size:12px; color:var(--blue); }
+</style>
+</head>
+<body>
+<div class="wrap" id="app"><div class="msg">Loading shop…</div></div>
+<script>
+var API = (new URLSearchParams(location.search).get('api')) || 'https://chitbridge-api-production.up.railway.app';
+var BRIDGE = (new URLSearchParams(location.search).get('bridge') || '').trim();
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+function el(id){ return document.getElementById(id); }
+function swatch(c){ return '<span class="dot" title="'+esc((c.name||'')+' '+(c.hex||''))+'" style="background:'+esc(c.hex||'#ccc')+'"></span>'; }
+function comboHtml(cm){ return '<div class="combo"><span style="display:inline-flex;gap:3px">'+((cm.colours||[]).map(swatch).join(''))+'</span><span class="cbname">'+esc(cm.name||'')+'</span><span class="cbcols">'+((cm.colours||[]).map(function(c){return esc(c.name);}).join(' + '))+'</span></div>'; }
+function finishCard(it, cur){
+  var price=(it.commercials&&it.commercials.price_per_litre!=null)?it.commercials.price_per_litre:null;
+  var chips='<span class="chip c-tex">'+esc(it.texture_family||'')+'</span>'+(it.region?'<span class="chip c-reg">'+esc(it.region)+'</span>':'')+((it.effect||[]).map(function(e){return '<span class="chip c-eff">'+esc(e)+'</span>';}).join(''));
+  return '<div class="card">'
+    +'<div style="display:flex;align-items:baseline;gap:8px"><span class="fname sg">'+esc(it.name)+'</span><span class="meta">'+esc(it.scale||'')+(it.sheen?(' · '+esc(it.sheen)):'')+'</span></div>'
+    +'<div class="story">'+esc(it.inspiration||'')+'</div>'
+    +'<div>'+chips+'</div>'
+    +'<div class="cclabel">Colour combinations</div>'+((it.combinations||[]).map(comboHtml).join(''))
+    +'<div class="apply">Applied with '+((it.tools||[]).join(', '))+' · '+esc(it.coats||'')+'</div>'
+    +'<div class="price">'+(price!=null?((cur||'₹')+esc(String(price))+' <small>/ litre</small>'):'<small>price on request</small>')+'</div>'
+    +'</div>';
+}
+function productRow(p, cur){ var d=(p.item_data||p)||{}; return '<div class="prow"><div style="flex:1"><b>'+esc(d.name||d.product||'item')+'</b> <span class="meta">'+esc(d.unit||'')+'</span></div><div style="font-weight:700">'+(d.price!=null?((cur||'₹')+esc(String(d.price))):'—')+'</div></div>'; }
+function render(data){
+  var s=data.shop||{}, cur=(s.currency_code==='INR'||!s.currency_code)?'₹':(s.currency_code+' ');
+  var statusBadge = s.business_status==='closed' ? '<span class="badge b-closed">Closed</span>' : (s.business_status==='away'?'<span class="badge b-away">Away</span>':'<span class="badge b-open">Open</span>');
+  var head='<div class="hd"><div class="logo">🎨</div><div style="flex:1"><div class="shopname sg">'+esc(s.display_name||'Shop')+'</div><div class="meta">'+esc(s.bridge_id||'')+(s.address?(' · '+esc(s.address)):'')+'</div></div>'+(s.is_verified?'<span class="badge b-ver">✓ Verified</span>':'')+' '+statusBadge+'</div>';
+  var finishes=(data.finishes||[]);
+  var finHtml='';
+  finishes.forEach(function(f){ finHtml += '<div class="sechd">🎨 '+esc(f.title||f.collection||'Designer finishes')+'</div>' + (f.items||[]).map(function(it){return finishCard(it,cur);}).join(''); });
+  var prods=(data.items||[]);
+  var prodHtml = prods.length ? ('<div class="sechd" style="color:var(--grey)">🗂️ Products</div>'+prods.map(function(p){return productRow(p,cur);}).join('')) : '';
+  var enq = '<div class="enq">To order, contact the shop with the finish &amp; colour combination you like. (In-app order by phone/email — coming here next.)</div>';
+  el('app').innerHTML = head + finHtml + prodHtml + (finHtml||prodHtml?enq:'<div class="msg">This shop has nothing on display yet.</div>')
+    + '<div class="foot">Powered by <b>Chit &amp; Bridge</b> · a governed rail. Design &amp; colour shown are referenced from the brand catalogue; prices are set by the shop.</div>';
+}
+(function(){
+  if(!BRIDGE){ el('app').innerHTML='<div class="msg">No shop specified. Use a link like <b>shop.html?bridge=CBXXXXXXXX</b></div>'; return; }
+  fetch(API+'/api/catalogue/'+encodeURIComponent(BRIDGE)).then(function(r){ return r.json().then(function(j){ return {status:r.status, j:j}; }); })
+    .then(function(res){ if(res.status!==200){ el('app').innerHTML='<div class="msg">'+esc((res.j&&res.j.message)||'Shop not found or has no public catalogue.')+'</div>'; return; } render(res.j); })
+    .catch(function(e){ el('app').innerHTML='<div class="msg">Could not reach the shop. '+esc(e.message||'')+'</div>'; });
+})();
+</script>
+</body>
+</html>
