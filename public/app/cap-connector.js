@@ -140,7 +140,8 @@ function _addDeviceForm(x,iot){
     +'<label class="fl">Name</label><input class="inp" id="ad_ref" placeholder="'+(iot?'Cold-store temp':'PO inbound')+'" style="width:100%">'+spec
     +(iot?('<label class="fl">Folder — file its exceptions here <span style="font-weight:400;color:var(--grey)">(a name you choose, under this entity)</span></label><input class="inp" id="ad_folder" placeholder="e.g. Gate log" style="width:100%">'
          +'<label class="fl">Keep — exception classes <span style="font-weight:400;color:var(--grey)">(comma-sep · blank = all; group / count by these)</span></label><input class="inp" id="ad_classes" placeholder="lorry, tanker" style="width:100%">'
-         +'<label class="fl">Default assignee <span style="font-weight:400;color:var(--grey)">(who this device\'s signals are assigned to — blank = entity default)</span></label><select class="inp" id="ad_assignee" style="width:100%">'+_asgOpts+'</select>'):'')
+         +'<label class="fl">Default assignee <span style="font-weight:400;color:var(--grey)">(who this device\'s signals are assigned to — blank = entity default)</span></label><select class="inp" id="ad_assignee" style="width:100%">'+_asgOpts+'</select>'
+         +'<label class="fl">External email <span style="font-weight:400;color:var(--grey)">(optional — notify someone OUTSIDE the system by email; a notice, not the data)</span></label><input class="inp" id="ad_notifyemail" type="email" placeholder="name@example.com" style="width:100%">'):'')
     +'<label class="fl">CC <span style="font-weight:400;color:var(--grey)">(optional — another entity id who also co-holds the proof)</span></label><input class="inp" id="ad_cp" placeholder="another entity id" style="width:100%">'
     +'<div class="err" id="ad_err" style="margin-top:6px"></div>'
     +'<div style="display:flex;gap:8px;margin-top:10px"><button class="composebtn pri" onclick="acAddDevice(\''+x.id+'\','+(iot?'true':'false')+')">Add</button><button class="composebtn" onclick="UI.acAddDev=false;paintAcDetail()">Cancel</button></div></div>';
@@ -149,7 +150,7 @@ async function acAddDevice(id, iot){
   var ref=(val('ad_ref')||'').trim(), err=document.getElementById('ad_err'); if(err)err.textContent='';
   if(!ref){ if(err)err.textContent='A name is required.'; return; }
   var _cls=(val('ad_classes')||'').split(',').map(function(s){return s.trim();}).filter(Boolean);
-  var config = iot ? {protocol:'mqtts', topic:(val('ad_topic')||'').trim()||undefined, device_id:(val('ad_dev')||'').trim()||undefined, folder:(val('ad_folder')||'').trim()||undefined, classes:_cls.length?_cls:undefined, default_assignee:(val('ad_assignee')||'').trim()||undefined} : {path:(val('ad_path')||'').trim()||undefined};
+  var config = iot ? {protocol:'mqtts', topic:(val('ad_topic')||'').trim()||undefined, device_id:(val('ad_dev')||'').trim()||undefined, folder:(val('ad_folder')||'').trim()||undefined, classes:_cls.length?_cls:undefined, default_assignee:(val('ad_assignee')||'').trim()||undefined, notify_email:(val('ad_notifyemail')||'').trim()||undefined} : {path:(val('ad_path')||'').trim()||undefined};
   var cp = (val('ad_cp')||'').trim()||undefined;   // counterparty entity id — where this device's signals route as chits
   try{ await api('connectorConnAdd',{params:{actorId:id},body:{ref:ref,direction:'in',config:config,counterparty_entity_id:cp}}); UI.acAddDev=false; if(typeof toast==='function')toast('Added.'); await acLoadDevices(id); }
   catch(e){ if(err)err.textContent=(e&&e.message)||'Add failed'; }

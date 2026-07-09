@@ -757,9 +757,21 @@ const WORK_PATTERNS = {
              {flag:'Payload', value:'the reading is the record', by:'constitution'},
              {flag:'Retention floor', value:'90 days', by:'template'} ],
     open:[ {knob:'Default folder', value:'per device', bounds:'any name you choose'},
-           {knob:'Counterparty (CC)', value:'optional', bounds:'a network entity'},
+           {knob:'Default assignee', value:'per device / entity default', bounds:'an active co-assist'},
+           {knob:'Counterparty (CC)', value:'optional', bounds:'a network entity (in-system co-hold)'},
+           {knob:'External email', value:'optional', bounds:'an email — an off-rail notice'},
            {knob:'Alert cadence', value:'60s', bounds:'10s–1h'} ],
-    reportsUp:['health','last-seen','exceptions / day'] },
+    reportsUp:['health','last-seen','exceptions / day'],
+    workflow:[ {done:true,  t:'Signal received', d:'the device authenticates with its own key'},
+               {done:true,  t:'Sealed as a co-held chit', d:'+ the governed audit stamped on it'},
+               {done:true,  t:'Filed into its folder', d:'per-device, auto-created'},
+               {done:true,  t:'Assigned to a co-assist', d:'owned + on someone\'s radar'},
+               {done:true,  t:'Notify external by email', d:'an off-rail notice to someone outside the system'},
+               {done:false, t:'Alert a phone (SMS)', d:'escalate to a number — provider-pluggable'},
+               {done:false, t:'AI triage', d:'classify · summarise · recommend the next action'},
+               {done:false, t:'Robot / actuator acts', d:'e.g. stop the line, close a valve'},
+               {done:false, t:'Escalate if unacknowledged', d:'climb the ladder until someone owns it'},
+               {done:true,  t:'Resolve → Close, report up', d:'lifecycle done; health + events flow to governance'} ] },
   'send-chit': { label:'Send a chit', icon:'✉️', capability:'core', licence:'Core · unlimited',
     sealed:[ {flag:'Isolation', value:'per-copy (RLS)', by:'constitution'},
              {flag:'Seal', value:'frozen at send (schema snapshot)', by:'constitution'},
@@ -790,6 +802,9 @@ function blueprintCardHTML(id){
     +'<div style="font-size:11.5px;font-weight:800;color:#8a6d1f;margin:8px 0 2px">🔒 SEALED — governed, cannot change</div>'+_bpRows(wp.sealed,'sealed')
     +'<div style="font-size:11.5px;font-weight:800;color:#1f7a3d;margin:14px 0 2px">✎ OPEN — yours to set, within bounds</div>'+_bpRows(wp.open,'open')
     +'<div style="font-size:11.5px;font-weight:800;color:#2b4a72;margin:14px 0 2px">↑ REPORTS UP — health &amp; events to governance</div><div style="font-size:12.5px;color:var(--ink);padding-top:4px">'+wp.reportsUp.map(esc).join(' · ')+'</div>'
+    +(wp.workflow?('<div style="font-size:11.5px;font-weight:800;color:#5a3fa0;margin:16px 0 4px">🔀 WORKFLOW — how deep this can reach</div>'
+      +wp.workflow.map(function(st,i){ return '<div style="display:flex;gap:9px;align-items:flex-start;padding:5px 0'+(i?';border-top:1px dashed var(--line)':'')+'"><span style="flex:none;width:20px;height:20px;border-radius:50%;background:'+(st.done?'#e8f4ee':'#f2eefb')+';color:'+(st.done?'#2f8f5b':'#6a44a8')+';font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center">'+(i+1)+'</span><div style="flex:1"><span style="font-size:12.5px;font-weight:700;color:var(--ink)">'+esc(st.t)+'</span> <span style="font-size:9.5px;font-weight:800;color:'+(st.done?'#2f8f5b':'#9a7bd0')+'"> '+(st.done?'✅ built':'○ extensible')+'</span><div style="color:var(--grey);font-size:11px;line-height:1.4">'+esc(st.d)+'</div></div></div>'; }).join('')
+      +'<div style="font-size:10.5px;color:var(--grey);margin-top:9px;line-height:1.5">The first steps are built today; the rest are the <b>same shape</b> — a resolved knob or a chained mode (SMS · AI · robot · escalation). The workflow reaches <b>as deep as you declare it</b> — this is the depth, in one place.</div>'):'')
     +'<div style="font-size:10.5px;color:var(--grey);margin-top:13px;line-height:1.5">Read-only showcase — the governance cascade for this mode, earmarked by the layer that set it. Enforcement + editable knobs come next.</div>'
     +'</div>';
 }
