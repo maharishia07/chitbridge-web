@@ -30,7 +30,7 @@ async function loadProfile(){ const h=document.getElementById("profbody"); if(!h
       <label class="fl">GSTN</label><input class="inp" id="pf_gstn" value="${esc(e.gstn)}">
       <label class="fl">Address</label><input class="inp" id="pf_addr" value="${esc(e.address)}">
       <label class="fl">Shop status</label><select class="inp" id="pf_bs">${opt(["open","closed","away"],e.business_status)}</select>
-      <div class="err" id="pf_err"></div><button class="composebtn" style="margin-top:9px" onclick="saveProfile()">Save profile</button></div>${govCardHTML(e.governance)}`;
+      <div class="err" id="pf_err"></div><button class="composebtn" style="margin-top:9px" onclick="saveProfile()">Save profile</button></div>${storefrontCardHTML(e)}${govCardHTML(e.governance)}`;
   }catch(e){ h.innerHTML=scrErr(e); } }
 // "Your governance" — the entity's resolved governance (from attributes): where it's minted, its platform, its basics
 // (with provenance ⟵ platform), rights + allowances + jurisdiction. Entity-simple; honest "minted, not enforced yet".
@@ -53,6 +53,26 @@ function govCardHTML(g){
 }
 async function saveProfile(){ const x=document.getElementById("pf_err"); if(x)x.textContent="";
   try{ await api("saveProfile",{body:{user_id:val("pf_uid")||null,gstn:val("pf_gstn")||null,address:val("pf_addr")||null,business_status:val("pf_bs")}}); toast(MSG.profileSaved()); }catch(e){ if(x)x.textContent=e.message; } }
+// 🛍️ Customer storefront — the shareable public shop link + the browse-first / login-first access mode.
+function storefrontCardHTML(e){
+  var url=location.origin+'/shop.html?bridge='+encodeURIComponent(e.bridge_id||'');
+  var acc=e.storefront_access||'browse';
+  var sfopts=[['browse','Browse first — catalogue is open; sign in only to order'],['login','Login first — customer signs in before browsing']]
+    .map(function(o){return '<option value="'+o[0]+'"'+(acc===o[0]?' selected':'')+'>'+o[1]+'</option>';}).join('');
+  return '<div style="'+_CARD+';margin-top:10px">'
+    +'<div class="sec" style="margin:0 0 8px">🛍️ Customer storefront</div>'
+    +'<div style="font-size:12px;color:var(--grey);line-height:1.5;margin-bottom:8px">Share this link — anyone can open it and order from your catalogue. No account needed (they confirm with a one-time code).</div>'
+    +'<div style="background:#f4f6f8;border:1px solid var(--line);border-radius:9px;padding:8px 10px"><span class="mono" id="sf_url" style="font-size:11.5px;word-break:break-all">'+esc(url)+'</span></div>'
+    +'<div style="display:flex;gap:8px;margin-top:8px"><button class="composebtn" onclick="sfCopy()">📋 Copy link</button><button class="composebtn" style="background:#fff" onclick="window.open(document.getElementById(\'sf_url\').textContent,\'_blank\')">Open ↗</button></div>'
+    +'<label class="fl" style="margin-top:12px">Customer access</label><select class="inp" id="pf_sfaccess" style="max-width:340px">'+sfopts+'</select>'
+    +'<div class="err" id="pf_err2"></div><button class="composebtn" style="margin-top:9px" onclick="saveStorefront()">Save storefront</button>'
+    +'</div>';
+}
+function sfCopy(){ var u=document.getElementById('sf_url'); if(!u)return; var t=u.textContent;
+  if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(t).then(function(){toast('Storefront link copied ✓');}).catch(function(){toast(t);}); }
+  else toast(t); }
+async function saveStorefront(){ var x=document.getElementById('pf_err2'); if(x)x.textContent='';
+  try{ await api('saveProfile',{body:{storefront_access:val('pf_sfaccess')}}); toast('Storefront access saved ✓'); }catch(e){ if(x)x.textContent=e.message; } }
 
 // Actor's own profile — their identity (from the JWT) + self-service Change PIN. Hat/shift/access are set by
 // the entity; the actor sets Duty/Break from the top bar.

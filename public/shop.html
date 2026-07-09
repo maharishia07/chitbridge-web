@@ -40,7 +40,7 @@
 <script>
 var API = (new URLSearchParams(location.search).get('api')) || 'https://chitbridge-api-production.up.railway.app';
 var BRIDGE = (new URLSearchParams(location.search).get('bridge') || '').trim();
-var _FIN=[]; var _ord=null;
+var _FIN=[]; var _ord=null; var _lg={}; var _SHOPDATA=null;
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
 function el(id){ return document.getElementById(id); }
 function swatch(c){ return '<span class="dot" title="'+esc((c.name||'')+' '+(c.hex||''))+'" style="background:'+esc(c.hex||'#ccc')+'"></span>'; }
@@ -72,6 +72,36 @@ function render(data){
   el('app').innerHTML = head + finHtml + prodHtml + (finHtml||prodHtml?enq:'<div class="msg">This shop has nothing on display yet.</div>')
     + '<div class="foot">Powered by <b>Chit &amp; Bridge</b> · a governed rail. Design &amp; colour shown are referenced from the brand catalogue; prices are set by the shop.</div>';
 }
+// ── Login-first gate (storefront_access==='login'): customer signs in (phone/email + OTP) before browsing. ──
+function renderLoginGate(shop){
+  var otpStep=(_lg.step==='otp'), fld='style="width:100%;padding:9px;border:1px solid #e7e3d8;border-radius:8px;margin-bottom:10px;font-size:14px"';
+  el('app').innerHTML='<div class="hd"><div class="logo">🎨</div><div style="flex:1"><div class="shopname sg">'+esc(shop.display_name||'Shop')+'</div><div class="meta">'+esc(shop.bridge_id||'')+'</div></div></div>'
+    +'<div class="card" style="max-width:420px;margin:26px auto"><div class="sg" style="font-weight:800;font-size:16px;margin-bottom:4px">Sign in to view this shop</div>'
+    +'<div class="meta" style="margin-bottom:12px">This shop asks customers to sign in first. Enter your phone or email — we\'ll text/email a one-time code.</div>'
+    +'<input id="lg_contact" placeholder="9876543210 or you@email.com" '+(otpStep?'disabled':'')+' value="'+esc(_lg.contact||'')+'" '+fld+'>'
+    +(otpStep?'<input id="lg_otp" inputmode="numeric" maxlength="6" placeholder="6-digit code" value="'+esc(_lg.otp||_lg.dev_otp||'')+'" '+fld+'>':'')
+    +(_lg.err?'<div style="color:#b4453f;font-size:12.5px;margin-bottom:8px">'+esc(_lg.err)+'</div>':'')
+    +(_lg.msg?'<div style="color:#2e7a45;font-size:12.5px;margin-bottom:8px">'+esc(_lg.msg)+'</div>':'')
+    +(_lg.busy?'<button disabled style="width:100%;border:0;border-radius:10px;padding:12px;background:#9db4d6;color:#fff;font-weight:700;font-size:14px">⏳ Processing…</button>'
+      :'<button onclick="'+(otpStep?'sfLoginVerify':'sfLoginStart')+'()" style="width:100%;border:0;border-radius:10px;padding:12px;background:#3F66A6;color:#fff;font-weight:700;font-size:14px;cursor:pointer">'+(otpStep?'View shop':'Send code')+'</button>')
+    +'</div>';
+}
+function sfLoginStart(){
+  if(_lg.busy)return; _lg.contact=(el('lg_contact').value||'').trim(); _lg.err=null; if(!_lg.contact){ _lg.err='Enter a phone or email.'; renderLoginGate(_SHOPDATA.shop); return; }
+  _lg.busy=true; renderLoginGate(_SHOPDATA.shop);
+  fetch(API+'/api/catalogue/'+encodeURIComponent(BRIDGE)+'/order/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({identifier:_lg.contact})})
+    .then(function(r){return r.json().then(function(j){return{status:r.status,j:j};});})
+    .then(function(res){ _lg.busy=false; if(res.status!==200){ _lg.err=(res.j&&res.j.message)||'Could not send code.'; renderLoginGate(_SHOPDATA.shop); return; } _lg.step='otp'; _lg.dev_otp=res.j&&res.j.dev_otp; _lg.msg='Code sent.'; _lg.err=null; renderLoginGate(_SHOPDATA.shop); })
+    .catch(function(e){ _lg.busy=false; _lg.err=e.message; renderLoginGate(_SHOPDATA.shop); });
+}
+function sfLoginVerify(){
+  if(_lg.busy)return; _lg.otp=(el('lg_otp').value||'').trim(); if(_lg.otp.length!==6){ _lg.err='Enter the 6-digit code.'; renderLoginGate(_SHOPDATA.shop); return; }
+  _lg.busy=true; _lg.err=null; renderLoginGate(_SHOPDATA.shop);
+  fetch(API+'/api/catalogue/'+encodeURIComponent(BRIDGE)+'/login/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({identifier:_lg.contact,otp:_lg.otp})})
+    .then(function(r){return r.json().then(function(j){return{status:r.status,j:j};});})
+    .then(function(res){ if(res.status!==200){ _lg.busy=false; _lg.err=(res.j&&res.j.message)||'Verification failed.'; renderLoginGate(_SHOPDATA.shop); return; } render(_SHOPDATA); })
+    .catch(function(e){ _lg.busy=false; _lg.err=e.message; renderLoginGate(_SHOPDATA.shop); });
+}
 // ── Order flow: pick combination + qty → phone/email → OTP → place order (a chit to the shop). Price is server-side. ──
 function ohost(){ var h=el('ohost'); if(!h){ h=document.createElement('div'); h.id='ohost'; document.body.appendChild(h); } return h; }
 function orderClose(){ var h=el('ohost'); if(h) h.innerHTML=''; _ord=null; }
@@ -89,37 +119,40 @@ function orderRender(msg, err){
     +'<label style="font-size:12px;color:#6a707a">Quantity (litres)</label><input id="o_qty" inputmode="decimal" value="'+esc(_ord.qty||'1')+'" '+fld+'>'
     +'<label style="font-size:12px;color:#6a707a">Your name</label><input id="o_name" placeholder="optional" value="'+esc(_ord.name||'')+'" '+fld+'>'
     +'<label style="font-size:12px;color:#6a707a">Phone or email</label><input id="o_contact" placeholder="9876543210 or you@email.com" '+(otpStep?'disabled':'')+' value="'+esc(_ord.contact||'')+'" '+fld+'>'
-    +(otpStep?('<label style="font-size:12px;color:#6a707a">6-digit code sent to you</label><input id="o_otp" inputmode="numeric" maxlength="6" value="'+esc(_ord.dev_otp||'')+'" '+fld+'>'):'')
+    +(otpStep?('<label style="font-size:12px;color:#6a707a">6-digit code sent to you</label><input id="o_otp" inputmode="numeric" maxlength="6" value="'+esc(_ord.otp||_ord.dev_otp||'')+'" '+fld+'>'):'')
     +(err?'<div style="color:#b4453f;font-size:12.5px;margin-bottom:8px">'+esc(err)+'</div>':'')
     +(msg?'<div style="color:#2e7a45;font-size:12.5px;margin-bottom:8px">'+esc(msg)+'</div>':'')
-    +(otpStep
+    +(_ord.busy?'<button disabled style="width:100%;border:0;border-radius:10px;padding:12px;background:#9db4d6;color:#fff;font-weight:700;font-size:14px">⏳ Processing…</button>'
+      :(otpStep
         ?'<button onclick="orderConfirm()" style="width:100%;border:0;border-radius:10px;padding:12px;background:#3F66A6;color:#fff;font-weight:700;font-size:14px;cursor:pointer">Place order</button>'
-        :'<button onclick="orderStart()" style="width:100%;border:0;border-radius:10px;padding:12px;background:#3F66A6;color:#fff;font-weight:700;font-size:14px;cursor:pointer">Send code</button>')
+        :'<button onclick="orderStart()" style="width:100%;border:0;border-radius:10px;padding:12px;background:#3F66A6;color:#fff;font-weight:700;font-size:14px;cursor:pointer">Send code</button>'))
     +'</div></div>';
   ohost().innerHTML=h;
 }
-function _ocap(){ if(el('o_combo'))_ord.combo=el('o_combo').value; if(el('o_qty'))_ord.qty=el('o_qty').value; if(el('o_name'))_ord.name=(el('o_name').value||'').trim(); if(el('o_contact'))_ord.contact=(el('o_contact').value||'').trim(); }
+function _ocap(){ if(el('o_combo'))_ord.combo=el('o_combo').value; if(el('o_qty'))_ord.qty=el('o_qty').value; if(el('o_name'))_ord.name=(el('o_name').value||'').trim(); if(el('o_contact'))_ord.contact=(el('o_contact').value||'').trim(); if(el('o_otp'))_ord.otp=el('o_otp').value; }
 function orderStart(){
-  _ocap(); if(!_ord.contact){ orderRender(null,'Enter a phone or email.'); return; }
+  if(_ord.busy)return; _ocap(); if(!_ord.contact){ orderRender(null,'Enter a phone or email.'); return; }
+  _ord.busy=true; orderRender();
   fetch(API+'/api/catalogue/'+encodeURIComponent(BRIDGE)+'/order/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({identifier:_ord.contact,name:_ord.name})})
     .then(function(r){return r.json().then(function(j){return{status:r.status,j:j};});})
-    .then(function(res){ if(res.status!==200){ orderRender(null,(res.j&&res.j.message)||'Could not send code.'); return; } _ord.step='otp'; _ord.dev_otp=res.j&&res.j.dev_otp; orderRender('Code sent — check your '+((res.j&&res.j.channel)||'phone/email')+'.'); })
-    .catch(function(e){ orderRender(null,e.message); });
+    .then(function(res){ _ord.busy=false; if(res.status!==200){ orderRender(null,(res.j&&res.j.message)||'Could not send code.'); return; } _ord.step='otp'; _ord.dev_otp=res.j&&res.j.dev_otp; orderRender('Code sent — check your '+((res.j&&res.j.channel)||'phone/email')+'.'); })
+    .catch(function(e){ _ord.busy=false; orderRender(null,e.message); });
 }
 function orderConfirm(){
-  _ocap(); var otp=(el('o_otp')&&el('o_otp').value||'').trim(); if(otp.length!==6){ orderRender(null,'Enter the 6-digit code.'); return; }
+  if(_ord.busy)return; _ocap(); var otp=(_ord.otp||'').trim(); if(otp.length!==6){ orderRender(null,'Enter the 6-digit code.'); return; }
   var e=_FIN[_ord.idx], it=e.it, qty=Number(_ord.qty);
   var body={ identifier:_ord.contact, name:_ord.name, otp:otp, line_items:[{kind:'finish', source:e.source, finish:it.name, combination:_ord.combo, quantity:qty}] };
+  _ord.busy=true; orderRender();
   fetch(API+'/api/catalogue/'+encodeURIComponent(BRIDGE)+'/order/confirm',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
     .then(function(r){return r.json().then(function(j){return{status:r.status,j:j};});})
-    .then(function(res){ if(res.status!==200){ orderRender(null,(res.j&&res.j.message)||'Order failed.'); return; }
+    .then(function(res){ if(res.status!==200){ _ord.busy=false; orderRender(null,(res.j&&res.j.message)||'Order failed.'); return; }
       ohost().innerHTML='<div style="position:fixed;inset:0;background:rgba(15,22,32,.5);z-index:900;display:flex;align-items:center;justify-content:center;padding:12px" onclick="orderClose()"><div style="background:#fff;max-width:400px;border-radius:16px;padding:26px;text-align:center"><div style="font-size:40px">✓</div><div class="sg" style="font-weight:800;font-size:18px;margin-top:8px">Order placed</div><div style="font-size:13px;color:#3a4048;margin-top:8px;line-height:1.6">Your order for <b>'+esc(it.name)+((_ord.combo)?(' · '+esc(_ord.combo)):'')+'</b> ('+esc(String(qty))+' L) reached the shop. They\'ll be in touch.</div><button onclick="orderClose()" style="margin-top:16px;border:0;border-radius:10px;padding:10px 20px;background:#3F66A6;color:#fff;font-weight:700;cursor:pointer">Done</button></div></div>'; })
-    .catch(function(e){ orderRender(null,e.message); });
+    .catch(function(e){ _ord.busy=false; orderRender(null,e.message); });
 }
 (function(){
   if(!BRIDGE){ el('app').innerHTML='<div class="msg">No shop specified. Use a link like <b>shop.html?bridge=CBXXXXXXXX</b></div>'; return; }
   fetch(API+'/api/catalogue/'+encodeURIComponent(BRIDGE)).then(function(r){ return r.json().then(function(j){ return {status:r.status, j:j}; }); })
-    .then(function(res){ if(res.status!==200){ el('app').innerHTML='<div class="msg">'+esc((res.j&&res.j.message)||'Shop not found or has no public catalogue.')+'</div>'; return; } render(res.j); })
+    .then(function(res){ if(res.status!==200){ el('app').innerHTML='<div class="msg">'+esc((res.j&&res.j.message)||'Shop not found or has no public catalogue.')+'</div>'; return; } _SHOPDATA=res.j; if(res.j.shop&&res.j.shop.storefront_access==='login'){ renderLoginGate(res.j.shop); } else { render(res.j); } })
     .catch(function(e){ el('app').innerHTML='<div class="msg">Could not reach the shop. '+esc(e.message||'')+'</div>'; });
 })();
 </script>
