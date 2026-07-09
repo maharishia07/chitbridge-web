@@ -565,6 +565,8 @@ const EP = {
   assistResolve:   {m:"POST", p:"/api/assist/resolve",          ok:"y"},  // approve (with answer) / reject a gap
   assistPublish:   {m:"POST", p:"/api/assist/publish",          ok:"y"},  // help desk publishes a Q&A to its catalogue (serves live)
   assistWhoami:    {m:"GET",  p:"/api/assist/whoami",            ok:"y"},  // is the logged-in entity a helpdesk instance?
+  assistStandards: {m:"GET",  p:"/api/assist/standards",         ok:"y"},  // compliance conform-check: standards available to check against
+  assistConform:   {m:"POST", p:"/api/assist/conform",           ok:"y"},  // FIRST LIGHT of AI-as-actor — deterministic verdict + (keyed) AI narrative + acted_by
   // --- repointed to real chitbridge-api routes (trace 2026-06-25). See FINDINGS.md. ---
   register:        {m:"POST", p:"/api/entities/register",        ok:"✓"},  // OTP request (register doubles as owner login)
   ownerLogin:      {m:"POST", p:"/api/entities/register",        ok:"✓"},  // same route — returning owner requests OTP (pass mode:'login')
@@ -901,9 +903,57 @@ function renderAssist(ans){ const h=document.getElementById("assisthost"); if(!h
       <div id="assist_ans" style="font-size:12.5px;color:#222;line-height:1.55;margin-bottom:10px">${ans||""}</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">${(_assistLoading && !sugg.length)?'<span style="font-size:11px;color:#9aa3a7">loading questions…</span>':sugg.map(e=>`<button onclick="assistPick('${e.id}')" style="border:0.5px solid #e3e0d8;border-radius:8px;padding:3px 8px;font-size:11px;background:#fff;cursor:pointer">${esc(e.q)}</button>`).join("")}</div>
       <div style="display:flex;gap:7px"><input id="assist_in" placeholder="${pre?"e.g. I run a timber yard…":"e.g. how do I assign a task?"}" style="flex:1;border:1px solid #e3e0d8;border-radius:8px;padding:7px 9px;font-size:12.5px" onkeydown="if(event.key==='Enter')assistAsk()"><button onclick="assistAsk()" style="border:0;border-radius:8px;padding:0 12px;background:#3F66A6;color:#fff;font-weight:700;cursor:pointer">Ask</button></div>
+      ${pre?'':'<div style="margin-top:9px;text-align:center"><button onclick="checkCompliance()" style="border:0.5px solid #e3e0d8;border-radius:8px;padding:6px 10px;font-size:11.5px;background:#fff;cursor:pointer">🛡️ Check compliance</button></div>'}
     </div>
     <div style="padding:7px 13px;font-size:9.5px;color:#9aa3a7;background:#faf8f3">Honest by design · sample answers from the library · richer AI coming.</div>
   </div>`;
+}
+/* ===================== COMPLIANCE CONFORM-CHECK (AI-as-actor, first light) =====================
+   The `ai:conform-verdict@v1` slot, surfaced. Pick a standard → the required data points render as a form →
+   Check → POST /api/assist/conform returns the DETERMINISTIC verdict (facts) + an AI narrative when the model key
+   is configured + the `acted_by` deputy stamp. Honest by design: the verdict is computed, not a model opinion. */
+let _ccStds=[], _ccPick=null;
+async function checkCompliance(){
+  try{ _ccStds = await api('assistStandards'); }
+  catch(e){ toast("Couldn't load standards: "+esc((e&&e.message)||'try again')); return; }
+  if(!_ccStds || !_ccStds.length){ toast("No standards available yet."); return; }
+  _ccPick = _ccStds[0].standard; ccRender();
+}
+function ccPickStd(s){ _ccPick=s; ccRender(); }
+function _ccRuleHint(r){ r=r||{}; if(r.max!=null) return "must be ≤ "+r.max; if(r.min!=null) return "must be ≥ "+r.min; if(r.equals!==undefined) return "must be "+r.equals; if(r.present) return "required"; return ""; }
+function _ccField(p){ const r=p.rule||{}; const id="cc_"+p.key;
+  if(r.equals===true||r.equals===false) return `<label style="display:flex;align-items:center;gap:8px;font-size:12.5px"><input type="checkbox" id="${id}"> ${esc(p.label)}</label>`;
+  const t=(r.max!=null||r.min!=null)?"number":"text";
+  return `<div style="display:flex;flex-direction:column;gap:3px"><label for="${id}" style="font-size:11.5px;color:#555">${esc(p.label)} <span style="color:#9aa3a7">· ${esc(_ccRuleHint(r))}${p.obligation==='must'?' · required':''}</span></label><input id="${id}" type="${t}" ${t==='number'?'step="any"':''} style="border:1px solid #e3e0d8;border-radius:8px;padding:7px 9px;font-size:12.5px"></div>`;
+}
+function ccRender(res){
+  const std=_ccStds.find(s=>s.standard===_ccPick)||_ccStds[0]; if(!std) return;
+  const opts=_ccStds.map(s=>`<option value="${esc(s.standard)}" ${s.standard===_ccPick?'selected':''}>${esc(s.title)} (${esc(s.standard)})</option>`).join("");
+  const fields=(std.points||[]).map(_ccField).join('<div style="height:9px"></div>');
+  modal(`<div style="font-family:'Space Grotesk';font-weight:700;font-size:15px;margin-bottom:3px">🛡️ Compliance check <span style="font-size:9.5px;font-family:'Space Mono';background:#f3f0e8;color:#7a5e22;border-radius:5px;padding:1px 6px;vertical-align:middle">first light</span></div>
+    <div style="font-size:11.5px;color:#777;margin-bottom:11px">Check a transaction's data against a standard. The verdict is computed from the rules — the AI only explains it.</div>
+    <label style="font-size:11.5px;color:#555">Standard</label>
+    <select onchange="ccPickStd(this.value)" style="width:100%;border:1px solid #e3e0d8;border-radius:8px;padding:7px 9px;font-size:12.5px;margin:3px 0 12px">${opts}</select>
+    <div>${fields}</div>
+    <button onclick="ccRun()" style="width:100%;margin-top:14px;border:0;border-radius:9px;padding:10px;background:#3F66A6;color:#fff;font-weight:700;font-size:13px;cursor:pointer">Check compliance</button>
+    <div id="cc_result" style="margin-top:12px">${res||''}</div>`, true);
+}
+async function ccRun(){
+  const std=_ccStds.find(s=>s.standard===_ccPick); if(!std) return;
+  const payload={};
+  (std.points||[]).forEach(p=>{ const el=document.getElementById("cc_"+p.key); if(!el) return; const r=p.rule||{};
+    if(r.equals===true||r.equals===false){ payload[p.key]=el.checked; }
+    else if((r.max!=null||r.min!=null)){ if(el.value!=='') payload[p.key]=Number(el.value); }
+    else if(el.value!==''){ payload[p.key]=el.value; } });
+  const rh=document.getElementById("cc_result"); if(rh) rh.innerHTML='<span style="font-size:12px;color:#9aa3a7">Checking…</span>';
+  let v; try{ v=await api('assistConform',{body:{standard:_ccPick, payload}}); }
+  catch(e){ if(rh) rh.innerHTML=`<div style="color:#b4453f;font-size:12.5px">Couldn't check: ${esc((e&&e.message)||'try again')}</div>`; return; }
+  const ok=v.compliant;
+  const badge=`<div style="display:inline-block;font-weight:800;font-size:12px;padding:4px 11px;border-radius:20px;background:${ok?'#e8f5ee':'#fbeae9'};color:${ok?'#2f8f5b':'#b4453f'}">${ok?'✓ COMPLIANT':'✗ NON-COMPLIANT'}</div>`;
+  const rows=(v.points||[]).map(p=>{ const g=p.status==='ok'; return `<div style="display:flex;gap:8px;align-items:baseline;padding:4px 0;font-size:12px;border-top:1px solid #f0ede5"><span style="color:${g?'#2f8f5b':'#b4453f'};font-weight:800">${g?'✓':'✗'}</span><span style="flex:1">${esc(p.label)}</span><span style="color:#9aa3a7;font-size:11px">${esc(p.detail||p.status)}</span></div>`; }).join("");
+  const narr=v.narrative?`<div style="margin-top:10px;background:#f6f4ee;border:1px solid #e7e3d8;border-radius:9px;padding:9px 11px;font-size:12px;line-height:1.55;color:#3a3a3a"><span style="font-size:10px;color:#7a5e22;font-weight:700">🤖 ASSIST</span><br>${esc(v.narrative)}</div>`:'';
+  const ab=v.acted_by||{}; const prov=`<div style="margin-top:9px;font-size:10px;color:#9aa3a7;font-family:'Space Mono'">stamped · ${esc(ab.deputy||'ai:conform-verdict')} · ${ab.model?('narrative by '+esc(ab.model)):'deterministic only (no model key)'} · against ${esc(v.standard||_ccPick)}</div>`;
+  if(rh) rh.innerHTML=badge+`<div style="margin-top:9px">${rows}</div>`+narr+prov;
 }
 function setLogFilter(k){ _logFilter=k; renderMsgConsole(); }
 function clearMsgLog(){ if(window.__cblog) window.__cblog.length=0; renderMsgConsole(); }
