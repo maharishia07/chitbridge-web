@@ -745,6 +745,62 @@ let _legendOpen=false;
 function openLegend(){ if(_legendOpen){ closeLegend(); return; }
   ensureCap('legend').then(function(){ _openLegendImpl(); }).catch(function(){ if(typeof toast==='function')toast('Legend unavailable — check your connection.'); }); }
 function closeLegend(){ _legendOpen=false; const h=document.getElementById("lbhost"); if(h)h.innerHTML=""; }
+
+/* ── WORK-PATTERN BLUEPRINTS — read-only SHOWCASE of the governance cascade per mode (the matrix, made visible).
+   Single source (WORK_PATTERNS); the SAME card renders inline (an ℹ️ on an action) AND in Settings. Enforcement +
+   editable knobs come later — for now this shows, per work pattern: 🎫 licence · 🔒 sealed (+ which layer sealed it)
+   · ✎ open knobs (with bounds) · ↑ what it reports up. See C:\dev\ARCHITECTURE-GOVERNANCE-MATRIX.md. */
+const WORK_PATTERNS = {
+  'iot-signal': { label:'IoT signal', icon:'🛰️', capability:'connector', licence:'Connector · up to 25 devices',
+    sealed:[ {flag:'Copy direction', value:'Task-only', by:'constitution'},
+             {flag:'Isolation', value:'per-copy (RLS)', by:'constitution'},
+             {flag:'Payload', value:'the reading is the record', by:'constitution'},
+             {flag:'Retention floor', value:'90 days', by:'template'} ],
+    open:[ {knob:'Default folder', value:'per device', bounds:'any name you choose'},
+           {knob:'Counterparty (CC)', value:'optional', bounds:'a network entity'},
+           {knob:'Alert cadence', value:'60s', bounds:'10s–1h'} ],
+    reportsUp:['health','last-seen','exceptions / day'] },
+  'send-chit': { label:'Send a chit', icon:'✉️', capability:'core', licence:'Core · unlimited',
+    sealed:[ {flag:'Isolation', value:'per-copy (RLS)', by:'constitution'},
+             {flag:'Seal', value:'frozen at send (schema snapshot)', by:'constitution'},
+             {flag:'Provenance', value:'append-only state log', by:'constitution'} ],
+    open:[ {knob:'Self-chit copies', value:'Both', bounds:'both / Order-only / Task-only'},
+           {knob:'Default assignee', value:'unassigned pool', bounds:'an active assignable co-assist'} ],
+    reportsUp:['delivered','status advances'] },
+  'raise-dispute': { label:'Raise a dispute', icon:'⚑', capability:'dispute', licence:'Dispute · included',
+    sealed:[ {flag:'Confidentiality', value:'roster-only', by:'constitution'},
+             {flag:'Copies', value:'per-party (each owns its own)', by:'constitution'},
+             {flag:'Resolution', value:'raiser clears its own', by:'constitution'} ],
+    open:[ {knob:'Dispute handler', value:'entity default', bounds:'an active co-assist'} ],
+    reportsUp:['raised','resolved','open count'] }
+};
+function _bpRows(items, kind){
+  return items.map(function(it){
+    var name = it.flag || it.knob;
+    var meta = kind==='sealed' ? ('<span style="margin-left:auto;font-size:11px;color:var(--grey)">⟵ '+esc(it.by)+'</span>')
+             : kind==='open'   ? ('<span style="margin-left:auto;font-size:11px;color:var(--grey)">'+esc(it.bounds)+'</span>') : '';
+    return '<div style="display:flex;gap:8px;align-items:baseline;padding:5px 0;font-size:12.5px;border-top:1px dashed var(--line)"><span style="min-width:148px;color:var(--grey)">'+esc(name)+'</span><b style="color:var(--ink)">'+esc(it.value)+'</b>'+meta+'</div>';
+  }).join('');
+}
+function blueprintCardHTML(id){
+  var wp = WORK_PATTERNS[id]; if(!wp) return '<div style="padding:12px">Unknown work pattern.</div>';
+  return '<div style="padding:2px 2px">'
+    +'<div style="display:flex;align-items:center;gap:9px;margin-bottom:2px"><span style="font-size:22px">'+wp.icon+'</span><div><div style="font-family:\'Space Grotesk\';font-weight:800;font-size:16px">'+esc(wp.label)+'</div><div style="font-size:11px;color:var(--grey)">what governs this work pattern</div></div></div>'
+    +'<div style="background:#f4f8fc;border:1px solid #cfe0f4;border-radius:9px;padding:8px 11px;margin:10px 0;font-size:12.5px;color:#2b4a72">🎫 <b>Licence</b> · '+esc(wp.licence)+'</div>'
+    +'<div style="font-size:11.5px;font-weight:800;color:#8a6d1f;margin:8px 0 2px">🔒 SEALED — governed, cannot change</div>'+_bpRows(wp.sealed,'sealed')
+    +'<div style="font-size:11.5px;font-weight:800;color:#1f7a3d;margin:14px 0 2px">✎ OPEN — yours to set, within bounds</div>'+_bpRows(wp.open,'open')
+    +'<div style="font-size:11.5px;font-weight:800;color:#2b4a72;margin:14px 0 2px">↑ REPORTS UP — health &amp; events to governance</div><div style="font-size:12.5px;color:var(--ink);padding-top:4px">'+wp.reportsUp.map(esc).join(' · ')+'</div>'
+    +'<div style="font-size:10.5px;color:var(--grey);margin-top:13px;line-height:1.5">Read-only showcase — the governance cascade for this mode, earmarked by the layer that set it. Enforcement + editable knobs come next.</div>'
+    +'</div>';
+}
+function openBlueprint(id){ if(typeof modal!=='function')return; modal(blueprintCardHTML(id)+'<div style="display:flex;margin-top:14px"><button class="composebtn pri" style="flex:1" onclick="closeModal()">Close</button></div>', false); }
+function blueprintSettingsHTML(){
+  return '<div class="sec" style="margin-top:18px">⚙ Governed by work pattern</div>'
+    +'<div style="font-size:11.5px;color:var(--grey);margin-bottom:9px;line-height:1.5">Each action is a governed <b>work pattern</b>. Open one to see its cascade — 🎫 licence · 🔒 sealed (and which layer sealed it) · ✎ open knobs · ↑ what it reports up. <i>Read-only showcase.</i></div>'
+    +Object.keys(WORK_PATTERNS).map(function(id){ var wp=WORK_PATTERNS[id];
+      return '<button class="composebtn" style="display:flex;align-items:center;gap:10px;width:100%;text-align:left;margin-bottom:7px;padding:10px 12px" onclick="openBlueprint(\''+id+'\')"><span style="font-size:16px">'+wp.icon+'</span><span style="flex:1"><b>'+esc(wp.label)+'</b><div style="font-size:11px;color:var(--grey)">'+wp.sealed.length+' sealed · '+wp.open.length+' open · 🎫 '+esc(wp.licence)+'</div></span><span style="color:var(--grey);font-size:15px">ℹ️</span></button>';
+    }).join('');
+}
 /* ── Floating AI assistant — context-sensitive, library-backed, pre + post auth, honest (no overselling). ──
    First version: keyword match over a seed library (consolidates HELP_PACKS / KB). Real NLU/AI is the next phase. */
 // ASSIST_LIB is now DB-served (GET /api/assist/questions), fetched per-screen + cached for the session —
