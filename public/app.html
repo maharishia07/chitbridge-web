@@ -2110,12 +2110,24 @@ function prodRowHTML(p){ const d=pData(p), id=prodId(p); return `<div class="row
   <div class="main2"><div class="l1"><span class="code">${esc(pName(d))}</span><span class="optchip" style="background:var(--gold-soft);color:#7a5e22;border-color:var(--gold-line)">${esc(pUnit(d))}</span><span class="amt" style="margin-left:auto">${inr(pPrice(d))}</span></div>
     <div class="l2">${pCode(d)?'<span class="mono">'+esc(pCode(d))+'</span> · ':''}${esc(pDesc(d)||'—')}</div></div>
   <div class="rowgo" aria-hidden="true">›</div></div>`; }
-function prodRowsHTML(){ const r=prodVisible(); if(!r.length) return '<div class="empty"><div class="big">🗂️</div><div class="t">No products yet</div><div>Add one with <b>+ New product</b>.</div></div>'; return r.map(prodRowHTML).join(''); }
+/* BRIDGE — the reference catalogue (Royale Play finishes adopted via 🤖 Catalogue builder) surfaces HERE, resolved
+   live from catalogue-mine (shared design/colour BY REFERENCE + the entity's commercials). NOT copied into products. */
+function refFinishRow(it){ var price=(it.commercials&&it.commercials.price_per_litre!=null)?it.commercials.price_per_litre:null;
+  var sw=(((it.combinations||[])[0]||{}).colours||[]).map(function(c){return '<span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:'+esc(c.hex)+';border:1px solid rgba(0,0,0,.15)"></span>';}).join('');
+  return '<div class="row" style="cursor:pointer" onclick="openCatalogueBuilder()"><div class="main2"><div class="l1"><span class="code">'+esc(it.name)+'</span><span style="display:inline-flex;gap:3px;margin-left:3px">'+sw+'</span><span class="optchip" style="background:#F0EAF9;color:#6a44a8;border-color:transparent">🎨 referenced</span><span class="amt" style="margin-left:auto">'+(price!=null?('₹'+esc(String(price))+'/L'):'<span style="color:#9aa3a7">no price</span>')+'</span></div><div class="l2">'+esc(it.texture_family||'')+(it.region?(' · '+esc(it.region)):'')+'</div></div><div class="rowgo" aria-hidden="true">›</div></div>'; }
+function refCatRowsHTML(){ var rc=UI.refCat||[]; if(!rc.length) return '';
+  return '<div style="padding:9px 13px 4px;font-size:10.5px;color:#6a44a8;text-transform:uppercase;letter-spacing:.4px;font-weight:800">🎨 Designer finishes · referenced</div>'+rc.map(refFinishRow).join('')+'<div style="padding:5px 13px 9px;font-size:10.5px;color:#9aa3a7;border-bottom:1px solid var(--line)">Shared design &amp; colour by reference · your prices · <span style="color:var(--blue);cursor:pointer;font-weight:600" onclick="openCatalogueBuilder()">manage in 🤖 Catalogue builder</span></div>'; }
+function prodRowsHTML(){ const ref=refCatRowsHTML(); const r=prodVisible();
+  if(!ref && !r.length) return '<div class="empty"><div class="big">🗂️</div><div class="t">No products yet</div><div>Add one with <b>+ New product</b>, or adopt a catalogue via 🤖 AI.</div></div>';
+  const prods = r.length ? ('<div style="padding:9px 13px 4px;font-size:10.5px;color:#9aa3a7;text-transform:uppercase;letter-spacing:.4px;font-weight:800">🗂️ Your products</div>'+r.map(prodRowHTML).join('')) : '';
+  return ref + prods; }
 function paintProdList(){ const b=document.getElementById('ct_rows'); if(b)b.innerHTML=prodRowsHTML(); const c=document.getElementById('ct_count'); if(c)c.textContent=prodVisible().length+' product(s)'; }
 function paintProdDetail(){ const dp=document.getElementById('detailpane'); if(dp){ dp.className='detail'; dp.innerHTML=prodDetailHTML(); } }
 async function loadCatalogue(){
   UI._prodLoading=true; const rb=document.getElementById('ct_rows'); if(rb)rb.innerHTML='<div class="loadwrap"><span class="spin"></span> loading…</div>';
-  try{ const items=(await api("prodList"))||[]; UI.prods=items; UI._prodLoading=false; paintProdList();
+  try{ const items=(await api("prodList"))||[]; UI.prods=items;
+    try{ const mine=await api('catalogueMine'); UI.refCat=(mine&&mine.catalogues&&mine.catalogues[0]&&mine.catalogues[0].resolved&&mine.catalogues[0].resolved.items)||[]; }catch(_){ UI.refCat=[]; }   // BRIDGE: resolve the adopted reference catalogue (best-effort)
+    UI._prodLoading=false; paintProdList();
     if(UI.prodSel && !UI.prods.some(p=>prodId(p)===UI.prodSel)){ UI.prodSel=null; }
     if(UI.prodMode!=='new'){ if(!UI.prodSel && UI.prods.length && UI.vp!=='mob'){ selectProduct(prodId(UI.prods[0]), true); } else paintProdDetail(); }
   }catch(e){ UI._prodLoading=false; const rb2=document.getElementById('ct_rows'); if(rb2)rb2.innerHTML=`<div class="empty"><div class="t">Couldn't load</div><div>${esc(e.message)}</div></div>`; }
