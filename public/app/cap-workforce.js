@@ -14,6 +14,7 @@ window.ACTOR_TYPES = Object.assign({
   human: { label:'Person',             icon:'👤', capability:null,        module:null,        load:null },
   iot:   { label:'IoT device',         icon:'🛰️', capability:'connector', module:'connector', load:'acLoadDevices' },
   erp:   { label:'ERP / API',          icon:'🔌', capability:'connector', module:'connector', load:'acLoadDevices' },
+  ai:    { label:'AI assist',          icon:'🤖', capability:null,        module:null,        load:null },
   cloud: { label:'Cloud (Azure / AWS)', icon:'☁️', capability:'cloud',    module:null,        load:null, comingSoon:true },
 }, window.ACTOR_TYPES||{});
 window.ACTOR_MANAGE = window.ACTOR_MANAGE || {};                     // type -> Tier-2 management renderer (lazy modules self-register)
@@ -23,6 +24,7 @@ window.AC_TYPE_HOW = window.AC_TYPE_HOW || {
   human:{how:'A person on your team who acts for the entity — with a hat that scopes what they can do. They log in, take Tasks, and advance chits on the same governed rail.'},
   iot:{how:'A Pi or gateway that authenticates with its OWN key and PUSHES readings onto the rail — each exception becomes a co-held chit, filed into your folder. Same rail, same governance as a person.'},
   erp:{how:'A business system that pushes documents over the rail — PROCESS-THEN-FORGET: we keep a receipt (hash + outcome), never the raw payload, and forward only the summary as a co-held chit.'},
+  ai:{how:'A governed AI that acts for you as a co-assist. Each AI assist is one SLOT (a work-pattern of the AI capability) at the cheapest sufficient rung. Invoking a live one runs it now; every action is a governed chit you can see and dispute — the model PROPOSES, the rail AUTHORISES, and rungs that decide always need a human. Model proposes, you confirm.'},
   cloud:{how:'A cloud account (Azure / AWS) as a co-assist — coming soon. Same rail, same governance.'}
 };
 function acTypeInfo(t){ var reg=(window.ACTOR_TYPES||{})[t]||{}, h=(window.AC_TYPE_HOW||{})[t]; if(!h||typeof modal!=='function')return;
@@ -32,6 +34,67 @@ function acTypeInfo(t){ var reg=(window.ACTOR_TYPES||{})[t]||{}, h=(window.AC_TY
 }
 // GOVERNANCE hook (invisible to end users): merge governed type defs (with their constraints) into the registry — no core change.
 function acMergeTypes(defs){ if(defs&&typeof defs==='object'){ Object.keys(defs).forEach(function(k){ window.ACTOR_TYPES[k]=Object.assign({},window.ACTOR_TYPES[k]||{},defs[k]); }); if(typeof paintAcList==='function')paintAcList(); if(typeof renderApp==='function')renderApp(); } }
+/* ═══ AI ASSISTS — the 🤖 co-assist type. Each AI assist = one SLOT (a work-pattern of the ai@v1 capability), shown
+ *     UNDER the AI type the way devices sit under an IoT gateway. The OWNER'S CONTROL lives here (enable + the rule),
+ *     because a lit slot is an ACTOR whose every action is a chit you can dispute — Settings just REDIRECTS here.
+ *     RULE per slot: rung is fixed; the human-gate can only be TIGHTENED from the rung floor (Crux 2). Registry +
+ *     policy are client-side (localStorage) for first light — mint to entity_governance later. Invoking a LIVE slot
+ *     runs it now (conform-verdict → the live compliance check). ═══ */
+window.AI_SLOTS = window.AI_SLOTS || [
+  { key:'conform-verdict@v1', name:'Compliance check', rung:'summarise', status:'live', invoke:'checkCompliance',
+    desc:'Checks a transaction against a standard (food-safety@v1) — deterministic verdict + an AI remediation note.',
+    gates:['recommend-only','draft-then-confirm','autonomous'], defGate:'recommend-only' },
+  { key:'draft-chit@v1', name:'Draft a chit', rung:'draft', status:'shaped', invoke:null,
+    desc:'Drafts a chit from your intent; you review and send. The AI never sends — your send is the confirm.',
+    gates:['draft-then-confirm'], defGate:'draft-then-confirm' },
+  { key:'triage@v1', name:'Inbox triage', rung:'classify', status:'shaped', invoke:null,
+    desc:'Sorts the inbox and flags likely disputes — surfaces, never decides.',
+    gates:['recommend-only','autonomous'], defGate:'recommend-only' },
+];
+function _aiPolKey(){ return 'cb_aipolicy_'+((typeof SESSION!=='undefined'&&(SESSION.name||SESSION.entity_id))||'me'); }
+function aiPolicy(){ try{ return JSON.parse(localStorage.getItem(_aiPolKey())||'{}')||{}; }catch(_){ return {}; } }
+function _aiPolSet(key,patch){ var p=aiPolicy(); p[key]=Object.assign({},p[key]||{},patch); try{ localStorage.setItem(_aiPolKey(),JSON.stringify(p)); }catch(_){}
+}
+function aiSlotState(s){ var p=(aiPolicy()[s.key])||{}; return { enabled:(p.enabled!==undefined)?!!p.enabled:false, gate:p.gate||s.defGate }; }
+function aiToggle(key){ var s=(window.AI_SLOTS||[]).find(function(x){return x.key===key;}); if(!s)return; var st=aiSlotState(s); _aiPolSet(key,{enabled:!st.enabled,gate:st.gate}); if(typeof paintAcList==='function')paintAcList(); if(typeof toast==='function')toast('AI assist '+(!st.enabled?'enabled':'disabled')+' — saved on this device (not yet in governance).'); }
+function aiSetGate(key,g){ _aiPolSet(key,{gate:g}); if(typeof paintAcList==='function')paintAcList(); }
+function acCount(){ return ((UI.acTypeF||'all')==='ai') ? (window.AI_SLOTS||[]).length : acVisible().length; }
+function aiSlotInfo(key){ var s=(window.AI_SLOTS||[]).find(function(x){return x.key===key;}); if(!s||typeof modal!=='function')return; var st=aiSlotState(s);
+  modal('<div style="padding:2px 2px"><div style="font-size:26px">🤖</div><div style="font-weight:800;font-size:16px;margin-top:4px">'+esc(s.name)+'</div>'
+    +'<div style="font-size:11px;color:#6a44a8;font-family:\'Space Mono\',monospace;margin-top:2px">ai:'+esc(s.key)+' · '+esc(s.status)+' · '+(st.enabled?'enabled':'off')+'</div>'
+    +'<div style="font-size:13px;color:#3a4048;line-height:1.6;margin-top:8px">'+esc(s.desc)+'</div>'
+    +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">'
+      +'<span class="optchip" style="background:#eef3fb;color:#345488;border-color:#cfe0f4">rung · '+esc(s.rung)+' (floor)</span>'
+      +'<span class="optchip" style="background:#f3f0e8;color:#7a5e22;border-color:#e6d9a8">human gate · '+esc(st.gate)+'</span></div>'
+    +'<div style="font-size:11.5px;color:var(--grey);background:#f7f7f5;border:1px solid var(--line);border-radius:9px;padding:9px 11px;margin-top:12px;line-height:1.5">Every run is a governed chit stamped <b>acted_by</b> (deputy · model · delegator · confirmed_by). The model PROPOSES, the rail AUTHORISES, you confirm. The rung sets the floor — you can only tighten the gate.</div>'
+    +'<div style="display:flex;gap:10px;margin-top:16px">'+((st.enabled&&s.status==='live'&&s.invoke)?'<button class="composebtn pri" style="flex:1" onclick="closeModal();'+esc(s.invoke)+'()">▶ Invoke</button>':'')+'<button class="composebtn" style="flex:1" onclick="closeModal()">Close</button></div></div>', false);
+}
+function aiRowsHTML(){
+  var slots=window.AI_SLOTS||[];
+  var intro='<div style="padding:11px 13px;font-size:11.5px;color:#6a707a;line-height:1.5;border-bottom:1px solid var(--line)">🤖 AI assists act for you as governed co-assists — each is one <b>slot</b>. Turn one on and set its rule; every action it takes is a chit you can see and dispute. <span style="color:#9aa3a7">Rung sets the floor — you can only tighten the human gate.</span></div>';
+  if(!slots.length) return intro+'<div class="empty"><div class="big">🤖</div><div class="t">No AI assists yet</div><div>They light up as slots are enabled.</div></div>';
+  return intro+slots.map(function(s){ var st=aiSlotState(s), live=s.status==='live', on=st.enabled;
+    var dot=on?(live?'#2f8f5b':'#c9a441'):'#b9b9b9';
+    var gateOpts=(s.gates||[]).map(function(g){ return '<option value="'+g+'"'+(st.gate===g?' selected':'')+'>'+g+'</option>'; }).join('');
+    var canInvoke=on&&live&&s.invoke;
+    return '<div class="row" style="cursor:default;align-items:flex-start">'
+      +'<div style="width:9px;height:9px;border-radius:50%;flex:0 0 auto;margin-top:6px;background:'+dot+'"></div>'
+      +'<div class="main2" style="width:100%;min-width:0"><div class="l1"><span class="code">'+esc(s.name)+'</span>'
+        +'<span class="optchip" style="background:#F0EAF9;color:#6a44a8;border-color:transparent">🤖 '+esc(s.key)+'</span>'
+        +'<span class="amt" style="margin-left:auto;font-size:11px;color:'+(on?(live?'#2f8f5b':'#a9791f'):'var(--grey)')+';font-weight:600">'+(on?(live?'enabled · live':'enabled · shaped'):'off')+'</span></div>'
+        +'<div class="l2">'+esc(s.desc)+'</div>'
+        +'<div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-top:8px">'
+          +'<button class="composebtn'+(on?' pri':'')+'" style="padding:5px 12px;font-size:12px" onclick="aiToggle(\''+esc(s.key)+'\')">'+(on?'✓ Enabled':'Enable')+'</button>'
+          +'<span class="optchip" style="background:#eef3fb;color:#345488;border-color:#cfe0f4">rung · '+esc(s.rung)+'</span>'
+          +'<label style="font-size:11.5px;color:var(--grey);display:inline-flex;align-items:center;gap:5px">human gate <select onchange="aiSetGate(\''+esc(s.key)+'\',this.value)" style="border:1px solid var(--line);border-radius:7px;padding:3px 6px;font-size:11.5px"'+(on?'':' disabled')+'>'+gateOpts+'</select></label>'
+        +'</div>'
+        +'<div style="margin-top:8px;display:flex;gap:6px;align-items:center">'
+          +(canInvoke?('<button class="composebtn pri" style="padding:6px 12px;font-size:12px" onclick="'+esc(s.invoke)+'()">▶ Invoke</button>'):('<button class="composebtn" style="padding:6px 12px;font-size:12px;opacity:.55;cursor:not-allowed" disabled title="'+(!on?'Enable it first':(!live?'Shaped — not runnable yet':'Not invokable'))+'">▶ Invoke</button>'))
+          +'<button class="composebtn" style="padding:6px 10px;font-size:12px" onclick="aiSlotInfo(\''+esc(s.key)+'\')">How it works</button>'
+        +'</div>'
+      +'</div></div>';
+  }).join('');
+}
 // generic showcase opener — loads a STANDALONE HTML page FROM THE SERVER in an overlay iframe (no showcase markup in JS; content is an asset, fetched on demand). Reusable: openShowcase('/iot-howitworks.html','How IoT works').
 // paneFrame — REUSABLE overlay sizing. Reuses the app's OWN two-panel coordinates (no guessing): laptop = fit the
 // RIGHT/detail pane's MEASURED rect (the proven co-assist technique); mobile = bottom-HALF sheet. Any overlay uses this.
@@ -68,9 +131,9 @@ function coassistsScreen(){
       <div style="display:flex;align-items:center;gap:6px;margin-top:8px;font-size:11px;color:var(--grey);flex-wrap:wrap">
         <span style="display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden">${['active','inactive','all'].map(f=>`<button onclick="setAcFlt('${f}')" style="border:0;background:${acFlt()===f?'var(--blue)':'#fff'};color:${acFlt()===f?'#fff':'var(--grey)'};font-weight:700;font-size:11px;padding:4px 9px;text-transform:capitalize">${f}</button>`).join('')}</span>
         <span style="display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden">${['all'].concat(Object.keys(window.ACTOR_TYPES||{})).map(t=>{var reg=(window.ACTOR_TYPES||{})[t]||{};var on=(UI.acTypeF||'all')===t;var lbl=t==='all'?'All':((reg.icon?reg.icon+' ':'')+(reg.label||t).split(/[ \/]/)[0]);return `<button onclick="setAcTypeF('${t}')" title="${t==='all'?'all types':(reg.label||t)}${reg.comingSoon?' — coming soon':''}" style="border:0;background:${on?'var(--blue)':'#fff'};color:${on?'#fff':'var(--grey)'};font-weight:700;font-size:11px;padding:4px 9px;white-space:nowrap${reg.comingSoon?';opacity:.55':''}">${lbl}</button>`;}).join('')}</span>
-        <span style="margin-left:auto" id="ac_count">${acVisible().length}</span></div>
+        <span style="margin-left:auto" id="ac_count">${acCount()}</span></div>
     </div>
-    <div class="rows" id="ac_rows">${UI._acLoading?'<div class="loadwrap"><span class="spin"></span> loading…</div>':acRowsHTML()}</div>
+    <div class="rows" id="ac_rows">${(UI._acLoading&&(UI.acTypeF||'all')!=='ai')?'<div class="loadwrap"><span class="spin"></span> loading…</div>':acRowsHTML()}</div>
   </div>`;
   const detail = `<div class="detail" id="detailpane">${acDetailHTML()}</div>`;
   const divider = `<div class="divider" id="divider" onmousedown="startDrag(event)" ontouchstart="startDrag(event)" role="separator" aria-label="Resize panes"><span class="grip"></span></div>`;
@@ -231,10 +294,10 @@ function acRowHTML(x){ if(typeof acTypeOf==='function'){ var _ct=acTypeOf(x); if
     <div class="main2"><div class="l1"><span class="code">${esc(x.name)}</span><span class="optchip" style="background:#eef3fb;color:#345488;border-color:#cfe0f4">${hatLabel(x.hat)}</span>${x.pinSet?'':(x.otp?'<span class="optchip" style="background:#fbf7ea;color:#7a5e22;border-color:#e6d9a8">⏳ invite</span>':'')}<span class="amt" style="margin-left:auto;font-size:11.5px;color:var(--grey)">${x.load}/${x.max||'∞'}</span></div>
       <div class="l2">${esc(x.role||'—')} · <span class="mono">${acLogin(x)}</span> <span class="optchip ${acShc(x.shift)}">${acShLabel(x.shift)}</span>${x.status!=='active'?'<span class="optchip off">'+esc(x.status)+'</span>':''}${(x.shift!=='on_shift'&&x.returnDate)?' · returns '+acDate(x.returnDate):''}</div>${coverLines}</div>
     <div class="rowgo" aria-hidden="true">›</div></div>`; }
-function acRowsHTML(){ const r=acVisible(); if(!r.length){ const _tf=UI.acTypeF||'all'; const _reg=(window.ACTOR_TYPES||{})[_tf]; if(_reg&&_reg.comingSoon) return '<div class="empty"><div class="big">'+(_reg.icon||'✨')+'</div><div class="t">'+esc(_reg.label)+' — coming soon</div><div>This capability is not enabled yet. When it is, you will add '+esc(_reg.label)+' co-assists right here — same flow, new type. <span style="color:var(--blue);font-weight:600">Notify me →</span></div></div>'; if(_tf==='iot') return '<div class="empty"><div class="big">🛰️</div><div class="t">No IoT devices yet</div><div>A Pi on the rail in one drop — <a href="#" onclick="openShowcase(\'/iot-howitworks.html\',\'How IoT works\');return false" style="color:var(--blue);font-weight:600">see how it works →</a><br>then add one with <b>+ New</b> above.</div></div>'; return '<div class="empty"><div class="big">🧑‍🤝‍🧑</div><div class="t">No co-assists</div><div>Add one with <b>+ New</b> above.</div></div>'; }
+function acRowsHTML(){ if((UI.acTypeF||'all')==='ai') return aiRowsHTML(); const r=acVisible(); if(!r.length){ const _tf=UI.acTypeF||'all'; const _reg=(window.ACTOR_TYPES||{})[_tf]; if(_reg&&_reg.comingSoon) return '<div class="empty"><div class="big">'+(_reg.icon||'✨')+'</div><div class="t">'+esc(_reg.label)+' — coming soon</div><div>This capability is not enabled yet. When it is, you will add '+esc(_reg.label)+' co-assists right here — same flow, new type. <span style="color:var(--blue);font-weight:600">Notify me →</span></div></div>'; if(_tf==='iot') return '<div class="empty"><div class="big">🛰️</div><div class="t">No IoT devices yet</div><div>A Pi on the rail in one drop — <a href="#" onclick="openShowcase(\'/iot-howitworks.html\',\'How IoT works\');return false" style="color:var(--blue);font-weight:600">see how it works →</a><br>then add one with <b>+ New</b> above.</div></div>'; return '<div class="empty"><div class="big">🧑‍🤝‍🧑</div><div class="t">No co-assists</div><div>Add one with <b>+ New</b> above.</div></div>'; }
   const cc={},cn={},nm={}; (UI.acts||[]).forEach(a=>{ const _l=acLbl(a); nm[a.id]=_l; if(a.del){ cc[a.del]=(cc[a.del]||0)+1; (cn[a.del]=cn[a.del]||[]).push(_l); } }); UI._coversCount=cc; UI._coversNames=cn; UI._acNames=nm;   // reverse-delegate maps (name+userid labels), once
   return r.map(acRowHTML).join(''); }
-function paintAcList(){ const b=document.getElementById('ac_rows'); if(b)b.innerHTML=acRowsHTML(); const c=document.getElementById('ac_count'); if(c)c.textContent=acVisible().length; }
+function paintAcList(){ const b=document.getElementById('ac_rows'); if(b)b.innerHTML=acRowsHTML(); const c=document.getElementById('ac_count'); if(c)c.textContent=acCount(); }
 function paintAcDetail(){ const dp=document.getElementById('detailpane'); if(dp){ dp.className='detail'; dp.innerHTML=acDetailHTML(); } }
 function selectActor(id, silent){ UI.acSel=id; UI.acMode='view'; UI.acDet=(UI.acts||[]).find(a=>a.id===id)||null;
   if((UI.vp==='mob') && !silent){ UI.mdetail=true; const p=document.getElementById('panel'); if(p)p.classList.add('showdetail'); }
