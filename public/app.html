@@ -963,7 +963,8 @@ async function ccRun(){
    catalogue into a client chooser. Design + colour = the SHARED layer (minted ONCE, inherited by REFERENCE — Beta
    stores no copy); the retailer fills only COMMERCIALS. Brings colour: renders real swatches from the palette. */
 async function openCatalogueBuilder(){
-  var v; try{ v=await api('catalogueStruct',{body:{source:'beta-royale-play@v1'}}); }
+  var src='beta-royale-play@v1'; window._cbSourceKey=src;   // the SOURCE KEY (v.source is the pdf provenance, not the key)
+  var v; try{ v=await api('catalogueStruct',{body:{source:src}}); }
   catch(e){ toast("Couldn't build the catalogue: "+esc((e&&e.message)||'try again')); return; }
   cbRenderCatalogue(v);
 }
@@ -1003,7 +1004,7 @@ async function cbAdopt(){
   var v=window._cbCat; if(!v)return; var com={};
   (v.finishes||v.items||[]).forEach(function(it,i){ var el=document.getElementById('com_'+i); if(el&&el.value!==''){ com[it.name]={price_per_litre:Number(el.value)}; } });
   var rh=document.getElementById('cb_result'); if(rh)rh.innerHTML='<span style="font-size:12px;color:#9aa3a7">Saving…</span>';
-  try{ await api('catalogueAdopt',{body:{source:v.source||'beta-royale-play@v1', commercials:com}});
+  try{ await api('catalogueAdopt',{body:{source:(window._cbSourceKey||(v.adoption_model&&v.adoption_model.source_ref)||'beta-royale-play@v1'), commercials:com}});
     if(rh)rh.innerHTML='<div style="color:#2e7a45;font-size:12.5px;background:#eef7ee;border:1px solid #cfe6cf;border-radius:8px;padding:8px 10px">✓ Saved — your entity now <b>references</b> this catalogue ('+Object.keys(com).length+' finishes priced). Design &amp; colour stay shared; only your commercials were stored.</div>';
     if(typeof toast==='function')toast('Catalogue adopted ✓ (reference + commercials)');
   }catch(e){ if(rh)rh.innerHTML='<div style="color:#b4453f;font-size:12.5px">'+esc((e&&e.message)||'save failed')+'</div>'; }
