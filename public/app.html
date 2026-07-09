@@ -567,6 +567,8 @@ const EP = {
   assistWhoami:    {m:"GET",  p:"/api/assist/whoami",            ok:"y"},  // is the logged-in entity a helpdesk instance?
   assistStandards: {m:"GET",  p:"/api/assist/standards",         ok:"y"},  // compliance conform-check: standards available to check against
   assistConform:   {m:"POST", p:"/api/assist/conform",           ok:"y"},  // FIRST LIGHT of AI-as-actor — deterministic verdict + (keyed) AI narrative + acted_by
+  catalogueSources:{m:"GET",  p:"/api/assist/catalogue-sources",  ok:"y"},  // catalogue-structure slot: sources the handler can structure
+  catalogueStruct: {m:"POST", p:"/api/assist/catalogue-structure", ok:"y"},  // catalogue-structure slot: source → schema + coloured items (shared) + commercials scaffold (entity)
   // --- repointed to real chitbridge-api routes (trace 2026-06-25). See FINDINGS.md. ---
   register:        {m:"POST", p:"/api/entities/register",        ok:"✓"},  // OTP request (register doubles as owner login)
   ownerLogin:      {m:"POST", p:"/api/entities/register",        ok:"✓"},  // same route — returning owner requests OTP (pass mode:'login')
@@ -954,6 +956,41 @@ async function ccRun(){
   const narr=v.narrative?`<div style="margin-top:10px;background:#f6f4ee;border:1px solid #e7e3d8;border-radius:9px;padding:9px 11px;font-size:12px;line-height:1.55;color:#3a3a3a"><span style="font-size:10px;color:#7a5e22;font-weight:700">🤖 ASSIST</span><br>${esc(v.narrative)}</div>`:'';
   const ab=v.acted_by||{}; const prov=`<div style="margin-top:9px;font-size:10px;color:#9aa3a7;font-family:'Space Mono'">stamped · ${esc(ab.deputy||'ai:conform-verdict')} · ${ab.model?('narrative by '+esc(ab.model)):'deterministic only (no model key)'} · against ${esc(v.standard||_ccPick)}</div>`;
   if(rh) rh.innerHTML=badge+`<div style="margin-top:9px">${rows}</div>`+narr+prov;
+}
+/* ===================== CATALOGUE BUILDER (ai:catalogue-structure@v1) — the AI handler that structures a brand
+   catalogue into a client chooser. Design + colour = the SHARED layer (minted ONCE, inherited by REFERENCE — Beta
+   stores no copy); the retailer fills only COMMERCIALS. Brings colour: renders real swatches from the palette. */
+async function openCatalogueBuilder(){
+  var v; try{ v=await api('catalogueStruct',{body:{source:'beta-royale-play@v1'}}); }
+  catch(e){ toast("Couldn't build the catalogue: "+esc((e&&e.message)||'try again')); return; }
+  cbRenderCatalogue(v);
+}
+function _swatch(c){ return '<span title="'+esc(c.name+' '+c.hex)+'" style="display:inline-block;width:20px;height:20px;border-radius:50%;background:'+esc(c.hex)+';border:1px solid rgba(0,0,0,.15);vertical-align:middle"></span>'; }
+function _combo(cm){ return '<div style="display:flex;align-items:center;gap:7px;margin-top:5px"><span style="display:inline-flex;gap:3px">'+((cm.colours||[]).map(_swatch).join(''))+'</span><span style="font-size:11.5px;color:#3a4048;font-weight:600">'+esc(cm.name)+'</span><span style="font-size:10.5px;color:#9aa3a7">'+((cm.colours||[]).map(function(c){return esc(c.name);}).join(' + '))+'</span></div>'; }
+function _finishCard(it){
+  var chips='<span class="optchip" style="background:#F0EAF9;color:#6a44a8;border-color:transparent">'+esc(it.texture_family)+'</span>'
+    +'<span class="optchip" style="background:#eef3fb;color:#345488;border-color:#cfe0f4">'+esc(it.region)+'</span>'
+    +((it.effect||[]).map(function(e){return '<span class="optchip" style="background:#f3f0e8;color:#7a5e22;border-color:#e6d9a8">'+esc(e)+'</span>';}).join(''));
+  return '<div style="border:1px solid #e7e3d8;border-radius:12px;padding:12px;margin-bottom:10px">'
+    +'<div style="display:flex;align-items:baseline;gap:8px"><span style="font-weight:800;font-size:15px">'+esc(it.name)+'</span><span style="font-size:11px;color:#9aa3a7">'+esc(it.scale)+' · '+esc(it.sheen)+'</span></div>'
+    +'<div style="font-size:12px;color:#6a707a;margin:4px 0 7px;line-height:1.5">'+esc(it.inspiration||'')+'</div>'
+    +'<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px">'+chips+'</div>'
+    +'<div style="font-size:10.5px;color:#9aa3a7;text-transform:uppercase;letter-spacing:.4px;font-weight:700;margin-top:6px">Colour combinations</div>'
+    +((it.combinations||[]).map(_combo).join(''))
+    +'<div style="font-size:11px;color:#9aa3a7;margin-top:7px">Applied with '+((it.tools||[]).join(', '))+' · '+esc(it.coats||'')+'</div>'
+    +'</div>';
+}
+function cbRenderCatalogue(v){
+  var head='<div style="font-family:\'Space Grotesk\';font-weight:700;font-size:15px;margin-bottom:2px">🎨 '+esc(v.title||'Catalogue')+'</div>'
+    +'<div style="font-size:11px;color:#6a44a8;font-family:\'Space Mono\',monospace;margin-bottom:8px">structured by ai:catalogue-structure@v1 · source '+esc(v.source||'')+'</div>';
+  var intro=v.intro?'<div style="font-size:12.5px;color:#3a4048;line-height:1.55;background:#f6f4ee;border:1px solid #e7e3d8;border-radius:9px;padding:9px 11px;margin-bottom:10px">'+esc(v.intro)+'</div>':'';
+  var layers='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:11px">'
+    +'<div style="flex:1;min-width:180px;background:#eef4fc;border:1px solid #cfe0f4;border-radius:9px;padding:9px 11px"><div style="font-size:10px;font-weight:800;color:#2c5aa0;text-transform:uppercase;letter-spacing:.4px">Shared · minted once</div><div style="font-size:11.5px;color:#3a4048;margin-top:3px">Schema + design + colour + images. Inherited by <b>reference</b> — Beta stores no copy.</div></div>'
+    +'<div style="flex:1;min-width:180px;background:#eef7ee;border:1px solid #cfe6cf;border-radius:9px;padding:9px 11px"><div style="font-size:10px;font-weight:800;color:#2e7a45;text-transform:uppercase;letter-spacing:.4px">Beta fills · per-entity</div><div style="font-size:11.5px;color:#3a4048;margin-top:3px">Only commercials: '+((v.commercials_fields||[]).map(function(f){return esc(f.label);}).join(' · '))+'.</div></div></div>';
+  var counts=v.counts?'<div style="font-size:11.5px;color:#6a707a;margin-bottom:9px">'+v.counts.finishes+' finishes · '+v.counts.combinations+' combinations · '+v.counts.colours+' colours · '+v.counts.fields+' schema fields</div>':'';
+  var items=(v.items||[]).map(_finishCard).join('');
+  var ab=v.acted_by||{}; var prov='<div style="margin-top:6px;font-size:10px;color:#9aa3a7;font-family:\'Space Mono\'">stamped · '+esc(ab.deputy||'ai:catalogue-structure')+' · '+(ab.model?('intro by '+esc(ab.model)):'deterministic only (no model key)')+' · '+esc(v.for_entity||'Beta')+' inherits by reference</div>';
+  modal(head+intro+layers+counts+items+prov, true);
 }
 function setLogFilter(k){ _logFilter=k; renderMsgConsole(); }
 function clearMsgLog(){ if(window.__cblog) window.__cblog.length=0; renderMsgConsole(); }
