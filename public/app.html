@@ -992,7 +992,7 @@ function cbRenderCatalogue(v){
     +'<div style="flex:1;min-width:180px;background:#eef4fc;border:1px solid #cfe0f4;border-radius:9px;padding:9px 11px"><div style="font-size:10px;font-weight:800;color:#2c5aa0;text-transform:uppercase;letter-spacing:.4px">Shared · minted once</div><div style="font-size:11.5px;color:#3a4048;margin-top:3px">Schema + design + colour + images. Inherited by <b>reference</b> — Beta stores no copy.</div></div>'
     +'<div style="flex:1;min-width:180px;background:#eef7ee;border:1px solid #cfe6cf;border-radius:9px;padding:9px 11px"><div style="font-size:10px;font-weight:800;color:#2e7a45;text-transform:uppercase;letter-spacing:.4px">Beta fills · per-entity</div><div style="font-size:11.5px;color:#3a4048;margin-top:3px">Only commercials: '+((v.commercials_fields||[]).map(function(f){return esc(f.label);}).join(' · '))+'.</div></div></div>';
   var counts=v.counts?'<div style="font-size:11.5px;color:#6a707a;margin-bottom:9px">'+v.counts.finishes+' finishes · '+v.counts.combinations+' combinations · '+v.counts.colours+' colours · '+v.counts.fields+' schema fields</div>':'';
-  var items=(v.items||[]).map(function(it,i){return _finishCard(it,i);}).join('');
+  var items=(v.finishes||v.items||[]).map(function(it,i){return _finishCard(it,i);}).join('');
   var adopt='<div style="display:flex;gap:8px;margin-top:4px"><button class="composebtn pri" onclick="cbAdopt()">Adopt &amp; save for my entity</button><button class="composebtn" onclick="cbViewMine()">View saved</button></div><div id="cb_result" style="margin-top:8px"></div>';
   var ab=v.acted_by||{}; var prov='<div style="margin-top:8px;font-size:10px;color:#9aa3a7;font-family:\'Space Mono\'">stamped · '+esc(ab.deputy||'ai:catalogue-structure')+' · '+(ab.model?('intro by '+esc(ab.model)):'deterministic only (no model key)')+' · inherits by reference</div>';
   window._cbCat=v;
@@ -1001,7 +1001,7 @@ function cbRenderCatalogue(v){
 // Adopt = the human CONFIRM/publish: persist the REFERENCE + the commercials the retailer typed. No design/colour copied.
 async function cbAdopt(){
   var v=window._cbCat; if(!v)return; var com={};
-  (v.items||[]).forEach(function(it,i){ var el=document.getElementById('com_'+i); if(el&&el.value!==''){ com[it.name]={price_per_litre:Number(el.value)}; } });
+  (v.finishes||v.items||[]).forEach(function(it,i){ var el=document.getElementById('com_'+i); if(el&&el.value!==''){ com[it.name]={price_per_litre:Number(el.value)}; } });
   var rh=document.getElementById('cb_result'); if(rh)rh.innerHTML='<span style="font-size:12px;color:#9aa3a7">Saving…</span>';
   try{ await api('catalogueAdopt',{body:{source:v.source||'beta-royale-play@v1', commercials:com}});
     if(rh)rh.innerHTML='<div style="color:#2e7a45;font-size:12.5px;background:#eef7ee;border:1px solid #cfe6cf;border-radius:8px;padding:8px 10px">✓ Saved — your entity now <b>references</b> this catalogue ('+Object.keys(com).length+' finishes priced). Design &amp; colour stay shared; only your commercials were stored.</div>';
