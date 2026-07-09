@@ -1399,7 +1399,7 @@ function autoRefresh(){
     const lb=document.getElementById('lbhost');    if(lb && lb.innerHTML.trim()) return;
     const ae=document.activeElement; if(ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) return;
     if(UI.detail || UI.mdetail) return;
-    if(['task','order','drafts','trash','archive'].includes(UI.nav)) loadList();
+    if(['task','order','drafts','trash','archive'].includes(UI.nav)) loadList(true);   // silent background refresh — no spinner flash
     else if(UI.nav==='disputes') loadDisputes();
     // Co-assist roster is NOT real-time — no auto-poll. It refreshed the whole left panel on a timer (disruptive
     // while viewing someone). It reloads on navigation and after an add/deactivate action, which is enough.
@@ -2360,21 +2360,27 @@ function loadNextPage(){ return pgNext("list"); }
 function paintRowsKeepScroll(){ const b=document.getElementById("rows"); if(!b)return; const st=b.scrollTop; b.innerHTML=renderRows(); b.scrollTop=st; document.querySelectorAll(".statetabs .n").forEach((el,i)=>{ el.textContent=stCount(["open","act","close"][i]); }); pgPaintTotal(); applyColTpl(); }
 function updateListTotal(){ const lt=document.getElementById("listtotal"); if(!lt)return; if(!UI.total){ lt.textContent=""; return; } const shown=Math.min(UI.rows.length,UI.total); lt.textContent='Showing '+shown+' of '+UI.total+(UI.allLoaded?' \u00b7 all loaded':' \u00b7 scroll for more'); }
 function paginationFooter(){ if(UI.loadingMore) return '<div class="listend"><span class="spin"></span> loading more\u2026 ('+UI.rows.length+'/'+UI.total+')</div>'; if(!UI.allLoaded) return '<div class="listend"><button class="composebtn" onclick="loadNextPage()">\u2193 Load more</button><span style="color:var(--grey)">'+UI.rows.length+' of '+UI.total+' loaded</span></div>'; if((UI.total||0)<=0) return ''; return '<div class="listend">\u2014 end of list \u00b7 '+UI.total+' total \u2014</div>'; }
-async function loadList(){
-  UI.loading=true; const body=document.getElementById("rows"); if(body)body.innerHTML='<div class="loadwrap"><span class="spin"></span> loading…</div>';
-  { const dp0=document.getElementById("detailpane"); if(dp0){dp0.className="detail"; dp0.innerHTML=detailSkeleton();} }
+async function loadList(silent){
+  // silent = a background auto-refresh: NEVER show the loading spinner/skeleton, don't touch the detail pane — just
+  // fetch and patch the rows in place. The spinner shows only on the FIRST / manual load (silent falsy).
+  UI.loading=true;
+  if(!silent){ const body=document.getElementById("rows"); if(body)body.innerHTML='<div class="loadwrap"><span class="spin"></span> loading…</div>';
+    const dp0=document.getElementById("detailpane"); if(dp0){dp0.className="detail"; dp0.innerHTML=detailSkeleton();} }
   try{
     UI.rows=[]; await pgFirst('list');
     UI.loading=false;
     // select the first record and kick off its detail load IMMEDIATELY — don't wait on the rollup below.
     // The rollup only refines the per-state counts; it must not sit between "list shown" and "record selected".
-    if(!UI.sel && UI.rows.length){ const first=UI.rows.find(c=>c.state===UI.state)||UI.rows[0]; if(first)openChit(first.id,true); }
-    else if(!UI.rows.length){ UI.sel=null; UI.detail=null; const dp=document.getElementById("detailpane"); if(dp){ dp.className="detail"; dp.innerHTML=renderDetail(); } }   // empty mailbox → placeholder, not a stuck loading skeleton
+    // Foreground load only — a silent refresh must not hijack the detail pane or flash anything.
+    if(!silent){
+      if(!UI.sel && UI.rows.length){ const first=UI.rows.find(c=>c.state===UI.state)||UI.rows[0]; if(first)openChit(first.id,true); }
+      else if(!UI.rows.length){ UI.sel=null; UI.detail=null; const dp=document.getElementById("detailpane"); if(dp){ dp.className="detail"; dp.innerHTML=renderDetail(); } }   // empty → placeholder, not a stuck skeleton
+    }
     paintRowsOnly();
     // full-set per-state rollup (true counts + sums) — independent enrichment; repaint counts when it lands.
     if(["task","order"].includes(UI.folder) && SESSION.role!=="customer"){ try{ const rl=await api("rollup",{query:rollupQuery()}); UI.rollup=(rl&&rl.groups)||[]; UI.disputeOpen=(rl&&rl.dispute_open)||0; paintRowsOnly(); }catch(_){ UI.rollup=[]; UI.disputeOpen=0; } } else { UI.rollup=[]; UI.disputeOpen=0; }
     if(SESSION.role==="actor" && CFG.MODE!=='demo'){ try{ const u=await api("unread"); const set=new Set((u&&u.unread)||[]); UI.rows.forEach(r=>{ r.unread=set.has(r.id); }); paintRowsOnly(); }catch(_){} }
-  }catch(e){ UI.loading=false; const b=document.getElementById("rows"); if(b)b.innerHTML=`<div class="empty"><div class="big">⚠</div><div class="t">Couldn't load</div><div>${e.message}</div><div style="font-size:11px">Check mode/endpoint, then retry.</div></div>`; }
+  }catch(e){ UI.loading=false; if(!silent){ const b=document.getElementById("rows"); if(b)b.innerHTML=`<div class="empty"><div class="big">⚠</div><div class="t">Couldn't load</div><div>${e.message}</div><div style="font-size:11px">Check mode/endpoint, then retry.</div></div>`; } }
 }
 function paintRowsOnly(){const b=document.getElementById("rows"); if(b)b.innerHTML=renderRows(); document.querySelectorAll(".statetabs .n").forEach((el,i)=>{el.textContent=stCount(["open","act","close"][i]);}); pgPaintTotal(); applyColTpl();}
 function visibleRows(){
