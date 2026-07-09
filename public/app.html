@@ -2369,6 +2369,7 @@ async function loadList(){
     // select the first record and kick off its detail load IMMEDIATELY — don't wait on the rollup below.
     // The rollup only refines the per-state counts; it must not sit between "list shown" and "record selected".
     if(!UI.sel && UI.rows.length){ const first=UI.rows.find(c=>c.state===UI.state)||UI.rows[0]; if(first)openChit(first.id,true); }
+    else if(!UI.rows.length){ UI.sel=null; UI.detail=null; const dp=document.getElementById("detailpane"); if(dp){ dp.className="detail"; dp.innerHTML=renderDetail(); } }   // empty mailbox → placeholder, not a stuck loading skeleton
     paintRowsOnly();
     // full-set per-state rollup (true counts + sums) — independent enrichment; repaint counts when it lands.
     if(["task","order"].includes(UI.folder) && SESSION.role!=="customer"){ try{ const rl=await api("rollup",{query:rollupQuery()}); UI.rollup=(rl&&rl.groups)||[]; UI.disputeOpen=(rl&&rl.dispute_open)||0; paintRowsOnly(); }catch(_){ UI.rollup=[]; UI.disputeOpen=0; } } else { UI.rollup=[]; UI.disputeOpen=0; }
@@ -2533,7 +2534,9 @@ function backToList(){UI.mdetail=false;const p=document.getElementById("panel");
 function renderDetail(){return detailInner();}
 function detailInner(){
   const c=UI.detail;
-  if(!c) return `<div class="empty"><div class="big">🧾</div><div class="t">Select a chit</div><div>Pick one from the list to see its content, status and summary.</div></div>`;
+  if(!c) return (UI.rows && UI.rows.length)
+    ? `<div class="empty"><div class="big">🧾</div><div class="t">Select a chit</div><div>Pick one from the list to see its content, status and summary.</div></div>`
+    : `<div class="empty"><div class="big">🧾</div><div class="t">Your mailbox is empty</div><div>No chits yet — use <b>Compose</b> to create your first one.</div></div>`;
   const back="";
   const proof = c.proof==='ok' ? `<span class="parity">⚖️ Two-sided proof: both parties hold matching, co-signed records.</span>` : `<span class="parity" style="background:var(--gold-soft);border-color:var(--gold-line);color:#6b5a36">⚖️ Awaiting counter-signature — one side hasn't co-signed yet.</span>`;
   buildAttGroups(c);
