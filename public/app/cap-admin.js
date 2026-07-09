@@ -30,8 +30,27 @@ async function loadProfile(){ const h=document.getElementById("profbody"); if(!h
       <label class="fl">GSTN</label><input class="inp" id="pf_gstn" value="${esc(e.gstn)}">
       <label class="fl">Address</label><input class="inp" id="pf_addr" value="${esc(e.address)}">
       <label class="fl">Shop status</label><select class="inp" id="pf_bs">${opt(["open","closed","away"],e.business_status)}</select>
-      <div class="err" id="pf_err"></div><button class="composebtn" style="margin-top:9px" onclick="saveProfile()">Save profile</button></div>`;
+      <div class="err" id="pf_err"></div><button class="composebtn" style="margin-top:9px" onclick="saveProfile()">Save profile</button></div>${govCardHTML(e.governance)}`;
   }catch(e){ h.innerHTML=scrErr(e); } }
+// "Your governance" — the entity's resolved governance (from attributes): where it's minted, its platform, its basics
+// (with provenance ⟵ platform), rights + allowances + jurisdiction. Entity-simple; honest "minted, not enforced yet".
+function govCardHTML(g){
+  if(!g) return '';
+  var inst=g.installation||{}, b=g.basics||{}, j=g.jurisdiction||{};
+  var caps=(g.capabilities||[]).map(function(c){return '<span class="optchip" style="background:#eef3fb;color:#345488;border-color:#cfe0f4">'+esc(c)+'</span>';}).join(' ');
+  var allow=(g.allowances||[]).map(function(a){return esc(a.limit+' '+a.resource);}).join(' · ');
+  var langs=(b.languages||[]).join(', ');
+  var loc=[inst.cloud,inst.region,inst.zone].filter(Boolean).join(' · ');
+  return '<div style="'+_CARD+';margin-top:10px">'
+    +'<div class="sec" style="margin:0 0 8px">🏛️ Your governance <span style="font-size:10px;font-family:\'Space Mono\';background:#f3f0e8;color:#7a5e22;border-radius:5px;padding:1px 6px">minted · not enforced yet</span></div>'
+    +'<div class="kv"><b>Governed by</b> · '+esc(g.constitution||'—')+' <span style="color:var(--grey);font-size:11px">🔒 platform-set</span></div>'
+    +'<div class="kv"><b>Installation</b> · '+esc(inst.label||inst.key||'—')+(loc?(' <span style="color:var(--grey);font-size:11px">'+esc(loc)+'</span>'):'')+'</div>'
+    +'<div class="kv"><b>Basics</b> <span style="color:var(--grey);font-size:11px">⟵ from your platform</span> · '+esc(b.currency||'—')+' · '+esc(b.timezone||'—')+' · '+esc(b.region||'—')+(langs?(' · '+esc(langs)):'')+'</div>'
+    +'<div style="margin:7px 0 2px;font-size:12.5px"><b>Rights</b> '+(caps||'<span style="color:var(--grey);font-size:11px">—</span>')+'</div>'
+    +(allow?('<div class="kv"><b>Allowances</b> · '+allow+'</div>'):'')
+    +(j.disclaimer?('<div style="font-size:11px;color:var(--grey);margin-top:7px;line-height:1.5"><b>Jurisdiction</b> — '+esc(j.mode||'')+(j.custodian===false?' · provider, not custodian':'')+'<br>'+esc(j.disclaimer)+'</div>'):'')
+    +'</div>';
+}
 async function saveProfile(){ const x=document.getElementById("pf_err"); if(x)x.textContent="";
   try{ await api("saveProfile",{body:{user_id:val("pf_uid")||null,gstn:val("pf_gstn")||null,address:val("pf_addr")||null,business_status:val("pf_bs")}}); toast(MSG.profileSaved()); }catch(e){ if(x)x.textContent=e.message; } }
 
