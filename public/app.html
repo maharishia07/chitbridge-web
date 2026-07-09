@@ -569,6 +569,7 @@ const EP = {
   register:        {m:"POST", p:"/api/entities/register",        ok:"✓"},  // OTP request (register doubles as owner login)
   ownerLogin:      {m:"POST", p:"/api/entities/register",        ok:"✓"},  // same route — returning owner requests OTP (pass mode:'login')
   ownerVerify:     {m:"POST", p:"/api/entities/verify",          ok:"✓"},  // verify OTP → token
+  constitutions:   {m:"GET",  p:"/api/entities/constitutions",   ok:"y"},  // public: the verticals to choose at sign-up
   actorLogin:      {m:"POST", p:"/api/actors/login",             ok:"✓"},  // actor PIN
   actorCheck:      {m:"GET",  p:"/api/actors/check-login",      ok:"✓"},  // ?username= -> {valid,has_pin}
   setPin:          {m:"POST", p:"/api/actors/set-pin",          ok:"✓"},  // first-time actor sets PIN
@@ -1085,6 +1086,7 @@ function renderRegister(){
        <button class="btn gold" id="r_go" ${R.busy?"disabled":""}>${R.busy?'<span class="spin"></span> Creating…':"Create entity →"}</button>`;
   } else {
     form = `<div ${who}>Entity <b>${esc(R.name)}</b> — verify to enter · <a onclick="regReset()">change</a></div>
+       ${regVerticalChooser()}
        <label class="fl">OTP sent to ${esc(R.email)}</label><input class="inp" id="r_otp" placeholder="6-digit code">
        ${R.err?`<div class="err">${R.err}</div>`:""}
        <button class="btn gold" id="r_go" ${R.busy?"disabled":""}>${R.busy?'<span class="spin"></span> Verifying…':"Verify & enter →"}</button>`;
@@ -1118,12 +1120,28 @@ async function doRegister(){
   try{
     if(R.step==="form"){
       const r=await api("register",{body:{display_name:R.name, email:R.email}});
-      R.email=(r&&r.email)||R.email; R.busy=false; R.step="otp"; return renderRegister();
+      R.email=(r&&r.email)||R.email; R.busy=false; R.step="otp";
+      try{ const c=await api("constitutions"); REG.verticals=(c&&c.constitutions)||[]; const dv=(REG.verticals.find(function(x){return x.is_default;})||REG.verticals[0]); REG.constitution=dv?dv.key:null; }catch(_){ REG.verticals=[]; }
+      return renderRegister();
     }
-    const r=await api("ownerVerify",{body:{email:R.email, otp:v_otp}});
+    const r=await api("ownerVerify",{body:{email:R.email, otp:v_otp, constitution:R.constitution||undefined}});
     setSession(entFromVerify(r, R.name)); R.busy=false; go("#/app");
   }catch(e){ R.busy=false; R.err="Could not register: "+e.message+" (check endpoint / stage)"; renderRegister(); }
 }
+/* The vertical/blueprint chooser at sign-up — showcases the available constitutions (verticals) so the registrant
+   picks one; their entity is minted onto it (verify → entity_governance). "None fits" → tailor / contact the team. */
+function regVerticalChooser(){
+  const vs=(REG.verticals)||[];
+  if(!vs.length) return '';
+  return '<div style="margin:10px 0 4px"><div class="fl">Choose your setup <span style="font-weight:400;color:var(--grey)">(you can change later)</span></div>'
+    + vs.map(function(v){ const sel=(REG.constitution||'')===v.key; const caps=(v.capabilities||[]).join(' · ');
+        return '<div onclick="REG.constitution=\''+esc(v.key)+'\';renderRegister()" style="border:1px solid '+(sel?'#3F66A6':'var(--line)')+';background:'+(sel?'#eef3fb':'#fff')+';border-radius:10px;padding:9px 11px;margin-bottom:7px;cursor:pointer"><div style="font-weight:700;font-size:12.5px;color:var(--ink)">'+(sel?'● ':'○ ')+esc(v.label||v.key)+(v.is_default?' <span style="font-size:10px;color:var(--grey);font-weight:400">· default</span>':'')+'</div><div style="font-size:11px;color:var(--grey);margin-top:2px">'+(v.vertical?('vertical: '+esc(v.vertical)+' · '):'')+'includes '+esc(caps||'core')+'</div></div>';
+      }).join('')
+    + '<div style="font-size:11px;color:var(--grey);margin:2px 0 4px">None fits? <a onclick="regTailor();return false" style="color:var(--blue);cursor:pointer;font-weight:600">Tailor one</a> — or <a onclick="regContact();return false" style="color:var(--blue);cursor:pointer;font-weight:600">contact the team</a> to wire it quickly.</div>'
+    + '</div>';
+}
+function regTailor(){ if(typeof toast==='function') toast("Tailoring — we'll wire a custom setup with you. For now, pick the closest and refine later."); }
+function regContact(){ try{ window.location.href='mailto:team@chitandbridge.com?subject='+encodeURIComponent('Tailor a setup for '+(REG.name||'my business')); }catch(_){ if(typeof toast==='function')toast('Email team@chitandbridge.com to wire a custom setup.'); } }
 
 /* SCREEN: Login (#/login) · module target: auth.js · smart single-login.
    Resolver (ported from web/src/pages/LoginPage.jsx): no '@' or email-with-dot => ENTITY (OTP);
