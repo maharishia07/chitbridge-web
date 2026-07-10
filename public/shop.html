@@ -68,7 +68,7 @@ function render(data){
   finishes.forEach(function(f){
     var viz=(f.experience&&f.experience.visualize)||{};   // b78 — the source's experience CASCADES to this storefront
     var vizBadge=viz.enabled?'<div style="margin:0 0 9px;font-size:11.5px;color:#6a44a8;background:#F0EAF9;border:1px solid #e3d5f5;border-radius:8px;padding:6px 10px;display:inline-block">✨ '+esc(viz.label||'Scan your home')+' — see it on your wall <span style="color:#9aa3a7">· from '+esc(f.title||'the brand')+'</span></div>':'';
-    finHtml += '<div class="sechd">🎨 '+esc(f.title||f.collection||'Designer finishes')+'</div>' + vizBadge + (f.items||[]).map(function(it){ var idx=_FIN.length; _FIN.push({source:f.source,it:it}); return finishCard(it,cur,idx); }).join('');
+    finHtml += '<div class="sechd">🎨 '+esc(f.title||f.collection||'Designer finishes')+'</div>' + vizBadge + (f.items||[]).map(function(it){ var idx=_FIN.length; _FIN.push({source:f.source,it:it,rules:(f.experience&&f.experience.rules)||{}}); return finishCard(it,cur,idx); }).join('');
   });
   var prods=(data.items||[]);
   var prodHtml = prods.length ? ('<div class="sechd" style="color:var(--grey)">🗂️ Products</div>'+prods.map(function(p){return productRow(p,cur);}).join('')) : '';
@@ -113,6 +113,7 @@ function orderOpen(idx){ if(!_FIN[idx])return; _ord={idx:idx, step:'contact'}; o
 function orderRender(msg, err){
   var e=_FIN[_ord.idx], it=e.it, cur='₹';
   var comboOpts=(it.combinations||[]).map(function(cm){ return '<option value="'+esc(cm.name)+'"'+(cm.name===_ord.combo?' selected':'')+'>'+esc(cm.name)+' ('+((cm.colours||[]).map(function(c){return esc(c.name);}).join(' + '))+')</option>'; }).join('');
+  var minL=(e.rules&&Number(e.rules.min_order_litres))||0;   // STONE 2: the source's rule, cascaded
   var otpStep=(_ord.step==='otp');
   var fld='style="width:100%;padding:9px;border:1px solid #e7e3d8;border-radius:8px;margin:3px 0 11px;font-size:14px"';
   var h='<div style="position:fixed;inset:0;background:rgba(15,22,32,.5);z-index:900;display:flex;align-items:center;justify-content:center;padding:12px" onclick="if(event.target===this)orderClose()">'
@@ -120,7 +121,7 @@ function orderRender(msg, err){
     +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:2px"><b class="sg" style="font-size:17px;flex:1">Order · '+esc(it.name)+'</b><button onclick="orderClose()" style="border:0;background:none;font-size:22px;cursor:pointer;color:#8a949c">×</button></div>'
     +'<div class="meta" style="margin-bottom:12px">'+esc(it.texture_family||'')+' · '+cur+esc(String((it.commercials&&it.commercials.price_per_litre)||''))+' / litre</div>'
     +'<label style="font-size:12px;color:#6a707a">Colour combination</label><select id="o_combo" '+fld+'>'+comboOpts+'</select>'
-    +'<label style="font-size:12px;color:#6a707a">Quantity (litres)</label><input id="o_qty" inputmode="decimal" value="'+esc(_ord.qty||'1')+'" '+fld+'>'
+    +'<label style="font-size:12px;color:#6a707a">Quantity (litres)'+(minL?' <span style="color:#9aa3a7">· min '+minL+' L (set by the brand)</span>':'')+'</label><input id="o_qty" inputmode="decimal" value="'+esc(_ord.qty||String(minL||1))+'" '+fld+'>'
     +'<label style="font-size:12px;color:#6a707a">Your name</label><input id="o_name" placeholder="optional" value="'+esc(_ord.name||'')+'" '+fld+'>'
     +'<label style="font-size:12px;color:#6a707a">Phone or email</label><input id="o_contact" placeholder="9876543210 or you@email.com" '+(otpStep?'disabled':'')+' value="'+esc(_ord.contact||'')+'" '+fld+'>'
     +(otpStep?('<label style="font-size:12px;color:#6a707a">6-digit code sent to you</label><input id="o_otp" inputmode="numeric" maxlength="6" value="'+esc(_ord.otp||_ord.dev_otp||'')+'" '+fld+'>'):'')
