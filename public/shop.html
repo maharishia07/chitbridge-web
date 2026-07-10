@@ -44,7 +44,6 @@ var _FIN=[]; var _ord=null; var _lg={}; var _SHOPDATA=null;
 var _REGIONS=[]; var _REGION='IN';
 var _CUR={INR:'₹',MXN:'Mex$',USD:'$',EUR:'€',CNY:'¥',JPY:'¥'};
 var _FX={INR:1,MXN:0.20,USD:0.012,EUR:0.011,CNY:0.087,JPY:1.8};   // indicative FX (INR-base) — real FX is the ERP's job
-var _FLAG={IN:'🇮🇳',TN:'🇮🇳',HI:'🇮🇳',MX:'🇲🇽',US:'🇺🇸',EU:'🇪🇺',CN:'🇨🇳',JP:'🇯🇵',ES:'🇪🇸',FR:'🇫🇷',DE:'🇩🇪'};
 // per-language phrases — the catalogue labels render in the region's language (character variation zh/ja, word variation es/fr/de)
 var _L={
   en:{wall:'See it on your wall',order:'Order this →',combos:'Colour combinations',applied:'Applied with',por:'price on request'},
@@ -67,11 +66,11 @@ function setRegion(code){ _REGION=code; if(_SHOPDATA) render(_SHOPDATA); }
 function regionBar(){
   if(!_REGIONS.length) return '';
   var rc=regionCur();
-  var btns=_REGIONS.map(function(r){ var on=r.region_code===_REGION; return '<button onclick="setRegion(\''+r.region_code+'\')" style="border:'+(on?'2px solid #3F66A6':'1px solid #e7e3d8')+';background:'+(on?'#eef4fc':'#fff')+';border-radius:9px;padding:5px 11px;margin:0 6px 6px 0;cursor:pointer;font-size:13px;font-weight:600">'+((_FLAG[r.region_code]||'🌐')+' '+esc(r.region_code))+'</button>'; }).join('');
+  var btns=_REGIONS.map(function(r){ var on=r.region_code===_REGION; return '<button onclick="setRegion(\''+r.region_code+'\')" style="border:'+(on?'2px solid #3F66A6':'1px solid #e7e3d8')+';background:'+(on?'#eef4fc':'#fff')+';border-radius:9px;padding:5px 11px;margin:0 6px 6px 0;cursor:pointer;font-size:13px;font-weight:600">'+esc(r.region_code)+'</button>'; }).join('');
   return '<div style="margin:0 0 16px;padding:11px 13px;background:#f4f6f8;border:1px solid var(--line);border-radius:12px">'
     +'<div style="font-size:11px;color:var(--grey);margin-bottom:7px">🌐 Spin the globe — see this catalogue for a customer in:</div>'
     +'<div style="display:flex;flex-wrap:wrap;align-items:center">'+btns+'</div>'
-    +'<div style="font-size:12px;color:#3a4048;margin-top:6px">Showing for <b>'+(_FLAG[_REGION]||'')+' '+esc(_REGION)+'</b> · currency <b>'+esc(rc.currency||'')+'</b> ('+esc(priceSym())+') · unit <b>'+esc(rc.units||'')+'</b> · language <b>'+esc(rc.language||'')+'</b>'+((rc.jurisdiction&&rc.jurisdiction.compliance)?(' · <span style="color:#b4453f">'+esc(rc.jurisdiction.compliance)+'</span>'):'')+'</div>'
+    +'<div style="font-size:12px;color:#3a4048;margin-top:6px">Showing for <b>'+esc(_REGION)+'</b> · currency <b>'+esc(rc.currency||'')+'</b> ('+esc(priceSym())+') · unit <b>'+esc(rc.units||'')+'</b> · language <b>'+esc(rc.language||'')+'</b>'+((rc.jurisdiction&&rc.jurisdiction.compliance)?(' · <span style="color:#b4453f">'+esc(rc.jurisdiction.compliance)+'</span>'):'')+'</div>'
     +'</div>';
 }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
