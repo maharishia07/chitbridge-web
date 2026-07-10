@@ -65,7 +65,11 @@ function render(data){
   var head='<div class="hd"><div class="logo">🎨</div><div style="flex:1"><div class="shopname sg">'+esc(s.display_name||'Shop')+'</div><div class="meta">'+esc(s.bridge_id||'')+(s.address?(' · '+esc(s.address)):'')+'</div></div>'+(s.is_verified?'<span class="badge b-ver">✓ Verified</span>':'')+' '+statusBadge+'</div>';
   var finishes=(data.finishes||[]);
   var finHtml=''; _FIN=[];
-  finishes.forEach(function(f){ finHtml += '<div class="sechd">🎨 '+esc(f.title||f.collection||'Designer finishes')+'</div>' + (f.items||[]).map(function(it){ var idx=_FIN.length; _FIN.push({source:f.source,it:it}); return finishCard(it,cur,idx); }).join(''); });
+  finishes.forEach(function(f){
+    var viz=(f.experience&&f.experience.visualize)||{};   // b78 — the source's experience CASCADES to this storefront
+    var vizBadge=viz.enabled?'<div style="margin:0 0 9px;font-size:11.5px;color:#6a44a8;background:#F0EAF9;border:1px solid #e3d5f5;border-radius:8px;padding:6px 10px;display:inline-block">✨ '+esc(viz.label||'Scan your home')+' — see it on your wall <span style="color:#9aa3a7">· from '+esc(f.title||'the brand')+'</span></div>':'';
+    finHtml += '<div class="sechd">🎨 '+esc(f.title||f.collection||'Designer finishes')+'</div>' + vizBadge + (f.items||[]).map(function(it){ var idx=_FIN.length; _FIN.push({source:f.source,it:it}); return finishCard(it,cur,idx); }).join('');
+  });
   var prods=(data.items||[]);
   var prodHtml = prods.length ? ('<div class="sechd" style="color:var(--grey)">🗂️ Products</div>'+prods.map(function(p){return productRow(p,cur);}).join('')) : '';
   var enq = '<div class="enq">Pick a finish, choose a colour combination and quantity, and order with just your phone or email.</div>';
