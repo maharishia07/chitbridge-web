@@ -86,6 +86,23 @@ const CAP_CATALOGUE = [
       {n:'Registered fleets — allowlisted devices, per-device governance / metering (L3)', s:'backlog'},
       {n:'AI actor cockpit — sibling of the Pi cockpit (prompt / guardrails / activity)', s:'backlog'},
     ]},
+  { id:'catalogue', name:'Catalogue — source-governed distribution', icon:'🏬', load:'lazy', maturity:3, target:4,
+    gov:2, govTarget:4, governedUnder:'the source@v blueprint (cascades from the source entity)',
+    governedBy:['version-freeze (chit pins the version)','source-rule enforcement (distributor cannot override)','resolve-at-mint seal','two-class RLS (share-read reference · per-copy handoff)'],
+    govGap:['tighten-only enforcement test','plan-ceiling / quota'],
+    blurb:'The storefront rail: a SOURCE (brand) authors its catalogue + experience + rules ONCE, and that governance TRAVELS to any distributor that serves it — the item always runs under the SOURCE, never the host. CB provides INFORMATION + the governed rail only (catalogue, order-as-chit, penetration heatmap, nearest-distributor INFO); next-level ERP does logistics (receipt-only handoff). Live-verified 2026-07-10 (Athi applied b75–b84 + confirmed the storefront). Stones 1–6b + visualize-apply + spin-the-globe, all live. Held at L3 (no tighten-only enforcement test, no metering/plan-ceiling → the L4 gate is not cleared).',
+    features:[
+      {n:'Source-as-entity — a brand AUTHORS its own catalogue source + experience + formatting (owner-gated); the item runs under the source, not the host (b78)', s:'done'},
+      {n:'Source RULES enforced at order — the distributor CANNOT override (e.g. min-order set by the brand); stamped governed{} on each order line (b78)', s:'done'},
+      {n:'Multi-source in one distributor — items namespaced by source, each runs under its own source@v; a mixed cart splits per source', s:'done'},
+      {n:'Container model — a mutable product pointer over IMMUTABLE write-once versions; enhance moves the pointer, every chit PINS the exact version it saw (verifiable forever) (b80)', s:'done'},
+      {n:'Regional scatter ("spin the globe") — resolve-at-mint into a SEALED regional blueprint (currency · units · language · jurisdiction); runtime is O(1) dereference (b81)', s:'done'},
+      {n:'Multilingual storefront — UI labels per region language (en/es/zh/ja/fr/de/ta/hi); 11 regions live incl. Tamil TN + Hindi HI (b83 + b84)', s:'done'},
+      {n:'Consent location → AGGREGATE-only penetration heatmap — structurally no customer PII (no customer-id column); owner-gated read (b79)', s:'done'},
+      {n:'ERP handoff — receipt-only (refs + routing + sha256, never the raw payload), process-then-forget; per-distributor RLS (b82)', s:'done'},
+      {n:'Visualize-apply — "see it on your wall": a cheap client-side recolor loop today; real vision model behind the same UI later', s:'partial'},
+      {n:'Real FX · metering / plan-ceiling · real-ERP adapter behind the seam — the L4→L5 gate', s:'backlog'},
+    ]},
   { id:'help', name:'Assistant', icon:'💬', load:'eager', maturity:1, target:3,
     gov:null, governedUnder:'— static / read-only Q&A (nothing to govern)',
     blurb:'One context-sensitive Assistant (engine in Core). Q&A is served from the DB (GET /api/assist/questions) — nothing static in the frontend; the same store feeds the AI when wired.',
@@ -137,6 +154,19 @@ const TRACE_MATRIX = [
       { id:'FR-C4', fr:'Emit signal → chit lands in Task', test:'lifecycle-iot 45/0 + real Pi: received co-held', st:'ok' },
       { id:'FR-C5', fr:'Routes capability-gated (403 if off)', test:'Capability off → 403', st:'built' },
       { id:'FR-C6', fr:'ERP process-then-forget: receipt-only, raw payload never stored, idempotent', test:'erp-connector.js 23/0: hash+outcome kept, no raw payload, retry=1 effect, RLS-isolated', st:'ok' },
+    ]},
+  { area:'Catalogue — source-governed distribution', br:'A brand governs the experience + rules of its catalogue, and that governance TRAVELS to any distributor that serves it — the item always runs under the source; CB does information + governed rail only, ERP does logistics.',
+    sr:'Source-as-entity authors catalogue_source (experience/rules); governance resolves from source@v not host; container = mutable pointer over immutable versions (each chit pins the version); regional resolve-at-mint sealed; two-class RLS (catalogue = share-read reference, erp_handoff = per-copy WITH RLS); penetration structurally PII-free (b75-b84).',
+    rows:[
+      { id:'FR-K1', fr:'Brand authors its own source + experience (owner-gated)', test:'source-entity.js 6/0 — owner stamped, experience read back', st:'ok' },
+      { id:'FR-K2', fr:'Source rule enforced at order; distributor cannot override', test:'source-rules.js 3/0 — below-min → 422 "set by <source>"', st:'ok' },
+      { id:'FR-K3', fr:'Multi-source per-source governance in one distributor', test:'multi-source.js 6/0 — same finish name, different source rule', st:'ok' },
+      { id:'FR-K4', fr:'Enhance moves the pointer; a pinned chit still resolves its original version', test:'container-model 8/0 + container-wiring 6/0 — v1 pinned resolves after v2', st:'ok' },
+      { id:'FR-K5', fr:'Spin the globe — region resolves currency/units/language/jurisdiction, sealed', test:'regional-scatter.js 8/0 — IN/MX/US/EU + sealed cache-hit', st:'ok' },
+      { id:'FR-K6', fr:'Penetration is aggregate-only (no customer PII)', test:'penetration.js 6/0 — owner-gated, no customer-id column', st:'ok' },
+      { id:'FR-K7', fr:'ERP handoff receipt-only (no raw payload), per-distributor RLS', test:'erp-handoff.js 7/0 — hash+status, RLS-isolated', st:'ok' },
+      { id:'FR-K8', fr:'Catalogue / blueprint structural conformance', test:'conform-check.js 10/0', st:'ok' },
+      { id:'FR-K9', fr:'Storefront renders region language + visualize-apply', test:'MANUAL — Athi storefront confirm 2026-07-10 (frontend, human-gated)', st:'built' },
     ]},
   { area:'Foundation — RLS isolation', br:'Every entity\'s data is its own — a governance leveler, same isolation solo→multinational.',
     sr:'Postgres RLS: app = cb_app (NOBYPASSRLS); withEntity() sets app.current_entity; ALL entity-data tables enforce FORCE rls_entity, per-copy (b48-b68).',
@@ -332,6 +362,18 @@ function _edgeTabHtml(){
         + crow('Chit &amp; Bridge','y','y','y','p',true)
       +'</table>'
       +'<div style="font-size:9.5px;color:var(--grey);margin-top:5px">✓ yes · ~ partial · ✗ no. Ours is the only row combining <b>governed + peer + two-way</b> (all real/built); <b>affordability is the aim</b>, not yet proven — hence the ~.</div>'
+    +'</div>'
+    +'<div style="margin-top:16px"><div style="font-size:11px;font-weight:700;color:var(--ink);margin-bottom:5px">Distribution lens — the same edge, a second domain</div>'
+      +'<div style="font-size:10.5px;color:var(--grey);margin-bottom:6px">Source-governed distribution competes with catalogue/commerce tools, not email. A brand&rsquo;s governance <b>rides to any distributor</b>; CB carries the <b>information + rules</b>, ERP does the logistics — no marketplace lock-in, no logistics grab.</div>'
+      +'<table style="width:100%;border-collapse:collapse;font-size:10.5px">'
+        +'<tr style="color:var(--grey);font-weight:700;font-size:9.5px"><td style="text-align:left;padding:3px 4px">Channel</td><td style="padding:3px 4px">Gov travels</td><td style="padding:3px 4px">Neutral</td><td style="padding:3px 4px">Info-only</td><td style="padding:3px 4px">Dispute</td></tr>'
+        + crow('Brand storefront (Shopify)','n','n','n','n',false)
+        + crow('Marketplace / distributor portal','p','n','n','n',false)
+        + crow('PIM (Salsify / Akeneo)','p','y','y','n',false)
+        + crow('EDI / ERP distribution','p','n','n','n',false)
+        + crow('Chit &amp; Bridge','y','y','y','p',true)
+      +'</table>'
+      +'<div style="font-size:9.5px;color:var(--grey);margin-top:5px">Cols: <b>Gov travels</b> to the distributor · <b>Neutral</b> = distributor-neutral, no host lock · <b>Info-only</b> = no logistics grab · <b>Dispute</b> = per-copy. Only CB combines governance-travels + neutral + information-only (built + harness-verified) — but <b>not yet adopted by a real brand+distributor pair</b>, so it&rsquo;s a target, not a trophy.</div>'
     +'</div>'
     +'<div style="font-size:10.5px;color:var(--grey);text-align:center;padding-top:10px;border-top:1px solid var(--line);margin-top:14px">Closest analog: <b>ServiceNow</b> — one records/workflow facility, many classified lifecycles (ITSM/HR/dev). It proves the model has takers — and it won by starting <i>narrow</i> (an ITIL desk) then generalizing. Our claimed differentiator vs it: accessibility &amp; cost for the small player.</div>'
     +'<div style="border:1px solid var(--line);border-radius:10px;padding:11px 12px;margin-top:14px;background:#faf9f6">'
