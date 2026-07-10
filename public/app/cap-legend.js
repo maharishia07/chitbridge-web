@@ -284,9 +284,11 @@ function _stackTabHtml(){
 function _lbTabBar(){
   const tab=(typeof _lbTab!=='undefined')?_lbTab:'subject';
   const btn=(id,label)=>`<button onclick="setLbTab('${id}')" style="border:0;background:none;cursor:pointer;padding:8px 15px;font-size:13.5px;font-weight:${tab===id?'700':'500'};color:${tab===id?'var(--ink)':'var(--grey)'};border-bottom:2px solid ${tab===id?'var(--accent,#3F66A6)':'transparent'}">${label}</button>`;
-  return `<div style="display:flex;gap:2px;border-bottom:1px solid var(--line);padding:0 8px;flex-wrap:wrap">${btn('subject','📜 The subject')}${btn('found','🧱 Foundations')}${btn('stack','🏛️ Governance stack')}${btn('cap','⬢ Capabilities')}${btn('edge','🎯 The edge')}${btn('life','🔀 Lifecycle')}${btn('sec','🔒 Security')}${btn('real','🔬 Reality')}</div>`;
+  return `<div style="display:flex;gap:2px;border-bottom:1px solid var(--line);padding:0 8px;flex-wrap:wrap">${btn('subject','📜 The subject')}${btn('found','🧱 Foundations')}${btn('stack','🏛️ Governance stack')}${btn('work','⬡ Work patterns')}${btn('cap','⬢ Capabilities')}${btn('edge','🎯 The edge')}${btn('life','🔀 Lifecycle')}${btn('sec','🔒 Security')}${btn('real','🔬 Reality')}</div>`;
 }
 function setLbTab(t){ _lbTab=t; _openLegendImpl(); }
+var _lbFontScale; try{ _lbFontScale=parseFloat(localStorage.getItem('cb_lb_fs'))||1; }catch(_){ _lbFontScale=1; }
+function lbFont(d){ _lbFontScale=Math.max(0.85,Math.min(1.6,(_lbFontScale||1)+d*0.1)); try{ localStorage.setItem('cb_lb_fs',_lbFontScale); }catch(_){} var b=document.getElementById('lbbody'); if(b) b.style.zoom=_lbFontScale; }
 
 function _lifeTabHtml(){
   const SS={ ok:['#2f8f5b','✅'], built:['#a9791f','◐'], todo:['#9aa3a7','○'] };
@@ -413,6 +415,86 @@ function _realTabHtml(){
   +'</div>';
 }
 
+/* ── WORK PATTERNS tab — each pattern is a minted governed JOURNEY, framed by the higher objective it achieves.
+ *    Mirrors C:\dev\SPEC-work-patterns.md + the rail map. Authored (like the other tabs); the live registry is
+ *    WORK_PATTERNS in Core — keep in sync when patterns change. ── */
+function _workTabHtml(){
+  const R='var(--accent,#3F66A6)';
+  const seal=t=>`<span style="font-size:10.5px;color:#2f8f5b;background:#e7f3ec;border-radius:5px;padding:1px 7px">🔒 ${t}</span>`;
+  const lic =t=>`<span style="font-size:10.5px;color:#7a5e22;background:var(--gold-soft,#f4eeda);border:1px solid var(--gold-line,#e0d4a8);border-radius:5px;padding:1px 7px">🎫 ${t}</span>`;
+  const knob=t=>`<span style="font-size:10.5px;color:#9a6d1a;background:#f7efdd;border-radius:5px;padding:1px 7px">✎ ${t}</span>`;
+  const up  =t=>`<span style="font-size:10.5px;color:var(--grey)">↑ ${t}</span>`;
+  const chain=t=>`<span style="font-size:10.5px;color:${R};background:#eef3fb;border-radius:5px;padding:1px 7px">${t}</span>`;
+  const stage=(t,d,tag)=>`<span style="display:inline-flex;flex-direction:column;background:#f6f8fb;border:1px solid var(--line);border-radius:8px;padding:5px 9px;vertical-align:top;max-width:158px"><b style="font-size:11px">${esc(t)}${tag?` <span style="font-family:'Space Mono';font-size:8.5px;color:${R};background:#eef3fb;border-radius:4px;padding:0 4px">${tag}</span>`:''}</b>${d?`<span style="color:var(--grey);font-size:10px;line-height:1.35;margin-top:2px">${d}</span>`:''}</span>`;
+  const arr=`<span style="color:var(--grey);font-size:11px;padding:0 1px">→</span>`;
+  const journey=(icon,name,sub,stages)=>`<div style="border:1px solid var(--line);border-radius:11px;padding:11px 13px;margin-bottom:10px"><div style="font-weight:700;font-size:12.5px;margin-bottom:8px">${icon} ${name} <span style="color:var(--grey);font-weight:500">— ${sub}</span></div><div style="display:flex;flex-wrap:wrap;gap:6px;align-items:stretch">${stages.join(arr)}</div></div>`;
+  const line=o=>`<div style="border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:11px">
+    <div style="display:flex;align-items:center;gap:9px">
+      <span style="width:30px;height:30px;border-radius:8px;display:grid;place-items:center;font-size:15px;background:#eef3fb;border:1px solid var(--line)">${o.icon}</span>
+      <span style="font-family:'Space Grotesk';font-weight:700;font-size:14.5px">${esc(o.name)}</span>
+      <span style="font-family:'Space Mono';font-size:11px;color:${R};background:#eef3fb;border:1px solid var(--line);border-radius:6px;padding:1px 6px">${esc(o.pid)}</span>
+      <span style="margin-left:auto;font-size:9.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:${o.live?'#2f8f5b':'#8a8f98'};border:1px ${o.live?'solid #bfe0cf':'dashed #c2c6cc'};border-radius:5px;padding:1px 6px">${o.live?'Live':'Designed'}</span>
+    </div>
+    <div style="font-size:13px;color:var(--ink);background:#eef3fb;border-left:3px solid ${R};border-radius:0 8px 8px 0;padding:7px 11px;margin:9px 0 8px;line-height:1.5"><b style="font-family:'Space Mono';font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:${R};margin-right:7px">Achieves</b>${o.obj}</div>
+    <div style="font-size:11.5px;color:var(--grey);margin-bottom:8px;line-height:1.55">${o.flow}</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">${o.chips.join('')}</div>
+  </div>`;
+  const lines=[
+    { icon:'🛰️', name:'IoT signal', pid:'iot-signal@v1', live:true,
+      obj:'Turns a <b>physical event into a governed, owned, actionable record</b> — an exception can\'t be lost, missed, or denied.',
+      flow:'Device telemetry (ActorKey) → <b>resolve</b> folder·assignee·copy → seal · file · assign · notify → <b>Task-only signal chit</b> → escalation (SMS · AI · robot →∞)',
+      chips:[seal('Copy · Task-only'),seal('Isolation · per-copy'),lic('Connector · ≤25 devices'),up('health · last-seen · exceptions/day')] },
+    { icon:'✉️', name:'Send a chit', pid:'send-chit@v1', live:true,
+      obj:'Two entities <b>transact on a sealed, co-held record neither can unilaterally rewrite</b> — trust without a middleman.',
+      flow:'Line items / terms (compose) → <b>deliver co-held</b> copies → advance signals (open→act→close) → co-held record → invoice · dispute · forward',
+      chips:[seal('Isolation · per-copy (RLS)'),knob('self-copy: both / order / task'),lic('Core · unlimited'),up('delivered · status advances')] },
+    { icon:'⚑', name:'Raise a dispute', pid:'raise-dispute@v1', live:true,
+      obj:'Resolves disagreement <b>confidentially and per-party, with no third party</b> — the relationship survives the conflict. <i>The USP.</i>',
+      flow:'Reason / category (a party) → <b>private siding</b> → raiser resolves its own → resolution (per-party copies) → roster only',
+      chips:[seal('Confidentiality · roster-only'),lic('Dispute · included'),up('raised · resolved · open count')] },
+    { icon:'🧾', name:'The commercial run', pid:'order → invoice → receipt', live:false,
+      obj:'Carries a <b>whole trade — request to proof — with unbroken provenance at every hop</b>.',
+      flow:'order → delivery_note → invoice → payment → receipt — each hop\'s <b>output is the next hop\'s input</b>',
+      chips:[chain('Purposes today · pattern-ize next')] },
+  ];
+  const spine=[['Constitution','base@v1'],['↳ Capability','connector@v1'],['↳ Work-pattern','iot-signal@v1'],['↳ Chit','stamped']].map((s,i)=>`<div style="flex:1 1 118px;min-width:110px;padding:9px 11px;${i?'border-left:1px solid var(--line)':''};${i===3?'background:#eef3fb':''}"><div style="font-family:'Space Mono';font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--grey)">${s[0]}</div><div style="font-weight:700;font-size:13px;${i===3?'color:'+R:''}">${s[1]}</div></div>`).join('');
+  const notif=[
+    ['🏢 Entity','a copy delivered to Task / Order','mailbox lists; entity-scoped RLS'],
+    ['🧑 Actor','assigned / visible change — delivery·status·message·dispute','per-actor <b>unread</b> + bell + message centre'],
+    ['🛰️ IoT','<i>emits</i>, doesn\'t receive','auto-file to folder + assign to resolved actor (+ optional email); health in cockpit'],
+    ['🔌 ERP','a handoff receipt lands','receipt ledger, per-distributor RLS; process-then-forget'],
+    ['🤖 AI','a proposal to authorize','human authorize → confirm (in-loop)'],
+    ['🛍️ Customer','order confirmation','OTP on the order — not a full mailbox'],
+  ].map(r=>`<tr style="border-top:1px solid var(--line)"><td style="padding:7px 9px;font-weight:600;white-space:nowrap;vertical-align:top">${r[0]}</td><td style="padding:7px 9px;color:var(--ink);vertical-align:top">${r[1]}</td><td style="padding:7px 9px;color:var(--grey);vertical-align:top">${r[2]}</td></tr>`).join('');
+  return `<div style="padding:13px 15px;overflow:visible">
+    <div style="font-size:12.5px;color:var(--grey);line-height:1.6;margin-bottom:12px">A work pattern isn't a form — it's a <b style="color:var(--ink)">governed journey</b>: a minted, version-frozen blueprint a chit runs end-to-end, stamped with everything that governed it. Each is framed by the <b style="color:var(--ink)">higher objective it achieves</b> — no outcome → not a work pattern; the flow shows how.</div>
+    <div style="display:flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:11px;overflow:hidden;margin-bottom:16px">${spine}</div>
+    ${lines.map(line).join('')}
+    <div style="border:1px solid ${R};background:linear-gradient(180deg,#eef3fb,var(--bg,#fff));border-radius:13px;padding:14px 16px;margin:6px 0 16px">
+      <div style="font-family:'Space Grotesk';font-weight:800;font-size:15px;color:${R}">A catalogue is a contract, not a list</div>
+      <div style="font-size:13px;color:var(--ink);background:#fff;border-left:3px solid ${R};border-radius:0 8px 8px 0;padding:7px 11px;margin:9px 0;line-height:1.5"><b style="font-family:'Space Mono';font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:${R};margin-right:7px">Achieves</b>Extends a <b>brand's governance to every customer through any distributor</b> — control without custody.</div>
+      <div style="font-size:12.5px;color:var(--ink);line-height:1.55">The source's governance amalgamated into one construct that <b>travels</b>: the order runs under the source's minted rules wherever served, the distributor <b>can't override</b>, and the chit <b>freezes the exact version</b> seen. Bogie line-up public (browse), cargo private (order), source rules = the sealed wagon-spec that binds every yard.</div>
+    </div>
+    <div style="font-family:'Space Grotesk';font-weight:700;font-size:14px;margin:14px 0 8px">The journeys that travel</div>
+    ${journey('🏷️','Source journey','a brand\'s governance reaches every customer, through any distributor',[
+      stage('Author','brand writes its source — experience + rules, owner-gated','b78'),
+      stage('Cascade','to every distributor that references it'),
+      stage('Travel','item runs under source@v; distributor can\'t override'),
+      stage('Order','the chit freezes the exact version seen','container@v'),
+      stage('Penetration','aggregate heatmap back to the brand — no PII','b79'),
+    ])}
+    ${journey('🧬','Schema journey','the wagon\'s shape is version-frozen, provenance kept',[
+      stage('Define','the entity owns its schema — the wagon shape'),
+      stage('Freeze at send','snapshot the governing schema@v'),
+      stage('Travel','the frozen schema rides with every copy'),
+      stage('Pin','the chit records schema@version — verifiable forever'),
+    ])}
+    <div style="font-family:'Space Grotesk';font-weight:700;font-size:14px;margin:16px 0 7px">Notifications — who gets told, and how</div>
+    <div style="overflow-x:auto;border:1px solid var(--line);border-radius:11px"><table style="width:100%;border-collapse:collapse;font-size:11.5px;min-width:520px"><tr style="background:#eef3fb"><td style="padding:6px 9px;font-family:'Space Mono';font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--grey)">Crew</td><td style="padding:6px 9px;font-family:'Space Mono';font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--grey)">Notified by</td><td style="padding:6px 9px;font-family:'Space Mono';font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--grey)">Handled</td></tr>${notif}</table></div>
+    <div style="font-size:10.5px;color:var(--grey);line-height:1.55;margin-top:11px">Mechanism: per-actor unread = <b>chit_reads</b> vs <b>chit_status.updated_at</b>; bell + centre from the append-only <b>state_log</b>; cross-entity delivery only via the SECURITY DEFINER fns. · <b>Honest:</b> 3 patterns minted+live; the commercial run is real as purposes (not pattern-ized); AI &amp; customer rows are designed.</div>
+  </div>`;
+}
+
 function _openLegendImpl(){
   let host=document.getElementById("lbhost");
   if(!host){ host=document.createElement('div'); host.id='lbhost'; document.body.appendChild(host); }  // pre-auth: create the host if the app shell isn't mounted (shareable /#/legend)
@@ -464,15 +546,19 @@ function _openLegendImpl(){
       <div style="font-size:10.5px;color:var(--grey);text-align:center;padding-top:4px">Load: <b>always on</b> ships with the app · <b>lazy</b> loads on first use · <b>planned</b> not built yet. · <b>L1–5</b> maturity: 1 Proven · 2 Packaged · 3 Itemised · 4 Governed · 5 Productized (→ = target). Kept true to the code.</div>
       <div style="font-size:10.5px;color:var(--grey);text-align:center;padding-top:3px">🏛️ <b>Governance rides on each capability</b> — the green band is the SECOND axis: <b>gov L1–5</b> (1 declared · 2 designed · 3 enforced+isolated · 4 governed+provable · 5 audited) <b>under</b> its cascade layer, with the amber <b>“to L4”</b> gap. Gov usually LAGS maturity — that lag IS the distance to L4. <b>N/A</b> = static/read-only, nothing to govern.</div>
     </div>`;
-  const body = (_lbTab==='subject') ? _subjectTabHtml() : (_lbTab==='found') ? _foundTabHtml() : (_lbTab==='stack') ? _stackTabHtml() : (_lbTab==='life') ? _lifeTabHtml() : (_lbTab==='sec') ? _secTabHtml() : (_lbTab==='edge') ? _edgeTabHtml() : (_lbTab==='real') ? _realTabHtml() : capBody;
-  const titles = { subject:'the subject — the sealed co-held record', found:'foundations — the trust floor + proof', stack:'the governance stack — universe → chit', cap:'capabilities &amp; features', life:'lifecycle &amp; traceability', sec:'security posture', edge:'positioning &amp; edge', real:'reality &amp; how we earn it' };
+  const body = (_lbTab==='subject') ? _subjectTabHtml() : (_lbTab==='found') ? _foundTabHtml() : (_lbTab==='stack') ? _stackTabHtml() : (_lbTab==='life') ? _lifeTabHtml() : (_lbTab==='sec') ? _secTabHtml() : (_lbTab==='edge') ? _edgeTabHtml() : (_lbTab==='real') ? _realTabHtml() : (_lbTab==='work') ? _workTabHtml() : capBody;
+  const titles = { subject:'the subject — the sealed co-held record', found:'foundations — the trust floor + proof', stack:'the governance stack — universe → chit', cap:'capabilities &amp; features', life:'lifecycle &amp; traceability', sec:'security posture', edge:'positioning &amp; edge', real:'reality &amp; how we earn it', work:'work patterns — the governed journeys' };
   host.innerHTML=`<div class="notifover" onclick="closeLegend()"><div class="notifpanel" style="position:fixed;inset:0;width:100vw;height:100vh;max-width:none;max-height:none;border-radius:0;overflow:hidden;display:flex;flex-direction:column;background:#fff" onclick="event.stopPropagation()">
     <div style="display:flex;align-items:center;gap:12px;padding:16px 20px;background:linear-gradient(180deg,#f7f9fc,#fff);border-bottom:1px solid var(--line);flex:none">
       <span style="font-size:22px">🔑</span>
       <div style="line-height:1.15"><div style="font-family:'Space Grotesk';font-weight:700;font-size:19px;color:var(--ink)">What we serve</div><div style="font-size:12.5px;color:var(--grey)">${titles[_lbTab]||titles.cap}</div></div>
-      <button onclick="closeLegend()" style="margin-left:auto;border:0;background:none;cursor:pointer;font-size:26px;line-height:1;color:var(--grey)" aria-label="Close">✕</button>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:6px">
+        <button onclick="lbFont(-1)" title="Smaller text" style="border:1px solid var(--line);background:none;cursor:pointer;font-size:12px;font-weight:700;color:var(--grey);border-radius:6px;width:27px;height:27px;line-height:1;padding:0">A−</button>
+        <button onclick="lbFont(1)" title="Larger text" style="border:1px solid var(--line);background:none;cursor:pointer;font-size:15px;font-weight:700;color:var(--ink);border-radius:6px;width:27px;height:27px;line-height:1;padding:0">A+</button>
+        <button onclick="closeLegend()" style="border:0;background:none;cursor:pointer;font-size:26px;line-height:1;color:var(--grey);margin-left:4px" aria-label="Close">✕</button>
+      </div>
     </div>
     <div style="flex:none">${_lbTabBar()}</div>
-    <div style="flex:1;overflow:auto;min-height:0"><div style="max-width:1040px;margin:0 auto">${body}</div></div>
+    <div style="flex:1;overflow:auto;min-height:0"><div id="lbbody" style="max-width:1040px;margin:0 auto;zoom:${(typeof _lbFontScale!=='undefined'?_lbFontScale:1)}">${body}</div></div>
   </div></div>`;
 }
