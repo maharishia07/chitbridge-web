@@ -5,9 +5,16 @@
  * feature's status (done / partial / backlog). Core keeps only the gated stub (openLegend/closeLegend/_legendOpen).
  * Update this whenever a capability or feature lands. Mirrors the catalogue in project-capability-modularisation. */
 
-// maturity 1-5 (CB Capability Maturity Model): 1 Proven · 2 Packaged · 3 Itemised&Isolated · 4 Governed · 5 Productized.
+// TWO AXES per capability (SPEC-governance-in-legend.md):
+//   maturity 1-5 (what it DOES): 1 Proven · 2 Packaged · 3 Itemised&Isolated · 4 Governed · 5 Productized.
+//   gov 1-5 (how it's GOVERNED): 1 declared · 2 designed · 3 enforced+isolated · 4 governed+provable · 5 audited/certified.
+//   gov RIDES ON the capability — governedUnder (the cascade layer) · governedBy (mechanisms in force) · govGap (= the L4 lever).
+//   RULE: gov usually LAGS maturity, and that lag IS the distance to L4. gov:null → N/A (nothing to govern; static/read-only).
 const CAP_CATALOGUE = [
   { id:'core', name:'Core — Governance rail', icon:'🛤️', load:'eager', maturity:2, target:3,
+    gov:3, govTarget:4, governedUnder:'the constitution + the RLS isolation floor',
+    governedBy:['RLS entity isolation (FORCE, per-copy)','append-only state_log','governed delivery fns (SECURITY DEFINER)'],
+    govGap:['governed provenance is thin','seal / version-freeze not tamper-tested'],
     blurb:'The governance RAIL, in the familiar form of a mailbox — the lean always-on shell every role starts with (loaded with app.html). As easy as an inbox; governed underneath.',
     features:[
       {n:'The tracks + lists — Task (coming to you) · Order (going from you) · Drafts · Trash · Archive', s:'done'},
@@ -21,6 +28,9 @@ const CAP_CATALOGUE = [
       {n:'Notifications bell + message centre (derived from state_log)', s:'partial'},
     ]},
   { id:'dispute', name:'Disputes — the USP', icon:'⚑', load:'lazy', maturity:3, target:4,
+    gov:3, govTarget:4, governedUnder:'the constitution (per-copy confidential scoping)',
+    governedBy:['per-copy chit_disputes (FORCE RLS)','roster-scoped delivery (chit_dispute_deliver)','raiser-only resolution'],
+    govGap:['governed provenance → L4','frontend module live-run'],
     blurb:'The confidential, per-party dispute rail — its own lazy, capability-gated module (cap-dispute.js); Core is dispute-blind. HARDENED PER-COPY (b68, 2026-07-08): each party holds its OWN chit_disputes copy (FORCE RLS), dispute_participants retired, dispute messages replicated to the roster only. L3 (itemised & isolated) is now PROVEN by automated regression (dispute-scope 7/0 — a chit party NOT in the dispute sees nothing). L4 gate = governed provenance + the frontend module live-run.',
     features:[
       {n:'Per-party scoped raise / resolve (raiser-only) + duplicate guard (Model A — SPEC-dispute)', s:'done'},
@@ -34,6 +44,9 @@ const CAP_CATALOGUE = [
       {n:'Automated regression suite (dispute-scope/regression) — DONE; governed provenance → L4', s:'partial'},
     ]},
   { id:'admin', name:'Admin', icon:'⚙️', load:'lazy', maturity:2, target:3,
+    gov:1, govTarget:4, governedUnder:'the 7-layer governance stub only',
+    governedBy:['settings surface (assignment model)'],
+    govGap:['the whole cascade is a STUB — declared, not enforced'],
     blurb:'Loads on first open of MIS / Profile / Settings.',
     features:[
       {n:'MIS dashboard (client-side rollup — summary endpoint pending)', s:'partial'},
@@ -42,6 +55,9 @@ const CAP_CATALOGUE = [
       {n:'Governance — 7-layer stub', s:'partial'},
     ]},
   { id:'workforce', name:'Co-assists', icon:'🧑‍🤝‍🧑', load:'lazy', maturity:2, target:3,
+    gov:2, govTarget:3, governedUnder:'hats + the assignability gate',
+    governedBy:['hat capability gate','assignability check','leave-cover concurrency guard'],
+    govGap:['governed role provenance (who granted a hat, when)'],
     blurb:'Loads on first open of Co-assists. Grows into leave / shift / wage.',
     features:[
       {n:'Create + invite (OTP) → set-PIN → PIN login', s:'done'},
@@ -55,6 +71,9 @@ const CAP_CATALOGUE = [
       {n:'Non-human co-assist types (connector / IoT / AI) auth', s:'backlog'},
     ]},
   { id:'connector', name:'Connector · IoT / ERP', icon:'🛰️', load:'lazy', maturity:2, target:3,
+    gov:2, govTarget:3, governedUnder:'the capability-gate + per-connection retention policy',
+    governedBy:['capability-gated routing (403 if off)','receipt-only retention (process-then-forget)','per-connection kill switch'],
+    govGap:['governed fleets (allowlisted devices, per-device control)','real-ERP pilot'],
     blurb:'Non-human actors — a Pi (IoT) or a system (ERP) — that exchange chits over the rail, managed INSIDE Co-assists (one panel, same shell as people). A Pi holds its connection string; its devices/endpoints are connections under it. b62 = connection-string schema + provisioning + cascading health; device-key ingest = the Pi authenticates with its OWN ActorKey. ✅ L1→L2 CLEARED 2026-07-06 — a real Raspberry Pi 4 read its CPU temp, authenticated by its ActorKey, went live + delivered a co-held chit. ✅ ERP TRANSFER MODE LIVE 2026-07-08 — process-then-forget: receipt-only (hash + outcome), never the raw payload; owner test-cycle + receipt ledger (harness 23/0, b69). L3 = governed fleets (registered devices, per-device control) + a real-ERP pilot; L5 = billed at scale.',
     features:[
       {n:'Connector = a co-assist grouped by SITE; connection string on it (b62)', s:'done'},
@@ -68,6 +87,7 @@ const CAP_CATALOGUE = [
       {n:'AI actor cockpit — sibling of the Pi cockpit (prompt / guardrails / activity)', s:'backlog'},
     ]},
   { id:'help', name:'Assistant', icon:'💬', load:'eager', maturity:1, target:3,
+    gov:null, governedUnder:'— static / read-only Q&A (nothing to govern)',
     blurb:'One context-sensitive Assistant (engine in Core). Q&A is served from the DB (GET /api/assist/questions) — nothing static in the frontend; the same store feeds the AI when wired.',
     features:[
       {n:'Context-sensitive Q&A — page-aware to the SUB-VIEW (context chain: cockpit / dispute / chit → parent → nav), served from the DB', s:'done'},
@@ -75,6 +95,7 @@ const CAP_CATALOGUE = [
       {n:'Tier-1 LLM over the /api/assist proxy', s:'backlog'},
     ]},
   { id:'legend', name:'Legend (this map)', icon:'🔑', load:'lazy', maturity:2, target:2,
+    gov:null, governedUnder:'— read-only map (nothing to govern)',
     blurb:'You are here. The live capability/feature catalogue — loads on demand.',
     features:[ {n:'Capability → feature map with load + status + maturity', s:'done'} ]},
   // ── Planned capabilities (not built yet) — so the map also shows what is coming ──
@@ -369,9 +390,27 @@ function _openLegendImpl(){
   const matBadge=(c)=>{ if(!c.maturity) return ''; const t=(c.target&&c.target>c.maturity)?`→L${c.target}`:''; return `<span title="Capability maturity — 1 Proven · 2 Packaged · 3 Itemised · 4 Governed · 5 Productized" style="font-size:10px;font-weight:800;color:#4b3b8f;background:#efeaf9;border:1px solid #cabdf0;border-radius:6px;padding:1px 7px">L${c.maturity}${t}</span>`; };
   const featRow=(f)=>{ const [col,ic]=SC[f.s]||SC.backlog;
     return `<div style="display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--ink);padding:4px 0;line-height:1.45"><span style="color:${col};flex:none">${ic}</span><span>${esc(f.n)}</span></div>`; };
+  // GOVERNANCE BAND — the SECOND axis: gov maturity + what governs it + the L4 gap (SPEC-governance-in-legend.md).
+  const govChips=(arr,col,bg,bd)=>(arr||[]).map(x=>`<span style="font-size:10px;color:${col};background:${bg};border:1px solid ${bd};border-radius:5px;padding:1px 6px">${esc(x)}</span>`).join(' ');
+  const govBand=(c)=>{
+    if(c.load==='planned') return '';                        // planned → nothing to govern yet
+    if(c.gov==null && !c.governedUnder) return '';
+    const na=(c.gov==null);
+    const t=(c.govTarget&&c.govTarget>c.gov)?`→L${c.govTarget}`:'';
+    const badge=na
+      ? `<span style="font-size:9.5px;font-weight:800;color:#8a8f98;background:#f0f0ee;border:1px solid var(--line);border-radius:6px;padding:1px 7px">gov · N/A</span>`
+      : `<span title="Governance maturity — 1 declared · 2 designed · 3 enforced+isolated · 4 governed+provable · 5 audited/certified" style="font-size:9.5px;font-weight:800;color:#1f6f4a;background:#e7f4ee;border:1px solid #bfe0cf;border-radius:6px;padding:1px 7px">gov · L${c.gov}${t}</span>`;
+    const under=c.governedUnder?`<span style="font-size:10.5px;color:var(--grey)">under <b style="color:#2f6f4a;font-weight:600">${esc(c.governedUnder)}</b></span>`:'';
+    const mech=(c.governedBy&&c.governedBy.length)?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:5px">${govChips(c.governedBy,'#1f6f4a','#eef6f0','#cfe4d7')}</div>`:'';
+    const gap=(c.govGap&&c.govGap.length)?`<div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-top:5px"><span style="font-size:9px;font-weight:700;color:#8a6d1f">to L${c.govTarget||4}:</span>${govChips(c.govGap,'#8a6d1f','#fbf6e9','#e8dab4')}</div>`:'';
+    return `<div style="border:1px solid #d7e6dc;background:#f6faf7;border-radius:8px;padding:7px 9px;margin:0 0 9px">
+      <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap">${badge}${under}</div>${mech}${gap}
+    </div>`;
+  };
   const card=(c)=>`<div style="border:1px solid var(--line);border-radius:11px;padding:11px 13px;margin-bottom:10px;background:${c.load==='planned'?'#faf9f5':'#fff'}">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px"><span style="font-size:15px">${c.icon}</span><span style="font-family:'Space Grotesk';font-weight:700;font-size:13.5px">${esc(c.name)}</span><span style="margin-left:auto;display:flex;gap:6px;align-items:center">${matBadge(c)}${loadBadge(c)}</span></div>
     <div style="font-size:12.5px;color:var(--grey);margin-bottom:8px;line-height:1.5">${esc(c.blurb)}</div>
+    ${govBand(c)}
     ${c.features.map(featRow).join('')}
   </div>`;
   const capBody=`
@@ -381,6 +420,7 @@ function _openLegendImpl(){
     </div>
     <div style="padding:12px 13px;overflow:visible">${CAP_CATALOGUE.map(card).join('')}
       <div style="font-size:10.5px;color:var(--grey);text-align:center;padding-top:4px">Load: <b>always on</b> ships with the app · <b>lazy</b> loads on first use · <b>planned</b> not built yet. · <b>L1–5</b> maturity: 1 Proven · 2 Packaged · 3 Itemised · 4 Governed · 5 Productized (→ = target). Kept true to the code.</div>
+      <div style="font-size:10.5px;color:var(--grey);text-align:center;padding-top:3px">🏛️ <b>Governance rides on each capability</b> — the green band is the SECOND axis: <b>gov L1–5</b> (1 declared · 2 designed · 3 enforced+isolated · 4 governed+provable · 5 audited) <b>under</b> its cascade layer, with the amber <b>“to L4”</b> gap. Gov usually LAGS maturity — that lag IS the distance to L4. <b>N/A</b> = static/read-only, nothing to govern.</div>
     </div>`;
   const body = (_lbTab==='subject') ? _subjectTabHtml() : (_lbTab==='found') ? _foundTabHtml() : (_lbTab==='stack') ? _stackTabHtml() : (_lbTab==='life') ? _lifeTabHtml() : (_lbTab==='sec') ? _secTabHtml() : (_lbTab==='edge') ? _edgeTabHtml() : (_lbTab==='real') ? _realTabHtml() : capBody;
   const titles = { subject:'the subject — the sealed co-held record', found:'foundations — the trust floor + proof', stack:'the governance stack — universe → chit', cap:'capabilities &amp; features', life:'lifecycle &amp; traceability', sec:'security posture', edge:'positioning &amp; edge', real:'reality &amp; how we earn it' };
