@@ -582,6 +582,7 @@ const EP = {
   custCatalogue:   {m:"GET",  p:"/api/catalogue/:bridgeId",      ok:"✓"},
   custVerify:      {m:"POST", p:"/api/catalogue/:bridgeId/login/verify", ok:"✓"},
   custOrders:      {m:"GET",  p:"/api/catalogue/:bridgeId/my-orders",     ok:"✓"},
+  custList:        {m:"GET",  p:"/api/relationships/customers",           ok:"✓"},  // the shop's CRM — end-customers locked under it
   inbox:           {m:"GET",  p:"/api/chits/inbox",              ok:"✓"},  // ?status= ?page= ?limit=
   sent:            {m:"GET",  p:"/api/chits/sent",               ok:"✓"},  // real sent copies (direction='sent') — baseline-4. (was wrongly /inbox = received copies)
   chit:            {m:"GET",  p:"/api/chits/:id",                ok:"✓"},
@@ -1411,7 +1412,7 @@ function priChip(p){ return (!p||p==="normal")?"":`<span class="prichip pri-${p}
 let UI = {...UI0, selected:new Set(), aggStates:new Set(["open","act","close"])};
 
 const MENUS = {
-  entity:{top:[["compose","✉️","Compose",""],["task","📥","Task",""],["order","📤","Order",""],["folders","📁","Folders",""],["drafts","📝","Drafts",""],["trash","🗑️","Trash",""],["archive","🗄️","Archive",""]], rest:[["network","🔗","Network"],["suppliers","🏭","Suppliers"],["catalogue","🗂️","Catalogue"],["coassists","🧑‍🤝‍🧑","Co-assists"],["mis","📊","MIS"],["disputes","⚖️","Disputes"],["profile","👤","Profile"],["settings","⚙️","Settings"],["assistreview","🧠","Assistant"]], tag:"Owner does structure."},
+  entity:{top:[["compose","✉️","Compose",""],["task","📥","Task",""],["order","📤","Order",""],["folders","📁","Folders",""],["drafts","📝","Drafts",""],["trash","🗑️","Trash",""],["archive","🗄️","Archive",""]], rest:[["network","🔗","Network"],["suppliers","🏭","Suppliers"],["customers","🛍️","Customers"],["catalogue","🗂️","Catalogue"],["coassists","🧑‍🤝‍🧑","Co-assists"],["mis","📊","MIS"],["disputes","⚖️","Disputes"],["profile","👤","Profile"],["settings","⚙️","Settings"],["assistreview","🧠","Assistant"]], tag:"Owner does structure."},
   actor:{top:[["compose","✉️","Compose",""],["task","📥","Task",""],["order","📤","Order",""],["folders","📁","Folders",""],["drafts","📝","Drafts",""],["trash","🗑️","Trash",""],["archive","🗄️","Archive",""]], rest:[["suppliers","🏭","Suppliers"],["profile","👤","Profile"]], tag:"Commerce yes, structure no."},
   customer:{top:[["order","📤","My orders",""]], rest:[["shops","🏬","Find a shop"]], tag:"You see only your orders."},
 };
@@ -1422,6 +1423,7 @@ const PURPOSE = {
   network:"Design your organisation here — your own branches and units, up to the lead node. Internal structure; for other businesses use Connections.",
   connections:"Connect with other businesses — suppliers, customers, agents. External; for your own structure use Network.",
   suppliers:"Suppliers you buy from — pull their catalogue into a cart.",
+  customers:"Your CRM — everyone who ordered from your storefront. They exist only under your shop; the platform never takes them over.",
   catalogue:"What you sell — products and price.",
   coassists:"Manage who acts for you — people now; connectors, devices, processes, agents next. For structure use Network.",
   mis:"Numbers — performance across the network.",
@@ -1493,6 +1495,7 @@ function renderApp(){
     if(UI.nav==="settings") loadSettings();
     if(UI.nav==="network") loadNetwork();
     if(UI.nav==="suppliers") loadSuppliers();
+    if(UI.nav==="customers") loadCustomers();
     if(UI.nav==="catalogue") loadCatalogue();
     if(UI.nav==="mis" && typeof loadMIS==="function") loadMIS();
     if(UI.nav==="coassists") loadCoassists();
@@ -2006,6 +2009,45 @@ function supRowHTML(x){
 function supRowsHTML(){ const rows=supVisible(); if(!rows.length) return '<div class="empty"><div class="big">🏭</div><div class="t">No suppliers yet</div><div>Add one above by their User ID or email.</div></div>'; return rows.map(supRowHTML).join(''); }
 function paintSupList(){ const b=document.getElementById('sup_rows'); if(b)b.innerHTML=supRowsHTML(); const c=document.getElementById('sp_count'); if(c)c.textContent=supCount()+' supplier(s)'; }
 function paintSupDetail(){ const dp=document.getElementById('detailpane'); if(dp){ dp.className='detail'; dp.innerHTML=supDetailHTML(); } }
+/* ===================== CUSTOMERS (CRM) — end-customers locked UNDER this shop (parent_entity_id = shop).
+   Everyone who ordered/signed-in via the storefront; the platform never shares them. GET /api/relationships/customers. */
+function custDate(x){ try{ return new Date(x).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}); }catch(_){ return ''; } }
+function custContact(c){ var em=(c&&c.email)||''; var at=em.lastIndexOf('@'); var local=at>=0?em.slice(0,at):em; if(local.indexOf('=')>=0) return local.replace('=','@'); return local||(c&&c.display_name)||''; }
+function custSeg(s){ var col={new:'#345488',regular:'#2e7a45',inactive:'#9a7b34'}[s]||'#8a949c', bg={new:'#eef3fb',regular:'#e8f3ec',inactive:'#f7f2e3'}[s]||'#f4f6f8'; return '<span class="optchip" style="background:'+bg+';color:'+col+';border-color:transparent">'+esc(s||'—')+'</span>'; }
+function customersScreen(){
+  const list=`<div class="list"><div class="lh">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:14px">🛍️ Customers</span><button onclick="openAssist('customers')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:#fff;color:#3F66A6;border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button></div>
+    <div style="font-size:11.5px;color:var(--grey);line-height:1.5">Your CRM — everyone who ordered from your storefront. They live <b>only under your shop</b>.</div>
+    <div style="margin-top:7px;font-size:11px;color:var(--grey)" id="cu_count">${(UI.custs||[]).length} customer(s)</div></div>
+    <div class="rows" id="cu_rows">${UI._custLoading?'<div class="loadwrap"><span class="spin"></span> loading…</div>':custRowsHTML()}</div></div>`;
+  const detail=`<div class="detail" id="detailpane">${custDetailHTML()}</div>`;
+  const divider=`<div class="divider" id="divider" onmousedown="startDrag(event)" ontouchstart="startDrag(event)" role="separator" aria-label="Resize panes"><span class="grip"></span></div>`;
+  const showDetail=(UI.vp==='mob')&&UI.mdetail;
+  return `<div class="panel ${showDetail?'showdetail':''}" id="panel" style="--lw:${UI.lw}px;--lh:${UI.lh}px">${list}${divider}${detail}</div>`;
+}
+function custRowHTML(c){ var sel=c.customer_identity_id===UI.custSel, n=(c.txn_count||0);
+  return '<div class="row '+(sel?'sel':'')+'" onclick="selectCust(\''+c.customer_identity_id+'\')"><div class="main2"><div class="l1"><span class="code">'+esc(c.display_name||custContact(c))+'</span>'+custSeg(c.segment)+'<span class="amt" style="margin-left:auto;font-size:11px;color:var(--grey)">'+n+' order'+(n===1?'':'s')+'</span></div><div class="l2"><span class="mono">'+esc(custContact(c))+'</span>'+(c.last_txn_at?(' · last '+esc(custDate(c.last_txn_at))):'')+'</div></div><div class="rowgo" aria-hidden="true">›</div></div>'; }
+function custRowsHTML(){ var r=UI.custs||[]; if(!r.length) return '<div class="empty"><div class="big">🛍️</div><div class="t">No customers yet</div><div>When someone orders from your storefront, they appear here — your CRM.</div></div>'; return r.map(custRowHTML).join(''); }
+function paintCustList(){ var b=document.getElementById('cu_rows'); if(b)b.innerHTML=custRowsHTML(); var c=document.getElementById('cu_count'); if(c)c.textContent=(UI.custs||[]).length+' customer(s)'; }
+function paintCustDetail(){ var dp=document.getElementById('detailpane'); if(dp){ dp.className='detail'; dp.innerHTML=custDetailHTML(); } }
+function selectCust(id){ UI.custSel=id; if(UI.vp==='mob'){ UI.mdetail=true; var p=document.getElementById('panel'); if(p)p.classList.add('showdetail'); } paintCustList(); paintCustDetail(); }
+function custDetailHTML(){ var c=(UI.custs||[]).find(function(x){return x.customer_identity_id===UI.custSel;});
+  if(!c) return '<div class="empty"><div class="big">🛍️</div><div class="t">Select a customer</div><div>Your storefront customers — locked under your shop, yours alone.</div></div>';
+  var kv=function(l,v){return '<div class="kv" style="display:flex;gap:8px;padding:9px 13px;border-bottom:1px dashed var(--line);font-size:13px"><b style="min-width:110px;color:var(--grey);font-weight:600;font-size:10.5px;text-transform:uppercase">'+l+'</b><span style="font-weight:600;flex:1">'+(v==null||v===''?'—':v)+'</span></div>';};
+  return '<div class="dh"><button class="dback" onclick="backToList()">‹ Customers</button><div class="dt">'+esc(c.display_name||custContact(c))+' '+custSeg(c.segment)+'</div><div class="ds">🔒 locked under your shop · your CRM</div></div>'
+    +'<div class="db"><div class="sec">Customer</div><div class="itab" style="border:1px solid var(--line);border-radius:11px;overflow:hidden">'
+    +kv('Name',esc(c.display_name||'—'))+kv('Contact','<span class="mono">'+esc(custContact(c))+'</span>')
+    +kv('Under-shop id','<span class="mono" style="font-size:11px">'+esc(c.email||'')+'</span>')
+    +kv('Segment',custSeg(c.segment))+kv('Orders',(c.txn_count||0)+'')
+    +kv('Last order',c.last_txn_at?esc(custDate(c.last_txn_at)):'—')+kv('Added via',esc(c.added_via||'—'))
+    +'</div><div style="font-size:11px;color:var(--grey);margin-top:10px;line-height:1.5">Signed in / ordered through your storefront. This customer exists <b>only under your shop</b> — the platform never shares them with anyone else.</div></div>';
+}
+async function loadCustomers(){ UI._custLoading=true; var rb=document.getElementById('cu_rows'); if(rb)rb.innerHTML='<div class="loadwrap"><span class="spin"></span> loading…</div>';
+  try{ var r=await api('custList'); UI.custs=(r&&r.customers)||(Array.isArray(r)?r:[]); UI._custLoading=false; paintCustList();
+    if(UI.custSel && !UI.custs.some(function(x){return x.customer_identity_id===UI.custSel;})) UI.custSel=null;
+    if(!UI.custSel && UI.custs.length && UI.vp!=='mob'){ selectCust(UI.custs[0].customer_identity_id); } else paintCustDetail();
+  }catch(e){ UI._custLoading=false; var rb2=document.getElementById('cu_rows'); if(rb2)rb2.innerHTML='<div class="empty"><div class="t">Could not load customers</div><div>'+esc(e.message)+'</div></div>'; }
+}
 async function loadSuppliers(){
   UI._supLoading=true; const rb=document.getElementById('sup_rows'); if(rb)rb.innerHTML='<div class="loadwrap"><span class="spin"></span> loading…</div>';
   try{
@@ -2220,6 +2262,7 @@ function mainBody(){
   if(UI.nav==="settings") return settingsScreen();
   if(UI.nav==="network") return networkScreen();
   if(UI.nav==="suppliers") return suppliersScreen();
+  if(UI.nav==="customers") return customersScreen();
   if(UI.nav==="catalogue") return catalogueScreen();
   if(UI.nav==="mis") return misScreen();
   if(UI.nav==="coassists") return coassistsScreen();
