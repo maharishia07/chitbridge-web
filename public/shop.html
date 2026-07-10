@@ -45,7 +45,7 @@ function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){retu
 function el(id){ return document.getElementById(id); }
 function swatch(c){ return '<span class="dot" title="'+esc((c.name||'')+' '+(c.hex||''))+'" style="background:'+esc(c.hex||'#ccc')+'"></span>'; }
 function comboHtml(cm){ return '<div class="combo"><span style="display:inline-flex;gap:3px">'+((cm.colours||[]).map(swatch).join(''))+'</span><span class="cbname">'+esc(cm.name||'')+'</span><span class="cbcols">'+((cm.colours||[]).map(function(c){return esc(c.name);}).join(' + '))+'</span></div>'; }
-function finishCard(it, cur, idx){
+function finishCard(it, cur, idx, vizEnabled){
   var price=(it.commercials&&it.commercials.price_per_litre!=null)?it.commercials.price_per_litre:null;
   var chips='<span class="chip c-tex">'+esc(it.texture_family||'')+'</span>'+(it.region?'<span class="chip c-reg">'+esc(it.region)+'</span>':'')+((it.effect||[]).map(function(e){return '<span class="chip c-eff">'+esc(e)+'</span>';}).join(''));
   return '<div class="card">'
@@ -55,8 +55,10 @@ function finishCard(it, cur, idx){
     +'<div class="cclabel">Colour combinations</div>'+((it.combinations||[]).map(comboHtml).join(''))
     +'<div class="apply">Applied with '+((it.tools||[]).join(', '))+' · '+esc(it.coats||'')+'</div>'
     +'<div class="price">'+(price!=null?((cur||'₹')+esc(String(price))+' <small>/ litre</small>'):'<small>price on request</small>')+'</div>'
-    +(price!=null&&idx!=null?'<button onclick="orderOpen('+idx+')" style="margin-top:10px;border:0;border-radius:9px;padding:9px 18px;background:#3F66A6;color:#fff;font-weight:700;font-size:13px;cursor:pointer">Order this →</button>':'')
-    +'</div>';
+    +'<div style="margin-top:10px">'
+    +(vizEnabled&&idx!=null?'<button onclick="vizOpen('+idx+')" style="margin:0 8px 0 0;border:1px solid #6a44a8;background:#F0EAF9;color:#6a44a8;border-radius:9px;padding:9px 16px;font-weight:700;font-size:13px;cursor:pointer">✨ See it on your wall</button>':'')
+    +(price!=null&&idx!=null?'<button onclick="orderOpen('+idx+')" style="border:0;border-radius:9px;padding:9px 18px;background:#3F66A6;color:#fff;font-weight:700;font-size:13px;cursor:pointer">Order this →</button>':'')
+    +'</div></div>';
 }
 function productRow(p, cur){ var d=(p.item_data||p)||{}; return '<div class="prow"><div style="flex:1"><b>'+esc(d.name||d.product||'item')+'</b> <span class="meta">'+esc(d.unit||'')+'</span></div><div style="font-weight:700">'+(d.price!=null?((cur||'₹')+esc(String(d.price))):'—')+'</div></div>'; }
 function render(data){
@@ -68,7 +70,7 @@ function render(data){
   finishes.forEach(function(f){
     var viz=(f.experience&&f.experience.visualize)||{};   // b78 — the source's experience CASCADES to this storefront
     var vizBadge=viz.enabled?'<div style="margin:0 0 9px;font-size:11.5px;color:#6a44a8;background:#F0EAF9;border:1px solid #e3d5f5;border-radius:8px;padding:6px 10px;display:inline-block">✨ '+esc(viz.label||'Scan your home')+' — see it on your wall <span style="color:#9aa3a7">· from '+esc(f.title||'the brand')+'</span></div>':'';
-    finHtml += '<div class="sechd">🎨 '+esc(f.title||f.collection||'Designer finishes')+'</div>' + vizBadge + (f.items||[]).map(function(it){ var idx=_FIN.length; _FIN.push({source:f.source,it:it,rules:(f.experience&&f.experience.rules)||{}}); return finishCard(it,cur,idx); }).join('');
+    finHtml += '<div class="sechd">🎨 '+esc(f.title||f.collection||'Designer finishes')+'</div>' + vizBadge + (f.items||[]).map(function(it){ var idx=_FIN.length; _FIN.push({source:f.source,it:it,rules:(f.experience&&f.experience.rules)||{}}); return finishCard(it,cur,idx,viz.enabled); }).join('');
   });
   var prods=(data.items||[]);
   var prodHtml = prods.length ? ('<div class="sechd" style="color:var(--grey)">🗂️ Products</div>'+prods.map(function(p){return productRow(p,cur);}).join('')) : '';
@@ -155,6 +157,31 @@ function orderConfirm(){
       ohost().innerHTML='<div style="position:fixed;inset:0;background:rgba(15,22,32,.5);z-index:900;display:flex;align-items:center;justify-content:center;padding:12px" onclick="orderClose()"><div style="background:#fff;max-width:400px;border-radius:16px;padding:26px;text-align:center"><div style="font-size:40px">✓</div><div class="sg" style="font-weight:800;font-size:18px;margin-top:8px">Order placed</div><div style="font-size:13px;color:#3a4048;margin-top:8px;line-height:1.6">Your order for <b>'+esc(it.name)+((_ord.combo)?(' · '+esc(_ord.combo)):'')+'</b> ('+esc(String(qty))+' L) reached the shop. They\'ll be in touch.</div><button onclick="orderClose()" style="margin-top:16px;border:0;border-radius:10px;padding:10px 20px;background:#3F66A6;color:#fff;font-weight:700;cursor:pointer">Done</button></div></div>'; })
     .catch(function(e){ _ord.busy=false; orderRender(null,e.message); });
 }
+// ── VISUALIZE-APPLY ("scan your home") — CHEAP first slice: upload a room photo, tint it in each recommended
+// combination (client-side canvas, no upload/GPU/S3), swap freely, then order. Honest: indicative overlay, not a true
+// room render yet (that swaps in later, cost-capped, cache-to-S3). Gated by the SOURCE's experience.visualize.enabled.
+var _VIZ=null;
+function vizhost(){ var h=el('vizhost'); if(!h){ h=document.createElement('div'); h.id='vizhost'; document.body.appendChild(h); } return h; }
+function vizClose(){ var h=el('vizhost'); if(h)h.innerHTML=''; _VIZ=null; }
+function vizOpen(idx){ var e=_FIN[idx]; if(!e)return; var combos=(e.it.combinations||[]); _VIZ={idx:idx, img:null, combos:combos, combo:combos[0]||null}; vizRender(); }
+function vizRender(){
+  var e=_FIN[_VIZ.idx], it=e.it, combos=_VIZ.combos;
+  var chips=combos.map(function(cm,i){ var on=_VIZ.combo&&_VIZ.combo.name===cm.name; var sw=(cm.colours||[]).map(function(c){return '<span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:'+esc(c.hex)+';border:1px solid rgba(0,0,0,.15);vertical-align:middle"></span>';}).join(''); return '<button onclick="vizPick('+i+')" style="border:'+(on?'2px solid #6a44a8':'1px solid #e7e3d8')+';background:#fff;border-radius:9px;padding:6px 10px;margin:0 6px 6px 0;cursor:pointer;font-size:12px"><span style="display:inline-flex;gap:2px;margin-right:5px">'+sw+'</span>'+esc(cm.name)+'</button>'; }).join('');
+  var upload='<label style="display:block;border:2px dashed #cfc3e8;border-radius:12px;padding:26px;text-align:center;cursor:pointer;color:#6a44a8;font-weight:600">📷 Upload a photo of your room<input type="file" accept="image/*" onchange="vizLoad(event)" style="display:none"></label>';
+  vizhost().innerHTML='<div style="position:fixed;inset:0;background:rgba(15,22,32,.6);z-index:950;display:flex;align-items:center;justify-content:center;padding:12px" onclick="if(event.target===this)vizClose()">'
+    +'<div style="background:#fff;width:100%;max-width:560px;border-radius:16px;padding:16px 16px 20px;max-height:94vh;overflow:auto">'
+    +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:2px"><b class="sg" style="font-size:17px;flex:1">'+esc(it.name)+' on your wall</b><button onclick="vizClose()" style="border:0;background:none;font-size:22px;cursor:pointer;color:#8a949c">×</button></div>'
+    +'<div style="font-size:11.5px;color:#9aa3a7;margin-bottom:10px">Upload a photo of your room and try the colour combinations. Indicative preview (colour overlay) - a true room render is coming.</div>'
+    +(_VIZ.img?'<canvas id="viz_canvas" width="520" height="340" style="width:100%;border-radius:12px;background:#eef0f2;display:block"></canvas><div style="margin-top:10px">'+chips+'</div><div style="display:flex;gap:8px;margin-top:8px"><button onclick="vizToOrder()" style="flex:1;border:0;border-radius:10px;padding:12px;background:#3F66A6;color:#fff;font-weight:700;font-size:14px;cursor:pointer">Order this combination →</button><label style="border:1px solid #e7e3d8;border-radius:10px;padding:12px;cursor:pointer;font-size:13px">Change photo<input type="file" accept="image/*" onchange="vizLoad(event)" style="display:none"></label></div>':upload)
+    +'</div></div>';
+  if(_VIZ.img) vizDraw(_VIZ.combo);
+}
+function vizLoad(ev){ var f=ev.target.files&&ev.target.files[0]; if(!f)return; var rd=new FileReader(); rd.onload=function(){ var im=new Image(); im.onload=function(){ _VIZ.img=im; vizRender(); }; im.src=rd.result; }; rd.readAsDataURL(f); }
+function vizPick(i){ _VIZ.combo=_VIZ.combos[i]; vizRender(); }
+function vizDraw(combo){ var cv=el('viz_canvas'); if(!cv||!_VIZ.img)return; var ctx=cv.getContext('2d'); var iw=_VIZ.img.width,ih=_VIZ.img.height,cw=cv.width,ch=cv.height; var sc=Math.min(cw/iw,ch/ih); var w=iw*sc,h=ih*sc,x=(cw-w)/2,y=(ch-h)/2; ctx.clearRect(0,0,cw,ch); ctx.fillStyle='#eef0f2'; ctx.fillRect(0,0,cw,ch); ctx.drawImage(_VIZ.img,x,y,w,h);
+  if(combo&&combo.colours&&combo.colours.length){ ctx.save(); ctx.globalCompositeOperation='multiply'; ctx.globalAlpha=0.5; var cols=combo.colours; var g=ctx.createLinearGradient(x,0,x+w,0); cols.forEach(function(c,i){ g.addColorStop(cols.length>1?(i/(cols.length-1)):0, c.hex||'#ccc'); }); ctx.fillStyle=g; ctx.fillRect(x,y,w,h); ctx.restore(); }
+}
+function vizToOrder(){ var idx=_VIZ.idx, comboName=_VIZ.combo&&_VIZ.combo.name; vizClose(); _ord={idx:idx, step:'contact', combo:comboName}; orderRender(); }
 (function(){
   if(!BRIDGE){ el('app').innerHTML='<div class="msg">No shop specified. Use a link like <b>shop.html?bridge=CBXXXXXXXX</b></div>'; return; }
   fetch(API+'/api/catalogue/'+encodeURIComponent(BRIDGE)).then(function(r){ return r.json().then(function(j){ return {status:r.status, j:j}; }); })
