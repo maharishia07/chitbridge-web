@@ -2164,7 +2164,11 @@ function refFinishRow(it,i){ var price=(it.commercials&&it.commercials.price_per
     +'<div style="font-size:11px;color:#9aa3a7;margin-top:7px">Applied with '+((it.tools||[]).join(', '))+' · '+esc(it.coats||'')+' · <span style="color:#6a44a8">🎨 referenced</span></div>'
   +'</div>'; }
 function refCatRowsHTML(){ var rc=UI.refCat||[]; if(!rc.length) return '';
-  return '<div style="padding:9px 13px 4px;font-size:10.5px;color:#6a44a8;text-transform:uppercase;letter-spacing:.4px;font-weight:800">🎨 Designer finishes · referenced</div>'+rc.map(function(it,i){return refFinishRow(it,i);}).join('')+'<div style="padding:5px 13px 9px;font-size:10.5px;color:#9aa3a7;border-bottom:1px solid var(--line)">Shared design &amp; colour by reference · your prices · <span style="color:var(--blue);cursor:pointer;font-weight:600" onclick="openCatalogueBuilder()">manage in 🤖 Catalogue builder</span></div>'; }
+  var groups={}, order=[]; rc.forEach(function(it,i){ var s=it._source||'?'; if(!groups[s]){groups[s]=[];order.push(s);} groups[s].push(i); });   // STONE 3: group by SOURCE (each brand distinct)
+  var body=order.map(function(s){ var t=(rc[groups[s][0]]||{})._sourceTitle||s;
+    return '<div style="padding:9px 13px 4px;font-size:10.5px;color:#6a44a8;text-transform:uppercase;letter-spacing:.4px;font-weight:800">🎨 '+esc(t)+' · referenced</div>'+groups[s].map(function(i){ return refFinishRow(rc[i],i); }).join('');
+  }).join('');
+  return body+'<div style="padding:5px 13px 9px;font-size:10.5px;color:#9aa3a7;border-bottom:1px solid var(--line)">Shared design &amp; colour by reference · your prices · each brand runs under its own rules · <span style="color:var(--blue);cursor:pointer;font-weight:600" onclick="openCatalogueBuilder()">manage in 🤖 Catalogue builder</span></div>'; }
 function prodRowsHTML(){ const ref=refCatRowsHTML(); const r=prodVisible();
   if(!ref && !r.length) return '<div class="empty"><div class="big">🗂️</div><div class="t">No products yet</div><div>Add one with <b>+ New product</b>, or adopt a catalogue via 🤖 AI.</div></div>';
   const prods = r.length ? ('<div style="padding:9px 13px 4px;font-size:10.5px;color:#9aa3a7;text-transform:uppercase;letter-spacing:.4px;font-weight:800">🗂️ Your products</div>'+r.map(prodRowHTML).join('')) : '';
@@ -2192,7 +2196,7 @@ function paintProdDetail(){ const dp=document.getElementById('detailpane'); if(d
 async function loadCatalogue(){
   UI._prodLoading=true; const rb=document.getElementById('ct_rows'); if(rb)rb.innerHTML='<div class="loadwrap"><span class="spin"></span> loading…</div>';
   try{ const items=(await api("prodList"))||[]; UI.prods=items;
-    try{ const mine=await api('catalogueMine'); UI.refCat=(mine&&mine.catalogues&&mine.catalogues[0]&&mine.catalogues[0].resolved&&mine.catalogues[0].resolved.items)||[]; }catch(_){ UI.refCat=[]; }   // BRIDGE: resolve the adopted reference catalogue (best-effort)
+    try{ const mine=await api('catalogueMine'); var _cats=(mine&&mine.catalogues)||[]; var _flat=[]; _cats.forEach(function(c){ var t=(c.resolved&&c.resolved.title)||c.source; ((c.resolved&&c.resolved.items)||[]).forEach(function(it){ _flat.push(Object.assign({},it,{_source:c.source,_sourceTitle:t})); }); }); UI.refCat=_flat; }catch(_){ UI.refCat=[]; }   // STONE 3: ALL adopted sources, flat with source tag (grouped at render)
     UI._prodLoading=false; paintProdList();
     if(UI.prodSel && !UI.prods.some(p=>prodId(p)===UI.prodSel)){ UI.prodSel=null; }
     if(UI.prodMode!=='new'){ if(!UI.prodSel && UI.prods.length && UI.vp!=='mob'){ selectProduct(prodId(UI.prods[0]), true); } else paintProdDetail(); }
