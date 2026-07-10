@@ -2037,8 +2037,8 @@ function custDetailHTML(){ var c=(UI.custs||[]).find(function(x){return x.custom
   var mono=function(v){return '<span class="mono" style="font-size:11px">'+esc(v||'')+'</span>';};
   var grp=function(t,rows){return '<div class="sec">'+t+'</div><div class="itab" style="border:1px solid var(--line);border-radius:11px;overflow:hidden;margin-bottom:12px">'+rows+'</div>';};
   var contact=c.otp_contact||c.phone||custContact(c);
-  var isPhone=(c.otp_contact&&/[0-9]{6,}/.test(String(c.otp_contact)))||(!c.otp_contact&&!!c.phone);
-  var chan=isPhone?'📱 Phone':'✉️ Email';
+  var oc=String(c.otp_contact||'');
+  var chan=(oc?(oc.indexOf('@')<0&&/[0-9]/.test(oc)):!!c.phone)?'📱 Phone':'✉️ Email';
   return '<div class="dh"><button class="dback" onclick="backToList()">‹ Customers</button><div class="dt">'+esc(c.display_name||contact)+' '+custSeg(c.segment)+'</div><div class="ds">🔒 locked under your shop · your CRM</div></div>'
     +'<div class="db">'
     + grp('Identity &amp; contact',
