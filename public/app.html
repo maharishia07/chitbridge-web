@@ -2349,6 +2349,91 @@ function toggleSelect(){UI.selectMode=!UI.selectMode;if(!UI.selectMode)UI.select
 function actionTargets(){ if(UI.selectMode && UI.selected.size) return [...UI.selected]; if(UI.sel) return [UI.sel]; return []; }
 function needTarget(){ const t=actionTargets(); if(!t.length) toast("Open a chit — or tick some in Select — first."); return t; }
 let MODALS={};
+
+/* ===== movable panels (drag / resize / font, persisted) ===== */
+/* makeMovable(panel, opts) — make a panel draggable + resizable + font-adjustable, geometry persisted per opts.key.
+   Best-effort & idempotent: if anything throws it never breaks the panel. Adds a grip + A-/A+ (top-left) and a
+   corner resize handle. opts: { key, minW, minH }. Uses CSS zoom for font scale (Chromium/Edge/Safari). */
+function makeMovable(panel, opts){
+  opts = opts || {};
+  try{
+    if(!panel || panel.getAttribute('data-movable')) return;
+    panel.setAttribute('data-movable','1');
+    var key = opts.key || 'cb_panel', minW = opts.minW || 280, minH = opts.minH || 160;
+    if(getComputedStyle(panel).position === 'static') panel.style.position = 'relative';
+    var saved = null; try{ saved = JSON.parse(localStorage.getItem(key) || 'null'); }catch(e){}
+    var fs = (saved && saved.fs) || 1;
+    function save(){ try{ localStorage.setItem(key, JSON.stringify({
+      left: parseFloat(panel.style.left), top: parseFloat(panel.style.top),
+      width: parseFloat(panel.style.width), height: parseFloat(panel.style.height), fs: fs })); }catch(e){} }
+    function clampIntoView(){
+      var r = panel.getBoundingClientRect();
+      var l = parseFloat(panel.style.left), t = parseFloat(panel.style.top);
+      if(!isNaN(l)) panel.style.left = Math.min(Math.max(0, l), Math.max(0, window.innerWidth - r.width)) + 'px';
+      if(!isNaN(t)) panel.style.top  = Math.min(Math.max(0, t), Math.max(0, window.innerHeight - r.height)) + 'px';
+    }
+    function floatOut(){ var r = panel.getBoundingClientRect();
+      panel.style.position = 'fixed'; panel.style.margin = '0'; panel.style.right = 'auto'; panel.style.bottom = 'auto';
+      if(!panel.style.left)  panel.style.left  = r.left + 'px';
+      if(!panel.style.top)   panel.style.top   = r.top + 'px';
+      if(!panel.style.width) panel.style.width = r.width + 'px';
+    }
+    // control bar: grip + A-/A+
+    var bar = document.createElement('div');
+    bar.setAttribute('data-mv','bar');
+    bar.style.cssText = 'position:absolute;top:6px;left:8px;display:flex;gap:4px;align-items:center;z-index:6';
+    var grip = document.createElement('span'); grip.textContent = '⠿'; grip.title = 'Drag';
+    grip.style.cssText = 'cursor:grab;color:#9aa3a7;font-size:14px;line-height:1;user-select:none;padding:2px 3px';
+    var btn = function(t, ti, fn){ var b = document.createElement('button'); b.type = 'button'; b.title = ti; b.textContent = t;
+      b.style.cssText = 'border:1px solid rgba(0,0,0,.13);background:rgba(255,255,255,.92);cursor:pointer;border-radius:5px;width:22px;height:22px;font-size:11px;font-weight:700;color:#5a6472;line-height:1;padding:0';
+      b.onmousedown = function(e){ e.stopPropagation(); };
+      b.onclick = function(e){ e.stopPropagation(); e.preventDefault(); fn(); }; return b; };
+    function setFs(d){ fs = Math.max(0.8, Math.min(1.6, Math.round((fs + d) * 100) / 100)); panel.style.zoom = fs; save(); }
+    bar.appendChild(grip);
+    bar.appendChild(btn('A−','Smaller text', function(){ setFs(-0.1); }));
+    bar.appendChild(btn('A+','Larger text', function(){ setFs(0.1); }));
+    panel.appendChild(bar);
+    // drag by grip
+    var d = null;
+    function dmove(e){ if(!d) return; panel.style.left = (d.l + e.clientX - d.x) + 'px'; panel.style.top = (d.t + e.clientY - d.y) + 'px'; }
+    function dup(){ if(!d) return; d = null; grip.style.cursor = 'grab'; clampIntoView(); save();
+      document.removeEventListener('mousemove', dmove); document.removeEventListener('mouseup', dup); }
+    grip.addEventListener('mousedown', function(e){ floatOut(); var r = panel.getBoundingClientRect();
+      d = { x: e.clientX, y: e.clientY, l: r.left, t: r.top }; grip.style.cursor = 'grabbing';
+      document.addEventListener('mousemove', dmove); document.addEventListener('mouseup', dup); e.preventDefault(); });
+    // resize corner
+    var rz = document.createElement('div'); rz.setAttribute('data-mv','rz');
+    rz.style.cssText = 'position:absolute;right:2px;bottom:2px;width:16px;height:16px;cursor:nwse-resize;z-index:6;background:linear-gradient(135deg,transparent 48%,rgba(0,0,0,.22) 48%);border-radius:0 0 8px 0';
+    panel.appendChild(rz);
+    var z = null;
+    function zmove(e){ if(!z) return; panel.style.width = Math.max(minW, z.w + e.clientX - z.x) + 'px';
+      panel.style.height = Math.max(minH, z.h + e.clientY - z.y) + 'px'; panel.style.maxHeight = 'none'; }
+    function zup(){ if(!z) return; z = null; save(); document.removeEventListener('mousemove', zmove); document.removeEventListener('mouseup', zup); }
+    rz.addEventListener('mousedown', function(e){ floatOut(); var r = panel.getBoundingClientRect();
+      z = { x: e.clientX, y: e.clientY, w: r.width, h: r.height };
+      document.addEventListener('mousemove', zmove); document.addEventListener('mouseup', zup); e.preventDefault(); e.stopPropagation(); });
+    // restore saved geometry
+    if(saved){ panel.style.position = 'fixed'; panel.style.margin = '0'; panel.style.right = 'auto'; panel.style.bottom = 'auto';
+      if(saved.left  != null && !isNaN(saved.left))  panel.style.left = saved.left + 'px';
+      if(saved.top   != null && !isNaN(saved.top))   panel.style.top = saved.top + 'px';
+      if(saved.width != null && !isNaN(saved.width)) panel.style.width = saved.width + 'px';
+      if(saved.height!= null && !isNaN(saved.height)){ panel.style.height = saved.height + 'px'; panel.style.maxHeight = 'none'; }
+      if(saved.fs != null){ fs = saved.fs; panel.style.zoom = fs; }
+      clampIntoView();
+    }
+  }catch(e){ /* best-effort — never break the panel */ }
+}
+
+/* movable-panels: apply makeMovable to the compose/large modal + the assistant when they appear (best-effort, idempotent). */
+(function(){
+  function tryMove(){
+    try{ var mp=document.querySelector('#modalhost .modal'); if(mp && !mp.getAttribute('data-movable') && mp.getBoundingClientRect().height>300) makeMovable(mp,{key:'cb_modal',minW:340,minH:260}); }catch(e){}
+    try{ var ap=document.querySelector('#assisthost > div'); if(ap && !ap.getAttribute('data-movable')) makeMovable(ap,{key:'cb_assist',minW:300,minH:220}); }catch(e){}
+  }
+  function start(){ try{ new MutationObserver(tryMove).observe(document.body,{childList:true,subtree:true}); }catch(e){} }
+  if(document.body) start(); else document.addEventListener('DOMContentLoaded', start);
+})();
+
 function modal(html, wide){ const h=document.getElementById("modalhost"); if(!h)return; UI._composeModal=false; h.style.display=''; h.innerHTML=`<div class="mover" onclick="modalBackdrop()"><div class="modal${wide?' wide':''}" onclick="event.stopPropagation()"><button class="mx" onclick="closeModal()" aria-label="Close" title="Close">✕</button>${html}</div></div>`; }
 function modalBackdrop(){ if(UI._composeModal){ minimiseCompose(); } else { closeModal(); } }
 function minimiseCompose(){ const h=document.getElementById("modalhost"); if(!h)return; h.style.display='none'; UI._composeMin=true; renderComposePill(); toast('Compose minimised — tap “Resume compose” to continue.'); }
