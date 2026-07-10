@@ -44,7 +44,7 @@ var _FIN=[]; var _ord=null; var _lg={}; var _SHOPDATA=null;
 var _REGIONS=[]; var _REGION='IN';
 var _CUR={INR:'₹',MXN:'Mex$',USD:'$',EUR:'€',CNY:'¥',JPY:'¥'};
 var _FX={INR:1,MXN:0.20,USD:0.012,EUR:0.011,CNY:0.087,JPY:1.8};   // indicative FX (INR-base) — real FX is the ERP's job
-var _FLAG={IN:'🇮🇳',MX:'🇲🇽',US:'🇺🇸',EU:'🇪🇺',CN:'🇨🇳',JP:'🇯🇵',ES:'🇪🇸',FR:'🇫🇷',DE:'🇩🇪'};
+var _FLAG={IN:'🇮🇳',TN:'🇮🇳',HI:'🇮🇳',MX:'🇲🇽',US:'🇺🇸',EU:'🇪🇺',CN:'🇨🇳',JP:'🇯🇵',ES:'🇪🇸',FR:'🇫🇷',DE:'🇩🇪'};
 // per-language phrases — the catalogue labels render in the region's language (character variation zh/ja, word variation es/fr/de)
 var _L={
   en:{wall:'See it on your wall',order:'Order this →',combos:'Colour combinations',applied:'Applied with',por:'price on request'},
@@ -52,7 +52,9 @@ var _L={
   zh:{wall:'在您的墙上预览',order:'立即订购 →',combos:'配色方案',applied:'施工工具',por:'价格面议'},
   ja:{wall:'あなたの壁で見る',order:'注文する →',combos:'カラーの組み合わせ',applied:'塗装方法',por:'価格はお問い合わせ'},
   fr:{wall:'Voyez-le sur votre mur',order:'Commander →',combos:'Combinaisons de couleurs',applied:'Appliqué avec',por:'prix sur demande'},
-  de:{wall:'An Ihrer Wand ansehen',order:'Bestellen →',combos:'Farbkombinationen',applied:'Aufgetragen mit',por:'Preis auf Anfrage'}
+  de:{wall:'An Ihrer Wand ansehen',order:'Bestellen →',combos:'Farbkombinationen',applied:'Aufgetragen mit',por:'Preis auf Anfrage'},
+  ta:{wall:'உங்கள் சுவரில் பாருங்கள்',order:'ஆர்டர் செய்யவும் →',combos:'வண்ண சேர்க்கைகள்',applied:'பூசும் முறை',por:'விலை கோரிக்கையின் பேரில்'},
+  hi:{wall:'इसे अपनी दीवार पर देखें',order:'ऑर्डर करें →',combos:'रंग संयोजन',applied:'लगाने का तरीका',por:'कीमत अनुरोध पर'}
 };
 function tlang(){ var rc=regionCur(); return rc.language||'en'; }
 function t(k){ var l=tlang(); return (_L[l]&&_L[l][k])||_L.en[k]||k; }
