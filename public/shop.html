@@ -42,14 +42,25 @@ var API = (new URLSearchParams(location.search).get('api')) || 'https://chitbrid
 var BRIDGE = (new URLSearchParams(location.search).get('bridge') || '').trim();
 var _FIN=[]; var _ord=null; var _lg={}; var _SHOPDATA=null;
 var _REGIONS=[]; var _REGION='IN';
-var _CUR={INR:'₹',MXN:'Mex$',USD:'$',EUR:'€'};
-var _FX={INR:1,MXN:0.20,USD:0.012,EUR:0.011};   // indicative FX (INR-base) — real FX is the ERP's job
-var _FLAG={IN:'🇮🇳',MX:'🇲🇽',US:'🇺🇸',EU:'🇪🇺'};
+var _CUR={INR:'₹',MXN:'Mex$',USD:'$',EUR:'€',CNY:'¥',JPY:'¥'};
+var _FX={INR:1,MXN:0.20,USD:0.012,EUR:0.011,CNY:0.087,JPY:1.8};   // indicative FX (INR-base) — real FX is the ERP's job
+var _FLAG={IN:'🇮🇳',MX:'🇲🇽',US:'🇺🇸',EU:'🇪🇺',CN:'🇨🇳',JP:'🇯🇵',ES:'🇪🇸',FR:'🇫🇷',DE:'🇩🇪'};
+// per-language phrases — the catalogue labels render in the region's language (character variation zh/ja, word variation es/fr/de)
+var _L={
+  en:{wall:'See it on your wall',order:'Order this →',combos:'Colour combinations',applied:'Applied with',por:'price on request'},
+  es:{wall:'Míralo en tu pared',order:'Pedir esto →',combos:'Combinaciones de color',applied:'Aplicado con',por:'precio a consultar'},
+  zh:{wall:'在您的墙上预览',order:'立即订购 →',combos:'配色方案',applied:'施工工具',por:'价格面议'},
+  ja:{wall:'あなたの壁で見る',order:'注文する →',combos:'カラーの組み合わせ',applied:'塗装方法',por:'価格はお問い合わせ'},
+  fr:{wall:'Voyez-le sur votre mur',order:'Commander →',combos:'Combinaisons de couleurs',applied:'Appliqué avec',por:'prix sur demande'},
+  de:{wall:'An Ihrer Wand ansehen',order:'Bestellen →',combos:'Farbkombinationen',applied:'Aufgetragen mit',por:'Preis auf Anfrage'}
+};
+function tlang(){ var rc=regionCur(); return rc.language||'en'; }
+function t(k){ var l=tlang(); return (_L[l]&&_L[l][k])||_L.en[k]||k; }
 function regionCur(){ return _REGIONS.find(function(r){return r.region_code===_REGION;})||{}; }
 function priceSym(){ var rc=regionCur(); return _CUR[rc.currency]||rc.currency||'₹'; }
 function priceUnit(){ var rc=regionCur(); return rc.units||'litre'; }
 function priceVal(price){ var rc=regionCur(); return Math.round(price*(_FX[rc.currency]||1)); }
-function finishPrice(price){ if(price==null) return '<small>price on request</small>'; return priceSym()+esc(String(priceVal(price)))+' <small>/ '+esc(priceUnit())+' · indicative</small>'; }
+function finishPrice(price){ if(price==null) return '<small>'+t('por')+'</small>'; return priceSym()+esc(String(priceVal(price)))+' <small>/ '+esc(priceUnit())+' · indicative</small>'; }
 function setRegion(code){ _REGION=code; if(_SHOPDATA) render(_SHOPDATA); }
 function regionBar(){
   if(!_REGIONS.length) return '';
@@ -72,12 +83,12 @@ function finishCard(it, cur, idx, vizEnabled){
     +'<div style="display:flex;align-items:baseline;gap:8px"><span class="fname sg">'+esc(it.name)+'</span><span class="meta">'+esc(it.scale||'')+(it.sheen?(' · '+esc(it.sheen)):'')+'</span></div>'
     +'<div class="story">'+esc(it.inspiration||'')+'</div>'
     +'<div>'+chips+'</div>'
-    +'<div class="cclabel">Colour combinations</div>'+((it.combinations||[]).map(comboHtml).join(''))
-    +'<div class="apply">Applied with '+((it.tools||[]).join(', '))+' · '+esc(it.coats||'')+'</div>'
+    +'<div class="cclabel">'+t('combos')+'</div>'+((it.combinations||[]).map(comboHtml).join(''))
+    +'<div class="apply">'+t('applied')+' '+((it.tools||[]).join(', '))+' · '+esc(it.coats||'')+'</div>'
     +'<div class="price">'+finishPrice(price)+'</div>'
     +'<div style="margin-top:10px">'
-    +(vizEnabled&&idx!=null?'<button onclick="vizOpen('+idx+')" style="margin:0 8px 0 0;border:1px solid #6a44a8;background:#F0EAF9;color:#6a44a8;border-radius:9px;padding:9px 16px;font-weight:700;font-size:13px;cursor:pointer">✨ See it on your wall</button>':'')
-    +(price!=null&&idx!=null?'<button onclick="orderOpen('+idx+')" style="border:0;border-radius:9px;padding:9px 18px;background:#3F66A6;color:#fff;font-weight:700;font-size:13px;cursor:pointer">Order this →</button>':'')
+    +(vizEnabled&&idx!=null?'<button onclick="vizOpen('+idx+')" style="margin:0 8px 0 0;border:1px solid #6a44a8;background:#F0EAF9;color:#6a44a8;border-radius:9px;padding:9px 16px;font-weight:700;font-size:13px;cursor:pointer">✨ '+t('wall')+'</button>':'')
+    +(price!=null&&idx!=null?'<button onclick="orderOpen('+idx+')" style="border:0;border-radius:9px;padding:9px 18px;background:#3F66A6;color:#fff;font-weight:700;font-size:13px;cursor:pointer">'+t('order')+'</button>':'')
     +'</div></div>';
 }
 function productRow(p, cur){ var d=(p.item_data||p)||{}; return '<div class="prow"><div style="flex:1"><b>'+esc(d.name||d.product||'item')+'</b> <span class="meta">'+esc(d.unit||'')+'</span></div><div style="font-weight:700">'+(d.price!=null?(priceSym()+esc(String(priceVal(d.price)))):'—')+'</div></div>'; }
