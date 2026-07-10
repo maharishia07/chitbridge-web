@@ -2033,14 +2033,28 @@ function paintCustDetail(){ var dp=document.getElementById('detailpane'); if(dp)
 function selectCust(id){ UI.custSel=id; if(UI.vp==='mob'){ UI.mdetail=true; var p=document.getElementById('panel'); if(p)p.classList.add('showdetail'); } paintCustList(); paintCustDetail(); }
 function custDetailHTML(){ var c=(UI.custs||[]).find(function(x){return x.customer_identity_id===UI.custSel;});
   if(!c) return '<div class="empty"><div class="big">🛍️</div><div class="t">Select a customer</div><div>Your storefront customers — locked under your shop, yours alone.</div></div>';
-  var kv=function(l,v){return '<div class="kv" style="display:flex;gap:8px;padding:9px 13px;border-bottom:1px dashed var(--line);font-size:13px"><b style="min-width:110px;color:var(--grey);font-weight:600;font-size:10.5px;text-transform:uppercase">'+l+'</b><span style="font-weight:600;flex:1">'+(v==null||v===''?'—':v)+'</span></div>';};
-  return '<div class="dh"><button class="dback" onclick="backToList()">‹ Customers</button><div class="dt">'+esc(c.display_name||custContact(c))+' '+custSeg(c.segment)+'</div><div class="ds">🔒 locked under your shop · your CRM</div></div>'
-    +'<div class="db"><div class="sec">Customer</div><div class="itab" style="border:1px solid var(--line);border-radius:11px;overflow:hidden">'
-    +kv('Name',esc(c.display_name||'—'))+kv('Contact','<span class="mono">'+esc(custContact(c))+'</span>')
-    +kv('Under-shop id','<span class="mono" style="font-size:11px">'+esc(c.email||'')+'</span>')
-    +kv('Segment',custSeg(c.segment))+kv('Orders',(c.txn_count||0)+'')
-    +kv('Last order',c.last_txn_at?esc(custDate(c.last_txn_at)):'—')+kv('Added via',esc(c.added_via||'—'))
-    +'</div><div style="font-size:11px;color:var(--grey);margin-top:10px;line-height:1.5">Signed in / ordered through your storefront. This customer exists <b>only under your shop</b> — the platform never shares them with anyone else.</div></div>';
+  var kv=function(l,v){return '<div class="kv" style="display:flex;gap:8px;padding:9px 13px;border-bottom:1px dashed var(--line);font-size:13px"><b style="min-width:112px;color:var(--grey);font-weight:600;font-size:10.5px;text-transform:uppercase">'+l+'</b><span style="font-weight:600;flex:1">'+(v==null||v===''?'—':v)+'</span></div>';};
+  var mono=function(v){return '<span class="mono" style="font-size:11px">'+esc(v||'')+'</span>';};
+  var grp=function(t,rows){return '<div class="sec">'+t+'</div><div class="itab" style="border:1px solid var(--line);border-radius:11px;overflow:hidden;margin-bottom:12px">'+rows+'</div>';};
+  var contact=c.otp_contact||c.phone||custContact(c);
+  var isPhone=(c.otp_contact&&/[0-9]{6,}/.test(String(c.otp_contact)))||(!c.otp_contact&&!!c.phone);
+  var chan=isPhone?'📱 Phone':'✉️ Email';
+  return '<div class="dh"><button class="dback" onclick="backToList()">‹ Customers</button><div class="dt">'+esc(c.display_name||contact)+' '+custSeg(c.segment)+'</div><div class="ds">🔒 locked under your shop · your CRM</div></div>'
+    +'<div class="db">'
+    + grp('Identity &amp; contact',
+        kv('Name',esc(c.display_name||'—'))
+        +kv('Channel',chan)
+        +kv('Contact',mono(contact))
+        +(c.phone?kv('Phone',mono(c.phone)):'')
+        +kv('Under-shop id',mono(c.email))
+        +kv('Bridge id',mono(c.bridge_id)))
+    + grp('Activity',
+        kv('Orders',(c.txn_count||0)+'')
+        +kv('Last order',c.last_txn_at?esc(custDate(c.last_txn_at)):'—')
+        +kv('Joined',c.customer_since?esc(custDate(c.customer_since)):'—')
+        +kv('Segment',custSeg(c.segment))
+        +kv('Added via',esc(c.added_via||'—')))
+    +'<div style="font-size:11px;color:var(--grey);margin-top:2px;line-height:1.5">Signed in / ordered through your storefront. This customer exists <b>only under your shop</b> — the platform never shares them with anyone else.</div></div>';
 }
 async function loadCustomers(){ UI._custLoading=true; var rb=document.getElementById('cu_rows'); if(rb)rb.innerHTML='<div class="loadwrap"><span class="spin"></span> loading…</div>';
   try{ var r=await api('custList'); UI.custs=(r&&r.customers)||(Array.isArray(r)?r:[]); UI._custLoading=false; paintCustList();
