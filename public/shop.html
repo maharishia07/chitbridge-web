@@ -41,6 +41,26 @@
 var API = (new URLSearchParams(location.search).get('api')) || 'https://chitbridge-api-production.up.railway.app';
 var BRIDGE = (new URLSearchParams(location.search).get('bridge') || '').trim();
 var _FIN=[]; var _ord=null; var _lg={}; var _SHOPDATA=null;
+var _REGIONS=[]; var _REGION='IN';
+var _CUR={INR:'₹',MXN:'Mex$',USD:'$',EUR:'€'};
+var _FX={INR:1,MXN:0.20,USD:0.012,EUR:0.011};   // indicative FX (INR-base) — real FX is the ERP's job
+var _FLAG={IN:'🇮🇳',MX:'🇲🇽',US:'🇺🇸',EU:'🇪🇺'};
+function regionCur(){ return _REGIONS.find(function(r){return r.region_code===_REGION;})||{}; }
+function priceSym(){ var rc=regionCur(); return _CUR[rc.currency]||rc.currency||'₹'; }
+function priceUnit(){ var rc=regionCur(); return rc.units||'litre'; }
+function priceVal(price){ var rc=regionCur(); return Math.round(price*(_FX[rc.currency]||1)); }
+function finishPrice(price){ if(price==null) return '<small>price on request</small>'; return priceSym()+esc(String(priceVal(price)))+' <small>/ '+esc(priceUnit())+' · indicative</small>'; }
+function setRegion(code){ _REGION=code; if(_SHOPDATA) render(_SHOPDATA); }
+function regionBar(){
+  if(!_REGIONS.length) return '';
+  var rc=regionCur();
+  var btns=_REGIONS.map(function(r){ var on=r.region_code===_REGION; return '<button onclick="setRegion(\''+r.region_code+'\')" style="border:'+(on?'2px solid #3F66A6':'1px solid #e7e3d8')+';background:'+(on?'#eef4fc':'#fff')+';border-radius:9px;padding:5px 11px;margin:0 6px 6px 0;cursor:pointer;font-size:13px;font-weight:600">'+((_FLAG[r.region_code]||'🌐')+' '+esc(r.region_code))+'</button>'; }).join('');
+  return '<div style="margin:0 0 16px;padding:11px 13px;background:#f4f6f8;border:1px solid var(--line);border-radius:12px">'
+    +'<div style="font-size:11px;color:var(--grey);margin-bottom:7px">🌐 Spin the globe — see this catalogue for a customer in:</div>'
+    +'<div style="display:flex;flex-wrap:wrap;align-items:center">'+btns+'</div>'
+    +'<div style="font-size:12px;color:#3a4048;margin-top:6px">Showing for <b>'+(_FLAG[_REGION]||'')+' '+esc(_REGION)+'</b> · currency <b>'+esc(rc.currency||'')+'</b> ('+esc(priceSym())+') · unit <b>'+esc(rc.units||'')+'</b> · language <b>'+esc(rc.language||'')+'</b>'+((rc.jurisdiction&&rc.jurisdiction.compliance)?(' · <span style="color:#b4453f">'+esc(rc.jurisdiction.compliance)+'</span>'):'')+'</div>'
+    +'</div>';
+}
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
 function el(id){ return document.getElementById(id); }
 function swatch(c){ return '<span class="dot" title="'+esc((c.name||'')+' '+(c.hex||''))+'" style="background:'+esc(c.hex||'#ccc')+'"></span>'; }
@@ -54,13 +74,13 @@ function finishCard(it, cur, idx, vizEnabled){
     +'<div>'+chips+'</div>'
     +'<div class="cclabel">Colour combinations</div>'+((it.combinations||[]).map(comboHtml).join(''))
     +'<div class="apply">Applied with '+((it.tools||[]).join(', '))+' · '+esc(it.coats||'')+'</div>'
-    +'<div class="price">'+(price!=null?((cur||'₹')+esc(String(price))+' <small>/ litre</small>'):'<small>price on request</small>')+'</div>'
+    +'<div class="price">'+finishPrice(price)+'</div>'
     +'<div style="margin-top:10px">'
     +(vizEnabled&&idx!=null?'<button onclick="vizOpen('+idx+')" style="margin:0 8px 0 0;border:1px solid #6a44a8;background:#F0EAF9;color:#6a44a8;border-radius:9px;padding:9px 16px;font-weight:700;font-size:13px;cursor:pointer">✨ See it on your wall</button>':'')
     +(price!=null&&idx!=null?'<button onclick="orderOpen('+idx+')" style="border:0;border-radius:9px;padding:9px 18px;background:#3F66A6;color:#fff;font-weight:700;font-size:13px;cursor:pointer">Order this →</button>':'')
     +'</div></div>';
 }
-function productRow(p, cur){ var d=(p.item_data||p)||{}; return '<div class="prow"><div style="flex:1"><b>'+esc(d.name||d.product||'item')+'</b> <span class="meta">'+esc(d.unit||'')+'</span></div><div style="font-weight:700">'+(d.price!=null?((cur||'₹')+esc(String(d.price))):'—')+'</div></div>'; }
+function productRow(p, cur){ var d=(p.item_data||p)||{}; return '<div class="prow"><div style="flex:1"><b>'+esc(d.name||d.product||'item')+'</b> <span class="meta">'+esc(d.unit||'')+'</span></div><div style="font-weight:700">'+(d.price!=null?(priceSym()+esc(String(priceVal(d.price)))):'—')+'</div></div>'; }
 function render(data){
   var s=data.shop||{}, cur=(s.currency_code==='INR'||!s.currency_code)?'₹':(s.currency_code+' ');
   var statusBadge = s.business_status==='closed' ? '<span class="badge b-closed">Closed</span>' : (s.business_status==='away'?'<span class="badge b-away">Away</span>':'<span class="badge b-open">Open</span>');
@@ -75,7 +95,7 @@ function render(data){
   var prods=(data.items||[]);
   var prodHtml = prods.length ? ('<div class="sechd" style="color:var(--grey)">🗂️ Products</div>'+prods.map(function(p){return productRow(p,cur);}).join('')) : '';
   var enq = '<div class="enq">Pick a finish, choose a colour combination and quantity, and order with just your phone or email.</div>';
-  el('app').innerHTML = head + finHtml + prodHtml + (finHtml||prodHtml?enq:'<div class="msg">This shop has nothing on display yet.</div>')
+  el('app').innerHTML = head + regionBar() + finHtml + prodHtml + (finHtml||prodHtml?enq:'<div class="msg">This shop has nothing on display yet.</div>')
     + '<div class="foot">Powered by <b>Chit &amp; Bridge</b> · a governed rail. Design &amp; colour shown are referenced from the brand catalogue; prices are set by the shop.</div>';
 }
 // ── Login-first gate (storefront_access==='login'): customer signs in (phone/email + OTP) before browsing. ──
@@ -184,9 +204,12 @@ function vizDraw(combo){ var cv=el('viz_canvas'); if(!cv||!_VIZ.img)return; var 
 function vizToOrder(){ var idx=_VIZ.idx, comboName=_VIZ.combo&&_VIZ.combo.name; vizClose(); _ord={idx:idx, step:'contact', combo:comboName}; orderRender(); }
 (function(){
   if(!BRIDGE){ el('app').innerHTML='<div class="msg">No shop specified. Use a link like <b>shop.html?bridge=CBXXXXXXXX</b></div>'; return; }
-  fetch(API+'/api/catalogue/'+encodeURIComponent(BRIDGE)).then(function(r){ return r.json().then(function(j){ return {status:r.status, j:j}; }); })
-    .then(function(res){ if(res.status!==200){ el('app').innerHTML='<div class="msg">'+esc((res.j&&res.j.message)||'Shop not found or has no public catalogue.')+'</div>'; return; } _SHOPDATA=res.j; if(res.j.shop&&res.j.shop.storefront_access==='login'){ renderLoginGate(res.j.shop); } else { render(res.j); } })
-    .catch(function(e){ el('app').innerHTML='<div class="msg">Could not reach the shop. '+esc(e.message||'')+'</div>'; });
+  // load the region layers first (for the spin-the-globe switcher), then the shop
+  fetch(API+'/api/assist/regions').then(function(r){return r.json();}).then(function(j){ _REGIONS=(j&&j.regions)||[]; if(_REGIONS.length && !_REGIONS.find(function(x){return x.region_code===_REGION;})) _REGION=_REGIONS[0].region_code; }).catch(function(){}).then(function(){
+    fetch(API+'/api/catalogue/'+encodeURIComponent(BRIDGE)).then(function(r){ return r.json().then(function(j){ return {status:r.status, j:j}; }); })
+      .then(function(res){ if(res.status!==200){ el('app').innerHTML='<div class="msg">'+esc((res.j&&res.j.message)||'Shop not found or has no public catalogue.')+'</div>'; return; } _SHOPDATA=res.j; if(res.j.shop&&res.j.shop.storefront_access==='login'){ renderLoginGate(res.j.shop); } else { render(res.j); } })
+      .catch(function(e){ el('app').innerHTML='<div class="msg">Could not reach the shop. '+esc(e.message||'')+'</div>'; });
+  });
 })();
 </script>
 </body>
