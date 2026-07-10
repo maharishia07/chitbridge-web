@@ -123,6 +123,7 @@ function orderRender(msg, err){
     +'<label style="font-size:12px;color:#6a707a">Colour combination</label><select id="o_combo" '+fld+'>'+comboOpts+'</select>'
     +'<label style="font-size:12px;color:#6a707a">Quantity (litres)'+(minL?' <span style="color:#9aa3a7">· min '+minL+' L (set by the brand)</span>':'')+'</label><input id="o_qty" inputmode="decimal" value="'+esc(_ord.qty||String(minL||1))+'" '+fld+'>'
     +'<label style="font-size:12px;color:#6a707a">Your name</label><input id="o_name" placeholder="optional" value="'+esc(_ord.name||'')+'" '+fld+'>'
+    +'<label style="font-size:12px;color:#6a707a">Your area — pincode or city <span style="color:#9aa3a7">· optional</span></label><input id="o_loc" placeholder="e.g. 560001 or Bengaluru" value="'+esc(_ord.loc||'')+'" '+fld+'>'
     +'<label style="font-size:12px;color:#6a707a">Phone or email</label><input id="o_contact" placeholder="9876543210 or you@email.com" '+(otpStep?'disabled':'')+' value="'+esc(_ord.contact||'')+'" '+fld+'>'
     +(otpStep?('<label style="font-size:12px;color:#6a707a">6-digit code sent to you</label><input id="o_otp" inputmode="numeric" maxlength="6" value="'+esc(_ord.otp||_ord.dev_otp||'')+'" '+fld+'>'):'')
     +(err?'<div style="color:#b4453f;font-size:12.5px;margin-bottom:8px">'+esc(err)+'</div>':'')
@@ -134,7 +135,7 @@ function orderRender(msg, err){
     +'</div></div>';
   ohost().innerHTML=h;
 }
-function _ocap(){ if(el('o_combo'))_ord.combo=el('o_combo').value; if(el('o_qty'))_ord.qty=el('o_qty').value; if(el('o_name'))_ord.name=(el('o_name').value||'').trim(); if(el('o_contact'))_ord.contact=(el('o_contact').value||'').trim(); if(el('o_otp'))_ord.otp=el('o_otp').value; }
+function _ocap(){ if(el('o_combo'))_ord.combo=el('o_combo').value; if(el('o_qty'))_ord.qty=el('o_qty').value; if(el('o_name'))_ord.name=(el('o_name').value||'').trim(); if(el('o_loc'))_ord.loc=(el('o_loc').value||'').trim(); if(el('o_contact'))_ord.contact=(el('o_contact').value||'').trim(); if(el('o_otp'))_ord.otp=el('o_otp').value; }
 function orderStart(){
   if(_ord.busy)return; _ocap(); if(!_ord.contact){ orderRender(null,'Enter a phone or email.'); return; }
   _ord.busy=true; orderRender();
@@ -146,7 +147,7 @@ function orderStart(){
 function orderConfirm(){
   if(_ord.busy)return; _ocap(); var otp=(_ord.otp||'').trim(); if(otp.length!==6){ orderRender(null,'Enter the 6-digit code.'); return; }
   var e=_FIN[_ord.idx], it=e.it, qty=Number(_ord.qty);
-  var body={ identifier:_ord.contact, name:_ord.name, otp:otp, line_items:[{kind:'finish', source:e.source, finish:it.name, combination:_ord.combo, quantity:qty}] };
+  var body={ identifier:_ord.contact, name:_ord.name, otp:otp, location:_ord.loc||'', line_items:[{kind:'finish', source:e.source, finish:it.name, combination:_ord.combo, quantity:qty}] };
   _ord.busy=true; orderRender();
   fetch(API+'/api/catalogue/'+encodeURIComponent(BRIDGE)+'/order/confirm',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
     .then(function(r){return r.json().then(function(j){return{status:r.status,j:j};});})
