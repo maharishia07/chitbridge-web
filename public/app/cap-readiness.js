@@ -7,6 +7,7 @@ if (typeof EP !== 'undefined') {
     readinessOwn:    {m:'GET',  p:'/api/governance/readiness',             ok:'y'},
     readinessOf:     {m:'GET',  p:'/api/governance/readiness/:bridge_id',  ok:'y'},
     readinessGather: {m:'POST', p:'/api/governance/compliance',            ok:'y'},
+    lanes:           {m:'GET',  p:'/api/governance/lanes',                 ok:'y'},
   });
 }
 async function loadReadiness(){
@@ -36,7 +37,8 @@ function _rdItem(it){
   return '<div style="display:flex;align-items:center;gap:11px;border:1px solid var(--line);border-radius:11px;background:#fff;padding:10px 13px;margin-bottom:8px">'
     +'<div style="width:23px;height:23px;border-radius:7px;display:grid;place-items:center;font-size:12px;font-weight:800;background:'+m.col+'22;color:'+m.col+';flex:0 0 auto">'+m.ic+'</div>'
     +'<div style="min-width:0"><div style="font-weight:650;font-size:13.5px">'+esc(it.title||it.doc)+'</div>'
-      +'<div style="font-size:11.5px;color:var(--grey)">from <span class="mono" style="color:var(--blue)">'+esc(it.standard)+'</span>'+valid+'</div></div>'
+      +'<div style="font-size:11.5px;color:var(--grey)">from <span class="mono" style="color:var(--blue)">'+esc(it.standard)+'</span>'+valid+'</div>'
+      +(it.guidance?'<div style="font-size:11px;color:#9a6a12;margin-top:3px">💡 '+esc(it.guidance)+'</div>':'')+'</div>'
     +act+'</div>';
 }
 function _rdSection(title, list){
@@ -44,22 +46,58 @@ function _rdSection(title, list){
   var met = list.filter(function(i){ return i.status==='gathered'||i.status==='expiring'; }).length;
   return '<div style="font-size:11px;font-weight:800;color:var(--grey);letter-spacing:.05em;margin:18px 2px 9px;display:flex"><span>'+title+'</span><span style="margin-left:auto;color:'+(met===list.length?'#2f8f5b':'var(--grey)')+'">'+met+' / '+list.length+'</span></div>'+list.map(_rdItem).join('');
 }
-// ── MY READINESS (supplier) ──
+// ── MY READINESS (supplier) — spin the globe: readiness resolved per destination ──
+async function loadLanes(){
+  try{ UI.laneMatrix = await api('lanes', {query:{vertical:'paint', origin:UI.laneOrigin||'IN'}}); }
+  catch(e){ UI.laneMatrix = {error:(e&&e.message)||'Could not load', lanes:[]}; }
+  if(UI.laneMatrix && UI.laneMatrix.lanes && UI.laneMatrix.lanes.length){
+    if(!UI.laneDest || !UI.laneMatrix.lanes.some(function(l){return l.dest_key===UI.laneDest;})) UI.laneDest = UI.laneMatrix.lanes[0].dest_key;
+    loadLaneReadiness(UI.laneDest);
+  }
+  if(typeof renderApp==='function') renderApp();
+}
+async function loadLaneReadiness(dest){
+  UI.laneRd = undefined;
+  try{ UI.laneRd = await api('readinessOwn', {query:{destination:dest, vertical:'paint', origin:UI.laneOrigin||'IN'}}); }
+  catch(e){ UI.laneRd = {error:(e&&e.message)||'Could not load'}; }
+  if(typeof renderApp==='function') renderApp();
+}
+function setLaneDest(dest){ UI.laneDest=dest; UI.laneRd=undefined; if(typeof renderApp==='function')renderApp(); loadLaneReadiness(dest); }
+function setLaneOrigin(o){ UI.laneOrigin=o; UI.laneMatrix=undefined; UI.laneRd=undefined; if(typeof renderApp==='function')renderApp(); loadLanes(); }
+function _rdOriginSel(){
+  var o = UI.laneOrigin||'IN', opts = [['IN','India'],['EU','European Union'],['US','United States'],['GULF','Gulf (GCC)']];
+  return '<span style="font-size:12px;color:var(--grey)">Home country: </span><select onchange="setLaneOrigin(this.value)" style="font-size:12.5px;font-weight:700;border:1px solid var(--line);border-radius:8px;padding:5px 8px;background:#fff">'
+    + opts.map(function(x){ return '<option value="'+x[0]+'"'+(x[0]===o?' selected':'')+'>'+x[1]+'</option>'; }).join('') + '</select>';
+}
+function _rdTiles(){
+  var m=UI.laneMatrix; if(!m||!m.lanes) return '';
+  return '<div style="display:flex;gap:9px;flex-wrap:wrap;margin:12px 0 2px">'+m.lanes.map(function(l){
+    var c=l.percent>=100?'#2f8f5b':(l.percent>=80?'#c98a1a':'#c0453b'), on=l.dest_key===UI.laneDest;
+    return '<div onclick="setLaneDest(\''+l.dest_key+'\')" style="flex:1 1 128px;min-width:118px;cursor:pointer;border:1px solid '+(on?'var(--blue)':'var(--line)')+';box-shadow:'+(on?'0 0 0 2px #eef3fb':'none')+';border-radius:12px;background:#fff;padding:11px 10px;text-align:center">'
+      +'<div style="font-size:12px;font-weight:700">'+esc(l.dest_name)+'</div>'
+      +'<div style="width:38px;height:38px;border-radius:50%;margin:7px auto 0;background:conic-gradient('+c+' '+l.percent+'%,var(--line) 0);display:grid;place-items:center;position:relative"><div style="position:absolute;inset:5px;border-radius:50%;background:#fff"></div><b style="position:relative;font-size:11px;color:'+c+'">'+l.percent+'%</b></div>'
+      +'<div style="font-size:10px;font-weight:700;margin-top:5px;color:'+c+'">'+(l.ready?'✓ ready':'◐ '+l.gaps.length+' gap'+(l.gaps.length===1?'':'s'))+'</div></div>';
+  }).join('')+'</div>';
+}
 function _rdMine(){
-  if(UI.readiness===undefined){ loadReadiness(); return (typeof loader==='function' ? loader('Loading trade readiness…') : 'Loading…'); }
-  var rd = UI.readiness||{}, items = rd.clearances||[], s = rd.summary||{};
-  if(rd.error) return (typeof emptyState==='function' ? emptyState('⚠️','Could not load readiness', esc(rd.error)) : esc(rd.error));
-  if(!items.length) return (typeof emptyState==='function' ? emptyState('🛡️','No standards yet','Adopt a boilerplate to inherit its standards, then gather the required clearances here.') : 'No standards yet.');
-  var standing = items.filter(function(i){ return i.scope==='entity'; });
-  var pership  = items.filter(function(i){ return i.scope!=='entity'; });
-  var msg = s.ready ? 'Import-ready — every clearance is met.' : ((s.total-s.met)+' clearance'+((s.total-s.met)===1?'':'s')+' still to gather.');
-  return '<div style="display:flex;gap:16px;align-items:center;border:1px solid var(--line);border-radius:14px;background:#fff;padding:16px 18px;margin-top:12px">'
+  if(UI.laneMatrix===undefined){ loadLanes(); return (typeof loader==='function'?loader('Resolving your markets…'):'Loading…'); }
+  if(UI.laneMatrix.error) return (typeof emptyState==='function'?emptyState('⚠️','Could not load', esc(UI.laneMatrix.error)):esc(UI.laneMatrix.error));
+  var head = '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px">'+_rdOriginSel()+'<span style="font-size:11.5px;color:var(--grey);margin-left:auto">Readiness varies by where you ship →</span></div>'+_rdTiles();
+  var rd = UI.laneRd;
+  if(rd===undefined) return head+(typeof loader==='function'?loader('…'):'');
+  if(rd.error) return head+(typeof emptyState==='function'?emptyState('⚠️','Could not load', esc(rd.error)):'');
+  var items=(rd.clearances)||[], s=(rd.summary)||{};
+  var standing = items.filter(function(i){return i.scope==='entity';});
+  var pership  = items.filter(function(i){return i.scope!=='entity';});
+  var msg = s.ready ? ('Import-ready for '+esc(rd.dest_name)+' — every clearance met.') : ((s.total-s.met)+' clearance'+((s.total-s.met)===1?'':'s')+' to gather for '+esc(rd.dest_name)+'.');
+  return head
+    +'<div style="display:flex;gap:16px;align-items:center;border:1px solid var(--line);border-radius:14px;background:#fff;padding:15px 17px;margin-top:14px">'
       +_rdRing(s.percent)
-      +'<div><div style="font-weight:700;font-size:18px">Trade readiness</div>'
-        +'<div style="font-size:13px;color:var(--grey);margin-top:3px">'+esc(msg)+' Working these <b>is</b> staying compliant — no separate certification chore.</div></div></div>'
+      +'<div><div style="font-weight:700;font-size:16px">Readiness for '+esc(rd.dest_name||'')+'</div>'
+        +'<div style="font-size:12.5px;color:var(--grey);margin-top:3px">'+msg+' Gaps show <b>how to close them</b> below.</div></div></div>'
     +_rdSection('STANDING CERTIFICATIONS', standing)
     +_rdSection('PER-SHIPMENT CLEARANCES', pership)
-    +'<div style="font-size:11.5px;color:var(--grey);margin-top:20px;padding:11px 13px;background:#f7f8fb;border:1px solid var(--line);border-radius:10px">Each row is a clearance your standards require, cascaded from your boilerplate. Gather them all and a buyer viewing your product sees <b>verified confidence</b>.</div>';
+    +'<div style="font-size:11.5px;color:var(--grey);margin-top:20px;padding:11px 13px;background:#f7f8fb;border:1px solid var(--line);border-radius:10px">Requirements are <b>derived per lane</b> (home + destination) — nothing enumerated. Gather what you can; each gap carries guidance to meet the rest.</div>';
 }
 // ── CHECK A SUPPLIER (buyer) ──
 function _rdPassport(d){
@@ -146,7 +184,7 @@ async function submitGather(){
     await api('readinessGather', {body:{standard_key:g.standard, doc_key:g.doc, evidence_ref:(chitId||ref||'recorded'), valid_until:valid, status:'gathered'}});
     if(typeof closeModal==='function') closeModal();
     if(typeof toast==='function') toast(file?'Clearance recorded — document on the rail ✓':'Clearance recorded ✓');
-    UI.readiness = undefined; loadReadiness();
+    UI.laneMatrix = undefined; UI.laneRd = undefined; loadLanes();
   }catch(e){
     if(btn){ btn.disabled=false; btn.textContent='Record clearance on the rail'; }
     if(err) err.textContent=(e&&e.message)||'Failed to record';
