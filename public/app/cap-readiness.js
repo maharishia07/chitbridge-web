@@ -109,11 +109,30 @@ async function checkSupplier(){
   if(typeof renderApp==='function') renderApp();
 }
 function dealFrom(bridge){ if(typeof toast==='function') toast('Confidence confirmed ✓ — start your order'); UI.nav='suppliers'; if(typeof renderApp==='function') renderApp(); }
-async function gatherReadiness(standard, doc){
+function gatherReadiness(standard, doc){
+  var far = new Date(Date.now()+365*86400000).toISOString().slice(0,10);
+  var inS = 'width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:13px;margin:5px 0 13px;box-sizing:border-box';
+  var lbl = 'font-size:11px;font-weight:700;color:var(--grey)';
+  var body = '<div class="mbody" style="padding:16px 18px">'
+    +'<div style="font-size:12.5px;color:var(--grey);margin-bottom:13px">Record the document that satisfies this clearance. It stays <b>private</b> — buyers only see that it\'s met, and its validity.</div>'
+    +'<label style="'+lbl+'">Document reference / number</label>'
+    +'<input id="gd_ref" placeholder="e.g. certificate no. / IEC / SDS ref" style="'+inS+'">'
+    +'<label style="'+lbl+'">Issued by (optional)</label>'
+    +'<input id="gd_by" placeholder="issuing body / authority" style="'+inS+'">'
+    +'<label style="'+lbl+'">Valid until</label>'
+    +'<input id="gd_valid" type="date" value="'+far+'" style="'+inS+'">'
+    +'<button onclick="submitGather(\''+esc(standard)+'\',\''+esc(doc)+'\')" style="width:100%;background:var(--blue);color:#fff;border:0;border-radius:9px;padding:11px;font-weight:700;cursor:pointer">Record clearance</button>'
+    +'</div>';
+  if(typeof modal==='function') modal('<div class="mhd"><div class="t">🛡️ Gather clearance</div></div>'+body);
+}
+async function submitGather(standard, doc){
+  var g = function(id){ var e=document.getElementById(id); return e?(e.value||'').trim():''; };
+  var ref = g('gd_ref'), by = g('gd_by'), valid = g('gd_valid') || null;
+  var evidence = (ref || 'recorded') + (by ? (' · ' + by) : '');
   try{
-    var far = new Date(Date.now()+730*86400000).toISOString().slice(0,10);   // demo validity; a real gather uploads the doc
-    await api('readinessGather', {body:{standard_key:standard, doc_key:doc, evidence_ref:'app://'+doc, valid_until:far}});
-    if(typeof toast==='function') toast('Clearance gathered.');
+    await api('readinessGather', {body:{standard_key:standard, doc_key:doc, evidence_ref:evidence, valid_until:valid, status:'gathered'}});
+    if(typeof closeModal==='function') closeModal();
+    if(typeof toast==='function') toast('Clearance recorded.');
     UI.readiness = undefined; loadReadiness();
-  }catch(e){ if(typeof toast==='function') toast((e&&e.message)||'Gather failed'); }
+  }catch(e){ if(typeof toast==='function') toast((e&&e.message)||'Failed to record'); }
 }
