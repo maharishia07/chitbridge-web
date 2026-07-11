@@ -190,7 +190,8 @@ function _rdTabs(){
 function readinessScreen(){
   var t = UI.rdTab||'mine';
   var content = (t==='check') ? _rdCheck() : _rdMine();
-  return '<div style="max-width:720px;margin:0 auto;padding:12px 14px 40px">'+_rdTabs()+content+'</div>';
+  // scroll container (matches the app's standard screen wrapper) — #mainbody is a flex column, so flex:1+overflow-y:auto scrolls.
+  return '<div style="flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch"><div style="max-width:720px;margin:0 auto;padding:12px 14px 40px">'+_rdTabs()+content+'</div></div>';
 }
 async function checkSupplier(){
   var el = document.getElementById('rd_bridge'); var b = el ? (el.value||'').trim() : '';
