@@ -103,6 +103,24 @@ const CAP_CATALOGUE = [
       {n:'Visualize-apply — "see it on your wall": a cheap client-side recolor loop today; real vision model behind the same UI later', s:'partial'},
       {n:'Real FX · metering / plan-ceiling · real-ERP adapter behind the seam — the L4→L5 gate', s:'backlog'},
     ]},
+  { id:'readiness', name:'Trade ready — compliance + commerce', icon:'🛡️', load:'lazy', maturity:2, target:4,
+    gov:2, govTarget:4, governedUnder:'the destination trade-lane rules + per-copy clearance isolation',
+    governedBy:['derive-not-enumerate lane predicate (origin ∪ destination ∪ universal)','per-entity clearances WITH RLS','honest trust ladder (registry-confirm ≠ format-check)','commerce standards as SEALED source-entities (Incoterms/UCP/FRM, b93)'],
+    govGap:['registry verification is format-only until a KYB key is connected','versioned evidence store (b94) not built','frontend live-run'],
+    blurb:'The supplier’s readiness + the buyer’s confidence: per-destination clearances (spin the globe), a trust ladder (declared→documented→attested→verified), a self-proving reference, and the invariant commercial spine (instruments by FRM risk + the settlement chain). Each topic opens to its lifecycle. Backend harness-proven; the screen needs a human live-run.',
+    features:[
+      {n:'Spin the globe — readiness resolved per DESTINATION (origin ∪ destination ∪ universal); derived, never enumerated (prove-readiness / prove-lanes)', s:'done'},
+      {n:'Trust ladder per clearance — declared → documented → attested → verified (the RUNG is shown, not just met/not-met)', s:'done'},
+      {n:'Machine-verify registry IDs (IEC/GSTN/PAN) — HONEST + KEY-READY: real KYB confirm → verified · format-only → declared · bad → 422 (prove-verify 8/0)', s:'partial'},
+      {n:'Self-proving reference — supplier track record DERIVED from own settled chits, un-fakeable (prove-reference 9/0)', s:'done'},
+      {n:'Commercial cover — EXIM instrument CLUSTER by risk; Incoterm routes cargo cover; mapped to canonical FRM classes (prove-commerce 18/0)', s:'done'},
+      {n:'End-to-end settlement chain — partner type + de-risking instrument per stage', s:'done'},
+      {n:'Commerce standards as SEALED source-entities — Incoterms 2020 / UCP 600 / FRM (b93, prove-commerce-standards 8/0)', s:'done'},
+      {n:'Each topic is a LIFECYCLE — expand → stepper (you-are-here) + evidence + how you use it + how AI enables it (level + gate) + partner + snapshot-on-fold versioning', s:'done'},
+      {n:'Real registry verification — drop a KYB key (Sandbox.co.in etc.); external integration, human-gated', s:'backlog'},
+      {n:'Versioned evidence store (b94) — issuing-body cert link + shareable link + audit outcome + maintenance milestones, frozen on fold (SPEC-versioned-evidence)', s:'backlog'},
+      {n:'Governing-partner delegation + opt-in buyer-facing track-record exposure', s:'backlog'},
+    ]},
   { id:'help', name:'Assistant', icon:'💬', load:'eager', maturity:1, target:3,
     gov:null, governedUnder:'— static / read-only Q&A (nothing to govern)',
     blurb:'One context-sensitive Assistant (engine in Core). Q&A is served from the DB (GET /api/assist/questions) — nothing static in the frontend; the same store feeds the AI when wired.',
@@ -284,7 +302,7 @@ function _stackTabHtml(){
 function _lbTabBar(){
   const tab=(typeof _lbTab!=='undefined')?_lbTab:'subject';
   const btn=(id,label)=>`<button onclick="setLbTab('${id}')" style="border:0;background:none;cursor:pointer;padding:8px 15px;font-size:13.5px;font-weight:${tab===id?'700':'500'};color:${tab===id?'var(--ink)':'var(--grey)'};border-bottom:2px solid ${tab===id?'var(--accent,#3F66A6)':'transparent'}">${label}</button>`;
-  return `<div style="display:flex;gap:2px;border-bottom:1px solid var(--line);padding:0 8px;flex-wrap:wrap">${btn('subject','📜 The subject')}${btn('found','🧱 Foundations')}${btn('stack','🏛️ Governance stack')}${btn('work','⬡ Work patterns')}${btn('cap','⬢ Capabilities')}${btn('edge','🎯 The edge')}${btn('life','🔀 Lifecycle')}${btn('sec','🔒 Security')}${btn('real','🔬 Reality')}</div>`;
+  return `<div style="display:flex;gap:2px;border-bottom:1px solid var(--line);padding:0 8px;flex-wrap:wrap">${btn('subject','📜 The subject')}${btn('stories','📖 The Life of…')}${btn('found','🧱 Foundations')}${btn('stack','🏛️ Governance stack')}${btn('work','⬡ Work patterns')}${btn('cap','⬢ Capabilities')}${btn('edge','🎯 The edge')}${btn('life','🔀 Lifecycle')}${btn('sec','🔒 Security')}${btn('real','🔬 Reality')}</div>`;
 }
 function setLbTab(t){ _lbTab=t; _openLegendImpl(); }
 var _lbFontScale; try{ _lbFontScale=parseFloat(localStorage.getItem('cb_lb_fs'))||1; }catch(_){ _lbFontScale=1; }
@@ -305,6 +323,23 @@ function _lifeTabHtml(){
     <div style="font-size:11.5px;color:var(--grey);margin-bottom:10px">How we work the lifecycle: every behaviour traces <b>Business → System → Functional → Test</b>. <span style="color:#2f8f5b">✅ verified-live</span> · <span style="color:#a9791f">◐ built, needs a live run</span> · <span style="color:#9aa3a7">○ backlog</span>.</div>
     ${TRACE_MATRIX.map(grp).join('')}
     <div style="font-size:10.5px;color:var(--grey);text-align:center;padding-top:2px">Most rows are ◐ — built + parse/boot-checked; each ✅ needed a human live-run or a script. Automated tests turn ◐ → ✅ at scale.</div>
+  </div>`;
+}
+
+/* ── THE LIFE OF… tab — the business-narrative reference set (followable stories, not feature ads) ── */
+function _storiesTabHtml(){
+  const S=[
+    { icon:'📜', name:'The Life of a Chit', blurb:'How one obligation travels the governed rail — composed, delivered per-copy, acted, disputed, settled. The conceptual anchor.', url:'https://claude.ai/code/artifact/c4696068-9bfd-4079-a425-6c8d81592bdc' },
+    { icon:'🏛️', name:'The Life of an Entity', blurb:'DDL → DML: author the source-entities → the boilerplate → mint an entity → its chits. Define the mould once, mint many.', url:'https://claude.ai/code/artifact/93ccd05b-fd3a-4068-a47f-9faa41d6e4b0' },
+    { icon:'🌍', name:'The Life of a Trade', blurb:'One chemical shipment, buyer → seller: real template evidence moving across the engine. Swap the industry and the standards change; the commercial spine and the rail do not.', url:'https://claude.ai/code/artifact/1d35a48a-bb1a-4d4d-8056-feef8539a69f' },
+  ];
+  const card=(x)=>`<a href="${x.url}" target="_blank" rel="noopener" style="display:block;text-decoration:none;border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:11px;background:#fff">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:5px"><span style="font-size:19px">${x.icon}</span><span style="font-family:'Space Grotesk';font-weight:700;font-size:15px;color:var(--ink)">${esc(x.name)}</span><span style="margin-left:auto;font-size:12px;color:var(--accent,#3F66A6);font-weight:700">Open ↗</span></div>
+    <div style="font-size:12.5px;color:var(--grey);line-height:1.5">${esc(x.blurb)}</div></a>`;
+  return `<div style="padding:12px 13px;overflow:visible">
+    <div style="font-size:11.5px;color:var(--grey);margin-bottom:12px">The <b>business narratives</b> — the product told from the value side, followable end-to-end (not feature ads). Open each in a new tab.</div>
+    ${S.map(card).join('')}
+    <div style="font-size:10.5px;color:var(--grey);text-align:center;padding-top:2px">Companion set to the ⬢ Capabilities map — the “what it feels like” beside the “what’s built”.</div>
   </div>`;
 }
 
@@ -546,8 +581,8 @@ function _openLegendImpl(){
       <div style="font-size:10.5px;color:var(--grey);text-align:center;padding-top:4px">Load: <b>always on</b> ships with the app · <b>lazy</b> loads on first use · <b>planned</b> not built yet. · <b>L1–5</b> maturity: 1 Proven · 2 Packaged · 3 Itemised · 4 Governed · 5 Productized (→ = target). Kept true to the code.</div>
       <div style="font-size:10.5px;color:var(--grey);text-align:center;padding-top:3px">🏛️ <b>Governance rides on each capability</b> — the green band is the SECOND axis: <b>gov L1–5</b> (1 declared · 2 designed · 3 enforced+isolated · 4 governed+provable · 5 audited) <b>under</b> its cascade layer, with the amber <b>“to L4”</b> gap. Gov usually LAGS maturity — that lag IS the distance to L4. <b>N/A</b> = static/read-only, nothing to govern.</div>
     </div>`;
-  const body = (_lbTab==='subject') ? _subjectTabHtml() : (_lbTab==='found') ? _foundTabHtml() : (_lbTab==='stack') ? _stackTabHtml() : (_lbTab==='life') ? _lifeTabHtml() : (_lbTab==='sec') ? _secTabHtml() : (_lbTab==='edge') ? _edgeTabHtml() : (_lbTab==='real') ? _realTabHtml() : (_lbTab==='work') ? _workTabHtml() : capBody;
-  const titles = { subject:'the subject — the sealed co-held record', found:'foundations — the trust floor + proof', stack:'the governance stack — universe → chit', cap:'capabilities &amp; features', life:'lifecycle &amp; traceability', sec:'security posture', edge:'positioning &amp; edge', real:'reality &amp; how we earn it', work:'work patterns — the governed journeys' };
+  const body = (_lbTab==='subject') ? _subjectTabHtml() : (_lbTab==='stories') ? _storiesTabHtml() : (_lbTab==='found') ? _foundTabHtml() : (_lbTab==='stack') ? _stackTabHtml() : (_lbTab==='life') ? _lifeTabHtml() : (_lbTab==='sec') ? _secTabHtml() : (_lbTab==='edge') ? _edgeTabHtml() : (_lbTab==='real') ? _realTabHtml() : (_lbTab==='work') ? _workTabHtml() : capBody;
+  const titles = { subject:'the subject — the sealed co-held record', stories:'the Life of… — business narratives', found:'foundations — the trust floor + proof', stack:'the governance stack — universe → chit', cap:'capabilities &amp; features', life:'lifecycle &amp; traceability', sec:'security posture', edge:'positioning &amp; edge', real:'reality &amp; how we earn it', work:'work patterns — the governed journeys' };
   host.innerHTML=`<div class="notifover" onclick="closeLegend()"><div class="notifpanel" style="position:fixed;inset:0;width:100vw;height:100vh;max-width:none;max-height:none;border-radius:0;overflow:hidden;display:flex;flex-direction:column;background:#fff" onclick="event.stopPropagation()">
     <div style="display:flex;align-items:center;gap:12px;padding:16px 20px;background:linear-gradient(180deg,#f7f9fc,#fff);border-bottom:1px solid var(--line);flex:none">
       <span style="font-size:22px">🔑</span>
