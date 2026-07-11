@@ -9,6 +9,8 @@ if (typeof EP !== 'undefined') {
     readinessGather: {m:'POST', p:'/api/governance/compliance',            ok:'y'},
     lanes:           {m:'GET',  p:'/api/governance/lanes',                 ok:'y'},
     readinessVerify: {m:'POST', p:'/api/governance/verify',               ok:'y'},
+    instruments:     {m:'GET',  p:'/api/governance/instruments',           ok:'y'},
+    journey:         {m:'GET',  p:'/api/governance/journey',               ok:'y'},
   });
 }
 async function loadReadiness(){
@@ -55,6 +57,46 @@ function _rdSection(title, list){
   if(!list.length) return '';
   var met = list.filter(function(i){ return i.status==='gathered'||i.status==='expiring'; }).length;
   return '<div style="font-size:11px;font-weight:800;color:var(--grey);letter-spacing:.05em;margin:18px 2px 9px;display:flex"><span>'+title+'</span><span style="margin-left:auto;color:'+(met===list.length?'#2f8f5b':'var(--grey)')+'">'+met+' / '+list.length+'</span></div>'+list.map(_rdItem).join('');
+}
+// ── COMMERCIAL COVER (live /instruments) — the invariant spine beneath the industry-variable compliance ──
+async function loadCommerce(){
+  try{ UI.commerce = await api('instruments', {query:{incoterm:'CIF', cross_border:1}}); }
+  catch(e){ UI.commerce = {error:(e&&e.message)||'x'}; }
+  UI.commerceLoading=false; if(typeof renderApp==='function') renderApp();
+}
+async function loadJourney(){
+  try{ UI.journey = await api('journey', {query:{incoterm:'CIF', cross_border:1}}); }
+  catch(e){ UI.journey = {error:(e&&e.message)||'x'}; }
+  UI.journeyLoading=false; if(typeof renderApp==='function') renderApp();
+}
+function _frmBadge(c){
+  var map={market:['#2857b8','market'],credit:['#8a5e22','credit'],liquidity:['#0e7c74','liquidity'],operational:['#7a4fb0','operational']};
+  var x=map[c]||['#8a94a6',String(c||'—')];
+  return '<span style="font-size:9px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;border-radius:5px;padding:2px 6px;background:'+x[0]+'1e;color:'+x[0]+'">FRM · '+x[1]+'</span>';
+}
+function _rdCommerce(){
+  if(UI.commerce===undefined){ if(!UI.commerceLoading){ UI.commerceLoading=true; loadCommerce(); } return ''; }
+  if(UI.commerce.error || !UI.commerce.cluster) return '';
+  var rows = UI.commerce.cluster.map(function(g){
+    var names = (g.instruments||[]).map(function(i){ return esc(i.name); }).join(' · ');
+    var onrail = g.covered_onrail ? '<span style="font-size:10px;color:#2f8f5b;font-weight:800;margin-left:6px">● on rail</span>' : '';
+    return '<div style="border:1px solid var(--line);border-radius:10px;background:#fff;padding:10px 12px;margin-bottom:7px">'
+      +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-weight:650;font-size:13px">'+esc(g.label)+'</span>'+_frmBadge(g.frm_class)+onrail+'</div>'
+      +'<div style="font-size:11.5px;color:var(--grey);margin-top:4px">'+names+'</div></div>';
+  }).join('');
+  return '<div style="font-size:11px;font-weight:800;color:var(--grey);letter-spacing:.05em;margin:24px 2px 6px">COMMERCIAL COVER · the invariant spine (FRM)</div>'
+    +'<div style="font-size:11.5px;color:var(--grey);margin:0 2px 10px">Same in every industry — only the compliance above changes with the goods. Cover by risk:</div>'
+    +rows;
+}
+function _rdJourney(){
+  if(UI.journey===undefined){ if(!UI.journeyLoading){ UI.journeyLoading=true; loadJourney(); } return ''; }
+  if(UI.journey.error || !UI.journey.chain) return '';
+  var chips = UI.journey.chain.map(function(s){
+    return '<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;border:1px solid var(--line);border-radius:999px;padding:5px 10px;background:#fff;white-space:nowrap">'
+      +esc(s.activity)+(s.partner_type?'<span style="color:var(--blue);font-weight:700">· '+esc(s.partner_type)+'</span>':'')+'</span>';
+  }).join('');
+  return '<div style="font-size:11px;font-weight:800;color:var(--grey);letter-spacing:.05em;margin:24px 2px 9px">END-TO-END SETTLEMENT CHAIN</div>'
+    +'<div style="display:flex;gap:7px;flex-wrap:wrap">'+chips+'</div>';
 }
 // ── MY READINESS (supplier) — spin the globe: readiness resolved per destination ──
 async function loadLanes(){
@@ -107,6 +149,8 @@ function _rdMine(){
         +'<div style="font-size:12.5px;color:var(--grey);margin-top:3px">'+msg+' Gaps show <b>how to close them</b> below.</div></div></div>'
     +_rdSection('STANDING CERTIFICATIONS', standing)
     +_rdSection('PER-SHIPMENT CLEARANCES', pership)
+    +_rdCommerce()
+    +_rdJourney()
     +'<div style="font-size:11.5px;color:var(--grey);margin-top:20px;padding:11px 13px;background:#f7f8fb;border:1px solid var(--line);border-radius:10px">Requirements are <b>derived per lane</b> (home + destination) — nothing enumerated. Gather what you can; each gap carries guidance to meet the rest.</div>';
 }
 // ── CHECK A SUPPLIER (buyer) ──
@@ -161,11 +205,11 @@ function verifyReadiness(standard, doc, id_type){
   UI.rdVerify = { standard:standard, doc:doc, id_type:id_type };
   var inS='width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:13px;margin:5px 0 13px;box-sizing:border-box';
   var body = '<div class="mbody" style="padding:16px 18px">'
-    +'<div style="font-size:12.5px;color:var(--grey);margin-bottom:12px">Machine-verify your <b>'+id_type.toUpperCase()+'</b> against the registry — the highest trust rung. Un-fakeable: we check the source of truth, not your word for it.</div>'
+    +'<div style="font-size:12.5px;color:var(--grey);margin-bottom:12px">Check your <b>'+id_type.toUpperCase()+'</b>. When a registry is connected this confirms it against the source of truth — the top <b>verified</b> rung. Until then it validates the format and records a <b>declared</b> claim (never a false “verified”).</div>'
     +'<label style="font-size:11px;font-weight:700;color:var(--grey)">'+id_type.toUpperCase()+' number</label>'
     +'<input id="vf_id" placeholder="'+(id_type==='iec'?'e.g. AAACR1234B':id_type.toUpperCase()+' number')+'" style="'+inS+'">'
     +'<div id="vf_err" style="color:#c0453b;font-size:12px;margin-bottom:8px"></div>'
-    +'<button id="vf_btn" onclick="submitVerify()" style="width:100%;background:#2f8f5b;color:#fff;border:0;border-radius:9px;padding:11px;font-weight:700;cursor:pointer">🔗 Verify against registry</button>'
+    +'<button id="vf_btn" onclick="submitVerify()" style="width:100%;background:#2f8f5b;color:#fff;border:0;border-radius:9px;padding:11px;font-weight:700;cursor:pointer">🔗 Verify ID</button>'
     +'</div>';
   if(typeof modal==='function') modal('<div class="mhd"><div class="t">🔗 Verify registry ID</div></div>'+body);
 }
@@ -176,11 +220,12 @@ async function submitVerify(){
   if(err) err.textContent=''; if(btn){ btn.disabled=true; btn.textContent='Verifying…'; }
   try{
     var far=new Date(Date.now()+730*86400000).toISOString().slice(0,10);
-    await api('readinessVerify', {body:{standard_key:g.standard, doc_key:g.doc, id_type:g.id_type, id_value:id, valid_until:far}});
+    var res = await api('readinessVerify', {body:{standard_key:g.standard, doc_key:g.doc, id_type:g.id_type, id_value:id, valid_until:far}});
     if(typeof closeModal==='function') closeModal();
-    if(typeof toast==='function') toast('Verified against registry ✓');
+    var vm = res && res.verdict && res.verdict.method;
+    if(typeof toast==='function') toast(vm==='registry' ? 'Verified against the registry ✓' : 'Format valid — recorded as a declared claim');
     UI.laneMatrix=undefined; UI.laneRd=undefined; loadLanes();
-  }catch(e){ if(btn){ btn.disabled=false; btn.textContent='🔗 Verify against registry'; } if(err) err.textContent=(e&&e.message)||'Verification failed'; }
+  }catch(e){ if(btn){ btn.disabled=false; btn.textContent='🔗 Verify ID'; } if(err) err.textContent=(e&&e.message)||'Verification failed'; }
 }
 function gatherReadiness(standard, doc){
   var it = ((UI.readiness&&UI.readiness.clearances)||[]).filter(function(c){ return c.standard===standard && c.doc===doc; })[0];
