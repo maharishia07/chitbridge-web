@@ -36,22 +36,56 @@ function _rungBadge(r){
   var x=map[r]; if(!x) return '';
   return '<span style="font-size:9px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;border-radius:5px;padding:2px 6px;background:'+x[0]+'22;color:'+x[0]+';margin-left:7px" title="trust rung">'+x[1]+'</span>';
 }
+// ── per-topic LIFECYCLE model (client-side) — each clearance is a process with states, an AI role + a partner option ──
+var LIFE = {
+  'iso-9001':{life:[['Implement QMS','done'],['Registrar audit','done'],['Certified','done'],['Surveillance','now'],['Recertify (3-yr)','next']],use:'Keep your QMS current — a surveillance audit holds the certificate.',ai:{lvl:'L3',gate:'sign recert',t:'AI tracks validity, assembles the surveillance evidence, flags the renewal window.'},partner:'Accredited ISO registrar'},
+  'iso-14001':{life:[['Implement EMS','done'],['Registrar audit','now'],['Certified','next'],['Surveillance','next']],use:'Certify your environmental management system with an accredited registrar.',ai:{lvl:'L3',gate:'sign',t:'AI assembles the aspects register and audit evidence.'},partner:'Environmental registrar'},
+  'reach':{life:[['Not started','now'],['Inventory substances','next'],['Register with ECHA','next'],['Safety dossier','next'],['Verified','next']],use:'Inventory each substance ≥1 t/yr and register it with ECHA.',ai:{lvl:'L3',gate:'authorise ECHA filing',t:'AI builds the inventory, drafts each registration + the safety dossier; you authorise the filing.'},partner:'EU Only-Representative'},
+  'sds':{life:[['No sheet','done'],['Draft GHS','now'],['Attach to product','next'],['Travels with order','next']],use:'Attach a current GHS Safety Data Sheet to each order.',ai:{lvl:'L3',gate:'approve',t:'AI authors the GHS sheet from your formulation; you approve.'},partner:'Testing lab'},
+  'tsca':{life:[['Not listed','now'],['File PMN / inventory','next'],['Listed','next']],use:'List substances on the US EPA TSCA inventory.',ai:{lvl:'L3',gate:'authorise',t:'AI prepares the inventory listing / PMN.'},partner:'US agent'},
+  'bis':{life:[['Not certified','now'],['Apply','next'],['Certified (ISI mark)','next']],use:'Obtain BIS product certification (ISI mark).',ai:{lvl:'L2',gate:'submit',t:'AI prepares the BIS application.'},partner:'BIS consultant'},
+  'exim-policy':{life:[['IEC obtained','now'],['Declaration filed','next'],['Cleared','next']],use:'Hold a valid IEC and complete the export declaration.',ai:{lvl:'L3',gate:'confirm',t:'AI verifies the IEC and prepares the export declaration.'},partner:'Customs broker (CHA)'}
+};
+function _life(std, status){ return LIFE[std] || {life:[['Pending',status==='pending'?'now':'done'],['Gathered',(status==='gathered'||status==='expiring')?'now':'next'],['Verified','next']],use:'Gather this clearance and keep it valid.',ai:{lvl:'L2',gate:'approve',t:'AI helps assemble and file the evidence; you approve.'},partner:null}; }
+function _rdToggle(std,doc){ var k=std+'|'+doc; UI.rdOpen=UI.rdOpen||{}; UI.rdOpen[k]=!UI.rdOpen[k]; if(typeof renderApp==='function') renderApp(); }
+function _rdSub(t){ return '<div style="font-size:9.5px;font-weight:800;color:var(--grey);letter-spacing:.05em;text-transform:uppercase;margin:13px 0 6px">'+t+'</div>'; }
+function _rdKv(k,v){ return '<div style="display:flex;gap:8px;padding:3px 0;font-size:12.5px"><span style="text-transform:uppercase;color:var(--grey);min-width:96px;font-size:10px;letter-spacing:.03em;padding-top:1px">'+k+'</span><span style="color:var(--ink);font-weight:500">'+esc(String(v))+'</span></div>'; }
+function _rdExpand(it){
+  var L=_life(it.standard, it.status);
+  var steps=L.life.map(function(s){ var c=s[1]; var col=c==='done'?'#2f8f5b':(c==='now'?'var(--blue)':'#c9d2dc'); var ic=c==='done'?'✓':(c==='now'?'●':'○');
+    return '<div style="display:flex;align-items:center;gap:9px;padding:4px 0;font-size:12.5px;color:'+(c==='next'?'var(--grey)':'var(--ink)')+'"><span style="width:18px;height:18px;border-radius:50%;display:grid;place-items:center;font-size:9px;font-weight:800;color:#fff;background:'+col+';flex:0 0 auto">'+ic+'</span>'+esc(s[0])+(c==='now'?' <span style="font-size:8.5px;color:var(--blue);font-weight:800;text-transform:uppercase;letter-spacing:.04em">you are here</span>':'')+'</div>';
+  }).join('');
+  var ev=_rdKv('Trust rung', it.rung||'—')+_rdKv('Status', it.status||'—')+(it.valid_until?_rdKv('Valid until', String(it.valid_until).slice(0,10)):'')+(it.evidence_ref&&/^[0-9a-f-]{20,}$/i.test(String(it.evidence_ref))?_rdKv('Evidence','document on the rail'):'');
+  var ai=L.ai;
+  var partner=L.partner?'<div style="margin-top:11px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:#faf6ee"><span style="font-size:8.5px;font-weight:800;color:#8a5e22;text-transform:uppercase;letter-spacing:.05em">Or hand it to a partner</span><div style="font-size:12.5px;margin-top:3px;font-weight:600">'+esc(L.partner)+'</div></div>':'';
+  return '<div style="border-top:1px solid var(--line);padding:12px 15px 15px;background:#fbfcfe">'
+    +_rdSub('Its lifecycle')+steps
+    +_rdSub('Evidence · current version')+'<div>'+ev+'</div>'
+    +_rdSub('How you use it')+'<div style="font-size:12.5px;color:var(--ink)">'+esc(L.use)+'</div>'
+    +_rdSub('🤖 How AI enables it')+'<div style="font-size:12.5px;color:var(--grey)"><b style="color:var(--blue)">'+ai.lvl+'</b> · gate: '+esc(ai.gate)+' — '+esc(ai.t)+'</div>'
+    +partner
+    +'<div style="font-size:10.5px;color:var(--grey);margin-top:12px;border-left:3px solid #8a5e22;padding-left:9px;line-height:1.45">Versioned: when a buyer folds this into an order they keep a <b>snapshot</b> — later changes never alter their copy.</div>'
+  +'</div>';
+}
 function _rdItem(it){
   var m=_rdStatus(it.status);
   var valid = it.valid_until ? '<span style="color:var(--grey)"> · valid to '+esc(String(it.valid_until).slice(0,10))+'</span>' : '';
   var rung = it.rung ? _rungBadge(it.rung) : '';
   var idType = ({iec_code:'iec',gstn:'gstn',pan:'pan'})[it.doc];
   var verifyBtn = (idType && it.rung!=='verified')
-    ? '<button onclick="verifyReadiness(\''+esc(it.standard)+'\',\''+esc(it.doc)+'\',\''+idType+'\')" title="Machine-verify against the registry" style="font-size:11.5px;font-weight:700;border:1px solid #2f8f5b;background:#eaf6ee;color:#2f8f5b;border-radius:8px;padding:6px 10px;cursor:pointer">🔗 Verify</button>' : '';
+    ? '<button onclick="event.stopPropagation();verifyReadiness(\''+esc(it.standard)+'\',\''+esc(it.doc)+'\',\''+idType+'\')" title="Verify against the registry" style="font-size:11.5px;font-weight:700;border:1px solid #2f8f5b;background:#eaf6ee;color:#2f8f5b;border-radius:8px;padding:6px 10px;cursor:pointer">🔗 Verify</button>' : '';
   var actBtn = (it.status==='gathered')
     ? '<span style="font-size:11px;color:'+m.col+';font-weight:700">'+m.lbl+'</span>'
-    : '<button onclick="gatherReadiness(\''+esc(it.standard)+'\',\''+esc(it.doc)+'\')" style="font-size:12px;font-weight:700;border:1px solid '+(it.status==='pending'?'var(--line)':m.col)+';background:'+(it.status==='pending'?'#fff':m.col)+';color:'+(it.status==='pending'?'#2a2f38':'#fff')+';border-radius:8px;padding:6px 12px;cursor:pointer">'+(it.status==='pending'?'Gather':'Renew')+'</button>';
-  return '<div style="display:flex;align-items:center;gap:11px;border:1px solid var(--line);border-radius:11px;background:#fff;padding:10px 13px;margin-bottom:8px">'
+    : '<button onclick="event.stopPropagation();gatherReadiness(\''+esc(it.standard)+'\',\''+esc(it.doc)+'\')" style="font-size:12px;font-weight:700;border:1px solid '+(it.status==='pending'?'var(--line)':m.col)+';background:'+(it.status==='pending'?'#fff':m.col)+';color:'+(it.status==='pending'?'#2a2f38':'#fff')+';border-radius:8px;padding:6px 12px;cursor:pointer">'+(it.status==='pending'?'Gather':'Renew')+'</button>';
+  var k = it.standard+'|'+it.doc, open = !!(UI.rdOpen && UI.rdOpen[k]);
+  var chev = '<span style="color:var(--grey);font-size:10px;display:inline-block;transform:rotate('+(open?'90deg':'0deg')+');flex:0 0 auto">▶</span>';
+  var header = '<div onclick="_rdToggle(\''+esc(it.standard)+'\',\''+esc(it.doc)+'\')" style="display:flex;align-items:center;gap:11px;padding:10px 13px;cursor:pointer">'
     +'<div style="width:23px;height:23px;border-radius:7px;display:grid;place-items:center;font-size:12px;font-weight:800;background:'+m.col+'22;color:'+m.col+';flex:0 0 auto">'+m.ic+'</div>'
     +'<div style="min-width:0;flex:1"><div style="font-weight:650;font-size:13.5px">'+esc(it.title||it.doc)+rung+'</div>'
       +'<div style="font-size:11.5px;color:var(--grey)">from <span class="mono" style="color:var(--blue)">'+esc(it.standard)+'</span>'+valid+'</div>'
       +(it.guidance?'<div style="font-size:11px;color:#9a6a12;margin-top:3px">💡 '+esc(it.guidance)+'</div>':'')+'</div>'
-    +'<div style="flex:0 0 auto;display:flex;gap:6px;align-items:center">'+verifyBtn+actBtn+'</div></div>';
+    +'<div style="flex:0 0 auto;display:flex;gap:6px;align-items:center" onclick="event.stopPropagation()">'+verifyBtn+actBtn+'</div>'+chev+'</div>';
+  return '<div style="border:1px solid var(--line);border-radius:11px;background:#fff;margin-bottom:8px;overflow:hidden">'+header+(open?_rdExpand(it):'')+'</div>';
 }
 function _rdSection(title, list){
   if(!list.length) return '';
