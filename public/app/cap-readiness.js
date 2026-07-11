@@ -8,6 +8,7 @@ if (typeof EP !== 'undefined') {
     readinessOf:     {m:'GET',  p:'/api/governance/readiness/:bridge_id',  ok:'y'},
     readinessGather: {m:'POST', p:'/api/governance/compliance',            ok:'y'},
     lanes:           {m:'GET',  p:'/api/governance/lanes',                 ok:'y'},
+    readinessVerify: {m:'POST', p:'/api/governance/verify',               ok:'y'},
   });
 }
 async function loadReadiness(){
@@ -28,18 +29,27 @@ function _rdStatus(st){
   if(st==='expired')  return {col:'#c0453b',ic:'✕',lbl:'expired'};
   return {col:'#8a94a6',ic:'○',lbl:'to gather'};
 }
+function _rungBadge(r){
+  var map={verified:['#2f8f5b','Verified'],attested:['#0e7c74','Attested'],documented:['#c98a1a','Documented'],declared:['#8a94a6','Declared']};
+  var x=map[r]; if(!x) return '';
+  return '<span style="font-size:9px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;border-radius:5px;padding:2px 6px;background:'+x[0]+'22;color:'+x[0]+';margin-left:7px" title="trust rung">'+x[1]+'</span>';
+}
 function _rdItem(it){
   var m=_rdStatus(it.status);
   var valid = it.valid_until ? '<span style="color:var(--grey)"> · valid to '+esc(String(it.valid_until).slice(0,10))+'</span>' : '';
-  var act = (it.status==='gathered')
-    ? '<span style="margin-left:auto;flex:0 0 auto;font-size:11px;color:'+m.col+';font-weight:700">'+m.lbl+'</span>'
-    : '<button onclick="gatherReadiness(\''+esc(it.standard)+'\',\''+esc(it.doc)+'\')" style="margin-left:auto;flex:0 0 auto;font-size:12px;font-weight:700;border:1px solid '+(it.status==='pending'?'var(--line)':m.col)+';background:'+(it.status==='pending'?'#fff':m.col)+';color:'+(it.status==='pending'?'#2a2f38':'#fff')+';border-radius:8px;padding:6px 12px;cursor:pointer">'+(it.status==='pending'?'Gather':'Renew')+'</button>';
+  var rung = it.rung ? _rungBadge(it.rung) : '';
+  var idType = ({iec_code:'iec',gstn:'gstn',pan:'pan'})[it.doc];
+  var verifyBtn = (idType && it.rung!=='verified')
+    ? '<button onclick="verifyReadiness(\''+esc(it.standard)+'\',\''+esc(it.doc)+'\',\''+idType+'\')" title="Machine-verify against the registry" style="font-size:11.5px;font-weight:700;border:1px solid #2f8f5b;background:#eaf6ee;color:#2f8f5b;border-radius:8px;padding:6px 10px;cursor:pointer">🔗 Verify</button>' : '';
+  var actBtn = (it.status==='gathered')
+    ? '<span style="font-size:11px;color:'+m.col+';font-weight:700">'+m.lbl+'</span>'
+    : '<button onclick="gatherReadiness(\''+esc(it.standard)+'\',\''+esc(it.doc)+'\')" style="font-size:12px;font-weight:700;border:1px solid '+(it.status==='pending'?'var(--line)':m.col)+';background:'+(it.status==='pending'?'#fff':m.col)+';color:'+(it.status==='pending'?'#2a2f38':'#fff')+';border-radius:8px;padding:6px 12px;cursor:pointer">'+(it.status==='pending'?'Gather':'Renew')+'</button>';
   return '<div style="display:flex;align-items:center;gap:11px;border:1px solid var(--line);border-radius:11px;background:#fff;padding:10px 13px;margin-bottom:8px">'
     +'<div style="width:23px;height:23px;border-radius:7px;display:grid;place-items:center;font-size:12px;font-weight:800;background:'+m.col+'22;color:'+m.col+';flex:0 0 auto">'+m.ic+'</div>'
-    +'<div style="min-width:0"><div style="font-weight:650;font-size:13.5px">'+esc(it.title||it.doc)+'</div>'
+    +'<div style="min-width:0;flex:1"><div style="font-weight:650;font-size:13.5px">'+esc(it.title||it.doc)+rung+'</div>'
       +'<div style="font-size:11.5px;color:var(--grey)">from <span class="mono" style="color:var(--blue)">'+esc(it.standard)+'</span>'+valid+'</div>'
       +(it.guidance?'<div style="font-size:11px;color:#9a6a12;margin-top:3px">💡 '+esc(it.guidance)+'</div>':'')+'</div>'
-    +act+'</div>';
+    +'<div style="flex:0 0 auto;display:flex;gap:6px;align-items:center">'+verifyBtn+actBtn+'</div></div>';
 }
 function _rdSection(title, list){
   if(!list.length) return '';
@@ -147,6 +157,31 @@ async function checkSupplier(){
   if(typeof renderApp==='function') renderApp();
 }
 function dealFrom(bridge){ if(typeof toast==='function') toast('Confidence confirmed ✓ — start your order'); UI.nav='suppliers'; if(typeof renderApp==='function') renderApp(); }
+function verifyReadiness(standard, doc, id_type){
+  UI.rdVerify = { standard:standard, doc:doc, id_type:id_type };
+  var inS='width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:13px;margin:5px 0 13px;box-sizing:border-box';
+  var body = '<div class="mbody" style="padding:16px 18px">'
+    +'<div style="font-size:12.5px;color:var(--grey);margin-bottom:12px">Machine-verify your <b>'+id_type.toUpperCase()+'</b> against the registry — the highest trust rung. Un-fakeable: we check the source of truth, not your word for it.</div>'
+    +'<label style="font-size:11px;font-weight:700;color:var(--grey)">'+id_type.toUpperCase()+' number</label>'
+    +'<input id="vf_id" placeholder="'+(id_type==='iec'?'e.g. AAACR1234B':id_type.toUpperCase()+' number')+'" style="'+inS+'">'
+    +'<div id="vf_err" style="color:#c0453b;font-size:12px;margin-bottom:8px"></div>'
+    +'<button id="vf_btn" onclick="submitVerify()" style="width:100%;background:#2f8f5b;color:#fff;border:0;border-radius:9px;padding:11px;font-weight:700;cursor:pointer">🔗 Verify against registry</button>'
+    +'</div>';
+  if(typeof modal==='function') modal('<div class="mhd"><div class="t">🔗 Verify registry ID</div></div>'+body);
+}
+async function submitVerify(){
+  var g=UI.rdVerify||{}; if(!g.standard) return;
+  var id=((document.getElementById('vf_id')||{}).value||'').trim();
+  var btn=document.getElementById('vf_btn'), err=document.getElementById('vf_err');
+  if(err) err.textContent=''; if(btn){ btn.disabled=true; btn.textContent='Verifying…'; }
+  try{
+    var far=new Date(Date.now()+730*86400000).toISOString().slice(0,10);
+    await api('readinessVerify', {body:{standard_key:g.standard, doc_key:g.doc, id_type:g.id_type, id_value:id, valid_until:far}});
+    if(typeof closeModal==='function') closeModal();
+    if(typeof toast==='function') toast('Verified against registry ✓');
+    UI.laneMatrix=undefined; UI.laneRd=undefined; loadLanes();
+  }catch(e){ if(btn){ btn.disabled=false; btn.textContent='🔗 Verify against registry'; } if(err) err.textContent=(e&&e.message)||'Verification failed'; }
+}
 function gatherReadiness(standard, doc){
   var it = ((UI.readiness&&UI.readiness.clearances)||[]).filter(function(c){ return c.standard===standard && c.doc===doc; })[0];
   UI.rdGather = { standard:standard, doc:doc, title:(it&&it.title)||doc };
