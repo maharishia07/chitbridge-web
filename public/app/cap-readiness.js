@@ -47,7 +47,6 @@ var LIFE = {
   'exim-policy':{life:[['IEC obtained','now'],['Declaration filed','next'],['Cleared','next']],use:'Hold a valid IEC and complete the export declaration.',ai:{lvl:'L3',gate:'confirm',t:'AI verifies the IEC and prepares the export declaration.'},partner:'Customs broker (CHA)'}
 };
 function _life(std, status){ return LIFE[std] || {life:[['Pending',status==='pending'?'now':'done'],['Gathered',(status==='gathered'||status==='expiring')?'now':'next'],['Verified','next']],use:'Gather this clearance and keep it valid.',ai:{lvl:'L2',gate:'approve',t:'AI helps assemble and file the evidence; you approve.'},partner:null}; }
-function _rdToggle(std,doc){ var k=std+'|'+doc; UI.rdOpen=UI.rdOpen||{}; UI.rdOpen[k]=!UI.rdOpen[k]; if(typeof renderApp==='function') renderApp(); }
 function _rdSub(t){ return '<div style="font-size:9.5px;font-weight:800;color:var(--grey);letter-spacing:.05em;text-transform:uppercase;margin:13px 0 6px">'+t+'</div>'; }
 function _rdKv(k,v){ return '<div style="display:flex;gap:8px;padding:3px 0;font-size:12.5px"><span style="text-transform:uppercase;color:var(--grey);min-width:96px;font-size:10px;letter-spacing:.03em;padding-top:1px">'+k+'</span><span style="color:var(--ink);font-weight:500">'+esc(String(v))+'</span></div>'; }
 function _rdExpand(it){
@@ -67,30 +66,31 @@ function _rdExpand(it){
     +'<div style="font-size:10.5px;color:var(--grey);margin-top:12px;border-left:3px solid #8a5e22;padding-left:9px;line-height:1.45">Versioned: when a buyer folds this into an order they keep a <b>snapshot</b> — later changes never alter their copy.</div>'
   +'</div>';
 }
-function _rdItem(it){
-  var m=_rdStatus(it.status);
-  var valid = it.valid_until ? '<span style="color:var(--grey)"> · valid to '+esc(String(it.valid_until).slice(0,10))+'</span>' : '';
-  var rung = it.rung ? _rungBadge(it.rung) : '';
+// ── TWO-PANE master-detail (list ↔ detail, like Task/Co-assist) — selecting preserves scroll (no jump) ──
+function _rdSelect(std,doc){
+  var sc=document.getElementById('rdscroll'); var top=sc?sc.scrollTop:0;
+  UI.rdSel = std+'|'+doc;
+  if(typeof renderApp==='function') renderApp();
+  var sc2=document.getElementById('rdscroll'); if(sc2) sc2.scrollTop=top;   // keep position across the re-render
+}
+function _rdRow(it, selKey){
+  var m=_rdStatus(it.status), k=it.standard+'|'+it.doc, on=(k===selKey);
+  return '<div onclick="_rdSelect(\''+esc(it.standard)+'\',\''+esc(it.doc)+'\')" style="display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:9px;cursor:pointer;margin:2px 0;background:'+(on?'#eef3fb':'transparent')+';border:1px solid '+(on?'var(--blue)':'transparent')+'">'
+    +'<div style="width:9px;height:9px;border-radius:50%;background:'+m.col+';flex:0 0 auto"></div>'
+    +'<div style="min-width:0;flex:1"><div style="font-weight:'+(on?'700':'600')+';font-size:12.5px;color:'+(on?'var(--blue)':'var(--ink)')+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(it.title||it.doc)+'</div></div>'
+    +'<div style="width:15px;height:15px;border-radius:5px;display:grid;place-items:center;font-size:9px;font-weight:800;background:'+m.col+'22;color:'+m.col+';flex:0 0 auto">'+m.ic+'</div></div>';
+}
+function _rdDetailPane(it){
+  if(!it) return '<div style="color:var(--grey);font-size:13px;padding:24px;text-align:center">Select a clearance on the left to see its lifecycle.</div>';
+  var m=_rdStatus(it.status), rung = it.rung ? _rungBadge(it.rung) : '';
   var idType = ({iec_code:'iec',gstn:'gstn',pan:'pan'})[it.doc];
   var verifyBtn = (idType && it.rung!=='verified')
-    ? '<button onclick="event.stopPropagation();verifyReadiness(\''+esc(it.standard)+'\',\''+esc(it.doc)+'\',\''+idType+'\')" title="Verify against the registry" style="font-size:11.5px;font-weight:700;border:1px solid #2f8f5b;background:#eaf6ee;color:#2f8f5b;border-radius:8px;padding:6px 10px;cursor:pointer">🔗 Verify</button>' : '';
+    ? '<button onclick="verifyReadiness(\''+esc(it.standard)+'\',\''+esc(it.doc)+'\',\''+idType+'\')" style="font-size:12px;font-weight:700;border:1px solid #2f8f5b;background:#eaf6ee;color:#2f8f5b;border-radius:8px;padding:7px 12px;cursor:pointer">🔗 Verify</button>' : '';
   var actBtn = (it.status==='gathered')
-    ? '<span style="font-size:11px;color:'+m.col+';font-weight:700">'+m.lbl+'</span>'
-    : '<button onclick="event.stopPropagation();gatherReadiness(\''+esc(it.standard)+'\',\''+esc(it.doc)+'\')" style="font-size:12px;font-weight:700;border:1px solid '+(it.status==='pending'?'var(--line)':m.col)+';background:'+(it.status==='pending'?'#fff':m.col)+';color:'+(it.status==='pending'?'#2a2f38':'#fff')+';border-radius:8px;padding:6px 12px;cursor:pointer">'+(it.status==='pending'?'Gather':'Renew')+'</button>';
-  var k = it.standard+'|'+it.doc, open = !!(UI.rdOpen && UI.rdOpen[k]);
-  var chev = '<span style="color:var(--grey);font-size:10px;display:inline-block;transform:rotate('+(open?'90deg':'0deg')+');flex:0 0 auto">▶</span>';
-  var header = '<div onclick="_rdToggle(\''+esc(it.standard)+'\',\''+esc(it.doc)+'\')" style="display:flex;align-items:center;gap:11px;padding:10px 13px;cursor:pointer">'
-    +'<div style="width:23px;height:23px;border-radius:7px;display:grid;place-items:center;font-size:12px;font-weight:800;background:'+m.col+'22;color:'+m.col+';flex:0 0 auto">'+m.ic+'</div>'
-    +'<div style="min-width:0;flex:1"><div style="font-weight:650;font-size:13.5px">'+esc(it.title||it.doc)+rung+'</div>'
-      +'<div style="font-size:11.5px;color:var(--grey)">from <span class="mono" style="color:var(--blue)">'+esc(it.standard)+'</span>'+valid+'</div>'
-      +(it.guidance?'<div style="font-size:11px;color:#9a6a12;margin-top:3px">💡 '+esc(it.guidance)+'</div>':'')+'</div>'
-    +'<div style="flex:0 0 auto;display:flex;gap:6px;align-items:center" onclick="event.stopPropagation()">'+verifyBtn+actBtn+'</div>'+chev+'</div>';
-  return '<div style="border:1px solid var(--line);border-radius:11px;background:#fff;margin-bottom:8px;overflow:hidden">'+header+(open?_rdExpand(it):'')+'</div>';
-}
-function _rdSection(title, list){
-  if(!list.length) return '';
-  var met = list.filter(function(i){ return i.status==='gathered'||i.status==='expiring'; }).length;
-  return '<div style="font-size:11px;font-weight:800;color:var(--grey);letter-spacing:.05em;margin:18px 2px 9px;display:flex"><span>'+title+'</span><span style="margin-left:auto;color:'+(met===list.length?'#2f8f5b':'var(--grey)')+'">'+met+' / '+list.length+'</span></div>'+list.map(_rdItem).join('');
+    ? '<span style="font-size:12px;color:'+m.col+';font-weight:700">'+m.lbl+'</span>'
+    : '<button onclick="gatherReadiness(\''+esc(it.standard)+'\',\''+esc(it.doc)+'\')" style="font-size:12px;font-weight:700;border:1px solid '+(it.status==='pending'?'var(--line)':m.col)+';background:'+(it.status==='pending'?'#fff':m.col)+';color:'+(it.status==='pending'?'#2a2f38':'#fff')+';border-radius:8px;padding:7px 13px;cursor:pointer">'+(it.status==='pending'?'Gather':'Renew')+'</button>';
+  return '<div style="padding:14px 16px 0"><div style="display:flex;align-items:flex-start;gap:10px"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:15px">'+esc(it.title||it.doc)+rung+'</div><div style="font-size:11.5px;color:var(--grey);margin-top:2px">from <span class="mono" style="color:var(--blue)">'+esc(it.standard)+'</span></div></div><div style="flex:0 0 auto;display:flex;gap:6px;align-items:center">'+verifyBtn+actBtn+'</div></div></div>'
+    + _rdExpand(it);
 }
 // ── COMMERCIAL COVER (live /instruments) — the invariant spine beneath the industry-variable compliance ──
 async function loadCommerce(){
@@ -176,13 +176,22 @@ function _rdMine(){
   var standing = items.filter(function(i){return i.scope==='entity';});
   var pership  = items.filter(function(i){return i.scope!=='entity';});
   var msg = s.ready ? ('Import-ready for '+esc(rd.dest_name)+' — every clearance met.') : ((s.total-s.met)+' clearance'+((s.total-s.met)===1?'':'s')+' to gather for '+esc(rd.dest_name)+'.');
+  // two-pane master-detail (left = the clearances, right = the selected one's lifecycle)
+  var all = standing.concat(pership);
+  if(!UI.rdSel || !all.some(function(i){return i.standard+'|'+i.doc===UI.rdSel;})) UI.rdSel = all.length ? (all[0].standard+'|'+all[0].doc) : null;
+  var sel = all.filter(function(i){return i.standard+'|'+i.doc===UI.rdSel;})[0];
+  var grpHdr=function(t){return '<div style="font-size:9.5px;font-weight:800;color:var(--grey);letter-spacing:.05em;padding:9px 8px 4px">'+t+'</div>';};
+  var left = (standing.length?grpHdr('STANDING CERTIFICATIONS')+standing.map(function(i){return _rdRow(i,UI.rdSel);}).join(''):'')
+           + (pership.length?grpHdr('PER-SHIPMENT CLEARANCES')+pership.map(function(i){return _rdRow(i,UI.rdSel);}).join(''):'');
+  var twopane = '<div style="display:flex;gap:13px;flex-wrap:wrap;align-items:flex-start;margin-top:14px">'
+    +'<div style="flex:1 1 240px;min-width:220px;border:1px solid var(--line);border-radius:12px;background:#fff;padding:5px 6px">'+left+'</div>'
+    +'<div style="flex:2 1 330px;min-width:290px;border:1px solid var(--line);border-radius:12px;background:#fff;overflow:hidden">'+_rdDetailPane(sel)+'</div></div>';
   return head
     +'<div style="display:flex;gap:16px;align-items:center;border:1px solid var(--line);border-radius:14px;background:#fff;padding:15px 17px;margin-top:14px">'
       +_rdRing(s.percent)
       +'<div><div style="font-weight:700;font-size:16px">Readiness for '+esc(rd.dest_name||'')+'</div>'
-        +'<div style="font-size:12.5px;color:var(--grey);margin-top:3px">'+msg+' Gaps show <b>how to close them</b> below.</div></div></div>'
-    +_rdSection('STANDING CERTIFICATIONS', standing)
-    +_rdSection('PER-SHIPMENT CLEARANCES', pership)
+        +'<div style="font-size:12.5px;color:var(--grey);margin-top:3px">'+msg+' Pick a clearance to see its <b>lifecycle</b>.</div></div></div>'
+    +twopane
     +_rdCommerce()
     +_rdJourney()
     +'<div style="font-size:11.5px;color:var(--grey);margin-top:20px;padding:11px 13px;background:#f7f8fb;border:1px solid var(--line);border-radius:10px">Requirements are <b>derived per lane</b> (home + destination) — nothing enumerated. Gather what you can; each gap carries guidance to meet the rest.</div>';
@@ -225,7 +234,7 @@ function readinessScreen(){
   var t = UI.rdTab||'mine';
   var content = (t==='check') ? _rdCheck() : _rdMine();
   // scroll container (matches the app's standard screen wrapper) — #mainbody is a flex column, so flex:1+overflow-y:auto scrolls.
-  return '<div style="flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch"><div style="max-width:720px;margin:0 auto;padding:12px 14px 40px">'+_rdTabs()+content+'</div></div>';
+  return '<div id="rdscroll" style="flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch"><div style="max-width:980px;margin:0 auto;padding:12px 14px 40px">'+_rdTabs()+content+'</div></div>';
 }
 async function checkSupplier(){
   var el = document.getElementById('rd_bridge'); var b = el ? (el.value||'').trim() : '';
