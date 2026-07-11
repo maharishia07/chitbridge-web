@@ -47,7 +47,7 @@ function _rdSection(title, list){
 // ── MY READINESS (supplier) ──
 function _rdMine(){
   if(UI.readiness===undefined){ loadReadiness(); return (typeof loader==='function' ? loader('Loading trade readiness…') : 'Loading…'); }
-  var rd = UI.readiness||{}, items = rd.items||[], s = rd.summary||{};
+  var rd = UI.readiness||{}, items = rd.clearances||[], s = rd.summary||{};
   if(rd.error) return (typeof emptyState==='function' ? emptyState('⚠️','Could not load readiness', esc(rd.error)) : esc(rd.error));
   if(!items.length) return (typeof emptyState==='function' ? emptyState('🛡️','No standards yet','Adopt a boilerplate to inherit its standards, then gather the required clearances here.') : 'No standards yet.');
   var standing = items.filter(function(i){ return i.scope==='entity'; });
@@ -65,7 +65,7 @@ function _rdMine(){
 function _rdPassport(d){
   if(d.loading) return (typeof loader==='function' ? loader('Checking…') : 'Checking…');
   if(d.error) return (typeof emptyState==='function' ? emptyState('⚠️','Not found', esc(d.error)) : esc(d.error));
-  var sup = d.supplier||{}, items = d.items||[], s = d.summary||{}, ready = !!s.ready;
+  var sup = d.supplier||{}, items = d.clearances||[], s = d.summary||{}, ready = !!s.ready;
   var standing = items.filter(function(i){ return i.scope==='entity'; });
   var pership  = items.filter(function(i){ return i.scope!=='entity'; });
   function grid(list){ return list.map(function(i){ var m=_rdStatus(i.status); var ok=i.status==='gathered'||i.status==='expiring';
