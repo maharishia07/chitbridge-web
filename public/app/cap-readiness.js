@@ -110,29 +110,45 @@ async function checkSupplier(){
 }
 function dealFrom(bridge){ if(typeof toast==='function') toast('Confidence confirmed ✓ — start your order'); UI.nav='suppliers'; if(typeof renderApp==='function') renderApp(); }
 function gatherReadiness(standard, doc){
+  var it = ((UI.readiness&&UI.readiness.clearances)||[]).filter(function(c){ return c.standard===standard && c.doc===doc; })[0];
+  UI.rdGather = { standard:standard, doc:doc, title:(it&&it.title)||doc };
   var far = new Date(Date.now()+365*86400000).toISOString().slice(0,10);
   var inS = 'width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:13px;margin:5px 0 13px;box-sizing:border-box';
   var lbl = 'font-size:11px;font-weight:700;color:var(--grey)';
   var body = '<div class="mbody" style="padding:16px 18px">'
-    +'<div style="font-size:12.5px;color:var(--grey);margin-bottom:13px">Record the document that satisfies this clearance. It stays <b>private</b> — buyers only see that it\'s met, and its validity.</div>'
-    +'<label style="'+lbl+'">Document reference / number</label>'
-    +'<input id="gd_ref" placeholder="e.g. certificate no. / IEC / SDS ref" style="'+inS+'">'
-    +'<label style="'+lbl+'">Issued by (optional)</label>'
-    +'<input id="gd_by" placeholder="issuing body / authority" style="'+inS+'">'
+    +'<div style="font-size:12.5px;color:var(--grey);margin-bottom:13px">This records the clearance as a <b>chit on the rail</b> that carries your document — provenanced &amp; private. Buyers see only that it\'s met + its validity.</div>'
+    +'<label style="'+lbl+'">Document (PDF/image · ≤ 6 MB)</label>'
+    +'<input id="gd_file" type="file" style="'+inS+'">'
+    +'<label style="'+lbl+'">Reference / number (optional)</label>'
+    +'<input id="gd_ref" placeholder="e.g. certificate no." style="'+inS+'">'
     +'<label style="'+lbl+'">Valid until</label>'
     +'<input id="gd_valid" type="date" value="'+far+'" style="'+inS+'">'
-    +'<button onclick="submitGather(\''+esc(standard)+'\',\''+esc(doc)+'\')" style="width:100%;background:var(--blue);color:#fff;border:0;border-radius:9px;padding:11px;font-weight:700;cursor:pointer">Record clearance</button>'
+    +'<div id="gd_err" style="color:#c0453b;font-size:12px;margin-bottom:8px"></div>'
+    +'<button id="gd_btn" onclick="submitGather()" style="width:100%;background:var(--blue);color:#fff;border:0;border-radius:9px;padding:11px;font-weight:700;cursor:pointer">Record clearance on the rail</button>'
     +'</div>';
-  if(typeof modal==='function') modal('<div class="mhd"><div class="t">🛡️ Gather clearance</div></div>'+body);
+  if(typeof modal==='function') modal('<div class="mhd"><div class="t">🛡️ Gather clearance — '+esc(UI.rdGather.title)+'</div></div>'+body);
 }
-async function submitGather(standard, doc){
-  var g = function(id){ var e=document.getElementById(id); return e?(e.value||'').trim():''; };
-  var ref = g('gd_ref'), by = g('gd_by'), valid = g('gd_valid') || null;
-  var evidence = (ref || 'recorded') + (by ? (' · ' + by) : '');
+async function submitGather(){
+  var g = UI.rdGather||{}; if(!g.standard) return;
+  var fe = document.getElementById('gd_file'), file = fe && fe.files && fe.files[0];
+  var ref = ((document.getElementById('gd_ref')||{}).value||'').trim();
+  var valid = ((document.getElementById('gd_valid')||{}).value||'') || null;
+  var btn = document.getElementById('gd_btn'), err = document.getElementById('gd_err');
+  if(err) err.textContent=''; if(btn){ btn.disabled=true; btn.textContent='Recording…'; }
   try{
-    await api('readinessGather', {body:{standard_key:standard, doc_key:doc, evidence_ref:evidence, valid_until:valid, status:'gathered'}});
+    // 1 · a SELF-CHIT is the evidence record on the rail (governed + provenanced like any chit)
+    var subj = 'Clearance — ' + (g.title||g.doc) + (ref?(' ('+ref+')'):'');
+    var r = await api('createChit', {body:{recipients:[{name:'self', role:'to'}], manual_subject:subj, subject:subj, purpose:'general', line_items:[]}});
+    var chitId = r && r.chit_id;
+    // 2 · attach the document to that chit (best-effort — a reference-only clearance is still valid)
+    if(chitId && file && typeof attUpload==='function'){ try{ await attUpload(chitId, file); }catch(_){} }
+    // 3 · record the clearance, pointing at its evidence chit
+    await api('readinessGather', {body:{standard_key:g.standard, doc_key:g.doc, evidence_ref:(chitId||ref||'recorded'), valid_until:valid, status:'gathered'}});
     if(typeof closeModal==='function') closeModal();
-    if(typeof toast==='function') toast('Clearance recorded.');
+    if(typeof toast==='function') toast(file?'Clearance recorded — document on the rail ✓':'Clearance recorded ✓');
     UI.readiness = undefined; loadReadiness();
-  }catch(e){ if(typeof toast==='function') toast((e&&e.message)||'Failed to record'); }
+  }catch(e){
+    if(btn){ btn.disabled=false; btn.textContent='Record clearance on the rail'; }
+    if(err) err.textContent=(e&&e.message)||'Failed to record';
+  }
 }
