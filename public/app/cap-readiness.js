@@ -11,7 +11,28 @@ if (typeof EP !== 'undefined') {
     readinessVerify: {m:'POST', p:'/api/governance/verify',               ok:'y'},
     instruments:     {m:'GET',  p:'/api/governance/instruments',           ok:'y'},
     journey:         {m:'GET',  p:'/api/governance/journey',               ok:'y'},
+    profileGet:      {m:'GET',  p:'/api/governance/profile',               ok:'y'},
+    profileSave:     {m:'PUT',  p:'/api/governance/profile',               ok:'y'},
   });
+}
+// the entity's DECLARATION — which standards it holds. A checkbox = a commitment: it only counts as MET when its
+// evidence is live & valid (status gathered/expiring). loadProfile → UI.profile.adopted[]. declareToggle persists it.
+async function loadProfile(){
+  try{ UI.profile = await api('profileGet'); }
+  catch(e){ UI.profile = {trade_mode:'domestic',markets:[],sectors:[],adopted:[]}; }
+  if(typeof renderApp==='function') renderApp();
+}
+function _rdDeclared(std){ return !!(UI.profile && (UI.profile.adopted||[]).indexOf(std)>=0); }
+function _rdEvidenceValid(it){ return it && (it.status==='gathered'||it.status==='expiring'); }  // has evidence + not expired
+async function declareToggle(std){
+  if(!UI.profile) UI.profile={trade_mode:'domestic',markets:[],sectors:[],adopted:[]};
+  var ad=(UI.profile.adopted||[]).slice(), i=ad.indexOf(std);
+  if(i>=0) ad.splice(i,1); else ad.push(std);
+  UI.profile.adopted=ad;                                   // optimistic
+  if(typeof renderApp==='function') renderApp();
+  try{ UI.profile = await api('profileSave', {body:{trade_mode:UI.profile.trade_mode, markets:UI.profile.markets, sectors:UI.profile.sectors, adopted:ad}}); }
+  catch(e){ if(typeof toast==='function') toast('Could not save declaration'); }
+  if(typeof renderApp==='function') renderApp();
 }
 async function loadReadiness(){
   try{ UI.readiness = await api('readinessOwn'); }
@@ -75,8 +96,11 @@ function _rdSelect(std,doc){
 }
 function _rdRow(it, selKey){
   var m=_rdStatus(it.status), k=it.standard+'|'+it.doc, on=(k===selKey);
+  var declared=_rdDeclared(it.standard), valid=_rdEvidenceValid(it);
+  var boxCol=declared?(valid?'#2f8f5b':'#c98a1a'):'var(--line)', boxBg=(declared&&valid)?'#2f8f5b':'#fff', boxMark=declared?(valid?'✓':'!'):'';
+  var box='<span onclick="event.stopPropagation();declareToggle(\''+esc(it.standard)+'\')" title="'+(declared?(valid?'Declared & evidenced (live, valid)':'Declared — needs live, valid evidence'):'Declare this applies to you')+'" style="width:16px;height:16px;border-radius:4px;border:1.5px solid '+boxCol+';background:'+boxBg+';color:'+((declared&&valid)?'#fff':'#c98a1a')+';display:inline-grid;place-items:center;font-size:10px;font-weight:800;flex:0 0 auto;cursor:pointer">'+boxMark+'</span>';
   return '<div onclick="_rdSelect(\''+esc(it.standard)+'\',\''+esc(it.doc)+'\')" style="display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:9px;cursor:pointer;margin:2px 0;background:'+(on?'#eef3fb':'transparent')+';border:1px solid '+(on?'var(--blue)':'transparent')+'">'
-    +'<div style="width:9px;height:9px;border-radius:50%;background:'+m.col+';flex:0 0 auto"></div>'
+    +box
     +'<div style="min-width:0;flex:1"><div style="font-weight:'+(on?'700':'600')+';font-size:12.5px;color:'+(on?'var(--blue)':'var(--ink)')+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(it.title||it.doc)+'</div></div>'
     +'<div style="width:15px;height:15px;border-radius:5px;display:grid;place-items:center;font-size:9px;font-weight:800;background:'+m.col+'22;color:'+m.col+';flex:0 0 auto">'+m.ic+'</div></div>';
 }
@@ -89,8 +113,14 @@ function _rdDetailPane(it){
   var actBtn = (it.status==='gathered')
     ? '<span style="font-size:12px;color:'+m.col+';font-weight:700">'+m.lbl+'</span>'
     : '<button onclick="gatherReadiness(\''+esc(it.standard)+'\',\''+esc(it.doc)+'\')" style="font-size:12px;font-weight:700;border:1px solid '+(it.status==='pending'?'var(--line)':m.col)+';background:'+(it.status==='pending'?'#fff':m.col)+';color:'+(it.status==='pending'?'#2a2f38':'#fff')+';border-radius:8px;padding:7px 13px;cursor:pointer">'+(it.status==='pending'?'Gather':'Renew')+'</button>';
+  var declared=_rdDeclared(it.standard), valid=_rdEvidenceValid(it);
+  var banner = declared
+    ? (valid
+       ? '<div style="margin:10px 16px 0;font-size:12px;color:#256e47;background:#eaf6ee;border:1px solid #bfe3cb;border-radius:9px;padding:9px 12px">✓ <b>Declared &amp; evidenced</b> — live and valid. Buyers see this as met.</div>'
+       : '<div style="margin:10px 16px 0;font-size:12px;color:#8a5f11;background:#fdf3e3;border:1px solid #f0dcae;border-radius:9px;padding:9px 12px">⚠ <b>Declared, but not backed</b> — add <b>live, valid evidence</b> (Gather or Verify) or it will not show to buyers.</div>')
+    : '<div style="margin:10px 16px 0;font-size:12px;color:var(--grey);background:#f7f8fb;border:1px solid var(--line);border-radius:9px;padding:9px 12px">☐ Not declared. Tick the box in the list to declare this applies to you — then attach evidence.</div>';
   return '<div style="padding:14px 16px 0"><div style="display:flex;align-items:flex-start;gap:10px"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:15px">'+esc(it.title||it.doc)+rung+'</div><div style="font-size:11.5px;color:var(--grey);margin-top:2px">from <span class="mono" style="color:var(--blue)">'+esc(it.standard)+'</span></div></div><div style="flex:0 0 auto;display:flex;gap:6px;align-items:center">'+verifyBtn+actBtn+'</div></div></div>'
-    + _rdExpand(it);
+    + banner + _rdExpand(it);
 }
 // ── COMMERCIAL COVER (live /instruments) — the invariant spine beneath the industry-variable compliance ──
 async function loadCommerce(){
@@ -277,6 +307,7 @@ function _rdTwoPane(list){
 // Trade ready — FULL-WIDTH, uniform with Task. Tabs: Certification (standing) · Clearance (per-shipment) · Commercial.
 function readinessScreen(){
   var tab=UI.rdTab||'certification';
+  if(UI.profile===undefined && typeof loadProfile==='function') loadProfile();   // the entity's declaration (checkboxes)
   var shell=function(inner){ return '<div style="flex:1;display:flex;flex-direction:column;min-height:0">'+_rdHeader()+_rdTabInfo(tab)+inner+'</div>'; };
   if(tab==='commercial'){
     return shell('<div style="flex:1;overflow-y:auto;min-height:0"><div style="max-width:860px;margin:0 auto;padding:14px 16px 40px">'+_rdCommercePage()+'</div></div>');
