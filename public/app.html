@@ -2976,6 +2976,30 @@ function _aiOrderDocPdf(){
   w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>'+esc(d.label||'Document')+'</title><style>'+css+'</style></head><body><div class="pg"><div class="hd"><div class="brand">CHIT &amp; BRIDGE</div><div class="tt">'+esc(d.label||'Document')+'</div><div class="meta">AI-drafted for '+esc(d.orderSubject||'order')+' · '+esc(new Date().toLocaleString())+(d.cost!=null?' · est. $'+d.cost:'')+' · review &amp; confirm</div></div><div class="amddoc">'+_aiMd(d.draft||'')+'</div></div></body></html>');
   w.document.close(); w.focus(); setTimeout(function(){try{w.print();}catch(_){}}, 350);
 }
+// aiRun — the ONE reusable AI affordance (advisory skills). Any screen: aiRun(skill, context, {title}). Global so caps reuse it.
+async function aiRun(skill, ctx, opts){
+  opts=opts||{}; if(typeof modal!=='function') return;
+  var title=opts.title||'✨ AI';
+  modal('<div class="mhd"><div class="t">'+esc(title)+'</div></div><div class="mbody" style="padding:16px"><div id="airbody" style="font-size:12.5px;color:var(--grey)">✨ Invoking the co-assist…</div></div>', true);
+  try{
+    var res=await fetch(CFG.API_BASE+'/api/governance/ai-draft',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+SESSION.token},body:JSON.stringify({skill_id:skill,context:ctx||{}})});
+    var j=await res.json();
+    if(!res.ok||!j||!j.draft) throw new Error((j&&j.message)||(res.status===503?'AI is not connected on this environment.':'AI failed'));
+    UI._aiRun={draft:j.draft,title:title,cost:(j.usage&&j.usage.est_cost_usd)};
+    var bs='font-size:12px;font-weight:700;border-radius:8px;padding:9px 13px;cursor:pointer';
+    var html='<style>'+(typeof _AI_MDCSS!=='undefined'?_AI_MDCSS:'')+'</style>'
+      +'<div style="font-size:10.5px;color:#6d5bd0;background:#f2effc;border:1px solid #ddd4f5;border-radius:8px;padding:8px 11px;margin-bottom:12px;line-height:1.5">🤖 <b>AI proposal — review before you rely on it.</b> '+(j.usage?('<span style="color:var(--grey)">· $'+j.usage.est_cost_usd+'</span>'):'')+'</div>'
+      +'<div class="amddoc" style="background:#fff;border:1px solid var(--line);border-radius:10px;padding:16px 18px;max-height:56vh;overflow:auto">'+_aiMd(j.draft)+'</div>'
+      +'<div style="display:flex;gap:8px;margin-top:13px"><button onclick="_aiRunPdf()" style="'+bs+';flex:1;border:1px solid #6d5bd0;background:#6d5bd0;color:#fff">⬇ Save as PDF</button><button onclick="closeModal()" style="'+bs+';flex:0 0 auto;border:1px solid var(--line);background:#fff">Done</button></div>';
+    var b=document.getElementById('airbody'); if(b)b.innerHTML=html;
+  }catch(e){ var b2=document.getElementById('airbody'); if(b2)b2.innerHTML='<div style="font-size:12px;color:#8a5f11;background:#fdf3e3;border:1px solid #f0dcae;border-radius:8px;padding:10px 12px">'+esc((e&&e.message)||'AI failed')+'</div>'; }
+}
+function _aiRunPdf(){
+  var d=UI._aiRun||{}; if(!d.draft)return; var w=window.open('','_blank'); if(!w){ if(typeof toast==='function')toast('Allow pop-ups to export the PDF'); return; }
+  var css='@page{size:A4;margin:18mm}body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#1e2530;margin:0}.pg{max-width:760px;margin:0 auto;padding:22px}.hd{border-bottom:2px solid #6d5bd0;padding-bottom:12px;margin-bottom:18px}.brand{font-weight:800;letter-spacing:.05em;color:#6d5bd0;font-size:12px}.tt{font-size:20px;font-weight:800;margin-top:4px}.meta{font-size:11px;color:#7a8494;margin-top:5px}'+(typeof _AI_MDCSS!=='undefined'?_AI_MDCSS:'');
+  w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>'+esc(d.title||'AI')+'</title><style>'+css+'</style></head><body><div class="pg"><div class="hd"><div class="brand">CHIT &amp; BRIDGE</div><div class="tt">'+esc(d.title||'AI')+'</div><div class="meta">AI co-assist · '+esc(new Date().toLocaleString())+(d.cost!=null?' · est. $'+d.cost:'')+'</div></div><div class="amddoc">'+_aiMd(d.draft||'')+'</div></div></body></html>');
+  w.document.close(); w.focus(); setTimeout(function(){try{w.print();}catch(_){}}, 350);
+}
 function detailInner(){
   const c=UI.detail;
   if(!c) return (UI.rows && UI.rows.length)
