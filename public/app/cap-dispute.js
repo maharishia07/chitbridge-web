@@ -158,8 +158,29 @@ function disputeOverlay(c, d, open, closed){
   return '<div style="position:absolute;inset:0;background:#fff;display:flex;flex-direction:column;z-index:30">'
     +'<div style="display:flex;align-items:center;gap:8px;padding:13px 16px;border-bottom:1px solid var(--line);background:#fdf0ef">'
       +'<span style="font-weight:700;color:#b4453f;font-size:14px">⚑ '+esc(cap(d.category||''))+'</span>'+proof
-      +'<button onclick="disputeClose()" style="margin-left:auto;border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:12.5px">✕ Close</button></div>'
+      +'<button onclick="aiDisputeSummary(\''+c.id+'\',\''+d.dispute_id+'\')" title="AI summarises this dispute neutrally — it does not decide it" style="margin-left:auto;border:1px solid #6d5bd0;background:#f2effc;color:#6d5bd0;border-radius:8px;padding:6px 11px;cursor:pointer;font-size:12.5px">✨ Summarize</button>'
+      +'<button onclick="disputeClose()" style="margin-left:8px;border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:12.5px">✕ Close</button></div>'
     +'<div style="padding:15px 16px;overflow:auto;flex:1">'+dd+disputeRoomBox(c,d)+'</div></div>';
+}
+// AI dispute summary — invoked, neutral, INFORMATIONAL (resolve stays human, raiser-only). Reuses the global _aiMd (app.html).
+async function aiDisputeSummary(chitId, disputeId){
+  var c=UI.detail; if(!c){ if(typeof toast==='function')toast('Open the dispute first'); return; }
+  var d=((c.disputes)||[]).filter(function(x){ return String(x.dispute_id)===String(disputeId); })[0]; if(!d) return;
+  if(typeof modal!=='function'||typeof _aiMd!=='function'){ if(typeof toast==='function')toast('AI unavailable here'); return; }
+  var msgs=(typeof disputeFilterMsgs==='function')?(disputeFilterMsgs((c.msgs||[]),'dispute',d.dispute_id)||[]):[];
+  var ctx={ category:d.category, status:d.status, raised_by:d.raised_by_display_name, subject:c.code,
+    thread:msgs.map(function(m){ return { from:(m.from||m.sender||''), text:(m.body||m.text||'') }; }) };
+  modal('<div class="mhd"><div class="t">✨ Summarize dispute</div></div><div class="mbody" style="padding:16px"><div id="adbody" style="font-size:12.5px;color:var(--grey)">✨ Summarizing — neutral &amp; factual…</div></div>', true);
+  try{
+    var res=await fetch(CFG.API_BASE+'/api/governance/ai-draft',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+SESSION.token},body:JSON.stringify({skill_id:'dispute-summary',context:ctx})});
+    var j=await res.json();
+    if(!res.ok||!j||!j.draft) throw new Error((j&&j.message)||(res.status===503?'AI is not connected on this environment.':'Summary failed'));
+    var html='<style>'+(typeof _AI_MDCSS!=='undefined'?_AI_MDCSS:'')+'</style>'
+      +'<div style="font-size:10.5px;color:#6d5bd0;background:#f2effc;border:1px solid #ddd4f5;border-radius:8px;padding:8px 11px;margin-bottom:12px;line-height:1.5">🤖 <b>AI summary — neutral, informational.</b> It does not decide the dispute. '+(j.usage?('<span style="color:var(--grey)">· $'+j.usage.est_cost_usd+'</span>'):'')+'</div>'
+      +'<div class="amddoc" style="background:#fff;border:1px solid var(--line);border-radius:10px;padding:15px 17px;max-height:56vh;overflow:auto">'+_aiMd(j.draft)+'</div>'
+      +'<div style="margin-top:12px;text-align:right"><button onclick="closeModal()" style="font-size:12px;font-weight:700;border:1px solid var(--line);background:#fff;border-radius:8px;padding:9px 16px;cursor:pointer">Done</button></div>';
+    var b=document.getElementById('adbody'); if(b)b.innerHTML=html;
+  }catch(e){ var b2=document.getElementById('adbody'); if(b2)b2.innerHTML='<div style="font-size:12px;color:#8a5f11;background:#fdf3e3;border:1px solid #f0dcae;border-radius:8px;padding:10px 12px">'+esc((e&&e.message)||'Summary failed')+'</div>'; }
 }
 /* one dispute's room: participants · own message wall (latest first, attachments) · New-message (text+attach) · Resolve */
 function disputeRoomBox(c, d){
