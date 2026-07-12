@@ -25,10 +25,13 @@ var RD_SKILL = { 'sds':'sds', 'exim-policy':'export-declaration', 'reach':'evide
   'bis':'product-classify' };   // which clearance standards have a drafting skill (the co-assist drafts the doc/evidence checklist)
 function _rdSkill(it){ return it ? (RD_SKILL[it.standard]||null) : null; }
 function _aiCtxExporter(){ return { name:((UI.profile&&UI.profile.legal_name)||(UI.profile&&UI.profile.name)||'[to confirm]') }; }
-// clearance path — draft a document from the standard/product the entity holds
+// clearance path — draft a document from the standard/product the entity holds. Passes an ATTACH target so a document
+// draft can be ACCEPTED → filed as the clearance's evidence on the rail (closes the advise→produce loop).
 async function aiDraftReadiness(std, doc, skill){
+  var it=((UI.laneRd&&UI.laneRd.clearances)||(UI.readiness&&UI.readiness.clearances)||[]).filter(function(c){return c.standard===std&&c.doc===doc;})[0];
   return _aiDraft(skill, std, { standard:std, document:doc, sector:(UI.laneVertical||'paint'),
-    origin:(UI.laneOrigin||'IN'), destination:(UI.laneDest||null), product:{ description:doc }, exporter:_aiCtxExporter() });
+    origin:(UI.laneOrigin||'IN'), destination:(UI.laneDest||null), product:{ description:doc }, exporter:_aiCtxExporter() },
+    { standard:std, doc:doc, title:(it&&it.title)||doc, skill:skill });
 }
 // commerce path — draft a commercial document/advice from the current trade lane (order specifics → [to confirm])
 async function aiDraftCommerce(skill, label){
@@ -71,19 +74,24 @@ var _MD_CSS=['.mddoc{color:#1e2530;font-size:12.5px;line-height:1.55;font-family
  '.mddoc table.mdt{border-collapse:collapse;width:100%;margin:11px 0;font-size:11.5px}','.mddoc .mdt th,.mddoc .mdt td{border:1px solid #dfe4ec;padding:7px 9px;text-align:left;vertical-align:top}',
  '.mddoc .mdt th{background:#f4f6fa;font-weight:700;color:#2a3340}','.mddoc .mdt tr:nth-child(even) td{background:#fafbfd}',
  '.mddoc code{background:#f0f2f6;padding:1px 5px;border-radius:4px;font-size:11px}','.mddoc strong{color:#141a22}'].join('');
-// the ONE reusable invoke+review modal — every path funnels here (mirrors lib/ai.js single pipe)
-async function _aiDraft(skill, label, ctx){
+// the ONE reusable invoke+review modal — every path funnels here (mirrors lib/ai.js single pipe). `attach` (optional) =
+// a clearance target {standard,doc,title,skill}; a DOCUMENT draft can then be ACCEPTED → filed as that clearance's evidence.
+async function _aiDraft(skill, label, ctx, attach){
   if(typeof modal==='function') modal('<div class="mhd"><div class="t">✨ Draft with AI — '+esc(label)+'</div></div><div class="mbody" style="padding:16px"><div id="aidbody" style="font-size:12.5px;color:var(--grey)">✨ Invoking the co-assist… drafting from what this order/profile holds.</div></div>', true);
   try{
     var r = await api('aiDraft', {body:{skill_id:skill, context:ctx}});
     var draft = (r&&r.draft)||'', cost = (r&&r.usage&&r.usage.est_cost_usd);
-    UI._aiLast = { draft:draft, label:label, note:(r&&r.note)||'', cost:cost };
+    UI._aiLast = { draft:draft, label:label, note:(r&&r.note)||'', cost:cost, attach:attach||null };
     var bs='font-size:12px;font-weight:700;border-radius:8px;padding:9px 13px;cursor:pointer';
+    // a DOCUMENT (the actual cert/declaration) can become the clearance's evidence; aids (classify/summarize) cannot.
+    var acceptBtn = (attach && r && r.kind==='document')
+      ? '<button onclick="_aiAccept()" title="File this document as the evidence backing '+esc(attach.title||attach.doc)+' — a chit on your rail" style="'+bs+';flex:1;border:1px solid #2f8f5b;background:#2f8f5b;color:#fff">✓ Accept &amp; attach as evidence</button>' : '';
     var html = '<style>'+_MD_CSS+'</style>'
       + '<div style="font-size:10.5px;color:#6d5bd0;background:#f2effc;border:1px solid #ddd4f5;border-radius:8px;padding:8px 11px;margin-bottom:12px;line-height:1.5">🤖 <b>AI proposal — not evidence.</b> '+esc((r&&r.note)||'Review and confirm before you use it.')+(cost!=null?' <span style="color:var(--grey)">· cost $'+cost+'</span>':'')+'</div>'
-      + '<div class="mddoc" style="background:#fff;border:1px solid var(--line);border-radius:10px;padding:16px 20px;max-height:56vh;overflow:auto">'+_mdToHtml(draft)+'</div>'
-      + '<div style="display:flex;gap:8px;margin-top:13px">'
-        + '<button onclick="_aiPdf()" style="'+bs+';flex:1;border:1px solid #6d5bd0;background:#6d5bd0;color:#fff">⬇ Save as PDF</button>'
+      + '<div class="mddoc" style="background:#fff;border:1px solid var(--line);border-radius:10px;padding:16px 20px;max-height:52vh;overflow:auto">'+_mdToHtml(draft)+'</div>'
+      + '<div style="display:flex;gap:8px;margin-top:13px;flex-wrap:wrap">'
+        + acceptBtn
+        + '<button onclick="_aiPdf()" style="'+bs+';flex:'+(acceptBtn?'0 0 auto':'1')+';border:1px solid #6d5bd0;background:'+(acceptBtn?'#fff':'#6d5bd0')+';color:'+(acceptBtn?'#6d5bd0':'#fff')+'">⬇ PDF</button>'
         + '<button onclick="_aiCopy(this)" data-draft="'+esc(encodeURIComponent(draft))+'" style="'+bs+';flex:0 0 auto;border:1px solid var(--line);background:#fff;color:var(--ink)">📋 Copy</button>'
         + '<button onclick="closeModal()" style="'+bs+';flex:0 0 auto;border:1px solid var(--line);background:#fff;color:var(--ink)">Done</button>'
       + '</div>';
@@ -94,6 +102,24 @@ async function _aiDraft(skill, label, ctx){
   }
 }
 function _aiCopy(btn){ try{ var t=decodeURIComponent(btn.getAttribute('data-draft')||''); if(navigator.clipboard) navigator.clipboard.writeText(t); if(typeof toast==='function') toast('Draft copied ✓'); }catch(_){ } }
+// close the loop: a confirmed DOCUMENT draft becomes the clearance's evidence — a self-chit on the rail carrying the
+// document, then gather (identical to a manually-uploaded cert). AI goes from advisor → producer on the rail.
+async function _aiAccept(){
+  var d=UI._aiLast||{}, at=d.attach; if(!d.draft||!at){ if(typeof toast==='function') toast('Nothing to attach'); return; }
+  try{
+    var subj='Clearance — '+(at.title||at.doc||at.standard)+' (AI-drafted)';
+    var r=await api('createChit',{body:{recipients:[{name:'self',role:'to'}], manual_subject:subj, subject:subj, purpose:'general', line_items:[]}});
+    var chitId=r&&r.chit_id;
+    if(chitId && typeof attUpload==='function' && typeof File!=='undefined'){
+      try{ var f=new File([d.draft], String(at.skill||'draft')+'.md', {type:'text/markdown'}); await attUpload(chitId, f); }catch(_){}
+    }
+    var far=new Date(Date.now()+365*86400000).toISOString().slice(0,10);
+    await api('readinessGather',{body:{standard_key:at.standard, doc_key:at.doc, evidence_ref:(chitId||'ai-drafted'), valid_until:far, status:'gathered'}});
+    if(typeof closeModal==='function') closeModal();
+    if(typeof toast==='function') toast('Accepted — filed as evidence on the rail ✓');
+    UI.laneMatrix=undefined; UI.laneRd=undefined; if(typeof loadLanes==='function') loadLanes();
+  }catch(e){ if(typeof toast==='function') toast((e&&e.message)||'Could not attach'); }
+}
 // export the draft as a print-ready A4 document → the browser's "Save as PDF" (no dependency, works offline)
 function _aiPdf(){
   var d=UI._aiLast||{}; if(!d.draft){ if(typeof toast==='function') toast('Nothing to export'); return; }
