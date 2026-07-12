@@ -2452,7 +2452,7 @@ function makeMovable(panel, opts){
 /* movable-panels: apply makeMovable to the compose/large modal + the assistant when they appear (best-effort, idempotent). */
 (function(){
   function tryMove(){
-    try{ var mp=document.querySelector('#modalhost .modal'); if(mp && !mp.getAttribute('data-movable') && mp.getBoundingClientRect().height>300) makeMovable(mp,{key:'cb_modal',minW:340,minH:260}); }catch(e){}
+    /* modals kept plain + centered — the movable A-/A+/grip bar overlapped titles & close; disabled for standard modals */
     try{ var ap=document.querySelector('#assisthost > div'); if(ap && !ap.getAttribute('data-movable')) makeMovable(ap,{key:'cb_assist',minW:300,minH:220}); }catch(e){}
   }
   function start(){ try{ new MutationObserver(tryMove).observe(document.body,{childList:true,subtree:true}); }catch(e){} }
