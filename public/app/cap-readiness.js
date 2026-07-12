@@ -24,15 +24,18 @@ async function loadProfile(){
 }
 function _rdDeclared(std){ return !!(UI.profile && (UI.profile.adopted||[]).indexOf(std)>=0); }
 function _rdEvidenceValid(it){ return it && (it.status==='gathered'||it.status==='expiring'); }  // has evidence + not expired
-async function declareToggle(std){
+async function declareToggle(std, doc){
   if(!UI.profile) UI.profile={trade_mode:'domestic',markets:[],sectors:[],adopted:[]};
-  var ad=(UI.profile.adopted||[]).slice(), i=ad.indexOf(std);
+  var ad=(UI.profile.adopted||[]).slice(), i=ad.indexOf(std), checking=(i<0);
   if(i>=0) ad.splice(i,1); else ad.push(std);
   UI.profile.adopted=ad;                                   // optimistic
   if(typeof renderApp==='function') renderApp();
   try{ UI.profile = await api('profileSave', {body:{trade_mode:UI.profile.trade_mode, markets:UI.profile.markets, sectors:UI.profile.sectors, adopted:ad}}); }
   catch(e){ if(typeof toast==='function') toast('Could not save declaration'); }
   if(typeof renderApp==='function') renderApp();
+  // check = a commitment → ask for the proof right away (unless it's already backed by live valid evidence)
+  if(checking && doc){ var it=((UI.laneRd&&UI.laneRd.clearances)||[]).filter(function(c){return c.standard===std&&c.doc===doc;})[0];
+    if(!_rdEvidenceValid(it) && typeof gatherReadiness==='function') gatherReadiness(std, doc); }
 }
 async function loadReadiness(){
   try{ UI.readiness = await api('readinessOwn'); }
@@ -98,7 +101,7 @@ function _rdRow(it, selKey){
   var m=_rdStatus(it.status), k=it.standard+'|'+it.doc, on=(k===selKey);
   var declared=_rdDeclared(it.standard), valid=_rdEvidenceValid(it);
   var boxCol=declared?(valid?'#2f8f5b':'#c98a1a'):'var(--line)', boxBg=(declared&&valid)?'#2f8f5b':'#fff', boxMark=declared?(valid?'✓':'!'):'';
-  var box='<span onclick="event.stopPropagation();declareToggle(\''+esc(it.standard)+'\')" title="'+(declared?(valid?'Declared & evidenced (live, valid)':'Declared — needs live, valid evidence'):'Declare this applies to you')+'" style="width:16px;height:16px;border-radius:4px;border:1.5px solid '+boxCol+';background:'+boxBg+';color:'+((declared&&valid)?'#fff':'#c98a1a')+';display:inline-grid;place-items:center;font-size:10px;font-weight:800;flex:0 0 auto;cursor:pointer">'+boxMark+'</span>';
+  var box='<span onclick="event.stopPropagation();declareToggle(\''+esc(it.standard)+'\',\''+esc(it.doc)+'\')" title="'+(declared?(valid?'Declared & evidenced (live, valid)':'Declared — needs live, valid evidence'):'Declare this applies to you — you will be asked for proof')+'" style="width:16px;height:16px;border-radius:4px;border:1.5px solid '+boxCol+';background:'+boxBg+';color:'+((declared&&valid)?'#fff':'#c98a1a')+';display:inline-grid;place-items:center;font-size:10px;font-weight:800;flex:0 0 auto;cursor:pointer">'+boxMark+'</span>';
   return '<div onclick="_rdSelect(\''+esc(it.standard)+'\',\''+esc(it.doc)+'\')" style="display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:9px;cursor:pointer;margin:2px 0;background:'+(on?'#eef3fb':'transparent')+';border:1px solid '+(on?'var(--blue)':'transparent')+'">'
     +box
     +'<div style="min-width:0;flex:1"><div style="font-weight:'+(on?'700':'600')+';font-size:12.5px;color:'+(on?'var(--blue)':'var(--ink)')+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(it.title||it.doc)+'</div></div>'
