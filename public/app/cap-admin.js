@@ -5,6 +5,44 @@
  * scrErr, val, toast, MSG, _CARD, CURRENCIES, UI. Screens: MIS, Profile, Settings (+ governance).
  * (Co-assists is planned to move here too, once its shared actor helpers are separated.) */
 
+if (typeof EP !== 'undefined') { Object.assign(EP, {
+  vaultGet:  {m:'GET', p:'/api/governance/profile',       ok:'y'},   // returns the trade profile incl. .vault
+  vaultSave: {m:'PUT', p:'/api/governance/profile/vault', ok:'y'},
+}); }
+// ── TRADE DOCUMENTS VAULT — the recurring inputs a business provides ONCE that pre-fill every authority form. Grouped;
+// matches the backend whitelist (lib/profile.js VAULT_SCHEMA). Gather here → forms are ~70% pre-filled thereafter. ──
+var VAULT_UI=[
+  {g:'identity', t:'🏢 Business identity', f:[['legal_name','Legal name','as registered'],['trade_name','Trade / brand name',''],['address','Address',''],['city','City',''],['state','State',''],['pincode','PIN / ZIP',''],['country','Country','e.g. India'],['email','Email',''],['phone','Phone','']]},
+  {g:'signatory', t:'✍️ Authorised signatory', f:[['name','Name',''],['designation','Designation','e.g. Director']]},
+  {g:'registrations', t:'🪪 Registrations', f:[['gstin','GSTIN','15-char'],['pan','PAN',''],['iec','IEC','Import-Export Code'],['ad_code','AD code','bank AD code'],['lut','LUT','export LUT no.']]},
+  {g:'banking', t:'🏦 Banking', f:[['bank_name','Bank name',''],['account_no','Account no.',''],['ifsc','IFSC',''],['swift','SWIFT / BIC',''],['ad_branch','AD branch','']]},
+  {g:'logistics', t:'🚢 Logistics defaults', f:[['port_loading','Port of loading','e.g. Nhava Sheva'],['incoterm','Preferred Incoterm','e.g. CIF'],['mode','Mode','Sea / Air']]}
+];
+function vaultCardHTML(vault){
+  vault=vault||{};
+  var groups=VAULT_UI.map(function(G){
+    var fields=G.f.map(function(fl){ var k=fl[0], v=(vault[G.g]&&vault[G.g][k])||'';
+      return '<div style="display:flex;flex-direction:column;gap:2px"><label style="font-size:10px;color:var(--grey);font-weight:600">'+esc(fl[1])+'</label><input class="inp" id="v_'+G.g+'_'+k+'" value="'+esc(v)+'" placeholder="'+esc(fl[2]||'')+'" style="margin:0"></div>'; }).join('');
+    return '<div style="margin-top:13px"><div style="font-size:12px;font-weight:700;color:var(--ink);margin-bottom:7px">'+G.t+'</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+fields+'</div></div>';
+  }).join('');
+  return '<div style="'+_CARD+';margin-top:10px"><div class="sec" style="margin:0">🗂 Trade documents vault <span style="font-size:10px;font-weight:600;color:var(--grey)">— fill once · pre-fills every form</span></div>'
+    +'<div style="font-size:11px;color:var(--grey);margin:3px 0 2px;line-height:1.5">These recurring details auto-fill your Commercial Invoice, Packing List and other authority forms. At form time you\'ll only be asked the shipment-specifics (invoice no, dates, ports).</div>'
+    +groups
+    +'<div class="err" id="vault_err" style="margin-top:8px"></div>'
+    +'<button class="composebtn" style="margin-top:11px" onclick="saveVaultUI()">Save vault</button></div>';
+}
+async function loadVault(){
+  var host=document.getElementById('vaulthost'); if(!host) return;
+  try{ var p=(await api('vaultGet'))||{}; host.innerHTML=vaultCardHTML(p.vault||{}); }
+  catch(e){ host.innerHTML=vaultCardHTML({}); }
+}
+async function saveVaultUI(){
+  var err=document.getElementById('vault_err'); if(err)err.textContent='';
+  var vault={};
+  VAULT_UI.forEach(function(G){ var grp={}; G.f.forEach(function(fl){ var el=document.getElementById('v_'+G.g+'_'+fl[0]); var v=el?(el.value||'').trim():''; if(v)grp[fl[0]]=v; }); if(Object.keys(grp).length)vault[G.g]=grp; });
+  try{ await api('vaultSave',{body:{vault:vault}}); if(typeof toast==='function')toast('Vault saved ✓'); }
+  catch(e){ if(err)err.textContent=(e&&e.message)||'Could not save the vault'; }
+}
 /* ---- MIS ---- */
 function misScreen(){ return scr("📊 MIS","misbody","mis"); }
 async function loadMIS(){ const h=document.getElementById("misbody"); if(!h)return;
@@ -31,7 +69,8 @@ async function loadProfile(){ const h=document.getElementById("profbody"); if(!h
       <label class="fl">GSTN</label><input class="inp" id="pf_gstn" value="${esc(e.gstn)}">
       <label class="fl">Address</label><input class="inp" id="pf_addr" value="${esc(e.address)}">
       <label class="fl">Shop status</label><select class="inp" id="pf_bs">${opt(["open","closed","away"],e.business_status)}</select>
-      <div class="err" id="pf_err"></div><button class="composebtn" style="margin-top:9px" onclick="saveProfile()">Save profile</button></div>${storefrontCardHTML(e)}${govCardHTML(e.governance)}`;
+      <div class="err" id="pf_err"></div><button class="composebtn" style="margin-top:9px" onclick="saveProfile()">Save profile</button></div>${storefrontCardHTML(e)}${govCardHTML(e.governance)}<div id="vaulthost"></div>`;
+    loadVault();   // the trade documents vault (async — pre-fills authority forms)
   }catch(e){ h.innerHTML=scrErr(e); } }
 // "Your governance" — the entity's resolved governance (from attributes): where it's minted, its platform, its basics
 // (with provenance ⟵ platform), rights + allowances + jurisdiction. Entity-simple; honest "minted, not enforced yet".
