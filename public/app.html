@@ -2594,7 +2594,7 @@ function mapApiChit(c){
   const fors=recips.filter(r=>r.role==='for').map(r=>r.display_name);
   const rsummary=[tos.length?('To: '+tos.join(', ')):'', ccs.length?('CC: '+ccs.join(', ')):'', fors.length?('For: '+fors.join(', ')):''].filter(Boolean).join(' · ');
   const sum=c.summary_json||{};
-  return { clearances:sum.clearances||null, id:c.chit_id, created_at:c.created_at, code:c.manual_subject||c.auto_subject||(c.purpose||'chit'),
+  return { clearances:sum.clearances||null, commercial:sum.commercial||null, id:c.chit_id, created_at:c.created_at, code:c.manual_subject||c.auto_subject||(c.purpose||'chit'),
     party:(tos.join(', '))||senderR.display_name||c.sender_entity_display_name||'—', cust:tos.join(', '), area:'', rcc:ccs.length, rfor:fors.length, rsummary:rsummary, sender:senderR.display_name||c.sender_entity_display_name||'',
     kind:c.purpose||'order', amt:sum.total_value||0, currency:sum.currency_code||'INR', state:ST[c.current_status]||'open', _status:c.current_status||'pending',
     assignTo:c.assigned_to_actor_id||null, assignee:c.assigned_to_actor_display_name||null, recips:recips, folder:'task', dispute:Number(c.open_dispute_count||0)>0, dispOpen:Number(c.open_dispute_count||0), dispResolved:Number(c.resolved_dispute_count||0),
@@ -2862,6 +2862,20 @@ function _rungChipCB(r){
   var M={verified:['✅','#1a7f37','#e7f5ec'],attested:['🔗','#245a9e','#e8f0fb'],documented:['📄','#8a6d1f','#faf3dd'],declared:['✍️','#666666','#eeeeee']};
   var m=M[r]||M.declared; return '<span style="font-size:9px;font-weight:800;padding:1px 6px;border-radius:8px;white-space:nowrap;color:'+m[1]+';background:'+m[2]+'">'+m[0]+' '+String(r||'declared').toUpperCase()+'</span>';
 }
+function _frmChipCB(f){
+  var M={market:['#2857b8','market'],credit:['#8a5e22','credit'],liquidity:['#0e7c74','liquidity'],operational:['#7a4fb0','operational']};
+  var x=M[f]||['#8a94a6',String(f||'—')]; return '<span style="font-size:8.5px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;border-radius:5px;padding:1px 6px;background:'+x[0]+'1e;color:'+x[0]+'">FRM · '+x[1]+'</span>';
+}
+function commercialBlock(c){
+  var cm=c&&c.commercial; if(!cm||!cm.areas||!cm.areas.length) return "";
+  var when="send"; try{ when=new Date(cm.folded_at).toLocaleDateString(); }catch(e){}
+  var rows=cm.areas.map(function(a){
+    var rail=a.on_rail?'<span style="font-size:8.5px;color:#2f8f5b;font-weight:800;white-space:nowrap">● on rail</span>':'<span style="font-size:8.5px;color:var(--grey);white-space:nowrap">applicable</span>';
+    var inst=(a.instruments&&a.instruments.length)?'<div style="font-size:9px;color:var(--grey);margin-top:1px">'+esc(a.instruments.join(" · "))+'</div>':'';
+    return '<div style="display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-top:1px solid var(--line)"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:12px">'+esc(a.label)+'</div>'+inst+'</div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">'+_frmChipCB(a.frm_class)+rail+'</div></div>';
+  }).join("");
+  return '<div class="itab" style="margin-top:10px;padding:10px"><div class="sec" style="margin:0;display:flex;align-items:center;gap:6px">💳 Commercial cover<span style="margin-left:auto;font-size:9px;color:var(--grey);font-weight:600">'+(cm.incoterm?esc(cm.incoterm)+" · ":"")+'folded on '+when+'</span></div><div style="font-size:10px;color:var(--grey);margin:2px 0 4px">The commercial-cover framework for this order — payment, transit, currency &amp; credit risk. Items marked on-rail are already evidenced by the supplier record.</div>'+rows+'</div>';
+}
 function clearancesBlock(c){
   var cl=c&&c.clearances; if(!cl||!cl.items||!cl.items.length) return "";
   var when="send"; try{ when=new Date(cl.folded_at).toLocaleDateString(); }catch(e){}
@@ -2889,7 +2903,7 @@ function detailInner(){
   if(UI.dtab==="summary") body=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
      <div class="itab" style="padding:10px"><div class="sec" style="margin:0">Value</div><div class="disp" style="font-size:17px;font-weight:700">${inr(c.amt)}</div></div>
      <div class="itab" style="padding:10px"><div class="sec" style="margin:0">State</div><div class="disp" style="font-size:15px;font-weight:700">${c.state.toUpperCase()}</div></div></div>
-     <div style="margin-top:10px">${proof}</div>${clearancesBlock(c)}`;
+     <div style="margin-top:10px">${proof}</div>${clearancesBlock(c)}${commercialBlock(c)}`;
   if(c._loading){ body=`<div class="dbload"><span class="spin"></span> loading details…</div>`; }
   const actbar = (UI.folder==='drafts') ? `<button class="pri" onclick="resumeDraft('${c.id}')">✏️ Resume &amp; edit</button>` : (UI.folder==='trash') ? `<button class="pri" onclick="restoreChit('${c.id}')">↩ Restore</button>${c.isDraft?`<button class="pri" style="background:#b4453f;border-color:#b4453f;margin-left:8px" onclick="purgeChit('${c.id}')">🗑 Delete forever</button>`:''}` : (UI.folder==='archive') ? `<button class="pri" onclick="unarchiveChit('${c.id}')">↩ Unarchive</button>` : SESSION.role==="customer"
     ? `<button onclick="toggleCustPri('${c.id}')">⚑ ${c.custPri?'Priority requested':'Request priority'}</button><button class="warn" onclick="quickDispute()">⚑ Dispute</button><button onclick="todo('pdf')">⬇ PDF</button>`
