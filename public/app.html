@@ -1594,7 +1594,7 @@ async function compose(prefill){ UI.drawer=false; CC={items:(prefill&&prefill.it
         ? `<div style="display:flex;gap:8px"><select class="inp" id="cc_pick">${STORE.catalogue.map((p,i)=>`<option value="${i}">${esc(p.particulars)} · ${inr(p.price)}/${esc(p.unit||'unit')}</option>`).join("")}</select><button class="composebtn" onclick="ccAddItem()">+ Add</button></div>`
         : `<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:10px 12px;font-size:12.5px;color:#6b5a36">${_catErr?esc(MSG.catalogueLoadErr()):'Your catalogue is empty — a chit needs at least one line item. <a onclick="closeModal();navTo(\'catalogue\')" style="color:#3F66A6;cursor:pointer;font-weight:600">Add a product in Catalogue first &rarr;</a>'}</div>`}
      <div style="display:flex;gap:6px;margin-top:6px"><input class="inp" id="cc_mname" placeholder="Or type an item name" style="flex:1"><input class="inp" id="cc_mqty" inputmode="numeric" value="1" style="width:50px" title="Qty"><input class="inp" id="cc_mprice" inputmode="numeric" placeholder="Price" style="width:74px"><button class="composebtn" onclick="ccAddManual()">+ Add</button></div>
-     <div id="cc_items" style="margin-top:8px"></div>
+     <div style="display:flex;gap:6px;margin-top:6px"><input class="inp" id="cc_aidesc" placeholder="✨ Or describe the order in words — AI fills the rows" style="flex:1"><button class="composebtn" id="cc_aibtn" onclick="ccAiFill()" title="AI turns your description into line items; you review and edit before sending">✨ Fill</button></div><div id="cc_items" style="margin-top:8px"></div>
      </div><div class="cc-rpane" data-p="atts" style="display:none">
      <div style="font-family:'Space Grotesk';font-weight:600;font-size:12px;color:var(--grey);margin:12px 0 4px">Whole-chit attachments · <span style="font-weight:400">co-signed (use 📎 on a line for item-specific files)</span></div>
      <label class="composebtn" style="cursor:pointer">📎 Attach files<input type="file" multiple style="display:none" onchange="ccAddFiles(this.files);this.value=''"></label>
@@ -1634,6 +1634,25 @@ function ccRenderRcpts(){ const h=document.getElementById("cc_rcpts");
     return `<span style="display:inline-flex;align-items:center;gap:5px;border:0.5px solid var(--line);border-radius:8px;padding:3px 7px;margin:0 5px 5px 0;font-size:11.5px"><span onclick="ccFlipRcpt(${i})" title="Flip role (To/CC/For)" style="cursor:pointer;font-family:'Space Mono';font-size:9.5px;background:${bg};color:${col};border-radius:5px;padding:1px 5px">${r.role.toUpperCase()}</span>${esc(r.name)}${r.bridge?'<span style="font-family:monospace;font-size:9px;color:#9aa3a7"> · '+esc(r.bridge)+'</span>':''}${r.self?'<span style="color:#3F66A6;font-size:10px"> · self</span>':''}<span onclick="ccDelRcpt(${i})" style="cursor:pointer;color:#9aa3a7">✕</span></span>`; }).join("") : `<div style="font-size:12px;color:var(--grey)">No recipients yet — add To / CC / For above.</div>`; }
   const capEl=document.getElementById("cc_rcap"); if(capEl) capEl.textContent="To "+ccRoleCount("to")+"/"+LIMITS.to+" · CC "+ccRoleCount("cc")+"/"+LIMITS.cc+" · For "+ccRoleCount("for")+"/"+LIMITS.for+" — tap a role chip to flip"; }
 function ccAddItem(){ const e=document.getElementById("cc_err"); if(e)e.textContent=""; if(CC.items.length>=(LIMITS.items||999)){ if(e)e.textContent="Line items capped at "+LIMITS.items+"."; return; } const i=+val("cc_pick"); const p=(STORE.catalogue||[])[i]; if(!p){ if(e)e.textContent=MSG.pickItemFirst(); return; } CC.items.push({particulars:p.particulars,unit:p.unit||"unit",price:+p.price||0,qty:1}); ccRenderItems(); }
+async function ccAiFill(){
+  var el=document.getElementById('cc_aidesc'); var desc=((el&&el.value)||'').trim();
+  var err=document.getElementById('cc_err'); if(err)err.textContent='';
+  if(!desc){ if(err)err.textContent='Describe the order first (e.g. "40 drums primer at 1150, 12 tins hardener").'; return; }
+  var btn=document.getElementById('cc_aibtn'); if(btn){ btn.disabled=true; btn.textContent='✨ Filling…'; }
+  try{
+    var res=await fetch(CFG.API_BASE+'/api/governance/ai-draft',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+SESSION.token},body:JSON.stringify({skill_id:'line-item-draft',context:{description:desc}})});
+    var j=await res.json();
+    if(!res.ok) throw new Error((j&&j.message)||(res.status===503?'AI is not connected on this environment.':'AI fill failed'));
+    var rows=(j&&j.data&&j.data.line_items)||[];
+    if(!rows.length) throw new Error('No line items detected — try more detail.');
+    var cap=(typeof LIMITS!=='undefined'&&LIMITS.items)||999;
+    rows.forEach(function(li){ if(CC.items.length>=cap) return; CC.items.push({ particulars:String(li.particulars||li.description||'item'), unit:String(li.unit||'unit'), price:+li.rate||+li.price||0, qty:Math.max(0,+li.qty||+li.quantity||0) }); });
+    if(el)el.value='';
+    ccRenderItems(); if(typeof ccRenderTotal==='function')ccRenderTotal(); if(typeof ccRenderSummary==='function')ccRenderSummary();
+    if(typeof toast==='function')toast('AI filled '+rows.length+' line item'+(rows.length>1?'s':'')+' — review, edit, then send ✓');
+  }catch(e){ if(err)err.textContent=(e&&e.message)||'AI fill failed'; }
+  finally{ var b2=document.getElementById('cc_aibtn'); if(b2){ b2.disabled=false; b2.textContent='✨ Fill'; } }
+}
 function ccAddManual(){ const e=document.getElementById("cc_err"); if(e)e.textContent=""; if(CC.items.length>=(LIMITS.items||999)){ if(e)e.textContent="Line items capped at "+LIMITS.items+"."; return; } const nm=(val("cc_mname")||"").trim(); if(!nm){ if(e)e.textContent="Enter an item name."; return; } CC.items.push({particulars:nm,unit:"unit",price:+val("cc_mprice")||0,qty:Math.max(1,+val("cc_mqty")||1)}); var a=document.getElementById("cc_mname"); if(a)a.value=""; var b=document.getElementById("cc_mprice"); if(b)b.value=""; ccRenderItems(); }
 function ccDelItem(i){ CC.items.splice(i,1); ccRenderItems(); }
 function ccQty(i,v){ if(CC.items[i])CC.items[i].qty=Math.max(0,+v||0); ccRenderTotal(); }
