@@ -2406,7 +2406,7 @@ function makeMovable(panel, opts){
     // control bar: grip + A-/A+
     var bar = document.createElement('div');
     bar.setAttribute('data-mv','bar');
-    bar.style.cssText = 'position:absolute;top:6px;right:8px;display:flex;gap:4px;align-items:center;z-index:6';
+    bar.style.cssText = 'position:absolute;top:6px;left:8px;display:flex;gap:4px;align-items:center;z-index:6';
     var grip = document.createElement('span'); grip.textContent = '⠿'; grip.title = 'Drag';
     grip.style.cssText = 'cursor:grab;color:#9aa3a7;font-size:14px;line-height:1;user-select:none;padding:2px 3px';
     var btn = function(t, ti, fn){ var b = document.createElement('button'); b.type = 'button'; b.title = ti; b.textContent = t;
