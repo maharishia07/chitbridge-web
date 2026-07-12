@@ -329,8 +329,8 @@ function _lifeTabHtml(){
 /* ── THE LIFE OF… tab — the business-narrative reference set (followable stories, not feature ads) ── */
 function _storiesTabHtml(){
   const S=[
-    { icon:'📜', name:'The Life of a Chit', blurb:'How one obligation travels the governed rail — composed, delivered per-copy, acted, disputed, settled. The conceptual anchor.', url:'https://claude.ai/code/artifact/c4696068-9bfd-4079-a425-6c8d81592bdc' },
-    { icon:'🏛️', name:'The Life of an Entity', blurb:'DDL → DML: author the source-entities → the boilerplate → mint an entity → its chits. Define the mould once, mint many.', url:'https://claude.ai/code/artifact/93ccd05b-fd3a-4068-a47f-9faa41d6e4b0' },
+    { icon:'📜', name:'The Life of a Chit', blurb:'How one obligation travels the governed rail — composed, delivered per-copy, acted, disputed, settled. The conceptual anchor.', url:'https://claude.ai/code/artifact/c4696068-9bfd-4079-a425-6c8d81592bdc?via=auto_preview' },
+    { icon:'🏛️', name:'The Life of an Entity', blurb:'DDL → DML: author the source-entities → the boilerplate → mint an entity → its chits. Define the mould once, mint many.', url:'https://claude.ai/code/artifact/93ccd05b-fd3a-4068-a47f-9faa41d6e4b0?via=auto_preview' },
     { icon:'🌍', name:'The Life of a Trade', blurb:'One chemical shipment, buyer → seller: real template evidence moving across the engine. Swap the industry and the standards change; the commercial spine and the rail do not.', url:'/docs/life-of-a-trade.html' },
   ];
   const card=(x)=>`<a href="${x.url}" target="_blank" rel="noopener" style="display:block;text-decoration:none;border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:11px;background:#fff">

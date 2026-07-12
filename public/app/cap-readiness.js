@@ -68,10 +68,10 @@ function _rdExpand(it){
 }
 // ── TWO-PANE master-detail (list ↔ detail, like Task/Co-assist) — selecting preserves scroll (no jump) ──
 function _rdSelect(std,doc){
-  var sc=document.getElementById('rdscroll'); var top=sc?sc.scrollTop:0;
+  var sc=document.getElementById('rdlist'); var top=sc?sc.scrollTop:0;
   UI.rdSel = std+'|'+doc;
   if(typeof renderApp==='function') renderApp();
-  var sc2=document.getElementById('rdscroll'); if(sc2) sc2.scrollTop=top;   // keep position across the re-render
+  var sc2=document.getElementById('rdlist'); if(sc2) sc2.scrollTop=top;   // keep the LIST scroll across the re-render
 }
 function _rdRow(it, selKey){
   var m=_rdStatus(it.status), k=it.standard+'|'+it.doc, on=(k===selKey);
@@ -149,7 +149,7 @@ async function loadLaneReadiness(dest){
   if(typeof renderApp==='function') renderApp();
 }
 function setLaneDest(dest){ UI.laneDest=dest; UI.laneRd=undefined; if(typeof renderApp==='function')renderApp(); loadLaneReadiness(dest); }
-function setLaneOrigin(o){ UI.laneOrigin=o; UI.laneMatrix=undefined; UI.laneRd=undefined; if(typeof renderApp==='function')renderApp(); loadLanes(); }
+function setLaneOrigin(o){ UI.laneOrigin=o; UI.laneRd=undefined; if(typeof renderApp==='function')renderApp(); loadLaneReadiness(UI.laneDest||'EU'); }
 function _rdOriginSel(){
   var o = UI.laneOrigin||'IN', opts = [['IN','India'],['EU','European Union'],['US','United States'],['GULF','Gulf (GCC)']];
   return '<span style="font-size:12px;color:var(--grey)">Home country: </span><select onchange="setLaneOrigin(this.value)" style="font-size:12.5px;font-weight:700;border:1px solid var(--line);border-radius:8px;padding:5px 8px;background:#fff">'
@@ -164,37 +164,6 @@ function _rdTiles(){
       +'<div style="width:38px;height:38px;border-radius:50%;margin:7px auto 0;background:conic-gradient('+c+' '+l.percent+'%,var(--line) 0);display:grid;place-items:center;position:relative"><div style="position:absolute;inset:5px;border-radius:50%;background:#fff"></div><b style="position:relative;font-size:11px;color:'+c+'">'+l.percent+'%</b></div>'
       +'<div style="font-size:10px;font-weight:700;margin-top:5px;color:'+c+'">'+(l.ready?'✓ ready':'◐ '+l.gaps.length+' gap'+(l.gaps.length===1?'':'s'))+'</div></div>';
   }).join('')+'</div>';
-}
-function _rdMine(){
-  if(UI.laneMatrix===undefined){ loadLanes(); return (typeof loader==='function'?loader('Resolving your markets…'):'Loading…'); }
-  if(UI.laneMatrix.error) return (typeof emptyState==='function'?emptyState('⚠️','Could not load', esc(UI.laneMatrix.error)):esc(UI.laneMatrix.error));
-  var head = '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px">'+_rdOriginSel()+'<span style="font-size:11.5px;color:var(--grey);margin-left:auto">Readiness varies by where you ship →</span></div>'+_rdTiles();
-  var rd = UI.laneRd;
-  if(rd===undefined) return head+(typeof loader==='function'?loader('…'):'');
-  if(rd.error) return head+(typeof emptyState==='function'?emptyState('⚠️','Could not load', esc(rd.error)):'');
-  var items=(rd.clearances)||[], s=(rd.summary)||{};
-  var standing = items.filter(function(i){return i.scope==='entity';});
-  var pership  = items.filter(function(i){return i.scope!=='entity';});
-  var msg = s.ready ? ('Import-ready for '+esc(rd.dest_name)+' — every clearance met.') : ((s.total-s.met)+' clearance'+((s.total-s.met)===1?'':'s')+' to gather for '+esc(rd.dest_name)+'.');
-  // two-pane master-detail (left = the clearances, right = the selected one's lifecycle)
-  var all = standing.concat(pership);
-  if(!UI.rdSel || !all.some(function(i){return i.standard+'|'+i.doc===UI.rdSel;})) UI.rdSel = all.length ? (all[0].standard+'|'+all[0].doc) : null;
-  var sel = all.filter(function(i){return i.standard+'|'+i.doc===UI.rdSel;})[0];
-  var grpHdr=function(t){return '<div style="font-size:9.5px;font-weight:800;color:var(--grey);letter-spacing:.05em;padding:9px 8px 4px">'+t+'</div>';};
-  var left = (standing.length?grpHdr('STANDING CERTIFICATIONS')+standing.map(function(i){return _rdRow(i,UI.rdSel);}).join(''):'')
-           + (pership.length?grpHdr('PER-SHIPMENT CLEARANCES')+pership.map(function(i){return _rdRow(i,UI.rdSel);}).join(''):'');
-  var twopane = '<div style="display:flex;gap:13px;flex-wrap:wrap;align-items:flex-start;margin-top:14px">'
-    +'<div style="flex:1 1 240px;min-width:220px;border:1px solid var(--line);border-radius:12px;background:#fff;padding:5px 6px">'+left+'</div>'
-    +'<div style="flex:2 1 330px;min-width:290px;border:1px solid var(--line);border-radius:12px;background:#fff;overflow:hidden">'+_rdDetailPane(sel)+'</div></div>';
-  return head
-    +'<div style="display:flex;gap:16px;align-items:center;border:1px solid var(--line);border-radius:14px;background:#fff;padding:15px 17px;margin-top:14px">'
-      +_rdRing(s.percent)
-      +'<div><div style="font-weight:700;font-size:16px">Readiness for '+esc(rd.dest_name||'')+'</div>'
-        +'<div style="font-size:12.5px;color:var(--grey);margin-top:3px">'+msg+' Pick a clearance to see its <b>lifecycle</b>.</div></div></div>'
-    +twopane
-    +_rdCommerce()
-    +_rdJourney()
-    +'<div style="font-size:11.5px;color:var(--grey);margin-top:20px;padding:11px 13px;background:#f7f8fb;border:1px solid var(--line);border-radius:10px">Requirements are <b>derived per lane</b> (home + destination) — nothing enumerated. Gather what you can; each gap carries guidance to meet the rest.</div>';
 }
 // ── CHECK A SUPPLIER (buyer) ──
 function _rdPassport(d){
@@ -230,11 +199,54 @@ function _rdTabs(){
   function tab(k,lbl){ return '<div onclick="UI.rdTab=\''+k+'\';if(typeof renderApp===\'function\')renderApp()" style="padding:9px 15px;font-size:13px;font-weight:700;cursor:pointer;border-bottom:2px solid '+(t===k?'var(--blue)':'transparent')+';color:'+(t===k?'var(--blue)':'var(--grey)')+'">'+lbl+'</div>'; }
   return '<div style="display:flex;gap:4px;border-bottom:1px solid var(--line)">'+tab('mine','My readiness')+tab('check','Check a supplier')+'</div>';
 }
+// compact spin-the-globe: origin → destination selectors (shown in the Clearances tab header).
+function _rdDestSelectors(){
+  var dest=UI.laneDest||'EU', origin=UI.laneOrigin||'IN';
+  var dOpts=[['EU','European Union'],['US','United States'],['GULF','Gulf (GCC)'],['IN','Domestic (India)']];
+  var oOpts=[['IN','India'],['EU','European Union'],['US','United States'],['GULF','Gulf (GCC)']];
+  var ss='font-size:12px;font-weight:700;border:1px solid var(--line);border-radius:8px;padding:5px 8px;background:#fff;color:var(--ink)';
+  var opt=function(list,v){return list.map(function(x){return '<option value="'+x[0]+'"'+(x[0]===v?' selected':'')+'>'+x[1]+'</option>';}).join('');};
+  var rd=UI.laneRd, s=(rd&&rd.summary)||{}, cnt=(rd&&!rd.error&&s.total!=null)?('<span style="font-size:11.5px;color:var(--grey)">'+(s.met||0)+' of '+(s.total||0)+' met</span>'):'';
+  return '<span style="font-size:11.5px;color:var(--grey)">🌍 from</span><select onchange="setLaneOrigin(this.value)" style="'+ss+'">'+opt(oOpts,origin)+'</select>'
+    +'<span style="font-size:11.5px;color:var(--grey)">ship to</span><select onchange="setLaneDest(this.value)" style="'+ss+'">'+opt(dOpts,dest)+'</select>'+cnt;
+}
+// header: tabs (Clearances | Commercial cover) within Trade ready + the spin-the-globe selectors on the Clearances tab.
+function _rdHeader(){
+  var tab=UI.rdTab||'clearances';
+  var tb=function(k,lbl){ return '<div onclick="UI.rdTab=\''+k+'\';if(typeof renderApp===\'function\')renderApp()" style="padding:9px 15px;font-size:12.5px;font-weight:700;cursor:pointer;border-bottom:2px solid '+(tab===k?'var(--blue)':'transparent')+';color:'+(tab===k?'var(--blue)':'var(--grey)')+'">'+lbl+'</div>'; };
+  return '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex:none;padding:0 12px;border-bottom:1px solid var(--line);background:#fff">'
+    +'<div style="display:flex;gap:2px">'+tb('clearances','Clearances')+tb('commercial','Commercial cover')+'</div>'
+    +(tab==='clearances'?'<div style="margin-left:auto;display:flex;align-items:center;gap:8px;padding:6px 0">'+_rdDestSelectors()+'</div>':'')+'</div>';
+}
+function _rdCommercePage(){
+  return '<div>'+_rdCommerce()+_rdJourney()
+    +'<div style="font-size:11.5px;color:var(--grey);margin-top:20px;padding:11px 13px;background:#f7f8fb;border:1px solid var(--line);border-radius:10px">The commercial spine is the same in every industry — only the compliance above changes with the goods.</div></div>';
+}
+// Trade ready — FULL-WIDTH, uniform with Task. Two tabs: Clearances (two-pane) · Commercial cover. Entity-level only.
 function readinessScreen(){
-  var t = UI.rdTab||'mine';
-  var content = (t==='check') ? _rdCheck() : _rdMine();
-  // scroll container (matches the app's standard screen wrapper) — #mainbody is a flex column, so flex:1+overflow-y:auto scrolls.
-  return '<div id="rdscroll" style="flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch"><div style="max-width:980px;margin:0 auto;padding:12px 14px 40px">'+_rdTabs()+content+'</div></div>';
+  var tab=UI.rdTab||'clearances';
+  if(tab==='commercial'){
+    return '<div style="flex:1;display:flex;flex-direction:column;min-height:0">'+_rdHeader()
+      +'<div style="flex:1;overflow-y:auto;min-height:0"><div style="max-width:860px;margin:0 auto;padding:14px 16px 40px">'+_rdCommercePage()+'</div></div></div>';
+  }
+  var dest=UI.laneDest||'EU';
+  var shell=function(inner){ return '<div style="flex:1;display:flex;flex-direction:column;min-height:0">'+_rdHeader()+inner+'</div>'; };
+  if(UI.laneRd===undefined){ if(typeof loadLaneReadiness==='function') loadLaneReadiness(dest); return shell('<div style="flex:1;display:grid;place-items:center;color:var(--grey);font-size:13px">'+(typeof loader==='function'?loader('Resolving clearances…'):'Loading…')+'</div>'); }
+  var rd=UI.laneRd;
+  if(rd.error) return shell('<div style="padding:20px">'+(typeof emptyState==='function'?emptyState('⚠️','Could not load', esc(rd.error)):esc(rd.error))+'</div>');
+  var items=(rd.clearances)||[];
+  var standing=items.filter(function(i){return i.scope==='entity';}), pership=items.filter(function(i){return i.scope!=='entity';});
+  var all=standing.concat(pership);
+  if(!UI.rdSel || !all.some(function(i){return i.standard+'|'+i.doc===UI.rdSel;})) UI.rdSel = all.length ? (all[0].standard+'|'+all[0].doc) : null;
+  var sel=all.filter(function(i){return i.standard+'|'+i.doc===UI.rdSel;})[0];
+  var grpHdr=function(t){return '<div style="font-size:9.5px;font-weight:800;color:var(--grey);letter-spacing:.05em;padding:11px 10px 5px">'+t+'</div>';};
+  var left=(standing.length?grpHdr('STANDING CERTIFICATIONS')+standing.map(function(i){return _rdRow(i,UI.rdSel);}).join(''):'')
+          +(pership.length?grpHdr('PER-SHIPMENT CLEARANCES')+pership.map(function(i){return _rdRow(i,UI.rdSel);}).join(''):'');
+  if(!all.length) left='<div style="padding:16px;color:var(--grey);font-size:12.5px">No clearances for this lane.</div>';
+  return shell('<div style="flex:1;display:flex;min-height:0;overflow:hidden">'
+      +'<div id="rdlist" style="width:300px;flex:0 0 auto;border-right:1px solid var(--line);overflow-y:auto;background:#fff;padding:4px 6px 30px">'+left+'</div>'
+      +'<div id="rddetail" style="flex:1;min-width:0;overflow-y:auto;background:#fbfcfe">'+_rdDetailPane(sel)+'</div>'
+    +'</div>');
 }
 async function checkSupplier(){
   var el = document.getElementById('rd_bridge'); var b = el ? (el.value||'').trim() : '';
