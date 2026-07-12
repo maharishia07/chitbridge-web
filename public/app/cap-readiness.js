@@ -22,12 +22,21 @@ if (typeof EP !== 'undefined') {
 // context it already holds; the co-assist PROPOSES a draft; the human reviews & confirms. Mirrors lib/ai.js single pipe. ──
 var RD_SKILL = { 'sds':'sds', 'exim-policy':'export-declaration' };   // which clearance standards have a drafting skill
 function _rdSkill(it){ return it ? (RD_SKILL[it.standard]||null) : null; }
+function _aiCtxExporter(){ return { name:((UI.profile&&UI.profile.legal_name)||(UI.profile&&UI.profile.name)||'[to confirm]') }; }
+// clearance path — draft a document from the standard/product the entity holds
 async function aiDraftReadiness(std, doc, skill){
-  var ctx = { standard:std, document:doc, sector:(UI.laneVertical||'paint'),
-    origin:(UI.laneOrigin||'IN'), destination:(UI.laneDest||null),
-    product:{ description:doc },
-    exporter:{ name:((UI.profile&&UI.profile.legal_name)||(UI.profile&&UI.profile.name)||'[to confirm]') } };
-  if(typeof modal==='function') modal('<div class="mhd"><div class="t">✨ Draft with AI — '+esc(std)+'</div><button onclick="closeModal()" style="border:0;background:none;cursor:pointer;font-size:20px;color:var(--grey);margin-left:auto">✕</button></div><div class="mbody" style="padding:16px"><div id="aidbody" style="font-size:12.5px;color:var(--grey)">✨ Invoking the co-assist… drafting from what this order/profile holds.</div></div>');
+  return _aiDraft(skill, std, { standard:std, document:doc, sector:(UI.laneVertical||'paint'),
+    origin:(UI.laneOrigin||'IN'), destination:(UI.laneDest||null), product:{ description:doc }, exporter:_aiCtxExporter() });
+}
+// commerce path — draft a commercial document/advice from the current trade lane (order specifics → [to confirm])
+async function aiDraftCommerce(skill, label){
+  return _aiDraft(skill, label, { area:label, sector:(UI.laneVertical||'paint'), origin:(UI.laneOrigin||'IN'),
+    destination:(UI.laneDest||null), incoterm:'CIF', lc:{ type:'irrevocable confirmed', amount:'[to confirm]', expiry:'[to confirm]', incoterm:'CIF' },
+    order:{ note:'draft from the current lane; fill order specifics [to confirm]' }, exporter:_aiCtxExporter() });
+}
+// the ONE reusable invoke+review modal — every path funnels here (mirrors lib/ai.js single pipe)
+async function _aiDraft(skill, label, ctx){
+  if(typeof modal==='function') modal('<div class="mhd"><div class="t">✨ Draft with AI — '+esc(label)+'</div><button onclick="closeModal()" style="border:0;background:none;cursor:pointer;font-size:20px;color:var(--grey);margin-left:auto">✕</button></div><div class="mbody" style="padding:16px"><div id="aidbody" style="font-size:12.5px;color:var(--grey)">✨ Invoking the co-assist… drafting from what this order/profile holds.</div></div>');
   try{
     var r = await api('aiDraft', {body:{skill_id:skill, context:ctx}});
     var draft = (r&&r.draft)||'', cost = (r&&r.usage&&r.usage.est_cost_usd);
@@ -348,6 +357,89 @@ function _rdCommercePage(){
   return '<div>'+_rdCommerce()+_rdJourney()
     +'<div style="font-size:11.5px;color:var(--grey);margin-top:20px;padding:11px 13px;background:#f7f8fb;border:1px solid var(--line);border-radius:10px">The commercial spine is the same in every industry — only the compliance above changes with the goods.</div></div>';
 }
+// ── COMMERCIAL two-pane — the invariant spine gets the SAME treatment as clearances. Left = the cover areas (live from
+// /instruments, grouped by risk); right = advice · trust ladder (attestor = a FINANCIAL party) · lifecycle · AI · partner.
+// Enriched by COMMETA the way clearances are enriched by LIFE. Attestor rung: declared→documented→attested→verified. ──
+var COMMETA = {
+  'Payment risk': { attestor:'confirming bank', top:'verified', partner:'Trade-finance bank',
+    ai:{ skill:'lc-checklist', lvl:'L2', gate:'confirm', t:'AI lists the exact documents your LC requires under UCP 600 and flags discrepancy risks; you check them.' },
+    advice:'For a new buyer or a higher-risk lane, prefer an irrevocable CONFIRMED LC — a bank stands behind payment. Documentary collection is cheaper; open account is cheapest but exposes you to non-payment, so use it only with a proven buyer.',
+    life:[['Terms agreed','now'],['LC applied / drafted','next'],['Bank issues & confirms','next'],['Docs presented vs payment','next']] },
+  'Performance risk': { attestor:'issuing bank', top:'attested', partner:'Bank (guarantee)',
+    ai:{ skill:null, lvl:'L2', gate:'confirm', t:'AI assembles your on-rail track record as evidence of performance; a bond adds a bank guarantee for large first orders.' },
+    advice:'Your on-rail settlement history already evidences that you perform — this area is part-covered on the rail. A performance bond / guarantee adds a bank promise for a large first order.',
+    life:[['On-rail history','done'],['Bond needed for size?','now'],['Bank issues bond','next']] },
+  'Transit / cargo risk': { attestor:'cargo insurer', top:'attested', partner:'Marine cargo insurer / broker',
+    ai:{ skill:null, lvl:'L2', gate:'confirm', t:'AI drafts the insurance request from the consignment and the Incoterm; the insurer issues the certificate.' },
+    advice:'Under CIF the SELLER buys marine cover to the destination port (ICC-A is all-risks). Under FOB the BUYER insures — read your Incoterm so cover is not doubled or missed.',
+    life:[['Incoterm sets who insures','now'],['Request cover','next'],['Insurer issues certificate','next']] },
+  'Currency risk': { attestor:'bank treasury', top:'attested', partner:'Bank FX desk',
+    ai:{ skill:null, lvl:'L2', gate:'confirm', t:'AI computes the currency exposure and drafts a hedge note; the bank books the forward.' },
+    advice:'If you invoice in a foreign currency but your costs are in yours, a forward locks the rate and removes the swing. Hedge the exposure — do not take a bet on the rate.',
+    life:[['Exposure identified','now'],['Book forward / option','next'],['Rate locked','next']] },
+  'Price / commodity risk': { attestor:'exchange / bank', top:'attested', partner:'Commodity desk',
+    ai:{ skill:null, lvl:'L2', gate:'confirm', t:'AI flags the input-price exposure; the desk structures the hedge.' },
+    advice:'If your margin depends on a volatile input (a metal, a polymer), a price hedge protects the quoted price between order and delivery.',
+    life:[['Input exposure','now'],['Hedge structured','next']] },
+  'Country / political risk': { attestor:'ECA / PRI insurer', top:'attested', partner:'ECA / political-risk insurer',
+    ai:{ skill:null, lvl:'L2', gate:'confirm', t:'AI checks the lane against country-risk signals and drafts the cover request.' },
+    advice:'For buyers in higher-risk jurisdictions, export-credit-agency or political-risk insurance covers non-payment caused by country events (transfer bans, expropriation).',
+    life:[['Assess country risk','now'],['Apply to ECA / insurer','next'],['Cover issued','next']] },
+  'Liquidity risk': { attestor:'bank / factor', top:'attested', partner:'Bank / factor',
+    ai:{ skill:null, lvl:'L2', gate:'confirm', t:'AI drafts a finance-eligibility note from the order and your history; the bank / factor advances the funds.' },
+    advice:'Packing credit funds production BEFORE shipment; bill discounting / factoring advances cash against the receivable so you do not wait out the buyer credit term.',
+    life:[['Working-capital need','now'],['Apply for finance','next'],['Funds advanced','next']] },
+};
+function _rdComSelect(i){ UI.comSel=i; if(typeof renderApp==='function') renderApp(); }
+function _rdComRow(g, i, sel){
+  var on=(i===sel);
+  var onrail=g.covered_onrail?'<span title="already evidenced on the rail" style="font-size:9px;color:#2f8f5b;font-weight:800;flex:0 0 auto">● rail</span>':'';
+  return '<div onclick="_rdComSelect('+i+')" style="display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:9px;cursor:pointer;margin:2px 0;background:'+(on?'#eef3fb':'transparent')+';border:1px solid '+(on?'var(--blue)':'transparent')+'">'
+    +'<div style="min-width:0;flex:1"><div style="font-weight:'+(on?'700':'600')+';font-size:12.5px;color:'+(on?'var(--blue)':'var(--ink)')+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(g.label)+'</div></div>'
+    +onrail+_frmBadge(g.frm_class)+'</div>';
+}
+function _rdComLadder(attestor, top){
+  var rungs=[['declared','term agreed'],['documented','instrument drafted'],['attested',(attestor||'a bank')+' issues / confirms'],['verified','confirmed at source']];
+  var order={declared:0,documented:1,attested:2,verified:3}, topIx=(order[top]!=null?order[top]:2);
+  var cols={declared:'#8a94a6',documented:'#c98a1a',attested:'#0e7c74',verified:'#2f8f5b'};
+  return rungs.map(function(r){ var ix=order[r[0]], reach=ix<=topIx, c=cols[r[0]];
+    return '<div style="display:flex;align-items:center;gap:9px;padding:3px 0;font-size:12px;opacity:'+(reach?'1':'.38')+'"><span style="width:9px;height:9px;border-radius:50%;background:'+c+';flex:0 0 auto"></span><b style="text-transform:uppercase;font-size:10px;letter-spacing:.03em;color:'+c+';min-width:82px">'+r[0]+'</b><span style="color:var(--grey)">'+esc(r[1])+'</span></div>';
+  }).join('');
+}
+function _rdComSteps(life){
+  return (life||[]).map(function(s){ var c=s[1], col=c==='done'?'#2f8f5b':(c==='now'?'var(--blue)':'#c9d2dc'), ic=c==='done'?'✓':(c==='now'?'●':'○');
+    return '<div style="display:flex;align-items:center;gap:9px;padding:4px 0;font-size:12.5px;color:'+(c==='next'?'var(--grey)':'var(--ink)')+'"><span style="width:18px;height:18px;border-radius:50%;display:grid;place-items:center;font-size:9px;font-weight:800;color:#fff;background:'+col+';flex:0 0 auto">'+ic+'</span>'+esc(s[0])+(c==='now'?' <span style="font-size:8.5px;color:var(--blue);font-weight:800;text-transform:uppercase;letter-spacing:.04em">you are here</span>':'')+'</div>';
+  }).join('');
+}
+function _rdComDetail(g){
+  if(!g) return '<div style="color:var(--grey);font-size:13px;padding:24px;text-align:center">Select a commercial area on the left.</div>';
+  var m=COMMETA[g.label]||{};
+  var names=(g.instruments||[]).map(function(i){return esc(i.name);}).join(' · ');
+  var draftBtn = (m.ai&&m.ai.skill)
+    ? '<button onclick="aiDraftCommerce(\''+m.ai.skill+'\',\''+esc(g.label)+'\')" title="AI drafts this from the current lane — you review and confirm (never autonomous)" style="font-size:12px;font-weight:700;border:1px solid #6d5bd0;background:#f2effc;color:#6d5bd0;border-radius:8px;padding:7px 12px;cursor:pointer">✨ Draft with AI</button>' : '';
+  var partner = m.partner ? '<div style="margin-top:11px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:#faf6ee"><span style="font-size:8.5px;font-weight:800;color:#8a5e22;text-transform:uppercase;letter-spacing:.05em">Or hand it to a partner</span><div style="font-size:12.5px;margin-top:3px;font-weight:600">'+esc(m.partner)+'</div></div>' : '';
+  var ai=m.ai||{};
+  var aiLine = '<b style="color:var(--blue)">'+esc(ai.lvl||'L2')+'</b> · gate: '+esc(ai.gate||'confirm')+' — '+esc(ai.t||'AI role to be defined.')+(ai.skill?'':' <i style="color:#8a94a6">(skill coming)</i>');
+  return '<div style="padding:14px 16px 0"><div style="display:flex;align-items:flex-start;gap:10px"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:15px">'+esc(g.label)+'</div><div style="font-size:11.5px;color:var(--grey);margin-top:4px;display:flex;align-items:center;gap:7px;flex-wrap:wrap">'+_frmBadge(g.frm_class)+(g.covered_onrail?'<span style="color:#2f8f5b;font-weight:700;font-size:10px">● already on rail</span>':'')+'</div></div><div style="flex:0 0 auto">'+draftBtn+'</div></div></div>'
+    +'<div style="border-top:1px solid var(--line);margin:12px 0 0;padding:2px 16px 16px">'
+    + _rdSub('Instruments')+'<div style="font-size:12.5px;color:var(--ink)">'+(names||'—')+'</div>'
+    + _rdSub('Advice')+'<div style="font-size:12.5px;color:var(--ink);line-height:1.5">'+esc(m.advice||'—')+'</div>'
+    + _rdSub('Trust ladder · who stands behind it')+'<div>'+_rdComLadder(m.attestor, m.top)+'</div>'
+    + (m.life?(_rdSub('Its lifecycle')+_rdComSteps(m.life)):'')
+    + _rdSub('🤖 How AI enables it')+'<div style="font-size:12.5px;color:var(--grey)">'+aiLine+'</div>'
+    + partner
+    + '<div style="font-size:10.5px;color:var(--grey);margin-top:12px;border-left:3px solid #8a5e22;padding-left:9px;line-height:1.45">When you send the order, the chosen cover folds onto the buyer\'s copy (frozen) beside the clearances — same as certificates.</div>'
+  +'</div>';
+}
+function _rdComTwoPane(){
+  if(UI.commerce===undefined){ if(!UI.commerceLoading){ UI.commerceLoading=true; loadCommerce(); } return '<div style="flex:1;display:grid;place-items:center;color:var(--grey);font-size:13px">Loading commercial cover…</div>'; }
+  if(UI.commerce.error || !UI.commerce.cluster) return '<div style="flex:1;padding:20px;color:var(--grey);font-size:13px">Could not load commercial cover'+(UI.commerce.error?(' — '+esc(UI.commerce.error)):'')+'.</div>';
+  var list=UI.commerce.cluster, sel=(UI.comSel!=null && UI.comSel<list.length)?UI.comSel:0; UI.comSel=sel;
+  var left=list.map(function(g,i){return _rdComRow(g,i,sel);}).join('');
+  return '<div style="flex:1;display:flex;min-height:0;overflow:hidden">'
+    +'<div id="comlist" style="width:300px;flex:0 0 auto;border-right:1px solid var(--line);overflow-y:auto;background:#fff;padding:8px 6px 30px">'+left+'</div>'
+    +'<div style="flex:1;min-width:0;overflow-y:auto;background:#fbfcfe">'+_rdComDetail(list[sel])+'</div></div>';
+}
 // a two-pane (list ↔ detail) for one tab's set of items
 function _rdTwoPane(list){
   if(!list.length) return '<div style="flex:1;display:grid;place-items:center;color:var(--grey);font-size:13px;padding:20px">Nothing required for this lane.</div>';
@@ -364,7 +456,7 @@ function readinessScreen(){
   if(UI.profile===undefined && typeof loadProfile==='function') loadProfile();   // the entity's declaration (checkboxes)
   var shell=function(inner){ return '<div style="flex:1;display:flex;flex-direction:column;min-height:0">'+_rdHeader()+_rdTabInfo(tab)+inner+'</div>'; };
   if(tab==='commercial'){
-    return shell('<div style="flex:1;overflow-y:auto;min-height:0"><div style="max-width:860px;margin:0 auto;padding:14px 16px 40px">'+_rdCommercePage()+'</div></div>');
+    return shell(_rdComTwoPane());
   }
   var dest=UI.laneDest||'EU';
   if(UI.laneRd===undefined){ if(typeof loadLaneReadiness==='function') loadLaneReadiness(dest); return shell('<div style="flex:1;display:grid;place-items:center;color:var(--grey);font-size:13px">'+(typeof loader==='function'?loader('Resolving clearances…'):'Loading…')+'</div>'); }
