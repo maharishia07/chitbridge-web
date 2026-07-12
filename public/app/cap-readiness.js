@@ -29,6 +29,7 @@ async function loadProfile(){
   if(typeof renderApp==='function') renderApp();
 }
 function _rdEvidenceValid(it){ return it && (it.status==='gathered'||it.status==='expiring'); }  // has evidence + not expired
+function _rdIdType(it){ return it ? (({iec_code:'iec',gstn:'gstn',pan:'pan'})[it.doc]||null) : null; }  // registry ID → LIVE source-check
 // persist the current lane to the entity's profile (+ local restore) — the selectors ARE the saved profile now.
 function saveLane(){
   var vert=UI.laneVertical||'paint', dest=UI.laneDest||'EU', origin=UI.laneOrigin||'IN';
@@ -102,14 +103,15 @@ function _rdRow(it, selKey){
   return '<div onclick="_rdSelect(\''+esc(it.standard)+'\',\''+esc(it.doc)+'\')" style="display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:9px;cursor:pointer;margin:2px 0;background:'+(on?'#eef3fb':'transparent')+';border:1px solid '+(on?'var(--blue)':'transparent')+'">'
     +box
     +'<div style="min-width:0;flex:1"><div style="font-weight:'+(on?'700':'600')+';font-size:12.5px;color:'+(on?'var(--blue)':'var(--ink)')+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(it.title||it.doc)+'</div></div>'
+    +(_rdIdType(it)?'<span title="Live source-check available — verified at the registry" style="font-size:10px;flex:0 0 auto">🔗</span>':'')
     +'<div style="width:15px;height:15px;border-radius:5px;display:grid;place-items:center;font-size:9px;font-weight:800;background:'+m.col+'22;color:'+m.col+';flex:0 0 auto">'+m.ic+'</div></div>';
 }
 function _rdDetailPane(it){
   if(!it) return '<div style="color:var(--grey);font-size:13px;padding:24px;text-align:center">Select a clearance on the left to see its lifecycle.</div>';
   var m=_rdStatus(it.status), rung = it.rung ? _rungBadge(it.rung) : '';
-  var idType = ({iec_code:'iec',gstn:'gstn',pan:'pan'})[it.doc];
+  var idType = _rdIdType(it);
   var verifyBtn = (idType && it.rung!=='verified')
-    ? '<button onclick="verifyReadiness(\''+esc(it.standard)+'\',\''+esc(it.doc)+'\',\''+idType+'\')" style="font-size:12px;font-weight:700;border:1px solid #2f8f5b;background:#eaf6ee;color:#2f8f5b;border-radius:8px;padding:7px 12px;cursor:pointer">🔗 Verify</button>' : '';
+    ? '<button onclick="verifyReadiness(\''+esc(it.standard)+'\',\''+esc(it.doc)+'\',\''+idType+'\')" title="Checked against the source registry, live" style="font-size:12px;font-weight:700;border:1px solid #2f8f5b;background:#eaf6ee;color:#2f8f5b;border-radius:8px;padding:7px 12px;cursor:pointer">🔗 Verify at source</button>' : '';
   var actBtn = (it.status==='gathered')
     ? '<span style="font-size:12px;color:'+m.col+';font-weight:700">'+m.lbl+'</span>'
     : '<button onclick="gatherReadiness(\''+esc(it.standard)+'\',\''+esc(it.doc)+'\')" style="font-size:12px;font-weight:700;border:1px solid '+(it.status==='pending'?'var(--line)':m.col)+';background:'+(it.status==='pending'?'#fff':m.col)+';color:'+(it.status==='pending'?'#2a2f38':'#fff')+';border-radius:8px;padding:7px 13px;cursor:pointer">'+(it.status==='pending'?'Gather':'Renew')+'</button>';
@@ -117,8 +119,11 @@ function _rdDetailPane(it){
   var banner = valid
     ? '<div style="margin:10px 16px 0;font-size:12px;color:#256e47;background:#eaf6ee;border:1px solid #bfe3cb;border-radius:9px;padding:9px 12px">✓ <b>Held</b> — live and valid evidence. Buyers see this as met.</div>'
     : '<div style="margin:10px 16px 0;font-size:12px;color:#8a5f11;background:#fdf3e3;border:1px solid #f0dcae;border-radius:9px;padding:9px 12px">☐ <b>Not held.</b> Provide <b>live, valid evidence</b> (Gather or Verify) to check it — it stays checked only while the evidence is valid; expired = auto-unchecked. Only held standards show to buyers.</div>';
+  var vmode = idType
+    ? '<div style="margin:8px 16px 0;font-size:11.5px;color:#256e47;background:#eaf6ee;border:1px solid #bfe3cb;border-radius:9px;padding:8px 11px">🔗 <b>Live source-check</b> — the platform verifies this '+idType.toUpperCase()+' against the <b>source registry</b>, invoked live. Confirmed at source, not your word for it.</div>'
+    : '<div style="margin:8px 16px 0;font-size:11.5px;color:var(--grey);background:#f7f8fb;border:1px solid var(--line);border-radius:9px;padding:8px 11px">📄 <b>Document evidence</b> — your certificate + issuer link. A <b>live source-check is not wired for this standard yet</b> (it needs the issuing body’s registry).</div>';
   return '<div style="padding:14px 16px 0"><div style="display:flex;align-items:flex-start;gap:10px"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:15px">'+esc(it.title||it.doc)+rung+'</div><div style="font-size:11.5px;color:var(--grey);margin-top:2px">from <span class="mono" style="color:var(--blue)">'+esc(it.standard)+'</span></div></div><div style="flex:0 0 auto;display:flex;gap:6px;align-items:center">'+verifyBtn+actBtn+'</div></div></div>'
-    + banner + _rdExpand(it);
+    + banner + vmode + _rdExpand(it);
 }
 // ── COMMERCIAL COVER (live /instruments) — the invariant spine beneath the industry-variable compliance ──
 async function loadCommerce(){
