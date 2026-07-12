@@ -182,6 +182,14 @@ async function aiDisputeSummary(chitId, disputeId){
     var b=document.getElementById('adbody'); if(b)b.innerHTML=html;
   }catch(e){ var b2=document.getElementById('adbody'); if(b2)b2.innerHTML='<div style="font-size:12px;color:#8a5f11;background:#fdf3e3;border:1px solid #f0dcae;border-radius:8px;padding:10px 12px">'+esc((e&&e.message)||'Summary failed')+'</div>'; }
 }
+// AI resolution wording — invoked, neutral DRAFT; the raiser still decides whether to resolve (human gate holds). Reuses global aiRun.
+function aiResolutionSuggest(chitId, disputeId){
+  var c=UI.detail; if(!c||typeof aiRun!=='function') return;
+  var d=((c.disputes)||[]).filter(function(x){ return String(x.dispute_id)===String(disputeId); })[0]; if(!d) return;
+  var msgs=(typeof disputeFilterMsgs==='function')?(disputeFilterMsgs((c.msgs||[]),'dispute',d.dispute_id)||[]):[];
+  aiRun('resolution-suggest', { category:d.category, raised_by:d.raised_by_display_name, subject:c.code,
+    thread:msgs.map(function(m){ return { from:(m.from||m.sender||''), text:(m.body||m.text||'') }; }) }, {title:'✨ Suggested resolution wording'});
+}
 /* one dispute's room: participants · own message wall (latest first, attachments) · New-message (text+attach) · Resolve */
 function disputeRoomBox(c, d){
   var readonly=d.status!=='open';
@@ -189,7 +197,8 @@ function disputeRoomBox(c, d){
   var parties=disputeParties(d);
   var st=readonly?'<span style="color:#2f7a45;font-size:11.5px;font-weight:700">✓ resolved</span>':'<span style="color:#b4453f;font-size:11.5px;font-weight:700">● open</span>';
   var resolve=readonly?'':disputeResolveBtns(parties, c.id, d.dispute_id, mine, 'db-res');
-  var resolveWrap=resolve?'<span style="display:inline-flex;gap:6px">'+resolve+'</span>':'';
+  var suggestBtn=(readonly||typeof aiRun!=='function')?'':'<button onclick="aiResolutionSuggest(\''+c.id+'\',\''+d.dispute_id+'\')" title="AI suggests neutral resolution wording — you decide whether to resolve" style="font-size:11px;font-weight:700;border:1px solid #6d5bd0;background:#f2effc;color:#6d5bd0;border-radius:7px;padding:5px 10px;cursor:pointer">✨ Suggest wording</button>';
+  var resolveWrap=(resolve||suggestBtn)?'<span style="display:inline-flex;gap:6px;flex-wrap:wrap">'+suggestBtn+resolve+'</span>':'';
   var roster=[nm(d.raised_by_display_name,'—')+' (raiser)'].concat(parties.map(function(p){ return nm(p.display_name,'party'); })).join(' · ');
   var msgs=(typeof disputeFilterMsgs==='function')?(disputeFilterMsgs((c.msgs||[]),'dispute',d.dispute_id)||[]):[];
   msgs=msgs.slice().reverse();   // latest first (the wall)
