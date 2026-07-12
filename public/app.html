@@ -2928,6 +2928,54 @@ function _aiOrderPdf(){
   w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>'+esc(d.label||'Order review')+'</title><style>'+css+'</style></head><body><div class="pg"><div class="hd"><div class="brand">CHIT &amp; BRIDGE</div><div class="tt">'+esc(d.label||'Order review')+'</div><div class="meta">AI buyer-side review · '+esc(new Date().toLocaleString())+(d.cost!=null?' · est. $'+d.cost:'')+' · informational, not a commitment</div></div><div class="amddoc">'+_aiMd(d.draft||'')+'</div></div></body></html>');
   w.document.close(); w.focus(); setTimeout(function(){try{w.print();}catch(_){}}, 350);
 }
+function askAiOrderDoc(){
+  var c=UI.detail; if(!c){ if(typeof toast==='function')toast('Open an order first'); return; }
+  var opts=[['commercial-invoice','Commercial Invoice'],['packing-list','Packing List'],['export-declaration','Export Declaration'],['sds','Safety Data Sheet']];
+  var btns=opts.map(function(o){ return '<button onclick="_aiOrderDoc(\''+o[0]+'\',\''+o[1]+'\')" style="display:block;width:100%;text-align:left;font-size:13px;font-weight:600;border:1px solid var(--line);background:#fff;border-radius:9px;padding:11px 13px;margin:6px 0;cursor:pointer">✨ '+esc(o[1])+'</button>'; }).join('');
+  modal('<div class="mhd"><div class="t">✨ Draft a document — from this order</div></div><div class="mbody" style="padding:16px"><div style="font-size:12px;color:var(--grey);margin-bottom:8px">The co-assist drafts from THIS order (parties, line items, cover). You review &amp; confirm — never sent automatically.</div>'+btns+'</div>');
+}
+async function _aiOrderDoc(skill, label){
+  var c=UI.detail; if(!c) return;
+  var inco=(c.commercial&&c.commercial.incoterm)||'CIF';
+  var ctx={ order:{ subject:c.code, incoterm:inco, total_value:c.amt, currency:c.currency },
+    seller:{ name:(c.sender||SESSION.entity||'[to confirm]') }, buyer:{ name:(c.party||'[to confirm]') },
+    line_items:(c.items||[]).map(function(it){return {description:it[0], qty:it[1]};}),
+    clearances:(c.clearances&&c.clearances.items)||[] };
+  modal('<div class="mhd"><div class="t">✨ '+esc(label)+' — from this order</div></div><div class="mbody" style="padding:16px"><div id="aoddbody" style="font-size:12.5px;color:var(--grey)">✨ Drafting from the order…</div></div>', true);
+  try{
+    var res=await fetch(CFG.API_BASE+'/api/governance/ai-draft',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+SESSION.token},body:JSON.stringify({skill_id:skill,context:ctx})});
+    var j=await res.json();
+    if(!res.ok||!j||!j.draft) throw new Error((j&&j.message)||(res.status===503?'AI is not connected on this environment.':'Draft failed'));
+    UI._aiOrderDoc={draft:j.draft,label:label,orderSubject:c.code,cost:(j.usage&&j.usage.est_cost_usd)};
+    var bs='font-size:12px;font-weight:700;border-radius:8px;padding:9px 13px;cursor:pointer';
+    var html='<style>'+(typeof _AI_MDCSS!=='undefined'?_AI_MDCSS:'')+'</style>'
+      +'<div style="font-size:10.5px;color:#6d5bd0;background:#f2effc;border:1px solid #ddd4f5;border-radius:8px;padding:8px 11px;margin-bottom:12px;line-height:1.5">🤖 <b>AI proposal — not evidence.</b> Review &amp; confirm before use. '+(j.usage?('<span style="color:var(--grey)">· $'+j.usage.est_cost_usd+'</span>'):'')+'</div>'
+      +'<div class="amddoc" style="background:#fff;border:1px solid var(--line);border-radius:10px;padding:16px 18px;max-height:52vh;overflow:auto">'+_aiMd(j.draft)+'</div>'
+      +'<div style="display:flex;gap:8px;margin-top:13px;flex-wrap:wrap">'
+        +'<button onclick="_aiOrderDocAccept()" title="File this document on your rail, referenced to this order" style="'+bs+';flex:1;border:1px solid #2f8f5b;background:#2f8f5b;color:#fff">✓ Accept &amp; file on rail</button>'
+        +'<button onclick="_aiOrderDocPdf()" style="'+bs+';flex:0 0 auto;border:1px solid #6d5bd0;background:#fff;color:#6d5bd0">⬇ PDF</button>'
+        +'<button onclick="closeModal()" style="'+bs+';flex:0 0 auto;border:1px solid var(--line);background:#fff">Done</button>'
+      +'</div>';
+    var b=document.getElementById('aoddbody'); if(b)b.innerHTML=html;
+  }catch(e){ var b2=document.getElementById('aoddbody'); if(b2)b2.innerHTML='<div style="font-size:12px;color:#8a5f11;background:#fdf3e3;border:1px solid #f0dcae;border-radius:8px;padding:10px 12px">'+esc((e&&e.message)||'Draft failed')+'</div>'; }
+}
+async function _aiOrderDocAccept(){
+  var d=UI._aiOrderDoc||{}; if(!d.draft){ if(typeof toast==='function')toast('Nothing to file'); return; }
+  try{
+    var subj='Document — '+(d.label||'draft')+' for '+(d.orderSubject||'order')+' (AI-drafted)';
+    var r=await api('createChit',{body:{recipients:[{name:'self',role:'to'}], manual_subject:subj, subject:subj, purpose:'general', line_items:[]}});
+    var chitId=r&&r.chit_id;
+    if(chitId && typeof attUpload==='function' && typeof File!=='undefined'){ try{ var f=new File([d.draft], String(d.label||'document').replace(/\s+/g,'-').toLowerCase()+'.md', {type:'text/markdown'}); await attUpload(chitId,f); }catch(_){}}
+    if(typeof closeModal==='function') closeModal();
+    if(typeof toast==='function') toast('Filed on the rail ✓ — '+(d.label||'document'));
+  }catch(e){ if(typeof toast==='function') toast((e&&e.message)||'Could not file'); }
+}
+function _aiOrderDocPdf(){
+  var d=UI._aiOrderDoc||{}; if(!d.draft)return; var w=window.open('','_blank'); if(!w){ if(typeof toast==='function')toast('Allow pop-ups to export the PDF'); return; }
+  var css='@page{size:A4;margin:18mm}body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#1e2530;margin:0}.pg{max-width:760px;margin:0 auto;padding:22px}.hd{border-bottom:2px solid #6d5bd0;padding-bottom:12px;margin-bottom:18px}.brand{font-weight:800;letter-spacing:.05em;color:#6d5bd0;font-size:12px}.tt{font-size:21px;font-weight:800;margin-top:4px}.meta{font-size:11px;color:#7a8494;margin-top:5px}'+(typeof _AI_MDCSS!=='undefined'?_AI_MDCSS:'');
+  w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>'+esc(d.label||'Document')+'</title><style>'+css+'</style></head><body><div class="pg"><div class="hd"><div class="brand">CHIT &amp; BRIDGE</div><div class="tt">'+esc(d.label||'Document')+'</div><div class="meta">AI-drafted for '+esc(d.orderSubject||'order')+' · '+esc(new Date().toLocaleString())+(d.cost!=null?' · est. $'+d.cost:'')+' · review &amp; confirm</div></div><div class="amddoc">'+_aiMd(d.draft||'')+'</div></div></body></html>');
+  w.document.close(); w.focus(); setTimeout(function(){try{w.print();}catch(_){}}, 350);
+}
 function detailInner(){
   const c=UI.detail;
   if(!c) return (UI.rows && UI.rows.length)
@@ -2948,8 +2996,8 @@ function detailInner(){
      <div style="margin-top:10px">${proof}</div>${clearancesBlock(c)}${commercialBlock(c)}`;
   if(c._loading){ body=`<div class="dbload"><span class="spin"></span> loading details…</div>`; }
   const actbar = (UI.folder==='drafts') ? `<button class="pri" onclick="resumeDraft('${c.id}')">✏️ Resume &amp; edit</button>` : (UI.folder==='trash') ? `<button class="pri" onclick="restoreChit('${c.id}')">↩ Restore</button>${c.isDraft?`<button class="pri" style="background:#b4453f;border-color:#b4453f;margin-left:8px" onclick="purgeChit('${c.id}')">🗑 Delete forever</button>`:''}` : (UI.folder==='archive') ? `<button class="pri" onclick="unarchiveChit('${c.id}')">↩ Unarchive</button>` : SESSION.role==="customer"
-    ? `<button onclick="toggleCustPri('${c.id}')">⚑ ${c.custPri?'Priority requested':'Request priority'}</button><button class="warn" onclick="quickDispute()">⚑ Dispute</button><button onclick="askAiOrder()" title="AI reviews this order — clearances &amp; cover met, and what to ask">✨ Ask AI</button><button onclick="todo('pdf')">⬇ PDF</button>`
-    : `<button onclick="forwardChit('${c.id}')" title="Forward as a new chit">➤ Forward</button><button onclick="ensureCap('folders').then(function(){moveChit('${c.id}')})" title="File into a folder">📁 Move</button>${UI.folder!=='order'?`<button onclick="markUnread('${c.id}')" title="Mark as unread">✉ Unread</button>`:''}${UI.folder!=='order'?`<button class="pri" onclick="pickChitStatus('${c.id}')">Status ▾</button>`:''}${SESSION.role==="actor"&&UI.folder!=='order'?`<button onclick="pickAssign('${c.id}')">👥 Assign</button>`:""}<button class="warn" onclick="quickDispute()">⚑ Dispute</button>${SESSION.role==="entity"?`<button class="warn pend" onclick="todo('voidChit')">⊘ Void</button>`:""}<button onclick="askAiOrder()" title="AI reviews this order — clearances &amp; cover met, and what to ask">✨ Ask AI</button><button onclick="todo('pdf')">⬇ PDF</button>`;
+    ? `<button onclick="toggleCustPri('${c.id}')">⚑ ${c.custPri?'Priority requested':'Request priority'}</button><button class="warn" onclick="quickDispute()">⚑ Dispute</button><button onclick="askAiOrderDoc()" title="AI drafts a trade document from THIS order (invoice, packing list, export declaration, SDS) — review and confirm">✨ Draft doc</button><button onclick="askAiOrder()" title="AI reviews this order — clearances &amp; cover met, and what to ask">✨ Ask AI</button><button onclick="todo('pdf')">⬇ PDF</button>`
+    : `<button onclick="forwardChit('${c.id}')" title="Forward as a new chit">➤ Forward</button><button onclick="ensureCap('folders').then(function(){moveChit('${c.id}')})" title="File into a folder">📁 Move</button>${UI.folder!=='order'?`<button onclick="markUnread('${c.id}')" title="Mark as unread">✉ Unread</button>`:''}${UI.folder!=='order'?`<button class="pri" onclick="pickChitStatus('${c.id}')">Status ▾</button>`:''}${SESSION.role==="actor"&&UI.folder!=='order'?`<button onclick="pickAssign('${c.id}')">👥 Assign</button>`:""}<button class="warn" onclick="quickDispute()">⚑ Dispute</button>${SESSION.role==="entity"?`<button class="warn pend" onclick="todo('voidChit')">⊘ Void</button>`:""}<button onclick="askAiOrderDoc()" title="AI drafts a trade document from THIS order (invoice, packing list, export declaration, SDS) — review and confirm">✨ Draft doc</button><button onclick="askAiOrder()" title="AI reviews this order — clearances &amp; cover met, and what to ask">✨ Ask AI</button><button onclick="todo('pdf')">⬇ PDF</button>`;
   const dtabs=[["content","Content"],["status","Status"],["summary","Summary"],["messages","💬 Messages"+(msgCount(c)?" ("+msgCount(c)+")":"")]];
   return `<div class="dh"><button class="dback" onclick="backToList()">‹ Back to list</button><button class="dmsg" onclick="setDtab('messages')" title="Messages" aria-label="Messages">💬${msgCount(c)?' '+msgCount(c):''}</button><div class="dt">${esc(c.code)} · ${esc(c.party)}</div><div class="ds">${esc(c.area)} · ${esc(c.kind)} · ${inr(c.amt)} · ${c.state.toUpperCase()}</div>
      <div class="parties"><span class="ptag">from <b>${esc(c.sender||SESSION.entity||"You")}</b></span><span class="ptag">${c.kind==='counter'?('to <b>'+esc(SESSION.entity||'You')+'</b>'):esc(c.rsummary||('to '+(c.party||'—')))}</span>${c.kind==='counter'?`<span class="ptag">for <b>${esc(c.cust)}</b></span>`:''}</div><div class="dchips"><span class="prichip-btn pri-${c.priExt||'normal'}" style="cursor:default" title="External priority — set by the drafter at compose, locked once sent">↔ ext: ${PRI[c.priExt||'normal'].label}</span>${SESSION.role!=="customer"?`<button class="prichip-btn pri-${c.pri||'normal'}" onclick="repriority('${c.id}')" title="Internal priority — your own queue; tap to change">⚙ int: ${PRI[c.pri||'normal'].label} ▾</button>`:''}${c.custPri?'<span class="custflag-tag">⚑ Customer priority</span>':''}<span class="prichip-btn" style="cursor:default;margin-left:auto;background:#eef3fb;color:#345488;border-color:#cfe0f4" title="Currently assigned to">👤 ${c.assignee?esc(c.assignee):'Unassigned'}</span></div></div>
