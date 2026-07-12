@@ -278,7 +278,10 @@ function _mtxCell(on,common,color){ return '<td style="text-align:center;padding
 async function openSectorMatrix(){
   var secs=[['paint','🧪','Chemical','#2857b8'],['food','🍎','Food','#2f8f5b'],['textiles','🧵','Textiles','#9a4db0'],['electronics','🔌','Electronics','#a0601a'],['pharma','💊','Pharma','#0e7c74'],['automobile','🚗','Auto','#b4532a']];
   var dest=UI.laneDest||'EU', origin=UI.laneOrigin||'IN';
-  if(typeof modal==='function') modal('<div class="mhd"><div class="t">🧮 Sector × standard — common vs specific</div></div><div class="mbody" style="padding:14px 16px"><div id="mtxbody" style="font-size:12.5px;color:var(--grey)">Resolving every sector for '+esc(origin)+' → '+esc(dest)+'…</div></div>');
+  if(typeof modal==='function'){
+    modal('<div class="mhd" style="display:flex;align-items:center;gap:8px"><div class="t" style="flex:1">🧮 Sector × standard — common vs specific</div><button onclick="closeModal()" title="Close" style="border:0;background:none;cursor:pointer;font-size:20px;line-height:1;color:var(--grey);padding:0 2px">✕</button></div><div class="mbody" style="padding:14px 16px"><div id="mtxbody" style="font-size:12.5px;color:var(--grey)">Resolving every sector for '+esc(origin)+' → '+esc(dest)+'…</div></div>');
+    try{ var mp=document.querySelector('#modalhost .modal'); if(mp) mp.setAttribute('data-movable','1'); }catch(_){}   // plain closeable modal — no movable-panel controls
+  }
   var rows={};
   for(var i=0;i<secs.length;i++){
     try{ var rd=await api('readinessOwn',{query:{destination:dest, vertical:secs[i][0], origin:origin}});
