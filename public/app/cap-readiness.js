@@ -29,7 +29,7 @@ async function loadProfile(){
   if(typeof renderApp==='function') renderApp();
 }
 function _rdEvidenceValid(it){ return it && (it.status==='gathered'||it.status==='expiring'); }  // has evidence + not expired
-function _rdIdType(it){ return it ? (({iec_code:'iec',gstn:'gstn',pan:'pan'})[it.doc]||null) : null; }  // registry ID → LIVE source-check
+function _rdIdType(it){ return it ? (({gstn:'gstn'})[it.doc]||null) : null; }  // registry ID with a LIVE source-check (GSTIN — confirmed via Sandbox.co.in)
 var _RUNGRANK={verified:4,attested:3,documented:2,declared:1};
 // HELD = live & valid AND backed by REAL evidence (document / attested / verified). A bare 'declared' claim does NOT count.
 function _rdHeld(it){ if(!it) return false; var live=(it.status==='gathered'||it.status==='expiring'); return live && (_RUNGRANK[it.rung]||0)>=2; }
