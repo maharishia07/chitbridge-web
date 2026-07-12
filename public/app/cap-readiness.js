@@ -144,12 +144,21 @@ async function loadLanes(){
 }
 async function loadLaneReadiness(dest){
   UI.laneRd = undefined;
-  try{ UI.laneRd = await api('readinessOwn', {query:{destination:dest, vertical:'paint', origin:UI.laneOrigin||'IN'}}); }
+  try{ UI.laneRd = await api('readinessOwn', {query:{destination:dest, vertical:(UI.laneVertical||'paint'), origin:UI.laneOrigin||'IN'}}); }
   catch(e){ UI.laneRd = {error:(e&&e.message)||'Could not load'}; }
   if(typeof renderApp==='function') renderApp();
 }
 function setLaneDest(dest){ UI.laneDest=dest; UI.laneRd=undefined; if(typeof renderApp==='function')renderApp(); loadLaneReadiness(dest); }
 function setLaneOrigin(o){ UI.laneOrigin=o; UI.laneRd=undefined; if(typeof renderApp==='function')renderApp(); loadLaneReadiness(UI.laneDest||'EU'); }
+function setLaneVertical(v){ UI.laneVertical=v; UI.laneRd=undefined; if(typeof renderApp==='function')renderApp(); loadLaneReadiness(UI.laneDest||'EU'); }
+// one-line explanation per tab (shown as an ⓘ strip under the tab bar)
+function _rdTabInfo(tab){
+  var m={ certification:'Standing certifications your organisation holds — audited and renewed, valid across every order.',
+          clearance:'Per-shipment clearances gathered for each order into the chosen destination.',
+          commercial:'Commercial cover for the deal — payment, transit, currency & financing risk (FRM). The same in every sector.' };
+  var t=m[tab]; if(!t) return '';
+  return '<div style="flex:none;font-size:11.5px;color:var(--grey);padding:8px 14px;border-bottom:1px solid var(--line);background:#f9fafc"><span style="color:var(--blue);font-weight:800">ⓘ</span> '+t+' <span style="color:#8a94a6">· sector-generic — switch the sector to see it re-resolve.</span></div>';
+}
 function _rdOriginSel(){
   var o = UI.laneOrigin||'IN', opts = [['IN','India'],['EU','European Union'],['US','United States'],['GULF','Gulf (GCC)']];
   return '<span style="font-size:12px;color:var(--grey)">Home country: </span><select onchange="setLaneOrigin(this.value)" style="font-size:12.5px;font-weight:700;border:1px solid var(--line);border-radius:8px;padding:5px 8px;background:#fff">'
@@ -201,13 +210,15 @@ function _rdTabs(){
 }
 // compact spin-the-globe: origin → destination selectors (shown in the Clearances tab header).
 function _rdDestSelectors(){
-  var dest=UI.laneDest||'EU', origin=UI.laneOrigin||'IN';
+  var dest=UI.laneDest||'EU', origin=UI.laneOrigin||'IN', vert=UI.laneVertical||'paint';
   var dOpts=[['EU','European Union'],['US','United States'],['GULF','Gulf (GCC)'],['IN','Domestic (India)']];
   var oOpts=[['IN','India'],['EU','European Union'],['US','United States'],['GULF','Gulf (GCC)']];
+  var vOpts=[['paint','Chemical / Paint'],['food','Food'],['textiles','Textiles'],['electronics','Electronics']];
   var ss='font-size:12px;font-weight:700;border:1px solid var(--line);border-radius:8px;padding:5px 8px;background:#fff;color:var(--ink)';
   var opt=function(list,v){return list.map(function(x){return '<option value="'+x[0]+'"'+(x[0]===v?' selected':'')+'>'+x[1]+'</option>';}).join('');};
   var rd=UI.laneRd, s=(rd&&rd.summary)||{}, cnt=(rd&&!rd.error&&s.total!=null)?('<span style="font-size:11.5px;color:var(--grey)">'+(s.met||0)+' of '+(s.total||0)+' met</span>'):'';
-  return '<span style="font-size:11.5px;color:var(--grey)">🌍 from</span><select onchange="setLaneOrigin(this.value)" style="'+ss+'">'+opt(oOpts,origin)+'</select>'
+  return '<span style="font-size:11.5px;color:var(--grey)">sector</span><select onchange="setLaneVertical(this.value)" style="'+ss+'">'+opt(vOpts,vert)+'</select>'
+    +'<span style="font-size:11.5px;color:var(--grey)">🌍 from</span><select onchange="setLaneOrigin(this.value)" style="'+ss+'">'+opt(oOpts,origin)+'</select>'
     +'<span style="font-size:11.5px;color:var(--grey)">ship to</span><select onchange="setLaneDest(this.value)" style="'+ss+'">'+opt(dOpts,dest)+'</select>'+cnt;
 }
 // header: tabs (Clearances | Commercial cover) within Trade ready + the spin-the-globe selectors on the Clearances tab.
@@ -235,7 +246,7 @@ function _rdTwoPane(list){
 // Trade ready — FULL-WIDTH, uniform with Task. Tabs: Certification (standing) · Clearance (per-shipment) · Commercial.
 function readinessScreen(){
   var tab=UI.rdTab||'certification';
-  var shell=function(inner){ return '<div style="flex:1;display:flex;flex-direction:column;min-height:0">'+_rdHeader()+inner+'</div>'; };
+  var shell=function(inner){ return '<div style="flex:1;display:flex;flex-direction:column;min-height:0">'+_rdHeader()+_rdTabInfo(tab)+inner+'</div>'; };
   if(tab==='commercial'){
     return shell('<div style="flex:1;overflow-y:auto;min-height:0"><div style="max-width:860px;margin:0 auto;padding:14px 16px 40px">'+_rdCommercePage()+'</div></div>');
   }
