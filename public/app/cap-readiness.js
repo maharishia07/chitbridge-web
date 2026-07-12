@@ -13,8 +13,34 @@ if (typeof EP !== 'undefined') {
     journey:         {m:'GET',  p:'/api/governance/journey',               ok:'y'},
     profileGet:      {m:'GET',  p:'/api/governance/profile',               ok:'y'},
     profileSave:     {m:'PUT',  p:'/api/governance/profile',               ok:'y'},
+    aiDraft:         {m:'POST', p:'/api/governance/ai-draft',              ok:'y'},
+    aiSkills:        {m:'GET',  p:'/api/governance/ai-skills',             ok:'y'},
+    aiUsage:         {m:'GET',  p:'/api/governance/ai-usage',              ok:'y'},
   });
 }
+// ── AI CO-ASSIST (invoked, never autonomous) — the ONE reusable draft affordance. Any path passes a skill_id + the
+// context it already holds; the co-assist PROPOSES a draft; the human reviews & confirms. Mirrors lib/ai.js single pipe. ──
+var RD_SKILL = { 'sds':'sds', 'exim-policy':'export-declaration' };   // which clearance standards have a drafting skill
+function _rdSkill(it){ return it ? (RD_SKILL[it.standard]||null) : null; }
+async function aiDraftReadiness(std, doc, skill){
+  var ctx = { standard:std, document:doc, sector:(UI.laneVertical||'paint'),
+    origin:(UI.laneOrigin||'IN'), destination:(UI.laneDest||null),
+    product:{ description:doc },
+    exporter:{ name:((UI.profile&&UI.profile.legal_name)||(UI.profile&&UI.profile.name)||'[to confirm]') } };
+  if(typeof modal==='function') modal('<div class="mhd"><div class="t">✨ Draft with AI — '+esc(std)+'</div><button onclick="closeModal()" style="border:0;background:none;cursor:pointer;font-size:20px;color:var(--grey);margin-left:auto">✕</button></div><div class="mbody" style="padding:16px"><div id="aidbody" style="font-size:12.5px;color:var(--grey)">✨ Invoking the co-assist… drafting from what this order/profile holds.</div></div>');
+  try{
+    var r = await api('aiDraft', {body:{skill_id:skill, context:ctx}});
+    var draft = (r&&r.draft)||'', cost = (r&&r.usage&&r.usage.est_cost_usd);
+    var html = '<div style="font-size:10.5px;color:#6d5bd0;background:#f2effc;border:1px solid #ddd4f5;border-radius:8px;padding:8px 11px;margin-bottom:11px;line-height:1.5">🤖 <b>AI proposal — not evidence.</b> '+esc((r&&r.note)||'Review and confirm before you use it.')+(cost!=null?' <span style="color:var(--grey)">· cost $'+cost+'</span>':'')+'</div>'
+      + '<div style="white-space:pre-wrap;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;line-height:1.5;color:var(--ink);background:#fbfcfe;border:1px solid var(--line);border-radius:9px;padding:12px 13px;max-height:52vh;overflow:auto">'+esc(draft)+'</div>'
+      + '<div style="display:flex;gap:8px;margin-top:12px"><button onclick="_aiCopy(this)" data-draft="'+esc(encodeURIComponent(draft))+'" style="flex:1;font-size:12px;font-weight:700;border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px;cursor:pointer">📋 Copy</button><button onclick="closeModal()" style="flex:1;font-size:12px;font-weight:700;border:1px solid #6d5bd0;background:#6d5bd0;color:#fff;border-radius:8px;padding:8px;cursor:pointer">Done — review later</button></div>';
+    var b=document.getElementById('aidbody'); if(b) b.innerHTML=html;
+  }catch(e){
+    var msg=(e&&e.message)||'AI draft failed'; var b2=document.getElementById('aidbody');
+    if(b2) b2.innerHTML='<div style="font-size:12px;color:#8a5f11;background:#fdf3e3;border:1px solid #f0dcae;border-radius:8px;padding:10px 12px">'+esc(String(msg).indexOf('503')>=0||String(msg).indexOf('not connected')>=0?'AI is not connected yet (no key on this environment).':msg)+'</div>';
+  }
+}
+function _aiCopy(btn){ try{ var t=decodeURIComponent(btn.getAttribute('data-draft')||''); if(navigator.clipboard) navigator.clipboard.writeText(t); if(typeof toast==='function') toast('Draft copied ✓'); }catch(_){ } }
 // the entity's DECLARATION — which standards it holds. A checkbox = a commitment: it only counts as MET when its
 // evidence is live & valid (status gathered/expiring). loadProfile → UI.profile.adopted[]. declareToggle persists it.
 async function loadProfile(){
@@ -120,6 +146,9 @@ function _rdDetailPane(it){
   var idType = _rdIdType(it);
   var verifyBtn = (idType && it.rung!=='verified')
     ? '<button onclick="verifyReadiness(\''+esc(it.standard)+'\',\''+esc(it.doc)+'\',\''+idType+'\')" title="Checked against the source registry, live" style="font-size:12px;font-weight:700;border:1px solid #2f8f5b;background:#eaf6ee;color:#2f8f5b;border-radius:8px;padding:7px 12px;cursor:pointer">🔗 Verify at source</button>' : '';
+  var skill=_rdSkill(it);
+  var draftBtn = skill
+    ? '<button onclick="aiDraftReadiness(\''+esc(it.standard)+'\',\''+esc(it.doc)+'\',\''+skill+'\')" title="AI drafts this document from your order/profile data — you review and confirm (never autonomous)" style="font-size:12px;font-weight:700;border:1px solid #6d5bd0;background:#f2effc;color:#6d5bd0;border-radius:8px;padding:7px 12px;cursor:pointer">✨ Draft with AI</button>' : '';
   var actBtn = (it.status==='gathered')
     ? '<span style="font-size:12px;color:'+m.col+';font-weight:700">'+m.lbl+'</span>'
     : '<button onclick="gatherReadiness(\''+esc(it.standard)+'\',\''+esc(it.doc)+'\')" style="font-size:12px;font-weight:700;border:1px solid '+(it.status==='pending'?'var(--line)':m.col)+';background:'+(it.status==='pending'?'#fff':m.col)+';color:'+(it.status==='pending'?'#2a2f38':'#fff')+';border-radius:8px;padding:7px 13px;cursor:pointer">'+(it.status==='pending'?'Gather':'Renew')+'</button>';
@@ -134,7 +163,7 @@ function _rdDetailPane(it){
   var vmode = idType
     ? '<div style="margin:8px 16px 0;font-size:11.5px;color:#256e47;background:#eaf6ee;border:1px solid #bfe3cb;border-radius:9px;padding:8px 11px">🔗 <b>Live source-check</b> — the platform verifies this '+idType.toUpperCase()+' against the <b>source registry</b>, invoked live. Confirmed at source, not your word for it.</div>'
     : '<div style="margin:8px 16px 0;font-size:11.5px;color:var(--grey);background:#f7f8fb;border:1px solid var(--line);border-radius:9px;padding:8px 11px">📄 <b>Document evidence</b> — your certificate + issuer link. A <b>live source-check is not wired for this standard yet</b> (it needs the issuing body’s registry).</div>';
-  return '<div style="padding:14px 16px 0"><div style="display:flex;align-items:flex-start;gap:10px"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:15px">'+esc(it.title||it.doc)+rung+'</div><div style="font-size:11.5px;color:var(--grey);margin-top:2px">from <span class="mono" style="color:var(--blue)">'+esc(it.standard)+'</span></div></div><div style="flex:0 0 auto;display:flex;gap:6px;align-items:center">'+verifyBtn+actBtn+'</div></div></div>'
+  return '<div style="padding:14px 16px 0"><div style="display:flex;align-items:flex-start;gap:10px"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:15px">'+esc(it.title||it.doc)+rung+'</div><div style="font-size:11.5px;color:var(--grey);margin-top:2px">from <span class="mono" style="color:var(--blue)">'+esc(it.standard)+'</span></div></div><div style="flex:0 0 auto;display:flex;gap:6px;align-items:center">'+draftBtn+verifyBtn+actBtn+'</div></div></div>'
     + banner + vmode + _rdExpand(it);
 }
 // ── COMMERCIAL COVER (live /instruments) — the invariant spine beneath the industry-variable compliance ──
