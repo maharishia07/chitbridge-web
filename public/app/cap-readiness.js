@@ -20,11 +20,12 @@ if (typeof EP !== 'undefined') {
 async function loadProfile(){
   try{ UI.profile = await api('profileGet'); }
   catch(e){ UI.profile = {trade_mode:'domestic',markets:[],sectors:[],adopted:[]}; }
-  // fold the explorer: restore the entity's SAVED lane (sector · destination · origin) so it opens to their real trade
+  // fold the explorer: restore the entity's SAVED lane (sector · destination) so it opens to their real trade
   try{ var s=localStorage.getItem('cb_rd_lane'); if(s){ var L=JSON.parse(s)||{};
     if(!UI.laneVertical && L.vert) UI.laneVertical=L.vert;
-    if(!UI.laneOrigin && L.origin) UI.laneOrigin=L.origin;
     if(!UI.laneDest && L.dest){ UI.laneDest=L.dest; UI.laneRd=undefined; } } }catch(_){}
+  // ORIGIN = the entity's registered country (not a choice) — fixed home jurisdiction
+  try{ var me=await api('me'); if(me && me.country){ var o=_mapOrigin(me.country); if(o!==UI.laneOrigin){ UI.laneOrigin=o; UI.laneRd=undefined; } } }catch(_){ if(!UI.laneOrigin) UI.laneOrigin='IN'; }
   if(typeof renderApp==='function') renderApp();
 }
 function _rdEvidenceValid(it){ return it && (it.status==='gathered'||it.status==='expiring'); }  // has evidence + not expired
@@ -236,16 +237,23 @@ function _rdTabs(){
   return '<div style="display:flex;gap:4px;border-bottom:1px solid var(--line)">'+tab('mine','My readiness')+tab('check','Check a supplier')+'</div>';
 }
 // compact spin-the-globe: origin → destination selectors (shown in the Clearances tab header).
+function _mapOrigin(c){ c=String(c||'').toUpperCase();
+  if(['IN','IND','INDIA'].indexOf(c)>=0) return 'IN';
+  if(['US','USA','UNITED STATES'].indexOf(c)>=0) return 'US';
+  if(['AE','SA','QA','KW','OM','BH','UAE','GCC','GULF'].indexOf(c)>=0) return 'GULF';
+  if(['EU','DE','FR','IT','ES','NL','BE','PL','SE','AT','IE','PT','GR','DK','FI'].indexOf(c)>=0) return 'EU';
+  return 'IN';
+}
 function _rdDestSelectors(){
   var dest=UI.laneDest||'EU', origin=UI.laneOrigin||'IN', vert=UI.laneVertical||'paint';
   var dOpts=[['EU','European Union'],['US','United States'],['GULF','Gulf (GCC)'],['IN','Domestic (India)']];
-  var oOpts=[['IN','India'],['EU','European Union'],['US','United States'],['GULF','Gulf (GCC)']];
-  var vOpts=[['paint','Chemical / Paint'],['food','Food'],['textiles','Textiles'],['electronics','Electronics']];
+  var vOpts=[['paint','Chemical / Paint'],['food','Food'],['textiles','Textiles'],['electronics','Electronics'],['pharma','Pharmaceutical'],['automobile','Automobile']];
+  var oName=({IN:'India',US:'United States',EU:'European Union',GULF:'Gulf (GCC)'})[origin]||origin;
   var ss='font-size:12px;font-weight:700;border:1px solid var(--line);border-radius:8px;padding:5px 8px;background:#fff;color:var(--ink)';
   var opt=function(list,v){return list.map(function(x){return '<option value="'+x[0]+'"'+(x[0]===v?' selected':'')+'>'+x[1]+'</option>';}).join('');};
   var rd=UI.laneRd, s=(rd&&rd.summary)||{}, cnt=(rd&&!rd.error&&s.total!=null)?('<span style="font-size:11.5px;color:var(--grey)">'+(s.met||0)+' of '+(s.total||0)+' met</span>'):'';
   return '<span style="font-size:11.5px;color:var(--grey)">sector</span><select onchange="setLaneVertical(this.value)" style="'+ss+'">'+opt(vOpts,vert)+'</select>'
-    +'<span style="font-size:11.5px;color:var(--grey)">🌍 from</span><select onchange="setLaneOrigin(this.value)" style="'+ss+'">'+opt(oOpts,origin)+'</select>'
+    +'<span style="font-size:11.5px;color:var(--grey)" title="Your registered country (fixed)">🌍 from <b style="color:var(--ink)">'+esc(oName)+'</b></span>'
     +'<span style="font-size:11.5px;color:var(--grey)">ship to</span><select onchange="setLaneDest(this.value)" style="'+ss+'">'+opt(dOpts,dest)+'</select>'+cnt;
 }
 // header: tabs (Clearances | Commercial cover) within Trade ready + the spin-the-globe selectors on the Clearances tab.
@@ -259,11 +267,11 @@ function _rdHeader(){
   +'</div>';
 }
 // STANDARD display names for the matrix (fallback = the key)
-var STDNAME={ 'exim-policy':'Export policy (IEC · HS · declaration · Incoterms)','iso-9001':'ISO 9001 — Quality','iso-14001':'ISO 14001 — Environmental','iso-27000':'ISO 27001 — Information security','iso-45001':'ISO 45001 — Occupational safety','reach':'REACH — chemical registration','sds':'Safety Data Sheet (GHS)','tsca':'TSCA — US chemical inventory','bis':'BIS — India conformity','haccp':'HACCP — food safety','fssai':'FSSAI licence','phyto':'Phytosanitary certificate','eu-health':'EU health certificate','oeko-tex':'OEKO-TEX Standard 100','gots':'GOTS — organic textiles','flammability':'Flammability (16 CFR 1610)','ce-rohs':'CE / RoHS conformity','weee':'WEEE registration','battery-comp':'UN 38.3 — battery' };
+var STDNAME={ 'exim-policy':'Export policy (IEC · HS · declaration · Incoterms)','iso-9001':'ISO 9001 — Quality','iso-14001':'ISO 14001 — Environmental','iso-27000':'ISO 27001 — Information security','iso-45001':'ISO 45001 — Occupational safety','reach':'REACH — chemical registration','sds':'Safety Data Sheet (GHS)','tsca':'TSCA — US chemical inventory','bis':'BIS — India conformity','haccp':'HACCP — food safety','fssai':'FSSAI licence','phyto':'Phytosanitary certificate','eu-health':'EU health certificate','oeko-tex':'OEKO-TEX Standard 100','gots':'GOTS — organic textiles','flammability':'Flammability (16 CFR 1610)','ce-rohs':'CE / RoHS conformity','weee':'WEEE registration','battery-comp':'UN 38.3 — battery','who-gmp':'WHO-GMP — Good Manufacturing Practice','cdsco':'CDSCO manufacturing licence','copp':'Certificate of Pharmaceutical Product','fda-drug':'US FDA drug registration','iatf-16949':'IATF 16949 — Automotive quality','ece-approval':'ECE Type Approval (UNECE)' };
 function _mtxCell(on,common,color){ return '<td style="text-align:center;padding:8px 5px;border-bottom:1px solid var(--line)">'+(on?'<span style="display:inline-block;width:19px;height:19px;border-radius:6px;background:'+(common?'#2f8f5b':color)+';color:#fff;font-size:11px;font-weight:800;line-height:19px">✓</span>':'<span style="color:var(--line)">·</span>')+'</td>'; }
 // the sector × standard matrix — LIVE from the engine (resolve every sector for the current lane), common vs specific.
 async function openSectorMatrix(){
-  var secs=[['paint','🧪','Chemical','#2857b8'],['food','🍎','Food','#2f8f5b'],['textiles','🧵','Textiles','#9a4db0'],['electronics','🔌','Electronics','#a0601a']];
+  var secs=[['paint','🧪','Chemical','#2857b8'],['food','🍎','Food','#2f8f5b'],['textiles','🧵','Textiles','#9a4db0'],['electronics','🔌','Electronics','#a0601a'],['pharma','💊','Pharma','#0e7c74'],['automobile','🚗','Auto','#b4532a']];
   var dest=UI.laneDest||'EU', origin=UI.laneOrigin||'IN';
   if(typeof modal==='function') modal('<div class="mhd"><div class="t">🧮 Sector × standard — common vs specific</div></div><div class="mbody" style="padding:14px 16px"><div id="mtxbody" style="font-size:12.5px;color:var(--grey)">Resolving every sector for '+esc(origin)+' → '+esc(dest)+'…</div></div>');
   var rows={};
