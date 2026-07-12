@@ -20,7 +20,9 @@ if (typeof EP !== 'undefined') {
 }
 // ── AI CO-ASSIST (invoked, never autonomous) — the ONE reusable draft affordance. Any path passes a skill_id + the
 // context it already holds; the co-assist PROPOSES a draft; the human reviews & confirms. Mirrors lib/ai.js single pipe. ──
-var RD_SKILL = { 'sds':'sds', 'exim-policy':'export-declaration' };   // which clearance standards have a drafting skill
+var RD_SKILL = { 'sds':'sds', 'exim-policy':'export-declaration', 'reach':'evidence-assemble', 'tsca':'evidence-assemble',
+  'iso-9001':'evidence-assemble', 'iso-14001':'evidence-assemble', 'iso-45001':'evidence-assemble', 'iso-27000':'evidence-assemble',
+  'bis':'product-classify' };   // which clearance standards have a drafting skill (the co-assist drafts the doc/evidence checklist)
 function _rdSkill(it){ return it ? (RD_SKILL[it.standard]||null) : null; }
 function _aiCtxExporter(){ return { name:((UI.profile&&UI.profile.legal_name)||(UI.profile&&UI.profile.name)||'[to confirm]') }; }
 // clearance path — draft a document from the standard/product the entity holds
@@ -429,15 +431,15 @@ var COMMETA = {
     advice:'For a new buyer or a higher-risk lane, prefer an irrevocable CONFIRMED LC — a bank stands behind payment. Documentary collection is cheaper; open account is cheapest but exposes you to non-payment, so use it only with a proven buyer.',
     life:[['Terms agreed','now'],['LC applied / drafted','next'],['Bank issues & confirms','next'],['Docs presented vs payment','next']] },
   'Performance risk': { attestor:'issuing bank', top:'attested', partner:'Bank (guarantee)',
-    ai:{ skill:null, lvl:'L2', gate:'confirm', t:'AI assembles your on-rail track record as evidence of performance; a bond adds a bank guarantee for large first orders.' },
+    ai:{ skill:'reference-summary', lvl:'L2', gate:'confirm', t:'AI assembles your on-rail track record as evidence of performance; a bond adds a bank guarantee for large first orders.' },
     advice:'Your on-rail settlement history already evidences that you perform — this area is part-covered on the rail. A performance bond / guarantee adds a bank promise for a large first order.',
     life:[['On-rail history','done'],['Bond needed for size?','now'],['Bank issues bond','next']] },
   'Transit / cargo risk': { attestor:'cargo insurer', top:'attested', partner:'Marine cargo insurer / broker',
-    ai:{ skill:null, lvl:'L2', gate:'confirm', t:'AI drafts the insurance request from the consignment and the Incoterm; the insurer issues the certificate.' },
+    ai:{ skill:'insurance-request', lvl:'L2', gate:'confirm', t:'AI drafts the insurance request from the consignment and the Incoterm; the insurer issues the certificate.' },
     advice:'Under CIF the SELLER buys marine cover to the destination port (ICC-A is all-risks). Under FOB the BUYER insures — read your Incoterm so cover is not doubled or missed.',
     life:[['Incoterm sets who insures','now'],['Request cover','next'],['Insurer issues certificate','next']] },
   'Currency risk': { attestor:'bank treasury', top:'attested', partner:'Bank FX desk',
-    ai:{ skill:null, lvl:'L2', gate:'confirm', t:'AI computes the currency exposure and drafts a hedge note; the bank books the forward.' },
+    ai:{ skill:'fx-exposure-note', lvl:'L2', gate:'confirm', t:'AI computes the currency exposure and drafts a hedge note; the bank books the forward.' },
     advice:'If you invoice in a foreign currency but your costs are in yours, a forward locks the rate and removes the swing. Hedge the exposure — do not take a bet on the rate.',
     life:[['Exposure identified','now'],['Book forward / option','next'],['Rate locked','next']] },
   'Price / commodity risk': { attestor:'exchange / bank', top:'attested', partner:'Commodity desk',
@@ -445,11 +447,11 @@ var COMMETA = {
     advice:'If your margin depends on a volatile input (a metal, a polymer), a price hedge protects the quoted price between order and delivery.',
     life:[['Input exposure','now'],['Hedge structured','next']] },
   'Country / political risk': { attestor:'ECA / PRI insurer', top:'attested', partner:'ECA / political-risk insurer',
-    ai:{ skill:null, lvl:'L2', gate:'confirm', t:'AI checks the lane against country-risk signals and drafts the cover request.' },
+    ai:{ skill:'political-risk-note', lvl:'L2', gate:'confirm', t:'AI checks the lane against country-risk signals and drafts the cover request.' },
     advice:'For buyers in higher-risk jurisdictions, export-credit-agency or political-risk insurance covers non-payment caused by country events (transfer bans, expropriation).',
     life:[['Assess country risk','now'],['Apply to ECA / insurer','next'],['Cover issued','next']] },
   'Liquidity risk': { attestor:'bank / factor', top:'attested', partner:'Bank / factor',
-    ai:{ skill:null, lvl:'L2', gate:'confirm', t:'AI drafts a finance-eligibility note from the order and your history; the bank / factor advances the funds.' },
+    ai:{ skill:'finance-eligibility-note', lvl:'L2', gate:'confirm', t:'AI drafts a finance-eligibility note from the order and your history; the bank / factor advances the funds.' },
     advice:'Packing credit funds production BEFORE shipment; bill discounting / factoring advances cash against the receivable so you do not wait out the buyer credit term.',
     life:[['Working-capital need','now'],['Apply for finance','next'],['Funds advanced','next']] },
 };
