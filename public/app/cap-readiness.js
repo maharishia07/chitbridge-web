@@ -49,41 +49,7 @@ async function aiDraftCommerce(skill, label){
     destination:(UI.laneDest||null), incoterm:'CIF', lc:{ type:'irrevocable confirmed', amount:'[to confirm]', expiry:'[to confirm]', incoterm:'CIF' },
     order:{ note:'draft from the current lane; fill order specifics [to confirm]' }, exporter:_aiCtxExporter() });
 }
-// ── markdown → clean HTML (headings · **bold** · tables · lists · hr) so a draft reads as a DOCUMENT, not raw pipes ──
-function _mdInline(s){ s=esc(String(s));
-  return s.replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>').replace(/`([^`]+)`/g,'<code>$1</code>').replace(/(^|[^*])\*([^*]+)\*(?!\*)/g,'$1<em>$2</em>');
-}
-function _mdToHtml(md){
-  var L=String(md||'').replace(/\r/g,'').split('\n'), out=[], i=0;
-  var sep=function(l){ return l.indexOf('-')>=0 && /^\s*\|?[\s:|-]+\|?\s*$/.test(l); };
-  var cells=function(r){ return r.trim().replace(/^\|/,'').replace(/\|$/,'').split('|').map(function(c){return c.trim();}); };
-  while(i<L.length){
-    var l=L[i];
-    if(l.indexOf('|')>=0 && i+1<L.length && sep(L[i+1])){
-      var th=cells(l).map(function(c){return '<th>'+_mdInline(c)+'</th>';}).join(''); i+=2; var tr=[];
-      while(i<L.length && L[i].indexOf('|')>=0 && L[i].trim()!==''){ tr.push('<tr>'+cells(L[i]).map(function(c){return '<td>'+_mdInline(c)+'</td>';}).join('')+'</tr>'); i++; }
-      out.push('<table class="mdt"><thead><tr>'+th+'</tr></thead><tbody>'+tr.join('')+'</tbody></table>'); continue;
-    }
-    var hm=l.match(/^(#{1,4})\s+(.*)$/); if(hm){ var lv=hm[1].length; out.push('<h'+lv+' class="mdh mdh'+lv+'">'+_mdInline(hm[2])+'</h'+lv+'>'); i++; continue; }
-    if(/^\s*(-{3,}|\*{3,}|_{3,})\s*$/.test(l)){ out.push('<hr class="mdhr">'); i++; continue; }
-    if(/^\s*([-*+]|\d+\.)\s+/.test(l)){ var ord=/^\s*\d+\./.test(l), it=[];
-      while(i<L.length && /^\s*([-*+]|\d+\.)\s+/.test(L[i])){ it.push('<li>'+_mdInline(L[i].replace(/^\s*([-*+]|\d+\.)\s+/,''))+'</li>'); i++; }
-      out.push('<'+(ord?'ol':'ul')+' class="mdl">'+it.join('')+'</'+(ord?'ol':'ul')+'>'); continue;
-    }
-    if(l.trim()===''){ i++; continue; }
-    var p=[l]; i++;
-    while(i<L.length && L[i].trim()!=='' && !/^\s*(#{1,4}\s|[-*+]\s|\d+\.\s|-{3,}\s*$)/.test(L[i]) && !(L[i].indexOf('|')>=0 && i+1<L.length && sep(L[i+1]))){ p.push(L[i]); i++; }
-    out.push('<p class="mdp">'+p.map(_mdInline).join('<br>')+'</p>');
-  }
-  return out.join('');
-}
-var _MD_CSS=['.mddoc{color:#1e2530;font-size:12.5px;line-height:1.55;font-family:-apple-system,Segoe UI,Roboto,sans-serif}',
- '.mddoc .mdh{margin:16px 0 7px;font-weight:700;line-height:1.25;color:#141a22}','.mddoc .mdh1{font-size:17px;padding-bottom:6px;border-bottom:2px solid #e6eaf0}',
- '.mddoc .mdh2{font-size:14.5px}','.mddoc .mdh3,.mddoc .mdh4{font-size:12px;text-transform:uppercase;letter-spacing:.03em;color:#5a6472}',
- '.mddoc .mdp{margin:8px 0}','.mddoc .mdl{margin:8px 0 8px 20px;padding:0}.mddoc .mdl li{margin:3px 0}','.mddoc .mdhr{border:0;border-top:1px solid #e6eaf0;margin:14px 0}',
- '.mddoc table.mdt{border-collapse:collapse;width:100%;margin:11px 0;font-size:11.5px}','.mddoc .mdt th,.mddoc .mdt td{border:1px solid #dfe4ec;padding:7px 9px;text-align:left;vertical-align:top}',
- '.mddoc .mdt th{background:#f4f6fa;font-weight:700;color:#2a3340}','.mddoc .mdt tr:nth-child(even) td{background:#fafbfd}',
- '.mddoc code{background:#f0f2f6;padding:1px 5px;border-radius:4px;font-size:11px}','.mddoc strong{color:#141a22}'].join('');
+// AI draft modals use the SHARED global markdown renderer (_aiMd / _AI_MDCSS from app.html) — one renderer, converged (#8).
 // the ONE reusable invoke+review modal — every path funnels here (mirrors lib/ai.js single pipe). `attach` (optional) =
 // a clearance target {standard,doc,title,skill}; a DOCUMENT draft can then be ACCEPTED → filed as that clearance's evidence.
 async function _aiDraft(skill, label, ctx, attach){
@@ -96,9 +62,9 @@ async function _aiDraft(skill, label, ctx, attach){
     // a DOCUMENT (the actual cert/declaration) can become the clearance's evidence; aids (classify/summarize) cannot.
     var acceptBtn = (attach && r && r.kind==='document')
       ? '<button onclick="_aiAccept()" title="File this document as the evidence backing '+esc(attach.title||attach.doc)+' — a chit on your rail" style="'+bs+';flex:1;border:1px solid #2f8f5b;background:#2f8f5b;color:#fff">✓ Accept &amp; attach as evidence</button>' : '';
-    var html = '<style>'+_MD_CSS+'</style>'
+    var html = '<style>'+(typeof _AI_MDCSS!=='undefined'?_AI_MDCSS:'')+'</style>'
       + '<div style="font-size:10.5px;color:#6d5bd0;background:#f2effc;border:1px solid #ddd4f5;border-radius:8px;padding:8px 11px;margin-bottom:12px;line-height:1.5">🤖 <b>AI proposal — not evidence.</b> '+esc((r&&r.note)||'Review and confirm before you use it.')+(cost!=null?' <span style="color:var(--grey)">· cost $'+cost+'</span>':'')+'</div>'
-      + '<div class="mddoc" style="background:#fff;border:1px solid var(--line);border-radius:10px;padding:16px 20px;max-height:52vh;overflow:auto">'+_mdToHtml(draft)+'</div>'
+      + '<div class="amddoc" style="background:#fff;border:1px solid var(--line);border-radius:10px;padding:16px 20px;max-height:52vh;overflow:auto">'+(typeof _aiMd==='function'?_aiMd(draft):esc(draft))+'</div>'
       + '<div style="display:flex;gap:8px;margin-top:13px;flex-wrap:wrap">'
         + acceptBtn
         + '<button onclick="_aiPdf()" style="'+bs+';flex:'+(acceptBtn?'0 0 auto':'1')+';border:1px solid #6d5bd0;background:'+(acceptBtn?'#fff':'#6d5bd0')+';color:'+(acceptBtn?'#6d5bd0':'#fff')+'">⬇ PDF</button>'
@@ -142,11 +108,11 @@ function _aiPdf(){
     +'.meta{font-size:11px;color:#7a8494;margin-top:5px}'
     +'.stamp{display:inline-block;margin-top:9px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#8a5f11;background:#fdf3e3;border:1px solid #f0dcae;border-radius:5px;padding:3px 8px}'
     +'.foot{margin-top:26px;padding-top:10px;border-top:1px solid #e6eaf0;font-size:10px;color:#9aa3b0;text-align:center}'
-    +_MD_CSS+'.mddoc{font-size:12px}';
+    +(typeof _AI_MDCSS!=='undefined'?_AI_MDCSS:'')+'.amddoc{font-size:12px}';
   var when=new Date().toLocaleString();
   w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>'+esc(d.label||'AI draft')+'</title><style>'+pcss+'</style></head><body><div class="pg">'
     +'<div class="hd"><div class="brand">CHIT &amp; BRIDGE</div><div class="doctitle">'+esc(d.label||'Draft')+'</div><div class="meta">Drafted by AI co-assist · '+esc(when)+(d.cost!=null?' · est. $'+d.cost:'')+'</div><div class="stamp">AI draft — not evidence until accepted</div></div>'
-    +'<div class="mddoc">'+_mdToHtml(d.draft||'')+'</div>'
+    +'<div class="amddoc">'+(typeof _aiMd==='function'?_aiMd(d.draft||''):esc(d.draft||''))+'</div>'
     +'<div class="foot">Generated on the Chit &amp; Bridge governance rail · review and confirm before use</div>'
     +'</div></body></html>');
   w.document.close(); w.focus(); setTimeout(function(){ try{ w.print(); }catch(_){ } }, 350);
