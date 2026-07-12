@@ -212,41 +212,40 @@ function _rdDestSelectors(){
 }
 // header: tabs (Clearances | Commercial cover) within Trade ready + the spin-the-globe selectors on the Clearances tab.
 function _rdHeader(){
-  var tab=UI.rdTab||'clearances';
+  var tab=UI.rdTab||'certification';
   var tb=function(k,lbl){ return '<div onclick="UI.rdTab=\''+k+'\';if(typeof renderApp===\'function\')renderApp()" style="padding:9px 15px;font-size:12.5px;font-weight:700;cursor:pointer;border-bottom:2px solid '+(tab===k?'var(--blue)':'transparent')+';color:'+(tab===k?'var(--blue)':'var(--grey)')+'">'+lbl+'</div>'; };
   return '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex:none;padding:0 12px;border-bottom:1px solid var(--line);background:#fff">'
-    +'<div style="display:flex;gap:2px">'+tb('clearances','Clearances')+tb('commercial','Commercial cover')+'</div>'
-    +(tab==='clearances'?'<div style="margin-left:auto;display:flex;align-items:center;gap:8px;padding:6px 0">'+_rdDestSelectors()+'</div>':'')+'</div>';
+    +'<div style="display:flex;gap:2px">'+tb('certification','Certification')+tb('clearance','Clearance')+tb('commercial','Commercial')+'</div>'
+    +(tab!=='commercial'?'<div style="margin-left:auto;display:flex;align-items:center;gap:8px;padding:6px 0">'+_rdDestSelectors()+'</div>':'')+'</div>';
 }
 function _rdCommercePage(){
   return '<div>'+_rdCommerce()+_rdJourney()
     +'<div style="font-size:11.5px;color:var(--grey);margin-top:20px;padding:11px 13px;background:#f7f8fb;border:1px solid var(--line);border-radius:10px">The commercial spine is the same in every industry — only the compliance above changes with the goods.</div></div>';
 }
-// Trade ready — FULL-WIDTH, uniform with Task. Two tabs: Clearances (two-pane) · Commercial cover. Entity-level only.
+// a two-pane (list ↔ detail) for one tab's set of items
+function _rdTwoPane(list){
+  if(!list.length) return '<div style="flex:1;display:grid;place-items:center;color:var(--grey);font-size:13px;padding:20px">Nothing required for this lane.</div>';
+  if(!UI.rdSel || !list.some(function(i){return i.standard+'|'+i.doc===UI.rdSel;})) UI.rdSel = list[0].standard+'|'+list[0].doc;
+  var sel=list.filter(function(i){return i.standard+'|'+i.doc===UI.rdSel;})[0];
+  var left=list.map(function(i){return _rdRow(i,UI.rdSel);}).join('');
+  return '<div style="flex:1;display:flex;min-height:0;overflow:hidden">'
+    +'<div id="rdlist" style="width:300px;flex:0 0 auto;border-right:1px solid var(--line);overflow-y:auto;background:#fff;padding:8px 6px 30px">'+left+'</div>'
+    +'<div id="rddetail" style="flex:1;min-width:0;overflow-y:auto;background:#fbfcfe">'+_rdDetailPane(sel)+'</div></div>';
+}
+// Trade ready — FULL-WIDTH, uniform with Task. Tabs: Certification (standing) · Clearance (per-shipment) · Commercial.
 function readinessScreen(){
-  var tab=UI.rdTab||'clearances';
+  var tab=UI.rdTab||'certification';
+  var shell=function(inner){ return '<div style="flex:1;display:flex;flex-direction:column;min-height:0">'+_rdHeader()+inner+'</div>'; };
   if(tab==='commercial'){
-    return '<div style="flex:1;display:flex;flex-direction:column;min-height:0">'+_rdHeader()
-      +'<div style="flex:1;overflow-y:auto;min-height:0"><div style="max-width:860px;margin:0 auto;padding:14px 16px 40px">'+_rdCommercePage()+'</div></div></div>';
+    return shell('<div style="flex:1;overflow-y:auto;min-height:0"><div style="max-width:860px;margin:0 auto;padding:14px 16px 40px">'+_rdCommercePage()+'</div></div>');
   }
   var dest=UI.laneDest||'EU';
-  var shell=function(inner){ return '<div style="flex:1;display:flex;flex-direction:column;min-height:0">'+_rdHeader()+inner+'</div>'; };
   if(UI.laneRd===undefined){ if(typeof loadLaneReadiness==='function') loadLaneReadiness(dest); return shell('<div style="flex:1;display:grid;place-items:center;color:var(--grey);font-size:13px">'+(typeof loader==='function'?loader('Resolving clearances…'):'Loading…')+'</div>'); }
   var rd=UI.laneRd;
   if(rd.error) return shell('<div style="padding:20px">'+(typeof emptyState==='function'?emptyState('⚠️','Could not load', esc(rd.error)):esc(rd.error))+'</div>');
   var items=(rd.clearances)||[];
-  var standing=items.filter(function(i){return i.scope==='entity';}), pership=items.filter(function(i){return i.scope!=='entity';});
-  var all=standing.concat(pership);
-  if(!UI.rdSel || !all.some(function(i){return i.standard+'|'+i.doc===UI.rdSel;})) UI.rdSel = all.length ? (all[0].standard+'|'+all[0].doc) : null;
-  var sel=all.filter(function(i){return i.standard+'|'+i.doc===UI.rdSel;})[0];
-  var grpHdr=function(t){return '<div style="font-size:9.5px;font-weight:800;color:var(--grey);letter-spacing:.05em;padding:11px 10px 5px">'+t+'</div>';};
-  var left=(standing.length?grpHdr('STANDING CERTIFICATIONS')+standing.map(function(i){return _rdRow(i,UI.rdSel);}).join(''):'')
-          +(pership.length?grpHdr('PER-SHIPMENT CLEARANCES')+pership.map(function(i){return _rdRow(i,UI.rdSel);}).join(''):'');
-  if(!all.length) left='<div style="padding:16px;color:var(--grey);font-size:12.5px">No clearances for this lane.</div>';
-  return shell('<div style="flex:1;display:flex;min-height:0;overflow:hidden">'
-      +'<div id="rdlist" style="width:300px;flex:0 0 auto;border-right:1px solid var(--line);overflow-y:auto;background:#fff;padding:4px 6px 30px">'+left+'</div>'
-      +'<div id="rddetail" style="flex:1;min-width:0;overflow-y:auto;background:#fbfcfe">'+_rdDetailPane(sel)+'</div>'
-    +'</div>');
+  var list=(tab==='clearance')?items.filter(function(i){return i.scope!=='entity';}):items.filter(function(i){return i.scope==='entity';});
+  return shell(_rdTwoPane(list));
 }
 async function checkSupplier(){
   var el = document.getElementById('rd_bridge'); var b = el ? (el.value||'').trim() : '';
