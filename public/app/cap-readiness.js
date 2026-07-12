@@ -227,7 +227,38 @@ function _rdHeader(){
   var tb=function(k,lbl){ return '<div onclick="UI.rdTab=\''+k+'\';if(typeof renderApp===\'function\')renderApp()" style="padding:9px 15px;font-size:12.5px;font-weight:700;cursor:pointer;border-bottom:2px solid '+(tab===k?'var(--blue)':'transparent')+';color:'+(tab===k?'var(--blue)':'var(--grey)')+'">'+lbl+'</div>'; };
   return '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex:none;padding:0 12px;border-bottom:1px solid var(--line);background:#fff">'
     +'<div style="display:flex;gap:2px">'+tb('certification','Certification')+tb('clearance','Clearance')+tb('commercial','Commercial')+'</div>'
-    +(tab!=='commercial'?'<div style="margin-left:auto;display:flex;align-items:center;gap:8px;padding:6px 0">'+_rdDestSelectors()+'</div>':'')+'</div>';
+    +'<div style="margin-left:auto;display:flex;align-items:center;gap:8px;padding:6px 0;flex-wrap:wrap">'+(tab!=='commercial'?_rdDestSelectors():'')
+      +'<button onclick="openSectorMatrix()" title="Common vs sector-specific — the sector × standard matrix" style="font-size:11.5px;font-weight:700;border:1px solid var(--line);background:#fff;color:var(--blue);border-radius:8px;padding:6px 10px;cursor:pointer">🧮 Matrix</button></div>'
+  +'</div>';
+}
+// STANDARD display names for the matrix (fallback = the key)
+var STDNAME={ 'exim-policy':'Export policy (IEC · HS · declaration · Incoterms)','iso-9001':'ISO 9001 — Quality','iso-14001':'ISO 14001 — Environmental','iso-27000':'ISO 27001 — Information security','iso-45001':'ISO 45001 — Occupational safety','reach':'REACH — chemical registration','sds':'Safety Data Sheet (GHS)','tsca':'TSCA — US chemical inventory','bis':'BIS — India conformity','haccp':'HACCP — food safety','fssai':'FSSAI licence','phyto':'Phytosanitary certificate','eu-health':'EU health certificate','oeko-tex':'OEKO-TEX Standard 100','gots':'GOTS — organic textiles','flammability':'Flammability (16 CFR 1610)','ce-rohs':'CE / RoHS conformity','weee':'WEEE registration','battery-comp':'UN 38.3 — battery' };
+function _mtxCell(on,common,color){ return '<td style="text-align:center;padding:8px 5px;border-bottom:1px solid var(--line)">'+(on?'<span style="display:inline-block;width:19px;height:19px;border-radius:6px;background:'+(common?'#2f8f5b':color)+';color:#fff;font-size:11px;font-weight:800;line-height:19px">✓</span>':'<span style="color:var(--line)">·</span>')+'</td>'; }
+// the sector × standard matrix — LIVE from the engine (resolve every sector for the current lane), common vs specific.
+async function openSectorMatrix(){
+  var secs=[['paint','🧪','Chemical','#2857b8'],['food','🍎','Food','#2f8f5b'],['textiles','🧵','Textiles','#9a4db0'],['electronics','🔌','Electronics','#a0601a']];
+  var dest=UI.laneDest||'EU', origin=UI.laneOrigin||'IN';
+  if(typeof modal==='function') modal('<div class="mhd"><div class="t">🧮 Sector × standard — common vs specific</div></div><div class="mbody" style="padding:14px 16px"><div id="mtxbody" style="font-size:12.5px;color:var(--grey)">Resolving every sector for '+esc(origin)+' → '+esc(dest)+'…</div></div>');
+  var rows={};
+  for(var i=0;i<secs.length;i++){
+    try{ var rd=await api('readinessOwn',{query:{destination:dest, vertical:secs[i][0], origin:origin}});
+      ((rd&&rd.clearances)||[]).forEach(function(c){ if(!rows[c.standard]) rows[c.standard]={std:c.standard,sectors:{}}; rows[c.standard].sectors[secs[i][0]]=true; });
+    }catch(e){}
+  }
+  var list=Object.keys(rows).map(function(k){ var on=secs.map(function(s){return !!rows[k].sectors[s[0]];}); return {std:k,name:STDNAME[k]||k,on:on,n:on.filter(Boolean).length}; });
+  list.sort(function(a,b){ return (b.n-a.n)||a.std.localeCompare(b.std); });
+  var head='<tr><th style="text-align:left;padding:8px 6px;font-size:10px;text-transform:uppercase;color:var(--grey);border-bottom:1px solid var(--line)">Standard</th>'+secs.map(function(s){return '<th style="padding:8px 4px;font-size:10.5px;border-bottom:1px solid var(--line);color:'+s[3]+';white-space:nowrap">'+s[1]+'<br>'+s[2]+'</th>';}).join('')+'</tr>';
+  var rowH=function(r){ var common=r.n===secs.length; return '<tr'+(common?' style="background:#eaf6ee"':'')+'><td style="padding:8px 6px;font-weight:600;font-size:12px;border-bottom:1px solid var(--line);color:'+(common?'#2f8f5b':'var(--ink)')+'">'+esc(r.name)+'</td>'+r.on.map(function(v,i){return _mtxCell(v,common,secs[i][3]);}).join('')+'</tr>'; };
+  var band=function(t){return '<tr><td colspan="'+(secs.length+1)+'" style="padding:11px 6px 3px;font-size:9.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--grey)">'+t+'</td></tr>';};
+  var common=list.filter(function(r){return r.n===secs.length;}), spec=list.filter(function(r){return r.n!==secs.length;});
+  var html='<div style="font-size:11.5px;color:var(--grey);margin-bottom:9px">Lane held constant ('+esc(origin)+' → '+esc(dest)+') — only the sector changes. A full row is the <b>common backbone</b>; a single ✓ is <b>sector-specific</b>.</div>'
+    +'<div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%;min-width:430px">'+head
+    +band('● Common — every sector')+common.map(rowH).join('')
+    +band('◆ Sector-specific')+spec.map(rowH).join('')
+    +'</table></div>'
+    +'<div style="margin-top:12px;font-size:11px;color:var(--grey)">required = <b>common backbone</b> ∪ <b>sector-specific</b> ∪ <b>destination-specific</b> — derived, never enumerated.</div>'
+    +'<div style="margin-top:12px;text-align:center;font-family:\'Space Grotesk\',system-ui;font-weight:700;font-size:11.5px;color:var(--blue);letter-spacing:.04em">Chit &amp; Bridge</div>';
+  var el=document.getElementById('mtxbody'); if(el) el.innerHTML=html;
 }
 function _rdCommercePage(){
   return '<div>'+_rdCommerce()+_rdJourney()
