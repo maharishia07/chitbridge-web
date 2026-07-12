@@ -24,6 +24,16 @@ var RD_SKILL = { 'sds':'sds', 'exim-policy':'export-declaration', 'reach':'evide
   'iso-9001':'evidence-assemble', 'iso-14001':'evidence-assemble', 'iso-45001':'evidence-assemble', 'iso-27000':'evidence-assemble',
   'bis':'product-classify' };   // which clearance standards have a drafting skill (the co-assist drafts the doc/evidence checklist)
 function _rdSkill(it){ return it ? (RD_SKILL[it.standard]||null) : null; }
+// advisory co-assist buttons (reuse the global aiRun) — standards to adopt, and who can carry a gap
+function aiSuggestStandards(){
+  if(typeof aiRun!=='function') return;
+  aiRun('standards-suggest', { sector:(UI.laneVertical||'paint'), market:(UI.laneDest||'EU'), origin:(UI.laneOrigin||'IN') }, {title:'✨ Standards to adopt'});
+}
+function aiSuggestPartner(std, doc){
+  if(typeof aiRun!=='function') return;
+  var it=((UI.laneRd&&UI.laneRd.clearances)||(UI.readiness&&UI.readiness.clearances)||[]).filter(function(c){return c.standard===std&&c.doc===doc;})[0];
+  aiRun('partner-suggest', { gap:(it&&(it.title||it.doc))||std, standard:std, market:(UI.laneDest||'EU') }, {title:'✨ Suggest a partner'});
+}
 function _aiCtxExporter(){ return { name:((UI.profile&&UI.profile.legal_name)||(UI.profile&&UI.profile.name)||'[to confirm]') }; }
 // clearance path — draft a document from the standard/product the entity holds. Passes an ATTACH target so a document
 // draft can be ACCEPTED → filed as the clearance's evidence on the rail (closes the advise→produce loop).
@@ -213,7 +223,7 @@ function _rdExpand(it){
     +(it.rung==='verified'&&it.verified_at?_rdKv('Verified at source', String(it.verified_at).slice(0,10)+(it.verified_by?' · '+esc(it.verified_by):'')):'')
     +(it.evidence_ref&&/^[0-9a-f-]{20,}$/i.test(String(it.evidence_ref))?_rdKv('Evidence','document on the rail'):'');
   var ai=L.ai;
-  var partner=L.partner?'<div style="margin-top:11px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:#faf6ee"><span style="font-size:8.5px;font-weight:800;color:#8a5e22;text-transform:uppercase;letter-spacing:.05em">Or hand it to a partner</span><div style="font-size:12.5px;margin-top:3px;font-weight:600">'+esc(L.partner)+'</div></div>':'';
+  var partner=L.partner?'<div style="margin-top:11px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:#faf6ee;display:flex;align-items:center;gap:8px"><div style="flex:1;min-width:0"><span style="font-size:8.5px;font-weight:800;color:#8a5e22;text-transform:uppercase;letter-spacing:.05em">Or hand it to a partner</span><div style="font-size:12.5px;margin-top:3px;font-weight:600">'+esc(L.partner)+'</div></div><button onclick="aiSuggestPartner(\''+esc(it.standard)+'\',\''+esc(it.doc)+'\')" title="AI suggests who can carry this + what to ask them" style="flex:0 0 auto;font-size:11px;font-weight:700;border:1px solid #6d5bd0;background:#fff;color:#6d5bd0;border-radius:7px;padding:6px 10px;cursor:pointer">✨ Suggest</button></div>':'';
   return '<div style="border-top:1px solid var(--line);padding:12px 15px 15px;background:#fbfcfe">'
     +_rdSub('Its lifecycle')+steps
     +_rdSub('Evidence · current version')+'<div>'+ev+'</div>'
@@ -409,6 +419,7 @@ function _rdHeader(){
   return '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex:none;padding:0 12px;border-bottom:1px solid var(--line);background:#fff">'
     +'<div style="display:flex;gap:2px">'+tb('certification','Certification')+tb('clearance','Clearance')+tb('commercial','Commercial')+'</div>'
     +'<div style="margin-left:auto;display:flex;align-items:center;gap:8px;padding:6px 0;flex-wrap:wrap">'+(tab!=='commercial'?_rdDestSelectors():'')
+      +'<button onclick="aiSuggestStandards()" title="AI suggests the standards you likely need for this sector + market" style="font-size:11.5px;font-weight:700;border:1px solid #6d5bd0;background:#f2effc;color:#6d5bd0;border-radius:8px;padding:6px 10px;cursor:pointer">✨ Standards</button>'
       +'<button onclick="openSectorMatrix()" title="Common vs sector-specific — the sector × standard matrix" style="font-size:11.5px;font-weight:700;border:1px solid var(--line);background:#fff;color:var(--blue);border-radius:8px;padding:6px 10px;cursor:pointer">🧮 Matrix</button></div>'
   +'</div>';
 }

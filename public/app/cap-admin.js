@@ -12,7 +12,8 @@ async function loadMIS(){ const h=document.getElementById("misbody"); if(!h)retu
     const chits=(inb||[]).map(mapApiChit); const byState={open:0,act:0,close:0}; let value=0; chits.forEach(c=>{byState[c.state]=(byState[c.state]||0)+1; value+=c.amt||0;});
     const openDisp=dq.total_open!=null?dq.total_open:((dq.my_disputes||[]).length+(dq.other_disputes||[]).length);
     const stat=(label,v)=>`<div style="${_CARD};text-align:center;margin:0"><div style="font-size:21px;font-weight:800;font-family:'Space Grotesk'">${v}</div><div style="font-size:11px;color:var(--grey)">${label}</div></div>`;
-    h.innerHTML=`${menuAssist('mis')}<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:9px">
+    UI._mis={ chits:chits.length, deal_value:value, currency:'INR', open:byState.open, in_progress:byState.act, closed:byState.close, open_disputes:openDisp, co_assists:(ac||[]).length, suppliers:(sp||[]).length };
+    h.innerHTML=`${menuAssist('mis')}<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button onclick="aiRun('metrics-narrate',UI._mis,{title:'📊 Explain my metrics'})" title="AI narrates what your numbers say" style="font-size:12px;font-weight:700;border:1px solid #6d5bd0;background:#f2effc;color:#6d5bd0;border-radius:8px;padding:7px 12px;cursor:pointer">✨ Explain</button></div><div style="display:grid;grid-template-columns:repeat(2,1fr);gap:9px">
       ${stat("Chits",chits.length)}${stat("Deal value",inr(value))}
       ${stat("Open",byState.open)}${stat("In progress",byState.act)}
       ${stat("Closed",byState.close)}${stat("Open disputes",openDisp)}
