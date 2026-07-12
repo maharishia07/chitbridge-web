@@ -30,6 +30,12 @@ async function loadProfile(){
 }
 function _rdEvidenceValid(it){ return it && (it.status==='gathered'||it.status==='expiring'); }  // has evidence + not expired
 function _rdIdType(it){ return it ? (({iec_code:'iec',gstn:'gstn',pan:'pan'})[it.doc]||null) : null; }  // registry ID → LIVE source-check
+var _RUNGRANK={verified:4,attested:3,documented:2,declared:1};
+// HELD = live & valid AND backed by REAL evidence (document / attested / verified). A bare 'declared' claim does NOT count.
+function _rdHeld(it){ if(!it) return false; var live=(it.status==='gathered'||it.status==='expiring'); return live && (_RUNGRANK[it.rung]||0)>=2; }
+function _rdRungChip(it){ var r=it&&it.rung, map={verified:['#2f8f5b','verified'],attested:['#0e7c74','attested'],documented:['#c98a1a','documented'],declared:['#8a94a6','declared']}, x=map[r];
+  if(!x) return '<span title="not yet evidenced" style="font-size:11px;color:var(--line);flex:0 0 auto">—</span>';
+  return '<span title="trust rung — how strongly it is evidenced" style="font-size:8.5px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;color:'+x[0]+';background:'+x[0]+'1e;border-radius:4px;padding:2px 5px;flex:0 0 auto">'+x[1]+'</span>'; }
 // persist the current lane to the entity's profile (+ local restore) — the selectors ARE the saved profile now.
 function saveLane(){
   var vert=UI.laneVertical||'paint', dest=UI.laneDest||'EU', origin=UI.laneOrigin||'IN';
@@ -97,14 +103,14 @@ function _rdSelect(std,doc){
   var sc2=document.getElementById('rdlist'); if(sc2) sc2.scrollTop=top;   // keep the LIST scroll across the re-render
 }
 function _rdRow(it, selKey){
-  var m=_rdStatus(it.status), k=it.standard+'|'+it.doc, on=(k===selKey);
-  var valid=_rdEvidenceValid(it);   // checked ONLY while backed by live, valid evidence — lapses → auto-unchecks
-  var box='<span onclick="event.stopPropagation();'+(valid?'_rdSelect':'gatherReadiness')+'(\''+esc(it.standard)+'\',\''+esc(it.doc)+'\')" title="'+(valid?'Held — live & valid evidence':'Not held — click to provide live, valid proof')+'" style="width:16px;height:16px;border-radius:4px;border:1.5px solid '+(valid?'#2f8f5b':'var(--line)')+';background:'+(valid?'#2f8f5b':'#fff')+';color:#fff;display:inline-grid;place-items:center;font-size:11px;font-weight:800;flex:0 0 auto;cursor:pointer">'+(valid?'✓':'')+'</span>';
+  var k=it.standard+'|'+it.doc, on=(k===selKey);
+  var held=_rdHeld(it);   // green ONLY with real (documented/verified), valid evidence — a bare 'declared' claim is NOT held
+  var box='<span onclick="event.stopPropagation();'+(held?'_rdSelect':'gatherReadiness')+'(\''+esc(it.standard)+'\',\''+esc(it.doc)+'\')" title="'+(held?'Held — real, valid evidence':'Not held — click to provide evidence')+'" style="width:16px;height:16px;border-radius:4px;border:1.5px solid '+(held?'#2f8f5b':'var(--line)')+';background:'+(held?'#2f8f5b':'#fff')+';color:#fff;display:inline-grid;place-items:center;font-size:11px;font-weight:800;flex:0 0 auto;cursor:pointer">'+(held?'✓':'')+'</span>';
   return '<div onclick="_rdSelect(\''+esc(it.standard)+'\',\''+esc(it.doc)+'\')" style="display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:9px;cursor:pointer;margin:2px 0;background:'+(on?'#eef3fb':'transparent')+';border:1px solid '+(on?'var(--blue)':'transparent')+'">'
     +box
     +'<div style="min-width:0;flex:1"><div style="font-weight:'+(on?'700':'600')+';font-size:12.5px;color:'+(on?'var(--blue)':'var(--ink)')+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(it.title||it.doc)+'</div></div>'
     +(_rdIdType(it)?'<span title="Live source-check available — verified at the registry" style="font-size:10px;flex:0 0 auto">🔗</span>':'')
-    +'<div style="width:15px;height:15px;border-radius:5px;display:grid;place-items:center;font-size:9px;font-weight:800;background:'+m.col+'22;color:'+m.col+';flex:0 0 auto">'+m.ic+'</div></div>';
+    +_rdRungChip(it)+'</div>';
 }
 function _rdDetailPane(it){
   if(!it) return '<div style="color:var(--grey);font-size:13px;padding:24px;text-align:center">Select a clearance on the left to see its lifecycle.</div>';
@@ -115,10 +121,14 @@ function _rdDetailPane(it){
   var actBtn = (it.status==='gathered')
     ? '<span style="font-size:12px;color:'+m.col+';font-weight:700">'+m.lbl+'</span>'
     : '<button onclick="gatherReadiness(\''+esc(it.standard)+'\',\''+esc(it.doc)+'\')" style="font-size:12px;font-weight:700;border:1px solid '+(it.status==='pending'?'var(--line)':m.col)+';background:'+(it.status==='pending'?'#fff':m.col)+';color:'+(it.status==='pending'?'#2a2f38':'#fff')+';border-radius:8px;padding:7px 13px;cursor:pointer">'+(it.status==='pending'?'Gather':'Renew')+'</button>';
-  var valid=_rdEvidenceValid(it);
-  var banner = valid
-    ? '<div style="margin:10px 16px 0;font-size:12px;color:#256e47;background:#eaf6ee;border:1px solid #bfe3cb;border-radius:9px;padding:9px 12px">✓ <b>Held</b> — live and valid evidence. Buyers see this as met.</div>'
-    : '<div style="margin:10px 16px 0;font-size:12px;color:#8a5f11;background:#fdf3e3;border:1px solid #f0dcae;border-radius:9px;padding:9px 12px">☐ <b>Not held.</b> Provide <b>live, valid evidence</b> (Gather or Verify) to check it — it stays checked only while the evidence is valid; expired = auto-unchecked. Only held standards show to buyers.</div>';
+  var held=_rdHeld(it), r=it.rung, live=(it.status==='gathered'||it.status==='expiring');
+  var banner = (held && r==='verified')
+      ? '<div style="margin:10px 16px 0;font-size:12px;color:#256e47;background:#eaf6ee;border:1px solid #bfe3cb;border-radius:9px;padding:9px 12px">✓ <b>Verified at source</b> — the platform confirmed this against the registry. Buyers see this as met.</div>'
+    : held
+      ? '<div style="margin:10px 16px 0;font-size:12px;color:#256e47;background:#eaf6ee;border:1px solid #bfe3cb;border-radius:9px;padding:9px 12px">✓ <b>Documented on the rail</b> — a real document backs this, valid. Buyers see this as met.</div>'
+    : live
+      ? '<div style="margin:10px 16px 0;font-size:12px;color:#8a5f11;background:#fdf3e3;border:1px solid #f0dcae;border-radius:9px;padding:9px 12px">⚠ <b>Declared only</b> — a bare claim, <b>not evidenced</b>. Attach a document (Gather) or <b>Verify at source</b> to make it count. Buyers do NOT treat a bare claim as met.</div>'
+      : '<div style="margin:10px 16px 0;font-size:12px;color:var(--grey);background:#f7f8fb;border:1px solid var(--line);border-radius:9px;padding:9px 12px">☐ <b>Not held.</b> Provide evidence (Gather or Verify) to check it — it stays checked only while the evidence is valid.</div>';
   var vmode = idType
     ? '<div style="margin:8px 16px 0;font-size:11.5px;color:#256e47;background:#eaf6ee;border:1px solid #bfe3cb;border-radius:9px;padding:8px 11px">🔗 <b>Live source-check</b> — the platform verifies this '+idType.toUpperCase()+' against the <b>source registry</b>, invoked live. Confirmed at source, not your word for it.</div>'
     : '<div style="margin:8px 16px 0;font-size:11.5px;color:var(--grey);background:#f7f8fb;border:1px solid var(--line);border-radius:9px;padding:8px 11px">📄 <b>Document evidence</b> — your certificate + issuer link. A <b>live source-check is not wired for this standard yet</b> (it needs the issuing body’s registry).</div>';
