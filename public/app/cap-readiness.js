@@ -34,15 +34,57 @@ async function aiDraftCommerce(skill, label){
     destination:(UI.laneDest||null), incoterm:'CIF', lc:{ type:'irrevocable confirmed', amount:'[to confirm]', expiry:'[to confirm]', incoterm:'CIF' },
     order:{ note:'draft from the current lane; fill order specifics [to confirm]' }, exporter:_aiCtxExporter() });
 }
+// ── markdown → clean HTML (headings · **bold** · tables · lists · hr) so a draft reads as a DOCUMENT, not raw pipes ──
+function _mdInline(s){ s=esc(String(s));
+  return s.replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>').replace(/`([^`]+)`/g,'<code>$1</code>').replace(/(^|[^*])\*([^*]+)\*(?!\*)/g,'$1<em>$2</em>');
+}
+function _mdToHtml(md){
+  var L=String(md||'').replace(/\r/g,'').split('\n'), out=[], i=0;
+  var sep=function(l){ return l.indexOf('-')>=0 && /^\s*\|?[\s:|-]+\|?\s*$/.test(l); };
+  var cells=function(r){ return r.trim().replace(/^\|/,'').replace(/\|$/,'').split('|').map(function(c){return c.trim();}); };
+  while(i<L.length){
+    var l=L[i];
+    if(l.indexOf('|')>=0 && i+1<L.length && sep(L[i+1])){
+      var th=cells(l).map(function(c){return '<th>'+_mdInline(c)+'</th>';}).join(''); i+=2; var tr=[];
+      while(i<L.length && L[i].indexOf('|')>=0 && L[i].trim()!==''){ tr.push('<tr>'+cells(L[i]).map(function(c){return '<td>'+_mdInline(c)+'</td>';}).join('')+'</tr>'); i++; }
+      out.push('<table class="mdt"><thead><tr>'+th+'</tr></thead><tbody>'+tr.join('')+'</tbody></table>'); continue;
+    }
+    var hm=l.match(/^(#{1,4})\s+(.*)$/); if(hm){ var lv=hm[1].length; out.push('<h'+lv+' class="mdh mdh'+lv+'">'+_mdInline(hm[2])+'</h'+lv+'>'); i++; continue; }
+    if(/^\s*(-{3,}|\*{3,}|_{3,})\s*$/.test(l)){ out.push('<hr class="mdhr">'); i++; continue; }
+    if(/^\s*([-*+]|\d+\.)\s+/.test(l)){ var ord=/^\s*\d+\./.test(l), it=[];
+      while(i<L.length && /^\s*([-*+]|\d+\.)\s+/.test(L[i])){ it.push('<li>'+_mdInline(L[i].replace(/^\s*([-*+]|\d+\.)\s+/,''))+'</li>'); i++; }
+      out.push('<'+(ord?'ol':'ul')+' class="mdl">'+it.join('')+'</'+(ord?'ol':'ul')+'>'); continue;
+    }
+    if(l.trim()===''){ i++; continue; }
+    var p=[l]; i++;
+    while(i<L.length && L[i].trim()!=='' && !/^\s*(#{1,4}\s|[-*+]\s|\d+\.\s|-{3,}\s*$)/.test(L[i]) && !(L[i].indexOf('|')>=0 && i+1<L.length && sep(L[i+1]))){ p.push(L[i]); i++; }
+    out.push('<p class="mdp">'+p.map(_mdInline).join('<br>')+'</p>');
+  }
+  return out.join('');
+}
+var _MD_CSS=['.mddoc{color:#1e2530;font-size:12.5px;line-height:1.55;font-family:-apple-system,Segoe UI,Roboto,sans-serif}',
+ '.mddoc .mdh{margin:16px 0 7px;font-weight:700;line-height:1.25;color:#141a22}','.mddoc .mdh1{font-size:17px;padding-bottom:6px;border-bottom:2px solid #e6eaf0}',
+ '.mddoc .mdh2{font-size:14.5px}','.mddoc .mdh3,.mddoc .mdh4{font-size:12px;text-transform:uppercase;letter-spacing:.03em;color:#5a6472}',
+ '.mddoc .mdp{margin:8px 0}','.mddoc .mdl{margin:8px 0 8px 20px;padding:0}.mddoc .mdl li{margin:3px 0}','.mddoc .mdhr{border:0;border-top:1px solid #e6eaf0;margin:14px 0}',
+ '.mddoc table.mdt{border-collapse:collapse;width:100%;margin:11px 0;font-size:11.5px}','.mddoc .mdt th,.mddoc .mdt td{border:1px solid #dfe4ec;padding:7px 9px;text-align:left;vertical-align:top}',
+ '.mddoc .mdt th{background:#f4f6fa;font-weight:700;color:#2a3340}','.mddoc .mdt tr:nth-child(even) td{background:#fafbfd}',
+ '.mddoc code{background:#f0f2f6;padding:1px 5px;border-radius:4px;font-size:11px}','.mddoc strong{color:#141a22}'].join('');
 // the ONE reusable invoke+review modal — every path funnels here (mirrors lib/ai.js single pipe)
 async function _aiDraft(skill, label, ctx){
-  if(typeof modal==='function') modal('<div class="mhd"><div class="t">✨ Draft with AI — '+esc(label)+'</div><button onclick="closeModal()" style="border:0;background:none;cursor:pointer;font-size:20px;color:var(--grey);margin-left:auto">✕</button></div><div class="mbody" style="padding:16px"><div id="aidbody" style="font-size:12.5px;color:var(--grey)">✨ Invoking the co-assist… drafting from what this order/profile holds.</div></div>');
+  if(typeof modal==='function') modal('<div class="mhd"><div class="t">✨ Draft with AI — '+esc(label)+'</div></div><div class="mbody" style="padding:16px"><div id="aidbody" style="font-size:12.5px;color:var(--grey)">✨ Invoking the co-assist… drafting from what this order/profile holds.</div></div>', true);
   try{
     var r = await api('aiDraft', {body:{skill_id:skill, context:ctx}});
     var draft = (r&&r.draft)||'', cost = (r&&r.usage&&r.usage.est_cost_usd);
-    var html = '<div style="font-size:10.5px;color:#6d5bd0;background:#f2effc;border:1px solid #ddd4f5;border-radius:8px;padding:8px 11px;margin-bottom:11px;line-height:1.5">🤖 <b>AI proposal — not evidence.</b> '+esc((r&&r.note)||'Review and confirm before you use it.')+(cost!=null?' <span style="color:var(--grey)">· cost $'+cost+'</span>':'')+'</div>'
-      + '<div style="white-space:pre-wrap;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;line-height:1.5;color:var(--ink);background:#fbfcfe;border:1px solid var(--line);border-radius:9px;padding:12px 13px;max-height:52vh;overflow:auto">'+esc(draft)+'</div>'
-      + '<div style="display:flex;gap:8px;margin-top:12px"><button onclick="_aiCopy(this)" data-draft="'+esc(encodeURIComponent(draft))+'" style="flex:1;font-size:12px;font-weight:700;border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px;cursor:pointer">📋 Copy</button><button onclick="closeModal()" style="flex:1;font-size:12px;font-weight:700;border:1px solid #6d5bd0;background:#6d5bd0;color:#fff;border-radius:8px;padding:8px;cursor:pointer">Done — review later</button></div>';
+    UI._aiLast = { draft:draft, label:label, note:(r&&r.note)||'', cost:cost };
+    var bs='font-size:12px;font-weight:700;border-radius:8px;padding:9px 13px;cursor:pointer';
+    var html = '<style>'+_MD_CSS+'</style>'
+      + '<div style="font-size:10.5px;color:#6d5bd0;background:#f2effc;border:1px solid #ddd4f5;border-radius:8px;padding:8px 11px;margin-bottom:12px;line-height:1.5">🤖 <b>AI proposal — not evidence.</b> '+esc((r&&r.note)||'Review and confirm before you use it.')+(cost!=null?' <span style="color:var(--grey)">· cost $'+cost+'</span>':'')+'</div>'
+      + '<div class="mddoc" style="background:#fff;border:1px solid var(--line);border-radius:10px;padding:16px 20px;max-height:56vh;overflow:auto">'+_mdToHtml(draft)+'</div>'
+      + '<div style="display:flex;gap:8px;margin-top:13px">'
+        + '<button onclick="_aiPdf()" style="'+bs+';flex:1;border:1px solid #6d5bd0;background:#6d5bd0;color:#fff">⬇ Save as PDF</button>'
+        + '<button onclick="_aiCopy(this)" data-draft="'+esc(encodeURIComponent(draft))+'" style="'+bs+';flex:0 0 auto;border:1px solid var(--line);background:#fff;color:var(--ink)">📋 Copy</button>'
+        + '<button onclick="closeModal()" style="'+bs+';flex:0 0 auto;border:1px solid var(--line);background:#fff;color:var(--ink)">Done</button>'
+      + '</div>';
     var b=document.getElementById('aidbody'); if(b) b.innerHTML=html;
   }catch(e){
     var msg=(e&&e.message)||'AI draft failed'; var b2=document.getElementById('aidbody');
@@ -50,6 +92,27 @@ async function _aiDraft(skill, label, ctx){
   }
 }
 function _aiCopy(btn){ try{ var t=decodeURIComponent(btn.getAttribute('data-draft')||''); if(navigator.clipboard) navigator.clipboard.writeText(t); if(typeof toast==='function') toast('Draft copied ✓'); }catch(_){ } }
+// export the draft as a print-ready A4 document → the browser's "Save as PDF" (no dependency, works offline)
+function _aiPdf(){
+  var d=UI._aiLast||{}; if(!d.draft){ if(typeof toast==='function') toast('Nothing to export'); return; }
+  var w=window.open('','_blank'); if(!w){ if(typeof toast==='function') toast('Allow pop-ups to export the PDF'); return; }
+  var pcss='@page{size:A4;margin:18mm}*{box-sizing:border-box}body{margin:0;font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#1e2530}'
+    +'.pg{max-width:760px;margin:0 auto;padding:22px}'
+    +'.hd{border-bottom:2px solid #6d5bd0;padding-bottom:12px;margin-bottom:18px}'
+    +'.brand{font-weight:800;letter-spacing:.05em;color:#6d5bd0;font-size:12px}'
+    +'.doctitle{font-size:22px;font-weight:800;margin-top:4px;color:#141a22}'
+    +'.meta{font-size:11px;color:#7a8494;margin-top:5px}'
+    +'.stamp{display:inline-block;margin-top:9px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#8a5f11;background:#fdf3e3;border:1px solid #f0dcae;border-radius:5px;padding:3px 8px}'
+    +'.foot{margin-top:26px;padding-top:10px;border-top:1px solid #e6eaf0;font-size:10px;color:#9aa3b0;text-align:center}'
+    +_MD_CSS+'.mddoc{font-size:12px}';
+  var when=new Date().toLocaleString();
+  w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>'+esc(d.label||'AI draft')+'</title><style>'+pcss+'</style></head><body><div class="pg">'
+    +'<div class="hd"><div class="brand">CHIT &amp; BRIDGE</div><div class="doctitle">'+esc(d.label||'Draft')+'</div><div class="meta">Drafted by AI co-assist · '+esc(when)+(d.cost!=null?' · est. $'+d.cost:'')+'</div><div class="stamp">AI draft — not evidence until accepted</div></div>'
+    +'<div class="mddoc">'+_mdToHtml(d.draft||'')+'</div>'
+    +'<div class="foot">Generated on the Chit &amp; Bridge governance rail · review and confirm before use</div>'
+    +'</div></body></html>');
+  w.document.close(); w.focus(); setTimeout(function(){ try{ w.print(); }catch(_){ } }, 350);
+}
 // the entity's DECLARATION — which standards it holds. A checkbox = a commitment: it only counts as MET when its
 // evidence is live & valid (status gathered/expiring). loadProfile → UI.profile.adopted[]. declareToggle persists it.
 async function loadProfile(){
