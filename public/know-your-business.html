@@ -49,6 +49,8 @@
   .fres a{ color:var(--blue); font-size:11px; } .asof{ font-size:10px; color:var(--grey); }
   .empty{ text-align:center; color:var(--grey); font-size:13px; padding:22px; } .err{ color:var(--bad); font-size:12px; margin-top:6px; }
   .note{ font-size:10.5px; color:var(--grey); }
+  .netpill{ position:fixed; top:10px; right:12px; font-size:11px; font-weight:700; border-radius:999px; padding:4px 11px; z-index:50; border:1px solid var(--line); background:#fff; color:var(--ok); }
+  .netpill.off{ background:#fdf6e9; color:var(--warn); border-color:#e8d9b8; }
 </style>
 </head>
 <body>
@@ -57,9 +59,13 @@
   <div class="sub">What CB can tell you from data you&rsquo;ve already given &mdash; each fact with how much to trust it. Not a governance feature; the outward panel always says &ldquo;verify at the source.&rdquo;</div>
   <div id="app"><div class="card"><div class="empty">Loading…</div></div></div>
 </div>
+<div id="netpill" class="netpill"></div>
+<script src="cb-offline.js"></script>
 <script>
 var API=(new URLSearchParams(location.search).get('api'))||'https://chitbridge-api-production.up.railway.app';
 var TOK=null, TAB='yourself', _stage='email';
+function paintPill(s){var p=el('netpill');if(!p)return;if(s.online){p.className='netpill';p.textContent=s.pending?('● Online · syncing '+s.pending):'● Online';}else{p.className='netpill off';p.textContent='⚠ Offline · '+(s.pending?s.pending+' pending':'work saved locally');}}
+function saveKyb(){ if(window.CBOffline) CBOffline.saveDraft('kyb.cred',{title:(el('nc_title')||{}).value||''}); }
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function el(id){return document.getElementById(id);}
 async function api(m,p,body){var h={'Content-Type':'application/json'};if(TOK)h.Authorization='Bearer '+TOK;var r=await fetch(API+p,{method:m,headers:h,body:body?JSON.stringify(body):undefined});var j=null;try{j=await r.json();}catch(e){}return{status:r.status,j:j};}
@@ -97,7 +103,7 @@ async function renderYourself(b){
   var r=await api('GET','/api/kyb/yourself'); if(r.status===401){TOK=null;return loginView('Session expired');}
   var f=(r.j&&r.j.facts)||{}, cr=f.credentials||[], s=f.summary||{};
   var add='<div class="card"><div class="sec" style="margin-top:0">Add a credential CB doesn&rsquo;t know</div><div class="note" style="margin-bottom:6px">A village NOC, a municipal licence &mdash; anything. It lands <b>declared</b>; it rises to <b>documented</b> when you attach a real owned document. The list you add IS the roadmap.</div>'
-    +'<div class="row"><input id="nc_title" placeholder="Credential name (e.g. Village Panchayat NOC)" style="flex:1;min-width:160px"><button class="pri" onclick="addCred()">Add</button></div><div id="nc_err" class="err"></div></div>';
+    +'<div class="row"><input id="nc_title" placeholder="Credential name (e.g. Village Panchayat NOC)" style="flex:1;min-width:160px" value="'+esc(((window.CBOffline&&CBOffline.loadDraft('kyb.cred'))||{}).title||'')+'" oninput="saveKyb()"><button class="pri" onclick="addCred()">Add</button></div><div id="nc_err" class="err"></div></div>';
   var list = cr.length ? cr.map(function(c){
     var exp = c.expired?'<span class="exp gone">expired</span>':(c.expiring?'<span class="exp soon">expires in '+esc(String(c.days_left))+'d</span>':'');
     return '<div class="cred"><span class="nm">'+esc(c.title)+'</span>'+(c.valid_until?'<span class="asof">to '+esc(String(c.valid_until).slice(0,10))+'</span>':'')+exp+rungChip(c.rung)+'</div>';
@@ -105,7 +111,7 @@ async function renderYourself(b){
   b.innerHTML='<div class="card"><div class="row" style="justify-content:space-between"><b style="font-size:14px">What you hold</b><span class="note">'+(s.held||0)+' held &middot; '+(s.verified||0)+' verified &middot; '+(s.documented||0)+' documented &middot; '+(s.declared||0)+' declared'+(s.expiring?' &middot; '+s.expiring+' expiring':'')+'</span></div>'+list+'</div>'+add
     +'<div class="note" style="padding:0 4px">'+esc((r.j&&r.j.note)||'')+'</div>';
 }
-async function addCred(){ var t=((el('nc_title')||{}).value||'').trim(); if(!t){el('nc_err').textContent='Enter a name';return;} var r=await api('POST','/api/kyb/credential',{title:t}); if(r.status===200){ load(); } else { el('nc_err').textContent=(r.j&&r.j.message)||'Failed'; } }
+async function addCred(){ var t=((el('nc_title')||{}).value||'').trim(); if(!t){el('nc_err').textContent='Enter a name';return;} var r=await api('POST','/api/kyb/credential',{title:t}); if(r.status===200){ if(window.CBOffline)CBOffline.clearDraft('kyb.cred'); load(); } else { el('nc_err').textContent=(r.j&&r.j.message)||'Failed'; } }
 
 // ── POSITION (directional selling avenues) ──
 async function renderPosition(b){
@@ -147,6 +153,7 @@ async function runField(){
   host.innerHTML=html+'<div class="note" style="margin-top:8px;font-style:italic">'+esc(j.note||'')+(j.cached?' &middot; (cached &mdash; free)':'')+'</div>';
 }
 
+if(window.CBOffline)CBOffline.configure({apiBase:API,token:function(){return TOK;},onChange:paintPill});
 loginView();
 </script>
 </body>

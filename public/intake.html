@@ -29,6 +29,8 @@
   .err{ color:#c0453b; font-size:12px; margin-top:6px; }
   .ok{ color:var(--ok); }
   .badge{ font-size:9.5px; font-weight:800; color:var(--ok); }
+  .netpill{ position:fixed; top:10px; right:12px; font-size:11px; font-weight:700; border-radius:999px; padding:4px 11px; z-index:50; border:1px solid var(--line); background:#fff; color:var(--ok); }
+  .netpill.off{ background:#fdf6e9; color:#b4832a; border-color:#e8d9b8; }
 </style>
 </head>
 <body>
@@ -37,9 +39,14 @@
   <div class="sub">Bring an inbound message (WhatsApp · email · web) onto the rail: capture → AI structures it → you confirm → it becomes a chit. This is a test surface for the capture connector.</div>
   <div id="app"><div class="card"><div class="empty">Loading…</div></div></div>
 </div>
+<div id="netpill" class="netpill"></div>
+<script src="cb-offline.js"></script>
 <script>
 var API = (new URLSearchParams(location.search).get('api')) || 'https://chitbridge-api-production.up.railway.app';
 var TOK = null, ME = null;
+function paintPill(s){ var p=el('netpill'); if(!p)return; if(s.online){ p.className='netpill'; p.textContent=s.pending?('● Online · syncing '+s.pending):'● Online'; } else { p.className='netpill off'; p.textContent='⚠ Offline · '+(s.pending?s.pending+' pending':'message saved locally'); } }
+function saveIntake(){ if(window.CBOffline) CBOffline.saveDraft('intake.sim',{ch:(el('s_ch')||{}).value,from:(el('s_from')||{}).value,text:(el('s_text')||{}).value}); }
+function restoreIntake(){ var d=window.CBOffline&&CBOffline.loadDraft('intake.sim'); if(!d)return; if(el('s_ch')&&d.ch)el('s_ch').value=d.ch; if(el('s_from'))el('s_from').value=d.from||''; if(el('s_text'))el('s_text').value=d.text||''; if((d.text||'').trim()&&el('s_err'))el('s_err').innerHTML='<span class="ok">↩ restored your unsaved message</span>'; }
 function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function el(id){ return document.getElementById(id); }
 async function api(m,p,body){ var h={'Content-Type':'application/json'}; if(TOK)h.Authorization='Bearer '+TOK; var r=await fetch(API+p,{method:m,headers:h,body:body?JSON.stringify(body):undefined}); var j=null; try{j=await r.json();}catch(e){} return {status:r.status,j:j}; }
@@ -73,12 +80,13 @@ async function load(){
   var caps=(r.j&&r.j.captures)||[];
   var mig=(r.j&&r.j.note)?'<div class="note" style="margin-bottom:8px">⚠ '+esc(r.j.note)+' — run migration b104 to enable.</div>':'';
   var sim='<div class="card"><b style="font-size:13px">Simulate an inbound message</b> <span class="note">(stands in for a WhatsApp/email arriving)</span>'
-    +'<div class="row" style="margin-top:6px"><select id="s_ch" style="width:130px"><option>whatsapp</option><option>email</option><option>web</option><option>sms</option></select>'
-    +'<input id="s_from" placeholder="from (phone / email)" style="flex:1;min-width:140px"></div>'
-    +'<label>Message</label><textarea id="s_text" placeholder="e.g. Hi, need 40 drums of white primer and 12 tins of hardener, deliver to Chennai next week"></textarea>'
+    +'<div class="row" style="margin-top:6px"><select id="s_ch" style="width:130px" onchange="saveIntake()"><option>whatsapp</option><option>email</option><option>web</option><option>sms</option></select>'
+    +'<input id="s_from" placeholder="from (phone / email)" style="flex:1;min-width:140px" oninput="saveIntake()"></div>'
+    +'<label>Message</label><textarea id="s_text" placeholder="e.g. Hi, need 40 drums of white primer and 12 tins of hardener, deliver to Chennai next week" oninput="saveIntake()"></textarea>'
     +'<div class="row" style="margin-top:8px"><button class="pri" onclick="simulate()">Add to inbox</button><span id="s_err" class="err"></span></div></div>';
   var list = caps.length ? caps.map(capCard).join('') : '<div class="card"><div class="empty">No pending captures. Simulate one above.</div></div>';
   el('app').innerHTML=mig+sim+'<div id="caps">'+list+'</div>';
+  restoreIntake();
 }
 function capCard(c){
   var draft = c.structured ? draftHtml(c.structured) : '';
@@ -100,7 +108,7 @@ async function simulate(){
   var ch=(el('s_ch')||{}).value, from=(el('s_from')||{}).value, text=(el('s_text')||{}).value;
   if(!(text||'').trim()){ el('s_err').textContent='Enter a message'; return; }
   var r=await api('POST','/api/capture/simulate',{channel:ch,sender_ref:from,raw_text:text});
-  if(r.status===200||r.status===201){ el('s_text').value=''; load(); } else { el('s_err').textContent=(r.j&&r.j.message)||'Failed'; }
+  if(r.status===200||r.status===201){ el('s_text').value=''; if(window.CBOffline)CBOffline.clearDraft('intake.sim'); load(); } else { el('s_err').textContent=(r.j&&r.j.message)||'Failed'; }
 }
 async function structure(id){
   var host=el('draft_'+id); if(host)host.innerHTML='<div class="note">✨ Structuring…</div>';
@@ -122,6 +130,7 @@ async function createChit(btn){
 }
 async function dismiss(id){ await api('POST','/api/capture/'+id+'/dismiss'); load(); }
 
+if(window.CBOffline)CBOffline.configure({apiBase:API,token:function(){return TOK;},onChange:paintPill});
 loginView();
 </script>
 </body>
