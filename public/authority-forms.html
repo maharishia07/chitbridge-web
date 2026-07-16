@@ -43,7 +43,10 @@
   .doc .sigline{ border-top:1px solid #333; padding-top:4px; font-size:12px; min-width:190px; }
   .doc .meta{ margin-top:22px; font-size:9.5px; color:#999; border-top:1px solid #eee; padding-top:8px; }
   .empty{ text-align:center; color:var(--grey); font-size:13px; padding:20px; }
-  @media print{
+  .netpill{ position:fixed; top:10px; right:12px; font-size:11px; font-weight:700; border-radius:999px; padding:4px 11px; z-index:50; border:1px solid var(--line); background:#fff; color:var(--ok); }
+  .netpill.off{ background:#fdf6e9; color:var(--warn); border-color:#e8d9b8; }
+  .restored{ font-size:11.5px; font-weight:600; color:var(--blue); background:#eef3fb; border:1px solid #cfe0f4; border-radius:8px; padding:7px 10px; margin-bottom:9px; }
+  @media print{ .netpill{ display:none; }
     body{ background:#fff; } .wrap{ max-width:none; padding:0; }
     .noprint{ display:none!important; } .doc{ border:0; border-radius:0; padding:0; }
     .doc .drow{ border-bottom:1px solid #ddd; }
@@ -56,9 +59,13 @@
   <div class="sub">Fill a submission-ready form from data CB already holds &mdash; each field shows its <b>source</b> and how much to trust it. Correct anything, freeze it, sign, print. Not a governance claim; verify at the issuing authority.</div></div>
   <div id="app"><div class="card"><div class="empty">Loading…</div></div></div>
 </div>
+<div id="netpill" class="netpill"></div>
+<script src="cb-offline.js"></script>
 <script>
 var API=(new URLSearchParams(location.search).get('api'))||'https://chitbridge-api-production.up.railway.app';
-var TOK=null,_stage='email',FORMS=[],SEL=null,CTX='',MANUAL={},RESOLVED=null,ISSUED=null;
+var TOK=null,_stage='email',FORMS=[],SEL=null,CTX='',MANUAL={},RESOLVED=null,ISSUED=null,_restored=false;
+function paintPill(s){var p=el('netpill');if(!p)return;if(s.online){p.className='netpill';p.textContent=s.pending?('● Online · syncing '+s.pending):'● Online';}else{p.className='netpill off';p.textContent='⚠ Offline · '+(s.pending?s.pending+' pending':'work saved locally');}}
+function saveAF(){ if(window.CBOffline&&SEL) CBOffline.saveDraft('af.'+SEL,{ctx:CTX,manual:MANUAL}); }
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function el(id){return document.getElementById(id);}
 async function api(m,p,body){var h={'Content-Type':'application/json'};if(TOK)h.Authorization='Bearer '+TOK;var r=await fetch(API+p,{method:m,headers:h,body:body?JSON.stringify(body):undefined});var j=null;try{j=await r.json();}catch(e){}return{status:r.status,j:j};}
@@ -90,9 +97,14 @@ function render(){
   el('app').innerHTML=picker+'<div id="work"></div>';
   if(SEL) resolve();
 }
-function pick(k){ SEL=k; MANUAL={}; ISSUED=null; CTX=((el('ctx')||{}).value||'').trim(); render(); }
+function pick(k){ SEL=k; ISSUED=null; _restored=false;
+  var d=(window.CBOffline&&CBOffline.loadDraft('af.'+k));
+  if(d&&(d.ctx||(d.manual&&Object.keys(d.manual).length))){ MANUAL=d.manual||{}; CTX=d.ctx||''; _restored=true; }
+  else { MANUAL={}; CTX=((el('ctx')||{}).value||'').trim(); }
+  render();
+}
 async function resolve(){
-  CTX=((el('ctx')||{}).value||CTX||'').trim();
+  CTX=((el('ctx')||{}).value||CTX||'').trim(); saveAF();
   var w=el('work'); w.innerHTML='<div class="card"><div class="empty">Filling from your data…</div></div>';
   var r=await api('POST','/api/forms/'+SEL+'/resolve',{context_ref:CTX||undefined,manual:MANUAL});
   if(r.status===401){TOK=null;return loginView('Session expired');}
@@ -100,6 +112,7 @@ async function resolve(){
 }
 function drawForm(){
   var d=RESOLVED||{}, fields=d.fields||[];
+  var restoredNote=_restored?'<div class="restored">↩ Restored your unsaved draft &mdash; nothing was lost.</div>':''; _restored=false;
   var banner=d.ready?'<div class="banner ready">✓ Ready to issue &mdash; every required field is filled.</div>'
     :'<div class="banner notready">Missing required: '+((d.unresolved_required||[]).map(function(u){return esc(u.label);}).join(', ')||'—')+'</div>';
   var rows=fields.map(function(f){
@@ -109,7 +122,7 @@ function drawForm(){
   }).join('');
   var prov=d.provenance?('<div class="prov">Provenance: '+Object.keys(d.provenance).map(function(k){return d.provenance[k]+' '+esc(k);}).join(' &middot; ')+' &middot; '+((d.completeness||{}).pct||0)+'% filled</div>'):'';
   el('work').innerHTML='<div class="card noprint"><div class="row" style="justify-content:space-between"><b style="font-size:14px">'+esc(d.title||SEL)+'</b><span class="note">'+esc(d.authority||'')+'</span></div>'
-    +banner+rows+prov
+    +restoredNote+banner+rows+prov
     +'<div class="row" style="margin-top:12px"><button class="ok" id="issueBtn" '+(d.ready?'':'disabled')+' onclick="issue()">Issue &amp; freeze</button>'
     +'<button class="gh" onclick="resolve()">Re-fill</button></div>'
     +'<div class="note" style="margin-top:8px">'+esc(d.note||'')+'</div><div id="issueErr" class="err"></div></div>';
@@ -118,7 +131,7 @@ function edit(inp){ var id=inp.getAttribute('data-fid'); var v=inp.value.trim();
 async function issue(){
   el('issueBtn').disabled=true;
   var r=await api('POST','/api/forms/'+SEL+'/issue',{context_ref:CTX||undefined,manual:MANUAL});
-  if(r.status===200){ ISSUED=r.j; loadInstance(r.j.form_id); }
+  if(r.status===200){ ISSUED=r.j; if(window.CBOffline)CBOffline.clearDraft('af.'+SEL); loadInstance(r.j.form_id); }
   else { el('issueErr').textContent=(r.j&&(r.j.message||r.j.error))||('Issue failed ('+r.status+')'); el('issueBtn').disabled=false; }
 }
 async function loadInstance(id){
@@ -159,6 +172,7 @@ async function attach(id){
   if(r.status===200){ el('attachMsg').innerHTML='<span class="note" style="color:#2f7a45;font-weight:700">✓ Filed on the rail &mdash; attachment '+esc(String(r.j.attachment_id).slice(0,8))+'… delivered to '+(r.j.participants||1)+' participant copy(ies).</span>'; }
   else{ el('attachMsg').innerHTML='<span class="err">'+esc((r.j&&(r.j.message||r.j.error))||('Attach failed ('+r.status+')'))+'</span>'; }
 }
+if(window.CBOffline)CBOffline.configure({apiBase:API,token:function(){return TOK;},onChange:paintPill});
 loginView();
 </script>
 </body>
