@@ -139,12 +139,25 @@ function drawDoc(inst){
   var controls='<div class="card noprint"><div class="banner ready">✓ Issued &amp; frozen'+(inst.signed_at?' &amp; signed':'')+'.</div><div class="row">'
     +(inst.signed_at?'':'<button class="pri" onclick="sign(\''+inst.form_id+'\')">Sign (authorised signatory)</button>')
     +'<button class="gh" onclick="window.print()">Print / Save PDF</button>'
-    +'<button class="gh" onclick="pick(\''+SEL+'\')">New form</button></div><div id="signErr" class="err"></div></div>';
+    +'<button class="gh" onclick="pick(\''+SEL+'\')">New form</button></div><div id="signErr" class="err"></div>'
+    +'<label style="margin-top:12px">Transfer on the rail — file onto a chit (per-copy)</label>'
+    +'<div class="row"><input id="attach_chit" style="flex:1;min-width:150px" value="'+esc(CTX)+'" placeholder="'+(CTX?'the order it was drawn from':'chit / order id')+'">'
+    +'<button class="ok" onclick="attach(\''+inst.form_id+'\')">File on rail</button></div>'
+    +'<div id="attachMsg" style="margin-top:6px"></div>'
+    +'<div class="note" style="margin-top:4px">Files the frozen form as an attachment on that chit — every participant gets their own copy to view, verify at source, or dispute.</div></div>';
   el('work').innerHTML=controls+doc;
 }
 async function sign(id){
   var r=await api('POST','/api/forms/instances/'+id+'/sign',{});
   if(r.status===200){ loadInstance(id); } else { el('signErr').textContent=(r.j&&(r.j.message||r.j.error))||('Sign failed ('+r.status+')'); }
+}
+async function attach(id){
+  var cid=((el('attach_chit')||{}).value||'').trim();
+  if(!cid){ el('attachMsg').innerHTML='<span class="err">Enter a chit / order id.</span>'; return; }
+  el('attachMsg').innerHTML='<span class="note">Filing on the rail…</span>';
+  var r=await api('POST','/api/forms/instances/'+id+'/attach',{chit_id:cid});
+  if(r.status===200){ el('attachMsg').innerHTML='<span class="note" style="color:#2f7a45;font-weight:700">✓ Filed on the rail &mdash; attachment '+esc(String(r.j.attachment_id).slice(0,8))+'… delivered to '+(r.j.participants||1)+' participant copy(ies).</span>'; }
+  else{ el('attachMsg').innerHTML='<span class="err">'+esc((r.j&&(r.j.message||r.j.error))||('Attach failed ('+r.status+')'))+'</span>'; }
 }
 loginView();
 </script>
