@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chit &amp; Bridge — Authority forms</title>
+<style>
+  :root{ --ink:#1b2431; --grey:#6a7686; --line:#e5e8ee; --bg:#f5f6f9; --card:#fff; --blue:#3F66A6;
+    --documented:#2f8f5b; --declared:#8a94a6; --derived:#7a6bb0; --order:#2f7a45;
+    --ok:#2f7a45; --warn:#b4832a; --bad:#c0453b; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; background:var(--bg); color:var(--ink); }
+  .wrap{ max-width:760px; margin:0 auto; padding:16px; }
+  h1{ font-size:20px; margin:4px 0 2px; } .sub{ font-size:12.5px; color:var(--grey); margin-bottom:14px; }
+  .card{ background:var(--card); border:1px solid var(--line); border-radius:13px; padding:14px 15px; margin-bottom:12px; }
+  label{ font-size:11px; font-weight:700; color:var(--grey); display:block; margin:8px 0 3px; }
+  input,select{ width:100%; padding:9px 11px; border:1px solid var(--line); border-radius:8px; font-size:13px; background:#fff; color:var(--ink); }
+  button{ font-size:13px; font-weight:700; border:0; border-radius:9px; padding:9px 15px; cursor:pointer; }
+  button:disabled{ opacity:.45; cursor:not-allowed; }
+  .pri{ background:var(--blue); color:#fff; } .gh{ background:#fff; color:var(--ink); border:1px solid var(--line); }
+  .ok{ background:var(--ok); color:#fff; }
+  .row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .note{ font-size:11px; color:var(--grey); } .err{ color:var(--bad); font-size:12px; margin-top:6px; }
+  .formcard{ border:1px solid var(--line); border-radius:11px; padding:11px 12px; margin-bottom:8px; cursor:pointer; background:#fff; }
+  .formcard:hover{ border-color:var(--blue); } .formcard.on{ border-color:var(--blue); background:#f4f7fc; }
+  .formcard .t{ font-weight:700; font-size:13.5px; } .formcard .a{ font-size:11px; color:var(--grey); }
+  .fld{ display:grid; grid-template-columns:1fr; gap:3px; padding:9px 0; border-top:1px solid var(--line); }
+  .fld .lb{ font-size:11px; font-weight:700; color:var(--grey); display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+  .req{ color:var(--bad); } .miss{ border-color:var(--bad)!important; background:#fdf5f4; }
+  .chip{ font-size:9px; font-weight:800; text-transform:uppercase; letter-spacing:.03em; border-radius:5px; padding:1px 6px; }
+  .c-documented{ background:#eaf6ee; color:var(--documented); } .c-order{ background:#e9f5ec; color:var(--order); }
+  .c-declared{ background:#eef0f3; color:var(--declared); } .c-derived{ background:#efeaf7; color:var(--derived); } .c-none{ background:#fbeaea; color:var(--bad); }
+  .banner{ font-size:12px; font-weight:700; border-radius:8px; padding:8px 11px; margin:4px 0 10px; }
+  .banner.ready{ background:#eaf6ee; color:var(--ok); } .banner.notready{ background:#fdf6e9; color:var(--warn); }
+  .prov{ font-size:11px; color:var(--grey); margin-top:6px; }
+  /* the printable document */
+  .doc{ background:#fff; color:#111; border:1px solid var(--line); border-radius:6px; padding:34px 38px; }
+  .doc h2{ text-align:center; font-size:19px; letter-spacing:.02em; margin:0 0 3px; }
+  .doc .auth{ text-align:center; font-size:11px; color:#555; margin-bottom:20px; text-transform:uppercase; letter-spacing:.08em; }
+  .doc .drow{ display:flex; padding:7px 0; border-bottom:1px dotted #ccc; font-size:13px; }
+  .doc .dk{ width:42%; color:#444; font-weight:600; } .doc .dv{ width:58%; }
+  .doc .sig{ margin-top:34px; display:flex; justify-content:space-between; align-items:flex-end; }
+  .doc .sigline{ border-top:1px solid #333; padding-top:4px; font-size:12px; min-width:190px; }
+  .doc .meta{ margin-top:22px; font-size:9.5px; color:#999; border-top:1px solid #eee; padding-top:8px; }
+  .empty{ text-align:center; color:var(--grey); font-size:13px; padding:20px; }
+  @media print{
+    body{ background:#fff; } .wrap{ max-width:none; padding:0; }
+    .noprint{ display:none!important; } .doc{ border:0; border-radius:0; padding:0; }
+    .doc .drow{ border-bottom:1px solid #ddd; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="noprint"><h1>🗎 Authority forms</h1>
+  <div class="sub">Fill a submission-ready form from data CB already holds &mdash; each field shows its <b>source</b> and how much to trust it. Correct anything, freeze it, sign, print. Not a governance claim; verify at the issuing authority.</div></div>
+  <div id="app"><div class="card"><div class="empty">Loading…</div></div></div>
+</div>
+<script>
+var API=(new URLSearchParams(location.search).get('api'))||'https://chitbridge-api-production.up.railway.app';
+var TOK=null,_stage='email',FORMS=[],SEL=null,CTX='',MANUAL={},RESOLVED=null,ISSUED=null;
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function el(id){return document.getElementById(id);}
+async function api(m,p,body){var h={'Content-Type':'application/json'};if(TOK)h.Authorization='Bearer '+TOK;var r=await fetch(API+p,{method:m,headers:h,body:body?JSON.stringify(body):undefined});var j=null;try{j=await r.json();}catch(e){}return{status:r.status,j:j};}
+function rungChip(s){var c={documented:'c-documented',declared:'c-declared',derived:'c-derived'}[s]||'c-none';return '<span class="chip '+c+'">'+esc(s||'missing')+'</span>';}
+function srcChip(s){if(!s)return '';var c=s==='order'?'c-order':'c-declared';return '<span class="chip '+c+'">'+esc(s)+'</span>';}
+
+function loginView(msg){
+  el('app').innerHTML='<div class="card"><label>Business email</label><input id="lg_email" placeholder="you@company.com">'
+    +'<div id="otpwrap" style="display:none"><label>OTP <span class="note">(dev 123456)</span></label><input id="lg_otp" placeholder="6-digit code"></div>'
+    +'<div class="row" style="margin-top:10px"><button class="pri" id="lg_btn" onclick="doLogin()">Send code</button></div>'
+    +(msg?'<div class="err">'+esc(msg)+'</div>':'')+'</div>';
+}
+async function doLogin(){
+  var email=((el('lg_email')||{}).value||'').trim();
+  if(_stage==='email'){ if(!email.includes('@'))return; await api('POST','/api/entities/register',{email:email}); _stage='otp'; el('otpwrap').style.display=''; el('lg_btn').textContent='Open'; return; }
+  var otp=((el('lg_otp')||{}).value||'').trim();
+  var v=await api('POST','/api/entities/verify',{email:email,otp:otp});
+  if(v.status===200&&v.j&&v.j.token){ TOK=v.j.token; boot(); } else { loginView((v.j&&v.j.message)||'Login failed'); _stage='email'; }
+}
+async function boot(){
+  var r=await api('GET','/api/forms'); if(r.status===401){TOK=null;return loginView('Session expired');}
+  FORMS=(r.j&&r.j.forms)||[]; render();
+}
+function render(){
+  var picker='<div class="card noprint"><div class="note" style="margin-bottom:7px;font-weight:700">Pick a form</div>'
+    +FORMS.map(function(f){return '<div class="formcard'+(SEL===f.key?' on':'')+'" onclick="pick(\''+f.key+'\')"><div class="t">'+esc(f.title)+'</div><div class="a">'+esc(f.authority||'')+' &middot; '+f.field_count+' fields</div></div>';}).join('')
+    +'<label>Draw from an order (optional chit ID)</label><input id="ctx" placeholder="paste an order/chit id to auto-fill buyer, invoice, value…" value="'+esc(CTX)+'">'
+    +'</div>';
+  el('app').innerHTML=picker+'<div id="work"></div>';
+  if(SEL) resolve();
+}
+function pick(k){ SEL=k; MANUAL={}; ISSUED=null; CTX=((el('ctx')||{}).value||'').trim(); render(); }
+async function resolve(){
+  CTX=((el('ctx')||{}).value||CTX||'').trim();
+  var w=el('work'); w.innerHTML='<div class="card"><div class="empty">Filling from your data…</div></div>';
+  var r=await api('POST','/api/forms/'+SEL+'/resolve',{context_ref:CTX||undefined,manual:MANUAL});
+  if(r.status===401){TOK=null;return loginView('Session expired');}
+  RESOLVED=r.j; drawForm();
+}
+function drawForm(){
+  var d=RESOLVED||{}, fields=d.fields||[];
+  var banner=d.ready?'<div class="banner ready">✓ Ready to issue &mdash; every required field is filled.</div>'
+    :'<div class="banner notready">Missing required: '+((d.unresolved_required||[]).map(function(u){return esc(u.label);}).join(', ')||'—')+'</div>';
+  var rows=fields.map(function(f){
+    var missing=f.required&&(f.value==null||f.value==='');
+    return '<div class="fld"><div class="lb">'+esc(f.label)+(f.required?' <span class="req">*</span>':'')+' '+srcChip(f.source)+rungChip(f.rung)+'</div>'
+      +'<input class="'+(missing?'miss':'')+'" data-fid="'+esc(f.id)+'" value="'+esc(f.value)+'" placeholder="'+(missing?'required — type it':'—')+'" onchange="edit(this)"></div>';
+  }).join('');
+  var prov=d.provenance?('<div class="prov">Provenance: '+Object.keys(d.provenance).map(function(k){return d.provenance[k]+' '+esc(k);}).join(' &middot; ')+' &middot; '+((d.completeness||{}).pct||0)+'% filled</div>'):'';
+  el('work').innerHTML='<div class="card noprint"><div class="row" style="justify-content:space-between"><b style="font-size:14px">'+esc(d.title||SEL)+'</b><span class="note">'+esc(d.authority||'')+'</span></div>'
+    +banner+rows+prov
+    +'<div class="row" style="margin-top:12px"><button class="ok" id="issueBtn" '+(d.ready?'':'disabled')+' onclick="issue()">Issue &amp; freeze</button>'
+    +'<button class="gh" onclick="resolve()">Re-fill</button></div>'
+    +'<div class="note" style="margin-top:8px">'+esc(d.note||'')+'</div><div id="issueErr" class="err"></div></div>';
+}
+function edit(inp){ var id=inp.getAttribute('data-fid'); var v=inp.value.trim(); if(v)MANUAL[id]=v; else delete MANUAL[id]; resolve(); }
+async function issue(){
+  el('issueBtn').disabled=true;
+  var r=await api('POST','/api/forms/'+SEL+'/issue',{context_ref:CTX||undefined,manual:MANUAL});
+  if(r.status===200){ ISSUED=r.j; loadInstance(r.j.form_id); }
+  else { el('issueErr').textContent=(r.j&&(r.j.message||r.j.error))||('Issue failed ('+r.status+')'); el('issueBtn').disabled=false; }
+}
+async function loadInstance(id){
+  var r=await api('GET','/api/forms/instances/'+id);
+  if(r.status!==200){ el('issueErr').textContent='Loaded, but could not fetch the frozen form.'; return; }
+  drawDoc(r.j);
+}
+function drawDoc(inst){
+  var fields=inst.fields||[];
+  var body=fields.filter(function(f){return f.value!=null&&f.value!=='';}).map(function(f){
+    return '<div class="drow"><div class="dk">'+esc(f.label)+'</div><div class="dv">'+esc(f.value)+'</div></div>';
+  }).join('');
+  var sig=inst.signatory?('<div class="sigline">'+esc(inst.signatory.name)+(inst.signatory.designation?'<br><span style="color:#777">'+esc(inst.signatory.designation)+'</span>':'')+'</div>')
+    :'<div class="sigline" style="color:#aaa">Signature</div>';
+  var doc='<div class="doc"><h2>'+esc(inst.title)+'</h2><div class="auth">'+esc((RESOLVED&&RESOLVED.authority)||'')+'</div>'+body
+    +'<div class="sig"><div>'+(inst.signed_at?'<div class="note" style="color:#2f7a45;font-weight:700">Signed '+esc(String(inst.signed_at).slice(0,10))+'</div>':'')+'</div>'+sig+'</div>'
+    +'<div class="meta">Issued via Chit &amp; Bridge &middot; content hash '+esc(String(inst.content_hash||'').slice(0,24))+'… &middot; This is a self-prepared submission; verify at the issuing authority.</div></div>';
+  var controls='<div class="card noprint"><div class="banner ready">✓ Issued &amp; frozen'+(inst.signed_at?' &amp; signed':'')+'.</div><div class="row">'
+    +(inst.signed_at?'':'<button class="pri" onclick="sign(\''+inst.form_id+'\')">Sign (authorised signatory)</button>')
+    +'<button class="gh" onclick="window.print()">Print / Save PDF</button>'
+    +'<button class="gh" onclick="pick(\''+SEL+'\')">New form</button></div><div id="signErr" class="err"></div></div>';
+  el('work').innerHTML=controls+doc;
+}
+async function sign(id){
+  var r=await api('POST','/api/forms/instances/'+id+'/sign',{});
+  if(r.status===200){ loadInstance(id); } else { el('signErr').textContent=(r.j&&(r.j.message||r.j.error))||('Sign failed ('+r.status+')'); }
+}
+loginView();
+</script>
+</body>
+</html>
