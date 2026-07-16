@@ -138,7 +138,7 @@ async function dismiss(id){
   if(res.queued){ var c=el('cap_'+id); if(c)c.style.opacity='0.5'; } else load();
 }
 
-if(window.CBOffline)CBOffline.configure({apiBase:API,token:function(){return TOK;},onChange:paintPill});
+if(window.CBOffline){CBOffline.configure({apiBase:API,token:function(){return TOK;},onChange:paintPill});CBOffline.registerSW();}
 loginView();
 </script>
 </body>

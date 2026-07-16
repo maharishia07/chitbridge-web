@@ -159,7 +159,7 @@ async function runField(){
   host.innerHTML=html+'<div class="note" style="margin-top:8px;font-style:italic">'+esc(j.note||'')+(j.cached?' &middot; (cached &mdash; free)':'')+'</div>';
 }
 
-if(window.CBOffline)CBOffline.configure({apiBase:API,token:function(){return TOK;},onChange:paintPill});
+if(window.CBOffline){CBOffline.configure({apiBase:API,token:function(){return TOK;},onChange:paintPill});CBOffline.registerSW();}
 loginView();
 </script>
 </body>

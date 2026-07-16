@@ -173,7 +173,7 @@ async function attach(id){
   if(r.status===200){ el('attachMsg').innerHTML='<span class="note" style="color:#2f7a45;font-weight:700">✓ Filed on the rail &mdash; attachment '+esc(String(r.j.attachment_id).slice(0,8))+'… delivered to '+(r.j.participants||1)+' participant copy(ies).</span>'; }
   else{ el('attachMsg').innerHTML='<span class="err">'+esc((r.j&&(r.j.message||r.j.error))||('Attach failed ('+r.status+')'))+'</span>'; }
 }
-if(window.CBOffline)CBOffline.configure({apiBase:API,token:function(){return TOK;},onChange:paintPill});
+if(window.CBOffline){CBOffline.configure({apiBase:API,token:function(){return TOK;},onChange:paintPill});CBOffline.registerSW();}
 loginView();
 </script>
 </body>

@@ -88,8 +88,17 @@
     root.addEventListener('offline', paint);
   }
 
+  // ── service worker (Phase 3) — app opens offline + read-cache. Safe no-op where SW is unavailable. ──
+  function registerSW(path) {
+    try { if (root.navigator && 'serviceWorker' in root.navigator) root.navigator.serviceWorker.register(path || '/cb-sw.js').catch(function () {}); } catch (e) {}
+  }
+  function clearApiCache() {   // call on logout so a shared device doesn't leak one entity's cached reads
+    try { if (root.navigator && root.navigator.serviceWorker && root.navigator.serviceWorker.controller) root.navigator.serviceWorker.controller.postMessage({ type: 'cb-clear-api' }); } catch (e) {}
+  }
+
   var API = { configure: configure, online: online, saveDraft: saveDraft, loadDraft: loadDraft, draftAge: draftAge,
-    clearDraft: clearDraft, submit: submit, enqueue: enqueue, flush: flush, pending: pending, _classify: classify, _uuid: uuid };
+    clearDraft: clearDraft, submit: submit, enqueue: enqueue, flush: flush, pending: pending,
+    registerSW: registerSW, clearApiCache: clearApiCache, _classify: classify, _uuid: uuid };
   root.CBOffline = API;
   if (typeof module !== 'undefined' && module.exports) module.exports = API;
 })(typeof window !== 'undefined' ? window : this);
