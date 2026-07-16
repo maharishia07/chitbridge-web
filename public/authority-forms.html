@@ -129,6 +129,7 @@ function drawForm(){
 }
 function edit(inp){ var id=inp.getAttribute('data-fid'); var v=inp.value.trim(); if(v)MANUAL[id]=v; else delete MANUAL[id]; resolve(); }
 async function issue(){
+  if(window.CBOffline&&!CBOffline.online()){ el('issueErr').innerHTML='<span class="note" style="color:var(--warn)">⏳ You&rsquo;re offline &mdash; your filled form is saved as a draft. Issue it when you&rsquo;re back online (issuing needs the server to freeze &amp; number it).</span>'; return; }
   el('issueBtn').disabled=true;
   var r=await api('POST','/api/forms/'+SEL+'/issue',{context_ref:CTX||undefined,manual:MANUAL});
   if(r.status===200){ ISSUED=r.j; if(window.CBOffline)CBOffline.clearDraft('af.'+SEL); loadInstance(r.j.form_id); }

@@ -111,7 +111,13 @@ async function renderYourself(b){
   b.innerHTML='<div class="card"><div class="row" style="justify-content:space-between"><b style="font-size:14px">What you hold</b><span class="note">'+(s.held||0)+' held &middot; '+(s.verified||0)+' verified &middot; '+(s.documented||0)+' documented &middot; '+(s.declared||0)+' declared'+(s.expiring?' &middot; '+s.expiring+' expiring':'')+'</span></div>'+list+'</div>'+add
     +'<div class="note" style="padding:0 4px">'+esc((r.j&&r.j.note)||'')+'</div>';
 }
-async function addCred(){ var t=((el('nc_title')||{}).value||'').trim(); if(!t){el('nc_err').textContent='Enter a name';return;} var r=await api('POST','/api/kyb/credential',{title:t}); if(r.status===200){ if(window.CBOffline)CBOffline.clearDraft('kyb.cred'); load(); } else { el('nc_err').textContent=(r.j&&r.j.message)||'Failed'; } }
+async function addCred(){ var t=((el('nc_title')||{}).value||'').trim(); if(!t){el('nc_err').textContent='Enter a name';return;}
+  if(!window.CBOffline){ var r=await api('POST','/api/kyb/credential',{title:t}); if(r.status===200){load();}else{el('nc_err').textContent=(r.j&&r.j.message)||'Failed';} return; }
+  var res=await CBOffline.submit({method:'POST',path:'/api/kyb/credential',body:{title:t}}); CBOffline.clearDraft('kyb.cred');
+  if(res.queued){ if(el('nc_title'))el('nc_title').value=''; el('nc_err').innerHTML='<span class="note">⏳ Offline — queued; it\'ll be added when you\'re back online.</span>'; }
+  else if(res.ok){ load(); }
+  else { el('nc_err').textContent='Failed ('+res.status+')'; }
+}
 
 // ── POSITION (directional selling avenues) ──
 async function renderPosition(b){

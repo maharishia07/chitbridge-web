@@ -107,8 +107,12 @@ function draftHtml(s){
 async function simulate(){
   var ch=(el('s_ch')||{}).value, from=(el('s_from')||{}).value, text=(el('s_text')||{}).value;
   if(!(text||'').trim()){ el('s_err').textContent='Enter a message'; return; }
-  var r=await api('POST','/api/capture/simulate',{channel:ch,sender_ref:from,raw_text:text});
-  if(r.status===200||r.status===201){ el('s_text').value=''; if(window.CBOffline)CBOffline.clearDraft('intake.sim'); load(); } else { el('s_err').textContent=(r.j&&r.j.message)||'Failed'; }
+  if(!window.CBOffline){ var r=await api('POST','/api/capture/simulate',{channel:ch,sender_ref:from,raw_text:text}); if(r.status===200||r.status===201){el('s_text').value='';load();}else{el('s_err').textContent=(r.j&&r.j.message)||'Failed';} return; }
+  var res=await CBOffline.submit({method:'POST',path:'/api/capture/simulate',body:{channel:ch,sender_ref:from,raw_text:text}});
+  el('s_text').value=''; CBOffline.clearDraft('intake.sim');
+  if(res.queued){ el('s_err').innerHTML='<span class="ok">⏳ Offline — queued; it\'ll land in your inbox when you\'re back online.</span>'; }
+  else if(res.ok){ load(); }
+  else { el('s_err').textContent='Failed ('+res.status+')'; }
 }
 async function structure(id){
   var host=el('draft_'+id); if(host)host.innerHTML='<div class="note">✨ Structuring…</div>';
@@ -128,7 +132,11 @@ async function createChit(btn){
   if(chitId){ await api('POST','/api/capture/'+id+'/convert',{chit_id:chitId}); capEl.innerHTML='<div class="row"><span class="chn">'+esc(s.intent||'chit')+'</span> <span class="badge">✓ Created chit on the rail</span></div><div class="note" style="margin-top:4px">chit '+esc(chitId.slice(0,8))+' — open it in the main app.</div>'; }
   else { btn.disabled=false; btn.textContent='✓ Create chit on the rail'; capEl.querySelector('.cerr').textContent=(send.j&&send.j.message)||'Send failed'; }
 }
-async function dismiss(id){ await api('POST','/api/capture/'+id+'/dismiss'); load(); }
+async function dismiss(id){
+  if(!window.CBOffline){ await api('POST','/api/capture/'+id+'/dismiss'); load(); return; }
+  var res=await CBOffline.submit({method:'POST',path:'/api/capture/'+id+'/dismiss'});
+  if(res.queued){ var c=el('cap_'+id); if(c)c.style.opacity='0.5'; } else load();
+}
 
 if(window.CBOffline)CBOffline.configure({apiBase:API,token:function(){return TOK;},onChange:paintPill});
 loginView();
