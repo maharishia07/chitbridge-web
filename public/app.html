@@ -528,6 +528,7 @@ img.attImg{object-fit:cover;display:block}
 <div id="toast"></div>
 
 <!-- module 1 of the app split: the shared client (api + envelope + auth/status branching) -->
+<script src="/cb-offline.js"></script>
 <script src="/app/core.js"></script>
 <!-- module 2: generic dependency-free helpers (esc/opt/scrErr/cap/inr_/fmtAt/fmtMoney/deepClone/jwtPayload) -->
 <script src="/app/helpers.js"></script>
@@ -1390,7 +1391,7 @@ function setShop(s){SESSION.shop=s;
   document.querySelectorAll('.shoptog button').forEach(b=>{b.classList.remove('on','open','closed','away');if(b.dataset.s===s){b.classList.add('on',s);}});
   toast({open:"Shop Open — accepting orders.",closed:"Shop Closed — new orders are blocked.",away:"Away — orders still accepted; customer is told service may be delayed."}[s]);
 }
-function logout(){try{localStorage.removeItem('cb_sess');localStorage.removeItem('cb_nav');}catch(_){}SESSION={token:null,role:null,name:null,entity:null,bridgeId:null};STORE=freshStore();UI={...UI0,selected:new Set(),aggStates:new Set(["open","act","close"])};applyPrefs();go("#/login");}
+function logout(){try{localStorage.removeItem('cb_sess');localStorage.removeItem('cb_nav');}catch(_){}try{window.CBOffline&&CBOffline.clearApiCache();}catch(_){}SESSION={token:null,role:null,name:null,entity:null,bridgeId:null};STORE=freshStore();UI={...UI0,selected:new Set(),aggStates:new Set(["open","act","close"])};applyPrefs();go("#/login");}
 
 /* ---------------- APP SHELL + TASK PANEL ---------------- */
 const UI0 = {nav:"task", folder:"task", sub:"my", state:"open", dtab:"content", sel:null, selectMode:false, selected:new Set(), aggStates:new Set(["open","act","close"]), drawer:false, mdetail:false, purpose:false, orgHelp:false, loading:false, rows:[], detail:null, actors:[], busy:false, vp:"lap", lw:340, lh:300, lb:null, lbGroup:null, openLines:new Set(), attGroups:{}, filterOpen:false, filter:{}, notifOpen:false, msgFilter:"all", msgChan:"internal", msgType:"all", msgKind:"info", msgcOpen:false, composeOpen:false, listHelp:false, total:0, page:1, pageLimit:50, loadingMore:false, allLoaded:false, sort:"date", dir:"desc", cols:null, colMenu:false, search:"", msgSearch:"", msgOrder:"latest", statusSearch:"", statusOrder:"latest"};
@@ -3378,6 +3379,14 @@ try{ const _cw=JSON.parse(localStorage.getItem("cb_colw")||"null"); if(_cw) UI.c
 try{ if(SESSION.token){ const _nv=localStorage.getItem("cb_nav"); if(_nv){ UI.nav=_nv; if(_nv==="order")UI.folder="order"; else if(["drafts","trash","archive"].indexOf(_nv)>=0)UI.folder=_nv; else if(_nv==="task")UI.folder="task"; } } }catch(_){ }
 if(!location.hash) location.hash=SESSION.token?"#/":"#/login";
 route();
+</script>
+<script>
+(function(){ if(!window.CBOffline) return;
+  function cbPill(s){ var p=document.getElementById("cbnet"); if(!p){ p=document.createElement("div"); p.id="cbnet"; p.style.cssText="position:fixed;bottom:10px;right:10px;z-index:9998;font:700 11px/1 system-ui,-apple-system,sans-serif;border-radius:999px;padding:5px 11px;border:1px solid #e5e8ee;background:#fff;color:#2f7a45;box-shadow:0 1px 4px rgba(0,0,0,.08)"; (document.body||document.documentElement).appendChild(p); } if(!p) return;
+    if(s.online){ p.style.background="#fff"; p.style.color="#2f7a45"; p.textContent = s.pending ? ("\u25CF Online \u00B7 syncing "+s.pending) : "\u25CF Online"; }
+    else { p.style.background="#fdf6e9"; p.style.color="#b4832a"; p.textContent = "\u26A0 Offline" + (s.pending ? " \u00B7 "+s.pending+" pending" : ""); } }
+  try{ CBOffline.configure({apiBase: CFG.API_BASE, token:function(){return SESSION && SESSION.token;}, onChange:cbPill}); CBOffline.registerSW("/cb-sw.js"); }catch(e){}
+})();
 </script>
 </body>
 </html>

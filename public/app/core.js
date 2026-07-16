@@ -37,6 +37,23 @@ const __cblog = [];
 function cblog(level, text){ __cblog.push({ t: Date.now(), level: level || 'info', text: String(text) }); if (__cblog.length > 300) __cblog.shift(); }
 if (typeof window !== 'undefined') { window.__cblog = __cblog; window.cblog = cblog; }
 
+// OUTBOX-SAFE mutations (offline Phase 4.2): fire-and-forget state changes / idempotent overwrites / deletes whose
+// callers ignore the response body. Offline, these are QUEUED (cb-offline.js) and replayed on reconnect — deduped by the
+// server Idempotency-Key (b109), so a replay can't double-apply. CREATES + id-returning + content-returning mutations
+// (createChit, sendMsg, dispute-raise, AI, auth, uploads) are deliberately NOT here — offline they fail gracefully and
+// the Phase-4.1 draft protects the typed input. See C:\dev\SPEC-offline-coverage.md.
+const OUTBOX_KEYS = new Set([
+  'advance','status','setPriority','custFlag','star','voidChit','markUnread','archive','unarchive','restore','delChit','purgeChit','assignBulk',
+  'actorBreak','actorStatus','actorPinReset','actorDelegate','assign','unassign','actorEdit',
+  'resolveDispute',
+  'saveProfile','shopStatus','saveSettings','vaultSave','profileSave',
+  'connRespond','netApprove','netDecline','netSuspend','netResume','netDisconnect',
+  'supDel','supPatch','prodDel','prodEdit','folderRename','folderDelete','folderMove',
+  'connectorDelete','connectorConnToggle',
+  'readinessGather','readinessVerify',
+  'assistResolve','assistPublish',
+]);
+
 async function api(key, {params, query, body}={}){
   const ep = EP[key]; if(!ep) throw new Error("no endpoint "+key);
   cblog('debug', (CFG.MODE==='demo'?'(demo) ':'') + ep.m + ' ' + key);
@@ -45,11 +62,29 @@ async function api(key, {params, query, body}={}){
   if(lockKey){ if(_lockKeys.has(lockKey)) throw new Error("Already working on that — one moment."); _lockKeys.add(lockKey); }
   _inflight++; _netBusy(true);
   try{
-    let url = CFG.API_BASE + fill(ep.p, params);
-    if(query){const q=new URLSearchParams(Object.entries(query).filter(([,v])=>v!=null&&v!=="")); if([...q].length)url+="?"+q;}
-    const res = await fetch(url, {method:ep.m, headers:{"Content-Type":"application/json", ...(SESSION.token?{Authorization:"Bearer "+SESSION.token}:{})}, body: body?JSON.stringify(body):undefined});
+    const CB = (typeof window!=='undefined') ? window.CBOffline : null;
+    const outboxSafe = ep.m!=='GET' && OUTBOX_KEYS.has(key);
+    const idemKey = (outboxSafe && CB) ? CB._uuid() : null;
+    let pathQ = fill(ep.p, params);
+    let url = CFG.API_BASE + pathQ;
+    if(query){const q=new URLSearchParams(Object.entries(query).filter(([,v])=>v!=null&&v!=="")); if([...q].length){const qs="?"+q; url+=qs; pathQ+=qs;}}
+    // Offline + queue-safe → capture to the outbox instead of a doomed request; replays (idempotently) on reconnect.
+    if(outboxSafe && CB && !CB.online()){
+      CB.enqueue({method:ep.m, path:pathQ, body, id:idemKey});
+      cblog('warn', ep.m+' '+key+' → queued offline'); return {queued:true, offline:true};
+    }
+    let res;
+    try{
+      res = await fetch(url, {method:ep.m, headers:{"Content-Type":"application/json", ...(idemKey?{"Idempotency-Key":idemKey}:{}), ...(SESSION.token?{Authorization:"Bearer "+SESSION.token}:{})}, body: body?JSON.stringify(body):undefined});
+    }catch(netErr){
+      // network unreachable mid-request: queue if safe, else fail gracefully (the draft has the typed work)
+      if(outboxSafe && CB){ CB.enqueue({method:ep.m, path:pathQ, body, id:idemKey}); cblog('warn', ep.m+' '+key+' → queued (net fail)'); return {queued:true, offline:true}; }
+      cblog('error', ep.m+' '+key+' → network unreachable');
+      throw new Error(ep.m==='GET' ? "You're offline — showing last-loaded data where available." : "You're offline — this needs a connection. Your typed work is saved.");
+    }
     if(!res.ok){
-      let msg=""; try{ const j=await res.json(); msg=j.message||j.error||""; }catch(_){}
+      let msg="", j=null; try{ j=await res.json(); msg=j.message||j.error||""; }catch(_){}
+      if(j && j.offline){ throw new Error(ep.m==='GET' ? "You're offline — showing last-loaded data where available." : "You're offline — your work is saved and will sync when you reconnect."); }
       cblog(res.status>=500?'error':'warn', ep.m+' '+key+' → '+res.status+(msg?' · '+msg:''));
       if(res.status===401){ SESSION={}; try{localStorage.removeItem("cb_token");localStorage.removeItem("cb_sess");}catch(_){} if(typeof go==="function") go("#/login"); throw new Error(msg||"Session expired — please sign in again."); }
       if(res.status===422){ throw new Error(msg||"Please check the form and try again."); }          // validation
