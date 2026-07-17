@@ -1,7 +1,7 @@
-// MODULE: Suppliers — add a supplier (by User ID / email) → appears in your list; edit their details.
-// FLOW A (runnable): mint → nav-suppliers → the add box + empty state render.
-// FLOW B (skeleton): add a REAL supplier — needs a second entity's User ID (cross-entity), so it's a two-mint setup.
-// LOCATORS: nav-suppliers · sup-add-input · sup-add · sup-row-* · sup-nick · sup-category · sup-notes · sup-save · sup-remove · sup-compose-order
+// MODULE: Suppliers — CRUD is cross-entity: B adds A (another entity) as a supplier, edits, removes.
+// FLOW A (runnable): mint → nav-suppliers → the add box renders.
+// FLOW B (CRUD): mint A (the supplier), mint B (the buyer), B adds A by A's email → edit → remove.
+// LOCATORS: nav-suppliers · sup-add-input · sup-add · sup-row-* · sup-nick · sup-category · sup-notes · sup-save · sup-remove
 const { test, expect } = require('@playwright/test');
 const { mintEntity } = require('../fixtures');
 
@@ -13,9 +13,27 @@ test.describe('Module · Suppliers', () => {
     await expect(page.getByTestId('sup-add')).toBeVisible();
   });
 
-  test.skip('add a real supplier by User ID (needs a 2nd entity)', async ({ page }) => {
-    // TODO(per-module): mint entity A (capture its bridge/User ID), mint entity B, then as B:
-    //   nav-suppliers → sup-add-input.fill(A.userId) → sup-add → expect a sup-row-* for A → open it →
-    //   sup-nick/sup-category/sup-notes → sup-save. (mintEntity needs to also return the bridge_id.)
+  test('CRUD — B adds A as a supplier, edits, removes', async ({ page }) => {
+    const A = await mintEntity(page);                                  // entity A = the supplier
+    await page.evaluate(() => { try { localStorage.clear(); sessionStorage.clear(); } catch (e) {} });
+    await mintEntity(page);                                            // entity B = the buyer
+
+    await test.step('CREATE — add A by email', async () => {
+      await page.getByTestId('nav-suppliers').click();
+      await page.getByTestId('sup-add-input').fill(A.email);
+      await page.getByTestId('sup-add').click();
+      await expect(page.locator('[data-testid^="sup-row-"]').first()).toBeVisible();
+    });
+    await test.step('READ + UPDATE — open, switch to Edit, save a nickname', async () => {
+      await page.locator('[data-testid^="sup-row-"]').first().click();
+      await page.getByText('Edit').click();                            // view→edit segment (not testid-tagged)
+      await page.getByTestId('sup-nick').fill('Local yard');
+      await page.getByTestId('sup-save').click();
+    });
+    await test.step('DELETE — remove from list', async () => {
+      await page.locator('[data-testid^="sup-row-"]').first().click();
+      await page.getByTestId('sup-remove').click();
+      await expect(page.locator('[data-testid^="sup-row-"]')).toHaveCount(0);
+    });
   });
 });

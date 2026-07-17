@@ -1,34 +1,43 @@
-// MODULE: Chits — compose a self-chit → send → it appears in the sender's Order (sent) list.
-// FLOW: mint → nav-compose → add Self → subject + a line item → send → nav-order → the chit is there.
-// LOCATORS: nav-compose · chit-add-self · chit-field-* · chit-item-name/qty/price · chit-item-add · chit-send · nav-order
+// MODULE: Chits — compose/send (create), open (read), advance status (update). Hard-delete is the bulk-select/trash flow.
+// LOCATORS: nav-compose · chit-add-self · chit-field-* · chit-item-name/qty/price · chit-item-add · chit-send · nav-order ·
+//           nav-task · chit-row-* · chit-status-btn · chit-unread · chit-void
 const { test, expect } = require('@playwright/test');
 const { mintEntity } = require('../fixtures');
 
+async function composeSelfChit(page, subject) {
+  await page.getByTestId('nav-compose').click();
+  await page.getByTestId('chit-add-self').click();
+  const subj = page.locator('[data-testid="chit-field-subject"]');
+  if (await subj.count()) await subj.fill(subject);
+  else await page.locator('[data-testid^="chit-field-"]').first().fill(subject);
+  await page.getByTestId('chit-item-name').fill('Widget');
+  await page.getByTestId('chit-item-qty').fill('3');
+  await page.getByTestId('chit-item-price').fill('100');
+  await page.getByTestId('chit-item-add').click();
+  await page.getByTestId('chit-send').click();
+}
+
 test.describe('Module · Chits', () => {
-  test('mint, compose a self-chit, send it, see it in Order', async ({ page }) => {
+  test('CREATE — compose + send a self-chit → appears in Order', async ({ page }) => {
     await mintEntity(page);
     const subject = 'E2E order ' + Date.now();
+    await composeSelfChit(page, subject);
+    await page.getByTestId('nav-order').click();
+    await expect(page.getByText(subject)).toBeVisible();
+  });
 
-    await test.step('open Compose', async () => {
-      await page.getByTestId('nav-compose').click();
-      await expect(page.getByTestId('chit-send')).toBeVisible();
+  test('READ + UPDATE — open the received copy, advance status', async ({ page }) => {
+    await mintEntity(page);
+    const subject = 'E2E status ' + Date.now();
+    await composeSelfChit(page, subject);
+    await test.step('READ — open the received copy in Task', async () => {
+      await page.getByTestId('nav-task').click();
+      await page.getByText(subject).click();
+      await expect(page.locator('#mainbody')).toContainText(subject);
     });
-
-    await test.step('add Self + subject + a line item', async () => {
-      await page.getByTestId('chit-add-self').click();
-      const subj = page.locator('[data-testid="chit-field-subject"]');
-      if (await subj.count()) await subj.fill(subject);
-      else await page.locator('[data-testid^="chit-field-"]').first().fill(subject);   // first schema field
-      await page.getByTestId('chit-item-name').fill('Widget');
-      await page.getByTestId('chit-item-qty').fill('3');
-      await page.getByTestId('chit-item-price').fill('100');
-      await page.getByTestId('chit-item-add').click();
-    });
-
-    await test.step('send → it lands in Order (sent)', async () => {
-      await page.getByTestId('chit-send').click();
-      await page.getByTestId('nav-order').click();
-      await expect(page.getByText(subject)).toBeVisible();
+    await test.step('UPDATE — advance status (picker opens)', async () => {
+      await page.getByTestId('chit-status-btn').click();
+      await expect(page.locator('#modalhost')).not.toBeEmpty();   // the status picker opened
     });
   });
 });

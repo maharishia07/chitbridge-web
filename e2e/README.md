@@ -14,6 +14,8 @@ the 2-day Definition of Done. Drives the **live** app (Vercel web + Railway API)
 | `tests/catalogue.spec.js` | Add a product → appears in the catalogue | ✅ written |
 | `tests/suppliers.spec.js` | Suppliers screen + add box | ✅ loads; real add needs a 2nd entity |
 | `tests/coassists.spec.js` | Every co-assist type (human/IoT/ERP/AI) + create a human | ✅ written |
+| `tests/capture.spec.js` | **WhatsApp/email → chit** (simulate transport) → inbox | ✅ simulate; AI structure = key-gated |
+| `tests/connector.spec.js` | IoT/ERP device cockpit (add/ping/erp-test/delete) | ◐ skeleton; needs a connector-enabled entity |
 | `tests/helpdesk.spec.js` | Assistant ask (deterministic); KB publish skeleton — **Step-3 first** | ◐ assistant works; KB needs a helpdesk entity |
 | `tests/storefront.spec.js` | Customer order → chit | ✅ written; needs a seeded `CB_SHOP_BRIDGE` |
 | `tests/redproof.spec.js` | **RED-proof** — the suite can fail on a broken screen | ✅ written |
