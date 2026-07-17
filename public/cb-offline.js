@@ -88,6 +88,35 @@
     root.addEventListener('offline', paint);
   }
 
+  // ── autodraft (Phase 4.1) — autosave EVERY field under a container to ONE draft key; restore on (re)render.
+  // Call after the container is in the DOM; call clearDraft(key) when the form submits. Never persists secrets
+  // (password/file/hidden/checkbox/radio, or ids that look like pin/otp/password/cvv/secret). Returns true if it
+  // restored anything. opts.overwrite=true restores OVER prefilled values (for server-loaded forms like the vault).
+  function autodraft(container, key, opts) {
+    if (!container || !container.querySelectorAll) return false;
+    opts = opts || {};
+    var skip = /pin|otp|password|pwd|cvv|secret/i;
+    var eligible = function (f) {
+      var id = f.id || f.name; if (!id || skip.test(id)) return null;
+      var t = (f.type || '').toLowerCase();
+      if (t === 'password' || t === 'file' || t === 'hidden' || t === 'checkbox' || t === 'radio') return null;
+      return id;
+    };
+    var collect = function () {
+      var o = {}, fs = container.querySelectorAll('input,textarea,select');
+      for (var i = 0; i < fs.length; i++) { var id = eligible(fs[i]); if (id && fs[i].value != null && fs[i].value !== '') o[id] = fs[i].value; }
+      return o;
+    };
+    var saved = loadDraft(key) || {}, restored = false, fs = container.querySelectorAll('input,textarea,select');
+    for (var i = 0; i < fs.length; i++) {
+      var id = eligible(fs[i]); if (!id) continue;
+      if (saved[id] != null && (opts.overwrite || fs[i].value === '' || fs[i].value == null)) { fs[i].value = saved[id]; restored = true; }
+      var h = function () { saveDraft(key, collect()); };
+      fs[i].addEventListener('input', h); fs[i].addEventListener('change', h);
+    }
+    return restored;
+  }
+
   // ── service worker (Phase 3) — app opens offline + read-cache. Safe no-op where SW is unavailable. ──
   function registerSW(path) {
     try { if (root.navigator && 'serviceWorker' in root.navigator) root.navigator.serviceWorker.register(path || '/cb-sw.js').catch(function () {}); } catch (e) {}
@@ -97,7 +126,7 @@
   }
 
   var API = { configure: configure, online: online, saveDraft: saveDraft, loadDraft: loadDraft, draftAge: draftAge,
-    clearDraft: clearDraft, submit: submit, enqueue: enqueue, flush: flush, pending: pending,
+    clearDraft: clearDraft, autodraft: autodraft, submit: submit, enqueue: enqueue, flush: flush, pending: pending,
     registerSW: registerSW, clearApiCache: clearApiCache, _classify: classify, _uuid: uuid };
   root.CBOffline = API;
   if (typeof module !== 'undefined' && module.exports) module.exports = API;

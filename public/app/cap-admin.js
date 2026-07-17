@@ -40,12 +40,13 @@ async function loadVault(){
   var host=document.getElementById('vaulthost'); if(!host) return;
   try{ var p=(await api('vaultGet'))||{}; host.innerHTML=vaultCardHTML(p.vault||{}, !!p.vault_encrypted); }
   catch(e){ host.innerHTML=vaultCardHTML({}, false); }
+  if(window.CBOffline)CBOffline.autodraft(host,'app.vault',{overwrite:true});   // restore unsaved edits over the server copy
 }
 async function saveVaultUI(){
   var err=document.getElementById('vault_err'); if(err)err.textContent='';
   var vault={};
   VAULT_UI.forEach(function(G){ var grp={}; G.f.forEach(function(fl){ var el=document.getElementById('v_'+G.g+'_'+fl[0]); var v=el?(el.value||'').trim():''; if(v)grp[fl[0]]=v; }); if(Object.keys(grp).length)vault[G.g]=grp; });
-  try{ await api('vaultSave',{body:{vault:vault}}); if(typeof toast==='function')toast('Vault saved ✓'); }
+  try{ await api('vaultSave',{body:{vault:vault}}); if(window.CBOffline)CBOffline.clearDraft('app.vault'); if(typeof toast==='function')toast('Vault saved ✓'); }
   catch(e){ if(err)err.textContent=(e&&e.message)||'Could not save the vault'; }
 }
 /* ---- MIS ---- */

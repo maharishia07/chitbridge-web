@@ -219,7 +219,7 @@ function disputeRoomBox(c, d){
 function disputeComposeBox(c, d, to){
   return '<div style="border:1px solid #e5c9c6;border-radius:9px;padding:9px;margin-bottom:10px;background:#fffdfd">'
     +'<div style="font-size:11px;color:#b4453f;font-weight:700;margin-bottom:6px">New message to '+to+'</div>'
-    +'<textarea id="droom-'+d.dispute_id+'" placeholder="Message — '+to+' will see this" style="width:100%;box-sizing:border-box;min-height:46px;border:1px solid var(--line);border-radius:8px;padding:7px;font:inherit;font-size:13px;resize:vertical"></textarea>'
+    +'<textarea id="droom-'+d.dispute_id+'" oninput="window.CBOffline&&CBOffline.saveDraft(\'disp.room.'+d.dispute_id+'\',this.value)" placeholder="Message — '+to+' will see this" style="width:100%;box-sizing:border-box;min-height:46px;border:1px solid var(--line);border-radius:8px;padding:7px;font:inherit;font-size:13px;resize:vertical">'+esc((window.CBOffline&&CBOffline.loadDraft('disp.room.'+d.dispute_id))||'')+'</textarea>'
     +'<div style="display:flex;align-items:center;gap:8px;margin-top:7px;flex-wrap:wrap">'
       +'<label style="border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 11px;font-size:12px;cursor:pointer">📎 Attach<input type="file" multiple style="display:none" onchange="disputeAddFiles(this.files);this.value=\'\'"></label>'
       +'<span id="dispfiles">'+disputeFileChips()+'</span>'
@@ -237,6 +237,7 @@ async function sendDisputeMsg(chitId, disputeId){
   busyShow('Sending…'); var mid=null;
   try{ var mr=await api("sendMsg",{params:{id:chitId},body:mb}); mid=mr&&mr.message_id; }catch(e){ busyHide(); toast(MSG.fail("send the message", e)); return; }
   if(mid && (UI.dispFiles||[]).length){ busyShow('Attaching '+UI.dispFiles.length+' file(s)…'); for(var i=0;i<UI.dispFiles.length;i++){ try{ await attUpload(chitId, UI.dispFiles[i], {message_id:mid}); }catch(e){ toast('Attachment failed.'); } } }
+  if(window.CBOffline)CBOffline.clearDraft('disp.room.'+disputeId);
   UI.dispFiles=[]; UI.dispCompose=false; UI.dispSel=disputeId;   // keep this room open after posting
   try{ await openChit(chitId, true); }catch(_){}
   busyHide(); paintDetail(); toast('Message sent');
@@ -280,14 +281,14 @@ async function quickDispute(){ var ids=(typeof needTarget==='function'?needTarge
     MODALS.disp.parties=parties;
     if(parties.length){ partyRows='<div style="font-size:12px;color:var(--grey);margin:9px 0 3px">Between which parties? <span style="color:#9aa3ad">(none ticked = everyone involved)</span></div>'+parties.map(function(p){ return '<label style="display:flex;gap:8px;align-items:center;padding:3px 0;font-size:13px;cursor:pointer"><input type="checkbox" class="dispparty" value="'+p.entity_id+'"> '+nm(p.display_name,'party')+' <span style="font-size:10px;color:var(--grey);text-transform:uppercase">'+esc(p.role||'')+'</span></label>'; }).join(''); }
   }catch(_){}
-  modal('<div class="mhd"><div class="t">⚑ Raise dispute</div></div><div class="mbody"><div style="font-size:12px;color:var(--grey);margin-bottom:7px">Pick a category and give a reason (min 10 characters). The parties you select are notified and carry the dispute status.</div><select id="dispcat" style="width:100%;margin-bottom:8px;padding:8px;border:1px solid var(--line);border-radius:6px"><option value="quality">Quality</option><option value="quantity">Quantity</option><option value="delivery">Delivery</option><option value="payment">Payment</option><option value="docs">Docs</option><option value="other" selected>Other</option></select>'+partyRows+'<textarea id="dispreason" placeholder="e.g. Quantity short by 2 units — please replace"></textarea></div><div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="danger" onclick="confirmDispute()">Raise dispute</button></div>');
+  modal('<div class="mhd"><div class="t">⚑ Raise dispute</div></div><div class="mbody"><div style="font-size:12px;color:var(--grey);margin-bottom:7px">Pick a category and give a reason (min 10 characters). The parties you select are notified and carry the dispute status.</div><select id="dispcat" style="width:100%;margin-bottom:8px;padding:8px;border:1px solid var(--line);border-radius:6px"><option value="quality">Quality</option><option value="quantity">Quantity</option><option value="delivery">Delivery</option><option value="payment">Payment</option><option value="docs">Docs</option><option value="other" selected>Other</option></select>'+partyRows+'<textarea id="dispreason" oninput="window.CBOffline&&CBOffline.saveDraft(\'disp.reason.'+id+'\',this.value)" placeholder="e.g. Quantity short by 2 units — please replace">'+esc((window.CBOffline&&CBOffline.loadDraft('disp.reason.'+id))||'')+'</textarea></div><div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="danger" onclick="confirmDispute()">Raise dispute</button></div>');
 }
 async function confirmDispute(){ var id=MODALS.disp.id; var el=document.getElementById('dispreason'); var reason=(el?el.value:"").trim(); var cat=(document.getElementById('dispcat')||{}).value||'other';
   if(reason.length<10){ toast("Reason must be at least 10 characters"); return; }
   var parties=[].slice.call(document.querySelectorAll('.dispparty:checked')).map(function(e){return e.value;});
   closeModal();
   var body={category:cat,reason}; if(parties.length)body.participant_entity_ids=parties;
-  try{ var _dr2=await api("dispute",{params:{id},body}); if(_dr2&&_dr2.warning)toast(_dr2.warning); var i=UI.rows.findIndex(function(x){return x.id===id;}); if(i>=0)UI.rows[i].dispute=true; }catch(e){ toast(MSG.fail("raise the dispute", e)); return; }
+  try{ var _dr2=await api("dispute",{params:{id},body}); if(window.CBOffline)CBOffline.clearDraft('disp.reason.'+id); if(_dr2&&_dr2.warning)toast(_dr2.warning); var i=UI.rows.findIndex(function(x){return x.id===id;}); if(i>=0)UI.rows[i].dispute=true; }catch(e){ toast(MSG.fail("raise the dispute", e)); return; }
   if(typeof refreshRollup==='function')refreshRollup(); toast(MSG.disputeRaised(1)); if(typeof announce==='function')announce('Dispute raised');
   if(UI.sel===id){ UI.dtab='messages'; await openChit(id); } else { renderApp(); }
 }
@@ -296,13 +297,13 @@ async function confirmDispute(){ var id=MODALS.disp.id; var el=document.getEleme
 function resolveDispute(chitId, disputeId, partyId, partyNameEnc){
   var partyName=partyNameEnc?decodeURIComponent(partyNameEnc):'';
   var who=partyName?'<div style="font-size:12px;color:var(--grey);margin-bottom:8px">Resolving with <b>'+esc(partyName)+'</b>. Any other parties stay open until you resolve them too.</div>':'';
-  modal('<div class="mhd"><div class="t">Resolve dispute'+(partyName?' — '+esc(partyName):'')+'</div></div><div class="mbody">'+who+'<label class="fl">Resolution note (required)</label><textarea id="resnote" placeholder="How was this resolved…"></textarea><div class="err" id="res_err"></div></div><div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="pri" onclick="submitResolve(\''+chitId+'\',\''+disputeId+'\',\''+(partyId||'')+'\')">Resolve</button></div>');
+  modal('<div class="mhd"><div class="t">Resolve dispute'+(partyName?' — '+esc(partyName):'')+'</div></div><div class="mbody">'+who+'<label class="fl">Resolution note (required)</label><textarea id="resnote" oninput="window.CBOffline&&CBOffline.saveDraft(\'disp.resolve.'+disputeId+'\',this.value)" placeholder="How was this resolved…">'+esc((window.CBOffline&&CBOffline.loadDraft('disp.resolve.'+disputeId))||'')+'</textarea><div class="err" id="res_err"></div></div><div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="pri" onclick="submitResolve(\''+chitId+'\',\''+disputeId+'\',\''+(partyId||'')+'\')">Resolve</button></div>');
 }
 async function submitResolve(chitId, disputeId, partyId){
   var note=val("resnote"); var err=document.getElementById("res_err"); if(err)err.textContent="";
   if(!note){ if(err)err.textContent="A resolution note is required."; return; }
   var body={resolution_note:note}; if(partyId)body.target_entity_id=partyId;
-  try{ var _rr=await api("resolveDispute",{params:{id:chitId,disputeId},body}); closeModal(); toast(MSG.disputeResolved());
+  try{ var _rr=await api("resolveDispute",{params:{id:chitId,disputeId},body}); if(window.CBOffline)CBOffline.clearDraft('disp.resolve.'+disputeId); closeModal(); toast(MSG.disputeResolved());
     if(document.getElementById("disprows"))loadDisputes();
     if(UI.sel===chitId){ var i=UI.rows.findIndex(function(x){return x.id===chitId;});
       // FULLY resolved → 0 open, but bump the resolved count so openChit STILL fetches disputes (else the Closed
