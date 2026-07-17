@@ -18,7 +18,16 @@ the 2-day Definition of Done. Drives the **live** app (Vercel web + Railway API)
 | `tests/connector.spec.js` | IoT/ERP device cockpit (add/ping/erp-test/delete) | ◐ skeleton; needs a connector-enabled entity |
 | `tests/helpdesk.spec.js` | Assistant ask (deterministic); KB publish skeleton — **Step-3 first** | ◐ assistant works; KB needs a helpdesk entity |
 | `tests/storefront.spec.js` | Customer order → chit | ✅ written; needs a seeded `CB_SHOP_BRIDGE` |
+| `tests/multiparty.spec.js` | **MULTIPARTY** — A sends → B receives (2 contexts); USP dispute skeleton (3) | ✅ sender↔receiver |
+| `tests/disputes.spec.js` | Raise → resolve (mechanics); USP 3-party skeleton | ✅ mechanics |
+| `tests/messages.spec.js` | Internal note + external message; privacy skeleton | ✅ |
 | `tests/redproof.spec.js` | **RED-proof** — the suite can fail on a broken screen | ✅ written |
+
+### Multiparty — the real capability (watch it live)
+The product is a **shared record between parties**, so the important flows use **multiple browser contexts** — one per
+logged-in entity. `npm run test:multiparty` runs headed so you **watch 2–3 windows** (sender / receiver / third party) act
+together. The `mintInContext(browser)` fixture mints an entity in its own isolated session; `addRecipientByName` lets A
+address B. This is the enabler for the dispute-USP (A&B private, C excluded) and message-privacy proofs.
 
 ## How each module is specified (the reviewer's 3 things)
 1. **The flow** — the screen sequence (top comment of each spec).

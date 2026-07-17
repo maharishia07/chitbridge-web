@@ -4,6 +4,8 @@
   "description": "Playwright e2e — one spec PER MODULE, chainable into a full flow. Runs against the live app.",
   "scripts": {
     "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:multiparty": "playwright test multiparty --headed",
     "test:onboarding": "playwright test onboarding",
     "test:helpdesk": "playwright test helpdesk",
     "test:storefront": "playwright test storefront",

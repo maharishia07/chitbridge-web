@@ -40,4 +40,19 @@ async function composeSelfChit(page, subject) {
   await page.getByTestId('chit-send').click();
 }
 
-module.exports = { DEV_OTP, uniqueEmail, uniqueName, mintEntity, composeSelfChit };
+// ── MULTIPARTY — the real capability. Each browser CONTEXT is an isolated logged-in party. Mint N entities in N contexts,
+// drive them together, assert what EACH party sees. Run headed (`npm run test:headed`) to watch 2-3 windows side by side.
+async function mintInContext(browser, opts) {
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  const who = await mintEntity(page, opts);
+  return { context, page, email: who.email, name: who.name };
+}
+
+// In Compose: address a recipient by typing their name and picking the live suggestion (entity search).
+async function addRecipientByName(page, name) {
+  await page.getByTestId('chit-recipient').fill(name);
+  await page.getByTestId('chit-recipient-suggest').filter({ hasText: name }).first().click();
+}
+
+module.exports = { DEV_OTP, uniqueEmail, uniqueName, mintEntity, composeSelfChit, mintInContext, addRecipientByName };
