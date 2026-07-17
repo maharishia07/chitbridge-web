@@ -104,6 +104,10 @@ RED. A spec that stays green on a real break is decorative.
 `npm run codegen -- https://chitbridge-web.vercel.app/app.html` records a clickthrough into a draft spec (lowers the
 locator-authoring effort). Prefer the `data-testid` locators over recorded CSS.
 
+## Cloud runs (GitHub Actions — no laptop needed)
+A **manual-only** workflow (`.github/workflows/e2e.yml`) runs this same suite in GitHub's cloud: repo → **Actions** tab → **e2e** → **Run workflow** (pick the target URL + an optional `grep`). It never runs on its own (push/schedule triggers are off), and it uploads the **`playwright-report`** (trace filmstrip) as a downloadable artifact on each run — even failed ones. Trigger from the CLI with `gh workflow run e2e.yml -f web_base=<url> -f grep=<tag>`.
+> **`grep` gotcha:** if you pass a `grep`, target a **self-minting** flow (`ONB-01`, the DoD flow, `RED-01`) or **leave it blank** for the full run. Grepping an *authed-only* tag (e.g. `DISP-01`) also filters out the `setup` project that mints the shared session, so those flows fail with "reading storage state from `.auth/user.json`". A blank grep runs `setup` first and everything is fine.
+
 ## Cleaning up test data
 Every run creates real rows (test entities, chits, …). All test identities share a **`@test.example`** email, so cleanup
 is a single, safe, pattern-scoped script: **`chitbridge-api/scripts/cleanup-test-entities.sql`**. Run it in the **Supabase
