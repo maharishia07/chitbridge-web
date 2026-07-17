@@ -91,8 +91,8 @@ function finishCard(it, cur, idx, vizEnabled){
     +'<div class="apply">'+t('applied')+' '+((it.tools||[]).join(', '))+' · '+esc(it.coats||'')+'</div>'
     +'<div class="price">'+finishPrice(price)+'</div>'
     +'<div style="margin-top:10px">'
-    +(vizEnabled&&idx!=null?'<button onclick="vizOpen('+idx+')" style="margin:0 8px 0 0;border:1px solid #6a44a8;background:#F0EAF9;color:#6a44a8;border-radius:9px;padding:9px 16px;font-weight:700;font-size:13px;cursor:pointer">✨ '+t('wall')+'</button>':'')
-    +(price!=null&&idx!=null?'<button onclick="orderOpen('+idx+')" style="border:0;border-radius:9px;padding:9px 18px;background:#3F66A6;color:#fff;font-weight:700;font-size:13px;cursor:pointer">'+t('order')+'</button>':'')
+    +(vizEnabled&&idx!=null?'<button data-testid="shop-viz-'+idx+'" onclick="vizOpen('+idx+')" style="margin:0 8px 0 0;border:1px solid #6a44a8;background:#F0EAF9;color:#6a44a8;border-radius:9px;padding:9px 16px;font-weight:700;font-size:13px;cursor:pointer">✨ '+t('wall')+'</button>':'')
+    +(price!=null&&idx!=null?'<button data-testid="shop-order-'+idx+'" onclick="orderOpen('+idx+')" style="border:0;border-radius:9px;padding:9px 18px;background:#3F66A6;color:#fff;font-weight:700;font-size:13px;cursor:pointer">'+t('order')+'</button>':'')
     +'</div></div>';
 }
 function productRow(p, cur){ var d=(p.item_data||p)||{}; return '<div class="prow"><div style="flex:1"><b>'+esc(d.name||d.product||'item')+'</b> <span class="meta">'+esc(d.unit||'')+'</span></div><div style="font-weight:700">'+(d.price!=null?(priceSym()+esc(String(priceVal(d.price)))):'—')+'</div></div>'; }
@@ -157,18 +157,18 @@ function orderRender(msg, err){
     +'<div style="background:#fff;width:100%;max-width:440px;border-radius:16px;padding:18px 18px 22px;max-height:92vh;overflow:auto">'
     +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:2px"><b class="sg" style="font-size:17px;flex:1">Order · '+esc(it.name)+'</b><button onclick="orderClose()" style="border:0;background:none;font-size:22px;cursor:pointer;color:#8a949c">×</button></div>'
     +'<div class="meta" style="margin-bottom:12px">'+esc(it.texture_family||'')+' · '+cur+esc(String((it.commercials&&it.commercials.price_per_litre)||''))+' / litre</div>'
-    +'<label style="font-size:12px;color:#6a707a">Colour combination</label><select id="o_combo" '+fld+'>'+comboOpts+'</select>'
-    +'<label style="font-size:12px;color:#6a707a">Quantity (litres)'+(minL?' <span style="color:#9aa3a7">· min '+minL+' L (set by the brand)</span>':'')+'</label><input id="o_qty" inputmode="decimal" value="'+esc(_ord.qty||String(minL||1))+'" '+fld+'>'
-    +'<label style="font-size:12px;color:#6a707a">Your name</label><input id="o_name" placeholder="optional" value="'+esc(_ord.name||'')+'" '+fld+'>'
-    +'<label style="font-size:12px;color:#6a707a">Your area — pincode or city <span style="color:#9aa3a7">· optional</span></label><input id="o_loc" placeholder="e.g. 560001 or Bengaluru" value="'+esc(_ord.loc||'')+'" '+fld+'>'
-    +'<label style="font-size:12px;color:#6a707a">Phone or email</label><input id="o_contact" placeholder="9876543210 or you@email.com" '+(otpStep?'disabled':'')+' value="'+esc(_ord.contact||'')+'" '+fld+'>'
-    +(otpStep?('<label style="font-size:12px;color:#6a707a">6-digit code sent to you</label><input id="o_otp" inputmode="numeric" maxlength="6" value="'+esc(_ord.otp||_ord.dev_otp||'')+'" '+fld+'>'):'')
+    +'<label style="font-size:12px;color:#6a707a">Colour combination</label><select id="o_combo" data-testid="shop-combo" '+fld+'>'+comboOpts+'</select>'
+    +'<label style="font-size:12px;color:#6a707a">Quantity (litres)'+(minL?' <span style="color:#9aa3a7">· min '+minL+' L (set by the brand)</span>':'')+'</label><input id="o_qty" data-testid="shop-qty" inputmode="decimal" value="'+esc(_ord.qty||String(minL||1))+'" '+fld+'>'
+    +'<label style="font-size:12px;color:#6a707a">Your name</label><input id="o_name" data-testid="shop-name" placeholder="optional" value="'+esc(_ord.name||'')+'" '+fld+'>'
+    +'<label style="font-size:12px;color:#6a707a">Your area — pincode or city <span style="color:#9aa3a7">· optional</span></label><input id="o_loc" data-testid="shop-area" placeholder="e.g. 560001 or Bengaluru" value="'+esc(_ord.loc||'')+'" '+fld+'>'
+    +'<label style="font-size:12px;color:#6a707a">Phone or email</label><input id="o_contact" data-testid="shop-contact" placeholder="9876543210 or you@email.com" '+(otpStep?'disabled':'')+' value="'+esc(_ord.contact||'')+'" '+fld+'>'
+    +(otpStep?('<label style="font-size:12px;color:#6a707a">6-digit code sent to you</label><input id="o_otp" data-testid="shop-otp" inputmode="numeric" maxlength="6" value="'+esc(_ord.otp||_ord.dev_otp||'')+'" '+fld+'>'):'')
     +(err?'<div style="color:#b4453f;font-size:12.5px;margin-bottom:8px">'+esc(err)+'</div>':'')
     +(msg?'<div style="color:#2e7a45;font-size:12.5px;margin-bottom:8px">'+esc(msg)+'</div>':'')
     +(_ord.busy?'<button disabled style="width:100%;border:0;border-radius:10px;padding:12px;background:#9db4d6;color:#fff;font-weight:700;font-size:14px">⏳ Processing…</button>'
       :(otpStep
-        ?'<button onclick="orderConfirm()" style="width:100%;border:0;border-radius:10px;padding:12px;background:#3F66A6;color:#fff;font-weight:700;font-size:14px;cursor:pointer">Place order</button>'
-        :'<button onclick="orderStart()" style="width:100%;border:0;border-radius:10px;padding:12px;background:#3F66A6;color:#fff;font-weight:700;font-size:14px;cursor:pointer">Send code</button>'))
+        ?'<button data-testid="shop-place-order" onclick="orderConfirm()" style="width:100%;border:0;border-radius:10px;padding:12px;background:#3F66A6;color:#fff;font-weight:700;font-size:14px;cursor:pointer">Place order</button>'
+        :'<button data-testid="shop-send-code" onclick="orderStart()" style="width:100%;border:0;border-radius:10px;padding:12px;background:#3F66A6;color:#fff;font-weight:700;font-size:14px;cursor:pointer">Send code</button>'))
     +'</div></div>';
   ohost().innerHTML=h;
 }
