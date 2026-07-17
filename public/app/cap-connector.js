@@ -134,10 +134,10 @@ function acDeleteConnector(id, name){
 function acRegenKey(id){ acReissueGate(id, 'key'); }   // gated: name + one-time code (see acReissueGate)
 function _addDeviceForm(x,iot){
   var _asgOpts='<option value="">— entity default —</option>'+(UI.acts||[]).filter(function(a){return (typeof acTypeOf!=='function'||acTypeOf(a)==='human') && (typeof hatAssignable!=='function'||hatAssignable(a.hat));}).map(function(a){return '<option value="'+esc(a.id)+'">'+esc(a.name)+'</option>';}).join('');
-  var spec = iot ? '<label class="fl">Topic</label><input class="inp" id="ad_topic" placeholder="sensors/line1/temp" style="width:100%"><label class="fl">Device id</label><input class="inp" id="ad_dev" placeholder="edge-gw-01" style="width:100%">'
-                 : '<label class="fl">Resource path</label><input class="inp" id="ad_path" placeholder="/odata/PurchaseOrders" style="width:100%">';
+  var spec = iot ? '<label class="fl">Topic</label><input class="inp" id="ad_topic" data-testid="conn-topic" placeholder="sensors/line1/temp" style="width:100%"><label class="fl">Device id</label><input class="inp" id="ad_dev" data-testid="conn-device-id" placeholder="edge-gw-01" style="width:100%">'
+                 : '<label class="fl">Resource path</label><input class="inp" id="ad_path" data-testid="conn-path" placeholder="/odata/PurchaseOrders" style="width:100%">';
   return '<div style="border:1px dashed #c9d2dd;border-radius:10px;padding:12px;margin:10px 0;background:#fbfcfe"><div style="font-weight:700;font-size:12.5px;margin-bottom:2px">Add '+(iot?'device':'endpoint')+'</div>'
-    +'<label class="fl">Name</label><input class="inp" id="ad_ref" placeholder="'+(iot?'Cold-store temp':'PO inbound')+'" style="width:100%">'+spec
+    +'<label class="fl">Name</label><input class="inp" id="ad_ref" data-testid="conn-device-name" placeholder="'+(iot?'Cold-store temp':'PO inbound')+'" style="width:100%">'+spec
     +(iot?('<label class="fl">Folder — file its exceptions here <span style="font-weight:400;color:var(--grey)">(a name you choose, under this entity)</span></label><input class="inp" id="ad_folder" placeholder="e.g. Gate log" style="width:100%">'
          +'<label class="fl">Keep — exception classes <span style="font-weight:400;color:var(--grey)">(comma-sep · blank = all; group / count by these)</span></label><input class="inp" id="ad_classes" placeholder="lorry, tanker" style="width:100%">'
          +'<label class="fl">Default assignee <span style="font-weight:400;color:var(--grey)">(who this device\'s signals are assigned to — blank = entity default)</span></label><select class="inp" id="ad_assignee" style="width:100%">'+_asgOpts+'</select>'
