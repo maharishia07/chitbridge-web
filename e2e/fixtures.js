@@ -28,4 +28,16 @@ async function mintEntity(page, { role = 'business' } = {}) {
   return { email, name };
 }
 
-module.exports = { DEV_OTP, uniqueEmail, uniqueName, mintEntity };
+// Reusable: compose + send a self-chit with a subject + one line item. The arrange step for chits/disputes/messages.
+async function composeSelfChit(page, subject) {
+  await page.getByTestId('nav-compose').click();
+  await page.getByTestId('chit-add-self').click();
+  const subj = page.locator('[data-testid="chit-field-subject"]');
+  if (await subj.count()) await subj.fill(subject);
+  else await page.locator('[data-testid^="chit-field-"]').first().fill(subject);
+  await page.getByTestId('chit-item-name').fill('Widget');
+  await page.getByTestId('chit-item-add').click();
+  await page.getByTestId('chit-send').click();
+}
+
+module.exports = { DEV_OTP, uniqueEmail, uniqueName, mintEntity, composeSelfChit };
