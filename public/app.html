@@ -1545,8 +1545,8 @@ function ccSchema(){ return DEFAULT_SCHEMA_FIELDS; }
 function cfField(f){
   const id="cf_"+f.field_key; const req=f.required?' <span style="color:#b4453f">*</span>':'';
   const ph=f.placeholder?` placeholder="${esc(f.placeholder)}"`:'';
-  const inp=f.field_type==="date" ? `<input class="inp" type="date" id="${id}">`
-    : `<input class="inp" id="${id}"${ph}>`;
+  const inp=f.field_type==="date" ? `<input class="inp" type="date" id="${id}" data-testid="chit-field-${f.field_key}">`
+    : `<input class="inp" id="${id}" data-testid="chit-field-${f.field_key}"${ph}>`;
   return `<label class="fl">${esc(f.field_name)}${req}</label>${inp}`;
 }
 function ccSendAsOptions(){
@@ -1577,11 +1577,11 @@ async function compose(prefill){ UI.drawer=false; CC={items:(prefill&&prefill.it
        : `<div style="font-family:'Space Grotesk';font-weight:600;font-size:12px;color:var(--grey);margin:12px 0 4px">Recipients · <b>To</b> acts · <b>CC</b> is informed · <b>For</b> = on behalf of</div>
      <div style="display:flex;gap:6px">
        <select class="inp" id="cc_rrole" style="max-width:74px"><option value="to">To</option><option value="cc">CC</option><option value="for">For</option></select>
-       <input class="inp" id="cc_rname" autocomplete="off" placeholder="Type a name — matches pop up with the bridge id" oninput="ccRcptSearch(this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();ccAddRcpt();}">
-       <button class="composebtn" onclick="ccAddRcpt()">+ Add</button>
+       <input class="inp" id="cc_rname" data-testid="chit-recipient" autocomplete="off" placeholder="Type a name — matches pop up with the bridge id" oninput="ccRcptSearch(this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();ccAddRcpt();}">
+       <button class="composebtn" data-testid="chit-recipient-add" onclick="ccAddRcpt()">+ Add</button>
      </div>
      <div id="cc_sugg" class="ccsugg"></div>
-     <button class="composebtn" style="margin-top:6px" onclick="ccAddSelf()">+ Self (own record)</button>
+     <button class="composebtn" style="margin-top:6px" data-testid="chit-add-self" onclick="ccAddSelf()">+ Self (own record)</button>
      <div id="cc_rcpts" style="margin-top:8px"></div>
      <div id="cc_rcap" style="font-size:11px;color:var(--grey);margin-top:4px"></div>`}
      <div style="font-family:'Space Grotesk';font-weight:600;font-size:12px;color:var(--grey);margin:12px 0 2px">Chit fields · from your <b>${esc((STORE.chitSchema||{schema_name:"Order"}).schema_name)}</b> schema</div>
@@ -1592,10 +1592,10 @@ async function compose(prefill){ UI.drawer=false; CC={items:(prefill&&prefill.it
      <div class="cc-rpane" data-p="items">
      <div style="font-family:'Space Grotesk';font-weight:600;font-size:12px;color:var(--grey);margin:12px 0 4px">Line items · from ${UI._supplier?('<b>'+esc(UI._supplier.name)+'</b>&rsquo;s catalogue'):'your catalogue'}</div>
      ${(STORE.catalogue||[]).length
-        ? `<div style="display:flex;gap:8px"><select class="inp" id="cc_pick">${STORE.catalogue.map((p,i)=>`<option value="${i}">${esc(p.particulars)} · ${inr(p.price)}/${esc(p.unit||'unit')}</option>`).join("")}</select><button class="composebtn" onclick="ccAddItem()">+ Add</button></div>`
+        ? `<div style="display:flex;gap:8px"><select class="inp" id="cc_pick" data-testid="chit-catalogue-pick">${STORE.catalogue.map((p,i)=>`<option value="${i}">${esc(p.particulars)} · ${inr(p.price)}/${esc(p.unit||'unit')}</option>`).join("")}</select><button class="composebtn" data-testid="chit-catalogue-add" onclick="ccAddItem()">+ Add</button></div>`
         : `<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:10px 12px;font-size:12.5px;color:#6b5a36">${_catErr?esc(MSG.catalogueLoadErr()):'Your catalogue is empty — a chit needs at least one line item. <a onclick="closeModal();navTo(\'catalogue\')" style="color:#3F66A6;cursor:pointer;font-weight:600">Add a product in Catalogue first &rarr;</a>'}</div>`}
-     <div style="display:flex;gap:6px;margin-top:6px"><input class="inp" id="cc_mname" placeholder="Or type an item name" style="flex:1"><input class="inp" id="cc_mqty" inputmode="numeric" value="1" style="width:50px" title="Qty"><input class="inp" id="cc_mprice" inputmode="numeric" placeholder="Price" style="width:74px"><button class="composebtn" onclick="ccAddManual()">+ Add</button></div>
-     <div style="display:flex;gap:6px;margin-top:6px"><input class="inp" id="cc_aidesc" placeholder="✨ Or describe the order in words — AI fills the rows" style="flex:1"><button class="composebtn" id="cc_aibtn" onclick="ccAiFill()" title="AI turns your description into line items; you review and edit before sending">✨ Fill</button></div><div id="cc_items" style="margin-top:8px"></div>
+     <div style="display:flex;gap:6px;margin-top:6px"><input class="inp" id="cc_mname" data-testid="chit-item-name" placeholder="Or type an item name" style="flex:1"><input class="inp" id="cc_mqty" data-testid="chit-item-qty" inputmode="numeric" value="1" style="width:50px" title="Qty"><input class="inp" id="cc_mprice" data-testid="chit-item-price" inputmode="numeric" placeholder="Price" style="width:74px"><button class="composebtn" data-testid="chit-item-add" onclick="ccAddManual()">+ Add</button></div>
+     <div style="display:flex;gap:6px;margin-top:6px"><input class="inp" id="cc_aidesc" data-testid="chit-ai-desc" placeholder="✨ Or describe the order in words — AI fills the rows" style="flex:1"><button class="composebtn" id="cc_aibtn" data-testid="chit-ai-fill" onclick="ccAiFill()" title="AI turns your description into line items; you review and edit before sending">✨ Fill</button></div><div id="cc_items" style="margin-top:8px"></div>
      </div><div class="cc-rpane" data-p="atts" style="display:none">
      <div style="font-family:'Space Grotesk';font-weight:600;font-size:12px;color:var(--grey);margin:12px 0 4px">Whole-chit attachments · <span style="font-weight:400">co-signed (use 📎 on a line for item-specific files)</span></div>
      <label class="composebtn" style="cursor:pointer">📎 Attach files<input type="file" multiple style="display:none" onchange="ccAddFiles(this.files);this.value=''"></label>
@@ -1603,7 +1603,7 @@ async function compose(prefill){ UI.drawer=false; CC={items:(prefill&&prefill.it
      <div id="cc_total" style="text-align:right;font-weight:700;font-size:13px;margin-top:6px"></div></div></div>
      <div class="err" id="cc_err"></div>
    </div>
-   <div class="mfoot"><button onclick="closeModal()">Cancel</button><button onclick="submitCompose(true)">Save draft</button><button class="pri" onclick="submitCompose(false)">Send chit</button></div>`, true);
+   <div class="mfoot"><button onclick="closeModal()">Cancel</button><button data-testid="chit-save-draft" onclick="submitCompose(true)">Save draft</button><button class="pri" data-testid="chit-send" onclick="submitCompose(false)">Send chit</button></div>`, true);
   ccRenderItems(); ccRenderRcpts(); ccRenderFiles(); UI._composeModal=true; try{ var _s=localStorage.getItem('cb_cc_split'); if(_s){ var _c=document.querySelector('.cc-cols'); if(_c)_c.style.setProperty('--cc-lw',_s); } }catch(_){ }
   if(prefill&&prefill.subject){ const sf=document.getElementById("cf_subject"); if(sf)sf.value=prefill.subject; }
   if(prefill&&prefill.priority){ const pf=document.getElementById("cc_priority"); if(pf)pf.value=prefill.priority; }

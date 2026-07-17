@@ -26,7 +26,10 @@ the 2-day Definition of Done. Drives the **live** app (Vercel web + Railway API)
    - **Toolbar icons:** `icon-legend` (🔑), `icon-messages` (💬), `icon-notifications` (🔔), `icon-logout`, `icon-help-*` (per-screen ?).
    - **Assistant:** `assistant-open`, `assist-input`, `assist-ask`, `assist-suggest-*`, `assist-helpdesk`, `assist-compliance`, `assist-close`.
    - **Helpdesk KB:** `kb-question`, `kb-answer`, `kb-context`, `kb-publish`, `kb-new`.
-   Still to add per module: Compose (chit-*), Catalogue/products, Suppliers, Storefront (shop.html has stable #ids).
+   - **Compose / chit:** `chit-recipient`, `chit-recipient-add`, `chit-add-self`, `chit-field-*` (subject etc.),
+     `chit-catalogue-pick`, `chit-catalogue-add`, `chit-item-name/qty/price`, `chit-item-add`, `chit-ai-desc`,
+     `chit-ai-fill`, `chit-save-draft`, `chit-send`.
+   Still to add per module: Catalogue/products, Suppliers, Storefront (shop.html has stable #ids).
    This lets a smoke spec click into **every menu item + every icon** to confirm each part loads (see below).
 
 ## Run (Saturday — the app must be UP)
