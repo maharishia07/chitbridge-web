@@ -9,8 +9,11 @@ the 2-day Definition of Done. Drives the **live** app (Vercel web + Railway API)
 |---|---|---|
 | `tests/onboarding.spec.js` | Welcome → role → vertical → register → verify → **mint** | ✅ written (testids live) |
 | `tests/flow.spec.js` | **DoD** — mint TWO distinct entities, screen by screen | ✅ written (mint half) |
-| `tests/chits.spec.js` | Compose → send a chit | ◐ mint works; compose steps need Compose testids |
-| `tests/helpdesk.spec.js` | KB publish → assistant answers (deterministic) — **Step-3 first** | ◐ skeleton; needs helpdesk login + KB testids |
+| `tests/smoke.spec.js` | **every menu item + icon** renders after mint | ✅ written |
+| `tests/chits.spec.js` | Compose → send a chit → appears in Order | ✅ written |
+| `tests/catalogue.spec.js` | Add a product → appears in the catalogue | ✅ written |
+| `tests/suppliers.spec.js` | Suppliers screen + add box | ✅ loads; real add needs a 2nd entity |
+| `tests/helpdesk.spec.js` | Assistant ask (deterministic); KB publish skeleton — **Step-3 first** | ◐ assistant works; KB needs a helpdesk entity |
 | `tests/storefront.spec.js` | Customer order → chit | ◐ skeleton; needs a seeded `CB_SHOP_BRIDGE` |
 | `tests/redproof.spec.js` | **RED-proof** — the suite can fail on a broken screen | ✅ written |
 
@@ -29,7 +32,11 @@ the 2-day Definition of Done. Drives the **live** app (Vercel web + Railway API)
    - **Compose / chit:** `chit-recipient`, `chit-recipient-add`, `chit-add-self`, `chit-field-*` (subject etc.),
      `chit-catalogue-pick`, `chit-catalogue-add`, `chit-item-name/qty/price`, `chit-item-add`, `chit-ai-desc`,
      `chit-ai-fill`, `chit-save-draft`, `chit-send`.
-   Still to add per module: Catalogue/products, Suppliers, Storefront (shop.html has stable #ids).
+   - **Catalogue:** `cat-new-product`, `cat-search`, `cat-product-*`, `cat-field-*` (name/unit/price/code/desc),
+     `cat-add`, `cat-save`, `cat-edit`, `cat-delete`.
+   - **Suppliers:** `sup-add-input`, `sup-add`, `sup-row-*`, `sup-nick`, `sup-category`, `sup-notes`, `sup-save`,
+     `sup-remove`, `sup-compose-order`.
+   Still to add per module: Storefront (shop.html already has stable #ids).
    This lets a smoke spec click into **every menu item + every icon** to confirm each part loads (see below).
 
 ## Run (Saturday — the app must be UP)

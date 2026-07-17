@@ -1994,7 +1994,7 @@ function suppliersScreen(){
   const list = `<div class="list">
     <div class="lh">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:14px">🏭 Suppliers</span><button onclick="openAssist('suppliers')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:#fff;color:#3F66A6;border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button></div>
-      <div style="display:flex;gap:7px"><input class="inp" id="sp_add" placeholder="Add supplier — type a name, User ID or email" style="flex:1" autocomplete="off" oninput="supSearch(this.value)" onkeydown="if(event.key==='Enter')addSupplier()"><button class="composebtn" onclick="addSupplier()">Add</button></div>
+      <div style="display:flex;gap:7px"><input class="inp" id="sp_add" data-testid="sup-add-input" placeholder="Add supplier — type a name, User ID or email" style="flex:1" autocomplete="off" oninput="supSearch(this.value)" onkeydown="if(event.key==='Enter')addSupplier()"><button class="composebtn" data-testid="sup-add" onclick="addSupplier()">Add</button></div>
       <div id="sp_sugg" class="ccsugg"></div>
       <div class="err" id="sp_err" style="margin-top:6px"></div>
       <div class="srch" style="margin-top:8px">🔍 <input placeholder="Search suppliers, category, ID" value="${esc(UI.supQ||'')}" oninput="UI.supQ=this.value;paintSupList()"></div>
@@ -2022,7 +2022,7 @@ function supCount(){ return supVisible().length; }
 function supRowHTML(x){
   const id=x.supplier_list_id, label=supName(x), sub=x.nickname?x.display_name:(x.bridge_id||'');
   const cat=x.has_catalogue?'<span class="optchip" style="background:#E8F0F4;color:#3F66A6;border-color:#cfe0ec">📕 catalogue</span>':'<span class="optchip" style="background:#F1EFE8;color:#8a857a">no catalogue</span>';
-  return `<div class="row ${id===UI.supSel?'sel':''}" onclick="selectSupplier('${id}')">
+  return `<div class="row ${id===UI.supSel?'sel':''}" data-testid="sup-row-${id}" onclick="selectSupplier('${id}')">
     <button title="Preferred — tap to toggle" onclick="event.stopPropagation();toggleSupPref('${id}')" style="background:none;border:0;font-size:15px;line-height:1;padding:0;color:${x.preferred?'#e0a92b':'#d9c88f'};flex:0 0 auto;margin-top:1px">${x.preferred?'★':'☆'}</button>
     <div class="main2"><div class="l1"><span class="code">${esc(label)}</span>${x.category?`<span class="optchip" style="background:var(--gold-soft);color:#7a5e22;border-color:var(--gold-line)">${esc(x.category)}</span>`:''}<span class="amt">${cat}</span></div>
       <div class="l2">${esc(sub)}${x.nickname?` · <span class="mono">${esc(x.bridge_id||'')}</span>`:''}</div></div>
@@ -2140,13 +2140,13 @@ function supDetailHTML(){
   let body, bar;
   if(UI.supMode==='edit'){
     body=`<div class="sec">Edit — your details for this supplier</div>
-      <label class="fl">Your name for them</label><input class="inp" id="sp_nick" value="${esc(x.nickname||'')}" placeholder="e.g. Acme (local yard)">
-      <label class="fl">Category / tag</label><input class="inp" id="sp_cat" value="${esc(x.category||'')}">
-      <label class="fl">Notes</label><input class="inp" id="sp_notes" value="${esc(x.notes||'')}" placeholder="contact person, terms…">
+      <label class="fl">Your name for them</label><input class="inp" id="sp_nick" data-testid="sup-nick" value="${esc(x.nickname||'')}" placeholder="e.g. Acme (local yard)">
+      <label class="fl">Category / tag</label><input class="inp" id="sp_cat" data-testid="sup-category" value="${esc(x.category||'')}">
+      <label class="fl">Notes</label><input class="inp" id="sp_notes" data-testid="sup-notes" value="${esc(x.notes||'')}" placeholder="contact person, terms…">
       <label class="fl" style="margin-top:12px">Preferred</label>
       <div><button onclick="toggleSupPref('${x.supplier_list_id}')" style="border:1px solid var(--line);border-radius:8px;background:${x.preferred?'var(--blue)':'#fff'};color:${x.preferred?'#fff':'var(--grey)'};font-size:12px;font-weight:700;padding:6px 13px">★ ${x.preferred?'Preferred':'Not preferred'}</button></div>
       <div class="err" id="sp_ederr" style="margin-top:8px"></div>`;
-    bar=`<button class="pri" onclick="saveSupplier('${x.supplier_list_id}')">Save</button><button onclick="setSupMode('view')">Cancel</button>`;
+    bar=`<button class="pri" data-testid="sup-save" onclick="saveSupplier('${x.supplier_list_id}')">Save</button><button onclick="setSupMode('view')">Cancel</button>`;
   } else {
     const prof=`<div class="sec">Profile</div><div class="itab" style="padding:4px 12px">
       <div class="kv" style="display:flex;gap:8px;padding:6px 0;border-bottom:1px dashed var(--line)"><b style="min-width:92px;color:var(--grey);font-weight:600;font-size:11px;text-transform:uppercase">Legal name</b><span>${esc(x.display_name||'—')}</span></div>
@@ -2159,7 +2159,7 @@ function supDetailHTML(){
     else if(d.loading) catcard=`<div class="sec">Order from them</div><div class="loadwrap" style="justify-content:flex-start;padding:6px 0"><span class="spin"></span> loading catalogue…</div>`;
     else catcard=`<div class="sec">Order from them</div><div class="itab" style="padding:12px"><div style="font-size:12.5px"><b>${(d.items||[]).length}</b> item(s) in their catalogue.</div><div style="font-size:11.5px;color:var(--grey);margin-top:5px">▸ Compose opens with <b>${esc(supName(x))}</b> as recipient (no CC) and their catalogue as line items — full draft &rarr; send lifecycle.</div></div>`;
     body=supConfidenceStrip()+prof+catcard;
-    bar=`<button class="pri" ${x.has_catalogue?'':'disabled'} onclick="composeFromSupplier('${x.supplier_list_id}')">🛒 Compose order</button><button class="warn" onclick="delSupplier('${x.supplier_list_id}')">Remove from list</button>`;
+    bar=`<button class="pri" ${x.has_catalogue?'':'disabled'} data-testid="sup-compose-order" onclick="composeFromSupplier('${x.supplier_list_id}')">🛒 Compose order</button><button class="warn" data-testid="sup-remove" onclick="delSupplier('${x.supplier_list_id}')">Remove from list</button>`;
   }
   return `${head}<div class="db">${body}</div><div class="actbar">${bar}</div>`;
 }
@@ -2187,8 +2187,8 @@ function catalogueScreen(){
   const list = `<div class="list">
     <div class="lh">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:14px">🗂️ Catalogue</span><button onclick="openAssist('catalogue')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:#fff;color:#3F66A6;border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button></div>
-      <button class="composebtn" style="width:100%;justify-content:center" onclick="newProduct()">+ New product</button>
-      <div class="srch" style="margin-top:8px">🔍 <input placeholder="Search name, code, unit" value="${esc(UI.prodQ||'')}" oninput="UI.prodQ=this.value;paintProdList()"></div>
+      <button class="composebtn" style="width:100%;justify-content:center" data-testid="cat-new-product" onclick="newProduct()">+ New product</button>
+      <div class="srch" style="margin-top:8px">🔍 <input data-testid="cat-search" placeholder="Search name, code, unit" value="${esc(UI.prodQ||'')}" oninput="UI.prodQ=this.value;paintProdList()"></div>
       <div style="margin-top:8px;font-size:11px;color:var(--grey)" id="ct_count">${prodVisible().length} product(s)</div>
     </div>
     <div class="rows" id="ct_rows">${UI._prodLoading?'<div class="loadwrap"><span class="spin"></span> loading…</div>':prodRowsHTML()}</div>
@@ -2206,7 +2206,7 @@ function pCode(d){ return d.code||d.hsn||d.sku||''; }
 function pDesc(d){ return d.desc||d.description||d.note||''; }
 function prodId(p){ return p.item_id||p.id; }
 function prodVisible(){ const a=(UI.prods||[]); const q=(UI.prodQ||'').trim().toLowerCase(); if(!q)return a; return a.filter(p=>{const d=pData(p); return (pName(d)+' '+pCode(d)+' '+pUnit(d)+' '+pDesc(d)).toLowerCase().includes(q);}); }
-function prodRowHTML(p){ const d=pData(p), id=prodId(p); return `<div class="row ${id===UI.prodSel?'sel':''}" onclick="selectProduct('${id}')">
+function prodRowHTML(p){ const d=pData(p), id=prodId(p); return `<div class="row ${id===UI.prodSel?'sel':''}" data-testid="cat-product-${id}" onclick="selectProduct('${id}')">
   <div class="main2"><div class="l1"><span class="code">${esc(pName(d))}</span><span class="optchip" style="background:var(--gold-soft);color:#7a5e22;border-color:var(--gold-line)">${esc(pUnit(d))}</span><span class="amt" style="margin-left:auto">${inr(pPrice(d))}</span></div>
     <div class="l2">${pCode(d)?'<span class="mono">'+esc(pCode(d))+'</span> · ':''}${esc(pDesc(d)||'—')}</div></div>
   <div class="rowgo" aria-hidden="true">›</div></div>`; }
@@ -2265,13 +2265,13 @@ function selectProduct(id, silent){ UI.refSel=null; UI.prodSel=id; UI.prodMode='
   paintProdList(); paintProdDetail(); }
 function setProdMode(m){ UI.prodMode=m; paintProdDetail(); }
 function newProduct(){ UI.prodSel=null; UI.prodMode='new'; if(UI.vp==='mob'){ UI.mdetail=true; const p=document.getElementById('panel'); if(p)p.classList.add('showdetail'); } paintProdList(); paintProdDetail(); }
-function ctField(k,label,v,extra){ return `<label class="fl">${label}</label><input class="inp" id="ct_${k}" value="${esc(v==null?'':v)}" ${extra||''}>`; }
-function prodEditForm(d){ return ctField('name','Name',d.name||'')+`<div style="display:flex;gap:10px"><div style="flex:1">`+ctField('unit','Unit',d.unit||'',"placeholder=\"piece / kg / tonne\"")+`</div><div style="flex:1"><label class="fl">Price</label><input class="inp" id="ct_price" inputmode="numeric" value="${d.price!=null?d.price:''}"></div></div>`+ctField('code','Code / HSN',pCode(d))+`<label class="fl">Description</label><textarea class="inp" id="ct_desc" style="width:100%;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13.5px;min-height:58px;resize:vertical;background:var(--paper)">${esc(pDesc(d))}</textarea>`; }
+function ctField(k,label,v,extra){ return `<label class="fl">${label}</label><input class="inp" id="ct_${k}" data-testid="cat-field-${k}" value="${esc(v==null?'':v)}" ${extra||''}>`; }
+function prodEditForm(d){ return ctField('name','Name',d.name||'')+`<div style="display:flex;gap:10px"><div style="flex:1">`+ctField('unit','Unit',d.unit||'',"placeholder=\"piece / kg / tonne\"")+`</div><div style="flex:1"><label class="fl">Price</label><input class="inp" id="ct_price" data-testid="cat-field-price" inputmode="numeric" value="${d.price!=null?d.price:''}"></div></div>`+ctField('code','Code / HSN',pCode(d))+`<label class="fl">Description</label><textarea class="inp" id="ct_desc" data-testid="cat-field-desc" style="width:100%;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13.5px;min-height:58px;resize:vertical;background:var(--paper)">${esc(pDesc(d))}</textarea>`; }
 function prodViewFields(d){ const kv=(l,v)=>`<div class="kv" style="display:flex;gap:8px;padding:8px 12px;border-bottom:1px dashed var(--line);font-size:13px"><b style="min-width:96px;color:var(--grey);font-weight:600;font-size:11px;text-transform:uppercase">${l}</b><span style="font-weight:600">${v===''||v==null?'—':esc(v)}</span></div>`;
   return `<div class="itab">${kv('Name',pName(d))}<div class="kv" style="display:flex;gap:8px;padding:8px 12px;border-bottom:1px dashed var(--line);font-size:13px"><b style="min-width:96px;color:var(--grey);font-weight:600;font-size:11px;text-transform:uppercase">Price</b><span style="font-weight:600">${inr(pPrice(d))} <span style="color:var(--grey);font-weight:400">/ ${esc(pUnit(d))}</span></span></div>${kv('Unit',pUnit(d))}${kv('Code / HSN',pCode(d))}${kv('Description',pDesc(d))}</div>`; }
 function prodDetailHTML(){
   if(UI.refSel!=null && (UI.refCat||[])[UI.refSel]) return refFinishDetail(UI.refCat[UI.refSel]);   // BRIDGE: rich finish showcase
-  if(UI.prodMode==='new'){ return `<div class="dh"><button class="dback" onclick="backToList()">‹ Catalogue</button><div class="dt">New product</div><div class="ds">add to your catalogue</div></div><div class="db"><div class="sec">Product details</div>${prodEditForm({})}<div class="err" id="ct_err" style="margin-top:8px"></div></div><div class="actbar"><button class="pri" onclick="saveNewProduct()">Add product</button><button onclick="backToList()">Cancel</button></div>`; }
+  if(UI.prodMode==='new'){ return `<div class="dh"><button class="dback" onclick="backToList()">‹ Catalogue</button><div class="dt">New product</div><div class="ds">add to your catalogue</div></div><div class="db"><div class="sec">Product details</div>${prodEditForm({})}<div class="err" id="ct_err" style="margin-top:8px"></div></div><div class="actbar"><button class="pri" data-testid="cat-add" onclick="saveNewProduct()">Add product</button><button onclick="backToList()">Cancel</button></div>`; }
   const p=(UI.prods||[]).find(x=>prodId(x)===UI.prodSel);
   if(!p) return `<div class="empty"><div class="big">🗂️</div><div class="t">Select a product</div><div>Pick one to view or edit — or add a new one.</div></div>`;
   const d=pData(p), id=prodId(p);
@@ -2279,8 +2279,8 @@ function prodDetailHTML(){
   const seg=(m,l)=>`<button onclick="setProdMode('${m}')" style="border:0;background:${(UI.prodMode==='edit'?'edit':'view')===m?'var(--ink)':'#fff'};color:${(UI.prodMode==='edit'?'edit':'view')===m?'#fff':'var(--grey)'};font-size:12px;font-weight:700;padding:6px 15px">${l}</button>`;
   const head=`<div class="dh">${back}<div class="dt">${esc(pName(d))}</div><div class="ds">${inr(pPrice(d))} / ${esc(pUnit(d))}${pCode(d)?' · '+esc(pCode(d)):''}</div><div style="display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-top:10px">${seg('view','View')}${seg('edit','Edit')}</div></div>`;
   let body, bar;
-  if(UI.prodMode==='edit'){ body=`<div class="sec">Edit product</div>${prodEditForm(d)}<div class="err" id="ct_err" style="margin-top:8px"></div>`; bar=`<button class="pri" onclick="saveProduct('${id}')">Save</button><button onclick="setProdMode('view')">Cancel</button>`; }
-  else { body=`<div class="sec">Product</div>${prodViewFields(d)}`; bar=`<button class="pri" onclick="setProdMode('edit')">✎ Edit</button><button class="warn" onclick="delProduct('${id}')">Delete</button>`; }
+  if(UI.prodMode==='edit'){ body=`<div class="sec">Edit product</div>${prodEditForm(d)}<div class="err" id="ct_err" style="margin-top:8px"></div>`; bar=`<button class="pri" data-testid="cat-save" onclick="saveProduct('${id}')">Save</button><button onclick="setProdMode('view')">Cancel</button>`; }
+  else { body=`<div class="sec">Product</div>${prodViewFields(d)}`; bar=`<button class="pri" data-testid="cat-edit" onclick="setProdMode('edit')">✎ Edit</button><button class="warn" data-testid="cat-delete" onclick="delProduct('${id}')">Delete</button>`; }
   return `${head}<div class="db">${body}</div><div class="actbar">${bar}</div>`;
 }
 function ctReadForm(orig){ return Object.assign({}, orig||{}, { name:(val("ct_name")||'').trim(), unit:(val("ct_unit")||'').trim()||'unit', price:+val("ct_price")||0, code:(val("ct_code")||'').trim(), desc:(val("ct_desc")||'').trim() }); }
