@@ -104,6 +104,12 @@ RED. A spec that stays green on a real break is decorative.
 `npm run codegen -- https://chitbridge-web.vercel.app/app.html` records a clickthrough into a draft spec (lowers the
 locator-authoring effort). Prefer the `data-testid` locators over recorded CSS.
 
+## Cleaning up test data
+Every run creates real rows (test entities, chits, …). All test identities share a **`@test.example`** email, so cleanup
+is a single, safe, pattern-scoped script: **`chitbridge-api/scripts/cleanup-test-entities.sql`**. Run it in the **Supabase
+SQL Editor** (postgres role, dev/test DB only) — **PART 1 is a dry-run count** to review; **PART 2 deletes**. It's
+schema-adaptive (sweeps every table with an `entity_id`, incl. the FORCE-RLS ones). Never run it against production.
+
 ## Definition of done (2-day window)
 `flow.spec.js` green: two different entities minted through the real front door, each landing in a working app (default
 schema, no catalogue-404), with a saved trace. The **verify(stub) → gated** steps slot into the onboarding/flow specs once
