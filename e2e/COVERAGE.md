@@ -13,7 +13,7 @@
 | **Catalogue / products** | **create · read · update · delete** (full CRUD) | catalogue |
 | **Suppliers** | add · edit · remove (cross-entity) | suppliers |
 | **Chits** | compose · **send** · read(open) · advance status · mark-unread | chits |
-| **Disputes (USP)** | raise · resolve | disputes |
+| **Disputes (USP)** | raise · resolve · **targeted (A&B, C excluded) · per-party resolve** (3-entity, live) | disputes |
 | **Messages** | internal note · external message (channel toggle) | messages |
 | **Co-assists** | create(human) · reach every type (human/IoT/ERP/AI) | coassists |
 | **Capture (WhatsApp/email)** | simulate inbound → inbox | capture |
@@ -25,7 +25,7 @@
 ## Partial / skeleton ◐ (needs setup or a key)
 | Capability | Subfunction | Why ◐ | Where |
 |---|---|---|---|
-| Disputes (USP) | **targeted (A&B, C excluded) · private room · per-party resolve** | needs 3 entities on one chit | disputes (skeleton) |
+| Disputes (USP) | private **room** message (A↔B only) | one more assertion on the 3-entity test | disputes (room step) |
 | Messages | **internal-stays-internal privacy** | needs 2 entities (A→B) | messages (skeleton) |
 | Capture | AI structure → create chit | needs `ANTHROPIC_API_KEY` | capture (skeleton) |
 | Helpdesk | KB publish → serve live | needs a helpdesk-type entity | helpdesk (skeleton) |
