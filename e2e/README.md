@@ -13,8 +13,9 @@ the 2-day Definition of Done. Drives the **live** app (Vercel web + Railway API)
 | `tests/chits.spec.js` | Compose → send a chit → appears in Order | ✅ written |
 | `tests/catalogue.spec.js` | Add a product → appears in the catalogue | ✅ written |
 | `tests/suppliers.spec.js` | Suppliers screen + add box | ✅ loads; real add needs a 2nd entity |
+| `tests/coassists.spec.js` | Every co-assist type (human/IoT/ERP/AI) + create a human | ✅ written |
 | `tests/helpdesk.spec.js` | Assistant ask (deterministic); KB publish skeleton — **Step-3 first** | ◐ assistant works; KB needs a helpdesk entity |
-| `tests/storefront.spec.js` | Customer order → chit | ◐ skeleton; needs a seeded `CB_SHOP_BRIDGE` |
+| `tests/storefront.spec.js` | Customer order → chit | ✅ written; needs a seeded `CB_SHOP_BRIDGE` |
 | `tests/redproof.spec.js` | **RED-proof** — the suite can fail on a broken screen | ✅ written |
 
 ## How each module is specified (the reviewer's 3 things)
@@ -36,7 +37,14 @@ the 2-day Definition of Done. Drives the **live** app (Vercel web + Railway API)
      `cat-add`, `cat-save`, `cat-edit`, `cat-delete`.
    - **Suppliers:** `sup-add-input`, `sup-add`, `sup-row-*`, `sup-nick`, `sup-category`, `sup-notes`, `sup-save`,
      `sup-remove`, `sup-compose-order`.
-   Still to add per module: Storefront (shop.html already has stable #ids).
+   - **Storefront (shop.html):** `shop-order-*`, `shop-viz-*`, `shop-combo`, `shop-qty`, `shop-name`, `shop-area`,
+     `shop-contact`, `shop-send-code`, `shop-otp`, `shop-place-order`.
+   - **Co-assists (wizard):** `coassist-new`, `coassist-type-{human|iot|erp|ai}` (the IoT/ERP/AI proof), `coassist-wiz-next`,
+     `coassist-wiz-back`, `aw_name`, `aw_key` (+ aw_site/baseurl/authref/role per type). `coassists.spec` proves every type
+     path is reachable + creates a human.
+   Still to add (deeper CRUD levels): the connector COCKPIT for a created IoT gateway / ERP system (add-device, ping,
+   erp-test, regen-key, delete — in cap-connector.js; a gateway must exist first), roster edit/delete, and the R/U/D steps
+   in catalogue/suppliers/chits (testids exist; specs currently assert Create).
    This lets a smoke spec click into **every menu item + every icon** to confirm each part loads (see below).
 
 ## Run (Saturday — the app must be UP)

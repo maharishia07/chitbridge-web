@@ -129,7 +129,7 @@ function coassistsScreen(){
   const list = `<div class="list">
     <div class="lh">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:14px">${_title}</span><button onclick="openAssist('coassists')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:#fff;color:#3F66A6;border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button>${_typeInfoBtn}</div>
-      <div style="display:flex;gap:7px"><input class="inp" id="ac_add" placeholder="New co-assist — person, device, system or agent" style="flex:1" readonly onclick="openActorWiz()"><button class="composebtn" onclick="openActorWiz()">+ New</button></div>
+      <div style="display:flex;gap:7px"><input class="inp" id="ac_add" placeholder="New co-assist — person, device, system or agent" style="flex:1" readonly onclick="openActorWiz()"><button class="composebtn" data-testid="coassist-new" onclick="openActorWiz()">+ New</button></div>
       <div class="srch" style="margin-top:8px">🔍 <input placeholder="Search name, role, key" value="${esc(UI.acQ||'')}" oninput="UI.acQ=this.value;paintAcList()"></div>
       <div style="display:flex;align-items:center;gap:6px;margin-top:8px;font-size:11px;color:var(--grey);flex-wrap:wrap">
         <span style="display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden">${['active','inactive','all'].map(f=>`<button onclick="setAcFlt('${f}')" style="border:0;background:${acFlt()===f?'var(--blue)':'#fff'};color:${acFlt()===f?'#fff':'var(--grey)'};font-weight:700;font-size:11px;padding:4px 9px;text-transform:capitalize">${f}</button>`).join('')}</span>
@@ -213,7 +213,7 @@ function _awPreviewHtml(t){
 }
 function awRender(){
   var d=UI.awData||{};   // render THROUGH the app's shared modal() → same placement/backdrop/responsive as every other dialog
-  function fld(id,label,ph){ return '<div style="margin-bottom:20px"><label class="fl" style="display:block;margin-bottom:5px">'+label+'</label><input class="inp" id="'+id+'" placeholder="'+ph+'" value="'+esc(d[id]||'')+'" style="width:100%"></div>'; }
+  function fld(id,label,ph){ return '<div style="margin-bottom:20px"><label class="fl" style="display:block;margin-bottom:5px">'+label+'</label><input class="inp" id="'+id+'" data-testid="'+id+'" placeholder="'+ph+'" value="'+esc(d[id]||'')+'" style="width:100%"></div>'; }
   function selF(id,label,opts){ return '<div style="margin-bottom:20px"><label class="fl" style="display:block;margin-bottom:5px">'+label+'</label><select class="inp" id="'+id+'" style="width:100%">'+opts.map(function(o){ return '<option value="'+o[0]+'"'+(String(d[id])===o[0]?' selected':'')+'>'+o[1]+'</option>'; }).join('')+'</select></div>'; }
   function how(x){ return '<div style="font-size:12px;color:var(--grey);background:#f7f7f5;border:1px solid var(--line);border-radius:10px;padding:10px 12px;line-height:1.5;margin-top:12px">'+x+'</div>'; }
   var body='', title='', sub='', dots='', foot='';
@@ -221,7 +221,7 @@ function awRender(){
     title='Add a co-assist'; sub='What kind of co-assist? People, devices, systems and agents can all act for you.';
     var types=[['human','👤','Human','A person who acts for you'],['iot','🛰️','IoT device','A Pi / gateway that sends signals'],['erp','🔌','ERP / API','Connect a business system'],['ai','🤖','AI agent','An autonomous co-assist']];
     body='<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'+types.map(function(t){ var rdy=_awReady(t[0]);
-      return '<div onclick="awPick(\''+t[0]+'\')" onmouseover="this.style.borderColor=\'#3F66A6\'" onmouseout="this.style.borderColor=\'#e5e2dd\'" style="border:1px solid #e5e2dd;border-radius:14px;padding:14px;cursor:pointer;'+(rdy?'':'opacity:.72')+'"><div style="font-size:24px">'+t[1]+'</div><div style="font-weight:700;font-size:14px;margin-top:6px">'+t[2]+'</div><div style="font-size:11.5px;color:#6a707a;margin-top:2px;line-height:1.35">'+t[3]+'</div><span style="display:inline-block;margin-top:9px;font-size:10px;font-weight:700;border-radius:20px;padding:1px 9px;'+(rdy?'background:#e8f3ec;color:#2f7a45':'background:#eef3fb;color:#2c5aa0')+'">'+(rdy?'ready':'explore')+'</span></div>';
+      return '<div data-testid="coassist-type-'+t[0]+'" onclick="awPick(\''+t[0]+'\')" onmouseover="this.style.borderColor=\'#3F66A6\'" onmouseout="this.style.borderColor=\'#e5e2dd\'" style="border:1px solid #e5e2dd;border-radius:14px;padding:14px;cursor:pointer;'+(rdy?'':'opacity:.72')+'"><div style="font-size:24px">'+t[1]+'</div><div style="font-weight:700;font-size:14px;margin-top:6px">'+t[2]+'</div><div style="font-size:11.5px;color:#6a707a;margin-top:2px;line-height:1.35">'+t[3]+'</div><span style="display:inline-block;margin-top:9px;font-size:10px;font-weight:700;border-radius:20px;padding:1px 9px;'+(rdy?'background:#e8f3ec;color:#2f7a45':'background:#eef3fb;color:#2c5aa0')+'">'+(rdy?'ready':'explore')+'</span></div>';
     }).join('')+'</div>';
     foot='<button class="composebtn" style="flex:1" onclick="awClose()">Cancel</button>';
   } else {
@@ -234,7 +234,7 @@ function awRender(){
       // Guard the duplicate-create: after a REAL create, do NOT offer Back (it would land on a live Create button and
       // make a 2nd connector). Only Done. Explore/preview created nothing, so Back is safe there.
       foot = rdy ? '<button class="composebtn pri" style="flex:1" onclick="awClose()">Done</button>'
-                 : '<button class="composebtn" style="flex:1" onclick="awBack()">‹ Back</button><button class="composebtn pri" style="flex:1" onclick="awClose()">Got it</button>';
+                 : '<button class="composebtn" style="flex:1" data-testid="coassist-wiz-back" onclick="awBack()">‹ Back</button><button class="composebtn pri" style="flex:1" onclick="awClose()">Got it</button>';
     } else {
       var sk=steps[UI.awStep];
       if(sk==='who') body=fld('aw_name','Display name','Anitha')+fld('aw_key','User ID (sign-in)','anitha')+how('They sign in with this User ID under your entity + a one-time code, then set a PIN.');
@@ -248,7 +248,7 @@ function awRender(){
       sub=(UI.awStep+1)+' of '+steps.length;
       if(UI.awErr) body+='<div style="color:#c0453b;font-size:12.5px;margin-top:10px">'+esc(UI.awErr)+'</div>';
       var nextLbl=(UI.awStep===steps.length-1)?(rdy?'Create':'See result'):'Next ›';
-      foot='<button class="composebtn" style="flex:1" onclick="awBack()">‹ Back</button><button class="composebtn pri" style="flex:1" onclick="awNext()">'+nextLbl+'</button>';
+      foot='<button class="composebtn" style="flex:1" data-testid="coassist-wiz-back" onclick="awBack()">‹ Back</button><button class="composebtn pri" style="flex:1" data-testid="coassist-wiz-next" onclick="awNext()">'+nextLbl+'</button>';
     }
   }
   // RESPONSIVE placement: FULL-SCREEN on mobile (fill · generous gaps · buttons in a bottom bar — like the
