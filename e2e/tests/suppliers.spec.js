@@ -6,14 +6,14 @@ const { test, expect } = require('@playwright/test');
 const { mintEntity } = require('../fixtures');
 
 test.describe('Module · Suppliers', () => {
-  test('suppliers screen loads with the add box', async ({ page }) => {
+  test('[SUP-01] suppliers screen loads with the add box', async ({ page }) => {
     await mintEntity(page);
     await page.getByTestId('nav-suppliers').click();
     await expect(page.getByTestId('sup-add-input')).toBeVisible();
     await expect(page.getByTestId('sup-add')).toBeVisible();
   });
 
-  test('CRUD — B adds A as a supplier, edits, removes', async ({ page }) => {
+  test('[SUP-02] CRUD — B adds A as a supplier, edits, removes', async ({ page }) => {
     const A = await mintEntity(page);                                  // entity A = the supplier
     await page.evaluate(() => { try { localStorage.clear(); sessionStorage.clear(); } catch (e) {} });
     await mintEntity(page);                                            // entity B = the buyer

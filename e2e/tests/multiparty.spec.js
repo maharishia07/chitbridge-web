@@ -6,7 +6,7 @@ const { test, expect } = require('@playwright/test');
 const { mintInContext, addRecipientByName } = require('../fixtures');
 
 test.describe('Multiparty · the real capability', () => {
-  test('A sends a chit to B; B receives their own copy', async ({ browser }) => {
+  test('[MP-01] A sends a chit to B; B receives their own copy', async ({ browser }) => {
     const A = await mintInContext(browser);   // sender
     const B = await mintInContext(browser);   // receiver
     const subject = 'Multiparty order ' + Date.now();
@@ -33,7 +33,7 @@ test.describe('Multiparty · the real capability', () => {
   });
 
   // THE USP, LIVE — 3 parties, targeted dispute, privacy. Uses the same multi-context pattern.
-  test.skip('A → B,C; A disputes with B only → B sees it, C does not (the USP)', async ({ browser }) => {
+  test.skip('[MP-02] A → B,C; A disputes with B only → B sees it, C does not (the USP)', async ({ browser }) => {
     // TODO: mint A, B, C in 3 contexts. A composes a chit To B + To C, send.
     //   A opens it → chit-dispute → TICK only B → dispute-reason → dispute-raise → dispute-room-send a private note.
     //   B: nav-task → open → sees the dispute + the room note.  C: nav-task → open → NO dispute, NO room.

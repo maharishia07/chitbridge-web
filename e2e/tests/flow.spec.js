@@ -5,7 +5,7 @@ const { test, expect } = require('@playwright/test');
 const { mintEntity } = require('../fixtures');
 
 test.describe('FLOW · mint two entities (DoD)', () => {
-  test('two distinct entities mint through the real front door', async ({ page }) => {
+  test('[FLOW-01] two distinct entities mint through the real front door', async ({ page }) => {
     const a = await test.step('Entity 1 — mint', async () => mintEntity(page));
     await expect(page).toHaveURL(/#\/app/);
     await expect(page.locator('#root')).toBeVisible();

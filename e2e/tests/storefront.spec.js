@@ -6,7 +6,7 @@ const { test, expect } = require('@playwright/test');
 const { DEV_OTP } = require('../fixtures');
 
 test.describe('Module · Storefront', () => {
-  test('customer places an order → chit', async ({ page }) => {
+  test('[SHOP-01] customer places an order → chit', async ({ page }) => {
     const bridge = process.env.CB_SHOP_BRIDGE;
     test.skip(!bridge, 'set CB_SHOP_BRIDGE to a seeded public shop bridge id');
 

@@ -6,7 +6,7 @@ const { test, expect } = require('@playwright/test');
 const { mintEntity, composeSelfChit } = require('../fixtures');
 
 test.describe('Module · Messages', () => {
-  test('send an internal note and an external message on a chit', async ({ page }) => {
+  test('[MSG-01] send an internal note and an external message on a chit', async ({ page }) => {
     await mintEntity(page);
     const subject = 'E2E msg ' + Date.now();
     await composeSelfChit(page, subject);
@@ -31,5 +31,5 @@ test.describe('Module · Messages', () => {
 
   // PRIVACY PROOF (skeleton, needs 2 entities): as A send an INTERNAL note + an EXTERNAL message on an A→B chit; sign in
   // as B → B sees ONLY the external message, never the internal note. That is the internal/external boundary, proven.
-  test.skip('privacy — the counterparty sees external, never internal (needs a 2nd entity)', async ({ page }) => {});
+  test.skip('[MSG-02] privacy — the counterparty sees external, never internal (needs a 2nd entity)', async ({ page }) => {});
 });

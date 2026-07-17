@@ -5,7 +5,7 @@ const { test, expect } = require('@playwright/test');
 const { mintEntity } = require('../fixtures');
 
 test.describe('Module · Catalogue (full CRUD)', () => {
-  test('create → read → update → delete a product', async ({ page }) => {
+  test('[CAT-01] create → read → update → delete a product', async ({ page }) => {
     await mintEntity(page);
     const name = 'E2E Widget ' + Date.now();
 

@@ -18,7 +18,7 @@ async function composeSelfChit(page, subject) {
 }
 
 test.describe('Module · Chits', () => {
-  test('CREATE — compose + send a self-chit → appears in Order', async ({ page }) => {
+  test('[CHIT-01] CREATE — compose + send a self-chit → appears in Order', async ({ page }) => {
     await mintEntity(page);
     const subject = 'E2E order ' + Date.now();
     await composeSelfChit(page, subject);
@@ -26,7 +26,7 @@ test.describe('Module · Chits', () => {
     await expect(page.getByText(subject)).toBeVisible();
   });
 
-  test('READ + UPDATE — open the received copy, advance status', async ({ page }) => {
+  test('[CHIT-02] READ + UPDATE — open the received copy, advance status', async ({ page }) => {
     await mintEntity(page);
     const subject = 'E2E status ' + Date.now();
     await composeSelfChit(page, subject);

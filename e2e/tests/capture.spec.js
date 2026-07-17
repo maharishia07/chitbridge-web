@@ -6,7 +6,7 @@ const { test, expect } = require('@playwright/test');
 const { uniqueEmail, DEV_OTP } = require('../fixtures');
 
 test.describe('Module · Capture (WhatsApp / email → chit)', () => {
-  test('simulate an inbound message → it appears in the intake inbox', async ({ page }) => {
+  test('[CAP-01] simulate an inbound message → it appears in the intake inbox', async ({ page }) => {
     const email = uniqueEmail();
     await test.step('open intake + login', async () => {
       await page.goto('/intake.html');
@@ -26,7 +26,7 @@ test.describe('Module · Capture (WhatsApp / email → chit)', () => {
   });
 
   // Structure + create is AI-gated: invokeSkill('message-to-chit') needs ANTHROPIC_API_KEY (else 503).
-  test.skip('structure with AI → create chit (needs ANTHROPIC_API_KEY)', async ({ page }) => {
+  test.skip('[CAP-02] structure with AI → create chit (needs ANTHROPIC_API_KEY)', async ({ page }) => {
     // TODO: cap-structure → the AI draft renders → cap-create-chit → "Created chit on the rail".
   });
 });

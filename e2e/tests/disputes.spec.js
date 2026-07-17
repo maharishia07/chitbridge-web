@@ -9,7 +9,7 @@ const { test, expect } = require('@playwright/test');
 const { mintEntity, mintInContext, addRecipientByName, composeSelfChit } = require('../fixtures');
 
 test.describe('Module · Disputes', () => {
-  test('mechanics — raise a dispute on a chit, then resolve it', async ({ page }) => {
+  test('[DISP-01] mechanics — raise a dispute on a chit, then resolve it', async ({ page }) => {
     await mintEntity(page);
     const subject = 'E2E dispute ' + Date.now();
     await composeSelfChit(page, subject);
@@ -31,7 +31,7 @@ test.describe('Module · Disputes', () => {
     });
   });
 
-  test('USP — A disputes with B only; B sees it, C does NOT; A resolves per-party', async ({ browser }) => {
+  test('[DISP-02] USP — A disputes with B only; B sees it, C does NOT; A resolves per-party', async ({ browser }) => {
     const A = await mintInContext(browser);   // sender / raiser
     const B = await mintInContext(browser);   // disputed party
     const C = await mintInContext(browser);   // other party — must be EXCLUDED

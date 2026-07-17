@@ -6,7 +6,7 @@ const { test, expect } = require('@playwright/test');
 const { uniqueEmail, uniqueName, DEV_OTP } = require('../fixtures');
 
 test.describe('Module · Onboarding / Mint', () => {
-  test('mint a business entity, screen by screen', async ({ page }) => {
+  test('[ONB-01] mint a business entity, screen by screen', async ({ page }) => {
     const email = uniqueEmail(), name = uniqueName();
 
     await test.step('Welcome — get started', async () => {
@@ -47,5 +47,5 @@ test.describe('Module · Onboarding / Mint', () => {
   // Guard: the entity is created from email+OTP alone today (no KYB gate). This test DOCUMENTS that gap by asserting
   // there is NO verification step between register and OTP — it will START FAILING (correctly) the day the gate lands,
   // which is the signal to update this module. (Reviewer Q3 — verified→gated→minted.)
-  test.skip('TODO(gate): a verification step blocks entry before mint (Q3, not built yet)', async () => {});
+  test.skip('[ONB-02] TODO(gate): a verification step blocks entry before mint (Q3, not built yet)', async () => {});
 });

@@ -6,7 +6,7 @@ const { test, expect } = require('@playwright/test');
 const { mintEntity } = require('../fixtures');
 
 test.describe('Module · Helpdesk / Assistant', () => {
-  test('open the assistant and ask — deterministic library answer', async ({ page }) => {
+  test('[HELP-01] open the assistant and ask — deterministic library answer', async ({ page }) => {
     await mintEntity(page);
     await expect(page).toHaveURL(/#\/app/);
     await test.step('open the assistant', async () => {
@@ -21,7 +21,7 @@ test.describe('Module · Helpdesk / Assistant', () => {
   });
 
   // KB publish → serve-live needs a HELPDESK entity (the 🧠 Assistant / nav-assistreview screen is gated to helpdesks).
-  test.skip('KB: publish an answer, then it serves live (needs a helpdesk entity)', async ({ page }) => {
+  test.skip('[HELP-02] KB: publish an answer, then it serves live (needs a helpdesk entity)', async ({ page }) => {
     // TODO(Step 3): sign in as the helpdesk entity → getByTestId('nav-assistreview').click()
     //   → kb-question.fill(...) → kb-answer.fill(...) → kb-publish.click()
     //   → assistant-open → assist-input.fill(same question) → assist-ask → expect the published answer.

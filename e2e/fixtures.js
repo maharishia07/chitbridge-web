@@ -12,8 +12,13 @@ function uniqueName(prefix) {
 // Reusable: walk the onboarding→register→verify (mint) flow and land in the app. Returns { email, name }.
 // This is the shared "arrange" step other modules (chits, catalogue) build on — and the heart of the DoD.
 async function mintEntity(page, { role = 'business' } = {}) {
-  const email = uniqueEmail(), name = uniqueName();
   await page.goto('/app.html');
+  // SAVED SESSION: if we're already inside the app (no welcome screen within a few seconds), skip onboarding entirely.
+  // In the `authed` project the storageState restores a logged-in session → this short-circuits. In `noauth` (and inside
+  // fresh multi-party contexts) the welcome screen shows → full mint. Falls back to minting if the session didn't restore.
+  try { await page.getByTestId('onb-getstarted').waitFor({ state: 'visible', timeout: 4000 }); }
+  catch (e) { return { existing: true, email: null, name: null }; }
+  const email = uniqueEmail(), name = uniqueName();
   await page.getByTestId('onb-getstarted').click();
   await page.getByTestId(`onb-role-${role}`).click();
   await page.locator('[data-testid^="onb-bp-"]').first().click();   // pick the first vertical/blueprint

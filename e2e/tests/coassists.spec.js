@@ -6,7 +6,7 @@ const { test, expect } = require('@playwright/test');
 const { mintEntity } = require('../fixtures');
 
 test.describe('Module · Co-assists', () => {
-  test('every co-assist type is reachable (human · IoT · ERP · AI)', async ({ page }) => {
+  test('[COA-01] every co-assist type is reachable (human · IoT · ERP · AI)', async ({ page }) => {
     await mintEntity(page);
     await page.getByTestId('nav-coassists').click();
     await page.getByTestId('coassist-new').click();
@@ -22,7 +22,7 @@ test.describe('Module · Co-assists', () => {
     }
   });
 
-  test('CRUD·create — add a human co-assist → invite issued', async ({ page }) => {
+  test('[COA-02] CRUD·create — add a human co-assist → invite issued', async ({ page }) => {
     await mintEntity(page);
     await page.getByTestId('nav-coassists').click();
     await page.getByTestId('coassist-new').click();

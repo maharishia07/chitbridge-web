@@ -9,7 +9,7 @@ const NAV = ['task', 'order', 'folders', 'drafts', 'trash', 'archive', 'network'
   'catalogue', 'readiness', 'coassists', 'mis', 'disputes', 'profile', 'settings', 'assistreview'];
 
 test.describe('Smoke · every menu item + icon renders', () => {
-  test('open each menu item', async ({ page }) => {
+  test('[SMOKE-01] open each menu item', async ({ page }) => {
     await mintEntity(page);
     await expect(page).toHaveURL(/#\/app/);
     for (const key of NAV) {
@@ -22,7 +22,7 @@ test.describe('Smoke · every menu item + icon renders', () => {
     }
   });
 
-  test('open compose + each toolbar icon', async ({ page }) => {
+  test('[SMOKE-02] open compose + each toolbar icon', async ({ page }) => {
     await mintEntity(page);
     await test.step('compose (modal)', async () => {
       await page.getByTestId('nav-compose').click();
