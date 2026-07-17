@@ -17,9 +17,17 @@ the 2-day Definition of Done. Drives the **live** app (Vercel web + Railway API)
 ## How each module is specified (the reviewer's 3 things)
 1. **The flow** — the screen sequence (top comment of each spec).
 2. **The data** — a fresh email per run + `DEV_OTP=123456` (see `fixtures.js`).
-3. **Stable locators** — `data-testid` on every interactive element. Live now (onboarding): `onb-getstarted`,
-   `onb-role-*`, `onb-bp-*`, `onb-continue`, `nav-signin`, `reg-name`, `reg-email`, `reg-submit`, `reg-vertical-*`,
-   `reg-otp`. To extend a module, add its testids (Compose / KB / catalogue) then fill the spec's TODO block.
+3. **Stable locators** — `data-testid` on every interactive element. Live now:
+   - **Onboarding/mint:** `onb-getstarted`, `onb-role-*`, `onb-bp-*`, `onb-continue`, `nav-signin`, `reg-name`,
+     `reg-email`, `reg-submit`, `reg-vertical-*`, `reg-otp`.
+   - **Panel nav (EVERY menu item):** `nav-<key>` — compose, task, order, folders, drafts, trash, archive, network,
+     suppliers, customers, catalogue, readiness, coassists, mis, disputes, profile, settings, assistreview, shops
+     (auto-derived in `menuBtn`, so new menu items get a testid for free). Plus `nav-drawer`.
+   - **Toolbar icons:** `icon-legend` (🔑), `icon-messages` (💬), `icon-notifications` (🔔), `icon-logout`, `icon-help-*` (per-screen ?).
+   - **Assistant:** `assistant-open`, `assist-input`, `assist-ask`, `assist-suggest-*`, `assist-helpdesk`, `assist-compliance`, `assist-close`.
+   - **Helpdesk KB:** `kb-question`, `kb-answer`, `kb-context`, `kb-publish`, `kb-new`.
+   Still to add per module: Compose (chit-*), Catalogue/products, Suppliers, Storefront (shop.html has stable #ids).
+   This lets a smoke spec click into **every menu item + every icon** to confirm each part loads (see below).
 
 ## Run (Saturday — the app must be UP)
 ```bash
