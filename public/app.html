@@ -2250,7 +2250,7 @@ function refFinishDetail(it){
   return head+body;
 }
 function paintProdList(){ const b=document.getElementById('ct_rows'); if(b)b.innerHTML=prodRowsHTML(); const c=document.getElementById('ct_count'); if(c)c.textContent=prodVisible().length+' product(s)'; }
-function paintProdDetail(){ const dp=document.getElementById('detailpane'); if(dp){ dp.className='detail'; dp.innerHTML=prodDetailHTML(); } }
+function paintProdDetail(){ const dp=document.getElementById('detailpane'); if(dp){ dp.className='detail'; dp.innerHTML=prodDetailHTML(); if(window.CBOffline&&UI.prodMode==='new')CBOffline.autodraft(dp,'prod.new'); } }
 async function loadCatalogue(){
   UI._prodLoading=true; const rb=document.getElementById('ct_rows'); if(rb)rb.innerHTML='<div class="loadwrap"><span class="spin"></span> loading…</div>';
   try{ const items=(await api("prodList"))||[]; UI.prods=items;
@@ -2285,7 +2285,7 @@ function prodDetailHTML(){
 }
 function ctReadForm(orig){ return Object.assign({}, orig||{}, { name:(val("ct_name")||'').trim(), unit:(val("ct_unit")||'').trim()||'unit', price:+val("ct_price")||0, code:(val("ct_code")||'').trim(), desc:(val("ct_desc")||'').trim() }); }
 async function saveNewProduct(){ const err=document.getElementById("ct_err"); if(err)err.textContent=""; const data=ctReadForm({}); if(!data.name){ if(err)err.textContent="Name is required."; return; }
-  try{ const r=await api("prodAdd",{body:{item_data:data}}); const nid=(r&&r.item&&r.item.item_id)||null; toast("Product added ✓"); UI.prodMode='view'; UI.prodSel=nid; await loadCatalogue(); if(nid){ UI.prodSel=nid; paintProdList(); paintProdDetail(); } }catch(e){ if(err)err.textContent=e.message; } }
+  try{ const r=await api("prodAdd",{body:{item_data:data}}); const nid=(r&&r.item&&r.item.item_id)||null; toast("Product added ✓"); if(window.CBOffline)CBOffline.clearDraft('prod.new'); UI.prodMode='view'; UI.prodSel=nid; await loadCatalogue(); if(nid){ UI.prodSel=nid; paintProdList(); paintProdDetail(); } }catch(e){ if(err)err.textContent=e.message; } }
 async function saveProduct(id){ const err=document.getElementById("ct_err"); if(err)err.textContent=""; const p=(UI.prods||[]).find(x=>prodId(x)===id); const data=ctReadForm(pData(p)); if(!data.name){ if(err)err.textContent="Name is required."; return; }
   try{ await api("prodEdit",{params:{id},body:{item_data:data}}); toast("Product updated ✓"); UI.prodMode='view'; await loadCatalogue(); UI.prodSel=id; paintProdList(); paintProdDetail(); }catch(e){ if(err)err.textContent=e.message; } }
 async function delProduct(id){ if(!confirm("Delete this product? This cannot be undone.")) return; try{ await api("prodDel",{params:{id}}); UI.prodSel=null; UI.mdetail=false; toast(MSG.productDeleted()); await loadCatalogue(); }catch(e){ toast(MSG.fail("delete the product", e)); } }
