@@ -14,7 +14,7 @@ const PRECACHE = [
   '/app/cap-admin.js', '/app/cap-dispute.js', '/app/cap-connector.js', '/app/cap-workforce.js',
   '/app/cap-folders.js', '/app/cap-readiness.js', '/app/cap-legend.js',
   '/cb-offline.js',
-  '/authority-forms.html', '/know-your-business.html', '/intake.html',
+  '/authority-forms.html', '/know-your-business.html', '/intake.html', '/shop.html', '/embed.html',
 ];
 
 self.addEventListener('install', (e) => {

@@ -37,6 +37,7 @@
 </head>
 <body>
 <div class="wrap" id="app"><div class="msg">Loading shop…</div></div>
+<script src="cb-offline.js"></script>
 <script>
 var API = (new URLSearchParams(location.search).get('api')) || 'https://chitbridge-api-production.up.railway.app';
 var BRIDGE = (new URLSearchParams(location.search).get('bridge') || '').trim();
@@ -55,6 +56,8 @@ var _L={
   ta:{wall:'உங்கள் சுவரில் பாருங்கள்',order:'ஆர்டர் செய்யவும் →',combos:'வண்ண சேர்க்கைகள்',applied:'பூசும் முறை',por:'விலை கோரிக்கையின் பேரில்'},
   hi:{wall:'इसे अपनी दीवार पर देखें',order:'ऑर्डर करें →',combos:'रंग संयोजन',applied:'लगाने का तरीका',por:'कीमत अनुरोध पर'}
 };
+function paintPill(s){ var p=el('netpill'); if(!p){ p=document.createElement('div'); p.id='netpill'; p.style.cssText='position:fixed;bottom:10px;right:10px;z-index:998;font:700 11px/1 system-ui,-apple-system,sans-serif;border-radius:999px;padding:5px 11px;border:1px solid #e5e8ee;background:#fff;color:#2f7a45;box-shadow:0 1px 4px rgba(0,0,0,.08)'; (document.body||document.documentElement).appendChild(p); } if(!p)return; if(s.online){ p.style.background='#fff'; p.style.color='#2f7a45'; p.textContent=s.pending?('● Online · '+s.pending):'● Online'; } else { p.style.background='#fdf6e9'; p.style.color='#b4832a'; p.textContent='⚠ Offline · saved'; } }
+if(window.CBOffline){ CBOffline.configure({apiBase:API, token:function(){return null;}, onChange:paintPill}); CBOffline.registerSW('/cb-sw.js'); }
 function tlang(){ var rc=regionCur(); return rc.language||'en'; }
 function t(k){ var l=tlang(); return (_L[l]&&_L[l][k])||_L.en[k]||k; }
 function regionCur(){ return _REGIONS.find(function(r){return r.region_code===_REGION;})||{}; }
@@ -143,7 +146,7 @@ function sfLoginVerify(){
 // ── Order flow: pick combination + qty → phone/email → OTP → place order (a chit to the shop). Price is server-side. ──
 function ohost(){ var h=el('ohost'); if(!h){ h=document.createElement('div'); h.id='ohost'; document.body.appendChild(h); } return h; }
 function orderClose(){ var h=el('ohost'); if(h) h.innerHTML=''; _ord=null; }
-function orderOpen(idx){ if(!_FIN[idx])return; _ord={idx:idx, step:'contact'}; orderRender(); }
+function orderOpen(idx){ if(!_FIN[idx])return; _ord={idx:idx, step:'contact'}; var _d=window.CBOffline&&CBOffline.loadDraft('shop.ord.'+BRIDGE); if(_d&&_d.idx===idx){ _ord.combo=_d.combo; _ord.qty=_d.qty; _ord.name=_d.name; _ord.loc=_d.loc; _ord.contact=_d.contact; } orderRender(); }
 function orderRender(msg, err){
   var e=_FIN[_ord.idx], it=e.it, cur='₹';
   var comboOpts=(it.combinations||[]).map(function(cm){ return '<option value="'+esc(cm.name)+'"'+(cm.name===_ord.combo?' selected':'')+'>'+esc(cm.name)+' ('+((cm.colours||[]).map(function(c){return esc(c.name);}).join(' + '))+')</option>'; }).join('');
@@ -169,14 +172,15 @@ function orderRender(msg, err){
     +'</div></div>';
   ohost().innerHTML=h;
 }
-function _ocap(){ if(el('o_combo'))_ord.combo=el('o_combo').value; if(el('o_qty'))_ord.qty=el('o_qty').value; if(el('o_name'))_ord.name=(el('o_name').value||'').trim(); if(el('o_loc'))_ord.loc=(el('o_loc').value||'').trim(); if(el('o_contact'))_ord.contact=(el('o_contact').value||'').trim(); if(el('o_otp'))_ord.otp=el('o_otp').value; }
+function _ocap(){ if(el('o_combo'))_ord.combo=el('o_combo').value; if(el('o_qty'))_ord.qty=el('o_qty').value; if(el('o_name'))_ord.name=(el('o_name').value||'').trim(); if(el('o_loc'))_ord.loc=(el('o_loc').value||'').trim(); if(el('o_contact'))_ord.contact=(el('o_contact').value||'').trim(); if(el('o_otp'))_ord.otp=el('o_otp').value;
+  if(window.CBOffline&&_ord)CBOffline.saveDraft('shop.ord.'+BRIDGE,{idx:_ord.idx,combo:_ord.combo,qty:_ord.qty,name:_ord.name,loc:_ord.loc,contact:_ord.contact}); }  /* persist across reload; NEVER the OTP */
 function orderStart(){
   if(_ord.busy)return; _ocap(); if(!_ord.contact){ orderRender(null,'Enter a phone or email.'); return; }
   _ord.busy=true; orderRender();
   fetch(API+'/api/catalogue/'+encodeURIComponent(BRIDGE)+'/order/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({identifier:_ord.contact,name:_ord.name})})
     .then(function(r){return r.json().then(function(j){return{status:r.status,j:j};});})
     .then(function(res){ _ord.busy=false; if(res.status!==200){ orderRender(null,(res.j&&res.j.message)||'Could not send code.'); return; } _ord.step='otp'; _ord.dev_otp=res.j&&res.j.dev_otp; orderRender('Code sent — check your '+((res.j&&res.j.channel)||'phone/email')+'.'); })
-    .catch(function(e){ _ord.busy=false; orderRender(null,e.message); });
+    .catch(function(e){ _ord.busy=false; orderRender(null,(window.CBOffline&&!CBOffline.online())?'You are offline — reconnect to continue. Your details are saved.':(e.message||'Network error')); });
 }
 function orderConfirm(){
   if(_ord.busy)return; _ocap(); var otp=(_ord.otp||'').trim(); if(otp.length!==6){ orderRender(null,'Enter the 6-digit code.'); return; }
@@ -186,8 +190,8 @@ function orderConfirm(){
   fetch(API+'/api/catalogue/'+encodeURIComponent(BRIDGE)+'/order/confirm',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
     .then(function(r){return r.json().then(function(j){return{status:r.status,j:j};});})
     .then(function(res){ if(res.status!==200){ _ord.busy=false; orderRender(null,(res.j&&res.j.message)||'Order failed.'); return; }
-      ohost().innerHTML='<div style="position:fixed;inset:0;background:rgba(15,22,32,.5);z-index:900;display:flex;align-items:center;justify-content:center;padding:12px" onclick="orderClose()"><div style="background:#fff;max-width:400px;border-radius:16px;padding:26px;text-align:center"><div style="font-size:40px">✓</div><div class="sg" style="font-weight:800;font-size:18px;margin-top:8px">Order placed</div><div style="font-size:13px;color:#3a4048;margin-top:8px;line-height:1.6">Your order for <b>'+esc(it.name)+((_ord.combo)?(' · '+esc(_ord.combo)):'')+'</b> ('+esc(String(qty))+' L) reached the shop. They\'ll be in touch.</div><button onclick="orderClose()" style="margin-top:16px;border:0;border-radius:10px;padding:10px 20px;background:#3F66A6;color:#fff;font-weight:700;cursor:pointer">Done</button></div></div>'; })
-    .catch(function(e){ _ord.busy=false; orderRender(null,e.message); });
+      ohost().innerHTML='<div style="position:fixed;inset:0;background:rgba(15,22,32,.5);z-index:900;display:flex;align-items:center;justify-content:center;padding:12px" onclick="orderClose()"><div style="background:#fff;max-width:400px;border-radius:16px;padding:26px;text-align:center"><div style="font-size:40px">✓</div><div class="sg" style="font-weight:800;font-size:18px;margin-top:8px">Order placed</div><div style="font-size:13px;color:#3a4048;margin-top:8px;line-height:1.6">Your order for <b>'+esc(it.name)+((_ord.combo)?(' · '+esc(_ord.combo)):'')+'</b> ('+esc(String(qty))+' L) reached the shop. They\'ll be in touch.</div><button onclick="orderClose()" style="margin-top:16px;border:0;border-radius:10px;padding:10px 20px;background:#3F66A6;color:#fff;font-weight:700;cursor:pointer">Done</button></div></div>'; if(window.CBOffline)CBOffline.clearDraft('shop.ord.'+BRIDGE); })
+    .catch(function(e){ _ord.busy=false; orderRender(null,(window.CBOffline&&!CBOffline.online())?'You are offline — reconnect to continue. Your details are saved.':(e.message||'Network error')); });
 }
 // ── VISUALIZE-APPLY ("scan your home") — CHEAP first slice: upload a room photo, tint it in each recommended
 // combination (client-side canvas, no upload/GPU/S3), swap freely, then order. Honest: indicative overlay, not a true
