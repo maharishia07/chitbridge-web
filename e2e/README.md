@@ -1,5 +1,11 @@
 # ChitBridge e2e — Playwright, one spec PER MODULE
 
+> **This is a standalone, independent application.** It has its own `package.json`, its own dependency (`@playwright/test`),
+> its own scripts, and it **drives ChitBridge from the OUTSIDE** (a real browser hitting the live URL) — it is not part of
+> the product, doesn't ship to users, and can't affect the app. Point it at any environment with `CB_WEB_BASE`. Run it
+> whenever, from anywhere: `cd e2e && npm run ui`. (It can move to its own git repo for full separation — optional; the
+> folder is already independent.)
+
 Structured so we **update per module** and **run them as a flow**. Each module owns a spec; `flow.spec.js` chains them into
 the 2-day Definition of Done. Drives the **live** app (Vercel web + Railway API) in a real browser, capturing a **trace**
 (the screen-by-screen filmstrip). Free & open-source (Apache-2.0). Per the reviewer's Step-3 handoff.
@@ -57,6 +63,21 @@ address B. This is the enabler for the dispute-USP (A&B private, C excluded) and
    erp-test, regen-key, delete — in cap-connector.js; a gateway must exist first), roster edit/delete, and the R/U/D steps
    in catalogue/suppliers/chits (testids exist; specs currently assert Create).
    This lets a smoke spec click into **every menu item + every icon** to confirm each part loads (see below).
+
+## The control panel — `npm run ui` (start / stop / results, per flow)
+Playwright **UI Mode** is the menu to run each flow independently and fine-tune it:
+```bash
+cd e2e && npm run ui
+```
+- **Left sidebar = every flow**, grouped by file (Disputes, Chits, Catalogue, Multiparty, …). Tick or click any one.
+- **▶ Run** a single flow (or all); **■ Stop** a run; a **watch** toggle auto-re-runs a flow when you edit it.
+- **Watch it live** — the browser actions play in the panel as they happen.
+- **Results inline** — green/red per test *and per step*, with the **trace/timeline + a DOM snapshot at each step** (click a
+  step to see exactly what the screen looked like). This is where you fine-tune a section: run it → watch → tweak → it
+  re-runs → green.
+- Nothing runs from the beginning — you pick a flow and only it executes.
+
+(For a shareable results page instead of the interactive panel, use `npm run report` after a `npm test` run.)
 
 ## Run (Saturday — the app must be UP)
 ```bash
