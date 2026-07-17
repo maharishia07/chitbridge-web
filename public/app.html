@@ -1167,20 +1167,20 @@ function renderWelcome(){
         <div class="welask-row"><input id="ask_in" class="inp" placeholder="Type a question…"><button class="btn" onclick="askAssist()">Ask</button></div>
         <div class="welask-ans" id="ask_ans"></div>
       </div>
-      <div class="welbtns"><button class="btn" onclick="setWStep('select')">Get started →</button></div>`;
+      <div class="welbtns"><button class="btn" data-testid="onb-getstarted" onclick="setWStep('select')">Get started →</button></div>`;
   } else {
     const roles=[["business","🏪","Run my business","I sell, supply, or serve customers and want my orders on a signed rail."],["agent","🤝","Bring businesses (Agent)","I onboard shops, set them up, and earn from each one I bring that stays active."]];
     const bps = ONB.role ? ONB_BP[ONB.role] : [];
     body = `
       <div class="welsec"><div class="welh2">I am here to…</div>
-        <div class="welgrid">${roles.map(r=>`<div class="welrole ${ONB.role===r[0]?'sel':''}" onclick="pickRole('${r[0]}')"><div class="ci">${r[1]}</div><div class="cn">${r[2]}</div><div class="cd">${r[3]}</div></div>`).join("")}</div></div>
+        <div class="welgrid">${roles.map(r=>`<div class="welrole ${ONB.role===r[0]?'sel':''}" data-testid="onb-role-${r[0]}" onclick="pickRole('${r[0]}')"><div class="ci">${r[1]}</div><div class="cn">${r[2]}</div><div class="cd">${r[3]}</div></div>`).join("")}</div></div>
       ${ONB.role?`<div class="welsec"><div class="welh2">Choose your vertical</div><div class="welsub">Pick a starting point — it shapes what a deal looks like. You can refine later.</div>
-        <div class="welgrid">${bps.map(b=>`<div class="welbp ${ONB.bp===b.k?'sel':''}" onclick="pickBP('${b.k}')"><div class="cn">${b.n}</div><div class="bt">${b.t}</div><div class="cd">${b.d}</div></div>`).join("")}</div></div>`:""}
-      <div class="welbtns"><button class="btn ghost" onclick="setWStep('intro')">← back</button><button class="btn" ${ONB.bp?"":"disabled"} onclick="welToRegister()">Continue to register →</button></div>`;
+        <div class="welgrid">${bps.map(b=>`<div class="welbp ${ONB.bp===b.k?'sel':''}" data-testid="onb-bp-${b.k}" onclick="pickBP('${b.k}')"><div class="cn">${b.n}</div><div class="bt">${b.t}</div><div class="cd">${b.d}</div></div>`).join("")}</div></div>`:""}
+      <div class="welbtns"><button class="btn ghost" onclick="setWStep('intro')">← back</button><button class="btn" ${ONB.bp?"":"disabled"} data-testid="onb-continue" onclick="welToRegister()">Continue to register →</button></div>`;
   }
   document.getElementById("root").innerHTML = modeRibbon() + `
   <div class="welwrap">
-    <div class="weltop">${logo()}<button class="welsignin" onclick="openLegend()" title="See what we serve — no login" style="margin-right:8px">🔑 What we serve</button><button class="welsignin" onclick="go('#/login')">Sign in</button></div>
+    <div class="weltop">${logo()}<button class="welsignin" onclick="openLegend()" title="See what we serve — no login" style="margin-right:8px">🔑 What we serve</button><button class="welsignin" data-testid="nav-signin" onclick="go('#/login')">Sign in</button></div>
     ${welPips()}
     ${body}
     <div class="welfoot">Preview → vertical → register · selection defaults to one Blueprint for now (the settings/schema cascade is a later juncture).</div>
@@ -1195,16 +1195,16 @@ function renderRegister(){
   const R=REG; const who='style="font-size:12px;color:var(--grey);margin-bottom:8px"'; const muted='style="color:var(--grey);font-weight:400"';
   let form="";
   if(R.step==="form"){
-    form = `${onbBanner()}<label class="fl">Business / entity name <span ${muted}>(Register.Name)</span></label><input class="inp" id="r_name" placeholder="Acme Traders" value="${esc(R.name)}">
-       <label class="fl">Email <span ${muted}>(Register.Email)</span></label><input class="inp" id="r_email" placeholder="you@business.in" value="${esc(R.email)}">
+    form = `${onbBanner()}<label class="fl">Business / entity name <span ${muted}>(Register.Name)</span></label><input class="inp" id="r_name" data-testid="reg-name" placeholder="Acme Traders" value="${esc(R.name)}">
+       <label class="fl">Email <span ${muted}>(Register.Email)</span></label><input class="inp" id="r_email" data-testid="reg-email" placeholder="you@business.in" value="${esc(R.email)}">
        ${R.err?`<div class="err">${R.err}</div>`:""}
-       <button class="btn gold" id="r_go" ${R.busy?"disabled":""}>${R.busy?'<span class="spin"></span> Creating…':"Create entity →"}</button>`;
+       <button class="btn gold" id="r_go" data-testid="reg-submit" ${R.busy?"disabled":""}>${R.busy?'<span class="spin"></span> Creating…':"Create entity →"}</button>`;
   } else {
     form = `<div ${who}>Entity <b>${esc(R.name)}</b> — verify to enter · <a onclick="regReset()">change</a></div>
        ${regVerticalChooser()}
-       <label class="fl">OTP sent to ${esc(R.email)}</label><input class="inp" id="r_otp" placeholder="6-digit code">
+       <label class="fl">OTP sent to ${esc(R.email)}</label><input class="inp" id="r_otp" data-testid="reg-otp" placeholder="6-digit code">
        ${R.err?`<div class="err">${R.err}</div>`:""}
-       <button class="btn gold" id="r_go" ${R.busy?"disabled":""}>${R.busy?'<span class="spin"></span> Verifying…':"Verify & enter →"}</button>`;
+       <button class="btn gold" id="r_go" data-testid="reg-submit" ${R.busy?"disabled":""}>${R.busy?'<span class="spin"></span> Verifying…':"Verify & enter →"}</button>`;
   }
   document.getElementById("root").innerHTML = modeRibbon() + `
   <div class="auth"><div class="card">
@@ -1250,7 +1250,7 @@ function regVerticalChooser(){
   if(!vs.length) return '';
   return '<div style="margin:10px 0 4px"><div class="fl">Choose your setup <span style="font-weight:400;color:var(--grey)">(you can change later)</span></div>'
     + vs.map(function(v){ const sel=(REG.constitution||'')===v.key; const caps=(v.capabilities||[]).join(' · ');
-        return '<div onclick="REG.constitution=\''+esc(v.key)+'\';renderRegister()" style="border:1px solid '+(sel?'#3F66A6':'var(--line)')+';background:'+(sel?'#eef3fb':'#fff')+';border-radius:10px;padding:9px 11px;margin-bottom:7px;cursor:pointer"><div style="font-weight:700;font-size:12.5px;color:var(--ink)">'+(sel?'● ':'○ ')+esc(v.label||v.key)+(v.is_default?' <span style="font-size:10px;color:var(--grey);font-weight:400">· default</span>':'')+'</div><div style="font-size:11px;color:var(--grey);margin-top:2px">'+(v.vertical?('vertical: '+esc(v.vertical)+' · '):'')+'includes '+esc(caps||'core')+'</div></div>';
+        return '<div data-testid="reg-vertical-'+esc(v.key)+'" onclick="REG.constitution=\''+esc(v.key)+'\';renderRegister()" style="border:1px solid '+(sel?'#3F66A6':'var(--line)')+';background:'+(sel?'#eef3fb':'#fff')+';border-radius:10px;padding:9px 11px;margin-bottom:7px;cursor:pointer"><div style="font-weight:700;font-size:12.5px;color:var(--ink)">'+(sel?'● ':'○ ')+esc(v.label||v.key)+(v.is_default?' <span style="font-size:10px;color:var(--grey);font-weight:400">· default</span>':'')+'</div><div style="font-size:11px;color:var(--grey);margin-top:2px">'+(v.vertical?('vertical: '+esc(v.vertical)+' · '):'')+'includes '+esc(caps||'core')+'</div></div>';
       }).join('')
     + '<div style="font-size:11px;color:var(--grey);margin:2px 0 4px">None fits? <a onclick="regTailor();return false" style="color:var(--blue);cursor:pointer;font-weight:600">Tailor one</a> — or <a onclick="regContact();return false" style="color:var(--blue);cursor:pointer;font-weight:600">contact the team</a> to wire it quickly.</div>'
     + '</div>';
