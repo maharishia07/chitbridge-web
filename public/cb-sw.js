@@ -2,7 +2,7 @@
 // data. Strategy = NETWORK-FIRST with cache fallback: when online you ALWAYS get fresh content (safe for a fast-deploying
 // app — no stale-code trap); the cache only answers when the network fails. Mutations (non-GET) are never touched here —
 // they are the outbox's job (cb-offline.js). Bump CB_SW_VERSION to invalidate all caches on the next load.
-const CB_SW_VERSION = 'v2';   // v2: fix Firefox/Safari 503 — a SW re-fetch of an intercepted cross-origin Request rejects on those engines, which masked live data as "offline"
+const CB_SW_VERSION = 'v3';   // v3: STOP intercepting the cross-origin API — Firefox/Safari SWs can't proxy it (re-fetch rejects), which masked live data as a 503 "offline". Native browser fetch works on every engine.
 const SHELL = 'cb-shell-' + CB_SW_VERSION;   // same-origin app shell + static JS
 const APICACHE = 'cb-api-' + CB_SW_VERSION;  // GET /api/** responses (this device's own data)
 const EXT = 'cb-ext-' + CB_SW_VERSION;       // cross-origin static (fonts)
@@ -53,10 +53,17 @@ self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET') return;                 // mutations pass straight through (outbox owns them)
   let url; try { url = new URL(req.url); } catch (_) { return; }
-  if (url.pathname.startsWith('/api/')) { e.respondWith(networkFirst(req, APICACHE, true)); return; }   // API (cross-origin) — data read-cache
-  if (url.origin === self.location.origin) { e.respondWith(networkFirst(req, SHELL, false)); return; }  // app shell / static
-  // cross-origin static (Google Fonts) — cache-first to avoid repeat external calls, network fallback
-  e.respondWith(caches.match(req).then((hit) => hit || fetch(req).then((res) => { const cp = res.clone(); caches.open(EXT).then((c) => c.put(req, cp)).catch(() => {}); return res; }).catch(() => hit || Response.error())));
+  // SAME-ORIGIN app shell / static → network-first so the app OPENS offline (safe: bump CB_SW_VERSION avoids a stale-code trap)
+  if (url.origin === self.location.origin) { e.respondWith(networkFirst(req, SHELL, false)); return; }
+  // CROSS-ORIGIN fonts → cache-first (avoid repeat external calls)
+  if (/(^|\.)(googleapis|gstatic)\.com$/.test(url.hostname)) {
+    e.respondWith(caches.match(req).then((hit) => hit || fetch(req).then((res) => { const cp = res.clone(); caches.open(EXT).then((c) => c.put(req, cp)).catch(() => {}); return res; }).catch(() => hit || Response.error())));
+    return;
+  }
+  // CROSS-ORIGIN API (Railway) and anything else → DO NOT intercept. A service worker on Firefox/Safari REJECTS a re-fetch
+  // of a cross-origin request, so networkFirst handed back a synthetic 503 for LIVE data (a just-created chit wouldn't
+  // appear). The page's own fetch works fine on every engine, so we stay out of its way. (Offline API read-cache is
+  // dropped for now — it only ever worked on Chromium; re-add later via a SAME-ORIGIN API proxy the SW can actually cache.)
 });
 
 // logout hook — a shared device must not leave one entity's data in the read-cache
