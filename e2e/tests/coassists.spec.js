@@ -31,6 +31,6 @@ test.describe('Module · Co-assists', () => {
     await page.getByTestId('aw_key').fill('anitha' + Date.now().toString().slice(-5));
     await page.getByTestId('coassist-wiz-next').click();     // who → hat
     await page.getByTestId('coassist-wiz-next').click();     // hat → finish (addActor)
-    await expect(page.getByText(/Invite ready|one-time code/i)).toBeVisible();
+    await expect(page.getByText(/Invite ready|one-time code/i).first()).toBeVisible();
   });
 });

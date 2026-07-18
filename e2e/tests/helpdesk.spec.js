@@ -8,7 +8,7 @@ const { mintEntity } = require('../fixtures');
 test.describe('Module · Helpdesk / Assistant', () => {
   test('[HELP-01] open the assistant and ask — deterministic library answer', async ({ page }) => {
     await mintEntity(page);
-    await expect(page).toHaveURL(/#\/app/);
+    await expect(page.getByTestId('nav-compose')).toBeVisible();   // app shell loaded
     await test.step('open the assistant', async () => {
       await page.getByTestId('assistant-open').click();
       await expect(page.getByTestId('assist-input')).toBeVisible();

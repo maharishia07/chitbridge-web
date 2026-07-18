@@ -11,7 +11,7 @@ const NAV = ['task', 'order', 'folders', 'drafts', 'trash', 'archive', 'network'
 test.describe('Smoke · every menu item + icon renders', () => {
   test('[SMOKE-01] open each menu item', async ({ page }) => {
     await mintEntity(page);
-    await expect(page).toHaveURL(/#\/app/);
+    await expect(page.getByTestId('nav-compose')).toBeVisible();   // app shell (restored session lands at #/, fresh mint at #/app)
     for (const key of NAV) {
       await test.step(`nav: ${key}`, async () => {
         const item = page.getByTestId(`nav-${key}`);

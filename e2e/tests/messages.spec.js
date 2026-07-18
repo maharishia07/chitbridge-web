@@ -11,7 +11,7 @@ test.describe('Module · Messages', () => {
     const subject = 'E2E msg ' + Date.now();
     await composeSelfChit(page, subject);
     await page.getByTestId('nav-task').click();
-    await page.getByText(subject).click();
+    await page.getByText(subject).first().click();
     await page.getByTestId('msg-tab').click();
 
     await test.step('INTERNAL — a team-only note', async () => {

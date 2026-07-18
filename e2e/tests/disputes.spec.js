@@ -15,7 +15,7 @@ test.describe('Module · Disputes', () => {
     await composeSelfChit(page, subject);
     await test.step('RAISE', async () => {
       await page.getByTestId('nav-task').click();
-      await page.getByText(subject).click();
+      await page.getByText(subject).first().click();
       await page.getByTestId('chit-dispute').click();
       await page.getByTestId('dispute-category').selectOption('quality');
       await page.getByTestId('dispute-reason').fill('Quantity short by two units, please replace.');
@@ -53,7 +53,7 @@ test.describe('Module · Disputes', () => {
 
     await test.step('A raises a dispute TARGETED at B only', async () => {
       await A.page.getByTestId('nav-order').click();
-      await A.page.getByText(subject).click();
+      await A.page.getByText(subject).first().click();
       await A.page.getByTestId('chit-dispute').click();
       // tick ONLY B in the party picker (C left unticked → excluded)
       await A.page.locator('label').filter({ hasText: B.name }).locator('input.dispparty').check();

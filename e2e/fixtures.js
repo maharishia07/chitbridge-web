@@ -63,9 +63,12 @@ async function composeSelfChit(page, subject) {
 // ── MULTIPARTY — the real capability. Each browser CONTEXT is an isolated logged-in party. Mint N entities in N contexts,
 // drive them together, assert what EACH party sees. Run headed (`npm run test:headed`) to watch 2-3 windows side by side.
 async function mintInContext(browser, opts) {
-  const context = await browser.newContext();
+  // storageState:undefined forces a CLEAN context — otherwise the authed project's saved session leaks in and
+  // mintEntity short-circuits (returns null name/email), collapsing all "parties" into one entity.
+  const context = await browser.newContext({ storageState: undefined });
   const page = await context.newPage();
   const who = await mintEntity(page, opts);
+  if (!who || !who.name) throw new Error('mintInContext: expected a fresh mint but got ' + JSON.stringify(who) + ' (session leaked into the context?)');
   return { context, page, email: who.email, name: who.name };
 }
 

@@ -3,7 +3,7 @@
 // FLOW B (CRUD): mint A (the supplier), mint B (the buyer), B adds A by A's email → edit → remove.
 // LOCATORS: nav-suppliers · sup-add-input · sup-add · sup-row-* · sup-nick · sup-category · sup-notes · sup-save · sup-remove
 const { test, expect } = require('@playwright/test');
-const { mintEntity } = require('../fixtures');
+const { mintEntity, mintInContext } = require('../fixtures');
 
 test.describe('Module · Suppliers', () => {
   test('[SUP-01] suppliers screen loads with the add box', async ({ page }) => {
@@ -13,10 +13,10 @@ test.describe('Module · Suppliers', () => {
     await expect(page.getByTestId('sup-add')).toBeVisible();
   });
 
-  test('[SUP-02] CRUD — B adds A as a supplier, edits, removes', async ({ page }) => {
-    const A = await mintEntity(page);                                  // entity A = the supplier
-    await page.evaluate(() => { try { localStorage.clear(); sessionStorage.clear(); } catch (e) {} });
-    await mintEntity(page);                                            // entity B = the buyer
+  test('[SUP-02] CRUD — B adds A as a supplier, edits, removes', async ({ page, browser }) => {
+    const A = await mintInContext(browser);                            // entity A = the supplier (fresh context → real email)
+    await A.context.close();                                           // only A's email is needed; B is the main session
+    await mintEntity(page);                                            // entity B = the buyer (the authed session)
 
     await test.step('CREATE — add A by email', async () => {
       await page.getByTestId('nav-suppliers').click();
