@@ -6,7 +6,7 @@
 // LOCATORS: chit-dispute · dispute-category/reason/raise · dispute-resolve-open/note/submit · dispute-room-input/send ·
 //           input.dispparty (the party picker) · nav-disputes
 const { test, expect } = require('@playwright/test');
-const { mintEntity, mintInContext, addRecipientByName, composeSelfChit, settle } = require('../fixtures');
+const { mintEntity, mintInContext, addRecipientByName, composeSelfChit, settle, dismissModal } = require('../fixtures');
 
 test.describe('Module · Disputes', () => {
   test('[DISP-01] mechanics — raise a dispute on a chit, then resolve it', async ({ page }) => {
@@ -23,6 +23,7 @@ test.describe('Module · Disputes', () => {
       await settle(page);
     });
     await test.step('RESOLVE', async () => {
+      await dismissModal(page);                         // the raise opens the dispute room modal → close before navigating
       await page.getByTestId('nav-disputes').click();
       await expect(page.getByText(/Quantity short/i)).toBeVisible();
       await page.getByTestId('dispute-resolve-open').first().click();
@@ -54,6 +55,7 @@ test.describe('Module · Disputes', () => {
     });
 
     await test.step('A raises a dispute TARGETED at B only', async () => {
+      await dismissModal(A.page);                       // close the compose modal left open after send
       await A.page.getByTestId('nav-order').click();
       await A.page.getByText(subject).first().click();
       await A.page.getByTestId('chit-dispute').click();

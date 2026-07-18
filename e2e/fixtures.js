@@ -47,6 +47,13 @@ async function settle(page) {
   await page.locator('#busyhost .busyov').waitFor({ state: 'hidden', timeout: 30000 }).catch(() => {});
 }
 
+// Close any open modal (#modalhost) so it doesn't intercept the next sidebar/toolbar click. Modals (compose, dispute
+// room, message center) are intentional, so we dismiss explicitly rather than auto-closing in settle().
+async function dismissModal(page) {
+  await page.evaluate(() => { try { if (window.closeModal) window.closeModal(); } catch (e) {} }).catch(() => {});
+  await page.locator('#modalhost').evaluate((el) => { if (el) el.innerHTML = ''; }).catch(() => {});
+}
+
 // Reusable: compose + send a self-chit with a subject + one line item. The arrange step for chits/disputes/messages.
 async function composeSelfChit(page, subject) {
   await page.getByTestId('nav-compose').click();
@@ -78,4 +85,4 @@ async function addRecipientByName(page, name) {
   await page.getByTestId('chit-recipient-suggest').filter({ hasText: name }).first().click();
 }
 
-module.exports = { DEV_OTP, uniqueEmail, uniqueName, mintEntity, composeSelfChit, mintInContext, addRecipientByName, settle };
+module.exports = { DEV_OTP, uniqueEmail, uniqueName, mintEntity, composeSelfChit, mintInContext, addRecipientByName, settle, dismissModal };

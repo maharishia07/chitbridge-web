@@ -16,17 +16,17 @@ test.describe('Module · Messages', () => {
     await page.getByTestId('msg-tab').click();
 
     await test.step('INTERNAL — a team-only note', async () => {
-      await page.getByTestId('msg-channel-internal').click();
-      await page.getByTestId('msg-body').fill('Internal: check stock before confirming.');
-      await page.getByTestId('msg-send').click();
-      await expect(page.getByText(/check stock/i)).toBeVisible();
+      await page.locator('[data-testid="msg-channel-internal"]:visible').first().click();
+      await page.locator('[data-testid="msg-body"]:visible').first().fill('Internal: check stock before confirming.');
+      await page.locator('[data-testid="msg-send"]:visible').first().click();
+      await expect(page.getByText(/check stock/i).first()).toBeVisible();
     });
 
     await test.step('EXTERNAL — a message the counterparty sees', async () => {
-      await page.getByTestId('msg-channel-external').click();
-      await page.getByTestId('msg-body').fill('External: your order is confirmed.');
-      await page.getByTestId('msg-send').click();
-      await expect(page.getByText(/order is confirmed/i)).toBeVisible();
+      await page.locator('[data-testid="msg-channel-external"]:visible').first().click();
+      await page.locator('[data-testid="msg-body"]:visible').first().fill('External: your order is confirmed.');
+      await page.locator('[data-testid="msg-send"]:visible').first().click();
+      await expect(page.getByText(/order is confirmed/i).first()).toBeVisible();
     });
   });
 

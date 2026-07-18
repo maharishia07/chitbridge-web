@@ -3,7 +3,7 @@
 // is the coverage checklist — extend it as the panel grows. Capability-gated items (connectors/disputes) may be hidden;
 // those are skipped (not failed) when absent.
 const { test, expect } = require('@playwright/test');
-const { mintEntity } = require('../fixtures');
+const { mintEntity, dismissModal } = require('../fixtures');
 
 const NAV = ['task', 'order', 'folders', 'drafts', 'trash', 'archive', 'network', 'suppliers', 'customers',
   'catalogue', 'readiness', 'coassists', 'mis', 'disputes', 'profile', 'settings', 'assistreview'];
@@ -34,8 +34,8 @@ test.describe('Smoke · every menu item + icon renders', () => {
       await expect(page.getByTestId('assist-input')).toBeVisible();
       await page.getByTestId('assist-close').click();
     });
-    await test.step('messages', async () => { await page.getByTestId('icon-messages').click(); await page.keyboard.press('Escape').catch(() => {}); });
-    await test.step('notifications', async () => { await page.getByTestId('icon-notifications').click(); await page.keyboard.press('Escape').catch(() => {}); });
-    await test.step('legend', async () => { await page.getByTestId('icon-legend').click(); await page.keyboard.press('Escape').catch(() => {}); });
+    await test.step('messages', async () => { await page.getByTestId('icon-messages').click(); await dismissModal(page); });
+    await test.step('notifications', async () => { await page.getByTestId('icon-notifications').click(); await dismissModal(page); });
+    await test.step('legend', async () => { await page.getByTestId('icon-legend').click(); await dismissModal(page); });
   });
 });
