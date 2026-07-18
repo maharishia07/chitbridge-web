@@ -15,14 +15,21 @@ test.describe('Module · Messages', () => {
     await settle(page);
     await page.getByTestId('msg-tab').click();
 
-    await test.step('INTERNAL — a team-only note', async () => {
-      await page.locator('[data-testid="msg-channel-internal"]:visible').first().click();
+    // The composer is hidden until you click "✏️ New message" (a toggle, no testid). Internal is the default channel.
+    const openComposer = async () => {
+      if (await page.locator('[data-testid="msg-body"]:visible').count() === 0)
+        await page.getByRole('button', { name: /New message/i }).first().click();
+    };
+
+    await test.step('INTERNAL — a team-only note (default channel)', async () => {
+      await openComposer();
       await page.locator('[data-testid="msg-body"]:visible').first().fill('Internal: check stock before confirming.');
       await page.locator('[data-testid="msg-send"]:visible').first().click();
       await expect(page.getByText(/check stock/i).first()).toBeVisible();
     });
 
     await test.step('EXTERNAL — a message the counterparty sees', async () => {
+      await openComposer();
       await page.locator('[data-testid="msg-channel-external"]:visible').first().click();
       await page.locator('[data-testid="msg-body"]:visible').first().fill('External: your order is confirmed.');
       await page.locator('[data-testid="msg-send"]:visible').first().click();

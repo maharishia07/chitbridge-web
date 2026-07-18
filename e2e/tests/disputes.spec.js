@@ -22,14 +22,13 @@ test.describe('Module · Disputes', () => {
       await page.getByTestId('dispute-raise').click();
       await settle(page);
     });
-    await test.step('RESOLVE', async () => {
-      await dismissModal(page);                         // the raise opens the dispute room modal → close before navigating
-      await page.getByTestId('nav-disputes').click();
-      await expect(page.getByText(/Quantity short/i)).toBeVisible();
+    await test.step('RESOLVE — on the same chit detail (not the Disputes menu)', async () => {
+      await dismissModal(page);                         // close the raise modal
+      // the dispute is open on THIS chit — resolve it right here (dropdown to open it, then resolve the party)
       await page.getByTestId('dispute-resolve-open').first().click();
       await page.getByTestId('dispute-resolve-note').fill('Replacement sent and confirmed.');
       await page.getByTestId('dispute-resolve-submit').click();
-      await expect(page.getByText(/resolved/i)).toBeVisible();
+      await expect(page.getByText(/resolved/i).first()).toBeVisible();
     });
   });
 
