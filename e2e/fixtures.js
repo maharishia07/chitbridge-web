@@ -41,6 +41,12 @@ async function mintEntity(page, { role = 'business' } = {}) {
   return { email, name };
 }
 
+// Wait out the busy overlay (#busyhost .busyov) that covers the screen during a post-mutation full-list refresh —
+// otherwise the next click is intercepted for the whole action timeout. 'hidden' also covers the detached case.
+async function settle(page) {
+  await page.locator('#busyhost .busyov').waitFor({ state: 'hidden', timeout: 30000 }).catch(() => {});
+}
+
 // Reusable: compose + send a self-chit with a subject + one line item. The arrange step for chits/disputes/messages.
 async function composeSelfChit(page, subject) {
   await page.getByTestId('nav-compose').click();
@@ -51,6 +57,7 @@ async function composeSelfChit(page, subject) {
   await page.getByTestId('chit-item-name').fill('Widget');
   await page.getByTestId('chit-item-add').click();
   await page.getByTestId('chit-send').click();
+  await settle(page);   // let the post-send refresh finish so the next nav click isn't intercepted
 }
 
 // ── MULTIPARTY — the real capability. Each browser CONTEXT is an isolated logged-in party. Mint N entities in N contexts,
@@ -68,4 +75,4 @@ async function addRecipientByName(page, name) {
   await page.getByTestId('chit-recipient-suggest').filter({ hasText: name }).first().click();
 }
 
-module.exports = { DEV_OTP, uniqueEmail, uniqueName, mintEntity, composeSelfChit, mintInContext, addRecipientByName };
+module.exports = { DEV_OTP, uniqueEmail, uniqueName, mintEntity, composeSelfChit, mintInContext, addRecipientByName, settle };

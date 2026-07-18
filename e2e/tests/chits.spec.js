@@ -2,7 +2,7 @@
 // LOCATORS: nav-compose · chit-add-self · chit-field-* · chit-item-name/qty/price · chit-item-add · chit-send · nav-order ·
 //           nav-task · chit-row-* · chit-status-btn · chit-unread · chit-void
 const { test, expect } = require('@playwright/test');
-const { mintEntity } = require('../fixtures');
+const { mintEntity, settle } = require('../fixtures');
 
 async function composeSelfChit(page, subject) {
   await page.getByTestId('nav-compose').click();
@@ -15,6 +15,7 @@ async function composeSelfChit(page, subject) {
   await page.getByTestId('chit-item-price').fill('100');
   await page.getByTestId('chit-item-add').click();
   await page.getByTestId('chit-send').click();
+  await settle(page);   // wait out the post-send refresh overlay before the next nav click
 }
 
 test.describe('Module · Chits', () => {

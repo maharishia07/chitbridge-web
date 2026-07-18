@@ -2,7 +2,7 @@
 // C: New product → name+price → Add.  R: open it → view shows the values.  U: Edit → change price → Save.  D: Delete.
 // LOCATORS: nav-catalogue · cat-new-product · cat-field-name/price · cat-add · cat-product-* · cat-edit · cat-save · cat-delete
 const { test, expect } = require('@playwright/test');
-const { mintEntity } = require('../fixtures');
+const { mintEntity, settle } = require('../fixtures');
 
 test.describe('Module · Catalogue (full CRUD)', () => {
   test('[CAT-01] create → read → update → delete a product', async ({ page }) => {
@@ -15,18 +15,20 @@ test.describe('Module · Catalogue (full CRUD)', () => {
       await page.getByTestId('cat-field-name').fill(name);
       await page.getByTestId('cat-field-price').fill('250');
       await page.getByTestId('cat-add').click();
-      await expect(page.getByText(name)).toBeVisible();          // now in view mode showing the new product
+      await settle(page);
+      await expect(page.getByText(name).first()).toBeVisible();  // renders in list + detail (title/code) → .first()
     });
 
     await test.step('READ', async () => {
-      await expect(page.getByText('250', { exact: false })).toBeVisible();   // view pane shows the price
+      await expect(page.getByText('250', { exact: false }).first()).toBeVisible();   // view pane shows the price
     });
 
     await test.step('UPDATE', async () => {
       await page.getByTestId('cat-edit').click();
       await page.getByTestId('cat-field-price').fill('999');
       await page.getByTestId('cat-save').click();
-      await expect(page.getByText('999', { exact: false })).toBeVisible();
+      await settle(page);
+      await expect(page.getByText('999', { exact: false }).first()).toBeVisible();
     });
 
     await test.step('DELETE', async () => {
