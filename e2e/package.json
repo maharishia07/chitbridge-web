@@ -8,6 +8,10 @@
     "swarm": "playwright test --project=swarm",
     "swarm:api": "node swarm-api.js",
     "keyboard": "playwright test keyboard",
+    "axe": "playwright test axe",
+    "visual": "playwright test visual",
+    "lighthouse": "node lighthouse-check.js",
+    "usability": "playwright test keyboard axe visual",
     "counter-browsers": "playwright test --project=counter-firefox --project=counter-webkit --project=laptop --project=mobile",
     "ui": "playwright test --ui",
     "test:headed": "playwright test --headed",
@@ -24,6 +28,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.47.0",
-    "@axe-core/playwright": "^4.9.0"
+    "@axe-core/playwright": "^4.9.0",
+    "lighthouse": "^11.7.0"
   }
 }
