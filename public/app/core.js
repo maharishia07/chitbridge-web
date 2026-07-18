@@ -75,7 +75,7 @@ async function api(key, {params, query, body}={}){
     }
     let res;
     try{
-      res = await fetch(url, {method:ep.m, headers:{"Content-Type":"application/json", ...(idemKey?{"Idempotency-Key":idemKey}:{}), ...(SESSION.token?{Authorization:"Bearer "+SESSION.token}:{})}, body: body?JSON.stringify(body):undefined});
+      res = await fetch(url, {method:ep.m, cache:"no-store", headers:{"Content-Type":"application/json", ...(idemKey?{"Idempotency-Key":idemKey}:{}), ...(SESSION.token?{Authorization:"Bearer "+SESSION.token}:{})}, body: body?JSON.stringify(body):undefined});
     }catch(netErr){
       // network unreachable mid-request: queue if safe, else fail gracefully (the draft has the typed work)
       if(outboxSafe && CB){ CB.enqueue({method:ep.m, path:pathQ, body, id:idemKey}); cblog('warn', ep.m+' '+key+' → queued (net fail)'); return {queued:true, offline:true}; }
