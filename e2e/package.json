@@ -5,6 +5,7 @@
   "scripts": {
     "test": "playwright test",
     "pool": "playwright test --project=pool",
+    "swarm": "playwright test --project=swarm",
     "keyboard": "playwright test keyboard",
     "counter-browsers": "playwright test --project=counter-firefox --project=counter-webkit --project=laptop --project=mobile",
     "ui": "playwright test --ui",

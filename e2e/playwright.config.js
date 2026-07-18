@@ -34,13 +34,15 @@ module.exports = defineConfig({
     { name: 'setup', testMatch: /auth\.setup\.js/ },
     // 1b · provision the STABLE ENTITY POOL (run on demand: `npm run pool`) — reusable entities for parallel/swarm runs
     { name: 'pool', testMatch: /pool\.setup\.js/, use: { ...devices['Desktop Chrome'] } },
+    // 1c · SWARM — concurrent global-load simulation over the whole pool (loads pool sessions itself; needs `npm run pool` first)
+    { name: 'swarm', testMatch: /swarm\.spec\.js/, use: { ...devices['Desktop Chrome'], viewport: COUNTER } },
     // 2 · flows that reuse the saved session (start signed-in; re-run any one instantly)
     {
       name: 'authed',
       dependencies: ['setup'],
       use: { ...devices['Desktop Chrome'], storageState: SAVED_SESSION },
       testMatch: /.*\.spec\.js/,
-      testIgnore: [/onboarding\.spec\.js/, /flow\.spec\.js/, /redproof\.spec\.js/],
+      testIgnore: [/onboarding\.spec\.js/, /flow\.spec\.js/, /redproof\.spec\.js/, /swarm\.spec\.js/],
     },
     // 3 · flows that must start LOGGED OUT (they test onboarding itself / the welcome screen)
     {
