@@ -69,16 +69,62 @@ async function dismissModal(page) {
   }
 }
 
+// Drawer-aware nav click. On a MOBILE viewport (innerWidth<=820 → UI.vp='mob') the sidebar is a slide-out drawer:
+// the nav items sit off-screen (translateX(-100%)) behind the ☰ (nav-drawer) button, so a direct nav click can't
+// land. On desktop the ☰ is display:none. So: if ☰ is showing and the menu isn't open, tap it first, then click.
+// Viewport-agnostic — a no-op on the counter/laptop projects, the drawer-opener on mobile.
+async function clickNav(page, key) {
+  const ham = page.getByTestId('nav-drawer');
+  if (await ham.isVisible().catch(() => false)) {                       // mobile mode — nav is behind the drawer
+    if (!(await page.locator('.menu.open').count())) {
+      await ham.click();
+      await page.locator('.menu.open').waitFor({ state: 'visible', timeout: 2000 }).catch(() => {});
+    }
+  }
+  await page.getByTestId('nav-' + key).click();
+}
+
+// Click a control inside the compose modal robustly. The modal is a fixed, scrollable overlay (.mover, overflow-y:auto)
+// whose backdrop closes it on click. A normal Playwright click uses COORDINATES + auto-scroll + a stability wait, and on
+// slower engines that misbehaves two ways (both reproduced via a step-through): on webkit the stability loop never
+// settles though the button is present+topmost; on mobile the auto-scroll strays onto the backdrop and dismisses the
+// modal. Dispatching the element's own handler directly (native .click()) sidesteps all of it — no scroll, no stability
+// check, no backdrop mis-hit — and fires the exact onclick the button carries. The element is real; we just trigger it.
+async function stableClick(page, testid) {
+  const el = page.getByTestId(testid);
+  await el.waitFor({ state: 'visible', timeout: 25000 });   // still assert it rendered (modal loads its catalogue async first)
+  await el.evaluate((node) => node.click());
+}
+
+// Like stableClick, but VERIFY the handler's effect landed and re-dispatch if not. On slow engines (webkit/firefox) the
+// modal renders late and a dispatched click can fire before the button's handler is wired, so the recipient/line-item
+// silently doesn't register — which then fails compose validation with no send. Dispatch → check the effect → retry.
+async function clickInModal(page, testid, verifyFn) {
+  const el = page.getByTestId(testid);
+  await el.waitFor({ state: 'visible', timeout: 25000 });
+  for (let i = 0; i < 5; i++) {
+    await el.evaluate((node) => node.click()).catch(() => {});
+    if (!verifyFn) return;
+    const ok = await page.waitForFunction(verifyFn, null, { timeout: 3000 }).then(() => true).catch(() => false);
+    if (ok) return;
+    await page.waitForTimeout(300);
+  }
+}
+const HAS_RCPT = () => { const h = document.getElementById('cc_rcpts'); return !!h && h.children.length > 0; };            // a recipient chip rendered
+const HAS_TOTAL = () => { const t = document.getElementById('cc_total'); return !!t && /\d/.test(t.textContent || ''); };  // a line-item total rendered
+
 // Reusable: compose + send a self-chit with a subject + one line item. The arrange step for chits/disputes/messages.
 async function composeSelfChit(page, subject) {
-  await page.getByTestId('nav-compose').click();
-  await page.getByTestId('chit-add-self').click();
+  await clickNav(page, 'compose');
+  await clickInModal(page, 'chit-add-self', HAS_RCPT);        // add the Self recipient (verify it registered)
   const subj = page.locator('[data-testid="chit-field-subject"]');
   if (await subj.count()) await subj.fill(subject);
   else await page.locator('[data-testid^="chit-field-"]').first().fill(subject);
   await page.getByTestId('chit-item-name').fill('Widget');
-  await page.getByTestId('chit-item-add').click();
-  await page.getByTestId('chit-send').click();
+  await clickInModal(page, 'chit-item-add', HAS_TOTAL);       // add the line item (verify it registered)
+  const sent = page.waitForResponse((r) => /\/chits\/send/.test(r.url()) && r.request().method() === 'POST', { timeout: 30000 }).catch(() => null);
+  await stableClick(page, 'chit-send');
+  await sent;            // wait for the server to confirm the send before the next step (slow engine / cold API)
   await settle(page);   // let the post-send refresh finish so the next nav click isn't intercepted
 }
 
@@ -121,4 +167,4 @@ async function poolContext(browser, i) {
   return { context, page, email: p.email, name: p.name, key: p.key };
 }
 
-module.exports = { DEV_OTP, uniqueEmail, uniqueName, mintEntity, composeSelfChit, mintInContext, addRecipientByName, settle, dismissModal, POOL, poolContext };
+module.exports = { DEV_OTP, uniqueEmail, uniqueName, mintEntity, composeSelfChit, clickNav, stableClick, clickInModal, HAS_RCPT, HAS_TOTAL, mintInContext, addRecipientByName, settle, dismissModal, POOL, poolContext };
