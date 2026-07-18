@@ -50,8 +50,13 @@ async function settle(page) {
 // Close any open modal (#modalhost) so it doesn't intercept the next sidebar/toolbar click. Modals (compose, dispute
 // room, message center) are intentional, so we dismiss explicitly rather than auto-closing in settle().
 async function dismissModal(page) {
-  await page.evaluate(() => { try { if (window.closeModal) window.closeModal(); } catch (e) {} }).catch(() => {});
-  await page.locator('#modalhost').evaluate((el) => { if (el) el.innerHTML = ''; }).catch(() => {});
+  await page.evaluate(() => {
+    try { if (window.closeModal) window.closeModal(); } catch (e) {}        // #modalhost (compose, dispute room)
+    try { if (window.closeMsgCenter) window.closeMsgCenter(); } catch (e) {} // #lbhost (message center, notifications)
+  }).catch(() => {});
+  for (const host of ['#modalhost', '#lbhost']) {
+    await page.locator(host).evaluate((el) => { if (el) el.innerHTML = ''; }).catch(() => {});
+  }
 }
 
 // Reusable: compose + send a self-chit with a subject + one line item. The arrange step for chits/disputes/messages.
