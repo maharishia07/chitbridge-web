@@ -1555,13 +1555,21 @@ function ccSendAsOptions(){
   (STORE.actors||[]).forEach(a=>{ o+=`<option value="${esc(a.id)}">${esc(a.name)} · ${esc(a.uid||'co-assist')}</option>`; });
   return o;
 }
-async function compose(prefill){ UI.drawer=false; CC={items:(prefill&&prefill.items)?prefill.items.slice():[],rcpts:(prefill&&prefill.recipients)?prefill.recipients.slice():[]}; UI._forwardFrom=(prefill&&prefill.forwardFrom)||null; UI._draftId=(prefill&&prefill.draftId)||null; UI._supplier=(prefill&&prefill.supplier)?prefill.supplier:null; let _catErr=false;
-  // Line-item catalogue: in SUPPLIER mode it's THEIR catalogue (passed in); otherwise load YOUR own products.
-  try{
-    if(UI._supplier && prefill && prefill.catalogue){ STORE.catalogue = prefill.catalogue.slice(); }
-    else { const _prods=(await api("prodList"))||[];
-      STORE.catalogue=_prods.map(x=>{const d=x.item_data||x; return {particulars:d.name||d.product||'item', unit:d.unit||'unit', price:+d.price||0};}); }
-  }catch(e){ STORE.catalogue=STORE.catalogue||[]; _catErr=true; }
+// The line-item catalogue loads ASYNC so the compose modal opens instantly (never blocks on a cold API). ccCatPickHTML
+// renders the picker for the current state — loading / ready (list) / empty / load-failed; ccRenderCatPick refreshes it
+// in place once the fetch resolves. UI._catState drives which state is shown.
+function ccCatPickHTML(){
+  if(UI._catState==='loading') return `<div style="font-size:12px;color:var(--grey);display:flex;align-items:center;gap:7px;padding:3px 0"><span class="spin"></span> Loading your catalogue…</div>`;
+  return (STORE.catalogue||[]).length
+    ? `<div style="display:flex;gap:8px"><select class="inp" id="cc_pick" data-testid="chit-catalogue-pick">${STORE.catalogue.map((p,i)=>`<option value="${i}">${esc(p.particulars)} · ${inr(p.price)}/${esc(p.unit||'unit')}</option>`).join("")}</select><button class="composebtn" data-testid="chit-catalogue-add" onclick="ccAddItem()">+ Add</button></div>`
+    : `<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:10px 12px;font-size:12.5px;color:#6b5a36">${UI._catState==='error'?esc(MSG.catalogueLoadErr()):'Your catalogue is empty — a chit needs at least one line item. <a onclick="closeModal();navTo(\'catalogue\')" style="color:#3F66A6;cursor:pointer;font-weight:600">Add a product in Catalogue first &rarr;</a>'}</div>`;
+}
+function ccRenderCatPick(){ const h=document.getElementById('cc_catpick'); if(h) h.innerHTML=ccCatPickHTML(); }
+async function compose(prefill){ UI.drawer=false; CC={items:(prefill&&prefill.items)?prefill.items.slice():[],rcpts:(prefill&&prefill.recipients)?prefill.recipients.slice():[]}; UI._forwardFrom=(prefill&&prefill.forwardFrom)||null; UI._draftId=(prefill&&prefill.draftId)||null; UI._supplier=(prefill&&prefill.supplier)?prefill.supplier:null;
+  // SUPPLIER mode uses THEIR catalogue (passed in) → ready now; otherwise show any cached list immediately, else a brief
+  // "loading…", and fetch YOUR products in the background AFTER the modal opens (below) so a cold API never stalls it.
+  if(UI._supplier && prefill && prefill.catalogue){ STORE.catalogue = prefill.catalogue.slice(); UI._catState='ready'; }
+  else { STORE.catalogue = STORE.catalogue||[]; UI._catState = (STORE.catalogue.length ? 'ready' : 'loading'); }
   modal(`<div class="mhd"><div class="t">✉️ Compose — author a chit <button data-testid="icon-help-compose" onclick="openAssist('compose')" title="Ask the assistant about composing" style="border:1px solid var(--line);background:#fff;color:#3F66A6;border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;vertical-align:middle">?</button></div><div class="s">create your own record, then bridge it</div></div>
    <div class="mbody">
      <div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:11px;padding:10px 12px;font-size:12.5px;color:#6b5a36;line-height:1.5;margin-bottom:10px"><b style="font-family:'Space Grotesk'">Author your own chit — it becomes shared the moment you bridge it.</b> A self-addressed chit is a real chit: one copy in <b>Order</b> (sent), one in <b>Task</b> (received), same thread. <span style="font-family:'Space Mono';font-size:10px;background:#fbeceb;color:#b4453f;border:1px solid #f0c9c6;border-radius:5px;padding:1px 6px">⏳ execute &amp; test pending</span></div>
@@ -1591,9 +1599,7 @@ async function compose(prefill){ UI.drawer=false; CC={items:(prefill&&prefill.it
      <div class="cc-rtabs"><button class="cc-rtab on" data-t="items" onclick="ccSetRTab('items')">Line items</button><button class="cc-rtab" data-t="atts" onclick="ccSetRTab('atts')">Attachments</button><button class="cc-rtab" data-t="delivery" onclick="ccSetRTab('delivery')">Delivery</button><button class="cc-rtab" data-t="summary" onclick="ccSetRTab('summary')">Summary</button></div>
      <div class="cc-rpane" data-p="items">
      <div style="font-family:'Space Grotesk';font-weight:600;font-size:12px;color:var(--grey);margin:12px 0 4px">Line items · from ${UI._supplier?('<b>'+esc(UI._supplier.name)+'</b>&rsquo;s catalogue'):'your catalogue'}</div>
-     ${(STORE.catalogue||[]).length
-        ? `<div style="display:flex;gap:8px"><select class="inp" id="cc_pick" data-testid="chit-catalogue-pick">${STORE.catalogue.map((p,i)=>`<option value="${i}">${esc(p.particulars)} · ${inr(p.price)}/${esc(p.unit||'unit')}</option>`).join("")}</select><button class="composebtn" data-testid="chit-catalogue-add" onclick="ccAddItem()">+ Add</button></div>`
-        : `<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:10px 12px;font-size:12.5px;color:#6b5a36">${_catErr?esc(MSG.catalogueLoadErr()):'Your catalogue is empty — a chit needs at least one line item. <a onclick="closeModal();navTo(\'catalogue\')" style="color:#3F66A6;cursor:pointer;font-weight:600">Add a product in Catalogue first &rarr;</a>'}</div>`}
+     <div id="cc_catpick">${ccCatPickHTML()}</div>
      <div style="display:flex;gap:6px;margin-top:6px"><input class="inp" id="cc_mname" data-testid="chit-item-name" placeholder="Or type an item name" style="flex:1"><input class="inp" id="cc_mqty" data-testid="chit-item-qty" inputmode="numeric" value="1" style="width:50px" title="Qty"><input class="inp" id="cc_mprice" data-testid="chit-item-price" inputmode="numeric" placeholder="Price" style="width:74px"><button class="composebtn" data-testid="chit-item-add" onclick="ccAddManual()">+ Add</button></div>
      <div style="display:flex;gap:6px;margin-top:6px"><input class="inp" id="cc_aidesc" data-testid="chit-ai-desc" placeholder="✨ Or describe the order in words — AI fills the rows" style="flex:1"><button class="composebtn" id="cc_aibtn" data-testid="chit-ai-fill" onclick="ccAiFill()" title="AI turns your description into line items; you review and edit before sending">✨ Fill</button></div><div id="cc_items" style="margin-top:8px"></div>
      </div><div class="cc-rpane" data-p="atts" style="display:none">
@@ -1607,6 +1613,16 @@ async function compose(prefill){ UI.drawer=false; CC={items:(prefill&&prefill.it
   ccRenderItems(); ccRenderRcpts(); ccRenderFiles(); UI._composeModal=true; try{ var _s=localStorage.getItem('cb_cc_split'); if(_s){ var _c=document.querySelector('.cc-cols'); if(_c)_c.style.setProperty('--cc-lw',_s); } }catch(_){ }
   if(prefill&&prefill.subject){ const sf=document.getElementById("cf_subject"); if(sf)sf.value=prefill.subject; }
   if(prefill&&prefill.priority){ const pf=document.getElementById("cc_priority"); if(pf)pf.value=prefill.priority; }
+  // Now that the modal is OPEN, fetch YOUR products and fill the picker in place (non-supplier only). Keeps any cached
+  // list on failure; only shows the error state if we had nothing. ccRenderCatPick is a no-op if the modal was closed.
+  if(!UI._supplier){
+    try{
+      const _prods=(await api("prodList"))||[];
+      STORE.catalogue=_prods.map(function(x){ var d=x.item_data||x; return {particulars:d.name||d.product||'item', unit:d.unit||'unit', price:+d.price||0}; });
+      UI._catState='ready';
+    }catch(e){ UI._catState=(STORE.catalogue||[]).length?'ready':'error'; }
+    ccRenderCatPick();
+  }
 }
 /* Recipients — To (Act) / CC (Info) / For (on-behalf), capped, flippable */
 function ccIsSelf(name){ const n=String(name||"").trim().toLowerCase(); if(!n)return false; if(n==="self"||n==="me")return true; const ent=String((typeof SESSION!=="undefined"&&SESSION.entity)||"").toLowerCase(); if(n===ent)return true; return (STORE.actors||[]).some(a=>String(a.name||"").toLowerCase()===n||String(a.uid||"").toLowerCase()===n); }
