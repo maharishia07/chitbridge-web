@@ -26,6 +26,8 @@ module.exports = defineConfig({
   projects: [
     // 1 · mint the shared logged-in session once
     { name: 'setup', testMatch: /auth\.setup\.js/ },
+    // 1b · provision the STABLE ENTITY POOL (run on demand: `npm run pool`) — reusable entities for parallel/swarm runs
+    { name: 'pool', testMatch: /pool\.setup\.js/, use: { ...devices['Desktop Chrome'] } },
     // 2 · flows that reuse the saved session (start signed-in; re-run any one instantly)
     {
       name: 'authed',

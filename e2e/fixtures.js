@@ -11,7 +11,11 @@ function uniqueName(prefix) {
 
 // Reusable: walk the onboarding→register→verify (mint) flow and land in the app. Returns { email, name }.
 // This is the shared "arrange" step other modules (chits, catalogue) build on — and the heart of the DoD.
-async function mintEntity(page, { role = 'business' } = {}) {
+async function mintEntity(page, { role = 'business', email, name } = {}) {
+  // A FIXED email makes this create-or-reuse: register() re-issues the OTP for an existing entity instead of erroring,
+  // so the same email always lands in the SAME entity. Omit for a throwaway unique one.
+  email = email || uniqueEmail();
+  name = name || uniqueName();
   await page.goto('/app.html');
   // SAVED SESSION: in the `authed` project a restored token boots straight into the app shell (a nav item is present) →
   // skip onboarding entirely. In `noauth` and fresh multi-party contexts there's no session → full mint below.
@@ -26,7 +30,6 @@ async function mintEntity(page, { role = 'business' } = {}) {
     else await page.goto('/app.html#/welcome');
   }
   await page.getByTestId('onb-getstarted').waitFor({ state: 'visible', timeout: 8000 });
-  const email = uniqueEmail(), name = uniqueName();
   await page.getByTestId('onb-getstarted').click();
   await page.getByTestId(`onb-role-${role}`).click();
   await page.locator('[data-testid^="onb-bp-"]').first().click();   // pick the first vertical/blueprint
@@ -97,4 +100,25 @@ async function addRecipientByName(page, name) {
   await page.getByTestId('chit-recipient-suggest').filter({ hasText: name }).first().click();
 }
 
-module.exports = { DEV_OTP, uniqueEmail, uniqueName, mintEntity, composeSelfChit, mintInContext, addRecipientByName, settle, dismissModal };
+// ── STABLE ENTITY POOL — a fixed set of reusable entities so runs don't mint fresh every time, and so flows can run in
+// PARALLEL (each takes a distinct pool entity → no session collision → real concurrency). Provisioned ONCE by
+// pool.setup.js (create-or-reuse via the fixed email), sessions saved to .auth/pool-NN.json and reused every run.
+// Bump CB_POOL_SIZE for more concurrency (e.g. the swarm/parallel simulation).
+const POOL_SIZE = Number(process.env.CB_POOL_SIZE || 10);
+const POOL = Array.from({ length: POOL_SIZE }, (_, i) => {
+  const nn = String(i + 1).padStart(2, '0');
+  return { key: `pool${nn}`, email: `e2e.pool${nn}@test.example`, name: `E2E Pool ${nn}`, session: `.auth/pool-${nn}.json` };
+});
+
+// Open a browser context ALREADY signed in as pool entity #i (loads its saved session — zero minting). The building
+// block for parallel/swarm simulation: give each concurrent actor its own poolContext.
+async function poolContext(browser, i) {
+  const p = POOL[i % POOL.length];
+  const context = await browser.newContext({ storageState: p.session });
+  const page = await context.newPage();
+  await page.goto('/app.html');
+  await page.getByTestId('nav-compose').waitFor({ state: 'visible', timeout: 15000 }).catch(() => {});
+  return { context, page, email: p.email, name: p.name, key: p.key };
+}
+
+module.exports = { DEV_OTP, uniqueEmail, uniqueName, mintEntity, composeSelfChit, mintInContext, addRecipientByName, settle, dismissModal, POOL, poolContext };
