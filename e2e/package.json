@@ -5,6 +5,8 @@
   "scripts": {
     "test": "playwright test",
     "pool": "playwright test --project=pool",
+    "keyboard": "playwright test keyboard",
+    "counter-browsers": "playwright test --project=counter-firefox --project=counter-webkit --project=laptop --project=mobile",
     "ui": "playwright test --ui",
     "test:headed": "playwright test --headed",
     "test:multiparty": "playwright test multiparty --headed",
@@ -16,9 +18,10 @@
     "report": "playwright show-report",
     "trace": "playwright show-trace",
     "codegen": "playwright codegen",
-    "install-browsers": "playwright install chromium"
+    "install-browsers": "playwright install chromium firefox webkit"
   },
   "devDependencies": {
-    "@playwright/test": "^1.47.0"
+    "@playwright/test": "^1.47.0",
+    "@axe-core/playwright": "^4.9.0"
   }
 }
