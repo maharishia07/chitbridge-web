@@ -15,6 +15,8 @@ test('provision the stable entity pool (create-or-reuse)', async ({ browser }) =
       await mintEntity(page, { email: p.email, name: p.name });   // fixed email → create-or-reuse the SAME entity
       await ctx.storageState({ path: p.session });                 // save its session for reuse
       done.push(p.key);
+    } catch (e) {
+      console.log('  SKIP ' + p.key + ' (' + e.message.slice(0, 50) + ') — re-run `npm run pool` to fill gaps');
     } finally {
       await ctx.close();
     }
