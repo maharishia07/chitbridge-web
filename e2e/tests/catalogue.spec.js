@@ -25,7 +25,10 @@ test.describe('Module · Catalogue (full CRUD)', () => {
 
     await test.step('UPDATE', async () => {
       await page.getByTestId('cat-edit').click();
-      await page.getByTestId('cat-field-price').fill('999');
+      const price = page.getByTestId('cat-field-price');
+      await price.waitFor({ state: 'visible' });
+      await price.fill('999');
+      await expect(price).toHaveValue('999');   // guard: the edit form actually holds the new value before saving
       await page.getByTestId('cat-save').click();
       await settle(page);
       await expect(page.getByText('999', { exact: false }).first()).toBeVisible();
