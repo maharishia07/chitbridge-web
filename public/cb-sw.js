@@ -2,7 +2,7 @@
 // data. Strategy = NETWORK-FIRST with cache fallback: when online you ALWAYS get fresh content (safe for a fast-deploying
 // app — no stale-code trap); the cache only answers when the network fails. Mutations (non-GET) are never touched here —
 // they are the outbox's job (cb-offline.js). Bump CB_SW_VERSION to invalidate all caches on the next load.
-const CB_SW_VERSION = 'v1';
+const CB_SW_VERSION = 'v2';   // v2: fix Firefox/Safari 503 — a SW re-fetch of an intercepted cross-origin Request rejects on those engines, which masked live data as "offline"
 const SHELL = 'cb-shell-' + CB_SW_VERSION;   // same-origin app shell + static JS
 const APICACHE = 'cb-api-' + CB_SW_VERSION;  // GET /api/** responses (this device's own data)
 const EXT = 'cb-ext-' + CB_SW_VERSION;       // cross-origin static (fonts)
@@ -31,15 +31,22 @@ self.addEventListener('activate', (e) => {
 });
 
 function networkFirst(req, cacheName, isApi) {
-  return fetch(req).then((res) => {
+  const store = (res) => {
     if (res && (res.ok || res.type === 'opaqueredirect')) { const cp = res.clone(); caches.open(cacheName).then((c) => c.put(req, cp)).catch(() => {}); }
     return res;
-  }).catch(() => caches.match(req).then((hit) => {
+  };
+  const fallback = () => caches.match(req).then((hit) => {
     if (hit) return hit;
     if (isApi) return new Response(JSON.stringify({ offline: true, error: 'offline', message: 'You are offline — no cached copy for this yet.' }), { status: 503, headers: { 'Content-Type': 'application/json' } });
     if (req.mode === 'navigate') return caches.match('/app.html');   // last-resort shell so a navigation still opens
     return Response.error();
-  }));
+  });
+  // Firefox/Safari REJECT fetch() when a service worker re-issues an intercepted CROSS-ORIGIN Request (Chromium doesn't).
+  // That rejection made networkFirst think we were offline and hand back a synthetic 503 for LIVE data (e.g. a chit that
+  // was just created wouldn't appear). Before deciding we're offline, retry once with a fresh same-URL request — headers
+  // are copied over (Authorization preserved), so the retry authenticates identically but avoids the re-fetch quirk.
+  const clean = () => fetch(new Request(req.url, { method: 'GET', headers: req.headers, mode: 'cors', credentials: 'omit', redirect: 'follow' }));
+  return fetch(req).then(store).catch(() => clean().then(store).catch(fallback));
 }
 
 self.addEventListener('fetch', (e) => {
