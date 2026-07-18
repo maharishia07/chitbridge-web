@@ -25,6 +25,7 @@ test.describe('Module · Messages', () => {
       await openComposer();
       await page.locator('[data-testid="msg-body"]:visible').first().fill('Internal: check stock before confirming.');
       await page.locator('[data-testid="msg-send"]:visible').first().click();
+      await settle(page);
       await expect(page.getByText(/check stock/i).first()).toBeVisible();
     });
 
@@ -33,6 +34,7 @@ test.describe('Module · Messages', () => {
       await page.locator('[data-testid="msg-channel-external"]:visible').first().click();
       await page.locator('[data-testid="msg-body"]:visible').first().fill('External: your order is confirmed.');
       await page.locator('[data-testid="msg-send"]:visible').first().click();
+      await settle(page);
       await expect(page.getByText(/order is confirmed/i).first()).toBeVisible();
     });
   });
