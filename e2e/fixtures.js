@@ -13,11 +13,19 @@ function uniqueName(prefix) {
 // This is the shared "arrange" step other modules (chits, catalogue) build on — and the heart of the DoD.
 async function mintEntity(page, { role = 'business' } = {}) {
   await page.goto('/app.html');
-  // SAVED SESSION: if we're already inside the app (no welcome screen within a few seconds), skip onboarding entirely.
-  // In the `authed` project the storageState restores a logged-in session → this short-circuits. In `noauth` (and inside
-  // fresh multi-party contexts) the welcome screen shows → full mint. Falls back to minting if the session didn't restore.
-  try { await page.getByTestId('onb-getstarted').waitFor({ state: 'visible', timeout: 4000 }); }
-  catch (e) { return { existing: true, email: null, name: null }; }
+  // SAVED SESSION: in the `authed` project a restored token boots straight into the app shell (a nav item is present) →
+  // skip onboarding entirely. In `noauth` and fresh multi-party contexts there's no session → full mint below.
+  const loggedIn = await page.getByTestId('nav-compose')
+    .waitFor({ state: 'visible', timeout: 4000 }).then(() => true).catch(() => false);
+  if (loggedIn) return { existing: true, email: null, name: null };
+  // LOGGED OUT: /app.html now defaults to the Sign-in screen → reach onboarding via "New here? Create an entity"
+  // (the welcome screen at #/welcome still carries onb-getstarted). Fall back to the hash route if the link moved.
+  if (!(await page.getByTestId('onb-getstarted').isVisible().catch(() => false))) {
+    const create = page.getByText('Create an entity');
+    if (await create.count()) await create.first().click();
+    else await page.goto('/app.html#/welcome');
+  }
+  await page.getByTestId('onb-getstarted').waitFor({ state: 'visible', timeout: 8000 });
   const email = uniqueEmail(), name = uniqueName();
   await page.getByTestId('onb-getstarted').click();
   await page.getByTestId(`onb-role-${role}`).click();

@@ -10,7 +10,8 @@ test.describe('Module · Onboarding / Mint', () => {
     const email = uniqueEmail(), name = uniqueName();
 
     await test.step('Welcome — get started', async () => {
-      await page.goto('/app.html');
+      await page.goto('/app.html');                           // new default entry = the Sign-in screen
+      await page.getByText('Create an entity').click();       // "New here? Create an entity" → the onboarding welcome
       await expect(page.getByTestId('onb-getstarted')).toBeVisible();
       await page.getByTestId('onb-getstarted').click();
     });
