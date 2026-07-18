@@ -3,7 +3,11 @@
 // `noauth` runs the flows that must start LOGGED OUT (onboarding/flow/redproof). Multi-party flows spin up their own
 // fresh contexts, so they're unaffected by the saved session. Override the web host with CB_WEB_BASE.
 const { defineConfig, devices } = require('@playwright/test');
+const fs = require('fs');
 const AUTH_FILE = '.auth/user.json';
+// Reuse the saved session if `setup` has run; otherwise leave it unset so each authed flow mints its OWN entity
+// (mintEntity self-detects). This is what lets ANY single flow run standalone — e.g. `npx playwright test -g CAT-01`.
+const SAVED_SESSION = fs.existsSync(AUTH_FILE) ? AUTH_FILE : undefined;
 
 module.exports = defineConfig({
   testDir: './tests',
@@ -26,7 +30,7 @@ module.exports = defineConfig({
     {
       name: 'authed',
       dependencies: ['setup'],
-      use: { ...devices['Desktop Chrome'], storageState: AUTH_FILE },
+      use: { ...devices['Desktop Chrome'], storageState: SAVED_SESSION },
       testMatch: /.*\.spec\.js/,
       testIgnore: [/onboarding\.spec\.js/, /flow\.spec\.js/, /redproof\.spec\.js/],
     },

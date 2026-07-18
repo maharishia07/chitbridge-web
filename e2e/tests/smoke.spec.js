@@ -34,8 +34,8 @@ test.describe('Smoke · every menu item + icon renders', () => {
       await expect(page.getByTestId('assist-input')).toBeVisible();
       await page.getByTestId('assist-close').click();
     });
-    await test.step('messages', async () => { await page.getByTestId('icon-messages').click(); });
-    await test.step('notifications', async () => { await page.getByTestId('icon-notifications').click(); });
-    await test.step('legend', async () => { await page.getByTestId('icon-legend').click(); });
+    await test.step('messages', async () => { await page.getByTestId('icon-messages').click(); await page.keyboard.press('Escape').catch(() => {}); });
+    await test.step('notifications', async () => { await page.getByTestId('icon-notifications').click(); await page.keyboard.press('Escape').catch(() => {}); });
+    await test.step('legend', async () => { await page.getByTestId('icon-legend').click(); await page.keyboard.press('Escape').catch(() => {}); });
   });
 });

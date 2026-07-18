@@ -3,10 +3,11 @@
 //   Test 1 (runnable): A sends a chit to B → B receives their own copy (sender ↔ receiver).
 //   Test 2 (skeleton): A→B,C + a TARGETED dispute with B only → B sees it, C does NOT (the USP, live).
 const { test, expect } = require('@playwright/test');
-const { mintInContext, addRecipientByName } = require('../fixtures');
+const { mintInContext, addRecipientByName, settle } = require('../fixtures');
 
 test.describe('Multiparty · the real capability', () => {
   test('[MP-01] A sends a chit to B; B receives their own copy', async ({ browser }) => {
+    test.slow();   // 2 entities minted in 2 contexts → needs more than the default timeout
     const A = await mintInContext(browser);   // sender
     const B = await mintInContext(browser);   // receiver
     const subject = 'Multiparty order ' + Date.now();
@@ -20,12 +21,13 @@ test.describe('Multiparty · the real capability', () => {
       await A.page.getByTestId('chit-item-name').fill('Widget');
       await A.page.getByTestId('chit-item-add').click();
       await A.page.getByTestId('chit-send').click();
+      await settle(A.page);
     });
 
     await test.step("B sees the chit in B's own Task inbox", async () => {
       await B.page.reload();                            // pull B's fresh state
       await B.page.getByTestId('nav-task').click();
-      await expect(B.page.getByText(subject)).toBeVisible();
+      await expect(B.page.getByText(subject).first()).toBeVisible();
     });
 
     await A.context.close();

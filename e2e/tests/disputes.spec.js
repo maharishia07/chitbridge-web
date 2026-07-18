@@ -6,7 +6,7 @@
 // LOCATORS: chit-dispute · dispute-category/reason/raise · dispute-resolve-open/note/submit · dispute-room-input/send ·
 //           input.dispparty (the party picker) · nav-disputes
 const { test, expect } = require('@playwright/test');
-const { mintEntity, mintInContext, addRecipientByName, composeSelfChit } = require('../fixtures');
+const { mintEntity, mintInContext, addRecipientByName, composeSelfChit, settle } = require('../fixtures');
 
 test.describe('Module · Disputes', () => {
   test('[DISP-01] mechanics — raise a dispute on a chit, then resolve it', async ({ page }) => {
@@ -20,6 +20,7 @@ test.describe('Module · Disputes', () => {
       await page.getByTestId('dispute-category').selectOption('quality');
       await page.getByTestId('dispute-reason').fill('Quantity short by two units, please replace.');
       await page.getByTestId('dispute-raise').click();
+      await settle(page);
     });
     await test.step('RESOLVE', async () => {
       await page.getByTestId('nav-disputes').click();
@@ -32,6 +33,7 @@ test.describe('Module · Disputes', () => {
   });
 
   test('[DISP-02] USP — A disputes with B only; B sees it, C does NOT; A resolves per-party', async ({ browser }) => {
+    test.slow();   // 3 entities minted in 3 contexts → needs 3× the default timeout
     const A = await mintInContext(browser);   // sender / raiser
     const B = await mintInContext(browser);   // disputed party
     const C = await mintInContext(browser);   // other party — must be EXCLUDED
@@ -60,6 +62,7 @@ test.describe('Module · Disputes', () => {
       await A.page.getByTestId('dispute-category').selectOption('quality');
       await A.page.getByTestId('dispute-reason').fill(reason);
       await A.page.getByTestId('dispute-raise').click();
+      await settle(A.page);
     });
 
     await test.step('B SEES the dispute — C does NOT (targeting + privacy)', async () => {

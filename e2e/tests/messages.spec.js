@@ -3,7 +3,7 @@
 // are what's exercised. The true internal-stays-internal privacy is a multi-entity assertion — noted below.)
 // LOCATORS: msg-tab · msg-channel-internal · msg-channel-external · msg-body · msg-send
 const { test, expect } = require('@playwright/test');
-const { mintEntity, composeSelfChit } = require('../fixtures');
+const { mintEntity, composeSelfChit, settle } = require('../fixtures');
 
 test.describe('Module · Messages', () => {
   test('[MSG-01] send an internal note and an external message on a chit', async ({ page }) => {
@@ -12,6 +12,7 @@ test.describe('Module · Messages', () => {
     await composeSelfChit(page, subject);
     await page.getByTestId('nav-task').click();
     await page.getByText(subject).first().click();
+    await settle(page);
     await page.getByTestId('msg-tab').click();
 
     await test.step('INTERNAL — a team-only note', async () => {
