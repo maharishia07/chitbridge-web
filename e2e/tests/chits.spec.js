@@ -23,7 +23,7 @@ test.describe('Module · Chits', () => {
     const subject = 'E2E order ' + Date.now();
     await composeSelfChit(page, subject);
     await page.getByTestId('nav-order').click();
-    await expect(page.getByText(subject)).toBeVisible();
+    await expect(page.getByText(subject).first()).toBeVisible();   // subject shows as both a title + a detail line
   });
 
   test('[CHIT-02] READ + UPDATE — open the received copy, advance status', async ({ page }) => {
@@ -32,7 +32,7 @@ test.describe('Module · Chits', () => {
     await composeSelfChit(page, subject);
     await test.step('READ — open the received copy in Task', async () => {
       await page.getByTestId('nav-task').click();
-      await page.getByText(subject).click();
+      await page.getByText(subject).first().click();   // subject appears as a title + a detail line
       await expect(page.locator('#mainbody')).toContainText(subject);
     });
     await test.step('UPDATE — advance status (picker opens)', async () => {
