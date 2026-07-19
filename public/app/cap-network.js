@@ -142,7 +142,7 @@ async function netAddProduct(nodeKey){
   var price = parseFloat((typeof prompt === 'function') ? prompt('Price (₹):', '199') : '199') || 0;
   UI.net.busy = true; if (typeof renderApp === 'function') renderApp();
   try {
-    await _netFetch('/api/products', 'POST', P.token, { item_data: { name: name.trim(), category: (category || 'Other').trim(), price: price, unit: 'unit', network_id: UI.net.id } });
+    await _netFetch('/api/products', 'POST', P.token, { item_data: { name: name.trim(), category: (category || 'Other').trim(), price: price, unit: 'unit', network_id: UI.net.id, operator: SESSION.entityId } });
     P.products = (P.products || 0) + 1;
     if (typeof toast === 'function') toast('Added “' + name.trim() + '” (' + P.visibility + ' catalogue).');
   } catch (e) { if (typeof toast === 'function') toast(e.message || 'Add product failed'); }
