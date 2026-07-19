@@ -5,7 +5,8 @@
  * never shown here. Backend: routes/chits.js  GET /api/chits/:id/trace?dir=forward|backward. Self-registers its EP. */
 if (typeof EP !== 'undefined') {
   Object.assign(EP, {
-    traceWalk: { m:'GET', p:'/api/chits/:id/trace', ok:'y' },
+    traceWalk:    { m:'GET', p:'/api/chits/:id/trace', ok:'y' },
+    traceBatches: { m:'GET', p:'/api/chits/trace/batches', ok:'y' },
   });
 }
 
@@ -48,7 +49,33 @@ function traceabilityScreen(){
   else body = emptyState('🧭', 'Flag a batch to trace it', 'Paste a batch or chit id above, then Recall set ▸ (who it reached) or ◂ To source (where it came from).');
 
   return '<div style="display:flex;flex-direction:column;height:100%;min-height:0">' + controls
-    + '<div style="flex:1;overflow:auto;min-height:0">' + body + '</div></div>';
+    + '<div style="flex:1;overflow:auto;min-height:0">' + _traceBatchPicker() + body + '</div></div>';
+}
+
+// The batches the signed-in operator can trace — each row prints its id (the "traceability string") and is
+// clickable, so a demo works on any machine without pasting a key. RLS-scoped server-side (you see only yours).
+async function loadTraceBatches(){
+  try { var r = await api('traceBatches'); UI.traceBatches = (r && r.batches) || []; }
+  catch(e){ UI.traceBatches = []; }
+  if (typeof renderApp === 'function') renderApp();
+}
+function _traceBatchPicker(){
+  if (UI.traceBatches === undefined){ loadTraceBatches(); return '<div style="padding:12px 20px;color:var(--grey);font-size:12px">Loading your batches…</div>'; }
+  if (!UI.traceBatches.length) return '<div style="padding:12px 20px;color:var(--grey);font-size:12px">No traceable batches yet — seed a chain, then reload.</div>';
+  var rows = UI.traceBatches.map(function(b){
+    var name = esc(b.product || b.to_name || 'batch');
+    var meta = [ (b.qty != null ? (esc(String(b.qty)) + esc(b.unit ? (' ' + b.unit) : '')) : ''), (b.sender_name ? ('from ' + esc(b.sender_name)) : '') ].filter(Boolean).join(' · ');
+    return '<div onclick="UI.traceId=\'' + b.chit_id + '\';runTrace(\'forward\')" title="Click to trace this batch" '
+      + 'style="cursor:pointer;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:#fff;display:flex;flex-direction:column;gap:2px">'
+      + '<div style="display:flex;align-items:center;gap:7px"><b style="font-size:13px">' + name + '</b>'
+        + (b.is_origin ? '<span style="font-size:9px;font-weight:800;color:#2c5aa0;background:#eaf1fb;border-radius:5px;padding:1px 5px">ORIGIN</span>' : '') + '</div>'
+      + (meta ? '<div style="font-size:11px;color:var(--grey)">' + meta + '</div>' : '')
+      + '<div style="font-family:monospace;font-size:10px;color:#8a94a3;word-break:break-all">' + esc(b.chit_id) + '</div>'
+      + '</div>';
+  }).join('');
+  return '<div style="padding:10px 18px 4px">'
+    + '<div style="font-size:11px;font-weight:800;color:var(--grey);letter-spacing:.05em;margin-bottom:7px">YOUR BATCHES — click one to trace</div>'
+    + '<div style="display:grid;gap:7px;grid-template-columns:repeat(auto-fill,minmax(210px,1fr))">' + rows + '</div></div>';
 }
 
 function _traceChip(n, isTerm){
