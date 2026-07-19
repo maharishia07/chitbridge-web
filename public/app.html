@@ -1442,7 +1442,7 @@ const PURPOSE = {
    /app/cap-<name>.js (classic script, shared global scope). CAP_OF maps a screen to its
    capability; unlisted screens are Core (eager, always loaded). renderApp shows "Loading…"
    and re-renders once the capability arrives. Grow CAP_OF as screens migrate out. */
-const CAP_OF = { mis:'admin', profile:'admin', settings:'admin', coassists:'workforce', assistreview:'admin', connectors:'connector', disputes:'dispute', folders:'folders', readiness:'readiness', traceability:'traceability' };
+const CAP_OF = { mis:'admin', profile:'admin', settings:'admin', coassists:'workforce', assistreview:'admin', connectors:'connector', disputes:'dispute', folders:'folders', readiness:'readiness', traceability:'traceability', network:'network' };
 // nav items gated by an entity capability (the itemised toggle) — hidden unless SESSION.capabilities holds the key.
 const CAP_GATED = { connectors:'connector', disputes:'dispute' };
 const CAP_LOADED = {};
