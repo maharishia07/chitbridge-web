@@ -37,7 +37,7 @@ async function netAddRoot(){
   if (!name || !name.trim()) return;
   UI.net.busy = true; if (typeof renderApp === 'function') renderApp();
   try { var m = await _netMint(name.trim());
-    UI.net.nodes.push({ key: _netKey(), name: m.name, entity_id: m.entity_id, token: m.token, email: m.email, key_policy: 'loose', chit_id: null, parent_key: null, product: null, qty: null, unit: null });
+    UI.net.nodes.push({ key: _netKey(), name: m.name, entity_id: m.entity_id, token: m.token, email: m.email, formation: 'owned', key_policy: 'loose', chit_id: null, parent_key: null, product: null, qty: null, unit: null });
     UI.net.sel = UI.net.nodes[UI.net.nodes.length - 1].key;
   } catch (e) { if (typeof toast === 'function') toast(e.message || 'Provisioning failed'); }
   UI.net.busy = false; if (typeof renderApp === 'function') renderApp();
@@ -56,7 +56,7 @@ async function netAddChild(parentKey){
     if (P.chit_id) trace.parents = [P.chit_id]; else trace.is_origin = true;   // root's first outbound = the origin edge
     var sent = await _netFetch('/api/chits/send', 'POST', P.token, { receivers: [{ entity_id: m.entity_id }], purpose: 'delivery_note',
       manual_subject: P.name + ' → ' + m.name + ': ' + product, line_items: [{ name: product, quantity: qty, unit: 'kg', price: 0, total: 0 }], trace: trace });
-    UI.net.nodes.push({ key: _netKey(), name: m.name, entity_id: m.entity_id, token: m.token, email: m.email, key_policy: 'loose', chit_id: sent.chit_id, parent_key: parentKey, product: product, qty: qty, unit: 'kg' });
+    UI.net.nodes.push({ key: _netKey(), name: m.name, entity_id: m.entity_id, token: m.token, email: m.email, formation: 'owned', key_policy: 'loose', chit_id: sent.chit_id, parent_key: parentKey, product: product, qty: qty, unit: 'kg' });
     UI.net.sel = UI.net.nodes[UI.net.nodes.length - 1].key;
   } catch (e) { if (typeof toast === 'function') toast(e.message || 'Add failed'); }
   UI.net.busy = false; if (typeof renderApp === 'function') renderApp();
@@ -85,6 +85,32 @@ function netHandover(key){
   if (typeof confirmAsk === 'function') confirmAsk('Hand over the key', 'Hand over <b>' + esc(n.name) + '</b>? You will <b>drop its key</b> — you can no longer act as it or read its private data. This <b>can\'t be undone</b> (tighten-only).', 'Hand over', go, true);
   else if (typeof window !== 'undefined' && window.confirm('Hand over ' + n.name + '? You drop its key permanently.')) go();
 }
+// JOINED node (Option 2): bring an INDEPENDENT business into the network via the real handshake (request → accept),
+// then transact a traceable handoff to it. It's a PEER — born tight (no key held), formation 'joined'. Contrast with
+// an owned node (minted, key held). A→B ⇒ not B→A: a fresh partner is always a new leaf, so no back-edge can form.
+async function netInvitePartner(parentKey){
+  var P = _netNode(parentKey); if (!P) { if (typeof toast === 'function') toast('Select the node the partner joins under first.'); return; }
+  if (P.formation === 'joined' || P.key_policy === 'handed_over' || !P.token) { if (typeof toast === 'function') toast('Invite from a node you still operate.'); return; }
+  if (!SESSION.entityId) { if (typeof toast === 'function') toast('Operator not loaded — reload and sign in again.'); return; }
+  var name = (typeof prompt === 'function') ? prompt('Partner business (an independent business joining your network):', '') : ''; if (!name || !name.trim()) return;
+  var product = (typeof prompt === 'function') ? prompt('Batch / product handed to the partner:', P.product || 'FG-PC-6621') : 'BATCH'; if (product === null) return;
+  var qty = parseFloat((typeof prompt === 'function') ? prompt('Quantity (kg):', '8') : '8') || 0;
+  UI.net.busy = true; if (typeof renderApp === 'function') renderApp();
+  try {
+    var partner = await _netMint(name.trim());                                   // an independent business (real entity)
+    var reqres = await _netFetch('/api/connections/request', 'POST', SESSION.token, { to_entity_id: partner.entity_id });  // operator requests
+    var connId = reqres.connection_id || (reqres.connection && reqres.connection.connection_id);
+    if (connId) await _netFetch('/api/connections/' + connId + '/respond', 'PUT', partner.token, { action: 'accept' });     // partner accepts (consent)
+    var trace = { product: product, qty: qty, unit: 'kg', network: { id: UI.net.id, operator: SESSION.entityId } };
+    if (P.chit_id) trace.parents = [P.chit_id]; else trace.is_origin = true;
+    var sent = await _netFetch('/api/chits/send', 'POST', P.token, { receivers: [{ entity_id: partner.entity_id }], purpose: 'delivery_note',
+      manual_subject: P.name + ' → ' + partner.name + ': ' + product, line_items: [{ name: product, quantity: qty, unit: 'kg', price: 0, total: 0 }], trace: trace });
+    UI.net.nodes.push({ key: _netKey(), name: partner.name, entity_id: partner.entity_id, token: null, email: partner.email,
+      formation: 'joined', key_policy: 'handed_over', chit_id: sent.chit_id, parent_key: parentKey, product: product, qty: qty, unit: 'kg' });
+    UI.net.sel = UI.net.nodes[UI.net.nodes.length - 1].key;
+  } catch (e) { if (typeof toast === 'function') toast(e.message || 'Invite failed'); }
+  UI.net.busy = false; if (typeof renderApp === 'function') renderApp();
+}
 function netTraceFrom(chitId){
   UI.traceId = chitId; UI.nav = 'traceability';
   if (typeof ensureCap === 'function') ensureCap('traceability').then(function(){ if (typeof runTrace === 'function') runTrace('forward'); }).catch(function(){});
@@ -95,7 +121,7 @@ function _netTree(parentKey, depth){
   var kids = (UI.net.nodes || []).filter(function(n){ return n.parent_key === (parentKey || null); });
   return kids.map(function(n){ var sel = UI.net.sel === n.key;
     return '<div onclick="netSelect(\'' + n.key + '\')" style="cursor:pointer;padding:7px 9px;padding-left:' + (9 + depth * 16) + 'px;border-radius:8px;font-size:12.5px;' + (sel ? 'background:#eef4fc;color:#2c5aa0;font-weight:700' : 'color:#3a4048') + '">'
-      + (n.parent_key ? '└ ' : '◆ ') + esc(n.name) + (n.key_policy === 'handed_over' ? ' 🔒' : '')
+      + (n.parent_key ? '└ ' : '◆ ') + esc(n.name) + (n.formation === 'joined' ? ' 🤝' : (n.key_policy === 'handed_over' ? ' 🔒' : ''))
       + (n.qty != null && n.product ? '<span style="color:var(--grey);font-weight:400;font-size:11px"> · ' + esc(String(n.qty)) + esc(' ' + n.unit) + '</span>' : '')
       + '</div>' + _netTree(n.key, depth + 1);
   }).join('');
@@ -123,27 +149,42 @@ function networkScreen(){
 }
 function _netNodeView(n){
   var childCount = (UI.net.nodes || []).filter(function(x){ return x.parent_key === n.key; }).length;
+  var joined = n.formation === 'joined';
   var handed = n.key_policy === 'handed_over';
+  var pill = function(on, label, onColor){ return '<span style="padding:2px 9px;border-radius:20px;font-size:11px;font-weight:800;' + (on ? 'color:#fff;background:' + onColor : 'color:var(--grey);background:#eef1f4') + '">' + label + '</span>'; };
   var actions = '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:14px">'
-    + (handed
-        ? '<span style="font-size:12px;color:var(--grey)">Handed over — its operator adds its own children now.</span>'
-        : '<button class="pri" onclick="netAddChild(\'' + n.key + '\')" style="padding:8px 13px">＋ Add child (hand a batch down)</button>')
+    + (joined
+        ? '<span style="font-size:12px;color:var(--grey)">Partner (peer) — it runs itself; you transacted with it.</span>'
+        : (handed
+            ? '<span style="font-size:12px;color:var(--grey)">Handed over — its operator adds its own children now.</span>'
+            : '<button class="pri" onclick="netAddChild(\'' + n.key + '\')" style="padding:8px 13px">＋ Add owned node</button>'
+              + '<button onclick="netInvitePartner(\'' + n.key + '\')" style="padding:8px 13px">🤝 Invite a partner</button>'))
     + (n.chit_id ? '<button onclick="netTraceFrom(\'' + n.chit_id + '\')" style="padding:8px 13px">🧭 Trace from here</button>' : '')
     + '</div>';
-  var pill = function(on, label, onColor){ return '<span style="padding:2px 9px;border-radius:20px;font-size:11px;font-weight:800;' + (on ? 'color:#fff;background:' + onColor : 'color:var(--grey);background:#eef1f4') + '">' + label + '</span>'; };
-  var dial = '<div style="margin-top:16px;padding:13px 15px;border:1px solid ' + (handed ? '#bcd0ea' : 'var(--line)') + ';border-radius:11px;background:' + (handed ? '#f4f8fe' : '#fff') + '">'
-    + '<div style="display:flex;align-items:center;gap:10px">'
-      + '<div style="font-size:11px;font-weight:800;color:var(--grey);letter-spacing:.05em">KEY POLICY</div>'
-      + '<div style="margin-left:auto;display:flex;align-items:center;gap:6px">' + pill(!handed, 'LOOSE', '#c98a2b') + '<span style="color:var(--grey);font-weight:800">→</span>' + pill(handed, 'HANDED OVER', '#2c5aa0') + '</div>'
-    + '</div>'
-    + '<div style="font-size:11px;color:#8a94a3;font-family:monospace;word-break:break-all;margin-top:9px">entity ' + esc(n.entity_id) + '</div>'
-    + (handed
-        ? '<div style="font-size:11.5px;color:#2c5aa0;margin-top:7px">✓ You dropped this node\'s key. It runs itself; you kept deactivate authority. Tighten-only — it can\'t be reclaimed.</div>'
-        : '<div style="font-size:11.5px;color:var(--grey);margin-top:7px">You provisioned this node and hold its key <b>(loose)</b> — you can act as it. Hand over to make its schema private even from you.</div>'
-          + '<button onclick="netHandover(\'' + n.key + '\')" style="padding:7px 12px;margin-top:10px">🔒 Hand over the key (tighten)</button>')
-    + '</div>';
+  var panel;
+  if (joined) {
+    panel = '<div style="margin-top:16px;padding:13px 15px;border:1px solid #cfe0d6;border-radius:11px;background:#f4faf6">'
+      + '<div style="font-size:11px;font-weight:800;color:var(--grey);letter-spacing:.05em">FORMATION · JOINED (partner)</div>'
+      + '<div style="font-size:11px;color:#8a94a3;font-family:monospace;word-break:break-all;margin-top:9px">entity ' + esc(n.entity_id) + '</div>'
+      + '<div style="font-size:11.5px;color:#2c7a43;margin-top:7px">🤝 Connected via handshake (request → accept). An independent business — <b>born tight</b>: you never held its key and can\'t act as it. Its schema is private from you by default.</div>'
+      + '</div>';
+  } else {
+    panel = '<div style="margin-top:16px;padding:13px 15px;border:1px solid ' + (handed ? '#bcd0ea' : 'var(--line)') + ';border-radius:11px;background:' + (handed ? '#f4f8fe' : '#fff') + '">'
+      + '<div style="display:flex;align-items:center;gap:10px">'
+        + '<div style="font-size:11px;font-weight:800;color:var(--grey);letter-spacing:.05em">OWNED · KEY POLICY</div>'
+        + '<div style="margin-left:auto;display:flex;align-items:center;gap:6px">' + pill(!handed, 'LOOSE', '#c98a2b') + '<span style="color:var(--grey);font-weight:800">→</span>' + pill(handed, 'HANDED OVER', '#2c5aa0') + '</div>'
+      + '</div>'
+      + '<div style="font-size:11px;color:#8a94a3;font-family:monospace;word-break:break-all;margin-top:9px">entity ' + esc(n.entity_id) + '</div>'
+      + (handed
+          ? '<div style="font-size:11.5px;color:#2c5aa0;margin-top:7px">✓ You dropped this node\'s key. It runs itself; you kept deactivate authority. Tighten-only.</div>'
+          : '<div style="font-size:11.5px;color:var(--grey);margin-top:7px">You minted this node and hold its key <b>(loose)</b> — you can act as it. Hand over to make its schema private even from you.</div>'
+            + '<button onclick="netHandover(\'' + n.key + '\')" style="padding:7px 12px;margin-top:10px">🔒 Hand over the key (tighten)</button>')
+      + '</div>';
+  }
+  var badge = joined ? '<span style="font-size:10px;font-weight:800;color:#2c7a43;background:#e6f4ec;border-radius:6px;padding:2px 7px;margin-left:9px;vertical-align:middle">🤝 JOINED</span>'
+            : (handed ? '<span style="font-size:10px;font-weight:800;color:#2c5aa0;background:#eaf1fb;border-radius:6px;padding:2px 7px;margin-left:9px;vertical-align:middle">🔒 HANDED OVER</span>' : '');
   return '<div style="padding:16px 20px">'
-    + '<div style="font-size:18px;font-weight:800">' + (n.parent_key ? '' : '◆ ') + esc(n.name) + (handed ? '<span style="font-size:10px;font-weight:800;color:#2c5aa0;background:#eaf1fb;border-radius:6px;padding:2px 7px;margin-left:9px;vertical-align:middle">🔒 HANDED OVER</span>' : '') + '</div>'
+    + '<div style="font-size:18px;font-weight:800">' + (n.parent_key ? '' : '◆ ') + esc(n.name) + badge + '</div>'
     + '<div style="font-size:11.5px;color:var(--grey);margin-top:2px">' + (n.parent_key ? ('received ' + esc(String(n.qty)) + esc(' ' + n.unit) + ' of ' + esc(n.product)) : 'source node — no inbound') + ' · ' + childCount + ' child' + (childCount === 1 ? '' : 'ren') + '</div>'
-    + actions + dial + '</div>';
+    + actions + panel + '</div>';
 }
