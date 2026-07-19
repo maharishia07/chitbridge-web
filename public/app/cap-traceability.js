@@ -7,6 +7,7 @@ if (typeof EP !== 'undefined') {
   Object.assign(EP, {
     traceWalk:    { m:'GET', p:'/api/chits/:id/trace', ok:'y' },
     traceBatches: { m:'GET', p:'/api/chits/trace/batches', ok:'y' },
+    traceByBatch: { m:'GET', p:'/api/chits/trace/by-batch', ok:'y' },
   });
 }
 
@@ -38,6 +39,13 @@ function traceabilityScreen(){
       + '<label>blanket-recall size&nbsp;<input value="' + blanket + '" oninput="UI.traceBlanket=_traceNum(this.value,200)" '
         + 'style="width:70px;padding:4px 7px;border:1px solid var(--line);border-radius:7px;font-size:12px"></label>'
       + '<span>— the ₹ saved is targeted recall vs a blanket recall of your whole network.</span>'
+    + '</div>'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px;padding-top:11px;border-top:1px dashed var(--line)">'
+      + '<span style="font-size:12px;color:var(--grey)">or reconstruct from shared data (no links):</span>'
+      + '<input id="traceBatchIn" value="' + esc(UI.traceBatchQ || '') + '" placeholder="batch number, e.g. FG-PC-6621" '
+        + 'oninput="UI.traceBatchQ=this.value" onkeydown="if(event.key===\'Enter\')runTraceByBatch()" '
+        + 'style="flex:1;min-width:180px;padding:8px 11px;border:1px solid var(--line);border-radius:9px;font-size:13px;font-family:monospace">'
+      + '<button onclick="runTraceByBatch()" style="padding:8px 13px">🔎 Trace by batch #</button>'
     + '</div>'
     + '</div>';
 
@@ -108,7 +116,8 @@ function _traceFwd(r){
 
   return banner
     + '<div style="padding:4px 20px 22px">'
-    + '<div style="font-size:11px;font-weight:800;color:var(--grey);letter-spacing:.05em;margin:6px 0 6px">WHO HOLDS IT — recall tree</div>'
+    + '<div style="font-size:11px;font-weight:800;color:var(--grey);letter-spacing:.05em;margin:6px 0 6px">'
+      + (r.reconstructed ? 'RECONSTRUCTED FROM BATCH “' + esc(r.by_batch || '') + '” — no links used' : 'WHO HOLDS IT — recall tree') + '</div>'
     + _traceTree(r) + '</div>';
 }
 
@@ -142,6 +151,9 @@ function _traceTree(r){
   var byId = {}; (r.nodes || []).forEach(function(n){ byId[n.chit_id] = n; });
   var kids = {}; (r.edges || []).forEach(function(e){ (kids[e.from] = kids[e.from] || []).push(e.to); });
   var term = {}; (r.terminals || []).forEach(function(t){ term[t.chit_id] = 1; });
+  var hasParent = {}; (r.edges || []).forEach(function(e){ hasParent[e.to] = 1; });
+  var roots = (r.nodes || []).filter(function(n){ return !hasParent[n.chit_id]; }).map(function(n){ return n.chit_id; });
+  if (!roots.length && r.start) roots = [r.start];   // walk always has a single flagged root; batch-reconstruct may be a forest
   var seen = {};
   function render(id){
     if (seen[id]) return '';
@@ -152,7 +164,7 @@ function _traceTree(r){
       + (kidHtml ? ('<div style="margin-left:8px;border-left:1.5px solid var(--line);padding-left:15px">' + kidHtml + '</div>') : '')
       + '</div>';
   }
-  return render(r.start);
+  return roots.map(render).join('');
 }
 
 function _traceBwd(r){
@@ -177,4 +189,13 @@ function runTrace(dir){
   api('traceWalk', { params:{ id:id }, query:{ dir:dir } })
     .then(function(r){ UI.traceLoading = false; r = r || {}; r.dir = dir; UI.traceResult = r; if (typeof renderApp === 'function') renderApp(); })
     .catch(function(e){ UI.traceLoading = false; UI.traceResult = { error: (e && e.message) || 'Trace failed — is this a batch you oversee?' }; if (typeof renderApp === 'function') renderApp(); });
+}
+// Reconstruct the chain from a shared batch number instead of the links (proves the graph survives without them).
+function runTraceByBatch(){
+  var q = (UI.traceBatchQ || '').trim();
+  if (!q){ if (typeof toast === 'function') toast('Type a batch number to reconstruct.'); return; }
+  UI.traceLoading = true; UI.traceResult = undefined; if (typeof renderApp === 'function') renderApp();
+  api('traceByBatch', { query:{ q:q } })
+    .then(function(r){ UI.traceLoading = false; r = r || {}; r.dir = 'forward'; UI.traceResult = r; if (typeof renderApp === 'function') renderApp(); })
+    .catch(function(e){ UI.traceLoading = false; UI.traceResult = { error: (e && e.message) || 'Batch trace failed' }; if (typeof renderApp === 'function') renderApp(); });
 }
