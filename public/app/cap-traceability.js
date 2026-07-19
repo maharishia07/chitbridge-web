@@ -103,6 +103,7 @@ function _traceFwd(r){
       + (r.terminals || []).length + ' exposed endpoint' + ((r.terminals || []).length === 1 ? '' : 's') + '</div>'
     + '<div style="margin-top:11px;font-size:14px;font-weight:800;color:#2c7a43">' + _traceRs(saved) + ' saved'
       + '<span style="font-weight:600;color:var(--grey);font-size:12px"> — recall these ' + targeted + ', not a blanket ~' + blanket + '</span></div>'
+    + ((r.flagged || 0) > 0 ? '<div style="margin-top:11px;font-size:13px;font-weight:800;color:#fff;background:#c0453b;border-radius:8px;padding:7px 12px;display:inline-block">⚠ ' + r.flagged + ' node' + (r.flagged === 1 ? '' : 's') + ' fail mass-balance — more went OUT than came IN</div>' : '')
     + '</div>';
 
   return banner
@@ -113,8 +114,10 @@ function _traceFwd(r){
 
 // Each node = a handoff, labelled by the PARTY THAT HOLDS IT (to_name) with from-whom + how much. Rendered as a
 // parent→child tree from the walk's edges; the visited-set keeps a diamond from rendering twice.
+function _traceQ(v){ try { return Number(v || 0).toLocaleString('en-IN'); } catch(e){ return String(v); } }
 function _traceNode(n, isTerm){
   var who = esc(n.to_name || n.product || _traceShort(n.chit_id));
+  var bal = n.balance, isRed = !!(bal && bal.status === 'red');
   var bits = [];
   if (n.sender_name) bits.push('from ' + esc(n.sender_name));
   if (n.qty != null) bits.push('<b style="color:#3a4048">' + esc(String(n.qty)) + esc(n.unit ? (' ' + n.unit) : '') + '</b>');
@@ -122,12 +125,17 @@ function _traceNode(n, isTerm){
   bits.push('<span style="font-family:monospace;font-size:10px;opacity:.6">' + _traceShort(n.chit_id) + '</span>');
   var badge = n.is_origin ? '<span style="font-size:9.5px;font-weight:800;color:#2c5aa0;background:#eaf1fb;border-radius:6px;padding:1px 6px;margin-left:7px">ORIGIN</span>'
             : (isTerm ? '<span style="font-size:9.5px;font-weight:800;color:#a5382e;background:#fdecea;border-radius:6px;padding:1px 6px;margin-left:7px">EXPOSED</span>' : '');
-  var dot = isTerm ? '#c0453b' : (n.is_origin ? '#2c5aa0' : '#8a94a3');
-  return '<div style="padding:6px 0">'
-    + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
+  if (isRed) badge += '<span style="font-size:9.5px;font-weight:800;color:#fff;background:#c0453b;border-radius:6px;padding:1px 6px;margin-left:7px">⚠ OUT &gt; IN</span>';
+  var dot = (isRed || isTerm) ? '#c0453b' : (n.is_origin ? '#2c5aa0' : '#8a94a3');
+  var balLine = isRed
+    ? '<div style="font-size:11px;color:#a5382e;font-weight:700;margin-left:17px;margin-top:2px">claimed ' + _traceQ(bal.out) + ' out, received ' + _traceQ(bal.in) + ' in — <u>' + _traceQ(bal.delta) + ' ' + esc(bal.base_unit || '') + ' unaccounted</u></div>'
+    : '';
+  return '<div style="padding:6px 0' + (isRed ? ';background:#fdf3f2;border-radius:8px' : '') + '">'
+    + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap' + (isRed ? ';padding-left:6px' : '') + '">'
       + '<span style="width:9px;height:9px;border-radius:50%;background:' + dot + ';flex:0 0 auto"></span>'
-      + '<span style="font-weight:700;font-size:13.5px">' + who + '</span>' + badge + '</div>'
-    + '<div style="font-size:11.5px;color:var(--grey);margin-left:17px;margin-top:1px">' + bits.join(' · ') + '</div>'
+      + '<span style="font-weight:700;font-size:13.5px' + (isRed ? ';color:#a5382e' : '') + '">' + who + '</span>' + badge + '</div>'
+    + '<div style="font-size:11.5px;color:var(--grey);margin-left:17px;margin-top:1px' + (isRed ? ';padding-left:6px' : '') + '">' + bits.join(' · ') + '</div>'
+    + balLine
     + '</div>';
 }
 function _traceTree(r){
