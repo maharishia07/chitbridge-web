@@ -64,35 +64,60 @@ function _traceChip(n, isTerm){
 }
 
 function _traceFwd(r){
-  var nodes = r.nodes || [], edges = r.edges || [];
+  var nodes = r.nodes || [];
   var targeted = r.reachable_count || nodes.length;
   var cost = (UI.traceCost == null ? 5000 : UI.traceCost);
   var blanket = (UI.traceBlanket == null ? 200 : UI.traceBlanket);
   var saved = Math.max(0, blanket - targeted) * cost;
-  var termIds = {}; (r.terminals || []).forEach(function(t){ termIds[t.chit_id] = 1; });
 
   var banner = '<div style="margin:16px 18px;padding:16px 18px;border:1px solid #e6a79f;background:linear-gradient(180deg,#fef6f5,#fdeceae0);border-radius:12px">'
-    + '<div style="font-size:20px;font-weight:800;color:#a5382e">🚨 Recall set — ' + targeted + ' node' + (targeted === 1 ? '' : 's') + '</div>'
+    + '<div style="font-size:20px;font-weight:800;color:#a5382e">🚨 Recall set — ' + targeted + ' place' + (targeted === 1 ? '' : 's') + ' hold this batch</div>'
     + '<div style="font-size:12.5px;color:#7a4139;margin-top:3px">' + (r.depth_max || 0) + ' hop' + ((r.depth_max || 0) === 1 ? '' : 's') + ' deep · '
-      + (r.terminals || []).length + ' exposure endpoint' + ((r.terminals || []).length === 1 ? '' : 's') + '</div>'
+      + (r.terminals || []).length + ' exposed endpoint' + ((r.terminals || []).length === 1 ? '' : 's') + '</div>'
     + '<div style="margin-top:11px;font-size:14px;font-weight:800;color:#2c7a43">' + _traceRs(saved) + ' saved'
-      + '<span style="font-weight:600;color:var(--grey);font-size:12px"> — recall ' + targeted + ' precise nodes, not a blanket ~' + blanket + '</span></div>'
+      + '<span style="font-weight:600;color:var(--grey);font-size:12px"> — recall these ' + targeted + ', not a blanket ~' + blanket + '</span></div>'
     + '</div>';
 
-  var terms = (r.terminals || []).length
-    ? '<div style="margin:0 18px 8px"><div style="font-size:11px;font-weight:800;color:var(--grey);letter-spacing:.05em;margin-bottom:4px">EXPOSURE ENDPOINTS</div>'
-      + (r.terminals || []).map(function(t){ return _traceChip({ chit_id:t.chit_id, product:t.product }, true); }).join('') + '</div>'
-    : '';
+  return banner
+    + '<div style="padding:4px 20px 22px">'
+    + '<div style="font-size:11px;font-weight:800;color:var(--grey);letter-spacing:.05em;margin:6px 0 6px">WHO HOLDS IT — recall tree</div>'
+    + _traceTree(r) + '</div>';
+}
 
-  var maxD = r.depth_max || 0, tiers = '';
-  for (var d = 0; d <= maxD; d++){
-    var tn = nodes.filter(function(n){ return n.depth === d; });
-    if (!tn.length) continue;
-    tiers += '<div style="padding:8px 18px;border-top:1px solid #f2f4f6">'
-      + '<div style="font-size:10.5px;font-weight:800;color:var(--grey);letter-spacing:.05em;margin-bottom:3px">' + (d === 0 ? 'FLAGGED' : 'HOP ' + d) + ' · ' + tn.length + '</div>'
-      + tn.map(function(n){ return _traceChip(n, !!termIds[n.chit_id]); }).join('') + '</div>';
+// Each node = a handoff, labelled by the PARTY THAT HOLDS IT (to_name) with from-whom + how much. Rendered as a
+// parent→child tree from the walk's edges; the visited-set keeps a diamond from rendering twice.
+function _traceNode(n, isTerm){
+  var who = esc(n.to_name || n.product || _traceShort(n.chit_id));
+  var bits = [];
+  if (n.sender_name) bits.push('from ' + esc(n.sender_name));
+  if (n.qty != null) bits.push('<b style="color:#3a4048">' + esc(String(n.qty)) + esc(n.unit ? (' ' + n.unit) : '') + '</b>');
+  if (n.product) bits.push(esc(n.product));
+  bits.push('<span style="font-family:monospace;font-size:10px;opacity:.6">' + _traceShort(n.chit_id) + '</span>');
+  var badge = n.is_origin ? '<span style="font-size:9.5px;font-weight:800;color:#2c5aa0;background:#eaf1fb;border-radius:6px;padding:1px 6px;margin-left:7px">ORIGIN</span>'
+            : (isTerm ? '<span style="font-size:9.5px;font-weight:800;color:#a5382e;background:#fdecea;border-radius:6px;padding:1px 6px;margin-left:7px">EXPOSED</span>' : '');
+  var dot = isTerm ? '#c0453b' : (n.is_origin ? '#2c5aa0' : '#8a94a3');
+  return '<div style="padding:6px 0">'
+    + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
+      + '<span style="width:9px;height:9px;border-radius:50%;background:' + dot + ';flex:0 0 auto"></span>'
+      + '<span style="font-weight:700;font-size:13.5px">' + who + '</span>' + badge + '</div>'
+    + '<div style="font-size:11.5px;color:var(--grey);margin-left:17px;margin-top:1px">' + bits.join(' · ') + '</div>'
+    + '</div>';
+}
+function _traceTree(r){
+  var byId = {}; (r.nodes || []).forEach(function(n){ byId[n.chit_id] = n; });
+  var kids = {}; (r.edges || []).forEach(function(e){ (kids[e.from] = kids[e.from] || []).push(e.to); });
+  var term = {}; (r.terminals || []).forEach(function(t){ term[t.chit_id] = 1; });
+  var seen = {};
+  function render(id){
+    if (seen[id]) return '';
+    seen[id] = 1;
+    var n = byId[id] || { chit_id:id };
+    var kidHtml = (kids[id] || []).map(render).join('');
+    return '<div>' + _traceNode(n, !!term[id])
+      + (kidHtml ? ('<div style="margin-left:8px;border-left:1.5px solid var(--line);padding-left:15px">' + kidHtml + '</div>') : '')
+      + '</div>';
   }
-  return banner + terms + tiers;
+  return render(r.start);
 }
 
 function _traceBwd(r){
