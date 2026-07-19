@@ -116,6 +116,39 @@ function netTraceFrom(chitId){
   if (typeof ensureCap === 'function') ensureCap('traceability').then(function(){ if (typeof runTrace === 'function') runTrace('forward'); }).catch(function(){});
   if (typeof renderApp === 'function') renderApp();
 }
+// Declaring a catalogue is a DELIBERATE choice of exposure — never assumed. Three levels:
+//   public    → shows in the public storefront (customers, anyone)
+//   protected → network/partner-facing only (restricted) — visible to members you connect, NOT the public
+//   private   → internal only — exposed to no one (an internal distribution/department node stays here)
+var _visMap = { public: 'public', protected: 'restricted', private: 'private' };
+async function netSetVisibility(nodeKey){
+  var P = _netNode(nodeKey); if (!P || !P.token) { if (typeof toast === 'function') toast('You don\'t hold this node\'s key.'); return; }
+  var raw = (typeof prompt === 'function') ? prompt('Declare this catalogue\'s exposure — public, protected, or private:', P.visibility || 'public') : 'public';
+  if (raw === null) return; raw = raw.trim().toLowerCase();
+  if (!_visMap[raw]) { if (typeof toast === 'function') toast('Type public, protected, or private.'); return; }
+  UI.net.busy = true; if (typeof renderApp === 'function') renderApp();
+  try { await _netFetch('/api/schemas/visibility', 'PATCH', P.token, { visibility: _visMap[raw] }); P.visibility = raw; if (typeof toast === 'function') toast('Catalogue declared ' + raw + '.'); }
+  catch (e) { if (typeof toast === 'function') toast(e.message || 'Could not set visibility'); }
+  UI.net.busy = false; if (typeof renderApp === 'function') renderApp();
+}
+// Put a product on a node (the node = a line of business). The catalogue's exposure must be DECLARED first; the
+// item is tagged with this network id, so it surfaces in the network storefront only if the node is declared public.
+async function netAddProduct(nodeKey){
+  var P = _netNode(nodeKey); if (!P) return;
+  if (P.formation === 'joined' || P.key_policy === 'handed_over' || !P.token) { if (typeof toast === 'function') toast('Add products from a node you operate.'); return; }
+  if (!P.visibility) { if (typeof toast === 'function') toast('Declare the catalogue exposure first (public / protected / private).'); await netSetVisibility(nodeKey); if (!P.visibility) return; }
+  var name = (typeof prompt === 'function') ? prompt('Product name (e.g. Basmati Rice 5kg):', '') : ''; if (!name || !name.trim()) return;
+  var category = (typeof prompt === 'function') ? prompt('Line of business / category (Grocery, Meat, Clothes…):', P.category || 'Grocery') : 'Grocery'; if (category === null) return;
+  var price = parseFloat((typeof prompt === 'function') ? prompt('Price (₹):', '199') : '199') || 0;
+  UI.net.busy = true; if (typeof renderApp === 'function') renderApp();
+  try {
+    await _netFetch('/api/products', 'POST', P.token, { item_data: { name: name.trim(), category: (category || 'Other').trim(), price: price, unit: 'unit', network_id: UI.net.id } });
+    P.products = (P.products || 0) + 1;
+    if (typeof toast === 'function') toast('Added “' + name.trim() + '” (' + P.visibility + ' catalogue).');
+  } catch (e) { if (typeof toast === 'function') toast(e.message || 'Add product failed'); }
+  UI.net.busy = false; if (typeof renderApp === 'function') renderApp();
+}
+function netViewStore(){ if (!UI.net || !UI.net.id) return; try { window.open('/store.html?net=' + encodeURIComponent(UI.net.id), '_blank'); } catch (e) {} }
 
 function _netTree(parentKey, depth){
   var kids = (UI.net.nodes || []).filter(function(n){ return n.parent_key === (parentKey || null); });
@@ -143,7 +176,8 @@ function networkScreen(){
       + tree
       + '<div style="font-size:12px;color:var(--blue);padding:11px 8px 4px;cursor:pointer" onclick="netAddRoot()">＋ Add root (source)</div>'
       + (UI.net.busy ? '<div style="font-size:11px;color:var(--grey);padding:6px 8px">provisioning…</div>' : '')
-      + '<div style="font-size:11px;color:var(--blue);padding:9px 8px;cursor:pointer;border-top:1px solid var(--line);margin-top:10px" onclick="netNewNetwork()">↺ Start a different network</div>'
+      + '<div style="font-size:12px;color:var(--blue);padding:9px 8px;cursor:pointer;border-top:1px solid var(--line);margin-top:10px" onclick="netViewStore()">🛍️ View public store</div>'
+      + '<div style="font-size:11px;color:var(--blue);padding:9px 8px;cursor:pointer" onclick="netNewNetwork()">↺ Start a different network</div>'
       + '</div>'
     + '<div style="flex:1;overflow:auto;min-width:0">' + right + '</div></div>';
 }
@@ -158,7 +192,9 @@ function _netNodeView(n){
         : (handed
             ? '<span style="font-size:12px;color:var(--grey)">Handed over — its operator adds its own children now.</span>'
             : '<button class="pri" onclick="netAddChild(\'' + n.key + '\')" style="padding:8px 13px">＋ Add owned node</button>'
-              + '<button onclick="netInvitePartner(\'' + n.key + '\')" style="padding:8px 13px">🤝 Invite a partner</button>'))
+              + '<button onclick="netInvitePartner(\'' + n.key + '\')" style="padding:8px 13px">🤝 Invite a partner</button>'
+              + '<button onclick="netAddProduct(\'' + n.key + '\')" style="padding:8px 13px">🏷️ Add product</button>'
+              + '<button onclick="netSetVisibility(\'' + n.key + '\')" style="padding:8px 13px">🔎 Catalogue: ' + (n.visibility || 'undeclared') + '</button>'))
     + (n.chit_id ? '<button onclick="netTraceFrom(\'' + n.chit_id + '\')" style="padding:8px 13px">🧭 Trace from here</button>' : '')
     + '</div>';
   var panel;
@@ -185,6 +221,6 @@ function _netNodeView(n){
             : (handed ? '<span style="font-size:10px;font-weight:800;color:#2c5aa0;background:#eaf1fb;border-radius:6px;padding:2px 7px;margin-left:9px;vertical-align:middle">🔒 HANDED OVER</span>' : '');
   return '<div style="padding:16px 20px">'
     + '<div style="font-size:18px;font-weight:800">' + (n.parent_key ? '' : '◆ ') + esc(n.name) + badge + '</div>'
-    + '<div style="font-size:11.5px;color:var(--grey);margin-top:2px">' + (n.parent_key ? ('received ' + esc(String(n.qty)) + esc(' ' + n.unit) + ' of ' + esc(n.product)) : 'source node — no inbound') + ' · ' + childCount + ' child' + (childCount === 1 ? '' : 'ren') + '</div>'
+    + '<div style="font-size:11.5px;color:var(--grey);margin-top:2px">' + (n.parent_key ? ('received ' + esc(String(n.qty)) + esc(' ' + n.unit) + ' of ' + esc(n.product)) : 'source node — no inbound') + ' · ' + childCount + ' child' + (childCount === 1 ? '' : 'ren') + (n.products ? ' · ' + n.products + ' product' + (n.products === 1 ? '' : 's') : '') + (n.visibility ? ' · <b style="color:' + (n.visibility === 'public' ? '#2c7a43' : (n.visibility === 'private' ? '#a5382e' : '#c98a2b')) + '">' + n.visibility + ' catalogue</b>' : '') + '</div>'
     + actions + panel + '</div>';
 }
