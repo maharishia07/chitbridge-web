@@ -1414,7 +1414,7 @@ function priChip(p){ return (!p||p==="normal")?"":`<span class="prichip pri-${p}
 let UI = {...UI0, selected:new Set(), aggStates:new Set(["open","act","close"])};
 
 const MENUS = {
-  entity:{top:[["compose","✉️","Compose",""],["task","📥","Task",""],["order","📤","Order",""],["folders","📁","Folders",""],["drafts","📝","Drafts",""],["trash","🗑️","Trash",""],["archive","🗄️","Archive",""]], rest:[["network","🔗","Network"],["suppliers","🏭","Suppliers"],["customers","🛍️","Customers"],["catalogue","🗂️","Catalogue"],["readiness","🛡️","Trade ready"],["coassists","🧑‍🤝‍🧑","Co-assists"],["mis","📊","MIS"],["disputes","⚖️","Disputes"],["profile","👤","Profile"],["settings","⚙️","Settings"],["assistreview","🧠","Assistant"]], tag:"Owner does structure."},
+  entity:{top:[["compose","✉️","Compose",""],["task","📥","Task",""],["order","📤","Order",""],["folders","📁","Folders",""],["drafts","📝","Drafts",""],["trash","🗑️","Trash",""],["archive","🗄️","Archive",""]], rest:[["traceability","🧭","Traceability"],["network","🔗","Network"],["suppliers","🏭","Suppliers"],["customers","🛍️","Customers"],["catalogue","🗂️","Catalogue"],["readiness","🛡️","Trade ready"],["coassists","🧑‍🤝‍🧑","Co-assists"],["mis","📊","MIS"],["disputes","⚖️","Disputes"],["profile","👤","Profile"],["settings","⚙️","Settings"],["assistreview","🧠","Assistant"]], tag:"Owner does structure."},
   actor:{top:[["compose","✉️","Compose",""],["task","📥","Task",""],["order","📤","Order",""],["folders","📁","Folders",""],["drafts","📝","Drafts",""],["trash","🗑️","Trash",""],["archive","🗄️","Archive",""]], rest:[["suppliers","🏭","Suppliers"],["profile","👤","Profile"]], tag:"Commerce yes, structure no."},
   customer:{top:[["order","📤","My orders",""]], rest:[["shops","🏬","Find a shop"]], tag:"You see only your orders."},
 };
@@ -1431,6 +1431,7 @@ const PURPOSE = {
   coassists:"Manage who acts for you — people now; connectors, devices, processes, agents next. For structure use Network.",
   mis:"Numbers — performance across the network.",
   disputes:"Chits flagged for resolution.",
+  traceability:"Flag a batch to see its recall set + ₹ saved; trace any node back to source. Operator lens: topology + product only.",
   settings:"Toolbar, saved views, archive schedule, your drive, status table.",
   assistreview:"Questions the assistant couldn't answer, captured for review. Write an answer to serve it live, or reject — approved answers appear in the assistant instantly.",
   shops:"Find a shop you have a bridge with.",
@@ -1441,7 +1442,7 @@ const PURPOSE = {
    /app/cap-<name>.js (classic script, shared global scope). CAP_OF maps a screen to its
    capability; unlisted screens are Core (eager, always loaded). renderApp shows "Loading…"
    and re-renders once the capability arrives. Grow CAP_OF as screens migrate out. */
-const CAP_OF = { mis:'admin', profile:'admin', settings:'admin', coassists:'workforce', assistreview:'admin', connectors:'connector', disputes:'dispute', folders:'folders', readiness:'readiness' };
+const CAP_OF = { mis:'admin', profile:'admin', settings:'admin', coassists:'workforce', assistreview:'admin', connectors:'connector', disputes:'dispute', folders:'folders', readiness:'readiness', traceability:'traceability' };
 // nav items gated by an entity capability (the itemised toggle) — hidden unless SESSION.capabilities holds the key.
 const CAP_GATED = { connectors:'connector', disputes:'dispute' };
 const CAP_LOADED = {};
@@ -2335,6 +2336,7 @@ function acLbl(a){ return a?(esc(a.name)+' <span class="mono" style="color:var(-
 function mainBody(){
   if(["task","order","drafts","trash","archive"].includes(UI.nav)) return taskPanel();
   if(UI.nav==="folders") return foldersScreen();
+  if(UI.nav==="traceability") return traceabilityScreen();
   if(UI.nav==="readiness") return readinessScreen();
       if(UI.nav==="disputes") return disputesScreen();
   if(UI.nav==="profile") return profileScreen();
