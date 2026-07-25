@@ -1,9 +1,12 @@
-/* app/cap-network.js — NETWORK provisioning (Option 1: a new, owner-provisioned network). Lazy via ensureCap('network').
- * Two panels: LEFT = the tree you build (parties); RIGHT = the selected node + "add child". Each node is a REAL
- * entity the operator mints (owner holds its first-time key — loose policy for now; the tighten/hand-over dial is next).
- * "Add child" hands a batch DOWN: it sends the traceable handoff parent→child FROM the parent's key, tagged with this
- * network id + the operator, so the tree you build IS the traceability tree. Reuses register/verify/send — no new backend. */
+/* app/cap-network.js — DESIGN-FIRST network builder. Lazy via ensureCap('network').
+ * You DESIGN a tree of nodes under your OWN entity (the top node) — a DRAFT. Nothing is minted while you design.
+ * The draft persists per-entity (localStorage) so it survives closing and reopening the app. When the design is
+ * done, "Build" is the confirm step that will create each node as a real entity + its login key — that step is
+ * DEFERRED (wired in a later slice); until you confirm it, NO entities and NO keys are created.
+ * Two panes, same style as before: LEFT = the tree; RIGHT = the selected node.
+ * (The provisioning/mint helpers from the previous version are kept below, dormant, for the future Build step.) */
 
+/* ---- mint helpers — DORMANT during design; used later by the Build/confirm step ---- */
 function _netBase(){ return (typeof CFG !== 'undefined' && CFG.API_BASE) || ''; }
 async function _netFetch(path, method, token, body){
   var res = await fetch(_netBase() + path, { method: method || 'GET', cache: 'no-store',
@@ -13,7 +16,6 @@ async function _netFetch(path, method, token, body){
   if (!res.ok) throw new Error((j && (j.message || j.error)) || ('API ' + res.status));
   return j;
 }
-// Provision a real entity node (owner mints it and holds its key).
 async function _netMint(name){
   var email = 'node-' + String(name || 'node').toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Date.now().toString(36) + '-' + Math.floor(Math.random() * 1e5) + '@node.cb';
   var reg = await _netFetch('/api/entities/register', 'POST', null, { display_name: name, email: email });
@@ -21,206 +23,128 @@ async function _netMint(name){
   var ver = await _netFetch('/api/entities/verify', 'POST', null, { email: email, otp: otp });
   return { entity_id: ver.entity.identity_id, token: ver.token, name: name, email: email };
 }
-function _netNode(key){ return (UI.net && UI.net.nodes || []).find(function(n){ return n.key === key; }); }
+
+/* ---- draft state + per-entity persistence (localStorage only; nothing hits the server) ---- */
+var NET_ROLES = ['branch', 'unit', 'depot', 'supplier', 'distributor', 'storefront', 'partner'];
+function _netDraftKey(){ return 'cb_netdraft_' + (SESSION.entityId || SESSION.entity || 'anon'); }
+function _netSave(){ try { if (UI.net) localStorage.setItem(_netDraftKey(), JSON.stringify(UI.net)); } catch (e) {} }
+function _netLoad(){ try { var s = localStorage.getItem(_netDraftKey()); return s ? JSON.parse(s) : null; } catch (e) { return null; } }
+function _netInit(){ if (UI.net === undefined || UI.net === null) UI.net = _netLoad() || null; }
 function _netKey(){ return 'k' + Date.now().toString(36) + Math.floor(Math.random() * 1e4); }
-function _netInit(){ if (!UI.net) UI.net = { id: null, purpose: '', nodes: [], sel: null, busy: false }; }
+function _netNode(key){ return (UI.net && UI.net.nodes || []).find(function(n){ return n.key === key; }); }
+function loadNetwork(){ _netInit(); }   // override the legacy loader — design-first renders from the draft, no server fetch
+function _netRerender(){ if (typeof renderApp === 'function') renderApp(); }
 
 function netNewNetwork(){
-  var name = (typeof prompt === 'function') ? prompt('Name this network (its purpose):', 'Supply chain') : 'Network';
-  if (name === null) return;
-  UI.net = { id: 'net-' + Date.now().toString(36), purpose: (name || 'Network'), nodes: [], sel: null, busy: false };
-  if (typeof renderApp === 'function') renderApp();
+  var ent = SESSION.entity || SESSION.name || 'My entity';
+  var purpose = (typeof prompt === 'function') ? prompt('Name this network (what it is for):', ent + ' network') : (ent + ' network');
+  if (purpose === null) return;
+  var rootKey = _netKey();
+  UI.net = { id: 'net-' + Date.now().toString(36), purpose: (purpose || ent + ' network'), built: false,
+    nodes: [{ key: rootKey, name: ent, parent_key: null, role: 'operator', note: 'This entity — the top of the network.' }], sel: rootKey };
+  _netSave(); _netRerender();
 }
-async function netAddRoot(){
-  _netInit(); if (!UI.net.id) { netNewNetwork(); return; }
-  var name = (typeof prompt === 'function') ? prompt('Root node — the source (e.g. Aurex API):', '') : '';
-  if (!name || !name.trim()) return;
-  UI.net.busy = true; if (typeof renderApp === 'function') renderApp();
-  try { var m = await _netMint(name.trim());
-    UI.net.nodes.push({ key: _netKey(), name: m.name, entity_id: m.entity_id, token: m.token, email: m.email, formation: 'owned', key_policy: 'loose', chit_id: null, parent_key: null, product: null, qty: null, unit: null });
-    UI.net.sel = UI.net.nodes[UI.net.nodes.length - 1].key;
-  } catch (e) { if (typeof toast === 'function') toast(e.message || 'Provisioning failed'); }
-  UI.net.busy = false; if (typeof renderApp === 'function') renderApp();
-}
-async function netAddChild(parentKey){
+function netAddChild(parentKey){
+  _netInit(); if (!UI.net) return;
   var P = _netNode(parentKey); if (!P) return;
-  if (P.key_policy === 'handed_over' || !P.token) { if (typeof toast === 'function') toast('“' + P.name + '” was handed over — its own operator adds its children now, not you.'); return; }
-  if (!SESSION.entityId) { if (typeof toast === 'function') toast('Operator not loaded — reload and sign in again.'); return; }
-  var name = (typeof prompt === 'function') ? prompt('New node — who receives (e.g. Distributor Mumbai):', '') : ''; if (!name || !name.trim()) return;
-  var product = (typeof prompt === 'function') ? prompt('Batch / product handed to it:', P.product || 'FG-PC-6621') : 'BATCH'; if (product === null) return;
-  var qty = parseFloat((typeof prompt === 'function') ? prompt('Quantity (kg):', '8') : '8') || 0;
-  UI.net.busy = true; if (typeof renderApp === 'function') renderApp();
-  try {
-    var m = await _netMint(name.trim());
-    var trace = { product: product, qty: qty, unit: 'kg', network: { id: UI.net.id, operator: SESSION.entityId } };
-    if (P.chit_id) trace.parents = [P.chit_id]; else trace.is_origin = true;   // root's first outbound = the origin edge
-    var sent = await _netFetch('/api/chits/send', 'POST', P.token, { receivers: [{ entity_id: m.entity_id }], purpose: 'delivery_note',
-      manual_subject: P.name + ' → ' + m.name + ': ' + product, line_items: [{ name: product, quantity: qty, unit: 'kg', price: 0, total: 0 }], trace: trace });
-    UI.net.nodes.push({ key: _netKey(), name: m.name, entity_id: m.entity_id, token: m.token, email: m.email, formation: 'owned', key_policy: 'loose', chit_id: sent.chit_id, parent_key: parentKey, product: product, qty: qty, unit: 'kg' });
-    UI.net.sel = UI.net.nodes[UI.net.nodes.length - 1].key;
-  } catch (e) { if (typeof toast === 'function') toast(e.message || 'Add failed'); }
-  UI.net.busy = false; if (typeof renderApp === 'function') renderApp();
+  var name = (typeof prompt === 'function') ? prompt('New node under "' + P.name + '" (a branch, unit, depot, supplier, distributor…):', '') : '';
+  if (!name || !name.trim()) return;
+  var n = { key: _netKey(), name: name.trim(), parent_key: parentKey, role: 'branch', note: '' };
+  UI.net.nodes.push(n); UI.net.sel = n.key; UI.net.built = false;
+  _netSave(); _netRerender();
 }
-function netSelect(key){ _netInit(); UI.net.sel = key; if (typeof renderApp === 'function') renderApp(); }
-// The tighten dial: hand over a node's key. The operator DROPS its token (can no longer act as / read the node),
-// the policy flips to handed_over (tighten-only — no reclaim), and its operator gets a first-time key. Making the
-// node's private schema unreachable even from HQ is what makes "the schema will not be exposed" actually true.
-function netHandover(key){
-  var n = _netNode(key); if (!n || n.key_policy === 'handed_over') return;
+function netSelect(key){ _netInit(); if (UI.net) UI.net.sel = key; _netRerender(); }
+function netRename(key){
+  var n = _netNode(key); if (!n) return;
+  var name = (typeof prompt === 'function') ? prompt('Rename node:', n.name) : n.name;
+  if (name === null || !name.trim()) return;
+  n.name = name.trim(); UI.net.built = false; _netSave(); _netRerender();
+}
+function netSetRole(key, role){ var n = _netNode(key); if (!n) return; n.role = role; UI.net.built = false; _netSave(); _netRerender(); }
+function netSetNote(key, val){ var n = _netNode(key); if (!n) return; n.note = val; _netSave(); }   // no re-render while typing
+function _netDescendants(key, acc){ acc = acc || []; (UI.net.nodes || []).forEach(function(n){ if (n.parent_key === key){ acc.push(n.key); _netDescendants(n.key, acc); } }); return acc; }
+function netDelete(key){
+  var n = _netNode(key); if (!n) return;
+  if (!n.parent_key){ if (typeof toast === 'function') toast('The top node is your entity — it stays.'); return; }
+  var cnt = _netDescendants(key).length;
   var go = function(){
-    n.key_policy = 'handed_over';
-    var handedEmail = n.email; n.token = null;   // operator drops the operational key
-    if (typeof renderApp === 'function') renderApp();
-    var body = '<div style="padding:16px 18px">'
-      + '<div style="font-size:13px;color:#3a4048;line-height:1.55">You handed over <b>' + esc(n.name) + '</b>. You no longer hold its key — it runs its own operations now. You keep <b>deactivate</b> authority.</div>'
-      + '<div style="margin-top:14px;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:#f7f9fb">'
-        + '<div style="font-size:11px;font-weight:800;color:var(--grey);letter-spacing:.05em;margin-bottom:6px">FIRST-TIME KEY — give this to its operator</div>'
-        + '<div style="font-size:12.5px;font-family:monospace">sign-in: ' + esc(handedEmail || '(node email)') + '</div>'
-        + '<div style="font-size:12.5px;font-family:monospace">code: 123456</div>'
-        + '<div style="font-size:11px;color:var(--grey);margin-top:7px">They sign in with this, then change it to their own — after which even you can\'t reach it. (Credential rotation is the next layer.)</div>'
-      + '</div></div>';
-    if (typeof modal === 'function') modal('<div class="mhd"><div class="t">🔒 Key handed over</div></div><div class="mbody" style="padding:0">' + body + '</div>');
-    else if (typeof toast === 'function') toast('Handed over ' + n.name);
+    var kill = _netDescendants(key); kill.push(key);
+    UI.net.nodes = UI.net.nodes.filter(function(x){ return kill.indexOf(x.key) < 0; });
+    if (kill.indexOf(UI.net.sel) >= 0) UI.net.sel = n.parent_key;
+    UI.net.built = false; _netSave(); _netRerender();
   };
-  if (typeof confirmAsk === 'function') confirmAsk('Hand over the key', 'Hand over <b>' + esc(n.name) + '</b>? You will <b>drop its key</b> — you can no longer act as it or read its private data. This <b>can\'t be undone</b> (tighten-only).', 'Hand over', go, true);
-  else if (typeof window !== 'undefined' && window.confirm('Hand over ' + n.name + '? You drop its key permanently.')) go();
+  if (typeof confirmAsk === 'function') confirmAsk('Remove node', 'Remove <b>' + esc(n.name) + '</b>' + (cnt ? ' and its ' + cnt + ' sub-node' + (cnt === 1 ? '' : 's') : '') + ' from the design? Nothing was created yet, so nothing is lost.', 'Remove', go, true);
+  else if (typeof window !== 'undefined' && window.confirm('Remove ' + n.name + '?')) go();
 }
-// JOINED node (Option 2): bring an INDEPENDENT business into the network via the real handshake (request → accept),
-// then transact a traceable handoff to it. It's a PEER — born tight (no key held), formation 'joined'. Contrast with
-// an owned node (minted, key held). A→B ⇒ not B→A: a fresh partner is always a new leaf, so no back-edge can form.
-async function netInvitePartner(parentKey){
-  var P = _netNode(parentKey); if (!P) { if (typeof toast === 'function') toast('Select the node the partner joins under first.'); return; }
-  if (P.formation === 'joined' || P.key_policy === 'handed_over' || !P.token) { if (typeof toast === 'function') toast('Invite from a node you still operate.'); return; }
-  if (!SESSION.entityId) { if (typeof toast === 'function') toast('Operator not loaded — reload and sign in again.'); return; }
-  var name = (typeof prompt === 'function') ? prompt('Partner business (an independent business joining your network):', '') : ''; if (!name || !name.trim()) return;
-  var product = (typeof prompt === 'function') ? prompt('Batch / product handed to the partner:', P.product || 'FG-PC-6621') : 'BATCH'; if (product === null) return;
-  var qty = parseFloat((typeof prompt === 'function') ? prompt('Quantity (kg):', '8') : '8') || 0;
-  UI.net.busy = true; if (typeof renderApp === 'function') renderApp();
-  try {
-    var partner = await _netMint(name.trim());                                   // an independent business (real entity)
-    var reqres = await _netFetch('/api/connections/request', 'POST', SESSION.token, { to_entity_id: partner.entity_id });  // operator requests
-    var connId = reqres.connection_id || (reqres.connection && reqres.connection.connection_id);
-    if (connId) await _netFetch('/api/connections/' + connId + '/respond', 'PUT', partner.token, { action: 'accept' });     // partner accepts (consent)
-    var trace = { product: product, qty: qty, unit: 'kg', network: { id: UI.net.id, operator: SESSION.entityId } };
-    if (P.chit_id) trace.parents = [P.chit_id]; else trace.is_origin = true;
-    var sent = await _netFetch('/api/chits/send', 'POST', P.token, { receivers: [{ entity_id: partner.entity_id }], purpose: 'delivery_note',
-      manual_subject: P.name + ' → ' + partner.name + ': ' + product, line_items: [{ name: product, quantity: qty, unit: 'kg', price: 0, total: 0 }], trace: trace });
-    UI.net.nodes.push({ key: _netKey(), name: partner.name, entity_id: partner.entity_id, token: null, email: partner.email,
-      formation: 'joined', key_policy: 'handed_over', chit_id: sent.chit_id, parent_key: parentKey, product: product, qty: qty, unit: 'kg' });
-    UI.net.sel = UI.net.nodes[UI.net.nodes.length - 1].key;
-  } catch (e) { if (typeof toast === 'function') toast(e.message || 'Invite failed'); }
-  UI.net.busy = false; if (typeof renderApp === 'function') renderApp();
+function netStartOver(){
+  var go = function(){ try { localStorage.removeItem(_netDraftKey()); } catch (e) {} UI.net = null; _netRerender(); };
+  if (typeof confirmAsk === 'function') confirmAsk('Start over', 'Discard this design and start a new one? Nothing was created on the server, so nothing is lost there.', 'Start over', go, true);
+  else go();
 }
-function netTraceFrom(chitId){
-  UI.traceId = chitId; UI.nav = 'traceability';
-  if (typeof ensureCap === 'function') ensureCap('traceability').then(function(){ if (typeof runTrace === 'function') runTrace('forward'); }).catch(function(){});
-  if (typeof renderApp === 'function') renderApp();
+function netBuild(){
+  _netInit(); if (!UI.net) return;
+  var n = (UI.net.nodes || []).length - 1;   // exclude the entity/top node
+  var body = '<div style="padding:16px 18px">'
+    + '<div style="font-size:13px;color:#3a4048;line-height:1.6">Your design is <b>saved</b>. Building will create <b>' + n + ' node' + (n === 1 ? '' : 's') + '</b> as real entities, each with its own login key — the same way a Co-assist gets a key.</div>'
+    + '<div style="margin-top:12px;padding:11px 13px;border:1px solid var(--line);border-radius:10px;background:#f7f9fb;font-size:12.5px;color:var(--grey)">🔒 <b>Not wired yet.</b> This is the confirm step — we build it next. Until you run it, <b>no entities and no keys are created</b>; your design just stays here, ready.</div>'
+    + '</div>';
+  if (typeof modal === 'function') modal('<div class="mhd"><div class="t">🔨 Ready to build</div></div><div class="mbody" style="padding:0">' + body + '</div>');
+  else if (typeof toast === 'function') toast('Design saved — the Build step comes next.');
 }
-// Declaring a catalogue is a DELIBERATE choice of exposure — never assumed. Three levels:
-//   public    → shows in the public storefront (customers, anyone)
-//   protected → network/partner-facing only (restricted) — visible to members you connect, NOT the public
-//   private   → internal only — exposed to no one (an internal distribution/department node stays here)
-var _visMap = { public: 'public', protected: 'restricted', private: 'private' };
-async function netSetVisibility(nodeKey){
-  var P = _netNode(nodeKey); if (!P || !P.token) { if (typeof toast === 'function') toast('You don\'t hold this node\'s key.'); return; }
-  var raw = (typeof prompt === 'function') ? prompt('Declare this catalogue\'s exposure — public, protected, or private:', P.visibility || 'public') : 'public';
-  if (raw === null) return; raw = raw.trim().toLowerCase();
-  if (!_visMap[raw]) { if (typeof toast === 'function') toast('Type public, protected, or private.'); return; }
-  UI.net.busy = true; if (typeof renderApp === 'function') renderApp();
-  try { await _netFetch('/api/schemas/visibility', 'PATCH', P.token, { visibility: _visMap[raw] }); P.visibility = raw; if (typeof toast === 'function') toast('Catalogue declared ' + raw + '.'); }
-  catch (e) { if (typeof toast === 'function') toast(e.message || 'Could not set visibility'); }
-  UI.net.busy = false; if (typeof renderApp === 'function') renderApp();
-}
-// Put a product on a node (the node = a line of business). The catalogue's exposure must be DECLARED first; the
-// item is tagged with this network id, so it surfaces in the network storefront only if the node is declared public.
-async function netAddProduct(nodeKey){
-  var P = _netNode(nodeKey); if (!P) return;
-  if (P.formation === 'joined' || P.key_policy === 'handed_over' || !P.token) { if (typeof toast === 'function') toast('Add products from a node you operate.'); return; }
-  if (!P.visibility) { if (typeof toast === 'function') toast('Declare the catalogue exposure first (public / protected / private).'); await netSetVisibility(nodeKey); if (!P.visibility) return; }
-  var name = (typeof prompt === 'function') ? prompt('Product name (e.g. Basmati Rice 5kg):', '') : ''; if (!name || !name.trim()) return;
-  var category = (typeof prompt === 'function') ? prompt('Line of business / category (Grocery, Meat, Clothes…):', P.category || 'Grocery') : 'Grocery'; if (category === null) return;
-  var price = parseFloat((typeof prompt === 'function') ? prompt('Price (₹):', '199') : '199') || 0;
-  UI.net.busy = true; if (typeof renderApp === 'function') renderApp();
-  try {
-    await _netFetch('/api/products', 'POST', P.token, { item_data: { name: name.trim(), category: (category || 'Other').trim(), price: price, unit: 'unit', network_id: UI.net.id, operator: SESSION.entityId } });
-    P.products = (P.products || 0) + 1;
-    if (typeof toast === 'function') toast('Added “' + name.trim() + '” (' + P.visibility + ' catalogue).');
-  } catch (e) { if (typeof toast === 'function') toast(e.message || 'Add product failed'); }
-  UI.net.busy = false; if (typeof renderApp === 'function') renderApp();
-}
-function netViewStore(){ if (!UI.net || !UI.net.id) return; try { window.open('/store.html?net=' + encodeURIComponent(UI.net.id), '_blank'); } catch (e) {} }
 
+/* ---- render (two panes, same style) ---- */
 function _netTree(parentKey, depth){
   var kids = (UI.net.nodes || []).filter(function(n){ return n.parent_key === (parentKey || null); });
   return kids.map(function(n){ var sel = UI.net.sel === n.key;
     return '<div onclick="netSelect(\'' + n.key + '\')" style="cursor:pointer;padding:7px 9px;padding-left:' + (9 + depth * 16) + 'px;border-radius:8px;font-size:12.5px;' + (sel ? 'background:#eef4fc;color:#2c5aa0;font-weight:700' : 'color:#3a4048') + '">'
-      + (n.parent_key ? '└ ' : '◆ ') + esc(n.name) + (n.formation === 'joined' ? ' 🤝' : (n.key_policy === 'handed_over' ? ' 🔒' : ''))
-      + (n.qty != null && n.product ? '<span style="color:var(--grey);font-weight:400;font-size:11px"> · ' + esc(String(n.qty)) + esc(' ' + n.unit) + '</span>' : '')
+      + (n.parent_key ? '└ ' : '◆ ') + esc(n.name)
+      + '<span style="color:var(--grey);font-weight:400;font-size:11px"> · ' + esc(n.role || 'node') + '</span>'
       + '</div>' + _netTree(n.key, depth + 1);
   }).join('');
 }
 function networkScreen(){
   _netInit();
-  if (!UI.net.id) {
-    return '<div style="padding:44px 22px;max-width:540px"><div style="font-size:19px;font-weight:800">🔗 Build a network</div>'
-      + '<div style="font-size:13px;color:var(--grey);margin:8px 0 18px;line-height:1.55">Provision a tree of nodes — each a real entity you own. Hand a batch down the tree and it becomes traceable end-to-end: flag the top and the whole reach lights up, flag a leaf and it walks back to source.</div>'
-      + '<button class="pri" onclick="netNewNetwork()" style="padding:10px 16px">＋ New network</button></div>';
+  if (!UI.net) {
+    var ent = SESSION.entity || SESSION.name || 'your entity';
+    return '<div style="padding:44px 22px;max-width:560px"><div style="font-size:19px;font-weight:800">🔗 Design your network</div>'
+      + '<div style="font-size:13px;color:var(--grey);margin:8px 0 8px;line-height:1.6">Draw your structure first — <b>' + esc(ent) + '</b> is the top node, and you add branches, units, depots or partners beneath it. This is a <b>design</b>: it saves here and survives closing the app. <b>Nothing is created</b> until you choose to Build.</div>'
+      + '<button class="pri" onclick="netNewNetwork()" style="padding:10px 16px;margin-top:10px">＋ Start designing</button></div>';
   }
-  var tree = _netTree(null, 0) || '<div style="color:var(--grey);font-size:12px;padding:8px 6px">No nodes yet — add the root (source) below.</div>';
+  var tree = _netTree(null, 0) || '<div style="color:var(--grey);font-size:12px;padding:8px 6px">No nodes yet.</div>';
   var sel = UI.net.sel ? _netNode(UI.net.sel) : null;
-  var right = sel ? _netNodeView(sel) : '<div style="padding:24px;color:var(--grey);font-size:13px">Select a node to hand a batch down from it — or add the root (source) on the left.</div>';
+  var right = sel ? _netNodeView(sel) : '<div style="padding:24px;color:var(--grey);font-size:13px">Select a node to edit it, or add a child under it.</div>';
+  var count = (UI.net.nodes || []).length - 1;
   return '<div style="display:flex;height:100%;min-height:0">'
-    + '<div style="width:290px;border-right:1px solid var(--line);overflow:auto;padding:12px 8px;flex:0 0 auto">'
+    + '<div style="width:300px;border-right:1px solid var(--line);overflow:auto;padding:12px 8px;flex:0 0 auto">'
       + '<div style="font-size:11px;font-weight:800;color:var(--grey);letter-spacing:.05em;padding:2px 8px 3px">' + esc(UI.net.purpose || 'NETWORK') + '</div>'
-      + '<div style="font-size:10px;color:#8a94a3;font-family:monospace;padding:0 8px 10px;word-break:break-all">' + esc(UI.net.id) + '</div>'
+      + '<div style="font-size:10px;color:#8a94a3;padding:0 8px 10px">design · saved on this device</div>'
       + tree
-      + '<div style="font-size:12px;color:var(--blue);padding:11px 8px 4px;cursor:pointer" onclick="netAddRoot()">＋ Add root (source)</div>'
-      + (UI.net.busy ? '<div style="font-size:11px;color:var(--grey);padding:6px 8px">provisioning…</div>' : '')
-      + '<div style="font-size:12px;color:var(--blue);padding:9px 8px;cursor:pointer;border-top:1px solid var(--line);margin-top:10px" onclick="netViewStore()">🛍️ View public store</div>'
-      + '<div style="font-size:11px;color:var(--blue);padding:9px 8px;cursor:pointer" onclick="netNewNetwork()">↺ Start a different network</div>'
+      + '<div style="border-top:1px solid var(--line);margin-top:12px;padding-top:10px">'
+        + '<button class="pri" onclick="netBuild()" style="width:calc(100% - 16px);margin:0 8px;padding:9px">🔨 Build network' + (count ? ' (' + count + ')' : '') + '</button>'
+        + '<div style="font-size:11px;color:var(--grey);padding:8px 8px 2px">' + (count ? count + ' node' + (count === 1 ? '' : 's') + ' designed · nothing created yet' : 'add nodes, then build') + '</div>'
+        + '<div style="font-size:11px;color:var(--blue);padding:6px 8px;cursor:pointer" onclick="netStartOver()">↺ Start over</div>'
+      + '</div>'
       + '</div>'
     + '<div style="flex:1;overflow:auto;min-width:0">' + right + '</div></div>';
 }
 function _netNodeView(n){
+  var isRoot = !n.parent_key;
   var childCount = (UI.net.nodes || []).filter(function(x){ return x.parent_key === n.key; }).length;
-  var joined = n.formation === 'joined';
-  var handed = n.key_policy === 'handed_over';
-  var pill = function(on, label, onColor){ return '<span style="padding:2px 9px;border-radius:20px;font-size:11px;font-weight:800;' + (on ? 'color:#fff;background:' + onColor : 'color:var(--grey);background:#eef1f4') + '">' + label + '</span>'; };
-  var actions = '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:14px">'
-    + (joined
-        ? '<span style="font-size:12px;color:var(--grey)">Partner (peer) — it runs itself; you transacted with it.</span>'
-        : (handed
-            ? '<span style="font-size:12px;color:var(--grey)">Handed over — its operator adds its own children now.</span>'
-            : '<button class="pri" onclick="netAddChild(\'' + n.key + '\')" style="padding:8px 13px">＋ Add owned node</button>'
-              + '<button onclick="netInvitePartner(\'' + n.key + '\')" style="padding:8px 13px">🤝 Invite a partner</button>'
-              + '<button onclick="netAddProduct(\'' + n.key + '\')" style="padding:8px 13px">🏷️ Add product</button>'
-              + '<button onclick="netSetVisibility(\'' + n.key + '\')" style="padding:8px 13px">🔎 Catalogue: ' + (n.visibility || 'undeclared') + '</button>'))
-    + (n.chit_id ? '<button onclick="netTraceFrom(\'' + n.chit_id + '\')" style="padding:8px 13px">🧭 Trace from here</button>' : '')
+  var roleOpts = NET_ROLES.map(function(r){ return '<option value="' + r + '"' + (n.role === r ? ' selected' : '') + '>' + r + '</option>'; }).join('');
+  return '<div style="padding:16px 20px;max-width:540px">'
+    + '<div style="font-size:18px;font-weight:800">' + (isRoot ? '◆ ' : '') + esc(n.name) + (isRoot ? '<span style="font-size:10px;font-weight:800;color:#2c5aa0;background:#eaf1fb;border-radius:6px;padding:2px 7px;margin-left:9px;vertical-align:middle">TOP · YOUR ENTITY</span>' : '') + '</div>'
+    + '<div style="font-size:11.5px;color:var(--grey);margin-top:2px">' + (isRoot ? 'The top of the network — your own entity.' : 'a node under ' + esc((_netNode(n.parent_key) || {}).name || '')) + ' · ' + childCount + ' child' + (childCount === 1 ? '' : 'ren') + '</div>'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:14px">'
+      + '<button class="pri" onclick="netAddChild(\'' + n.key + '\')" style="padding:8px 13px">＋ Add node under this</button>'
+      + (isRoot ? '' : '<button onclick="netRename(\'' + n.key + '\')" style="padding:8px 13px">✏️ Rename</button><button onclick="netDelete(\'' + n.key + '\')" style="padding:8px 13px">🗑️ Remove</button>')
+    + '</div>'
+    + (isRoot ? '' :
+        '<div style="margin-top:16px;padding:13px 15px;border:1px solid var(--line);border-radius:11px;background:#fff">'
+        + '<label style="font-size:11px;font-weight:800;color:var(--grey);letter-spacing:.05em">ROLE IN THE NETWORK</label>'
+        + '<select onchange="netSetRole(\'' + n.key + '\', this.value)" style="display:block;margin-top:6px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;font-size:13px">' + roleOpts + '</select>'
+        + '<label style="font-size:11px;font-weight:800;color:var(--grey);letter-spacing:.05em;display:block;margin-top:12px">NOTE (what it does)</label>'
+        + '<input value="' + esc(n.note || '') + '" oninput="netSetNote(\'' + n.key + '\', this.value)" placeholder="e.g. handles East-region depots" style="width:100%;margin-top:6px;padding:7px 9px;border:1px solid var(--line);border-radius:8px;font-size:13px;box-sizing:border-box">'
+        + '</div>')
+    + '<div style="margin-top:16px;font-size:11.5px;color:var(--grey);line-height:1.55">When the design is done, <b>Build</b> turns each node into a real entity with its own login key. Until then this is just a plan — saved, nothing created.</div>'
     + '</div>';
-  var panel;
-  if (joined) {
-    panel = '<div style="margin-top:16px;padding:13px 15px;border:1px solid #cfe0d6;border-radius:11px;background:#f4faf6">'
-      + '<div style="font-size:11px;font-weight:800;color:var(--grey);letter-spacing:.05em">FORMATION · JOINED (partner)</div>'
-      + '<div style="font-size:11px;color:#8a94a3;font-family:monospace;word-break:break-all;margin-top:9px">entity ' + esc(n.entity_id) + '</div>'
-      + '<div style="font-size:11.5px;color:#2c7a43;margin-top:7px">🤝 Connected via handshake (request → accept). An independent business — <b>born tight</b>: you never held its key and can\'t act as it. Its schema is private from you by default.</div>'
-      + '</div>';
-  } else {
-    panel = '<div style="margin-top:16px;padding:13px 15px;border:1px solid ' + (handed ? '#bcd0ea' : 'var(--line)') + ';border-radius:11px;background:' + (handed ? '#f4f8fe' : '#fff') + '">'
-      + '<div style="display:flex;align-items:center;gap:10px">'
-        + '<div style="font-size:11px;font-weight:800;color:var(--grey);letter-spacing:.05em">OWNED · KEY POLICY</div>'
-        + '<div style="margin-left:auto;display:flex;align-items:center;gap:6px">' + pill(!handed, 'LOOSE', '#c98a2b') + '<span style="color:var(--grey);font-weight:800">→</span>' + pill(handed, 'HANDED OVER', '#2c5aa0') + '</div>'
-      + '</div>'
-      + '<div style="font-size:11px;color:#8a94a3;font-family:monospace;word-break:break-all;margin-top:9px">entity ' + esc(n.entity_id) + '</div>'
-      + (handed
-          ? '<div style="font-size:11.5px;color:#2c5aa0;margin-top:7px">✓ You dropped this node\'s key. It runs itself; you kept deactivate authority. Tighten-only.</div>'
-          : '<div style="font-size:11.5px;color:var(--grey);margin-top:7px">You minted this node and hold its key <b>(loose)</b> — you can act as it. Hand over to make its schema private even from you.</div>'
-            + '<button onclick="netHandover(\'' + n.key + '\')" style="padding:7px 12px;margin-top:10px">🔒 Hand over the key (tighten)</button>')
-      + '</div>';
-  }
-  var badge = joined ? '<span style="font-size:10px;font-weight:800;color:#2c7a43;background:#e6f4ec;border-radius:6px;padding:2px 7px;margin-left:9px;vertical-align:middle">🤝 JOINED</span>'
-            : (handed ? '<span style="font-size:10px;font-weight:800;color:#2c5aa0;background:#eaf1fb;border-radius:6px;padding:2px 7px;margin-left:9px;vertical-align:middle">🔒 HANDED OVER</span>' : '');
-  return '<div style="padding:16px 20px">'
-    + '<div style="font-size:18px;font-weight:800">' + (n.parent_key ? '' : '◆ ') + esc(n.name) + badge + '</div>'
-    + '<div style="font-size:11.5px;color:var(--grey);margin-top:2px">' + (n.parent_key ? ('received ' + esc(String(n.qty)) + esc(' ' + n.unit) + ' of ' + esc(n.product)) : 'source node — no inbound') + ' · ' + childCount + ' child' + (childCount === 1 ? '' : 'ren') + (n.products ? ' · ' + n.products + ' product' + (n.products === 1 ? '' : 's') : '') + (n.visibility ? ' · <b style="color:' + (n.visibility === 'public' ? '#2c7a43' : (n.visibility === 'private' ? '#a5382e' : '#c98a2b')) + '">' + n.visibility + ' catalogue</b>' : '') + '</div>'
-    + actions + panel + '</div>';
 }
