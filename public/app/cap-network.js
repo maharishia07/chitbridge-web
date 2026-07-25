@@ -49,11 +49,11 @@ var CAT_METHODS = [
   { k: 'qtyprice', label: 'Price + qty vary',   hint: 'both negotiable per order' },
 ];
 var CAT_TEMPLATES = {
-  custom:  { label: 'Custom (build your own)', fields: [] },
-  timber:  { label: 'Timber',     fields: [{ name: 'species', source: 'manual', type: 'text' }, { name: 'grade', source: 'manual', type: 'choice' }, { name: 'moisture_pct', source: 'iot', type: 'number' }, { name: 'weight_kg', source: 'iot', type: 'number' }, { name: 'stock_qty', source: 'erp', type: 'number' }, { name: 'price_per_m3', source: 'erp', type: 'number' }] },
-  gold:    { label: 'Gold bar',   fields: [{ name: 'bar_serial', source: 'manual', type: 'text' }, { name: 'fineness', source: 'iot', type: 'number' }, { name: 'fine_weight_g', source: 'iot', type: 'number' }, { name: 'source_mine', source: 'manual', type: 'text' }, { name: 'spot_price', source: 'erp', type: 'number' }] },
-  pharma:  { label: 'Pharma lot', fields: [{ name: 'batch_no', source: 'manual', type: 'text' }, { name: 'active_ingredient', source: 'manual', type: 'text' }, { name: 'assay_pct', source: 'iot', type: 'number' }, { name: 'storage_temp', source: 'iot', type: 'number' }, { name: 'expiry', source: 'manual', type: 'date' }, { name: 'stock_qty', source: 'erp', type: 'number' }] },
-  drone:   { label: 'Drone',      fields: [{ name: 'model', source: 'manual', type: 'text' }, { name: 'serial_no', source: 'manual', type: 'text' }, { name: 'battery_health', source: 'iot', type: 'number' }, { name: 'flight_hours', source: 'iot', type: 'number' }, { name: 'unit_price', source: 'erp', type: 'number' }] },
+  custom:  { label: 'Custom (build your own)', baseUnit: '', fields: [] },
+  timber:  { label: 'Timber',     baseUnit: 'm3', fields: [{ name: 'species', source: 'manual', type: 'text' }, { name: 'grade', source: 'manual', type: 'choice' }, { name: 'moisture_pct', source: 'iot', type: 'number' }, { name: 'weight_kg', source: 'iot', type: 'number' }, { name: 'stock_qty', source: 'erp', type: 'number' }] },
+  gold:    { label: 'Gold bar',   baseUnit: 'g', fields: [{ name: 'bar_serial', source: 'manual', type: 'text' }, { name: 'fineness', source: 'iot', type: 'number' }, { name: 'fine_weight_g', source: 'iot', type: 'number' }, { name: 'source_mine', source: 'manual', type: 'text' }] },
+  pharma:  { label: 'Pharma lot', baseUnit: 'unit', fields: [{ name: 'batch_no', source: 'manual', type: 'text' }, { name: 'active_ingredient', source: 'manual', type: 'text' }, { name: 'assay_pct', source: 'iot', type: 'number' }, { name: 'storage_temp', source: 'iot', type: 'number' }, { name: 'expiry', source: 'manual', type: 'date' }, { name: 'stock_qty', source: 'erp', type: 'number' }] },
+  drone:   { label: 'Drone',      baseUnit: 'unit', fields: [{ name: 'model', source: 'manual', type: 'text' }, { name: 'serial_no', source: 'manual', type: 'text' }, { name: 'battery_health', source: 'iot', type: 'number' }, { name: 'flight_hours', source: 'iot', type: 'number' }] },
 };
 var COASSIST_KINDS = [
   { k: 'human', icon: '🧑', label: 'Human workforce' },
@@ -155,12 +155,31 @@ function netCapToggleOpen(key, capKey){   // collapse / expand a Yes capability'
   UI.net.collapsed = UI.net.collapsed || {}; UI.net.collapsed[capKey] = !UI.net.collapsed[capKey]; _netRerender();
 }
 /* catalogue spec editing */
-function _ensureCat(n){ if (!n.catalogue) n.catalogue = { template: 'custom', fields: [] }; if (!n.catalogue.loadedBy) n.catalogue.loadedBy = 'manual'; return n.catalogue; }
+function _ensureCat(n){
+  if (!n.catalogue) n.catalogue = { template: 'custom', fields: [] };
+  var c = n.catalogue;
+  if (!c.fields) c.fields = [];
+  if (!c.loadedBy) c.loadedBy = 'manual';
+  if (c.product === undefined) c.product = '';   // A · identity + order
+  if (!c.variants) c.variants = [];
+  if (c.baseUnit === undefined) c.baseUnit = '';
+  if (!c.altUnits) c.altUnits = [];
+  return c;
+}
 function netSetCatLoad(key, v){ var n = _netNode(key); if (!n) return; _ensureCat(n).loadedBy = v; _netMark(); _netRerender(); }
+/* catalogue Part A — identity + order (product · variants · base + alternative units) */
+function netSetCatProduct(key, v){ var n = _netNode(key); if (!n) return; _ensureCat(n).product = v; _netSave(); }
+function netSetBaseUnit(key, v){ var n = _netNode(key); if (!n) return; _ensureCat(n).baseUnit = v; _netSave(); }
+function netAddVariant(key){ var n = _netNode(key); if (!n) return; _ensureCat(n).variants.push({ name: '' }); _netMark(); _netRerender(); }
+function netDelVariant(key, i){ var n = _netNode(key); if (!n) return; _ensureCat(n).variants.splice(i, 1); _netMark(); _netRerender(); }
+function netSetVariant(key, i, v){ var n = _netNode(key); if (!n) return; var a = _ensureCat(n).variants; if (i >= 0 && i < a.length) { a[i].name = v; _netMark(); } }
+function netAddAltUnit(key){ var n = _netNode(key); if (!n) return; _ensureCat(n).altUnits.push({ unit: '', num: 1, den: 1 }); _netMark(); _netRerender(); }
+function netDelAltUnit(key, i){ var n = _netNode(key); if (!n) return; _ensureCat(n).altUnits.splice(i, 1); _netMark(); _netRerender(); }
+function netSetAltUnit(key, i, prop, v){ var n = _netNode(key); if (!n) return; var a = _ensureCat(n).altUnits; if (i < 0 || i >= a.length) return; if (prop === 'num' || prop === 'den') { var x = parseInt(v, 10); a[i][prop] = (v === '' || isNaN(x) || x < 1) ? 1 : x; _netMark(); } else { a[i][prop] = v; _netMark(); } }
 function _srcBacked(n, src){ if (src === 'manual') return true; if ((n.holds || []).indexOf('coassist') < 0) return false; var cc = _normCoassist(n.coassist); if (src === 'erp') return cc.erp.connectors.length > 0; if (src === 'iot') return (cc.iot.connections || []).length > 0; if (src === 'ai') return cc.ai.count > 0; return true; }
 function netSetCatTemplate(key, tpl){
   var n = _netNode(key); if (!n) return; var c = _ensureCat(n); c.template = tpl;
-  var t = CAT_TEMPLATES[tpl]; if (t && tpl !== 'custom') c.fields = t.fields.map(function(f){ return { name: f.name, source: f.source, type: f.type || 'text' }; });
+  var t = CAT_TEMPLATES[tpl]; if (t && tpl !== 'custom') { c.fields = t.fields.map(function(f){ return { name: f.name, source: f.source, type: f.type || 'text' }; }); if (t.baseUnit) c.baseUnit = t.baseUnit; if (!c.product) c.product = t.label; }
   _netMark(); _netRerender();
 }
 /* order form (lives under Storefront): commercial method + max + collect-back + how the CHIT arrives */
@@ -307,13 +326,27 @@ function _catConfig(n){
   var used = {}; (c.fields || []).forEach(function(f){ if (f.source && f.source !== 'manual') used[f.source] = true; });
   var usedK = Object.keys(used);
   var srcNote = usedK.length ? ('<div style="font-size:11px;color:var(--grey);margin-top:6px;border-top:1px dotted var(--line);padding-top:5px">Field sources: ' + usedK.map(function(s){ var ok = _srcBacked(n, s); return '<b style="color:' + (ok ? '#2c7a43' : '#a5382e') + '">' + s.toUpperCase() + (ok ? ' ✓' : ' ⚠') + '</b>'; }).join(' · ') + (usedK.some(function(s){ return !_srcBacked(n, s); }) ? ' <span style="color:#a5382e">— add the matching co-assist to this node</span>' : '') + '</div>') : '';
+  var _in = 'font-size:11.5px;padding:5px 7px;border:1px solid var(--line);border-radius:6px';
+  var variantRows = (c.variants || []).map(function(v, i){ return '<div style="display:flex;gap:6px;align-items:center;padding:2px 0"><input value="' + esc(v.name || '') + '" oninput="netSetVariant(\'' + n.key + '\',' + i + ',this.value)" placeholder="variant (e.g. Sunlit Ivory · Matte · 4L)" style="flex:1;min-width:0;' + _in + '"><span onclick="netDelVariant(\'' + n.key + '\',' + i + ')" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 3px">×</span></div>'; }).join('');
+  var altRows = (c.altUnits || []).map(function(u, i){ return '<div style="display:flex;gap:4px;align-items:center;padding:2px 0"><input value="' + esc(u.unit || '') + '" oninput="netSetAltUnit(\'' + n.key + '\',' + i + ',\'unit\',this.value)" placeholder="unit" style="width:66px;' + _in + '"><span style="font-size:10px;color:var(--grey)">1=</span><input type="number" min="1" value="' + (u.num || 1) + '" oninput="netSetAltUnit(\'' + n.key + '\',' + i + ',\'num\',this.value)" style="width:48px;' + _in + '"><span style="font-size:10px;color:var(--grey)">/</span><input type="number" min="1" value="' + (u.den || 1) + '" oninput="netSetAltUnit(\'' + n.key + '\',' + i + ',\'den\',this.value)" style="width:48px;' + _in + '"><span style="font-size:10px;color:var(--grey)">' + esc(c.baseUnit || 'base') + '</span><span onclick="netDelAltUnit(\'' + n.key + '\',' + i + ')" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 3px">×</span></div>'; }).join('');
+  var partA = '<div style="font-size:11px;font-weight:800;color:#2c5aa0;letter-spacing:.05em;margin-top:12px;border-top:1px solid var(--line);padding-top:9px">A · IDENTITY + ORDER</div>'
+    + '<label style="font-size:11px;color:var(--grey);display:block;margin-top:8px">Product (browse name)</label>'
+    + '<input value="' + esc(c.product || '') + '" oninput="netSetCatProduct(\'' + n.key + '\',this.value)" placeholder="product / family name" style="width:100%;margin-top:4px;box-sizing:border-box;' + _in + '">'
+    + '<label style="font-size:11px;color:var(--grey);display:block;margin-top:9px">Variants <span style="color:var(--faint,#8a929e)">(the orderable unit — the chit freezes the variant; none = product is its own)</span></label>'
+    + variantRows + '<div onclick="netAddVariant(\'' + n.key + '\')" style="cursor:pointer;color:var(--blue);font-size:11.5px;font-weight:600;padding:4px 0">＋ variant</div>'
+    + '<label style="font-size:11px;color:var(--grey);display:block;margin-top:6px">Base unit <span style="color:var(--faint,#8a929e)">(lowest indivisible — kg, litre)</span></label>'
+    + '<input value="' + esc(c.baseUnit || '') + '" oninput="netSetBaseUnit(\'' + n.key + '\',this.value)" placeholder="e.g. kg" style="width:120px;margin-top:4px;' + _in + '">'
+    + '<label style="font-size:11px;color:var(--grey);display:block;margin-top:9px">Alternative units <span style="color:var(--faint,#8a929e)">(integer conversion — 1 crate = 20/1 kg)</span></label>'
+    + altRows + '<div onclick="netAddAltUnit(\'' + n.key + '\')" style="cursor:pointer;color:var(--blue);font-size:11.5px;font-weight:600;padding:4px 0">＋ unit</div>'
+    + '<div style="font-size:10.5px;color:var(--grey);font-style:italic;margin-top:2px">Orderable unit is resolved by the buyer\'s tier; unit + factor freeze on the chit.</div>';
   return '<div style="margin-top:10px;padding:12px 13px;border:1px solid var(--line);border-left:3px solid #2c5aa0;border-radius:10px;background:#fbfdff">'
-    + '<div style="font-size:11px;font-weight:800;color:#2c5aa0;letter-spacing:.05em">🗂️ CATALOGUE SPEC</div>'
+    + '<div style="font-size:11px;font-weight:800;color:#2c5aa0;letter-spacing:.05em">🗂️ CATALOGUE — source (four parts)</div>'
     + '<label style="font-size:11px;color:var(--grey);display:block;margin-top:8px">Common catalogue (sets the fields)</label>'
     + '<select onchange="netSetCatTemplate(\'' + n.key + '\',this.value)" style="margin-top:4px;padding:6px 8px;border:1px solid var(--line);border-radius:7px;font-size:12.5px;max-width:100%">' + tplOpts + '</select>'
     + '<label style="font-size:11px;color:var(--grey);display:block;margin-top:10px">Populated by <span style="color:var(--faint,#8a929e)">(how the catalogue is fed)</span></label>'
     + '<select onchange="netSetCatLoad(\'' + n.key + '\',this.value)" style="margin-top:4px;padding:6px 8px;border:1px solid var(--line);border-radius:7px;font-size:12.5px">' + loadOpts + '</select>'
-    + '<label style="font-size:11px;color:var(--grey);display:block;margin-top:10px">Fields <span style="color:var(--faint,#8a929e)">(name · where it comes from · type)</span></label>'
+    + partA
+    + '<label style="font-size:11px;color:var(--grey);display:block;margin-top:12px;border-top:1px solid var(--line);padding-top:9px"><b style="font-weight:800;color:#2c5aa0;letter-spacing:.05em">C · ATTRIBUTES</b> <span style="color:var(--faint,#8a929e)">(name · where it comes from · type)</span></label>'
     + fields
     + '<div onclick="netAddCatField(\'' + n.key + '\')" style="cursor:pointer;color:var(--blue);font-size:12px;font-weight:600;padding:5px 0">＋ add field</div>'
     + srcNote
@@ -343,12 +376,16 @@ function _srcBadge(src){
 }
 function _catRecordPreview(n){
   var c = n.catalogue || {}; var fs = c.fields || [];
-  if (!fs.length) return '';
-  var name = (CAT_TEMPLATES[c.template] || {}).label || 'Item';
+  if (!fs.length && !c.product) return '';
+  var name = c.product || (CAT_TEMPLATES[c.template] || {}).label || 'Item';
+  var v0 = (c.variants || [])[0];
+  var au = (c.altUnits || [])[0];
+  var unitLine = c.baseUnit ? ('base ' + esc(c.baseUnit) + (au && au.unit ? ' · 1 ' + esc(au.unit) + ' = ' + (au.num || 1) + '/' + (au.den || 1) + ' ' + esc(c.baseUnit) : '')) : '';
   var rows = fs.map(function(f){ return '<div style="display:flex;align-items:center;gap:8px;padding:2px 0;font-size:11.5px"><span style="flex:0 0 116px;color:var(--grey);font-family:monospace;overflow:hidden;text-overflow:ellipsis">' + esc(f.name || '—') + '</span><span style="flex:1;color:#1c2128">' + _sampleVal(f.type) + '</span>' + _srcBadge(f.source || 'manual') + '</div>'; }).join('');
-  return '<div style="margin-top:10px;padding:11px 12px;border:1px solid var(--line);border-radius:9px;background:#fff">'
+  return '<div style="margin-top:12px;padding:11px 12px;border:1px solid var(--line);border-radius:9px;background:#fff">'
     + '<div style="font-size:10px;color:var(--faint,#8a929e);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">📄 Stored as a record — one item</div>'
-    + '<div style="font-weight:700;font-size:12.5px;margin-bottom:4px">' + esc(name) + '</div>'
+    + '<div style="font-weight:700;font-size:12.5px">' + esc(name) + (v0 && v0.name ? ' <span style="font-weight:500;color:var(--grey);font-size:11px">▸ ' + esc(v0.name) + '</span>' : '') + '</div>'
+    + (unitLine ? '<div style="font-size:10.5px;color:var(--grey);font-family:monospace;margin:2px 0 5px">' + unitLine + '</div>' : '<div style="margin-bottom:4px"></div>')
     + rows
     + '<div style="border-top:1px dashed var(--line);margin-top:6px;padding-top:5px;font-size:10.5px;color:var(--grey);font-family:monospace">🔒 sealed · content_hash a1b2c3…  ·  loaded by ' + esc(c.loadedBy || 'manual') + '</div>'
     + '</div>';
