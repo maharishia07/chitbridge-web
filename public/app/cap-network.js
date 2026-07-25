@@ -281,17 +281,65 @@ function netStartOver(){
   if (typeof confirmAsk === 'function') confirmAsk('Start over', 'Discard this design and start a new one? Nothing was created on the server, so nothing is lost there.', 'Start over', go, true);
   else go();
 }
+/* Build DRY-RUN — reads the design (via the shared model's deriveComputeJob) and shows the exact
+   wiring plan against EXISTING capabilities. It CALLS NOTHING and mints NOTHING. The real mint is
+   the gated next phase (human live-run). This is G7 (build contract) + the safe half of G8. */
+function _buildPlanNode(n){
+  var owned = !n.root && n.owned, partner = !n.owned, holds = n.holds || [], lines = [], warns = [];
+  if (n.root) lines.push('anchor: the top entity (you) — no new entity');
+  else if (owned) lines.push('register <b>entity</b> + issue a <b>login key</b> (co-assist pattern)');
+  else lines.push('send a <b>handshake</b> — independent business, <b>no key held</b>');
+  if (holds.indexOf('catalogue') >= 0) {
+    var c = _ensureCat(n), job = CBCatalogue.deriveComputeJob(c);
+    lines.push('catalogue <b>' + esc(c.product || '(unnamed)') + '</b> · ' + (c.variants || []).length + ' variant(s) · base ' + esc(c.baseUnit || '—'));
+    if (job.standards.length) lines.push('· ' + job.standards.length + ' standard(s) <i>by reference</i> (' + job.standards.map(function(s){ return esc(s.scheme); }).join(', ') + ')');
+    if (job.pricing.length) lines.push('· ' + job.pricing.length + ' price(s) in ' + esc([job.context.currency, job.context.region].filter(Boolean).join(' · ') || 'no context') + ' (' + job.pricing.map(function(p){ return p.by; }).join('/') + ')');
+    if (job.feeds.length) lines.push('· bind ' + job.feeds.length + ' <b>system-fed</b> field(s) to connector(s)');
+    if (job.computed.length) lines.push('· ' + job.computed.length + ' <b>computed</b> field(s) → co-assist computes, <b>rail seals</b>');
+    if (job.fromCustomer.length) lines.push('· ' + job.fromCustomer.length + ' customer-collected field(s)');
+    if (job.stored.length) lines.push('· ' + job.stored.length + ' CB-stored field(s) <i>(the gap)</i>');
+    if (job.bom.length) lines.push('· ' + job.bom.length + ' BOM component(s)');
+    if (job.triggers.length) lines.push('· wire ' + job.triggers.length + ' <b>loop</b> trigger(s)');
+    if (job.feedback.length) lines.push('· ' + job.feedback.length + ' <b>feed-back adapter(s)</b>: ' + job.feedback.map(function(f){ return esc(f.system) + (f.onRail ? ' (chit)' : ' (' + esc(f.format || '?') + ')'); }).join(', '));
+    (c.fields || []).forEach(function(f){ if ((f.leg === 'system' || f.leg === 'compute') && !_legBacked(n, f)) warns.push('“' + esc(f.name || '?') + '” needs ' + (f.leg === 'compute' ? esc(f.via) + ' (AI/ERP)' : 'a ' + esc(f.via) + ' connector') + ' this node doesn\'t carry'); });
+    CBCatalogue.validate(c).issues.forEach(function(iss){ warns.push(esc(iss)); });
+  }
+  if (holds.indexOf('storefront') >= 0) { var o = _ensureOrder(n); lines.push('storefront: ' + esc(n.exposure || 'public') + ' · order ' + esc(o.method || 'cart') + ((o.states || []).length ? ' · ' + o.states.length + ' lifecycle state(s)' : '')); }
+  if (holds.indexOf('coassist') >= 0) { var cc = _normCoassist(n.coassist); var p = []; if (cc.human.count) p.push(cc.human.count + ' human'); if ((cc.iot.connections || []).length) p.push((cc.iot.connections || []).length + ' IoT'); if (cc.erp.connectors.length) p.push(cc.erp.connectors.length + ' ERP'); if (cc.ai.count) p.push(cc.ai.count + ' AI slot'); lines.push('co-assists: ' + (p.join(' · ') || 'none set')); }
+  if (holds.indexOf('transact') >= 0) { var tr = n.transact || {}; lines.push('transact: ' + esc(tr.flow || 'both') + (tr.copyOperator ? ' · copy operator (traceability + MIS)' : '')); }
+  if (holds.indexOf('tradeready') >= 0) { var tt = n.tradeready || {}; lines.push('trade-ready: ' + (tt.mode === 'own' ? (tt.certs || []).length + ' own cert(s)' : 'inherit network certs')); }
+  if (holds.indexOf('dispute') >= 0) { lines.push('dispute: ' + ((n.dispute || {}).informed ? 'informed party (per-party scoping)' : 'not involved')); }
+  return { node: n, owned: owned, partner: partner, lines: lines, warns: warns };
+}
 function netBuild(){
   _netInit(); if (!UI.net) return;
-  var owned = (UI.net.nodes || []).filter(function(n){ return !n.root && n.owned; }).length;
-  var partners = (UI.net.nodes || []).filter(function(n){ return !n.owned; }).length;
-  var body = '<div style="padding:16px 18px">'
-    + '<div style="font-size:13px;color:#3a4048;line-height:1.6">Your design is <b>saved</b>. Building will:</div>'
-    + '<div style="font-size:13px;color:#3a4048;line-height:1.7;margin-top:8px">• create <b>' + owned + ' owned node' + (owned === 1 ? '' : 's') + '</b> as real entities, each with its own login key (like a Co-assist);<br>• send a handshake to <b>' + partners + ' partner' + (partners === 1 ? '' : 's') + '</b> (independent — no key held).</div>'
-    + '<div style="margin-top:12px;padding:11px 13px;border:1px solid var(--line);border-radius:10px;background:#f7f9fb;font-size:12.5px;color:var(--grey)">🔒 <b>Not wired yet.</b> This is the confirm step — we build it next. Until you run it, <b>no entities and no keys are created</b>; your design just stays here, ready.</div>'
+  var nodes = (UI.net.nodes || []);
+  var plans = nodes.map(_buildPlanNode);
+  var t = { owned: 0, partners: 0, cat: 0, co: 0, trig: 0, adapt: 0, std: 0, price: 0, warn: 0 };
+  plans.forEach(function(p){ if (p.owned) t.owned++; if (p.partner) t.partners++; t.warn += p.warns.length; });
+  nodes.forEach(function(n){ var h = n.holds || []; if (h.indexOf('catalogue') >= 0) { var job = CBCatalogue.deriveComputeJob(_ensureCat(n)); t.cat++; t.trig += job.triggers.length; t.adapt += job.feedback.length; t.std += job.standards.length; t.price += job.pricing.length; } if (h.indexOf('coassist') >= 0) { var cc = _normCoassist(n.coassist); t.co += (cc.human.count ? 1 : 0) + cc.erp.connectors.length + (cc.iot.connections || []).length + (cc.ai.count ? 1 : 0); } });
+  var chip = function(v, label){ return '<span style="display:inline-block;font-size:11.5px;background:#eef2f7;border-radius:6px;padding:2px 8px;margin:2px 4px 2px 0"><b>' + v + '</b> ' + label + '</span>'; };
+  var totals = '<div style="padding:12px 16px;border-bottom:1px solid var(--line)">'
+    + chip(t.owned, 'entities + keys') + chip(t.partners, 'partner handshake' + (t.partners === 1 ? '' : 's')) + chip(t.cat, 'catalogue' + (t.cat === 1 ? '' : 's')) + chip(t.co, 'co-assists') + chip(t.std, 'standards') + chip(t.price, 'prices') + chip(t.trig, 'triggers') + chip(t.adapt, 'adapters')
+    + (t.warn ? '<span style="display:inline-block;font-size:11.5px;background:#fbeeec;color:#a5382e;border-radius:6px;padding:2px 8px;margin:2px 4px"><b>' + t.warn + '</b> ⚠ to resolve</span>' : '<span style="display:inline-block;font-size:11.5px;color:#2c7a43;padding:2px 8px">✓ no blockers</span>')
     + '</div>';
-  if (typeof modal === 'function') modal('<div class="mhd"><div class="t">🔨 Ready to build</div></div><div class="mbody" style="padding:0">' + body + '</div>');
-  else if (typeof toast === 'function') toast('Design saved — the Build step comes next.');
+  var blocks = plans.filter(function(p){ return !p.node.root || p.lines.length > 1; }).map(function(p){
+    var n = p.node;
+    var badge = n.root ? 'ANCHOR' : (p.owned ? 'OWNED · entity+key' : 'PARTNER · handshake');
+    var bcol = n.root ? '#6b6f86' : (p.owned ? '#2c5aa0' : '#8a5a1e');
+    var rows = p.lines.map(function(l){ return '<div style="font-size:12px;color:#3a4048;line-height:1.55;padding:1px 0">' + (l.indexOf('·') === 0 ? '<span style="color:var(--grey);padding-left:12px">' + l + '</span>' : '▸ ' + l) + '</div>'; }).join('');
+    var w = p.warns.length ? '<div style="margin-top:6px;padding:6px 9px;border:1px solid #e6c4bf;border-radius:7px;background:#fbeeec;font-size:11px;color:#a5382e">' + p.warns.map(function(x){ return '⚠ ' + x; }).join('<br>') + '</div>' : '';
+    return '<div style="padding:11px 16px;border-bottom:1px solid var(--line)">'
+      + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><b style="font-size:13px">' + esc(n.name) + '</b><span style="font-size:9.5px;font-weight:700;letter-spacing:.03em;color:' + bcol + ';border:1px solid ' + bcol + '55;border-radius:4px;padding:1px 5px">' + badge + '</span></div>'
+      + rows + w + '</div>';
+  }).join('');
+  var gate = '<div style="padding:13px 16px">'
+    + '<div style="padding:11px 13px;border:1px solid #b7a3d6;border-radius:10px;background:#f7f4fc;font-size:12.5px;color:#5a4a86;line-height:1.6">🔒 <b>Dry-run — nothing was created.</b> This is the exact plan Build would run against the existing capabilities. The real mint (entities, keys, catalogue records, connector bindings) is the <b>gated next phase</b> and needs a <b>human live-run</b>.</div>'
+    + '<button disabled style="margin-top:11px;width:100%;padding:10px;border-radius:8px;border:1px solid var(--line);background:#eef1f5;color:#9aa2ad;font-weight:600;font-size:13px;cursor:not-allowed">🔨 Mint for real — human live-run required (not wired)</button>'
+    + '</div>';
+  var body = '<div style="max-height:66vh;overflow:auto">' + totals + blocks + gate + '</div>';
+  if (typeof modal === 'function') modal('<div class="mhd"><div class="t">🔨 Build plan — dry-run</div></div><div class="mbody" style="padding:0">' + body + '</div>', true);
+  else if (typeof toast === 'function') toast('Build dry-run ready.');
 }
 
 /* ---- render (two panes, same style) ---- */
