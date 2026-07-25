@@ -67,6 +67,13 @@ var IOT_TYPES = ['Raspberry Pi', 'Industrial gateway', 'PLC', 'Direct sensor', '
 var CAT_LOADS = ['manual', 'ERP sync', 'CSV', 'Excel', 'on-demand'];        // how the LIST (catalogue) is built
 var OFF_RAIL_CHANNELS = ['WhatsApp', 'email', 'scan'];    // off-rail capture inlets — a message to a handle you own → captured to a chit
 var COLLECT_CADENCE = ['per order', 'regular'];
+// The four-leg information chain: every required field is routed to ONE origin leg; the record is then fed back to systems.
+var CAT_LEGS = [
+  { k: 'system',   label: 'Fed by system',           short: 'System feed',   hint: 'already exists in ERP / IoT — sync it in',      col: ['#b07b1e', '#f6ecd8'] },
+  { k: 'customer', label: 'Collected from customer',  short: 'From customer', hint: 'known only at order time — capture it',         col: ['#2b6f8f', '#dcecf3'] },
+  { k: 'cb',       label: 'Stored in CB',             short: 'Store in CB',   hint: 'has no home today — the gap CB fills',          col: ['#2c7a43', '#e6f4ec'] },
+];
+var CAT_VIA = ['ERP', 'IoT'];   // when a field is fed by a system, which kind
 
 /* ---- draft state + per-entity persistence (localStorage only; nothing hits the server) ---- */
 function _netDraftKey(){ return 'cb_netdraft_' + (SESSION.entityId || SESSION.entity || 'anon'); }
@@ -156,17 +163,31 @@ function netCapToggleOpen(key, capKey){   // collapse / expand a Yes capability'
 }
 /* catalogue spec editing */
 function _ensureCat(n){
-  if (!n.catalogue) n.catalogue = { template: 'custom', fields: [] };
+  if (!n.catalogue) n.catalogue = { fields: [] };
   var c = n.catalogue;
   if (!c.fields) c.fields = [];
   if (!c.loadedBy) c.loadedBy = 'manual';
-  if (c.product === undefined) c.product = '';   // A · identity + order
+  if (c.story === undefined) c.story = '';        // the purpose narrative — drives the gap analysis
+  if (!c.feedback) c.feedback = [];               // systems the completed record is fed BACK to
+  if (c.product === undefined) c.product = '';    // A · identity + order
   if (!c.variants) c.variants = [];
   if (c.baseUnit === undefined) c.baseUnit = '';
   if (!c.altUnits) c.altUnits = [];
+  (c.fields || []).forEach(function(f){           // migrate old source → four-leg routing
+    if (!f.leg) {
+      if (f.source === 'erp') { f.leg = 'system'; f.via = 'ERP'; }
+      else if (f.source === 'iot') { f.leg = 'system'; f.via = 'IoT'; }
+      else { f.leg = 'cb'; }   // manual / ai → stored in CB (the gap)
+    }
+  });
   return c;
 }
 function netSetCatLoad(key, v){ var n = _netNode(key); if (!n) return; _ensureCat(n).loadedBy = v; _netMark(); _netRerender(); }
+/* catalogue purpose (the story that drives the gap analysis) + feed-back destinations */
+function netSetCatStory(key, v){ var n = _netNode(key); if (!n) return; _ensureCat(n).story = v; _netSave(); }   // no re-render while typing
+function netAddFeedback(key){ var n = _netNode(key); if (!n) return; _ensureCat(n).feedback.push({ system: '' }); _netMark(); _netRerender(); }
+function netDelFeedback(key, i){ var n = _netNode(key); if (!n) return; _ensureCat(n).feedback.splice(i, 1); _netMark(); _netRerender(); }
+function netSetFeedback(key, i, v){ var n = _netNode(key); if (!n) return; var fb = _ensureCat(n).feedback; if (i >= 0 && i < fb.length) { fb[i].system = v; _netMark(); } }   // no re-render while typing
 /* catalogue Part A — identity + order (product · variants · base + alternative units) */
 function netSetCatProduct(key, v){ var n = _netNode(key); if (!n) return; _ensureCat(n).product = v; _netSave(); }
 function netSetBaseUnit(key, v){ var n = _netNode(key); if (!n) return; _ensureCat(n).baseUnit = v; _netSave(); }
@@ -177,6 +198,8 @@ function netAddAltUnit(key){ var n = _netNode(key); if (!n) return; _ensureCat(n
 function netDelAltUnit(key, i){ var n = _netNode(key); if (!n) return; _ensureCat(n).altUnits.splice(i, 1); _netMark(); _netRerender(); }
 function netSetAltUnit(key, i, prop, v){ var n = _netNode(key); if (!n) return; var a = _ensureCat(n).altUnits; if (i < 0 || i >= a.length) return; if (prop === 'num' || prop === 'den') { var x = parseInt(v, 10); a[i][prop] = (v === '' || isNaN(x) || x < 1) ? 1 : x; _netMark(); } else { a[i][prop] = v; _netMark(); } }
 function _srcBacked(n, src){ if (src === 'manual') return true; if ((n.holds || []).indexOf('coassist') < 0) return false; var cc = _normCoassist(n.coassist); if (src === 'erp') return cc.erp.connectors.length > 0; if (src === 'iot') return (cc.iot.connections || []).length > 0; if (src === 'ai') return cc.ai.count > 0; return true; }
+// A 'fed by system' leg is only real if the node actually carries the matching connector (ERP → ERP connector, IoT → IoT connection).
+function _legBacked(n, f){ if (f.leg !== 'system') return true; if ((n.holds || []).indexOf('coassist') < 0) return false; var cc = _normCoassist(n.coassist); return f.via === 'IoT' ? (cc.iot.connections || []).length > 0 : cc.erp.connectors.length > 0; }
 function netSetCatTemplate(key, tpl){
   var n = _netNode(key); if (!n) return; var c = _ensureCat(n); c.template = tpl;
   var t = CAT_TEMPLATES[tpl]; if (t && tpl !== 'custom') { c.fields = t.fields.map(function(f){ return { name: f.name, source: f.source, type: f.type || 'text' }; }); if (t.baseUnit) c.baseUnit = t.baseUnit; if (!c.product) c.product = t.label; }
@@ -205,9 +228,9 @@ function netSetOrderNotes(key, val){ var n = _netNode(key); if (!n) return; _ens
 function netAddCollectBack(key){ var n = _netNode(key); if (!n) return; _ensureOrder(n).collectBack.push({ name: '', cadence: 'per order' }); _netMark(); _netRerender(); }
 function netDelCollectBack(key, i){ var n = _netNode(key); if (!n) return; _ensureOrder(n).collectBack.splice(i, 1); _netMark(); _netRerender(); }
 function netSetCollectBack(key, i, prop, val){ var n = _netNode(key); if (!n) return; var cb = _ensureOrder(n).collectBack; if (i >= 0 && i < cb.length) { cb[i][prop] = val; _netMark(); if (prop === 'cadence') _netRerender(); } }   // name via oninput: no re-render
-function netAddCatField(key){ var n = _netNode(key); if (!n) return; _ensureCat(n).fields.push({ name: '', source: 'manual', type: 'text' }); _netMark(); _netRerender(); }
+function netAddCatField(key){ var n = _netNode(key); if (!n) return; _ensureCat(n).fields.push({ name: '', leg: 'cb', via: '', type: 'text' }); _netMark(); _netRerender(); }   // default leg = the gap CB fills
 function netDelCatField(key, i){ var n = _netNode(key); if (!n) return; var c = _ensureCat(n); c.fields.splice(i, 1); _netMark(); _netRerender(); }
-function netSetCatField(key, i, prop, val){ var n = _netNode(key); if (!n) return; var c = _ensureCat(n); if (c.fields[i]) { c.fields[i][prop] = val; _netMark(); if (prop !== 'name') _netRerender(); } }   // name via oninput: no re-render
+function netSetCatField(key, i, prop, val){ var n = _netNode(key); if (!n) return; var c = _ensureCat(n); var f = c.fields[i]; if (!f) return; f[prop] = val; if (prop === 'leg' && val === 'system' && !f.via) f.via = 'ERP'; _netMark(); if (prop !== 'name') _netRerender(); }   // name via oninput: no re-render
 function netSetExposure(key, val){ var n = _netNode(key); if (!n) return; n.exposure = val; _netMark(); _netRerender(); }
 /* structure */
 function _netDescendants(key, acc){ acc = acc || []; (UI.net.nodes || []).forEach(function(n){ if (n.parent_key === key){ acc.push(n.key); _netDescendants(n.key, acc); } }); return acc; }
@@ -309,23 +332,30 @@ function _capList(n){
   return '<div style="margin-top:8px;border-top:1px solid var(--line)">' + NET_CAPS.map(function(c){ return _capRow(n, c); }).join('') + '</div>';
 }
 function _catFieldRow(n, f, i){
-  var srcOpts = CAT_SOURCES.map(function(s){ return '<option value="' + s + '"' + (f.source === s ? ' selected' : '') + '>' + s + '</option>'; }).join('');
+  var legOpts = CAT_LEGS.map(function(l){ return '<option value="' + l.k + '"' + (f.leg === l.k ? ' selected' : '') + '>' + l.short + '</option>'; }).join('');
   var typOpts = CAT_TYPES.map(function(t){ return '<option value="' + t + '"' + (f.type === t ? ' selected' : '') + '>' + t + '</option>'; }).join('');
-  return '<div style="display:flex;gap:6px;align-items:center;padding:3px 0">'
-    + '<input value="' + esc(f.name || '') + '" oninput="netSetCatField(\'' + n.key + '\',' + i + ',\'name\',this.value)" placeholder="field name" style="flex:1;min-width:0;font-size:12px;padding:5px 7px;border:1px solid var(--line);border-radius:6px">'
-    + '<select onchange="netSetCatField(\'' + n.key + '\',' + i + ',\'source\',this.value)" style="font-size:11px;padding:4px;border:1px solid var(--line);border-radius:6px">' + srcOpts + '</select>'
+  var viaSel = '';
+  if (f.leg === 'system') {
+    var viaOpts = CAT_VIA.map(function(v){ return '<option value="' + v + '"' + ((f.via || 'ERP') === v ? ' selected' : '') + '>' + v + '</option>'; }).join('');
+    var ok = _legBacked(n, f);
+    viaSel = '<select onchange="netSetCatField(\'' + n.key + '\',' + i + ',\'via\',this.value)" title="' + (ok ? 'connector present' : 'no matching connector on this node') + '" style="font-size:11px;padding:4px;border:1px solid ' + (ok ? 'var(--line)' : '#d98b84') + ';border-radius:6px;background:' + (ok ? '#fff' : '#fbeeec') + '">' + viaOpts + '</select>';
+  }
+  var col = (CAT_LEGS.filter(function(l){ return l.k === f.leg; })[0] || {}).col || ['#6b6f86', '#e8e9f0'];
+  return '<div style="display:flex;gap:6px;align-items:center;padding:3px 0;border-left:3px solid ' + col[0] + ';padding-left:7px">'
+    + '<input value="' + esc(f.name || '') + '" oninput="netSetCatField(\'' + n.key + '\',' + i + ',\'name\',this.value)" placeholder="what you need to know" style="flex:1;min-width:0;font-size:12px;padding:5px 7px;border:1px solid var(--line);border-radius:6px">'
+    + '<select onchange="netSetCatField(\'' + n.key + '\',' + i + ',\'leg\',this.value)" style="font-size:11px;padding:4px;border:1px solid var(--line);border-radius:6px">' + legOpts + '</select>'
+    + viaSel
     + '<select onchange="netSetCatField(\'' + n.key + '\',' + i + ',\'type\',this.value)" style="font-size:11px;padding:4px;border:1px solid var(--line);border-radius:6px">' + typOpts + '</select>'
     + '<span onclick="netDelCatField(\'' + n.key + '\',' + i + ')" title="remove" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 4px">×</span>'
     + '</div>';
 }
 function _catConfig(n){
   var c = _ensureCat(n);
-  var tplOpts = Object.keys(CAT_TEMPLATES).map(function(k){ return '<option value="' + k + '"' + ((c.template || 'custom') === k ? ' selected' : '') + '>' + CAT_TEMPLATES[k].label + '</option>'; }).join('');
-  var fields = (c.fields || []).map(function(f, i){ return _catFieldRow(n, f, i); }).join('') || '<div style="font-size:11px;color:var(--grey);padding:2px 0">No fields yet — pick a common catalogue, or add fields.</div>';
+  var fields = (c.fields || []).map(function(f, i){ return _catFieldRow(n, f, i); }).join('') || '<div style="font-size:11px;color:var(--grey);padding:2px 0">No requirements yet — add what this catalogue must know, then route each to a leg.</div>';
   var loadOpts = CAT_LOADS.map(function(l){ return '<option value="' + l + '"' + ((c.loadedBy || 'manual') === l ? ' selected' : '') + '>' + l + '</option>'; }).join('');
-  var used = {}; (c.fields || []).forEach(function(f){ if (f.source && f.source !== 'manual') used[f.source] = true; });
-  var usedK = Object.keys(used);
-  var srcNote = usedK.length ? ('<div style="font-size:11px;color:var(--grey);margin-top:6px;border-top:1px dotted var(--line);padding-top:5px">Field sources: ' + usedK.map(function(s){ var ok = _srcBacked(n, s); return '<b style="color:' + (ok ? '#2c7a43' : '#a5382e') + '">' + s.toUpperCase() + (ok ? ' ✓' : ' ⚠') + '</b>'; }).join(' · ') + (usedK.some(function(s){ return !_srcBacked(n, s); }) ? ' <span style="color:#a5382e">— add the matching co-assist to this node</span>' : '') + '</div>') : '';
+  var unbacked = (c.fields || []).filter(function(f){ return f.leg === 'system' && !_legBacked(n, f); });
+  var legNote = unbacked.length ? ('<div style="font-size:11px;color:#a5382e;margin-top:6px;border-top:1px dotted var(--line);padding-top:5px">⚠ ' + unbacked.length + ' system-fed field' + (unbacked.length > 1 ? 's' : '') + ' with no matching connector on this node — add the ERP / IoT co-assist, or route ' + (unbacked.length > 1 ? 'them' : 'it') + ' to another leg.</div>') : '';
+  var legLegend = CAT_LEGS.map(function(l){ return '<span style="font-size:10px;color:' + l.col[0] + ';background:' + l.col[1] + ';border-radius:4px;padding:1px 6px;margin-right:4px">' + l.short + '</span>'; }).join('');
   var _in = 'font-size:11.5px;padding:5px 7px;border:1px solid var(--line);border-radius:6px';
   var variantRows = (c.variants || []).map(function(v, i){ return '<div style="display:flex;gap:6px;align-items:center;padding:2px 0"><input value="' + esc(v.name || '') + '" oninput="netSetVariant(\'' + n.key + '\',' + i + ',this.value)" placeholder="variant (e.g. Sunlit Ivory · Matte · 4L)" style="flex:1;min-width:0;' + _in + '"><span onclick="netDelVariant(\'' + n.key + '\',' + i + ')" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 3px">×</span></div>'; }).join('');
   var altRows = (c.altUnits || []).map(function(u, i){ return '<div style="display:flex;gap:4px;align-items:center;padding:2px 0"><input value="' + esc(u.unit || '') + '" oninput="netSetAltUnit(\'' + n.key + '\',' + i + ',\'unit\',this.value)" placeholder="unit" style="width:66px;' + _in + '"><span style="font-size:10px;color:var(--grey)">1=</span><input type="number" min="1" value="' + (u.num || 1) + '" oninput="netSetAltUnit(\'' + n.key + '\',' + i + ',\'num\',this.value)" style="width:48px;' + _in + '"><span style="font-size:10px;color:var(--grey)">/</span><input type="number" min="1" value="' + (u.den || 1) + '" oninput="netSetAltUnit(\'' + n.key + '\',' + i + ',\'den\',this.value)" style="width:48px;' + _in + '"><span style="font-size:10px;color:var(--grey)">' + esc(c.baseUnit || 'base') + '</span><span onclick="netDelAltUnit(\'' + n.key + '\',' + i + ')" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 3px">×</span></div>'; }).join('');
@@ -339,17 +369,26 @@ function _catConfig(n){
     + '<label style="font-size:11px;color:var(--grey);display:block;margin-top:9px">Alternative units <span style="color:var(--faint,#8a929e)">(integer conversion — 1 crate = 20/1 kg)</span></label>'
     + altRows + '<div onclick="netAddAltUnit(\'' + n.key + '\')" style="cursor:pointer;color:var(--blue);font-size:11.5px;font-weight:600;padding:4px 0">＋ unit</div>'
     + '<div style="font-size:10.5px;color:var(--grey);font-style:italic;margin-top:2px">Orderable unit is resolved by the buyer\'s tier; unit + factor freeze on the chit.</div>';
+  var fbRows = (c.feedback || []).map(function(fb, i){ return '<div style="display:flex;gap:6px;align-items:center;padding:2px 0"><input value="' + esc(fb.system || '') + '" oninput="netSetFeedback(\'' + n.key + '\',' + i + ',this.value)" placeholder="system to feed back (e.g. SAP, warehouse WMS)" style="flex:1;min-width:0;' + _in + '"><span onclick="netDelFeedback(\'' + n.key + '\',' + i + ')" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 3px">×</span></div>'; }).join('');
   return '<div style="margin-top:10px;padding:12px 13px;border:1px solid var(--line);border-left:3px solid #2c5aa0;border-radius:10px;background:#fbfdff">'
-    + '<div style="font-size:11px;font-weight:800;color:#2c5aa0;letter-spacing:.05em">🗂️ CATALOGUE — source (four parts)</div>'
-    + '<label style="font-size:11px;color:var(--grey);display:block;margin-top:8px">Common catalogue (sets the fields)</label>'
-    + '<select onchange="netSetCatTemplate(\'' + n.key + '\',this.value)" style="margin-top:4px;padding:6px 8px;border:1px solid var(--line);border-radius:7px;font-size:12.5px;max-width:100%">' + tplOpts + '</select>'
-    + '<label style="font-size:11px;color:var(--grey);display:block;margin-top:10px">Populated by <span style="color:var(--faint,#8a929e)">(how the catalogue is fed)</span></label>'
-    + '<select onchange="netSetCatLoad(\'' + n.key + '\',this.value)" style="margin-top:4px;padding:6px 8px;border:1px solid var(--line);border-radius:7px;font-size:12.5px">' + loadOpts + '</select>'
+    + '<div style="font-size:11px;font-weight:800;color:#2c5aa0;letter-spacing:.05em">🗂️ CATALOGUE — complete the information chain</div>'
+    // ---- purpose / story (drives the gap analysis) ----
+    + '<label style="font-size:11px;color:var(--grey);display:block;margin-top:8px">Purpose <span style="color:var(--faint,#8a929e)">(what this catalogue is for — in your words)</span></label>'
+    + '<textarea oninput="netSetCatStory(\'' + n.key + '\',this.value)" placeholder="e.g. Sell interior emulsion to trade buyers; assay + stock live in SAP; site address comes from the buyer." rows="2" style="width:100%;margin-top:4px;box-sizing:border-box;resize:vertical;' + _in + '">' + esc(c.story || '') + '</textarea>'
+    + '<div style="margin-top:6px;padding:7px 9px;border:1px dashed #b7a3d6;border-radius:8px;background:#f7f4fc;font-size:10.5px;color:#6a4fa0">🤖 An AI assistant will read this, pull the canonical fields for this material / service, check them against your existing systems, and propose the routing below. <i>Wiring in a later iteration — route by hand for now.</i></div>'
     + partA
-    + '<label style="font-size:11px;color:var(--grey);display:block;margin-top:12px;border-top:1px solid var(--line);padding-top:9px"><b style="font-weight:800;color:#2c5aa0;letter-spacing:.05em">C · ATTRIBUTES</b> <span style="color:var(--faint,#8a929e)">(name · where it comes from · type)</span></label>'
+    // ---- requirements routed to the four legs ----
+    + '<div style="margin-top:12px;border-top:1px solid var(--line);padding-top:9px"><b style="font-size:11px;font-weight:800;color:#2c5aa0;letter-spacing:.05em">REQUIREMENTS</b> <span style="color:var(--faint,#8a929e)">— what you need to know, and where each part comes from</span></div>'
+    + '<div style="margin:6px 0 2px">' + legLegend + '</div>'
     + fields
-    + '<div onclick="netAddCatField(\'' + n.key + '\')" style="cursor:pointer;color:var(--blue);font-size:12px;font-weight:600;padding:5px 0">＋ add field</div>'
-    + srcNote
+    + '<div onclick="netAddCatField(\'' + n.key + '\')" style="cursor:pointer;color:var(--blue);font-size:12px;font-weight:600;padding:5px 0">＋ requirement</div>'
+    + legNote
+    + '<label style="font-size:11px;color:var(--grey);display:block;margin-top:10px">List is built by <span style="color:var(--faint,#8a929e)">(how the catalogue itself is loaded)</span></label>'
+    + '<select onchange="netSetCatLoad(\'' + n.key + '\',this.value)" style="margin-top:4px;padding:6px 8px;border:1px solid var(--line);border-radius:7px;font-size:12.5px">' + loadOpts + '</select>'
+    // ---- feed back (close the loop) ----
+    + '<label style="font-size:11px;color:var(--grey);display:block;margin-top:12px;border-top:1px solid var(--line);padding-top:9px"><b style="font-weight:800;color:#2c5aa0;letter-spacing:.05em">FEED BACK</b> <span style="color:var(--faint,#8a929e)">— once complete, push the record to these systems (with a receipt)</span></label>'
+    + fbRows + '<div onclick="netAddFeedback(\'' + n.key + '\')" style="cursor:pointer;color:var(--blue);font-size:11.5px;font-weight:600;padding:4px 0">＋ system to feed back</div>'
+    + _catChain(n)
     + _catRecordPreview(n)
     + '</div>';
 }
@@ -374,6 +413,37 @@ function _srcBadge(src){
   var col = m[src] || m.manual;
   return '<span style="font-size:9px;font-weight:700;text-transform:uppercase;color:' + col[0] + ';background:' + col[1] + ';border-radius:4px;padding:1px 5px">' + esc(src) + '</span>';
 }
+function _legBadge(leg){
+  var l = CAT_LEGS.filter(function(x){ return x.k === leg; })[0] || { short: '—', col: ['#6b6f86', '#e8e9f0'] };
+  return '<span style="font-size:9px;font-weight:700;text-transform:uppercase;color:' + l.col[0] + ';background:' + l.col[1] + ';border-radius:4px;padding:1px 5px">' + esc(l.short) + '</span>';
+}
+/* the headline: the four-leg information chain, drawn from the routed requirements */
+function _catChain(n){
+  var c = n.catalogue || {}; var fs = c.fields || [];
+  var chip = function(txt, col){ return '<span style="display:inline-block;font-size:10.5px;color:#1c2128;background:' + col[1] + ';border:1px solid ' + col[0] + '55;border-radius:5px;padding:1px 6px;margin:2px 3px 0 0">' + esc(txt) + '</span>'; };
+  var fb = (c.feedback || []).filter(function(x){ return x.system; });
+  if (!fs.length && !c.product && !fb.length) return '';
+  var fbCol = ['#6a4fa0', '#efeafa'];
+  var card = function(head, hint, col, itemsHtml, count){
+    return '<div style="flex:1;min-width:118px;border:1px solid var(--line);border-top:3px solid ' + col[0] + ';border-radius:9px;padding:8px 9px;background:#fff">'
+      + '<div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:' + col[0] + '">' + esc(head) + ' <span style="color:var(--faint,#8a929e)">' + count + '</span></div>'
+      + '<div style="font-size:9.5px;color:var(--grey);margin:1px 0 4px">' + esc(hint) + '</div>'
+      + (itemsHtml || '<span style="font-size:10px;color:var(--faint,#8a929e)">—</span>')
+      + '</div>';
+  };
+  var cards = CAT_LEGS.map(function(l){
+    var items = fs.filter(function(f){ return f.leg === l.k; }).map(function(f){ return chip((f.name || '—') + (l.k === 'system' && f.via ? ' · ' + f.via : ''), l.col); });
+    if (l.k === 'cb') {   // identity + units are always CB-stored (the gap CB fills by definition)
+      if (c.baseUnit) items.unshift(chip('units · ' + c.baseUnit, l.col));
+      if (c.product) items.unshift(chip(c.product + ' (identity)', l.col));
+    }
+    return card(l.short, l.hint, l.col, items.join(''), items.length);
+  }).join('');
+  cards += card('Feed back', 'record pushed out', fbCol, fb.map(function(x){ return chip(x.system, fbCol); }).join(''), fb.length);
+  return '<div style="margin-top:12px;padding-top:9px;border-top:1px solid var(--line)">'
+    + '<div style="font-size:11px;font-weight:800;color:#2c5aa0;letter-spacing:.05em;margin-bottom:6px">🔗 INFORMATION CHAIN — how this catalogue is completed</div>'
+    + '<div style="display:flex;gap:7px;flex-wrap:wrap">' + cards + '</div></div>';
+}
 function _catRecordPreview(n){
   var c = n.catalogue || {}; var fs = c.fields || [];
   if (!fs.length && !c.product) return '';
@@ -381,7 +451,7 @@ function _catRecordPreview(n){
   var v0 = (c.variants || [])[0];
   var au = (c.altUnits || [])[0];
   var unitLine = c.baseUnit ? ('base ' + esc(c.baseUnit) + (au && au.unit ? ' · 1 ' + esc(au.unit) + ' = ' + (au.num || 1) + '/' + (au.den || 1) + ' ' + esc(c.baseUnit) : '')) : '';
-  var rows = fs.map(function(f){ return '<div style="display:flex;align-items:center;gap:8px;padding:2px 0;font-size:11.5px"><span style="flex:0 0 116px;color:var(--grey);font-family:monospace;overflow:hidden;text-overflow:ellipsis">' + esc(f.name || '—') + '</span><span style="flex:1;color:#1c2128">' + _sampleVal(f.type) + '</span>' + _srcBadge(f.source || 'manual') + '</div>'; }).join('');
+  var rows = fs.map(function(f){ return '<div style="display:flex;align-items:center;gap:8px;padding:2px 0;font-size:11.5px"><span style="flex:0 0 116px;color:var(--grey);font-family:monospace;overflow:hidden;text-overflow:ellipsis">' + esc(f.name || '—') + '</span><span style="flex:1;color:#1c2128">' + _sampleVal(f.type) + '</span>' + _legBadge(f.leg) + '</div>'; }).join('');
   return '<div style="margin-top:12px;padding:11px 12px;border:1px solid var(--line);border-radius:9px;background:#fff">'
     + '<div style="font-size:10px;color:var(--faint,#8a929e);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">📄 Stored as a record — one item</div>'
     + '<div style="font-weight:700;font-size:12.5px">' + esc(name) + (v0 && v0.name ? ' <span style="font-weight:500;color:var(--grey);font-size:11px">▸ ' + esc(v0.name) + '</span>' : '') + '</div>'
@@ -394,7 +464,7 @@ function _chitPreview(n){
   var c = n.catalogue || {}; var fs = c.fields || [];
   var o = _ensureOrder(n);
   var e = n.exposure || 'public';
-  var name = (CAT_TEMPLATES[c.template] || {}).label || 'Item';
+  var name = c.product || 'Item';
   var expBadge = '<span style="font-size:9px;font-weight:700;text-transform:uppercase;color:' + (e === 'public' ? '#2c7a43' : '#8a5a1e') + ';background:' + (e === 'public' ? '#e6f4ec' : '#f6ecd8') + ';border-radius:4px;padding:1px 5px">' + esc(e) + '</span>';
   var specRows = fs.slice(0, 6).map(function(f){ return '<div style="display:flex;justify-content:space-between;font-size:11px;padding:1px 0"><span style="color:var(--grey)">' + esc(f.name || '—') + '</span><span style="color:var(--faint,#8a929e);font-family:monospace">' + _sampleVal(f.type) + '</span></div>'; }).join('') || '<div style="font-size:11px;color:var(--grey)">no fields</div>';
   var cb = (o.collectBack || []).filter(function(x){ return x.name; });
