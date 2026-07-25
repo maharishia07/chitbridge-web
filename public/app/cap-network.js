@@ -61,6 +61,8 @@ var COASSIST_KINDS = [
   { k: 'iot', icon: '📡', label: 'IoT devices / streams' },
   { k: 'ai', icon: '🤖', label: 'AI agents' },
 ];
+var ERP_SYSTEMS = ['SAP', 'Oracle', 'NetSuite', 'Dynamics', 'Tally', 'Other'];
+var AI_AUTONOMY = ['propose', 'authorize', 'confirm', 'delegate'];
 
 /* ---- draft state + per-entity persistence (localStorage only; nothing hits the server) ---- */
 function _netDraftKey(){ return 'cb_netdraft_' + (SESSION.entityId || SESSION.entity || 'anon'); }
@@ -75,7 +77,7 @@ function _netInit(){
     if (n.note && n.purpose === undefined) { n.purpose = n.note; delete n.note; }
     if (n.holds.indexOf('catalogue') >= 0 && !n.catalogue) n.catalogue = { template: 'custom', fields: [], method: 'cart', maxItems: null };
     if (n.holds.indexOf('storefront') >= 0 && !n.exposure) n.exposure = 'public';
-    if (n.holds.indexOf('coassist') >= 0 && !n.coassist) n.coassist = { human: 0, erp: 0, iot: 0, ai: 0 };
+    if (n.holds.indexOf('coassist') >= 0) n.coassist = _normCoassist(n.coassist);
     if (n.holds.indexOf('transact') >= 0 && !n.transact) n.transact = { flow: 'both' };
     if (n.holds.indexOf('tradeready') >= 0 && !n.tradeready) n.tradeready = { mode: 'inherit', certs: [] };
     if (n.holds.indexOf('dispute') >= 0 && !n.dispute) n.dispute = { informed: true };
@@ -128,7 +130,7 @@ function netCapYes(key, capKey){
     n.holds.push(capKey);
     if (capKey === 'catalogue' && !n.catalogue) n.catalogue = { template: 'custom', fields: [], method: 'cart', maxItems: null };
     if (capKey === 'storefront' && !n.exposure) n.exposure = 'public';
-    if (capKey === 'coassist' && !n.coassist) n.coassist = { human: 0, erp: 0, iot: 0, ai: 0 };
+    if (capKey === 'coassist' && !n.coassist) n.coassist = _defCoassist();
     if (capKey === 'transact' && !n.transact) n.transact = { flow: 'both' };
     if (capKey === 'tradeready' && !n.tradeready) n.tradeready = { mode: 'inherit', certs: [] };
     if (capKey === 'dispute' && !n.dispute) n.dispute = { informed: true };
@@ -229,7 +231,7 @@ function networkScreen(){
 function _capSummary(n, k){
   if (k === 'catalogue') { var c = n.catalogue || {}; var nf = (c.fields || []).length; var m = (CAT_METHODS.filter(function(x){ return x.k === (c.method || 'cart'); })[0] || {}).label || ''; return nf + ' field' + (nf === 1 ? '' : 's') + ' · ' + m; }
   if (k === 'storefront') return 'exposure: ' + (n.exposure || 'public');
-  if (k === 'coassist') { var ca = n.coassist || {}; var tot = ['human', 'erp', 'iot', 'ai'].reduce(function(s, x){ return s + (parseInt(ca[x], 10) || 0); }, 0); return tot + ' co-assist' + (tot === 1 ? '' : 's'); }
+  if (k === 'coassist') { var cc = _normCoassist(n.coassist); var p = []; if (cc.human.count) p.push(cc.human.count + ' human'); if (cc.iot.devices || cc.iot.gateways) p.push((cc.iot.devices || 0) + ' IoT'); if (cc.erp.connectors.length) p.push(cc.erp.connectors.length + ' ERP'); if (cc.ai.count) p.push(cc.ai.count + ' AI'); return p.length ? p.join(' · ') : 'none set'; }
   if (k === 'transact') { var f = (n.transact || {}).flow || 'both'; return f === 'both' ? 'sends & receives' : (f === 'send' ? 'sends only' : 'receives only'); }
   if (k === 'tradeready') { var tr = n.tradeready || {}; return tr.mode === 'own' ? ('own · ' + (tr.certs || []).length + ' cert' + ((tr.certs || []).length === 1 ? '' : 's')) : "network's certs"; }
   if (k === 'dispute') return (n.dispute || {}).informed !== false ? 'informed' : 'not involved';
@@ -300,7 +302,28 @@ function _exposureConfig(n){
     + '</div>';
 }
 /* setters for the four remaining panels */
-function netSetCoassist(key, kind, val){ var n = _netNode(key); if (!n) return; n.coassist = n.coassist || {}; var num = parseInt(val, 10); n.coassist[kind] = (val === '' || isNaN(num) || num < 0) ? 0 : num; _netMark(); }   // no re-render while typing
+/* co-assist: normalized shape + per-kind setters (Human roles · IoT gateways→devices · ERP system+label · AI role+autonomy) */
+function _defCoassist(){ return { human: { count: 0, roles: [] }, iot: { gateways: 0, devices: 0 }, erp: { connectors: [] }, ai: { count: 0, role: '', autonomy: 'authorize' } }; }
+function _normCoassist(ca){
+  var d = _defCoassist(); ca = ca || {};
+  if (typeof ca.human === 'number') d.human.count = ca.human; else if (ca.human) { d.human.count = ca.human.count || 0; d.human.roles = ca.human.roles || []; }
+  if (typeof ca.iot === 'number') d.iot.devices = ca.iot; else if (ca.iot) { d.iot.gateways = ca.iot.gateways || 0; d.iot.devices = ca.iot.devices || 0; }
+  if (typeof ca.erp === 'number') { for (var i = 0; i < ca.erp; i++) d.erp.connectors.push({ system: 'SAP', label: '' }); } else if (ca.erp) { d.erp.connectors = ca.erp.connectors || []; }
+  if (typeof ca.ai === 'number') d.ai.count = ca.ai; else if (ca.ai) { d.ai.count = ca.ai.count || 0; d.ai.role = ca.ai.role || ''; d.ai.autonomy = ca.ai.autonomy || 'authorize'; }
+  return d;
+}
+function _ca(n){ n.coassist = _normCoassist(n.coassist); return n.coassist; }
+function netCaHuman(key, val){ var n = _netNode(key); if (!n) return; var x = parseInt(val, 10); _ca(n).human.count = (val === '' || isNaN(x) || x < 0) ? 0 : x; _netMark(); }
+function netCaHumanAddRole(key){ var n = _netNode(key); if (!n) return; _ca(n).human.roles.push(''); _netMark(); _netRerender(); }
+function netCaHumanDelRole(key, i){ var n = _netNode(key); if (!n) return; _ca(n).human.roles.splice(i, 1); _netMark(); _netRerender(); }
+function netCaHumanSetRole(key, i, val){ var n = _netNode(key); if (!n) return; var r = _ca(n).human.roles; if (i >= 0 && i < r.length) { r[i] = val; _netMark(); } }
+function netCaIot(key, field, val){ var n = _netNode(key); if (!n) return; var x = parseInt(val, 10); _ca(n).iot[field] = (val === '' || isNaN(x) || x < 0) ? 0 : x; _netMark(); }
+function netCaAddErp(key){ var n = _netNode(key); if (!n) return; _ca(n).erp.connectors.push({ system: 'SAP', label: '' }); _netMark(); _netRerender(); }
+function netCaDelErp(key, i){ var n = _netNode(key); if (!n) return; _ca(n).erp.connectors.splice(i, 1); _netMark(); _netRerender(); }
+function netCaSetErp(key, i, prop, val){ var n = _netNode(key); if (!n) return; var e = _ca(n).erp.connectors; if (i >= 0 && i < e.length) { e[i][prop] = val; _netMark(); if (prop === 'system') _netRerender(); } }
+function netCaAiCount(key, val){ var n = _netNode(key); if (!n) return; var x = parseInt(val, 10); _ca(n).ai.count = (val === '' || isNaN(x) || x < 0) ? 0 : x; _netMark(); }
+function netCaAiRole(key, val){ var n = _netNode(key); if (!n) return; _ca(n).ai.role = val; _netMark(); }
+function netCaAiAutonomy(key, val){ var n = _netNode(key); if (!n) return; _ca(n).ai.autonomy = val; _netMark(); _netRerender(); }
 function netSetTransact(key, flow){ var n = _netNode(key); if (!n) return; n.transact = n.transact || {}; n.transact.flow = flow; _netMark(); _netRerender(); }
 function netSetTradeMode(key, mode){ var n = _netNode(key); if (!n) return; n.tradeready = n.tradeready || { certs: [] }; n.tradeready.mode = mode; _netMark(); _netRerender(); }
 function netAddCert(key){ var n = _netNode(key); if (!n) return; n.tradeready = n.tradeready || { mode: 'own', certs: [] }; n.tradeready.certs = n.tradeready.certs || []; n.tradeready.certs.push(''); _netMark(); _netRerender(); }
@@ -309,19 +332,34 @@ function netSetCert(key, i, val){ var n = _netNode(key); if (!n || !n.tradeready
 function netSetDispute(key, informed){ var n = _netNode(key); if (!n) return; n.dispute = n.dispute || {}; n.dispute.informed = !!informed; _netMark(); _netRerender(); }
 
 function _coassistConfig(n){
-  var ca = n.coassist || {};
-  var rows = COASSIST_KINDS.map(function(k){
-    return '<div style="display:flex;align-items:center;gap:8px;padding:4px 0">'
-      + '<span style="flex:1;font-size:12.5px;color:#3a4048">' + k.icon + ' ' + k.label + '</span>'
-      + '<input type="number" min="0" value="' + (ca[k.k] != null ? esc(String(ca[k.k])) : '') + '" oninput="netSetCoassist(\'' + n.key + '\',\'' + k.k + '\',this.value)" placeholder="0" style="width:74px;padding:5px 7px;border:1px solid var(--line);border-radius:6px;font-size:12.5px">'
-      + '</div>';
+  var c = _ca(n);
+  var roleChips = c.human.roles.map(function(r, i){ return '<span style="display:inline-flex;align-items:center;gap:3px;margin:0 5px 4px 0"><input value="' + esc(r) + '" oninput="netCaHumanSetRole(\'' + n.key + '\',' + i + ',this.value)" placeholder="role" style="width:96px;font-size:11.5px;padding:3px 6px;border:1px solid var(--line);border-radius:6px"><span onclick="netCaHumanDelRole(\'' + n.key + '\',' + i + ')" style="cursor:pointer;color:var(--grey);font-weight:700">×</span></span>'; }).join('');
+  var human = '<div style="padding:9px 0;border-bottom:1px solid var(--line)">'
+    + '<div style="display:flex;align-items:center;gap:8px"><span style="flex:1;font-size:12.5px;font-weight:600;color:#3a4048">🧑 Human workforce</span>'
+      + '<span style="font-size:11px;color:var(--grey)">count</span><input type="number" min="0" value="' + (c.human.count || '') + '" oninput="netCaHuman(\'' + n.key + '\',this.value)" placeholder="0" style="width:64px;padding:4px 6px;border:1px solid var(--line);border-radius:6px;font-size:12px"></div>'
+    + '<div style="margin-top:6px">' + roleChips + '<span onclick="netCaHumanAddRole(\'' + n.key + '\')" style="cursor:pointer;color:var(--blue);font-size:11.5px;font-weight:600">＋ role</span></div>'
+    + '</div>';
+  var iot = '<div style="padding:9px 0;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
+    + '<span style="flex:1 0 90px;font-size:12.5px;font-weight:600;color:#3a4048">📡 IoT</span>'
+    + '<span style="font-size:11px;color:var(--grey)">gateways (Pi)</span><input type="number" min="0" value="' + (c.iot.gateways || '') + '" oninput="netCaIot(\'' + n.key + '\',\'gateways\',this.value)" placeholder="0" style="width:58px;padding:4px 6px;border:1px solid var(--line);border-radius:6px;font-size:12px">'
+    + '<span style="font-size:11px;color:var(--grey)">devices</span><input type="number" min="0" value="' + (c.iot.devices || '') + '" oninput="netCaIot(\'' + n.key + '\',\'devices\',this.value)" placeholder="0" style="width:64px;padding:4px 6px;border:1px solid var(--line);border-radius:6px;font-size:12px">'
+    + '</div>';
+  var erpRows = c.erp.connectors.map(function(e, i){
+    var opts = ERP_SYSTEMS.map(function(s){ return '<option value="' + s + '"' + (e.system === s ? ' selected' : '') + '>' + s + '</option>'; }).join('');
+    return '<div style="display:flex;gap:6px;align-items:center;padding:3px 0"><select onchange="netCaSetErp(\'' + n.key + '\',' + i + ',\'system\',this.value)" style="font-size:11.5px;padding:4px;border:1px solid var(--line);border-radius:6px">' + opts + '</select><input value="' + esc(e.label || '') + '" oninput="netCaSetErp(\'' + n.key + '\',' + i + ',\'label\',this.value)" placeholder="label (e.g. SAP-Prod)" style="flex:1;min-width:0;font-size:11.5px;padding:4px 7px;border:1px solid var(--line);border-radius:6px"><span onclick="netCaDelErp(\'' + n.key + '\',' + i + ')" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 3px">×</span></div>';
   }).join('');
-  var total = COASSIST_KINDS.reduce(function(s, k){ return s + (parseInt(ca[k.k], 10) || 0); }, 0);
+  var erp = '<div style="padding:9px 0;border-bottom:1px solid var(--line)"><span style="font-size:12.5px;font-weight:600;color:#3a4048">🔗 ERP connectors</span>'
+    + '<div style="margin-top:5px">' + erpRows + '<span onclick="netCaAddErp(\'' + n.key + '\')" style="cursor:pointer;color:var(--blue);font-size:11.5px;font-weight:600">＋ connector</span></div></div>';
+  var auOpts = AI_AUTONOMY.map(function(a){ return '<option value="' + a + '"' + (c.ai.autonomy === a ? ' selected' : '') + '>' + a + '</option>'; }).join('');
+  var ai = '<div style="padding:9px 0 2px">'
+    + '<div style="display:flex;align-items:center;gap:8px"><span style="flex:1;font-size:12.5px;font-weight:600;color:#3a4048">🤖 AI agents</span>'
+      + '<span style="font-size:11px;color:var(--grey)">count</span><input type="number" min="0" value="' + (c.ai.count || '') + '" oninput="netCaAiCount(\'' + n.key + '\',this.value)" placeholder="0" style="width:64px;padding:4px 6px;border:1px solid var(--line);border-radius:6px;font-size:12px"></div>'
+    + '<div style="display:flex;gap:6px;align-items:center;margin-top:6px;flex-wrap:wrap"><input value="' + esc(c.ai.role || '') + '" oninput="netCaAiRole(\'' + n.key + '\',this.value)" placeholder="what it does" style="flex:1 0 110px;min-width:0;font-size:11.5px;padding:4px 7px;border:1px solid var(--line);border-radius:6px"><span style="font-size:11px;color:var(--grey)">autonomy</span><select onchange="netCaAiAutonomy(\'' + n.key + '\',this.value)" style="font-size:11.5px;padding:4px;border:1px solid var(--line);border-radius:6px">' + auOpts + '</select></div>'
+    + '</div>';
   return '<div style="padding:12px 13px;border:1px solid var(--line);border-left:3px solid #8a5cc4;border-radius:10px;background:#fbfaff">'
-    + '<div style="font-size:11px;font-weight:800;color:#8a5cc4;letter-spacing:.05em">🧑‍🤝‍🧑 CO-ASSISTS — who / what acts for this node</div>'
-    + '<div style="font-size:11px;color:var(--grey);margin-top:3px">Estimate how many of each this node needs.</div>'
-    + '<div style="margin-top:8px">' + rows + '</div>'
-    + '<div style="font-size:11.5px;color:#8a5cc4;font-weight:700;margin-top:6px;border-top:1px solid var(--line);padding-top:6px">Total: ' + total + ' co-assist' + (total === 1 ? '' : 's') + '</div>'
+    + '<div style="font-size:11px;font-weight:800;color:#8a5cc4;letter-spacing:.05em">🧑‍🤝‍🧑 CO-ASSISTS — under THIS branch</div>'
+    + '<div style="font-size:11px;color:var(--grey);margin-top:3px">Each is created under this node (login <b>key@branch</b>), not the network.</div>'
+    + '<div style="margin-top:4px">' + human + iot + erp + ai + '</div>'
     + '</div>';
 }
 function _radioOpt(onclick, on, label, hint, color, bg){
