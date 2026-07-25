@@ -55,6 +55,12 @@ var CAT_TEMPLATES = {
   pharma:  { label: 'Pharma lot', fields: [{ name: 'batch_no', source: 'manual', type: 'text' }, { name: 'active_ingredient', source: 'manual', type: 'text' }, { name: 'assay_pct', source: 'iot', type: 'number' }, { name: 'storage_temp', source: 'iot', type: 'number' }, { name: 'expiry', source: 'manual', type: 'date' }, { name: 'stock_qty', source: 'erp', type: 'number' }] },
   drone:   { label: 'Drone',      fields: [{ name: 'model', source: 'manual', type: 'text' }, { name: 'serial_no', source: 'manual', type: 'text' }, { name: 'battery_health', source: 'iot', type: 'number' }, { name: 'flight_hours', source: 'iot', type: 'number' }, { name: 'unit_price', source: 'erp', type: 'number' }] },
 };
+var COASSIST_KINDS = [
+  { k: 'human', icon: '🧑', label: 'Human workforce' },
+  { k: 'erp', icon: '🔗', label: 'ERP connectors' },
+  { k: 'iot', icon: '📡', label: 'IoT devices / streams' },
+  { k: 'ai', icon: '🤖', label: 'AI agents' },
+];
 
 /* ---- draft state + per-entity persistence (localStorage only; nothing hits the server) ---- */
 function _netDraftKey(){ return 'cb_netdraft_' + (SESSION.entityId || SESSION.entity || 'anon'); }
@@ -69,6 +75,10 @@ function _netInit(){
     if (n.note && n.purpose === undefined) { n.purpose = n.note; delete n.note; }
     if (n.holds.indexOf('catalogue') >= 0 && !n.catalogue) n.catalogue = { template: 'custom', fields: [], method: 'cart', maxItems: null };
     if (n.holds.indexOf('storefront') >= 0 && !n.exposure) n.exposure = 'public';
+    if (n.holds.indexOf('coassist') >= 0 && !n.coassist) n.coassist = { human: 0, erp: 0, iot: 0, ai: 0 };
+    if (n.holds.indexOf('transact') >= 0 && !n.transact) n.transact = { flow: 'both' };
+    if (n.holds.indexOf('tradeready') >= 0 && !n.tradeready) n.tradeready = { mode: 'inherit', certs: [] };
+    if (n.holds.indexOf('dispute') >= 0 && !n.dispute) n.dispute = { informed: true };
   });
 }
 function _netKey(){ return 'k' + Date.now().toString(36) + Math.floor(Math.random() * 1e4); }
@@ -118,6 +128,10 @@ function netCapYes(key, capKey){
     n.holds.push(capKey);
     if (capKey === 'catalogue' && !n.catalogue) n.catalogue = { template: 'custom', fields: [], method: 'cart', maxItems: null };
     if (capKey === 'storefront' && !n.exposure) n.exposure = 'public';
+    if (capKey === 'coassist' && !n.coassist) n.coassist = { human: 0, erp: 0, iot: 0, ai: 0 };
+    if (capKey === 'transact' && !n.transact) n.transact = { flow: 'both' };
+    if (capKey === 'tradeready' && !n.tradeready) n.tradeready = { mode: 'inherit', certs: [] };
+    if (capKey === 'dispute' && !n.dispute) n.dispute = { informed: true };
   }
   if (UI.net.collapsed) delete UI.net.collapsed[capKey]; _netMark(); _netRerender();   // turning Yes shows its detail
 }
@@ -215,6 +229,10 @@ function networkScreen(){
 function _capSummary(n, k){
   if (k === 'catalogue') { var c = n.catalogue || {}; var nf = (c.fields || []).length; var m = (CAT_METHODS.filter(function(x){ return x.k === (c.method || 'cart'); })[0] || {}).label || ''; return nf + ' field' + (nf === 1 ? '' : 's') + ' · ' + m; }
   if (k === 'storefront') return 'exposure: ' + (n.exposure || 'public');
+  if (k === 'coassist') { var ca = n.coassist || {}; var tot = ['human', 'erp', 'iot', 'ai'].reduce(function(s, x){ return s + (parseInt(ca[x], 10) || 0); }, 0); return tot + ' co-assist' + (tot === 1 ? '' : 's'); }
+  if (k === 'transact') { var f = (n.transact || {}).flow || 'both'; return f === 'both' ? 'sends & receives' : (f === 'send' ? 'sends only' : 'receives only'); }
+  if (k === 'tradeready') { var tr = n.tradeready || {}; return tr.mode === 'own' ? ('own · ' + (tr.certs || []).length + ' cert' + ((tr.certs || []).length === 1 ? '' : 's')) : "network's certs"; }
+  if (k === 'dispute') return (n.dispute || {}).informed !== false ? 'informed' : 'not involved';
   return 'set up next';
 }
 function _yesNo(n, k, yes){
@@ -281,12 +299,74 @@ function _exposureConfig(n){
     + '<div style="font-size:11px;color:var(--grey);margin-top:8px">Untick <b>Storefront</b> above to keep this node <b>private</b> (internal — shown to no one).</div>'
     + '</div>';
 }
+/* setters for the four remaining panels */
+function netSetCoassist(key, kind, val){ var n = _netNode(key); if (!n) return; n.coassist = n.coassist || {}; var num = parseInt(val, 10); n.coassist[kind] = (val === '' || isNaN(num) || num < 0) ? 0 : num; _netMark(); }   // no re-render while typing
+function netSetTransact(key, flow){ var n = _netNode(key); if (!n) return; n.transact = n.transact || {}; n.transact.flow = flow; _netMark(); _netRerender(); }
+function netSetTradeMode(key, mode){ var n = _netNode(key); if (!n) return; n.tradeready = n.tradeready || { certs: [] }; n.tradeready.mode = mode; _netMark(); _netRerender(); }
+function netAddCert(key){ var n = _netNode(key); if (!n) return; n.tradeready = n.tradeready || { mode: 'own', certs: [] }; n.tradeready.certs = n.tradeready.certs || []; n.tradeready.certs.push(''); _netMark(); _netRerender(); }
+function netDelCert(key, i){ var n = _netNode(key); if (!n || !n.tradeready) return; (n.tradeready.certs || []).splice(i, 1); _netMark(); _netRerender(); }
+function netSetCert(key, i, val){ var n = _netNode(key); if (!n || !n.tradeready || !n.tradeready.certs) return; if (i >= 0 && i < n.tradeready.certs.length) { n.tradeready.certs[i] = val; _netMark(); } }   // no re-render while typing
+function netSetDispute(key, informed){ var n = _netNode(key); if (!n) return; n.dispute = n.dispute || {}; n.dispute.informed = !!informed; _netMark(); _netRerender(); }
+
+function _coassistConfig(n){
+  var ca = n.coassist || {};
+  var rows = COASSIST_KINDS.map(function(k){
+    return '<div style="display:flex;align-items:center;gap:8px;padding:4px 0">'
+      + '<span style="flex:1;font-size:12.5px;color:#3a4048">' + k.icon + ' ' + k.label + '</span>'
+      + '<input type="number" min="0" value="' + (ca[k.k] != null ? esc(String(ca[k.k])) : '') + '" oninput="netSetCoassist(\'' + n.key + '\',\'' + k.k + '\',this.value)" placeholder="0" style="width:74px;padding:5px 7px;border:1px solid var(--line);border-radius:6px;font-size:12.5px">'
+      + '</div>';
+  }).join('');
+  var total = COASSIST_KINDS.reduce(function(s, k){ return s + (parseInt(ca[k.k], 10) || 0); }, 0);
+  return '<div style="padding:12px 13px;border:1px solid var(--line);border-left:3px solid #8a5cc4;border-radius:10px;background:#fbfaff">'
+    + '<div style="font-size:11px;font-weight:800;color:#8a5cc4;letter-spacing:.05em">🧑‍🤝‍🧑 CO-ASSISTS — who / what acts for this node</div>'
+    + '<div style="font-size:11px;color:var(--grey);margin-top:3px">Estimate how many of each this node needs.</div>'
+    + '<div style="margin-top:8px">' + rows + '</div>'
+    + '<div style="font-size:11.5px;color:#8a5cc4;font-weight:700;margin-top:6px;border-top:1px solid var(--line);padding-top:6px">Total: ' + total + ' co-assist' + (total === 1 ? '' : 's') + '</div>'
+    + '</div>';
+}
+function _radioOpt(onclick, on, label, hint, color, bg){
+  return '<div onclick="' + onclick + '" style="cursor:pointer;padding:8px 10px;border:1px solid ' + (on ? color : 'var(--line)') + ';border-radius:8px;background:' + (on ? bg : '#fff') + ';margin-top:6px">'
+    + '<b style="font-size:12.5px;color:' + (on ? color : '#3a4048') + '">' + (on ? '● ' : '○ ') + label + '</b>'
+    + '<div style="font-size:11px;color:var(--grey);margin-top:2px">' + hint + '</div></div>';
+}
+function _transactConfig(n){
+  var f = (n.transact || {}).flow || 'both';
+  return '<div style="padding:12px 13px;border:1px solid var(--line);border-left:3px solid #2b6f8f;border-radius:10px;background:#f9fcfd">'
+    + '<div style="font-size:11px;font-weight:800;color:#2b6f8f;letter-spacing:.05em">🔄 TRANSACT — does it deal directly with others?</div>'
+    + _radioOpt("netSetTransact('" + n.key + "','both')", f === 'both', 'Sends and receives', 'Talks to counterparties on its own — both directions.', '#2b6f8f', '#e4f0f4')
+    + _radioOpt("netSetTransact('" + n.key + "','send')", f === 'send', 'Sends only', 'Hands records out (to customers / downstream).', '#2b6f8f', '#e4f0f4')
+    + _radioOpt("netSetTransact('" + n.key + "','receive')", f === 'receive', 'Receives only', 'Takes records in (from suppliers / upstream).', '#2b6f8f', '#e4f0f4')
+    + '</div>';
+}
+function _tradereadyConfig(n){
+  var tr = n.tradeready || {}; var mode = tr.mode || 'inherit'; var certs = tr.certs || [];
+  var certList = mode === 'own' ? '<div style="margin-top:8px">'
+    + (certs.length ? certs.map(function(c, i){ return '<div style="display:flex;gap:6px;align-items:center;padding:3px 0"><input value="' + esc(c) + '" oninput="netSetCert(\'' + n.key + '\',' + i + ',this.value)" placeholder="certification (e.g. FSC, ISO 9001)" style="flex:1;font-size:12px;padding:5px 7px;border:1px solid var(--line);border-radius:6px"><span onclick="netDelCert(\'' + n.key + '\',' + i + ')" title="remove" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 4px">×</span></div>'; }).join('') : '<div style="font-size:11px;color:var(--grey)">No certifications yet.</div>')
+    + '<div onclick="netAddCert(\'' + n.key + '\')" style="cursor:pointer;color:var(--blue);font-size:12px;font-weight:600;padding:5px 0">＋ add certification</div></div>' : '';
+  return '<div style="padding:12px 13px;border:1px solid var(--line);border-left:3px solid #22857a;border-radius:10px;background:#f8fdfc">'
+    + '<div style="font-size:11px;font-weight:800;color:#22857a;letter-spacing:.05em">🛡️ TRADE-READY — certifications</div>'
+    + _radioOpt("netSetTradeMode('" + n.key + "','own')", mode === 'own', 'Holds its own certifications', 'This node carries its own clearances.', '#22857a', '#daf0ec')
+    + _radioOpt("netSetTradeMode('" + n.key + "','inherit')", mode === 'inherit', "Inherits the network's", "The network's certifications apply here (cascaded).", '#22857a', '#daf0ec')
+    + certList
+    + '</div>';
+}
+function _disputeConfig(n){
+  var inf = (n.dispute || {}).informed !== false;
+  return '<div style="padding:12px 13px;border:1px solid var(--line);border-left:3px solid #8a5cc4;border-radius:10px;background:#fbfaff">'
+    + '<div style="font-size:11px;font-weight:800;color:#8a5cc4;letter-spacing:.05em">⚖️ DISPUTE — is this node in the loop?</div>'
+    + _radioOpt("netSetDispute('" + n.key + "',true)", inf, 'Informed / involved', 'When a dispute touches this node, it is notified and can respond.', '#8a5cc4', '#efeafa')
+    + _radioOpt("netSetDispute('" + n.key + "',false)", !inf, 'Not involved', "Disputes are handled above it; this node isn't notified.", '#8a5cc4', '#efeafa')
+    + '</div>';
+}
 function _capDetail(n, k){
   if (k === 'catalogue') return _catConfig(n);
   if (k === 'storefront') return _exposureConfig(n);
+  if (k === 'coassist') return _coassistConfig(n);
+  if (k === 'transact') return _transactConfig(n);
+  if (k === 'tradeready') return _tradereadyConfig(n);
+  if (k === 'dispute') return _disputeConfig(n);
   var c = _capMeta(k) || {};
-  return '<div style="padding:12px 14px;border:1px dashed var(--line-strong,#c8d0d9);border-radius:10px;background:#fafbfc;font-size:12.5px;color:var(--grey)">'
-    + c.icon + ' <b>' + esc(c.label) + '</b> — its settings come in the next slice; for now, Yes just marks that this node holds it.</div>';
+  return '<div style="padding:12px 14px;border:1px dashed var(--line-strong,#c8d0d9);border-radius:10px;background:#fafbfc;font-size:12.5px;color:var(--grey)">' + c.icon + ' <b>' + esc(c.label) + '</b> — no settings.</div>';
 }
 function _netNodeView(n){
   var isRoot = !n.parent_key;
