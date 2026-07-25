@@ -40,7 +40,7 @@ function _capMeta(k){ for (var i = 0; i < NET_CAPS.length; i++) if (NET_CAPS[i].
 
 /* ---- catalogue spec vocabulary ---- */
 var CAT_SOURCES = ['manual', 'erp', 'iot', 'ai'];
-var CAT_TYPES = ['text', 'number', 'choice', 'range', 'date'];
+var CAT_TYPES = CBCatalogue.TYPES;
 var CAT_METHODS = [
   { k: 'text',     label: 'Text only',          hint: 'no quantity, no price — information only' },
   { k: 'qty',      label: 'Quantity only',      hint: 'order a count; no price' },
@@ -68,13 +68,9 @@ var CAT_LOADS = ['manual', 'ERP sync', 'CSV', 'Excel', 'on-demand'];        // h
 var OFF_RAIL_CHANNELS = ['WhatsApp', 'email', 'scan'];    // off-rail capture inlets — a message to a handle you own → captured to a chit
 var COLLECT_CADENCE = ['per order', 'regular'];
 // The four-leg information chain: every required field is routed to ONE origin leg; the record is then fed back to systems.
-var CAT_LEGS = [
-  { k: 'system',   label: 'Fed by system',           short: 'System feed',   hint: 'already exists in ERP / IoT — sync it in',        col: ['#b07b1e', '#f6ecd8'] },
-  { k: 'customer', label: 'Collected from customer',  short: 'From customer', hint: 'known only at order time — capture it',           col: ['#2b6f8f', '#dcecf3'] },
-  { k: 'compute',  label: 'Computed by co-assist',    short: 'Computed',      hint: 'a co-assist (AI / ERP) computes it, the rail seals it', col: ['#8a5cc4', '#efeafa'] },
-  { k: 'cb',       label: 'Stored in CB',             short: 'Store in CB',   hint: 'has no home today — the gap CB fills',            col: ['#2c7a43', '#e6f4ec'] },
-];
-function _viaFor(leg){ return leg === 'compute' ? ['AI', 'ERP'] : ['ERP', 'IoT']; }   // system → ERP/IoT · compute → AI/ERP
+// Vocabulary + catalogue shape come from the shared model (app/catalogue-model.js). ONE definition — the UI and headless consumers (e.g. the EOQ harness) route through it.
+var CAT_LEGS = CBCatalogue.LEGS;
+function _viaFor(leg){ return CBCatalogue.viaFor(leg); }   // system → ERP/IoT · compute → AI/ERP
 
 /* ---- draft state + per-entity persistence (localStorage only; nothing hits the server) ---- */
 function _netDraftKey(){ return 'cb_netdraft_' + (SESSION.entityId || SESSION.entity || 'anon'); }
@@ -163,30 +159,7 @@ function netCapToggleOpen(key, capKey){   // collapse / expand a Yes capability'
   UI.net.collapsed = UI.net.collapsed || {}; UI.net.collapsed[capKey] = !UI.net.collapsed[capKey]; _netRerender();
 }
 /* catalogue spec editing */
-function _ensureCat(n){
-  if (!n.catalogue) n.catalogue = { fields: [] };
-  var c = n.catalogue;
-  if (!c.fields) c.fields = [];
-  if (!c.loadedBy) c.loadedBy = 'manual';
-  if (c.story === undefined) c.story = '';        // the purpose narrative — drives the gap analysis
-  if (!c.feedback) c.feedback = [];               // systems the completed record is fed BACK to
-  if (!c.refs) c.refs = [];                       // B · known-as: the same item's local code in each system (a link, never a copy)
-  if (!c.bom) c.bom = [];                          // G3 · related line items (a reorder cascades to these)
-  if (!c.triggers) c.triggers = [];               // G1 · loop: when a signal crosses a threshold, act
-  (c.feedback || []).forEach(function(fb){ if (fb.format === undefined) fb.format = ''; if (fb.onRail === undefined) fb.onRail = false; });   // G4 · outbound adapter
-  if (c.product === undefined) c.product = '';    // A · identity + order
-  if (!c.variants) c.variants = [];
-  if (c.baseUnit === undefined) c.baseUnit = '';
-  if (!c.altUnits) c.altUnits = [];
-  (c.fields || []).forEach(function(f){           // migrate old source → four-leg routing
-    if (!f.leg) {
-      if (f.source === 'erp') { f.leg = 'system'; f.via = 'ERP'; }
-      else if (f.source === 'iot') { f.leg = 'system'; f.via = 'IoT'; }
-      else { f.leg = 'cb'; }   // manual / ai → stored in CB (the gap)
-    }
-  });
-  return c;
-}
+function _ensureCat(n){ if (!n.catalogue) n.catalogue = {}; return CBCatalogue.ensure(n.catalogue); }   // shape + migration live in the shared model
 function netSetCatLoad(key, v){ var n = _netNode(key); if (!n) return; _ensureCat(n).loadedBy = v; _netMark(); _netRerender(); }
 /* catalogue purpose (the story that drives the gap analysis) + feed-back destinations */
 function netSetCatStory(key, v){ var n = _netNode(key); if (!n) return; _ensureCat(n).story = v; _netSave(); }   // no re-render while typing
@@ -194,6 +167,18 @@ function netAddFeedback(key){ var n = _netNode(key); if (!n) return; _ensureCat(
 function netDelFeedback(key, i){ var n = _netNode(key); if (!n) return; _ensureCat(n).feedback.splice(i, 1); _netMark(); _netRerender(); }
 function netSetFeedback(key, i, v){ var n = _netNode(key); if (!n) return; var fb = _ensureCat(n).feedback; if (i >= 0 && i < fb.length) { fb[i].system = v; _netMark(); } }   // no re-render while typing
 function netCatTab(key, tab){ if (UI.net) UI.net.catTab = tab; _netRerender(); }   // which catalogue sub-panel is showing (few inputs at a time)
+function netExportCat(key){   // export the node's catalogue draft as JSON — the harness (and later Build) reads this exact shape
+  var n = _netNode(key); if (!n) return; var c = _ensureCat(n);
+  var payload = { node: n.name, key: n.key, catalogue: c, order: (n.holds || []).indexOf('storefront') >= 0 ? _ensureOrder(n) : undefined };
+  try {
+    var blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    var a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = 'catalogue-' + ((c.product || 'draft').replace(/[^a-z0-9]+/gi, '-').toLowerCase() || 'draft') + '.json';
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 100);
+    if (typeof toast === 'function') toast('Draft exported');
+  } catch (e) { if (typeof toast === 'function') toast('Export failed'); }
+}
 /* catalogue Part B — known-as: the same item's local code/name in each system (a reference, never a mirror) */
 function netAddRef(key){ var n = _netNode(key); if (!n) return; _ensureCat(n).refs.push({ system: '', code: '' }); _netMark(); _netRerender(); }
 function netDelRef(key, i){ var n = _netNode(key); if (!n) return; _ensureCat(n).refs.splice(i, 1); _netMark(); _netRerender(); }
@@ -467,7 +452,9 @@ function _catConfig(n){
       + fbRows + '<div onclick="netAddFeedback(\'' + n.key + '\')" style="cursor:pointer;color:var(--blue);font-size:11.5px;font-weight:600;padding:4px 0">＋ system to feed back</div>'
       + '<div style="font-size:10.5px;color:var(--grey);margin-top:6px">Nothing here = CB is the end of the chain (it just holds the record).</div>';
   } else {
-    body = _catChain(n) + _catRecordPreview(n);
+    body = _catChain(n) + _catRecordPreview(n)
+      + '<div onclick="netExportCat(\'' + n.key + '\')" style="cursor:pointer;display:inline-block;margin-top:10px;font-size:11.5px;font-weight:600;color:var(--blue);border:1px solid var(--line);border-radius:7px;padding:5px 11px">⤓ Export draft (JSON)</div>'
+      + '<div style="font-size:10.5px;color:var(--grey);margin-top:4px">Feeds the compute→seal harness — the design drives the run.</div>';
   }
   return '<div style="margin-top:10px;padding:12px 13px;border:1px solid var(--line);border-left:3px solid #2c5aa0;border-radius:10px;background:#fbfdff">'
     + '<div style="font-size:11px;font-weight:800;color:#2c5aa0;letter-spacing:.05em">🗂️ CATALOGUE — complete the information chain</div>'
