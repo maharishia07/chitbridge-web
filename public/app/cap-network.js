@@ -64,7 +64,9 @@ var COASSIST_KINDS = [
 var ERP_SYSTEMS = ['SAP', 'Oracle', 'NetSuite', 'Dynamics', 'Tally', 'Other'];
 var AI_AUTONOMY = ['propose', 'authorize', 'confirm', 'delegate'];
 var IOT_TYPES = ['Raspberry Pi', 'Industrial gateway', 'PLC', 'Direct sensor', 'Other'];
-var CAT_LOADS = ['manual', 'ERP sync', 'WhatsApp', 'email', 'scan', 'Excel', 'on-demand'];
+var CAT_LOADS = ['manual', 'ERP sync', 'CSV', 'Excel', 'on-demand'];        // how the LIST (catalogue) is built
+var CHIT_CHANNELS = ['web form', 'WhatsApp', 'email', 'scan', 'manual'];    // how an ORDER / chit arrives
+var COLLECT_CADENCE = ['per order', 'regular'];
 
 /* ---- draft state + per-entity persistence (localStorage only; nothing hits the server) ---- */
 function _netDraftKey(){ return 'cb_netdraft_' + (SESSION.entityId || SESSION.entity || 'anon'); }
@@ -77,8 +79,8 @@ function _netInit(){
     if (n.owned === undefined) n.owned = true;
     if (!n.holds) n.holds = [];
     if (n.note && n.purpose === undefined) { n.purpose = n.note; delete n.note; }
-    if (n.holds.indexOf('catalogue') >= 0 && !n.catalogue) n.catalogue = { template: 'custom', fields: [], method: 'cart', maxItems: null };
-    if (n.holds.indexOf('storefront') >= 0 && !n.exposure) n.exposure = 'public';
+    if (n.holds.indexOf('catalogue') >= 0 && !n.catalogue) n.catalogue = { template: 'custom', fields: [] };
+    if (n.holds.indexOf('storefront') >= 0) { if (!n.exposure) n.exposure = 'public'; _ensureOrder(n); }
     if (n.holds.indexOf('coassist') >= 0) n.coassist = _normCoassist(n.coassist);
     if (n.holds.indexOf('transact') >= 0 && !n.transact) n.transact = { flow: 'both', copyOperator: true };
     if (n.holds.indexOf('tradeready') >= 0 && !n.tradeready) n.tradeready = { mode: 'inherit', certs: [] };
@@ -104,7 +106,7 @@ function netAddChild(parentKey){
   var P = _netNode(parentKey); if (!P) return;
   var name = (typeof prompt === 'function') ? prompt('New OWNED node under "' + P.name + '" (a branch, unit or depot you own):', '') : '';
   if (!name || !name.trim()) return;
-  var n = { key: _netKey(), name: name.trim(), parent_key: parentKey, owned: true, holds: ['catalogue'], purpose: '', catalogue: { template: 'custom', fields: [], method: 'cart', maxItems: null } };
+  var n = { key: _netKey(), name: name.trim(), parent_key: parentKey, owned: true, holds: ['catalogue'], purpose: '', catalogue: { template: 'custom', fields: [] } };
   UI.net.nodes.push(n); UI.net.sel = n.key; UI.net.openCap = 'catalogue'; UI.net.built = false;
   _netSave(); _netRerender();
 }
@@ -113,7 +115,7 @@ function netAddPartner(parentKey){
   var P = _netNode(parentKey); if (!P) return;
   var name = (typeof prompt === 'function') ? prompt('Partner — an INDEPENDENT business joining under "' + P.name + '" (you won\'t hold its key; its catalogue shows here):', '') : '';
   if (!name || !name.trim()) return;
-  var n = { key: _netKey(), name: name.trim(), parent_key: parentKey, owned: false, holds: ['catalogue'], purpose: '', catalogue: { template: 'custom', fields: [], method: 'cart', maxItems: null } };
+  var n = { key: _netKey(), name: name.trim(), parent_key: parentKey, owned: false, holds: ['catalogue'], purpose: '', catalogue: { template: 'custom', fields: [] } };
   UI.net.nodes.push(n); UI.net.sel = n.key; UI.net.openCap = 'catalogue'; UI.net.built = false;
   _netSave(); _netRerender();
 }
@@ -130,8 +132,8 @@ function netCapYes(key, capKey){
   var n = _netNode(key); if (!n) return; n.holds = n.holds || [];
   if (n.holds.indexOf(capKey) < 0) {
     n.holds.push(capKey);
-    if (capKey === 'catalogue' && !n.catalogue) n.catalogue = { template: 'custom', fields: [], method: 'cart', maxItems: null };
-    if (capKey === 'storefront' && !n.exposure) n.exposure = 'public';
+    if (capKey === 'catalogue' && !n.catalogue) n.catalogue = { template: 'custom', fields: [] };
+    if (capKey === 'storefront') { if (!n.exposure) n.exposure = 'public'; _ensureOrder(n); }
     if (capKey === 'coassist' && !n.coassist) n.coassist = _defCoassist();
     if (capKey === 'transact' && !n.transact) n.transact = { flow: 'both', copyOperator: true };
     if (capKey === 'tradeready' && !n.tradeready) n.tradeready = { mode: 'inherit', certs: [] };
@@ -149,7 +151,7 @@ function netCapToggleOpen(key, capKey){   // collapse / expand a Yes capability'
   UI.net.collapsed = UI.net.collapsed || {}; UI.net.collapsed[capKey] = !UI.net.collapsed[capKey]; _netRerender();
 }
 /* catalogue spec editing */
-function _ensureCat(n){ if (!n.catalogue) n.catalogue = { template: 'custom', fields: [], method: 'cart', maxItems: null }; if (!n.catalogue.loadedBy) n.catalogue.loadedBy = 'manual'; return n.catalogue; }
+function _ensureCat(n){ if (!n.catalogue) n.catalogue = { template: 'custom', fields: [] }; if (!n.catalogue.loadedBy) n.catalogue.loadedBy = 'manual'; return n.catalogue; }
 function netSetCatLoad(key, v){ var n = _netNode(key); if (!n) return; _ensureCat(n).loadedBy = v; _netMark(); _netRerender(); }
 function _srcBacked(n, src){ if (src === 'manual') return true; if ((n.holds || []).indexOf('coassist') < 0) return false; var cc = _normCoassist(n.coassist); if (src === 'erp') return cc.erp.connectors.length > 0; if (src === 'iot') return (cc.iot.connections || []).length > 0; if (src === 'ai') return cc.ai.count > 0; return true; }
 function netSetCatTemplate(key, tpl){
@@ -157,8 +159,14 @@ function netSetCatTemplate(key, tpl){
   var t = CAT_TEMPLATES[tpl]; if (t && tpl !== 'custom') c.fields = t.fields.map(function(f){ return { name: f.name, source: f.source, type: f.type || 'text' }; });
   _netMark(); _netRerender();
 }
-function netSetCatMethod(key, m){ var n = _netNode(key); if (!n) return; _ensureCat(n).method = m; _netMark(); _netRerender(); }
-function netSetCatMax(key, v){ var n = _netNode(key); if (!n) return; var num = parseInt(v, 10); _ensureCat(n).maxItems = (v === '' || isNaN(num)) ? null : num; _netSave(); }   // no re-render while typing
+/* order form (lives under Storefront): commercial method + max + collect-back + how the CHIT arrives */
+function _ensureOrder(n){ if (!n.order) { var lc = n.catalogue || {}; n.order = { method: lc.method || 'cart', maxItems: (lc.maxItems != null ? lc.maxItems : null), collectBack: [], chitChannel: 'web form' }; if (lc.method !== undefined) delete lc.method; if (lc.maxItems !== undefined) delete lc.maxItems; } if (!n.order.chitChannel) n.order.chitChannel = 'web form'; if (!n.order.collectBack) n.order.collectBack = []; if (!n.order.method) n.order.method = 'cart'; return n.order; }
+function netSetOrderMethod(key, m){ var n = _netNode(key); if (!n) return; _ensureOrder(n).method = m; _netMark(); _netRerender(); }
+function netSetOrderMax(key, v){ var n = _netNode(key); if (!n) return; var num = parseInt(v, 10); _ensureOrder(n).maxItems = (v === '' || isNaN(num)) ? null : num; _netSave(); }   // no re-render while typing
+function netSetOrderChannel(key, v){ var n = _netNode(key); if (!n) return; _ensureOrder(n).chitChannel = v; _netMark(); _netRerender(); }
+function netAddCollectBack(key){ var n = _netNode(key); if (!n) return; _ensureOrder(n).collectBack.push({ name: '', cadence: 'per order' }); _netMark(); _netRerender(); }
+function netDelCollectBack(key, i){ var n = _netNode(key); if (!n) return; _ensureOrder(n).collectBack.splice(i, 1); _netMark(); _netRerender(); }
+function netSetCollectBack(key, i, prop, val){ var n = _netNode(key); if (!n) return; var cb = _ensureOrder(n).collectBack; if (i >= 0 && i < cb.length) { cb[i][prop] = val; _netMark(); if (prop === 'cadence') _netRerender(); } }   // name via oninput: no re-render
 function netAddCatField(key){ var n = _netNode(key); if (!n) return; _ensureCat(n).fields.push({ name: '', source: 'manual', type: 'text' }); _netMark(); _netRerender(); }
 function netDelCatField(key, i){ var n = _netNode(key); if (!n) return; var c = _ensureCat(n); c.fields.splice(i, 1); _netMark(); _netRerender(); }
 function netSetCatField(key, i, prop, val){ var n = _netNode(key); if (!n) return; var c = _ensureCat(n); if (c.fields[i]) { c.fields[i][prop] = val; _netMark(); if (prop !== 'name') _netRerender(); } }   // name via oninput: no re-render
@@ -233,8 +241,8 @@ function networkScreen(){
     + '<div style="flex:1;overflow:auto;min-width:0">' + right + '</div></div>';
 }
 function _capSummary(n, k){
-  if (k === 'catalogue') { var c = n.catalogue || {}; var nf = (c.fields || []).length; var m = (CAT_METHODS.filter(function(x){ return x.k === (c.method || 'cart'); })[0] || {}).label || ''; return nf + ' field' + (nf === 1 ? '' : 's') + ' · ' + m; }
-  if (k === 'storefront') return 'exposure: ' + (n.exposure || 'public');
+  if (k === 'catalogue') { var c = n.catalogue || {}; var nf = (c.fields || []).length; return nf + ' field' + (nf === 1 ? '' : 's') + ' · ' + (c.loadedBy || 'manual'); }
+  if (k === 'storefront') { var o = n.order || {}; var ml = (CAT_METHODS.filter(function(x){ return x.k === (o.method || 'cart'); })[0] || {}).label || ''; return (n.exposure || 'public') + ' · ' + ml; }
   if (k === 'coassist') { var cc = _normCoassist(n.coassist); var p = []; if (cc.human.count) p.push(cc.human.count + ' human'); var iotDev = (cc.iot.connections || []).reduce(function(s, x){ return s + (parseInt(x.devices, 10) || 0); }, 0); if (iotDev || (cc.iot.connections || []).length) p.push(iotDev + ' IoT'); if (cc.erp.connectors.length) p.push(cc.erp.connectors.length + ' ERP'); if (cc.ai.count) p.push(cc.ai.count + ' AI'); return p.length ? p.join(' · ') : 'none set'; }
   if (k === 'transact') { var t = n.transact || {}; var f = t.flow || 'both'; var base = f === 'both' ? 'sends & receives' : (f === 'send' ? 'sends only' : 'receives only'); return base + (t.copyOperator !== false ? ' · HQ copied' : ''); }
   if (k === 'tradeready') { var tr = n.tradeready || {}; return tr.mode === 'own' ? ('own · ' + (tr.certs || []).length + ' cert' + ((tr.certs || []).length === 1 ? '' : 's')) : "network's certs"; }
@@ -275,8 +283,6 @@ function _catFieldRow(n, f, i){
 function _catConfig(n){
   var c = _ensureCat(n);
   var tplOpts = Object.keys(CAT_TEMPLATES).map(function(k){ return '<option value="' + k + '"' + ((c.template || 'custom') === k ? ' selected' : '') + '>' + CAT_TEMPLATES[k].label + '</option>'; }).join('');
-  var methOpts = CAT_METHODS.map(function(m){ return '<option value="' + m.k + '"' + ((c.method || 'cart') === m.k ? ' selected' : '') + '>' + m.label + '</option>'; }).join('');
-  var mh = (CAT_METHODS.filter(function(m){ return m.k === (c.method || 'cart'); })[0] || {}).hint || '';
   var fields = (c.fields || []).map(function(f, i){ return _catFieldRow(n, f, i); }).join('') || '<div style="font-size:11px;color:var(--grey);padding:2px 0">No fields yet — pick a common catalogue, or add fields.</div>';
   var loadOpts = CAT_LOADS.map(function(l){ return '<option value="' + l + '"' + ((c.loadedBy || 'manual') === l ? ' selected' : '') + '>' + l + '</option>'; }).join('');
   var used = {}; (c.fields || []).forEach(function(f){ if (f.source && f.source !== 'manual') used[f.source] = true; });
@@ -292,25 +298,39 @@ function _catConfig(n){
     + fields
     + '<div onclick="netAddCatField(\'' + n.key + '\')" style="cursor:pointer;color:var(--blue);font-size:12px;font-weight:600;padding:5px 0">＋ add field</div>'
     + srcNote
-    + '<label style="font-size:11px;color:var(--grey);display:block;margin-top:8px">How customers order (commercial method)</label>'
-    + '<select onchange="netSetCatMethod(\'' + n.key + '\',this.value)" style="margin-top:4px;padding:6px 8px;border:1px solid var(--line);border-radius:7px;font-size:12.5px">' + methOpts + '</select>'
-    + '<div style="font-size:11px;color:var(--grey);font-style:italic;margin-top:3px">' + esc(mh) + '</div>'
-    + '<label style="font-size:11px;color:var(--grey);display:block;margin-top:10px">Max items per order <span style="color:var(--faint,#8a929e)">(optional limit)</span></label>'
-    + '<input value="' + (c.maxItems != null ? esc(String(c.maxItems)) : '') + '" oninput="netSetCatMax(\'' + n.key + '\',this.value)" type="number" min="1" placeholder="no limit" style="margin-top:4px;padding:6px 8px;border:1px solid var(--line);border-radius:7px;font-size:12.5px;width:130px">'
     + '</div>';
 }
-function _exposureConfig(n){
+function _storefrontConfig(n){
   var e = n.exposure || 'public';
+  var o = _ensureOrder(n);
   var opt = function(val, label, hint){ var on = e === val;
     return '<div onclick="netSetExposure(\'' + n.key + '\',\'' + val + '\')" style="cursor:pointer;padding:8px 10px;border:1px solid ' + (on ? '#2c7a43' : 'var(--line)') + ';border-radius:8px;background:' + (on ? '#e6f4ec' : '#fff') + ';margin-top:6px">'
       + '<b style="font-size:12.5px;color:' + (on ? '#2c7a43' : '#3a4048') + '">' + (on ? '● ' : '○ ') + label + '</b>'
       + '<div style="font-size:11px;color:var(--grey);margin-top:2px">' + hint + '</div></div>'; };
-  return '<div style="margin-top:10px;padding:12px 13px;border:1px solid var(--line);border-left:3px solid #2c7a43;border-radius:10px;background:#fbfefc">'
-    + '<div style="font-size:11px;font-weight:800;color:#2c7a43;letter-spacing:.05em">🛒 EXPOSURE — shown to the outside world</div>'
-    + opt('public', 'Public', 'Anyone / customers can see this catalogue in the storefront.')
-    + opt('protected', 'Protected', 'Your <b>connected network / partners</b> can see it — <b>not</b> the public (HQ, other branches, partners).')
-    + '<div style="font-size:11px;color:var(--grey);margin-top:8px">Untick <b>Storefront</b> above to keep this node <b>private</b> (internal — shown to no one).</div>'
+  var view = '<div style="font-size:11px;font-weight:800;color:#2c7a43;letter-spacing:.05em">👁️ VIEW — who sees it</div>'
+    + opt('public', 'Public', 'Anyone / customers can see this in the storefront.')
+    + opt('protected', 'Protected', 'Your <b>connected network / partners</b> — <b>not</b> the public.')
+    + '<div style="font-size:11px;color:var(--grey);margin-top:8px">Untick <b>Storefront</b> above to keep this node <b>private</b> (internal — shown to no one).</div>';
+  var methOpts = CAT_METHODS.map(function(m){ return '<option value="' + m.k + '"' + ((o.method || 'cart') === m.k ? ' selected' : '') + '>' + m.label + '</option>'; }).join('');
+  var mh = (CAT_METHODS.filter(function(m){ return m.k === (o.method || 'cart'); })[0] || {}).hint || '';
+  var chanOpts = CHIT_CHANNELS.map(function(ch){ return '<option value="' + ch + '"' + ((o.chitChannel || 'web form') === ch ? ' selected' : '') + '>' + ch + '</option>'; }).join('');
+  var cbRows = (o.collectBack || []).map(function(cb, i){
+    var cadOpts = COLLECT_CADENCE.map(function(cd){ return '<option value="' + cd + '"' + (cb.cadence === cd ? ' selected' : '') + '>' + cd + '</option>'; }).join('');
+    return '<div style="display:flex;gap:6px;align-items:center;padding:3px 0"><input value="' + esc(cb.name || '') + '" oninput="netSetCollectBack(\'' + n.key + '\',' + i + ',\'name\',this.value)" placeholder="what to collect (e.g. delivery location)" style="flex:1;min-width:0;font-size:11.5px;padding:4px 7px;border:1px solid var(--line);border-radius:6px"><select onchange="netSetCollectBack(\'' + n.key + '\',' + i + ',\'cadence\',this.value)" style="font-size:11px;padding:4px;border:1px solid var(--line);border-radius:6px">' + cadOpts + '</select><span onclick="netDelCollectBack(\'' + n.key + '\',' + i + ')" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 3px">×</span></div>';
+  }).join('') || '<div style="font-size:11px;color:var(--grey);padding:2px 0">Nothing asked back.</div>';
+  var order = '<div style="margin-top:12px;border-top:1px solid var(--line);padding-top:9px"><div style="font-size:11px;font-weight:800;color:#2c7a43;letter-spacing:.05em">📝 ORDER FORM — what the customer fills in</div>'
+    + '<label style="font-size:11px;color:var(--grey);display:block;margin-top:8px">How they order (commercial method)</label>'
+    + '<select onchange="netSetOrderMethod(\'' + n.key + '\',this.value)" style="margin-top:4px;padding:6px 8px;border:1px solid var(--line);border-radius:7px;font-size:12.5px">' + methOpts + '</select>'
+    + '<div style="font-size:11px;color:var(--grey);font-style:italic;margin-top:3px">' + esc(mh) + '</div>'
+    + '<label style="font-size:11px;color:var(--grey);display:block;margin-top:10px">Max items per order <span style="color:var(--faint,#8a929e)">(optional)</span></label>'
+    + '<input value="' + (o.maxItems != null ? esc(String(o.maxItems)) : '') + '" oninput="netSetOrderMax(\'' + n.key + '\',this.value)" type="number" min="1" placeholder="no limit" style="margin-top:4px;padding:6px 8px;border:1px solid var(--line);border-radius:7px;font-size:12.5px;width:130px">'
+    + '<label style="font-size:11px;color:var(--grey);display:block;margin-top:10px">Collect back <span style="color:var(--faint,#8a929e)">(what you ask the customer to provide)</span></label>'
+    + cbRows
+    + '<div onclick="netAddCollectBack(\'' + n.key + '\')" style="cursor:pointer;color:var(--blue);font-size:12px;font-weight:600;padding:5px 0">＋ collect-back field</div>'
+    + '<label style="font-size:11px;color:var(--grey);display:block;margin-top:8px">Chit arrives via <span style="color:var(--faint,#8a929e)">(how an order reaches you)</span></label>'
+    + '<select onchange="netSetOrderChannel(\'' + n.key + '\',this.value)" style="margin-top:4px;padding:6px 8px;border:1px solid var(--line);border-radius:7px;font-size:12.5px">' + chanOpts + '</select>'
     + '</div>';
+  return '<div style="margin-top:10px;padding:12px 13px;border:1px solid var(--line);border-left:3px solid #2c7a43;border-radius:10px;background:#fbfefc">' + view + order + '</div>';
 }
 /* setters for the four remaining panels */
 /* co-assist: normalized shape + per-kind setters (Human roles · IoT gateways→devices · ERP system+label · AI role+autonomy) */
@@ -318,8 +338,8 @@ function _defCoassist(){ return { human: { count: 0, roles: [] }, iot: { connect
 function _normCoassist(ca){
   var d = _defCoassist(); ca = ca || {};
   if (typeof ca.human === 'number') d.human.count = ca.human; else if (ca.human) { d.human.count = ca.human.count || 0; d.human.roles = ca.human.roles || []; }
-  if (typeof ca.iot === 'number') { if (ca.iot > 0) d.iot.connections = [{ type: 'Direct sensor', devices: ca.iot }]; }
-  else if (ca.iot) { if (Array.isArray(ca.iot.connections)) d.iot.connections = ca.iot.connections; else if (ca.iot.gateways || ca.iot.devices) d.iot.connections = [{ type: 'Raspberry Pi', devices: ca.iot.devices || 0 }]; }
+  if (typeof ca.iot === 'number') { if (ca.iot > 0) d.iot.connections = [{ type: 'Direct sensor', count: 1, devices: ca.iot }]; }
+  else if (ca.iot) { if (Array.isArray(ca.iot.connections)) d.iot.connections = ca.iot.connections.map(function(x){ return { type: x.type || 'Raspberry Pi', count: (x.count != null ? x.count : 1), devices: x.devices || 0 }; }); else if (ca.iot.gateways || ca.iot.devices) d.iot.connections = [{ type: 'Raspberry Pi', count: ca.iot.gateways || 1, devices: ca.iot.devices || 0 }]; }
   if (typeof ca.erp === 'number') { for (var i = 0; i < ca.erp; i++) d.erp.connectors.push({ system: 'SAP', label: '' }); } else if (ca.erp) { d.erp.connectors = ca.erp.connectors || []; }
   if (typeof ca.ai === 'number') d.ai.count = ca.ai; else if (ca.ai) { d.ai.count = ca.ai.count || 0; d.ai.role = ca.ai.role || ''; d.ai.autonomy = ca.ai.autonomy || 'authorize'; }
   return d;
@@ -329,9 +349,9 @@ function netCaHuman(key, val){ var n = _netNode(key); if (!n) return; var x = pa
 function netCaHumanAddRole(key){ var n = _netNode(key); if (!n) return; _ca(n).human.roles.push(''); _netMark(); _netRerender(); }
 function netCaHumanDelRole(key, i){ var n = _netNode(key); if (!n) return; _ca(n).human.roles.splice(i, 1); _netMark(); _netRerender(); }
 function netCaHumanSetRole(key, i, val){ var n = _netNode(key); if (!n) return; var r = _ca(n).human.roles; if (i >= 0 && i < r.length) { r[i] = val; _netMark(); } }
-function netCaAddIot(key){ var n = _netNode(key); if (!n) return; _ca(n).iot.connections.push({ type: 'Raspberry Pi', devices: 0 }); _netMark(); _netRerender(); }
+function netCaAddIot(key){ var n = _netNode(key); if (!n) return; _ca(n).iot.connections.push({ type: 'Raspberry Pi', count: 1, devices: 0 }); _netMark(); _netRerender(); }
 function netCaDelIot(key, i){ var n = _netNode(key); if (!n) return; _ca(n).iot.connections.splice(i, 1); _netMark(); _netRerender(); }
-function netCaSetIot(key, i, prop, val){ var n = _netNode(key); if (!n) return; var cs = _ca(n).iot.connections; if (i < 0 || i >= cs.length) return; if (prop === 'devices') { var x = parseInt(val, 10); cs[i].devices = (val === '' || isNaN(x) || x < 0) ? 0 : x; _netMark(); } else { cs[i][prop] = val; _netMark(); _netRerender(); } }
+function netCaSetIot(key, i, prop, val){ var n = _netNode(key); if (!n) return; var cs = _ca(n).iot.connections; if (i < 0 || i >= cs.length) return; if (prop === 'devices' || prop === 'count') { var x = parseInt(val, 10); cs[i][prop] = (val === '' || isNaN(x) || x < 0) ? 0 : x; _netMark(); } else { cs[i][prop] = val; _netMark(); _netRerender(); } }
 function netCaAddErp(key){ var n = _netNode(key); if (!n) return; _ca(n).erp.connectors.push({ system: 'SAP', label: '' }); _netMark(); _netRerender(); }
 function netCaDelErp(key, i){ var n = _netNode(key); if (!n) return; _ca(n).erp.connectors.splice(i, 1); _netMark(); _netRerender(); }
 function netCaSetErp(key, i, prop, val){ var n = _netNode(key); if (!n) return; var e = _ca(n).erp.connectors; if (i >= 0 && i < e.length) { e[i][prop] = val; _netMark(); if (prop === 'system') _netRerender(); } }
@@ -356,7 +376,7 @@ function _coassistConfig(n){
     + '</div>';
   var iotRows = c.iot.connections.map(function(io, i){
     var opts = IOT_TYPES.map(function(t){ return '<option value="' + t + '"' + (io.type === t ? ' selected' : '') + '>' + t + '</option>'; }).join('');
-    return '<div style="display:flex;gap:6px;align-items:center;padding:3px 0"><select onchange="netCaSetIot(\'' + n.key + '\',' + i + ',\'type\',this.value)" style="font-size:11.5px;padding:4px;border:1px solid var(--line);border-radius:6px">' + opts + '</select><span style="font-size:11px;color:var(--grey)">devices</span><input type="number" min="0" value="' + (io.devices || '') + '" oninput="netCaSetIot(\'' + n.key + '\',' + i + ',\'devices\',this.value)" placeholder="0" style="width:58px;font-size:11.5px;padding:4px 6px;border:1px solid var(--line);border-radius:6px"><span onclick="netCaDelIot(\'' + n.key + '\',' + i + ')" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 3px">×</span></div>';
+    return '<div style="display:flex;gap:5px;align-items:center;padding:3px 0;flex-wrap:wrap"><select onchange="netCaSetIot(\'' + n.key + '\',' + i + ',\'type\',this.value)" style="font-size:11.5px;padding:4px;border:1px solid var(--line);border-radius:6px">' + opts + '</select><span style="font-size:11px;color:var(--grey)">how many</span><input type="number" min="0" value="' + (io.count || '') + '" oninput="netCaSetIot(\'' + n.key + '\',' + i + ',\'count\',this.value)" placeholder="1" style="width:46px;font-size:11.5px;padding:4px 6px;border:1px solid var(--line);border-radius:6px"><span style="font-size:11px;color:var(--grey)">devices</span><input type="number" min="0" value="' + (io.devices || '') + '" oninput="netCaSetIot(\'' + n.key + '\',' + i + ',\'devices\',this.value)" placeholder="0" style="width:54px;font-size:11.5px;padding:4px 6px;border:1px solid var(--line);border-radius:6px"><span onclick="netCaDelIot(\'' + n.key + '\',' + i + ')" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 3px">×</span></div>';
   }).join('');
   var iot = '<div style="padding:9px 0;border-bottom:1px solid var(--line)"><span style="font-size:12.5px;font-weight:600;color:#3a4048">📡 IoT connections</span>'
     + '<div style="margin-top:5px">' + iotRows + '<span onclick="netCaAddIot(\'' + n.key + '\')" style="cursor:pointer;color:var(--blue);font-size:11.5px;font-weight:600">＋ connection</span></div></div>';
@@ -419,7 +439,7 @@ function _disputeConfig(n){
 }
 function _capDetail(n, k){
   if (k === 'catalogue') return _catConfig(n);
-  if (k === 'storefront') return _exposureConfig(n);
+  if (k === 'storefront') return _storefrontConfig(n);
   if (k === 'coassist') return _coassistConfig(n);
   if (k === 'transact') return _transactConfig(n);
   if (k === 'tradeready') return _tradereadyConfig(n);
