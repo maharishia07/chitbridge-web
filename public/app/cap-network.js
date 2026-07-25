@@ -1,10 +1,13 @@
 /* app/cap-network.js — DESIGN-FIRST network builder. Lazy via ensureCap('network').
- * You DESIGN a tree of nodes under your OWN entity (the top node) — a DRAFT. Nothing is minted while you design.
- * The draft persists per-entity (localStorage) so it survives closing and reopening the app. When the design is
- * done, "Build" is the confirm step that will create each node as a real entity + its login key — that step is
- * DEFERRED (wired in a later slice); until you confirm it, NO entities and NO keys are created.
- * Two panes, same style as before: LEFT = the tree; RIGHT = the selected node.
- * (The provisioning/mint helpers from the previous version are kept below, dormant, for the future Build step.) */
+ * DESIGN a tree under your OWN entity (top node) — a DRAFT; nothing is minted while you design.
+ *   OWNED   (branch / unit / depot) — part of you; at Build → a real entity + a login key YOU hold (Co-assist pattern).
+ *   PARTNER (external business)      — a peer under the network; at Build → a handshake (no key). Its catalogue is visible here.
+ * Each node declares a PURPOSE (line 1) and WHAT IT HOLDS via capability checkboxes. Ticking one EXPANDS its config:
+ *   🗂️ Catalogue → catalogue spec (common-catalogue pick → fields, commercial method, max-items constraint).
+ *   🛒 Storefront → exposure (public / protected). Off ⇒ private/internal.
+ *   (Co-assists · Transact · Trade-ready · Dispute — checkboxes now; their expansions come in later slices.)
+ * Draft persists per-entity (localStorage), survives reopen. "Build" (mint owned + handshake partners) is DEFERRED.
+ * (Mint helpers from the previous version kept below, dormant, for the Build step.) */
 
 /* ---- mint helpers — DORMANT during design; used later by the Build/confirm step ---- */
 function _netBase(){ return (typeof CFG !== 'undefined' && CFG.API_BASE) || ''; }
@@ -24,12 +27,50 @@ async function _netMint(name){
   return { entity_id: ver.entity.identity_id, token: ver.token, name: name, email: email };
 }
 
+/* ---- capabilities a node can HOLD (checkboxes) ---- */
+var NET_CAPS = [
+  { k: 'catalogue',  icon: '🗂️', label: 'Catalogue' },
+  { k: 'storefront', icon: '🛒', label: 'Storefront' },
+  { k: 'coassist',   icon: '🧑‍🤝‍🧑', label: 'Co-assists' },
+  { k: 'transact',   icon: '🔄', label: 'Transact' },
+  { k: 'tradeready', icon: '🛡️', label: 'Trade-ready' },
+  { k: 'dispute',    icon: '⚖️', label: 'Dispute' },
+];
+function _capMeta(k){ for (var i = 0; i < NET_CAPS.length; i++) if (NET_CAPS[i].k === k) return NET_CAPS[i]; return null; }
+
+/* ---- catalogue spec vocabulary ---- */
+var CAT_SOURCES = ['manual', 'erp', 'iot', 'ai'];
+var CAT_TYPES = ['text', 'number', 'choice', 'range', 'date'];
+var CAT_METHODS = [
+  { k: 'text',     label: 'Text only',          hint: 'no quantity, no price — information only' },
+  { k: 'qty',      label: 'Quantity only',      hint: 'order a count; no price' },
+  { k: 'cart',     label: 'Cart (qty + price)', hint: 'standard: quantity × price' },
+  { k: 'range',    label: 'Price as a range',   hint: 'price varies within a band' },
+  { k: 'qtyprice', label: 'Price + qty vary',   hint: 'both negotiable per order' },
+];
+var CAT_TEMPLATES = {
+  custom:  { label: 'Custom (build your own)', fields: [] },
+  timber:  { label: 'Timber',     fields: [{ name: 'species', source: 'manual', type: 'text' }, { name: 'grade', source: 'manual', type: 'choice' }, { name: 'moisture_pct', source: 'iot', type: 'number' }, { name: 'weight_kg', source: 'iot', type: 'number' }, { name: 'stock_qty', source: 'erp', type: 'number' }, { name: 'price_per_m3', source: 'erp', type: 'number' }] },
+  gold:    { label: 'Gold bar',   fields: [{ name: 'bar_serial', source: 'manual', type: 'text' }, { name: 'fineness', source: 'iot', type: 'number' }, { name: 'fine_weight_g', source: 'iot', type: 'number' }, { name: 'source_mine', source: 'manual', type: 'text' }, { name: 'spot_price', source: 'erp', type: 'number' }] },
+  pharma:  { label: 'Pharma lot', fields: [{ name: 'batch_no', source: 'manual', type: 'text' }, { name: 'active_ingredient', source: 'manual', type: 'text' }, { name: 'assay_pct', source: 'iot', type: 'number' }, { name: 'storage_temp', source: 'iot', type: 'number' }, { name: 'expiry', source: 'manual', type: 'date' }, { name: 'stock_qty', source: 'erp', type: 'number' }] },
+  drone:   { label: 'Drone',      fields: [{ name: 'model', source: 'manual', type: 'text' }, { name: 'serial_no', source: 'manual', type: 'text' }, { name: 'battery_health', source: 'iot', type: 'number' }, { name: 'flight_hours', source: 'iot', type: 'number' }, { name: 'unit_price', source: 'erp', type: 'number' }] },
+};
+
 /* ---- draft state + per-entity persistence (localStorage only; nothing hits the server) ---- */
-var NET_ROLES = ['branch', 'unit', 'depot', 'supplier', 'distributor', 'storefront', 'partner'];
 function _netDraftKey(){ return 'cb_netdraft_' + (SESSION.entityId || SESSION.entity || 'anon'); }
 function _netSave(){ try { if (UI.net) localStorage.setItem(_netDraftKey(), JSON.stringify(UI.net)); } catch (e) {} }
+function _netMark(){ if (UI.net) UI.net.built = false; _netSave(); }
 function _netLoad(){ try { var s = localStorage.getItem(_netDraftKey()); return s ? JSON.parse(s) : null; } catch (e) { return null; } }
-function _netInit(){ if (UI.net === undefined || UI.net === null) UI.net = _netLoad() || null; }
+function _netInit(){
+  if (UI.net === undefined || UI.net === null) UI.net = _netLoad() || null;
+  if (UI.net && UI.net.nodes) UI.net.nodes.forEach(function(n){          // upgrade older drafts to the current model
+    if (n.owned === undefined) n.owned = true;
+    if (!n.holds) n.holds = [];
+    if (n.note && n.purpose === undefined) { n.purpose = n.note; delete n.note; }
+    if (n.holds.indexOf('catalogue') >= 0 && !n.catalogue) n.catalogue = { template: 'custom', fields: [], method: 'cart', maxItems: null };
+    if (n.holds.indexOf('storefront') >= 0 && !n.exposure) n.exposure = 'public';
+  });
+}
 function _netKey(){ return 'k' + Date.now().toString(36) + Math.floor(Math.random() * 1e4); }
 function _netNode(key){ return (UI.net && UI.net.nodes || []).find(function(n){ return n.key === key; }); }
 function loadNetwork(){ _netInit(); }   // override the legacy loader — design-first renders from the draft, no server fetch
@@ -41,15 +82,24 @@ function netNewNetwork(){
   if (purpose === null) return;
   var rootKey = _netKey();
   UI.net = { id: 'net-' + Date.now().toString(36), purpose: (purpose || ent + ' network'), built: false,
-    nodes: [{ key: rootKey, name: ent, parent_key: null, role: 'operator', note: 'This entity — the top of the network.' }], sel: rootKey };
+    nodes: [{ key: rootKey, name: ent, parent_key: null, owned: true, root: true, holds: [], purpose: 'This entity — the top of the network.' }], sel: rootKey };
   _netSave(); _netRerender();
 }
 function netAddChild(parentKey){
   _netInit(); if (!UI.net) return;
   var P = _netNode(parentKey); if (!P) return;
-  var name = (typeof prompt === 'function') ? prompt('New node under "' + P.name + '" (a branch, unit, depot, supplier, distributor…):', '') : '';
+  var name = (typeof prompt === 'function') ? prompt('New OWNED node under "' + P.name + '" (a branch, unit or depot you own):', '') : '';
   if (!name || !name.trim()) return;
-  var n = { key: _netKey(), name: name.trim(), parent_key: parentKey, role: 'branch', note: '' };
+  var n = { key: _netKey(), name: name.trim(), parent_key: parentKey, owned: true, holds: ['catalogue'], purpose: '', catalogue: { template: 'custom', fields: [], method: 'cart', maxItems: null } };
+  UI.net.nodes.push(n); UI.net.sel = n.key; UI.net.built = false;
+  _netSave(); _netRerender();
+}
+function netAddPartner(parentKey){
+  _netInit(); if (!UI.net) return;
+  var P = _netNode(parentKey); if (!P) return;
+  var name = (typeof prompt === 'function') ? prompt('Partner — an INDEPENDENT business joining under "' + P.name + '" (you won\'t hold its key; its catalogue shows here):', '') : '';
+  if (!name || !name.trim()) return;
+  var n = { key: _netKey(), name: name.trim(), parent_key: parentKey, owned: false, holds: ['catalogue'], purpose: '', catalogue: { template: 'custom', fields: [], method: 'cart', maxItems: null } };
   UI.net.nodes.push(n); UI.net.sel = n.key; UI.net.built = false;
   _netSave(); _netRerender();
 }
@@ -58,10 +108,35 @@ function netRename(key){
   var n = _netNode(key); if (!n) return;
   var name = (typeof prompt === 'function') ? prompt('Rename node:', n.name) : n.name;
   if (name === null || !name.trim()) return;
-  n.name = name.trim(); UI.net.built = false; _netSave(); _netRerender();
+  n.name = name.trim(); _netMark(); _netRerender();
 }
-function netSetRole(key, role){ var n = _netNode(key); if (!n) return; n.role = role; UI.net.built = false; _netSave(); _netRerender(); }
-function netSetNote(key, val){ var n = _netNode(key); if (!n) return; n.note = val; _netSave(); }   // no re-render while typing
+function netSetPurpose(key, val){ var n = _netNode(key); if (!n) return; n.purpose = val; _netSave(); }   // no re-render while typing
+function netToggleHold(key, capKey){
+  var n = _netNode(key); if (!n) return;
+  n.holds = n.holds || [];
+  var i = n.holds.indexOf(capKey);
+  if (i >= 0) n.holds.splice(i, 1);
+  else {
+    n.holds.push(capKey);
+    if (capKey === 'catalogue' && !n.catalogue) n.catalogue = { template: 'custom', fields: [], method: 'cart', maxItems: null };
+    if (capKey === 'storefront' && !n.exposure) n.exposure = 'public';
+  }
+  _netMark(); _netRerender();
+}
+/* catalogue spec editing */
+function _ensureCat(n){ if (!n.catalogue) n.catalogue = { template: 'custom', fields: [], method: 'cart', maxItems: null }; return n.catalogue; }
+function netSetCatTemplate(key, tpl){
+  var n = _netNode(key); if (!n) return; var c = _ensureCat(n); c.template = tpl;
+  var t = CAT_TEMPLATES[tpl]; if (t && tpl !== 'custom') c.fields = t.fields.map(function(f){ return { name: f.name, source: f.source, type: f.type || 'text' }; });
+  _netMark(); _netRerender();
+}
+function netSetCatMethod(key, m){ var n = _netNode(key); if (!n) return; _ensureCat(n).method = m; _netMark(); _netRerender(); }
+function netSetCatMax(key, v){ var n = _netNode(key); if (!n) return; var num = parseInt(v, 10); _ensureCat(n).maxItems = (v === '' || isNaN(num)) ? null : num; _netSave(); }   // no re-render while typing
+function netAddCatField(key){ var n = _netNode(key); if (!n) return; _ensureCat(n).fields.push({ name: '', source: 'manual', type: 'text' }); _netMark(); _netRerender(); }
+function netDelCatField(key, i){ var n = _netNode(key); if (!n) return; var c = _ensureCat(n); c.fields.splice(i, 1); _netMark(); _netRerender(); }
+function netSetCatField(key, i, prop, val){ var n = _netNode(key); if (!n) return; var c = _ensureCat(n); if (c.fields[i]) { c.fields[i][prop] = val; _netMark(); if (prop !== 'name') _netRerender(); } }   // name via oninput: no re-render
+function netSetExposure(key, val){ var n = _netNode(key); if (!n) return; n.exposure = val; _netMark(); _netRerender(); }
+/* structure */
 function _netDescendants(key, acc){ acc = acc || []; (UI.net.nodes || []).forEach(function(n){ if (n.parent_key === key){ acc.push(n.key); _netDescendants(n.key, acc); } }); return acc; }
 function netDelete(key){
   var n = _netNode(key); if (!n) return;
@@ -71,7 +146,7 @@ function netDelete(key){
     var kill = _netDescendants(key); kill.push(key);
     UI.net.nodes = UI.net.nodes.filter(function(x){ return kill.indexOf(x.key) < 0; });
     if (kill.indexOf(UI.net.sel) >= 0) UI.net.sel = n.parent_key;
-    UI.net.built = false; _netSave(); _netRerender();
+    _netMark(); _netRerender();
   };
   if (typeof confirmAsk === 'function') confirmAsk('Remove node', 'Remove <b>' + esc(n.name) + '</b>' + (cnt ? ' and its ' + cnt + ' sub-node' + (cnt === 1 ? '' : 's') : '') + ' from the design? Nothing was created yet, so nothing is lost.', 'Remove', go, true);
   else if (typeof window !== 'undefined' && window.confirm('Remove ' + n.name + '?')) go();
@@ -83,9 +158,11 @@ function netStartOver(){
 }
 function netBuild(){
   _netInit(); if (!UI.net) return;
-  var n = (UI.net.nodes || []).length - 1;   // exclude the entity/top node
+  var owned = (UI.net.nodes || []).filter(function(n){ return !n.root && n.owned; }).length;
+  var partners = (UI.net.nodes || []).filter(function(n){ return !n.owned; }).length;
   var body = '<div style="padding:16px 18px">'
-    + '<div style="font-size:13px;color:#3a4048;line-height:1.6">Your design is <b>saved</b>. Building will create <b>' + n + ' node' + (n === 1 ? '' : 's') + '</b> as real entities, each with its own login key — the same way a Co-assist gets a key.</div>'
+    + '<div style="font-size:13px;color:#3a4048;line-height:1.6">Your design is <b>saved</b>. Building will:</div>'
+    + '<div style="font-size:13px;color:#3a4048;line-height:1.7;margin-top:8px">• create <b>' + owned + ' owned node' + (owned === 1 ? '' : 's') + '</b> as real entities, each with its own login key (like a Co-assist);<br>• send a handshake to <b>' + partners + ' partner' + (partners === 1 ? '' : 's') + '</b> (independent — no key held).</div>'
     + '<div style="margin-top:12px;padding:11px 13px;border:1px solid var(--line);border-radius:10px;background:#f7f9fb;font-size:12.5px;color:var(--grey)">🔒 <b>Not wired yet.</b> This is the confirm step — we build it next. Until you run it, <b>no entities and no keys are created</b>; your design just stays here, ready.</div>'
     + '</div>';
   if (typeof modal === 'function') modal('<div class="mhd"><div class="t">🔨 Ready to build</div></div><div class="mbody" style="padding:0">' + body + '</div>');
@@ -93,12 +170,13 @@ function netBuild(){
 }
 
 /* ---- render (two panes, same style) ---- */
+function _capDots(n){ return (n.holds || []).map(function(k){ var c = _capMeta(k); return c ? c.icon : ''; }).join(''); }
 function _netTree(parentKey, depth){
   var kids = (UI.net.nodes || []).filter(function(n){ return n.parent_key === (parentKey || null); });
-  return kids.map(function(n){ var sel = UI.net.sel === n.key;
+  return kids.map(function(n){ var sel = UI.net.sel === n.key; var dots = _capDots(n);
     return '<div onclick="netSelect(\'' + n.key + '\')" style="cursor:pointer;padding:7px 9px;padding-left:' + (9 + depth * 16) + 'px;border-radius:8px;font-size:12.5px;' + (sel ? 'background:#eef4fc;color:#2c5aa0;font-weight:700' : 'color:#3a4048') + '">'
-      + (n.parent_key ? '└ ' : '◆ ') + esc(n.name)
-      + '<span style="color:var(--grey);font-weight:400;font-size:11px"> · ' + esc(n.role || 'node') + '</span>'
+      + (n.parent_key ? '└ ' : '◆ ') + esc(n.name) + (n.owned ? '' : ' <span title="partner">🤝</span>')
+      + (dots ? '<span style="font-size:10px;margin-left:5px;opacity:.9">' + dots + '</span>' : '')
       + '</div>' + _netTree(n.key, depth + 1);
   }).join('');
 }
@@ -106,8 +184,8 @@ function networkScreen(){
   _netInit();
   if (!UI.net) {
     var ent = SESSION.entity || SESSION.name || 'your entity';
-    return '<div style="padding:44px 22px;max-width:560px"><div style="font-size:19px;font-weight:800">🔗 Design your network</div>'
-      + '<div style="font-size:13px;color:var(--grey);margin:8px 0 8px;line-height:1.6">Draw your structure first — <b>' + esc(ent) + '</b> is the top node, and you add branches, units, depots or partners beneath it. This is a <b>design</b>: it saves here and survives closing the app. <b>Nothing is created</b> until you choose to Build.</div>'
+    return '<div style="padding:44px 22px;max-width:580px"><div style="font-size:19px;font-weight:800">🔗 Design your network</div>'
+      + '<div style="font-size:13px;color:var(--grey);margin:8px 0 8px;line-height:1.6">Draw your structure first — <b>' + esc(ent) + '</b> is the top node. Add <b>owned</b> nodes (branches, units, depots) beneath it, or bring in a <b>partner</b> business. For each: a purpose, and tick <b>what it holds</b> (catalogue, storefront…) to fill in its spec. This is a <b>design</b>: it saves here and survives closing the app. <b>Nothing is created</b> until you choose to Build.</div>'
       + '<button class="pri" onclick="netNewNetwork()" style="padding:10px 16px;margin-top:10px">＋ Start designing</button></div>';
   }
   var tree = _netTree(null, 0) || '<div style="color:var(--grey);font-size:12px;padding:8px 6px">No nodes yet.</div>';
@@ -127,24 +205,87 @@ function networkScreen(){
       + '</div>'
     + '<div style="flex:1;overflow:auto;min-width:0">' + right + '</div></div>';
 }
+function _capChecklist(n){
+  return '<div style="display:flex;flex-wrap:wrap;gap:7px;margin-top:8px">' + NET_CAPS.map(function(c){
+    var on = (n.holds || []).indexOf(c.k) >= 0;
+    return '<span onclick="netToggleHold(\'' + n.key + '\',\'' + c.k + '\')" style="cursor:pointer;user-select:none;display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:5px 11px;border-radius:999px;border:1px solid ' + (on ? '#2c5aa0' : 'var(--line)') + ';' + (on ? 'background:#eef4fc;color:#2c5aa0' : 'background:#fff;color:var(--grey)') + '">' + (on ? '✓ ' : '') + c.icon + ' ' + c.label + '</span>';
+  }).join('') + '</div>';
+}
+function _catFieldRow(n, f, i){
+  var srcOpts = CAT_SOURCES.map(function(s){ return '<option value="' + s + '"' + (f.source === s ? ' selected' : '') + '>' + s + '</option>'; }).join('');
+  var typOpts = CAT_TYPES.map(function(t){ return '<option value="' + t + '"' + (f.type === t ? ' selected' : '') + '>' + t + '</option>'; }).join('');
+  return '<div style="display:flex;gap:6px;align-items:center;padding:3px 0">'
+    + '<input value="' + esc(f.name || '') + '" oninput="netSetCatField(\'' + n.key + '\',' + i + ',\'name\',this.value)" placeholder="field name" style="flex:1;min-width:0;font-size:12px;padding:5px 7px;border:1px solid var(--line);border-radius:6px">'
+    + '<select onchange="netSetCatField(\'' + n.key + '\',' + i + ',\'source\',this.value)" style="font-size:11px;padding:4px;border:1px solid var(--line);border-radius:6px">' + srcOpts + '</select>'
+    + '<select onchange="netSetCatField(\'' + n.key + '\',' + i + ',\'type\',this.value)" style="font-size:11px;padding:4px;border:1px solid var(--line);border-radius:6px">' + typOpts + '</select>'
+    + '<span onclick="netDelCatField(\'' + n.key + '\',' + i + ')" title="remove" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 4px">×</span>'
+    + '</div>';
+}
+function _catConfig(n){
+  var c = _ensureCat(n);
+  var tplOpts = Object.keys(CAT_TEMPLATES).map(function(k){ return '<option value="' + k + '"' + ((c.template || 'custom') === k ? ' selected' : '') + '>' + CAT_TEMPLATES[k].label + '</option>'; }).join('');
+  var methOpts = CAT_METHODS.map(function(m){ return '<option value="' + m.k + '"' + ((c.method || 'cart') === m.k ? ' selected' : '') + '>' + m.label + '</option>'; }).join('');
+  var mh = (CAT_METHODS.filter(function(m){ return m.k === (c.method || 'cart'); })[0] || {}).hint || '';
+  var fields = (c.fields || []).map(function(f, i){ return _catFieldRow(n, f, i); }).join('') || '<div style="font-size:11px;color:var(--grey);padding:2px 0">No fields yet — pick a common catalogue, or add fields.</div>';
+  return '<div style="margin-top:10px;padding:12px 13px;border:1px solid var(--line);border-left:3px solid #2c5aa0;border-radius:10px;background:#fbfdff">'
+    + '<div style="font-size:11px;font-weight:800;color:#2c5aa0;letter-spacing:.05em">🗂️ CATALOGUE SPEC</div>'
+    + '<label style="font-size:11px;color:var(--grey);display:block;margin-top:8px">Common catalogue (sets the fields)</label>'
+    + '<select onchange="netSetCatTemplate(\'' + n.key + '\',this.value)" style="margin-top:4px;padding:6px 8px;border:1px solid var(--line);border-radius:7px;font-size:12.5px;max-width:100%">' + tplOpts + '</select>'
+    + '<label style="font-size:11px;color:var(--grey);display:block;margin-top:10px">Fields <span style="color:var(--faint,#8a929e)">(name · where it comes from · type)</span></label>'
+    + fields
+    + '<div onclick="netAddCatField(\'' + n.key + '\')" style="cursor:pointer;color:var(--blue);font-size:12px;font-weight:600;padding:5px 0">＋ add field</div>'
+    + '<label style="font-size:11px;color:var(--grey);display:block;margin-top:8px">How customers order (commercial method)</label>'
+    + '<select onchange="netSetCatMethod(\'' + n.key + '\',this.value)" style="margin-top:4px;padding:6px 8px;border:1px solid var(--line);border-radius:7px;font-size:12.5px">' + methOpts + '</select>'
+    + '<div style="font-size:11px;color:var(--grey);font-style:italic;margin-top:3px">' + esc(mh) + '</div>'
+    + '<label style="font-size:11px;color:var(--grey);display:block;margin-top:10px">Max items per order <span style="color:var(--faint,#8a929e)">(optional limit)</span></label>'
+    + '<input value="' + (c.maxItems != null ? esc(String(c.maxItems)) : '') + '" oninput="netSetCatMax(\'' + n.key + '\',this.value)" type="number" min="1" placeholder="no limit" style="margin-top:4px;padding:6px 8px;border:1px solid var(--line);border-radius:7px;font-size:12.5px;width:130px">'
+    + '</div>';
+}
+function _exposureConfig(n){
+  var e = n.exposure || 'public';
+  var opt = function(val, label, hint){ var on = e === val;
+    return '<div onclick="netSetExposure(\'' + n.key + '\',\'' + val + '\')" style="cursor:pointer;padding:8px 10px;border:1px solid ' + (on ? '#2c7a43' : 'var(--line)') + ';border-radius:8px;background:' + (on ? '#e6f4ec' : '#fff') + ';margin-top:6px">'
+      + '<b style="font-size:12.5px;color:' + (on ? '#2c7a43' : '#3a4048') + '">' + (on ? '● ' : '○ ') + label + '</b>'
+      + '<div style="font-size:11px;color:var(--grey);margin-top:2px">' + hint + '</div></div>'; };
+  return '<div style="margin-top:10px;padding:12px 13px;border:1px solid var(--line);border-left:3px solid #2c7a43;border-radius:10px;background:#fbfefc">'
+    + '<div style="font-size:11px;font-weight:800;color:#2c7a43;letter-spacing:.05em">🛒 EXPOSURE — shown to the outside world</div>'
+    + opt('public', 'Public', 'Anyone / customers can see this catalogue in the storefront.')
+    + opt('protected', 'Protected', 'Only businesses you\'re connected with can see it.')
+    + '<div style="font-size:11px;color:var(--grey);margin-top:8px">Untick <b>Storefront</b> above to keep this node <b>private</b> (internal — shown to no one).</div>'
+    + '</div>';
+}
+function _capConfig(n){
+  var out = '';
+  if ((n.holds || []).indexOf('catalogue') >= 0) out += _catConfig(n);
+  if ((n.holds || []).indexOf('storefront') >= 0) out += _exposureConfig(n);
+  return out;
+}
 function _netNodeView(n){
   var isRoot = !n.parent_key;
   var childCount = (UI.net.nodes || []).filter(function(x){ return x.parent_key === n.key; }).length;
-  var roleOpts = NET_ROLES.map(function(r){ return '<option value="' + r + '"' + (n.role === r ? ' selected' : '') + '>' + r + '</option>'; }).join('');
-  return '<div style="padding:16px 20px;max-width:540px">'
-    + '<div style="font-size:18px;font-weight:800">' + (isRoot ? '◆ ' : '') + esc(n.name) + (isRoot ? '<span style="font-size:10px;font-weight:800;color:#2c5aa0;background:#eaf1fb;border-radius:6px;padding:2px 7px;margin-left:9px;vertical-align:middle">TOP · YOUR ENTITY</span>' : '') + '</div>'
-    + '<div style="font-size:11.5px;color:var(--grey);margin-top:2px">' + (isRoot ? 'The top of the network — your own entity.' : 'a node under ' + esc((_netNode(n.parent_key) || {}).name || '')) + ' · ' + childCount + ' child' + (childCount === 1 ? '' : 'ren') + '</div>'
+  var badge = isRoot ? '<span style="font-size:10px;font-weight:800;color:#2c5aa0;background:#eaf1fb;border-radius:6px;padding:2px 7px;margin-left:9px;vertical-align:middle">TOP · YOUR ENTITY</span>'
+    : (n.owned ? '<span style="font-size:10px;font-weight:800;color:#2c7a43;background:#e6f4ec;border-radius:6px;padding:2px 7px;margin-left:9px;vertical-align:middle">OWNED</span>'
+               : '<span style="font-size:10px;font-weight:800;color:#8a5a1e;background:#f6ecd8;border-radius:6px;padding:2px 7px;margin-left:9px;vertical-align:middle">🤝 PARTNER</span>');
+  var kindLine = isRoot ? 'The top of the network — your own entity.'
+    : (n.owned ? 'An owned node — at Build it becomes a real entity with a login key <b>you hold</b>.'
+               : 'An independent business — at Build it\'s a <b>handshake</b> (no key held). Its catalogue is visible here.');
+  return '<div style="padding:16px 20px;max-width:560px">'
+    + '<div style="font-size:18px;font-weight:800">' + (isRoot ? '◆ ' : '') + esc(n.name) + badge + '</div>'
+    + '<div style="font-size:11.5px;color:var(--grey);margin-top:2px">' + kindLine + ' · ' + childCount + ' child' + (childCount === 1 ? '' : 'ren') + '</div>'
     + '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:14px">'
-      + '<button class="pri" onclick="netAddChild(\'' + n.key + '\')" style="padding:8px 13px">＋ Add node under this</button>'
+      + '<button class="pri" onclick="netAddChild(\'' + n.key + '\')" style="padding:8px 13px">＋ Add owned node</button>'
+      + '<button onclick="netAddPartner(\'' + n.key + '\')" style="padding:8px 13px">🤝 Add partner</button>'
       + (isRoot ? '' : '<button onclick="netRename(\'' + n.key + '\')" style="padding:8px 13px">✏️ Rename</button><button onclick="netDelete(\'' + n.key + '\')" style="padding:8px 13px">🗑️ Remove</button>')
     + '</div>'
     + (isRoot ? '' :
-        '<div style="margin-top:16px;padding:13px 15px;border:1px solid var(--line);border-radius:11px;background:#fff">'
-        + '<label style="font-size:11px;font-weight:800;color:var(--grey);letter-spacing:.05em">ROLE IN THE NETWORK</label>'
-        + '<select onchange="netSetRole(\'' + n.key + '\', this.value)" style="display:block;margin-top:6px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;font-size:13px">' + roleOpts + '</select>'
-        + '<label style="font-size:11px;font-weight:800;color:var(--grey);letter-spacing:.05em;display:block;margin-top:12px">NOTE (what it does)</label>'
-        + '<input value="' + esc(n.note || '') + '" oninput="netSetNote(\'' + n.key + '\', this.value)" placeholder="e.g. handles East-region depots" style="width:100%;margin-top:6px;padding:7px 9px;border:1px solid var(--line);border-radius:8px;font-size:13px;box-sizing:border-box">'
-        + '</div>')
-    + '<div style="margin-top:16px;font-size:11.5px;color:var(--grey);line-height:1.55">When the design is done, <b>Build</b> turns each node into a real entity with its own login key. Until then this is just a plan — saved, nothing created.</div>'
+        '<div style="margin-top:16px"><label style="font-size:11px;font-weight:800;color:var(--grey);letter-spacing:.05em">PURPOSE</label>'
+        + '<input value="' + esc(n.purpose || '') + '" oninput="netSetPurpose(\'' + n.key + '\', this.value)" placeholder="what is this node for? (one line)" style="width:100%;margin-top:6px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;box-sizing:border-box"></div>')
+    + '<div style="margin-top:16px;padding:13px 15px;border:1px solid var(--line);border-radius:11px;background:#fff">'
+      + '<div style="font-size:11px;font-weight:800;color:var(--grey);letter-spacing:.05em">WHAT THIS NODE HOLDS</div>'
+      + '<div style="font-size:11px;color:var(--grey);margin-top:3px">Tick a capability — it opens its details below.</div>'
+      + _capChecklist(n)
+      + _capConfig(n)
+      + '</div>'
+    + '<div style="margin-top:16px;font-size:11.5px;color:var(--grey);line-height:1.55">When the design is done, <b>Build</b> turns each owned node into a real entity + login key, and invites each partner by handshake. Until then this is just a plan — saved, nothing created.</div>'
     + '</div>';
 }
