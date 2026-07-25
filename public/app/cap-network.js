@@ -90,7 +90,11 @@ function _netInit(){
 function _netKey(){ return 'k' + Date.now().toString(36) + Math.floor(Math.random() * 1e4); }
 function _netNode(key){ return (UI.net && UI.net.nodes || []).find(function(n){ return n.key === key; }); }
 function loadNetwork(){ _netInit(); }   // override the legacy loader — design-first renders from the draft, no server fetch
-function _netRerender(){ if (typeof renderApp === 'function') renderApp(); }
+function _netRerender(){   // keep the detail pane's scroll position stable across re-render (no more jumping)
+  var p = (typeof document !== 'undefined') ? document.getElementById('netDetailPane') : null; var st = p ? p.scrollTop : 0;
+  if (typeof renderApp === 'function') renderApp();
+  var p2 = (typeof document !== 'undefined') ? document.getElementById('netDetailPane') : null; if (p2) p2.scrollTop = st;
+}
 
 function netNewNetwork(){
   var ent = SESSION.entity || SESSION.name || 'My entity';
@@ -166,6 +170,8 @@ function _ensureOrder(n){
   if (!n.order.inlets) n.order.inlets = [];
   if (n.order.chitChannel) { if (['WhatsApp', 'email', 'scan'].indexOf(n.order.chitChannel) >= 0) n.order.inlets.push({ channel: n.order.chitChannel, handle: '' }); delete n.order.chitChannel; }
   if (!n.order.method) n.order.method = 'cart';
+  if (!n.order.attachments) n.order.attachments = [];
+  if (n.order.notes === undefined) n.order.notes = '';
   return n.order;
 }
 function netSetOrderMethod(key, m){ var n = _netNode(key); if (!n) return; _ensureOrder(n).method = m; _netMark(); _netRerender(); }
@@ -173,6 +179,10 @@ function netSetOrderMax(key, v){ var n = _netNode(key); if (!n) return; var num 
 function netAddInlet(key){ var n = _netNode(key); if (!n) return; _ensureOrder(n).inlets.push({ channel: 'WhatsApp', handle: '' }); _netMark(); _netRerender(); }
 function netDelInlet(key, i){ var n = _netNode(key); if (!n) return; _ensureOrder(n).inlets.splice(i, 1); _netMark(); _netRerender(); }
 function netSetInlet(key, i, prop, val){ var n = _netNode(key); if (!n) return; var il = _ensureOrder(n).inlets; if (i >= 0 && i < il.length) { il[i][prop] = val; _netMark(); if (prop === 'channel') _netRerender(); } }   // handle via oninput: no re-render
+function netAddAttach(key){ var n = _netNode(key); if (!n) return; _ensureOrder(n).attachments.push({ name: '' }); _netMark(); _netRerender(); }
+function netDelAttach(key, i){ var n = _netNode(key); if (!n) return; _ensureOrder(n).attachments.splice(i, 1); _netMark(); _netRerender(); }
+function netSetAttach(key, i, val){ var n = _netNode(key); if (!n) return; var a = _ensureOrder(n).attachments; if (i >= 0 && i < a.length) { a[i].name = val; _netMark(); } }   // no re-render while typing
+function netSetOrderNotes(key, val){ var n = _netNode(key); if (!n) return; _ensureOrder(n).notes = val; _netSave(); }   // no re-render while typing
 function netAddCollectBack(key){ var n = _netNode(key); if (!n) return; _ensureOrder(n).collectBack.push({ name: '', cadence: 'per order' }); _netMark(); _netRerender(); }
 function netDelCollectBack(key, i){ var n = _netNode(key); if (!n) return; _ensureOrder(n).collectBack.splice(i, 1); _netMark(); _netRerender(); }
 function netSetCollectBack(key, i, prop, val){ var n = _netNode(key); if (!n) return; var cb = _ensureOrder(n).collectBack; if (i >= 0 && i < cb.length) { cb[i][prop] = val; _netMark(); if (prop === 'cadence') _netRerender(); } }   // name via oninput: no re-render
@@ -247,7 +257,7 @@ function networkScreen(){
         + '<div style="font-size:11px;color:var(--blue);padding:6px 8px;cursor:pointer" onclick="netStartOver()">↺ Start over</div>'
       + '</div>'
       + '</div>'
-    + '<div style="flex:1;overflow:auto;min-width:0">' + right + '</div></div>';
+    + '<div id="netDetailPane" style="flex:1;overflow:auto;min-width:0">' + right + '</div></div>';
 }
 function _capSummary(n, k){
   if (k === 'catalogue') { var c = n.catalogue || {}; var nf = (c.fields || []).length; return nf + ' field' + (nf === 1 ? '' : 's') + ' · ' + (c.loadedBy || 'manual'); }
@@ -354,6 +364,12 @@ function _storefrontConfig(n){
     + '<div style="font-size:11px;color:var(--grey);margin-top:8px">Off-rail inlets <span style="color:var(--faint,#8a929e)">(optional)</span> — a message to a channel <b>you own &amp; publish</b>, captured into a chit:</div>'
     + inletRows
     + '<div onclick="netAddInlet(\'' + n.key + '\')" style="cursor:pointer;color:var(--blue);font-size:12px;font-weight:600;padding:5px 0">＋ add off-rail inlet</div>'
+    + '<div style="font-size:11px;color:var(--grey);margin-top:4px;font-style:italic">De-duplicated automatically — the same scan or message won\'t create a second chit (matched by content).</div>'
+    + '<div style="font-size:11px;font-weight:800;color:#2c7a43;letter-spacing:.05em;margin-top:12px;border-top:1px solid var(--line);padding-top:9px">📎 ATTACHMENTS &amp; NOTES</div>'
+    + '<div style="font-size:11px;color:var(--grey);margin-top:3px">Documents the chit carries, and any free-text note.</div>'
+    + ((o.attachments || []).map(function(a, i){ return '<div style="display:flex;gap:6px;align-items:center;padding:3px 0"><input value="' + esc(a.name || '') + '" oninput="netSetAttach(\'' + n.key + '\',' + i + ',this.value)" placeholder="document name (e.g. assay_cert.pdf)" style="flex:1;min-width:0;font-size:11.5px;padding:4px 7px;border:1px solid var(--line);border-radius:6px"><span onclick="netDelAttach(\'' + n.key + '\',' + i + ')" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 3px">×</span></div>'; }).join('') || '<div style="font-size:11px;color:var(--grey);padding:2px 0">No attachments.</div>')
+    + '<div onclick="netAddAttach(\'' + n.key + '\')" style="cursor:pointer;color:var(--blue);font-size:12px;font-weight:600;padding:5px 0">＋ add attachment</div>'
+    + '<textarea oninput="netSetOrderNotes(\'' + n.key + '\',this.value)" placeholder="notes…" style="width:100%;margin-top:6px;padding:6px 8px;border:1px solid var(--line);border-radius:7px;font-size:12px;box-sizing:border-box;min-height:2.4rem;resize:vertical">' + esc(o.notes || '') + '</textarea>'
     + '</div>';
   return '<div style="margin-top:10px;padding:12px 13px;border:1px solid var(--line);border-left:3px solid #2c7a43;border-radius:10px;background:#fbfefc">' + view + order + '</div>';
 }
