@@ -119,7 +119,7 @@ function netCapYes(key, capKey){
     if (capKey === 'catalogue' && !n.catalogue) n.catalogue = { template: 'custom', fields: [], method: 'cart', maxItems: null };
     if (capKey === 'storefront' && !n.exposure) n.exposure = 'public';
   }
-  UI.net.openCap = capKey; _netMark(); _netRerender();   // turning Yes opens its detail
+  if (UI.net.collapsed) delete UI.net.collapsed[capKey]; _netMark(); _netRerender();   // turning Yes shows its detail
 }
 function netCapNo(key, capKey){
   var n = _netNode(key); if (!n) return; n.holds = n.holds || [];
@@ -127,8 +127,8 @@ function netCapNo(key, capKey){
   if (UI.net.openCap === capKey) UI.net.openCap = null;
   _netMark(); _netRerender();
 }
-function netCapToggleOpen(key, capKey){   // expand / collapse a Yes capability's detail — one open at a time
-  UI.net.openCap = (UI.net.openCap === capKey) ? null : capKey; _netRerender();
+function netCapToggleOpen(key, capKey){   // collapse / expand a Yes capability's detail (each independent)
+  UI.net.collapsed = UI.net.collapsed || {}; UI.net.collapsed[capKey] = !UI.net.collapsed[capKey]; _netRerender();
 }
 /* catalogue spec editing */
 function _ensureCat(n){ if (!n.catalogue) n.catalogue = { template: 'custom', fields: [], method: 'cart', maxItems: null }; return n.catalogue; }
@@ -225,7 +225,7 @@ function _yesNo(n, k, yes){
 }
 function _capRow(n, c){
   var yes = (n.holds || []).indexOf(c.k) >= 0;
-  var open = yes && UI.net.openCap === c.k;
+  var open = yes && !(UI.net.collapsed && UI.net.collapsed[c.k]);
   var left = '<span ' + (yes ? 'onclick="netCapToggleOpen(\'' + n.key + '\',\'' + c.k + '\')" style="cursor:pointer;' : 'style="') + 'flex:1;min-width:0;display:flex;align-items:center;gap:8px">'
     + '<span style="font-size:15px">' + c.icon + '</span>'
     + '<span style="font-weight:700;font-size:13px;color:#1c2128">' + c.label + '</span>'
