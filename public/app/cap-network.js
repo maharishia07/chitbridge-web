@@ -317,18 +317,60 @@ function _catConfig(n){
     + fields
     + '<div onclick="netAddCatField(\'' + n.key + '\')" style="cursor:pointer;color:var(--blue);font-size:12px;font-weight:600;padding:5px 0">＋ add field</div>'
     + srcNote
+    + _catRecordPreview(n)
     + '</div>';
 }
-function _methodPreview(m){
-  var wrap = function(inner){ return '<div style="margin-top:6px;padding:9px 10px;border:1px dashed var(--line-strong,#c8d0d9);border-radius:8px;background:#fff"><div style="font-size:10px;color:var(--faint,#8a929e);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Customer sees</div>' + inner + '</div>'; };
+function _methodControl(m){
   var inp = 'display:inline-block;border:1px solid var(--line);border-radius:5px;padding:2px 8px;font-size:11.5px;color:var(--grey);background:#f5f7f9';
   var btn = 'display:inline-block;background:#2c5aa0;color:#fff;border-radius:5px;padding:3px 10px;font-size:11.5px;font-weight:600';
-  if (m === 'text') return wrap('<span style="font-size:11.5px;color:var(--grey)">Information only — nothing to order.</span>');
-  if (m === 'qty') return wrap('<span style="' + inp + '">Qty ▢</span> &nbsp; <span style="' + btn + '">Order</span>');
-  if (m === 'cart') return wrap('<span style="' + inp + '">Qty ▢</span> <span style="font-size:11.5px;color:var(--grey)">× ₹ price</span> &nbsp; <span style="' + btn + '">Add to cart</span>');
-  if (m === 'range') return wrap('<div style="font-size:11.5px;color:var(--grey)">₹ min ──●────── ₹ max</div><div style="margin-top:5px"><span style="' + inp + '">Qty ▢</span> &nbsp; <span style="' + btn + '">Order</span></div>');
-  if (m === 'qtyprice') return wrap('<span style="' + inp + '">Qty ▢</span> <span style="' + inp + '">Your price ▢</span> &nbsp; <span style="' + btn + '">Send offer</span>');
+  if (m === 'text') return '<span style="font-size:11.5px;color:var(--grey)">Information only — nothing to order.</span>';
+  if (m === 'qty') return '<span style="' + inp + '">Qty ▢</span> &nbsp; <span style="' + btn + '">Order</span>';
+  if (m === 'cart') return '<span style="' + inp + '">Qty ▢</span> <span style="font-size:11.5px;color:var(--grey)">× ₹ price</span> &nbsp; <span style="' + btn + '">Add to cart</span>';
+  if (m === 'range') return '<div style="font-size:11.5px;color:var(--grey)">₹ min ──●────── ₹ max</div><div style="margin-top:5px"><span style="' + inp + '">Qty ▢</span> &nbsp; <span style="' + btn + '">Order</span></div>';
+  if (m === 'qtyprice') return '<span style="' + inp + '">Qty ▢</span> <span style="' + inp + '">Your price ▢</span> &nbsp; <span style="' + btn + '">Send offer</span>';
   return '';
+}
+function _methodPreview(m){
+  var inner = _methodControl(m); if (!inner) return '';
+  return '<div style="margin-top:6px;padding:9px 10px;border:1px dashed var(--line-strong,#c8d0d9);border-radius:8px;background:#fff"><div style="font-size:10px;color:var(--faint,#8a929e);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Customer sees</div>' + inner + '</div>';
+}
+/* ---- the REAL OUTPUT visuals ---- */
+function _sampleVal(type){ if (type === 'number') return '123.4'; if (type === 'choice') return 'A'; if (type === 'range') return '10–20'; if (type === 'date') return '2026-07-25'; return 'text'; }
+function _srcBadge(src){
+  var m = { erp: ['#b07b1e', '#f6ecd8'], iot: ['#22857a', '#daf0ec'], ai: ['#8a5cc4', '#efeafa'], manual: ['#6b6f86', '#e8e9f0'] };
+  var col = m[src] || m.manual;
+  return '<span style="font-size:9px;font-weight:700;text-transform:uppercase;color:' + col[0] + ';background:' + col[1] + ';border-radius:4px;padding:1px 5px">' + esc(src) + '</span>';
+}
+function _catRecordPreview(n){
+  var c = n.catalogue || {}; var fs = c.fields || [];
+  if (!fs.length) return '';
+  var name = (CAT_TEMPLATES[c.template] || {}).label || 'Item';
+  var rows = fs.map(function(f){ return '<div style="display:flex;align-items:center;gap:8px;padding:2px 0;font-size:11.5px"><span style="flex:0 0 116px;color:var(--grey);font-family:monospace;overflow:hidden;text-overflow:ellipsis">' + esc(f.name || '—') + '</span><span style="flex:1;color:#1c2128">' + _sampleVal(f.type) + '</span>' + _srcBadge(f.source || 'manual') + '</div>'; }).join('');
+  return '<div style="margin-top:10px;padding:11px 12px;border:1px solid var(--line);border-radius:9px;background:#fff">'
+    + '<div style="font-size:10px;color:var(--faint,#8a929e);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">📄 Stored as a record — one item</div>'
+    + '<div style="font-weight:700;font-size:12.5px;margin-bottom:4px">' + esc(name) + '</div>'
+    + rows
+    + '<div style="border-top:1px dashed var(--line);margin-top:6px;padding-top:5px;font-size:10.5px;color:var(--grey);font-family:monospace">🔒 sealed · content_hash a1b2c3…  ·  loaded by ' + esc(c.loadedBy || 'manual') + '</div>'
+    + '</div>';
+}
+function _chitPreview(n){
+  var c = n.catalogue || {}; var fs = c.fields || [];
+  var o = _ensureOrder(n);
+  var e = n.exposure || 'public';
+  var name = (CAT_TEMPLATES[c.template] || {}).label || 'Item';
+  var expBadge = '<span style="font-size:9px;font-weight:700;text-transform:uppercase;color:' + (e === 'public' ? '#2c7a43' : '#8a5a1e') + ';background:' + (e === 'public' ? '#e6f4ec' : '#f6ecd8') + ';border-radius:4px;padding:1px 5px">' + esc(e) + '</span>';
+  var specRows = fs.slice(0, 6).map(function(f){ return '<div style="display:flex;justify-content:space-between;font-size:11px;padding:1px 0"><span style="color:var(--grey)">' + esc(f.name || '—') + '</span><span style="color:var(--faint,#8a929e);font-family:monospace">' + _sampleVal(f.type) + '</span></div>'; }).join('') || '<div style="font-size:11px;color:var(--grey)">no fields</div>';
+  var cb = (o.collectBack || []).filter(function(x){ return x.name; });
+  var collectLine = cb.length ? '<div style="margin-top:7px;font-size:10.5px;color:#2b6f8f">You provide: <b>' + cb.map(function(x){ return esc(x.name); }).join(', ') + '</b></div>' : '';
+  var arrive = ['on the rail'].concat((o.inlets || []).filter(function(x){ return x.channel; }).map(function(x){ return x.channel; })).join(' · ');
+  return '<div style="margin-top:12px;border-top:1px solid var(--line);padding-top:9px"><div style="font-size:11px;font-weight:800;color:#2c7a43;letter-spacing:.05em">🧾 CHIT — what the customer sees</div>'
+    + '<div style="margin-top:7px;max-width:290px;border:1px solid var(--line);border-top:3px solid #2c5aa0;border-radius:11px;box-shadow:0 1px 3px rgba(20,30,45,.08);padding:12px 13px;background:#fff">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-weight:700;font-size:13px">' + esc(name) + '</span>' + expBadge + '</div>'
+      + '<div style="margin-top:6px">' + specRows + '</div>'
+      + '<div style="margin-top:9px">' + _methodControl(o.method) + '</div>'
+      + collectLine
+      + '<div style="border-top:1px dashed var(--line);margin-top:9px;padding-top:5px;font-size:10px;color:var(--faint,#8a929e)">arrives: ' + esc(arrive) + '</div>'
+    + '</div></div>';
 }
 function _storefrontConfig(n){
   var e = n.exposure || 'public';
@@ -371,7 +413,7 @@ function _storefrontConfig(n){
     + '<div onclick="netAddAttach(\'' + n.key + '\')" style="cursor:pointer;color:var(--blue);font-size:12px;font-weight:600;padding:5px 0">＋ add attachment</div>'
     + '<textarea oninput="netSetOrderNotes(\'' + n.key + '\',this.value)" placeholder="notes…" style="width:100%;margin-top:6px;padding:6px 8px;border:1px solid var(--line);border-radius:7px;font-size:12px;box-sizing:border-box;min-height:2.4rem;resize:vertical">' + esc(o.notes || '') + '</textarea>'
     + '</div>';
-  return '<div style="margin-top:10px;padding:12px 13px;border:1px solid var(--line);border-left:3px solid #2c7a43;border-radius:10px;background:#fbfefc">' + view + order + '</div>';
+  return '<div style="margin-top:10px;padding:12px 13px;border:1px solid var(--line);border-left:3px solid #2c7a43;border-radius:10px;background:#fbfefc">' + view + order + _chitPreview(n) + '</div>';
 }
 /* setters for the four remaining panels */
 /* co-assist: normalized shape + per-kind setters (Human roles · IoT gateways→devices · ERP system+label · AI role+autonomy) */
