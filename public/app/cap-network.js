@@ -63,6 +63,8 @@ var COASSIST_KINDS = [
 ];
 var ERP_SYSTEMS = ['SAP', 'Oracle', 'NetSuite', 'Dynamics', 'Tally', 'Other'];
 var AI_AUTONOMY = ['propose', 'authorize', 'confirm', 'delegate'];
+var IOT_TYPES = ['Raspberry Pi', 'Industrial gateway', 'PLC', 'Direct sensor', 'Other'];
+var CAT_LOADS = ['manual', 'ERP sync', 'WhatsApp', 'email', 'scan', 'Excel', 'on-demand'];
 
 /* ---- draft state + per-entity persistence (localStorage only; nothing hits the server) ---- */
 function _netDraftKey(){ return 'cb_netdraft_' + (SESSION.entityId || SESSION.entity || 'anon'); }
@@ -78,7 +80,7 @@ function _netInit(){
     if (n.holds.indexOf('catalogue') >= 0 && !n.catalogue) n.catalogue = { template: 'custom', fields: [], method: 'cart', maxItems: null };
     if (n.holds.indexOf('storefront') >= 0 && !n.exposure) n.exposure = 'public';
     if (n.holds.indexOf('coassist') >= 0) n.coassist = _normCoassist(n.coassist);
-    if (n.holds.indexOf('transact') >= 0 && !n.transact) n.transact = { flow: 'both' };
+    if (n.holds.indexOf('transact') >= 0 && !n.transact) n.transact = { flow: 'both', copyOperator: true };
     if (n.holds.indexOf('tradeready') >= 0 && !n.tradeready) n.tradeready = { mode: 'inherit', certs: [] };
     if (n.holds.indexOf('dispute') >= 0 && !n.dispute) n.dispute = { informed: true };
   });
@@ -131,7 +133,7 @@ function netCapYes(key, capKey){
     if (capKey === 'catalogue' && !n.catalogue) n.catalogue = { template: 'custom', fields: [], method: 'cart', maxItems: null };
     if (capKey === 'storefront' && !n.exposure) n.exposure = 'public';
     if (capKey === 'coassist' && !n.coassist) n.coassist = _defCoassist();
-    if (capKey === 'transact' && !n.transact) n.transact = { flow: 'both' };
+    if (capKey === 'transact' && !n.transact) n.transact = { flow: 'both', copyOperator: true };
     if (capKey === 'tradeready' && !n.tradeready) n.tradeready = { mode: 'inherit', certs: [] };
     if (capKey === 'dispute' && !n.dispute) n.dispute = { informed: true };
   }
@@ -147,7 +149,9 @@ function netCapToggleOpen(key, capKey){   // collapse / expand a Yes capability'
   UI.net.collapsed = UI.net.collapsed || {}; UI.net.collapsed[capKey] = !UI.net.collapsed[capKey]; _netRerender();
 }
 /* catalogue spec editing */
-function _ensureCat(n){ if (!n.catalogue) n.catalogue = { template: 'custom', fields: [], method: 'cart', maxItems: null }; return n.catalogue; }
+function _ensureCat(n){ if (!n.catalogue) n.catalogue = { template: 'custom', fields: [], method: 'cart', maxItems: null }; if (!n.catalogue.loadedBy) n.catalogue.loadedBy = 'manual'; return n.catalogue; }
+function netSetCatLoad(key, v){ var n = _netNode(key); if (!n) return; _ensureCat(n).loadedBy = v; _netMark(); _netRerender(); }
+function _srcBacked(n, src){ if (src === 'manual') return true; if ((n.holds || []).indexOf('coassist') < 0) return false; var cc = _normCoassist(n.coassist); if (src === 'erp') return cc.erp.connectors.length > 0; if (src === 'iot') return (cc.iot.connections || []).length > 0; if (src === 'ai') return cc.ai.count > 0; return true; }
 function netSetCatTemplate(key, tpl){
   var n = _netNode(key); if (!n) return; var c = _ensureCat(n); c.template = tpl;
   var t = CAT_TEMPLATES[tpl]; if (t && tpl !== 'custom') c.fields = t.fields.map(function(f){ return { name: f.name, source: f.source, type: f.type || 'text' }; });
@@ -231,8 +235,8 @@ function networkScreen(){
 function _capSummary(n, k){
   if (k === 'catalogue') { var c = n.catalogue || {}; var nf = (c.fields || []).length; var m = (CAT_METHODS.filter(function(x){ return x.k === (c.method || 'cart'); })[0] || {}).label || ''; return nf + ' field' + (nf === 1 ? '' : 's') + ' · ' + m; }
   if (k === 'storefront') return 'exposure: ' + (n.exposure || 'public');
-  if (k === 'coassist') { var cc = _normCoassist(n.coassist); var p = []; if (cc.human.count) p.push(cc.human.count + ' human'); if (cc.iot.devices || cc.iot.gateways) p.push((cc.iot.devices || 0) + ' IoT'); if (cc.erp.connectors.length) p.push(cc.erp.connectors.length + ' ERP'); if (cc.ai.count) p.push(cc.ai.count + ' AI'); return p.length ? p.join(' · ') : 'none set'; }
-  if (k === 'transact') { var f = (n.transact || {}).flow || 'both'; return f === 'both' ? 'sends & receives' : (f === 'send' ? 'sends only' : 'receives only'); }
+  if (k === 'coassist') { var cc = _normCoassist(n.coassist); var p = []; if (cc.human.count) p.push(cc.human.count + ' human'); var iotDev = (cc.iot.connections || []).reduce(function(s, x){ return s + (parseInt(x.devices, 10) || 0); }, 0); if (iotDev || (cc.iot.connections || []).length) p.push(iotDev + ' IoT'); if (cc.erp.connectors.length) p.push(cc.erp.connectors.length + ' ERP'); if (cc.ai.count) p.push(cc.ai.count + ' AI'); return p.length ? p.join(' · ') : 'none set'; }
+  if (k === 'transact') { var t = n.transact || {}; var f = t.flow || 'both'; var base = f === 'both' ? 'sends & receives' : (f === 'send' ? 'sends only' : 'receives only'); return base + (t.copyOperator !== false ? ' · HQ copied' : ''); }
   if (k === 'tradeready') { var tr = n.tradeready || {}; return tr.mode === 'own' ? ('own · ' + (tr.certs || []).length + ' cert' + ((tr.certs || []).length === 1 ? '' : 's')) : "network's certs"; }
   if (k === 'dispute') return (n.dispute || {}).informed !== false ? 'informed' : 'not involved';
   return 'set up next';
@@ -274,13 +278,20 @@ function _catConfig(n){
   var methOpts = CAT_METHODS.map(function(m){ return '<option value="' + m.k + '"' + ((c.method || 'cart') === m.k ? ' selected' : '') + '>' + m.label + '</option>'; }).join('');
   var mh = (CAT_METHODS.filter(function(m){ return m.k === (c.method || 'cart'); })[0] || {}).hint || '';
   var fields = (c.fields || []).map(function(f, i){ return _catFieldRow(n, f, i); }).join('') || '<div style="font-size:11px;color:var(--grey);padding:2px 0">No fields yet — pick a common catalogue, or add fields.</div>';
+  var loadOpts = CAT_LOADS.map(function(l){ return '<option value="' + l + '"' + ((c.loadedBy || 'manual') === l ? ' selected' : '') + '>' + l + '</option>'; }).join('');
+  var used = {}; (c.fields || []).forEach(function(f){ if (f.source && f.source !== 'manual') used[f.source] = true; });
+  var usedK = Object.keys(used);
+  var srcNote = usedK.length ? ('<div style="font-size:11px;color:var(--grey);margin-top:6px;border-top:1px dotted var(--line);padding-top:5px">Field sources: ' + usedK.map(function(s){ var ok = _srcBacked(n, s); return '<b style="color:' + (ok ? '#2c7a43' : '#a5382e') + '">' + s.toUpperCase() + (ok ? ' ✓' : ' ⚠') + '</b>'; }).join(' · ') + (usedK.some(function(s){ return !_srcBacked(n, s); }) ? ' <span style="color:#a5382e">— add the matching co-assist to this node</span>' : '') + '</div>') : '';
   return '<div style="margin-top:10px;padding:12px 13px;border:1px solid var(--line);border-left:3px solid #2c5aa0;border-radius:10px;background:#fbfdff">'
     + '<div style="font-size:11px;font-weight:800;color:#2c5aa0;letter-spacing:.05em">🗂️ CATALOGUE SPEC</div>'
     + '<label style="font-size:11px;color:var(--grey);display:block;margin-top:8px">Common catalogue (sets the fields)</label>'
     + '<select onchange="netSetCatTemplate(\'' + n.key + '\',this.value)" style="margin-top:4px;padding:6px 8px;border:1px solid var(--line);border-radius:7px;font-size:12.5px;max-width:100%">' + tplOpts + '</select>'
+    + '<label style="font-size:11px;color:var(--grey);display:block;margin-top:10px">Populated by <span style="color:var(--faint,#8a929e)">(how the catalogue is fed)</span></label>'
+    + '<select onchange="netSetCatLoad(\'' + n.key + '\',this.value)" style="margin-top:4px;padding:6px 8px;border:1px solid var(--line);border-radius:7px;font-size:12.5px">' + loadOpts + '</select>'
     + '<label style="font-size:11px;color:var(--grey);display:block;margin-top:10px">Fields <span style="color:var(--faint,#8a929e)">(name · where it comes from · type)</span></label>'
     + fields
     + '<div onclick="netAddCatField(\'' + n.key + '\')" style="cursor:pointer;color:var(--blue);font-size:12px;font-weight:600;padding:5px 0">＋ add field</div>'
+    + srcNote
     + '<label style="font-size:11px;color:var(--grey);display:block;margin-top:8px">How customers order (commercial method)</label>'
     + '<select onchange="netSetCatMethod(\'' + n.key + '\',this.value)" style="margin-top:4px;padding:6px 8px;border:1px solid var(--line);border-radius:7px;font-size:12.5px">' + methOpts + '</select>'
     + '<div style="font-size:11px;color:var(--grey);font-style:italic;margin-top:3px">' + esc(mh) + '</div>'
@@ -297,17 +308,18 @@ function _exposureConfig(n){
   return '<div style="margin-top:10px;padding:12px 13px;border:1px solid var(--line);border-left:3px solid #2c7a43;border-radius:10px;background:#fbfefc">'
     + '<div style="font-size:11px;font-weight:800;color:#2c7a43;letter-spacing:.05em">🛒 EXPOSURE — shown to the outside world</div>'
     + opt('public', 'Public', 'Anyone / customers can see this catalogue in the storefront.')
-    + opt('protected', 'Protected', 'Only businesses you\'re connected with can see it.')
+    + opt('protected', 'Protected', 'Your <b>connected network / partners</b> can see it — <b>not</b> the public (HQ, other branches, partners).')
     + '<div style="font-size:11px;color:var(--grey);margin-top:8px">Untick <b>Storefront</b> above to keep this node <b>private</b> (internal — shown to no one).</div>'
     + '</div>';
 }
 /* setters for the four remaining panels */
 /* co-assist: normalized shape + per-kind setters (Human roles · IoT gateways→devices · ERP system+label · AI role+autonomy) */
-function _defCoassist(){ return { human: { count: 0, roles: [] }, iot: { gateways: 0, devices: 0 }, erp: { connectors: [] }, ai: { count: 0, role: '', autonomy: 'authorize' } }; }
+function _defCoassist(){ return { human: { count: 0, roles: [] }, iot: { connections: [] }, erp: { connectors: [] }, ai: { count: 0, role: '', autonomy: 'authorize' } }; }
 function _normCoassist(ca){
   var d = _defCoassist(); ca = ca || {};
   if (typeof ca.human === 'number') d.human.count = ca.human; else if (ca.human) { d.human.count = ca.human.count || 0; d.human.roles = ca.human.roles || []; }
-  if (typeof ca.iot === 'number') d.iot.devices = ca.iot; else if (ca.iot) { d.iot.gateways = ca.iot.gateways || 0; d.iot.devices = ca.iot.devices || 0; }
+  if (typeof ca.iot === 'number') { if (ca.iot > 0) d.iot.connections = [{ type: 'Direct sensor', devices: ca.iot }]; }
+  else if (ca.iot) { if (Array.isArray(ca.iot.connections)) d.iot.connections = ca.iot.connections; else if (ca.iot.gateways || ca.iot.devices) d.iot.connections = [{ type: 'Raspberry Pi', devices: ca.iot.devices || 0 }]; }
   if (typeof ca.erp === 'number') { for (var i = 0; i < ca.erp; i++) d.erp.connectors.push({ system: 'SAP', label: '' }); } else if (ca.erp) { d.erp.connectors = ca.erp.connectors || []; }
   if (typeof ca.ai === 'number') d.ai.count = ca.ai; else if (ca.ai) { d.ai.count = ca.ai.count || 0; d.ai.role = ca.ai.role || ''; d.ai.autonomy = ca.ai.autonomy || 'authorize'; }
   return d;
@@ -317,7 +329,9 @@ function netCaHuman(key, val){ var n = _netNode(key); if (!n) return; var x = pa
 function netCaHumanAddRole(key){ var n = _netNode(key); if (!n) return; _ca(n).human.roles.push(''); _netMark(); _netRerender(); }
 function netCaHumanDelRole(key, i){ var n = _netNode(key); if (!n) return; _ca(n).human.roles.splice(i, 1); _netMark(); _netRerender(); }
 function netCaHumanSetRole(key, i, val){ var n = _netNode(key); if (!n) return; var r = _ca(n).human.roles; if (i >= 0 && i < r.length) { r[i] = val; _netMark(); } }
-function netCaIot(key, field, val){ var n = _netNode(key); if (!n) return; var x = parseInt(val, 10); _ca(n).iot[field] = (val === '' || isNaN(x) || x < 0) ? 0 : x; _netMark(); }
+function netCaAddIot(key){ var n = _netNode(key); if (!n) return; _ca(n).iot.connections.push({ type: 'Raspberry Pi', devices: 0 }); _netMark(); _netRerender(); }
+function netCaDelIot(key, i){ var n = _netNode(key); if (!n) return; _ca(n).iot.connections.splice(i, 1); _netMark(); _netRerender(); }
+function netCaSetIot(key, i, prop, val){ var n = _netNode(key); if (!n) return; var cs = _ca(n).iot.connections; if (i < 0 || i >= cs.length) return; if (prop === 'devices') { var x = parseInt(val, 10); cs[i].devices = (val === '' || isNaN(x) || x < 0) ? 0 : x; _netMark(); } else { cs[i][prop] = val; _netMark(); _netRerender(); } }
 function netCaAddErp(key){ var n = _netNode(key); if (!n) return; _ca(n).erp.connectors.push({ system: 'SAP', label: '' }); _netMark(); _netRerender(); }
 function netCaDelErp(key, i){ var n = _netNode(key); if (!n) return; _ca(n).erp.connectors.splice(i, 1); _netMark(); _netRerender(); }
 function netCaSetErp(key, i, prop, val){ var n = _netNode(key); if (!n) return; var e = _ca(n).erp.connectors; if (i >= 0 && i < e.length) { e[i][prop] = val; _netMark(); if (prop === 'system') _netRerender(); } }
@@ -325,6 +339,7 @@ function netCaAiCount(key, val){ var n = _netNode(key); if (!n) return; var x = 
 function netCaAiRole(key, val){ var n = _netNode(key); if (!n) return; _ca(n).ai.role = val; _netMark(); }
 function netCaAiAutonomy(key, val){ var n = _netNode(key); if (!n) return; _ca(n).ai.autonomy = val; _netMark(); _netRerender(); }
 function netSetTransact(key, flow){ var n = _netNode(key); if (!n) return; n.transact = n.transact || {}; n.transact.flow = flow; _netMark(); _netRerender(); }
+function netSetTransactCopy(key, v){ var n = _netNode(key); if (!n) return; n.transact = n.transact || {}; n.transact.copyOperator = !!v; _netMark(); _netRerender(); }
 function netSetTradeMode(key, mode){ var n = _netNode(key); if (!n) return; n.tradeready = n.tradeready || { certs: [] }; n.tradeready.mode = mode; _netMark(); _netRerender(); }
 function netAddCert(key){ var n = _netNode(key); if (!n) return; n.tradeready = n.tradeready || { mode: 'own', certs: [] }; n.tradeready.certs = n.tradeready.certs || []; n.tradeready.certs.push(''); _netMark(); _netRerender(); }
 function netDelCert(key, i){ var n = _netNode(key); if (!n || !n.tradeready) return; (n.tradeready.certs || []).splice(i, 1); _netMark(); _netRerender(); }
@@ -339,11 +354,12 @@ function _coassistConfig(n){
       + '<span style="font-size:11px;color:var(--grey)">count</span><input type="number" min="0" value="' + (c.human.count || '') + '" oninput="netCaHuman(\'' + n.key + '\',this.value)" placeholder="0" style="width:64px;padding:4px 6px;border:1px solid var(--line);border-radius:6px;font-size:12px"></div>'
     + '<div style="margin-top:6px">' + roleChips + '<span onclick="netCaHumanAddRole(\'' + n.key + '\')" style="cursor:pointer;color:var(--blue);font-size:11.5px;font-weight:600">＋ role</span></div>'
     + '</div>';
-  var iot = '<div style="padding:9px 0;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
-    + '<span style="flex:1 0 90px;font-size:12.5px;font-weight:600;color:#3a4048">📡 IoT</span>'
-    + '<span style="font-size:11px;color:var(--grey)">gateways (Pi)</span><input type="number" min="0" value="' + (c.iot.gateways || '') + '" oninput="netCaIot(\'' + n.key + '\',\'gateways\',this.value)" placeholder="0" style="width:58px;padding:4px 6px;border:1px solid var(--line);border-radius:6px;font-size:12px">'
-    + '<span style="font-size:11px;color:var(--grey)">devices</span><input type="number" min="0" value="' + (c.iot.devices || '') + '" oninput="netCaIot(\'' + n.key + '\',\'devices\',this.value)" placeholder="0" style="width:64px;padding:4px 6px;border:1px solid var(--line);border-radius:6px;font-size:12px">'
-    + '</div>';
+  var iotRows = c.iot.connections.map(function(io, i){
+    var opts = IOT_TYPES.map(function(t){ return '<option value="' + t + '"' + (io.type === t ? ' selected' : '') + '>' + t + '</option>'; }).join('');
+    return '<div style="display:flex;gap:6px;align-items:center;padding:3px 0"><select onchange="netCaSetIot(\'' + n.key + '\',' + i + ',\'type\',this.value)" style="font-size:11.5px;padding:4px;border:1px solid var(--line);border-radius:6px">' + opts + '</select><span style="font-size:11px;color:var(--grey)">devices</span><input type="number" min="0" value="' + (io.devices || '') + '" oninput="netCaSetIot(\'' + n.key + '\',' + i + ',\'devices\',this.value)" placeholder="0" style="width:58px;font-size:11.5px;padding:4px 6px;border:1px solid var(--line);border-radius:6px"><span onclick="netCaDelIot(\'' + n.key + '\',' + i + ')" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 3px">×</span></div>';
+  }).join('');
+  var iot = '<div style="padding:9px 0;border-bottom:1px solid var(--line)"><span style="font-size:12.5px;font-weight:600;color:#3a4048">📡 IoT connections</span>'
+    + '<div style="margin-top:5px">' + iotRows + '<span onclick="netCaAddIot(\'' + n.key + '\')" style="cursor:pointer;color:var(--blue);font-size:11.5px;font-weight:600">＋ connection</span></div></div>';
   var erpRows = c.erp.connectors.map(function(e, i){
     var opts = ERP_SYSTEMS.map(function(s){ return '<option value="' + s + '"' + (e.system === s ? ' selected' : '') + '>' + s + '</option>'; }).join('');
     return '<div style="display:flex;gap:6px;align-items:center;padding:3px 0"><select onchange="netCaSetErp(\'' + n.key + '\',' + i + ',\'system\',this.value)" style="font-size:11.5px;padding:4px;border:1px solid var(--line);border-radius:6px">' + opts + '</select><input value="' + esc(e.label || '') + '" oninput="netCaSetErp(\'' + n.key + '\',' + i + ',\'label\',this.value)" placeholder="label (e.g. SAP-Prod)" style="flex:1;min-width:0;font-size:11.5px;padding:4px 7px;border:1px solid var(--line);border-radius:6px"><span onclick="netCaDelErp(\'' + n.key + '\',' + i + ')" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 3px">×</span></div>';
@@ -369,11 +385,16 @@ function _radioOpt(onclick, on, label, hint, color, bg){
 }
 function _transactConfig(n){
   var f = (n.transact || {}).flow || 'both';
+  var copy = (n.transact || {}).copyOperator !== false;
   return '<div style="padding:12px 13px;border:1px solid var(--line);border-left:3px solid #2b6f8f;border-radius:10px;background:#f9fcfd">'
     + '<div style="font-size:11px;font-weight:800;color:#2b6f8f;letter-spacing:.05em">🔄 TRANSACT — does it deal directly with others?</div>'
     + _radioOpt("netSetTransact('" + n.key + "','both')", f === 'both', 'Sends and receives', 'Talks to counterparties on its own — both directions.', '#2b6f8f', '#e4f0f4')
     + _radioOpt("netSetTransact('" + n.key + "','send')", f === 'send', 'Sends only', 'Hands records out (to customers / downstream).', '#2b6f8f', '#e4f0f4')
     + _radioOpt("netSetTransact('" + n.key + "','receive')", f === 'receive', 'Receives only', 'Takes records in (from suppliers / upstream).', '#2b6f8f', '#e4f0f4')
+    + '<div style="font-size:11px;font-weight:800;color:#2b6f8f;letter-spacing:.05em;margin-top:12px;border-top:1px solid var(--line);padding-top:9px">COPY THE OPERATOR (HQ)?</div>'
+    + '<div style="font-size:11px;color:var(--grey);margin-top:2px">If yes, HQ keeps a copy of this node\'s transactions — this is what powers <b>traceability</b> + <b>MIS</b> across the network.</div>'
+    + _radioOpt("netSetTransactCopy('" + n.key + "',true)", copy, 'Yes — copy HQ', 'The operator sees this node\'s transactions.', '#2b6f8f', '#e4f0f4')
+    + _radioOpt("netSetTransactCopy('" + n.key + "',false)", !copy, 'No — node only', 'Only the counterparties hold copies; HQ does not see them.', '#2b6f8f', '#e4f0f4')
     + '</div>';
 }
 function _tradereadyConfig(n){
