@@ -586,6 +586,8 @@ const EP = {
   custVerify:      {m:"POST", p:"/api/catalogue/:bridgeId/login/verify", ok:"✓"},
   custOrders:      {m:"GET",  p:"/api/catalogue/:bridgeId/my-orders",     ok:"✓"},
   custList:        {m:"GET",  p:"/api/relationships/customers",           ok:"✓"},  // the shop's CRM — end-customers locked under it
+  netDesignGet:    {m:"GET",  p:"/api/network-design",                    ok:"✓"},  // b111 — load this entity's saved network design (cross-device)
+  netDesignPut:    {m:"PUT",  p:"/api/network-design",                    ok:"✓"},  // b111 — save (upsert) the whole design draft
   inbox:           {m:"GET",  p:"/api/chits/inbox",              ok:"✓"},  // ?status= ?page= ?limit=
   sent:            {m:"GET",  p:"/api/chits/sent",               ok:"✓"},  // real sent copies (direction='sent') — baseline-4. (was wrongly /inbox = received copies)
   chit:            {m:"GET",  p:"/api/chits/:id",                ok:"✓"},

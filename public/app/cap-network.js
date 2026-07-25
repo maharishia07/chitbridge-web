@@ -77,7 +77,27 @@ function _viaFor(leg){ return CBCatalogue.viaFor(leg); }   // system → ERP/IoT
 
 /* ---- draft state + per-entity persistence (localStorage only; nothing hits the server) ---- */
 function _netDraftKey(){ return 'cb_netdraft_' + (SESSION.entityId || SESSION.entity || 'anon'); }
-function _netSave(){ try { if (UI.net) localStorage.setItem(_netDraftKey(), JSON.stringify(UI.net)); } catch (e) {} }
+/* server persistence (b111): localStorage stays the instant/offline cache; the server is the cross-device truth.
+   Pull once per session on load (server wins); push (debounced) on every change. */
+var _netPushTimer = null;
+function _netLoggedIn(){ return typeof SESSION !== 'undefined' && !!SESSION.token; }
+function _netPushServer(){ if (!_netLoggedIn() || !UI.net) return; try { api('netDesignPut', { body: { draft: UI.net } }).catch(function(){}); } catch (e) {} }
+function _netQueuePush(){ if (!_netLoggedIn()) return; if (_netPushTimer) clearTimeout(_netPushTimer); _netPushTimer = setTimeout(_netPushServer, 1500); }
+function _netPullServer(){
+  if (!_netLoggedIn() || UI._netPulled) return; UI._netPulled = true;
+  try {
+    api('netDesignGet').then(function(r){
+      if (r && r.draft && r.draft.nodes) {                 // server holds the shared design → adopt it (server wins on load)
+        UI.net = r.draft; _netInit();
+        try { localStorage.setItem(_netDraftKey(), JSON.stringify(UI.net)); } catch (e) {}
+        if (typeof renderApp === 'function') renderApp();
+      } else if (UI.net && UI.net.nodes) {                 // server empty but this device has a design → migrate it up once
+        _netPushServer();
+      }
+    }).catch(function(){});
+  } catch (e) {}
+}
+function _netSave(){ try { if (UI.net) localStorage.setItem(_netDraftKey(), JSON.stringify(UI.net)); } catch (e) {} _netQueuePush(); }
 function _netMark(){ if (UI.net) UI.net.built = false; _netSave(); }
 function _netLoad(){ try { var s = localStorage.getItem(_netDraftKey()); return s ? JSON.parse(s) : null; } catch (e) { return null; } }
 function _netInit(){
@@ -355,6 +375,7 @@ function _netTree(parentKey, depth){
 }
 function networkScreen(){
   _netInit();
+  _netPullServer();   // b111 — once per session, adopt the entity's server-saved design (cross-device)
   if (!UI.net) {
     var ent = SESSION.entity || SESSION.name || 'your entity';
     return '<div style="padding:44px 22px;max-width:580px"><div style="font-size:19px;font-weight:800">🔗 Design your network</div>'
