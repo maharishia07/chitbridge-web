@@ -52,6 +52,7 @@ const OUTBOX_KEYS = new Set([
   'connectorDelete','connectorConnToggle',
   'readinessGather','readinessVerify',
   'assistResolve','assistPublish',
+  'netDesignPut',   // b111 — whole-document upsert, idempotent → safe to queue + replay offline
 ]);
 
 async function api(key, {params, query, body}={}){

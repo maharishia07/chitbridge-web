@@ -6,26 +6,8 @@
  *   🗂️ Catalogue → catalogue spec (common-catalogue pick → fields, commercial method, max-items constraint).
  *   🛒 Storefront → exposure (public / protected). Off ⇒ private/internal.
  *   (Co-assists · Transact · Trade-ready · Dispute — checkboxes now; their expansions come in later slices.)
- * Draft persists per-entity (localStorage), survives reopen. "Build" (mint owned + handshake partners) is DEFERRED.
- * (Mint helpers from the previous version kept below, dormant, for the Build step.) */
-
-/* ---- mint helpers — DORMANT during design; used later by the Build/confirm step ---- */
-function _netBase(){ return (typeof CFG !== 'undefined' && CFG.API_BASE) || ''; }
-async function _netFetch(path, method, token, body){
-  var res = await fetch(_netBase() + path, { method: method || 'GET', cache: 'no-store',
-    headers: Object.assign({ 'Content-Type': 'application/json' }, token ? { Authorization: 'Bearer ' + token } : {}),
-    body: body ? JSON.stringify(body) : undefined });
-  var j = {}; try { j = await res.json(); } catch (e) {}
-  if (!res.ok) throw new Error((j && (j.message || j.error)) || ('API ' + res.status));
-  return j;
-}
-async function _netMint(name){
-  var email = 'node-' + String(name || 'node').toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Date.now().toString(36) + '-' + Math.floor(Math.random() * 1e5) + '@node.cb';
-  var reg = await _netFetch('/api/entities/register', 'POST', null, { display_name: name, email: email });
-  var otp = reg.dev_otp || '123456';
-  var ver = await _netFetch('/api/entities/verify', 'POST', null, { email: email, otp: otp });
-  return { entity_id: ver.entity.identity_id, token: ver.token, name: name, email: email };
-}
+ * Draft persists per-entity (localStorage + server, b111), survives reopen. "Build" is a dry-run (mints nothing);
+ * real mint wiring is Phase B (through the real API / capability modules), added when that step is built. */
 
 /* ---- capabilities a node can HOLD (checkboxes) ---- */
 var NET_CAPS = [
@@ -38,8 +20,7 @@ var NET_CAPS = [
 ];
 function _capMeta(k){ for (var i = 0; i < NET_CAPS.length; i++) if (NET_CAPS[i].k === k) return NET_CAPS[i]; return null; }
 
-/* ---- catalogue spec vocabulary ---- */
-var CAT_SOURCES = ['manual', 'erp', 'iot', 'ai'];
+/* ---- catalogue spec vocabulary (leg/type vocab lives in the shared model, app/catalogue-model.js) ---- */
 var CAT_TYPES = CBCatalogue.TYPES;
 var CAT_METHODS = [
   { k: 'text',     label: 'Text only',          hint: 'no quantity, no price — information only' },
@@ -48,13 +29,6 @@ var CAT_METHODS = [
   { k: 'range',    label: 'Price as a range',   hint: 'price varies within a band' },
   { k: 'qtyprice', label: 'Price + qty vary',   hint: 'both negotiable per order' },
 ];
-var CAT_TEMPLATES = {
-  custom:  { label: 'Custom (build your own)', baseUnit: '', fields: [] },
-  timber:  { label: 'Timber',     baseUnit: 'm3', fields: [{ name: 'species', source: 'manual', type: 'text' }, { name: 'grade', source: 'manual', type: 'choice' }, { name: 'moisture_pct', source: 'iot', type: 'number' }, { name: 'weight_kg', source: 'iot', type: 'number' }, { name: 'stock_qty', source: 'erp', type: 'number' }] },
-  gold:    { label: 'Gold bar',   baseUnit: 'g', fields: [{ name: 'bar_serial', source: 'manual', type: 'text' }, { name: 'fineness', source: 'iot', type: 'number' }, { name: 'fine_weight_g', source: 'iot', type: 'number' }, { name: 'source_mine', source: 'manual', type: 'text' }] },
-  pharma:  { label: 'Pharma lot', baseUnit: 'unit', fields: [{ name: 'batch_no', source: 'manual', type: 'text' }, { name: 'active_ingredient', source: 'manual', type: 'text' }, { name: 'assay_pct', source: 'iot', type: 'number' }, { name: 'storage_temp', source: 'iot', type: 'number' }, { name: 'expiry', source: 'manual', type: 'date' }, { name: 'stock_qty', source: 'erp', type: 'number' }] },
-  drone:   { label: 'Drone',      baseUnit: 'unit', fields: [{ name: 'model', source: 'manual', type: 'text' }, { name: 'serial_no', source: 'manual', type: 'text' }, { name: 'battery_health', source: 'iot', type: 'number' }, { name: 'flight_hours', source: 'iot', type: 'number' }] },
-};
 var COASSIST_KINDS = [
   { k: 'human', icon: '🧑', label: 'Human workforce' },
   { k: 'erp', icon: '🔗', label: 'ERP connectors' },
@@ -76,28 +50,55 @@ var PRICE_BY = CBCatalogue.PRICE_BY;
 function _viaFor(leg){ return CBCatalogue.viaFor(leg); }   // system → ERP/IoT · compute → AI/ERP
 
 /* ---- draft state + per-entity persistence (localStorage only; nothing hits the server) ---- */
+/* server persistence (b111): localStorage = instant/offline cache; server = cross-device truth.
+   A persisted "dirty" flag (unpushed local edits) survives reloads, so a stale server copy never
+   clobbers newer local work. Debounced push + a keepalive flush on tab-close/logout so nothing is lost. */
 function _netDraftKey(){ return 'cb_netdraft_' + (SESSION.entityId || SESSION.entity || 'anon'); }
-/* server persistence (b111): localStorage stays the instant/offline cache; the server is the cross-device truth.
-   Pull once per session on load (server wins); push (debounced) on every change. */
-var _netPushTimer = null;
+function _netDirtyKey(){ return 'cb_netdirty_' + (SESSION.entityId || SESSION.entity || 'anon'); }
 function _netLoggedIn(){ return typeof SESSION !== 'undefined' && !!SESSION.token; }
-function _netPushServer(){ if (!_netLoggedIn() || !UI.net) return; try { api('netDesignPut', { body: { draft: UI.net } }).catch(function(){}); } catch (e) {} }
+function _netIsDirty(){ try { return localStorage.getItem(_netDirtyKey()) === '1'; } catch (e) { return false; } }
+function _netSetDirty(on){ try { if (on) localStorage.setItem(_netDirtyKey(), '1'); else localStorage.removeItem(_netDirtyKey()); } catch (e) {} }
+function _netStripView(net){ try { var c = JSON.parse(JSON.stringify(net)); delete c.sel; delete c.openCap; delete c.catTab; delete c.collapsed; return c; } catch (e) { return net; } }   // don't sync transient view state across devices
+var _netPushTimer = null;
+function _netPushServer(){
+  if (!_netLoggedIn() || !UI.net) return;
+  try {
+    api('netDesignPut', { body: { draft: _netStripView(UI.net) } })
+      .then(function(){ _netSetDirty(false); })
+      .catch(function(err){ _netQueuePush();   // retry the latest state after an in-flight push / transient failure
+        if (typeof toast === 'function' && !/Already working/.test((err && err.message) || '')) toast('Design saved on this device — not synced yet'); });
+  } catch (e) {}
+}
 function _netQueuePush(){ if (!_netLoggedIn()) return; if (_netPushTimer) clearTimeout(_netPushTimer); _netPushTimer = setTimeout(_netPushServer, 1500); }
+function _netFlush(){   // synchronous best-effort send on tab close / logout — keepalive lets it outlive the page
+  if (!_netLoggedIn() || !UI.net || !_netIsDirty() || typeof CFG === 'undefined') return;
+  try { fetch(CFG.API_BASE + '/api/network-design', { method: 'PUT', keepalive: true,
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + SESSION.token },
+    body: JSON.stringify({ draft: _netStripView(UI.net) }) }); } catch (e) {}
+}
 function _netPullServer(){
-  if (!_netLoggedIn() || UI._netPulled) return; UI._netPulled = true;
+  if (!_netLoggedIn() || UI._netPulled || UI._netPulling) return;
+  UI._netPulling = true;   // guard concurrent pulls across re-renders (GET is not lock-guarded)
   try {
     api('netDesignGet').then(function(r){
-      if (r && r.draft && r.draft.nodes) {                 // server holds the shared design → adopt it (server wins on load)
+      UI._netPulling = false; UI._netPulled = true;          // latch only on success — a failed pull retries next render
+      if (_netIsDirty()) { _netPushServer(); return; }       // this device has unpushed edits → local wins; never overwrite with a stale server copy
+      if (r && r.draft && r.draft.nodes) {                   // server holds the shared design → adopt it
         UI.net = r.draft; _netInit();
         try { localStorage.setItem(_netDraftKey(), JSON.stringify(UI.net)); } catch (e) {}
         if (typeof renderApp === 'function') renderApp();
-      } else if (UI.net && UI.net.nodes) {                 // server empty but this device has a design → migrate it up once
+      } else if (UI.net && UI.net.nodes) {                   // server empty but this device has a design → migrate it up once
         _netPushServer();
       }
-    }).catch(function(){});
-  } catch (e) {}
+    }).catch(function(){ UI._netPulling = false; });          // leave _netPulled false → retried on next render
+  } catch (e) { UI._netPulling = false; }
 }
-function _netSave(){ try { if (UI.net) localStorage.setItem(_netDraftKey(), JSON.stringify(UI.net)); } catch (e) {} _netQueuePush(); }
+if (typeof window !== 'undefined' && !window._netFlushBound) {   // bind the unload flush once
+  window._netFlushBound = true;
+  window.addEventListener('pagehide', _netFlush);
+  document.addEventListener('visibilitychange', function(){ if (document.visibilityState === 'hidden') _netFlush(); });
+}
+function _netSave(){ try { if (UI.net) localStorage.setItem(_netDraftKey(), JSON.stringify(UI.net)); } catch (e) {} _netSetDirty(true); _netQueuePush(); }
 function _netMark(){ if (UI.net) UI.net.built = false; _netSave(); }
 function _netLoad(){ try { var s = localStorage.getItem(_netDraftKey()); return s ? JSON.parse(s) : null; } catch (e) { return null; } }
 function _netInit(){
@@ -234,7 +235,6 @@ function netSetVariant(key, i, v){ var n = _netNode(key); if (!n) return; var a 
 function netAddAltUnit(key){ var n = _netNode(key); if (!n) return; _ensureCat(n).altUnits.push({ unit: '', num: 1, den: 1 }); _netMark(); _netRerender(); }
 function netDelAltUnit(key, i){ var n = _netNode(key); if (!n) return; _ensureCat(n).altUnits.splice(i, 1); _netMark(); _netRerender(); }
 function netSetAltUnit(key, i, prop, v){ var n = _netNode(key); if (!n) return; var a = _ensureCat(n).altUnits; if (i < 0 || i >= a.length) return; if (prop === 'num' || prop === 'den') { var x = parseInt(v, 10); a[i][prop] = (v === '' || isNaN(x) || x < 1) ? 1 : x; _netMark(); } else { a[i][prop] = v; _netMark(); } }
-function _srcBacked(n, src){ if (src === 'manual') return true; if ((n.holds || []).indexOf('coassist') < 0) return false; var cc = _normCoassist(n.coassist); if (src === 'erp') return cc.erp.connectors.length > 0; if (src === 'iot') return (cc.iot.connections || []).length > 0; if (src === 'ai') return cc.ai.count > 0; return true; }
 // A 'system feed' / 'computed' leg is only real if the node carries the matching co-assist (ERP connector, IoT connection, or AI slot).
 function _legBacked(n, f){
   if (f.leg !== 'system' && f.leg !== 'compute') return true;
@@ -242,11 +242,6 @@ function _legBacked(n, f){
   var cc = _normCoassist(n.coassist);
   if (f.leg === 'compute') return f.via === 'ERP' ? cc.erp.connectors.length > 0 : cc.ai.count > 0;
   return f.via === 'IoT' ? (cc.iot.connections || []).length > 0 : cc.erp.connectors.length > 0;
-}
-function netSetCatTemplate(key, tpl){
-  var n = _netNode(key); if (!n) return; var c = _ensureCat(n); c.template = tpl;
-  var t = CAT_TEMPLATES[tpl]; if (t && tpl !== 'custom') { c.fields = t.fields.map(function(f){ return { name: f.name, source: f.source, type: f.type || 'text' }; }); if (t.baseUnit) c.baseUnit = t.baseUnit; if (!c.product) c.product = t.label; }
-  _netMark(); _netRerender();
 }
 /* order form (lives under Storefront): commercial method + max + collect-back + how the CHIT arrives */
 function _ensureOrder(n){
@@ -585,11 +580,6 @@ function _methodPreview(m){
 }
 /* ---- the REAL OUTPUT visuals ---- */
 function _sampleVal(type){ if (type === 'number') return '123.4'; if (type === 'choice') return 'A'; if (type === 'range') return '10–20'; if (type === 'date') return '2026-07-25'; return 'text'; }
-function _srcBadge(src){
-  var m = { erp: ['#b07b1e', '#f6ecd8'], iot: ['#22857a', '#daf0ec'], ai: ['#8a5cc4', '#efeafa'], manual: ['#6b6f86', '#e8e9f0'] };
-  var col = m[src] || m.manual;
-  return '<span style="font-size:9px;font-weight:700;text-transform:uppercase;color:' + col[0] + ';background:' + col[1] + ';border-radius:4px;padding:1px 5px">' + esc(src) + '</span>';
-}
 function _legBadge(leg){
   var l = CAT_LEGS.filter(function(x){ return x.k === leg; })[0] || { short: '—', col: ['#6b6f86', '#e8e9f0'] };
   return '<span style="font-size:9px;font-weight:700;text-transform:uppercase;color:' + l.col[0] + ';background:' + l.col[1] + ';border-radius:4px;padding:1px 5px">' + esc(l.short) + '</span>';
@@ -654,7 +644,7 @@ function _catInfer(n){
 function _catRecordPreview(n){
   var c = n.catalogue || {}; var fs = c.fields || [];
   if (!fs.length && !c.product) return '';
-  var name = c.product || (CAT_TEMPLATES[c.template] || {}).label || 'Item';
+  var name = c.product || 'Item';
   var v0 = (c.variants || [])[0];
   var au = (c.altUnits || [])[0];
   var unitLine = c.baseUnit ? ('base ' + esc(c.baseUnit) + (au && au.unit ? ' · 1 ' + esc(au.unit) + ' = ' + (au.num || 1) + '/' + (au.den || 1) + ' ' + esc(c.baseUnit) : '')) : '';
@@ -682,6 +672,7 @@ function _chitPreview(n){
   var arrive = ['on the rail'].concat((o.inlets || []).filter(function(x){ return x.channel; }).map(function(x){ return x.channel; })).join(' · ');
   var st = (o.states || []).filter(function(x){ return x.name; });
   var stateFlow = st.length ? '<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:3px;align-items:center">' + st.map(function(x, i){ return (i ? '<span style="color:var(--faint,#8a929e);font-size:10px">→</span>' : '') + '<span style="font-size:9.5px;font-weight:600;color:#3a4048;background:#eef1f5;border-radius:4px;padding:1px 6px">' + esc(x.name) + '</span>'; }).join('') + '</div>' : '';
+  return '<div style="margin-top:12px;border-top:1px solid var(--line);padding-top:9px"><div style="font-size:11px;font-weight:800;color:#2c7a43;letter-spacing:.05em">🧾 CHIT — what the customer sees</div>'
     + '<div style="margin-top:7px;max-width:290px;border:1px solid var(--line);border-top:3px solid #2c5aa0;border-radius:11px;box-shadow:0 1px 3px rgba(20,30,45,.08);padding:12px 13px;background:#fff">'
       + '<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-weight:700;font-size:13px">' + esc(name) + '</span>' + expBadge + '</div>'
       + '<div style="margin-top:6px">' + specRows + '</div>'
