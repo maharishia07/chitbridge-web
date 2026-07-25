@@ -188,6 +188,7 @@ function netSetCatStory(key, v){ var n = _netNode(key); if (!n) return; _ensureC
 function netAddFeedback(key){ var n = _netNode(key); if (!n) return; _ensureCat(n).feedback.push({ system: '' }); _netMark(); _netRerender(); }
 function netDelFeedback(key, i){ var n = _netNode(key); if (!n) return; _ensureCat(n).feedback.splice(i, 1); _netMark(); _netRerender(); }
 function netSetFeedback(key, i, v){ var n = _netNode(key); if (!n) return; var fb = _ensureCat(n).feedback; if (i >= 0 && i < fb.length) { fb[i].system = v; _netMark(); } }   // no re-render while typing
+function netCatTab(key, tab){ if (UI.net) UI.net.catTab = tab; _netRerender(); }   // which catalogue sub-panel is showing (few inputs at a time)
 /* catalogue Part A — identity + order (product · variants · base + alternative units) */
 function netSetCatProduct(key, v){ var n = _netNode(key); if (!n) return; _ensureCat(n).product = v; _netSave(); }
 function netSetBaseUnit(key, v){ var n = _netNode(key); if (!n) return; _ensureCat(n).baseUnit = v; _netSave(); }
@@ -370,26 +371,46 @@ function _catConfig(n){
     + altRows + '<div onclick="netAddAltUnit(\'' + n.key + '\')" style="cursor:pointer;color:var(--blue);font-size:11.5px;font-weight:600;padding:4px 0">＋ unit</div>'
     + '<div style="font-size:10.5px;color:var(--grey);font-style:italic;margin-top:2px">Orderable unit is resolved by the buyer\'s tier; unit + factor freeze on the chit.</div>';
   var fbRows = (c.feedback || []).map(function(fb, i){ return '<div style="display:flex;gap:6px;align-items:center;padding:2px 0"><input value="' + esc(fb.system || '') + '" oninput="netSetFeedback(\'' + n.key + '\',' + i + ',this.value)" placeholder="system to feed back (e.g. SAP, warehouse WMS)" style="flex:1;min-width:0;' + _in + '"><span onclick="netDelFeedback(\'' + n.key + '\',' + i + ')" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 3px">×</span></div>'; }).join('');
+  // ---- five focused tabs: a human fills a few things at a time (no more one long scroll) ----
+  var tab = (UI.net && UI.net.catTab) || 'purpose';
+  var nfields = (c.fields || []).length;
+  var TABS = [
+    { k: 'purpose', label: 'Purpose' },
+    { k: 'identity', label: 'Identity' },
+    { k: 'reqs', label: 'Requirements' + (nfields ? ' · ' + nfields : '') },
+    { k: 'feedback', label: 'Feed back' + ((c.feedback || []).length ? ' · ' + c.feedback.length : '') },
+    { k: 'chain', label: '🔗 Chain' },
+  ];
+  var tabBar = '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:9px">' + TABS.map(function(t){ var on = tab === t.k;
+    return '<span onclick="netCatTab(\'' + n.key + '\',\'' + t.k + '\')" style="cursor:pointer;font-size:11px;font-weight:600;padding:4px 11px;border-radius:14px;border:1px solid ' + (on ? '#2c5aa0' : 'var(--line)') + ';color:' + (on ? '#fff' : 'var(--grey)') + ';background:' + (on ? '#2c5aa0' : '#fff') + '">' + t.label + '</span>'; }).join('') + '</div>';
+  var body = '';
+  if (tab === 'purpose') {
+    body = '<label style="font-size:11px;color:var(--grey);display:block;margin-top:10px">Purpose <span style="color:var(--faint,#8a929e)">(what this catalogue is for — in your words)</span></label>'
+      + '<textarea oninput="netSetCatStory(\'' + n.key + '\',this.value)" onchange="netCatTab(\'' + n.key + '\',\'purpose\')" placeholder="e.g. Gather stock from ERP + Tally, work out the reorder, and send POs to my suppliers by EOQ." rows="3" style="width:100%;margin-top:4px;box-sizing:border-box;resize:vertical;' + _in + '">' + esc(c.story || '') + '</textarea>'
+      + '<div style="margin-top:6px;padding:7px 9px;border:1px dashed #b7a3d6;border-radius:8px;background:#f7f4fc;font-size:10.5px;color:#6a4fa0">🤖 An AI assistant will read this, pull the canonical fields for this material / service, check them against your existing systems, and propose the routing. <i>Wiring later — route by hand for now.</i></div>'
+      + _catInfer(n)
+      + '<div style="font-size:10.5px;color:var(--grey);margin-top:8px">Next: <b>Identity</b> → name the product · <b>Requirements</b> → route each field · <b>Feed back</b> → where it goes · <b>Chain</b> → the finished picture.</div>';
+  } else if (tab === 'identity') {
+    body = partA;
+  } else if (tab === 'reqs') {
+    body = '<div style="margin-top:10px"><b style="font-size:11px;font-weight:800;color:#2c5aa0;letter-spacing:.05em">REQUIREMENTS</b> <span style="color:var(--faint,#8a929e)">— what you need to know, and where each part comes from</span></div>'
+      + '<div style="margin:6px 0 2px">' + legLegend + '</div>'
+      + fields
+      + '<div onclick="netAddCatField(\'' + n.key + '\')" style="cursor:pointer;color:var(--blue);font-size:12px;font-weight:600;padding:5px 0">＋ requirement</div>'
+      + legNote
+      + '<label style="font-size:11px;color:var(--grey);display:block;margin-top:10px">List is built by <span style="color:var(--faint,#8a929e)">(how the catalogue itself is loaded)</span></label>'
+      + '<select onchange="netSetCatLoad(\'' + n.key + '\',this.value)" style="margin-top:4px;padding:6px 8px;border:1px solid var(--line);border-radius:7px;font-size:12.5px">' + loadOpts + '</select>';
+  } else if (tab === 'feedback') {
+    body = '<label style="font-size:11px;color:var(--grey);display:block;margin-top:10px"><b style="font-weight:800;color:#2c5aa0;letter-spacing:.05em">FEED BACK</b> <span style="color:var(--faint,#8a929e)">— once complete, push the record to these systems (with a receipt)</span></label>'
+      + fbRows + '<div onclick="netAddFeedback(\'' + n.key + '\')" style="cursor:pointer;color:var(--blue);font-size:11.5px;font-weight:600;padding:4px 0">＋ system to feed back</div>'
+      + '<div style="font-size:10.5px;color:var(--grey);margin-top:6px">Nothing here = CB is the end of the chain (it just holds the record).</div>';
+  } else {
+    body = _catChain(n) + _catRecordPreview(n);
+  }
   return '<div style="margin-top:10px;padding:12px 13px;border:1px solid var(--line);border-left:3px solid #2c5aa0;border-radius:10px;background:#fbfdff">'
     + '<div style="font-size:11px;font-weight:800;color:#2c5aa0;letter-spacing:.05em">🗂️ CATALOGUE — complete the information chain</div>'
-    // ---- purpose / story (drives the gap analysis) ----
-    + '<label style="font-size:11px;color:var(--grey);display:block;margin-top:8px">Purpose <span style="color:var(--faint,#8a929e)">(what this catalogue is for — in your words)</span></label>'
-    + '<textarea oninput="netSetCatStory(\'' + n.key + '\',this.value)" placeholder="e.g. Sell interior emulsion to trade buyers; assay + stock live in SAP; site address comes from the buyer." rows="2" style="width:100%;margin-top:4px;box-sizing:border-box;resize:vertical;' + _in + '">' + esc(c.story || '') + '</textarea>'
-    + '<div style="margin-top:6px;padding:7px 9px;border:1px dashed #b7a3d6;border-radius:8px;background:#f7f4fc;font-size:10.5px;color:#6a4fa0">🤖 An AI assistant will read this, pull the canonical fields for this material / service, check them against your existing systems, and propose the routing below. <i>Wiring in a later iteration — route by hand for now.</i></div>'
-    + partA
-    // ---- requirements routed to the four legs ----
-    + '<div style="margin-top:12px;border-top:1px solid var(--line);padding-top:9px"><b style="font-size:11px;font-weight:800;color:#2c5aa0;letter-spacing:.05em">REQUIREMENTS</b> <span style="color:var(--faint,#8a929e)">— what you need to know, and where each part comes from</span></div>'
-    + '<div style="margin:6px 0 2px">' + legLegend + '</div>'
-    + fields
-    + '<div onclick="netAddCatField(\'' + n.key + '\')" style="cursor:pointer;color:var(--blue);font-size:12px;font-weight:600;padding:5px 0">＋ requirement</div>'
-    + legNote
-    + '<label style="font-size:11px;color:var(--grey);display:block;margin-top:10px">List is built by <span style="color:var(--faint,#8a929e)">(how the catalogue itself is loaded)</span></label>'
-    + '<select onchange="netSetCatLoad(\'' + n.key + '\',this.value)" style="margin-top:4px;padding:6px 8px;border:1px solid var(--line);border-radius:7px;font-size:12.5px">' + loadOpts + '</select>'
-    // ---- feed back (close the loop) ----
-    + '<label style="font-size:11px;color:var(--grey);display:block;margin-top:12px;border-top:1px solid var(--line);padding-top:9px"><b style="font-weight:800;color:#2c5aa0;letter-spacing:.05em">FEED BACK</b> <span style="color:var(--faint,#8a929e)">— once complete, push the record to these systems (with a receipt)</span></label>'
-    + fbRows + '<div onclick="netAddFeedback(\'' + n.key + '\')" style="cursor:pointer;color:var(--blue);font-size:11.5px;font-weight:600;padding:4px 0">＋ system to feed back</div>'
-    + _catChain(n)
-    + _catRecordPreview(n)
+    + tabBar
+    + '<div style="margin-top:6px">' + body + '</div>'
     + '</div>';
 }
 function _methodControl(m){
@@ -443,6 +464,25 @@ function _catChain(n){
   return '<div style="margin-top:12px;padding-top:9px;border-top:1px solid var(--line)">'
     + '<div style="font-size:11px;font-weight:800;color:#2c5aa0;letter-spacing:.05em;margin-bottom:6px">🔗 INFORMATION CHAIN — how this catalogue is completed</div>'
     + '<div style="display:flex;gap:7px;flex-wrap:wrap">' + cards + '</div></div>';
+}
+/* a first, honest reading of the purpose story — rule-based today, the AI takes this over later */
+function _catInfer(n){
+  var s = ((n.catalogue || {}).story || '').toLowerCase();
+  if (!s.trim()) return '';
+  var systems = ['erp', 'sap', 'oracle', 'netsuite', 'dynamics', 'tally', 'quickbooks', 'zoho'].filter(function(t){ return s.indexOf(t) >= 0; });
+  var feedsBack = /supplier|vendor|purchase order|\bpo\b|reorder|replenish|feed ?back|send.*to my/.test(s);
+  var fromCust = /customer|buyer|client|order from|they send|storefront/.test(s);
+  var computes = [];
+  if (/eoq|reorder|replenish|economic order|min.?max|stock level/.test(s)) computes.push('reorder / EOQ');
+  if (/combine|combined|consolidat|merge|aggregat/.test(s)) computes.push('combined view');
+  var bits = [];
+  if (systems.length) bits.push('<b style="color:#b07b1e">System feed</b> — ' + systems.map(function(x){ return x.toUpperCase(); }).join(', '));
+  if (fromCust) bits.push('<b style="color:#2b6f8f">From customer</b> — order details at request time');
+  bits.push('<b style="color:#2c7a43">Store in CB</b> — ' + (computes.length ? computes.join(', ') + ' (the gap CB fills)' : 'the consolidated record (the gap CB fills)'));
+  if (feedsBack) bits.push('<b style="color:#6a4fa0">Feed back</b> — suppliers / the named system');
+  return '<div style="margin-top:8px;padding:8px 10px;border:1px solid #bcd0e8;border-radius:8px;background:#f2f7fd">'
+    + '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#2c5aa0;margin-bottom:4px">Reading your purpose <span style="font-weight:500;color:var(--grey);text-transform:none">— a first guess; confirm it as you route the requirements</span></div>'
+    + '<div style="font-size:11px;color:#1c2128;line-height:1.6">' + bits.join('<br>') + '</div></div>';
 }
 function _catRecordPreview(n){
   var c = n.catalogue || {}; var fs = c.fields || [];
