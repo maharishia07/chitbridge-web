@@ -65,7 +65,7 @@ var ERP_SYSTEMS = ['SAP', 'Oracle', 'NetSuite', 'Dynamics', 'Tally', 'Other'];
 var AI_AUTONOMY = ['propose', 'authorize', 'confirm', 'delegate'];
 var IOT_TYPES = ['Raspberry Pi', 'Industrial gateway', 'PLC', 'Direct sensor', 'Other'];
 var CAT_LOADS = ['manual', 'ERP sync', 'CSV', 'Excel', 'on-demand'];        // how the LIST (catalogue) is built
-var CHIT_CHANNELS = ['web form', 'WhatsApp', 'email', 'scan', 'manual'];    // how an ORDER / chit arrives
+var OFF_RAIL_CHANNELS = ['WhatsApp', 'email', 'scan'];    // off-rail capture inlets — a message to a handle you own → captured to a chit
 var COLLECT_CADENCE = ['per order', 'regular'];
 
 /* ---- draft state + per-entity persistence (localStorage only; nothing hits the server) ---- */
@@ -160,10 +160,19 @@ function netSetCatTemplate(key, tpl){
   _netMark(); _netRerender();
 }
 /* order form (lives under Storefront): commercial method + max + collect-back + how the CHIT arrives */
-function _ensureOrder(n){ if (!n.order) { var lc = n.catalogue || {}; n.order = { method: lc.method || 'cart', maxItems: (lc.maxItems != null ? lc.maxItems : null), collectBack: [], chitChannel: 'web form' }; if (lc.method !== undefined) delete lc.method; if (lc.maxItems !== undefined) delete lc.maxItems; } if (!n.order.chitChannel) n.order.chitChannel = 'web form'; if (!n.order.collectBack) n.order.collectBack = []; if (!n.order.method) n.order.method = 'cart'; return n.order; }
+function _ensureOrder(n){
+  if (!n.order) { var lc = n.catalogue || {}; n.order = { method: lc.method || 'cart', maxItems: (lc.maxItems != null ? lc.maxItems : null), collectBack: [], inlets: [] }; if (lc.method !== undefined) delete lc.method; if (lc.maxItems !== undefined) delete lc.maxItems; }
+  if (!n.order.collectBack) n.order.collectBack = [];
+  if (!n.order.inlets) n.order.inlets = [];
+  if (n.order.chitChannel) { if (['WhatsApp', 'email', 'scan'].indexOf(n.order.chitChannel) >= 0) n.order.inlets.push({ channel: n.order.chitChannel, handle: '' }); delete n.order.chitChannel; }
+  if (!n.order.method) n.order.method = 'cart';
+  return n.order;
+}
 function netSetOrderMethod(key, m){ var n = _netNode(key); if (!n) return; _ensureOrder(n).method = m; _netMark(); _netRerender(); }
 function netSetOrderMax(key, v){ var n = _netNode(key); if (!n) return; var num = parseInt(v, 10); _ensureOrder(n).maxItems = (v === '' || isNaN(num)) ? null : num; _netSave(); }   // no re-render while typing
-function netSetOrderChannel(key, v){ var n = _netNode(key); if (!n) return; _ensureOrder(n).chitChannel = v; _netMark(); _netRerender(); }
+function netAddInlet(key){ var n = _netNode(key); if (!n) return; _ensureOrder(n).inlets.push({ channel: 'WhatsApp', handle: '' }); _netMark(); _netRerender(); }
+function netDelInlet(key, i){ var n = _netNode(key); if (!n) return; _ensureOrder(n).inlets.splice(i, 1); _netMark(); _netRerender(); }
+function netSetInlet(key, i, prop, val){ var n = _netNode(key); if (!n) return; var il = _ensureOrder(n).inlets; if (i >= 0 && i < il.length) { il[i][prop] = val; _netMark(); if (prop === 'channel') _netRerender(); } }   // handle via oninput: no re-render
 function netAddCollectBack(key){ var n = _netNode(key); if (!n) return; _ensureOrder(n).collectBack.push({ name: '', cadence: 'per order' }); _netMark(); _netRerender(); }
 function netDelCollectBack(key, i){ var n = _netNode(key); if (!n) return; _ensureOrder(n).collectBack.splice(i, 1); _netMark(); _netRerender(); }
 function netSetCollectBack(key, i, prop, val){ var n = _netNode(key); if (!n) return; var cb = _ensureOrder(n).collectBack; if (i >= 0 && i < cb.length) { cb[i][prop] = val; _netMark(); if (prop === 'cadence') _netRerender(); } }   // name via oninput: no re-render
@@ -300,6 +309,17 @@ function _catConfig(n){
     + srcNote
     + '</div>';
 }
+function _methodPreview(m){
+  var wrap = function(inner){ return '<div style="margin-top:6px;padding:9px 10px;border:1px dashed var(--line-strong,#c8d0d9);border-radius:8px;background:#fff"><div style="font-size:10px;color:var(--faint,#8a929e);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Customer sees</div>' + inner + '</div>'; };
+  var inp = 'display:inline-block;border:1px solid var(--line);border-radius:5px;padding:2px 8px;font-size:11.5px;color:var(--grey);background:#f5f7f9';
+  var btn = 'display:inline-block;background:#2c5aa0;color:#fff;border-radius:5px;padding:3px 10px;font-size:11.5px;font-weight:600';
+  if (m === 'text') return wrap('<span style="font-size:11.5px;color:var(--grey)">Information only — nothing to order.</span>');
+  if (m === 'qty') return wrap('<span style="' + inp + '">Qty ▢</span> &nbsp; <span style="' + btn + '">Order</span>');
+  if (m === 'cart') return wrap('<span style="' + inp + '">Qty ▢</span> <span style="font-size:11.5px;color:var(--grey)">× ₹ price</span> &nbsp; <span style="' + btn + '">Add to cart</span>');
+  if (m === 'range') return wrap('<div style="font-size:11.5px;color:var(--grey)">₹ min ──●────── ₹ max</div><div style="margin-top:5px"><span style="' + inp + '">Qty ▢</span> &nbsp; <span style="' + btn + '">Order</span></div>');
+  if (m === 'qtyprice') return wrap('<span style="' + inp + '">Qty ▢</span> <span style="' + inp + '">Your price ▢</span> &nbsp; <span style="' + btn + '">Send offer</span>');
+  return '';
+}
 function _storefrontConfig(n){
   var e = n.exposure || 'public';
   var o = _ensureOrder(n);
@@ -313,7 +333,7 @@ function _storefrontConfig(n){
     + '<div style="font-size:11px;color:var(--grey);margin-top:8px">Untick <b>Storefront</b> above to keep this node <b>private</b> (internal — shown to no one).</div>';
   var methOpts = CAT_METHODS.map(function(m){ return '<option value="' + m.k + '"' + ((o.method || 'cart') === m.k ? ' selected' : '') + '>' + m.label + '</option>'; }).join('');
   var mh = (CAT_METHODS.filter(function(m){ return m.k === (o.method || 'cart'); })[0] || {}).hint || '';
-  var chanOpts = CHIT_CHANNELS.map(function(ch){ return '<option value="' + ch + '"' + ((o.chitChannel || 'web form') === ch ? ' selected' : '') + '>' + ch + '</option>'; }).join('');
+  var inletRows = (o.inlets || []).map(function(il, i){ var chOpts = OFF_RAIL_CHANNELS.map(function(ch){ return '<option value="' + ch + '"' + (il.channel === ch ? ' selected' : '') + '>' + ch + '</option>'; }).join(''); return '<div style="display:flex;gap:6px;align-items:center;padding:3px 0"><select onchange="netSetInlet(\'' + n.key + '\',' + i + ',\'channel\',this.value)" style="font-size:11.5px;padding:4px;border:1px solid var(--line);border-radius:6px">' + chOpts + '</select><input value="' + esc(il.handle || '') + '" oninput="netSetInlet(\'' + n.key + '\',' + i + ',\'handle\',this.value)" placeholder="the number / address customers use" style="flex:1;min-width:0;font-size:11.5px;padding:4px 7px;border:1px solid var(--line);border-radius:6px"><span onclick="netDelInlet(\'' + n.key + '\',' + i + ')" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 3px">×</span></div>'; }).join('');
   var cbRows = (o.collectBack || []).map(function(cb, i){
     var cadOpts = COLLECT_CADENCE.map(function(cd){ return '<option value="' + cd + '"' + (cb.cadence === cd ? ' selected' : '') + '>' + cd + '</option>'; }).join('');
     return '<div style="display:flex;gap:6px;align-items:center;padding:3px 0"><input value="' + esc(cb.name || '') + '" oninput="netSetCollectBack(\'' + n.key + '\',' + i + ',\'name\',this.value)" placeholder="what to collect (e.g. delivery location)" style="flex:1;min-width:0;font-size:11.5px;padding:4px 7px;border:1px solid var(--line);border-radius:6px"><select onchange="netSetCollectBack(\'' + n.key + '\',' + i + ',\'cadence\',this.value)" style="font-size:11px;padding:4px;border:1px solid var(--line);border-radius:6px">' + cadOpts + '</select><span onclick="netDelCollectBack(\'' + n.key + '\',' + i + ')" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 3px">×</span></div>';
@@ -322,13 +342,18 @@ function _storefrontConfig(n){
     + '<label style="font-size:11px;color:var(--grey);display:block;margin-top:8px">How they order (commercial method)</label>'
     + '<select onchange="netSetOrderMethod(\'' + n.key + '\',this.value)" style="margin-top:4px;padding:6px 8px;border:1px solid var(--line);border-radius:7px;font-size:12.5px">' + methOpts + '</select>'
     + '<div style="font-size:11px;color:var(--grey);font-style:italic;margin-top:3px">' + esc(mh) + '</div>'
+    + _methodPreview(o.method)
     + '<label style="font-size:11px;color:var(--grey);display:block;margin-top:10px">Max items per order <span style="color:var(--faint,#8a929e)">(optional)</span></label>'
     + '<input value="' + (o.maxItems != null ? esc(String(o.maxItems)) : '') + '" oninput="netSetOrderMax(\'' + n.key + '\',this.value)" type="number" min="1" placeholder="no limit" style="margin-top:4px;padding:6px 8px;border:1px solid var(--line);border-radius:7px;font-size:12.5px;width:130px">'
-    + '<label style="font-size:11px;color:var(--grey);display:block;margin-top:10px">Collect back <span style="color:var(--faint,#8a929e)">(what you ask the customer to provide)</span></label>'
+    + '<div style="font-size:11px;font-weight:800;color:#2c7a43;letter-spacing:.05em;margin-top:12px;border-top:1px solid var(--line);padding-top:9px">📥 COLLECT FROM CUSTOMER</div>'
+    + '<div style="font-size:11px;color:var(--grey);margin-top:3px">Info you ask the buyer to provide with the order (e.g. delivery address, a monthly forecast).</div>'
     + cbRows
-    + '<div onclick="netAddCollectBack(\'' + n.key + '\')" style="cursor:pointer;color:var(--blue);font-size:12px;font-weight:600;padding:5px 0">＋ collect-back field</div>'
-    + '<label style="font-size:11px;color:var(--grey);display:block;margin-top:8px">Chit arrives via <span style="color:var(--faint,#8a929e)">(how an order reaches you)</span></label>'
-    + '<select onchange="netSetOrderChannel(\'' + n.key + '\',this.value)" style="margin-top:4px;padding:6px 8px;border:1px solid var(--line);border-radius:7px;font-size:12.5px">' + chanOpts + '</select>'
+    + '<div onclick="netAddCollectBack(\'' + n.key + '\')" style="cursor:pointer;color:var(--blue);font-size:12px;font-weight:600;padding:5px 0">＋ collect field</div>'
+    + '<div style="font-size:11px;font-weight:800;color:#2c7a43;letter-spacing:.05em;margin-top:12px;border-top:1px solid var(--line);padding-top:9px">🛬 HOW ORDERS ARRIVE</div>'
+    + '<div style="font-size:11.5px;color:#2c7a43;margin-top:5px;padding:6px 9px;border:1px solid #cfe0d6;border-radius:7px;background:#f4faf6">✓ <b>On the rail</b> — customers order at your storefront (they find you in ChitBridge).</div>'
+    + '<div style="font-size:11px;color:var(--grey);margin-top:8px">Off-rail inlets <span style="color:var(--faint,#8a929e)">(optional)</span> — a message to a channel <b>you own &amp; publish</b>, captured into a chit:</div>'
+    + inletRows
+    + '<div onclick="netAddInlet(\'' + n.key + '\')" style="cursor:pointer;color:var(--blue);font-size:12px;font-weight:600;padding:5px 0">＋ add off-rail inlet</div>'
     + '</div>';
   return '<div style="margin-top:10px;padding:12px 13px;border:1px solid var(--line);border-left:3px solid #2c7a43;border-radius:10px;background:#fbfefc">' + view + order + '</div>';
 }
