@@ -169,6 +169,7 @@ function _ensureCat(n){
   if (!c.loadedBy) c.loadedBy = 'manual';
   if (c.story === undefined) c.story = '';        // the purpose narrative — drives the gap analysis
   if (!c.feedback) c.feedback = [];               // systems the completed record is fed BACK to
+  if (!c.refs) c.refs = [];                       // B · known-as: the same item's local code in each system (a link, never a copy)
   if (c.product === undefined) c.product = '';    // A · identity + order
   if (!c.variants) c.variants = [];
   if (c.baseUnit === undefined) c.baseUnit = '';
@@ -189,6 +190,10 @@ function netAddFeedback(key){ var n = _netNode(key); if (!n) return; _ensureCat(
 function netDelFeedback(key, i){ var n = _netNode(key); if (!n) return; _ensureCat(n).feedback.splice(i, 1); _netMark(); _netRerender(); }
 function netSetFeedback(key, i, v){ var n = _netNode(key); if (!n) return; var fb = _ensureCat(n).feedback; if (i >= 0 && i < fb.length) { fb[i].system = v; _netMark(); } }   // no re-render while typing
 function netCatTab(key, tab){ if (UI.net) UI.net.catTab = tab; _netRerender(); }   // which catalogue sub-panel is showing (few inputs at a time)
+/* catalogue Part B — known-as: the same item's local code/name in each system (a reference, never a mirror) */
+function netAddRef(key){ var n = _netNode(key); if (!n) return; _ensureCat(n).refs.push({ system: '', code: '' }); _netMark(); _netRerender(); }
+function netDelRef(key, i){ var n = _netNode(key); if (!n) return; _ensureCat(n).refs.splice(i, 1); _netMark(); _netRerender(); }
+function netSetRef(key, i, prop, v){ var n = _netNode(key); if (!n) return; var r = _ensureCat(n).refs; if (i >= 0 && i < r.length) { r[i][prop] = v; _netMark(); if (prop === 'system') _netRerender(); } }   // code via oninput: no re-render
 /* catalogue Part A — identity + order (product · variants · base + alternative units) */
 function netSetCatProduct(key, v){ var n = _netNode(key); if (!n) return; _ensureCat(n).product = v; _netSave(); }
 function netSetBaseUnit(key, v){ var n = _netNode(key); if (!n) return; _ensureCat(n).baseUnit = v; _netSave(); }
@@ -370,6 +375,10 @@ function _catConfig(n){
     + '<label style="font-size:11px;color:var(--grey);display:block;margin-top:9px">Alternative units <span style="color:var(--faint,#8a929e)">(integer conversion — 1 crate = 20/1 kg)</span></label>'
     + altRows + '<div onclick="netAddAltUnit(\'' + n.key + '\')" style="cursor:pointer;color:var(--blue);font-size:11.5px;font-weight:600;padding:4px 0">＋ unit</div>'
     + '<div style="font-size:10.5px;color:var(--grey);font-style:italic;margin-top:2px">Orderable unit is resolved by the buyer\'s tier; unit + factor freeze on the chit.</div>';
+  var refRows = (c.refs || []).map(function(r, i){ return '<div style="display:flex;gap:6px;align-items:center;padding:2px 0"><input value="' + esc(r.system || '') + '" oninput="netSetRef(\'' + n.key + '\',' + i + ',\'system\',this.value)" placeholder="system (ERP, Tally, Supplier A)" style="width:150px;' + _in + '"><input value="' + esc(r.code || '') + '" oninput="netSetRef(\'' + n.key + '\',' + i + ',\'code\',this.value)" placeholder="their code / local name" style="flex:1;min-width:0;' + _in + '"><span onclick="netDelRef(\'' + n.key + '\',' + i + ')" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 3px">×</span></div>'; }).join('');
+  var partB = '<div style="font-size:11px;font-weight:800;color:#2c5aa0;letter-spacing:.05em;margin-top:14px;border-top:1px solid var(--line);padding-top:9px">B · KNOWN AS <span style="font-weight:500;color:var(--faint,#8a929e);letter-spacing:0">(the same item — its name in each system)</span></div>'
+    + refRows + '<div onclick="netAddRef(\'' + n.key + '\')" style="cursor:pointer;color:var(--blue);font-size:11.5px;font-weight:600;padding:4px 0">＋ system name</div>'
+    + '<div style="font-size:10.5px;color:var(--grey);font-style:italic;margin-top:2px">CB stores the reference {system · their code}, not their data — so it can gather from, and order in, each system\'s own name.</div>';
   var fbRows = (c.feedback || []).map(function(fb, i){ return '<div style="display:flex;gap:6px;align-items:center;padding:2px 0"><input value="' + esc(fb.system || '') + '" oninput="netSetFeedback(\'' + n.key + '\',' + i + ',this.value)" placeholder="system to feed back (e.g. SAP, warehouse WMS)" style="flex:1;min-width:0;' + _in + '"><span onclick="netDelFeedback(\'' + n.key + '\',' + i + ')" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 3px">×</span></div>'; }).join('');
   // ---- five focused tabs: a human fills a few things at a time (no more one long scroll) ----
   var tab = (UI.net && UI.net.catTab) || 'purpose';
@@ -391,7 +400,7 @@ function _catConfig(n){
       + _catInfer(n)
       + '<div style="font-size:10.5px;color:var(--grey);margin-top:8px">Next: <b>Identity</b> → name the product · <b>Requirements</b> → route each field · <b>Feed back</b> → where it goes · <b>Chain</b> → the finished picture.</div>';
   } else if (tab === 'identity') {
-    body = partA;
+    body = partA + partB;
   } else if (tab === 'reqs') {
     body = '<div style="margin-top:10px"><b style="font-size:11px;font-weight:800;color:#2c5aa0;letter-spacing:.05em">REQUIREMENTS</b> <span style="color:var(--faint,#8a929e)">— what you need to know, and where each part comes from</span></div>'
       + '<div style="margin:6px 0 2px">' + legLegend + '</div>'
@@ -491,11 +500,14 @@ function _catRecordPreview(n){
   var v0 = (c.variants || [])[0];
   var au = (c.altUnits || [])[0];
   var unitLine = c.baseUnit ? ('base ' + esc(c.baseUnit) + (au && au.unit ? ' · 1 ' + esc(au.unit) + ' = ' + (au.num || 1) + '/' + (au.den || 1) + ' ' + esc(c.baseUnit) : '')) : '';
+  var refs = (c.refs || []).filter(function(r){ return r.system && r.code; });
+  var refsLine = refs.length ? refs.map(function(r){ return esc(r.system) + ':' + esc(r.code); }).join(' · ') : '';
   var rows = fs.map(function(f){ return '<div style="display:flex;align-items:center;gap:8px;padding:2px 0;font-size:11.5px"><span style="flex:0 0 116px;color:var(--grey);font-family:monospace;overflow:hidden;text-overflow:ellipsis">' + esc(f.name || '—') + '</span><span style="flex:1;color:#1c2128">' + _sampleVal(f.type) + '</span>' + _legBadge(f.leg) + '</div>'; }).join('');
   return '<div style="margin-top:12px;padding:11px 12px;border:1px solid var(--line);border-radius:9px;background:#fff">'
     + '<div style="font-size:10px;color:var(--faint,#8a929e);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">📄 Stored as a record — one item</div>'
     + '<div style="font-weight:700;font-size:12.5px">' + esc(name) + (v0 && v0.name ? ' <span style="font-weight:500;color:var(--grey);font-size:11px">▸ ' + esc(v0.name) + '</span>' : '') + '</div>'
-    + (unitLine ? '<div style="font-size:10.5px;color:var(--grey);font-family:monospace;margin:2px 0 5px">' + unitLine + '</div>' : '<div style="margin-bottom:4px"></div>')
+    + (unitLine ? '<div style="font-size:10.5px;color:var(--grey);font-family:monospace;margin:2px 0 2px">' + unitLine + '</div>' : '')
+    + (refsLine ? '<div style="font-size:10px;color:var(--faint,#8a929e);font-family:monospace;margin:1px 0 5px">known as ' + refsLine + '</div>' : '<div style="margin-bottom:4px"></div>')
     + rows
     + '<div style="border-top:1px dashed var(--line);margin-top:6px;padding-top:5px;font-size:10.5px;color:var(--grey);font-family:monospace">🔒 sealed · content_hash a1b2c3…  ·  loaded by ' + esc(c.loadedBy || 'manual') + '</div>'
     + '</div>';
