@@ -27,6 +27,11 @@
     { k: 'cb',       label: 'Stored in CB',            short: 'Store in CB',   hint: 'has no home today — the gap CB fills',                   col: ['#2c7a43', '#e6f4ec'] },
   ];
   var TYPES = ['text', 'number', 'choice', 'range', 'date'];
+  // Part C · standards — external classification schemes, always BY REFERENCE (link out, never mirror).
+  var STD_SCHEMES = ['HS', 'GS1 GPC', 'Schema.org', 'UNSPSC', 'custom'];
+  // Part D · pricing — where a price ORIGINATES (basis) and how it is HELD (by ref = loose/resolved at seal · by value = frozen).
+  var PRICE_BASIS = ['global', 'system', 'user', 'manual'];   // global market stage · ERP/system · user choice at order · hand-entered
+  var PRICE_BY = ['ref', 'value'];                            // ref → resolved from source at seal (loose) · value → frozen amount now
   function viaFor(leg) { return leg === 'compute' ? ['AI', 'ERP'] : ['ERP', 'IoT']; }
   function leg(k) { for (var i = 0; i < LEGS.length; i++) if (LEGS[i].k === k) return LEGS[i]; return null; }
 
@@ -44,6 +49,22 @@
     if (!c.variants) c.variants = [];
     if (c.baseUnit === undefined) c.baseUnit = '';
     if (!c.altUnits) c.altUnits = [];
+    // governance context: currency + region the catalogue is priced/read in; prices inherit these when blank.
+    if (!c.context) c.context = { currency: '', region: '' };
+    if (c.context.currency === undefined) c.context.currency = '';
+    if (c.context.region === undefined) c.context.region = '';
+    if (!c.standards) c.standards = [];   // Part C · [{scheme, code, label}] — by reference
+    if (!c.pricing) c.pricing = [];       // Part D · [{label, basis, by, source, amount, currency, region, validFrom, validTo}]
+    c.pricing.forEach(function (p) {
+      if (!p.basis) p.basis = 'global';
+      if (!p.by) p.by = 'ref';
+      if (p.source === undefined) p.source = '';
+      if (p.amount === undefined) p.amount = null;
+      if (p.currency === undefined) p.currency = '';
+      if (p.region === undefined) p.region = '';
+      if (p.validFrom === undefined) p.validFrom = '';
+      if (p.validTo === undefined) p.validTo = '';
+    });
     c.fields.forEach(function (f) {
       if (!f.leg) {                                   // migrate the old {source} shape
         if (f.source === 'erp') { f.leg = 'system'; f.via = 'ERP'; }
@@ -63,6 +84,21 @@
     var u = (c.altUnits || []).filter(function (x) { return x.unit === unit; })[0];
     if (!u) return null;                              // unknown unit — caller decides
     return qty * (u.num || 1) / (u.den || 1);
+  }
+
+  // ---- resolve a price against the catalogue's governance context (currency/region inherited when blank).
+  // by 'value' → a frozen amount now; by 'ref' → loose, resolved from `source` at seal (FX freezes then, not here).
+  function resolvePrice(c, p) {
+    c = ensure(c);
+    return {
+      label: p.label || (p.basis + ' price'),
+      basis: p.basis, by: p.by, source: p.source,
+      amount: p.by === 'value' ? p.amount : null,
+      currency: p.currency || c.context.currency || '',
+      region: p.region || c.context.region || '',
+      validFrom: p.validFrom, validTo: p.validTo,
+      state: p.by === 'value' ? 'frozen (by value)' : 'loose (by ref — resolves at seal)',
+    };
   }
 
   // ---- the four-leg chain as DATA (the UI draws it; the harness reasons over it) ----
@@ -89,7 +125,10 @@
     var stored = c.fields.filter(function (f) { return f.leg === 'cb'; }).map(function (f) { return f.name; });
     return {
       product: c.product,
+      context: c.context,           // governance: currency + region prices/refs resolve under
       known_as: (c.refs || []).filter(function (r) { return r.system && r.code; }),
+      standards: (c.standards || []).filter(function (s) { return s.code || s.label; }),   // Part C · by reference
+      pricing: (c.pricing || []).map(function (p) { return resolvePrice(c, p); }),          // Part D · by ref / by value
       bom: (c.bom || []).filter(function (b) { return b.item; }),
       feeds: feeds,                 // inputs to the co-assist (from ERP/IoT)
       computed: computed,           // what the co-assist outputs (then sealed)
@@ -125,7 +164,8 @@
 
   return {
     LEGS: LEGS, TYPES: TYPES, viaFor: viaFor, leg: leg,
-    ensure: ensure, toBase: toBase, routeChain: routeChain,
+    STD_SCHEMES: STD_SCHEMES, PRICE_BASIS: PRICE_BASIS, PRICE_BY: PRICE_BY,
+    ensure: ensure, toBase: toBase, resolvePrice: resolvePrice, routeChain: routeChain,
     deriveComputeJob: deriveComputeJob, canonicalInputs: canonicalInputs, validate: validate,
   };
 });

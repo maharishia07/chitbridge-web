@@ -70,6 +70,9 @@ var COLLECT_CADENCE = ['per order', 'regular'];
 // The four-leg information chain: every required field is routed to ONE origin leg; the record is then fed back to systems.
 // Vocabulary + catalogue shape come from the shared model (app/catalogue-model.js). ONE definition — the UI and headless consumers (e.g. the EOQ harness) route through it.
 var CAT_LEGS = CBCatalogue.LEGS;
+var STD_SCHEMES = CBCatalogue.STD_SCHEMES;
+var PRICE_BASIS = CBCatalogue.PRICE_BASIS;
+var PRICE_BY = CBCatalogue.PRICE_BY;
 function _viaFor(leg){ return CBCatalogue.viaFor(leg); }   // system → ERP/IoT · compute → AI/ERP
 
 /* ---- draft state + per-entity persistence (localStorage only; nothing hits the server) ---- */
@@ -193,6 +196,15 @@ function netDelTrigger(key, i){ var n = _netNode(key); if (!n) return; _ensureCa
 function netSetTrigger(key, i, prop, v){ var n = _netNode(key); if (!n) return; var t = _ensureCat(n).triggers; if (i >= 0 && i < t.length) { t[i][prop] = v; _netMark(); if (prop === 'op' || prop === 'action') _netRerender(); } }   // text via oninput: no re-render
 /* G4 · outbound adapter — the format + on/off-rail of each feed-back destination */
 function netSetFeedbackFmt(key, i, prop, v){ var n = _netNode(key); if (!n) return; var fb = _ensureCat(n).feedback; if (i < 0 || i >= fb.length) return; if (prop === 'onRail') { fb[i].onRail = !fb[i].onRail; _netMark(); _netRerender(); } else { fb[i][prop] = v; _netMark(); } }   // format via oninput: no re-render
+/* Part C · standards — external classification, by reference (HS / GS1 / Schema.org) */
+function netAddStd(key){ var n = _netNode(key); if (!n) return; _ensureCat(n).standards.push({ scheme: 'HS', code: '', label: '' }); _netMark(); _netRerender(); }
+function netDelStd(key, i){ var n = _netNode(key); if (!n) return; _ensureCat(n).standards.splice(i, 1); _netMark(); _netRerender(); }
+function netSetStd(key, i, prop, v){ var n = _netNode(key); if (!n) return; var s = _ensureCat(n).standards; if (i >= 0 && i < s.length) { s[i][prop] = v; _netMark(); if (prop === 'scheme') _netRerender(); } }   // code/label via oninput: no re-render
+/* Part D · pricing — governance context + priced entries (by ref / by value) */
+function netSetContext(key, prop, v){ var n = _netNode(key); if (!n) return; _ensureCat(n).context[prop] = v; _netSave(); }   // currency/region text: no re-render while typing
+function netAddPrice(key){ var n = _netNode(key); if (!n) return; _ensureCat(n).pricing.push({ label: '', basis: 'global', by: 'ref', source: '', amount: null, currency: '', region: '', validFrom: '', validTo: '' }); _netMark(); _netRerender(); }
+function netDelPrice(key, i){ var n = _netNode(key); if (!n) return; _ensureCat(n).pricing.splice(i, 1); _netMark(); _netRerender(); }
+function netSetPrice(key, i, prop, v){ var n = _netNode(key); if (!n) return; var p = _ensureCat(n).pricing; if (i < 0 || i >= p.length) return; if (prop === 'amount') { var x = parseFloat(v); p[i].amount = (v === '' || isNaN(x)) ? null : x; _netMark(); } else { p[i][prop] = v; _netMark(); if (prop === 'basis' || prop === 'by') _netRerender(); } }   // text via oninput: no re-render
 /* catalogue Part A — identity + order (product · variants · base + alternative units) */
 function netSetCatProduct(key, v){ var n = _netNode(key); if (!n) return; _ensureCat(n).product = v; _netSave(); }
 function netSetBaseUnit(key, v){ var n = _netNode(key); if (!n) return; _ensureCat(n).baseUnit = v; _netSave(); }
@@ -395,6 +407,29 @@ function _catConfig(n){
   var partBOM = '<div style="font-size:11px;font-weight:800;color:#2c5aa0;letter-spacing:.05em;margin-top:14px;border-top:1px solid var(--line);padding-top:9px">MADE OF <span style="font-weight:500;color:var(--faint,#8a929e);letter-spacing:0">(related line items — a reorder cascades to these)</span></div>'
     + bomRows + '<div onclick="netAddBom(\'' + n.key + '\')" style="cursor:pointer;color:var(--blue);font-size:11.5px;font-weight:600;padding:4px 0">＋ component</div>'
     + '<div style="font-size:10.5px;color:var(--grey);font-style:italic;margin-top:2px">Ordering the parent proposes its components (a BOM), not a full MRP explosion.</div>';
+  // Part C · standards (by reference)
+  var stdRows = (c.standards || []).map(function(s, i){ var scOpts = STD_SCHEMES.map(function(x){ return '<option' + (s.scheme === x ? ' selected' : '') + '>' + x + '</option>'; }).join(''); return '<div style="display:flex;gap:6px;align-items:center;padding:2px 0"><select onchange="netSetStd(\'' + n.key + '\',' + i + ',\'scheme\',this.value)" style="font-size:11px;padding:4px;border:1px solid var(--line);border-radius:6px">' + scOpts + '</select><input value="' + esc(s.code || '') + '" oninput="netSetStd(\'' + n.key + '\',' + i + ',\'code\',this.value)" placeholder="code (e.g. 8544.49)" style="width:120px;' + _in + '"><input value="' + esc(s.label || '') + '" oninput="netSetStd(\'' + n.key + '\',' + i + ',\'label\',this.value)" placeholder="what it classifies (optional)" style="flex:1;min-width:0;' + _in + '"><span onclick="netDelStd(\'' + n.key + '\',' + i + ')" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 3px">×</span></div>'; }).join('');
+  var partStd = '<div style="font-size:11px;font-weight:800;color:#2c5aa0;letter-spacing:.05em;margin-top:14px;border-top:1px solid var(--line);padding-top:9px">C · STANDARDS <span style="font-weight:500;color:var(--faint,#8a929e);letter-spacing:0">(classification — by reference, never mirrored)</span></div>'
+    + stdRows + '<div onclick="netAddStd(\'' + n.key + '\')" style="cursor:pointer;color:var(--blue);font-size:11.5px;font-weight:600;padding:4px 0">＋ standard</div>'
+    + '<div style="font-size:10.5px;color:var(--grey);font-style:italic;margin-top:2px">HS / GS1 / Schema.org codes point OUT to the authority; CB holds the reference, not the scheme.</div>';
+  // Part D · pricing (governance context + by ref / by value)
+  var ctx = c.context || { currency: '', region: '' };
+  var priceRows = (c.pricing || []).map(function(p, i){
+    var basisOpts = PRICE_BASIS.map(function(b){ return '<option' + (p.basis === b ? ' selected' : '') + '>' + b + '</option>'; }).join('');
+    var byOpts = PRICE_BY.map(function(b){ return '<option value="' + b + '"' + (p.by === b ? ' selected' : '') + '>by ' + b + '</option>'; }).join('');
+    var valField = p.by === 'value'
+      ? '<input type="number" step="any" value="' + (p.amount != null ? p.amount : '') + '" oninput="netSetPrice(\'' + n.key + '\',' + i + ',\'amount\',this.value)" placeholder="amount" style="width:88px;' + _in + '"><input value="' + esc(p.currency || '') + '" oninput="netSetPrice(\'' + n.key + '\',' + i + ',\'currency\',this.value)" placeholder="' + esc(ctx.currency || 'ccy') + '" style="width:56px;' + _in + '">'
+      : '<input value="' + esc(p.source || '') + '" oninput="netSetPrice(\'' + n.key + '\',' + i + ',\'source\',this.value)" placeholder="source ref (LBMA fix · SAP ZPR0 · buyer offer)" style="flex:1;min-width:0;' + _in + '">';
+    return '<div style="border:1px solid var(--line);border-radius:8px;padding:7px 9px;margin-top:6px">'
+      + '<div style="display:flex;gap:6px;align-items:center"><input value="' + esc(p.label || '') + '" oninput="netSetPrice(\'' + n.key + '\',' + i + ',\'label\',this.value)" placeholder="price label (list · trade · spot)" style="flex:1;min-width:0;' + _in + '"><span onclick="netDelPrice(\'' + n.key + '\',' + i + ')" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 3px">×</span></div>'
+      + '<div style="display:flex;gap:6px;align-items:center;margin-top:5px"><select onchange="netSetPrice(\'' + n.key + '\',' + i + ',\'basis\',this.value)" style="font-size:11px;padding:4px;border:1px solid var(--line);border-radius:6px">' + basisOpts + '</select><select onchange="netSetPrice(\'' + n.key + '\',' + i + ',\'by\',this.value)" style="font-size:11px;padding:4px;border:1px solid var(--line);border-radius:6px">' + byOpts + '</select>' + valField + '</div>'
+      + '<div style="display:flex;gap:6px;align-items:center;margin-top:5px;font-size:10px;color:var(--grey)">valid <input type="date" value="' + esc(p.validFrom || '') + '" onchange="netSetPrice(\'' + n.key + '\',' + i + ',\'validFrom\',this.value)" style="' + _in + '">→<input type="date" value="' + esc(p.validTo || '') + '" onchange="netSetPrice(\'' + n.key + '\',' + i + ',\'validTo\',this.value)" style="' + _in + '"> · region <input value="' + esc(p.region || '') + '" oninput="netSetPrice(\'' + n.key + '\',' + i + ',\'region\',this.value)" placeholder="' + esc(ctx.region || 'inherit') + '" style="width:78px;' + _in + '"><span style="margin-left:auto;font-size:9.5px;font-weight:600;color:' + (p.by === 'value' ? '#2c7a43' : '#8a5cc4') + '">' + (p.by === 'value' ? 'frozen' : 'loose · resolves at seal') + '</span></div>'
+      + '</div>';
+  }).join('') || '<div style="font-size:11px;color:var(--grey);padding:2px 0">No prices — information-only catalogue.</div>';
+  var partPricing = '<label style="font-size:11px;color:var(--grey);display:block;margin-top:10px"><b style="font-weight:800;color:#2c5aa0;letter-spacing:.05em">D · PRICING</b> <span style="color:var(--faint,#8a929e)">— governed by context; by ref (loose) or by value (frozen)</span></label>'
+    + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px;padding:6px 9px;border:1px dashed var(--line);border-radius:8px;background:#fbfdff"><span style="font-size:10.5px;color:var(--grey)">Context governs →</span><input value="' + esc(ctx.currency || '') + '" oninput="netSetContext(\'' + n.key + '\',\'currency\',this.value)" placeholder="currency (INR)" style="width:108px;' + _in + '"><input value="' + esc(ctx.region || '') + '" oninput="netSetContext(\'' + n.key + '\',\'region\',this.value)" placeholder="region (IN)" style="width:108px;' + _in + '"></div>'
+    + priceRows + '<div onclick="netAddPrice(\'' + n.key + '\')" style="cursor:pointer;color:var(--blue);font-size:11.5px;font-weight:600;padding:5px 0">＋ price</div>'
+    + '<div style="font-size:10.5px;color:var(--grey);font-style:italic;margin-top:2px">Currency &amp; region inherit the context unless overridden. A by-ref price (and its FX rate) freezes only when the chit is sealed.</div>';
   var fbRows = (c.feedback || []).map(function(fb, i){
     var onRail = !!fb.onRail;
     var railBtn = '<span onclick="netSetFeedbackFmt(\'' + n.key + '\',' + i + ',\'onRail\')" title="is this party on C&B?" style="cursor:pointer;font-size:10px;font-weight:700;padding:3px 9px;border-radius:12px;border:1px solid ' + (onRail ? '#2c7a43' : 'var(--line)') + ';color:' + (onRail ? '#fff' : 'var(--grey)') + ';background:' + (onRail ? '#2c7a43' : '#fff') + '">' + (onRail ? 'on C&B' : 'off-rail') + '</span>';
@@ -420,6 +455,7 @@ function _catConfig(n){
     { k: 'purpose', label: 'Purpose' },
     { k: 'identity', label: 'Identity' },
     { k: 'reqs', label: 'Requirements' + (nfields ? ' · ' + nfields : '') },
+    { k: 'pricing', label: 'Pricing' + ((c.pricing || []).length ? ' · ' + c.pricing.length : '') },
     { k: 'loop', label: 'Loop' + ((c.triggers || []).length ? ' · ' + c.triggers.length : '') },
     { k: 'feedback', label: 'Feed back' + ((c.feedback || []).length ? ' · ' + c.feedback.length : '') },
     { k: 'chain', label: '🔗 Chain' },
@@ -434,7 +470,9 @@ function _catConfig(n){
       + _catInfer(n)
       + '<div style="font-size:10.5px;color:var(--grey);margin-top:8px">Next: <b>Identity</b> → name the product · <b>Requirements</b> → route each field · <b>Feed back</b> → where it goes · <b>Chain</b> → the finished picture.</div>';
   } else if (tab === 'identity') {
-    body = partA + partB + partBOM;
+    body = partA + partB + partStd + partBOM;
+  } else if (tab === 'pricing') {
+    body = partPricing;
   } else if (tab === 'loop') {
     body = '<label style="font-size:11px;color:var(--grey);display:block;margin-top:10px"><b style="font-weight:800;color:#2c5aa0;letter-spacing:.05em">LOOP</b> <span style="color:var(--faint,#8a929e)">— when a watched signal crosses a threshold, act automatically</span></label>'
       + trigRows + '<div onclick="netAddTrigger(\'' + n.key + '\')" style="cursor:pointer;color:var(--blue);font-size:11.5px;font-weight:600;padding:5px 0">＋ trigger</div>'
@@ -490,6 +528,7 @@ function _legBadge(leg){
 /* the headline: the four-leg information chain, drawn from the routed requirements */
 function _catChain(n){
   var c = n.catalogue || {}; var fs = c.fields || [];
+  var _cx = c.context || {}; var ctxLabel = [_cx.currency, _cx.region].filter(Boolean).map(esc).join(' · ');
   var chip = function(txt, col){ return '<span style="display:inline-block;font-size:10.5px;color:#1c2128;background:' + col[1] + ';border:1px solid ' + col[0] + '55;border-radius:5px;padding:1px 6px;margin:2px 3px 0 0">' + esc(txt) + '</span>'; };
   var fb = (c.feedback || []).filter(function(x){ return x.system; });
   if (!fs.length && !c.product && !fb.length) return '';
@@ -514,10 +553,14 @@ function _catChain(n){
   var loopBanner = trigs.length ? ('<div style="margin-top:8px;padding:6px 10px;border:1px solid #cdbfe6;border-radius:8px;background:#f7f4fc;font-size:11px;color:#6a4fa0">⟳ ' + trigs.map(function(t){ return 'when <b>' + esc(t.watch || '?') + '</b> ' + esc(t.op || '') + ' <b>' + esc(t.value || '?') + '</b> → <b>' + esc(t.action || '') + '</b>' + (t.target ? ' to ' + esc(t.target) : ''); }).join(' · ') + '</div>') : '';
   var bomList = (c.bom || []).filter(function(b){ return b.item; });
   var bomBanner = bomList.length ? ('<div style="margin-top:6px;font-size:10.5px;color:var(--grey)">Made of: ' + bomList.map(function(b){ return esc(b.item) + '×' + (b.qty != null ? b.qty : 1); }).join(' · ') + ' <i>(reorder cascades)</i></div>') : '';
+  var stds = (c.standards || []).filter(function(s){ return s.code || s.label; });
+  var stdBanner = stds.length ? ('<div style="margin-top:6px;font-size:10.5px;color:var(--grey)">Standards: ' + stds.map(function(s){ return esc(s.scheme) + ' ' + esc(s.code || s.label); }).join(' · ') + ' <i>(by reference)</i></div>') : '';
+  var prices = (c.pricing || []).filter(function(p){ return p.label || p.amount != null || p.source; });
+  var priceBanner = prices.length ? ('<div style="margin-top:6px;font-size:10.5px;color:var(--grey)">Pricing: ' + prices.map(function(p){ var r = CBCatalogue.resolvePrice(c, p); return esc(r.label) + ' — ' + (p.by === 'value' ? (r.amount != null ? r.amount + ' ' + esc(r.currency || '') : 'value') : esc(p.source || 'ref')) + ' <i>[' + (p.by === 'value' ? 'frozen' : 'ref') + ']</i>'; }).join(' · ') + (ctxLabel ? ' · in ' + ctxLabel : '') + '</div>') : '';
   return '<div style="margin-top:12px;padding-top:9px;border-top:1px solid var(--line)">'
     + '<div style="font-size:11px;font-weight:800;color:#2c5aa0;letter-spacing:.05em;margin-bottom:6px">🔗 INFORMATION CHAIN — how this catalogue is completed</div>'
     + '<div style="display:flex;gap:7px;flex-wrap:wrap">' + cards + '</div>'
-    + loopBanner + bomBanner + '</div>';
+    + loopBanner + bomBanner + stdBanner + priceBanner + '</div>';
 }
 /* a first, honest reading of the purpose story — rule-based today, the AI takes this over later */
 function _catInfer(n){
