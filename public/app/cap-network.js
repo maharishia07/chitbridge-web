@@ -91,7 +91,7 @@ function netAddChild(parentKey){
   var name = (typeof prompt === 'function') ? prompt('New OWNED node under "' + P.name + '" (a branch, unit or depot you own):', '') : '';
   if (!name || !name.trim()) return;
   var n = { key: _netKey(), name: name.trim(), parent_key: parentKey, owned: true, holds: ['catalogue'], purpose: '', catalogue: { template: 'custom', fields: [], method: 'cart', maxItems: null } };
-  UI.net.nodes.push(n); UI.net.sel = n.key; UI.net.activeCap = 'catalogue'; UI.net.built = false;
+  UI.net.nodes.push(n); UI.net.sel = n.key; UI.net.openCap = 'catalogue'; UI.net.built = false;
   _netSave(); _netRerender();
 }
 function netAddPartner(parentKey){
@@ -100,10 +100,10 @@ function netAddPartner(parentKey){
   var name = (typeof prompt === 'function') ? prompt('Partner — an INDEPENDENT business joining under "' + P.name + '" (you won\'t hold its key; its catalogue shows here):', '') : '';
   if (!name || !name.trim()) return;
   var n = { key: _netKey(), name: name.trim(), parent_key: parentKey, owned: false, holds: ['catalogue'], purpose: '', catalogue: { template: 'custom', fields: [], method: 'cart', maxItems: null } };
-  UI.net.nodes.push(n); UI.net.sel = n.key; UI.net.activeCap = 'catalogue'; UI.net.built = false;
+  UI.net.nodes.push(n); UI.net.sel = n.key; UI.net.openCap = 'catalogue'; UI.net.built = false;
   _netSave(); _netRerender();
 }
-function netSelect(key){ _netInit(); if (UI.net) { UI.net.sel = key; var _n = _netNode(key); UI.net.activeCap = (_n && _n.holds && _n.holds[0]) || null; } _netRerender(); }
+function netSelect(key){ _netInit(); if (UI.net) { UI.net.sel = key; var _n = _netNode(key); UI.net.openCap = (_n && _n.holds && _n.holds[0]) || null; } _netRerender(); }
 function netRename(key){
   var n = _netNode(key); if (!n) return;
   var name = (typeof prompt === 'function') ? prompt('Rename node:', n.name) : n.name;
@@ -111,24 +111,24 @@ function netRename(key){
   n.name = name.trim(); _netMark(); _netRerender();
 }
 function netSetPurpose(key, val){ var n = _netNode(key); if (!n) return; n.purpose = val; _netSave(); }   // no re-render while typing
-// Click a capability chip = SELECT it (if not already) and make it the ACTIVE panel (the one shown).
-// It NEVER deselects — so switching which panel you view can't lose a decision.
-function netCapClick(key, capKey){
+// Each capability is a clear YES / NO. Yes ⇒ the node holds it (and its detail opens). No ⇒ it doesn't. Sticky decision.
+function netCapYes(key, capKey){
   var n = _netNode(key); if (!n) return; n.holds = n.holds || [];
   if (n.holds.indexOf(capKey) < 0) {
     n.holds.push(capKey);
     if (capKey === 'catalogue' && !n.catalogue) n.catalogue = { template: 'custom', fields: [], method: 'cart', maxItems: null };
     if (capKey === 'storefront' && !n.exposure) n.exposure = 'public';
-    _netMark();
   }
-  UI.net.activeCap = capKey; _netRerender();
+  UI.net.openCap = capKey; _netMark(); _netRerender();   // turning Yes opens its detail
 }
-// The × on a selected chip = DELIBERATELY remove the capability (and drop back to another open panel).
-function netCapDeselect(key, capKey){
+function netCapNo(key, capKey){
   var n = _netNode(key); if (!n) return; n.holds = n.holds || [];
   var i = n.holds.indexOf(capKey); if (i >= 0) n.holds.splice(i, 1);
-  if (UI.net.activeCap === capKey) UI.net.activeCap = n.holds[0] || null;
+  if (UI.net.openCap === capKey) UI.net.openCap = null;
   _netMark(); _netRerender();
+}
+function netCapToggleOpen(key, capKey){   // expand / collapse a Yes capability's detail — one open at a time
+  UI.net.openCap = (UI.net.openCap === capKey) ? null : capKey; _netRerender();
 }
 /* catalogue spec editing */
 function _ensureCat(n){ if (!n.catalogue) n.catalogue = { template: 'custom', fields: [], method: 'cart', maxItems: null }; return n.catalogue; }
@@ -212,18 +212,31 @@ function networkScreen(){
       + '</div>'
     + '<div style="flex:1;overflow:auto;min-width:0">' + right + '</div></div>';
 }
-function _capChecklist(n){
-  var active = UI.net.activeCap;
-  return '<div style="display:flex;flex-wrap:wrap;gap:7px;margin-top:8px">' + NET_CAPS.map(function(c){
-    var on = (n.holds || []).indexOf(c.k) >= 0; var act = on && active === c.k;
-    var border = act ? '#2c5aa0' : (on ? '#9cc0e0' : 'var(--line)');
-    var bg = act ? '#dcebfb' : (on ? '#eef4fc' : '#fff');
-    var col = on ? '#2c5aa0' : 'var(--grey)';
-    return '<span style="display:inline-flex;align-items:center;font-size:12px;font-weight:600;border-radius:999px;border:1px solid ' + border + ';background:' + bg + ';color:' + col + ';' + (act ? 'box-shadow:0 0 0 2px rgba(44,90,160,.14)' : '') + '">'
-      + '<span onclick="netCapClick(\'' + n.key + '\',\'' + c.k + '\')" title="' + (on ? 'edit' : 'add') + ' ' + c.label + '" style="cursor:pointer;user-select:none;padding:5px 6px 5px 11px">' + (on ? '✓ ' : '') + c.icon + ' ' + c.label + '</span>'
-      + (on ? '<span onclick="netCapDeselect(\'' + n.key + '\',\'' + c.k + '\')" title="remove" style="cursor:pointer;color:var(--grey);font-weight:800;padding:2px 9px 2px 4px">×</span>' : '<span style="padding-right:5px"></span>')
-      + '</span>';
-  }).join('') + '</div>';
+function _capSummary(n, k){
+  if (k === 'catalogue') { var c = n.catalogue || {}; var nf = (c.fields || []).length; var m = (CAT_METHODS.filter(function(x){ return x.k === (c.method || 'cart'); })[0] || {}).label || ''; return nf + ' field' + (nf === 1 ? '' : 's') + ' · ' + m; }
+  if (k === 'storefront') return 'exposure: ' + (n.exposure || 'public');
+  return 'set up next';
+}
+function _yesNo(n, k, yes){
+  return '<span style="display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden;flex:0 0 auto">'
+    + '<span onclick="netCapNo(\'' + n.key + '\',\'' + k + '\')" style="cursor:pointer;padding:4px 12px;font-size:12px;font-weight:700;' + (!yes ? 'background:#eceef1;color:#3a4048' : 'background:#fff;color:var(--grey)') + '">No</span>'
+    + '<span onclick="netCapYes(\'' + n.key + '\',\'' + k + '\')" style="cursor:pointer;padding:4px 12px;font-size:12px;font-weight:700;' + (yes ? 'background:#2c5aa0;color:#fff' : 'background:#fff;color:var(--grey)') + '">Yes</span>'
+    + '</span>';
+}
+function _capRow(n, c){
+  var yes = (n.holds || []).indexOf(c.k) >= 0;
+  var open = yes && UI.net.openCap === c.k;
+  var left = '<span ' + (yes ? 'onclick="netCapToggleOpen(\'' + n.key + '\',\'' + c.k + '\')" style="cursor:pointer;' : 'style="') + 'flex:1;min-width:0;display:flex;align-items:center;gap:8px">'
+    + '<span style="font-size:15px">' + c.icon + '</span>'
+    + '<span style="font-weight:700;font-size:13px;color:#1c2128">' + c.label + '</span>'
+    + (yes ? '<span style="font-size:11px;color:var(--grey);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">· ' + esc(_capSummary(n, c.k)) + '</span><span style="margin-left:auto;color:var(--grey);font-size:11px;flex:0 0 auto">' + (open ? '▾' : '▸') + '</span>' : '')
+    + '</span>';
+  var head = '<div style="display:flex;align-items:center;gap:10px;padding:9px 2px">' + left + _yesNo(n, c.k, yes) + '</div>';
+  var detail = (yes && open) ? '<div style="padding:0 2px 12px">' + _capDetail(n, c.k) + '</div>' : '';
+  return '<div style="border-bottom:1px solid var(--line)">' + head + detail + '</div>';
+}
+function _capList(n){
+  return '<div style="margin-top:8px;border-top:1px solid var(--line)">' + NET_CAPS.map(function(c){ return _capRow(n, c); }).join('') + '</div>';
 }
 function _catFieldRow(n, f, i){
   var srcOpts = CAT_SOURCES.map(function(s){ return '<option value="' + s + '"' + (f.source === s ? ' selected' : '') + '>' + s + '</option>'; }).join('');
@@ -268,15 +281,12 @@ function _exposureConfig(n){
     + '<div style="font-size:11px;color:var(--grey);margin-top:8px">Untick <b>Storefront</b> above to keep this node <b>private</b> (internal — shown to no one).</div>'
     + '</div>';
 }
-// Only ONE panel shows — the ACTIVE capability's. Selections all stay; you switch which you edit by clicking a chip.
-function _capConfig(n){
-  var a = UI.net.activeCap;
-  if (!a || (n.holds || []).indexOf(a) < 0) return '';
-  if (a === 'catalogue') return _catConfig(n);
-  if (a === 'storefront') return _exposureConfig(n);
-  var c = _capMeta(a) || {};
-  return '<div style="margin-top:10px;padding:14px;border:1px dashed var(--line-strong,#c8d0d9);border-radius:10px;background:#fafbfc;font-size:12.5px;color:var(--grey)">'
-    + c.icon + ' <b>' + esc(c.label) + '</b> is selected. Its settings panel is coming in the next slice — for now this just marks that the node holds it.</div>';
+function _capDetail(n, k){
+  if (k === 'catalogue') return _catConfig(n);
+  if (k === 'storefront') return _exposureConfig(n);
+  var c = _capMeta(k) || {};
+  return '<div style="padding:12px 14px;border:1px dashed var(--line-strong,#c8d0d9);border-radius:10px;background:#fafbfc;font-size:12.5px;color:var(--grey)">'
+    + c.icon + ' <b>' + esc(c.label) + '</b> — its settings come in the next slice; for now, Yes just marks that this node holds it.</div>';
 }
 function _netNodeView(n){
   var isRoot = !n.parent_key;
@@ -300,9 +310,8 @@ function _netNodeView(n){
         + '<input value="' + esc(n.purpose || '') + '" oninput="netSetPurpose(\'' + n.key + '\', this.value)" placeholder="what is this node for? (one line)" style="width:100%;margin-top:6px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;box-sizing:border-box"></div>')
     + '<div style="margin-top:16px;padding:13px 15px;border:1px solid var(--line);border-radius:11px;background:#fff">'
       + '<div style="font-size:11px;font-weight:800;color:var(--grey);letter-spacing:.05em">WHAT THIS NODE HOLDS</div>'
-      + '<div style="font-size:11px;color:var(--grey);margin-top:3px">Tick a capability — it opens its details below.</div>'
-      + _capChecklist(n)
-      + _capConfig(n)
+      + '<div style="font-size:11px;color:var(--grey);margin-top:3px">For each, choose <b>Yes</b> or <b>No</b>. Yes opens its details right below.</div>'
+      + _capList(n)
       + '</div>'
     + '<div style="margin-top:16px;font-size:11.5px;color:var(--grey);line-height:1.55">When the design is done, <b>Build</b> turns each owned node into a real entity + login key, and invites each partner by handshake. Until then this is just a plan — saved, nothing created.</div>'
     + '</div>';
