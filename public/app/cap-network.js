@@ -91,7 +91,7 @@ function netAddChild(parentKey){
   var name = (typeof prompt === 'function') ? prompt('New OWNED node under "' + P.name + '" (a branch, unit or depot you own):', '') : '';
   if (!name || !name.trim()) return;
   var n = { key: _netKey(), name: name.trim(), parent_key: parentKey, owned: true, holds: ['catalogue'], purpose: '', catalogue: { template: 'custom', fields: [], method: 'cart', maxItems: null } };
-  UI.net.nodes.push(n); UI.net.sel = n.key; UI.net.built = false;
+  UI.net.nodes.push(n); UI.net.sel = n.key; UI.net.activeCap = 'catalogue'; UI.net.built = false;
   _netSave(); _netRerender();
 }
 function netAddPartner(parentKey){
@@ -100,10 +100,10 @@ function netAddPartner(parentKey){
   var name = (typeof prompt === 'function') ? prompt('Partner — an INDEPENDENT business joining under "' + P.name + '" (you won\'t hold its key; its catalogue shows here):', '') : '';
   if (!name || !name.trim()) return;
   var n = { key: _netKey(), name: name.trim(), parent_key: parentKey, owned: false, holds: ['catalogue'], purpose: '', catalogue: { template: 'custom', fields: [], method: 'cart', maxItems: null } };
-  UI.net.nodes.push(n); UI.net.sel = n.key; UI.net.built = false;
+  UI.net.nodes.push(n); UI.net.sel = n.key; UI.net.activeCap = 'catalogue'; UI.net.built = false;
   _netSave(); _netRerender();
 }
-function netSelect(key){ _netInit(); if (UI.net) UI.net.sel = key; _netRerender(); }
+function netSelect(key){ _netInit(); if (UI.net) { UI.net.sel = key; var _n = _netNode(key); UI.net.activeCap = (_n && _n.holds && _n.holds[0]) || null; } _netRerender(); }
 function netRename(key){
   var n = _netNode(key); if (!n) return;
   var name = (typeof prompt === 'function') ? prompt('Rename node:', n.name) : n.name;
@@ -111,16 +111,23 @@ function netRename(key){
   n.name = name.trim(); _netMark(); _netRerender();
 }
 function netSetPurpose(key, val){ var n = _netNode(key); if (!n) return; n.purpose = val; _netSave(); }   // no re-render while typing
-function netToggleHold(key, capKey){
-  var n = _netNode(key); if (!n) return;
-  n.holds = n.holds || [];
-  var i = n.holds.indexOf(capKey);
-  if (i >= 0) n.holds.splice(i, 1);
-  else {
+// Click a capability chip = SELECT it (if not already) and make it the ACTIVE panel (the one shown).
+// It NEVER deselects — so switching which panel you view can't lose a decision.
+function netCapClick(key, capKey){
+  var n = _netNode(key); if (!n) return; n.holds = n.holds || [];
+  if (n.holds.indexOf(capKey) < 0) {
     n.holds.push(capKey);
     if (capKey === 'catalogue' && !n.catalogue) n.catalogue = { template: 'custom', fields: [], method: 'cart', maxItems: null };
     if (capKey === 'storefront' && !n.exposure) n.exposure = 'public';
+    _netMark();
   }
+  UI.net.activeCap = capKey; _netRerender();
+}
+// The × on a selected chip = DELIBERATELY remove the capability (and drop back to another open panel).
+function netCapDeselect(key, capKey){
+  var n = _netNode(key); if (!n) return; n.holds = n.holds || [];
+  var i = n.holds.indexOf(capKey); if (i >= 0) n.holds.splice(i, 1);
+  if (UI.net.activeCap === capKey) UI.net.activeCap = n.holds[0] || null;
   _netMark(); _netRerender();
 }
 /* catalogue spec editing */
@@ -206,9 +213,16 @@ function networkScreen(){
     + '<div style="flex:1;overflow:auto;min-width:0">' + right + '</div></div>';
 }
 function _capChecklist(n){
+  var active = UI.net.activeCap;
   return '<div style="display:flex;flex-wrap:wrap;gap:7px;margin-top:8px">' + NET_CAPS.map(function(c){
-    var on = (n.holds || []).indexOf(c.k) >= 0;
-    return '<span onclick="netToggleHold(\'' + n.key + '\',\'' + c.k + '\')" style="cursor:pointer;user-select:none;display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:5px 11px;border-radius:999px;border:1px solid ' + (on ? '#2c5aa0' : 'var(--line)') + ';' + (on ? 'background:#eef4fc;color:#2c5aa0' : 'background:#fff;color:var(--grey)') + '">' + (on ? '✓ ' : '') + c.icon + ' ' + c.label + '</span>';
+    var on = (n.holds || []).indexOf(c.k) >= 0; var act = on && active === c.k;
+    var border = act ? '#2c5aa0' : (on ? '#9cc0e0' : 'var(--line)');
+    var bg = act ? '#dcebfb' : (on ? '#eef4fc' : '#fff');
+    var col = on ? '#2c5aa0' : 'var(--grey)';
+    return '<span style="display:inline-flex;align-items:center;font-size:12px;font-weight:600;border-radius:999px;border:1px solid ' + border + ';background:' + bg + ';color:' + col + ';' + (act ? 'box-shadow:0 0 0 2px rgba(44,90,160,.14)' : '') + '">'
+      + '<span onclick="netCapClick(\'' + n.key + '\',\'' + c.k + '\')" title="' + (on ? 'edit' : 'add') + ' ' + c.label + '" style="cursor:pointer;user-select:none;padding:5px 6px 5px 11px">' + (on ? '✓ ' : '') + c.icon + ' ' + c.label + '</span>'
+      + (on ? '<span onclick="netCapDeselect(\'' + n.key + '\',\'' + c.k + '\')" title="remove" style="cursor:pointer;color:var(--grey);font-weight:800;padding:2px 9px 2px 4px">×</span>' : '<span style="padding-right:5px"></span>')
+      + '</span>';
   }).join('') + '</div>';
 }
 function _catFieldRow(n, f, i){
@@ -254,11 +268,15 @@ function _exposureConfig(n){
     + '<div style="font-size:11px;color:var(--grey);margin-top:8px">Untick <b>Storefront</b> above to keep this node <b>private</b> (internal — shown to no one).</div>'
     + '</div>';
 }
+// Only ONE panel shows — the ACTIVE capability's. Selections all stay; you switch which you edit by clicking a chip.
 function _capConfig(n){
-  var out = '';
-  if ((n.holds || []).indexOf('catalogue') >= 0) out += _catConfig(n);
-  if ((n.holds || []).indexOf('storefront') >= 0) out += _exposureConfig(n);
-  return out;
+  var a = UI.net.activeCap;
+  if (!a || (n.holds || []).indexOf(a) < 0) return '';
+  if (a === 'catalogue') return _catConfig(n);
+  if (a === 'storefront') return _exposureConfig(n);
+  var c = _capMeta(a) || {};
+  return '<div style="margin-top:10px;padding:14px;border:1px dashed var(--line-strong,#c8d0d9);border-radius:10px;background:#fafbfc;font-size:12.5px;color:var(--grey)">'
+    + c.icon + ' <b>' + esc(c.label) + '</b> is selected. Its settings panel is coming in the next slice — for now this just marks that the node holds it.</div>';
 }
 function _netNodeView(n){
   var isRoot = !n.parent_key;
