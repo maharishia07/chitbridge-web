@@ -59,7 +59,7 @@ var CATF_SOURCE_ITEMS = {
 /* ---- per-entity face draft (localStorage; server persistence is a later slice) ---- */
 function _catfKey(){ return 'cb_catface_' + (SESSION.entityId || SESSION.entity || 'anon'); }
 function _catfLoad(){ try { var s = localStorage.getItem(_catfKey()); return s ? JSON.parse(s) : null; } catch (e) { return null; } }
-function _catfSave(){ try { if (UI.catf) localStorage.setItem(_catfKey(), JSON.stringify(UI.catf)); } catch (e) {} }
+function _catfSave(){ try { if (UI.catf) localStorage.setItem(_catfKey(), JSON.stringify(UI.catf)); } catch (e) { if (typeof toast === 'function') toast('Couldn\'t save the catalogue locally — it may be too large (try fewer/smaller photos).'); } }
 function _catfInit(){ if (UI.catf === undefined) UI.catf = _catfLoad(); if (!UI.catfMode) UI.catfMode = 'adopt'; }
 function _catfCcy(){ return (typeof SESSION !== 'undefined' && SESSION.currency) || 'INR'; }
 function _catfCountry(){ return (typeof SESSION !== 'undefined' && SESSION.country) || 'IN'; }
@@ -90,7 +90,14 @@ function _catfInfer(purpose){
 function _catfParseCSV(text){
   var lines = (text || '').trim().split(/\r?\n/).filter(function(l){ return l.trim(); });
   if (!lines.length) return { headers: [], rows: [] };
-  var sp = function(l){ return l.split(',').map(function(x){ return x.trim().replace(/^"|"$/g, ''); }); };
+  // RFC-4180-ish line splitter: honours "quoted fields, embedded, commas" and "" escaped quotes.
+  var sp = function(l){ var out = [], cur = '', q = false;
+    for (var i = 0; i < l.length; i++) { var ch = l[i];
+      if (q) { if (ch === '"') { if (l[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += ch; }
+      else if (ch === '"') q = true;
+      else if (ch === ',') { out.push(cur.trim()); cur = ''; }
+      else cur += ch; }
+    out.push(cur.trim()); return out; };
   return { headers: sp(lines[0]), rows: lines.slice(1, 60).map(sp) };
 }
 function _catfColKind(name, samples){
@@ -193,7 +200,7 @@ function catfShowPalette(){
 }
 function catfStandardsModal(){
   var S = (CBCatalogue.STANDARDS || []);
-  var badge = function(st){ var c = st === 'in code' ? ['#2c7a43', '#e6f4ec'] : st === 'by reference' ? ['#2c5aa0', '#e8eef7'] : ['#8a6d1e', '#f6efd8']; return '<span style="font-size:9.5px;font-weight:700;color:' + c[0] + ';background:' + c[1] + ';border-radius:5px;padding:2px 7px;white-space:nowrap">' + esc(st) + '</span>'; };
+  var badge = function(st){ var c = st === 'in code' ? ['#2c7a43', '#e6f4ec'] : st === 'by reference' ? ['#2c5aa0', '#e8eef7'] : st === 'vocabulary' ? ['#6a4fa0', '#efeafa'] : ['#8a6d1e', '#f6efd8']; return '<span style="font-size:9.5px;font-weight:700;color:' + c[0] + ';background:' + c[1] + ';border-radius:5px;padding:2px 7px;white-space:nowrap">' + esc(st) + '</span>'; };
   var row = function(s){ return '<div style="padding:10px 0;border-bottom:1px solid var(--line)">'
     + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-size:13px;font-weight:700;color:#1c2128">' + esc(s.name) + '</span>' + badge(s.status) + '<span style="font-size:10px;color:var(--grey)">' + esc(s.body) + '</span></div>'
     + '<div style="font-size:12px;color:var(--grey);margin-top:3px;line-height:1.5">' + esc(s.role) + '</div>'
@@ -203,6 +210,7 @@ function catfStandardsModal(){
   var body = '<div style="padding:14px 18px;max-height:72vh;overflow:auto">'
     + '<div style="font-size:12.5px;color:var(--grey);line-height:1.6">This catalogue is <b>not bespoke</b> — it is assembled from open, named standards. We arrange existing pieces our own way; the CB-unique layer (four-leg provenance · chit/seal · per-copy · governance) rides on top.</div>'
     + grp('IMPLEMENTED IN CODE', 'in code')
+    + grp('VOCABULARY ALIGNMENT (naming, not an engine)', 'vocabulary')
     + grp('HELD BY REFERENCE (link out, never mirror)', 'by reference')
     + grp('ON THE ROADMAP', 'roadmap')
     + '<div style="font-size:10.5px;color:var(--grey);font-style:italic;margin-top:14px">Multi-source fill + smooth modification = <b>PIM</b> built on <b>MDM golden records</b>, edited with <b>RFC 7386 JSON Merge Patch</b>, de-duplicated by <b>GS1 GTIN/SKU</b>. Cross-company sync (GDSN) is the same discipline, later.</div>'
@@ -512,7 +520,7 @@ function cwSetPhotoField(id, field, v){ (UI.cw.photos || []).forEach(function(p)
 function cwPhotoRemove(id){ var w = UI.cw; w.photos = (w.photos || []).filter(function(p){ return p.id !== id; }); renderApp(); }
 function cwPhotosCommit(){ var w = UI.cw; var ph = w.photos || []; if (!ph.length) { if (typeof toast === 'function') toast('Add some photos first.'); return; }
   w.manualItems = (w.manualItems || []).filter(function(i){ return i._src !== 'capture'; });
-  ph.forEach(function(p){ var it = { _src: 'capture', product: (p.name || 'Item'), _photo: p.url, _media: true }; var pv = parseFloat(p.price); if (!isNaN(pv)) it.price = pv; w.manualItems.push(it); });
+  ph.forEach(function(p, i){ var nm = (p.name && p.name.trim()) || ('Photo ' + (i + 1)); var it = { _src: 'capture', product: nm, _photo: p.url, _media: true }; var pv = parseFloat(p.price); if (!isNaN(pv)) it.price = pv; w.manualItems.push(it); });
   if (typeof toast === 'function') toast(ph.length + ' photo item(s) added'); renderApp();
 }
 function cwSetPrice(name, v){ UI.cw.prices[name] = v; }

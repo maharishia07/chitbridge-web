@@ -238,8 +238,8 @@
     { id: 'json-schema-2020-12', name: 'JSON Schema (draft 2020-12)', body: 'json-schema.org', role: 'Catalogue & item shape — LLMs emit it natively, so it doubles as the real-time build format.', status: 'in code', where: 'toJSONSchema()', spec: 'https://json-schema.org/draft/2020-12' },
     { id: 'rfc7386', name: 'JSON Merge Patch — IETF RFC 7386', body: 'IETF', role: 'Smooth partial modification: any source emits a patch, the record accumulates it (never a full rewrite).', status: 'in code', where: 'mergePatch()', spec: 'https://www.rfc-editor.org/rfc/rfc7386' },
     { id: 'mdm-golden-record', name: 'MDM golden record + survivorship', body: 'Master Data Management', role: 'One living item filled by many sources; per-field source-of-truth decides which source wins.', status: 'in code', where: 'upsertItem() · _lineage', spec: 'https://en.wikipedia.org/wiki/Master_data_management' },
-    { id: 'gs1-gtin', name: 'GS1 GTIN / SKU', body: 'GS1', role: 'Stable identity key — upsert on it so re-importing a source updates, never duplicates.', status: 'in code', where: 'itemKey() · upsertItem()', spec: 'https://www.gs1.org/standards/id-keys/gtin' },
-    { id: 'pim', name: 'PIM data model (attributes · families · completeness)', body: 'PIM discipline — concepts only, no vendor code', role: 'Vocabulary for catalogue structure — our fields/sections/facets mirror the standard PIM shape, so export stays compatible.', status: 'in code', where: 'fields · sections · facets', spec: 'https://en.wikipedia.org/wiki/Product_information_management' },
+    { id: 'gs1-gtin', name: 'GS1 GTIN / SKU', body: 'GS1', role: 'Used as the stable upsert key so re-importing a source updates, never duplicates. (SKU/GTIN taken as-is — no check-digit validation yet.)', status: 'in code', where: 'itemKey() · upsertItem()', spec: 'https://www.gs1.org/standards/id-keys/gtin' },
+    { id: 'pim', name: 'PIM data model (attributes · families · completeness)', body: 'PIM discipline', role: 'Naming/shape alignment only — our fields/sections/facets mirror the standard PIM vocabulary so an export stays compatible. No PIM engine or vendor code is embedded.', status: 'vocabulary', where: 'fields · sections · facets', spec: 'https://en.wikipedia.org/wiki/Product_information_management' },
     { id: 'gs1-gpc', name: 'GS1 GPC classification', body: 'GS1', role: 'Product classification, held BY REFERENCE (link out, never mirror).', status: 'by reference', where: 'standards[]', spec: 'https://www.gs1.org/standards/gpc' },
     { id: 'schema-org-product', name: 'Schema.org / Product', body: 'schema.org', role: 'Web-standard product vocabulary for interop, held by reference.', status: 'by reference', where: 'standards[]', spec: 'https://schema.org/Product' },
     { id: 'rfc6902', name: 'JSON Patch — IETF RFC 6902', body: 'IETF', role: 'Ordered, audited edit operations — for when a change history must be replayable.', status: 'roadmap', where: '—', spec: 'https://www.rfc-editor.org/rfc/rfc6902' },
@@ -289,6 +289,12 @@
         existing[f] = mergePatch(existing[f], incoming[f]);
         lin[f] = { source: source, prio: prio };
       }
+    });
+    // Carry display-only meta (e.g. _photo, _media) onto an existing record when it lacks it. These are not tracked in
+    // _lineage (they are not four-leg fields), so the field loop above skips them — without this a second source hitting
+    // the same SKU would silently lose the image.
+    Object.keys(incoming).forEach(function (f) {
+      if (f.charAt(0) === '_' && f !== '_lineage' && f !== '_src' && (existing[f] == null || existing[f] === '')) existing[f] = incoming[f];
     });
     return { items: items, item: existing, created: false, updated: true };
   }
