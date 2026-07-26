@@ -534,6 +534,8 @@ img.attImg{object-fit:cover;display:block}
 <script src="/app/helpers.js"></script>
 <!-- module 3: the canonical catalogue model (shape · migration · four-leg chain · compute-job derivation). Shared by cap-network.js and headless consumers. -->
 <script src="/app/catalogue-model.js"></script>
+<!-- module 4 (LOCAL PROTOTYPE — not promoted): enhanced catalogue "face" setup (adopt/build → one face → conforming items). -->
+<script src="/app/cap-catalogue.js"></script>
 <script>
 /* =========================================================================
    CHIT & BRIDGE — separate build (Registration → Login → Menu → Task Panel)
@@ -2207,7 +2209,7 @@ async function composeFromSupplier(id){ const d=UI.supDet, x=d&&d.supplier; if(!
 function catalogueScreen(){
   const list = `<div class="list">
     <div class="lh">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:14px">🗂️ Catalogue</span><button onclick="openAssist('catalogue')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:#fff;color:#3F66A6;border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button></div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:14px">🗂️ Catalogue</span><button onclick="openAssist('catalogue')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:#fff;color:#3F66A6;border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button><span onclick="UI.nav='cataloguesetup';renderApp()" title="New: catalogue face setup (prototype)" style="margin-left:auto;cursor:pointer;font-size:11px;font-weight:600;color:var(--blue);border:1px solid var(--line);border-radius:7px;padding:3px 9px">⚙ Set up (new)</span></div>
       <button class="composebtn" style="width:100%;justify-content:center" data-testid="cat-new-product" onclick="newProduct()">+ New product</button>
       <div class="srch" style="margin-top:8px">🔍 <input data-testid="cat-search" placeholder="Search name, code, unit" value="${esc(UI.prodQ||'')}" oninput="UI.prodQ=this.value;paintProdList()"></div>
       <div style="margin-top:8px;font-size:11px;color:var(--grey)" id="ct_count">${prodVisible().length} product(s)</div>
@@ -2348,6 +2350,7 @@ function mainBody(){
   if(UI.nav==="network") return networkScreen();
   if(UI.nav==="suppliers") return suppliersScreen();
   if(UI.nav==="customers") return customersScreen();
+  if(UI.nav==="cataloguesetup" && typeof catalogueSetupScreen==="function") return catalogueSetupScreen();  // LOCAL PROTOTYPE
   if(UI.nav==="catalogue") return catalogueScreen();
   if(UI.nav==="mis") return misScreen();
   if(UI.nav==="coassists") return coassistsScreen();
