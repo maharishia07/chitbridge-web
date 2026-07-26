@@ -615,11 +615,15 @@ function cwFinish(){
     step();
   };
 
-  // 1) by-reference commercials (adoption store) if a source · 2) persist owned products · 3) commit the face.
+  // Reference vs value are MUTUALLY EXCLUSIVE (no double-create):
+  //   • reference (default) → catalogueAdopt only — shared items shown REFERENCED, your price overlaid. NOT copied to products.
+  //   • by value (copy)     → prodAdd only — the items become your OWN products. NOT referenced.
+  // (owned already excludes _src==='reference', so reference-mode blueprint items never reach prodAdd.)
+  var isValue = (w.adoptMode === 'value');
   var afterAdopt = function(){ persistProducts(toLive); };
-  if (w.source && Object.keys(com).length && typeof api === 'function') {
-    if (typeof toast === 'function') toast('Publishing…');
-    api('catalogueAdopt', { body: { source: w.source, commercials: com } }).then(afterAdopt).catch(function(e){ if (typeof toast === 'function') toast('Reference publish failed: ' + ((e && e.message) || '')); afterAdopt(); });
+  if (w.source && Object.keys(com).length && !isValue && typeof api === 'function') {
+    if (typeof toast === 'function') toast('Adopting by reference…');
+    api('catalogueAdopt', { body: { source: w.source, commercials: com } }).then(afterAdopt).catch(function(e){ if (typeof toast === 'function') toast('Reference adopt failed: ' + ((e && e.message) || '')); afterAdopt(); });
   } else { afterAdopt(); }
 }
 
