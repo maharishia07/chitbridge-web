@@ -291,8 +291,8 @@ function cwSetUnit(u){ UI.cw.unitType = u; }
 function _cwRequired(w){ if (w.fieldSel && w.fieldSel.length) return w.fieldSel.filter(function(f){ return f.on; }).map(function(f){ return { name: f.name, leg: f.leg || 'cb' }; }); return CATF_REQUIRED[w.vertical] || []; }
 function _cwBpFields(w){ var it = w.built && w.built.finishes && w.built.finishes[0]; return it ? Object.keys(it).filter(function(k){ return ['commercials', 'combinations'].indexOf(k) < 0 && it[k] != null && it[k] !== ''; }) : []; }
 function _cwNorm(n){ n = (n || '').toLowerCase().replace(/[^a-z0-9]/g, ''); if (n === 'productname' || n === 'product' || n === 'item' || n === 'title') return 'name'; if (n === 'colour') return 'color'; return n; }
-function _cwCovered(w){ var m = {}; _cwBpFields(w).forEach(function(k){ m[k] = 'blueprint'; }); Object.keys(w.erp || {}).forEach(function(k){ if (w.erp[k]) m[k] = 'erp'; }); Object.keys(w.manual || {}).forEach(function(k){ if (w.manual[k] !== '' && w.manual[k] != null) m[k] = 'manual'; }); return m; }
-function _cwRemaining(w){ var cov = _cwCovered(w); return _cwRequired(w).filter(function(r){ return !cov[r.name]; }); }
+function _cwCovered(w){ var m = {}; _cwBpFields(w).forEach(function(k){ m[_cwNorm(k)] = 'blueprint'; }); Object.keys(w.erpMap || {}).forEach(function(k){ var mm = w.erpMap[k]; if (mm && mm.system && mm.system !== '—') m[_cwNorm(k)] = 'erp'; }); Object.keys(w.manual || {}).forEach(function(k){ if (w.manual[k] !== '' && w.manual[k] != null) m[_cwNorm(k)] = 'manual'; }); return m; }
+function _cwRemaining(w){ var cov = _cwCovered(w); return _cwRequired(w).filter(function(r){ return !cov[_cwNorm(r.name)]; }); }
 
 function _catfWizard(){
   _cwInit(); var w = UI.cw, step = w.step;
@@ -315,7 +315,7 @@ function _cwPreview(w){
   var head = '<div style="font-size:11px;font-weight:800;color:#2c5aa0;letter-spacing:.05em">YOUR CATALOGUE SO FAR</div>'
     + '<div style="margin-top:6px;font-size:12.5px;font-weight:700">' + esc(title) + '</div>'
     + '<div style="font-size:10.5px;color:var(--grey)">cart · ' + esc(_catfCcy()) + ' · sold by ' + esc(w.unitType || 'unit') + (w.source ? ' · blueprint ' + esc(w.source) : '') + '</div>';
-  var fieldsHtml = fields.length ? '<div style="margin-top:11px;font-size:10px;font-weight:700;color:#6a707a;text-transform:uppercase;letter-spacing:.04em">Fields</div>' + fields.map(function(f){ var src = cov[f.name]; var b = src === 'blueprint' ? ['📎 blueprint', '#6a44a8'] : src === 'erp' ? ['🔗 ERP', '#b07b1e'] : src === 'manual' ? ['✍ you', '#2c7a43'] : ['· to fill', '#9aa3a7']; return '<div style="display:flex;align-items:center;gap:6px;font-size:11.5px;padding:1px 0"><span style="flex:1;color:#3a4048">' + esc(f.name) + '</span><span style="font-size:9px;font-weight:700;color:' + b[1] + ';background:' + b[1] + '18;border-radius:4px;padding:1px 6px">' + b[0] + '</span></div>'; }).join('') : '';
+  var fieldsHtml = fields.length ? '<div style="margin-top:11px;font-size:10px;font-weight:700;color:#6a707a;text-transform:uppercase;letter-spacing:.04em">Fields</div>' + fields.map(function(f){ var src = cov[_cwNorm(f.name)]; var b = src === 'blueprint' ? ['📎 blueprint', '#6a44a8'] : src === 'erp' ? ['🔗 ERP', '#b07b1e'] : src === 'manual' ? ['✍ you', '#2c7a43'] : ['· to fill', '#9aa3a7']; return '<div style="display:flex;align-items:center;gap:6px;font-size:11.5px;padding:1px 0"><span style="flex:1;color:#3a4048">' + esc(f.name) + '</span><span style="font-size:9px;font-weight:700;color:' + b[1] + ';background:' + b[1] + '18;border-radius:4px;padding:1px 6px">' + b[0] + '</span></div>'; }).join('') : '';
   var itemsHtml = items.length ? '<div style="margin-top:11px;font-size:10px;font-weight:700;color:#6a707a;text-transform:uppercase;letter-spacing:.04em">Items · ' + items.length + '</div>' + items.slice(0, 7).map(function(it){ var p = w.prices[it.name]; return '<div style="display:flex;align-items:center;gap:6px;font-size:11.5px;padding:1px 0"><span style="flex:1">' + esc(it.name) + '</span><span style="font-weight:600;color:' + (p != null && p !== '' ? '#1c2128' : '#a5382e') + '">' + (p != null && p !== '' ? esc(_catfMoney(p)) : 'no price') + '</span></div>'; }).join('') : '';
   var taxHtml = (w.tax && w.tax.rate) ? '<div style="margin-top:9px;font-size:11px;color:var(--grey)">Tax: ' + esc(w.tax.label || 'GST') + ' ' + esc(w.tax.rate) + '%</div>' : '';
   return head + fieldsHtml + itemsHtml + taxHtml;
@@ -354,7 +354,8 @@ function _cwStep2Fields(w){
     + '<div><span style="color:' + (mode === 'value' ? '#2c5aa0' : '#6a44a8') + ';font-weight:700">' + (mode === 'value' ? '📋 filled by value · ' : '📎 filled by reference · ') + refF.length + '</span> <span style="color:var(--grey)">' + esc(refF.join(' · ') || '—') + '</span></div>'
     + (todo.length ? '<div><span style="color:#2c7a43;font-weight:700">✍ you still fill · ' + todo.length + '</span> <span style="color:var(--grey)">' + esc(todo.join(' · ')) + '</span></div>' : '')
     + '</div>' : '';
-  return head + summary + '<div style="margin-top:8px">' + rows + '</div>';
+  var swatches = (sel && sel.combinations && sel.combinations.length) ? '<div style="margin-top:10px;border-top:1px solid var(--line);padding-top:8px"><div style="font-size:10px;font-weight:700;color:#6a707a;text-transform:uppercase;letter-spacing:.04em">Colour combinations</div>' + sel.combinations.map(_cwCombo).join('') + '</div>' : '';
+  return head + summary + '<div style="margin-top:8px">' + rows + '</div>' + swatches;
 }
 /* render products with the blueprint's OWN look & feel — colour swatches, chips, accent, story */
 function _cwSwatch(c){ return '<span title="' + esc((c.name || '') + ' ' + (c.hex || '')) + '" style="display:inline-block;width:15px;height:15px;border-radius:50%;background:' + esc(c.hex || '#ccc') + ';border:1px solid rgba(0,0,0,.15);vertical-align:middle;margin-right:2px"></span>'; }
@@ -382,11 +383,16 @@ function _cwStep2Products(w){
   return '<div style="font-size:12.5px;color:#3a4048;margin-bottom:8px">Pick a <b>blueprint</b> — a ready, structured catalogue of this sort. Its <b>products</b> list here; tick the ones you sell, click one to see its field values on the left. <b>No blueprint? Skip.</b></div>' + picker + rights + modeToggle + products;
 }
 function _cwStep3(w){
-  var rem = _cwRemaining(w);
-  var candidates = rem.filter(function(r){ return r.leg === 'system'; }).map(function(r){ return r.name; });
-  if (!candidates.length) candidates = ['stock', 'availability'];
-  return '<div style="font-size:13px;color:#3a4048;margin-bottom:10px">Do you pull anything from your <b>own system (ERP / Tally)</b>? Map it and it syncs from there. <b>No ERP? Skip.</b></div>'
-    + candidates.map(function(f){ var on = !!w.erp[f]; return '<div style="display:flex;align-items:center;gap:9px;padding:6px 10px;border:1px solid var(--line);border-radius:9px;margin-top:5px;background:#fff"><input type="checkbox" ' + (on ? 'checked' : '') + ' onchange="cwToggleErp(\'' + f + '\')"><span style="font-weight:600;font-size:12.5px;min-width:110px">' + esc(f) + '</span>' + (on ? '<input value="' + esc(w.erp[f] === true ? '' : (w.erp[f] || '')) + '" oninput="cwSetErpRef(\'' + f + '\',this.value)" placeholder="your ERP field / code" style="flex:1;padding:5px 8px;border:1px solid var(--line);border-radius:6px;font-size:12px">' : '<span style="font-size:11px;color:var(--grey)">— not from ERP</span>') + '</div>'; }).join('');
+  var fields = (w.fieldSel || []).filter(function(f){ return f.on; });
+  var systems = ['—', 'ERP', 'Tally', 'SAP', 'Other'];
+  w.erpMap = w.erpMap || {};
+  var mapped = Object.keys(w.erpMap).filter(function(k){ return w.erpMap[k] && w.erpMap[k].system && w.erpMap[k].system !== '—'; }).length;
+  var rows = fields.map(function(f){ var m = w.erpMap[f.name] || {}; var sys = m.system || '—'; var esn = f.name.replace(/'/g, "\\'");
+    var sysSel = '<select onchange="cwSetMapSys(\'' + esn + '\',this.value)" style="font-size:11px;padding:4px;border:1px solid var(--line);border-radius:6px">' + systems.map(function(s){ return '<option' + (sys === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>';
+    var ref = sys !== '—' ? '<input value="' + esc(m.ref || '') + '" oninput="cwSetMapRef(\'' + esn + '\',this.value)" placeholder="field / code in ' + esc(sys) + '" style="flex:1;min-width:0;font-size:11px;padding:4px 7px;border:1px solid var(--line);border-radius:6px">' : '<span style="font-size:10.5px;color:var(--grey);flex:1">' + (f._bp ? '📎 from blueprint' : 'not mapped') + '</span>';
+    return '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px dashed var(--line)"><span style="flex:0 0 138px;font-size:11.5px;color:#3a4048">' + esc(f.name) + (f._bp ? ' <span style="color:#6a44a8;font-size:9px">📎</span>' : '') + '</span>' + sysSel + ref + '</div>';
+  }).join('');
+  return '<div style="font-size:13px;color:#3a4048;margin-bottom:10px">Map fields to your <b>own systems (ERP / Tally / SAP)</b> so they sync from there. These <b>mapping rules are saved with the catalogue design</b> and stay for each selected item. <b>Nothing from ERP? Skip.</b></div>' + rows + (mapped ? '<div style="font-size:10.5px;color:#b07b1e;margin-top:8px">🔗 ' + mapped + ' field(s) mapped to your systems — saved as references with the design.</div>' : '');
 }
 function _cwStep4(w){
   var rem = _cwRemaining(w).filter(function(r){ return r.leg !== 'compute'; });
@@ -395,7 +401,8 @@ function _cwStep4(w){
   return '<div style="font-size:13px;color:#3a4048;margin-bottom:10px">Fill anything still missing <b>by hand</b>. (These are the fields not covered by the blueprint or ERP.)</div>' + body;
 }
 function _cwStep5(w){
-  if (w.erp && w.erp.price) return '<div style="font-size:13px;color:#3a4048">Price comes from your <b>ERP</b> (' + esc(w.erp.price === true ? 'mapped' : w.erp.price) + ') — nothing to set here.</div>';
+  var pk = Object.keys(w.erpMap || {}).filter(function(k){ return /price|rate|mrp/i.test(k) && w.erpMap[k] && w.erpMap[k].system && w.erpMap[k].system !== '—'; })[0];
+  if (pk) return '<div style="font-size:13px;color:#3a4048">Price comes from your <b>' + esc(w.erpMap[pk].system) + '</b> (' + esc(w.erpMap[pk].ref || 'mapped') + ') — nothing to set here.</div>';
   var items = (w.built && w.built.finishes || []).filter(function(it){ return w.chosen[it.name] !== false; });
   if (!items.length) items = [{ name: (CATF_KB[w.vertical] && CATF_KB[w.vertical].product) || 'Item' }];
   return '<div style="font-size:13px;color:#3a4048;margin-bottom:10px">Set your <b>price</b> per item (' + esc(_catfCcy()) + '). You can change these anytime later.</div>'
@@ -421,6 +428,8 @@ function cwAddCustomField(){ var w = UI.cw; var name = (val('cw_newfield') || ''
 function cwSetAdoptMode(m){ UI.cw.adoptMode = m; renderApp(); }
 function cwChooseAll(v){ var w = UI.cw; (w.built && w.built.finishes || []).forEach(function(it){ w.chosen[it.name] = v; }); renderApp(); }
 function cwSelectProduct(name){ UI.cw.sel = (UI.cw.sel === name) ? null : name; renderApp(); }
+function cwSetMapSys(field, sys){ var w = UI.cw; w.erpMap = w.erpMap || {}; if (sys === '—') delete w.erpMap[field]; else { w.erpMap[field] = w.erpMap[field] || {}; w.erpMap[field].system = sys; } renderApp(); }
+function cwSetMapRef(field, ref){ var w = UI.cw; w.erpMap = w.erpMap || {}; if (w.erpMap[field]) w.erpMap[field].ref = ref; }
 function cwToggleItem(name){ UI.cw.chosen[name] = UI.cw.chosen[name] === false; renderApp(); }
 function cwToggleErp(f){ if (UI.cw.erp[f]) delete UI.cw.erp[f]; else UI.cw.erp[f] = true; renderApp(); }
 function cwSetErpRef(f, v){ UI.cw.erp[f] = v || true; }
@@ -432,7 +441,7 @@ function cwFinish(){
   var chosenFinishes = (w.built && w.built.finishes || []).filter(function(it){ return w.chosen[it.name] !== false; });
   var com = {}; chosenFinishes.forEach(function(it){ var p = w.prices[it.name]; if (p != null && p !== '') com[it.name] = { price_per_litre: Number(p) }; });
   var toLive = function(){
-    UI.catf = { method: 'cart', facets: { variants: true, media: !!w.source, sourcing: Object.keys(w.erp).length > 0 }, adoptedFrom: (w.built && w.built.title) || '', _source: w.source || '', tax: w.tax,
+    UI.catf = { method: 'cart', facets: { variants: true, media: !!w.source, sourcing: Object.keys(w.erpMap || {}).length > 0 }, adoptedFrom: (w.built && w.built.title) || '', _source: w.source || '', tax: w.tax, erpMap: w.erpMap,
       catalogue: CBCatalogue.ensure({ product: (w.built && w.built.title) || (CATF_KB[w.vertical] && CATF_KB[w.vertical].product) || 'Catalogue', baseUnit: (CATF_KB[w.vertical] && CATF_KB[w.vertical].baseUnit) || 'unit' }),
       items: chosenFinishes.length ? chosenFinishes.map(function(it){ return { _src: (w.adoptMode === 'value' ? 'value' : 'reference'), product: it.name, texture_family: it.texture_family, sheen: it.sheen, region: it.region, price: (w.prices[it.name] != null && w.prices[it.name] !== '') ? Number(w.prices[it.name]) : null, _media: true }; })
         : [{ _src: 'manual', product: (w.manual.name || (CATF_KB[w.vertical] && CATF_KB[w.vertical].product) || 'Item'), price: (w.prices[Object.keys(w.prices)[0]] != null ? Number(w.prices[Object.keys(w.prices)[0]]) : null) }] };
