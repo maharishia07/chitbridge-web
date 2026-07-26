@@ -40,6 +40,17 @@ test.describe('Veg blueprint · publish → inherit (the path)', () => {
     expect(tomato && tomato.botanical_name, 'AI filled Tomato botanical name').toBeTruthy();
     await shot(A.page, 'veg-01b-A-enriched.png');
 
+    // PHOTOS — attach by filename (Tomato.png → the "Tomato" item). Downscaled thumbnail; travels in the blueprint.
+    const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAYAAABytg0kAAAAEklEQVR42mP8z8BQz0AEYBxVSFENAJd0A/3nQ0f0AAAAAElFTkSuQmCC', 'base64');
+    await A.page.locator('#catf_photo_input').setInputFiles([
+      { name: 'Tomato.png', mimeType: 'image/png', buffer: PNG },
+      { name: 'Onion.png', mimeType: 'image/png', buffer: PNG },
+    ]);
+    let tomatoPhoto = null;
+    for (let t = 0; t < 12; t++) { tomatoPhoto = await A.page.evaluate(() => { const it = (UI.catf.items || []).find((i) => (i.product || i.name) === 'Tomato'); return it && it._photo ? it._photo.slice(0, 20) : null; }); if (tomatoPhoto) break; await A.page.waitForTimeout(400); }
+    console.log('Tomato photo attached:', !!tomatoPhoto);
+    expect(tomatoPhoto, 'photo matched to the Tomato item by filename').toBeTruthy();
+
     // publish as a blueprint
     await A.page.evaluate(() => catfPublishBlueprint());
     await A.page.waitForTimeout(2500);
@@ -68,8 +79,9 @@ test.describe('Veg blueprint · publish → inherit (the path)', () => {
       expect(names, label + ' inherits the veg names by reference').toContain('Tomato');
       // the AI enrichment travels in the blueprint too (by reference)
       const tomatoRef = (struct && struct.finishes || []).find((x) => x.name === 'Tomato');
-      console.log(label + ' inherited Tomato botanical:', tomatoRef && tomatoRef.botanical_name);
+      console.log(label + ' inherited Tomato botanical:', tomatoRef && tomatoRef.botanical_name, '· photo:', !!(tomatoRef && tomatoRef.photo));
       expect(tomatoRef && tomatoRef.botanical_name, label + ' inherits the AI enrichment by reference').toBeTruthy();
+      expect(tomatoRef && tomatoRef.photo, label + ' inherits the PHOTO by reference').toBeTruthy();
       // adopt with OWN commercials (price), and record it
       const adopt = await D.page.evaluate(([k, com]) => window.api('catalogueAdopt', { body: { source: k, commercials: com, visible: true } }), [srcKey, priceByVeg]);
       console.log(label + ' adopt:', JSON.stringify(adopt).slice(0, 120));

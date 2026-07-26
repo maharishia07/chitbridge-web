@@ -170,7 +170,31 @@ function catfManage(){ UI.nav = 'catalogue'; if (typeof renderApp === 'function'
 function _catfSourceItems(f){
   return (f.items || []).map(function(it){ var d = {};
     Object.keys(it).forEach(function(k){ if (k.charAt(0) !== '_' && ['price', 'rate', 'sku'].indexOf(k) < 0 && typeof it[k] !== 'object' && it[k] != null && it[k] !== '') d[k] = it[k]; });
-    d.name = it.product || it.name || ''; return d; }).filter(function(d){ return d.name; });
+    d.name = it.product || it.name || '';
+    if (it._photo || it.photo) d.photo = it._photo || it.photo;   // the picture travels in the blueprint (by reference)
+    return d; }).filter(function(d){ return d.name; });
+}
+// ATTACH PHOTOS TO ITEMS BY FILENAME — the veg flow: names via CSV, photos separately. Tomato.jpg → the "Tomato"
+// item. Downscaled thumbnail on the item; travels in the blueprint on publish (via _catfSourceItems.photo).
+function catfPhotoAttachBtn(){ var el = document.getElementById('catf_photo_input'); if (el) el.click(); }
+function catfAddPhotos(input){
+  var files = (input && input.files) ? Array.prototype.slice.call(input.files) : []; if (!files.length) return;
+  var f = UI.catf; if (!f) { input.value = ''; return; }
+  var items = f.items || [];
+  var norm = function(s){ return String(s || '').toLowerCase().replace(/\.[^.]+$/, '').replace(/[^a-z0-9]/g, ''); };
+  var pending = files.length, matched = 0, unmatched = [];
+  var done = function(){ pending--; if (pending <= 0) { _catfSave(); if (typeof toast === 'function') toast(matched + ' photo(s) matched' + (unmatched.length ? ' · unmatched: ' + unmatched.join(', ') : '')); renderApp(); } };
+  files.forEach(function(file){
+    if (!/^image\//.test(file.type || '')) { done(); return; }
+    var fn = norm(file.name);
+    var it = items.filter(function(x){ return norm(x.product || x.name) === fn; })[0]
+          || items.filter(function(x){ var n = norm(x.product || x.name); return n && fn && (n.indexOf(fn) >= 0 || fn.indexOf(n) >= 0); })[0];
+    if (!it) { unmatched.push(file.name); done(); return; }
+    var rd = new FileReader();
+    rd.onload = function(){ _cwDownscale(rd.result, 360, function(small){ it._photo = small; matched++; done(); }); };
+    rd.onerror = done; rd.readAsDataURL(file);
+  });
+  input.value = '';
 }
 // AI ENRICH (catalogue-enrich skill, b113, via the deployed /ai-draft). Fills local names + botanical name + category
 // onto the item names — reference gap-fill. These become item fields, so they travel in the blueprint on publish.
@@ -387,6 +411,7 @@ function _cwProductCard(w, it){
   var chips = [it.texture_family, it.region].filter(Boolean).map(function(c){ return '<span style="font-size:9.5px;background:' + accent + '18;color:' + accent + ';border-radius:4px;padding:1px 6px">' + esc(c) + '</span>'; }).join('') + (it.effect || []).map(function(e){ return '<span style="font-size:9.5px;background:#f3f0e8;color:#7a5e22;border-radius:4px;padding:1px 6px">' + esc(e) + '</span>'; }).join('');
   var combos = (it.combinations || []).slice(0, 2).map(_cwCombo).join('');
   return '<div onclick="cwSelectProduct(\'' + nm + '\')" style="border:1px solid ' + (seld ? accent : 'var(--line)') + ';border-radius:11px;padding:10px 12px;margin-top:6px;background:' + (seld ? accent + '0c' : '#fff') + ';cursor:pointer">'
+    + (it.photo ? '<div style="height:96px;background:#f4f6f8 center/cover no-repeat;background-image:url(' + it.photo + ');border-radius:8px;margin-bottom:7px"></div>' : '')
     + '<div style="display:flex;align-items:center;gap:8px"><input type="checkbox" ' + (on ? 'checked' : '') + ' onclick="event.stopPropagation()" onchange="cwToggleItem(\'' + nm + '\')"><span style="font-weight:700;font-size:13px">' + esc(it.name) + '</span><span style="font-size:10px;color:#9aa3a7">' + esc(it.scale || '') + (it.sheen ? ' · ' + esc(it.sheen) : '') + '</span><span style="margin-left:auto;color:' + accent + ';font-weight:700">' + (seld ? '▸' : '') + '</span></div>'
     + (it.inspiration ? '<div style="font-size:11px;color:#6a707a;margin:5px 0;line-height:1.45">' + esc(it.inspiration) + '</div>' : '')
     + (chips ? '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px">' + chips + '</div>' : '')
@@ -625,7 +650,7 @@ function _catfItemsHtml(f){
       ? '<span style="font-weight:700;font-size:12px">' + esc(_catfMoney(it.price)) + '</span> <span onclick="catfEditPrice(' + i + ')" style="cursor:pointer;color:var(--blue);font-size:10px">edit</span>'
       : '<input type="number" placeholder="set price" onchange="catfSetItemPrice(' + i + ',this.value)" title="the ONLY thing you enter for a referenced item" style="width:92px;padding:4px 7px;border:1px solid #d98b84;border-radius:6px;font-size:12px;background:#fbeeec">';
     return '<div style="border:1px solid var(--line);border-radius:9px;padding:8px 11px;margin-top:5px;background:#fff"><div style="display:flex;align-items:center;gap:8px">'
-      + (it._media ? '<span style="width:22px;height:22px;border-radius:5px;background:linear-gradient(135deg,#eef1f5,#dde3ea);flex:none"></span>' : '')
+      + ((it._photo || it.photo) ? '<span style="width:26px;height:26px;border-radius:5px;background:#f4f6f8 center/cover no-repeat;background-image:url(' + (it._photo || it.photo) + ');flex:none"></span>' : (it._media ? '<span style="width:22px;height:22px;border-radius:5px;background:linear-gradient(135deg,#eef1f5,#dde3ea);flex:none"></span>' : ''))
       + '<span style="font-weight:600;font-size:12.5px">' + esc(it.product || it.name || 'item') + '</span>'
       + '<span style="font-size:9.5px;font-weight:700;color:' + t[1] + ';background:' + t[1] + '18;border-radius:4px;padding:1px 6px">' + t[0] + '</span>'
       + '<span style="margin-left:auto">' + priceCell + '</span></div>'
@@ -670,6 +695,8 @@ function _catfFaceView(){
     + '<button onclick="catfSyncERP()" style="padding:9px 15px;border:1px solid #b07b1e;border-radius:9px;background:#fff;color:#b07b1e;font-weight:600">🔗 From ERP</button>'
     + '<button onclick="catfCustomerPreview()" style="padding:9px 15px;border:1px solid #2c7a43;border-radius:9px;background:#fff;color:#2c7a43;font-weight:600">👁 Customer experience</button>'
     + '<button onclick="catfManage()" style="padding:9px 15px;border:1px solid #2c5aa0;border-radius:9px;background:#fff;color:#2c5aa0;font-weight:600">🗂️ Manage in Catalogue</button>'
+    + '<input id="catf_photo_input" type="file" accept="image/*" multiple style="display:none" onchange="catfAddPhotos(this)">'
+    + '<button onclick="catfPhotoAttachBtn()" style="padding:9px 15px;border:1px solid #2c7a43;border-radius:9px;background:#fff;color:#2c7a43;font-weight:600">📷 Add photos</button>'
     + '<button onclick="catfEnrichAI()" style="padding:9px 15px;border:1px solid #b07b1e;border-radius:9px;background:#fff;color:#b07b1e;font-weight:600">✨ Enrich (AI)</button>'
     + '<button onclick="catfPublishBlueprint()" style="padding:9px 15px;border:1px solid #6a4fa0;border-radius:9px;background:#fff;color:#6a4fa0;font-weight:600">📢 Publish as blueprint</button>'
     + '<button onclick="catfReset()" style="padding:9px 15px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--grey)">↺ Start over</button>'
