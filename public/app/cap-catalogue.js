@@ -215,26 +215,69 @@ function _catfDraftPreview(f){
     + '<div style="font-weight:700;font-size:14px">' + esc(c.product || 'Your catalogue') + '</div>'
     + '<div style="font-size:11.5px;color:var(--grey);margin-top:3px">sells by <b>' + esc(methLabel) + '</b> · in <b>' + esc(_catfCcy()) + '</b>' + (f.adoptedFrom ? ' · adopted <b>' + esc(f.adoptedFrom) + '</b>' : f.studied ? ' · from your <b>' + f.studied.cols + ' columns / ' + f.studied.rows + ' rows</b>' : ' · built from purpose') + '</div>'
     + '<div style="margin-top:7px">' + facetChips + '</div></div>';
-  // studied column mapping
-  var mapping = (f.mapping && f.mapping.length) ? '<div style="margin-top:12px;font-size:11px;font-weight:800;color:#2c5aa0;letter-spacing:.05em">STUDIED YOUR COLUMNS →</div>'
+  var tab = UI.catfPTab || 'holds';
+  var tabBar = '<div style="display:flex;gap:5px;margin-top:14px">' + [['holds', '📋 What it holds'], ['appears', '🧾 How it appears in a chit']].map(function(t){ var on = tab === t[0]; return '<span onclick="catfPTab(\'' + t[0] + '\')" style="cursor:pointer;font-size:11.5px;font-weight:600;padding:5px 13px;border-radius:14px;border:1px solid ' + (on ? '#2c5aa0' : 'var(--line)') + ';color:' + (on ? '#fff' : 'var(--grey)') + ';background:' + (on ? '#2c5aa0' : '#fff') + '">' + t[1] + '</span>'; }).join('') + '</div>';
+  var body = tab === 'appears' ? _catfAppearsTab(f, c, facets) : _catfHoldsTab(f, c, facets);
+  return head + tabBar + '<div style="margin-top:12px">' + body + '</div>'
+    + '<button class="pri" onclick="catfCommit()" style="margin-top:16px;padding:10px 18px">Use this catalogue ✓</button>';
+}
+function catfPTab(t){ UI.catfPTab = t; renderApp(); }
+
+/* TAB 1 — what the catalogue holds (the structure) */
+function _catfHoldsTab(f, c, facets){
+  var mapping = (f.mapping && f.mapping.length) ? '<div style="font-size:11px;font-weight:800;color:#2c5aa0;letter-spacing:.05em">STUDIED YOUR COLUMNS →</div>'
     + '<div style="margin-top:6px">' + f.mapping.map(function(m){ var badge = m.role === 'name' ? ['identity', '#2c5aa0'] : m.role === 'price' ? ['price', '#b07b1e'] : m.role === 'unit' ? ['unit', '#8a5a1e'] : m.role === 'code' ? ['standard', '#8a5cc4'] : m.leg === 'system' ? [(m.via || 'ERP') + ' feed', '#b07b1e'] : ['stored in CB', '#2c7a43']; return '<div style="display:flex;align-items:center;gap:8px;font-size:11.5px;padding:2px 0"><span style="font-family:monospace;color:var(--grey);min-width:120px">' + esc(m.col) + '</span><span style="color:#9aa3a7">→</span><span style="font-size:10px;font-weight:700;color:' + badge[1] + ';background:' + badge[1] + '18;border-radius:4px;padding:1px 7px">' + esc(badge[0]) + '</span></div>'; }).join('') + '</div>' : '';
-  // WHAT THE CATALOGUE HOLDS — full visibility of the sourced/studied model, by leg
   var chain = CBCatalogue.routeChain(c);
   var legMeta = { system: ['From your systems (ERP/IoT)', '#b07b1e'], customer: ['From the customer', '#2b6f8f'], compute: ['Computed by co-assist', '#8a5cc4'], cb: ['Stored in CB — the gap', '#2c7a43'] };
   var visRows = ['system', 'customer', 'compute', 'cb'].map(function(k){ var fs = (chain[k] || []).filter(function(x){ return !x.identity; }).map(function(x){ return x.name + (x.via ? ' · ' + x.via : ''); }); if (!fs.length) return ''; var mm = legMeta[k]; return '<div style="font-size:11.5px;padding:3px 0;line-height:1.5"><span style="font-size:9.5px;font-weight:700;color:' + mm[1] + ';background:' + mm[1] + '1a;border-radius:4px;padding:1px 6px">' + esc(mm[0]) + '</span> <span style="color:#3a4048">' + fs.map(esc).join(' · ') + '</span></div>'; }).join('');
   if (facets.standards) visRows += '<div style="font-size:11.5px;padding:3px 0"><span style="font-size:9.5px;font-weight:700;color:#6a4fa0;background:#6a4fa01a;border-radius:4px;padding:1px 6px">Standards</span> <span style="color:#3a4048">HS / GS1 — by reference</span></div>';
-  if (facets.media) visRows += '<div style="font-size:11.5px;padding:3px 0"><span style="font-size:9.5px;font-weight:700;color:#7a5e22;background:#f6ecd8;border-radius:4px;padding:1px 6px">Media</span> <span style="color:#3a4048">images / video (own or from a source)</span></div>';
-  var vis = visRows ? '<div style="margin-top:12px;font-size:11px;font-weight:800;color:#2c5aa0;letter-spacing:.05em">WHAT THE CATALOGUE HOLDS ' + (f.sourced ? '<span style="font-weight:500;color:var(--grey)">— sourced from knowledge (not in your data yet)</span>' : '') + '</div><div style="margin-top:6px">' + visRows + '</div>' : '';
-  // sample items with values
+  if (facets.media) visRows += '<div style="font-size:11.5px;padding:3px 0"><span style="font-size:9.5px;font-weight:700;color:#7a5e22;background:#f6ecd8;border-radius:4px;padding:1px 6px">Media</span> <span style="color:#3a4048">images / video</span></div>';
+  var vis = visRows ? '<div style="' + (mapping ? 'margin-top:12px;' : '') + 'font-size:11px;font-weight:800;color:#2c5aa0;letter-spacing:.05em">WHAT THE CATALOGUE HOLDS ' + (f.sourced ? '<span style="font-weight:500;color:var(--grey)">— sourced (not in your data yet)</span>' : '') + '</div><div style="margin-top:6px">' + visRows + '</div>' : '';
   var rows = (f.sampleRows && f.sampleRows.length) ? f.sampleRows : [{ name: c.product || 'Sample item', unit: facets.variants ? (c.baseUnit || 'unit') : '', price: '' }];
-  var items = '<div style="margin-top:14px;font-size:11px;font-weight:800;color:#2c7a43;letter-spacing:.05em">SAMPLE ITEMS</div><div style="margin-top:6px">'
+  var items = '<div style="margin-top:14px;font-size:11px;font-weight:800;color:#2c7a43;letter-spacing:.05em">SAMPLE ITEMS (as records)</div><div style="margin-top:6px">'
     + rows.map(function(r){ var price = r.price !== '' && r.price != null ? _catfMoney(r.price) : (f.method === 'cart' ? _catfMoney(40) : '');
       var vals = r.values ? Object.keys(r.values).slice(0, 4).map(function(kk){ return esc(kk) + '=' + esc(r.values[kk]); }).join(' · ') : '';
       return '<div style="padding:7px 10px;border:1px solid var(--line);border-radius:9px;background:#fff;margin-bottom:5px"><div style="display:flex;align-items:center;gap:8px"><span style="font-weight:600;font-size:12.5px">' + esc(r.name || 'item') + '</span>' + (r.unit ? '<span style="font-size:10px;color:#7a5e22;background:var(--gold-soft,#f6ecd8);border-radius:4px;padding:1px 6px">' + esc(r.unit) + '</span>' : '') + (price ? '<span style="margin-left:auto;font-weight:700;font-size:12.5px">' + esc(price) + '</span>' : '') + '</div>' + (vals ? '<div style="font-size:10px;color:var(--faint,#8a929e);margin-top:4px;font-family:monospace">' + vals + '</div>' : '') + '</div>';
-    }).join('') + '</div>'
-    + '<div style="font-size:10.5px;color:var(--grey);font-style:italic;margin-top:2px">' + (f.sourced ? 'Sourced sample values — you replace them with your real ones.' : 'Every item conforms to this face.') + '</div>';
-  return head + mapping + vis + items
-    + '<button class="pri" onclick="catfCommit()" style="margin-top:16px;padding:10px 18px">Use this catalogue ✓</button>';
+    }).join('') + '</div>';
+  return mapping + vis + items;
+}
+
+function _catfMethodControl(method, price){
+  var p = price != null && price !== '' ? _catfMoney(price) : _catfMoney(40);
+  var btn = 'background:#2c5aa0;color:#fff;border-radius:5px;padding:3px 10px;font-size:11px;font-weight:600';
+  if (method === 'text') return '<span style="font-size:11px;color:var(--grey)">information only</span>';
+  if (method === 'cart') return '<span style="font-size:11px;color:var(--grey)">Qty ▢ × ' + esc(p) + '</span> <span style="' + btn + '">Add</span>';
+  if (method === 'range') return '<span style="font-size:11px;color:var(--grey)">' + esc(_catfMoney(3200)) + ' – ' + esc(_catfMoney(3600)) + '</span> <span style="' + btn + '">Order</span>';
+  if (method === 'qty') return '<span style="font-size:11px;color:var(--grey)">Qty ▢</span> <span style="' + btn + '">Order</span>';
+  return '<span style="font-size:11px;color:var(--grey)">Qty ▢ · your price ▢</span> <span style="' + btn + '">Offer</span>';
+}
+
+/* TAB 2 — the customer front: the Amazon-style END-TO-END experience (browse → product → cart → order = chit) */
+function _catfAppearsTab(f, c, facets){
+  var rows = (f.sampleRows && f.sampleRows.length) ? f.sampleRows.slice(0, 3) : [{ name: c.product || 'Item', unit: c.baseUnit || '', price: 40, values: {} }];
+  var visFields = (c.fields || []).slice(0, 4);
+  var ccy = _catfCcy();
+  var priceOf = function(r){ return (r.price != null && r.price !== '') ? r.price : 40; };
+  var step = function(n, title, inner){ return '<div style="border:1px solid var(--line);border-radius:11px;background:#fff;padding:11px 13px;margin-top:8px"><div style="font-size:10px;font-weight:800;color:#2c5aa0;letter-spacing:.04em;margin-bottom:8px">' + n + ' · ' + title + '</div>' + inner + '</div>'; };
+  var arrow = '<div style="text-align:center;color:#c8d0d9;font-size:15px;line-height:1.1">↓</div>';
+  // 1 · browse (listing grid)
+  var browse = '<div style="display:flex;gap:8px;flex-wrap:wrap">' + rows.map(function(r){ return '<div style="width:132px;border:1px solid var(--line);border-radius:9px;padding:8px 9px;background:#fff">' + (facets.media ? '<div style="height:46px;border-radius:6px;background:linear-gradient(135deg,#eef1f5,#dde3ea);margin-bottom:6px"></div>' : '') + '<div style="font-weight:600;font-size:11.5px;line-height:1.2">' + esc(r.name || 'item') + '</div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px"><span style="font-weight:700;font-size:11.5px">' + esc(_catfMoney(priceOf(r))) + '</span><span style="background:#2c5aa0;color:#fff;border-radius:4px;padding:2px 7px;font-size:10px;font-weight:600">' + (f.method === 'cart' ? 'Add' : 'View') + '</span></div></div>'; }).join('') + '</div>';
+  // 2 · product detail
+  var p0 = rows[0] || {};
+  var spec = visFields.map(function(fl){ var v = (p0.values && p0.values[fl.name]) || _catfSampleVal(fl.name, 0); return '<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0;border-bottom:1px dashed var(--line)"><span style="color:var(--grey)">' + esc(fl.name) + '</span><span style="font-family:monospace">' + esc(v) + '</span></div>'; }).join('');
+  var detail = '<div style="display:flex;gap:11px">' + (facets.media ? '<div style="width:86px;height:86px;border-radius:9px;background:linear-gradient(135deg,#eef1f5,#dde3ea);flex:none"></div>' : '') + '<div style="flex:1;min-width:0"><div style="font-weight:700;font-size:14px">' + esc(p0.name || c.product || 'Item') + '</div><div style="font-weight:800;font-size:15px;margin-top:2px">' + esc(_catfMoney(priceOf(p0))) + (p0.unit ? ' <span style="font-size:11px;color:var(--grey);font-weight:400">/ ' + esc(p0.unit) + '</span>' : '') + '</div>' + (spec ? '<div style="margin-top:8px">' + spec + '</div>' : '') + '<div style="margin-top:10px">' + _catfMethodControl(f.method, p0.price) + '</div></div></div>';
+  // 3 · cart & checkout
+  var qty = 3; var up = parseFloat(priceOf(p0)) || 40; var tot = f.method === 'cart' ? up * qty : up;
+  var cart = '<div style="display:flex;justify-content:space-between;font-size:12px"><span>' + esc(p0.name || 'Item') + ' × ' + qty + '</span><span style="font-weight:600">' + esc(_catfMoney(tot)) + '</span></div><div style="display:flex;justify-content:space-between;margin-top:6px;border-top:1px solid var(--line);padding-top:6px"><span style="font-weight:700">Total (' + esc(ccy) + ')</span><span style="font-weight:800">' + esc(_catfMoney(tot)) + '</span></div><div style="text-align:right;margin-top:9px"><span style="background:#2c7a43;color:#fff;border-radius:6px;padding:5px 14px;font-size:11.5px;font-weight:600">Place order</span></div>';
+  // 4 · order placed → the chit (final output, both sides keep a copy)
+  var fieldLines = visFields.map(function(fl){ var v = (p0.values && p0.values[fl.name]) || _catfSampleVal(fl.name, 0); return '<div style="display:flex;justify-content:space-between;font-size:10.5px;padding:1px 0"><span style="color:var(--grey)">' + esc(fl.name) + '</span><span style="font-family:monospace;color:var(--faint,#8a929e)">' + esc(v) + '</span></div>'; }).join('');
+  var chit = '<div style="max-width:280px;margin:0 auto;border:1px solid var(--line);border-top:3px solid #2c5aa0;border-radius:10px;padding:11px 12px;background:#fbfdff"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-weight:700;font-size:12.5px">' + esc(p0.name || 'Item') + '</span><span style="font-size:9.5px;color:#2c7a43;font-weight:700">✓ placed</span></div><div style="font-size:11px;color:var(--grey);margin-top:3px">Qty ' + qty + (f.method === 'cart' ? ' · ' + esc(_catfMoney(tot)) : '') + (p0.unit ? ' ' + esc(p0.unit) : '') + '</div>' + (fieldLines ? '<div style="margin-top:6px;border-top:1px dashed var(--line);padding-top:5px">' + fieldLines + '</div>' : '') + '<div style="border-top:1px dashed var(--line);margin-top:8px;padding-top:5px;font-size:9.5px;color:var(--faint,#8a929e);font-family:monospace">🔒 sealed · arrives on the rail · both parties keep a copy</div></div>';
+  return '<div style="font-size:11px;font-weight:800;color:#2c7a43;letter-spacing:.05em">🛍 CUSTOMER EXPERIENCE — end to end</div>'
+    + step('1', 'Browse the storefront', browse) + arrow
+    + step('2', 'Open a product', detail) + arrow
+    + step('3', 'Cart &amp; checkout', cart) + arrow
+    + step('4', 'Order placed → the chit', chit)
+    + '<div style="font-size:10.5px;color:var(--grey);font-style:italic;margin-top:8px">This is what your customer experiences — and the chit is what both sides keep.</div>';
 }
 
 /* ===== committed FACE view (after "Use this catalogue") ===== */
