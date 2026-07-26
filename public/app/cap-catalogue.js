@@ -29,6 +29,22 @@ var CATF_FACETS = [
   { k: 'standards', label: 'Standards', hint: 'HS code · GS1 — by reference' },
   { k: 'media',     label: 'Images & video', hint: 'your own, or inherited from a source / blueprint' },
 ];
+/* what a COMPLETE catalogue for a purpose needs — the theme: build what is NOT in the ERP/data (the gap CB fills). */
+var CATF_REQUIRED = {
+  gold:   [{ name: 'fineness', leg: 'cb' }, { name: 'assay_cert', leg: 'cb' }, { name: 'bar_serial', leg: 'cb' }, { name: 'hs_code', leg: 'standard' }],
+  coffee: [{ name: 'origin_farm', leg: 'cb' }, { name: 'varietal', leg: 'cb' }, { name: 'cupping_score', leg: 'cb' }, { name: 'moisture_pct', leg: 'system' }, { name: 'hs_code', leg: 'standard' }],
+  pharma: [{ name: 'batch_no', leg: 'cb' }, { name: 'active_ingredient', leg: 'cb' }, { name: 'expiry', leg: 'cb' }, { name: 'storage_temp', leg: 'system' }],
+  paint:  [{ name: 'finish', leg: 'cb' }, { name: 'coverage', leg: 'cb' }, { name: 'colour', leg: 'cb' }],
+  veg:    [{ name: 'grade', leg: 'cb' }, { name: 'source_farm', leg: 'cb' }],
+  retail: [{ name: 'brand', leg: 'cb' }],
+  trade:  [{ name: 'hs_code', leg: 'standard' }, { name: 'incoterm', leg: 'customer' }, { name: 'origin_country', leg: 'cb' }],
+};
+function _catfVerticalFromPurpose(p){ var s = (p || '').toLowerCase();
+  if (/gold|bullion/.test(s)) return 'gold'; if (/coffee|bean/.test(s)) return 'coffee';
+  if (/pharma|drug|medicine|\blot\b/.test(s)) return 'pharma'; if (/paint|finish|colou?r/.test(s)) return 'paint';
+  if (/veg|vegetable|grocery|produce/.test(s)) return 'veg'; if (/export|import|customs|\btrade\b/.test(s)) return 'trade';
+  if (/retail|\bshop\b|\bstore\b/.test(s)) return 'retail'; return null;
+}
 
 /* ---- per-entity face draft (localStorage; server persistence is a later slice) ---- */
 function _catfKey(){ return 'cb_catface_' + (SESSION.entityId || SESSION.entity || 'anon'); }
@@ -43,7 +59,7 @@ function _catfFacets(f){ return Object.assign({ variants: false, sourcing: false
 /* ---- adopt / build → a face draft ---- */
 function _catfFromTemplate(key){
   var t = CATF_KB[key] || {}; var c = CBCatalogue.ensure({ story: '', product: t.product || '', baseUnit: t.baseUnit || '' });
-  return { method: t.method || 'cart', facets: _catfFacets({ facets: t.facets }), adoptedFrom: t.title || key, catalogue: c };
+  return { method: t.method || 'cart', facets: _catfFacets({ facets: t.facets }), adoptedFrom: t.title || key, templateKey: key, required: CATF_REQUIRED[key] || [], catalogue: c };
 }
 function _catfInfer(purpose){
   var s = (purpose || '').toLowerCase();
@@ -101,10 +117,48 @@ function _catfStudy(purpose, csv){
   return draft;
 }
 
+/* ---- SOURCE the model from knowledge (no data needed): purpose → full, populated, visible catalogue ---- */
+function _catfSampleVal(name, i){ var n = (name || '').toLowerCase();
+  if (/fineness|purity/.test(n)) return ['999.9', '995.0', '916.0'][i % 3];
+  if (/price|rate|cost|mrp/.test(n)) return [40, 30, 25][i % 3];
+  if (/score|cupping/.test(n)) return [88, 86, 84][i % 3];
+  if (/pct|moisture/.test(n)) return [11.2, 10.8, 11.9][i % 3];
+  if (/temp/.test(n)) return [18, 4, -2][i % 3];
+  if (/expiry|date/.test(n)) return '2027-0' + ((i % 9) + 1);
+  if (/farm|origin|source|country/.test(n)) return ['Estate A', 'Estate B', 'Estate C'][i % 3];
+  if (/serial|batch|\blot\b|\bno\b|code|cert/.test(n)) return (name.replace(/[^a-z0-9]/gi, '').slice(0, 3).toUpperCase() || 'ID') + '-' + String(i + 1).padStart(3, '0');
+  return name + ' ' + (i + 1);
+}
+function _catfKnowledgeItems(vertical, c){
+  var base = (CATF_KB[vertical] || {}).product || c.product || 'Item';
+  var suffix = vertical === 'gold' ? ['100 g', '1 kg', '50 g'] : vertical === 'coffee' ? ['Ethiopia G1', 'Colombia', 'Brazil'] : ['A', 'B', 'C'];
+  return [0, 1, 2].map(function(i){
+    var vals = {}; (c.fields || []).forEach(function(f){ vals[f.name] = _catfSampleVal(f.name, i); });
+    return { name: base + ' · ' + suffix[i], unit: c.baseUnit || '', price: _catfSampleVal('price', i), values: vals };
+  });
+}
+function _catfSourceModel(vertical, purpose){
+  var t = CATF_KB[vertical] || {}; var req = CATF_REQUIRED[vertical] || [];
+  var c = CBCatalogue.ensure({ story: purpose || '', product: t.product || (vertical && vertical !== 'generic' ? (vertical[0].toUpperCase() + vertical.slice(1)) : 'Your catalogue'), baseUnit: t.baseUnit || '' });
+  var facets = _catfFacets({ facets: t.facets });
+  if (!req.length) req = [{ name: 'specification', leg: 'cb' }, { name: 'stock', leg: 'system' }];   // generic gap when the vertical is unknown
+  req.forEach(function(r){
+    if (r.leg === 'standard') { facets.standards = true; return; }
+    if (r.leg === 'system') facets.sourcing = true;
+    c.fields.push({ name: r.name, leg: r.leg, via: r.leg === 'system' ? 'ERP' : '', type: /price|score|pct|weight|temp|qty|stock|count|fineness/.test(r.name) ? 'number' : /expiry|date/.test(r.name) ? 'date' : 'text' });
+  });
+  var draft = { method: t.method || _catfInfer(purpose).method, facets: facets, adoptedFrom: t.title || '', templateKey: vertical, required: req, sourced: true, catalogue: CBCatalogue.ensure(c) };
+  draft.sampleRows = _catfKnowledgeItems(vertical, draft.catalogue);
+  return draft;
+}
+
 /* ---- actions ---- */
 function catfMode(m){ UI.catfMode = m; renderApp(); }
-function catfPreviewTemplate(key){ UI.catfDraft = key ? _catfFromTemplate(key) : null; UI.catfPick = key; renderApp(); }
-function catfStudy(){ var p = (val('catf_purpose') || '').trim(); var csv = (val('catf_csv') || ''); if (!p && !csv.trim()) { if (typeof toast === 'function') toast('Describe the purpose, or paste some inventory to study.'); return; } UI.catfDraft = _catfStudy(p, csv); renderApp(); }
+function catfPreviewTemplate(key){ UI.catfDraft = key ? _catfSourceModel(key, '') : null; UI.catfPick = key; renderApp(); }   // adopt = source the full visible model
+function catfStudy(){ var p = (val('catf_purpose') || '').trim(); var csv = (val('catf_csv') || '');
+  if (!p && !csv.trim()) { if (typeof toast === 'function') toast('Describe the purpose (we source the rest), or paste inventory.'); return; }
+  UI.catfDraft = csv.trim() ? _catfStudy(p, csv) : _catfSourceModel(_catfVerticalFromPurpose(p) || 'generic', p);   // no data → source from knowledge
+  renderApp(); }
 function catfCommit(){ if (!UI.catfDraft) return; UI.catf = UI.catfDraft; UI.catfDraft = null; _catfSave(); renderApp(); }
 function catfSetPurpose(v){ if (UI.catf) { UI.catf.catalogue.story = v; _catfSave(); } }
 function catfSetMethod(v){ if (UI.catf) { UI.catf.method = v; _catfSave(); renderApp(); } }
@@ -164,12 +218,22 @@ function _catfDraftPreview(f){
   // studied column mapping
   var mapping = (f.mapping && f.mapping.length) ? '<div style="margin-top:12px;font-size:11px;font-weight:800;color:#2c5aa0;letter-spacing:.05em">STUDIED YOUR COLUMNS →</div>'
     + '<div style="margin-top:6px">' + f.mapping.map(function(m){ var badge = m.role === 'name' ? ['identity', '#2c5aa0'] : m.role === 'price' ? ['price', '#b07b1e'] : m.role === 'unit' ? ['unit', '#8a5a1e'] : m.role === 'code' ? ['standard', '#8a5cc4'] : m.leg === 'system' ? [(m.via || 'ERP') + ' feed', '#b07b1e'] : ['stored in CB', '#2c7a43']; return '<div style="display:flex;align-items:center;gap:8px;font-size:11.5px;padding:2px 0"><span style="font-family:monospace;color:var(--grey);min-width:120px">' + esc(m.col) + '</span><span style="color:#9aa3a7">→</span><span style="font-size:10px;font-weight:700;color:' + badge[1] + ';background:' + badge[1] + '18;border-radius:4px;padding:1px 7px">' + esc(badge[0]) + '</span></div>'; }).join('') + '</div>' : '';
-  // sample items
+  // WHAT THE CATALOGUE HOLDS — full visibility of the sourced/studied model, by leg
+  var chain = CBCatalogue.routeChain(c);
+  var legMeta = { system: ['From your systems (ERP/IoT)', '#b07b1e'], customer: ['From the customer', '#2b6f8f'], compute: ['Computed by co-assist', '#8a5cc4'], cb: ['Stored in CB — the gap', '#2c7a43'] };
+  var visRows = ['system', 'customer', 'compute', 'cb'].map(function(k){ var fs = (chain[k] || []).filter(function(x){ return !x.identity; }).map(function(x){ return x.name + (x.via ? ' · ' + x.via : ''); }); if (!fs.length) return ''; var mm = legMeta[k]; return '<div style="font-size:11.5px;padding:3px 0;line-height:1.5"><span style="font-size:9.5px;font-weight:700;color:' + mm[1] + ';background:' + mm[1] + '1a;border-radius:4px;padding:1px 6px">' + esc(mm[0]) + '</span> <span style="color:#3a4048">' + fs.map(esc).join(' · ') + '</span></div>'; }).join('');
+  if (facets.standards) visRows += '<div style="font-size:11.5px;padding:3px 0"><span style="font-size:9.5px;font-weight:700;color:#6a4fa0;background:#6a4fa01a;border-radius:4px;padding:1px 6px">Standards</span> <span style="color:#3a4048">HS / GS1 — by reference</span></div>';
+  if (facets.media) visRows += '<div style="font-size:11.5px;padding:3px 0"><span style="font-size:9.5px;font-weight:700;color:#7a5e22;background:#f6ecd8;border-radius:4px;padding:1px 6px">Media</span> <span style="color:#3a4048">images / video (own or from a source)</span></div>';
+  var vis = visRows ? '<div style="margin-top:12px;font-size:11px;font-weight:800;color:#2c5aa0;letter-spacing:.05em">WHAT THE CATALOGUE HOLDS ' + (f.sourced ? '<span style="font-weight:500;color:var(--grey)">— sourced from knowledge (not in your data yet)</span>' : '') + '</div><div style="margin-top:6px">' + visRows + '</div>' : '';
+  // sample items with values
   var rows = (f.sampleRows && f.sampleRows.length) ? f.sampleRows : [{ name: c.product || 'Sample item', unit: facets.variants ? (c.baseUnit || 'unit') : '', price: '' }];
-  var items = '<div style="margin-top:14px;font-size:11px;font-weight:800;color:#2c7a43;letter-spacing:.05em">SAMPLE ITEMS UNDER THIS FACE</div>'
-    + '<div style="margin-top:6px">' + rows.map(function(r){ var price = r.price !== '' && r.price != null ? _catfMoney(r.price) : (f.method === 'cart' ? _catfMoney(40) : ''); return '<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--line);border-radius:9px;background:#fff;margin-bottom:5px"><span style="font-weight:600;font-size:12.5px">' + esc(r.name || 'item') + '</span>' + (r.unit ? '<span style="font-size:10px;color:#7a5e22;background:var(--gold-soft,#f6ecd8);border-radius:4px;padding:1px 6px">' + esc(r.unit) + '</span>' : '') + (price ? '<span style="margin-left:auto;font-weight:700;font-size:12.5px">' + esc(price) + '</span>' : '') + '</div>'; }).join('') + '</div>'
-    + '<div style="font-size:10.5px;color:var(--grey);font-style:italic;margin-top:4px">Every item sells the same way — you fill values, never re-pick the type.</div>';
-  return head + mapping + items
+  var items = '<div style="margin-top:14px;font-size:11px;font-weight:800;color:#2c7a43;letter-spacing:.05em">SAMPLE ITEMS</div><div style="margin-top:6px">'
+    + rows.map(function(r){ var price = r.price !== '' && r.price != null ? _catfMoney(r.price) : (f.method === 'cart' ? _catfMoney(40) : '');
+      var vals = r.values ? Object.keys(r.values).slice(0, 4).map(function(kk){ return esc(kk) + '=' + esc(r.values[kk]); }).join(' · ') : '';
+      return '<div style="padding:7px 10px;border:1px solid var(--line);border-radius:9px;background:#fff;margin-bottom:5px"><div style="display:flex;align-items:center;gap:8px"><span style="font-weight:600;font-size:12.5px">' + esc(r.name || 'item') + '</span>' + (r.unit ? '<span style="font-size:10px;color:#7a5e22;background:var(--gold-soft,#f6ecd8);border-radius:4px;padding:1px 6px">' + esc(r.unit) + '</span>' : '') + (price ? '<span style="margin-left:auto;font-weight:700;font-size:12.5px">' + esc(price) + '</span>' : '') + '</div>' + (vals ? '<div style="font-size:10px;color:var(--faint,#8a929e);margin-top:4px;font-family:monospace">' + vals + '</div>' : '') + '</div>';
+    }).join('') + '</div>'
+    + '<div style="font-size:10.5px;color:var(--grey);font-style:italic;margin-top:2px">' + (f.sourced ? 'Sourced sample values — you replace them with your real ones.' : 'Every item conforms to this face.') + '</div>';
+  return head + mapping + vis + items
     + '<button class="pri" onclick="catfCommit()" style="margin-top:16px;padding:10px 18px">Use this catalogue ✓</button>';
 }
 
