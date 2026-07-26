@@ -49,9 +49,55 @@ function _catfVerticalFromPurpose(p){ var s = (p || '').toLowerCase();
 // the REAL Royale Play source (beta-royale-play@v1, live on shop CB3D5L4UFT) — design by reference, owner sets price only
 /* ---- per-entity face draft (localStorage; server persistence is a later slice) ---- */
 function _catfKey(){ return 'cb_catface_' + (SESSION.entityId || SESSION.entity || 'anon'); }
+function _catfDirtyKey(){ return 'cb_catfdirty_' + (SESSION.entityId || SESSION.entity || 'anon'); }
+function _catfLoggedIn(){ return typeof SESSION !== 'undefined' && !!SESSION.token; }
+function _catfIsDirty(){ try { return localStorage.getItem(_catfDirtyKey()) === '1'; } catch (e) { return false; } }
+function _catfSetDirty(on){ try { if (on) localStorage.setItem(_catfDirtyKey(), '1'); else localStorage.removeItem(_catfDirtyKey()); } catch (e) {} }
 function _catfLoad(){ try { var s = localStorage.getItem(_catfKey()); return s ? JSON.parse(s) : null; } catch (e) { return null; } }
-function _catfSave(){ try { if (UI.catf) localStorage.setItem(_catfKey(), JSON.stringify(UI.catf)); } catch (e) { if (typeof toast === 'function') toast('Couldn\'t save the catalogue locally — it may be too large (try fewer/smaller photos).'); } }
-function _catfInit(){ if (UI.catf === undefined) UI.catf = _catfLoad(); }
+// what we sync to the server: the config + a light item snapshot. Strip the big base64 _photo and the _lineage objects
+// (items are the real store in catalogue_items; this face carries only a display snapshot). Keeps the jsonb small.
+function _catfStripSync(catf){ try { var c = JSON.parse(JSON.stringify(catf)); if (c && Array.isArray(c.items)) c.items.forEach(function(it){ delete it._photo; delete it._lineage; }); return c; } catch (e) { return catf; } }
+var _catfPushTimer = null;
+function _catfPushServer(){
+  if (!_catfLoggedIn() || typeof api !== 'function') return;
+  try {
+    api('catFacePut', { body: { face: UI.catf ? _catfStripSync(UI.catf) : {} } })
+      .then(function(){ _catfSetDirty(false); })
+      .catch(function(err){ _catfQueuePush();   // retry the latest state after an in-flight push / transient failure
+        if (typeof toast === 'function' && !/Already working/.test((err && err.message) || '')) toast('Catalogue saved on this device — not synced yet'); });
+  } catch (e) {}
+}
+function _catfQueuePush(){ if (!_catfLoggedIn()) return; if (_catfPushTimer) clearTimeout(_catfPushTimer); _catfPushTimer = setTimeout(_catfPushServer, 1500); }
+function _catfFlush(){   // synchronous best-effort send on tab close / logout — keepalive lets it outlive the page
+  if (!_catfLoggedIn() || !_catfIsDirty() || typeof CFG === 'undefined') return;
+  try { fetch(CFG.API_BASE + '/api/catalogue-face', { method: 'PUT', keepalive: true,
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + SESSION.token },
+    body: JSON.stringify({ face: UI.catf ? _catfStripSync(UI.catf) : {} }) }); } catch (e) {}
+}
+function _catfPullServer(){
+  if (!_catfLoggedIn() || UI._catfPulled || UI._catfPulling || typeof api !== 'function') return;
+  UI._catfPulling = true;   // guard concurrent pulls across re-renders (GET is not lock-guarded)
+  try {
+    api('catFaceGet').then(function(r){
+      UI._catfPulling = false; UI._catfPulled = true;         // latch only on success — a failed pull retries next render
+      if (_catfIsDirty()) { _catfPushServer(); return; }       // this device has unpushed edits → local wins; never overwrite with a stale server copy
+      if (r && r.face && r.face.catalogue) {                   // server holds a committed face → adopt it
+        UI.catf = r.face;
+        try { localStorage.setItem(_catfKey(), JSON.stringify(UI.catf)); } catch (e) {}
+        if (typeof renderApp === 'function') renderApp();
+      } else if (UI.catf && UI.catf.catalogue) {               // server empty but this device has a face → migrate it up once
+        _catfPushServer();
+      }
+    }).catch(function(){ UI._catfPulling = false; });          // leave _catfPulled false → retried on next render
+  } catch (e) { UI._catfPulling = false; }
+}
+if (typeof window !== 'undefined' && !window._catfFlushBound) {   // bind the unload flush once
+  window._catfFlushBound = true;
+  window.addEventListener('pagehide', _catfFlush);
+  document.addEventListener('visibilitychange', function(){ if (document.visibilityState === 'hidden') _catfFlush(); });
+}
+function _catfSave(){ try { if (UI.catf) localStorage.setItem(_catfKey(), JSON.stringify(UI.catf)); } catch (e) { if (typeof toast === 'function') toast('Couldn\'t save the catalogue locally — it may be too large (try fewer/smaller photos).'); } _catfSetDirty(true); _catfQueuePush(); }
+function _catfInit(){ if (UI.catf === undefined) UI.catf = _catfLoad(); _catfPullServer(); }
 function _catfCcy(){ return (typeof SESSION !== 'undefined' && SESSION.currency) || 'INR'; }
 function _catfCountry(){ return (typeof SESSION !== 'undefined' && SESSION.country) || 'IN'; }
 function _catfMoney(v){ return (typeof fmtMoney === 'function') ? fmtMoney(v, _catfCcy()) : (_catfCcy() + ' ' + v); }
@@ -115,7 +161,7 @@ function catfStandardsModal(){
 function catfSetPurpose(v){ if (UI.catf) { UI.catf.catalogue.story = v; _catfSave(); } }
 function catfSetMethod(v){ if (UI.catf) { UI.catf.method = v; _catfSave(); renderApp(); } }
 function catfToggleFacet(k){ if (!UI.catf) return; UI.catf.facets = _catfFacets(UI.catf); UI.catf.facets[k] = !UI.catf.facets[k]; _catfSave(); renderApp(); }
-function catfReset(){ if (typeof confirm === 'function' && !confirm('Start the catalogue setup over? (items are not affected)')) return; UI.catf = null; UI.catfDraft = null; UI.catfPick = ''; try { localStorage.removeItem(_catfKey()); } catch (e) {} renderApp(); }
+function catfReset(){ if (typeof confirm === 'function' && !confirm('Start the catalogue setup over? (items are not affected)')) return; UI.catf = null; UI.catfDraft = null; UI.catfPick = ''; try { localStorage.removeItem(_catfKey()); } catch (e) {} _catfSetDirty(true); _catfQueuePush(); renderApp(); }
 // Hand off to the REAL catalogue screen — the owned items were persisted via prodAdd; view/edit/delete live there.
 function catfManage(){ UI.nav = 'catalogue'; if (typeof renderApp === 'function') renderApp(); if (typeof loadCatalogue === 'function') loadCatalogue(); }
 
