@@ -32,6 +32,14 @@ test.describe('Veg blueprint · publish → inherit (the path)', () => {
     console.log('A face items:', itemCount);
     expect(itemCount, 'A built a 5-veg catalogue').toBeGreaterThanOrEqual(5);
 
+    // AI ENRICH — fill local + botanical names (they then travel in the blueprint). Needs b113 skill in prod.
+    await A.page.evaluate(() => catfEnrichAI());
+    let tomato = null;
+    for (let t = 0; t < 18; t++) { tomato = await A.page.evaluate(() => (UI.catf.items || []).find((i) => (i.product || i.name) === 'Tomato')); if (tomato && tomato.botanical_name) break; await A.page.waitForTimeout(1000); }
+    console.log('Tomato enriched → botanical:', tomato && tomato.botanical_name, '· local:', tomato && tomato.local_names);
+    expect(tomato && tomato.botanical_name, 'AI filled Tomato botanical name').toBeTruthy();
+    await shot(A.page, 'veg-01b-A-enriched.png');
+
     // publish as a blueprint
     await A.page.evaluate(() => catfPublishBlueprint());
     await A.page.waitForTimeout(2500);
@@ -58,6 +66,10 @@ test.describe('Veg blueprint · publish → inherit (the path)', () => {
       const names = (struct && struct.finishes || []).map((x) => x.name);
       console.log(label + ' sees items by reference:', names.join(', '));
       expect(names, label + ' inherits the veg names by reference').toContain('Tomato');
+      // the AI enrichment travels in the blueprint too (by reference)
+      const tomatoRef = (struct && struct.finishes || []).find((x) => x.name === 'Tomato');
+      console.log(label + ' inherited Tomato botanical:', tomatoRef && tomatoRef.botanical_name);
+      expect(tomatoRef && tomatoRef.botanical_name, label + ' inherits the AI enrichment by reference').toBeTruthy();
       // adopt with OWN commercials (price), and record it
       const adopt = await D.page.evaluate(([k, com]) => window.api('catalogueAdopt', { body: { source: k, commercials: com, visible: true } }), [srcKey, priceByVeg]);
       console.log(label + ' adopt:', JSON.stringify(adopt).slice(0, 120));

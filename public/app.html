@@ -593,6 +593,7 @@ const EP = {
   catFaceGet:      {m:"GET",  p:"/api/catalogue-face",                    ok:"✓"},  // b112 — load this entity's saved catalogue face (cross-device)
   catFacePut:      {m:"PUT",  p:"/api/catalogue-face",                    ok:"✓"},  // b112 — save (upsert) the whole catalogue face config
   catSourcePut:    {m:"PUT",  p:"/api/assist/catalogue-source",          ok:"✓"},  // b78 — PUBLISH this store's catalogue as an adoptable blueprint (source-as-entity)
+  catEnrich:       {m:"POST", p:"/api/governance/ai-draft",              ok:"✓"},  // reuse the deployed invokeSkill endpoint for catalogue-enrich (b113 skill)
   inbox:           {m:"GET",  p:"/api/chits/inbox",              ok:"✓"},  // ?status= ?page= ?limit=
   sent:            {m:"GET",  p:"/api/chits/sent",               ok:"✓"},  // real sent copies (direction='sent') — baseline-4. (was wrongly /inbox = received copies)
   chit:            {m:"GET",  p:"/api/chits/:id",                ok:"✓"},

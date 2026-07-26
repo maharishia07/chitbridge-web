@@ -172,6 +172,23 @@ function _catfSourceItems(f){
     Object.keys(it).forEach(function(k){ if (k.charAt(0) !== '_' && ['price', 'rate', 'sku'].indexOf(k) < 0 && typeof it[k] !== 'object' && it[k] != null && it[k] !== '') d[k] = it[k]; });
     d.name = it.product || it.name || ''; return d; }).filter(function(d){ return d.name; });
 }
+// AI ENRICH (catalogue-enrich skill, b113, via the deployed /ai-draft). Fills local names + botanical name + category
+// onto the item names — reference gap-fill. These become item fields, so they travel in the blueprint on publish.
+function catfEnrichAI(){
+  var f = UI.catf; if (!f || typeof api !== 'function') return;
+  var names = (f.items || []).map(function(it){ return it.product || it.name; }).filter(Boolean);
+  if (!names.length) { if (typeof toast === 'function') toast('Add some items first, then enrich.'); return; }
+  if (typeof toast === 'function') toast('Enriching ' + names.length + ' item(s) with AI…');
+  api('catEnrich', { body: { skill_id: 'catalogue-enrich', context: { names: names, vertical: f.vertical || '' } } }).then(function(r){
+    var map = (r && r.data) || null;
+    if (!map || typeof map !== 'object') { if (typeof toast === 'function') toast('AI returned nothing to apply.'); return; }
+    var n = 0;
+    (f.items || []).forEach(function(it){ var e = map[it.product || it.name]; if (e && typeof e === 'object') { ['local_names', 'botanical_name', 'category'].forEach(function(k){ if (e[k] != null && e[k] !== '') it[k] = e[k]; }); n++; } });
+    _catfSave();
+    if (typeof toast === 'function') toast('Enriched ' + n + ' item(s) ✓ — local & botanical names added');
+    renderApp();
+  }).catch(function(err){ if (typeof toast === 'function') toast('Enrich failed: ' + ((err && err.message) || 'error')); });
+}
 function catfPublishBlueprint(){
   var f = UI.catf; if (!f || typeof api !== 'function') return;
   var c = CBCatalogue.ensure(f.catalogue);
@@ -653,6 +670,7 @@ function _catfFaceView(){
     + '<button onclick="catfSyncERP()" style="padding:9px 15px;border:1px solid #b07b1e;border-radius:9px;background:#fff;color:#b07b1e;font-weight:600">🔗 From ERP</button>'
     + '<button onclick="catfCustomerPreview()" style="padding:9px 15px;border:1px solid #2c7a43;border-radius:9px;background:#fff;color:#2c7a43;font-weight:600">👁 Customer experience</button>'
     + '<button onclick="catfManage()" style="padding:9px 15px;border:1px solid #2c5aa0;border-radius:9px;background:#fff;color:#2c5aa0;font-weight:600">🗂️ Manage in Catalogue</button>'
+    + '<button onclick="catfEnrichAI()" style="padding:9px 15px;border:1px solid #b07b1e;border-radius:9px;background:#fff;color:#b07b1e;font-weight:600">✨ Enrich (AI)</button>'
     + '<button onclick="catfPublishBlueprint()" style="padding:9px 15px;border:1px solid #6a4fa0;border-radius:9px;background:#fff;color:#6a4fa0;font-weight:600">📢 Publish as blueprint</button>'
     + '<button onclick="catfReset()" style="padding:9px 15px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--grey)">↺ Start over</button>'
     + '</div>'
