@@ -259,7 +259,98 @@ function catfCustomerPreview(){
 /* ---- render ---- */
 function catalogueSetupScreen(){
   _catfInit();
-  return UI.catf ? _catfFaceView() : _catfTwoPanelSetup();
+  return UI.catf ? _catfFaceView() : _catfWizard();
+}
+
+/* ===================== SETUP WIZARD — fill the catalogue step by step (each source optional / partial) ===================== */
+var CW_STEPS = ['Vertical', 'Blueprint', 'From ERP', 'Manual', 'Price', 'Tax · finish'];
+function _cwLoggedIn(){ return typeof SESSION !== 'undefined' && !!SESSION.token; }
+function _cwInit(){
+  if (!UI.cw) UI.cw = { step: 1, vertical: '', source: '', built: null, chosen: {}, erp: {}, manual: {}, prices: {}, tax: { label: 'GST', rate: '' } };
+  if (UI._cwSources === undefined) { UI._cwSources = null; if (_cwLoggedIn()) api('catalogueSources').then(function(r){ UI._cwSources = (Array.isArray(r) ? r : (r && r.data) || []); renderApp(); }).catch(function(){ UI._cwSources = []; }); else UI._cwSources = []; }
+}
+function _cwRequired(w){ return CATF_REQUIRED[w.vertical] || []; }
+function _cwBpFields(w){ var it = w.built && w.built.finishes && w.built.finishes[0]; return it ? Object.keys(it).filter(function(k){ return ['name', 'commercials', 'combinations'].indexOf(k) < 0 && it[k] != null; }) : []; }
+function _cwCovered(w){ var m = {}; _cwBpFields(w).forEach(function(k){ m[k] = 'blueprint'; }); Object.keys(w.erp || {}).forEach(function(k){ if (w.erp[k]) m[k] = 'erp'; }); Object.keys(w.manual || {}).forEach(function(k){ if (w.manual[k] !== '' && w.manual[k] != null) m[k] = 'manual'; }); return m; }
+function _cwRemaining(w){ var cov = _cwCovered(w); return _cwRequired(w).filter(function(r){ return !cov[r.name]; }); }
+
+function _catfWizard(){
+  _cwInit(); var w = UI.cw, step = w.step;
+  var bar = '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:16px">' + CW_STEPS.map(function(s, i){ var n = i + 1, on = n === step, done = n < step; return '<span onclick="cwGo(' + n + ')" style="cursor:pointer;display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:' + (on ? '#2c5aa0' : done ? '#2c7a43' : 'var(--grey)') + '"><span style="width:19px;height:19px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:9.5px;background:' + (on ? '#2c5aa0' : done ? '#2c7a43' : '#eef1f5') + ';color:' + (on || done ? '#fff' : 'var(--grey)') + '">' + (done ? '✓' : n) + '</span>' + esc(s) + '</span>' + (n < CW_STEPS.length ? '<span style="color:#c8d0d9">›</span>' : ''); }).join('') + '</div>';
+  var body = [null, _cwStep1, _cwStep2, _cwStep3, _cwStep4, _cwStep5, _cwStep6][step](w);
+  var nav = '<div style="display:flex;gap:10px;margin-top:20px;align-items:center">'
+    + (step > 1 ? '<button onclick="cwBack()" style="padding:9px 16px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--grey)">‹ Back</button>' : '')
+    + (step < 6 ? '<button class="pri" onclick="cwNext()" style="padding:9px 18px">Next ›</button>' : '<button class="pri" onclick="cwFinish()" style="padding:9px 18px">✓ Finish — go live</button>')
+    + (step < 6 ? '<span onclick="cwFinish()" style="cursor:pointer;font-size:11.5px;color:var(--blue)">or finish now (partial is fine)</span>' : '')
+    + '<span onclick="cwCancel()" style="cursor:pointer;font-size:11.5px;color:var(--grey);margin-left:auto">Cancel</span></div>';
+  return '<div style="flex:1;min-height:0;overflow-y:auto;padding:22px"><div style="max-width:700px"><div style="font-size:19px;font-weight:800">🗂️ Set up your catalogue</div><div style="font-size:11.5px;color:var(--grey);margin:4px 0 16px">Currency <b>' + esc(_catfCcy()) + '</b> — from Settings · fill as much as you can, in order; each step is optional.</div>' + bar + body + nav + '</div></div>';
+}
+function _cwStep1(w){
+  var opts = '<option value="">— choose —</option>' + Object.keys(CATF_KB).map(function(k){ return '<option value="' + k + '"' + (w.vertical === k ? ' selected' : '') + '>' + esc(CATF_KB[k].title) + '</option>'; }).join('');
+  var req = _cwRequired(w);
+  var reqHtml = w.vertical ? '<div style="margin-top:14px;font-size:11px;font-weight:800;color:#2c5aa0;letter-spacing:.05em">THIS CATALOGUE NEEDS <span style="font-weight:500;color:var(--grey)">— the sources below will fill these</span></div><div style="margin-top:6px">' + (req.length ? req.map(function(r){ return '<span style="display:inline-block;font-size:11px;background:#eef1f5;border-radius:6px;padding:2px 8px;margin:2px 4px 0 0">' + esc(r.name) + '</span>'; }).join('') : '<span style="font-size:11px;color:var(--grey)">name · price (simple)</span>') + '</div>' : '';
+  return '<div style="font-size:13px;color:#3a4048;margin-bottom:10px">What kind of catalogue is this? The <b>vertical</b> decides which data items you need.</div><select onchange="cwSetVertical(this.value)" style="padding:8px 10px;border:1px solid var(--line);border-radius:9px;font-size:13px;min-width:240px">' + opts + '</select>' + reqHtml;
+}
+function _cwStep2(w){
+  var srcs = UI._cwSources;
+  var picker = (srcs === null) ? '<div style="color:var(--grey);font-size:12px">loading blueprints…</div>' : '<select onchange="cwPickSource(this.value)" style="padding:8px 10px;border:1px solid var(--line);border-radius:9px;font-size:13px;min-width:300px"><option value="">— no blueprint / skip —</option>' + srcs.map(function(s){ return '<option value="' + esc(s.key) + '"' + (w.source === s.key ? ' selected' : '') + '>' + esc(s.title) + ' (' + s.item_count + ')</option>'; }).join('') + '</select>';
+  var items = (w.built && w.built.finishes) ? '<div style="margin-top:14px;font-size:11px;font-weight:800;color:#6a44a8;letter-spacing:.05em">ITEMS FROM THE BLUEPRINT <span style="font-weight:500;color:var(--grey)">— referenced, choose which you sell</span></div>' + w.built.finishes.map(function(it){ var on = w.chosen[it.name] !== false; return '<div style="display:flex;align-items:center;gap:9px;padding:6px 10px;border:1px solid var(--line);border-radius:9px;margin-top:5px;background:#fff"><input type="checkbox" ' + (on ? 'checked' : '') + ' onchange="cwToggleItem(\'' + esc(it.name).replace(/'/g, "\\'") + '\')"><span style="font-weight:600;font-size:12.5px">' + esc(it.name) + '</span><span style="font-size:10.5px;color:var(--grey)">' + esc(it.texture_family || '') + ' · ' + esc(it.sheen || '') + ' · ' + esc(it.region || '') + '</span></div>'; }).join('') + '<div style="font-size:10.5px;color:#2c7a43;margin-top:8px">✓ Blueprint fills: ' + _cwBpFields(w).join(' · ') + '</div>' : '';
+  return '<div style="font-size:13px;color:#3a4048;margin-bottom:10px">Is there a <b>blueprint</b> to adopt? It fills most of the information by <b>reference</b> (design, colour, images — kept inside, no copy). <b>No blueprint? Just skip.</b></div>' + picker + items;
+}
+function _cwStep3(w){
+  var rem = _cwRemaining(w);
+  var candidates = rem.filter(function(r){ return r.leg === 'system'; }).map(function(r){ return r.name; });
+  if (!candidates.length) candidates = ['stock', 'availability'];
+  return '<div style="font-size:13px;color:#3a4048;margin-bottom:10px">Do you pull anything from your <b>own system (ERP / Tally)</b>? Map it and it syncs from there. <b>No ERP? Skip.</b></div>'
+    + candidates.map(function(f){ var on = !!w.erp[f]; return '<div style="display:flex;align-items:center;gap:9px;padding:6px 10px;border:1px solid var(--line);border-radius:9px;margin-top:5px;background:#fff"><input type="checkbox" ' + (on ? 'checked' : '') + ' onchange="cwToggleErp(\'' + f + '\')"><span style="font-weight:600;font-size:12.5px;min-width:110px">' + esc(f) + '</span>' + (on ? '<input value="' + esc(w.erp[f] === true ? '' : (w.erp[f] || '')) + '" oninput="cwSetErpRef(\'' + f + '\',this.value)" placeholder="your ERP field / code" style="flex:1;padding:5px 8px;border:1px solid var(--line);border-radius:6px;font-size:12px">' : '<span style="font-size:11px;color:var(--grey)">— not from ERP</span>') + '</div>'; }).join('');
+}
+function _cwStep4(w){
+  var rem = _cwRemaining(w).filter(function(r){ return r.leg !== 'compute'; });
+  var extra = Object.keys(w.manual || {});
+  var body = rem.length ? rem.map(function(r){ return '<div style="display:flex;align-items:center;gap:9px;padding:5px 0"><span style="font-size:12px;color:var(--grey);min-width:150px">' + esc(r.name) + '</span><input value="' + esc(w.manual[r.name] || '') + '" oninput="cwSetManual(\'' + r.name + '\',this.value)" placeholder="value" style="flex:1;padding:6px 8px;border:1px solid var(--line);border-radius:7px;font-size:12px"></div>'; }).join('') : '<div style="font-size:12px;color:#2c7a43">Nothing left — the blueprint / ERP covered it.</div>';
+  return '<div style="font-size:13px;color:#3a4048;margin-bottom:10px">Fill anything still missing <b>by hand</b>. (These are the fields not covered by the blueprint or ERP.)</div>' + body;
+}
+function _cwStep5(w){
+  if (w.erp && w.erp.price) return '<div style="font-size:13px;color:#3a4048">Price comes from your <b>ERP</b> (' + esc(w.erp.price === true ? 'mapped' : w.erp.price) + ') — nothing to set here.</div>';
+  var items = (w.built && w.built.finishes || []).filter(function(it){ return w.chosen[it.name] !== false; });
+  if (!items.length) items = [{ name: (CATF_KB[w.vertical] && CATF_KB[w.vertical].product) || 'Item' }];
+  return '<div style="font-size:13px;color:#3a4048;margin-bottom:10px">Set your <b>price</b> per item (' + esc(_catfCcy()) + '). You can change these anytime later.</div>'
+    + items.map(function(it){ return '<div style="display:flex;align-items:center;gap:9px;padding:6px 10px;border:1px solid var(--line);border-radius:9px;margin-top:5px;background:#fff"><span style="font-weight:600;font-size:12.5px;flex:1">' + esc(it.name) + '</span><span style="color:var(--grey);font-size:11px">' + esc(_catfCcy()) + '</span><input type="number" value="' + (w.prices[it.name] != null ? w.prices[it.name] : '') + '" oninput="cwSetPrice(\'' + esc(it.name).replace(/'/g, "\\'") + '\',this.value)" placeholder="price" style="width:100px;padding:5px 8px;border:1px solid var(--line);border-radius:6px;font-size:12px"></div>'; }).join('');
+}
+function _cwStep6(w){
+  var priced = Object.keys(w.prices).filter(function(k){ return w.prices[k] != null && w.prices[k] !== ''; }).length;
+  return '<div style="font-size:13px;color:#3a4048;margin-bottom:10px">Set <b>tax</b>, then go live.</div>'
+    + '<div style="display:flex;gap:8px;align-items:center"><input value="' + esc(w.tax.label || 'GST') + '" oninput="cwSetTax(\'label\',this.value)" style="width:80px;padding:6px 8px;border:1px solid var(--line);border-radius:7px;font-size:12px"><input type="number" value="' + esc(w.tax.rate || '') + '" oninput="cwSetTax(\'rate\',this.value)" placeholder="18" style="width:70px;padding:6px 8px;border:1px solid var(--line);border-radius:7px;font-size:12px"><span style="font-size:12px;color:var(--grey)">%</span></div>'
+    + '<div style="margin-top:14px;padding:11px 13px;border:1px solid #cfe6cf;border-radius:9px;background:#eef7ee;font-size:12px;color:#2e7a45">On finish: your entity <b>adopts</b> the blueprint (reference) + your <b>' + priced + ' price(s)</b>' + (w.source ? '' : ' — <i>no blueprint, so it saves your manual items</i>') + '. It goes <b>live</b> on your storefront. Half-filled is fine — you can add the rest anytime.</div>';
+}
+/* wizard actions */
+function cwGo(n){ if (n <= UI.cw.step || n === UI.cw.step + 1) { UI.cw.step = n; renderApp(); } }
+function cwNext(){ var w = UI.cw; if (w.step === 1 && !w.vertical) { if (typeof toast === 'function') toast('Pick a vertical first.'); return; } if (w.step < 6) w.step++; renderApp(); }
+function cwBack(){ if (UI.cw.step > 1) UI.cw.step--; renderApp(); }
+function cwCancel(){ UI.cw = null; renderApp(); }
+function cwSetVertical(v){ UI.cw.vertical = v; renderApp(); }
+function cwPickSource(key){ var w = UI.cw; w.source = key; w.built = null; if (!key) { renderApp(); return; } if (typeof toast === 'function') toast('Loading blueprint…'); api('catalogueStruct', { body: { source: key } }).then(function(r){ w.built = r; w.chosen = {}; (r.finishes || []).forEach(function(it){ w.chosen[it.name] = true; if (it.commercials && it.commercials.price_per_litre != null) w.prices[it.name] = it.commercials.price_per_litre; }); renderApp(); }).catch(function(e){ if (typeof toast === 'function') toast('Load failed: ' + ((e && e.message) || '')); }); }
+function cwToggleItem(name){ UI.cw.chosen[name] = UI.cw.chosen[name] === false; renderApp(); }
+function cwToggleErp(f){ if (UI.cw.erp[f]) delete UI.cw.erp[f]; else UI.cw.erp[f] = true; renderApp(); }
+function cwSetErpRef(f, v){ UI.cw.erp[f] = v || true; }
+function cwSetManual(f, v){ UI.cw.manual[f] = v; }
+function cwSetPrice(name, v){ UI.cw.prices[name] = v; }
+function cwSetTax(k, v){ UI.cw.tax[k] = v; }
+function cwFinish(){
+  var w = UI.cw;
+  var chosenFinishes = (w.built && w.built.finishes || []).filter(function(it){ return w.chosen[it.name] !== false; });
+  var com = {}; chosenFinishes.forEach(function(it){ var p = w.prices[it.name]; if (p != null && p !== '') com[it.name] = { price_per_litre: Number(p) }; });
+  var toLive = function(){
+    UI.catf = { method: 'cart', facets: { variants: true, media: !!w.source, sourcing: Object.keys(w.erp).length > 0 }, adoptedFrom: (w.built && w.built.title) || '', _source: w.source || '', tax: w.tax,
+      catalogue: CBCatalogue.ensure({ product: (w.built && w.built.title) || (CATF_KB[w.vertical] && CATF_KB[w.vertical].product) || 'Catalogue', baseUnit: (CATF_KB[w.vertical] && CATF_KB[w.vertical].baseUnit) || 'unit' }),
+      items: chosenFinishes.length ? chosenFinishes.map(function(it){ return { _src: 'reference', product: it.name, texture_family: it.texture_family, sheen: it.sheen, region: it.region, price: (w.prices[it.name] != null && w.prices[it.name] !== '') ? Number(w.prices[it.name]) : null, _media: true }; })
+        : [{ _src: 'manual', product: (w.manual.name || (CATF_KB[w.vertical] && CATF_KB[w.vertical].product) || 'Item'), price: (w.prices[Object.keys(w.prices)[0]] != null ? Number(w.prices[Object.keys(w.prices)[0]]) : null) }] };
+    _catfSave(); UI.cw = null; if (typeof toast === 'function') toast('Catalogue is live ✓'); renderApp();
+  };
+  if (w.source && Object.keys(com).length && typeof api === 'function') {
+    if (typeof toast === 'function') toast('Publishing…');
+    api('catalogueAdopt', { body: { source: w.source, commercials: com } }).then(toLive).catch(function(e){ if (typeof toast === 'function') toast('Saved locally — publish failed: ' + ((e && e.message) || '')); toLive(); });
+  } else { toLive(); }
 }
 
 function _catfSettingsNote(){ return 'Currency <b>' + esc(_catfCcy()) + '</b> · country <b>' + esc(_catfCountry()) + '</b> — from <b>Settings</b> (set at registration), inherited here.'; }
@@ -401,7 +492,12 @@ function _catfItemsHtml(f){
   }).join('');
   return '<div style="font-size:11px;font-weight:800;color:#2c7a43;letter-spacing:.05em;margin-top:18px">YOUR ITEMS · ' + items.length + (needPrice ? ' <span style="color:#a5382e;font-weight:600">· ' + needPrice + ' need a price</span>' : ' <span style="color:#2c7a43">· ready</span>') + '</div><div style="margin-top:4px">' + rows + '</div>';
 }
-function catfSetItemPrice(i, v){ if (!UI.catf || !UI.catf.items || !UI.catf.items[i]) return; var x = parseFloat(v); UI.catf.items[i].price = (v === '' || isNaN(x)) ? null : x; _catfSave(); renderApp(); }
+function catfSetItemPrice(i, v){ if (!UI.catf || !UI.catf.items || !UI.catf.items[i]) return; var x = parseFloat(v); UI.catf.items[i].price = (v === '' || isNaN(x)) ? null : x; _catfSave(); if (UI.catf._source) _catfRepublish(); renderApp(); }
+function _catfRepublish(){   // price change on a live (adopted) catalogue = CRUD → re-persist commercials via the real API
+  if (!UI.catf || !UI.catf._source || typeof api !== 'function') return;
+  var com = {}; (UI.catf.items || []).forEach(function(it){ if (it.price != null && it.price !== '') com[it.product || it.name] = { price_per_litre: Number(it.price) }; });
+  api('catalogueAdopt', { body: { source: UI.catf._source, commercials: com } }).then(function(){ if (typeof toast === 'function') toast('Price updated · live ✓'); }).catch(function(){});
+}
 function catfEditPrice(i){ if (!UI.catf || !UI.catf.items || !UI.catf.items[i]) return; UI.catf.items[i].price = null; _catfSave(); renderApp(); }
 function catfSyncERP(){ if (!UI.catf) { if (typeof toast === 'function') toast('Set up a catalogue first.'); return; } UI.catf.items = UI.catf.items || []; UI.catf.items.push({ _src: 'erp', product: 'Royale Matt (from ERP)', texture_family: 'Matt', colour_combination: 'White', sheen: 'Matte', coverage_sqft_per_litre: 150, stock_litres: 240, price: 520 }); _catfSave(); if (typeof toast === 'function') toast('Pulled 1 item from ERP (stub) — its data + price came in'); renderApp(); }
 
