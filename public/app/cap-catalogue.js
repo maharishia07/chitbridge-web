@@ -1,17 +1,13 @@
 /* cap-catalogue.js — the ENHANCED catalogue setup (local prototype, not promoted).
  *
- * Athi's model: ONE "face" per catalogue (not per item). The face = purpose · storefront method (one) ·
- * facets (variants/sourcing/standards/media). Currency + country are INHERITED from entity Settings — the
- * catalogue never decides them. Items conform to the face; only their count/values vary.
+ * Athi's model: ONE "face" per catalogue (not per item). Face = purpose · one storefront method · facets
+ * (variants/sourcing/standards/media). Currency + country INHERITED from entity Settings. Items conform.
  *
- * Flow: blank catalogue → ADOPT a known template (existing knowledge) OR BUILD from purpose (infer) → face
- * setup (progressive '＋' — deepen the whole catalogue only when needed) → sample item preview.
- *
- * Draft-only (localStorage per entity). Uses the shared model (catalogue-model.js / CBCatalogue). Slice 1 =
- * the face; conforming-item CRUD reuses the existing products API in a later slice.
+ * Setup is TWO PANELS: left = choose (adopt a template via dropdown) OR build (state purpose + FEED your
+ * existing inventory — CSV/ERP — which we STUDY and turn into a suggested model); right = a LIVE preview of
+ * "how the catalogue will look". Commit → the face view. Draft-only (localStorage). Uses catalogue-model.js.
  */
 
-/* storefront method — ONE per catalogue (a cart catalogue is all cart; no per-row mixing) */
 var CATF_METHODS = [
   { k: 'cart',     label: 'Cart (qty × price)',   hint: 'a shop — pick quantity, pay the price (veg market, retail)' },
   { k: 'qty',      label: 'Quantity only',        hint: 'order a count, no price shown' },
@@ -19,28 +15,32 @@ var CATF_METHODS = [
   { k: 'qtyprice', label: 'Both negotiable',      hint: 'buyer proposes quantity and price (tenders, trade)' },
   { k: 'text',     label: 'Information only',      hint: 'a listing, nothing to order' },
 ];
-
-/* known templates — "adopt if you know it". Small seed KB; the real one grows / an AI proposes it. */
 var CATF_KB = {
-  veg:    { title: 'Veg market',   method: 'cart',     facets: { variants: true },                          product: 'Vegetables',        baseUnit: 'kg' },
-  retail: { title: 'Retail shop',  method: 'cart',     facets: {},                                          product: 'Products',          baseUnit: 'piece' },
-  gold:   { title: 'Gold / bullion', method: 'range',  facets: { variants: true, standards: true, sourcing: true }, product: 'Gold bar',  baseUnit: 'g' },
-  paint:  { title: 'Paint / finishes', method: 'cart', facets: { variants: true, media: true },              product: 'Finishes',          baseUnit: 'litre' },
-  pharma: { title: 'Pharma',       method: 'cart',     facets: { variants: true, standards: true, sourcing: true }, product: 'Pharma lot', baseUnit: 'unit' },
-  trade:  { title: 'Trade / export', method: 'qtyprice', facets: { standards: true, sourcing: true },        product: 'Goods',             baseUnit: 'unit' },
+  veg:    { title: 'Veg market',       method: 'cart',     facets: { variants: true },                                   product: 'Vegetables', baseUnit: 'kg' },
+  retail: { title: 'Retail shop',      method: 'cart',     facets: {},                                                   product: 'Products',   baseUnit: 'piece' },
+  gold:   { title: 'Gold / bullion',   method: 'range',    facets: { variants: true, standards: true, sourcing: true },  product: 'Gold bar',   baseUnit: 'g' },
+  paint:  { title: 'Paint / finishes', method: 'cart',     facets: { variants: true, media: true },                      product: 'Finishes',   baseUnit: 'litre' },
+  pharma: { title: 'Pharma',           method: 'cart',     facets: { variants: true, standards: true, sourcing: true },  product: 'Pharma lot', baseUnit: 'unit' },
+  trade:  { title: 'Trade / export',   method: 'qtyprice', facets: { standards: true, sourcing: true },                  product: 'Goods',      baseUnit: 'unit' },
 };
+var CATF_FACETS = [
+  { k: 'variants',  label: 'Variants & units', hint: 'multiple sizes / sold by kg, litre, pack — with unit conversions' },
+  { k: 'sourcing',  label: 'Where data comes from', hint: 'each field: ERP · customer · AI-computed · stored in CB (four legs)' },
+  { k: 'standards', label: 'Standards', hint: 'HS code · GS1 — by reference' },
+  { k: 'media',     label: 'Images & video', hint: 'your own, or inherited from a source / blueprint' },
+];
 
 /* ---- per-entity face draft (localStorage; server persistence is a later slice) ---- */
 function _catfKey(){ return 'cb_catface_' + (SESSION.entityId || SESSION.entity || 'anon'); }
 function _catfLoad(){ try { var s = localStorage.getItem(_catfKey()); return s ? JSON.parse(s) : null; } catch (e) { return null; } }
 function _catfSave(){ try { if (UI.catf) localStorage.setItem(_catfKey(), JSON.stringify(UI.catf)); } catch (e) {} }
-function _catfInit(){ if (UI.catf === undefined) UI.catf = _catfLoad(); }
-function _catfCcy(){ return (typeof SESSION !== 'undefined' && SESSION.currency) || 'INR'; }        // inherited from entity Settings
+function _catfInit(){ if (UI.catf === undefined) UI.catf = _catfLoad(); if (!UI.catfMode) UI.catfMode = 'adopt'; }
+function _catfCcy(){ return (typeof SESSION !== 'undefined' && SESSION.currency) || 'INR'; }
 function _catfCountry(){ return (typeof SESSION !== 'undefined' && SESSION.country) || 'IN'; }
 function _catfMoney(v){ return (typeof fmtMoney === 'function') ? fmtMoney(v, _catfCcy()) : (_catfCcy() + ' ' + v); }
 function _catfFacets(f){ return Object.assign({ variants: false, sourcing: false, standards: false, media: false }, (f && f.facets) || {}); }
 
-/* build a face from an adopted template, or inferred from the purpose text (reuses existing knowledge) */
+/* ---- adopt / build → a face draft ---- */
 function _catfFromTemplate(key){
   var t = CATF_KB[key] || {}; var c = CBCatalogue.ensure({ story: '', product: t.product || '', baseUnit: t.baseUnit || '' });
   return { method: t.method || 'cart', facets: _catfFacets({ facets: t.facets }), adoptedFrom: t.title || key, catalogue: c };
@@ -57,106 +57,145 @@ function _catfInfer(purpose){
     standards: /hs code|gs1|organic|fairtrade|certif|compliance|regulat/.test(s),
     media: /image|photo|video|showcase|look|design|finish|colou?r/.test(s),
   };
-  var c = CBCatalogue.ensure({ story: purpose || '', product: '', baseUnit: '' });
-  return { method: method, facets: facets, adoptedFrom: '', catalogue: c };
+  return { method: method, facets: facets, adoptedFrom: '', catalogue: CBCatalogue.ensure({ story: purpose || '', product: '', baseUnit: '' }) };
+}
+
+/* ---- STUDY existing inventory (CSV now; ERP via connector later): columns → a suggested model ---- */
+function _catfParseCSV(text){
+  var lines = (text || '').trim().split(/\r?\n/).filter(function(l){ return l.trim(); });
+  if (!lines.length) return { headers: [], rows: [] };
+  var sp = function(l){ return l.split(',').map(function(x){ return x.trim().replace(/^"|"$/g, ''); }); };
+  return { headers: sp(lines[0]), rows: lines.slice(1, 60).map(sp) };
+}
+function _catfColKind(name, samples){
+  var n = (name || '').toLowerCase();
+  if (/^(name|item|product|title|particular|desc)/.test(n)) return { role: 'name' };
+  if (/(price|rate|mrp|cost|amount)/.test(n)) return { role: 'price' };
+  if (/(qty|quantity|stock|inventory|on.?hand|balance)/.test(n)) return { role: 'field', leg: 'system', via: 'ERP', type: 'number' };
+  if (/(unit|uom|measure)/.test(n)) return { role: 'unit' };
+  if (/(hs|hsn|sku|code|barcode|gtin|ean|batch|serial)/.test(n)) return { role: 'code' };
+  var num = samples.length && samples.every(function(s){ return s === '' || !isNaN(parseFloat(s)); });
+  return { role: 'field', leg: 'cb', via: '', type: num ? 'number' : 'text' };
+}
+function _catfStudy(purpose, csv){
+  var draft = _catfInfer(purpose); draft.adoptedFrom = '';
+  var p = _catfParseCSV(csv);
+  if (p.headers.length) {
+    var c = draft.catalogue; c.fields = []; var nameCol = -1, unitCol = -1, priceCol = -1;
+    p.headers.forEach(function(h, i){
+      var samples = p.rows.map(function(r){ return r[i]; }).filter(function(x){ return x != null && x !== ''; }).slice(0, 8);
+      var k = _catfColKind(h, samples);
+      if (k.role === 'name') nameCol = i;
+      else if (k.role === 'unit') { unitCol = i; draft.facets.variants = true; }
+      else if (k.role === 'price') priceCol = i;
+      else if (k.role === 'code') { draft.facets.standards = true; c.fields.push({ name: h, leg: 'cb', via: '', type: 'text' }); }
+      else { if (k.leg === 'system') draft.facets.sourcing = true; c.fields.push({ name: h, leg: k.leg, via: k.via || '', type: k.type || 'text' }); }
+    });
+    if (nameCol >= 0 && p.rows[0]) c.product = p.rows[0][nameCol] || c.product;
+    if (unitCol >= 0 && p.rows[0]) c.baseUnit = p.rows[0][unitCol] || c.baseUnit;
+    draft.catalogue = CBCatalogue.ensure(c);
+    draft.mapping = p.headers.map(function(h, i){ var k = _catfColKind(h, p.rows.map(function(r){ return r[i]; })); return { col: h, role: (i === nameCol ? 'name' : i === unitCol ? 'unit' : i === priceCol ? 'price' : k.role), leg: k.leg, via: k.via }; });
+    draft.sampleRows = p.rows.slice(0, 4).map(function(r){ return { name: nameCol >= 0 ? r[nameCol] : (r[0] || ''), unit: unitCol >= 0 ? r[unitCol] : '', price: priceCol >= 0 ? r[priceCol] : '' }; });
+    draft.studied = { cols: p.headers.length, rows: p.rows.length };
+  }
+  return draft;
 }
 
 /* ---- actions ---- */
-function catfAdopt(key){ UI.catf = _catfFromTemplate(key); _catfSave(); renderApp(); }
-function catfBuild(){ var p = (val('catf_purpose') || '').trim(); if (!p) { if (typeof toast === 'function') toast('Say what the catalogue is for first.'); return; } UI.catf = _catfInfer(p); UI.catf.catalogue.story = p; _catfSave(); renderApp(); }
-function catfSetPurpose(v){ if (UI.catf) { UI.catf.catalogue.story = v; _catfSave(); } }   // no rerender while typing
+function catfMode(m){ UI.catfMode = m; renderApp(); }
+function catfPreviewTemplate(key){ UI.catfDraft = key ? _catfFromTemplate(key) : null; UI.catfPick = key; renderApp(); }
+function catfStudy(){ var p = (val('catf_purpose') || '').trim(); var csv = (val('catf_csv') || ''); if (!p && !csv.trim()) { if (typeof toast === 'function') toast('Describe the purpose, or paste some inventory to study.'); return; } UI.catfDraft = _catfStudy(p, csv); renderApp(); }
+function catfCommit(){ if (!UI.catfDraft) return; UI.catf = UI.catfDraft; UI.catfDraft = null; _catfSave(); renderApp(); }
+function catfSetPurpose(v){ if (UI.catf) { UI.catf.catalogue.story = v; _catfSave(); } }
 function catfSetMethod(v){ if (UI.catf) { UI.catf.method = v; _catfSave(); renderApp(); } }
 function catfToggleFacet(k){ if (!UI.catf) return; UI.catf.facets = _catfFacets(UI.catf); UI.catf.facets[k] = !UI.catf.facets[k]; _catfSave(); renderApp(); }
-function catfReset(){ if (typeof confirm === 'function' && !confirm('Start the catalogue setup over? (items are not affected)')) return; UI.catf = null; try { localStorage.removeItem(_catfKey()); } catch (e) {} renderApp(); }
+function catfReset(){ if (typeof confirm === 'function' && !confirm('Start the catalogue setup over? (items are not affected)')) return; UI.catf = null; UI.catfDraft = null; UI.catfPick = ''; try { localStorage.removeItem(_catfKey()); } catch (e) {} renderApp(); }
 
 /* ---- render ---- */
-function _catfWrap(inner){ return '<div style="flex:1;min-height:0;overflow-y:auto;padding:22px 20px">' + inner + '</div>'; }
-
 function catalogueSetupScreen(){
   _catfInit();
-  var ccy = _catfCcy(), country = _catfCountry();
-  var settingsNote = '<div style="font-size:11px;color:var(--grey);margin-top:6px">Currency <b>' + esc(ccy) + '</b> · country <b>' + esc(country) + '</b> — from your <b>Settings</b> (set at registration), inherited here.</div>';
+  return UI.catf ? _catfFaceView() : _catfTwoPanelSetup();
+}
 
-  if (!UI.catf) {
-    var palette = Object.keys(CATF_KB).map(function(k){ var t = CATF_KB[k];
-      return '<div onclick="catfAdopt(\'' + k + '\')" style="cursor:pointer;border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-width:150px;flex:1;background:#fff">'
-        + '<div style="font-weight:700;font-size:13px">' + esc(t.title) + '</div>'
-        + '<div style="font-size:11px;color:var(--grey);margin-top:2px">' + esc((CATF_METHODS.filter(function(m){ return m.k === t.method; })[0] || {}).label || t.method) + '</div></div>';
-    }).join('');
-    return _catfWrap('<div style="max-width:640px">'
-      + '<div style="font-size:19px;font-weight:800">🗂️ Set up your catalogue</div>'
-      + '<div style="font-size:13px;color:var(--grey);margin:8px 0;line-height:1.6">Your catalogue has <b>one face</b> — one purpose, one way of selling. Items conform to it; only their number grows. Start by adopting a known template, or describe your purpose and we\'ll build it.</div>'
-      + settingsNote
-      + '<div style="font-size:11px;font-weight:800;color:#2c5aa0;letter-spacing:.05em;margin-top:16px">🔎 ADOPT A TEMPLATE <span style="font-weight:500;color:var(--grey)">— if you know what it is</span></div>'
-      + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">' + palette + '</div>'
-      + '<div style="font-size:11px;font-weight:800;color:#2c5aa0;letter-spacing:.05em;margin-top:18px;border-top:1px solid var(--line);padding-top:14px">🛠 BUILD FROM PURPOSE <span style="font-weight:500;color:var(--grey)">— if it\'s new</span></div>'
-      + '<textarea id="catf_purpose" placeholder="e.g. Sell vegetables to local buyers by the kg" rows="2" style="width:100%;margin-top:8px;box-sizing:border-box;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:13px;resize:vertical"></textarea>'
-      + '<button class="pri" onclick="catfBuild()" style="margin-top:8px;padding:9px 15px">Build my catalogue</button>'
-      + '</div>');
+function _catfSettingsNote(){ return 'Currency <b>' + esc(_catfCcy()) + '</b> · country <b>' + esc(_catfCountry()) + '</b> — from <b>Settings</b> (set at registration), inherited here.'; }
+
+/* ===== two-panel SETUP: left = choose/feed · right = live "how it looks" ===== */
+function _catfTwoPanelSetup(){
+  var mode = UI.catfMode || 'adopt';
+  var seg = function(m, l){ var on = mode === m; return '<button onclick="catfMode(\'' + m + '\')" style="border:1px solid var(--line);background:' + (on ? 'var(--ink,#1c2128)' : '#fff') + ';color:' + (on ? '#fff' : 'var(--grey)') + ';font-size:12px;font-weight:700;padding:6px 14px;cursor:pointer">' + l + '</button>'; };
+  var left = '<div style="font-size:17px;font-weight:800">🗂️ Set up your catalogue</div>'
+    + '<div style="font-size:12px;color:var(--grey);margin:6px 0 4px;line-height:1.6">One <b>face</b> for the whole catalogue — one purpose, one way of selling. Items conform.</div>'
+    + '<div style="font-size:11px;color:var(--grey);margin-bottom:12px">' + _catfSettingsNote() + '</div>'
+    + '<div style="display:inline-flex;border-radius:9px;overflow:hidden;border:1px solid var(--line)">' + seg('adopt', '🔎 Adopt a template') + seg('build', '🛠 Build from purpose') + '</div>';
+
+  if (mode === 'adopt') {
+    var opts = '<option value="">— choose a template —</option>' + Object.keys(CATF_KB).map(function(k){ return '<option value="' + k + '"' + (UI.catfPick === k ? ' selected' : '') + '>' + esc(CATF_KB[k].title) + '</option>'; }).join('');
+    left += '<label style="font-size:11px;color:var(--grey);display:block;margin-top:16px">Template <span style="color:var(--faint,#8a929e)">(if you know what it is)</span></label>'
+      + '<select onchange="catfPreviewTemplate(this.value)" style="margin-top:5px;padding:8px 10px;border:1px solid var(--line);border-radius:9px;font-size:13px;min-width:220px">' + opts + '</select>'
+      + '<div style="font-size:11px;color:var(--grey);margin-top:8px;font-style:italic">Pick one → the right panel shows how that catalogue looks.</div>';
+  } else {
+    left += '<label style="font-size:11px;color:var(--grey);display:block;margin-top:16px">Purpose</label>'
+      + '<textarea id="catf_purpose" placeholder="e.g. Sell vegetables by the kg · or · reorder cable stock from ERP by EOQ" rows="2" style="width:100%;margin-top:5px;box-sizing:border-box;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:13px;resize:vertical"></textarea>'
+      + '<label style="font-size:11px;color:var(--grey);display:block;margin-top:12px">Feed your existing inventory <span style="color:var(--faint,#8a929e)">(so we can meet the purpose)</span></label>'
+      + '<div style="display:flex;gap:6px;margin-top:5px;flex-wrap:wrap"><span style="font-size:11px;border:1px solid var(--line);border-radius:7px;padding:4px 10px;background:#f5f7f9;color:var(--grey)">📄 CSV (paste below)</span><span title="via connector — later slice" style="font-size:11px;border:1px dashed var(--line);border-radius:7px;padding:4px 10px;color:var(--faint,#8a929e)">🔗 ERP · CSV upload (soon)</span></div>'
+      + '<textarea id="catf_csv" placeholder="name,unit,price,stock,hsn\nTomato,kg,40,120,0702\nOnion,kg,30,300,0703" rows="5" style="width:100%;margin-top:6px;box-sizing:border-box;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:12px;font-family:monospace;resize:vertical"></textarea>'
+      + '<button class="pri" onclick="catfStudy()" style="margin-top:8px;padding:9px 15px">Study &amp; suggest a model →</button>'
+      + '<div style="font-size:11px;color:var(--grey);margin-top:6px;font-style:italic">We study the columns (stock → ERP feed, price → pricing, HSN → standards, …) and propose the model on the right.</div>';
   }
 
-  // ---- face setup ----
+  var right = _catfDraftPreview(UI.catfDraft);
+  return '<div style="display:flex;height:100%;min-height:0">'
+    + '<div style="flex:0 0 47%;max-width:560px;border-right:1px solid var(--line);overflow-y:auto;padding:20px 18px">' + left + '</div>'
+    + '<div style="flex:1;min-width:0;overflow-y:auto;padding:20px 18px;background:#fbfdff">' + right + '</div>'
+    + '</div>';
+}
+
+/* right panel: how the (pending) catalogue will look */
+function _catfDraftPreview(f){
+  if (!f) return '<div style="color:var(--grey);font-size:13px;max-width:340px;margin-top:40px;text-align:center;margin-left:auto;margin-right:auto"><div style="font-size:34px">👁️</div><div style="font-weight:700;margin-top:6px">How it will look</div><div style="margin-top:4px">Pick a template, or study your inventory — and this side shows the catalogue we\'ll create.</div></div>';
+  var c = CBCatalogue.ensure(f.catalogue), facets = _catfFacets(f);
+  var methLabel = (CATF_METHODS.filter(function(m){ return m.k === f.method; })[0] || {}).label || f.method;
+  var facetChips = CATF_FACETS.filter(function(x){ return facets[x.k]; }).map(function(x){ return '<span style="font-size:10.5px;color:#2c7a43;background:#e6f4ec;border-radius:5px;padding:2px 8px;margin:2px 4px 0 0;display:inline-block">' + esc(x.label) + '</span>'; }).join('') || '<span style="font-size:11px;color:var(--grey)">simple — name & price only</span>';
+  var head = '<div style="font-size:11px;font-weight:800;color:#2c5aa0;letter-spacing:.05em">👁️ HOW YOUR CATALOGUE WILL LOOK</div>'
+    + '<div style="margin-top:8px;padding:11px 13px;border:1px solid var(--line);border-radius:10px;background:#fff">'
+    + '<div style="font-weight:700;font-size:14px">' + esc(c.product || 'Your catalogue') + '</div>'
+    + '<div style="font-size:11.5px;color:var(--grey);margin-top:3px">sells by <b>' + esc(methLabel) + '</b> · in <b>' + esc(_catfCcy()) + '</b>' + (f.adoptedFrom ? ' · adopted <b>' + esc(f.adoptedFrom) + '</b>' : f.studied ? ' · from your <b>' + f.studied.cols + ' columns / ' + f.studied.rows + ' rows</b>' : ' · built from purpose') + '</div>'
+    + '<div style="margin-top:7px">' + facetChips + '</div></div>';
+  // studied column mapping
+  var mapping = (f.mapping && f.mapping.length) ? '<div style="margin-top:12px;font-size:11px;font-weight:800;color:#2c5aa0;letter-spacing:.05em">STUDIED YOUR COLUMNS →</div>'
+    + '<div style="margin-top:6px">' + f.mapping.map(function(m){ var badge = m.role === 'name' ? ['identity', '#2c5aa0'] : m.role === 'price' ? ['price', '#b07b1e'] : m.role === 'unit' ? ['unit', '#8a5a1e'] : m.role === 'code' ? ['standard', '#8a5cc4'] : m.leg === 'system' ? [(m.via || 'ERP') + ' feed', '#b07b1e'] : ['stored in CB', '#2c7a43']; return '<div style="display:flex;align-items:center;gap:8px;font-size:11.5px;padding:2px 0"><span style="font-family:monospace;color:var(--grey);min-width:120px">' + esc(m.col) + '</span><span style="color:#9aa3a7">→</span><span style="font-size:10px;font-weight:700;color:' + badge[1] + ';background:' + badge[1] + '18;border-radius:4px;padding:1px 7px">' + esc(badge[0]) + '</span></div>'; }).join('') + '</div>' : '';
+  // sample items
+  var rows = (f.sampleRows && f.sampleRows.length) ? f.sampleRows : [{ name: c.product || 'Sample item', unit: facets.variants ? (c.baseUnit || 'unit') : '', price: '' }];
+  var items = '<div style="margin-top:14px;font-size:11px;font-weight:800;color:#2c7a43;letter-spacing:.05em">SAMPLE ITEMS UNDER THIS FACE</div>'
+    + '<div style="margin-top:6px">' + rows.map(function(r){ var price = r.price !== '' && r.price != null ? _catfMoney(r.price) : (f.method === 'cart' ? _catfMoney(40) : ''); return '<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--line);border-radius:9px;background:#fff;margin-bottom:5px"><span style="font-weight:600;font-size:12.5px">' + esc(r.name || 'item') + '</span>' + (r.unit ? '<span style="font-size:10px;color:#7a5e22;background:var(--gold-soft,#f6ecd8);border-radius:4px;padding:1px 6px">' + esc(r.unit) + '</span>' : '') + (price ? '<span style="margin-left:auto;font-weight:700;font-size:12.5px">' + esc(price) + '</span>' : '') + '</div>'; }).join('') + '</div>'
+    + '<div style="font-size:10.5px;color:var(--grey);font-style:italic;margin-top:4px">Every item sells the same way — you fill values, never re-pick the type.</div>';
+  return head + mapping + items
+    + '<button class="pri" onclick="catfCommit()" style="margin-top:16px;padding:10px 18px">Use this catalogue ✓</button>';
+}
+
+/* ===== committed FACE view (after "Use this catalogue") ===== */
+function _catfFaceView(){
   var f = UI.catf, c = CBCatalogue.ensure(f.catalogue), facets = _catfFacets(f);
   var methOpts = CATF_METHODS.map(function(m){ return '<option value="' + m.k + '"' + (f.method === m.k ? ' selected' : '') + '>' + m.label + '</option>'; }).join('');
   var methHint = (CATF_METHODS.filter(function(m){ return m.k === f.method; })[0] || {}).hint || '';
-  var FACETS = [
-    { k: 'variants', label: 'Variants & units', hint: 'multiple sizes / sold by kg, litre, pack — with unit conversions' },
-    { k: 'sourcing', label: 'Where data comes from', hint: 'each field: ERP · customer · AI-computed · stored in CB (the four legs)' },
-    { k: 'standards', label: 'Standards', hint: 'HS code · GS1 — by reference' },
-    { k: 'media', label: 'Images & video', hint: 'your own, or inherited from a source / blueprint' },
-  ];
-  var facetRows = FACETS.map(function(x){ var on = !!facets[x.k];
+  var facetRows = CATF_FACETS.map(function(x){ var on = !!facets[x.k];
     return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)">'
       + '<div style="flex:1"><div style="font-weight:600;font-size:12.5px;color:' + (on ? '#1c2128' : 'var(--grey)') + '">' + esc(x.label) + '</div><div style="font-size:11px;color:var(--grey)">' + esc(x.hint) + '</div></div>'
-      + '<span onclick="catfToggleFacet(\'' + x.k + '\')" style="cursor:pointer;font-size:11.5px;font-weight:700;padding:4px 12px;border-radius:14px;border:1px solid ' + (on ? '#2c7a43' : 'var(--line)') + ';color:' + (on ? '#fff' : 'var(--blue)') + ';background:' + (on ? '#2c7a43' : '#fff') + '">' + (on ? '✓ on' : '＋ add') + '</span>'
-      + '</div>';
+      + '<span onclick="catfToggleFacet(\'' + x.k + '\')" style="cursor:pointer;font-size:11.5px;font-weight:700;padding:4px 12px;border-radius:14px;border:1px solid ' + (on ? '#2c7a43' : 'var(--line)') + ';color:' + (on ? '#fff' : 'var(--blue)') + ';background:' + (on ? '#2c7a43' : '#fff') + '">' + (on ? '✓ on' : '＋ add') + '</span></div>';
   }).join('');
-
-  return _catfWrap('<div style="max-width:660px">'
-    + '<div style="display:flex;align-items:center;gap:10px"><div style="font-size:18px;font-weight:800">🗂️ Catalogue face</div>' + (f.adoptedFrom ? '<span style="font-size:10.5px;font-weight:700;color:#2c5aa0;background:#eef2f7;border-radius:5px;padding:2px 8px">adopted · ' + esc(f.adoptedFrom) + '</span>' : '<span style="font-size:10.5px;font-weight:700;color:#6a4fa0;background:#efeafa;border-radius:5px;padding:2px 8px">built from purpose</span>') + '</div>'
-    + '<div style="font-size:11.5px;color:var(--grey);margin-top:4px">One face for the whole catalogue — every item conforms. ' + settingsNote.replace(/^<div[^>]*>/, '<span style="color:var(--grey)">').replace(/<\/div>$/, '</span>') + '</div>'
-    // purpose
+  var inner = '<div style="max-width:660px">'
+    + '<div style="display:flex;align-items:center;gap:10px"><div style="font-size:18px;font-weight:800">🗂️ Catalogue face</div>' + (f.adoptedFrom ? '<span style="font-size:10.5px;font-weight:700;color:#2c5aa0;background:#eef2f7;border-radius:5px;padding:2px 8px">adopted · ' + esc(f.adoptedFrom) + '</span>' : '<span style="font-size:10.5px;font-weight:700;color:#6a4fa0;background:#efeafa;border-radius:5px;padding:2px 8px">built from your data</span>') + '</div>'
+    + '<div style="font-size:11.5px;color:var(--grey);margin-top:4px">One face for the whole catalogue — every item conforms. ' + _catfSettingsNote() + '</div>'
     + '<label style="font-size:11px;color:var(--grey);display:block;margin-top:14px">Purpose</label>'
     + '<textarea oninput="catfSetPurpose(this.value)" rows="2" style="width:100%;margin-top:4px;box-sizing:border-box;padding:8px 10px;border:1px solid var(--line);border-radius:9px;font-size:13px;resize:vertical">' + esc(c.story || '') + '</textarea>'
-    // method (one, uniform)
     + '<label style="font-size:11px;color:var(--grey);display:block;margin-top:12px">How the store sells <span style="color:var(--faint,#8a929e)">— one method for the whole catalogue</span></label>'
     + '<select onchange="catfSetMethod(this.value)" style="margin-top:4px;padding:7px 9px;border:1px solid var(--line);border-radius:8px;font-size:13px">' + methOpts + '</select>'
     + '<div style="font-size:11px;color:var(--grey);font-style:italic;margin-top:3px">' + esc(methHint) + '</div>'
-    // facets (progressive)
     + '<div style="font-size:11px;font-weight:800;color:#2c5aa0;letter-spacing:.05em;margin-top:16px">DEEPEN THE CATALOGUE <span style="font-weight:500;color:var(--grey)">— add only what this business needs</span></div>'
     + '<div style="margin-top:6px">' + facetRows + '</div>'
-    // sample item under this face
-    + _catfSamplePreview(f, c, facets)
-    // actions
     + '<div style="display:flex;gap:10px;margin-top:16px">'
     + '<button class="pri" onclick="alert(\'Conforming-item management is the next slice.\')" style="padding:9px 15px">Manage items ›</button>'
     + '<button onclick="catfReset()" style="padding:9px 15px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--grey)">↺ Start over</button>'
-    + '</div>'
-    + '</div>');
-}
-
-/* a live sample item as it would appear UNDER this face — proves the face shapes every item uniformly */
-function _catfSamplePreview(f, c, facets){
-  var name = c.product || 'Sample item';
-  var unit = facets.variants ? (c.baseUnit || 'unit') : '';
-  var control = f.method === 'text' ? '<span style="font-size:11.5px;color:var(--grey)">information only</span>'
-    : f.method === 'cart' ? '<span style="font-size:11.5px;color:var(--grey)">Qty ▢ × ' + esc(_catfMoney(40)) + '</span> <span style="background:#2c5aa0;color:#fff;border-radius:5px;padding:3px 10px;font-size:11.5px;font-weight:600">Add</span>'
-    : f.method === 'range' ? '<span style="font-size:11.5px;color:var(--grey)">' + esc(_catfMoney(3200)) + ' – ' + esc(_catfMoney(3600)) + '</span>'
-    : f.method === 'qty' ? '<span style="font-size:11.5px;color:var(--grey)">Qty ▢</span> <span style="background:#2c5aa0;color:#fff;border-radius:5px;padding:3px 10px;font-size:11.5px;font-weight:600">Order</span>'
-    : '<span style="font-size:11.5px;color:var(--grey)">Qty ▢ · your price ▢</span> <span style="background:#2c5aa0;color:#fff;border-radius:5px;padding:3px 10px;font-size:11.5px;font-weight:600">Offer</span>';
-  var tags = [];
-  if (facets.sourcing) tags.push('sourced: ERP · customer · AI · CB');
-  if (facets.standards) tags.push('HS / GS1 by ref');
-  if (facets.media) tags.push('🖼 image / video');
-  var tagLine = tags.length ? '<div style="font-size:10px;color:var(--faint,#8a929e);margin-top:6px">' + tags.map(esc).join(' · ') + '</div>' : '';
-  return '<div style="margin-top:14px;border-top:1px solid var(--line);padding-top:10px">'
-    + '<div style="font-size:11px;font-weight:800;color:#2c7a43;letter-spacing:.05em;margin-bottom:6px">A SAMPLE ITEM UNDER THIS FACE</div>'
-    + '<div style="max-width:300px;border:1px solid var(--line);border-radius:11px;box-shadow:0 1px 3px rgba(20,30,45,.08);padding:12px 13px;background:#fff">'
-    + (facets.media ? '<div style="height:70px;border-radius:8px;background:linear-gradient(135deg,#eef1f5,#dde3ea);display:flex;align-items:center;justify-content:center;color:#9aa3a7;font-size:11px;margin-bottom:8px">🖼 media (from source)</div>' : '')
-    + '<div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-weight:700;font-size:13.5px">' + esc(name) + '</span>' + (unit ? '<span style="font-size:10.5px;color:#7a5e22;background:var(--gold-soft,#f6ecd8);border-radius:5px;padding:1px 7px">' + esc(unit) + '</span>' : '') + '</div>'
-    + '<div style="margin-top:9px">' + control + '</div>'
-    + tagLine
-    + '</div>'
-    + '<div style="font-size:10.5px;color:var(--grey);font-style:italic;margin-top:6px">Every item in this catalogue looks and sells this way — you only fill the values, never re-pick the type.</div>'
-    + '</div>';
+    + '</div></div>';
+  return '<div style="flex:1;min-height:0;overflow-y:auto;padding:22px 20px">' + inner + '</div>';
 }
