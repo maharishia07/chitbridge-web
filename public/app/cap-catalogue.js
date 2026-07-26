@@ -19,7 +19,7 @@ var CATF_KB = {
   veg:    { title: 'Veg market',       method: 'cart',     facets: { variants: true },                                   product: 'Vegetables', baseUnit: 'kg' },
   retail: { title: 'Retail shop',      method: 'cart',     facets: {},                                                   product: 'Products',   baseUnit: 'piece' },
   gold:   { title: 'Gold / bullion',   method: 'range',    facets: { variants: true, standards: true, sourcing: true },  product: 'Gold bar',   baseUnit: 'g' },
-  paint:  { title: 'Paint / finishes', method: 'cart',     facets: { variants: true, media: true },                      product: 'Finishes',   baseUnit: 'litre' },
+  paint:  { title: 'Royale Paint (finishes)', method: 'cart', facets: { variants: true, media: true, sourcing: true }, product: 'Royale Play finish', baseUnit: 'litre' },
   pharma: { title: 'Pharma',           method: 'cart',     facets: { variants: true, standards: true, sourcing: true },  product: 'Pharma lot', baseUnit: 'unit' },
   trade:  { title: 'Trade / export',   method: 'qtyprice', facets: { standards: true, sourcing: true },                  product: 'Goods',      baseUnit: 'unit' },
 };
@@ -34,7 +34,7 @@ var CATF_REQUIRED = {
   gold:   [{ name: 'fineness', leg: 'cb' }, { name: 'assay_cert', leg: 'cb' }, { name: 'bar_serial', leg: 'cb' }, { name: 'hs_code', leg: 'standard' }],
   coffee: [{ name: 'origin_farm', leg: 'cb' }, { name: 'varietal', leg: 'cb' }, { name: 'cupping_score', leg: 'cb' }, { name: 'moisture_pct', leg: 'system' }, { name: 'hs_code', leg: 'standard' }],
   pharma: [{ name: 'batch_no', leg: 'cb' }, { name: 'active_ingredient', leg: 'cb' }, { name: 'expiry', leg: 'cb' }, { name: 'storage_temp', leg: 'system' }],
-  paint:  [{ name: 'finish', leg: 'cb' }, { name: 'coverage', leg: 'cb' }, { name: 'colour', leg: 'cb' }],
+  paint:  [{ name: 'texture_family', leg: 'cb' }, { name: 'colour_combination', leg: 'cb' }, { name: 'sheen', leg: 'cb' }, { name: 'coverage_sqft_per_litre', leg: 'cb' }, { name: 'stock_litres', leg: 'system', via: 'ERP' }, { name: 'room_area_sqft', leg: 'customer' }, { name: 'litres_needed', leg: 'compute', via: 'AI' }],
   veg:    [{ name: 'grade', leg: 'cb' }, { name: 'source_farm', leg: 'cb' }],
   retail: [{ name: 'brand', leg: 'cb' }],
   trade:  [{ name: 'hs_code', leg: 'standard' }, { name: 'incoterm', leg: 'customer' }, { name: 'origin_country', leg: 'cb' }],
@@ -125,13 +125,20 @@ function _catfSampleVal(name, i){ var n = (name || '').toLowerCase();
   if (/pct|moisture/.test(n)) return [11.2, 10.8, 11.9][i % 3];
   if (/temp/.test(n)) return [18, 4, -2][i % 3];
   if (/expiry|date/.test(n)) return '2027-0' + ((i % 9) + 1);
+  if (/texture/.test(n)) return ['Metallica', 'Sparkle', 'Pearl'][i % 3];
+  if (/colou?r_comb|colou?r/.test(n)) return ['Ivory + Gold', 'Blue + Silver', 'Rose + Pearl'][i % 3];
+  if (/sheen/.test(n)) return ['Satin', 'Matte', 'Gloss'][i % 3];
+  if (/coverage/.test(n)) return [140, 120, 160][i % 3];
+  if (/stock/.test(n)) return [320, 150, 410][i % 3];
+  if (/room_area|sqft|area/.test(n)) return [180, 240, 120][i % 3];
+  if (/litres_needed|needed/.test(n)) return [6, 10, 4][i % 3];
   if (/farm|origin|source|country/.test(n)) return ['Estate A', 'Estate B', 'Estate C'][i % 3];
   if (/serial|batch|\blot\b|\bno\b|code|cert/.test(n)) return (name.replace(/[^a-z0-9]/gi, '').slice(0, 3).toUpperCase() || 'ID') + '-' + String(i + 1).padStart(3, '0');
   return name + ' ' + (i + 1);
 }
 function _catfKnowledgeItems(vertical, c){
   var base = (CATF_KB[vertical] || {}).product || c.product || 'Item';
-  var suffix = vertical === 'gold' ? ['100 g', '1 kg', '50 g'] : vertical === 'coffee' ? ['Ethiopia G1', 'Colombia', 'Brazil'] : ['A', 'B', 'C'];
+  var suffix = vertical === 'gold' ? ['100 g', '1 kg', '50 g'] : vertical === 'coffee' ? ['Ethiopia G1', 'Colombia', 'Brazil'] : vertical === 'paint' ? ['Sunlit Ivory', 'Royale Aspira', 'Pearl Glow'] : ['A', 'B', 'C'];
   return [0, 1, 2].map(function(i){
     var vals = {}; (c.fields || []).forEach(function(f){ vals[f.name] = _catfSampleVal(f.name, i); });
     return { name: base + ' · ' + suffix[i], unit: c.baseUnit || '', price: _catfSampleVal('price', i), values: vals };
@@ -145,7 +152,7 @@ function _catfSourceModel(vertical, purpose){
   req.forEach(function(r){
     if (r.leg === 'standard') { facets.standards = true; return; }
     if (r.leg === 'system') facets.sourcing = true;
-    c.fields.push({ name: r.name, leg: r.leg, via: r.leg === 'system' ? 'ERP' : '', type: /price|score|pct|weight|temp|qty|stock|count|fineness/.test(r.name) ? 'number' : /expiry|date/.test(r.name) ? 'date' : 'text' });
+    c.fields.push({ name: r.name, leg: r.leg, via: r.via || (r.leg === 'system' ? 'ERP' : r.leg === 'compute' ? 'AI' : ''), type: /price|score|pct|weight|temp|qty|stock|count|fineness|sqft|litres|coverage|needed|area/.test(r.name) ? 'number' : /expiry|date/.test(r.name) ? 'date' : 'text' });
   });
   var draft = { method: t.method || _catfInfer(purpose).method, facets: facets, adoptedFrom: t.title || '', templateKey: vertical, required: req, sourced: true, catalogue: CBCatalogue.ensure(c) };
   draft.sampleRows = _catfKnowledgeItems(vertical, draft.catalogue);
@@ -196,8 +203,12 @@ function _catfLoadJE(){
 function catfFillItem(){
   var f = UI.catf || UI.catfDraft; if (!f) { if (typeof toast === 'function') toast('Set up a catalogue first.'); return; }
   var c = CBCatalogue.ensure(f.catalogue);
-  var schema = CBCatalogue.toJSONSchema(c, { method: f.method, currency: _catfCcy(), facets: _catfFacets(f) });
-  delete schema['$schema'];   // json-editor takes the schema via its option; drop the meta key
+  var full = CBCatalogue.toJSONSchema(c, { method: f.method, currency: _catfCcy(), facets: _catfFacets(f) });
+  // ADD FORM = only the fields the OWNER types: identity + unit + the CB gap. Hide system-fed (ERP), computed (AI),
+  // at-order (customer), and by-reference (standards) — those aren't typed here.
+  var props = {}; Object.keys(full.properties || {}).forEach(function(k){ var p = full.properties[k]; var leg = p['x-cb-leg']; var role = p['x-cb-role']; if (role === 'identity' || role === 'unit' || !leg || leg === 'cb') props[k] = p; });
+  if (['cart', 'range', 'qtyprice'].indexOf(f.method) >= 0 && !props.price) props.price = { type: 'number', title: 'Price (' + _catfCcy() + ')' };
+  var schema = Object.assign({}, full, { properties: props }); delete schema['$schema'];
   window._catfSchema = schema;
   var style = '<style>#cat_je > div > h3,#cat_je .je-object__title{font-size:13px;font-weight:700;margin:0}#cat_je label{display:block;font-size:11px;color:#6a707a;font-weight:600;margin:9px 0 3px}#cat_je input[type=text],#cat_je input[type=number],#cat_je select,#cat_je textarea{width:100%;box-sizing:border-box;padding:7px 9px;border:1px solid var(--line);border-radius:7px;font-size:13px;background:var(--paper,#fff)}#cat_je .je-indented-panel{border:none;padding:0;margin:0}#cat_je p.je-object__title + *{margin-top:0}#cat_je .je-header{margin-bottom:2px}</style>';
   modal('<div class="mhd"><div class="t">Add an item</div></div><div class="mbody" style="padding:0"><div style="padding:14px 18px">' + style + '<div style="font-size:11.5px;color:var(--grey);margin-bottom:12px">Fill in the details for this item.</div><div id="cat_je" style="color:var(--grey);font-size:12px">…</div><div id="cat_je_out" style="margin-top:12px"></div><div style="display:flex;gap:8px;margin-top:16px"><button class="pri" onclick="catfCaptureItem()" style="padding:9px 16px">Save item</button><button onclick="closeModal()" style="padding:9px 16px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--grey)">Cancel</button></div></div></div>', true);
