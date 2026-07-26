@@ -46,11 +46,13 @@ function _catfVerticalFromPurpose(p){ var s = (p || '').toLowerCase();
   if (/retail|\bshop\b|\bstore\b/.test(s)) return 'retail'; return null;
 }
 /* what ADOPTION brings from the source (by reference) — the owner only sets the price. Kept inside the catalogue. */
+// the REAL Royale Play source (beta-royale-play@v1, live on shop CB3D5L4UFT) — design by reference, owner sets price only
 var CATF_SOURCE_ITEMS = {
   paint: [
-    { product: 'Sunlit Ivory', texture_family: 'Metallica', colour_combination: 'Ivory + Gold', sheen: 'Satin', coverage_sqft_per_litre: 140, _media: true },
-    { product: 'Royale Aspira', texture_family: 'Sparkle', colour_combination: 'Blue + Silver', sheen: 'Matte', coverage_sqft_per_litre: 120, _media: true },
-    { product: 'Pearl Glow', texture_family: 'Pearl', colour_combination: 'Rose + Pearl', sheen: 'Gloss', coverage_sqft_per_litre: 160, _media: true },
+    { product: 'Tussar', texture_family: 'weave', sheen: 'metallic', coats: '1 base + 2 effect', region: 'East', combination: 'Silk Route · Raw Silk + Bronze Glow', _media: true },
+    { product: 'Madras Check', texture_family: 'check', sheen: 'matte', coats: '1 base + 1 effect', region: 'South', combination: 'Rustic Grid · Terracotta + Slate', _media: true },
+    { product: 'Ikkat', texture_family: 'thread', sheen: 'pearl', coats: '1 base + 2 effect', region: 'South', combination: 'Blurred Weave · Teal Blur + Ivory', _media: true },
+    { product: 'Bandhej', texture_family: 'tie-dye', sheen: 'matte', coats: '1 base + 2 effect', region: 'West', combination: 'Desert Bloom · Madder Red + Sand', _media: true },
   ],
 };
 
