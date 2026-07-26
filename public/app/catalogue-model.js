@@ -186,6 +186,37 @@
     return inputs;
   }
 
+  // ---- ADOPT the standard: emit the catalogue AS JSON Schema (+ our x-cb-* overlay for the four legs / seal).
+  // This is what an AI would emit per purpose (LLMs speak JSON Schema); RJSF / JSON Forms / json-editor render it
+  // for free. We only add the CB-unique bits as extension keywords. Our model stays a thin PROFILE over the standard.
+  function _jkey(n){ return (n || '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || 'field'; }
+  var TYPE_TO_JSONSCHEMA = {
+    text: { type: 'string' }, number: { type: 'number' }, date: { type: 'string', format: 'date' },
+    choice: { type: 'string' }, range: { type: 'object', properties: { min: { type: 'number' }, max: { type: 'number' } } },
+  };
+  function toJSONSchema(c, opts) {
+    c = ensure(c); opts = opts || {};
+    var props = {}, required = [];
+    props.product = { type: 'string', title: 'Product', 'x-cb-role': 'identity', 'x-cb-leg': 'cb' };
+    if (c.product) required.push('product');
+    if (c.baseUnit) props.unit = { type: 'string', title: 'Unit', default: c.baseUnit, 'x-cb-role': 'unit' };
+    (c.fields || []).forEach(function (f) {
+      var base = JSON.parse(JSON.stringify(TYPE_TO_JSONSCHEMA[f.type] || { type: 'string' }));
+      base.title = f.name; base['x-cb-leg'] = f.leg;            // <-- the four-leg overlay: where this field comes from
+      if (f.via) base['x-cb-via'] = f.via;
+      if (f.leg === 'compute') base.readOnly = true;            // computed by a co-assist, then sealed
+      props[_jkey(f.name)] = base;
+    });
+    (c.standards || []).forEach(function (s) { if (s.code || s.scheme) props[_jkey(s.scheme || 'std')] = { type: 'string', title: (s.scheme || 'Standard') + ' code', 'x-cb-role': 'standard-ref', 'x-cb-standard': s.scheme, 'x-cb-ref': true }; });
+    var schema = { '$schema': 'https://json-schema.org/draft/2020-12/schema', title: c.product || 'Catalogue item', type: 'object', properties: props };
+    if (required.length) schema.required = required;
+    schema['x-cb-method'] = opts.method || 'cart';                // the whole-catalogue overlay
+    schema['x-cb-currency'] = opts.currency || '(entity)';
+    if (opts.facets) schema['x-cb-facets'] = Object.keys(opts.facets).filter(function (k) { return opts.facets[k]; });
+    schema['x-cb-seal'] = 'content-hash on the chit';
+    return schema;
+  }
+
   // ---- completeness for a build-ready check (used later by the gated Build) ----
   function validate(c) {
     c = ensure(c);
@@ -203,5 +234,6 @@
     DATATYPES: DATATYPES, METHODS: METHODS, FACETS: FACETS, PRICING_MODELS: PRICING_MODELS, PALETTE: PALETTE,
     ensure: ensure, toBase: toBase, resolvePrice: resolvePrice, routeChain: routeChain,
     deriveComputeJob: deriveComputeJob, canonicalInputs: canonicalInputs, validate: validate,
+    toJSONSchema: toJSONSchema,
   };
 });

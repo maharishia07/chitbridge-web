@@ -236,8 +236,8 @@ function _catfDraftPreview(f){
     + '<div style="font-size:11.5px;color:var(--grey);margin-top:3px">sells by <b>' + esc(methLabel) + '</b> · in <b>' + esc(_catfCcy()) + '</b>' + (f.adoptedFrom ? ' · adopted <b>' + esc(f.adoptedFrom) + '</b>' : f.studied ? ' · from your <b>' + f.studied.cols + ' columns / ' + f.studied.rows + ' rows</b>' : ' · built from purpose') + '</div>'
     + '<div style="margin-top:7px">' + facetChips + '</div></div>';
   var tab = UI.catfPTab || 'holds';
-  var tabBar = '<div style="display:flex;gap:5px;margin-top:14px">' + [['holds', '📋 What it holds'], ['appears', '🧾 How it appears in a chit']].map(function(t){ var on = tab === t[0]; return '<span onclick="catfPTab(\'' + t[0] + '\')" style="cursor:pointer;font-size:11.5px;font-weight:600;padding:5px 13px;border-radius:14px;border:1px solid ' + (on ? '#2c5aa0' : 'var(--line)') + ';color:' + (on ? '#fff' : 'var(--grey)') + ';background:' + (on ? '#2c5aa0' : '#fff') + '">' + t[1] + '</span>'; }).join('') + '</div>';
-  var body = tab === 'appears' ? _catfAppearsTab(f, c, facets) : _catfHoldsTab(f, c, facets);
+  var tabBar = '<div style="display:flex;gap:5px;margin-top:14px;flex-wrap:wrap">' + [['holds', '📋 What it holds'], ['appears', '🧾 How it appears in a chit'], ['schema', '📐 JSON Schema']].map(function(t){ var on = tab === t[0]; return '<span onclick="catfPTab(\'' + t[0] + '\')" style="cursor:pointer;font-size:11.5px;font-weight:600;padding:5px 13px;border-radius:14px;border:1px solid ' + (on ? '#2c5aa0' : 'var(--line)') + ';color:' + (on ? '#fff' : 'var(--grey)') + ';background:' + (on ? '#2c5aa0' : '#fff') + '">' + t[1] + '</span>'; }).join('') + '</div>';
+  var body = tab === 'appears' ? _catfAppearsTab(f, c, facets) : tab === 'schema' ? _catfSchemaTab(f, c, facets) : _catfHoldsTab(f, c, facets);
   return head + tabBar + '<div style="margin-top:12px">' + body + '</div>'
     + '<button class="pri" onclick="catfCommit()" style="margin-top:16px;padding:10px 18px">Use this catalogue ✓</button>';
 }
@@ -262,6 +262,14 @@ function _catfHoldsTab(f, c, facets){
   return mapping + vis + items;
 }
 
+/* TAB 3 — the catalogue as STANDARD JSON Schema (what an AI emits; RJSF/JSON Forms/json-editor render it). Adopt, don't reinvent. */
+function _catfSchemaTab(f, c, facets){
+  var schema = CBCatalogue.toJSONSchema(c, { method: f.method, currency: _catfCcy(), facets: facets });
+  var json = JSON.stringify(schema, null, 2);
+  return '<div style="font-size:11.5px;color:var(--grey);line-height:1.6">This is the catalogue as <b>standard JSON Schema</b> — what an AI emits per purpose, and what any renderer (<b>react-jsonschema-form · JSON Forms · json-editor</b>) turns into a form for free. We add only the CB-unique overlay: <code style="background:#eef2f7;padding:1px 4px;border-radius:3px">x-cb-leg</code> (where each field comes from) and <code style="background:#eef2f7;padding:1px 4px;border-radius:3px">x-cb-seal</code>.</div>'
+    + '<pre style="margin-top:10px;background:#0f1720;color:#d6e2f0;border-radius:9px;padding:12px 14px;font-size:11px;line-height:1.5;overflow:auto;max-height:52vh;white-space:pre">' + esc(json) + '</pre>'
+    + '<div style="font-size:10.5px;color:var(--grey);font-style:italic;margin-top:6px">Adopt the standard, arrange it our way. The four legs ride as x-cb-leg; everything else is off-the-shelf.</div>';
+}
 function _catfMethodControl(method, price){
   var p = price != null && price !== '' ? _catfMoney(price) : _catfMoney(40);
   var btn = 'background:#2c5aa0;color:#fff;border-radius:5px;padding:3px 10px;font-size:11px;font-weight:600';
