@@ -116,6 +116,8 @@ function catfSetPurpose(v){ if (UI.catf) { UI.catf.catalogue.story = v; _catfSav
 function catfSetMethod(v){ if (UI.catf) { UI.catf.method = v; _catfSave(); renderApp(); } }
 function catfToggleFacet(k){ if (!UI.catf) return; UI.catf.facets = _catfFacets(UI.catf); UI.catf.facets[k] = !UI.catf.facets[k]; _catfSave(); renderApp(); }
 function catfReset(){ if (typeof confirm === 'function' && !confirm('Start the catalogue setup over? (items are not affected)')) return; UI.catf = null; UI.catfDraft = null; UI.catfPick = ''; try { localStorage.removeItem(_catfKey()); } catch (e) {} renderApp(); }
+// Hand off to the REAL catalogue screen — the owned items were persisted via prodAdd; view/edit/delete live there.
+function catfManage(){ UI.nav = 'catalogue'; if (typeof renderApp === 'function') renderApp(); if (typeof loadCatalogue === 'function') loadCatalogue(); }
 
 /* ---- ADOPTED RENDERER: json-editor (MIT) renders an item-entry form straight from our JSON Schema.
    Lazy-loaded (535KB) only when the designer fills an item — no schema/form code of our own. ---- */
@@ -415,26 +417,57 @@ function cwPhotosCommit(){ var w = UI.cw; var ph = w.photos || []; if (!ph.lengt
 }
 function cwSetPrice(name, v){ UI.cw.prices[name] = v; }
 function cwSetTax(k, v){ UI.cw.tax[k] = v; }
+// Golden item → catalogue_items item_data. Keeps the whole record (sku/hsn/_src/_lineage…) in the JSONB; sets the
+// name/unit the classic catalogue screen reads (pName/pUnit/pCode). Drops the client-only _pid.
+function _catfProductData(it, unit){ var d = {};
+  // business fields only — strip ALL underscore meta (_photo base64, _lineage, _src, _media, _pid): those are
+  // client/prototype metadata, not catalogue columns (a big base64 _photo would also bloat/break the write).
+  Object.keys(it).forEach(function(k){ if (k.charAt(0) !== '_' && typeof it[k] !== 'object') d[k] = it[k]; });
+  d.name = it.product || it.name || 'Item'; if (!d.unit) d.unit = unit || 'unit'; if (!d.code && (it.sku || it.hsn)) d.code = it.sku || it.hsn; return d; }
 function cwFinish(){
   var w = UI.cw;
   var chosenFinishes = (w.built && w.built.finishes || []).filter(function(it){ return w.chosen[it.name] !== false; });
   var com = {}; chosenFinishes.forEach(function(it){ var p = w.prices[it.name]; if (p != null && p !== '') com[it.name] = { price_per_litre: Number(p) }; });
+  var units = (w.units && w.units.length) ? w.units.slice() : [(CATF_KB[w.vertical] && CATF_KB[w.vertical].baseUnit) || 'unit'];
+  // Build the golden records (MDM) — one item per SKU via RFC 7386 merge-patch.
+  var acc = []; var srcMode = (w.adoptMode === 'value' ? 'value' : 'reference');
+  chosenFinishes.forEach(function(it){ var pr = w.prices[it.name]; var inc = { sku: it.name, product: it.name, texture_family: it.texture_family, sheen: it.sheen, region: it.region, _media: true }; if (pr != null && pr !== '') inc.price = Number(pr); CBCatalogue.upsertItem(acc, inc, { source: srcMode }); });
+  (w.manualItems || []).forEach(function(it){ var inc = {}; Object.keys(it).forEach(function(k){ if (k !== '_src' && it[k] != null && it[k] !== '') inc[k] = it[k]; }); if (!inc.sku && inc.product) inc.sku = inc.product; CBCatalogue.upsertItem(acc, inc, { source: it._src === 'csv' ? 'csv' : it._src === 'capture' ? 'capture' : 'manual' }); });
+  if (!acc.length) { var pr0 = w.prices[Object.keys(w.prices)[0]]; var one = { product: (w.manual.name || (CATF_KB[w.vertical] && CATF_KB[w.vertical].product) || 'Item') }; if (pr0 != null && pr0 !== '') one.price = Number(pr0); CBCatalogue.upsertItem(acc, one, { source: 'manual' }); }
+
   var toLive = function(){
-    var units = (w.units && w.units.length) ? w.units.slice() : [(CATF_KB[w.vertical] && CATF_KB[w.vertical].baseUnit) || 'unit'];
     UI.catf = { method: 'cart', units: units, facets: { variants: true, media: !!w.source, sourcing: Object.keys(w.erpMap || {}).length > 0 }, adoptedFrom: (w.built && w.built.title) || '', _source: w.source || '', tax: w.tax, erpMap: w.erpMap,
       catalogue: CBCatalogue.ensure({ story: w.purpose || '', product: (w.built && w.built.title) || (CATF_KB[w.vertical] && CATF_KB[w.vertical].product) || 'Catalogue', baseUnit: units[0], altUnits: units.slice(1) }),
-      items: (function(){ var acc = []; var srcMode = (w.adoptMode === 'value' ? 'value' : 'reference');
-        // Golden records (MDM): each source upserts into one item keyed by SKU via RFC 7386 merge-patch.
-        chosenFinishes.forEach(function(it){ var pr = w.prices[it.name]; var inc = { sku: it.name, product: it.name, texture_family: it.texture_family, sheen: it.sheen, region: it.region, _media: true }; if (pr != null && pr !== '') inc.price = Number(pr); CBCatalogue.upsertItem(acc, inc, { source: srcMode }); });
-        (w.manualItems || []).forEach(function(it){ var inc = {}; Object.keys(it).forEach(function(k){ if (k !== '_src' && it[k] != null && it[k] !== '') inc[k] = it[k]; }); if (!inc.sku && inc.product) inc.sku = inc.product; CBCatalogue.upsertItem(acc, inc, { source: it._src === 'csv' ? 'csv' : it._src === 'capture' ? 'capture' : 'manual' }); });
-        if (!acc.length) { var pr0 = w.prices[Object.keys(w.prices)[0]]; var one = { product: (w.manual.name || (CATF_KB[w.vertical] && CATF_KB[w.vertical].product) || 'Item') }; if (pr0 != null && pr0 !== '') one.price = Number(pr0); CBCatalogue.upsertItem(acc, one, { source: 'manual' }); }
-        return acc; })() };
+      items: acc };
     _catfSave(); UI.cw = null; if (typeof toast === 'function') toast('Catalogue is live ✓'); renderApp();
   };
+
+  // Persist OWNED, PRICED items into the REAL catalogue (catalogue_items via prodAdd — the same store the classic
+  // Catalogue screen manages, WITH RLS). By-REFERENCE items are NOT copied (adoption store). Items with no price yet
+  // stay as face drafts (the API requires a price to go live) — the face flags them "need a price".
+  var owned = acc.filter(function(it){ return it._src !== 'reference'; });
+  var priced = owned.filter(function(it){ return it.price != null && it.price !== ''; });
+  var unpriced = owned.length - priced.length;
+  var persistProducts = function(next){
+    if (!(typeof api === 'function') || !priced.length) { if (unpriced && typeof toast === 'function') toast(unpriced + ' item(s) need a price before they go live.'); return next(); }
+    if (typeof toast === 'function') toast('Adding ' + priced.length + ' item(s) to your Catalogue…');
+    var i = 0, ok = 0;
+    var step = function(){
+      if (i >= priced.length) { if (typeof toast === 'function') toast(ok + ' item(s) added to Catalogue' + (unpriced ? ' · ' + unpriced + ' still need a price' : '') + ' ✓'); return next(); }
+      var it = priced[i++];
+      api('prodAdd', { body: { item_data: _catfProductData(it, units[0]) } })
+        .then(function(r){ var id = r && r.item && (r.item.item_id || r.item.id); if (id) it._pid = id; ok++; step(); })
+        .catch(function(){ step(); });   // one failure shouldn't abort the batch; the item still shows in the face
+    };
+    step();
+  };
+
+  // 1) by-reference commercials (adoption store) if a source · 2) persist owned products · 3) commit the face.
+  var afterAdopt = function(){ persistProducts(toLive); };
   if (w.source && Object.keys(com).length && typeof api === 'function') {
     if (typeof toast === 'function') toast('Publishing…');
-    api('catalogueAdopt', { body: { source: w.source, commercials: com } }).then(toLive).catch(function(e){ if (typeof toast === 'function') toast('Saved locally — publish failed: ' + ((e && e.message) || '')); toLive(); });
-  } else { toLive(); }
+    api('catalogueAdopt', { body: { source: w.source, commercials: com } }).then(afterAdopt).catch(function(e){ if (typeof toast === 'function') toast('Reference publish failed: ' + ((e && e.message) || '')); afterAdopt(); });
+  } else { afterAdopt(); }
 }
 
 function _catfSettingsNote(){ return 'Currency <b>' + esc(_catfCcy()) + '</b> · country <b>' + esc(_catfCountry()) + '</b> — from <b>Settings</b> (set at registration), inherited here.'; }
@@ -540,6 +573,7 @@ function _catfFaceView(){
     + '<button class="pri" onclick="catfFillItem()" style="padding:9px 15px">＋ Add manually</button>'
     + '<button onclick="catfSyncERP()" style="padding:9px 15px;border:1px solid #b07b1e;border-radius:9px;background:#fff;color:#b07b1e;font-weight:600">🔗 From ERP</button>'
     + '<button onclick="catfCustomerPreview()" style="padding:9px 15px;border:1px solid #2c7a43;border-radius:9px;background:#fff;color:#2c7a43;font-weight:600">👁 Customer experience</button>'
+    + '<button onclick="catfManage()" style="padding:9px 15px;border:1px solid #2c5aa0;border-radius:9px;background:#fff;color:#2c5aa0;font-weight:600">🗂️ Manage in Catalogue</button>'
     + '<button onclick="catfReset()" style="padding:9px 15px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--grey)">↺ Start over</button>'
     + '</div>'
     + '<div style="margin-top:14px;font-size:10.5px;color:var(--grey)">Items are <b>golden records</b> — each source (blueprint · ERP · CSV · capture) merges into one item, keyed by SKU, edited via JSON Merge Patch. <span onclick="catfStandardsModal()" style="cursor:pointer;color:var(--blue);font-weight:600">📐 Built on open standards →</span></div>'

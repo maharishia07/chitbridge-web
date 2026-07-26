@@ -65,9 +65,12 @@ test.describe('Catalogue wizard · visual walkthrough', () => {
       const fi = page.locator('#cw_photo_input');
       if (await fi.count()) {
         await fi.setInputFiles([{ name: 'tussar.png', mimeType: 'image/png', buffer: PNG }, { name: 'ikkat.png', mimeType: 'image/png', buffer: PNG }]);
-        await page.waitForTimeout(500);
+        // the pick pipeline is async (FileReader → canvas downscale); wait until both photos are staged before committing
+        for (let t = 0; t < 12; t++) { if ((await page.evaluate(() => (UI.cw.photos || []).length)) >= 2) break; await page.waitForTimeout(300); }
       }
       await shot(page, '07-step4-photos.png');
+      // give each photo a price so they qualify to go live (the API requires a price)
+      await page.evaluate(() => { (UI.cw.photos || []).forEach((p, i) => cwSetPhotoField(p.id, 'price', String(300 + i * 20))); });
       await page.evaluate(() => { if (typeof cwPhotosCommit === 'function') cwPhotosCommit(); });
       await shot(page, '08-step4-photos-added.png');
     });
@@ -92,6 +95,38 @@ test.describe('Catalogue wizard · visual walkthrough', () => {
       await page.evaluate(() => { if (typeof catfStandardsModal === 'function') catfStandardsModal(); });
       await page.waitForTimeout(400);
       await shot(page, '12-standards.png');
+      await page.evaluate(() => { try { closeModal(); } catch (e) {} });
+    });
+
+    await test.step('REAL CRUD against catalogue_items', async () => {
+      // CREATE happened in cwFinish (prodAdd per owned item — an async batch). READ it back, polling until the
+      // count STABILISES (don't read mid-batch), then assert.
+      let items = [], prev = -1, stable = 0;
+      for (let t = 0; t < 22; t++) { items = await page.evaluate(() => window.api('prodList')).catch(() => []); const n = (items || []).length; if (n > 0 && n === prev) { if (++stable >= 2) break; } else stable = 0; prev = n; await page.waitForTimeout(600); }
+      console.log('prodList after finish (settled):', (items || []).length, '→', (items || []).map((p) => (p.item_data && p.item_data.name) || '?').join(' | '));
+      // 2 CSV + 2 photos, all priced → all four should be real catalogue_items
+      expect((items || []).length, 'wizard persisted all priced items via prodAdd').toBeGreaterThanOrEqual(4);
+      // READ in the classic Catalogue screen (the existing CRUD UI) — wait for the list to finish loading
+      await page.evaluate(() => catfManage());
+      await page.locator('#ct_rows .row').first().waitFor({ state: 'visible', timeout: 10000 }).catch(() => {});
+      await page.waitForTimeout(400);
+      await shot(page, '13-catalogue-crud.png');
+      // UPDATE the first item's price via the real PATCH
+      const first = items[0], fid = first.item_id || first.id;
+      await page.evaluate(([id, data]) => window.api('prodEdit', { params: { id }, body: { item_data: data } }), [fid, Object.assign({}, first.item_data || {}, { price: 777 })]);
+      // DELETE the last item via the real DELETE
+      const last = items[items.length - 1], lid = last.item_id || last.id;
+      await page.evaluate((id) => window.api('prodDel', { params: { id } }), lid);
+      await page.waitForTimeout(800);
+      const after = await page.evaluate(() => window.api('prodList')).catch(() => []);
+      const firstAfter = (after || []).find((p) => (p.item_id || p.id) === fid) || {};
+      console.log('after UPDATE+DELETE:', (after || []).length, 'items · first item price now →', (firstAfter.item_data || {}).price);
+      expect((after || []).length, 'DELETE removed exactly one').toBe(items.length - 1);
+      expect(String((firstAfter.item_data || {}).price), 'UPDATE changed the price to 777').toBe('777');
+      await page.evaluate(() => { if (typeof loadCatalogue === 'function') loadCatalogue(); });
+      await page.locator('#ct_rows .row').first().waitFor({ state: 'visible', timeout: 10000 }).catch(() => {});
+      await page.waitForTimeout(500);
+      await shot(page, '14-catalogue-after-update-delete.png');
     });
 
     // sanity: we actually reached the face (or at least ran the wizard)
