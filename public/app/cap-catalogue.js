@@ -208,10 +208,22 @@ function catfFillItem(){
 }
 function catfCaptureItem(){
   if (!window._catfJE) return; var v; try { v = window._catfJE.getValue(); } catch (e) { return; }
-  var out = document.getElementById('cat_je_out'); if (!out) return;
+  if (UI.catf) {   // committed catalogue → add the item and return to the catalogue (real, saved locally for the prototype)
+    UI.catf.items = UI.catf.items || []; UI.catf.items.push(v); _catfSave();
+    if (typeof closeModal === 'function') closeModal();
+    if (typeof toast === 'function') toast('Item added ✓'); renderApp(); return;
+  }
+  var out = document.getElementById('cat_je_out'); if (!out) return;   // draft preview → just show the JSON
   out.innerHTML = '<div style="font-size:11px;font-weight:800;color:#2c7a43;letter-spacing:.05em">CAPTURED ITEM — conforms to the schema</div>'
     + '<pre style="background:#0f1720;color:#d6e2f0;border-radius:8px;padding:10px 12px;font-size:11px;overflow:auto;max-height:30vh;margin-top:6px;white-space:pre">' + esc(JSON.stringify(v, null, 2)) + '</pre>'
     + '<div style="font-size:10.5px;color:var(--grey);font-style:italic;margin-top:4px">A real catalogue_item — this is the JSON that gets sealed onto the chit.</div>';
+}
+function _catfItemToRow(it){ it = it || {}; var name = it.product || it.name || 'item'; var unit = it.unit || ''; var price = (it.price != null ? it.price : (it.rate != null ? it.rate : '')); var values = {}; Object.keys(it).forEach(function(k){ if (['product', 'name', 'unit', 'price', 'rate'].indexOf(k) < 0 && it[k] !== '' && it[k] != null) values[k] = it[k]; }); return { name: name, unit: unit, price: price, values: values }; }
+function catfCustomerPreview(){
+  var f = UI.catf; if (!f) return; var c = CBCatalogue.ensure(f.catalogue); var facets = _catfFacets(f);
+  var items = (f.items || []).map(_catfItemToRow);
+  var tmp = Object.assign({}, f, items.length ? { sampleRows: items } : {});
+  if (typeof modal === 'function') modal('<div class="mhd"><div class="t">👁 Customer experience — end to end</div></div><div class="mbody" style="padding:0"><div style="padding:14px 18px;max-height:72vh;overflow:auto">' + _catfAppearsTab(tmp, c, facets) + '</div></div>', true);
 }
 
 /* ---- render ---- */
@@ -339,6 +351,13 @@ function _catfAppearsTab(f, c, facets){
     + '<div style="font-size:10.5px;color:var(--grey);font-style:italic;margin-top:8px">This is what your customer experiences — and the chit is what both sides keep.</div>';
 }
 
+/* the real items entered under this face (via the standard json-editor form) */
+function _catfItemsHtml(f){
+  var items = (f.items || []);
+  var list = items.length ? items.map(function(it){ var r = _catfItemToRow(it); return '<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid var(--line);border-radius:8px;margin-top:5px;background:#fff"><span style="font-weight:600;font-size:12px">' + esc(r.name) + '</span>' + (r.unit ? '<span style="font-size:10px;color:#7a5e22;background:var(--gold-soft,#f6ecd8);border-radius:4px;padding:1px 6px">' + esc(r.unit) + '</span>' : '') + (r.price !== '' && r.price != null ? '<span style="margin-left:auto;font-weight:700;font-size:12px">' + esc(_catfMoney(r.price)) + '</span>' : '') + '</div>'; }).join('') : '<div style="font-size:11px;color:var(--grey);padding:4px 0">No items yet — add one with the standard form (json-editor renders it from the schema).</div>';
+  return '<div style="font-size:11px;font-weight:800;color:#2c7a43;letter-spacing:.05em;margin-top:18px">YOUR ITEMS · ' + items.length + '</div><div style="margin-top:4px">' + list + '</div>';
+}
+
 /* ===== committed FACE view (after "Use this catalogue") ===== */
 function _catfFaceView(){
   var f = UI.catf, c = CBCatalogue.ensure(f.catalogue), facets = _catfFacets(f);
@@ -359,8 +378,10 @@ function _catfFaceView(){
     + '<div style="font-size:11px;color:var(--grey);font-style:italic;margin-top:3px">' + esc(methHint) + '</div>'
     + '<div style="font-size:11px;font-weight:800;color:#2c5aa0;letter-spacing:.05em;margin-top:16px">DEEPEN THE CATALOGUE <span style="font-weight:500;color:var(--grey)">— add only what this business needs</span></div>'
     + '<div style="margin-top:6px">' + facetRows + '</div>'
-    + '<div style="display:flex;gap:10px;margin-top:16px">'
-    + '<button class="pri" onclick="catfFillItem()" style="padding:9px 15px">＋ Fill an item</button>'
+    + _catfItemsHtml(f)
+    + '<div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap">'
+    + '<button class="pri" onclick="catfFillItem()" style="padding:9px 15px">＋ Fill an item (standard form)</button>'
+    + '<button onclick="catfCustomerPreview()" style="padding:9px 15px;border:1px solid #2c7a43;border-radius:9px;background:#fff;color:#2c7a43;font-weight:600">👁 Customer experience</button>'
     + '<button onclick="catfReset()" style="padding:9px 15px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--grey)">↺ Start over</button>'
     + '</div></div>';
   return '<div style="flex:1;min-height:0;overflow-y:auto;padding:22px 20px">' + inner + '</div>';
