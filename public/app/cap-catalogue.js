@@ -191,6 +191,25 @@ function catfShowPalette(){
   if (typeof modal === 'function') modal('<div class="mhd"><div class="t">🎛 Datatype palette — what the AI composes from</div></div><div class="mbody" style="padding:0">' + body + '</div>', true);
   else if (typeof toast === 'function') toast('Palette: ' + P.datatypes.length + ' datatypes');
 }
+function catfStandardsModal(){
+  var S = (CBCatalogue.STANDARDS || []);
+  var badge = function(st){ var c = st === 'in code' ? ['#2c7a43', '#e6f4ec'] : st === 'by reference' ? ['#2c5aa0', '#e8eef7'] : ['#8a6d1e', '#f6efd8']; return '<span style="font-size:9.5px;font-weight:700;color:' + c[0] + ';background:' + c[1] + ';border-radius:5px;padding:2px 7px;white-space:nowrap">' + esc(st) + '</span>'; };
+  var row = function(s){ return '<div style="padding:10px 0;border-bottom:1px solid var(--line)">'
+    + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-size:13px;font-weight:700;color:#1c2128">' + esc(s.name) + '</span>' + badge(s.status) + '<span style="font-size:10px;color:var(--grey)">' + esc(s.body) + '</span></div>'
+    + '<div style="font-size:12px;color:var(--grey);margin-top:3px;line-height:1.5">' + esc(s.role) + '</div>'
+    + '<div style="font-size:10.5px;color:#9aa3a7;margin-top:3px">' + (s.where && s.where !== '—' ? 'in: <code>' + esc(s.where) + '</code> · ' : '') + '<a href="' + esc(s.spec) + '" target="_blank" rel="noopener" style="color:#2c5aa0">spec ↗</a></div>'
+    + '</div>'; };
+  var grp = function(title, st){ var rows = S.filter(function(s){ return s.status === st; }); return rows.length ? '<div style="font-size:11px;font-weight:800;color:#2c5aa0;letter-spacing:.05em;margin-top:14px">' + esc(title) + '</div>' + rows.map(row).join('') : ''; };
+  var body = '<div style="padding:14px 18px;max-height:72vh;overflow:auto">'
+    + '<div style="font-size:12.5px;color:var(--grey);line-height:1.6">This catalogue is <b>not bespoke</b> — it is assembled from open, named standards. We arrange existing pieces our own way; the CB-unique layer (four-leg provenance · chit/seal · per-copy · governance) rides on top.</div>'
+    + grp('IMPLEMENTED IN CODE', 'in code')
+    + grp('HELD BY REFERENCE (link out, never mirror)', 'by reference')
+    + grp('ON THE ROADMAP', 'roadmap')
+    + '<div style="font-size:10.5px;color:var(--grey);font-style:italic;margin-top:14px">Multi-source fill + smooth modification = <b>PIM</b> built on <b>MDM golden records</b>, edited with <b>RFC 7386 JSON Merge Patch</b>, de-duplicated by <b>GS1 GTIN/SKU</b>. Cross-company sync (GDSN) is the same discipline, later.</div>'
+    + '</div>';
+  if (typeof modal === 'function') modal('<div class="mhd"><div class="t">📐 Built on open standards</div></div><div class="mbody" style="padding:0">' + body + '</div>', true);
+  else if (typeof toast === 'function') toast((CBCatalogue.STANDARDS || []).length + ' standards adopted');
+}
 function catfPreviewTemplate(key){ UI.catfDraft = key ? _catfSourceModel(key, '') : null; UI.catfPick = key; renderApp(); }   // adopt = source the full visible model
 function catfStudy(){ var p = (val('catf_purpose') || '').trim(); var csv = (val('catf_csv') || '');
   if (!p && !csv.trim()) { if (typeof toast === 'function') toast('Describe the purpose (we source the rest), or paste inventory.'); return; }
@@ -478,7 +497,12 @@ function cwFinish(){
     var units = (w.units && w.units.length) ? w.units.slice() : [(CATF_KB[w.vertical] && CATF_KB[w.vertical].baseUnit) || 'unit'];
     UI.catf = { method: 'cart', units: units, facets: { variants: true, media: !!w.source, sourcing: Object.keys(w.erpMap || {}).length > 0 }, adoptedFrom: (w.built && w.built.title) || '', _source: w.source || '', tax: w.tax, erpMap: w.erpMap,
       catalogue: CBCatalogue.ensure({ product: (w.built && w.built.title) || (CATF_KB[w.vertical] && CATF_KB[w.vertical].product) || 'Catalogue', baseUnit: units[0], altUnits: units.slice(1) }),
-      items: (function(){ var bp = chosenFinishes.map(function(it){ return { _src: (w.adoptMode === 'value' ? 'value' : 'reference'), product: it.name, texture_family: it.texture_family, sheen: it.sheen, region: it.region, price: (w.prices[it.name] != null && w.prices[it.name] !== '') ? Number(w.prices[it.name]) : null, _media: true }; }); var all = bp.concat((w.manualItems || []).slice()); if (!all.length) all = [{ _src: 'manual', product: (w.manual.name || (CATF_KB[w.vertical] && CATF_KB[w.vertical].product) || 'Item'), price: (w.prices[Object.keys(w.prices)[0]] != null ? Number(w.prices[Object.keys(w.prices)[0]]) : null) }]; return all; })() };
+      items: (function(){ var acc = []; var srcMode = (w.adoptMode === 'value' ? 'value' : 'reference');
+        // Golden records (MDM): each source upserts into one item keyed by SKU via RFC 7386 merge-patch.
+        chosenFinishes.forEach(function(it){ var pr = w.prices[it.name]; var inc = { sku: it.name, product: it.name, texture_family: it.texture_family, sheen: it.sheen, region: it.region, _media: true }; if (pr != null && pr !== '') inc.price = Number(pr); CBCatalogue.upsertItem(acc, inc, { source: srcMode }); });
+        (w.manualItems || []).forEach(function(it){ var inc = {}; Object.keys(it).forEach(function(k){ if (k !== '_src' && it[k] != null && it[k] !== '') inc[k] = it[k]; }); if (!inc.sku && inc.product) inc.sku = inc.product; CBCatalogue.upsertItem(acc, inc, { source: it._src === 'csv' ? 'csv' : 'manual' }); });
+        if (!acc.length) { var pr0 = w.prices[Object.keys(w.prices)[0]]; var one = { product: (w.manual.name || (CATF_KB[w.vertical] && CATF_KB[w.vertical].product) || 'Item') }; if (pr0 != null && pr0 !== '') one.price = Number(pr0); CBCatalogue.upsertItem(acc, one, { source: 'manual' }); }
+        return acc; })() };
     _catfSave(); UI.cw = null; if (typeof toast === 'function') toast('Catalogue is live ✓'); renderApp();
   };
   if (w.source && Object.keys(com).length && typeof api === 'function') {
@@ -496,7 +520,7 @@ function _catfTwoPanelSetup(){
   var left = '<div style="font-size:17px;font-weight:800">🗂️ Set up your catalogue</div>'
     + '<div style="font-size:12px;color:var(--grey);margin:6px 0 4px;line-height:1.6">One <b>face</b> for the whole catalogue — one purpose, one way of selling. Items conform.</div>'
     + '<div style="font-size:11px;color:var(--grey);margin-bottom:6px">' + _catfSettingsNote() + '</div>'
-    + '<div style="margin-bottom:12px"><span onclick="catfShowPalette()" style="cursor:pointer;font-size:11px;color:var(--blue);font-weight:600">🎛 The datatype palette the AI composes from →</span></div>'
+    + '<div style="margin-bottom:12px;display:flex;gap:16px;flex-wrap:wrap"><span onclick="catfShowPalette()" style="cursor:pointer;font-size:11px;color:var(--blue);font-weight:600">🎛 The datatype palette the AI composes from →</span><span onclick="catfStandardsModal()" style="cursor:pointer;font-size:11px;color:var(--blue);font-weight:600">📐 Built on open standards →</span></div>'
     + '<div style="display:inline-flex;border-radius:9px;overflow:hidden;border:1px solid var(--line)">' + seg('adopt', '🔎 Adopt a template') + seg('build', '🛠 Build from purpose') + '</div>';
 
   if (mode === 'adopt') {
@@ -663,6 +687,8 @@ function _catfFaceView(){
     + '<button onclick="catfSyncERP()" style="padding:9px 15px;border:1px solid #b07b1e;border-radius:9px;background:#fff;color:#b07b1e;font-weight:600">🔗 From ERP</button>'
     + '<button onclick="catfCustomerPreview()" style="padding:9px 15px;border:1px solid #2c7a43;border-radius:9px;background:#fff;color:#2c7a43;font-weight:600">👁 Customer experience</button>'
     + '<button onclick="catfReset()" style="padding:9px 15px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--grey)">↺ Start over</button>'
-    + '</div></div>';
+    + '</div>'
+    + '<div style="margin-top:14px;font-size:10.5px;color:var(--grey)">Items are <b>golden records</b> — each source (blueprint · ERP · CSV · capture) merges into one item, keyed by SKU, edited via JSON Merge Patch. <span onclick="catfStandardsModal()" style="cursor:pointer;color:var(--blue);font-weight:600">📐 Built on open standards →</span></div>'
+    + '</div>';
   return '<div style="flex:1;min-height:0;overflow-y:auto;padding:22px 20px">' + inner + '</div>';
 }

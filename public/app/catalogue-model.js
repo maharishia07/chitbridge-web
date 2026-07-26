@@ -228,6 +228,71 @@
     return { ok: issues.length === 0, issues: issues };
   }
 
+  // ============================================================================
+  // ADOPTED INDUSTRY STANDARDS  (named here so the whole thing is universal, not
+  // bespoke — this list is what the in-app "Built on open standards" panel reads.)
+  // We arrange these existing pieces our own way; the CB-unique layer (four-leg
+  // provenance + chit/seal + per-copy + governance) rides ON TOP of them.
+  // ============================================================================
+  var STANDARDS = [
+    { id: 'json-schema-2020-12', name: 'JSON Schema (draft 2020-12)', body: 'json-schema.org', role: 'Catalogue & item shape — LLMs emit it natively, so it doubles as the real-time build format.', status: 'in code', where: 'toJSONSchema()', spec: 'https://json-schema.org/draft/2020-12' },
+    { id: 'rfc7386', name: 'JSON Merge Patch — IETF RFC 7386', body: 'IETF', role: 'Smooth partial modification: any source emits a patch, the record accumulates it (never a full rewrite).', status: 'in code', where: 'mergePatch()', spec: 'https://www.rfc-editor.org/rfc/rfc7386' },
+    { id: 'mdm-golden-record', name: 'MDM golden record + survivorship', body: 'Master Data Management', role: 'One living item filled by many sources; per-field source-of-truth decides which source wins.', status: 'in code', where: 'upsertItem() · _lineage', spec: 'https://en.wikipedia.org/wiki/Master_data_management' },
+    { id: 'gs1-gtin', name: 'GS1 GTIN / SKU', body: 'GS1', role: 'Stable identity key — upsert on it so re-importing a source updates, never duplicates.', status: 'in code', where: 'itemKey() · upsertItem()', spec: 'https://www.gs1.org/standards/id-keys/gtin' },
+    { id: 'pim', name: 'PIM data model (attributes · families · completeness)', body: 'Akeneo-aligned', role: 'Vocabulary for catalogue structure — our fields/sections/facets mirror it, so export stays compatible.', status: 'in code', where: 'fields · sections · facets', spec: 'https://en.wikipedia.org/wiki/Product_information_management' },
+    { id: 'gs1-gpc', name: 'GS1 GPC classification', body: 'GS1', role: 'Product classification, held BY REFERENCE (link out, never mirror).', status: 'by reference', where: 'standards[]', spec: 'https://www.gs1.org/standards/gpc' },
+    { id: 'schema-org-product', name: 'Schema.org / Product', body: 'schema.org', role: 'Web-standard product vocabulary for interop, held by reference.', status: 'by reference', where: 'standards[]', spec: 'https://schema.org/Product' },
+    { id: 'rfc6902', name: 'JSON Patch — IETF RFC 6902', body: 'IETF', role: 'Ordered, audited edit operations — for when a change history must be replayable.', status: 'roadmap', where: '—', spec: 'https://www.rfc-editor.org/rfc/rfc6902' },
+    { id: 'gs1-gdsn', name: 'GS1 GDSN', body: 'GS1', role: 'Cross-company continuous catalogue sync (supplier → distributor).', status: 'roadmap', where: '—', spec: 'https://www.gs1.org/services/gdsn' },
+  ];
+
+  // RFC 7386 — JSON Merge Patch. Pure, ~10 lines: null deletes a key, object recurses, scalar replaces.
+  function mergePatch(target, patch) {
+    if (patch === null || typeof patch !== 'object' || Array.isArray(patch)) return patch;
+    var out = (target && typeof target === 'object' && !Array.isArray(target)) ? Object.assign({}, target) : {};
+    Object.keys(patch).forEach(function (k) {
+      if (patch[k] === null) { delete out[k]; }
+      else { out[k] = mergePatch(out[k], patch[k]); }
+    });
+    return out;
+  }
+
+  // GS1-style stable identity — first present of sku/gtin/code, else the name.
+  function itemKey(it) { return (it && (it.sku || it.gtin || it.code || it.product || it.name)) || null; }
+
+  // MDM source-priority — higher wins a field conflict; a source only overwrites a field a
+  // stronger source already set if it is >= that strength (else it only fills empties).
+  var SOURCE_PRIORITY = { manual: 5, csv: 4, erp: 3, blueprint: 2, reference: 2, value: 2, capture: 1 };
+
+  // Upsert a source's contribution into the golden record set (MDM + RFC 7386).
+  // Records per-field provenance in _lineage {field: {source, prio}} — that IS the four-leg made concrete.
+  function upsertItem(items, incoming, opts) {
+    opts = opts || {}; items = items || [];
+    var source = opts.source || 'manual';
+    var prio = (opts.priority != null) ? opts.priority : (SOURCE_PRIORITY[source] || 1);
+    var key = itemKey(incoming);
+    var existing = null;
+    for (var i = 0; i < items.length; i++) { if (key && itemKey(items[i]) === key) { existing = items[i]; break; } }
+    if (!existing) {
+      var created = mergePatch({}, incoming);
+      created._src = source; created._lineage = {};
+      Object.keys(incoming).forEach(function (f) { if (f.charAt(0) !== '_') created._lineage[f] = { source: source, prio: prio }; });
+      items.push(created);
+      return { items: items, item: created, created: true };
+    }
+    var lin = existing._lineage || (existing._lineage = {});
+    Object.keys(incoming).forEach(function (f) {
+      if (f.charAt(0) === '_') return;
+      var cur = lin[f];
+      var empty = existing[f] == null || existing[f] === '';
+      if (empty || !cur || prio >= cur.prio) {
+        existing[f] = mergePatch(existing[f], incoming[f]);
+        lin[f] = { source: source, prio: prio };
+      }
+    });
+    return { items: items, item: existing, created: false, updated: true };
+  }
+
   return {
     LEGS: LEGS, TYPES: TYPES, viaFor: viaFor, leg: leg,
     STD_SCHEMES: STD_SCHEMES, PRICE_BASIS: PRICE_BASIS, PRICE_BY: PRICE_BY,
@@ -235,5 +300,6 @@
     ensure: ensure, toBase: toBase, resolvePrice: resolvePrice, routeChain: routeChain,
     deriveComputeJob: deriveComputeJob, canonicalInputs: canonicalInputs, validate: validate,
     toJSONSchema: toJSONSchema,
+    STANDARDS: STANDARDS, mergePatch: mergePatch, itemKey: itemKey, upsertItem: upsertItem, SOURCE_PRIORITY: SOURCE_PRIORITY,
   };
 });
