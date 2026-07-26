@@ -204,10 +204,43 @@ async function loadSettings(){ const h=document.getElementById("setbody"); if(!h
       <label class="fl">Default max tasks per actor</label><input class="inp" id="st_mt" inputmode="numeric" value="${esc(s.default_max_tasks||10)}">
       <label class="fl" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="st_av" ${s.all_task_visible?'checked':''}> All tasks visible to all co-assists</label>
       <label class="fl" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="st_ar" ${s.auto_return_on_short_break?'checked':''}> Auto-return tasks on short break</label>
-      <div class="err" id="st_err"></div><button class="composebtn" style="margin-top:9px" onclick="saveSettings()">Save settings</button></div>${autoAssignCard(s,_daOpts)}<div style="border:1px solid var(--line);border-radius:11px;padding:13px;margin-top:10px"><div class="sec" style="margin:0 0 6px">📎 Attachment policy <span style="font-size:10px;font-family:'Space Mono';background:#f3f0e8;color:#7a5e22;border-radius:5px;padding:1px 6px">governance · stub</span></div><label class="fl">Allowed types</label><input class="inp" id="st_atttypes" value="image, pdf, docx, xlsx, csv, zip"><label class="fl">Max size per file (MB)</label><input class="inp" id="st_attsize" inputmode="numeric" value="10"><label class="fl">Max attachments per chit</label><input class="inp" id="st_attcount" inputmode="numeric" value="10"><div style="font-size:11px;color:var(--grey);margin-top:6px">Where allowed-types / size / count rules live (enforced backend-side). Not active yet.</div></div>${aiSettingsCard()}${blueprintSettingsHTML()}`;
+      <div class="err" id="st_err"></div><button class="composebtn" style="margin-top:9px" onclick="saveSettings()">Save settings</button></div>${autoAssignCard(s,_daOpts)}<div style="border:1px solid var(--line);border-radius:11px;padding:13px;margin-top:10px"><div class="sec" style="margin:0 0 6px">📎 Attachment policy <span style="font-size:10px;font-family:'Space Mono';background:#f3f0e8;color:#7a5e22;border-radius:5px;padding:1px 6px">governance · stub</span></div><label class="fl">Allowed types</label><input class="inp" id="st_atttypes" value="image, pdf, docx, xlsx, csv, zip"><label class="fl">Max size per file (MB)</label><input class="inp" id="st_attsize" inputmode="numeric" value="10"><label class="fl">Max attachments per chit</label><input class="inp" id="st_attcount" inputmode="numeric" value="10"><div style="font-size:11px;color:var(--grey);margin-top:6px">Where allowed-types / size / count rules live (enforced backend-side). Not active yet.</div></div>${aiSettingsCard()}${policyFlagsCard()}${blueprintSettingsHTML()}`;
   }catch(e){ h.innerHTML=scrErr(e); } }
 async function saveSettings(){ const x=document.getElementById("st_err"); if(x)x.textContent="";
   try{ await api("saveSettings",{body:{assignment_model:val("st_am"),default_max_tasks:+val("st_mt")||10,all_task_visible:document.getElementById("st_av").checked,auto_return_on_short_break:document.getElementById("st_ar").checked}}); toast(MSG.settingsSaved()); }catch(e){ if(x)x.textContent=e.message; } }
+/* ---- POLICY FLAGS — the per-entity / work-pattern toggles the 7-layer block (GOV) does NOT yet carry: self-copy,
+   chit-expiry, retention, dispute scope. SAME governance grammar as GOV (govKlass class + cascade level), rendered from
+   a schema (adopt-don't-reinvent: this complements govLayersBlock, it does not duplicate it). These actually PERSIST
+   (localStorage prototype); server persistence + real enforcement + folding into the layers are the next slices. */
+var POLICY_FLAGS = [
+  { key:'self_copy_pref',    label:'Self-chit copy',        type:'enum',   options:['both','sent','received'],      def:'both', level:'entity',        gov:'entity',   help:'A chit to yourself: keep both copies, only the Order (sent), or only the Task (received).' },
+  { key:'chit_expiry_days',  label:'Chit expiry (days)',    type:'number', def:0,  level:'work-pattern', gov:'chosen',   help:'0 = no expiry. Auto-closes a chit after N days. Tighten-only, per work pattern.' },
+  { key:'retention_days',    label:'Retention (days)',      type:'number', def:0,  level:'entity',        gov:'chosen',   help:'0 = keep. Per-copy retention; governed auto-purge is destructive → human-gated.' },
+  { key:'dispute_scope',     label:'Dispute messages',      type:'enum',   options:['per-party','shared'],          def:'per-party', level:'platform', gov:'bound', help:'Per-party confidential scoping is the USP — platform-bound, cannot be relaxed.' },
+];
+function _polKey(){ return 'cb_polflags_' + (SESSION.entityId || SESSION.entity || 'anon'); }
+function _polLoad(){ try { var s=localStorage.getItem(_polKey()); return s?JSON.parse(s):{}; } catch(e){ return {}; } }
+function _polSave(o){ try { localStorage.setItem(_polKey(), JSON.stringify(o||{})); } catch(e){} }
+function _polVal(def){ var o=UI._polset||(UI._polset=_polLoad()); return (o[def.key]!==undefined)?o[def.key]:def.def; }
+function _polLocked(gov){ return gov==='bound'||gov==='protected'||gov==='inherited'; }
+function setPolFlag(key, v){ var o=UI._polset||(UI._polset=_polLoad()); var def=POLICY_FLAGS.filter(function(d){return d.key===key;})[0]; if(def&&def.type==='number') v=(v===''?0:Number(v)); o[key]=v; _polSave(o); if(typeof toast==='function') toast((def?def.label:'Flag')+' set ✓'); }
+function _polControl(def){ var v=_polVal(def);
+  if(_polLocked(def.gov)) return '<span style="font-weight:700;font-size:12.5px">'+esc(String(v))+'</span> <span style="font-size:10px" title="locked / inherited — cannot change here">🔒</span>';
+  if(def.type==='enum') return '<select onchange="setPolFlag(\''+def.key+'\',this.value)" style="padding:5px 8px;border:1px solid var(--line);border-radius:7px;font-size:12.5px">'+def.options.map(function(o){ return '<option'+(String(v)===String(o)?' selected':'')+'>'+esc(o)+'</option>'; }).join('')+'</select>';
+  if(def.type==='number') return '<input type="number" value="'+esc(String(v))+'" onchange="setPolFlag(\''+def.key+'\',this.value)" style="width:90px;padding:5px 8px;border:1px solid var(--line);border-radius:7px;font-size:12.5px">';
+  return '<input value="'+esc(String(v))+'" onchange="setPolFlag(\''+def.key+'\',this.value)" style="padding:5px 8px;border:1px solid var(--line);border-radius:7px;font-size:12.5px">';
+}
+function policyFlagsCard(){ UI._polset=_polLoad();
+  var rows=POLICY_FLAGS.map(function(def){ return '<div style="display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)">'
+    +'<div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap"><span style="font-weight:600;font-size:12.5px">'+esc(def.label)+'</span>'+govKlass(def.gov)+'<span style="font-size:9px;font-family:\'Space Mono\';background:#eef1f5;color:#6a707a;border-radius:5px;padding:1px 6px">'+esc(def.level)+'</span></div>'
+    +'<div style="font-size:11px;color:var(--grey);margin-top:2px;line-height:1.45">'+esc(def.help)+'</div></div>'
+    +'<div style="flex:none;text-align:right;min-width:120px">'+_polControl(def)+'</div></div>'; }).join('');
+  return '<div style="'+_CARD+';margin-top:10px">'
+    +'<div class="sec" style="margin:0 0 4px">🚩 Policy flags <span style="font-size:10px;font-family:\'Space Mono\';background:#EFEAF6;color:#5b4a86;border-radius:5px;padding:1px 6px">schema-driven · functional</span></div>'
+    +'<div style="font-size:11px;color:var(--grey);line-height:1.5;margin-bottom:6px">The per-entity / work-pattern toggles the <b>7-layer block above</b> doesn\'t yet carry — same governance grammar (<b>class</b> + <b>level</b>): 🔒 platform-bound you can\'t relax; <b>tighten-only</b> you can make stricter; <b>entity</b> you set freely. Defined as data (a schema), these actually persist.</div>'
+    +rows
+    +'<div style="font-size:10.5px;color:var(--grey);font-style:italic;margin-top:8px">Saved on this device (prototype). Next: fold into the 7 layers · server persistence · real enforcement (self-copy is declared-but-unenforced today).</div></div>';
+}
 function autoAssignCard(s, daOpts){ const m=s.auto_assign_mode||'off';
   return `<div style="${_CARD};margin-top:10px"><div class="sec" style="margin:0 0 6px">🧭 Auto-assign on receipt <span style="font-size:10px;font-family:'Space Mono';background:#e7f3ea;color:#2e6b3f;border-radius:5px;padding:1px 6px">active</span></div>
     <label class="fl">Mode</label><select class="inp" id="st_aam">
