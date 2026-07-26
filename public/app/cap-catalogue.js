@@ -437,8 +437,20 @@ function _cwStep4(w){
     body = '<div style="font-size:12.5px;color:#3a4048;margin-bottom:8px">Just a few? Fill the remaining fields by hand (or use ＋ Add item on the finished catalogue).</div>'
       + (rem.length ? rem.map(function(r){ return '<div style="display:flex;align-items:center;gap:9px;padding:4px 0"><span style="font-size:12px;color:var(--grey);min-width:150px">' + esc(r.name) + '</span><input value="' + esc(w.manual[r.name] || '') + '" oninput="cwSetManual(\'' + r.name + '\',this.value)" placeholder="value" style="flex:1;padding:6px 8px;border:1px solid var(--line);border-radius:7px;font-size:12px"></div>'; }).join('') : '<div style="font-size:12px;color:#2c7a43">Nothing left — the blueprint / ERP covered it.</div>');
   } else {
-    body = '<div style="font-size:12.5px;color:#3a4048;margin-bottom:8px">Only have <b>photos or product labels</b>? The <b>Capture</b> connector reads an image/scan and extracts the item (name, price, code) into your catalogue — the same pipeline as WhatsApp / email / scan.</div>'
-      + '<div style="padding:11px 13px;border:1px dashed #b7a3d6;border-radius:9px;background:#f7f4fc;font-size:11.5px;color:#6a4fa0">📷 Upload photos → AI reads each → items land here, de-duplicated by content. <i>Runs through the existing Capture capability (b104) — hooking the upload into the wizard next.</i></div>';
+    var ph = w.photos || []; var committed = (w.manualItems || []).filter(function(i){ return i._src === 'capture'; }).length;
+    body = '<div style="font-size:12.5px;color:#3a4048;margin-bottom:8px">Only have <b>photos or product labels</b>? Add the pictures — each becomes an item. You confirm the name &amp; price (the same human-confirm step the <b>Capture</b> connector uses).</div>'
+      + '<input id="cw_photo_input" type="file" accept="image/*" multiple style="display:none" onchange="cwPhotoPick(this)">'
+      + '<button class="pri" onclick="cwPhotoBtn()" style="padding:8px 15px">📷 Add photos</button>'
+      + (ph.length ? '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:10px;margin-top:12px">'
+          + ph.map(function(p){ return '<div style="border:1px solid var(--line);border-radius:9px;padding:8px;background:#fff">'
+            + '<div style="height:88px;background:#f4f6f8 center/cover no-repeat;background-image:url(' + p.url + ');border-radius:6px"></div>'
+            + '<input value="' + esc(p.name || '') + '" oninput="cwSetPhotoField(\'' + p.id + '\',\'name\',this.value)" placeholder="item name" style="width:100%;box-sizing:border-box;margin-top:6px;padding:5px 7px;border:1px solid var(--line);border-radius:6px;font-size:11.5px">'
+            + '<div style="display:flex;gap:5px;margin-top:5px;align-items:center"><span style="font-size:10px;color:var(--grey)">' + esc(_catfCcy()) + '</span><input type="number" value="' + (p.price != null ? p.price : '') + '" oninput="cwSetPhotoField(\'' + p.id + '\',\'price\',this.value)" placeholder="price" style="flex:1;min-width:0;padding:4px 6px;border:1px solid var(--line);border-radius:6px;font-size:11.5px"><span onclick="cwPhotoRemove(\'' + p.id + '\')" style="cursor:pointer;color:#b23;font-size:15px;line-height:1" title="remove">×</span></div>'
+            + '</div>'; }).join('') + '</div>'
+          + '<button onclick="cwPhotosCommit()" style="margin-top:10px;padding:8px 15px;border:1px solid #2c7a43;border-radius:9px;background:#fff;color:#2c7a43;font-weight:600">✓ Add ' + ph.length + ' photo' + (ph.length > 1 ? 's' : '') + ' to catalogue</button>'
+          + (committed ? '<div style="margin-top:7px;font-size:11.5px;color:#2c7a43">✓ ' + committed + ' photo item(s) in your catalogue.</div>' : '')
+        : '')
+      + '<div style="font-size:10.5px;color:var(--grey);margin-top:12px;font-style:italic">Photos are downscaled and stored on the item. Auto-reading the label text (OCR / vision) is the Capture connector\'s AI step — <b>text-only today</b>, so you set name &amp; price now; auto-fill lands when vision is added to the co-assist.</div>';
   }
   return '<div style="font-size:13px;color:#3a4048;margin-bottom:10px">How do you have your items? Don\'t type hundreds — bring a <b>list</b> (CSV/Excel) or <b>photos</b>.</div>' + bar + body;
 }
@@ -487,6 +499,22 @@ function cwImportCSV(){
   p.rows.forEach(function(r){ if (!r[nameIdx]) return; var it = { _src: 'csv', product: r[nameIdx] }; p.headers.forEach(function(h, i){ if (i !== nameIdx && r[i] != null && r[i] !== '') it[h] = r[i]; }); if (priceIdx >= 0) { var pv = parseFloat(r[priceIdx]); if (!isNaN(pv)) it.price = pv; } w.manualItems.push(it); });
   if (typeof toast === 'function') toast(w.manualItems.filter(function(i){ return i._src === 'csv'; }).length + ' items imported'); renderApp();
 }
+// ── Photos → catalogue items (reuses the item pipeline; Capture's human-confirm gate kept: owner sets name/price) ──
+var _cwPhotoSeq = 0;
+function cwPhotoBtn(){ var el = document.getElementById('cw_photo_input'); if (el) el.click(); }
+function _cwDownscale(dataUrl, maxPx, cb){ try { var img = new Image(); img.onload = function(){ var iw = img.width || 1, ih = img.height || 1; var s = Math.min(1, maxPx / Math.max(iw, ih)); var cw = Math.max(1, Math.round(iw * s)), ch = Math.max(1, Math.round(ih * s)); var cv = document.createElement('canvas'); cv.width = cw; cv.height = ch; cv.getContext('2d').drawImage(img, 0, 0, cw, ch); try { cb(cv.toDataURL('image/jpeg', 0.72)); } catch (e) { cb(dataUrl); } }; img.onerror = function(){ cb(dataUrl); }; img.src = dataUrl; } catch (e) { cb(dataUrl); } }
+function cwPhotoPick(input){ var files = (input && input.files) ? Array.prototype.slice.call(input.files) : []; if (!files.length) return; var w = UI.cw; w.photos = w.photos || []; var pending = files.length;
+  var done = function(){ pending--; if (pending <= 0) renderApp(); };
+  files.forEach(function(file){ if (!/^image\//.test(file.type || '')) { done(); return; } var rd = new FileReader(); rd.onload = function(){ _cwDownscale(rd.result, 360, function(small){ w.photos.push({ id: 'ph' + (++_cwPhotoSeq), name: String(file.name || 'Item').replace(/\.[^.]+$/, ''), price: '', url: small }); done(); }); }; rd.onerror = done; rd.readAsDataURL(file); });
+  input.value = '';
+}
+function cwSetPhotoField(id, field, v){ (UI.cw.photos || []).forEach(function(p){ if (p.id === id) p[field] = v; }); }
+function cwPhotoRemove(id){ var w = UI.cw; w.photos = (w.photos || []).filter(function(p){ return p.id !== id; }); renderApp(); }
+function cwPhotosCommit(){ var w = UI.cw; var ph = w.photos || []; if (!ph.length) { if (typeof toast === 'function') toast('Add some photos first.'); return; }
+  w.manualItems = (w.manualItems || []).filter(function(i){ return i._src !== 'capture'; });
+  ph.forEach(function(p){ var it = { _src: 'capture', product: (p.name || 'Item'), _photo: p.url, _media: true }; var pv = parseFloat(p.price); if (!isNaN(pv)) it.price = pv; w.manualItems.push(it); });
+  if (typeof toast === 'function') toast(ph.length + ' photo item(s) added'); renderApp();
+}
 function cwSetPrice(name, v){ UI.cw.prices[name] = v; }
 function cwSetTax(k, v){ UI.cw.tax[k] = v; }
 function cwFinish(){
@@ -500,7 +528,7 @@ function cwFinish(){
       items: (function(){ var acc = []; var srcMode = (w.adoptMode === 'value' ? 'value' : 'reference');
         // Golden records (MDM): each source upserts into one item keyed by SKU via RFC 7386 merge-patch.
         chosenFinishes.forEach(function(it){ var pr = w.prices[it.name]; var inc = { sku: it.name, product: it.name, texture_family: it.texture_family, sheen: it.sheen, region: it.region, _media: true }; if (pr != null && pr !== '') inc.price = Number(pr); CBCatalogue.upsertItem(acc, inc, { source: srcMode }); });
-        (w.manualItems || []).forEach(function(it){ var inc = {}; Object.keys(it).forEach(function(k){ if (k !== '_src' && it[k] != null && it[k] !== '') inc[k] = it[k]; }); if (!inc.sku && inc.product) inc.sku = inc.product; CBCatalogue.upsertItem(acc, inc, { source: it._src === 'csv' ? 'csv' : 'manual' }); });
+        (w.manualItems || []).forEach(function(it){ var inc = {}; Object.keys(it).forEach(function(k){ if (k !== '_src' && it[k] != null && it[k] !== '') inc[k] = it[k]; }); if (!inc.sku && inc.product) inc.sku = inc.product; CBCatalogue.upsertItem(acc, inc, { source: it._src === 'csv' ? 'csv' : it._src === 'capture' ? 'capture' : 'manual' }); });
         if (!acc.length) { var pr0 = w.prices[Object.keys(w.prices)[0]]; var one = { product: (w.manual.name || (CATF_KB[w.vertical] && CATF_KB[w.vertical].product) || 'Item') }; if (pr0 != null && pr0 !== '') one.price = Number(pr0); CBCatalogue.upsertItem(acc, one, { source: 'manual' }); }
         return acc; })() };
     _catfSave(); UI.cw = null; if (typeof toast === 'function') toast('Catalogue is live ✓'); renderApp();
@@ -631,7 +659,7 @@ function _catfAppearsTab(f, c, facets){
 }
 
 /* the items under this face — each tagged by SOURCE (reference / manual / ERP). For referenced items the owner only sets price. */
-function _catfSrcTag(src){ return src === 'reference' ? ['📎 by reference', '#6a44a8'] : src === 'value' ? ['📋 by value (copy)', '#2c5aa0'] : src === 'erp' ? ['🔗 from ERP', '#b07b1e'] : src === 'csv' ? ['📄 imported', '#2c7a43'] : ['✍ entered', '#2c7a43']; }
+function _catfSrcTag(src){ return src === 'reference' ? ['📎 by reference', '#6a44a8'] : src === 'value' ? ['📋 by value (copy)', '#2c5aa0'] : src === 'erp' ? ['🔗 from ERP', '#b07b1e'] : src === 'csv' ? ['📄 imported', '#2c7a43'] : src === 'capture' ? ['📷 photo', '#6a4fa0'] : ['✍ entered', '#2c7a43']; }
 function _catfItemsHtml(f){
   var items = (f.items || []); if (!items.length) return '<div style="font-size:11px;font-weight:800;color:#2c7a43;letter-spacing:.05em;margin-top:18px">YOUR ITEMS · 0</div><div style="font-size:11px;color:var(--grey);padding:4px 0">No items yet — adopt a source, add manually, or pull from ERP.</div>';
   var needPrice = items.filter(function(it){ return it.price == null || it.price === ''; }).length;
