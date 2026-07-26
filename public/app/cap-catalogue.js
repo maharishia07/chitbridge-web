@@ -1,11 +1,28 @@
-/* cap-catalogue.js — the ENHANCED catalogue setup (local prototype, not promoted).
+/* cap-catalogue.js — CATALOGUE SETUP capability (⚙ Set up (new)). LIVE in prod (main). Lazy-loaded. Gate: `npm run check`.
  *
- * Athi's model: ONE "face" per catalogue (not per item). Face = purpose · one storefront method · facets
- * (variants/sourcing/standards/media). Currency + country INHERITED from entity Settings. Items conform.
+ * MODEL: ONE "face" per catalogue (not per item) — purpose · one storefront method · units (multi) · facets. Currency +
+ * country inherited from entity Settings. Items conform to the face. Built on catalogue-model.js (CBCatalogue): JSON
+ * Schema 2020-12 · RFC 7386 merge-patch · MDM golden-record + survivorship · GS1 SKU (adopt-don't-reinvent — see the
+ * 📐 standards panel). The CB-unique layer (four-leg provenance · chit/seal · per-copy · governance) rides on top.
  *
- * Setup is TWO PANELS: left = choose (adopt a template via dropdown) OR build (state purpose + FEED your
- * existing inventory — CSV/ERP — which we STUDY and turn into a suggested model); right = a LIVE preview of
- * "how the catalogue will look". Commit → the face view. Draft-only (localStorage). Uses catalogue-model.js.
+ * FLOW: a 6-step wizard (_catfWizard) → committed face (_catfFaceView).
+ *   Step 1 Vertical  — purpose → suggested fields + the catalogue's unit SET (multi-select).
+ *   Step 2 Blueprint — adopt a SOURCE catalogue (b78 catalogue_source) BY REFERENCE (shared design, own price) or by
+ *                      VALUE (copy). Picker is searchable + filtered by vertical FAMILY (_catfGroupOf: food/materials/…).
+ *   Step 3 ERP       — capture the field→ERP/Tally mapping (the connector executes the pull at runtime).
+ *   Step 4 Manual    — bring items without typing: CSV/Excel paste · photos (matched by filename) · type-a-few.
+ *   Step 5/6 Price·Tax → cwFinish.
+ *
+ * PERSISTENCE (all real, prod): owned+priced items → catalogue_items via prodAdd (the classic Catalogue screen owns
+ * R/U/D; '🗂️ Manage in Catalogue' hands off). By-REFERENCE adoptions → catalogue_adoption (b75) — reference and value
+ * are MUTUALLY EXCLUSIVE (no double-create). Face config → catalogue_face (b112, server truth + localStorage cache,
+ * mirrors the cap-network _net* sync). '📢 Publish as blueprint' → catalogue_source (b78). '✨ Enrich (AI)' → the
+ * deployed /api/governance/ai-draft with the catalogue-enrich skill (b113): local/botanical names that travel in the
+ * blueprint. Photos ride the blueprint as downscaled thumbnails.
+ *
+ * KNOWN GAPS (spec'd, not built): the classic REFERENCED display (app.html refFinishRow/refFinishDetail) is still
+ * paint-centric + per-product units aren't wired → C:\dev\SPEC-adoption-generalize.md (rollout held on this). Photo→item
+ * OCR/vision → C:\dev\SPEC-catalogue-photo-vision.md.
  */
 
 var CATF_METHODS = [
