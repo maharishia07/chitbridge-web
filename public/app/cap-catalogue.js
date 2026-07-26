@@ -408,7 +408,9 @@ function cwSetPhotoField(id, field, v){ (UI.cw.photos || []).forEach(function(p)
 function cwPhotoRemove(id){ var w = UI.cw; w.photos = (w.photos || []).filter(function(p){ return p.id !== id; }); renderApp(); }
 function cwPhotosCommit(){ var w = UI.cw; var ph = w.photos || []; if (!ph.length) { if (typeof toast === 'function') toast('Add some photos first.'); return; }
   w.manualItems = (w.manualItems || []).filter(function(i){ return i._src !== 'capture'; });
-  ph.forEach(function(p, i){ var nm = (p.name && p.name.trim()) || ('Photo ' + (i + 1)); var it = { _src: 'capture', product: nm, _photo: p.url, _media: true }; var pv = parseFloat(p.price); if (!isNaN(pv)) it.price = pv; w.manualItems.push(it); });
+  var seen = {};   // de-dupe names within the batch so two photos never collide on one SKU and drop an image
+  ph.forEach(function(p, i){ var base = (p.name && p.name.trim()) || ('Photo ' + (i + 1)); var nm = base; if (seen[base]) { nm = base + ' (' + (seen[base] + 1) + ')'; seen[base]++; } else seen[base] = 1;
+    var it = { _src: 'capture', product: nm, _photo: p.url, _media: true }; var pv = parseFloat(p.price); if (!isNaN(pv)) it.price = pv; w.manualItems.push(it); });
   if (typeof toast === 'function') toast(ph.length + ' photo item(s) added'); renderApp();
 }
 function cwSetPrice(name, v){ UI.cw.prices[name] = v; }
