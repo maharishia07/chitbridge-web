@@ -42,9 +42,17 @@ var CATF_REQUIRED = {
 function _catfVerticalFromPurpose(p){ var s = (p || '').toLowerCase();
   if (/gold|bullion/.test(s)) return 'gold'; if (/coffee|bean/.test(s)) return 'coffee';
   if (/pharma|drug|medicine|\blot\b/.test(s)) return 'pharma'; if (/paint|finish|colou?r/.test(s)) return 'paint';
+  if (/meat|chicken|mutton|poultry|beef|pork|lamb|goat/.test(s)) return 'meat';
+  if (/fish|seafood|prawn|shrimp|crab|squid/.test(s)) return 'fish';
+  if (/fruit|mango|banana|apple|citrus/.test(s)) return 'fruit';
+  if (/dairy|milk|cheese|paneer|curd|yog[hu]?urt|butter/.test(s)) return 'dairy';
   if (/veg|vegetable|grocery|produce/.test(s)) return 'veg'; if (/export|import|customs|\btrade\b/.test(s)) return 'trade';
   if (/retail|\bshop\b|\bstore\b/.test(s)) return 'retail'; return null;
 }
+// Blueprint FAMILY (Athi: tag as "eatable" so asking meat surfaces veg/meat/fish). Filtering is by family, not exact
+// vertical. Derived from the vertical — no schema change.
+var CATF_GROUPS = { food: ['veg', 'meat', 'fish', 'fruit', 'dairy', 'grocery', 'produce', 'poultry', 'bakery', 'coffee'], materials: ['paint', 'chemical', 'hardware', 'building'], precious: ['gold', 'silver', 'jewellery', 'gem'], health: ['pharma', 'medicine'] };
+function _catfGroupOf(v){ v = (v || '').toLowerCase(); if (!v) return null; for (var g in CATF_GROUPS) { if (CATF_GROUPS[g].indexOf(v) >= 0) return g; } return null; }
 /* what ADOPTION brings from the source (by reference) — the owner only sets the price. Kept inside the catalogue. */
 // the REAL Royale Play source (beta-royale-play@v1, live on shop CB3D5L4UFT) — design by reference, owner sets price only
 /* ---- per-entity face draft (localStorage; server persistence is a later slice) ---- */
@@ -425,11 +433,13 @@ function _cwStep2Products(w){
   else {
     var q = (w.bpQuery || '').toLowerCase().trim();
     var all = srcs || [];
-    var matchVert = function(s){ return w.bpAll || !w.vertical || !s.for_vertical || s.for_vertical === w.vertical; };
+    var storeGroup = _catfGroupOf(w.vertical);
+    var matchVert = function(s){ if (w.bpAll) return true; if (!s.for_vertical) return true; if (storeGroup) return _catfGroupOf(s.for_vertical) === storeGroup; return !w.vertical || s.for_vertical === w.vertical; };
     var filtered = all.filter(function(s){ return matchVert(s) && (!q || (((s.title || '') + ' ' + (s.for_entity || '') + ' ' + (s.for_vertical || '')).toLowerCase().indexOf(q) >= 0)); });
     var otherCount = all.filter(function(s){ return !matchVert(s); }).length;
+    var scopeLabel = w.bpAll ? 'All types' : (storeGroup ? (storeGroup + ' family' + (w.vertical ? ' · ' + esc(w.vertical) : '')) : ('For ' + esc(w.vertical || 'your catalogue')));
     var search = '<input id="cw_bp_search" value="' + esc(w.bpQuery || '') + '" oninput="cwSetBpQuery(this.value)" placeholder="🔎 search blueprints…" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--line);border-radius:8px;font-size:12.5px">';
-    var scope = '<div style="font-size:10.5px;color:var(--grey);margin:6px 0">' + (w.bpAll ? 'All verticals' : ('For ' + esc(w.vertical || 'your catalogue'))) + ' · ' + filtered.length + ' blueprint(s)'
+    var scope = '<div style="font-size:10.5px;color:var(--grey);margin:6px 0">' + scopeLabel + ' · ' + filtered.length + ' blueprint(s)'
       + ((otherCount && !w.bpAll) ? ' · <span onclick="cwToggleBpAll()" style="cursor:pointer;color:var(--blue);font-weight:600">show all (' + otherCount + ' other)</span>' : ((w.bpAll && w.vertical) ? ' · <span onclick="cwToggleBpAll()" style="cursor:pointer;color:var(--blue);font-weight:600">only ' + esc(w.vertical) + '</span>' : '')) + '</div>';
     var skipRow = '<div onclick="cwPickSource(\'\')" style="cursor:pointer;padding:7px 11px;border-bottom:1px solid var(--line);background:' + (!w.source ? '#f4f6f8' : '#fff') + ';font-size:12px;color:var(--grey)">— skip (build without a blueprint) —</div>';
     var rows = filtered.map(function(s){ var on = w.source === s.key;
