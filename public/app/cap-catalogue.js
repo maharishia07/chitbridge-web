@@ -154,6 +154,25 @@ function _catfSourceModel(vertical, purpose){
 
 /* ---- actions ---- */
 function catfMode(m){ UI.catfMode = m; renderApp(); }
+/* the maximum datatype palette — the grammar the AI composes any catalogue from in real time (templates are just a stub) */
+function catfShowPalette(){
+  var P = CBCatalogue.PALETTE();
+  var chip = function(t){ return '<span style="display:inline-block;font-size:11px;background:#eef2f7;border-radius:6px;padding:2px 8px;margin:2px 4px 2px 0">' + esc(t) + '</span>'; };
+  var section = function(title, inner){ return '<div style="margin-top:13px"><div style="font-size:11px;font-weight:800;color:#2c5aa0;letter-spacing:.05em">' + esc(title) + '</div><div style="margin-top:5px">' + inner + '</div></div>'; };
+  var dt = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 16px">' + P.datatypes.map(function(d){ return '<div style="font-size:11.5px;padding:1px 0"><b>' + esc(d.label) + '</b> <span style="color:var(--grey)">— ' + esc(d.note) + '</span></div>'; }).join('') + '</div>';
+  var body = '<div style="padding:14px 18px;max-height:70vh;overflow:auto">'
+    + '<div style="font-size:12.5px;color:var(--grey);line-height:1.6">We can\'t pre-design every catalogue. The code fixes this <b>grammar</b> — the maximum datatypes/primitives — and an <b>AI composes any catalogue from it in real time</b>. The templates are just a stub for now.</div>'
+    + section('DATATYPES · ' + P.datatypes.length, dt)
+    + section('ORIGIN — the four legs', P.legs.map(function(l){ return chip(l.short); }).join(''))
+    + section('STOREFRONT METHODS (one per catalogue)', P.methods.map(function(m){ return chip(m.label); }).join(''))
+    + section('FACETS (deepen when needed)', P.facets.map(chip).join(''))
+    + section('PRICING', P.pricingModels.map(chip).join('') + ' <span style="color:var(--grey);font-size:11px">· held</span> ' + P.priceBy.map(function(b){ return chip('by ' + b); }).join(''))
+    + section('STANDARDS (by reference)', P.standards.map(chip).join(''))
+    + '<div style="font-size:10.5px;color:var(--grey);font-style:italic;margin-top:14px">Anything a real catalogue needs is a combination of these. The AI picks + arranges them per purpose, in real time.</div>'
+    + '</div>';
+  if (typeof modal === 'function') modal('<div class="mhd"><div class="t">🎛 Datatype palette — what the AI composes from</div></div><div class="mbody" style="padding:0">' + body + '</div>', true);
+  else if (typeof toast === 'function') toast('Palette: ' + P.datatypes.length + ' datatypes');
+}
 function catfPreviewTemplate(key){ UI.catfDraft = key ? _catfSourceModel(key, '') : null; UI.catfPick = key; renderApp(); }   // adopt = source the full visible model
 function catfStudy(){ var p = (val('catf_purpose') || '').trim(); var csv = (val('catf_csv') || '');
   if (!p && !csv.trim()) { if (typeof toast === 'function') toast('Describe the purpose (we source the rest), or paste inventory.'); return; }
@@ -179,7 +198,8 @@ function _catfTwoPanelSetup(){
   var seg = function(m, l){ var on = mode === m; return '<button onclick="catfMode(\'' + m + '\')" style="border:1px solid var(--line);background:' + (on ? 'var(--ink,#1c2128)' : '#fff') + ';color:' + (on ? '#fff' : 'var(--grey)') + ';font-size:12px;font-weight:700;padding:6px 14px;cursor:pointer">' + l + '</button>'; };
   var left = '<div style="font-size:17px;font-weight:800">🗂️ Set up your catalogue</div>'
     + '<div style="font-size:12px;color:var(--grey);margin:6px 0 4px;line-height:1.6">One <b>face</b> for the whole catalogue — one purpose, one way of selling. Items conform.</div>'
-    + '<div style="font-size:11px;color:var(--grey);margin-bottom:12px">' + _catfSettingsNote() + '</div>'
+    + '<div style="font-size:11px;color:var(--grey);margin-bottom:6px">' + _catfSettingsNote() + '</div>'
+    + '<div style="margin-bottom:12px"><span onclick="catfShowPalette()" style="cursor:pointer;font-size:11px;color:var(--blue);font-weight:600">🎛 The datatype palette the AI composes from →</span></div>'
     + '<div style="display:inline-flex;border-radius:9px;overflow:hidden;border:1px solid var(--line)">' + seg('adopt', '🔎 Adopt a template') + seg('build', '🛠 Build from purpose') + '</div>';
 
   if (mode === 'adopt') {

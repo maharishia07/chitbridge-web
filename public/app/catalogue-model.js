@@ -33,6 +33,41 @@
   var PRICE_BASIS = ['global', 'system', 'user', 'manual'];   // global market stage · ERP/system · user choice at order · hand-entered
   var PRICE_BY = ['ref', 'value'];                            // ref → resolved from source at seal (loose) · value → frozen amount now
   function viaFor(leg) { return leg === 'compute' ? ['AI', 'ERP'] : ['ERP', 'IoT']; }
+
+  // ---- THE MAXIMUM DATATYPE PALETTE ----
+  // We cannot pre-design every catalogue. So the code fixes the GRAMMAR (the full set of primitives), and an AI
+  // composes any catalogue from it in real time. This is that grammar — the maximum datatypes as code.
+  var DATATYPES = [
+    { k: 'text',         label: 'Text',                    note: 'a short string' },
+    { k: 'longtext',     label: 'Long text',               note: 'description / notes' },
+    { k: 'number',       label: 'Number',                  note: 'decimal quantity' },
+    { k: 'integer',      label: 'Whole number',            note: 'count' },
+    { k: 'boolean',      label: 'Yes / No',                note: 'a flag' },
+    { k: 'date',         label: 'Date',                    note: 'expiry, harvest' },
+    { k: 'datetime',     label: 'Date & time',             note: 'timestamped event' },
+    { k: 'choice',       label: 'Choice (one)',            note: 'grade, colour — pick one' },
+    { k: 'multichoice',  label: 'Choice (many)',           note: 'tags, effects' },
+    { k: 'range',        label: 'Range (min–max)',         note: 'a band' },
+    { k: 'money',        label: 'Money',                   note: 'amount + currency (from context)' },
+    { k: 'quantity',     label: 'Quantity',                note: 'value + unit' },
+    { k: 'unit',         label: 'Unit + conversions',      note: 'base unit + integer factors' },
+    { k: 'standard_ref', label: 'Standard reference',      note: 'HS / GS1 — by reference' },
+    { k: 'external_ref', label: 'External reference',      note: 'system + id (ERP/PIM code)' },
+    { k: 'media',        label: 'Image / video / file',    note: 'own or inherited from source' },
+    { k: 'url',          label: 'Link',                    note: 'spec sheet, page' },
+    { k: 'geo',          label: 'Location',                note: 'origin, delivery point' },
+    { k: 'formula',      label: 'Computed (formula)',      note: 'derived by a co-assist, then sealed' },
+  ];
+  var METHODS = [   // how the whole catalogue sells (one per catalogue)
+    { k: 'cart',     label: 'Cart (qty × price)' }, { k: 'qty', label: 'Quantity only' },
+    { k: 'range',    label: 'Price as a range' },   { k: 'qtyprice', label: 'Both negotiable' },
+    { k: 'text',     label: 'Information only' },    { k: 'subscription', label: 'Subscription / recurring' },
+    { k: 'quote',    label: 'Quote / tender' },
+  ];
+  var FACETS = ['identity', 'variants', 'units', 'standards', 'media', 'bom', 'pricing', 'loop', 'feedback'];
+  var PRICING_MODELS = ['fixed', 'range', 'tiered', 'market-ref', 'negotiated'];
+  // the whole grammar, in one place — what the AI composes from
+  function PALETTE(){ return { datatypes: DATATYPES, legs: LEGS, viaFor: viaFor, methods: METHODS, facets: FACETS, pricingModels: PRICING_MODELS, standards: STD_SCHEMES, priceBy: PRICE_BY, priceBasis: PRICE_BASIS }; }
   function leg(k) { for (var i = 0; i < LEGS.length; i++) if (LEGS[i].k === k) return LEGS[i]; return null; }
 
   // ---- normalize / migrate a draft to the current shape (moved out of the UI's _ensureCat) ----
@@ -165,6 +200,7 @@
   return {
     LEGS: LEGS, TYPES: TYPES, viaFor: viaFor, leg: leg,
     STD_SCHEMES: STD_SCHEMES, PRICE_BASIS: PRICE_BASIS, PRICE_BY: PRICE_BY,
+    DATATYPES: DATATYPES, METHODS: METHODS, FACETS: FACETS, PRICING_MODELS: PRICING_MODELS, PALETTE: PALETTE,
     ensure: ensure, toBase: toBase, resolvePrice: resolvePrice, routeChain: routeChain,
     deriveComputeJob: deriveComputeJob, canonicalInputs: canonicalInputs, validate: validate,
   };
