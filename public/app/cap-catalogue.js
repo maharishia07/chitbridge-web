@@ -164,6 +164,39 @@ function catfToggleFacet(k){ if (!UI.catf) return; UI.catf.facets = _catfFacets(
 function catfReset(){ if (typeof confirm === 'function' && !confirm('Start the catalogue setup over? (items are not affected)')) return; UI.catf = null; UI.catfDraft = null; UI.catfPick = ''; try { localStorage.removeItem(_catfKey()); } catch (e) {} _catfSetDirty(true); _catfQueuePush(); renderApp(); }
 // Hand off to the REAL catalogue screen — the owned items were persisted via prodAdd; view/edit/delete live there.
 function catfManage(){ UI.nav = 'catalogue'; if (typeof renderApp === 'function') renderApp(); if (typeof loadCatalogue === 'function') loadCatalogue(); }
+// PUBLISH AS BLUEPRINT (source-as-entity, b78): turn this store's catalogue into an adoptable source other stores
+// inherit BY REFERENCE (names + design travel; each distributor overlays its OWN unit + price). Price is NOT published
+// (it's the per-distributor commercial); underscore meta + objects are stripped.
+function _catfSourceItems(f){
+  return (f.items || []).map(function(it){ var d = {};
+    Object.keys(it).forEach(function(k){ if (k.charAt(0) !== '_' && ['price', 'rate', 'sku'].indexOf(k) < 0 && typeof it[k] !== 'object' && it[k] != null && it[k] !== '') d[k] = it[k]; });
+    d.name = it.product || it.name || ''; return d; }).filter(function(d){ return d.name; });
+}
+function catfPublishBlueprint(){
+  var f = UI.catf; if (!f || typeof api !== 'function') return;
+  var c = CBCatalogue.ensure(f.catalogue);
+  var items = _catfSourceItems(f);
+  if (!items.length) { if (typeof toast === 'function') toast('Add some items first, then publish as a blueprint.'); return; }
+  var slug = String(SESSION.entity || SESSION.entityId || 'store').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'store';
+  var source_key = slug + '@v1';
+  var keys = {}; items.forEach(function(d){ Object.keys(d).forEach(function(k){ if (k !== 'name') keys[k] = true; }); });
+  var fields = [{ key: 'name', label: c.product || 'Item', type: 'text' }].concat(Object.keys(keys).map(function(k){ return { key: k, label: k.replace(/_/g, ' '), type: 'text' }; }));
+  var unit = (f.units && f.units[0]) || c.baseUnit || 'unit';
+  var body = { source_key: source_key, version: 'v1', for_vertical: f.vertical || '', title: (String(SESSION.entity || '') + ' — ' + (c.product || 'Catalogue')).trim(), collection: c.product || '',
+    schema: { name: c.product || 'Item', fields: fields }, items: items,
+    commercials_fields: [{ key: 'price', label: 'Price / ' + unit, type: 'money' }],
+    experience: { note: c.story || '' }, formatting: {} };
+  if (typeof toast === 'function') toast('Publishing blueprint…');
+  api('catSourcePut', { body: body }).then(function(r){
+    if (r && r.ok) {
+      if (typeof toast === 'function') toast('Published as blueprint ✓');
+      if (typeof modal === 'function') modal('<div class="mhd"><div class="t">📢 Published as a blueprint</div></div><div class="mbody" style="padding:16px 18px"><div style="font-size:13px;color:#3a4048;line-height:1.6">Your catalogue is now an <b>adoptable blueprint</b>. In <b>another store</b>, open <b>🗂️ Catalogue → ⚙ Set up (new) → Blueprint</b> and pick:'
+        + '<div style="margin-top:8px;font-weight:700;color:#2c5aa0">' + esc(body.title) + '</div>'
+        + '<div style="font-size:11px;color:var(--grey);margin-top:2px">source <code>' + esc(source_key) + '</code> · ' + items.length + ' item(s)' + (f.vertical ? ' · ' + esc(f.vertical) : '') + '</div>'
+        + '<div style="margin-top:10px">Each distributor sets its <b>own unit + price</b> (e.g. wholesale in <b>ton</b>, retail in <b>kg</b>) — the names &amp; design travel <b>by reference</b>, not copied.</div></div></div>', true);
+    } else if (typeof toast === 'function') toast('Publish failed: ' + ((r && r.error) || 'unknown'));
+  }).catch(function(e){ if (typeof toast === 'function') toast('Publish failed: ' + ((e && e.message) || '')); });
+}
 
 /* ---- ADOPTED RENDERER: json-editor (MIT) renders an item-entry form straight from our JSON Schema.
    Lazy-loaded (535KB) only when the designer fills an item — no schema/form code of our own. ---- */
@@ -482,7 +515,7 @@ function cwFinish(){
   if (!acc.length) { var pr0 = w.prices[Object.keys(w.prices)[0]]; var one = { product: (w.manual.name || (CATF_KB[w.vertical] && CATF_KB[w.vertical].product) || 'Item') }; if (pr0 != null && pr0 !== '') one.price = Number(pr0); CBCatalogue.upsertItem(acc, one, { source: 'manual' }); }
 
   var toLive = function(){
-    UI.catf = { method: 'cart', units: units, facets: { variants: true, media: !!w.source, sourcing: Object.keys(w.erpMap || {}).length > 0 }, adoptedFrom: (w.built && w.built.title) || '', _source: w.source || '', tax: w.tax, erpMap: w.erpMap,
+    UI.catf = { method: 'cart', units: units, vertical: w.vertical || '', facets: { variants: true, media: !!w.source, sourcing: Object.keys(w.erpMap || {}).length > 0 }, adoptedFrom: (w.built && w.built.title) || '', _source: w.source || '', tax: w.tax, erpMap: w.erpMap,
       catalogue: CBCatalogue.ensure({ story: w.purpose || '', product: (w.built && w.built.title) || (CATF_KB[w.vertical] && CATF_KB[w.vertical].product) || 'Catalogue', baseUnit: units[0], altUnits: units.slice(1) }),
       items: acc };
     _catfSave(); UI.cw = null; if (typeof toast === 'function') toast('Catalogue is live ✓'); renderApp();
@@ -620,6 +653,7 @@ function _catfFaceView(){
     + '<button onclick="catfSyncERP()" style="padding:9px 15px;border:1px solid #b07b1e;border-radius:9px;background:#fff;color:#b07b1e;font-weight:600">🔗 From ERP</button>'
     + '<button onclick="catfCustomerPreview()" style="padding:9px 15px;border:1px solid #2c7a43;border-radius:9px;background:#fff;color:#2c7a43;font-weight:600">👁 Customer experience</button>'
     + '<button onclick="catfManage()" style="padding:9px 15px;border:1px solid #2c5aa0;border-radius:9px;background:#fff;color:#2c5aa0;font-weight:600">🗂️ Manage in Catalogue</button>'
+    + '<button onclick="catfPublishBlueprint()" style="padding:9px 15px;border:1px solid #6a4fa0;border-radius:9px;background:#fff;color:#6a4fa0;font-weight:600">📢 Publish as blueprint</button>'
     + '<button onclick="catfReset()" style="padding:9px 15px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--grey)">↺ Start over</button>'
     + '</div>'
     + '<div style="margin-top:14px;font-size:10.5px;color:var(--grey)">Items are <b>golden records</b> — each source (blueprint · ERP · CSV · capture) merges into one item, keyed by SKU, edited via JSON Merge Patch. <span onclick="catfStandardsModal()" style="cursor:pointer;color:var(--blue);font-weight:600">📐 Built on open standards →</span></div>'
