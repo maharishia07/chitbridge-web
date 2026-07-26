@@ -395,10 +395,26 @@ function _cwStep3(w){
   return '<div style="font-size:13px;color:#3a4048;margin-bottom:10px">Map fields to your <b>own systems (ERP / Tally / SAP)</b> so they sync from there. These <b>mapping rules are saved with the catalogue design</b> and stay for each selected item. <b>Nothing from ERP? Skip.</b></div>' + rows + (mapped ? '<div style="font-size:10.5px;color:#b07b1e;margin-top:8px">🔗 ' + mapped + ' field(s) mapped to your systems — saved as references with the design.</div>' : '');
 }
 function _cwStep4(w){
-  var rem = _cwRemaining(w).filter(function(r){ return r.leg !== 'compute'; });
-  var extra = Object.keys(w.manual || {});
-  var body = rem.length ? rem.map(function(r){ return '<div style="display:flex;align-items:center;gap:9px;padding:5px 0"><span style="font-size:12px;color:var(--grey);min-width:150px">' + esc(r.name) + '</span><input value="' + esc(w.manual[r.name] || '') + '" oninput="cwSetManual(\'' + r.name + '\',this.value)" placeholder="value" style="flex:1;padding:6px 8px;border:1px solid var(--line);border-radius:7px;font-size:12px"></div>'; }).join('') : '<div style="font-size:12px;color:#2c7a43">Nothing left — the blueprint / ERP covered it.</div>';
-  return '<div style="font-size:13px;color:#3a4048;margin-bottom:10px">Fill anything still missing <b>by hand</b>. (These are the fields not covered by the blueprint or ERP.)</div>' + body;
+  var mode = w.bulkMode || 'csv';
+  var seg = function(m, l){ var on = mode === m; return '<span onclick="cwBulkMode(\'' + m + '\')" style="cursor:pointer;font-size:11.5px;font-weight:600;padding:5px 11px;border-radius:13px;border:1px solid ' + (on ? '#2c5aa0' : 'var(--line)') + ';color:' + (on ? '#fff' : 'var(--grey)') + ';background:' + (on ? '#2c5aa0' : '#fff') + '">' + l + '</span>'; };
+  var bar = '<div style="display:flex;gap:5px;margin-bottom:12px;flex-wrap:wrap">' + seg('csv', '📄 List (CSV/Excel)') + seg('few', '✍ Type a few') + seg('photos', '📷 Photos only') + '</div>';
+  var body;
+  if (mode === 'csv') {
+    var n = (w.manualItems || []).filter(function(i){ return i._src === 'csv'; }).length;
+    body = '<div style="font-size:12.5px;color:#3a4048;margin-bottom:8px">Have a list? <b>Export to CSV from Excel / Tally</b> and paste it (first row = column names). We map columns to your fields — no typing.</div>'
+      + '<textarea id="cw_bulk_csv" placeholder="name,price,pack_size,hsn\nRoyale Matt,520,4,3209\nRoyale Shyne,610,4,3209" rows="5" style="width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:12px;font-family:monospace;resize:vertical"></textarea>'
+      + '<button class="pri" onclick="cwImportCSV()" style="margin-top:8px;padding:8px 15px">Import rows</button>'
+      + (n ? '<div style="margin-top:8px;font-size:11.5px;color:#2c7a43">✓ ' + n + ' item(s) imported from CSV — they\'ll be in your catalogue.</div>' : '')
+      + '<div style="font-size:10.5px;color:var(--grey);margin-top:6px;font-style:italic">Excel? Save-as CSV. Hundreds of rows work in one paste.</div>';
+  } else if (mode === 'few') {
+    var rem = _cwRemaining(w).filter(function(r){ return r.leg !== 'compute'; });
+    body = '<div style="font-size:12.5px;color:#3a4048;margin-bottom:8px">Just a few? Fill the remaining fields by hand (or use ＋ Add item on the finished catalogue).</div>'
+      + (rem.length ? rem.map(function(r){ return '<div style="display:flex;align-items:center;gap:9px;padding:4px 0"><span style="font-size:12px;color:var(--grey);min-width:150px">' + esc(r.name) + '</span><input value="' + esc(w.manual[r.name] || '') + '" oninput="cwSetManual(\'' + r.name + '\',this.value)" placeholder="value" style="flex:1;padding:6px 8px;border:1px solid var(--line);border-radius:7px;font-size:12px"></div>'; }).join('') : '<div style="font-size:12px;color:#2c7a43">Nothing left — the blueprint / ERP covered it.</div>');
+  } else {
+    body = '<div style="font-size:12.5px;color:#3a4048;margin-bottom:8px">Only have <b>photos or product labels</b>? The <b>Capture</b> connector reads an image/scan and extracts the item (name, price, code) into your catalogue — the same pipeline as WhatsApp / email / scan.</div>'
+      + '<div style="padding:11px 13px;border:1px dashed #b7a3d6;border-radius:9px;background:#f7f4fc;font-size:11.5px;color:#6a4fa0">📷 Upload photos → AI reads each → items land here, de-duplicated by content. <i>Runs through the existing Capture capability (b104) — hooking the upload into the wizard next.</i></div>';
+  }
+  return '<div style="font-size:13px;color:#3a4048;margin-bottom:10px">How do you have your items? Don\'t type hundreds — bring a <b>list</b> (CSV/Excel) or <b>photos</b>.</div>' + bar + body;
 }
 function _cwStep5(w){
   var pk = Object.keys(w.erpMap || {}).filter(function(k){ return /price|rate|mrp/i.test(k) && w.erpMap[k] && w.erpMap[k].system && w.erpMap[k].system !== '—'; })[0];
@@ -434,6 +450,17 @@ function cwToggleItem(name){ UI.cw.chosen[name] = UI.cw.chosen[name] === false; 
 function cwToggleErp(f){ if (UI.cw.erp[f]) delete UI.cw.erp[f]; else UI.cw.erp[f] = true; renderApp(); }
 function cwSetErpRef(f, v){ UI.cw.erp[f] = v || true; }
 function cwSetManual(f, v){ UI.cw.manual[f] = v; }
+function cwBulkMode(m){ UI.cw.bulkMode = m; renderApp(); }
+function cwImportCSV(){
+  var w = UI.cw; var text = val('cw_bulk_csv') || ''; var p = _catfParseCSV(text);
+  if (!p.headers.length) { if (typeof toast === 'function') toast('Paste some CSV first.'); return; }
+  var idx = function(re){ for (var i = 0; i < p.headers.length; i++) if (re.test(p.headers[i])) return i; return -1; };
+  var nameIdx = idx(/name|item|product|title/i); if (nameIdx < 0) nameIdx = 0;
+  var priceIdx = idx(/price|rate|mrp|cost/i);
+  w.manualItems = (w.manualItems || []).filter(function(i){ return i._src !== 'csv'; });
+  p.rows.forEach(function(r){ if (!r[nameIdx]) return; var it = { _src: 'csv', product: r[nameIdx] }; p.headers.forEach(function(h, i){ if (i !== nameIdx && r[i] != null && r[i] !== '') it[h] = r[i]; }); if (priceIdx >= 0) { var pv = parseFloat(r[priceIdx]); if (!isNaN(pv)) it.price = pv; } w.manualItems.push(it); });
+  if (typeof toast === 'function') toast(w.manualItems.filter(function(i){ return i._src === 'csv'; }).length + ' items imported'); renderApp();
+}
 function cwSetPrice(name, v){ UI.cw.prices[name] = v; }
 function cwSetTax(k, v){ UI.cw.tax[k] = v; }
 function cwFinish(){
@@ -443,8 +470,7 @@ function cwFinish(){
   var toLive = function(){
     UI.catf = { method: 'cart', facets: { variants: true, media: !!w.source, sourcing: Object.keys(w.erpMap || {}).length > 0 }, adoptedFrom: (w.built && w.built.title) || '', _source: w.source || '', tax: w.tax, erpMap: w.erpMap,
       catalogue: CBCatalogue.ensure({ product: (w.built && w.built.title) || (CATF_KB[w.vertical] && CATF_KB[w.vertical].product) || 'Catalogue', baseUnit: (CATF_KB[w.vertical] && CATF_KB[w.vertical].baseUnit) || 'unit' }),
-      items: chosenFinishes.length ? chosenFinishes.map(function(it){ return { _src: (w.adoptMode === 'value' ? 'value' : 'reference'), product: it.name, texture_family: it.texture_family, sheen: it.sheen, region: it.region, price: (w.prices[it.name] != null && w.prices[it.name] !== '') ? Number(w.prices[it.name]) : null, _media: true }; })
-        : [{ _src: 'manual', product: (w.manual.name || (CATF_KB[w.vertical] && CATF_KB[w.vertical].product) || 'Item'), price: (w.prices[Object.keys(w.prices)[0]] != null ? Number(w.prices[Object.keys(w.prices)[0]]) : null) }] };
+      items: (function(){ var bp = chosenFinishes.map(function(it){ return { _src: (w.adoptMode === 'value' ? 'value' : 'reference'), product: it.name, texture_family: it.texture_family, sheen: it.sheen, region: it.region, price: (w.prices[it.name] != null && w.prices[it.name] !== '') ? Number(w.prices[it.name]) : null, _media: true }; }); var all = bp.concat((w.manualItems || []).slice()); if (!all.length) all = [{ _src: 'manual', product: (w.manual.name || (CATF_KB[w.vertical] && CATF_KB[w.vertical].product) || 'Item'), price: (w.prices[Object.keys(w.prices)[0]] != null ? Number(w.prices[Object.keys(w.prices)[0]]) : null) }]; return all; })() };
     _catfSave(); UI.cw = null; if (typeof toast === 'function') toast('Catalogue is live ✓'); renderApp();
   };
   if (w.source && Object.keys(com).length && typeof api === 'function') {
@@ -573,7 +599,7 @@ function _catfAppearsTab(f, c, facets){
 }
 
 /* the items under this face — each tagged by SOURCE (reference / manual / ERP). For referenced items the owner only sets price. */
-function _catfSrcTag(src){ return src === 'reference' ? ['📎 by reference', '#6a44a8'] : src === 'value' ? ['📋 by value (copy)', '#2c5aa0'] : src === 'erp' ? ['🔗 from ERP', '#b07b1e'] : ['✍ entered', '#2c7a43']; }
+function _catfSrcTag(src){ return src === 'reference' ? ['📎 by reference', '#6a44a8'] : src === 'value' ? ['📋 by value (copy)', '#2c5aa0'] : src === 'erp' ? ['🔗 from ERP', '#b07b1e'] : src === 'csv' ? ['📄 imported', '#2c7a43'] : ['✍ entered', '#2c7a43']; }
 function _catfItemsHtml(f){
   var items = (f.items || []); if (!items.length) return '<div style="font-size:11px;font-weight:800;color:#2c7a43;letter-spacing:.05em;margin-top:18px">YOUR ITEMS · 0</div><div style="font-size:11px;color:var(--grey);padding:4px 0">No items yet — adopt a source, add manually, or pull from ERP.</div>';
   var needPrice = items.filter(function(it){ return it.price == null || it.price === ''; }).length;
