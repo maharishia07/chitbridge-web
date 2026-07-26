@@ -347,7 +347,14 @@ function _cwStep2Fields(w){
   var head = '<div style="font-size:11px;font-weight:800;color:#2c5aa0;letter-spacing:.05em">FIELDS' + (sel ? ' <span style="color:#6a44a8">· ' + esc(sel.name) + '</span>' : '') + '</div>';
   if (!fields.length) return head + '<div style="font-size:12px;color:var(--grey);margin-top:8px">Pick fields in step 1 first. Adopting a blueprint (right) adds its fields here.</div>';
   var rows = fields.map(function(f){ var v = sel ? sel[f._bpKey || f.name] : undefined; var vstr = (v == null) ? '' : (Array.isArray(v) ? v.map(function(x){ return (x && typeof x === 'object') ? (x.name || '') : x; }).join(', ') : (typeof v === 'object' ? (v.name || JSON.stringify(v)) : String(v))); return '<div style="display:flex;gap:8px;padding:3px 0;border-bottom:1px dashed var(--line);font-size:11.5px"><span style="flex:0 0 148px;color:#3a4048">' + esc(f.name) + (f._bp ? ' <span style="color:#6a44a8;font-size:9px">📎</span>' : f._added ? ' <span style="color:#2c7a43;font-size:9px">＋</span>' : '') + '</span><span style="flex:1;color:' + (vstr ? '#1c2128' : '#9aa3a7') + '">' + (sel ? (vstr ? esc(vstr) : '—') : '<span style="font-size:10px">value shows when you click a product ›</span>') + '</span></div>'; }).join('');
-  return head + '<div style="margin-top:8px">' + rows + '</div>';
+  var refF = fields.filter(function(f){ return f._bp; }).map(function(f){ return f.name; });
+  var todo = fields.filter(function(f){ return !f._bp; }).map(function(f){ return f.name; });
+  var mode = w.adoptMode || 'reference';
+  var summary = w.source ? '<div style="margin-top:6px;font-size:10.5px;line-height:1.6;border-bottom:1px solid var(--line);padding-bottom:8px">'
+    + '<div><span style="color:' + (mode === 'value' ? '#2c5aa0' : '#6a44a8') + ';font-weight:700">' + (mode === 'value' ? '📋 filled by value · ' : '📎 filled by reference · ') + refF.length + '</span> <span style="color:var(--grey)">' + esc(refF.join(' · ') || '—') + '</span></div>'
+    + (todo.length ? '<div><span style="color:#2c7a43;font-weight:700">✍ you still fill · ' + todo.length + '</span> <span style="color:var(--grey)">' + esc(todo.join(' · ')) + '</span></div>' : '')
+    + '</div>' : '';
+  return head + summary + '<div style="margin-top:8px">' + rows + '</div>';
 }
 function _cwStep2Products(w){
   var srcs = UI._cwSources;
