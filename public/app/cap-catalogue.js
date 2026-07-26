@@ -45,6 +45,14 @@ function _catfVerticalFromPurpose(p){ var s = (p || '').toLowerCase();
   if (/veg|vegetable|grocery|produce/.test(s)) return 'veg'; if (/export|import|customs|\btrade\b/.test(s)) return 'trade';
   if (/retail|\bshop\b|\bstore\b/.test(s)) return 'retail'; return null;
 }
+/* what ADOPTION brings from the source (by reference) — the owner only sets the price. Kept inside the catalogue. */
+var CATF_SOURCE_ITEMS = {
+  paint: [
+    { product: 'Sunlit Ivory', texture_family: 'Metallica', colour_combination: 'Ivory + Gold', sheen: 'Satin', coverage_sqft_per_litre: 140, _media: true },
+    { product: 'Royale Aspira', texture_family: 'Sparkle', colour_combination: 'Blue + Silver', sheen: 'Matte', coverage_sqft_per_litre: 120, _media: true },
+    { product: 'Pearl Glow', texture_family: 'Pearl', colour_combination: 'Rose + Pearl', sheen: 'Gloss', coverage_sqft_per_litre: 160, _media: true },
+  ],
+};
 
 /* ---- per-entity face draft (localStorage; server persistence is a later slice) ---- */
 function _catfKey(){ return 'cb_catface_' + (SESSION.entityId || SESSION.entity || 'anon'); }
@@ -156,6 +164,7 @@ function _catfSourceModel(vertical, purpose){
   });
   var draft = { method: t.method || _catfInfer(purpose).method, facets: facets, adoptedFrom: t.title || '', templateKey: vertical, required: req, sourced: true, catalogue: CBCatalogue.ensure(c) };
   draft.sampleRows = _catfKnowledgeItems(vertical, draft.catalogue);
+  draft.items = (CATF_SOURCE_ITEMS[vertical] || []).map(function(it){ return Object.assign({ _src: 'reference', price: null }, it); });   // adoption brings the source's items; owner only sets price
   return draft;
 }
 
@@ -221,8 +230,8 @@ function catfFillItem(){
 function catfCaptureItem(){
   if (!window._catfJE) return; var v; try { v = window._catfJE.getValue(); } catch (e) { return; }
   if (UI.catf) {   // committed catalogue → SAVE to the real catalogue via the existing products API (behind the scenes)
-    var item = v || {};
-    var item_data = Object.assign({}, item, { name: item.product || item.name || 'item' });   // existing catalogue reads item_data.name/unit/price
+    var item = Object.assign({ _src: 'manual' }, v || {});
+    var item_data = Object.assign({}, v || {}, { name: (v && (v.product || v.name)) || 'item' });   // existing catalogue reads item_data.name/unit/price
     UI.catf.items = UI.catf.items || []; UI.catf.items.push(item); _catfSave();   // keep a local copy for the instant customer preview
     if (typeof closeModal === 'function') closeModal();
     if (typeof api === 'function') {
@@ -237,7 +246,7 @@ function catfCaptureItem(){
     + '<pre style="background:#0f1720;color:#d6e2f0;border-radius:8px;padding:10px 12px;font-size:11px;overflow:auto;max-height:30vh;margin-top:6px;white-space:pre">' + esc(JSON.stringify(v, null, 2)) + '</pre>'
     + '<div style="font-size:10.5px;color:var(--grey);font-style:italic;margin-top:4px">A real catalogue_item — this is the JSON that gets sealed onto the chit.</div>';
 }
-function _catfItemToRow(it){ it = it || {}; var name = it.product || it.name || 'item'; var unit = it.unit || ''; var price = (it.price != null ? it.price : (it.rate != null ? it.rate : '')); var values = {}; Object.keys(it).forEach(function(k){ if (['product', 'name', 'unit', 'price', 'rate'].indexOf(k) < 0 && it[k] !== '' && it[k] != null) values[k] = it[k]; }); return { name: name, unit: unit, price: price, values: values }; }
+function _catfItemToRow(it){ it = it || {}; var name = it.product || it.name || 'item'; var unit = it.unit || ''; var price = (it.price != null ? it.price : (it.rate != null ? it.rate : '')); var values = {}; Object.keys(it).forEach(function(k){ if (k.charAt(0) !== '_' && ['product', 'name', 'unit', 'price', 'rate'].indexOf(k) < 0 && it[k] !== '' && it[k] != null) values[k] = it[k]; }); return { name: name, unit: unit, price: price, values: values }; }
 function catfCustomerPreview(){
   var f = UI.catf; if (!f) return; var c = CBCatalogue.ensure(f.catalogue); var facets = _catfFacets(f);
   var items = (f.items || []).map(_catfItemToRow);
@@ -370,12 +379,29 @@ function _catfAppearsTab(f, c, facets){
     + '<div style="font-size:10.5px;color:var(--grey);font-style:italic;margin-top:8px">This is what your customer experiences — and the chit is what both sides keep.</div>';
 }
 
-/* the real items entered under this face (via the standard json-editor form) */
+/* the items under this face — each tagged by SOURCE (reference / manual / ERP). For referenced items the owner only sets price. */
+function _catfSrcTag(src){ return src === 'reference' ? ['📎 from source', '#6a44a8'] : src === 'erp' ? ['🔗 from ERP', '#b07b1e'] : ['✍ entered', '#2c7a43']; }
 function _catfItemsHtml(f){
-  var items = (f.items || []);
-  var list = items.length ? items.map(function(it){ var r = _catfItemToRow(it); return '<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid var(--line);border-radius:8px;margin-top:5px;background:#fff"><span style="font-weight:600;font-size:12px">' + esc(r.name) + '</span>' + (r.unit ? '<span style="font-size:10px;color:#7a5e22;background:var(--gold-soft,#f6ecd8);border-radius:4px;padding:1px 6px">' + esc(r.unit) + '</span>' : '') + (r.price !== '' && r.price != null ? '<span style="margin-left:auto;font-weight:700;font-size:12px">' + esc(_catfMoney(r.price)) + '</span>' : '') + '</div>'; }).join('') : '<div style="font-size:11px;color:var(--grey);padding:4px 0">No items yet — add one with the standard form (json-editor renders it from the schema).</div>';
-  return '<div style="font-size:11px;font-weight:800;color:#2c7a43;letter-spacing:.05em;margin-top:18px">YOUR ITEMS · ' + items.length + '</div><div style="margin-top:4px">' + list + '</div>';
+  var items = (f.items || []); if (!items.length) return '<div style="font-size:11px;font-weight:800;color:#2c7a43;letter-spacing:.05em;margin-top:18px">YOUR ITEMS · 0</div><div style="font-size:11px;color:var(--grey);padding:4px 0">No items yet — adopt a source, add manually, or pull from ERP.</div>';
+  var needPrice = items.filter(function(it){ return it.price == null || it.price === ''; }).length;
+  var rows = items.map(function(it, i){
+    var t = _catfSrcTag(it._src);
+    var attrs = Object.keys(it).filter(function(k){ return ['product', 'name', 'price', 'unit', '_src', '_media', 'rate'].indexOf(k) < 0 && it[k] != null && it[k] !== ''; }).slice(0, 3).map(function(k){ return esc(k) + ': ' + esc(it[k]); }).join(' · ');
+    var priceCell = (it.price != null && it.price !== '')
+      ? '<span style="font-weight:700;font-size:12px">' + esc(_catfMoney(it.price)) + '</span> <span onclick="catfEditPrice(' + i + ')" style="cursor:pointer;color:var(--blue);font-size:10px">edit</span>'
+      : '<input type="number" placeholder="set price" onchange="catfSetItemPrice(' + i + ',this.value)" title="the ONLY thing you enter for a referenced item" style="width:92px;padding:4px 7px;border:1px solid #d98b84;border-radius:6px;font-size:12px;background:#fbeeec">';
+    return '<div style="border:1px solid var(--line);border-radius:9px;padding:8px 11px;margin-top:5px;background:#fff"><div style="display:flex;align-items:center;gap:8px">'
+      + (it._media ? '<span style="width:22px;height:22px;border-radius:5px;background:linear-gradient(135deg,#eef1f5,#dde3ea);flex:none"></span>' : '')
+      + '<span style="font-weight:600;font-size:12.5px">' + esc(it.product || it.name || 'item') + '</span>'
+      + '<span style="font-size:9.5px;font-weight:700;color:' + t[1] + ';background:' + t[1] + '18;border-radius:4px;padding:1px 6px">' + t[0] + '</span>'
+      + '<span style="margin-left:auto">' + priceCell + '</span></div>'
+      + (attrs ? '<div style="font-size:10.5px;color:var(--grey);margin-top:3px">' + attrs + (it._src === 'reference' ? ' <span style="color:#6a44a8">· referenced, kept inside</span>' : '') + '</div>' : '') + '</div>';
+  }).join('');
+  return '<div style="font-size:11px;font-weight:800;color:#2c7a43;letter-spacing:.05em;margin-top:18px">YOUR ITEMS · ' + items.length + (needPrice ? ' <span style="color:#a5382e;font-weight:600">· ' + needPrice + ' need a price</span>' : ' <span style="color:#2c7a43">· ready</span>') + '</div><div style="margin-top:4px">' + rows + '</div>';
 }
+function catfSetItemPrice(i, v){ if (!UI.catf || !UI.catf.items || !UI.catf.items[i]) return; var x = parseFloat(v); UI.catf.items[i].price = (v === '' || isNaN(x)) ? null : x; _catfSave(); renderApp(); }
+function catfEditPrice(i){ if (!UI.catf || !UI.catf.items || !UI.catf.items[i]) return; UI.catf.items[i].price = null; _catfSave(); renderApp(); }
+function catfSyncERP(){ if (!UI.catf) { if (typeof toast === 'function') toast('Set up a catalogue first.'); return; } UI.catf.items = UI.catf.items || []; UI.catf.items.push({ _src: 'erp', product: 'Royale Matt (from ERP)', texture_family: 'Matt', colour_combination: 'White', sheen: 'Matte', coverage_sqft_per_litre: 150, stock_litres: 240, price: 520 }); _catfSave(); if (typeof toast === 'function') toast('Pulled 1 item from ERP (stub) — its data + price came in'); renderApp(); }
 
 /* ===== committed FACE view (after "Use this catalogue") ===== */
 function _catfFaceView(){
@@ -398,8 +424,10 @@ function _catfFaceView(){
     + '<div style="font-size:11px;font-weight:800;color:#2c5aa0;letter-spacing:.05em;margin-top:16px">DEEPEN THE CATALOGUE <span style="font-weight:500;color:var(--grey)">— add only what this business needs</span></div>'
     + '<div style="margin-top:6px">' + facetRows + '</div>'
     + _catfItemsHtml(f)
-    + '<div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap">'
-    + '<button class="pri" onclick="catfFillItem()" style="padding:9px 15px">＋ Fill an item (standard form)</button>'
+    + '<div style="font-size:10.5px;color:var(--grey);margin-top:16px">Item data comes three ways — <b>📎 from the source</b> (owner sets price only) · <b>✍ entered</b> · <b>🔗 from ERP</b>:</div>'
+    + '<div style="display:flex;gap:10px;margin-top:6px;flex-wrap:wrap">'
+    + '<button class="pri" onclick="catfFillItem()" style="padding:9px 15px">＋ Add manually</button>'
+    + '<button onclick="catfSyncERP()" style="padding:9px 15px;border:1px solid #b07b1e;border-radius:9px;background:#fff;color:#b07b1e;font-weight:600">🔗 From ERP</button>'
     + '<button onclick="catfCustomerPreview()" style="padding:9px 15px;border:1px solid #2c7a43;border-radius:9px;background:#fff;color:#2c7a43;font-weight:600">👁 Customer experience</button>'
     + '<button onclick="catfReset()" style="padding:9px 15px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--grey)">↺ Start over</button>'
     + '</div></div>';
