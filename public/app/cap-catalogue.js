@@ -420,7 +420,27 @@ function _cwProductCard(w, it){
 }
 function _cwStep2Products(w){
   var srcs = UI._cwSources;
-  var picker = (srcs === null) ? '<div style="color:var(--grey);font-size:12px">loading blueprints…</div>' : '<select onchange="cwPickSource(this.value)" style="padding:7px 9px;border:1px solid var(--line);border-radius:8px;font-size:12.5px;width:100%;box-sizing:border-box"><option value="">— pick a blueprint / skip —</option>' + srcs.map(function(s){ return '<option value="' + esc(s.key) + '"' + (w.source === s.key ? ' selected' : '') + '>' + esc(s.title) + ' (' + s.item_count + ')</option>'; }).join('') + '</select>';
+  var picker;
+  if (srcs === null) picker = '<div style="color:var(--grey);font-size:12px">loading blueprints…</div>';
+  else {
+    var q = (w.bpQuery || '').toLowerCase().trim();
+    var all = srcs || [];
+    var matchVert = function(s){ return w.bpAll || !w.vertical || !s.for_vertical || s.for_vertical === w.vertical; };
+    var filtered = all.filter(function(s){ return matchVert(s) && (!q || (((s.title || '') + ' ' + (s.for_entity || '') + ' ' + (s.for_vertical || '')).toLowerCase().indexOf(q) >= 0)); });
+    var otherCount = all.filter(function(s){ return !matchVert(s); }).length;
+    var search = '<input id="cw_bp_search" value="' + esc(w.bpQuery || '') + '" oninput="cwSetBpQuery(this.value)" placeholder="🔎 search blueprints…" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--line);border-radius:8px;font-size:12.5px">';
+    var scope = '<div style="font-size:10.5px;color:var(--grey);margin:6px 0">' + (w.bpAll ? 'All verticals' : ('For ' + esc(w.vertical || 'your catalogue'))) + ' · ' + filtered.length + ' blueprint(s)'
+      + ((otherCount && !w.bpAll) ? ' · <span onclick="cwToggleBpAll()" style="cursor:pointer;color:var(--blue);font-weight:600">show all (' + otherCount + ' other)</span>' : ((w.bpAll && w.vertical) ? ' · <span onclick="cwToggleBpAll()" style="cursor:pointer;color:var(--blue);font-weight:600">only ' + esc(w.vertical) + '</span>' : '')) + '</div>';
+    var skipRow = '<div onclick="cwPickSource(\'\')" style="cursor:pointer;padding:7px 11px;border-bottom:1px solid var(--line);background:' + (!w.source ? '#f4f6f8' : '#fff') + ';font-size:12px;color:var(--grey)">— skip (build without a blueprint) —</div>';
+    var rows = filtered.map(function(s){ var on = w.source === s.key;
+      return '<div onclick="cwPickSource(\'' + esc(s.key) + '\')" style="cursor:pointer;padding:8px 11px;border-bottom:1px solid var(--line);background:' + (on ? '#eef4ff' : '#fff') + '">'
+        + '<div style="display:flex;align-items:center;gap:8px"><span style="font-weight:' + (on ? 700 : 600) + ';font-size:12.5px">' + esc(s.title) + '</span>'
+        + (s.for_vertical ? '<span style="font-size:9.5px;color:#6a44a8;background:#efeafa;border-radius:4px;padding:1px 6px">' + esc(s.for_vertical) + '</span>' : '')
+        + '<span style="margin-left:auto;font-size:10px;color:var(--grey)">' + s.item_count + ' item(s)</span></div>'
+        + (s.for_entity ? '<div style="font-size:10px;color:#9aa3a7;margin-top:1px">' + esc(s.for_entity) + '</div>' : '') + '</div>'; }).join('');
+    var empty = '<div style="font-size:11.5px;color:var(--grey);padding:9px 11px">No blueprints' + (q ? ' match “' + esc(q) + '”' : ((w.vertical && !w.bpAll) ? ' for ' + esc(w.vertical) : '')) + '.' + ((otherCount && !w.bpAll) ? ' <span onclick="cwToggleBpAll()" style="cursor:pointer;color:var(--blue);font-weight:600">Show all verticals.</span>' : '') + '</div>';
+    picker = search + scope + '<div style="max-height:220px;overflow:auto;border:1px solid var(--line);border-radius:9px">' + skipRow + (filtered.length ? rows : empty) + '</div>';
+  }
   var rights = w.source ? '<div style="margin-top:6px;font-size:10.5px;color:#2e7a45">🔓 Rights ok <span style="color:var(--grey)">— you may use this blueprint (distributor grant)</span></div>' : '';
   var mode = w.adoptMode || 'reference';
   var modeToggle = w.source ? '<div style="margin-top:8px;font-size:11px;color:#3a4048">by: <span onclick="cwSetAdoptMode(\'reference\')" style="cursor:pointer;font-weight:700;padding:2px 9px;border-radius:11px;border:1px solid ' + (mode === 'reference' ? '#2c7a43' : 'var(--line)') + ';color:' + (mode === 'reference' ? '#fff' : 'var(--grey)') + ';background:' + (mode === 'reference' ? '#2c7a43' : '#fff') + '">reference</span> <span onclick="cwSetAdoptMode(\'value\')" style="cursor:pointer;font-weight:700;padding:2px 9px;border-radius:11px;border:1px solid ' + (mode === 'value' ? '#2c5aa0' : 'var(--line)') + ';color:' + (mode === 'value' ? '#fff' : 'var(--grey)') + ';background:' + (mode === 'value' ? '#2c5aa0' : '#fff') + '">value</span></div>' : '';
@@ -493,6 +513,8 @@ function cwNext(){ var w = UI.cw; if (w.step === 1 && !w.vertical) { if (typeof 
 function cwBack(){ if (UI.cw.step > 1) UI.cw.step--; renderApp(); }
 function cwCancel(){ UI.cw = null; renderApp(); }
 function cwSetVertical(v){ UI.cw.vertical = v; renderApp(); }
+function cwSetBpQuery(v){ UI.cw.bpQuery = v; renderApp(); var el = document.getElementById('cw_bp_search'); if (el) { el.focus(); var n = el.value.length; try { el.setSelectionRange(n, n); } catch (e) {} } }
+function cwToggleBpAll(){ UI.cw.bpAll = !UI.cw.bpAll; renderApp(); }
 function cwPickSource(key){ var w = UI.cw; w.source = key; w.built = null; if (!key) { renderApp(); return; } if (typeof toast === 'function') toast('Loading blueprint…'); api('catalogueStruct', { body: { source: key } }).then(function(r){ w.built = r; w.chosen = {}; w.sel = null; (r.finishes || []).forEach(function(it){ w.chosen[it.name] = true; if (it.commercials && it.commercials.price_per_litre != null) w.prices[it.name] = it.commercials.price_per_litre; }); _cwMergeBpFields(w); renderApp(); }).catch(function(e){ if (typeof toast === 'function') toast('Load failed: ' + ((e && e.message) || '')); }); }
 // the blueprint's data items become fields too — match an existing selected field by name, or add it. So the
 // vertical field selection ends up holding ALL adopted data items.
