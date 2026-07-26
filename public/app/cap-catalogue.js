@@ -422,7 +422,7 @@ function cwFinish(){
   var toLive = function(){
     var units = (w.units && w.units.length) ? w.units.slice() : [(CATF_KB[w.vertical] && CATF_KB[w.vertical].baseUnit) || 'unit'];
     UI.catf = { method: 'cart', units: units, facets: { variants: true, media: !!w.source, sourcing: Object.keys(w.erpMap || {}).length > 0 }, adoptedFrom: (w.built && w.built.title) || '', _source: w.source || '', tax: w.tax, erpMap: w.erpMap,
-      catalogue: CBCatalogue.ensure({ product: (w.built && w.built.title) || (CATF_KB[w.vertical] && CATF_KB[w.vertical].product) || 'Catalogue', baseUnit: units[0], altUnits: units.slice(1) }),
+      catalogue: CBCatalogue.ensure({ story: w.purpose || '', product: (w.built && w.built.title) || (CATF_KB[w.vertical] && CATF_KB[w.vertical].product) || 'Catalogue', baseUnit: units[0], altUnits: units.slice(1) }),
       items: (function(){ var acc = []; var srcMode = (w.adoptMode === 'value' ? 'value' : 'reference');
         // Golden records (MDM): each source upserts into one item keyed by SKU via RFC 7386 merge-patch.
         chosenFinishes.forEach(function(it){ var pr = w.prices[it.name]; var inc = { sku: it.name, product: it.name, texture_family: it.texture_family, sheen: it.sheen, region: it.region, _media: true }; if (pr != null && pr !== '') inc.price = Number(pr); CBCatalogue.upsertItem(acc, inc, { source: srcMode }); });
@@ -491,7 +491,7 @@ function _catfItemsHtml(f){
   var needPrice = items.filter(function(it){ return it.price == null || it.price === ''; }).length;
   var rows = items.map(function(it, i){
     var t = _catfSrcTag(it._src);
-    var attrs = Object.keys(it).filter(function(k){ return ['product', 'name', 'price', 'unit', '_src', '_media', 'rate'].indexOf(k) < 0 && it[k] != null && it[k] !== ''; }).slice(0, 3).map(function(k){ return esc(k) + ': ' + esc(it[k]); }).join(' · ');
+    var attrs = Object.keys(it).filter(function(k){ return k.charAt(0) !== '_' && ['product', 'name', 'price', 'unit', 'rate'].indexOf(k) < 0 && it[k] != null && it[k] !== '' && typeof it[k] !== 'object'; }).slice(0, 3).map(function(k){ return esc(k) + ': ' + esc(it[k]); }).join(' · ');
     var priceCell = (it.price != null && it.price !== '')
       ? '<span style="font-weight:700;font-size:12px">' + esc(_catfMoney(it.price)) + '</span> <span onclick="catfEditPrice(' + i + ')" style="cursor:pointer;color:var(--blue);font-size:10px">edit</span>'
       : '<input type="number" placeholder="set price" onchange="catfSetItemPrice(' + i + ',this.value)" title="the ONLY thing you enter for a referenced item" style="width:92px;padding:4px 7px;border:1px solid #d98b84;border-radius:6px;font-size:12px;background:#fbeeec">';
