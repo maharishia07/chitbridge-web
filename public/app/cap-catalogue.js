@@ -269,7 +269,26 @@ function _cwInit(){
   if (!UI.cw) UI.cw = { step: 1, vertical: '', source: '', built: null, chosen: {}, erp: {}, manual: {}, prices: {}, tax: { label: 'GST', rate: '' } };
   if (UI._cwSources === undefined) { UI._cwSources = null; if (_cwLoggedIn()) api('catalogueSources').then(function(r){ UI._cwSources = (Array.isArray(r) ? r : (r && r.data) || []); renderApp(); }).catch(function(){ UI._cwSources = []; }); else UI._cwSources = []; }
 }
-function _cwRequired(w){ return CATF_REQUIRED[w.vertical] || []; }
+// a small field LIBRARY, grouped in sections — the AI suggests from these per purpose (stub for the real AI)
+var CW_FIELD_LIB = {
+  Identity: [{ name: 'product_name', type: 'text' }, { name: 'brand', type: 'text' }, { name: 'grade', type: 'text' }],
+  'Chemical make-up': [{ name: 'chemical_composition', type: 'text' }, { name: 'cas_number', type: 'text' }, { name: 'base_type', type: 'choice' }, { name: 'colour', type: 'choice' }, { name: 'finish', type: 'choice' }],
+  Properties: [{ name: 'viscosity', type: 'number' }, { name: 'density', type: 'number' }, { name: 'ph', type: 'number' }, { name: 'voc_content', type: 'number' }, { name: 'coverage_sqft_per_litre', type: 'number' }],
+  'Packaging & unit': [{ name: 'pack_size', type: 'number' }, { name: 'shelf_life', type: 'date' }],
+  Compliance: [{ name: 'hazard_class', type: 'choice' }, { name: 'msds_ref', type: 'text' }, { name: 'hs_code', type: 'text' }],
+};
+function _cwSuggestFields(purpose){
+  var s = (purpose || '').toLowerCase(); var sections = ['Identity'];
+  if (/chemical|paint|coating|ink|adhesive|resin|solvent|lacquer|primer/.test(s)) sections.push('Chemical make-up', 'Properties', 'Compliance');
+  sections.push('Packaging & unit');
+  if (/export|import|trade|customs/.test(s) && sections.indexOf('Compliance') < 0) sections.push('Compliance');
+  var out = []; sections.forEach(function(sec){ (CW_FIELD_LIB[sec] || []).forEach(function(f){ out.push({ section: sec, name: f.name, type: f.type, on: true, leg: 'cb' }); }); });
+  return out;
+}
+function cwUnderstand(){ var w = UI.cw; var p = (val('cw_purpose') || '').trim(); if (!p) { if (typeof toast === 'function') toast('Describe the catalogue first.'); return; } w.purpose = p; w.vertical = _catfVerticalFromPurpose(p) || w.vertical || ''; w.fieldSel = _cwSuggestFields(p); if (!w.unitType) w.unitType = (CATF_KB[w.vertical] && CATF_KB[w.vertical].baseUnit) || 'litre'; renderApp(); }
+function cwToggleField(idx){ var f = UI.cw.fieldSel && UI.cw.fieldSel[idx]; if (f) { f.on = !f.on; renderApp(); } }
+function cwSetUnit(u){ UI.cw.unitType = u; }
+function _cwRequired(w){ if (w.fieldSel && w.fieldSel.length) return w.fieldSel.filter(function(f){ return f.on; }).map(function(f){ return { name: f.name, leg: f.leg || 'cb' }; }); return CATF_REQUIRED[w.vertical] || []; }
 function _cwBpFields(w){ var it = w.built && w.built.finishes && w.built.finishes[0]; return it ? Object.keys(it).filter(function(k){ return ['name', 'commercials', 'combinations'].indexOf(k) < 0 && it[k] != null; }) : []; }
 function _cwCovered(w){ var m = {}; _cwBpFields(w).forEach(function(k){ m[k] = 'blueprint'; }); Object.keys(w.erp || {}).forEach(function(k){ if (w.erp[k]) m[k] = 'erp'; }); Object.keys(w.manual || {}).forEach(function(k){ if (w.manual[k] !== '' && w.manual[k] != null) m[k] = 'manual'; }); return m; }
 function _cwRemaining(w){ var cov = _cwCovered(w); return _cwRequired(w).filter(function(r){ return !cov[r.name]; }); }
@@ -277,25 +296,53 @@ function _cwRemaining(w){ var cov = _cwCovered(w); return _cwRequired(w).filter(
 function _catfWizard(){
   _cwInit(); var w = UI.cw, step = w.step;
   var bar = '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:16px">' + CW_STEPS.map(function(s, i){ var n = i + 1, on = n === step, done = n < step; return '<span onclick="cwGo(' + n + ')" style="cursor:pointer;display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:' + (on ? '#2c5aa0' : done ? '#2c7a43' : 'var(--grey)') + '"><span style="width:19px;height:19px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:9.5px;background:' + (on ? '#2c5aa0' : done ? '#2c7a43' : '#eef1f5') + ';color:' + (on || done ? '#fff' : 'var(--grey)') + '">' + (done ? '✓' : n) + '</span>' + esc(s) + '</span>' + (n < CW_STEPS.length ? '<span style="color:#c8d0d9">›</span>' : ''); }).join('') + '</div>';
-  var body = [null, _cwStep1, _cwStep2, _cwStep3, _cwStep4, _cwStep5, _cwStep6][step](w);
+  var raw = [null, _cwStep1, _cwStep2, _cwStep3, _cwStep4, _cwStep5, _cwStep6][step](w);
+  var body = step === 1 ? raw : _cwTwo(raw, _cwPreview(w));   // step 1 has its own two-panel; the rest get the running preview on the right
   var nav = '<div style="display:flex;gap:10px;margin-top:20px;align-items:center">'
     + (step > 1 ? '<button onclick="cwBack()" style="padding:9px 16px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--grey)">‹ Back</button>' : '')
     + (step < 6 ? '<button class="pri" onclick="cwNext()" style="padding:9px 18px">Next ›</button>' : '<button class="pri" onclick="cwFinish()" style="padding:9px 18px">✓ Finish — go live</button>')
     + (step < 6 ? '<span onclick="cwFinish()" style="cursor:pointer;font-size:11.5px;color:var(--blue)">or finish now (partial is fine)</span>' : '')
     + '<span onclick="cwCancel()" style="cursor:pointer;font-size:11.5px;color:var(--grey);margin-left:auto">Cancel</span></div>';
-  return '<div style="flex:1;min-height:0;overflow-y:auto;padding:22px"><div style="max-width:700px"><div style="font-size:19px;font-weight:800">🗂️ Set up your catalogue</div><div style="font-size:11.5px;color:var(--grey);margin:4px 0 16px">Currency <b>' + esc(_catfCcy()) + '</b> — from Settings · fill as much as you can, in order; each step is optional.</div>' + bar + body + nav + '</div></div>';
+  return '<div style="flex:1;min-height:0;overflow-y:auto;padding:22px"><div style="max-width:940px"><div style="font-size:19px;font-weight:800">🗂️ Set up your catalogue</div><div style="font-size:11.5px;color:var(--grey);margin:4px 0 16px">Currency <b>' + esc(_catfCcy()) + '</b> — from Settings · fill as much as you can, in order; each step is optional.</div>' + bar + body + nav + '</div></div>';
+}
+/* two-panel wrapper + the running "catalogue so far" preview (the right side, shared across steps 2–6) */
+function _cwTwo(left, right){ return '<div style="display:flex;gap:18px;flex-wrap:wrap"><div style="flex:0 0 46%;min-width:280px;max-width:410px">' + left + '</div><div style="flex:1;min-width:260px;border-left:1px solid var(--line);padding-left:18px">' + right + '</div></div>'; }
+function _cwPreview(w){
+  var fields = _cwRequired(w), cov = _cwCovered(w);
+  var items = (w.built && w.built.finishes || []).filter(function(it){ return w.chosen[it.name] !== false; });
+  var title = (w.built && w.built.title) || (CATF_KB[w.vertical] && CATF_KB[w.vertical].product) || (w.purpose ? 'Your catalogue' : '—');
+  var head = '<div style="font-size:11px;font-weight:800;color:#2c5aa0;letter-spacing:.05em">YOUR CATALOGUE SO FAR</div>'
+    + '<div style="margin-top:6px;font-size:12.5px;font-weight:700">' + esc(title) + '</div>'
+    + '<div style="font-size:10.5px;color:var(--grey)">cart · ' + esc(_catfCcy()) + ' · sold by ' + esc(w.unitType || 'unit') + (w.source ? ' · blueprint ' + esc(w.source) : '') + '</div>';
+  var fieldsHtml = fields.length ? '<div style="margin-top:11px;font-size:10px;font-weight:700;color:#6a707a;text-transform:uppercase;letter-spacing:.04em">Fields</div>' + fields.map(function(f){ var src = cov[f.name]; var b = src === 'blueprint' ? ['📎 blueprint', '#6a44a8'] : src === 'erp' ? ['🔗 ERP', '#b07b1e'] : src === 'manual' ? ['✍ you', '#2c7a43'] : ['· to fill', '#9aa3a7']; return '<div style="display:flex;align-items:center;gap:6px;font-size:11.5px;padding:1px 0"><span style="flex:1;color:#3a4048">' + esc(f.name) + '</span><span style="font-size:9px;font-weight:700;color:' + b[1] + ';background:' + b[1] + '18;border-radius:4px;padding:1px 6px">' + b[0] + '</span></div>'; }).join('') : '';
+  var itemsHtml = items.length ? '<div style="margin-top:11px;font-size:10px;font-weight:700;color:#6a707a;text-transform:uppercase;letter-spacing:.04em">Items · ' + items.length + '</div>' + items.slice(0, 7).map(function(it){ var p = w.prices[it.name]; return '<div style="display:flex;align-items:center;gap:6px;font-size:11.5px;padding:1px 0"><span style="flex:1">' + esc(it.name) + '</span><span style="font-weight:600;color:' + (p != null && p !== '' ? '#1c2128' : '#a5382e') + '">' + (p != null && p !== '' ? esc(_catfMoney(p)) : 'no price') + '</span></div>'; }).join('') : '';
+  var taxHtml = (w.tax && w.tax.rate) ? '<div style="margin-top:9px;font-size:11px;color:var(--grey)">Tax: ' + esc(w.tax.label || 'GST') + ' ' + esc(w.tax.rate) + '%</div>' : '';
+  return head + fieldsHtml + itemsHtml + taxHtml;
 }
 function _cwStep1(w){
-  var opts = '<option value="">— choose —</option>' + Object.keys(CATF_KB).map(function(k){ return '<option value="' + k + '"' + (w.vertical === k ? ' selected' : '') + '>' + esc(CATF_KB[k].title) + '</option>'; }).join('');
-  var req = _cwRequired(w);
-  var reqHtml = w.vertical ? '<div style="margin-top:14px;font-size:11px;font-weight:800;color:#2c5aa0;letter-spacing:.05em">THIS CATALOGUE NEEDS <span style="font-weight:500;color:var(--grey)">— the sources below will fill these</span></div><div style="margin-top:6px">' + (req.length ? req.map(function(r){ return '<span style="display:inline-block;font-size:11px;background:#eef1f5;border-radius:6px;padding:2px 8px;margin:2px 4px 0 0">' + esc(r.name) + '</span>'; }).join('') : '<span style="font-size:11px;color:var(--grey)">name · price (simple)</span>') + '</div>' : '';
-  return '<div style="font-size:13px;color:#3a4048;margin-bottom:10px">What kind of catalogue is this? The <b>vertical</b> decides which data items you need.</div><select onchange="cwSetVertical(this.value)" style="padding:8px 10px;border:1px solid var(--line);border-radius:9px;font-size:13px;min-width:240px">' + opts + '</select>' + reqHtml;
+  var left = '<div style="font-size:13px;color:#3a4048;margin-bottom:8px">Tell me the <b>purpose</b> — the exact catalogue you want.</div>'
+    + '<textarea id="cw_purpose" placeholder="e.g. a chemical catalogue especially focusing on paint" rows="4" style="width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:13px;resize:vertical">' + esc(w.purpose || '') + '</textarea>'
+    + '<button class="pri" onclick="cwUnderstand()" style="margin-top:8px;padding:9px 15px">Understand → suggest fields</button>'
+    + (w.vertical ? '<div style="font-size:11px;color:var(--grey);margin-top:8px">reads as: <b>' + esc(w.vertical) + '</b></div>' : '');
+  var right;
+  if (w.fieldSel && w.fieldSel.length) {
+    var secs = {}, order = []; w.fieldSel.forEach(function(f){ if (!secs[f.section]) { secs[f.section] = []; order.push(f.section); } secs[f.section].push(f); });
+    var on = w.fieldSel.filter(function(f){ return f.on; }).length;
+    right = '<div style="font-size:11px;font-weight:800;color:#2c5aa0;letter-spacing:.05em;margin-bottom:8px">FIELDS TO STORE <span style="font-weight:500;color:var(--grey)">— pick what this catalogue keeps</span></div>'
+      + '<div style="display:flex;gap:8px;align-items:center;margin-bottom:12px"><span style="font-size:11px;color:var(--grey)">Sold by (unit)</span><select onchange="cwSetUnit(this.value)" style="padding:5px 8px;border:1px solid var(--line);border-radius:7px;font-size:12px">' + ['litre', 'kg', 'piece', 'unit', 'tonne', 'pack', 'metre'].map(function(u){ return '<option' + ((w.unitType || 'litre') === u ? ' selected' : '') + '>' + u + '</option>'; }).join('') + '</select></div>'
+      + order.map(function(sec){ return '<div style="margin-bottom:11px"><div style="font-size:10.5px;font-weight:700;color:#6a707a;text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">' + esc(sec) + '</div>' + secs[sec].map(function(f){ var idx = w.fieldSel.indexOf(f); return '<label style="display:flex;align-items:center;gap:8px;padding:2px 0;cursor:pointer"><input type="checkbox" ' + (f.on ? 'checked' : '') + ' onchange="cwToggleField(' + idx + ')"><span style="font-size:12px;font-weight:' + (f.on ? 600 : 400) + ';color:' + (f.on ? '#1c2128' : 'var(--grey)') + '">' + esc(f.name) + '</span><span style="font-size:9.5px;color:#9aa3a7;background:#eef1f5;border-radius:4px;padding:1px 6px">' + esc(f.type) + '</span></label>'; }).join('') + '</div>'; }).join('')
+      + '<div style="font-size:10.5px;color:#2c7a43;font-style:italic;border-top:1px solid var(--line);padding-top:8px">' + on + ' fields selected · sold by ' + esc(w.unitType || 'unit') + ' — next, a blueprint / ERP / you fill these.</div>';
+  } else {
+    right = '<div style="color:var(--grey);font-size:12.5px;text-align:center;margin-top:44px">Describe the catalogue on the left →<br>I\'ll suggest the fields to store, grouped in sections, for you to pick.</div>';
+  }
+  return '<div style="display:flex;gap:18px;flex-wrap:wrap"><div style="flex:0 0 300px;max-width:340px">' + left + '</div><div style="flex:1;min-width:280px;border-left:1px solid var(--line);padding-left:18px">' + right + '</div></div>';
 }
 function _cwStep2(w){
   var srcs = UI._cwSources;
   var picker = (srcs === null) ? '<div style="color:var(--grey);font-size:12px">loading blueprints…</div>' : '<select onchange="cwPickSource(this.value)" style="padding:8px 10px;border:1px solid var(--line);border-radius:9px;font-size:13px;min-width:300px"><option value="">— no blueprint / skip —</option>' + srcs.map(function(s){ return '<option value="' + esc(s.key) + '"' + (w.source === s.key ? ' selected' : '') + '>' + esc(s.title) + ' (' + s.item_count + ')</option>'; }).join('') + '</select>';
-  var items = (w.built && w.built.finishes) ? '<div style="margin-top:14px;font-size:11px;font-weight:800;color:#6a44a8;letter-spacing:.05em">ITEMS FROM THE BLUEPRINT <span style="font-weight:500;color:var(--grey)">— referenced, choose which you sell</span></div>' + w.built.finishes.map(function(it){ var on = w.chosen[it.name] !== false; return '<div style="display:flex;align-items:center;gap:9px;padding:6px 10px;border:1px solid var(--line);border-radius:9px;margin-top:5px;background:#fff"><input type="checkbox" ' + (on ? 'checked' : '') + ' onchange="cwToggleItem(\'' + esc(it.name).replace(/'/g, "\\'") + '\')"><span style="font-weight:600;font-size:12.5px">' + esc(it.name) + '</span><span style="font-size:10.5px;color:var(--grey)">' + esc(it.texture_family || '') + ' · ' + esc(it.sheen || '') + ' · ' + esc(it.region || '') + '</span></div>'; }).join('') + '<div style="font-size:10.5px;color:#2c7a43;margin-top:8px">✓ Blueprint fills: ' + _cwBpFields(w).join(' · ') + '</div>' : '';
-  return '<div style="font-size:13px;color:#3a4048;margin-bottom:10px">Is there a <b>blueprint</b> to adopt? It fills most of the information by <b>reference</b> (design, colour, images — kept inside, no copy). <b>No blueprint? Just skip.</b></div>' + picker + items;
+  var rights = w.source ? '<div style="margin-top:8px;font-size:11px;padding:6px 9px;border:1px solid #cfe6cf;border-radius:7px;background:#eef7ee;color:#2e7a45">🔓 <b>Rights:</b> you may use this blueprint <span style="color:var(--grey)">(e.g. an authorised Royale Play distributor) — checked against the source\'s grant before adopting.</span></div>' : '';
+  var items = (w.built && w.built.finishes) ? '<div style="margin-top:12px;font-size:11px;font-weight:800;color:#6a44a8;letter-spacing:.05em">ITEMS FROM THE BLUEPRINT <span style="font-weight:500;color:var(--grey)">— referenced · keep or remove</span></div>' + w.built.finishes.map(function(it){ var on = w.chosen[it.name] !== false; return '<div style="display:flex;align-items:center;gap:9px;padding:6px 10px;border:1px solid var(--line);border-radius:9px;margin-top:5px;background:#fff"><input type="checkbox" ' + (on ? 'checked' : '') + ' onchange="cwToggleItem(\'' + esc(it.name).replace(/'/g, "\\'") + '\')"><span style="font-weight:600;font-size:12.5px">' + esc(it.name) + '</span><span style="font-size:10.5px;color:var(--grey)">' + esc(it.texture_family || '') + ' · ' + esc(it.sheen || '') + '</span></div>'; }).join('') + '<div style="font-size:10.5px;color:#2c7a43;margin-top:8px">✓ Blueprint fills: ' + _cwBpFields(w).join(' · ') + '</div>' : '';
+  return '<div style="font-size:13px;color:#3a4048;margin-bottom:10px">Is there a <b>blueprint</b> to adopt? It fills most of the fields by <b>reference</b> (design, colour, images — kept inside, no copy). <b>No blueprint? Skip.</b></div>' + picker + rights + items;
 }
 function _cwStep3(w){
   var rem = _cwRemaining(w);
