@@ -64,7 +64,13 @@ function regionCur(){ return _REGIONS.find(function(r){return r.region_code===_R
 function priceSym(){ var rc=regionCur(); return _CUR[rc.currency]||rc.currency||'₹'; }
 function priceUnit(){ var rc=regionCur(); return rc.units||'litre'; }
 function priceVal(price){ var rc=regionCur(); return Math.round(price*(_FX[rc.currency]||1)); }
-function finishPrice(price){ if(price==null) return '<small>'+t('por')+'</small>'; return priceSym()+esc(String(priceVal(price)))+' <small>/ '+esc(priceUnit())+' · indicative</small>'; }
+function finishPrice(price, unit){ if(price==null) return '<small>'+t('por')+'</small>'; return priceSym()+esc(String(priceVal(price)))+' <small>/ '+esc(unit||priceUnit())+' · indicative</small>'; }
+// commercials are GENERIC {price, unit}; price_per_litre is the pre-generic paint shape, still read so existing
+// adoptions keep pricing. The unit is the ITEM's own (kg / count / litre), never assumed.
+function itemPrice(it){ var c=(it&&it.commercials)||{};
+  if(c.price!=null&&c.price!=='') return {v:c.price,u:c.unit||it.unit||priceUnit()};
+  if(c.price_per_litre!=null&&c.price_per_litre!=='') return {v:c.price_per_litre,u:'litre'};
+  return null; }
 function setRegion(code){ _REGION=code; if(_SHOPDATA) render(_SHOPDATA); }
 function regionBar(){
   if(!_REGIONS.length) return '';
@@ -80,16 +86,21 @@ function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){retu
 function el(id){ return document.getElementById(id); }
 function swatch(c){ return '<span class="dot" title="'+esc((c.name||'')+' '+(c.hex||''))+'" style="background:'+esc(c.hex||'#ccc')+'"></span>'; }
 function comboHtml(cm){ return '<div class="combo"><span style="display:inline-flex;gap:3px">'+((cm.colours||[]).map(swatch).join(''))+'</span><span class="cbname">'+esc(cm.name||'')+'</span><span class="cbcols">'+((cm.colours||[]).map(function(c){return esc(c.name);}).join(' + '))+'</span></div>'; }
+// PRESENCE-DRIVEN (see app.html refFinishRow): each block renders only if the item carries that data, so a veg or
+// meat storefront shows name · photo · price in its unit — no empty texture chip, no combos header over nothing.
 function finishCard(it, cur, idx, vizEnabled){
-  var price=(it.commercials&&it.commercials.price_per_litre!=null)?it.commercials.price_per_litre:null;
-  var chips='<span class="chip c-tex">'+esc(it.texture_family||'')+'</span>'+(it.region?'<span class="chip c-reg">'+esc(it.region)+'</span>':'')+((it.effect||[]).map(function(e){return '<span class="chip c-eff">'+esc(e)+'</span>';}).join(''));
+  var p=itemPrice(it), price=p?p.v:null;
+  var chips=(it.texture_family?'<span class="chip c-tex">'+esc(it.texture_family)+'</span>':'')+(it.region?'<span class="chip c-reg">'+esc(it.region)+'</span>':'')+((it.effect||[]).map(function(e){return '<span class="chip c-eff">'+esc(e)+'</span>';}).join(''));
+  var combos=(it.combinations||[]), sub=[it.scale,it.sheen].filter(Boolean).map(esc).join(' · ');
+  var applied=[]; if((it.tools||[]).length) applied.push(t('applied')+' '+esc(it.tools.join(', '))); if(it.coats) applied.push(esc(it.coats));
+  var photo=(it.photo||it._photo)?'<span style="width:34px;height:34px;border-radius:6px;flex:none;background:#f4f6f8 center/cover no-repeat;background-image:url('+(it.photo||it._photo)+')"></span>':'';
   return '<div class="card">'
-    +'<div style="display:flex;align-items:baseline;gap:8px"><span class="fname sg">'+esc(it.name)+'</span><span class="meta">'+esc(it.scale||'')+(it.sheen?(' · '+esc(it.sheen)):'')+'</span></div>'
-    +'<div class="story">'+esc(it.inspiration||'')+'</div>'
-    +'<div>'+chips+'</div>'
-    +'<div class="cclabel">'+t('combos')+'</div>'+((it.combinations||[]).map(comboHtml).join(''))
-    +'<div class="apply">'+t('applied')+' '+((it.tools||[]).join(', '))+' · '+esc(it.coats||'')+'</div>'
-    +'<div class="price">'+finishPrice(price)+'</div>'
+    +'<div style="display:flex;align-items:center;gap:8px">'+photo+'<span class="fname sg">'+esc(it.name)+'</span>'+(sub?'<span class="meta">'+sub+'</span>':'')+'</div>'
+    +(it.inspiration?'<div class="story">'+esc(it.inspiration)+'</div>':'')
+    +(chips?'<div>'+chips+'</div>':'')
+    +(combos.length?'<div class="cclabel">'+t('combos')+'</div>'+combos.map(comboHtml).join(''):'')
+    +(applied.length?'<div class="apply">'+applied.join(' · ')+'</div>':'')
+    +'<div class="price">'+finishPrice(price, p&&p.u)+'</div>'
     +'<div style="margin-top:10px">'
     +(vizEnabled&&idx!=null?'<button data-testid="shop-viz-'+idx+'" onclick="vizOpen('+idx+')" style="margin:0 8px 0 0;border:1px solid #6a44a8;background:#F0EAF9;color:#6a44a8;border-radius:9px;padding:9px 16px;font-weight:700;font-size:13px;cursor:pointer">✨ '+t('wall')+'</button>':'')
     +(price!=null&&idx!=null?'<button data-testid="shop-order-'+idx+'" onclick="orderOpen('+idx+')" style="border:0;border-radius:9px;padding:9px 18px;background:#3F66A6;color:#fff;font-weight:700;font-size:13px;cursor:pointer">'+t('order')+'</button>':'')
@@ -156,9 +167,10 @@ function orderRender(msg, err){
   var h='<div style="position:fixed;inset:0;background:rgba(15,22,32,.5);z-index:900;display:flex;align-items:center;justify-content:center;padding:12px" onclick="if(event.target===this)orderClose()">'
     +'<div style="background:#fff;width:100%;max-width:440px;border-radius:16px;padding:18px 18px 22px;max-height:92vh;overflow:auto">'
     +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:2px"><b class="sg" style="font-size:17px;flex:1">Order · '+esc(it.name)+'</b><button onclick="orderClose()" style="border:0;background:none;font-size:22px;cursor:pointer;color:#8a949c">×</button></div>'
-    +'<div class="meta" style="margin-bottom:12px">'+esc(it.texture_family||'')+' · '+cur+esc(String((it.commercials&&it.commercials.price_per_litre)||''))+' / litre</div>'
+    +(function(){ var p=itemPrice(it), bits=[]; if(it.texture_family)bits.push(esc(it.texture_family)); if(p)bits.push(cur+esc(String(p.v))+' / '+esc(p.u));
+       return bits.length?'<div class="meta" style="margin-bottom:12px">'+bits.join(' · ')+'</div>':''; })()
     +'<label style="font-size:12px;color:#6a707a">Colour combination</label><select id="o_combo" data-testid="shop-combo" '+fld+'>'+comboOpts+'</select>'
-    +'<label style="font-size:12px;color:#6a707a">Quantity (litres)'+(minL?' <span style="color:#9aa3a7">· min '+minL+' L (set by the brand)</span>':'')+'</label><input id="o_qty" data-testid="shop-qty" inputmode="decimal" value="'+esc(_ord.qty||String(minL||1))+'" '+fld+'>'
+    +'<label style="font-size:12px;color:#6a707a">Quantity'+(function(){ var p=itemPrice(it); return p&&p.u?' ('+esc(p.u)+')':''; })()+(minL?' <span style="color:#9aa3a7">· min '+minL+' L (set by the brand)</span>':'')+'</label><input id="o_qty" data-testid="shop-qty" inputmode="decimal" value="'+esc(_ord.qty||String(minL||1))+'" '+fld+'>'
     +'<label style="font-size:12px;color:#6a707a">Your name</label><input id="o_name" data-testid="shop-name" placeholder="optional" value="'+esc(_ord.name||'')+'" '+fld+'>'
     +'<label style="font-size:12px;color:#6a707a">Your area — pincode or city <span style="color:#9aa3a7">· optional</span></label><input id="o_loc" data-testid="shop-area" placeholder="e.g. 560001 or Bengaluru" value="'+esc(_ord.loc||'')+'" '+fld+'>'
     +'<label style="font-size:12px;color:#6a707a">Phone or email</label><input id="o_contact" data-testid="shop-contact" placeholder="9876543210 or you@email.com" '+(otpStep?'disabled':'')+' value="'+esc(_ord.contact||'')+'" '+fld+'>'

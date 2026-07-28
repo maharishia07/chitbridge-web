@@ -77,6 +77,13 @@ test.describe('Catalogue wizard · visual walkthrough', () => {
 
     await test.step('Step 5 · Price', async () => {
       await page.evaluate(() => cwNext());
+      // SPEC-adoption-generalize case 3 — step-1 units are the ALLOWED SET, each item picks its own from it.
+      // With more than one unit selected in step 1, every priced row must offer its own unit dropdown.
+      const units = await page.evaluate(() => (UI.cw && UI.cw.units) || []);
+      if (units.length > 1) {
+        await expect(page.getByTestId('cw-item-unit').first(),
+          'per-item unit dropdown must render when the catalogue allows several units').toBeVisible();
+      }
       await shot(page, '09-step5-price.png');
     });
 

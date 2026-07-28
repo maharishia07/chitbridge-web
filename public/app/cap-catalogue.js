@@ -20,9 +20,14 @@
  * deployed /api/governance/ai-draft with the catalogue-enrich skill (b113): local/botanical names that travel in the
  * blueprint. Photos ride the blueprint as downscaled thumbnails.
  *
- * KNOWN GAPS (spec'd, not built): the classic REFERENCED display (app.html refFinishRow/refFinishDetail) is still
- * paint-centric + per-product units aren't wired → C:\dev\SPEC-adoption-generalize.md (rollout held on this). Photo→item
- * OCR/vision → C:\dev\SPEC-catalogue-photo-vision.md.
+ * VERTICAL-AGNOSTIC (SPEC-adoption-generalize, built): step-1 units are the catalogue's ALLOWED SET and each item
+ * picks its own from it (_cwItemUnit / catfSetItemUnit) — Tomato kg · Egg count in one catalogue. Commercials are
+ * GENERIC {price, unit}, not price_per_litre; every reader falls back to price_per_litre so adoptions made before
+ * this keep rendering. The referenced display (app.html refFinishRow/refFinishDetail, shop.html finishCard) is
+ * presence-driven, so paint keeps its swatches/combos and veg shows no paint artifacts.
+ * Regression: `npm run check:adoption` (11 assertions, cases 1-3) + e2e catalogue-wizard/meat-blueprint (cases 4-5).
+ *
+ * KNOWN GAPS (spec'd, not built): photo→item OCR/vision → C:\dev\SPEC-catalogue-photo-vision.md.
  */
 
 var CATF_METHODS = [
@@ -247,10 +252,11 @@ function catfPublishBlueprint(){
   var source_key = slug + '@v1';
   var keys = {}; items.forEach(function(d){ Object.keys(d).forEach(function(k){ if (k !== 'name') keys[k] = true; }); });
   var fields = [{ key: 'name', label: c.product || 'Item', type: 'text' }].concat(Object.keys(keys).map(function(k){ return { key: k, label: k.replace(/_/g, ' '), type: 'text' }; }));
-  var unit = (f.units && f.units[0]) || c.baseUnit || 'unit';
+  // one allowed unit → name it in the commercials label; several → items carry their own unit, so keep the label generic.
+  var unit = (f.units && f.units.length === 1) ? f.units[0] : ((f.units && f.units.length) ? '' : (c.baseUnit || 'unit'));
   var body = { source_key: source_key, version: 'v1', for_vertical: f.vertical || '', title: (String(SESSION.entity || '') + ' — ' + (c.product || 'Catalogue')).trim(), collection: c.product || '',
     schema: { name: c.product || 'Item', fields: fields }, items: items,
-    commercials_fields: [{ key: 'price', label: 'Price / ' + unit, type: 'money' }],
+    commercials_fields: [{ key: 'price', label: unit ? ('Price / ' + unit) : 'Price', type: 'money' }],
     experience: { note: c.story || '' }, formatting: {} };
   if (typeof toast === 'function') toast('Publishing blueprint…');
   api('catSourcePut', { body: body }).then(function(r){
@@ -331,7 +337,7 @@ function cwToggleUnit(u){ var w = UI.cw; w.units = w.units || []; var i = w.unit
 function cwAddUnit(){ var w = UI.cw; var u = (val('cw_newunit') || '').trim(); if (!u) return; w.units = w.units || []; if (w.units.indexOf(u) < 0) w.units.push(u); renderApp(); }
 function _cwLoggedIn(){ return typeof SESSION !== 'undefined' && !!SESSION.token; }
 function _cwInit(){
-  if (!UI.cw) UI.cw = { step: 1, vertical: '', source: '', built: null, chosen: {}, erp: {}, manual: {}, prices: {}, tax: { label: 'GST', rate: '' } };
+  if (!UI.cw) UI.cw = { step: 1, vertical: '', source: '', built: null, chosen: {}, erp: {}, manual: {}, prices: {}, itemUnits: {}, tax: { label: 'GST', rate: '' } };
   if (UI._cwSources === undefined) { UI._cwSources = null; if (_cwLoggedIn()) api('catalogueSources').then(function(r){ UI._cwSources = (Array.isArray(r) ? r : (r && r.data) || []); renderApp(); }).catch(function(){ UI._cwSources = []; }); else UI._cwSources = []; }
 }
 // a small field LIBRARY, grouped in sections — the AI suggests from these per purpose (stub for the real AI)
@@ -525,9 +531,22 @@ function _cwStep5(w){
   if (pk) return '<div style="font-size:13px;color:#3a4048">Price comes from your <b>' + esc(w.erpMap[pk].system) + '</b> (' + esc(w.erpMap[pk].ref || 'mapped') + ') — nothing to set here.</div>';
   var items = (w.built && w.built.finishes || []).filter(function(it){ return w.chosen[it.name] !== false; });
   if (!items.length) items = [{ name: (CATF_KB[w.vertical] && CATF_KB[w.vertical].product) || 'Item' }];
-  return '<div style="font-size:13px;color:#3a4048;margin-bottom:10px">Set your <b>price</b> per item (' + esc(_catfCcy()) + '). You can change these anytime later.</div>'
-    + items.map(function(it){ return '<div style="display:flex;align-items:center;gap:9px;padding:6px 10px;border:1px solid var(--line);border-radius:9px;margin-top:5px;background:#fff"><span style="font-weight:600;font-size:12.5px;flex:1">' + esc(it.name) + '</span><span style="color:var(--grey);font-size:11px">' + esc(_catfCcy()) + '</span><input type="number" value="' + (w.prices[it.name] != null ? w.prices[it.name] : '') + '" oninput="cwSetPrice(\'' + esc(it.name).replace(/'/g, "\\'") + '\',this.value)" placeholder="price" style="width:100px;padding:5px 8px;border:1px solid var(--line);border-radius:6px;font-size:12px"></div>'; }).join('');
+  // Step-1 units are the catalogue's ALLOWED SET; each item picks its own from it (Tomato kg · Egg count · Milk litre).
+  var units = _cwUnitSet(w);
+  return '<div style="font-size:13px;color:#3a4048;margin-bottom:10px">Set your <b>price</b> per item (' + esc(_catfCcy()) + ')' + (units.length > 1 ? ' and the <b>unit</b> it sells by' : '') + '. You can change these anytime later.</div>'
+    + items.map(function(it){ var nm = esc(it.name).replace(/'/g, "\\'");
+        return '<div style="display:flex;align-items:center;gap:9px;padding:6px 10px;border:1px solid var(--line);border-radius:9px;margin-top:5px;background:#fff"><span style="font-weight:600;font-size:12.5px;flex:1">' + esc(it.name) + '</span><span style="color:var(--grey);font-size:11px">' + esc(_catfCcy()) + '</span>'
+        + '<input type="number" value="' + (w.prices[it.name] != null ? w.prices[it.name] : '') + '" oninput="cwSetPrice(\'' + nm + '\',this.value)" placeholder="price" style="width:92px;padding:5px 8px;border:1px solid var(--line);border-radius:6px;font-size:12px">'
+        + _cwUnitSelect(units, _cwItemUnit(w, it), 'cwSetItemUnit(\'' + nm + '\',this.value)') + '</div>'; }).join('');
 }
+// the allowed unit set (step 1) + the item's own choice from it, defaulting to the first.
+function _cwUnitSet(w){ return (w.units && w.units.length) ? w.units.slice() : [(CATF_KB[w.vertical] && CATF_KB[w.vertical].baseUnit) || 'unit']; }
+function _cwItemUnit(w, it){ var s = _cwUnitSet(w); var u = (w.itemUnits || {})[it.name]; return (u && s.indexOf(u) >= 0) ? u : s[0]; }
+function _cwUnitSelect(units, sel, onchange){
+  return '<select data-testid="cw-item-unit" onchange="' + onchange + '" title="unit this item sells by" style="padding:5px 6px;border:1px solid var(--line);border-radius:6px;font-size:12px;background:#fff;color:#3a4048">'
+    + units.map(function(u){ return '<option value="' + esc(u) + '"' + (u === sel ? ' selected' : '') + '>' + esc(u) + '</option>'; }).join('') + '</select>';
+}
+function cwSetItemUnit(name, u){ UI.cw.itemUnits = UI.cw.itemUnits || {}; UI.cw.itemUnits[name] = u; }
 function _cwStep6(w){
   var priced = Object.keys(w.prices).filter(function(k){ return w.prices[k] != null && w.prices[k] !== ''; }).length;
   return '<div style="font-size:13px;color:#3a4048;margin-bottom:10px">Set <b>tax</b>, then go live.</div>'
@@ -542,7 +561,10 @@ function cwCancel(){ UI.cw = null; renderApp(); }
 function cwSetVertical(v){ UI.cw.vertical = v; renderApp(); }
 function cwSetBpQuery(v){ UI.cw.bpQuery = v; renderApp(); var el = document.getElementById('cw_bp_search'); if (el) { el.focus(); var n = el.value.length; try { el.setSelectionRange(n, n); } catch (e) {} } }
 function cwToggleBpAll(){ UI.cw.bpAll = !UI.cw.bpAll; renderApp(); }
-function cwPickSource(key){ var w = UI.cw; w.source = key; w.built = null; if (!key) { renderApp(); return; } if (typeof toast === 'function') toast('Loading blueprint…'); api('catalogueStruct', { body: { source: key } }).then(function(r){ w.built = r; w.chosen = {}; w.sel = null; (r.finishes || []).forEach(function(it){ w.chosen[it.name] = true; if (it.commercials && it.commercials.price_per_litre != null) w.prices[it.name] = it.commercials.price_per_litre; }); _cwMergeBpFields(w); renderApp(); }).catch(function(e){ if (typeof toast === 'function') toast('Load failed: ' + ((e && e.message) || '')); }); }
+function cwPickSource(key){ var w = UI.cw; w.source = key; w.built = null; if (!key) { renderApp(); return; } if (typeof toast === 'function') toast('Loading blueprint…'); api('catalogueStruct', { body: { source: key } }).then(function(r){ w.built = r; w.chosen = {}; w.sel = null; w.itemUnits = w.itemUnits || {}; (r.finishes || []).forEach(function(it){ w.chosen[it.name] = true; var c = it.commercials || {};
+      var pv = (c.price != null && c.price !== '') ? c.price : c.price_per_litre;                 // generic {price,unit}, falling back to the pre-generic paint shape
+      if (pv != null) w.prices[it.name] = pv;
+      var u = c.unit || it.unit; if (u) w.itemUnits[it.name] = u; }); _cwMergeBpFields(w); renderApp(); }).catch(function(e){ if (typeof toast === 'function') toast('Load failed: ' + ((e && e.message) || '')); }); }
 // the blueprint's data items become fields too — match an existing selected field by name, or add it. So the
 // vertical field selection ends up holding ALL adopted data items.
 function _cwMergeBpFields(w){ w.fieldSel = w.fieldSel || []; var have = {}; w.fieldSel.forEach(function(f){ have[_cwNorm(f.name)] = f; }); _cwBpFields(w).forEach(function(key){ var e = have[_cwNorm(key)]; if (e) { e.on = true; e._bp = true; e._bpKey = key; } else { var nf = { section: 'From blueprint', name: key, type: 'text', on: true, leg: 'cb', _bp: true, _bpKey: key }; w.fieldSel.push(nf); have[_cwNorm(key)] = nf; } }); }
@@ -597,11 +619,14 @@ function _catfProductData(it, unit){ var d = {};
 function cwFinish(){
   var w = UI.cw;
   var chosenFinishes = (w.built && w.built.finishes || []).filter(function(it){ return w.chosen[it.name] !== false; });
-  var com = {}; chosenFinishes.forEach(function(it){ var p = w.prices[it.name]; if (p != null && p !== '') com[it.name] = { price_per_litre: Number(p) }; });
-  var units = (w.units && w.units.length) ? w.units.slice() : [(CATF_KB[w.vertical] && CATF_KB[w.vertical].baseUnit) || 'unit'];
+  var units = _cwUnitSet(w);
+  // GENERIC commercials: {price, unit} per item — not price_per_litre. The unit is the item's own pick from the
+  // catalogue's allowed set, so one catalogue can hold Tomato/kg + Egg/count. (Readers still fall back to
+  // price_per_litre so adoptions made before this keep rendering.)
+  var com = {}; chosenFinishes.forEach(function(it){ var p = w.prices[it.name]; if (p != null && p !== '') com[it.name] = { price: Number(p), unit: _cwItemUnit(w, it) }; });
   // Build the golden records (MDM) — one item per SKU via RFC 7386 merge-patch.
   var acc = []; var srcMode = (w.adoptMode === 'value' ? 'value' : 'reference');
-  chosenFinishes.forEach(function(it){ var pr = w.prices[it.name]; var inc = { sku: it.name, product: it.name, texture_family: it.texture_family, sheen: it.sheen, region: it.region, _media: true }; if (pr != null && pr !== '') inc.price = Number(pr); CBCatalogue.upsertItem(acc, inc, { source: srcMode }); });
+  chosenFinishes.forEach(function(it){ var pr = w.prices[it.name]; var inc = { sku: it.name, product: it.name, texture_family: it.texture_family, sheen: it.sheen, region: it.region, unit: _cwItemUnit(w, it), _media: true }; if (pr != null && pr !== '') inc.price = Number(pr); CBCatalogue.upsertItem(acc, inc, { source: srcMode }); });
   (w.manualItems || []).forEach(function(it){ var inc = {}; Object.keys(it).forEach(function(k){ if (k !== '_src' && it[k] != null && it[k] !== '') inc[k] = it[k]; }); if (!inc.sku && inc.product) inc.sku = inc.product; CBCatalogue.upsertItem(acc, inc, { source: it._src === 'csv' ? 'csv' : it._src === 'capture' ? 'capture' : 'manual' }); });
   if (!acc.length) { var pr0 = w.prices[Object.keys(w.prices)[0]]; var one = { product: (w.manual.name || (CATF_KB[w.vertical] && CATF_KB[w.vertical].product) || 'Item') }; if (pr0 != null && pr0 !== '') one.price = Number(pr0); CBCatalogue.upsertItem(acc, one, { source: 'manual' }); }
 
@@ -706,15 +731,26 @@ function _catfItemsHtml(f){
       + ((it._photo || it.photo) ? '<span style="width:26px;height:26px;border-radius:5px;background:#f4f6f8 center/cover no-repeat;background-image:url(' + (it._photo || it.photo) + ');flex:none"></span>' : (it._media ? '<span style="width:22px;height:22px;border-radius:5px;background:linear-gradient(135deg,#eef1f5,#dde3ea);flex:none"></span>' : ''))
       + '<span style="font-weight:600;font-size:12.5px">' + esc(it.product || it.name || 'item') + '</span>'
       + '<span style="font-size:9.5px;font-weight:700;color:' + t[1] + ';background:' + t[1] + '18;border-radius:4px;padding:1px 6px">' + t[0] + '</span>'
-      + '<span style="margin-left:auto">' + priceCell + '</span></div>'
+      + '<span style="margin-left:auto;display:flex;align-items:center;gap:6px">' + _catfUnitCell(f, it, i) + priceCell + '</span></div>'
       + (attrs ? '<div style="font-size:10.5px;color:var(--grey);margin-top:3px">' + attrs + (it._src === 'reference' ? ' <span style="color:#6a44a8">· referenced, kept inside</span>' : '') + '</div>' : '') + '</div>';
   }).join('');
   return '<div style="font-size:11px;font-weight:800;color:#2c7a43;letter-spacing:.05em;margin-top:18px">YOUR ITEMS · ' + items.length + (needPrice ? ' <span style="color:#a5382e;font-weight:600">· ' + needPrice + ' need a price</span>' : ' <span style="color:#2c7a43">· ready</span>') + '</div><div style="margin-top:4px">' + rows + '</div>';
 }
+// PER-ITEM UNIT on the face row: the catalogue's units are the allowed SET, each item picks its own from it.
+// One unit → a plain label (nothing to choose); several → a dropdown.
+function _catfUnitCell(f, it, i){
+  var units = (f.units && f.units.length) ? f.units : []; if (!units.length) return '';
+  var sel = (units.indexOf(it.unit) >= 0) ? it.unit : units[0];
+  if (units.length === 1) return '<span style="font-size:10.5px;color:var(--grey)">/ ' + esc(sel) + '</span>';
+  return '<select data-testid="catf-item-unit" onchange="catfSetItemUnit(' + i + ',this.value)" title="unit this item sells by" style="padding:3px 5px;border:1px solid var(--line);border-radius:5px;font-size:11px;background:#fff;color:#3a4048">'
+    + units.map(function(u){ return '<option value="' + esc(u) + '"' + (u === sel ? ' selected' : '') + '>' + esc(u) + '</option>'; }).join('') + '</select>';
+}
+function catfSetItemUnit(i, u){ if (!UI.catf || !UI.catf.items || !UI.catf.items[i]) return; UI.catf.items[i].unit = u; _catfSave(); if (UI.catf._source) _catfRepublish(); renderApp(); }
 function catfSetItemPrice(i, v){ if (!UI.catf || !UI.catf.items || !UI.catf.items[i]) return; var x = parseFloat(v); UI.catf.items[i].price = (v === '' || isNaN(x)) ? null : x; _catfSave(); if (UI.catf._source) _catfRepublish(); renderApp(); }
 function _catfRepublish(){   // price change on a live (adopted) catalogue = CRUD → re-persist commercials via the real API
   if (!UI.catf || !UI.catf._source || typeof api !== 'function') return;
-  var com = {}; (UI.catf.items || []).forEach(function(it){ if (it.price != null && it.price !== '') com[it.product || it.name] = { price_per_litre: Number(it.price) }; });
+  var f = UI.catf; var units = (f.units && f.units.length) ? f.units : [];
+  var com = {}; (f.items || []).forEach(function(it){ if (it.price != null && it.price !== '') com[it.product || it.name] = { price: Number(it.price), unit: it.unit || units[0] || '' }; });
   api('catalogueAdopt', { body: { source: UI.catf._source, commercials: com } }).then(function(){ if (typeof toast === 'function') toast('Price updated · live ✓'); }).catch(function(){});
 }
 function catfEditPrice(i){ if (!UI.catf || !UI.catf.items || !UI.catf.items[i]) return; UI.catf.items[i].price = null; _catfSave(); renderApp(); }

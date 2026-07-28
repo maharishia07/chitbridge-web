@@ -9,17 +9,22 @@ import { fileURLToPath } from 'node:url';
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 let failed = 0;
 
-// 1) inline <script> blocks in app.html (skip external src= ones)
-const html = fs.readFileSync(path.join(root, 'public', 'app.html'), 'utf8');
-const re = /<script\b([^>]*)>([\s\S]*?)<\/script>/gi;
-let m, n = 0;
-while ((m = re.exec(html)) !== null) {
-  if (/\bsrc\s*=/.test(m[1] || '')) continue;
-  n++;
-  try { new vm.Script(m[2], { filename: `app.html#inline-${n}` }); }
-  catch (e) { failed++; console.log('SYNTAX FAIL  app.html inline #' + n + ': ' + e.message); }
+// 1) inline <script> blocks in EVERY public/*.html page (skip external src= ones).
+// Not just app.html: shop.html is the customer-facing storefront and carries its own inline script — a syntax error
+// there is just as fatal, and it used to sail past this check.
+const pubDir = path.join(root, 'public');
+for (const page of fs.readdirSync(pubDir).filter(f => f.endsWith('.html')).sort()) {
+  const html = fs.readFileSync(path.join(pubDir, page), 'utf8');
+  const re = /<script\b([^>]*)>([\s\S]*?)<\/script>/gi;
+  let m, n = 0, bad = 0;
+  while ((m = re.exec(html)) !== null) {
+    if (/\bsrc\s*=/.test(m[1] || '')) continue;
+    n++;
+    try { new vm.Script(m[2], { filename: `${page}#inline-${n}` }); }
+    catch (e) { failed++; bad++; console.log('SYNTAX FAIL  ' + page + ' inline #' + n + ': ' + e.message); }
+  }
+  console.log(page + ': ' + n + ' inline script(s) — ' + (bad ? 'FAIL' : 'OK'));
 }
-console.log('app.html: ' + n + ' inline script(s) — ' + (failed ? 'FAIL' : 'OK'));
 
 // 2) the JS modules under public/app/
 const appDir = path.join(root, 'public', 'app');

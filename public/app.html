@@ -983,19 +983,24 @@ async function openCatalogueBuilder(){
 }
 function _swatch(c){ return '<span title="'+esc(c.name+' '+c.hex)+'" style="display:inline-block;width:20px;height:20px;border-radius:50%;background:'+esc(c.hex)+';border:1px solid rgba(0,0,0,.15);vertical-align:middle"></span>'; }
 function _combo(cm){ return '<div style="display:flex;align-items:center;gap:7px;margin-top:5px"><span style="display:inline-flex;gap:3px">'+((cm.colours||[]).map(_swatch).join(''))+'</span><span style="font-size:11.5px;color:#3a4048;font-weight:600">'+esc(cm.name)+'</span><span style="font-size:10.5px;color:#9aa3a7">'+((cm.colours||[]).map(function(c){return esc(c.name);}).join(' + '))+'</span></div>'; }
-function _finishCard(it,i){
-  var chips='<span class="optchip" style="background:#F0EAF9;color:#6a44a8;border-color:transparent">'+esc(it.texture_family)+'</span>'
-    +'<span class="optchip" style="background:#eef3fb;color:#345488;border-color:#cfe0f4">'+esc(it.region)+'</span>'
-    +((it.effect||[]).map(function(e){return '<span class="optchip" style="background:#f3f0e8;color:#7a5e22;border-color:#e6d9a8">'+esc(e)+'</span>';}).join(''));
-  var price=(it.commercials&&it.commercials.price_per_litre!=null)?it.commercials.price_per_litre:'';
+// the source's own unit, read off its commercials_fields label ("Price / kg" → "kg"). No vertical assumed.
+function _cardUnit(v){ var cf=(v&&v.commercials_fields)||[];
+  for(var i=0;i<cf.length;i++){ var m=/\/\s*(.+)$/.exec(cf[i].label||''); if(m) return m[1].trim(); }
+  return ''; }
+// Presence-driven, same rule as refFinishRow — the AI/assistant preview must not show paint fields a veg item lacks.
+function _finishCard(it,i,unit){
+  var chips=_refChips(it), facts=_refFacts(it,3), combos=(it.combinations||[]), u=it.unit||unit||'';
+  var applied=[]; if((it.tools||[]).length) applied.push('Applied with '+esc(it.tools.join(', '))); if(it.coats) applied.push(esc(it.coats));
+  var sub=[it.scale,it.sheen].filter(Boolean).map(esc).join(' · ');
+  var p=_refPrice(it), price=p?p.v:'';
   return '<div style="border:1px solid #e7e3d8;border-radius:12px;padding:12px;margin-bottom:10px">'
-    +'<div style="display:flex;align-items:baseline;gap:8px"><span style="font-weight:800;font-size:15px">'+esc(it.name)+'</span><span style="font-size:11px;color:#9aa3a7">'+esc(it.scale)+' · '+esc(it.sheen)+'</span></div>'
-    +'<div style="font-size:12px;color:#6a707a;margin:4px 0 7px;line-height:1.5">'+esc(it.inspiration||'')+'</div>'
-    +'<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px">'+chips+'</div>'
-    +'<div style="font-size:10.5px;color:#9aa3a7;text-transform:uppercase;letter-spacing:.4px;font-weight:700;margin-top:6px">Colour combinations</div>'
-    +((it.combinations||[]).map(_combo).join(''))
-    +'<div style="font-size:11px;color:#9aa3a7;margin-top:7px">Applied with '+((it.tools||[]).join(', '))+' · '+esc(it.coats||'')+'</div>'
-    +'<div style="margin-top:8px;display:flex;align-items:center;gap:6px;background:#eef7ee;border:1px solid #cfe6cf;border-radius:8px;padding:6px 9px"><span style="font-size:11px;color:#2e7a45;font-weight:700">Your price / L</span><span style="font-size:11px;color:#9aa3a7">₹</span><input id="com_'+i+'" inputmode="decimal" value="'+esc(price)+'" placeholder="e.g. 850" style="width:88px;border:1px solid #cfe6cf;border-radius:7px;padding:4px 7px;font-size:12px"></div>'
+    +'<div style="display:flex;align-items:center;gap:8px">'+_refPhoto(it,30)+'<span style="font-weight:800;font-size:15px">'+esc(it.name)+'</span>'+(sub?'<span style="font-size:11px;color:#9aa3a7">'+sub+'</span>':'')+'</div>'
+    +(it.inspiration?'<div style="font-size:12px;color:#6a707a;margin:4px 0 7px;line-height:1.5">'+esc(it.inspiration)+'</div>':'')
+    +(chips?'<div style="display:flex;gap:5px;flex-wrap:wrap;margin:6px 0">'+chips+'</div>':'')
+    +(facts.length?'<div style="font-size:11.5px;color:#3a4048;margin:5px 0;line-height:1.55">'+facts.join(' · ')+'</div>':'')
+    +(combos.length?'<div style="font-size:10.5px;color:#9aa3a7;text-transform:uppercase;letter-spacing:.4px;font-weight:700;margin-top:6px">Colour combinations</div>'+combos.map(_combo).join(''):'')
+    +(applied.length?'<div style="font-size:11px;color:#9aa3a7;margin-top:7px">'+applied.join(' · ')+'</div>':'')
+    +'<div style="margin-top:8px;display:flex;align-items:center;gap:6px;background:#eef7ee;border:1px solid #cfe6cf;border-radius:8px;padding:6px 9px"><span style="font-size:11px;color:#2e7a45;font-weight:700">Your price'+(u?' / '+esc(u):'')+'</span><span style="font-size:11px;color:#9aa3a7">₹</span><input id="com_'+i+'" inputmode="decimal" value="'+esc(price)+'" placeholder="e.g. 850" style="width:88px;border:1px solid #cfe6cf;border-radius:7px;padding:4px 7px;font-size:12px"></div>'
     +'</div>';
 }
 function cbRenderCatalogue(v){
@@ -1006,7 +1011,7 @@ function cbRenderCatalogue(v){
     +'<div style="flex:1;min-width:180px;background:#eef4fc;border:1px solid #cfe0f4;border-radius:9px;padding:9px 11px"><div style="font-size:10px;font-weight:800;color:#2c5aa0;text-transform:uppercase;letter-spacing:.4px">Shared · minted once</div><div style="font-size:11.5px;color:#3a4048;margin-top:3px">Schema + design + colour + images. Inherited by <b>reference</b> — Beta stores no copy.</div></div>'
     +'<div style="flex:1;min-width:180px;background:#eef7ee;border:1px solid #cfe6cf;border-radius:9px;padding:9px 11px"><div style="font-size:10px;font-weight:800;color:#2e7a45;text-transform:uppercase;letter-spacing:.4px">Beta fills · per-entity</div><div style="font-size:11.5px;color:#3a4048;margin-top:3px">Only commercials: '+((v.commercials_fields||[]).map(function(f){return esc(f.label);}).join(' · '))+'.</div></div></div>';
   var counts=v.counts?'<div style="font-size:11.5px;color:#6a707a;margin-bottom:9px">'+v.counts.finishes+' finishes · '+v.counts.combinations+' combinations · '+v.counts.colours+' colours · '+v.counts.fields+' schema fields</div>':'';
-  var items=(v.finishes||v.items||[]).map(function(it,i){return _finishCard(it,i);}).join('');
+  var _u=_cardUnit(v); var items=(v.finishes||v.items||[]).map(function(it,i){return _finishCard(it,i,_u);}).join('');
   var adopt='<div style="display:flex;gap:8px;margin-top:4px"><button class="composebtn pri" onclick="cbAdopt()">Adopt &amp; save for my entity</button><button class="composebtn" onclick="cbViewMine()">View saved</button></div><div id="cb_result" style="margin-top:8px"></div>';
   var ab=v.acted_by||{}; var prov='<div style="margin-top:8px;font-size:10px;color:#9aa3a7;font-family:\'Space Mono\'">stamped · '+esc(ab.deputy||'ai:catalogue-structure')+' · '+(ab.model?('intro by '+esc(ab.model)):'deterministic only (no model key)')+' · inherits by reference</div>';
   window._cbCat=v;
@@ -1015,7 +1020,8 @@ function cbRenderCatalogue(v){
 // Adopt = the human CONFIRM/publish: persist the REFERENCE + the commercials the retailer typed. No design/colour copied.
 async function cbAdopt(){
   var v=window._cbCat; if(!v)return; var com={};
-  (v.finishes||v.items||[]).forEach(function(it,i){ var el=document.getElementById('com_'+i); if(el&&el.value!==''){ com[it.name]={price_per_litre:Number(el.value)}; } });
+  var _u=_cardUnit(v);   // commercials are GENERIC {price, unit} — the unit is the item's own, not assumed litre
+  (v.finishes||v.items||[]).forEach(function(it,i){ var el=document.getElementById('com_'+i); if(el&&el.value!==''){ com[it.name]={price:Number(el.value),unit:(it.unit||_u||'')}; } });
   var rh=document.getElementById('cb_result'); if(rh)rh.innerHTML='<span style="font-size:12px;color:#9aa3a7">Saving…</span>';
   try{ await api('catalogueAdopt',{body:{source:(window._cbSourceKey||(v.adoption_model&&v.adoption_model.source_ref)||'beta-royale-play@v1'), commercials:com}});
     if(rh)rh.innerHTML='<div style="color:#2e7a45;font-size:12.5px;background:#eef7ee;border:1px solid #cfe6cf;border-radius:8px;padding:8px 10px">✓ Saved — your entity now <b>references</b> this catalogue ('+Object.keys(com).length+' finishes priced). Design &amp; colour stay shared; only your commercials were stored.</div>';
@@ -1027,7 +1033,7 @@ async function cbViewMine(){
   try{ var r=await api('catalogueMine');
     if(!r.count){ if(rh)rh.innerHTML='<div style="font-size:12.5px;color:#6a707a">Nothing saved yet — set prices and Adopt above.</div>'; return; }
     var c=r.catalogues[0]; var priced=(c.resolved.items||[]).filter(function(it){return it.commercials;});
-    if(rh)rh.innerHTML='<div style="font-size:12.5px;color:#3a4048;background:#f6f4ee;border:1px solid #e7e3d8;border-radius:8px;padding:8px 10px">Persisted · <b>'+esc(c.source)+'</b> · '+priced.length+' priced:<br>'+(priced.map(function(it){return esc(it.name)+' — ₹'+esc(String(it.commercials.price_per_litre==null?'?':it.commercials.price_per_litre))+'/L';}).join(' · ')||'—')+'<div style="font-size:10.5px;color:#9aa3a7;margin-top:5px">design &amp; colour resolved by reference from the shared source — no copy stored</div></div>';
+    if(rh)rh.innerHTML='<div style="font-size:12.5px;color:#3a4048;background:#f6f4ee;border:1px solid #e7e3d8;border-radius:8px;padding:8px 10px">Persisted · <b>'+esc(c.source)+'</b> · '+priced.length+' priced:<br>'+(priced.map(function(it){var p=_refPrice(it);return esc(it.name)+' — '+(p?('₹'+esc(String(p.v))+(p.u?'/'+esc(p.u):'')):'?');}).join(' · ')||'—')+'<div style="font-size:10.5px;color:#9aa3a7;margin-top:5px">design &amp; data resolved by reference from the shared source — no copy stored</div></div>';
   }catch(e){ if(rh)rh.innerHTML='<div style="color:#b4453f;font-size:12.5px">'+esc((e&&e.message)||'load failed')+'</div>'; }
 }
 function setLogFilter(k){ _logFilter=k; renderMsgConsole(); }
@@ -2237,16 +2243,48 @@ function prodRowHTML(p){ const d=pData(p), id=prodId(p); return `<div class="row
   <div class="main2"><div class="l1"><span class="code">${esc(pName(d))}</span><span class="optchip" style="background:var(--gold-soft);color:#7a5e22;border-color:var(--gold-line)">${esc(pUnit(d))}</span><span class="amt" style="margin-left:auto">${inr(pPrice(d))}</span></div>
     <div class="l2">${pCode(d)?'<span class="mono">'+esc(pCode(d))+'</span> · ':''}${esc(pDesc(d)||'—')}</div></div>
   <div class="rowgo" aria-hidden="true">›</div></div>`; }
-/* BRIDGE — the reference catalogue (Royale Play finishes adopted via 🤖 Catalogue builder) surfaces HERE, resolved
-   live from catalogue-mine (shared design/colour BY REFERENCE + the entity's commercials). NOT copied into products. */
-function refFinishRow(it,i){ var price=(it.commercials&&it.commercials.price_per_litre!=null)?it.commercials.price_per_litre:null;
-  var chips='<span class="optchip" style="background:#F0EAF9;color:#6a44a8;border-color:transparent">'+esc(it.texture_family||'')+'</span>'+(it.region?'<span class="optchip" style="background:#eef3fb;color:#345488;border-color:#cfe0f4">'+esc(it.region)+'</span>':'')+((it.effect||[]).map(function(e){return '<span class="optchip" style="background:#f3f0e8;color:#7a5e22;border-color:#e6d9a8">'+esc(e)+'</span>';}).join(''));
+/* BRIDGE — the reference catalogue (any adopted blueprint) surfaces HERE, resolved live from catalogue-mine
+   (shared design/data BY REFERENCE + the entity's commercials). NOT copied into products.
+   VERTICAL-AGNOSTIC: every block below is PRESENCE-DRIVEN — it renders only if the item carries that data. Paint
+   happens to have texture/combinations/tools, so it keeps the rich card unchanged; a veg or meat item shows its own
+   facts (local/botanical name, category), its photo, and its price in ITS unit — no empty chips, no dangling
+   "Applied with ·", no COLOUR COMBINATIONS header over nothing. */
+// price is generic {price, unit}; price_per_litre is the pre-generic paint shape, still read so existing adoptions render.
+function _refPrice(it){ var c=it.commercials||{};
+  if(c.price!=null&&c.price!=='') return {v:c.price,u:c.unit||it.unit||''};
+  if(c.price_per_litre!=null&&c.price_per_litre!=='') return {v:c.price_per_litre,u:'L'};
+  return null; }
+function _refPriceHTML(p,sz){ if(!p) return '<span style="color:#9aa3a7;font-size:12px;font-weight:400">no price</span>';
+  return '₹'+esc(String(p.v))+(p.u?'<span style="font-size:'+(sz||11)+'px;color:#9aa3a7;font-weight:400">/'+esc(p.u)+'</span>':''); }
+function _refChips(it){ var c='';
+  if(it.texture_family) c+='<span class="optchip" style="background:#F0EAF9;color:#6a44a8;border-color:transparent">'+esc(it.texture_family)+'</span>';
+  if(it.region) c+='<span class="optchip" style="background:#eef3fb;color:#345488;border-color:#cfe0f4">'+esc(it.region)+'</span>';
+  return c+((it.effect||[]).map(function(e){return '<span class="optchip" style="background:#f3f0e8;color:#7a5e22;border-color:#e6d9a8">'+esc(e)+'</span>';}).join('')); }
+// the item's OWN fields — whatever this vertical happens to carry (veg: local_names · botanical_name · category).
+// Skips everything already rendered by a dedicated block, plus underscore meta.
+var _REF_SKIP={name:1,photo:1,unit:1,scale:1,sheen:1,texture_family:1,region:1,effect:1,inspiration:1,combinations:1,tools:1,coats:1,commercials:1,sku:1,id:1};
+function _refFacts(it,max){ var out=[];
+  Object.keys(it||{}).forEach(function(k){ if(out.length>=(max||3)||k.charAt(0)==='_'||_REF_SKIP[k]) return;
+    var v=it[k]; if(v==null||v==='') return;
+    if(Array.isArray(v)){ v=v.filter(function(x){return x!=null&&x!==''&&typeof x!=='object';}).join(', '); if(!v) return; }
+    else if(typeof v==='object') return;
+    out.push('<b style="color:#6a707a;font-weight:600">'+esc(k.replace(/_/g,' '))+'</b> '+esc(String(v))); });
+  return out; }
+function _refPhoto(it,px){ var u=it.photo||it._photo;
+  return u?'<span style="width:'+px+'px;height:'+px+'px;border-radius:6px;flex:none;background:#f4f6f8 center/cover no-repeat;background-image:url('+u+')"></span>':''; }
+function refFinishRow(it,i){
+  var p=_refPrice(it), chips=_refChips(it), facts=_refFacts(it,3), combos=(it.combinations||[]);
+  var applied=[]; if((it.tools||[]).length) applied.push('Applied with '+esc(it.tools.join(', '))); if(it.coats) applied.push(esc(it.coats));
+  var sub=[it.scale,it.sheen].filter(Boolean).map(esc).join(' · ');
   return '<div style="cursor:pointer;padding:12px 14px;border-bottom:1px solid var(--line)'+(UI.refSel===i?';background:#f4f6f8':'')+'" onclick="selectRefFinish('+i+')">'
-    +'<div style="display:flex;align-items:baseline;gap:8px"><span style="font-weight:800;font-size:15px">'+esc(it.name)+'</span><span style="font-size:11px;color:#9aa3a7">'+esc(it.scale||'')+(it.sheen?(' · '+esc(it.sheen)):'')+'</span><span style="margin-left:auto;font-weight:800;font-size:14px">'+(price!=null?('₹'+esc(String(price))+'<span style="font-size:11px;color:#9aa3a7;font-weight:400">/L</span>'):'<span style="color:#9aa3a7;font-size:12px;font-weight:400">no price</span>')+'</span></div>'
-    +'<div style="font-size:12px;color:#6a707a;margin:4px 0 7px;line-height:1.5">'+esc(it.inspiration||'')+'</div>'
-    +'<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:7px">'+chips+'</div>'
-    +'<div style="font-size:10px;color:#9aa3a7;text-transform:uppercase;letter-spacing:.4px;font-weight:700;margin-bottom:2px">Colour combinations</div>'+((it.combinations||[]).map(_combo).join(''))
-    +'<div style="font-size:11px;color:#9aa3a7;margin-top:7px">Applied with '+((it.tools||[]).join(', '))+' · '+esc(it.coats||'')+' · <span style="color:#6a44a8">🎨 referenced</span></div>'
+    +'<div style="display:flex;align-items:center;gap:8px">'+_refPhoto(it,30)+'<span style="font-weight:800;font-size:15px">'+esc(it.name)+'</span>'
+      +(sub?'<span style="font-size:11px;color:#9aa3a7">'+sub+'</span>':'')
+      +'<span style="margin-left:auto;font-weight:800;font-size:14px">'+_refPriceHTML(p)+'</span></div>'
+    +(it.inspiration?'<div style="font-size:12px;color:#6a707a;margin:4px 0 7px;line-height:1.5">'+esc(it.inspiration)+'</div>':'')
+    +(chips?'<div style="display:flex;gap:5px;flex-wrap:wrap;margin:6px 0 7px">'+chips+'</div>':'')
+    +(facts.length?'<div style="font-size:11.5px;color:#3a4048;margin:5px 0 2px;line-height:1.55">'+facts.join(' · ')+'</div>':'')
+    +(combos.length?'<div style="font-size:10px;color:#9aa3a7;text-transform:uppercase;letter-spacing:.4px;font-weight:700;margin-bottom:2px">Colour combinations</div>'+combos.map(_combo).join(''):'')
+    +'<div style="font-size:11px;color:#9aa3a7;margin-top:7px">'+(applied.length?applied.join(' · ')+' · ':'')+'<span style="color:#6a44a8">🎨 referenced</span></div>'
   +'</div>'; }
 function refCatRowsHTML(){ var rc=UI.refCat||[]; if(!rc.length) return '';
   var groups={}, order=[]; rc.forEach(function(it,i){ var s=it._source||'?'; if(!groups[s]){groups[s]=[];order.push(s);} groups[s].push(i); });   // STONE 3: group by SOURCE (each brand distinct)
@@ -2260,19 +2298,23 @@ function prodRowsHTML(){ const ref=refCatRowsHTML(); const r=prodVisible();
   return ref + prods; }
 function selectRefFinish(i){ UI.refSel=i; UI.prodSel=null; UI.prodMode='view'; if(UI.vp==='mob'){ UI.mdetail=true; var p=document.getElementById('panel'); if(p)p.classList.add('showdetail'); } paintProdList(); paintProdDetail(); }
 function backToRefList(){ UI.refSel=null; UI.mdetail=false; var p=document.getElementById('panel'); if(p)p.classList.remove('showdetail'); paintProdList(); paintProdDetail(); }
-// The RICH showcase in the detail pane — the exact Royale Play format (story · chips · colour combinations w/ named
-// swatches · application · price). Design/colour by reference; only the price is the retailer's.
+// The RICH showcase in the detail pane. Same presence-driven rule as the row: paint keeps the full format (story ·
+// chips · colour combinations w/ named swatches · application · price); a veg/meat item shows photo · its own facts ·
+// price in its unit, and nothing it doesn't have. Design/data by reference; only the price is the retailer's.
 function refFinishDetail(it){
-  var price=(it.commercials&&it.commercials.price_per_litre!=null)?it.commercials.price_per_litre:null;
-  var chips='<span class="optchip" style="background:#F0EAF9;color:#6a44a8;border-color:transparent">'+esc(it.texture_family||'')+'</span>'+(it.region?'<span class="optchip" style="background:#eef3fb;color:#345488;border-color:#cfe0f4">'+esc(it.region)+'</span>':'')+((it.effect||[]).map(function(e){return '<span class="optchip" style="background:#f3f0e8;color:#7a5e22;border-color:#e6d9a8">'+esc(e)+'</span>';}).join(''));
-  var head='<div class="dh"><button class="dback" onclick="backToRefList()">‹ Catalogue</button><div class="dt">'+esc(it.name)+'</div><div class="ds">'+esc(it.scale||'')+(it.sheen?(' · '+esc(it.sheen)):'')+'</div></div>';
+  var p=_refPrice(it), chips=_refChips(it), facts=_refFacts(it,6), combos=(it.combinations||[]), photo=_refPhoto(it,120);
+  var applied=[]; if((it.tools||[]).length) applied.push('Applied with '+esc(it.tools.join(', '))); if(it.coats) applied.push(esc(it.coats));
+  var sub=[it.scale,it.sheen].filter(Boolean).map(esc).join(' · ');
+  var head='<div class="dh"><button class="dback" onclick="backToRefList()">‹ Catalogue</button><div class="dt">'+esc(it.name)+'</div>'+(sub?'<div class="ds">'+sub+'</div>':'')+'</div>';
   var body='<div class="db">'
-    +'<div style="font-size:13px;color:#3a4048;line-height:1.6;margin-bottom:10px">'+esc(it.inspiration||'')+'</div>'
-    +'<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px">'+chips+'</div>'
-    +'<div class="sec">Colour combinations</div>'+((it.combinations||[]).map(_combo).join(''))
-    +'<div style="font-size:11.5px;color:#9aa3a7;margin-top:10px">Applied with '+((it.tools||[]).join(', '))+' · '+esc(it.coats||'')+'</div>'
-    +'<div class="sec" style="margin-top:14px">Price</div><div style="font-size:17px;font-weight:800">'+(price!=null?('₹'+esc(String(price))+' <span style="font-size:12px;color:#9aa3a7;font-weight:400">/ litre</span>'):'<span style="color:#9aa3a7;font-size:13px">not priced yet</span>')+'</div>'
-    +'<div style="font-size:10.5px;color:#9aa3a7;margin-top:12px;font-family:\'Space Mono\'">🎨 design &amp; colour referenced from the shared source · no copy · <span style="color:var(--blue);cursor:pointer" onclick="UI.nav=\'cataloguesetup\';renderApp()">manage prices</span></div>'
+    +(photo?'<div style="margin-bottom:12px;display:flex">'+photo+'</div>':'')
+    +(it.inspiration?'<div style="font-size:13px;color:#3a4048;line-height:1.6;margin-bottom:10px">'+esc(it.inspiration)+'</div>':'')
+    +(chips?'<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px">'+chips+'</div>':'')
+    +(facts.length?'<div class="sec">Details</div><div style="font-size:12.5px;color:#3a4048;line-height:1.8;margin-bottom:4px">'+facts.join('<br>')+'</div>':'')
+    +(combos.length?'<div class="sec">Colour combinations</div>'+combos.map(_combo).join(''):'')
+    +(applied.length?'<div style="font-size:11.5px;color:#9aa3a7;margin-top:10px">'+applied.join(' · ')+'</div>':'')
+    +'<div class="sec" style="margin-top:14px">Price</div><div style="font-size:17px;font-weight:800">'+(p?('₹'+esc(String(p.v))+(p.u?' <span style="font-size:12px;color:#9aa3a7;font-weight:400">/ '+esc(p.u)+'</span>':'')):'<span style="color:#9aa3a7;font-size:13px">not priced yet</span>')+'</div>'
+    +'<div style="font-size:10.5px;color:#9aa3a7;margin-top:12px;font-family:\'Space Mono\'">🎨 referenced from the shared source · no copy · <span style="color:var(--blue);cursor:pointer" onclick="UI.nav=\'cataloguesetup\';renderApp()">manage prices</span></div>'
   +'</div>';
   return head+body;
 }
