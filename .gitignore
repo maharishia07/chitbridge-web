@@ -1,3 +1,6 @@
 node_modules/
 .env
 dist/
+e2e/wizard-shots/
+e2e/test-results/
+e2e/playwright-report/
