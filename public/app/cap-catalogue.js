@@ -30,12 +30,14 @@
  * KNOWN GAPS (spec'd, not built): photo→item OCR/vision → C:\dev\SPEC-catalogue-photo-vision.md.
  */
 
+// The ORDER METHOD decides what the buyer is asked for — and therefore WHAT DATA COMES BACK to the business on the
+// order chit. `receives` states that plainly, so the choice is made on the data you want, not on the widget.
 var CATF_METHODS = [
-  { k: 'cart',     label: 'Cart (qty × price)',   hint: 'a shop — pick quantity, pay the price (veg market, retail)' },
-  { k: 'qty',      label: 'Quantity only',        hint: 'order a count, no price shown' },
-  { k: 'range',    label: 'Price as a range',     hint: 'price moves within a band (commodities)' },
-  { k: 'qtyprice', label: 'Both negotiable',      hint: 'buyer proposes quantity and price (tenders, trade)' },
-  { k: 'text',     label: 'Information only',      hint: 'a listing, nothing to order' },
+  { k: 'cart',     label: 'Cart (qty × price)',   hint: 'a shop — pick quantity, pay the price (veg market, retail)', receives: 'quantity · your price · line total' },
+  { k: 'qty',      label: 'Quantity only',        hint: 'order a count, no price shown',                              receives: 'quantity only — you quote the price later' },
+  { k: 'range',    label: 'Price as a range',     hint: 'price moves within a band (commodities)',                    receives: 'quantity · the band it was ordered within' },
+  { k: 'qtyprice', label: 'Both negotiable',      hint: 'buyer proposes quantity and price (tenders, trade)',         receives: "quantity · the buyer's PROPOSED price — you accept or counter" },
+  { k: 'text',     label: 'Information only',      hint: 'a listing, nothing to order',                               receives: 'nothing — an enquiry at most; no order is placed' },
 ];
 var CATF_KB = {
   veg:    { title: 'Veg market',       method: 'cart',     facets: { variants: true },                                   product: 'Vegetables', baseUnit: 'kg' },
@@ -337,7 +339,7 @@ function cwToggleUnit(u){ var w = UI.cw; w.units = w.units || []; var i = w.unit
 function cwAddUnit(){ var w = UI.cw; var u = (val('cw_newunit') || '').trim(); if (!u) return; w.units = w.units || []; if (w.units.indexOf(u) < 0) w.units.push(u); renderApp(); }
 function _cwLoggedIn(){ return typeof SESSION !== 'undefined' && !!SESSION.token; }
 function _cwInit(){
-  if (!UI.cw) UI.cw = { step: 1, vertical: '', source: '', built: null, chosen: {}, erp: {}, manual: {}, prices: {}, itemUnits: {}, tax: { label: 'GST', rate: '' } };
+  if (!UI.cw) UI.cw = { step: 1, vertical: '', source: '', built: null, chosen: {}, erp: {}, manual: {}, prices: {}, itemUnits: {}, method: '', tax: { label: 'GST', rate: '' } };
   if (UI._cwSources === undefined) { UI._cwSources = null; if (_cwLoggedIn()) api('catalogueSources').then(function(r){ UI._cwSources = (Array.isArray(r) ? r : (r && r.data) || []); renderApp(); }).catch(function(){ UI._cwSources = []; }); else UI._cwSources = []; }
 }
 // a small field LIBRARY, grouped in sections — the AI suggests from these per purpose (stub for the real AI)
@@ -356,7 +358,9 @@ function _cwSuggestFields(purpose){
   var out = []; sections.forEach(function(sec){ (CW_FIELD_LIB[sec] || []).forEach(function(f){ out.push({ section: sec, name: f.name, type: f.type, on: true, leg: 'cb' }); }); });
   return out;
 }
-function cwUnderstand(){ var w = UI.cw; var p = (val('cw_purpose') || '').trim(); if (!p) { if (typeof toast === 'function') toast('Describe the catalogue first.'); return; } w.purpose = p; w.vertical = _catfVerticalFromPurpose(p) || w.vertical || ''; w.fieldSel = _cwSuggestFields(p); if (!(w.units && w.units.length)) w.units = [(CATF_KB[w.vertical] && CATF_KB[w.vertical].baseUnit) || 'litre']; renderApp(); }
+function cwUnderstand(){ var w = UI.cw; var p = (val('cw_purpose') || '').trim(); if (!p) { if (typeof toast === 'function') toast('Describe the catalogue first.'); return; } w.purpose = p; w.vertical = _catfVerticalFromPurpose(p) || w.vertical || ''; w.fieldSel = _cwSuggestFields(p); if (!(w.units && w.units.length)) w.units = [(CATF_KB[w.vertical] && CATF_KB[w.vertical].baseUnit) || 'litre'];
+  if (!w.method) w.method = (CATF_KB[w.vertical] && CATF_KB[w.vertical].method) || 'cart';   // the vertical's own default (gold → range, trade → qtyprice)
+  renderApp(); }
 function cwToggleField(idx){ var f = UI.cw.fieldSel && UI.cw.fieldSel[idx]; if (f) { f.on = !f.on; renderApp(); } }
 function _cwUnitStr(w){ return (w.units && w.units.length) ? w.units.join(' · ') : 'unit'; }
 function _cwRequired(w){ if (w.fieldSel && w.fieldSel.length) return w.fieldSel.filter(function(f){ return f.on; }).map(function(f){ return { name: f.name, leg: f.leg || 'cb' }; }); return CATF_REQUIRED[w.vertical] || []; }
@@ -391,6 +395,23 @@ function _cwPreview(w){
   var taxHtml = (w.tax && w.tax.rate) ? '<div style="margin-top:9px;font-size:11px;color:var(--grey)">Tax: ' + esc(w.tax.label || 'GST') + ' ' + esc(w.tax.rate) + '%</div>' : '';
   return head + fieldsHtml + itemsHtml + taxHtml;
 }
+// HOW CUSTOMERS ORDER — the same chip pattern as "Sold by", but single-select. This is the question "what data do I
+// want back from a buyer?", so each option states what the order chit will CARRY, not just what the widget looks like.
+// Defaults from the vertical (CATF_KB: gold → range, trade → qtyprice), and the wizard now honours that choice —
+// it used to hardcode 'cart' at finish regardless of what the vertical declared.
+function _cwMethod(w){ return w.method || (CATF_KB[w.vertical] && CATF_KB[w.vertical].method) || 'cart'; }
+function cwSetMethod(k){ UI.cw.method = k; renderApp(); }
+function _cwMethodBlock(w){
+  var cur = _cwMethod(w);
+  var sel = CATF_METHODS.filter(function(m){ return m.k === cur; })[0] || CATF_METHODS[0];
+  var chip = function(m){ var on = m.k === cur;
+    return '<span data-testid="cw-method-' + esc(m.k) + '" onclick="cwSetMethod(\'' + esc(m.k) + '\')" title="' + esc(m.hint) + '" style="cursor:pointer;font-size:11px;font-weight:600;padding:3px 10px;border-radius:13px;border:1px solid ' + (on ? '#2c5aa0' : 'var(--line)') + ';color:' + (on ? '#fff' : 'var(--grey)') + ';background:' + (on ? '#2c5aa0' : '#fff') + '">' + (on ? '✓ ' : '') + esc(m.label) + '</span>'; };
+  return '<div style="margin-bottom:14px">'
+    + '<div style="font-size:11px;color:var(--grey);margin-bottom:5px">How customers order <span style="color:#9aa3a7">— this decides what data comes back to you on the order</span></div>'
+    + '<div style="display:flex;gap:5px;flex-wrap:wrap">' + CATF_METHODS.map(chip).join('') + '</div>'
+    + '<div style="margin-top:6px;font-size:10.5px;color:#2c5aa0;background:#eef4fc;border:1px solid #cfe0f4;border-radius:7px;padding:5px 9px">'
+    + '<b>You receive:</b> ' + esc(sel.receives) + '</div></div>';
+}
 function _cwStep1(w){
   var left = '<div style="font-size:13px;color:#3a4048;margin-bottom:8px">Tell me the <b>purpose</b> — the exact catalogue you want.</div>'
     + '<textarea id="cw_purpose" placeholder="e.g. a chemical catalogue especially focusing on paint" rows="4" style="width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:13px;resize:vertical">' + esc(w.purpose || '') + '</textarea>'
@@ -406,6 +427,7 @@ function _cwStep1(w){
         return '<div style="margin-bottom:14px"><div style="font-size:11px;color:var(--grey);margin-bottom:5px">Sold by <span style="color:#9aa3a7">— pick every unit this catalogue uses (products can differ: kg · litre · count…)</span></div>'
           + '<div style="display:flex;gap:5px;flex-wrap:wrap">' + CW_UNITS.map(function(u){ return chip(u, true); }).join('') + extra.map(function(u){ return chip(u, false); }).join('') + '</div>'
           + '<div style="display:flex;gap:6px;margin-top:7px"><input id="cw_newunit" placeholder="add a unit (e.g. drum, coil)" style="width:170px;padding:4px 8px;border:1px solid var(--line);border-radius:6px;font-size:11.5px"><button onclick="cwAddUnit()" style="padding:4px 11px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--blue);font-weight:600;font-size:11px;cursor:pointer">Add</button></div></div>'; })()
+      + _cwMethodBlock(w)
       + order.map(function(sec){ return '<div style="margin-bottom:11px"><div style="font-size:10.5px;font-weight:700;color:#6a707a;text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">' + esc(sec) + '</div>' + secs[sec].map(function(f){ var idx = w.fieldSel.indexOf(f); return '<label style="display:flex;align-items:center;gap:8px;padding:2px 0;cursor:pointer"><input type="checkbox" ' + (f.on ? 'checked' : '') + ' onchange="cwToggleField(' + idx + ')"><span style="font-size:12px;font-weight:' + (f.on ? 600 : 400) + ';color:' + (f.on ? '#1c2128' : 'var(--grey)') + '">' + esc(f.name) + '</span><span style="font-size:9.5px;color:#9aa3a7;background:#eef1f5;border-radius:4px;padding:1px 6px">' + esc(f.type) + '</span>' + (f._bp ? '<span style="font-size:9px;color:#6a44a8" title="from blueprint">📎</span>' : f._added ? '<span style="font-size:9px;color:#2c7a43" title="you added">＋</span>' : '') + '</label>'; }).join('') + '</div>'; }).join('')
       + '<div style="font-size:10.5px;color:#2c7a43;font-style:italic;border-top:1px solid var(--line);padding-top:8px">' + on + ' fields selected · sold by ' + esc(_cwUnitStr(w)) + '</div>'
       + '<div style="margin-top:8px"><div style="font-size:10px;font-weight:700;color:#6a707a;text-transform:uppercase;letter-spacing:.04em">Add a data type</div><div style="display:flex;gap:6px;margin-top:5px"><input id="cw_newfield" placeholder="field name" style="flex:1;min-width:0;padding:5px 8px;border:1px solid var(--line);border-radius:6px;font-size:12px"><select id="cw_newtype" style="padding:5px;border:1px solid var(--line);border-radius:6px;font-size:11px">' + ['text', 'number', 'choice', 'date', 'boolean'].map(function(t){ return '<option>' + t + '</option>'; }).join('') + '</select><button onclick="cwAddCustomField()" style="padding:5px 10px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--blue);font-weight:600;font-size:11px;cursor:pointer">Add</button></div><div style="font-size:10px;color:var(--grey);margin-top:4px">Uncheck any you don\'t need · add any that are missing. Adopting a blueprint (step 2) adds its fields here too 📎.</div></div>';
@@ -527,6 +549,8 @@ function _cwStep4(w){
   return '<div style="font-size:13px;color:#3a4048;margin-bottom:10px">How do you have your items? Don\'t type hundreds — bring a <b>list</b> (CSV/Excel) or <b>photos</b>.</div>' + bar + body;
 }
 function _cwStep5(w){
+  // "Information only" is a listing — there is nothing to order, so there is no price to collect.
+  if (_cwMethod(w) === 'text') return '<div style="font-size:13px;color:#3a4048">This catalogue is <b>information only</b> — nothing is ordered, so no prices are collected. Change <b>How customers order</b> in step 1 if you want to take orders.</div>';
   var pk = Object.keys(w.erpMap || {}).filter(function(k){ return /price|rate|mrp/i.test(k) && w.erpMap[k] && w.erpMap[k].system && w.erpMap[k].system !== '—'; })[0];
   if (pk) return '<div style="font-size:13px;color:#3a4048">Price comes from your <b>' + esc(w.erpMap[pk].system) + '</b> (' + esc(w.erpMap[pk].ref || 'mapped') + ') — nothing to set here.</div>';
   var items = (w.built && w.built.finishes || []).filter(function(it){ return w.chosen[it.name] !== false; });
@@ -549,9 +573,11 @@ function _cwUnitSelect(units, sel, onchange){
 function cwSetItemUnit(name, u){ UI.cw.itemUnits = UI.cw.itemUnits || {}; UI.cw.itemUnits[name] = u; }
 function _cwStep6(w){
   var priced = Object.keys(w.prices).filter(function(k){ return w.prices[k] != null && w.prices[k] !== ''; }).length;
+  var _m = CATF_METHODS.filter(function(m){ return m.k === _cwMethod(w); })[0] || CATF_METHODS[0];
   return '<div style="font-size:13px;color:#3a4048;margin-bottom:10px">Set <b>tax</b>, then go live.</div>'
     + '<div style="display:flex;gap:8px;align-items:center"><input value="' + esc(w.tax.label || 'GST') + '" oninput="cwSetTax(\'label\',this.value)" style="width:80px;padding:6px 8px;border:1px solid var(--line);border-radius:7px;font-size:12px"><input type="number" value="' + esc(w.tax.rate || '') + '" oninput="cwSetTax(\'rate\',this.value)" placeholder="18" style="width:70px;padding:6px 8px;border:1px solid var(--line);border-radius:7px;font-size:12px"><span style="font-size:12px;color:var(--grey)">%</span></div>'
-    + '<div style="margin-top:14px;padding:11px 13px;border:1px solid #cfe6cf;border-radius:9px;background:#eef7ee;font-size:12px;color:#2e7a45">On finish: your entity <b>adopts</b> the blueprint (reference) + your <b>' + priced + ' price(s)</b>' + (w.source ? '' : ' — <i>no blueprint, so it saves your manual items</i>') + '. It goes <b>live</b> on your storefront. Half-filled is fine — you can add the rest anytime.</div>';
+    + '<div style="margin-top:12px;padding:9px 12px;border:1px solid #cfe0f4;border-radius:9px;background:#eef4fc;font-size:11.5px;color:#2c5aa0">Orders arrive as <b>' + esc(_m.label) + '</b> — you receive <b>' + esc(_m.receives) + '</b>.</div>'
+    + '<div style="margin-top:10px;padding:11px 13px;border:1px solid #cfe6cf;border-radius:9px;background:#eef7ee;font-size:12px;color:#2e7a45">On finish: your entity <b>adopts</b> the blueprint (reference) + your <b>' + priced + ' price(s)</b>' + (w.source ? '' : ' — <i>no blueprint, so it saves your manual items</i>') + '. It goes <b>live</b> on your storefront. Half-filled is fine — you can add the rest anytime.</div>';
 }
 /* wizard actions */
 function cwGo(n){ if (n <= UI.cw.step || n === UI.cw.step + 1) { UI.cw.step = n; renderApp(); } }
@@ -631,7 +657,7 @@ function cwFinish(){
   if (!acc.length) { var pr0 = w.prices[Object.keys(w.prices)[0]]; var one = { product: (w.manual.name || (CATF_KB[w.vertical] && CATF_KB[w.vertical].product) || 'Item') }; if (pr0 != null && pr0 !== '') one.price = Number(pr0); CBCatalogue.upsertItem(acc, one, { source: 'manual' }); }
 
   var toLive = function(){
-    UI.catf = { method: 'cart', units: units, vertical: w.vertical || '', facets: { variants: true, media: !!w.source, sourcing: Object.keys(w.erpMap || {}).length > 0 }, adoptedFrom: (w.built && w.built.title) || '', _source: w.source || '', tax: w.tax, erpMap: w.erpMap,
+    UI.catf = { method: _cwMethod(w), units: units, vertical: w.vertical || '', facets: { variants: true, media: !!w.source, sourcing: Object.keys(w.erpMap || {}).length > 0 }, adoptedFrom: (w.built && w.built.title) || '', _source: w.source || '', tax: w.tax, erpMap: w.erpMap,
       catalogue: CBCatalogue.ensure({ story: w.purpose || '', product: (w.built && w.built.title) || (CATF_KB[w.vertical] && CATF_KB[w.vertical].product) || 'Catalogue', baseUnit: units[0], altUnits: units.slice(1) }),
       items: acc };
     _catfSave(); UI.cw = null; if (typeof toast === 'function') toast('Catalogue is live ✓'); renderApp();

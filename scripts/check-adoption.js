@@ -122,5 +122,37 @@ t('no field renders as the literal "undefined"', () => {
   }
 });
 
+// ── WIZARD CONTRACT · the order METHOD (what data the business gets back from a buyer) ──
+// The wizard used to hardcode method:'cart' at finish, silently discarding the vertical's own declared method —
+// a gold or trade catalogue became a cart. These assertions run against the real cap-catalogue.js.
+const capSrc = fs.readFileSync(path.join(root, 'public', 'app', 'cap-catalogue.js'), 'utf8');
+const capCtx = { UI: {}, renderApp() {}, esc: (v) => String(v == null ? '' : v), val: () => '', toast() {},
+                 CBCatalogue: { ensure: (x) => x }, api: null, document: { getElementById: () => null } };
+try { new vm.Script(capSrc).runInNewContext(capCtx); }
+catch (e) { console.log('  XX  cap-catalogue.js did not evaluate — ' + e.message); fail++; }
+
+if (capCtx._cwMethod) {
+  t('wizard · each vertical keeps its OWN declared order method (not a hardcoded cart)', () => {
+    for (const v of Object.keys(capCtx.CATF_KB)) {
+      const want = capCtx.CATF_KB[v].method, got = capCtx._cwMethod({ vertical: v, method: '' });
+      if (got !== want) throw new Error(v + ' should default to ' + want + ', got ' + got);
+    }
+  });
+  t('wizard · an explicit pick overrides the vertical default', () => {
+    if (capCtx._cwMethod({ vertical: 'gold', method: 'qtyprice' }) !== 'qtyprice') throw new Error('explicit method ignored');
+  });
+  t('wizard · every order method states WHAT DATA the business receives', () => {
+    for (const m of capCtx.CATF_METHODS) {
+      if (!m.receives || !m.receives.length) throw new Error(m.k + ' has no `receives` — the choice must be made on the data, not the widget');
+      if (!m.label || !m.hint) throw new Error(m.k + ' missing label/hint');
+    }
+  });
+  t('wizard · "information only" collects no prices', () => {
+    const h = capCtx._cwStep5({ vertical: 'veg', method: 'text', erpMap: {}, prices: {}, chosen: {} });
+    if (h.indexOf('information only') < 0) throw new Error('text method must explain that nothing is priced');
+    if (h.indexOf('<input type="number"') >= 0) throw new Error('text method must not render price inputs');
+  });
+}
+
 console.log('\ncheck-adoption: ' + pass + ' passed, ' + fail + ' failed');
 process.exit(fail ? 1 : 0);
