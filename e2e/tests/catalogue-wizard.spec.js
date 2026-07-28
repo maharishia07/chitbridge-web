@@ -106,6 +106,11 @@ test.describe('Catalogue wizard · visual walkthrough', () => {
       console.log('prodList after finish (settled):', (items || []).length, '→', (items || []).map((p) => (p.item_data && p.item_data.name) || '?').join(' | '));
       // 2 CSV + 2 photos, all priced → all four should be real catalogue_items
       expect((items || []).length, 'wizard persisted all priced items via prodAdd').toBeGreaterThanOrEqual(4);
+      // b112: the catalogue FACE itself should have synced to the server (cross-device persistence)
+      let faceResp = null;
+      for (let t = 0; t < 10; t++) { faceResp = await page.evaluate(() => window.api('catFaceGet')).catch(() => null); if (faceResp && faceResp.face && faceResp.face.catalogue) break; await page.waitForTimeout(600); }
+      console.log('catFaceGet (b112):', faceResp && faceResp.face ? ('face synced · units ' + JSON.stringify(faceResp.face.units)) : 'NO FACE');
+      expect(faceResp && faceResp.face && faceResp.face.catalogue, 'catalogue face persisted server-side (b112)').toBeTruthy();
       // READ in the classic Catalogue screen (the existing CRUD UI) — wait for the list to finish loading
       await page.evaluate(() => catfManage());
       await page.locator('#ct_rows .row').first().waitFor({ state: 'visible', timeout: 10000 }).catch(() => {});
