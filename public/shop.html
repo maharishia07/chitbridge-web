@@ -44,10 +44,40 @@ var BRIDGE = (new URLSearchParams(location.search).get('bridge') || '').trim();
 var _FIN=[]; var _ord=null; var _lg={}; var _SHOPDATA=null;
 // SPEC-negotiation-position — how this shop takes orders, from the API (never assumed). Decides what the customer is
 // asked for and therefore what data the business gets back. Unknown/absent → 'cart' (every existing shop unchanged).
-var _METHOD='cart';
-function _isNegotiable(){ return _METHOD==='range'||_METHOD==='qtyprice'; }
-function _showsPrice(){ return _METHOD!=='qty'&&_METHOD!=='text'; }
-function _canOrder(){ return _METHOD!=='text'; }
+var _OI={preset:'cart',pipeline:'commerce',showsPrice:true,negotiable:false,schema:{type:'object',properties:{quantity:{type:'number'}}}};
+var _METHOD='cart';   // the preset name, kept for readability
+function _isNegotiable(){ return !!_OI.negotiable; }
+function _showsPrice(){ return _OI.showsPrice!==false && _OI.pipeline!=='payload'; }
+function _isPayload(){ return _OI.pipeline==='payload'; }
+function _submitLabel(){ return _isPayload()?(_OI.preset==='form'?'Submit':'Send enquiry'):(_isNegotiable()?'Make an offer':t('order')); }
+// ── render the DECLARED fields — same subset the server validates (type · enum · maxLength · required) ──
+function _schemaFields(schema, vals){
+  var props=(schema&&schema.properties)||{}, req=(schema&&schema.required)||[];
+  var fld='style="width:100%;padding:9px;border:1px solid #e7e3d8;border-radius:8px;margin:3px 0 11px;font-size:14px"';
+  return Object.keys(props).map(function(k){
+    var p=props[k]||{}, v=(vals&&vals[k]!=null)?vals[k]:'';
+    var label=esc(k.replace(/_/g,' '))+(req.indexOf(k)>=0?' <span style="color:#b4453f">*</span>':'');
+    var inp;
+    if(Array.isArray(p.enum)&&p.enum.length){
+      inp='<select id="f_'+esc(k)+'" data-testid="shop-f-'+esc(k)+'" '+fld+'><option value=""></option>'
+        +p.enum.map(function(o){ return '<option value="'+esc(o)+'"'+(String(o)===String(v)?' selected':'')+'>'+esc(o)+'</option>'; }).join('')+'</select>';
+    } else if(p.type==='boolean'){
+      inp='<div style="margin:3px 0 11px"><input type="checkbox" id="f_'+esc(k)+'" data-testid="shop-f-'+esc(k)+'"'+(v?' checked':'')+'></div>';
+    } else if(p.maxLength&&p.maxLength>200){
+      inp='<textarea id="f_'+esc(k)+'" data-testid="shop-f-'+esc(k)+'" rows="4" '+fld+'>'+esc(v)+'</textarea>';
+    } else {
+      inp='<input id="f_'+esc(k)+'" data-testid="shop-f-'+esc(k)+'"'+(p.type==='number'||p.type==='integer'?' inputmode="decimal"':'')
+        +(p.maxLength?' maxlength="'+p.maxLength+'"':'')+' value="'+esc(v)+'" '+fld+'>';
+    }
+    return '<label style="font-size:12px;color:#6a707a">'+label+'</label>'+inp;
+  }).join('');
+}
+function _readSchemaFields(schema){
+  var props=(schema&&schema.properties)||{}, out={};
+  Object.keys(props).forEach(function(k){ var e=el('f_'+k); if(!e)return;
+    out[k]=(props[k]&&props[k].type==='boolean')?!!e.checked:e.value; });
+  return out;
+}
 // the seller's declared band for an item, when it has one
 function itemBand(it){ var c=(it&&it.commercials)||{}; return (c.price_min!=null||c.price_max!=null)?{min:c.price_min,max:c.price_max}:null; }
 function _bandText(b,cur){ if(!b)return ''; var lo=(b.min!=null?(cur+b.min):'…'), hi=(b.max!=null?(cur+b.max):'…'); return lo+' – '+hi; }
@@ -116,13 +146,15 @@ function finishCard(it, cur, idx, vizEnabled){
     +'<div style="margin-top:10px">'
     +(vizEnabled&&idx!=null?'<button data-testid="shop-viz-'+idx+'" onclick="vizOpen('+idx+')" style="margin:0 8px 0 0;border:1px solid #6a44a8;background:#F0EAF9;color:#6a44a8;border-radius:9px;padding:9px 16px;font-weight:700;font-size:13px;cursor:pointer">✨ '+t('wall')+'</button>':'')
     // 'text' = a listing: no order path at all. 'qty' has no price to show but IS orderable, so it must not be gated on price.
-    +((_canOrder()&&idx!=null&&(price!=null||!_showsPrice()))?'<button data-testid="shop-order-'+idx+'" onclick="orderOpen('+idx+')" style="border:0;border-radius:9px;padding:9px 18px;background:#3F66A6;color:#fff;font-weight:700;font-size:13px;cursor:pointer">'+(_isNegotiable()?'Make an offer':t('order'))+'</button>':'')
+    // a priced line is only REQUIRED on the commerce path — a form or enquiry has no price by design.
+    +((idx!=null&&(price!=null||!_showsPrice()))?'<button data-testid="shop-order-'+idx+'" onclick="orderOpen('+idx+')" style="border:0;border-radius:9px;padding:9px 18px;background:#3F66A6;color:#fff;font-weight:700;font-size:13px;cursor:pointer">'+esc(_submitLabel())+'</button>':'')
     +'</div></div>';
 }
 function productRow(p, cur){ var d=(p.item_data||p)||{}; return '<div class="prow"><div style="flex:1"><b>'+esc(d.name||d.product||'item')+'</b> <span class="meta">'+esc(d.unit||'')+'</span></div><div style="font-weight:700">'+(d.price!=null?(priceSym()+esc(String(priceVal(d.price)))):'—')+'</div></div>'; }
 function render(data){
   var s=data.shop||{}, cur=(s.currency_code==='INR'||!s.currency_code)?'₹':(s.currency_code+' ');
-  _METHOD=(['cart','qty','range','qtyprice','text'].indexOf(s.order_method)>=0)?s.order_method:'cart';
+  if(s.order_input&&typeof s.order_input==='object') _OI=s.order_input;   // the declared contract, from the API
+  _METHOD=_OI.preset||'cart';
   var statusBadge = s.business_status==='closed' ? '<span class="badge b-closed">Closed</span>' : (s.business_status==='away'?'<span class="badge b-away">Away</span>':'<span class="badge b-open">Open</span>');
   var head='<div class="hd"><div class="logo">🎨</div><div style="flex:1"><div class="shopname sg">'+esc(s.display_name||'Shop')+'</div><div class="meta">'+esc(s.bridge_id||'')+(s.address?(' · '+esc(s.address)):'')+'</div></div>'+(s.is_verified?'<span class="badge b-ver">✓ Verified</span>':'')+' '+statusBadge+'</div>';
   var finishes=(data.finishes||[]);
@@ -180,10 +212,13 @@ function orderRender(msg, err){
   var fld='style="width:100%;padding:9px;border:1px solid #e7e3d8;border-radius:8px;margin:3px 0 11px;font-size:14px"';
   var h='<div style="position:fixed;inset:0;background:rgba(15,22,32,.5);z-index:900;display:flex;align-items:center;justify-content:center;padding:12px" onclick="if(event.target===this)orderClose()">'
     +'<div style="background:#fff;width:100%;max-width:440px;border-radius:16px;padding:18px 18px 22px;max-height:92vh;overflow:auto">'
-    +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:2px"><b class="sg" style="font-size:17px;flex:1">Order · '+esc(it.name)+'</b><button onclick="orderClose()" style="border:0;background:none;font-size:22px;cursor:pointer;color:#8a949c">×</button></div>'
-    +(function(){ var p=itemPrice(it), bits=[]; if(it.texture_family)bits.push(esc(it.texture_family)); if(p)bits.push(cur+esc(String(p.v))+' / '+esc(p.u));
+    +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:2px"><b class="sg" style="font-size:17px;flex:1">'+esc(_isPayload()?_submitLabel():'Order')+' · '+esc(it.name)+'</b><button onclick="orderClose()" style="border:0;background:none;font-size:22px;cursor:pointer;color:#8a949c">×</button></div>'
+    +(function(){ var p=itemPrice(it), bits=[]; if(it.texture_family)bits.push(esc(it.texture_family)); if(p&&_showsPrice())bits.push(cur+esc(String(p.v))+' / '+esc(p.u));
        return bits.length?'<div class="meta" style="margin-bottom:12px">'+bits.join(' · ')+'</div>':''; })()
-    +'<label style="font-size:12px;color:#6a707a">Colour combination</label><select id="o_combo" data-testid="shop-combo" '+fld+'>'+comboOpts+'</select>'
+    // PAYLOAD path (enquiry / form): render the DECLARED fields — there is no quantity, price or colour to ask for.
+    +(_isPayload()?_schemaFields(_OI.schema, _ord.payload):(
+      ''
+    +(comboOpts?'<label style="font-size:12px;color:#6a707a">Colour combination</label><select id="o_combo" data-testid="shop-combo" '+fld+'>'+comboOpts+'</select>':'')
     +'<label style="font-size:12px;color:#6a707a">Quantity'+(function(){ var p=itemPrice(it); return p&&p.u?' ('+esc(p.u)+')':''; })()+(minL?' <span style="color:#9aa3a7">· min '+minL+' L (set by the brand)</span>':'')+'</label><input id="o_qty" data-testid="shop-qty" inputmode="decimal" value="'+esc(_ord.qty||String(minL||1))+'" '+fld+'>'
     // SPEC-negotiation-position — the buyer's POSITION. The seller's price stays the catalogue's; this rides on the chit.
     +(_isNegotiable()?(function(){ var b=itemBand(it);
@@ -191,6 +226,7 @@ function orderRender(msg, err){
           +(b?' <span style="color:#9aa3a7">· seller’s range '+esc(_bandText(b,cur))+'</span>':' <span style="color:#9aa3a7">· name your price</span>')+'</label>'
           +'<input id="o_offer" data-testid="shop-offer" inputmode="decimal" placeholder="'+(b&&b.min!=null?esc(String(b.min)):'your price')+'" value="'+esc(_ord.offer||'')+'" '+fld+'>'
           +'<div style="font-size:11px;color:#6a707a;margin:-6px 0 11px">This is an <b>offer</b> — the shop accepts or counters. Nothing is charged.</div>'; })():'')
+    ))
     +'<label style="font-size:12px;color:#6a707a">Your name</label><input id="o_name" data-testid="shop-name" placeholder="optional" value="'+esc(_ord.name||'')+'" '+fld+'>'
     +'<label style="font-size:12px;color:#6a707a">Your area — pincode or city <span style="color:#9aa3a7">· optional</span></label><input id="o_loc" data-testid="shop-area" placeholder="e.g. 560001 or Bengaluru" value="'+esc(_ord.loc||'')+'" '+fld+'>'
     +'<label style="font-size:12px;color:#6a707a">Phone or email</label><input id="o_contact" data-testid="shop-contact" placeholder="9876543210 or you@email.com" '+(otpStep?'disabled':'')+' value="'+esc(_ord.contact||'')+'" '+fld+'>'
@@ -204,7 +240,8 @@ function orderRender(msg, err){
     +'</div></div>';
   ohost().innerHTML=h;
 }
-function _ocap(){ if(el('o_combo'))_ord.combo=el('o_combo').value; if(el('o_qty'))_ord.qty=el('o_qty').value; if(el('o_offer'))_ord.offer=el('o_offer').value; if(el('o_name'))_ord.name=(el('o_name').value||'').trim(); if(el('o_loc'))_ord.loc=(el('o_loc').value||'').trim(); if(el('o_contact'))_ord.contact=(el('o_contact').value||'').trim(); if(el('o_otp'))_ord.otp=el('o_otp').value;
+function _ocap(){ if(el('o_combo'))_ord.combo=el('o_combo').value; if(el('o_qty'))_ord.qty=el('o_qty').value; if(el('o_offer'))_ord.offer=el('o_offer').value;
+  if(_isPayload())_ord.payload=_readSchemaFields(_OI.schema); if(el('o_name'))_ord.name=(el('o_name').value||'').trim(); if(el('o_loc'))_ord.loc=(el('o_loc').value||'').trim(); if(el('o_contact'))_ord.contact=(el('o_contact').value||'').trim(); if(el('o_otp'))_ord.otp=el('o_otp').value;
   if(window.CBOffline&&_ord)CBOffline.saveDraft('shop.ord.'+BRIDGE,{idx:_ord.idx,combo:_ord.combo,qty:_ord.qty,name:_ord.name,loc:_ord.loc,contact:_ord.contact}); }  /* persist across reload; NEVER the OTP */
 function orderStart(){
   if(_ord.busy)return; _ocap(); if(!_ord.contact){ orderRender(null,'Enter a phone or email.'); return; }
@@ -217,6 +254,14 @@ function orderStart(){
 function orderConfirm(){
   if(_ord.busy)return; _ocap(); var otp=(_ord.otp||'').trim(); if(otp.length!==6){ orderRender(null,'Enter the 6-digit code.'); return; }
   var e=_FIN[_ord.idx], it=e.it, qty=Number(_ord.qty);
+  // PAYLOAD path: the catalogue receives declared DATA, not a purchase. No quantity, no price, no repricing.
+  if(_isPayload()){
+    var req=(_OI.schema&&_OI.schema.required)||[], pay=_ord.payload||{};
+    for(var i=0;i<req.length;i++){ if(pay[req[i]]==null||pay[req[i]]===''){ _ord.busy=false; orderRender(null,'"'+req[i].replace(/_/g,' ')+'" is required.'); return; } }
+    var pbody={ identifier:_ord.contact, name:_ord.name, otp:otp, location:_ord.loc||'',
+                line_items:[{kind:'payload', source:e.source, finish:it.name, name:it.name, payload:pay}] };
+    return _orderPost(pbody);
+  }
   var line={kind:'finish', source:e.source, finish:it.name, combination:_ord.combo, quantity:qty};
   // the buyer's offer travels AS THE CHIT — the server never lets it become the price (CJ-07 stays server-authoritative).
   if(_isNegotiable()){ var off=parseFloat(_ord.offer);
@@ -227,12 +272,24 @@ function orderConfirm(){
     line.proposal={price:off};
   }
   var body={ identifier:_ord.contact, name:_ord.name, otp:otp, location:_ord.loc||'', line_items:[line] };
+  return _orderPost(body);
+}
+// One POST for every declaration — commerce order, offer, enquiry or filled form. They differ only in the line built
+// above; the rail, the OTP and the resulting chit are identical.
+function _orderPost(body){
+  var e=_FIN[_ord.idx], it=e.it;
   _ord.busy=true; orderRender();
   fetch(API+'/api/catalogue/'+encodeURIComponent(BRIDGE)+'/order/confirm',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
     .then(function(r){return r.json().then(function(j){return{status:r.status,j:j};});})
-    .then(function(res){ if(res.status!==200){ _ord.busy=false; orderRender(null,(res.j&&res.j.message)||'Order failed.'); return; }
-      ohost().innerHTML='<div style="position:fixed;inset:0;background:rgba(15,22,32,.5);z-index:900;display:flex;align-items:center;justify-content:center;padding:12px" onclick="orderClose()"><div style="background:#fff;max-width:400px;border-radius:16px;padding:26px;text-align:center"><div style="font-size:40px">✓</div><div class="sg" style="font-weight:800;font-size:18px;margin-top:8px">Order placed</div><div style="font-size:13px;color:#3a4048;margin-top:8px;line-height:1.6">Your order for <b>'+esc(it.name)+((_ord.combo)?(' · '+esc(_ord.combo)):'')+'</b> ('+esc(String(qty))+' L) reached the shop. They\'ll be in touch.</div><button onclick="orderClose()" style="margin-top:16px;border:0;border-radius:10px;padding:10px 20px;background:#3F66A6;color:#fff;font-weight:700;cursor:pointer">Done</button></div></div>'; if(window.CBOffline)CBOffline.clearDraft('shop.ord.'+BRIDGE); })
-    .catch(function(e){ _ord.busy=false; orderRender(null,(window.CBOffline&&!CBOffline.online())?'You are offline — reconnect to continue. Your details are saved.':(e.message||'Network error')); });
+    .then(function(res){ if(res.status!==200){ _ord.busy=false; orderRender(null,(res.j&&res.j.message)||'Could not submit.'); return; }
+      var p=itemPrice(it), unit=(p&&p.u)||'';
+      var what=_isPayload()?(_OI.preset==='form'?'Your form for ':'Your enquiry about ')
+              :(_isNegotiable()?'Your offer for ':'Your order for ');
+      var qtyTxt=(!_isPayload()&&_ord.qty)?(' ('+esc(String(_ord.qty))+(unit?(' '+esc(unit)):'')+')'):'';
+      var title=_isPayload()?'Submitted':(_isNegotiable()?'Offer sent':'Order placed');
+      var tail=_isNegotiable()?'The shop will accept or counter.':'They\'ll be in touch.';
+      ohost().innerHTML='<div style="position:fixed;inset:0;background:rgba(15,22,32,.5);z-index:900;display:flex;align-items:center;justify-content:center;padding:12px" onclick="orderClose()"><div style="background:#fff;max-width:400px;border-radius:16px;padding:26px;text-align:center"><div style="font-size:40px">✓</div><div class="sg" style="font-weight:800;font-size:18px;margin-top:8px">'+esc(title)+'</div><div style="font-size:13px;color:#3a4048;margin-top:8px;line-height:1.6">'+what+'<b>'+esc(it.name)+((_ord.combo&&!_isPayload())?(' · '+esc(_ord.combo)):'')+'</b>'+qtyTxt+' reached the shop. '+tail+'</div><button onclick="orderClose()" style="margin-top:16px;border:0;border-radius:10px;padding:10px 20px;background:#3F66A6;color:#fff;font-weight:700;cursor:pointer">Done</button></div></div>'; if(window.CBOffline)CBOffline.clearDraft('shop.ord.'+BRIDGE); })
+    .catch(function(e2){ _ord.busy=false; orderRender(null,(window.CBOffline&&!CBOffline.online())?'You are offline — reconnect to continue. Your details are saved.':(e2.message||'Network error')); });
 }
 // ── VISUALIZE-APPLY ("scan your home") — CHEAP first slice: upload a room photo, tint it in each recommended
 // combination (client-side canvas, no upload/GPU/S3), swap freely, then order. Honest: indicative overlay, not a true

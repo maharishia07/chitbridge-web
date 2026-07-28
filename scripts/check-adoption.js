@@ -147,10 +147,21 @@ if (capCtx._cwMethod) {
       if (!m.label || !m.hint) throw new Error(m.k + ' missing label/hint');
     }
   });
-  t('wizard · "information only" collects no prices', () => {
-    const h = capCtx._cwStep5({ vertical: 'veg', method: 'text', erpMap: {}, prices: {}, chosen: {} });
-    if (h.indexOf('information only') < 0) throw new Error('text method must explain that nothing is priced');
-    if (h.indexOf('<input type="number"') >= 0) throw new Error('text method must not render price inputs');
+  // A PAYLOAD catalogue (enquiry / form) receives declared data, not a purchase — so the price step must collect
+  // nothing and must say what it DOES receive. Asserted on behaviour, not on wording.
+  t('wizard · payload presets collect no prices and name what they receive', () => {
+    for (const k of Object.keys(capCtx.CATF_PIPELINE).filter((k) => capCtx.CATF_PIPELINE[k] === 'payload')) {
+      const h = capCtx._cwStep5({ vertical: 'veg', method: k, erpMap: {}, prices: {}, chosen: {} });
+      if (h.indexOf('<input type="number"') >= 0) throw new Error(k + ' must not render price inputs');
+      const receives = (capCtx.CATF_METHODS.filter((m) => m.k === k)[0] || {}).receives;
+      if (!receives || h.indexOf(receives) < 0) throw new Error(k + ' must state what it receives');
+    }
+  });
+  t('wizard · every preset declares a pipeline, and commerce/payload is the only split', () => {
+    for (const m of capCtx.CATF_METHODS) {
+      const p = capCtx.CATF_PIPELINE[m.k];
+      if (p !== 'commerce' && p !== 'payload') throw new Error(m.k + ' has no valid pipeline');
+    }
   });
 }
 

@@ -37,8 +37,14 @@ var CATF_METHODS = [
   { k: 'qty',      label: 'Quantity only',        hint: 'order a count, no price shown',                              receives: 'quantity only — you quote the price later' },
   { k: 'range',    label: 'Price as a range',     hint: 'price moves within a band (commodities)',                    receives: 'quantity · the band it was ordered within' },
   { k: 'qtyprice', label: 'Both negotiable',      hint: 'buyer proposes quantity and price (tenders, trade)',         receives: "quantity · the buyer's PROPOSED price — you accept or counter" },
-  { k: 'text',     label: 'Information only',      hint: 'a listing, nothing to order',                               receives: 'nothing — an enquiry at most; no order is placed' },
+  { k: 'choice',   label: 'Fixed options',        hint: 'a range, but only certain prices may be picked (grades, tiers)', receives: 'quantity · the option the buyer picked' },
+  { k: 'text',     label: 'Information only',      hint: 'a listing; the buyer can send an enquiry',                  receives: 'a message — no order is placed' },
+  { k: 'form',     label: 'A form to fill',        hint: 'the catalogue IS a set of forms (applications, requests, a help desk)', receives: 'the filled form — exactly the fields you declare' },
 ];
+// Presets are LABELS over a declared schema (api lib/order-input.js). `pipeline` is the load-bearing part: commerce
+// reprices against the catalogue; payload validates declared fields and carries them. A form has no price or
+// quantity, which is precisely why it cannot run the commerce path.
+var CATF_PIPELINE = { cart: 'commerce', qty: 'commerce', range: 'commerce', choice: 'commerce', qtyprice: 'commerce', text: 'payload', form: 'payload' };
 var CATF_KB = {
   veg:    { title: 'Veg market',       method: 'cart',     facets: { variants: true },                                   product: 'Vegetables', baseUnit: 'kg' },
   retail: { title: 'Retail shop',      method: 'cart',     facets: {},                                                   product: 'Products',   baseUnit: 'piece' },
@@ -550,7 +556,11 @@ function _cwStep4(w){
 }
 function _cwStep5(w){
   // "Information only" is a listing — there is nothing to order, so there is no price to collect.
-  if (_cwMethod(w) === 'text') return '<div style="font-size:13px;color:#3a4048">This catalogue is <b>information only</b> — nothing is ordered, so no prices are collected. Change <b>How customers order</b> in step 1 if you want to take orders.</div>';
+  // the PAYLOAD pipeline receives declared data, not a purchase — there is nothing to price.
+  if (CATF_PIPELINE[_cwMethod(w)] === 'payload') {
+    var _mp = CATF_METHODS.filter(function(m){ return m.k === _cwMethod(w); })[0] || {};
+    return '<div style="font-size:13px;color:#3a4048">This catalogue receives <b>' + esc(_mp.receives || 'data') + '</b> — nothing is bought, so no prices are collected. Change <b>How customers order</b> in step 1 if you want to take orders.</div>';
+  }
   var pk = Object.keys(w.erpMap || {}).filter(function(k){ return /price|rate|mrp/i.test(k) && w.erpMap[k] && w.erpMap[k].system && w.erpMap[k].system !== '—'; })[0];
   if (pk) return '<div style="font-size:13px;color:#3a4048">Price comes from your <b>' + esc(w.erpMap[pk].system) + '</b> (' + esc(w.erpMap[pk].ref || 'mapped') + ') — nothing to set here.</div>';
   var items = (w.built && w.built.finishes || []).filter(function(it){ return w.chosen[it.name] !== false; });
@@ -657,7 +667,9 @@ function cwFinish(){
   if (!acc.length) { var pr0 = w.prices[Object.keys(w.prices)[0]]; var one = { product: (w.manual.name || (CATF_KB[w.vertical] && CATF_KB[w.vertical].product) || 'Item') }; if (pr0 != null && pr0 !== '') one.price = Number(pr0); CBCatalogue.upsertItem(acc, one, { source: 'manual' }); }
 
   var toLive = function(){
-    UI.catf = { method: _cwMethod(w), units: units, vertical: w.vertical || '', facets: { variants: true, media: !!w.source, sourcing: Object.keys(w.erpMap || {}).length > 0 }, adoptedFrom: (w.built && w.built.title) || '', _source: w.source || '', tax: w.tax, erpMap: w.erpMap,
+    // the DECLARATION the storefront reads. `method` stays for back-compat; `order_input` is the contract.
+    UI.catf = { method: _cwMethod(w), order_input: { preset: _cwMethod(w), pipeline: CATF_PIPELINE[_cwMethod(w)] || 'commerce' },
+      units: units, vertical: w.vertical || '', facets: { variants: true, media: !!w.source, sourcing: Object.keys(w.erpMap || {}).length > 0 }, adoptedFrom: (w.built && w.built.title) || '', _source: w.source || '', tax: w.tax, erpMap: w.erpMap,
       catalogue: CBCatalogue.ensure({ story: w.purpose || '', product: (w.built && w.built.title) || (CATF_KB[w.vertical] && CATF_KB[w.vertical].product) || 'Catalogue', baseUnit: units[0], altUnits: units.slice(1) }),
       items: acc };
     _catfSave(); UI.cw = null; if (typeof toast === 'function') toast('Catalogue is live ✓'); renderApp();
