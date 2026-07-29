@@ -72,6 +72,37 @@ function _schemaFields(schema, vals){
     return '<label style="font-size:12px;color:#6a707a">'+label+'</label>'+inp;
   }).join('');
 }
+// ── CARRIED DOCUMENTS (SPEC-document-carrying) — the submission is the filled form AND its proof. The input appears
+// ONLY when the catalogue declares it; the server re-validates and is the authority (these checks are a courtesy so
+// the customer learns about a 7 MB scan before uploading it, not after).
+var _docs=[];   // [{name, mime, data_base64, size}]
+function _docDecl(){ return (_OI&&_OI.documents)||null; }
+function _docBlock(){
+  var d=_docDecl(); if(!d)return '';
+  var mb=function(n){ return (n/1048576).toFixed(1)+' MB'; };
+  var rows=_docs.map(function(f,i){ return '<div style="display:flex;align-items:center;gap:8px;font-size:12px;padding:5px 8px;border:1px solid #e7e3d8;border-radius:8px;margin-bottom:5px;background:#fbfaf7"><span style="flex:1">📎 '+esc(f.name)+'</span><span style="color:#8a949c">'+esc(mb(f.size))+'</span><button onclick="_docRemove('+i+')" style="border:0;background:none;color:#b4453f;cursor:pointer;font-size:15px">×</button></div>'; }).join('');
+  var full=_docs.length>=d.max;
+  return '<label style="font-size:12px;color:#6a707a">'+esc(d.label)+(d.required?' <span style="color:#b4453f">*</span>':' <span style="color:#9aa3a7">· optional</span>')+'</label>'
+    +'<div style="margin:3px 0 11px">'+rows
+    +(full?'<div style="font-size:11px;color:#8a949c">Maximum '+d.max+' reached.</div>'
+          :'<label style="display:block;border:1.5px dashed #cfc3e8;border-radius:10px;padding:12px;text-align:center;cursor:pointer;color:#6a44a8;font-weight:600;font-size:12.5px">📎 Attach '+esc(d.label.toLowerCase())
+            +'<input type="file" data-testid="shop-doc" accept="'+esc(d.accept.join(','))+'" onchange="_docPick(event)" style="display:none"></label>'
+            +'<div style="font-size:10.5px;color:#9aa3a7;margin-top:4px">'+esc(d.accept.join(' · ').replace(/application\//g,'').replace(/image\//g,''))+' · up to '+d.max+' file(s)</div>')
+    +'</div>';
+}
+function _docRemove(i){ _docs.splice(i,1); orderRender(); }
+function _docPick(ev){
+  var d=_docDecl(), f=ev.target.files&&ev.target.files[0]; ev.target.value='';
+  if(!d||!f)return;
+  if(_docs.length>=d.max){ orderRender(null,'At most '+d.max+' document(s).'); return; }
+  var mime=(f.type||'').toLowerCase().split(';')[0];
+  if(d.accept.indexOf(mime)<0){ orderRender(null,'That file type is not accepted here.'); return; }
+  if(f.size>6*1048576){ orderRender(null,'"'+f.name+'" is larger than 6 MB.'); return; }
+  var rd=new FileReader();
+  rd.onload=function(){ _docs.push({name:f.name,mime:mime,size:f.size,data_base64:String(rd.result).replace(/^data:[^;]+;base64,/,'')}); orderRender(); };
+  rd.onerror=function(){ orderRender(null,'Could not read that file.'); };
+  rd.readAsDataURL(f);
+}
 function _readSchemaFields(schema){
   var props=(schema&&schema.properties)||{}, out={};
   Object.keys(props).forEach(function(k){ var e=el('f_'+k); if(!e)return;
@@ -202,8 +233,8 @@ function sfLoginVerify(){
 }
 // ── Order flow: pick combination + qty → phone/email → OTP → place order (a chit to the shop). Price is server-side. ──
 function ohost(){ var h=el('ohost'); if(!h){ h=document.createElement('div'); h.id='ohost'; document.body.appendChild(h); } return h; }
-function orderClose(){ var h=el('ohost'); if(h) h.innerHTML=''; _ord=null; }
-function orderOpen(idx){ if(!_FIN[idx])return; _ord={idx:idx, step:'contact'}; var _d=window.CBOffline&&CBOffline.loadDraft('shop.ord.'+BRIDGE); if(_d&&_d.idx===idx){ _ord.combo=_d.combo; _ord.qty=_d.qty; _ord.name=_d.name; _ord.loc=_d.loc; _ord.contact=_d.contact; } orderRender(); }
+function orderClose(){ var h=el('ohost'); if(h) h.innerHTML=''; _ord=null; _docs=[]; }   // never carry a document to the next submission
+function orderOpen(idx){ if(!_FIN[idx])return; _ord={idx:idx, step:'contact'}; _docs=[]; var _d=window.CBOffline&&CBOffline.loadDraft('shop.ord.'+BRIDGE); if(_d&&_d.idx===idx){ _ord.combo=_d.combo; _ord.qty=_d.qty; _ord.name=_d.name; _ord.loc=_d.loc; _ord.contact=_d.contact; } orderRender(); }
 function orderRender(msg, err){
   var e=_FIN[_ord.idx], it=e.it, cur='₹';
   var comboOpts=(it.combinations||[]).map(function(cm){ return '<option value="'+esc(cm.name)+'"'+(cm.name===_ord.combo?' selected':'')+'>'+esc(cm.name)+' ('+((cm.colours||[]).map(function(c){return esc(c.name);}).join(' + '))+')</option>'; }).join('');
@@ -216,7 +247,7 @@ function orderRender(msg, err){
     +(function(){ var p=itemPrice(it), bits=[]; if(it.texture_family)bits.push(esc(it.texture_family)); if(p&&_showsPrice())bits.push(cur+esc(String(p.v))+' / '+esc(p.u));
        return bits.length?'<div class="meta" style="margin-bottom:12px">'+bits.join(' · ')+'</div>':''; })()
     // PAYLOAD path (enquiry / form): render the DECLARED fields — there is no quantity, price or colour to ask for.
-    +(_isPayload()?_schemaFields(_OI.schema, _ord.payload):(
+    +(_isPayload()?(_schemaFields(_OI.schema, _ord.payload)+_docBlock()):(
       ''
     +(comboOpts?'<label style="font-size:12px;color:#6a707a">Colour combination</label><select id="o_combo" data-testid="shop-combo" '+fld+'>'+comboOpts+'</select>':'')
     +'<label style="font-size:12px;color:#6a707a">Quantity'+(function(){ var p=itemPrice(it); return p&&p.u?' ('+esc(p.u)+')':''; })()+(minL?' <span style="color:#9aa3a7">· min '+minL+' L (set by the brand)</span>':'')+'</label><input id="o_qty" data-testid="shop-qty" inputmode="decimal" value="'+esc(_ord.qty||String(minL||1))+'" '+fld+'>'
@@ -258,9 +289,12 @@ function orderConfirm(){
   if(_isPayload()){
     var req=(_OI.schema&&_OI.schema.required)||[], pay=_ord.payload||{};
     for(var i=0;i<req.length;i++){ if(pay[req[i]]==null||pay[req[i]]===''){ _ord.busy=false; orderRender(null,'"'+req[i].replace(/_/g,' ')+'" is required.'); return; } }
-    var pbody={ identifier:_ord.contact, name:_ord.name, otp:otp, location:_ord.loc||'',
-                line_items:[{kind:'payload', source:e.source, finish:it.name, name:it.name, payload:pay}] };
-    return _orderPost(pbody);
+    var d=_docDecl();
+    if(d&&d.required&&!_docs.length){ _ord.busy=false; orderRender(null,d.label+' is required.'); return; }
+    var pline={kind:'payload', source:e.source, finish:it.name, name:it.name, payload:pay};
+    // the proof travels WITH the filled form, in the same submission
+    if(_docs.length) pline.documents=_docs.map(function(f){ return {name:f.name,mime:f.mime,data_base64:f.data_base64}; });
+    return _orderPost({ identifier:_ord.contact, name:_ord.name, otp:otp, location:_ord.loc||'', line_items:[pline] });
   }
   var line={kind:'finish', source:e.source, finish:it.name, combination:_ord.combo, quantity:qty};
   // the buyer's offer travels AS THE CHIT — the server never lets it become the price (CJ-07 stays server-authoritative).
