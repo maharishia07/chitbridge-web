@@ -46,10 +46,23 @@ var _FIN=[]; var _ord=null; var _lg={}; var _SHOPDATA=null;
 // asked for and therefore what data the business gets back. Unknown/absent → 'cart' (every existing shop unchanged).
 var _OI={preset:'cart',pipeline:'commerce',showsPrice:true,negotiable:false,schema:{type:'object',properties:{quantity:{type:'number'}}}};
 var _METHOD='cart';   // the preset name, kept for readability
-function _isNegotiable(){ return !!_OI.negotiable; }
-function _showsPrice(){ return _OI.showsPrice!==false && _OI.pipeline!=='payload'; }
-function _isPayload(){ return _OI.pipeline==='payload'; }
-function _submitLabel(){ return _isPayload()?(_OI.preset==='form'?'Submit':'Send enquiry'):(_isNegotiable()?'Make an offer':t('order')); }
+// ONE CATALOGUE ENTRY = ONE FORM. A store may offer ITR-2 and a Commercial Invoice; each item carries its OWN
+// declaration, merge-patched over the catalogue's (RFC 7386 — the item wins, because it is the more specific one).
+// The customer must see the fields of the template THEY picked. The server re-resolves the same way at submit.
+var _OIC=null;   // the declaration for the item currently open
+function _mergePatch(t,p){
+  if(p===null||typeof p!=='object'||Array.isArray(p))return p;
+  var o=(t&&typeof t==='object'&&!Array.isArray(t))?Object.assign({},t):{};
+  for(var k in p){ if(!Object.prototype.hasOwnProperty.call(p,k))continue;
+    if(p[k]===null)delete o[k]; else o[k]=_mergePatch(o[k],p[k]); }
+  return o;
+}
+function _oiFor(it){ var d=it&&it.order_input; return d?_mergePatch(_OI,d):_OI; }
+function _cur(){ return _OIC||_OI; }
+function _isNegotiable(){ return !!_cur().negotiable; }
+function _showsPrice(){ return _cur().showsPrice!==false && _cur().pipeline!=='payload'; }
+function _isPayload(){ return _cur().pipeline==='payload'; }
+function _submitLabel(){ return _isPayload()?(_cur().preset==='form'?'Submit':'Send enquiry'):(_isNegotiable()?'Make an offer':t('order')); }
 // ── render the DECLARED fields — same subset the server validates (type · enum · maxLength · required) ──
 function _schemaFields(schema, vals){
   var props=(schema&&schema.properties)||{}, req=(schema&&schema.required)||[];
@@ -76,7 +89,7 @@ function _schemaFields(schema, vals){
 // ONLY when the catalogue declares it; the server re-validates and is the authority (these checks are a courtesy so
 // the customer learns about a 7 MB scan before uploading it, not after).
 var _docs=[];   // [{name, mime, data_base64, size}]
-function _docDecl(){ return (_OI&&_OI.documents)||null; }
+function _docDecl(){ var o=_cur(); return (o&&o.documents)||null; }   // per-item: this template's own proof requirement
 function _docBlock(){
   var d=_docDecl(); if(!d)return '';
   var mb=function(n){ return (n/1048576).toFixed(1)+' MB'; };
@@ -233,8 +246,13 @@ function sfLoginVerify(){
 }
 // ── Order flow: pick combination + qty → phone/email → OTP → place order (a chit to the shop). Price is server-side. ──
 function ohost(){ var h=el('ohost'); if(!h){ h=document.createElement('div'); h.id='ohost'; document.body.appendChild(h); } return h; }
-function orderClose(){ var h=el('ohost'); if(h) h.innerHTML=''; _ord=null; _docs=[]; }   // never carry a document to the next submission
-function orderOpen(idx){ if(!_FIN[idx])return; _ord={idx:idx, step:'contact'}; _docs=[]; var _d=window.CBOffline&&CBOffline.loadDraft('shop.ord.'+BRIDGE); if(_d&&_d.idx===idx){ _ord.combo=_d.combo; _ord.qty=_d.qty; _ord.name=_d.name; _ord.loc=_d.loc; _ord.contact=_d.contact; } orderRender(); }
+function orderClose(){ var h=el('ohost'); if(h) h.innerHTML=''; _ord=null; _docs=[]; _OIC=null; }   // never carry a document to the next submission
+function orderOpen(idx){ if(!_FIN[idx])return;
+  _ord={idx:idx, step:'contact'}; _docs=[];
+  _OIC=_oiFor(_FIN[idx].it);   /* this template's OWN declaration — one catalogue entry = one form */
+  var _d=window.CBOffline&&CBOffline.loadDraft('shop.ord.'+BRIDGE);
+  if(_d&&_d.idx===idx){ _ord.combo=_d.combo; _ord.qty=_d.qty; _ord.name=_d.name; _ord.loc=_d.loc; _ord.contact=_d.contact; }
+  orderRender(); }
 function orderRender(msg, err){
   var e=_FIN[_ord.idx], it=e.it, cur='₹';
   var comboOpts=(it.combinations||[]).map(function(cm){ return '<option value="'+esc(cm.name)+'"'+(cm.name===_ord.combo?' selected':'')+'>'+esc(cm.name)+' ('+((cm.colours||[]).map(function(c){return esc(c.name);}).join(' + '))+')</option>'; }).join('');
@@ -247,7 +265,7 @@ function orderRender(msg, err){
     +(function(){ var p=itemPrice(it), bits=[]; if(it.texture_family)bits.push(esc(it.texture_family)); if(p&&_showsPrice())bits.push(cur+esc(String(p.v))+' / '+esc(p.u));
        return bits.length?'<div class="meta" style="margin-bottom:12px">'+bits.join(' · ')+'</div>':''; })()
     // PAYLOAD path (enquiry / form): render the DECLARED fields — there is no quantity, price or colour to ask for.
-    +(_isPayload()?(_schemaFields(_OI.schema, _ord.payload)+_docBlock()):(
+    +(_isPayload()?(_schemaFields(_cur().schema, _ord.payload)+_docBlock()):(
       ''
     +(comboOpts?'<label style="font-size:12px;color:#6a707a">Colour combination</label><select id="o_combo" data-testid="shop-combo" '+fld+'>'+comboOpts+'</select>':'')
     +'<label style="font-size:12px;color:#6a707a">Quantity'+(function(){ var p=itemPrice(it); return p&&p.u?' ('+esc(p.u)+')':''; })()+(minL?' <span style="color:#9aa3a7">· min '+minL+' L (set by the brand)</span>':'')+'</label><input id="o_qty" data-testid="shop-qty" inputmode="decimal" value="'+esc(_ord.qty||String(minL||1))+'" '+fld+'>'
@@ -272,7 +290,7 @@ function orderRender(msg, err){
   ohost().innerHTML=h;
 }
 function _ocap(){ if(el('o_combo'))_ord.combo=el('o_combo').value; if(el('o_qty'))_ord.qty=el('o_qty').value; if(el('o_offer'))_ord.offer=el('o_offer').value;
-  if(_isPayload())_ord.payload=_readSchemaFields(_OI.schema); if(el('o_name'))_ord.name=(el('o_name').value||'').trim(); if(el('o_loc'))_ord.loc=(el('o_loc').value||'').trim(); if(el('o_contact'))_ord.contact=(el('o_contact').value||'').trim(); if(el('o_otp'))_ord.otp=el('o_otp').value;
+  if(_isPayload())_ord.payload=_readSchemaFields(_cur().schema); if(el('o_name'))_ord.name=(el('o_name').value||'').trim(); if(el('o_loc'))_ord.loc=(el('o_loc').value||'').trim(); if(el('o_contact'))_ord.contact=(el('o_contact').value||'').trim(); if(el('o_otp'))_ord.otp=el('o_otp').value;
   if(window.CBOffline&&_ord)CBOffline.saveDraft('shop.ord.'+BRIDGE,{idx:_ord.idx,combo:_ord.combo,qty:_ord.qty,name:_ord.name,loc:_ord.loc,contact:_ord.contact}); }  /* persist across reload; NEVER the OTP */
 function orderStart(){
   if(_ord.busy)return; _ocap(); if(!_ord.contact){ orderRender(null,'Enter a phone or email.'); return; }
@@ -287,7 +305,7 @@ function orderConfirm(){
   var e=_FIN[_ord.idx], it=e.it, qty=Number(_ord.qty);
   // PAYLOAD path: the catalogue receives declared DATA, not a purchase. No quantity, no price, no repricing.
   if(_isPayload()){
-    var req=(_OI.schema&&_OI.schema.required)||[], pay=_ord.payload||{};
+    var req=(_cur().schema&&_cur().schema.required)||[], pay=_ord.payload||{};
     for(var i=0;i<req.length;i++){ if(pay[req[i]]==null||pay[req[i]]===''){ _ord.busy=false; orderRender(null,'"'+req[i].replace(/_/g,' ')+'" is required.'); return; } }
     var d=_docDecl();
     if(d&&d.required&&!_docs.length){ _ord.busy=false; orderRender(null,d.label+' is required.'); return; }
