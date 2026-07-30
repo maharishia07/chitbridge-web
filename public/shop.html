@@ -69,7 +69,11 @@ function _schemaFields(schema, vals){
   var fld='style="width:100%;padding:9px;border:1px solid #e7e3d8;border-radius:8px;margin:3px 0 11px;font-size:14px"';
   return Object.keys(props).map(function(k){
     var p=props[k]||{}, v=(vals&&vals[k]!=null)?vals[k]:'';
-    var label=esc(k.replace(/_/g,' '))+(req.indexOf(k)>=0?' <span style="color:#b4453f">*</span>':'');
+    // PROVENANCE, shown to the customer: which document a value came from, and which line of it. They can still
+    // change anything — a read value is a suggestion, not a fact, until they send it.
+    var src=_read[k];
+    var label=esc(k.replace(/_/g,' '))+(req.indexOf(k)>=0?' <span style="color:#b4453f">*</span>':'')
+      +(src?' <span style="font-size:10px;color:#2e7a45;background:#eef7ee;border:1px solid #cfe6cf;border-radius:9px;padding:1px 6px" title="'+esc(src.label)+'">from your '+esc(src.from)+'</span>':'');
     var inp;
     if(Array.isArray(p.enum)&&p.enum.length){
       inp='<select id="f_'+esc(k)+'" data-testid="shop-f-'+esc(k)+'" '+fld+'><option value=""></option>'
@@ -103,6 +107,65 @@ function _docBlock(){
             +'<div style="font-size:10.5px;color:#9aa3a7;margin-top:4px">'+esc(d.accept.join(' · ').replace(/application\//g,'').replace(/image\//g,''))+' · up to '+d.max+' file(s)</div>')
     +'</div>';
 }
+// ── READ THE DOCUMENT (the handshake, in the browser) ────────────────────────────────────────────────────────
+// The catalogue declares WHICH documents it can read and WHERE each value sits — as a LITERAL LABEL plus a type,
+// never a regex, so a shop cannot ship catastrophic backtracking to its own customers. The reader escapes the label
+// and builds the pattern itself.
+//
+// It runs HERE, in the customer's browser, on purpose: it is their own document, it never has to reach a server to
+// be read, and the extracted values are their ASSERTION — exactly as if they had typed them. The document's sha256
+// is the proof, and the shop can always open the PDF and check. Nobody is asked to trust an extractor.
+var _pdfjs=null;
+function _loadPdfjs(){
+  if(_pdfjs) return Promise.resolve(_pdfjs);
+  // ~1.8 MB, fetched ONLY when a customer attaches a readable document to a catalogue that declares a source.
+  return import('/app/vendor/pdf.min.mjs').then(function(m){
+    m.GlobalWorkerOptions.workerSrc='/app/vendor/pdf.worker.min.mjs';
+    _pdfjs=m; return m;
+  });
+}
+var _VALUE_RE={ number:'([0-9][0-9,]*\\.?[0-9]*)', code:'([A-Z0-9]{4,15})', year:'([0-9]{4}-[0-9]{2})',
+                string:'([^\\n]{1,60}?)(?=\\s{2,}|$)' };
+function _escRe(s){ return String(s).replace(/[.*+?^${}()|[\]\\]/g,'\\$&'); }
+function _srcsFor(){ var o=_cur(); return (o&&o.sources)||null; }
+function _srcForMime(mime){ var ss=_srcsFor()||[]; for(var i=0;i<ss.length;i++){ if((ss[i].accept||[]).indexOf(mime)>=0) return ss[i]; } return null; }
+
+async function _readDocument(file, src){
+  var pdfjs=await _loadPdfjs();
+  var buf=await file.arrayBuffer();
+  var doc=await pdfjs.getDocument({data:new Uint8Array(buf), isEvalSupported:false}).promise;
+  var text='';
+  for(var p=1;p<=doc.numPages;p++){ var pg=await doc.getPage(p); var c=await pg.getTextContent();
+    text+=c.items.map(function(it){return it.str;}).join(' ')+'\n'; }
+  var got={}, missed=[];
+  (src.fields||[]).forEach(function(f){
+    var vp=_VALUE_RE[f.type]||_VALUE_RE.string;
+    var re=new RegExp(_escRe(f.after)+'\\s*:?\\s*'+vp,'i');
+    var m=re.exec(text);
+    if(!m){ missed.push(f.to); return; }
+    var v=m[1];
+    if(f.type==='number'){ v=Number(String(v).replace(/,/g,'')); if(!isFinite(v)){ missed.push(f.to); return; } }
+    got[f.to]={value:v, from:src.label, label:f.after};
+  });
+  return {got:got, missed:missed, chars:text.length, pages:doc.numPages};
+}
+
+// what was read, and from where — the customer sees the provenance, and can still edit any of it
+var _read={};   // formField -> {value, from, label}
+function _applyRead(got){
+  Object.keys(got).forEach(function(k){ _read[k]=got[k]; });
+  _ord.payload=Object.assign({}, _ord.payload||{},
+    Object.keys(got).reduce(function(a,k){ a[k]=got[k].value; return a; },{}));
+}
+function _readBanner(){
+  var n=Object.keys(_read).length; if(!n) return '';
+  var props=((_cur().schema||{}).properties)||{};
+  var left=Object.keys(props).filter(function(k){ return !_read[k]; });
+  return '<div style="margin:0 0 11px;padding:9px 11px;border:1px solid #cfe6cf;border-radius:9px;background:#eef7ee;font-size:12px;color:#2e7a45">'
+    +'<b>Read '+n+' field'+(n===1?'':'s')+' from your '+esc(Object.values(_read)[0].from)+'.</b>'
+    +(left.length?' You still need to fill '+left.length+'.':' Nothing left to fill.')
+    +'<div style="font-size:10.5px;color:#6a707a;margin-top:3px">Check them — you can change anything before sending.</div></div>';
+}
 function _docRemove(i){ _docs.splice(i,1); orderRender(); }
 function _docPick(ev){
   var d=_docDecl(), f=ev.target.files&&ev.target.files[0]; ev.target.value='';
@@ -112,7 +175,26 @@ function _docPick(ev){
   if(d.accept.indexOf(mime)<0){ orderRender(null,'That file type is not accepted here.'); return; }
   if(f.size>6*1048576){ orderRender(null,'"'+f.name+'" is larger than 6 MB.'); return; }
   var rd=new FileReader();
-  rd.onload=function(){ _docs.push({name:f.name,mime:mime,size:f.size,data_base64:String(rd.result).replace(/^data:[^;]+;base64,/,'')}); orderRender(); };
+  rd.onload=function(){
+    _docs.push({name:f.name,mime:mime,size:f.size,data_base64:String(rd.result).replace(/^data:[^;]+;base64,/,'')});
+    // If the catalogue declares that it can READ this kind of document, do so — and prefill what it finds.
+    var src=_srcForMime(mime);
+    if(!src){ orderRender(); return; }
+    orderRender('Reading '+esc(f.name)+'…');
+    _readDocument(f, src).then(function(r){
+      _ord.busy=false;
+      if(!Object.keys(r.got).length){
+        // Say so plainly. A scanned PDF has no text layer, and silently filling nothing looks like a broken page.
+        orderRender(null,'Attached, but nothing could be read from it — if it is a scan, please fill the fields yourself.');
+        return;
+      }
+      _applyRead(r.got);
+      orderRender();
+    }).catch(function(){
+      _ord.busy=false;
+      orderRender(null,'Attached, but it could not be read — please fill the fields yourself.');
+    });
+  };
   rd.onerror=function(){ orderRender(null,'Could not read that file.'); };
   rd.readAsDataURL(f);
 }
@@ -246,9 +328,9 @@ function sfLoginVerify(){
 }
 // ── Order flow: pick combination + qty → phone/email → OTP → place order (a chit to the shop). Price is server-side. ──
 function ohost(){ var h=el('ohost'); if(!h){ h=document.createElement('div'); h.id='ohost'; document.body.appendChild(h); } return h; }
-function orderClose(){ var h=el('ohost'); if(h) h.innerHTML=''; _ord=null; _docs=[]; _OIC=null; }   // never carry a document to the next submission
+function orderClose(){ var h=el('ohost'); if(h) h.innerHTML=''; _ord=null; _docs=[]; _OIC=null; _read={}; }   // never carry a document — or what was read from it — to the next submission
 function orderOpen(idx){ if(!_FIN[idx])return;
-  _ord={idx:idx, step:'contact'}; _docs=[];
+  _ord={idx:idx, step:'contact'}; _docs=[]; _read={};
   _OIC=_oiFor(_FIN[idx].it);   /* this template's OWN declaration — one catalogue entry = one form */
   var _d=window.CBOffline&&CBOffline.loadDraft('shop.ord.'+BRIDGE);
   if(_d&&_d.idx===idx){ _ord.combo=_d.combo; _ord.qty=_d.qty; _ord.name=_d.name; _ord.loc=_d.loc; _ord.contact=_d.contact; }
@@ -265,7 +347,8 @@ function orderRender(msg, err){
     +(function(){ var p=itemPrice(it), bits=[]; if(it.texture_family)bits.push(esc(it.texture_family)); if(p&&_showsPrice())bits.push(cur+esc(String(p.v))+' / '+esc(p.u));
        return bits.length?'<div class="meta" style="margin-bottom:12px">'+bits.join(' · ')+'</div>':''; })()
     // PAYLOAD path (enquiry / form): render the DECLARED fields — there is no quantity, price or colour to ask for.
-    +(_isPayload()?(_schemaFields(_cur().schema, _ord.payload)+_docBlock()):(
+    // the attach control comes FIRST on a readable catalogue — upload, then see the fields already filled
+    +(_isPayload()?(_docBlock()+_readBanner()+_schemaFields(_cur().schema, _ord.payload)):(
       ''
     +(comboOpts?'<label style="font-size:12px;color:#6a707a">Colour combination</label><select id="o_combo" data-testid="shop-combo" '+fld+'>'+comboOpts+'</select>':'')
     +'<label style="font-size:12px;color:#6a707a">Quantity'+(function(){ var p=itemPrice(it); return p&&p.u?' ('+esc(p.u)+')':''; })()+(minL?' <span style="color:#9aa3a7">· min '+minL+' L (set by the brand)</span>':'')+'</label><input id="o_qty" data-testid="shop-qty" inputmode="decimal" value="'+esc(_ord.qty||String(minL||1))+'" '+fld+'>'
