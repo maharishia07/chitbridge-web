@@ -207,6 +207,20 @@ function _readSchemaFields(schema){
 // the seller's declared band for an item, when it has one
 function itemBand(it){ var c=(it&&it.commercials)||{}; return (c.price_min!=null||c.price_max!=null)?{min:c.price_min,max:c.price_max}:null; }
 function _bandText(b,cur){ if(!b)return ''; var lo=(b.min!=null?(cur+b.min):'…'), hi=(b.max!=null?(cur+b.max):'…'); return lo+' – '+hi; }
+// cbAmount — TOLERANT PRICE READER. A price is either a legacy bare number or a stamped { amount, currency }.
+// Deployed BEFORE any row is stamped, because the idiom this replaces is `+d.price||0`: given an object that is
+// NaN, and NaN||0 is 0, so every stamped product would render as FREE — no error, no log, a correct-looking page.
+// Behaviour is otherwise IDENTICAL to what it replaces (0 for absent), so this change adds a readable shape and
+// nothing else. Whether absent should stop being 0 is a separate decision, deliberately not taken here.
+function cbAmount(v){
+  if(v&&typeof v==='object'&&typeof v.amount==='number'&&isFinite(v.amount)) return v.amount;
+  var n=+v; return isFinite(n)?n:0;
+}
+// cbCurrency — the price's OWN currency when it carries one, else null. Null means "not stamped yet", never a guess.
+function cbCurrency(v){ return (v&&typeof v==='object'&&typeof v.currency==='string')?v.currency:null; }
+// cbHasPrice — distinguishes "price on request" from a genuine zero. `d.price!=null` is true for a stamped object,
+// so it stays correct; this exists so callers stop relying on that coincidence.
+function cbHasPrice(v){ return v!=null&&v!==''&&(typeof v!=='object'||typeof v.amount==='number'); }
 var _REGIONS=[]; var _REGION='IN';
 var _CUR={INR:'₹',MXN:'Mex$',USD:'$',EUR:'€',CNY:'¥',JPY:'¥'};
 var _FX={INR:1,MXN:0.20,USD:0.012,EUR:0.011,CNY:0.087,JPY:1.8};   // indicative FX (INR-base) — real FX is the ERP's job
@@ -233,7 +247,7 @@ function finishPrice(price, unit){ if(price==null) return '<small>'+t('por')+'</
 // commercials are GENERIC {price, unit}; price_per_litre is the pre-generic paint shape, still read so existing
 // adoptions keep pricing. The unit is the ITEM's own (kg / count / litre), never assumed.
 function itemPrice(it){ var c=(it&&it.commercials)||{};
-  if(c.price!=null&&c.price!=='') return {v:c.price,u:c.unit||it.unit||priceUnit()};
+  if(cbHasPrice(c.price)) return {v:cbAmount(c.price),u:c.unit||it.unit||priceUnit()};
   if(c.price_per_litre!=null&&c.price_per_litre!=='') return {v:c.price_per_litre,u:'litre'};
   return null; }
 function setRegion(code){ _REGION=code; if(_SHOPDATA) render(_SHOPDATA); }
@@ -276,7 +290,7 @@ function finishCard(it, cur, idx, vizEnabled){
     +((idx!=null&&(price!=null||!_showsPrice()))?'<button data-testid="shop-order-'+idx+'" onclick="orderOpen('+idx+')" style="border:0;border-radius:9px;padding:9px 18px;background:#3F66A6;color:#fff;font-weight:700;font-size:13px;cursor:pointer">'+esc(_submitLabel())+'</button>':'')
     +'</div></div>';
 }
-function productRow(p, cur){ var d=(p.item_data||p)||{}; return '<div class="prow"><div style="flex:1"><b>'+esc(d.name||d.product||'item')+'</b> <span class="meta">'+esc(d.unit||'')+'</span></div><div style="font-weight:700">'+(d.price!=null?(priceSym()+esc(String(priceVal(d.price)))):'—')+'</div></div>'; }
+function productRow(p, cur){ var d=(p.item_data||p)||{}; return '<div class="prow"><div style="flex:1"><b>'+esc(d.name||d.product||'item')+'</b> <span class="meta">'+esc(d.unit||'')+'</span></div><div style="font-weight:700">'+(cbHasPrice(d.price)?(priceSym()+esc(String(priceVal(cbAmount(d.price))))):'—')+'</div></div>'; }
 function render(data){
   var s=data.shop||{}, cur=(s.currency_code==='INR'||!s.currency_code)?'₹':(s.currency_code+' ');
   if(s.order_input&&typeof s.order_input==='object') _OI=s.order_input;   // the declared contract, from the API

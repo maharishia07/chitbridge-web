@@ -1549,6 +1549,16 @@ function navTo(k){UI.nav=k;UI.drawer=false;UI.mdetail=false;UI.sel=null;UI.detai
    Schema-driven fields + Send-as (entity|actor) + To (self|counterparty) + catalogue line items + two-copy self-chit fan-out. */
 /* ATH-119 / ATH-116 — caps for every "any number" field, one place, per-entity-overridable later.
    Unbounded fan-out is a real cost (each recipient = its own copy on the thread). UI enforces; server must re-check. */
+// cbAmount — TOLERANT PRICE READER. A price is either a legacy bare number or a stamped { amount, currency }.
+// Must be live BEFORE any row is stamped: the idiom it replaces is `+d.price||0`, and `+{amount:3290}` is NaN while
+// `NaN||0` is 0 — so a stamped product would render as FREE with no error and no log. Identical behaviour otherwise
+// (0 for absent), so this adds a readable shape and changes nothing else.
+function cbAmount(v){
+  if(v&&typeof v==='object'&&typeof v.amount==='number'&&isFinite(v.amount)) return v.amount;
+  var n=+v; return isFinite(n)?n:0;
+}
+function cbCurrency(v){ return (v&&typeof v==='object'&&typeof v.currency==='string')?v.currency:null; }
+function cbHasPrice(v){ return v!=null&&v!==''&&(typeof v!=='object'||typeof v.amount==='number'); }
 const LIMITS = { to:5, cc:5, for:1, items:50, attachments:10 };
 let CC={items:[], rcpts:[]};
 const DEFAULT_SCHEMA_FIELDS=[
@@ -1635,7 +1645,7 @@ async function compose(prefill){ UI.drawer=false; CC={items:(prefill&&prefill.it
   if(!UI._supplier){
     try{
       const _prods=(await api("prodList"))||[];
-      STORE.catalogue=_prods.map(function(x){ var d=x.item_data||x; return {particulars:d.name||d.product||'item', unit:d.unit||'unit', price:+d.price||0}; });
+      STORE.catalogue=_prods.map(function(x){ var d=x.item_data||x; return {particulars:d.name||d.product||'item', unit:d.unit||'unit', price:cbAmount(d.price)}; });
       UI._catState='ready';
     }catch(e){ UI._catState=(STORE.catalogue||[]).length?'ready':'error'; }
     ccRenderCatPick();
@@ -1667,7 +1677,7 @@ function ccRenderRcpts(){ const h=document.getElementById("cc_rcpts");
     if(UI._supplier){ return `<span style="display:inline-flex;align-items:center;gap:5px;border:0.5px solid #cfe0f4;background:#EEF3FB;border-radius:8px;padding:4px 9px;margin:0 5px 5px 0;font-size:12px;font-weight:600;color:#3F66A6">🏭 ${esc(r.name)}${r.bridge?'<span style="font-family:monospace;font-size:9px;opacity:.8"> · '+esc(r.bridge)+'</span>':''} <span style="font-weight:400;color:var(--grey)">· locked</span></span>`; }
     return `<span style="display:inline-flex;align-items:center;gap:5px;border:0.5px solid var(--line);border-radius:8px;padding:3px 7px;margin:0 5px 5px 0;font-size:11.5px"><span onclick="ccFlipRcpt(${i})" title="Flip role (To/CC/For)" style="cursor:pointer;font-family:'Space Mono';font-size:9.5px;background:${bg};color:${col};border-radius:5px;padding:1px 5px">${r.role.toUpperCase()}</span>${esc(r.name)}${r.bridge?'<span style="font-family:monospace;font-size:9px;color:#9aa3a7"> · '+esc(r.bridge)+'</span>':''}${r.self?'<span style="color:#3F66A6;font-size:10px"> · self</span>':''}<span onclick="ccDelRcpt(${i})" style="cursor:pointer;color:#9aa3a7">✕</span></span>`; }).join("") : `<div style="font-size:12px;color:var(--grey)">No recipients yet — add To / CC / For above.</div>`; }
   const capEl=document.getElementById("cc_rcap"); if(capEl) capEl.textContent="To "+ccRoleCount("to")+"/"+LIMITS.to+" · CC "+ccRoleCount("cc")+"/"+LIMITS.cc+" · For "+ccRoleCount("for")+"/"+LIMITS.for+" — tap a role chip to flip"; }
-function ccAddItem(){ const e=document.getElementById("cc_err"); if(e)e.textContent=""; if(CC.items.length>=(LIMITS.items||999)){ if(e)e.textContent="Line items capped at "+LIMITS.items+"."; return; } const i=+val("cc_pick"); const p=(STORE.catalogue||[])[i]; if(!p){ if(e)e.textContent=MSG.pickItemFirst(); return; } CC.items.push({particulars:p.particulars,unit:p.unit||"unit",price:+p.price||0,qty:1}); ccRenderItems(); }
+function ccAddItem(){ const e=document.getElementById("cc_err"); if(e)e.textContent=""; if(CC.items.length>=(LIMITS.items||999)){ if(e)e.textContent="Line items capped at "+LIMITS.items+"."; return; } const i=+val("cc_pick"); const p=(STORE.catalogue||[])[i]; if(!p){ if(e)e.textContent=MSG.pickItemFirst(); return; } CC.items.push({particulars:p.particulars,unit:p.unit||"unit",price:cbAmount(p.price),qty:1}); ccRenderItems(); }
 async function ccAiFill(){
   var el=document.getElementById('cc_aidesc'); var desc=((el&&el.value)||'').trim();
   var err=document.getElementById('cc_err'); if(err)err.textContent='';
@@ -2136,7 +2146,7 @@ async function selectSupplier(id, silent){
   loadSupplierConfidence(x.bridge_id);
   if(x.has_catalogue){
     try{ const it=await api("supCatalogue",{params:{sid:x.supplier_entity_id}}); const arr=Array.isArray(it)?it:((it&&it.items)||[]);
-      UI.supDet={supplier:x, items:arr.map(p=>{const d=p.item_data||p; return {particulars:d.name||d.product||'item', unit:d.unit||'unit', price:+d.price||0};}), loading:false};
+      UI.supDet={supplier:x, items:arr.map(p=>{const d=p.item_data||p; return {particulars:d.name||d.product||'item', unit:d.unit||'unit', price:cbAmount(d.price)};}), loading:false};
     }catch(e){ UI.supDet={supplier:x, items:[], loading:false, err:e.message}; }
     if(UI.supSel===id) paintSupDetail();
   }
@@ -2212,7 +2222,7 @@ async function saveSupplier(id){ const err=document.getElementById("sp_ederr"); 
   catch(e){ if(err)err.textContent=e.message+" — this needs the Stage-B migration applied."; } }
 async function composeFromSupplier(id){ const d=UI.supDet, x=d&&d.supplier; if(!x||x.supplier_list_id!==id)return;
   let items=d.items;
-  if(items==null){ try{ const it=await api("supCatalogue",{params:{sid:x.supplier_entity_id}}); const arr=Array.isArray(it)?it:((it&&it.items)||[]); items=arr.map(p=>{const dd=p.item_data||p; return {particulars:dd.name||dd.product||'item', unit:dd.unit||'unit', price:+dd.price||0};}); }catch(e){ items=[]; } }
+  if(items==null){ try{ const it=await api("supCatalogue",{params:{sid:x.supplier_entity_id}}); const arr=Array.isArray(it)?it:((it&&it.items)||[]); items=arr.map(p=>{const dd=p.item_data||p; return {particulars:dd.name||dd.product||'item', unit:dd.unit||'unit', price:cbAmount(dd.price)};}); }catch(e){ items=[]; } }
   compose({ supplier:{name:supName(x), bridge:x.bridge_id, entity_id:x.supplier_entity_id}, recipients:[{name:supName(x), role:'to', bridge:x.bridge_id||null}], catalogue:items });
 }
 /* CATALOGUE (own products) — two-sided master/detail. Full CRUD is live (PATCH /products/:id), so Edit persists. */
@@ -2234,7 +2244,7 @@ function catalogueScreen(){
 function pData(p){ return (p&&(p.item_data||p.data))||{}; }
 function pName(d){ return d.name||d.product||'item'; }
 function pUnit(d){ return d.unit||'unit'; }
-function pPrice(d){ return +d.price||0; }
+function pPrice(d){ return cbAmount(d.price); }
 function pCode(d){ return d.code||d.hsn||d.sku||''; }
 function pDesc(d){ return d.desc||d.description||d.note||''; }
 function prodId(p){ return p.item_id||p.id; }
@@ -2251,7 +2261,7 @@ function prodRowHTML(p){ const d=pData(p), id=prodId(p); return `<div class="row
    "Applied with ·", no COLOUR COMBINATIONS header over nothing. */
 // price is generic {price, unit}; price_per_litre is the pre-generic paint shape, still read so existing adoptions render.
 function _refPrice(it){ var c=it.commercials||{};
-  if(c.price!=null&&c.price!=='') return {v:c.price,u:c.unit||it.unit||''};
+  if(cbHasPrice(c.price)) return {v:cbAmount(c.price),u:c.unit||it.unit||''};
   if(c.price_per_litre!=null&&c.price_per_litre!=='') return {v:c.price_per_litre,u:'L'};
   return null; }
 function _refPriceHTML(p,sz){ if(!p) return '<span style="color:#9aa3a7;font-size:12px;font-weight:400">no price</span>';
@@ -2335,7 +2345,7 @@ function selectProduct(id, silent){ UI.refSel=null; UI.prodSel=id; UI.prodMode='
 function setProdMode(m){ UI.prodMode=m; paintProdDetail(); }
 function newProduct(){ UI.prodSel=null; UI.prodMode='new'; if(UI.vp==='mob'){ UI.mdetail=true; const p=document.getElementById('panel'); if(p)p.classList.add('showdetail'); } paintProdList(); paintProdDetail(); }
 function ctField(k,label,v,extra){ return `<label class="fl">${label}</label><input class="inp" id="ct_${k}" data-testid="cat-field-${k}" value="${esc(v==null?'':v)}" ${extra||''}>`; }
-function prodEditForm(d){ return ctField('name','Name',d.name||'')+`<div style="display:flex;gap:10px"><div style="flex:1">`+ctField('unit','Unit',d.unit||'',"placeholder=\"piece / kg / tonne\"")+`</div><div style="flex:1"><label class="fl">Price</label><input class="inp" id="ct_price" data-testid="cat-field-price" inputmode="numeric" value="${d.price!=null?d.price:''}"></div></div>`+ctField('code','Code / HSN',pCode(d))+`<label class="fl">Description</label><textarea class="inp" id="ct_desc" data-testid="cat-field-desc" style="width:100%;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13.5px;min-height:58px;resize:vertical;background:var(--paper)">${esc(pDesc(d))}</textarea>`; }
+function prodEditForm(d){ return ctField('name','Name',d.name||'')+`<div style="display:flex;gap:10px"><div style="flex:1">`+ctField('unit','Unit',d.unit||'',"placeholder=\"piece / kg / tonne\"")+`</div><div style="flex:1"><label class="fl">Price</label><input class="inp" id="ct_price" data-testid="cat-field-price" inputmode="numeric" value="${cbHasPrice(d.price)?cbAmount(d.price):''}"></div></div>`+ctField('code','Code / HSN',pCode(d))+`<label class="fl">Description</label><textarea class="inp" id="ct_desc" data-testid="cat-field-desc" style="width:100%;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13.5px;min-height:58px;resize:vertical;background:var(--paper)">${esc(pDesc(d))}</textarea>`; }
 function prodViewFields(d){ const kv=(l,v)=>`<div class="kv" style="display:flex;gap:8px;padding:8px 12px;border-bottom:1px dashed var(--line);font-size:13px"><b style="min-width:96px;color:var(--grey);font-weight:600;font-size:11px;text-transform:uppercase">${l}</b><span style="font-weight:600">${v===''||v==null?'—':esc(v)}</span></div>`;
   return `<div class="itab">${kv('Name',pName(d))}<div class="kv" style="display:flex;gap:8px;padding:8px 12px;border-bottom:1px dashed var(--line);font-size:13px"><b style="min-width:96px;color:var(--grey);font-weight:600;font-size:11px;text-transform:uppercase">Price</b><span style="font-weight:600">${inr(pPrice(d))} <span style="color:var(--grey);font-weight:400">/ ${esc(pUnit(d))}</span></span></div>${kv('Unit',pUnit(d))}${kv('Code / HSN',pCode(d))}${kv('Description',pDesc(d))}</div>`; }
 function prodDetailHTML(){
