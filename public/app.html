@@ -693,7 +693,10 @@ function acIdPrev(){const e=document.getElementById("ac_idprev"); if(e){ const k
 /* DEMO responder — mimics the API so the whole flow works standalone */
 /* ---------------- SESSION + ROUTER ---------------- */
 let SESSION = {token:null, role:null, name:null, entity:null, bridgeId:null};
-const inr=n=>fmtMoney(n,'INR');
+function myCur(){ return (typeof SESSION!=='undefined' && SESSION.currency) || 'INR'; }
+// inr() is a legacy NAME, not a legacy behaviour: it now formats in the BUSINESS'S OWN currency. Renaming it
+// across 13 call sites would be churn for no gain; changing what it does fixes all 13 at once.
+const inr=n=>fmtMoney(n,myCur());
 /* CCY_LOCALE + fmtMoney → app/helpers.js */
 const CURRENCIES=[['INR','₹ Indian Rupee · 2dp'],['USD','$ US Dollar · 2dp'],['EUR','€ Euro · 2dp'],['GBP','£ British Pound · 2dp'],['JPY','¥ Japanese Yen · 0dp'],['KRW','₩ Korean Won · 0dp'],['VND','₫ Vietnam Dong · 0dp'],['BHD','Bahraini Dinar · 3dp'],['KWD','Kuwaiti Dinar · 3dp'],['OMR','Omani Rial · 3dp'],['AED','UAE Dirham · 2dp'],['SAR','Saudi Riyal · 2dp'],['CNY','¥ Chinese Yuan · 2dp'],['SGD','$ Singapore Dollar · 2dp'],['AUD','$ Australian Dollar · 2dp'],['CHF','Swiss Franc · 2dp']];
 function go(hash){location.hash=hash;}
@@ -1033,7 +1036,7 @@ async function cbViewMine(){
   try{ var r=await api('catalogueMine');
     if(!r.count){ if(rh)rh.innerHTML='<div style="font-size:12.5px;color:#6a707a">Nothing saved yet — set prices and Adopt above.</div>'; return; }
     var c=r.catalogues[0]; var priced=(c.resolved.items||[]).filter(function(it){return it.commercials;});
-    if(rh)rh.innerHTML='<div style="font-size:12.5px;color:#3a4048;background:#f6f4ee;border:1px solid #e7e3d8;border-radius:8px;padding:8px 10px">Persisted · <b>'+esc(c.source)+'</b> · '+priced.length+' priced:<br>'+(priced.map(function(it){var p=_refPrice(it);return esc(it.name)+' — '+(p?('₹'+esc(String(p.v))+(p.u?'/'+esc(p.u):'')):'?');}).join(' · ')||'—')+'<div style="font-size:10.5px;color:#9aa3a7;margin-top:5px">design &amp; data resolved by reference from the shared source — no copy stored</div></div>';
+    if(rh)rh.innerHTML='<div style="font-size:12.5px;color:#3a4048;background:#f6f4ee;border:1px solid #e7e3d8;border-radius:8px;padding:8px 10px">Persisted · <b>'+esc(c.source)+'</b> · '+priced.length+' priced:<br>'+(priced.map(function(it){var p=_refPrice(it);return esc(it.name)+' — '+(p?(esc(inr(p.v))+(p.u?'/'+esc(p.u):'')):'?');}).join(' · ')||'—')+'<div style="font-size:10.5px;color:#9aa3a7;margin-top:5px">design &amp; data resolved by reference from the shared source — no copy stored</div></div>';
   }catch(e){ if(rh)rh.innerHTML='<div style="color:#b4453f;font-size:12.5px">'+esc((e&&e.message)||'load failed')+'</div>'; }
 }
 function setLogFilter(k){ _logFilter=k; renderMsgConsole(); }
@@ -1482,7 +1485,14 @@ function renderApp(){
     api('assistWhoami').then(function(r){ const was=SESSION.isHelpdesk; SESSION.isHelpdesk=!!(r&&r.is_helpdesk); if(SESSION.isHelpdesk&&!was) renderApp(); }).catch(function(){}); }
   // once per session: the entity's capability SELECTION (drives the itemised nav toggles, e.g. Connectors).
   if(SESSION.token && role!=="customer" && SESSION._capsChecked===undefined){ SESSION._capsChecked=true;
-    api('me',{query:{_t:Date.now()}}).then(function(r){ SESSION.capabilities=(r&&r.capabilities)||[]; if(SESSION.role!=='customer')ensureCap('dispute').then(renderApp).catch(function(){}); renderApp(); }).catch(function(e){ SESSION.capabilities=SESSION.capabilities||[]; }); }
+    api('me',{query:{_t:Date.now()}}).then(function(r){ SESSION.capabilities=(r&&r.capabilities)||[];
+      // THE BUSINESS'S OWN CURRENCY. /me has always returned currency_code; the client dropped it, so
+      // SESSION.currency was NEVER set — cap-catalogue.js read it, fell back to 'INR', and every business on earth
+      // saw "Price (INR)". Now that a price is STAMPED with the entity's currency on write, showing the wrong one
+      // is no longer cosmetic: it tells someone they are typing INR while the server records USD.
+      // `unwrap()` returns j.entity for /me, so read both shapes.
+      var _e=(r&&r.entity)||r||{}; if(_e.currency_code) SESSION.currency=_e.currency_code; if(_e.country) SESSION.country=_e.country;
+      if(SESSION.role!=='customer')ensureCap('dispute').then(renderApp).catch(function(){}); renderApp(); }).catch(function(e){ SESSION.capabilities=SESSION.capabilities||[]; }); }
   const _cap = CAP_OF[UI.nav];
   const _capLoading = !!(_cap && !CAP_LOADED[_cap]);
   if(_capLoading){ ensureCap(_cap).then(function(){ if(CAP_OF[UI.nav]===_cap) renderApp(); })
@@ -2265,7 +2275,7 @@ function _refPrice(it){ var c=it.commercials||{};
   if(c.price_per_litre!=null&&c.price_per_litre!=='') return {v:c.price_per_litre,u:'L'};
   return null; }
 function _refPriceHTML(p,sz){ if(!p) return '<span style="color:#9aa3a7;font-size:12px;font-weight:400">no price</span>';
-  return '₹'+esc(String(p.v))+(p.u?'<span style="font-size:'+(sz||11)+'px;color:#9aa3a7;font-weight:400">/'+esc(p.u)+'</span>':''); }
+  return esc(inr(p.v))+(p.u?'<span style="font-size:'+(sz||11)+'px;color:#9aa3a7;font-weight:400">/'+esc(p.u)+'</span>':''); }
 function _refChips(it){ var c='';
   if(it.texture_family) c+='<span class="optchip" style="background:#F0EAF9;color:#6a44a8;border-color:transparent">'+esc(it.texture_family)+'</span>';
   if(it.region) c+='<span class="optchip" style="background:#eef3fb;color:#345488;border-color:#cfe0f4">'+esc(it.region)+'</span>';
@@ -2323,7 +2333,7 @@ function refFinishDetail(it){
     +(facts.length?'<div class="sec">Details</div><div style="font-size:12.5px;color:#3a4048;line-height:1.8;margin-bottom:4px">'+facts.join('<br>')+'</div>':'')
     +(combos.length?'<div class="sec">Colour combinations</div>'+combos.map(_combo).join(''):'')
     +(applied.length?'<div style="font-size:11.5px;color:#9aa3a7;margin-top:10px">'+applied.join(' · ')+'</div>':'')
-    +'<div class="sec" style="margin-top:14px">Price</div><div style="font-size:17px;font-weight:800">'+(p?('₹'+esc(String(p.v))+(p.u?' <span style="font-size:12px;color:#9aa3a7;font-weight:400">/ '+esc(p.u)+'</span>':'')):'<span style="color:#9aa3a7;font-size:13px">not priced yet</span>')+'</div>'
+    +'<div class="sec" style="margin-top:14px">Price</div><div style="font-size:17px;font-weight:800">'+(p?(esc(inr(p.v))+(p.u?' <span style="font-size:12px;color:#9aa3a7;font-weight:400">/ '+esc(p.u)+'</span>':'')):'<span style="color:#9aa3a7;font-size:13px">not priced yet</span>')+'</div>'
     +'<div style="font-size:10.5px;color:#9aa3a7;margin-top:12px;font-family:\'Space Mono\'">🎨 referenced from the shared source · no copy · <span style="color:var(--blue);cursor:pointer" onclick="UI.nav=\'cataloguesetup\';renderApp()">manage prices</span></div>'
   +'</div>';
   return head+body;
@@ -2345,7 +2355,7 @@ function selectProduct(id, silent){ UI.refSel=null; UI.prodSel=id; UI.prodMode='
 function setProdMode(m){ UI.prodMode=m; paintProdDetail(); }
 function newProduct(){ UI.prodSel=null; UI.prodMode='new'; if(UI.vp==='mob'){ UI.mdetail=true; const p=document.getElementById('panel'); if(p)p.classList.add('showdetail'); } paintProdList(); paintProdDetail(); }
 function ctField(k,label,v,extra){ return `<label class="fl">${label}</label><input class="inp" id="ct_${k}" data-testid="cat-field-${k}" value="${esc(v==null?'':v)}" ${extra||''}>`; }
-function prodEditForm(d){ return ctField('name','Name',d.name||'')+`<div style="display:flex;gap:10px"><div style="flex:1">`+ctField('unit','Unit',d.unit||'',"placeholder=\"piece / kg / tonne\"")+`</div><div style="flex:1"><label class="fl">Price</label><input class="inp" id="ct_price" data-testid="cat-field-price" inputmode="numeric" value="${cbHasPrice(d.price)?cbAmount(d.price):''}"></div></div>`+ctField('code','Code / HSN',pCode(d))+`<label class="fl">Description</label><textarea class="inp" id="ct_desc" data-testid="cat-field-desc" style="width:100%;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13.5px;min-height:58px;resize:vertical;background:var(--paper)">${esc(pDesc(d))}</textarea>`; }
+function prodEditForm(d){ return ctField('name','Name',d.name||'')+`<div style="display:flex;gap:10px"><div style="flex:1">`+ctField('unit','Unit',d.unit||'',"placeholder=\"piece / kg / tonne\"")+`</div><div style="flex:1"><label class="fl">Price (${myCur()})</label><input class="inp" id="ct_price" data-testid="cat-field-price" inputmode="numeric" value="${cbHasPrice(d.price)?cbAmount(d.price):''}"></div></div>`+ctField('code','Code / HSN',pCode(d))+`<label class="fl">Description</label><textarea class="inp" id="ct_desc" data-testid="cat-field-desc" style="width:100%;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13.5px;min-height:58px;resize:vertical;background:var(--paper)">${esc(pDesc(d))}</textarea>`; }
 function prodViewFields(d){ const kv=(l,v)=>`<div class="kv" style="display:flex;gap:8px;padding:8px 12px;border-bottom:1px dashed var(--line);font-size:13px"><b style="min-width:96px;color:var(--grey);font-weight:600;font-size:11px;text-transform:uppercase">${l}</b><span style="font-weight:600">${v===''||v==null?'—':esc(v)}</span></div>`;
   return `<div class="itab">${kv('Name',pName(d))}<div class="kv" style="display:flex;gap:8px;padding:8px 12px;border-bottom:1px dashed var(--line);font-size:13px"><b style="min-width:96px;color:var(--grey);font-weight:600;font-size:11px;text-transform:uppercase">Price</b><span style="font-weight:600">${inr(pPrice(d))} <span style="color:var(--grey);font-weight:400">/ ${esc(pUnit(d))}</span></span></div>${kv('Unit',pUnit(d))}${kv('Code / HSN',pCode(d))}${kv('Description',pDesc(d))}</div>`; }
 function prodDetailHTML(){
