@@ -694,6 +694,12 @@ function acIdPrev(){const e=document.getElementById("ac_idprev"); if(e){ const k
 /* ---------------- SESSION + ROUTER ---------------- */
 let SESSION = {token:null, role:null, name:null, entity:null, bridgeId:null};
 function myCur(){ return (typeof SESSION!=='undefined' && SESSION.currency) || 'INR'; }
+// The SYMBOL for a currency code, taken from Intl rather than a hand-kept table — it covers every currency and
+// cannot drift. Falls back to the code itself (AED shows as 'AED' in many locales, which is correct, not a bug).
+function curSym(code){ code = code || myCur();
+  try { var pt = new Intl.NumberFormat(undefined,{style:'currency',currency:code,currencyDisplay:'narrowSymbol'})
+      .formatToParts(0).find(function(x){ return x.type==='currency'; }); return (pt && pt.value) || code; }
+  catch(e){ return code; } }
 // inr() is a legacy NAME, not a legacy behaviour: it now formats in the BUSINESS'S OWN currency. Renaming it
 // across 13 call sites would be churn for no gain; changing what it does fixes all 13 at once.
 const inr=n=>fmtMoney(n,myCur());
@@ -2355,7 +2361,7 @@ function selectProduct(id, silent){ UI.refSel=null; UI.prodSel=id; UI.prodMode='
 function setProdMode(m){ UI.prodMode=m; paintProdDetail(); }
 function newProduct(){ UI.prodSel=null; UI.prodMode='new'; if(UI.vp==='mob'){ UI.mdetail=true; const p=document.getElementById('panel'); if(p)p.classList.add('showdetail'); } paintProdList(); paintProdDetail(); }
 function ctField(k,label,v,extra){ return `<label class="fl">${label}</label><input class="inp" id="ct_${k}" data-testid="cat-field-${k}" value="${esc(v==null?'':v)}" ${extra||''}>`; }
-function prodEditForm(d){ return ctField('name','Name',d.name||'')+`<div style="display:flex;gap:10px"><div style="flex:1">`+ctField('unit','Unit',d.unit||'',"placeholder=\"piece / kg / tonne\"")+`</div><div style="flex:1"><label class="fl">Price (${myCur()})</label><input class="inp" id="ct_price" data-testid="cat-field-price" inputmode="numeric" value="${cbHasPrice(d.price)?cbAmount(d.price):''}"></div></div>`+ctField('code','Code / HSN',pCode(d))+`<label class="fl">Description</label><textarea class="inp" id="ct_desc" data-testid="cat-field-desc" style="width:100%;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13.5px;min-height:58px;resize:vertical;background:var(--paper)">${esc(pDesc(d))}</textarea>`; }
+function prodEditForm(d){ return ctField('name','Name',d.name||'')+`<div style="display:flex;gap:10px"><div style="flex:1">`+ctField('unit','Unit',d.unit||'',"placeholder=\"piece / kg / tonne\"")+`</div><div style="flex:1"><label class="fl">Price</label><div style="display:flex;align-items:stretch"><span style="display:flex;align-items:center;padding:0 11px;border:1px solid var(--line);border-right:0;border-radius:10px 0 0 10px;background:#f2f1ed;color:#6b7176;font-weight:700;font-size:13.5px;white-space:nowrap" title="${myCur()} — your business currency">${esc(curSym())}</span><input class="inp" id="ct_price" data-testid="cat-field-price" inputmode="numeric" style="border-radius:0 10px 10px 0" value="${cbHasPrice(d.price)?cbAmount(d.price):''}"></div></div></div>`+ctField('code','Code / HSN',pCode(d))+`<label class="fl">Description</label><textarea class="inp" id="ct_desc" data-testid="cat-field-desc" style="width:100%;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13.5px;min-height:58px;resize:vertical;background:var(--paper)">${esc(pDesc(d))}</textarea>`; }
 function prodViewFields(d){ const kv=(l,v)=>`<div class="kv" style="display:flex;gap:8px;padding:8px 12px;border-bottom:1px dashed var(--line);font-size:13px"><b style="min-width:96px;color:var(--grey);font-weight:600;font-size:11px;text-transform:uppercase">${l}</b><span style="font-weight:600">${v===''||v==null?'—':esc(v)}</span></div>`;
   return `<div class="itab">${kv('Name',pName(d))}<div class="kv" style="display:flex;gap:8px;padding:8px 12px;border-bottom:1px dashed var(--line);font-size:13px"><b style="min-width:96px;color:var(--grey);font-weight:600;font-size:11px;text-transform:uppercase">Price</b><span style="font-weight:600">${inr(pPrice(d))} <span style="color:var(--grey);font-weight:400">/ ${esc(pUnit(d))}</span></span></div>${kv('Unit',pUnit(d))}${kv('Code / HSN',pCode(d))}${kv('Description',pDesc(d))}</div>`; }
 function prodDetailHTML(){
