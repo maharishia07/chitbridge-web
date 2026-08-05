@@ -2251,7 +2251,11 @@ function catalogueScreen(){
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:14px">🗂️ Catalogue</span><button onclick="openAssist('catalogue')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:#fff;color:#3F66A6;border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button><span onclick="UI.nav='cataloguesetup';renderApp()" title="New: catalogue face setup (prototype)" style="margin-left:auto;cursor:pointer;font-size:11px;font-weight:600;color:var(--blue);border:1px solid var(--line);border-radius:7px;padding:3px 9px">⚙ Set up (new)</span></div>
       <button class="composebtn" style="width:100%;justify-content:center" data-testid="cat-new-product" onclick="newProduct()">+ New product</button>
       <div class="srch" style="margin-top:8px">🔍 <input data-testid="cat-search" placeholder="Search name, code, unit" value="${esc(UI.prodQ||'')}" oninput="UI.prodQ=this.value;paintProdList()"></div>
-      <div style="margin-top:8px;font-size:11px;color:var(--grey)" id="ct_count">${prodVisible().length} product(s)</div>
+      <div style="margin-top:8px;display:flex;align-items:center;gap:8px">
+        <span style="font-size:11px;color:var(--grey)" id="ct_count">${prodVisible().length} product(s)</span>
+        <button data-testid="cat-export-csv" onclick="exportCatalogueCSV(this)" title="Download every product as a spreadsheet"
+          style="margin-left:auto;border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:4px 9px;font-size:11.5px;color:var(--ink);cursor:pointer">⬇ Export CSV</button>
+      </div>
     </div>
     <div class="rows" id="ct_rows">${UI._prodLoading?'<div class="loadwrap"><span class="spin"></span> loading…</div>':prodRowsHTML()}</div>
   </div>`;
@@ -2364,6 +2368,46 @@ function selectProduct(id, silent){ UI.refSel=null; UI.prodSel=id; UI.prodMode='
 function setProdMode(m){ UI.prodMode=m; paintProdDetail(); }
 function newProduct(){ UI.prodSel=null; UI.prodMode='new'; if(UI.vp==='mob'){ UI.mdetail=true; const p=document.getElementById('panel'); if(p)p.classList.add('showdetail'); } paintProdList(); paintProdDetail(); }
 function ctField(k,label,v,extra){ return `<label class="fl">${label}</label><input class="inp" id="ct_${k}" data-testid="cat-field-${k}" value="${esc(v==null?'':v)}" ${extra||''}>`; }
+/**
+ * Download the catalogue as CSV.
+ *
+ * Not a plain <a href> — the endpoint is authenticated, and a link carries no Authorization header. So: fetch with
+ * the token, turn the response into a blob, and click a temporary link at it. The browser then treats it as a real
+ * download with a real filename, rather than rendering the text or opening a tab.
+ *
+ * Deliberately NOT routed through api() in core.js: that helper JSON-parses every response, which would turn a
+ * perfectly good CSV into a parse error.
+ */
+async function exportCatalogueCSV(btn){
+  const was = btn ? btn.textContent : null;
+  if(btn){ btn.disabled = true; btn.textContent = '⬇ Preparing…'; }
+  try{
+    const res = await fetch(CFG.API_BASE + '/api/products/export.csv', {
+      cache: 'no-store',
+      headers: SESSION.token ? { Authorization: 'Bearer ' + SESSION.token } : {},
+    });
+    if(!res.ok){
+      let msg = ''; try { const j = await res.json(); msg = j.message || j.error || ''; } catch(_){}
+      throw new Error(msg || ('Export failed (' + res.status + ')'));
+    }
+    const blob = await res.blob();
+    // Prefer the filename the SERVER chose — it carries the date, and one place deciding it means the file is
+    // named the same however it was fetched.
+    const cd = res.headers.get('Content-Disposition') || '';
+    const m = /filename="?([^"]+)"?/.exec(cd);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = (m && m[1]) || 'catalogue.csv';
+    document.body.appendChild(a); a.click(); a.remove();
+    // Revoke on the next tick, not immediately — Safari cancels an in-flight download if the URL dies too soon.
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+    if(typeof toast === 'function') toast('Catalogue exported ✓');
+  }catch(e){
+    if(typeof toast === 'function') toast((e && e.message) || 'Could not export the catalogue.');
+  }finally{
+    if(btn){ btn.disabled = false; btn.textContent = was; }
+  }
+}
 function prodEditForm(d){ return ctField('name','Name',d.name||'')+`<div style="display:flex;gap:10px"><div style="flex:1">`+ctField('unit','Unit',d.unit||'',"placeholder=\"piece / kg / tonne\"")+`</div><div style="flex:1"><label class="fl">Price</label><div style="display:flex;align-items:stretch"><span style="display:flex;align-items:center;padding:0 11px;border:1px solid var(--line);border-right:0;border-radius:10px 0 0 10px;background:#f2f1ed;color:#6b7176;font-weight:700;font-size:13.5px;white-space:nowrap" title="${myCur()} — your business currency">${esc(curSym())}</span><input class="inp" id="ct_price" data-testid="cat-field-price" inputmode="numeric" style="border-radius:0 10px 10px 0" value="${cbHasPrice(d.price)?cbAmount(d.price):''}"></div></div></div>`+ctField('code','Code / HSN',pCode(d))+`<label class="fl">Description</label><textarea class="inp" id="ct_desc" data-testid="cat-field-desc" style="width:100%;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13.5px;min-height:58px;resize:vertical;background:var(--paper)">${esc(pDesc(d))}</textarea>`; }
 function prodViewFields(d){ const kv=(l,v)=>`<div class="kv" style="display:flex;gap:8px;padding:8px 12px;border-bottom:1px dashed var(--line);font-size:13px"><b style="min-width:96px;color:var(--grey);font-weight:600;font-size:11px;text-transform:uppercase">${l}</b><span style="font-weight:600">${v===''||v==null?'—':esc(v)}</span></div>`;
   return `<div class="itab">${kv('Name',pName(d))}<div class="kv" style="display:flex;gap:8px;padding:8px 12px;border-bottom:1px dashed var(--line);font-size:13px"><b style="min-width:96px;color:var(--grey);font-weight:600;font-size:11px;text-transform:uppercase">Price</b><span style="font-weight:600">${inr(pPrice(d))} <span style="color:var(--grey);font-weight:400">/ ${esc(pUnit(d))}</span></span></div>${kv('Unit',pUnit(d))}${kv('Code / HSN',pCode(d))}${kv('Description',pDesc(d))}</div>`; }
