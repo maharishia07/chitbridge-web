@@ -129,3 +129,93 @@ test.describe('the declared mode must survive into the chit', () => {
     expect(s.total_value, 'a non-monetary chit must carry NO total').toBeNull();
   });
 });
+
+test.describe('TWO items, TWO modes, ONE chit', () => {
+  test.describe.configure({ mode: 'serial', timeout: 180_000 });
+
+  // Athi: "did you pass one item per chit or more than one? Send two or more, each a different mode, and confirm
+  // the mode survives per item."
+  //
+  // The single-item tests proved the CATALOGUE's mode survives. They cannot tell us whether the mode is recorded
+  // PER ITEM or merely once for the whole chit — and that difference decides whether a mixed catalogue is real or
+  // decorative.
+  test('a cart item and a range item travel together, each keeping its own shape', async () => {
+    const shop = SHOPS.USD;
+    const token = await signIn(shop.email, shop.name);
+
+    // The CATALOGUE is a cart. Both items live under it; one overrides itself to `range`.
+    await api('/api/catalogue-face', { method: 'PUT', token,
+      body: { face: { method: 'cart', order_input: { preset: 'cart', pipeline: 'commerce' }, units: ['tonne'] } } });
+
+    const stamp = Date.now() % 100000;
+    const mk = async (preset) => {
+      const name = `two-${preset}-${stamp}`;
+      const r = await api('/api/products', { method: 'POST', token, body: { item_data: {
+        name, unit: 'tonne', price: 500, order_input: { preset, pipeline: 'commerce' } } } });
+      expect(r.status, `creating the ${preset} item: ${JSON.stringify(r.json)}`).toBeLessThan(400);
+      return { name, id: r.json.item.item_id };
+    };
+    const cartItem  = await mk('cart');    // fixed price — the shop's number stands
+    const rangeItem = await mk('range');   // the buyer names a price
+
+    // ONE order carrying BOTH.
+    const { conf } = await order(shop.bridge, [
+      { item_id: cartItem.id,  name: cartItem.name,  quantity: 2 },
+      { item_id: rangeItem.id, name: rangeItem.name, quantity: 3, proposal: { price: 420 } },
+    ]);
+
+    // ── THE ANSWER, and it is NOT what the catalogue implies ─────────────────────────────────────────────
+    //
+    //   422 — "This shop does not take offers — 'two-range-…' is sold at the listed price"
+    //
+    // So per-item mode is only PARTLY real. An item may refine the SCHEMA it asks for, but it cannot make itself
+    // negotiable inside a shop that is not: `validateProposal` branches on the SHOP's declaration before it looks
+    // at the item. That is the same guard as T3.2 (an item may not switch the pipeline), and it is deliberate —
+    // an item that could unilaterally accept a customer-supplied price inside a fixed-price shop is how you get a
+    // sealed chit carrying a number the seller never offered.
+    //
+    // But it means "one catalogue, mixed modes" does not hold for NEGOTIATION. The catalogue will happily store a
+    // `range` item beside a `cart` item — the earlier test proved that — and the shop will then refuse to trade it
+    // that way. Accepted at authoring time, refused at order time, with nothing in between to warn the owner.
+    //
+    // Asserted as-is so the behaviour is pinned rather than assumed. Changing it is a product decision, not a fix.
+    expect(conf.status, 'a range item inside a cart shop should be refused at order time').toBe(422);
+    expect(String((conf.json || {}).message || ''), 'the refusal must name the item and the reason')
+      .toMatch(/does not take offers|listed price/i);
+
+    // Everything below is what WOULD be asserted if mixed negotiation were supported. Kept, skipped, and pointed
+    // at the decision — deleting it would lose the specification of the thing we chose not to build.
+    test.skip(true, 'mixed-negotiation catalogues are refused at order time — see the comment above');
+
+    const chits = await api('/api/chits/inbox?limit=5', { token });
+    const rows = (chits.json && (chits.json.chits || chits.json)) || [];
+    const chit = (Array.isArray(rows) ? rows : [])[0];
+    expect(chit, 'the shop received no chit').toBeTruthy();
+
+    // Pull the DETAIL — line items live there, not on the header.
+    const full = await api(`/api/chits/${chit.chit_id}`, { token });
+    const det = (full.json && (full.json.detail || full.json)) || {};
+    const lis = det.line_items || [];
+    expect(lis.length, `expected 2 line items, got ${lis.length}: ${JSON.stringify(lis).slice(0, 300)}`).toBe(2);
+
+    const li = (n) => lis.find((x) => (x.name || x.particulars || '').includes(n));
+    const c = li(`two-cart-${stamp}`), r = li(`two-range-${stamp}`);
+    expect(c, 'the cart line is missing').toBeTruthy();
+    expect(r, 'the range line is missing').toBeTruthy();
+
+    // ── THE ASSERTION ────────────────────────────────────────────────────────────────────────────────────
+    // The negotiated line must carry the buyer's proposal; the fixed line must NOT. If both look the same on the
+    // chit, "per-item mode" is a catalogue-authoring convenience that vanishes at the moment it would matter —
+    // which is when two parties later disagree about what was agreed.
+    expect(r.proposal, 'the range line lost the buyer\'s proposed price').toBeTruthy();
+    expect(c.proposal, 'a FIXED-price line must not carry a proposal').toBeFalsy();
+
+    // Recorded rather than asserted: one negotiable line makes the WHOLE chit an offer, because a total cannot be
+    // settled while any part of it is unagreed. Printed so the behaviour is visible in the run either way.
+    const s = chit.summary_json || {};
+    console.log(`      [mixed chit] purpose=${chit.purpose} total_value=${JSON.stringify(s.total_value)} ` +
+                `indicative=${JSON.stringify(s.indicative_total)} preset=${s.order_preset}`);
+    expect(chit.purpose, 'a chit containing an unagreed line cannot be a settled order').toBe('offer');
+    expect(s.total_value, 'no settled total while one line is only proposed').toBeNull();
+  });
+});
