@@ -85,6 +85,9 @@
   .swap{text-align:center;font-size:12.5px;color:var(--grey);margin-top:14px}.swap a{color:var(--blue);font-weight:700;cursor:pointer}
   .hint{font-size:11px;color:#9a7b34;background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;margin-top:12px;line-height:1.5}
   .err{font-size:12px;color:var(--disp);background:#fbeeed;border:1px solid #e7b9b5;border-radius:9px;padding:9px 11px;margin-top:12px}
+  /* An empty error box still had background, border and padding — so it rendered as a pink bar with nothing
+     to say, on a form where nothing had gone wrong. An error surface must be INVISIBLE until it has content. */
+  .err:empty{display:none}
 
   /* app shell */
   .shell{flex:1;display:grid;grid-template-columns:212px 1fr;grid-template-rows:auto 1fr;min-height:0}
@@ -1751,7 +1754,7 @@ async function submitCompose(isDraft){
     else if(r&&r.selfCopies){ toast(MSG.chitBridged(r.copies, r.selfCopies)); UI.nav="task"; UI.folder="task"; }
     else { toast(MSG.chitBridged(r&&r.copies)); UI.nav="order"; UI.folder="order"; }
     UI.sel=null; UI.detail=null; await loadList(); busyHide(); renderApp();
-  }catch(e){ busyHide(); if(err)err.textContent=e.message; }
+  }catch(e){ busyHide(); if(err)err.textContent=(e&&e.message)||"Something went wrong — please try again."; }
 }
 function ccAddFiles(files){ CC.files=CC.files||[]; for(var k=0;k<files.length;k++){ var f=files[k]; if(f.size>6*1024*1024){ toast(f.name+' is over 6MB — skipped.'); continue; } CC.files.push(f); } ccRenderFiles(); }
 function ccDelFile(i){ (CC.files||[]).splice(i,1); ccRenderFiles(); }
@@ -1848,7 +1851,7 @@ async function submitActor(){
       if(sel && (UI.acts||[]).some(a=>a.id===sel)){ selectActor(sel);
         const _row=document.querySelector('.row[data-ac="'+sel+'"]'); if(_row&&_row.scrollIntoView) _row.scrollIntoView({block:'nearest'}); } }
     actorInviteModal('✅ '+name+' added', name, lf, otp); }
-  catch(e){ if(err)err.textContent=e.message; }
+  catch(e){ if(err)err.textContent=(e&&e.message)||"Something went wrong — please try again."; }
 }
 // One dialog for onboarding codes — reused by create, re-invite, and reset-PIN. Shows the User ID + the
 // one-time code the admin must relay (the actor uses it once, then sets their own PIN).
@@ -2235,7 +2238,7 @@ async function toggleSupPref(id){ const x=(UI.sups||[]).find(s=>s.supplier_list_
 async function saveSupplier(id){ const err=document.getElementById("sp_ederr"); if(err)err.textContent="";
   const body={ nickname:val("sp_nick")||null, category:val("sp_cat")||null, notes:val("sp_notes")||null };
   try{ await api("supPatch",{params:{id},body}); const x=(UI.sups||[]).find(s=>s.supplier_list_id===id); if(x){ x.nickname=body.nickname; x.category=body.category; x.notes=body.notes; } if(UI.supDet&&UI.supDet.supplier)Object.assign(UI.supDet.supplier, body); UI.supMode='view'; paintSupList(); paintSupDetail(); toast("Supplier updated ✓"); }
-  catch(e){ if(err)err.textContent=e.message+" — this needs the Stage-B migration applied."; } }
+  catch(e){ if(err)err.textContent=((e&&e.message)||"Failed")+" — this needs the Stage-B migration applied."; } }
 async function composeFromSupplier(id){ const d=UI.supDet, x=d&&d.supplier; if(!x||x.supplier_list_id!==id)return;
   let items=d.items;
   if(items==null){ try{ const it=await api("supCatalogue",{params:{sid:x.supplier_entity_id}}); const arr=Array.isArray(it)?it:((it&&it.items)||[]); items=arr.map(p=>{const dd=p.item_data||p; return {particulars:dd.name||dd.product||'item', unit:dd.unit||'unit', price:cbAmount(dd.price)};}); }catch(e){ items=[]; } }
@@ -2380,9 +2383,9 @@ function prodDetailHTML(){
 }
 function ctReadForm(orig){ return Object.assign({}, orig||{}, { name:(val("ct_name")||'').trim(), unit:(val("ct_unit")||'').trim()||'unit', price:+val("ct_price")||0, code:(val("ct_code")||'').trim(), desc:(val("ct_desc")||'').trim() }); }
 async function saveNewProduct(){ const err=document.getElementById("ct_err"); if(err)err.textContent=""; const data=ctReadForm({}); if(!data.name){ if(err)err.textContent="Name is required."; return; }
-  try{ const r=await api("prodAdd",{body:{item_data:data}}); const nid=(r&&r.item&&r.item.item_id)||null; toast("Product added ✓"); if(window.CBOffline)CBOffline.clearDraft('prod.new'); UI.prodMode='view'; UI.prodSel=nid; await loadCatalogue(); if(nid){ UI.prodSel=nid; paintProdList(); paintProdDetail(); } }catch(e){ if(err)err.textContent=e.message; } }
+  try{ const r=await api("prodAdd",{body:{item_data:data}}); const nid=(r&&r.item&&r.item.item_id)||null; toast("Product added ✓"); if(window.CBOffline)CBOffline.clearDraft('prod.new'); UI.prodMode='view'; UI.prodSel=nid; await loadCatalogue(); if(nid){ UI.prodSel=nid; paintProdList(); paintProdDetail(); } }catch(e){ if(err)err.textContent=(e&&e.message)||"Could not add the product — please try again."; } }
 async function saveProduct(id){ const err=document.getElementById("ct_err"); if(err)err.textContent=""; const p=(UI.prods||[]).find(x=>prodId(x)===id); const data=ctReadForm(pData(p)); if(!data.name){ if(err)err.textContent="Name is required."; return; }
-  try{ await api("prodEdit",{params:{id},body:{item_data:data}}); toast("Product updated ✓"); UI.prodMode='view'; await loadCatalogue(); UI.prodSel=id; paintProdList(); paintProdDetail(); }catch(e){ if(err)err.textContent=e.message; } }
+  try{ await api("prodEdit",{params:{id},body:{item_data:data}}); toast("Product updated ✓"); UI.prodMode='view'; await loadCatalogue(); UI.prodSel=id; paintProdList(); paintProdDetail(); }catch(e){ if(err)err.textContent=(e&&e.message)||"Could not add the product — please try again."; } }
 async function delProduct(id){ if(!confirm("Delete this product? This cannot be undone.")) return; try{ await api("prodDel",{params:{id}}); UI.prodSel=null; UI.mdetail=false; toast(MSG.productDeleted()); await loadCatalogue(); }catch(e){ toast(MSG.fail("delete the product", e)); } }
 /* MIS — computed client-side (no MIS route on the legacy backend) */
 /* misScreen + loadMIS → app/cap-admin.js (admin capability, lazy-loaded via ensureCap) */
