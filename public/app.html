@@ -2253,8 +2253,10 @@ function catalogueScreen(){
       <div class="srch" style="margin-top:8px">🔍 <input data-testid="cat-search" placeholder="Search name, code, unit" value="${esc(UI.prodQ||'')}" oninput="UI.prodQ=this.value;paintProdList()"></div>
       <div style="margin-top:8px;display:flex;align-items:center;gap:8px">
         <span style="font-size:11px;color:var(--grey)" id="ct_count">${prodVisible().length} product(s)</span>
+        <button data-testid="cat-template-csv" onclick="downloadCatalogueTemplate(this)" title="Download a blank sheet in your catalogue's own format"
+          style="margin-left:auto;border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:4px 9px;font-size:11.5px;color:var(--ink);cursor:pointer">📄 Template</button>
         <button data-testid="cat-export-csv" onclick="exportCatalogueCSV(this)" title="Download every product as a spreadsheet"
-          style="margin-left:auto;border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:4px 9px;font-size:11.5px;color:var(--ink);cursor:pointer">⬇ Export CSV</button>
+          style="border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:4px 9px;font-size:11.5px;color:var(--ink);cursor:pointer">⬇ Export CSV</button>
       </div>
     </div>
     <div class="rows" id="ct_rows">${UI._prodLoading?'<div class="loadwrap"><span class="spin"></span> loading…</div>':prodRowsHTML()}</div>
@@ -2404,6 +2406,47 @@ async function exportCatalogueCSV(btn){
     if(typeof toast === 'function') toast('Catalogue exported ✓');
   }catch(e){
     if(typeof toast === 'function') toast((e && e.message) || 'Could not export the catalogue.');
+  }finally{
+    if(btn){ btn.disabled = false; btn.textContent = was; }
+  }
+}
+/**
+ * downloadCatalogueTemplate — the blank upload sheet, in THIS catalogue's own format.
+ *
+ * Athi, 2026-08-06: "each entity will have its own catalogue style and the accepted format, so the catalogue
+ * template can be downloaded and the same format uploaded — this makes the system stable."
+ *
+ * The columns are a projection of what this shop declares it accepts, so a cart shop gets `price` and a range shop
+ * gets `price_min`/`price_max`. Nobody has to guess a column name and there is no template file to drift.
+ *
+ * Two steps rather than one link: the server returns JSON because the guidance CANNOT live in the CSV — a comment
+ * row would parse as a product. So the file downloads and the notes are shown beside it.
+ */
+async function downloadCatalogueTemplate(btn){
+  const was = btn ? btn.textContent : null;
+  if(btn){ btn.disabled = true; btn.textContent = '📄 …'; }
+  try{
+    const t = await api('/api/products/template');
+    const blob = new Blob(['﻿' + t.csv], { type: 'text/csv;charset=utf-8' });   // BOM: Excel mangles ₹ without it
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = t.filename || 'catalogue-template.csv';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+
+    const cols = (t.columns||[]).map(function(c){
+      const opt = (t.optional||[]).indexOf(c) >= 0;
+      return '<span style="display:inline-block;border:1px solid var(--line);border-radius:6px;padding:2px 7px;margin:0 4px 4px 0;font-size:11.5px;font-family:ui-monospace,monospace;'
+        + (opt ? 'color:var(--grey);border-style:dashed' : 'font-weight:600') + '">' + esc(c) + '</span>';
+    }).join('');
+    modal('<div class="mh">📄 Catalogue template</div><div class="mb">'
+      + '<div style="font-size:12.5px;color:var(--grey);margin-bottom:9px">Downloaded as <b>' + esc(t.filename||'') + '</b> — these are the columns your catalogue accepts. Dashed ones are optional.</div>'
+      + '<div style="margin-bottom:10px">' + cols + '</div>'
+      + '<ul style="font-size:12.5px;line-height:1.65;padding-left:18px;margin:0">'
+      + (t.notes||[]).map(function(n){ return '<li>' + esc(n) + '</li>'; }).join('')
+      + '</ul></div><div class="mf"><button class="pri" onclick="closeModal()">Got it</button></div>');
+  }catch(e){
+    if(typeof toast === 'function') toast((e && e.message) || 'Could not build the template.');
   }finally{
     if(btn){ btn.disabled = false; btn.textContent = was; }
   }
