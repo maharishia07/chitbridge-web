@@ -659,6 +659,8 @@ const EP = {
   prodAdd:         {m:"POST",  p:"/api/products",                ok:"✓"},  // {item_data:{name,price}}
   prodDel:         {m:"DELETE",p:"/api/products/:id",            ok:"✓"},
   prodEdit:        {m:"PATCH", p:"/api/products/:id",            ok:"✓"},  // {item_data} — full edit (already live)
+  prodTemplate:    {m:"GET",   p:"/api/products/template",       ok:"✓"},  // the blank sheet in THIS catalogue's format
+  prodPreflight:   {m:"POST",  p:"/api/products/import/preflight",ok:"✓"}, // read a file before it becomes data — WRITES NOTHING
   // --- NET tree (NET-01 Spine) · live /api/network · cb_entity/cb_edge. NOTE: cb_* id-space — resolve self via netLookup(bridge_id); Dev needs backfill ---
   netLookup:      {m:"GET",  p:"/api/network/entities/lookup",            ok:"✓"},
   entitySearch:   {m:"GET",  p:"/api/entities/search",                    ok:"✓"},  // ?q= live recipient lookup (name/bridge_id)
@@ -2253,8 +2255,10 @@ function catalogueScreen(){
       <div class="srch" style="margin-top:8px">🔍 <input data-testid="cat-search" placeholder="Search name, code, unit" value="${esc(UI.prodQ||'')}" oninput="UI.prodQ=this.value;paintProdList()"></div>
       <div style="margin-top:8px;display:flex;align-items:center;gap:8px">
         <span style="font-size:11px;color:var(--grey)" id="ct_count">${prodVisible().length} product(s)</span>
+        <button data-testid="cat-check-csv" onclick="checkCatalogueFile()" title="Read a spreadsheet and see how its columns line up — nothing is imported"
+          style="margin-left:auto;border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:4px 9px;font-size:11.5px;color:var(--ink);cursor:pointer">🔍 Check file</button>
         <button data-testid="cat-template-csv" onclick="downloadCatalogueTemplate(this)" title="Download a blank sheet in your catalogue's own format"
-          style="margin-left:auto;border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:4px 9px;font-size:11.5px;color:var(--ink);cursor:pointer">📄 Template</button>
+          style="border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:4px 9px;font-size:11.5px;color:var(--ink);cursor:pointer">📄 Template</button>
         <button data-testid="cat-export-csv" onclick="exportCatalogueCSV(this)" title="Download every product as a spreadsheet"
           style="border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:4px 9px;font-size:11.5px;color:var(--ink);cursor:pointer">⬇ Export CSV</button>
       </div>
@@ -2426,7 +2430,7 @@ async function downloadCatalogueTemplate(btn){
   const was = btn ? btn.textContent : null;
   if(btn){ btn.disabled = true; btn.textContent = '📄 …'; }
   try{
-    const t = await api('/api/products/template');
+    const t = await api('prodTemplate');
     const blob = new Blob(['﻿' + t.csv], { type: 'text/csv;charset=utf-8' });   // BOM: Excel mangles ₹ without it
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -2450,6 +2454,78 @@ async function downloadCatalogueTemplate(btn){
   }finally{
     if(btn){ btn.disabled = false; btn.textContent = was; }
   }
+}
+/**
+ * checkCatalogueFile — read a spreadsheet BEFORE any of it becomes data.
+ *
+ * Athi, 2026-08-06: "what if the columns are different, or named differently? do we have a parser before uploading
+ * and providing any suggestion?"
+ *
+ * Pick a file (or paste it), and the server says how each incoming column lines up: matched exactly, recognised
+ * under a different name, guessed by similarity and needing confirmation, refused because a file may not set it, or
+ * unrecognised. NOTHING IS IMPORTED — the button says so and the panel says so, because a review step that quietly
+ * writes is worse than no review step.
+ */
+function checkCatalogueFile(){
+  modal('<div class="mh">🔍 Check a file</div><div class="mb">'
+    + '<div style="font-size:12.5px;color:var(--grey);margin-bottom:10px">Choose a spreadsheet or paste it below. We read the column headings and show how they line up with your catalogue. <b>Nothing is imported.</b></div>'
+    + '<input type="file" accept=".csv,text/csv" data-testid="cat-check-file" onchange="_cfPick(this)" style="font-size:12.5px;margin-bottom:9px">'
+    + '<textarea id="cf_text" data-testid="cat-check-text" placeholder="…or paste the rows here, heading row first" style="width:100%;min-height:120px;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:12.5px;font-family:ui-monospace,monospace;resize:vertical;background:var(--paper)"></textarea>'
+    + '<div id="cf_out" style="margin-top:10px"></div>'
+    + '</div><div class="mf"><button class="pri" data-testid="cat-check-run" onclick="_cfRun(this)">Check</button><button onclick="closeModal()">Close</button></div>', true);
+}
+function _cfPick(input){
+  var f = input && input.files && input.files[0]; if(!f) return;
+  var rd = new FileReader();
+  rd.onload = function(){ var el = document.getElementById('cf_text'); if(el) el.value = String(rd.result||'').replace(/^﻿/,''); };
+  rd.readAsText(f);
+}
+async function _cfRun(btn){
+  var text = (document.getElementById('cf_text')||{}).value || '';
+  var out = document.getElementById('cf_out'); if(!out) return;
+  if(!text.trim()){ out.innerHTML = '<div style="font-size:12.5px;color:#B4483C">Choose a file or paste some rows first.</div>'; return; }
+  var was = btn ? btn.textContent : null; if(btn){ btn.disabled = true; btn.textContent = 'Reading…'; }
+  try{
+    var r = (await api('prodPreflight', { body:{ csv: text } })).report;
+    var HOW = {
+      exact:        ['✓','#2E7D5B','matches your catalogue'],
+      synonym:      ['✓','#2E7D5B','recognised under another name'],
+      fuzzy:        ['?','#B07A2B','guessed — confirm this'],
+      'not-accepted':['—','#8A9099','your catalogue does not use this'],
+      unmatched:    ['—','#8A9099','not recognised — will be ignored'],
+      conflict:     ['!','#B07A2B','another column matched this better'],
+      blocked:      ['⨯','#B4483C','a file may not set this'],
+      empty:        ['—','#8A9099','this column has no heading']
+    };
+    var rowsHtml = (r.mapping||[]).map(function(m){
+      var h = HOW[m.how] || ['?','#8A9099',m.how];
+      return '<tr>'
+        + '<td style="padding:5px 8px;border-bottom:1px dashed var(--line);font-family:ui-monospace,monospace;font-size:12px">'+esc(m.incoming||'(blank)')+'</td>'
+        + '<td style="padding:5px 8px;border-bottom:1px dashed var(--line);color:'+h[1]+';font-weight:700;text-align:center">'+h[0]+'</td>'
+        + '<td style="padding:5px 8px;border-bottom:1px dashed var(--line);font-family:ui-monospace,monospace;font-size:12px;font-weight:600">'+esc(m.canonical||'—')+'</td>'
+        + '<td style="padding:5px 8px;border-bottom:1px dashed var(--line);font-size:11.5px;color:var(--grey)">'+esc(m.conflict||m.why||h[2])+'</td>'
+        + '</tr>';
+    }).join('');
+    var s = r.summary || {};
+    var badge = r.ready
+      ? '<span style="background:#E6F2EC;color:#2E7D5B;border-radius:6px;padding:3px 9px;font-size:11.5px;font-weight:700">Ready — every column is placed</span>'
+      : '<span style="background:#FBEDEA;color:#B4483C;border-radius:6px;padding:3px 9px;font-size:11.5px;font-weight:700">Needs a look before importing</span>';
+    var issues = (r.issues||[]).slice(0,25).map(function(i){
+      var c = i.severity==='error' ? '#B4483C' : (i.severity==='info' ? '#6b7176' : '#B07A2B');
+      return '<li style="color:'+c+'">line '+i.row+' · <b>'+esc(i.column)+'</b> — '+esc(i.message)+'</li>';
+    }).join('');
+    out.innerHTML = badge
+      + '<div style="font-size:12.5px;margin:9px 0 6px">'+s.rows+' row(s) read · <b>'+s.importable+'</b> would import · '+s.errors+' error(s) · '+s.warnings+' warning(s)</div>'
+      + '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse"><thead><tr>'
+      + ['In your file','','Becomes','Why'].map(function(h){ return '<th style="text-align:left;padding:5px 8px;font-size:10.5px;text-transform:uppercase;color:var(--grey);border-bottom:1px solid var(--line)">'+h+'</th>'; }).join('')
+      + '</tr></thead><tbody>'+rowsHtml+'</tbody></table></div>'
+      + ((r.notes||[]).length ? '<ul style="font-size:12px;line-height:1.6;padding-left:18px;margin:10px 0 0">'+r.notes.map(function(n){ return '<li>'+esc(n)+'</li>'; }).join('')+'</ul>' : '')
+      + (issues ? '<div style="font-size:11px;text-transform:uppercase;color:var(--grey);margin:10px 0 4px">Rows</div><ul style="font-size:12px;line-height:1.6;padding-left:18px;margin:0">'+issues+'</ul>'
+          + ((r.issues||[]).length>25 ? '<div style="font-size:11.5px;color:var(--grey);margin-top:5px">…and '+((r.issues||[]).length-25)+' more.</div>' : '') : '')
+      + '<div style="font-size:11.5px;color:var(--grey);margin-top:11px;border-top:1px solid var(--line);padding-top:8px">This was a read-only check — your catalogue has not changed.</div>';
+  }catch(e){
+    out.innerHTML = '<div style="font-size:12.5px;color:#B4483C">'+esc((e&&e.message)||'Could not read the file.')+'</div>';
+  }finally{ if(btn){ btn.disabled = false; btn.textContent = was; } }
 }
 function prodEditForm(d){ return ctField('name','Name',d.name||'')+`<div style="display:flex;gap:10px"><div style="flex:1">`+ctField('unit','Unit',d.unit||'',"placeholder=\"piece / kg / tonne\"")+`</div><div style="flex:1"><label class="fl">Price</label><div style="display:flex;align-items:stretch"><span style="display:flex;align-items:center;padding:0 11px;border:1px solid var(--line);border-right:0;border-radius:10px 0 0 10px;background:#f2f1ed;color:#6b7176;font-weight:700;font-size:13.5px;white-space:nowrap" title="${myCur()} — your business currency">${esc(curSym())}</span><input class="inp" id="ct_price" data-testid="cat-field-price" inputmode="numeric" style="border-radius:0 10px 10px 0" value="${cbHasPrice(d.price)?cbAmount(d.price):''}"></div></div></div>`+ctField('code','Code / HSN',pCode(d))+`<label class="fl">Description</label><textarea class="inp" id="ct_desc" data-testid="cat-field-desc" style="width:100%;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13.5px;min-height:58px;resize:vertical;background:var(--paper)">${esc(pDesc(d))}</textarea>`; }
 function prodViewFields(d){ const kv=(l,v)=>`<div class="kv" style="display:flex;gap:8px;padding:8px 12px;border-bottom:1px dashed var(--line);font-size:13px"><b style="min-width:96px;color:var(--grey);font-weight:600;font-size:11px;text-transform:uppercase">${l}</b><span style="font-weight:600">${v===''||v==null?'—':esc(v)}</span></div>`;

@@ -153,7 +153,10 @@ function _catfParseCSV(text){
       else if (ch === ',') { out.push(cur.trim()); cur = ''; }
       else cur += ch; }
     out.push(cur.trim()); return out; };
-  return { headers: sp(lines[0]), rows: lines.slice(1, 60).map(sp) };
+  // ⚠️ WAS `lines.slice(1, 60)`. The only caller is cwImportCSV, which IMPORTS these rows — so a 400-row paste
+  // brought in 59 and toasted "59 items imported" as though that were the whole file. A cap that silently drops
+  // data and reports success is the worst kind. Parse everything; a caller that only wants a preview slices it.
+  return { headers: sp(lines[0]), rows: lines.slice(1).map(sp) };
 }
 
 /* ---- sample values for the customer-experience preview ---- */
