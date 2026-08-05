@@ -223,7 +223,16 @@ function cbCurrency(v){ return (v&&typeof v==='object'&&typeof v.currency==='str
 function cbHasPrice(v){ return v!=null&&v!==''&&(typeof v!=='object'||typeof v.amount==='number'); }
 var _REGIONS=[]; var _REGION='IN';
 var _CUR={INR:'₹',MXN:'Mex$',USD:'$',EUR:'€',CNY:'¥',JPY:'¥'};
-var _FX={INR:1,MXN:0.20,USD:0.012,EUR:0.011,CNY:0.087,JPY:1.8};   // indicative FX (INR-base) — real FX is the ERP's job
+// NO FX TABLE. Deleted 2026-08-05, not deprecated — a rate table that exists will eventually be used.
+//
+// Athi: "assume you see Amazon.co.in from America — you will not get any conversion, you simply see values in INR."
+// Exactly so. A storefront shows the SELLER'S price in the SELLER'S currency, to everyone, everywhere. The viewer's
+// region decides language and units; it has never had any business deciding the money.
+//
+// What was here multiplied every price by a hardcoded rate keyed to the VIEWER's region and labelled the result
+// 'indicative'. Three things wrong with that: the rates were stale the day they shipped, an approximation was
+// shown where an exact figure exists, and it REPLACED the declared price instead of sitting beside it. Now that a
+// price carries its own currency, the honest render is simply to print what the seller declared.
 // per-language phrases — the catalogue labels render in the region's language (character variation zh/ja, word variation es/fr/de)
 var _L={
   en:{wall:'See it on your wall',order:'Order this →',combos:'Colour combinations',applied:'Applied with',por:'price on request'},
@@ -240,14 +249,26 @@ if(window.CBOffline){ CBOffline.configure({apiBase:API, token:function(){return 
 function tlang(){ var rc=regionCur(); return rc.language||'en'; }
 function t(k){ var l=tlang(); return (_L[l]&&_L[l][k])||_L.en[k]||k; }
 function regionCur(){ return _REGIONS.find(function(r){return r.region_code===_REGION;})||{}; }
-function priceSym(){ var rc=regionCur(); return _CUR[rc.currency]||rc.currency||'₹'; }
+// The symbol follows the MONEY, not the reader. Precedence: the price's own stamped currency, then the shop's,
+// then nothing rather than a guess — a wrong symbol on a right number is worse than no symbol at all.
+function curOf(price){ return cbCurrency(price) || (_SHOPDATA && _SHOPDATA.shop && _SHOPDATA.shop.currency_code) || null; }
+function symOf(code){ if(!code) return ''; if(_CUR[code]) return _CUR[code];
+  try { var pt=new Intl.NumberFormat(undefined,{style:'currency',currency:code,currencyDisplay:'narrowSymbol'})
+    .formatToParts(0).find(function(x){return x.type==='currency';}); return (pt&&pt.value)||code+' '; } catch(e){ return code+' '; } }
+function priceSym(price){ return symOf(curOf(price)); }
 function priceUnit(){ var rc=regionCur(); return rc.units||'litre'; }
-function priceVal(price){ var rc=regionCur(); return Math.round(price*(_FX[rc.currency]||1)); }
-function finishPrice(price, unit){ if(price==null) return '<small>'+t('por')+'</small>'; return priceSym()+esc(String(priceVal(price)))+' <small>/ '+esc(unit||priceUnit())+' · indicative</small>'; }
+// The amount, unchanged. No rate, no rounding of someone else's money — what the seller typed is what shows.
+function priceVal(price){ return price; }
+// 'indicative' is gone with the conversion: this IS the seller's price, not an approximation of it.
+//  is the price's own currency, passed down from itemPrice() — see the note there.
+function finishPrice(price, unit, cur){ if(price==null) return '<small>'+t('por')+'</small>';
+  return symOf(cur||curOf(null))+esc(String(priceVal(price)))+' <small>/ '+esc(unit||priceUnit())+'</small>'; }
 // commercials are GENERIC {price, unit}; price_per_litre is the pre-generic paint shape, still read so existing
 // adoptions keep pricing. The unit is the ITEM's own (kg / count / litre), never assumed.
 function itemPrice(it){ var c=(it&&it.commercials)||{};
-  if(cbHasPrice(c.price)) return {v:cbAmount(c.price),u:c.unit||it.unit||priceUnit()};
+  // Carry the price's OWN currency (c) alongside value and unit. A stamped price knows its denomination; the
+  // renderer should use that rather than fall back to the shop-level one, so a mixed catalogue stays honest.
+  if(cbHasPrice(c.price)) return {v:cbAmount(c.price),u:c.unit||it.unit||priceUnit(),c:cbCurrency(c.price)};
   if(c.price_per_litre!=null&&c.price_per_litre!=='') return {v:c.price_per_litre,u:'litre'};
   return null; }
 function setRegion(code){ _REGION=code; if(_SHOPDATA) render(_SHOPDATA); }
@@ -258,7 +279,10 @@ function regionBar(){
   return '<div style="margin:0 0 16px;padding:11px 13px;background:#f4f6f8;border:1px solid var(--line);border-radius:12px">'
     +'<div style="font-size:11px;color:var(--grey);margin-bottom:7px">🌐 Spin the globe — see this catalogue for a customer in:</div>'
     +'<div style="display:flex;flex-wrap:wrap;align-items:center">'+btns+'</div>'
-    +'<div style="font-size:12px;color:#3a4048;margin-top:6px">Showing for <b>'+esc(_REGION)+'</b> · currency <b>'+esc(rc.currency||'')+'</b> ('+esc(priceSym())+') · unit <b>'+esc(rc.units||'')+'</b> · language <b>'+esc(rc.language||'')+'</b>'+((rc.jurisdiction&&rc.jurisdiction.compliance)?(' · <span style="color:#b4453f">'+esc(rc.jurisdiction.compliance)+'</span>'):'')+'</div>'
+    // The region sets UNIT and LANGUAGE. It no longer claims to set the currency, because it never should have —
+    // the price is the seller's and is shown as the seller declared it. Stating where the money comes from, rather
+    // than implying the reader's region decides it, is the whole correction.
+    +'<div style="font-size:12px;color:#3a4048;margin-top:6px">Showing for <b>'+esc(_REGION)+'</b> · unit <b>'+esc(rc.units||'')+'</b> · language <b>'+esc(rc.language||'')+'</b>'+(curOf(null)?(' · <span style="color:#6a707a">priced by the seller in <b>'+esc(curOf(null))+'</b></span>'):'')+((rc.jurisdiction&&rc.jurisdiction.compliance)?(' · <span style="color:#b4453f">'+esc(rc.jurisdiction.compliance)+'</span>'):'')+'</div>'
     +'</div>';
 }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
@@ -282,7 +306,7 @@ function finishCard(it, cur, idx, vizEnabled){
     +(function(){ var b=itemBand(it);
         if(!_showsPrice()) return '<div class="price"><small>Price on request</small></div>';   // qty / text — the shop quotes later
         if(_METHOD==='range'&&b) return '<div class="price">'+esc(_bandText(b,'₹'))+' <small>/ '+esc((p&&p.u)||priceUnit())+' · seller’s range</small></div>';
-        return '<div class="price">'+finishPrice(price, p&&p.u)+'</div>'; })()
+        return '<div class="price">'+finishPrice(price, p&&p.u, p&&p.c)+'</div>'; })()
     +'<div style="margin-top:10px">'
     +(vizEnabled&&idx!=null?'<button data-testid="shop-viz-'+idx+'" onclick="vizOpen('+idx+')" style="margin:0 8px 0 0;border:1px solid #6a44a8;background:#F0EAF9;color:#6a44a8;border-radius:9px;padding:9px 16px;font-weight:700;font-size:13px;cursor:pointer">✨ '+t('wall')+'</button>':'')
     // 'text' = a listing: no order path at all. 'qty' has no price to show but IS orderable, so it must not be gated on price.
@@ -290,7 +314,7 @@ function finishCard(it, cur, idx, vizEnabled){
     +((idx!=null&&(price!=null||!_showsPrice()))?'<button data-testid="shop-order-'+idx+'" onclick="orderOpen('+idx+')" style="border:0;border-radius:9px;padding:9px 18px;background:#3F66A6;color:#fff;font-weight:700;font-size:13px;cursor:pointer">'+esc(_submitLabel())+'</button>':'')
     +'</div></div>';
 }
-function productRow(p, cur){ var d=(p.item_data||p)||{}; return '<div class="prow"><div style="flex:1"><b>'+esc(d.name||d.product||'item')+'</b> <span class="meta">'+esc(d.unit||'')+'</span></div><div style="font-weight:700">'+(cbHasPrice(d.price)?(priceSym()+esc(String(priceVal(cbAmount(d.price))))):'—')+'</div></div>'; }
+function productRow(p, cur){ var d=(p.item_data||p)||{}; return '<div class="prow"><div style="flex:1"><b>'+esc(d.name||d.product||'item')+'</b> <span class="meta">'+esc(d.unit||'')+'</span></div><div style="font-weight:700">'+(cbHasPrice(d.price)?(priceSym(d.price)+esc(String(cbAmount(d.price)))):'—')+'</div></div>'; }
 function render(data){
   var s=data.shop||{}, cur=(s.currency_code==='INR'||!s.currency_code)?'₹':(s.currency_code+' ');
   if(s.order_input&&typeof s.order_input==='object') _OI=s.order_input;   // the declared contract, from the API
