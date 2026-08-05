@@ -205,8 +205,17 @@ function _readSchemaFields(schema){
   return out;
 }
 // the seller's declared band for an item, when it has one
-function itemBand(it){ var c=(it&&it.commercials)||{}; return (c.price_min!=null||c.price_max!=null)?{min:c.price_min,max:c.price_max}:null; }
-function _bandText(b,cur){ if(!b)return ''; var lo=(b.min!=null?(cur+b.min):'…'), hi=(b.max!=null?(cur+b.max):'…'); return lo+' – '+hi; }
+// The BAND is money too. price_min/price_max are stamped { amount, currency } like any other price, so they must
+// be unwrapped — string-concatenating one renders "₹[object Object]", which is exactly what a range store showed.
+// Same class of bug as the silent zero, except loud, which is the only mercy in it.
+function itemBand(it){ var c=(it&&it.commercials)||{};
+  if(!cbHasPrice(c.price_min) && !cbHasPrice(c.price_max)) return null;
+  return { min: cbHasPrice(c.price_min)?cbAmount(c.price_min):null,
+           max: cbHasPrice(c.price_max)?cbAmount(c.price_max):null,
+           c:   cbCurrency(c.price_min) || cbCurrency(c.price_max) || null }; }
+// The symbol comes from the BAND's own currency; the caller's hint is only a fallback.
+function _bandText(b,cur){ if(!b)return ''; var sym=symOf(b.c||curOf(null))||cur||'';
+  var lo=(b.min!=null?(sym+b.min):'…'), hi=(b.max!=null?(sym+b.max):'…'); return lo+' – '+hi; }
 // cbAmount — TOLERANT PRICE READER. A price is either a legacy bare number or a stamped { amount, currency }.
 // Deployed BEFORE any row is stamped, because the idiom this replaces is `+d.price||0`: given an object that is
 // NaN, and NaN||0 is 0, so every stamped product would render as FREE — no error, no log, a correct-looking page.
@@ -305,7 +314,7 @@ function finishCard(it, cur, idx, vizEnabled){
     +(applied.length?'<div class="apply">'+applied.join(' · ')+'</div>':'')
     +(function(){ var b=itemBand(it);
         if(!_showsPrice()) return '<div class="price"><small>Price on request</small></div>';   // qty / text — the shop quotes later
-        if(_METHOD==='range'&&b) return '<div class="price">'+esc(_bandText(b,'₹'))+' <small>/ '+esc((p&&p.u)||priceUnit())+' · seller’s range</small></div>';
+        if(_METHOD==='range'&&b) return '<div class="price">'+esc(_bandText(b))+' <small>/ '+esc((p&&p.u)||priceUnit())+' · seller’s range</small></div>';
         return '<div class="price">'+finishPrice(price, p&&p.u, p&&p.c)+'</div>'; })()
     +'<div style="margin-top:10px">'
     +(vizEnabled&&idx!=null?'<button data-testid="shop-viz-'+idx+'" onclick="vizOpen('+idx+')" style="margin:0 8px 0 0;border:1px solid #6a44a8;background:#F0EAF9;color:#6a44a8;border-radius:9px;padding:9px 16px;font-weight:700;font-size:13px;cursor:pointer">✨ '+t('wall')+'</button>':'')
@@ -440,8 +449,8 @@ function orderConfirm(){
   if(_isNegotiable()){ var off=parseFloat(_ord.offer);
     if(!isFinite(off)||off<=0){ _ord.busy=false; orderRender(null,'Enter your offer.'); return; }
     var b=itemBand(it);
-    if(b&&b.min!=null&&off<Number(b.min)){ _ord.busy=false; orderRender(null,'Your offer is below the seller’s range ('+_bandText(b,'₹')+').'); return; }
-    if(b&&b.max!=null&&off>Number(b.max)){ _ord.busy=false; orderRender(null,'Your offer is above the seller’s range ('+_bandText(b,'₹')+').'); return; }
+    if(b&&b.min!=null&&off<Number(b.min)){ _ord.busy=false; orderRender(null,'Your offer is below the seller’s range ('+_bandText(b)+').'); return; }
+    if(b&&b.max!=null&&off>Number(b.max)){ _ord.busy=false; orderRender(null,'Your offer is above the seller’s range ('+_bandText(b)+').'); return; }
     line.proposal={price:off};
   }
   var body={ identifier:_ord.contact, name:_ord.name, otp:otp, location:_ord.loc||'', line_items:[line] };
