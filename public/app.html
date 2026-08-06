@@ -2242,14 +2242,73 @@ function supConfidenceStrip(){
   if(r.loading) return '<div class="sec">Trade confidence</div><div class="loadwrap" style="justify-content:flex-start;padding:6px 0"><span class="spin"></span> checking clearances…</div>';
   if(r.err||!r.data) return '';
   var sm=r.data.summary||{}, ready=!!sm.ready, col=ready?"#2f8f5b":"#c98a1a";
-  return '<div class="sec">Trade confidence</div><div style="display:flex;gap:11px;align-items:center;border:1px solid '+(ready?"#bfe3cb":"#f0dcae")+';background:'+(ready?"#eaf6ee":"#fdf3e3")+';border-radius:10px;padding:11px 13px">'
+  // ⚠️ SAY WHOSE. Athi, 2026-08-06: "does it bring the trade-ready details of Beta here? if so it has to be
+  // EXPLICITLY stated."
+  //
+  // It does — GET /api/governance/readiness/:bridge_id resolves the clearances of THAT bridge_id. But the panel was
+  // headed only "Trade confidence" and sat inside your own screen, so "35 clearances outstanding" read just as
+  // easily as YOUR OWN shortfall. A number about someone else, shown without saying so, is worse than no number:
+  // it is the kind of thing a person acts on before noticing they misread it.
+  var who=esc(supName(x));
+  return '<div class="sec">'+who+' — trade confidence <span style="font-weight:400;color:var(--grey);text-transform:none;letter-spacing:0">(their clearances, not yours)</span></div>'
+    +'<div style="display:flex;gap:11px;align-items:center;border:1px solid '+(ready?"#bfe3cb":"#f0dcae")+';background:'+(ready?"#eaf6ee":"#fdf3e3")+';border-radius:10px;padding:11px 13px">'
     +'<div style="width:34px;height:34px;border-radius:50%;background:'+col+';color:#fff;display:grid;place-items:center;font-size:17px;flex:0 0 auto">'+(ready?"✓":"!")+'</div>'
-    +'<div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13px;color:'+col+'">'+(ready?"Import-ready — every clearance met":((sm.total-sm.met)+" clearance(s) outstanding"))+'</div><div style="font-size:11px;color:var(--grey)">'+(sm.met||0)+" / "+(sm.total||0)+' met · verifiable on the rail</div></div>'
-    +'<button onclick="viewSupplierPassport(\''+esc(x.bridge_id)+'\')" style="border:1px solid var(--line);background:#fff;border-radius:8px;padding:7px 11px;font-size:12px;font-weight:700;cursor:pointer;flex:0 0 auto">Passport &rarr;</button></div>';
+    +'<div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13px;color:'+col+'">'+(ready?(who+" is import-ready — every clearance met"):(who+" has "+(sm.total-sm.met)+" clearance(s) outstanding"))+'</div><div style="font-size:11px;color:var(--grey)">'+(sm.met||0)+" / "+(sm.total||0)+' met · status only — their evidence stays theirs</div></div>'
+    +'<button onclick="viewSupplierPassport(\''+esc(x.bridge_id)+'\',\''+String(supName(x)).replace(/[\\\\\']/g,'')+'\')" title="Open '+who+'\'s readiness passport" style="border:1px solid var(--line);background:#fff;border-radius:8px;padding:7px 11px;font-size:12px;font-weight:700;cursor:pointer;flex:0 0 auto">'+who+'\'s passport &rarr;</button></div>';
 }
-function viewSupplierPassport(bridge){
-  UI.nav='readiness'; UI.rdTab='check'; UI.rdBridge=bridge; UI.rdCheck={loading:true};
-  ensureCap('readiness').then(function(){ renderApp(); api('readinessOf',{params:{bridge_id:bridge}}).then(function(d){ UI.rdCheck=d; renderApp(); }).catch(function(e){ UI.rdCheck={error:(e&&e.message)||'Not found'}; renderApp(); }); });
+/**
+ * viewSupplierPassport — THEIR readiness, as an overlay, plainly labelled as theirs.
+ *
+ * Athi, 2026-08-06: *"passport redirects to Alpha's trade-ready, not showing Beta's. It has to be a webpage overlay,
+ * and also very clearly state that it is Beta's trade-ready page."*
+ *
+ * ⚠️ THE BUG: this used to set `UI.nav='readiness'` and navigate. That screen is the CALLER'S OWN readiness — it
+ * loads from `GET /api/governance/readiness` (no bridge_id), which resolves for whoever is signed in. So clicking
+ * "Passport" on Beta took Alpha to *Alpha's* clearances. The `UI.rdCheck` this function set was simply not what that
+ * screen renders. Worse than a dead link: a screen full of real numbers about the wrong company.
+ *
+ * Now it stays where you are, opens over the top, and names the business in the title, the subtitle and every count.
+ * Leaving the supplier's page to read the supplier's passport was always the wrong shape.
+ */
+async function viewSupplierPassport(bridge, name){
+  var who = name || bridge;
+  modal('<div class="mh">🛂 '+esc(who)+' — trade readiness</div><div class="mb" id="pp_body">'
+    + '<div class="loadwrap"><span class="spin"></span> reading their passport…</div></div>'
+    + '<div class="mf"><button class="pri" onclick="closeModal()">Close</button></div>', true);
+  try{
+    var d = await api('readinessOf', { params: { bridge_id: bridge } });
+    var body = document.getElementById('pp_body'); if(!body) return;
+    var sup = d.supplier || {}, sm = d.summary || {}, cl = d.clearances || [];
+    var label = esc(sup.display_name || who);
+    var ready = !!sm.ready;
+    var PILL = { gathered:['#2f8f5b','#eaf6ee','met'], expiring:['#b07a2b','#fdf3e3','expiring'],
+                 expired:['#b4483c','#fbeae9','expired'], pending:['#8a949c','#f4f6f8','not provided'] };
+    var rows = cl.map(function(c){
+      var p = PILL[c.status] || PILL.pending;
+      return '<tr><td style="padding:6px 8px;border-bottom:1px dashed var(--line);font-size:12.5px">'+esc(c.title||c.doc||'')
+        + '<div style="font-size:11px;color:var(--grey)">'+esc(c.standard||'')+(c.scope?' · '+esc(c.scope):'')+'</div></td>'
+        + '<td style="padding:6px 8px;border-bottom:1px dashed var(--line);text-align:right;white-space:nowrap">'
+        + '<span style="font-size:11px;font-weight:700;color:'+p[0]+';background:'+p[1]+';border-radius:7px;padding:2px 8px">'+p[2]+'</span>'
+        + (c.valid_until?'<div style="font-size:10.5px;color:var(--grey);margin-top:2px">until '+esc(String(c.valid_until).slice(0,10))+'</div>':'')
+        + '</td></tr>';
+    }).join('');
+    body.innerHTML =
+        '<div style="background:#eef3fb;border:1px solid #d6e2f5;border-radius:10px;padding:9px 12px;font-size:12.5px;margin-bottom:11px">'
+      + 'This is <b>'+label+'</b>&rsquo;s readiness — the supplier you are looking at. <b>Not yours.</b> '
+      + '<span style="color:var(--grey)">User ID '+esc(sup.bridge_id||bridge)+'</span></div>'
+      + '<div style="display:flex;gap:10px;align-items:center;margin-bottom:12px">'
+      + '<div style="width:38px;height:38px;border-radius:50%;background:'+(ready?'#2f8f5b':'#c98a1a')+';color:#fff;display:grid;place-items:center;font-size:18px">'+(ready?'✓':'!')+'</div>'
+      + '<div><div style="font-weight:700;font-size:13.5px">'+(ready?(label+' is import-ready'):(label+' has '+((sm.total||0)-(sm.met||0))+' clearance(s) outstanding'))+'</div>'
+      + '<div style="font-size:11.5px;color:var(--grey)">'+(sm.met||0)+' of '+(sm.total||0)+' met'+(sm.expiring?' · '+sm.expiring+' expiring':'')+(sm.expired?' · '+sm.expired+' expired':'')+'</div></div></div>'
+      + (rows ? '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">'+rows+'</table></div>'
+              : '<div style="font-size:12.5px;color:var(--grey)">They have no clearances recorded yet.</div>')
+      + '<div style="font-size:11.5px;color:var(--grey);margin-top:12px;border-top:1px solid var(--line);padding-top:8px">'
+      + 'Status and validity only — the documents themselves stay with '+label+'. Nothing here is your own readiness; '
+      + 'for that, open <b>Trade readiness</b> from the menu.</div>';
+  }catch(e){
+    var b2 = document.getElementById('pp_body');
+    if(b2) b2.innerHTML = '<div style="font-size:12.5px;color:#B4483C">'+esc((e&&e.message)||'Could not read their passport.')+'</div>';
+  }
 }
 function setSupMode(m){ UI.supMode=m; paintSupDetail(); }
 function supDetailHTML(){
@@ -2288,10 +2347,11 @@ function supDetailHTML(){
 let _spSearchT=null;
 function supSearch(q){ clearTimeout(_spSearchT); q=(q||'').trim(); const h=document.getElementById('sp_sugg'); if(q.length<2){ if(h)h.innerHTML=''; return; } _spSearchT=setTimeout(async function(){ try{ const r=await api("entitySearch",{query:{q:q}}); supRenderSugg(Array.isArray(r)?r:((r&&r.results)||[])); }catch(_){ const hh=document.getElementById('sp_sugg'); if(hh)hh.innerHTML=''; } }, 250); }
 function supRenderSugg(list){ UI._supSugg=list||[]; const h=document.getElementById('sp_sugg'); if(!h)return; if(!UI._supSugg.length){ h.innerHTML='<div class="ccsugg-empty">No matching business found</div>'; return; } h.innerHTML=UI._supSugg.slice(0,8).map(function(e,i){ return '<div class="ccsugg-item" onclick="supPick('+i+')"><span class="ccsugg-nm">'+esc(e.display_name||'')+'</span><span class="ccsugg-id">'+esc(e.bridge_id||'')+'</span></div>'; }).join(''); }
-async function supPick(i){ const e=(UI._supSugg||[])[i]; if(!e)return; const h=document.getElementById('sp_sugg'); if(h)h.innerHTML=''; const err=document.getElementById('sp_err'); if(err)err.textContent=''; const a=document.getElementById('sp_add'); if(a)a.value=e.display_name||''; try{ await api("supAdd",{body:{supplier_bridge_id:e.bridge_id}}); toast('Supplier added ✓'); if(a)a.value=''; await loadSuppliers(); }catch(ex){ if(err)err.textContent=ex.message; } }
+async function supPick(i){ const e=(UI._supSugg||[])[i]; if(!e)return; const h=document.getElementById('sp_sugg'); if(h)h.innerHTML=''; const err=document.getElementById('sp_err'); if(err)err.textContent=''; const a=document.getElementById('sp_add'); if(a)a.value=e.display_name||''; if(!confirm('Add ' + (e.display_name||e.bridge_id) + ' (' + e.bridge_id + ') as your supplier?\n\nThey are not asked and are not notified — this is your own list. You will see what their public storefront shows.')){ if(a)a.value=''; return; } try{ await api("supAdd",{body:{supplier_bridge_id:e.bridge_id}}); toast('Supplier added ✓'); if(a)a.value=''; await loadSuppliers(); }catch(ex){ if(err)err.textContent=ex.message; } }
 async function addSupplier(){ const x=document.getElementById("sp_err"); if(x)x.textContent=""; const bid=(val("sp_add")||"").trim(); if(!bid){ if(x)x.textContent="Enter a supplier's name, User ID or email."; return; } const h=document.getElementById('sp_sugg'); if(h)h.innerHTML=''; if(!isUserId(bid)){ if(x)x.textContent="Type a name and pick from the list, or enter a User ID (8+ chars) / email."; return; }
+  if(!confirm('Add ' + bid + ' as your supplier?\n\nThey are not asked and are not notified — this is your own list. You will see what their public storefront shows.')) return;
   try{ await api("supAdd",{body:{supplier_bridge_id:bid}}); toast("Supplier added ✓"); const a=document.getElementById('sp_add'); if(a)a.value=''; await loadSuppliers(); }catch(e){ if(x)x.textContent=e.message; } }
-async function delSupplier(id){ if(!confirm("Remove this supplier from your list?")) return; try{ await api("supDel",{params:{id}}); UI.supSel=null; UI.supDet=null; UI.mdetail=false; toast(MSG.supplierRemoved()); await loadSuppliers(); }catch(e){ toast(MSG.fail("remove the supplier", e)); } }
+async function delSupplier(id){ const _s=(UI.sups||[]).find(function(v){return v.supplier_list_id===id;}); const _n=_s?supName(_s):'this supplier'; if(!confirm('Remove ' + _n + ' from your supplier list?\n\nTheir catalogue and their business are untouched — only your own list entry is removed.')) return; try{ await api("supDel",{params:{id}}); UI.supSel=null; UI.supDet=null; UI.mdetail=false; toast(MSG.supplierRemoved()); await loadSuppliers(); }catch(e){ toast(MSG.fail("remove the supplier", e)); } }
 async function toggleSupPref(id){ const x=(UI.sups||[]).find(s=>s.supplier_list_id===id); if(!x)return; const nv=!x.preferred;
   try{ await api("supPatch",{params:{id},body:{preferred:nv}}); x.preferred=nv; if(UI.supDet&&UI.supDet.supplier&&UI.supDet.supplier.supplier_list_id===id)UI.supDet.supplier.preferred=nv; paintSupList(); paintSupDetail(); toast(nv?"Marked preferred ★":"Removed preferred"); }
   catch(e){ toast(MSG.fail("update the supplier", e)+" — needs the Stage-B migration"); } }
