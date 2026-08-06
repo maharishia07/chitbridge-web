@@ -661,6 +661,9 @@ const EP = {
   prodEdit:        {m:"PATCH", p:"/api/products/:id",            ok:"✓"},  // {item_data} — full edit (already live)
   prodTemplate:    {m:"GET",   p:"/api/products/template",       ok:"✓"},  // the blank sheet in THIS catalogue's format
   prodPreflight:   {m:"POST",  p:"/api/products/import/preflight",ok:"✓"}, // read a file before it becomes data — WRITES NOTHING
+  prodImport:      {m:"POST",  p:"/api/products/import",         ok:"✓"},  // the commit half — a decision per column, confirm:true required
+  prodStarters:    {m:"GET",   p:"/api/products/starter-columns",ok:"✓"},  // the standard column set for a trade
+  prodStarterAdopt:{m:"POST",  p:"/api/products/starter-columns",ok:"✓"}   // adopt one — ADDITIVE, never retypes an existing column
   // --- NET tree (NET-01 Spine) · live /api/network · cb_entity/cb_edge. NOTE: cb_* id-space — resolve self via netLookup(bridge_id); Dev needs backfill ---
   netLookup:      {m:"GET",  p:"/api/network/entities/lookup",            ok:"✓"},
   entitySearch:   {m:"GET",  p:"/api/entities/search",                    ok:"✓"},  // ?q= live recipient lookup (name/bridge_id)
@@ -2255,8 +2258,10 @@ function catalogueScreen(){
       <div class="srch" style="margin-top:8px">🔍 <input data-testid="cat-search" placeholder="Search name, code, unit" value="${esc(UI.prodQ||'')}" oninput="UI.prodQ=this.value;paintProdList()"></div>
       <div style="margin-top:8px;display:flex;align-items:center;gap:8px">
         <span style="font-size:11px;color:var(--grey)" id="ct_count">${prodVisible().length} product(s)</span>
-        <button data-testid="cat-check-csv" onclick="checkCatalogueFile()" title="Read a spreadsheet and see how its columns line up — nothing is imported"
-          style="margin-left:auto;border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:4px 9px;font-size:11.5px;color:var(--ink);cursor:pointer">🔍 Check file</button>
+        <button data-testid="cat-starter-set" onclick="startFromStandardSet()" title="Add the columns your trade expects"
+          style="margin-left:auto;border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:4px 9px;font-size:11.5px;color:var(--ink);cursor:pointer">📐 Standard set</button>
+        <button data-testid="cat-check-csv" onclick="checkCatalogueFile()" title="Read a spreadsheet, choose what each column becomes, then import"
+          style="border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:4px 9px;font-size:11.5px;color:var(--ink);cursor:pointer">🔍 Check &amp; import</button>
         <button data-testid="cat-template-csv" onclick="downloadCatalogueTemplate(this)" title="Download a blank sheet in your catalogue's own format"
           style="border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:4px 9px;font-size:11.5px;color:var(--ink);cursor:pointer">📄 Template</button>
         <button data-testid="cat-export-csv" onclick="exportCatalogueCSV(this)" title="Download every product as a spreadsheet"
@@ -2467,12 +2472,47 @@ async function downloadCatalogueTemplate(btn){
  * writes is worse than no review step.
  */
 function checkCatalogueFile(){
+  UI._cf = null;
   modal('<div class="mh">🔍 Check a file</div><div class="mb">'
-    + '<div style="font-size:12.5px;color:var(--grey);margin-bottom:10px">Choose a spreadsheet or paste it below. We read the column headings and show how they line up with your catalogue. <b>Nothing is imported.</b></div>'
+    + '<div style="font-size:12.5px;color:var(--grey);margin-bottom:10px">Choose a spreadsheet or paste it below. We read the column headings and show how they line up with your catalogue. <b>Nothing is imported until you say so.</b></div>'
     + '<input type="file" accept=".csv,text/csv" data-testid="cat-check-file" onchange="_cfPick(this)" style="font-size:12.5px;margin-bottom:9px">'
-    + '<textarea id="cf_text" data-testid="cat-check-text" placeholder="…or paste the rows here, heading row first" style="width:100%;min-height:120px;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:12.5px;font-family:ui-monospace,monospace;resize:vertical;background:var(--paper)"></textarea>'
+    + '<textarea id="cf_text" data-testid="cat-check-text" placeholder="…or paste the rows here, heading row first" style="width:100%;min-height:110px;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:12.5px;font-family:ui-monospace,monospace;resize:vertical;background:var(--paper)"></textarea>'
     + '<div id="cf_out" style="margin-top:10px"></div>'
-    + '</div><div class="mf"><button class="pri" data-testid="cat-check-run" onclick="_cfRun(this)">Check</button><button onclick="closeModal()">Close</button></div>', true);
+    + '</div><div class="mf"><button class="pri" data-testid="cat-check-run" onclick="_cfRun(this)">Check</button>'
+    + '<button id="cf_import" data-testid="cat-import-run" onclick="_cfImport(this)" disabled title="Check a file first" style="opacity:.5">Import</button>'
+    + '<button onclick="closeModal()">Close</button></div>', true);
+}
+/**
+ * startFromStandardSet — the standard columns for a trade, so an empty catalogue is not a blank page.
+ *
+ * Athi, 2026-08-06: "initially when the registration happens the catalogue is empty… we can provide a list of
+ * columns, a standard set which can be used."
+ *
+ * Adopting a set is ADDITIVE: it adds what is missing and never renames, retypes or removes a column already in
+ * use, because products already stored satisfy the current definition.
+ */
+async function startFromStandardSet(){
+  try{
+    const r = await api('prodStarters');
+    const opts = (r.verticals||[]).map(function(v){ return '<option value="'+esc(v.key)+'">'+esc(v.title)+' — '+v.field_count+' columns</option>'; }).join('');
+    modal('<div class="mh">📐 Start from a standard set</div><div class="mb">'
+      + '<div style="font-size:12.5px;color:var(--grey);margin-bottom:10px">A new catalogue starts with name, unit and price. Pick the trade you are in and we add the columns that trade expects — you can still add your own from a spreadsheet afterwards.</div>'
+      + '<select id="cf_vert" data-testid="cat-starter-pick" class="inp" style="width:100%">'+opts+'</select>'
+      + '<div id="cf_vout" style="margin-top:10px"></div>'
+      + '</div><div class="mf"><button class="pri" data-testid="cat-starter-adopt" onclick="_cfAdoptSet(this)">Add these columns</button><button onclick="closeModal()">Close</button></div>');
+  }catch(e){ if(typeof toast==='function') toast((e&&e.message)||'Could not load the standard sets.'); }
+}
+async function _cfAdoptSet(btn){
+  const v = (document.getElementById('cf_vert')||{}).value;
+  const out = document.getElementById('cf_vout'); if(!v||!out) return;
+  const was = btn.textContent; btn.disabled = true; btn.textContent = 'Adding…';
+  try{
+    const r = await api('prodStarterAdopt', { body:{ vertical: v } });
+    out.innerHTML = '<div style="font-size:12.5px">'+esc(r.message||'')+'</div>'
+      + ((r.added||[]).length ? '<div style="font-size:12px;color:var(--grey);margin-top:6px">Added: '+r.added.map(esc).join(', ')+'</div>' : '')
+      + ((r.unchanged||[]).length ? '<div style="font-size:12px;color:var(--grey);margin-top:4px">Already there: '+r.unchanged.map(esc).join(', ')+'</div>' : '');
+  }catch(e){ out.innerHTML = '<div style="font-size:12.5px;color:#B4483C">'+esc((e&&e.message)||'Could not add the columns.')+'</div>'; }
+  finally{ btn.disabled = false; btn.textContent = was; }
 }
 function _cfPick(input){
   var f = input && input.files && input.files[0]; if(!f) return;
@@ -2486,47 +2526,125 @@ async function _cfRun(btn){
   if(!text.trim()){ out.innerHTML = '<div style="font-size:12.5px;color:#B4483C">Choose a file or paste some rows first.</div>'; return; }
   var was = btn ? btn.textContent : null; if(btn){ btn.disabled = true; btn.textContent = 'Reading…'; }
   try{
-    var r = (await api('prodPreflight', { body:{ csv: text } })).report;
+    var res = await api('prodPreflight', { body:{ csv: text } });
+    var r = res.report;
+    UI._cf = { csv: text, accepted: res.accepted||[], optional: res.optional||[], report: r };
+
+    // How each verdict reads, and what it DEFAULTS the decision to. A blocked column has no choice at all — the
+    // control is removed rather than merely pre-set, because a disabled dropdown still looks like a decision
+    // someone could change.
     var HOW = {
-      exact:        ['✓','#2E7D5B','matches your catalogue'],
-      synonym:      ['✓','#2E7D5B','recognised under another name'],
-      fuzzy:        ['?','#B07A2B','guessed — confirm this'],
+      exact:         ['✓','#2E7D5B','matches your catalogue'],
+      synonym:       ['✓','#2E7D5B','recognised under another name'],
+      contains:      ['?','#B07A2B','probably this — confirm'],
+      fuzzy:         ['?','#B07A2B','guessed — confirm this'],
+      ambiguous:     ['?','#B07A2B','could be more than one thing'],
       'not-accepted':['—','#8A9099','your catalogue does not use this'],
-      unmatched:    ['—','#8A9099','not recognised — will be ignored'],
-      conflict:     ['!','#B07A2B','another column matched this better'],
-      blocked:      ['⨯','#B4483C','a file may not set this'],
-      empty:        ['—','#8A9099','this column has no heading']
+      unmatched:     ['—','#8A9099','not recognised'],
+      conflict:      ['!','#B07A2B','another column matched this better'],
+      blocked:       ['⨯','#B4483C','a file may not set this'],
+      empty:         ['—','#8A9099','this column has no heading']
     };
-    var rowsHtml = (r.mapping||[]).map(function(m){
+    var accepted = res.accepted || [];
+    var rowsHtml = (r.mapping||[]).map(function(m, i){
       var h = HOW[m.how] || ['?','#8A9099',m.how];
+      var control;
+      if(m.how === 'blocked' || m.how === 'empty'){
+        control = '<span style="font-size:11.5px;color:'+h[1]+'">not importable</span>';
+      } else {
+        var opts = ['<option value="ignore">Leave it out</option>'];
+        accepted.forEach(function(f){
+          var sel = (m.canonical === f) ? ' selected' : '';
+          opts.push('<option value="map:'+esc(f)+'"'+sel+'>Use as '+esc(f)+'</option>');
+        });
+        // Only offer to CREATE where nothing in the catalogue claimed it — otherwise the obvious click is the one
+        // that grows a second column meaning the same thing.
+        if(!m.canonical) opts.push('<option value="create" selected>Add as a new column</option>');
+        control = '<select data-cfcol="'+esc(m.incoming||'')+'" data-testid="cf-decide-'+i+'" class="inp" style="font-size:12px;padding:3px 6px;width:100%">'+opts.join('')+'</select>';
+      }
       return '<tr>'
         + '<td style="padding:5px 8px;border-bottom:1px dashed var(--line);font-family:ui-monospace,monospace;font-size:12px">'+esc(m.incoming||'(blank)')+'</td>'
         + '<td style="padding:5px 8px;border-bottom:1px dashed var(--line);color:'+h[1]+';font-weight:700;text-align:center">'+h[0]+'</td>'
-        + '<td style="padding:5px 8px;border-bottom:1px dashed var(--line);font-family:ui-monospace,monospace;font-size:12px;font-weight:600">'+esc(m.canonical||'—')+'</td>'
+        + '<td style="padding:5px 8px;border-bottom:1px dashed var(--line);min-width:150px">'+control+'</td>'
         + '<td style="padding:5px 8px;border-bottom:1px dashed var(--line);font-size:11.5px;color:var(--grey)">'+esc(m.conflict||m.why||h[2])+'</td>'
         + '</tr>';
     }).join('');
+
     var s = r.summary || {};
-    var badge = r.ready
-      ? '<span style="background:#E6F2EC;color:#2E7D5B;border-radius:6px;padding:3px 9px;font-size:11.5px;font-weight:700">Ready — every column is placed</span>'
-      : '<span style="background:#FBEDEA;color:#B4483C;border-radius:6px;padding:3px 9px;font-size:11.5px;font-weight:700">Needs a look before importing</span>';
+    var blocking = (s.errors || 0) > 0;
+    var badge = blocking
+      ? '<span style="background:#FBEDEA;color:#B4483C;border-radius:6px;padding:3px 9px;font-size:11.5px;font-weight:700">'+s.errors+' row problem(s) — fix the file first</span>'
+      : (r.ready
+        ? '<span style="background:#E6F2EC;color:#2E7D5B;border-radius:6px;padding:3px 9px;font-size:11.5px;font-weight:700">Every column is placed</span>'
+        : '<span style="background:#FDF3E3;color:#B07A2B;border-radius:6px;padding:3px 9px;font-size:11.5px;font-weight:700">Check the choices below, then import</span>');
     var issues = (r.issues||[]).slice(0,25).map(function(i){
       var c = i.severity==='error' ? '#B4483C' : (i.severity==='info' ? '#6b7176' : '#B07A2B');
       return '<li style="color:'+c+'">line '+i.row+' · <b>'+esc(i.column)+'</b> — '+esc(i.message)+'</li>';
     }).join('');
+
     out.innerHTML = badge
       + '<div style="font-size:12.5px;margin:9px 0 6px">'+s.rows+' row(s) read · <b>'+s.importable+'</b> would import · '+s.errors+' error(s) · '+s.warnings+' warning(s)</div>'
       + '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse"><thead><tr>'
-      + ['In your file','','Becomes','Why'].map(function(h){ return '<th style="text-align:left;padding:5px 8px;font-size:10.5px;text-transform:uppercase;color:var(--grey);border-bottom:1px solid var(--line)">'+h+'</th>'; }).join('')
+      + ['In your file','','What to do with it','Why'].map(function(h){ return '<th style="text-align:left;padding:5px 8px;font-size:10.5px;text-transform:uppercase;color:var(--grey);border-bottom:1px solid var(--line)">'+h+'</th>'; }).join('')
       + '</tr></thead><tbody>'+rowsHtml+'</tbody></table></div>'
       + ((r.notes||[]).length ? '<ul style="font-size:12px;line-height:1.6;padding-left:18px;margin:10px 0 0">'+r.notes.map(function(n){ return '<li>'+esc(n)+'</li>'; }).join('')+'</ul>' : '')
       + (issues ? '<div style="font-size:11px;text-transform:uppercase;color:var(--grey);margin:10px 0 4px">Rows</div><ul style="font-size:12px;line-height:1.6;padding-left:18px;margin:0">'+issues+'</ul>'
           + ((r.issues||[]).length>25 ? '<div style="font-size:11.5px;color:var(--grey);margin-top:5px">…and '+((r.issues||[]).length-25)+' more.</div>' : '') : '')
-      + '<div style="font-size:11.5px;color:var(--grey);margin-top:11px;border-top:1px solid var(--line);padding-top:8px">This was a read-only check — your catalogue has not changed.</div>';
+      + '<div style="font-size:11.5px;color:var(--grey);margin-top:11px;border-top:1px solid var(--line);padding-top:8px">Reading the file changed nothing. <b>Import</b> applies the choices above — it adds and updates products, and never deletes one.</div>';
+
+    // The Import button is enabled only when the file itself is sound. Row errors are not a warning to click past:
+    // the server refuses them too, and offering the button anyway teaches people to ignore it.
+    var ib = document.getElementById('cf_import');
+    if(ib){ ib.disabled = blocking; ib.style.opacity = blocking ? '.5' : '1';
+      ib.title = blocking ? 'Fix the row problems first' : 'Apply these choices to your catalogue'; }
   }catch(e){
     out.innerHTML = '<div style="font-size:12.5px;color:#B4483C">'+esc((e&&e.message)||'Could not read the file.')+'</div>';
   }finally{ if(btn){ btn.disabled = false; btn.textContent = was; } }
 }
+/**
+ * _cfImport — apply the per-column choices.
+ *
+ * The decisions come from the dropdowns, NOT from the preflight's suggestions: what the person sees on screen is
+ * exactly what is sent. The server re-reads the file and re-checks every decision, so nothing here is trusted.
+ */
+async function _cfImport(btn){
+  if(!UI._cf){ if(typeof toast==='function') toast('Check a file first.'); return; }
+  var out = document.getElementById('cf_out');
+  var sels = Array.prototype.slice.call(document.querySelectorAll('[data-cfcol]'));
+  var decisions = sels.map(function(el){
+    var v = el.value || 'ignore';
+    if(v === 'create') return { incoming: el.getAttribute('data-cfcol'), action: 'create' };
+    if(v.indexOf('map:') === 0) return { incoming: el.getAttribute('data-cfcol'), action: 'map', field: v.slice(4) };
+    return { incoming: el.getAttribute('data-cfcol'), action: 'ignore' };
+  });
+  var creating = decisions.filter(function(d){ return d.action === 'create'; }).length;
+  var using = decisions.filter(function(d){ return d.action !== 'ignore'; }).length;
+  if(!using){ if(typeof toast==='function') toast('Every column is set to be left out.'); return; }
+  if(!confirm('Import using ' + using + ' column(s)'
+    + (creating ? ', adding ' + creating + ' new column(s) to your catalogue' : '')
+    + '?\n\nProducts are added or updated. Nothing is deleted.')) return;
+
+  var was = btn.textContent; btn.disabled = true; btn.textContent = 'Importing…';
+  try{
+    var r = await api('prodImport', { body:{ csv: UI._cf.csv, decisions: decisions, confirm: true } });
+    var sum = r.summary || {};
+    out.innerHTML = '<div style="background:#E6F2EC;color:#2E7D5B;border-radius:6px;padding:8px 10px;font-size:12.5px;font-weight:700">'+esc(r.message||'Imported')+'</div>'
+      + ((r.created_columns||[]).length ? '<div style="font-size:12px;color:var(--grey);margin-top:8px">Your catalogue now also has: '+r.created_columns.map(esc).join(', ')+'. The next template you download will include them.</div>' : '')
+      + '<ul style="font-size:12px;line-height:1.6;padding-left:18px;margin:10px 0 0">'
+      + (r.outcome||[]).slice(0,40).map(function(o){
+          var c = o.action==='failed' ? '#B4483C' : 'var(--ink)';
+          return '<li style="color:'+c+'">line '+o.line+' · '+esc(o.name||'')+' — '+esc(o.action)+(o.message?': '+esc(o.message):'')+'</li>';
+        }).join('')
+      + '</ul>'
+      + ((r.outcome||[]).length>40 ? '<div style="font-size:11.5px;color:var(--grey);margin-top:5px">…and '+((r.outcome||[]).length-40)+' more.</div>' : '');
+    btn.disabled = true; btn.style.opacity = '.5';
+    if(typeof loadProducts === 'function') loadProducts();
+  }catch(e){
+    out.innerHTML = '<div style="font-size:12.5px;color:#B4483C">'+esc((e&&e.message)||'Could not import.')+' Nothing was changed.</div>';
+    btn.disabled = false;
+  }finally{ btn.textContent = was; }
+}
+
 function prodEditForm(d){ return ctField('name','Name',d.name||'')+`<div style="display:flex;gap:10px"><div style="flex:1">`+ctField('unit','Unit',d.unit||'',"placeholder=\"piece / kg / tonne\"")+`</div><div style="flex:1"><label class="fl">Price</label><div style="display:flex;align-items:stretch"><span style="display:flex;align-items:center;padding:0 11px;border:1px solid var(--line);border-right:0;border-radius:10px 0 0 10px;background:#f2f1ed;color:#6b7176;font-weight:700;font-size:13.5px;white-space:nowrap" title="${myCur()} — your business currency">${esc(curSym())}</span><input class="inp" id="ct_price" data-testid="cat-field-price" inputmode="numeric" style="border-radius:0 10px 10px 0" value="${cbHasPrice(d.price)?cbAmount(d.price):''}"></div></div></div>`+ctField('code','Code / HSN',pCode(d))+`<label class="fl">Description</label><textarea class="inp" id="ct_desc" data-testid="cat-field-desc" style="width:100%;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13.5px;min-height:58px;resize:vertical;background:var(--paper)">${esc(pDesc(d))}</textarea>`; }
 function prodViewFields(d){ const kv=(l,v)=>`<div class="kv" style="display:flex;gap:8px;padding:8px 12px;border-bottom:1px dashed var(--line);font-size:13px"><b style="min-width:96px;color:var(--grey);font-weight:600;font-size:11px;text-transform:uppercase">${l}</b><span style="font-weight:600">${v===''||v==null?'—':esc(v)}</span></div>`;
   return `<div class="itab">${kv('Name',pName(d))}<div class="kv" style="display:flex;gap:8px;padding:8px 12px;border-bottom:1px dashed var(--line);font-size:13px"><b style="min-width:96px;color:var(--grey);font-weight:600;font-size:11px;text-transform:uppercase">Price</b><span style="font-weight:600">${inr(pPrice(d))} <span style="color:var(--grey);font-weight:400">/ ${esc(pUnit(d))}</span></span></div>${kv('Unit',pUnit(d))}${kv('Code / HSN',pCode(d))}${kv('Description',pDesc(d))}</div>`; }
