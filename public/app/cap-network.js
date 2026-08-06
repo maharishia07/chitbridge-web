@@ -117,7 +117,116 @@ function _netInit(){
 }
 function _netKey(){ return 'k' + Date.now().toString(36) + Math.floor(Math.random() * 1e4); }
 function _netNode(key){ return (UI.net && UI.net.nodes || []).find(function(n){ return n.key === key; }); }
-function loadNetwork(){ _netInit(); }   // override the legacy loader — design-first renders from the draft, no server fetch
+function loadNetwork(){ _netInit(); netWhereAmI(); }   // design-first draft, PLUS the live position card below
+
+/**
+ * netWhereAmI — the LIVE network this store actually belongs to, and where it sits.
+ *
+ * Athi, 2026-08-06: *"I am in dept-warehouse, and if this store is part of the network then the network
+ * architecture should be visible and where they are should be informed in the value chain. Mark the store in
+ * bold."*
+ *
+ * The Network screen renders the DESIGN draft — a thing you are sketching. It never showed the tree you are
+ * actually on. So a warehouse whose whole reason for existing is that it sits under a departmental store had no
+ * way to see that from inside the app; it only showed up in what a fellow department could read.
+ *
+ * ⚠️ The design draft and the live tree are DIFFERENT THINGS and this does not merge them. One is what you are
+ * planning; the other is what is true right now. Showing a plan as if it were the live structure is how a person
+ * ends up trusting a diagram nobody implemented.
+ *
+ * "Not on a network" is a normal answer, not an error — most entities are their own root.
+ */
+async function netWhereAmI(){
+  var host = document.getElementById('netWhereAmI');
+  if(!host){
+    var body = document.getElementById('netbody') || document.getElementById('mainbody');
+    if(!body) return;
+    host = document.createElement('div'); host.id = 'netWhereAmI'; host.style.marginBottom = '12px';
+    body.insertBefore(host, body.firstChild);
+  }
+  host.innerHTML = '<div style="font-size:12px;color:var(--grey)">checking your place in the network…</div>';
+  try{
+    var self = await api('netLookup', { query: { bridgeId: SESSION.bridgeId || '' } }).catch(function(){ return null; });
+    var me = self && (self.entity || self);
+    if(!me || !me.id){ host.innerHTML = _netAloneCard(); return; }
+
+    // ⚠️ WALK UP FIRST. `netSubtree` is me AND MY DESCENDANTS — so a leaf asking for its own subtree gets back
+    // exactly itself, which is the one view that cannot answer "where do I sit?". The path names the root
+    // (`CBV97P3TYA.CBC5QSLG3Q`), so resolve that and ask for ITS subtree: the whole network, me included.
+    var myTree = await api('netSubtree', { params: { id: me.id } }).catch(function(){ return []; });
+    myTree = Array.isArray(myTree) ? myTree : (myTree && myTree.nodes) || [];
+    var myPath = (myTree[0] && myTree[0].path) || '';
+    var rootLabel = myPath ? myPath.split('.')[0] : '';
+    var rootBridge = rootLabel ? rootLabel.replace(/_/g, '-') : '';
+
+    var nodes = myTree;
+    if(rootBridge && rootBridge !== String(me.bridgeId || me.bridge_id || '')){
+      var rootSelf = await api('netLookup', { query: { bridgeId: rootBridge } }).catch(function(){ return null; });
+      var rootId = rootSelf && (rootSelf.entity || rootSelf) && (rootSelf.entity || rootSelf).id;
+      if(rootId){
+        var whole = await api('netSubtree', { params: { id: rootId } }).catch(function(){ return null; });
+        whole = Array.isArray(whole) ? whole : (whole && whole.nodes) || null;
+        if(whole && whole.length) nodes = whole;
+      }
+    }
+    host.innerHTML = _netPlaceCard(me, nodes);
+  }catch(e){ host.innerHTML = _netAloneCard(); }
+}
+function _netAloneCard(){
+  return '<div style="border:1px solid var(--line);background:#fff;border-radius:12px;padding:13px 15px">'
+    + '<div class="sec" style="margin:0 0 5px">🔗 Your place in the network</div>'
+    + '<div style="font-size:12.5px;color:var(--grey)">This business is not part of a network — it stands on its own. '
+    + 'That is the normal case: a network is for a group that shares one shopfront, like a departmental store with '
+    + 'separate departments.</div></div>';
+}
+/**
+ * The tree, with THIS store in bold. Depth comes from the ltree path, so the indentation is the real hierarchy and
+ * not a guess — and the value-chain line reads root → … → you, which is the question actually being asked.
+ */
+function _netPlaceCard(me, nodes){
+  var mine = String(me.bridgeId || me.bridge_id || '');
+  var rows = (nodes || []).map(function(n){
+    var bid = String(n.bridgeId || n.bridge_id || '');
+    var path = String(n.path || '');
+    var depth = path ? Math.max(0, path.split('.').length - 1) : 0;
+    return { bid: bid, name: n.name || bid, depth: depth, path: path, mode: n.mode || '', isMe: bid === mine };
+  });
+  if(!rows.length) return _netAloneCard();
+  rows.sort(function(a,b){ return a.path < b.path ? -1 : a.path > b.path ? 1 : 0; });
+
+  var meRow = rows.find(function(r){ return r.isMe; });
+  var chain = meRow ? rows.filter(function(r){ return meRow.path.indexOf(r.path) === 0; })
+                          .sort(function(a,b){ return a.depth - b.depth; }) : [];
+
+  var list = rows.map(function(r){
+    var pad = 10 + r.depth * 18;
+    return '<div style="padding:5px 8px 5px '+pad+'px;font-size:13px;'
+      + (r.isMe ? 'background:#F0EAF9;border-left:3px solid #6a44a8;border-radius:0 8px 8px 0;' : '')
+      + '">'
+      + (r.depth ? '<span style="color:var(--grey)">└ </span>' : '')
+      + (r.isMe ? '<b>'+esc(r.name)+'</b> <span style="font-size:11px;color:#6a44a8;font-weight:700">← you are here</span>'
+                : esc(r.name))
+      + ' <span style="font-size:11px;color:var(--grey)" class="mono">'+esc(r.bid)+'</span>'
+      + (r.mode ? ' <span style="font-size:10.5px;color:var(--grey)">'+esc(r.mode)+'</span>' : '')
+      + '</div>';
+  }).join('');
+
+  var chainLine = chain.length > 1
+    ? '<div style="font-size:12px;color:var(--grey);margin-top:9px;padding-top:8px;border-top:1px dashed var(--line)">'
+      + 'Value chain · ' + chain.map(function(r){
+          return r.isMe ? '<b style="color:var(--ink)">'+esc(r.name)+'</b>' : esc(r.name); }).join(' <span style="color:var(--grey)">→</span> ')
+      + '</div>'
+    : '';
+
+  var root = rows[0];
+  return '<div style="border:1px solid var(--line);background:#fff;border-radius:12px;padding:13px 15px">'
+    + '<div class="sec" style="margin:0 0 3px">🔗 Your place in the network</div>'
+    + '<div style="font-size:11.5px;color:var(--grey);margin-bottom:8px">The live structure — what is true right now, not the design below.</div>'
+    + list
+    + chainLine
+    + '<div style="margin-top:10px;font-size:11.5px"><a href="/network.html?bridge='+encodeURIComponent(root.bid)+'" target="_blank" style="color:var(--blue);text-decoration:none">🏬 See the network storefront a shopper sees →</a></div>'
+    + '</div>';
+}
 function _netRerender(){   // keep the detail pane's scroll position stable across re-render (no more jumping)
   var p = (typeof document !== 'undefined') ? document.getElementById('netDetailPane') : null; var st = p ? p.scrollTop : 0;
   if (typeof renderApp === 'function') renderApp();
