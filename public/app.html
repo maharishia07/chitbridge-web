@@ -663,7 +663,7 @@ const EP = {
   prodPreflight:   {m:"POST",  p:"/api/products/import/preflight",ok:"✓"}, // read a file before it becomes data — WRITES NOTHING
   prodImport:      {m:"POST",  p:"/api/products/import",         ok:"✓"},  // the commit half — a decision per column, confirm:true required
   prodStarters:    {m:"GET",   p:"/api/products/starter-columns",ok:"✓"},  // the standard column set for a trade
-  prodStarterAdopt:{m:"POST",  p:"/api/products/starter-columns",ok:"✓"}   // adopt one — ADDITIVE, never retypes an existing column
+  prodStarterAdopt:{m:"POST",  p:"/api/products/starter-columns",ok:"✓"},  // adopt one — ADDITIVE, never retypes an existing column
   // --- NET tree (NET-01 Spine) · live /api/network · cb_entity/cb_edge. NOTE: cb_* id-space — resolve self via netLookup(bridge_id); Dev needs backfill ---
   netLookup:      {m:"GET",  p:"/api/network/entities/lookup",            ok:"✓"},
   entitySearch:   {m:"GET",  p:"/api/entities/search",                    ok:"✓"},  // ?q= live recipient lookup (name/bridge_id)
