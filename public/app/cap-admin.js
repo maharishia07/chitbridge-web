@@ -103,7 +103,9 @@ async function saveProfile(){ const x=document.getElementById("pf_err"); if(x)x.
 function storefrontCardHTML(e){
   var url=location.origin+'/shop.html?bridge='+encodeURIComponent(e.bridge_id||'');
   var acc=e.storefront_access||'browse';
-  var vis=e.catalogue_visibility||'private';   // b114 — absent means not published
+  var vis=e.catalogue_visibility||'private';   // b114 — absent means not published (EFFECTIVE, cap applied)
+  var cap=e.visibility_cap||{max:'public',by:null,reason:''};
+  var capped=(cap.max==='private');
   var sfopts=[['browse','Browse first — catalogue is open; sign in only to order'],['login','Login first — customer signs in before browsing']]
     .map(function(o){return '<option value="'+o[0]+'"'+(acc===o[0]?' selected':'')+'>'+o[1]+'</option>';}).join('');
   return '<div style="'+_CARD+';margin-top:10px">'
@@ -121,12 +123,19 @@ function storefrontCardHTML(e){
     //
     // It belongs HERE, immediately above the link it governs — a link that does not work is the symptom, and the
     // switch that makes it work should not be on a different screen.
+    // ── A CONTROL THAT CANNOT WORK MUST NOT LOOK LIKE ONE ────────────────────────────────────────────────────
+    // The cap comes from /me (`visibility_cap`): the operator who provisioned this entity, then the plan. When it
+    // is capped, the switch is DISABLED and says WHO capped it — offering a working-looking control that 403s on
+    // save is the same lie as a button that reports success and does nothing.
     +'<label class="fl" style="margin-top:12px">Is your shop open?</label>'
-    +'<select class="inp" id="pf_catvis" data-testid="pf-catvis" style="max-width:340px">'
-      +'<option value="public"'+(vis==='public'?' selected':'')+'>Open — anyone with the link can see your catalogue</option>'
-      +'<option value="private"'+(vis!=='public'?' selected':'')+'>Closed — the link shows nothing, to anyone</option>'
+    +'<select class="inp" id="pf_catvis" data-testid="pf-catvis" style="max-width:340px"'+(capped?' disabled':'')+'>'
+      +(capped ? '<option value="private" selected>Closed — set by your network operator</option>'
+               : '<option value="public"'+(vis==='public'?' selected':'')+'>Open — anyone with the link can see your catalogue</option>'
+                +'<option value="private"'+(vis!=='public'?' selected':'')+'>Closed — the link shows nothing, to anyone</option>')
     +'</select>'
-    +(vis!=='public' ? '<div style="margin-top:7px;font-size:12px;color:#B4483C;background:#FBEDEA;border:1px solid #f3d9d5;border-radius:8px;padding:7px 10px">⚠ Your shop is CLOSED. The link above will show &ldquo;this shop has no public catalogue&rdquo; — to customers and to other businesses looking at you as a supplier.</div>' : '')
+    +(capped
+      ? '<div style="margin-top:7px;font-size:12px;color:#6a44a8;background:#F0EAF9;border:1px solid #e3d5f5;border-radius:8px;padding:7px 10px">🔒 '+esc(cap.reason||'This entity may not publish a public catalogue.')+'<div style="color:var(--grey);margin-top:3px">You cannot change this here — it is set '+(cap.by==='operator'?'by whoever provisioned this entity':'by your plan')+'.</div></div>'
+      : (vis!=='public' ? '<div style="margin-top:7px;font-size:12px;color:#B4483C;background:#FBEDEA;border:1px solid #f3d9d5;border-radius:8px;padding:7px 10px">⚠ Your shop is CLOSED. The link above will show &ldquo;this shop has no public catalogue&rdquo; — to customers and to other businesses looking at you as a supplier.</div>' : ''))
     +'<label class="fl" style="margin-top:12px">Customer access</label><select class="inp" id="pf_sfaccess" style="max-width:340px">'+sfopts+'</select>'
     +'<div class="err" id="pf_err2"></div><button class="composebtn" style="margin-top:9px" onclick="saveStorefront()">Save storefront</button>'
     +'</div>';
@@ -135,7 +144,7 @@ function sfCopy(){ var u=document.getElementById('sf_url'); if(!u)return; var t=
   if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(t).then(function(){toast('Storefront link copied ✓');}).catch(function(){toast(t);}); }
   else toast(t); }
 async function saveStorefront(){ var x=document.getElementById('pf_err2'); if(x)x.textContent='';
-  try{ await api('saveProfile',{body:{storefront_access:val('pf_sfaccess'), catalogue_visibility:val('pf_catvis')}});
+  try{ await api('saveProfile',{body:{storefront_access:val('pf_sfaccess'), catalogue_visibility:(document.getElementById('pf_catvis')&&document.getElementById('pf_catvis').disabled)?undefined:val('pf_catvis')}});
     toast(val('pf_catvis')==='public' ? 'Shop is OPEN — your link works now ✓' : 'Shop is CLOSED — the link shows nothing');
     if(typeof loadProfile==='function') loadProfile(); }catch(e){ if(x)x.textContent=e.message; } }
 
