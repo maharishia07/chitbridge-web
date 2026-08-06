@@ -705,6 +705,31 @@ function cwFinish(){
   var isValue = (w.adoptMode === 'value');
   var afterAdopt = function(){ persistProducts(toLive); };
   if (w.source && Object.keys(com).length && !isValue && typeof api === 'function') {
+    /**
+     * ⚠️ ASK BEFORE ADOPTING, AND SAY WHAT IS NOT PRICED.
+     *
+     * Athi, 2026-08-06: *"it quickly adopts, no confirmation messages etc. I have added price for two items, but
+     * not for others."*
+     *
+     * Both halves were real. Adoption is a governance act — you take on another brand's catalogue by reference and
+     * it appears in your shop — and it happened on a click with no statement of what was about to occur.
+     *
+     * And the second half was worse: the unpriced ones were LISTED. Reproduced on a throwaway shop — six finishes
+     * adopted, two priced, and the storefront advertised all six. The four without a price showed a dash and were
+     * refused at the till. The server now hides an unpriced line from a shop that shows prices; this tells the
+     * owner BEFORE they get there, because a hidden product they meant to sell is its own kind of surprise.
+     */
+    var picked = (w.chosen ? Object.keys(w.chosen).filter(function(k){ return w.chosen[k] !== false; }) : []);
+    var priced = Object.keys(com).filter(function(k){
+      var c = com[k] || {}; var p = c.price; var a = (p && typeof p === 'object') ? p.amount : p;
+      return a !== undefined && a !== null && a !== '' && isFinite(Number(a));
+    });
+    var noPrice = Math.max(0, picked.length - priced.length);
+    var msg = 'Adopt "' + ((w.built && w.built.title) || w.source) + '" into your catalogue?\n\n'
+      + '• ' + priced.length + ' item(s) with your price — these go live\n'
+      + (noPrice ? ('• ' + noPrice + ' item(s) with NO price — adopted, but NOT shown in your shop until you price them\n') : '')
+      + '\nThe brand keeps its names, images and colours. You own only your prices.';
+    if (!confirm(msg)) { afterAdopt(); return; }
     if (typeof toast === 'function') toast('Adopting by reference…');
     api('catalogueAdopt', { body: { source: w.source, commercials: com } }).then(afterAdopt).catch(function(e){ if (typeof toast === 'function') toast('Reference adopt failed: ' + ((e && e.message) || '')); afterAdopt(); });
   } else { afterAdopt(); }
