@@ -103,6 +103,7 @@ async function saveProfile(){ const x=document.getElementById("pf_err"); if(x)x.
 function storefrontCardHTML(e){
   var url=location.origin+'/shop.html?bridge='+encodeURIComponent(e.bridge_id||'');
   var acc=e.storefront_access||'browse';
+  var vis=e.catalogue_visibility||'private';   // b114 — absent means not published
   var sfopts=[['browse','Browse first — catalogue is open; sign in only to order'],['login','Login first — customer signs in before browsing']]
     .map(function(o){return '<option value="'+o[0]+'"'+(acc===o[0]?' selected':'')+'>'+o[1]+'</option>';}).join('');
   return '<div style="'+_CARD+';margin-top:10px">'
@@ -110,6 +111,22 @@ function storefrontCardHTML(e){
     +'<div style="font-size:12px;color:var(--grey);line-height:1.5;margin-bottom:8px">Share this link — anyone can open it and order from your catalogue. No account needed (they confirm with a one-time code).</div>'
     +'<div style="background:#f4f6f8;border:1px solid var(--line);border-radius:9px;padding:8px 10px"><span class="mono" id="sf_url" style="font-size:11.5px;word-break:break-all">'+esc(url)+'</span></div>'
     +'<div style="display:flex;gap:8px;margin-top:8px"><button class="composebtn" onclick="sfCopy()">📋 Copy link</button><button class="composebtn" style="background:#fff" onclick="window.open(document.getElementById(\'sf_url\').textContent,\'_blank\')">Open ↗</button></div>'
+    // ── IS THE SHOP OPEN AT ALL? ─────────────────────────────────────────────────────────────────────────────
+    // Athi, 2026-08-06: "it says the store does not have a public catalogue — how do I make it public?"
+    //
+    // He could not, and neither could anyone else. b114 made publishing an EXPLICIT act and shipped no way to
+    // perform it: the only mention of catalogue_visibility in the whole front end was a read-only Settings row.
+    // The API has read and written it since b114; the control simply did not exist. So every shop sat private,
+    // its storefront link opened onto "this shop has no public catalogue", and the owner had no lever.
+    //
+    // It belongs HERE, immediately above the link it governs — a link that does not work is the symptom, and the
+    // switch that makes it work should not be on a different screen.
+    +'<label class="fl" style="margin-top:12px">Is your shop open?</label>'
+    +'<select class="inp" id="pf_catvis" data-testid="pf-catvis" style="max-width:340px">'
+      +'<option value="public"'+(vis==='public'?' selected':'')+'>Open — anyone with the link can see your catalogue</option>'
+      +'<option value="private"'+(vis!=='public'?' selected':'')+'>Closed — the link shows nothing, to anyone</option>'
+    +'</select>'
+    +(vis!=='public' ? '<div style="margin-top:7px;font-size:12px;color:#B4483C;background:#FBEDEA;border:1px solid #f3d9d5;border-radius:8px;padding:7px 10px">⚠ Your shop is CLOSED. The link above will show &ldquo;this shop has no public catalogue&rdquo; — to customers and to other businesses looking at you as a supplier.</div>' : '')
     +'<label class="fl" style="margin-top:12px">Customer access</label><select class="inp" id="pf_sfaccess" style="max-width:340px">'+sfopts+'</select>'
     +'<div class="err" id="pf_err2"></div><button class="composebtn" style="margin-top:9px" onclick="saveStorefront()">Save storefront</button>'
     +'</div>';
@@ -118,7 +135,9 @@ function sfCopy(){ var u=document.getElementById('sf_url'); if(!u)return; var t=
   if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(t).then(function(){toast('Storefront link copied ✓');}).catch(function(){toast(t);}); }
   else toast(t); }
 async function saveStorefront(){ var x=document.getElementById('pf_err2'); if(x)x.textContent='';
-  try{ await api('saveProfile',{body:{storefront_access:val('pf_sfaccess')}}); toast('Storefront access saved ✓'); }catch(e){ if(x)x.textContent=e.message; } }
+  try{ await api('saveProfile',{body:{storefront_access:val('pf_sfaccess'), catalogue_visibility:val('pf_catvis')}});
+    toast(val('pf_catvis')==='public' ? 'Shop is OPEN — your link works now ✓' : 'Shop is CLOSED — the link shows nothing');
+    if(typeof loadProfile==='function') loadProfile(); }catch(e){ if(x)x.textContent=e.message; } }
 
 // Actor's own profile — their identity (from the JWT) + self-service Change PIN. Hat/shift/access are set by
 // the entity; the actor sets Duty/Break from the top bar.
