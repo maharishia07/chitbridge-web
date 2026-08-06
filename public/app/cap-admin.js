@@ -129,13 +129,19 @@ function storefrontCardHTML(e){
     // save is the same lie as a button that reports success and does nothing.
     +'<label class="fl" style="margin-top:12px">Is your shop open?</label>'
     +'<select class="inp" id="pf_catvis" data-testid="pf-catvis" style="max-width:340px"'+(capped?' disabled':'')+'>'
+      // THREE TIERS (b115). `network` is the warehouse case: invisible to the world, visible to the businesses
+      // under the same network. Worded by WHO SEES IT rather than by the value, because "network" means nothing to
+      // a shopkeeper and "the other businesses in your network" means exactly what it says.
       +(capped ? '<option value="private" selected>Closed — set by your network operator</option>'
                : '<option value="public"'+(vis==='public'?' selected':'')+'>Open — anyone with the link can see your catalogue</option>'
-                +'<option value="private"'+(vis!=='public'?' selected':'')+'>Closed — the link shows nothing, to anyone</option>')
+                +'<option value="network"'+(vis==='network'?' selected':'')+'>Network only — the other businesses in your network can see it; the public cannot</option>'
+                +'<option value="private"'+(vis==='private'||!vis?' selected':'')+'>Closed — the link shows nothing, to anyone</option>')
     +'</select>'
     +(capped
       ? '<div style="margin-top:7px;font-size:12px;color:#6a44a8;background:#F0EAF9;border:1px solid #e3d5f5;border-radius:8px;padding:7px 10px">🔒 '+esc(cap.reason||'This entity may not publish a public catalogue.')+'<div style="color:var(--grey);margin-top:3px">You cannot change this here — it is set '+(cap.by==='operator'?'by whoever provisioned this entity':'by your plan')+'.</div></div>'
-      : (vis!=='public' ? '<div style="margin-top:7px;font-size:12px;color:#B4483C;background:#FBEDEA;border:1px solid #f3d9d5;border-radius:8px;padding:7px 10px">⚠ Your shop is CLOSED. The link above will show &ldquo;this shop has no public catalogue&rdquo; — to customers and to other businesses looking at you as a supplier.</div>' : ''))
+      : (vis==='network'
+          ? '<div style="margin-top:7px;font-size:12px;color:#6a44a8;background:#F0EAF9;border:1px solid #e3d5f5;border-radius:8px;padding:7px 10px">🔗 <b>Network only.</b> Businesses under your network see this catalogue. A shopper on the link above sees nothing — and neither does an outside business that adds you as a supplier.</div>'
+          : (vis!=='public' ? '<div style="margin-top:7px;font-size:12px;color:#B4483C;background:#FBEDEA;border:1px solid #f3d9d5;border-radius:8px;padding:7px 10px">⚠ Your shop is CLOSED. The link above will show &ldquo;this shop has no public catalogue&rdquo; — to customers and to other businesses looking at you as a supplier.</div>' : '')))
     +'<label class="fl" style="margin-top:12px">Customer access</label><select class="inp" id="pf_sfaccess" style="max-width:340px">'+sfopts+'</select>'
     +'<div class="err" id="pf_err2"></div><button class="composebtn" style="margin-top:9px" onclick="saveStorefront()">Save storefront</button>'
     +'</div>';
