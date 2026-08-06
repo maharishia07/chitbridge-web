@@ -323,7 +323,50 @@ function finishCard(it, cur, idx, vizEnabled){
     +((idx!=null&&(price!=null||!_showsPrice()))?'<button data-testid="shop-order-'+idx+'" onclick="orderOpen('+idx+')" style="border:0;border-radius:9px;padding:9px 18px;background:#3F66A6;color:#fff;font-weight:700;font-size:13px;cursor:pointer">'+esc(_submitLabel())+'</button>':'')
     +'</div></div>';
 }
-function productRow(p, cur){ var d=(p.item_data||p)||{}; return '<div class="prow"><div style="flex:1"><b>'+esc(d.name||d.product||'item')+'</b> <span class="meta">'+esc(d.unit||'')+'</span></div><div style="font-weight:700">'+(cbHasPrice(d.price)?(priceSym(d.price)+esc(String(cbAmount(d.price)))):'—')+'</div></div>'; }
+function productRow(p, cur, variantLabel){ var d=(p.item_data||p)||{};
+  // A variant row leads with what DISTINGUISHES it ("4L"), not with the product name repeated three times.
+  var lead = variantLabel ? '<b>'+esc(variantLabel)+'</b>' : '<b>'+esc(d.name||d.product||'item')+'</b>';
+  return '<div class="prow"'+(variantLabel?' style="padding-left:18px"':'')+'><div style="flex:1">'+lead+' <span class="meta">'+esc(d.unit||'')+'</span></div><div style="font-weight:700">'+(cbHasPrice(d.price)?(priceSym(d.price)+esc(String(cbAmount(d.price)))):'—')+'</div></div>'; }
+
+/**
+ * groupedProductHtml — one product, its sizes underneath.
+ *
+ * The Medusa mapping test measured the gap: one paint with three pack sizes rendered as THREE UNRELATED PRODUCTS,
+ * so a shopper saw three things where the merchant saw one.
+ *
+ * ⚠️ THE ORDER PATH IS UNTOUCHED. Each row is still a LINE with its own code and its own price, which is what every
+ * one of the 7 presets expects. Grouping changes what a person SEES and nothing about what is agreed — if the
+ * server sends no groups (the usual case, and every catalogue that has not declared one), this falls straight
+ * through to the flat list it has always rendered.
+ */
+function productListHtml(data, cur){
+  var prods = data.items || [];
+  var groups = data.groups || [];
+  if (!prods.length) return '';
+  var head = '<div class="sechd" style="color:var(--grey)">🗂️ Products</div>';
+  if (!groups.length) return head + prods.map(function(p){ return productRow(p, cur); }).join('');
+
+  var byId = {}; prods.forEach(function(p){ byId[p.item_id] = p; });
+  var shown = {};
+  var html = groups.map(function(g){
+    var lines = (g.lines||[]).map(function(l){ return { line: l, p: byId[l.item_id] }; }).filter(function(x){ return x.p; });
+    if (!lines.length) return '';
+    lines.forEach(function(x){ shown[x.line.item_id] = true; });
+    // A group of one is not a group — render it as the plain product it is, with no empty hierarchy.
+    if (lines.length === 1) return productRow(lines[0].p, cur);
+    var opts = Object.keys(g.options||{}).map(function(k){ return esc(g.options[k].join(' · ')); }).join('  ');
+    return '<div style="margin:6px 0 2px"><div style="display:flex;align-items:baseline;gap:8px">'
+      + '<b style="font-size:14px">'+esc(g.label||'')+'</b>'
+      + '<span class="meta">'+lines.length+' options</span></div>'
+      + (opts ? '<div class="meta" style="margin-bottom:2px">'+opts+'</div>' : '')
+      + lines.map(function(x){ return productRow(x.p, cur, x.line.variant); }).join('')
+      + '</div>';
+  }).join('');
+  // Anything the grouping did not cover is still shown. A product that vanished because it lacked a group value
+  // would be the silent-drop failure again.
+  html += prods.filter(function(p){ return !shown[p.item_id]; }).map(function(p){ return productRow(p, cur); }).join('');
+  return head + html;
+}
 function render(data){
   var s=data.shop||{}, cur=(s.currency_code==='INR'||!s.currency_code)?'₹':(s.currency_code+' ');
   if(s.order_input&&typeof s.order_input==='object') _OI=s.order_input;   // the declared contract, from the API
@@ -338,7 +381,7 @@ function render(data){
     finHtml += '<div class="sechd">🎨 '+esc(f.title||f.collection||'Designer finishes')+'</div>' + vizBadge + (f.items||[]).map(function(it){ var idx=_FIN.length; _FIN.push({source:f.source,it:it,rules:(f.experience&&f.experience.rules)||{}}); return finishCard(it,cur,idx,viz.enabled); }).join('');
   });
   var prods=(data.items||[]);
-  var prodHtml = prods.length ? ('<div class="sechd" style="color:var(--grey)">🗂️ Products</div>'+prods.map(function(p){return productRow(p,cur);}).join('')) : '';
+  var prodHtml = productListHtml(data, cur);
   var enq = '<div class="enq">Pick a finish, choose a colour combination and quantity, and order with just your phone or email.</div>';
   el('app').innerHTML = head + regionBar() + finHtml + prodHtml + (finHtml||prodHtml?enq:'<div class="msg">This shop has nothing on display yet.</div>')
     + '<div class="foot">Powered by <b>Chit &amp; Bridge</b> · a governed rail. Design &amp; colour shown are referenced from the brand catalogue; prices are set by the shop.</div>';

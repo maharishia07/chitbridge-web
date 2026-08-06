@@ -595,6 +595,7 @@ const EP = {
   netDesignPut:    {m:"PUT",  p:"/api/network-design",                    ok:"✓"},  // b111 — save (upsert) the whole design draft
   catFaceGet:      {m:"GET",  p:"/api/catalogue-face",                    ok:"✓"},  // b112 — load this entity's saved catalogue face (cross-device)
   catFacePut:      {m:"PUT",  p:"/api/catalogue-face",                    ok:"✓"},  // b112 — save (upsert) the whole catalogue face config
+  schemaFields:    {m:"GET",  p:"/api/schemas/fields",                     ok:"✓"},  // the columns this catalogue declares — what a variant can be keyed or grouped on
   catSourcePut:    {m:"PUT",  p:"/api/assist/catalogue-source",          ok:"✓"},  // b78 — PUBLISH this store's catalogue as an adoptable blueprint (source-as-entity)
   catEnrich:       {m:"POST", p:"/api/governance/ai-draft",              ok:"✓"},  // reuse the deployed invokeSkill endpoint for catalogue-enrich (b113 skill)
   inbox:           {m:"GET",  p:"/api/chits/inbox",              ok:"✓"},  // ?status= ?page= ?limit=
@@ -2258,8 +2259,10 @@ function catalogueScreen(){
       <div class="srch" style="margin-top:8px">🔍 <input data-testid="cat-search" placeholder="Search name, code, unit" value="${esc(UI.prodQ||'')}" oninput="UI.prodQ=this.value;paintProdList()"></div>
       <div style="margin-top:8px;display:flex;align-items:center;gap:8px">
         <span style="font-size:11px;color:var(--grey)" id="ct_count">${prodVisible().length} product(s)</span>
+        <button data-testid="cat-variants" onclick="declareVariants()" title="One product, several sizes — say which lines belong together"
+          style="margin-left:auto;border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:4px 9px;font-size:11.5px;color:var(--ink);cursor:pointer">🔗 Variants</button>
         <button data-testid="cat-starter-set" onclick="startFromStandardSet()" title="Add the columns your trade expects"
-          style="margin-left:auto;border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:4px 9px;font-size:11.5px;color:var(--ink);cursor:pointer">📐 Standard set</button>
+          style="border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:4px 9px;font-size:11.5px;color:var(--ink);cursor:pointer">📐 Standard set</button>
         <button data-testid="cat-check-csv" onclick="checkCatalogueFile()" title="Read a spreadsheet, choose what each column becomes, then import"
           style="border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:4px 9px;font-size:11.5px;color:var(--ink);cursor:pointer">🔍 Check &amp; import</button>
         <button data-testid="cat-template-csv" onclick="downloadCatalogueTemplate(this)" title="Download a blank sheet in your catalogue's own format"
@@ -2481,6 +2484,72 @@ function checkCatalogueFile(){
     + '</div><div class="mf"><button class="pri" data-testid="cat-check-run" onclick="_cfRun(this)">Check</button>'
     + '<button id="cf_import" data-testid="cat-import-run" onclick="_cfImport(this)" disabled title="Check a file first" style="opacity:.5">Import</button>'
     + '<button onclick="closeModal()">Close</button></div>', true);
+}
+/**
+ * declareVariants — one product, several purchasable lines.
+ *
+ * Athi, 2026-08-06: the Medusa comparison measured it — one paint with three pack sizes rendered as THREE UNRELATED
+ * PRODUCTS, so a shopper saw three things where the merchant saw one.
+ *
+ * Two declarations, both drawn from columns the catalogue ALREADY has:
+ *   · which field NAMES the product a line belongs to  (the group)
+ *   · which fields DISTINGUISH the lines inside it     (the options)
+ *
+ * ⚠️ The face is saved WHOLE, so this reads the current one and patches it. Sending only `identity` would silently
+ * wipe order_input, units and vertical — the shop's entire declared contract — which is the kind of quiet loss
+ * that is only noticed at order time.
+ */
+async function declareVariants(){
+  try{
+    const [face, sch] = await Promise.all([
+      api('catFaceGet').catch(function(){ return { face: null }; }),
+      api('schemaFields').catch(function(){ return { fields: [] }; }),
+    ]);
+    const cur = (face && face.face && face.face.identity) || {};
+    const fields = (sch && sch.fields) || [];
+    // A price, a stock level or the customer's quantity are not properties that identify or distinguish a product.
+    const NOT = ['quantity','price','price_min','price_max','price_currency','available_qty','availability','order_input'];
+    const pick = fields.filter(function(f){ return NOT.indexOf(f.field_key) < 0; });
+    if(!pick.length){
+      modal('<div class="mh">🔗 Variants</div><div class="mb"><div style="font-size:12.5px">Your catalogue has no columns to group by yet. Add one from a spreadsheet or a standard set first.</div></div><div class="mf"><button class="pri" onclick="closeModal()">OK</button></div>');
+      return;
+    }
+    const opt = function(f, sel){ return '<option value="'+esc(f.field_key)+'"'+(sel===f.field_key?' selected':'')+'>'+esc(f.field_name||f.field_key)+'</option>'; };
+    const chk = (cur.options)||[];
+    UI._vf = face && face.face ? face.face : {};
+    modal('<div class="mh">🔗 Variants</div><div class="mb">'
+      + '<div style="font-size:12.5px;color:var(--grey);margin-bottom:12px">A product can have several purchasable lines — three pack sizes of one paint. Each line keeps its own code and its own price; this only says which lines belong together.</div>'
+      + '<label class="fl">Which column identifies a line?</label>'
+      + '<select id="v_key" class="inp" style="width:100%;margin-bottom:11px">'+pick.map(function(f){ return opt(f, (cur.key&&cur.key[0])||'sku'); }).join('')+'</select>'
+      + '<label class="fl">Which column names the product it belongs to?</label>'
+      + '<select id="v_group" class="inp" style="width:100%;margin-bottom:11px"><option value="">— none, every line is its own product —</option>'+pick.map(function(f){ return opt(f, cur.group||''); }).join('')+'</select>'
+      + '<label class="fl">Which columns tell the lines apart?</label>'
+      + '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:5px">'
+      + pick.map(function(f){ return '<label style="font-size:12.5px;display:flex;align-items:center;gap:5px;border:1px solid var(--line);border-radius:8px;padding:4px 9px"><input type="checkbox" data-vopt="'+esc(f.field_key)+'"'+(chk.indexOf(f.field_key)>=0?' checked':'')+'> '+esc(f.field_name||f.field_key)+'</label>'; }).join('')
+      + '</div><div id="v_out" style="margin-top:11px"></div>'
+      + '</div><div class="mf"><button class="pri" data-testid="cat-variants-save" onclick="_vSave(this)">Save</button><button onclick="closeModal()">Cancel</button></div>');
+  }catch(e){ if(typeof toast==='function') toast((e&&e.message)||'Could not load your columns.'); }
+}
+async function _vSave(btn){
+  const out = document.getElementById('v_out');
+  const key = (document.getElementById('v_key')||{}).value || 'sku';
+  const group = (document.getElementById('v_group')||{}).value || '';
+  const options = Array.prototype.slice.call(document.querySelectorAll('[data-vopt]'))
+    .filter(function(el){ return el.checked; }).map(function(el){ return el.getAttribute('data-vopt'); })
+    .filter(function(k){ return k !== key && k !== group; });
+  const was = btn.textContent; btn.disabled = true; btn.textContent = 'Saving…';
+  try{
+    // PATCH the existing face — never replace it. See the note above.
+    const face = Object.assign({}, UI._vf || {}, { identity: { key: [key], group: group || null, options: options } });
+    await api('catFacePut', { body: { face: face } });
+    if(out) out.innerHTML = '<div style="font-size:12.5px;color:#2E7D5B">Saved. '
+      + (group ? 'Lines sharing the same <b>'+esc(group)+'</b> now show as one product'+(options.length?', told apart by <b>'+options.map(esc).join(', ')+'</b>':'')+'.' : 'Every line is its own product.')
+      + '</div>';
+    if(typeof toast === 'function') toast('Variants saved ✓');
+  }catch(e){
+    // The server refuses a declaration it cannot enforce (422) — show its words, they name the column.
+    if(out) out.innerHTML = '<div style="font-size:12.5px;color:#B4483C">'+esc((e&&e.message)||'Could not save.')+'</div>';
+  }finally{ btn.disabled = false; btn.textContent = was; }
 }
 /**
  * startFromStandardSet — the standard columns for a trade, so an empty catalogue is not a blank page.
