@@ -537,6 +537,7 @@ img.attImg{object-fit:cover;display:block}
 <script src="/app/helpers.js"></script>
 <!-- module 3: the canonical catalogue model (shape · migration · four-leg chain · compute-job derivation). Shared by cap-network.js and headless consumers. -->
 <script src="/app/catalogue-model.js"></script>
+<script src="/app/catalogue-lines.js"></script>
 <!-- module 4 (LOCAL PROTOTYPE — not promoted): enhanced catalogue "face" setup (adopt/build → one face → conforming items). -->
 <script src="/app/cap-catalogue.js"></script>
 <script>
@@ -2170,11 +2171,64 @@ async function selectSupplier(id, silent){
   UI.supDet={supplier:x, items:null, loading:!!x.has_catalogue}; paintSupDetail();
   loadSupplierConfidence(x.bridge_id);
   if(x.has_catalogue){
-    try{ const it=await api("supCatalogue",{params:{sid:x.supplier_entity_id}}); const arr=Array.isArray(it)?it:((it&&it.items)||[]);
-      UI.supDet={supplier:x, items:arr.map(p=>{const d=p.item_data||p; return {particulars:d.name||d.product||'item', unit:d.unit||'unit', price:cbAmount(d.price)};}), loading:false};
-    }catch(e){ UI.supDet={supplier:x, items:[], loading:false, err:e.message}; }
+    try{ const cat=await supCatalogueFull(x.supplier_entity_id); const arr=cat.items||[];
+      UI.supDet={supplier:x, cat:cat,
+        items:arr.map(p=>{const d=p.item_data||p; return {particulars:d.name||d.product||'item', unit:d.unit||'unit', price:cbAmount(d.price)};}), loading:false};
+    }catch(e){ UI.supDet={supplier:x, cat:null, items:[], loading:false, err:e.message}; }
     if(UI.supSel===id) paintSupDetail();
   }
+}
+/**
+ * supCatalogueFull — a supplier's catalogue, WHOLE.
+ *
+ * Athi, 2026-08-06: "you are logging into Alpha and calling Beta, and Beta's catalogue should render."
+ *
+ * ⚠️ Deliberately NOT through api(). `unwrap()` in core.js returns the `items` ARRAY when it finds one and drops
+ * every sibling key with it — so `groups`, `shop` and `fields` could never reach this screen no matter what the
+ * server sent. That is the same footgun that once made Trade Readiness report "No standards yet" for every entity.
+ * exportCatalogueCSV bypasses api() for the same class of reason (it would JSON-parse a CSV).
+ *
+ * The alternative was renaming the response's `items` key, which would ripple into matrix.js, test-dev.js and the
+ * supplier-hop journey script. Bypassing here is the smaller, contained change.
+ */
+async function supCatalogueFull(sid){
+  const res = await fetch(CFG.API_BASE + '/api/relationships/suppliers/' + encodeURIComponent(sid) + '/catalogue', {
+    cache: 'no-store',
+    headers: SESSION.token ? { Authorization: 'Bearer ' + SESSION.token } : {},
+  });
+  if(!res.ok){
+    let msg=''; try{ const j=await res.json(); msg=j.message||j.error||''; }catch(_){}
+    throw new Error(msg || ('Could not read their catalogue (' + res.status + ')'));
+  }
+  return await res.json();
+}
+/**
+ * supCatalogueHTML — THEIR catalogue, rendered the way their own storefront renders it.
+ *
+ * Same walk as shop.html (cbLineRows in app/catalogue-lines.js): one product with its sizes underneath, a group of
+ * one shown flat, and nothing dropped. Athi: "this should not be a separate code, it is another entry point for the
+ * same view." The read was already shared (buildPublicView); this is the render.
+ */
+function supCatalogueHTML(cat){
+  const rows = (typeof cbLineRows === 'function') ? cbLineRows(cat) : [];
+  if(!rows.length) return '<div style="font-size:12.5px;color:var(--grey)">They have not published any products.</div>';
+  const ccy = (cat && cat.shop && cat.shop.currency_code) || '';
+  const sym = (typeof curSym === 'function' && ccy) ? curSym(ccy) : '';
+  return '<div class="itab" data-testid="sup-catalogue">' + rows.map(function(r){
+    if(r.type === 'product'){
+      return '<div style="padding:9px 12px 3px;display:flex;align-items:baseline;gap:8px">'
+        + '<b style="font-size:13.5px">'+esc(r.label)+'</b>'
+        + '<span style="font-size:11px;color:var(--grey)">'+r.count+' options</span>'
+        + (r.options?'<span style="font-size:11px;color:var(--grey);margin-left:auto">'+esc(r.options)+'</span>':'')
+        + '</div>';
+    }
+    const d = r.item.item_data || r.item;
+    const amt = (typeof cbAmount === 'function') ? cbAmount(d.price) : (d.price && d.price.amount);
+    return '<div style="display:flex;gap:8px;padding:7px 12px'+(r.variant?' 7px 30px':'')+';border-bottom:1px dashed var(--line);font-size:13px">'
+      + '<span style="flex:1"><b>'+esc(r.variant || d.name || d.product || 'item')+'</b>'
+      + (d.unit?' <span style="color:var(--grey);font-size:11.5px">'+esc(d.unit)+'</span>':'')+'</span>'
+      + '<span style="font-weight:700">'+(amt==null||amt===''?'—':esc(sym+String(amt)))+'</span></div>';
+  }).join('') + '</div>';
 }
 function loadSupplierConfidence(bridge){
   if(!bridge){ UI.supRd=null; return; }
@@ -2225,7 +2279,7 @@ function supDetailHTML(){
     let catcard;
     if(!x.has_catalogue) catcard=`<div class="sec">Order from them</div><div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;font-size:12px;color:#6b5a36">No catalogue published yet — nothing to order.</div>`;
     else if(d.loading) catcard=`<div class="sec">Order from them</div><div class="loadwrap" style="justify-content:flex-start;padding:6px 0"><span class="spin"></span> loading catalogue…</div>`;
-    else catcard=`<div class="sec">Order from them</div><div class="itab" style="padding:12px"><div style="font-size:12.5px"><b>${(d.items||[]).length}</b> item(s) in their catalogue.</div><div style="font-size:11.5px;color:var(--grey);margin-top:5px">▸ Compose opens with <b>${esc(supName(x))}</b> as recipient (no CC) and their catalogue as line items — full draft &rarr; send lifecycle.</div></div>`;
+    else catcard=`<div class="sec">Order from them</div><div style="font-size:11.5px;color:var(--grey);margin-bottom:6px">${(d.items||[]).length} item(s) — priced in their currency, exactly as their own storefront shows them.</div>${supCatalogueHTML(d.cat||{})}`;
     body=supConfidenceStrip()+prof+catcard;
     bar=`<button class="pri" ${x.has_catalogue?'':'disabled'} data-testid="sup-compose-order" onclick="composeFromSupplier('${x.supplier_list_id}')">🛒 Compose order</button><button class="warn" data-testid="sup-remove" onclick="delSupplier('${x.supplier_list_id}')">Remove from list</button>`;
   }
@@ -2247,7 +2301,7 @@ async function saveSupplier(id){ const err=document.getElementById("sp_ederr"); 
   catch(e){ if(err)err.textContent=((e&&e.message)||"Failed")+" — this needs the Stage-B migration applied."; } }
 async function composeFromSupplier(id){ const d=UI.supDet, x=d&&d.supplier; if(!x||x.supplier_list_id!==id)return;
   let items=d.items;
-  if(items==null){ try{ const it=await api("supCatalogue",{params:{sid:x.supplier_entity_id}}); const arr=Array.isArray(it)?it:((it&&it.items)||[]); items=arr.map(p=>{const dd=p.item_data||p; return {particulars:dd.name||dd.product||'item', unit:dd.unit||'unit', price:cbAmount(dd.price)};}); }catch(e){ items=[]; } }
+  if(items==null){ try{ const cat=await supCatalogueFull(x.supplier_entity_id); items=(cat.items||[]).map(p=>{const dd=p.item_data||p; return {particulars:dd.name||dd.product||'item', unit:dd.unit||'unit', price:cbAmount(dd.price)};}); }catch(e){ items=[]; } }
   compose({ supplier:{name:supName(x), bridge:x.bridge_id, entity_id:x.supplier_entity_id}, recipients:[{name:supName(x), role:'to', bridge:x.bridge_id||null}], catalogue:items });
 }
 /* CATALOGUE (own products) — two-sided master/detail. Full CRUD is live (PATCH /products/:id), so Edit persists. */
