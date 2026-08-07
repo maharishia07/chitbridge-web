@@ -51,7 +51,10 @@ module.exports = defineConfig({
       // currency-matrix belongs here: it is a CUSTOMER view. It authenticates to the API itself to arrange each
       // combination, then loads the storefront with no session — which is how a real buyer arrives.
       testMatch: [/onboarding\.spec\.js/, /flow\.spec\.js/, /redproof\.spec\.js/,
-        /currency-matrix\.spec\.js/, /mode-survives-order\.spec\.js/, /variants\.spec\.js/],
+        /currency-matrix\.spec\.js/, /mode-survives-order\.spec\.js/, /variants\.spec\.js/,
+        // the cascade is a CUSTOMER view too: it arranges every combination through the API, then arrives at the
+        // storefront with no session — which is how a buyer actually gets there.
+        /network-cascade\.spec\.js/],
     },
     // 4 · CROSS-BROWSER + SIZE sweep of the COUNTER flows (keyboard/storefront/chits). Opt-in — run e.g.
     //     `npx playwright test --project=counter-firefox`. The default run stays Chromium@counter for speed.
