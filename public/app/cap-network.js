@@ -555,7 +555,13 @@ function netMint(){
 function netMintGo(){
   if (typeof toast === 'function') toast('Creating…');
   api('netBuild', { body: {} }).then(function(r){
-    var created = r.created || [], invited = r.invited || [], probs = r.problems || [];
+    // Take the receipts IMMEDIATELY, not when the person clicks Done. Between the build and that click, autosave
+    // could push this page's copy — which has no `built` markers — and the next Build would treat existing stores
+    // as new. The server now also refuses to drop them, but the client should not be sending stale state at all.
+    api('netDesignGet').then(function(d){
+      if (d && d.draft && d.draft.nodes) { UI.net = d.draft; _netSetDirty(false); }
+    }).catch(function(){});
+    var created = r.created || [], invited = r.invited || [], updated = r.updated || [], probs = r.problems || [];
     var body = '<div style="max-height:64vh;overflow:auto">'
       + (created.length ? '<div style="padding:11px 16px;border-bottom:1px solid var(--line);font-size:12.5px;line-height:1.6"><b>' + created.length + ' store' + (created.length === 1 ? '' : 's') + ' created.</b> Each signs in at the login page with the <b>handle</b> and the <b>code</b> below. Codes last 7 days.<br><span style="color:#a5382e">This is the only time these codes are shown.</span></div>' : '')
       + created.map(function(c){
@@ -566,6 +572,8 @@ function netMintGo(){
             + '<span style="font-family:ui-monospace,Menlo,monospace;font-size:15px;font-weight:700;letter-spacing:.08em;background:#f4f7fb;border:1px solid var(--line);border-radius:7px;padding:2px 10px">' + esc(c.claim_code) + '</span>'
             + '<button onclick="netCopyKey(\'' + esc(c.handle) + '\',\'' + esc(c.claim_code) + '\')" style="padding:4px 10px;font-size:11.5px">Copy</button>'
             + '</div></div>'; }).join('')
+      + (updated.length ? '<div style="padding:9px 16px 4px;font-size:11px;font-weight:700;letter-spacing:.04em;color:#8a5a1e">CHANGED — ' + updated.length + '</div>'
+          + updated.map(function(u){ return '<div style="padding:7px 16px;font-size:12.5px;border-bottom:1px solid var(--line)">' + esc(u.name) + ' <span style="color:var(--grey)">' + esc(u.from) + ' → ' + esc(u.to) + '</span></div>'; }).join('') : '')
       + (invited.length ? '<div style="padding:9px 16px 4px;font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--grey)">INVITED — awaiting their acceptance</div>'
           + invited.map(function(i){ return '<div style="padding:7px 16px;font-size:12.5px;border-bottom:1px solid var(--line)">🤝 ' + esc(i.name) + ' <span style="color:var(--grey)">' + esc(i.handle || '') + ' · ' + esc(i.status || '') + '</span></div>'; }).join('') : '')
       + (probs.length ? probs.map(function(x){ return '<div style="padding:7px 16px;font-size:12px;color:#a5382e"><b>' + esc(x.name || '—') + '</b> — ' + esc(x.reason) + '</div>'; }).join('') : '')
