@@ -468,12 +468,17 @@ function netBuild(){
     + '</div>';
   var blocks = plans.filter(function(p){ return !p.node.root || p.lines.length > 1; }).map(function(p){
     var n = p.node;
-    var badge = n.root ? 'ANCHOR' : (p.owned ? 'OWNED · entity+key' : 'PARTNER · handshake');
-    var bcol = n.root ? '#6b6f86' : (p.owned ? '#2c5aa0' : '#8a5a1e');
+    // BUILT vs DESIGNED, said on every row. Athi: *"how do we differentiate between design and already built
+    // network?"* Until now the plan read identically whether a node existed or not, which is the one thing a
+    // person needs to know before pressing anything.
+    var badge = n.root ? 'ANCHOR' : (n.built ? 'BUILT' : (p.owned ? 'TO CREATE' : 'PARTNER · invite'));
+    var bcol = n.root ? '#6b6f86' : (n.built ? '#2c7a43' : (p.owned ? '#2c5aa0' : '#8a5a1e'));
+    var hnd = _netHandleOf(n);
     var rows = p.lines.map(function(l){ return '<div style="font-size:12px;color:#3a4048;line-height:1.55;padding:1px 0">' + (l.indexOf('·') === 0 ? '<span style="color:var(--grey);padding-left:12px">' + l + '</span>' : '▸ ' + l) + '</div>'; }).join('');
     var w = p.warns.length ? '<div style="margin-top:6px;padding:6px 9px;border:1px solid #e6c4bf;border-radius:7px;background:#fbeeec;font-size:11px;color:#a5382e">' + p.warns.map(function(x){ return '⚠ ' + x; }).join('<br>') + '</div>' : '';
     return '<div style="padding:11px 16px;border-bottom:1px solid var(--line)">'
-      + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><b style="font-size:13px">' + esc(n.name) + '</b><span style="font-size:9.5px;font-weight:700;letter-spacing:.03em;color:' + bcol + ';border:1px solid ' + bcol + '55;border-radius:4px;padding:1px 5px">' + badge + '</span></div>'
+      + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:2px"><b style="font-size:13px">' + esc(n.name) + '</b><span style="font-size:9.5px;font-weight:700;letter-spacing:.03em;color:' + bcol + ';border:1px solid ' + bcol + '55;border-radius:4px;padding:1px 5px">' + badge + '</span></div>'
+      + (hnd ? '<div style="font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:#2c5aa0;margin-bottom:4px">' + esc(hnd) + '</div>' : '')
       + rows + w + '</div>';
   }).join('');
   var gate = '<div style="padding:13px 16px">'
@@ -508,13 +513,21 @@ function netMint(){
     _netSetDirty(false);
     return api('netBuild', { body: { dry_run: true } });
   }).then(function(p){
-    var create = p.create || [], invite = p.invite || [], probs = (p.problems || []).concat([]), notes = p.notes || [];
+    var create = p.create || [], update = p.update || [], invite = p.invite || [],
+        probs = (p.problems || []).concat([]), notes = p.notes || [];
     var body = '<div style="max-height:64vh;overflow:auto">'
       + '<div style="padding:12px 16px;border-bottom:1px solid var(--line);font-size:12.5px;line-height:1.6">'
       + 'Your network is named <b style="font-family:ui-monospace,Menlo,monospace">' + esc(p.root) + '</b>'
       + (p.root_claimed ? ' — <b>this will become your User ID</b>, and every store below is named from it.' : '. Every store below is named from it.')
       + '</div>'
       + (create.length ? '<div style="padding:9px 16px 4px;font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--grey)">WILL BE CREATED — ' + create.length + '</div>' + create.map(_mintRow).join('') : '')
+      // Enhancing an existing network: a store already built whose visibility the design now disagrees with. Shown
+      // as a from → to so nobody discovers after the fact that a live shop changed who can see it.
+      + (update.length ? '<div style="padding:9px 16px 4px;font-size:11px;font-weight:700;letter-spacing:.04em;color:#8a5a1e">WILL BE CHANGED — ' + update.length + '</div>'
+          + update.map(function(u){ return '<div style="padding:8px 16px;border-bottom:1px solid var(--line)">'
+              + '<b style="font-size:13px">' + esc(u.name) + '</b>'
+              + '<div style="font-family:ui-monospace,Menlo,monospace;font-size:12px;color:#2c5aa0;margin-top:2px">' + esc(u.handle) + '</div>'
+              + '<div style="font-size:12px;color:#8a5a1e;margin-top:3px">who can see it: <b>' + esc(u.from) + '</b> → <b>' + esc(u.to) + '</b></div></div>'; }).join('') : '')
       + (invite.length ? '<div style="padding:9px 16px 4px;font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--grey)">WILL BE INVITED — ' + invite.length + '</div>'
           + invite.map(function(i){ return '<div style="padding:8px 16px;border-bottom:1px solid var(--line);font-size:12.5px">🤝 <b>' + esc(i.name) + '</b> <span style="color:var(--grey)">→ ' + esc(i.ref) + '</span><div style="font-size:11px;color:var(--grey);margin-top:2px">A request they must accept. They are not added to your network by you.</div></div>'; }).join('') : '')
       + ((p.skip || []).length ? '<div style="padding:9px 16px;font-size:11.5px;color:var(--grey)">' + p.skip.length + ' already built — untouched.</div>' : '')
@@ -522,10 +535,16 @@ function netMint(){
           + probs.map(function(x){ return '<div style="padding:7px 16px;font-size:12px;color:#a5382e;border-bottom:1px solid var(--line)"><b>' + esc(x.name || '—') + '</b> — ' + esc(x.reason) + '</div>'; }).join('') : '')
       + (notes.length ? notes.map(function(n){ return '<div style="padding:7px 16px;font-size:12px;color:#8a5a1e">⚠ ' + esc(n) + '</div>'; }).join('') : '')
       + '<div style="padding:13px 16px">'
-      + (create.length || invite.length
-          ? '<div style="padding:10px 13px;border:1px solid #e0d3b0;border-radius:10px;background:#fdf8ec;font-size:12px;color:#7a6428;line-height:1.6">Each new store gets a <b>sign-in code shown once</b> on the next screen. Write them down or hand them over then — you can issue a fresh one later, but you cannot look this one up again.</div>'
-            + '<button class="pri" onclick="netMintGo()" style="margin-top:11px;width:100%;padding:10px;font-size:13px">Create ' + create.length + ' store' + (create.length === 1 ? '' : 's') + (invite.length ? ' · send ' + invite.length + ' invitation' + (invite.length === 1 ? '' : 's') : '') + '</button>'
-          : '<div style="font-size:12.5px;color:var(--grey)">Nothing to create. Fix the reasons above, or add a node you own.</div>')
+      + (create.length || update.length || invite.length
+          ? (create.length ? '<div style="padding:10px 13px;border:1px solid #e0d3b0;border-radius:10px;background:#fdf8ec;font-size:12px;color:#7a6428;line-height:1.6">Each new store gets a <b>sign-in code shown once</b> on the next screen. Write them down or hand them over then — you can issue a fresh one later, but you cannot look this one up again.</div>' : '')
+            + '<button class="pri" onclick="netMintGo()" style="margin-top:11px;width:100%;padding:10px;font-size:13px">'
+            + [create.length ? 'Create ' + create.length + ' store' + (create.length === 1 ? '' : 's') : '',
+               update.length ? 'change ' + update.length : '',
+               invite.length ? 'send ' + invite.length + ' invitation' + (invite.length === 1 ? '' : 's') : '']
+              .filter(Boolean).join(' · ')
+            + '</button>'
+            + '<div style="font-size:11px;color:var(--grey);margin-top:8px;line-height:1.5">Nothing is deleted or renamed. Removing a node from the drawing does not remove the store.</div>'
+          : '<div style="font-size:12.5px;color:var(--grey)">The network already matches this design. Add a node, or change a store\'s visibility.</div>')
       + '</div></div>';
     if (typeof modal === 'function') modal('<div class="mhd"><div class="t">🔨 Confirm — nothing created yet</div></div><div class="mbody" style="padding:0">' + body + '</div>', true);
   }).catch(function(e){
@@ -1089,7 +1108,10 @@ function _netRootHandle(){
     try { api('me').then(function(r){
       var e = (r && (r.entity || r)) || {};
       var h = e.user_id || e.handle;
-      if (h) { UI._netRootHandle = String(h).toLowerCase(); _netRerender(); }
+      // The NETWORK's own visibility, which caps every store under it (see netMaxExposure).
+      UI._netOwnVis = String(e.catalogue_visibility || '').toLowerCase() || null;
+      if (h) UI._netRootHandle = String(h).toLowerCase();
+      _netRerender();
     }).catch(function(){}); } catch (e) {}
   }
   return _netSlug((typeof SESSION !== 'undefined' && SESSION.entity) || '') || 'your-network';
@@ -1151,16 +1173,34 @@ function _netVisChip(n){
     + ';border-radius:5px;padding:1px 5px;margin-left:6px;vertical-align:middle">' + c.t + '</span>';
 }
 
+/* The most open a store may be, given the NETWORK's own visibility. Athi: *"what if the network is private? Then
+   each store can have only network or private options."* A private network cannot front a public shop.
+   Mirrors the cascade the build enforces; the server remains the authority and refuses regardless. */
+function netMaxExposure(){
+  var v = UI._netOwnVis;
+  return (v === 'private' || v === 'network') ? 'protected' : 'public';
+}
 function _netVisibilityBlock(n){
   var cur = n.exposure || 'private';
+  var maxOpen = netMaxExposure();
+  var allowed = maxOpen === 'public' ? ['public', 'protected', 'private'] : ['protected', 'private'];
+  // A choice already made but no longer permitted must still be VISIBLE, or the screen would quietly show
+  // "Private" for a store the operator had set to public and never say why it moved.
+  var stale = allowed.indexOf(cur) < 0;
   return '<div style="margin-top:16px;padding:13px 15px;border:1px solid #b9cbe4;border-radius:11px;background:#f7fafd">'
     + '<div style="font-size:11px;font-weight:800;color:#2c5aa0;letter-spacing:.05em">WHO CAN SEE THIS STORE\'S CATALOGUE</div>'
     + '<div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:9px">'
-    + NET_EXPOSURE.map(function(o){
+    + NET_EXPOSURE.filter(function(o){ return allowed.indexOf(o.k) >= 0 || o.k === cur; }).map(function(o){
         var on = cur === o.k;
+        var off = allowed.indexOf(o.k) < 0;
+        if (off) return '<button disabled title="Not available while the network is not public" style="padding:7px 13px;border-radius:8px;font-size:12.5px;border:1px dashed var(--line);background:#f4f5f7;color:#9aa2ad;cursor:not-allowed">' + o.label + '</button>';
         return '<button onclick="netSetExposure(\'' + n.key + '\',\'' + o.k + '\')" style="padding:7px 13px;border-radius:8px;font-size:12.5px;font-weight:' + (on ? '700' : '500') + ';border:1px solid ' + (on ? '#2c5aa0' : 'var(--line)') + ';background:' + (on ? '#2c5aa0' : '#fff') + ';color:' + (on ? '#fff' : '#3a4048') + '">' + o.label + '</button>';
       }).join('')
     + '</div>'
+    + (maxOpen !== 'public'
+        ? '<div style="font-size:11.5px;color:#8a5a1e;margin-top:8px;line-height:1.55">🔒 <b>This network is ' + esc(UI._netOwnVis === 'network' ? 'network-only' : 'private') + '</b>, so a store under it can be seen by the network or by nobody — not by the public. Open the network itself first if you want public shops.'
+          + (stale ? ' <b>“' + esc((NET_EXPOSURE.filter(function(o){ return o.k === cur; })[0] || {}).label || cur) + '” is no longer available</b> and will be built as Network only.' : '')
+          + '</div>' : '')
     + '<div style="font-size:11.5px;color:var(--grey);margin-top:8px;line-height:1.55">'
     + esc((NET_EXPOSURE.filter(function(o){ return o.k === cur; })[0] || {}).hint || '') + '</div>'
     + (n.built ? '<div style="font-size:11px;color:#8a5a1e;margin-top:7px;line-height:1.5">⚠ Already built — changing this here updates the design, not the live store. Change it from the store\'s own Settings, within what you allowed it.</div>' : '')
