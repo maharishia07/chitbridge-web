@@ -628,7 +628,9 @@ function networkScreen(){
   return '<div style="display:flex;height:100%;min-height:0">'
     + '<div style="width:300px;border-right:1px solid var(--line);overflow:auto;padding:12px 8px;flex:0 0 auto">'
       + '<div style="font-size:11px;font-weight:800;color:var(--grey);letter-spacing:.05em;padding:2px 8px 3px">' + esc(UI.net.purpose || 'NETWORK') + '</div>'
-      + '<div style="font-size:10px;color:#8a94a3;padding:0 8px 10px">design · saved on this device</div>'
+      // "on this device" was left over from when the draft was localStorage only. It has been saved against the
+      // ENTITY since b111 — it follows you to any browser — and saying otherwise undersold it.
+      + '<div style="font-size:10px;color:#8a94a3;padding:0 8px 10px">design · saved for this network</div>'
       + tree
       + '<div style="border-top:1px solid var(--line);margin-top:12px;padding-top:10px">'
         + '<button class="pri" onclick="netBuild()" style="width:calc(100% - 16px);margin:0 8px;padding:9px">🔨 Build network' + (count ? ' (' + count + ')' : '') + '</button>'
