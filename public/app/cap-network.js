@@ -407,7 +407,26 @@ function netSetCollectBack(key, i, prop, val){ var n = _netNode(key); if (!n) re
 function netAddCatField(key){ var n = _netNode(key); if (!n) return; _ensureCat(n).fields.push({ name: '', leg: 'cb', via: '', type: 'text' }); _netMark(); _netRerender(); }   // default leg = the gap CB fills
 function netDelCatField(key, i){ var n = _netNode(key); if (!n) return; var c = _ensureCat(n); c.fields.splice(i, 1); _netMark(); _netRerender(); }
 function netSetCatField(key, i, prop, val){ var n = _netNode(key); if (!n) return; var c = _ensureCat(n); var f = c.fields[i]; if (!f) return; f[prop] = val; if (prop === 'leg') f.via = (val === 'system' || val === 'compute') ? _viaFor(val)[0] : ''; _netMark(); if (prop !== 'name') _netRerender(); }   // name via oninput: no re-render
-function netSetExposure(key, val){ var n = _netNode(key); if (!n) return; n.exposure = val; _netMark(); _netRerender(); }
+function netSetExposure(key, val){
+  var n = _netNode(key); if (!n) return;
+  n.exposure = val;
+  // Closing a department closes what is under it. Doing this in the DESIGN as well as at Build means the drawing
+  // never claims something the platform will refuse — and the person sees the consequence at the moment they
+  // cause it, rather than in a list of notes after pressing Build.
+  var closed = [];
+  (function shut(parentKey, ceil){
+    (UI.net.nodes || []).filter(function(x){ return x.parent_key === parentKey; }).forEach(function(c){
+      var cv = c.exposure || 'private';
+      var next = NET_RANK[cv] > NET_RANK[ceil] ? ceil : cv;
+      if (next !== cv) { c.exposure = next; closed.push(c.name); }
+      shut(c.key, next);
+    });
+  })(key, val);
+  if (closed.length && typeof toast === 'function') {
+    toast(closed.length === 1 ? '"' + closed[0] + '" was closed to match' : closed.length + ' stores below were closed to match');
+  }
+  _netMark(); _netRerender();
+}
 /* structure */
 function _netDescendants(key, acc){ acc = acc || []; (UI.net.nodes || []).forEach(function(n){ if (n.parent_key === key){ acc.push(n.key); _netDescendants(n.key, acc); } }); return acc; }
 function netDelete(key){
@@ -1259,6 +1278,21 @@ function netMaxExposure(){
   var v = UI._netOwnVis;
   return (v === 'private' || v === 'network') ? 'protected' : 'public';
 }
+/* The ceiling for ONE node: the narrowest of the network's own setting and every ancestor's effective visibility.
+   Athi, 2026-08-08: *"make the cascade for parent and child."* A store can be no more open than what it sits
+   inside, at every level — not just under the root. Mirrors lib/network-build.js; the server stays the authority. */
+var NET_RANK = { private: 0, protected: 1, public: 2 };
+function _netCeilingFor(n){
+  var ceil = netMaxExposure();
+  var seen = 0;
+  var p = n && n.parent_key ? _netNode(n.parent_key) : null;
+  while (p && !p.root && seen++ < 20) {                       // seen: a malformed draft must not spin
+    var pv = p.exposure || 'private';
+    if (NET_RANK[pv] < NET_RANK[ceil]) ceil = pv;
+    p = p.parent_key ? _netNode(p.parent_key) : null;
+  }
+  return ceil;
+}
 /* ── THE FIRST QUESTION ───────────────────────────────────────────────────────────────────────────────────────
    Athi, 2026-08-07: *"when someone tries to set up the network, the first question needs to be: is it a private
    network or a public network where any of the stores should be visible outside and face the customer — so the
@@ -1313,8 +1347,10 @@ function _netNetworkVisibilityBlock(){
 
 function _netVisibilityBlock(n){
   var cur = n.exposure || 'private';
-  var maxOpen = netMaxExposure();
-  var allowed = maxOpen === 'public' ? ['public', 'protected', 'private'] : ['protected', 'private'];
+  var maxOpen = _netCeilingFor(n);         // the network AND every department above this one
+  var byParent = maxOpen !== netMaxExposure();
+  var allowed = maxOpen === 'public' ? ['public', 'protected', 'private']
+              : maxOpen === 'protected' ? ['protected', 'private'] : ['private'];
   // A choice already made but no longer permitted must still be VISIBLE, or the screen would quietly show
   // "Private" for a store the operator had set to public and never say why it moved.
   var stale = allowed.indexOf(cur) < 0;
@@ -1329,7 +1365,12 @@ function _netVisibilityBlock(n){
       }).join('')
     + '</div>'
     + (maxOpen !== 'public'
-        ? '<div style="font-size:11.5px;color:#8a5a1e;margin-top:8px;line-height:1.55">🔒 <b>This network is ' + esc(UI._netOwnVis === 'network' ? 'network-only' : 'private') + '</b>, so a store under it can be seen by the network or by nobody — not by the public. Open the network itself first if you want public shops.'
+        ? '<div style="font-size:11.5px;color:#8a5a1e;margin-top:8px;line-height:1.55">🔒 '
+          + (byParent
+              ? '<b>' + esc((_netNode(n.parent_key) || {}).name || 'The department above') + '</b> is '
+                + esc(((NET_EXPOSURE.filter(function(o){ return o.k === maxOpen; })[0] || {}).label || maxOpen)).replace(/^[^ ]+ /, '')
+                + ', so this store cannot be more open than that. Move it under the network itself if it should face customers.'
+              : '<b>This network is ' + esc(UI._netOwnVis === 'network' ? 'network-only' : 'private') + '</b>, so a store under it can be seen by the network or by nobody — not by the public. Open the network itself first if you want public shops.')
           + (stale ? ' <b>“' + esc((NET_EXPOSURE.filter(function(o){ return o.k === cur; })[0] || {}).label || cur) + '” is no longer available</b> and will be built as Network only.' : '')
           + '</div>' : '')
     + '<div style="font-size:11.5px;color:var(--grey);margin-top:8px;line-height:1.55">'
