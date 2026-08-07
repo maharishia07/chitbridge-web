@@ -140,7 +140,7 @@ const CAP_CATALOGUE = [
       {n:'Operator cap (params_override.caps) — a provisioned node cannot open itself; the switch renders LOCKED with who capped it', s:'done'},
       {n:'ARCHIVED — cb_catalogue_item/category (a third catalogue model nothing read). A network aggregates its members and holds no catalogue of its own', s:'done'},
       {n:'THE BUILD MINTS — the design page creates the stores it drew: an entity, a place on the tree and a sign-in code per owned node, in one transaction (network-build 15/0)', s:'done'},
-      {n:'HUMAN-READABLE HANDLES — athi.clothing, the same convention at every level; the bridge id stays the identity and is never typed (handle 17/0)', s:'done'},
+      {n:'HUMAN-READABLE HANDLES — athi.clothing, ALWAYS two levels however deep the store sits; depth lives in the tree, not the name, so a co-assist stays ravi@athi.mens (handle 18/0)', s:'done'},
       {n:'★ WHO MAY JOIN A NETWORK — answered. An OWNED node is created by the operator; a PARTNER is only ever INVITED and must accept. Nothing places an outsider on the tree unilaterally, which is what keeps the network tier honest', s:'done'},
       {n:'The provisioning cap is written AT THE MINT — a warehouse designed network-only is capped network-only and cannot publish itself from its own Settings screen', s:'done'},
       {n:'⚠ A cap of “network” used to be silently ignored (capOf answered only public|private) — the middle rung is now enforced by rank, found while wiring this', s:'done'},
