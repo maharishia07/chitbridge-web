@@ -577,6 +577,10 @@ function _netTree(parentKey, depth){
   return kids.map(function(n){ var sel = UI.net.sel === n.key; var dots = _capDots(n);
     return '<div onclick="netSelect(\'' + n.key + '\')" style="cursor:pointer;padding:7px 9px;padding-left:' + (9 + depth * 16) + 'px;border-radius:8px;font-size:12.5px;' + (sel ? 'background:#eef4fc;color:#2c5aa0;font-weight:700' : 'color:#3a4048') + '">'
       + (n.parent_key ? '└ ' : '◆ ') + esc(n.name) + (n.owned ? '' : ' <span title="partner">🤝</span>')
+      // The visibility flag, in the tree. It is the decision this whole page exists to make, so it must be
+      // readable across the WHOLE network at a glance — not one node at a time. Re-rendered by netSetExposure,
+      // so changing it on the right updates here immediately.
+      + (n.root || !n.owned ? '' : _netVisChip(n))
       + (dots ? '<span style="font-size:10px;margin-left:5px;opacity:.9">' + dots + '</span>' : '')
       + '</div>' + _netTree(n.key, depth + 1);
   }).join('');
@@ -1059,6 +1063,45 @@ function _capDetail(n, k){
   var c = _capMeta(k) || {};
   return '<div style="padding:12px 14px;border:1px dashed var(--line-strong,#c8d0d9);border-radius:10px;background:#fafbfc;font-size:12.5px;color:var(--grey)">' + c.icon + ' <b>' + esc(c.label) + '</b> — no settings.</div>';
 }
+/* ── THE NAME EVERY STORE WILL CARRY ──────────────────────────────────────────────────────────────────────────
+   Athi, 2026-08-07: *"the right-hand side has to show the name of the store is alpha timers.north, so it is clear
+   that the network name is always prefixed in each store."*
+
+   ⚠️ THIS IS A PREVIEW, NOT THE DECISION. The authoritative handle is composed by lib/handle.js on the server at
+   Build, from the operator's real user_id. These rules are kept identical to it deliberately — but if they ever
+   drift, the SERVER wins and the confirm screen (netMint) shows the real handles before anything is created.
+   That is why the preview is allowed to exist at all: nothing is created from it.                             */
+function _netSlug(name){
+  return String(name == null ? '' : name).toLowerCase()
+    .replace(/['’]/g, '')          // "Men's" → mens, not men-s
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .replace(/-{2,}/g, '-')
+    .slice(0, 40);
+}
+/* The network's own name. Prefers what the server said (after a Build, or once /me has been read), and only then
+   falls back to slugging the display name — which is exactly what the server would do if no user_id is set. */
+function _netRootHandle(){
+  if (UI.net && UI.net.root_handle) return UI.net.root_handle;
+  if (UI._netRootHandle) return UI._netRootHandle;
+  if (!UI._netRootAsked && _netLoggedIn()) {
+    UI._netRootAsked = true;                       // once per session; a failed read simply keeps the fallback
+    try { api('me').then(function(r){
+      var e = (r && (r.entity || r)) || {};
+      var h = e.user_id || e.handle;
+      if (h) { UI._netRootHandle = String(h).toLowerCase(); _netRerender(); }
+    }).catch(function(){}); } catch (e) {}
+  }
+  return _netSlug((typeof SESSION !== 'undefined' && SESSION.entity) || '') || 'your-network';
+}
+/* The full handle a node will be given: <network>.<store>, always exactly two levels however deep it sits. */
+function _netHandleOf(n){
+  if (n && n.built && n.built.user_id) return n.built.user_id;
+  if (!n || n.root || !n.owned) return '';
+  var s = _netSlug(n.name);
+  return s ? _netRootHandle() + '.' + s : '';
+}
+
 /* The visibility of ONE store, on the node itself — the only thing a network has to decide about a member.
    `private` is the default and the absence of a choice, never a value you have to pick to be safe. */
 var NET_EXPOSURE = [
@@ -1066,6 +1109,19 @@ var NET_EXPOSURE = [
   { k: 'protected', label: '🔒 Network only', hint: 'The other stores in this network — the warehouse case. Not the public.' },
   { k: 'private',   label: '— Private',       hint: 'Nobody but this store. Nothing is published.' },
 ];
+/* The tree's one-word visibility badge. Private is deliberately the QUIETEST of the three — it is the default and
+   the safe state, so it should not shout; Public is the one worth noticing. */
+var NET_VIS_CHIP = {
+  'public':    { t: 'Public',  fg: '#2c7a43', bg: '#e6f4ec' },
+  'protected': { t: 'Network', fg: '#8a5a1e', bg: '#f6ecd8' },
+  'private':   { t: 'Private', fg: '#6b6f86', bg: '#eef0f4' },
+};
+function _netVisChip(n){
+  var c = NET_VIS_CHIP[n.exposure || 'private'] || NET_VIS_CHIP.private;
+  return '<span style="font-size:9.5px;font-weight:800;letter-spacing:.02em;color:' + c.fg + ';background:' + c.bg
+    + ';border-radius:5px;padding:1px 5px;margin-left:6px;vertical-align:middle">' + c.t + '</span>';
+}
+
 function _netVisibilityBlock(n){
   var cur = n.exposure || 'private';
   return '<div style="margin-top:16px;padding:13px 15px;border:1px solid #b9cbe4;border-radius:11px;background:#f7fafd">'
@@ -1093,6 +1149,12 @@ function _netNodeView(n){
                : 'An independent business — at Build it\'s a <b>handshake</b> (no key held). Its catalogue is visible here.');
   return '<div style="padding:16px 20px;max-width:560px">'
     + '<div style="font-size:18px;font-weight:800">' + (isRoot ? '◆ ' : '') + esc(n.name) + badge + '</div>'
+    // The handle, directly under the name: the network prefix is not a detail, it IS the store's identity on the
+    // platform, and it is what gets typed into "add a supplier" or a login box.
+    + (_netHandleOf(n) ? '<div style="font-family:ui-monospace,Menlo,monospace;font-size:13px;color:#2c5aa0;margin-top:3px">' + esc(_netHandleOf(n))
+        + (n.built ? '' : '<span style="font-family:inherit;font-size:11px;color:var(--grey);margin-left:7px">— the name it will be given</span>') + '</div>' : '')
+    + (isRoot ? '<div style="font-family:ui-monospace,Menlo,monospace;font-size:13px;color:#2c5aa0;margin-top:3px">' + esc(_netRootHandle())
+        + '<span style="font-family:inherit;font-size:11px;color:var(--grey);margin-left:7px">— the network name every store is prefixed with</span></div>' : '')
     + '<div style="font-size:11.5px;color:var(--grey);margin-top:2px">' + kindLine + ' · ' + childCount + ' child' + (childCount === 1 ? '' : 'ren') + '</div>'
     + '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:14px">'
       + '<button class="pri" onclick="netAddChild(\'' + n.key + '\')" style="padding:8px 13px">＋ Add owned node</button>'
