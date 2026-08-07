@@ -1094,6 +1094,35 @@ function _netRootHandle(){
   }
   return _netSlug((typeof SESSION !== 'undefined' && SESSION.entity) || '') || 'your-network';
 }
+/* Is the network name a real, saved User ID — or a guess we made from the display name?
+   Athi, 2026-08-07: *"why alpha-timers when the user id is alpha timers?"* Because "alpha timers" is the DISPLAY
+   NAME, a handle cannot contain a space, and nobody had ever been asked to choose. Deriving it silently is the
+   problem; this makes the difference visible and the choice available. */
+function _netRootIsSet(){ return !!((UI.net && UI.net.root_handle) || UI._netRootHandle); }
+
+/* Choose the network name. Every store is prefixed with it, so it is the most consequential name on the page. */
+function netSetNetworkName(){
+  var cur = _netRootHandle();
+  var want = (typeof prompt === 'function')
+    ? prompt('The network name.\n\nEvery store is prefixed with it — ' + cur + '.north, ' + cur + '.south.\nIt is also your own User ID, so people can use it to add you as a supplier.\n\nLetters, numbers and dashes only — no spaces.', cur)
+    : null;
+  if (want === null) return;
+  var s = String(want).trim().toLowerCase();
+  if (!s) return;
+  if (!/^[a-z0-9][a-z0-9-]*$/.test(s) || /-$/.test(s)) {
+    if (typeof toast === 'function') toast('Letters, numbers and dashes only — no spaces. Try "' + _netSlug(s) + '".', true);
+    return;
+  }
+  api('saveProfile', { body: { user_id: s } }).then(function(){
+    UI._netRootHandle = s;
+    if (typeof toast === 'function') toast('Network name set to ' + s);
+    _netRerender();
+  }).catch(function(e){
+    // The server owns uniqueness and the platform's own User ID rules; it says which one was broken.
+    if (typeof toast === 'function') toast((e && e.message) || 'Could not set that name', true);
+  });
+}
+
 /* The full handle a node will be given: <network>.<store>, always exactly two levels however deep it sits. */
 function _netHandleOf(n){
   if (n && n.built && n.built.user_id) return n.built.user_id;
@@ -1153,8 +1182,19 @@ function _netNodeView(n){
     // platform, and it is what gets typed into "add a supplier" or a login box.
     + (_netHandleOf(n) ? '<div style="font-family:ui-monospace,Menlo,monospace;font-size:13px;color:#2c5aa0;margin-top:3px">' + esc(_netHandleOf(n))
         + (n.built ? '' : '<span style="font-family:inherit;font-size:11px;color:var(--grey);margin-left:7px">— the name it will be given</span>') + '</div>' : '')
-    + (isRoot ? '<div style="font-family:ui-monospace,Menlo,monospace;font-size:13px;color:#2c5aa0;margin-top:3px">' + esc(_netRootHandle())
-        + '<span style="font-family:inherit;font-size:11px;color:var(--grey);margin-left:7px">— the network name every store is prefixed with</span></div>' : '')
+    // The network name, said out loud and CHANGEABLE. It is the most consequential name on the page — every store
+    // carries it — and it used to be derived from the display name without anyone being asked.
+    + (isRoot ? '<div style="margin-top:5px;display:flex;align-items:center;gap:9px;flex-wrap:wrap">'
+        + '<span style="font-family:ui-monospace,Menlo,monospace;font-size:14px;font-weight:700;color:#2c5aa0">' + esc(_netRootHandle()) + '</span>'
+        + '<button onclick="netSetNetworkName()" style="padding:3px 10px;font-size:11.5px">Change</button>'
+        + '</div>'
+        + '<div style="font-size:11.5px;color:var(--grey);margin-top:4px;line-height:1.55">'
+        + (_netRootIsSet()
+            ? 'Your User ID. Every store is prefixed with it.'
+            : 'Suggested from your business name — <b>not saved yet</b>. A handle cannot contain a space, so "'
+              + esc((typeof SESSION !== 'undefined' && SESSION.entity) || '') + '" becomes "' + esc(_netRootHandle())
+              + '". Change it now if you want something else; after Build the stores keep the name they were given.')
+        + '</div>' : '')
     + '<div style="font-size:11.5px;color:var(--grey);margin-top:2px">' + kindLine + ' · ' + childCount + ' child' + (childCount === 1 ? '' : 'ren') + '</div>'
     + '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:14px">'
       + '<button class="pri" onclick="netAddChild(\'' + n.key + '\')" style="padding:8px 13px">＋ Add owned node</button>'
