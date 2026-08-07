@@ -108,7 +108,7 @@ function _netInit(){
     if (!n.holds) n.holds = [];
     if (n.note && n.purpose === undefined) { n.purpose = n.note; delete n.note; }
     if (n.holds.indexOf('catalogue') >= 0 && !n.catalogue) n.catalogue = { template: 'custom', fields: [] };
-    if (n.holds.indexOf('storefront') >= 0) { if (!n.exposure) n.exposure = 'public'; _ensureOrder(n); }
+    if (n.holds.indexOf('storefront') >= 0) { _ensureOrder(n); }   // NEVER default exposure to public — an unset choice is private, decided on the node
     if (n.holds.indexOf('coassist') >= 0) n.coassist = _normCoassist(n.coassist);
     if (n.holds.indexOf('transact') >= 0 && !n.transact) n.transact = { flow: 'both', copyOperator: true };
     if (n.holds.indexOf('tradeready') >= 0 && !n.tradeready) n.tradeready = { mode: 'inherit', certs: [] };
@@ -287,7 +287,7 @@ function netCapYes(key, capKey){
   if (n.holds.indexOf(capKey) < 0) {
     n.holds.push(capKey);
     if (capKey === 'catalogue' && !n.catalogue) n.catalogue = { template: 'custom', fields: [] };
-    if (capKey === 'storefront') { if (!n.exposure) n.exposure = 'public'; _ensureOrder(n); }
+    if (capKey === 'storefront') { _ensureOrder(n); }   // ticking a capability must not publish a shop
     if (capKey === 'coassist' && !n.coassist) n.coassist = _defCoassist();
     if (capKey === 'transact' && !n.transact) n.transact = { flow: 'both', copyOperator: true };
     if (capKey === 'tradeready' && !n.tradeready) n.tradeready = { mode: 'inherit', certs: [] };
@@ -424,7 +424,13 @@ function netStartOver(){
 function _buildPlanNode(n){
   var owned = !n.root && n.owned, partner = !n.owned, holds = n.holds || [], lines = [], warns = [];
   if (n.root) lines.push('anchor: the top entity (you) — no new entity');
-  else if (owned) lines.push('register <b>entity</b> + issue a <b>login key</b> (co-assist pattern)');
+  else if (owned) {
+    lines.push('register <b>entity</b> + issue a <b>login key</b> (co-assist pattern)');
+    // Stated for EVERY store, not only ones with a storefront ticked — visibility is the decision the network is
+    // being built to express, so it must be legible in the plan without opening anything.
+    var vis = (NET_EXPOSURE.filter(function(x){ return x.k === (n.exposure || 'private'); })[0] || {}).label || '— Private';
+    lines.push('catalogue visible to: <b>' + esc(vis) + '</b>');
+  }
   else lines.push('send a <b>handshake</b> — independent business, <b>no key held</b>');
   if (holds.indexOf('catalogue') >= 0) {
     var c = _ensureCat(n), job = CBCatalogue.deriveComputeJob(c);
@@ -441,7 +447,7 @@ function _buildPlanNode(n){
     (c.fields || []).forEach(function(f){ if ((f.leg === 'system' || f.leg === 'compute') && !_legBacked(n, f)) warns.push('“' + esc(f.name || '?') + '” needs ' + (f.leg === 'compute' ? esc(f.via) + ' (AI/ERP)' : 'a ' + esc(f.via) + ' connector') + ' this node doesn\'t carry'); });
     CBCatalogue.validate(c).issues.forEach(function(iss){ warns.push(esc(iss)); });
   }
-  if (holds.indexOf('storefront') >= 0) { var o = _ensureOrder(n); lines.push('storefront: ' + esc(n.exposure || 'public') + ' · order ' + esc(o.method || 'cart') + ((o.states || []).length ? ' · ' + o.states.length + ' lifecycle state(s)' : '')); }
+  if (holds.indexOf('storefront') >= 0) { var o = _ensureOrder(n); lines.push('storefront: ' + esc(n.exposure || 'private') + ' · order ' + esc(o.method || 'cart') + ((o.states || []).length ? ' · ' + o.states.length + ' lifecycle state(s)' : '')); }
   if (holds.indexOf('coassist') >= 0) { var cc = _normCoassist(n.coassist); var p = []; if (cc.human.count) p.push(cc.human.count + ' human'); if ((cc.iot.connections || []).length) p.push((cc.iot.connections || []).length + ' IoT'); if (cc.erp.connectors.length) p.push(cc.erp.connectors.length + ' ERP'); if (cc.ai.count) p.push(cc.ai.count + ' AI slot'); lines.push('co-assists: ' + (p.join(' · ') || 'none set')); }
   if (holds.indexOf('transact') >= 0) { var tr = n.transact || {}; lines.push('transact: ' + esc(tr.flow || 'both') + (tr.copyOperator ? ' · copy operator (traceability + MIS)' : '')); }
   if (holds.indexOf('tradeready') >= 0) { var tt = n.tradeready || {}; lines.push('trade-ready: ' + (tt.mode === 'own' ? (tt.certs || []).length + ' own cert(s)' : 'inherit network certs')); }
@@ -603,7 +609,7 @@ function networkScreen(){
 }
 function _capSummary(n, k){
   if (k === 'catalogue') { var c = n.catalogue || {}; var nf = (c.fields || []).length; return nf + ' field' + (nf === 1 ? '' : 's') + ' · ' + (c.loadedBy || 'manual'); }
-  if (k === 'storefront') { var o = n.order || {}; var ml = (CAT_METHODS.filter(function(x){ return x.k === (o.method || 'cart'); })[0] || {}).label || ''; return (n.exposure || 'public') + ' · ' + ml; }
+  if (k === 'storefront') { var o = n.order || {}; var ml = (CAT_METHODS.filter(function(x){ return x.k === (o.method || 'cart'); })[0] || {}).label || ''; return (n.exposure || 'private') + ' · ' + ml; }
   if (k === 'coassist') { var cc = _normCoassist(n.coassist); var p = []; if (cc.human.count) p.push(cc.human.count + ' human'); var iotDev = (cc.iot.connections || []).reduce(function(s, x){ return s + (parseInt(x.devices, 10) || 0); }, 0); if (iotDev || (cc.iot.connections || []).length) p.push(iotDev + ' IoT'); if (cc.erp.connectors.length) p.push(cc.erp.connectors.length + ' ERP'); if (cc.ai.count) p.push(cc.ai.count + ' AI'); return p.length ? p.join(' · ') : 'none set'; }
   if (k === 'transact') { var t = n.transact || {}; var f = t.flow || 'both'; var base = f === 'both' ? 'sends & receives' : (f === 'send' ? 'sends only' : 'receives only'); return base + (t.copyOperator !== false ? ' · HQ copied' : ''); }
   if (k === 'tradeready') { var tr = n.tradeready || {}; return tr.mode === 'own' ? ('own · ' + (tr.certs || []).length + ' cert' + ((tr.certs || []).length === 1 ? '' : 's')) : "network's certs"; }
@@ -870,7 +876,7 @@ function _catRecordPreview(n){
 function _chitPreview(n){
   var c = n.catalogue || {}; var fs = c.fields || [];
   var o = _ensureOrder(n);
-  var e = n.exposure || 'public';
+  var e = n.exposure || 'private';
   var name = c.product || 'Item';
   var expBadge = '<span style="font-size:9px;font-weight:700;text-transform:uppercase;color:' + (e === 'public' ? '#2c7a43' : '#8a5a1e') + ';background:' + (e === 'public' ? '#e6f4ec' : '#f6ecd8') + ';border-radius:4px;padding:1px 5px">' + esc(e) + '</span>';
   var specRows = fs.slice(0, 6).map(function(f){ return '<div style="display:flex;justify-content:space-between;font-size:11px;padding:1px 0"><span style="color:var(--grey)">' + esc(f.name || '—') + '</span><span style="color:var(--faint,#8a929e);font-family:monospace">' + _sampleVal(f.type) + '</span></div>'; }).join('') || '<div style="font-size:11px;color:var(--grey)">no fields</div>';
@@ -890,18 +896,18 @@ function _chitPreview(n){
     + '</div></div>';
 }
 function _storefrontConfig(n){
-  var e = n.exposure || 'public';
+  var e = n.exposure || 'private';
   var o = _ensureOrder(n);
   var opt = function(val, label, hint){ var on = e === val;
     return '<div onclick="netSetExposure(\'' + n.key + '\',\'' + val + '\')" style="cursor:pointer;padding:8px 10px;border:1px solid ' + (on ? '#2c7a43' : 'var(--line)') + ';border-radius:8px;background:' + (on ? '#e6f4ec' : '#fff') + ';margin-top:6px">'
       + '<b style="font-size:12.5px;color:' + (on ? '#2c7a43' : '#3a4048') + '">' + (on ? '● ' : '○ ') + label + '</b>'
       + '<div style="font-size:11px;color:var(--grey);margin-top:2px">' + hint + '</div></div>'; };
-  var view = '<div style="font-size:11px;font-weight:800;color:#2c7a43;letter-spacing:.05em">👁️ VIEW — who sees it</div>'
-    + opt('public', 'Public', 'Anyone / customers can see this in the storefront.')
-    // The stored value stays `protected` — existing drafts hold it, and network-build.js translates both words.
-    // Only the LABEL changes, to the word the platform uses everywhere else: network.
-    + opt('protected', 'Network only', 'Members of <b>your network</b> — the warehouse case. <b>Not</b> the public.')
-    + '<div style="font-size:11px;color:var(--grey);margin-top:8px">Untick <b>Storefront</b> above to keep this node <b>private</b> (internal — shown to no one).</div>';
+  // Visibility MOVED to the node itself (_netVisibilityBlock). Two controls for one value is how a person sets it
+  // in one place and finds it changed in the other; this panel now only REPORTS it and points at the real control.
+  var curLabel = (NET_EXPOSURE.filter(function(x){ return x.k === (n.exposure || 'private'); })[0] || {}).label || '— Private';
+  var view = '<div style="font-size:11px;font-weight:800;color:#2c7a43;letter-spacing:.05em">👁️ WHO SEES IT</div>'
+    + '<div style="font-size:12px;color:var(--grey);margin-top:5px;line-height:1.55">Currently <b>' + esc(curLabel) + '</b> — set at the top of this node, under <b>Who can see this store\'s catalogue</b>.</div>';
+  void opt;
   var methOpts = CAT_METHODS.map(function(m){ return '<option value="' + m.k + '"' + ((o.method || 'cart') === m.k ? ' selected' : '') + '>' + m.label + '</option>'; }).join('');
   var mh = (CAT_METHODS.filter(function(m){ return m.k === (o.method || 'cart'); })[0] || {}).hint || '';
   var inletRows = (o.inlets || []).map(function(il, i){ var chOpts = OFF_RAIL_CHANNELS.map(function(ch){ return '<option value="' + ch + '"' + (il.channel === ch ? ' selected' : '') + '>' + ch + '</option>'; }).join(''); return '<div style="display:flex;gap:6px;align-items:center;padding:3px 0"><select onchange="netSetInlet(\'' + n.key + '\',' + i + ',\'channel\',this.value)" style="font-size:11.5px;padding:4px;border:1px solid var(--line);border-radius:6px">' + chOpts + '</select><input value="' + esc(il.handle || '') + '" oninput="netSetInlet(\'' + n.key + '\',' + i + ',\'handle\',this.value)" placeholder="the number / address customers use" style="flex:1;min-width:0;font-size:11.5px;padding:4px 7px;border:1px solid var(--line);border-radius:6px"><span onclick="netDelInlet(\'' + n.key + '\',' + i + ')" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 3px">×</span></div>'; }).join('');
@@ -1053,6 +1059,29 @@ function _capDetail(n, k){
   var c = _capMeta(k) || {};
   return '<div style="padding:12px 14px;border:1px dashed var(--line-strong,#c8d0d9);border-radius:10px;background:#fafbfc;font-size:12.5px;color:var(--grey)">' + c.icon + ' <b>' + esc(c.label) + '</b> — no settings.</div>';
 }
+/* The visibility of ONE store, on the node itself — the only thing a network has to decide about a member.
+   `private` is the default and the absence of a choice, never a value you have to pick to be safe. */
+var NET_EXPOSURE = [
+  { k: 'public',    label: '🌐 Public',       hint: 'Anyone with the link, and it appears on the network storefront.' },
+  { k: 'protected', label: '🔒 Network only', hint: 'The other stores in this network — the warehouse case. Not the public.' },
+  { k: 'private',   label: '— Private',       hint: 'Nobody but this store. Nothing is published.' },
+];
+function _netVisibilityBlock(n){
+  var cur = n.exposure || 'private';
+  return '<div style="margin-top:16px;padding:13px 15px;border:1px solid #b9cbe4;border-radius:11px;background:#f7fafd">'
+    + '<div style="font-size:11px;font-weight:800;color:#2c5aa0;letter-spacing:.05em">WHO CAN SEE THIS STORE\'S CATALOGUE</div>'
+    + '<div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:9px">'
+    + NET_EXPOSURE.map(function(o){
+        var on = cur === o.k;
+        return '<button onclick="netSetExposure(\'' + n.key + '\',\'' + o.k + '\')" style="padding:7px 13px;border-radius:8px;font-size:12.5px;font-weight:' + (on ? '700' : '500') + ';border:1px solid ' + (on ? '#2c5aa0' : 'var(--line)') + ';background:' + (on ? '#2c5aa0' : '#fff') + ';color:' + (on ? '#fff' : '#3a4048') + '">' + o.label + '</button>';
+      }).join('')
+    + '</div>'
+    + '<div style="font-size:11.5px;color:var(--grey);margin-top:8px;line-height:1.55">'
+    + esc((NET_EXPOSURE.filter(function(o){ return o.k === cur; })[0] || {}).hint || '') + '</div>'
+    + (n.built ? '<div style="font-size:11px;color:#8a5a1e;margin-top:7px;line-height:1.5">⚠ Already built — changing this here updates the design, not the live store. Change it from the store\'s own Settings, within what you allowed it.</div>' : '')
+    + '</div>';
+}
+
 function _netNodeView(n){
   var isRoot = !n.parent_key;
   var childCount = (UI.net.nodes || []).filter(function(x){ return x.parent_key === n.key; }).length;
@@ -1082,11 +1111,17 @@ function _netNodeView(n){
     + (isRoot ? '' :
         '<div style="margin-top:16px"><label style="font-size:11px;font-weight:800;color:var(--grey);letter-spacing:.05em">PURPOSE</label>'
         + '<input value="' + esc(n.purpose || '') + '" oninput="netSetPurpose(\'' + n.key + '\', this.value)" placeholder="what is this node for? (one line)" style="width:100%;margin-top:6px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;box-sizing:border-box"></div>')
-    + '<div style="margin-top:16px;padding:13px 15px;border:1px solid var(--line);border-radius:11px;background:#fff">'
-      + '<div style="font-size:11px;font-weight:800;color:var(--grey);letter-spacing:.05em">WHAT THIS NODE HOLDS</div>'
-      + '<div style="font-size:11px;color:var(--grey);margin-top:3px">For each, choose <b>Yes</b> or <b>No</b>. Yes opens its details right below.</div>'
+    // ── THE ONE DECISION ────────────────────────────────────────────────────────────────────────────────────
+    // Athi, 2026-08-07: *"we keep the catalogue setting simple — here we have to decide only the visibility part
+    // and nothing else."* Exposure used to live INSIDE the storefront capability panel, three clicks down, which
+    // made the one thing a network actually has to decide the hardest thing on the screen to find.
+    + (isRoot || !n.owned ? '' : _netVisibilityBlock(n))
+    + '<details style="margin-top:16px" ' + ((n.holds || []).length > 1 ? 'open' : '') + '>'
+      + '<summary style="cursor:pointer;font-size:11px;font-weight:800;color:var(--grey);letter-spacing:.05em;padding:4px 0">WHAT ELSE THIS NODE HOLDS <span style="font-weight:600;letter-spacing:0">— optional</span></summary>'
+      + '<div style="margin-top:9px;padding:13px 15px;border:1px solid var(--line);border-radius:11px;background:#fff">'
+      + '<div style="font-size:11px;color:var(--grey)">None of this is needed to build the network. For each, choose <b>Yes</b> or <b>No</b>; Yes opens its details right below.</div>'
       + _capList(n)
-      + '</div>'
+      + '</div></details>'
     + '<div style="margin-top:16px;font-size:11.5px;color:var(--grey);line-height:1.55">When the design is done, <b>Build</b> turns each owned node into a real entity + login key, and invites each partner by handshake. Until then this is just a plan — saved, nothing created.</div>'
     + '</div>';
 }
