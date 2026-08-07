@@ -1188,6 +1188,58 @@ function netMaxExposure(){
   var v = UI._netOwnVis;
   return (v === 'private' || v === 'network') ? 'protected' : 'public';
 }
+/* ── THE FIRST QUESTION ───────────────────────────────────────────────────────────────────────────────────────
+   Athi, 2026-08-07: *"when someone tries to set up the network, the first question needs to be: is it a private
+   network or a public network where any of the stores should be visible outside and face the customer — so the
+   initial hurdle can be crossed."*
+
+   Right, and it was the missing step. The NETWORK's own visibility caps every store under it, and it defaults to
+   private — so a person could mark a store Public, press Build, and get a network-only store with a note
+   explaining why. Asked here, once, before any of that. */
+function netSetNetworkVisibility(v){
+  // Athi: *"even if they select public initially and then change to protected, need to switch accordingly."*
+  // Closing the network must bring the DESIGN down with it, or the drawing keeps claiming public stores that can
+  // never be built and every future Build re-reports the same refusals.
+  var willClose = (v !== 'public') && (UI.net && (UI.net.nodes || []).some(function(n){ return n.exposure === 'public' && !n.root && n.owned; }));
+  var go = function(){
+    api('saveProfile', { body: { catalogue_visibility: v } }).then(function(){
+      UI._netOwnVis = v;
+      if (willClose) {
+        (UI.net.nodes || []).forEach(function(n){ if (n.exposure === 'public' && !n.root && n.owned) n.exposure = 'protected'; });
+        _netSave();
+      }
+      if (typeof toast === 'function') toast(v === 'public' ? 'This network can face customers' : 'This network is closed to the public');
+      _netRerender();
+    }).catch(function(e){ if (typeof toast === 'function') toast((e && e.message) || 'Could not change that', true); });
+  };
+  if (!willClose) return go();
+  var n = (UI.net.nodes || []).filter(function(x){ return x.exposure === 'public' && !x.root && x.owned; }).length;
+  var msg = n + ' store' + (n === 1 ? ' is' : 's are') + ' set to Public. Closing the network changes '
+          + (n === 1 ? 'it' : 'them') + ' to <b>Network only</b>. Any that are already live will be closed at the next Build.';
+  if (typeof confirmAsk === 'function') confirmAsk('Close this network?', msg, 'Close it', go, true);
+  else go();
+}
+function _netNetworkVisibilityBlock(){
+  var v = UI._netOwnVis;
+  var unanswered = !v;                       // /me not read yet, or genuinely never set
+  var isPublic = v === 'public';
+  var btn = function(val, label, hint){
+    var on = v === val;
+    return '<div onclick="netSetNetworkVisibility(\'' + val + '\')" style="cursor:pointer;flex:1;min-width:190px;padding:10px 12px;border:1px solid ' + (on ? '#2c5aa0' : 'var(--line)') + ';border-radius:9px;background:' + (on ? '#eef4fc' : '#fff') + '">'
+      + '<b style="font-size:12.5px;color:' + (on ? '#2c5aa0' : '#3a4048') + '">' + (on ? '● ' : '○ ') + label + '</b>'
+      + '<div style="font-size:11px;color:var(--grey);margin-top:3px;line-height:1.5">' + hint + '</div></div>';
+  };
+  return '<div style="margin-top:16px;padding:13px 15px;border:1px solid ' + (unanswered ? '#e0d3b0' : '#b9cbe4') + ';border-radius:11px;background:' + (unanswered ? '#fdf8ec' : '#f7fafd') + '">'
+    + '<div style="font-size:11px;font-weight:800;color:' + (unanswered ? '#8a5a1e' : '#2c5aa0') + ';letter-spacing:.05em">IS THIS NETWORK PUBLIC OR PRIVATE?</div>'
+    + '<div style="font-size:11.5px;color:var(--grey);margin-top:4px;line-height:1.55">Answer this first — it decides what every store below is allowed to be.</div>'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:9px">'
+    + btn('public',  '🌐 Public network',  'Stores under it <b>can face customers</b>. Each store still chooses its own visibility — public, network-only, or private.')
+    + btn('private', '🔒 Private network', 'Nothing here faces the public. Stores can be seen by <b>the network</b> or by <b>nobody</b>.')
+    + '</div>'
+    + (isPublic ? '' : '<div style="font-size:11px;color:#8a5a1e;margin-top:8px;line-height:1.5">While this is private, Public is unavailable on every store below.</div>')
+    + '</div>';
+}
+
 function _netVisibilityBlock(n){
   var cur = n.exposure || 'private';
   var maxOpen = netMaxExposure();
@@ -1265,7 +1317,8 @@ function _netNodeView(n){
     // Athi, 2026-08-07: *"we keep the catalogue setting simple — here we have to decide only the visibility part
     // and nothing else."* Exposure used to live INSIDE the storefront capability panel, three clicks down, which
     // made the one thing a network actually has to decide the hardest thing on the screen to find.
-    + (isRoot || !n.owned ? '' : _netVisibilityBlock(n))
+    // The network's OWN answer sits on the root node — it is the first question, and it caps every store below.
+    + (isRoot ? _netNetworkVisibilityBlock() : (!n.owned ? '' : _netVisibilityBlock(n)))
     + '<details style="margin-top:16px" ' + ((n.holds || []).length > 1 ? 'open' : '') + '>'
       + '<summary style="cursor:pointer;font-size:11px;font-weight:800;color:var(--grey);letter-spacing:.05em;padding:4px 0">WHAT ELSE THIS NODE HOLDS <span style="font-weight:600;letter-spacing:0">— optional</span></summary>'
       + '<div style="margin-top:9px;padding:13px 15px;border:1px solid var(--line);border-radius:11px;background:#fff">'
