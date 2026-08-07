@@ -268,6 +268,19 @@ function netRename(key){
   n.name = name.trim(); _netMark(); _netRerender();
 }
 function netSetPurpose(key, val){ var n = _netNode(key); if (!n) return; n.purpose = val; _netSave(); }   // no re-render while typing
+function netSetPartnerRef(key, val){ var n = _netNode(key); if (!n) return; n.partner_ref = String(val || '').trim(); _netSave(); }
+/* A claim code lasts 7 days and is shown once. Without this, a store whose code lapsed — or whose owner lost the
+   slip of paper — would be permanently unreachable, which is the review's §4 lesson in a new costume. */
+function netReissueKey(userId){
+  api('netReissue', { body: { user_id: userId } }).then(function(r){
+    var body = '<div style="padding:16px 20px;font-size:13px;line-height:1.7">'
+      + 'New sign-in code for <b style="font-family:ui-monospace,Menlo,monospace">' + esc(r.user_id) + '</b>:'
+      + '<div style="margin:11px 0;font-family:ui-monospace,Menlo,monospace;font-size:20px;font-weight:700;letter-spacing:.1em;text-align:center;background:#f4f7fb;border:1px solid var(--line);border-radius:9px;padding:10px">' + esc(r.claim_code) + '</div>'
+      + '<div style="color:var(--grey);font-size:12px">Expires in 7 days. The previous code no longer works.</div>'
+      + '<button class="pri" onclick="netCopyKey(\'' + esc(r.user_id) + '\',\'' + esc(r.claim_code) + '\')" style="margin-top:12px;width:100%;padding:9px">Copy</button></div>';
+    if (typeof modal === 'function') modal('<div class="mhd"><div class="t">🔑 New code</div></div><div class="mbody" style="padding:0">' + body + '</div>', true);
+  }).catch(function(e){ if (typeof toast === 'function') toast((e && e.message) || 'Could not issue a code', true); });
+}
 // Each capability is a clear YES / NO. Yes ⇒ the node holds it (and its detail opens). No ⇒ it doesn't. Sticky decision.
 function netCapYes(key, capKey){
   var n = _netNode(key); if (!n) return; n.holds = n.holds || [];
@@ -458,12 +471,97 @@ function netBuild(){
       + rows + w + '</div>';
   }).join('');
   var gate = '<div style="padding:13px 16px">'
-    + '<div style="padding:11px 13px;border:1px solid #b7a3d6;border-radius:10px;background:#f7f4fc;font-size:12.5px;color:#5a4a86;line-height:1.6">🔒 <b>Dry-run — nothing was created.</b> This is the exact plan Build would run against the existing capabilities. The real mint (entities, keys, catalogue records, connector bindings) is the <b>gated next phase</b> and needs a <b>human live-run</b>.</div>'
-    + '<button disabled style="margin-top:11px;width:100%;padding:10px;border-radius:8px;border:1px solid var(--line);background:#eef1f5;color:#9aa2ad;font-weight:600;font-size:13px;cursor:not-allowed">🔨 Mint for real — human live-run required (not wired)</button>'
+    + '<div style="padding:11px 13px;border:1px solid #b7a3d6;border-radius:10px;background:#f7f4fc;font-size:12.5px;color:#5a4a86;line-height:1.6">🔒 <b>Nothing has been created yet.</b> This is the wiring plan for the capabilities each node holds. The next step names the actual stores and asks before creating anything.</div>'
+    + '<button class="pri" onclick="netMint()" style="margin-top:11px;width:100%;padding:10px;font-size:13px">🔨 Name the stores and create them →</button>'
     + '</div>';
   var body = '<div style="max-height:66vh;overflow:auto">' + totals + blocks + gate + '</div>';
-  if (typeof modal === 'function') modal('<div class="mhd"><div class="t">🔨 Build plan — dry-run</div></div><div class="mbody" style="padding:0">' + body + '</div>', true);
-  else if (typeof toast === 'function') toast('Build dry-run ready.');
+  if (typeof modal === 'function') modal('<div class="mhd"><div class="t">🔨 Build plan — nothing created yet</div></div><div class="mbody" style="padding:0">' + body + '</div>', true);
+  else if (typeof toast === 'function') toast('Build plan ready.');
+}
+
+/* ═══ THE MINT ═══════════════════════════════════════════════════════════════════════════════════════════════
+   Two screens, deliberately. The server computes the plan (POST /build {dry_run:true}) and we SHOW IT — the
+   exact handles, the exact visibility, and every node that will NOT be built and why — before anything is
+   created. The confirm button then runs the same endpoint for real.
+
+   The plan is never computed here. A preview drawn by different code from the thing it previews is a preview
+   that can lie, and this one is showing a person the names their business will carry.                        */
+function _mintRow(c){
+  var vis = { 'public': ['🌐 public', '#2c7a43'], 'network': ['🔒 network only', '#8a5a1e'], 'private': ['— private', '#6b6f86'] }[c.visibility] || ['—', '#6b6f86'];
+  return '<div style="display:flex;align-items:center;gap:10px;padding:8px 16px;border-bottom:1px solid var(--line)">'
+    + '<div style="flex:1;min-width:0"><b style="font-size:13px">' + esc(c.name) + '</b>'
+    + '<div style="font-family:ui-monospace,Menlo,monospace;font-size:12px;color:#2c5aa0;margin-top:2px">' + esc(c.handle) + '</div></div>'
+    + '<span style="font-size:11px;color:' + vis[1] + '">' + vis[0] + '</span></div>';
+}
+function netMint(){
+  _netInit(); if (!UI.net) return;
+  // SAVE FIRST, AND WAIT. The server plans from the SAVED design, so the fire-and-forget flush used elsewhere
+  // could plan against a draft one edit old — and the operator would be shown, approve, and then create the
+  // wrong names. Autosave is a 1.5s debounce; a person clicks faster than that.
+  api('netDesignPut', { body: { draft: _netStripView(UI.net) } }).then(function(){
+    _netSetDirty(false);
+    return api('netBuild', { body: { dry_run: true } });
+  }).then(function(p){
+    var create = p.create || [], invite = p.invite || [], probs = (p.problems || []).concat([]), notes = p.notes || [];
+    var body = '<div style="max-height:64vh;overflow:auto">'
+      + '<div style="padding:12px 16px;border-bottom:1px solid var(--line);font-size:12.5px;line-height:1.6">'
+      + 'Your network is named <b style="font-family:ui-monospace,Menlo,monospace">' + esc(p.root) + '</b>'
+      + (p.root_claimed ? ' — <b>this will become your User ID</b>, and every store below is named from it.' : '. Every store below is named from it.')
+      + '</div>'
+      + (create.length ? '<div style="padding:9px 16px 4px;font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--grey)">WILL BE CREATED — ' + create.length + '</div>' + create.map(_mintRow).join('') : '')
+      + (invite.length ? '<div style="padding:9px 16px 4px;font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--grey)">WILL BE INVITED — ' + invite.length + '</div>'
+          + invite.map(function(i){ return '<div style="padding:8px 16px;border-bottom:1px solid var(--line);font-size:12.5px">🤝 <b>' + esc(i.name) + '</b> <span style="color:var(--grey)">→ ' + esc(i.ref) + '</span><div style="font-size:11px;color:var(--grey);margin-top:2px">A request they must accept. They are not added to your network by you.</div></div>'; }).join('') : '')
+      + ((p.skip || []).length ? '<div style="padding:9px 16px;font-size:11.5px;color:var(--grey)">' + p.skip.length + ' already built — untouched.</div>' : '')
+      + (probs.length ? '<div style="padding:9px 16px 4px;font-size:11px;font-weight:700;letter-spacing:.04em;color:#a5382e">NOT BUILT — ' + probs.length + '</div>'
+          + probs.map(function(x){ return '<div style="padding:7px 16px;font-size:12px;color:#a5382e;border-bottom:1px solid var(--line)"><b>' + esc(x.name || '—') + '</b> — ' + esc(x.reason) + '</div>'; }).join('') : '')
+      + (notes.length ? notes.map(function(n){ return '<div style="padding:7px 16px;font-size:12px;color:#8a5a1e">⚠ ' + esc(n) + '</div>'; }).join('') : '')
+      + '<div style="padding:13px 16px">'
+      + (create.length || invite.length
+          ? '<div style="padding:10px 13px;border:1px solid #e0d3b0;border-radius:10px;background:#fdf8ec;font-size:12px;color:#7a6428;line-height:1.6">Each new store gets a <b>sign-in code shown once</b> on the next screen. Write them down or hand them over then — you can issue a fresh one later, but you cannot look this one up again.</div>'
+            + '<button class="pri" onclick="netMintGo()" style="margin-top:11px;width:100%;padding:10px;font-size:13px">Create ' + create.length + ' store' + (create.length === 1 ? '' : 's') + (invite.length ? ' · send ' + invite.length + ' invitation' + (invite.length === 1 ? '' : 's') : '') + '</button>'
+          : '<div style="font-size:12.5px;color:var(--grey)">Nothing to create. Fix the reasons above, or add a node you own.</div>')
+      + '</div></div>';
+    if (typeof modal === 'function') modal('<div class="mhd"><div class="t">🔨 Confirm — nothing created yet</div></div><div class="mbody" style="padding:0">' + body + '</div>', true);
+  }).catch(function(e){
+    // A 409 here is the useful case: the root handle is unusable or taken, and the message says which.
+    if (typeof toast === 'function') toast((e && e.message) || 'Could not plan the build', true);
+  });
+}
+function netMintGo(){
+  if (typeof toast === 'function') toast('Creating…');
+  api('netBuild', { body: {} }).then(function(r){
+    var created = r.created || [], invited = r.invited || [], probs = r.problems || [];
+    var body = '<div style="max-height:64vh;overflow:auto">'
+      + (created.length ? '<div style="padding:11px 16px;border-bottom:1px solid var(--line);font-size:12.5px;line-height:1.6"><b>' + created.length + ' store' + (created.length === 1 ? '' : 's') + ' created.</b> Each signs in at the login page with the <b>handle</b> and the <b>code</b> below. Codes last 7 days.<br><span style="color:#a5382e">This is the only time these codes are shown.</span></div>' : '')
+      + created.map(function(c){
+          return '<div style="padding:10px 16px;border-bottom:1px solid var(--line)">'
+            + '<div style="font-size:13px"><b>' + esc(c.name) + '</b> <span style="font-size:11px;color:var(--grey)">' + esc(c.bridge_id) + '</span></div>'
+            + '<div style="display:flex;gap:14px;align-items:center;margin-top:5px;flex-wrap:wrap">'
+            + '<span style="font-family:ui-monospace,Menlo,monospace;font-size:13px;color:#2c5aa0">' + esc(c.handle) + '</span>'
+            + '<span style="font-family:ui-monospace,Menlo,monospace;font-size:15px;font-weight:700;letter-spacing:.08em;background:#f4f7fb;border:1px solid var(--line);border-radius:7px;padding:2px 10px">' + esc(c.claim_code) + '</span>'
+            + '<button onclick="netCopyKey(\'' + esc(c.handle) + '\',\'' + esc(c.claim_code) + '\')" style="padding:4px 10px;font-size:11.5px">Copy</button>'
+            + '</div></div>'; }).join('')
+      + (invited.length ? '<div style="padding:9px 16px 4px;font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--grey)">INVITED — awaiting their acceptance</div>'
+          + invited.map(function(i){ return '<div style="padding:7px 16px;font-size:12.5px;border-bottom:1px solid var(--line)">🤝 ' + esc(i.name) + ' <span style="color:var(--grey)">' + esc(i.handle || '') + ' · ' + esc(i.status || '') + '</span></div>'; }).join('') : '')
+      + (probs.length ? probs.map(function(x){ return '<div style="padding:7px 16px;font-size:12px;color:#a5382e"><b>' + esc(x.name || '—') + '</b> — ' + esc(x.reason) + '</div>'; }).join('') : '')
+      + '<div style="padding:13px 16px"><button class="pri" onclick="netMintDone()" style="width:100%;padding:10px;font-size:13px">I have the codes — done</button></div>'
+      + '</div>';
+    if (typeof modal === 'function') modal('<div class="mhd"><div class="t">✅ ' + esc(r.message || 'Built') + '</div></div><div class="mbody" style="padding:0">' + body + '</div>', true);
+  }).catch(function(e){
+    if (typeof toast === 'function') toast((e && e.message) || 'Build failed', true);
+  });
+}
+function netCopyKey(handle, code){
+  var txt = 'Sign in at ChitBridge\nUser ID: ' + handle + '\nCode: ' + code;
+  if (navigator.clipboard) navigator.clipboard.writeText(txt).then(function(){ if (typeof toast === 'function') toast('Copied'); });
+}
+function netMintDone(){
+  // Re-read the design from the server: the build wrote `built` onto each node, and that is what makes a second
+  // Build a no-op. Reading it back is also the only honest confirmation that the write landed.
+  if (typeof closeModal === 'function') closeModal();
+  api('netDesignGet').then(function(r){
+    if (r && r.draft && r.draft.nodes) { UI.net = r.draft; _netRerender(); }
+  }).catch(function(){});
 }
 
 /* ---- render (two panes, same style) ---- */
@@ -800,7 +898,9 @@ function _storefrontConfig(n){
       + '<div style="font-size:11px;color:var(--grey);margin-top:2px">' + hint + '</div></div>'; };
   var view = '<div style="font-size:11px;font-weight:800;color:#2c7a43;letter-spacing:.05em">👁️ VIEW — who sees it</div>'
     + opt('public', 'Public', 'Anyone / customers can see this in the storefront.')
-    + opt('protected', 'Protected', 'Your <b>connected network / partners</b> — <b>not</b> the public.')
+    // The stored value stays `protected` — existing drafts hold it, and network-build.js translates both words.
+    // Only the LABEL changes, to the word the platform uses everywhere else: network.
+    + opt('protected', 'Network only', 'Members of <b>your network</b> — the warehouse case. <b>Not</b> the public.')
     + '<div style="font-size:11px;color:var(--grey);margin-top:8px">Untick <b>Storefront</b> above to keep this node <b>private</b> (internal — shown to no one).</div>';
   var methOpts = CAT_METHODS.map(function(m){ return '<option value="' + m.k + '"' + ((o.method || 'cart') === m.k ? ' selected' : '') + '>' + m.label + '</option>'; }).join('');
   var mh = (CAT_METHODS.filter(function(m){ return m.k === (o.method || 'cart'); })[0] || {}).hint || '';
@@ -970,6 +1070,15 @@ function _netNodeView(n){
       + '<button onclick="netAddPartner(\'' + n.key + '\')" style="padding:8px 13px">🤝 Add partner</button>'
       + (isRoot ? '' : '<button onclick="netRename(\'' + n.key + '\')" style="padding:8px 13px">✏️ Rename</button><button onclick="netDelete(\'' + n.key + '\')" style="padding:8px 13px">🗑️ Remove</button>')
     + '</div>'
+    // A partner is INVITED, never created — so Build needs to know WHO. Without a handle here the node is
+    // reported as un-buildable rather than guessed at, and this is where that gets fixed.
+    + (n.owned || isRoot ? '' :
+        '<div style="margin-top:16px"><label style="font-size:11px;font-weight:800;color:var(--grey);letter-spacing:.05em">THEIR USER ID</label>'
+        + '<input value="' + esc(n.partner_ref || '') + '" oninput="netSetPartnerRef(\'' + n.key + '\', this.value)" placeholder="e.g. ravi.timbers — ask them for it" style="width:100%;margin-top:6px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;box-sizing:border-box">'
+        + '<div style="font-size:11px;color:var(--grey);margin-top:5px;line-height:1.5">Build sends them an invitation. <b>They have to accept it</b> — you cannot add another business to your network on your own.</div>'
+        + (n.invited ? '<div style="font-size:11.5px;color:#2c7a43;margin-top:6px">✓ invited · ' + esc(n.invited.status || 'pending') + '</div>' : '')
+        + '</div>')
+    + (n.built ? '<div style="margin-top:16px;padding:11px 13px;border:1px solid #cfe0cf;border-radius:10px;background:#f2f8f3;font-size:12.5px;color:#2c7a43;line-height:1.6">✓ <b>Built.</b> Signs in as <b style="font-family:ui-monospace,Menlo,monospace">' + esc(n.built.user_id) + '</b> · ' + esc(n.built.bridge_id) + '<br><button onclick="netReissueKey(\'' + esc(n.built.user_id) + '\')" style="margin-top:7px;padding:5px 11px;font-size:11.5px">Issue a new sign-in code</button></div>' : '')
     + (isRoot ? '' :
         '<div style="margin-top:16px"><label style="font-size:11px;font-weight:800;color:var(--grey);letter-spacing:.05em">PURPOSE</label>'
         + '<input value="' + esc(n.purpose || '') + '" oninput="netSetPurpose(\'' + n.key + '\', this.value)" placeholder="what is this node for? (one line)" style="width:100%;margin-top:6px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;box-sizing:border-box"></div>')

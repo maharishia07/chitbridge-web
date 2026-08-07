@@ -594,6 +594,8 @@ const EP = {
   custList:        {m:"GET",  p:"/api/relationships/customers",           ok:"✓"},  // the shop's CRM — end-customers locked under it
   netDesignGet:    {m:"GET",  p:"/api/network-design",                    ok:"✓"},  // b111 — load this entity's saved network design (cross-device)
   netDesignPut:    {m:"PUT",  p:"/api/network-design",                    ok:"✓"},  // b111 — save (upsert) the whole design draft
+  netBuild:        {m:"POST", p:"/api/network-design/build",              ok:"✓"},  // MINT: owned nodes become entities; send {dry_run:true} to preview (no migration — no new columns)
+  netReissue:      {m:"POST", p:"/api/network-design/reissue",            ok:"✓"},  // a fresh claim code for a store this operator minted
   catFaceGet:      {m:"GET",  p:"/api/catalogue-face",                    ok:"✓"},  // b112 — load this entity's saved catalogue face (cross-device)
   catFacePut:      {m:"PUT",  p:"/api/catalogue-face",                    ok:"✓"},  // b112 — save (upsert) the whole catalogue face config
   schemaFields:    {m:"GET",  p:"/api/schemas/fields",                     ok:"✓"},  // the columns this catalogue declares — what a variant can be keyed or grouped on
