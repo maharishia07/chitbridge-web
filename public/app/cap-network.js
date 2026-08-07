@@ -169,8 +169,18 @@ async function netWhereAmI(){
         if(whole && whole.length) nodes = whole;
       }
     }
-    host.innerHTML = _netPlaceCard(me, nodes);
-  }catch(e){ host.innerHTML = _netAloneCard(); }
+    // WHO AM I IN THIS NETWORK? Athi, 2026-08-08: *"if we login with any of the store, it has to show the same
+    // network, but can't create or update or modify the network."* The design belongs to the OPERATOR — the root
+    // of the tree. A member sees the same network, read-only. Someone on no tree at all is simply standalone.
+    var wasRole = UI._netRole;
+    UI._netRole = (rootBridge && rootBridge === String(me.bridgeId || me.bridge_id || '')) ? 'operator'
+                : (nodes.length > 1 ? 'member' : 'alone');
+    UI._netLive = { me: me, nodes: nodes, rootBridge: rootBridge };
+    // A member's whole screen IS this tree, so the card would be the same thing twice. The operator keeps it —
+    // there it earns its place by showing the LIVE structure beside the design, which are different things.
+    host.innerHTML = UI._netRole === 'member' ? '' : _netPlaceCard(me, nodes);
+    if (wasRole !== UI._netRole && typeof renderApp === 'function') renderApp();   // the panel below depends on it
+  }catch(e){ UI._netRole = 'alone'; host.innerHTML = _netAloneCard(); }
 }
 function _netAloneCard(){
   return '<div style="border:1px solid var(--line);background:#fff;border-radius:12px;padding:13px 15px">'
@@ -415,6 +425,19 @@ function netDelete(key){
 }
 function netStartOver(){
   var go = function(){ try { localStorage.removeItem(_netDraftKey()); } catch (e) {} UI.net = null; _netRerender(); };
+  var built = (UI.net && (UI.net.nodes || []).filter(function(n){ return n.built; }).length) || 0;
+  // ⚠️ Once stores exist, "start over" is no longer harmless. It mints fresh node keys, so the receipts the server
+  // re-attaches BY KEY no longer match: the design forgets stores that are still live, and the next Build proposes
+  // handles that are already taken. The stores themselves are untouched — which is precisely why this needs saying
+  // out loud rather than a cheerful "nothing is lost there".
+  if (built) {
+    var msg = 'This network has <b>' + built + ' live store' + (built === 1 ? '' : 's') + '</b>.<br><br>'
+      + 'Starting over discards the drawing only — <b>the stores keep existing</b>, keep their catalogues and keep '
+      + 'their logins. But this design will no longer know about them, and rebuilding will not adopt them back.<br><br>'
+      + 'Use this only if you want to draw something unrelated.';
+    if (typeof confirmAsk === 'function') return confirmAsk('Start over? ' + built + ' store' + (built === 1 ? '' : 's') + ' are live', msg, 'Discard the drawing', go, true);
+    return go();
+  }
   if (typeof confirmAsk === 'function') confirmAsk('Start over', 'Discard this design and start a new one? Nothing was created on the server, so nothing is lost there.', 'Start over', go, true);
   else go();
 }
@@ -612,9 +635,48 @@ function _netTree(parentKey, depth){
       + '</div>' + _netTree(n.key, depth + 1);
   }).join('');
 }
+/**
+ * A MEMBER'S VIEW — the same network, read-only.
+ *
+ * Athi, 2026-08-08: *"if we login with any of the store, it has to show the same network, but can't create or
+ * update or modify the network."*
+ *
+ * The design document belongs to the operator and is RLS-scoped to it, so a member could never load it anyway.
+ * What a member should see is the LIVE network — the tree it actually sits on — with no controls at all. Showing
+ * them a design canvas would invite them to draw a second, private network that Build would refuse to touch.
+ */
+function _netMemberScreen(){
+  var L = UI._netLive || {};
+  var rows = (L.nodes || []).slice().sort(function(a, b){
+    var pa = String(a.path || ''), pb = String(b.path || ''); return pa < pb ? -1 : pa > pb ? 1 : 0; });
+  var mine = String((L.me && (L.me.bridgeId || L.me.bridge_id)) || '');
+  var list = rows.map(function(n){
+    var bid = String(n.bridgeId || n.bridge_id || '');
+    var depth = Math.max(0, String(n.path || '').split('.').length - 1);
+    var isMe = bid === mine;
+    return '<div style="padding:8px 10px 8px ' + (12 + depth * 18) + 'px;font-size:13px;border-bottom:1px solid var(--line);'
+      + (isMe ? 'background:#F0EAF9;border-left:3px solid #6a44a8;' : '') + '">'
+      + (depth ? '<span style="color:var(--grey)">└ </span>' : '◆ ')
+      + (isMe ? '<b>' + esc(n.name || bid) + '</b> <span style="font-size:11px;color:#6a44a8;font-weight:700">← you</span>'
+              : esc(n.name || bid))
+      + ' <span style="font-size:11px;color:var(--grey);font-family:ui-monospace,Menlo,monospace">' + esc(bid) + '</span></div>';
+  }).join('');
+  var rootName = (rows[0] && (rows[0].name || rows[0].bridge_id)) || 'the network operator';
+  return '<div style="padding:22px;max-width:640px">'
+    + '<div style="font-size:19px;font-weight:800">🔗 Your network</div>'
+    + '<div style="font-size:13px;color:var(--grey);margin:8px 0 14px;line-height:1.6">You are part of <b>' + esc(rootName)
+    + '</b>. The structure is set by the network operator — you can see it here, and you look after your own store, its catalogue and its people.</div>'
+    + '<div style="border:1px solid var(--line);border-radius:12px;background:#fff;overflow:hidden">' + list + '</div>'
+    + '<div style="margin-top:14px;padding:11px 13px;border:1px solid var(--line);border-radius:10px;background:#fafbfc;font-size:12px;color:var(--grey);line-height:1.6">'
+    + 'Only <b>' + esc(rootName) + '</b> can add, change or remove stores in this network. '
+    + 'Ask them if something here is wrong.</div></div>';
+}
+
 function networkScreen(){
   _netInit();
   _netPullServer();   // b111 — once per session, adopt the entity's server-saved design (cross-device)
+  // A member of someone else's network never gets the builder — not disabled, absent. See _netMemberScreen.
+  if (UI._netRole === 'member') return _netMemberScreen();
   if (!UI.net) {
     var ent = SESSION.entity || SESSION.name || 'your entity';
     return '<div style="padding:44px 22px;max-width:580px"><div style="font-size:19px;font-weight:800">🔗 Design your network</div>'
@@ -625,16 +687,23 @@ function networkScreen(){
   var sel = UI.net.sel ? _netNode(UI.net.sel) : null;
   var right = sel ? _netNodeView(sel) : '<div style="padding:24px;color:var(--grey);font-size:13px">Select a node to edit it, or add a child under it.</div>';
   var count = (UI.net.nodes || []).length - 1;
+  var built = (UI.net.nodes || []).filter(function(n){ return n.built; }).length;
+  var pending = (UI.net.nodes || []).filter(function(n){ return !n.root && n.owned && !n.built; }).length;
   return '<div style="display:flex;height:100%;min-height:0">'
     + '<div style="width:300px;border-right:1px solid var(--line);overflow:auto;padding:12px 8px;flex:0 0 auto">'
       + '<div style="font-size:11px;font-weight:800;color:var(--grey);letter-spacing:.05em;padding:2px 8px 3px">' + esc(UI.net.purpose || 'NETWORK') + '</div>'
-      // "on this device" was left over from when the draft was localStorage only. It has been saved against the
-      // ENTITY since b111 — it follows you to any browser — and saying otherwise undersold it.
-      + '<div style="font-size:10px;color:#8a94a3;padding:0 8px 10px">design · saved for this network</div>'
+      // Once stores exist it is no longer a design — it is the network, and calling it a draft understates what
+      // pressing Build actually did. Athi, 2026-08-08: *"after creation it should say your network."*
+      + '<div style="font-size:10px;color:' + (built ? '#2c7a43' : '#8a94a3') + ';padding:0 8px 10px">'
+      + (built ? '✓ your network · ' + built + ' store' + (built === 1 ? '' : 's') + ' live'
+               : 'design · saved for this network · nothing created yet') + '</div>'
       + tree
       + '<div style="border-top:1px solid var(--line);margin-top:12px;padding-top:10px">'
-        + '<button class="pri" onclick="netBuild()" style="width:calc(100% - 16px);margin:0 8px;padding:9px">🔨 Build network' + (count ? ' (' + count + ')' : '') + '</button>'
-        + '<div style="font-size:11px;color:var(--grey);padding:8px 8px 2px">' + (count ? count + ' node' + (count === 1 ? '' : 's') + ' designed · nothing created yet' : 'add nodes, then build') + '</div>'
+        + '<button class="pri" onclick="netBuild()" style="width:calc(100% - 16px);margin:0 8px;padding:9px">'
+        + (built ? '🔨 Apply changes' + (pending ? ' (' + pending + ' new)' : '') : '🔨 Build network' + (count ? ' (' + count + ')' : '')) + '</button>'
+        + '<div style="font-size:11px;color:var(--grey);padding:8px 8px 2px">'
+        + (built ? (pending ? pending + ' new store' + (pending === 1 ? '' : 's') + ' to create' : 'add or change a store, then apply')
+                 : (count ? count + ' node' + (count === 1 ? '' : 's') + ' designed · nothing created yet' : 'add nodes, then build')) + '</div>'
         + '<div style="font-size:11px;color:var(--blue);padding:6px 8px;cursor:pointer" onclick="netStartOver()">↺ Start over</div>'
       + '</div>'
       + '</div>'
