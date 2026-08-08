@@ -1249,6 +1249,103 @@ function netAskFor(entityId, storeName, itemName, bridgeId, rowPrice){
     .catch(function(){ /* their catalogue is unreadable — the request can still be written */ });
 }
 
+/* ── BROWSE A STORE'S CATALOGUE, THE SUPPLIER WAY ─────────────────────────────────────────────────────────────
+   Athi, 2026-08-08: *"we have to have a mechanism of opening the store's catalogue from network, same style as
+   supplier — everything works faster in the supplier menu."*
+
+   He is right about the speed, and the reason is structural rather than mysterious: the supplier menu loads ONE
+   store's catalogue ONCE and keeps it, while the search asks every store on every keystroke. Browsing is a
+   different question — "show me what this store sells" — and it deserves the cheaper shape.
+
+   So this uses the SAME reader the supplier menu uses (supCatalogueFull), which means the same one call and the
+   same speed. Not a second implementation that would drift from it. */
+function netBrowse(entityId, name, bridgeId){
+  UI._brSel = { entity_id: entityId, name: name, bridge_id: bridgeId };
+  UI._brItems = null; UI._brBusy = true;
+  _netPaintBrowse();
+  if (typeof supCatalogueFull !== 'function') { UI._brBusy = false; _netPaintBrowse(); return; }
+  supCatalogueFull(entityId)
+    .then(function(cat){
+      UI._brBusy = false;
+      UI._brItems = (((cat && cat.items) || [])).map(function(p){
+        var d = p.item_data || p;
+        return { name: d.name || d.product || '(unnamed)', code: d.code || d.sku || null,
+                 unit: d.unit || 'unit', price: (typeof cbAmount === 'function') ? cbAmount(d.price) : d.price,
+                 avail: d.avail || null };
+      });
+      _netPaintBrowse();
+    })
+    .catch(function(e){ UI._brBusy = false; UI._brItems = []; UI._brErr = (e && e.message) || 'Could not read it'; _netPaintBrowse(); });
+}
+function netBrowseBack(){ UI._brSel = null; UI._brItems = null; UI._brErr = null; _netPaintBrowse(); }
+function _netPaintBrowse(){
+  var el = (typeof document !== 'undefined') ? document.getElementById('netBrowseBody') : null;
+  if (el) el.innerHTML = _netBrowseBody();
+}
+function _netBrowseBody(){
+  if (UI._brSel) {
+    var s = UI._brSel;
+    var head = '<div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;padding-bottom:10px;border-bottom:1px solid var(--line)">'
+      + '<span onclick="netBrowseBack()" style="cursor:pointer;color:var(--blue);font-size:12.5px">‹ all stores</span>'
+      + '<b style="font-size:16px;margin-left:6px">' + esc(s.name) + '</b>'
+      + (s.bridge_id ? '<span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;color:var(--grey)">' + esc(s.bridge_id) + '</span>' : '')
+      + '</div>';
+    if (UI._brBusy) return head + '<div style="padding:20px 2px;color:var(--grey);font-size:13px">Reading their catalogue…</div>';
+    var items = UI._brItems || [];
+    if (!items.length) {
+      return head + '<div style="padding:20px 2px;color:var(--grey);font-size:13px">'
+        + (UI._brErr ? esc(UI._brErr) : 'Nothing in this catalogue that you can see.') + '</div>';
+    }
+    return head + items.map(function(it){
+      var a = it.avail;
+      var qty = a && a.qty !== undefined && a.qty !== null ? a.qty : null;
+      return '<div style="padding:10px 2px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:baseline;flex-wrap:wrap">'
+        + '<div style="flex:1;min-width:180px"><b style="font-size:13.5px">' + esc(it.name) + '</b>'
+        + (it.code ? '<span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;color:var(--grey);margin-left:7px">' + esc(it.code) + '</span>' : '')
+        + '<div style="font-size:11.5px;color:' + (qty === null ? '#8a94a3' : (qty > 0 ? '#2c7a43' : '#a5382e')) + ';margin-top:2px">'
+        + (qty === null ? 'stock not reported' : qty + ' in stock') + '</div></div>'
+        + '<span style="font-size:13px;font-weight:700">' + ((typeof inr === 'function') ? inr(it.price) : esc(it.price))
+        + '<span style="font-weight:400;color:var(--grey);font-size:11.5px"> / ' + esc(it.unit) + '</span></span>'
+        + '<button onclick="netAskFor(\'' + esc(s.entity_id) + '\',\'' + esc(s.name) + '\',\''
+        + esc(String(it.name).replace(/'/g, '')) + '\',\'' + esc(s.bridge_id || '') + '\','
+        + (it.price === null || it.price === undefined ? 'null' : Number(it.price) || 0) + ')" style="padding:5px 12px;font-size:12px">Request</button>'
+        + '</div>';
+    }).join('');
+  }
+
+  var L = UI._brStores;
+  if (L === undefined) return '<div style="padding:20px 2px;color:var(--grey);font-size:13px">Loading the network…</div>';
+  if (L === null) return '<div style="padding:20px 2px;color:#a5382e;font-size:13px">Could not load the network.</div>';
+  if (L.not_in_network) return '<div style="padding:20px 2px;color:var(--grey);font-size:13px">This business is not part of a network.</div>';
+  var stores = L.stores || [];
+  if (!stores.length) return '<div style="padding:20px 2px;color:var(--grey);font-size:13px">No store in this network is visible to you.</div>';
+  return stores.map(function(st){
+    return '<div onclick="netBrowse(\'' + esc(st.entity_id) + '\',\'' + esc(String(st.name).replace(/'/g, '')) + '\',\'' + esc(st.bridge_id || '') + '\')"'
+      + ' style="cursor:pointer;padding:11px 2px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:baseline;flex-wrap:wrap">'
+      + '<b style="font-size:13.5px">' + esc(st.name) + '</b>'
+      + (st.is_me ? '<span style="font-size:10px;font-weight:800;color:#6a44a8;background:#F0EAF9;border-radius:5px;padding:1px 6px">YOU</span>' : '')
+      + (st.city ? '<span style="font-size:12px;color:var(--grey)">' + esc(st.city) + '</span>' : '')
+      + (st.km !== null && st.km !== undefined ? '<span style="font-size:12px;color:var(--grey)">' + st.km + ' km</span>' : '')
+      + (st.currency ? '<span style="font-size:11px;color:var(--grey)">' + esc(st.currency) + '</span>' : '')
+      + '<span style="margin-left:auto;color:var(--blue);font-size:12.5px">open catalogue ›</span>'
+      + (st.purpose ? '<div style="width:100%;font-size:11.5px;color:#8a94a3">' + esc(st.purpose) + '</div>' : '')
+      + '</div>';
+  }).join('');
+}
+function _netBrowseScreen(){
+  // The list is fetched ONCE per visit, not per render — the network does not change while you read it.
+  if (UI._brStores === undefined && !UI._brBusyList) {
+    UI._brBusyList = true;
+    api('netStores').then(function(r){ UI._brStores = r || { stores: [] }; UI._brBusyList = false; _netPaintBrowse(); })
+      .catch(function(){ UI._brStores = null; UI._brBusyList = false; _netPaintBrowse(); });
+  }
+  return '<div style="padding:18px 22px;max-width:760px">'
+    + '<div style="font-size:19px;font-weight:800">🗂️ Store catalogues</div>'
+    + '<div style="font-size:12.5px;color:var(--grey);margin-top:4px;line-height:1.6">Open any store in your network '
+    + 'and see what it sells — the same reader the Suppliers screen uses, so the same one call and the same speed.</div>'
+    + '<div id="netBrowseBody" style="margin-top:14px">' + _netBrowseBody() + '</div></div>';
+}
+
 function _netAvailScreen(){
   return '<div style="padding:18px 22px;max-width:760px">'
     + '<div style="font-size:19px;font-weight:800">🔎 Where is it?</div>'
@@ -1271,7 +1368,7 @@ function _netModeStrip(){
       + 'border:1px solid ' + (on ? 'var(--blue)' : 'var(--line)') + '">'
       + '<span style="width:16px;text-align:center;font-size:14px">' + icon + '</span>' + label + '</span>';
   };
-  return '<div style="display:flex;gap:6px;padding:12px 22px 0">' + tab('design','🔗','The network') + tab('find','🔎','Where is it?') + '</div>';
+  return '<div style="display:flex;gap:6px;padding:12px 22px 0;flex-wrap:wrap">' + tab('design','🔗','The network') + tab('find','🔎','Where is it?') + tab('browse','🗂️','Store catalogues') + '</div>';
 }
 function netMode(m){ UI._netMode = m; _netRerender(); }
 
@@ -1285,6 +1382,7 @@ function networkScreen(){
    */
   if (UI._netRole === 'member' || UI._netRole === 'operator') {
     if (UI._netMode === 'find') return _netModeStrip() + _netAvailScreen();
+    if (UI._netMode === 'browse') return _netModeStrip() + _netBrowseScreen();
   }
   // A member of someone else's network never gets the builder — not disabled, absent. See _netMemberScreen.
   if (UI._netRole === 'member') return _netModeStrip() + _netMemberScreen();

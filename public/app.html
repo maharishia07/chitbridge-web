@@ -596,7 +596,8 @@ const EP = {
   netDesignPut:    {m:"PUT",  p:"/api/network-design",                    ok:"✓"},  // b111 — save (upsert) the whole design draft
   netBuild:        {m:"POST", p:"/api/network-design/build",              ok:"✓"},  // MINT: owned nodes become entities; send {dry_run:true} to preview (no migration — no new columns)
   netReissue:      {m:"POST", p:"/api/network-design/reissue",            ok:"✓"},  // a fresh claim code for a store this operator minted
-  netAvail:        {m:"GET",  p:"/api/network-design/availability",       ok:"✓"},  // who in my network has this — real stock, with its source and date
+  netAvail:        {m:"GET",  p:"/api/network-design/availability",       ok:"✓"},
+  netStores:       {m:"GET",  p:"/api/network-design/stores",             ok:"✓"},  // the network as a LIST — browse a store the supplier way  // who in my network has this — real stock, with its source and date
   prodAvail:       {m:"PUT",  p:"/api/products/:id/availability",         ok:"✓"},  // this store reports what it has, and when that was true
   catFaceGet:      {m:"GET",  p:"/api/catalogue-face",                    ok:"✓"},  // b112 — load this entity's saved catalogue face (cross-device)
   catFacePut:      {m:"PUT",  p:"/api/catalogue-face",                    ok:"✓"},  // b112 — save (upsert) the whole catalogue face config
