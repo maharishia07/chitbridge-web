@@ -1023,6 +1023,9 @@ function netAvailSearch(v){
       .catch(function(e){ UI._avBusy = false; UI._avRes = { error: (e && e.message) || 'Search failed' }; _netPaintAvail(); });
   }, 400);
 }
+/** Open one product group. Clicking the open one closes it, so a long list can be collapsed back down. */
+function netAvailToggle(key){ UI._avOpen = (UI._avOpen === key) ? null : key; _netPaintAvail(); }
+
 /** Repaint only this pane — the rest of the page has nothing to do with the answer. */
 function _netPaintAvail(){
   var el = (typeof document !== 'undefined') ? document.getElementById('netAvailBody') : null;
@@ -1050,7 +1053,50 @@ function _netAvailBody(){
     return '<div style="padding:22px 4px;color:var(--grey);font-size:13px">No store in your network carries anything '
       + 'matching “' + esc(q) + '”.</div>';
   }
-  var body = rows.map(function(r){
+  /**
+   * ── GROUPED BY PRODUCT, NOT BY ROW ──────────────────────────────────────────────────────────────────────
+   * Athi, 2026-08-08: *"if the same shop has similar names, it is bringing all the items, but each product one
+   * line item with shop name etc — can't we group together and make it selectable?"*
+   *
+   * He is right, and the flat list had the shape of the QUERY rather than of the question. Searching "test"
+   * matched three different products, so North appeared three times and a person had to reassemble "which
+   * product is this row about" from the small print. The question is "where is THIS PRODUCT", so the product is
+   * the heading and the stores are what sit under it.
+   *
+   * Grouped by code where there is one, and by name where there is not — a code is the identity, a name is a
+   * label two stores may spell differently.
+   */
+  var groups = [], byKey = {};
+  rows.forEach(function(r){
+    var key = (r.code ? 'c:' + String(r.code).toLowerCase() : 'n:' + String(r.name).toLowerCase());
+    if (!byKey[key]) { byKey[key] = { key: key, name: r.name, code: r.code, rows: [] }; groups.push(byKey[key]); }
+    byKey[key].rows.push(r);
+  });
+  // Most-answerable product first: the one with stock somewhere, then the one with the most stores holding it.
+  groups.forEach(function(g){
+    g.have = g.rows.filter(function(x){ return x.qty !== null && x.qty !== undefined && x.qty > 0; });
+    g.total = g.have.reduce(function(s, x){ return s + x.qty; }, 0);
+    g.unknown = g.rows.filter(function(x){ return x.qty === null || x.qty === undefined; }).length;
+  });
+  groups.sort(function(a, b){ return (b.have.length - a.have.length) || (b.total - a.total); });
+
+  var one = groups.length === 1;
+  var body = groups.map(function(g){
+    var open = one || UI._avOpen === g.key;
+    var head = '<div onclick="netAvailToggle(\'' + g.key + '\')" style="cursor:pointer;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;'
+      + 'padding:11px 2px;border-bottom:1px solid var(--line);background:' + (open ? 'transparent' : '#fafbfc') + '">'
+      + '<span style="color:var(--grey);font-size:12px;width:12px">' + (open ? '▾' : '▸') + '</span>'
+      + '<b style="font-size:14px">' + esc(g.name) + '</b>'
+      + (g.code ? '<span style="font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:var(--grey)">' + esc(g.code) + '</span>' : '')
+      + '<span style="margin-left:auto;font-size:12.5px;color:' + (g.have.length ? '#2c7a43' : '#8a94a3') + ';font-weight:700">'
+      + (g.have.length ? g.total + ' across ' + g.have.length + ' store' + (g.have.length === 1 ? '' : 's')
+                       : 'nobody has reported any')
+      + (g.unknown ? '<span style="font-weight:400;color:#8a5a1e"> · ' + g.unknown + ' unknown</span>' : '')
+      + '</span></div>';
+    return head + (open ? g.rows.map(storeRow).join('') : '');
+  }).join('');
+
+  function storeRow(r){
     var f = r.freshness || {};
     var unknown = r.qty === null || r.qty === undefined;
     var none = !unknown && r.qty <= 0;
@@ -1100,7 +1146,7 @@ function _netAvailBody(){
            + (r.price === null || r.price === undefined ? 'null' : Number(r.price)) + ')" style="padding:5px 12px;font-size:12px">'
            + (unknown ? 'Ask if they have it' : 'Request from ' + esc(r.store)) + '</button></div>')
       + '</div>';
-  }).join('');
+  }
   return '<div style="padding:13px 2px 4px;font-size:14px;font-weight:700">' + esc(R.summary || '') + '</div>'
     + body
     + (R.truncated ? '<div style="font-size:11px;color:#8a5a1e;padding:9px 2px">Asked the first ' + R.truncated.asked
