@@ -1149,8 +1149,16 @@ function _netAvailBody(){
   }
   return '<div style="padding:13px 2px 4px;font-size:14px;font-weight:700">' + esc(R.summary || '') + '</div>'
     + body
-    + (R.truncated ? '<div style="font-size:11px;color:#8a5a1e;padding:9px 2px">Asked the first ' + R.truncated.asked
-        + ' of ' + R.truncated.of + ' stores.</div>' : '');
+    // Two paths can cap an answer, and they cap DIFFERENT things: the fan-out runs out of stores, the single
+    // network query (b122) runs out of rows. Saying "asked the first undefined of undefined stores" for the
+    // second would be worse than saying nothing — a cap must be reported in the terms it was actually applied in.
+    + (R.truncated
+        ? '<div style="font-size:11px;color:#8a5a1e;padding:9px 2px">'
+          + (R.truncated.of
+              ? 'Asked the first ' + R.truncated.asked + ' of ' + R.truncated.of + ' stores.'
+              : 'Showing the first ' + R.truncated.shown + ' matches across the network — narrow the search to see the rest.')
+          + '</div>'
+        : '');
 }
 /**
  * Ask a store in the network to send goods.
