@@ -229,5 +229,53 @@ ok('★ withdrawing the offer falls back to their price, and stops claiming an o
    K.total('m').amount === 900 * 2 && K.total('m').offered === false);
 K.clear('m');
 
+/* ══════════════════════════════════════════════════════════════════════════════════════════════════════════════
+   create() — a cart you HOLD, and load() — the door every non-human input comes through.
+
+   Athi, 2026-08-09: *"the cart is the mechanism different type of input can get into the system… how the whatsapp
+   integration works? it has to be one of the cart?"*
+
+   It is not a cart — it FILLS one. WhatsApp, email, the AI line, a CSV and an ERP push all produce the same thing:
+   lines somebody then confirms. load() is that door, and it routes every line through the SAME gate as the +
+   button, or the order models are decoration.
+   ══════════════════════════════════════════════════════════════════════════════════════════════════════════════ */
+console.log('\ncart-ui · create()');
+const chanCat = { shop: { bridge_id: 'W' }, groups: [], items: [
+  { item_id: 'b', item_data: { name: 'Bolts', unit: 'box', price: 12, order: { model: 'pack', step: 12 } } },
+  { item_id: 'c', item_data: { name: 'Cable', unit: 'm', price: 9, order: { model: 'range', min: 5, max: 500, step: 5 } } },
+  { item_id: 'p', item_data: { name: 'Paint tin', unit: 'tin', price: 100 } },
+] };
+const cart = K.create(chanCat, {});
+ok('★ create returns a handle you hold — no namespace string to pass around',
+   typeof cart.add === 'function' && typeof cart.ns === 'string');
+cart.add('p').add('p');
+ok('it counts like any cart', cart.lines() === 1 && cart.qtyOf('p') === 2 && cart.total().amount === 200);
+const second = K.create(chanCat, {});
+second.add('p');
+ok('★★ two carts are INDEPENDENT — the bug the namespaced API could not prevent',
+   cart.qtyOf('p') === 2 && second.qtyOf('p') === 1);
+second.destroy();
+ok('★ destroy releases it', K.state(second.ns) === undefined);
+
+console.log('\ncart-ui · load() — the channel door (WhatsApp, email, AI, CSV, ERP)');
+cart.clear();
+const res = cart.load([
+  { name: 'Bolts', qty: 2 },       // sold in 12s — "2 boxes" is not a legal line as written
+  { name: 'Cable', qty: 3 },       // below the 5 m minimum
+  { name: 'Sand bag', qty: 4 },    // not stocked at all
+  { qty: 9 },                      // no name
+]);
+ok('★★ a channel line passes through the MODEL gate — 2 boxes of bolts lands on a legal pack',
+   cart.qtyOf('b') > 0 && cart.qtyOf('b') % 12 === 0);
+ok('★★ below a minimum is REFUSED and REPORTED — never rounded up to fit',
+   cart.qtyOf('c') === 0 && res.refused.some((r) => r.name === 'Cable'));
+ok('★ something the shop does not stock still becomes a line — a real request, not a silent drop',
+   res.placed.some((p) => p.adhoc && p.name === 'Sand bag'));
+ok('★ a nameless line is refused, with a reason', res.refused.some((r) => r.name === null && r.why));
+ok('★ placed says what was ASKED as well as what landed, so a person can see the difference',
+   res.placed.find((p) => p.name === 'Bolts').asked === 2);
+ok('★ nothing is minted — load fills a cart, a human still confirms', cart.lines() === 2);
+cart.destroy();
+
 console.log('\n  ' + (failed ? failed + ' FAILED' : 'all passed') + '\n');
 process.exit(failed ? 1 : 0);

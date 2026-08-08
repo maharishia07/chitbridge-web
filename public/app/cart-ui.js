@@ -610,7 +610,127 @@
     paintBar(ns);
   }
 
+  /**
+   * ════════════════════════════════════════════════════════════════════════════════════════════════════════════
+   *  create() — A CART YOU HOLD, rather than a name you pass around.
+   * ════════════════════════════════════════════════════════════════════════════════════════════════════════════
+   *
+   * Athi, 2026-08-09: *"do the create() refactor now, before the step-flow… the cart is the mechanism different
+   * type of input can get into the system."*
+   *
+   * The namespaced API ('sup', 'net', 'cc', 'shop') works, and it caused two of the five defects in the 2026-08-09
+   * integration. Both came from the same root: state keyed by a NAME means a screen re-initialises by calling
+   * init() again on every repaint, so the module has to guess whether it is being handed the same catalogue or a
+   * new one. Guessing wrong either wiped the caller's options or nearly emptied a basket.
+   *
+   * A handle removes the question. You create a cart once, you hold it, and there is no second call to interpret.
+   *
+   *     const cart = CBCart.create(catalogue, { accent, listEl, barEl, onCheckout });
+   *     cart.add(itemId); cart.selected(); cart.destroy();
+   *
+   * ⚠️ THE NAMESPACED API IS NOT DELETED. Four live screens call it, and this session is a lesson in what happens
+   * when a refactor and a behaviour change land together. `create` is built ON the same core — one implementation,
+   * two front doors — so the live screens keep working untouched and can move over one at a time.
+   *
+   * ── WHY THIS MATTERS FOR EVERY OTHER INPUT ───────────────────────────────────────────────────────────────────
+   * The cart is where things ENTER the system, and the screen is only one way in. WhatsApp, email, the AI
+   * "describe it in words" line, a CSV, an ERP push — all of them produce the same thing: a set of lines somebody
+   * then confirms. `load()` is that door.
+   *
+   * ⚠️ AND IT IS THE SAME DOOR ON PURPOSE. A WhatsApp message saying "2 boxes of bolts" must pass through the same
+   * model gate as a human pressing +. Bolts sold in 12s make "2 boxes" 24, or it is not a legal line. A channel
+   * with its own path would bypass every order model and mint orders the catalogue says cannot exist. So load()
+   * routes each line through put(), exactly as the + button does, and reports what it could not place rather than
+   * dropping it.
+   */
+  var SEQ = 0;
+
+  function create(cat, opts) {
+    var ns = 'cbcart-' + (++SEQ);
+    init(ns, cat, opts || {});
+    var h = {
+      ns: ns,
+      /* reading */
+      state: function () { return st(ns); },
+      rows: function () { return rows(ns); },
+      selected: function () { return selected(ns); },
+      lines: function () { return lines(ns); },
+      units: function () { return units(ns); },
+      total: function () { return total(ns); },
+      qtyOf: function (id) { return qtyOf(ns, id); },
+      offerState: function (id) { return offerState(ns, id); },
+      /* changing — every one routes through the same gate as the + button */
+      add: function (id) { add(ns, id); return h; },
+      dec: function (id) { dec(ns, id); return h; },
+      setQty: function (id, v) { setQty(ns, id, v); return h; },
+      setOffer: function (id, v) { setOffer(ns, id, v); return h; },
+      addLine: function (data, qty) { return addAdhoc(ns, data, qty); },
+      group: function (i) { group(ns, i); return h; },
+      clear: function () { clear(ns); return h; },
+      search: function (q) { search(ns, q); return h; },
+      /* the cart popup */
+      open: function () { open(ns); return h; },
+      close: function () { close(ns); return h; },
+      checkout: function () { checkout(ns); return h; },
+      /* rendering */
+      barHTML: function () { return barHTML(ns); },
+      listHTML: function () { return listHTML(ns); },
+      popupHTML: function () { return popupHTML(ns); },
+      paint: function () { paint(ns); return h; },
+
+      /**
+       * load(lines) — THE CHANNEL DOOR. Anything that is not a person pressing + comes in here: a WhatsApp
+       * message, an email, the AI line, a CSV, an ERP push.
+       *
+       * Each line is `{ item_id?, name?, qty?, price?, unit? }`. A line that names a catalogue item by id or name
+       * is placed AS that item, so it inherits the item's order model and the catalogue's price. A line that
+       * matches nothing becomes an ad-hoc line, because a message asking for something you do not stock is still
+       * a real request and dropping it silently is the failure this codebase keeps refusing.
+       *
+       * ⚠️ RETURNS WHAT IT COULD NOT PLACE. `refused` holds lines the MODEL rejected — 3 metres of a cable with a
+       * 5 metre minimum, say. They are reported, never rounded up to make them fit, because quietly ordering more
+       * than someone asked for is the one direction this must never fail in. The caller shows them; a human
+       * decides. Nothing here mints anything.
+       */
+      load: function (incoming) {
+        var s = C[ns]; if (!s || !Array.isArray(incoming)) return { placed: [], refused: [] };
+        var placed = [], refused = [];
+        var all = rowsOf(s.cat).filter(function (r) { return r.type === 'line'; });
+        var byId = {}, byName = {};
+        all.forEach(function (r) {
+          byId[r.item_id] = r;
+          byName[String(nameOf(r)).trim().toLowerCase()] = r;
+        });
+        incoming.forEach(function (ln) {
+          if (!ln) return;
+          var want = ln.qty == null ? 1 : ln.qty;
+          var match = (ln.item_id && byId[ln.item_id])
+                   || (ln.name && byName[String(ln.name).trim().toLowerCase()]);
+          if (match) {
+            put(ns, match.item_id, want);
+            // The model may have refused it outright (below a minimum) or landed it on a legal value.
+            var got = qtyOf(ns, match.item_id);
+            if (got > 0) placed.push({ item_id: match.item_id, name: nameOf(match), qty: got, asked: want });
+            else refused.push({ name: nameOf(match), asked: want, why: 'the catalogue refuses that quantity' });
+            return;
+          }
+          if (!ln.name) { refused.push({ name: null, asked: want, why: 'no name — nothing to put on a chit' }); return; }
+          var id = addAdhoc(ns, { name: ln.name, unit: ln.unit || 'unit', price: ln.price }, want);
+          if (id) placed.push({ item_id: id, name: ln.name, qty: qtyOf(ns, id), asked: want, adhoc: true });
+          else refused.push({ name: ln.name, asked: want, why: 'could not be added' });
+        });
+        touched(ns);
+        return { placed: placed, refused: refused };
+      },
+
+      /** Let it go. A held cart that is never released is a leak the namespaced API could not even express. */
+      destroy: function () { close(ns); delete C[ns]; }
+    };
+    return h;
+  }
+
   root.CBCart = {
+    create: create,
     init: init, state: st, rows: rows, selected: selected,
     lines: lines, units: units, total: total, qtyOf: qtyOf, unitPrice: unitPrice,
     add: add, dec: dec, setQty: setQty, setOffer: setOffer, offerState: offerState,
