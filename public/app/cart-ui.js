@@ -666,7 +666,11 @@
     // ⚠️ MERGE OVER WHAT WAS ALREADY SET. cbPickHTML() re-inits when handed a catalogue, and it passes no opts —
     // so a testid (or accent, or checkout handler) set by an earlier cbPickInit was silently wiped, and the
     // element lost the data-testid the e2e spec looks for. Later opts win; anything omitted is KEPT.
-    var prevOpts = (prev && prev.opts) || {};
+    // ⚠️ `C[ns]`, NOT `prev`. `prev` is a local inside init(); referencing it here threw ReferenceError at the
+    // first render, which shop.html caught and reported as "Could not reach the shop" — the storefront went down
+    // a SECOND time, from the fix for the previous outage. The adapter has no access to init()'s locals.
+    var prevState = C[ns];
+    var prevOpts = (prevState && prevState.opts) || {};
     var o = {}; for (var pk in prevOpts) o[pk] = prevOpts[pk];
     for (var k in (opts || {})) o[k] = opts[k];
     var base = ids(ns);
