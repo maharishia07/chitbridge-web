@@ -1267,9 +1267,21 @@ function netAskFor(entityId, storeName, itemName, bridgeId, rowPrice){
 
    So this uses the SAME reader the supplier menu uses (supCatalogueFull), which means the same one call and the
    same speed. Not a second implementation that would drift from it. */
+/* ── THE STORE CART, HELD ─────────────────────────────────────────────────────────────────────────────────────
+   `UI._netCart` is the handle, `UI._netCartFor` the store's entity_id. Released when you browse a DIFFERENT store,
+   and deliberately NOT on netBrowseBack — going back to the store list is a look, not an abandonment, and the
+   namespaced cart survived it too. At most one is held at a time. */
+function _netCartRelease(){ if (UI._netCart) UI._netCart.destroy(); UI._netCart = null; UI._netCartFor = null; }
+function _netCartOpts(){
+  return { listEl: 'cbpick_net', barEl: 'cbcartbar_net', onChange: _netPaintBrowse,
+           cartTitle: 'Your request', onCheckout: netSendCart };
+}
+/* Search repaints the LIST only — repainting the panel would take the focus out of the box being typed in. */
+function netPickSearch(q){ if (UI._netCart) UI._netCart.search(q); }
 function netBrowse(entityId, name, bridgeId){
   UI._brSel = { entity_id: entityId, name: name, bridge_id: bridgeId };
   UI._brItems = null; UI._brCat = null; UI._brBusy = true;
+  if (UI._netCartFor && UI._netCartFor !== entityId) _netCartRelease();
   _netPaintBrowse();
   if (typeof supCatalogueFull !== 'function') { UI._brBusy = false; _netPaintBrowse(); return; }
   supCatalogueFull(entityId)
@@ -1279,8 +1291,17 @@ function netBrowse(entityId, name, bridgeId){
       // one heading, and a mapped list would have thrown that away — the same drift catalogue-lines.js exists to stop.
       UI._brCat = cat || {};
       UI._brItems = ((cat && cat.items) || []);
-      if (typeof cbPickInit === 'function') cbPickInit('net', UI._brCat);
-      if (typeof cbPickOnChange === 'function') cbPickOnChange('net', _netPaintBrowse);
+      /**
+       * ⚠️ THE CART IS CREATED HERE, where a catalogue ARRIVES — not in _netBrowseBody, which repaints on every
+       * press of + and would hand back a new empty cart each time.
+       *
+       * A DIFFERENT STORE IS A DIFFERENT BASKET: carrying lines between two stores' catalogues would compose an
+       * order to someone who never listed the item. The SAME store keeps what you were filling, so stepping back
+       * to the store list to check something and returning does not cost you the basket — which is what the
+       * namespaced cart did, by matching a signature. Here the screen knows, so nothing has to guess.
+       */
+      if (UI._netCart && UI._netCartFor === entityId) UI._netCart.setCatalogue(UI._brCat);
+      else { _netCartRelease(); UI._netCart = CBCart.create(UI._brCat, _netCartOpts()); UI._netCartFor = entityId; }
       _netPaintBrowse();
     })
     .catch(function(e){ UI._brBusy = false; UI._brItems = []; UI._brErr = (e && e.message) || 'Could not read it'; _netPaintBrowse(); });
@@ -1301,7 +1322,7 @@ function netBrowseBack(){ UI._brSel = null; UI._brItems = null; UI._brCat = null
 function netSendCart(){
   var s = UI._brSel;
   if (!s) return;
-  var picked = (typeof cbPickSelected === 'function') ? cbPickSelected('net') : [];
+  var picked = UI._netCart ? UI._netCart.selected() : [];
   if (!picked.length) return;
   if (typeof compose !== 'function') {
     if (typeof toast === 'function') toast('Compose is not available on this screen', true);
@@ -1347,12 +1368,17 @@ function _netBrowseBody(){
      * there show how many items selected."*
      *
      * So this screen no longer renders its own item rows. It renders the shared picker (app/catalogue-lines.js for
-     * the rules, cbPickHTML for the house style) and a cart strip on top. A store's catalogue is the same catalogue
+     * the rules, the held CBCart for the house style) and a cart strip on top. A store's catalogue is the same one
      * whether you reached it through Suppliers or through the Network; two renderers would eventually disagree
      * about what a variant is, which is the divergence the shared walk was written to end.
      */
-    return head + cbCartBar('net', 'netSendCart()')
-      + ((typeof cbPickHTML === 'function') ? cbPickHTML('net', UI._brCat || {}) : '');
+    var c = UI._netCart;
+    if (!c) return head + '<div style="padding:20px 2px;color:var(--grey);font-size:13px">Reading their catalogue…</div>';
+    return head + '<div id="cbcartbar_net">' + c.barHTML() + '</div>'
+      + '<input class="inp" style="margin:0 0 7px" placeholder="Search this catalogue…"'
+      + ' value="' + esc((c.state() || {}).q || '') + '" data-testid="pick-search-net"'
+      + ' oninput="netPickSearch(this.value)">'
+      + '<div id="cbpick_net" data-testid="pick-net">' + c.listHTML() + '</div>';
   }
 
   var L = UI._brStores;

@@ -1,0 +1,137 @@
+/**
+ * cap-network-render.test.mjs — DOES THE NETWORK BROWSE SCREEN ACTUALLY RENDER?
+ *
+ * ── WHY THIS EXISTS ──────────────────────────────────────────────────────────────────────────────────────────────
+ * The Network store-browse screen is the one ordering surface with NO automated gate at all. It sits behind login,
+ * and cap-network.js is lazy-loaded via ensureCap('network'), so render-smoke never reaches it and variants never
+ * touches it. Authed e2e is blocked (dev OTP closed on production).
+ *
+ * That left `node -c` as the only check — and `node -c` is precisely what passed on all five defects of
+ * 2026-08-09: a deleted function still being called, a renamed data-testid, a changed number format and an
+ * out-of-scope variable are every one of them legal JavaScript. Two of them took the public storefront down.
+ *
+ * So this drives the real code instead of parsing it. cap-network.js declares plain top-level functions rather
+ * than exporting a module, so it is evaluated in a node:vm context alongside the real cart-ui.js and
+ * catalogue-lines.js, with the handful of globals the browse path touches stubbed. Then it calls netBrowse() and
+ * reads the HTML that comes back out of _netBrowseBody().
+ *
+ * ⚠️ IT IS NOT A SUBSTITUTE FOR A BROWSER. It cannot see layout, CSS or a real click. It answers the narrower
+ * question the cheap checks structurally cannot: does this screen still build its cart, and does it still render
+ * the catalogue and the hooks it publishes?
+ *
+ *      node scripts/cap-network-render.test.mjs
+ */
+import { readFileSync } from 'node:fs';
+import { createContext, runInContext } from 'node:vm';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+const read = (p) => readFileSync(join(ROOT, p), 'utf8');
+
+/* netBrowse fires a promise chain and does not return it — the screen paints when the fetch LANDS, not when the
+   click returns. So the harness drains the queue, which is what the browser does between paints. */
+const settle = () => new Promise((r) => setImmediate(r));
+
+let failed = 0;
+function ok(label, cond) {
+  if (!cond) failed++;
+  console.log(`  ${cond ? 'ok  ' : 'FAIL'} ${label}`);
+}
+
+/* THE CATALOGUE a store publishes: one product with two sizes, plus a standalone line. */
+const CAT = {
+  shop: { bridge_id: 'CBSTORE01', display_name: 'Beta Depot' },
+  // ⚠️ The VARIANT rides on the group's line, not on the item — that is the server's shape, and a fixture that
+  // invented its own would prove the walk works on data the API never sends.
+  groups: [{ label: 'Emulsion', lines: [{ item_id: 'e4', variant: '4L' }, { item_id: 'e10', variant: '10L' }] }],
+  items: [
+    { item_id: 'e4', item_data: { name: 'Emulsion', unit: '4L', price: 900 } },
+    { item_id: 'e10', item_data: { name: 'Emulsion', unit: '10L', price: 2100 } },
+    { item_id: 'br', item_data: { name: 'Brush', unit: 'each', price: 120 } },
+  ],
+};
+
+/* ── the browser-shaped globals the browse path actually touches ───────────────────────────────────────────── */
+const painted = [];
+const ctx = {
+  console,
+  UI: {},
+  esc: (s) => String(s == null ? '' : s).replace(/[&<>"']/g,
+    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])),
+  cbAmount: (p) => (p && typeof p === 'object' && p.amount !== undefined ? p.amount : p),
+  supCatalogueFull: async () => CAT,
+  compose: (arg) => { ctx.__composed = arg; },
+  toast: () => {},
+  localStorage: { getItem: () => null, setItem: () => {}, removeItem: () => {} },
+  // No real DOM: every paint target resolves to nothing, which is the honest shape for a headless run. What we
+  // assert on is the HTML the screen BUILDS, not where it would have put it. body/head DO accept appends, because
+  // the cart mounts its popup host on create() and a stub that threw there would be testing the stub.
+  document: { getElementById: (id) => { painted.push(id); return null; },
+              createElement: () => ({ style: {}, setAttribute() {}, appendChild() {} }),
+              querySelector: () => null,
+              body: { appendChild() {} }, head: { appendChild() {} }, documentElement: { appendChild() {} } },
+};
+ctx.globalThis = ctx;
+ctx.window = undefined;
+createContext(ctx);
+
+/* The REAL modules, in the order app.html loads them. */
+runInContext(read('public/app/catalogue-model.js'), ctx, { filename: 'catalogue-model.js' });
+runInContext(read('public/app/catalogue-lines.js'), ctx, { filename: 'catalogue-lines.js' });
+runInContext(read('public/app/cart-ui.js'), ctx, { filename: 'cart-ui.js' });
+runInContext(read('public/app/cap-network.js'), ctx, { filename: 'cap-network.js' });
+
+console.log('\ncap-network · the browse screen renders');
+ok('★ cap-network.js evaluates and CBCart is reachable from it',
+   typeof ctx.netBrowse === 'function' && typeof ctx.CBCart === 'object');
+
+ctx.netBrowse('E1', 'Beta Depot', 'CBSTORE01'); await settle();
+const html = ctx._netBrowseBody();
+
+ok('★★ it renders their catalogue rather than "Reading their catalogue…"',
+   html.includes('Emulsion') && html.includes('Brush') && !html.includes('Reading their catalogue'));
+ok('★★ the cart bar is on the page — the screen is orderable, not a read-only list',
+   html.includes('id="cbcartbar_net"') && html.includes('cbcart-bar'));
+ok('★ the published hooks are intact — a renamed test id is how a spec silently finds nothing',
+   html.includes('data-testid="pick-net"') && html.includes('data-testid="pick-search-net"')
+   && html.includes('id="cbpick_net"'));
+ok('★ the shared walk grouped the variants — one product, its sizes underneath',
+   html.includes('2 options') && (html.split('>Emulsion<').length - 1) === 1);
+ok('★ the store name is in the head, escaped', html.includes('Beta Depot'));
+
+console.log('\ncap-network · the cart is HELD, not rebuilt by the renderer');
+const cart = ctx.UI._netCart;
+ok('★ browsing a store creates exactly one held cart', !!cart && ctx.UI._netCartFor === 'E1');
+cart.add('e4'); cart.add('e4'); cart.add('br');
+ok('it fills like any cart', cart.lines() === 2 && cart.qtyOf('e4') === 2);
+
+/* ⚠️ THE BUG THE HANDLE EXISTS TO MAKE IMPOSSIBLE. _netBrowseBody runs on every press of +, because onChange
+   repaints the panel. If it ever creates a cart again, the basket cannot survive its own first click. */
+const again = ctx._netBrowseBody();
+ok('★★ REPAINTING DOES NOT EMPTY THE CART — the renderer renders, it does not create',
+   ctx.UI._netCart === cart && cart.lines() === 2 && again.includes('Emulsion'));
+
+/* Re-entering the SAME store re-reads the catalogue; the basket you were filling is not an abandoned thing. */
+ctx.netBrowse('E1', 'Beta Depot', 'CBSTORE01'); await settle();
+ok('★★ coming back to the same store keeps the basket',
+   ctx.UI._netCart === cart && cart.qtyOf('e4') === 2);
+
+/* A different store is a different basket — carrying lines across would address an order to someone who never
+   listed the item. */
+ctx.netBrowse('E2', 'Gamma Yard', 'CBSTORE02'); await settle();
+ok('★★ a DIFFERENT store gets a different, empty cart',
+   ctx.UI._netCart !== cart && ctx.UI._netCartFor === 'E2' && ctx.UI._netCart.lines() === 0);
+
+console.log('\ncap-network · what the cart sends');
+ctx.UI._netCart.add('e10');
+ctx.netSendCart();
+const sent = ctx.__composed;
+ok('★ send goes down the compose path with THEIR store as recipient',
+   !!sent && sent.recipients[0].entity_id === 'E2' && sent.supplier.entity_id === 'E2');
+ok('★★ the quantity set at the ROW travels through — the stepper is a decision, not a suggestion',
+   sent.items.length === 1 && sent.items[0].qty === 1 && sent.items[0].particulars === 'Emulsion 10L');
+ok('★ their price rides along as they stamped it', sent.items[0].price === 2100);
+
+console.log('\n  ' + (failed ? failed + ' FAILED' : 'all passed') + '\n');
+process.exit(failed ? 1 : 0);

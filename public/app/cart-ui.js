@@ -629,7 +629,11 @@
     d.id = 'cbcart_ov'; d.className = 'cbcart-ov';
     d.onclick = function (e) { if (e.target === d) { for (var k in C) if (C[k] && C[k].open) close(k); } };
     d.innerHTML = '<div class="cbcart-ovc" id="cbcart_ovc"></div>';
-    document.body.appendChild(d);
+    // ⚠️ `|| documentElement`. create() now runs this, and create() is called from inside a catalogue load whose
+    // .catch() reports any exception as "could not read their catalogue" — so a bare document.body.appendChild
+    // would turn a missing <body> into a message blaming the supplier's catalogue. There is always somewhere to
+    // put it; failing loudly in the wrong words is worse than either failing or working.
+    (document.body || document.documentElement).appendChild(d);
     if (!document.getElementById('cbcart_css')) {
       // `styleEl`, not `st` — `st` is this module's state getter, and shadowing it here is a trap for the next edit.
       var styleEl = document.createElement('style');
@@ -638,7 +642,7 @@
         + 'align-items:center;justify-content:center;padding:14px;z-index:1200}.cbcart-ov.on{display:flex}'
         + '.cbcart-ovc{background:#fff;width:100%;max-width:470px;border-radius:15px;padding:17px 18px 20px;'
         + 'max-height:86vh;overflow:auto}';
-      document.head.appendChild(styleEl);
+      (document.head || document.documentElement).appendChild(styleEl);
     }
   }
   /** The popup host every cart shares, unless a caller deliberately names its own. */
