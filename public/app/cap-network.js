@@ -998,11 +998,126 @@ function _netMemberScreen(){
     + 'Ask them if something here is wrong.</div></div>';
 }
 
+/* ── WHO IN MY NETWORK HAS THIS? ──────────────────────────────────────────────────────────────────────────────
+   Athi, 2026-08-08: *"if there is a query about one product, how can we provide where exactly the product is and
+   how quickly this can be sent across?"*
+
+   Every number on this screen is REAL — quantity, source, date and distance all come from
+   GET /api/network-design/availability. It waited for lib/availability.js to exist rather than shipping a screen
+   of invented figures, which is why it is worth reading.
+
+   The two states the rendering leads with are the ones that decide whether a person can trust it:
+     UNKNOWN   a store carrying the item that has never reported. Never drawn as 0.
+     STALE     a figure old enough that acting on it is a gamble, said out loud rather than shaded away.  */
+var _avT = null;
+function netAvailSearch(v){
+  UI._avQ = String(v || '');
+  if (_avT) clearTimeout(_avT);
+  var q = UI._avQ.trim();
+  if (q.length < 2) { UI._avRes = null; UI._avBusy = false; _netPaintAvail(); return; }
+  UI._avBusy = true; _netPaintAvail();
+  // Debounced: a keystroke is not a question, and this walks every store in the network.
+  _avT = setTimeout(function(){
+    api('netAvail', { query: { q: q } })
+      .then(function(r){ UI._avBusy = false; UI._avRes = r; _netPaintAvail(); })
+      .catch(function(e){ UI._avBusy = false; UI._avRes = { error: (e && e.message) || 'Search failed' }; _netPaintAvail(); });
+  }, 400);
+}
+/** Repaint only this pane — the rest of the page has nothing to do with the answer. */
+function _netPaintAvail(){
+  var el = (typeof document !== 'undefined') ? document.getElementById('netAvailBody') : null;
+  if (el) el.innerHTML = _netAvailBody();
+}
+function _netAvailBody(){
+  var q = String(UI._avQ || '').trim();
+  if (q.length < 2) {
+    return '<div style="padding:26px 4px;color:var(--grey);font-size:13px;line-height:1.7">'
+      + 'Type a product name or code. Every store in your network is asked, and each answers with what it has, '
+      + '<b>where the number came from</b> and <b>when it was last true</b>.'
+      + '<div style="margin-top:10px;font-size:12px">A store that has never reported comes back as <b>unknown</b> — '
+      + 'not as zero. The two are different, and only one of them can be fixed by asking.</div></div>';
+  }
+  if (UI._avBusy) return '<div style="padding:22px 4px;color:var(--grey);font-size:13px">Asking every store…</div>';
+  var R = UI._avRes;
+  if (!R) return '';
+  if (R.error) return '<div style="padding:20px 4px;color:#a5382e;font-size:13px">' + esc(R.error) + '</div>';
+  if (R.not_in_network) {
+    return '<div style="padding:22px 4px;color:var(--grey);font-size:13px">This business is not part of a network, '
+      + 'so there is nobody else to ask.</div>';
+  }
+  var rows = R.rows || [];
+  if (!rows.length) {
+    return '<div style="padding:22px 4px;color:var(--grey);font-size:13px">No store in your network carries anything '
+      + 'matching “' + esc(q) + '”.</div>';
+  }
+  var body = rows.map(function(r){
+    var f = r.freshness || {};
+    var unknown = r.qty === null || r.qty === undefined;
+    var none = !unknown && r.qty <= 0;
+    var qtyTxt = unknown ? 'not reported' : (r.qty + ' in stock');
+    var qtyCol = unknown ? '#8a94a3' : (none ? '#a5382e' : '#2c7a43');
+    return '<div style="padding:11px 2px;border-bottom:1px solid var(--line);' + (unknown || none ? 'opacity:.75;' : '') + '">'
+      + '<div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap">'
+      + '<b style="font-size:13.5px">' + esc(r.store) + '</b>'
+      + (r.is_me ? '<span style="font-size:10px;font-weight:800;color:#6a44a8;background:#F0EAF9;border-radius:5px;padding:1px 6px">YOU</span>' : '')
+      + (r.city ? '<span style="font-size:12px;color:var(--grey)">' + esc(r.city) + '</span>' : '')
+      + '<span style="font-size:12px;color:var(--grey)">' + (r.km === null || r.km === undefined ? 'distance unknown' : r.km + ' km') + '</span>'
+      + '<b style="margin-left:auto;font-size:15px;color:' + qtyCol + '">' + qtyTxt + '</b></div>'
+      + '<div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:4px">'
+      + '<span style="font-size:12px;color:var(--grey)">' + esc(r.name) + (r.code ? ' · ' + esc(r.code) : '') + '</span>'
+      // The provenance of the number, always. A quantity without it is not an answer.
+      + '<span style="margin-left:auto;font-size:10px;font-weight:800;letter-spacing:.03em;border-radius:5px;padding:1px 6px;'
+      + (f.stale ? 'background:#f6ecd8;color:#8a5a1e' : 'background:#e6f4ec;color:#2c7a43') + '">'
+      + esc((r.source || 'no source') + ' · ' + (f.label || 'no date')) + '</span></div>'
+      + (unknown
+          ? '<div style="font-size:11px;color:#8a5a1e;margin-top:4px">This store carries the item but has never reported a quantity. <b>Unknown is not zero</b> — worth asking before routing around it.</div>'
+          : (f.stale ? '<div style="font-size:11px;color:#8a5a1e;margin-top:4px">This figure is ' + esc(f.label) + '. Acting on it is a guess.</div>' : ''))
+      + '</div>';
+  }).join('');
+  return '<div style="padding:13px 2px 4px;font-size:14px;font-weight:700">' + esc(R.summary || '') + '</div>'
+    + body
+    + (R.truncated ? '<div style="font-size:11px;color:#8a5a1e;padding:9px 2px">Asked the first ' + R.truncated.asked
+        + ' of ' + R.truncated.of + ' stores.</div>' : '');
+}
+function _netAvailScreen(){
+  return '<div style="padding:18px 22px;max-width:760px">'
+    + '<div style="font-size:19px;font-weight:800">🔎 Where is it?</div>'
+    + '<div style="font-size:12.5px;color:var(--grey);margin-top:4px;line-height:1.6">Ask every store in your network '
+    + 'what it has. The answer carries the quantity, the system it came from and when it was last true.</div>'
+    + '<input value="' + esc(UI._avQ || '') + '" oninput="netAvailSearch(this.value)" placeholder="a product name or code — e.g. impeller, IMP-90"'
+    + ' style="width:100%;margin-top:13px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;font-size:14px;box-sizing:border-box">'
+    + '<div id="netAvailBody">' + _netAvailBody() + '</div>'
+    + '</div>';
+}
+
+/** The Network panel has two jobs: DESIGN the network, and ASK it a question. One strip, at the very top. */
+function _netModeStrip(){
+  var m = UI._netMode || 'design';
+  var tab = function(k, icon, label){
+    var on = m === k;
+    return '<span onclick="netMode(\'' + k + '\')" style="cursor:pointer;display:inline-flex;align-items:center;gap:8px;'
+      + 'padding:8px 13px;border-radius:9px;font-size:13px;font-weight:' + (on ? '700' : '500') + ';'
+      + 'background:' + (on ? 'var(--blue)' : 'transparent') + ';color:' + (on ? '#fff' : '#3a4048') + ';'
+      + 'border:1px solid ' + (on ? 'var(--blue)' : 'var(--line)') + '">'
+      + '<span style="width:16px;text-align:center;font-size:14px">' + icon + '</span>' + label + '</span>';
+  };
+  return '<div style="display:flex;gap:6px;padding:12px 22px 0">' + tab('design','🔗','The network') + tab('find','🔎','Where is it?') + '</div>';
+}
+function netMode(m){ UI._netMode = m; _netRerender(); }
+
 function networkScreen(){
   _netInit();
   _netPullServer();   // b111 — once per session, adopt the entity's server-saved design (cross-device)
+  /**
+   * "Where is it?" is available to EVERYONE on a network, operator and member alike — a store asking who has a
+   * part is the commonest question in a chain, and it is not an owner's privilege. The answer is already bounded
+   * by the catalogue's own visibility rule, so a member sees exactly what it is entitled to see and no more.
+   */
+  if (UI._netRole === 'member' || UI._netRole === 'operator') {
+    if (UI._netMode === 'find') return _netModeStrip() + _netAvailScreen();
+  }
   // A member of someone else's network never gets the builder — not disabled, absent. See _netMemberScreen.
-  if (UI._netRole === 'member') return _netMemberScreen();
+  if (UI._netRole === 'member') return _netModeStrip() + _netMemberScreen();
   // ⚠️ While the role is UNKNOWN, offer nothing. Painting "Design your network" first and correcting it a moment
   // later is how a store that IS in a network gets invited to draw a second one — which is exactly what happened.
   if (UI._netRole === undefined || UI._netRole === null) {
@@ -1016,10 +1131,12 @@ function networkScreen(){
   }
   var sel = UI.net.sel ? _netNode(UI.net.sel) : null;
   var right = sel ? _netNodeView(sel) : '<div style="padding:24px;color:var(--grey);font-size:13px">Select a node to edit it, or add a child under it.</div>';
-  return '<div style="display:flex;height:100%;min-height:0">'
+  return '<div style="display:flex;flex-direction:column;height:100%;min-height:0">'
+    + _netModeStrip()
+    + '<div style="display:flex;flex:1;min-height:0">'
     + '<div id="netLeftPane" style="width:300px;border-right:1px solid var(--line);overflow:auto;padding:12px 8px;flex:0 0 auto">'
       + _netLeftPane() + '</div>'
-    + '<div id="netDetailPane" style="flex:1;overflow:auto;min-width:0">' + right + '</div></div>';
+    + '<div id="netDetailPane" style="flex:1;overflow:auto;min-width:0">' + right + '</div></div></div>';
 }
 
 /**
