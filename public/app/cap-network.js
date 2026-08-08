@@ -512,8 +512,70 @@ function netDelete(key){
     if (kill.indexOf(UI.net.sel) >= 0) UI.net.sel = n.parent_key;
     _netMark(); _netRerender();
   };
-  if (typeof confirmAsk === 'function') confirmAsk('Remove node', 'Remove <b>' + esc(n.name) + '</b>' + (cnt ? ' and its ' + cnt + ' sub-node' + (cnt === 1 ? '' : 's') : '') + ' from the design? Nothing was created yet, so nothing is lost.', 'Remove', go, true);
+  // ⚠️ "nothing is lost" is only true for a node that was never built. Removing a LIVE store from the drawing does
+  // not remove the store — it keeps trading, keeps its catalogue and keeps its login, and the design simply stops
+  // tracking it. Saying otherwise would be the most expensive sentence on the page.
+  var live = _netDescendants(key).concat([key]).filter(function(k){ var x = _netNode(k); return x && x.built; }).length;
+  var msg = 'Remove <b>' + esc(n.name) + '</b>' + (cnt ? ' and its ' + cnt + ' sub-node' + (cnt === 1 ? '' : 's') : '') + ' from the design?<br><br>'
+    + (live ? '<b>' + live + ' of these ' + (live === 1 ? 'is a live store' : 'are live stores')
+              + '</b> — they keep trading and keep their logins. This design just stops tracking them, and rebuilding will not adopt them back.'
+            : 'Nothing was created yet, so nothing is lost.');
+  if (typeof confirmAsk === 'function') confirmAsk(live ? 'Remove from the design?' : 'Remove node', msg, 'Remove', go, true);
   else if (typeof window !== 'undefined' && window.confirm('Remove ' + n.name + '?')) go();
+}
+
+/* ── CHANGING YOUR MIND ───────────────────────────────────────────────────────────────────────────────────────
+   Athi, 2026-08-08: *"how can they change their decision? Is there any way a cancel button or an X mark can be
+   introduced to revert the decision?"*
+
+   Everything in the pending list is a decision not yet acted on, so each one must be undoable in a click — and
+   undoable WITHOUT knowing what it used to be, which is the part a person cannot be expected to remember. The
+   server's plan carries `from`, so the revert target is known exactly rather than guessed. */
+var NET_PLAT_TO_DESIGN = { public: 'public', network: 'protected', private: 'private' };
+
+function netRevertOne(key){
+  var n = _netNode(key); if (!n) return;
+  var pl = _netPlanFor(n);
+  if (!pl) return;
+  if (pl.kind === 'create') return netDelete(key);          // never created → undo means take it off the drawing
+
+  var back = NET_PLAT_TO_DESIGN[pl.from] || 'private';
+  // A revert cannot break the cascade: if what it sits inside is closed, putting it back to public is not
+  // available, and the honest answer is to say which node to revert instead of quietly doing something else.
+  var ceil = _netCeilingFor(n);
+  if (NET_RANK[back] > NET_RANK[ceil]) {
+    var p = _netNode(n.parent_key);
+    if (typeof toast === 'function') toast('"' + n.name + '" cannot go back to ' + _netLab(back)
+      + ' while ' + ((p && !p.root) ? '"' + p.name + '"' : 'the network') + ' is closed — revert that first.', true);
+    return;
+  }
+  n.exposure = back;
+  if (typeof toast === 'function') toast('"' + n.name + '" left as ' + _netLab(back));
+  _netMark(); _netRerender();
+}
+
+/** Put the whole drawing back to what the live network actually is. */
+function netRevertAll(){
+  var P = UI._netPlan || {};
+  var creates = P.create || [], changes = P.update || [];
+  if (!creates.length && !changes.length) return;
+  var go = function(){
+    var kill = [];
+    creates.forEach(function(c){ kill.push(c.key); _netDescendants(c.key).forEach(function(k){ kill.push(k); }); });
+    if (kill.length) {
+      UI.net.nodes = UI.net.nodes.filter(function(x){ return kill.indexOf(x.key) < 0; });
+      if (kill.indexOf(UI.net.sel) >= 0) UI.net.sel = (_netRootNode() || {}).key || null;
+    }
+    changes.forEach(function(u){ var t = _netNode(u.key); if (t) t.exposure = NET_PLAT_TO_DESIGN[u.from] || 'private'; });
+    _netMark(); _netRerender();
+  };
+  var lines = creates.map(function(c){ return 'remove <b>' + esc(c.name) + '</b> (never created)'; })
+    .concat(changes.map(function(u){ return '<b>' + esc(u.name) + '</b> back to ' + esc(_netPlatLab[u.from] || u.from); }));
+  if (typeof confirmAsk === 'function')
+    confirmAsk('Discard the changes you have not applied?',
+      'The design goes back to matching the live network:<br><br>' + lines.join('<br>')
+      + '<br><br>No live store is touched — none of this has happened yet.', 'Discard them', go, true);
+  else go();
 }
 function netStartOver(){
   var go = function(){ try { localStorage.removeItem(_netDraftKey()); } catch (e) {} UI.net = null; _netRerender(); };
@@ -789,13 +851,19 @@ function networkScreen(){
      item, yet to be created."* A number tells you something is outstanding; a list tells you what. */
   var pendingList = pendingCount
     ? '<div style="margin:8px 8px 0;border:1px solid #e0d3b0;border-radius:9px;background:#fdf8ec;overflow:hidden">'
-      + toCreate.map(function(c){ return '<div style="padding:6px 9px;font-size:11.5px;border-bottom:1px solid #efe4cc">'
-          + '<b style="color:#2c5aa0">NEW</b> ' + esc(c.name)
-          + '<div style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;color:var(--grey)">' + esc(c.handle) + ' · ' + esc(_netPlatLab[c.visibility] || c.visibility) + '</div></div>'; }).join('')
-      + toChange.map(function(u){ return '<div style="padding:6px 9px;font-size:11.5px;border-bottom:1px solid #efe4cc">'
-          + '<b style="color:#8a5a1e">CHANGE</b> ' + esc(u.name)
-          + '<div style="font-size:10.5px;color:var(--grey)"><s>' + esc(_netPlatLab[u.from] || u.from) + '</s> → <b>' + esc(_netPlatLab[u.to] || u.to) + '</b></div></div>'; }).join('')
-      + '<div style="padding:6px 9px;font-size:10.5px;color:#8a5a1e">Nothing above has happened yet.</div></div>'
+      // Each row carries its own ✕ — a decision that cannot be taken back in one click is a decision people avoid
+      // making at all. The revert target comes from the plan's `from`, so nobody has to remember what it used to be.
+      + toCreate.map(function(c){ return '<div style="display:flex;gap:6px;align-items:flex-start;padding:6px 9px;font-size:11.5px;border-bottom:1px solid #efe4cc">'
+          + '<div style="flex:1;min-width:0"><b style="color:#2c5aa0">NEW</b> ' + esc(c.name)
+          + '<div style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;color:var(--grey)">' + esc(c.handle) + ' · ' + esc(_netPlatLab[c.visibility] || c.visibility) + '</div></div>'
+          + '<span onclick="netRevertOne(\'' + c.key + '\')" title="Remove it — it was never created" style="cursor:pointer;color:#8a929e;font-weight:700;padding:0 3px">✕</span></div>'; }).join('')
+      + toChange.map(function(u){ return '<div style="display:flex;gap:6px;align-items:flex-start;padding:6px 9px;font-size:11.5px;border-bottom:1px solid #efe4cc">'
+          + '<div style="flex:1;min-width:0"><b style="color:#8a5a1e">CHANGE</b> ' + esc(u.name)
+          + '<div style="font-size:10.5px;color:var(--grey)"><s>' + esc(_netPlatLab[u.from] || u.from) + '</s> → <b>' + esc(_netPlatLab[u.to] || u.to) + '</b></div></div>'
+          + '<span onclick="netRevertOne(\'' + u.key + '\')" title="Leave it as ' + esc(_netPlatLab[u.from] || u.from) + '" style="cursor:pointer;color:#8a929e;font-weight:700;padding:0 3px">✕</span></div>'; }).join('')
+      + '<div style="display:flex;gap:8px;align-items:center;padding:6px 9px;font-size:10.5px;color:#8a5a1e">'
+      + '<span style="flex:1">Nothing above has happened yet.</span>'
+      + '<span onclick="netRevertAll()" style="cursor:pointer;color:var(--blue);font-weight:600">↺ Discard all</span></div></div>'
     : '';
   var problemList = probs.length
     ? '<div style="margin:8px 8px 0;font-size:11px;color:#a5382e;line-height:1.5">'
