@@ -29,7 +29,11 @@ var NET_CAPS = [
        pricepolicy  what may it charge?                            → a BAND, not a price
        localise     what changes when it crosses a border?         → same pump, different product
      See C:\dev\SPEC-global-distribution.md for the reasoning and what each would need underneath. */
-  { k: 'place',       icon: '📍', label: 'Place & reach' },
+  /* 🌍 GLOBAL — Athi, 2026-08-08: *"only the currency and the location, timestamp changes are the ones which
+     make it global; if we make it as a separate tab that would be good."* Right, and they belong together: they
+     are the three things that differ because a store is somewhere ELSE. Place folds in here rather than sitting
+     as its own tab — one subject, one page, and one fewer tab. */
+  { k: 'place',       icon: '🌍', label: 'Global' },
   { k: 'territory',   icon: '🗺️', label: 'Territory & authority', soon: true },
   { k: 'stock',       icon: '📦', label: 'Stock & policy',        soon: true },
   { k: 'fulfil',      icon: '🚚', label: 'Fulfilment routes',     soon: true },
@@ -888,6 +892,30 @@ function netMove(key, dir){
   _netMark(); _netRerender();
 }
 
+/**
+ * Currency and country in the tree — on the ROOT always, on a store only when it DIFFERS.
+ *
+ * The network's own line is the reference everything else is read against, so it always shows. A store repeating
+ * the same two values adds a line of noise per store and hides the one that matters; a store that trades in
+ * another currency is genuinely worth spotting from across the tree.
+ */
+function _netGlobalChip(n){
+  var netCur = String((typeof SESSION !== 'undefined' && SESSION.currency) || '').toUpperCase();
+  var netCty = String((typeof SESSION !== 'undefined' && SESSION.country) || '').toUpperCase();
+  if (n.root) {
+    if (!netCur && !netCty) return '';
+    return '<div style="font-size:10px;color:#8a94a3;margin:2px 0 0 13px">'
+      + esc([netCur, netCty].filter(Boolean).join(' · ')) + ' <span style="opacity:.8">— the network\'s</span></div>';
+  }
+  var p = n.place || {};
+  var cur = String(p.currency || '').toUpperCase(), cty = String(p.country || '').toUpperCase();
+  var out = [];
+  if (cur && cur !== netCur) out.push(cur);
+  if (cty && cty !== netCty) out.push(cty);
+  if (!out.length) return '';
+  return '<div style="font-size:10px;font-weight:700;color:#8a5a1e;margin:2px 0 0 13px">🌍 ' + esc(out.join(' · ')) + '</div>';
+}
+
 function _netTree(parentKey, depth){
   var kids = (UI.net.nodes || []).filter(function(n){ return n.parent_key === (parentKey || null); }).sort(_netByName);
   return kids.map(function(n){ var sel = UI.net.sel === n.key; var dots = _capDots(n);
@@ -905,6 +933,10 @@ function _netTree(parentKey, depth){
       // the full text on hover: it must add meaning without turning the tree into a document.
       + (n.purpose ? '<div title="' + esc(n.purpose) + '" style="font-size:10.5px;color:#8a94a3;line-height:1.4;'
           + 'margin:2px 0 0 13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(n.purpose) + '</div>' : '')
+      // ⚠️ SHOW THE EXCEPTION, NOT THE RULE. Athi, 2026-08-08: *"if the currency changes, then we can bring it in
+      // the left menu — otherwise only the top node shows the currency and country."* Repeating "INR · IN" on every
+      // store says nothing and buries the one store that is different. So it appears only where it DIFFERS.
+      + _netGlobalChip(n)
       + '</div>' + _netTree(n.key, depth + 1);
   }).join('');
 }
@@ -1498,19 +1530,47 @@ function _inp(val, oninput, ph, extra){
 }
 function _fieldLabel(t){ return '<label style="font-size:10.5px;font-weight:700;color:var(--grey);letter-spacing:.04em;display:block;margin:9px 0 3px">' + esc(t) + '</label>'; }
 
-/** 📍 PLACE — the only one wired through to the store. "Closest" is a geometry question; this is the geometry. */
-function _placeConfig(n){
+/**
+ * 🌍 GLOBAL — the three things that differ because a store is somewhere ELSE: what it trades in, where it is, and
+ * what time it is there.
+ *
+ * Currency and country are INHERITED from the network at Build unless set here. Left blank they stay blank, and
+ * the store takes the network's — which is why the fields say "the network's X" as their placeholder rather than
+ * pre-filling the value. A pre-filled inherited value looks like a decision somebody made about this store.
+ */
+function _globalConfig(n){
   var p = _netPlace(n);
+  var netCur = (typeof SESSION !== 'undefined' && SESSION.currency) || '—';
+  var netCty = (typeof SESSION !== 'undefined' && SESSION.country) || '—';
+  var inheritNote = function(own, netVal){
+    return own
+      ? '<span style="font-size:10px;font-weight:800;background:#e6f4ec;color:#2c7a43;border-radius:5px;padding:1px 6px">SET HERE</span>'
+      : '<span style="font-size:10px;font-weight:800;background:#eef2f7;color:#5b6472;border-radius:5px;padding:1px 6px">FROM NETWORK · AT BUILD — ' + esc(netVal) + '</span>';
+  };
   return '<div style="padding:12px 13px;border:1px solid var(--line);border-left:3px solid #2c5aa0;border-radius:10px;background:#f7fafd">'
-    + '<div style="font-size:11px;font-weight:800;color:#2c5aa0;letter-spacing:.05em">📍 PLACE &amp; REACH</div>'
-    + '<div style="font-size:11.5px;color:var(--grey);margin-top:4px;line-height:1.5">Where this store is, and how far it serves. '
-    + 'Nearest-store, coverage and transfer routing are all distance questions — they need this.</div>'
+    + '<div style="font-size:11px;font-weight:800;color:#2c5aa0;letter-spacing:.05em">🌍 GLOBAL — CURRENCY · PLACE · TIME</div>'
+    + '<div style="font-size:11.5px;color:var(--grey);margin-top:4px;line-height:1.5">The three things that change '
+    + 'because this store is somewhere else. Leave a field blank and it takes the network\'s.</div>'
+
+    + '<div style="display:flex;gap:8px">'
+    + '<div style="flex:1">' + _fieldLabel('CURRENCY') + _inp(p.currency, "netSetPlace('" + n.key + "','currency',this.value.toUpperCase())", "the network's " + netCur) + '</div>'
+    + '<div style="flex:1">' + _fieldLabel('COUNTRY') + _inp(p.country, "netSetPlace('" + n.key + "','country',this.value.toUpperCase())", "the network's " + netCty) + '</div>'
+    + '</div>'
+    + '<div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:6px">'
+    + inheritNote(p.currency, netCur) + inheritNote(p.country, netCty) + '</div>'
+    + '<div style="font-size:11px;color:var(--grey);margin-top:6px;line-height:1.5">A price is <b>stamped</b> in this '
+    + 'store\'s currency and never converted, so setting it here is a real decision — not a display preference.</div>'
+
+    + _fieldLabel('TIME ZONE')
+    + _inp(p.tz, "netSetPlace('" + n.key + "','tz',this.value)", 'Asia/Colombo — captured, not enforced yet')
+
+    + '<div style="border-top:1px dashed var(--line);margin-top:13px;padding-top:4px"></div>'
     + _fieldLabel('ADDRESS')
     + _inp(p.address, "netSetPlace('" + n.key + "','address',this.value)", 'street · area')
-    + '<div style="display:flex;gap:8px">'
-    + '<div style="flex:1">' + _fieldLabel('CITY') + _inp(p.city, "netSetPlace('" + n.key + "','city',this.value)", 'Coimbatore') + '</div>'
-    + '<div style="flex:1">' + _fieldLabel('COUNTRY') + _inp(p.country, "netSetPlace('" + n.key + "','country',this.value)", 'IN') + '</div>'
-    + '</div>'
+    // COUNTRY is set above with currency — it is an inherited-or-overridden value, not part of the address. Having
+    // it in both places would be two controls for one field, which is how you set it once and find it changed.
+    + _fieldLabel('CITY')
+    + _inp(p.city, "netSetPlace('" + n.key + "','city',this.value)", 'Coimbatore')
     + '<div style="display:flex;gap:8px">'
     + '<div style="flex:1">' + _fieldLabel('LATITUDE') + _inp(p.lat, "netSetPlaceNum('" + n.key + "','lat',this.value)", '11.0168') + '</div>'
     + '<div style="flex:1">' + _fieldLabel('LONGITUDE') + _inp(p.lng, "netSetPlaceNum('" + n.key + "','lng',this.value)", '76.9558') + '</div>'
@@ -1567,7 +1627,7 @@ function _soonConfig(n, k){
 }
 
 function _capDetail(n, k){
-  if (k === 'place') return _placeConfig(n);
+  if (k === 'place') return _globalConfig(n);
   if (NET_SOON[k]) return _soonConfig(n, k);
   if (k === 'catalogue') return _catConfig(n);
   if (k === 'storefront') return _storefrontConfig(n);
