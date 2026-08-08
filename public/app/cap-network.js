@@ -17,7 +17,60 @@ var NET_CAPS = [
   { k: 'transact',   icon: '🔄', label: 'Transact' },
   { k: 'tradeready', icon: '🛡️', label: 'Trade-ready' },
   { k: 'dispute',    icon: '⚖️', label: 'Dispute' },
+  /* ── PLACEMENTS ONLY — nothing behind these yet (2026-08-08) ──────────────────────────────────────────────
+     Athi: *"assume Grundfos as a global supplier and its dealer / sub-dealer network across the globe — if we
+     have to set it up, what do we need? Just do a placement, don't wire anything."*
+
+     Each answers ONE question that a global distribution chain asks and CB currently cannot:
+       place        where is it, and how far does it serve?        → "closest store" is a geometry question
+       territory    what may it sell, where, at what tier?         → keeps a chain legal rather than chaotic
+       stock        what does it actually hold, and how fresh?     → "who has it nearest" needs a number
+       fulfil       how do goods reach a customer from here?       → lateral transfer, drop-ship, back-order
+       pricepolicy  what may it charge?                            → a BAND, not a price
+       localise     what changes when it crosses a border?         → same pump, different product
+     See C:\dev\SPEC-global-distribution.md for the reasoning and what each would need underneath. */
+  { k: 'place',       icon: '📍', label: 'Place & reach',        soon: true },
+  { k: 'territory',   icon: '🗺️', label: 'Territory & authority', soon: true },
+  { k: 'stock',       icon: '📦', label: 'Stock & policy',        soon: true },
+  { k: 'fulfil',      icon: '🚚', label: 'Fulfilment routes',     soon: true },
+  { k: 'pricepolicy', icon: '💱', label: 'Price policy',          soon: true },
+  { k: 'localise',    icon: '📜', label: 'Localisation',          soon: true },
 ];
+
+/* What each placement would capture. Written as the QUESTION it answers, then the fields — so the panel is
+   useful to think with before any of it exists. `have` names what CB already has to build on; `need` is honest
+   about what is missing, because a placeholder that implies more than it does is worse than no placeholder. */
+var NET_SOON = {
+  place: { q: 'Where is this node, and how far does it serve?',
+    fields: ['Address · city · country', 'Latitude / longitude (or geohash)', 'Service radius', 'Time zone · working days'],
+    have: 'cb_entity already carries latitude, longitude, geohash, city and country — dormant, unused.',
+    need: 'the place on the LIVE entity, and a spatial index. Nearest-node is unanswerable without it.' },
+  territory: { q: 'What may it sell, where, and at what tier?',
+    fields: ['Tier — branch · distributor · dealer · sub-dealer · installer', 'Authorised markets (country / state)',
+             'Product lines it may carry', 'Exclusive or shared', 'Valid from / to'],
+    have: 'source-governed distribution: the brand\'s rules travel with the catalogue to any distributor.',
+    need: 'territory as a CHECKABLE attribute — so a Tamil Nadu dealer cannot answer a Kenya order.' },
+  stock: { q: 'What does it actually hold — and how old is that number?',
+    fields: ['Stocking or non-stocking', 'Per-item min / max', 'On hand · reserved · available', 'Replenishment lead time',
+             'Where the number comes from (ERP · IoT · manual) and when it was last true'],
+    have: 'the four-leg model can FEED this — system leg → ERP/IoT connector.',
+    need: 'an availability record with a FRESHNESS stamp. A stock figure with no timestamp is a rumour.' },
+  fulfil: { q: 'How do goods reach a customer from here?',
+    fields: ['From own stock', 'Lateral transfer from a sibling or nearby dealer', 'From the regional warehouse',
+             'Drop-ship from the source', 'Back-order', 'Transit days · who invoices · Incoterm per route'],
+    have: 'the chit rail already carries the instruction, and trace edges already record the handoff.',
+    need: 'the ROUTES declared, with transit times — today nothing says goods may move sideways at all.' },
+  pricepolicy: { q: 'What may it charge?',
+    fields: ['Currency (already per entity)', 'Basis — source list · territory list · its own',
+             'Floor and ceiling, or margin band', 'Who may discount, and by how much', 'Tax treatment'],
+    have: 'money is stamped per entity and never converted; the catalogue already models price basis and by-ref.',
+    need: 'the BAND. Today a price is yours or referenced — there is no "within these limits".' },
+  localise: { q: 'What changes when this catalogue crosses a border?',
+    fields: ['Destination markets served', 'Required certifications (CE · UL · BIS · WRAS)',
+             'Variants — voltage · frequency · fittings', 'Language · labelling', 'Import documents', 'Warranty terms'],
+    have: 'per-copy overlay with per-field provenance, trade-lane confidence, compliance-by-catalogue.',
+    need: 'the localisation MAP — which fields a market may override, and which the source freezes.' },
+};
 function _capMeta(k){ for (var i = 0; i < NET_CAPS.length; i++) if (NET_CAPS[i].k === k) return NET_CAPS[i]; return null; }
 
 /* ---- catalogue spec vocabulary (leg/type vocab lives in the shared model, app/catalogue-model.js) ---- */
@@ -1007,6 +1060,7 @@ function networkScreen(){
     + '<div id="netDetailPane" style="flex:1;overflow:auto;min-width:0">' + right + '</div></div>';
 }
 function _capSummary(n, k){
+  if (NET_SOON[k]) return 'noted on the design · nothing built';
   if (k === 'catalogue') { var c = n.catalogue || {}; var nf = (c.fields || []).length; return nf + ' field' + (nf === 1 ? '' : 's') + ' · ' + (c.loadedBy || 'manual'); }
   if (k === 'storefront') { var o = n.order || {}; var ml = (CAT_METHODS.filter(function(x){ return x.k === (o.method || 'cart'); })[0] || {}).label || ''; return (n.exposure || 'private') + ' · ' + ml; }
   if (k === 'coassist') { var cc = _normCoassist(n.coassist); var p = []; if (cc.human.count) p.push(cc.human.count + ' human'); var iotDev = (cc.iot.connections || []).reduce(function(s, x){ return s + (parseInt(x.devices, 10) || 0); }, 0); if (iotDev || (cc.iot.connections || []).length) p.push(iotDev + ' IoT'); if (cc.erp.connectors.length) p.push(cc.erp.connectors.length + ' ERP'); if (cc.ai.count) p.push(cc.ai.count + ' AI'); return p.length ? p.join(' · ') : 'none set'; }
@@ -1026,7 +1080,9 @@ function _capRow(n, c){
   var open = yes && !(UI.net.collapsed && UI.net.collapsed[c.k]);
   var left = '<span ' + (yes ? 'onclick="netCapToggleOpen(\'' + n.key + '\',\'' + c.k + '\')" style="cursor:pointer;' : 'style="') + 'flex:1;min-width:0;display:flex;align-items:center;gap:8px">'
     + '<span style="font-size:15px">' + c.icon + '</span>'
-    + '<span style="font-weight:700;font-size:13px;color:#1c2128">' + c.label + '</span>'
+    + '<span style="font-weight:700;font-size:13px;color:' + (c.soon ? '#6b6f86' : '#1c2128') + '">' + c.label + '</span>'
+    // Marked on the ROW, not only inside it — otherwise a person ticks six things and believes they configured six.
+    + (c.soon ? '<span style="font-size:9px;font-weight:800;letter-spacing:.03em;color:#6b6f86;background:#eef0f4;border-radius:5px;padding:1px 5px">NOT BUILT</span>' : '')
     + (yes ? '<span style="font-size:11px;color:var(--grey);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">· ' + esc(_capSummary(n, c.k)) + '</span><span style="margin-left:auto;color:var(--grey);font-size:11px;flex:0 0 auto">' + (open ? '▾' : '▸') + '</span>' : '')
     + '</span>';
   var head = '<div style="display:flex;align-items:center;gap:10px;padding:9px 2px">' + left + _yesNo(n, c.k, yes) + '</div>';
@@ -1448,7 +1504,27 @@ function _disputeConfig(n){
     + _radioOpt("netSetDispute('" + n.key + "',false)", !inf, 'Not involved', "Disputes are handled above it; this node isn't notified.", '#8a5cc4', '#efeafa')
     + '</div>';
 }
+/* A placement panel. It captures NOTHING — it says what would be captured, what CB already has to build it on,
+   and what is genuinely missing. A placeholder that looks like a form people will type into is a trap. */
+function _soonConfig(k){
+  var s = NET_SOON[k], c = _capMeta(k) || {};
+  if (!s) return '';
+  return '<div style="padding:12px 13px;border:1px dashed var(--line-strong,#c8d0d9);border-radius:10px;background:#fafbfc">'
+    + '<div style="font-size:11px;font-weight:800;color:#6b6f86;letter-spacing:.05em">' + c.icon + ' ' + esc((c.label || '').toUpperCase())
+    + ' <span style="background:#eef0f4;border-radius:5px;padding:1px 6px;margin-left:5px">NOT BUILT</span></div>'
+    + '<div style="font-size:12.5px;color:#3a4048;margin-top:7px;line-height:1.55"><b>' + esc(s.q) + '</b></div>'
+    + '<div style="margin-top:8px">' + s.fields.map(function(f){
+        return '<div style="font-size:12px;color:var(--grey);padding:2px 0">· ' + esc(f) + '</div>'; }).join('') + '</div>'
+    + '<div style="margin-top:9px;font-size:11.5px;line-height:1.55"><span style="color:#2c7a43;font-weight:700">Have</span> '
+    + '<span style="color:var(--grey)">' + esc(s.have) + '</span></div>'
+    + '<div style="margin-top:3px;font-size:11.5px;line-height:1.55"><span style="color:#a5382e;font-weight:700">Need</span> '
+    + '<span style="color:var(--grey)">' + esc(s.need) + '</span></div>'
+    + '<div style="margin-top:9px;font-size:11px;color:#8a94a3">Nothing here is stored or built. Ticking it records the '
+    + 'intent on the design only.</div></div>';
+}
+
 function _capDetail(n, k){
+  if (NET_SOON[k]) return _soonConfig(k);
   if (k === 'catalogue') return _catConfig(n);
   if (k === 'storefront') return _storefrontConfig(n);
   if (k === 'coassist') return _coassistConfig(n);
