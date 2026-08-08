@@ -1428,7 +1428,7 @@ function setShop(s){SESSION.shop=s;
   document.querySelectorAll('.shoptog button').forEach(b=>{b.classList.remove('on','open','closed','away');if(b.dataset.s===s){b.classList.add('on',s);}});
   toast({open:"Shop Open — accepting orders.",closed:"Shop Closed — new orders are blocked.",away:"Away — orders still accepted; customer is told service may be delayed."}[s]);
 }
-function logout(){if(typeof _netFlush==='function'){try{_netFlush();}catch(_){}}if(typeof _catfFlush==='function'){try{_catfFlush();}catch(_){}}try{localStorage.removeItem('cb_sess');localStorage.removeItem('cb_nav');}catch(_){}SESSION={token:null,role:null,name:null,entity:null,bridgeId:null};STORE=freshStore();UI={...UI0,selected:new Set(),aggStates:new Set(["open","act","close"])};applyPrefs();go("#/login");}
+function logout(){if(typeof _netFlush==='function'){try{_netFlush();}catch(_){}}if(typeof _catfFlush==='function'){try{_catfFlush();}catch(_){}}try{localStorage.removeItem('cb_sess');localStorage.removeItem('cb_nav');}catch(_){}stopAutoRefresh();SESSION={token:null,role:null,name:null,entity:null,bridgeId:null};STORE=freshStore();UI={...UI0,selected:new Set(),aggStates:new Set(["open","act","close"])};applyPrefs();go("#/login");}
 
 /* ---------------- APP SHELL + TASK PANEL ---------------- */
 const UI0 = {nav:"task", folder:"task", sub:"my", state:"open", dtab:"content", sel:null, selectMode:false, selected:new Set(), aggStates:new Set(["open","act","close"]), drawer:false, mdetail:false, purpose:false, orgHelp:false, loading:false, rows:[], detail:null, actors:[], busy:false, vp:"lap", lw:340, lh:300, lb:null, lbGroup:null, openLines:new Set(), attGroups:{}, filterOpen:false, filter:{}, notifOpen:false, msgFilter:"all", msgChan:"internal", msgType:"all", msgKind:"info", msgcOpen:false, composeOpen:false, listHelp:false, total:0, page:1, pageLimit:50, loadingMore:false, allLoaded:false, sort:"date", dir:"desc", cols:null, colMenu:false, search:"", msgSearch:"", msgOrder:"latest", statusSearch:"", statusOrder:"latest"};
@@ -1496,6 +1496,23 @@ function ensureCap(name){
   });
 }
 function renderApp(){
+  /**
+   * ⚠️ THE SHELL MUST NEVER PAINT WITHOUT A SESSION.
+   *
+   * Athi, 2026-08-08: *"I copied the URL and opened another incognito window… initially it opened the original
+   * store and on pressing again I got the null store, and not able to log out as well."*
+   *
+   * The router was right — no token at #/login renders the login screen. What was wrong is that renderApp() would
+   * paint the whole authenticated shell for ANY caller, and there are dozens: the 20-second auto-refresh (whose
+   * timer logout never cleared), capability loaders, /me callbacks, the assistant. One of those landing after the
+   * session went away repainted the app over the login form with SESSION.name and SESSION.entity both null —
+   * hence "null null ·" in the header — and every subsequent logout was undone 20 seconds later, which is exactly
+   * what "not able to log out" looks like from the outside.
+   *
+   * The router guarding the front door is not enough when async callbacks can walk in through the back. This is
+   * the guard at the thing being protected, so it holds however it is reached.
+   */
+  if(!SESSION.token){ stopAutoRefresh(); return go("#/login"); }
   const role=SESSION.role, M=MENUS[role]||MENUS.entity;
   if(role==="customer" && (UI.nav==="task"||UI.nav==="compose")) UI.nav="order";
   // once per session: is this entity a helpdesk? (generalises the helpdesk business-layer gate off the hardcoded name)
@@ -1556,6 +1573,9 @@ var _autoRefreshTimer = null;
 // Skips while you're typing, reading a chit, composing, in a modal, or the tab is hidden.
 function autoRefresh(){
   try{
+    // A signed-out tab must go quiet. Without this the timer kept polling with no token, and its callbacks
+    // repainted the app shell over the login screen every 20 seconds.
+    if(!SESSION.token){ stopAutoRefresh(); return; }
     if(CFG.STAGE==='web_demo' || document.hidden || UI.nav==='compose') return;
     loadNotifs();   // keep the bell badge current (no-op in demo)
     const mh=document.getElementById('modalhost'); if(mh && mh.innerHTML.trim()) return;
@@ -1569,6 +1589,9 @@ function autoRefresh(){
   }catch(e){}
 }
 function startAutoRefresh(sec){ if(_autoRefreshTimer) clearInterval(_autoRefreshTimer); _autoRefreshTimer=setInterval(autoRefresh,(sec||20)*1000); if(CFG.MODE!=='demo') loadNotifs(); }
+// Logout never stopped the timer, so a signed-out tab kept polling and repainting. A thing that starts on sign-in
+// must have a way to stop on sign-out, or it outlives the session that justified it.
+function stopAutoRefresh(){ if(_autoRefreshTimer){ clearInterval(_autoRefreshTimer); _autoRefreshTimer=null; } }
 function togglePurpose(){UI.purpose=!UI.purpose;const el=document.getElementById('purposebar');if(el)el.classList.toggle('open',UI.purpose);const ic=document.getElementById('infobtn');if(ic)ic.classList.toggle('on',UI.purpose);}
 function navTitle(){const all={...Object.fromEntries(Object.values(MENUS).flatMap(m=>[...m.top,...m.rest]).map(x=>[x[0],x[2]]))};return all[UI.nav]||UI.nav;}
 function menuBtn(x){const[key,ic,label]=x;const on=UI.nav===key;const click=key==="compose"?`compose()`:`navTo('${key}')`;return `<button class="${on?'on':''}" data-testid="nav-${key}" onclick="${click}"><span class="ic">${ic}</span>${label}</button>`;}

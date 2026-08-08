@@ -54,7 +54,9 @@ module.exports = defineConfig({
         /currency-matrix\.spec\.js/, /mode-survives-order\.spec\.js/, /variants\.spec\.js/,
         // the cascade is a CUSTOMER view too: it arranges every combination through the API, then arrives at the
         // storefront with no session — which is how a buyer actually gets there.
-        /network-cascade\.spec\.js/],
+        /network-cascade\.spec\.js/,
+        // signed-out is the definition of a noauth test: it asserts that no session means no app, over time
+        /signed-out\.spec\.js/],
     },
     // 4 · CROSS-BROWSER + SIZE sweep of the COUNTER flows (keyboard/storefront/chits). Opt-in — run e.g.
     //     `npx playwright test --project=counter-firefox`. The default run stays Chromium@counter for speed.
