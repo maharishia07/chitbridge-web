@@ -1664,9 +1664,48 @@ function ccSendAsOptions(){
 // in place once the fetch resolves. UI._catState drives which state is shown.
 function ccCatPickHTML(){
   if(UI._catState==='loading') return `<div style="font-size:12px;color:var(--grey);display:flex;align-items:center;gap:7px;padding:3px 0"><span class="spin"></span> Loading your catalogue…</div>`;
-  return (STORE.catalogue||[]).length
-    ? `<div style="display:flex;gap:8px"><select class="inp" id="cc_pick" data-testid="chit-catalogue-pick">${STORE.catalogue.map((p,i)=>`<option value="${i}">${esc(p.particulars)} · ${inr(p.price)}/${esc(p.unit||'unit')}</option>`).join("")}</select><button class="composebtn" data-testid="chit-catalogue-add" onclick="ccAddItem()">+ Add</button></div>`
-    : `<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:10px 12px;font-size:12.5px;color:#6b5a36">${UI._catState==='error'?esc(MSG.catalogueLoadErr()):'Your catalogue is empty — a chit needs at least one line item. <a onclick="closeModal();navTo(\'catalogue\')" style="color:#3F66A6;cursor:pointer;font-weight:600">Add a product in Catalogue first &rarr;</a>'}</div>`;
+  if(!(STORE.catalogue||[]).length)
+    return `<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:10px 12px;font-size:12.5px;color:#6b5a36">${UI._catState==='error'?esc(MSG.catalogueLoadErr()):'Your catalogue is empty — a chit needs at least one line item. <a onclick="closeModal();navTo(\'catalogue\')" style="color:#3F66A6;cursor:pointer;font-weight:600">Add a product in Catalogue first &rarr;</a>'}</div>`;
+  /**
+   * ── THE FOURTH PLACE ─────────────────────────────────────────────────────────────────────────────────────────
+   * Athi, 2026-08-08: *"the same functionality should be used in storefront and in self compose as well, these are
+   * the four places the compose works."*
+   *
+   * This was a dropdown and an "+ Add" button — one item per press, and no way to search a long list at all. On a
+   * catalogue of any size that is the same all-or-nothing problem the supplier screen had, in a worse form: you
+   * cannot even see what you are choosing between.
+   *
+   * ⚠️ NO GROUPS HERE, AND THAT IS NOT A REGRESSION. STORE.catalogue is already a flat list of order LINES — it
+   * arrives pre-flattened for compose, without the `groups` declaration the shop payload carries — so the walk has
+   * nothing to group and renders each line plainly, which is exactly rule 1. If compose is ever given the whole
+   * catalogue payload instead, variants will group here too with no change to this code.
+   */
+  const cat = { shop:{ bridge_id:'self' }, items:(STORE.catalogue||[]).map((p,i)=>({
+    item_id:'sc'+i, item_data:{ name:p.particulars, unit:p.unit||'unit', price:p.price } })) };
+  if(typeof cbPickInit==='function') cbPickInit('cc', cat);
+  cbPickOnChange('cc', ccRenderCatPick);
+  return cbCartBar('cc','ccAddPicked()','+ Add to the chit') + cbPickHTML('cc', cat);
+}
+/**
+ * ccAddPicked — the ticked lines become chit lines.
+ *
+ * ⚠️ ADDS, never replaces. Compose may already hold lines typed by hand or carried in from a forward, and a picker
+ * that overwrote them would destroy work that is not visible from inside the picker.
+ */
+function ccAddPicked(){
+  const e=document.getElementById("cc_err"); if(e)e.textContent="";
+  const picked = (typeof cbPickSelected==='function') ? cbPickSelected('cc') : [];
+  if(!picked.length) return;
+  // The line cap is the chit's, and it is REPORTED when it bites. Adding eight to a chit with room for three and
+  // silently keeping three would leave someone to discover the missing five after sending.
+  const cap = LIMITS.items || 999, room = Math.max(0, cap - (CC.items||[]).length);
+  if(!room){ if(e)e.textContent="Line items capped at "+cap+"."; return; }
+  const take = picked.slice(0, room);
+  CC.items = (CC.items||[]).concat(take.map(p=>({
+    particulars:p.name, unit:p.unit||'unit', price:(typeof cbAmount==='function'?cbAmount(p.price):p.price)||0, qty:1 })));
+  if(take.length < picked.length && e) e.textContent = "Added "+take.length+" — line items are capped at "+cap+", so "+(picked.length-take.length)+" were not added.";
+  cbPickClear('cc');
+  ccRenderItems();
 }
 function ccRenderCatPick(){ const h=document.getElementById('cc_catpick'); if(h) h.innerHTML=ccCatPickHTML(); }
 async function compose(prefill){ UI.drawer=false; CC={items:(prefill&&prefill.items)?prefill.items.slice():[],rcpts:(prefill&&prefill.recipients)?prefill.recipients.slice():[]}; UI._forwardFrom=(prefill&&prefill.forwardFrom)||null; UI._draftId=(prefill&&prefill.draftId)||null; UI._supplier=(prefill&&prefill.supplier)?prefill.supplier:null;
@@ -2288,7 +2327,12 @@ function cbPickHTML(ns, cat, opts){
   const total = (typeof cbLineRows === 'function' ? cbLineRows(cat) : []).filter(r=>r.type==='line').length;
   if(!total) return '<div style="font-size:12.5px;color:var(--grey)">They have not published any products.</div>';
   // The search box is OUTSIDE the repainted list — filtering must not pull the cursor out of the box you are typing in.
+  // ⚠️ The box carries its CURRENT value. Ticking an item repaints whichever container owns this picker, and an
+  // input rendered without `value` would come back empty while the filter behind it stayed on — the list would
+  // show a narrowed catalogue with nothing on screen to say why.
+  const st0 = (typeof cbPickState==='function') ? cbPickState(ns) : null;
   const search = '<input class="inp" style="margin:0 0 7px" placeholder="Search this catalogue…"'
+    + ' value="'+esc((st0 && st0.q) || '')+'"'
     + ' data-testid="pick-search-'+esc(ns)+'" oninput="cbPickSearch(\''+esc(ns)+'\', this.value)">';
   return search + '<div class="itab" id="cbpick_'+esc(ns)+'" data-testid="pick-'+esc(ns)+'">'
     + cbPickListHTML(ns, sym) + '</div>';
