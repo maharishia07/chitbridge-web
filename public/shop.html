@@ -373,7 +373,7 @@ function productListHtml(data, cur){
   cbPickInit('shop', data, { accent:'#c0392b', soft:'#fdf3f2', symbol:_shopSym(), from:(data.shop&&data.shop.display_name)||'',
     cartTitle:'Your basket', checkoutLabel:'Check out →', emptyHint:'Press + on what you want',
     noCatalogue:'This shop has nothing on display yet.',
-    listEl:'p_list', barEl:'p_cart', onCheckout:function(){ shopCartOrder(); }, onChange:function(){ shopPickPaint(); } });
+    listEl:'p_list', barEl:'p_cart', onCheckout:function(){ shopCartOrder(); } });
   if (!cbLineRows(data).length) return '';
   return '<div class="sechd" style="color:var(--grey)">🗂️ Products</div>'
     + '<input id="p_search" placeholder="Search products…" value="'+esc((cbPickState('shop')||{}).q||'')+'"'
@@ -385,6 +385,17 @@ function productListHtml(data, cur){
    keeps only its ACCENT, because it is a public page in the shop's colours; the rules are shared, the palette
    is not. shopPickListHtml / shopCartBarHtml are now one-line forwarders. */
 var _PCUR='₹';
+/**
+ * ⚠️ _shopSym MUST BE DEFINED BEFORE productListHtml RUNS.
+ *
+ * I deleted it along with the old renderers on 2026-08-09 and left the call to it in place, which threw
+ * "_shopSym is not defined" INSIDE render() — so the storefront caught it and showed "Could not reach the shop",
+ * a message about the network for a fault that was mine. The whole public page was down.
+ *
+ * Caught by e2e/tests/variants.spec.js against the deployed site — not by any unit test, not by node -c, and not
+ * by the local run, which never reached this code because the API refuses a localhost origin. The seam again.
+ */
+function _shopSym(){ var c=(_SHOPDATA&&_SHOPDATA.shop&&_SHOPDATA.shop.currency_code)||''; return (!c||c==='INR')?'₹':(c+' '); }
 function shopPickListHtml(){ return CBCart.listHTML('shop'); }
 function shopCartBarHtml(){ return CBCart.barHTML('shop'); }
 function shopPickPaint(listOnly){
@@ -392,8 +403,6 @@ function shopPickPaint(listOnly){
   if(!listOnly){ var c=el('p_cart'); if(c) c.innerHTML=shopCartBarHtml(); }
 }
 function shopPickSearch(q){ cbPickSearch('shop', q); shopPickPaint(true); }
-// The shared picker calls this on every tick; the search box is repainted separately so typing is never interrupted.
-window.cbPickPaint = function(ns, listOnly){ if(ns==='shop') shopPickPaint(listOnly); };
 function render(data){
   var s=data.shop||{}, cur=(s.currency_code==='INR'||!s.currency_code)?'₹':(s.currency_code+' ');
   if(s.order_input&&typeof s.order_input==='object') _OI=s.order_input;   // the declared contract, from the API
