@@ -101,19 +101,20 @@ test.describe('render smoke — the page boots without throwing', () => {
       cart: typeof window.CBCart,
       steps: typeof window.CBSteps,
       walk: typeof window.cbLineRows,
+      // ⚠️ THE ADAPTER IS NOW EXPECTED TO BE ABSENT. Every screen holds a CBCart.create() handle, so the cbPick*
+      // forwarders were deleted on 2026-08-09 — and this assertion FLIPPED in that same commit, deliberately,
+      // rather than being discovered broken by something else later.
       adapter: typeof window.cbPickInit,
-      // The picker used to live in catalogue-lines.js. If these ever come back, there are two carts again.
-      strays: ['cbPickListHTML', 'cbPickToggle', 'cbPickUnits', 'cbPickTotal', 'cbPickView']
+      // The picker used to live in catalogue-lines.js, then behind these shims. If any come back, there are two
+      // carts again — which is the whole thing this file exists to prevent.
+      strays: ['cbPickInit', 'cbPickHTML', 'cbCartBar', 'cbPickPaint', 'cbPickOnChange', 'cbPickSelected',
+               'cbPickListHTML', 'cbPickToggle', 'cbPickUnits', 'cbPickTotal', 'cbPickView']
         .filter((n) => typeof window[n] === 'function'),
     }));
     expect(state.cart, 'CBCart did not load — check the script tag in app.html').toBe('object');
     expect(state.steps, 'CBSteps did not load — check the script tag in app.html').toBe('object');
     expect(state.walk, 'cbLineRows did not load').toBe('function');
-    // The adapter is now RETAINED, not depended on: as of the 2026-08-09 migration no screen calls cbPick* — the
-    // storefront, Suppliers, Compose and Network all hold a CBCart.create() handle. It stays until a sweep confirms
-    // nothing outside this repo reaches for it. When it is deleted, this assertion goes WITH that commit —
-    // deliberately, rather than being discovered broken by something else.
-    expect(state.adapter, 'the cbPick* compat adapter is missing — it is still published').toBe('function');
+    expect(state.adapter, 'the cbPick* adapter is back — the migration is meant to be finished').toBe('undefined');
     expect(state.strays, 'a removed shim is back — that is a second cart forming').toEqual([]);
   });
 

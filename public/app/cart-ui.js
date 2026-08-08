@@ -666,9 +666,10 @@
    *     const cart = CBCart.create(catalogue, { accent, listEl, barEl, onCheckout });
    *     cart.add(itemId); cart.selected(); cart.destroy();
    *
-   * ⚠️ THE NAMESPACED API IS NOT DELETED. Four live screens call it, and this session is a lesson in what happens
-   * when a refactor and a behaviour change land together. `create` is built ON the same core — one implementation,
-   * two front doors — so the live screens keep working untouched and can move over one at a time.
+   * ⚠️ ALL FOUR SCREENS HOLD A HANDLE NOW (2026-08-09) — storefront, Suppliers, Compose, Network. The cbPick*
+   * adapters that carried them across are deleted. What remains of the namespaced API below is not a second front
+   * door: `CBCart.add('cbcart-3', 'id')` is what the rows' own inline onclick handlers call, so the generated
+   * markup can reach the cart it belongs to. It is an internal address, not an API to build a screen on.
    *
    * ── WHY THIS MATTERS FOR EVERY OTHER INPUT ───────────────────────────────────────────────────────────────────
    * The cart is where things ENTER the system, and the screen is only one way in. WhatsApp, email, the AI
@@ -815,98 +816,23 @@
     paint: paint, paintList: paintList, paintBar: paintBar, paintPopup: paintPopup
   };
   /**
-   * ════════════════════════════════════════════════════════════════════════════════════════════════════════════
-   *  COMPATIBILITY — the cbPick* names, as thin adapters. ONE implementation underneath.
-   * ════════════════════════════════════════════════════════════════════════════════════════════════════════════
+   * ⚠️ THE cbPick* ADAPTERS ARE GONE (2026-08-09), and this note is the receipt.
    *
-   * Athi, 2026-08-09: *"now you can integrate."*
+   * They existed for one reason: on 2026-08-08 four live screens called a picker written the day before, and
+   * rewriting every call site in one pass, on a deployed app, to land a UI change is the kind of big-bang edit that
+   * breaks something unrelated at 11pm. So the old names survived as forwarders while the screens moved over one at
+   * a time — storefront, Suppliers, Compose, Network — each with a gate between.
    *
-   * The live screens already call a picker I wrote a day earlier, in catalogue-lines.js and app.html. Rewriting
-   * every call site in one pass, on a deployed app, to land a UI change is the kind of big-bang edit that breaks
-   * something unrelated at 11pm. So the old names survive here and forward to CBCart.
+   * All four hold a CBCart.create() handle now, so every forwarder had lost its last caller. A compat shim with no
+   * caller is not compatibility; it is dead weight that reads like a supported API, and the next person needing a
+   * cart would have found two front doors with no way to tell which was current.
    *
-   * ⚠️ THIS IS NOT A SECOND CART. Every one of these is a forwarder — no state, no rules, no markup of its own.
-   * The duplicate implementations they used to point at are DELETED, not left beside these. An adapter that kept
-   * its own copy would be the divergence this whole exercise exists to end.
-   *
-   * They are a migration step and should shrink: as each screen moves to calling CBCart directly, its adapter
-   * loses a caller and can go. Five already have — cbPickUnits, cbPickTotal, cbPickToggle, cbPickView and
-   * cbPickListHTML were removed on 2026-08-09 once a sweep showed nothing called them. A compat shim with no
-   * caller is not compatibility, it is dead weight that reads like a supported API.
+   * ⚠️ WHAT THE TWO DOORS COST BEFORE: they were never quite the same. cbPickInit called ensureHost() and named the
+   * popup element ids; create() did neither, so the storefront shipped a cart that could be filled and never
+   * opened. That is why ensureHost and the host ids now live in the CART itself, above — so deleting these takes
+   * nothing with them.
    */
-  /* The adapter's element names. The popup host is NOT here any more — it is the cart's own, above, so both front
-     doors get the same one. */
-  function ids(ns) {
-    var o = { listEl: 'cbpick_' + ns, barEl: 'cbcartbar_' + ns };
-    for (var h in HOST) o[h] = HOST[h];
-    return o;
-  }
-  root.cbPickInit = function (ns, cat, opts) {
-    ensureHost();
-    // ⚠️ MERGE OVER WHAT WAS ALREADY SET. cbPickHTML() re-inits when handed a catalogue, and it passes no opts —
-    // so a testid (or accent, or checkout handler) set by an earlier cbPickInit was silently wiped, and the
-    // element lost the data-testid the e2e spec looks for. Later opts win; anything omitted is KEPT.
-    // ⚠️ `C[ns]`, NOT `prev`. `prev` is a local inside init(); referencing it here threw ReferenceError at the
-    // first render, which shop.html caught and reported as "Could not reach the shop" — the storefront went down
-    // a SECOND time, from the fix for the previous outage. The adapter has no access to init()'s locals.
-    var prevState = C[ns];
-    var prevOpts = (prevState && prevState.opts) || {};
-    var o = {}; for (var pk in prevOpts) o[pk] = prevOpts[pk];
-    for (var k in (opts || {})) o[k] = opts[k];
-    var base = ids(ns);
-    for (var j in base) if (o[j] === undefined) o[j] = base[j];
-    return init(ns, cat, o);
-  };
-  root.cbPickState = st;
-  root.cbPickRows = rows;
-  root.cbPickSelected = selected;
-  root.cbPickCount = lines;
-  root.cbPickQtyOf = qtyOf;
-  root.cbPickAdd = add;
-  root.cbPickDec = dec;
-  root.cbPickSetQty = setQty;
-  root.cbPickGroup = group;
-  root.cbPickClear = clear;
-  root.cbPickSearch = search;
-  root.cbPickAddAdhoc = addAdhoc;
-  root.cbPickOpen = open;
-  root.cbPickClose = close;
-  /** The list, with its own search box above it — what the screens used to build by hand. */
-  root.cbPickHTML = function (ns, cat, opts) {
-    if (cat) root.cbPickInit(ns, cat, opts);
-    var s = C[ns]; if (!s) return '';
-    return '<input class="inp" style="margin:0 0 7px" placeholder="Search this catalogue…"'
-      + ' value="' + esc(s.q || '') + '" data-testid="pick-search-' + esc(ns) + '"'
-      + ' oninput="CBCart.search(\'' + esc(ns) + '\', this.value)">'
-      // ⚠️ A SCREEN MAY OWN THE TEST ID. variants.spec.js addresses the supplier catalogue as 'sup-catalogue';
-      // renaming it to 'pick-sup' as part of a refactor silently removed a documented hook and the spec could no
-      // longer find the element at all.  lets the caller keep the name it published.
-      + '<div id="' + esc(ids(ns).listEl) + '" data-testid="' + esc(opt(ns, 'testid', 'pick-' + ns)) + '">'
-      + listHTML(ns) + '</div>';
-  };
-  /**
-   * The bar. `sendCall` is a handler STRING, which is this codebase's inline-handler idiom, so it is honoured as
-   * the checkout action rather than re-plumbed — the adapter's job is to change nothing the caller can see.
-   */
-  root.cbCartBar = function (ns, sendCall, label) {
-    ensureHost();
-    var s = C[ns];
-    if (s) {
-      s.opts = s.opts || {};
-      if (label) s.opts.checkoutLabel = label;
-      if (sendCall) s.opts.onCheckout = function () { try { (new Function(sendCall))(); } catch (e) { /* caller's handler */ } };
-    }
-    return '<div id="' + esc(ids(ns).barEl) + '">' + barHTML(ns) + '</div>';
-  };
-  root.cbPickOnChange = function (ns, fn) { var s = C[ns]; if (s) { s.opts = s.opts || {}; s.opts.onChange = fn; } };
-  /**
-   * The old repaint entry point. It repaints the list and the bar in place, then lets the screen refresh whatever
-   * else depends on the cart — the same split cart-ui uses natively, so a screen's own footer stays in step.
-   */
-  root.cbPickPaint = function (ns, listOnly) {
-    paintList(ns);
-    if (!listOnly) { paintBar(ns); var s = C[ns]; if (s && s.opts && typeof s.opts.onChange === 'function') { try { s.opts.onChange(); } catch (e) {} } }
-  };
+
 
   if (typeof module !== 'undefined' && module.exports) module.exports = root.CBCart;
 })(typeof window !== 'undefined' ? window : globalThis);
