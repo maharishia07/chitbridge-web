@@ -99,6 +99,7 @@ test.describe('render smoke — the page boots without throwing', () => {
     await page.goto('/app.html#/login', { waitUntil: 'networkidle' });
     const state = await page.evaluate(() => ({
       cart: typeof window.CBCart,
+      steps: typeof window.CBSteps,
       walk: typeof window.cbLineRows,
       adapter: typeof window.cbPickInit,
       // The picker used to live in catalogue-lines.js. If these ever come back, there are two carts again.
@@ -106,6 +107,7 @@ test.describe('render smoke — the page boots without throwing', () => {
         .filter((n) => typeof window[n] === 'function'),
     }));
     expect(state.cart, 'CBCart did not load — check the script tag in app.html').toBe('object');
+    expect(state.steps, 'CBSteps did not load — check the script tag in app.html').toBe('object');
     expect(state.walk, 'cbLineRows did not load').toBe('function');
     // The adapter is now RETAINED, not depended on: as of the 2026-08-09 migration no screen calls cbPick* — the
     // storefront, Suppliers, Compose and Network all hold a CBCart.create() handle. It stays until a sweep confirms

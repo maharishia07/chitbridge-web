@@ -12,7 +12,8 @@
     "check:syntax": "node scripts/check-syntax.js",
     "check:adoption": "node scripts/check-adoption.js",
     "check:cart": "node scripts/cart-ui.test.mjs && node scripts/cap-network-render.test.mjs",
-    "check": "npm run check:cart && node scripts/check-syntax.js && node scripts/check-demo-leak.js && node scripts/check-adoption.js",
+    "check:steps": "node scripts/step-flow.test.mjs",
+    "check": "npm run check:cart && npm run check:steps && node scripts/check-syntax.js && node scripts/check-demo-leak.js && node scripts/check-adoption.js",
     "parsecheck": "node scripts/check-app-parses.cjs"
   },
   "dependencies": {
