@@ -102,12 +102,22 @@ var sel = 'west', tab = 'general';
 
 function fld(label, value, source, hint){
   var cls = source === 'own' ? 'own' : source === 'cap' ? 'cap' : 'inh';
-  var word = source === 'own' ? 'SET HERE' : source === 'cap' ? 'CAPPED BY NETWORK' : 'FROM NETWORK';
+  // 'FROM NETWORK' alone would imply the value follows the network live. It does not — it is COPIED at Build.
+  // Saying so costs three words and keeps the label from being a small lie until real inheritance is built.
+  var word = source === 'own' ? 'SET HERE' : source === 'cap' ? 'CAPPED BY NETWORK' : 'FROM NETWORK · AT BUILD';
   var act  = source === 'own' ? 'use the network’s' : source === 'cap' ? '' : 'override for this store';
   return '<div class="fld"><div class="lbl">' + label + '</div>'
     + '<div class="val"><span>' + value + '</span><span class="src ' + cls + '">' + word + '</span>'
     + (act ? '<span class="act">' + act + '</span>' : '') + '</div>'
     + (hint ? '<div class="note">' + hint + '</div>' : '') + '</div>';
+}
+function visOpts(s){
+  return ['Public','Network only','Private'].map(function(o){
+    var on = (o === 'Network only' ? 'Network' : o) === s.vis;
+    return '<span style="display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border-radius:8px;cursor:pointer;'
+      + 'border:1px solid ' + (on ? 'var(--blue)' : 'var(--line)') + ';background:' + (on ? 'var(--blue)' : '#fff')
+      + ';color:' + (on ? '#fff' : 'var(--ink)') + ';font-weight:' + (on ? '700' : '500') + ';font-size:12.5px">' + o + '</span>';
+  }).join(' ');
 }
 function store(){ return STORES.filter(function(s){ return s.key === sel; })[0]; }
 function val(s, k){ return (s.own && s.own[k] !== undefined) ? s.own[k] : NET[k]; }
@@ -133,29 +143,23 @@ function drawPage(){
     body = '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px">'
       + '<button>＋ Add owned node</button><button>🤝 Add partner</button><button>✏️ Rename</button>'
       + '<button>🗑️ Remove</button><button>↑</button><button>↓</button></div>'
+      // Visibility STAYS on General (Athi's call, 2026-08-08). It is the one decision required to build a
+      // network, so it belongs on the tab you land on, not one click away behind the shopfront.
       + '<div class="box">'
+      + '<div class="fld"><div class="lbl">WHO CAN SEE THIS STORE\'S CATALOGUE</div>'
+      + '<div class="val" style="margin-top:7px">' + visOpts(s) + '<span class="src cap">CAPPED BY NETWORK</span></div>'
+      + '<div class="note">The network is <b>Public</b>, so all three are available. If the network closes, only '
+      + '<b>Network only</b> and <b>Private</b> remain — a ceiling, not a default. A store can never be more open '
+      + 'than what contains it.</div></div>'
       + fld('WHAT IT IS FOR', s.purpose, 'own', 'Shows under the name in the map, and on the store itself.')
       + '</div>'
       + '<div class="box">'
       + fld('COUNTRY', val(s,'country'), src(s,'country'))
       + fld('CITY', val(s,'city'), src(s,'city'))
       + fld('CURRENCY', val(s,'currency'), src(s,'currency'))
-      + '</div>'
-      + '<div class="note" style="margin-top:12px">Who can see this store is on the <b>Storefront</b> tab — it is a '
-      + 'decision about facing customers, so it lives with the shopfront.</div>';
+      + '</div>';
   } else if (tab === 'storefront') {
-    var opts = ['Public','Network only','Private'].map(function(o){
-      var on = (o === 'Network only' ? 'Network' : o) === s.vis;
-      return '<span style="display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border-radius:8px;cursor:pointer;'
-        + 'border:1px solid ' + (on ? 'var(--blue)' : 'var(--line)') + ';background:' + (on ? 'var(--blue)' : '#fff')
-        + ';color:' + (on ? '#fff' : 'var(--ink)') + ';font-weight:' + (on ? '700' : '500') + ';font-size:12.5px">' + o + '</span>';
-    }).join(' ');
     body = '<div class="box">'
-      + '<div class="fld"><div class="lbl">WHO CAN SEE THIS STORE\'S CATALOGUE</div>'
-      + '<div class="val" style="margin-top:7px">' + opts + '<span class="src cap">CAPPED BY NETWORK</span></div>'
-      + '<div class="note">The network is <b>Public</b>, so all three are available. If the network closes, only '
-      + '<b>Network only</b> and <b>Private</b> remain — a ceiling, not a default. A store can never be more open '
-      + 'than what contains it.</div></div>'
       + '<div class="fld"><div class="lbl">HOW CUSTOMERS ORDER</div>'
       + '<div class="val"><select><option>Cart (qty + price)</option><option>Quantity only</option><option>Enquiry</option></select>'
       + '<span class="src inh">FROM NETWORK</span><span class="act">override for this store</span></div></div>'

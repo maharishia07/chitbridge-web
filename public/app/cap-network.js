@@ -1967,6 +1967,51 @@ function _netGeneralTab(n){
     // made the one thing a network actually has to decide the hardest thing on the screen to find.
     // The network's OWN answer sits on the root node — it is the first question, and it caps every store below.
     + (isRoot ? _netNetworkVisibilityBlock() : (!n.owned ? '' : _netVisibilityBlock(n)))
+    + (isRoot || !n.owned ? '' : _netInheritBlock(n))
+    + '</div>';
+}
+
+/**
+ * WHAT THIS STORE TAKES FROM THE NETWORK.
+ *
+ * Athi, 2026-08-08: *"how the settings of the root are to be transferred to the child nodes — currency, location,
+ * trade-ready and so on."* Three kinds, and the difference between them is the design:
+ *
+ *   FROM NETWORK · AT BUILD   the network's value is stamped onto the store when it is created
+ *   SET HERE                  this store overrode it, for that one field, and says so
+ *   CAPPED BY NETWORK         a ceiling, not a default — narrower allowed, wider refused
+ *
+ * ⚠️ "AT BUILD" is doing real work in that label. These values are COPIED at the mint, not inherited live —
+ * changing the network's currency afterwards does NOT move a store that already exists. Athi chose to show the
+ * language now and build true inheritance later, so the label has to say which one it is. "FROM NETWORK" on its
+ * own would read as "follows the network", and a person would then wonder why changing the top changed nothing.
+ */
+function _netInheritBlock(n){
+  var cur = (typeof SESSION !== 'undefined' && SESSION.currency) || '—';
+  var cty = (typeof SESSION !== 'undefined' && SESSION.country) || '—';
+  var chip = function(t, bg, fg){ return '<span style="font-size:9.5px;font-weight:800;letter-spacing:.03em;background:' + bg + ';color:' + fg + ';border-radius:5px;padding:1px 6px">' + t + '</span>'; };
+  var row = function(label, value, note){
+    return '<div style="padding:9px 0;border-bottom:1px solid var(--line)">'
+      + '<div style="font-size:10.5px;font-weight:700;letter-spacing:.04em;color:var(--grey)">' + label + '</div>'
+      + '<div style="display:flex;align-items:center;gap:9px;margin-top:3px;flex-wrap:wrap"><span style="font-size:13.5px">' + esc(value) + '</span>'
+      + chip('FROM NETWORK · AT BUILD', '#eef2f7', '#5b6472') + '</div>'
+      + (note ? '<div style="font-size:11px;color:var(--grey);margin-top:4px;line-height:1.5">' + note + '</div>' : '')
+      + '</div>';
+  };
+  return '<div style="margin-top:16px;padding:4px 15px;border:1px solid var(--line);border-radius:11px;background:#fff">'
+    + '<div style="font-size:11px;font-weight:800;color:var(--grey);letter-spacing:.05em;padding:11px 0 0">WHAT IT TAKES FROM THE NETWORK</div>'
+    + row('CURRENCY', cur, 'Stamped when the store is created, and never converted afterwards.')
+    + row('COUNTRY', cty)
+    + '<div style="padding:9px 0;border-bottom:1px solid var(--line)">'
+      + '<div style="font-size:10.5px;font-weight:700;letter-spacing:.04em;color:var(--grey)">CERTIFICATIONS</div>'
+      + '<div style="font-size:12.5px;color:var(--grey);margin-top:3px">Set on the <b>Trade-ready</b> tab — own, or the network\'s.</div></div>'
+    + '<div style="padding:9px 0">'
+      + '<div style="font-size:10.5px;font-weight:700;letter-spacing:.04em;color:var(--grey)">PLACE</div>'
+      // The one that must NOT inherit, and it is worth saying why on the screen rather than only in a spec.
+      + '<div style="font-size:12.5px;color:var(--grey);margin-top:3px">Never inherited — two stores are never in the '
+      + 'same spot. Only the <b>country</b> comes down. Set it on the <b>Place</b> tab.</div></div>'
+    + '<div style="font-size:11px;color:#8a5a1e;padding:0 0 11px;line-height:1.5">⚠ These are <b>copied when the store is '
+    + 'built</b>, not followed live. Changing the network afterwards does not move a store that already exists.</div>'
     + '</div>';
 }
 
