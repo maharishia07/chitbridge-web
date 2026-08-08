@@ -763,6 +763,37 @@
         return { placed: placed, refused: refused };
       },
 
+      /**
+       * setCatalogue — the SAME cart, pointed at a freshly-read catalogue.
+       *
+       * A screen re-reads a supplier's catalogue for reasons that have nothing to do with the basket — you clicked
+       * the same supplier again, you came back from another store. Under the namespaced API that was init()'s job,
+       * and init() had to GUESS from a signature whether it was being handed the same catalogue or a new one;
+       * guessing wrong once nearly emptied a basket and once wiped the caller's options.
+       *
+       * ⚠️ THERE IS NO GUESS HERE. The caller already knows which supplier it is looking at, so it decides: the same
+       * one gets setCatalogue and keeps the basket, a different one gets destroy() and a new cart. That is the whole
+       * reason a handle beats a name.
+       */
+      setCatalogue: function (nextCat) {
+        var s = C[ns]; if (!s) return h;
+        var next = nextCat || {};
+        // Ad-hoc lines are the CALLER'S own, not the shop's — re-reading the shop's catalogue must not delete
+        // something a person typed in themselves. Copied, never mutated: the payload belongs to the screen.
+        var mine = ((s.cat && s.cat.items) || []).filter(function (p) { return p && p.adhoc; });
+        var merged = {}; for (var k in next) merged[k] = next[k];
+        if (mine.length) merged.items = (next.items || []).concat(mine);
+        s.cat = merged; s.sig = sigOf(merged);
+        // A line the shop has withdrawn cannot be ordered, and left in `sel` it would go on counting toward the
+        // bar while selected() — which reads the catalogue — never returned it. Two facts about one cart,
+        // disagreeing. Dropping it is visible on screen; a phantom in the count is not.
+        var live = {};
+        rowsOf(merged).forEach(function (r) { if (r.type === 'line') live[r.item_id] = 1; });
+        Object.keys(s.sel).forEach(function (id) { if (!live[id]) delete s.sel[id]; });
+        touched(ns);
+        return h;
+      },
+
       /** Let it go. A held cart that is never released is a leak the namespaced API could not even express. */
       destroy: function () { close(ns); delete C[ns]; }
     };

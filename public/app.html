@@ -2260,25 +2260,49 @@ async function loadSuppliers(){
   try{
     const r=await api("supList"); UI.sups=Array.isArray(r)?r:((r&&r.suppliers)||[]);
     UI._supLoading=false; paintSupList();
-    if(UI.supSel && !UI.sups.some(s=>s.supplier_list_id===UI.supSel)){ UI.supSel=null; UI.supDet=null; }
+    if(UI.supSel && !UI.sups.some(s=>s.supplier_list_id===UI.supSel)){ UI.supSel=null; UI.supDet=null; supCartRelease(); }
     if(!UI.supSel && UI.sups.length && UI.vp!=='mob'){ selectSupplier(UI.sups[0].supplier_list_id, true); }
     else paintSupDetail();
   }catch(e){ UI._supLoading=false; const rb2=document.getElementById('sup_rows'); if(rb2)rb2.innerHTML=`<div class="empty"><div class="t">Couldn't load suppliers</div><div>${esc(e.message)}</div></div>`; }
 }
+/**
+ * ── THE SUPPLIER CART, HELD ───────────────────────────────────────────────────────────────────────────────────────
+ * `UI._supCart` is the handle; `UI._supCartFor` is the supplier it belongs to. Held here rather than created in the
+ * render function because supDetailHTML() runs on EVERY cart change (onChange repaints the whole pane) — a render
+ * that created a cart would create a new one each time you pressed +, and the basket would never survive its own
+ * first click.
+ *
+ * ⚠️ A DIFFERENT SUPPLIER IS A DIFFERENT BASKET. Carrying lines from one supplier's catalogue into another's is not
+ * a convenience, it is an order addressed to someone who never listed the item.
+ */
+function supCartRelease(){ if(UI._supCart){ UI._supCart.destroy(); } UI._supCart=null; UI._supCartFor=null; }
+/** The cart's own repaint target: the whole detail pane, which is what the bar and the list live inside. */
+function supCartOpts(x){
+  return { listEl:'cbpick_sup', barEl:'cbcartbar_sup', checkoutLabel:'Order these',
+           from:supName(x), cartTitle:'Your order',
+           onCheckout:function(){ composeFromSupplier(x.supplier_list_id); },
+           onChange:paintSupDetail };
+}
 async function selectSupplier(id, silent){
   UI.supSel=id; UI.supMode='view';
+  // A new supplier gets a new cart. The SAME supplier keeps the one you have been filling — the screen knows which
+  // it is, so the cart never has to guess (that guess is what create() exists to remove).
+  if(UI._supCartFor && UI._supCartFor!==id) supCartRelease();
   if((UI.vp==='mob') && !silent){ UI.mdetail=true; const p=document.getElementById('panel'); if(p)p.classList.add('showdetail'); }
   paintSupList();
-  const x=(UI.sups||[]).find(s=>s.supplier_list_id===id); if(!x){ return; }
+  const x=(UI.sups||[]).find(s=>s.supplier_list_id===id); if(!x){ supCartRelease(); return; }
   UI.supDet={supplier:x, items:null, loading:!!x.has_catalogue}; paintSupDetail();
   loadSupplierConfidence(x.bridge_id);
   if(x.has_catalogue){
     try{ const cat=await supCatalogueFull(x.supplier_entity_id); const arr=cat.items||[];
       UI.supDet={supplier:x, cat:cat,
         items:arr.map(p=>{const d=p.item_data||p; return {particulars:d.name||d.product||'item', unit:d.unit||'unit', price:cbAmount(d.price)};}), loading:false};
-    }catch(e){ UI.supDet={supplier:x, cat:null, items:[], loading:false, err:e.message}; }
+      // ⚠️ THE CART IS CREATED HERE, where a catalogue actually ARRIVES — once per supplier, not once per repaint.
+      if(UI._supCart && UI._supCartFor===id) UI._supCart.setCatalogue(cat);
+      else { supCartRelease(); UI._supCart=CBCart.create(cat, supCartOpts(x)); UI._supCartFor=id; }
+    }catch(e){ UI.supDet={supplier:x, cat:null, items:[], loading:false, err:e.message}; supCartRelease(); }
     if(UI.supSel===id) paintSupDetail();
-  }
+  } else supCartRelease();
 }
 /**
  * supCatalogueFull — a supplier's catalogue, WHOLE.
@@ -2315,13 +2339,24 @@ async function supCatalogueFull(sid){
    Network, compose and the storefront. cbPickHTML / cbCartBar / cbPickPaint / cbPickOnChange
    still exist under those names — as thin adapters over CBCart, not as a second copy. The bodies that used to
    be here are DELETED, so there is nothing left to drift. */
-// Kept for callers that only want to SHOW a catalogue; the picker is the same rows with boxes on them.
-function supCatalogueHTML(cat){
-  // 'sup-catalogue' is the name e2e/tests/variants.spec.js looks for. It is a published hook, not an internal
-  // detail — the refactor renamed it and the spec stopped finding the element.
-  if(typeof cbPickInit === 'function') cbPickInit('sup', cat, { testid:'sup-catalogue' });
-  return cbPickHTML('sup', cat);
+/**
+ * supCartHTML — the cart bar, the search box and their catalogue, ALL out of the held cart.
+ *
+ * ⚠️ IT ONLY RENDERS. Creating the cart here is what the namespaced API forced and what create() exists to stop:
+ * this function runs on every repaint, and a repaint happens each time you press +.
+ *
+ * ⚠️ 'sup-catalogue' AND 'pick-search-sup' ARE PUBLISHED HOOKS, not internal names. e2e/tests/variants.spec.js
+ * addresses the catalogue by the first; a refactor renamed it once and the spec silently found nothing at all.
+ */
+function supCartHTML(){
+  const c=UI._supCart; if(!c) return '';
+  return `<div id="cbcartbar_sup">${c.barHTML()}</div>`
+    + `<input class="inp" style="margin:0 0 7px" placeholder="Search this catalogue…" value="${esc((c.state()||{}).q||'')}"`
+    + ` data-testid="pick-search-sup" oninput="supPickSearch(this.value)">`
+    + `<div id="cbpick_sup" data-testid="sup-catalogue">${c.listHTML()}</div>`;
 }
+/* Search repaints the LIST only — repainting the pane would take the focus out of the box being typed in. */
+function supPickSearch(q){ if(UI._supCart) UI._supCart.search(q); }
 function loadSupplierConfidence(bridge){
   if(!bridge){ UI.supRd=null; return; }
   UI.supRd={bridge:bridge, loading:true}; paintSupDetail();
@@ -2431,13 +2466,12 @@ function supDetailHTML(){
     if(!x.has_catalogue) catcard=`<div class="sec">Order from them</div><div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;font-size:12px;color:#6b5a36">No catalogue published yet — nothing to order.</div>`;
     else if(d.loading) catcard=`<div class="sec">Order from them</div><div class="loadwrap" style="justify-content:flex-start;padding:6px 0"><span class="spin"></span> loading catalogue…</div>`;
     else catcard=`<div class="sec">Order from them</div><div style="font-size:11.5px;color:var(--grey);margin-bottom:6px">${(d.items||[]).length} item(s) — priced in their currency, exactly as their own storefront shows them.</div>`
-      + (function(){ if(typeof cbPickInit==='function') cbPickInit('sup', d.cat||{}, { testid:'sup-catalogue' }); cbPickOnChange('sup', paintSupDetail);
-                     return cbCartBar('sup', `composeFromSupplier('${x.supplier_list_id}')`, 'Order these') + cbPickHTML('sup', d.cat||{}); })();
+      + supCartHTML();
     body=supConfidenceStrip()+prof+catcard;
     // The cart's own button is above the list, where the picking happens. This one stays for the case it has always
     // served: order the WHOLE catalogue without ticking anything — still correct for a six-item supplier, and the
     // label says which of the two it is about to do, so it can never quietly mean something else.
-    const _n = (typeof cbPickCount==='function') ? cbPickCount('sup') : 0;
+    const _n = UI._supCart ? UI._supCart.lines() : 0;
     bar=`<button class="pri" ${x.has_catalogue?'':'disabled'} data-testid="sup-compose-order" onclick="composeFromSupplier('${x.supplier_list_id}')">🛒 ${_n? 'Order '+_n+' in cart' : 'Compose order — all items'}</button>`
       + `<button class="warn" data-testid="sup-remove" onclick="delSupplier('${x.supplier_list_id}')">Remove from list</button>`;
   }
@@ -2450,7 +2484,7 @@ async function supPick(i){ const e=(UI._supSugg||[])[i]; if(!e)return; const h=d
 async function addSupplier(){ const x=document.getElementById("sp_err"); if(x)x.textContent=""; const bid=(val("sp_add")||"").trim(); if(!bid){ if(x)x.textContent="Enter a supplier's name, User ID or email."; return; } const h=document.getElementById('sp_sugg'); if(h)h.innerHTML=''; if(!isUserId(bid)){ if(x)x.textContent="Type a name and pick from the list, or enter a User ID (8+ chars) / email."; return; }
   if(!confirm('Add ' + bid + ' as your supplier?\n\nThey are not asked and are not notified — this is your own list. You will see what their public storefront shows.')) return;
   try{ await api("supAdd",{body:{supplier_bridge_id:bid}}); toast("Supplier added ✓"); const a=document.getElementById('sp_add'); if(a)a.value=''; await loadSuppliers(); }catch(e){ if(x)x.textContent=e.message; } }
-async function delSupplier(id){ const _s=(UI.sups||[]).find(function(v){return v.supplier_list_id===id;}); const _n=_s?supName(_s):'this supplier'; if(!confirm('Remove ' + _n + ' from your supplier list?\n\nTheir catalogue and their business are untouched — only your own list entry is removed.')) return; try{ await api("supDel",{params:{id}}); UI.supSel=null; UI.supDet=null; UI.mdetail=false; toast(MSG.supplierRemoved()); await loadSuppliers(); }catch(e){ toast(MSG.fail("remove the supplier", e)); } }
+async function delSupplier(id){ const _s=(UI.sups||[]).find(function(v){return v.supplier_list_id===id;}); const _n=_s?supName(_s):'this supplier'; if(!confirm('Remove ' + _n + ' from your supplier list?\n\nTheir catalogue and their business are untouched — only your own list entry is removed.')) return; try{ await api("supDel",{params:{id}}); UI.supSel=null; UI.supDet=null; UI.mdetail=false; supCartRelease(); toast(MSG.supplierRemoved()); await loadSuppliers(); }catch(e){ toast(MSG.fail("remove the supplier", e)); } }
 async function toggleSupPref(id){ const x=(UI.sups||[]).find(s=>s.supplier_list_id===id); if(!x)return; const nv=!x.preferred;
   try{ await api("supPatch",{params:{id},body:{preferred:nv}}); x.preferred=nv; if(UI.supDet&&UI.supDet.supplier&&UI.supDet.supplier.supplier_list_id===id)UI.supDet.supplier.preferred=nv; paintSupList(); paintSupDetail(); toast(nv?"Marked preferred ★":"Removed preferred"); }
   catch(e){ toast(MSG.fail("update the supplier", e)+" — needs the Stage-B migration"); } }
@@ -2461,7 +2495,7 @@ async function saveSupplier(id){ const err=document.getElementById("sp_ederr"); 
 async function composeFromSupplier(id){ const d=UI.supDet, x=d&&d.supplier; if(!x||x.supplier_list_id!==id)return;
   // TICKED LINES FIRST. A variant carries its parent's name into the order line ("Tussar Emulsion 4L") — an order
   // that just says "4L" is not an order anybody can read six weeks later.
-  const picked = (typeof cbPickSelected==='function') ? cbPickSelected('sup') : [];
+  const picked = UI._supCart ? UI._supCart.selected() : [];
   let items = picked.length
     ? picked.map(p=>({ particulars:p.name, unit:p.unit, price:cbAmount(p.price), qty:p.qty||1 }))
     : d.items;
