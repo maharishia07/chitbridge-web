@@ -1096,7 +1096,7 @@ function _netAvailBody(){
       // else. Nothing new is invented for "internal" transfers: a store asking a sibling is still two parties.
       + (r.is_me ? '<div style="font-size:11px;color:var(--grey);margin-top:5px">This is your own stock.</div>'
          : '<div style="margin-top:7px"><button onclick="netAskFor(\'' + esc(r.entity_id) + '\',\'' + esc(r.store) + '\',\''
-           + esc(String(r.name).replace(/'/g, '')) + '\')" style="padding:5px 12px;font-size:12px">'
+           + esc(String(r.name).replace(/'/g, '')) + '\',\'' + esc(r.bridge_id || '') + '\')" style="padding:5px 12px;font-size:12px">'
            + (unknown ? 'Ask if they have it' : 'Request from ' + esc(r.store)) + '</button></div>')
       + '</div>';
   }).join('');
@@ -1115,25 +1115,50 @@ function _netAvailBody(){
  * like anything else. Nothing separate is invented for "internal" movement — the moment it were, the transfer
  * would stop being reconcilable against everything else, which is the whole reason CB exists.
  */
-function netAskFor(entityId, storeName, itemName){
-  var qty = (typeof prompt === 'function')
-    ? prompt('How many "' + itemName + '" do you want from ' + storeName + '?', '1') : '1';
-  if (qty === null) return;
-  var n = Number(String(qty).trim());
-  if (!Number.isFinite(n) || n <= 0) { if (typeof toast === 'function') toast('How many? A number above zero.', true); return; }
-  api('createChit', { body: {
-    recipients: [{ entity_id: entityId, role: 'to' }],
-    purpose: 'order',
-    subject: 'Please send ' + n + ' × ' + itemName,
-    // The line carries what is being asked for. No price: THEY set what they charge, and guessing it here would
-    // be putting a number in their mouth.
-    line_items: [{ particulars: itemName, description: itemName, qty: n }],
-  } }).then(function(r){
-    if (typeof toast === 'function') toast('Requested ' + n + ' from ' + storeName + ' — it is in their Task list.');
-    void r;
-  }).catch(function(e){
-    if (typeof toast === 'function') toast((e && e.message) || 'Could not send the request', true);
-  });
+function netAskFor(entityId, storeName, itemName, bridgeId){
+  /**
+   * ⚠️ THE COMPOSE PATH, NOT A CHIT FIRED FROM A PROMPT.
+   *
+   * Athi, 2026-08-08: *"request sent, but immature — it has to pull the request form designed by the store,
+   * compose page, and fill the details of the requestor and send it like any other chit. The same compose path
+   * for the storefront or supplier."*
+   *
+   * He is right, and my first version was a shortcut with real consequences. A chit assembled here would carry
+   * whatever THIS page happened to think a request looks like, and would bypass everything the receiving store
+   * has declared about how it wants to be asked — its order form, its required fields, its line-item shape. Two
+   * ways to ask the same store for the same thing is how one of them quietly stops matching.
+   *
+   * So it goes down the SAME path a supplier order takes (composeFromSupplier): open compose, locked to that
+   * store, with THEIR catalogue loaded, and the item this search found already on the first line. One compose,
+   * one contract, one place where a request is made.
+   */
+  var openCompose = function(items){
+    if (typeof compose !== 'function') {
+      if (typeof toast === 'function') toast('Compose is not available on this screen', true);
+      return;
+    }
+    compose({
+      supplier: { name: storeName, bridge: bridgeId || null, entity_id: entityId },
+      recipients: [{ name: storeName, role: 'to', bridge: bridgeId || null, entity_id: entityId }],
+      catalogue: items,
+      // The line this search was about, so the person is not asked to find it again in a list they just searched.
+      items: [{ particulars: itemName, unit: 'unit', price: 0, qty: 1 }],
+    });
+  };
+  // THEIR catalogue, so the compose lines come from what they actually sell rather than from what we guessed.
+  // supCatalogueFull is a plain function, not an EP key — it bypasses api() on purpose (it needs the sibling
+  // fields that unwrap() would drop), and it is the SAME reader the supplier compose uses.
+  if (typeof supCatalogueFull !== 'function') { openCompose([]); return; }
+  supCatalogueFull(entityId)
+    .then(function(cat){
+      var items = (((cat && cat.items) || [])).map(function(p){
+        var d = p.item_data || p;
+        return { particulars: d.name || d.product || 'item', unit: d.unit || 'unit',
+                 price: (typeof cbAmount === 'function') ? cbAmount(d.price) : 0 };
+      });
+      openCompose(items);
+    })
+    .catch(function(){ openCompose([]); });   // no catalogue readable → still let the request be written
 }
 
 function _netAvailScreen(){
