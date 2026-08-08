@@ -62,6 +62,10 @@ const ctx = {
   cbAmount: (p) => (p && typeof p === 'object' && p.amount !== undefined ? p.amount : p),
   supCatalogueFull: async () => CAT,
   compose: (arg) => { ctx.__composed = arg; },
+  // sendChit lives in app.html and is the ONE send. Stubbed here so the harness can read exactly what this screen
+  // would put on the wire, without minting anything.
+  sendChit: (v) => { ctx.__sent = v; return Promise.resolve({ chit_id: 'stub' }); },
+  SESSION: { entity: 'North Depot' },
   toast: () => {},
   localStorage: { getItem: () => null, setItem: () => {}, removeItem: () => {} },
   // No real DOM: every paint target resolves to nothing, which is the honest shape for a headless run. What we
@@ -77,6 +81,7 @@ ctx.window = undefined;
 createContext(ctx);
 
 /* The REAL modules, in the order app.html loads them. */
+runInContext(read('public/app/step-flow.js'), ctx, { filename: 'step-flow.js' });
 runInContext(read('public/app/catalogue-model.js'), ctx, { filename: 'catalogue-model.js' });
 runInContext(read('public/app/catalogue-lines.js'), ctx, { filename: 'catalogue-lines.js' });
 runInContext(read('public/app/cart-ui.js'), ctx, { filename: 'cart-ui.js' });
@@ -123,15 +128,59 @@ ctx.netBrowse('E2', 'Gamma Yard', 'CBSTORE02'); await settle();
 ok('★★ a DIFFERENT store gets a different, empty cart',
    ctx.UI._netCart !== cart && ctx.UI._netCartFor === 'E2' && ctx.UI._netCart.lines() === 0);
 
-console.log('\ncap-network · what the cart sends');
+console.log('\ncap-network · the step flow');
+const f = ctx.UI._netFlow;
+ok('★ browsing a store creates a flow beside the cart', !!f && f.steps().length === 3);
+ok('★★ THREE steps and no "To" — the store IS the recipient',
+   f.steps().map((s) => s.k).join(',') === 'items,details,review');
+ok('★★ an empty cart blocks the first step, and SAYS why',
+   f.blockedBecause() === 'Add at least one item.' && f.footHTML().includes('Add at least one item'));
 ctx.UI._netCart.add('e10');
+ok('★ adding a line unblocks it', f.blockedBecause() === null);
+ok('★ the rail and the body are both on the panel',
+   ctx._netBrowseBody().includes('id="net_rail"') && ctx._netBrowseBody().includes('id="net_body"'));
+f.next();
+ok('★ Details renders and proposes a subject', f.step() === 'details'
+   && ctx._netStepDetails().includes('data-testid="net-subject"') && ctx.UI._netOrder.subject.indexOf('Request —') === 0);
+f.next();
+ok('★ Review renders the total and names what it sends', f.step() === 'review'
+   && ctx._netStepReview().includes('data-testid="net-total"') && f.footHTML().includes('Send request to'));
+ok('★ the escape hatch is offered on Review only', ctx._netBrowseBody().includes('net-open-compose'));
+
+console.log('\ncap-network · ⚠️ your own store');
+/* You can be looking at yourself: your own store is in your own network. Ordering from yourself is not a transfer,
+   it is a mistake — and it must be caught on the CHIP, not discovered at Review. */
+ctx.UI._brStores = { stores: [{ entity_id: 'E2', name: 'Gamma Yard', is_me: true }] };
+ok('★★ the own-store guard blocks EVERY step, not just the first',
+   f.blockedBecause() === 'This is your own store — pick another.');
+ok('★★ …and it is said ON the chip, where it cannot be missed',
+   ctx._netBrowseBody().includes('this is your own store'));
+const before = ctx.__composed;
 ctx.netSendCart();
-const sent = ctx.__composed;
-ok('★ send goes down the compose path with THEIR store as recipient',
-   !!sent && sent.recipients[0].entity_id === 'E2' && sent.supplier.entity_id === 'E2');
+ok('★★ …and sending is refused outright', ctx.__composed === before);
+ctx.UI._brStores = { stores: [{ entity_id: 'E2', name: 'Gamma Yard', is_me: false }] };
+
+console.log('\ncap-network · what it sends');
+ctx.netSendCart();
+const sent = ctx.__sent;
+ok('★★ it SENDS — one createChit, the same one compose uses, not a second path',
+   !!sent && sent.recipients[0].name === 'Gamma Yard' && sent.recipients[0].role === 'to');
 ok('★★ the quantity set at the ROW travels through — the stepper is a decision, not a suggestion',
-   sent.items.length === 1 && sent.items[0].qty === 1 && sent.items[0].particulars === 'Emulsion 10L');
-ok('★ their price rides along as they stamped it', sent.items[0].price === 2100);
+   sent.line_items.length === 1 && sent.line_items[0].quantity === 1 && sent.line_items[0].particulars === 'Emulsion 10L');
+ok('★ their price rides along as they stamped it', sent.line_items[0].price === 2100);
+ok('★ the chit schema is filled from the Details step',
+   sent.schema_values.subject === sent.subject && 'delivery_by' in sent.schema_values);
+
+console.log('\ncap-network · the escape hatch still hands to compose');
+ctx.netBrowse('E2', 'Gamma Yard', 'CBSTORE02'); await settle();
+// sendChit is stubbed here, so its onSent (which releases the cart) never runs — clear explicitly rather than
+// assert against whatever the previous case happened to leave behind.
+ctx.UI._netCart.clear();
+ctx.UI._netCart.add('br');
+ctx.netOpenInCompose();
+const composed = ctx.__composed;
+ok('★ "Open in compose" carries the store, the lines and the catalogue',
+   !!composed && composed.supplier.entity_id === 'E2' && composed.items.length === 1 && composed.catalogue.length === 3);
 
 console.log('\n  ' + (failed ? failed + ' FAILED' : 'all passed') + '\n');
 process.exit(failed ? 1 : 0);

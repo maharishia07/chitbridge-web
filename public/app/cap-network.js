@@ -1271,10 +1271,112 @@ function netAskFor(entityId, storeName, itemName, bridgeId, rowPrice){
    `UI._netCart` is the handle, `UI._netCartFor` the store's entity_id. Released when you browse a DIFFERENT store,
    and deliberately NOT on netBrowseBack — going back to the store list is a look, not an abandonment, and the
    namespaced cart survived it too. At most one is held at a time. */
-function _netCartRelease(){ if (UI._netCart) UI._netCart.destroy(); UI._netCart = null; UI._netCartFor = null; }
+function _netCartRelease(){
+  if (UI._netCart) UI._netCart.destroy(); UI._netCart = null; UI._netCartFor = null;
+  if (UI._netFlow) UI._netFlow.destroy(); UI._netFlow = null;
+  UI._netOrder = null;
+}
 function _netCartOpts(){
-  return { listEl: 'cbpick_net', barEl: 'cbcartbar_net', onChange: _netPaintBrowse,
-           cartTitle: 'Your request', onCheckout: netSendCart };
+  return { listEl: 'cbpick_net', barEl: 'cbcartbar_net',
+           cartTitle: 'Your request', checkoutLabel: 'Check out →',
+           // ⚠️ THE ONE SCREEN THAT ASKS FOR STOCK. A supplier publishes a catalogue; a network store also reports
+           // what it HAS, and which store to ask is the question this screen exists to answer. Everywhere else
+           // hideAvail stays true (its default), so no other catalogue grows an "avl —" on every row for a report
+           // it never claimed to make. Absent is not zero, and a quantity with no date is a rumour — cart-ui keeps
+           // those three states distinct.
+           hideAvail: false, staleDays: 14,
+           onCheckout: function(){ if (UI._netFlow) UI._netFlow.next(); },
+           // Only the footer: adding a line unblocks "Check out" and changes nothing else. The cart repaints its
+           // own bar and list; repainting the panel would rebuild the catalogue under the cursor.
+           onChange: function(){ if (UI._netFlow) UI._netFlow.paintFoot(); } };
+}
+/** Your own store is in your own network. Ordering from yourself is not a transfer, it is a mistake. */
+function netIsMe(){
+  var L = UI._brStores, s = UI._brSel;
+  if (!L || !s) return false;
+  var hit = ((L.stores || []).filter(function(x){ return x.entity_id === s.entity_id; })[0]) || {};
+  return hit.is_me === true;
+}
+function _netOrderState(){ if (!UI._netOrder) UI._netOrder = { subject:'', by:'', addr:'', note:'' }; return UI._netOrder; }
+function _netDefaultSubject(){ return 'Request — ' + ((UI._brSel && UI._brSel.name) || 'store'); }
+/**
+ * ── THE STORE REQUEST, IN STEPS ───────────────────────────────────────────────────────────────────────────────
+ * Identical in shape to Suppliers, and that is deliberate: ordering from a sibling store is the same act as
+ * ordering from a supplier — pick who, pick what, say when, send. THREE steps; the store IS the recipient.
+ */
+function _netStepsFor(){
+  return CBSteps.create({
+    steps: [{ k:'items', n:'Items', t:'What do you need from them?' },
+            { k:'details', n:'Details', t:'When, where, and anything they should know' },
+            { k:'review', n:'Review', t:'Check it, then send' }],
+    railEl: 'net_rail', bodyEl: 'net_body', footEl: 'net_foot', subEl: 'net_sub',
+    render: function(k){ return k==='items' ? _netStepItems() : k==='details' ? _netStepDetails() : _netStepReview(); },
+    guard: function(k){
+      // ⚠️ Checked on EVERY step, not just the first: you can reach Review and then discover it. Said on the chip
+      // too, because a warning behind a tap is a warning found too late.
+      if (netIsMe()) return 'This is your own store — pick another.';
+      if (k === 'items' && !(UI._netCart && UI._netCart.lines())) return 'Add at least one item.';
+      if (k === 'details' && !_netOrderState().subject.trim()) return 'A subject is required.';
+      return null;
+    },
+    nextLabel: function(k){ return k==='items' ? 'Check out →' : null; },
+    sendLabel: function(){ return 'Send request to ' + ((UI._brSel && UI._brSel.name) || 'them'); },
+    cancelLabel: '‹ all stores',
+    draftLabel: 'Save draft',
+    onCancel: netBrowseBack,
+    onDraft: function(){ netSendCart(true); },
+    onSend: function(){ netSendCart(false); },
+    onStep: function(){ _netPaintBrowse(); }
+  });
+}
+function _netStepItems(){
+  var c = UI._netCart; if (!c) return '';
+  return (netIsMe() ? '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:10px;padding:9px 12px;font-size:12.5px;color:#6b5a36;margin:0 0 9px">⚠ This is your own store. You cannot send yourself a request — pick another store.</div>' : '')
+    + '<div id="cbcartbar_net">' + c.barHTML() + '</div>'
+    + '<input class="inp" style="margin:0 0 7px" placeholder="Search this store’s catalogue…"'
+    + ' value="' + esc((c.state() || {}).q || '') + '" data-testid="pick-search-net"'
+    + ' oninput="netPickSearch(this.value)">'
+    + '<div id="cbpick_net" data-testid="pick-net">' + c.listHTML() + '</div>';
+}
+function _netStepDetails(){
+  var o = _netOrderState();
+  if (!o.subject) o.subject = _netDefaultSubject();
+  return '<div class="sec">Your request to ' + esc((UI._brSel && UI._brSel.name) || '') + '</div>'
+    + '<label class="fl">Subject <span style="color:#b4453f">*</span></label>'
+    + '<input class="inp" data-testid="net-subject" value="' + esc(o.subject) + '" oninput="UI._netOrder.subject=this.value;UI._netFlow&&UI._netFlow.paintFoot()">'
+    + '<div style="display:flex;gap:10px"><div style="flex:1"><label class="fl">Needed by</label>'
+    + '<input class="inp" type="date" data-testid="net-by" value="' + esc(o.by) + '" oninput="UI._netOrder.by=this.value"></div>'
+    + '<div style="flex:1"><label class="fl">Deliver to</label>'
+    + '<input class="inp" data-testid="net-addr" value="' + esc(o.addr) + '" placeholder="site / address" oninput="UI._netOrder.addr=this.value"></div></div>'
+    + '<label class="fl">Note</label>'
+    + '<input class="inp" data-testid="net-note" value="' + esc(o.note) + '" placeholder="instructions" oninput="UI._netOrder.note=this.value">'
+    /* The same rail as any other chit — nothing separate is invented for "internal" movement, or it stops being
+       reconcilable against everything else. */
+    + '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:10px;padding:9px 12px;font-size:12.5px;color:#6b5a36;margin:10px 0">'
+    + 'This goes as an ordinary chit: it lands in their Task list and can be disputed like any other.</div>';
+}
+function _netStepReview(){
+  var o = _netOrderState(), c = UI._netCart, T = c ? c.total() : { amount:0 }, sel = c ? c.selected() : [];
+  var s = UI._brSel || {};
+  var row = function(k, v){ return '<div style="display:flex;gap:10px;padding:8px 12px;border-top:1px solid var(--line);font-size:13px">'
+    + '<span style="min-width:96px;color:var(--grey);font-size:11.5px">' + k + '</span><span style="flex:1">' + v + '</span></div>'; };
+  var card = function(h, inner, edit){ return '<div style="border:1px solid var(--line);border-radius:11px;overflow:hidden;margin-top:8px">'
+    + '<div style="background:var(--paper);padding:8px 12px;font-size:11px;font-weight:800;color:var(--grey);text-transform:uppercase;letter-spacing:.05em;display:flex">' + h
+    + (edit != null ? '<span style="margin-left:auto;color:var(--blue);cursor:pointer;text-transform:none;letter-spacing:0;font-size:11.5px" onclick="UI._netFlow.go(' + edit + ')">Change</span>' : '')
+    + '</div>' + inner + '</div>'; };
+  return card('To<span style="margin-left:auto;font-weight:400;text-transform:none;letter-spacing:0">fixed — this is their request</span>',
+        '<div style="padding:8px 12px;font-size:13px"><b>' + esc(s.name || '') + '</b> <span style="color:var(--grey);font-size:11.5px">' + esc(s.bridge_id || '') + '</span></div>')
+    + card('Items · ' + sel.length, sel.map(function(l){
+        return row(l.qty + ' × ' + esc(l.unit), '<span style="flex:1">' + esc(l.name) + '</span>'
+          + '<b style="float:right">' + (l.line_total == null ? '—' : esc(String(l.line_total))) + '</b>'); }).join('')
+        + '<div style="display:flex;padding:10px 12px;border-top:2px solid var(--line);font-size:14px;font-weight:800">'
+        + '<span style="flex:1">' + (T.offered ? 'Total at your offer' : 'Total') + '</span>'
+        + '<span data-testid="net-total">' + (T.amount ? esc(String(T.amount)) + (T.partial ? '+' : '') : '—') + '</span></div>', 0)
+    + card('Details', row('Subject', esc(o.subject)) + row('Needed by', o.by ? esc(o.by) : '—')
+        + row('Deliver to', o.addr ? esc(o.addr) : '—') + row('Note', o.note ? esc(o.note) : '—'), 1)
+    /* Money is stamped per entity and NEVER converted. A store trading in another currency shows its own. */
+    + '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:10px;padding:9px 12px;font-size:12.5px;color:#6b5a36;margin:10px 0">'
+    + 'Their price, in their currency, exactly as their catalogue states it. Nothing is converted.</div>';
 }
 /* Search repaints the LIST only — repainting the panel would take the focus out of the box being typed in. */
 function netPickSearch(q){ if (UI._netCart) UI._netCart.search(q); }
@@ -1301,7 +1403,8 @@ function netBrowse(entityId, name, bridgeId){
        * namespaced cart did, by matching a signature. Here the screen knows, so nothing has to guess.
        */
       if (UI._netCart && UI._netCartFor === entityId) UI._netCart.setCatalogue(UI._brCat);
-      else { _netCartRelease(); UI._netCart = CBCart.create(UI._brCat, _netCartOpts()); UI._netCartFor = entityId; }
+      else { _netCartRelease(); UI._netCart = CBCart.create(UI._brCat, _netCartOpts()); UI._netCartFor = entityId;
+             UI._netFlow = _netStepsFor(); }
       _netPaintBrowse();
     })
     .catch(function(e){ UI._brBusy = false; UI._brItems = []; UI._brErr = (e && e.message) || 'Could not read it'; _netPaintBrowse(); });
@@ -1316,25 +1419,46 @@ function netBrowseBack(){ UI._brSel = null; UI._brItems = null; UI._brCat = null
  * supplier order is. Firing five separate requests would give the receiving store five things to answer, five
  * things to dispute and nothing that adds up, which is precisely the reconciliation CB exists to make possible.
  *
- * It goes down the SAME compose path as netAskFor and composeFromSupplier — their form, their catalogue, their
- * required fields. The cart decides WHAT is asked for; it does not get to decide how a store is asked.
+ * ⚠️ IT SENDS, through sendChit() — the same one submitCompose and the Suppliers flow use. There is exactly one
+ * createChit in this app, so a store request is the same kind of chit as any other and reconciles against them.
+ * netOpenInCompose() below is the escape hatch for what three steps cannot express (CC, attachments, an unlisted
+ * line); it is the old behaviour, kept and made explicit rather than removed.
  */
-function netSendCart(){
+function netSendCart(isDraft){
   var s = UI._brSel;
-  if (!s) return;
+  if (!s || netIsMe()) return;
   var picked = UI._netCart ? UI._netCart.selected() : [];
-  if (!picked.length) return;
-  if (typeof compose !== 'function') {
-    if (typeof toast === 'function') toast('Compose is not available on this screen', true);
-    return;
-  }
+  if (!isDraft && !picked.length) return;
+  if (typeof sendChit !== 'function') { if (typeof toast === 'function') toast('Sending is not available on this screen', true); return; }
   // THEIR price, as they stamped it — never zero, never converted. Same rule as the single-item request.
+  var amt = function(p){ var v = (typeof cbAmount === 'function') ? cbAmount(p.price) : p.price;
+                         return (v === null || v === undefined || v === '') ? 0 : Number(v) || 0; };
+  var o = _netOrderState(), subj = o.subject || _netDefaultSubject();
+  sendChit({
+    recipients: [{ name: s.name, role: 'to', self: false }],
+    isDraft: !!isDraft,
+    send_as_label: (typeof SESSION !== 'undefined' && SESSION.entity) || '',
+    subject: subj,
+    schema_values: { subject: subj, delivery_by: o.by || '', deliver_to: o.addr || '', note: o.note || '' },
+    line_items: picked.map(function(p){ return { particulars: p.name, quantity: +p.qty || 0,
+      price: amt(p), total: (+p.qty || 0) * amt(p) }; }),
+    priority: 'normal',
+    onSent: function(){ _netCartRelease(); netBrowseBack(); },
+    onError: function(m){ if (typeof toast === 'function') toast(m, true); }
+  });
+}
+/** The full compose form, carrying everything the flow already collected. */
+function netOpenInCompose(){
+  var s = UI._brSel;
+  if (!s || typeof compose !== 'function') return;
+  var picked = UI._netCart ? UI._netCart.selected() : [];
   var amt = function(p){ var v = (typeof cbAmount === 'function') ? cbAmount(p.price) : p.price;
                          return (v === null || v === undefined || v === '') ? 0 : Number(v) || 0; };
   var full = (UI._brItems || []).map(function(p){ var d = p.item_data || p;
     return { particulars: d.name || d.product || 'item', unit: d.unit || 'unit',
              price: (typeof cbAmount === 'function') ? cbAmount(d.price) : d.price }; });
   compose({
+    subject: _netOrderState().subject || '',
     supplier: { name: s.name, bridge: s.bridge_id || null, entity_id: s.entity_id },
     recipients: [{ name: s.name, role: 'to', bridge: s.bridge_id || null, entity_id: s.entity_id }],
     catalogue: full,
@@ -1350,11 +1474,14 @@ function _netPaintBrowse(){
 function _netBrowseBody(){
   if (UI._brSel) {
     var s = UI._brSel;
-    var head = '<div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;padding-bottom:10px;border-bottom:1px solid var(--line)">'
+    /* THE CHIP — who you are ordering from, and the one warning that must never hide behind a tap. */
+    var head = '<div style="padding-bottom:10px;border-bottom:1px solid var(--line)">'
       + '<span onclick="netBrowseBack()" style="cursor:pointer;color:var(--blue);font-size:12.5px">‹ all stores</span>'
-      + '<b style="font-size:16px;margin-left:6px">' + esc(s.name) + '</b>'
+      + '<div data-testid="net-chip" style="display:inline-flex;align-items:center;gap:9px;border:1px solid var(--line);border-radius:22px;padding:6px 13px;background:#fff;margin-left:8px">'
+      + '<b style="font-size:13.5px">' + esc(s.name) + '</b>'
       + (s.bridge_id ? '<span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;color:var(--grey)">' + esc(s.bridge_id) + '</span>' : '')
-      + '</div>';
+      + (netIsMe() ? '<span style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:20px;padding:2px 9px;font-size:11px;color:#8a5a1e;font-weight:700">⚠ this is your own store</span>' : '')
+      + '</div></div>';
     if (UI._brBusy) return head + '<div style="padding:20px 2px;color:var(--grey);font-size:13px">Reading their catalogue…</div>';
     var items = UI._brItems || [];
     if (!items.length) {
@@ -1372,13 +1499,15 @@ function _netBrowseBody(){
      * whether you reached it through Suppliers or through the Network; two renderers would eventually disagree
      * about what a variant is, which is the divergence the shared walk was written to end.
      */
-    var c = UI._netCart;
-    if (!c) return head + '<div style="padding:20px 2px;color:var(--grey);font-size:13px">Reading their catalogue…</div>';
-    return head + '<div id="cbcartbar_net">' + c.barHTML() + '</div>'
-      + '<input class="inp" style="margin:0 0 7px" placeholder="Search this catalogue…"'
-      + ' value="' + esc((c.state() || {}).q || '') + '" data-testid="pick-search-net"'
-      + ' oninput="netPickSearch(this.value)">'
-      + '<div id="cbpick_net" data-testid="pick-net">' + c.listHTML() + '</div>';
+    var c = UI._netCart, f = UI._netFlow;
+    if (!c || !f) return head + '<div style="padding:20px 2px;color:var(--grey);font-size:13px">Reading their catalogue…</div>';
+    return head
+      + '<div id="net_rail">' + f.railHTML() + '</div>'
+      + '<div id="net_sub" style="font-size:11.5px;color:var(--grey);margin:0 0 8px">' + esc(f.steps()[f.index()].t || '') + '</div>'
+      + '<div id="net_body">' + f.bodyHTML() + '</div>'
+      + '<div id="net_foot" style="margin-top:12px;padding-top:11px;border-top:1px solid var(--line)">' + f.footHTML() + '</div>'
+      + (f.isLast() ? '<div style="font-size:11.5px;color:var(--grey);margin-top:6px">Need CC, attachments or a line they do not list? '
+          + '<span data-testid="net-open-compose" onclick="netOpenInCompose()" style="cursor:pointer;color:var(--blue);font-weight:600">Open in compose →</span></div>' : '');
   }
 
   var L = UI._brStores;
