@@ -293,7 +293,7 @@ function netAddChild(parentKey){
   var name = (typeof prompt === 'function') ? prompt('New OWNED node under "' + P.name + '" (a branch, unit or depot you own):', '') : '';
   if (!name || !name.trim()) return;
   var n = { key: _netKey(), name: name.trim(), parent_key: parentKey, owned: true, holds: ['catalogue'], purpose: '', catalogue: { template: 'custom', fields: [] } };
-  UI.net.nodes.push(n); UI.net.sel = n.key; UI.net.openCap = 'catalogue'; UI.net.built = false;
+  UI.net.nodes.push(n); UI.net.sel = n.key; UI.net.tab = 'general'; UI.net.built = false;
   _netSave(); _netRerender();
 }
 function netAddPartner(parentKey){
@@ -302,10 +302,12 @@ function netAddPartner(parentKey){
   var name = (typeof prompt === 'function') ? prompt('Partner — an INDEPENDENT business joining under "' + P.name + '" (you won\'t hold its key; its catalogue shows here):', '') : '';
   if (!name || !name.trim()) return;
   var n = { key: _netKey(), name: name.trim(), parent_key: parentKey, owned: false, holds: ['catalogue'], purpose: '', catalogue: { template: 'custom', fields: [] } };
-  UI.net.nodes.push(n); UI.net.sel = n.key; UI.net.openCap = 'catalogue'; UI.net.built = false;
+  UI.net.nodes.push(n); UI.net.sel = n.key; UI.net.tab = 'general'; UI.net.built = false;
   _netSave(); _netRerender();
 }
-function netSelect(key){ _netInit(); if (UI.net) { UI.net.sel = key; var _n = _netNode(key); UI.net.openCap = (_n && _n.holds && _n.holds[0]) || null; } _netRerender(); }
+// Selecting a different store lands on GENERAL rather than wherever you happened to be — the tab that was open
+// for the last store is rarely the one you want for this one, and arriving mid-subject hides who you are editing.
+function netSelect(key){ _netInit(); if (UI.net) { UI.net.sel = key; UI.net.tab = 'general'; } _netRerender(); }
 function netRename(key){
   var n = _netNode(key); if (!n) return;
   var name = (typeof prompt === 'function') ? prompt('Rename node:', n.name) : n.name;
@@ -338,8 +340,8 @@ function netCapYes(key, capKey){
     if (capKey === 'tradeready' && !n.tradeready) n.tradeready = { mode: 'inherit', certs: [] };
     if (capKey === 'dispute' && !n.dispute) n.dispute = { informed: true };
   }
-  // Turning something on SELECTS it, so the panel you just enabled is the one in front of you.
-  UI.net.openCap = capKey;
+  // Turning something on SELECTS its tab, so the page you just enabled is the one in front of you.
+  UI.net.tab = capKey;
   // `collapsed` belonged to the accordion and nothing reads it now; cleared so an old draft stops carrying it.
   if (UI.net.collapsed) delete UI.net.collapsed[capKey];
   _netMark(); _netRerender();
@@ -349,6 +351,7 @@ function netCapNo(key, capKey){
   var i = n.holds.indexOf(capKey); if (i >= 0) n.holds.splice(i, 1);
   // The tab STAYS selected — turning something off should not also move you somewhere else, or the screen
   // changing under you reads as though something worse happened than what you asked for.
+  UI.net.tab = capKey;
   _netMark(); _netRerender();
 }
 /* catalogue spec editing */
@@ -1062,78 +1065,6 @@ function _capSummary(n, k){
   if (k === 'tradeready') { var tr = n.tradeready || {}; return tr.mode === 'own' ? ('own · ' + (tr.certs || []).length + ' cert' + ((tr.certs || []).length === 1 ? '' : 's')) : "network's certs"; }
   if (k === 'dispute') return (n.dispute || {}).informed !== false ? 'informed' : 'not involved';
   return 'set up next';
-}
-/**
- * ── ONE TAB, ONE SUBJECT ──────────────────────────────────────────────────────────────────────────────────────
- * Athi, 2026-08-08: *"not a tab for scrolling, keep it side by side one after the other, so it is easier to see
- * and act. One tab, one subject."*
- *
- * It was a stack of twelve accordions: to compare Place with Territory you scrolled past ten other things, and
- * with every one expanded the panel was metres long. Now the subjects sit SIDE BY SIDE as tabs and exactly one is
- * on screen — the whole point being that you can act on it without hunting for it.
- *
- * The tab still carries its own state, because a person choosing which subject to open needs to know which ones
- * are switched on and what they say before opening them: a dot for on, and its one-line summary underneath.
- */
-/**
- * A PANEL TAB — Athi, 2026-08-08: *"the tab should be something like a panel tab on the top so we can switch
- * pages. Normal VB tab kind of."*
- *
- * So: square-shouldered tabs sitting ON the panel's top border, and the selected one JOINED to the body below by
- * having no bottom border of its own. That join is the whole grammar of a tab control — it is what says "this
- * strip and this panel are one thing", and a row of floating rounded chips does not say it.
- */
-function _capTab(n, c, sel){
-  var yes = (n.holds || []).indexOf(c.k) >= 0;
-  var on = c.k === sel;
-  return '<span onclick="netCapPick(\'' + n.key + '\',\'' + c.k + '\')" title="' + esc(c.label) + '"'
-    + ' style="cursor:pointer;display:inline-flex;align-items:center;gap:9px;padding:9px 12px;border-radius:9px;'
-    + 'background:' + (on ? 'var(--blue)' : 'transparent') + ';'
-    + 'color:' + (on ? '#fff' : (yes ? '#1c2128' : '#8a94a3')) + ';'
-    + 'font-size:13px;font-weight:' + (on ? '700' : '500') + ';white-space:nowrap;'
-    + 'border:1px solid ' + (on ? 'var(--blue)' : 'var(--line)') + '">'
-    + '<span style="width:16px;text-align:center;font-size:14px">' + c.icon + '</span>' + esc(c.label)
-    + (yes ? '<span title="on for this store" style="width:6px;height:6px;border-radius:50%;flex:0 0 auto;background:'
-        + (on ? 'rgba(255,255,255,.8)' : '#2c7a43') + '"></span>' : '')
-    + (c.soon ? '<span style="font-size:8.5px;font-weight:800;letter-spacing:.03em;opacity:.75;border:1px solid '
-        + (on ? 'rgba(255,255,255,.5)' : 'var(--line)') + ';border-radius:4px;padding:0 3px">N/E</span>' : '')
-    + '</span>';
-}
-function netCapPick(key, capKey){
-  UI.net.openCap = (UI.net.openCap === capKey) ? null : capKey;   // clicking the open one closes it
-  _netRerender();
-}
-function _capList(n){
-  var sel = UI.net.openCap || null;
-  var c = sel ? _capMeta(sel) : null;
-  var yes = c ? (n.holds || []).indexOf(c.k) >= 0 : false;
-  var body;
-  if (!c) {
-    body = '<div style="padding:16px 4px;font-size:12.5px;color:var(--grey);line-height:1.6">'
-      + 'Pick a subject above. A green dot means this store already carries it.</div>';
-  } else if (!yes) {
-    // OFF is a real answer and gets its own screen, so turning something on is a deliberate act rather than a
-    // checkbox brushed past on the way somewhere else.
-    body = '<div style="padding:16px 4px">'
-      + '<div style="font-size:13px;font-weight:700">' + c.icon + ' ' + esc(c.label) + '</div>'
-      + '<div style="font-size:12.5px;color:var(--grey);margin-top:5px;line-height:1.6">Not on for <b>' + esc(n.name) + '</b>.'
-      + (NET_SOON[c.k] ? ' ' + esc(NET_SOON[c.k].q) : '') + '</div>'
-      + '<button class="pri" onclick="netCapYes(\'' + n.key + '\',\'' + c.k + '\')" style="margin-top:11px;padding:8px 14px">Turn on for this store</button>'
-      + '</div>';
-  } else {
-    body = '<div style="padding:12px 0">'
-      + '<div style="display:flex;align-items:center;gap:9px;margin-bottom:9px">'
-      + '<span style="font-size:11px;color:var(--grey);flex:1">' + esc(_capSummary(n, c.k)) + '</span>'
-      + '<span onclick="netCapNo(\'' + n.key + '\',\'' + c.k + '\')" style="cursor:pointer;font-size:11.5px;color:var(--blue)">turn off</span>'
-      + '</div>' + _capDetail(n, c.k) + '</div>';
-  }
-  // The app's own MENU grammar — Athi: *"the menu what you are showing is good, I want the tab that way."* Two
-  // navigations that look alike teach the same habit once, instead of asking a person to learn a second
-  // vocabulary for the same act: choosing which page to look at.
-  return '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">'
-    + NET_CAPS.map(function(x){ return _capTab(n, x, sel); }).join('') + '</div>'
-    + '<div style="border:1px solid var(--line);border-radius:11px;background:#fff;padding:0 14px;margin-top:10px">'
-    + body + '</div>';
 }
 function _catFieldRow(n, f, i){
   var legOpts = CAT_LEGS.map(function(l){ return '<option value="' + l.k + '"' + (f.leg === l.k ? ' selected' : '') + '>' + l.short + '</option>'; }).join('');
@@ -1961,7 +1892,53 @@ function _netNodeView(n){
               + '". Change it now if you want something else; after Build the stores keep the name they were given.')
         + '</div>' : '')
     + '<div style="font-size:11.5px;color:var(--grey);margin-top:2px">' + kindLine + ' · ' + childCount + ' child' + (childCount === 1 ? '' : 'ren') + '</div>'
-    + '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:14px">'
+    /**
+     * ── THE WHOLE PAGE IS TABBED, SETTINGS-STYLE ────────────────────────────────────────────────────────────
+     * Athi, 2026-08-08: *"the tab I wanted was like in the Settings page. The first tab can be named General
+     * which shows up to purpose, then the next tab could be Catalogue, then Storefront etc, so I can click on
+     * the top and switch."*
+     *
+     * Everything that identifies the store — its name, handle and what kind of node it is — stays ABOVE the tabs,
+     * because it is the title of the page rather than one of its subjects. Below the strip, one subject at a time.
+     */
+    + _netTabStrip(n)
+    + (_netTab() === 'general' ? _netGeneralTab(n) : _capPanel(n, _netTab()))
+    + '<div style="margin-top:16px;font-size:11.5px;color:var(--grey);line-height:1.55">When the design is done, <b>Build</b> turns each owned node into a real entity + login key, and invites each partner by handshake. Until then this is just a plan — saved, nothing created.</div>'
+    + '</div>';
+}
+
+/** Which tab is showing. `general` is the landing page — the thing you almost always came here to change. */
+function _netTab(){ return (UI.net && UI.net.tab) || 'general'; }
+function netPickTab(t){ if (UI.net) UI.net.tab = t; _netRerender(); }
+
+function _netTabStrip(n){
+  var cur = _netTab();
+  var tabs = [{ k: 'general', icon: '⚙️', label: 'General' }].concat(NET_CAPS);
+  return '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:16px;padding-bottom:12px;border-bottom:1px solid var(--line)">'
+    + tabs.map(function(c){
+        var on = c.k === cur;
+        var yes = c.k !== 'general' && (n.holds || []).indexOf(c.k) >= 0;
+        return '<span onclick="netPickTab(\'' + c.k + '\')" style="cursor:pointer;display:inline-flex;align-items:center;gap:8px;'
+          + 'padding:8px 12px;border-radius:9px;font-size:13px;white-space:nowrap;'
+          + 'background:' + (on ? 'var(--blue)' : 'transparent') + ';'
+          + 'border:1px solid ' + (on ? 'var(--blue)' : 'var(--line)') + ';'
+          + 'color:' + (on ? '#fff' : (yes || c.k === 'general' ? '#1c2128' : '#8a94a3')) + ';'
+          + 'font-weight:' + (on ? '700' : '500') + '">'
+          + '<span style="width:16px;text-align:center;font-size:14px">' + c.icon + '</span>' + esc(c.label)
+          + (yes ? '<span title="on for this store" style="width:6px;height:6px;border-radius:50%;flex:0 0 auto;background:'
+              + (on ? 'rgba(255,255,255,.8)' : '#2c7a43') + '"></span>' : '')
+          + (c.soon ? '<span style="font-size:8.5px;font-weight:800;opacity:.75;border:1px solid '
+              + (on ? 'rgba(255,255,255,.5)' : 'var(--line)') + ';border-radius:4px;padding:0 3px">N/E</span>' : '')
+          + '</span>';
+      }).join('')
+    + '</div>';
+}
+
+/** GENERAL — who this store is and the decisions every store has: what it is for, and who may see it. */
+function _netGeneralTab(n){
+  var isRoot = !n.parent_key;
+  return '<div style="padding-top:14px">'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">'
       + '<button class="pri" onclick="netAddChild(\'' + n.key + '\')" style="padding:8px 13px">＋ Add owned node</button>'
       + '<button onclick="netAddPartner(\'' + n.key + '\')" style="padding:8px 13px">🤝 Add partner</button>'
       + (isRoot ? '' : '<button onclick="netRename(\'' + n.key + '\')" style="padding:8px 13px">✏️ Rename</button><button onclick="netDelete(\'' + n.key + '\')" style="padding:8px 13px">🗑️ Remove</button>'
@@ -1990,12 +1967,28 @@ function _netNodeView(n){
     // made the one thing a network actually has to decide the hardest thing on the screen to find.
     // The network's OWN answer sits on the root node — it is the first question, and it caps every store below.
     + (isRoot ? _netNetworkVisibilityBlock() : (!n.owned ? '' : _netVisibilityBlock(n)))
-    // No box around the tab control — the tabs and their panel ARE the box. A frame inside a frame is the thing
-    // that makes a tab strip look like buttons sitting in a card.
-    + '<div style="margin-top:18px">'
-      + '<div style="font-size:11px;font-weight:800;color:var(--grey);letter-spacing:.05em">WHAT ELSE THIS STORE HOLDS <span style="font-weight:600;letter-spacing:0">— optional, none of it is needed to build</span></div>'
-      + _capList(n)
-      + '</div>'
-    + '<div style="margin-top:16px;font-size:11.5px;color:var(--grey);line-height:1.55">When the design is done, <b>Build</b> turns each owned node into a real entity + login key, and invites each partner by handshake. Until then this is just a plan — saved, nothing created.</div>'
     + '</div>';
+}
+
+/**
+ * ONE capability, as a page. Off is its own screen with a single deliberate way in — a subject you have to turn on
+ * should not be a checkbox brushed past on the way somewhere else.
+ */
+function _capPanel(n, k){
+  var c = _capMeta(k);
+  if (!c) return '';
+  var yes = (n.holds || []).indexOf(k) >= 0;
+  if (!yes) {
+    return '<div style="padding:22px 2px">'
+      + '<div style="font-size:14px;font-weight:700">' + c.icon + ' ' + esc(c.label) + '</div>'
+      + '<div style="font-size:12.5px;color:var(--grey);margin-top:6px;line-height:1.6;max-width:460px">Not on for <b>'
+      + esc(n.name) + '</b>.' + (NET_SOON[k] ? ' ' + esc(NET_SOON[k].q) : '') + '</div>'
+      + '<button class="pri" onclick="netCapYes(\'' + n.key + '\',\'' + k + '\')" style="margin-top:13px;padding:9px 15px">Turn on for this store</button>'
+      + '</div>';
+  }
+  return '<div style="padding-top:14px">'
+    + '<div style="display:flex;align-items:center;gap:9px;margin-bottom:10px">'
+    + '<span style="font-size:11.5px;color:var(--grey);flex:1">' + esc(_capSummary(n, k)) + '</span>'
+    + '<span onclick="netCapNo(\'' + n.key + '\',\'' + k + '\')" style="cursor:pointer;font-size:11.5px;color:var(--blue)">turn off</span>'
+    + '</div>' + _capDetail(n, k) + '</div>';
 }
