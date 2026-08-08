@@ -197,6 +197,21 @@ async function netWhereAmI(){
     host = document.createElement('div'); host.id = 'netWhereAmI'; host.style.marginBottom = '12px';
     body.insertBefore(host, body.firstChild);
   }
+  /**
+   * ⚠️ FETCH ONCE, RE-INSERT ALWAYS. Athi, 2026-08-08: *"the view is hiding and appearing again and again."*
+   *
+   * renderApp() rewrites #root, so this card is destroyed on every re-render and has to be put back — and it was
+   * putting back "checking your place…" and then re-running the whole lookup each time. The design page
+   * re-renders on every keystroke-ish action and on each plan refresh, so the card blanked and repopulated
+   * continuously.
+   *
+   * The live structure does not change while you type. So it is fetched ONCE, the rendered card is cached, and
+   * every subsequent render just re-inserts it — synchronously, with nothing to see. `UI._netPlaceHtml = null`
+   * invalidates it, which is what a build does.
+   */
+  if (UI._netPlaceHtml !== undefined && UI._netPlaceHtml !== null) { host.innerHTML = UI._netPlaceHtml; return; }
+  if (UI._netPlaceBusy) return;                    // in flight — leave whatever is there rather than blanking it
+  UI._netPlaceBusy = true;
   host.innerHTML = '<div style="font-size:12px;color:var(--grey)">checking your place in the network…</div>';
   try{
     // The bridge id, self-healing. An empty one used to be answered with a confident "not part of a network",
@@ -206,10 +221,10 @@ async function netWhereAmI(){
       try{ var r0 = await api('me'); var e0 = (r0 && (r0.entity || r0)) || {};
            if(e0.bridge_id){ SESSION.bridgeId = e0.bridge_id; if(typeof setSession==='function') setSession({bridgeId:e0.bridge_id}); } }catch(_){}
     }
-    if(!SESSION.bridgeId){ UI._netRole = null; host.innerHTML = ''; return; }   // unknown ≠ alone: say nothing
+    if(!SESSION.bridgeId){ UI._netRole = null; UI._netPlaceBusy = false; host.innerHTML = ''; return; }   // unknown ≠ alone: say nothing
     var self = await api('netLookup', { query: { bridgeId: SESSION.bridgeId } }).catch(function(){ return null; });
     var me = self && (self.entity || self);
-    if(!me || !me.id){ UI._netRole = 'alone'; host.innerHTML = _netAloneCard(); return; }
+    if(!me || !me.id){ UI._netRole = 'alone'; UI._netPlaceBusy = false; UI._netPlaceHtml = _netAloneCard(); host.innerHTML = UI._netPlaceHtml; return; }
 
     // ⚠️ WALK UP FIRST. `netSubtree` is me AND MY DESCENDANTS — so a leaf asking for its own subtree gets back
     // exactly itself, which is the one view that cannot answer "where do I sit?". The path names the root
@@ -239,9 +254,11 @@ async function netWhereAmI(){
     UI._netLive = { me: me, nodes: nodes, rootBridge: rootBridge };
     // A member's whole screen IS this tree, so the card would be the same thing twice. The operator keeps it —
     // there it earns its place by showing the LIVE structure beside the design, which are different things.
-    host.innerHTML = UI._netRole === 'member' ? '' : _netPlaceCard(me, nodes);
+    UI._netPlaceBusy = false;
+    UI._netPlaceHtml = UI._netRole === 'member' ? '' : _netPlaceCard(me, nodes);
+    host.innerHTML = UI._netPlaceHtml;
     if (wasRole !== UI._netRole && typeof renderApp === 'function') renderApp();   // the panel below depends on it
-  }catch(e){ UI._netRole = 'alone'; host.innerHTML = _netAloneCard(); }
+  }catch(e){ UI._netRole = 'alone'; UI._netPlaceBusy = false; UI._netPlaceHtml = _netAloneCard(); host.innerHTML = UI._netPlaceHtml; }
 }
 function _netAloneCard(){
   return '<div style="border:1px solid var(--line);background:#fff;border-radius:12px;padding:13px 15px">'
@@ -826,7 +843,8 @@ function netMintGo(){
     api('netDesignGet').then(function(d){
       if (d && d.draft && d.draft.nodes) { UI.net = d.draft; _netSetDirty(false); }
       UI._netPlan = null; UI._netPlanSig = null;   // the outstanding list is now stale by definition — re-ask
-    }).catch(function(){ UI._netPlan = null; UI._netPlanSig = null; });
+      UI._netPlaceHtml = null;                     // and so is the live tree above it
+    }).catch(function(){ UI._netPlan = null; UI._netPlanSig = null; UI._netPlaceHtml = null; });
     var created = r.created || [], invited = r.invited || [], updated = r.updated || [], probs = r.problems || [];
     var body = '<div style="max-height:64vh;overflow:auto">'
       + (created.length ? '<div style="padding:11px 16px;border-bottom:1px solid var(--line);font-size:12.5px;line-height:1.6"><b>' + created.length + ' store' + (created.length === 1 ? '' : 's') + ' created.</b> Each signs in at the login page with the <b>handle</b> and the <b>code</b> below. Codes last 7 days.<br><span style="color:#a5382e">This is the only time these codes are shown.</span></div>' : '')
