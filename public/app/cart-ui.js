@@ -692,7 +692,11 @@
     return '<input class="inp" style="margin:0 0 7px" placeholder="Search this catalogue…"'
       + ' value="' + esc(s.q || '') + '" data-testid="pick-search-' + esc(ns) + '"'
       + ' oninput="CBCart.search(\'' + esc(ns) + '\', this.value)">'
-      + '<div id="' + esc(ids(ns).listEl) + '" data-testid="pick-' + esc(ns) + '">' + listHTML(ns) + '</div>';
+      // ⚠️ A SCREEN MAY OWN THE TEST ID. variants.spec.js addresses the supplier catalogue as 'sup-catalogue';
+      // renaming it to 'pick-sup' as part of a refactor silently removed a documented hook and the spec could no
+      // longer find the element at all.  lets the caller keep the name it published.
+      + '<div id="' + esc(ids(ns).listEl) + '" data-testid="' + esc(opt(ns, 'testid', 'pick-' + ns)) + '">'
+      + listHTML(ns) + '</div>';
   };
   root.cbPickListHTML = listHTML;
   /**

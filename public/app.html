@@ -2317,7 +2317,9 @@ async function supCatalogueFull(sid){
    be here are DELETED, so there is nothing left to drift. */
 // Kept for callers that only want to SHOW a catalogue; the picker is the same rows with boxes on them.
 function supCatalogueHTML(cat){
-  if(typeof cbPickInit === 'function') cbPickInit('sup', cat);
+  // 'sup-catalogue' is the name e2e/tests/variants.spec.js looks for. It is a published hook, not an internal
+  // detail — the refactor renamed it and the spec stopped finding the element.
+  if(typeof cbPickInit === 'function') cbPickInit('sup', cat, { testid:'sup-catalogue' });
   return cbPickHTML('sup', cat);
 }
 function loadSupplierConfidence(bridge){
