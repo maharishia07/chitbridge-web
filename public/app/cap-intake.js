@@ -1,0 +1,179 @@
+/* app/cap-intake.js — THE INTAKE INBOX. Lazy via ensureCap('intake').
+ *
+ * Athi, 2026-07-12: someone is chatting on WhatsApp or emailing, and they want it to become a chit on the rail.
+ *
+ * ── THE ONE PIPELINE (every channel is just an adapter) ──────────────────────────────────────────────────────────
+ *     channel → webhook → CAPTURE (raw, untrusted) → AI STRUCTURE → HUMAN CONFIRM → CHIT on rail → notify back
+ *
+ * This file is the FACE of that pipeline and nothing else. The pipeline itself is already built and live:
+ * routes/capture.js, lib/capture.js and migration b104 (the `capture` table, per-entity, WITH RLS). Verified against
+ * production on 2026-08-09 — simulate, pending, structure and dismiss all answer 200. What was missing was a way to
+ * SEE it from inside the app, which is why this is a screen and not a new subsystem. See SPEC-capture-connector.md.
+ *
+ * ── ⚠️ A MESSAGE IS A NOTICE. A CHIT IS AN OBLIGATION. ───────────────────────────────────────────────────────────
+ * The human confirm is not a nicety, it is the governance boundary. Nothing here mints anything: "Make this a chit"
+ * opens Compose with the lines already filled in, and a person still presses Send. An inbound WhatsApp message that
+ * became an order by itself would be money crossing on the say-so of an unverified sender and an AI draft.
+ *
+ * ── ⚠️ THE STRUCTURED LINES GO THROUGH THE CART'S OWN DOOR ───────────────────────────────────────────────────────
+ * CBCart.load() is the channel door — the same gate the + button passes through. So "2 boxes of bolts" lands on a
+ * legal pack of 12, and 3 m of a cable with a 5 m minimum is REFUSED and reported rather than quietly rounded up.
+ * A channel with its own path into the cart would bypass every order model the catalogue declares.
+ *
+ * ── WHAT IS NOT HERE YET ─────────────────────────────────────────────────────────────────────────────────────────
+ * The WhatsApp/email WEBHOOKS exist in the API but are inert: they have no mapping from an inbound number/address to
+ * a CB entity, and no BSP is configured. So the honest way in today is "Record a message" — the same createCapture
+ * the webhook calls, driven by hand. That is the test surface the spec asked for, not a mock: it exercises the real
+ * queue, the real AI structuring and the real convert.
+ */
+
+/* ── state ──────────────────────────────────────────────────────────────────────────────────────────────────── */
+var _INTAKE = { list: null, busy: false, err: null, working: {}, sim: false, migrated: true };
+
+function intakeScreen(){
+  return '<div class="list" style="flex:1;min-width:0">'
+    + '<div class="lh"><div style="display:flex;align-items:center;gap:8px;margin-bottom:9px">'
+    + '<span style="font-family:\'Space Grotesk\';font-weight:700;font-size:14px">📥 Intake</span>'
+    + '<button onclick="openAssist(\'intake\')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:#fff;color:#3F66A6;border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button>'
+    + '<button data-testid="intake-refresh" onclick="loadIntake()" style="margin-left:auto;border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:4px 9px;font-size:11.5px;cursor:pointer">↻ Refresh</button>'
+    + '<button data-testid="intake-simulate-open" onclick="intakeToggleSim()" style="border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:4px 9px;font-size:11.5px;cursor:pointer">✚ Record a message</button>'
+    + '</div>'
+    + '<div style="font-size:11.5px;color:var(--grey);line-height:1.5">A message is a <b>notice</b>; a chit is an <b>obligation</b>. Nothing here becomes a chit until you confirm it.</div>'
+    + '</div><div id="intake_body" style="flex:1;overflow:auto;padding:12px 14px">' + intakeBodyHTML() + '</div></div>';
+}
+function intakeToggleSim(){ _INTAKE.sim = !_INTAKE.sim; paintIntake(); }
+function paintIntake(){ var h=document.getElementById('intake_body'); if(h) h.innerHTML=intakeBodyHTML(); }
+
+function _chn(c){
+  var M={ whatsapp:['#25D366','WhatsApp'], email:['#3F66A6','Email'], web:['#6a44a8','Web'], sms:['#b07a2b','SMS'] };
+  var m=M[c]||['#6a707a', String(c||'channel')];
+  return '<span style="font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#fff;background:'
+    + m[0] + ';border-radius:5px;padding:2px 7px">' + esc(m[1]) + '</span>';
+}
+function intakeSimHTML(){
+  if(!_INTAKE.sim) return '';
+  return '<div style="border:1px solid var(--line);border-radius:11px;padding:12px 13px;margin-bottom:12px;background:var(--paper)">'
+    + '<div style="font-weight:700;font-size:12.5px;margin-bottom:6px">Record an inbound message</div>'
+    + '<div style="font-size:11.5px;color:var(--grey);margin-bottom:8px">The WhatsApp and email webhooks exist but are not connected to a provider yet, so this is how a message gets onto the queue today. It goes through the SAME capture the webhook uses — nothing is faked.</div>'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap">'
+    + '<select class="inp" id="in_ch" data-testid="intake-sim-channel" style="max-width:130px"><option value="whatsapp">WhatsApp</option><option value="email">Email</option><option value="web">Web</option><option value="sms">SMS</option></select>'
+    + '<input class="inp" id="in_from" data-testid="intake-sim-from" placeholder="from — phone or email" style="flex:1;min-width:150px">'
+    + '</div>'
+    + '<textarea class="inp" id="in_text" data-testid="intake-sim-text" placeholder="what they wrote — e.g. need 2 boxes of bolts and 5 m cable by friday" style="width:100%;margin-top:8px;min-height:64px;font-family:inherit"></textarea>'
+    + '<div style="margin-top:8px"><button class="composebtn" data-testid="intake-sim-add" onclick="intakeSimulate()">Add to the queue</button></div>'
+    + '</div>';
+}
+function intakeBodyHTML(){
+  if(_INTAKE.busy && !_INTAKE.list) return intakeSimHTML()+'<div class="loadwrap"><span class="spin"></span> reading the queue…</div>';
+  /* b104 is applied in production, but an environment without it answers 503 — say which it is, because "no
+     messages" and "the table does not exist" look identical on screen and mean completely different things. */
+  if(!_INTAKE.migrated) return '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:10px;padding:11px 13px;font-size:12.5px;color:#6b5a36">'
+    + 'The intake queue is not migrated on this environment (b104). The screen is here; the table is not.</div>';
+  if(_INTAKE.err) return intakeSimHTML()+'<div style="background:#fbeceb;border:1px solid #f0c9c6;border-radius:10px;padding:11px 13px;font-size:12.5px;color:#b4453f">'+esc(_INTAKE.err)+'</div>';
+  var L=_INTAKE.list||[];
+  if(!L.length) return intakeSimHTML()
+    + '<div class="empty" style="padding:36px 12px;text-align:center;color:var(--grey)"><div style="font-size:34px">📥</div>'
+    + '<div style="font-weight:700;color:var(--ink);margin-top:8px">Nothing waiting</div>'
+    + '<div style="font-size:12.5px;margin-top:5px">Messages from WhatsApp, email and the web land here — raw, until you turn one into a chit.</div></div>';
+  return intakeSimHTML() + L.map(intakeCardHTML).join('');
+}
+function intakeCardHTML(c){
+  var w=_INTAKE.working[c.id]||{}, s=c.structured||w.structured;
+  return '<div class="cap" data-testid="intake-row" style="border:1px solid var(--line);border-radius:11px;padding:12px 13px;margin-bottom:10px;background:#fff">'
+    + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">' + _chn(c.channel)
+    + '<span style="font-size:11.5px;color:var(--grey)">' + esc(c.sender_name||c.sender_ref||'unknown sender') + '</span>'
+    + (c.sender_name&&c.sender_ref?'<span style="font-size:11px;color:var(--grey);font-family:ui-monospace,Menlo,monospace">'+esc(c.sender_ref)+'</span>':'')
+    + '<span style="margin-left:auto;font-size:11px;color:var(--grey)">' + esc(String(c.created_at||'').slice(0,16).replace('T',' ')) + '</span></div>'
+    /* ⚠️ THE RAW TEXT IS UNTRUSTED and is shown as TEXT, never as markup. esc() is the whole guard: a capture is a
+       stranger's words arriving from outside the rail. */
+    + '<div style="font-size:13px;margin:8px 0;white-space:pre-wrap">' + esc(c.raw_text||'') + '</div>'
+    + (s ? intakeDraftHTML(c, s) : '')
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:9px">'
+    + (s ? '<button class="composebtn" data-testid="intake-make-chit" onclick="intakeMakeChit(\''+esc(c.id)+'\')">Make this a chit →</button>'
+         : '<button class="composebtn" data-testid="intake-structure" '+(w.busy?'disabled':'')+' onclick="intakeStructure(\''+esc(c.id)+'\')">'+(w.busy?'✨ Reading…':'✨ Structure it')+'</button>')
+    + '<button data-testid="intake-dismiss" onclick="intakeDismiss(\''+esc(c.id)+'\')" style="border:1px solid var(--line);background:#fff;border-radius:9px;padding:9px 15px;font-size:13px;font-weight:700;cursor:pointer;color:var(--grey)">Dismiss</button>'
+    + '</div>'
+    + (w.err?'<div style="color:#b4453f;font-size:12px;margin-top:6px">'+esc(w.err)+'</div>':'')
+    + '</div>';
+}
+function intakeDraftHTML(c, s){
+  var li=(s.line_items||[]);
+  return '<div style="background:#f7f6fd;border:1px solid #e4dff6;border-radius:9px;padding:10px 12px;margin-top:8px;font-size:12.5px">'
+    + '<div style="font-weight:700;margin-bottom:4px">✨ AI draft <span style="font-weight:400;color:var(--grey)">— proposed, not evidence. You confirm.</span></div>'
+    + (s.subject?'<div style="margin-bottom:4px"><b>Subject:</b> '+esc(s.subject)+'</div>':'')
+    + li.map(function(l){ return '<div style="display:flex;justify-content:space-between;padding:3px 0;border-top:1px dashed var(--line);font-size:12px">'
+        + '<span>' + esc(l.particulars||'item') + '</span>'
+        + '<span style="color:var(--grey)">' + esc(String(l.qty==null?'':l.qty)) + ' ' + esc(l.unit||'') + '</span></div>'; }).join('')
+    + (s.notes?'<div style="margin-top:5px;color:var(--grey)">'+esc(s.notes)+'</div>':'')
+    + '</div>';
+}
+
+/* ── the API calls. Each one narrow, each one saying what failed. ────────────────────────────────────────────── */
+async function loadIntake(){
+  _INTAKE.busy=true; _INTAKE.err=null; paintIntake();
+  try{
+    var r=await api('capturePending');
+    _INTAKE.list=(r&&r.captures)||[]; _INTAKE.migrated=true;
+  }catch(e){
+    // 503 is the migration gate the route declares, not a fault — tell them apart.
+    if(/not migrated|b104|503/i.test((e&&e.message)||'')) { _INTAKE.migrated=false; }
+    else _INTAKE.err=(e&&e.message)||'Could not read the intake queue.';
+    _INTAKE.list=_INTAKE.list||[];
+  }
+  _INTAKE.busy=false; paintIntake();
+}
+async function intakeSimulate(){
+  var ch=val('in_ch')||'whatsapp', from=val('in_from')||'', text=(val('in_text')||'').trim();
+  if(!text){ toast('Type what they wrote first.', true); return; }
+  try{
+    await api('captureSimulate',{body:{channel:ch, sender_ref:from, sender_name:from, raw_text:text}});
+    var t=document.getElementById('in_text'); if(t)t.value='';
+    await loadIntake();
+  }catch(e){ toast((e&&e.message)||'Could not record the message', true); }
+}
+async function intakeStructure(id){
+  _INTAKE.working[id]={busy:true}; paintIntake();
+  try{
+    var r=await api('captureStructure',{params:{id:id}});
+    _INTAKE.working[id]={structured:(r&&r.structured)||null};
+  }catch(e){ _INTAKE.working[id]={err:(e&&e.message)||'AI could not read that message.'}; }
+  paintIntake();
+}
+async function intakeDismiss(id){
+  if(!confirm('Dismiss this message?\n\nIt stays on the capture queue as dismissed — a receipt that it arrived and was not turned into a chit.')) return;
+  try{ await api('captureDismiss',{params:{id:id}}); await loadIntake(); }
+  catch(e){ toast((e&&e.message)||'Could not dismiss it', true); }
+}
+/**
+ * intakeMakeChit — the CONFIRM GATE, and the only route from a message to the rail.
+ *
+ * ⚠️ IT OPENS COMPOSE. It does not send. The lines are proposed by an AI from a stranger's message; a person reads
+ * them, fixes what is wrong, addresses it, and presses Send. That gap is the whole difference between a notice and
+ * an obligation.
+ *
+ * ⚠️ AND THE LINES GO THROUGH CBCart.load(), the same gate the + button uses — so the catalogue's order models
+ * apply to an inbound WhatsApp message exactly as they do to a human pressing +. "2 boxes" of a pack-of-12 becomes
+ * 24; 3 m of a 5 m-minimum cable is REFUSED and reported, never rounded up to fit. A channel that wrote straight
+ * into the cart would mint orders the catalogue says cannot exist.
+ */
+async function intakeMakeChit(id){
+  var c=(_INTAKE.list||[]).filter(function(x){ return x.id===id; })[0];
+  var w=_INTAKE.working[id]||{};
+  var s=(c&&c.structured)||w.structured; if(!c||!s) return;
+  // The chit carries WHERE IT CAME FROM in its subject line, so provenance is readable six weeks later.
+  var subj=s.subject || ('From '+(c.sender_name||c.sender_ref||c.channel));
+  UI._captureId=id;                       // sendChit records the linkage once a chit really exists
+  await compose({ subject: subj });
+  if(!UI._ccCart) return;
+  var res=UI._ccCart.load((s.line_items||[]).map(function(l){
+    return { name:l.particulars||l.description, qty:l.qty==null?1:l.qty, unit:l.unit, price:(l.rate!=null?l.rate:l.price) };
+  }));
+  if(typeof ccAddPicked==='function') ccAddPicked();     // the placed lines become chit lines, through the one gate
+  // ⚠️ WHAT COULD NOT BE PLACED IS REPORTED, never silently dropped. A refused line is a real request that the
+  // catalogue's own rules would not accept at that quantity — a person has to see it to decide.
+  if(res && res.refused && res.refused.length){
+    var e=document.getElementById('cc_err');
+    var msg=res.refused.length+' line(s) could not be placed: '+res.refused.map(function(r){ return (r.name||'unnamed')+' — '+r.why; }).join('; ');
+    if(e) e.textContent=msg; else toast(msg, true);
+  }
+}

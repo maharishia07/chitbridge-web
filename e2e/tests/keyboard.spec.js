@@ -55,7 +55,11 @@ test.describe('Keyboard operability · the counter runs on the keyboard', () => 
       expect(await tabTo(page, 'chit-send')).toBe(true);
       await page.keyboard.press('Enter');
       // completed with zero mouse events beyond the initial focus anchor — confirm it sent
-      await expect(page.getByTestId('nav-order').or(page.locator('#mainbody'))).toBeVisible();
+      // ⚠️ `.first()`. `a.or(b)` under strict mode FAILS when both match, and after a successful send both always
+      // do — the app shell has a nav rail AND a #mainbody. So this assertion could only ever pass while the send
+      // was broken enough to leave one of them off the page. It was failing for the opposite of the reason it
+      // looked like: the flow worked, and the locator did not.
+      await expect(page.getByTestId('nav-order').or(page.locator('#mainbody')).first()).toBeVisible();
     });
   });
 

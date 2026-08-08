@@ -645,6 +645,12 @@ const EP = {
   unarchive:       {m:"POST", p:"/api/chits/:id/unarchive",     ok:"y"},
   restore:         {m:"POST", p:"/api/chits/:id/restore",       ok:"y"},
   createChit:      {m:"POST", p:"/api/chits/send",               ok:"✓"},  // compose a new chit
+  // CAPTURE — the intake queue (b104, live in production). channel → capture → AI structure → HUMAN CONFIRM → chit.
+  capturePending:  {m:"GET",  p:"/api/capture/pending",          ok:"✓"},
+  captureSimulate: {m:"POST", p:"/api/capture/simulate",         ok:"✓"},  // the webhook's own path, driven by hand
+  captureStructure:{m:"POST", p:"/api/capture/:id/structure",    ok:"✓"},
+  captureConvert:  {m:"POST", p:"/api/capture/:id/convert",      ok:"✓"},  // the receipt: this capture became that chit
+  captureDismiss:  {m:"POST", p:"/api/capture/:id/dismiss",      ok:"✓"},
   attUpload:       {m:"POST", p:"/api/attachments",             ok:"✓"},  // upload a file (base64) after a chit/message exists
   addActor:        {m:"POST", p:"/api/actors",                   ok:"✓"},  // create an actor
   disputeQueue:    {m:"GET",  p:"/api/chits/disputes/queue",     ok:"✓"},  // all open disputes
@@ -1480,7 +1486,7 @@ function priChip(p){ return (!p||p==="normal")?"":`<span class="prichip pri-${p}
 let UI = {...UI0, selected:new Set(), aggStates:new Set(["open","act","close"])};
 
 const MENUS = {
-  entity:{top:[["compose","✉️","Compose",""],["task","📥","Task",""],["order","📤","Order",""],["folders","📁","Folders",""],["drafts","📝","Drafts",""],["trash","🗑️","Trash",""],["archive","🗄️","Archive",""]], rest:[["traceability","🧭","Traceability"],["network","🔗","Network"],["suppliers","🏭","Suppliers"],["customers","🛍️","Customers"],["catalogue","🗂️","Catalogue"],["readiness","🛡️","Trade ready"],["coassists","🧑‍🤝‍🧑","Co-assists"],["mis","📊","MIS"],["disputes","⚖️","Disputes"],["profile","👤","Profile"],["settings","⚙️","Settings"],["assistreview","🧠","Assistant"]], tag:"Owner does structure."},
+  entity:{top:[["compose","✉️","Compose",""],["task","📥","Task",""],["order","📤","Order",""],["folders","📁","Folders",""],["drafts","📝","Drafts",""],["trash","🗑️","Trash",""],["archive","🗄️","Archive",""]], rest:[["intake","📨","Intake"],["traceability","🧭","Traceability"],["network","🔗","Network"],["suppliers","🏭","Suppliers"],["customers","🛍️","Customers"],["catalogue","🗂️","Catalogue"],["readiness","🛡️","Trade ready"],["coassists","🧑‍🤝‍🧑","Co-assists"],["mis","📊","MIS"],["disputes","⚖️","Disputes"],["profile","👤","Profile"],["settings","⚙️","Settings"],["assistreview","🧠","Assistant"]], tag:"Owner does structure."},
   actor:{top:[["compose","✉️","Compose",""],["task","📥","Task",""],["order","📤","Order",""],["folders","📁","Folders",""],["drafts","📝","Drafts",""],["trash","🗑️","Trash",""],["archive","🗄️","Archive",""]], rest:[["suppliers","🏭","Suppliers"],["profile","👤","Profile"]], tag:"Commerce yes, structure no."},
   customer:{top:[["order","📤","My orders",""]], rest:[["shops","🏬","Find a shop"]], tag:"You see only your orders."},
 };
@@ -1488,6 +1494,7 @@ const PURPOSE = {
   task:"Your work folder — chits that need you. Press a state chip ▸ to advance.",
   order:"Chits you've sent — track them to close.",
   compose:"Author your own chit (a self-chit) — send it to yourself or a counterparty; line items come from your catalogue.",
+  intake:"Messages from WhatsApp, email and the web, before they are anything. AI reads one into a draft; you confirm it into a chit. A message is a notice — a chit is an obligation.",
   network:"Design your organisation here — your own branches and units, up to the lead node. Internal structure; for other businesses use Connections.",
   connections:"Connect with other businesses — suppliers, customers, agents. External; for your own structure use Network.",
   suppliers:"Suppliers you buy from — pull their catalogue into a cart.",
@@ -1508,7 +1515,7 @@ const PURPOSE = {
    /app/cap-<name>.js (classic script, shared global scope). CAP_OF maps a screen to its
    capability; unlisted screens are Core (eager, always loaded). renderApp shows "Loading…"
    and re-renders once the capability arrives. Grow CAP_OF as screens migrate out. */
-const CAP_OF = { mis:'admin', profile:'admin', settings:'admin', coassists:'workforce', assistreview:'admin', connectors:'connector', disputes:'dispute', folders:'folders', readiness:'readiness', traceability:'traceability', network:'network' };
+const CAP_OF = { mis:'admin', profile:'admin', settings:'admin', coassists:'workforce', assistreview:'admin', connectors:'connector', disputes:'dispute', folders:'folders', readiness:'readiness', traceability:'traceability', network:'network', intake:'intake' };
 // nav items gated by an entity capability (the itemised toggle) — hidden unless SESSION.capabilities holds the key.
 const CAP_GATED = { connectors:'connector', disputes:'dispute' };
 const CAP_LOADED = {};
@@ -1588,6 +1595,7 @@ function renderApp(){
     if(UI.nav==="profile") loadProfile();
     if(UI.nav==="settings") loadSettings();
     if(UI.nav==="network") loadNetwork();
+    if(UI.nav==="intake" && typeof loadIntake==="function") loadIntake();
     if(UI.nav==="suppliers") loadSuppliers();
     if(UI.nav==="customers") loadCustomers();
     if(UI.nav==="catalogue") loadCatalogue();
@@ -1914,6 +1922,17 @@ async function sendChit(v){
     const _lines=v.itemFiles||[];
     if(_newId){ for(let _li=0;_li<_lines.length;_li++){ const _it=_lines[_li]; if(_it&&_it.files&&_it.files.length){ busyShow('Attaching files…'); for(const f of _it.files){ try{ await attUpload(_newId, f, {line_index:_li}); }catch(e){ toast('Attachment "'+f.name+'" failed.'); } } } } }
     closeModal(); CC={items:[],rcpts:[]};
+    /**
+     * ⚠️ THE CAPTURE RECEIPT. If this chit began life as an inbound message (WhatsApp, email, web), record which
+     * capture became which chit. It lives HERE rather than in the intake screen because the send is the moment the
+     * link becomes true — the intake screen has already handed over by then, and a chit sent from a capture is
+     * still a chit sent from a capture whichever button finished it. Best-effort: a failed receipt must never undo
+     * a chit that really was sent.
+     */
+    if(_newId && !v.isDraft && UI._captureId){
+      var _cap=UI._captureId; UI._captureId=null;
+      try{ await api('captureConvert',{params:{id:_cap}, body:{chit_id:_newId}}); }catch(_){ }
+    }
     if(typeof v.onSent==='function'){ try{ v.onSent(r); }catch(_){ } }
     if(v.isDraft){ toast(MSG.draftSaved()); UI.nav="drafts"; UI.folder="drafts"; try{localStorage.setItem("cb_nav","drafts");}catch(_){} }
     else if(r&&r.selfCopies){ toast(MSG.chitBridged(r.copies, r.selfCopies)); UI.nav="task"; UI.folder="task"; }
@@ -3274,6 +3293,7 @@ function acLbl(a){ return a?(esc(a.name)+' <span class="mono" style="color:var(-
 function mainBody(){
   if(["task","order","drafts","trash","archive"].includes(UI.nav)) return taskPanel();
   if(UI.nav==="folders") return foldersScreen();
+  if(UI.nav==="intake" && typeof intakeScreen==="function") return intakeScreen();   // app/cap-intake.js (lazy)
   if(UI.nav==="traceability") return traceabilityScreen();
   if(UI.nav==="readiness") return readinessScreen();
       if(UI.nav==="disputes") return disputesScreen();
