@@ -1117,6 +1117,61 @@ function _catFieldRow(n, f, i){
     + '<span onclick="netDelCatField(\'' + n.key + '\',' + i + ')" title="remove" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 4px">×</span>'
     + '</div>';
 }
+/**
+ * ── HOW A STORE PRICES WHAT IT ADOPTED ────────────────────────────────────────────────────────────────────────
+ * Athi, 2026-08-08: *"root is Euro and under it each store is another currency. The stores inherit the product,
+ * but the money should be updated with local currency… we can give the option at catalogue level: conversion to
+ * your currency, or you decide the price. Just place the option now."*
+ *
+ * So the option is placed, and nothing more. What it settles is the split that matters:
+ *
+ *     THE PRODUCT   held BY REFERENCE — name, spec, pictures, video stay the network's, and a correction at the
+ *                   top reaches every store without anyone confirming anything, because nobody overrode it.
+ *     THE PRICE     always the store's own, stamped in its own currency and never converted afterwards.
+ *
+ * Conversion is therefore a CALCULATOR that proposes a number a person accepts — not a live formula the platform
+ * re-evaluates. A live formula means every price in the network moves whenever a rate moves and nobody agreed to
+ * any of them.
+ *
+ * ⚠️ CAPTURED, NOT ENFORCED. Nothing reads this yet. The rate source, how often it is re-read, and who confirms a
+ * new proposal are the maintenance question, and they are deliberately unanswered.
+ */
+var CAT_PRICE_SRC = [
+  { k: 'convert', label: 'Convert from the network',
+    hint: 'A rate and the local add-ons propose a price; the store confirms it. Right where the reference price is the real price.' },
+  { k: 'own', label: 'This store decides the price',
+    hint: 'The network\'s price is shown for context only. Right where local cost, duty and competition set the number.' },
+];
+function netSetPriceSrc(key, v){ var n = _netNode(key); if (!n) return; _ensureCat(n).priceSrc = v; _netMark(); _netRerender(); }
+function _adoptedPricing(n, c){
+  var cur = (n.place && n.place.currency) || (typeof SESSION !== 'undefined' && SESSION.currency) || 'the network\'s';
+  var v = c.priceSrc || 'own';
+  return '<div style="margin:10px 0 14px;padding:11px 13px;border:1px solid var(--line);border-left:3px solid #2c5aa0;border-radius:10px;background:#f7fafd">'
+    + '<div style="font-size:11px;font-weight:800;color:#2c5aa0;letter-spacing:.05em">HOW THIS STORE PRICES WHAT IT ADOPTED'
+    + ' <span style="background:#eef0f4;color:#6b6f86;border-radius:5px;padding:1px 6px;margin-left:5px">CAPTURED, NOT ENFORCED</span></div>'
+    + '<div style="font-size:11.5px;color:var(--grey);margin-top:4px;line-height:1.5">The <b>product</b> stays the '
+    + 'network\'s — a corrected picture or spec reaches every store. Only the <b>price</b> is ever this store\'s, '
+    + 'stamped in <b>' + esc(cur) + '</b> and never converted afterwards.</div>'
+    + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:9px">'
+    + CAT_PRICE_SRC.map(function(o){
+        var on = v === o.k;
+        return '<div onclick="netSetPriceSrc(\'' + n.key + '\',\'' + o.k + '\')" style="cursor:pointer;flex:1;min-width:210px;'
+          + 'padding:10px 12px;border:1px solid ' + (on ? '#2c5aa0' : 'var(--line)') + ';border-radius:9px;background:' + (on ? '#eef4fc' : '#fff') + '">'
+          + '<b style="font-size:12.5px;color:' + (on ? '#2c5aa0' : '#1c2128') + '">' + (on ? '● ' : '○ ') + esc(o.label) + '</b>'
+          + '<div style="font-size:11px;color:var(--grey);margin-top:3px;line-height:1.5">' + o.hint + '</div></div>';
+      }).join('')
+    + '</div>'
+    // The rollover. This part is NOT speculation — adoption by reference and hiding unpriced adopted lines from a
+    // price-showing shop are both live behaviour today, and the second was a real defect once.
+    + '<div style="margin-top:11px;border-top:1px dashed var(--line);padding-top:9px;font-size:11.5px;line-height:1.7;color:var(--grey)">'
+    + '<b style="color:#1c2128">When the network changes the catalogue</b><br>'
+    + '· a new item appears here, because the catalogue is held by reference<br>'
+    + '· on <b>Convert</b> it arrives with a proposed price · on <b>Decide</b> it arrives <b style="color:#a5382e">unpriced</b>, '
+    + 'and an unpriced adopted item stays out of a shop that shows prices — that is live behaviour, not a plan<br>'
+    + '· a corrected picture, video or spec reaches every store immediately; nobody confirms it, because nobody had overridden it'
+    + '</div></div>';
+}
+
 function _catConfig(n){
   var c = _ensureCat(n);
   var fields = (c.fields || []).map(function(f, i){ return _catFieldRow(n, f, i); }).join('') || '<div style="font-size:11px;color:var(--grey);padding:2px 0">No requirements yet — add what this catalogue must know, then route each to a leg.</div>';
@@ -1210,7 +1265,7 @@ function _catConfig(n){
   } else if (tab === 'identity') {
     body = partA + partB + partStd + partBOM;
   } else if (tab === 'pricing') {
-    body = partPricing;
+    body = _adoptedPricing(n, c) + partPricing;
   } else if (tab === 'loop') {
     body = '<label style="font-size:11px;color:var(--grey);display:block;margin-top:10px"><b style="font-weight:800;color:#2c5aa0;letter-spacing:.05em">LOOP</b> <span style="color:var(--faint,#8a929e)">— when a watched signal crosses a threshold, act automatically</span></label>'
       + trigRows + '<div onclick="netAddTrigger(\'' + n.key + '\')" style="cursor:pointer;color:var(--blue);font-size:11.5px;font-weight:600;padding:5px 0">＋ trigger</div>'
@@ -1238,13 +1293,16 @@ function _catConfig(n){
     + '<div style="margin-top:6px">' + body + '</div>'
     + '</div>';
 }
-function _methodControl(m){
+/** The order-form preview. Takes the store's CURRENCY CODE — a hardcoded symbol here showed ₹ to a store
+    trading in dollars, which is the defect currency-matrix already records against the storefront. */
+function _methodControl(m, cur){
+  cur = cur || (typeof SESSION !== 'undefined' && SESSION.currency) || '';
   var inp = 'display:inline-block;border:1px solid var(--line);border-radius:5px;padding:2px 8px;font-size:11.5px;color:var(--grey);background:#f5f7f9';
   var btn = 'display:inline-block;background:#2c5aa0;color:#fff;border-radius:5px;padding:3px 10px;font-size:11.5px;font-weight:600';
   if (m === 'text') return '<span style="font-size:11.5px;color:var(--grey)">Information only — nothing to order.</span>';
   if (m === 'qty') return '<span style="' + inp + '">Qty ▢</span> &nbsp; <span style="' + btn + '">Order</span>';
-  if (m === 'cart') return '<span style="' + inp + '">Qty ▢</span> <span style="font-size:11.5px;color:var(--grey)">× ₹ price</span> &nbsp; <span style="' + btn + '">Add to cart</span>';
-  if (m === 'range') return '<div style="font-size:11.5px;color:var(--grey)">₹ min ──●────── ₹ max</div><div style="margin-top:5px"><span style="' + inp + '">Qty ▢</span> &nbsp; <span style="' + btn + '">Order</span></div>';
+  if (m === 'cart') return '<span style="' + inp + '">Qty ▢</span> <span style="font-size:11.5px;color:var(--grey)">× ' + esc(cur) + ' price</span> &nbsp; <span style="' + btn + '">Add to cart</span>';
+  if (m === 'range') return '<div style="font-size:11.5px;color:var(--grey)">' + esc(cur) + ' min ──●────── ' + esc(cur) + ' max</div><div style="margin-top:5px"><span style="' + inp + '">Qty ▢</span> &nbsp; <span style="' + btn + '">Order</span></div>';
   if (m === 'qtyprice') return '<span style="' + inp + '">Qty ▢</span> <span style="' + inp + '">Your price ▢</span> &nbsp; <span style="' + btn + '">Send offer</span>';
   return '';
 }
@@ -1350,7 +1408,7 @@ function _chitPreview(n){
     + '<div style="margin-top:7px;max-width:290px;border:1px solid var(--line);border-top:3px solid #2c5aa0;border-radius:11px;box-shadow:0 1px 3px rgba(20,30,45,.08);padding:12px 13px;background:#fff">'
       + '<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-weight:700;font-size:13px">' + esc(name) + '</span>' + expBadge + '</div>'
       + '<div style="margin-top:6px">' + specRows + '</div>'
-      + '<div style="margin-top:9px">' + _methodControl(o.method) + '</div>'
+      + '<div style="margin-top:9px">' + _methodControl(o.method, (n.place && n.place.currency) || (typeof SESSION !== 'undefined' && SESSION.currency) || '') + '</div>'
       + collectLine
       + stateFlow
       + '<div style="border-top:1px dashed var(--line);margin-top:9px;padding-top:5px;font-size:10px;color:var(--faint,#8a929e)">arrives: ' + esc(arrive) + '</div>'
