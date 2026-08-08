@@ -2271,14 +2271,46 @@ async function supCatalogueFull(sid){
  * one shown flat, and nothing dropped. Athi: "this should not be a separate code, it is another entry point for the
  * same view." The read was already shared (buildPublicView); this is the render.
  */
-function supCatalogueHTML(cat){
-  const rows = (typeof cbLineRows === 'function') ? cbLineRows(cat) : [];
-  if(!rows.length) return '<div style="font-size:12.5px;color:var(--grey)">They have not published any products.</div>';
-  const ccy = (cat && cat.shop && cat.shop.currency_code) || '';
+/**
+ * cbPickHTML — the catalogue as something you SELECT FROM, in app.html's house style.
+ *
+ * Athi, 2026-08-08: *"in supplier and network, the same pattern. with check box, and search, they should be able to
+ * select more product and then send button."*
+ *
+ * The rows, the grouping and the filtering come from app/catalogue-lines.js so supplier and network cannot drift
+ * apart; only the CSS lives here. `ns` namespaces the selection, so a supplier's picks and a network store's picks
+ * are separate baskets and switching between them never mixes them up.
+ */
+function cbPickHTML(ns, cat, opts){
+  opts = opts || {};
+  const ccy = (cat && cat.shop && cat.shop.currency_code) || opts.currency || '';
   const sym = (typeof curSym === 'function' && ccy) ? curSym(ccy) : '';
-  return '<div class="itab" data-testid="sup-catalogue">' + rows.map(function(r){
+  const total = (typeof cbLineRows === 'function' ? cbLineRows(cat) : []).filter(r=>r.type==='line').length;
+  if(!total) return '<div style="font-size:12.5px;color:var(--grey)">They have not published any products.</div>';
+  // The search box is OUTSIDE the repainted list — filtering must not pull the cursor out of the box you are typing in.
+  const search = '<input class="inp" style="margin:0 0 7px" placeholder="Search this catalogue…"'
+    + ' data-testid="pick-search-'+esc(ns)+'" oninput="cbPickSearch(\''+esc(ns)+'\', this.value)">';
+  return search + '<div class="itab" id="cbpick_'+esc(ns)+'" data-testid="pick-'+esc(ns)+'">'
+    + cbPickListHTML(ns, sym) + '</div>';
+}
+function cbPickListHTML(ns, sym){
+  const st = (typeof cbPickState === 'function') ? cbPickState(ns) : null;
+  if(!st) return '';
+  if(sym===undefined){ const c=(st.cat&&st.cat.shop&&st.cat.shop.currency_code)||''; sym=(typeof curSym==='function'&&c)?curSym(c):''; }
+  const rows = cbPickRows(ns);
+  // A search that matches nothing SAYS so. An empty list under a filled search box reads as "they have nothing".
+  if(!rows.length) return '<div style="padding:11px 12px;font-size:12.5px;color:var(--grey)">Nothing here matches that.</div>';
+  const box=(on,handler,pad)=>'<span onclick="'+handler+'" style="cursor:pointer;flex:0 0 16px;width:16px;height:16px;margin-'
+    + 'right:2px;border:1.5px solid '+(on?'var(--blue)':'var(--line)')+';border-radius:4px;background:'+(on?'var(--blue)':'#fff')
+    + ';color:#fff;font-size:11px;line-height:14px;text-align:center;font-weight:800">'+(on?'✓':'')+'</span>';
+  return rows.map(function(r,i){
     if(r.type === 'product'){
-      return '<div style="padding:9px 12px 3px;display:flex;align-items:baseline;gap:8px">'
+      // Same rule as cbPickGroup: membership is `gid`, never "until the next heading" — ungrouped products are
+      // appended as lines after the groups, and walking forward would show them as part of a group they are not in.
+      let ids=[]; for(let k=i+1;k<rows.length && rows[k].type==='line' && rows[k].gid===r.gid;k++) ids.push(rows[k].item_id);
+      const allOn = ids.length && ids.every(id=>st.sel[id]);
+      return '<div style="padding:9px 12px 3px;display:flex;align-items:center;gap:8px">'
+        + box(allOn, "cbPickGroup('"+esc(ns)+"',"+i+")")
         + '<b style="font-size:13.5px">'+esc(r.label)+'</b>'
         + '<span style="font-size:11px;color:var(--grey)">'+r.count+' options</span>'
         + (r.options?'<span style="font-size:11px;color:var(--grey);margin-left:auto">'+esc(r.options)+'</span>':'')
@@ -2286,11 +2318,63 @@ function supCatalogueHTML(cat){
     }
     const d = r.item.item_data || r.item;
     const amt = (typeof cbAmount === 'function') ? cbAmount(d.price) : (d.price && d.price.amount);
-    return '<div style="display:flex;gap:8px;padding:7px 12px'+(r.variant?' 7px 30px':'')+';border-bottom:1px dashed var(--line);font-size:13px">'
+    const on = !!st.sel[r.item_id];
+    return '<div onclick="cbPickToggle(\''+esc(ns)+'\',\''+esc(r.item_id)+'\')" style="display:flex;align-items:center;gap:8px;cursor:pointer;'
+      + 'padding:7px 12px 7px '+(r.variant?'30px':'12px')+';border-bottom:1px dashed var(--line);font-size:13px;'
+      + (on?'background:var(--blue-soft,#eef4ff)':'')+'">'
+      + box(on, "event.stopPropagation();cbPickToggle('"+esc(ns)+"','"+esc(r.item_id)+"')")
       + '<span style="flex:1"><b>'+esc(r.variant || d.name || d.product || 'item')+'</b>'
       + (d.unit?' <span style="color:var(--grey);font-size:11.5px">'+esc(d.unit)+'</span>':'')+'</span>'
       + '<span style="font-weight:700">'+(amt==null||amt===''?'—':esc(sym+String(amt)))+'</span></div>';
-  }).join('') + '</div>';
+  }).join('');
+}
+/**
+ * cbPickPaint — repaint after a tick or a keystroke.
+ *
+ * The LIST is repainted in place rather than the whole screen: the supplier pane holds a loaded catalogue and a
+ * scroll position, and rebuilding it on every checkbox would throw both away. The action bar is asked to refresh
+ * itself separately so the send button's count stays true — the two are painted by different owners on purpose.
+ */
+function cbPickPaint(ns, listOnly){
+  const h = document.getElementById('cbpick_' + ns);
+  if(h) h.innerHTML = cbPickListHTML(ns);
+  if(!listOnly && typeof UI !== 'undefined' && UI._pickBar && UI._pickBar[ns]) { try{ UI._pickBar[ns](); }catch(_){ } }
+}
+/** Registers who repaints the send button for this picker. */
+function cbPickOnChange(ns, fn){ if(typeof UI==='undefined')return; UI._pickBar = UI._pickBar || {}; UI._pickBar[ns] = fn; }
+/**
+ * cbCartBar — the cart, above the list it fills.
+ *
+ * Athi, 2026-08-08: *"like normal cart, cart can be filled with selected items. show the cart symbol so there show
+ * how many items selected."*
+ *
+ * A count on a button at the bottom of a long catalogue is invisible while you are picking — you scroll away from
+ * it on the second screenful. This sits above the list, so what you have gathered is in view the whole time you are
+ * gathering it, which is the only reason a cart badge exists anywhere.
+ *
+ * EMPTY IS SHOWN, NOT HIDDEN. A cart that appears only once it has something in it teaches nobody that it is there.
+ * It sits greyed with a zero and says what to do, and it cannot be sent — an empty basket has nothing to send.
+ */
+function cbCartBar(ns, sendCall, label){
+  const n = (typeof cbPickCount==='function') ? cbPickCount(ns) : 0;
+  const on = n > 0;
+  return '<div data-testid="cart-'+esc(ns)+'" style="display:flex;align-items:center;gap:10px;margin:12px 0 9px;padding:9px 12px;'
+    + 'border:1px solid '+(on?'var(--blue)':'var(--line)')+';border-radius:10px;background:'+(on?'var(--blue-soft,#eef4ff)':'var(--paper,#fafafa)')+'">'
+    + '<span style="position:relative;font-size:18px;line-height:1">🛒'
+    + (on?'<span data-testid="cart-count-'+esc(ns)+'" style="position:absolute;top:-6px;right:-9px;background:var(--blue);color:#fff;border-radius:9px;'
+        + 'min-width:17px;height:17px;padding:0 4px;font-size:10.5px;font-weight:800;line-height:17px;text-align:center">'+n+'</span>':'')
+    + '</span>'
+    + '<span style="font-size:12.5px;color:'+(on?'var(--ink)':'var(--grey)')+';font-weight:'+(on?'700':'400')+'">'
+    + (on ? (n===1?'1 item in the cart':n+' items in the cart') : 'Tick the items you want — they collect here')+'</span>'
+    + (on?'<span onclick="cbPickClear(\''+esc(ns)+'\')" style="cursor:pointer;font-size:11.5px;color:var(--grey);margin-left:6px">Clear</span>':'')
+    + '<button class="pri" data-testid="cart-send-'+esc(ns)+'" style="margin-left:auto;padding:6px 14px;font-size:12.5px" '
+    + (on?'onclick="'+sendCall+'"':'disabled') + '>' + esc(label || 'Request these') + '</button>'
+    + '</div>';
+}
+// Kept for callers that only want to SHOW a catalogue; the picker is the same rows with boxes on them.
+function supCatalogueHTML(cat){
+  if(typeof cbPickInit === 'function') cbPickInit('sup', cat);
+  return cbPickHTML('sup', cat);
 }
 function loadSupplierConfidence(bridge){
   if(!bridge){ UI.supRd=null; return; }
@@ -2400,9 +2484,16 @@ function supDetailHTML(){
     let catcard;
     if(!x.has_catalogue) catcard=`<div class="sec">Order from them</div><div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;font-size:12px;color:#6b5a36">No catalogue published yet — nothing to order.</div>`;
     else if(d.loading) catcard=`<div class="sec">Order from them</div><div class="loadwrap" style="justify-content:flex-start;padding:6px 0"><span class="spin"></span> loading catalogue…</div>`;
-    else catcard=`<div class="sec">Order from them</div><div style="font-size:11.5px;color:var(--grey);margin-bottom:6px">${(d.items||[]).length} item(s) — priced in their currency, exactly as their own storefront shows them.</div>${supCatalogueHTML(d.cat||{})}`;
+    else catcard=`<div class="sec">Order from them</div><div style="font-size:11.5px;color:var(--grey);margin-bottom:6px">${(d.items||[]).length} item(s) — priced in their currency, exactly as their own storefront shows them.</div>`
+      + (function(){ if(typeof cbPickInit==='function') cbPickInit('sup', d.cat||{}); cbPickOnChange('sup', paintSupDetail);
+                     return cbCartBar('sup', `composeFromSupplier('${x.supplier_list_id}')`, 'Order these') + cbPickHTML('sup', d.cat||{}); })();
     body=supConfidenceStrip()+prof+catcard;
-    bar=`<button class="pri" ${x.has_catalogue?'':'disabled'} data-testid="sup-compose-order" onclick="composeFromSupplier('${x.supplier_list_id}')">🛒 Compose order</button><button class="warn" data-testid="sup-remove" onclick="delSupplier('${x.supplier_list_id}')">Remove from list</button>`;
+    // The cart's own button is above the list, where the picking happens. This one stays for the case it has always
+    // served: order the WHOLE catalogue without ticking anything — still correct for a six-item supplier, and the
+    // label says which of the two it is about to do, so it can never quietly mean something else.
+    const _n = (typeof cbPickCount==='function') ? cbPickCount('sup') : 0;
+    bar=`<button class="pri" ${x.has_catalogue?'':'disabled'} data-testid="sup-compose-order" onclick="composeFromSupplier('${x.supplier_list_id}')">🛒 ${_n? 'Order '+_n+' in cart' : 'Compose order — all items'}</button>`
+      + `<button class="warn" data-testid="sup-remove" onclick="delSupplier('${x.supplier_list_id}')">Remove from list</button>`;
   }
   return `${head}<div class="db">${body}</div><div class="actbar">${bar}</div>`;
 }
@@ -2422,7 +2513,12 @@ async function saveSupplier(id){ const err=document.getElementById("sp_ederr"); 
   try{ await api("supPatch",{params:{id},body}); const x=(UI.sups||[]).find(s=>s.supplier_list_id===id); if(x){ x.nickname=body.nickname; x.category=body.category; x.notes=body.notes; } if(UI.supDet&&UI.supDet.supplier)Object.assign(UI.supDet.supplier, body); UI.supMode='view'; paintSupList(); paintSupDetail(); toast("Supplier updated ✓"); }
   catch(e){ if(err)err.textContent=((e&&e.message)||"Failed")+" — this needs the Stage-B migration applied."; } }
 async function composeFromSupplier(id){ const d=UI.supDet, x=d&&d.supplier; if(!x||x.supplier_list_id!==id)return;
-  let items=d.items;
+  // TICKED LINES FIRST. A variant carries its parent's name into the order line ("Tussar Emulsion 4L") — an order
+  // that just says "4L" is not an order anybody can read six weeks later.
+  const picked = (typeof cbPickSelected==='function') ? cbPickSelected('sup') : [];
+  let items = picked.length
+    ? picked.map(p=>({ particulars:p.name, unit:p.unit, price:cbAmount(p.price) }))
+    : d.items;
   if(items==null){ try{ const cat=await supCatalogueFull(x.supplier_entity_id); items=(cat.items||[]).map(p=>{const dd=p.item_data||p; return {particulars:dd.name||dd.product||'item', unit:dd.unit||'unit', price:cbAmount(dd.price)};}); }catch(e){ items=[]; } }
   compose({ supplier:{name:supName(x), bridge:x.bridge_id, entity_id:x.supplier_entity_id}, recipients:[{name:supName(x), role:'to', bridge:x.bridge_id||null}], catalogue:items });
 }

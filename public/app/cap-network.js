@@ -1269,23 +1269,58 @@ function netAskFor(entityId, storeName, itemName, bridgeId, rowPrice){
    same speed. Not a second implementation that would drift from it. */
 function netBrowse(entityId, name, bridgeId){
   UI._brSel = { entity_id: entityId, name: name, bridge_id: bridgeId };
-  UI._brItems = null; UI._brBusy = true;
+  UI._brItems = null; UI._brCat = null; UI._brBusy = true;
   _netPaintBrowse();
   if (typeof supCatalogueFull !== 'function') { UI._brBusy = false; _netPaintBrowse(); return; }
   supCatalogueFull(entityId)
     .then(function(cat){
       UI._brBusy = false;
-      UI._brItems = (((cat && cat.items) || [])).map(function(p){
-        var d = p.item_data || p;
-        return { name: d.name || d.product || '(unnamed)', code: d.code || d.sku || null,
-                 unit: d.unit || 'unit', price: (typeof cbAmount === 'function') ? cbAmount(d.price) : d.price,
-                 avail: d.avail || null };
-      });
+      // The WHOLE payload is kept, not a flattened copy: the picker needs `groups` to put a product's sizes under
+      // one heading, and a mapped list would have thrown that away — the same drift catalogue-lines.js exists to stop.
+      UI._brCat = cat || {};
+      UI._brItems = ((cat && cat.items) || []);
+      if (typeof cbPickInit === 'function') cbPickInit('net', UI._brCat);
+      if (typeof cbPickOnChange === 'function') cbPickOnChange('net', _netPaintBrowse);
       _netPaintBrowse();
     })
     .catch(function(e){ UI._brBusy = false; UI._brItems = []; UI._brErr = (e && e.message) || 'Could not read it'; _netPaintBrowse(); });
 }
-function netBrowseBack(){ UI._brSel = null; UI._brItems = null; UI._brErr = null; _netPaintBrowse(); }
+function netBrowseBack(){ UI._brSel = null; UI._brItems = null; UI._brCat = null; UI._brErr = null; _netPaintBrowse(); }
+/**
+ * netSendCart — send the cart, as ONE request to that store.
+ *
+ * Athi, 2026-08-08: *"they should be able to select more product and then send button."*
+ *
+ * ⚠️ ONE CHIT, NOT ONE PER LINE. Five items picked from one store is one order with five lines — the same thing a
+ * supplier order is. Firing five separate requests would give the receiving store five things to answer, five
+ * things to dispute and nothing that adds up, which is precisely the reconciliation CB exists to make possible.
+ *
+ * It goes down the SAME compose path as netAskFor and composeFromSupplier — their form, their catalogue, their
+ * required fields. The cart decides WHAT is asked for; it does not get to decide how a store is asked.
+ */
+function netSendCart(){
+  var s = UI._brSel;
+  if (!s) return;
+  var picked = (typeof cbPickSelected === 'function') ? cbPickSelected('net') : [];
+  if (!picked.length) return;
+  if (typeof compose !== 'function') {
+    if (typeof toast === 'function') toast('Compose is not available on this screen', true);
+    return;
+  }
+  // THEIR price, as they stamped it — never zero, never converted. Same rule as the single-item request.
+  var amt = function(p){ var v = (typeof cbAmount === 'function') ? cbAmount(p.price) : p.price;
+                         return (v === null || v === undefined || v === '') ? 0 : Number(v) || 0; };
+  var full = (UI._brItems || []).map(function(p){ var d = p.item_data || p;
+    return { particulars: d.name || d.product || 'item', unit: d.unit || 'unit',
+             price: (typeof cbAmount === 'function') ? cbAmount(d.price) : d.price }; });
+  compose({
+    supplier: { name: s.name, bridge: s.bridge_id || null, entity_id: s.entity_id },
+    recipients: [{ name: s.name, role: 'to', bridge: s.bridge_id || null, entity_id: s.entity_id }],
+    catalogue: full,
+    // Quantity opens at 1 per line and is editable in compose — Athi, 2026-08-08: "will anyone ask only one quantity."
+    items: picked.map(function(p){ return { particulars: p.name, unit: p.unit, price: amt(p), qty: 1 }; }),
+  });
+}
 function _netPaintBrowse(){
   var el = (typeof document !== 'undefined') ? document.getElementById('netBrowseBody') : null;
   if (el) el.innerHTML = _netBrowseBody();
@@ -1304,21 +1339,19 @@ function _netBrowseBody(){
       return head + '<div style="padding:20px 2px;color:var(--grey);font-size:13px">'
         + (UI._brErr ? esc(UI._brErr) : 'Nothing in this catalogue that you can see.') + '</div>';
     }
-    return head + items.map(function(it){
-      var a = it.avail;
-      var qty = a && a.qty !== undefined && a.qty !== null ? a.qty : null;
-      return '<div style="padding:10px 2px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:baseline;flex-wrap:wrap">'
-        + '<div style="flex:1;min-width:180px"><b style="font-size:13.5px">' + esc(it.name) + '</b>'
-        + (it.code ? '<span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;color:var(--grey);margin-left:7px">' + esc(it.code) + '</span>' : '')
-        + '<div style="font-size:11.5px;color:' + (qty === null ? '#8a94a3' : (qty > 0 ? '#2c7a43' : '#a5382e')) + ';margin-top:2px">'
-        + (qty === null ? 'stock not reported' : qty + ' in stock') + '</div></div>'
-        + '<span style="font-size:13px;font-weight:700">' + ((typeof inr === 'function') ? inr(it.price) : esc(it.price))
-        + '<span style="font-weight:400;color:var(--grey);font-size:11.5px"> / ' + esc(it.unit) + '</span></span>'
-        + '<button onclick="netAskFor(\'' + esc(s.entity_id) + '\',\'' + esc(s.name) + '\',\''
-        + esc(String(it.name).replace(/'/g, '')) + '\',\'' + esc(s.bridge_id || '') + '\','
-        + (it.price === null || it.price === undefined ? 'null' : Number(it.price) || 0) + ')" style="padding:5px 12px;font-size:12px">Request</button>'
-        + '</div>';
-    }).join('');
+    /**
+     * ── THE SAME PICKER THE SUPPLIERS SCREEN USES ────────────────────────────────────────────────────────────────
+     * Athi, 2026-08-08: *"in supplier and network, the same pattern. with check box, and search, they should be
+     * able to select more product and then send button."* — and then: *"like normal cart… show the cart symbol so
+     * there show how many items selected."*
+     *
+     * So this screen no longer renders its own item rows. It renders the shared picker (app/catalogue-lines.js for
+     * the rules, cbPickHTML for the house style) and a cart strip on top. A store's catalogue is the same catalogue
+     * whether you reached it through Suppliers or through the Network; two renderers would eventually disagree
+     * about what a variant is, which is the divergence the shared walk was written to end.
+     */
+    return head + cbCartBar('net', 'netSendCart()')
+      + ((typeof cbPickHTML === 'function') ? cbPickHTML('net', UI._brCat || {}) : '');
   }
 
   var L = UI._brStores;
