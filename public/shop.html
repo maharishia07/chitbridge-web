@@ -369,13 +369,16 @@ function productListHtml(data, cur){
    * because shop.html is a public page in a customer's brand colours and the signed-in app is not. Sharing the rules
    * is the requirement; sharing the stylesheet would be a different and worse thing.
    */
-  cbPickInit('shop', data, { accent:'#c0392b', soft:'#fdf3f2', symbol:_shopSym(), from:(data.shop&&data.shop.display_name)||'',
+  /* ⚠️ ONE CART, HELD. render() runs again on a region change, so the handle is released first — a create()
+     without a destroy() is the leak the namespaced API could not express. */
+  if (_CART) _CART.destroy();
+  _CART = CBCart.create(data, { accent:'#c0392b', soft:'#fdf3f2', symbol:_shopSym(), from:(data.shop&&data.shop.display_name)||'',
     cartTitle:'Your basket', checkoutLabel:'Check out →', emptyHint:'Press + on what you want',
     noCatalogue:'This shop has nothing on display yet.',
     listEl:'p_list', barEl:'p_cart', onCheckout:function(){ shopCartOrder(); } });
   if (!cbLineRows(data).length) return '';
   return '<div class="sechd" style="color:var(--grey)">🗂️ Products</div>'
-    + '<input id="p_search" placeholder="Search products…" value="'+esc((cbPickState('shop')||{}).q||'')+'"'
+    + '<input id="p_search" placeholder="Search products…" value="'+esc((_CART.state()||{}).q||'')+'"'
     + ' oninput="shopPickSearch(this.value)" style="width:100%;padding:9px;border:1px solid #e7e3d8;border-radius:8px;margin:2px 0 8px;font-size:14px;box-sizing:border-box">'
     + '<div id="p_cart">' + shopCartBarHtml() + '</div>'
     + '<div id="p_list">' + shopPickListHtml(cur) + '</div>';
@@ -394,13 +397,15 @@ function productListHtml(data, cur){
  * by the local run, which never reached this code because the API refuses a localhost origin. The seam again.
  */
 function _shopSym(){ var c=(_SHOPDATA&&_SHOPDATA.shop&&_SHOPDATA.shop.currency_code)||''; return (!c||c==='INR')?'₹':(c+' '); }
-function shopPickListHtml(){ return CBCart.listHTML('shop'); }
-function shopCartBarHtml(){ return CBCart.barHTML('shop'); }
+/* The one cart this page holds. Created in productListHtml, released before it is created again. */
+var _CART=null;
+function shopPickListHtml(){ return _CART?_CART.listHTML():''; }
+function shopCartBarHtml(){ return _CART?_CART.barHTML():''; }
 function shopPickPaint(listOnly){
   var l=el('p_list'); if(l) l.innerHTML=shopPickListHtml();
   if(!listOnly){ var c=el('p_cart'); if(c) c.innerHTML=shopCartBarHtml(); }
 }
-function shopPickSearch(q){ cbPickSearch('shop', q); shopPickPaint(true); }
+function shopPickSearch(q){ if(_CART) _CART.search(q); shopPickPaint(true); }
 function render(data){
   var s=data.shop||{}, cur=(s.currency_code==='INR'||!s.currency_code)?'₹':(s.currency_code+' ');
   if(s.order_input&&typeof s.order_input==='object') _OI=s.order_input;   // the declared contract, from the API
@@ -469,7 +474,7 @@ function orderOpen(idx){ if(!_FIN[idx])return;
  */
 function _isCart(){ return !!(_ord && _ord.cart); }
 function shopCartOrder(){
-  var picked = cbPickSelected('shop');
+  var picked = _CART ? _CART.selected() : [];
   if(!picked.length) return;
   /**
    * ⚠️ CARRY THE item_id. The server matches a product line by id first and falls back to NAME, rejecting any name
