@@ -111,7 +111,7 @@ function _netDirtyKey(){ return 'cb_netdirty_' + (SESSION.entityId || SESSION.en
 function _netLoggedIn(){ return typeof SESSION !== 'undefined' && !!SESSION.token; }
 function _netIsDirty(){ try { return localStorage.getItem(_netDirtyKey()) === '1'; } catch (e) { return false; } }
 function _netSetDirty(on){ try { if (on) localStorage.setItem(_netDirtyKey(), '1'); else localStorage.removeItem(_netDirtyKey()); } catch (e) {} }
-function _netStripView(net){ try { var c = JSON.parse(JSON.stringify(net)); delete c.sel; delete c.openCap; delete c.catTab; delete c.collapsed; return c; } catch (e) { return net; } }   // don't sync transient view state across devices
+function _netStripView(net){ try { var c = JSON.parse(JSON.stringify(net)); delete c.sel; delete c.tab; delete c.openCap; delete c.catTab; delete c.collapsed; return c; } catch (e) { return net; } }   // don't sync transient view state across devices
 var _netPushTimer = null;
 function _netPushServer(){
   if (!_netLoggedIn() || !UI.net) return;
