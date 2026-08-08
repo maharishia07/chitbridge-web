@@ -56,7 +56,11 @@ module.exports = defineConfig({
         // storefront with no session — which is how a buyer actually gets there.
         /network-cascade\.spec\.js/,
         // signed-out is the definition of a noauth test: it asserts that no session means no app, over time
-        /signed-out\.spec\.js/],
+        /signed-out\.spec\.js/,
+        // ⚠️ THE PRE-PUSH GATE. Seconds, no login, no data: did the page BOOT without throwing? Five defects in the
+        // 2026-08-09 cart integration were invisible to node -c and to the unit tests, and twice took the public
+        // storefront down. Run before pushing anything touching app.html, shop.html or app/*.js.
+        /render-smoke\.spec\.js/],
     },
     // 4 · CROSS-BROWSER + SIZE sweep of the COUNTER flows (keyboard/storefront/chits). Opt-in — run e.g.
     //     `npx playwright test --project=counter-firefox`. The default run stays Chromium@counter for speed.
