@@ -1096,7 +1096,8 @@ function _netAvailBody(){
       // else. Nothing new is invented for "internal" transfers: a store asking a sibling is still two parties.
       + (r.is_me ? '<div style="font-size:11px;color:var(--grey);margin-top:5px">This is your own stock.</div>'
          : '<div style="margin-top:7px"><button onclick="netAskFor(\'' + esc(r.entity_id) + '\',\'' + esc(r.store) + '\',\''
-           + esc(String(r.name).replace(/'/g, '')) + '\',\'' + esc(r.bridge_id || '') + '\')" style="padding:5px 12px;font-size:12px">'
+           + esc(String(r.name).replace(/'/g, '')) + '\',\'' + esc(r.bridge_id || '') + '\','
+           + (r.price === null || r.price === undefined ? 'null' : Number(r.price)) + ')" style="padding:5px 12px;font-size:12px">'
            + (unknown ? 'Ask if they have it' : 'Request from ' + esc(r.store)) + '</button></div>')
       + '</div>';
   }).join('');
@@ -1115,7 +1116,7 @@ function _netAvailBody(){
  * like anything else. Nothing separate is invented for "internal" movement — the moment it were, the transfer
  * would stop being reconcilable against everything else, which is the whole reason CB exists.
  */
-function netAskFor(entityId, storeName, itemName, bridgeId){
+function netAskFor(entityId, storeName, itemName, bridgeId, rowPrice){
   /**
    * ⚠️ THE COMPOSE PATH, NOT A CHIT FIRED FROM A PROMPT.
    *
@@ -1137,12 +1138,30 @@ function netAskFor(entityId, storeName, itemName, bridgeId){
       if (typeof toast === 'function') toast('Compose is not available on this screen', true);
       return;
     }
+    /**
+     * ⚠️ THE PRE-FILLED LINE MUST CARRY THEIR PRICE, NOT ZERO.
+     *
+     * Athi, 2026-08-08: *"the item came with qty 1 and price as 0."* It did — I hardcoded a zero. A request that
+     * opens at zero is not a blank waiting to be filled; it reads as an offer of nothing, and pressing send would
+     * commit a line the supplier never agreed to at a number they never quoted.
+     *
+     * The price comes from THEIR catalogue first — the same list the dropdown is built from, matched by name — and
+     * from what the search reported second. Only if neither knows does it fall back to 0, which by then genuinely
+     * means "nobody has priced this".
+     */
+    var match = null, want = String(itemName || '').trim().toLowerCase();
+    (items || []).forEach(function(it){
+      if (!match && String(it.particulars || '').trim().toLowerCase() === want) match = it;
+    });
+    var price = match && match.price ? match.price
+              : (rowPrice !== undefined && rowPrice !== null && rowPrice !== '' ? Number(rowPrice) : 0);
     compose({
       supplier: { name: storeName, bridge: bridgeId || null, entity_id: entityId },
       recipients: [{ name: storeName, role: 'to', bridge: bridgeId || null, entity_id: entityId }],
       catalogue: items,
       // The line this search was about, so the person is not asked to find it again in a list they just searched.
-      items: [{ particulars: itemName, unit: 'unit', price: 0, qty: 1 }],
+      items: [{ particulars: (match && match.particulars) || itemName,
+                unit: (match && match.unit) || 'unit', price: price, qty: 1 }],
     });
   };
   // THEIR catalogue, so the compose lines come from what they actually sell rather than from what we guessed.
