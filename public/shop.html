@@ -369,7 +369,6 @@ function productListHtml(data, cur){
    * because shop.html is a public page in a customer's brand colours and the signed-in app is not. Sharing the rules
    * is the requirement; sharing the stylesheet would be a different and worse thing.
    */
-  _PCUR = cur;
   cbPickInit('shop', data, { accent:'#c0392b', soft:'#fdf3f2', symbol:_shopSym(), from:(data.shop&&data.shop.display_name)||'',
     cartTitle:'Your basket', checkoutLabel:'Check out →', emptyHint:'Press + on what you want',
     noCatalogue:'This shop has nothing on display yet.',
@@ -384,7 +383,6 @@ function productListHtml(data, cur){
 /* ⚠️ THE ROWS AND THE BAR MOVED to app/cart-ui.js — the same cart Suppliers, Network and compose use. This page
    keeps only its ACCENT, because it is a public page in the shop's colours; the rules are shared, the palette
    is not. shopPickListHtml / shopCartBarHtml are now one-line forwarders. */
-var _PCUR='₹';
 /**
  * ⚠️ _shopSym MUST BE DEFINED BEFORE productListHtml RUNS.
  *

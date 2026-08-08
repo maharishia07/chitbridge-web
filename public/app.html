@@ -2312,7 +2312,7 @@ async function supCatalogueFull(sid){
  * same view." The read was already shared (buildPublicView); this is the render.
  */
 /* ⚠️ THE PICKER RENDERERS MOVED to app/cart-ui.js (loaded above), which is now the ONE cart for Suppliers,
-   Network, compose and the storefront. cbPickHTML / cbPickListHTML / cbCartBar / cbPickPaint / cbPickOnChange
+   Network, compose and the storefront. cbPickHTML / cbCartBar / cbPickPaint / cbPickOnChange
    still exist under those names — as thin adapters over CBCart, not as a second copy. The bodies that used to
    be here are DELETED, so there is nothing left to drift. */
 // Kept for callers that only want to SHOW a catalogue; the picker is the same rows with boxes on them.

@@ -635,7 +635,9 @@
    * its own copy would be the divergence this whole exercise exists to end.
    *
    * They are a migration step and should shrink: as each screen moves to calling CBCart directly, its adapter
-   * loses a caller and can go.
+   * loses a caller and can go. Five already have — cbPickUnits, cbPickTotal, cbPickToggle, cbPickView and
+   * cbPickListHTML were removed on 2026-08-09 once a sweep showed nothing called them. A compat shim with no
+   * caller is not compatibility, it is dead weight that reads like a supported API.
    */
   function ids(ns) {
     return { listEl: 'cbpick_' + ns, barEl: 'cbcartbar_' + ns, popupEl: 'cbcart_ov', popupBodyEl: 'cbcart_ovc',
@@ -670,21 +672,16 @@
   root.cbPickRows = rows;
   root.cbPickSelected = selected;
   root.cbPickCount = lines;
-  root.cbPickUnits = units;
   root.cbPickQtyOf = qtyOf;
-  root.cbPickTotal = function (ns) { var t = total(ns); return { amount: t.amount, partial: t.partial, currency: '' }; };
   root.cbPickAdd = add;
   root.cbPickDec = dec;
   root.cbPickSetQty = setQty;
-  root.cbPickToggle = function (ns, id) { qtyOf(ns, id) ? setQty(ns, id, 0) : add(ns, id); };
   root.cbPickGroup = group;
   root.cbPickClear = clear;
   root.cbPickSearch = search;
   root.cbPickAddAdhoc = addAdhoc;
   root.cbPickOpen = open;
   root.cbPickClose = close;
-  /** The old view-toggle. The cart is a POPUP now, so this opens it — one way to see the cart, not two. */
-  root.cbPickView = function (ns) { open(ns); };
   /** The list, with its own search box above it — what the screens used to build by hand. */
   root.cbPickHTML = function (ns, cat, opts) {
     if (cat) root.cbPickInit(ns, cat, opts);
@@ -698,7 +695,6 @@
       + '<div id="' + esc(ids(ns).listEl) + '" data-testid="' + esc(opt(ns, 'testid', 'pick-' + ns)) + '">'
       + listHTML(ns) + '</div>';
   };
-  root.cbPickListHTML = listHTML;
   /**
    * The bar. `sendCall` is a handler STRING, which is this codebase's inline-handler idiom, so it is honoured as
    * the checkout action rather than re-plumbed — the adapter's job is to change nothing the caller can see.
