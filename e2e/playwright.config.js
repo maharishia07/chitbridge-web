@@ -42,7 +42,11 @@ module.exports = defineConfig({
       dependencies: ['setup'],
       use: { ...devices['Desktop Chrome'], storageState: SAVED_SESSION },
       testMatch: /.*\.spec\.js/,
-      testIgnore: [/onboarding\.spec\.js/, /flow\.spec\.js/, /redproof\.spec\.js/, /swarm\.spec\.js/],
+      // ⚠️ ANCHORED TO THE FILENAME. These were bare substrings, so `/flow\.spec\.js/` also matched
+      // step-flow.spec.js — a brand-new spec was silently excluded from every project and reported as
+      // "No tests found". A test that is skipped because of a name collision is worse than a failing one:
+      // it looks like it passed. Any future `<something>-flow.spec.js` would have hit the same wall.
+      testIgnore: [/[\\/]onboarding\.spec\.js$/, /[\\/]flow\.spec\.js$/, /[\\/]redproof\.spec\.js$/, /[\\/]swarm\.spec\.js$/],
     },
     // 3 · flows that must start LOGGED OUT (they test onboarding itself / the welcome screen)
     {
@@ -50,7 +54,9 @@ module.exports = defineConfig({
       use: { ...devices['Desktop Chrome'] },
       // currency-matrix belongs here: it is a CUSTOMER view. It authenticates to the API itself to arrange each
       // combination, then loads the storefront with no session — which is how a real buyer arrives.
-      testMatch: [/onboarding\.spec\.js/, /flow\.spec\.js/, /redproof\.spec\.js/,
+      // Anchored for the same reason as the ignore list above — an unanchored /flow\.spec\.js/ would pull any
+      // future `<x>-flow.spec.js` into the logged-out project, where a signed-in flow would fail for no real reason.
+      testMatch: [/[\\/]onboarding\.spec\.js$/, /[\\/]flow\.spec\.js$/, /[\\/]redproof\.spec\.js$/,
         /currency-matrix\.spec\.js/, /mode-survives-order\.spec\.js/, /variants\.spec\.js/,
         // the cascade is a CUSTOMER view too: it arranges every combination through the API, then arrives at the
         // storefront with no session — which is how a buyer actually gets there.
