@@ -1877,18 +1877,50 @@ async function submitCompose(isDraft){
   const schema_values={}; ccSchema().forEach(f=>{ schema_values[f.field_key]=val("cf_"+f.field_key); });
   const line_items=CC.items.map(it=>({particulars:it.particulars,quantity:+it.qty||0,price:+it.price||0,total:ccLineTotal(it)}));
   const recipients=CC.rcpts.map(r=>({name:r.name,role:r.role,self:!!r.self}));
+  return await sendChit({ recipients, isDraft:!!isDraft, send_as_label, subject, schema_values, line_items,
+    priority:val("cc_priority")||"normal", files:CC.files||[], itemFiles:CC.items,
+    promote_draft_id:UI._draftId||undefined, forwarded_from:UI._forwardFrom||undefined,
+    onError:function(m){ if(err)err.textContent=m; } });
+}
+/**
+ * ════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+ *  sendChit — THE send. One implementation, every screen that mints a chit calls it.
+ * ════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+ *
+ * Extracted from submitCompose so the Suppliers step flow can finish an order WITHOUT opening the compose modal —
+ * which is the entire point of the redesign. Athi, 2026-08-08: *"reduce number of clicks, otherwise no one will be
+ * interested."* The old count was pick supplier → read profile → Compose order → modal → find item → qty → send.
+ *
+ * ⚠️ IT TAKES VALUES, NOT THE DOM. submitCompose used to read `cf_subject`, `cc_sendas` and `cc_priority` straight
+ * out of the compose modal, so sending was only possible from a screen that had drawn that modal. A second screen
+ * would have had to write a SECOND createChit call — which is the divergence this codebase keeps paying for. Now
+ * the caller assembles the values and this owns the wire: one createChit, one attachment pass, one set of toasts,
+ * one place where "what a sent chit does to the app" is decided.
+ *
+ * ⚠️ THE ATTACHMENT PASSES ARE PART OF SENDING, not of the modal. A chit whose files were uploaded by one caller
+ * and not another is the same chit with different evidence on it.
+ */
+async function sendChit(v){
+  v = v || {};
+  const fail = typeof v.onError==='function' ? v.onError : function(m){ toast(m, true); };
   try{
-    busyShow(isDraft?'Saving draft…':'Sending chit…');
-    const r=await api("createChit",{body:{recipients,is_draft:!!isDraft,send_as_label,subject,schema_values,line_items,external_priority:val("cc_priority")||"normal",promote_draft_id:UI._draftId||undefined,forwarded_from:UI._forwardFrom||undefined}});
+    busyShow(v.isDraft?'Saving draft…':'Sending chit…');
+    const r=await api("createChit",{body:{recipients:v.recipients||[], is_draft:!!v.isDraft, send_as_label:v.send_as_label,
+      subject:v.subject, schema_values:v.schema_values||{}, line_items:v.line_items||[],
+      external_priority:v.priority||"normal", promote_draft_id:v.promote_draft_id, forwarded_from:v.forwarded_from}});
     const _newId=r&&r.chit_id;
-    if(_newId && (CC.files||[]).length){ busyShow('Attaching files…'); for(const f of CC.files){ try{ await attUpload(_newId, f); }catch(e){ toast('Attachment "'+f.name+'" failed.'); } } }
-    if(_newId){ for(let _li=0;_li<CC.items.length;_li++){ const _it=CC.items[_li]; if(_it&&_it.files&&_it.files.length){ busyShow('Attaching files…'); for(const f of _it.files){ try{ await attUpload(_newId, f, {line_index:_li}); }catch(e){ toast('Attachment "'+f.name+'" failed.'); } } } } }
+    if(_newId && (v.files||[]).length){ busyShow('Attaching files…'); for(const f of v.files){ try{ await attUpload(_newId, f); }catch(e){ toast('Attachment "'+f.name+'" failed.'); } } }
+    // Per-LINE attachments, addressed by the line's index on the chit — so a file stays with the line it evidences.
+    const _lines=v.itemFiles||[];
+    if(_newId){ for(let _li=0;_li<_lines.length;_li++){ const _it=_lines[_li]; if(_it&&_it.files&&_it.files.length){ busyShow('Attaching files…'); for(const f of _it.files){ try{ await attUpload(_newId, f, {line_index:_li}); }catch(e){ toast('Attachment "'+f.name+'" failed.'); } } } } }
     closeModal(); CC={items:[],rcpts:[]};
-    if(isDraft){ toast(MSG.draftSaved()); UI.nav="drafts"; UI.folder="drafts"; try{localStorage.setItem("cb_nav","drafts");}catch(_){} }
+    if(typeof v.onSent==='function'){ try{ v.onSent(r); }catch(_){ } }
+    if(v.isDraft){ toast(MSG.draftSaved()); UI.nav="drafts"; UI.folder="drafts"; try{localStorage.setItem("cb_nav","drafts");}catch(_){} }
     else if(r&&r.selfCopies){ toast(MSG.chitBridged(r.copies, r.selfCopies)); UI.nav="task"; UI.folder="task"; }
     else { toast(MSG.chitBridged(r&&r.copies)); UI.nav="order"; UI.folder="order"; }
     UI.sel=null; UI.detail=null; await loadList(); busyHide(); renderApp();
-  }catch(e){ busyHide(); if(err)err.textContent=(e&&e.message)||"Something went wrong — please try again."; }
+    return r;
+  }catch(e){ busyHide(); fail((e&&e.message)||"Something went wrong — please try again."); return null; }
 }
 function ccAddFiles(files){ CC.files=CC.files||[]; for(var k=0;k<files.length;k++){ var f=files[k]; if(f.size>6*1024*1024){ toast(f.name+' is over 6MB — skipped.'); continue; } CC.files.push(f); } ccRenderFiles(); }
 function ccDelFile(i){ (CC.files||[]).splice(i,1); ccRenderFiles(); }
@@ -2300,13 +2332,156 @@ async function loadSuppliers(){
  * ⚠️ A DIFFERENT SUPPLIER IS A DIFFERENT BASKET. Carrying lines from one supplier's catalogue into another's is not
  * a convenience, it is an order addressed to someone who never listed the item.
  */
-function supCartRelease(){ if(UI._supCart){ UI._supCart.destroy(); } UI._supCart=null; UI._supCartFor=null; }
+function supCartRelease(){
+  if(UI._supCart){ UI._supCart.destroy(); } UI._supCart=null; UI._supCartFor=null;
+  if(UI._supFlow){ UI._supFlow.destroy(); } UI._supFlow=null;
+  UI._supOrder=null;
+}
+/**
+ * ── THE SUPPLIER ORDER, IN STEPS ──────────────────────────────────────────────────────────────────────────────────
+ * Athi, 2026-08-08: *"when you select the supplier, right hand side this catalogue should appear for sending order…
+ * reduce number of clicks, otherwise no one will be interested."*
+ *
+ * Before: pick supplier → read profile → "Compose order" → a modal opens → only THEN their catalogue loads → find
+ * item → qty → send. The catalogue — the thing you came for — was three clicks inside a modal.
+ * Now: pick supplier → + → Check out → Review → Send. The catalogue IS the screen.
+ *
+ * ⭐ THREE STEPS, NOT FOUR. There is no "To": on a supplier order the recipient IS the supplier, and asking would be
+ * asking a question with one answer. Compose keeps its To step because there the recipient is genuinely unknown.
+ */
+function supOrderState(){ if(!UI._supOrder) UI._supOrder={subject:'',by:'',addr:'',note:''}; return UI._supOrder; }
+function supStepsFor(x){
+  return CBSteps.create({
+    steps:[{k:'items',n:'Items',t:'What do you need from them?'},
+           {k:'details',n:'Details',t:'When, where, and anything they should know'},
+           {k:'review',n:'Review',t:'Check it, then send'}],
+    railEl:'sup_rail', bodyEl:'sup_body', footEl:'sup_foot', subEl:'sup_sub',
+    render:function(k){ return k==='items'?supStepItems():k==='details'?supStepDetails(x):supStepReview(x); },
+    guard:function(k){
+      if(k==='items' && !(UI._supCart&&UI._supCart.lines())) return 'Add at least one item.';
+      if(k==='details' && !supOrderState().subject.trim()) return 'A subject is required.';
+      return null;
+    },
+    nextLabel:function(k){ return k==='items'?'Check out →':null; },
+    sendLabel:function(){ return 'Send order to '+supName(x); },
+    cancelLabel:'Their details',
+    draftLabel:'Save draft',
+    onCancel:function(){ supOpenProfile(x.supplier_list_id); },
+    onDraft:function(){ supSendOrder(x, true); },
+    onSend:function(){ supSendOrder(x, false); },
+    // A step CHANGE is a navigation, so the whole pane is rebuilt — "Remove from list" belongs only on the
+    // browsing step, and that lives outside the flow's own footer.
+    onStep:function(){ paintSupDetail(); }
+  });
+}
+/* The subject the schema requires, proposed rather than demanded — it is still editable on the Details step. */
+function supDefaultSubject(x){ return 'Order — '+supName(x); }
+function supStepItems(){
+  return supCartHTML()
+    + '<div style="margin-top:9px;font-size:11.5px;color:var(--grey)">'
+    + '<span data-testid="sup-add-all" onclick="supAddAll()" style="cursor:pointer;color:var(--blue);font-weight:600">Add everything to the cart</span>'
+    + ' — for a short catalogue where ticking each line is the long way round.</div>';
+}
+/** The whole catalogue, ticked. Replaces the old "Compose order — all items", which skipped the cart entirely. */
+function supAddAll(){
+  var c=UI._supCart; if(!c) return;
+  c.rows().forEach(function(r){ if(r.type==='line' && !c.qtyOf(r.item_id)) c.add(r.item_id); });
+}
+function supStepDetails(x){
+  var o=supOrderState();
+  if(!o.subject) o.subject=supDefaultSubject(x);
+  return '<div class="sec">Your order to '+esc(supName(x))+'</div>'
+    + '<label class="fl">Subject <span style="color:#b4453f">*</span></label>'
+    + '<input class="inp" data-testid="sup-subject" value="'+esc(o.subject)+'" oninput="UI._supOrder.subject=this.value;UI._supFlow&&UI._supFlow.paintFoot()">'
+    + '<div class="two"><div><label class="fl">Needed by</label>'
+    + '<input class="inp" type="date" data-testid="sup-by" value="'+esc(o.by)+'" oninput="UI._supOrder.by=this.value"></div>'
+    + '<div><label class="fl">Deliver to</label>'
+    + '<input class="inp" data-testid="sup-addr" value="'+esc(o.addr)+'" placeholder="site / address" oninput="UI._supOrder.addr=this.value"></div></div>'
+    + '<label class="fl">Note</label>'
+    + '<input class="inp" data-testid="sup-note" value="'+esc(o.note)+'" placeholder="instructions" oninput="UI._supOrder.note=this.value">'
+    + '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:10px;padding:9px 12px;font-size:12.5px;color:#6b5a36;margin:10px 0">'
+    + 'Asked for, not agreed — '+esc(supName(x))+' confirms the date and the price.</div>';
+}
+function supStepReview(x){
+  var o=supOrderState(), c=UI._supCart, T=c?c.total():{amount:0}, sel=c?c.selected():[];
+  var row=function(k,v){ return '<div style="display:flex;gap:10px;padding:8px 12px;border-top:1px solid var(--line);font-size:13px">'
+    + '<span style="min-width:96px;color:var(--grey);font-size:11.5px">'+k+'</span><span style="flex:1">'+v+'</span></div>'; };
+  var card=function(h,inner,edit){ return '<div style="border:1px solid var(--line);border-radius:11px;overflow:hidden;margin-top:8px">'
+    + '<div style="background:var(--paper);padding:8px 12px;font-size:11px;font-weight:800;color:var(--grey);text-transform:uppercase;letter-spacing:.05em;display:flex">'+h
+    + (edit!=null?'<span style="margin-left:auto;color:var(--blue);cursor:pointer;text-transform:none;letter-spacing:0;font-size:11.5px" onclick="UI._supFlow.go('+edit+')">Change</span>':'')
+    + '</div>'+inner+'</div>'; };
+  return card('To<span style="margin-left:auto;font-weight:400;text-transform:none;letter-spacing:0">fixed — this is their order</span>',
+        '<div style="padding:8px 12px;font-size:13px"><b>'+esc(supName(x))+'</b> <span class="mono" style="color:var(--grey);font-size:11.5px">'+esc(x.bridge_id||'')+'</span></div>')
+    + card('Items · '+sel.length, sel.map(function(l){
+        return row(l.qty+' × '+esc(l.unit), '<span style="flex:1">'+esc(l.name)+'</span>'
+          + (l.offered?'<span style="color:var(--grey);font-size:11.5px"> · your offer</span>':'')
+          + '<b style="float:right">'+(l.line_total==null?'—':esc(String(l.line_total)))+'</b>'); }).join('')
+        + '<div style="display:flex;padding:10px 12px;border-top:2px solid var(--line);font-size:14px;font-weight:800">'
+        + '<span style="flex:1">'+(T.offered?'Total at your offer':'Total')+'</span>'
+        + '<span data-testid="sup-total">'+(T.amount?esc(String(T.amount))+(T.partial?'+':''):'—')+'</span></div>', 0)
+    + card('Details', row('Subject', esc(o.subject)||'<span style="color:#b4453f">required</span>')
+        + row('Needed by', o.by?esc(o.by):'—') + row('Deliver to', o.addr?esc(o.addr):'—')
+        + row('Note', o.note?esc(o.note):'—'), 1)
+    + '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:10px;padding:9px 12px;font-size:12.5px;color:#6b5a36;margin:10px 0">'
+    + 'Their price, as their catalogue states it. They reprice on receipt — this is a request.</div>'
+    /**
+     * ⚠️ THE ESCAPE HATCH. Three steps cannot express everything a chit can: no CC, no "For", no attachments, no
+     * line that is not in their catalogue. Dropping the compose route entirely would have removed those from
+     * supplier orders altogether — a quiet capability loss traded for a click count. So the fast path is the
+     * default and the full one is one link away, carrying everything already entered.
+     */
+    + '<div style="font-size:11.5px;color:var(--grey);margin-top:6px">Need CC, attachments or a line they do not list? '
+    + '<span data-testid="sup-open-compose" onclick="composeFromSupplier(\''+esc(x.supplier_list_id)+'\')" style="cursor:pointer;color:var(--blue);font-weight:600">Open in compose →</span></div>';
+}
+/**
+ * ⚠️ IT SENDS. Not "open compose pre-filled" — that would have made the redesign LONGER than what it replaced, with
+ * two Review steps for one order. It goes through sendChit(), the same one submitCompose uses, so there is exactly
+ * one createChit in this file and a supplier order is the same kind of chit as any other.
+ */
+function supSendOrder(x, isDraft){
+  var o=supOrderState(), c=UI._supCart; if(!c) return;
+  var sel=c.selected();
+  if(!isDraft && !sel.length) return;
+  sendChit({
+    recipients:[{name:supName(x), role:'to', self:false}],
+    isDraft:!!isDraft,
+    send_as_label:(typeof SESSION!=='undefined'&&SESSION.entity)||'',
+    subject:o.subject||supDefaultSubject(x),
+    schema_values:{ subject:o.subject||supDefaultSubject(x), delivery_by:o.by||'', deliver_to:o.addr||'', note:o.note||'' },
+    line_items:sel.map(function(p){ return { particulars:p.name, quantity:+p.qty||0,
+      price:+(typeof cbAmount==='function'?cbAmount(p.price):p.price)||0,
+      total:(+p.qty||0)*(+(typeof cbAmount==='function'?cbAmount(p.price):p.price)||0) }; }),
+    priority:'normal',
+    onSent:function(){ supCartRelease(); },
+    onError:function(m){ toast(m, true); }
+  });
+}
+/** Their details — profile, clearances and the way out of the list. The chip opens it; it is never where a WARNING
+ *  first appears, only where the detail behind one lives. */
+function supOpenProfile(id){
+  var x=(UI.sups||[]).find(function(s){return s.supplier_list_id===id;}); if(!x) return;
+  var r=UI.supRd, sm=(r&&r.data&&r.data.summary)||null;
+  var kv=function(k,v){ return '<div style="display:flex;gap:9px;padding:7px 0;border-bottom:1px dashed var(--line);font-size:13px">'
+    + '<b style="min-width:96px;color:var(--grey);font-size:11px;text-transform:uppercase;font-weight:700">'+k+'</b><span>'+v+'</span></div>'; };
+  modal('<div class="mh">🏭 '+esc(supName(x))+'</div><div class="mb">'
+    + (sm&&!sm.ready?'<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:10px;padding:9px 12px;font-size:12.5px;color:#6b5a36;margin-bottom:9px">⚠ '
+        +((sm.total||0)-(sm.met||0))+' clearance(s) outstanding · '+(sm.met||0)+'/'+(sm.total||0)+' met — status only, their evidence stays theirs.</div>':'')
+    + kv('Legal name', esc(x.display_name||'—')) + kv('Your name', esc(x.nickname||'—'))
+    + kv('User ID', '<span class="mono">'+esc(x.bridge_id||'')+'</span>')
+    + kv('Category', esc(x.category||'—')) + kv('Notes', esc(x.notes||'—'))
+    + '<div style="margin-top:12px"><button data-testid="sup-passport" onclick="viewSupplierPassport(\''+esc(x.bridge_id)+'\',\''+String(supName(x)).replace(/[\\\\']/g,'')+'\')" style="border:1px solid var(--line);background:#fff;border-radius:8px;padding:7px 11px;font-size:12px;font-weight:700;cursor:pointer">'+esc(supName(x))+'&rsquo;s passport &rarr;</button></div>'
+    + '</div><div class="mf"><button class="pri" onclick="closeModal()">Close</button></div>', true);
+}
 /** The cart's own repaint target: the whole detail pane, which is what the bar and the list live inside. */
 function supCartOpts(x){
-  return { listEl:'cbpick_sup', barEl:'cbcartbar_sup', checkoutLabel:'Order these',
+  return { listEl:'cbpick_sup', barEl:'cbcartbar_sup', checkoutLabel:'Check out →',
            from:supName(x), cartTitle:'Your order',
-           onCheckout:function(){ composeFromSupplier(x.supplier_list_id); },
-           onChange:paintSupDetail };
+           // The cart hands over; THIS screen decides what "next" means. Checking out of the popup is the same
+           // action as pressing the footer's primary, so it lands on the same step rather than a second path.
+           onCheckout:function(){ if(UI._supFlow) UI._supFlow.next(); },
+           // ⚠️ ONLY THE FOOTER. Adding a line unblocks "Check out" and changes nothing else on screen — the cart
+           // repaints its own bar and list, so repainting the pane would rebuild the catalogue under the cursor.
+           onChange:function(){ if(UI._supFlow) UI._supFlow.paintFoot(); } };
 }
 async function selectSupplier(id, silent){
   UI.supSel=id; UI.supMode='view';
@@ -2322,9 +2497,10 @@ async function selectSupplier(id, silent){
     try{ const cat=await supCatalogueFull(x.supplier_entity_id); const arr=cat.items||[];
       UI.supDet={supplier:x, cat:cat,
         items:arr.map(p=>{const d=p.item_data||p; return {particulars:d.name||d.product||'item', unit:d.unit||'unit', price:cbAmount(d.price)};}), loading:false};
-      // ⚠️ THE CART IS CREATED HERE, where a catalogue actually ARRIVES — once per supplier, not once per repaint.
+      // ⚠️ THE CART AND THE FLOW ARE CREATED HERE, where a catalogue actually ARRIVES — once per supplier, not once
+      // per repaint. Both are held for exactly as long as this supplier is the one on screen.
       if(UI._supCart && UI._supCartFor===id) UI._supCart.setCatalogue(cat);
-      else { supCartRelease(); UI._supCart=CBCart.create(cat, supCartOpts(x)); UI._supCartFor=id; }
+      else { supCartRelease(); UI._supCart=CBCart.create(cat, supCartOpts(x)); UI._supCartFor=id; UI._supFlow=supStepsFor(x); }
     }catch(e){ UI.supDet={supplier:x, cat:null, items:[], loading:false, err:e.message}; supCartRelease(); }
     if(UI.supSel===id) paintSupDetail();
   } else supCartRelease();
@@ -2388,26 +2564,10 @@ function loadSupplierConfidence(bridge){
   api('readinessOf',{params:{bridge_id:bridge}}).then(function(d){ UI.supRd={bridge:bridge, data:d}; if(UI.supDet&&UI.supDet.supplier&&UI.supDet.supplier.bridge_id===bridge) paintSupDetail(); })
     .catch(function(e){ UI.supRd={bridge:bridge, err:(e&&e.message)||''}; });
 }
-function supConfidenceStrip(){
-  var r=UI.supRd, x=UI.supDet&&UI.supDet.supplier;
-  if(!r||!x||r.bridge!==x.bridge_id) return '';
-  if(r.loading) return '<div class="sec">Trade confidence</div><div class="loadwrap" style="justify-content:flex-start;padding:6px 0"><span class="spin"></span> checking clearances…</div>';
-  if(r.err||!r.data) return '';
-  var sm=r.data.summary||{}, ready=!!sm.ready, col=ready?"#2f8f5b":"#c98a1a";
-  // ⚠️ SAY WHOSE. Athi, 2026-08-06: "does it bring the trade-ready details of Beta here? if so it has to be
-  // EXPLICITLY stated."
-  //
-  // It does — GET /api/governance/readiness/:bridge_id resolves the clearances of THAT bridge_id. But the panel was
-  // headed only "Trade confidence" and sat inside your own screen, so "35 clearances outstanding" read just as
-  // easily as YOUR OWN shortfall. A number about someone else, shown without saying so, is worse than no number:
-  // it is the kind of thing a person acts on before noticing they misread it.
-  var who=esc(supName(x));
-  return '<div class="sec">'+who+' — trade confidence <span style="font-weight:400;color:var(--grey);text-transform:none;letter-spacing:0">(their clearances, not yours)</span></div>'
-    +'<div style="display:flex;gap:11px;align-items:center;border:1px solid '+(ready?"#bfe3cb":"#f0dcae")+';background:'+(ready?"#eaf6ee":"#fdf3e3")+';border-radius:10px;padding:11px 13px">'
-    +'<div style="width:34px;height:34px;border-radius:50%;background:'+col+';color:#fff;display:grid;place-items:center;font-size:17px;flex:0 0 auto">'+(ready?"✓":"!")+'</div>'
-    +'<div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13px;color:'+col+'">'+(ready?(who+" is import-ready — every clearance met"):(who+" has "+(sm.total-sm.met)+" clearance(s) outstanding"))+'</div><div style="font-size:11px;color:var(--grey)">'+(sm.met||0)+" / "+(sm.total||0)+' met · status only — their evidence stays theirs</div></div>'
-    +'<button onclick="viewSupplierPassport(\''+esc(x.bridge_id)+'\',\''+String(supName(x)).replace(/[\\\\\']/g,'')+'\')" title="Open '+who+'\'s readiness passport" style="border:1px solid var(--line);background:#fff;border-radius:8px;padding:7px 11px;font-size:12px;font-weight:700;cursor:pointer;flex:0 0 auto">'+who+'\'s passport &rarr;</button></div>';
-}
+/* ⚠️ supConfidenceStrip REMOVED — the step flow replaced it. Its whole job was a panel inside the pane saying
+   how many clearances the supplier is missing; that now rides ON the chip, which is where a warning has to be
+   (behind a tap is too late), and the detail behind it lives in supOpenProfile. loadSupplierConfidence still runs
+   and still fills UI.supRd — the chip and the profile overlay both read it. */
 /**
  * viewSupplierPassport — THEIR readiness, as an overlay, plainly labelled as theirs.
  *
@@ -2481,24 +2641,33 @@ function supDetailHTML(){
       <div class="err" id="sp_ederr" style="margin-top:8px"></div>`;
     bar=`<button class="pri" data-testid="sup-save" onclick="saveSupplier('${x.supplier_list_id}')">Save</button><button onclick="setSupMode('view')">Cancel</button>`;
   } else {
-    const prof=`<div class="sec">Profile</div><div class="itab" style="padding:4px 12px">
-      <div class="kv" style="display:flex;gap:8px;padding:6px 0;border-bottom:1px dashed var(--line)"><b style="min-width:92px;color:var(--grey);font-weight:600;font-size:11px;text-transform:uppercase">Legal name</b><span>${esc(x.display_name||'—')}</span></div>
-      <div class="kv" style="display:flex;gap:8px;padding:6px 0;border-bottom:1px dashed var(--line)"><b style="min-width:92px;color:var(--grey);font-weight:600;font-size:11px;text-transform:uppercase">Your name</b><span>${esc(x.nickname||'—')}</span></div>
-      <div class="kv" style="display:flex;gap:8px;padding:6px 0;border-bottom:1px dashed var(--line)"><b style="min-width:92px;color:var(--grey);font-weight:600;font-size:11px;text-transform:uppercase">User ID</b><span class="mono">${esc(x.bridge_id||'')}</span></div>
-      <div class="kv" style="display:flex;gap:8px;padding:6px 0;border-bottom:1px dashed var(--line)"><b style="min-width:92px;color:var(--grey);font-weight:600;font-size:11px;text-transform:uppercase">Category</b><span>${esc(x.category||'—')}</span></div>
-      <div class="kv" style="display:flex;gap:8px;padding:6px 0"><b style="min-width:92px;color:var(--grey);font-weight:600;font-size:11px;text-transform:uppercase">Notes</b><span>${esc(x.notes||'—')}</span></div></div>`;
+    /**
+     * ⚠️ THE PROFILE MOVED BEHIND THE CHIP, THE WARNING DID NOT. Selecting a supplier means you intend to order
+     * from them, so the catalogue is the default view and the profile is what costs a tap — the exception moves,
+     * not the main job. But an outstanding-clearance warning stays ON the chip: discovering at Review that you are
+     * ordering from someone who cannot clear customs is discovering it too late.
+     */
+    const c=UI.supRd&&UI.supRd.data&&UI.supRd.data.summary, bad=c&&!c.ready;
+    const chip=`<div style="padding:2px 0 0"><div data-testid="sup-chip" onclick="supOpenProfile('${x.supplier_list_id}')" style="display:inline-flex;align-items:center;gap:9px;border:1px solid var(--line);border-radius:22px;padding:6px 8px 6px 13px;background:#fff;cursor:pointer">`
+      + `<b style="font-size:13.5px">${esc(supName(x))}</b>`
+      + `<span class="mono" style="font-size:11px;color:var(--grey)">${esc(x.bridge_id||'')}</span>`
+      + (bad?`<span style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:20px;padding:2px 9px;font-size:11px;color:#8a5a1e;font-weight:700">⚠ ${(c.total||0)-(c.met||0)} clearances outstanding</span>`:'')
+      + `<span style="background:var(--paper);border-radius:20px;padding:3px 10px;font-size:11.5px;color:var(--blue);font-weight:700">Details ›</span></div></div>`;
     let catcard;
     if(!x.has_catalogue) catcard=`<div class="sec">Order from them</div><div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;font-size:12px;color:#6b5a36">No catalogue published yet — nothing to order.</div>`;
     else if(d.loading) catcard=`<div class="sec">Order from them</div><div class="loadwrap" style="justify-content:flex-start;padding:6px 0"><span class="spin"></span> loading catalogue…</div>`;
-    else catcard=`<div class="sec">Order from them</div><div style="font-size:11.5px;color:var(--grey);margin-bottom:6px">${(d.items||[]).length} item(s) — priced in their currency, exactly as their own storefront shows them.</div>`
-      + supCartHTML();
-    body=supConfidenceStrip()+prof+catcard;
-    // The cart's own button is above the list, where the picking happens. This one stays for the case it has always
-    // served: order the WHOLE catalogue without ticking anything — still correct for a six-item supplier, and the
-    // label says which of the two it is about to do, so it can never quietly mean something else.
-    const _n = UI._supCart ? UI._supCart.lines() : 0;
-    bar=`<button class="pri" ${x.has_catalogue?'':'disabled'} data-testid="sup-compose-order" onclick="composeFromSupplier('${x.supplier_list_id}')">🛒 ${_n? 'Order '+_n+' in cart' : 'Compose order — all items'}</button>`
-      + `<button class="warn" data-testid="sup-remove" onclick="delSupplier('${x.supplier_list_id}')">Remove from list</button>`;
+    // has_catalogue, finished loading, and still no cart → the READ failed. Say so; rendering nothing at all would
+    // look like a supplier who publishes nothing, which is a different and wrong fact.
+    else catcard=`<div class="sec">Order from them</div><div style="background:#fbeceb;border:1px solid #f0c9c6;border-radius:9px;padding:9px 11px;font-size:12px;color:#b4453f">${esc(d.err||'Could not read their catalogue.')} <span onclick="selectSupplier('${x.supplier_list_id}')" style="cursor:pointer;color:var(--blue);font-weight:600">Try again</span></div>`;
+    const stepped = x.has_catalogue && !d.loading && UI._supFlow;
+    body = chip + (stepped
+      ? `<div id="sup_rail">${UI._supFlow.railHTML()}</div><div style="font-size:11.5px;color:var(--grey);margin:0 0 8px" id="sup_sub">${esc(UI._supFlow.steps()[UI._supFlow.index()].t||'')}</div>`
+        + `<div id="sup_body">${UI._supFlow.bodyHTML()}</div>`
+      : catcard);
+    // Removing a supplier belongs on the browsing step, not halfway through composing them an order.
+    const onItems = stepped && UI._supFlow.index()===0;
+    bar = (stepped ? `<div id="sup_foot" style="flex:1">${UI._supFlow.footHTML()}</div>` : '')
+      + ((!stepped || onItems) ? `<button class="warn" data-testid="sup-remove" onclick="delSupplier('${x.supplier_list_id}')">Remove from list</button>` : '');
   }
   return `${head}<div class="db">${body}</div><div class="actbar">${bar}</div>`;
 }
@@ -2525,7 +2694,11 @@ async function composeFromSupplier(id){ const d=UI.supDet, x=d&&d.supplier; if(!
     ? picked.map(p=>({ particulars:p.name, unit:p.unit, price:cbAmount(p.price), qty:p.qty||1 }))
     : d.items;
   if(items==null){ try{ const cat=await supCatalogueFull(x.supplier_entity_id); items=(cat.items||[]).map(p=>{const dd=p.item_data||p; return {particulars:dd.name||dd.product||'item', unit:dd.unit||'unit', price:cbAmount(dd.price)};}); }catch(e){ items=[]; } }
-  compose({ supplier:{name:supName(x), bridge:x.bridge_id, entity_id:x.supplier_entity_id}, recipients:[{name:supName(x), role:'to', bridge:x.bridge_id||null}], catalogue:items });
+  // Carry what the step flow already collected, so "Open in compose" is a WIDENING of the same order and not a
+  // restart — retyping a subject you already wrote is how an escape hatch stops being used.
+  const o = UI._supOrder || {};
+  compose({ supplier:{name:supName(x), bridge:x.bridge_id, entity_id:x.supplier_entity_id}, recipients:[{name:supName(x), role:'to', bridge:x.bridge_id||null}], catalogue:items,
+            items:items, subject:o.subject||'' });
 }
 /* CATALOGUE (own products) — two-sided master/detail. Full CRUD is live (PATCH /products/:id), so Edit persists. */
 function catalogueScreen(){
