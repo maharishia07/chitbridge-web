@@ -1164,10 +1164,23 @@ function netAskFor(entityId, storeName, itemName, bridgeId, rowPrice){
                 unit: (match && match.unit) || 'unit', price: price, qty: 1 }],
     });
   };
-  // THEIR catalogue, so the compose lines come from what they actually sell rather than from what we guessed.
+  /**
+   * ⚠️ OPEN FIRST, THEN FILL. Athi, 2026-08-08: *"the compose window takes time to load."*
+   *
+   * It waited for the supplier's whole catalogue before showing anything, so pressing Request sat on a dead screen
+   * for a round trip. But the search already knows the one item this is about — its name and its price — so compose
+   * can open immediately with that, and the rest of their catalogue arrives behind it.
+   *
+   * The thing being requested is therefore correct from the first frame. What fills in late is only the OTHER
+   * items in the picker, which is the part nobody is waiting on.
+   */
+  var known = [{ particulars: itemName, unit: 'unit',
+                 price: (rowPrice === undefined || rowPrice === null || rowPrice === '') ? 0 : Number(rowPrice) }];
+  openCompose(known);
+
+  if (typeof supCatalogueFull !== 'function') return;
   // supCatalogueFull is a plain function, not an EP key — it bypasses api() on purpose (it needs the sibling
   // fields that unwrap() would drop), and it is the SAME reader the supplier compose uses.
-  if (typeof supCatalogueFull !== 'function') { openCompose([]); return; }
   supCatalogueFull(entityId)
     .then(function(cat){
       var items = (((cat && cat.items) || [])).map(function(p){
@@ -1175,9 +1188,19 @@ function netAskFor(entityId, storeName, itemName, bridgeId, rowPrice){
         return { particulars: d.name || d.product || 'item', unit: d.unit || 'unit',
                  price: (typeof cbAmount === 'function') ? cbAmount(d.price) : 0 };
       });
-      openCompose(items);
+      if (!items.length) return;
+      // Swap the picker's source in place. The composed LINES are untouched — a list arriving late must never
+      // rewrite something the person has already started editing.
+      if (typeof STORE !== 'undefined') STORE.catalogue = items;
+      var sel = (typeof document !== 'undefined') ? document.getElementById('cc_pick') : null;
+      if (sel) {
+        sel.innerHTML = items.map(function(p, i){
+          return '<option value="' + i + '">' + esc(p.particulars) + ' · '
+            + ((typeof inr === 'function') ? inr(p.price) : p.price) + '/' + esc(p.unit || 'unit') + '</option>';
+        }).join('');
+      }
     })
-    .catch(function(){ openCompose([]); });   // no catalogue readable → still let the request be written
+    .catch(function(){ /* their catalogue is unreadable — the request can still be written */ });
 }
 
 function _netAvailScreen(){
