@@ -407,25 +407,98 @@ function netSetCollectBack(key, i, prop, val){ var n = _netNode(key); if (!n) re
 function netAddCatField(key){ var n = _netNode(key); if (!n) return; _ensureCat(n).fields.push({ name: '', leg: 'cb', via: '', type: 'text' }); _netMark(); _netRerender(); }   // default leg = the gap CB fills
 function netDelCatField(key, i){ var n = _netNode(key); if (!n) return; var c = _ensureCat(n); c.fields.splice(i, 1); _netMark(); _netRerender(); }
 function netSetCatField(key, i, prop, val){ var n = _netNode(key); if (!n) return; var c = _ensureCat(n); var f = c.fields[i]; if (!f) return; f[prop] = val; if (prop === 'leg') f.via = (val === 'system' || val === 'compute') ? _viaFor(val)[0] : ''; _netMark(); if (prop !== 'name') _netRerender(); }   // name via oninput: no re-render
-function netSetExposure(key, val){
-  var n = _netNode(key); if (!n) return;
-  n.exposure = val;
-  // Closing a department closes what is under it. Doing this in the DESIGN as well as at Build means the drawing
-  // never claims something the platform will refuse — and the person sees the consequence at the moment they
-  // cause it, rather than in a list of notes after pressing Build.
-  var closed = [];
-  (function shut(parentKey, ceil){
-    (UI.net.nodes || []).filter(function(x){ return x.parent_key === parentKey; }).forEach(function(c){
+/* ── SHOW THE CHANGE ON THE MAP BEFORE MAKING IT ──────────────────────────────────────────────────────────────
+   Athi, 2026-08-08: *"bring the store name in the toast and say these stores are moving from public to network by
+   your confirmation and then perform… it is highly unlikely that people understand the difference between map
+   changes and update behind the scene. Once you show the difference they assume it is changed. In fact show the
+   entire map and highlight the change by striking public and network replacement text."*
+
+   He is right, and the toast was the wrong shape twice over: it came AFTER the change, and it counted rather than
+   named. Worse, a person who sees the map redraw assumes the live shops moved too — so the map and the shops must
+   never diverge without being shown side by side and agreed to.
+
+   So: compute the consequence without touching anything, draw the WHOLE tree with the affected rows striking the
+   old value through, and only mutate on confirm.                                                              */
+
+/** What would narrowing `startKey` to `val` do — to it and everything under it? Computed, never applied. */
+function _netPlanNarrow(startKey, val){
+  var changes = [];
+  var start = startKey ? _netNode(startKey) : null;
+  if (start) {
+    var sv = start.exposure || 'private';
+    if (sv !== val) changes.push({ key: start.key, name: start.name, from: sv, to: val });
+  }
+  (function walk(parentKey, ceil){
+    (UI.net.nodes || []).filter(function(x){ return x.parent_key === parentKey && !x.root && x.owned; }).forEach(function(c){
       var cv = c.exposure || 'private';
       var next = NET_RANK[cv] > NET_RANK[ceil] ? ceil : cv;
-      if (next !== cv) { c.exposure = next; closed.push(c.name); }
-      shut(c.key, next);
+      if (next !== cv) changes.push({ key: c.key, name: c.name, from: cv, to: next });
+      walk(c.key, next);
     });
-  })(key, val);
-  if (closed.length && typeof toast === 'function') {
-    toast(closed.length === 1 ? '"' + closed[0] + '" was closed to match' : closed.length + ' stores below were closed to match');
-  }
-  _netMark(); _netRerender();
+  })(startKey || (_netRootNode() || {}).key || null, val);
+  return changes;
+}
+function _netRootNode(){ return (UI.net && (UI.net.nodes || []).filter(function(n){ return n.root; })[0]) || null; }
+
+/** The whole map, with the rows that move showing `Public → Network` and the old value struck through. */
+function _netChangeMap(changes){
+  var byKey = {}; changes.forEach(function(c){ byKey[c.key] = c; });
+  var lab = function(k){ return ((NET_EXPOSURE.filter(function(o){ return o.k === k; })[0] || {}).label || k).replace(/^\S+\s/, ''); };
+  var rows = [];
+  (function walk(parentKey, depth){
+    (UI.net.nodes || []).filter(function(x){ return x.parent_key === parentKey; }).forEach(function(n){
+      var ch = byKey[n.key];
+      var chip = ch
+        ? '<span style="font-size:11px"><s style="color:#a5382e">' + esc(lab(ch.from)) + '</s>'
+          + ' <b style="color:#2c7a43">→ ' + esc(lab(ch.to)) + '</b></span>'
+        : (n.root || !n.owned ? '' : '<span style="font-size:11px;color:var(--grey)">' + esc(lab(n.exposure || 'private')) + '</span>');
+      rows.push('<div style="display:flex;gap:9px;align-items:baseline;padding:5px 12px 5px ' + (12 + depth * 18) + 'px;'
+        + (ch ? 'background:#fdf6ec;' : '') + '">'
+        + '<span style="font-size:12.5px;' + (ch ? 'font-weight:700' : '') + '">' + (depth ? '└ ' : '◆ ') + esc(n.name) + '</span>'
+        + '<span style="margin-left:auto">' + chip + '</span></div>');
+      walk(n.key, depth + 1);
+    });
+  })(null, 0);
+  return '<div style="border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff">' + rows.join('') + '</div>';
+}
+
+/** Ask, showing the map. `apply` runs only if the person agrees. */
+function _netConfirmNarrow(title, lead, changes, apply){
+  if (!changes.length) return apply();
+  UI._netApply = apply;
+  var names = changes.map(function(c){ return c.name; });
+  var body = '<div style="padding:14px 16px;max-height:66vh;overflow:auto">'
+    + '<div style="font-size:13px;line-height:1.6;margin-bottom:11px">' + lead + '</div>'
+    + '<div style="font-size:12.5px;line-height:1.6;margin-bottom:11px"><b>' + names.length + ' store'
+    + (names.length === 1 ? '' : 's') + '</b> will change: ' + esc(names.join(', ')) + '.</div>'
+    + _netChangeMap(changes)
+    + '<div style="font-size:11.5px;color:var(--grey);margin-top:11px;line-height:1.55">This changes the <b>design</b>. '
+    + 'Stores that are already live keep serving customers until you press <b>Apply changes</b>.</div>'
+    + '<div style="display:flex;gap:9px;margin-top:14px">'
+    + '<button onclick="netCancelNarrow()" style="flex:1;padding:9px">Cancel</button>'
+    + '<button class="pri" onclick="netRunNarrow()" style="flex:1;padding:9px">Make these changes</button>'
+    + '</div></div>';
+  if (typeof modal === 'function') modal('<div class="mhd"><div class="t">' + esc(title) + '</div></div><div class="mbody" style="padding:0">' + body + '</div>', true);
+  else apply();
+}
+function netCancelNarrow(){ UI._netApply = null; if (typeof closeModal === 'function') closeModal(); }
+function netRunNarrow(){ var f = UI._netApply; UI._netApply = null; if (typeof closeModal === 'function') closeModal(); if (f) f(); }
+
+function netSetExposure(key, val){
+  var n = _netNode(key); if (!n) return;
+  var changes = _netPlanNarrow(key, val);
+  var below = changes.filter(function(c){ return c.key !== key; });
+  var apply = function(){
+    changes.forEach(function(c){ var t = _netNode(c.key); if (t) t.exposure = c.to; });
+    if (!changes.length) n.exposure = val;
+    _netMark(); _netRerender();
+  };
+  // Only ASK when something OTHER than the node you clicked is affected. Confirming your own click back to you is
+  // noise, and noise is how a confirmation stops being read.
+  if (!below.length) return apply();
+  _netConfirmNarrow('Closing "' + n.name + '" closes what is inside it',
+    'A store can never be more open than the department containing it, so closing <b>' + esc(n.name)
+    + '</b> closes the stores underneath.', changes, apply);
 }
 /* structure */
 function _netDescendants(key, acc){ acc = acc || []; (UI.net.nodes || []).forEach(function(n){ if (n.parent_key === key){ acc.push(n.key); _netDescendants(n.key, acc); } }); return acc; }
@@ -708,6 +781,7 @@ function networkScreen(){
   var count = (UI.net.nodes || []).length - 1;
   var built = (UI.net.nodes || []).filter(function(n){ return n.built; }).length;
   var pending = (UI.net.nodes || []).filter(function(n){ return !n.root && n.owned && !n.built; }).length;
+  var toChange = (UI.net.nodes || []).filter(function(n){ return _netPending(n); }).length;
   return '<div style="display:flex;height:100%;min-height:0">'
     + '<div style="width:300px;border-right:1px solid var(--line);overflow:auto;padding:12px 8px;flex:0 0 auto">'
       + '<div style="font-size:11px;font-weight:800;color:var(--grey);letter-spacing:.05em;padding:2px 8px 3px">' + esc(UI.net.purpose || 'NETWORK') + '</div>'
@@ -719,10 +793,14 @@ function networkScreen(){
       + tree
       + '<div style="border-top:1px solid var(--line);margin-top:12px;padding-top:10px">'
         + '<button class="pri" onclick="netBuild()" style="width:calc(100% - 16px);margin:0 8px;padding:9px">'
-        + (built ? '🔨 Apply changes' + (pending ? ' (' + pending + ' new)' : '') : '🔨 Build network' + (count ? ' (' + count + ')' : '')) + '</button>'
-        + '<div style="font-size:11px;color:var(--grey);padding:8px 8px 2px">'
-        + (built ? (pending ? pending + ' new store' + (pending === 1 ? '' : 's') + ' to create' : 'add or change a store, then apply')
-                 : (count ? count + ' node' + (count === 1 ? '' : 's') + ' designed · nothing created yet' : 'add nodes, then build')) + '</div>'
+        + (built ? '🔨 Apply changes' + ((pending + toChange) ? ' (' + (pending + toChange) + ')' : '')
+                 : '🔨 Build network' + (count ? ' (' + count + ')' : '')) + '</button>'
+        + '<div style="font-size:11px;padding:8px 8px 2px;color:' + (toChange ? '#8a5a1e' : 'var(--grey)') + '">'
+        + (built
+            ? [pending ? pending + ' new store' + (pending === 1 ? '' : 's') : '',
+               toChange ? toChange + ' change' + (toChange === 1 ? '' : 's') + ' not applied yet' : '']
+                .filter(Boolean).join(' · ') || 'the live network matches this design'
+            : (count ? count + ' node' + (count === 1 ? '' : 's') + ' designed · nothing created yet' : 'add nodes, then build')) + '</div>'
         + '<div style="font-size:11px;color:var(--blue);padding:6px 8px;cursor:pointer" onclick="netStartOver()">↺ Start over</div>'
       + '</div>'
       + '</div>'
@@ -1265,10 +1343,24 @@ var NET_VIS_CHIP = {
   'protected': { t: 'Network', fg: '#8a5a1e', bg: '#f6ecd8' },
   'private':   { t: 'Private', fg: '#6b6f86', bg: '#eef0f4' },
 };
+/** design word → the platform's word, so a receipt written by the server can be compared with a drawing. */
+var NET_PLATFORM = { public: 'public', protected: 'network', private: 'private' };
+/** Has this store's drawing moved away from what the live shop is actually set to? */
+function _netPending(n){
+  if (!n || !n.built || !n.built.visibility) return null;
+  var want = NET_PLATFORM[n.exposure || 'private'] || 'private';
+  return n.built.visibility === want ? null : { from: n.built.visibility, to: want };
+}
 function _netVisChip(n){
   var c = NET_VIS_CHIP[n.exposure || 'private'] || NET_VIS_CHIP.private;
-  return '<span style="font-size:9.5px;font-weight:800;letter-spacing:.02em;color:' + c.fg + ';background:' + c.bg
+  var chip = '<span style="font-size:9.5px;font-weight:800;letter-spacing:.02em;color:' + c.fg + ';background:' + c.bg
     + ';border-radius:5px;padding:1px 5px;margin-left:6px;vertical-align:middle">' + c.t + '</span>';
+  // ⚠️ THE DRAWING AND THE SHOP DISAGREE. Athi, 2026-08-08: *"once you show the difference they assume it is
+  // changed."* Exactly — so a store whose design has moved but whose live shop has not must say so, in the tree,
+  // until Apply changes reconciles them. Silence here is what makes the redraw a lie.
+  var p = _netPending(n);
+  if (p) chip += '<span title="the live shop is still ' + p.from + ' — press Apply changes" style="font-size:9px;font-weight:800;color:#8a5a1e;background:#f6ecd8;border-radius:5px;padding:1px 5px;margin-left:4px;vertical-align:middle">NOT APPLIED</span>';
+  return chip;
 }
 
 /* The most open a store may be, given the NETWORK's own visibility. Athi: *"what if the network is private? Then
@@ -1305,24 +1397,23 @@ function netSetNetworkVisibility(v){
   // Athi: *"even if they select public initially and then change to protected, need to switch accordingly."*
   // Closing the network must bring the DESIGN down with it, or the drawing keeps claiming public stores that can
   // never be built and every future Build re-reports the same refusals.
-  var willClose = (v !== 'public') && (UI.net && (UI.net.nodes || []).some(function(n){ return n.exposure === 'public' && !n.root && n.owned; }));
+  // The whole tree narrowed to the network's new ceiling — computed, not applied, so it can be SHOWN first.
+  var changes = (v === 'public') ? [] : _netPlanNarrow(null, 'protected');
   var go = function(){
     api('saveProfile', { body: { catalogue_visibility: v } }).then(function(){
       UI._netOwnVis = v;
-      if (willClose) {
-        (UI.net.nodes || []).forEach(function(n){ if (n.exposure === 'public' && !n.root && n.owned) n.exposure = 'protected'; });
+      if (changes.length) {
+        changes.forEach(function(c){ var t = _netNode(c.key); if (t) t.exposure = c.to; });
         _netSave();
       }
       if (typeof toast === 'function') toast(v === 'public' ? 'This network can face customers' : 'This network is closed to the public');
       _netRerender();
     }).catch(function(e){ if (typeof toast === 'function') toast((e && e.message) || 'Could not change that', true); });
   };
-  if (!willClose) return go();
-  var n = (UI.net.nodes || []).filter(function(x){ return x.exposure === 'public' && !x.root && x.owned; }).length;
-  var msg = n + ' store' + (n === 1 ? ' is' : 's are') + ' set to Public. Closing the network changes '
-          + (n === 1 ? 'it' : 'them') + ' to <b>Network only</b>. Any that are already live will be closed at the next Build.';
-  if (typeof confirmAsk === 'function') confirmAsk('Close this network?', msg, 'Close it', go, true);
-  else go();
+  if (!changes.length) return go();
+  _netConfirmNarrow('Close this network?',
+    'A private network cannot put any store in front of customers, so these move to <b>Network only</b>.',
+    changes, go);
 }
 function _netNetworkVisibilityBlock(){
   var v = UI._netOwnVis;
