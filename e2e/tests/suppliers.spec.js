@@ -18,6 +18,15 @@ test.describe('Module · Suppliers', () => {
     await A.context.close();                                           // only A's email is needed; B is the main session
     await mintEntity(page);                                            // entity B = the buyer (the authed session)
 
+    /**
+     * ⚠️ ACCEPT THE CONFIRMS. Both addSupplier() and delSupplier() ask before they post, and Playwright
+     * auto-DISMISSES dialogs unless a handler says otherwise — so the add silently returned, no row ever appeared,
+     * and this failed at `sup-row-` with "element(s) not found" as though the SCREEN were broken. It was not: the
+     * spec never took a step a real person takes. variants.spec.js hit the identical trap and documented it; this
+     * spec was never given the same fix.
+     */
+    page.on('dialog', (d) => d.accept());
+
     await test.step('CREATE — add A by email', async () => {
       await page.getByTestId('nav-suppliers').click();
       await page.getByTestId('sup-add-input').fill(A.email);
