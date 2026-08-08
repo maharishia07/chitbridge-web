@@ -1065,6 +1065,13 @@ function _netAvailBody(){
       + '<b style="margin-left:auto;font-size:15px;color:' + qtyCol + '">' + qtyTxt + '</b></div>'
       + '<div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:4px">'
       + '<span style="font-size:12px;color:var(--grey)">' + esc(r.name) + (r.code ? ' · ' + esc(r.code) : '') + '</span>'
+      // The holding store's OWN price, in its OWN currency, as it stamped it. Shown as a code and never converted —
+      // what this store would charge is a fact about that store, and turning it into your currency here would be
+      // inventing a rate nobody agreed.
+      + (r.price !== null && r.price !== undefined
+          ? '<span style="font-size:12.5px;font-weight:700">' + esc(r.price_currency || '') + ' '
+            + Number(r.price).toLocaleString(undefined, { maximumFractionDigits: 2 }) + '</span>'
+          : '<span style="font-size:11.5px;color:var(--grey)">no price set</span>')
       // The provenance of the number, always. A quantity without it is not an answer.
       + '<span style="margin-left:auto;font-size:10px;font-weight:800;letter-spacing:.03em;border-radius:5px;padding:1px 6px;'
       + (f.stale ? 'background:#f6ecd8;color:#8a5a1e' : 'background:#e6f4ec;color:#2c7a43') + '">'
@@ -1072,6 +1079,14 @@ function _netAvailBody(){
       + (unknown
           ? '<div style="font-size:11px;color:#8a5a1e;margin-top:4px">This store carries the item but has never reported a quantity. <b>Unknown is not zero</b> — worth asking before routing around it.</div>'
           : (f.stale ? '<div style="font-size:11px;color:#8a5a1e;margin-top:4px">This figure is ' + esc(f.label) + '. Acting on it is a guess.</div>' : ''))
+      // ── ASK FOR IT ────────────────────────────────────────────────────────────────────────────────────────
+      // The point of knowing who has it. This is an ordinary chit — the same rail as every other request between
+      // two businesses — so it lands in their Task list, carries a line item, and can be disputed like anything
+      // else. Nothing new is invented for "internal" transfers: a store asking a sibling is still two parties.
+      + (r.is_me ? '<div style="font-size:11px;color:var(--grey);margin-top:5px">This is your own stock.</div>'
+         : '<div style="margin-top:7px"><button onclick="netAskFor(\'' + esc(r.entity_id) + '\',\'' + esc(r.store) + '\',\''
+           + esc(String(r.name).replace(/'/g, '')) + '\')" style="padding:5px 12px;font-size:12px">'
+           + (unknown ? 'Ask if they have it' : 'Request from ' + esc(r.store)) + '</button></div>')
       + '</div>';
   }).join('');
   return '<div style="padding:13px 2px 4px;font-size:14px;font-weight:700">' + esc(R.summary || '') + '</div>'
@@ -1079,6 +1094,37 @@ function _netAvailBody(){
     + (R.truncated ? '<div style="font-size:11px;color:#8a5a1e;padding:9px 2px">Asked the first ' + R.truncated.asked
         + ' of ' + R.truncated.of + ' stores.</div>' : '');
 }
+/**
+ * Ask a store in the network to send goods.
+ *
+ * Athi, 2026-08-08: *"now we have to see how to trigger a request to the store which has got the goods."*
+ *
+ * It is an ORDINARY CHIT. A store asking a sibling is still two parties, so it goes down the same rail as every
+ * other request between businesses: it lands in their Task list, carries the item as a line, and can be disputed
+ * like anything else. Nothing separate is invented for "internal" movement — the moment it were, the transfer
+ * would stop being reconcilable against everything else, which is the whole reason CB exists.
+ */
+function netAskFor(entityId, storeName, itemName){
+  var qty = (typeof prompt === 'function')
+    ? prompt('How many "' + itemName + '" do you want from ' + storeName + '?', '1') : '1';
+  if (qty === null) return;
+  var n = Number(String(qty).trim());
+  if (!Number.isFinite(n) || n <= 0) { if (typeof toast === 'function') toast('How many? A number above zero.', true); return; }
+  api('createChit', { body: {
+    recipients: [{ entity_id: entityId, role: 'to' }],
+    purpose: 'order',
+    subject: 'Please send ' + n + ' × ' + itemName,
+    // The line carries what is being asked for. No price: THEY set what they charge, and guessing it here would
+    // be putting a number in their mouth.
+    line_items: [{ particulars: itemName, description: itemName, qty: n }],
+  } }).then(function(r){
+    if (typeof toast === 'function') toast('Requested ' + n + ' from ' + storeName + ' — it is in their Task list.');
+    void r;
+  }).catch(function(e){
+    if (typeof toast === 'function') toast((e && e.message) || 'Could not send the request', true);
+  });
+}
+
 function _netAvailScreen(){
   return '<div style="padding:18px 22px;max-width:760px">'
     + '<div style="font-size:19px;font-weight:800">🔎 Where is it?</div>'
