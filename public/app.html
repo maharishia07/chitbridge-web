@@ -1300,10 +1300,10 @@ function regContact(){ try{ window.location.href='mailto:team@chitandbridge.com?
    name@entity with no dot => ACTOR (PIN if set, else first-time OTP -> set PIN).
    Customer is NOT a login -> secondary shop-link entry (Login.Bridge).
    EP keys: ownerLogin, ownerVerify, actorCheck, actorLogin, setPin, custVerify. See NAMING.md / Linear "Working Canon". */
-let LOGIN = {step:"id", id:"", kind:null, email:"", hasPin:false, busy:false, err:"", cust:false};
+let LOGIN = {step:"id", id:"", kind:null, email:"", handle:"", note:"", hasPin:false, busy:false, err:"", cust:false};
 function loginIsActor(id){ const p=id.split("@"); return id.includes("@") && p.length===2 && !p[1].includes("."); }
 function setLoginCust(on){ LOGIN.cust=!!on; LOGIN.err=""; renderLogin(); }
-function loginReset(){ LOGIN={step:"id", id:"", kind:null, email:"", hasPin:false, busy:false, err:"", cust:false}; renderLogin(); }
+function loginReset(){ LOGIN={step:"id", id:"", kind:null, email:"", handle:"", note:"", hasPin:false, busy:false, err:"", cust:false}; renderLogin(); }
 function renderLogin(){
   const L=LOGIN; const muted='style="color:var(--grey);font-weight:400"'; const who='style="font-size:12px;color:var(--grey);margin-bottom:8px"';
   let form="";
@@ -1317,7 +1317,8 @@ function renderLogin(){
        <button class="btn" id="l_go">${L.busy?'<span class="spin"></span> …':"Continue →"}</button>`;
   } else if(L.step==="otp"){
     form = `<div ${who}>Signing in as <b>${esc(L.id)}</b> · ${L.kind} · <a onclick="loginReset()">change</a></div>
-       <label class="fl">OTP ${L.kind==="entity"?"sent to your email":"from your admin"}</label><input class="inp" id="l_otp" placeholder="6-digit code">
+       ${L.note?`<div style="font-size:12px;color:#7a6428;background:#fdf8ec;border:1px solid #e0d3b0;border-radius:9px;padding:9px 11px;margin:6px 0 4px;line-height:1.5">${esc(L.note)}</div>`:''}
+       <label class="fl">${L.note?"Code from your network operator":(L.kind==="entity"?"OTP sent to your email":"OTP from your admin")}</label><input class="inp" id="l_otp" placeholder="6-digit code">
        <button class="btn" id="l_go">${L.busy?'<span class="spin"></span> Verifying…':"Verify & enter →"}</button>`;
   } else if(L.step==="pin"){
     form = `<div ${who}>Signing in as <b>${esc(L.id)}</b> · co-assist · <a onclick="loginReset()">change</a></div>
@@ -1365,7 +1366,21 @@ async function doLogin(){
       } else {
         L.kind="entity";
         const r=await api("ownerLogin",{body:{display_name:id, email:id, mode:"login"}});
-        L.email = (r && r.email) || id;
+        /**
+         * ⚠️ A HANDLE IS NOT AN EMAIL, AND THIS LINE USED TO PRETEND IT WAS.
+         *
+         * Athi, 2026-08-08: *"when I try to log in using the id alpha-timers.north it asked for the password, and
+         * on providing it the window says sign-in failed, email not found."*
+         *
+         * A network-minted store has NO email — it is issued a handle and a claim code. `r.email` came back empty,
+         * this fell back to the typed id, and the id was then sent to /verify as `email`, which looked it up in the
+         * email column and quite correctly found nothing. The API has accepted `user_id` here since the handle was
+         * introduced; the client simply never used it, so every minted store could be issued a code it could not
+         * redeem — a credential that cannot log in.
+         */
+        L.email  = (r && r.email) || null;
+        L.handle = (r && r.handle) || (String(id).includes('@') ? null : id);
+        L.note   = (r && r.operator_issued) ? (r.message || 'This store signs in with the code its network operator issued.') : '';
         L.step="otp";
       }
       L.busy=false; return renderLogin();
@@ -1376,7 +1391,11 @@ async function doLogin(){
         if(r && r.requires_pin_setup){ setSession({token:r.token||"",role:"actor"}); L.busy=false; L.step="setpin"; return renderLogin(); }
         setSession({token:r.token||"t",role:"actor",name:(r.actor&&r.actor.display_name)||r.name||L.id.split("@")[0],entity:(r.actor&&r.actor.parent_entity)||r.entity||L.id.split("@")[1]||"",duty:((r.actor&&r.actor.break_status&&r.actor.break_status!=='active')?'break':'duty')});
       } else {
-        const r=await api("ownerVerify",{body:{email:L.email||L.id, otp:v_otp}});
+        // Email when we have one, otherwise the HANDLE as `user_id` — the two are different columns and the API
+        // has always taken either. Never the typed string as an email just because it is the only thing to hand.
+        const r=await api("ownerVerify", { body: L.email
+          ? { email: L.email, otp: v_otp }
+          : { user_id: (L.handle || L.id), otp: v_otp } });
         setSession(entFromVerify(r, L.id));
       }
       L.busy=false; return go("#/app");
