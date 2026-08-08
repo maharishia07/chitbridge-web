@@ -341,7 +341,11 @@ function productRow(p, cur, variantLabel){ var d=(p.item_data||p)||{};
  * one of the 7 presets expects. Grouping changes what a person SEES and nothing about what is agreed.
  */
 function productListHtml(data, cur){
-  if (typeof cbPickInit !== 'function' || !((data.items||[]).length)) {
+  /* ⚠️ GATE ON WHAT THIS FUNCTION ACTUALLY USES. It tested `cbPickInit` — a compat adapter this page stopped
+     calling when it moved to create(). Deleting the adapters, which is the next step, would have sent the
+     storefront permanently down the display-only branch: prices visible, no cart, no way to order, and nothing
+     thrown. That is the same silence that made the popup outage invisible. */
+  if (typeof CBCart === 'undefined' || typeof CBCart.create !== 'function' || !((data.items||[]).length)) {
     var rows0 = (typeof cbLineRows === 'function')
       ? cbLineRows(data)
       : (data.items||[]).map(function(p){ return { type:'line', item:p, variant:'' }; });

@@ -107,7 +107,11 @@ test.describe('render smoke — the page boots without throwing', () => {
     }));
     expect(state.cart, 'CBCart did not load — check the script tag in app.html').toBe('object');
     expect(state.walk, 'cbLineRows did not load').toBe('function');
-    expect(state.adapter, 'the cbPick* compat adapter is missing — live screens still call it').toBe('function');
+    // The adapter is now RETAINED, not depended on: as of the 2026-08-09 migration no screen calls cbPick* — the
+    // storefront, Suppliers, Compose and Network all hold a CBCart.create() handle. It stays until a sweep confirms
+    // nothing outside this repo reaches for it. When it is deleted, this assertion goes WITH that commit —
+    // deliberately, rather than being discovered broken by something else.
+    expect(state.adapter, 'the cbPick* compat adapter is missing — it is still published').toBe('function');
     expect(state.strays, 'a removed shim is back — that is a second cart forming').toEqual([]);
   });
 
