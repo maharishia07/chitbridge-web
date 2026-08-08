@@ -202,7 +202,14 @@ function _netPlaceCard(me, nodes){
     return { bid: bid, name: n.name || bid, depth: depth, path: path, mode: n.mode || '', isMe: bid === mine };
   });
   if(!rows.length) return _netAloneCard();
-  rows.sort(function(a,b){ return a.path < b.path ? -1 : a.path > b.path ? 1 : 0; });
+  // Depth-first, siblings by NAME — identical to the design tree and to a member's view. Sorting by `path` here
+  // ordered the network by bridge id, which is why the same network looked different to two people.
+  var kidsOf = {};
+  rows.forEach(function(r){ var i = r.path.lastIndexOf('.'); (kidsOf[i < 0 ? '' : r.path.slice(0, i)] = kidsOf[i < 0 ? '' : r.path.slice(0, i)] || []).push(r); });
+  Object.keys(kidsOf).forEach(function(k){ kidsOf[k].sort(_netByName); });
+  var ordered = [];
+  (function walk(p){ (kidsOf[p] || []).forEach(function(r){ ordered.push(r); walk(r.path); }); })('');
+  if(ordered.length === rows.length) rows = ordered;   // fall back to the raw list if any path was unexpected
 
   var meRow = rows.find(function(r){ return r.isMe; });
   var chain = meRow ? rows.filter(function(r){ return meRow.path.indexOf(r.path) === 0; })
@@ -446,7 +453,7 @@ function _netChangeMap(changes){
   var lab = function(k){ return ((NET_EXPOSURE.filter(function(o){ return o.k === k; })[0] || {}).label || k).replace(/^\S+\s/, ''); };
   var rows = [];
   (function walk(parentKey, depth){
-    (UI.net.nodes || []).filter(function(x){ return x.parent_key === parentKey; }).forEach(function(n){
+    (UI.net.nodes || []).filter(function(x){ return x.parent_key === parentKey; }).sort(_netByName).forEach(function(n){
       var ch = byKey[n.key];
       var chip = ch
         ? '<span style="font-size:11px"><s style="color:#a5382e">' + esc(lab(ch.from)) + '</s>'
@@ -795,8 +802,31 @@ function netMintDone(){
 
 /* ---- render (two panes, same style) ---- */
 function _capDots(n){ return (n.holds || []).map(function(k){ var c = _capMeta(k); return c ? c.icon : ''; }).join(''); }
+/**
+ * ONE ORDER, EVERYWHERE.
+ *
+ * Athi, 2026-08-08: *"one is from the network and another from the child — why are the store alignments different?
+ * It has to be identical… the already stored entities should retain the placement so it looks the same for
+ * anyone."*
+ *
+ * Right, and NEITHER order meant anything. The operator's tree listed nodes in the order they were added to the
+ * drawing; the member's tree came back `ORDER BY path`, and a path label is the BRIDGE ID — so the live view was
+ * sorted by a random string and would reshuffle for every network.
+ *
+ * Name is the only key both sides genuinely share: the design has no bridge ids until Build, and the live tree has
+ * no design keys at all. So siblings sort by name, case-insensitively, everywhere the network is drawn.
+ *
+ * ⚠️ The trade: this is NOT "the order you added them", and there is no hand-arranged order yet. If one is wanted,
+ * it needs a stored position on the entity — the order has to live somewhere both readers can see, which is
+ * exactly the thing that was missing here.
+ */
+function _netByName(a, b){
+  var x = String((a && a.name) || '').toLowerCase(), y = String((b && b.name) || '').toLowerCase();
+  return x < y ? -1 : x > y ? 1 : 0;
+}
+
 function _netTree(parentKey, depth){
-  var kids = (UI.net.nodes || []).filter(function(n){ return n.parent_key === (parentKey || null); });
+  var kids = (UI.net.nodes || []).filter(function(n){ return n.parent_key === (parentKey || null); }).sort(_netByName);
   return kids.map(function(n){ var sel = UI.net.sel === n.key; var dots = _capDots(n);
     return '<div onclick="netSelect(\'' + n.key + '\')" style="cursor:pointer;padding:7px 9px;padding-left:' + (9 + depth * 16) + 'px;border-radius:8px;font-size:12.5px;' + (sel ? 'background:#eef4fc;color:#2c5aa0;font-weight:700' : 'color:#3a4048') + '">'
       + (n.parent_key ? '└ ' : '◆ ') + esc(n.name) + (n.owned ? '' : ' <span title="partner">🤝</span>')
@@ -827,9 +857,21 @@ function _netTree(parentKey, depth){
  */
 function _netMemberScreen(){
   var L = UI._netLive || {};
-  var rows = (L.nodes || []).slice().sort(function(a, b){
-    var pa = String(a.path || ''), pb = String(b.path || ''); return pa < pb ? -1 : pa > pb ? 1 : 0; });
   var mine = String((L.me && (L.me.bridgeId || L.me.bridge_id)) || '');
+  // A real DEPTH-FIRST walk, siblings by name — the same rule the operator's tree uses, so both read identically.
+  // Sorting the flat list by `path` (which is what the server returns) orders by bridge id, i.e. at random.
+  var all = (L.nodes || []).slice();
+  var childrenOf = {};
+  all.forEach(function(n){
+    var p = String(n.path || ''); var i = p.lastIndexOf('.');
+    var parent = i < 0 ? '' : p.slice(0, i);
+    (childrenOf[parent] = childrenOf[parent] || []).push(n);
+  });
+  Object.keys(childrenOf).forEach(function(k){ childrenOf[k].sort(_netByName); });
+  var rows = [];
+  (function walk(parentPath){
+    (childrenOf[parentPath] || []).forEach(function(n){ rows.push(n); walk(String(n.path || '')); });
+  })('');
   var list = rows.map(function(n){
     var bid = String(n.bridgeId || n.bridge_id || '');
     var depth = Math.max(0, String(n.path || '').split('.').length - 1);
