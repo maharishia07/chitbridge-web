@@ -90,10 +90,13 @@ var STORES = [
   { key:'west',  name:'West',  vis:'Network', purpose:'Supplies the westside stores',
     own:{ currency:'LKR', country:'LK', city:'Colombo', certs:'SLS' } },
 ];
+/* The full menu, matching the real app. `soon` = captured on the design, not enforced by the platform yet. */
 var TABS = [
   ['general','⚙️','General'], ['catalogue','🗂️','Catalogue'], ['storefront','🛒','Storefront'],
-  ['place','📍','Place'], ['tradeready','🛡️','Trade-ready'], ['money','💱','Money'],
-  ['dispute','⚖️','Dispute'],
+  ['coassist','🧑‍🤝‍🧑','Co-assists'], ['transact','🔄','Transact'], ['tradeready','🛡️','Trade-ready'],
+  ['dispute','⚖️','Dispute'], ['place','📍','Place'],
+  ['territory','🗺️','Territory',1], ['stock','📦','Stock',1], ['fulfil','🚚','Fulfilment',1],
+  ['money','💱','Price policy',1], ['localise','📜','Localisation',1],
 ];
 var sel = 'west', tab = 'general';
 
@@ -127,14 +130,35 @@ function drawPage(){
   var s = store();
   var body;
   if (tab === 'general') {
-    body = '<div class="box">'
-      + fld('WHAT IT IS FOR', s.purpose, 'own')
-      + fld('WHO CAN SEE ITS CATALOGUE', s.vis, 'cap',
-          'The network is <b>Public</b>, so a store may be public, network-only or private. If the network closes, this can only be network or private — a ceiling, not a default.')
+    body = '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px">'
+      + '<button>＋ Add owned node</button><button>🤝 Add partner</button><button>✏️ Rename</button>'
+      + '<button>🗑️ Remove</button><button>↑</button><button>↓</button></div>'
+      + '<div class="box">'
+      + fld('WHAT IT IS FOR', s.purpose, 'own', 'Shows under the name in the map, and on the store itself.')
       + '</div>'
       + '<div class="box">'
       + fld('COUNTRY', val(s,'country'), src(s,'country'))
       + fld('CITY', val(s,'city'), src(s,'city'))
+      + fld('CURRENCY', val(s,'currency'), src(s,'currency'))
+      + '</div>'
+      + '<div class="note" style="margin-top:12px">Who can see this store is on the <b>Storefront</b> tab — it is a '
+      + 'decision about facing customers, so it lives with the shopfront.</div>';
+  } else if (tab === 'storefront') {
+    var opts = ['Public','Network only','Private'].map(function(o){
+      var on = (o === 'Network only' ? 'Network' : o) === s.vis;
+      return '<span style="display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border-radius:8px;cursor:pointer;'
+        + 'border:1px solid ' + (on ? 'var(--blue)' : 'var(--line)') + ';background:' + (on ? 'var(--blue)' : '#fff')
+        + ';color:' + (on ? '#fff' : 'var(--ink)') + ';font-weight:' + (on ? '700' : '500') + ';font-size:12.5px">' + o + '</span>';
+    }).join(' ');
+    body = '<div class="box">'
+      + '<div class="fld"><div class="lbl">WHO CAN SEE THIS STORE\'S CATALOGUE</div>'
+      + '<div class="val" style="margin-top:7px">' + opts + '<span class="src cap">CAPPED BY NETWORK</span></div>'
+      + '<div class="note">The network is <b>Public</b>, so all three are available. If the network closes, only '
+      + '<b>Network only</b> and <b>Private</b> remain — a ceiling, not a default. A store can never be more open '
+      + 'than what contains it.</div></div>'
+      + '<div class="fld"><div class="lbl">HOW CUSTOMERS ORDER</div>'
+      + '<div class="val"><select><option>Cart (qty + price)</option><option>Quantity only</option><option>Enquiry</option></select>'
+      + '<span class="src inh">FROM NETWORK</span><span class="act">override for this store</span></div></div>'
       + '</div>';
   } else if (tab === 'money') {
     body = '<div class="box">'
@@ -159,8 +183,17 @@ function drawPage(){
       + fld('SERVES', '50 km', 'own')
       + '</div>';
   } else {
-    body = '<div class="box"><div class="fld"><div class="lbl">' + tab.toUpperCase() + '</div>'
-      + '<div class="note">Not drawn yet in this mock.</div></div></div>';
+    // The real app already has rich panels for catalogue, co-assists, transact and dispute. The mock does not
+    // redraw them — it says so, rather than showing a thinner version that would look like a proposal to replace
+    // them. Athi: *"the same way as the mock, but without destroying the details."*
+    var real = { catalogue:1, coassist:1, transact:1, dispute:1, tradeready:1 };
+    var lbl = (TABS.filter(function(t){ return t[0] === tab; })[0] || [])[2] || tab;
+    body = '<div class="box"><div class="fld"><div class="lbl">' + lbl.toUpperCase() + '</div>'
+      + '<div class="note">' + (real[tab]
+          ? 'The real app already has this panel, in full. It is <b>not redrawn here</b> — the mock is for layout '
+            + 'and inheritance, and a thinner version would read as a proposal to replace what exists.'
+          : 'Captured on the design, <b>not enforced</b> by the platform yet.')
+      + '</div></div></div>';
   }
 
   document.getElementById('page').innerHTML =
@@ -169,7 +202,9 @@ function drawPage(){
     + '<div class="kind">An owned store · settings not set here come from <b>' + NET.name + '</b></div>'
     + '<div class="tabs">' + TABS.map(function(t){
         return '<span class="tab ' + (t[0] === tab ? 'on' : 'has') + '" onclick="pickTab(\'' + t[0] + '\')">'
-          + '<span class="ic">' + t[1] + '</span>' + t[2] + '</span>'; }).join('') + '</div>'
+          + '<span class="ic">' + t[1] + '</span>' + t[2]
+          + (t[3] ? '<span style="font-size:8.5px;font-weight:800;opacity:.7;border:1px solid currentColor;border-radius:4px;padding:0 3px">N/E</span>' : '')
+          + '</span>'; }).join('') + '</div>'
     + '<div class="pane">' + body + '</div>'
     + '<div class="legend"><h3>THE THREE KINDS — this is what the mock is really asking</h3>'
       + '<b>FROM NETWORK</b> — the network said it and this store has not disagreed. Change it once at the top and '
