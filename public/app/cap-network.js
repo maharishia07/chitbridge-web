@@ -787,6 +787,13 @@ function _netTree(parentKey, depth){
       // so changing it on the right updates here immediately.
       + (n.root || !n.owned ? '' : _netVisChip(n))
       + (dots ? '<span style="font-size:10px;margin-left:5px;opacity:.9">' + dots + '</span>' : '')
+      // WHAT THIS STORE IS FOR, under its name. Athi, 2026-08-08: *"if we can bring the purpose of the store as a
+      // comment or readable text under each store, that makes the network tree more meaningful."* The purpose was
+      // captured on the first day and then only ever shown on the node you happened to have selected — so the
+      // tree read as a list of names, and a name does not tell you why a branch exists. One line, clamped, with
+      // the full text on hover: it must add meaning without turning the tree into a document.
+      + (n.purpose ? '<div title="' + esc(n.purpose) + '" style="font-size:10.5px;color:#8a94a3;line-height:1.4;'
+          + 'margin:2px 0 0 13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(n.purpose) + '</div>' : '')
       + '</div>' + _netTree(n.key, depth + 1);
   }).join('');
 }
@@ -1663,7 +1670,9 @@ function _netNodeView(n){
     + (n.built ? '<div style="margin-top:16px;padding:11px 13px;border:1px solid #cfe0cf;border-radius:10px;background:#f2f8f3;font-size:12.5px;color:#2c7a43;line-height:1.6">✓ <b>Built.</b> Signs in as <b style="font-family:ui-monospace,Menlo,monospace">' + esc(n.built.user_id) + '</b> · ' + esc(n.built.bridge_id) + '<br><button onclick="netReissueKey(\'' + esc(n.built.user_id) + '\')" style="margin-top:7px;padding:5px 11px;font-size:11.5px">Issue a new sign-in code</button></div>' : '')
     + (isRoot ? '' :
         '<div style="margin-top:16px"><label style="font-size:11px;font-weight:800;color:var(--grey);letter-spacing:.05em">PURPOSE</label>'
-        + '<input value="' + esc(n.purpose || '') + '" oninput="netSetPurpose(\'' + n.key + '\', this.value)" placeholder="what is this node for? (one line)" style="width:100%;margin-top:6px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;box-sizing:border-box"></div>')
+        // oninput saves without re-rendering (typing must not fight the cursor); onchange fires on blur and
+        // redraws, so the line the person just wrote appears under the store in the tree.
+        + '<input value="' + esc(n.purpose || '') + '" oninput="netSetPurpose(\'' + n.key + '\', this.value)" onchange="_netRerender()" placeholder="what is this store for? one line — it shows under the name in the map" style="width:100%;margin-top:6px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;box-sizing:border-box"></div>')
     // ── THE ONE DECISION ────────────────────────────────────────────────────────────────────────────────────
     // Athi, 2026-08-07: *"we keep the catalogue setting simple — here we have to decide only the visibility part
     // and nothing else."* Exposure used to live INSIDE the storefront capability panel, three clicks down, which
