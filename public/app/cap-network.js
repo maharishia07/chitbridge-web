@@ -539,6 +539,17 @@ function netRevertOne(key){
   if (!pl) return;
   if (pl.kind === 'create') return netDelete(key);          // never created → undo means take it off the drawing
 
+  // A purpose-only edit reverts to the wording the store actually carries. Handled first so the visibility branch
+  // below never has to cope with a `from` that isn't there.
+  var raw = ((UI._netPlan || {}).update || []).filter(function(x){ return x.key === key; })[0] || {};
+  if (raw.purpose && !raw.from) {
+    n.purpose = raw.purpose.from || '';
+    if (typeof toast === 'function') toast('"' + n.name + '" text left as it is on the store');
+    _netMark(); _netRerender();
+    return;
+  }
+  if (raw.purpose) n.purpose = raw.purpose.from || '';      // both moved → put both back
+
   var back = NET_PLAT_TO_DESIGN[pl.from] || 'private';
   // A revert cannot break the cascade: if what it sits inside is closed, putting it back to public is not
   // available, and the honest answer is to say which node to revert instead of quietly doing something else.
@@ -566,11 +577,18 @@ function netRevertAll(){
       UI.net.nodes = UI.net.nodes.filter(function(x){ return kill.indexOf(x.key) < 0; });
       if (kill.indexOf(UI.net.sel) >= 0) UI.net.sel = (_netRootNode() || {}).key || null;
     }
-    changes.forEach(function(u){ var t = _netNode(u.key); if (t) t.exposure = NET_PLAT_TO_DESIGN[u.from] || 'private'; });
+    changes.forEach(function(u){
+      var t = _netNode(u.key); if (!t) return;
+      if (u.from) t.exposure = NET_PLAT_TO_DESIGN[u.from] || 'private';
+      if (u.purpose) t.purpose = u.purpose.from || '';
+    });
     _netMark(); _netRerender();
   };
   var lines = creates.map(function(c){ return 'remove <b>' + esc(c.name) + '</b> (never created)'; })
-    .concat(changes.map(function(u){ return '<b>' + esc(u.name) + '</b> back to ' + esc(_netPlatLab[u.from] || u.from); }));
+    .concat(changes.map(function(u){
+      return '<b>' + esc(u.name) + '</b> back to '
+        + [u.from ? esc(_netPlatLab[u.from] || u.from) : '', u.purpose ? 'its current wording' : ''].filter(Boolean).join(' and ');
+    }));
   if (typeof confirmAsk === 'function')
     confirmAsk('Discard the changes you have not applied?',
       'The design goes back to matching the live network:<br><br>' + lines.join('<br>')
@@ -821,7 +839,11 @@ function _netMemberScreen(){
       + (depth ? '<span style="color:var(--grey)">└ </span>' : '◆ ')
       + (isMe ? '<b>' + esc(n.name || bid) + '</b> <span style="font-size:11px;color:#6a44a8;font-weight:700">← you</span>'
               : esc(n.name || bid))
-      + ' <span style="font-size:11px;color:var(--grey);font-family:ui-monospace,Menlo,monospace">' + esc(bid) + '</span></div>';
+      + ' <span style="font-size:11px;color:var(--grey);font-family:ui-monospace,Menlo,monospace">' + esc(bid) + '</span>'
+      // b117 — carried onto the store at Build, so a MEMBER can read why each branch exists. Until then this tree
+      // was a list of names, which tells a new store nothing about the network it just joined.
+      + (n.purpose ? '<div style="font-size:11px;color:#8a94a3;margin-top:2px;line-height:1.4">' + esc(n.purpose) + '</div>' : '')
+      + '</div>';
   }).join('');
   var rootName = (rows[0] && (rows[0].name || rows[0].bridge_id)) || 'the network operator';
   return '<div style="padding:22px;max-width:640px">'
@@ -866,7 +888,9 @@ function networkScreen(){
           + '<span onclick="netRevertOne(\'' + c.key + '\')" title="Remove it — it was never created" style="cursor:pointer;color:#8a929e;font-weight:700;padding:0 3px">✕</span></div>'; }).join('')
       + toChange.map(function(u){ return '<div style="display:flex;gap:6px;align-items:flex-start;padding:6px 9px;font-size:11.5px;border-bottom:1px solid #efe4cc">'
           + '<div style="flex:1;min-width:0"><b style="color:#8a5a1e">CHANGE</b> ' + esc(u.name)
-          + '<div style="font-size:10.5px;color:var(--grey)"><s>' + esc(_netPlatLab[u.from] || u.from) + '</s> → <b>' + esc(_netPlatLab[u.to] || u.to) + '</b></div></div>'
+          + (u.from ? '<div style="font-size:10.5px;color:var(--grey)"><s>' + esc(_netPlatLab[u.from] || u.from) + '</s> → <b>' + esc(_netPlatLab[u.to] || u.to) + '</b></div>' : '')
+          + (u.purpose ? '<div style="font-size:10.5px;color:var(--grey)">text: <s>' + esc(u.purpose.from || '(none)') + '</s> → <b>' + esc(u.purpose.to || '(none)') + '</b></div>' : '')
+          + '</div>'
           + '<span onclick="netRevertOne(\'' + u.key + '\')" title="Leave it as ' + esc(_netPlatLab[u.from] || u.from) + '" style="cursor:pointer;color:#8a929e;font-weight:700;padding:0 3px">✕</span></div>'; }).join('')
       + '<div style="display:flex;gap:8px;align-items:center;padding:6px 9px;font-size:10.5px;color:#8a5a1e">'
       + '<span style="flex:1">Nothing above has happened yet.</span>'
@@ -1482,7 +1506,11 @@ function _netPlanFor(n){
 /** Has this store's drawing moved away from what the live shop is set to? Server plan first, receipt as fallback. */
 function _netPending(n){
   var pl = _netPlanFor(n);
-  if (pl && pl.kind === 'change') return { from: pl.from, to: pl.to };
+  // A node can be outstanding for its VISIBILITY, its PURPOSE, or both. Only a visibility move renders as a
+  // struck-through chip; a purpose-only change gets its own quieter marker (the chip would otherwise read
+  // "undefined → undefined", which is how a display bug becomes a trust problem).
+  if (pl && pl.kind === 'change' && pl.from) return { from: pl.from, to: pl.to };
+  if (pl && pl.kind === 'change') return null;
   if (UI._netPlan) return null;                       // the server has spoken; do not second-guess it
   if (!n || !n.built || !n.built.visibility) return null;
   var want = NET_PLATFORM[n.exposure || 'private'] || 'private';
@@ -1515,7 +1543,9 @@ function _netVisChip(n){
   }
   var c = NET_VIS_CHIP[n.exposure || 'private'] || NET_VIS_CHIP.private;
   return '<span style="font-size:9.5px;font-weight:800;letter-spacing:.02em;color:' + c.fg + ';background:' + c.bg
-    + ';border-radius:5px;padding:1px 5px;margin-left:6px;vertical-align:middle">' + c.t + '</span>';
+    + ';border-radius:5px;padding:1px 5px;margin-left:6px;vertical-align:middle">' + c.t + '</span>'
+    // The purpose moved but the visibility did not — still outstanding, still has to say so.
+    + (pl && pl.kind === 'change' ? '<span title="the wording on the store has not been updated yet" style="font-size:9px;font-weight:800;color:#8a5a1e;background:#f6ecd8;border-radius:5px;padding:1px 5px;margin-left:4px;vertical-align:middle">TEXT EDITED</span>' : '');
 }
 
 /* The most open a store may be, given the NETWORK's own visibility. Athi: *"what if the network is private? Then
