@@ -80,13 +80,21 @@
    referenced), and visibility is a genuine cap. This is the same two ideas applied to a store's settings.        */
 var NET = {
   name: 'alpha timers', handle: 'alpha-timers',
-  currency: 'INR', country: 'IN', city: 'Coimbatore',
-  certs: 'BIS, ISO 9001', priceBand: '12% – 22%', disputes: 'Handled by the network',
+  currency: 'EUR', country: 'DE', city: 'Hamburg',
+  certs: 'CE, ISO 9001', priceBand: '12% – 22%', disputes: 'Handled by the network',
 };
+/* The ROOT's catalogue — authored once, referenced by every store. Pictures and video live with the SKU. */
+var SKUS = [
+  { sku:'CR-32-4', name:'Vertical multistage pump CR 32-4', eur:1840, img:'🖼️ 4', vid:'🎬 1', unit:'each' },
+  { sku:'MQ3-45',  name:'Booster set MQ3-45',               eur: 620, img:'🖼️ 3', vid:'🎬 0', unit:'each' },
+  { sku:'SEAL-11', name:'Shaft seal kit (11 mm)',           eur:  48, img:'🖼️ 1', vid:'🎬 0', unit:'kit'  },
+];
+/* What a store adds ON TOP of the reference price to reach its own. Percentages, per store. */
+var LANDED = { rate:{ EUR:1, LKR:335.0, INR:91.5 }, importPct:15, taxPct:18, handlePct:4 };
 var STORES = [
   { key:'east',  name:'East',  vis:'Private', purpose:'Cash counter' },
   { key:'north', name:'North', vis:'Public',  purpose:'Walk-in showroom',
-    own:{ city:'Erode' } },
+    own:{ currency:'INR', country:'IN', city:'Coimbatore' } },
   { key:'west',  name:'West',  vis:'Network', purpose:'Supplies the westside stores',
     own:{ currency:'LKR', country:'LK', city:'Colombo', certs:'SLS' } },
 ];
@@ -118,6 +126,88 @@ function visOpts(s){
       + 'border:1px solid ' + (on ? 'var(--blue)' : 'var(--line)') + ';background:' + (on ? 'var(--blue)' : '#fff')
       + ';color:' + (on ? '#fff' : 'var(--ink)') + ';font-weight:' + (on ? '700' : '500') + ';font-size:12.5px">' + o + '</span>';
   }).join(' ');
+}
+/* ── THE ROOT'S CATALOGUE, AND WHAT A STORE DOES WITH IT ──────────────────────────────────────────────────────
+   Athi, 2026-08-08: *"if we set up a catalogue at the top and cascade it to the stores below as a reference…
+   root is Euro and under it each store is another currency. The stores inherit the product, but the money should
+   be updated with local currency — conversion + local tax + import tax + handling. But how that is maintained on
+   an ongoing basis is going to be difficult."*
+
+   He has put his finger on the hard part himself. The answer this mock proposes is that there are TWO prices and
+   they are different KINDS of thing, not two versions of one number:
+
+     REFERENCE   the root's price, in the root's currency. One per SKU. Never converted, never local.
+     THE STORE'S the price the store actually sells at, stamped in ITS currency. Its own value.
+
+   Conversion is then a CALCULATOR that proposes the second from the first — used once, at the moment a person
+   accepts it. It is not a live formula the platform re-evaluates, because a live formula means every price in
+   the network moves whenever a rate moves, and nobody has agreed to that.
+
+   CB already carries this distinction: the catalogue model has price BY REF (loose, resolves when the chit is
+   sealed) and BY VALUE (frozen at adoption). Ongoing maintenance is exactly that choice, made per SKU.          */
+function money(n, cur){
+  return (cur === 'EUR' ? '€' : cur === 'LKR' ? 'Rs ' : '₹') + n.toLocaleString(undefined,{maximumFractionDigits:0});
+}
+function landed(eur, cur){
+  var base = eur * (LANDED.rate[cur] || 1);
+  var imp  = base * LANDED.importPct / 100;
+  var hand = (base + imp) * LANDED.handlePct / 100;
+  var tax  = (base + imp + hand) * LANDED.taxPct / 100;
+  return { base:base, imp:imp, hand:hand, tax:tax, total: base + imp + hand + tax };
+}
+function catalogueTab(s){
+  var isRoot = false;                       // in this mock the left tree only selects stores
+  var cur = val(s, 'currency');
+  var rows = SKUS.map(function(k){
+    var L = landed(k.eur, cur);
+    return '<div class="fld"><div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap">'
+      + '<b style="font-size:13.5px">' + k.name + '</b>'
+      + '<span style="font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:var(--grey)">' + k.sku + '</span>'
+      + '<span style="font-size:11px;color:var(--grey)">' + k.img + ' · ' + k.vid + '</span>'
+      + '<span class="src inh" style="margin-left:auto">FROM NETWORK · BY REFERENCE</span></div>'
+      + '<div class="val" style="margin-top:6px">'
+      + '<span style="color:var(--grey);font-size:12.5px">reference ' + money(k.eur,'EUR') + '</span>'
+      + '<span style="font-size:12.5px">→</span>'
+      + '<b style="font-size:15px">' + money(L.total, cur) + '</b>'
+      + '<span class="src own">STAMPED HERE</span></div>'
+      + '<div class="note">' + money(L.base,cur) + ' converted · +' + LANDED.importPct + '% import ' + money(L.imp,cur)
+      + ' · +' + LANDED.handlePct + '% handling ' + money(L.hand,cur) + ' · +' + LANDED.taxPct + '% tax ' + money(L.tax,cur)
+      + '</div></div>';
+  }).join('');
+  return '<div class="box">'
+    + '<div class="fld"><div class="lbl">WHERE THIS CATALOGUE CAME FROM</div>'
+    + '<div class="val"><span>Adopted from <b>' + NET.name + '</b> · 3 items</span>'
+    + '<span class="src inh">BY REFERENCE</span><span class="act">stop following the network</span></div>'
+    + '<div class="note">The product, its pictures and its video stay the network\'s — corrections at the top reach '
+    + 'every store. Only the <b>price</b> is this store\'s own.</div></div>'
+    + rows + '</div>'
+
+    + '<div class="box"><div class="fld"><div class="lbl">HOW THE LOCAL PRICE IS REACHED</div>'
+    + '<div class="val" style="margin-top:6px;gap:6px">'
+    + '<span>rate</span><input value="' + (LANDED.rate[cur] || 1) + '" style="width:80px">'
+    + '<span>import %</span><input value="' + LANDED.importPct + '" style="width:56px">'
+    + '<span>handling %</span><input value="' + LANDED.handlePct + '" style="width:56px">'
+    + '<span>tax %</span><input value="' + LANDED.taxPct + '" style="width:56px">'
+    + '</div>'
+    + '<div class="note">A <b>calculator</b>, used once, at the moment someone accepts the number. It is not a live '
+    + 'formula — see below.</div></div></div>'
+
+    + '<div class="legend"><h3>THE ONGOING PROBLEM — you named it, so here it is stated plainly</h3>'
+    + 'A rate moves every day. If a price is a <b>live formula</b>, then every price in every store moves every day, '
+    + 'nobody agreed to any of them, and a customer can be quoted one number and invoiced another. If a price is '
+    + '<b>frozen</b>, it is stable and agreed — and it goes stale, so somebody must review it.<br><br>'
+    + 'There is no third option, and pretending otherwise is where this usually goes wrong. So make it a choice '
+    + '<i>per SKU</i>, which CB already models:<br><br>'
+    + '<b>BY VALUE (frozen)</b> — the store accepted this number. It stays until someone changes it. Right for a '
+    + 'catalogue that is quoted, printed and negotiated.<br>'
+    + '<b>BY REFERENCE (resolves at the order)</b> — the price is computed when the chit is sealed, from a rate '
+    + 'with a <i>source and a timestamp</i>. Right for a daily-rate business — gold, fuel, commodities.<br><br>'
+    + '⚠️ Whichever is chosen, the rate must be a <b>declared source with a date</b>, and the chit must record the '
+    + 'rate it used. A converted price with no record of the rate cannot be disputed, and a number that cannot be '
+    + 'disputed is not a price — it is an assertion.<br><br>'
+    + '⚠️ And import duty and local tax are <b>not conversion</b>. They are the destination\'s rules, not arithmetic '
+    + 'on a rate — they belong with trade-lane and compliance, and they change by law rather than by market.'
+    + '</div>';
 }
 function store(){ return STORES.filter(function(s){ return s.key === sel; })[0]; }
 function val(s, k){ return (s.own && s.own[k] !== undefined) ? s.own[k] : NET[k]; }
@@ -186,11 +276,12 @@ function drawPage(){
           'A place is never inherited — two stores are never in the same spot. The network only passes down the <b>country</b>.')
       + fld('SERVES', '50 km', 'own')
       + '</div>';
+  } else if (tab === 'catalogue') {
+    body = catalogueTab(s);
   } else {
-    // The real app already has rich panels for catalogue, co-assists, transact and dispute. The mock does not
-    // redraw them — it says so, rather than showing a thinner version that would look like a proposal to replace
-    // them. Athi: *"the same way as the mock, but without destroying the details."*
-    var real = { catalogue:1, coassist:1, transact:1, dispute:1, tradeready:1 };
+    // The real app already has rich panels for co-assists, transact and dispute. The mock does not redraw them —
+    // it says so, rather than showing a thinner version that would look like a proposal to replace them.
+    var real = { coassist:1, transact:1, dispute:1, tradeready:1 };
     var lbl = (TABS.filter(function(t){ return t[0] === tab; })[0] || [])[2] || tab;
     body = '<div class="box"><div class="fld"><div class="lbl">' + lbl.toUpperCase() + '</div>'
       + '<div class="note">' + (real[tab]
