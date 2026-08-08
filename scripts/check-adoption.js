@@ -18,15 +18,45 @@ const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const html = fs.readFileSync(process.env.CB_APP_HTML || path.join(root, 'public', 'app.html'), 'utf8');
 
 // lift the renderers + their helpers straight out of the page (each ends at the next top-level `function `)
-const NEEDED = ['_refPrice', '_refPriceHTML', '_refChips', '_refFacts', '_refPhoto', 'refFinishRow', 'refFinishDetail', '_swatch', '_combo'];
+// ⚠️ THE PRICE READERS ARE LIFTED TOO, NOT STUBBED. The renderers grew a dependency on cbHasPrice/cbAmount/
+// cbCurrency (the tolerant readers, added when a price became {amount,currency}), and this check's vm context was
+// never given them — so all 11 assertions had been failing with "cbHasPrice is not defined" for a while. That is a
+// harness gap wearing the costume of a product failure, and a check that is permanently red stops being read at
+// all. Lifted from app.html for the same reason as the renderers: a stub here would be a copy that drifts, and
+// this file's whole premise is no copies.
+const NEEDED = ['myCur', 'cbAmount', 'cbCurrency', 'cbHasPrice',
+  '_refPrice', '_refPriceHTML', '_refChips', '_refFacts', '_refPhoto', 'refFinishRow', 'refFinishDetail', '_swatch', '_combo'];
 let src = 'var _REF_SKIP=' + (/var _REF_SKIP=(\{[^}]*\});/.exec(html) || [])[1] + ';\n';
 for (const fn of NEEDED) {
   const m = new RegExp('^function ' + fn + '\\b[\\s\\S]*?(?=^function |^var |^\\/\\/)', 'm').exec(html);
   if (!m) { console.log('SETUP FAIL — could not lift ' + fn + '() out of app.html'); process.exit(1); }
   src += m[0] + '\n';
 }
+/**
+ * ⚠️ MONEY IS LIFTED TOO. The renderers call inr(), which is `n => fmtMoney(n, myCur())` — an arrow const in
+ * app.html over a formatter that lives in app/helpers.js. The lifter above only takes `function NAME`, so inr was
+ * missing and every price assertion failed on "inr is not defined". Both are taken from source for the same reason
+ * as everything else here: a stub for money would be a second money formatter, and this codebase has spent real
+ * outages on exactly that kind of second copy.
+ */
+const helpers = fs.readFileSync(path.join(root, 'public', 'app', 'helpers.js'), 'utf8');
+for (const fn of ['fmtMoney']) {
+  const m = new RegExp('^function ' + fn + '\\b.*$', 'm').exec(helpers);
+  if (!m) { console.log('SETUP FAIL — could not lift ' + fn + '() out of app/helpers.js'); process.exit(1); }
+  src = m[0] + '\n' + src;
+}
+{
+  const m = /^const CCY_LOCALE\s*=.*$/m.exec(helpers);
+  src = (m ? m[0] + '\n' : 'const CCY_LOCALE={};\n') + src;
+  const i = /^const inr\s*=.*$/m.exec(html);
+  if (!i) { console.log('SETUP FAIL — could not lift inr from app.html'); process.exit(1); }
+  src += '\n' + i[0];
+}
 const ctx = {
   UI: { refSel: null },
+  // myCur() reads SESSION.currency; the fixtures are priced in INR, so say so explicitly rather than lean on a
+  // default that could change underneath the assertions.
+  SESSION: { currency: 'INR' },
   esc: (v) => String(v == null ? '' : v).replace(/[<>"&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '"': '&quot;', '&': '&amp;' }[c])),
 };
 try { new vm.Script(src).runInNewContext(ctx); }
