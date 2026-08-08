@@ -368,7 +368,21 @@
   /* ── rendering ───────────────────────────────────────────────────────────────────────────────────────────── */
   function doc(id) { return (typeof document !== 'undefined' && id) ? document.getElementById(id) : null; }
   function sym(ns) { return opt(ns, 'symbol', '₹'); }
-  function fmt(ns, n) { return sym(ns) + Number(n).toLocaleString(opt(ns, 'locale', 'en-IN')); }
+  /**
+   * ⚠️ DIGIT GROUPING IS OFF BY DEFAULT, and that is deliberate.
+   *
+   * The screens this helper replaced printed the raw number — ₹3400. Grouping it (₹3,400) is arguably better and
+   * is certainly correct for INR, but it is a CHANGE TO A PUBLIC PAGE that nobody asked for, arriving as a side
+   * effect of a cart refactor. A refactor that quietly restyles money is not a refactor.
+   *
+   * It broke e2e/tests/variants.spec.js, which asserts the price as written — and the test was right to fail.
+   * So the default reproduces the old output exactly, and grouping is a flag a screen can choose on purpose.
+   */
+  function fmt(ns, n) {
+    return sym(ns) + (opt(ns, 'groupDigits', false)
+      ? Number(n).toLocaleString(opt(ns, 'locale', 'en-IN'))
+      : String(n));
+  }
   function accent(ns) { return opt(ns, 'accent', '#3F66A6'); }
   function soft(ns) { return opt(ns, 'soft', '#eef4ff'); }
 
