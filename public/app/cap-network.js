@@ -170,7 +170,9 @@ function _netInit(){
 }
 function _netKey(){ return 'k' + Date.now().toString(36) + Math.floor(Math.random() * 1e4); }
 function _netNode(key){ return (UI.net && UI.net.nodes || []).find(function(n){ return n.key === key; }); }
-function loadNetwork(){ _netInit(); netWhereAmI(); }   // design-first draft, PLUS the live position card below
+// netWhereAmI no longer draws anything — it resolves WHO THIS ENTITY IS in the network (operator · member ·
+// standalone), which decides whether the design builder or the read-only member screen is shown.
+function loadNetwork(){ _netInit(); netWhereAmI(); }
 
 /**
  * netWhereAmI — the LIVE network this store actually belongs to, and where it sits.
@@ -224,7 +226,7 @@ async function netWhereAmI(){
     if(!SESSION.bridgeId){ UI._netRole = null; UI._netPlaceBusy = false; host.innerHTML = ''; return; }   // unknown ≠ alone: say nothing
     var self = await api('netLookup', { query: { bridgeId: SESSION.bridgeId } }).catch(function(){ return null; });
     var me = self && (self.entity || self);
-    if(!me || !me.id){ UI._netRole = 'alone'; UI._netPlaceBusy = false; UI._netPlaceHtml = _netAloneCard(); host.innerHTML = UI._netPlaceHtml; return; }
+    if(!me || !me.id){ UI._netRole = 'alone'; UI._netPlaceBusy = false; UI._netPlaceHtml = ''; host.innerHTML = ''; return; }
 
     // ⚠️ WALK UP FIRST. `netSubtree` is me AND MY DESCENDANTS — so a leaf asking for its own subtree gets back
     // exactly itself, which is the one view that cannot answer "where do I sit?". The path names the root
@@ -255,72 +257,20 @@ async function netWhereAmI(){
     // A member's whole screen IS this tree, so the card would be the same thing twice. The operator keeps it —
     // there it earns its place by showing the LIVE structure beside the design, which are different things.
     UI._netPlaceBusy = false;
-    UI._netPlaceHtml = UI._netRole === 'member' ? '' : _netPlaceCard(me, nodes);
-    host.innerHTML = UI._netPlaceHtml;
+    /**
+     * NO CARD ABOVE THE DESIGN. Athi, 2026-08-08: *"for the root I don't want the top panel at all — 'you are
+     * here', that is not required. It is required only for the stores underneath."*
+     *
+     * The operator IS the top. Telling them where they sit answers a question they never had, and it took the eye
+     * first, above the thing they came to work on. A MEMBER still sees the whole structure — but as its own
+     * screen (_netMemberScreen), which shows purposes and places and is the better version of this anyway.
+     *
+     * The lookup still runs: it is what decides operator vs member vs standalone. Only the card is gone.
+     */
+    UI._netPlaceHtml = '';
+    host.innerHTML = '';
     if (wasRole !== UI._netRole && typeof renderApp === 'function') renderApp();   // the panel below depends on it
-  }catch(e){ UI._netRole = 'alone'; UI._netPlaceBusy = false; UI._netPlaceHtml = _netAloneCard(); host.innerHTML = UI._netPlaceHtml; }
-}
-function _netAloneCard(){
-  return '<div style="border:1px solid var(--line);background:#fff;border-radius:12px;padding:13px 15px">'
-    + '<div class="sec" style="margin:0 0 5px">🔗 Your place in the network</div>'
-    + '<div style="font-size:12.5px;color:var(--grey)">This business is not part of a network — it stands on its own. '
-    + 'That is the normal case: a network is for a group that shares one shopfront, like a departmental store with '
-    + 'separate departments.</div></div>';
-}
-/**
- * The tree, with THIS store in bold. Depth comes from the ltree path, so the indentation is the real hierarchy and
- * not a guess — and the value-chain line reads root → … → you, which is the question actually being asked.
- */
-function _netPlaceCard(me, nodes){
-  var mine = String(me.bridgeId || me.bridge_id || '');
-  var rows = (nodes || []).map(function(n){
-    var bid = String(n.bridgeId || n.bridge_id || '');
-    var path = String(n.path || '');
-    var depth = path ? Math.max(0, path.split('.').length - 1) : 0;
-    return { bid: bid, name: n.name || bid, depth: depth, path: path, mode: n.mode || '', isMe: bid === mine };
-  });
-  if(!rows.length) return _netAloneCard();
-  // Depth-first, siblings by NAME — identical to the design tree and to a member's view. Sorting by `path` here
-  // ordered the network by bridge id, which is why the same network looked different to two people.
-  var kidsOf = {};
-  rows.forEach(function(r){ var i = r.path.lastIndexOf('.'); (kidsOf[i < 0 ? '' : r.path.slice(0, i)] = kidsOf[i < 0 ? '' : r.path.slice(0, i)] || []).push(r); });
-  Object.keys(kidsOf).forEach(function(k){ kidsOf[k].sort(_netByName); });
-  var ordered = [];
-  (function walk(p){ (kidsOf[p] || []).forEach(function(r){ ordered.push(r); walk(r.path); }); })('');
-  if(ordered.length === rows.length) rows = ordered;   // fall back to the raw list if any path was unexpected
-
-  var meRow = rows.find(function(r){ return r.isMe; });
-  var chain = meRow ? rows.filter(function(r){ return meRow.path.indexOf(r.path) === 0; })
-                          .sort(function(a,b){ return a.depth - b.depth; }) : [];
-
-  var list = rows.map(function(r){
-    var pad = 10 + r.depth * 18;
-    return '<div style="padding:5px 8px 5px '+pad+'px;font-size:13px;'
-      + (r.isMe ? 'background:#F0EAF9;border-left:3px solid #6a44a8;border-radius:0 8px 8px 0;' : '')
-      + '">'
-      + (r.depth ? '<span style="color:var(--grey)">└ </span>' : '')
-      + (r.isMe ? '<b>'+esc(r.name)+'</b> <span style="font-size:11px;color:#6a44a8;font-weight:700">← you are here</span>'
-                : esc(r.name))
-      + ' <span style="font-size:11px;color:var(--grey)" class="mono">'+esc(r.bid)+'</span>'
-      + (r.mode ? ' <span style="font-size:10.5px;color:var(--grey)">'+esc(r.mode)+'</span>' : '')
-      + '</div>';
-  }).join('');
-
-  var chainLine = chain.length > 1
-    ? '<div style="font-size:12px;color:var(--grey);margin-top:9px;padding-top:8px;border-top:1px dashed var(--line)">'
-      + 'Value chain · ' + chain.map(function(r){
-          return r.isMe ? '<b style="color:var(--ink)">'+esc(r.name)+'</b>' : esc(r.name); }).join(' <span style="color:var(--grey)">→</span> ')
-      + '</div>'
-    : '';
-
-  var root = rows[0];
-  return '<div style="border:1px solid var(--line);background:#fff;border-radius:12px;padding:13px 15px">'
-    + '<div class="sec" style="margin:0 0 3px">🔗 Your place in the network</div>'
-    + '<div style="font-size:11.5px;color:var(--grey);margin-bottom:8px">The live structure — what is true right now, not the design below.</div>'
-    + list
-    + chainLine
-    + '<div style="margin-top:10px;font-size:11.5px"><a href="/network.html?bridge='+encodeURIComponent(root.bid)+'" target="_blank" style="color:var(--blue);text-decoration:none">🏬 See the network storefront a shopper sees →</a></div>'
-    + '</div>';
+  }catch(e){ UI._netRole = 'alone'; UI._netPlaceBusy = false; UI._netPlaceHtml = ''; host.innerHTML = ''; }
 }
 function _netRerender(){   // keep the detail pane's scroll position stable across re-render (no more jumping)
   var p = (typeof document !== 'undefined') ? document.getElementById('netDetailPane') : null; var st = p ? p.scrollTop : 0;
@@ -1137,16 +1087,16 @@ function _capTab(n, c, sel){
   var yes = (n.holds || []).indexOf(c.k) >= 0;
   var on = c.k === sel;
   return '<span onclick="netCapPick(\'' + n.key + '\',\'' + c.k + '\')" title="' + esc(c.label) + '"'
-    + ' style="cursor:pointer;display:inline-flex;align-items:center;gap:5px;padding:7px 11px 8px;'
-    + 'border:1px solid ' + (on ? 'var(--line)' : 'transparent') + ';'
-    + 'border-bottom:' + (on ? '1px solid #fff' : '1px solid var(--line)') + ';'
-    + 'border-radius:7px 7px 0 0;margin-bottom:-1px;position:relative;'
-    + 'background:' + (on ? '#fff' : 'transparent') + ';'
-    + 'color:' + (on ? '#1c2128' : (yes ? '#3a4048' : '#8a94a3')) + ';'
-    + 'font-size:12.5px;font-weight:' + (on ? '700' : (yes ? '600' : '500')) + ';white-space:nowrap">'
-    + '<span style="font-size:14px">' + c.icon + '</span>' + esc(c.label)
-    + (yes ? '<span title="on for this store" style="width:6px;height:6px;border-radius:50%;background:#2c7a43;flex:0 0 auto"></span>' : '')
-    + (c.soon ? '<span style="font-size:8px;font-weight:800;letter-spacing:.03em;color:#8a94a3;border:1px solid var(--line);border-radius:4px;padding:0 3px">N/E</span>' : '')
+    + ' style="cursor:pointer;display:inline-flex;align-items:center;gap:9px;padding:9px 12px;border-radius:9px;'
+    + 'background:' + (on ? 'var(--blue)' : 'transparent') + ';'
+    + 'color:' + (on ? '#fff' : (yes ? '#1c2128' : '#8a94a3')) + ';'
+    + 'font-size:13px;font-weight:' + (on ? '700' : '500') + ';white-space:nowrap;'
+    + 'border:1px solid ' + (on ? 'var(--blue)' : 'var(--line)') + '">'
+    + '<span style="width:16px;text-align:center;font-size:14px">' + c.icon + '</span>' + esc(c.label)
+    + (yes ? '<span title="on for this store" style="width:6px;height:6px;border-radius:50%;flex:0 0 auto;background:'
+        + (on ? 'rgba(255,255,255,.8)' : '#2c7a43') + '"></span>' : '')
+    + (c.soon ? '<span style="font-size:8.5px;font-weight:800;letter-spacing:.03em;opacity:.75;border:1px solid '
+        + (on ? 'rgba(255,255,255,.5)' : 'var(--line)') + ';border-radius:4px;padding:0 3px">N/E</span>' : '')
     + '</span>';
 }
 function netCapPick(key, capKey){
@@ -1177,11 +1127,12 @@ function _capList(n){
       + '<span onclick="netCapNo(\'' + n.key + '\',\'' + c.k + '\')" style="cursor:pointer;font-size:11.5px;color:var(--blue)">turn off</span>'
       + '</div>' + _capDetail(n, c.k) + '</div>';
   }
-  // The strip sits ON the panel's top border and the selected tab breaks through it — the join is what makes a
-  // row of labels read as a tab control rather than as buttons that happen to be near a box.
-  return '<div style="display:flex;flex-wrap:wrap;gap:2px;margin-top:10px;border-bottom:1px solid var(--line);align-items:flex-end">'
+  // The app's own MENU grammar — Athi: *"the menu what you are showing is good, I want the tab that way."* Two
+  // navigations that look alike teach the same habit once, instead of asking a person to learn a second
+  // vocabulary for the same act: choosing which page to look at.
+  return '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">'
     + NET_CAPS.map(function(x){ return _capTab(n, x, sel); }).join('') + '</div>'
-    + '<div style="border:1px solid var(--line);border-top:none;border-radius:0 0 9px 9px;background:#fff;padding:0 13px">'
+    + '<div style="border:1px solid var(--line);border-radius:11px;background:#fff;padding:0 14px;margin-top:10px">'
     + body + '</div>';
 }
 function _catFieldRow(n, f, i){
