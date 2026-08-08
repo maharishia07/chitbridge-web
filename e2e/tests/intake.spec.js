@@ -26,8 +26,13 @@ test.describe('Capture connector · Intake', () => {
     // The capability is lazy (ensureCap('intake') → /app/cap-intake.js), so the screen arrives a moment later.
     await expect(page.getByTestId('intake-simulate-open')).toBeVisible({ timeout: 15000 });
 
-    // A fresh entity has an empty queue — and "nothing waiting" must not be indistinguishable from "not migrated".
-    await expect(page.getByTestId('intake-row')).toHaveCount(0);
+    /**
+     * ⚠️ THE QUEUE IS NOT ASSUMED EMPTY. mintEntity short-circuits when the authed project's saved session is
+     * present, so every run of this file lands in the SAME entity and sees whatever earlier runs left behind.
+     * A spec that asserted "0 rows" passed once and then failed forever for a reason that was nothing to do
+     * with the code. So: work relative to what is there, and clean up after yourself at the end.
+     */
+    const before = await page.getByTestId('intake-row').count();
 
     // ── RECORD an inbound message. This is the SAME createCapture the WhatsApp webhook calls; the webhooks exist
     //    but have no provider or entity mapping yet, so this is the honest way in today.
@@ -37,8 +42,9 @@ test.describe('Capture connector · Intake', () => {
     await page.getByTestId('intake-sim-text').fill('need 2 boxes of bolts and 5 m cable by friday');
     await page.getByTestId('intake-sim-add').click();
 
-    const row = page.getByTestId('intake-row').first();
-    await expect(row, 'the message never reached the queue').toBeVisible({ timeout: 15000 });
+    await expect(page.getByTestId('intake-row'), 'the message never reached the queue')
+      .toHaveCount(before + 1, { timeout: 15000 });
+    const row = page.getByTestId('intake-row').first();     // newest first — the queue is created_at DESC
     await expect(row).toContainText('bolts');
     await expect(row).toContainText('WhatsApp');
 
@@ -55,7 +61,13 @@ test.describe('Capture connector · Intake', () => {
     await expect(modal, 'the captured lines did not reach the chit').toContainText(/bolts/i);
 
     // ⚠️ NOT SENT. The gate is that a person still has to press this.
-    await page.getByTestId('modal-close, .mx').first().click().catch(() => {});
+    await page.locator('#modalhost .mx').first().click().catch(() => {});
+
+    // Put the queue back as it was found.
+    await page.getByTestId('nav-intake').click();
+    await expect(page.getByTestId('intake-dismiss').first()).toBeVisible({ timeout: 15000 });
+    await page.getByTestId('intake-dismiss').first().click();
+    await expect(page.getByTestId('intake-row')).toHaveCount(before, { timeout: 15000 });
   });
 
   test('★ a message can be dismissed — and that is recorded, not forgotten', async ({ page }) => {
@@ -63,15 +75,22 @@ test.describe('Capture connector · Intake', () => {
     page.on('dialog', (d) => d.accept());
     await page.getByTestId('nav-intake').click();
     await expect(page.getByTestId('intake-simulate-open')).toBeVisible({ timeout: 15000 });
+    const before = await page.getByTestId('intake-row').count();
 
+    const TEXT = 'wrong number, ignore this ' + Date.now();
     await page.getByTestId('intake-simulate-open').click();
-    await page.getByTestId('intake-sim-text').fill('wrong number, ignore this');
+    await page.getByTestId('intake-sim-text').fill(TEXT);
     await page.getByTestId('intake-sim-add').click();
-    await expect(page.getByTestId('intake-row').first()).toBeVisible({ timeout: 15000 });
+    await expect(page.getByTestId('intake-row')).toHaveCount(before + 1, { timeout: 15000 });
+    await expect(page.locator('#intake_body')).toContainText(TEXT);
 
     await page.getByTestId('intake-dismiss').first().click();
-    // It leaves the PENDING queue. It is not deleted — the capture row stays, marked dismissed, as a receipt that
-    // the message arrived and was deliberately not turned into a chit.
-    await expect(page.getByTestId('intake-row'), 'dismiss did not clear it from the queue').toHaveCount(0, { timeout: 15000 });
+    /**
+     * It leaves the PENDING queue — and the row is NOT deleted. The capture stays in the table marked dismissed,
+     * as a receipt that the message arrived and was deliberately not turned into a chit. "We never got it" and
+     * "we saw it and said no" are different answers, and only one of them is true.
+     */
+    await expect(page.locator('#intake_body'), 'dismiss did not clear it from the queue').not.toContainText(TEXT, { timeout: 15000 });
+    await expect(page.getByTestId('intake-row')).toHaveCount(before, { timeout: 15000 });
   });
 });
