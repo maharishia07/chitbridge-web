@@ -371,16 +371,18 @@ function netCapYes(key, capKey){
     if (capKey === 'tradeready' && !n.tradeready) n.tradeready = { mode: 'inherit', certs: [] };
     if (capKey === 'dispute' && !n.dispute) n.dispute = { informed: true };
   }
-  if (UI.net.collapsed) delete UI.net.collapsed[capKey]; _netMark(); _netRerender();   // turning Yes shows its detail
+  // Turning something on SELECTS it, so the panel you just enabled is the one in front of you.
+  UI.net.openCap = capKey;
+  // `collapsed` belonged to the accordion and nothing reads it now; cleared so an old draft stops carrying it.
+  if (UI.net.collapsed) delete UI.net.collapsed[capKey];
+  _netMark(); _netRerender();
 }
 function netCapNo(key, capKey){
   var n = _netNode(key); if (!n) return; n.holds = n.holds || [];
   var i = n.holds.indexOf(capKey); if (i >= 0) n.holds.splice(i, 1);
-  if (UI.net.openCap === capKey) UI.net.openCap = null;
+  // The tab STAYS selected — turning something off should not also move you somewhere else, or the screen
+  // changing under you reads as though something worse happened than what you asked for.
   _netMark(); _netRerender();
-}
-function netCapToggleOpen(key, capKey){   // collapse / expand a Yes capability's detail (each independent)
-  UI.net.collapsed = UI.net.collapsed || {}; UI.net.collapsed[capKey] = !UI.net.collapsed[capKey]; _netRerender();
 }
 /* catalogue spec editing */
 function _ensureCat(n){ if (!n.catalogue) n.catalogue = {}; return CBCatalogue.ensure(n.catalogue); }   // shape + migration live in the shared model
@@ -1079,28 +1081,60 @@ function _capSummary(n, k){
   if (k === 'dispute') return (n.dispute || {}).informed !== false ? 'informed' : 'not involved';
   return 'set up next';
 }
-function _yesNo(n, k, yes){
-  return '<span style="display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden;flex:0 0 auto">'
-    + '<span onclick="netCapNo(\'' + n.key + '\',\'' + k + '\')" style="cursor:pointer;padding:4px 12px;font-size:12px;font-weight:700;' + (!yes ? 'background:#eceef1;color:#3a4048' : 'background:#fff;color:var(--grey)') + '">No</span>'
-    + '<span onclick="netCapYes(\'' + n.key + '\',\'' + k + '\')" style="cursor:pointer;padding:4px 12px;font-size:12px;font-weight:700;' + (yes ? 'background:#2c5aa0;color:#fff' : 'background:#fff;color:var(--grey)') + '">Yes</span>'
+/**
+ * ── ONE TAB, ONE SUBJECT ──────────────────────────────────────────────────────────────────────────────────────
+ * Athi, 2026-08-08: *"not a tab for scrolling, keep it side by side one after the other, so it is easier to see
+ * and act. One tab, one subject."*
+ *
+ * It was a stack of twelve accordions: to compare Place with Territory you scrolled past ten other things, and
+ * with every one expanded the panel was metres long. Now the subjects sit SIDE BY SIDE as tabs and exactly one is
+ * on screen — the whole point being that you can act on it without hunting for it.
+ *
+ * The tab still carries its own state, because a person choosing which subject to open needs to know which ones
+ * are switched on and what they say before opening them: a dot for on, and its one-line summary underneath.
+ */
+function _capTab(n, c, sel){
+  var yes = (n.holds || []).indexOf(c.k) >= 0;
+  var on = c.k === sel;
+  return '<span onclick="netCapPick(\'' + n.key + '\',\'' + c.k + '\')" title="' + esc(c.label) + '"'
+    + ' style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;padding:7px 11px;border-radius:9px;'
+    + 'border:1px solid ' + (on ? '#2c5aa0' : 'var(--line)') + ';background:' + (on ? '#2c5aa0' : (yes ? '#fff' : '#fafbfc')) + ';'
+    + 'color:' + (on ? '#fff' : (yes ? '#1c2128' : '#8a94a3')) + ';font-size:12.5px;font-weight:' + (on || yes ? '700' : '500') + '">'
+    + '<span style="font-size:14px">' + c.icon + '</span>' + esc(c.label)
+    + (yes ? '<span style="width:6px;height:6px;border-radius:50%;background:' + (on ? '#fff' : '#2c7a43') + '"></span>' : '')
+    + (c.soon ? '<span style="font-size:8.5px;font-weight:800;letter-spacing:.03em;opacity:.75">NOT ENFORCED</span>' : '')
     + '</span>';
 }
-function _capRow(n, c){
-  var yes = (n.holds || []).indexOf(c.k) >= 0;
-  var open = yes && !(UI.net.collapsed && UI.net.collapsed[c.k]);
-  var left = '<span ' + (yes ? 'onclick="netCapToggleOpen(\'' + n.key + '\',\'' + c.k + '\')" style="cursor:pointer;' : 'style="') + 'flex:1;min-width:0;display:flex;align-items:center;gap:8px">'
-    + '<span style="font-size:15px">' + c.icon + '</span>'
-    + '<span style="font-weight:700;font-size:13px;color:' + (c.soon ? '#6b6f86' : '#1c2128') + '">' + c.label + '</span>'
-    // Marked on the ROW, not only inside it — otherwise a person ticks six things and believes they configured six.
-    + (c.soon ? '<span style="font-size:9px;font-weight:800;letter-spacing:.03em;color:#6b6f86;background:#eef0f4;border-radius:5px;padding:1px 5px">NOT BUILT</span>' : '')
-    + (yes ? '<span style="font-size:11px;color:var(--grey);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">· ' + esc(_capSummary(n, c.k)) + '</span><span style="margin-left:auto;color:var(--grey);font-size:11px;flex:0 0 auto">' + (open ? '▾' : '▸') + '</span>' : '')
-    + '</span>';
-  var head = '<div style="display:flex;align-items:center;gap:10px;padding:9px 2px">' + left + _yesNo(n, c.k, yes) + '</div>';
-  var detail = (yes && open) ? '<div style="padding:0 2px 12px">' + _capDetail(n, c.k) + '</div>' : '';
-  return '<div style="border-bottom:1px solid var(--line)">' + head + detail + '</div>';
+function netCapPick(key, capKey){
+  UI.net.openCap = (UI.net.openCap === capKey) ? null : capKey;   // clicking the open one closes it
+  _netRerender();
 }
 function _capList(n){
-  return '<div style="margin-top:8px;border-top:1px solid var(--line)">' + NET_CAPS.map(function(c){ return _capRow(n, c); }).join('') + '</div>';
+  var sel = UI.net.openCap || null;
+  var c = sel ? _capMeta(sel) : null;
+  var yes = c ? (n.holds || []).indexOf(c.k) >= 0 : false;
+  var body;
+  if (!c) {
+    body = '<div style="padding:16px 4px;font-size:12.5px;color:var(--grey);line-height:1.6">'
+      + 'Pick a subject above. A green dot means this store already carries it.</div>';
+  } else if (!yes) {
+    // OFF is a real answer and gets its own screen, so turning something on is a deliberate act rather than a
+    // checkbox brushed past on the way somewhere else.
+    body = '<div style="padding:16px 4px">'
+      + '<div style="font-size:13px;font-weight:700">' + c.icon + ' ' + esc(c.label) + '</div>'
+      + '<div style="font-size:12.5px;color:var(--grey);margin-top:5px;line-height:1.6">Not on for <b>' + esc(n.name) + '</b>.'
+      + (NET_SOON[c.k] ? ' ' + esc(NET_SOON[c.k].q) : '') + '</div>'
+      + '<button class="pri" onclick="netCapYes(\'' + n.key + '\',\'' + c.k + '\')" style="margin-top:11px;padding:8px 14px">Turn on for this store</button>'
+      + '</div>';
+  } else {
+    body = '<div style="padding:12px 0">'
+      + '<div style="display:flex;align-items:center;gap:9px;margin-bottom:9px">'
+      + '<span style="font-size:11px;color:var(--grey);flex:1">' + esc(_capSummary(n, c.k)) + '</span>'
+      + '<span onclick="netCapNo(\'' + n.key + '\',\'' + c.k + '\')" style="cursor:pointer;font-size:11.5px;color:var(--blue)">turn off</span>'
+      + '</div>' + _capDetail(n, c.k) + '</div>';
+  }
+  return '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:9px">' + NET_CAPS.map(function(x){ return _capTab(n, x, sel); }).join('') + '</div>'
+    + '<div style="border-top:1px solid var(--line);margin-top:11px">' + body + '</div>';
 }
 function _catFieldRow(n, f, i){
   var legOpts = CAT_LEGS.map(function(l){ return '<option value="' + l.k + '"' + (f.leg === l.k ? ' selected' : '') + '>' + l.short + '</option>'; }).join('');
@@ -1953,12 +1987,10 @@ function _netNodeView(n){
     // made the one thing a network actually has to decide the hardest thing on the screen to find.
     // The network's OWN answer sits on the root node — it is the first question, and it caps every store below.
     + (isRoot ? _netNetworkVisibilityBlock() : (!n.owned ? '' : _netVisibilityBlock(n)))
-    + '<details style="margin-top:16px" ' + ((n.holds || []).length > 1 ? 'open' : '') + '>'
-      + '<summary style="cursor:pointer;font-size:11px;font-weight:800;color:var(--grey);letter-spacing:.05em;padding:4px 0">WHAT ELSE THIS NODE HOLDS <span style="font-weight:600;letter-spacing:0">— optional</span></summary>'
-      + '<div style="margin-top:9px;padding:13px 15px;border:1px solid var(--line);border-radius:11px;background:#fff">'
-      + '<div style="font-size:11px;color:var(--grey)">None of this is needed to build the network. For each, choose <b>Yes</b> or <b>No</b>; Yes opens its details right below.</div>'
+    + '<div style="margin-top:16px;padding:13px 15px;border:1px solid var(--line);border-radius:11px;background:#fff">'
+      + '<div style="font-size:11px;font-weight:800;color:var(--grey);letter-spacing:.05em">WHAT ELSE THIS STORE HOLDS <span style="font-weight:600;letter-spacing:0">— optional, none of it is needed to build</span></div>'
       + _capList(n)
-      + '</div></details>'
+      + '</div>'
     + '<div style="margin-top:16px;font-size:11.5px;color:var(--grey);line-height:1.55">When the design is done, <b>Build</b> turns each owned node into a real entity + login key, and invites each partner by handshake. Until then this is just a plan — saved, nothing created.</div>'
     + '</div>';
 }
