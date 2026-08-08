@@ -60,7 +60,7 @@
 
 <div class="bar">
   <b>DESIGN MOCK</b> — nothing here is real, nothing saves.
-  <span style="margin-left:auto">exploring: how the network's settings reach its stores</span>
+  <span style="margin-left:auto"><a href="#" onclick="view='locate';drawPage();return false" style="color:#8fd0ff">🔎 where is a product?</a> · <a href="#" onclick="view='store';drawPage();return false" style="color:#8fd0ff">back to the store</a></span>
 </div>
 
 <div class="wrap">
@@ -90,13 +90,14 @@ var SKUS = [
   { sku:'SEAL-11', name:'Shaft seal kit (11 mm)',           eur:  48, img:'🖼️ 1', vid:'🎬 0', unit:'kit'  },
 ];
 /* What a store adds ON TOP of the reference price to reach its own. Percentages, per store. */
-var LANDED = { rate:{ EUR:1, LKR:335.0, INR:91.5 }, importPct:15, taxPct:18, handlePct:4 };
+/* ⚠️ A STUB. Athi: *"we don't need to get stuck at currency, it is the stub at the moment."* These numbers are
+   invented so the FLOW can be seen. Where the rate comes from, and how often, is a later decision. */
+var LANDED = { rate:{ EUR:1, USD:1.09, INR:98.5, AED:4.0, CNY:7.85 }, importPct:15, taxPct:18, handlePct:4 };
 var STORES = [
-  { key:'east',  name:'East',  vis:'Private', purpose:'Cash counter' },
-  { key:'north', name:'North', vis:'Public',  purpose:'Walk-in showroom',
-    own:{ currency:'INR', country:'IN', city:'Coimbatore' } },
-  { key:'west',  name:'West',  vis:'Network', purpose:'Supplies the westside stores',
-    own:{ currency:'LKR', country:'LK', city:'Colombo', certs:'SLS' } },
+  { key:'usa',   name:'USA',   vis:'Public',  purpose:'North America', own:{ currency:'USD', country:'US', city:'Chicago' }, mode:'convert' },
+  { key:'india', name:'India', vis:'Public',  purpose:'South Asia',    own:{ currency:'INR', country:'IN', city:'Coimbatore' }, mode:'convert' },
+  { key:'uae',   name:'UAE',   vis:'Public',  purpose:'Gulf',          own:{ currency:'AED', country:'AE', city:'Dubai' }, mode:'own' },
+  { key:'china', name:'China', vis:'Network', purpose:'Assembly + regional supply', own:{ currency:'CNY', country:'CN', city:'Suzhou' }, mode:'own' },
 ];
 /* The full menu, matching the real app. `soon` = captured on the design, not enforced by the platform yet. */
 var TABS = [
@@ -106,7 +107,7 @@ var TABS = [
   ['territory','🗺️','Territory',1], ['stock','📦','Stock',1], ['fulfil','🚚','Fulfilment',1],
   ['money','💱','Price policy',1], ['localise','📜','Localisation',1],
 ];
-var sel = 'west', tab = 'general';
+var sel = 'india', tab = 'catalogue', view = 'store';
 
 function fld(label, value, source, hint){
   var cls = source === 'own' ? 'own' : source === 'cap' ? 'cap' : 'inh';
@@ -156,59 +157,91 @@ function landed(eur, cur){
   return { base:base, imp:imp, hand:hand, tax:tax, total: base + imp + hand + tax };
 }
 function catalogueTab(s){
-  var isRoot = false;                       // in this mock the left tree only selects stores
   var cur = val(s, 'currency');
+  var mode = s.mode || 'convert';
+  var opt = function(k, title, sub){
+    var on = mode === k;
+    return '<div onclick="setMode(\'' + k + '\')" style="cursor:pointer;flex:1;min-width:230px;padding:11px 13px;'
+      + 'border:1px solid ' + (on ? 'var(--blue)' : 'var(--line)') + ';border-radius:9px;background:' + (on ? '#eef4fc' : '#fff') + '">'
+      + '<b style="font-size:12.5px;color:' + (on ? 'var(--blue)' : 'var(--ink)') + '">' + (on ? '● ' : '○ ') + title + '</b>'
+      + '<div class="note" style="margin-top:3px">' + sub + '</div></div>';
+  };
+
   var rows = SKUS.map(function(k){
     var L = landed(k.eur, cur);
+    var priced = mode === 'convert' ? money(L.total, cur) : (k.own && k.own[s.key] ? money(k.own[s.key], cur) : null);
     return '<div class="fld"><div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap">'
       + '<b style="font-size:13.5px">' + k.name + '</b>'
       + '<span style="font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:var(--grey)">' + k.sku + '</span>'
       + '<span style="font-size:11px;color:var(--grey)">' + k.img + ' · ' + k.vid + '</span>'
-      + '<span class="src inh" style="margin-left:auto">FROM NETWORK · BY REFERENCE</span></div>'
+      + '<span class="src inh" style="margin-left:auto">PRODUCT FROM NETWORK</span></div>'
       + '<div class="val" style="margin-top:6px">'
-      + '<span style="color:var(--grey);font-size:12.5px">reference ' + money(k.eur,'EUR') + '</span>'
+      + '<span style="color:var(--grey);font-size:12.5px">reference ' + money(k.eur, 'EUR') + '</span>'
       + '<span style="font-size:12.5px">→</span>'
-      + '<b style="font-size:15px">' + money(L.total, cur) + '</b>'
-      + '<span class="src own">STAMPED HERE</span></div>'
-      + '<div class="note">' + money(L.base,cur) + ' converted · +' + LANDED.importPct + '% import ' + money(L.imp,cur)
-      + ' · +' + LANDED.handlePct + '% handling ' + money(L.hand,cur) + ' · +' + LANDED.taxPct + '% tax ' + money(L.tax,cur)
-      + '</div></div>';
+      + (priced
+          ? '<b style="font-size:15px">' + priced + '</b><span class="src ' + (mode === 'convert' ? 'inh' : 'own') + '">'
+            + (mode === 'convert' ? 'CONVERTED' : 'SET HERE') + '</span>'
+          : '<b style="font-size:14px;color:#a5382e">no price yet</b><span class="src cap">NEEDS A PRICE</span>')
+      + '</div>'
+      + (mode === 'convert'
+          ? '<div class="note">' + money(L.base, cur) + ' converted · +' + LANDED.importPct + '% import · +'
+            + LANDED.handlePct + '% handling · +' + LANDED.taxPct + '% tax</div>'
+          : '<div class="note">This store names its own number. The reference is shown so it has something to price against.</div>')
+      + '</div>';
   }).join('');
+
   return '<div class="box">'
     + '<div class="fld"><div class="lbl">WHERE THIS CATALOGUE CAME FROM</div>'
-    + '<div class="val"><span>Adopted from <b>' + NET.name + '</b> · 3 items</span>'
+    + '<div class="val"><span>Adopted from <b>' + NET.name + '</b> · ' + SKUS.length + ' items · reference currency EUR</span>'
     + '<span class="src inh">BY REFERENCE</span><span class="act">stop following the network</span></div>'
-    + '<div class="note">The product, its pictures and its video stay the network\'s — corrections at the top reach '
-    + 'every store. Only the <b>price</b> is this store\'s own.</div></div>'
-    + rows + '</div>'
+    + '<div class="note">The product, its pictures and its video stay the network\'s — a correction at the top reaches '
+    + 'every store. Only the <b>price</b> is ever this store\'s own.</div></div></div>'
 
-    + '<div class="box"><div class="fld"><div class="lbl">HOW THE LOCAL PRICE IS REACHED</div>'
-    + '<div class="val" style="margin-top:6px;gap:6px">'
-    + '<span>rate</span><input value="' + (LANDED.rate[cur] || 1) + '" style="width:80px">'
-    + '<span>import %</span><input value="' + LANDED.importPct + '" style="width:56px">'
-    + '<span>handling %</span><input value="' + LANDED.handlePct + '" style="width:56px">'
-    + '<span>tax %</span><input value="' + LANDED.taxPct + '" style="width:56px">'
+    /* ── THE OPTION, WHICH IS ALL THAT IS BEING PLACED HERE ──────────────────────────────────────────────────
+       Athi, 2026-08-08: *"we can give the option at catalogue level — conversion to your currency, or you decide
+       the price. These are the options available. Just place the option now, then we will see how to perform the
+       same."* So: two choices, set once for the catalogue, and the consequence shown per item.                */
+    + '<div class="box"><div class="fld"><div class="lbl">HOW THIS STORE PRICES WHAT IT ADOPTED</div>'
+    + '<div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:9px">'
+    + opt('convert', 'Convert from the network',
+        'A rate and the local add-ons produce a price. The store confirms it — it is a <b>proposal</b>, not a live formula.')
+    + opt('own', 'This store decides the price',
+        'The reference is shown for context; the number is the store\'s. Nothing is calculated.')
     + '</div>'
-    + '<div class="note">A <b>calculator</b>, used once, at the moment someone accepts the number. It is not a live '
-    + 'formula — see below.</div></div></div>'
+    + '<div class="note" style="margin-top:9px">Set for the catalogue, and overridable on a single item — one pump may '
+    + 'be a fixed global price while everything else converts.</div></div></div>'
 
-    + '<div class="legend"><h3>THE ONGOING PROBLEM — you named it, so here it is stated plainly</h3>'
-    + 'A rate moves every day. If a price is a <b>live formula</b>, then every price in every store moves every day, '
-    + 'nobody agreed to any of them, and a customer can be quoted one number and invoiced another. If a price is '
-    + '<b>frozen</b>, it is stable and agreed — and it goes stale, so somebody must review it.<br><br>'
-    + 'There is no third option, and pretending otherwise is where this usually goes wrong. So make it a choice '
-    + '<i>per SKU</i>, which CB already models:<br><br>'
-    + '<b>BY VALUE (frozen)</b> — the store accepted this number. It stays until someone changes it. Right for a '
-    + 'catalogue that is quoted, printed and negotiated.<br>'
-    + '<b>BY REFERENCE (resolves at the order)</b> — the price is computed when the chit is sealed, from a rate '
-    + 'with a <i>source and a timestamp</i>. Right for a daily-rate business — gold, fuel, commodities.<br><br>'
-    + '⚠️ Whichever is chosen, the rate must be a <b>declared source with a date</b>, and the chit must record the '
-    + 'rate it used. A converted price with no record of the rate cannot be disputed, and a number that cannot be '
-    + 'disputed is not a price — it is an assertion.<br><br>'
-    + '⚠️ And import duty and local tax are <b>not conversion</b>. They are the destination\'s rules, not arithmetic '
-    + 'on a rate — they belong with trade-lane and compliance, and they change by law rather than by market.'
+    + '<div class="box">' + rows + '</div>'
+
+    /* ── THE ROLLOVER — the part actually worth looking at ──────────────────────────────────────────────────── */
+    + '<div class="box"><div class="fld"><div class="lbl">WHEN THE NETWORK CHANGES THE CATALOGUE</div>'
+    + '<div style="font-size:12.5px;line-height:1.7;margin-top:6px">'
+    + '<b>A new SKU is added at the top</b> → it appears in every store, because the catalogue is held by reference.<br>'
+    + '&nbsp;&nbsp;· stores on <b>Convert</b> get a proposed price straight away.<br>'
+    + '&nbsp;&nbsp;· stores on <b>Decide</b> get the item <b style="color:#a5382e">unpriced</b>, and it stays out of '
+    + 'their shopfront until someone prices it.<br>'
+    + '<b>The reference price changes</b> → Convert stores see a new proposal and are asked to confirm; Decide stores '
+    + 'are told the reference moved and left alone.<br>'
+    + '<b>A picture, a video or a spec is corrected</b> → it reaches every store immediately. Nobody confirms '
+    + 'anything, because nobody had overridden it.<br>'
+    + '<b>The item is withdrawn</b> → it stops being offered everywhere, and past orders still resolve to the '
+    + 'version they were placed against.</div>'
+    + '<div class="note" style="margin-top:8px">⚠️ An unpriced adopted item being <b>advertised but unsellable</b> is a '
+    + 'defect CB has already had once and fixed — such items are hidden from a shop that shows prices. The rollover '
+    + 'must keep that true rather than re-open it.</div></div></div>'
+
+    + '<div class="legend"><h3>WHAT IS BEING DECIDED HERE — and what is deliberately not</h3>'
+    + '<b>Decided:</b> the product is held <i>by reference</i> and the price is <i>the store\'s</i>. That split is the '
+    + 'whole model — corrections flow down, money never does.<br>'
+    + '<b>Decided:</b> two ways to reach a local price, chosen per catalogue and overridable per item.<br><br>'
+    + '<b>Deliberately not decided:</b> where the rate comes from, how often it is re-read, and who confirms a new '
+    + 'proposal. Those are the maintenance question, and they are a stub here on purpose.<br><br>'
+    + '⚠️ One thing not to lose when it stops being a stub: whichever way a price is reached, <b>the chit must record '
+    + 'the rate it used</b>. A converted price with no record of the rate cannot be disputed, and a number that '
+    + 'cannot be disputed is not a price.'
     + '</div>';
 }
+function setMode(m){ var s = store(); s.mode = m; drawPage(); }
 function store(){ return STORES.filter(function(s){ return s.key === sel; })[0]; }
 function val(s, k){ return (s.own && s.own[k] !== undefined) ? s.own[k] : NET[k]; }
 function src(s, k){ return (s.own && s.own[k] !== undefined) ? 'own' : 'inherited'; }
@@ -226,7 +259,90 @@ function drawTree(){
           + '<div class="sub">' + s.purpose + (overrides ? ' · ' + overrides + ' set here' : '') + '</div></div>';
       }).join('');
 }
+/* ── ONE PRODUCT, ACROSS THE WHOLE NETWORK ────────────────────────────────────────────────────────────────────
+   Athi, 2026-08-08: *"if there is a query about one product, how can we provide where exactly the product is and
+   how quickly this can be sent across? Also how individual systems can be connected to make it happen."*
+
+   This is the question the whole supply-chain set exists to answer, and it is worth seeing as ONE screen: a SKU,
+   and every store that has it — how many, how far, how fast, and — the part that decides whether any of it can be
+   trusted — WHERE THE NUMBER CAME FROM and WHEN it was last true.
+
+   ⚠️ The freshness column is not decoration. A live ERP feed, a nightly sync and a figure somebody typed in March
+   are three different facts, and flattening them into one number is how a network promises stock it does not have.
+   CB's four-leg model already separates system-fed from stored-in-CB; this is that distinction, shown. */
+var STOCK = {
+  'CR-32-4': [
+    { store:'India', city:'Coimbatore', qty:6,  km:0,     days:1, via:'ERP · SAP',      fresh:'live · 4 min ago' },
+    { store:'UAE',   city:'Dubai',      qty:2,  km:2480,  days:4, via:'ERP · Dynamics', fresh:'nightly · 11 h ago' },
+    { store:'China', city:'Suzhou',     qty:41, km:5900,  days:9, via:'IoT · bin count',fresh:'live · 30 s ago' },
+    { store:'USA',   city:'Chicago',    qty:0,  km:13400, days:0, via:'manual',         fresh:'typed · 26 Mar' },
+  ],
+};
+function locateScreen(){
+  var k = SKUS[0], rows = STOCK[k.sku] || [];
+  var have = rows.filter(function(r){ return r.qty > 0; }).sort(function(a,b){ return a.days - b.days; });
+  var none = rows.filter(function(r){ return r.qty <= 0; });
+  var line = function(r, dim){
+    var stale = /typed|nightly/.test(r.fresh);
+    return '<div class="fld" style="' + (dim ? 'opacity:.55' : '') + '">'
+      + '<div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap">'
+      + '<b style="font-size:13.5px">' + r.store + '</b>'
+      + '<span style="font-size:12px;color:var(--grey)">' + r.city + '</span>'
+      + '<span style="font-size:12px;color:var(--grey)">' + (r.km ? r.km.toLocaleString() + ' km' : 'here') + '</span>'
+      + '<b style="margin-left:auto;font-size:15px;color:' + (r.qty ? '#2c7a43' : '#a5382e') + '">' + r.qty + ' in stock</b>'
+      + '</div>'
+      + '<div class="val" style="margin-top:4px">'
+      + (r.qty ? '<span style="font-size:12.5px">can ship in <b>' + r.days + ' day' + (r.days === 1 ? '' : 's') + '</b></span>' : '<span style="font-size:12.5px;color:#a5382e">nothing to ship</span>')
+      + '<span class="src ' + (stale ? 'cap' : 'own') + '">' + r.via + ' · ' + r.fresh + '</span>'
+      + '</div>'
+      + (stale ? '<div class="note">⚠ This number is not live. It is the best the connected system offers, and the '
+          + 'screen says so rather than rounding it up to certainty.</div>' : '')
+      + '</div>';
+  };
+  return '<h1>🔎 Where is it?</h1>'
+    + '<div class="hd">' + k.sku + '</div>'
+    + '<div class="kind">' + k.name + ' · asked across <b>' + NET.name + '</b></div>'
+
+    + '<div class="box">'
+    + '<div class="fld"><div class="lbl">CAN BE SENT — soonest first</div></div>'
+    + have.map(function(r){ return line(r, false); }).join('')
+    + none.map(function(r){ return line(r, true); }).join('')
+    + '</div>'
+
+    + '<div class="box"><div class="fld"><div class="lbl">SO THE ANSWER TO THE CUSTOMER IS</div>'
+    + '<div style="font-size:13.5px;margin-top:6px;line-height:1.7">'
+    + '<b>6 available in Coimbatore, tomorrow.</b> Beyond that, 2 in Dubai in 4 days and 41 in Suzhou in 9. '
+    + 'Chicago has none.</div>'
+    + '<div class="note">Distance comes from each store\'s <b>place</b>; the days come from its declared '
+    + '<b>fulfilment routes</b>; the quantity comes from whatever system that store has connected. All three are '
+    + 'per-store declarations — nothing here is central.</div></div></div>'
+
+    + '<div class="box"><div class="fld"><div class="lbl">HOW THE SYSTEMS CONNECT</div>'
+    + '<div style="font-size:12.5px;line-height:1.8;margin-top:6px">'
+    + '<b>India → SAP</b> over the ERP connector, pushing on change. Live.<br>'
+    + '<b>UAE → Dynamics</b>, a nightly file. Correct at 2 a.m., a guess by lunchtime.<br>'
+    + '<b>China → IoT</b>, a bin counter on the rack. Live, and only as good as the sensor.<br>'
+    + '<b>USA → nobody</b>. Somebody typed it in March and it has been decaying ever since.</div>'
+    + '<div class="note">This is the four-leg model doing its job: each field says which leg it came from — '
+    + '<b>system-fed</b>, <b>from the customer</b>, <b>computed</b>, or <b>stored in CB</b>. A store with no '
+    + 'connector is not excluded from the network; it is included and marked, which is the honest version.</div>'
+    + '</div></div>'
+
+    + '<div class="legend"><h3>WHAT THIS SCREEN NEEDS THAT CB DOES NOT YET HAVE</h3>'
+    + '<b>Place</b> — built (b119). Distances are real.<br>'
+    + '<b>Stock with a freshness stamp</b> — not built. The quantities and timestamps above are invented, and this '
+    + 'is the piece the whole screen rests on.<br>'
+    + '<b>Fulfilment routes and transit days</b> — not built. The "1 day / 4 days / 9 days" are invented too.<br>'
+    + '<b>The ERP and IoT connectors</b> — the rail exists and the four-leg routing exists; what is missing is a '
+    + 'per-store <i>availability record</i> for them to write into.<br><br>'
+    + '⚠️ Note what is NOT needed: a central inventory. Every number above stays in the store that owns it and is '
+    + 'read across the network at the moment of asking. That is the difference between a rail and a database, and '
+    + 'it is the only version a chain of independent businesses would ever agree to.'
+    + '</div>';
+}
+
 function drawPage(){
+  if (view === 'locate') { document.getElementById('page').innerHTML = locateScreen(); return; }
   var s = store();
   var body;
   if (tab === 'general') {
