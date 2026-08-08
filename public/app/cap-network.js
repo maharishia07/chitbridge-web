@@ -1317,8 +1317,9 @@ function netSendCart(){
     supplier: { name: s.name, bridge: s.bridge_id || null, entity_id: s.entity_id },
     recipients: [{ name: s.name, role: 'to', bridge: s.bridge_id || null, entity_id: s.entity_id }],
     catalogue: full,
-    // Quantity opens at 1 per line and is editable in compose — Athi, 2026-08-08: "will anyone ask only one quantity."
-    items: picked.map(function(p){ return { particulars: p.name, unit: p.unit, price: amt(p), qty: 1 }; }),
+    // The quantity set at the ROW travels through — it is not re-asked in compose, which would make the stepper a
+    // suggestion rather than a decision. Still editable there, as every compose line is.
+    items: picked.map(function(p){ return { particulars: p.name, unit: p.unit, price: amt(p), qty: p.qty || 1 }; }),
   });
 }
 function _netPaintBrowse(){

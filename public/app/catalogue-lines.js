@@ -121,7 +121,46 @@
     var keep = prev && prev.sig === sig;
     PICK[ns] = { cat: cat || {}, sig: sig, q: keep ? prev.q : '', sel: keep ? prev.sel : {} };
   }
+  /**
+   * ── QUANTITY LIVES IN THE ROW ─────────────────────────────────────────────────────────────────────────────────
+   * Athi, 2026-08-08, showing the grocery cart he built in 2018: a `+` on each line, which becomes `− 1 +` once it
+   * is in the cart, a running count and total always on screen, and a toggle between the cart and the full list.
+   *
+   * He is right and my checkbox version was worse. A checkbox says only "yes", so quantity had to be asked for
+   * LATER in a separate panel — which means you decide "how many" away from the row that tells you the price, the
+   * unit and what it is. Setting it in place removes that trip, and the row can then show what it will cost.
+   *
+   * So `sel` maps item_id → QUANTITY, not item_id → true. Zero is never stored: removing the last one deletes the
+   * key, so "in the cart" stays a single fact rather than two that can disagree (a key with qty 0 would render as
+   * a cart line worth nothing).
+   */
   function cbPickCount(ns) { var s = PICK[ns]; return s ? Object.keys(s.sel).length : 0; }
+  /** Units, not lines — "3 items" on the badge means three things arriving, which is what a person is counting. */
+  function cbPickUnits(ns) {
+    var s = PICK[ns]; if (!s) return 0;
+    return Object.keys(s.sel).reduce(function (n, k) { return n + (Number(s.sel[k]) || 0); }, 0);
+  }
+  function cbPickQtyOf(ns, id) { var s = PICK[ns]; return (s && Number(s.sel[id])) || 0; }
+  /**
+   * The running total, and whether it is WHOLE.
+   *
+   * ⚠️ A total that silently skips unpriced lines is a lie in the direction that costs money. If any line in the
+   * cart has no readable price, `partial` is true and the screen must say so rather than show a confident number.
+   */
+  function cbPickTotal(ns) {
+    var s = PICK[ns]; if (!s) return { amount: 0, partial: false, currency: '' };
+    var amount = 0, partial = false;
+    cbLineRows(s.cat).forEach(function (r) {
+      if (r.type !== 'line' || !s.sel[r.item_id]) return;
+      var d = (r.item && (r.item.item_data || r.item)) || {};
+      var p = d.price, v = (p && typeof p === 'object' && p.amount !== undefined) ? p.amount : p;
+      var n = parseFloat(v);
+      if (!isFinite(n)) { partial = true; return; }
+      amount += n * (Number(s.sel[r.item_id]) || 0);
+    });
+    var shop = (s.cat && s.cat.shop) || {};
+    return { amount: amount, partial: partial, currency: shop.currency_code || '' };
+  }
 
   function lineText(r) {
     var d = (r.item && (r.item.item_data || r.item)) || {};
@@ -134,12 +173,14 @@
     var s = PICK[ns]; if (!s) return [];
     var all = cbLineRows(s.cat);
     var q = (s.q || '').trim().toLowerCase();
-    if (!q) return all;
+    // In cart view the search still applies — a cart big enough to need reviewing is big enough to need finding in.
+    if (!q && !s.cartView) return all;
     var out = [], pending = null, took = false;
     for (var i = 0; i < all.length; i++) {
       var r = all[i];
       if (r.type === 'product') { pending = r; took = false; continue; }
-      if (lineText(r).indexOf(q) === -1) continue;
+      if (s.cartView && !s.sel[r.item_id]) continue;
+      if (q && lineText(r).indexOf(q) === -1) continue;
       if (pending && !took) { out.push(pending); took = true; }
       out.push(r);
     }
@@ -153,16 +194,50 @@
       .map(function (r) {
         var d = (r.item && (r.item.item_data || r.item)) || {};
         return {
-          item_id: r.item_id, item: r.item,
+          item_id: r.item_id, item: r.item, qty: Number(s.sel[r.item_id]) || 1,
           name: r.variant ? ((d.name || d.product || '') + ' ' + r.variant).trim() : (d.name || d.product || 'item'),
           unit: d.unit || 'unit', price: d.price, code: d.code || d.sku || null,
         };
       });
   }
 
+  var MAX_QTY = 100000;   // the server's own line cap; refuse here too so a typo is caught at the row, not at send
+
+  /** `+` — first press puts it in the cart, every press after adds one more. */
+  function cbPickAdd(ns, id) {
+    var s = PICK[ns]; if (!s) return;
+    s.sel[id] = Math.min(MAX_QTY, (Number(s.sel[id]) || 0) + 1);
+    if (root.cbPickPaint) root.cbPickPaint(ns);
+  }
+  /** `−` — and taking the last one OUT removes the line, rather than leaving a cart entry of zero. */
+  function cbPickDec(ns, id) {
+    var s = PICK[ns]; if (!s) return;
+    var n = (Number(s.sel[id]) || 0) - 1;
+    if (n > 0) s.sel[id] = n; else delete s.sel[id];
+    if (root.cbPickPaint) root.cbPickPaint(ns);
+  }
+  /** Typed straight into the box. Anything that is not a positive number leaves the line as it was. */
+  function cbPickSetQty(ns, id, v) {
+    var s = PICK[ns]; if (!s) return;
+    var n = parseFloat(v);
+    if (!isFinite(n) || n <= 0) { delete s.sel[id]; }
+    else s.sel[id] = Math.min(MAX_QTY, n);
+    if (root.cbPickPaint) root.cbPickPaint(ns);
+  }
   function cbPickToggle(ns, id) {
     var s = PICK[ns]; if (!s) return;
-    if (s.sel[id]) delete s.sel[id]; else s.sel[id] = true;
+    if (s.sel[id]) delete s.sel[id]; else s.sel[id] = 1;
+    if (root.cbPickPaint) root.cbPickPaint(ns);
+  }
+  /**
+   * Cart view ⇄ full list. Athi: *"you can switch between cart and current selection."*
+   * It is a VIEW, not a different list — the same rows filtered to what is in the cart, so a quantity changed while
+   * reviewing is the same quantity, and emptying the cart from here drops you back to the list rather than staring
+   * at nothing.
+   */
+  function cbPickView(ns, on) {
+    var s = PICK[ns]; if (!s) return;
+    s.cartView = !!on;
     if (root.cbPickPaint) root.cbPickPaint(ns);
   }
   /**
@@ -179,7 +254,9 @@
       ids.push(rows[i].item_id);
     }
     var allOn = ids.length && ids.every(function (id) { return s.sel[id]; });
-    ids.forEach(function (id) { if (allOn) delete s.sel[id]; else s.sel[id] = true; });
+    // Adding a whole group puts ONE of each in the cart — never a quantity nobody asked for. Clearing it removes
+    // the lines outright, including any quantity that was raised by hand; that is what "clear the group" means.
+    ids.forEach(function (id) { if (allOn) delete s.sel[id]; else if (!s.sel[id]) s.sel[id] = 1; });
     if (root.cbPickPaint) root.cbPickPaint(ns);
   }
   function cbPickSearch(ns, q) {
@@ -193,6 +270,9 @@
   root.cbPickInit = cbPickInit; root.cbPickRows = cbPickRows; root.cbPickSelected = cbPickSelected;
   root.cbPickToggle = cbPickToggle; root.cbPickGroup = cbPickGroup; root.cbPickSearch = cbPickSearch;
   root.cbPickCount = cbPickCount; root.cbPickClear = cbPickClear; root.cbPickState = cbPickState;
+  root.cbPickAdd = cbPickAdd; root.cbPickDec = cbPickDec; root.cbPickSetQty = cbPickSetQty;
+  root.cbPickQtyOf = cbPickQtyOf; root.cbPickUnits = cbPickUnits; root.cbPickTotal = cbPickTotal;
+  root.cbPickView = cbPickView;
 
   root.cbLineRows = cbLineRows;
   if (typeof module !== 'undefined' && module.exports) {

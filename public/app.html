@@ -1702,7 +1702,7 @@ function ccAddPicked(){
   if(!room){ if(e)e.textContent="Line items capped at "+cap+"."; return; }
   const take = picked.slice(0, room);
   CC.items = (CC.items||[]).concat(take.map(p=>({
-    particulars:p.name, unit:p.unit||'unit', price:(typeof cbAmount==='function'?cbAmount(p.price):p.price)||0, qty:1 })));
+    particulars:p.name, unit:p.unit||'unit', price:(typeof cbAmount==='function'?cbAmount(p.price):p.price)||0, qty:p.qty||1 })));
   if(take.length < picked.length && e) e.textContent = "Added "+take.length+" — line items are capped at "+cap+", so "+(picked.length-take.length)+" were not added.";
   cbPickClear('cc');
   ccRenderItems();
@@ -2344,32 +2344,47 @@ function cbPickListHTML(ns, sym){
   const rows = cbPickRows(ns);
   // A search that matches nothing SAYS so. An empty list under a filled search box reads as "they have nothing".
   if(!rows.length) return '<div style="padding:11px 12px;font-size:12.5px;color:var(--grey)">Nothing here matches that.</div>';
-  const box=(on,handler,pad)=>'<span onclick="'+handler+'" style="cursor:pointer;flex:0 0 16px;width:16px;height:16px;margin-'
-    + 'right:2px;border:1.5px solid '+(on?'var(--blue)':'var(--line)')+';border-radius:4px;background:'+(on?'var(--blue)':'#fff')
-    + ';color:#fff;font-size:11px;line-height:14px;text-align:center;font-weight:800">'+(on?'✓':'')+'</span>';
+  /**
+   * ── THE STEPPER, NOT A CHECKBOX ───────────────────────────────────────────────────────────────────────────────
+   * Athi, 2026-08-08, from the grocery cart he built in 2018: a `+` on every row, which becomes `− 1 +` once the
+   * line is in the cart. Quantity is decided AT the row — beside the price and the unit that inform it — instead of
+   * in a panel two steps later, which is where my checkbox version made you decide it.
+   */
+  const rnd='border-radius:50%;width:24px;height:24px;flex:none;border:1.5px solid var(--blue);background:#fff;color:var(--blue);'
+    + 'font-size:15px;font-weight:700;line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center';
+  const stepper=(id,q)=> q>0
+    ? '<span style="display:inline-flex;align-items:center;gap:7px" onclick="event.stopPropagation()">'
+      + '<button style="'+rnd+'" data-testid="pick-dec" onclick="cbPickDec(\''+esc(ns)+'\',\''+esc(id)+'\')">−</button>'
+      + '<input inputmode="decimal" value="'+esc(String(q))+'" onclick="event.stopPropagation()" onchange="cbPickSetQty(\''+esc(ns)+'\',\''+esc(id)+'\',this.value)"'
+      + ' style="width:42px;padding:3px 5px;border:1px solid var(--line);border-radius:6px;font-size:12.5px;text-align:center">'
+      + '<button style="'+rnd+';background:var(--blue);color:#fff" data-testid="pick-add" onclick="cbPickAdd(\''+esc(ns)+'\',\''+esc(id)+'\')">+</button></span>'
+    : '<button style="'+rnd+'" data-testid="pick-add" onclick="event.stopPropagation();cbPickAdd(\''+esc(ns)+'\',\''+esc(id)+'\')">+</button>';
   return rows.map(function(r,i){
     if(r.type === 'product'){
       // Same rule as cbPickGroup: membership is `gid`, never "until the next heading" — ungrouped products are
       // appended as lines after the groups, and walking forward would show them as part of a group they are not in.
       let ids=[]; for(let k=i+1;k<rows.length && rows[k].type==='line' && rows[k].gid===r.gid;k++) ids.push(rows[k].item_id);
-      const allOn = ids.length && ids.every(id=>st.sel[id]);
+      const inCart = ids.filter(id=>st.sel[id]).length;
       return '<div style="padding:9px 12px 3px;display:flex;align-items:center;gap:8px">'
-        + box(allOn, "cbPickGroup('"+esc(ns)+"',"+i+")")
         + '<b style="font-size:13.5px">'+esc(r.label)+'</b>'
         + '<span style="font-size:11px;color:var(--grey)">'+r.count+' options</span>'
+        + (inCart?'<span style="font-size:11px;color:var(--blue);font-weight:700">'+inCart+' in cart</span>':'')
         + (r.options?'<span style="font-size:11px;color:var(--grey);margin-left:auto">'+esc(r.options)+'</span>':'')
         + '</div>';
     }
     const d = r.item.item_data || r.item;
     const amt = (typeof cbAmount === 'function') ? cbAmount(d.price) : (d.price && d.price.amount);
-    const on = !!st.sel[r.item_id];
-    return '<div onclick="cbPickToggle(\''+esc(ns)+'\',\''+esc(r.item_id)+'\')" style="display:flex;align-items:center;gap:8px;cursor:pointer;'
-      + 'padding:7px 12px 7px '+(r.variant?'30px':'12px')+';border-bottom:1px dashed var(--line);font-size:13px;'
-      + (on?'background:var(--blue-soft,#eef4ff)':'')+'">'
-      + box(on, "event.stopPropagation();cbPickToggle('"+esc(ns)+"','"+esc(r.item_id)+"')")
+    const q = (typeof cbPickQtyOf==='function') ? cbPickQtyOf(ns, r.item_id) : 0;
+    const lineTot = (q>0 && amt!=null && amt!=='') ? sym+String(Number(amt)*q) : null;
+    return '<div style="display:flex;align-items:center;gap:9px;'
+      + 'padding:7px 12px 7px '+(r.variant?'26px':'12px')+';border-bottom:1px dashed var(--line);font-size:13px;'
+      + (q>0?'background:var(--blue-soft,#eef4ff)':'')+'">'
       + '<span style="flex:1"><b>'+esc(r.variant || d.name || d.product || 'item')+'</b>'
-      + (d.unit?' <span style="color:var(--grey);font-size:11.5px">'+esc(d.unit)+'</span>':'')+'</span>'
-      + '<span style="font-weight:700">'+(amt==null||amt===''?'—':esc(sym+String(amt)))+'</span></div>';
+      + (d.unit?' <span style="color:var(--grey);font-size:11.5px">'+esc(d.unit)+'</span>':'')
+      + '<div style="font-size:11.5px;color:var(--grey)">'+(amt==null||amt===''?'—':esc(sym+String(amt)))
+      // The line's own total, shown only once there is a quantity to multiply by — a price × 1 restated is noise.
+      + (lineTot?' <span style="color:var(--ink);font-weight:700">· '+esc(lineTot)+'</span>':'')+'</div></span>'
+      + stepper(r.item_id, q) + '</div>';
   }).join('');
 }
 /**
@@ -2401,19 +2416,36 @@ function cbPickOnChange(ns, fn){ if(typeof UI==='undefined')return; UI._pickBar 
  */
 function cbCartBar(ns, sendCall, label){
   const n = (typeof cbPickCount==='function') ? cbPickCount(ns) : 0;
+  const units = (typeof cbPickUnits==='function') ? cbPickUnits(ns) : 0;
+  const st = (typeof cbPickState==='function') ? cbPickState(ns) : null;
+  const cartView = !!(st && st.cartView);
   const on = n > 0;
+  // The running total, beside the count — Athi's 2018 bar showed "#2 · ₹625.00" and never made you open the cart to
+  // learn what it came to. `partial` is true when a line has no readable price: the number is then shown with a "+"
+  // and a note, because a total that quietly omits lines is wrong in the direction that costs money.
+  const T = (typeof cbPickTotal==='function') ? cbPickTotal(ns) : {amount:0,partial:false,currency:''};
+  const sym = (typeof curSym==='function' && T.currency) ? curSym(T.currency) : '';
+  const money = on ? (T.amount ? (sym+String(T.amount)+(T.partial?'+':'')) : (T.partial?'—':'')) : '';
   return '<div data-testid="cart-'+esc(ns)+'" style="display:flex;align-items:center;gap:10px;margin:12px 0 9px;padding:9px 12px;'
     + 'border:1px solid '+(on?'var(--blue)':'var(--line)')+';border-radius:10px;background:'+(on?'var(--blue-soft,#eef4ff)':'var(--paper,#fafafa)')+'">'
     + '<span style="position:relative;font-size:18px;line-height:1">🛒'
     + (on?'<span data-testid="cart-count-'+esc(ns)+'" style="position:absolute;top:-6px;right:-9px;background:var(--blue);color:#fff;border-radius:9px;'
-        + 'min-width:17px;height:17px;padding:0 4px;font-size:10.5px;font-weight:800;line-height:17px;text-align:center">'+n+'</span>':'')
+        + 'min-width:17px;height:17px;padding:0 4px;font-size:10.5px;font-weight:800;line-height:17px;text-align:center">'+units+'</span>':'')
     + '</span>'
     + '<span style="font-size:12.5px;color:'+(on?'var(--ink)':'var(--grey)')+';font-weight:'+(on?'700':'400')+'">'
-    + (on ? (n===1?'1 item in the cart':n+' items in the cart') : 'Tick the items you want — they collect here')+'</span>'
-    + (on?'<span onclick="cbPickClear(\''+esc(ns)+'\')" style="cursor:pointer;font-size:11.5px;color:var(--grey);margin-left:6px">Clear</span>':'')
+    + (on ? (n===1?'1 line':n+' lines') + (units!==n?' · '+units+' units':'') + (money?' · '+esc(money):'')
+          : 'Press + on what you want — it collects here')+'</span>'
+    // Cart ⇄ list. Athi: "you can switch between cart and current selection." Same rows, filtered — so a quantity
+    // changed while reviewing is the same quantity, not a second copy of it.
+    + (on?'<span onclick="cbPickView(\''+esc(ns)+'\','+(cartView?'false':'true')+')" data-testid="cart-view-'+esc(ns)+'"'
+        + ' style="cursor:pointer;font-size:11.5px;color:var(--blue);font-weight:700;margin-left:6px">'
+        + (cartView?'← All items':'View cart')+'</span>':'')
+    + (on?'<span onclick="cbPickClear(\''+esc(ns)+'\')" style="cursor:pointer;font-size:11.5px;color:var(--grey)">Clear</span>':'')
     + '<button class="pri" data-testid="cart-send-'+esc(ns)+'" style="margin-left:auto;padding:6px 14px;font-size:12.5px" '
     + (on?'onclick="'+sendCall+'"':'disabled') + '>' + esc(label || 'Request these') + '</button>'
-    + '</div>';
+    + '</div>'
+    // The total is INDICATIVE until the other side confirms — every one of these four paths reprices server-side.
+    + (on&&T.partial?'<div style="font-size:11px;color:#8a5a1e;margin:-4px 0 8px">Some lines have no price yet — the total covers only the priced ones.</div>':'');
 }
 // Kept for callers that only want to SHOW a catalogue; the picker is the same rows with boxes on them.
 function supCatalogueHTML(cat){
@@ -2561,7 +2593,7 @@ async function composeFromSupplier(id){ const d=UI.supDet, x=d&&d.supplier; if(!
   // that just says "4L" is not an order anybody can read six weeks later.
   const picked = (typeof cbPickSelected==='function') ? cbPickSelected('sup') : [];
   let items = picked.length
-    ? picked.map(p=>({ particulars:p.name, unit:p.unit, price:cbAmount(p.price) }))
+    ? picked.map(p=>({ particulars:p.name, unit:p.unit, price:cbAmount(p.price), qty:p.qty||1 }))
     : d.items;
   if(items==null){ try{ const cat=await supCatalogueFull(x.supplier_entity_id); items=(cat.items||[]).map(p=>{const dd=p.item_data||p; return {particulars:dd.name||dd.product||'item', unit:dd.unit||'unit', price:cbAmount(dd.price)};}); }catch(e){ items=[]; } }
   compose({ supplier:{name:supName(x), bridge:x.bridge_id, entity_id:x.supplier_entity_id}, recipients:[{name:supName(x), role:'to', bridge:x.bridge_id||null}], catalogue:items });

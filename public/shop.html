@@ -383,40 +383,64 @@ function shopPickListHtml(cur){
   var st = cbPickState('shop'); if(!st) return '';
   var rows = cbPickRows('shop');
   if(!rows.length) return '<div class="meta" style="padding:10px 0">Nothing here matches that.</div>';
-  var box=function(on,handler){ return '<span onclick="'+handler+'" style="cursor:pointer;flex:0 0 17px;width:17px;height:17px;border:1.5px solid '
-    + (on?'#3F66A6':'#d8d2c4')+';border-radius:4px;background:'+(on?'#3F66A6':'#fff')+';color:#fff;font-size:11px;line-height:15px;text-align:center;font-weight:800">'+(on?'✓':'')+'</span>'; };
+  // The stepper Athi's 2018 cart used: a round `+` on every row, becoming `− n +` once the line is in the cart.
+  var rnd='border-radius:50%;width:27px;height:27px;flex:none;border:1.5px solid #c0392b;background:#fff;color:#c0392b;'
+    + 'font-size:16px;font-weight:700;line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center';
+  var stepper=function(id,q){ return q>0
+    ? '<span style="display:inline-flex;align-items:center;gap:8px">'
+      + '<button style="'+rnd+'" onclick="event.stopPropagation();cbPickDec(\'shop\',\''+esc(id)+'\')">−</button>'
+      + '<input inputmode="decimal" value="'+esc(String(q))+'" onclick="event.stopPropagation()" onchange="cbPickSetQty(\'shop\',\''+esc(id)+'\',this.value)"'
+      + ' style="width:44px;padding:4px;border:1px solid #e7e3d8;border-radius:7px;font-size:13px;text-align:center">'
+      + '<button style="'+rnd+';background:#c0392b;color:#fff" data-testid="shop-add" onclick="event.stopPropagation();cbPickAdd(\'shop\',\''+esc(id)+'\')">+</button></span>'
+    : '<button style="'+rnd+'" data-testid="shop-add" onclick="event.stopPropagation();cbPickAdd(\'shop\',\''+esc(id)+'\')">+</button>'; };
   return rows.map(function(r,i){
     if(r.type==='product'){
       var ids=[]; for(var k=i+1;k<rows.length && rows[k].type==='line' && rows[k].gid===r.gid;k++) ids.push(rows[k].item_id);
-      var allOn = ids.length && ids.every(function(id){ return st.sel[id]; });
+      var inCart = ids.filter(function(id){ return st.sel[id]; }).length;
       return '<div style="margin:8px 0 2px"><div style="display:flex;align-items:center;gap:8px">'
-        + box(allOn, "cbPickGroup('shop',"+i+")")
         + '<b style="font-size:14px">'+esc(r.label)+'</b>'
-        + '<span class="meta">'+r.count+' options</span></div>'
-        + (r.options ? '<div class="meta" style="padding-left:25px">'+esc(r.options)+'</div>' : '') + '</div>';
+        + '<span class="meta">'+r.count+' options</span>'
+        + (inCart?'<span style="font-size:11px;color:#c0392b;font-weight:700">'+inCart+' in cart</span>':'')+'</div>'
+        + (r.options ? '<div class="meta">'+esc(r.options)+'</div>' : '') + '</div>';
     }
     var d=(r.item.item_data||r.item)||{};
-    var on=!!st.sel[r.item_id];
-    return '<div class="prow" onclick="cbPickToggle(\'shop\',\''+esc(r.item_id)+'\')" style="cursor:pointer;align-items:center;gap:9px'
-      + (r.variant?';padding-left:18px':'')+(on?';background:#f2f6fc':'')+'">'
-      + box(on, "event.stopPropagation();cbPickToggle('shop','"+esc(r.item_id)+"')")
+    var q=cbPickQtyOf('shop', r.item_id);
+    var amt=cbHasPrice(d.price)?cbAmount(d.price):null;
+    return '<div class="prow" style="align-items:center;gap:10px'
+      + (r.variant?';padding-left:18px':'')+(q>0?';background:#fdf3f2':'')+'">'
       + '<div style="flex:1">'+(r.variant?'<b>'+esc(r.variant)+'</b>':'<b>'+esc(d.name||d.product||'item')+'</b>')
-      + ' <span class="meta">'+esc(d.unit||'')+'</span></div>'
-      + '<div style="font-weight:700">'+(cbHasPrice(d.price)?(priceSym(d.price)+esc(String(cbAmount(d.price)))):'—')+'</div></div>';
+      + ' <span class="meta">'+esc(d.unit||'')+'</span>'
+      + '<div style="font-weight:700;margin-top:2px">'+(amt==null?'—':priceSym(d.price)+esc(String(amt)))
+      + (q>0&&amt!=null?' <span class="meta" style="color:#c0392b;font-weight:700">· '+priceSym(d.price)+esc(String(amt*q))+'</span>':'')+'</div></div>'
+      + stepper(r.item_id, q) + '</div>';
   }).join('');
 }
+/**
+ * shopCartBarHtml — the count, the running total and the cart⇄list switch.
+ *
+ * Athi's 2018 bar carried "#2   ₹625.00" above a full-width CHECK OUT, so what the order came to was never more
+ * than a glance away. Same three facts here. The total is INDICATIVE — the server reprices every line (CJ-07) —
+ * and the line under it says so rather than letting a customer believe this is the amount agreed.
+ */
 function shopCartBarHtml(){
-  var n = cbPickCount('shop'), on = n>0;
-  return '<div data-testid="shop-cart" style="display:flex;align-items:center;gap:10px;margin:4px 0 10px;padding:9px 11px;border:1px solid '
-    + (on?'#3F66A6':'#e7e3d8')+';border-radius:10px;background:'+(on?'#f2f6fc':'#faf8f3')+'">'
-    + '<span style="position:relative;font-size:18px;line-height:1">🛒'
-    + (on?'<span data-testid="shop-cart-count" style="position:absolute;top:-6px;right:-9px;background:#3F66A6;color:#fff;border-radius:9px;min-width:17px;height:17px;padding:0 4px;font-size:10.5px;font-weight:800;line-height:17px;text-align:center">'+n+'</span>':'')
-    + '</span><span style="font-size:12.5px;color:'+(on?'#1d2530':'#8a949c')+';font-weight:'+(on?'700':'400')+'">'
-    + (on?(n===1?'1 item in your cart':n+' items in your cart'):'Tick what you want — it collects here')+'</span>'
-    + (on?'<span onclick="cbPickClear(\'shop\')" style="cursor:pointer;font-size:11.5px;color:#8a949c;margin-left:6px">Clear</span>':'')
-    + '<button data-testid="shop-cart-order" style="margin-left:auto;border:0;border-radius:9px;padding:7px 14px;font-size:12.5px;font-weight:700;'
-    + (on?'background:#3F66A6;color:#fff;cursor:pointer':'background:#d8d2c4;color:#fff')+'" '+(on?'onclick="shopCartOrder()"':'disabled')+'>Order these</button></div>';
+  var n=cbPickCount('shop'), units=cbPickUnits('shop'), on=n>0;
+  var st=cbPickState('shop'), cartView=!!(st&&st.cartView);
+  var T=cbPickTotal('shop');
+  var sym=(typeof _shopSym==='function')?_shopSym():'₹';
+  return '<div data-testid="shop-cart" style="display:flex;align-items:center;gap:10px;margin:4px 0 10px;padding:10px 12px;border:1px solid '
+    + (on?'#c0392b':'#e7e3d8')+';border-radius:10px;background:'+(on?'#fdf3f2':'#faf8f3')+';position:sticky;top:0;z-index:5">'
+    + '<span style="position:relative;font-size:19px;line-height:1">🛒'
+    + (on?'<span data-testid="shop-cart-count" style="position:absolute;top:-6px;right:-9px;background:#c0392b;color:#fff;border-radius:9px;min-width:18px;height:18px;padding:0 4px;font-size:11px;font-weight:800;line-height:18px;text-align:center">'+units+'</span>':'')
+    + '</span><span style="font-size:13px;color:'+(on?'#1d2530':'#8a949c')+';font-weight:'+(on?'800':'400')+'">'
+    + (on?('#'+n+(T.amount?('  '+sym+T.amount+(T.partial?'+':'')):'')):'Press + on what you want')+'</span>'
+    + (on?'<span onclick="cbPickView(\'shop\','+(cartView?'false':'true')+')" data-testid="shop-cart-view" style="cursor:pointer;font-size:11.5px;color:#c0392b;font-weight:700;margin-left:4px">'
+        + (cartView?'← All items':'View cart')+'</span>':'')
+    + (on?'<span onclick="cbPickClear(\'shop\')" style="cursor:pointer;font-size:11.5px;color:#8a949c">Clear</span>':'')
+    + '<button data-testid="shop-cart-order" style="margin-left:auto;border:0;border-radius:9px;padding:8px 16px;font-size:13px;font-weight:700;'
+    + (on?'background:#c0392b;color:#fff;cursor:pointer':'background:#d8d2c4;color:#fff')+'" '+(on?'onclick="shopCartOrder()"':'disabled')+'>Check out</button></div>'
+    + (on&&T.partial?'<div class="meta" style="color:#8a5a1e;margin:-6px 0 8px">Some lines have no price yet — the total covers only the priced ones.</div>':'');
 }
+function _shopSym(){ var c=(_SHOPDATA&&_SHOPDATA.shop&&_SHOPDATA.shop.currency_code)||''; return (!c||c==='INR')?'₹':(c+' '); }
 function shopPickPaint(listOnly){
   var l=el('p_list'); if(l) l.innerHTML=shopPickListHtml();
   if(!listOnly){ var c=el('p_cart'); if(c) c.innerHTML=shopCartBarHtml(); }
@@ -532,7 +556,19 @@ function _cartPanelHtml(){
     +'<span id="cl_g" style="font-weight:800">'+_cartGrand()+'</span></div>'
     +'<div class="meta" style="margin:-6px 0 12px">The shop confirms the price — nothing is charged now.</div>'
     +'<label style="font-size:12px;color:#6a707a">Your name</label><input id="o_name" data-testid="shop-name" placeholder="optional" value="'+esc(_ord.name||'')+'" '+fld+'>'
-    +'<label style="font-size:12px;color:#6a707a">Your area — pincode or city <span style="color:#9aa3a7">· optional</span></label><input id="o_loc" data-testid="shop-area" placeholder="e.g. 560001 or Bengaluru" value="'+esc(_ord.loc||'')+'" '+fld+'>'
+    +'<label style="font-size:12px;color:#6a707a">Delivery address</label><input id="o_loc" data-testid="shop-area" placeholder="e.g. 16a, Bollenini Hill Side, 560001" value="'+esc(_ord.loc||'')+'" '+fld+'>'
+    /**
+     * WHEN, asked as two plain fields. Athi's 2018 panel had Delivery Date and Delivery Time above the address.
+     * ⚠️ Both are the CUSTOMER'S REQUEST, not a promise — the shop has said nothing yet, and a storefront that
+     * looks like it confirmed a slot it never saw is the kind of false certainty this codebase keeps refusing.
+     * They ride on the chit as asked-for values, and the shop answers.
+     */
+    +'<div style="display:flex;gap:9px"><div style="flex:1"><label style="font-size:12px;color:#6a707a">Delivery date <span style="color:#9aa3a7">· optional</span></label>'
+    +'<input id="o_date" type="date" data-testid="shop-date" value="'+esc(_ord.date||'')+'" '+fld+'></div>'
+    +'<div style="flex:1"><label style="font-size:12px;color:#6a707a">Time <span style="color:#9aa3a7">· optional</span></label>'
+    +'<input id="o_time" type="time" data-testid="shop-time" value="'+esc(_ord.time||'')+'" '+fld+'></div></div>'
+    +'<div class="meta" style="margin:-6px 0 11px">A request, not a confirmed slot — the shop will come back to you.</div>'
+    +'<label style="font-size:12px;color:#6a707a">Remark <span style="color:#9aa3a7">· optional</span></label><input id="o_remark" data-testid="shop-remark" placeholder="anything the shop should know" value="'+esc(_ord.remark||'')+'" '+fld+'>'
     +'<label style="font-size:12px;color:#6a707a">Phone or email</label><input id="o_contact" data-testid="shop-contact" placeholder="9876543210 or you@email.com" '+(otpStep?'disabled':'')+' value="'+esc(_ord.contact||'')+'" '+fld+'>'
     +(otpStep?('<label style="font-size:12px;color:#6a707a">6-digit code sent to you</label><input id="o_otp" data-testid="shop-otp" inputmode="numeric" maxlength="6" value="'+esc(_ord.otp||_ord.dev_otp||'')+'" '+fld+'>'):'')
     +(_ord._err?'<div style="color:#b4453f;font-size:12.5px;margin-bottom:8px">'+esc(_ord._err)+'</div>':'')
@@ -583,6 +619,8 @@ function orderRender(msg, err){
   ohost().innerHTML=h;
 }
 function _ocap(){ if(el('o_combo'))_ord.combo=el('o_combo').value; if(el('o_qty'))_ord.qty=el('o_qty').value; if(el('o_offer'))_ord.offer=el('o_offer').value;
+  if(_isCart()){ if(el('o_date'))_ord.date=el('o_date').value; if(el('o_time'))_ord.time=el('o_time').value;
+                 if(el('o_remark'))_ord.remark=(el('o_remark').value||'').trim(); }
   // A cart is a purchase, never a declared-payload submission — the shop's default preset must not turn three
   // ticked products into an enquiry form with no fields on screen to fill.
   if(!_isCart() && _isPayload())_ord.payload=_readSchemaFields(_cur().schema); if(el('o_name'))_ord.name=(el('o_name').value||'').trim(); if(el('o_loc'))_ord.loc=(el('o_loc').value||'').trim(); if(el('o_contact'))_ord.contact=(el('o_contact').value||'').trim(); if(el('o_otp'))_ord.otp=el('o_otp').value;
@@ -601,6 +639,9 @@ function orderConfirm(){
   // endpoint are otherwise the same, so the shop reconciles one kind of order however it was placed.
   if(_isCart()){
     return _orderPost({ identifier:_ord.contact, name:_ord.name, otp:otp, location:_ord.loc||'',
+      // Asked-for, not agreed. The server stores them on the chit; the shop answers.
+      requested_delivery:(_ord.date||_ord.time)?{ date:_ord.date||null, time:_ord.time||null }:null,
+      remark:_ord.remark||null,
       // No price is sent. CJ-07: the shop's catalogue is the authority and the server re-prices every line — a
       // customer-supplied price is exactly what that rule exists to ignore.
       line_items:_ord.lines.map(function(L){
