@@ -1029,9 +1029,26 @@ function networkScreen(){
       + '<div style="font-size:13px;color:var(--grey);margin:8px 0 8px;line-height:1.6">Draw your structure first — <b>' + esc(ent) + '</b> is the top node. Add <b>owned</b> nodes (branches, units, depots) beneath it, or bring in a <b>partner</b> business. For each: a purpose, and tick <b>what it holds</b> (catalogue, storefront…) to fill in its spec. This is a <b>design</b>: it saves here and survives closing the app. <b>Nothing is created</b> until you choose to Build.</div>'
       + '<button class="pri" onclick="netNewNetwork()" style="padding:10px 16px;margin-top:10px">＋ Start designing</button></div>';
   }
-  var tree = _netTree(null, 0) || '<div style="color:var(--grey);font-size:12px;padding:8px 6px">No nodes yet.</div>';
   var sel = UI.net.sel ? _netNode(UI.net.sel) : null;
   var right = sel ? _netNodeView(sel) : '<div style="padding:24px;color:var(--grey);font-size:13px">Select a node to edit it, or add a child under it.</div>';
+  return '<div style="display:flex;height:100%;min-height:0">'
+    + '<div id="netLeftPane" style="width:300px;border-right:1px solid var(--line);overflow:auto;padding:12px 8px;flex:0 0 auto">'
+      + _netLeftPane() + '</div>'
+    + '<div id="netDetailPane" style="flex:1;overflow:auto;min-width:0">' + right + '</div></div>';
+}
+
+/**
+ * The left column, on its own, so the plan refresh can repaint JUST THIS.
+ *
+ * Athi, 2026-08-08: *"I don't want the flickering to happen, I couldn't concentrate on what I am thinking."*
+ *
+ * The outstanding-work list comes back from the server a moment after every edit, and the only way to show it used
+ * to be `_netRerender()` — which rebuilds the entire application shell, flashing the whole page each time. Nothing
+ * outside this column depends on the plan, so nothing outside it should be redrawn.
+ */
+function _netLeftPane(){
+  if (!UI.net) return '';
+  var tree = _netTree(null, 0) || '<div style="color:var(--grey);font-size:12px;padding:8px 6px">No nodes yet.</div>';
   var count = (UI.net.nodes || []).length - 1;
   var built = (UI.net.nodes || []).filter(function(n){ return n.built; }).length;
   _netRefreshPlan();                       // ask the server what is outstanding (debounced by design signature)
@@ -1064,8 +1081,7 @@ function networkScreen(){
     ? '<div style="margin:8px 8px 0;font-size:11px;color:#a5382e;line-height:1.5">'
       + probs.map(function(x){ return '⚠ ' + esc(x.name || '') + ' — ' + esc(x.reason); }).join('<br>') + '</div>'
     : '';
-  return '<div style="display:flex;height:100%;min-height:0">'
-    + '<div style="width:300px;border-right:1px solid var(--line);overflow:auto;padding:12px 8px;flex:0 0 auto">'
+  return ''
       + '<div style="font-size:11px;font-weight:800;color:var(--grey);letter-spacing:.05em;padding:2px 8px 3px">' + esc(UI.net.purpose || 'NETWORK') + '</div>'
       // Once stores exist it is no longer a design — it is the network, and calling it a draft understates what
       // pressing Build actually did. Athi, 2026-08-08: *"after creation it should say your network."*
@@ -1082,9 +1098,7 @@ function networkScreen(){
             + (built ? '✓ the live network matches this design'
                      : (count ? count + ' node' + (count === 1 ? '' : 's') + ' designed · nothing created yet' : 'add nodes, then build')) + '</div>')
         + '<div style="font-size:11px;color:var(--blue);padding:6px 8px;cursor:pointer" onclick="netStartOver()">↺ Start over</div>'
-      + '</div>'
-      + '</div>'
-    + '<div id="netDetailPane" style="flex:1;overflow:auto;min-width:0">' + right + '</div></div>';
+      + '</div>';
 }
 function _capSummary(n, k){
   if (k === 'place') { var pl = n.place || {}; return (pl.city || pl.address || 'no address')
@@ -1111,16 +1125,28 @@ function _capSummary(n, k){
  * The tab still carries its own state, because a person choosing which subject to open needs to know which ones
  * are switched on and what they say before opening them: a dot for on, and its one-line summary underneath.
  */
+/**
+ * A PANEL TAB — Athi, 2026-08-08: *"the tab should be something like a panel tab on the top so we can switch
+ * pages. Normal VB tab kind of."*
+ *
+ * So: square-shouldered tabs sitting ON the panel's top border, and the selected one JOINED to the body below by
+ * having no bottom border of its own. That join is the whole grammar of a tab control — it is what says "this
+ * strip and this panel are one thing", and a row of floating rounded chips does not say it.
+ */
 function _capTab(n, c, sel){
   var yes = (n.holds || []).indexOf(c.k) >= 0;
   var on = c.k === sel;
   return '<span onclick="netCapPick(\'' + n.key + '\',\'' + c.k + '\')" title="' + esc(c.label) + '"'
-    + ' style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;padding:7px 11px;border-radius:9px;'
-    + 'border:1px solid ' + (on ? '#2c5aa0' : 'var(--line)') + ';background:' + (on ? '#2c5aa0' : (yes ? '#fff' : '#fafbfc')) + ';'
-    + 'color:' + (on ? '#fff' : (yes ? '#1c2128' : '#8a94a3')) + ';font-size:12.5px;font-weight:' + (on || yes ? '700' : '500') + '">'
+    + ' style="cursor:pointer;display:inline-flex;align-items:center;gap:5px;padding:7px 11px 8px;'
+    + 'border:1px solid ' + (on ? 'var(--line)' : 'transparent') + ';'
+    + 'border-bottom:' + (on ? '1px solid #fff' : '1px solid var(--line)') + ';'
+    + 'border-radius:7px 7px 0 0;margin-bottom:-1px;position:relative;'
+    + 'background:' + (on ? '#fff' : 'transparent') + ';'
+    + 'color:' + (on ? '#1c2128' : (yes ? '#3a4048' : '#8a94a3')) + ';'
+    + 'font-size:12.5px;font-weight:' + (on ? '700' : (yes ? '600' : '500')) + ';white-space:nowrap">'
     + '<span style="font-size:14px">' + c.icon + '</span>' + esc(c.label)
-    + (yes ? '<span style="width:6px;height:6px;border-radius:50%;background:' + (on ? '#fff' : '#2c7a43') + '"></span>' : '')
-    + (c.soon ? '<span style="font-size:8.5px;font-weight:800;letter-spacing:.03em;opacity:.75">NOT ENFORCED</span>' : '')
+    + (yes ? '<span title="on for this store" style="width:6px;height:6px;border-radius:50%;background:#2c7a43;flex:0 0 auto"></span>' : '')
+    + (c.soon ? '<span style="font-size:8px;font-weight:800;letter-spacing:.03em;color:#8a94a3;border:1px solid var(--line);border-radius:4px;padding:0 3px">N/E</span>' : '')
     + '</span>';
 }
 function netCapPick(key, capKey){
@@ -1151,8 +1177,12 @@ function _capList(n){
       + '<span onclick="netCapNo(\'' + n.key + '\',\'' + c.k + '\')" style="cursor:pointer;font-size:11.5px;color:var(--blue)">turn off</span>'
       + '</div>' + _capDetail(n, c.k) + '</div>';
   }
-  return '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:9px">' + NET_CAPS.map(function(x){ return _capTab(n, x, sel); }).join('') + '</div>'
-    + '<div style="border-top:1px solid var(--line);margin-top:11px">' + body + '</div>';
+  // The strip sits ON the panel's top border and the selected tab breaks through it — the join is what makes a
+  // row of labels read as a tab control rather than as buttons that happen to be near a box.
+  return '<div style="display:flex;flex-wrap:wrap;gap:2px;margin-top:10px;border-bottom:1px solid var(--line);align-items:flex-end">'
+    + NET_CAPS.map(function(x){ return _capTab(n, x, sel); }).join('') + '</div>'
+    + '<div style="border:1px solid var(--line);border-top:none;border-radius:0 0 9px 9px;background:#fff;padding:0 13px">'
+    + body + '</div>';
 }
 function _catFieldRow(n, f, i){
   var legOpts = CAT_LEGS.map(function(l){ return '<option value="' + l.k + '"' + (f.leg === l.k ? ' selected' : '') + '>' + l.short + '</option>'; }).join('');
@@ -1780,7 +1810,11 @@ function _netRefreshPlan(){
     .then(function(p){
       UI._netPlanBusy = false;
       UI._netPlan = p || null;
-      _netRerender();
+      // Repaint ONLY the left column. Rebuilding the whole shell for this is what made the page flash after every
+      // edit; nothing outside this column depends on the plan.
+      var el = (typeof document !== 'undefined') ? document.getElementById('netLeftPane') : null;
+      if (el) { var top = el.scrollTop; el.innerHTML = _netLeftPane(); el.scrollTop = top; }
+      else _netRerender();                    // not on the design screen — fall back rather than silently skip
     })
     // Clear the signature on failure so the next render tries again. Latching it would leave the badges silently
     // stale after one hiccup — and a stale "nothing outstanding" is the exact lie this whole thing exists to stop.
@@ -2005,7 +2039,9 @@ function _netNodeView(n){
     // made the one thing a network actually has to decide the hardest thing on the screen to find.
     // The network's OWN answer sits on the root node — it is the first question, and it caps every store below.
     + (isRoot ? _netNetworkVisibilityBlock() : (!n.owned ? '' : _netVisibilityBlock(n)))
-    + '<div style="margin-top:16px;padding:13px 15px;border:1px solid var(--line);border-radius:11px;background:#fff">'
+    // No box around the tab control — the tabs and their panel ARE the box. A frame inside a frame is the thing
+    // that makes a tab strip look like buttons sitting in a card.
+    + '<div style="margin-top:18px">'
       + '<div style="font-size:11px;font-weight:800;color:var(--grey);letter-spacing:.05em">WHAT ELSE THIS STORE HOLDS <span style="font-weight:600;letter-spacing:0">— optional, none of it is needed to build</span></div>'
       + _capList(n)
       + '</div>'
