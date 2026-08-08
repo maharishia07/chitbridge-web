@@ -29,7 +29,7 @@ var NET_CAPS = [
        pricepolicy  what may it charge?                            → a BAND, not a price
        localise     what changes when it crosses a border?         → same pump, different product
      See C:\dev\SPEC-global-distribution.md for the reasoning and what each would need underneath. */
-  { k: 'place',       icon: '📍', label: 'Place & reach',        soon: true },
+  { k: 'place',       icon: '📍', label: 'Place & reach' },
   { k: 'territory',   icon: '🗺️', label: 'Territory & authority', soon: true },
   { k: 'stock',       icon: '📦', label: 'Stock & policy',        soon: true },
   { k: 'fulfil',      icon: '🚚', label: 'Fulfilment routes',     soon: true },
@@ -975,6 +975,11 @@ function _netMemberScreen(){
       // b117 — carried onto the store at Build, so a MEMBER can read why each branch exists. Until then this tree
       // was a list of names, which tells a new store nothing about the network it just joined.
       + (n.purpose ? '<div style="font-size:11px;color:#8a94a3;margin-top:2px;line-height:1.4">' + esc(n.purpose) + '</div>' : '')
+      // b119 — where it is, for a member reading the network. A store you may be asked to transfer goods to is a
+      // place before it is a name.
+      + ((n.city || n.lat != null) ? '<div style="font-size:10.5px;color:#8a94a3;margin-top:1px">📍 '
+          + esc(n.city || '') + (n.lat != null && n.lng != null ? ' · locatable' : ' · not locatable')
+          + (n.service_km ? ' · serves ' + esc(n.service_km) + ' km' : '') + '</div>' : '')
       + '</div>';
   }).join('');
   var rootName = (rows[0] && (rows[0].name || rows[0].bridge_id)) || 'the network operator';
@@ -1027,6 +1032,8 @@ function networkScreen(){
           + '<div style="flex:1;min-width:0"><b style="color:#8a5a1e">CHANGE</b> ' + esc(u.name)
           + (u.from ? '<div style="font-size:10.5px;color:var(--grey)"><s>' + esc(_netPlatLab[u.from] || u.from) + '</s> → <b>' + esc(_netPlatLab[u.to] || u.to) + '</b></div>' : '')
           + (u.purpose ? '<div style="font-size:10.5px;color:var(--grey)">text: <s>' + esc(u.purpose.from || '(none)') + '</s> → <b>' + esc(u.purpose.to || '(none)') + '</b></div>' : '')
+          + (u.order ? '<div style="font-size:10.5px;color:var(--grey)">moved in the order</div>' : '')
+          + (u.place ? '<div style="font-size:10.5px;color:var(--grey)">place updated' + ((u.place.to && u.place.to.city) ? ' · ' + esc(u.place.to.city) : '') + '</div>' : '')
           + '</div>'
           + '<span onclick="netRevertOne(\'' + u.key + '\')" title="Leave it as ' + esc(_netPlatLab[u.from] || u.from) + '" style="cursor:pointer;color:#8a929e;font-weight:700;padding:0 3px">✕</span></div>'; }).join('')
       + '<div style="display:flex;gap:8px;align-items:center;padding:6px 9px;font-size:10.5px;color:#8a5a1e">'
@@ -1060,7 +1067,10 @@ function networkScreen(){
     + '<div id="netDetailPane" style="flex:1;overflow:auto;min-width:0">' + right + '</div></div>';
 }
 function _capSummary(n, k){
-  if (NET_SOON[k]) return 'noted on the design · nothing built';
+  if (k === 'place') { var pl = n.place || {}; return (pl.city || pl.address || 'no address')
+    + (pl.lat != null && pl.lng != null ? ' · locatable' : ' · not locatable') + (pl.km ? ' · ' + pl.km + ' km' : ''); }
+  if (NET_SOON[k]) { var sv = (n.soon && n.soon[k]) || {}; var got = Object.keys(sv).filter(function(x){ return String(sv[x] || '').trim(); }).length;
+    return got ? got + ' noted · not enforced' : 'nothing noted yet'; }
   if (k === 'catalogue') { var c = n.catalogue || {}; var nf = (c.fields || []).length; return nf + ' field' + (nf === 1 ? '' : 's') + ' · ' + (c.loadedBy || 'manual'); }
   if (k === 'storefront') { var o = n.order || {}; var ml = (CAT_METHODS.filter(function(x){ return x.k === (o.method || 'cart'); })[0] || {}).label || ''; return (n.exposure || 'private') + ' · ' + ml; }
   if (k === 'coassist') { var cc = _normCoassist(n.coassist); var p = []; if (cc.human.count) p.push(cc.human.count + ' human'); var iotDev = (cc.iot.connections || []).reduce(function(s, x){ return s + (parseInt(x.devices, 10) || 0); }, 0); if (iotDev || (cc.iot.connections || []).length) p.push(iotDev + ' IoT'); if (cc.erp.connectors.length) p.push(cc.erp.connectors.length + ' ERP'); if (cc.ai.count) p.push(cc.ai.count + ' AI'); return p.length ? p.join(' · ') : 'none set'; }
@@ -1504,27 +1514,97 @@ function _disputeConfig(n){
     + _radioOpt("netSetDispute('" + n.key + "',false)", !inf, 'Not involved', "Disputes are handled above it; this node isn't notified.", '#8a5cc4', '#efeafa')
     + '</div>';
 }
-/* A placement panel. It captures NOTHING — it says what would be captured, what CB already has to build it on,
-   and what is genuinely missing. A placeholder that looks like a form people will type into is a trap. */
-function _soonConfig(k){
-  var s = NET_SOON[k], c = _capMeta(k) || {};
+/* ── THE SUPPLY-CHAIN PANELS ──────────────────────────────────────────────────────────────────────────────────
+   Real forms now, writing into the design draft. Only PLACE is carried onto the store at Build (b119) — the other
+   five are captured and clearly say so, because "we wrote down what you told us" and "the platform enforces this"
+   are different promises and mixing them is how a governance screen becomes decoration. */
+
+function _netPlace(n){ n.place = n.place || {}; return n.place; }
+function netSetPlace(key, f, v){ var n = _netNode(key); if (!n) return; _netPlace(n)[f] = v; _netSave(); }
+function netSetPlaceNum(key, f, v){
+  var n = _netNode(key); if (!n) return;
+  var s = String(v == null ? '' : v).trim();
+  _netPlace(n)[f] = s === '' ? null : (isNaN(Number(s)) ? null : Number(s));
+  _netSave();
+}
+function _inp(val, oninput, ph, extra){
+  return '<input value="' + esc(val == null ? '' : val) + '" oninput="' + oninput + '" placeholder="' + esc(ph || '')
+    + '" style="width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:7px;font-size:12.5px;box-sizing:border-box;'
+    + (extra || '') + '">';
+}
+function _fieldLabel(t){ return '<label style="font-size:10.5px;font-weight:700;color:var(--grey);letter-spacing:.04em;display:block;margin:9px 0 3px">' + esc(t) + '</label>'; }
+
+/** 📍 PLACE — the only one wired through to the store. "Closest" is a geometry question; this is the geometry. */
+function _placeConfig(n){
+  var p = _netPlace(n);
+  return '<div style="padding:12px 13px;border:1px solid var(--line);border-left:3px solid #2c5aa0;border-radius:10px;background:#f7fafd">'
+    + '<div style="font-size:11px;font-weight:800;color:#2c5aa0;letter-spacing:.05em">📍 PLACE &amp; REACH</div>'
+    + '<div style="font-size:11.5px;color:var(--grey);margin-top:4px;line-height:1.5">Where this store is, and how far it serves. '
+    + 'Nearest-store, coverage and transfer routing are all distance questions — they need this.</div>'
+    + _fieldLabel('ADDRESS')
+    + _inp(p.address, "netSetPlace('" + n.key + "','address',this.value)", 'street · area')
+    + '<div style="display:flex;gap:8px">'
+    + '<div style="flex:1">' + _fieldLabel('CITY') + _inp(p.city, "netSetPlace('" + n.key + "','city',this.value)", 'Coimbatore') + '</div>'
+    + '<div style="flex:1">' + _fieldLabel('COUNTRY') + _inp(p.country, "netSetPlace('" + n.key + "','country',this.value)", 'IN') + '</div>'
+    + '</div>'
+    + '<div style="display:flex;gap:8px">'
+    + '<div style="flex:1">' + _fieldLabel('LATITUDE') + _inp(p.lat, "netSetPlaceNum('" + n.key + "','lat',this.value)", '11.0168') + '</div>'
+    + '<div style="flex:1">' + _fieldLabel('LONGITUDE') + _inp(p.lng, "netSetPlaceNum('" + n.key + "','lng',this.value)", '76.9558') + '</div>'
+    + '<div style="flex:1">' + _fieldLabel('SERVES (KM)') + _inp(p.km, "netSetPlaceNum('" + n.key + "','km',this.value)", '50') + '</div>'
+    + '</div>'
+    + ((p.lat == null || p.lng == null)
+        ? '<div style="font-size:11px;color:#8a5a1e;margin-top:8px;line-height:1.5">⚠ Without latitude and longitude this store cannot answer "who is nearest" — the address alone is text.</div>'
+        : '<div style="font-size:11px;color:#2c7a43;margin-top:8px">✓ Locatable' + (p.km ? ' · serves ' + esc(p.km) + ' km' : '') + '</div>')
+    + '<div style="font-size:11px;color:var(--grey);margin-top:8px;border-top:1px dashed var(--line);padding-top:7px">'
+    + 'Carried onto the store at <b>Apply changes</b>, like its visibility and wording.</div>'
+    + '</div>';
+}
+
+/** The five that are CAPTURED but not yet carried. Real inputs, honest label. */
+function _netSoonVal(n, k){ n.soon = n.soon || {}; n.soon[k] = n.soon[k] || {}; return n.soon[k]; }
+function netSetSoon(key, cap, f, v){ var n = _netNode(key); if (!n) return; _netSoonVal(n, cap)[f] = v; _netSave(); }
+var NET_SOON_FORM = {
+  territory: [['tier', 'TIER', 'distributor · dealer · sub-dealer · installer'],
+              ['markets', 'AUTHORISED MARKETS', 'IN-TN, IN-KL, LK'],
+              ['lines', 'PRODUCT LINES IT MAY CARRY', 'circulator pumps, booster sets'],
+              ['exclusive', 'EXCLUSIVE OR SHARED', 'shared'],
+              ['valid', 'VALID UNTIL', '2027-03-31']],
+  stock:     [['policy', 'STOCKING POLICY', 'stocking · non-stocking'],
+              ['minmax', 'MIN / MAX PER ITEM', '5 / 40'],
+              ['source', 'WHERE THE NUMBER COMES FROM', 'ERP sync · IoT · manual'],
+              ['lead', 'REPLENISHMENT LEAD TIME (DAYS)', '9']],
+  fulfil:    [['routes', 'ROUTES IT CAN USE', 'own stock, lateral, regional warehouse, drop-ship'],
+              ['transit', 'TRANSIT DAYS PER ROUTE', 'own 0 · lateral 1 · regional 4 · drop-ship 9'],
+              ['invoices', 'WHO INVOICES THE CUSTOMER', 'this store'],
+              ['incoterm', 'INCOTERM', 'DAP']],
+  pricepolicy:[['basis', 'PRICE BASIS', 'source list · territory list · its own'],
+              ['band', 'FLOOR / CEILING OR MARGIN BAND', '12% – 22%'],
+              ['discount', 'WHO MAY DISCOUNT, AND HOW MUCH', 'branch manager, up to 5%'],
+              ['tax', 'TAX TREATMENT', 'GST 18% inclusive']],
+  localise:  [['markets', 'DESTINATION MARKETS SERVED', 'IN, LK'],
+              ['certs', 'REQUIRED CERTIFICATIONS', 'BIS, CE'],
+              ['variants', 'VARIANTS', '230V/50Hz, BSP fittings'],
+              ['docs', 'IMPORT DOCUMENTS', 'BIS licence, invoice, packing list'],
+              ['warranty', 'WARRANTY TERMS HERE', '24 months']],
+};
+function _soonConfig(n, k){
+  var s = NET_SOON[k], c = _capMeta(k) || {}, form = NET_SOON_FORM[k] || [], v = _netSoonVal(n, k);
   if (!s) return '';
-  return '<div style="padding:12px 13px;border:1px dashed var(--line-strong,#c8d0d9);border-radius:10px;background:#fafbfc">'
+  return '<div style="padding:12px 13px;border:1px solid var(--line);border-left:3px solid #8a94a3;border-radius:10px;background:#fafbfc">'
     + '<div style="font-size:11px;font-weight:800;color:#6b6f86;letter-spacing:.05em">' + c.icon + ' ' + esc((c.label || '').toUpperCase())
-    + ' <span style="background:#eef0f4;border-radius:5px;padding:1px 6px;margin-left:5px">NOT BUILT</span></div>'
-    + '<div style="font-size:12.5px;color:#3a4048;margin-top:7px;line-height:1.55"><b>' + esc(s.q) + '</b></div>'
-    + '<div style="margin-top:8px">' + s.fields.map(function(f){
-        return '<div style="font-size:12px;color:var(--grey);padding:2px 0">· ' + esc(f) + '</div>'; }).join('') + '</div>'
-    + '<div style="margin-top:9px;font-size:11.5px;line-height:1.55"><span style="color:#2c7a43;font-weight:700">Have</span> '
-    + '<span style="color:var(--grey)">' + esc(s.have) + '</span></div>'
-    + '<div style="margin-top:3px;font-size:11.5px;line-height:1.55"><span style="color:#a5382e;font-weight:700">Need</span> '
-    + '<span style="color:var(--grey)">' + esc(s.need) + '</span></div>'
-    + '<div style="margin-top:9px;font-size:11px;color:#8a94a3">Nothing here is stored or built. Ticking it records the '
-    + 'intent on the design only.</div></div>';
+    + ' <span style="background:#eef0f4;border-radius:5px;padding:1px 6px;margin-left:5px">CAPTURED, NOT ENFORCED</span></div>'
+    + '<div style="font-size:12.5px;color:#3a4048;margin-top:6px;line-height:1.5"><b>' + esc(s.q) + '</b></div>'
+    + form.map(function(f){ return _fieldLabel(f[1]) + _inp(v[f[0]], "netSetSoon('" + n.key + "','" + k + "','" + f[0] + "',this.value)", f[2]); }).join('')
+    + '<div style="margin-top:11px;font-size:11.5px;line-height:1.55;border-top:1px dashed var(--line);padding-top:8px">'
+    + '<div><span style="color:#2c7a43;font-weight:700">Have</span> <span style="color:var(--grey)">' + esc(s.have) + '</span></div>'
+    + '<div style="margin-top:3px"><span style="color:#a5382e;font-weight:700">Need</span> <span style="color:var(--grey)">' + esc(s.need) + '</span></div>'
+    + '<div style="margin-top:6px;color:#8a5a1e">⚠ Written down on the design. <b>The platform does not enforce any of it yet</b> — '
+    + 'it is not carried to the store and nothing checks it.</div></div></div>';
 }
 
 function _capDetail(n, k){
-  if (NET_SOON[k]) return _soonConfig(k);
+  if (k === 'place') return _placeConfig(n);
+  if (NET_SOON[k]) return _soonConfig(n, k);
   if (k === 'catalogue') return _catConfig(n);
   if (k === 'storefront') return _storefrontConfig(n);
   if (k === 'coassist') return _coassistConfig(n);
