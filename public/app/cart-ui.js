@@ -611,6 +611,40 @@
   }
 
   /**
+   * ensureHost — the ONE overlay the popup is painted into.
+   *
+   * ⚠️ THIS BELONGS TO THE CART, NOT TO THE COMPAT ADAPTER, and for two days it did not — it sat under cbPickInit,
+   * so a screen that used the NEW front door got a cart it could add to and could not open. That is exactly what
+   * shipped: on 2026-08-09 the storefront moved to create() and its "View cart ›" went dead, along with the only
+   * route to check out. Six + buttons and no order path, on the public page, with nothing thrown for a smoke test
+   * to catch — `open()` looked up a popupEl the caller had never been told to supply, got null, and returned
+   * quietly. Silence is the failure mode a missing default always has.
+   *
+   * Two front doors are only one implementation if they hand back the same cart. A default the old door filled in
+   * and the new door did not is a second implementation wearing the first one's name.
+   */
+  function ensureHost() {
+    if (typeof document === 'undefined' || document.getElementById('cbcart_ov')) return;
+    var d = document.createElement('div');
+    d.id = 'cbcart_ov'; d.className = 'cbcart-ov';
+    d.onclick = function (e) { if (e.target === d) { for (var k in C) if (C[k] && C[k].open) close(k); } };
+    d.innerHTML = '<div class="cbcart-ovc" id="cbcart_ovc"></div>';
+    document.body.appendChild(d);
+    if (!document.getElementById('cbcart_css')) {
+      // `styleEl`, not `st` — `st` is this module's state getter, and shadowing it here is a trap for the next edit.
+      var styleEl = document.createElement('style');
+      styleEl.id = 'cbcart_css';
+      styleEl.textContent = '.cbcart-ov{position:fixed;inset:0;background:rgba(15,22,32,.5);display:none;'
+        + 'align-items:center;justify-content:center;padding:14px;z-index:1200}.cbcart-ov.on{display:flex}'
+        + '.cbcart-ovc{background:#fff;width:100%;max-width:470px;border-radius:15px;padding:17px 18px 20px;'
+        + 'max-height:86vh;overflow:auto}';
+      document.head.appendChild(styleEl);
+    }
+  }
+  /** The popup host every cart shares, unless a caller deliberately names its own. */
+  var HOST = { popupEl: 'cbcart_ov', popupBodyEl: 'cbcart_ovc', popupClass: 'cbcart-ov' };
+
+  /**
    * ════════════════════════════════════════════════════════════════════════════════════════════════════════════
    *  create() — A CART YOU HOLD, rather than a name you pass around.
    * ════════════════════════════════════════════════════════════════════════════════════════════════════════════
@@ -647,7 +681,13 @@
 
   function create(cat, opts) {
     var ns = 'cbcart-' + (++SEQ);
-    init(ns, cat, opts || {});
+    // The popup host is the cart's own business. A caller supplies a catalogue and where to paint the list — being
+    // made to know that an overlay exists, and to name two element ids for it, is the kind of detail that gets
+    // forgotten exactly once and then ships.
+    ensureHost();
+    var o = {}; for (var k in (opts || {})) o[k] = opts[k];
+    for (var h in HOST) if (o[h] === undefined) o[h] = HOST[h];
+    init(ns, cat, o);
     var h = {
       ns: ns,
       /* reading */
@@ -759,27 +799,12 @@
    * cbPickListHTML were removed on 2026-08-09 once a sweep showed nothing called them. A compat shim with no
    * caller is not compatibility, it is dead weight that reads like a supported API.
    */
+  /* The adapter's element names. The popup host is NOT here any more — it is the cart's own, above, so both front
+     doors get the same one. */
   function ids(ns) {
-    return { listEl: 'cbpick_' + ns, barEl: 'cbcartbar_' + ns, popupEl: 'cbcart_ov', popupBodyEl: 'cbcart_ovc',
-             popupClass: 'cbcart-ov' };
-  }
-  /** Ensures the ONE popup host exists. Screens never had to declare it, so the adapter creates it on demand. */
-  function ensureHost() {
-    if (typeof document === 'undefined' || document.getElementById('cbcart_ov')) return;
-    var d = document.createElement('div');
-    d.id = 'cbcart_ov'; d.className = 'cbcart-ov';
-    d.onclick = function (e) { if (e.target === d) { for (var k in C) if (C[k] && C[k].open) close(k); } };
-    d.innerHTML = '<div class="cbcart-ovc" id="cbcart_ovc"></div>';
-    document.body.appendChild(d);
-    if (!document.getElementById('cbcart_css')) {
-      var st = document.createElement('style');
-      st.id = 'cbcart_css';
-      st.textContent = '.cbcart-ov{position:fixed;inset:0;background:rgba(15,22,32,.5);display:none;'
-        + 'align-items:center;justify-content:center;padding:14px;z-index:1200}.cbcart-ov.on{display:flex}'
-        + '.cbcart-ovc{background:#fff;width:100%;max-width:470px;border-radius:15px;padding:17px 18px 20px;'
-        + 'max-height:86vh;overflow:auto}';
-      document.head.appendChild(st);
-    }
+    var o = { listEl: 'cbpick_' + ns, barEl: 'cbcartbar_' + ns };
+    for (var h in HOST) o[h] = HOST[h];
+    return o;
   }
   root.cbPickInit = function (ns, cat, opts) {
     ensureHost();

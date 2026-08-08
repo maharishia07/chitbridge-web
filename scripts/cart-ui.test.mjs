@@ -257,6 +257,21 @@ ok('★★ two carts are INDEPENDENT — the bug the namespaced API could not pr
 second.destroy();
 ok('★ destroy releases it', K.state(second.ns) === undefined);
 
+/* ⚠️ THE DEFECT THIS PAIR EXISTS FOR — shipped to the public storefront on 2026-08-09.
+   The popup host was a default the COMPAT ADAPTER filled in and create() did not. So the storefront migrated to
+   create(), kept adding to its cart perfectly, and could never open it: open() looked up a popupEl nobody had told
+   the caller to supply, got null, and returned in silence. Six + buttons and no way to check out, on a public page,
+   with nothing thrown for the smoke test to see.
+   Two front doors are one implementation only if they hand back the SAME cart. */
+const hosted = K.create(chanCat, {});
+const hOpts = K.state(hosted.ns).opts;
+ok('★★ create() supplies the popup host itself — a caller must not have to know an overlay exists',
+   hOpts.popupEl === 'cbcart_ov' && hOpts.popupBodyEl === 'cbcart_ovc' && hOpts.popupClass === 'cbcart-ov');
+const owned = K.create(chanCat, { popupEl: 'mine_ov', popupBodyEl: 'mine_body' });
+ok('★ …but a caller that names its own host keeps it',
+   K.state(owned.ns).opts.popupEl === 'mine_ov' && K.state(owned.ns).opts.popupBodyEl === 'mine_body');
+hosted.destroy(); owned.destroy();
+
 console.log('\ncart-ui · load() — the channel door (WhatsApp, email, AI, CSV, ERP)');
 cart.clear();
 const res = cart.load([

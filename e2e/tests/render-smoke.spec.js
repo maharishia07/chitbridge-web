@@ -110,4 +110,40 @@ test.describe('render smoke — the page boots without throwing', () => {
     expect(state.adapter, 'the cbPick* compat adapter is missing — live screens still call it').toBe('function');
     expect(state.strays, 'a removed shim is back — that is a second cart forming').toEqual([]);
   });
+
+  /**
+   * ★★ DEFECT 6 — the one this file did not catch, found the next day on the DEPLOYED storefront.
+   *
+   * The storefront moved to CBCart.create(). It kept adding to its cart perfectly: the + buttons worked, the badge
+   * counted up, the total was right. And the cart could not be OPENED, so there was no route to check out at all —
+   * a public shop with six add buttons and no order path.
+   *
+   * The popup host was a default the compat adapter filled in (cbPickInit → ensureHost) and create() did not. So
+   * open() looked up a popupEl the caller had never been told to supply, got null, and returned in silence.
+   * NOTHING THREW. Every check above passes on that page: it booted, it painted, it printed money correctly, the
+   * module was loaded and unique. "Did it boot" and "does it work" are different questions, and a cart that adds
+   * but cannot be opened answers the first one yes.
+   *
+   * So this test does the only thing that could have found it — it presses +, opens the cart, and looks for the way
+   * out. Any screen that adopts create() is covered by the same three clicks.
+   */
+  test('★★ the storefront cart OPENS and offers a way to check out', async ({ page }) => {
+    const errors = watch(page);
+    await page.goto(`/shop.html?bridge=${BRIDGE}&api=${encodeURIComponent(API)}`, { waitUntil: 'networkidle' });
+
+    const add = page.getByTestId('cart-add');
+    test.skip(!(await add.count()), 'this shop publishes no orderable products');
+
+    await add.first().click();
+    await expect(page.locator('[data-testid^="cart-count-"]').first(),
+      'pressing + did not put anything in the cart').toBeVisible();
+
+    // The WHOLE bar is the tap target, deliberately — so this is exactly what a customer does.
+    await page.locator('.cbcart-bar').first().click();
+    await expect(page.locator('#cbcart_ov'),
+      'the cart bar does not open the cart — the popup host is missing').toBeVisible();
+    await expect(page.getByTestId('cart-checkout'),
+      'the cart opened with no way to check out').toBeVisible();
+    expect(ourFaults(errors), 'the page threw while using the cart:\n' + ourFaults(errors).join('\n')).toEqual([]);
+  });
 });
