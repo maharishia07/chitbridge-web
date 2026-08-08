@@ -2431,7 +2431,7 @@ function supDetailHTML(){
     if(!x.has_catalogue) catcard=`<div class="sec">Order from them</div><div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;font-size:12px;color:#6b5a36">No catalogue published yet — nothing to order.</div>`;
     else if(d.loading) catcard=`<div class="sec">Order from them</div><div class="loadwrap" style="justify-content:flex-start;padding:6px 0"><span class="spin"></span> loading catalogue…</div>`;
     else catcard=`<div class="sec">Order from them</div><div style="font-size:11.5px;color:var(--grey);margin-bottom:6px">${(d.items||[]).length} item(s) — priced in their currency, exactly as their own storefront shows them.</div>`
-      + (function(){ if(typeof cbPickInit==='function') cbPickInit('sup', d.cat||{}); cbPickOnChange('sup', paintSupDetail);
+      + (function(){ if(typeof cbPickInit==='function') cbPickInit('sup', d.cat||{}, { testid:'sup-catalogue' }); cbPickOnChange('sup', paintSupDetail);
                      return cbCartBar('sup', `composeFromSupplier('${x.supplier_list_id}')`, 'Order these') + cbPickHTML('sup', d.cat||{}); })();
     body=supConfidenceStrip()+prof+catcard;
     // The cart's own button is above the list, where the picking happens. This one stays for the case it has always

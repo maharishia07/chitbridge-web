@@ -663,7 +663,12 @@
   }
   root.cbPickInit = function (ns, cat, opts) {
     ensureHost();
-    var o = {}; for (var k in (opts || {})) o[k] = opts[k];
+    // ⚠️ MERGE OVER WHAT WAS ALREADY SET. cbPickHTML() re-inits when handed a catalogue, and it passes no opts —
+    // so a testid (or accent, or checkout handler) set by an earlier cbPickInit was silently wiped, and the
+    // element lost the data-testid the e2e spec looks for. Later opts win; anything omitted is KEPT.
+    var prevOpts = (prev && prev.opts) || {};
+    var o = {}; for (var pk in prevOpts) o[pk] = prevOpts[pk];
+    for (var k in (opts || {})) o[k] = opts[k];
     var base = ids(ns);
     for (var j in base) if (o[j] === undefined) o[j] = base[j];
     return init(ns, cat, o);

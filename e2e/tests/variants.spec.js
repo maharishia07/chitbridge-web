@@ -200,6 +200,16 @@ test.describe('variants', () => {
     // "N item(s) in their catalogue".
     await mintEntity(page);                                   // a buyer, signed in
 
+    /**
+     * ⚠️ ACCEPT THE CONFIRM. addSupplier() asks "Add X as your supplier?" before it posts, and Playwright
+     * auto-DISMISSES dialogs unless a handler says otherwise — so the add silently returned and no row ever
+     * appeared. The spec then failed at `sup-row-` with "element(s) not found", ten lines before the catalogue it
+     * exists to check, which made it read like a rendering fault when nothing had been rendered yet.
+     *
+     * A confirm() in the app is a real step a person takes; a spec that drives the app has to take it too.
+     */
+    page.on('dialog', (d) => d.accept());
+
     await page.getByTestId('nav-suppliers').click();
     await expect(page.getByTestId('sup-add-input')).toBeVisible();
 
