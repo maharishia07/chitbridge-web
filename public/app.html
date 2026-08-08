@@ -1681,12 +1681,32 @@ function ccCatPickHTML(){
    * nothing to group and renders each line plainly, which is exactly rule 1. If compose is ever given the whole
    * catalogue payload instead, variants will group here too with no change to this code.
    */
+  const c = UI._ccCart; if(!c) return '';
+  return `<div id="cbcartbar_cc">${c.barHTML()}</div>`
+    + `<input class="inp" style="margin:0 0 7px" placeholder="Search this catalogue…" value="${esc((c.state()||{}).q||'')}"`
+    + ` data-testid="pick-search-cc" oninput="ccPickSearch(this.value)">`
+    + `<div id="cbpick_cc" data-testid="pick-cc">${c.listHTML()}</div>`;
+}
+/* Search repaints the LIST only — repainting the picker would take the focus out of the box being typed in. */
+function ccPickSearch(q){ if(UI._ccCart) UI._ccCart.search(q); }
+/**
+ * ccCartSync — create or re-point the compose cart. Called ONLY where STORE.catalogue actually changes: when the
+ * modal opens, and when the async product fetch lands.
+ *
+ * ⚠️ NOT FROM ccCatPickHTML. That function runs on every cart change (onChange repaints the picker), so a
+ * setCatalogue() there would repaint → sync → repaint, forever. Creating in a render function is the same mistake
+ * one loop louder: it is what the namespaced API forced, and what a held handle exists to make impossible.
+ */
+function ccCartSync(){
   const cat = { shop:{ bridge_id:'self' }, items:(STORE.catalogue||[]).map((p,i)=>({
     item_id:'sc'+i, item_data:{ name:p.particulars, unit:p.unit||'unit', price:p.price } })) };
-  if(typeof cbPickInit==='function') cbPickInit('cc', cat);
-  cbPickOnChange('cc', ccRenderCatPick);
-  return cbCartBar('cc','ccAddPicked()','+ Add to the chit') + cbPickHTML('cc', cat);
+  if(UI._ccCart) UI._ccCart.setCatalogue(cat);
+  else UI._ccCart = CBCart.create(cat, { listEl:'cbpick_cc', barEl:'cbcartbar_cc',
+         checkoutLabel:'+ Add to the chit', cartTitle:'Lines to add', emptyHint:'Press + on what this chit is for',
+         noCatalogue:'Your catalogue is empty.', onCheckout:ccAddPicked, onChange:ccRenderCatPick });
 }
+/* The modal is the cart's lifetime. Closing compose and leaving a cart behind is the leak a handle can express. */
+function ccCartRelease(){ if(UI._ccCart){ UI._ccCart.destroy(); UI._ccCart=null; } }
 /**
  * ccAddPicked — the ticked lines become chit lines.
  *
@@ -1695,7 +1715,7 @@ function ccCatPickHTML(){
  */
 function ccAddPicked(){
   const e=document.getElementById("cc_err"); if(e)e.textContent="";
-  const picked = (typeof cbPickSelected==='function') ? cbPickSelected('cc') : [];
+  const picked = UI._ccCart ? UI._ccCart.selected() : [];
   if(!picked.length) return;
   // The line cap is the chit's, and it is REPORTED when it bites. Adding eight to a chit with room for three and
   // silently keeping three would leave someone to discover the missing five after sending.
@@ -1705,7 +1725,7 @@ function ccAddPicked(){
   CC.items = (CC.items||[]).concat(take.map(p=>({
     particulars:p.name, unit:p.unit||'unit', price:(typeof cbAmount==='function'?cbAmount(p.price):p.price)||0, qty:p.qty||1 })));
   if(take.length < picked.length && e) e.textContent = "Added "+take.length+" — line items are capped at "+cap+", so "+(picked.length-take.length)+" were not added.";
-  cbPickClear('cc');
+  if(UI._ccCart) UI._ccCart.clear();
   ccRenderItems();
 }
 function ccRenderCatPick(){ const h=document.getElementById('cc_catpick'); if(h) h.innerHTML=ccCatPickHTML(); }
@@ -1714,6 +1734,8 @@ async function compose(prefill){ UI.drawer=false; CC={items:(prefill&&prefill.it
   // "loading…", and fetch YOUR products in the background AFTER the modal opens (below) so a cold API never stalls it.
   if(UI._supplier && prefill && prefill.catalogue){ STORE.catalogue = prefill.catalogue.slice(); UI._catState='ready'; }
   else { STORE.catalogue = STORE.catalogue||[]; UI._catState = (STORE.catalogue.length ? 'ready' : 'loading'); }
+  // A fresh compose is a fresh cart: whatever was ticked in the LAST chit is not an instruction about this one.
+  ccCartRelease(); ccCartSync();
   modal(`<div class="mhd"><div class="t">✉️ Compose — author a chit <button data-testid="icon-help-compose" onclick="openAssist('compose')" title="Ask the assistant about composing" style="border:1px solid var(--line);background:#fff;color:#3F66A6;border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;vertical-align:middle">?</button></div><div class="s">create your own record, then bridge it</div></div>
    <div class="mbody">
      <div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:11px;padding:10px 12px;font-size:12.5px;color:#6b5a36;line-height:1.5;margin-bottom:10px"><b style="font-family:'Space Grotesk'">Author your own chit — it becomes shared the moment you bridge it.</b> A self-addressed chit is a real chit: one copy in <b>Order</b> (sent), one in <b>Task</b> (received), same thread. <span style="font-family:'Space Mono';font-size:10px;background:#fbeceb;color:#b4453f;border:1px solid #f0c9c6;border-radius:5px;padding:1px 6px">⏳ execute &amp; test pending</span></div>
@@ -1765,6 +1787,7 @@ async function compose(prefill){ UI.drawer=false; CC={items:(prefill&&prefill.it
       STORE.catalogue=_prods.map(function(x){ var d=x.item_data||x; return {particulars:d.name||d.product||'item', unit:d.unit||'unit', price:cbAmount(d.price)}; });
       UI._catState='ready';
     }catch(e){ UI._catState=(STORE.catalogue||[]).length?'ready':'error'; }
+    ccCartSync();          // the products just arrived — point the cart at them before painting it
     ccRenderCatPick();
   }
 }
@@ -2335,10 +2358,10 @@ async function supCatalogueFull(sid){
  * one shown flat, and nothing dropped. Athi: "this should not be a separate code, it is another entry point for the
  * same view." The read was already shared (buildPublicView); this is the render.
  */
-/* ⚠️ THE PICKER RENDERERS MOVED to app/cart-ui.js (loaded above), which is now the ONE cart for Suppliers,
-   Network, compose and the storefront. cbPickHTML / cbCartBar / cbPickPaint / cbPickOnChange
-   still exist under those names — as thin adapters over CBCart, not as a second copy. The bodies that used to
-   be here are DELETED, so there is nothing left to drift. */
+/* ⚠️ THE PICKER RENDERERS LIVE IN app/cart-ui.js (loaded above), the ONE cart for Suppliers, Network, compose and
+   the storefront. This file no longer calls the cbPick* adapter at all: both of its carts — UI._supCart here and
+   UI._ccCart in compose — are HELD handles from CBCart.create(). A screen holds its cart, renders from it, and
+   releases it; nothing keys cart state by a name any more. */
 /**
  * supCartHTML — the cart bar, the search box and their catalogue, ALL out of the held cart.
  *
@@ -3244,7 +3267,7 @@ function minimiseCompose(){ const h=document.getElementById("modalhost"); if(!h)
 function resumeCompose(){ const h=document.getElementById("modalhost"); if(h)h.style.display=''; UI._composeMin=false; const p=document.getElementById('composepill'); if(p)p.remove(); setTimeout(function(){ var t=document.getElementById('cf_subject'); if(t)t.focus(); },20); }
 function renderComposePill(){ var p=document.getElementById('composepill'); if(!p){ p=document.createElement('div'); p.id='composepill'; document.body.appendChild(p); } p.className='composepill'; p.innerHTML='<span onclick="resumeCompose()" style="cursor:pointer">✏️ Resume compose</span><span onclick="discardCompose()" title="Discard draft" style="cursor:pointer;opacity:.75;font-weight:800">✕</span>'; }
 function discardCompose(){ var p=document.getElementById('composepill'); if(p)p.remove(); CC={items:[],rcpts:[]}; closeModal(); }
-function closeModal(){ const h=document.getElementById("modalhost"); if(h){ h.style.display=''; h.innerHTML=""; } UI._composeModal=false; UI._composeMin=false; UI._draftId=null; UI._supplier=null; const p=document.getElementById('composepill'); if(p)p.remove(); }
+function closeModal(){ const h=document.getElementById("modalhost"); if(h){ h.style.display=''; h.innerHTML=""; } UI._composeModal=false; UI._composeMin=false; UI._draftId=null; UI._supplier=null; ccCartRelease(); const p=document.getElementById('composepill'); if(p)p.remove(); }
 function quickStatus(){ const ids=needTarget(); if(!ids.length)return; MODALS.stat={ids,to:null};
   const opts=[["open","Open"],["act","Act"],["close","Close"]].map(([v,l])=>`<div class="optrow" data-v="${v}" onclick="pickStatus('${v}')"><span class="rdo"></span><div class="oc"><div class="on">${l}</div></div></div>`).join("");
   modal(`<div class="mhd"><div class="t">Change status</div><div class="s">${ids.length} chit${ids.length>1?'s':''}</div></div><div class="mbody">${opts}</div><div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="pri" id="mok" disabled onclick="confirmStatus()">Set status</button></div>`);
