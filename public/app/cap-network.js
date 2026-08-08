@@ -675,7 +675,8 @@ function netMintGo(){
     // as new. The server now also refuses to drop them, but the client should not be sending stale state at all.
     api('netDesignGet').then(function(d){
       if (d && d.draft && d.draft.nodes) { UI.net = d.draft; _netSetDirty(false); }
-    }).catch(function(){});
+      UI._netPlan = null; UI._netPlanSig = null;   // the outstanding list is now stale by definition — re-ask
+    }).catch(function(){ UI._netPlan = null; UI._netPlanSig = null; });
     var created = r.created || [], invited = r.invited || [], updated = r.updated || [], probs = r.problems || [];
     var body = '<div style="max-height:64vh;overflow:auto">'
       + (created.length ? '<div style="padding:11px 16px;border-bottom:1px solid var(--line);font-size:12.5px;line-height:1.6"><b>' + created.length + ' store' + (created.length === 1 ? '' : 's') + ' created.</b> Each signs in at the login page with the <b>handle</b> and the <b>code</b> below. Codes last 7 days.<br><span style="color:#a5382e">This is the only time these codes are shown.</span></div>' : '')
@@ -780,8 +781,26 @@ function networkScreen(){
   var right = sel ? _netNodeView(sel) : '<div style="padding:24px;color:var(--grey);font-size:13px">Select a node to edit it, or add a child under it.</div>';
   var count = (UI.net.nodes || []).length - 1;
   var built = (UI.net.nodes || []).filter(function(n){ return n.built; }).length;
-  var pending = (UI.net.nodes || []).filter(function(n){ return !n.root && n.owned && !n.built; }).length;
-  var toChange = (UI.net.nodes || []).filter(function(n){ return _netPending(n); }).length;
+  _netRefreshPlan();                       // ask the server what is outstanding (debounced by design signature)
+  var P = UI._netPlan || {};
+  var toCreate = P.create || [], toChange = P.update || [], probs = P.problems || [];
+  var pendingCount = toCreate.length + toChange.length;
+  /* The outstanding work, as LINE ITEMS. Athi: *"show the newly created store under the apply changes as a line
+     item, yet to be created."* A number tells you something is outstanding; a list tells you what. */
+  var pendingList = pendingCount
+    ? '<div style="margin:8px 8px 0;border:1px solid #e0d3b0;border-radius:9px;background:#fdf8ec;overflow:hidden">'
+      + toCreate.map(function(c){ return '<div style="padding:6px 9px;font-size:11.5px;border-bottom:1px solid #efe4cc">'
+          + '<b style="color:#2c5aa0">NEW</b> ' + esc(c.name)
+          + '<div style="font-family:ui-monospace,Menlo,monospace;font-size:10.5px;color:var(--grey)">' + esc(c.handle) + ' · ' + esc(_netPlatLab[c.visibility] || c.visibility) + '</div></div>'; }).join('')
+      + toChange.map(function(u){ return '<div style="padding:6px 9px;font-size:11.5px;border-bottom:1px solid #efe4cc">'
+          + '<b style="color:#8a5a1e">CHANGE</b> ' + esc(u.name)
+          + '<div style="font-size:10.5px;color:var(--grey)"><s>' + esc(_netPlatLab[u.from] || u.from) + '</s> → <b>' + esc(_netPlatLab[u.to] || u.to) + '</b></div></div>'; }).join('')
+      + '<div style="padding:6px 9px;font-size:10.5px;color:#8a5a1e">Nothing above has happened yet.</div></div>'
+    : '';
+  var problemList = probs.length
+    ? '<div style="margin:8px 8px 0;font-size:11px;color:#a5382e;line-height:1.5">'
+      + probs.map(function(x){ return '⚠ ' + esc(x.name || '') + ' — ' + esc(x.reason); }).join('<br>') + '</div>'
+    : '';
   return '<div style="display:flex;height:100%;min-height:0">'
     + '<div style="width:300px;border-right:1px solid var(--line);overflow:auto;padding:12px 8px;flex:0 0 auto">'
       + '<div style="font-size:11px;font-weight:800;color:var(--grey);letter-spacing:.05em;padding:2px 8px 3px">' + esc(UI.net.purpose || 'NETWORK') + '</div>'
@@ -793,14 +812,12 @@ function networkScreen(){
       + tree
       + '<div style="border-top:1px solid var(--line);margin-top:12px;padding-top:10px">'
         + '<button class="pri" onclick="netBuild()" style="width:calc(100% - 16px);margin:0 8px;padding:9px">'
-        + (built ? '🔨 Apply changes' + ((pending + toChange) ? ' (' + (pending + toChange) + ')' : '')
+        + (built ? '🔨 Apply changes' + (pendingCount ? ' (' + pendingCount + ')' : '')
                  : '🔨 Build network' + (count ? ' (' + count + ')' : '')) + '</button>'
-        + '<div style="font-size:11px;padding:8px 8px 2px;color:' + (toChange ? '#8a5a1e' : 'var(--grey)') + '">'
-        + (built
-            ? [pending ? pending + ' new store' + (pending === 1 ? '' : 's') : '',
-               toChange ? toChange + ' change' + (toChange === 1 ? '' : 's') + ' not applied yet' : '']
-                .filter(Boolean).join(' · ') || 'the live network matches this design'
-            : (count ? count + ' node' + (count === 1 ? '' : 's') + ' designed · nothing created yet' : 'add nodes, then build')) + '</div>'
+        + pendingList + problemList
+        + (pendingCount ? '' : '<div style="font-size:11px;color:var(--grey);padding:8px 8px 2px">'
+            + (built ? '✓ the live network matches this design'
+                     : (count ? count + ' node' + (count === 1 ? '' : 's') + ' designed · nothing created yet' : 'add nodes, then build')) + '</div>')
         + '<div style="font-size:11px;color:var(--blue);padding:6px 8px;cursor:pointer" onclick="netStartOver()">↺ Start over</div>'
       + '</div>'
       + '</div>'
@@ -1345,22 +1362,85 @@ var NET_VIS_CHIP = {
 };
 /** design word → the platform's word, so a receipt written by the server can be compared with a drawing. */
 var NET_PLATFORM = { public: 'public', protected: 'network', private: 'private' };
-/** Has this store's drawing moved away from what the live shop is actually set to? */
+
+/* ── WHAT IS PENDING COMES FROM THE SERVER, NOT FROM A GUESS ──────────────────────────────────────────────────
+   Athi, 2026-08-08: *"I added another store called North-1 as public but I have not applied changes, and this is
+   now visible in the map — people assume it got created. Any changes whatsoever being mentioned to be highlighted
+   separately."*
+
+   The map draws the DESIGN, so a node appears the moment it is drawn. Nothing distinguished "drawn" from "live",
+   and the tree is the first thing anyone reads.
+
+   The answer is the dry run: the same endpoint Build uses, with dry_run:true, returning exactly what WOULD happen.
+   Using the server's own plan rather than inferring it client-side means the badges cannot disagree with what
+   pressing the button will do — and it covers stores built before receipts carried their visibility, which no
+   amount of local comparison could. It saves first, because the plan is computed from the SAVED design. */
+function _netPlanSig(){
+  return JSON.stringify((UI.net && UI.net.nodes || []).map(function(n){
+    return [n.key, n.name, n.exposure || '', n.parent_key || '', n.owned !== false, n.partner_ref || '', !!n.built]; }));
+}
+function _netRefreshPlan(){
+  if (!_netLoggedIn() || !UI.net || UI._netPlanBusy) return;
+  var sig = _netPlanSig();
+  if (sig === UI._netPlanSig) return;                 // nothing moved — do not re-ask
+  UI._netPlanBusy = true; UI._netPlanSig = sig;
+  api('netDesignPut', { body: { draft: _netStripView(UI.net) } })
+    .then(function(){ _netSetDirty(false); return api('netBuild', { body: { dry_run: true } }); })
+    .then(function(p){
+      UI._netPlanBusy = false;
+      UI._netPlan = p || null;
+      _netRerender();
+    })
+    // Clear the signature on failure so the next render tries again. Latching it would leave the badges silently
+    // stale after one hiccup — and a stale "nothing outstanding" is the exact lie this whole thing exists to stop.
+    .catch(function(){ UI._netPlanBusy = false; UI._netPlan = null; UI._netPlanSig = null; });
+}
+/** This node's row in the server's plan: to be created, or about to change. */
+function _netPlanFor(n){
+  var p = UI._netPlan; if (!p || !n) return null;
+  var c = (p.create || []).filter(function(x){ return x.key === n.key; })[0];
+  if (c) return { kind: 'create', to: c.visibility, asked: c.asked };
+  var u = (p.update || []).filter(function(x){ return x.key === n.key; })[0];
+  if (u) return { kind: 'change', from: u.from, to: u.to };
+  return null;
+}
+/** Has this store's drawing moved away from what the live shop is set to? Server plan first, receipt as fallback. */
 function _netPending(n){
+  var pl = _netPlanFor(n);
+  if (pl && pl.kind === 'change') return { from: pl.from, to: pl.to };
+  if (UI._netPlan) return null;                       // the server has spoken; do not second-guess it
   if (!n || !n.built || !n.built.visibility) return null;
   var want = NET_PLATFORM[n.exposure || 'private'] || 'private';
   return n.built.visibility === want ? null : { from: n.built.visibility, to: want };
 }
+var _netLab = function(k){ return ((NET_EXPOSURE.filter(function(o){ return o.k === k; })[0] || {}).label || k).replace(/^\S+\s/, ''); };
+var _netPlatLab = { public: 'Public', network: 'Network', private: 'Private' };
+
+/**
+ * The chip beside a store in the tree — and the whole point of it is that a store which is NOT LIVE must never
+ * look like one that is.
+ *
+ *     Public                       live, and set to public
+ *     TO BE CREATED  Public        drawn, does not exist yet
+ *     Public → Network             live, but the drawing has moved and Apply has not run
+ */
 function _netVisChip(n){
-  var c = NET_VIS_CHIP[n.exposure || 'private'] || NET_VIS_CHIP.private;
-  var chip = '<span style="font-size:9.5px;font-weight:800;letter-spacing:.02em;color:' + c.fg + ';background:' + c.bg
-    + ';border-radius:5px;padding:1px 5px;margin-left:6px;vertical-align:middle">' + c.t + '</span>';
-  // ⚠️ THE DRAWING AND THE SHOP DISAGREE. Athi, 2026-08-08: *"once you show the difference they assume it is
-  // changed."* Exactly — so a store whose design has moved but whose live shop has not must say so, in the tree,
-  // until Apply changes reconciles them. Silence here is what makes the redraw a lie.
+  var pl = _netPlanFor(n);
+  if (pl && pl.kind === 'create') {
+    return '<span style="font-size:9px;font-weight:800;letter-spacing:.02em;color:#2c5aa0;background:#eaf1fb;'
+      + 'border:1px dashed #2c5aa0;border-radius:5px;padding:0 5px;margin-left:6px;vertical-align:middle">TO BE CREATED</span>'
+      + '<span style="font-size:9.5px;font-weight:700;color:#6b7280;margin-left:5px">' + esc(_netPlatLab[pl.to] || pl.to) + '</span>';
+  }
   var p = _netPending(n);
-  if (p) chip += '<span title="the live shop is still ' + p.from + ' — press Apply changes" style="font-size:9px;font-weight:800;color:#8a5a1e;background:#f6ecd8;border-radius:5px;padding:1px 5px;margin-left:4px;vertical-align:middle">NOT APPLIED</span>';
-  return chip;
+  if (p) {
+    // The change, IN the map, exactly as it will be applied — struck through so it reads as a move, not a state.
+    return '<span style="font-size:9.5px;font-weight:800;margin-left:6px;vertical-align:middle">'
+      + '<s style="color:#a5382e">' + esc(_netPlatLab[p.from] || p.from) + '</s>'
+      + ' <span style="color:#8a5a1e">→ ' + esc(_netPlatLab[p.to] || p.to) + '</span></span>';
+  }
+  var c = NET_VIS_CHIP[n.exposure || 'private'] || NET_VIS_CHIP.private;
+  return '<span style="font-size:9.5px;font-weight:800;letter-spacing:.02em;color:' + c.fg + ';background:' + c.bg
+    + ';border-radius:5px;padding:1px 5px;margin-left:6px;vertical-align:middle">' + c.t + '</span>';
 }
 
 /* The most open a store may be, given the NETWORK's own visibility. Athi: *"what if the network is private? Then
