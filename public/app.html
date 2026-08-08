@@ -538,6 +538,7 @@ img.attImg{object-fit:cover;display:block}
 <!-- module 3: the canonical catalogue model (shape · migration · four-leg chain · compute-job derivation). Shared by cap-network.js and headless consumers. -->
 <script src="/app/catalogue-model.js"></script>
 <script src="/app/catalogue-lines.js"></script>
+<script src="/app/cart-ui.js"></script>
 <!-- module 4 (LOCAL PROTOTYPE — not promoted): enhanced catalogue "face" setup (adopt/build → one face → conforming items). -->
 <script src="/app/cap-catalogue.js"></script>
 <script>
@@ -2310,143 +2311,10 @@ async function supCatalogueFull(sid){
  * one shown flat, and nothing dropped. Athi: "this should not be a separate code, it is another entry point for the
  * same view." The read was already shared (buildPublicView); this is the render.
  */
-/**
- * cbPickHTML — the catalogue as something you SELECT FROM, in app.html's house style.
- *
- * Athi, 2026-08-08: *"in supplier and network, the same pattern. with check box, and search, they should be able to
- * select more product and then send button."*
- *
- * The rows, the grouping and the filtering come from app/catalogue-lines.js so supplier and network cannot drift
- * apart; only the CSS lives here. `ns` namespaces the selection, so a supplier's picks and a network store's picks
- * are separate baskets and switching between them never mixes them up.
- */
-function cbPickHTML(ns, cat, opts){
-  opts = opts || {};
-  const ccy = (cat && cat.shop && cat.shop.currency_code) || opts.currency || '';
-  const sym = (typeof curSym === 'function' && ccy) ? curSym(ccy) : '';
-  const total = (typeof cbLineRows === 'function' ? cbLineRows(cat) : []).filter(r=>r.type==='line').length;
-  if(!total) return '<div style="font-size:12.5px;color:var(--grey)">They have not published any products.</div>';
-  // The search box is OUTSIDE the repainted list — filtering must not pull the cursor out of the box you are typing in.
-  // ⚠️ The box carries its CURRENT value. Ticking an item repaints whichever container owns this picker, and an
-  // input rendered without `value` would come back empty while the filter behind it stayed on — the list would
-  // show a narrowed catalogue with nothing on screen to say why.
-  const st0 = (typeof cbPickState==='function') ? cbPickState(ns) : null;
-  const search = '<input class="inp" style="margin:0 0 7px" placeholder="Search this catalogue…"'
-    + ' value="'+esc((st0 && st0.q) || '')+'"'
-    + ' data-testid="pick-search-'+esc(ns)+'" oninput="cbPickSearch(\''+esc(ns)+'\', this.value)">';
-  return search + '<div class="itab" id="cbpick_'+esc(ns)+'" data-testid="pick-'+esc(ns)+'">'
-    + cbPickListHTML(ns, sym) + '</div>';
-}
-function cbPickListHTML(ns, sym){
-  const st = (typeof cbPickState === 'function') ? cbPickState(ns) : null;
-  if(!st) return '';
-  if(sym===undefined){ const c=(st.cat&&st.cat.shop&&st.cat.shop.currency_code)||''; sym=(typeof curSym==='function'&&c)?curSym(c):''; }
-  const rows = cbPickRows(ns);
-  // A search that matches nothing SAYS so. An empty list under a filled search box reads as "they have nothing".
-  if(!rows.length) return '<div style="padding:11px 12px;font-size:12.5px;color:var(--grey)">Nothing here matches that.</div>';
-  /**
-   * ── THE STEPPER, NOT A CHECKBOX ───────────────────────────────────────────────────────────────────────────────
-   * Athi, 2026-08-08, from the grocery cart he built in 2018: a `+` on every row, which becomes `− 1 +` once the
-   * line is in the cart. Quantity is decided AT the row — beside the price and the unit that inform it — instead of
-   * in a panel two steps later, which is where my checkbox version made you decide it.
-   */
-  const rnd='border-radius:50%;width:24px;height:24px;flex:none;border:1.5px solid var(--blue);background:#fff;color:var(--blue);'
-    + 'font-size:15px;font-weight:700;line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center';
-  const stepper=(id,q)=> q>0
-    ? '<span style="display:inline-flex;align-items:center;gap:7px" onclick="event.stopPropagation()">'
-      + '<button style="'+rnd+'" data-testid="pick-dec" onclick="cbPickDec(\''+esc(ns)+'\',\''+esc(id)+'\')">−</button>'
-      + '<input inputmode="decimal" value="'+esc(String(q))+'" onclick="event.stopPropagation()" onchange="cbPickSetQty(\''+esc(ns)+'\',\''+esc(id)+'\',this.value)"'
-      + ' style="width:42px;padding:3px 5px;border:1px solid var(--line);border-radius:6px;font-size:12.5px;text-align:center">'
-      + '<button style="'+rnd+';background:var(--blue);color:#fff" data-testid="pick-add" onclick="cbPickAdd(\''+esc(ns)+'\',\''+esc(id)+'\')">+</button></span>'
-    : '<button style="'+rnd+'" data-testid="pick-add" onclick="event.stopPropagation();cbPickAdd(\''+esc(ns)+'\',\''+esc(id)+'\')">+</button>';
-  return rows.map(function(r,i){
-    if(r.type === 'product'){
-      // Same rule as cbPickGroup: membership is `gid`, never "until the next heading" — ungrouped products are
-      // appended as lines after the groups, and walking forward would show them as part of a group they are not in.
-      let ids=[]; for(let k=i+1;k<rows.length && rows[k].type==='line' && rows[k].gid===r.gid;k++) ids.push(rows[k].item_id);
-      const inCart = ids.filter(id=>st.sel[id]).length;
-      return '<div style="padding:9px 12px 3px;display:flex;align-items:center;gap:8px">'
-        + '<b style="font-size:13.5px">'+esc(r.label)+'</b>'
-        + '<span style="font-size:11px;color:var(--grey)">'+r.count+' options</span>'
-        + (inCart?'<span style="font-size:11px;color:var(--blue);font-weight:700">'+inCart+' in cart</span>':'')
-        + (r.options?'<span style="font-size:11px;color:var(--grey);margin-left:auto">'+esc(r.options)+'</span>':'')
-        + '</div>';
-    }
-    const d = r.item.item_data || r.item;
-    const amt = (typeof cbAmount === 'function') ? cbAmount(d.price) : (d.price && d.price.amount);
-    const q = (typeof cbPickQtyOf==='function') ? cbPickQtyOf(ns, r.item_id) : 0;
-    const lineTot = (q>0 && amt!=null && amt!=='') ? sym+String(Number(amt)*q) : null;
-    return '<div style="display:flex;align-items:center;gap:9px;'
-      + 'padding:7px 12px 7px '+(r.variant?'26px':'12px')+';border-bottom:1px dashed var(--line);font-size:13px;'
-      + (q>0?'background:var(--blue-soft,#eef4ff)':'')+'">'
-      + '<span style="flex:1"><b>'+esc(r.variant || d.name || d.product || 'item')+'</b>'
-      + (d.unit?' <span style="color:var(--grey);font-size:11.5px">'+esc(d.unit)+'</span>':'')
-      + '<div style="font-size:11.5px;color:var(--grey)">'+(amt==null||amt===''?'—':esc(sym+String(amt)))
-      // The line's own total, shown only once there is a quantity to multiply by — a price × 1 restated is noise.
-      + (lineTot?' <span style="color:var(--ink);font-weight:700">· '+esc(lineTot)+'</span>':'')+'</div></span>'
-      + stepper(r.item_id, q) + '</div>';
-  }).join('');
-}
-/**
- * cbPickPaint — repaint after a tick or a keystroke.
- *
- * The LIST is repainted in place rather than the whole screen: the supplier pane holds a loaded catalogue and a
- * scroll position, and rebuilding it on every checkbox would throw both away. The action bar is asked to refresh
- * itself separately so the send button's count stays true — the two are painted by different owners on purpose.
- */
-function cbPickPaint(ns, listOnly){
-  const h = document.getElementById('cbpick_' + ns);
-  if(h) h.innerHTML = cbPickListHTML(ns);
-  if(!listOnly && typeof UI !== 'undefined' && UI._pickBar && UI._pickBar[ns]) { try{ UI._pickBar[ns](); }catch(_){ } }
-}
-/** Registers who repaints the send button for this picker. */
-function cbPickOnChange(ns, fn){ if(typeof UI==='undefined')return; UI._pickBar = UI._pickBar || {}; UI._pickBar[ns] = fn; }
-/**
- * cbCartBar — the cart, above the list it fills.
- *
- * Athi, 2026-08-08: *"like normal cart, cart can be filled with selected items. show the cart symbol so there show
- * how many items selected."*
- *
- * A count on a button at the bottom of a long catalogue is invisible while you are picking — you scroll away from
- * it on the second screenful. This sits above the list, so what you have gathered is in view the whole time you are
- * gathering it, which is the only reason a cart badge exists anywhere.
- *
- * EMPTY IS SHOWN, NOT HIDDEN. A cart that appears only once it has something in it teaches nobody that it is there.
- * It sits greyed with a zero and says what to do, and it cannot be sent — an empty basket has nothing to send.
- */
-function cbCartBar(ns, sendCall, label){
-  const n = (typeof cbPickCount==='function') ? cbPickCount(ns) : 0;
-  const units = (typeof cbPickUnits==='function') ? cbPickUnits(ns) : 0;
-  const st = (typeof cbPickState==='function') ? cbPickState(ns) : null;
-  const cartView = !!(st && st.cartView);
-  const on = n > 0;
-  // The running total, beside the count — Athi's 2018 bar showed "#2 · ₹625.00" and never made you open the cart to
-  // learn what it came to. `partial` is true when a line has no readable price: the number is then shown with a "+"
-  // and a note, because a total that quietly omits lines is wrong in the direction that costs money.
-  const T = (typeof cbPickTotal==='function') ? cbPickTotal(ns) : {amount:0,partial:false,currency:''};
-  const sym = (typeof curSym==='function' && T.currency) ? curSym(T.currency) : '';
-  const money = on ? (T.amount ? (sym+String(T.amount)+(T.partial?'+':'')) : (T.partial?'—':'')) : '';
-  return '<div data-testid="cart-'+esc(ns)+'" style="display:flex;align-items:center;gap:10px;margin:12px 0 9px;padding:9px 12px;'
-    + 'border:1px solid '+(on?'var(--blue)':'var(--line)')+';border-radius:10px;background:'+(on?'var(--blue-soft,#eef4ff)':'var(--paper,#fafafa)')+'">'
-    + '<span style="position:relative;font-size:18px;line-height:1">🛒'
-    + (on?'<span data-testid="cart-count-'+esc(ns)+'" style="position:absolute;top:-6px;right:-9px;background:var(--blue);color:#fff;border-radius:9px;'
-        + 'min-width:17px;height:17px;padding:0 4px;font-size:10.5px;font-weight:800;line-height:17px;text-align:center">'+units+'</span>':'')
-    + '</span>'
-    + '<span style="font-size:12.5px;color:'+(on?'var(--ink)':'var(--grey)')+';font-weight:'+(on?'700':'400')+'">'
-    + (on ? (n===1?'1 line':n+' lines') + (units!==n?' · '+units+' units':'') + (money?' · '+esc(money):'')
-          : 'Press + on what you want — it collects here')+'</span>'
-    // Cart ⇄ list. Athi: "you can switch between cart and current selection." Same rows, filtered — so a quantity
-    // changed while reviewing is the same quantity, not a second copy of it.
-    + (on?'<span onclick="cbPickView(\''+esc(ns)+'\','+(cartView?'false':'true')+')" data-testid="cart-view-'+esc(ns)+'"'
-        + ' style="cursor:pointer;font-size:11.5px;color:var(--blue);font-weight:700;margin-left:6px">'
-        + (cartView?'← All items':'View cart')+'</span>':'')
-    + (on?'<span onclick="cbPickClear(\''+esc(ns)+'\')" style="cursor:pointer;font-size:11.5px;color:var(--grey)">Clear</span>':'')
-    + '<button class="pri" data-testid="cart-send-'+esc(ns)+'" style="margin-left:auto;padding:6px 14px;font-size:12.5px" '
-    + (on?'onclick="'+sendCall+'"':'disabled') + '>' + esc(label || 'Request these') + '</button>'
-    + '</div>'
-    // The total is INDICATIVE until the other side confirms — every one of these four paths reprices server-side.
-    + (on&&T.partial?'<div style="font-size:11px;color:#8a5a1e;margin:-4px 0 8px">Some lines have no price yet — the total covers only the priced ones.</div>':'');
-}
+/* ⚠️ THE PICKER RENDERERS MOVED to app/cart-ui.js (loaded above), which is now the ONE cart for Suppliers,
+   Network, compose and the storefront. cbPickHTML / cbPickListHTML / cbCartBar / cbPickPaint / cbPickOnChange
+   still exist under those names — as thin adapters over CBCart, not as a second copy. The bodies that used to
+   be here are DELETED, so there is nothing left to drift. */
 // Kept for callers that only want to SHOW a catalogue; the picker is the same rows with boxes on them.
 function supCatalogueHTML(cat){
   if(typeof cbPickInit === 'function') cbPickInit('sup', cat);

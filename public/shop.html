@@ -39,6 +39,7 @@
 <div class="wrap" id="app"><div class="msg">Loading shop…</div></div>
 <script src="cb-offline.js"></script>
 <script src="app/catalogue-lines.js"></script>
+<script src="app/cart-ui.js"></script>
 <script>
 var API = (new URLSearchParams(location.search).get('api')) || 'https://chitbridge-api-production.up.railway.app';
 var BRIDGE = (new URLSearchParams(location.search).get('bridge') || '').trim();
@@ -369,7 +370,10 @@ function productListHtml(data, cur){
    * is the requirement; sharing the stylesheet would be a different and worse thing.
    */
   _PCUR = cur;
-  cbPickInit('shop', data);
+  cbPickInit('shop', data, { accent:'#c0392b', soft:'#fdf3f2', symbol:_shopSym(), from:(data.shop&&data.shop.display_name)||'',
+    cartTitle:'Your basket', checkoutLabel:'Check out →', emptyHint:'Press + on what you want',
+    noCatalogue:'This shop has nothing on display yet.',
+    listEl:'p_list', barEl:'p_cart', onCheckout:function(){ shopCartOrder(); }, onChange:function(){ shopPickPaint(); } });
   if (!cbLineRows(data).length) return '';
   return '<div class="sechd" style="color:var(--grey)">🗂️ Products</div>'
     + '<input id="p_search" placeholder="Search products…" value="'+esc((cbPickState('shop')||{}).q||'')+'"'
@@ -377,70 +381,12 @@ function productListHtml(data, cur){
     + '<div id="p_cart">' + shopCartBarHtml() + '</div>'
     + '<div id="p_list">' + shopPickListHtml(cur) + '</div>';
 }
-var _PCUR = '₹';
-function shopPickListHtml(cur){
-  cur = cur || _PCUR;
-  var st = cbPickState('shop'); if(!st) return '';
-  var rows = cbPickRows('shop');
-  if(!rows.length) return '<div class="meta" style="padding:10px 0">Nothing here matches that.</div>';
-  // The stepper Athi's 2018 cart used: a round `+` on every row, becoming `− n +` once the line is in the cart.
-  var rnd='border-radius:50%;width:27px;height:27px;flex:none;border:1.5px solid #c0392b;background:#fff;color:#c0392b;'
-    + 'font-size:16px;font-weight:700;line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center';
-  var stepper=function(id,q){ return q>0
-    ? '<span style="display:inline-flex;align-items:center;gap:8px">'
-      + '<button style="'+rnd+'" onclick="event.stopPropagation();cbPickDec(\'shop\',\''+esc(id)+'\')">−</button>'
-      + '<input inputmode="decimal" value="'+esc(String(q))+'" onclick="event.stopPropagation()" onchange="cbPickSetQty(\'shop\',\''+esc(id)+'\',this.value)"'
-      + ' style="width:44px;padding:4px;border:1px solid #e7e3d8;border-radius:7px;font-size:13px;text-align:center">'
-      + '<button style="'+rnd+';background:#c0392b;color:#fff" data-testid="shop-add" onclick="event.stopPropagation();cbPickAdd(\'shop\',\''+esc(id)+'\')">+</button></span>'
-    : '<button style="'+rnd+'" data-testid="shop-add" onclick="event.stopPropagation();cbPickAdd(\'shop\',\''+esc(id)+'\')">+</button>'; };
-  return rows.map(function(r,i){
-    if(r.type==='product'){
-      var ids=[]; for(var k=i+1;k<rows.length && rows[k].type==='line' && rows[k].gid===r.gid;k++) ids.push(rows[k].item_id);
-      var inCart = ids.filter(function(id){ return st.sel[id]; }).length;
-      return '<div style="margin:8px 0 2px"><div style="display:flex;align-items:center;gap:8px">'
-        + '<b style="font-size:14px">'+esc(r.label)+'</b>'
-        + '<span class="meta">'+r.count+' options</span>'
-        + (inCart?'<span style="font-size:11px;color:#c0392b;font-weight:700">'+inCart+' in cart</span>':'')+'</div>'
-        + (r.options ? '<div class="meta">'+esc(r.options)+'</div>' : '') + '</div>';
-    }
-    var d=(r.item.item_data||r.item)||{};
-    var q=cbPickQtyOf('shop', r.item_id);
-    var amt=cbHasPrice(d.price)?cbAmount(d.price):null;
-    return '<div class="prow" style="align-items:center;gap:10px'
-      + (r.variant?';padding-left:18px':'')+(q>0?';background:#fdf3f2':'')+'">'
-      + '<div style="flex:1">'+(r.variant?'<b>'+esc(r.variant)+'</b>':'<b>'+esc(d.name||d.product||'item')+'</b>')
-      + ' <span class="meta">'+esc(d.unit||'')+'</span>'
-      + '<div style="font-weight:700;margin-top:2px">'+(amt==null?'—':priceSym(d.price)+esc(String(amt)))
-      + (q>0&&amt!=null?' <span class="meta" style="color:#c0392b;font-weight:700">· '+priceSym(d.price)+esc(String(amt*q))+'</span>':'')+'</div></div>'
-      + stepper(r.item_id, q) + '</div>';
-  }).join('');
-}
-/**
- * shopCartBarHtml — the count, the running total and the cart⇄list switch.
- *
- * Athi's 2018 bar carried "#2   ₹625.00" above a full-width CHECK OUT, so what the order came to was never more
- * than a glance away. Same three facts here. The total is INDICATIVE — the server reprices every line (CJ-07) —
- * and the line under it says so rather than letting a customer believe this is the amount agreed.
- */
-function shopCartBarHtml(){
-  var n=cbPickCount('shop'), units=cbPickUnits('shop'), on=n>0;
-  var st=cbPickState('shop'), cartView=!!(st&&st.cartView);
-  var T=cbPickTotal('shop');
-  var sym=(typeof _shopSym==='function')?_shopSym():'₹';
-  return '<div data-testid="shop-cart" style="display:flex;align-items:center;gap:10px;margin:4px 0 10px;padding:10px 12px;border:1px solid '
-    + (on?'#c0392b':'#e7e3d8')+';border-radius:10px;background:'+(on?'#fdf3f2':'#faf8f3')+';position:sticky;top:0;z-index:5">'
-    + '<span style="position:relative;font-size:19px;line-height:1">🛒'
-    + (on?'<span data-testid="shop-cart-count" style="position:absolute;top:-6px;right:-9px;background:#c0392b;color:#fff;border-radius:9px;min-width:18px;height:18px;padding:0 4px;font-size:11px;font-weight:800;line-height:18px;text-align:center">'+units+'</span>':'')
-    + '</span><span style="font-size:13px;color:'+(on?'#1d2530':'#8a949c')+';font-weight:'+(on?'800':'400')+'">'
-    + (on?('#'+n+(T.amount?('  '+sym+T.amount+(T.partial?'+':'')):'')):'Press + on what you want')+'</span>'
-    + (on?'<span onclick="cbPickView(\'shop\','+(cartView?'false':'true')+')" data-testid="shop-cart-view" style="cursor:pointer;font-size:11.5px;color:#c0392b;font-weight:700;margin-left:4px">'
-        + (cartView?'← All items':'View cart')+'</span>':'')
-    + (on?'<span onclick="cbPickClear(\'shop\')" style="cursor:pointer;font-size:11.5px;color:#8a949c">Clear</span>':'')
-    + '<button data-testid="shop-cart-order" style="margin-left:auto;border:0;border-radius:9px;padding:8px 16px;font-size:13px;font-weight:700;'
-    + (on?'background:#c0392b;color:#fff;cursor:pointer':'background:#d8d2c4;color:#fff')+'" '+(on?'onclick="shopCartOrder()"':'disabled')+'>Check out</button></div>'
-    + (on&&T.partial?'<div class="meta" style="color:#8a5a1e;margin:-6px 0 8px">Some lines have no price yet — the total covers only the priced ones.</div>':'');
-}
-function _shopSym(){ var c=(_SHOPDATA&&_SHOPDATA.shop&&_SHOPDATA.shop.currency_code)||''; return (!c||c==='INR')?'₹':(c+' '); }
+/* ⚠️ THE ROWS AND THE BAR MOVED to app/cart-ui.js — the same cart Suppliers, Network and compose use. This page
+   keeps only its ACCENT, because it is a public page in the shop's colours; the rules are shared, the palette
+   is not. shopPickListHtml / shopCartBarHtml are now one-line forwarders. */
+var _PCUR='₹';
+function shopPickListHtml(){ return CBCart.listHTML('shop'); }
+function shopCartBarHtml(){ return CBCart.barHTML('shop'); }
 function shopPickPaint(listOnly){
   var l=el('p_list'); if(l) l.innerHTML=shopPickListHtml();
   if(!listOnly){ var c=el('p_cart'); if(c) c.innerHTML=shopCartBarHtml(); }
