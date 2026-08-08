@@ -1418,7 +1418,11 @@ function setSession(s){ SESSION={...SESSION,...s};
   // Live tokens are JWTs — derive the REAL actor/entity id from the token so the UI never hardcodes ids.
   const p=jwtPayload(SESSION.token);
   if(p){ if(p.identity_type==='actor'){ SESSION.actorId=p.identity_id; SESSION.name=p.display_name||SESSION.name; SESSION.entity=p.parent_entity_name||SESSION.entity; } SESSION.entityId=p.parent_entity_id||p.identity_id; }
-  try{ if(SESSION.token) localStorage.setItem('cb_sess', JSON.stringify({token:SESSION.token, role:SESSION.role, name:SESSION.name, entity:SESSION.entity, duty:SESSION.duty, shop:SESSION.shop})); }catch(_){}
+  // ⚠️ bridgeId IS PERSISTED (2026-08-08). It was set at sign-in and then dropped from this whitelist, so it
+  // survived exactly until the first reload — after which anything that identifies this entity to the network
+  // (netLookup, "your place in the network") asked with an empty id and got back "not part of a network". A store
+  // that IS in a network was shown the Design-your-network screen instead of its own tree.
+  try{ if(SESSION.token) localStorage.setItem('cb_sess', JSON.stringify({token:SESSION.token, role:SESSION.role, name:SESSION.name, entity:SESSION.entity, bridgeId:SESSION.bridgeId, duty:SESSION.duty, shop:SESSION.shop})); }catch(_){}
 }
 // Restore a persisted session on boot so a browser refresh stays signed-in. Drops an expired token.
 function restoreSession(){ try{ if(SESSION.token) return; const raw=localStorage.getItem('cb_sess'); if(!raw) return; const s=JSON.parse(raw); if(!s||!s.token) return; const p=jwtPayload(s.token); if(p&&p.exp&&(p.exp*1000)<Date.now()){ localStorage.removeItem('cb_sess'); return; } setSession(s); }catch(_){ } }

@@ -146,9 +146,17 @@ async function netWhereAmI(){
   }
   host.innerHTML = '<div style="font-size:12px;color:var(--grey)">checking your place in the network…</div>';
   try{
-    var self = await api('netLookup', { query: { bridgeId: SESSION.bridgeId || '' } }).catch(function(){ return null; });
+    // The bridge id, self-healing. An empty one used to be answered with a confident "not part of a network",
+    // which is the worst possible failure here: indistinguishable from the truth, and it hands a member of a
+    // network the Design-your-network screen. If the session does not have it, ask /me once and cache it.
+    if(!SESSION.bridgeId){
+      try{ var r0 = await api('me'); var e0 = (r0 && (r0.entity || r0)) || {};
+           if(e0.bridge_id){ SESSION.bridgeId = e0.bridge_id; if(typeof setSession==='function') setSession({bridgeId:e0.bridge_id}); } }catch(_){}
+    }
+    if(!SESSION.bridgeId){ UI._netRole = null; host.innerHTML = ''; return; }   // unknown ≠ alone: say nothing
+    var self = await api('netLookup', { query: { bridgeId: SESSION.bridgeId } }).catch(function(){ return null; });
     var me = self && (self.entity || self);
-    if(!me || !me.id){ host.innerHTML = _netAloneCard(); return; }
+    if(!me || !me.id){ UI._netRole = 'alone'; host.innerHTML = _netAloneCard(); return; }
 
     // ⚠️ WALK UP FIRST. `netSubtree` is me AND MY DESCENDANTS — so a leaf asking for its own subtree gets back
     // exactly itself, which is the one view that cannot answer "where do I sit?". The path names the root
@@ -821,8 +829,37 @@ function _capDots(n){ return (n.holds || []).map(function(k){ var c = _capMeta(k
  * exactly the thing that was missing here.
  */
 function _netByName(a, b){
+  // b118 — a deliberate ARRANGEMENT wins, and name is the tiebreak. An un-arranged store has no position at all
+  // (not zero), so it sorts after the arranged ones and a network nobody has touched keeps the order it has.
+  var pa = _netPos(a), pb = _netPos(b);
+  if (pa !== pb) return pa - pb;
   var x = String((a && a.name) || '').toLowerCase(), y = String((b && b.name) || '').toLowerCase();
   return x < y ? -1 : x > y ? 1 : 0;
+}
+/** A node's position, from the DESIGN (`pos`) or from the live store (`sort_order`). Absent → last. */
+function _netPos(n){
+  var v = n && (n.pos !== undefined && n.pos !== null ? n.pos : n.sort_order);
+  return (v === undefined || v === null || v === '') ? Number.MAX_SAFE_INTEGER : Number(v);
+}
+
+/**
+ * Move a store up or down among its siblings.
+ *
+ * Athi, 2026-08-08: *"yes, add the stored position so we can arrange the order."*
+ *
+ * The first move on a branch NUMBERS it — every sibling gets the position it currently displays at, and only then
+ * does the swap happen. Numbering on demand rather than at creation is what lets an existing network keep its
+ * current order until somebody actually decides to change it.
+ */
+function netMove(key, dir){
+  var n = _netNode(key); if (!n) return;
+  var sibs = (UI.net.nodes || []).filter(function(x){ return x.parent_key === n.parent_key && !x.root; }).sort(_netByName);
+  sibs.forEach(function(s, i){ s.pos = i; });          // freeze what is on screen, then move within it
+  var i = sibs.findIndex(function(s){ return s.key === key; });
+  var j = i + dir;
+  if (i < 0 || j < 0 || j >= sibs.length) return;      // already at the end — nothing to do, and no false toast
+  var t = sibs[i].pos; sibs[i].pos = sibs[j].pos; sibs[j].pos = t;
+  _netMark(); _netRerender();
 }
 
 function _netTree(parentKey, depth){
@@ -903,6 +940,11 @@ function networkScreen(){
   _netPullServer();   // b111 — once per session, adopt the entity's server-saved design (cross-device)
   // A member of someone else's network never gets the builder — not disabled, absent. See _netMemberScreen.
   if (UI._netRole === 'member') return _netMemberScreen();
+  // ⚠️ While the role is UNKNOWN, offer nothing. Painting "Design your network" first and correcting it a moment
+  // later is how a store that IS in a network gets invited to draw a second one — which is exactly what happened.
+  if (UI._netRole === undefined || UI._netRole === null) {
+    return '<div style="padding:44px 22px;color:var(--grey);font-size:13px">Checking your place in the network…</div>';
+  }
   if (!UI.net) {
     var ent = SESSION.entity || SESSION.name || 'your entity';
     return '<div style="padding:44px 22px;max-width:580px"><div style="font-size:19px;font-weight:800">🔗 Design your network</div>'
@@ -1729,7 +1771,11 @@ function _netNodeView(n){
     + '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:14px">'
       + '<button class="pri" onclick="netAddChild(\'' + n.key + '\')" style="padding:8px 13px">＋ Add owned node</button>'
       + '<button onclick="netAddPartner(\'' + n.key + '\')" style="padding:8px 13px">🤝 Add partner</button>'
-      + (isRoot ? '' : '<button onclick="netRename(\'' + n.key + '\')" style="padding:8px 13px">✏️ Rename</button><button onclick="netDelete(\'' + n.key + '\')" style="padding:8px 13px">🗑️ Remove</button>')
+      + (isRoot ? '' : '<button onclick="netRename(\'' + n.key + '\')" style="padding:8px 13px">✏️ Rename</button><button onclick="netDelete(\'' + n.key + '\')" style="padding:8px 13px">🗑️ Remove</button>'
+          // The arrangement everyone sees. Applied to the stores at the next Build, like every other change.
+          + '<span style="margin-left:4px;display:inline-flex;gap:4px">'
+          + '<button onclick="netMove(\'' + n.key + '\',-1)" title="Move up among its siblings" style="padding:8px 11px">↑</button>'
+          + '<button onclick="netMove(\'' + n.key + '\',1)" title="Move down among its siblings" style="padding:8px 11px">↓</button></span>')
     + '</div>'
     // A partner is INVITED, never created — so Build needs to know WHO. Without a handle here the node is
     // reported as un-buildable rather than guessed at, and this is where that gets fixed.
