@@ -36,7 +36,7 @@ var NET_CAPS = [
   { k: 'place',       icon: '🌍', label: 'Global' },
   { k: 'territory',   icon: '🗺️', label: 'Territory & authority', soon: true },
   { k: 'stock',       icon: '📦', label: 'Stock & policy',        soon: true },
-  { k: 'fulfil',      icon: '🚚', label: 'Fulfilment routes',     soon: true },
+  { k: 'fulfil',      icon: '🚚', label: 'How fast' },
   { k: 'pricepolicy', icon: '💱', label: 'Price policy',          soon: true },
   { k: 'localise',    icon: '📜', label: 'Localisation',          soon: true },
 ];
@@ -1063,6 +1063,17 @@ function _netAvailBody(){
       + (r.city ? '<span style="font-size:12px;color:var(--grey)">' + esc(r.city) + '</span>' : '')
       + '<span style="font-size:12px;color:var(--grey)">' + (r.km === null || r.km === undefined ? 'distance unknown' : r.km + ' km') + '</span>'
       + '<b style="margin-left:auto;font-size:15px;color:' + qtyCol + '">' + qtyTxt + '</b></div>'
+      // WHEN, next to how many — the question was never just "who has it".
+      + (function(){
+          var e = r.eta || {};
+          if (e.declared) {
+            return '<div style="font-size:12.5px;color:#2c7a43;font-weight:700;margin-top:3px">'
+              + (e.days === 0 ? 'today' : e.days === 1 ? 'tomorrow' : 'in ' + e.days + ' days')
+              + ' <span style="font-weight:400;color:var(--grey)">· ' + esc(e.basis || '') + '</span></div>';
+          }
+          // Not "unknown days" — WHICH number is missing, so somebody can go and get it.
+          return '<div style="font-size:11.5px;color:#8a5a1e;margin-top:3px">how soon: not declared · ' + esc(e.basis || '') + '</div>';
+        })()
       + '<div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:4px">'
       + '<span style="font-size:12px;color:var(--grey)">' + esc(r.name) + (r.code ? ' · ' + esc(r.code) : '') + '</span>'
       // The holding store's OWN price, in its OWN currency, as it stamped it. Shown as a code and never converted —
@@ -1805,6 +1816,42 @@ function _globalConfig(n){
     + '</div>';
 }
 
+/**
+ * 🚚 HOW FAST — the three numbers that turn "who has it" into "when can I have it".
+ *
+ * Athi, 2026-08-08: *"do the fulfilment routes so we get the days."*
+ *
+ * ⚠️ DECLARED, NEVER DERIVED. Days could be computed from distance, and that would produce a confident date for
+ * every store including the ones nobody has asked. A plausible wrong date is worse than none — it gets promised to
+ * a customer. Left blank, a store simply says "not declared", and the network search says so too.
+ *
+ * Two transit numbers rather than a per-pair matrix: a matrix is O(stores²) to maintain, nobody keeps it current,
+ * and it decays into confident nonsense. Two bands a store actually knows are worth more than a matrix it doesn't.
+ */
+function _fulfilConfig(n){
+  var p = _netPlace(n);
+  var km = p.km;
+  var declared = p.dispatch !== undefined && p.dispatch !== null && p.dispatch !== '';
+  return '<div style="padding:12px 13px;border:1px solid var(--line);border-left:3px solid #2b6f8f;border-radius:10px;background:#f9fcfd">'
+    + '<div style="font-size:11px;font-weight:800;color:#2b6f8f;letter-spacing:.05em">🚚 HOW FAST THIS STORE CAN SEND</div>'
+    + '<div style="font-size:11.5px;color:var(--grey);margin-top:4px;line-height:1.5">Three numbers this store knows. '
+    + 'They are what lets the network answer <b>when</b>, not just who and how far.</div>'
+    + _fieldLabel('DAYS TO DISPATCH — order in, goods out')
+    + _inp(p.dispatch, "netSetPlaceNum('" + n.key + "','dispatch',this.value)", '0 for same day')
+    + _fieldLabel('DAYS IN TRANSIT — inside its service area' + (km ? ' (' + esc(km) + ' km)' : ' (set the radius on Global)'))
+    + _inp(p.within, "netSetPlaceNum('" + n.key + "','within',this.value)", '1')
+    + _fieldLabel('DAYS IN TRANSIT — beyond it')
+    + _inp(p.beyond, "netSetPlaceNum('" + n.key + "','beyond',this.value)", '6 — usually a different lane, not a longer drive')
+    + (declared
+        ? '<div style="font-size:11.5px;color:#2c7a43;margin-top:9px">✓ The network can now say when this store could deliver.</div>'
+        : '<div style="font-size:11.5px;color:#8a5a1e;margin-top:9px">⚠ Nothing declared, so a search shows this store '
+          + 'as <b>no dispatch time declared</b> rather than guessing. That is deliberate — a made-up date gets promised '
+          + 'to a customer.</div>')
+    + '<div style="font-size:11px;color:var(--grey);margin-top:8px;border-top:1px dashed var(--line);padding-top:7px">'
+    + 'Carried onto the store at <b>Apply changes</b>, like everything else here.</div>'
+    + '</div>';
+}
+
 /** The five that are CAPTURED but not yet carried. Real inputs, honest label. */
 function _netSoonVal(n, k){ n.soon = n.soon || {}; n.soon[k] = n.soon[k] || {}; return n.soon[k]; }
 function netSetSoon(key, cap, f, v){ var n = _netNode(key); if (!n) return; _netSoonVal(n, cap)[f] = v; _netSave(); }
@@ -1849,6 +1896,7 @@ function _soonConfig(n, k){
 
 function _capDetail(n, k){
   if (k === 'place') return _globalConfig(n);
+  if (k === 'fulfil') return _fulfilConfig(n);
   if (NET_SOON[k]) return _soonConfig(n, k);
   if (k === 'catalogue') return _catConfig(n);
   if (k === 'storefront') return _storefrontConfig(n);
