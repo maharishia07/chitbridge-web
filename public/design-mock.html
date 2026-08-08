@@ -59,7 +59,9 @@
 </style>
 
 <div class="bar">
-  <b>DESIGN MOCK</b> — nothing here is real, nothing saves.
+  <b>DESIGN MOCK</b> — nothing saves.
+  <input id="q" placeholder="🔎 find a product across the network — try CR-32 or seal" oninput="doSearch(this.value)"
+         style="flex:1;max-width:430px;padding:5px 10px;border-radius:7px;border:1px solid #2a4f63;background:#123c4d;color:#fff">
   <span style="margin-left:auto"><a href="#" onclick="view='locate';drawPage();return false" style="color:#8fd0ff">🔎 where is a product?</a> · <a href="#" onclick="view='store';drawPage();return false" style="color:#8fd0ff">back to the store</a></span>
 </div>
 
@@ -146,8 +148,18 @@ function visOpts(s){
 
    CB already carries this distinction: the catalogue model has price BY REF (loose, resolves when the chit is
    sealed) and BY VALUE (frozen at adoption). Ongoing maintenance is exactly that choice, made per SKU.          */
+/**
+ * ⚠️ THE CODE, NEVER A SYMBOL. Athi, 2026-08-08: *"USA shows India currency symbol."*
+ *
+ * It did: the symbol map handled EUR and LKR and defaulted EVERYTHING ELSE to ₹, so a Chicago store priced in
+ * dollars was displaying rupees. The real codebase has already been bitten by exactly this — currency-matrix
+ * records "a hardcoded ₹ on a USD shop" as a live defect — and the fix there was the same one: a CODE is
+ * unambiguous in every locale, a symbol needs a lookup that will always be missing an entry.
+ *
+ * A wrong symbol is worse than an ugly one. It does not look broken; it looks like a price.
+ */
 function money(n, cur){
-  return (cur === 'EUR' ? '€' : cur === 'LKR' ? 'Rs ' : '₹') + n.toLocaleString(undefined,{maximumFractionDigits:0});
+  return String(cur || '???') + ' ' + n.toLocaleString(undefined, { maximumFractionDigits: 0 });
 }
 function landed(eur, cur){
   var base = eur * (LANDED.rate[cur] || 1);
@@ -249,15 +261,31 @@ function src(s, k){ return (s.own && s.own[k] !== undefined) ? 'own' : 'inherite
 function drawTree(){
   document.getElementById('tree').innerHTML =
     '<div style="font-size:11px;font-weight:800;color:var(--grey);letter-spacing:.05em;padding:2px 8px 3px">NETWORK</div>'
-    + '<div style="font-size:10px;color:#2c7a43;padding:0 8px 10px">✓ your network · 3 stores live</div>'
+    + '<div style="font-size:10px;color:#2c7a43;padding:0 8px 10px">✓ your network · ' + STORES.length + ' stores live'
+    + (NET.currency ? ' · ' + NET.currency + ' · ' + NET.country : '') + '</div>'
     + '<div class="nd">◆ ' + NET.name + '<div class="sub">the top — its settings flow down</div></div>'
     + STORES.map(function(s){
         var c = s.vis === 'Public' ? 'background:#e6f4ec;color:#2c7a43' : s.vis === 'Network' ? 'background:#f6ecd8;color:#8a5a1e' : 'background:#eef0f4;color:#6b6f86';
         var overrides = s.own ? Object.keys(s.own).length : 0;
-        return '<div class="nd ' + (s.key === sel ? 'on' : '') + '" onclick="pick(\'' + s.key + '\')" style="margin-left:12px">'
-          + '└ ' + s.name + '<span class="chip" style="' + c + '">' + s.vis + '</span>'
-          + '<div class="sub">' + s.purpose + (overrides ? ' · ' + overrides + ' set here' : '') + '</div></div>';
-      }).join('');
+        // The searched item, answered IN THE TREE. Green when it is there, struck when it is not — so "who has it"
+        // is legible in the place you were already looking rather than only in a panel on the right.
+        var h = Q ? holders()[s.name] : null;
+        var hit = Q
+          ? (h && h.qty > 0
+              ? '<span class="chip" style="background:#2c7a43;color:#fff">' + h.qty + ' · ' + h.days + 'd</span>'
+              : '<span class="chip" style="background:#f7eceb;color:#a5382e">none</span>')
+          : '';
+        var dim = Q && !(h && h.qty > 0) ? 'opacity:.5;' : '';
+        // A store's own currency shows only where it DIFFERS from the network's — the exception, not the rule.
+        var cur = (s.own && s.own.currency && s.own.currency !== NET.currency) ? s.own.currency : '';
+        return '<div class="nd ' + (s.key === sel ? 'on' : '') + '" onclick="pick(\'' + s.key + '\')" style="margin-left:12px;' + dim + '">'
+          + '└ ' + s.name + '<span class="chip" style="' + c + '">' + s.vis + '</span>' + hit
+          + '<div class="sub">' + s.purpose + (overrides ? ' · ' + overrides + ' set here' : '') + '</div>'
+          + (cur ? '<div class="sub" style="color:#8a5a1e;font-weight:700">🌍 ' + cur + '</div>' : '')
+          + '</div>';
+      }).join('')
+    + (Q ? '<div style="margin-top:12px;padding:9px 10px;border:1px solid #e0d3b0;background:#fdf8ec;border-radius:9px;font-size:11.5px;line-height:1.5">'
+        + 'Searching <b>' + Q + '</b> across the network. Green = has it, with quantity and days to ship.</div>' : '');
 }
 /* ── ONE PRODUCT, ACROSS THE WHOLE NETWORK ────────────────────────────────────────────────────────────────────
    Athi, 2026-08-08: *"if there is a query about one product, how can we provide where exactly the product is and
@@ -277,9 +305,19 @@ var STOCK = {
     { store:'China', city:'Suzhou',     qty:41, km:5900,  days:9, via:'IoT · bin count',fresh:'live · 30 s ago' },
     { store:'USA',   city:'Chicago',    qty:0,  km:13400, days:0, via:'manual',         fresh:'typed · 26 Mar' },
   ],
+  'MQ3-45': [
+    { store:'USA',   city:'Chicago',    qty:18, km:13400, days:2, via:'ERP · NetSuite', fresh:'live · 1 min ago' },
+    { store:'UAE',   city:'Dubai',      qty:5,  km:2480,  days:4, via:'ERP · Dynamics', fresh:'nightly · 11 h ago' },
+    { store:'India', city:'Coimbatore', qty:0,  km:0,     days:0, via:'ERP · SAP',      fresh:'live · 4 min ago' },
+  ],
+  'SEAL-11': [
+    { store:'China', city:'Suzhou',     qty:320,km:5900,  days:9, via:'IoT · bin count',fresh:'live · 30 s ago' },
+  ],
 };
 function locateScreen(){
-  var k = SKUS[0], rows = STOCK[k.sku] || [];
+  var k = matchSku();
+  if (!k) return '<h1>🔎 No product matches “' + Q + '”</h1><div class="kind">The catalogue holds ' + SKUS.length + ' items. Try CR-32, MQ3 or seal.</div>';
+  var rows = STOCK[k.sku] || [];
   var have = rows.filter(function(r){ return r.qty > 0; }).sort(function(a,b){ return a.days - b.days; });
   var none = rows.filter(function(r){ return r.qty <= 0; });
   var line = function(r, dim){
@@ -339,6 +377,28 @@ function locateScreen(){
     + 'read across the network at the moment of asking. That is the difference between a rail and a database, and '
     + 'it is the only version a chain of independent businesses would ever agree to.'
     + '</div>';
+}
+
+/* ── SEARCH ONE PRODUCT, SEE WHO HAS IT ───────────────────────────────────────────────────────────────────────
+   Athi, 2026-08-08: *"if you search the product, we may have to bring which store has the particular item and
+   highlight in one place."*
+
+   So the search is NETWORK-WIDE, not per store — the question is never "does this store have it", it is "who in
+   the network has it, and how fast can it get here". Matching stores are highlighted in the tree at the same
+   time, so the answer is legible in the place you were already looking. */
+var Q = '';
+function doSearch(v){ Q = String(v || '').trim(); view = Q ? 'locate' : 'store'; drawTree(); drawPage(); }
+function matchSku(){
+  if (!Q) return SKUS[0];
+  var q = Q.toLowerCase();
+  return SKUS.filter(function(k){ return (k.sku + ' ' + k.name).toLowerCase().indexOf(q) >= 0; })[0] || null;
+}
+/** Which stores hold the searched item — used by the tree to highlight, and by the locator to answer. */
+function holders(){
+  var k = matchSku(); if (!k) return {};
+  var out = {};
+  (STOCK[k.sku] || []).forEach(function(r){ out[r.store] = r; });
+  return out;
 }
 
 function drawPage(){
