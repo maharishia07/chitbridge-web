@@ -4084,6 +4084,27 @@ function commercialBlock(c){
  * ⚠️ AND IT SAYS THE SENDER IS NOT VERIFIED, out loud. A phone number that messaged a business is a stranger's
  * assertion of who they are. Six weeks on, nothing else on this record would tell it apart from a verified party.
  */
+/* How the lines on a raised request got their prices — and, more usefully, how they did NOT. */
+function _viaPricing(p){
+  if(!p) return '';
+  var out=[];
+  if(p.from_catalogue) out.push('<div style="font-size:11px;color:var(--grey)">💰 '+p.from_catalogue+' line'+(p.from_catalogue===1?'':'s')+' priced from your catalogue.</div>');
+  /* ⚠️ WHAT THEY ASKED, NEXT TO WHAT WE CHARGE. Ours is used — it is ours to charge — but a customer who named a
+     different figure has said something, and overwriting it invisibly is how a disagreement becomes a dispute. */
+  if((p.asked_differs||[]).length) out.push('<div style="font-size:11px;color:#b4453f;margin-top:3px">⚠️ <b>They named a different price</b> on '
+    + p.asked_differs.length+' line'+(p.asked_differs.length===1?'':'s')+': '
+    + esc(p.asked_differs.map(function(a){ return a.name+' — they said '+inr(a.asked)+', your catalogue says '+inr(a.ours); }).join('; '))
+    + '. Yours is on the chit; theirs is recorded here.</div>');
+  if((p.ambiguous||[]).length) out.push('<div style="font-size:11px;color:#6b5a36;margin-top:3px">⚠️ '
+    + esc(p.ambiguous.map(function(a){ return '"'+a.name+'" matches '+a.matches+' catalogue lines'; }).join('; '))
+    + ' — not priced, because picking one would be a guess.</div>');
+  if(p.created_count) out.push('<div style="font-size:11px;color:#6b5a36;margin-top:3px">🆕 '+p.created_count+' item'+(p.created_count===1?'':'s')
+    + ' you do not stock '+(p.created_count===1?'was':'were')+' added to your catalogue, unpriced'
+    + ((p.created||[]).length?' — '+esc(p.created.join(', ')):'')
+    + '. <b>Not on your storefront</b> until you price '+(p.created_count===1?'it':'them')+'.</div>');
+  else if(p.unpriced) out.push('<div style="font-size:11px;color:#6b5a36;margin-top:3px">⚠️ '+p.unpriced+' line'+(p.unpriced===1?'':'s')+' still ha'+(p.unpriced===1?'s':'ve')+' no price.</div>');
+  return out.length?'<div style="margin-top:6px">'+out.join('')+'</div>':'';
+}
 function viaBlock(c){
   var v=c&&c.via; if(!v||!v.channel) return "";
   var CH={ whatsapp:['#25D366','WhatsApp'], email:['#3F66A6','Email'], sms:['#b07a2b','SMS'], web:['#6a44a8','Web'] };
@@ -4107,6 +4128,9 @@ function viaBlock(c){
         + esc(v.raw_excerpt) + (v.raw_excerpt.length>=400?'<span style="color:var(--grey)"> … (full text attached)</span>':'') + '</div></div>' : '')
     + (v.media_count ? '<div style="margin-top:5px;font-size:11px;color:#6b5a36">📎 '+v.media_count+' attachment'+(v.media_count===1?'':'s')+' came with the message and '
         + '<b>are not on this chit</b> — they are still held at the provider.</div>' : '')
+    /* ⚠️ WHERE EACH PRICE CAME FROM. A figure off your shelf, a figure the customer named, and no figure at all
+       look identical in a total. Which one it was is the difference between a quote and a guess. */
+    + _viaPricing(v.priced)
     + '<div style="margin-top:6px;font-size:11px;color:#6b5a36;background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:8px;padding:7px 9px">'
     + '⚠️ <b>The sender is not a verified party.</b> This is a phone number that wrote in'
     + (v.read_by==='co-assist'?', and the lines below are a co-assist&rsquo;s reading of their words':'')
