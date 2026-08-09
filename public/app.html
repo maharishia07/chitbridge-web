@@ -1651,7 +1651,6 @@ function startAutoRefresh(sec){ if(_autoRefreshTimer) clearInterval(_autoRefresh
 // Logout never stopped the timer, so a signed-out tab kept polling and repainting. A thing that starts on sign-in
 // must have a way to stop on sign-out, or it outlives the session that justified it.
 function stopAutoRefresh(){ if(_autoRefreshTimer){ clearInterval(_autoRefreshTimer); _autoRefreshTimer=null; } }
-function togglePurpose(){UI.purpose=!UI.purpose;const el=document.getElementById('purposebar');if(el)el.classList.toggle('open',UI.purpose);const ic=document.getElementById('infobtn');if(ic)ic.classList.toggle('on',UI.purpose);}
 function navTitle(){const all={...Object.fromEntries(Object.values(MENUS).flatMap(m=>[...m.top,...m.rest]).map(x=>[x[0],x[2]]))};return all[UI.nav]||UI.nav;}
 function menuBtn(x){const[key,ic,label]=x;const on=UI.nav===key;const click=key==="compose"?`compose()`:`navTo('${key}')`;return `<button class="${on?'on':''}" data-testid="nav-${key}" onclick="${click}"><span class="ic">${ic}</span>${label}</button>`;}
 function navTo(k){UI.nav=k;UI.drawer=false;UI.mdetail=false;UI.sel=null;UI.detail=null;if(k==="task")UI.folder="task";if(k==="order")UI.folder="order";if(["drafts","trash","archive"].indexOf(k)>=0)UI.folder=k;try{localStorage.setItem("cb_nav",k);}catch(_){}renderApp();}
@@ -1991,7 +1990,6 @@ function ccRenderRcpts(){ const h=document.getElementById("cc_rcpts");
     return `<span style="display:inline-flex;align-items:center;gap:5px;border:0.5px solid var(--line);border-radius:8px;padding:3px 7px;margin:0 5px 5px 0;font-size:11.5px"><span onclick="ccFlipRcpt(${i})" title="Flip role (To/CC/For)" style="cursor:pointer;font-family:'Space Mono';font-size:9.5px;background:${bg};color:${col};border-radius:5px;padding:1px 5px">${r.role.toUpperCase()}</span>${esc(r.name)}${r.bridge?'<span style="font-family:monospace;font-size:9px;color:#9aa3a7"> · '+esc(r.bridge)+'</span>':''}${r.self?'<span style="color:#3F66A6;font-size:10px"> · self</span>':''}<span onclick="ccDelRcpt(${i})" style="cursor:pointer;color:#9aa3a7">✕</span></span>`; }).join("") : `<div style="font-size:12px;color:var(--grey)">No recipients yet — add To / CC / For above.</div>`; }
   if(UI._ccFlow) UI._ccFlow.paintFoot();   // a recipient added or removed changes whether To can be left
   const capEl=document.getElementById("cc_rcap"); if(capEl) capEl.textContent="To "+ccRoleCount("to")+"/"+LIMITS.to+" · CC "+ccRoleCount("cc")+"/"+LIMITS.cc+" · For "+ccRoleCount("for")+"/"+LIMITS.for+" — tap a role chip to flip"; }
-function ccAddItem(){ const e=document.getElementById("cc_err"); if(e)e.textContent=""; if(CC.items.length>=(LIMITS.items||999)){ if(e)e.textContent="Line items capped at "+LIMITS.items+"."; return; } const i=+val("cc_pick"); const p=(STORE.catalogue||[])[i]; if(!p){ if(e)e.textContent=MSG.pickItemFirst(); return; } CC.items.push({particulars:p.particulars,unit:p.unit||"unit",price:cbAmount(p.price),qty:1}); ccRenderItems(); }
 async function ccAiFill(){
   var el=document.getElementById('cc_aidesc'); var desc=((el&&el.value)||'').trim();
   var err=document.getElementById('cc_err'); if(err)err.textContent='';
@@ -2377,11 +2375,6 @@ const NET_MODEL_NOTE = {
   b2b2c:"Storefront (b2c) on a b2b make tree \u2014 the iron-gate case. Orders land at the Storefront and fan out to internal units; the fan-out is a future shape (ATH-116).",
   b2c:"A single shopfront (b2c) with internal counters. Customers buy directly; no upstream distribution."
 };
-function loadNetModel(key){ UI.netModel=key; STORE.net = deepClone(NET_MODELS[key]||NET_MODELS.sample); loadNetwork(); }
-function netModelBar(){ const cur=UI.netModel||"sample";
-  const opt=(k,l)=>`<button class="composebtn" style="${cur===k?'background:var(--ink);color:#fff;border-color:var(--ink)':''}" onclick="loadNetModel('${k}')">${l}</button>`;
-  return `<div style="${_CARD};border-style:dashed"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><div style="font-size:12px;font-weight:600">Network model showcase <span style="font-size:10px;font-family:'Space Mono';background:#fbeceb;color:#b4453f;border:1px solid #f0c9c6;border-radius:5px;padding:1px 6px">\u23f3 execute &amp; test pending</span></div><div style="display:flex;gap:6px;flex-wrap:wrap">${opt("sample","Sample org")}${opt("b2b","Pure B2B")}${opt("b2b2c","B2B2C")}${opt("b2c","Pure B2C")}</div></div><div style="font-size:11.5px;color:var(--grey);margin-top:8px;line-height:1.5">${NET_MODEL_NOTE[cur]||""}</div></div>`;
-}
 function netView(self, tree, edges){
   const nodes = tree.map(n=>`<div style="padding:3px 0 3px ${(n.depth||0)*20}px;font-size:13.5px">${n.depth>0?'<span style="color:var(--grey)">└ </span>':''}<b>${esc(n.name)}</b> <span style="font-family:'Space Mono';font-size:11px;color:var(--grey)">${esc(n.bridge_id||'')}</span>${n.act!=null?` <span class="optchip" style="background:#eef3fb;color:#345488;border-color:#cfe0f4">👥 ${n.act}</span>`:''}${n.mode==='b2c'?` <span class="optchip" style="background:var(--gold-soft);color:#7a5e22;border-color:var(--gold-line);font-size:10px">b2c</span>`:''}${n.demo?` <span class="optchip" style="font-size:10px">demo</span>`:''}${n.isnew?` <span class="optchip" style="font-size:10px;background:#eaf3ee;color:#2f8f5b;border-color:#bfe0cd">new</span>`:''}</div>`).join("");
   const edgeRows = edges.map(e=>{
@@ -2427,12 +2420,6 @@ async function netSuspend(id){ try{ await api("netSuspend",{params:{id}}); toast
 async function netResume(id){ try{ await api("netResume",{params:{id}}); toast(MSG.netResumed()); loadNetwork(); }catch(e){ toast(MSG.fail("resume", e)); } }
 async function netDisconnect(id){ if(!confirm("Disconnect this edge? The child subtree detaches to its own root.")) return; try{ await api("netDisconnect",{params:{id},body:{settle:false}}); toast(MSG.netDisconnected()); loadNetwork(); }catch(e){ toast(/settle/.test(e.message)?MSG.settleFirst():MSG.fail("disconnect", e)); } }
 async function netRegisterSelf(){ try{ await api("netRegister",{body:{name:SESSION.entity||SESSION.name||"My entity", businessType:"Aggregator"}}); toast(MSG.netRegistered()); loadNetwork(); }catch(e){ toast(MSG.fail("register", e)); } }
-async function connectReq(){ const x=document.getElementById("nw_err"); if(x)x.textContent=""; const q=val("nw_to"); if(!q){ if(x)x.textContent="Enter a business name or User ID."; return; }
-  try{ let to=q;
-    if(!/^[0-9a-f-]{30,}$/i.test(q)){ const sr=await api("entitySearch",{query:{q}}); const hit=(sr||[])[0]; if(!hit){ if(x)x.textContent='No business found for "'+q+'".'; return; } to=hit.identity_id; }
-    await api("connRequest",{body:{to_entity_id:to}}); toast(MSG.connRequested()); loadNetwork();
-  }catch(e){ if(x)x.textContent=e.message; } }
-async function respondConn(id,action){ try{ await api("connRespond",{params:{id},body:{action}}); toast(action==='accept'?MSG.connected():MSG.connRejected()); loadNetwork(); }catch(e){ toast(MSG.fail("respond", e)); } }
 /* SUPPLIERS */
 /* SUPPLIERS — two-sided master/detail (Stage A). Same .panel/.list/.divider/.detail skeleton as task/order,
    so it inherits the draggable divider (startDrag/UI.lw) and the mobile collapse (.appwrap.m + UI.mdetail). */
@@ -3874,8 +3861,6 @@ function onRowsScroll(){ if(UI.loading)return; pgScroll("list"); }
 function ensureFilled(){ if(UI.loading)return; pgFill("list"); }
 function loadNextPage(){ return pgNext("list"); }
 function paintRowsKeepScroll(){ const b=document.getElementById("rows"); if(!b)return; const st=b.scrollTop; b.innerHTML=renderRows(); b.scrollTop=st; document.querySelectorAll(".statetabs .n").forEach((el,i)=>{ el.textContent=stCount(["open","act","close"][i]); }); pgPaintTotal(); applyColTpl(); }
-function updateListTotal(){ const lt=document.getElementById("listtotal"); if(!lt)return; if(!UI.total){ lt.textContent=""; return; } const shown=Math.min(UI.rows.length,UI.total); lt.textContent='Showing '+shown+' of '+UI.total+(UI.allLoaded?' \u00b7 all loaded':' \u00b7 scroll for more'); }
-function paginationFooter(){ if(UI.loadingMore) return '<div class="listend"><span class="spin"></span> loading more\u2026 ('+UI.rows.length+'/'+UI.total+')</div>'; if(!UI.allLoaded) return '<div class="listend"><button class="composebtn" onclick="loadNextPage()">\u2193 Load more</button><span style="color:var(--grey)">'+UI.rows.length+' of '+UI.total+' loaded</span></div>'; if((UI.total||0)<=0) return ''; return '<div class="listend">\u2014 end of list \u00b7 '+UI.total+' total \u2014</div>'; }
 async function loadList(silent){
   // silent = a background auto-refresh: NEVER show the loading spinner/skeleton, don't touch the detail pane — just
   // fetch and patch the rows in place. The spinner shows only on the FIRST / manual load (silent falsy).
@@ -3971,17 +3956,6 @@ function renderRows(){
   const rows=visibleRows();
   if(!rows.length) return listHeader()+`<div class="empty"><div class="big">📭</div><div class="t">Nothing in ${UI.selectMode?'the ticked states':cap(UI.state||'this view')}</div><div>${pgDone('list')?'No chits here — try another tab.':'More may be further down — Load more.'}</div></div>`+(pgDone('list')?'':pgFooter('list'));
   return listHeader() + rows.map(rowGrid).join("") + pgFooter('list');
-}
-function rowHTML(c){
-  const cbx=UI.selectMode&&SESSION.role!=="customer"?`<div class="cbx ${UI.selected.has(c.id)?'on':''}" onclick="event.stopPropagation();toggleSel('${c.id}')">${UI.selected.has(c.id)?'✓':''}</div>`:"";
-  const proof=`<span class="proof ${c.proof==='ok'?'ok':'wait'}">${c.proof==='ok'?'✓ both-signed':'⚠ awaiting'}</span>`;
-  const acts=(SESSION.role==="actor"&&UI.folder==="task")?(UI.sub==="all"?`<div class="rowacts"><button class="go" onclick="event.stopPropagation();assignChit('${c.id}','${myActorId()||''}')">⤵ Pull to me</button><button onclick="event.stopPropagation();unassignChit('${c.id}')">⤴ Push</button></div>`:`<div class="rowacts"><button onclick="event.stopPropagation();unassignChit('${c.id}')">↩ Push back</button><button class="go" onclick="event.stopPropagation();pickAssign('${c.id}')">👥 Assign</button></div>`):"";
-  return `<div class="row ${c.id===UI.sel?'sel':''} ${c.unread?'unread':''} ${UI.selectMode&&UI.selected.has(c.id)?'picked':''}" data-testid="chit-row-${c.id}" onclick="${UI.selectMode?`toggleSel('${c.id}')`:`openChit('${c.id}')`}">${cbx}
-    <div class="main2"><div class="l1">${c.unread?'<span class="unreaddot" title="Unread — new activity"></span>':''}${c.custPri?'<span class="custflag" title="Customer flagged priority">⚑</span>':''}<span class="code">${esc(c.code)}</span>${c.isDraft?' <span class="optchip" style="font-size:9.5px;background:#f3f0e8;color:#7a5e22;border-color:var(--gold-line)">draft</span>':''}${c.selfChit&&!c.isDraft?' <span class="optchip" style="font-size:9.5px;background:#eef3fb;color:#345488;border-color:#cfe0f4" title="Self-chit · '+( c.folder==="order"?"sent copy":"received copy")+'">self-chit</span>':''}<span class="party">· ${esc(c.party)}</span><span class="amt">${c.amt?inr(c.amt):'—'}</span></div>
-      <div class="l2">${esc(c.area)} · ${esc(c.kind)} ${priChip(c.priExt)} ${c.rcc?`<span class="optchip" style="font-size:9px;background:#F4ECD8;color:#7a5e22;border-color:#E4D3A8">CC ${c.rcc}</span>`:''}${c.rfor?`<span class="optchip" style="font-size:9px;background:#EFEBE2;color:#5F6B70;border-color:#E0DACF">For ${c.rfor}</span>`:''} ${c.att?`<span class="rowclip">📎 ${c.att}</span>`:''} ${c.msg?`<span class="rowmsg" onclick="event.stopPropagation();openChitMsgs('${c.id}')">💬 ${c.msg}</span>`:''} ${proof} ${(typeof dispCell==='function')?dispCell(c):''}
-        ${statusChip(c)}</div>${acts}</div>
-    <div class="rowgo" aria-hidden="true">›</div>
-  </div>`;
 }
 function toggleSel(id){UI.selected.has(id)?UI.selected.delete(id):UI.selected.add(id);paintRowsOnly();updateSelBar();}
 /* PENDING — not built on the backend yet. One place so we remember to build them (mirrors TASK-PANEL-WIRING.md ○ items). */
@@ -4432,23 +4406,6 @@ async function refreshRollup(){ if(["task","order"].indexOf(UI.folder)<0 || SESS
   try{ const rl=await api("rollup",{query:rollupQuery()}); UI.rollup=(rl&&rl.groups)||[]; UI.disputeOpen=(rl&&rl.dispute_open)||0;
     document.querySelectorAll(".statetabs .n").forEach(function(el,i){ el.textContent=stCount(["open","act","close"][i]); });
     const _sa=document.getElementById("srchadv"); if(_sa)_sa.innerHTML=advBtnHtml(); }catch(_){ } }
-async function advanceChit(id){
-  const c=UI.rows.find(x=>x.id===id)||UI.detail; if(c&&c.state==="close"){toast("At Close — next is Archive (sunset model).");return;}
-  const NB={pending:'accepted',delivered:'accepted',read:'accepted',accepted:'in_progress',in_progress:'completed',partial:'completed',finished:'completed'};
-  const UIS={pending:'open',delivered:'open',read:'open',accepted:'act',in_progress:'act',partial:'act',completed:'close',cancelled:'close',rejected:'close'};
-  const curB=(c&&c._status)||'pending', nextB=NB[curB];
-  if(!nextB){ toast("Already at the final state."); return; }
-  const fromUI=(c&&c.state)||UIS[curB]||'open';
-  const pos=chitPos(id);
-  try{ await api("advance",{params:{id},body:{status:nextB}});
-    const i=UI.rows.findIndex(x=>x.id===id); if(i>=0){UI.rows[i]._status=nextB; UI.rows[i].state=UIS[nextB];}
-    if(UI.detail&&UI.detail.id===id){UI.detail._status=nextB; UI.detail.state=UIS[nextB];}
-    const toUI=UIS[nextB]||nextB;
-    afterChitAction(id, pos);
-    toast(MSG.advanced(c&&c.code, toUI)); announce(((c&&c.code)||'This chit')+' moved from '+cap(fromUI)+' to '+cap(toUI));
-  }
-  catch(e){ toast(MSG.fail("advance", e)); }
-}
 async function assignChit(id, actorId, pri, reason){
   try{ const body={action:'push',target_actor_id:actorId}; if(pri)body.priority=pri; if(reason)body.reason=reason; await api("assign",{params:{id},body}); const i=UI.rows.findIndex(x=>x.id===id); if(i>=0){UI.rows[i].assignTo=actorId; if(pri)UI.rows[i].pri=pri;} if(UI.detail&&UI.detail.id===id)await openChit(id,true); renderApp();
     const a=(UI.actors||STORE.actors||[]).find(x=>x.id===actorId); const c=UI.rows.find(x=>x.id===id)||UI.detail; toast(MSG.assigned(c&&c.code, a&&a.name), ()=>unassignChit(id)); announce(((c&&c.code)||'Chit')+' assigned to '+((a&&a.name)||'the co-assist')); }

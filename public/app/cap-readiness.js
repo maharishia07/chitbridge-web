@@ -144,18 +144,6 @@ function saveLane(){
   try{ localStorage.setItem('cb_rd_lane', JSON.stringify({vert:vert,dest:dest,origin:origin})); }catch(_){}
   try{ api('profileSave',{body:{trade_mode:(dest===origin?'domestic':'export'), markets:[dest], sectors:[vert], adopted:(UI.profile&&UI.profile.adopted)||[]}}).then(function(p){UI.profile=p;}).catch(function(){}); }catch(_){}
 }
-async function loadReadiness(){
-  try{ UI.readiness = await api('readinessOwn'); }
-  catch(e){ UI.readiness = {items:[], summary:{}, error:(e&&e.message)||'Could not load'}; }
-  if(typeof renderApp==='function') renderApp();
-}
-function _rdRing(pct){
-  pct = Math.max(0, Math.min(100, pct||0));
-  var col = pct>=100 ? '#2f8f5b' : (pct>=60 ? '#c98a1a' : '#c0453b');
-  return '<div style="width:64px;height:64px;border-radius:50%;flex:0 0 auto;background:conic-gradient('+col+' '+pct+'%,var(--line) 0);display:grid;place-items:center;position:relative">'
-    +'<div style="position:absolute;inset:7px;border-radius:50%;background:#fff"></div>'
-    +'<b style="position:relative;font-size:15px;color:'+col+'">'+pct+'%</b></div>';
-}
 function _rdStatus(st){
   if(st==='gathered') return {col:'#2f8f5b',ic:'✓',lbl:'gathered'};
   if(st==='expiring') return {col:'#c98a1a',ic:'!',lbl:'renew soon'};
@@ -248,39 +236,10 @@ async function loadCommerce(){
   catch(e){ UI.commerce = {error:(e&&e.message)||'x'}; }
   UI.commerceLoading=false; if(typeof renderApp==='function') renderApp();
 }
-async function loadJourney(){
-  try{ UI.journey = await api('journey', {query:{incoterm:'CIF', cross_border:1}}); }
-  catch(e){ UI.journey = {error:(e&&e.message)||'x'}; }
-  UI.journeyLoading=false; if(typeof renderApp==='function') renderApp();
-}
 function _frmBadge(c){
   var map={market:['#2857b8','market'],credit:['#8a5e22','credit'],liquidity:['#0e7c74','liquidity'],operational:['#7a4fb0','operational']};
   var x=map[c]||['#8a94a6',String(c||'—')];
   return '<span style="font-size:9px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;border-radius:5px;padding:2px 6px;background:'+x[0]+'1e;color:'+x[0]+'">FRM · '+x[1]+'</span>';
-}
-function _rdCommerce(){
-  if(UI.commerce===undefined){ if(!UI.commerceLoading){ UI.commerceLoading=true; loadCommerce(); } return ''; }
-  if(UI.commerce.error || !UI.commerce.cluster) return '';
-  var rows = UI.commerce.cluster.map(function(g){
-    var names = (g.instruments||[]).map(function(i){ return esc(i.name); }).join(' · ');
-    var onrail = g.covered_onrail ? '<span style="font-size:10px;color:#2f8f5b;font-weight:800;margin-left:6px">● on rail</span>' : '';
-    return '<div style="border:1px solid var(--line);border-radius:10px;background:#fff;padding:10px 12px;margin-bottom:7px">'
-      +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-weight:650;font-size:13px">'+esc(g.label)+'</span>'+_frmBadge(g.frm_class)+onrail+'</div>'
-      +'<div style="font-size:11.5px;color:var(--grey);margin-top:4px">'+names+'</div></div>';
-  }).join('');
-  return '<div style="font-size:11px;font-weight:800;color:var(--grey);letter-spacing:.05em;margin:24px 2px 6px">COMMERCIAL COVER · the invariant spine (FRM)</div>'
-    +'<div style="font-size:11.5px;color:var(--grey);margin:0 2px 10px">Same in every industry — only the compliance above changes with the goods. Cover by risk:</div>'
-    +rows;
-}
-function _rdJourney(){
-  if(UI.journey===undefined){ if(!UI.journeyLoading){ UI.journeyLoading=true; loadJourney(); } return ''; }
-  if(UI.journey.error || !UI.journey.chain) return '';
-  var chips = UI.journey.chain.map(function(s){
-    return '<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;border:1px solid var(--line);border-radius:999px;padding:5px 10px;background:#fff;white-space:nowrap">'
-      +esc(s.activity)+(s.partner_type?'<span style="color:var(--blue);font-weight:700">· '+esc(s.partner_type)+'</span>':'')+'</span>';
-  }).join('');
-  return '<div style="font-size:11px;font-weight:800;color:var(--grey);letter-spacing:.05em;margin:24px 2px 9px">END-TO-END SETTLEMENT CHAIN</div>'
-    +'<div style="display:flex;gap:7px;flex-wrap:wrap">'+chips+'</div>';
 }
 // ── MY READINESS (supplier) — spin the globe: readiness resolved per destination ──
 async function loadLanes(){
@@ -299,7 +258,6 @@ async function loadLaneReadiness(dest){
   if(typeof renderApp==='function') renderApp();
 }
 function setLaneDest(dest){ UI.laneDest=dest; UI.laneRd=undefined; if(typeof renderApp==='function')renderApp(); loadLaneReadiness(dest); saveLane(); }
-function setLaneOrigin(o){ UI.laneOrigin=o; UI.laneRd=undefined; if(typeof renderApp==='function')renderApp(); loadLaneReadiness(UI.laneDest||'EU'); saveLane(); }
 function setLaneVertical(v){ UI.laneVertical=v; UI.laneRd=undefined; if(typeof renderApp==='function')renderApp(); loadLaneReadiness(UI.laneDest||'EU'); saveLane(); }
 // one-line explanation per tab (shown as an ⓘ strip under the tab bar)
 function _rdTabInfo(tab){
@@ -309,55 +267,7 @@ function _rdTabInfo(tab){
   var t=m[tab]; if(!t) return '';
   return '<div style="flex:none;font-size:11.5px;color:var(--grey);padding:8px 14px;border-bottom:1px solid var(--line);background:#f9fafc"><span style="color:var(--blue);font-weight:800">ⓘ</span> '+t+' <span style="color:#8a94a6">· sector-generic — switch the sector to see it re-resolve.</span></div>';
 }
-function _rdOriginSel(){
-  var o = UI.laneOrigin||'IN', opts = [['IN','India'],['EU','European Union'],['US','United States'],['GULF','Gulf (GCC)']];
-  return '<span style="font-size:12px;color:var(--grey)">Home country: </span><select onchange="setLaneOrigin(this.value)" style="font-size:12.5px;font-weight:700;border:1px solid var(--line);border-radius:8px;padding:5px 8px;background:#fff">'
-    + opts.map(function(x){ return '<option value="'+x[0]+'"'+(x[0]===o?' selected':'')+'>'+x[1]+'</option>'; }).join('') + '</select>';
-}
-function _rdTiles(){
-  var m=UI.laneMatrix; if(!m||!m.lanes) return '';
-  return '<div style="display:flex;gap:9px;flex-wrap:wrap;margin:12px 0 2px">'+m.lanes.map(function(l){
-    var c=l.percent>=100?'#2f8f5b':(l.percent>=80?'#c98a1a':'#c0453b'), on=l.dest_key===UI.laneDest;
-    return '<div onclick="setLaneDest(\''+l.dest_key+'\')" style="flex:1 1 128px;min-width:118px;cursor:pointer;border:1px solid '+(on?'var(--blue)':'var(--line)')+';box-shadow:'+(on?'0 0 0 2px #eef3fb':'none')+';border-radius:12px;background:#fff;padding:11px 10px;text-align:center">'
-      +'<div style="font-size:12px;font-weight:700">'+esc(l.dest_name)+'</div>'
-      +'<div style="width:38px;height:38px;border-radius:50%;margin:7px auto 0;background:conic-gradient('+c+' '+l.percent+'%,var(--line) 0);display:grid;place-items:center;position:relative"><div style="position:absolute;inset:5px;border-radius:50%;background:#fff"></div><b style="position:relative;font-size:11px;color:'+c+'">'+l.percent+'%</b></div>'
-      +'<div style="font-size:10px;font-weight:700;margin-top:5px;color:'+c+'">'+(l.ready?'✓ ready':'◐ '+l.gaps.length+' gap'+(l.gaps.length===1?'':'s'))+'</div></div>';
-  }).join('')+'</div>';
-}
 // ── CHECK A SUPPLIER (buyer) ──
-function _rdPassport(d){
-  if(d.loading) return (typeof loader==='function' ? loader('Checking…') : 'Checking…');
-  if(d.error) return (typeof emptyState==='function' ? emptyState('⚠️','Not found', esc(d.error)) : esc(d.error));
-  var sup = d.supplier||{}, items = d.clearances||[], s = d.summary||{}, ready = !!s.ready;
-  var standing = items.filter(function(i){ return i.scope==='entity'; });
-  var pership  = items.filter(function(i){ return i.scope!=='entity'; });
-  function grid(list){ return list.map(function(i){ var m=_rdStatus(i.status); var ok=i.status==='gathered'||i.status==='expiring';
-    return '<div style="display:flex;gap:9px;align-items:center;border:1px solid var(--line);border-radius:9px;background:#fff;padding:8px 11px;margin-bottom:6px"><div style="width:19px;height:19px;border-radius:50%;background:'+m.col+'22;color:'+m.col+';display:grid;place-items:center;font-size:11px;font-weight:800">'+m.ic+'</div><div style="font-size:12.5px;font-weight:600">'+esc(i.title||i.doc)+'</div>'+(i.valid_until?'<span style="margin-left:auto;font-size:10.5px;color:var(--grey)">valid to '+esc(String(i.valid_until).slice(0,10))+'</span>':'')+'</div>';
-  }).join(''); }
-  var verdict = '<div style="display:flex;gap:13px;align-items:center;border-radius:12px;padding:14px 16px;margin:10px 0;background:'+(ready?'#eaf6ee':'#fdf3e3')+';border:1px solid '+(ready?'#bfe3cb':'#f0dcae')+'">'
-    +'<div style="width:40px;height:40px;border-radius:50%;background:'+(ready?'#2f8f5b':'#c98a1a')+';color:#fff;display:grid;place-items:center;font-size:20px;flex:0 0 auto">'+(ready?'✓':'!')+'</div>'
-    +'<div style="flex:1;min-width:0"><div style="font-weight:700;font-size:14.5px;color:'+(ready?'#256e47':'#8a5f11')+'">'+(ready?'Import-ready — every clearance is met':((s.total-s.met)+' clearance(s) outstanding'))+'</div>'
-      +'<div style="font-size:11.5px;color:var(--grey)">'+(s.met||0)+' / '+(s.total||0)+' met · verifiable on the rail</div></div>'
-    +(ready?'<button onclick="dealFrom(\''+esc(sup.bridge_id||'')+'\')" style="background:#2f8f5b;color:#fff;border:0;border-radius:10px;padding:10px 15px;font-weight:700;cursor:pointer;flex:0 0 auto">Create trade deal →</button>':'')+'</div>';
-  return '<div style="border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-top:10px">'
-    +'<div style="padding:14px 17px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px"><div style="width:38px;height:38px;border-radius:11px;background:#ece3fb;color:#8a3ffc;display:grid;place-items:center;font-size:17px">🏭</div><div><div style="font-weight:700;font-size:15.5px">'+esc(sup.display_name||sup.bridge_id||'Supplier')+'</div><div style="font-size:11px;color:var(--grey)" class="mono">'+esc(sup.bridge_id||'')+' · verified on the rail</div></div></div>'
-    +'<div style="padding:2px 16px 14px">'+verdict
-      +(standing.length?'<div style="font-size:11px;font-weight:800;color:var(--grey);margin:14px 2px 8px">STANDING CERTIFICATIONS</div>'+grid(standing):'')
-      +(pership.length?'<div style="font-size:11px;font-weight:800;color:var(--grey);margin:14px 2px 8px">PER-SHIPMENT CLEARANCES</div>'+grid(pership):'')
-      +'<div style="font-size:11px;color:var(--grey);margin-top:12px">Every tick is a verifiable record on the rail — status only, no private documents exposed.</div>'
-    +'</div></div>';
-}
-function _rdCheck(){
-  var v = esc(UI.rdBridge||'');
-  var inp = '<div style="display:flex;gap:8px;margin:14px 0 4px"><input id="rd_bridge" value="'+v+'" placeholder="Supplier bridge id (e.g. CB…)" onkeydown="if(event.key===\'Enter\')checkSupplier()" style="flex:1;padding:10px 12px;border:1px solid var(--line);border-radius:9px;font-size:13px"><button onclick="checkSupplier()" style="background:var(--blue);color:#fff;border:0;border-radius:9px;padding:10px 16px;font-weight:700;cursor:pointer">Check</button></div>';
-  var body = UI.rdCheck ? _rdPassport(UI.rdCheck) : '<div style="font-size:12.5px;color:var(--grey);padding:10px 2px">Enter a supplier’s bridge id to see their trade-confidence passport before you deal — every clearance, met or not, verifiable on the rail.</div>';
-  return inp+body;
-}
-function _rdTabs(){
-  var t = UI.rdTab||'mine';
-  function tab(k,lbl){ return '<div onclick="UI.rdTab=\''+k+'\';if(typeof renderApp===\'function\')renderApp()" style="padding:9px 15px;font-size:13px;font-weight:700;cursor:pointer;border-bottom:2px solid '+(t===k?'var(--blue)':'transparent')+';color:'+(t===k?'var(--blue)':'var(--grey)')+'">'+lbl+'</div>'; }
-  return '<div style="display:flex;gap:4px;border-bottom:1px solid var(--line)">'+tab('mine','My readiness')+tab('check','Check a supplier')+'</div>';
-}
 // compact spin-the-globe: origin → destination selectors (shown in the Clearances tab header).
 function _mapOrigin(c){ c=String(c||'').toUpperCase();
   if(['IN','IND','INDIA'].indexOf(c)>=0) return 'IN';
@@ -420,10 +330,6 @@ async function openSectorMatrix(){
     +'<div style="margin-top:12px;font-size:11px;color:var(--grey)">required = <b>common backbone</b> ∪ <b>sector-specific</b> ∪ <b>destination-specific</b> — derived, never enumerated.</div>'
     +'<div style="margin-top:12px;text-align:center;font-family:\'Space Grotesk\',system-ui;font-weight:700;font-size:11.5px;color:var(--blue);letter-spacing:.04em">Chit &amp; Bridge</div>';
   var el=document.getElementById('mtxbody'); if(el) el.innerHTML=html;
-}
-function _rdCommercePage(){
-  return '<div>'+_rdCommerce()+_rdJourney()
-    +'<div style="font-size:11.5px;color:var(--grey);margin-top:20px;padding:11px 13px;background:#f7f8fb;border:1px solid var(--line);border-radius:10px">The commercial spine is the same in every industry — only the compliance above changes with the goods.</div></div>';
 }
 // ── COMMERCIAL two-pane — the invariant spine gets the SAME treatment as clearances. Left = the cover areas (live from
 // /instruments, grouped by risk); right = advice · trust ladder (attestor = a FINANCIAL party) · lifecycle · AI · partner.
@@ -534,15 +440,6 @@ function readinessScreen(){
   var list=(tab==='clearance')?items.filter(function(i){return i.scope!=='entity';}):items.filter(function(i){return i.scope==='entity';});
   return shell(_rdTwoPane(list));
 }
-async function checkSupplier(){
-  var el = document.getElementById('rd_bridge'); var b = el ? (el.value||'').trim() : '';
-  if(!b){ if(typeof toast==='function') toast('Enter a supplier bridge id'); return; }
-  UI.rdBridge = b; UI.rdCheck = {loading:true}; if(typeof renderApp==='function') renderApp();
-  try{ UI.rdCheck = await api('readinessOf',{params:{bridge_id:b}}); }
-  catch(e){ UI.rdCheck = {error:(e&&e.message)||'No such supplier'}; }
-  if(typeof renderApp==='function') renderApp();
-}
-function dealFrom(bridge){ if(typeof toast==='function') toast('Confidence confirmed ✓ — start your order'); UI.nav='suppliers'; if(typeof renderApp==='function') renderApp(); }
 function verifyReadiness(standard, doc, id_type){
   UI.rdVerify = { standard:standard, doc:doc, id_type:id_type };
   var inS='width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:13px;margin:5px 0 13px;box-sizing:border-box';

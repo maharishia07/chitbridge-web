@@ -93,13 +93,6 @@ function disputeDecorateSend(mb, body){
   return txt;
 }
 /* list row → the one-glance dispute count: N open (red) · M resolved (green); '' when neither. */
-function dispCell(c){
-  var o=(c&&c.dispOpen)||0, r=(c&&c.dispResolved)||0; if(!o&&!r) return '';
-  var p=[];
-  if(o) p.push('<b style="color:var(--disp)">⚑ '+o+' open</b>');
-  if(r) p.push('<span style="color:#3c8a52">✓ '+r+' resolved</span>');
-  return '<span class="rowdisp" style="font-size:11px">'+p.join(' <span style="color:var(--line)">·</span> ')+'</span>';
-}
 
 /* ── Advanced-search dispute filter (was inline in Core toolbar + adv modal). The ⚠ N chip surfaces on
  *    task/order lists when open disputes exist (or the filter is on); toggling adds dispute='open' to
