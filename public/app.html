@@ -2122,6 +2122,17 @@ async function sendChit(v){
     }
     if(typeof v.onSent==='function'){ try{ v.onSent(r); }catch(_){ } }
     if(v.isDraft){ toast(MSG.draftSaved()); UI.nav="drafts"; UI.folder="drafts"; try{localStorage.setItem("cb_nav","drafts");}catch(_){} }
+    /**
+     * ⚠️ LAND WHERE THE CHIT ACTUALLY IS. When the send suppressed a copy, the default landing sends you to the
+     * list that copy was suppressed FROM — an empty-handed arrival that reads exactly like a failed send.
+     *
+     * Raising a WhatsApp message asks for Task-only (self_copy:'received'), and this dropped the sender on the
+     * ORDER list, where the request deliberately is not. It was created correctly every time; you just never saw
+     * it. Deciding the destination from what was ASKED FOR, not from what came back, is the only version of this
+     * that stays right when a new copy shape is added.
+     */
+    else if(v.self_copy==='received'){ toast(MSG.chitBridged(r&&r.copies)); UI.nav="task"; UI.folder="task"; try{localStorage.setItem("cb_nav","task");}catch(_){} }
+    else if(v.self_copy==='sent'){ toast(MSG.chitBridged(r&&r.copies)); UI.nav="order"; UI.folder="order"; try{localStorage.setItem("cb_nav","order");}catch(_){} }
     else if(r&&r.selfCopies){ toast(MSG.chitBridged(r.copies, r.selfCopies)); UI.nav="task"; UI.folder="task"; }
     else { toast(MSG.chitBridged(r&&r.copies)); UI.nav="order"; UI.folder="order"; }
     UI.sel=null; UI.detail=null; await loadList(); busyHide(); renderApp();
