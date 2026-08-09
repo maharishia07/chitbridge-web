@@ -306,8 +306,13 @@ function channelsInner(){
 function _chRow(c){
   var bound=(c.bindings||[]).length;
   /* ⚠️ RECEIVING requires BOTH. Anything else is a state worth naming, not a colour to average out. */
-  var live = c.provider_configured && bound;
+  /* ⚠️ RECEIVING NEEDS A VERIFIED BINDING, not just any binding (b124). A claim is not a permission: until the
+     platform confirms the number is yours, it resolves to nothing and messages sent there reach nobody. Counting a
+     declared claim as "receiving" would be the panel telling the exact lie the migration exists to stop. */
+  var verified=(c.bindings||[]).filter(function(b){ return b.status==='verified'; }).length;
+  var live = c.provider_configured && verified;
   var pill = live ? ['#2e6b3f','#e7f3ea','receiving']
+           : (bound && !verified) ? ['#8a5a1e','#FBF6E9','claimed — awaiting confirmation']
            : (!c.provider_configured && bound) ? ['#8a5a1e','#FBF6E9','waiting on a provider account']
            : (c.provider_configured && !bound) ? ['#8a5a1e','#FBF6E9','configured — nothing bound yet']
            : ['#6a707a','#eef1f5','not set up'];
@@ -323,13 +328,15 @@ function _chRow(c){
           + '<span style="font-family:ui-monospace,Menlo,monospace">'+esc(b.address)+'</span>'
           + (b.label?'<span style="color:var(--grey)">'+esc(b.label)+'</span>':'')
           /* declared vs verified — asserted is not confirmed, and the difference is visible. */
-          + '<span style="font-size:9.5px;font-weight:800;color:'+(b.status==='verified'?'#2e6b3f':'#6a707a')+';background:'+(b.status==='verified'?'#e7f3ea':'#eef1f5')+';border-radius:5px;padding:1px 6px">'+esc(b.status)+'</span>'
+          /* declared vs verified — and what DECLARED actually costs you, said in the row rather than in a footnote:
+             a claim that has not been confirmed receives nothing at all. */
+          + '<span style="font-size:9.5px;font-weight:800;color:'+(b.status==='verified'?'#2e6b3f':'#8a5a1e')+';background:'+(b.status==='verified'?'#e7f3ea':'#FBF6E9')+';border-radius:5px;padding:1px 6px" title="'+(b.status==='verified'?'confirmed by the platform — messages sent here reach you':'not confirmed yet — messages sent to this number reach nobody')+'">'+esc(b.status==='verified'?'verified'+(b.verified_via?' · '+b.verified_via:''):'declared — not receiving yet')+'</span>'
           + '<span style="margin-left:auto;cursor:pointer;color:#9aa3a7" title="Unbind" data-testid="ch-del" onclick="chUnbind(\''+esc(b.id)+'\')">✕</span></div>'; }).join('')
     + (_CH.adding===c.key
         ? '<div style="display:flex;gap:6px;margin-top:8px"><input class="inp" id="ch_addr" placeholder="'+esc(c.placeholder)+'" data-testid="ch-addr" style="flex:1">'
           + '<input class="inp" id="ch_label" placeholder="label (optional)" data-testid="ch-label" style="max-width:140px">'
           + '<button class="composebtn" data-testid="ch-save" onclick="chBind(\''+esc(c.key)+'\')">Bind</button></div>'
-          + '<div style="font-size:10.5px;color:var(--grey);margin-top:4px">'+esc(c.address_label)+' — the address your customers write TO, not theirs.</div>'
+          + '<div style="font-size:10.5px;color:var(--grey);margin-top:4px">'+esc(c.address_label)+' — the address your customers write TO, not theirs. It is a <b>claim</b>: it starts inert and receives nothing until the platform confirms the number is yours.</div>'
         : '')
     + '</div>';
 }
