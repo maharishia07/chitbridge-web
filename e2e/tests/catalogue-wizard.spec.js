@@ -134,7 +134,14 @@ test.describe('Catalogue wizard · visual walkthrough', () => {
       const firstAfter = (after || []).find((p) => (p.item_id || p.id) === fid) || {};
       console.log('after UPDATE+DELETE:', (after || []).length, 'items · first item price now →', (firstAfter.item_data || {}).price);
       expect((after || []).length, 'DELETE removed exactly one').toBe(items.length - 1);
-      expect(String((firstAfter.item_data || {}).price), 'UPDATE changed the price to 777').toBe('777');
+      /**
+       * ⚠️ READ THE PRICE THE WAY THE APP DOES. A price is a STAMPED { amount, currency } now, not a bare number,
+       * so String(price) is "[object Object]" and this failed while the UPDATE had worked perfectly — the amount
+       * really was 777. Same shape as the cbHasPrice gap that had check-adoption permanently red: the product
+       * moved to stamped money and the checks were never told.
+       */
+      const amountOf = (p) => (p && typeof p === 'object' && p.amount !== undefined ? p.amount : p);
+      expect(String(amountOf((firstAfter.item_data || {}).price)), 'UPDATE changed the price to 777').toBe('777');
       await page.evaluate(() => { if (typeof loadCatalogue === 'function') loadCatalogue(); });
       await page.locator('#ct_rows .row').first().waitFor({ state: 'visible', timeout: 10000 }).catch(() => {});
       await page.waitForTimeout(500);

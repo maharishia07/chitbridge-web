@@ -27,7 +27,17 @@ test.describe('Smoke · every menu item + icon renders', () => {
     await test.step('compose (modal)', async () => {
       await page.getByTestId('nav-compose').click();
       await expect(page.locator('#modalhost')).not.toBeEmpty();   // compose modal opened
-      await page.keyboard.press('Escape').catch(() => {});
+      /**
+       * ⚠️ Escape was a NO-OP here and this step only continued because the modal was being destroyed underneath
+       * it by a background renderApp (fixed 2026-08-09). With that gone, compose correctly stays open and its
+       * backdrop intercepts every toolbar click below — so close it deliberately, the way the other steps do.
+       *
+       * Escape-to-close is deliberately NOT wired for compose: it would discard a draft on a stray keypress,
+       * which is the same lost work the renderApp fix exists to prevent. Cancel and the ✕ are explicit; minimise
+       * keeps the draft.
+       */
+      await dismissModal(page);
+      await expect(page.locator('#modalhost')).toBeEmpty();
     });
     await test.step('assistant', async () => {
       await page.getByTestId('assistant-open').click();
