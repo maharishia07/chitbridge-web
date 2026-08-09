@@ -1,4 +1,5 @@
 // Shared helpers for the e2e specs. Kept tiny so each MODULE spec stays self-describing.
+const { expect } = require('@playwright/test');   // composeChit asserts the wizard actually advanced
 const DEV_OTP = process.env.CB_DEV_OTP || '123456';   // relies on DEV_OTP set on the API during dev (Athi's standing choice)
 
 // a fresh identity per run so specs never collide on an existing entity/email.
@@ -114,18 +115,61 @@ const HAS_RCPT = () => { const h = document.getElementById('cc_rcpts'); return !
 const HAS_TOTAL = () => { const t = document.getElementById('cc_total'); return !!t && /\d/.test(t.textContent || ''); };  // a line-item total rendered
 
 // Reusable: compose + send a self-chit with a subject + one line item. The arrange step for chits/disputes/messages.
-async function composeSelfChit(page, subject) {
+/**
+ * composeStepNext — advance the compose wizard one step, and refuse to move on quietly if it will not go.
+ *
+ * ⚠️ THE PRIMARY IS GUARDED. If the current step is unanswered the button is disabled and the flow simply does not
+ * advance — so a spec that clicked and carried on would fail three lines later, on the next step's field, reading
+ * like a rendering fault. Asserting the step actually CHANGED puts the failure where the cause is.
+ */
+async function composeStepNext(page, expectStep) {
+  const btn = page.locator('[data-testid^="step-next-"]');
+  await expect(btn, `compose cannot leave this step: ${await page.locator('[data-testid^="step-why-"]').textContent().catch(() => '')}`).toBeEnabled();
+  await btn.click();
+  await expect(page.locator(`[data-testid="step-${expectStep}"].now`),
+    `compose did not advance to the ${expectStep} step`).toBeVisible();
+}
+
+/**
+ * composeChit — author and send a chit through the FOUR-STEP compose wizard.
+ *
+ * Athi, 2026-08-08: *"once all the selection is over, then we show the rest in order one by one."*
+ *
+ * Compose became Items → To → Details → Review on 2026-08-09, so every driver has to walk it. This is the one
+ * place that knows the walk: six specs used to inline "fill everything, press send" against a single screen, and
+ * six copies of a wizard walk would drift the moment a step moved.
+ *
+ * `recipients` are added by name from the suggest list; `self: true` adds the Self recipient instead.
+ */
+async function composeChit(page, { subject, item = 'Widget', recipients = [], self = false, send = true } = {}) {
   await clickNav(page, 'compose');
-  await clickInModal(page, 'chit-add-self', HAS_RCPT);        // add the Self recipient (verify it registered)
+
+  // ── 1 · ITEMS. The line comes first now: the chit is about what is on it.
+  await page.getByTestId('chit-item-name').fill(item);
+  await clickInModal(page, 'chit-item-add', HAS_TOTAL);       // add the line item (verify it registered)
+  await composeStepNext(page, 'to');
+
+  // ── 2 · TO. Compose keeps this step precisely because the recipient is genuinely unknown here.
+  if (self) await clickInModal(page, 'chit-add-self', HAS_RCPT);
+  for (const name of recipients) await addRecipientByName(page, name);
+  await composeStepNext(page, 'details');
+
+  // ── 3 · DETAILS.
   const subj = page.locator('[data-testid="chit-field-subject"]');
   if (await subj.count()) await subj.fill(subject);
   else await page.locator('[data-testid^="chit-field-"]').first().fill(subject);
-  await page.getByTestId('chit-item-name').fill('Widget');
-  await clickInModal(page, 'chit-item-add', HAS_TOTAL);       // add the line item (verify it registered)
+  await composeStepNext(page, 'review');
+
+  // ── 4 · REVIEW → send.
+  if (!send) return;
   const sent = page.waitForResponse((r) => /\/chits\/send/.test(r.url()) && r.request().method() === 'POST', { timeout: 30000 }).catch(() => null);
   await stableClick(page, 'chit-send');
   await sent;            // wait for the server to confirm the send before the next step (slow engine / cold API)
   await settle(page);   // let the post-send refresh finish so the next nav click isn't intercepted
+}
+
+async function composeSelfChit(page, subject) {
+  await composeChit(page, { subject, self: true });
 }
 
 // ── MULTIPARTY — the real capability. Each browser CONTEXT is an isolated logged-in party. Mint N entities in N contexts,
@@ -167,4 +211,4 @@ async function poolContext(browser, i) {
   return { context, page, email: p.email, name: p.name, key: p.key };
 }
 
-module.exports = { DEV_OTP, uniqueEmail, uniqueName, mintEntity, composeSelfChit, clickNav, stableClick, clickInModal, HAS_RCPT, HAS_TOTAL, mintInContext, addRecipientByName, settle, dismissModal, POOL, poolContext };
+module.exports = { DEV_OTP, uniqueEmail, uniqueName, mintEntity, composeSelfChit, composeChit, composeStepNext, clickNav, stableClick, clickInModal, HAS_RCPT, HAS_TOTAL, mintInContext, addRecipientByName, settle, dismissModal, POOL, poolContext };

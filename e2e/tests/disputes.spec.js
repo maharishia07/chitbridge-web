@@ -6,7 +6,7 @@
 // LOCATORS: chit-dispute · dispute-category/reason/raise · dispute-resolve-open/note/submit · dispute-room-input/send ·
 //           input.dispparty (the party picker) · nav-disputes
 const { test, expect } = require('@playwright/test');
-const { mintEntity, mintInContext, addRecipientByName, composeSelfChit, settle, dismissModal } = require('../fixtures');
+const { mintEntity, mintInContext, composeChit, composeSelfChit, settle, dismissModal } = require('../fixtures');
 
 test.describe('Module · Disputes', () => {
   // A dispute is inherently BETWEEN parties — a self-chit has no counterparty, so raising on one produces no resolvable
@@ -47,15 +47,9 @@ test.describe('Module · Disputes', () => {
     const reason = 'Quality issue ' + stamp + ' — please review and replace.';
 
     await test.step('A composes ONE chit to both B and C', async () => {
-      await A.page.getByTestId('nav-compose').click();
-      await addRecipientByName(A.page, B.name);
-      await addRecipientByName(A.page, C.name);
-      const subj = A.page.locator('[data-testid="chit-field-subject"]');
-      if (await subj.count()) await subj.fill(subject);
-      else await A.page.locator('[data-testid^="chit-field-"]').first().fill(subject);
-      await A.page.getByTestId('chit-item-name').fill('Widget');
-      await A.page.getByTestId('chit-item-add').click();
-      await A.page.getByTestId('chit-send').click();
+      // Compose is a four-step wizard (Items → To → Details → Review); composeChit owns the walk so this spec can
+      // stay about the DISPUTE. Two To recipients on ONE chit is the whole setup for the per-party scoping below.
+      await composeChit(A.page, { subject, recipients: [B.name, C.name] });
     });
 
     await test.step('A raises a dispute TARGETED at B only', async () => {

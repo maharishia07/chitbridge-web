@@ -3,7 +3,7 @@
 //   Test 1 (runnable): A sends a chit to B → B receives their own copy (sender ↔ receiver).
 //   Test 2 (skeleton): A→B,C + a TARGETED dispute with B only → B sees it, C does NOT (the USP, live).
 const { test, expect } = require('@playwright/test');
-const { mintInContext, addRecipientByName, settle } = require('../fixtures');
+const { mintInContext, composeChit, settle } = require('../fixtures');
 
 test.describe('Multiparty · the real capability', () => {
   test('[MP-01] A sends a chit to B; B receives their own copy', async ({ browser }) => {
@@ -13,14 +13,9 @@ test.describe('Multiparty · the real capability', () => {
     const subject = 'Multiparty order ' + Date.now();
 
     await test.step('A composes a chit addressed to B', async () => {
-      await A.page.getByTestId('nav-compose').click();
-      await addRecipientByName(A.page, B.name);
-      const subj = A.page.locator('[data-testid="chit-field-subject"]');
-      if (await subj.count()) await subj.fill(subject);
-      else await A.page.locator('[data-testid^="chit-field-"]').first().fill(subject);
-      await A.page.getByTestId('chit-item-name').fill('Widget');
-      await A.page.getByTestId('chit-item-add').click();
-      await A.page.getByTestId('chit-send').click();
+      // Four-step wizard now (Items → To → Details → Review) — composeChit owns the walk so this spec stays about
+      // what each PARTY sees.
+      await composeChit(A.page, { subject, recipients: [B.name] });
       await settle(A.page);
     });
 

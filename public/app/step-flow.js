@@ -123,21 +123,31 @@
     var custom = call(s, 'nextLabel', keyAt(s, s.i), null);
     return custom || ('Next: ' + (stepAt(s, s.i + 1).n || '') + ' →');
   }
+  /**
+   * ⚠️ A SCREEN MAY OWN ITS BUTTON'S TEST ID, and Compose does. `chit-send` is addressed by four specs and by the
+   * shared composeSelfChit fixture; renaming it to `step-next-cbsteps-2` because the wizard now draws the button
+   * would remove a published hook and leave every one of them hunting for an element that no longer exists. That
+   * is defect 3 of 2026-08-09, repeated. So the generated ids are DEFAULTS, not decisions.
+   */
   function footHTML(ns) {
     var s = F[ns]; if (!s) return '';
     var last = s.i === s.steps.length - 1, blocked = why(s, s.i);
     var backLbl = s.i ? '← Back' : opt(s, 'cancelLabel', '');
+    var tidBack = opt(s, 'backTestid', 'step-back-' + ns);
+    var tidDraft = opt(s, 'draftTestid', 'step-draft-' + ns);
+    // The primary changes JOB on the last step, so it may change NAME too: "next" and "send" are different actions.
+    var tidPri = last ? opt(s, 'sendTestid', 'step-next-' + ns) : opt(s, 'nextTestid', 'step-next-' + ns);
     var out = '<div class="cbst-foot" data-testid="stepfoot-' + esc(ns) + '">';
     if (backLbl) {
-      out += '<button type="button" data-testid="step-back-' + esc(ns) + '"'
+      out += '<button type="button" data-testid="' + esc(tidBack) + '"'
         + ' onclick="CBSteps.back(\'' + esc(ns) + '\')">' + esc(backLbl) + '</button>';
     }
     if (opt(s, 'draftLabel')) {
-      out += '<button type="button" data-testid="step-draft-' + esc(ns) + '"'
+      out += '<button type="button" data-testid="' + esc(tidDraft) + '"'
         + ' onclick="CBSteps.draft(\'' + esc(ns) + '\')">' + esc(opt(s, 'draftLabel')) + '</button>';
     }
     // ⚠️ The reason rides on `title`. A dead button that will not say why is the thing this guard exists to avoid.
-    out += '<button type="button" class="pri" data-testid="step-next-' + esc(ns) + '"'
+    out += '<button type="button" class="pri" data-testid="' + esc(tidPri) + '"'
       + (blocked ? ' disabled title="' + esc(blocked) + '"' : '')
       + ' onclick="CBSteps.' + (last ? 'send' : 'next') + '(\'' + esc(ns) + '\')">' + esc(nextLabel(s)) + '</button>';
     // …and it is said in words too, because a title only appears if you hover, and nobody hovers on a phone.

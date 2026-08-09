@@ -113,4 +113,62 @@ test.describe('Order step flow', () => {
       .toBeVisible();
     await expect(page.locator('[data-testid^="step-next-"]')).toBeDisabled();
   });
+
+  /**
+   * ★★ COMPOSE — the only screen that keeps a "To" step, because the recipient is genuinely unknown.
+   *
+   * Compose was two dense columns with four tabs in the right-hand one. This walks what replaced it, and checks the
+   * thing the restructure most easily breaks: values typed on one step must still be there when a LATER step sends.
+   * submitCompose used to read cf_subject straight off the page — with Details no longer rendered on Review, that
+   * would have sent an empty subject from the very screen that exists to confirm it.
+   */
+  test('★★ COMPOSE — four steps, To survives, and a value typed on step 3 is still there on step 4', async ({ page }) => {
+    await mintEntity(page);
+    await page.getByTestId('nav-compose').click();
+
+    const rail = page.locator('[data-testid^="steps-"]');
+    await expect(rail).toBeVisible();
+    await expect(rail.locator('.cbst')).toHaveCount(4);
+    await expect(page.getByTestId('step-to'), 'Compose MUST keep its To step').toBeVisible();
+
+    // ── ITEMS ────────────────────────────────────────────────────────────────────────────────────────────────
+    const next = page.locator('[data-testid^="step-next-"]');
+    await expect(next).toBeDisabled();
+    await expect(page.locator('[data-testid^="step-why-"]')).toContainText('Add at least one line item');
+    await page.getByTestId('chit-item-name').fill('Widget');
+    await page.getByTestId('chit-item-add').click();
+    await expect(next, 'adding a line did not unblock Items').toBeEnabled();
+    await next.click();
+
+    // ── TO ───────────────────────────────────────────────────────────────────────────────────────────────────
+    await expect(page.getByTestId('chit-add-self')).toBeVisible();
+    await expect(page.locator('[data-testid^="step-next-"]')).toBeDisabled();
+    await expect(page.locator('[data-testid^="step-why-"]')).toContainText('To recipient');
+    await page.getByTestId('chit-add-self').click();
+    await page.locator('[data-testid^="step-next-"]').click();
+
+    // ── DETAILS ──────────────────────────────────────────────────────────────────────────────────────────────
+    const SUBJ = 'Step flow ' + Date.now();
+    await expect(page.getByTestId('chit-field-subject')).toBeVisible();
+    await expect(page.locator('[data-testid^="step-next-"]')).toBeDisabled();
+    await page.getByTestId('chit-field-subject').fill(SUBJ);
+    await expect(page.locator('[data-testid^="step-next-"]'), 'a subject did not unblock Details').toBeEnabled();
+    await page.locator('[data-testid^="step-next-"]').click();
+
+    // ── REVIEW ───────────────────────────────────────────────────────────────────────────────────────────────
+    // ⚠️ THE ASSERTION THAT MATTERS. The subject was typed on a step that is no longer on screen; if it lived only
+    // in the DOM it is gone by now, and the send would go out blank.
+    await expect(page.getByTestId('cc-review-total'), 'the Review step did not render').toBeVisible();
+    await expect(page.locator('#cc_body'), 'the subject typed on Details did not survive to Review').toContainText(SUBJ);
+    await expect(page.locator('#cc_body'), 'the line did not survive to Review').toContainText('Widget');
+    await expect(page.getByTestId('chit-send'), 'the send button kept its published test id').toBeEnabled();
+
+    // Walk back and confirm the field renders FROM state, not from a stale input.
+    await page.getByTestId('step-details').click();
+    await expect(page.getByTestId('chit-field-subject')).toHaveValue(SUBJ);
+
+    // ⚠️ Does NOT send — this runs against production and a spec that mints real chits every run makes the data
+    // untrustworthy. chits/keyboard/messages own the send, with their own cleanup.
+    await page.locator('#modalhost .mx').first().click().catch(() => {});
+  });
 });

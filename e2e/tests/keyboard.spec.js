@@ -22,6 +22,30 @@ async function tabTo(page, testid, { max = 60, shift = false } = {}) {
 const focusedTestId = (page) =>
   page.evaluate(() => document.activeElement && document.activeElement.getAttribute('data-testid'));
 
+/**
+ * Tab to a control whose testid STARTS WITH `prefix`. The step flow's primary button is `step-next-<generated-ns>`,
+ * so its exact id is not knowable from a spec — but "the button that moves the wizard on" is, and that is what an
+ * operator is reaching for.
+ */
+async function tabToPrefix(page, prefix, { max = 60 } = {}) {
+  for (let i = 0; i < max; i++) {
+    const cur = await focusedTestId(page);
+    if (cur && cur.startsWith(prefix)) return true;
+    await page.keyboard.press('Tab');
+  }
+  const cur = await focusedTestId(page);
+  return !!(cur && cur.startsWith(prefix));
+}
+
+/** Advance the compose wizard by keyboard alone, and prove the step actually changed. */
+async function stepOnByKeyboard(page, expectStep) {
+  expect(await tabToPrefix(page, 'step-next-'),
+    'the step flow\'s primary button must be reachable by Tab — a mouse-only Next is a broken wizard').toBe(true);
+  await page.keyboard.press('Enter');
+  await expect(page.locator(`[data-testid="step-${expectStep}"].now`),
+    `compose did not advance to ${expectStep} on Enter`).toBeVisible();
+}
+
 test.describe('Keyboard operability · the counter runs on the keyboard', () => {
   test('[KBD-01] compose + send a chit using ONLY the keyboard', async ({ page }) => {
     await mintEntity(page);                      // arrange (reused pool session when present)
@@ -36,9 +60,12 @@ test.describe('Keyboard operability · the counter runs on the keyboard', () => 
       if (process.env.CB_KBD_BREAK) expect(await tabTo(page, 'this-control-does-not-exist', { max: 10 })).toBe(true);
     });
 
-    await test.step('fill the line item with typed numbers (no forced tab-away mid-number)', async () => {
-      // add self as recipient (a chit needs a party) — by keyboard
-      if (await tabTo(page, 'chit-add-self', { max: 40 })) await page.keyboard.press('Enter');
+    /**
+     * ⚠️ COMPOSE IS FOUR STEPS NOW (Items → To → Details → Review), so the keyboard has to walk it. That is not an
+     * inconvenience for the test, it is the point of the test: a wizard whose Next is mouse-only is worse than the
+     * single screen it replaced, because there is no way past it at all.
+     */
+    await test.step('ITEMS — fill the line with typed numbers (no forced tab-away mid-number)', async () => {
       // item name → qty → price, each reached by Tab and TYPED (numeric entry must not force a tab-away)
       expect(await tabTo(page, 'chit-item-name')).toBe(true);
       await page.keyboard.type('Widget');
@@ -49,6 +76,19 @@ test.describe('Keyboard operability · the counter runs on the keyboard', () => 
       await page.keyboard.type('100');
       expect(await tabTo(page, 'chit-item-add')).toBe(true);
       await page.keyboard.press('Enter');        // Enter commits the line
+      await stepOnByKeyboard(page, 'to');
+    });
+
+    await test.step('TO — add self as the recipient, by keyboard', async () => {
+      expect(await tabTo(page, 'chit-add-self', { max: 40 })).toBe(true);
+      await page.keyboard.press('Enter');
+      await stepOnByKeyboard(page, 'details');
+    });
+
+    await test.step('DETAILS — type the subject the schema requires', async () => {
+      expect(await tabTo(page, 'chit-field-subject')).toBe(true);
+      await page.keyboard.type('Keyboard chit ' + Date.now());
+      await stepOnByKeyboard(page, 'review');
     });
 
     await test.step('send by keyboard, land in Order', async () => {

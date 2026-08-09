@@ -165,16 +165,8 @@
   .ccsugg-empty{padding:6px 10px;font-size:11px;color:var(--grey);border:1px solid var(--line);border-radius:8px;background:#fff}
   .modal{width:360px;max-width:94vw;background:#fff;border-radius:14px;overflow:hidden;box-shadow:var(--shadow)}
   .modal.wide{width:820px;max-width:94vw}
-  .cc-cols{display:grid;grid-template-columns:var(--cc-lw,1fr) 14px minmax(0,1fr);gap:0;align-items:start}
-  .cc-col{min-width:0}
-  .cc-rtabs{display:flex;gap:5px;margin:2px 0 8px;flex-wrap:wrap}
-  .cc-rtab{border:1px solid var(--line);background:#fff;border-radius:7px;font-size:11px;font-weight:700;padding:4px 9px;color:var(--grey);cursor:pointer}
-  .cc-rtab.on{background:#EEF3FB;color:var(--blue);border-color:var(--blue)}
-  .ccsum-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;font-size:12.5px;color:var(--ink)}
-  .cc-gutter{align-self:stretch;width:14px;cursor:col-resize;position:relative}
-  .cc-gutter::before{content:"";position:absolute;left:6px;top:2px;bottom:2px;width:2px;background:var(--line);border-radius:2px}
-  .cc-gutter:hover::before{background:var(--blue);width:3px;left:5px}
-  @media (max-width:680px){ .cc-cols{grid-template-columns:1fr} .cc-gutter{display:none} }
+  /* .cc-cols / .cc-col / .cc-rtabs / .cc-rtab / .ccsum-row / .cc-gutter went with the two-column compose — one job
+     per step means there is no second column to size and no tab strip inside a screen that is already navigated. */
   .modal.wide .mbody{max-height:72vh}
   @media (max-width:680px){ .mover{padding:18px 7px} .modal.wide{width:97vw;max-width:97vw} .modal.wide .mbody{max-height:80vh} .modal .mbody{max-height:74vh} }
   .modal .mhd{padding:13px 16px;border-bottom:1px solid var(--line)}
@@ -1648,7 +1640,7 @@ function cbAmount(v){
 function cbCurrency(v){ return (v&&typeof v==='object'&&typeof v.currency==='string')?v.currency:null; }
 function cbHasPrice(v){ return v!=null&&v!==''&&(typeof v!=='object'||typeof v.amount==='number'); }
 const LIMITS = { to:5, cc:5, for:1, items:50, attachments:10 };
-let CC={items:[], rcpts:[]};
+let CC={items:[], rcpts:[], fields:{}};
 const DEFAULT_SCHEMA_FIELDS=[
   {field_key:"subject",     field_name:"Subject",     field_type:"text", required:true,  placeholder:"e.g. order summary"},
   {field_key:"delivery_by", field_name:"Delivery by", field_type:"date", required:false},
@@ -1657,11 +1649,19 @@ const DEFAULT_SCHEMA_FIELDS=[
 ];
 /* Live uses a neutral default schema (never demo data); demo mode keeps its sample schema. */
 function ccSchema(){ return DEFAULT_SCHEMA_FIELDS; }
+/**
+ * ⚠️ THE FIELD RENDERS FROM `CC.fields` AND WRITES BACK TO IT. It used to be a bare input the send read off the
+ * page — fine while every field was on screen at once. Details is step 3 now, so on Review the element is gone:
+ * a DOM read would have sent an empty subject from the very screen that exists to confirm it, and walking back to
+ * Details would have shown a blank box over a value that was really still there.
+ */
 function cfField(f){
   const id="cf_"+f.field_key; const req=f.required?' <span style="color:#b4453f">*</span>':'';
   const ph=f.placeholder?` placeholder="${esc(f.placeholder)}"`:'';
-  const inp=f.field_type==="date" ? `<input class="inp" type="date" id="${id}" data-testid="chit-field-${f.field_key}">`
-    : `<input class="inp" id="${id}" data-testid="chit-field-${f.field_key}"${ph}>`;
+  const v=esc(ccField(f.field_key));
+  const wire=` value="${v}" oninput="ccSetField('${f.field_key}', this.value)"`;
+  const inp=f.field_type==="date" ? `<input class="inp" type="date" id="${id}" data-testid="chit-field-${f.field_key}"${wire}>`
+    : `<input class="inp" id="${id}" data-testid="chit-field-${f.field_key}"${ph}${wire}>`;
   return `<label class="fl">${esc(f.field_name)}${req}</label>${inp}`;
 }
 function ccSendAsOptions(){
@@ -1715,8 +1715,12 @@ function ccCartSync(){
          checkoutLabel:'+ Add to the chit', cartTitle:'Lines to add', emptyHint:'Press + on what this chit is for',
          noCatalogue:'Your catalogue is empty.', onCheckout:ccAddPicked, onChange:ccRenderCatPick });
 }
-/* The modal is the cart's lifetime. Closing compose and leaving a cart behind is the leak a handle can express. */
-function ccCartRelease(){ if(UI._ccCart){ UI._ccCart.destroy(); UI._ccCart=null; } }
+/* The modal is the lifetime of BOTH the cart and the step flow. Closing compose and leaving either behind is the
+   leak a handle can express and a namespace could not. */
+function ccCartRelease(){
+  if(UI._ccCart){ UI._ccCart.destroy(); UI._ccCart=null; }
+  if(UI._ccFlow){ UI._ccFlow.destroy(); UI._ccFlow=null; }
+}
 /**
  * ccAddPicked — the ticked lines become chit lines.
  *
@@ -1739,56 +1743,31 @@ function ccAddPicked(){
   ccRenderItems();
 }
 function ccRenderCatPick(){ const h=document.getElementById('cc_catpick'); if(h) h.innerHTML=ccCatPickHTML(); }
-async function compose(prefill){ UI.drawer=false; CC={items:(prefill&&prefill.items)?prefill.items.slice():[],rcpts:(prefill&&prefill.recipients)?prefill.recipients.slice():[]}; UI._forwardFrom=(prefill&&prefill.forwardFrom)||null; UI._draftId=(prefill&&prefill.draftId)||null; UI._supplier=(prefill&&prefill.supplier)?prefill.supplier:null;
+async function compose(prefill){ UI.drawer=false; CC={items:(prefill&&prefill.items)?prefill.items.slice():[],rcpts:(prefill&&prefill.recipients)?prefill.recipients.slice():[],fields:{}}; UI._forwardFrom=(prefill&&prefill.forwardFrom)||null; UI._draftId=(prefill&&prefill.draftId)||null; UI._supplier=(prefill&&prefill.supplier)?prefill.supplier:null;
   // SUPPLIER mode uses THEIR catalogue (passed in) → ready now; otherwise show any cached list immediately, else a brief
   // "loading…", and fetch YOUR products in the background AFTER the modal opens (below) so a cold API never stalls it.
   if(UI._supplier && prefill && prefill.catalogue){ STORE.catalogue = prefill.catalogue.slice(); UI._catState='ready'; }
   else { STORE.catalogue = STORE.catalogue||[]; UI._catState = (STORE.catalogue.length ? 'ready' : 'loading'); }
   // A fresh compose is a fresh cart: whatever was ticked in the LAST chit is not an instruction about this one.
   ccCartRelease(); ccCartSync();
-  modal(`<div class="mhd"><div class="t">✉️ Compose — author a chit <button data-testid="icon-help-compose" onclick="openAssist('compose')" title="Ask the assistant about composing" style="border:1px solid var(--line);background:#fff;color:#3F66A6;border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;vertical-align:middle">?</button></div><div class="s">create your own record, then bridge it</div></div>
+  UI._ccFlow = ccStepsFor();
+  modal(`<div class="mhd"><div class="t">✉️ Compose — author a chit <button data-testid="icon-help-compose" onclick="openAssist('compose')" title="Ask the assistant about composing" style="border:1px solid var(--line);background:#fff;color:#3F66A6;border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;vertical-align:middle">?</button></div><div class="s" id="cc_sub">create your own record, then bridge it</div></div>
    <div class="mbody">
-     <div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:11px;padding:10px 12px;font-size:12.5px;color:#6b5a36;line-height:1.5;margin-bottom:10px"><b style="font-family:'Space Grotesk'">Author your own chit — it becomes shared the moment you bridge it.</b> A self-addressed chit is a real chit: one copy in <b>Order</b> (sent), one in <b>Task</b> (received), same thread. <span style="font-family:'Space Mono';font-size:10px;background:#fbeceb;color:#b4453f;border:1px solid #f0c9c6;border-radius:5px;padding:1px 6px">⏳ execute &amp; test pending</span></div>
-     <div style="display:flex;gap:8px;flex-wrap:wrap">
-       <div style="flex:1;min-width:150px"><label class="fl">Send as</label><select class="inp" id="cc_sendas">${ccSendAsOptions()}</select></div>
-       <div style="min-width:120px"><label class="fl">External priority <span style="font-weight:400;color:var(--grey)">· informed, locked once sent</span></label><select class="inp" id="cc_priority"><option value="normal">Normal</option><option value="high">High</option><option value="urgent">Urgent</option></select></div>
-     </div>
-     <div class="cc-cols"><div class="cc-col">
-     ${UI._supplier
-       ? `<div style="font-family:'Space Grotesk';font-weight:600;font-size:12px;color:var(--grey);margin:12px 0 4px">Recipient · <b>supplier order</b> <span style="font-weight:400">— locked, no CC/For</span></div>
-     <div id="cc_rcpts" style="margin-top:4px"></div>
-     <div id="cc_rcap" style="display:none"></div>`
-       : `<div style="font-family:'Space Grotesk';font-weight:600;font-size:12px;color:var(--grey);margin:12px 0 4px">Recipients · <b>To</b> acts · <b>CC</b> is informed · <b>For</b> = on behalf of</div>
-     <div style="display:flex;gap:6px">
-       <select class="inp" id="cc_rrole" style="max-width:74px"><option value="to">To</option><option value="cc">CC</option><option value="for">For</option></select>
-       <input class="inp" id="cc_rname" data-testid="chit-recipient" autocomplete="off" placeholder="Type a name — matches pop up with the bridge id" oninput="ccRcptSearch(this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();ccAddRcpt();}">
-       <button class="composebtn" data-testid="chit-recipient-add" onclick="ccAddRcpt()">+ Add</button>
-     </div>
-     <div id="cc_sugg" class="ccsugg"></div>
-     <button class="composebtn" style="margin-top:6px" data-testid="chit-add-self" onclick="ccAddSelf()">+ Self (own record)</button>
-     <div id="cc_rcpts" style="margin-top:8px"></div>
-     <div id="cc_rcap" style="font-size:11px;color:var(--grey);margin-top:4px"></div>`}
-     <div style="font-family:'Space Grotesk';font-weight:600;font-size:12px;color:var(--grey);margin:12px 0 2px">Chit fields · from your <b>${esc((STORE.chitSchema||{schema_name:"Order"}).schema_name)}</b> schema</div>
-     ${!STORE.chitSchema?`<div style="background:#fbeceb;border:1px solid #f0c9c6;border-radius:8px;padding:7px 10px;font-size:11.5px;color:#b4453f;margin-bottom:6px">${esc(MSG.schemaDefault())}</div>`:''}
-     ${ccSchema().map(cfField).join("")}
-     </div><div class="cc-gutter" onmousedown="ccSplitStart(event)" title="Drag to resize the two panels"></div><div class="cc-col">
-     <div class="cc-rtabs"><button class="cc-rtab on" data-t="items" onclick="ccSetRTab('items')">Line items</button><button class="cc-rtab" data-t="atts" onclick="ccSetRTab('atts')">Attachments</button><button class="cc-rtab" data-t="delivery" onclick="ccSetRTab('delivery')">Delivery</button><button class="cc-rtab" data-t="summary" onclick="ccSetRTab('summary')">Summary</button></div>
-     <div class="cc-rpane" data-p="items">
-     <div style="font-family:'Space Grotesk';font-weight:600;font-size:12px;color:var(--grey);margin:12px 0 4px">Line items · from ${UI._supplier?('<b>'+esc(UI._supplier.name)+'</b>&rsquo;s catalogue'):'your catalogue'}</div>
-     <div id="cc_catpick">${ccCatPickHTML()}</div>
-     <div style="display:flex;gap:6px;margin-top:6px"><input class="inp" id="cc_mname" data-testid="chit-item-name" placeholder="Or type an item name" style="flex:1"><input class="inp" id="cc_mqty" data-testid="chit-item-qty" inputmode="numeric" value="1" style="width:50px" title="Qty"><input class="inp" id="cc_mprice" data-testid="chit-item-price" inputmode="numeric" placeholder="Price" style="width:74px"><button class="composebtn" data-testid="chit-item-add" onclick="ccAddManual()">+ Add</button></div>
-     <div style="display:flex;gap:6px;margin-top:6px"><input class="inp" id="cc_aidesc" data-testid="chit-ai-desc" placeholder="✨ Or describe the order in words — AI fills the rows" style="flex:1"><button class="composebtn" id="cc_aibtn" data-testid="chit-ai-fill" onclick="ccAiFill()" title="AI turns your description into line items; you review and edit before sending">✨ Fill</button></div><div id="cc_items" style="margin-top:8px"></div>
-     </div><div class="cc-rpane" data-p="atts" style="display:none">
-     <div style="font-family:'Space Grotesk';font-weight:600;font-size:12px;color:var(--grey);margin:12px 0 4px">Whole-chit attachments · <span style="font-weight:400">co-signed (use 📎 on a line for item-specific files)</span></div>
-     <label class="composebtn" style="cursor:pointer">📎 Attach files<input type="file" multiple style="display:none" onchange="ccAddFiles(this.files);this.value=''"></label>
-     <div id="cc_files" style="margin-top:6px"></div></div><div class="cc-rpane" data-p="delivery" style="display:none"><div style="font-size:12px;color:var(--grey);line-height:1.6;padding:8px 2px">📦 <b>Delivery details</b> land in this space.<br>They come from your <b>schema / template</b> (governance-driven) — address, expected date, SLA / ISL — so they stay consistent per business type. This tab hosts them once the template groups delivery fields here; nothing is hardcoded.</div></div><div class="cc-rpane" data-p="summary" style="display:none"><div id="cc_summary"></div></div>
-     <div id="cc_total" style="text-align:right;font-weight:700;font-size:13px;margin-top:6px"></div></div></div>
+     <div id="cc_rail"></div>
+     <div id="cc_body"></div>
      <div class="err" id="cc_err"></div>
    </div>
-   <div class="mfoot"><button onclick="closeModal()">Cancel</button><button data-testid="chit-save-draft" onclick="submitCompose(true)">Save draft</button><button class="pri" data-testid="chit-send" onclick="submitCompose(false)">Send chit</button></div>`, true);
-  ccRenderItems(); ccRenderRcpts(); ccRenderFiles(); UI._composeModal=true; try{ var _s=localStorage.getItem('cb_cc_split'); if(_s){ var _c=document.querySelector('.cc-cols'); if(_c)_c.style.setProperty('--cc-lw',_s); } }catch(_){ }
-  if(prefill&&prefill.subject){ const sf=document.getElementById("cf_subject"); if(sf)sf.value=prefill.subject; }
-  if(prefill&&prefill.priority){ const pf=document.getElementById("cc_priority"); if(pf)pf.value=prefill.priority; }
+   <div class="mfoot" id="cc_foot"></div>`, true);
+  UI._ccFlow.paint(); ccPaintStepParts(); UI._composeModal=true;
+  /**
+   * ⚠️ PREFILL GOES INTO STATE, NOT INTO AN INPUT. It used to set `cf_subject`'s value directly — which worked
+   * only because every field was on screen at once. Details is now step 3, so at open that element does not exist
+   * and a prefilled subject would have vanished silently, taking supplier orders and intake conversions with it.
+   * CC.fields is the single place a field value lives; the input renders FROM it when its step is reached.
+   */
+  if(prefill&&prefill.subject){ CC.fields.subject=prefill.subject; }
+  if(prefill&&prefill.priority){ CC.priority=prefill.priority; }
+  UI._ccFlow.paintFoot();
   // Now that the modal is OPEN, fetch YOUR products and fill the picker in place (non-supplier only). Keeps any cached
   // list on failure; only shows the error state if we had nothing. ccRenderCatPick is a no-op if the modal was closed.
   if(!UI._supplier){
@@ -1801,13 +1780,124 @@ async function compose(prefill){ UI.drawer=false; CC={items:(prefill&&prefill.it
     ccRenderCatPick();
   }
 }
+/**
+ * ════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+ *  COMPOSE, IN STEPS — Items → To → Details → Review
+ * ════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+ *
+ * Athi, 2026-08-08: *"we do not want the left half… once all the selection is over, then we show the rest in order
+ * one by one."*
+ *
+ * Compose put send-as, priority, recipients, the schema fields, four tabs AND the catalogue on one screen, in two
+ * draggable columns — with the thing you came to do squeezed into the right-hand half. One job per step instead.
+ * The cart gets the whole width, because choosing what to send is the longest, most back-and-forth part; everything
+ * after it is a short form, and short forms read better one at a time than crowded together.
+ *
+ * ⭐ FOUR STEPS — "To" SURVIVES HERE AND ONLY HERE. Suppliers and Network drop it because the recipient IS the
+ * party whose catalogue you are in. Here the recipient is genuinely unknown — that is the whole point of authoring
+ * a chit — so it stays, and it is step 2: after you know WHAT you are sending, before the details of sending it.
+ *
+ * ⚠️ FIELD VALUES LIVE IN `CC`, NOT IN THE DOM. submitCompose used to read cf_subject / cc_sendas / cc_priority
+ * straight off the page, which only worked while every field was on screen at once. With steps, Details is not
+ * rendered while you are on Review — so a DOM read would send an EMPTY SUBJECT on the very screen that exists to
+ * confirm it. Each control writes to CC on input and renders back from it.
+ */
+function ccStepsFor(){
+  return CBSteps.create({
+    steps:[{k:'items',n:'Items',t:'What are you sending?'},
+           {k:'to',n:'To',t:'Who is this going to?'},
+           {k:'details',n:'Details',t:'Subject, delivery and anything attached'},
+           {k:'review',n:'Review',t:'Check it, then send'}],
+    railEl:'cc_rail', bodyEl:'cc_body', footEl:'cc_foot', subEl:'cc_sub',
+    render:function(k){ return k==='items'?ccStepItems():k==='to'?ccStepTo():k==='details'?ccStepDetails():ccStepReview(); },
+    guard:function(k){
+      if(k==='items' && !(CC.items||[]).length) return 'Add at least one line item.';
+      if(k==='to' && !CC.rcpts.filter(function(r){return r.role==='to';}).length) return 'Add at least one To recipient.';
+      if(k==='details' && !String(ccField('subject')||'').trim()) return 'A subject is required.';
+      return null;
+    },
+    sendLabel:function(){ return 'Send chit'; },
+    // ⚠️ THE PUBLISHED HOOKS. chit-send is addressed by four specs and by the shared composeSelfChit fixture.
+    sendTestid:'chit-send', draftTestid:'chit-save-draft',
+    cancelLabel:'Cancel', draftLabel:'Save draft',
+    onCancel:closeModal,
+    onDraft:function(){ submitCompose(true); },
+    onSend:function(){ submitCompose(false); },
+    // A step change rebuilds the body, so the pieces that paint themselves into it must run again.
+    onStep:function(){ ccPaintStepParts(); }
+  });
+}
+/** The value of a schema field — CC first, the live input second (it is only there while its step is). */
+function ccField(k){
+  CC.fields = CC.fields || {};
+  if(CC.fields[k] !== undefined) return CC.fields[k];
+  return val('cf_'+k) || '';
+}
+function ccSetField(k, v){ CC.fields = CC.fields || {}; CC.fields[k] = v; if(UI._ccFlow) UI._ccFlow.paintFoot(); }
+/** After any body repaint, the sub-renderers that own their own containers have to run again. */
+function ccPaintStepParts(){ ccRenderItems(); ccRenderRcpts(); ccRenderFiles(); }
+function ccStepItems(){
+  return `<div style="font-family:'Space Grotesk';font-weight:600;font-size:12px;color:var(--grey);margin:2px 0 4px">Line items · from ${UI._supplier?('<b>'+esc(UI._supplier.name)+'</b>&rsquo;s catalogue'):'your catalogue'}</div>
+     <div id="cc_catpick">${ccCatPickHTML()}</div>
+     <div style="display:flex;gap:6px;margin-top:6px"><input class="inp" id="cc_mname" data-testid="chit-item-name" placeholder="Or type an item name" style="flex:1"><input class="inp" id="cc_mqty" data-testid="chit-item-qty" inputmode="numeric" value="1" style="width:50px" title="Qty"><input class="inp" id="cc_mprice" data-testid="chit-item-price" inputmode="numeric" placeholder="Price" style="width:74px"><button class="composebtn" data-testid="chit-item-add" onclick="ccAddManual()">+ Add</button></div>
+     <div style="display:flex;gap:6px;margin-top:6px"><input class="inp" id="cc_aidesc" data-testid="chit-ai-desc" placeholder="✨ Or describe the order in words — AI fills the rows" style="flex:1"><button class="composebtn" id="cc_aibtn" data-testid="chit-ai-fill" onclick="ccAiFill()" title="AI turns your description into line items; you review and edit before sending">✨ Fill</button></div>
+     <div id="cc_items" style="margin-top:8px"></div>
+     <div id="cc_total" style="text-align:right;font-weight:700;font-size:13px;margin-top:6px"></div>`;
+}
+function ccStepTo(){
+  return (UI._supplier
+    ? `<div style="font-family:'Space Grotesk';font-weight:600;font-size:12px;color:var(--grey);margin:2px 0 4px">Recipient · <b>supplier order</b> <span style="font-weight:400">— locked, no CC/For</span></div>
+     <div id="cc_rcpts" style="margin-top:4px"></div>
+     <div id="cc_rcap" style="display:none"></div>`
+    : `<div style="font-family:'Space Grotesk';font-weight:600;font-size:12px;color:var(--grey);margin:2px 0 4px">Recipients · <b>To</b> acts · <b>CC</b> is informed · <b>For</b> = on behalf of</div>
+     <div style="display:flex;gap:6px">
+       <select class="inp" id="cc_rrole" style="max-width:74px"><option value="to">To</option><option value="cc">CC</option><option value="for">For</option></select>
+       <input class="inp" id="cc_rname" data-testid="chit-recipient" autocomplete="off" placeholder="Type a name — matches pop up with the bridge id" oninput="ccRcptSearch(this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();ccAddRcpt();}">
+       <button class="composebtn" data-testid="chit-recipient-add" onclick="ccAddRcpt()">+ Add</button>
+     </div>
+     <div id="cc_sugg" class="ccsugg"></div>
+     <button class="composebtn" style="margin-top:6px" data-testid="chit-add-self" onclick="ccAddSelf()">+ Self (own record)</button>
+     <div id="cc_rcpts" style="margin-top:8px"></div>
+     <div id="cc_rcap" style="font-size:11px;color:var(--grey);margin-top:4px"></div>`)
+    + `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
+       <div style="flex:1;min-width:150px"><label class="fl">Send as</label><select class="inp" id="cc_sendas" onchange="CC.sendas=this.value">${ccSendAsOptions()}</select></div>
+       <div style="min-width:120px"><label class="fl">External priority <span style="font-weight:400;color:var(--grey)">· informed, locked once sent</span></label><select class="inp" id="cc_priority" onchange="CC.priority=this.value">${['normal','high','urgent'].map(function(p){ return '<option value="'+p+'"'+((CC.priority||'normal')===p?' selected':'')+'>'+p.charAt(0).toUpperCase()+p.slice(1)+'</option>'; }).join('')}</select></div>
+     </div>`;
+}
+function ccStepDetails(){
+  return `<div style="font-family:'Space Grotesk';font-weight:600;font-size:12px;color:var(--grey);margin:2px 0 2px">Chit fields · from your <b>${esc((STORE.chitSchema||{schema_name:"Order"}).schema_name)}</b> schema</div>
+     ${!STORE.chitSchema?`<div style="background:#fbeceb;border:1px solid #f0c9c6;border-radius:8px;padding:7px 10px;font-size:11.5px;color:#b4453f;margin-bottom:6px">${esc(MSG.schemaDefault())}</div>`:''}
+     ${ccSchema().map(cfField).join("")}
+     <div style="font-family:'Space Grotesk';font-weight:600;font-size:12px;color:var(--grey);margin:14px 0 4px">Attachments · <span style="font-weight:400">co-signed (use 📎 on a line for item-specific files)</span></div>
+     <label class="composebtn" style="cursor:pointer">📎 Attach files<input type="file" multiple style="display:none" onchange="ccAddFiles(this.files);this.value=''"></label>
+     <div id="cc_files" style="margin-top:6px"></div>`;
+}
+function ccStepReview(){
+  var sum=(CC.items||[]).reduce(function(s,it){return s+ccLineTotal(it);},0);
+  var nAtt=(CC.files||[]).length+(CC.items||[]).reduce(function(a,it){return a+((it.files||[]).length);},0);
+  var row=function(k,v){ return '<div style="display:flex;gap:10px;padding:8px 12px;border-top:1px solid var(--line);font-size:13px">'
+    + '<span style="min-width:104px;color:var(--grey);font-size:11.5px">'+k+'</span><span style="flex:1">'+v+'</span></div>'; };
+  var card=function(h,inner,edit){ return '<div style="border:1px solid var(--line);border-radius:11px;overflow:hidden;margin-top:8px">'
+    + '<div style="background:var(--paper);padding:8px 12px;font-size:11px;font-weight:800;color:var(--grey);text-transform:uppercase;letter-spacing:.05em;display:flex">'+h
+    + (edit!=null?'<span style="margin-left:auto;color:var(--blue);cursor:pointer;text-transform:none;letter-spacing:0;font-size:11.5px" onclick="UI._ccFlow.go('+edit+')">Change</span>':'')
+    + '</div>'+inner+'</div>'; };
+  return card('Lines · '+(CC.items||[]).length,
+        (CC.items||[]).map(function(l){ return row((l.qty||1)+' × '+esc(l.unit||'unit'),
+          '<span style="flex:1">'+esc(l.particulars)+'</span><b style="float:right">'+esc(fmtMoney(ccLineTotal(l),'INR'))+'</b>'); }).join('')
+        + '<div style="display:flex;padding:10px 12px;border-top:2px solid var(--line);font-size:14px;font-weight:800">'
+        + '<span style="flex:1">Total</span><span data-testid="cc-review-total">'+esc(fmtMoney(sum,'INR'))+'</span></div>', 0)
+    + card('To', row('Recipients', (CC.rcpts||[]).length
+        ? (CC.rcpts||[]).map(function(r){ return esc(r.role.toUpperCase())+' '+esc(r.name); }).join(' · ')
+        : '<span style="color:#b4453f">nobody yet</span>'), 1)
+    + card('Details', ccSchema().map(function(f){
+        var v=ccField(f.field_key);
+        return row(esc(f.field_name), v?esc(v):(f.required?'<span style="color:#b4453f">required</span>':'—')); }).join('')
+        + row('Attachments', nAtt?String(nAtt):'—'), 2)
+    + `<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:11px;padding:10px 12px;font-size:12.5px;color:#6b5a36;line-height:1.5;margin-top:10px"><b style="font-family:'Space Grotesk'">It becomes shared the moment you bridge it.</b> A self-addressed chit is a real chit: one copy in <b>Order</b> (sent), one in <b>Task</b> (received), same thread.</div>`;
+}
 /* Recipients — To (Act) / CC (Info) / For (on-behalf), capped, flippable */
 function ccIsSelf(name){ const n=String(name||"").trim().toLowerCase(); if(!n)return false; if(n==="self"||n==="me")return true; const ent=String((typeof SESSION!=="undefined"&&SESSION.entity)||"").toLowerCase(); if(n===ent)return true; return (STORE.actors||[]).some(a=>String(a.name||"").toLowerCase()===n||String(a.uid||"").toLowerCase()===n); }
 function ccRoleCount(role){ return CC.rcpts.filter(r=>r.role===role).length; }
-let _ccSplit=null;
-function ccSplitStart(e){ e.preventDefault(); const c=document.querySelector('.cc-cols'); if(!c)return; _ccSplit={rect:c.getBoundingClientRect()}; document.addEventListener('mousemove',ccSplitMove); document.addEventListener('mouseup',ccSplitEnd); document.body.style.userSelect='none'; }
-function ccSplitMove(e){ if(!_ccSplit)return; const r=_ccSplit.rect; let x=e.clientX-r.left; x=Math.max(150,Math.min(r.width-164,x)); const c=document.querySelector('.cc-cols'); if(c)c.style.setProperty('--cc-lw', x+'px'); }
-function ccSplitEnd(){ document.removeEventListener('mousemove',ccSplitMove); document.removeEventListener('mouseup',ccSplitEnd); document.body.style.userSelect=''; const c=document.querySelector('.cc-cols'); if(c){ try{ localStorage.setItem('cb_cc_split', c.style.getPropertyValue('--cc-lw')); }catch(_){ } } _ccSplit=null; }
 let _ccSearchT=null;
 function ccRcptSearch(q){ clearTimeout(_ccSearchT); q=(q||'').trim(); if(q.length<2){ ccClearSugg(); return; } _ccSearchT=setTimeout(async function(){ try{ const r=await api("entitySearch",{query:{q:q}}); ccRenderSugg(Array.isArray(r)?r:((r&&r.results)||[])); }catch(_){ ccClearSugg(); } }, 250); }
 function ccRenderSugg(list){ UI._ccSugg=list||[]; const h=document.getElementById("cc_sugg"); if(!h)return; if(!UI._ccSugg.length){ h.innerHTML='<div class="ccsugg-empty">No matching business found</div>'; return; } h.innerHTML=UI._ccSugg.map(function(e,i){ return '<div class="ccsugg-item" data-testid="chit-recipient-suggest" onclick="ccPickRcptIdx('+i+')"><span class="ccsugg-nm">'+esc(e.display_name||'')+'</span><span class="ccsugg-id">'+esc(e.bridge_id||'')+'</span></div>'; }).join(''); }
@@ -1826,6 +1916,7 @@ function ccRenderRcpts(){ const h=document.getElementById("cc_rcpts");
   if(h){ h.innerHTML = CC.rcpts.length ? CC.rcpts.map((r,i)=>{ const col=r.role==="to"?"#3F66A6":r.role==="cc"?"#7a5e22":"#5F6B70"; const bg=r.role==="to"?"#EEF3FB":r.role==="cc"?"#F4ECD8":"#EFEBE2";
     if(UI._supplier){ return `<span style="display:inline-flex;align-items:center;gap:5px;border:0.5px solid #cfe0f4;background:#EEF3FB;border-radius:8px;padding:4px 9px;margin:0 5px 5px 0;font-size:12px;font-weight:600;color:#3F66A6">🏭 ${esc(r.name)}${r.bridge?'<span style="font-family:monospace;font-size:9px;opacity:.8"> · '+esc(r.bridge)+'</span>':''} <span style="font-weight:400;color:var(--grey)">· locked</span></span>`; }
     return `<span style="display:inline-flex;align-items:center;gap:5px;border:0.5px solid var(--line);border-radius:8px;padding:3px 7px;margin:0 5px 5px 0;font-size:11.5px"><span onclick="ccFlipRcpt(${i})" title="Flip role (To/CC/For)" style="cursor:pointer;font-family:'Space Mono';font-size:9.5px;background:${bg};color:${col};border-radius:5px;padding:1px 5px">${r.role.toUpperCase()}</span>${esc(r.name)}${r.bridge?'<span style="font-family:monospace;font-size:9px;color:#9aa3a7"> · '+esc(r.bridge)+'</span>':''}${r.self?'<span style="color:#3F66A6;font-size:10px"> · self</span>':''}<span onclick="ccDelRcpt(${i})" style="cursor:pointer;color:#9aa3a7">✕</span></span>`; }).join("") : `<div style="font-size:12px;color:var(--grey)">No recipients yet — add To / CC / For above.</div>`; }
+  if(UI._ccFlow) UI._ccFlow.paintFoot();   // a recipient added or removed changes whether To can be left
   const capEl=document.getElementById("cc_rcap"); if(capEl) capEl.textContent="To "+ccRoleCount("to")+"/"+LIMITS.to+" · CC "+ccRoleCount("cc")+"/"+LIMITS.cc+" · For "+ccRoleCount("for")+"/"+LIMITS.for+" — tap a role chip to flip"; }
 function ccAddItem(){ const e=document.getElementById("cc_err"); if(e)e.textContent=""; if(CC.items.length>=(LIMITS.items||999)){ if(e)e.textContent="Line items capped at "+LIMITS.items+"."; return; } const i=+val("cc_pick"); const p=(STORE.catalogue||[])[i]; if(!p){ if(e)e.textContent=MSG.pickItemFirst(); return; } CC.items.push({particulars:p.particulars,unit:p.unit||"unit",price:cbAmount(p.price),qty:1}); ccRenderItems(); }
 async function ccAiFill(){
@@ -1842,7 +1933,7 @@ async function ccAiFill(){
     var cap=(typeof LIMITS!=='undefined'&&LIMITS.items)||999;
     rows.forEach(function(li){ if(CC.items.length>=cap) return; CC.items.push({ particulars:String(li.particulars||li.description||'item'), unit:String(li.unit||'unit'), price:+li.rate||+li.price||0, qty:Math.max(0,+li.qty||+li.quantity||0) }); });
     if(el)el.value='';
-    ccRenderItems(); if(typeof ccRenderTotal==='function')ccRenderTotal(); if(typeof ccRenderSummary==='function')ccRenderSummary();
+    ccRenderItems();
     if(typeof toast==='function')toast('AI filled '+rows.length+' line item'+(rows.length>1?'s':'')+' — review, edit, then send ✓');
   }catch(e){ if(err)err.textContent=(e&&e.message)||'AI fill failed'; }
   finally{ var b2=document.getElementById('cc_aibtn'); if(b2){ b2.disabled=false; b2.textContent='✨ Fill'; } }
@@ -1870,23 +1961,38 @@ function ccRenderItems(){ const h=document.getElementById("cc_items"); if(!h)ret
 function ccItemChips(i){ var it=CC.items[i]||{}; var fs=it.files||[]; return fs.map(function(f,k){ return '<span style="display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:7px;padding:2px 7px;margin:2px 5px 0 0;font-size:11px;background:#fff">'+attIcon(attType(f.type,f.name))+' '+esc(f.name.length>20?f.name.slice(0,20)+'…':f.name)+' <span onclick="ccDelItemFile('+i+','+k+')" style="cursor:pointer;color:#9aa3a7">✕</span></span>'; }).join(''); }
 function ccAddItemFiles(i,files){ var it=CC.items[i]; if(!it)return; it.files=it.files||[]; for(var k=0;k<files.length;k++){ var f=files[k]; if(f.size>6*1024*1024){ toast(f.name+' is over 6MB — skipped.'); continue; } it.files.push(f); } var el=document.getElementById('cc_itf_'+i); if(el)el.innerHTML=ccItemChips(i); }
 function ccDelItemFile(i,k){ var it=CC.items[i]; if(it&&it.files){ it.files.splice(k,1); } var el=document.getElementById('cc_itf_'+i); if(el)el.innerHTML=ccItemChips(i); }
-function ccSetRTab(t){ UI.ccRTab=t; document.querySelectorAll('.cc-rtab').forEach(function(b){ b.classList.toggle('on', b.getAttribute('data-t')===t); }); document.querySelectorAll('.cc-rpane').forEach(function(p){ p.style.display=(p.getAttribute('data-p')===t)?'':'none'; }); if(t==='summary')ccRenderSummary(); }
-function ccRenderSummary(){ var h=document.getElementById('cc_summary'); if(!h)return; var nItems=(CC.items||[]).length; var nAtt=(CC.files||[]).length+(CC.items||[]).reduce(function(a,it){return a+((it.files||[]).length);},0); var nRcpt=(CC.rcpts||[]).length; var sum=(CC.items||[]).reduce(function(s,it){return s+ccLineTotal(it);},0); h.innerHTML='<div class="ccsum-row"><span>Line items</span><b>'+nItems+'</b></div><div class="ccsum-row"><span>Attachments</span><b>'+nAtt+'</b></div><div class="ccsum-row"><span>Recipients</span><b>'+nRcpt+'</b></div><div class="ccsum-row" style="border-top:1px solid var(--line);margin-top:4px;padding-top:6px"><span><b>Total</b></span><b>'+fmtMoney(sum,'INR')+'</b></div><div style="font-size:10.5px;color:var(--grey);margin-top:9px;line-height:1.5">This rollup rides on the chit <b>header</b> (summary_json) at send — line-item count + total already; attachment count is a small add if you want it stored.<br><br>🔮 <b>Planned (not now):</b> an AI layer that reads the attached contract documents and returns a bullet-point <b>gist</b> — e.g. lease-to-buy vs rent vs lease — so the counterparty gets the <i>context</i>, not the whole file.</div>'; }
-function ccRenderTotal(){ const t=document.getElementById("cc_total"); if(!t)return; const sum=CC.items.reduce((s,it)=>s+ccLineTotal(it),0); t.textContent=CC.items.length?("Total "+fmtMoney(sum,'INR')):""; }
+/* ⚠️ ccSetRTab / ccRenderSummary REMOVED with the four right-hand tabs (Line items · Attachments · Delivery ·
+   Summary). The tabs were a second navigation INSIDE a screen that is now itself navigated: Line items became step
+   1, Attachments moved onto Details where the other things describing the chit live, and Summary became the Review
+   step — which is a better home for it, because a rollup you have to go and find is not a review. The Delivery tab
+   held a paragraph about where delivery fields WOULD go; the schema's delivery_by / deliver_to render on Details
+   like any other declared field, which is what that paragraph said should eventually happen.
+   ccSplitStart/Move/End and the .cc-cols gutter went with them — there are no two columns left to drag. */
+function ccRenderTotal(){
+  // ⚠️ THE FOOTER FIRST, and unconditionally. Adding the first line is what unblocks "Next: To →", and the total
+  // element only exists on the Items step — an early return on `!t` would have left the guard stale every time a
+  // line was added from anywhere else (the cart, AI fill, an intake conversion).
+  if(UI._ccFlow) UI._ccFlow.paintFoot();
+  const t=document.getElementById("cc_total"); if(!t)return;
+  const sum=CC.items.reduce((s,it)=>s+ccLineTotal(it),0); t.textContent=CC.items.length?("Total "+fmtMoney(sum,'INR')):""; }
 async function submitCompose(isDraft){
   const err=document.getElementById("cc_err"); if(err)err.textContent="";
-  const subject=val("cf_subject");
-  const sendasV=val("cc_sendas"); const ent=(typeof SESSION!=="undefined"&&SESSION.entity)||"";
+  // ⚠️ EVERY VALUE COMES FROM `CC`, NOT THE PAGE. With the step flow, Details and To are not rendered while you
+  // are on Review — reading the DOM here would send an empty subject and a default send-as from the one screen
+  // that exists to confirm them. ccField() falls back to the live input, so a value typed and sent without
+  // leaving the step still works.
+  const subject=ccField('subject');
+  const sendasV=CC.sendas!==undefined?CC.sendas:val("cc_sendas"); const ent=(typeof SESSION!=="undefined"&&SESSION.entity)||"";
   const actor=(STORE.actors||[]).find(a=>a.id===sendasV); const send_as_label=actor?(actor.name+" ("+(actor.uid||"co-assist")+")"):ent;
   const tos=CC.rcpts.filter(r=>r.role==="to");
   if(!isDraft && !subject){ if(err)err.textContent="Subject is required."; return; }
   if(!isDraft && !tos.length){ if(err)err.textContent="Add at least one To recipient (or Save draft)."; return; }
   if(!isDraft && !CC.items.length){ if(err)err.textContent="Add at least one line item to send (or Save draft)."; return; }
-  const schema_values={}; ccSchema().forEach(f=>{ schema_values[f.field_key]=val("cf_"+f.field_key); });
+  const schema_values={}; ccSchema().forEach(f=>{ schema_values[f.field_key]=ccField(f.field_key); });
   const line_items=CC.items.map(it=>({particulars:it.particulars,quantity:+it.qty||0,price:+it.price||0,total:ccLineTotal(it)}));
   const recipients=CC.rcpts.map(r=>({name:r.name,role:r.role,self:!!r.self}));
   return await sendChit({ recipients, isDraft:!!isDraft, send_as_label, subject, schema_values, line_items,
-    priority:val("cc_priority")||"normal", files:CC.files||[], itemFiles:CC.items,
+    priority:CC.priority||val("cc_priority")||"normal", files:CC.files||[], itemFiles:CC.items,
     promote_draft_id:UI._draftId||undefined, forwarded_from:UI._forwardFrom||undefined,
     onError:function(m){ if(err)err.textContent=m; } });
 }
@@ -1921,7 +2027,7 @@ async function sendChit(v){
     // Per-LINE attachments, addressed by the line's index on the chit — so a file stays with the line it evidences.
     const _lines=v.itemFiles||[];
     if(_newId){ for(let _li=0;_li<_lines.length;_li++){ const _it=_lines[_li]; if(_it&&_it.files&&_it.files.length){ busyShow('Attaching files…'); for(const f of _it.files){ try{ await attUpload(_newId, f, {line_index:_li}); }catch(e){ toast('Attachment "'+f.name+'" failed.'); } } } } }
-    closeModal(); CC={items:[],rcpts:[]};
+    closeModal(); CC={items:[],rcpts:[],fields:{}};
     /**
      * ⚠️ THE CAPTURE RECEIPT. If this chit began life as an inbound message (WhatsApp, email, web), record which
      * capture became which chit. It lives HERE rather than in the intake screen because the send is the moment the
@@ -3461,7 +3567,7 @@ function modalBackdrop(){ if(UI._composeModal){ minimiseCompose(); } else { clos
 function minimiseCompose(){ const h=document.getElementById("modalhost"); if(!h)return; h.style.display='none'; UI._composeMin=true; renderComposePill(); toast('Compose minimised — tap “Resume compose” to continue.'); }
 function resumeCompose(){ const h=document.getElementById("modalhost"); if(h)h.style.display=''; UI._composeMin=false; const p=document.getElementById('composepill'); if(p)p.remove(); setTimeout(function(){ var t=document.getElementById('cf_subject'); if(t)t.focus(); },20); }
 function renderComposePill(){ var p=document.getElementById('composepill'); if(!p){ p=document.createElement('div'); p.id='composepill'; document.body.appendChild(p); } p.className='composepill'; p.innerHTML='<span onclick="resumeCompose()" style="cursor:pointer">✏️ Resume compose</span><span onclick="discardCompose()" title="Discard draft" style="cursor:pointer;opacity:.75;font-weight:800">✕</span>'; }
-function discardCompose(){ var p=document.getElementById('composepill'); if(p)p.remove(); CC={items:[],rcpts:[]}; closeModal(); }
+function discardCompose(){ var p=document.getElementById('composepill'); if(p)p.remove(); CC={items:[],rcpts:[],fields:{}}; closeModal(); }
 function closeModal(){ const h=document.getElementById("modalhost"); if(h){ h.style.display=''; h.innerHTML=""; } UI._composeModal=false; UI._composeMin=false; UI._draftId=null; UI._supplier=null; ccCartRelease(); const p=document.getElementById('composepill'); if(p)p.remove(); }
 function quickStatus(){ const ids=needTarget(); if(!ids.length)return; MODALS.stat={ids,to:null};
   const opts=[["open","Open"],["act","Act"],["close","Close"]].map(([v,l])=>`<div class="optrow" data-v="${v}" onclick="pickStatus('${v}')"><span class="rdo"></span><div class="oc"><div class="on">${l}</div></div></div>`).join("");
