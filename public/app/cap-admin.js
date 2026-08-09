@@ -323,6 +323,14 @@ function _chRow(c){
     + '<span style="margin-left:auto;font-size:11px;color:var(--blue);cursor:pointer;font-weight:600" data-testid="ch-add-'+esc(c.key)+'" onclick="chToggleAdd(\''+esc(c.key)+'\')">'+(_CH.adding===c.key?'cancel':'+ bind')+'</span>'
     + '</div>'
     + '<div style="font-size:11px;color:var(--grey);margin-top:2px">'+esc(c.hint)+'</div>'
+    /* ⚠️ REPLIES ARE A SEPARATE CREDENTIAL, so a separate line. Receiving and sending are not one switch: the app
+       secret verifies inbound, WHATSAPP_TOKEN sends. Saying "connected" once would promise replies we cannot make.
+       Only shown where the channel actually has a return leg. */
+    + (c.key==='whatsapp' ? '<div style="font-size:11px;margin-top:3px;color:'+(c.outbound_configured?'#2e6b3f':'var(--grey)')+'">'
+        + (c.outbound_configured
+            ? '↩ replies on — status changes go back to the customer, within their 24-hour window'
+            : '↩ replies off — needs WHATSAPP_TOKEN. Messages still arrive; nothing goes back.')
+        + '</div>' : '')
     + (c.bindings||[]).map(function(b){
         return '<div style="display:flex;align-items:center;gap:8px;margin-top:6px;font-size:12px">'
           + '<span style="font-family:ui-monospace,Menlo,monospace">'+esc(b.address)+'</span>'
