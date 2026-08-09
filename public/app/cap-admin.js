@@ -376,6 +376,20 @@ function _chRow(c){
              a claim that has not been confirmed receives nothing at all. */
           + '<span style="font-size:9.5px;font-weight:800;color:'+(b.status==='verified'?'#2e6b3f':'#8a5a1e')+';background:'+(b.status==='verified'?'#e7f3ea':'#FBF6E9')+';border-radius:5px;padding:1px 6px" title="'+(b.status==='verified'?'confirmed by the platform — messages sent here reach you':'not confirmed yet — messages sent to this number reach nobody')+'">'+esc(b.status==='verified'?'verified'+(b.verified_via?' · '+b.verified_via:''):'declared — not receiving yet')+'</span>'
           + '<span style="margin-left:auto;cursor:pointer;color:#9aa3a7" title="Unbind" data-testid="ch-del" onclick="chUnbind(\''+esc(b.id)+'\')">✕</span></div>'
+          /**
+           * ⚠️ HANDS-FREE, PER LINE (b131). Athi: *"no one will sit and create a chit from whatsapp, it has to be
+           * automatic without anyone's presence."*
+           *
+           * ⚠️ THE SWITCH IS NOT THE PERMISSION, and the row says so: on an unverified line it reads "waiting on
+           * verification" rather than "on", because a binding that receives nothing cannot raise anything either.
+           * Two independent conditions, and a toggle that claimed otherwise would be the lie.
+           */
+          + (b.auto_raise===undefined ? '' :
+             '<label style="display:flex;align-items:center;gap:6px;margin:5px 0 0 10px;font-size:11.5px;color:var(--grey);cursor:pointer">'
+             + '<input type="checkbox" data-testid="ch-autoraise" '+(b.auto_raise?'checked':'')+' onchange="chSetAutoRaise(\''+esc(b.id)+'\',this.checked)">'
+             + '<span>Raise messages on this line <b>automatically</b>'
+             + (b.auto_raise && b.status!=='verified' ? ' <span style="color:#8a5a1e;font-weight:700">— waiting on verification</span>' : '')
+             + '<br><span style="font-size:10.5px">A chit appears in your Task list with nobody present. It is still an <b>inquiry</b> — a record, not an obligation — and anything the co-assist cannot read stays here in Intake.</span></span></label>')
           /* ⚠️ TEMPLATES ARE PER-NUMBER, so they hang off the BINDING and not the channel. Meta approves for one
              WhatsApp account; another business's approval says nothing about this one. */
           + (c.key==='whatsapp' ? (c.templates||[]).map(function(t){
@@ -421,6 +435,14 @@ async function chBind(channel){
     await api('channelBind',{body:{channel:channel, address:addr, label:label}});
     _CH.adding=null; await loadChannels(); toast('Channel bound ✓');
   }catch(e){ toast((e&&e.message)||'Could not bind that.', true); }
+}
+/* ⚠️ CONFIRMED WHEN TURNING IT ON, not when turning it off. Switching it on changes what happens while nobody is
+   watching, which is exactly the kind of change that should be read once before it takes effect. Switching it off
+   only ever means "back to a person pressing Raise" — nothing to warn about. Repaints from the server either way. */
+async function chSetAutoRaise(id, on){
+  if(on && !confirm('Raise messages on this line automatically?\n\nA chit will appear in your Task list without anyone present. It is an inquiry — a record, not an obligation — and it still says the sender is unverified.\n\nAnything the co-assist cannot read stays in Intake for you.')){ await loadChannels(); return; }
+  try{ await api('channelAutoRaise',{params:{id:id}, body:{on:!!on}}); await loadChannels(); }
+  catch(e){ toast((e&&e.message)||'Could not change that.', true); await loadChannels(); }
 }
 async function chSetTemplate(id, name, state){
   try{ await api('channelTemplate',{params:{id:id}, body:{name:name, state:state}}); await loadChannels(); }
