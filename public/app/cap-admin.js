@@ -238,7 +238,8 @@ async function loadSettings(){ const h=document.getElementById("setbody"); if(!h
       <label class="fl">Default max tasks per actor</label><input class="inp" id="st_mt" inputmode="numeric" value="${esc(s.default_max_tasks||10)}">
       <label class="fl" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="st_av" ${s.all_task_visible?'checked':''}> All tasks visible to all co-assists</label>
       <label class="fl" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="st_ar" ${s.auto_return_on_short_break?'checked':''}> Auto-return tasks on short break</label>
-      <div class="err" id="st_err"></div><button class="composebtn" style="margin-top:9px" onclick="saveSettings()">Save settings</button></div>${autoAssignCard(s,_daOpts)}<div style="border:1px solid var(--line);border-radius:11px;padding:13px;margin-top:10px"><div class="sec" style="margin:0 0 6px">📎 Attachment policy <span style="font-size:10px;font-family:'Space Mono';background:#f3f0e8;color:#7a5e22;border-radius:5px;padding:1px 6px">governance · stub</span></div><label class="fl">Allowed types</label><input class="inp" id="st_atttypes" value="image, pdf, docx, xlsx, csv, zip"><label class="fl">Max size per file (MB)</label><input class="inp" id="st_attsize" inputmode="numeric" value="10"><label class="fl">Max attachments per chit</label><input class="inp" id="st_attcount" inputmode="numeric" value="10"><div style="font-size:11px;color:var(--grey);margin-top:6px">Where allowed-types / size / count rules live (enforced backend-side). Not active yet.</div></div>${aiSettingsCard()}${policyFlagsCard()}${blueprintSettingsHTML()}`;
+      <div class="err" id="st_err"></div><button class="composebtn" style="margin-top:9px" onclick="saveSettings()">Save settings</button></div>${autoAssignCard(s,_daOpts)}<div style="border:1px solid var(--line);border-radius:11px;padding:13px;margin-top:10px"><div class="sec" style="margin:0 0 6px">📎 Attachment policy <span style="font-size:10px;font-family:'Space Mono';background:#f3f0e8;color:#7a5e22;border-radius:5px;padding:1px 6px">governance · stub</span></div><label class="fl">Allowed types</label><input class="inp" id="st_atttypes" value="image, pdf, docx, xlsx, csv, zip"><label class="fl">Max size per file (MB)</label><input class="inp" id="st_attsize" inputmode="numeric" value="10"><label class="fl">Max attachments per chit</label><input class="inp" id="st_attcount" inputmode="numeric" value="10"><div style="font-size:11px;color:var(--grey);margin-top:6px">Where allowed-types / size / count rules live (enforced backend-side). Not active yet.</div></div>${aiSettingsCard()}${channelsCard()}${policyFlagsCard()}${blueprintSettingsHTML()}`;
+    loadChannels();   // async — the card paints itself in when the read lands
   }catch(e){ h.innerHTML=scrErr(e); } }
 async function saveSettings(){ const x=document.getElementById("st_err"); if(x)x.textContent="";
   try{ await api("saveSettings",{body:{assignment_model:val("st_am"),default_max_tasks:+val("st_mt")||10,all_task_visible:document.getElementById("st_av").checked,auto_return_on_short_break:document.getElementById("st_ar").checked}}); toast(MSG.settingsSaved()); }catch(e){ if(x)x.textContent=e.message; } }
@@ -264,6 +265,100 @@ function _polControl(def){ var v=_polVal(def);
   if(def.type==='number') return '<input type="number" value="'+esc(String(v))+'" onchange="setPolFlag(\''+def.key+'\',this.value)" style="width:90px;padding:5px 8px;border:1px solid var(--line);border-radius:7px;font-size:12.5px">';
   return '<input value="'+esc(String(v))+'" onchange="setPolFlag(\''+def.key+'\',this.value)" style="padding:5px 8px;border:1px solid var(--line);border-radius:7px;font-size:12.5px">';
 }
+/* ---- CHANNELS — the inbound on-ramps. Which number / address reaches THIS entity's intake inbox (b123).
+ *
+ * Athi, 2026-08-09: *"is there a new panel in the front end as Channels, underneath we can specify whatsapp,
+ * email and so on?"*
+ *
+ * The capture pipeline has been complete except for this: a message arrives on a public webhook carrying nothing
+ * but a destination number, and the server has to know whose inbox that is. It may not read it off the payload —
+ * that would let anyone post an obligation into anyone's intake — so it reads it here.
+ *
+ * ⚠️ TWO FACTS, SHOWN SEPARATELY, BECAUSE ONLY THE PAIR RECEIVES ANYTHING.
+ *   · PROVIDER CONFIGURED — the server really holds the secret for that channel (read from the environment, never
+ *     from anything typed on this screen).
+ *   · BOUND — this entity has claimed a number / address.
+ * A panel that collapsed those into one green tick would tell an owner "WhatsApp: connected" when no account
+ * exists, and their customer's message would vanish while the screen insisted all was well. So each is stated,
+ * and the row says plainly which of the two is missing.
+ */
+var _CH = { data: null, busy: false, err: null, adding: null };
+
+function channelsCard(){
+  return '<div style="'+_CARD+';margin-top:10px" id="ch_card">'+channelsInner()+'</div>';
+}
+function channelsInner(){
+  var head = '<div class="sec" style="margin:0 0 4px">📡 Channels '
+    + '<span style="font-size:10px;font-family:\'Space Mono\';background:#e7f3ea;color:#2e6b3f;border-radius:5px;padding:1px 6px">inbound · live</span></div>'
+    + '<div style="font-size:11px;color:var(--grey);line-height:1.5;margin-bottom:8px">Where messages come in from. Bind the number or address a customer writes to, and anything sent there lands in <b>📨 Intake</b> — raw, for you to confirm into a chit. Nothing here can send on your behalf.</div>';
+  if(_CH.busy && !_CH.data) return head+'<div class="loadwrap" style="justify-content:flex-start;padding:6px 0"><span class="spin"></span> reading your channels…</div>';
+  /* ⚠️ A MISSING ENDPOINT IS NOT A BROKEN SCREEN, and must not be reported as one. The API deploys separately from
+     this page, so a web release can land first — "Could not read your channels" would send someone hunting for a
+     fault in their own account. Name the actual state: the server has not shipped this yet. */
+  if(_CH.notDeployed) return head+'<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;font-size:12px;color:#6b5a36">The channels API is not on this server yet (the panel shipped ahead of it). Nothing is wrong with your account — deploy the API and reload.</div>';
+  if(_CH.err) return head+'<div style="background:#fbeceb;border:1px solid #f0c9c6;border-radius:9px;padding:9px 11px;font-size:12px;color:#b4453f">'+esc(_CH.err)+'</div>';
+  if(!_CH.data) return head+'<div style="font-size:12px;color:var(--grey)">Not loaded.</div>';
+  /* The route answers 200 with a note when the table is not there — say which it is, because "no channels" and
+     "the store does not exist" look identical on screen and mean entirely different things. */
+  if(_CH.data.note) return head+'<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;font-size:12px;color:#6b5a36">The channel map is not migrated on this environment ('+esc(_CH.data.note)+'). The panel is here; the table is not.</div>';
+  return head + (_CH.data.channels||[]).map(_chRow).join('');
+}
+function _chRow(c){
+  var bound=(c.bindings||[]).length;
+  /* ⚠️ RECEIVING requires BOTH. Anything else is a state worth naming, not a colour to average out. */
+  var live = c.provider_configured && bound;
+  var pill = live ? ['#2e6b3f','#e7f3ea','receiving']
+           : (!c.provider_configured && bound) ? ['#8a5a1e','#FBF6E9','waiting on a provider account']
+           : (c.provider_configured && !bound) ? ['#8a5a1e','#FBF6E9','configured — nothing bound yet']
+           : ['#6a707a','#eef1f5','not set up'];
+  return '<div style="padding:10px 0;border-bottom:1px solid var(--line)" data-testid="ch-row-'+esc(c.key)+'">'
+    + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
+    + '<span style="font-weight:600;font-size:12.5px">'+esc(c.name)+'</span>'
+    + '<span style="font-size:9.5px;font-weight:800;color:'+pill[0]+';background:'+pill[1]+';border-radius:5px;padding:1px 7px" data-testid="ch-status-'+esc(c.key)+'">'+pill[2]+'</span>'
+    + '<span style="margin-left:auto;font-size:11px;color:var(--blue);cursor:pointer;font-weight:600" data-testid="ch-add-'+esc(c.key)+'" onclick="chToggleAdd(\''+esc(c.key)+'\')">'+(_CH.adding===c.key?'cancel':'+ bind')+'</span>'
+    + '</div>'
+    + '<div style="font-size:11px;color:var(--grey);margin-top:2px">'+esc(c.hint)+'</div>'
+    + (c.bindings||[]).map(function(b){
+        return '<div style="display:flex;align-items:center;gap:8px;margin-top:6px;font-size:12px">'
+          + '<span style="font-family:ui-monospace,Menlo,monospace">'+esc(b.address)+'</span>'
+          + (b.label?'<span style="color:var(--grey)">'+esc(b.label)+'</span>':'')
+          /* declared vs verified — asserted is not confirmed, and the difference is visible. */
+          + '<span style="font-size:9.5px;font-weight:800;color:'+(b.status==='verified'?'#2e6b3f':'#6a707a')+';background:'+(b.status==='verified'?'#e7f3ea':'#eef1f5')+';border-radius:5px;padding:1px 6px">'+esc(b.status)+'</span>'
+          + '<span style="margin-left:auto;cursor:pointer;color:#9aa3a7" title="Unbind" data-testid="ch-del" onclick="chUnbind(\''+esc(b.id)+'\')">✕</span></div>'; }).join('')
+    + (_CH.adding===c.key
+        ? '<div style="display:flex;gap:6px;margin-top:8px"><input class="inp" id="ch_addr" placeholder="'+esc(c.placeholder)+'" data-testid="ch-addr" style="flex:1">'
+          + '<input class="inp" id="ch_label" placeholder="label (optional)" data-testid="ch-label" style="max-width:140px">'
+          + '<button class="composebtn" data-testid="ch-save" onclick="chBind(\''+esc(c.key)+'\')">Bind</button></div>'
+          + '<div style="font-size:10.5px;color:var(--grey);margin-top:4px">'+esc(c.address_label)+' — the address your customers write TO, not theirs.</div>'
+        : '')
+    + '</div>';
+}
+function chPaint(){ var h=document.getElementById('ch_card'); if(h) h.innerHTML=channelsInner(); }
+async function loadChannels(){
+  _CH.busy=true; _CH.err=null; _CH.notDeployed=false; chPaint();
+  try{ _CH.data=await api('channelsList'); }
+  catch(e){
+    var m=(e&&e.message)||'';
+    if(/does not exist|not found|404/i.test(m)) _CH.notDeployed=true;
+    else _CH.err=m||'Could not read your channels.';
+  }
+  _CH.busy=false; chPaint();
+}
+function chToggleAdd(k){ _CH.adding=(_CH.adding===k)?null:k; chPaint(); }
+async function chBind(channel){
+  var addr=val('ch_addr'), label=val('ch_label');
+  if(!String(addr||'').trim()){ toast('Enter the number or address first.', true); return; }
+  try{
+    await api('channelBind',{body:{channel:channel, address:addr, label:label}});
+    _CH.adding=null; await loadChannels(); toast('Channel bound ✓');
+  }catch(e){ toast((e&&e.message)||'Could not bind that.', true); }
+}
+async function chUnbind(id){
+  if(!confirm('Unbind this address?\n\nMessages sent to it will stop reaching your intake inbox. Captures you have already received are untouched.')) return;
+  try{ await api('channelUnbind',{params:{id:id}}); await loadChannels(); }
+  catch(e){ toast((e&&e.message)||'Could not unbind that.', true); }
+}
+
 function policyFlagsCard(){ UI._polset=_polLoad();
   var rows=POLICY_FLAGS.map(function(def){ return '<div style="display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)">'
     +'<div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap"><span style="font-weight:600;font-size:12.5px">'+esc(def.label)+'</span>'+govKlass(def.gov)+'<span style="font-size:9px;font-family:\'Space Mono\';background:#eef1f5;color:#6a707a;border-radius:5px;padding:1px 6px">'+esc(def.level)+'</span></div>'

@@ -643,6 +643,10 @@ const EP = {
   captureStructure:{m:"POST", p:"/api/capture/:id/structure",    ok:"✓"},
   captureConvert:  {m:"POST", p:"/api/capture/:id/convert",      ok:"✓"},  // the receipt: this capture became that chit
   captureDismiss:  {m:"POST", p:"/api/capture/:id/dismiss",      ok:"✓"},
+  // CHANNELS (b123) — which inbound number/address reaches this entity. The map the capture webhooks resolve against.
+  channelsList:    {m:"GET",  p:"/api/channels",                 ok:"✓"},
+  channelBind:     {m:"POST", p:"/api/channels",                 ok:"✓"},
+  channelUnbind:   {m:"DELETE",p:"/api/channels/:id",            ok:"✓"},
   attUpload:       {m:"POST", p:"/api/attachments",             ok:"✓"},  // upload a file (base64) after a chit/message exists
   addActor:        {m:"POST", p:"/api/actors",                   ok:"✓"},  // create an actor
   disputeQueue:    {m:"GET",  p:"/api/chits/disputes/queue",     ok:"✓"},  // all open disputes
