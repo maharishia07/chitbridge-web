@@ -54,13 +54,27 @@ test.describe('Capture connector · Intake', () => {
       'the AI draft never came back').toBeVisible({ timeout: 45000 });
     await expect(row, 'the draft must say it is a proposal, not evidence').toContainText('AI draft');
 
-    // ── CONFIRM. This opens Compose with the lines in it — and stops there.
+    /**
+     * ── CONFIRM. This opens Compose with the lines already in it — and stops there.
+     *
+     * ⚠️ Compose is a four-step wizard, so it opens on ITEMS; `chit-send` lives on Review and is deliberately
+     * several deliberate actions away. That distance IS the confirm gate: a message becomes an obligation only
+     * because a person walked it.
+     */
     await page.getByTestId('intake-make-chit').first().click();
-    await expect(page.getByTestId('chit-send'), 'Compose did not open for the human confirm').toBeVisible({ timeout: 20000 });
-    const modal = page.locator('#modalhost');
-    await expect(modal, 'the captured lines did not reach the chit').toContainText(/bolts/i);
+    await expect(page.getByTestId('chit-item-name'), 'Compose did not open for the human confirm').toBeVisible({ timeout: 20000 });
+    await expect(page.locator('#cc_items'), 'the captured lines did not reach the chit').toContainText(/bolts/i);
+    await expect(page.locator('#cc_items'), 'only one of the two captured lines arrived').toContainText(/cable/i);
 
-    // ⚠️ NOT SENT. The gate is that a person still has to press this.
+    // Walk to Details and confirm the capture's SUBJECT survived the handoff. It is carried in state, not in an
+    // input — the Details step is not even rendered at the moment intakeMakeChit sets it.
+    await page.locator('[data-testid^="step-next-"]').click();
+    await page.getByTestId('chit-add-self').click();
+    await page.locator('[data-testid^="step-next-"]').click();
+    await expect(page.getByTestId('chit-field-subject'),
+      'the capture\'s subject did not survive into the chit').not.toHaveValue('');
+
+    // ⚠️ NOT SENT. The gate is that a person still has to finish this.
     await page.locator('#modalhost .mx').first().click().catch(() => {});
 
     // Put the queue back as it was found.
