@@ -4098,11 +4098,9 @@ function _viaPricing(p){
   if((p.ambiguous||[]).length) out.push('<div style="font-size:11px;color:#6b5a36;margin-top:3px">⚠️ '
     + esc(p.ambiguous.map(function(a){ return '"'+a.name+'" matches '+a.matches+' catalogue lines'; }).join('; '))
     + ' — not priced, because picking one would be a guess.</div>');
-  if(p.created_count) out.push('<div style="font-size:11px;color:#6b5a36;margin-top:3px">🆕 '+p.created_count+' item'+(p.created_count===1?'':'s')
-    + ' you do not stock '+(p.created_count===1?'was':'were')+' added to your catalogue, unpriced'
-    + ((p.created||[]).length?' — '+esc(p.created.join(', ')):'')
-    + '. They stay off your storefront until priced.</div>');
-  else if(p.unpriced) out.push('<div style="font-size:11px;color:#6b5a36;margin-top:3px">⚠️ '+p.unpriced+' line'+(p.unpriced===1?'':'s')+' still ha'+(p.unpriced===1?'s':'ve')+' no price.</div>');
+  /* ⚠️ AN UNPRICED LINE IS NOT AN ERROR. A farmer sending "milk 10 l" to a factory has no catalogue, no price and
+     nothing to look up, and the chit is complete without them. Said plainly, not warned about. */
+  if(p.unpriced) out.push('<div style="font-size:11px;color:var(--grey);margin-top:3px">'+p.unpriced+' line'+(p.unpriced===1?'':'s')+' carr'+(p.unpriced===1?'ies':'y')+' no price — as asked for.</div>');
   return out.length?'<div style="margin-top:6px">'+out.join('')+'</div>':'';
 }
 function viaBlock(c){
