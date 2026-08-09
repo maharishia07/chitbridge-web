@@ -645,6 +645,8 @@ const EP = {
   captureDismiss:  {m:"POST", p:"/api/capture/:id/dismiss",      ok:"✓"},
   // CHANNELS (b123) — which inbound number/address reaches this entity. The map the capture webhooks resolve against.
   channelsList:    {m:"GET",  p:"/api/channels",                 ok:"✓"},
+  // VISION (b127) — read products out of a photo. Proposes only; the owner confirms every row.
+  photoExtract:    {m:"POST", p:"/api/catalogue/photo-extract",   ok:"✓"},
   channelBind:     {m:"POST", p:"/api/channels",                 ok:"✓"},
   channelUnbind:   {m:"DELETE",p:"/api/channels/:id",            ok:"✓"},
   attUpload:       {m:"POST", p:"/api/attachments",             ok:"✓"},  // upload a file (base64) after a chit/message exists

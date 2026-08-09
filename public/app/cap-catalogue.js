@@ -544,16 +544,35 @@ function _cwStep4(w){
     body = '<div style="font-size:12.5px;color:#3a4048;margin-bottom:8px">Only have <b>photos or product labels</b>? Add the pictures — each becomes an item. You confirm the name &amp; price (the same human-confirm step the <b>Capture</b> connector uses).</div>'
       + '<input id="cw_photo_input" type="file" accept="image/*" multiple style="display:none" onchange="cwPhotoPick(this)">'
       + '<button class="pri" onclick="cwPhotoBtn()" style="padding:8px 15px">📷 Add photos</button>'
+      /**
+       * ⚠️ READING IS A SEPARATE, DELIBERATE PRESS. It is not folded into "Add photos" because it COSTS — a vision
+       * call per batch, on a shared key, for someone who is cash-light. An automatic read on every pick would spend
+       * on photos the owner only meant to attach. So: add freely, read when you choose.
+       */
+      + (ph.length ? '<button data-testid="cw-photo-read" onclick="cwPhotosRead()" ' + (w._phBusy ? 'disabled ' : '')
+          + 'style="margin-left:8px;padding:8px 15px;border:1px solid #6d5bd0;border-radius:9px;background:#fff;color:#6d5bd0;font-weight:600;cursor:pointer">'
+          + (w._phBusy ? '✨ Reading…' : '✨ Read the labels') + '</button>' : '')
+      + (w._phErr ? '<div style="margin-top:8px;background:#fbeceb;border:1px solid #f0c9c6;border-radius:8px;padding:8px 11px;font-size:12px;color:#b4453f">' + esc(w._phErr) + '</div>' : '')
+      + (w._phNote ? '<div style="margin-top:8px;background:#f7f6fd;border:1px solid #e4dff6;border-radius:8px;padding:8px 11px;font-size:12px;color:#4a3f7a">' + esc(w._phNote) + '</div>' : '')
       + (ph.length ? '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:10px;margin-top:12px">'
           + ph.map(function(p){ return '<div style="border:1px solid var(--line);border-radius:9px;padding:8px;background:#fff">'
             + '<div style="height:88px;background:#f4f6f8 center/cover no-repeat;background-image:url(' + p.url + ');border-radius:6px"></div>'
-            + '<input value="' + esc(p.name || '') + '" oninput="cwSetPhotoField(\'' + p.id + '\',\'name\',this.value)" placeholder="item name" style="width:100%;box-sizing:border-box;margin-top:6px;padding:5px 7px;border:1px solid var(--line);border-radius:6px;font-size:11.5px">'
+            /**
+             * ⚠️ A PROPOSAL MUST NOT LOOK LIKE SOMETHING YOU TYPED. An AI-filled name and price get a purple frame
+             * and a "proposed" tag, and the tag CLEARS the moment the owner edits the field — because at that point
+             * it is theirs, not the model's. Without that distinction someone confirming a screenful of cards
+             * cannot tell which values they actually checked.
+             */
+            + (p._ai ? '<div style="margin-top:6px;font-size:9.5px;font-weight:800;color:#6d5bd0;background:#f0ecfb;border-radius:5px;padding:1px 6px;display:inline-block">✨ proposed — check it</div>' : '')
+            + '<input value="' + esc(p.name || '') + '" oninput="cwSetPhotoField(\'' + p.id + '\',\'name\',this.value)" placeholder="item name" style="width:100%;box-sizing:border-box;margin-top:6px;padding:5px 7px;border:1px solid ' + (p._ai ? '#c9bdf0' : 'var(--line)') + ';border-radius:6px;font-size:11.5px">'
             + '<div style="display:flex;gap:5px;margin-top:5px;align-items:center"><span style="font-size:10px;color:var(--grey)">' + esc(_catfCcy()) + '</span><input type="number" value="' + (p.price != null ? p.price : '') + '" oninput="cwSetPhotoField(\'' + p.id + '\',\'price\',this.value)" placeholder="price" style="flex:1;min-width:0;padding:4px 6px;border:1px solid var(--line);border-radius:6px;font-size:11.5px"><span onclick="cwPhotoRemove(\'' + p.id + '\')" style="cursor:pointer;color:#b23;font-size:15px;line-height:1" title="remove">×</span></div>'
             + '</div>'; }).join('') + '</div>'
           + '<button onclick="cwPhotosCommit()" style="margin-top:10px;padding:8px 15px;border:1px solid #2c7a43;border-radius:9px;background:#fff;color:#2c7a43;font-weight:600">✓ Add ' + ph.length + ' photo' + (ph.length > 1 ? 's' : '') + ' to catalogue</button>'
           + (committed ? '<div style="margin-top:7px;font-size:11.5px;color:#2c7a43">✓ ' + committed + ' photo item(s) in your catalogue.</div>' : '')
         : '')
-      + '<div style="font-size:10.5px;color:var(--grey);margin-top:12px;font-style:italic">Photos are downscaled and stored on the item. Auto-reading the label text (OCR / vision) is the Capture connector\'s AI step — <b>text-only today</b>, so you set name &amp; price now; auto-fill lands when vision is added to the co-assist.</div>';
+      /* ⚠️ This line used to say the co-assist was "text-only today". It is not, as of b127 — and a footnote that
+         still says a feature is missing while the button for it sits above is worse than no footnote. */
+      + '<div style="font-size:10.5px;color:var(--grey);margin-top:12px;font-style:italic">Photos are downscaled and stored on the item. <b>✨ Read the labels</b> asks the co-assist to read what it can SEE into the cards — always a <b>proposal you check</b>, never a value it commits, and it fills only empty fields so anything you typed stays yours.</div>';
   }
   return '<div style="font-size:13px;color:#3a4048;margin-bottom:10px">How do you have your items? Don\'t type hundreds — bring a <b>list</b> (CSV/Excel) or <b>photos</b>.</div>' + bar + body;
 }
@@ -637,7 +656,70 @@ function cwPhotoPick(input){ var files = (input && input.files) ? Array.prototyp
   files.forEach(function(file){ if (!/^image\//.test(file.type || '')) { done(); return; } var rd = new FileReader(); rd.onload = function(){ _cwDownscale(rd.result, 360, function(small){ w.photos.push({ id: 'ph' + (++_cwPhotoSeq), name: String(file.name || 'Item').replace(/\.[^.]+$/, ''), price: '', url: small }); done(); }); }; rd.onerror = done; rd.readAsDataURL(file); });
   input.value = '';
 }
-function cwSetPhotoField(id, field, v){ (UI.cw.photos || []).forEach(function(p){ if (p.id === id) p[field] = v; }); }
+function cwSetPhotoField(id, field, v){
+  (UI.cw.photos || []).forEach(function(p){
+    if (p.id !== id) return;
+    p[field] = v;
+    // ⚠️ EDITING CLEARS "proposed". The value is now the owner's, not the model's, and the card must stop
+    // implying otherwise — provenance that survives a human overwriting it is a lie about who said what.
+    p._ai = false;
+  });
+}
+/**
+ * cwPhotosRead — ask the co-assist to read the labels, and PRE-FILL the same cards. (SPEC-catalogue-photo-vision.md)
+ *
+ * ⚠️ IT PROPOSES INTO THE EXISTING CARDS AND COMMITS NOTHING. cwPhotosCommit is untouched: the owner still edits
+ * and still presses "Add to catalogue". A read that wrote straight into the catalogue would put a model's guess
+ * about a price into a record that other people trade against.
+ *
+ * ⚠️ IT NEVER OVERWRITES SOMETHING YOU TYPED. A card you have already named keeps your name; the proposal only
+ * fills what is still empty. Your work outranks a suggestion.
+ */
+async function cwPhotosRead(){
+  var w = UI.cw, ph = (w.photos || []).filter(function(p){ return !!p.url; });
+  if (!ph.length) return;
+  w._phErr = null; w._phNote = null; w._phBusy = true; renderApp();
+  /* The engine caps at 4 per call, so batch — and SAY how many are going, because a silent partial read looks
+     like the model simply missed the rest. */
+  var BATCH = 4, filled = 0, read = 0;
+  try {
+    for (var i = 0; i < ph.length; i += BATCH) {
+      var slice = ph.slice(i, i + BATCH);
+      var images = slice.map(function(p){
+        var m = /^data:(image\/[a-z+]+);base64,(.*)$/i.exec(p.url || '');
+        return m ? { mime: m[1], b64: m[2] } : null;
+      }).filter(Boolean);
+      if (!images.length) continue;
+      var out = await api('photoExtract', { body: { images: images } });
+      var items = (out && out.data && out.data.items) || [];
+      read += images.length;
+      /* ⚠️ POSITIONAL, and that is a real limit worth stating: the model returns items in the order it read them,
+         which for one-product-per-photo lines up and for a price-list photo does not. So a batch that returns a
+         different count than it was given is reported rather than smeared across the cards. */
+      if (items.length === slice.length) {
+        slice.forEach(function(p, k){
+          var it = items[k] || {};
+          if (!String(p.name || '').trim() && it.name) { p.name = it.name; p._ai = true; filled++; }
+          if ((p.price === '' || p.price == null) && it.price) { p.price = it.price; p._ai = true; }
+        });
+      } else if (items.length) {
+        w._phNote = 'Read ' + items.length + ' item(s) from ' + slice.length + ' photo(s) — the counts differ, so nothing was filled in automatically for that batch. A photo of a price LIST holds several items; these cards are one item each.';
+      }
+    }
+    if (!w._phNote) {
+      w._phNote = filled
+        ? 'Read ' + read + ' photo(s) — ' + filled + ' field(s) proposed. Check each one: they are the model\'s reading, not yours, until you edit or confirm them.'
+        : 'Read ' + read + ' photo(s) and could not make anything out. Nothing was filled in — type the details instead.';
+    }
+  } catch (e) {
+    var m = (e && e.message) || '';
+    /* ⚠️ AI OFF IS NOT A BROKEN SCREEN (spec case 8). The manual flow still works and must be seen to. */
+    w._phErr = /not connected|503/i.test(m)
+      ? 'The co-assist is not connected on this environment, so labels cannot be read automatically. Everything else still works — set the name and price yourself.'
+      : (m || 'Could not read the photos.');
+  }
+  w._phBusy = false; renderApp();
+}
 function cwPhotoRemove(id){ var w = UI.cw; w.photos = (w.photos || []).filter(function(p){ return p.id !== id; }); renderApp(); }
 function cwPhotosCommit(){ var w = UI.cw; var ph = w.photos || []; if (!ph.length) { if (typeof toast === 'function') toast('Add some photos first.'); return; }
   w.manualItems = (w.manualItems || []).filter(function(i){ return i._src !== 'capture'; });
