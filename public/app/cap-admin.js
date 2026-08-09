@@ -243,28 +243,64 @@ async function loadSettings(){ const h=document.getElementById("setbody"); if(!h
   }catch(e){ h.innerHTML=scrErr(e); } }
 async function saveSettings(){ const x=document.getElementById("st_err"); if(x)x.textContent="";
   try{ await api("saveSettings",{body:{assignment_model:val("st_am"),default_max_tasks:+val("st_mt")||10,all_task_visible:document.getElementById("st_av").checked,auto_return_on_short_break:document.getElementById("st_ar").checked}}); toast(MSG.settingsSaved()); }catch(e){ if(x)x.textContent=e.message; } }
-/* ---- POLICY FLAGS — the per-entity / work-pattern toggles the 7-layer block (GOV) does NOT yet carry: self-copy,
-   chit-expiry, retention, dispute scope. SAME governance grammar as GOV (govKlass class + cascade level), rendered from
-   a schema (adopt-don't-reinvent: this complements govLayersBlock, it does not duplicate it). These actually PERSIST
-   (localStorage prototype); server persistence + real enforcement + folding into the layers are the next slices. */
+/* ---- POLICY FLAGS — per-entity governance toggles, SERVER-PERSISTED (b130).
+ *
+ * Athi, 2026-08-09: *"make the policy flags real, move it to settings."*
+ *
+ * They were a localStorage prototype: the card said "set ✓", nothing left the browser, and the server that has to
+ * ENFORCE them never heard. `self_copy_pref` was the sharpest version of that — it has a real, enforced column, and
+ * this card wrote past it into localStorage, so the one flag with teeth was the one the UI had disconnected.
+ *
+ * The schema still lives here (the card renders from data, not from markup), but the VALUES now come from and go
+ * to /api/entities/policy, which validates against its own whitelist. The server never trusts this list.
+ */
 var POLICY_FLAGS = [
+  /* ⚠️ AN ENTITY IS CREATED FOR A PURPOSE. Athi: *"sell and purchase never been the same entity. while testing we
+     are trying to test all the possibility in the same business, so for us it seems the same entity will do
+     everything, but that is not going to be the case."* Which side of the trade an entity is on does not change
+     message to message — which is why this is a setting here and not the per-raise toggle I first built. */
+  { key:'trade_side',        label:'This entity',           type:'enum',   options:['sell','receive'],              def:'sell', level:'entity',        gov:'entity',   help:'SELL — inbound messages are priced from your catalogue where the item matches. RECEIVE — they are not: a catalogue price is what you SELL at, and pricing goods coming IN off it puts a figure on the record nobody agreed.' },
   { key:'self_copy_pref',    label:'Self-chit copy',        type:'enum',   options:['both','sent','received'],      def:'both', level:'entity',        gov:'entity',   help:'A chit to yourself: keep both copies, only the Order (sent), or only the Task (received).' },
   { key:'chit_expiry_days',  label:'Chit expiry (days)',    type:'number', def:0,  level:'work-pattern', gov:'chosen',   help:'0 = no expiry. Auto-closes a chit after N days. Tighten-only, per work pattern.' },
   { key:'retention_days',    label:'Retention (days)',      type:'number', def:0,  level:'entity',        gov:'chosen',   help:'0 = keep. Per-copy retention; governed auto-purge is destructive → human-gated.' },
   { key:'dispute_scope',     label:'Dispute messages',      type:'enum',   options:['per-party','shared'],          def:'per-party', level:'platform', gov:'bound', help:'Per-party confidential scoping is the USP — platform-bound, cannot be relaxed.' },
 ];
-function _polKey(){ return 'cb_polflags_' + (SESSION.entityId || SESSION.entity || 'anon'); }
-function _polLoad(){ try { var s=localStorage.getItem(_polKey()); return s?JSON.parse(s):{}; } catch(e){ return {}; } }
-function _polSave(o){ try { localStorage.setItem(_polKey(), JSON.stringify(o||{})); } catch(e){} }
-function _polVal(def){ var o=UI._polset||(UI._polset=_polLoad()); return (o[def.key]!==undefined)?o[def.key]:def.def; }
+var _POL = { flags:null, busy:false, err:null, migrated:true };
+function _polVal(def){ var o=_POL.flags||{}; return (o[def.key]!==undefined)?o[def.key]:def.def; }
 function _polLocked(gov){ return gov==='bound'||gov==='protected'||gov==='inherited'; }
-function setPolFlag(key, v){ var o=UI._polset||(UI._polset=_polLoad()); var def=POLICY_FLAGS.filter(function(d){return d.key===key;})[0]; if(def&&def.type==='number') v=(v===''?0:Number(v)); o[key]=v; _polSave(o); if(typeof toast==='function') toast((def?def.label:'Flag')+' set ✓'); }
+/* ⚠️ THE WRITE IS AWAITED AND ITS ANSWER IS SHOWN. The old version toasted "set ✓" the instant you changed a
+   dropdown, whatever happened afterwards — which is the exact habit that let a dead setting look alive for months.
+   The card repaints from what the SERVER returns, so what is on screen is what is stored. */
+async function setPolFlag(key, v){
+  var def=POLICY_FLAGS.filter(function(d){return d.key===key;})[0];
+  if(def&&def.type==='number') v=(v===''?0:Number(v));
+  _POL.busy=true; _POL.err=null; paintPolicy();
+  try{
+    var body={}; body[key]=v;
+    var r=await api('policySet',{body:body});
+    _POL.flags=(r&&r.flags)||_POL.flags;
+    toast((def?def.label:'Flag')+' saved');
+  }catch(e){
+    _POL.err=(e&&e.message)||'Could not save that setting.';
+    if(/not migrated|b130|503/i.test(_POL.err)) _POL.migrated=false;
+  }
+  _POL.busy=false; paintPolicy();
+}
+async function loadPolicy(){
+  _POL.busy=true; _POL.err=null; paintPolicy();
+  try{ var r=await api('policyGet'); _POL.flags=(r&&r.flags)||{}; _POL.migrated=!(_POL.flags._migrated===false); }
+  catch(e){ _POL.err=(e&&e.message)||'Could not read your policy flags.'; }
+  _POL.busy=false; paintPolicy();
+}
+function paintPolicy(){ var h=document.getElementById('polflags'); if(h) h.innerHTML=policyFlagsInner(); }
 function _polControl(def){ var v=_polVal(def);
   if(_polLocked(def.gov)) return '<span style="font-weight:700;font-size:12.5px">'+esc(String(v))+'</span> <span style="font-size:10px" title="locked / inherited — cannot change here">🔒</span>';
-  if(def.type==='enum') return '<select onchange="setPolFlag(\''+def.key+'\',this.value)" style="padding:5px 8px;border:1px solid var(--line);border-radius:7px;font-size:12.5px">'+def.options.map(function(o){ return '<option'+(String(v)===String(o)?' selected':'')+'>'+esc(o)+'</option>'; }).join('')+'</select>';
-  if(def.type==='number') return '<input type="number" value="'+esc(String(v))+'" onchange="setPolFlag(\''+def.key+'\',this.value)" style="width:90px;padding:5px 8px;border:1px solid var(--line);border-radius:7px;font-size:12.5px">';
-  return '<input value="'+esc(String(v))+'" onchange="setPolFlag(\''+def.key+'\',this.value)" style="padding:5px 8px;border:1px solid var(--line);border-radius:7px;font-size:12.5px">';
+  var dis=_POL.busy?' disabled':'';
+  if(def.type==='enum') return '<select'+dis+' data-testid="pol-'+esc(def.key)+'" onchange="setPolFlag(\''+def.key+'\',this.value)" style="padding:5px 8px;border:1px solid var(--line);border-radius:7px;font-size:12.5px">'+def.options.map(function(o){ return '<option'+(String(v)===String(o)?' selected':'')+'>'+esc(o)+'</option>'; }).join('')+'</select>';
+  if(def.type==='number') return '<input type="number"'+dis+' data-testid="pol-'+esc(def.key)+'" value="'+esc(String(v))+'" onchange="setPolFlag(\''+def.key+'\',this.value)" style="width:90px;padding:5px 8px;border:1px solid var(--line);border-radius:7px;font-size:12.5px">';
+  return '<input'+dis+' value="'+esc(String(v))+'" onchange="setPolFlag(\''+def.key+'\',this.value)" style="padding:5px 8px;border:1px solid var(--line);border-radius:7px;font-size:12.5px">';
 }
+
 /* ---- CHANNELS — the inbound on-ramps. Which number / address reaches THIS entity's intake inbox (b123).
  *
  * Athi, 2026-08-09: *"is there a new panel in the front end as Channels, underneath we can specify whatsapp,
@@ -396,16 +432,20 @@ async function chUnbind(id){
   catch(e){ toast((e&&e.message)||'Could not unbind that.', true); }
 }
 
-function policyFlagsCard(){ UI._polset=_polLoad();
+function policyFlagsCard(){ loadPolicy(); return '<div style="'+_CARD+';margin-top:10px" id="polflags">'+policyFlagsInner()+'</div>'; }
+function policyFlagsInner(){
   var rows=POLICY_FLAGS.map(function(def){ return '<div style="display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)">'
     +'<div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap"><span style="font-weight:600;font-size:12.5px">'+esc(def.label)+'</span>'+govKlass(def.gov)+'<span style="font-size:9px;font-family:\'Space Mono\';background:#eef1f5;color:#6a707a;border-radius:5px;padding:1px 6px">'+esc(def.level)+'</span></div>'
     +'<div style="font-size:11px;color:var(--grey);margin-top:2px;line-height:1.45">'+esc(def.help)+'</div></div>'
     +'<div style="flex:none;text-align:right;min-width:120px">'+_polControl(def)+'</div></div>'; }).join('');
-  return '<div style="'+_CARD+';margin-top:10px">'
-    +'<div class="sec" style="margin:0 0 4px">🚩 Policy flags <span style="font-size:10px;font-family:\'Space Mono\';background:#EFEAF6;color:#5b4a86;border-radius:5px;padding:1px 6px">schema-driven · functional</span></div>'
-    +'<div style="font-size:11px;color:var(--grey);line-height:1.5;margin-bottom:6px">The per-entity / work-pattern toggles the <b>7-layer block above</b> doesn\'t yet carry — same governance grammar (<b>class</b> + <b>level</b>): 🔒 platform-bound you can\'t relax; <b>tighten-only</b> you can make stricter; <b>entity</b> you set freely. Defined as data (a schema), these actually persist.</div>'
-    +rows
-    +'<div style="font-size:10.5px;color:var(--grey);font-style:italic;margin-top:8px">Saved on this device (prototype). Next: fold into the 7 layers · server persistence · real enforcement (self-copy is declared-but-unenforced today).</div></div>';
+  /* A setting that cannot be stored must SAY so rather than accept a change it will lose — that is the whole
+     failure this card is being rebuilt out of. */
+  var warn = !_POL.migrated ? '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;font-size:11.5px;color:#6b5a36;margin-bottom:7px">Policy flags are not migrated on this environment (b130). The card is here; the column is not — changes will not save.</div>' : '';
+  var err = _POL.err ? '<div style="color:#b4453f;font-size:11.5px;margin-top:6px">'+esc(_POL.err)+'</div>' : '';
+  return '<div class="sec" style="margin:0 0 4px">🚩 Policy flags <span style="font-size:10px;font-family:\'Space Mono\';background:#e7f3ea;color:#2e6b3f;border-radius:5px;padding:1px 6px">saved to your entity</span></div>'
+    +'<div style="font-size:11px;color:var(--grey);line-height:1.5;margin-bottom:6px">The per-entity toggles the <b>7-layer block above</b> doesn\'t yet carry — same governance grammar (<b>class</b> + <b>level</b>): 🔒 platform-bound you can\'t relax; <b>tighten-only</b> you can make stricter; <b>entity</b> you set freely.</div>'
+    +warn+rows+err
+    +'<div style="font-size:10.5px;color:var(--grey);font-style:italic;margin-top:8px">Stored on the entity, not on this device. <b>Enforced today:</b> self-chit copy, and which side of the trade you are on (inbound pricing). Expiry and retention are declared, not yet enforced.</div>';
 }
 function autoAssignCard(s, daOpts){ const m=s.auto_assign_mode||'off';
   return `<div style="${_CARD};margin-top:10px"><div class="sec" style="margin:0 0 6px">🧭 Auto-assign on receipt <span style="font-size:10px;font-family:'Space Mono';background:#e7f3ea;color:#2e6b3f;border-radius:5px;padding:1px 6px">active</span></div>

@@ -644,6 +644,8 @@ const EP = {
   captureStructure:{m:"POST", p:"/api/capture/:id/structure",    ok:"✓"},
   captureConvert:  {m:"POST", p:"/api/capture/:id/convert",      ok:"✓"},  // the receipt: this capture became that chit
   captureRaise:    {m:"POST", p:"/api/capture/:id/raise",        ok:"✓"},  // build the request payload — creates NOTHING
+  policyGet:       {m:"GET",  p:"/api/entities/policy",          ok:"✓"},  // b130 — per-entity flags, on the ENTITY
+  policySet:       {m:"PATCH",p:"/api/entities/policy",          ok:"✓"},
   captureDismiss:  {m:"POST", p:"/api/capture/:id/dismiss",      ok:"✓"},
   // CHANNELS (b123) — which inbound number/address reaches this entity. The map the capture webhooks resolve against.
   channelsList:    {m:"GET",  p:"/api/channels",                 ok:"✓"},
