@@ -66,6 +66,33 @@ test.describe('Capture connector · Intake', () => {
     await expect(page.locator('#cc_items'), 'the captured lines did not reach the chit').toContainText(/bolts/i);
     await expect(page.locator('#cc_items'), 'only one of the two captured lines arrived').toContainText(/cable/i);
 
+    /**
+     * ⚠️ ARRIVING IS NOT THE SAME AS BEING SEEN, and this spec used to stop one assertion short of the difference.
+     *
+     * Athi, 2026-08-09: *"it just opened the compose screen, the data is not going to the chit."* Everything above
+     * passed at the time. CC.items held both lines, the subject was filled, the capture was linked — and the top of
+     * the screen was an empty cart reading "Press + on what this chit is for", with the lines six catalogue rows
+     * below the fold. A defect found by eye that a green suite had no opinion about is a gap in the suite, so the
+     * two things a person actually needs are asserted here: WAS I TOLD, and CAN I SEE IT WITHOUT HUNTING.
+     */
+    const origin = page.getByTestId('cc-origin');
+    await expect(origin, 'compose never said the lines came from a message').toBeVisible();
+    await expect(origin, 'the banner must name the channel it came from').toContainText(/WhatsApp/i);
+    await expect(origin, 'an AI proposal must never present itself as evidence').toContainText(/not evidence/i);
+    // ⚠️ NO PRICE IS NOT ZERO PRICE — an item the catalogue does not stock renders ₹0.00, identical to a real free
+    //    line. The count is said out loud; sending an obligation for goods at nothing is never silent.
+    await expect(origin, 'unpriced ad-hoc lines were not called out').toContainText(/no price/i);
+
+    // The lines must come BEFORE the catalogue picker: the question has changed from "what are you sending" to
+    // "is this right", and whichever is on top is the question the screen is really asking.
+    const order = await page.evaluate(() => {
+      const items = document.getElementById('cc_items'), pick = document.getElementById('cc_catpick');
+      if (!items || !pick) return 'missing';
+      // DOCUMENT_POSITION_FOLLOWING === 4 → the picker comes after the lines
+      return (items.compareDocumentPosition(pick) & 4) ? 'lines-first' : 'picker-first';
+    });
+    expect(order, 'the chit lines are below the picker — they read as "nothing arrived"').toBe('lines-first');
+
     // Walk to Details and confirm the capture's SUBJECT survived the handoff. It is carried in state, not in an
     // input — the Details step is not even rendered at the moment intakeMakeChit sets it.
     await page.locator('[data-testid^="step-next-"]').click();
