@@ -1523,6 +1523,27 @@ function ensureCap(name){
     document.head.appendChild(s);
   });
 }
+/**
+ * bgRenderApp — a BACKGROUND shell refresh that must never destroy what someone is in the middle of.
+ *
+ * ⚠️ THE BUG THIS FIXES: renderApp() rebuilds the whole shell, and the shell template contains an EMPTY
+ * `<div id="modalhost">`. So any renderApp while a modal is open deletes that modal — and everything typed into it.
+ * The /me fetch and ensureCap('dispute') both resolve a second or two AFTER load and each called renderApp, so
+ * opening Compose promptly and then taking a moment over it lost the whole draft, with no error and nothing to
+ * suggest the app had done it. Reproduced: modalhost went from 3.7kB to 0 while idling inside compose.
+ *
+ * It survived this long because the old one-screen compose was filled and sent in a couple of seconds. Four steps
+ * simply spend longer in the modal, so the window stopped being narrow enough to miss.
+ *
+ * A background refresh is an ENRICHMENT — capabilities, currency, the dispute cap. None of it is worth a lost
+ * draft, and the next real navigation re-renders anyway. So it yields while a modal or lightbox is up.
+ * ⚠️ Deliberately NOT applied to renderApp itself: navigation, sends and screen changes must always paint.
+ */
+function bgRenderApp(){
+  var mh=document.getElementById('modalhost'); if(mh && mh.innerHTML.trim()) return;
+  var lb=document.getElementById('lbhost');    if(lb && lb.innerHTML.trim()) return;
+  renderApp();
+}
 function renderApp(){
   /**
    * ⚠️ THE SHELL MUST NEVER PAINT WITHOUT A SESSION.
@@ -1555,7 +1576,7 @@ function renderApp(){
       // is no longer cosmetic: it tells someone they are typing INR while the server records USD.
       // `unwrap()` returns j.entity for /me, so read both shapes.
       var _e=(r&&r.entity)||r||{}; if(_e.currency_code) SESSION.currency=_e.currency_code; if(_e.country) SESSION.country=_e.country;
-      if(SESSION.role!=='customer')ensureCap('dispute').then(renderApp).catch(function(){}); renderApp(); }).catch(function(e){ SESSION.capabilities=SESSION.capabilities||[]; }); }
+      if(SESSION.role!=='customer')ensureCap('dispute').then(bgRenderApp).catch(function(){}); bgRenderApp(); }).catch(function(e){ SESSION.capabilities=SESSION.capabilities||[]; }); }
   const _cap = CAP_OF[UI.nav];
   const _capLoading = !!(_cap && !CAP_LOADED[_cap]);
   if(_capLoading){ ensureCap(_cap).then(function(){ if(CAP_OF[UI.nav]===_cap) renderApp(); })

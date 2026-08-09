@@ -124,7 +124,11 @@ const HAS_TOTAL = () => { const t = document.getElementById('cc_total'); return 
  */
 async function composeStepNext(page, expectStep) {
   const btn = page.locator('[data-testid^="step-next-"]');
-  await expect(btn, `compose cannot leave this step: ${await page.locator('[data-testid^="step-why-"]').textContent().catch(() => '')}`).toBeEnabled();
+  // ⚠️ DO NOT read step-why-* to build this message. When the step is satisfied that element does not exist, so
+  // `.textContent()` auto-waits the full action timeout before the catch — fifteen seconds of doing nothing inside
+  // an open modal, on every step. It cost real time and it masked a real bug (a background renderApp wiping the
+  // modal) as a locator failure. The guard's reason is on the button's title and in step-why when it applies.
+  await expect(btn, 'compose could not leave this step — its guard is unsatisfied').toBeEnabled();
   await btn.click();
   await expect(page.locator(`[data-testid="step-${expectStep}"].now`),
     `compose did not advance to the ${expectStep} step`).toBeVisible();
@@ -141,11 +145,13 @@ async function composeStepNext(page, expectStep) {
  *
  * `recipients` are added by name from the suggest list; `self: true` adds the Self recipient instead.
  */
-async function composeChit(page, { subject, item = 'Widget', recipients = [], self = false, send = true } = {}) {
+async function composeChit(page, { subject, item = 'Widget', qty, price, recipients = [], self = false, send = true } = {}) {
   await clickNav(page, 'compose');
 
   // ── 1 · ITEMS. The line comes first now: the chit is about what is on it.
   await page.getByTestId('chit-item-name').fill(item);
+  if (qty !== undefined) await page.getByTestId('chit-item-qty').fill(String(qty));
+  if (price !== undefined) await page.getByTestId('chit-item-price').fill(String(price));
   await clickInModal(page, 'chit-item-add', HAS_TOTAL);       // add the line item (verify it registered)
   await composeStepNext(page, 'to');
 
