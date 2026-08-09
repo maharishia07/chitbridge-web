@@ -642,6 +642,7 @@ const EP = {
   captureSimulate: {m:"POST", p:"/api/capture/simulate",         ok:"✓"},  // the webhook's own path, driven by hand
   captureStructure:{m:"POST", p:"/api/capture/:id/structure",    ok:"✓"},
   captureConvert:  {m:"POST", p:"/api/capture/:id/convert",      ok:"✓"},  // the receipt: this capture became that chit
+  captureRaise:    {m:"POST", p:"/api/capture/:id/raise",        ok:"✓"},  // build the request payload — creates NOTHING
   captureDismiss:  {m:"POST", p:"/api/capture/:id/dismiss",      ok:"✓"},
   // CHANNELS (b123) — which inbound number/address reaches this entity. The map the capture webhooks resolve against.
   channelsList:    {m:"GET",  p:"/api/channels",                 ok:"✓"},
@@ -2092,7 +2093,16 @@ async function sendChit(v){
     busyShow(v.isDraft?'Saving draft…':'Sending chit…');
     const r=await api("createChit",{body:{recipients:v.recipients||[], is_draft:!!v.isDraft, send_as_label:v.send_as_label,
       subject:v.subject, schema_values:v.schema_values||{}, line_items:v.line_items||[],
-      external_priority:v.priority||"normal", promote_draft_id:v.promote_draft_id, forwarded_from:v.forwarded_from}});
+      external_priority:v.priority||"normal", promote_draft_id:v.promote_draft_id, forwarded_from:v.forwarded_from,
+      /* Pass-throughs, each omitted unless the caller asked for it — so every existing send is byte-identical.
+         purpose: an inbound REQUEST is an 'inquiry', not an 'order'. business_json: where it came from.
+         self_copy: 'received' = Task only, for a request the entity did not raise itself. */
+      ...(v.purpose?{purpose:v.purpose}:{}),
+      /* ⚠️ business_json WINS OVER schema_values on the server — it reads `business_json || {schema_values}`, so
+         sending both as-is would silently drop every schema field. Merged here, once, rather than left as a trap
+         for the next caller that needs provenance AND a filled form. */
+      ...(v.business_json?{business_json:{...v.business_json, ...(Object.keys(v.schema_values||{}).length?{schema_values:v.schema_values}:{})}}:{}),
+      ...(v.self_copy?{self_copy:v.self_copy}:{})}});
     const _newId=r&&r.chit_id;
     if(_newId && (v.files||[]).length){ busyShow('Attaching files…'); for(const f of v.files){ try{ await attUpload(_newId, f); }catch(e){ toast('Attachment "'+f.name+'" failed.'); } } }
     // Per-LINE attachments, addressed by the line's index on the chit — so a file stays with the line it evidences.
@@ -3768,7 +3778,7 @@ function mapApiChit(c){
   const fors=recips.filter(r=>r.role==='for').map(r=>r.display_name);
   const rsummary=[tos.length?('To: '+tos.join(', ')):'', ccs.length?('CC: '+ccs.join(', ')):'', fors.length?('For: '+fors.join(', ')):''].filter(Boolean).join(' · ');
   const sum=c.summary_json||{};
-  return { clearances:sum.clearances||null, commercial:sum.commercial||null, id:c.chit_id, created_at:c.created_at, code:c.manual_subject||c.auto_subject||(c.purpose||'chit'),
+  return { clearances:sum.clearances||null, commercial:sum.commercial||null, via:sum.via||null, id:c.chit_id, created_at:c.created_at, code:c.manual_subject||c.auto_subject||(c.purpose||'chit'),
     party:(tos.join(', '))||senderR.display_name||c.sender_entity_display_name||'—', cust:tos.join(', '), area:'', rcc:ccs.length, rfor:fors.length, rsummary:rsummary, sender:senderR.display_name||c.sender_entity_display_name||'',
     kind:c.purpose||'order', amt:sum.total_value||0, currency:sum.currency_code||'INR', state:ST[c.current_status]||'open', _status:c.current_status||'pending',
     assignTo:c.assigned_to_actor_id||null, assignee:c.assigned_to_actor_display_name||null, recips:recips, folder:'task', dispute:Number(c.open_dispute_count||0)>0, dispOpen:Number(c.open_dispute_count||0), dispResolved:Number(c.resolved_dispute_count||0),
@@ -4050,6 +4060,40 @@ function commercialBlock(c){
   }).join("");
   return '<div class="itab" style="margin-top:10px;padding:10px"><div class="sec" style="margin:0;display:flex;align-items:center;gap:6px">💳 Commercial cover<span style="margin-left:auto;font-size:9px;color:var(--grey);font-weight:600">'+(cm.incoterm?esc(cm.incoterm)+" · ":"")+'folded on '+when+'</span></div><div style="font-size:10px;color:var(--grey);margin:2px 0 4px">The commercial-cover framework for this order — payment, transit, currency &amp; credit risk. Items marked on-rail are already evidenced by the supplier record.</div>'+rows+'</div>';
 }
+/**
+ * viaBlock — where this chit came from, when it came from OUTSIDE the rail.
+ *
+ * A request raised from a WhatsApp message is authored by the entity's own credentials, because the rail has no
+ * other way to author it — a phone number is not an entity. Without this block the record would read as though the
+ * business raised the request itself, which is the one thing it must not say.
+ *
+ * ⚠️ IT NAMES THE LINE THEY WROTE TO, not just who wrote. With two bound numbers, "which of my businesses was this
+ * customer talking to" is a real question, and the answer is on the chit rather than inferred later.
+ *
+ * ⚠️ AND IT SAYS THE SENDER IS NOT VERIFIED, out loud. A phone number that messaged a business is a stranger's
+ * assertion of who they are. Six weeks on, nothing else on this record would tell it apart from a verified party.
+ */
+function viaBlock(c){
+  var v=c&&c.via; if(!v||!v.channel) return "";
+  var CH={ whatsapp:['#25D366','WhatsApp'], email:['#3F66A6','Email'], sms:['#b07a2b','SMS'], web:['#6a44a8','Web'] };
+  var m=CH[v.channel]||['#6a707a', String(v.channel)];
+  function row(label, value){ return value ? '<div style="display:flex;gap:8px;font-size:11px;padding:2px 0"><span style="color:var(--grey);min-width:86px">'+esc(label)+'</span><span style="font-family:ui-monospace,Menlo,monospace;word-break:break-all">'+esc(value)+'</span></div>' : ''; }
+  return '<div class="itab" style="padding:10px 12px;margin-bottom:9px">'
+    + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
+    + '<span style="font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#fff;background:'+m[0]+';border-radius:5px;padding:2px 7px">'+esc(m[1])+'</span>'
+    + '<span style="font-weight:700;font-size:12px">Came in from outside the rail</span></div>'
+    + '<div style="margin-top:6px">'
+    + row('Asked by', (v.from_name?v.from_name+' · ':'')+(v.from||'unknown'))
+    + row('On your line', v.to)
+    + row('Received', String(v.received_at||'').slice(0,16).replace('T',' '))
+    + row('Message id', v.provider_msg_id)
+    + '</div>'
+    + '<div style="margin-top:6px;font-size:11px;color:#6b5a36;background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:8px;padding:7px 9px">'
+    + '⚠️ <b>The sender is not a verified party.</b> This is a phone number that wrote in'
+    + (v.read_by==='co-assist'?', and the lines below are a co-assist&rsquo;s reading of their words':'')
+    + ' — raised here so it can be answered, not because it has been checked.</div>'
+    + '</div>';
+}
 function clearancesBlock(c){
   var cl=c&&c.clearances; if(!cl||!cl.items||!cl.items.length) return "";
   var when="send"; try{ when=new Date(cl.folded_at).toLocaleDateString(); }catch(e){}
@@ -4184,7 +4228,9 @@ function detailInner(){
   buildAttGroups(c);
   const items=contentItems(c);
   let body="";
-  if(UI.dtab==="content") body=`<div class="itab">${items}<div class="ir tot"><span>Total</span><span class="qt">${fmtMoney(c.amt,c.currency)}</span></div></div>
+  // Provenance leads the content tab: before "what was asked for" is readable, "who asked, and are they anyone we
+  // know" has to be. It is a no-op on every chit raised inside the rail.
+  if(UI.dtab==="content") body=`${viaBlock(c)}<div class="itab">${items}<div class="ir tot"><span>Total</span><span class="qt">${fmtMoney(c.amt,c.currency)}</span></div></div>
      ${chitAttBlock(c)}`;
   if(UI.dtab==="messages") body=messagesTab(c);
   if(UI.dtab==="status") body=statusTabHtml(c);

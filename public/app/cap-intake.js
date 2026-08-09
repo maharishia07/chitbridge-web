@@ -89,7 +89,12 @@ function intakeCardHTML(c){
     + '<div style="font-size:13px;margin:8px 0;white-space:pre-wrap">' + esc(c.raw_text||'') + '</div>'
     + (s ? intakeDraftHTML(c, s) : '')
     + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:9px">'
-    + (s ? '<button class="composebtn" data-testid="intake-make-chit" onclick="intakeMakeChit(\''+esc(c.id)+'\')">Make this a chit →</button>'
+    /* TWO doors out of a read message, and they are not the same act. RAISE files it as a request, unedited, in
+       the sender's terms — one press, because most inbound messages need nothing more. MAKE A CHIT opens Compose
+       to edit, price and address it, which is what you want when the message is a starting point rather than the
+       thing itself. Neither sends anything without a person pressing it. */
+    + (s ? '<button class="composebtn" data-testid="intake-raise" '+(w.busy?'disabled':'')+' onclick="intakeRaise(\''+esc(c.id)+'\')" title="File this as a request in your inbox, in their words, with the message reference on it">'+(w.busy?'Raising…':'📥 Raise as a request')+'</button>'
+         + '<button data-testid="intake-make-chit" onclick="intakeMakeChit(\''+esc(c.id)+'\')" style="border:1px solid var(--line);background:#fff;border-radius:9px;padding:9px 15px;font-size:13px;font-weight:700;cursor:pointer" title="Open Compose to edit, price and address it before sending">Make this a chit →</button>'
          : '<button class="composebtn" data-testid="intake-structure" '+(w.busy?'disabled':'')+' onclick="intakeStructure(\''+esc(c.id)+'\')">'+(w.busy?'✨ Reading…':'✨ Structure it')+'</button>')
     + '<button data-testid="intake-dismiss" onclick="intakeDismiss(\''+esc(c.id)+'\')" style="border:1px solid var(--line);background:#fff;border-radius:9px;padding:9px 15px;font-size:13px;font-weight:700;cursor:pointer;color:var(--grey)">Dismiss</button>'
     + '</div>'
@@ -143,6 +148,49 @@ async function intakeDismiss(id){
   if(!confirm('Dismiss this message?\n\nIt stays on the capture queue as dismissed — a receipt that it arrived and was not turned into a chit.')) return;
   try{ await api('captureDismiss',{params:{id:id}}); await loadIntake(); }
   catch(e){ toast((e&&e.message)||'Could not dismiss it', true); }
+}
+/**
+ * ══════════════════════════════════════════════════════════════════════════════════════════════════════════════
+ *  intakeRaise — the message becomes a REQUEST addressed to you, in their words, one press.
+ * ══════════════════════════════════════════════════════════════════════════════════════════════════════════════
+ *
+ * Athi, 2026-08-09: *"what we need is creating a chit and send it to the entity as a request."*
+ *
+ * ⚠️ A TASK, NOT AN ORDER. It is a SELF-CHIT with the Order copy suppressed, so it lands in your inbox and NOT in
+ * your Sent list. You did not raise this — someone outside asked — and a copy in Sent would claim otherwise. The
+ * suppression is declared on the chit (copy_policy, source:'request'), so the missing copy is governed, not a hole.
+ *
+ * ⚠️ AND IT IS AN `inquiry`, NOT AN `order`. Nobody has agreed to anything: a stranger asked, and answering is
+ * still yours to do. A request that entered the ledger as an order would be an obligation minted by a message.
+ *
+ * ⚠️ THE SENDER IS NOT A RECIPIENT. /api/chits/send resolves every recipient to a live entity and refuses a name
+ * that does not; a WhatsApp number is not an entity, and inventing one for every stranger would put unverified
+ * identities on the rail. They are the ORIGIN, recorded in business_json.via — WHICH line they wrote to, WHICH
+ * provider message it was, and that they are NOT verified.
+ *
+ * The payload is built SERVER-SIDE from the stored capture row (POST /api/capture/:id/raise, which creates
+ * nothing) and then goes through the ONE send. Provenance a browser composes is a claim about itself; provenance
+ * read off the row the webhook wrote is a record.
+ */
+async function intakeRaise(id){
+  _INTAKE.working[id]=Object.assign({}, _INTAKE.working[id], {busy:true, err:null}); paintIntake();
+  try{
+    var pay=await api('captureRaise',{params:{id:id}});
+    UI._captureId=id;                     // sendChit files the receipt: this capture became that chit
+    var r=await sendChit({
+      recipients:(pay.recipients||[]).map(function(x){ return {name:'', role:x.role||'to', self:!!x.self}; }),
+      subject:pay.subject, line_items:pay.line_items||[], purpose:pay.purpose,
+      business_json:pay.business_json, self_copy:pay.self_copy,
+      onError:function(m){ _INTAKE.working[id]={err:m}; paintIntake(); } });
+    if(!r){ _INTAKE.working[id]=Object.assign({}, _INTAKE.working[id], {busy:false}); paintIntake(); return; }
+    /* sendChit already navigates to the Task list and reloads it — the request is on screen where it landed. The
+       intake queue is re-read too, because /convert has just taken this message off it. */
+    await loadIntake();
+  }catch(e){
+    UI._captureId=null;
+    _INTAKE.working[id]=Object.assign({}, _INTAKE.working[id], {busy:false, err:(e&&e.message)||'Could not raise it as a request.'});
+    paintIntake();
+  }
 }
 /**
  * intakeMakeChit — the CONFIRM GATE, and the only route from a message to the rail.
