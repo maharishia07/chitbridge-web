@@ -4088,6 +4088,14 @@ function viaBlock(c){
     + row('Received', String(v.received_at||'').slice(0,16).replace('T',' '))
     + row('Message id', v.provider_msg_id)
     + '</div>'
+    /* ⚠️ WHAT THEY ACTUALLY WROTE, next to what was read out of it. The lines below are an interpretation; this is
+       the thing being interpreted. Shown together because a reading you can check is a different kind of record
+       from one you have to trust — and the full original is attached to this chit, held per-copy, not linked. */
+    + (v.raw_excerpt ? '<div style="margin-top:7px"><div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--grey);margin-bottom:3px">What they wrote</div>'
+        + '<div style="font-size:12px;white-space:pre-wrap;background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:8px 10px">'
+        + esc(v.raw_excerpt) + (v.raw_excerpt.length>=400?'<span style="color:var(--grey)"> … (full text attached)</span>':'') + '</div></div>' : '')
+    + (v.media_count ? '<div style="margin-top:5px;font-size:11px;color:#6b5a36">📎 '+v.media_count+' attachment'+(v.media_count===1?'':'s')+' came with the message and '
+        + '<b>are not on this chit</b> — they are still held at the provider.</div>' : '')
     + '<div style="margin-top:6px;font-size:11px;color:#6b5a36;background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:8px;padding:7px 9px">'
     + '⚠️ <b>The sender is not a verified party.</b> This is a phone number that wrote in'
     + (v.read_by==='co-assist'?', and the lines below are a co-assist&rsquo;s reading of their words':'')

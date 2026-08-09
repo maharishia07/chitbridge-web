@@ -177,10 +177,24 @@ async function intakeRaise(id){
   try{
     var pay=await api('captureRaise',{params:{id:id}});
     UI._captureId=id;                     // sendChit files the receipt: this capture became that chit
+    /**
+     * ⚠️ THE ORIGINAL MESSAGE RIDES ALONG AS EVIDENCE. Athi, 2026-08-09: *"the copy is attached along with the
+     * message so it can be verified against."*
+     *
+     * The lines on this chit are a co-assist's reading of someone else's words. A reading with the original beside
+     * it can be checked and disputed; a reading without one has to be trusted. Attachments already replicate
+     * per-entity-per-copy, so each party HOLDS the original rather than a pointer to ours — which is exactly the
+     * difference that matters when two readings disagree months later.
+     */
+    var files=[];
+    if(pay.original && pay.original.text){
+      try{ files.push(new File([pay.original.text], pay.original.filename||'original-message.txt', {type:'text/plain'})); }
+      catch(_){ /* older engines: a chit with the lines but no evidence beats no chit at all */ }
+    }
     var r=await sendChit({
       recipients:(pay.recipients||[]).map(function(x){ return {name:'', role:x.role||'to', self:!!x.self}; }),
       subject:pay.subject, line_items:pay.line_items||[], purpose:pay.purpose,
-      business_json:pay.business_json, self_copy:pay.self_copy,
+      business_json:pay.business_json, self_copy:pay.self_copy, files:files,
       onError:function(m){ _INTAKE.working[id]={err:m}; paintIntake(); } });
     if(!r){ _INTAKE.working[id]=Object.assign({}, _INTAKE.working[id], {busy:false}); paintIntake(); return; }
     /* sendChit already navigates to the Task list and reloads it — the request is on screen where it landed. The
