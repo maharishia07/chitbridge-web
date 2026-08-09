@@ -163,17 +163,27 @@ async function intakeMakeChit(id){
   // The chit carries WHERE IT CAME FROM in its subject line, so provenance is readable six weeks later.
   var subj=s.subject || ('From '+(c.sender_name||c.sender_ref||c.channel));
   UI._captureId=id;                       // sendChit records the linkage once a chit really exists
-  await compose({ subject: subj });
+  /**
+   * ⚠️ PROVENANCE TRAVELS WITH THE LINES, and it is handed over BEFORE compose opens.
+   *
+   * Athi, 2026-08-09: *"it just opened the compose screen, the data is not going to the chit."* It was going to the
+   * chit. What it was not doing was SAYING so: compose opened on an empty cart reading "Press + on what this chit
+   * is for" while it fetched the catalogue, and the lines landed below the fold a second or two later. Arriving
+   * work that announces nothing cannot be told apart from work that never arrived.
+   */
+  var CHN={ whatsapp:'a WhatsApp message', email:'an email', sms:'an SMS', web:'the web' };
+  await compose({ subject: subj, origin:{ kind:'capture', channel:c.channel,
+    channelName:CHN[c.channel]||('a '+c.channel+' message'), from:c.sender_name||c.sender_ref||null } });
   if(!UI._ccCart) return;
   var res=UI._ccCart.load((s.line_items||[]).map(function(l){
     return { name:l.particulars||l.description, qty:l.qty==null?1:l.qty, unit:l.unit, price:(l.rate!=null?l.rate:l.price) };
   }));
   if(typeof ccAddPicked==='function') ccAddPicked();     // the placed lines become chit lines, through the one gate
-  // ⚠️ WHAT COULD NOT BE PLACED IS REPORTED, never silently dropped. A refused line is a real request that the
-  // catalogue's own rules would not accept at that quantity — a person has to see it to decide.
-  if(res && res.refused && res.refused.length){
-    var e=document.getElementById('cc_err');
-    var msg=res.refused.length+' line(s) could not be placed: '+res.refused.map(function(r){ return (r.name||'unnamed')+' — '+r.why; }).join('; ');
-    if(e) e.textContent=msg; else toast(msg, true);
-  }
+  /* ⚠️ WHAT COULD NOT BE PLACED IS REPORTED, never silently dropped — a refused line is a real request the
+     catalogue's own rules would not accept at that quantity. It goes on the ORIGIN BANNER, not in cc_err: cc_err
+     is cleared by the next repaint, so the one message explaining a missing line had the shortest life of anything
+     on the screen. Then repaint the step, so the lines lead and the banner counts them. */
+  if(CC.origin) CC.origin.refused=(res&&res.refused)||[];
+  if(UI._ccFlow) UI._ccFlow.paint();
+  if(typeof ccPaintStepParts==='function') ccPaintStepParts();
 }

@@ -1772,6 +1772,17 @@ function ccAddPicked(){
 }
 function ccRenderCatPick(){ const h=document.getElementById('cc_catpick'); if(h) h.innerHTML=ccCatPickHTML(); }
 async function compose(prefill){ UI.drawer=false; CC={items:(prefill&&prefill.items)?prefill.items.slice():[],rcpts:(prefill&&prefill.recipients)?prefill.recipients.slice():[],fields:{}}; UI._forwardFrom=(prefill&&prefill.forwardFrom)||null; UI._draftId=(prefill&&prefill.draftId)||null; UI._supplier=(prefill&&prefill.supplier)?prefill.supplier:null;
+  /**
+   * ⚠️ WHERE THE LINES CAME FROM, SAID ON SCREEN. Athi, 2026-08-09: *"it just opened the compose screen, the data is
+   * not going to the chit."* The data WAS going to the chit — CC.items held both lines and the subject was filled —
+   * but the first thing on screen was an empty cart reading "Press + on what this chit is for", with the actual
+   * lines six catalogue rows below the fold. Arriving work that announces nothing is indistinguishable from work
+   * that never arrived, and a person who cannot see it has no reason to believe it.
+   *
+   * `origin` is set BEFORE the catalogue fetch, so the banner is on screen during the second or two that compose
+   * genuinely is empty — the other half of why this looked broken.
+   */
+  CC.origin=(prefill&&prefill.origin)||null;
   // SUPPLIER mode uses THEIR catalogue (passed in) → ready now; otherwise show any cached list immediately, else a brief
   // "loading…", and fetch YOUR products in the background AFTER the modal opens (below) so a cold API never stalls it.
   if(UI._supplier && prefill && prefill.catalogue){ STORE.catalogue = prefill.catalogue.slice(); UI._catState='ready'; }
@@ -1864,13 +1875,45 @@ function ccField(k){
 function ccSetField(k, v){ CC.fields = CC.fields || {}; CC.fields[k] = v; if(UI._ccFlow) UI._ccFlow.paintFoot(); }
 /** After any body repaint, the sub-renderers that own their own containers have to run again. */
 function ccPaintStepParts(){ ccRenderItems(); ccRenderRcpts(); ccRenderFiles(); }
+/**
+ * ccOriginHTML — the arriving lines say where they came from, what could not be placed, and what is still missing.
+ *
+ * ⚠️ IT IS A PROPOSAL, AND IT SAYS SO. These lines were read by a co-assist out of a stranger's message. The banner
+ * is the same governance line the intake screen draws: a message is a notice, a chit is an obligation, and the gap
+ * between them is a person reading this.
+ */
+function ccOriginHTML(){
+  const o=CC.origin; if(!o) return '';
+  const n=(CC.items||[]).length;
+  /* ⚠️ NO PRICE IS NOT ZERO PRICE. An item the catalogue does not stock arrives with nothing in the price column,
+     and ₹0.00 renders identically to a real free line. Sending an obligation for goods at nothing, because nobody
+     noticed the column, is worth a sentence on screen. It is NOT blocked — a delivery note or a quantity-only
+     request is a legitimate chit — but it is never silent. */
+  const unpriced=(CC.items||[]).filter(i=>!(typeof cbAmount==='function'?cbAmount(i.price):i.price)).length;
+  const ref=(o.refused||[]);
+  const who=esc(o.from||o.channel||'a message');
+  return `<div data-testid="cc-origin" style="background:#f7f6fd;border:1px solid #e4dff6;border-radius:10px;padding:10px 12px;margin:0 0 10px;font-size:12.5px">
+    <div style="font-weight:700">✨ ${n?(n+' line'+(n===1?'':'s')+' brought in'):'Bringing the lines in…'} from ${esc(o.channelName||o.channel||'a message')} — ${who}</div>
+    <div style="color:var(--grey);margin-top:3px">Read by a co-assist. <b>Proposed, not evidence</b> — check the quantities and prices before you send.</div>
+    ${unpriced?`<div style="margin-top:5px;color:#6b5a36">⚠️ ${unpriced} line${unpriced===1?'':'s'} ${unpriced===1?'has':'have'} no price — your catalogue does not stock ${unpriced===1?'it':'them'}. Set one below, or send it as a quantity-only chit.</div>`:''}
+    ${ref.length?`<div style="margin-top:5px;color:#b4453f">⚠️ ${ref.length} line${ref.length===1?'':'s'} could not be placed: ${esc(ref.map(r=>(r.name||'unnamed')+' — '+r.why).join('; '))}</div>`:''}
+  </div>`;
+}
 function ccStepItems(){
-  return `<div style="font-family:'Space Grotesk';font-weight:600;font-size:12px;color:var(--grey);margin:2px 0 4px">Line items · from ${UI._supplier?('<b>'+esc(UI._supplier.name)+'</b>&rsquo;s catalogue'):'your catalogue'}</div>
+  const pick=`<div style="font-family:'Space Grotesk';font-weight:600;font-size:12px;color:var(--grey);margin:2px 0 4px">${(CC.items||[]).length?'Add more':'Line items'} · from ${UI._supplier?('<b>'+esc(UI._supplier.name)+'</b>&rsquo;s catalogue'):'your catalogue'}</div>
      <div id="cc_catpick">${ccCatPickHTML()}</div>
      <div style="display:flex;gap:6px;margin-top:6px"><input class="inp" id="cc_mname" data-testid="chit-item-name" placeholder="Or type an item name" style="flex:1"><input class="inp" id="cc_mqty" data-testid="chit-item-qty" inputmode="numeric" value="1" style="width:50px" title="Qty"><input class="inp" id="cc_mprice" data-testid="chit-item-price" inputmode="numeric" placeholder="Price" style="width:74px"><button class="composebtn" data-testid="chit-item-add" onclick="ccAddManual()">+ Add</button></div>
-     <div style="display:flex;gap:6px;margin-top:6px"><input class="inp" id="cc_aidesc" data-testid="chit-ai-desc" placeholder="✨ Or describe the order in words — AI fills the rows" style="flex:1"><button class="composebtn" id="cc_aibtn" data-testid="chit-ai-fill" onclick="ccAiFill()" title="AI turns your description into line items; you review and edit before sending">✨ Fill</button></div>
-     <div id="cc_items" style="margin-top:8px"></div>
+     <div style="display:flex;gap:6px;margin-top:6px"><input class="inp" id="cc_aidesc" data-testid="chit-ai-desc" placeholder="✨ Or describe the order in words — AI fills the rows" style="flex:1"><button class="composebtn" id="cc_aibtn" data-testid="chit-ai-fill" onclick="ccAiFill()" title="AI turns your description into line items; you review and edit before sending">✨ Fill</button></div>`;
+  const lines=`<div id="cc_items" style="margin-top:8px"></div>
      <div id="cc_total" style="text-align:right;font-weight:700;font-size:13px;margin-top:6px"></div>`;
+  /**
+   * ⚠️ WHAT IS ALREADY ON THE CHIT COMES FIRST. Empty, the picker leads — you are here to choose. Non-empty, the
+   * lines lead, because the question has changed from "what are you sending" to "is this right".
+   *
+   * The order is decided ONCE per entry to the step, not on every line change: ccAddPicked repaints `cc_items`
+   * alone, so a list that reordered itself under the hand adding to it would be worse than the fault being fixed.
+   */
+  return ccOriginHTML() + ((CC.items||[]).length ? lines + pick : pick + lines);
 }
 function ccStepTo(){
   return (UI._supplier
