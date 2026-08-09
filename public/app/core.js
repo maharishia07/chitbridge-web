@@ -57,7 +57,7 @@ const OUTBOX_KEYS = new Set([
 
 async function api(key, {params, query, body}={}){
   const ep = EP[key]; if(!ep) throw new Error("no endpoint "+key);
-  cblog('debug', (CFG.MODE==='demo'?'(demo) ':'') + ep.m + ' ' + key);
+  cblog('debug', ep.m + ' ' + key);
   // Double-fire guard: block a repeat of the SAME in-flight mutation (same endpoint+params). GETs are free.
   const lockKey = (ep.m!=='GET') ? (key+':'+JSON.stringify(params||{})) : null;
   if(lockKey){ if(_lockKeys.has(lockKey)) throw new Error("Already working on that — one moment."); _lockKeys.add(lockKey); }

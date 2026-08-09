@@ -540,12 +540,11 @@ img.attImg{object-fit:cover;display:block}
 /* =========================================================================
    CHIT & BRIDGE — separate build (Registration → Login → Menu → Task Panel)
    Single self-contained SPA. Deploy to its OWN URL (does not touch the
-   existing front end). Runs standalone in WEB DEMO (mock data); switch stage (Dev/UAT/Live) for the real API.
+   existing front end). Switch stage (Dev/UAT/Live) to point at a different API.
    ========================================================================= */
 
 /* ---- CONFIG: the only block to edit when wiring to the backend ----
    STAGE = the promotion ladder. ONE source of truth: CFG.STAGE.
-     web_demo → front-end only, mock data (no API)
      dev / uat / live → the SAME real-API code path, pointed at three backends (differ only by base URL)
    MODE + API_BASE are DERIVED from STAGE, so the shared client (core.js) needs no change. */
 const STAGES = {
@@ -556,7 +555,7 @@ const STAGES = {
 const CFG = {
   STAGE: "dev",                                                     // points at the live dev API (Railway). Flip in the build-preview ribbon if present.
   ASSIST_LLM: false,                                                // tier-1 LLM for the assistant — OFF until the /api/assist proxy exists; answer() falls through to the library floor.
-  get MODE(){ return STAGES[this.STAGE].mock ? "demo" : "live"; },  // compat shim: core.js still reads CFG.MODE
+  get MODE(){ return "live"; },                                     // compat shim: core.js still reads CFG.MODE. There is no mock stage — the demo is gone.
   get API_BASE(){ return STAGES[this.STAGE].base || ""; },          // derived from the current stage
 };
 /* Endpoint map. ✓ = matches build registry · ? = ASSUMED, confirm before live.
@@ -700,9 +699,9 @@ const EP = {
 };
 
 /* deepClone → app/helpers.js */
-/* In LIVE mode STORE must hold NO demo data — start empty so a demo constant
-   (actors / chits / suppliers / catalogue / schema) can never be read while
-   logged into a real entity. Demo mode keeps the full DEMO dataset. */
+/* STORE starts EMPTY. It once had a demo dataset beside it and the rule was that a demo constant must never be
+   readable while logged into a real entity. The demo is gone, so the rule is now structural: there is nothing to
+   leak. Keep it that way — seed data belongs in a test, never in the shipped store. */
 function blankStore(){ return { actors:[], chits:[], catalogue:[], suppliers:[], disputes:{mine:[],other:[]}, chitSchema:{schema_name:"Order",schema_type:"product",fields:[]}, net:{self:{id:"e_self",name:"",bridgeId:"",mode:"b2b",claimed:false},nodes:[],edges:[],reg:{}} }; }
 function freshStore(){ return blankStore(); }
 let STORE = freshStore();
@@ -718,7 +717,6 @@ function acIdPrev(){const e=document.getElementById("ac_idprev"); if(e){ const k
 /* ---------------- API CLIENT — extracted to /app/core.js (module 1) ----------------
    fill(), unwrap() (the {ok,data,error} envelope), and api() (auth + 401/422/500 branching)
    now live in /app/core.js, loaded just above this script. Panels share that one client. */
-/* DEMO responder — mimics the API so the whole flow works standalone */
 /* ---------------- SESSION + ROUTER ---------------- */
 let SESSION = {token:null, role:null, name:null, entity:null, bridgeId:null};
 function myCur(){ return (typeof SESSION!=='undefined' && SESSION.currency) || 'INR'; }
@@ -777,7 +775,6 @@ function _timeout(ms){ return new Promise((_,rej)=> setTimeout(()=>rej(new Error
    network / bad shape) falls through to matchLibrary — the assistant degrades, it never breaks. */
 async function askLLM(question, contextKey){
   if(!(typeof CFG!=="undefined" && CFG.ASSIST_LLM)) return null;          // disabled → instant fall-through
-  if(typeof CFG!=="undefined" && CFG.MODE==="demo") return null;          // never call the model from the no-login mock
   const r = await api('assist', { body:{ q:question, context:contextKey||curScreen(), stage:CFG.STAGE } });
   if(!r || !r.answer) return null;                                        // honest empty → fall through to the floor
   return { q:question, a:String(r.answer), fit:r.fit, media:r.media };    // shape it like a library entry for assistEntryHTML
@@ -1207,14 +1204,14 @@ function renderWelcome(){
     body = `
       <div class="welhero"><h1>A shared, signed record between you and the people you deal with.</h1>
         <p>Chit &amp; Bridge is the rail — you bring the business. Every order, message, and dispute becomes one record both sides signed, and you decide who you connect with.</p>
-        <div class="welhero-cta"><button class="btn" onclick="window.open('/demo.html','_blank')">▶ Watch how it works</button><span class="welhero-cta-sub">90-second narrated demo — see one order travel between two businesses.</span></div></div>
+        <!-- the demo CTA lived here; the Theatre and its generated demo.html are gone --></div>
       <div class="welcaps">${ONB_CAP.map(c=>`<div class="welcap"><div class="ci">${c[0]}</div><div class="cn">${c[1]}</div><div class="cd">${c[2]}</div></div>`).join("")}</div>
       <div class="welsplit">
         <div class="welcol is"><div class="welh2">What Chit &amp; Bridge is</div><ul><li>The rail that carries and co-signs your records, A to B.</li><li>One shared, signed record per deal — order, message, dispute.</li><li>Yours to control: your prices, catalogue, customers and rules.</li></ul></div>
         <div class="welcol isnot"><div class="welh2">What it's not — not our aim</div><ul><li>We don't hold or sell your customers or your data.</li><li>We don't take over your relationships or become the marketplace.</li><li>Not a place that owns what's yours — disconnect any time.</li></ul></div>
       </div>
       <div class="welask">
-        <div class="welh2">Ask Chit &amp; Bridge <span class="welask-tag">Web Demo · sample answers</span></div>
+        <div class="welh2">Ask Chit &amp; Bridge <span class="welask-tag">sample answers</span></div>
         <div class="welsub">A product guide can answer whether it fits your business. (Real version: answers from the Prospect Knowledge Base, with its guardrails.)</div>
         <div class="welchips">${ONB_FAQ.map((f,i)=>`<button class="welchip" onclick="askPick(${i})">${f.q}</button>`).join("")}</div>
         <div class="welask-row"><input id="ask_in" class="inp" placeholder="Type a question…"><button class="btn" onclick="askAssist()">Ask</button></div>
@@ -1264,13 +1261,13 @@ function renderRegister(){
     <div class="top">${logo()}<h1>Create your entity</h1><p class="sub">Register your business on Chit &amp; Bridge</p></div>
     <div class="body">
       ${form}
-      <div class="hint">${STAGES[CFG.STAGE].mock?"<b>Web Demo</b> — any values create + sign you in so you can walk the flow.":'<b>'+STAGES[CFG.STAGE].label+'</b> — real OTP to your email via <span class="mono">'+EP.register.p+'</span>.'}</div>
+      <div class="hint"><b>${STAGES[CFG.STAGE].label}</b> — real OTP to your email via <span class="mono">${EP.register.p}</span>.</div>
       <div class="swap">Already registered? <a onclick="go('#/login')">Sign in</a></div>
     </div>
   </div></div>`;
   const b=document.getElementById("r_go"); if(b) b.onclick=doRegister;
 }
-/* Normalise the verify response (real API returns entity as an OBJECT; demo returns flat strings) -> fixes the [object Object] header bug. */
+/* Normalise the verify response — the API returns entity as an OBJECT. Fixes the [object Object] header bug. */
 function entFromVerify(r, fallbackName){
   let nm, ent, bridge;
   if(r && r.entity && typeof r.entity==="object"){ nm = r.entity.display_name||fallbackName; ent = nm; bridge = r.entity.bridge_id||null; }
@@ -1351,7 +1348,7 @@ function renderLogin(){
     <div class="body">
       ${form}
       ${L.err?`<div class="err">${L.err}</div>`:""}
-      <div class="hint">${STAGES[CFG.STAGE].mock?"<b>Web Demo</b> — any value signs you in so you can walk the flow.":"<b>"+STAGES[CFG.STAGE].label+"</b> — real OTP/PIN against the API."}</div>
+      <div class="hint"><b>${STAGES[CFG.STAGE].label}</b> — real OTP/PIN against the API.</div>
       ${L.cust?"":`<div class="swap">New here? <a onclick="go('#/welcome')">Create an entity</a> · <a onclick="setLoginCust(true)">Have a shop link?</a></div>`}
       <div style="text-align:center;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)"><button onclick="openLegend()" title="See what we serve — no login" style="border:0;background:linear-gradient(180deg,#4a72b0,#3F66A6);color:#fff;border-radius:22px;padding:11px 22px;cursor:pointer;font-size:13.5px;font-weight:700;box-shadow:0 3px 12px rgba(63,102,166,.32)">🔑 See what we serve — no sign-in</button><div style="font-size:10.5px;color:var(--grey);margin-top:6px">A 60-second look at where we&rsquo;re different.</div></div>
     </div>
@@ -1442,8 +1439,8 @@ function setSession(s){ SESSION={...SESSION,...s};
 }
 // Restore a persisted session on boot so a browser refresh stays signed-in. Drops an expired token.
 function restoreSession(){ try{ if(SESSION.token) return; const raw=localStorage.getItem('cb_sess'); if(!raw) return; const s=JSON.parse(raw); if(!s||!s.token) return; const p=jwtPayload(s.token); if(p&&p.exp&&(p.exp*1000)<Date.now()){ localStorage.removeItem('cb_sess'); return; } setSession(s); }catch(_){ } }
-// Live: the logged-in actor's real id (from the JWT). Demo: the seed actor 'a1' so the mock flow still works.
-function myActorId(){ return SESSION.actorId || (CFG.MODE==='demo' ? 'a1' : null); }
+// The logged-in actor's real id, from the JWT.
+function myActorId(){ return SESSION.actorId || null; }
 function statusControl(role){
   if(role==="actor"){const d=SESSION.duty||"duty";
     return `<div class="dutytog" role="group" aria-label="Duty status">
@@ -1638,7 +1635,7 @@ function autoRefresh(){
     // A signed-out tab must go quiet. Without this the timer kept polling with no token, and its callbacks
     // repainted the app shell over the login screen every 20 seconds.
     if(!SESSION.token){ stopAutoRefresh(); return; }
-    if(CFG.STAGE==='web_demo' || document.hidden || UI.nav==='compose') return;
+    if(document.hidden || UI.nav==='compose') return;
     loadNotifs();   // keep the bell badge current (no-op in demo)
     const mh=document.getElementById('modalhost'); if(mh && mh.innerHTML.trim()) return;
     const lb=document.getElementById('lbhost');    if(lb && lb.innerHTML.trim()) return;
@@ -2393,7 +2390,7 @@ function netView(self, tree, edges){
       : e.state==='suspended' ? `<button class="composebtn" onclick="netResume('${e.id}')">Resume</button> <button class="composebtn" style="color:var(--disp)" onclick="netDisconnect('${e.id}')">Disconnect</button>` : '';
     return `<div style="${_CARD}"><div style="display:flex;justify-content:space-between;align-items:center"><span><b>${esc(e.parent_name)}</b> <span style="color:var(--grey)">&rarr;</span> <b>${esc(e.child_name)}</b></span>${netStChip(e.state)}</div>${a?`<div style="margin-top:8px;display:flex;gap:6px">${a}</div>`:''}</div>`;
   }).join("")||'<div style="color:var(--grey);font-size:13px;padding:6px">No connections.</div>';
-  return `${CFG.MODE==="demo"?netModelBar():""}${orgBanner()}<div style="${_CARD}"><div style="display:flex;justify-content:space-between;align-items:center"><span><b>${esc(self.name)}</b> · <span style="font-family:\'Space Mono\';font-size:12px">${esc(self.bridgeId||self.bridge_id||'')}</span></span><span class="optchip ${self.claimed?'on':'brk'}">${self.claimed?'claimed':'unclaimed'}</span></div><div style="font-size:11.5px;color:var(--grey);margin-top:4px">mode ${esc(self.mode||'b2b')} · ${self.mode==='b2c'?'customer-facing':'internal-B2B'} · NET-01 Spine · /api/network (preview — editing not yet live)</div></div>
+  return `${orgBanner()}<div style="${_CARD}"><div style="display:flex;justify-content:space-between;align-items:center"><span><b>${esc(self.name)}</b> · <span style="font-family:\'Space Mono\';font-size:12px">${esc(self.bridgeId||self.bridge_id||'')}</span></span><span class="optchip ${self.claimed?'on':'brk'}">${self.claimed?'claimed':'unclaimed'}</span></div><div style="font-size:11.5px;color:var(--grey);margin-top:4px">mode ${esc(self.mode||'b2b')} · ${self.mode==='b2c'?'customer-facing':'internal-B2B'} · NET-01 Spine · /api/network (preview — editing not yet live)</div></div>
     <div class="sec" style="font-size:12px;color:var(--grey);margin:10px 0 4px">Your network — entities under you (up to the lead node)</div>
     <div style="${_CARD}">${nodes||'<div style="color:var(--grey);font-size:13px;padding:4px">Just you so far.</div>'}</div>
     <div style="font-size:11.5px;color:var(--grey);margin:-2px 0 10px;line-height:1.5">👥 = co-assists at that node. Set them in <b>Co-assists</b>. <i>Per-node access grants that cascade down the tree are planned — not enforced yet.</i></div>
@@ -3753,7 +3750,7 @@ function filterPanel(){ const f=UI.filter||{};
   </div>`;
 }
 let _notifs=[];
-function notifBadge(){ return CFG.MODE==='demo' ? 3 : (UI.notifCount||0); }   // demo keeps its showcase count
+function notifBadge(){ return UI.notifCount||0; }
 async function loadNotifs(){ if(CFG.MODE==='demo') return;
   try{ const r=await api("notifications"); _notifs=(r&&r.notifications)||[]; UI.notifCount=(r&&r.count!=null)?r.count:_notifs.length;
     const d=document.getElementById('belldot'); if(d){ d.textContent=UI.notifCount||""; d.style.display=UI.notifCount?'':'none'; } }catch(_){}
