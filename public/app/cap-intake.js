@@ -39,9 +39,23 @@ function intakeScreen(){
     + '<button data-testid="intake-simulate-open" onclick="intakeToggleSim()" style="border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:4px 9px;font-size:11.5px;cursor:pointer">✚ Record a message</button>'
     + '</div>'
     + '<div style="font-size:11.5px;color:var(--grey);line-height:1.5">A message is a <b>notice</b>; a chit is an <b>obligation</b>. Nothing here becomes a chit until you confirm it.</div>'
+    /**
+     * ⚠️ A CATALOGUE PRICE IS A SELL-SIDE PRICE. Taking an order, that is exactly what you want. Receiving milk
+     * from a farmer, it is the wrong side of the trade — pricing an inbound supply notice off what you SELL at
+     * puts a number on the record that nobody agreed. Same pipeline, opposite meaning, and only the business
+     * knows which it is, so it is a switch and not a guess.
+     */
+    + '<label style="display:flex;align-items:center;gap:6px;margin-top:7px;font-size:11.5px;color:var(--grey);cursor:pointer">'
+    + '<input type="checkbox" data-testid="intake-use-catalogue" '+(_intakeUseCat()?'checked':'')+' onchange="intakeSetUseCat(this.checked)">'
+    + 'Price the lines from my catalogue where they match <span style="color:var(--grey)">— turn off if you are RECEIVING goods rather than selling them</span></label>'
     + '</div><div id="intake_body" style="flex:1;overflow:auto;padding:12px 14px">' + intakeBodyHTML() + '</div></div>';
 }
 function intakeToggleSim(){ _INTAKE.sim = !_INTAKE.sim; paintIntake(); }
+/* Defaults ON: with it on, an unmatched line is untouched, so the only effect is prices appearing where they
+   genuinely match. ⚠️ Held in localStorage, so it is PER DEVICE — the policy-flags layer is still a stub, and
+   this rides it rather than pretending to be a governed setting it is not. */
+function _intakeUseCat(){ try{ return localStorage.getItem('cb_intake_usecat') !== '0'; }catch(_){ return true; } }
+function intakeSetUseCat(on){ try{ localStorage.setItem('cb_intake_usecat', on?'1':'0'); }catch(_){ } }
 function paintIntake(){ var h=document.getElementById('intake_body'); if(h) h.innerHTML=intakeBodyHTML(); }
 
 function _chn(c){
@@ -175,7 +189,7 @@ async function intakeDismiss(id){
 async function intakeRaise(id){
   _INTAKE.working[id]=Object.assign({}, _INTAKE.working[id], {busy:true, err:null}); paintIntake();
   try{
-    var pay=await api('captureRaise',{params:{id:id}});
+    var pay=await api('captureRaise',{params:{id:id}, body:{use_catalogue:_intakeUseCat()}});
     UI._captureId=id;                     // sendChit files the receipt: this capture became that chit
     /**
      * ⚠️ THE ORIGINAL MESSAGE RIDES ALONG AS EVIDENCE. Athi, 2026-08-09: *"the copy is attached along with the

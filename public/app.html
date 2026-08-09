@@ -434,6 +434,7 @@ button:focus-visible,.composebtn:focus-visible,.pri:focus-visible{outline:2px so
 .tl .ev.next .ea::after{content:" (upcoming)";font-size:9px;font-family:'Space Mono';color:#9aa3a7;font-weight:400}
 img.attImg{object-fit:cover;display:block}
 .attpdf{width:100%;height:60vh;border:0;background:#fff}
+.atttext{width:100%;max-height:60vh;overflow:auto;margin:0;padding:16px 18px;background:#fff;color:#243038;font:12.5px/1.65 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:pre-wrap;word-break:break-word;text-align:left}
 .attfile{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;min-height:160px;padding:24px;text-align:center;color:#46566a}
 .lhead{display:grid;align-items:center;gap:8px;position:sticky;top:0;z-index:3;background:#fff;border-bottom:1.5px solid var(--line);padding:7px 12px;font-size:10px;font-weight:700;color:var(--grey);text-transform:uppercase;letter-spacing:.3px}
 .lhcell{display:flex;align-items:center;white-space:nowrap;overflow:hidden}
@@ -4553,18 +4554,28 @@ function attMedia(a,size){
   const big=size==='hero'||size==='lb';
   if(a&&a.src&&a.t==='image') return '<img class="attImg '+(big?'big':'')+'" src="'+esc(a.src)+'" loading="lazy" alt="'+esc(a.n||'')+'" style="object-fit:cover">';
   if(a&&a.src&&a.t==='pdf'&&big) return '<iframe class="attpdf" src="'+esc(a.src)+'" title="'+esc(a.n||'pdf')+'"></iframe>';
+  /* ⚠️ SHOWN AS TEXT, NEVER AS MARKUP. The commonest text attachment here is a stranger's own words, captured off
+     a channel. esc() is the whole guard, and an iframe on a blob URL was the tempting shortcut that would not have
+     had it. */
+  if(a&&a.t==='text'&&big) return a.text!=null
+    ? '<pre class="atttext">'+esc(a.text)+'</pre>'
+    : '<div class="attfile"><div style="font-size:46px">📄</div><div style="font-weight:600;margin:8px 0 2px">'+esc(a.n||'file')+'</div><div style="font-size:11px;color:#9aa3a7">reading…</div></div>';
   if(a&&big&&a.t!=='image') return '<div class="attfile"><div style="font-size:46px">'+(a.t==='xlsx'||a.t==='csv'?'📊':(a.t==='docx'||a.t==='doc'?'📝':(a.t==='ppt'?'📑':(a.t==='zip'?'🗜️':(a.t==='pdf'?'📄':'📎')))))+'</div><div style="font-weight:600;margin:8px 0 2px">'+esc(a.n||'file')+'</div><div style="font-size:11px;color:#9aa3a7;text-transform:uppercase">'+esc(a.t||'file')+'</div>'+(a.src?'<a class="composebtn" style="margin-top:10px;display:inline-block" href="'+esc(a.src)+'" target="_blank" rel="noopener">Open / download</a>':'')+'</div>';
   const bg=a.t==='image'?'#E8F0F4':a.t==='video'?'#F7F1E4':'#F1EFE8';
   return `<div class="attImg ${big?'big':''}" style="background:${bg}"><span style="font-size:${big?'40px':'20px'}">${attIcon(a.t)}</span>${a.t==='video'?'<span class="vlen">0:12</span>':''}</div>`;
 }
 /* ── real attachments (platform-independent): bytes pulled ON DEMAND — GET /api/attachments/:id is auth'd, so fetch→blobURL ── */
-function attType(mime,name){ mime=String(mime||''); name=String(name||'').toLowerCase(); if(mime.indexOf('image/')===0)return 'image'; if(mime.indexOf('video/')===0)return 'video'; if(mime==='application/pdf'||/\.pdf$/.test(name))return 'pdf'; if(/sheet|excel|csv/.test(mime)||/\.(xlsx|xls|csv)$/.test(name))return 'xlsx'; if(/word|document/.test(mime)||/\.(docx|doc)$/.test(name))return 'docx'; if(/zip|compress/.test(mime)||/\.zip$/.test(name))return 'zip'; return 'doc'; }
+function attType(mime,name){ mime=String(mime||''); name=String(name||'').toLowerCase(); if(mime.indexOf('image/')===0)return 'image'; if(mime.indexOf('video/')===0)return 'video'; if(mime==='application/pdf'||/\.pdf$/.test(name))return 'pdf';
+  /* ⚠️ TEXT IS READABLE, SO READ IT. It used to fall through to 'doc', which offers a DOWNLOAD — and the commonest
+     text attachment on the rail is the original inbound message, attached as evidence precisely so someone can
+     check the lines against it. Making them download a file to read one sentence defeats the reason it is there. */
+  if(mime.indexOf('text/')===0||/\.(txt|md|log)$/.test(name))return 'text'; if(/sheet|excel|csv/.test(mime)||/\.(xlsx|xls|csv)$/.test(name))return 'xlsx'; if(/word|document/.test(mime)||/\.(docx|doc)$/.test(name))return 'docx'; if(/zip|compress/.test(mime)||/\.zip$/.test(name))return 'zip'; return 'doc'; }
 function mapAtt(a){ return { id:a.id, n:a.name||'file', t:attType(a.mime,a.name), mime:a.mime||'', size:a.size||0, line_index:(a.line_index==null?null:a.line_index) }; }
 function fileToB64(file){ return new Promise(function(res,rej){ var r=new FileReader(); r.onload=function(){res(String(r.result).replace(/^data:[^;]+;base64,/,''));}; r.onerror=function(){rej(new Error('read failed'));}; r.readAsDataURL(file); }); }
 async function attUpload(chit_id, file, extra){ var data_base64=await fileToB64(file); var body=Object.assign({chit_id:chit_id, name:file.name, mime:file.type||'application/octet-stream', data_base64:data_base64}, extra||{}); return await api("attUpload",{body:body}); }
 var _attUrls={};
 async function attBlobUrl(id){ if(_attUrls[id])return _attUrls[id]; var res=await fetch(CFG.API_BASE+'/api/attachments/'+id,{headers:SESSION.token?{Authorization:'Bearer '+SESSION.token}:{}}); if(!res.ok)throw new Error('attachment '+res.status); var b=await res.blob(); var u=URL.createObjectURL(b); _attUrls[id]=u; return u; }
-async function attResolveSrc(a){ try{ a.src=await attBlobUrl(a.id); paintLB(); }catch(e){ /* keep icon placeholder */ } }
+async function attResolveSrc(a){ try{ a.src=await attBlobUrl(a.id); if(a.t==='text'&&a.text==null){ try{ a.text=await (await fetch(a.src)).text(); }catch(_){ a.text=''; } } paintLB(); }catch(e){ /* keep icon placeholder */ } }
 function openMsgAtt(mid,i){ var m=((UI.detail&&UI.detail.msgs)||[]).find(function(x){return String(x.id)===String(mid);}); if(!m)return; UI.attGroups=UI.attGroups||{}; UI.attGroups['msg:'+mid]=(m.atts||[]); openLightbox('msg:'+mid,i); }
 /* build the visible attachment groups for the current chit: line0, line1 … + chit */
 function attGlyph(t){ return ({image:'🖼️',video:'🎬',pdf:'📄',xlsx:'📊',csv:'📊',docx:'📝',doc:'📝',ppt:'📑',zip:'🗜️'})[t]||'📎'; }
