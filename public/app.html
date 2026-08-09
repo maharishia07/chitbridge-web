@@ -4580,7 +4580,9 @@ async function attBlobUrl(id){ if(_attUrls[id])return _attUrls[id]; var res=awai
 async function attResolveSrc(a){ try{ a.src=await attBlobUrl(a.id); if(a.t==='text'&&a.text==null){ try{ a.text=await (await fetch(a.src)).text(); }catch(_){ a.text=''; } } paintLB(); }catch(e){ /* keep icon placeholder */ } }
 function openMsgAtt(mid,i){ var m=((UI.detail&&UI.detail.msgs)||[]).find(function(x){return String(x.id)===String(mid);}); if(!m)return; UI.attGroups=UI.attGroups||{}; UI.attGroups['msg:'+mid]=(m.atts||[]); openLightbox('msg:'+mid,i); }
 /* build the visible attachment groups for the current chit: line0, line1 … + chit */
-function attGlyph(t){ return ({image:'🖼️',video:'🎬',pdf:'📄',xlsx:'📊',csv:'📊',docx:'📝',doc:'📝',ppt:'📑',zip:'🗜️'})[t]||'📎'; }
+/* ⚠️ 'text' MUST BE HERE TOO. attType learned about text and this map did not, so a .txt fell through to 📎 —
+   the tile said "attachment" for the one file on the chit that is the customer's own words. */
+function attGlyph(t){ return ({image:'🖼️',video:'🎬',pdf:'📄',text:'📄',xlsx:'📊',csv:'📊',docx:'📝',doc:'📝',ppt:'📑',zip:'🗜️'})[t]||'📎'; }
 function fmtSize(b){ b=+b||0; if(b<1024)return b+' B'; if(b<1048576)return Math.round(b/1024)+' KB'; return (b/1048576).toFixed(1)+' MB'; }
 function attTile(a,group,i){ return `<div class="attTile" onclick="openLightbox('${group}',${i})" title="${esc(a.n)}"><div class="attTileIcon">${attGlyph(a.t)}</div><div class="attTileName">${esc(a.n)}</div><div class="attTileMeta">${esc((a.t||'file').toUpperCase())}${a.size?(' · '+fmtSize(a.size)):''}</div></div>`; }
 function attTileGrid(atts,group){ return `<div class="attGrid">${atts.map((a,i)=>attTile(a,group,i)).join('')}</div>`; }
