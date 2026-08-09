@@ -462,7 +462,9 @@ function sfLoginVerify(){
 }
 // ── Order flow: pick combination + qty → phone/email → OTP → place order (a chit to the shop). Price is server-side. ──
 function ohost(){ var h=el('ohost'); if(!h){ h=document.createElement('div'); h.id='ohost'; document.body.appendChild(h); } return h; }
-function orderClose(){ var h=el('ohost'); if(h) h.innerHTML=''; _ord=null; _docs=[]; _OIC=null; _read={}; }   // never carry a document — or what was read from it — to the next submission
+function orderClose(){ var h=el('ohost'); if(h) h.innerHTML=''; _ord=null; _docs=[]; _OIC=null; _read={};
+  // A checkout that is closed and leaves its wizard behind would reopen halfway through someone else's order.
+  if(_CFLOW){ _CFLOW.destroy(); _CFLOW=null; } }   // never carry a document — or what was read from it — to the next submission
 function orderOpen(idx){ if(!_FIN[idx])return;
   _ord={idx:idx, step:'contact'}; _docs=[]; _read={};
   _OIC=_oiFor(_FIN[idx].it);   /* this template's OWN declaration — one catalogue entry = one form */
@@ -491,6 +493,9 @@ function shopCartOrder(){
   _ord = { cart:true, step:'contact', lines:picked.map(function(p){
     return { item_id:p.item_id, name:p.name, unit:p.unit, code:p.code, price:cbAmount(p.price), qty:1 }; }) };
   _docs=[]; _read={}; _OIC=null;
+  // ⚠️ A NEW CHECKOUT STARTS AT STEP ONE. Reusing a flow from a previous basket would open this one halfway
+  // through, on a Review of items that are no longer in it.
+  if(_CFLOW){ _CFLOW.destroy(); _CFLOW=null; }
   var _d=window.CBOffline&&CBOffline.loadDraft('shop.ord.'+BRIDGE);
   if(_d&&_d.cart){ _ord.name=_d.name; _ord.loc=_d.loc; _ord.contact=_d.contact; }
   orderRender();
@@ -503,48 +508,149 @@ function _cartLineTotal(i){ var L=_ord.lines[i]; var p=Number(L.price)||0; retur
 function _cartGrand(){ var s=0, any=false;
   (_ord.lines||[]).forEach(function(L){ var p=Number(L.price)||0; if(p){ any=true; s+=p*L.qty; } });
   return any?('₹'+s):'—'; }
-function _cartPanelHtml(){
-  var fld='style="width:100%;padding:9px;border:1px solid #e7e3d8;border-radius:8px;margin:3px 0 11px;font-size:14px"';
-  var otpStep=(_ord.step==='otp');
-  return '<div style="position:fixed;inset:0;background:rgba(15,22,32,.5);z-index:900;display:flex;align-items:center;justify-content:center;padding:12px" onclick="if(event.target===this)orderClose()">'
-    +'<div style="background:#fff;width:100%;max-width:460px;border-radius:16px;padding:18px 18px 22px;max-height:92vh;overflow:auto">'
-    +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><b class="sg" style="font-size:17px;flex:1">🛒 Your order · '+_ord.lines.length+' item'+(_ord.lines.length===1?'':'s')+'</b><button onclick="orderClose()" style="border:0;background:none;font-size:22px;cursor:pointer;color:#8a949c">×</button></div>'
-    + _ord.lines.map(function(L,i){
-        return '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px dashed #e7e3d8;font-size:13px">'
-          + '<span style="flex:1"><b>'+esc(L.name)+'</b>'+(L.unit?' <span class="meta">'+esc(L.unit)+'</span>':'')+'</span>'
-          + '<input inputmode="decimal" value="'+esc(String(L.qty))+'" oninput="shopCartQty('+i+',this.value)" data-testid="shop-cart-qty-'+i+'"'
-          + ' style="width:58px;padding:5px 7px;border:1px solid #e7e3d8;border-radius:7px;font-size:13px;text-align:right">'
-          + '<span id="cl_t_'+i+'" style="min-width:64px;text-align:right;font-weight:700">'+_cartLineTotal(i)+'</span></div>'; }).join('')
-    +'<div style="display:flex;padding:9px 0 12px;font-size:13.5px"><span style="flex:1;font-weight:700">Total</span>'
+/**
+ * ════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+ *  THE BASKET CHECKOUT, IN STEPS — Items → Delivery → Review → Who you are
+ * ════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+ *
+ * Athi, 2026-08-08: *"once all the selection is over, then we show the rest in order one by one."*
+ *
+ * This panel used to be one dense sheet: every line with its quantity, then name, address, date, time, remark,
+ * phone AND the OTP box — all stacked, on a phone, for a customer who has not agreed to anything yet.
+ *
+ * ⭐ "WHO YOU ARE" IS LAST, ON PURPOSE. Every other caller already knows who is ordering; here it is the one thing
+ * we do not know, and the one thing a stranger is most reluctant to hand over. Nobody types their phone number
+ * before they know what it costs. So the price and the delivery are settled first, and identity is asked once, at
+ * the end, because that is the moment it is actually needed — to send the code.
+ *
+ * ⚠️ ONLY THE CHECKOUT PANEL CHANGED. render() and productListHtml — the public page itself — are untouched. That
+ * is the code that took the storefront down twice this week, and the crowded screen was never in it.
+ *
+ * ⚠️ AND THE SIX OTHER PRESETS ARE UNTOUCHED. A finish / enquiry / form submission goes through orderRender()'s
+ * other branch and still renders its declared schema on one screen, which is right for it: a form IS one job.
+ * This is the CART path only (_isCart()).
+ */
+var _CFLOW = null;
+function _cartStepsFor(){
+  return CBSteps.create({
+    steps:[{k:'items',n:'Items'},{k:'delivery',n:'Delivery'},{k:'review',n:'Review'},{k:'who',n:'Who you are'}],
+    railEl:'oc_rail', bodyEl:'oc_body', footEl:'oc_foot',
+    render:function(k){ return k==='items'?_cartStepItems():k==='delivery'?_cartStepDelivery():k==='review'?_cartStepReview():_cartStepWho(); },
+    guard:function(k){
+      if(k==='items' && !(_ord&&_ord.lines&&_ord.lines.length)) return 'Your basket is empty.';
+      /* The address is the one thing the shop cannot guess. Date and time are genuinely optional — asking for them
+         as required would be inventing a commitment neither side has made. */
+      if(k==='delivery' && !String((_ord&&_ord.loc)||'').trim()) return 'A delivery address is needed.';
+      if(k==='who'){
+        if(!String((_ord&&_ord.contact)||'').trim()) return 'A phone or email — so the shop can reach you.';
+        if(_ord.step==='otp' && String(_ord.otp||'').trim().length!==6) return 'Enter the 6-digit code.';
+      }
+      return null;
+    },
+    nextLabel:function(k){ return k==='review' ? 'Continue →' : null; },
+    /* ⚠️ The last step's action CHANGES with the OTP stage — ask for the code, then place the order. Saying which
+       of the two it is about to do is the entire job of a labelled button. */
+    sendLabel:function(){ return (_ord&&_ord.step==='otp') ? 'Place order' : 'Send me a code'; },
+    sendTestid:'shop-cart-submit',
+    cancelLabel:'✕ Close',
+    onCancel:orderClose,
+    onSend:function(){ if(_ord&&_ord.step==='otp') orderConfirm(); else orderStart(); }
+  });
+}
+function _cartStepItems(){
+  return _ord.lines.map(function(L,i){
+      return '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px dashed #e7e3d8;font-size:13px">'
+        + '<span style="flex:1"><b>'+esc(L.name)+'</b>'+(L.unit?' <span class="meta">'+esc(L.unit)+'</span>':'')+'</span>'
+        + '<input inputmode="decimal" value="'+esc(String(L.qty))+'" oninput="shopCartQty('+i+',this.value)" data-testid="shop-cart-qty-'+i+'"'
+        + ' style="width:58px;padding:5px 7px;border:1px solid #e7e3d8;border-radius:7px;font-size:13px;text-align:right">'
+        + '<span id="cl_t_'+i+'" style="min-width:64px;text-align:right;font-weight:700">'+_cartLineTotal(i)+'</span></div>'; }).join('')
+    +'<div style="display:flex;padding:9px 0 6px;font-size:13.5px"><span style="flex:1;font-weight:700">Total</span>'
     +'<span id="cl_g" style="font-weight:800">'+_cartGrand()+'</span></div>'
-    +'<div class="meta" style="margin:-6px 0 12px">The shop confirms the price — nothing is charged now.</div>'
-    +'<label style="font-size:12px;color:#6a707a">Your name</label><input id="o_name" data-testid="shop-name" placeholder="optional" value="'+esc(_ord.name||'')+'" '+fld+'>'
-    +'<label style="font-size:12px;color:#6a707a">Delivery address</label><input id="o_loc" data-testid="shop-area" placeholder="e.g. 16a, Bollenini Hill Side, 560001" value="'+esc(_ord.loc||'')+'" '+fld+'>'
+    +'<div class="meta">The shop confirms the price — nothing is charged now.</div>';
+}
+function _cartStepDelivery(){
+  var fld='style="width:100%;padding:9px;border:1px solid #e7e3d8;border-radius:8px;margin:3px 0 11px;font-size:14px"';
+  return '<label style="font-size:12px;color:#6a707a">Delivery address</label>'
+    +'<input id="o_loc" data-testid="shop-area" placeholder="e.g. 16a, Bollenini Hill Side, 560001" value="'+esc(_ord.loc||'')+'" oninput="_cartSet(&#39;loc&#39;,this.value)" '+fld+'>'
     /**
      * WHEN, asked as two plain fields. Athi's 2018 panel had Delivery Date and Delivery Time above the address.
      * ⚠️ Both are the CUSTOMER'S REQUEST, not a promise — the shop has said nothing yet, and a storefront that
      * looks like it confirmed a slot it never saw is the kind of false certainty this codebase keeps refusing.
-     * They ride on the chit as asked-for values, and the shop answers.
      */
     +'<div style="display:flex;gap:9px"><div style="flex:1"><label style="font-size:12px;color:#6a707a">Delivery date <span style="color:#9aa3a7">· optional</span></label>'
-    +'<input id="o_date" type="date" data-testid="shop-date" value="'+esc(_ord.date||'')+'" '+fld+'></div>'
+    +'<input id="o_date" type="date" data-testid="shop-date" value="'+esc(_ord.date||'')+'" oninput="_cartSet(&#39;date&#39;,this.value)" '+fld+'></div>'
     +'<div style="flex:1"><label style="font-size:12px;color:#6a707a">Time <span style="color:#9aa3a7">· optional</span></label>'
-    +'<input id="o_time" type="time" data-testid="shop-time" value="'+esc(_ord.time||'')+'" '+fld+'></div></div>'
+    +'<input id="o_time" type="time" data-testid="shop-time" value="'+esc(_ord.time||'')+'" oninput="_cartSet(&#39;time&#39;,this.value)" '+fld+'></div></div>'
     +'<div class="meta" style="margin:-6px 0 11px">A request, not a confirmed slot — the shop will come back to you.</div>'
-    +'<label style="font-size:12px;color:#6a707a">Remark <span style="color:#9aa3a7">· optional</span></label><input id="o_remark" data-testid="shop-remark" placeholder="anything the shop should know" value="'+esc(_ord.remark||'')+'" '+fld+'>'
-    +'<label style="font-size:12px;color:#6a707a">Phone or email</label><input id="o_contact" data-testid="shop-contact" placeholder="9876543210 or you@email.com" '+(otpStep?'disabled':'')+' value="'+esc(_ord.contact||'')+'" '+fld+'>'
-    +(otpStep?('<label style="font-size:12px;color:#6a707a">6-digit code sent to you</label><input id="o_otp" data-testid="shop-otp" inputmode="numeric" maxlength="6" value="'+esc(_ord.otp||_ord.dev_otp||'')+'" '+fld+'>'):'')
-    +(_ord._err?'<div style="color:#b4453f;font-size:12.5px;margin-bottom:8px">'+esc(_ord._err)+'</div>':'')
-    +(_ord._msg?'<div style="color:#2e7a45;font-size:12.5px;margin-bottom:8px">'+esc(_ord._msg)+'</div>':'')
-    +(_ord.busy?'<button disabled style="width:100%;border:0;border-radius:10px;padding:12px;background:#9db4d6;color:#fff;font-weight:700;font-size:14px">⏳ Processing…</button>'
-      :'<button data-testid="shop-cart-submit" onclick="'+(otpStep?'orderConfirm()':'orderStart()')+'" style="width:100%;border:0;border-radius:10px;padding:12px;background:#3F66A6;color:#fff;font-weight:700;font-size:14px;cursor:pointer">'
-      +(otpStep?'Place order':'Send me a code')+'</button>')
+    +'<label style="font-size:12px;color:#6a707a">Remark <span style="color:#9aa3a7">· optional</span></label>'
+    +'<input id="o_remark" data-testid="shop-remark" placeholder="anything the shop should know" value="'+esc(_ord.remark||'')+'" oninput="_cartSet(&#39;remark&#39;,this.value)" '+fld+'>';
+}
+function _cartStepReview(){
+  var shopName=(_SHOPDATA&&_SHOPDATA.shop&&_SHOPDATA.shop.display_name)||'The shop';
+  var row=function(k,v){ return '<div style="display:flex;gap:10px;padding:7px 0;border-top:1px dashed #e7e3d8;font-size:13px">'
+    + '<span style="min-width:104px;color:#6a707a;font-size:11.5px">'+k+'</span><span style="flex:1">'+v+'</span></div>'; };
+  var hd=function(t,step){ return '<div style="font-size:11px;font-weight:800;color:#6a707a;text-transform:uppercase;letter-spacing:.05em;display:flex;margin-top:10px">'+t
+    + '<span style="margin-left:auto;color:#c0392b;cursor:pointer;text-transform:none;letter-spacing:0;font-size:11.5px" onclick="_CFLOW.go('+step+')">Change</span></div>'; };
+  return hd('Your basket · '+_ord.lines.length, 0)
+    + _ord.lines.map(function(L,i){ return row(L.qty+' × '+esc(L.unit||''), '<span>'+esc(L.name)+'</span><b style="float:right">'+_cartLineTotal(i)+'</b>'); }).join('')
+    + '<div style="display:flex;padding:9px 0;border-top:2px solid #e7e3d8;font-size:14px;font-weight:800"><span style="flex:1">Total</span><span data-testid="shop-review-total">'+_cartGrand()+'</span></div>'
+    /* ⚠️ CJ-07 — the shop's catalogue is the authority and the server reprices every line. On a public page that
+       must be SAID: a customer reading a total on their own screen cannot otherwise tell a request from a bill. */
+    + '<div style="background:#FBF6E9;border:1px solid #efe3c4;border-radius:10px;padding:9px 12px;font-size:12.5px;color:#6b5a36;margin:10px 0">'
+    + 'This is a <b>request</b>, not a bill. '+esc(shopName)+' confirms the price and the date before anything is due. Nothing is charged here.</div>'
+    + hd('Delivery', 1)
+    + row('Address', _ord.loc?esc(_ord.loc):'<span style="color:#b4453f">required</span>')
+    + row('When', (_ord.date||_ord.time)?esc(((_ord.date||'')+' '+(_ord.time||'')).trim()):'as soon as possible')
+    + row('Remark', _ord.remark?esc(_ord.remark):'—');
+}
+function _cartStepWho(){
+  var fld='style="width:100%;padding:9px;border:1px solid #e7e3d8;border-radius:8px;margin:3px 0 11px;font-size:14px"';
+  var otpStep=(_ord.step==='otp');
+  return '<div class="meta" style="margin-bottom:8px">Last step — so the shop can reach you about this order.</div>'
+    +'<label style="font-size:12px;color:#6a707a">Your name <span style="color:#9aa3a7">· optional</span></label>'
+    +'<input id="o_name" data-testid="shop-name" placeholder="optional" value="'+esc(_ord.name||'')+'" oninput="_cartSet(&#39;name&#39;,this.value)" '+fld+'>'
+    +'<label style="font-size:12px;color:#6a707a">Phone or email</label>'
+    +'<input id="o_contact" data-testid="shop-contact" placeholder="9876543210 or you@email.com" '+(otpStep?'disabled':'')+' value="'+esc(_ord.contact||'')+'" oninput="_cartSet(&#39;contact&#39;,this.value)" '+fld+'>'
+    +(otpStep?('<label style="font-size:12px;color:#6a707a">6-digit code sent to you</label><input id="o_otp" data-testid="shop-otp" inputmode="numeric" maxlength="6" value="'+esc(_ord.otp||_ord.dev_otp||'')+'" oninput="_cartSet(&#39;otp&#39;,this.value)" '+fld+'>'):'')
+    /* No account, no password. The code IS the identity — the same rail the signed-in app uses, entered once. */
+    +'<div class="meta">No account needed. The code confirms it is really you, and your order becomes a record you both hold.</div>'
+    +(_ord._err?'<div style="color:#b4453f;font-size:12.5px;margin-top:8px">'+esc(_ord._err)+'</div>':'')
+    +(_ord._msg?'<div style="color:#2e7a45;font-size:12.5px;margin-top:8px">'+esc(_ord._msg)+'</div>':'');
+}
+/**
+ * ⚠️ EVERY FIELD WRITES TO `_ord` AS IT IS TYPED. The steps are not all on screen at once, so _ocap()'s DOM read of
+ * o_loc / o_contact / o_date can only ever see the step you are standing on — the send would post an address that
+ * scrolled out of existence two steps ago. _ocap() still reads the DOM, which remains right for the FINISH path:
+ * that one really is a single screen.
+ */
+function _cartSet(k, v){
+  if(!_ord) return;
+  _ord[k]=v;
+  if(_CFLOW) _CFLOW.paintFoot();          // the address / contact / code guards all live on the footer
+  /* persist across a reload — NEVER the OTP */
+  if(window.CBOffline) CBOffline.saveDraft('shop.ord.'+BRIDGE,{cart:true,name:_ord.name,loc:_ord.loc,contact:_ord.contact});
+}
+function _cartPanelHtml(){
+  if(!_CFLOW) _CFLOW=_cartStepsFor();
+  var shop=(_SHOPDATA&&_SHOPDATA.shop)||{};
+  /* ⚠️ --cbst-accent: the shared rail takes THIS shop's colour. A blue rail on a red shop is the same mistake as
+     sharing a stylesheet instead of sharing the rules. */
+  return '<div style="position:fixed;inset:0;background:rgba(15,22,32,.5);z-index:900;display:flex;align-items:center;justify-content:center;padding:12px" onclick="if(event.target===this)orderClose()">'
+    +'<div style="--cbst-accent:#c0392b;--cbst-soft:#fdf3f2;background:#fff;width:100%;max-width:460px;border-radius:16px;padding:18px 18px 20px;max-height:92vh;overflow:auto">'
+    +'<div style="display:flex;align-items:center;gap:8px"><b class="sg" style="font-size:16px;flex:1">🛒 '+esc(shop.display_name||'Your order')+'</b>'
+    +'<button onclick="orderClose()" style="border:0;background:none;font-size:22px;cursor:pointer;color:#8a949c">×</button></div>'
+    +'<div id="oc_rail"></div><div id="oc_body"></div>'
+    +(_ord.busy?'<div style="margin-top:12px"><button disabled style="width:100%;border:0;border-radius:10px;padding:12px;background:#9db4d6;color:#fff;font-weight:700;font-size:14px">⏳ Processing…</button></div>'
+                :'<div id="oc_foot" style="margin-top:14px"></div>')
     +'</div></div>';
 }
 function orderRender(msg, err){
   // The cart is its own panel: there is no single finish to title it with, no colour combination and no per-item
   // band. Everything after the lines — name, area, contact, OTP — is deliberately identical to the finish path.
-  if(_isCart()){ _ord._msg=msg||''; _ord._err=err||''; ohost().innerHTML=_cartPanelHtml(); return; }
+  if(_isCart()){ _ord._msg=msg||''; _ord._err=err||''; ohost().innerHTML=_cartPanelHtml();
+    // The panel is only the HOST — the rail, the step body and the footer are painted by the flow that owns them.
+    if(_CFLOW) _CFLOW.paint();
+    return; }
   var e=_FIN[_ord.idx], it=e.it, cur='₹';
   var comboOpts=(it.combinations||[]).map(function(cm){ return '<option value="'+esc(cm.name)+'"'+(cm.name===_ord.combo?' selected':'')+'>'+esc(cm.name)+' ('+((cm.colours||[]).map(function(c){return esc(c.name);}).join(' + '))+')</option>'; }).join('');
   var minL=(e.rules&&Number(e.rules.min_order_litres))||0;   // STONE 2: the source's rule, cascaded

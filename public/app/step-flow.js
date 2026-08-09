@@ -235,19 +235,22 @@
     if (typeof document === 'undefined' || document.getElementById('cbst_css')) return;
     var st = document.createElement('style');
     st.id = 'cbst_css';
+    /* ⚠️ THE ACCENT IS A TOKEN, not a constant. The storefront is a PUBLIC page in the shop's own colours — a blue
+       rail on a red shop is the same mistake as sharing a stylesheet instead of the rules. Any host can set
+       `--cbst-accent` (and `--cbst-soft`) on a container; everything else stays shared. */
     st.textContent =
       '.cbst-rail{display:flex;gap:6px;padding:11px 0 10px;flex-wrap:wrap}'
       + '.cbst{display:flex;align-items:center;gap:7px;padding:5px 11px;border-radius:20px;font-size:12.5px;'
       + 'white-space:nowrap;border:1px solid #e3e6ea;background:#fff;color:#6a707a}'
       + '.cbst .n{width:18px;height:18px;border-radius:50%;background:rgba(0,0,0,.08);display:inline-flex;'
       + 'align-items:center;justify-content:center;font-size:11px;font-weight:800;flex:none}'
-      + '.cbst.done{border-color:#cfe0d6;background:#f2f9f5;color:#2c7a43}'
-      + '.cbst.now{border-color:#3F66A6;background:#3F66A6;color:#fff;font-weight:700}'
+      + '.cbst.done{border-color:#cfe0d6;background:var(--cbst-soft,#f2f9f5);color:var(--cbst-accent,#2c7a43)}'
+      + '.cbst.now{border-color:var(--cbst-accent,#3F66A6);background:var(--cbst-accent,#3F66A6);color:#fff;font-weight:700}'
       + '.cbst.now .n{background:rgba(255,255,255,.24)}'
       + '.cbst-foot{display:flex;gap:10px;align-items:center;flex-wrap:wrap}'
       + '.cbst-foot button{border-radius:10px;padding:11px 16px;font-size:13.5px;font-weight:700;cursor:pointer;'
       + 'border:1px solid #e3e6ea;background:#fff}'
-      + '.cbst-foot button.pri{flex:1;background:#3F66A6;color:#fff;border-color:#3F66A6}'
+      + '.cbst-foot button.pri{flex:1;background:var(--cbst-accent,#3F66A6);color:#fff;border-color:var(--cbst-accent,#3F66A6)}'
       + '.cbst-foot button:disabled{opacity:.45;cursor:not-allowed}'
       + '.cbst-why{flex-basis:100%;font-size:11.5px;color:#8a5a1e}';
     (document.head || document.documentElement).appendChild(st);

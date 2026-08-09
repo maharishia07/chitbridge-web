@@ -153,4 +153,59 @@ test.describe('render smoke — the page boots without throwing', () => {
       'the cart opened with no way to check out').toBeVisible();
     expect(ourFaults(errors), 'the page threw while using the cart:\n' + ourFaults(errors).join('\n')).toEqual([]);
   });
+
+  /**
+   * ★★ THE CHECKOUT WIZARD, on the public page. Items → Delivery → Review → Who you are.
+   *
+   * The storefront checkout had no automated coverage at all — no spec drove shop-cart-submit, shop-area or
+   * shop-contact. This is the page that went down twice in a week, so the redesign of its checkout does not ship
+   * on a promise.
+   *
+   * ⚠️ IT STOPS BEFORE "Send me a code". Everything up to that point is local to the browser; pressing it would
+   * send a real OTP to a real channel from a production shop. The wizard is what is under test — the OTP rail is
+   * already covered by the order specs.
+   */
+  test('★★ the storefront checkout walks Items → Delivery → Review → Who you are', async ({ page }) => {
+    const errors = watch(page);
+    await page.goto(`/shop.html?bridge=${BRIDGE}&api=${encodeURIComponent(API)}`, { waitUntil: 'networkidle' });
+
+    const add = page.getByTestId('cart-add');
+    test.skip(!(await add.count()), 'this shop publishes no orderable products');
+    await add.first().click();
+    await page.locator('.cbcart-bar').first().click();
+    await page.getByTestId('cart-checkout').click();
+
+    // ── ITEMS ────────────────────────────────────────────────────────────────────────────────────────────────
+    const rail = page.locator('[data-testid^="steps-"]');
+    await expect(rail, 'the checkout did not open as a step flow').toBeVisible();
+    await expect(rail.locator('.cbst')).toHaveCount(4);
+    await expect(page.getByTestId('shop-cart-qty-0'), 'the basket lines are not on the Items step').toBeVisible();
+    const next = page.locator('[data-testid^="step-next-"]');
+    await next.click();
+
+    // ── DELIVERY. The address is the one thing the shop cannot guess; date and time are optional on purpose.
+    await expect(page.getByTestId('shop-area')).toBeVisible();
+    await expect(next, 'Delivery let itself be left with no address').toBeDisabled();
+    await expect(page.locator('[data-testid^="step-why-"]')).toContainText('address');
+    await page.getByTestId('shop-area').fill('16a Hill Side, 641001');
+    await expect(next, 'an address did not unblock Delivery').toBeEnabled();
+    await next.click();
+
+    // ── REVIEW. ⚠️ A public page must SAY that a total on the customer's own screen is not a bill.
+    await expect(page.getByTestId('shop-review-total'), 'the Review step did not render').toBeVisible();
+    await expect(page.locator('#ohost')).toContainText(/request/i);
+    await expect(page.locator('#ohost'), 'the address typed on Delivery did not reach Review').toContainText('16a Hill Side');
+    await page.locator('[data-testid^="step-next-"]').click();
+
+    // ── WHO YOU ARE — last, so nobody types a phone number before they know the price.
+    await expect(page.getByTestId('shop-contact')).toBeVisible();
+    const submit = page.getByTestId('shop-cart-submit');
+    await expect(submit, 'identity is asked for before it is given').toBeDisabled();
+    await page.getByTestId('shop-contact').fill('9876543210');
+    await expect(submit).toBeEnabled();
+    await expect(submit, 'the button must say which of its two jobs it is about to do').toContainText('Send me a code');
+
+    // ⚠️ NOT PRESSED — see above.
+    expect(ourFaults(errors), 'the checkout threw:\n' + ourFaults(errors).join('\n')).toEqual([]);
+  });
 });
