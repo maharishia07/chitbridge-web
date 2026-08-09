@@ -2,7 +2,7 @@
 // LOCATORS: nav-compose · chit-add-self · chit-field-* · chit-item-name/qty/price · chit-item-add · chit-send · nav-order ·
 //           nav-task · chit-row-* · chit-status-btn · chit-unread · chit-void
 const { test, expect } = require('@playwright/test');
-const { mintEntity, settle, composeChit } = require('../fixtures');
+const { mintEntity, clickNav, composeChit } = require('../fixtures');
 
 /**
  * ⚠️ THE LOCAL composeSelfChit IS GONE — it was a COPY of the fixture, and it drifted the moment compose became a

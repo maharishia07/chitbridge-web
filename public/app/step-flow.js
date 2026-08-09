@@ -79,6 +79,24 @@
     return true;
   }
 
+  /**
+   * ⚠️ FOCUS FOLLOWS THE STEP. Pressing Next re-renders the footer, which destroys the button that had focus — so
+   * the browser drops focus back to <body> and a keyboard user is returned to the TOP OF THE DOCUMENT. They then
+   * have to Tab through the entire app shell to reach the first field of the step they just asked for. Caught by
+   * KBD-01, which could not reach `chit-add-self` in forty presses.
+   *
+   * A wizard that costs a keyboard user forty keystrokes per step is worse than the single screen it replaced.
+   * Athi's rule stands: a mouse-only control is a broken control.
+   *
+   * Called AFTER onStep, because a screen's onStep may rebuild the body (Suppliers and Network both repaint the
+   * whole pane) and would otherwise undo this.
+   */
+  function focusFirst(ns) {
+    var s = F[ns]; if (!s || typeof document === 'undefined') return;
+    var b = doc(opt(s, 'bodyEl')); if (!b) return;
+    var el = b.querySelector('input:not([type=hidden]):not([disabled]),select:not([disabled]),textarea:not([disabled]),button:not([disabled]),[tabindex]:not([tabindex="-1"])');
+    if (el && typeof el.focus === 'function') { try { el.focus({ preventScroll: false }); } catch (e) {} }
+  }
   function go(ns, i) {
     var s = F[ns]; if (!s) return;
     if (i < 0 || i >= s.steps.length) return;
@@ -88,6 +106,9 @@
     if (b) b.scrollTop = 0;                 // a new step starts at its own top, never mid-scroll of the last one
     paint(ns);
     call(s, 'onStep', keyAt(s, i));
+    // ⚠️ Only on a deliberate MOVE, never on the initial paint or a footer refresh — stealing focus from someone
+    // mid-sentence is its own bug.
+    focusFirst(ns);
   }
   function next(ns) { var s = F[ns]; if (s && !why(s, s.i)) go(ns, s.i + 1); }
   function back(ns) { var s = F[ns]; if (s) { if (s.i > 0) go(ns, s.i - 1); else call(s, 'onCancel'); } }
