@@ -339,7 +339,25 @@ function _chRow(c){
           /* declared vs verified — and what DECLARED actually costs you, said in the row rather than in a footnote:
              a claim that has not been confirmed receives nothing at all. */
           + '<span style="font-size:9.5px;font-weight:800;color:'+(b.status==='verified'?'#2e6b3f':'#8a5a1e')+';background:'+(b.status==='verified'?'#e7f3ea':'#FBF6E9')+';border-radius:5px;padding:1px 6px" title="'+(b.status==='verified'?'confirmed by the platform — messages sent here reach you':'not confirmed yet — messages sent to this number reach nobody')+'">'+esc(b.status==='verified'?'verified'+(b.verified_via?' · '+b.verified_via:''):'declared — not receiving yet')+'</span>'
-          + '<span style="margin-left:auto;cursor:pointer;color:#9aa3a7" title="Unbind" data-testid="ch-del" onclick="chUnbind(\''+esc(b.id)+'\')">✕</span></div>'; }).join('')
+          + '<span style="margin-left:auto;cursor:pointer;color:#9aa3a7" title="Unbind" data-testid="ch-del" onclick="chUnbind(\''+esc(b.id)+'\')">✕</span></div>'
+          /* ⚠️ TEMPLATES ARE PER-NUMBER, so they hang off the BINDING and not the channel. Meta approves for one
+             WhatsApp account; another business's approval says nothing about this one. */
+          + (c.key==='whatsapp' ? (c.templates||[]).map(function(t){
+              var state=((b.templates||{})[t.name])||'none';
+              var col=state==='approved'?['#2e6b3f','#e7f3ea']:state==='pending'?['#8a5a1e','#FBF6E9']:['#6a707a','#eef1f5'];
+              return '<div style="margin:5px 0 0 10px;padding:7px 9px;border-left:2px solid var(--line);font-size:11.5px">'
+                + '<div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap"><span style="font-family:ui-monospace,Menlo,monospace">'+esc(t.name)+'</span>'
+                + '<span style="font-size:9.5px;font-weight:800;color:'+col[0]+';background:'+col[1]+';border-radius:5px;padding:1px 6px">'+esc(state==='none'?'not approved':state)+'</span>'
+                + '<span style="color:var(--grey)">'+esc(t.category)+' · '+esc(t.language)+'</span>'
+                + '<span style="margin-left:auto;color:var(--blue);cursor:pointer;font-weight:600" data-testid="ch-tpl-toggle" onclick="chSetTemplate(\''+esc(b.id)+'\',\''+esc(t.name)+'\',\''+(state==='approved'?'pending':'approved')+'\')">'
+                + (state==='approved'?'mark not approved':'mark approved')+'</span></div>'
+                /* Show the submission text VERBATIM. Describing it would guarantee a mismatch with what Meta
+                   approved, and a template whose text differs from the approved one is simply rejected. */
+                + '<div style="margin-top:4px;color:var(--grey)">Submit this to Meta word for word:</div>'
+                + '<div style="margin-top:2px;padding:5px 7px;background:var(--paper);border-radius:6px;font-family:ui-monospace,Menlo,monospace;font-size:10.5px;white-space:pre-wrap">'+esc(t.body)+'</div>'
+                + (state!=='approved' ? '<div style="margin-top:3px;color:#8a5a1e">Until Meta approves this, nothing can be sent more than 24 hours after the customer last wrote.</div>' : '')
+                + '</div>'; }).join('') : '')
+          ; }).join('')
     + (_CH.adding===c.key
         ? '<div style="display:flex;gap:6px;margin-top:8px"><input class="inp" id="ch_addr" placeholder="'+esc(c.placeholder)+'" data-testid="ch-addr" style="flex:1">'
           + '<input class="inp" id="ch_label" placeholder="label (optional)" data-testid="ch-label" style="max-width:140px">'
@@ -367,6 +385,10 @@ async function chBind(channel){
     await api('channelBind',{body:{channel:channel, address:addr, label:label}});
     _CH.adding=null; await loadChannels(); toast('Channel bound ✓');
   }catch(e){ toast((e&&e.message)||'Could not bind that.', true); }
+}
+async function chSetTemplate(id, name, state){
+  try{ await api('channelTemplate',{params:{id:id}, body:{name:name, state:state}}); await loadChannels(); }
+  catch(e){ toast((e&&e.message)||'Could not update the template.', true); }
 }
 async function chUnbind(id){
   if(!confirm('Unbind this address?\n\nMessages sent to it will stop reaching your intake inbox. Captures you have already received are untouched.')) return;

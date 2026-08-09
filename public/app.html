@@ -649,6 +649,7 @@ const EP = {
   photoExtract:    {m:"POST", p:"/api/catalogue/photo-extract",   ok:"✓"},
   channelBind:     {m:"POST", p:"/api/channels",                 ok:"✓"},
   channelUnbind:   {m:"DELETE",p:"/api/channels/:id",            ok:"✓"},
+  channelTemplate: {m:"POST", p:"/api/channels/:id/template",    ok:"✓"},   // b128 — Meta approved this template on THIS number
   attUpload:       {m:"POST", p:"/api/attachments",             ok:"✓"},  // upload a file (base64) after a chit/message exists
   addActor:        {m:"POST", p:"/api/actors",                   ok:"✓"},  // create an actor
   disputeQueue:    {m:"GET",  p:"/api/chits/disputes/queue",     ok:"✓"},  // all open disputes
