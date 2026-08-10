@@ -138,7 +138,14 @@ function setFolderTab(t){
   if (t === 'metrics' && !_FLD.metrics) loadFolderMetrics();
   if (t === 'rules'   && !_FLD.rules)   loadFolderRules();
 }
-function _fldPaint(){ var dp = document.getElementById('detailpane'); if (dp) dp.innerHTML = _folderView(); }
+/* ⚠️ THE PANES RENDER WHEREVER THEY WERE OPENED. Metrics/Rules now open as a MODAL over the Task list (a folder
+   is that list filtered, not a separate screen), so paint into the modal body when it is there and fall back to
+   the detail pane for the legacy standalone Folders screen. */
+function _fldPaint(){
+  var host = document.getElementById('fld_pane');
+  if (host) { host.innerHTML = (_FLD.tab === 'rules') ? _folderRulesPane() : _folderMetricsPane(); return; }
+  var dp = document.getElementById('detailpane'); if (dp) dp.innerHTML = _folderView();
+}
 
 async function loadFolderMetrics(){
   _FLD.busy = true; _fldPaint();

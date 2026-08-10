@@ -1668,22 +1668,68 @@ function navTitle(){const all={...Object.fromEntries(Object.values(MENUS).flatMa
  * folder, so nobody is asked a question the position already answers.
  */
 function menuBtn(x){
-  const[key,ic,label]=x;const on=UI.nav===key;const click=key==="compose"?`compose()`:`navTo('${key}')`;
-  const btn=`<button class="${on?'on':''}" data-testid="nav-${key}" onclick="${click}"><span class="ic">${ic}</span>${label}</button>`;
-  return (key==='task'||key==='order') ? btn+navFolders(key) : btn;
+  const[key,ic,label]=x;
+  // A track is "on" only when NO folder is selected — otherwise the folder below it is the one you are in.
+  const on=(key==='task'||key==='order') ? (UI.nav===key && !UI.folderSel) : UI.nav===key;
+  const click=key==="compose"?`compose()`:`navTo('${key}')`;
+  if(key!=='task'&&key!=='order') return `<button class="${on?'on':''}" data-testid="nav-${key}" onclick="${click}"><span class="ic">${ic}</span>${label}</button>`;
+  const fs=(UI.folders||[]).filter(f=>(f.scope||'task')===key);
+  const open=trackIsOpen(key);
+  /* The chevron only appears when there is something to collapse — a disclosure control for nothing is noise. */
+  const chev=fs.length?`<span data-testid="nav-collapse-${key}" onclick="event.stopPropagation();toggleTrack('${key}')" title="${open?'Collapse':'Expand'}" style="margin-left:auto;padding:0 4px;opacity:.6;font-size:11px">${open?'▾':'▸'}</span>`:'';
+  const btn=`<button class="${on?'on':''}" data-testid="nav-${key}" onclick="${click}"><span class="ic">${ic}</span>${label}${chev}</button>`;
+  return open ? btn+navFolders(key,fs) : btn;
 }
 /* The sub-folders of one track, indented under it. Loaded with the nav, so they are there before you look for them. */
-function navFolders(track){
-  const fs=(UI.folders||[]).filter(f=>(f.scope||'task')===track);
-  const rows=fs.map(f=>`<button class="${UI.nav==='folder:'+f.folder_id?'on':''}" data-testid="nav-folder-${esc(f.folder_id)}" onclick="navToFolder('${esc(f.folder_id)}')" style="padding-left:30px;font-size:12.5px"><span class="ic" style="font-size:12px">📁</span>${esc(f.name)}${f.count?`<span style="margin-left:auto;font-size:10.5px;color:var(--grey)">${f.count}</span>`:''}</button>`).join('');
+function navFolders(track,fs){
+  const rows=fs.map(f=>`<button class="${UI.folderSel===f.folder_id?'on':''}" data-testid="nav-folder-${esc(f.folder_id)}" onclick="navToFolder('${esc(f.folder_id)}')" style="padding-left:30px;font-size:12.5px"><span class="ic" style="font-size:12px">📁</span>${esc(f.name)}${f.count?`<span style="margin-left:auto;font-size:10.5px;color:var(--grey)">${f.count}</span>`:''}</button>`).join('');
   return rows+`<button data-testid="nav-newfolder-${track}" onclick="newFolderIn('${track}')" style="padding-left:30px;font-size:11.5px;color:var(--grey)"><span class="ic" style="font-size:12px">＋</span>New folder</button>`;
 }
+/**
+ * ⚠️ A FOLDER OPENS THE TRACK'S OWN PANEL, FILTERED — it is not a second screen.
+ *
+ * Athi, 2026-08-10: *"we don't need to create different ux/UI panel for each panel, only task and order panel, we
+ * just pass the parameter as folder name and filter data accordingly, so the same panel works for each folder.
+ * just the header should change to folder name."*
+ *
+ * Right, and it DELETES code rather than adding it. The bespoke folder list had its own columns, its own row
+ * actions and its own bugs, and would have drifted from Task within a month. Now `UI.nav` stays 'task' or 'order'
+ * — everything the list already does (sort, filter, select, status, assign, dispute, the lot) keeps working, for
+ * free, because it is the same list.
+ */
 function navToFolder(id){
-  UI.nav='folder:'+id; UI.folderSel=id; UI.folderArch=false; UI.folderChits=undefined; UI.drawer=false;
-  if(typeof _FLD!=='undefined'){ _FLD.tab='chits'; _FLD.metrics=null; _FLD.rules=null; }
-  try{localStorage.setItem("cb_nav",UI.nav);}catch(_){}
-  ensureCap('folders').then(function(){ renderApp(); if(typeof loadFolderChits==='function') loadFolderChits(); });
+  const f=(UI.folders||[]).find(x=>x.folder_id===id)||{};
+  const track=(f.scope==='order')?'order':'task';
+  UI.nav=track; UI.folder=track; UI.folderSel=id; UI.mdetail=false; UI.sel=null; UI.detail=null; UI.drawer=false;
+  try{localStorage.setItem("cb_nav",track);}catch(_){}
+  renderApp();
 }
+/* Leaving a folder = the same panel with the filter off. */
+function clearFolder(){ UI.folderSel=null; UI.sel=null; UI.detail=null; renderApp(); }
+/**
+ * Metrics and Rules open as a MODAL over the list, not as a third screen — the list stays where it was, and you
+ * come back to the row you were on. They are folder-specific, so they only exist while a folder is selected.
+ */
+async function openFolderPane(tab){
+  if(!UI.folderSel) return;
+  await ensureCap('folders');
+  const f=(UI.folders||[]).find(x=>x.folder_id===UI.folderSel)||{name:'Folder'};
+  _FLD.tab=tab; _FLD.metrics=null; _FLD.rules=null; _FLD.err=null; _FLD.draft=null; _FLD.preview=null;
+  modal(`<div class="mhd"><div class="t">${tab==='rules'?'⚙️ Rules':'📊 Metrics'} — 📁 ${esc(f.name)}</div>
+     <div class="s">${tab==='rules'?'what gets filed in here automatically':'what is in this folder, as numbers'}</div></div>
+   <div class="mbody" id="fld_pane"><div style="padding:18px;color:var(--grey);font-size:12.5px"><span class="spin"></span> loading…</div></div>`, true);
+  _fldPaint();
+  if(tab==='metrics') loadFolderMetrics(); else loadFolderRules();
+}
+/* ⚠️ COLLAPSE, because eight folders under Task made the menu taller than the screen (Athi's screenshot). The
+   state persists — a menu that re-expands on every render is worse than one that never collapsed. */
+function toggleTrack(t){
+  UI.trackOpen=UI.trackOpen||{};
+  UI.trackOpen[t]=!(UI.trackOpen[t]!==false);
+  try{localStorage.setItem('cb_trackopen',JSON.stringify(UI.trackOpen));}catch(_){}
+  renderApp();
+}
+function trackIsOpen(t){ const o=UI.trackOpen||{}; return o[t]!==false; }   // default open — you can see them at first
 /* ⚠️ THE TRACK IS THE ANSWER, so the dialog does not ask for it. Creating under Order makes an Order folder. */
 async function newFolderIn(track){
   await ensureCap('folders');
@@ -3570,7 +3616,21 @@ function taskPanel(){
   const sel = (UI.selectMode&&!isCust)?selBar():"";
   const _ak = (UI.folder==='order')?'order':'task';
   const helpStrip = isCust ? "" : `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line);background:var(--gold-soft);font-size:12px;color:#6b5a36"><b style="font-family:'Space Grotesk'">${({order:"Order — chits you've sent",task:"Task — chits received",drafts:"Drafts — unsent chits",trash:"Trash — deleted chits",archive:"Archive — archived chits"}[UI.folder]||"Task — chits received")}</b><button class="composebtn" style="margin-left:auto" onclick="toggleListHelp()">${UI.listHelp?'✕ Close':'❓ Help'}</button></div>${UI.listHelp?`<div style="padding:11px 12px;border-bottom:1px solid var(--line);overflow-y:auto;max-height:52%">${assistPage(_ak)}</div>`:''}`;
-  const list = `<div class="list">${helpStrip}
+  /**
+   * ⚠️ THE HEADER IS THE ONLY THING THAT CHANGES. Athi: *"just the header should change to folder name, instead of
+   * task, it should be task/folder name."* Everything below it is the track's own list, untouched — which is why
+   * sort, filter, select, status, assign and dispute all keep working inside a folder without a line of new code.
+   */
+  const _fsel = UI.folderSel ? (UI.folders||[]).find(f=>f.folder_id===UI.folderSel) : null;
+  const crumb = _fsel ? `<div class="lh" style="padding-bottom:0;border:0">
+      <div style="display:flex;align-items:center;gap:6px;font-size:13px;flex-wrap:wrap">
+        <span data-testid="crumb-track" onclick="clearFolder()" style="cursor:pointer;color:var(--blue);font-weight:600">${UI.folder==='order'?'📤 Order':'📥 Task'}</span>
+        <span style="color:var(--grey)">/</span>
+        <span data-testid="crumb-folder" style="font-weight:800">📁 ${esc(_fsel.name)}</span>
+        <span data-testid="folder-metrics-btn" onclick="openFolderPane('metrics')" title="Metrics for this folder" style="margin-left:auto;cursor:pointer;border:1px solid var(--line);border-radius:8px;padding:3px 9px;font-size:11.5px">📊 Metrics</span>
+        <span data-testid="folder-rules-btn" onclick="openFolderPane('rules')" title="Rules that file into this folder" style="cursor:pointer;border:1px solid var(--line);border-radius:8px;padding:3px 9px;font-size:11.5px">⚙️ Rules</span>
+      </div></div>` : '';
+  const list = `<div class="list">${helpStrip}${crumb}
     <div class="lh">${folders}${sub}${stTabs}
       <div class="srch">🔍 <input placeholder="${isCust?'Search my orders':'Search chits, party, item'}" id="listsrch" value="${esc(UI.search||'')}" oninput="onSrch('list', this.value)"><span id="srchadv">${advBtnHtml()}</span></div>
       ${tools}${sel}
@@ -3875,7 +3935,15 @@ pgInit('list', { el:()=>document.getElementById("rows"), limit:50, map:mapApiChi
 /* common list search — server lists route q through the pager; client (lazyWrap) lists filter in place */
 function onSrch(scope, q){ clearTimeout(UI._srchT); UI._srchT=setTimeout(function(){ q=(q||'').trim(); if(scope==='list'){ UI.search=q; UI.sel=null; UI.detail=null; loadList(); } else if(typeof lazyFilter==='function'){ lazyFilter(scope, q); } }, 300); }
 /* ── advanced search (header-level only): amount range, date range, status, priority ──────── */
-function advParams(){ const a=UI.adv||{}; const o={}; ['amount_min','amount_max','date_from','date_to','priority','fstatus'].forEach(function(k){ if(a[k])o[k]=a[k]; }); if(a.dispute)o.dispute=a.dispute; return o; }
+/**
+ * ⚠️ THE FOLDER RIDES WITH THE OTHER FILTERS, and that is the whole trick. Athi, 2026-08-10: *"we just pass the
+ * parameter as folder name and filter data accordingly, so the same panel works for each folder."*
+ *
+ * advParams() feeds BOTH branches of fetchPage — inbox and sent — so one line here means a folder under Task and a
+ * folder under Order both work, and every other filter (amount, date, priority, status, search, sort) keeps
+ * composing with it. A folder is not a mode; it is one more term in the same query.
+ */
+function advParams(){ const a=UI.adv||{}; const o={}; ['amount_min','amount_max','date_from','date_to','priority','fstatus'].forEach(function(k){ if(a[k])o[k]=a[k]; }); if(a.dispute)o.dispute=a.dispute; if(UI.folderSel)o.folder_id=UI.folderSel; return o; }
 function advActive(){ const a=UI.adv||{}; return !!(a.amount_min||a.amount_max||a.date_from||a.date_to||a.fstatus||a.priority||a.dispute); }
 // D4 — dispute quick-filter chip in the search bar (server-truth count from the rollup) + toggle.
 /* dispChipHtml + toggleDisputeFilter live in cap-dispute.js now (advanced-search dispute filter) */
