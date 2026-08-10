@@ -1,0 +1,30 @@
+const { chromium } = require('@playwright/test');
+const F = require('./fixtures.js');
+(async()=>{
+const WEB='https://chitbridge-web.vercel.app';
+const b=await chromium.launch(); const p=await (await b.newContext({baseURL:WEB})).newPage();
+p.on('pageerror',e=>console.log('  PAGE ERROR:',String(e.message).slice(0,160)));
+p.on('dialog',d=>d.accept());
+await p.goto(WEB+'/app.html');
+await F.mintEntity(p,{email:'beta@test-cb.com',name:'Beta Fresh'});
+await p.evaluate(()=>navTo('folders')); await p.waitForTimeout(4000);
+// make a folder to walk
+await p.evaluate(()=>{ window.prompt = () => 'UX proof ' + Date.now().toString().slice(-4); });
+await p.getByText('New folder').first().click().catch(async()=>{ await p.evaluate(()=>newFolder()); });
+await p.waitForTimeout(3500);
+await p.locator('[onclick^="selectFolder"]').last().click().catch(()=>{});
+await p.waitForTimeout(2500);
+console.log('tabs present:', await p.getByTestId('folder-tab-metrics').count(), await p.getByTestId('folder-tab-rules').count());
+await p.getByTestId('folder-tab-metrics').click(); await p.waitForTimeout(3500);
+const met=await p.evaluate(()=>(document.getElementById('detailpane')||{}).innerText||'');
+console.log('--- METRICS PANE ---\n'+met.split('\n').filter(Boolean).slice(0,18).join('\n'));
+await p.getByTestId('folder-tab-rules').click(); await p.waitForTimeout(3000);
+await p.getByTestId('rule-new').click(); await p.waitForTimeout(800);
+await p.getByTestId('rule-value').fill('received');
+await p.evaluate(()=>{ ruleDraftSet('term','direction'); _fldPaint(); });
+await p.getByTestId('rule-value').fill('received');
+await p.getByTestId('rule-preview').click(); await p.waitForTimeout(6000);
+const rul=await p.evaluate(()=>(document.getElementById('detailpane')||{}).innerText||'');
+console.log('--- RULES PANE (after preview) ---\n'+rul.split('\n').filter(Boolean).slice(2,20).join('\n'));
+await b.close();
+})();
