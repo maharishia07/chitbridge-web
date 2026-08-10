@@ -19,6 +19,23 @@ module.exports = defineConfig({
   timeout: 60_000,
   expect: { timeout: 10_000 },
   fullyParallel: false,        // stateful flows — keep order deterministic
+  /**
+   * ⚠️ ONE WORKER, AND IT IS NOT ABOUT SPEED.
+   *
+   * `fullyParallel:false` only serialises tests WITHIN a file; separate FILES still ran across two workers. Every
+   * `authed` spec signs in from ONE shared session (auth.setup.js → .auth/user.json), so those parallel files are
+   * not different tenants — they are the SAME entity, and they assert on relative counts inside it
+   * (`const before = …count(); expect(…).toHaveCount(before + 1)`). One file adding an intake row while another
+   * is counting is a guaranteed, timing-dependent failure.
+   *
+   * ⚠️ IT IS NOT AN ISOLATION PROBLEM AND MUST NOT BE READ AS ONE. Cross-entity isolation is proven separately and
+   * hard: prove-channels 17/17 ("A did NOT receive B's — one webhook, many entities, no leakage"), and variants
+   * runs Alpha against Beta's catalogue. The bug was two tests wearing the same account.
+   *
+   * On 2026-08-10 this produced three red specs that every one of them passed alone — the most expensive kind of
+   * failure, because it reads as a regression in whatever was last changed.
+   */
+  workers: 1,
   retries: 0,                  // a real break must show RED, not be retried away
   reporter: [['list'], ['html', { open: 'never', outputFolder: 'playwright-report' }]],
   use: {
