@@ -1612,6 +1612,13 @@ function renderApp(){
     </div>
   </div></div><div id="lbhost"></div><div id="modalhost"></div><div class="sr" id="live" aria-live="polite" role="status"></div>`;
   if(!_capLoading){
+    /**
+     * ⚠️ THE NAV NEEDS THE FOLDERS BEFORE YOU LOOK FOR THEM. They hang under Task and Order, so the list has to be
+     * there when the menu paints — not when you visit a Folders screen. Fetched once per session and only then:
+     * `UI.folders===undefined` distinguishes "not yet asked" from "asked, and you have none", so an entity with no
+     * folders does not re-request on every render. (on-demand loading, still — one fetch, not one per paint.)
+     */
+    if(UI.folders===undefined && SESSION.token){ UI.folders=[]; ensureCap('folders').then(function(){ if(typeof loadFolders==='function') loadFolders().then(renderApp); }); }
     if(["task","order","drafts","trash","archive"].includes(UI.nav)) loadList();
     if(UI.nav==="disputes") loadDisputes();
     if(UI.nav==="profile") loadProfile();
@@ -1652,7 +1659,39 @@ function startAutoRefresh(sec){ if(_autoRefreshTimer) clearInterval(_autoRefresh
 // must have a way to stop on sign-out, or it outlives the session that justified it.
 function stopAutoRefresh(){ if(_autoRefreshTimer){ clearInterval(_autoRefreshTimer); _autoRefreshTimer=null; } }
 function navTitle(){const all={...Object.fromEntries(Object.values(MENUS).flatMap(m=>[...m.top,...m.rest]).map(x=>[x[0],x[2]]))};return all[UI.nav]||UI.nav;}
-function menuBtn(x){const[key,ic,label]=x;const on=UI.nav===key;const click=key==="compose"?`compose()`:`navTo('${key}')`;return `<button class="${on?'on':''}" data-testid="nav-${key}" onclick="${click}"><span class="ic">${ic}</span>${label}</button>`;}
+/**
+ * ⚠️ FOLDERS HANG UNDER THE TRACK THEY BELONG TO. Athi, 2026-08-10: *"possibly we can create folder under task and
+ * order… if we can segregate underneath it would be easier i guess instead of a separate panel called folder."*
+ *
+ * That is the mail-client shape done properly — Inbox with its sub-folders, not a separate filing cabinet you have
+ * to remember to visit. It also makes the Task/Order choice DISAPPEAR: a folder created under Task IS a Task
+ * folder, so nobody is asked a question the position already answers.
+ */
+function menuBtn(x){
+  const[key,ic,label]=x;const on=UI.nav===key;const click=key==="compose"?`compose()`:`navTo('${key}')`;
+  const btn=`<button class="${on?'on':''}" data-testid="nav-${key}" onclick="${click}"><span class="ic">${ic}</span>${label}</button>`;
+  return (key==='task'||key==='order') ? btn+navFolders(key) : btn;
+}
+/* The sub-folders of one track, indented under it. Loaded with the nav, so they are there before you look for them. */
+function navFolders(track){
+  const fs=(UI.folders||[]).filter(f=>(f.scope||'task')===track);
+  const rows=fs.map(f=>`<button class="${UI.nav==='folder:'+f.folder_id?'on':''}" data-testid="nav-folder-${esc(f.folder_id)}" onclick="navToFolder('${esc(f.folder_id)}')" style="padding-left:30px;font-size:12.5px"><span class="ic" style="font-size:12px">📁</span>${esc(f.name)}${f.count?`<span style="margin-left:auto;font-size:10.5px;color:var(--grey)">${f.count}</span>`:''}</button>`).join('');
+  return rows+`<button data-testid="nav-newfolder-${track}" onclick="newFolderIn('${track}')" style="padding-left:30px;font-size:11.5px;color:var(--grey)"><span class="ic" style="font-size:12px">＋</span>New folder</button>`;
+}
+function navToFolder(id){
+  UI.nav='folder:'+id; UI.folderSel=id; UI.folderArch=false; UI.folderChits=undefined; UI.drawer=false;
+  if(typeof _FLD!=='undefined'){ _FLD.tab='chits'; _FLD.metrics=null; _FLD.rules=null; }
+  try{localStorage.setItem("cb_nav",UI.nav);}catch(_){}
+  ensureCap('folders').then(function(){ renderApp(); if(typeof loadFolderChits==='function') loadFolderChits(); });
+}
+/* ⚠️ THE TRACK IS THE ANSWER, so the dialog does not ask for it. Creating under Order makes an Order folder. */
+async function newFolderIn(track){
+  await ensureCap('folders');
+  const name=(typeof prompt==='function')?prompt('New '+(track==='order'?'Order':'Task')+' folder:'):'';
+  if(!name||!name.trim())return;
+  try{ await api('folderCreate',{body:{name:name.trim(), scope:track}}); await loadFolders(); renderApp(); }
+  catch(e){ toast((e&&e.message)||'Could not create the folder', true); }
+}
 function navTo(k){UI.nav=k;UI.drawer=false;UI.mdetail=false;UI.sel=null;UI.detail=null;if(k==="task")UI.folder="task";if(k==="order")UI.folder="order";if(["drafts","trash","archive"].indexOf(k)>=0)UI.folder=k;try{localStorage.setItem("cb_nav",k);}catch(_){}renderApp();}
 /* ATH-119 — Compose / self-chit. Compose = author your own chit (the "Chit"); bridging = addressing it to a counterparty.
    Schema-driven fields + Send-as (entity|actor) + To (self|counterparty) + catalogue line items + two-copy self-chit fan-out. */
@@ -3478,6 +3517,9 @@ function acLbl(a){ return a?(esc(a.name)+' <span class="mono" style="color:var(-
 
 function mainBody(){
   if(["task","order","drafts","trash","archive"].includes(UI.nav)) return taskPanel();
+  /* A folder opened from the nav renders the folder view directly — same screen, reached from where it lives.
+     The old standalone Folders panel still works for anyone who has it bookmarked. */
+  if(String(UI.nav).indexOf('folder:')===0 && typeof _folderView==='function') return _folderView();
   if(UI.nav==="folders") return foldersScreen();
   if(UI.nav==="intake" && typeof intakeScreen==="function") return intakeScreen();   // app/cap-intake.js (lazy)
   if(UI.nav==="traceability") return traceabilityScreen();
