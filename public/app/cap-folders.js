@@ -157,6 +157,23 @@ function _fldPaint(){
    the track rather than from a folder — everything below reads it instead of asking twice. */
 function _fldTrack(){ return UI.folderSel ? null : (UI.folder === 'order' ? 'order' : 'task'); }
 
+/* Every rule on a track, assembled from the per-folder endpoint. Used only when the single-call route is absent.
+   ⚠️ `migrated` is ANDed, not taken from the last response: if any folder reports the rules table missing, the
+   pane must say so rather than show a confidently short list. */
+async function _allRulesPerFolder(track){
+  var mine = (UI.folders || []).filter(function(f){ return (f.scope || 'task') === track; });
+  var out = [], migrated = true;
+  for (var i = 0; i < mine.length; i++) {
+    try {
+      var r = await api('folderRules', { params: { id: mine[i].folder_id } });
+      if (r && r.migrated === false) migrated = false;
+      (r && r.rules || []).forEach(function(x){ out.push(x); });
+    } catch (e) { /* one unreadable folder must not blank the whole pane */ }
+  }
+  out.sort(function(a, b){ return (a.sort - b.sort) || String(a.created_at).localeCompare(String(b.created_at)); });
+  return { rules: out, migrated: migrated };
+}
+
 async function loadFolderMetrics(){
   _FLD.busy = true; _FLD.recon = null; _fldPaint();
   var track = _fldTrack();
@@ -182,7 +199,17 @@ async function loadFolderRules(){
   _FLD.busy = true; _fldPaint();
   var track = _fldTrack();
   try {
-    var r = track ? await api('folderAllRules') : await api('folderRules', { params: { id: UI.folderSel } });
+    var r;
+    if (track) {
+      /* ⚠️ FALLS BACK TO PER-FOLDER READS. GET /api/folders/rules is new, and an API that has not been redeployed
+         answers 404 — which would show as "could not read the rules" for a pane whose data is, in fact, entirely
+         reachable through an endpoint that has shipped for months. One call when it exists, N when it does not.
+         N is the number of folders on this track, fetched only when the pane is opened. */
+      try { r = await api('folderAllRules'); }
+      catch (e) { r = await _allRulesPerFolder(track); }
+    } else {
+      r = await api('folderRules', { params: { id: UI.folderSel } });
+    }
     _FLD.rules = (r && r.rules) || [];
     /* A rule surface that cannot store anything must SAY so rather than accept a rule it will lose. */
     _FLD.rulesNote = (r && r.migrated === false) ? 'Folder rules are not migrated on this environment (b132). You can still PREVIEW a rule — nothing will save.' : null;
