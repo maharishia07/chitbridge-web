@@ -109,6 +109,12 @@ function intakeCardHTML(c){
          + '<button data-testid="intake-make-chit" onclick="intakeMakeChit(\''+esc(c.id)+'\')" style="border:1px solid var(--line);background:#fff;border-radius:9px;padding:9px 15px;font-size:13px;font-weight:700;cursor:pointer" title="Open Compose to edit, price and address it before sending">Make this a chit →</button>'
          : '<button class="composebtn" data-testid="intake-structure" '+(w.busy?'disabled':'')+' onclick="intakeStructure(\''+esc(c.id)+'\')">'+(w.busy?'✨ Reading…':'✨ Structure it')+'</button>')
     + '<button data-testid="intake-dismiss" onclick="intakeDismiss(\''+esc(c.id)+'\')" style="border:1px solid var(--line);background:#fff;border-radius:9px;padding:9px 15px;font-size:13px;font-weight:700;cursor:pointer;color:var(--grey)">Dismiss</button>'
+    /* ⚠️ THE CONFIRM STEP MUST SHOW WHAT IT IS ASKING YOU TO CONFIRM. Athi, 2026-08-11, after finding that
+       "konjam spiciya" and "periya bottle" were nowhere on screen: this card renders only particulars + qty + unit,
+       so comment, unit_size, unit_price and unplaced were invisible whether the reader captured them or not — at
+       exactly the moment a person decides whether the reading is right. A button that shows the actual JSON is the
+       difference between tuning a prompt and guessing at one. */
+    + '<button data-testid="intake-json" onclick="intakeShowJson(\''+esc(c.id)+'\')" title="See exactly what was read, and what the chit would carry" style="border:1px solid var(--line);background:#fff;border-radius:9px;padding:9px 13px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:ui-monospace,Menlo,monospace">{ } JSON</button>'
     + '</div>'
     + (w.err?'<div style="color:#b4453f;font-size:12px;margin-top:6px">'+esc(w.err)+'</div>':'')
     + '</div>';
@@ -119,8 +125,21 @@ function intakeDraftHTML(c, s){
     + '<div style="font-weight:700;margin-bottom:4px">✨ AI draft <span style="font-weight:400;color:var(--grey)">— proposed, not evidence. You confirm.</span></div>'
     + (s.subject?'<div style="margin-bottom:4px"><b>Subject:</b> '+esc(s.subject)+'</div>':'')
     + li.map(function(l){ return '<div style="display:flex;justify-content:space-between;padding:3px 0;border-top:1px dashed var(--line);font-size:12px">'
-        + '<span>' + esc(l.particulars||'item') + '</span>'
-        + '<span style="color:var(--grey)">' + esc(String(l.qty==null?'':l.qty)) + ' ' + esc(l.unit||'') + '</span></div>'; }).join('')
+        /**
+         * ⚠️ THE QUALIFIERS RENDER WITH THE LINE. This showed only particulars + qty + unit, so "konjam spiciya"
+         * and "periya bottle" were invisible whether the reader had captured them or not — at exactly the moment a
+         * person decides whether the reading is right. A confirm step must show what it is asking you to confirm.
+         */
+        + '<span>' + esc(l.particulars||'item')
+        + (l.comment ? '<span style="color:#6b5a36"> · ' + esc(l.comment) + '</span>' : '') + '</span>'
+        + '<span style="color:var(--grey);white-space:nowrap">' + esc(String(l.qty==null?'':l.qty)) + ' ' + esc(l.unit||'')
+        + (l.unit_size ? ' (' + esc(l.unit_size) + ')' : '')
+        + (l.unit_price ? ' @' + esc(String(l.unit_price)) : '') + '</span></div>'; }).join('')
+      /* Order-level facts that have no line of their own — and `unplaced` in red, because a fact the reader could
+         not place is the single most useful thing on this card when tuning. */
+      + ['delivery_at','delivery_address','notes'].filter(function(k){ return s[k]; }).map(function(k){
+          return '<div style="font-size:11px;color:var(--grey);margin-top:3px">' + esc(k.replace('_',' ')) + ': ' + esc(s[k]) + '</div>'; }).join('')
+      + (s.unplaced ? '<div style="font-size:11px;color:#b4453f;margin-top:3px">⚠️ not placed anywhere: ' + esc(s.unplaced) + '</div>' : '')
     + (s.notes?'<div style="margin-top:5px;color:var(--grey)">'+esc(s.notes)+'</div>':'')
     + '</div>';
 }
@@ -262,4 +281,77 @@ async function intakeMakeChit(id){
   if(CC.origin) CC.origin.refused=(res&&res.refused)||[];
   if(UI._ccFlow) UI._ccFlow.paint();
   if(typeof ccPaintStepParts==='function') ccPaintStepParts();
+}
+
+/* ════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+ *  { } JSON — what was read, and what the chit would actually carry.
+ * ════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+ *
+ * Athi, 2026-08-11: *"create a json structure as part of the display… so i can just click and see what the json
+ * consists of. so we can see how the complex stuff is going to work."*
+ *
+ * ⚠️ THREE STAGES, BECAUSE THE INTERESTING PART IS THE TRANSFORMATION. Showing only the AI's output tells you what
+ * it heard; showing only the chit tells you what survived. The gap between them is where a lost "konjam spiciya"
+ * or an invented unit actually happens, and you cannot tune a prompt you can only see one end of.
+ *
+ *   1 · THE MESSAGE      what the sender actually wrote, verbatim
+ *   2 · WHAT WAS READ    the AI's structured output — comment, unit_size, unit_price, unplaced and all
+ *   3 · WHAT THE CHIT GETS  the raise payload: catalogue matching applied, prices attached, flags raised
+ *
+ * ⚠️ STAGE 3 CREATES NOTHING. /raise is a pure read that returns what WOULD be sent — the same call the button
+ * uses, minus the send. So this is a preview in the honest sense, not a dry-run that half-commits.
+ */
+async function intakeShowJson(id){
+  var c=(_INTAKE.list||[]).filter(function(x){ return x.id===id; })[0];
+  if(!c) return;
+  var w=_INTAKE.working[id]||{};
+  var structured=(c.structured)||w.structured||null;
+
+  modal('<div class="mhd"><div class="t">{ } What the reader saw</div>'
+    + '<div class="s">the message → what was read → what the chit would carry</div></div>'
+    + '<div class="mbody" id="ijson"><div style="padding:18px;color:var(--grey);font-size:12.5px"><span class="spin"></span> building…</div></div>'
+    + '<div class="mfoot"><button class="composebtn" onclick="closeModal()">Close</button></div>', true);
+
+  /* Stage 3 needs the server, and it may legitimately refuse — nothing read yet (409), or not migrated. A refusal
+     is INFORMATION here, so it is shown rather than swallowed: "it would not raise, and here is why". */
+  var payload=null, payErr=null;
+  if(structured){
+    try{ payload=await api('captureRaise',{params:{id:id}}); }
+    catch(e){ payErr=(e&&e.message)||'could not build the chit payload'; }
+  }
+
+  var host=document.getElementById('ijson'); if(!host) return;
+  host.innerHTML=_jsonBlock('1 · THE MESSAGE — verbatim, as it arrived',
+      { channel:c.channel, from:c.sender_ref, from_name:c.sender_name, to_line:c.to_ref,
+        received_at:c.created_at, text:c.raw_text, media:(c.media_refs||[]).length })
+    + _jsonBlock('2 · WHAT WAS READ — the co-assist\u2019s output' + (structured?'':' (press \u2728 Structure it first)'),
+        structured||'(not read yet)')
+    + (payErr
+        ? _note('3 · WHAT THE CHIT WOULD CARRY \u2014 refused: '+payErr)
+        : _jsonBlock('3 · WHAT THE CHIT WOULD CARRY — after the catalogue is applied',
+            payload||'(only available once it has been read)'))
+    + '<div style="padding:10px 14px;font-size:11.5px;color:var(--grey);line-height:1.6;border-top:1px solid var(--line)">'
+    + '\u26A0\uFE0F <b>Read stage 2 against stage 3.</b> A qualifier the sender wrote should appear as <b>comment</b> on its line; '
+    + 'a size like &ldquo;periya&rdquo; or &ldquo;500ml&rdquo; as <b>unit_size</b>; a stated price as <b>unit_price</b>. '
+    + 'Anything the reader could not place lands in <b>unplaced</b> \u2014 if that is empty and something is still missing from '
+    + 'the message, the reader dropped it silently, and that is the bug worth telling us about.</div>';
+}
+
+/* Pretty, escaped, scrollable, and copyable. ⚠️ esc() is not optional: this is a stranger's words plus an AI's
+   reading of them, which is precisely the input that must never reach the DOM as markup. */
+function _jsonBlock(title, obj){
+  var txt = (typeof obj==='string') ? obj : JSON.stringify(obj,null,2);
+  var id='jb'+Math.random().toString(36).slice(2,8);
+  return '<div style="border-bottom:1px solid var(--line)">'
+    + '<div style="display:flex;align-items:center;gap:8px;padding:9px 14px 5px">'
+    +   '<span style="font-size:10.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey)">'+esc(title)+'</span>'
+    +   '<span onclick="_copyJson(\''+id+'\')" style="margin-left:auto;font-size:11px;color:var(--blue);cursor:pointer">copy</span>'
+    + '</div>'
+    + '<pre id="'+id+'" style="margin:0;padding:0 14px 12px;font:11.5px/1.55 ui-monospace,Menlo,Consolas,monospace;'
+    +   'white-space:pre-wrap;word-break:break-word;max-height:46vh;overflow:auto;color:#243038">'+esc(txt)+'</pre></div>';
+}
+function _note(t){ return '<div style="padding:11px 14px;font-size:12px;color:#8a5a1e;background:var(--gold-soft);border-bottom:1px solid var(--line)">'+esc(t)+'</div>'; }
+function _copyJson(id){
+  var el=document.getElementById(id); if(!el) return;
+  try{ navigator.clipboard.writeText(el.textContent); if(typeof toast==='function') toast('copied'); }catch(_){}
 }

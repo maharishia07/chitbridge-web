@@ -3886,7 +3886,24 @@ function mapApiChit(c){
     proof:'ok', pri:c.priority_flag||'normal', priExt:(c.summary_json&&c.summary_json.priority_external)||'normal', custPri:!!c.customer_priority, star:!!c.star_flag, unread:(c.read_at!==undefined ? !c.read_at : false), nitems:(c.summary_json&&c.summary_json.line_item_count)||0, items:[], atts:[], msgs:[] };
 }
 /* fmtAt + inr_ → app/helpers.js */
-function fmtLine(li){ return [li.particulars||'Item', (li.quantity||0)+' × '+inr_(li.price)+' = '+inr_(li.total||(li.quantity*li.price)), []]; }
+/**
+ * ⚠️ THE QUALIFIERS ARE PART OF THE LINE, so they render with it. "Briyani × 4" and "Briyani × 4 — extra leg
+ * piece, extra spicy, schezwan" are different orders; showing only the first means the kitchen cooks the wrong
+ * thing off a chit that looks perfectly correct.
+ *
+ * Unit and unit-size ride along too: "2 × crate (20kg)" is answerable, "2" is not.
+ */
+/* ⚠️ PLAIN TEXT, NEVER MARKUP. The caller escapes what this returns (`esc(it[0])`), so HTML here would be
+   double-escaped and shown as tags — and this text is an AI's reading of a STRANGER'S message, which is exactly
+   the input that must never reach the DOM as markup. Both reasons point the same way. */
+function fmtLine(li){
+  var qty=(li.quantity||0)+(li.unit?(' '+li.unit):'')+(li.unit_size?(' ('+li.unit_size+')'):'');
+  var money=' × '+inr_(li.price)+' = '+inr_(li.total||(li.quantity*li.price));
+  var name=(li.particulars||'Item')
+    + (li.comment?('  ·  '+li.comment):'')
+    + (li.asked_unit?('  (asked in '+li.asked_unit+')'):'');
+  return [name, qty+money, []];
+}
 function mapApiMsg(m){ if(!m||m.scope!==undefined) return m; var _b=m.message_text||''; var _by=null, _dk=null; if(m.is_dispute && typeof disputeByline==='function'){ var _p=disputeByline(_b); _by=_p.by; _b=_p.body; _dk=_p.kind; } return { id:m.message_id, scope:m.thread_type||'internal', author:m.sender_display_name||'—', byline:_by, body:_b, at:fmtAt(m.created_at), type:m.msg_type||'info', isDispute:!!m.is_dispute, disputeId:m.dispute_id||null, dispKind:_dk, unread:false, atts:(m.attachments||[]).map(mapAtt) }; }
 function mapApiActor(a){ if(!a||a.shift!==undefined) return a; const S={active:'on_shift',short_break:'on_break',on_break:'on_break',break:'on_break',leave:'on_break',off:'off',deactivated:'off',removed:'off'}; const st=(a.break_status==='deactivated')?'deactivated':(a.break_status==='removed'?'removed':'active'); return { id:a.identity_id, name:a.display_name, uid:a.user_id||a.uid, key:a.actor_key||'', role:a.actor_role||'', type:a.actor_type||'human', shift:S[a.break_status]||'on_shift', status:st, load:a.current_task_count||0, max:a.max_tasks||0, phone:a.phone||'', hat:a.hat||'act', del:a.delegate_actor_id||null, lastAssigned:a.last_assigned_at||null, pinSet:!!a.pin_set_at, otp:a.otp_code||'', otpExp:a.otp_expires_at||null, breakType:a.break_type||null, breakSince:a.break_started_at||null, returnDate:a.return_date||null, bridge:a.bridge_id||'', created:a.created_at||null, last:a.last_active_at||null }; }
 /* ── generic lazy-list pager — ONE implementation for every scrollable list ────────────────
@@ -4169,6 +4186,26 @@ function commercialBlock(c){
  * ⚠️ AND IT SAYS THE SENDER IS NOT VERIFIED, out loud. A phone number that messaged a business is a stranger's
  * assertion of who they are. Six weeks on, nothing else on this record would tell it apart from a verified party.
  */
+/**
+ * Order-level facts the sender gave that have no column of their own — when, where, and anything the reader
+ * could not place at all.
+ *
+ * ⚠️ "NOT PLACED ANYWHERE" IS SHOWN IN RED ON PURPOSE. Athi, 2026-08-10: *'need to see each data the user provides, which
+ * data item in the js schema it can fit in, if not keep it as a note or a comment.'* A request that quietly lost
+ * 'deliver at 7pm' looks perfectly correct and is wrong, and nobody would ever know which one. A leftover you can
+ * see is a gap; a leftover you cannot is a silent gap, and only one of those gets fixed.
+ */
+function _viaExtras(v){
+  var out=[];
+  if(v.delivery_at) out.push(['🕒 Wanted', v.delivery_at, 'var(--ink)']);
+  if(v.delivery_address) out.push(['📍 Deliver to', v.delivery_address, 'var(--ink)']);
+  if(v.notes) out.push(['📝 They also said', v.notes, 'var(--grey)']);
+  if(v.unplaced) out.push(['⚠️ Not placed anywhere', v.unplaced, '#b4453f']);
+  if(!out.length) return '';
+  return '<div style="margin-top:7px">'+out.map(function(r){
+    return '<div style="display:flex;gap:8px;font-size:11.5px;padding:2px 0"><span style="color:var(--grey);min-width:120px">'+esc(r[0])+'</span><span style="color:'+r[2]+'">'+esc(r[1])+'</span></div>';
+  }).join('')+'</div>';
+}
 /* How the lines on a raised request got their prices — and, more usefully, how they did NOT. */
 function _viaPricing(p){
   if(!p) return '';
@@ -4214,6 +4251,7 @@ function viaBlock(c){
     /* ⚠️ WHERE EACH PRICE CAME FROM. A figure off your shelf, a figure the customer named, and no figure at all
        look identical in a total. Which one it was is the difference between a quote and a guess. */
     + _viaPricing(v.priced)
+    + _viaExtras(v)
     + '<div style="margin-top:6px;font-size:11px;color:#6b5a36;background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:8px;padding:7px 9px">'
     + '⚠️ <b>The sender is not a verified party.</b> This is a phone number that wrote in'
     + (v.read_by==='co-assist'?', and the lines below are a co-assist&rsquo;s reading of their words':'')
