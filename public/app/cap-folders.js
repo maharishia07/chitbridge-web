@@ -18,6 +18,12 @@ if (typeof EP !== 'undefined') {
     folderRuleUpdate:  {m:'PATCH',  p:'/api/folders/rules/:rule_id', ok:'y'},
     folderRuleDelete:  {m:'DELETE', p:'/api/folders/rules/:rule_id', ok:'y'},
     folderRulePreview: {m:'POST',   p:'/api/folders/rules/preview',  ok:'y'},   // what WOULD this rule have caught
+    /* Track level — the SAME two panes opened from Task/Order itself rather than from inside a folder.
+       ⚠️ Metrics reuses /reconcile rather than adding a track-metrics route: reconcile already measures every copy
+       on the track AND proves the folders add up. A second endpoint returning the first half of that would be one
+       more place for the same number to be computed differently. */
+    folderReconcile:   {m:'GET',    p:'/api/folders/reconcile',      ok:'y'},   // ?scope=task|order
+    folderAllRules:    {m:'GET',    p:'/api/folders/rules',          ok:'y'},   // every rule, across folders
     scorecardList:     {m:'GET',    p:'/api/relationships/scorecard', ok:'y'},
     scorecardOne:      {m:'GET',    p:'/api/relationships/scorecard/:entity_id', ok:'y'},
   });
@@ -130,7 +136,7 @@ async function _doMove(chitId, folderId){
  * chit list would make the folder screen unreadable on a phone and barely readable anywhere else. Tabs across the
  * top, one job each — the same shape the compose step-flow uses, and the standing rule here.
  */
-var _FLD = { tab: 'chits', metrics: null, rules: null, rulesNote: null, busy: false, err: null, draft: null, preview: null };
+var _FLD = { tab: 'chits', metrics: null, recon: null, rules: null, rulesNote: null, busy: false, err: null, draft: null, preview: null };
 
 function setFolderTab(t){
   _FLD.tab = t; _FLD.err = null;
@@ -147,16 +153,36 @@ function _fldPaint(){
   var dp = document.getElementById('detailpane'); if (dp) dp.innerHTML = _folderView();
 }
 
+/* The track (Task / Order) is the folder you are always in. `_FLD.track` is set when the panes were opened from
+   the track rather than from a folder — everything below reads it instead of asking twice. */
+function _fldTrack(){ return UI.folderSel ? null : (UI.folder === 'order' ? 'order' : 'task'); }
+
 async function loadFolderMetrics(){
-  _FLD.busy = true; _fldPaint();
-  try { _FLD.metrics = await api('folderMetrics', { params: { id: UI.folderSel } }); }
+  _FLD.busy = true; _FLD.recon = null; _fldPaint();
+  var track = _fldTrack();
+  try {
+    if (track) {
+      /* ⚠️ ONE CALL, TWO ANSWERS. reconcile returns `overall` — the same measure shape a folder's metrics returns,
+         so the whole pane below renders unchanged — plus the per-folder split and the assertion that they add up.
+         Asking a metrics endpoint and a reconcile endpoint separately would let the two disagree, which is exactly
+         the failure the reconciliation exists to catch. */
+      var r = await api('folderReconcile', { query: { scope: track } });
+      /* `overall` is measured over every row on the track, so overall.count IS the total. Used as-is rather than
+         overwritten with r.total: if those two ever disagree it is a bug worth seeing, not one worth papering. */
+      _FLD.metrics = (r && r.overall) || null;
+      _FLD.recon = r;
+    } else {
+      _FLD.metrics = await api('folderMetrics', { params: { id: UI.folderSel } });
+    }
+  }
   catch (e) { _FLD.err = (e && e.message) || 'Could not read the metrics.'; }
   _FLD.busy = false; _fldPaint();
 }
 async function loadFolderRules(){
   _FLD.busy = true; _fldPaint();
+  var track = _fldTrack();
   try {
-    var r = await api('folderRules', { params: { id: UI.folderSel } });
+    var r = track ? await api('folderAllRules') : await api('folderRules', { params: { id: UI.folderSel } });
     _FLD.rules = (r && r.rules) || [];
     /* A rule surface that cannot store anything must SAY so rather than accept a rule it will lose. */
     _FLD.rulesNote = (r && r.migrated === false) ? 'Folder rules are not migrated on this environment (b132). You can still PREVIEW a rule — nothing will save.' : null;
@@ -172,6 +198,47 @@ function _mBox(label, value, hint, tone){
     + '<div style="font-size:19px;font-weight:800;margin-top:3px;color:' + col + '">' + esc(String(value)) + '</div>'
     + (hint ? '<div style="font-size:10.5px;color:var(--grey);margin-top:2px">' + esc(hint) + '</div>' : '') + '</div>';
 }
+/**
+ * ⭐ THE RECONCILIATION — Athi, 2026-08-10: *"total number of tasks in the database should be the sum of all the
+ * tasks under the folder, according to its status."*
+ *
+ * ⚠️ WHY THIS IS ON SCREEN AND NOT JUST IN THE API. The moment folders exist, the Task header stops being the whole
+ * truth: filing moves a chit OUT of the unfiled list and INTO a folder, so Task can read 34 while 180 more sit in
+ * folders. Anyone glancing at it would conclude the work had shrunk. The invariant
+ *
+ *        TOTAL  =  unfiled  +  Σ(every folder)
+ *
+ * is shown as an arithmetic sentence you can read left to right, and it is ASSERTED, not assumed — if one chit is
+ * unaccounted for the strip goes red and names the gap. A total that balances by luck is one that will one day not.
+ */
+function _reconStrip(){
+  var r = _FLD.recon; if (!r) return '';
+  var fs = (r.folders || []).filter(function(f){ return f.own || f.tree; })
+    .sort(function(a, b){ return (b.tree || b.own) - (a.tree || a.own); });
+  var sums = '<b>' + r.total + '</b> total &nbsp;=&nbsp; <b>' + r.unfiled + '</b> unfiled &nbsp;+&nbsp; <b>' + r.filed + '</b> in folders';
+  var verdict = r.reconciles
+    ? '<span style="color:#2f8f5b;font-weight:800">✓ adds up</span>'
+    : '<span style="color:#c0453b;font-weight:800">✗ ' + Math.abs(((r.discrepancy || {}).missing) || 0) + ' unaccounted for</span>';
+  /* ⚠️ `own` AND `tree` BOTH, never one. A parent showing only its own rows makes the tree look smaller than its
+     branches; showing only the roll-up makes a parent look full when everything is actually one level down. */
+  var rows = fs.length ? fs.map(function(f){
+    var s = f.segments || {};
+    return '<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-top:1px solid var(--line);font-size:12px">'
+      + '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📁 ' + esc(f.name) + '</span>'
+      + '<span style="color:var(--grey);font-size:11px">' + (s.open || 0) + ' open · ' + (s.unassigned || 0) + ' unassigned</span>'
+      + '<span style="font-weight:800;min-width:34px;text-align:right">' + f.own + '</span>'
+      + (f.tree !== f.own ? '<span style="color:var(--grey);font-size:11px;min-width:52px;text-align:right">' + f.tree + ' w/ sub</span>' : '<span style="min-width:52px"></span>')
+      + '</div>';
+  }).join('') : '<div style="font-size:11.5px;color:var(--grey);padding:5px 0">No folders on this track yet — everything is unfiled, which is why the two numbers match trivially.</div>';
+
+  return '<div style="border:1px solid var(--line);border-radius:10px;padding:11px 13px;margin-bottom:12px;background:#fbfbfd">'
+    + '<div style="font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey)">Does it add up?</div>'
+    + '<div style="font-size:13px;margin-top:3px">' + sums + ' &nbsp; ' + verdict + '</div>'
+    + '<div style="font-size:11px;color:var(--grey);margin-top:2px">' + (r.overall || {}).assigned + ' assigned · ' + (r.overall || {}).unassigned + ' unassigned — a chit can be open and unassigned, and that is the pile worth seeing.</div>'
+    + '<div style="margin-top:8px">' + rows + '</div>'
+    + (r.reconciles ? '' : '<div style="font-size:11.5px;color:#c0453b;margin-top:7px">⚠️ Filed count and the sum of the folders disagree. A chit is filed into a folder this login cannot see.</div>')
+    + '</div>';
+}
 function _folderMetricsPane(){
   if (_FLD.busy && !_FLD.metrics) return '<div style="padding:18px;color:var(--grey);font-size:12.5px"><span class="spin"></span> measuring…</div>';
   var m = _FLD.metrics; if (!m) return '<div style="padding:18px;color:var(--grey);font-size:12.5px">No metrics yet.</div>';
@@ -186,8 +253,9 @@ function _folderMetricsPane(){
     + (((mo.excluded || {}).awaiting_agreement) ? '<div style="font-size:11px;color:var(--grey);margin-top:2px">' + mo.excluded.awaiting_agreement + ' chit(s) have no agreed value yet and are excluded — they are not counted as zero.</div>' : '');
 
   return '<div style="padding:14px 18px">'
+    + _reconStrip()
     + '<div style="display:flex;gap:9px;flex-wrap:wrap">'
-    + _mBox('In this folder', m.count, (m.open || 0) + ' open · ' + (m.closed || 0) + ' closed')
+    + _mBox(_FLD.recon ? 'On this track' : 'In this folder', m.count, (m.open || 0) + ' open · ' + (m.closed || 0) + ' closed')
     + _mBox('Unread', m.unread, m.unread ? 'nobody has opened these' : 'all seen', m.unread ? 'warn' : null)
     + _mBox('Overdue', m.overdue, 'open for ' + m.overdue_days + '+ days', m.overdue ? 'bad' : null)
     + _mBox('Oldest', dash(c.oldest_age_days, 'd'), 'the one nobody is working', (c.oldest_age_days > (m.overdue_days || 7) * 3) ? 'warn' : null)
@@ -259,13 +327,17 @@ async function ruleDelete(id){
   catch (e) { _FLD.err = (e && e.message) || 'Could not delete it.'; _fldPaint(); }
 }
 
+function _fldFolderName(id){ var f = (UI.folders || []).find(function(x){ return x.folder_id === id; }); return (f && f.name) || 'a folder'; }
 function _ruleRow(r){
   var terms = Object.keys(r.when || {}).map(function(k){ return '<span style="font-family:ui-monospace,Menlo,monospace;font-size:11.5px">' + esc(k) + '</span> <b>' + esc(String(r.when[k])) + '</b>'; }).join(' <span style="color:var(--grey)">and</span> ');
   return '<div style="border:1px solid var(--line);border-radius:10px;padding:11px 13px;margin-bottom:8px;background:#fff">'
     + '<div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap">'
     + '<label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" data-testid="rule-enabled" ' + (r.enabled ? 'checked' : '') + ' onchange="ruleToggle(\'' + esc(r.rule_id) + '\',this.checked)"><span style="font-weight:700;font-size:13px">' + esc(r.name || 'Rule') + '</span></label>'
     + '<span style="margin-left:auto;font-size:11px;color:#c0453b;cursor:pointer" onclick="ruleDelete(\'' + esc(r.rule_id) + '\')">Delete</span></div>'
-    + '<div style="font-size:12.5px;margin-top:6px">When ' + terms + ' → file here</div>'
+    /* ⚠️ AT TRACK LEVEL A RULE MUST NAME ITS DESTINATION. "file here" is only meaningful standing inside the
+       folder; in the all-rules list it would read as if every rule filed into the same place, which is the exact
+       confusion this list exists to remove. */
+    + '<div style="font-size:12.5px;margin-top:6px">When ' + terms + ' → ' + (_fldTrack() ? ('file into <b>📁 ' + esc(_fldFolderName(r.folder_id)) + '</b>') : 'file here') + '</div>'
     /* Observability: a rule that quietly stopped matching should be visible, not assumed to be working. */
     + '<div style="font-size:11px;color:var(--grey);margin-top:4px">'
     + (r.match_count ? ('filed ' + r.match_count + ' chit' + (r.match_count == 1 ? '' : 's') + (r.last_matched_at ? ' · last ' + esc(String(r.last_matched_at).slice(0, 10)) : '')) : 'has not matched anything yet')
@@ -278,16 +350,25 @@ function _folderRulesPane(){
   var d = _FLD.draft;
   var out = '<div style="padding:14px 18px">';
 
+  var _trk = _fldTrack();
   out += '<div style="font-size:11.5px;color:var(--grey);line-height:1.55;margin-bottom:10px">'
-    + 'A rule files <b>new arrivals</b> into this folder automatically. '
-    + '⚠️ It only <b>files</b> — it never changes a chit’s status, value or counterparty. Filing is a view on your own copy; anything more belongs to a person.</div>';
+    + (_trk
+       ? ('Every rule on <b>' + (_trk === 'order' ? 'Order' : 'Task') + '</b>, in the order they run. '
+          + '⚠️ Rules only conflict with <b>each other</b> — two folders both claiming supplier invoices is invisible from inside either one, which is why they are listed together here.')
+       : 'A rule files <b>new arrivals</b> into this folder automatically. ')
+    + ' ⚠️ It only <b>files</b> — it never changes a chit’s status, value or counterparty. Filing is a view on your own copy; anything more belongs to a person.</div>';
 
   if (_FLD.rulesNote) out += '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;font-size:11.5px;color:#6b5a36;margin-bottom:9px">' + esc(_FLD.rulesNote) + '</div>';
   if (_FLD.err) out += '<div style="color:#c0453b;font-size:12px;margin-bottom:8px">' + esc(_FLD.err) + '</div>';
 
   out += rules.length ? rules.map(_ruleRow).join('') : '<div style="color:var(--grey);font-size:12.5px;padding:6px 0 12px">No rules yet. Everything arrives unfiled until you add one.</div>';
 
-  if (!d) {
+  /* ⚠️ NO "ADD A RULE" AT TRACK LEVEL, and this is a real constraint rather than an omission: a rule's whole
+     definition is "file into THIS folder", so from the track there is no destination to write down. Offering the
+     button here would mean inventing a target folder on the user's behalf. Say where it lives instead. */
+  if (_trk) {
+    out += '<div style="font-size:11.5px;color:var(--grey);padding:4px 0 2px">To add one, open the folder it should file into — a rule is defined by its destination, so there is nothing to write down from here.</div>';
+  } else if (!d) {
     out += '<button class="composebtn" data-testid="rule-new" onclick="ruleDraftNew()">+ Add a rule</button>';
   } else {
     var opts = Object.keys(_RULE_HELP).map(function(k){ return '<option value="' + k + '"' + (d.term === k ? ' selected' : '') + '>' + esc(k) + '</option>'; }).join('');

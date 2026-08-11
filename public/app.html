@@ -602,6 +602,8 @@ const EP = {
   inbox:           {m:"GET",  p:"/api/chits/inbox",              ok:"✓"},  // ?status= ?page= ?limit=
   sent:            {m:"GET",  p:"/api/chits/sent",               ok:"✓"},  // real sent copies (direction='sent') — baseline-4. (was wrongly /inbox = received copies)
   chit:            {m:"GET",  p:"/api/chits/:id",                ok:"✓"},
+  amend:           {m:"POST", p:"/api/chits/:id/amend",          ok:"✓"},  // b137 — records a correction ALONGSIDE the reading; never edits line_items
+  catOverlay:      {m:"GET",  p:"/api/chits/:id/catalogue-overlay", ok:"✓"},  // ?q= — pull the full catalogue row so one fix carries unit+size+price too
   advance:         {m:"PUT",  p:"/api/chits/:id/status",         ok:"✓"},  // state change is via PUT /status (no /advance route)
   status:          {m:"PUT",  p:"/api/chits/:id/status",         ok:"✓"},
   assign:          {m:"PUT",  p:"/api/actors/assign/:id",        ok:"✓"},  // body {action:'push', target_actor_id}
@@ -1710,13 +1712,18 @@ function clearFolder(){ UI.folderSel=null; UI.sel=null; UI.detail=null; renderAp
  * Metrics and Rules open as a MODAL over the list, not as a third screen — the list stays where it was, and you
  * come back to the row you were on. They are folder-specific, so they only exist while a folder is selected.
  */
+/* ⚠️ ALSO OPENS FROM THE TRACK, not only from inside a folder. Athi: *"even in task, bring metrics and rules as
+   icon, give the same ux and functionalities."* Task and Order ARE folders — the ones you are always in — so the
+   same two panes answer the same two questions one level up. It is the identical modal; only the scope differs. */
 async function openFolderPane(tab){
-  if(!UI.folderSel) return;
   await ensureCap('folders');
-  const f=(UI.folders||[]).find(x=>x.folder_id===UI.folderSel)||{name:'Folder'};
-  _FLD.tab=tab; _FLD.metrics=null; _FLD.rules=null; _FLD.err=null; _FLD.draft=null; _FLD.preview=null;
-  modal(`<div class="mhd"><div class="t">${tab==='rules'?'⚙️ Rules':'📊 Metrics'} — 📁 ${esc(f.name)}</div>
-     <div class="s">${tab==='rules'?'what gets filed in here automatically':'what is in this folder, as numbers'}</div></div>
+  const f=UI.folderSel?((UI.folders||[]).find(x=>x.folder_id===UI.folderSel)||{name:'Folder'}):null;
+  const where=f?('📁 '+esc(f.name)):(UI.folder==='order'?'📤 Order':'📥 Task');
+  _FLD.tab=tab; _FLD.metrics=null; _FLD.recon=null; _FLD.rules=null; _FLD.err=null; _FLD.draft=null; _FLD.preview=null;
+  modal(`<div class="mhd"><div class="t">${tab==='rules'?'⚙️ Rules':'📊 Metrics'} — ${where}</div>
+     <div class="s">${tab==='rules'
+        ? (f?'what gets filed in here automatically':'every rule on this track, and where each one files')
+        : (f?'what is in this folder, as numbers':'the whole track — and whether the folders add up to it')}</div></div>
    <div class="mbody" id="fld_pane"><div style="padding:18px;color:var(--grey);font-size:12.5px"><span class="spin"></span> loading…</div></div>`, true);
   _fldPaint();
   if(tab==='metrics') loadFolderMetrics(); else loadFolderRules();
@@ -3622,13 +3629,20 @@ function taskPanel(){
    * sort, filter, select, status, assign and dispute all keep working inside a folder without a line of new code.
    */
   const _fsel = UI.folderSel ? (UI.folders||[]).find(f=>f.folder_id===UI.folderSel) : null;
-  const crumb = _fsel ? `<div class="lh" style="padding-bottom:0;border:0">
+  /* ⚠️ THE ICONS RIDE ON THE TRACK TOO, not only inside a folder. Athi: *"even in task, bring metrics and rules as
+     icon, give the same ux and functionalities."* Task/Order behave exactly like folders — same arithmetic, same
+     rules — so hiding the affordance one level up made the track feel like a lesser thing than its own children.
+     One button pair, rendered whether or not a folder is selected; only the crumb in front of it changes. */
+  const _isTrack = (UI.folder==='task'||UI.folder==='order');
+  const _btns = `<span data-testid="folder-metrics-btn" onclick="openFolderPane('metrics')" title="${_fsel?'Metrics for this folder':'Metrics for this whole track — and whether the folders add up'}" style="margin-left:auto;cursor:pointer;border:1px solid var(--line);border-radius:8px;padding:3px 9px;font-size:11.5px">📊 Metrics</span>
+        <span data-testid="folder-rules-btn" onclick="openFolderPane('rules')" title="${_fsel?'Rules that file into this folder':'Every rule on this track, and where each one files'}" style="cursor:pointer;border:1px solid var(--line);border-radius:8px;padding:3px 9px;font-size:11.5px">⚙️ Rules</span>`;
+  const crumb = (_fsel || _isTrack) ? `<div class="lh" style="padding-bottom:0;border:0">
       <div style="display:flex;align-items:center;gap:6px;font-size:13px;flex-wrap:wrap">
-        <span data-testid="crumb-track" onclick="clearFolder()" style="cursor:pointer;color:var(--blue);font-weight:600">${UI.folder==='order'?'📤 Order':'📥 Task'}</span>
+        ${_fsel ? `<span data-testid="crumb-track" onclick="clearFolder()" style="cursor:pointer;color:var(--blue);font-weight:600">${UI.folder==='order'?'📤 Order':'📥 Task'}</span>
         <span style="color:var(--grey)">/</span>
-        <span data-testid="crumb-folder" style="font-weight:800">📁 ${esc(_fsel.name)}</span>
-        <span data-testid="folder-metrics-btn" onclick="openFolderPane('metrics')" title="Metrics for this folder" style="margin-left:auto;cursor:pointer;border:1px solid var(--line);border-radius:8px;padding:3px 9px;font-size:11.5px">📊 Metrics</span>
-        <span data-testid="folder-rules-btn" onclick="openFolderPane('rules')" title="Rules that file into this folder" style="cursor:pointer;border:1px solid var(--line);border-radius:8px;padding:3px 9px;font-size:11.5px">⚙️ Rules</span>
+        <span data-testid="crumb-folder" style="font-weight:800">📁 ${esc(_fsel.name)}</span>`
+        : `<span data-testid="crumb-track" style="font-weight:800">${UI.folder==='order'?'📤 Order':'📥 Task'}</span>`}
+        ${_btns}
       </div></div>` : '';
   const list = `<div class="list">${helpStrip}${crumb}
     <div class="lh">${folders}${sub}${stTabs}
@@ -3902,7 +3916,10 @@ function fmtLine(li){
   var name=(li.particulars||'Item')
     + (li.comment?('  ·  '+li.comment):'')
     + (li.asked_unit?('  (asked in '+li.asked_unit+')'):'');
-  return [name, qty+money, []];
+  /* ⚠️ [3] IS THE RAW LINE, carried so the renderer can show an amendment (b137) — the struck-through original
+     beside the correction — without a second lookup. It is data, not markup; nothing escapes it because nothing
+     prints it directly. Appended rather than inserted: [0]/[1]/[2] have three other call sites. */
+  return [name, qty+money, [], li];
 }
 function mapApiMsg(m){ if(!m||m.scope!==undefined) return m; var _b=m.message_text||''; var _by=null, _dk=null; if(m.is_dispute && typeof disputeByline==='function'){ var _p=disputeByline(_b); _by=_p.by; _b=_p.body; _dk=_p.kind; } return { id:m.message_id, scope:m.thread_type||'internal', author:m.sender_display_name||'—', byline:_by, body:_b, at:fmtAt(m.created_at), type:m.msg_type||'info', isDispute:!!m.is_dispute, disputeId:m.dispute_id||null, dispKind:_dk, unread:false, atts:(m.attachments||[]).map(mapAtt) }; }
 function mapApiActor(a){ if(!a||a.shift!==undefined) return a; const S={active:'on_shift',short_break:'on_break',on_break:'on_break',break:'on_break',leave:'on_break',off:'off',deactivated:'off',removed:'off'}; const st=(a.break_status==='deactivated')?'deactivated':(a.break_status==='removed'?'removed':'active'); return { id:a.identity_id, name:a.display_name, uid:a.user_id||a.uid, key:a.actor_key||'', role:a.actor_role||'', type:a.actor_type||'human', shift:S[a.break_status]||'on_shift', status:st, load:a.current_task_count||0, max:a.max_tasks||0, phone:a.phone||'', hat:a.hat||'act', del:a.delegate_actor_id||null, lastAssigned:a.last_assigned_at||null, pinSet:!!a.pin_set_at, otp:a.otp_code||'', otpExp:a.otp_expires_at||null, breakType:a.break_type||null, breakSince:a.break_started_at||null, returnDate:a.return_date||null, bridge:a.bridge_id||'', created:a.created_at||null, last:a.last_active_at||null }; }
@@ -4141,10 +4158,13 @@ async function openChit(id, silent){
         const r=await chitP;
         if(r && r.header){ const h=r.header, det=r.detail||{};
           const base=rowBase||mapApiChit({chit_id:h.chit_id,summary_json:h.summary_json,all_recipients:h.all_recipients,sender_entity_display_name:h.sender_entity_display_name,purpose:h.purpose,manual_subject:h.manual_subject,auto_subject:h.auto_subject,current_status:'delivered',open_dispute_count:0});
-          const _items=(det.line_items||[]).map(fmtLine);
+          /* b137 — `amended_lines` is the original reading with corrections laid over it; each carries `_amended`
+             so the row can strike the old value and show the new. Falls back to the raw lines when nothing has
+             been amended (or the migration isn't applied), so the chit opens either way. */
+          const _items=((r.amended_lines||det.line_items)||[]).map(fmtLine);
           const _ratts=(r.attachments||[]).map(mapAtt);
           _ratts.filter(a=>a.line_index!=null).forEach(a=>{ const it=_items[a.line_index]; if(it){ it[2]=it[2]||[]; it[2].push(a); } });
-          UI.detail={...base, items:_items, atts:_ratts.filter(a=>a.line_index==null), msgs:[], log:(r.state_log||[])};
+          UI.detail={...base, items:_items, atts:_ratts.filter(a=>a.line_index==null), msgs:[], log:(r.state_log||[]), amendments:(r.amendments||[]), canAmend:(r.amendments_migrated!==false)};
           try{ const mr=await msgP; UI.detail.msgs=(mr||[]).map(mapApiMsg); }catch(_){}
           if(dispP){ try{ const dr=await dispP; UI.detail.disputes=(dr&&dr.disputes)||[]; }catch(_){} }
         } else { UI.detail=r; }
@@ -4447,8 +4467,10 @@ function msgSearchSort(){ return '<div class="msgss"><input id="msgsrch" class="
 function setMsgSearch(v){ clearTimeout(UI._msgT); UI._msgT=setTimeout(function(){ UI.msgSearch=(v||'').trim(); paintDetail(); var s=document.getElementById('msgsrch'); if(s){ s.focus(); var n=s.value.length; try{s.setSelectionRange(n,n);}catch(_){ } } }, 300); }
 function setMsgOrder(o){ UI.msgOrder=o; paintDetail(); }
 function fmtLogTime(ts){ try{ var d=new Date(ts); if(isNaN(d))return ''; return d.toLocaleString('en-IN', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}); }catch(_){ return ''; } }
-function statusLabel(e){ var a=e.action||''; if(a==='created') return 'Created'; if(a==='message_sent') return 'Message sent'; if(a.indexOf('status_')===0) return 'Status → '+a.slice(7); if(e.new_status) return (a||'updated')+' → '+e.new_status; return a||'event'; }
-function statusEv(e){ return '<div class="ev"><div class="ea">'+esc(statusLabel(e))+'</div><div class="em">'+esc(e.action_by_display_name||'')+' · '+esc(fmtLogTime(e.created_at))+(e.detail?(' · '+esc(String(e.detail).slice(0,80))):'')+'</div></div>'; }
+function statusLabel(e){ var a=e.action||''; if(a==='created') return 'Created'; if(a==='message_sent') return 'Message sent'; if(a==='amended') return '✎ Amended'; if(a.indexOf('status_')===0) return 'Status → '+a.slice(7); if(e.new_status) return (a||'updated')+' → '+e.new_status; return a||'event'; }
+/* ⚠️ an amendment's detail gets more room than 80 chars: it reads `quantity "5" → "2"`, and the truncation would
+   land squarely on the arrow — leaving a history entry that says something changed but not to what. */
+function statusEv(e){ var cap=(e.action==='amended')?200:80; return '<div class="ev"><div class="ea">'+esc(statusLabel(e))+'</div><div class="em">'+esc(e.action_by_display_name||'')+' · '+esc(fmtLogTime(e.created_at))+(e.detail?(' · '+esc(String(e.detail).slice(0,cap))):'')+'</div></div>'; }
 function statusSearchSort(){ return '<div class="msgss"><input id="stsrch" class="msgsi" placeholder="Search status history" value="'+esc(UI.statusSearch||'')+'" oninput="setStatusSearch(this.value)"><button class="msgord" onclick="setStatusOrder(UI.statusOrder===\'oldest\'?\'latest\':\'oldest\')" title="Sort order">'+((UI.statusOrder==='oldest')?'↑ Oldest':'↓ Latest')+'</button></div>'; }
 function setStatusSearch(v){ clearTimeout(UI._stT); UI._stT=setTimeout(function(){ UI.statusSearch=(v||'').trim(); paintDetail(); var s=document.getElementById('stsrch'); if(s){ s.focus(); var n=s.value.length; try{s.setSelectionRange(n,n);}catch(_){ } } }, 300); }
 function setStatusOrder(o){ UI.statusOrder=o; paintDetail(); }
@@ -4695,17 +4717,168 @@ function buildAttGroups(c){
   const chit=attsVis(c.atts); if(chit.length)g['chit']=chit;
   UI.attGroups=g;
 }
+/* ── b137 · AMENDED VALUES ────────────────────────────────────────────────────────────────────────────────────
+   Athi: *"the existing data has to be shown striked out and the new data item appears instead."*
+
+   ⚠️ BOTH READINGS STAY ON SCREEN. Showing only the corrected value would be tidier and would quietly destroy the
+   one thing an amendment exists to preserve — that a person disagreed with the machine, and about what. Six weeks
+   into a dispute, "it says 2" is worth far less than "it was read as 5 and Athi corrected it to 2 on the 11th".
+   The strike-through IS the record, not a decoration on it. */
+function amdVal(li, field, cur, fmt){
+  const a=li && li._amended && li._amended[field];
+  const f=fmt||(v=>v==null?'':String(v));
+  const now=esc(f(cur));
+  if(!a) return now;
+  /* ⚠️ THE OLD VALUE IS FORMATTED THE SAME WAY AS THE NEW ONE. Striking a raw "10" beside a formatted "₹12.00"
+     reads as a change of currency as much as of price — the eye compares the shapes before the digits. */
+  const was=(a.from==null||a.from==='')?'—':esc(f(a.from));
+  return `<s style="opacity:.55;text-decoration-thickness:1.5px">${was}</s> <span style="color:#245a9e;font-weight:700">${now}</span>`;
+}
 /* items table — each line shows a clip + expandable image strip scoped to that line */
 function contentItems(c){
   return (c.items||[]).map((it,idx)=>{
     const atts=attsVis(it[2]);
+    const li=it[3]||{};
+    const amended=!!(li._amended&&Object.keys(li._amended).length);
     const open=UI.openLines.has('line'+idx);
     const clip=atts.length?`<span class="lineclip" onclick="event.stopPropagation();toggleLine(${idx})">📎 ${atts.length} ${open?'▾':'▸'}</span>`:"";
     const strip=(atts.length&&open)?`<div class="lineImgs">${attTileGrid(atts,'line'+idx)}</div>`:"";
-    return `<div class="ir ${atts.length?'hasatt':''}" ${atts.length?`onclick="toggleLine(${idx})"`:''}><span class="nm">${esc(it[0])}</span><span class="qt">${esc(it[1])}</span>${clip}</div>${strip}`;
+    /* An unamended line renders exactly as before — same strings, same escaping. Only a corrected line pays for
+       the per-field build, so the common case cannot regress. */
+    let nm, qt;
+    if(amended){
+      nm=amdVal(li,'particulars',li.particulars||'Item')
+        + (li.comment||(li._amended&&li._amended.comment) ? '<span style="opacity:.7">  ·  '+amdVal(li,'comment',li.comment||'')+'</span>' : '');
+      qt=amdVal(li,'quantity',li.quantity==null?0:li.quantity)
+        + (li.unit||(li._amended&&li._amended.unit) ? ' '+amdVal(li,'unit',li.unit||'') : '')
+        + (li.unit_size||(li._amended&&li._amended.unit_size) ? ' ('+amdVal(li,'unit_size',li.unit_size||'')+')' : '')
+        + ' × '+amdVal(li,'price',li.price,inr_)
+        + ' = '+esc(inr_(li.total||(li.quantity*li.price)));
+    } else { nm=esc(it[0]); qt=esc(it[1]); }
+    /* ✎ sits on every line, not only misread ones — you cannot tell which lines were misread until you read them,
+       and hiding the affordance behind a confidence score would make the low-confidence guesses the only ones
+       anybody checked. */
+    const pen=(c.canAmend===false)?'':`<span class="lineclip" title="Amend this line — the original stays on the record" onclick="event.stopPropagation();amendLine(${idx})" style="cursor:pointer">✎</span>`;
+    return `<div class="ir ${atts.length?'hasatt':''}" ${atts.length?`onclick="toggleLine(${idx})"`:''}><span class="nm">${nm}</span><span class="qt">${qt}</span>${clip}${pen}</div>${strip}`;
   }).join("");
 }
 function toggleLine(idx){const k='line'+idx;UI.openLines.has(k)?UI.openLines.delete(k):UI.openLines.add(k);paintDetail();}
+
+/* ═══ b137 · AMEND A LINE ══════════════════════════════════════════════════════════════════════════════════════
+   Athi, 2026-08-11: *"the chit preparation is going to be automatic, and we provide the entire text as well, so
+   what we may have to do is, as part of the chit, we have to provide an edit option while performing the action
+   at the task level."*
+
+   ⚠️ THIS DOES NOT EDIT THE CHIT. It posts a correction that is filed next to the reading. The chit's own lines
+   are never rewritten — see lib/amend.js for why that is not merely a style choice.
+
+   The catalogue overlay is the other half. Correcting "thakkali" to "Tomato" fixes one word and leaves the unit,
+   the pack size and the price still wrong, because they were all read off the same misunderstanding. Picking the
+   catalogue row carries all four in one act — and it uses the SAME matcher the reader used, so a human can never
+   "correct" a line to something the reader could not have produced.
+*/
+const AMD = { idx:null, line:null, cat:null, picked:null };
+function amendLine(idx){
+  const c=UI.detail||{}; const it=(c.items||[])[idx]; if(!it) return;
+  AMD.idx=idx; AMD.line={...(it[3]||{})}; AMD.cat=null; AMD.picked=null;
+  amendPaint();
+  /* Fetch the overlay after painting so the box opens instantly — no catalogue is a normal answer, not a failure,
+     and the free-text fields must work while this is still in flight. */
+  api('catOverlay',{params:{id:UI.sel},query:{q:(AMD.line.asked_as||AMD.line.particulars||'')}})
+    .then(r=>{ AMD.cat=r||{has_catalogue:false}; if(AMD.idx===idx) amendPaint(); })
+    .catch(()=>{ AMD.cat={has_catalogue:false}; if(AMD.idx===idx) amendPaint(); });
+}
+function amdField(k,label,val,ph){
+  return `<label style="display:block;margin:0 0 8px"><span style="font-size:10px;color:var(--grey);font-weight:700;text-transform:uppercase;letter-spacing:.04em">${esc(label)}</span>
+    <input id="amd_${k}" value="${esc(val==null?'':String(val))}" placeholder="${esc(ph||'')}" style="width:100%;box-sizing:border-box;padding:7px 9px;border:1px solid var(--line);border-radius:6px;font-size:13px"></label>`;
+}
+function amendPaint(){
+  const l=AMD.line||{}, cat=AMD.cat;
+  /* What the customer actually wrote for this line, when the reader renamed it. It is the whole reason a human is
+     looking at this box, so it goes at the top rather than in a tooltip. */
+  const asked=l.asked_as?`<div style="font-size:11px;color:var(--grey);margin:0 0 10px">They wrote <b style="color:var(--ink)">“${esc(l.asked_as)}”</b> — read as <b style="color:var(--ink)">“${esc(l.particulars||'')}”</b></div>`:'';
+  let overlay;
+  if(!cat) overlay=`<div style="font-size:11px;color:var(--grey)">Looking in the catalogue…</div>`;
+  else if(!cat.has_catalogue) overlay=`<div style="font-size:11px;color:var(--grey)">No catalogue on this entity — type the correction directly. <span style="opacity:.8">(A supplier sending “milk 10 l” has no catalogue either; that is normal, not a gap.)</span></div>`;
+  else {
+    const opts=(cat.items||[]).map((x,i)=>`<option value="${i}">${esc(x.label)}${x.unit?(' · '+esc(x.unit)):''}${(x.price||x.price===0)?(' · '+inr_(x.price)):''}</option>`).join('');
+    const warn=cat.match&&cat.match.variant_unspecified
+      ? `<div style="font-size:10.5px;color:#8a6d1f;background:#faf3dd;border-radius:5px;padding:5px 7px;margin-top:6px">⚠️ The catalogue has grades for this item (${esc((cat.match.variants||[]).join(', '))}) and the message named none — pick the right one.</div>`
+      : (cat.ambiguous?`<div style="font-size:10.5px;color:#8a6d1f;background:#faf3dd;border-radius:5px;padding:5px 7px;margin-top:6px">⚠️ ${cat.ambiguous} catalogue items answer to this name.</div>`:'');
+    overlay=`<div style="font-size:10px;color:var(--grey);font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Pull from catalogue</div>
+      <select id="amd_cat" onchange="amendPick(this.value)" style="width:100%;box-sizing:border-box;padding:7px 9px;border:1px solid var(--line);border-radius:6px;font-size:13px">
+        <option value="">— choose an item (fills name, unit, size &amp; price) —</option>${opts}</select>${warn}`;
+  }
+  const picked=`<div id="amd_picked">${AMD.picked?amdPickedHtml(AMD.picked,l):''}</div>`;
+  modal(`<h3 style="margin:0 0 4px">✎ Amend line ${AMD.idx+1}</h3>
+    <div style="font-size:11px;color:var(--grey);margin:0 0 10px">The original reading stays on the record and will be shown struck through. Nothing on the chit is overwritten.</div>
+    ${asked}
+    <div style="border:1px solid var(--line);border-radius:8px;padding:10px;margin-bottom:12px">${overlay}${picked}</div>
+    ${amdField('particulars','Item',l.particulars,'what it actually is')}
+    <div style="display:flex;gap:8px">
+      <div style="flex:1">${amdField('quantity','Quantity',l.quantity,'2')}</div>
+      <div style="flex:1">${amdField('unit','Unit',l.unit,'box, kg, l')}</div>
+      <div style="flex:1">${amdField('unit_size','Unit size',l.unit_size,'5 inch')}</div>
+    </div>
+    ${amdField('price','Price',l.price,'per unit')}
+    ${amdField('comment','Comment',l.comment,'anything the line should carry — extra spicy, deliver 7 PM')}
+    <label style="display:block;margin:2px 0 12px"><span style="font-size:10px;color:var(--grey);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Why (optional)</span>
+      <input id="amd_reason" placeholder="e.g. 5 was the size, not the quantity" style="width:100%;box-sizing:border-box;padding:7px 9px;border:1px solid var(--line);border-radius:6px;font-size:13px"></label>
+    <div style="display:flex;gap:8px"><button class="btn" style="flex:1" onclick="closeModal()">Cancel</button><button class="btn pri" style="flex:1" onclick="amendSave()">Amend &amp; record</button></div>`);
+}
+function amdPickedHtml(x,l){
+  return `<div style="font-size:10.5px;color:#245a9e;background:#e8f0fb;border-radius:5px;padding:5px 7px;margin-top:6px">Filled from catalogue: <b>${esc(x.label)}</b>${x.unit?(' · '+esc(x.unit)):''}${(x.price||x.price===0)?(' · '+inr_(x.price)):''} — recorded as a <b>naming</b> correction, so “${esc((l&&(l.asked_as||l.particulars))||'')}” can later be confirmed as a catalogue synonym.</div>`;
+}
+function amendPick(i){
+  const x=((AMD.cat&&AMD.cat.items)||[])[+i];
+  const strip=document.getElementById('amd_picked');
+  if(!x){ AMD.picked=null; if(strip) strip.innerHTML=''; return; }
+  AMD.picked=x;
+  /* ⚠️ FILLS THE BOX, DOES NOT SAVE. The person still sees every value the catalogue supplied and can override any
+     of them before it becomes a record — a catalogue row is a strong default, not a fact about this order.
+     ⚠️ AND IT PATCHES THE DOM RATHER THAN REPAINTING: a repaint here would discard whatever the person had already
+     typed into the other fields, which is precisely the work they came to do. */
+  const set=(k,v)=>{const e=document.getElementById('amd_'+k); if(e&&v!=null&&v!=='') e.value=v;};
+  set('particulars', x.label);
+  set('unit', x.unit); set('unit_size', x.unit_size); set('price', x.price);
+  if(strip) strip.innerHTML=amdPickedHtml(x, AMD.line);
+}
+async function amendSave(){
+  const l=AMD.line||{}, idx=AMD.idx, id=UI.sel;
+  const g=(k)=>{const e=document.getElementById('amd_'+k); return e?e.value.trim():'';};
+  const NUM=['quantity','price'];
+  const edits=[];
+  let bad=null;
+  ['particulars','quantity','unit','unit_size','price','comment'].forEach(k=>{
+    const now=g(k); const was=(l[k]==null?'':String(l[k]));
+    if(now===was) return;
+    /* ⚠️ A NON-NUMERIC QUANTITY IS REFUSED, not coerced. Number("2 box") is NaN and would be stored as a
+       correction that reads as blank — the amendment would look applied and the line would be worse than before
+       anyone touched it. */
+    if(NUM.indexOf(k)>=0 && now!=='' && !isFinite(Number(now))){ bad=bad||(k+' must be a number — got “'+now+'”'); return; }
+    edits.push({ line_index:idx, field:k, old_value:(was===''?null:was), new_value:(now===''?null:now),
+      /* A name changed by picking a catalogue row is a NAMING fact and can eventually be learned as a synonym.
+         Anything else is a READING error — no amount of data fixes those; the prompt has to change. Filing them
+         apart is the only way to tell whether the reader is actually getting better. */
+      kind:(k==='particulars'&&AMD.picked)?'naming':'reading',
+      reason:g('reason')||null });
+  });
+  if(bad){ toast(bad); return; }
+  if(!edits.length){ toast('Nothing changed'); return; }
+  try{
+    const r=await api('amend',{params:{id},body:{edits}});
+    closeModal();
+    toast(edits.length===1?'Amended — the original is kept':(edits.length+' fields amended — the originals are kept'));
+    if(r&&r.synonym_candidates&&r.synonym_candidates.length){
+      const s=r.synonym_candidates[0];
+      /* ⚠️ REPORTED, NEVER APPLIED HERE. Teaching the catalogue that “thakkali” means Tomato is exactly right and
+         exactly dangerous: one typo confirmed in haste permanently merges two real products, and nothing
+         downstream would flag it again. Confirmation is a deliberate, separate act. */
+      toast('Noted: “'+s.term+'” → “'+s.means+'” can be confirmed as a catalogue synonym');
+    }
+    await openChit(id, true);
+  }catch(e){ toast(MSG.fail('amend the line', e)); }
+}
 /* whole-chit attachments (documents, clips not tied to one line) */
 function chitAttBlock(c){
   const atts=attsVis(c.atts);
