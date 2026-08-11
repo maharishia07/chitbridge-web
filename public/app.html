@@ -1719,14 +1719,18 @@ async function openFolderPane(tab){
   await ensureCap('folders');
   const f=UI.folderSel?((UI.folders||[]).find(x=>x.folder_id===UI.folderSel)||{name:'Folder'}):null;
   const where=f?('📁 '+esc(f.name)):(UI.folder==='order'?'📤 Order':'📥 Task');
-  _FLD.tab=tab; _FLD.metrics=null; _FLD.recon=null; _FLD.rules=null; _FLD.err=null; _FLD.draft=null; _FLD.preview=null;
-  modal(`<div class="mhd"><div class="t">${tab==='rules'?'⚙️ Rules':'📊 Metrics'} — ${where}</div>
-     <div class="s">${tab==='rules'
-        ? (f?'what gets filed in here automatically':'every rule on this track, and where each one files')
-        : (f?'what is in this folder, as numbers':'the whole track — and whether the folders add up to it')}</div></div>
+  _FLD.tab=tab; _FLD.metrics=null; _FLD.recon=null; _FLD.rules=null; _FLD.gs=null; _FLD.gsOpen={}; _FLD.gsAll=false; _FLD.err=null; _FLD.draft=null; _FLD.preview=null;
+  const _title={rules:'⚙️ Rules', groupsum:'🧮 Group sum', metrics:'📊 Metrics'}[tab]||'📊 Metrics';
+  const _sub={
+    rules:    f?'what gets filed in here automatically':'every rule on this track, and where each one files',
+    groupsum: 'total requirement per item, its cost, and who asked — click a line to see them',
+    metrics:  f?'what is in this folder, as numbers':'the whole track — and whether the folders add up to it',
+  }[tab]||'';
+  modal(`<div class="mhd"><div class="t">${_title} — ${where}</div>
+     <div class="s">${_sub}</div></div>
    <div class="mbody" id="fld_pane"><div style="padding:18px;color:var(--grey);font-size:12.5px"><span class="spin"></span> loading…</div></div>`, true);
   _fldPaint();
-  if(tab==='metrics') loadFolderMetrics(); else loadFolderRules();
+  if(tab==='metrics') loadFolderMetrics(); else if(tab==='groupsum') loadGroupSum(); else loadFolderRules();
 }
 /* ⚠️ COLLAPSE, because eight folders under Task made the menu taller than the screen (Athi's screenshot). The
    state persists — a menu that re-expands on every render is worse than one that never collapsed. */
@@ -3642,6 +3646,7 @@ function taskPanel(){
   /* ⚠️ THE DESCRIPTION STAYS THE TRACK'S, inside a folder too. A folder is that list FILTERED — the chits in
      "Needs attention" are still chits received, and relabelling per folder would imply otherwise. */
   const _btns = _isTrack ? `<span data-testid="folder-metrics-btn" onclick="openFolderPane('metrics')" title="${_fsel?'Metrics for this folder':'Metrics for this whole track — and whether the folders add up'}" style="margin-left:auto;cursor:pointer;border:1px solid var(--line);border-radius:8px;padding:3px 9px;font-size:11.5px;background:#fff">📊 Metrics</span>
+      <span data-testid="folder-groupsum-btn" onclick="openFolderPane('groupsum')" title="What does this pile add up to — quantity per item, cost, and who asked" style="cursor:pointer;border:1px solid var(--line);border-radius:8px;padding:3px 9px;font-size:11.5px;background:#fff">🧮 Group sum</span>
       <span data-testid="folder-rules-btn" onclick="openFolderPane('rules')" title="${_fsel?'Rules that file into this folder':'Every rule on this track, and where each one files'}" style="cursor:pointer;border:1px solid var(--line);border-radius:8px;padding:3px 9px;font-size:11.5px;background:#fff">⚙️ Rules</span>` : '';
   const helpStrip = isCust ? "" : `<div style="display:flex;align-items:center;gap:7px;padding:8px 12px;border-bottom:1px solid var(--line);background:var(--gold-soft);font-size:12px;color:#6b5a36;flex-wrap:wrap">
       <b style="font-family:'Space Grotesk';font-size:13px;display:flex;align-items:center;gap:6px;min-width:0">

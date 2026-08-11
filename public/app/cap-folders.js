@@ -24,6 +24,7 @@ if (typeof EP !== 'undefined') {
        more place for the same number to be computed differently. */
     folderReconcile:   {m:'GET',    p:'/api/folders/reconcile',      ok:'y'},   // ?scope=task|order
     folderAllRules:    {m:'GET',    p:'/api/folders/rules',          ok:'y'},   // every rule, across folders
+    folderGroupSum:    {m:'GET',    p:'/api/folders/groupsum',       ok:'y'},   // ?scope= &folder_id= — requirement + cost
     scorecardList:     {m:'GET',    p:'/api/relationships/scorecard', ok:'y'},
     scorecardOne:      {m:'GET',    p:'/api/relationships/scorecard/:entity_id', ok:'y'},
   });
@@ -149,7 +150,7 @@ function setFolderTab(t){
    the detail pane for the legacy standalone Folders screen. */
 function _fldPaint(){
   var host = document.getElementById('fld_pane');
-  if (host) { host.innerHTML = (_FLD.tab === 'rules') ? _folderRulesPane() : _folderMetricsPane(); return; }
+  if (host) { host.innerHTML = (_FLD.tab === 'rules') ? _folderRulesPane() : (_FLD.tab === 'groupsum') ? _groupSumPane() : _folderMetricsPane(); return; }
   var dp = document.getElementById('detailpane'); if (dp) dp.innerHTML = _folderView();
 }
 
@@ -215,6 +216,113 @@ async function loadFolderRules(){
     _FLD.rulesNote = (r && r.migrated === false) ? 'Folder rules are not migrated on this environment (b132). You can still PREVIEW a rule — nothing will save.' : null;
   } catch (e) { _FLD.err = (e && e.message) || 'Could not read the rules.'; _FLD.rules = []; }
   _FLD.busy = false; _fldPaint();
+}
+
+/* ════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+ *  🧮 GROUP SUM — what does this pile add up to, and who asked for it?
+ * ════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+ * Athi, 2026-08-11: *"sum all the tasks and find out the total requirement… say 10 parties ordered 1000Kg, on
+ * click the down below need to know who are all asked."*
+ */
+async function loadGroupSum(){
+  _FLD.busy = true; _fldPaint();
+  /* ⚠️ THE SCOPE IS A CHOICE, and it is stated on screen rather than assumed. Athi: *"at task level, we can ask
+     for that total sum irrespective of the folders."*  Inside a folder both readings are reasonable — this pile,
+     or the whole track — so the pane offers them instead of picking one silently. */
+  var fid = (UI.folderSel && !_FLD.gsAll) ? UI.folderSel : null;
+  var scope = UI.folderSel ? ((UI.folders || []).find(function(f){ return f.folder_id === UI.folderSel; }) || {}).scope || 'task'
+                           : (UI.folder === 'order' ? 'order' : 'task');
+  try { _FLD.gs = await api('folderGroupSum', { query: { scope: scope, folder_id: fid || undefined } }); _FLD.err = null; }
+  catch (e) { _FLD.err = (e && e.message) || 'Could not add it up.'; _FLD.gs = null; }
+  _FLD.busy = false; _fldPaint();
+}
+function gsScope(all){ _FLD.gsAll = !!all; _FLD.gs = null; loadGroupSum(); }
+function gsToggle(i){ _FLD.gsOpen = _FLD.gsOpen || {}; _FLD.gsOpen[i] = !_FLD.gsOpen[i]; _fldPaint(); }
+
+function _gsMoney(v, mixed){
+  if (!v || !v.length) return '<span style="color:var(--grey)">—</span>';
+  /* ⚠️ SIDE BY SIDE, NEVER SUMMED. A figure spanning two currencies means nothing, most convincingly when tidy. */
+  return v.map(function(x){ return '<b>' + esc(x.currency) + ' ' + esc(String(x.total)) + '</b>'; }).join('<span style="color:var(--grey)"> + </span>')
+    + (mixed ? '<div style="font-size:10px;color:#8a5a1e">not added together</div>' : '');
+}
+function _groupSumPane(){
+  if (_FLD.busy && !_FLD.gs) return '<div style="padding:18px;color:var(--grey);font-size:12.5px"><span class="spin"></span> adding it up…</div>';
+  if (_FLD.err) return '<div style="padding:18px;color:#c0453b;font-size:12.5px">' + esc(_FLD.err) + '</div>';
+  var g = _FLD.gs; if (!g) return '<div style="padding:18px;color:var(--grey);font-size:12.5px">Nothing to add up.</div>';
+  var out = '<div style="padding:14px 18px">';
+
+  if (UI.folderSel) {
+    var b = function(on, lbl, arg){ return '<span onclick="gsScope(' + arg + ')" style="cursor:pointer;border:1px solid var(--line);border-radius:8px;padding:3px 10px;font-size:11.5px;margin-right:6px;' + (on ? 'background:var(--blue);color:#fff;border-color:var(--blue);font-weight:700' : 'background:#fff') + '">' + lbl + '</span>'; };
+    out += '<div style="margin-bottom:10px">' + b(!_FLD.gsAll, 'This folder', 'false') + b(!!_FLD.gsAll, 'Whole track — every folder', 'true') + '</div>';
+  }
+
+  /* ⚠️ SAID FIRST, NOT BURIED. A pile of 47 chits where only 9 carry line items produces a requirement built from
+     9 — and without this line that total reads as though it covered all 47. */
+  out += '<div style="font-size:11.5px;color:var(--grey);margin-bottom:10px">'
+    + '<b style="color:var(--ink)">' + g.chits + '</b> chit' + (g.chits === 1 ? '' : 's')
+    + ' · <b style="color:var(--ink)">' + g.chits_with_lines + '</b> carry line items'
+    + (g.chits_without_lines ? ' · <span style="color:#8a5a1e">' + g.chits_without_lines + ' have none and contribute nothing</span>' : '')
+    + (g.has_catalogue ? '' : '<div style="color:#8a5a1e;margin-top:3px">⚠️ No catalogue on this entity — items are grouped by the words used, so two spellings of the same thing stay apart.</div>')
+    + '</div>';
+
+  var req = g.requirement || [];
+  if (req.length) {
+    out += '<div style="display:flex;font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);padding:0 0 4px"><span style="flex:1">Item</span><span style="width:110px;text-align:right">Quantity</span><span style="width:130px;text-align:right">Cost</span><span style="width:74px;text-align:right">Parties</span></div>';
+    out += req.map(function(l, i){
+      var open = !!(_FLD.gsOpen || {})[i];
+      var name = esc(l.item) + (l.variant ? ' <span style="color:var(--grey);font-weight:600">· ' + esc(l.variant) + '</span>' : '');
+      var head = '<div onclick="gsToggle(' + i + ')" style="display:flex;align-items:center;cursor:pointer;padding:7px 0;border-top:1px solid var(--line);font-size:13px">'
+        + '<span style="flex:1;min-width:0">' + (open ? '▾' : '▸') + ' ' + name
+        + (l.matched_by_spelling ? ' <span title="matched through a misspelling" style="font-size:9px;color:#8a6d1f">≈</span>' : '') + '</span>'
+        + '<span style="width:110px;text-align:right;font-weight:800">' + esc(String(l.total)) + ' ' + esc(l.canonical_unit || '') + '</span>'
+        + '<span style="width:130px;text-align:right">' + _gsMoney(l.value, l.value_mixed) + '</span>'
+        + '<span style="width:74px;text-align:right;color:var(--grey);font-size:11.5px">' + l.stores + '</span></div>';
+      /* THE DRILLDOWN — Athi: "on click the down below need to know who are all asked". The roster comes straight
+         from consolidate()'s attribution; nothing is recomputed to render it. */
+      var rows = open ? '<div style="padding:2px 0 8px 16px;background:#fbfbfd">'
+        + (l.breakdown || []).map(function(s){
+            return '<div style="display:flex;align-items:center;font-size:12px;padding:3px 0">'
+              + '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(s.store_name)
+              /* ⚠️ WHAT THEY ACTUALLY WROTE, when it differs from the canonical name. "thakkali → Tomato" is the
+                 single most useful thing to see when checking whether a total is right. */
+              + (String(s.phrase || '').toLowerCase() !== String(l.item || '').toLowerCase() ? ' <span style="color:var(--grey)">— asked as “' + esc(s.phrase) + '”</span>' : '')
+              + '</span>'
+              + '<span style="width:110px;text-align:right">' + esc(String(s.qty)) + ' ' + esc(s.unit || '') + '</span>'
+              + '<span style="width:130px;text-align:right">' + (s.value == null ? '<span style="color:var(--grey)" title="no price on this line — not counted as zero">—</span>' : esc((s.currency || '') + ' ' + s.value)) + '</span>'
+              + '<span style="width:74px"></span></div>';
+          }).join('')
+        + '</div>' : '';
+      var partial = (open && l.value_partial) ? '<div style="font-size:11px;color:#8a5a1e;padding:0 0 8px 16px">⚠️ ' + l.value_partial.unpriced + ' of ' + (l.value_partial.priced + l.value_partial.unpriced) + ' have no price yet — the cost above is the priced part only, <b>not</b> the cost of this line.</div>' : '';
+      var split = l.unit_split ? '<div style="font-size:11px;color:#c0453b;padding:0 0 8px 16px">⚠️ ' + esc(l.flagged || 'unit split') + ' — ' + l.unit_split.map(function(u){ return esc(u.qty + ' ' + u.unit); }).join(' + ') + '</div>' : '';
+      return head + rows + partial + split;
+    }).join('');
+  } else {
+    out += '<div style="color:var(--grey);font-size:12.5px;padding:8px 0">Nothing totalled. ' + (g.chits_with_lines ? 'The lines here did not resolve to catalogue items — see below.' : 'None of these chits carry line items.') + '</div>';
+  }
+
+  /* ⚠️ THE FLAGS TRAVEL WITH THE TOTALS, never on a separate screen nobody opens. A total with a gap beside it
+     gets checked; a total that quietly excluded something does not. */
+  var f = g.flags || {};
+  var blocks = [
+    ['unmatched', '🚫 Not totalled — no catalogue match', f.unmatched, function(x){ return esc(x.phrase) + ' · ' + esc(x.store_name) + ' · ' + esc(String(x.qty) + ' ' + (x.unit || '')) + (x.reason ? ' — ' + esc(x.reason) : ''); }],
+    ['variant_unspecified', '⚠️ Not totalled — a grade was never named', f.variant_unspecified, function(x){ return esc(x.item) + ' · ' + esc(x.store_name) + ' — catalogue has ' + esc((x.variants || []).join(' / ')) + '; picking one silently would be inventing the order'; }],
+    ['unit_split', '⚠️ Units that cannot be added', f.unit_split, function(x){ return esc(x.item) + ' — ' + (x.split || []).map(function(u){ return esc(u.qty + ' ' + u.unit); }).join(' + ') + '; no conversion is defined, and guessing one sources the wrong quantity'; }],
+  ];
+  blocks.forEach(function(bk){
+    var arr = bk[2] || []; if (!arr.length) return;
+    out += '<div style="margin-top:12px"><div style="font-size:11px;font-weight:800;color:#8a5a1e;margin-bottom:3px">' + bk[1] + ' (' + arr.length + ')</div>'
+      + arr.slice(0, 25).map(function(x){ return '<div style="font-size:11.5px;color:var(--grey);padding:2px 0">· ' + bk[3](x) + '</div>'; }).join('')
+      + (arr.length > 25 ? '<div style="font-size:11px;color:var(--grey)">…and ' + (arr.length - 25) + ' more</div>' : '') + '</div>';
+  });
+
+  var mo = g.money || {};
+  out += '<div style="margin-top:16px;border-top:1px solid var(--line);padding-top:10px">'
+    + '<div style="font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin-bottom:4px">Agreed value of these chits</div>'
+    + ((mo.by_currency || []).length ? (mo.by_currency || []).map(function(x){ return '<span style="display:inline-block;border:1px solid var(--line);border-radius:8px;padding:3px 9px;margin:0 6px 6px 0;font-size:12px"><b>' + esc(x.currency) + '</b> ' + esc(String(x.total)) + ' <span style="color:var(--grey)">· ' + x.chits + ' chit' + (x.chits === 1 ? '' : 's') + '</span></span>'; }).join('') : '<span style="font-size:12px;color:var(--grey)">nothing with an agreed value</span>')
+    + (((mo.excluded || {}).awaiting_agreement) ? '<div style="font-size:11px;color:var(--grey)">' + mo.excluded.awaiting_agreement + ' chit(s) have no agreed value yet and are excluded — not counted as zero.</div>' : '')
+    + '<div style="font-size:11px;color:var(--grey);margin-top:4px">⚠️ This is the <b>agreed value of the chits</b>, which is a different question from the <b>cost of the requirement</b> above — a chit can carry priced lines and no agreed total, or the reverse.</div>'
+    + '</div></div>';
+  return out;
 }
 
 /* ── metrics ──────────────────────────────────────────────────────────────────────────────────────────────────── */
