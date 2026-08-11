@@ -3921,16 +3921,20 @@ function mapApiChit(c){
 /* ⚠️ PLAIN TEXT, NEVER MARKUP. The caller escapes what this returns (`esc(it[0])`), so HTML here would be
    double-escaped and shown as tags — and this text is an AI's reading of a STRANGER'S message, which is exactly
    the input that must never reach the DOM as markup. Both reasons point the same way. */
-function fmtLine(li){
+/* ⚠️ TAKES A LIVE-SET ENTRY, renders the LIVE version. A removed line has live:null and is rendered from its
+   original — struck through by contentItems — because it must stay on screen as evidence of what was asked for
+   while counting in nothing. */
+function fmtLine(e){
+  var li=(e&&(e.live||e.original))||e||{};
   var qty=(li.quantity||0)+(li.unit?(' '+li.unit):'')+(li.unit_size?(' ('+li.unit_size+')'):'');
   var money=' × '+inr_(li.price)+' = '+inr_(li.total||(li.quantity*li.price));
   var name=(li.particulars||'Item')
     + (li.comment?('  ·  '+li.comment):'')
     + (li.asked_unit?('  (asked in '+li.asked_unit+')'):'');
-  /* ⚠️ [3] IS THE RAW LINE, carried so the renderer can show an amendment (b137) — the struck-through original
-     beside the correction — without a second lookup. It is data, not markup; nothing escapes it because nothing
-     prints it directly. Appended rather than inserted: [0]/[1]/[2] have three other call sites. */
-  return [name, qty+money, [], li];
+  /* ⚠️ [3] IS THE LIVE-SET ENTRY (b138), carried so the renderer can strike the superseded versions and mark a
+     removal without a second lookup. Data, not markup — nothing prints it directly. Appended rather than
+     inserted: [0]/[1]/[2] have three other call sites. */
+  return [name, qty+money, [], e];
 }
 function mapApiMsg(m){ if(!m||m.scope!==undefined) return m; var _b=m.message_text||''; var _by=null, _dk=null; if(m.is_dispute && typeof disputeByline==='function'){ var _p=disputeByline(_b); _by=_p.by; _b=_p.body; _dk=_p.kind; } return { id:m.message_id, scope:m.thread_type||'internal', author:m.sender_display_name||'—', byline:_by, body:_b, at:fmtAt(m.created_at), type:m.msg_type||'info', isDispute:!!m.is_dispute, disputeId:m.dispute_id||null, dispKind:_dk, unread:false, atts:(m.attachments||[]).map(mapAtt) }; }
 function mapApiActor(a){ if(!a||a.shift!==undefined) return a; const S={active:'on_shift',short_break:'on_break',on_break:'on_break',break:'on_break',leave:'on_break',off:'off',deactivated:'off',removed:'off'}; const st=(a.break_status==='deactivated')?'deactivated':(a.break_status==='removed'?'removed':'active'); return { id:a.identity_id, name:a.display_name, uid:a.user_id||a.uid, key:a.actor_key||'', role:a.actor_role||'', type:a.actor_type||'human', shift:S[a.break_status]||'on_shift', status:st, load:a.current_task_count||0, max:a.max_tasks||0, phone:a.phone||'', hat:a.hat||'act', del:a.delegate_actor_id||null, lastAssigned:a.last_assigned_at||null, pinSet:!!a.pin_set_at, otp:a.otp_code||'', otpExp:a.otp_expires_at||null, breakType:a.break_type||null, breakSince:a.break_started_at||null, returnDate:a.return_date||null, bridge:a.bridge_id||'', created:a.created_at||null, last:a.last_active_at||null }; }
@@ -4169,10 +4173,15 @@ async function openChit(id, silent){
         const r=await chitP;
         if(r && r.header){ const h=r.header, det=r.detail||{};
           const base=rowBase||mapApiChit({chit_id:h.chit_id,summary_json:h.summary_json,all_recipients:h.all_recipients,sender_entity_display_name:h.sender_entity_display_name,purpose:h.purpose,manual_subject:h.manual_subject,auto_subject:h.auto_subject,current_status:'delivered',open_dispute_count:0});
-          /* b137 — `amended_lines` is the original reading with corrections laid over it; each carries `_amended`
-             so the row can strike the old value and show the new. Falls back to the raw lines when nothing has
-             been amended (or the migration isn't applied), so the chit opens either way. */
-          const _items=((r.amended_lines||det.line_items)||[]).map(fmtLine);
+          /* b138 — `live_set` is one entry per ORIGINAL line carrying what it is NOW plus everything it has been:
+             {live, original, history[], removed, reason_code}. Removed lines are PRESENT with live:null — they
+             must stay on screen as evidence while counting nowhere.
+             ⚠️ ONE SHAPE TO RENDER. The pre-b138 API sent a flat line array; falling back to that here keeps a
+             chit openable against an older API, and fmtLine is handed the same {live,…} envelope either way so
+             contentItems never has to ask which world it is in. */
+          const _live=Array.isArray(r.live_set) ? r.live_set
+            : ((det.line_items||[]).map((l,i)=>({index:i, live:l, original:l, history:[], removed:false})));
+          const _items=_live.map(fmtLine);
           const _ratts=(r.attachments||[]).map(mapAtt);
           _ratts.filter(a=>a.line_index!=null).forEach(a=>{ const it=_items[a.line_index]; if(it){ it[2]=it[2]||[]; it[2].push(a); } });
           UI.detail={...base, items:_items, atts:_ratts.filter(a=>a.line_index==null), msgs:[], log:(r.state_log||[]), amendments:(r.amendments||[]), canAmend:(r.amendments_migrated!==false)};
@@ -4728,168 +4737,187 @@ function buildAttGroups(c){
   const chit=attsVis(c.atts); if(chit.length)g['chit']=chit;
   UI.attGroups=g;
 }
-/* ── b137 · AMENDED VALUES ────────────────────────────────────────────────────────────────────────────────────
+/* ── b138 · THE LIVE SET ON SCREEN ────────────────────────────────────────────────────────────────────────────
    Athi: *"the existing data has to be shown striked out and the new data item appears instead."*
 
-   ⚠️ BOTH READINGS STAY ON SCREEN. Showing only the corrected value would be tidier and would quietly destroy the
-   one thing an amendment exists to preserve — that a person disagreed with the machine, and about what. Six weeks
-   into a dispute, "it says 2" is worth far less than "it was read as 5 and Athi corrected it to 2 on the 11th".
-   The strike-through IS the record, not a decoration on it. */
-function amdVal(li, field, cur, fmt){
-  const a=li && li._amended && li._amended[field];
-  const f=fmt||(v=>v==null?'':String(v));
-  const now=esc(f(cur));
-  if(!a) return now;
-  /* ⚠️ THE OLD VALUE IS FORMATTED THE SAME WAY AS THE NEW ONE. Striking a raw "10" beside a formatted "₹12.00"
-     reads as a change of currency as much as of price — the eye compares the shapes before the digits. */
-  const was=(a.from==null||a.from==='')?'—':esc(f(a.from));
-  return `<s style="opacity:.55;text-decoration-thickness:1.5px">${was}</s> <span style="color:#245a9e;font-weight:700">${now}</span>`;
+   ⚠️ BOTH READINGS STAY VISIBLE. Showing only the correction would be tidier and would destroy the one thing an
+   amendment exists to preserve — that a person disagreed with the machine, and about what. Six weeks into an
+   argument, "it says 2" is worth far less than "it was read as 5 and Athi corrected it to 2 on the 11th".
+   ⚠️ AND A REMOVED LINE IS STILL DRAWN — greyed, struck, counting in nothing. It is evidence that the customer
+   asked for something; deleting it from the screen would make the chit disagree with the message it came from. */
+function lineWas(h){
+  return (h||[]).map(function(v){
+    return '<div style="opacity:.5;font-size:11.5px"><s>'+esc([v.particulars, v.quantity, v.unit].filter(function(x){return x!=null&&x!=='';}).join(' '))+'</s></div>';
+  }).join('');
 }
 /* items table — each line shows a clip + expandable image strip scoped to that line */
 function contentItems(c){
   return (c.items||[]).map((it,idx)=>{
     const atts=attsVis(it[2]);
-    const li=it[3]||{};
-    const amended=!!(li._amended&&Object.keys(li._amended).length);
+    const e=it[3]||{};                      // live-set entry: {live, original, history, removed, reason_code}
     const open=UI.openLines.has('line'+idx);
     const clip=atts.length?`<span class="lineclip" onclick="event.stopPropagation();toggleLine(${idx})">📎 ${atts.length} ${open?'▾':'▸'}</span>`:"";
     const strip=(atts.length&&open)?`<div class="lineImgs">${attTileGrid(atts,'line'+idx)}</div>`:"";
-    /* An unamended line renders exactly as before — same strings, same escaping. Only a corrected line pays for
-       the per-field build, so the common case cannot regress. */
-    let nm, qt;
-    if(amended){
-      nm=amdVal(li,'particulars',li.particulars||'Item')
-        + (li.comment||(li._amended&&li._amended.comment) ? '<span style="opacity:.7">  ·  '+amdVal(li,'comment',li.comment||'')+'</span>' : '');
-      qt=amdVal(li,'quantity',li.quantity==null?0:li.quantity)
-        + (li.unit||(li._amended&&li._amended.unit) ? ' '+amdVal(li,'unit',li.unit||'') : '')
-        + (li.unit_size||(li._amended&&li._amended.unit_size) ? ' ('+amdVal(li,'unit_size',li.unit_size||'')+')' : '')
-        + ' × '+amdVal(li,'price',li.price,inr_)
-        + ' = '+esc(inr_(li.total||(li.quantity*li.price)));
-    } else { nm=esc(it[0]); qt=esc(it[1]); }
-    /* ✎ sits on every line, not only misread ones — you cannot tell which lines were misread until you read them,
-       and hiding the affordance behind a confidence score would make the low-confidence guesses the only ones
-       anybody checked. */
-    const pen=(c.canAmend===false)?'':`<span class="lineclip" title="Amend this line — the original stays on the record" onclick="event.stopPropagation();amendLine(${idx})" style="cursor:pointer">✎</span>`;
-    return `<div class="ir ${atts.length?'hasatt':''}" ${atts.length?`onclick="toggleLine(${idx})"`:''}><span class="nm">${nm}</span><span class="qt">${qt}</span>${clip}${pen}</div>${strip}`;
+    const pen=(c.canAmend===false)?'':`<span class="lineclip" title="Fix this line" onclick="event.stopPropagation();amendLine(${idx})" style="cursor:pointer">✎</span>`;
+    const was=e.history&&e.history.length?lineWas(e.history):'';
+    if(e.removed){
+      /* ⚠️ REMOVED, NOT DELETED. The reason shows because "we misread this" and "we cannot supply this" are
+         opposite facts — the second one leaves a customer still expecting a delivery. */
+      const why={misread_by_ai:'never asked',stock_unavailable:'not available',customer_clarified:'changed',rate_agreed:'rate agreed',other:'removed'}[e.reason_code]||'removed';
+      return `<div class="ir" style="opacity:.62"><span class="nm"><s>${esc(it[0])}</s></span><span class="qt"><s>${esc(it[1])}</s></span>
+        <span style="font-size:10px;font-weight:700;color:#8a5a1e;background:#faf3dd;border-radius:5px;padding:1px 6px;white-space:nowrap">${esc(why)}</span>${pen}</div>`;
+    }
+    return `<div class="ir ${atts.length?'hasatt':''}" ${atts.length?`onclick="toggleLine(${idx})"`:''}>${was?`<span class="nm">${was}<div>${esc(it[0])}</div></span>`:`<span class="nm">${esc(it[0])}</span>`}<span class="qt">${esc(it[1])}</span>${clip}${pen}</div>${strip}`;
   }).join("");
 }
 function toggleLine(idx){const k='line'+idx;UI.openLines.has(k)?UI.openLines.delete(k):UI.openLines.add(k);paintDetail();}
 
-/* ═══ b137 · AMEND A LINE ══════════════════════════════════════════════════════════════════════════════════════
-   Athi, 2026-08-11: *"the chit preparation is going to be automatic, and we provide the entire text as well, so
-   what we may have to do is, as part of the chit, we have to provide an edit option while performing the action
-   at the task level."*
+/* ═══ b138 · FIX A LINE ════════════════════════════════════════════════════════════════════════════════════════
+   Athi, 2026-08-11: *"how does he update? json format, no, some other easy means"* and
+   *"a very simple UX for this purpose, just like whatsapp, few icon, and details."*
 
-   ⚠️ THIS DOES NOT EDIT THE CHIT. It posts a correction that is filed next to the reading. The chit's own lines
-   are never rewritten — see lib/amend.js for why that is not merely a style choice.
+   He is standing in a market, one hand on the phone, forty times a day.
 
-   The catalogue overlay is the other half. Correcting "thakkali" to "Tomato" fixes one word and leaves the unit,
-   the pack size and the price still wrong, because they were all read off the same misunderstanding. Picking the
-   catalogue row carries all four in one act — and it uses the SAME matcher the reader used, so a human can never
-   "correct" a line to something the reader could not have produced.
-*/
-const AMD = { idx:null, line:null, cat:null, picked:null };
+   ⚠️ ONE THING PER SCREEN. The first version of this card had a name, a stepper, a dropdown, a row of unit chips,
+   a note box and three buttons — all at once. That is a form, and a form is what he does not have time for.
+   Now: the line, a stepper, and three icons. Changing the item or the unit REPLACES the card rather than crowding
+   it, which is how WhatsApp handles every secondary action.
+
+   ⚠️ EVERY CORRECTION IS A TAP FROM A BOUNDED SET, NEVER FREE TEXT. Free text is what put us here — the moment he
+   types words we are parsing again, and a correction that needs parsing can be wrong exactly as the original was.
+   Item comes from the catalogue, unit from a short list, quantity from −/+ or the numeric keypad. Only the note is
+   free text, and nothing is ever computed from it.
+
+   ⚠️ WHAT THEY WROTE SITS AT THE TOP, ALWAYS. It is the only reason he can catch `pathu` read as 5.
+
+   ⚠️ THE GESTURE IS PER-FIELD; THE RECORD IS A WHOLE LINE. He taps +; the card sends the entire replacement line.
+   Those need not match — storage answers "what is true now", the buttons answer "what is easy to press". */
+const AMD = { idx:null, line:null, orig:null, raw:'', cat:null, picked:false, view:'main' };
+const AMD_REASONS=[['stock_unavailable','Not available'],['misread_by_ai','They never asked for this'],['customer_clarified','Customer changed it'],['other','Other']];
+const AMD_UNITS=['kg','crate','box','packet','bundle','l','piece','g'];
+
 function amendLine(idx){
   const c=UI.detail||{}; const it=(c.items||[])[idx]; if(!it) return;
-  AMD.idx=idx; AMD.line={...(it[3]||{})}; AMD.cat=null; AMD.picked=null;
+  const e=it[3]||{};
+  AMD.idx=idx; AMD.picked=false; AMD.view='main'; AMD.cat=null;
+  /* Edit the LIVE version — correcting a correction starts from what is true now, not from the AI's first guess. */
+  AMD.line=Object.assign({}, e.live||e.original||{});
+  AMD.orig=e.original||{};
+  AMD.raw=(e.original&&(e.original.asked_as||e.original.raw_phrase))||c.rawText||'';
   amendPaint();
-  /* Fetch the overlay after painting so the box opens instantly — no catalogue is a normal answer, not a failure,
-     and the free-text fields must work while this is still in flight. */
-  api('catOverlay',{params:{id:UI.sel},query:{q:(AMD.line.asked_as||AMD.line.particulars||'')}})
+  api('catOverlay',{params:{id:UI.sel},query:{q:(AMD.line.particulars||'')}})
     .then(r=>{ AMD.cat=r||{has_catalogue:false}; if(AMD.idx===idx) amendPaint(); })
     .catch(()=>{ AMD.cat={has_catalogue:false}; if(AMD.idx===idx) amendPaint(); });
 }
-function amdField(k,label,val,ph){
-  return `<label style="display:block;margin:0 0 8px"><span style="font-size:10px;color:var(--grey);font-weight:700;text-transform:uppercase;letter-spacing:.04em">${esc(label)}</span>
-    <input id="amd_${k}" value="${esc(val==null?'':String(val))}" placeholder="${esc(ph||'')}" style="width:100%;box-sizing:border-box;padding:7px 9px;border:1px solid var(--line);border-radius:6px;font-size:13px"></label>`;
+function amdView(v){ AMD.view=v; amendPaint(); }
+/* ±1 with no keyboard — by far the commonest correction, so it gets the cheapest gesture on the card. */
+function amdStep(d){
+  const q=Number(AMD.line.quantity);
+  const next=Math.round(((Number.isFinite(q)?q:0)+d)*1000)/1000;
+  AMD.line.quantity = next<0 ? 0 : next;   // never negative; removal is a separate, explicit act
+  amendPaint();
 }
+function amdSetQty(v){ const n=Number(v); if(Number.isFinite(n)&&n>=0) AMD.line.quantity=n; }
+function amdSetNote(v){ AMD.line.comment=v; }
+function amdPickItem(i){
+  const x=((AMD.cat&&AMD.cat.items)||[])[+i]; if(!x){ amdView('main'); return; }
+  /* ⚠️ THE CATALOGUE CARRIES MORE THAN THE NAME. Fixing "thakkali" to "Tomato" corrects one word and leaves the
+     unit and the price still wrong, because all three came off the same misunderstanding. */
+  AMD.line.particulars=x.label; AMD.picked=true;
+  if(x.unit) AMD.line.unit=x.unit;
+  if(x.unit_size) AMD.line.unit_size=x.unit_size;
+  if(x.price||x.price===0) AMD.line.price=x.price;
+  amdView('main');
+}
+function amdPickUnit(u){ AMD.line.unit=u; amdView('main'); }
+
+const _amdSheet=(title,body,back)=>modal(`<h3 style="margin:0 0 10px">${title}</h3>${body}
+  <button class="btn" style="width:100%;margin-top:8px" onclick="amdView('${back||'main'}')">← back</button>`);
+
 function amendPaint(){
-  const l=AMD.line||{}, cat=AMD.cat;
-  /* What the customer actually wrote for this line, when the reader renamed it. It is the whole reason a human is
-     looking at this box, so it goes at the top rather than in a tooltip. */
-  const asked=l.asked_as?`<div style="font-size:11px;color:var(--grey);margin:0 0 10px">They wrote <b style="color:var(--ink)">“${esc(l.asked_as)}”</b> — read as <b style="color:var(--ink)">“${esc(l.particulars||'')}”</b></div>`:'';
-  let overlay;
-  if(!cat) overlay=`<div style="font-size:11px;color:var(--grey)">Looking in the catalogue…</div>`;
-  else if(!cat.has_catalogue) overlay=`<div style="font-size:11px;color:var(--grey)">No catalogue on this entity — type the correction directly. <span style="opacity:.8">(A supplier sending “milk 10 l” has no catalogue either; that is normal, not a gap.)</span></div>`;
-  else {
-    const opts=(cat.items||[]).map((x,i)=>`<option value="${i}">${esc(x.label)}${x.unit?(' · '+esc(x.unit)):''}${(x.price||x.price===0)?(' · '+inr_(x.price)):''}</option>`).join('');
-    const warn=cat.match&&cat.match.variant_unspecified
-      ? `<div style="font-size:10.5px;color:#8a6d1f;background:#faf3dd;border-radius:5px;padding:5px 7px;margin-top:6px">⚠️ The catalogue has grades for this item (${esc((cat.match.variants||[]).join(', '))}) and the message named none — pick the right one.</div>`
-      : (cat.ambiguous?`<div style="font-size:10.5px;color:#8a6d1f;background:#faf3dd;border-radius:5px;padding:5px 7px;margin-top:6px">⚠️ ${cat.ambiguous} catalogue items answer to this name.</div>`:'');
-    overlay=`<div style="font-size:10px;color:var(--grey);font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px">Pull from catalogue</div>
-      <select id="amd_cat" onchange="amendPick(this.value)" style="width:100%;box-sizing:border-box;padding:7px 9px;border:1px solid var(--line);border-radius:6px;font-size:13px">
-        <option value="">— choose an item (fills name, unit, size &amp; price) —</option>${opts}</select>${warn}`;
+  const l=AMD.line||{}, o=AMD.orig||{}, cat=AMD.cat;
+
+  /* ── secondary screens: each REPLACES the card, never crowds it ──────────────────────────────────────────── */
+  if(AMD.view==='item'){
+    const items=(cat&&cat.items)||[];
+    return _amdSheet('Which item?', items.length
+      ? items.map((x,i)=>`<button class="btn" style="width:100%;margin-bottom:6px;text-align:left;font-size:15px" onclick="amdPickItem(${i})">${esc(x.label)}${x.unit?` <span style="color:var(--grey);font-size:12px">· ${esc(x.unit)}</span>`:''}</button>`).join('')
+      : '<div style="font-size:12.5px;color:var(--grey);padding:6px 0">No catalogue yet — the name stays as written.</div>');
   }
-  const picked=`<div id="amd_picked">${AMD.picked?amdPickedHtml(AMD.picked,l):''}</div>`;
-  modal(`<h3 style="margin:0 0 4px">✎ Amend line ${AMD.idx+1}</h3>
-    <div style="font-size:11px;color:var(--grey);margin:0 0 10px">The original reading stays on the record and will be shown struck through. Nothing on the chit is overwritten.</div>
-    ${asked}
-    <div style="border:1px solid var(--line);border-radius:8px;padding:10px;margin-bottom:12px">${overlay}${picked}</div>
-    ${amdField('particulars','Item',l.particulars,'what it actually is')}
-    <div style="display:flex;gap:8px">
-      <div style="flex:1">${amdField('quantity','Quantity',l.quantity,'2')}</div>
-      <div style="flex:1">${amdField('unit','Unit',l.unit,'box, kg, l')}</div>
-      <div style="flex:1">${amdField('unit_size','Unit size',l.unit_size,'5 inch')}</div>
+  if(AMD.view==='unit'){
+    const units=[...new Set([].concat(l.unit?[l.unit]:[], ((cat&&cat.items)||[]).map(x=>x.unit).filter(Boolean), AMD_UNITS))].slice(0,10);
+    return _amdSheet('Which unit?', `<div style="display:flex;gap:7px;flex-wrap:wrap">${units.map(u=>`<span onclick="amdPickUnit('${esc(u)}')" style="cursor:pointer;border:1px solid ${u===l.unit?'var(--blue)':'var(--line)'};${u===l.unit?'background:var(--blue);color:#fff;font-weight:700;':''}border-radius:18px;padding:9px 18px;font-size:15px">${esc(u)}</span>`).join('')}</div>`);
+  }
+  if(AMD.view==='note'){
+    return _amdSheet('Note for this line', `<input value="${esc(l.comment||'')}" oninput="amdSetNote(this.value)" placeholder="extra spicy, deliver 7 PM…" style="width:100%;box-sizing:border-box;padding:11px;border:1px solid var(--line);border-radius:9px;font-size:15px">`);
+  }
+  if(AMD.view==='remove'){
+    /* ⚠️ REMOVING ASKS WHY, and it is not bookkeeping. "They never asked for this" and "not available" produce an
+       identical empty line and mean opposite things — the second leaves a customer expecting a delivery. */
+    return modal(`<h3 style="margin:0 0 4px">Remove this line?</h3>
+      <div style="font-size:12.5px;color:var(--grey);margin:0 0 12px">It stays on the chit so you can see it was asked for. It just stops counting.</div>
+      ${AMD_REASONS.map(r=>`<button class="btn" style="width:100%;margin-bottom:7px;text-align:left;font-size:15px" onclick="amendSave(null,'${r[0]}')">${esc(r[1])}</button>`).join('')}
+      <button class="btn" style="width:100%;margin-top:4px" onclick="amdView('main')">← back</button>`);
+  }
+
+  /* ── the card ───────────────────────────────────────────────────────────────────────────────────────────── */
+  const wrote=AMD.raw?`<div style="background:#f3f5f8;border-radius:10px;padding:9px 11px;margin-bottom:14px">
+      <div style="font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey)">they wrote</div>
+      <div style="font-size:14px;margin-top:2px">“${esc(AMD.raw)}”</div></div>`:'';
+  const changed=(o.quantity!=null&&Number(o.quantity)!==Number(l.quantity))||(o.particulars&&o.particulars!==l.particulars)||(o.unit&&o.unit!==l.unit);
+  const diff=changed?`<div style="font-size:12.5px;text-align:center;margin-bottom:12px">
+      <s style="opacity:.5">${esc([o.particulars,o.quantity,o.unit].filter(Boolean).join(' '))}</s>
+      &nbsp;→&nbsp;<b style="color:#245a9e">${esc([l.particulars,l.quantity,l.unit].filter(Boolean).join(' '))}</b></div>`:'';
+  const ic=(g,t,fn,col)=>`<button class="btn" title="${t}" onclick="${fn}" style="flex:1;height:50px;font-size:21px;${col||''}">${g}</button>`;
+
+  modal(`${wrote}
+    <div onclick="amdView('item')" style="cursor:pointer;text-align:center;font-size:19px;font-weight:800;margin-bottom:2px">${esc(l.particulars||'—')}</div>
+    <div style="text-align:center;font-size:10.5px;color:var(--grey);margin-bottom:14px">tap the name to change it${AMD.picked?' · from catalogue':''}</div>
+
+    <div style="display:flex;align-items:center;gap:10px;justify-content:center">
+      <button class="btn" onclick="amdStep(-1)" style="width:56px;height:56px;font-size:26px;border-radius:28px">−</button>
+      <input inputmode="decimal" value="${esc(String(l.quantity??''))}" oninput="amdSetQty(this.value)"
+             style="width:96px;text-align:center;font-size:24px;font-weight:800;padding:9px;border:1px solid var(--line);border-radius:11px">
+      <span onclick="amdView('unit')" style="cursor:pointer;font-size:16px;font-weight:700;min-width:62px;text-align:center;border-bottom:2px dotted var(--line)">${esc(l.unit||'unit')}</span>
+      <button class="btn" onclick="amdStep(1)" style="width:56px;height:56px;font-size:26px;border-radius:28px">+</button>
     </div>
-    ${amdField('price','Price',l.price,'per unit')}
-    ${amdField('comment','Comment',l.comment,'anything the line should carry — extra spicy, deliver 7 PM')}
-    <label style="display:block;margin:2px 0 12px"><span style="font-size:10px;color:var(--grey);font-weight:700;text-transform:uppercase;letter-spacing:.04em">Why (optional)</span>
-      <input id="amd_reason" placeholder="e.g. 5 was the size, not the quantity" style="width:100%;box-sizing:border-box;padding:7px 9px;border:1px solid var(--line);border-radius:6px;font-size:13px"></label>
-    <div style="display:flex;gap:8px"><button class="btn" style="flex:1" onclick="closeModal()">Cancel</button><button class="btn pri" style="flex:1" onclick="amendSave()">Amend &amp; record</button></div>`);
+    <div style="text-align:center;font-size:10.5px;color:var(--grey);margin:6px 0 14px">tap the number for the keypad · tap the unit to change it</div>
+    ${diff}
+    <div style="display:flex;gap:8px">
+      ${ic('✓','Save','amendSave()','background:var(--blue);color:#fff;font-weight:800')}
+      ${ic(l.comment?'📝•':'📝','Note',"amdView('note')")}
+      ${ic('🗑','Remove this line',"amdView('remove')",'color:#c0453b')}
+      ${ic('✕','Cancel','closeModal()')}
+    </div>`);
 }
-function amdPickedHtml(x,l){
-  return `<div style="font-size:10.5px;color:#245a9e;background:#e8f0fb;border-radius:5px;padding:5px 7px;margin-top:6px">Filled from catalogue: <b>${esc(x.label)}</b>${x.unit?(' · '+esc(x.unit)):''}${(x.price||x.price===0)?(' · '+inr_(x.price)):''} — recorded as a <b>naming</b> correction, so “${esc((l&&(l.asked_as||l.particulars))||'')}” can later be confirmed as a catalogue synonym.</div>`;
-}
-function amendPick(i){
-  const x=((AMD.cat&&AMD.cat.items)||[])[+i];
-  const strip=document.getElementById('amd_picked');
-  if(!x){ AMD.picked=null; if(strip) strip.innerHTML=''; return; }
-  AMD.picked=x;
-  /* ⚠️ FILLS THE BOX, DOES NOT SAVE. The person still sees every value the catalogue supplied and can override any
-     of them before it becomes a record — a catalogue row is a strong default, not a fact about this order.
-     ⚠️ AND IT PATCHES THE DOM RATHER THAN REPAINTING: a repaint here would discard whatever the person had already
-     typed into the other fields, which is precisely the work they came to do. */
-  const set=(k,v)=>{const e=document.getElementById('amd_'+k); if(e&&v!=null&&v!=='') e.value=v;};
-  set('particulars', x.label);
-  set('unit', x.unit); set('unit_size', x.unit_size); set('price', x.price);
-  if(strip) strip.innerHTML=amdPickedHtml(x, AMD.line);
-}
-async function amendSave(){
-  const l=AMD.line||{}, idx=AMD.idx, id=UI.sel;
-  const g=(k)=>{const e=document.getElementById('amd_'+k); return e?e.value.trim():'';};
-  const NUM=['quantity','price'];
-  const edits=[];
-  let bad=null;
-  ['particulars','quantity','unit','unit_size','price','comment'].forEach(k=>{
-    const now=g(k); const was=(l[k]==null?'':String(l[k]));
-    if(now===was) return;
-    /* ⚠️ A NON-NUMERIC QUANTITY IS REFUSED, not coerced. Number("2 box") is NaN and would be stored as a
-       correction that reads as blank — the amendment would look applied and the line would be worse than before
-       anyone touched it. */
-    if(NUM.indexOf(k)>=0 && now!=='' && !isFinite(Number(now))){ bad=bad||(k+' must be a number — got “'+now+'”'); return; }
-    edits.push({ line_index:idx, field:k, old_value:(was===''?null:was), new_value:(now===''?null:now),
-      /* A name changed by picking a catalogue row is a NAMING fact and can eventually be learned as a synonym.
-         Anything else is a READING error — no amount of data fixes those; the prompt has to change. Filing them
-         apart is the only way to tell whether the reader is actually getting better. */
-      kind:(k==='particulars'&&AMD.picked)?'naming':'reading',
-      reason:g('reason')||null });
-  });
-  if(bad){ toast(bad); return; }
-  if(!edits.length){ toast('Nothing changed'); return; }
+
+async function amendSave(forceNull, reason_code){
+  const idx=AMD.idx, id=UI.sel;
+  const removing=(forceNull===null);
+  let line=null;
+  if(!removing){
+    line=Object.assign({}, AMD.line);
+    delete line.total; delete line._amended; delete line.asked_as; delete line.raw_phrase;
+    if(!line.particulars){ toast('The line needs an item'); return; }
+    if(line.quantity!=null && !isFinite(Number(line.quantity))){ toast('Quantity must be a number'); return; }
+  }
   try{
-    const r=await api('amend',{params:{id},body:{edits}});
+    const r=await api('amend',{params:{id},body:{edits:[{ line_index:idx, line:line,
+      /* Default reason when he just fixed a number: the machine got it wrong. That count is what tells us whether
+         the reading is improving, so it must not default to a shrug. */
+      reason_code: reason_code || 'misread_by_ai' }]}});
     closeModal();
-    toast(edits.length===1?'Amended — the original is kept':(edits.length+' fields amended — the originals are kept'));
+    toast(removing?'Removed — it stays on the chit as a record':'Fixed — what they wrote is kept');
     if(r&&r.synonym_candidates&&r.synonym_candidates.length){
       const s=r.synonym_candidates[0];
-      /* ⚠️ REPORTED, NEVER APPLIED HERE. Teaching the catalogue that “thakkali” means Tomato is exactly right and
-         exactly dangerous: one typo confirmed in haste permanently merges two real products, and nothing
-         downstream would flag it again. Confirmation is a deliberate, separate act. */
-      toast('Noted: “'+s.term+'” → “'+s.means+'” can be confirmed as a catalogue synonym');
+      /* ⚠️ NOTED, NOT APPLIED. One correction never teaches the catalogue — a synonym promotes only on N
+         independent confirmations across entities, and units and grades never promote automatically at all. */
+      toast('Noted: “'+s.term+'” may mean “'+s.means+'”');
     }
     await openChit(id, true);
-  }catch(e){ toast(MSG.fail('amend the line', e)); }
+  }catch(e){ toast(MSG.fail('fix the line', e)); }
 }
+
 /* whole-chit attachments (documents, clips not tied to one line) */
 function chitAttBlock(c){
   const atts=attsVis(c.atts);
