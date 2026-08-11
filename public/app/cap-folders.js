@@ -233,7 +233,16 @@ async function loadGroupSum(){
   var scope = UI.folderSel ? ((UI.folders || []).find(function(f){ return f.folder_id === UI.folderSel; }) || {}).scope || 'task'
                            : (UI.folder === 'order' ? 'order' : 'task');
   try { _FLD.gs = await api('folderGroupSum', { query: { scope: scope, folder_id: fid || undefined } }); _FLD.err = null; }
-  catch (e) { _FLD.err = (e && e.message) || 'Could not add it up.'; _FLD.gs = null; }
+  catch (e) {
+    var m = (e && e.message) || '';
+    /* ⚠️ NAME THE ACTUAL CAUSE. Unlike the Rules pane there is no older endpoint to fall back to, so a 404 here
+       means the API has not shipped this route yet — not that the sum failed or that there is nothing to add up.
+       "Could not add it up" would send someone hunting through their data for a problem that is not there. */
+    _FLD.err = /404|not found/i.test(m)
+      ? 'Group sum needs an API version that has not deployed yet. Everything else on this screen works — this one route is missing. (Nothing is wrong with your data.)'
+      : (m || 'Could not add it up.');
+    _FLD.gs = null;
+  }
   _FLD.busy = false; _fldPaint();
 }
 function gsScope(all){ _FLD.gsAll = !!all; _FLD.gs = null; loadGroupSum(); }
