@@ -3622,29 +3622,35 @@ function taskPanel(){
     </div>${UI.filterOpen?filterPanel():""}`;
   const sel = (UI.selectMode&&!isCust)?selBar():"";
   const _ak = (UI.folder==='order')?'order':'task';
-  const helpStrip = isCust ? "" : `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line);background:var(--gold-soft);font-size:12px;color:#6b5a36"><b style="font-family:'Space Grotesk'">${({order:"Order — chits you've sent",task:"Task — chits received",drafts:"Drafts — unsent chits",trash:"Trash — deleted chits",archive:"Archive — archived chits"}[UI.folder]||"Task — chits received")}</b><button class="composebtn" style="margin-left:auto" onclick="toggleListHelp()">${UI.listHelp?'✕ Close':'❓ Help'}</button></div>${UI.listHelp?`<div style="padding:11px 12px;border-bottom:1px solid var(--line);overflow-y:auto;max-height:52%">${assistPage(_ak)}</div>`:''}`;
   /**
-   * ⚠️ THE HEADER IS THE ONLY THING THAT CHANGES. Athi: *"just the header should change to folder name, instead of
-   * task, it should be task/folder name."* Everything below it is the track's own list, untouched — which is why
-   * sort, filter, select, status, assign and dispute all keep working inside a folder without a line of new code.
+   * ⚠️ ONE HEADER ROW, NOT TWO. Athi, 2026-08-11 (with a screenshot): *"task also folder and it should have the
+   * same icons so we can merge — task · chits received to task/… · chits received, so all in the same line."*
+   *
+   * There used to be a gold "Task — chits received" bar and, underneath it, a separate breadcrumb row carrying the
+   * Metrics/Rules icons. Two rows saying the same thing about the same place, and the icons only appeared on the
+   * lower one — so a folder looked like it had powers the track did not. It is ONE place, so it gets ONE line:
+   *
+   *      📥 Task / 📁 Needs attention — chits received            [📊 Metrics] [⚙️ Rules] [❓ Help]
+   *
+   * Task and Order ARE folders — the ones you are always in — so the icons render whether or not a folder is
+   * selected. Only the crumb in front of them changes, and the track segment stays clickable to step back out.
    */
   const _fsel = UI.folderSel ? (UI.folders||[]).find(f=>f.folder_id===UI.folderSel) : null;
-  /* ⚠️ THE ICONS RIDE ON THE TRACK TOO, not only inside a folder. Athi: *"even in task, bring metrics and rules as
-     icon, give the same ux and functionalities."* Task/Order behave exactly like folders — same arithmetic, same
-     rules — so hiding the affordance one level up made the track feel like a lesser thing than its own children.
-     One button pair, rendered whether or not a folder is selected; only the crumb in front of it changes. */
   const _isTrack = (UI.folder==='task'||UI.folder==='order');
-  const _btns = `<span data-testid="folder-metrics-btn" onclick="openFolderPane('metrics')" title="${_fsel?'Metrics for this folder':'Metrics for this whole track — and whether the folders add up'}" style="margin-left:auto;cursor:pointer;border:1px solid var(--line);border-radius:8px;padding:3px 9px;font-size:11.5px">📊 Metrics</span>
-        <span data-testid="folder-rules-btn" onclick="openFolderPane('rules')" title="${_fsel?'Rules that file into this folder':'Every rule on this track, and where each one files'}" style="cursor:pointer;border:1px solid var(--line);border-radius:8px;padding:3px 9px;font-size:11.5px">⚙️ Rules</span>`;
-  const crumb = (_fsel || _isTrack) ? `<div class="lh" style="padding-bottom:0;border:0">
-      <div style="display:flex;align-items:center;gap:6px;font-size:13px;flex-wrap:wrap">
-        ${_fsel ? `<span data-testid="crumb-track" onclick="clearFolder()" style="cursor:pointer;color:var(--blue);font-weight:600">${UI.folder==='order'?'📤 Order':'📥 Task'}</span>
-        <span style="color:var(--grey)">/</span>
-        <span data-testid="crumb-folder" style="font-weight:800">📁 ${esc(_fsel.name)}</span>`
-        : `<span data-testid="crumb-track" style="font-weight:800">${UI.folder==='order'?'📤 Order':'📥 Task'}</span>`}
-        ${_btns}
-      </div></div>` : '';
-  const list = `<div class="list">${helpStrip}${crumb}
+  const _tname = {order:'📤 Order', task:'📥 Task', drafts:'📝 Drafts', trash:'🗑️ Trash', archive:'🗄️ Archive'}[UI.folder] || '📥 Task';
+  const _tdesc = {order:"chits you've sent", task:'chits received', drafts:'unsent chits', trash:'deleted chits', archive:'archived chits'}[UI.folder] || 'chits received';
+  /* ⚠️ THE DESCRIPTION STAYS THE TRACK'S, inside a folder too. A folder is that list FILTERED — the chits in
+     "Needs attention" are still chits received, and relabelling per folder would imply otherwise. */
+  const _btns = _isTrack ? `<span data-testid="folder-metrics-btn" onclick="openFolderPane('metrics')" title="${_fsel?'Metrics for this folder':'Metrics for this whole track — and whether the folders add up'}" style="margin-left:auto;cursor:pointer;border:1px solid var(--line);border-radius:8px;padding:3px 9px;font-size:11.5px;background:#fff">📊 Metrics</span>
+      <span data-testid="folder-rules-btn" onclick="openFolderPane('rules')" title="${_fsel?'Rules that file into this folder':'Every rule on this track, and where each one files'}" style="cursor:pointer;border:1px solid var(--line);border-radius:8px;padding:3px 9px;font-size:11.5px;background:#fff">⚙️ Rules</span>` : '';
+  const helpStrip = isCust ? "" : `<div style="display:flex;align-items:center;gap:7px;padding:8px 12px;border-bottom:1px solid var(--line);background:var(--gold-soft);font-size:12px;color:#6b5a36;flex-wrap:wrap">
+      <b style="font-family:'Space Grotesk';font-size:13px;display:flex;align-items:center;gap:6px;min-width:0">
+        ${_fsel ? `<span data-testid="crumb-track" onclick="clearFolder()" title="Back to all of ${esc(_tname.slice(2))}" style="cursor:pointer;color:var(--blue)">${_tname}</span><span style="color:var(--grey);font-weight:400">/</span><span data-testid="crumb-folder" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📁 ${esc(_fsel.name)}</span>`
+                : `<span data-testid="crumb-track">${_tname}</span>`}
+      </b><span style="color:#8a7c58">— ${_tdesc}</span>
+      ${_btns}<button class="composebtn" style="${_isTrack?'':'margin-left:auto'}" onclick="toggleListHelp()">${UI.listHelp?'✕ Close':'❓ Help'}</button>
+    </div>${UI.listHelp?`<div style="padding:11px 12px;border-bottom:1px solid var(--line);overflow-y:auto;max-height:52%">${assistPage(_ak)}</div>`:''}`;
+  const list = `<div class="list">${helpStrip}
     <div class="lh">${folders}${sub}${stTabs}
       <div class="srch">🔍 <input placeholder="${isCust?'Search my orders':'Search chits, party, item'}" id="listsrch" value="${esc(UI.search||'')}" oninput="onSrch('list', this.value)"><span id="srchadv">${advBtnHtml()}</span></div>
       ${tools}${sel}
