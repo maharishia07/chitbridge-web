@@ -4767,7 +4767,13 @@ function contentItems(c){
       return `<div class="ir" style="opacity:.62"><span class="nm"><s>${esc(it[0])}</s></span><span class="qt"><s>${esc(it[1])}</s></span>
         <span style="font-size:10px;font-weight:700;color:#8a5a1e;background:#faf3dd;border-radius:5px;padding:1px 6px;white-space:nowrap">${esc(why)}</span>${pen}</div>`;
     }
-    return `<div class="ir ${atts.length?'hasatt':''}" ${atts.length?`onclick="toggleLine(${idx})"`:''}>${was?`<span class="nm">${was}<div>${esc(it[0])}</div></span>`:`<span class="nm">${esc(it[0])}</span>`}<span class="qt">${esc(it[1])}</span>${clip}${pen}</div>${strip}`;
+    /* ⚠️ A QUANTITY THAT APPEARS NOWHERE IN WHAT THEY WROTE is the number on this chit most likely to be wrong,
+       so it is marked on the row being confirmed — not buried in a summary nobody opens. The closed-class check
+       (lib/numerals.js) flags rather than rejects while it is message-level; it starts rejecting per-line once
+       the reader emits raw_phrase. */
+    const li0=(e.live||e.original||{});
+    const unver=li0.qty_unverified?`<span title="This number does not appear anywhere in their message — check it" style="font-size:10px;font-weight:700;color:#8a5a1e;background:#faf3dd;border-radius:5px;padding:1px 6px;white-space:nowrap">⚠️ check qty</span>`:'';
+    return `<div class="ir ${atts.length?'hasatt':''}" ${atts.length?`onclick="toggleLine(${idx})"`:''}>${was?`<span class="nm">${was}<div>${esc(it[0])}</div></span>`:`<span class="nm">${esc(it[0])}</span>`}<span class="qt">${esc(it[1])}</span>${unver}${clip}${pen}</div>${strip}`;
   }).join("");
 }
 function toggleLine(idx){const k='line'+idx;UI.openLines.has(k)?UI.openLines.delete(k):UI.openLines.add(k);paintDetail();}
