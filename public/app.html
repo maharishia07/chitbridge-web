@@ -3530,7 +3530,39 @@ function catFieldRow(k, v){
     + esc(k.replace(/_/g, ' ')) + (ro ? ' <span title="from another system — read-only">🔒</span>' : '') + '</b>'
     + '<span style="flex:1;min-width:0;font-weight:600">' + catFieldVal(k, v) + '</span></div>';
 }
-function prodAllFields(id){
+/**
+ * ── ⭐ WHAT THIS ITEM COULD CARRY AND DOES NOT ──────────────────────────────────────────────────────────────────
+ * Athi, 2026-08-13: *"also in the ux, we can showcase fields which are available, but not used."*
+ *
+ * ⚠️ ADOPTED, NOT INVENTED — this is PIM **completeness**, already named in CBCatalogue.STANDARDS ("attributes ·
+ * families · completeness"). Every PIM shows how full a record is against the attributes its family declares,
+ * because the missing half is the half nobody can see. Same idea, same word.
+ *
+ * ⚠️ AND "AVAILABLE" HAS TWO SOURCES THAT MEAN DIFFERENT THINGS — showing them as one list would be a lie:
+ *   DECLARED — your catalogue definition has this column and this item leaves it blank. If it is also REQUIRED,
+ *              that is not an opportunity, it is a gap, and it gets said in amber.
+ *   IN USE   — nothing declares it, but N other items carry it. That is the catalogue teaching itself: someone
+ *              imported `botanical` on 40 rows and this row missed the file.
+ *
+ * ⚠️ STAMPS AND REFERENCES ARE NOT SUGGESTED. `status_at`, `avail`, `external_id` are written by an event or
+ * another system; listing them as "you could fill this in" invites someone to forge a record of something that
+ * never happened. The read-only set already says which those are — one definition, used for both jobs.
+ */
+const catDeclared = async function(){
+  if (UI._catFields) return UI._catFields;                 // once per session — this is a definition, not data
+  try { const r = await api('schemaFields'); UI._catFields = (r && r.fields) || []; }
+  catch (_) { UI._catFields = []; }                        // no definition is not an error; it just means no hints
+  return UI._catFields;
+};
+function catUnusedRow(k, label, why, required){
+  return '<div style="display:flex;gap:10px;padding:7px 0;border-bottom:1px dashed var(--line);font-size:13px">'
+    + '<b style="min-width:118px;color:var(--grey);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.03em">'
+    + esc(String(label || k).replace(/_/g, ' ')) + '</b>'
+    + '<span style="flex:1;min-width:0;color:' + (required ? '#b0641c' : 'var(--grey)') + ';font-style:italic;font-weight:' + (required ? '700' : '400') + '">'
+    + (required ? 'required — not set' : 'not set')
+    + '<span style="font-style:normal;font-weight:400;color:var(--grey);font-size:11.5px"> · ' + esc(why) + '</span></span></div>';
+}
+async function prodAllFields(id){
   const p = (UI.prods || []).find(function(x){ return prodId(x) === id; });
   if (!p) return;
   const d = Object.assign({}, pData(p));
@@ -3549,17 +3581,56 @@ function prodAllFields(id){
     body += '<div style="font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin:14px 0 2px">Other</div>'
       + rest.map(function(k){ return catFieldRow(k, d[k]); }).join('');
   }
+  /* ── available, not used ─────────────────────────────────────────────────────────────────────────────────── */
+  const has = function(k){ const v = d[k]; return !(v === undefined || v === null || v === '' || (Array.isArray(v) && !v.length)); };
+  const skip = function(k){ return CAT_READONLY.has(k) || k.charAt(0) === '_' || k.indexOf('status_') === 0; };
+  const declared = await catDeclared();
+  const gapsDeclared = declared.filter(function(f){ return !skip(f.field_key) && !has(f.field_key); });
+  const declaredKeys = new Set(declared.map(function(f){ return f.field_key; }));
+  /* Observed across the catalogue the person already has — counted, because "3 of 56" and "51 of 56" are not the
+     same suggestion and a bare field name cannot tell them apart. */
+  const seen = {};
+  (UI.prods || []).forEach(function(x){
+    const od = pData(x) || {};
+    Object.keys(od).forEach(function(k){
+      if (skip(k) || declaredKeys.has(k)) return;
+      if (od[k] === undefined || od[k] === null || od[k] === '') return;
+      seen[k] = (seen[k] || 0) + 1;
+    });
+  });
+  const gapsSeen = Object.keys(seen).filter(function(k){ return !has(k); }).sort(function(a, b){ return seen[b] - seen[a]; });
+
+  if (gapsDeclared.length || gapsSeen.length) {
+    body += '<div style="font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin:14px 0 2px">'
+      + 'Available · not used <span style="font-weight:600;text-transform:none;letter-spacing:0">— what this item could carry</span></div>'
+      + gapsDeclared.map(function(f){
+          return catUnusedRow(f.field_key, f.field_name || f.field_key, 'in your catalogue definition', !!f.is_required);
+        }).join('')
+      + gapsSeen.map(function(k){
+          return catUnusedRow(k, k, 'used by ' + seen[k] + ' other item' + (seen[k] === 1 ? '' : 's'), false);
+        }).join('');
+  }
+
   /* The row's own identifiers, always read-only — where this record lives, not what it says. */
   body += '<div style="font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin:14px 0 2px">Reference</div>'
     + catFieldRow('item_id', p.item_id) + catFieldRow('schema_id', p.schema_id)
     + catFieldRow('created_at', p.created_at) + catFieldRow('updated_at', p.updated_at);
 
+  /* PIM completeness, over the DECLARED set only — the definition is the thing you can be complete against. A
+     percentage over "every key anyone ever imported" would fall as the catalogue grew richer, which is backwards. */
+  const missReq = gapsDeclared.filter(function(f){ return f.is_required; }).length;
+  const compl = declared.length
+    ? '<span style="color:' + (missReq ? '#b0641c' : 'var(--grey)') + '"> · '
+      + (declared.length - gapsDeclared.length) + '/' + declared.length + ' of the definition filled'
+      + (missReq ? ' · ' + missReq + ' required blank' : '') + '</span>'
+    : '';
+
   const st = (d.status || 'available');
   const stCol = st === 'available' ? '#2f6b4f' : st === 'unavailable' ? '#b0641c' : '#c0453b';
   modal('<h3 style="margin:0 0 3px">' + esc(pName(d)) + (d.variant ? ' <span style="color:var(--grey);font-weight:500">· ' + esc(d.variant) + '</span>' : '') + '</h3>'
     + '<div style="font-size:12px;margin-bottom:4px"><span style="color:' + stCol + ';font-weight:700">' + esc(st) + '</span>'
-    + '<span style="color:var(--grey)"> · ' + Object.keys(d).length + ' fields on this item</span></div>'
-    + '<div style="font-size:11.5px;color:var(--grey);margin-bottom:6px">🔒 marks a field written by another system or stamped by an event — shown, never edited.</div>'
+    + '<span style="color:var(--grey)"> · ' + Object.keys(d).length + ' fields on this item</span>' + compl + '</div>'
+    + '<div style="font-size:11.5px;color:var(--grey);margin-bottom:6px">🔒 marks a field written by another system or stamped by an event — shown, never edited. <i>Not set</i> marks a field this catalogue has and this item leaves blank.</div>'
     + '<div style="max-height:52vh;overflow-y:auto">' + body + '</div>'
     + '<div style="display:flex;gap:8px;margin-top:14px">'
     + '<button class="btn" style="flex:1" onclick="closeModal()">Close</button>'

@@ -242,6 +242,11 @@
     { id: 'pim', name: 'PIM data model (attributes · families · completeness)', body: 'PIM discipline', role: 'Naming/shape alignment only — our fields/sections/facets mirror the standard PIM vocabulary so an export stays compatible. No PIM engine or vendor code is embedded.', status: 'vocabulary', where: 'fields · sections · facets', spec: 'https://en.wikipedia.org/wiki/Product_information_management' },
     { id: 'gs1-gpc', name: 'GS1 GPC classification', body: 'GS1', role: 'Product classification, held BY REFERENCE (link out, never mirror).', status: 'by reference', where: 'standards[]', spec: 'https://www.gs1.org/standards/gpc' },
     { id: 'schema-org-product', name: 'Schema.org / Product', body: 'schema.org', role: 'Web-standard product vocabulary for interop, held by reference.', status: 'by reference', where: 'standards[]', spec: 'https://schema.org/Product' },
+    // Moved from "by reference" to IN CODE: the item lifecycle flag is schema.org's enumeration, not four words we
+    // made up. CB is deliberately finer in one place — schema.org's single Discontinued conflates "stopped selling"
+    // with "use that one instead", and only the second carries a successor worth acting on. Both export as
+    // Discontinued, so we are finer than the standard without ever emitting a value it does not define.
+    { id: 'schema-org-availability', name: 'Schema.org / ItemAvailability', body: 'schema.org', role: 'Item lifecycle flag (available · not available · redundant · retired) carries its InStock/OutOfStock/Discontinued equivalent, so a feed or storefront never learns our vocabulary.', status: 'in code', where: 'itemstatus.SCHEMA_ORG · item_data.status_schema_org', spec: 'https://schema.org/ItemAvailability' },
     { id: 'rfc6902', name: 'JSON Patch — IETF RFC 6902', body: 'IETF', role: 'Ordered, audited edit operations — for when a change history must be replayable.', status: 'roadmap', where: '—', spec: 'https://www.rfc-editor.org/rfc/rfc6902' },
     { id: 'gs1-gdsn', name: 'GS1 GDSN', body: 'GS1', role: 'Cross-company continuous catalogue sync (supplier → distributor).', status: 'roadmap', where: '—', spec: 'https://www.gs1.org/services/gdsn' },
   ];
