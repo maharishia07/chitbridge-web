@@ -59,6 +59,13 @@ async function loadChit2(){
     C2.data = both[0];
     C2.data.msgs = (both[1] || []).map(function(m){ return (typeof mapApiMsg === 'function') ? mapApiMsg(m) : m; });
     C2.err = null;
+    /* ⚠️ LOAD THE ROSTER OURSELVES. `UI.actors` is only populated by the assign/bulk-assign modals in app.html, so
+       arriving here directly left the Assign dropdown EMPTY — no error, just a select with nothing in it and no
+       way to guess why. Anything this screen needs, this screen fetches. */
+    if (!(UI.actors || []).length) {
+      try { var ac = await api('actors'); UI.actors = (ac || []).map(function(x){ return (typeof mapApiActor === 'function') ? mapApiActor(x) : x; }); }
+      catch (e) { UI.actors = []; }
+    }
   }
   catch (e) { C2.err = (e && e.message) || 'Could not open this chit.'; }
   C2.busy = false; c2Paint();
@@ -175,9 +182,40 @@ function c2PaneDel(d){
       + ((p.events || []).length ? '<div style="margin-top:7px;font-size:11.5px;color:var(--grey)">' + p.events.map(function(v){
             return (v.quantity > 0 ? '+' : '') + v.quantity + ' ' + esc(v.unit || '') + ' · ' + esc(v.mine ? 'you' : (v.by || 'them')) + (v.reference ? ' · ' + esc(v.reference) : '');
           }).join('<br>') + '</div>' : '')
+      /* ⚠️ RECORDING LIVES ON THE LINE ITSELF. The first version of this pane was read-only — you could watch a
+         delivery but never make one, which meant the whole tab was a demo. Recording is the point; it is the
+         action he performs twenty times a day, so it is one tap from the line rather than behind a menu. */
+      + '<div style="margin-top:9px;display:flex;gap:7px;align-items:center;flex-wrap:wrap">'
+      + '<input id="c2dq_' + e.line_id + '" inputmode="decimal" placeholder="' + (p.pending ? String(p.pending) : 'qty') + '" style="width:74px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:13px">'
+      + '<span style="font-size:12.5px;color:var(--grey)">' + esc(l.unit || '') + '</span>'
+      + '<input id="c2dr_' + e.line_id + '" placeholder="reference (optional)" style="flex:1;min-width:110px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:13px">'
+      + '<button class="btn pri" onclick="c2Deliver(\'' + e.line_id + '\',\'' + esc(l.unit || '') + '\')">Delivered</button>'
+      + (p.delivered ? '<button class="btn" title="Record a correcting entry — the original claim stays on the record" onclick="c2Deliver(\'' + e.line_id + '\',\'' + esc(l.unit || '') + '\',true)">Take back</button>' : '')
+      + '</div>'
       + '</div>';
   }).join('');
   return out;
+}
+/**
+ * c2Deliver(line_id, unit, back) — claim a delivery, or correct one.
+ *
+ * ⚠️ "TAKE BACK" SENDS A NEGATIVE QUANTITY, it does not delete anything. Both rows stay on the record, because
+ * what was claimed on the day has to remain legible after somebody changes their mind — and because the other
+ * party already holds a copy of the original claim.
+ * ⚠️ EXCESS IS NOT BLOCKED HERE either. Delivering 11 against an order of 10 is normal; the API records it and
+ * shows the excess. Refusing it in the browser would make the record disagree with the lorry.
+ */
+async function c2Deliver(line_id, unit, back){
+  var el = document.getElementById('c2dq_' + line_id);
+  var q = Number(el ? el.value.trim() : '');
+  if (!Number.isFinite(q) || q === 0) return toast('How many? (a number, and not zero)');
+  var ref = (document.getElementById('c2dr_' + line_id) || {}).value || null;
+  try {
+    await api('c2DeliverLines', { params: { id: C2.id }, body: { rows: [
+      { line_id: line_id, quantity: back ? -Math.abs(q) : Math.abs(q), unit: unit || null, reference: ref } ] } });
+    await loadChit2();
+    toast(back ? 'Taken back — the original claim stays on the record' : 'Recorded');
+  } catch (e) { toast(MSG.fail('record the delivery', e)); }
 }
 
 /* ── US · work ─────────────────────────────────────────────────────────────────────────────────────────────── */
@@ -216,7 +254,14 @@ function c2PaneWork(d){
   return out;
 }
 function c2AssignForm(line_id, a){
-  var opts = (UI.actors || []).map(function(x){ return '<option value="' + esc(x.id) + '"' + (a.assignee_actor_id === x.id ? ' selected' : '') + '>' + esc(x.name) + '</option>'; }).join('');
+  var roster = UI.actors || [];
+  /* ⚠️ SAY SO WHEN THERE IS NOBODY TO ASSIGN TO. An empty dropdown is indistinguishable from a broken one, and
+     the honest answer — "you have not added any co-assists" — is also the instruction. */
+  if (!roster.length) {
+    return '<div style="padding:11px 16px 14px;background:#fbfaf8;border-bottom:1px solid var(--line);font-size:12.5px;color:var(--grey)">'
+      + 'No co-assists yet — add someone under <b>Co-assists</b> and they will appear here.</div>';
+  }
+  var opts = roster.map(function(x){ return '<option value="' + esc(x.id) + '"' + (a.assignee_actor_id === x.id ? ' selected' : '') + '>' + esc(x.name) + '</option>'; }).join('');
   return '<div style="padding:11px 16px 14px;background:#fbfaf8;border-bottom:1px solid var(--line)">'
     + '<div style="display:flex;gap:9px;flex-wrap:wrap;align-items:flex-end">'
     + '<div><label style="display:block;font-size:11px;color:var(--grey);margin-bottom:3px">ASSIGN TO</label>'
