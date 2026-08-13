@@ -680,6 +680,9 @@ const EP = {
   prodAdd:         {m:"POST",  p:"/api/products",                ok:"✓"},  // {item_data:{name,price}}
   prodDel:         {m:"DELETE",p:"/api/products/:id",            ok:"✓"},
   prodEdit:        {m:"PATCH", p:"/api/products/:id",            ok:"✓"},  // {item_data} — full edit (already live)
+  /* ⚠️ NOT prodEdit. A status change MERGES onto the row (jsonb ||), so it cannot lose a price or a synonym
+     list — which is exactly what a PATCH of the whole item_data would risk. Set a flag; never amend the row. */
+  prodStatus:      {m:"PUT",   p:"/api/products/:id/status",     ok:"✓"},  // {status, until?, replaced_by?, note?}
   prodTemplate:    {m:"GET",   p:"/api/products/template",       ok:"✓"},  // the blank sheet in THIS catalogue's format
   prodPreflight:   {m:"POST",  p:"/api/products/import/preflight",ok:"✓"}, // read a file before it becomes data — WRITES NOTHING
   prodImport:      {m:"POST",  p:"/api/products/import",         ok:"✓"},  // the commit half — a decision per column, confirm:true required
@@ -3037,9 +3040,18 @@ function pCode(d){ return d.code||d.hsn||d.sku||''; }
 function pDesc(d){ return d.desc||d.description||d.note||''; }
 function prodId(p){ return p.item_id||p.id; }
 function prodVisible(){ const a=(UI.prods||[]); const q=(UI.prodQ||'').trim().toLowerCase(); if(!q)return a; return a.filter(p=>{const d=pData(p); return (pName(d)+' '+pCode(d)+' '+pUnit(d)+' '+pDesc(d)).toLowerCase().includes(q);}); }
-function prodRowHTML(p){ const d=pData(p), id=prodId(p); return `<div class="row ${id===UI.prodSel?'sel':''}" data-testid="cat-product-${id}" onclick="selectProduct('${id}')">
-  <div class="main2"><div class="l1"><span class="code">${esc(pName(d))}</span><span class="optchip" style="background:var(--gold-soft);color:#7a5e22;border-color:var(--gold-line)">${esc(pUnit(d))}</span><span class="amt" style="margin-left:auto">${inr(pPrice(d))}</span></div>
-    <div class="l2">${pCode(d)?'<span class="mono">'+esc(pCode(d))+'</span> · ':''}${esc(pDesc(d)||'—')}</div></div>
+function prodRowHTML(p){ const d=pData(p), id=prodId(p);
+  /* ⚠️ STATUS ON THE ROW, not only inside the item. A retired product that looks identical to a live one in the
+     list is how somebody re-creates a product they already retired — which is the exact thing the flag exists to
+     prevent. An absent status means available, so a normal row shows no chip at all. */
+  const st=d.status||'available';
+  const stC={unavailable:['#b0641c','#fdf4e8','not available'],retired:['#c0453b','#fdecea','retired'],redundant:['#5b5340','#f4f1e8','redundant']}[st];
+  const stChip=stC?`<span class="optchip" style="background:${stC[1]};color:${stC[0]};border-color:${stC[1]}">${stC[2]}</span>`:'';
+  /* Synonyms were the field Athi could not see anywhere — the count alone tells him which rows still need words. */
+  const syn=(Array.isArray(d.synonyms)&&d.synonyms.length)?`<span style="color:var(--grey)">· ${d.synonyms.length} synonyms</span>`:'';
+  return `<div class="row ${id===UI.prodSel?'sel':''}" data-testid="cat-product-${id}" onclick="selectProduct('${id}')" style="${st!=='available'?'opacity:.7':''}">
+  <div class="main2"><div class="l1"><span class="code">${esc(pName(d))}${d.variant?`<span style="color:var(--grey);font-weight:400"> · ${esc(d.variant)}</span>`:''}</span><span class="optchip" style="background:var(--gold-soft);color:#7a5e22;border-color:var(--gold-line)">${esc(pUnit(d))}</span>${stChip}<span class="amt" style="margin-left:auto">${inr(pPrice(d))}</span></div>
+    <div class="l2">${pCode(d)?'<span class="mono">'+esc(pCode(d))+'</span> · ':''}${esc(pDesc(d)||'—')} ${syn}</div></div>
   <div class="rowgo" aria-hidden="true">›</div></div>`; }
 /* BRIDGE — the reference catalogue (any adopted blueprint) surfaces HERE, resolved live from catalogue-mine
    (shared design/data BY REFERENCE + the entity's commercials). NOT copied into products.
@@ -3466,6 +3478,131 @@ async function _cfImport(btn){
 }
 
 function prodEditForm(d){ return ctField('name','Name',d.name||'')+`<div style="display:flex;gap:10px"><div style="flex:1">`+ctField('unit','Unit',d.unit||'',"placeholder=\"piece / kg / tonne\"")+`</div><div style="flex:1"><label class="fl">Price</label><div style="display:flex;align-items:stretch"><span style="display:flex;align-items:center;padding:0 11px;border:1px solid var(--line);border-right:0;border-radius:10px 0 0 10px;background:#f2f1ed;color:#6b7176;font-weight:700;font-size:13.5px;white-space:nowrap" title="${myCur()} — your business currency">${esc(curSym())}</span><input class="inp" id="ct_price" data-testid="cat-field-price" inputmode="numeric" style="border-radius:0 10px 10px 0" value="${cbHasPrice(d.price)?cbAmount(d.price):''}"></div></div></div>`+ctField('code','Code / HSN',pCode(d))+`<label class="fl">Description</label><textarea class="inp" id="ct_desc" data-testid="cat-field-desc" style="width:100%;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13.5px;min-height:58px;resize:vertical;background:var(--paper)">${esc(pDesc(d))}</textarea>`; }
+/* ═══ EVERY FIELD THIS ITEM CARRIES ════════════════════════════════════════════════════════════════════════════
+ * Athi, 2026-08-13: *"the other information like synonym etc are not visible… clicking one item possibly bring
+ * the field name and its item vertically as an overlay showcasing all the fields but graying the field which
+ * cannot be edited… or we can group and show case in tab, like price info, tax info and reference, canonical."*
+ *
+ * ⚠️ THE OLD VIEW SHOWED FIVE HARD-CODED FIELDS — name, price, unit, code, description. `item_data` is free-form
+ * jsonb, so synonyms, variant, status, conversions and every column anyone ever imported from a spreadsheet were
+ * simply invisible. Not hidden deliberately; just never asked for. A catalogue you cannot see the whole of is one
+ * you edit blind.
+ *
+ * ⚠️ SO THE LAST GROUP IS THE IMPORTANT ONE. Known keys are grouped for readability, and EVERYTHING ELSE lands in
+ * "Other" automatically. Add a field tomorrow and it appears without anyone touching this file — which is the
+ * only version of this that stays true.
+ */
+const CAT_GROUPS = [
+  ['Basics',    ['name', 'variant', 'grade', 'unit', 'unit_size', 'desc', 'description', 'note', 'synonyms']],
+  ['Price',     ['price', 'price_per_litre', 'mrp', 'currency', 'min_qty', 'conversions']],
+  ['Tax',       ['hsn', 'sac', 'gst', 'gst_rate', 'tax', 'tax_rate', 'cess']],
+  ['Status',    ['status', 'status_until', 'status_replaced_by', 'status_note', 'status_at', 'status_by', 'avail']],
+  ['Canonical', ['sku', 'code', 'gtin', 'ean', 'barcode', 'category', 'brand', 'botanical', 'local_name']],
+];
+/* ⚠️ READ-ONLY, AND THE REASON MATTERS: a reference from another system is EVIDENCE OF WHERE THIS CAME FROM. If
+   it is editable it stops being evidence — the same argument as the amendment trail. Stamps (who/when) and the
+   connector-written availability feed are on the list for the same reason: they are records of an event, not
+   opinions someone may revise. */
+const CAT_READONLY = new Set(['status_at', 'status_by', 'avail', 'source', 'external_id', 'source_system',
+  'imported_at', 'schema_id', 'item_id', 'created_at', 'updated_at', 'entity_id', 'is_active']);
+
+function catFieldVal(k, v){
+  if (v === null || v === undefined || v === '') return '<span style="color:var(--grey)">—</span>';
+  if (Array.isArray(v)) {
+    if (!v.length) return '<span style="color:var(--grey)">—</span>';
+    /* Synonyms are the field Athi could not see, so they get chips rather than a comma soup — the count is the
+       thing you actually want to read at a glance. */
+    return '<div style="display:flex;flex-wrap:wrap;gap:4px">' + v.map(function(x){
+      return '<span style="border:1px solid var(--line);border-radius:10px;padding:1px 8px;font-size:11.5px;background:#fff">' + esc(String(x)) + '</span>';
+    }).join('') + '</div>';
+  }
+  if (typeof v === 'object') {
+    if (typeof cbAmount === 'function' && v.amount !== undefined) return esc(String(v.currency || '') + ' ' + v.amount);
+    return '<span style="font-family:ui-monospace,Menlo,monospace;font-size:11.5px">' + esc(JSON.stringify(v)) + '</span>';
+  }
+  return esc(String(v));
+}
+function catFieldRow(k, v){
+  const ro = CAT_READONLY.has(k);
+  return '<div style="display:flex;gap:10px;padding:8px 0;border-bottom:1px dashed var(--line);font-size:13px;'
+    + (ro ? 'opacity:.55' : '') + '">'
+    + '<b style="min-width:118px;color:var(--grey);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.03em">'
+    + esc(k.replace(/_/g, ' ')) + (ro ? ' <span title="from another system — read-only">🔒</span>' : '') + '</b>'
+    + '<span style="flex:1;min-width:0;font-weight:600">' + catFieldVal(k, v) + '</span></div>';
+}
+function prodAllFields(id){
+  const p = (UI.prods || []).find(function(x){ return prodId(x) === id; });
+  if (!p) return;
+  const d = Object.assign({}, pData(p));
+  const shown = new Set();
+  let body = '';
+  CAT_GROUPS.forEach(function(g){
+    const rows = g[1].filter(function(k){ return d[k] !== undefined; });
+    if (!rows.length) return;
+    rows.forEach(function(k){ shown.add(k); });
+    body += '<div style="font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin:14px 0 2px">' + g[0] + '</div>'
+      + rows.map(function(k){ return catFieldRow(k, d[k]); }).join('');
+  });
+  /* ⭐ ANYTHING THE GROUPS DID NOT CLAIM. This is what makes the overlay survive a new field being added. */
+  const rest = Object.keys(d).filter(function(k){ return !shown.has(k); });
+  if (rest.length) {
+    body += '<div style="font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin:14px 0 2px">Other</div>'
+      + rest.map(function(k){ return catFieldRow(k, d[k]); }).join('');
+  }
+  /* The row's own identifiers, always read-only — where this record lives, not what it says. */
+  body += '<div style="font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin:14px 0 2px">Reference</div>'
+    + catFieldRow('item_id', p.item_id) + catFieldRow('schema_id', p.schema_id)
+    + catFieldRow('created_at', p.created_at) + catFieldRow('updated_at', p.updated_at);
+
+  const st = (d.status || 'available');
+  const stCol = st === 'available' ? '#2f6b4f' : st === 'unavailable' ? '#b0641c' : '#c0453b';
+  modal('<h3 style="margin:0 0 3px">' + esc(pName(d)) + (d.variant ? ' <span style="color:var(--grey);font-weight:500">· ' + esc(d.variant) + '</span>' : '') + '</h3>'
+    + '<div style="font-size:12px;margin-bottom:4px"><span style="color:' + stCol + ';font-weight:700">' + esc(st) + '</span>'
+    + '<span style="color:var(--grey)"> · ' + Object.keys(d).length + ' fields on this item</span></div>'
+    + '<div style="font-size:11.5px;color:var(--grey);margin-bottom:6px">🔒 marks a field written by another system or stamped by an event — shown, never edited.</div>'
+    + '<div style="max-height:52vh;overflow-y:auto">' + body + '</div>'
+    + '<div style="display:flex;gap:8px;margin-top:14px">'
+    + '<button class="btn" style="flex:1" onclick="closeModal()">Close</button>'
+    + '<button class="btn" style="flex:1" onclick="closeModal();prodStatusPick(\'' + id + '\')">Set status</button>'
+    + '<button class="btn pri" style="flex:1" onclick="closeModal();selectProduct(\'' + id + '\');setProdMode(\'edit\')">✎ Edit</button></div>', true);
+}
+
+/* ── set the lifecycle flag — Athi: "so we don't need to amend the catalogue, but we can set the flag" ──────── */
+function prodStatusPick(id){
+  const p = (UI.prods || []).find(function(x){ return prodId(x) === id; });
+  const d = p ? pData(p) : {};
+  const opt = function(v, label, why){
+    const on = (d.status || 'available') === v;
+    return '<button class="btn" style="width:100%;margin-bottom:7px;text-align:left;' + (on ? 'border-color:var(--blue);font-weight:700' : '') + '" onclick="prodSetStatus(\'' + id + '\',\'' + v + '\')">'
+      + esc(label) + '<div style="font-size:11px;color:var(--grey);font-weight:400">' + esc(why) + '</div></button>';
+  };
+  modal('<h3 style="margin:0 0 4px">Status · ' + esc(pName(d)) + '</h3>'
+    + '<div style="font-size:11.5px;color:var(--grey);margin-bottom:12px">The row is never deleted — only the flag changes.</div>'
+    + opt('available', 'Available', 'normal — matches orders and prices')
+    + opt('unavailable', 'Not available (for now)', 'still matches, so the order records what they asked for — flagged as unable to ship')
+    + opt('retired', 'Retired', 'no longer sold. New orders stop resolving to it; old chits are untouched')
+    + opt('redundant', 'Redundant', 'replaced by another item — needs to say which')
+    + '<button class="btn" style="width:100%;margin-top:4px" onclick="closeModal()">Cancel</button>');
+}
+async function prodSetStatus(id, status){
+  let body = { status: status };
+  if (status === 'unavailable') {
+    /* ⚠️ ASKED FOR, NOT REQUIRED. "Not available" with no end is indistinguishable from retired to everyone
+       except the person who set it — and that person forgets. */
+    const u = prompt('Back on which date? (YYYY-MM-DD — leave blank if you do not know)');
+    if (u && u.trim()) body.until = u.trim();
+  }
+  if (status === 'redundant') {
+    const r = prompt('Replaced by which item? (the point of "redundant" is that there is a right answer)');
+    if (!r || !r.trim()) return toast('Redundant needs a replacement — use Retired if there is none');
+    body.replaced_by = r.trim();
+  }
+  try { const out = await api('prodStatus', { params: { id }, body: body });
+    closeModal(); await loadCatalogue(); paintProdList(); paintProdDetail();
+    toast((out && out.reads_as) ? out.reads_as : ('Status: ' + status));
+  } catch (e) { toast(MSG.fail('set the status', e)); }
+}
+
 function prodViewFields(d){ const kv=(l,v)=>`<div class="kv" style="display:flex;gap:8px;padding:8px 12px;border-bottom:1px dashed var(--line);font-size:13px"><b style="min-width:96px;color:var(--grey);font-weight:600;font-size:11px;text-transform:uppercase">${l}</b><span style="font-weight:600">${v===''||v==null?'—':esc(v)}</span></div>`;
   return `<div class="itab">${kv('Name',pName(d))}<div class="kv" style="display:flex;gap:8px;padding:8px 12px;border-bottom:1px dashed var(--line);font-size:13px"><b style="min-width:96px;color:var(--grey);font-weight:600;font-size:11px;text-transform:uppercase">Price</b><span style="font-weight:600">${inr(pPrice(d))} <span style="color:var(--grey);font-weight:400">/ ${esc(pUnit(d))}</span></span></div>${kv('Unit',pUnit(d))}${kv('Code / HSN',pCode(d))}${kv('Description',pDesc(d))}</div>`; }
 /**
@@ -3536,7 +3673,17 @@ function prodDetailHTML(){
   const head=`<div class="dh">${back}<div class="dt">${esc(pName(d))}</div><div class="ds">${inr(pPrice(d))} / ${esc(pUnit(d))}${pCode(d)?' · '+esc(pCode(d)):''}</div><div style="display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-top:10px">${seg('view','View')}${seg('edit','Edit')}</div></div>`;
   let body, bar;
   if(UI.prodMode==='edit'){ body=`<div class="sec">Edit product</div>${prodEditForm(d)}<div class="err" id="ct_err" style="margin-top:8px"></div>`; bar=`<button class="pri" data-testid="cat-save" onclick="saveProduct('${id}')">Save</button><button onclick="setProdMode('view')">Cancel</button>`; }
-  else { body=`<div class="sec">Product</div>${prodViewFields(d)}${prodAvailBlock(d,id)}`; bar=`<button class="pri" data-testid="cat-edit" onclick="setProdMode('edit')">✎ Edit</button><button class="warn" data-testid="cat-delete" onclick="delProduct('${id}')">Delete</button>`; }
+  else {
+    /* ⚠️ THE FIVE-FIELD SUMMARY STAYS as the glance, with a way into EVERYTHING beneath it. Replacing it with the
+       full list would bury the price under twenty rows of provenance; hiding the full list is what made synonyms
+       invisible in the first place. Glance, then the whole record on demand. */
+    const nfields = Object.keys(d).length;
+    body = `<div class="sec">Product</div>${prodViewFields(d)}`
+      + `<div style="padding:9px 12px"><button class="composebtn" data-testid="cat-all-fields" onclick="prodAllFields('${id}')">🗂️ All ${nfields} fields</button>`
+      + `<span style="font-size:11.5px;color:var(--grey);margin-left:9px">synonyms, status, and anything imported</span></div>`
+      + prodAvailBlock(d,id);
+    bar=`<button class="pri" data-testid="cat-edit" onclick="setProdMode('edit')">✎ Edit</button><button data-testid="cat-status" onclick="prodStatusPick('${id}')">◍ Status</button><button class="warn" data-testid="cat-delete" onclick="delProduct('${id}')">Delete</button>`;
+  }
   return `${head}<div class="db">${body}</div><div class="actbar">${bar}</div>`;
 }
 function ctReadForm(orig){ return Object.assign({}, orig||{}, { name:(val("ct_name")||'').trim(), unit:(val("ct_unit")||'').trim()||'unit', price:+val("ct_price")||0, code:(val("ct_code")||'').trim(), desc:(val("ct_desc")||'').trim() }); }
