@@ -4787,8 +4787,13 @@ function contentItems(c){
        (lib/numerals.js) flags rather than rejects while it is message-level; it starts rejecting per-line once
        the reader emits raw_phrase. */
     const li0=(e.live||e.original||{});
-    const unver=li0.qty_unverified?`<span title="This number does not appear anywhere in their message — check it" style="font-size:10px;font-weight:700;color:#8a5a1e;background:#faf3dd;border-radius:5px;padding:1px 6px;white-space:nowrap">⚠️ check qty</span>`:'';
-    return `<div class="ir ${atts.length?'hasatt':''}" ${atts.length?`onclick="toggleLine(${idx})"`:''}>${was?`<span class="nm">${was}<div>${esc(it[0])}</div></span>`:`<span class="nm">${esc(it[0])}</span>`}<span class="qt">${esc(it[1])}</span>${unver}${clip}${pen}</div>${strip}`;
+    const unver=li0.qty_unverified?`<span title="This number does not appear anywhere in their message — check it" style="font-size:10px;font-weight:700;color:#8a5a1e;background:#faf3dd;border-radius:5px;padding:1px 6px;white-space:nowrap">⚠️ check qty</span>`
+      :(li0.qty_rejected?`<span title="${esc(li0.qty_rejected)}" style="font-size:10px;font-weight:700;color:#c0453b;background:#fdecea;border-radius:5px;padding:1px 6px;white-space:nowrap">⚠️ qty rejected</span>`:'');
+    /* ⭐ THE CUSTOMER'S OWN WORDS, under the line (b141). Athi: *"this will give confidence to the person; the
+       right message is interpreted."* Everything else on the row came out of a machine — this is the only part
+       that did not, so it is the only part that can settle whether the machine read it right. */
+    const rawp=li0.raw_phrase?`<div class="ir" style="border-top:0;padding-top:0;padding-bottom:8px"><span class="nm" style="font-size:11.5px;color:var(--grey)">they wrote “${esc(li0.raw_phrase)}”${li0.phrase_says!=null?` · <b style="color:#c0453b">reads as ${esc(String(li0.phrase_says))}</b>`:''}</span></div>`:'';
+    return `<div class="ir ${atts.length?'hasatt':''}" ${atts.length?`onclick="toggleLine(${idx})"`:''}>${was?`<span class="nm">${was}<div>${esc(it[0])}</div></span>`:`<span class="nm">${esc(it[0])}</span>`}<span class="qt">${esc(it[1])}</span>${unver}${clip}${pen}</div>${rawp}${strip}`;
   }).join("");
 }
 function toggleLine(idx){const k='line'+idx;UI.openLines.has(k)?UI.openLines.delete(k):UI.openLines.add(k);paintDetail();}

@@ -146,7 +146,12 @@ function c2PaneOrd(d){
       + '<div style="margin-top:3px;font-size:13.5px;color:var(--ink-2,#6b665e);font-variant-numeric:tabular-nums">' + was + esc(c2q(l)) + (l.price != null ? ' × ' + c2Money(l.price) : '') + '</div>'
       + (l.comment ? '<div style="margin-top:5px;font-size:12.5px;color:#2c5d7c;background:#eef4f8;border-radius:5px;padding:4px 8px;display:inline-block">' + esc(l.comment) + '</div>' : '')
       + (l.qty_unverified ? '<div style="margin-top:5px;font-size:11px;color:#8a5a1e">⚠️ this number does not appear in their message — check it</div>' : '')
-      + (l.asked_as ? '<div style="margin-top:4px;font-size:11.5px;color:var(--grey)">they wrote “' + esc(l.asked_as) + '”</div>' : '')
+      /* ⚠️ REJECTED IS LOUDER THAN UNVERIFIED, because it is a stronger claim: the quantity was compared against
+         THIS line's own words and disagreed, so it was nulled rather than shown. */
+      + (l.qty_rejected ? '<div style="margin-top:5px;font-size:11px;color:#c0453b">⚠️ quantity rejected — ' + esc(l.qty_rejected) + '. Fix it on the line.</div>' : '')
+      /* ⭐ b141 — their own words for THIS line. The only thing on the row a machine did not produce. */
+      + (l.raw_phrase ? '<div style="margin-top:5px;font-size:11.5px;color:var(--grey);font-style:italic">they wrote “' + esc(l.raw_phrase) + '”</div>'
+          : (l.asked_as ? '<div style="margin-top:4px;font-size:11.5px;color:var(--grey)">they wrote “' + esc(l.asked_as) + '”</div>' : ''))
       + '</div>';
   }).join('');
   return out;
