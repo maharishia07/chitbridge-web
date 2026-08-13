@@ -237,17 +237,53 @@ function c2PaneWork(d){
       + '<div style="font-size:12.5px;color:var(--grey);margin-top:2px">' + people[k].map(function(e){ return esc((e.live || e.original || {}).particulars || ''); }).join(' · ') + '</div></div>';
   }).join('');
 
-  out += c2Grp('Lines', 'tap to assign');
+  /**
+   * ⭐ THE OPERATIONAL SUMMARY — Athi, 2026-08-13: *"we should be able to see the summary of what is given, what
+   * is left, which date it is assigned."*
+   *
+   * ⚠️ IT BELONGS ON **US**, not THEM, and that is not a layout choice. It mixes a SHARED fact (what has been
+   * delivered) with a PRIVATE one (who is doing it). The same table on the shared side would hand the customer
+   * your roster and your capacity.
+   *
+   * ⚠️ AND IT IS ALL DERIVED. Ordered comes from the live line, delivered is summed from the delivery rows, left
+   * is the difference, and the assignee is the latest row of the chain. Nothing here is stored, so nothing here
+   * can disagree with the tabs it summarises.
+   */
+  var prog = d.line_delivery || {};
+  var totOrd = 0, totLeft = 0, anyVal = false;
+  lines.forEach(function(e){
+    var l = e.live || e.original || {}; var p = prog[e.line_id] || {};
+    if (l.price != null && l.quantity != null) {
+      anyVal = true;
+      totOrd += c2n(l.quantity) * c2n(l.price);
+      totLeft += Math.max(0, (c2n(l.quantity) - (p.delivered || 0))) * c2n(l.price);
+    }
+  });
+  out += c2Grp('What is left', anyVal ? (c2Money(totLeft) + ' of ' + c2Money(totOrd)) : '');
+  out += '<div style="display:flex;font-size:10.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--grey);padding:0 16px 4px;font-weight:600">'
+    + '<span style="flex:1">Item</span><span style="width:62px;text-align:right">Given</span><span style="width:62px;text-align:right">Left</span></div>';
+
   out += lines.map(function(e){
     var a = asg[e.line_id] || {};
     var l = e.live || e.original || {};
+    var p = prog[e.line_id] || {};
+    var ord = c2n(l.quantity), got = p.delivered || 0;
+    var left = (ord == null) ? null : Math.max(0, Math.round((ord - got) * 1000) / 1000);
     var open = C2.open === ('w' + e.line_id);
+    var done = (left === 0 && ord != null);
     return '<div onclick="c2Toggle(\'w' + e.line_id + '\')" style="padding:11px 16px;border-bottom:1px solid var(--line);cursor:pointer">'
-      + '<div style="display:flex;justify-content:space-between"><span style="font-weight:500">' + esc(l.particulars || '') + '</span><span style="color:var(--grey)">' + (open ? '▾' : '▸') + '</span></div>'
-      + '<div style="font-size:12.5px;color:var(--grey);margin-top:3px">' + esc(c2q(l)) + '</div>'
+      + '<div style="display:flex;align-items:baseline;gap:8px">'
+      + '<span style="flex:1;font-weight:500">' + esc(l.particulars || '') + '<span style="color:var(--grey);font-weight:400;font-size:12.5px"> · ' + esc(c2q(l)) + '</span></span>'
+      + '<span style="width:62px;text-align:right;font-variant-numeric:tabular-nums;font-size:13.5px">' + got + '</span>'
+      + '<span style="width:62px;text-align:right;font-variant-numeric:tabular-nums;font-size:13.5px;font-weight:' + (done ? '400' : '700') + ';color:' + (done ? '#2f6b4f' : 'var(--ink)') + '">' + (left === null ? '—' : (done ? '✓' : left)) + '</span>'
+      + '<span style="color:var(--grey);width:12px;text-align:right">' + (open ? '▾' : '▸') + '</span></div>'
+      /* Who has it and when it is due — the two things that turn "what is left" into "who do I chase". */
       + (a.assignee_name ? '<div style="margin-top:5px;font-size:12px;color:#5b5340;background:#f4f1e8;border-radius:5px;padding:3px 8px;display:inline-block">◍ ' + esc(a.assignee_name) + (a.task ? ' · ' + esc(a.task) : '') + (a.due_date ? ' · due ' + esc(String(a.due_date).slice(0, 10)) : '') + '</div>'
-          : '<div style="margin-top:5px;font-size:12px;color:var(--grey)">unassigned</div>')
+          : '<div style="margin-top:5px;font-size:12px;color:var(--grey)">unassigned' + (left ? ' · nobody is doing this' : '') + '</div>')
       + ((a.history || []).length ? '<div style="margin-top:4px;font-size:11px;color:var(--grey)">was ' + esc(a.history.map(function(h){ return h.assignee_name || 'unassigned'; }).join(' → ')) + '</div>' : '')
+      /* ⚠️ SURFACED HERE TOO. A line the two parties disagree about is a line you cannot call finished, and this
+         is the screen where someone decides what still needs doing. */
+      + (p.divergent ? '<div style="margin-top:4px;font-size:11px;color:#b0641c">⚠️ they say ' + p.theirs + ', you say ' + p.delivered + '</div>' : '')
       + '</div>'
       + (open ? c2AssignForm(e.line_id, a) : '');
   }).join('');
