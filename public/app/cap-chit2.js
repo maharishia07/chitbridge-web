@@ -24,6 +24,7 @@ if (typeof EP !== 'undefined') {
     c2DeliverLines:{ m: 'POST', p: '/api/chits/:id/deliver-lines', ok: 'y' },
     c2CostsGet:    { m: 'GET',  p: '/api/chits/:id/costs',         ok: 'y' },
     c2CostsAdd:    { m: 'POST', p: '/api/chits/:id/costs',         ok: 'y' },
+    c2Reprice:     { m: 'POST', p: '/api/chits/:id/reprice',       ok: 'y' },  // preview:true computes, writes nothing
   });
 }
 
@@ -121,7 +122,14 @@ function c2PaneOrd(d){
   var lines = d.live_set || [];
   var asg = d.line_assignment || {};
   var amended = lines.filter(function(e){ return e.history && e.history.length; }).length;
-  var out = c2Head('The order', lines.length + ' line' + (lines.length === 1 ? '' : 's') + (amended ? ' · ' + amended + ' amended' : ''));
+  /* ⚠️ COUNTED, NOT ASSUMED. "3 lines have no price" is the reason someone would reach for the catalogue at all,
+     so it is stated on the header rather than left to be discovered line by line. */
+  var unpriced = lines.filter(function(e){ var l = e.live || e.original || {}; return !e.removed && (l.price === null || l.price === undefined || Number(l.price) === 0); }).length;
+  var out = c2Head('The order', lines.length + ' line' + (lines.length === 1 ? '' : 's') + (amended ? ' · ' + amended + ' amended' : '')
+    + (unpriced ? ' · <span style="color:#b0641c">' + unpriced + ' with no price</span>' : ''));
+  out += '<div style="padding:9px 16px;border-bottom:1px solid var(--line)">'
+    + '<button class="btn" onclick="c2RepricePreview()">₹ Price from catalogue</button>'
+    + '<span style="font-size:11.5px;color:var(--grey);margin-left:9px">shows what would change before anything is written</span></div>';
 
   out += lines.map(function(e, i){
     var l = e.live || e.original || {};
@@ -155,6 +163,83 @@ function c2PaneOrd(d){
       + '</div>';
   }).join('');
   return out;
+}
+
+/* ── price from catalogue — PREVIEW, then apply ─────────────────────────────────────────────────────────────────
+   Athi, 2026-08-13: *"either wholistically or for an individual item the price should be pulled in"* and
+   *"always bring the entire content as an overlay box and perform the activity"*.
+
+   ⚠️ THE PREVIEW IS NOT A COURTESY. Pricing a whole chit in one tap is the useful version and also the dangerous
+   one — it can overwrite a figure the customer stated. Showing the exact list first turns a promise into a
+   decision, and it costs one extra tap on an action performed rarely.
+   ⚠️ AND IT IS AN OVERLAY, not an inline expansion, so the page does not jump under the reader's thumb. */
+var C2R = { plan: null, busy: false, only_unpriced: false };
+
+async function c2RepricePreview(){
+  C2R.busy = true; c2RepricePaint();
+  try { C2R.plan = await api('c2Reprice', { params: { id: C2.id }, body: { preview: true, only_unpriced: C2R.only_unpriced } }); }
+  catch (e) { C2R.plan = { error: (e && e.message) || 'Could not read the catalogue.' }; }
+  C2R.busy = false; c2RepricePaint();
+}
+function c2RepriceScope(v){ C2R.only_unpriced = !!v; c2RepricePreview(); }
+
+function c2RepricePaint(){
+  if (C2R.busy && !C2R.plan) return modal('<h3 style="margin:0 0 10px">₹ Price from catalogue</h3><div style="color:var(--grey);font-size:12.5px"><span class="spin"></span> checking the catalogue…</div>');
+  var p = C2R.plan || {};
+  if (p.error) return modal('<h3 style="margin:0 0 10px">₹ Price from catalogue</h3><div style="color:#c0453b;font-size:12.5px">' + esc(p.error) + '</div><button class="btn" style="width:100%;margin-top:12px" onclick="closeModal()">Close</button>');
+
+  if (!p.has_catalogue) {
+    return modal('<h3 style="margin:0 0 6px">₹ Price from catalogue</h3>'
+      + '<div style="font-size:12.5px;color:var(--grey);margin-bottom:12px">There is no catalogue on this entity yet, so there are no prices to pull. Add items under <b>Catalogue</b> and this will fill them in.</div>'
+      + '<button class="btn" style="width:100%" onclick="closeModal()">Close</button>');
+  }
+
+  var will = p.will_price || [], need = p.needs_price || [];
+  var body = '<div style="display:flex;gap:6px;margin-bottom:12px">'
+    + ['<span onclick="c2RepriceScope(false)" style="cursor:pointer;border:1px solid ' + (C2R.only_unpriced ? 'var(--line)' : 'var(--blue)') + ';' + (C2R.only_unpriced ? '' : 'background:var(--blue);color:#fff;font-weight:700;') + 'border-radius:8px;padding:4px 11px;font-size:12px">Every line</span>',
+       '<span onclick="c2RepriceScope(true)" style="cursor:pointer;border:1px solid ' + (C2R.only_unpriced ? 'var(--blue)' : 'var(--line)') + ';' + (C2R.only_unpriced ? 'background:var(--blue);color:#fff;font-weight:700;' : '') + 'border-radius:8px;padding:4px 11px;font-size:12px">Only lines with no price</span>'].join('')
+    + '</div>';
+
+  body += will.length
+    ? '<div style="font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin-bottom:4px">Will change (' + will.length + ')</div>'
+      + will.map(function(w){
+          return '<div style="display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-top:1px solid var(--line);font-size:13px">'
+            + '<span style="flex:1;min-width:0"><b>' + esc(w.particulars || '') + '</b>'
+            + '<div style="font-size:11.5px;color:var(--grey)">→ ' + esc(w.matched) + (w.matched_by_spelling ? ' <span style="color:#8a6d1f">≈ matched by spelling</span>' : '') + '</div>'
+            /* ⚠️ REPLACING A STATED FIGURE IS CALLED OUT. Filling an empty price and overwriting one the customer
+               wrote are different acts, and only a person can say whether the second is right. */
+            + (w.replaces_stated_price ? '<div style="font-size:11px;color:#b0641c">replaces the price on the chit</div>' : '')
+            + '</span><span style="text-align:right;font-variant-numeric:tabular-nums">'
+            + (w.price != null ? '<s style="color:var(--grey)">' + c2Money(w.price) + '</s> ' : '') + '<b>' + c2Money(w.to) + '</b></span></div>';
+        }).join('')
+    : '<div style="font-size:12.5px;color:var(--grey)">Nothing to change — every line already matches the catalogue.</div>';
+
+  /* ⚠️ WHAT CANNOT BE PRICED IS SHOWN HERE, NOT LEFT AT ZERO. Athi: "if the exact item not found, then highlight
+     for the cost to be updated." A chit that looks priced while a third of it is not is the failure this avoids. */
+  if (need.length) {
+    body += '<div style="margin-top:14px;font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#b0641c;margin-bottom:4px">⚠️ Needs a price from you (' + need.length + ')</div>'
+      + need.map(function(n){
+          return '<div style="padding:5px 0;border-top:1px solid var(--line);font-size:12.5px"><b>' + esc(n.particulars || '') + '</b> '
+            + '<span style="color:var(--grey)">' + esc(n.reason) + '</span></div>';
+        }).join('');
+  }
+
+  modal('<h3 style="margin:0 0 4px">₹ Price from catalogue</h3>'
+    + '<div style="font-size:11.5px;color:var(--grey);margin-bottom:12px">Nothing is written until you confirm. Each change is recorded as an amendment — the old price stays struck through.</div>'
+    + body
+    + '<div style="display:flex;gap:8px;margin-top:16px">'
+    + '<button class="btn" style="flex:1" onclick="closeModal()">Cancel</button>'
+    + (will.length ? '<button class="btn pri" style="flex:1" onclick="c2RepriceApply()">Apply ' + will.length + '</button>' : '')
+    + '</div>');
+}
+
+async function c2RepriceApply(){
+  try {
+    var r = await api('c2Reprice', { params: { id: C2.id }, body: { only_unpriced: C2R.only_unpriced } });
+    closeModal(); C2R.plan = null;
+    await loadChit2();
+    toast((r && r.applied ? r.applied : 0) + ' line(s) priced — the old values are kept');
+  } catch (e) { toast(MSG.fail('apply the prices', e)); }
 }
 
 /* ── THEM · delivered & paid ───────────────────────────────────────────────────────────────────────────────── */
