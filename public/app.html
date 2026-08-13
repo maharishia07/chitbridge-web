@@ -5027,7 +5027,21 @@ function contentItems(c){
        right message is interpreted."* Everything else on the row came out of a machine — this is the only part
        that did not, so it is the only part that can settle whether the machine read it right. */
     const rawp=li0.raw_phrase?`<div class="ir" style="border-top:0;padding-top:0;padding-bottom:8px"><span class="nm" style="font-size:11.5px;color:var(--grey)">they wrote “${esc(li0.raw_phrase)}”${li0.phrase_says!=null?` · <b style="color:#c0453b">reads as ${esc(String(li0.phrase_says))}</b>`:''}</span></div>`:'';
-    return `<div class="ir ${atts.length?'hasatt':''}" ${atts.length?`onclick="toggleLine(${idx})"`:''}>${was?`<span class="nm">${was}<div>${esc(it[0])}</div></span>`:`<span class="nm">${esc(it[0])}</span>`}<span class="qt">${esc(it[1])}</span>${unver}${clip}${pen}</div>${rawp}${strip}`;
+    /**
+     * ⭐ AN UNPRICED LINE MUST SAY SO ON THE ROW, and offer the fix there.
+     *
+     * ⚠️ WITHOUT THIS THE WHOLE PICKER IS UNREACHABLE IN PRACTICE. The refusal to price was recorded on the line
+     * and mentioned in a summary; the row itself looked like any other row, just quieter. Someone scrolling a
+     * twelve-line order has no reason to open the edit card on the one line that needs it — so the chit stays
+     * short by one item's money and nobody is told which one.
+     *
+     * A removed line never shows it: the question "which of these did they mean" is meaningless once the answer
+     * is "none, it is not being supplied", and it returns above this point anyway.
+     */
+    const nCand=(li0.ambiguous||li0.variant_candidates||[]).length;
+    const pick=(!nCand||c.canAmend===false)?'':`<span onclick="event.stopPropagation();amendPick(${idx})" title="The catalogue has more than one of these — pick which, and the price comes with it"
+      style="cursor:pointer;font-size:10px;font-weight:800;color:#8a6d1e;background:#faf3dd;border:1px solid #e6d9a8;border-radius:5px;padding:2px 7px;white-space:nowrap">⚠️ pick item${li0.ambiguous_count>nCand?` (${nCand} of ${li0.ambiguous_count})`:''}</span>`;
+    return `<div class="ir ${atts.length?'hasatt':''}" ${atts.length?`onclick="toggleLine(${idx})"`:''}>${was?`<span class="nm">${was}<div>${esc(it[0])}</div></span>`:`<span class="nm">${esc(it[0])}</span>`}<span class="qt">${esc(it[1])}</span>${pick}${unver}${clip}${pen}</div>${rawp}${strip}`;
   }).join("");
 }
 function toggleLine(idx){const k='line'+idx;UI.openLines.has(k)?UI.openLines.delete(k):UI.openLines.add(k);paintDetail();}
@@ -5059,15 +5073,39 @@ const AMD_UNITS=['kg','crate','box','packet','bundle','l','piece','g'];
 function amendLine(idx){
   const c=UI.detail||{}; const it=(c.items||[])[idx]; if(!it) return;
   const e=it[3]||{};
-  AMD.idx=idx; AMD.picked=false; AMD.view='main'; AMD.cat=null;
+  /* ⚠️ wantPick RESETS HERE, not only where it is set. amendPick() sets it immediately after calling this, which
+     works because the fetch has not resolved yet — but a plain ✎ on another line must not inherit a stale flag
+     and jump someone into a picker they did not ask for. */
+  AMD.idx=idx; AMD.picked=false; AMD.view='main'; AMD.cat=null; AMD.resolved=false; AMD.pickedKey=null; AMD.wantPick=false;
   /* Edit the LIVE version — correcting a correction starts from what is true now, not from the AI's first guess. */
   AMD.line=Object.assign({}, e.live||e.original||{});
   AMD.orig=e.original||{};
   AMD.raw=(e.original&&(e.original.asked_as||e.original.raw_phrase))||c.rawText||'';
   amendPaint();
-  api('catOverlay',{params:{id:UI.sel},query:{q:(AMD.line.particulars||'')}})
-    .then(r=>{ AMD.cat=r||{has_catalogue:false}; if(AMD.idx===idx) amendPaint(); })
+  /* ⚠️ QUERIED BY WHAT THEY WROTE when we have it, not by the name on the line. On an ambiguous line the line's
+     name IS the sender's raw phrase, so the two agree — but once someone has half-corrected it, asking the
+     catalogue about our own corrected text would return the item we already chose and hide the alternatives that
+     caused the question. The shortlist has to be computed from the words that were actually ambiguous. */
+  api('catOverlay',{params:{id:UI.sel},query:{q:((AMD.orig&&AMD.orig.raw_phrase)||AMD.line.particulars||'')}})
+    .then(r=>{ AMD.cat=r||{has_catalogue:false}; if(AMD.idx!==idx) return;
+      if(AMD.wantPick&&(AMD.cat.candidates||[]).length){ AMD.wantPick=false; AMD.view='item'; }
+      amendPaint(); })
     .catch(()=>{ AMD.cat={has_catalogue:false}; if(AMD.idx===idx) amendPaint(); });
+}
+/**
+ * The ⚠️ badge opens the card ALREADY ON THE PICKER, because that is the only question being asked.
+ *
+ * ⚠️ IT DOES NOT SHORTCUT PAST THE CARD, and that was the tempting version. Resolving the item is not the whole
+ * edit — the quantity on an ambiguous line is often wrong too, and a picker that saved on selection would commit
+ * a price against a quantity nobody looked at. Picking returns to the card; one save covers both.
+ *
+ * ⚠️ AND IT WAITS FOR THE CATALOGUE. amendLine() fetches asynchronously, so switching the view immediately would
+ * render "which item?" against an empty list and read as "your catalogue has nothing" — the one message
+ * guaranteed to stop someone. The view flips when the shortlist actually arrives.
+ */
+function amendPick(idx){
+  amendLine(idx);
+  AMD.wantPick=true;
 }
 function amdView(v){ AMD.view=v; amendPaint(); }
 /* ±1 with no keyboard — by far the commonest correction, so it gets the cheapest gesture on the card. */
@@ -5089,6 +5127,24 @@ function amdPickItem(i){
   if(x.price||x.price===0) AMD.line.price=x.price;
   amdView('main');
 }
+/**
+ * Choosing from the shortlist. Same effect as amdPickItem, one difference that matters: it remembers that this
+ * edit RESOLVED AN AMBIGUITY rather than corrected a misreading.
+ *
+ * ⚠️ THE REASON CODE IS NOT BOOKKEEPING. `misread_by_ai` is the counter we watch to know whether the reading is
+ * getting better; filing every ambiguity resolution under it would blame the reader for the customer's own
+ * ambiguity and make the machine look worse the more careful it was. The trail has to say the reader refused
+ * correctly and a named person chose.
+ */
+function amdPickCand(i){
+  const x=((AMD.cat&&AMD.cat.candidates)||[])[+i]; if(!x) return;
+  AMD.line.particulars = x.label || (x.name + (x.variant ? ' · ' + x.variant : ''));
+  AMD.picked=true; AMD.pickedKey=x.key; AMD.resolved=true;
+  if(x.unit) AMD.line.unit=x.unit;
+  if(x.unit_size) AMD.line.unit_size=x.unit_size;
+  if(x.price||x.price===0) AMD.line.price=x.price;
+  amdView('main');
+}
 function amdPickUnit(u){ AMD.line.unit=u; amdView('main'); }
 
 const _amdSheet=(title,body,back)=>modal(`<h3 style="margin:0 0 10px">${title}</h3>${body}
@@ -5100,9 +5156,55 @@ function amendPaint(){
   /* ── secondary screens: each REPLACES the card, never crowds it ──────────────────────────────────────────── */
   if(AMD.view==='item'){
     const items=(cat&&cat.items)||[];
+    const cands=(cat&&cat.candidates)||[];
+    /**
+     * ⭐ THE SHORTLIST FIRST, AS RADIOS — Athi, 2026-08-13: *"provision to pick up the right price from the two or
+     * three similar items which are ambiguous … show an overlay for every item as a radio button so one of the
+     * item can be selected."*
+     *
+     * ⚠️ WHY RADIOS AND NOT THE PLAIN BUTTON LIST BELOW: these two or three rows are the SAME PRODUCT NAME at
+     * different prices. A row of buttons reading "Tomato · kg / Tomato · kg" is unreadable — the thing that
+     * distinguishes them is the variant and the price, so those have to be the loud part, and the choice has to
+     * look like a choice being made rather than a link being followed.
+     *
+     * ⚠️ AND THE PRICE IS ON THE ROW. Picking blind and discovering the number afterwards is how someone resolves
+     * an ambiguity the wrong way and never notices: the whole reason the machine refused was that the two prices
+     * differ. Status rides along too — an out-of-stock item is still pickable, but you should know before you pick.
+     */
+    const shortlist = cands.length ? `
+      <div style="font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#8a6d1e;margin-bottom:5px">
+        ${cands.length===1?'closest match':'which of these '+cands.length+'?'}</div>
+      <div style="font-size:11.5px;color:var(--grey);margin-bottom:9px;line-height:1.45">
+        “${esc(AMD.raw||l.particulars||'')}” answers to ${cat.ambiguous?('<b>'+cat.ambiguous+'</b> catalogue names'):'more than one grade'} — the prices differ, so nothing was picked for you.</div>
+      ${cands.map((x,i)=>{
+        const on = AMD.pickedKey===x.key;
+        const st = x.status && x.status!=='available';
+        return `<label style="display:flex;align-items:center;gap:11px;cursor:pointer;padding:11px 12px;margin-bottom:7px;
+             border:1.5px solid ${on?'var(--blue)':'var(--line)'};border-radius:11px;background:${on?'#f2f7fd':'#fff'}">
+          <input type="radio" name="amdcand" ${on?'checked':''} onchange="amdPickCand(${i})" style="width:19px;height:19px;flex:none;accent-color:var(--blue)">
+          <span style="flex:1;min-width:0">
+            <span style="font-size:15px;font-weight:700">${esc(x.name||x.label)}</span>
+            ${x.variant?`<span style="font-size:13px;color:#245a9e;font-weight:700"> · ${esc(x.variant)}</span>`:''}
+            ${st?`<div style="font-size:11px;color:#b0641c;margin-top:1px">⚠️ ${esc(x.status_text||x.status)}</div>`:''}
+          </span>
+          <span style="text-align:right;flex:none">
+            <span style="font-size:16px;font-weight:800">${x.price!=null?esc((x.currency?x.currency+' ':'')+x.price):'<span style="color:#b0641c;font-size:12px">no price</span>'}</span>
+            ${x.unit?`<div style="font-size:11px;color:var(--grey)">per ${esc(x.unit)}</div>`:''}
+          </span></label>`;}).join('')}
+      <button class="btn" style="width:100%;margin:2px 0 4px;font-size:13px" onclick="amdView('itemall')">
+        none of these — show all ${items.length} items</button>` : '';
+
+    if(cands.length) return _amdSheet('Which one did they mean?', shortlist);
     return _amdSheet('Which item?', items.length
       ? items.map((x,i)=>`<button class="btn" style="width:100%;margin-bottom:6px;text-align:left;font-size:15px" onclick="amdPickItem(${i})">${esc(x.label)}${x.unit?` <span style="color:var(--grey);font-size:12px">· ${esc(x.unit)}</span>`:''}</button>`).join('')
       : '<div style="font-size:12.5px;color:var(--grey);padding:6px 0">No catalogue yet — the name stays as written.</div>');
+  }
+  /* The full list, reached only by rejecting the shortlist — so "none of these" stays one tap, not a hunt. */
+  if(AMD.view==='itemall'){
+    const items=(cat&&cat.items)||[];
+    return _amdSheet('All catalogue items', (items.length
+      ? items.map((x,i)=>`<button class="btn" style="width:100%;margin-bottom:6px;text-align:left;font-size:15px" onclick="amdPickItem(${i})">${esc(x.label)}${x.unit?` <span style="color:var(--grey);font-size:12px">· ${esc(x.unit)}</span>`:''}</button>`).join('')
+      : '<div style="font-size:12.5px;color:var(--grey);padding:6px 0">No catalogue yet — the name stays as written.</div>'), 'item');
   }
   if(AMD.view==='unit'){
     const units=[...new Set([].concat(l.unit?[l.unit]:[], ((cat&&cat.items)||[]).map(x=>x.unit).filter(Boolean), AMD_UNITS))].slice(0,10);
@@ -5165,7 +5267,7 @@ async function amendSave(forceNull, reason_code){
     const r=await api('amend',{params:{id},body:{edits:[{ line_index:idx, line:line,
       /* Default reason when he just fixed a number: the machine got it wrong. That count is what tells us whether
          the reading is improving, so it must not default to a shrug. */
-      reason_code: reason_code || 'misread_by_ai' }]}});
+      reason_code: reason_code || (AMD.resolved ? 'ambiguity_resolved' : 'misread_by_ai') }]}});
     closeModal();
     toast(removing?'Removed — it stays on the chit as a record':'Fixed — what they wrote is kept');
     if(r&&r.synonym_candidates&&r.synonym_candidates.length){
