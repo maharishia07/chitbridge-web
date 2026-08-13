@@ -178,6 +178,50 @@ function _catfSampleVal(name, i){ var n = (name || '').toLowerCase();
   if (/serial|batch|\blot\b|\bno\b|code|cert/.test(n)) return (name.replace(/[^a-z0-9]/gi, '').slice(0, 3).toUpperCase() || 'ID') + '-' + String(i + 1).padStart(3, '0');
   return name + ' ' + (i + 1);
 }
+/**
+ * The field-by-field map — "we call it `hsn`, what does an integrator call it?"
+ *
+ * ⚠️ THE GAPS AND CONFLICTS SECTIONS ARE THE POINT, not filler. A standards panel that lists only what we align
+ * with is marketing; one that also names what we do NOT carry, and where we knowingly differ, is a reference
+ * someone can act on. Both come straight from CBCatalogue — there is no second copy of this to drift.
+ */
+function catfFieldMapHTML(){
+  var FS = (CBCatalogue.FIELD_STANDARDS || {}), GAPS = (CBCatalogue.FIELD_GAPS || []), CON = (CBCatalogue.FIELD_CONFLICTS || []);
+  var keys = Object.keys(FS);
+  if (!keys.length) return '';
+  var hdr = function(t, sub){ return '<div style="font-size:11px;font-weight:800;color:#2c5aa0;letter-spacing:.05em;margin-top:18px;border-top:1px solid var(--line);padding-top:11px">' + esc(t)
+    + (sub ? '<span style="font-weight:500;color:var(--grey);letter-spacing:0;text-transform:none"> — ' + esc(sub) + '</span>' : '') + '</div>'; };
+  var cell = function(v){ return (!v || v === '—') ? '<span style="color:#c3c9cf">—</span>' : esc(v); };
+  var rows = keys.map(function(k){
+    var f = FS[k];
+    var warn = /^[⚠⭐✗]/.test(f.n || '') || /^✗/.test(f.m || '');
+    return '<tr style="border-bottom:1px solid var(--line)">'
+      + '<td style="padding:6px 8px 6px 0;font-weight:700;font-size:11.5px;white-space:nowrap;vertical-align:top">' + esc(k) + '</td>'
+      + '<td style="padding:6px 8px;font-size:11.5px;vertical-align:top">' + cell(f.s) + '</td>'
+      + '<td style="padding:6px 8px;font-size:11.5px;vertical-align:top">' + cell(f.m) + '</td>'
+      + '<td style="padding:6px 8px;font-size:11.5px;vertical-align:top;color:#2c5aa0">' + cell(f.o) + '</td>'
+      + '<td style="padding:6px 0 6px 8px;font-size:11px;color:' + (warn ? '#8a6d1e' : 'var(--grey)') + ';line-height:1.45;vertical-align:top">' + esc(f.n || '') + '</td>'
+      + '</tr>';
+  }).join('');
+  return hdr('FIELD BY FIELD', 'ours → theirs')
+    + '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;margin-top:6px;min-width:640px">'
+    + '<thead><tr style="border-bottom:2px solid var(--line)">'
+    + ['ours', 'schema.org', 'Medusa', 'other', 'note'].map(function(h){
+        return '<th style="text-align:left;padding:0 8px 5px 0;font-size:9.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey)">' + h + '</th>'; }).join('')
+    + '</tr></thead><tbody>' + rows + '</tbody></table></div>'
+    + hdr('NOT CARRIED', 'named so the absence is a decision, not an oversight')
+    + GAPS.map(function(g){ return '<div style="padding:7px 0;border-bottom:1px dashed var(--line)">'
+        + '<span style="font-size:11.5px;font-weight:700">' + esc(g.key) + '</span>'
+        + '<span style="font-size:10px;color:var(--grey)"> · ' + esc(g.from) + '</span>'
+        + '<div style="font-size:11.5px;color:var(--grey);line-height:1.5;margin-top:2px">' + esc(g.why) + '</div></div>'; }).join('')
+    + hdr('WHERE WE DIFFER', 'recorded, not silently changed — renaming a live field is a migration')
+    + CON.map(function(c){ return '<div style="padding:8px 0;border-bottom:1px dashed var(--line)">'
+        + '<div style="font-size:11.5px;font-weight:700">' + esc(c.ours) + '</div>'
+        + '<div style="font-size:11.5px;color:var(--grey);line-height:1.5;margin-top:2px">' + esc(c.issue) + '</div>'
+        + '<div style="font-size:11px;color:#2c5aa0;margin-top:3px">standard: ' + esc(c.standard) + '</div>'
+        + '<div style="font-size:11px;color:#8a6d1e;margin-top:2px">cost: ' + esc(c.cost) + '</div>'
+        + '<div style="font-size:11px;color:var(--grey);margin-top:2px">fix: ' + esc(c.fix) + '</div></div>'; }).join('');
+}
 function catfStandardsModal(){
   var S = (CBCatalogue.STANDARDS || []);
   var badge = function(st){ var c = st === 'in code' ? ['#2c7a43', '#e6f4ec'] : st === 'by reference' ? ['#2c5aa0', '#e8eef7'] : st === 'vocabulary' ? ['#6a4fa0', '#efeafa'] : ['#8a6d1e', '#f6efd8']; return '<span style="font-size:9.5px;font-weight:700;color:' + c[0] + ';background:' + c[1] + ';border-radius:5px;padding:2px 7px;white-space:nowrap">' + esc(st) + '</span>'; };
@@ -194,6 +238,7 @@ function catfStandardsModal(){
     + grp('HELD BY REFERENCE (link out, never mirror)', 'by reference')
     + grp('ON THE ROADMAP', 'roadmap')
     + '<div style="font-size:10.5px;color:var(--grey);font-style:italic;margin-top:14px">Multi-source fill + smooth modification = <b>PIM</b> built on <b>MDM golden records</b>, edited with <b>RFC 7386 JSON Merge Patch</b>, de-duplicated by <b>GS1 GTIN/SKU</b>. Cross-company sync (GDSN) is the same discipline, later.</div>'
+    + catfFieldMapHTML()
     + '</div>';
   if (typeof modal === 'function') modal('<div class="mhd"><div class="t">📐 Built on open standards</div></div><div class="mbody" style="padding:0">' + body + '</div>', true);
   else if (typeof toast === 'function') toast((CBCatalogue.STANDARDS || []).length + ' standards adopted');

@@ -3522,13 +3522,28 @@ function catFieldVal(k, v){
   }
   return esc(String(v));
 }
+/**
+ * The standard equivalent, printed under the field it belongs to.
+ *
+ * ⚠️ GUARDED, because catalogue-model.js is a LAZY capability and this overlay is not. Reading CBCatalogue
+ * unguarded here would throw on a page where the catalogue capability has not been loaded yet — and the overlay
+ * would simply not open, with no error a person could act on.
+ */
+function catStdLine(k){
+  const C = (typeof CBCatalogue !== 'undefined') ? CBCatalogue : null;
+  const s = (C && typeof C.stdFor === 'function') ? C.stdFor(k) : null;
+  if (!s || (!s.label && !s.note)) return '';
+  return '<div style="font-size:10.5px;color:#9aa3a7;margin-top:2px;line-height:1.4">'
+    + (s.label ? '<span style="color:#2c5aa0">' + esc(s.label) + '</span>' : '')
+    + (s.note ? (s.label ? ' · ' : '') + esc(s.note) : '') + '</div>';
+}
 function catFieldRow(k, v){
   const ro = CAT_READONLY.has(k);
   return '<div style="display:flex;gap:10px;padding:8px 0;border-bottom:1px dashed var(--line);font-size:13px;'
     + (ro ? 'opacity:.55' : '') + '">'
     + '<b style="min-width:118px;color:var(--grey);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.03em">'
     + esc(k.replace(/_/g, ' ')) + (ro ? ' <span title="from another system — read-only">🔒</span>' : '') + '</b>'
-    + '<span style="flex:1;min-width:0;font-weight:600">' + catFieldVal(k, v) + '</span></div>';
+    + '<span style="flex:1;min-width:0;font-weight:600">' + catFieldVal(k, v) + catStdLine(k) + '</span></div>';
 }
 /**
  * ── ⭐ WHAT THIS ITEM COULD CARRY AND DOES NOT ──────────────────────────────────────────────────────────────────
@@ -3560,7 +3575,8 @@ function catUnusedRow(k, label, why, required){
     + esc(String(label || k).replace(/_/g, ' ')) + '</b>'
     + '<span style="flex:1;min-width:0;color:' + (required ? '#b0641c' : 'var(--grey)') + ';font-style:italic;font-weight:' + (required ? '700' : '400') + '">'
     + (required ? 'required — not set' : 'not set')
-    + '<span style="font-style:normal;font-weight:400;color:var(--grey);font-size:11.5px"> · ' + esc(why) + '</span></span></div>';
+    + '<span style="font-style:normal;font-weight:400;color:var(--grey);font-size:11.5px"> · ' + esc(why) + '</span>'
+    + '<span style="font-style:normal;font-weight:400">' + catStdLine(k) + '</span></span></div>';
 }
 async function prodAllFields(id){
   const p = (UI.prods || []).find(function(x){ return prodId(x) === id; });

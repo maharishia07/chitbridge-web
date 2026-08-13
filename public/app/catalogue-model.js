@@ -247,9 +247,119 @@
     // with "use that one instead", and only the second carries a successor worth acting on. Both export as
     // Discontinued, so we are finer than the standard without ever emitting a value it does not define.
     { id: 'schema-org-availability', name: 'Schema.org / ItemAvailability', body: 'schema.org', role: 'Item lifecycle flag (available · not available · redundant · retired) carries its InStock/OutOfStock/Discontinued equivalent, so a feed or storefront never learns our vocabulary.', status: 'in code', where: 'itemstatus.SCHEMA_ORG · item_data.status_schema_org', spec: 'https://schema.org/ItemAvailability' },
+    // ── named in the one-pass audit of 2026-08-13 (schema.org + Medusa, field by field — see FIELD_STANDARDS) ──
+    { id: 'schema-org-offer', name: 'Schema.org / Offer', body: 'schema.org', role: 'Price, currency, availability, eligible quantity and price VALIDITY belong to the offer, not the product — the same good sells at different prices to different buyers. Our per-copy model already agrees; the field placement does not yet.', status: 'vocabulary', where: 'price · currency · min_qty · status', spec: 'https://schema.org/Offer' },
+    { id: 'wco-hs', name: 'WCO Harmonized System (HS/HSN)', body: 'World Customs Organization', role: 'Customs classification — what a good IS, for duty. schema.org has no equivalent at all; Medusa carries hs_code as first-class. It is the field that makes this a trade catalogue rather than a shop one.', status: 'by reference', where: 'hsn · hs_code · starter-fields', spec: 'https://www.wcoomd.org/en/topics/nomenclature/instrument-and-tools/hs-nomenclature-2022-edition.aspx' },
+    { id: 'unece-rec20', name: 'UN/CEFACT Recommendation 20 — units of measure', body: 'UNECE', role: 'The code list for units in international trade (KGM · LTR · TNE · MTQ · PCE). Neither schema.org nor Medusa models a unit of sale properly, which for a bulk-commodity rail is a real gap in both — and the reason we keep our own unit + conversions.', status: 'roadmap', where: 'unit · conversions (our own names today)', spec: 'https://unece.org/trade/uncefact/cl-recommendations' },
+    { id: 'iso3166', name: 'ISO 3166-1 alpha-2', body: 'ISO', role: 'Country of origin — drives duty and preference, and feeds the trade-lane layer.', status: 'by reference', where: 'origin_country', spec: 'https://www.iso.org/iso-3166-country-codes.html' },
+    { id: 'iso4217', name: 'ISO 4217 currency codes', body: 'ISO', role: 'Currency of a price, stamped from the ENTITY and never from the request.', status: 'in code', where: 'money.stampItem() · regional.currencyFor()', spec: 'https://www.iso.org/iso-4217-currency-codes.html' },
+    { id: 'medusa-model', name: 'Medusa product model', body: 'Medusa (MIT)', role: 'Read field-by-field to name ours well: Product/ProductVariant confirmed hs_code, origin_country, sku, barcode, material, weight. NOT adopted: variant-as-its-own-record (a trader writes a flat price list), ProductStatus (a publication workflow, not orderability), is_giftcard/discountable (B2C checkout concerns). No Medusa code is embedded.', status: 'vocabulary', where: 'FIELD_STANDARDS', spec: 'https://docs.medusajs.com/resources/references/product/models/Product' },
     { id: 'rfc6902', name: 'JSON Patch — IETF RFC 6902', body: 'IETF', role: 'Ordered, audited edit operations — for when a change history must be replayable.', status: 'roadmap', where: '—', spec: 'https://www.rfc-editor.org/rfc/rfc6902' },
     { id: 'gs1-gdsn', name: 'GS1 GDSN', body: 'GS1', role: 'Cross-company continuous catalogue sync (supplier → distributor).', status: 'roadmap', where: '—', spec: 'https://www.gs1.org/services/gdsn' },
   ];
+
+  /* ============================================================================================================
+   * FIELD-LEVEL STANDARD MAP — our key → what the rest of the world calls it.
+   *
+   * Athi, 2026-08-13: *"adopt all the standards in one pass so we can reference quickly … check medusa and org
+   * standards."*
+   *
+   * The STANDARDS list above names the standards we build ON. This names them FIELD BY FIELD, because that is the
+   * question anyone actually has: "we call it `hsn` — what does an integrator call it?" Without this the alignment
+   * is a claim in a comment; with it, it is a lookup.
+   *
+   *   s — schema.org (Product properties, or Offer.* where the standard puts it on the offer, not the product)
+   *   m — Medusa (MIT). Field names read from the Product / ProductVariant model references, 2026-08-13.
+   *   o — the other governing standard, where one owns the field outright (WCO HS, ISO, UN/CEFACT, GS1)
+   *   n — a note, and always the reason when we differ
+   *
+   * ⚠️ VOCABULARY ONLY — NO MEDUSA CODE IS EMBEDDED, exactly as the PIM entry above already states. Reading a
+   * model to name our own fields well is not vendoring it.
+   *
+   * ⚠️ TWO THINGS THIS MAP MADE VISIBLE, both recorded in FIELD_GAPS/CONFLICTS below rather than silently fixed:
+   * our `code` field is labelled "Code / HSN" and conflates a merchant SKU with a customs classification, and
+   * Medusa's `status` is the same WORD as ours for a different QUESTION.
+   * ========================================================================================================== */
+  var FIELD_STANDARDS = {
+    // ── identity ──────────────────────────────────────────────────────────────────────────────────────────────
+    name:        { s: 'name',            m: 'Product.title',            n: '' },
+    variant:     { s: '—',               m: 'ProductVariant.title',     n: 'Medusa makes a variant its OWN record keyed by option values; we keep it a field on the item. Ours is flatter and matches how a trader writes a price list.' },
+    grade:       { s: '—',               m: 'ProductOptionValue',       n: 'a variant axis — same idea, named for the trade' },
+    desc:        { s: 'description',     m: 'Product.description',      n: '' },
+    description: { s: 'description',     m: 'Product.description',      n: 'alias of desc — both appear in real imports' },
+    synonyms:    { s: 'alternateName',   m: '—',                        n: '⭐ carries far more weight here than anywhere else: multilingual trade names are the MATCHER INPUT, not decoration. Medusa has no equivalent.' },
+    local_name:  { s: 'alternateName',   m: '—',                        n: '' },
+    botanical:   { s: 'alternateName',   m: '—',                        n: 'the species name — an alternateName with a scheme' },
+    brand:       { s: 'brand',           m: 'ProductCollection',        n: '' },
+    category:    { s: 'category',        m: 'ProductCategory',          o: 'GS1 GPC · UNSPSC', n: 'classification held BY REFERENCE' },
+    // ── canonical codes ───────────────────────────────────────────────────────────────────────────────────────
+    sku:         { s: 'sku',             m: 'ProductVariant.sku',       n: 'merchant identifier — ours, not the world’s' },
+    gtin:        { s: 'gtin',            m: 'ProductVariant.barcode',   o: 'GS1 GTIN-8/12/13/14', n: 'the world’s identifier. Medusa splits ean/upc/barcode; GS1 subsumes all three under GTIN.' },
+    ean:         { s: 'gtin13',          m: 'ProductVariant.ean',       o: 'GS1', n: '' },
+    barcode:     { s: 'gtin',            m: 'ProductVariant.barcode',   o: 'GS1', n: '' },
+    mpn:         { s: 'mpn',             m: '—',                        n: 'manufacturer part number — spares and machinery' },
+    code:        { s: 'sku | —',         m: 'sku | hs_code',            n: '⚠️ AMBIGUOUS IN OUR OWN STARTER SET, labelled "Code / HSN". A merchant SKU and a WCO customs classification are different standards with different owners; both schema.org and Medusa keep them apart. See CONFLICTS.' },
+    // ── customs & trade — the fields that make this a TRADE catalogue rather than a shop one ───────────────────
+    hsn:         { s: '—',               m: 'hs_code',                  o: 'WCO Harmonized System', n: '⭐ schema.org has NO customs classification. Medusa carries hs_code on both product and variant — worth knowing that a serious commerce model treats this as first-class.' },
+    hs_code:     { s: '—',               m: 'hs_code',                  o: 'WCO Harmonized System', n: 'same field, the international spelling' },
+    origin_country: { s: '—',            m: 'origin_country',           o: 'ISO 3166-1 alpha-2',    n: 'country of origin — drives duty and preference' },
+    material:    { s: 'material',        m: 'material',                 n: '' },
+    weight:      { s: 'weight',          m: 'weight',                   o: 'UN/CEFACT Rec 20 (unit code)', n: '' },
+    // ── quantity & units ──────────────────────────────────────────────────────────────────────────────────────
+    unit:        { s: '—',               m: '—',                        o: 'UN/CEFACT Rec 20', n: '⭐ THE code list for units in international trade (KGM · LTR · TNE · MTQ · PCE). Neither schema.org nor Medusa models a unit of sale properly — for a bulk-commodity rail this is a real gap in BOTH, and the reason we keep our own unit + conversions.' },
+    unit_size:   { s: 'size',            m: '—',                        n: '' },
+    conversions: { s: '—',               m: '—',                        o: 'UN/CEFACT Rec 20', n: 'integer factors between units — CB-specific, because a sack is 50 kg only in this catalogue' },
+    min_qty:     { s: 'Offer.eligibleQuantity', m: '—',                 n: '' },
+    // ── price ─────────────────────────────────────────────────────────────────────────────────────────────────
+    price:       { s: 'Offer.price',     m: 'Price.amount',             n: '⚠️ schema.org puts price on the OFFER, not the product — the same thing sells at different prices to different people. Our per-copy model already agrees with that; the field placement does not yet.' },
+    currency:    { s: 'Offer.priceCurrency', m: 'Price.currency_code',  o: 'ISO 4217', n: 'stamped from the ENTITY, never from the request' },
+    mrp:         { s: 'Offer.priceSpecification', m: '—',               n: 'list price — a second price with a different role' },
+    // ── lifecycle & stock ─────────────────────────────────────────────────────────────────────────────────────
+    status:      { s: 'Offer.availability', m: '✗ NOT ProductStatus',   n: '⚠️ SAME WORD, DIFFERENT QUESTION. Medusa’s status (draft/proposed/published/rejected) is a PUBLICATION workflow — is this listing ready to show. Ours is schema.org ItemAvailability — can this be ordered at all. Mapping one to the other would be wrong in both directions.' },
+    status_until:{ s: '—',               m: '—',                        n: 'CB-specific: what makes "temporarily" mean anything' },
+    status_replaced_by: { s: 'isSimilarTo', m: '—',                     n: 'the successor that makes redundant ≠ retired' },
+    avail:       { s: 'Offer.inventoryLevel', m: 'InventoryLevel',      n: 'the QUANTITY feed — how many are on the shelf. Not the lifecycle.' },
+    // ── tax — jurisdictional, and deliberately not pretended to be universal ───────────────────────────────────
+    gst_rate:    { s: '—',               m: 'TaxRate (Tax Module)',     n: 'no cross-border standard exists — the HS code drives the rate, and the rate is the jurisdiction’s' },
+    gst:         { s: '—',               m: 'TaxRate (Tax Module)',     n: 'alias' },
+    sac:         { s: '—',               m: '—',                        o: 'India SAC', n: 'services counterpart of HSN' },
+    cess:        { s: '—',               m: '—',                        n: 'India-specific levy' },
+    // ── media ─────────────────────────────────────────────────────────────────────────────────────────────────
+    image:       { s: 'image',           m: 'Product.thumbnail/images', n: '' },
+  };
+
+  /* Standard fields we do NOT carry. Named so the absence is a DECISION with a trigger, not an oversight — the
+     list is as much a part of "we follow the standards" as the map above. */
+  var FIELD_GAPS = [
+    { key: 'priceValidUntil', from: 'schema.org Offer', why: '⭐ THE TIME ANGLE, and the standard answers it: price validity belongs on the OFFER, not the product. Our design model already has pricing[].validFrom/validTo — items do not. This is the gap to close first.' },
+    { key: 'itemCondition',   from: 'schema.org Offer', why: 'new · used · refurbished · damaged. Matters the moment anyone trades machinery, scrap or seconds.' },
+    { key: 'mid_code',        from: 'Medusa',           why: 'Manufacturer ID code — US customs. Needed only when a lane runs to the US; the trade-lane layer should ask for it, not the catalogue.' },
+    { key: 'length/height/width', from: 'both',         why: 'dimensions — freight cost and container fill. We carry weight and not volume, which is half a shipping answer.' },
+    { key: 'manage_inventory / allow_backorder', from: 'Medusa', why: 'whether stock is tracked at all, and whether you may oversell. We have an availability feed but nothing that says "this item is not stock-tracked", so an empty feed and an untracked item look identical.' },
+    { key: 'handle',          from: 'Medusa',           why: 'URL slug. Only meaningful once a storefront is public.' },
+    { key: 'variant_rank',    from: 'Medusa',           why: 'display order of variants. Cosmetic until a catalogue is large.' },
+    { key: 'is_giftcard · discountable', from: 'Medusa', why: 'NOT adopted — checkout concerns for a B2C shop, not properties of a traded good.' },
+  ];
+
+  /* Where our model and a standard genuinely disagree. Recorded, not silently "fixed" — renaming a live field is a
+     migration, and the decision is Athi's. */
+  var FIELD_CONFLICTS = [
+    { ours: 'code', issue: 'labelled "Code / HSN" in the starter set, so one column is asked to hold either a merchant SKU or a WCO customs code.', standard: 'schema.org (sku vs no HS at all) and Medusa (sku on the variant, hs_code on both) keep them apart.', cost: 'a catalogue exported for customs would carry SKUs in the HS column, and nothing would flag it.', fix: 'split into sku + hs_code in starter-fields; existing rows keep `code` until someone chooses.' },
+    { ours: 'price on the item', issue: 'a single price lives on the product record.', standard: 'schema.org models price on the Offer — the same good sells at different prices to different buyers.', cost: 'per-buyer and time-boxed pricing have nowhere to live, which is the same reason validFrom/validTo never reached items.', fix: 'an offers[] layer over the item, keyed by counterparty and validity window.' },
+    { ours: 'variant as a field', issue: 'name + variant on one flat row.', standard: 'Medusa makes the variant the purchasable record and the product a grouping.', cost: 'none today — flat matches how a trader writes a price list, and the matcher depends on it. Recorded so the difference is deliberate.', fix: 'none proposed.' },
+  ];
+
+  /* stdFor(key) — the one-line reference a UI can print beside a field. Returns null when nothing maps, so the
+     caller can stay silent rather than print "—". */
+  function stdFor(key) {
+    var f = FIELD_STANDARDS[key];
+    if (!f) return null;
+    var bits = [];
+    if (f.s && f.s !== '—') bits.push('schema.org ' + f.s);
+    if (f.m && f.m !== '—') bits.push('Medusa ' + f.m);
+    if (f.o) bits.push(f.o);
+    return bits.length ? { label: bits.join(' · '), note: f.n || '' } : (f.n ? { label: '', note: f.n } : null);
+  }
 
   // RFC 7386 — JSON Merge Patch. Pure, ~10 lines: null deletes a key, object recurses, scalar replaces.
   function mergePatch(target, patch) {
@@ -312,5 +422,6 @@
     deriveComputeJob: deriveComputeJob, canonicalInputs: canonicalInputs, validate: validate,
     toJSONSchema: toJSONSchema,
     STANDARDS: STANDARDS, mergePatch: mergePatch, itemKey: itemKey, upsertItem: upsertItem, SOURCE_PRIORITY: SOURCE_PRIORITY,
+    FIELD_STANDARDS: FIELD_STANDARDS, FIELD_GAPS: FIELD_GAPS, FIELD_CONFLICTS: FIELD_CONFLICTS, stdFor: stdFor,
   };
 });
