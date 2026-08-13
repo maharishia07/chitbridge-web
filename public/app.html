@@ -4018,7 +4018,15 @@ function advPanel(){ const a=UI.adv||{};
     <div class="advfoot"><button class="composebtn" onclick="clearAdv()">Clear</button><button class="composebtn pri" onclick="applyAdv()">Apply</button></div>
   </div>`; }
 function fetchPage(page){ const limit=UI.pageLimit||50; if(["drafts","trash","archive"].indexOf(UI.folder)>=0){ return api("folder",{query:Object.assign({view:UI.folder,page,limit,q:UI.search||undefined,sort:UI.sort||undefined,dir:UI.dir||undefined}, advParams())}); } if(UI.folder==="order"||SESSION.role==="customer"){ return SESSION.role==="customer" ? api("custOrders",{params:{bridgeId:SESSION.bridgeId},query:{page,limit,q:UI.search||undefined,sort:UI.sort||undefined,dir:UI.dir||undefined}}) : api("sent",{query:Object.assign({page,limit,q:UI.search||undefined,sort:UI.sort||undefined,dir:UI.dir||undefined}, advParams())}); } const q={page,limit}; if(UI.search)q.q=UI.search; if(UI.sort){q.sort=UI.sort;q.dir=UI.dir;} Object.assign(q, advParams());
-  var _dispF=!!(UI.adv&&UI.adv.dispute); if(!_dispF){ if(SESSION.role==="actor"){ if(UI.sub==="my")q.assigned_to="me"; } else { q.assignment=taskScope(); } }   // entity: unassigned pool (default) / assigned
+  /**
+   * ⚠️ "ALL TASK" IS THE UNASSIGNED POOL, NOT EVERYTHING. Athi, 2026-08-13:
+   *   *"after assignment, that task should not be appearing in all task. All task is nothing but all unassigned
+   *    task. But here it is showing all task irrespective of assignment. So anyone can reassign the same task."*
+   *
+   * This sent `assigned_to=me` for My Task and NOTHING for All Task — so All Task returned assigned work too,
+   * and two co-assists could pick up the same job. A pool that still shows what has been taken is not a pool.
+   */
+  var _dispF=!!(UI.adv&&UI.adv.dispute); if(!_dispF){ if(SESSION.role==="actor"){ if(UI.sub==="my")q.assigned_to="me"; else q.assignment="unassigned"; } else { q.assignment=taskScope(); } }   // entity: unassigned pool (default) / assigned
   return api("inbox",{query:q}); }
 function onRowsScroll(){ if(UI.loading)return; pgScroll("list"); }
 function ensureFilled(){ if(UI.loading)return; pgFill("list"); }
@@ -4594,7 +4602,10 @@ function afterChitAction(id, pos){
 function taskScope(){ return UI.taskScope||'unassigned'; }
 function setTaskScope(v){ UI.taskScope=v; UI.sel=null; UI.detail=null; UI.selectMode=false; UI.selected.clear(); renderApp(); }
 // Rollup scope MUST match the list scope (counts = exactly what's shown).
-function rollupQuery(){ const rq={group_by:'state', direction:UI.folder==='order'?'sent':'received'}; if(UI.folder==='task'){ if(SESSION.role==='actor'){ if(UI.sub==='my')rq.assigned_to='me'; } else rq.assignment=taskScope(); } return rq; }
+/* ⚠️ THE SAME GAP LIVED HERE, and it is the worse half: the comment above says "counts = exactly what's shown",
+   but All Task counted assigned work the list no longer shows. A tab reading "26/75" over a shorter list is how
+   someone concludes the list is broken. Both places now scope identically. */
+function rollupQuery(){ const rq={group_by:'state', direction:UI.folder==='order'?'sent':'received'}; if(UI.folder==='task'){ if(SESSION.role==='actor'){ if(UI.sub==='my')rq.assigned_to='me'; else rq.assignment='unassigned'; } else rq.assignment=taskScope(); } return rq; }
 // Refresh true per-state totals (rule: counts = server truth) WITHOUT reloading the list — keeps cursor + position.
 async function refreshRollup(){ if(["task","order"].indexOf(UI.folder)<0 || SESSION.role==="customer") return;
   try{ const rl=await api("rollup",{query:rollupQuery()}); UI.rollup=(rl&&rl.groups)||[]; UI.disputeOpen=(rl&&rl.dispute_open)||0;
