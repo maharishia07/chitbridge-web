@@ -661,7 +661,6 @@ function cwGo(n){ if (n <= UI.cw.step || n === UI.cw.step + 1) { UI.cw.step = n;
 function cwNext(){ var w = UI.cw; if (w.step === 1 && !w.vertical) { if (typeof toast === 'function') toast('Pick a vertical first.'); return; } if (w.step < 6) w.step++; renderApp(); }
 function cwBack(){ if (UI.cw.step > 1) UI.cw.step--; renderApp(); }
 function cwCancel(){ UI.cw = null; renderApp(); }
-function cwSetVertical(v){ UI.cw.vertical = v; renderApp(); }
 function cwSetBpQuery(v){ UI.cw.bpQuery = v; renderApp(); var el = document.getElementById('cw_bp_search'); if (el) { el.focus(); var n = el.value.length; try { el.setSelectionRange(n, n); } catch (e) {} } }
 function cwToggleBpAll(){ UI.cw.bpAll = !UI.cw.bpAll; renderApp(); }
 function cwPickSource(key){ var w = UI.cw; w.source = key; w.built = null; if (!key) { renderApp(); return; } if (typeof toast === 'function') toast('Loading blueprint…'); api('catalogueStruct', { body: { source: key } }).then(function(r){ w.built = r; w.chosen = {}; w.sel = null; w.itemUnits = w.itemUnits || {}; (r.finishes || []).forEach(function(it){ w.chosen[it.name] = true; var c = it.commercials || {};
@@ -678,8 +677,6 @@ function cwSelectProduct(name){ UI.cw.sel = (UI.cw.sel === name) ? null : name; 
 function cwSetMapSys(field, sys){ var w = UI.cw; w.erpMap = w.erpMap || {}; if (sys === '—') delete w.erpMap[field]; else { w.erpMap[field] = w.erpMap[field] || {}; w.erpMap[field].system = sys; } renderApp(); }
 function cwSetMapRef(field, ref){ var w = UI.cw; w.erpMap = w.erpMap || {}; if (w.erpMap[field]) w.erpMap[field].ref = ref; }
 function cwToggleItem(name){ UI.cw.chosen[name] = UI.cw.chosen[name] === false; renderApp(); }
-function cwToggleErp(f){ if (UI.cw.erp[f]) delete UI.cw.erp[f]; else UI.cw.erp[f] = true; renderApp(); }
-function cwSetErpRef(f, v){ UI.cw.erp[f] = v || true; }
 function cwSetManual(f, v){ UI.cw.manual[f] = v; }
 function cwBulkMode(m){ UI.cw.bulkMode = m; renderApp(); }
 function cwImportCSV(){

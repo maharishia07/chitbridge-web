@@ -130,7 +130,7 @@ async function loadProfile(){
   try{ var me=await api('me'); if(me && me.country){ var o=_mapOrigin(me.country); if(o!==UI.laneOrigin){ UI.laneOrigin=o; UI.laneRd=undefined; } } }catch(_){ if(!UI.laneOrigin) UI.laneOrigin='IN'; }
   if(typeof renderApp==='function') renderApp();
 }
-function _rdEvidenceValid(it){ return it && (it.status==='gathered'||it.status==='expiring'); }  // has evidence + not expired
+  // has evidence + not expired
 function _rdIdType(it){ return it ? (({gstn:'gstn'})[it.doc]||null) : null; }  // registry ID with a LIVE source-check (GSTIN — confirmed via Sandbox.co.in)
 var _RUNGRANK={verified:4,attested:3,documented:2,declared:1};
 // HELD = live & valid AND backed by REAL evidence (document / attested / verified). A bare 'declared' claim does NOT count.

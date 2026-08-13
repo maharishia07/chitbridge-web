@@ -716,7 +716,6 @@ let STORE = freshStore();
 function entBiz(){return (typeof SESSION!=="undefined"&&SESSION.entity)||"";}
 /* Co-assist login id = <login key>@<business name>. */
 function coId(k){return String(k||"").trim()+"@"+entBiz();}
-function defActorHandle(){return "coassist"+String(((STORE.actors||[]).length)+1).padStart(2,"0");}
 function acIdPrev(){const e=document.getElementById("ac_idprev"); if(e){ const k=(val("ac_key")||"").trim(); e.textContent = k ? coId(k) : ('…@'+entBiz()); } }
 
 /* ---------------- API CLIENT — extracted to /app/core.js (module 1) ----------------
@@ -1198,7 +1197,6 @@ function askPick(i){ const f=ONB_FAQ[i]; const inp=document.getElementById("ask_
 function askAssist(){ const q=(val("ask_in")||"").toLowerCase(); let a; if(/cost|price|pay|fee|charge/.test(q))a=ONB_FAQ[2].a; else if(/customer|data|own|take|sell/.test(q))a=ONB_FAQ[1].a; else if(/industry|vertical|fit|trade|sector/.test(q))a=ONB_FAQ[3].a; else if(q.trim())a="I don't have that detail here — but I can connect you with the team. Tell me a little about your business and I'll point you the right way."; else a="Ask me anything about what Chit & Bridge does for your business."; const o=document.getElementById("ask_ans"); if(o)o.innerHTML=esc(a); }
 function onbBpName(){ const a=ONB.role&&ONB_BP[ONB.role]; const b=a&&a.find(x=>x.k===ONB.bp); return b?b.n:""; }
 function onbBanner(){ if(!(ONB.role&&ONB.bp)) return ""; return '<div class="rchosen">Registering as <b>'+(ONB.role==="agent"?"an Agent":"a Business")+'</b> · vertical <b>'+onbBpName()+'</b> — <span style="color:var(--grey)">defaults to one Blueprint for now</span></div>'; }
-function welReset(){ ONB={role:null,bp:null}; WSTEP="intro"; }
 function setWStep(x){ WSTEP=x; renderWelcome(); }
 function pickRole(r){ ONB.role=r; ONB.bp=null; renderWelcome(); }
 function pickBP(k){ ONB.bp=k; renderWelcome(); }
@@ -1445,7 +1443,6 @@ function setSession(s){ SESSION={...SESSION,...s};
 // Restore a persisted session on boot so a browser refresh stays signed-in. Drops an expired token.
 function restoreSession(){ try{ if(SESSION.token) return; const raw=localStorage.getItem('cb_sess'); if(!raw) return; const s=JSON.parse(raw); if(!s||!s.token) return; const p=jwtPayload(s.token); if(p&&p.exp&&(p.exp*1000)<Date.now()){ localStorage.removeItem('cb_sess'); return; } setSession(s); }catch(_){ } }
 // The logged-in actor's real id, from the JWT.
-function myActorId(){ return SESSION.actorId || null; }
 function statusControl(role){
   if(role==="actor"){const d=SESSION.duty||"duty";
     return `<div class="dutytog" role="group" aria-label="Duty status">
@@ -4201,7 +4198,6 @@ function pgFooter(id){ const p=PG[id]; if(!p)return ''; const c=p.cfg.count();
   if(!p.done) return '<div class="listend"><button class="composebtn" onclick="pgNext(\''+id+'\')">↓ Load more</button>'+(p.total>0?('<span style="color:var(--grey)">'+c+' of '+p.total+' loaded</span>'):'')+'</div>';
   return '<div class="listend">— end of list'+(p.total>0?(' · '+p.total+' total'):'')+' —</div>'; }
 /* static footer for small, non-paginated lists (count + end marker, no Load more) */
-function staticFooter(n){ return n>0 ? '<div class="listend">'+n+' total · end of list</div>' : ''; }
 /* the Task/Order list bar */
 function pgPaintTotal(){ const lt=document.getElementById("listtotal"); if(!lt)return; lt.innerHTML='<span class="lttxt">'+esc(pgTotalText('list'))+'</span><span class="lttools">'+sortPresetSelect()+'<button class="colcog" onclick="event.stopPropagation();toggleLegend()" title="Legend / key">🔑 key</button>'+(UI.legendOpen?listLegend():'')+'<button class="colcog" onclick="event.stopPropagation();toggleColMenu()" title="Choose columns">⚙ columns</button>'+(UI.colMenu?colChooser():'')+'</span>'; }
 function toggleLegend(){ UI.legendOpen=!UI.legendOpen; UI.colMenu=false; pgPaintTotal(); }
@@ -4263,8 +4259,6 @@ function fetchPage(page){ const limit=UI.pageLimit||50; if(["drafts","trash","ar
   var _dispF=!!(UI.adv&&UI.adv.dispute); if(!_dispF){ if(SESSION.role==="actor"){ if(UI.sub==="my")q.assigned_to="me"; else q.assignment="unassigned"; } else { q.assignment=taskScope(); } }   // entity: unassigned pool (default) / assigned
   return api("inbox",{query:q}); }
 function onRowsScroll(){ if(UI.loading)return; pgScroll("list"); }
-function ensureFilled(){ if(UI.loading)return; pgFill("list"); }
-function loadNextPage(){ return pgNext("list"); }
 function paintRowsKeepScroll(){ const b=document.getElementById("rows"); if(!b)return; const st=b.scrollTop; b.innerHTML=renderRows(); b.scrollTop=st; document.querySelectorAll(".statetabs .n").forEach((el,i)=>{ el.textContent=stCount(["open","act","close"][i]); }); pgPaintTotal(); applyColTpl(); }
 async function loadList(silent){
   // silent = a background auto-refresh: NEVER show the loading spinner/skeleton, don't touch the detail pane — just
@@ -4720,7 +4714,7 @@ async function doAnswerPublish(id){ const x=document.getElementById("ap_err"); i
 function openChitMsgs(id){ UI.dtab="messages"; markChitRead(id); openChit(id); setTimeout(refreshMsgBadge,0); }
 function msgCount(c){ return ((c&&c.msgs)?c.msgs:[]).filter(m=>!m.isDispute&&(SESSION.role==="customer"?m.scope==="external":true)).length; }
 function setMsgFilter(f){ UI.msgFilter=f; UI.msgDispSel=''; paintDetail(); }
-function setMsgDisp(did){ UI.msgDispSel=did||''; UI.msgFilter='dispute'; paintDetail(); }   // per-dispute thread select
+   // per-dispute thread select
 function setMsgChan(ch){ UI.msgChan=ch; paintDetail(); }
 function toggleCompose(){ UI.composeOpen=!UI.composeOpen; paintDetail(); if(UI.composeOpen)setTimeout(()=>{const dp=document.getElementById('detailpane'); if(dp)dp.scrollTop=0; const t=document.getElementById('msgbody');if(t)t.focus();},30); }
 function toggleMsgTypeMenu(){ UI.msgTypeMenu=!UI.msgTypeMenu; paintDetail(); }
