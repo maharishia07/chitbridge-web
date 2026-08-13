@@ -5125,6 +5125,7 @@ function amdPickItem(i){
   if(x.unit) AMD.line.unit=x.unit;
   if(x.unit_size) AMD.line.unit_size=x.unit_size;
   if(x.price||x.price===0) AMD.line.price=x.price;
+  amdSetRef(x,'human');
   amdView('main');
 }
 /**
@@ -5143,7 +5144,24 @@ function amdPickCand(i){
   if(x.unit) AMD.line.unit=x.unit;
   if(x.unit_size) AMD.line.unit_size=x.unit_size;
   if(x.price||x.price===0) AMD.line.price=x.price;
+  amdSetRef(x,'human');
   amdView('main');
+}
+/**
+ * The catalogue reference a pick leaves behind.
+ *
+ * ⚠️ THE ONE PATH WHERE WE ARE CERTAIN MUST NOT BE THE ONE THAT LEAVES NO TRACE. A machine guess records how it
+ * matched; a person choosing from a shortlist is the strongest evidence there is of which item was meant, and
+ * without this it would have been the only resolution with nothing to show for it.
+ *
+ * ⚠️ `how` IS NOT COPIED FROM THE ROW. The catalogue row does not know how it came to be on screen — the caller
+ * does. Trusting the row would let a fuzzy suggestion a person merely accepted be recorded as if they had picked
+ * it deliberately, which is precisely the distinction a dispute turns on.
+ */
+function amdSetRef(x, how){
+  if(!x || (!x.item_id && !x.sku)) { delete AMD.line.ref; return; }
+  AMD.line.ref = { ...(x.item_id?{item_id:x.item_id}:{}), ...(x.sku?{sku:x.sku}:{}), how: how||'human',
+    ...(x.as_of?{as_of:x.as_of}:{}), ...(x.hash?{hash:x.hash}:{}) };
 }
 function amdPickUnit(u){ AMD.line.unit=u; amdView('main'); }
 
