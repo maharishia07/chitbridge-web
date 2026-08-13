@@ -604,6 +604,14 @@ const EP = {
   chit:            {m:"GET",  p:"/api/chits/:id",                ok:"✓"},
   amend:           {m:"POST", p:"/api/chits/:id/amend",          ok:"✓"},  // b137 — records a correction ALONGSIDE the reading; never edits line_items
   catOverlay:      {m:"GET",  p:"/api/chits/:id/catalogue-overlay", ok:"✓"},  // ?q= — pull the full catalogue row so one fix carries unit+size+price too
+  // b147 — a chit AS A SERVICE REQUEST. The clock, and the pause both parties can dispute.
+  svcGet:          {m:"GET",  p:"/api/service/:id",                     ok:"✓"},
+  svcSet:          {m:"PUT",  p:"/api/service/:id",                     ok:"✓"},
+  svcRespond:      {m:"POST", p:"/api/service/:id/respond",             ok:"✓"},
+  svcResolve:      {m:"POST", p:"/api/service/:id/resolve",             ok:"✓"},
+  svcPause:        {m:"POST", p:"/api/service/:id/pause",               ok:"✓"},
+  svcPauseEnd:     {m:"POST", p:"/api/service/:id/pause/:pid/end",      ok:"✓"},
+  svcPauseAnswer:  {m:"POST", p:"/api/service/:id/pause/:pid/answer",   ok:"✓"},  // ⭐ accept or REJECT the other side's pause — the disagreement, made into a fact
   advance:         {m:"PUT",  p:"/api/chits/:id/status",         ok:"✓"},  // state change is via PUT /status (no /advance route)
   status:          {m:"PUT",  p:"/api/chits/:id/status",         ok:"✓"},
   assign:          {m:"PUT",  p:"/api/actors/assign/:id",        ok:"✓"},  // body {action:'push', target_actor_id}
@@ -5114,6 +5122,14 @@ function amdOpen(e, idx, chit_id, rawText, opts){
  * render "which item?" against an empty list and read as "your catalogue has nothing" — the one message
  * guaranteed to stop someone. The view flips when the shortlist actually arrives.
  */
+/**
+ * ⭐ b147 — open the SERVICE CLOCK for a chit. The entry point lives HERE, not in cap-service.js: the function
+ * that loads a lazy capability cannot sit inside the file it loads, or nothing could ever call it.
+ */
+function openServiceClock(chit_id){
+  ensureCap('service').then(function(){ svcOpen(chit_id); })
+    .catch(function(){ toast('Could not load the service capability.'); });
+}
 function amendPick(idx){
   amendLine(idx);
   AMD.wantPick=true;
