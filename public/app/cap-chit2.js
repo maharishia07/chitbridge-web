@@ -108,16 +108,72 @@ function c2Mine(entry, assignMap){
 function c2PaneMsg(d){
   var h = d.header || {};
   var raw = (h.summary_json && h.summary_json.via) || {};
-  var att = (d.attachments || []);
-  /* ⚠️ WHAT THEY WROTE IS THE TOP OF THE SCREEN, VERBATIM. It is the only reason anyone can catch `pathu` read
-     as 5, and the one thing that settles an argument six weeks later. */
-  var text = raw.text || raw.raw_text || h.auto_subject || '';
-  return c2Head(esc(h.sender_entity_display_name || 'Them'), (raw.channel ? esc(String(raw.channel).toUpperCase()) + ' · ' : '') + esc(fmtAt ? fmtAt(h.created_at) : ''))
-    + '<div style="padding:16px">'
-    + (text ? '<div style="font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin-bottom:6px">what they wrote</div><div style="font-size:15px;line-height:1.9">' + esc(text) + '</div>' : '<div style="color:var(--grey);font-size:13px">No original message on this chit — it was composed here.</div>')
-    + (raw.from ? '<div style="font-size:11.5px;color:var(--grey);margin-top:12px;padding-top:10px;border-top:1px solid var(--line)">from ' + esc(raw.from) + (raw.from_name ? ' · ' + esc(raw.from_name) : '') + '</div>' : '')
-    + '</div>'
-    + (att.length ? c2Grp('Attached', String(att.length)) + '<div style="padding:0 16px 14px;font-size:12.5px;color:var(--grey)">' + att.map(function(a){ return esc(a.file_name || a.n || 'file'); }).join(' · ') + '</div>' : '');
+
+  /**
+   * ⚠️ THE FIELD IS `raw_excerpt`, NOT `text`. Athi, 2026-08-13: *"Message tab does not have the message, original
+   * text and the attachment, which is appearing in format-1."* Right — this read `raw.text || raw.raw_text`,
+   * neither of which exists, so it silently fell through to the auto-subject and looked like a chit that simply
+   * had no message. A key that does not exist fails as a plausible screen, not as an error.
+   *
+   * ⚠️ AND IT IS DELIBERATELY CAPPED AT 400 CHARS. summary_json is copied onto every party's copy, so the FULL
+   * text lives as an attachment instead — which is why the attachment is not decoration here. The excerpt is the
+   * glance; the file is the evidence.
+   */
+  var text = raw.raw_excerpt || '';
+  var atts = (d.attachments || []).map(function(a){ return (typeof mapAtt === 'function') ? mapAtt(a) : a; });
+  /* Register the group so the existing lightbox can open these — same viewer Design 1 uses, not a second one. */
+  if (typeof UI !== 'undefined') { UI.attGroups = UI.attGroups || {}; UI.attGroups.chit2 = atts; }
+  var origin = atts.filter(function(a){ return /original-message/i.test(a.n || ''); });
+
+  var out = c2Head(esc(h.sender_entity_display_name || 'Them'),
+    (raw.channel ? esc(String(raw.channel).toUpperCase()) + ' · ' : '') + esc(typeof fmtAt === 'function' ? fmtAt(h.created_at) : ''));
+
+  /* ⚠️ NOT A VERIFIED PARTY, said on the screen where their words are read. A phone number that messaged a
+     business is not a counterparty, and nothing else here would distinguish the two six weeks later. */
+  if (raw.sender_verified === false) {
+    out += '<div style="padding:9px 16px;background:#fdf4e8;color:#b0641c;font-size:12px;border-bottom:1px solid var(--line)">'
+      + '⚠️ Not a verified party — a phone number wrote in, and the lines were read from those words by a co-assist.</div>';
+  }
+
+  out += '<div style="padding:16px">';
+  if (text) {
+    out += '<div style="font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin-bottom:6px">what they wrote</div>'
+      + '<div style="font-size:15px;line-height:1.9">' + esc(text) + (text.length >= 400 ? '<span style="color:var(--grey)"> … </span>' : '') + '</div>';
+    if (origin.length) {
+      out += '<div style="margin-top:8px"><span onclick="openLightbox(\'chit2\',' + atts.indexOf(origin[0]) + ')" style="cursor:pointer;color:var(--blue);font-size:12.5px">📄 open the full original</span></div>';
+    }
+  } else {
+    out += '<div style="color:var(--grey);font-size:13px">No original message on this chit — it was composed here rather than received.</div>';
+  }
+  out += (raw.from ? '<div style="font-size:11.5px;color:var(--grey);margin-top:12px;padding-top:10px;border-top:1px solid var(--line)">from ' + esc(raw.from) + (raw.from_name ? ' · ' + esc(raw.from_name) : '') + '</div>' : '')
+    + '</div>';
+
+  /**
+   * ⭐ WHAT THEY SAID THAT IS NOT A LINE ITEM. Athi, 2026-08-10: *"need to see each data the user provides, which
+   * data item in the js schema it can fit in, if not keep it as a note or a comment."*
+   * `unplaced` especially: a request that quietly lost its "deliver at 7pm" looks perfectly correct and is wrong,
+   * and nobody would ever know which. Shown, not dropped.
+   */
+  var extras = [['🕐', 'Wanted', raw.delivery_at], ['📍', 'Deliver to', raw.delivery_address],
+                ['📝', 'They also said', raw.notes], ['⚠️', 'Could not be placed', raw.unplaced]]
+    .filter(function(x){ return x[2]; });
+  if (extras.length) {
+    out += c2Grp('From the message', '')
+      + extras.map(function(x){
+          return '<div style="padding:8px 16px;border-bottom:1px solid var(--line);display:flex;gap:9px;font-size:13px">'
+            + '<span style="width:16px">' + x[0] + '</span>'
+            + '<span style="flex:1"><span style="color:var(--grey);font-size:11.5px;display:block">' + esc(x[1]) + '</span>' + esc(x[2]) + '</span></div>';
+        }).join('');
+  }
+
+  /* ⚠️ TILES, NOT A LIST OF NAMES. The original is a file someone has to be able to OPEN — Athi's complaint was
+     that a .txt asked to be downloaded instead of showing. attTileGrid + the shared lightbox handle it. */
+  if (atts.length) {
+    out += c2Grp('Attached', String(atts.length))
+      + '<div style="padding:0 16px 16px">' + (typeof attTileGrid === 'function' ? attTileGrid(atts, 'chit2')
+          : atts.map(function(a){ return esc(a.n || 'file'); }).join(' · ')) + '</div>';
+  }
+  return out;
 }
 
 /* ── THEM · the order ──────────────────────────────────────────────────────────────────────────────────────── */
