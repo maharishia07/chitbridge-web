@@ -209,7 +209,15 @@ function c2PaneOrd(d){
     return '<div style="padding:11px 16px;border-bottom:1px solid var(--line);' + (mine ? 'background:#f6f8fb' : 'opacity:.62') + '">'
       + '<div style="display:flex;justify-content:space-between;gap:10px">'
       + '<span style="font-weight:' + (mine ? '700' : '500') + ';font-size:14.5px">' + esc(l.particulars || 'Item') + (mine ? ' <span style="font-size:10px;color:var(--blue);font-weight:800">YOURS</span>' : '') + '</span>'
-      + '<span style="font-variant-numeric:tabular-nums;font-size:14px">' + (l.price != null ? c2Money((c2n(l.quantity) || 0) * c2n(l.price)) : '') + '</span></div>'
+      /* ⭐ THE CORRECTION AFFORDANCE. Athi, 2026-08-13: *"maybe a html line with edit icon would be useful"* — and
+         he was righter than that. This screen had NO way to open the correction card at all, so an unpriced or
+         misread line was a dead end by construction: the reader's refusal was visible and unanswerable. */
+      + '<span style="display:flex;gap:6px;align-items:center;flex:none">'
+      + c2PickBadge(l, i)
+      + '<span style="font-variant-numeric:tabular-nums;font-size:14px">' + (l.price != null ? c2Money((c2n(l.quantity) || 0) * c2n(l.price)) : '') + '</span>'
+      + '<span onclick="event.stopPropagation();c2AmendLine(' + i + ')" title="Fix this line"'
+      + ' style="cursor:pointer;font-size:15px;color:var(--grey);padding:0 2px">✎</span>'
+      + '</span></div>'
       + '<div style="margin-top:3px;font-size:13.5px;color:var(--ink-2,#6b665e);font-variant-numeric:tabular-nums">' + was + esc(c2q(l)) + (l.price != null ? ' × ' + c2Money(l.price) : '') + '</div>'
       + (l.comment ? '<div style="margin-top:5px;font-size:12.5px;color:#2c5d7c;background:#eef4f8;border-radius:5px;padding:4px 8px;display:inline-block">' + esc(l.comment) + '</div>' : '')
       + (l.qty_unverified ? '<div style="margin-top:5px;font-size:11px;color:#8a5a1e">⚠️ this number does not appear in their message — check it</div>' : '')
@@ -222,6 +230,50 @@ function c2PaneOrd(d){
       + '</div>';
   }).join('');
   return out;
+}
+
+/**
+ * ── ⭐ THE CORRECTION CARD, WIRED INTO DESIGN 2 ─────────────────────────────────────────────────────────────────
+ *
+ * Athi, 2026-08-13, testing a real Tamil order: *"it is not showing anything here?"* — and it never could. This
+ * screen renders its own rows and had no reference to the amend card anywhere, so ✎ did not exist, the ⚠️ pick
+ * badge did not exist, and a ₹0.00 line offered nothing to act on. The picker built for the ambiguity case was
+ * reachable only from Design 1, on a screen he was not using.
+ *
+ * ⚠️ IT CALLS THE SHARED CARD, IT DOES NOT REBUILD ONE. amdOpen() in app.html owns the setup — the raw_phrase
+ * fallback, the wantPick reset, the "query the catalogue by what they WROTE" rule. Each of those is a bug that
+ * was found once; a second copy here would mean finding all three again.
+ *
+ * ⚠️ AND IT PASSES ITS OWN REFRESH. Without `after`, a correction saved here would reload Design 1's state and the
+ * edit would look lost until a manual reload — the change would be committed and invisible, which is the worst of
+ * both outcomes.
+ */
+/* ⚠️ `live_set` — the name this screen already uses in three other places. My first version read `d.live`, which
+   is undefined, so every ✎ would have reported "that line is no longer on the chit": a plausible sentence, a
+   working-looking screen, and completely wrong. The row index and the array must come from one source. */
+function c2Entry(i){ return ((C2.data || {}).live_set || [])[i] || null; }
+
+function c2AmendLine(i, wantPick){
+  var e = c2Entry(i);
+  if (!e) { if (typeof toast === 'function') toast('That line is no longer on the chit'); return; }
+  /* app.html owns the card and is always present, but this capability is lazy-loaded — say so rather than throwing
+     a ReferenceError into the console where nobody sees it. */
+  if (typeof amdOpen !== 'function') { if (typeof toast === 'function') toast('The correction card is not loaded yet — try again'); return; }
+  amdOpen(e, i, C2.id, (C2.data && C2.data.rawText) || '', { after: function(){ return loadChit2(); } });
+  /* Same rule as Design 1: the badge opens ON the picker, but never saves on selection — the quantity on an
+     ambiguous line is often wrong too, and one save has to cover both. */
+  if (wantPick) AMD.wantPick = true;
+}
+function c2AmendPick(i){ c2AmendLine(i, true); }
+
+/** The ⚠️ badge, only where the reader actually refused to choose. Same data Design 1 reads. */
+function c2PickBadge(l, i){
+  var n = ((l && (l.ambiguous || l.variant_candidates)) || []).length;
+  if (!n) return '';
+  return '<span onclick="event.stopPropagation();c2AmendPick(' + i + ')"'
+    + ' title="The catalogue has more than one of these — pick which, and the price comes with it"'
+    + ' style="cursor:pointer;font-size:10px;font-weight:800;color:#8a6d1e;background:#faf3dd;border:1px solid #e6d9a8;'
+    + 'border-radius:5px;padding:2px 7px;white-space:nowrap">⚠️ pick item</span>';
 }
 
 /* ── price from catalogue — PREVIEW, then apply ─────────────────────────────────────────────────────────────────

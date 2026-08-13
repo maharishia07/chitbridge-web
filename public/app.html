@@ -5072,21 +5072,38 @@ const AMD_UNITS=['kg','crate','box','packet','bundle','l','piece','g'];
 
 function amendLine(idx){
   const c=UI.detail||{}; const it=(c.items||[])[idx]; if(!it) return;
-  const e=it[3]||{};
+  amdOpen(it[3]||{}, idx, UI.sel, c.rawText||'');
+}
+/**
+ * ⭐ amdOpen(entry, idx, chit_id, rawText, opts) — THE one way the correction card is opened, by either design.
+ *
+ * ⚠️ EXTRACTED THE MOMENT THERE WAS A SECOND CALLER, not after. Design 2 renders its own rows from the same
+ * live-set entries, and copying these nine lines into it would have produced a second card that drifts — the
+ * `raw_phrase` fallback, the reset of `wantPick`, and the "query by what they WROTE" rule are each a bug that was
+ * found once and would have had to be found again. This codebase has already paid that bill twice (six bridge-id
+ * generators, three OTP generators) and once more this week, when a test fixture rebuilt `keyOf` and dropped the
+ * variant.
+ *
+ * `opts.after` is how a caller says what to refresh once a correction saves. Without it, Design 2 would save
+ * correctly and then re-render Design 1's state — the edit would look lost until a manual reload.
+ */
+function amdOpen(e, idx, chit_id, rawText, opts){
+  opts=opts||{};
   /* ⚠️ wantPick RESETS HERE, not only where it is set. amendPick() sets it immediately after calling this, which
      works because the fetch has not resolved yet — but a plain ✎ on another line must not inherit a stale flag
      and jump someone into a picker they did not ask for. */
   AMD.idx=idx; AMD.picked=false; AMD.view='main'; AMD.cat=null; AMD.resolved=false; AMD.pickedKey=null; AMD.wantPick=false;
+  AMD.chit=chit_id||UI.sel; AMD.after=opts.after||null;
   /* Edit the LIVE version — correcting a correction starts from what is true now, not from the AI's first guess. */
   AMD.line=Object.assign({}, e.live||e.original||{});
   AMD.orig=e.original||{};
-  AMD.raw=(e.original&&(e.original.asked_as||e.original.raw_phrase))||c.rawText||'';
+  AMD.raw=(e.original&&(e.original.asked_as||e.original.raw_phrase))||rawText||'';
   amendPaint();
   /* ⚠️ QUERIED BY WHAT THEY WROTE when we have it, not by the name on the line. On an ambiguous line the line's
      name IS the sender's raw phrase, so the two agree — but once someone has half-corrected it, asking the
      catalogue about our own corrected text would return the item we already chose and hide the alternatives that
      caused the question. The shortlist has to be computed from the words that were actually ambiguous. */
-  api('catOverlay',{params:{id:UI.sel},query:{q:((AMD.orig&&AMD.orig.raw_phrase)||AMD.line.particulars||'')}})
+  api('catOverlay',{params:{id:AMD.chit},query:{q:((AMD.orig&&AMD.orig.raw_phrase)||AMD.line.particulars||'')}})
     .then(r=>{ AMD.cat=r||{has_catalogue:false}; if(AMD.idx!==idx) return;
       if(AMD.wantPick&&(AMD.cat.candidates||[]).length){ AMD.wantPick=false; AMD.view='item'; }
       amendPaint(); })
@@ -5272,7 +5289,10 @@ function amendPaint(){
 }
 
 async function amendSave(forceNull, reason_code){
-  const idx=AMD.idx, id=UI.sel;
+  /* ⚠️ THE CHIT COMES FROM THE CARD, NOT FROM UI.sel. Design 2 opens this card without ever setting UI.sel, so
+     reading the global would have filed the correction against whatever chit Design 1 last had open — or against
+     nothing. A correction landing on the wrong document is not a UI bug. */
+  const idx=AMD.idx, id=AMD.chit||UI.sel;
   const removing=(forceNull===null);
   let line=null;
   if(!removing){
@@ -5294,7 +5314,9 @@ async function amendSave(forceNull, reason_code){
          independent confirmations across entities, and units and grades never promote automatically at all. */
       toast('Noted: “'+s.term+'” may mean “'+s.means+'”');
     }
-    await openChit(id, true);
+    /* Whoever opened the card says what to refresh. Design 1 reloads its detail; Design 2 reloads its own. */
+    if(typeof AMD.after==='function') await AMD.after();
+    else await openChit(id, true);
   }catch(e){ toast(MSG.fail('fix the line', e)); }
 }
 
