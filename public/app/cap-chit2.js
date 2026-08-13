@@ -28,7 +28,7 @@ if (typeof EP !== 'undefined') {
   });
 }
 
-var C2 = { id: null, side: 'them', tab: 'msg', data: null, costs: null, busy: false, err: null, open: null };
+var C2 = { id: null, side: 'them', tab: 'msg', data: null, costs: null, busy: false, err: null };
 
 /* ── the shell ─────────────────────────────────────────────────────────────────────────────────────────────── */
 var C2_TABS = {
@@ -37,7 +37,7 @@ var C2_TABS = {
 };
 
 async function openChit2(id){
-  C2.id = id; C2.side = 'them'; C2.tab = 'msg'; C2.data = null; C2.costs = null; C2.err = null; C2.open = null;
+  C2.id = id; C2.side = 'them'; C2.tab = 'msg'; C2.data = null; C2.costs = null; C2.err = null;
   UI.nav = 'chit2';
   renderApp();
   await loadChit2();
@@ -45,7 +45,10 @@ async function openChit2(id){
 function c2Side(s){ C2.side = s; C2.tab = C2_TABS[s][0][0]; c2Paint(); }
 function c2Tab(t){ C2.tab = t; c2Paint(); if (t === 'cost' && !C2.costs) loadChit2Costs(); }
 function c2Back(){ UI.nav = UI.folder === 'order' ? 'order' : 'task'; C2.id = null; renderApp(); }
-function c2Toggle(k){ C2.open = (C2.open === k) ? null : k; c2Paint(); }
+/* ⚠️ c2Toggle AND C2.open ARE GONE. They existed to expand a form INSIDE a row, which is the thing that made
+   the page jump — every line below the tapped one moved down, then back up on close. Everything that edits now
+   opens as an overlay, so there is no in-place expansion left to toggle. Leaving a dead toggle behind would
+   invite the next person to reach for it. */
 
 async function loadChit2(){
   C2.busy = true; c2Paint();
@@ -359,14 +362,14 @@ function c2PaneWork(d){
     var p = prog[e.line_id] || {};
     var ord = c2n(l.quantity), got = p.delivered || 0;
     var left = (ord == null) ? null : Math.max(0, Math.round((ord - got) * 1000) / 1000);
-    var open = C2.open === ('w' + e.line_id);
     var done = (left === 0 && ord != null);
-    return '<div onclick="c2Toggle(\'w' + e.line_id + '\')" style="padding:11px 16px;border-bottom:1px solid var(--line);cursor:pointer">'
+    /* Opens an OVERLAY rather than expanding underneath — the row keeps its height, so nothing below it moves. */
+    return '<div onclick="c2AssignOpen(\'' + e.line_id + '\')" style="padding:11px 16px;border-bottom:1px solid var(--line);cursor:pointer">'
       + '<div style="display:flex;align-items:baseline;gap:8px">'
       + '<span style="flex:1;font-weight:500">' + esc(l.particulars || '') + '<span style="color:var(--grey);font-weight:400;font-size:12.5px"> · ' + esc(c2q(l)) + '</span></span>'
       + '<span style="width:62px;text-align:right;font-variant-numeric:tabular-nums;font-size:13.5px">' + got + '</span>'
       + '<span style="width:62px;text-align:right;font-variant-numeric:tabular-nums;font-size:13.5px;font-weight:' + (done ? '400' : '700') + ';color:' + (done ? '#2f6b4f' : 'var(--ink)') + '">' + (left === null ? '—' : (done ? '✓' : left)) + '</span>'
-      + '<span style="color:var(--grey);width:12px;text-align:right">' + (open ? '▾' : '▸') + '</span></div>'
+      + '<span style="color:var(--grey);width:12px;text-align:right;font-size:12px">✎</span></div>'
       /* Who has it and when it is due — the two things that turn "what is left" into "who do I chase". */
       + (a.assignee_name ? '<div style="margin-top:5px;font-size:12px;color:#5b5340;background:#f4f1e8;border-radius:5px;padding:3px 8px;display:inline-block">◍ ' + esc(a.assignee_name) + (a.task ? ' · ' + esc(a.task) : '') + (a.due_date ? ' · due ' + esc(String(a.due_date).slice(0, 10)) : '') + '</div>'
           : '<div style="margin-top:5px;font-size:12px;color:var(--grey)">unassigned' + (left ? ' · nobody is doing this' : '') + '</div>')
@@ -375,28 +378,46 @@ function c2PaneWork(d){
          is the screen where someone decides what still needs doing. */
       + (p.divergent ? '<div style="margin-top:4px;font-size:11px;color:#b0641c">⚠️ they say ' + p.theirs + ', you say ' + p.delivered + '</div>' : '')
       + '</div>'
-      + (open ? c2AssignForm(e.line_id, a) : '');
+      ;
   }).join('');
   return out;
 }
-function c2AssignForm(line_id, a){
+/**
+ * ⚠️ AN OVERLAY, NOT AN INLINE EXPANSION. Athi, 2026-08-13: *"whenever a modification is being done, if you are
+ * doing it as part of the page, the page is jumping up and down... always bring the entire content as an overlay
+ * box and perform the activity and show the result in the line item."*
+ *
+ * This used to grow a form UNDER the tapped row, which pushed every line below it down the screen — so the thing
+ * you were about to type into moved as you reached for it, and closing it moved everything back. A row that is
+ * always the same height cannot do that. The result still lands on the line, which is the half that matters.
+ */
+function c2AssignOpen(line_id){
+  var d = C2.data || {};
+  var e = (d.live_set || []).find(function(x){ return x.line_id === line_id; }) || {};
+  var l = e.live || e.original || {};
+  var a = (d.line_assignment || {})[line_id] || {};
   var roster = UI.actors || [];
+
   /* ⚠️ SAY SO WHEN THERE IS NOBODY TO ASSIGN TO. An empty dropdown is indistinguishable from a broken one, and
      the honest answer — "you have not added any co-assists" — is also the instruction. */
   if (!roster.length) {
-    return '<div style="padding:11px 16px 14px;background:#fbfaf8;border-bottom:1px solid var(--line);font-size:12.5px;color:var(--grey)">'
-      + 'No co-assists yet — add someone under <b>Co-assists</b> and they will appear here.</div>';
+    return modal('<h3 style="margin:0 0 8px">Assign · ' + esc(l.particulars || '') + '</h3>'
+      + '<div style="font-size:12.5px;color:var(--grey);margin-bottom:12px">No co-assists yet — add someone under <b>Co-assists</b> and they will appear here.</div>'
+      + '<button class="btn" style="width:100%" onclick="closeModal()">Close</button>');
   }
   var opts = roster.map(function(x){ return '<option value="' + esc(x.id) + '"' + (a.assignee_actor_id === x.id ? ' selected' : '') + '>' + esc(x.name) + '</option>'; }).join('');
-  return '<div style="padding:11px 16px 14px;background:#fbfaf8;border-bottom:1px solid var(--line)">'
-    + '<div style="display:flex;gap:9px;flex-wrap:wrap;align-items:flex-end">'
-    + '<div><label style="display:block;font-size:11px;color:var(--grey);margin-bottom:3px">ASSIGN TO</label>'
-    + '<select id="c2a_' + line_id + '" style="padding:7px 9px;border:1px solid var(--line);border-radius:6px;font-size:13px"><option value="">Unassigned</option>' + opts + '</select></div>'
-    + '<div><label style="display:block;font-size:11px;color:var(--grey);margin-bottom:3px">TASK</label>'
-    + '<input id="c2t_' + line_id + '" value="' + esc(a.task || '') + '" placeholder="packing" style="width:110px;padding:7px 9px;border:1px solid var(--line);border-radius:6px;font-size:13px"></div>'
-    + '<div><label style="display:block;font-size:11px;color:var(--grey);margin-bottom:3px">DUE</label>'
-    + '<input id="c2d_' + line_id + '" type="date" value="' + esc(a.due_date ? String(a.due_date).slice(0, 10) : '') + '" style="padding:7px 9px;border:1px solid var(--line);border-radius:6px;font-size:13px"></div>'
-    + '<button class="btn pri" onclick="event.stopPropagation();c2Assign(\'' + line_id + '\')">Assign</button></div></div>';
+  modal('<h3 style="margin:0 0 3px">Assign this line</h3>'
+    + '<div style="font-size:13px;color:var(--grey);margin-bottom:14px">' + esc(l.particulars || '') + ' · ' + esc(c2q(l)) + '</div>'
+    + '<label style="display:block;font-size:11px;color:var(--grey);margin-bottom:3px">ASSIGN TO</label>'
+    + '<select id="c2a_' + line_id + '" style="width:100%;box-sizing:border-box;padding:9px;border:1px solid var(--line);border-radius:7px;font-size:14px;margin-bottom:10px"><option value="">Unassigned</option>' + opts + '</select>'
+    + '<div style="display:flex;gap:9px;margin-bottom:14px">'
+    + '<div style="flex:1"><label style="display:block;font-size:11px;color:var(--grey);margin-bottom:3px">TASK</label>'
+    + '<input id="c2t_' + line_id + '" value="' + esc(a.task || '') + '" placeholder="packing" style="width:100%;box-sizing:border-box;padding:9px;border:1px solid var(--line);border-radius:7px;font-size:14px"></div>'
+    + '<div style="flex:1"><label style="display:block;font-size:11px;color:var(--grey);margin-bottom:3px">DUE</label>'
+    + '<input id="c2d_' + line_id + '" type="date" value="' + esc(a.due_date ? String(a.due_date).slice(0, 10) : '') + '" style="width:100%;box-sizing:border-box;padding:9px;border:1px solid var(--line);border-radius:7px;font-size:14px"></div></div>'
+    + ((a.history || []).length ? '<div style="font-size:11.5px;color:var(--grey);margin-bottom:12px">previously ' + esc(a.history.map(function(h){ return h.assignee_name || 'unassigned'; }).join(' → ')) + '</div>' : '')
+    + '<div style="display:flex;gap:8px"><button class="btn" style="flex:1" onclick="closeModal()">Cancel</button>'
+    + '<button class="btn pri" style="flex:1" onclick="c2Assign(\'' + line_id + '\')">Assign</button></div>');
 }
 async function c2Assign(line_id){
   var sel = document.getElementById('c2a_' + line_id);
@@ -410,7 +431,6 @@ async function c2Assign(line_id){
     await api('c2AssignLines', { params: { id: C2.id }, body: { edits: [
       { line_id: line_id, assignee_actor_id: actor || null, assignee_name: name, assignee_type: 'human',
         task: task, due_date: due } ] } });
-    C2.open = null;
     await loadChit2();
     toast(actor ? ('Assigned to ' + name) : 'Unassigned');
   } catch (e) { toast(MSG.fail('assign the line', e)); }
@@ -501,9 +521,20 @@ function chit2Screen(){
 
   var pane = { msg: c2PaneMsg, ord: c2PaneOrd, del: c2PaneDel, work: c2PaneWork, notes: c2PaneNotes, cost: c2PaneCost }[C2.tab];
 
-  /* ⚠️ THE WRAPPER IS NOT OPTIONAL. Any screen returned into #mainbody must carry flex:1;min-height:0;overflow-y:auto
-     or .main{overflow:hidden} clips everything below the first viewport and the page silently cannot scroll. */
-  return '<div style="flex:1;min-height:0;overflow-y:auto;background:#fff">'
+  /**
+   * ⚠️ THE MENU IS FROZEN; ONLY THE LINES SCROLL. Athi, 2026-08-13: *"you need to always freeze the menu part and
+   * only the line item has to roll, otherwise it is difficult to work with."*
+   *
+   * The first version put everything in ONE scrolling box, so the side switch and the tabs rolled away the moment
+   * a chit had more than a screenful of lines — and on a phone, changing tab then meant scrolling back to the top
+   * first. Now the outer box is a flex COLUMN that does not scroll, the header is a fixed-height child, and only
+   * the pane carries `overflow-y:auto`.
+   *
+   * ⚠️ The outer element must still be `flex:1;min-height:0` — #mainbody is a flex column and `.main` is
+   * `overflow:hidden`, so without min-height:0 the pane grows past the viewport and nothing scrolls at all.
+   */
+  return '<div style="flex:1;min-height:0;display:flex;flex-direction:column;background:#fff">'
+    + '<div style="flex:none">'                                                   // ← the frozen part
     + '<div style="padding:10px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px">'
     + '<span onclick="c2Back()" style="cursor:pointer;color:var(--blue);font-size:13px">‹ Back</span>'
     + '<span style="font-weight:600;font-size:15px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(h.manual_subject || h.auto_subject || 'Chit') + '</span>'
@@ -513,6 +544,7 @@ function chit2Screen(){
     + (C2.side === 'them' ? 'Both parties hold everything on this side' : 'Assignment, notes and cost — they never see this') + '</div>'
     + (sum ? '<div style="padding:6px 16px 0;font-size:12px;color:var(--grey);text-align:center">' + sum.complete + ' of ' + sum.lines + ' lines delivered</div>' : '')
     + '<div style="display:flex;border-bottom:1px solid var(--line);margin-top:10px">' + tabs + '</div>'
-    + pane(d)
+    + '</div>'
+    + '<div style="flex:1;min-height:0;overflow-y:auto">' + pane(d) + '</div>'   // ← the only thing that rolls
     + '</div>';
 }
