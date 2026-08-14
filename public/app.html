@@ -5107,7 +5107,19 @@ function amdOpen(e, idx, chit_id, rawText, opts){
      caused the question. The shortlist has to be computed from the words that were actually ambiguous. */
   api('catOverlay',{params:{id:AMD.chit},query:{q:((AMD.orig&&AMD.orig.raw_phrase)||AMD.line.particulars||'')}})
     .then(r=>{ AMD.cat=r||{has_catalogue:false}; if(AMD.idx!==idx) return;
-      if(AMD.wantPick&&(AMD.cat.candidates||[]).length){ AMD.wantPick=false; AMD.view='item'; }
+      /**
+       * ⭐ AN UNRESOLVED LINE OPENS ON THE PICKER, however it was opened.
+       *
+       * Athi, 2026-08-14, first real run: *"I don't like this design at all — it has to show the two listed items
+       * from the catalogue to pick one."* He is right, and this was my error. The card leads with the quantity
+       * stepper and hides the item behind "tap the name to change it" — which is correct for a line whose only
+       * problem is a wrong number, and backwards for a line whose PRIMARY problem is that nobody knows which item
+       * it is. On an ambiguous line the shortlist IS the question; the stepper is the follow-up.
+       *
+       * ⚠️ ONLY WHILE UNRESOLVED. Once a pick is made the card returns to the stepper, so re-opening ✎ to fix a
+       * quantity does not drag someone back through a choice they already made.
+       */
+      if((AMD.cat.candidates||[]).length && !AMD.picked){ AMD.wantPick=false; AMD.view='item'; }
       amendPaint(); })
     .catch(()=>{ AMD.cat={has_catalogue:false}; if(AMD.idx===idx) amendPaint(); });
 }
