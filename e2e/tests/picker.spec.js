@@ -45,6 +45,11 @@ test.describe('PICKER — two catalogue items answer to one name', () => {
     const pageErrors = [];
     page.on('pageerror', (e) => pageErrors.push(String(e && e.message || e)));
     page.on('console', (m) => { if (m.type() === 'error') pageErrors.push('console: ' + m.text()); });
+    const amendCalls = [];
+    page.on('response', async (r) => { if (/\/amend/.test(r.url())) {
+      let b = null; try { b = await r.json(); } catch (e) {}
+      amendCalls.push({ status: r.status(), body: JSON.stringify(b).slice(0, 300) });
+    }});
     page.on("response", async (r) => { if (/catalogue-overlay/.test(r.url())) {
       let b = null; try { b = await r.json(); } catch (e) {}
       overlayCalls.push({ url: r.url(), status: r.status(),
@@ -122,8 +127,51 @@ test.describe('PICKER — two catalogue items answer to one name', () => {
     });
 
     // ── the line now carries the catalogue's name and price ────────────────────────────────────────────────────
-    await expect(page.locator('body'), 'the chosen item name must replace the ambiguous word').toContainText('Tomato Hybrid');
-    await expect(page.locator('body'), "the chosen item's price must land on the line").toContainText('36');
+    /* ⚠️ DIAGNOSTICS BEFORE ASSERTIONS. They were after, so the first failing assertion aborted the test before
+       anything printed — three runs produced a red with no evidence in it. A log that only appears when the test
+       passes is not a diagnostic. */
+    const sel = await page.evaluate(() => (typeof UI !== 'undefined') ? UI.sel : null);
+    const after = await page.evaluate(() => ({
+      nav: (typeof UI !== 'undefined') ? UI.nav : null,
+      sel: (typeof UI !== 'undefined') ? UI.sel : null,
+      modalOpen: !!document.querySelector('[data-testid="amd-save"]'),
+      bodyHas: /Tomato Hybrid/.test(document.body.innerText || ''),
+      snippet: (document.body.innerText || '').replace(/\s+/g, ' ').slice(0, 240),
+    }));
+    console.log('\n  AMEND CALLS : ' + JSON.stringify(amendCalls));
+    console.log('  AFTER SAVE  : ' + JSON.stringify(after));
+    console.log('  PAGE ERRORS : ' + JSON.stringify(pageErrors) + '\n');
+
+    /**
+     * ⚠️ SAVING RETURNS YOU TO THE LIST, NOT THE CHIT. `UI.nav` comes back as 'task' with the detail closed, so the
+     * corrected line is not on screen at all — which is why this assertion failed three times while the amendment
+     * itself was landing perfectly (200, price 36, total 108, ref stamped).
+     *
+     * Recorded as a product observation, not fixed here: after correcting one line of a twelve-line order you are
+     * put back at the top of the list and have to find the chit again. Athi has not raised it, so it stays his
+     * call — but it is the kind of thing that makes a person stop correcting lines.
+     */
+    /**
+     * ⭐ ASSERT ON WHAT WAS STORED, NOT ON WHAT THE PAGE HAPPENS TO SHOW. Three runs failed here while the
+     * amendment was landing perfectly — because after saving the app returns to the list and the corrected line is
+     * simply not on screen. Chasing that with re-open clicks tests the navigation, not the correction.
+     */
+    const live = await page.evaluate(async (id) => {
+      const d = await api('chit', { params: { id } });
+      const e = (d.live_set || [])[0] || {};
+      const l = e.live || e.original || {};
+      return { particulars: l.particulars, price: l.price, quantity: l.quantity, ref: l.ref || null };
+    }, sel);
+    console.log('  STORED LINE : ' + JSON.stringify(live) + '\n');
+
+    expect(String(live.particulars), 'the chosen item name must replace the ambiguous word').toContain('Tomato Hybrid');
+    expect(Number(live.price), "the chosen item's price must land on the line").toBe(36);
+    expect(Number(live.quantity), 'the quantity the customer asked for must survive the correction').toBe(3);
+    /* ⭐ b146 through the UI: the line knows WHICH catalogue row it came from and WHAT that row said at the time. */
+    expect(live.ref, 'a human pick must leave a catalogue reference').toBeTruthy();
+    expect(live.ref.how, 'a person chose this — not a machine guess').toBe('human');
+    expect(live.ref.item_id, 'the reference must name the catalogue row').toBeTruthy();
+    expect(live.ref.hash, 'and what that row said at the moment it was chosen').toBeTruthy();
 
     console.log('\n  ⏱  timings (ms): ' + JSON.stringify(timings, null, 0) + '\n');
     /* Not an assertion — a report. Athi: "my click takes time and it is taking time to load each screen." A number

@@ -5096,6 +5096,18 @@ function amdOpen(e, idx, chit_id, rawText, opts){
      and jump someone into a picker they did not ask for. */
   AMD.idx=idx; AMD.picked=false; AMD.view='main'; AMD.cat=null; AMD.resolved=false; AMD.pickedKey=null; AMD.wantPick=false;
   AMD.chit=chit_id||UI.sel; AMD.after=opts.after||null;
+  /**
+   * ⭐ THE LINE'S ID, AND WITHOUT IT A CORRECTION IS RECORDED AND NEVER APPLIED.
+   *
+   * amend.record() writes the audit row from `line_index`, then calls writeLine() to update the LIVE row in
+   * chit_line — and writeLine's first statement is `if (!line_id) return false`. The client never sent one, so on
+   * every b142 chit the amendment was stored, returned 200 with the right payload, and changed nothing anybody
+   * could see. The detail route reads the live line from chit_line whenever those rows exist, so the screen kept
+   * showing the original: a save that reports success and does nothing.
+   *
+   * Found by asserting on what was STORED rather than on the rendered page — the 200 response looked perfect.
+   */
+  AMD.lineId=e.line_id||null;
   /* Edit the LIVE version — correcting a correction starts from what is true now, not from the AI's first guess. */
   AMD.line=Object.assign({}, e.live||e.original||{});
   AMD.orig=e.original||{};
@@ -5335,7 +5347,7 @@ async function amendSave(forceNull, reason_code){
     if(line.quantity!=null && !isFinite(Number(line.quantity))){ toast('Quantity must be a number'); return; }
   }
   try{
-    const r=await api('amend',{params:{id},body:{edits:[{ line_index:idx, line:line,
+    const r=await api('amend',{params:{id},body:{edits:[{ line_index:idx, line_id:AMD.lineId||undefined, line:line,
       /* Default reason when he just fixed a number: the machine got it wrong. That count is what tells us whether
          the reading is improving, so it must not default to a shrug. */
       reason_code: reason_code || (AMD.resolved ? 'ambiguity_resolved' : 'misread_by_ai') }]}});
