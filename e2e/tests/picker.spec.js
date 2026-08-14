@@ -36,6 +36,21 @@ test.describe('PICKER — two catalogue items answer to one name', () => {
 
     await mintEntity(page);
 
+    /* DIAGNOSTIC: what the browser actually asks the catalogue, and what it gets back. Two failures this
+       morning were invisible because nobody could see this exchange. */
+    const overlayCalls = [];
+    /* ⚠️ A THROWN ERROR INSIDE amendLine WOULD BE COMPLETELY SILENT from the outside — the modal simply never
+       opens, which is indistinguishable from "the feature is not built". Catching pageerror is the difference
+       between debugging and guessing. */
+    const pageErrors = [];
+    page.on('pageerror', (e) => pageErrors.push(String(e && e.message || e)));
+    page.on('console', (m) => { if (m.type() === 'error') pageErrors.push('console: ' + m.text()); });
+    page.on("response", async (r) => { if (/catalogue-overlay/.test(r.url())) {
+      let b = null; try { b = await r.json(); } catch (e) {}
+      overlayCalls.push({ url: r.url(), status: r.status(),
+        ambiguous: b && b.ambiguous, candidates: b && (b.candidates||[]).length, items: b && (b.items||[]).length });
+    }});
+
     // ── setup · two products that share a synonym ───────────────────────────────────────────────────────────────
     // Through the app's own api() so the session and the entity context are the real ones, not a fabricated token.
     const made = await page.evaluate(async (items) => {
@@ -67,6 +82,17 @@ test.describe('PICKER — two catalogue items answer to one name', () => {
       await page.waitForResponse((r) => /catalogue-overlay/.test(r.url()), { timeout: 30000 }).catch(() => null);
     });
 
+    const state = await page.evaluate(() => ({
+      hasAmendLine: typeof amendLine,
+      hasAmdOpen: typeof amdOpen,
+      detailItems: (typeof UI !== 'undefined' && UI.detail && UI.detail.items || []).length,
+      sel: (typeof UI !== 'undefined') ? UI.sel : null,
+      amd: (typeof AMD !== 'undefined') ? { idx: AMD.idx, view: AMD.view, chit: AMD.chit, cat: !!AMD.cat } : 'no AMD',
+      modalOpen: !!document.querySelector('.mbody, .mhd, [data-testid="amd-save"]'),
+    }));
+    console.log('\n  OVERLAY CALLS: ' + JSON.stringify(overlayCalls));
+    console.log('  PAGE ERRORS  : ' + JSON.stringify(pageErrors));
+    console.log('  STATE        : ' + JSON.stringify(state) + '\n');
     const picker = page.getByTestId('amd-picker');
     await expect(picker,
       'the card must open ON the picker for an unresolved line — landing on the quantity stepper is the bug Athi hit'

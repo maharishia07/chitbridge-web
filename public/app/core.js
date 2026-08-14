@@ -11,7 +11,21 @@ function fill(path, params){ return path.replace(/:(\w+)/g, (_, k) => encodeURIC
 function unwrap(j){
   if(j==null||typeof j!=="object"||Array.isArray(j)) return j;
   if("ok" in j && ("data" in j || "error" in j)){ if(j.ok===false) throw new Error(j.error||"Request failed"); return j.data; }
-  if("token" in j || "my_disputes" in j || "header" in j) return j; // auth (token) / structured / compound -> whole, untouched
+  /**
+   * ⚠️ `has_catalogue` JOINS THIS LIST BECAUSE THE LINE BELOW WAS EATING THE ANSWER (found 2026-08-14, driving the
+   * picker under Playwright after three failed attempts by hand).
+   *
+   * The catalogue-overlay response is a COMPOUND: {has_catalogue, items[], match, ambiguous, candidates[]}. The
+   * array-collapse below sees `items` and returns ONLY that array — so `candidates`, `ambiguous` and `match` were
+   * silently discarded before any caller saw them. The picker read `cat.candidates` on what was actually a bare
+   * array, got undefined, and fell through to the quantity stepper with no error anywhere.
+   *
+   * ⚠️ AND IT HAD BEEN BREAKING THE OLDER FEATURE ALL ALONG: the "which item?" sheet reads `cat.items`, which on
+   * an array is also undefined — so that list has been rendering "No catalogue yet" since the day it was written,
+   * on entities with a full catalogue. One convention, applied to a response it was never designed for, quietly
+   * disabled two features and produced not a single error message.
+   */
+  if("token" in j || "my_disputes" in j || "header" in j || "has_catalogue" in j) return j; // auth / structured / compound -> whole, untouched
   for(const k of ["chits","messages","connections","requests","suppliers","items","results","actors"]) if(Array.isArray(j[k])){ const a=j[k]; for(const mk of ["total","page","limit"]) if(mk in j){ try{ Object.defineProperty(a, mk, {value:j[mk], enumerable:false, configurable:true, writable:true}); }catch(_){ a[mk]=j[mk]; } } return a; }
   if(j.entity) return j.entity;
   if(j.settings) return j.settings;
