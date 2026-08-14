@@ -225,4 +225,83 @@ test.describe('WORKLIST — one person, every chit', () => {
     await settle(page);
     await expect(page.getByTestId('wl-row'), 'collapse all closes every level, not just the top').toHaveCount(0);
   });
+
+  test('WL-04 · ⭐ dropping a dimension SUMS over it — the same product totals', async ({ page }) => {
+    /* Athi, 2026-08-14, looking at the screen: *"should be the pivot view — when i remove the date, all the same
+       item should group together … if i remove the date, what my demand for that particular product?"*
+
+       ⚠️ THE DEFECT THIS PINS DOWN: removing a key only removed a HEADING. The rows stayed loose, so Rice Ponni
+       Boiled sat there twice — 120 kg and 50 kg — and the reader added them up by eye. In a pivot, a dimension
+       you drop is a dimension you sum over. */
+    await mintEntity(page);
+    const s = await page.evaluate(async () => {
+      await ensureCap('chit2');
+      const s = String(Date.now()).slice(-6);
+      const r = await api('addActor', { body: { display_name: 'Pandi', actor_key: 'pan' + s } });
+      const a = (r && (r.actor || r)) || {}; const who = a.actor_id || a.identity_id;
+      const me = await api('me').catch(() => null);
+      const myId = (me && (me.identity_id || (me.entity || {}).identity_id)) || null;
+      /* ⭐ THE SAME PRODUCT, TWO ORDERS, TWO DIFFERENT DAYS. That is the only shape where "sum over the dropped
+         dimension" and "just hide the heading" give different answers. */
+      const mk = async (subject, lines, dueDate) => {
+        const sent = await api('createChit', { body: { purpose: 'order', manual_subject: subject,
+          line_items: lines, recipients: myId ? [{ entity_id: myId, role: 'to' }] : [], send_to_self: true } });
+        const ls = (await api('chit', { params: { id: sent.chit_id } })).live_set || [];
+        await api('c2AssignLines', { params: { id: sent.chit_id }, body: { edits: ls.map((e) => (
+          { line_id: e.line_id, assignee_actor_id: who, assignee_name: 'Pandi', due_date: dueDate })) } });
+      };
+      /* ⚠️ A SECOND PRODUCT IS NOT PADDING — IT IS WHAT MAKES THE TEST ABLE TO FAIL. With one product the
+         person's total and the product's total are the same number, so asserting "170 kg" proves nothing about
+         which heading produced it. With Dal in the mix the person totals 200 kg and rice totals 170, and only a
+         real per-product roll-up can put 170 on the screen. */
+      await mk('Pivot A ' + s, [{ particulars: 'Pivot Rice', quantity: 120, unit: 'kg', price: 60 },
+                                { particulars: 'Pivot Dal', quantity: 30, unit: 'kg', price: 140 }], '2026-11-10');
+      await mk('Pivot B ' + s, [{ particulars: 'Pivot Rice', quantity: 50, unit: 'kg', price: 60 }], '2026-11-11');
+      return s;
+    });
+
+    await page.evaluate(() => { UI.nav = 'worklist'; renderApp(); });
+    await page.waitForResponse((r) => /folders\/worklist/.test(r.url()), { timeout: 30000 }).catch(() => null);
+    await settle(page);
+
+    /* Group by person, no date split — the exact state in his screenshot. */
+    await page.getByTestId('wl-view-who').click();
+    await settle(page);
+    const dateBox = page.getByTestId('wl-then-date');
+    if (await dateBox.isChecked()) { await dateBox.uncheck(); await settle(page); }
+    await expect(page.getByTestId('wl-byitem'), 'the pivot is on by default').toBeChecked();
+
+    await page.getByTestId('wl-head').filter({ hasText: 'Pandi' }).click();
+    await settle(page);
+
+    /* ⭐ ONE heading per product, carrying THAT product's total — not loose rows to add up. */
+    const body = await page.locator('body').innerText();
+    console.log('\n  PIVOT (person, no date):\n' + body.split('\n').filter((l) => /Pivot|kg/.test(l)).join('\n') + '\n');
+    expect(body, '⭐ 120 + 50 = 170 kg — the demand for THAT product, summed for you').toMatch(/170 kg/);
+    expect(body, 'and the other product totals on its own — 30, not folded into the rice').toMatch(/30 kg/);
+    /* ⚠️ The person above still totals everything they hold: 170 + 30. If this read 170 the roll-up would be
+       leaking the last product's figure upward instead of summing the group. */
+    expect(body, 'the person heading totals all their work, 200 kg').toMatch(/200 kg/);
+
+    /* ⚠️ AND THE CONSTITUENTS SURVIVE. A total that hides where it came from is worse than no total — you cannot
+       ring "170 kg", you ring Pivot A. They sit one level below, which is what makes it a pivot and not a report. */
+    await page.getByTestId('wl-expand-all').click();
+    await settle(page);
+    const opened = await page.locator('body').innerText();
+    expect(opened, 'the orders behind the total are one click down').toContain('Pivot A ' + s);
+    expect(opened, 'both of them').toContain('Pivot B ' + s);
+
+    /* ── switching the pivot OFF returns the raw lines ───────────────────────────────────────────────────────── */
+    await page.getByTestId('wl-byitem').uncheck();
+    await settle(page);
+    await page.getByTestId('wl-expand-all').click();
+    await settle(page);
+    const raw = await page.locator('body').innerText();
+    console.log('  PIVOT OFF:\n' + raw.split('\n').filter((l) => /Pivot/.test(l)).join('\n') + '\n');
+    /* ⚠️ NOT `not.toMatch(/170 kg/)` — the PERSON heading legitimately totals 170 kg of rice + 30 of dal either
+       way, so that assertion failed against correct behaviour. What actually changes is the ROW: rolled up it
+       leads with the order it came from, unrolled it leads with the product and its own quantity. */
+    expect(raw, 'unrolled, each line leads with its own product and quantity').toMatch(/Pivot Rice · 120 kg/);
+    expect(raw, 'and the other one stands apart rather than merging').toMatch(/Pivot Rice · 50 kg/);
+  });
 });

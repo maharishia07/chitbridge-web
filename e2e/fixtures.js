@@ -10,6 +10,26 @@ function uniqueName(prefix) {
   return (prefix || 'E2E Co') + ' ' + Date.now().toString().slice(-6);
 }
 
+/**
+ * ⭐ WHICH API THE BROWSER TALKS TO — and why the suite needs to be able to say.
+ *
+ * Served from localhost, app.html resolves API_BASE to `http://localhost:3000`, and vite proxies /api there too.
+ * That is the right default for development, but it silently couples the whole suite to one local process: the
+ * moment it is down, EVERY spec fails at registration with "You're offline", which reads like a broken app rather
+ * than a missing server. app.html already honours `localStorage.cb_api_base` for exactly this; the suite just
+ * never used it.
+ *
+ *   CB_API_BASE=https://chitbridge-api-production.up.railway.app npx playwright test …
+ *
+ * ⚠️ Unset, nothing changes — the local API stays the default, so this cannot quietly start pointing a developer's
+ * run at production.
+ */
+async function useApiBase(page) {
+  const base = process.env.CB_API_BASE;
+  if (!base) return;
+  await page.addInitScript((b) => { try { localStorage.setItem('cb_api_base', b); } catch (e) {} }, base);
+}
+
 // Reusable: walk the onboarding→register→verify (mint) flow and land in the app. Returns { email, name }.
 // This is the shared "arrange" step other modules (chits, catalogue) build on — and the heart of the DoD.
 async function mintEntity(page, { role = 'business', email, name } = {}) {
@@ -17,6 +37,7 @@ async function mintEntity(page, { role = 'business', email, name } = {}) {
   // so the same email always lands in the SAME entity. Omit for a throwaway unique one.
   email = email || uniqueEmail();
   name = name || uniqueName();
+  await useApiBase(page);
   await page.goto('/app.html');
   // SAVED SESSION: in the `authed` project a restored token boots straight into the app shell (a nav item is present) →
   // skip onboarding entirely. In `noauth` and fresh multi-party contexts there's no session → full mint below.
@@ -217,4 +238,4 @@ async function poolContext(browser, i) {
   return { context, page, email: p.email, name: p.name, key: p.key };
 }
 
-module.exports = { DEV_OTP, uniqueEmail, uniqueName, mintEntity, composeSelfChit, composeChit, composeStepNext, clickNav, stableClick, clickInModal, HAS_RCPT, HAS_TOTAL, mintInContext, addRecipientByName, settle, dismissModal, POOL, poolContext };
+module.exports = { DEV_OTP, useApiBase, uniqueEmail, uniqueName, mintEntity, composeSelfChit, composeChit, composeStepNext, clickNav, stableClick, clickInModal, HAS_RCPT, HAS_TOTAL, mintInContext, addRecipientByName, settle, dismissModal, POOL, poolContext };

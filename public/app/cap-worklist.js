@@ -49,6 +49,7 @@ function wlDue(v){ WL.due = v || ''; wlLoad(); }
 function wlPrimary(k){ WL.primary = k; if (WL.then === k) WL.then = null; WL.open = {}; wlPaint(); }
 /* A checkbox, so the second key can be switched OFF entirely — "every line under its date, never mind who". */
 function wlThen(k){ WL.then = (WL.then === k) ? null : k; WL.open = {}; wlPaint(); }
+function wlByItem(){ WL.byItem = (WL.byItem === false); WL.open = {}; wlPaint(); }
 /**
  * ⭐ OPENING A GROUP OPENS WHAT IS INSIDE IT, ALL THE WAY DOWN.
  *
@@ -104,7 +105,21 @@ function wlId(path, key, val){ return (path || []).concat([key, String(val)]).jo
 function wlKeys(mine){
   var p = WL.primary || (mine ? 'date' : 'who');
   var t = (WL.then === undefined) ? (p === 'who' ? 'date' : 'who') : WL.then;
-  return (t && t !== p) ? [p, t] : [p];
+  var keys = (t && t !== p) ? [p, t] : [p];
+  /**
+   * ⭐ THIS IS A PIVOT, NOT A NESTED LIST — Athi, 2026-08-14: *"when i remove the date, all the same item should
+   * group together … if i remove the date, what my demand for that particular product?"*
+   *
+   * ⚠️ THE FIRST VERSION ONLY REMOVED A HEADING. Dropping a dimension left the raw rows behind, so Rice Ponni
+   * Boiled sat there twice — 120 kg and 50 kg — and you added them up yourself. That is the one arithmetic the
+   * screen exists to do. In a pivot, a dimension you DROP is a dimension you SUM OVER.
+   *
+   * ITEM IS ALWAYS THE INNERMOST DIMENSION because the quantity belongs to it: whatever you group by, the number
+   * under each heading is a quantity OF SOMETHING. Then "170 kg of rice" is true at every level, and the orders
+   * it came from are one click below it — the total and its constituents, never one without the other.
+   */
+  if (WL.byItem !== false && keys.indexOf('item') < 0) keys.push('item');
+  return keys;
 }
 
 /** Flatten byPerson's people[] back to rows — the grouping is this screen's job, not the API's. */
@@ -134,20 +149,32 @@ function wlDateLabel(d){
    reason: a heading that reads "Raman" over a row that says "Raman" is noise where the item should be. */
 function wlRow(r, ctx){
   var due = r.due_date ? wlDateLabel(r.due_date) : null;
+  var named = ctx.indexOf('item') >= 0;    // an item heading above already said WHAT this is
+  var ordered = ctx.indexOf('chit') >= 0;  // …and a chit heading already said which order
+  var order = esc(r.subject || 'chit') + (r.counterparty ? ' · ' + esc(r.counterparty) : '');
+  var qty = esc([r.quantity, r.unit].filter(function(x){ return x != null && x !== ''; }).join(' '));
+
+  /**
+   * ⚠️ A ROW MUST SAY SOMETHING ITS HEADINGS DID NOT. Under "Rice Ponni Boiled · 170 kg", a row that leads with
+   * "Rice Ponni Boiled" is the total repeated back at you. What the row is for there is WHICH ORDER this slice of
+   * the total came from — you cannot ring a heading.
+   */
+  var lead = named ? (ordered ? qty : order) : esc(r.particulars || '');
+  var tail = named ? (ordered ? '' : ' · ' + qty) : ' · ' + qty;
+
   var bits = [];
   if (ctx.indexOf('who') < 0 && r.who) bits.push(esc(r.who));
   if (ctx.indexOf('date') < 0 && due) bits.push((due.overdue ? '⚠️ ' : '') + esc(due.text));
   if (r.task) bits.push(esc(r.task));
+
   return '<div data-testid="wl-row" onclick="wlOpen(&quot;' + r.chit_id + '&quot;)" style="padding:11px 16px 11px 28px;border-bottom:1px solid var(--line);cursor:pointer">'
     + '<div style="display:flex;align-items:baseline;gap:8px">'
-    + '<span style="flex:1;font-weight:600;font-size:14.5px">' + esc(r.particulars || '')
-    + '<span style="color:var(--grey);font-weight:400;font-size:12.5px"> · '
-    + esc([r.quantity, r.unit].filter(function(x){ return x != null && x !== ''; }).join(' ')) + '</span></span>'
+    + '<span style="flex:1;font-weight:600;font-size:14.5px">' + lead
+    + (tail ? '<span style="color:var(--grey);font-weight:400;font-size:12.5px">' + tail + '</span>' : '') + '</span>'
     + '<span style="color:var(--grey);font-size:12px">›</span></div>'
     /* ⚠️ WHICH ORDER IT CAME FROM. A line without its chit is an instruction with no context — you cannot ring the
        customer, check the rest of the order, or know who is waiting. */
-    + '<div style="font-size:11.5px;color:var(--grey);margin-top:3px">' + esc(r.subject || 'chit')
-    + (r.counterparty ? ' · ' + esc(r.counterparty) : '') + '</div>'
+    + (named || ordered ? '' : '<div style="font-size:11.5px;color:var(--grey);margin-top:3px">' + order + '</div>')
     + (bits.length ? '<div style="margin-top:4px;font-size:12px;color:#5b5340;background:#f4f1e8;border-radius:5px;padding:3px 8px;display:inline-block">◍ ' + bits.join(' · ') + '</div>' : '')
     + '</div>';
 }
@@ -222,9 +249,11 @@ function worklistScreen(){
 
   var d2 = WL.data || {};
   var mine2 = !!d2.scoped_to_self;
-  var KEYS = [['who', 'person'], ['date', 'date'], ['chit', 'order']];
+  var KEYS = [['who', 'person'], ['date', 'date'], ['chit', 'order'], ['item', 'product']];
   var active = wlKeys(mine2);
-  var prim = active[0], sec = active[1] || null;
+  var prim = active[0];
+  /* `item` is appended by wlKeys, not chosen — it must not appear as the "then split by" tick. */
+  var sec = (active[1] && active[1] !== 'item') ? active[1] : null;
 
   var chip = function(k, label, on, fn, testid){
     return '<span data-testid="' + testid + '" onclick="' + fn + '" style="cursor:pointer;font-size:12.5px;border:1px solid '
@@ -234,7 +263,7 @@ function worklistScreen(){
   /* ⚠️ A CHECKBOX, NOT A THIRD CHIP. "Group by date, and do not split by person" is a different act from "group by
      person" — presenting it as another radio would make the one thing Athi asked for unreachable. */
   var box = function(k, label){
-    if (k === prim) return '';
+    if (k === prim || k === 'item') return '';   // item has its own switch — it is a roll-up, not a split
     var on = sec === k;
     return '<label style="display:inline-flex;align-items:center;gap:5px;font-size:12.5px;color:var(--ink-2,#41474e);cursor:pointer">'
       + '<input type="checkbox" data-testid="wl-then-' + k + '" ' + (on ? 'checked' : '')
@@ -258,7 +287,12 @@ function worklistScreen(){
     + '<div style="display:flex;gap:14px;align-items:center;padding:8px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap">'
     +   '<span style="font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--grey)">then split by</span>'
     +   KEYS.map(function(x){ return box(x[0], x[1]); }).join('')
-    +   (sec ? '' : '<span style="font-size:11.5px;color:var(--grey);font-style:italic">not split — every line under its ' + esc(prim === 'who' ? 'person' : prim === 'date' ? 'date' : 'order') + '</span>')
+    +   (sec ? '' : '<span style="font-size:11.5px;color:var(--grey);font-style:italic">not split — every line under its ' + esc(prim === 'who' ? 'person' : prim === 'date' ? 'date' : prim === 'item' ? 'product' : 'order') + '</span>')
+    /* ⭐ THE PIVOT SWITCH. Off, you get the raw lines; on, the same product merges and its quantity totals — the
+       answer to "what is my demand for that product", which is a sum you should never be doing by eye. */
+    +   (prim === 'item' ? '' : '<label style="display:inline-flex;align-items:center;gap:5px;font-size:12.5px;color:var(--ink-2,#41474e);cursor:pointer">'
+    +     '<input type="checkbox" data-testid="wl-byitem" ' + (WL.byItem === false ? '' : 'checked')
+    +     ' onchange="wlByItem()" style="width:15px;height:15px;accent-color:var(--blue)">total by product</label>')
     +   '<span style="margin-left:auto;display:flex;gap:10px">'
     +     '<span data-testid="wl-expand-all" onclick="wlAll(true)" style="cursor:pointer;font-size:12px;color:var(--blue)">expand all</span>'
     +     '<span data-testid="wl-collapse-all" onclick="wlAll(false)" style="cursor:pointer;font-size:12px;color:var(--blue)">collapse all</span>'
@@ -280,6 +314,17 @@ var WLG = {
             return esc(l.text) + ' <span style="font-size:12px;font-weight:600;color:' + (l.overdue ? '#c0453b' : 'var(--grey)') + '">· ' + l.rel + '</span>'; },
           sort: function(a, b){ if (!a) return 1; if (!b) return -1; return a.localeCompare(b); },
           tone: function(k){ return (k && wlDateLabel(k).overdue) ? '#c0453b' : null; } },
+  /**
+   * ⭐ THE PRODUCT — the dimension the quantity actually belongs to.
+   *
+   * ⚠️ BUCKETED ON THE NAME, NOT THE SKU, DELIBERATELY. A worklist line may have come off a WhatsApp message and
+   * never matched the catalogue, so it has no sku — keying on one would scatter exactly the lines a picker still
+   * needs to be pointed at. The name is what the two lines have in common today; when the catalogue match lands,
+   * `of` is the one place that changes.
+   */
+  item: { of: function(r){ return String(r.particulars || '').trim() || '—'; },
+          label: function(k){ return esc(k); },
+          sort: function(a, b){ return a.localeCompare(b); }, tone: function(){ return null; } },
   chit: { of: function(r){ return r.chit_id; },
           label: function(k, rs){ return esc((rs[0] && rs[0].subject) || 'chit') + (rs[0] && rs[0].counterparty ? ' <span style="font-size:12px;font-weight:600;color:var(--grey)">· ' + esc(rs[0].counterparty) + '</span>' : ''); },
           sort: function(){ return 0; }, tone: function(){ return null; } },
