@@ -304,4 +304,97 @@ test.describe('WORKLIST — one person, every chit', () => {
     expect(raw, 'unrolled, each line leads with its own product and quantity').toMatch(/Pivot Rice · 120 kg/);
     expect(raw, 'and the other one stands apart rather than merging').toMatch(/Pivot Rice · 50 kg/);
   });
+
+  test('WL-05 · ⭐ the work is recorded from the list the work is listed on', async ({ page }) => {
+    /* Athi, 2026-08-14: *"in this task list, if they serviced it, how are they going to set the status? Here
+       itself, if we do the management activity that would be good — like set the status, cost and so on."*
+
+       ⚠️ THE LIST WAS READ-ONLY, which made it a report rather than a worklist: fifteen lines you could see and
+       not one you could act on without opening fifteen chits — the wall this screen replaces, one level down.
+       This also covers the FIRST UI for b152's other direction; until now cost could only be added by API. */
+    const pageErrors = [];
+    page.on('pageerror', (e) => pageErrors.push(String(e && e.message || e)));
+    await mintEntity(page);
+
+    const s = await page.evaluate(async () => {
+      await ensureCap('chit2');
+      const s = String(Date.now()).slice(-6);
+      const r = await api('addActor', { body: { display_name: 'Velu', actor_key: 'vel' + s } });
+      const a = (r && (r.actor || r)) || {}; const who = a.actor_id || a.identity_id;
+      const me = await api('me').catch(() => null);
+      const myId = (me && (me.identity_id || (me.entity || {}).identity_id)) || null;
+      const sent = await api('createChit', { body: { purpose: 'order', manual_subject: 'WL act ' + s,
+        line_items: [{ particulars: 'Act Rice', quantity: 50, unit: 'kg', price: 60 }],
+        recipients: myId ? [{ entity_id: myId, role: 'to' }] : [], send_to_self: true } });
+      const ls = (await api('chit', { params: { id: sent.chit_id } })).live_set || [];
+      await api('c2AssignLines', { params: { id: sent.chit_id }, body: { edits: [
+        { line_id: ls[0].line_id, assignee_actor_id: who, assignee_name: 'Velu', due_date: '2026-12-05' } ] } });
+      return { s, chit_id: sent.chit_id, line_id: ls[0].line_id };
+    });
+
+    await page.evaluate(() => { UI.nav = 'worklist'; renderApp(); });
+    await page.waitForResponse((r) => /folders\/worklist/.test(r.url()), { timeout: 30000 }).catch(() => null);
+    await settle(page);
+    await page.getByTestId('wl-expand-all').click();
+    await settle(page);
+
+    // ── ① RECORD A DELIVERY, WITHOUT LEAVING THE LIST ────────────────────────────────────────────────────────
+    /* ⚠️ THE ROW DOES NOT SAY 'Act Rice'. With the pivot on — the default — the product is the HEADING, and the
+       row beneath it leads with the ORDER it came from, because repeating the product there would say nothing the
+       heading did not. Filtering on the product name finds the heading and never the row. */
+    const row = page.getByTestId('wl-row').filter({ hasText: 'WL act ' + s.s }).first();
+    /**
+     * ⚠️ DISPATCH THE HANDLER, DO NOT CLICK THE COORDINATES — the same reason fixtures.stableClick exists.
+     *
+     * This passed alone and failed in the full suite, which is the signature worth reading: by then the shared
+     * session holds ~30 rows, so the target sits deep inside a scrolling container and Playwright's click spends
+     * its whole timeout on "visible, enabled and stable" while the list re-renders under it. The element was
+     * always found — it just never held still. Firing its own onclick sidesteps scroll, stability and any
+     * overlay, and tests the handler rather than the scroll position.
+     */
+    await row.getByTestId('wl-done').evaluate((n) => n.click());
+    await settle(page);
+    /* ⚠️ THE CHIT MUST NOT HAVE OPENED BEHIND THE CARD. The row carries its own tap handler, so without
+       stopPropagation the modal lands on a screen that navigated out from under it. */
+    await expect(page.locator('#modalhost'), 'the card is open').toContainText('Record delivery');
+    await page.locator('#wl_qty').fill('20');
+    await page.locator('#wl_ref').fill('DC-WL-1');
+    await page.getByTestId('wl-act-save').click();
+    await settle(page);
+
+    let p = await page.evaluate(async (x) => {
+      const d = await api('chit', { params: { id: x.chit_id } });
+      return (d.line_delivery || {})[x.line_id] || null;
+    }, s);
+    expect(p && p.delivered, '⭐ 20 of 50 recorded from the worklist').toBe(20);
+    expect(p.pending, 'and 30 still owed').toBe(30);
+    expect(p.events[0].reference, 'the reference survives — it is the evidence').toBe('DC-WL-1');
+
+    // ── ② ⭐ ADD A COST — b152's other direction, reachable at last ──────────────────────────────────────────
+    await page.getByTestId('wl-expand-all').click();
+    await settle(page);
+    await page.getByTestId('wl-row').filter({ hasText: 'WL act ' + s.s }).first()
+      .getByTestId('wl-cost').evaluate((n) => n.click());
+    await settle(page);
+    await expect(page.locator('#modalhost')).toContainText('Add cost');
+    await page.locator('#wl_what').fill('Handling charge');
+    await page.locator('#wl_qty').fill('2');
+    await page.locator('#wl_unit').fill('hour');
+    await page.locator('#wl_amt').fill('450');
+    await page.getByTestId('wl-act-save').click();
+    await settle(page);
+
+    p = await page.evaluate(async (x) => {
+      const d = await api('chit', { params: { id: x.chit_id } });
+      return (d.line_delivery || {})[x.line_id] || null;
+    }, s);
+    expect(p.charged, '⭐ the cost accrued on the line').toBe(450);
+    expect((p.added || []).length, 'as an added event, listed in its own unit').toBe(1);
+    expect(p.added[0].particulars, 'saying what it was for').toBe('Handling charge');
+    expect(p.added[0].unit, 'hours, kept apart from the kg above').toBe('hour');
+    /* ⚠️ THE WHOLE POINT: 2 hours did NOT deliver 2 kg of rice. */
+    expect(p.delivered, 'and it did NOT touch the delivered quantity').toBe(20);
+
+    expect(pageErrors, 'a swallowed exception is how the picker looked unbuilt for a day').toEqual([]);
+  });
 });

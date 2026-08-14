@@ -35,6 +35,8 @@ var WL = { data: null, busy: false, err: null, due: '', view: null,
 if (typeof EP !== 'undefined') {
   Object.assign(EP, {
     worklist: { m: 'GET', p: '/api/folders/worklist', ok: 'y' },
+    /* ⭐ The two things a person does after doing the work — recorded from the list they did it from. */
+    wlDeliver: { m: 'POST', p: '/api/chits/:id/deliver-lines', ok: 'y' },
   });
 }
 
@@ -147,11 +149,11 @@ function wlDateLabel(d){
 
 /* One row. It drops whatever the headings above it already said — the same rule as the Work tab, for the same
    reason: a heading that reads "Raman" over a row that says "Raman" is noise where the item should be. */
-function wlRow(r, ctx){
+function wlRow(r, ctx, depth){
   var due = r.due_date ? wlDateLabel(r.due_date) : null;
   var named = ctx.indexOf('item') >= 0;    // an item heading above already said WHAT this is
   var ordered = ctx.indexOf('chit') >= 0;  // …and a chit heading already said which order
-  var order = esc(r.subject || 'chit') + (r.counterparty ? ' · ' + esc(r.counterparty) : '');
+  var order = esc(r.subject || 'chit') + wlWho(r.counterparty);
   var qty = esc([r.quantity, r.unit].filter(function(x){ return x != null && x !== ''; }).join(' '));
 
   /**
@@ -167,11 +169,22 @@ function wlRow(r, ctx){
   if (ctx.indexOf('date') < 0 && due) bits.push((due.overdue ? '⚠️ ' : '') + esc(due.text));
   if (r.task) bits.push(esc(r.task));
 
-  return '<div data-testid="wl-row" onclick="wlOpen(&quot;' + r.chit_id + '&quot;)" style="padding:11px 16px 11px 28px;border-bottom:1px solid var(--line);cursor:pointer">'
+  /* ⚠️ THE LEAF IS BODY TEXT, AND MUST BE QUIETER THAN EVERY HEADING ABOVE IT. It used to be 14.5px bold — larger
+     than the two levels it sat under — so the eye landed here first and then had to climb. Regular weight is what
+     separates content from heading now, not size alone. */
+  var ind = 16 + (depth || 0) * 15;
+  return '<div data-testid="wl-row" onclick="wlOpen(&quot;' + r.chit_id + '&quot;)" style="padding:9px 16px 9px ' + (ind + 13) + 'px;border-bottom:1px solid var(--line);cursor:pointer">'
     + '<div style="display:flex;align-items:baseline;gap:8px">'
-    + '<span style="flex:1;font-weight:600;font-size:14.5px">' + lead
+    + '<span style="flex:1;font-weight:500;font-size:13.5px;color:var(--ink-2,#41474e)">' + lead
     + (tail ? '<span style="color:var(--grey);font-weight:400;font-size:12.5px">' + tail + '</span>' : '') + '</span>'
-    + '<span style="color:var(--grey);font-size:12px">›</span></div>'
+    /* ⚠️ event.stopPropagation() ON BOTH — without it the row's own handler also fires and the chit opens behind
+       the card, so the modal you wanted is sitting on a screen that navigated out from under it. */
+    + '<span style="display:flex;gap:2px;flex:none;align-items:center">'
+    +   '<span data-testid="wl-done" title="Record a delivery against this line" onclick="event.stopPropagation();wlAct(&quot;' + r.line_id + '&quot;,&quot;' + r.chit_id + '&quot;,&quot;done&quot;)"'
+    +     ' style="cursor:pointer;font-size:13px;padding:2px 6px;border-radius:6px;color:#3d7a4e;background:#eef6f0;font-weight:800">✓</span>'
+    +   '<span data-testid="wl-cost" title="Add a part, labour or a charge to this line" onclick="event.stopPropagation();wlAct(&quot;' + r.line_id + '&quot;,&quot;' + r.chit_id + '&quot;,&quot;cost&quot;)"'
+    +     ' style="cursor:pointer;font-size:13px;padding:2px 6px;border-radius:6px;color:#2c5d7c;background:#eef4f8;font-weight:800">₹</span>'
+    +   '<span style="color:var(--grey);font-size:12px;padding-left:3px">›</span></span></div>'
     /* ⚠️ WHICH ORDER IT CAME FROM. A line without its chit is an instruction with no context — you cannot ring the
        customer, check the rest of the order, or know who is waiting. */
     + (named || ordered ? '' : '<div style="font-size:11.5px;color:var(--grey);margin-top:3px">' + order + '</div>')
@@ -307,12 +320,12 @@ function worklistScreen(){
  */
 var WLG = {
   who:  { of: function(r){ return r.who || 'Unassigned'; }, label: function(k){ return esc(k); },
-          sort: function(a, b){ if (a === 'Unassigned') return 1; if (b === 'Unassigned') return -1; return a.localeCompare(b); },
+          last: function(k){ return k === 'Unassigned'; },
           tone: function(k){ return k === 'Unassigned' ? 'var(--grey)' : null; } },
   date: { of: function(r){ return r.due_date ? String(r.due_date).slice(0, 10) : ''; },
           label: function(k){ if (!k) return 'No date'; var l = wlDateLabel(k);
-            return esc(l.text) + ' <span style="font-size:12px;font-weight:600;color:' + (l.overdue ? '#c0453b' : 'var(--grey)') + '">· ' + l.rel + '</span>'; },
-          sort: function(a, b){ if (!a) return 1; if (!b) return -1; return a.localeCompare(b); },
+            return esc(l.text) + ' <span style="font-size:.86em;font-weight:600;color:' + (l.overdue ? '#c0453b' : 'var(--grey)') + '">· ' + l.rel + '</span>'; },
+          last: function(k){ return !k; },
           tone: function(k){ return (k && wlDateLabel(k).overdue) ? '#c0453b' : null; } },
   /**
    * ⭐ THE PRODUCT — the dimension the quantity actually belongs to.
@@ -323,12 +336,76 @@ var WLG = {
    * `of` is the one place that changes.
    */
   item: { of: function(r){ return String(r.particulars || '').trim() || '—'; },
-          label: function(k){ return esc(k); },
-          sort: function(a, b){ return a.localeCompare(b); }, tone: function(){ return null; } },
+          label: function(k){ return esc(k); }, tone: function(){ return null; } },
   chit: { of: function(r){ return r.chit_id; },
-          label: function(k, rs){ return esc((rs[0] && rs[0].subject) || 'chit') + (rs[0] && rs[0].counterparty ? ' <span style="font-size:12px;font-weight:600;color:var(--grey)">· ' + esc(rs[0].counterparty) + '</span>' : ''); },
-          sort: function(){ return 0; }, tone: function(){ return null; } },
+          label: function(k, rs){ return esc((rs[0] && rs[0].subject) || 'chit') + wlWho(rs[0] && rs[0].counterparty); },
+          tone: function(){ return null; } },
 };
+
+/**
+ * ⭐ THE OTHER PARTY — and only when there IS one.
+ *
+ * Athi, 2026-08-14: *"here the name of the shop is appearing as mytest, not sure why it is required."*
+ *
+ * ⚠️ IT WAS NEVER A COUNTERPARTY. The field is `sender_entity_display_name`, which on a chit you SENT — and on
+ * every self-chit — is you. So the screen read "Order from Sri Balaji Mess · mytest" as though mytest were the
+ * other side of the deal, when it is the reader. Suppressing it is not tidying: a name in that position makes a
+ * claim about who you are dealing with, and the claim was false.
+ */
+function wlWho(name){
+  if (!name) return '';
+  if (typeof ccIsSelf === 'function' && ccIsSelf(name)) return '';
+  return ' <span style="font-size:.86em;font-weight:600;color:var(--grey)">· ' + esc(name) + '</span>';
+}
+
+/**
+ * ⭐ URGENCY ORDERS THE LIST, NOT THE ALPHABET — Athi: *"the order is alphabetically sorted, instead it has to be
+ * datewise."*
+ *
+ * ⚠️ AND `sort` STRUCTURALLY COULD NOT EXPRESS THAT, which is why it was alphabetical rather than by choice. It
+ * compared two group KEYS — two names, two product titles — and a name carries no date. The date lives in the
+ * group's ROWS, so the comparator has to see the bucket, not the label. That is the whole fix: sort buckets.
+ *
+ * Groups holding nothing dated sink to the bottom rather than floating up on a null, and the alphabet survives
+ * only as the tie-break, which is where it belongs.
+ */
+function wlOrder(buckets, key){
+  var G = WLG[key];
+  var soon = function(rows){
+    var m = null;
+    rows.forEach(function(r){ if (!r.due_date) return; var d = String(r.due_date).slice(0, 10); if (!m || d < m) m = d; });
+    return m;
+  };
+  return Object.keys(buckets).map(function(k){ return { k: k, first: soon(buckets[k]) }; })
+    .sort(function(a, b){
+      /* "Unassigned" and "No date" are answers about absence — they belong last whatever date they hold. */
+      var la = G.last ? !!G.last(a.k) : false, lb = G.last ? !!G.last(b.k) : false;
+      if (la !== lb) return la ? 1 : -1;
+      if (a.first !== b.first) { if (!a.first) return 1; if (!b.first) return -1; return a.first < b.first ? -1 : 1; }
+      return String(a.k).localeCompare(String(b.k));
+    })
+    .map(function(x){ return x.k; });
+}
+
+/**
+ * ⭐ FOUR LEVELS, EACH QUIETER THAN THE ONE ABOVE — Athi: *"like in a Word document, heading 1, 2, 3 … so the
+ * flow is naturally known"* and *"there can be some colour of the font, otherwise not able to recognise."*
+ *
+ * ⚠️ THE HIERARCHY WAS INVERTED, WHICH IS WHY IT WOULD NOT READ. Depth 1 and depth 2 shared a single style, so
+ * two different levels looked identical — and the ROW below them was 14.5px bold, LOUDER than either heading
+ * above it. The eye follows size, so it landed on the leaf and had to climb back up to learn what the leaf was
+ * about. Exactly the inversion, seen in his screenshot: "15 litre" shouting over "Groundnut Oil".
+ *
+ * Size, weight and colour now step down together, and each level indents — indentation being the cheapest
+ * hierarchy cue there is, and the screen had none of it.
+ */
+var WLLVL = [
+  { size: '16.5px', weight: 800, color: 'var(--ink,#1c2128)' },
+  { size: '14.5px', weight: 750, color: '#2c5d7c' },
+  { size: '13px',   weight: 700, color: '#5f7a52' },
+  { size: '12.5px', weight: 650, color: 'var(--grey)' },
+];
+function wlLvl(d){ return WLLVL[Math.min(d, WLLVL.length - 1)]; }
 
 /* The same recursive grouper as the Work tab. A key order is data; a view is not code. */
 function wlRender(rows, keys, depth, path){
@@ -339,15 +416,16 @@ function wlRender(rows, keys, depth, path){
   /* The path alternates key, value, key, value — so the KEYS a row already inherits from its headings are its even
      positions. wlRow drops exactly those, and reading them off the path keeps one source of truth. */
   if (!keys.length) return rows.map(function(r){
-    return wlRow(r, path.filter(function(_, i){ return i % 2 === 0; }));
+    return wlRow(r, path.filter(function(_, i){ return i % 2 === 0; }), depth || 0);
   }).join('');
   var key = keys[0], rest = keys.slice(1);
   var G = WLG[key];
   var buckets = {};
   rows.forEach(function(r){ var k = G.of(r); (buckets[k] = buckets[k] || []).push(r); });
-  var html = Object.keys(buckets).sort(G.sort).map(function(k){
+  var html = wlOrder(buckets, key).map(function(k){
     var rs = buckets[k];
     var title = G.label(k, rs), tone = G.tone(k);
+    var lv = wlLvl(depth), ind = 16 + depth * 15;
     /**
      * ⭐ EVERY GROUP IS A DISCLOSURE — Athi: *"can we make it expandable … so we can see all at once and can be
      * expanded for the required people or for the date."*
@@ -358,16 +436,98 @@ function wlRender(rows, keys, depth, path){
     var id = wlId(path, key, k);
     var isOpen = !!WL.open[id];
     var caret = '<span style="display:inline-block;width:13px;color:var(--grey);font-size:11px">' + (isOpen ? '▾' : '▸') + '</span>';
+    /* Every level carries its OWN roll-up: a breakdown that only totals at the top is a total, not a breakdown. */
     var head = depth === 0
       ? wlHead(caret + (tone === '#c0453b' ? '⚠️ ' : '') + title, wlRollupText(rs), tone, id)
-      /* The sub-heading carries its own roll-up: a breakdown that only totals at the top is a total, not a
-         breakdown. It is quieter than the level above, or the two compete and neither reads as the grouping. */
-      : '<div onclick="wlToggle(&quot;' + esc(id) + '&quot;)" style="cursor:pointer;padding:6px 16px 2px;display:flex;justify-content:space-between;align-items:baseline">'
-        + '<span style="font-size:12.5px;font-weight:700;color:var(--grey)">' + caret + title + '</span>'
-        + '<span style="font-size:11.5px;color:var(--grey)">' + wlRollupText(rs) + '</span></div>';
+      : '<div onclick="wlToggle(&quot;' + esc(id) + '&quot;)" style="cursor:pointer;padding:7px ' + (ind - 2) + 'px 2px ' + ind + 'px;'
+        + 'display:flex;justify-content:space-between;align-items:baseline;gap:10px">'
+        + '<span style="font-size:' + lv.size + ';font-weight:' + lv.weight + ';color:' + (tone || lv.color) + '">' + caret + title + '</span>'
+        + '<span style="font-size:11.5px;color:var(--grey);text-align:right;flex:none">' + wlRollupText(rs) + '</span></div>';
     return head + (isOpen ? wlRender(rs, rest, depth + 1, path.concat([key, k])) : '');
   }).join('');
   return html;
+}
+
+/**
+ * ⭐ RECORDING THE WORK WHERE THE WORK IS LISTED.
+ *
+ * Athi, 2026-08-14: *"in this task list, if they serviced it, how are they going to set the status? Here itself,
+ * if we do the management activity that would be good — like set the status, cost and so on."*
+ *
+ * ⚠️ THE LIST WAS READ-ONLY, WHICH MADE IT A REPORT RATHER THAN A WORKLIST. A co-assist could see their fifteen
+ * lines and could do nothing about any of them without opening fifteen chits — which is the wall the screen was
+ * built to replace, reintroduced one level down.
+ *
+ * ⭐ AND THIS IS THE FIRST SCREEN FOR THE OTHER DIRECTION. b152 made a line accumulate parts, labour and cost,
+ * and until now the only way to record any of it was the API. "Add cost" is that, reachable.
+ *
+ * ⚠️ THE ROW TAP STILL OPENS THE CHIT, unchanged. These are deliberate extra affordances, not a re-purposed tap:
+ * a list where tapping does something different depending on where you land is a list people stop trusting.
+ */
+var WLACT = { row: null };
+function wlAct(line_id, chit_id, kind){
+  var rows = wlRows(WL.data || {});
+  var r = rows.filter(function(x){ return x.line_id === line_id; })[0];
+  if (!r) return;
+  WLACT.row = r;
+  var q = (r.quantity == null ? '' : r.quantity), u = r.unit || '';
+  var body = (kind === 'cost')
+    /* ⚠️ PARTICULARS IS REQUIRED, and the server refuses without it — a cost that cannot say what it was for is
+       unreadable a week later, which is when someone actually asks. */
+    ? '<label style="font-size:12px;font-weight:700;color:var(--grey)">WHAT WAS IT FOR</label>'
+      + '<input id="wl_what" placeholder="Brake shoe, labour, call-out…" style="width:100%;font-size:15px;padding:9px 11px;border:1px solid var(--line);border-radius:8px;margin:4px 0 12px">'
+      + '<div style="display:flex;gap:10px">'
+      +   '<div style="flex:1"><label style="font-size:12px;font-weight:700;color:var(--grey)">HOW MANY</label>'
+      +     '<input id="wl_qty" type="number" step="any" placeholder="1" style="width:100%;font-size:15px;padding:9px 11px;border:1px solid var(--line);border-radius:8px;margin-top:4px"></div>'
+      +   '<div style="flex:1"><label style="font-size:12px;font-weight:700;color:var(--grey)">UNIT</label>'
+      +     '<input id="wl_unit" placeholder="piece, hour, litre" style="width:100%;font-size:15px;padding:9px 11px;border:1px solid var(--line);border-radius:8px;margin-top:4px"></div>'
+      +   '<div style="flex:1"><label style="font-size:12px;font-weight:700;color:var(--grey)">COST</label>'
+      +     '<input id="wl_amt" type="number" step="any" placeholder="0.00" style="width:100%;font-size:15px;padding:9px 11px;border:1px solid var(--line);border-radius:8px;margin-top:4px"></div>'
+      + '</div>'
+      + '<div style="margin-top:10px;font-size:11.5px;color:var(--grey);line-height:1.5">This adds to the line, it does not deliver it. Units are never added together — a litre and an hour stay apart; only the money totals.</div>'
+    : '<div style="display:flex;gap:10px;align-items:flex-end">'
+      +   '<div style="flex:1"><label style="font-size:12px;font-weight:700;color:var(--grey)">DELIVERED</label>'
+      +     '<input id="wl_qty" type="number" step="any" value="' + esc(String(q)) + '" style="width:100%;font-size:17px;font-weight:700;padding:9px 11px;border:1px solid var(--line);border-radius:8px;margin-top:4px"></div>'
+      +   '<div style="font-size:15px;color:var(--grey);padding-bottom:11px">' + esc(u) + '</div>'
+      + '</div>'
+      + '<label style="font-size:12px;font-weight:700;color:var(--grey);display:block;margin-top:12px">REFERENCE <span style="font-weight:400">(docket, "left at the gate", anything)</span></label>'
+      + '<input id="wl_ref" style="width:100%;font-size:15px;padding:9px 11px;border:1px solid var(--line);border-radius:8px;margin-top:4px">'
+      + '<div style="margin-top:10px;font-size:11.5px;color:var(--grey);line-height:1.5">Recorded as YOUR claim, in both copies. A negative figure corrects an earlier one — nothing is ever deleted.</div>';
+
+  modal('<div class="mhd"><div class="t">' + (kind === 'cost' ? 'Add cost' : 'Record delivery') + '</div>'
+    + '<div class="s">' + esc(r.particulars || 'line') + ' · ' + esc(r.subject || 'chit') + '</div></div>'
+    + '<div class="mbody">' + body + '</div>'
+    + '<div class="mfoot"><button onclick="closeModal()">Cancel</button>'
+    + '<button class="pri" data-testid="wl-act-save" onclick="wlActSave(&quot;' + kind + '&quot;)">'
+    + (kind === 'cost' ? 'Add' : 'Record') + '</button></div>');
+}
+async function wlActSave(kind){
+  var r = WLACT.row; if (!r) return;
+  var g = function(id){ var e = document.getElementById(id); return e ? e.value.trim() : ''; };
+  var row = { line_id: r.line_id };
+  if (kind === 'cost') {
+    row.kind = 'add';
+    row.particulars = g('wl_what');
+    row.quantity = g('wl_qty') === '' ? 0 : Number(g('wl_qty'));
+    row.unit = g('wl_unit') || null;
+    row.amount = g('wl_amt') === '' ? null : Number(g('wl_amt'));
+    if (!row.particulars) { toast('Say what the cost was for'); return; }
+    if (!row.quantity && !row.amount) { toast('Give a quantity or an amount'); return; }
+  } else {
+    row.quantity = Number(g('wl_qty'));
+    row.unit = r.unit || null;
+    row.reference = g('wl_ref') || null;
+    if (!isFinite(row.quantity) || row.quantity === 0) { toast('A delivery needs a quantity'); return; }
+  }
+  try {
+    await api('wlDeliver', { params: { id: r.chit_id }, body: { rows: [row] } });
+    closeModal();
+    toast(kind === 'cost' ? 'Added to the line' : 'Delivery recorded');
+    /* ⚠️ RELOAD RATHER THAN PATCH THE ROW IN PLACE. The roll-ups above it are derived from every row in the
+       group, so a local edit would leave the headings stating a total that no longer matches what is under them —
+       the class of drift that makes people stop believing the numbers. */
+    await wlLoad();
+  } catch (e) { toast((e && e.message) || 'Could not record that'); }
 }
 
 /* Tapping a line opens the chit it belongs to — the line is where the work is, the chit is where the context is. */
