@@ -92,6 +92,16 @@ test.describe('WORKLIST — one person, every chit', () => {
     await expect(rows, 'by order — still four').toHaveCount(4);
     await expect(heads, 'two chits → two headings').toHaveCount(2);
 
+    // ── ⭐ THE WORK-BREAKDOWN ROLL-UP ─────────────────────────────────────────────────────────────────────
+    await page.getByTestId('wl-view-who').click();
+    await settle(page);
+    var roll = await page.getByTestId('wl-head').first().innerText();
+    console.log('\n  ROLL-UP: ' + JSON.stringify(roll) + '\n');
+    /* ⚠️ Each person here holds two lines in DIFFERENT units (kg and kg here, but the rule is what matters):
+       a quantity may only appear when the group is single-unit, never summed across units. */
+    expect(roll, 'the heading carries a breakdown, not just a line count').toMatch(/line/);
+    expect(roll, 'a count of lines is always present').toMatch(/2 lines/);
+
     expect(pageErrors, 'a swallowed exception is how the picker looked unbuilt for a day').toEqual([]);
   });
 

@@ -80,6 +80,43 @@ function wlRow(r, ctx){
     + '</div>';
 }
 
+/**
+ * ⭐ THE WORK-BREAKDOWN ROLL-UP — Athi, 2026-08-14: *"from entity perspective can we have a summary of all the
+ * tickets with work breakdown structure … from assignment perspective, date perspective and name perspective."*
+ *
+ * A heading that says only "3 lines" makes you add the rest up yourself. This is what a person actually wants to
+ * know at a glance: how much, how late.
+ *
+ * ⚠️ QUANTITIES ARE NOT SUMMED ACROSS UNITS, AND THAT IS THE WHOLE CARE IN THIS FUNCTION. 25 kg + 20 கட்டு +
+ * 10 லிட்டர் is not 55 of anything, and a screen that prints "55 left" is inventing a number nobody can act on.
+ * So a quantity appears ONLY when every line in the group shares one unit; otherwise the group is described by
+ * counts, which are always summable. Counting is the honest fallback, not the lazy one.
+ */
+function wlRollup(rows){
+  var today = new Date(); today.setHours(0, 0, 0, 0);
+  var units = {}, overdue = 0, undated = 0;
+  rows.forEach(function(r){
+    var u = r.unit || '';
+    var q = Number(r.quantity);
+    if (isFinite(q)) units[u] = (units[u] || 0) + q;
+    if (!r.due_date) { undated++; return; }
+    var t = new Date(String(r.due_date).slice(0, 10) + 'T00:00:00');
+    if (t < today) overdue++;
+  });
+  var keys = Object.keys(units);
+  var qty = (keys.length === 1) ? (Math.round(units[keys[0]] * 1000) / 1000) + (keys[0] ? ' ' + keys[0] : '') : null;
+  return { lines: rows.length, qty: qty, mixed: keys.length > 1, overdue: overdue, undated: undated };
+}
+function wlRollupText(rows){
+  var r = wlRollup(rows);
+  var bits = [r.lines + ' line' + (r.lines === 1 ? '' : 's')];
+  if (r.qty) bits.push(r.qty);
+  else if (r.mixed) bits.push('mixed units');    // said plainly rather than adding numbers that do not add
+  if (r.undated) bits.push(r.undated + ' undated');
+  var text = bits.join(' · ');
+  if (r.overdue) text += ' · <span style="color:#c0453b;font-weight:700">' + r.overdue + ' overdue</span>';
+  return text;
+}
 function wlHead(title, right, tone){
   return '<div data-testid="wl-head" style="padding:14px 16px 6px;display:flex;justify-content:space-between;align-items:baseline;'
     + 'border-top:1px solid var(--line);background:#fbfbfa">'
@@ -165,9 +202,12 @@ function wlRender(rows, keys, depth, path){
   var html = Object.keys(buckets).sort(G.sort).map(function(k){
     var rs = buckets[k], n = rs.length;
     var title = G.label(k, rs), tone = G.tone(k);
+    /* The sub-heading gets the roll-up too — a breakdown that only totals at the top is a total, not a breakdown. */
     var head = depth === 0
-      ? wlHead((tone === '#c0453b' ? '⚠️ ' : '') + title, n + ' line' + (n === 1 ? '' : 's'), tone)
-      : '<div style="padding:6px 16px 2px;font-size:12.5px;font-weight:700;color:var(--grey)">' + title + '</div>';
+      ? wlHead((tone === '#c0453b' ? '⚠️ ' : '') + title, wlRollupText(rs), tone)
+      : '<div style="padding:6px 16px 2px;display:flex;justify-content:space-between;align-items:baseline">'
+        + '<span style="font-size:12.5px;font-weight:700;color:var(--grey)">' + title + '</span>'
+        + '<span style="font-size:11.5px;color:var(--grey)">' + wlRollupText(rs) + '</span></div>';
     return head + wlRender(rs, rest, depth + 1, next);
   }).join('');
   return html;

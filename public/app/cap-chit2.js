@@ -447,6 +447,47 @@ function c2WorkView(v){ C2.work = v; c2Paint(); }
  * A grouping heading — the name is the loudest thing on the row, because it is what you are scanning for.
  * c2Grp() is a small grey uppercase LABEL, right for "What is left" and wrong for a person's name.
  */
+/**
+ * ⭐ THE SAME ROLL-UP, WITH DELIVERY. The worklist cannot say what is LEFT — byPerson does not carry deliveries —
+ * but inside a chit we have them, so the breakdown can answer the question that actually matters on a work
+ * screen: not how much was ordered, but how much is still owed.
+ *
+ * ⚠️ AND THE SAME UNIT RULE. A quantity is shown only when every line in the group shares one unit; across mixed
+ * units it says so instead of adding numbers that do not add.
+ */
+function c2Rollup(entries, asg, prog){
+  var today = new Date(); today.setHours(0, 0, 0, 0);
+  var units = {}, left = {}, overdue = 0, done = 0;
+  entries.forEach(function(e){
+    var l = e.live || e.original || {}, p = (prog || {})[e.line_id] || {}, a = (asg || {})[e.line_id] || {};
+    var u = l.unit || '', q = c2n(l.quantity);
+    if (q != null) {
+      units[u] = (units[u] || 0) + q;
+      var rem = Math.max(0, q - (p.delivered || 0));
+      left[u] = (left[u] || 0) + rem;
+      if (rem === 0) done++;
+    }
+    if (a.due_date) {
+      var t = new Date(String(a.due_date).slice(0, 10) + 'T00:00:00');
+      if (t < today && (q == null || Math.max(0, q - (p.delivered || 0)) > 0)) overdue++;
+    }
+  });
+  var keys = Object.keys(units);
+  var one = keys.length === 1 ? keys[0] : null;
+  return { lines: entries.length, done: done, overdue: overdue,
+           qtyLeft: one !== null ? (Math.round(left[one] * 1000) / 1000) + (one ? ' ' + one : '') : null,
+           mixed: keys.length > 1 };
+}
+function c2RollupText(entries, asg, prog){
+  var r = c2Rollup(entries, asg, prog);
+  var bits = [r.lines + ' line' + (r.lines === 1 ? '' : 's')];
+  if (r.qtyLeft) bits.push(r.qtyLeft + ' left');
+  else if (r.mixed) bits.push('mixed units');
+  if (r.done) bits.push(r.done + ' done');
+  var text = bits.join(' · ');
+  if (r.overdue) text += ' · <span style="color:#c0453b;font-weight:700">' + r.overdue + ' overdue</span>';
+  return text;
+}
 function c2GrpBig(title, right, tone){
   return '<div style="padding:14px 16px 6px;display:flex;justify-content:space-between;align-items:baseline;'
     + 'border-top:1px solid var(--line);background:#fbfbfa">'
@@ -543,10 +584,14 @@ function c2PaneWork(d){
     rows.forEach(function(e){ var k = g.of(e); (buckets[k] = buckets[k] || []).push(e); });
     return Object.keys(buckets).sort(g.sort).map(function(k){
       var n = buckets[k].length;
+      var roll = c2RollupText(buckets[k], asg, prog);
       var head = depth === 0
-        ? c2GrpBig((g.tone(k) === '#c0453b' ? '⚠️ ' : '') + g.label(k), n + ' line' + (n === 1 ? '' : 's'), g.tone(k))
-        /* A nested heading is a sub-heading — quieter, or the two compete and neither reads as the grouping. */
-        : '<div style="padding:6px 16px 2px;font-size:12.5px;font-weight:700;color:var(--grey)">' + g.label(k) + '</div>';
+        ? c2GrpBig((g.tone(k) === '#c0453b' ? '⚠️ ' : '') + g.label(k), roll, g.tone(k))
+        /* A nested heading is a sub-heading — quieter, or the two compete and neither reads as the grouping.
+           It still carries its own roll-up: a breakdown that only totals at the top is a total, not a breakdown. */
+        : '<div style="padding:6px 16px 2px;display:flex;justify-content:space-between;align-items:baseline">'
+          + '<span style="font-size:12.5px;font-weight:700;color:var(--grey)">' + g.label(k) + '</span>'
+          + '<span style="font-size:11.5px;color:var(--grey)">' + roll + '</span></div>';
       return head + renderGroup(buckets[k], rest, depth + 1);
     }).join('');
   }
