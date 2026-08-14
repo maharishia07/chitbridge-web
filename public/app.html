@@ -5009,7 +5009,7 @@ function contentItems(c){
     const open=UI.openLines.has('line'+idx);
     const clip=atts.length?`<span class="lineclip" onclick="event.stopPropagation();toggleLine(${idx})">📎 ${atts.length} ${open?'▾':'▸'}</span>`:"";
     const strip=(atts.length&&open)?`<div class="lineImgs">${attTileGrid(atts,'line'+idx)}</div>`:"";
-    const pen=(c.canAmend===false)?'':`<span class="lineclip" title="Fix this line" onclick="event.stopPropagation();amendLine(${idx})" style="cursor:pointer">✎</span>`;
+    const pen=(c.canAmend===false)?'':`<span class="lineclip" data-testid="amend-line" title="Fix this line" onclick="event.stopPropagation();amendLine(${idx})" style="cursor:pointer">✎</span>`;
     const was=e.history&&e.history.length?lineWas(e.history):'';
     if(e.removed){
       /* ⚠️ REMOVED, NOT DELETED. The reason shows because "we misread this" and "we cannot supply this" are
@@ -5247,7 +5247,7 @@ function amendPaint(){
       ${cands.map((x,i)=>{
         const on = AMD.pickedKey===x.key;
         const st = x.status && x.status!=='available';
-        return `<label style="display:flex;align-items:center;gap:11px;cursor:pointer;padding:11px 12px;margin-bottom:7px;
+        return `<label data-testid="amd-cand" style="display:flex;align-items:center;gap:11px;cursor:pointer;padding:11px 12px;margin-bottom:7px;
              border:1.5px solid ${on?'var(--blue)':'var(--line)'};border-radius:11px;background:${on?'#f2f7fd':'#fff'}">
           <input type="radio" name="amdcand" ${on?'checked':''} onchange="amdPickCand(${i})" style="width:19px;height:19px;flex:none;accent-color:var(--blue)">
           <span style="flex:1;min-width:0">
@@ -5262,7 +5262,7 @@ function amendPaint(){
       <button class="btn" style="width:100%;margin:2px 0 4px;font-size:13px" onclick="amdView('itemall')">
         none of these — show all ${items.length} items</button>` : '';
 
-    if(cands.length) return _amdSheet('Which one did they mean?', shortlist);
+    if(cands.length) return _amdSheet('Which one did they mean?', '<div data-testid="amd-picker">'+shortlist+'</div>');
     return _amdSheet('Which item?', items.length
       ? items.map((x,i)=>`<button class="btn" style="width:100%;margin-bottom:6px;text-align:left;font-size:15px" onclick="amdPickItem(${i})">${esc(x.label)}${x.unit?` <span style="color:var(--grey);font-size:12px">· ${esc(x.unit)}</span>`:''}</button>`).join('')
       : '<div style="font-size:12.5px;color:var(--grey);padding:6px 0">No catalogue yet — the name stays as written.</div>');
@@ -5298,7 +5298,7 @@ function amendPaint(){
   const diff=changed?`<div style="font-size:12.5px;text-align:center;margin-bottom:12px">
       <s style="opacity:.5">${esc([o.particulars,o.quantity,o.unit].filter(Boolean).join(' '))}</s>
       &nbsp;→&nbsp;<b style="color:#245a9e">${esc([l.particulars,l.quantity,l.unit].filter(Boolean).join(' '))}</b></div>`:'';
-  const ic=(g,t,fn,col)=>`<button class="btn" title="${t}" onclick="${fn}" style="flex:1;height:50px;font-size:21px;${col||''}">${g}</button>`;
+  const ic=(g,t,fn,col)=>`<button class="btn" data-testid="amd-${String(t).toLowerCase().split(' ')[0]}" title="${t}" onclick="${fn}" style="flex:1;height:50px;font-size:21px;${col||''}">${g}</button>`;
 
   modal(`${wrote}
     <div onclick="amdView('item')" style="cursor:pointer;text-align:center;font-size:19px;font-weight:800;margin-bottom:2px">${esc(l.particulars||'—')}</div>

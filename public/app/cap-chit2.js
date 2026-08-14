@@ -215,7 +215,7 @@ function c2PaneOrd(d){
       + '<span style="display:flex;gap:6px;align-items:center;flex:none">'
       + c2PickBadge(l, i)
       + '<span style="font-variant-numeric:tabular-nums;font-size:14px">' + (l.price != null ? c2Money((c2n(l.quantity) || 0) * c2n(l.price)) : '') + '</span>'
-      + '<span onclick="event.stopPropagation();c2AmendLine(' + i + ')" title="Fix this line"'
+      + '<span data-testid="amend-line" onclick="event.stopPropagation();c2AmendLine(' + i + ')" title="Fix this line"'
       + ' style="cursor:pointer;font-size:15px;color:var(--grey);padding:0 2px">✎</span>'
       + '</span></div>'
       + '<div style="margin-top:3px;font-size:13.5px;color:var(--ink-2,#6b665e);font-variant-numeric:tabular-nums">' + was + esc(c2q(l)) + (l.price != null ? ' × ' + c2Money(l.price) : '') + '</div>'
