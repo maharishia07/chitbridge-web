@@ -600,6 +600,10 @@ function c2PaneWork(d){
   if (!lines.length) return out + '<div style="padding:14px 16px;font-size:12.5px;color:var(--grey)">No lines on this chit.</div>';
   if (view !== 'line') return out + renderGroup(lines, KEYS[view] || [], 0);
 
+  /* ⭐ THE FLAT VIEW SUMMARISES ITSELF TOO. It had no roll-up: the breakdown only appeared once you GROUPED, so
+     the view everyone lands on was the one view that never told you the totals. Found by DEL-03, not by looking —
+     the grouped views looked complete, and the default looked normal because it always had. */
+  out += c2Grp('What is left', c2RollupText(lines, asg, prog));
   out += lines.map(function(e){ return c2WorkRow(e, asg, prog); }).join('');
   return out;
 }

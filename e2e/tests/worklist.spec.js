@@ -62,6 +62,8 @@ test.describe('WORKLIST — one person, every chit', () => {
     await page.waitForResponse((r) => /folders\/worklist/.test(r.url()), { timeout: 30000 }).catch(() => null);
     await settle(page);
 
+    await page.getByTestId('wl-expand-all').click();
+    await settle(page);
     const rows = page.getByTestId('wl-row');
     /* ⭐ FOUR. Not eight. This is the whole point of the spec. */
     await expect(rows, 'four assigned lines across two chits — eight means a join is multiplying').toHaveCount(4);
@@ -77,7 +79,7 @@ test.describe('WORKLIST — one person, every chit', () => {
     await expect(page.locator('body')).toContainText(setup.subjects[1]);
 
     // ── the same rows, a different key order ────────────────────────────────────────────────────────────────────
-    await page.getByTestId('wl-view-date').click();
+    await page.getByTestId('wl-view-date').click(); await page.getByTestId('wl-expand-all').click();
     await settle(page);
     await expect(rows, 'by date shows the SAME four lines — a view is a regrouping, not a filter').toHaveCount(4);
     await expect(heads, 'two distinct due dates → two headings').toHaveCount(2);
@@ -87,13 +89,13 @@ test.describe('WORKLIST — one person, every chit', () => {
        exact punctuation the runtime's locale data decides. */
     expect(headText, 'the real date must be visible, not just a relative word').toMatch(/17.*Aug|Aug.*17/);
 
-    await page.getByTestId('wl-view-chit').click();
+    await page.getByTestId('wl-view-chit').click(); await page.getByTestId('wl-expand-all').click();
     await settle(page);
     await expect(rows, 'by order — still four').toHaveCount(4);
     await expect(heads, 'two chits → two headings').toHaveCount(2);
 
     // ── ⭐ THE WORK-BREAKDOWN ROLL-UP ─────────────────────────────────────────────────────────────────────
-    await page.getByTestId('wl-view-who').click();
+    await page.getByTestId('wl-view-who').click(); await page.getByTestId('wl-expand-all').click();
     await settle(page);
     var roll = await page.getByTestId('wl-head').first().innerText();
     console.log('\n  ROLL-UP: ' + JSON.stringify(roll) + '\n');
@@ -135,6 +137,8 @@ test.describe('WORKLIST — one person, every chit', () => {
     /* ⚠️ RELATIVE, NOT ABSOLUTE. The authed project reuses ONE minted session, so this entity already holds the
        lines WL-01 assigned. An absolute count here asserts test ORDER, which is how a suite starts failing only
        when run together. */
+    await page.getByTestId('wl-expand-all').click();
+    await settle(page);
     var n0 = await page.getByTestId('wl-row').count();
     console.log('\n  ROWS BEFORE FILTER: ' + n0 + '\n');
     expect(n0, 'at least the two lines this test assigned').toBeGreaterThanOrEqual(2);
@@ -142,9 +146,83 @@ test.describe('WORKLIST — one person, every chit', () => {
     await page.evaluate(() => wlDue('2026-09-01'));
     await page.waitForResponse((r) => /due_on=2026-09-01/.test(r.url()), { timeout: 30000 }).catch(() => null);
     await settle(page);
+    await page.getByTestId('wl-expand-all').click();
+    await settle(page);
     var n1 = await page.getByTestId('wl-row').count();
     console.log('  ROWS AFTER FILTER : ' + n1);
     expect(n1, 'only the 1 Sep line survives the filter').toBe(1);
     await expect(page.locator('body')).toContainText('Beans');
+  });
+
+  test('WL-03 · groups collapse, open one at a time, and the second key can be switched OFF', async ({ page }) => {
+    /* Athi, 2026-08-14: *"can we make it expandable, like name and date can be expandable so we can see all at
+       once and can be expanded for the required people or for the date; also under date, if i want to see all
+       without who is doing it, any chance of removing the name from the filter — just a checkbox option so the
+       filter can omit parameters."*
+
+       Three separate claims, and each is asserted here because each can break alone. */
+    await mintEntity(page);
+    await page.evaluate(async () => {
+      await ensureCap('chit2');
+      const s = String(Date.now()).slice(-6);
+      const mk = async (n, k) => { const r = await api('addActor', { body: { display_name: n, actor_key: k } });
+        const a = (r && (r.actor || r)) || {}; return a.actor_id || a.identity_id; };
+      const A = await mk('Devi', 'dev' + s), B = await mk('Arun', 'aru' + s);
+      const me = await api('me').catch(() => null);
+      const myId = (me && (me.identity_id || (me.entity || {}).identity_id)) || null;
+      /* ⚠️ TWO PEOPLE SHARING ONE DAY. That is the case the path-keyed open state exists for: if the id were the
+         label alone, opening Devi under 20 Aug would also open Devi under 21 Aug. */
+      const sent = await api('createChit', { body: { purpose: 'order', manual_subject: 'WL expand ' + s,
+        line_items: [{ particulars: 'Ragi', quantity: 3, unit: 'kg', price: 30 },
+                     { particulars: 'Millet', quantity: 7, unit: 'kg', price: 50 }],
+        recipients: myId ? [{ entity_id: myId, role: 'to' }] : [], send_to_self: true } });
+      const ls = (await api('chit', { params: { id: sent.chit_id } })).live_set || [];
+      await api('c2AssignLines', { params: { id: sent.chit_id }, body: { edits: [
+        { line_id: ls[0].line_id, assignee_actor_id: A, assignee_name: 'Devi', due_date: '2026-10-20' },
+        { line_id: ls[1].line_id, assignee_actor_id: B, assignee_name: 'Arun', due_date: '2026-10-20' } ] } });
+    });
+
+    await page.evaluate(() => { UI.nav = 'worklist'; renderApp(); });
+    await page.waitForResponse((r) => /folders\/worklist/.test(r.url()), { timeout: 30000 }).catch(() => null);
+    await settle(page);
+
+    /* ── ① COLLAPSED IS THE DEFAULT ─────────────────────────────────────────────────────────────────────────── */
+    await page.getByTestId('wl-view-date').click();
+    await settle(page);
+    await expect(page.getByTestId('wl-row'), 'nothing is open until it is opened').toHaveCount(0);
+    const heads = page.getByTestId('wl-head');
+    const nHeads = await heads.count();
+    expect(nHeads, 'every date is a heading you can see at once').toBeGreaterThanOrEqual(1);
+
+    /* ── ② OPENING ONE OPENS ONLY THAT ONE ──────────────────────────────────────────────────────────────────── */
+    await page.getByTestId('wl-head').filter({ hasText: '20 Oct' }).click();
+    await settle(page);
+    const openOnly = await page.getByTestId('wl-row').count();
+    console.log('\n  ROWS WITH ONE DATE OPEN: ' + openOnly + ' (heads: ' + nHeads + ')\n');
+    expect(openOnly, 'the two lines due 20 Oct, and nothing from any other date').toBe(2);
+    await expect(page.locator('body')).toContainText('Ragi');
+
+    /* ── ③ ⭐ THE CHECKBOX OMITS THE SECOND KEY ─────────────────────────────────────────────────────────────── */
+    const box = page.getByTestId('wl-then-who');
+    await expect(box, 'grouped by date, the person is the split you can drop').toBeChecked();
+    await box.uncheck();
+    await settle(page);
+    await page.getByTestId('wl-expand-all').click();
+    await settle(page);
+    await expect(page.locator('body'), 'the screen says plainly that it is no longer split').toContainText('not split');
+    /* With the name dropped, each row must CARRY the name it no longer inherits from a heading — otherwise
+       "show me the day without who is doing it" quietly loses who is doing it. */
+    await expect(page.locator('body')).toContainText('Devi');
+    await expect(page.locator('body')).toContainText('Arun');
+    const flat = await page.getByTestId('wl-row').count();
+    const heads2 = await page.getByTestId('wl-head').count();
+    console.log('  UNSPLIT: ' + flat + ' rows under ' + heads2 + ' date headings\n');
+    expect(heads2, 'dropping a key removes sub-headings, never rows').toBe(nHeads);
+    expect(flat, 'every line still present, just not divided by person').toBeGreaterThanOrEqual(2);
+
+    /* ── ④ COLLAPSE ALL puts it back ────────────────────────────────────────────────────────────────────────── */
+    await page.getByTestId('wl-collapse-all').click();
+    await settle(page);
+    await expect(page.getByTestId('wl-row'), 'collapse all closes every level, not just the top').toHaveCount(0);
   });
 });
