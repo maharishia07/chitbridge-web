@@ -5108,6 +5108,30 @@ function amdOpen(e, idx, chit_id, rawText, opts){
    * Found by asserting on what was STORED rather than on the rendered page — the 200 response looked perfect.
    */
   AMD.lineId=e.line_id||null;
+  /**
+   * ⭐ SEEDED FROM THE LINE ITSELF — NO NETWORK, NO FLASH.
+   *
+   * Athi, 2026-08-14: *"first it loads the one screen … it was having weight only, after few seconds it loads the
+   * two variety … the system already knows the variety and the choices, so it should be lightning fast."*
+   *
+   * He is right and the old order was indefensible: paint the quantity stepper synchronously, fetch the catalogue,
+   * then replace the screen when it answers. Two screens for one tap, the first one wrong, with a visible pause in
+   * between — which reads as the app not working rather than the app thinking.
+   *
+   * The reader already wrote the shortlist onto the line at raise time (capture stamps `ambiguous` /
+   * `variant_candidates` with names, prices and status). So the picker can render on the FIRST paint, from data
+   * already in memory. The overlay fetch still runs, and still replaces this with the fuller answer — today's
+   * prices plus the whole catalogue behind "none of these" — but nobody waits to see the question.
+   *
+   * ⚠️ ONLY CHITS RAISED SINCE THAT FLAG EXISTS CAN BE INSTANT. An older line carries no candidates, so it still
+   * has to ask. That is a property of the data, not something a spinner can fix.
+   */
+  const _l0 = e.live || e.original || {};
+  const _seed = (_l0.ambiguous || _l0.variant_candidates || []);
+  if (_seed.length) {
+    AMD.cat = { candidates: _seed, ambiguous: _l0.ambiguous_count || _seed.length, items: [], has_catalogue: true, _seeded: true };
+    AMD.view = 'item';
+  }
   /* Edit the LIVE version — correcting a correction starts from what is true now, not from the AI's first guess. */
   AMD.line=Object.assign({}, e.live||e.original||{});
   AMD.orig=e.original||{};
@@ -5230,6 +5254,23 @@ function amdPickUnit(u){ AMD.line.unit=u; amdView('main'); }
 const _amdSheet=(title,body,back)=>modal(`<h3 style="margin:0 0 10px">${title}</h3>${body}
   <button class="btn" style="width:100%;margin-top:8px" onclick="amdView('${back||'main'}')">← back</button>`);
 
+/**
+ * The price on a candidate row, from EITHER shape.
+ *
+ * ⚠️ TWO SOURCES, TWO SHAPES, AND ONE OF THEM RENDERS AS "[object Object]". The overlay hands back a plain number
+ * plus a currency (money.amountOf did the unwrapping server-side); the line's own seeded candidates carry the raw
+ * catalogue price, which is `{amount, currency}` on any migrated row. Rendering the raw object was invisible until
+ * the picker started drawing from the line — and the failure would have been a price nobody could read on the one
+ * screen whose whole job is comparing prices.
+ */
+function amdPriceText(x){
+  if(!x) return '';
+  const amt = (typeof cbAmount==='function') ? cbAmount(x.price) : x.price;
+  const has = (typeof cbHasPrice==='function') ? cbHasPrice(x.price) : (x.price!=null);
+  if(!has) return '<span style="color:#b0641c;font-size:12px">no price</span>';
+  const cur = x.currency || ((typeof cbCurrency==='function') ? cbCurrency(x.price) : null);
+  return esc((cur?cur+' ':'') + amt);
+}
 function amendPaint(){
   const l=AMD.line||{}, o=AMD.orig||{}, cat=AMD.cat;
 
@@ -5268,11 +5309,15 @@ function amendPaint(){
             ${st?`<div style="font-size:11px;color:#b0641c;margin-top:1px">⚠️ ${esc(x.status_text||x.status)}</div>`:''}
           </span>
           <span style="text-align:right;flex:none">
-            <span style="font-size:16px;font-weight:800">${x.price!=null?esc((x.currency?x.currency+' ':'')+x.price):'<span style="color:#b0641c;font-size:12px">no price</span>'}</span>
+            <span style="font-size:16px;font-weight:800">${amdPriceText(x)}</span>
             ${x.unit?`<div style="font-size:11px;color:var(--grey)">per ${esc(x.unit)}</div>`:''}
           </span></label>`;}).join('')}
-      <button class="btn" style="width:100%;margin:2px 0 4px;font-size:13px" onclick="amdView('itemall')">
-        none of these — show all ${items.length} items</button>` : '';
+      ${items.length
+        ? `<button class="btn" style="width:100%;margin:2px 0 4px;font-size:13px" onclick="amdView('itemall')">
+             none of these — show all ${items.length} items</button>`
+        /* ⚠️ NOT "show all 0 items". On the first paint the shortlist comes from the LINE and the full catalogue has
+           not arrived yet — offering a list of nothing would be worse than saying it is still coming. */
+        : `<div style="font-size:11.5px;color:var(--grey);text-align:center;padding:6px 0">loading the rest of the catalogue…</div>`}` : '';
 
     if(cands.length) return _amdSheet('Which one did they mean?', '<div data-testid="amd-picker">'+shortlist+'</div>');
     return _amdSheet('Which item?', items.length

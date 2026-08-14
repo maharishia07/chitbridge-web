@@ -93,6 +93,8 @@ test.describe('PICKER — two catalogue items answer to one name', () => {
       detailItems: (typeof UI !== 'undefined' && UI.detail && UI.detail.items || []).length,
       sel: (typeof UI !== 'undefined') ? UI.sel : null,
       amd: (typeof AMD !== 'undefined') ? { idx: AMD.idx, view: AMD.view, chit: AMD.chit, cat: !!AMD.cat } : 'no AMD',
+      lineId: (typeof AMD !== 'undefined') ? AMD.lineId : 'n/a',
+      codeHasLineIdFix: (typeof amdOpen === 'function') && /AMD.lineId/.test(amdOpen.toString()),
       modalOpen: !!document.querySelector('.mbody, .mhd, [data-testid="amd-save"]'),
     }));
     console.log('\n  OVERLAY CALLS: ' + JSON.stringify(overlayCalls));
