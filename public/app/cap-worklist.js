@@ -128,15 +128,38 @@ function wlKeys(mine){
   return keys;
 }
 
-/** Flatten byPerson's people[] back to rows — the grouping is this screen's job, not the API's. */
+/**
+ * Flatten byPerson's people[] back to rows — the grouping is this screen's job, not the API's.
+ *
+ * ⭐ FINISHED WORK LEAVES THE QUEUE — Athi, 2026-08-14: *"when the status is set to complete, why still in the
+ * queue? Once completed it has to move out of his queue … here it has to be shown which are not complete."*
+ *
+ * ⚠️ I ARGUED THE OPPOSITE THIS EVENING and was wrong about the important half. My reasoning was that a done row
+ * left visible tells the next person "someone already has this". True — but it was costing far more than it
+ * bought: a done line stayed in the ROLL-UPS, so a finished, fully delivered line still counted as **1 overdue**
+ * in red on its heading. A queue whose headline figure counts work that is finished is worse than one that hides
+ * it, because the number is what people act on. His screenshot shows it exactly: "Jute Bag 50kg · 1 overdue"
+ * over a struck-through line reading "all out".
+ *
+ * So done work is out of the list AND out of the counts by default, and `show done` brings it back — which keeps
+ * the "someone already has this" answer available without letting it corrupt the arithmetic.
+ */
 function wlRows(d){
   var out = [];
   (d.people || []).forEach(function(p){
     (p.lines || []).forEach(function(l){
+      if (!WL.showDone && l.state === 'done') return;
       out.push(Object.assign({}, l, { who: p.name || 'Unassigned', actor_id: p.actor_id || null }));
     });
   });
   return out;
+}
+function wlDone(){ WL.showDone = !WL.showDone; WL.open = {}; wlPaint(); }
+/** How many are hidden right now — stated plainly, because silently dropping rows is its own kind of lying. */
+function wlDoneCount(d){
+  var n = 0;
+  ((d || {}).people || []).forEach(function(p){ (p.lines || []).forEach(function(l){ if (l.state === 'done') n++; }); });
+  return n;
 }
 
 function wlDateLabel(d){
@@ -275,8 +298,12 @@ function worklistScreen(){
     } else if (!rows.length) {
       /* ⚠️ TWO DIFFERENT EMPTIES. "Nothing is assigned to you" and "nothing is assigned to anyone" send opposite
          signals — one means you are free, the other means the work has not been handed out. */
+      /* ⚠️ THREE DIFFERENT EMPTIES NOW. "Nothing assigned to you", "nothing assigned to anyone", and "everything
+         you had is finished" mean completely different things, and the third is the one worth saying out loud. */
+      var hid = wlDoneCount(d);
       body = '<div style="padding:18px 16px;font-size:12.5px;color:var(--grey)">'
-        + (mine ? 'Nothing is assigned to you right now.' : 'No lines are assigned to anyone yet — open a chit and assign its lines.')
+        + (hid ? 'Everything here is done — ' + hid + ' finished line' + (hid === 1 ? '' : 's') + ' hidden. Tick “show ' + hid + ' done” to see them.'
+              : (mine ? 'Nothing is assigned to you right now.' : 'No lines are assigned to anyone yet — open a chit and assign its lines.'))
         + (WL.due ? ' (filtered to ' + esc(WL.due) + ')' : '') + '</div>';
     } else {
       /* ⭐ THE KEY ORDER IS THE VIEW — his model. */
@@ -330,6 +357,11 @@ function worklistScreen(){
     +   (prim === 'item' ? '' : '<label style="display:inline-flex;align-items:center;gap:5px;font-size:12.5px;color:var(--ink-2,#41474e);cursor:pointer">'
     +     '<input type="checkbox" data-testid="wl-byitem" ' + (WL.byItem === false ? '' : 'checked')
     +     ' onchange="wlByItem()" style="width:15px;height:15px;accent-color:var(--blue)">total by product</label>')
+    /* ⚠️ SAY HOW MANY ARE HIDDEN. A list that quietly drops rows is a list people stop trusting the moment they
+       notice — and they always notice. The count is the honest half of the filter. */
+    +   (wlDoneCount(d2) ? '<label style="display:inline-flex;align-items:center;gap:5px;font-size:12.5px;color:var(--ink-2,#41474e);cursor:pointer">'
+    +     '<input type="checkbox" data-testid="wl-showdone" ' + (WL.showDone ? 'checked' : '')
+    +     ' onchange="wlDone()" style="width:15px;height:15px;accent-color:var(--blue)">show ' + wlDoneCount(d2) + ' done</label>' : '')
     +   '<span style="margin-left:auto;display:flex;gap:10px">'
     +     '<span data-testid="wl-expand-all" onclick="wlAll(true)" style="cursor:pointer;font-size:12px;color:var(--blue)">expand all</span>'
     +     '<span data-testid="wl-collapse-all" onclick="wlAll(false)" style="cursor:pointer;font-size:12px;color:var(--blue)">collapse all</span>'

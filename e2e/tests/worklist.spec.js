@@ -488,10 +488,25 @@ test.describe('WORKLIST — one person, every chit', () => {
     await page.getByTestId('wl-expand-all').click();
     await settle(page);
 
+    /**
+     * ⭐ FINISHED WORK LEAVES THE QUEUE — Athi, 2026-08-14: *"once completed it has to move out of his queue …
+     * here it has to be shown which are not complete."*
+     *
+     * ⚠️ THIS REVERSES WHAT I BUILT AN HOUR EARLIER. I kept done rows visible so the next person could see
+     * "someone already has this", and that reasoning was sound but far too expensive: a done row stayed in the
+     * ROLL-UPS, so a finished, fully delivered line still printed **1 overdue** in red on its own heading. The
+     * headline figure is what people act on, so a queue that counts finished work is worse than one that hides
+     * it. Hidden by default, and the checkbox brings it back without corrupting the arithmetic.
+     */
+    await expect(page.getByTestId('wl-row').filter({ hasText: 'WL card ' + s.s }),
+      'the finished line is out of the queue').toHaveCount(0);
+
+    await page.getByTestId('wl-showdone').check();
+    await settle(page);
+    await page.getByTestId('wl-expand-all').click();
+    await settle(page);
     const doneRow = page.getByTestId('wl-row').filter({ hasText: 'WL card ' + s.s }).first();
-    /* ⚠️ IT STAYS ON THE LIST, GREYED. Athi's reason for the state is "so others should not do that", and a row
-       that vanishes cannot say "someone already has this" — removing it makes a double-pick MORE likely. */
-    await expect(doneRow, 'the done line is still listed').toHaveAttribute('data-state', 'done');
+    await expect(doneRow, 'and "show done" brings it back, marked done').toHaveAttribute('data-state', 'done');
 
     /* ⭐ AND THE GOODS ARE STILL OWED. The person finished their bit; 60 kg has not gone out. Two different
        facts, and a merged status would have had to lie about one of them. */
