@@ -397,4 +397,111 @@ test.describe('WORKLIST — one person, every chit', () => {
 
     expect(pageErrors, 'a swallowed exception is how the picker looked unbuilt for a day').toEqual([]);
   });
+
+  test('WL-06 · ⭐ the line card — what is left, what was asked, who has it, and done', async ({ page }) => {
+    /* Athi, 2026-08-14: *"managing the line item from here … reassign it to someone else … he can set the status
+       to close … partial deliver, and the remaining qty to be visible with history … possibly assign to a
+       different date."* And: *"how do we connect with the original requirement … is it transparent?"* */
+    const pageErrors = [];
+    page.on('pageerror', (e) => pageErrors.push(String(e && e.message || e)));
+    await mintEntity(page);
+
+    const s = await page.evaluate(async () => {
+      await ensureCap('chit2');
+      const s = String(Date.now()).slice(-6);
+      const mk = async (n, k) => { const r = await api('addActor', { body: { display_name: n, actor_key: k } });
+        const a = (r && (r.actor || r)) || {}; return a.actor_id || a.identity_id; };
+      const A = await mk('Ravi', 'rav' + s), B = await mk('Mani', 'man' + s);
+      const me = await api('me').catch(() => null);
+      const myId = (me && (me.identity_id || (me.entity || {}).identity_id)) || null;
+      const sent = await api('createChit', { body: { purpose: 'order', manual_subject: 'WL card ' + s,
+        line_items: [{ particulars: 'Card Rice', quantity: 100, unit: 'kg', price: 60,
+                       comment: 'last time the quality was not good — check before loading' }],
+        recipients: myId ? [{ entity_id: myId, role: 'to' }] : [], send_to_self: true } });
+      const ls = (await api('chit', { params: { id: sent.chit_id } })).live_set || [];
+      await api('c2AssignLines', { params: { id: sent.chit_id }, body: { edits: [
+        { line_id: ls[0].line_id, assignee_actor_id: A, assignee_name: 'Ravi', due_date: '2026-12-10' } ] } });
+      /* 40 of 100 out, so "what is left" has a real answer rather than the ordered figure. */
+      await api('c2DeliverLines', { params: { id: sent.chit_id },
+        body: { rows: [{ line_id: ls[0].line_id, quantity: 40, unit: 'kg', reference: 'DC-CARD' }] } });
+      return { s, chit_id: sent.chit_id, line_id: ls[0].line_id, A, B };
+    });
+
+    await page.evaluate(() => { UI.nav = 'worklist'; renderApp(); });
+    await page.waitForResponse((r) => /folders\/worklist/.test(r.url()), { timeout: 30000 }).catch(() => null);
+    await settle(page);
+    await page.getByTestId('wl-expand-all').click();
+    await settle(page);
+
+    /* ── ① THE ROW SHOWS WHAT IS LEFT, NOT WHAT WAS ORDERED ──────────────────────────────────────────────────
+       ⚠️ It used to say "100 kg" with 40 already gone — right at the start, wrong ever after, and wrong in the
+       direction that sends someone to fetch a full load twice. */
+    const row = page.getByTestId('wl-row').filter({ hasText: 'WL card ' + s.s }).first();
+    await expect(row, 'the row leads with the remainder').toContainText('60 kg left');
+    await expect(row, 'and still shows the whole picture').toContainText('40 of 100');
+
+    // ── ② THE CARD ──────────────────────────────────────────────────────────────────────────────────────────
+    await row.evaluate((n) => n.click());
+    await page.waitForResponse((r) => /\/api\/chits\//.test(r.url()), { timeout: 30000 }).catch(() => null);
+    await settle(page);
+    const card = page.locator('#modalhost');
+    await expect(card, 'the remainder is the headline figure').toContainText('60');
+    /* ⭐ THE TRANSPARENCY ASK: the instruction that travelled with the order reaches the person doing the work. */
+    await expect(card, 'the original instruction is visible to whoever does the work')
+      .toContainText('last time the quality was not good');
+    await expect(card, 'and the delivery history is there, with its reference').toContainText('DC-CARD');
+
+    // ── ③ REASSIGN AND RE-DATE, IN ONE SAVE ─────────────────────────────────────────────────────────────────
+    await page.getByTestId('wl-who-sel').selectOption(s.B);
+    await page.getByTestId('wl-due-inp').fill('2026-12-20');
+    await Promise.all([
+      page.waitForResponse((r) => /folders\/worklist/.test(r.url()), { timeout: 30000 }).catch(() => null),
+      page.getByTestId('wl-line-save').click(),
+    ]);
+    await settle(page);
+
+    let asg = await page.evaluate(async (x) => {
+      const d = await api('chit', { params: { id: x.chit_id } });
+      const a = (d.line_assignment || {})[x.line_id] || {};
+      return { name: a.assignee_name, due: a.due_date, history: (a.history || []).length };
+    }, s);
+    expect(asg.name, 'the line moved to Mani').toBe('Mani');
+    expect(asg.due, 'and to the new date').toBe('2026-12-20');
+    /* ⚠️ NOTHING WAS OVERWRITTEN. Handing work on keeps who had it before — that is the record of what happened,
+       and it is free because the table was already append-only. */
+    expect(asg.history, 'Ravi is still there as history').toBeGreaterThanOrEqual(1);
+
+    // ── ④ ⭐ MARK DONE — the private declaration ──────────────────────────────────────────────────────────────
+    await page.getByTestId('wl-expand-all').click();
+    await settle(page);
+    await page.getByTestId('wl-row').filter({ hasText: 'WL card ' + s.s }).first().evaluate((n) => n.click());
+    await settle(page);
+    /* ⚠️ WAIT FOR THE LIST TO COME BACK, NOT FOR THE SPINNER. wlAssignSave reloads the worklist after saving, and
+       settle() only waits out the busy overlay — which can clear before the refetch lands. This passed alone and
+       failed in the full suite, where production is answering slower: the classic shape of asserting on a screen
+       that has not been told the news yet. */
+    await Promise.all([
+      page.waitForResponse((r) => /folders\/worklist/.test(r.url()), { timeout: 30000 }).catch(() => null),
+      page.getByTestId('wl-mark-done').click(),
+    ]);
+    await settle(page);
+    await page.getByTestId('wl-expand-all').click();
+    await settle(page);
+
+    const doneRow = page.getByTestId('wl-row').filter({ hasText: 'WL card ' + s.s }).first();
+    /* ⚠️ IT STAYS ON THE LIST, GREYED. Athi's reason for the state is "so others should not do that", and a row
+       that vanishes cannot say "someone already has this" — removing it makes a double-pick MORE likely. */
+    await expect(doneRow, 'the done line is still listed').toHaveAttribute('data-state', 'done');
+
+    /* ⭐ AND THE GOODS ARE STILL OWED. The person finished their bit; 60 kg has not gone out. Two different
+       facts, and a merged status would have had to lie about one of them. */
+    const p = await page.evaluate(async (x) => {
+      const d = await api('chit', { params: { id: x.chit_id } });
+      return (d.line_delivery || {})[x.line_id] || null;
+    }, s);
+    expect(p.delivered, 'delivery is untouched by the work state').toBe(40);
+    expect(p.complete, 'the line still owes 60 kg — done is not delivered').toBe(false);
+
+    expect(pageErrors, 'a swallowed exception is how the picker looked unbuilt for a day').toEqual([]);
+  });
 });

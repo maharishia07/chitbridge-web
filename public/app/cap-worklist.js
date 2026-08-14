@@ -35,8 +35,12 @@ var WL = { data: null, busy: false, err: null, due: '', view: null,
 if (typeof EP !== 'undefined') {
   Object.assign(EP, {
     worklist: { m: 'GET', p: '/api/folders/worklist', ok: 'y' },
-    /* ⭐ The two things a person does after doing the work — recorded from the list they did it from. */
+    /* ⭐ Everything a person does to a line, recorded from the list they did it from. Declared HERE rather than
+       borrowed from cap-chit2, so opening a line never depends on another capability having been loaded first. */
     wlDeliver: { m: 'POST', p: '/api/chits/:id/deliver-lines', ok: 'y' },
+    wlAssign:  { m: 'POST', p: '/api/chits/:id/assign-lines',  ok: 'y' },
+    wlChit:    { m: 'GET',  p: '/api/chits/:id',               ok: 'y' },
+    wlActors:  { m: 'GET',  p: '/api/actors',                  ok: 'y' },
   });
 }
 
@@ -154,7 +158,21 @@ function wlRow(r, ctx, depth){
   var named = ctx.indexOf('item') >= 0;    // an item heading above already said WHAT this is
   var ordered = ctx.indexOf('chit') >= 0;  // …and a chit heading already said which order
   var order = esc(r.subject || 'chit') + wlWho(r.counterparty);
+  var done = r.state === 'done';
+  /**
+   * ⭐ WHAT IS LEFT, NOT WHAT WAS ORDERED — Athi, 2026-08-14: *"partial deliver, and the remaining qty to be
+   * visible with history."*
+   *
+   * ⚠️ THE ROW SAID "30 kg" WITH 20 ALREADY OUT. That is the ordered figure, and it is the one number a person
+   * working the list must not be given on its own: it is right at the start, wrong ever after, and wrong in the
+   * direction that sends someone to fetch a full load twice.
+   */
   var qty = esc([r.quantity, r.unit].filter(function(x){ return x != null && x !== ''; }).join(' '));
+  if (r.delivered > 0 && r.left != null) {
+    qty = '<b style="color:' + (r.left === 0 ? '#3d7a4e' : '#b0641c') + '">'
+      + (r.left === 0 ? 'all out' : esc(String(r.left)) + ' ' + esc(r.unit || '') + ' left')
+      + '</b> <span style="color:var(--grey)">· ' + esc(String(r.delivered)) + ' of ' + esc(String(r.quantity)) + '</span>';
+  }
 
   /**
    * ⚠️ A ROW MUST SAY SOMETHING ITS HEADINGS DID NOT. Under "Rice Ponni Boiled · 170 kg", a row that leads with
@@ -173,9 +191,15 @@ function wlRow(r, ctx, depth){
      than the two levels it sat under — so the eye landed here first and then had to climb. Regular weight is what
      separates content from heading now, not size alone. */
   var ind = 16 + (depth || 0) * 15;
-  return '<div data-testid="wl-row" onclick="wlOpen(&quot;' + r.chit_id + '&quot;)" style="padding:9px 16px 9px ' + (ind + 13) + 'px;border-bottom:1px solid var(--line);cursor:pointer">'
+  /* ⚠️ A DONE LINE STAYS ON THE LIST, GREYED — it does not vanish. Athi's reason for the state is *"so others
+     should not do that"*, and a row that disappears cannot say "someone already has this". Removing it would
+     make two people picking the same sack MORE likely, not less. */
+  return '<div data-testid="wl-row" data-state="' + (done ? 'done' : 'open') + '" onclick="wlLine(&quot;' + r.line_id + '&quot;)"'
+    + ' style="padding:9px 16px 9px ' + (ind + 13) + 'px;border-bottom:1px solid var(--line);cursor:pointer'
+    + (done ? ';opacity:.5' : '') + '">'
     + '<div style="display:flex;align-items:baseline;gap:8px">'
-    + '<span style="flex:1;font-weight:500;font-size:13.5px;color:var(--ink-2,#41474e)">' + lead
+    + '<span style="flex:1;font-weight:500;font-size:13.5px;color:var(--ink-2,#41474e)' + (done ? ';text-decoration:line-through' : '') + '">'
+    + (done ? '<span style="color:#3d7a4e;font-weight:800;text-decoration:none">✓ </span>' : '') + lead
     + (tail ? '<span style="color:var(--grey);font-weight:400;font-size:12.5px">' + tail + '</span>' : '') + '</span>'
     /* ⚠️ event.stopPropagation() ON BOTH — without it the row's own handler also fires and the chit opens behind
        the card, so the modal you wanted is sitting on a screen that navigated out from under it. */
@@ -528,6 +552,140 @@ async function wlActSave(kind){
        the class of drift that makes people stop believing the numbers. */
     await wlLoad();
   } catch (e) { toast((e && e.message) || 'Could not record that'); }
+}
+
+/**
+ * ⭐ THE LINE CARD — everything you can do to one subtask, in one pane.
+ *
+ * Athi, 2026-08-14: *"managing the line item from here, what are the possibilities … reassign it to someone else
+ * … he can set the status to close … partial deliver, and the remaining qty to be visible with history … possibly
+ * assign to a different date … some commercials."* And: *"how do we connect with the original requirement … see,
+ * is it transparent?"*
+ *
+ * ⚠️ A PANE, NOT A DENSER ROW. Five affordances on every row would answer the list and ruin it. The row keeps the
+ * two frequent ones (deliver · cost) and everything else lives one tap in — which is also where the ORIGINAL
+ * WORDS belong, since they are what you read before deciding, not while scanning.
+ *
+ * ⚠️ LOADED ON OPEN, NEVER PRE-LOADED. The history and the actor list are one request each, made when the card
+ * opens. Fetching them for every row of a fifty-row list to serve the one row someone taps is the habit this
+ * codebase refuses.
+ */
+var WLL = { row: null, det: null, actors: null };
+async function wlLine(line_id){
+  var r = wlRows(WL.data || {}).filter(function(x){ return x.line_id === line_id; })[0];
+  if (!r) return;
+  WLL.row = r; WLL.det = null;
+  modal(wlLineHTML(true));
+  try {
+    WLL.det = await api('wlChit', { params: { id: r.chit_id } });
+    if (!WLL.actors) {
+      var a = await api('wlActors').catch(function(){ return null; });
+      WLL.actors = (a && (a.actors || a.items || (Array.isArray(a) ? a : []))) || [];
+    }
+  } catch (e) { /* the card still works without history — it just cannot show it */ }
+  var host = document.getElementById('modalhost');
+  if (host && host.innerHTML) modal(wlLineHTML(false));
+}
+function wlLineHTML(loading){
+  var r = WLL.row || {}, d = WLL.det || {};
+  var prog = ((d.line_delivery || {})[r.line_id]) || {};
+  var events = prog.events || [], added = prog.added || [];
+  var done = r.state === 'done';
+  var lbl = function(t){ return '<div style="font-size:10.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--grey);margin:14px 0 5px">' + t + '</div>'; };
+
+  /* ── ⭐ WHAT WAS ACTUALLY ASKED FOR ──────────────────────────────────────────────────────────────────────────
+     ⚠️ THE RAW PHRASE GOES FIRST, ABOVE THE TIDY NAME. The matched name is a CONCLUSION — "2 boxes of the usual
+     rice" became "Rice Ponni Boiled · 24 kg" — and the person holding the sack is the last one who can catch a
+     wrong conclusion. They were the one person never shown the evidence. */
+  var asked = '';
+  if (r.raw_phrase || r.asked_as || r.comment || r.needs_human) {
+    asked = lbl('what was asked for')
+      + '<div style="background:#f4f1e8;border-left:3px solid #b0641c;border-radius:0 7px 7px 0;padding:9px 12px;font-size:13.5px;line-height:1.55">'
+      + (r.raw_phrase ? '<div style="font-style:italic;color:#5b5340">“' + esc(r.raw_phrase) + '”</div>' : '')
+      + (r.asked_as ? '<div style="margin-top:4px;font-size:12.5px;color:var(--grey)">written as <b>' + esc(r.asked_as) + '</b> · matched to <b>' + esc(r.particulars || '') + '</b></div>' : '')
+      + (r.comment ? '<div style="margin-top:6px;color:#2c5d7c">' + esc(r.comment) + '</div>' : '')
+      + (r.needs_human ? '<div style="margin-top:6px;font-size:12.5px;color:#c0453b;font-weight:700">⚠️ this line was flagged for a person to check</div>' : '')
+      + '</div>';
+  }
+
+  /* ── progress, and the history behind it ─────────────────────────────────────────────────────────────────── */
+  var left = r.left == null ? null : r.left;
+  var bar = '<div style="display:flex;gap:16px;align-items:baseline;font-variant-numeric:tabular-nums">'
+    + '<div><div style="font-size:22px;font-weight:800;color:' + (left === 0 ? '#3d7a4e' : '#b0641c') + '">'
+    +   (left == null ? '—' : esc(String(left))) + '</div><div style="font-size:11px;color:var(--grey)">' + esc(r.unit || '') + ' left</div></div>'
+    + '<div style="font-size:13px;color:var(--grey)">' + esc(String(r.delivered || 0)) + ' out of ' + esc(String(r.quantity == null ? '—' : r.quantity)) + ' ' + esc(r.unit || '') + '</div>'
+    + (prog.charged ? '<div style="margin-left:auto;text-align:right"><div style="font-size:17px;font-weight:800;color:#2c5d7c">' + esc(String(prog.charged)) + '</div><div style="font-size:11px;color:var(--grey)">charged</div></div>' : '')
+    + '</div>';
+
+  var hist = '';
+  if (loading) hist = '<div style="font-size:12.5px;color:var(--grey);padding:6px 0"><span class="spin"></span> reading the history…</div>';
+  else if (!events.length && !added.length) hist = '<div style="font-size:12.5px;color:var(--grey);padding:4px 0">Nothing recorded against this line yet.</div>';
+  else {
+    hist = events.concat([]).map(function(e){
+      return '<div style="display:flex;gap:10px;align-items:baseline;padding:5px 0;border-bottom:1px solid var(--line-soft,#f0efec);font-size:13px">'
+        + '<span style="font-weight:700;font-variant-numeric:tabular-nums;color:' + (e.quantity < 0 ? '#c0453b' : 'var(--ink)') + '">'
+        +   (e.quantity < 0 ? '' : '+') + esc(String(e.quantity)) + ' ' + esc(e.unit || '') + '</span>'
+        + '<span style="color:var(--grey);font-size:12px">' + esc(e.reference || e.note || '') + '</span>'
+        + '<span style="margin-left:auto;color:var(--grey);font-size:11.5px">' + esc(String(e.at || '').slice(0, 10)) + ' · ' + esc(e.by_actor || e.by || '') + '</span></div>';
+    }).join('')
+    + added.map(function(a){
+      return '<div style="display:flex;gap:10px;align-items:baseline;padding:5px 0;border-bottom:1px solid var(--line-soft,#f0efec);font-size:13px">'
+        + '<span style="color:#2c5d7c;font-weight:700">₹ ' + esc(String(a.amount == null ? '' : a.amount)) + '</span>'
+        + '<span>' + esc(a.particulars || '') + (a.quantity ? ' <span style="color:var(--grey)">· ' + esc(String(a.quantity)) + ' ' + esc(a.unit || '') + '</span>' : '') + '</span>'
+        + '<span style="margin-left:auto;color:var(--grey);font-size:11.5px">' + esc(String(a.at || '').slice(0, 10)) + '</span></div>';
+    }).join('');
+  }
+
+  /* ── who holds it, and when it is due — both changeable, both append-only behind the scenes ──────────────── */
+  var opts = '<option value="">Unassigned</option>' + (WLL.actors || []).map(function(a){
+    var id = a.actor_id || a.identity_id, nm = a.display_name || a.name || '';
+    return '<option value="' + esc(id) + '"' + (id === r.actor_id ? ' selected' : '') + '>' + esc(nm) + '</option>';
+  }).join('');
+
+  return '<div class="mhd"><div class="t">' + esc(r.particulars || 'Line') + (done ? ' <span style="font-size:13px;color:#3d7a4e">✓ done</span>' : '') + '</div>'
+    + '<div class="s">' + esc(r.subject || 'chit') + '</div></div>'
+    + '<div class="mbody">'
+    +   bar
+    +   asked
+    +   lbl('history')
+    +   hist
+    +   lbl('who is doing it, and by when')
+    +   '<div style="display:flex;gap:10px">'
+    +     '<select id="wl_who" data-testid="wl-who-sel" style="flex:1;font-size:14.5px;padding:8px 10px;border:1px solid var(--line);border-radius:8px">' + opts + '</select>'
+    +     '<input id="wl_due" data-testid="wl-due-inp" type="date" value="' + esc(String(r.due_date || '').slice(0, 10)) + '" style="font-size:14.5px;padding:8px 10px;border:1px solid var(--line);border-radius:8px">'
+    +   '</div>'
+    +   '<div style="margin-top:6px;font-size:11.5px;color:var(--grey);line-height:1.5">Handing it on keeps the old assignment as history — nothing is overwritten.</div>'
+    + '</div>'
+    + '<div class="mfoot" style="flex-wrap:wrap;gap:8px">'
+    +   '<button onclick="wlOpen(&quot;' + r.chit_id + '&quot;)">Open the order</button>'
+    /* ⚠️ MARK-DONE CARRIES THE ASSIGNEE AND DATE FORWARD, so pressing it is not a quiet unassignment. */
+    +   '<button data-testid="wl-mark-done" onclick="wlSetState(' + (done ? '&quot;open&quot;' : '&quot;done&quot;') + ')">'
+    +     (done ? 'Reopen' : 'Mark done') + '</button>'
+    +   '<button class="pri" data-testid="wl-line-save" onclick="wlLineSave()">Save</button>'
+    + '</div>';
+}
+async function wlSetState(state){
+  var r = WLL.row; if (!r) return;
+  await wlAssignSave({ state: state,
+    assignee_actor_id: r.actor_id || null, assignee_name: r.who === 'Unassigned' ? null : r.who,
+    due_date: r.due_date || null }, state === 'done' ? 'Marked done' : 'Reopened');
+}
+async function wlLineSave(){
+  var r = WLL.row; if (!r) return;
+  var sel = document.getElementById('wl_who'), due = document.getElementById('wl_due');
+  var id = sel ? sel.value : '';
+  var nm = sel && sel.selectedIndex >= 0 ? sel.options[sel.selectedIndex].text : null;
+  await wlAssignSave({ state: r.state || 'open', assignee_actor_id: id || null,
+    assignee_name: id ? nm : null, due_date: (due && due.value) || null }, 'Updated');
+}
+async function wlAssignSave(edit, msg){
+  var r = WLL.row; if (!r) return;
+  try {
+    await api('wlAssign', { params: { id: r.chit_id }, body: { edits: [Object.assign({ line_id: r.line_id }, edit)] } });
+    closeModal();
+    toast(msg);
+    await wlLoad();
+  } catch (e) { toast((e && e.message) || 'Could not save that'); }
 }
 
 /* Tapping a line opens the chit it belongs to — the line is where the work is, the chit is where the context is. */
