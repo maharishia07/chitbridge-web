@@ -66,7 +66,7 @@ function wlRow(r, ctx){
   if (ctx.indexOf('who') < 0 && r.who) bits.push(esc(r.who));
   if (ctx.indexOf('date') < 0 && due) bits.push((due.overdue ? '⚠️ ' : '') + esc(due.text));
   if (r.task) bits.push(esc(r.task));
-  return '<div onclick="wlOpen(&quot;' + r.chit_id + '&quot;)" style="padding:11px 16px 11px 28px;border-bottom:1px solid var(--line);cursor:pointer">'
+  return '<div data-testid="wl-row" onclick="wlOpen(&quot;' + r.chit_id + '&quot;)" style="padding:11px 16px 11px 28px;border-bottom:1px solid var(--line);cursor:pointer">'
     + '<div style="display:flex;align-items:baseline;gap:8px">'
     + '<span style="flex:1;font-weight:600;font-size:14.5px">' + esc(r.particulars || '')
     + '<span style="color:var(--grey);font-weight:400;font-size:12.5px"> · '
@@ -81,7 +81,7 @@ function wlRow(r, ctx){
 }
 
 function wlHead(title, right, tone){
-  return '<div style="padding:14px 16px 6px;display:flex;justify-content:space-between;align-items:baseline;'
+  return '<div data-testid="wl-head" style="padding:14px 16px 6px;display:flex;justify-content:space-between;align-items:baseline;'
     + 'border-top:1px solid var(--line);background:#fbfbfa">'
     + '<span style="font-size:16px;font-weight:800;color:' + (tone || 'var(--ink,#1c2128)') + '">' + title + '</span>'
     + '<span style="font-size:12.5px;color:var(--grey)">' + (right || '') + '</span></div>';
@@ -127,7 +127,7 @@ function worklistScreen(){
     + '<div style="display:flex;gap:6px;padding:9px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap">'
     +   opts.map(function(o){
           var on = cur === o[0];
-          return '<span onclick="wlView(&quot;' + o[0] + '&quot;)" style="cursor:pointer;font-size:12.5px;border:1px solid '
+          return '<span data-testid="wl-view-' + o[0].split('>')[0] + '" onclick="wlView(&quot;' + o[0] + '&quot;)" style="cursor:pointer;font-size:12.5px;border:1px solid '
             + (on ? 'var(--blue)' : 'var(--line)') + ';' + (on ? 'background:var(--blue);color:#fff;font-weight:700;' : '')
             + 'border-radius:8px;padding:4px 11px">' + o[1] + '</span>';
         }).join('')
