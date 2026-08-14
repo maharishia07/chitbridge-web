@@ -218,15 +218,28 @@ function c2PaneOrd(d){
       + '<span style="display:flex;gap:6px;align-items:center;flex:none">'
       + c2PickBadge(l, i)
       + '<span style="font-variant-numeric:tabular-nums;font-size:14px">' + (l.price != null ? c2Money((c2n(l.quantity) || 0) * c2n(l.price)) : '') + '</span>'
-      /* Same rule as Design 1: a delivered line is settled, so it shows a lock rather than an edit that the
-         server would refuse. The refusal itself lives in amend.record — this only stops someone typing first. */
-      /* ⚠️ THE WHOLE TERNARY IS PARENTHESISED, and it was not for one commit. `a + b ? c : d` parses as
-         `(a + b) ? c : d`, so every piece of the row built so far became the CONDITION — always truthy — and was
-         thrown away, leaving a row that was nothing but a padlock. It parsed cleanly and rendered nonsense. */
-      + ((((d.line_delivery||{})[e.line_id]||{}).events||[]).length
-         ? '<span title="Delivered — the order cannot be changed for this line" style="opacity:.55;font-size:14px">🔒</span>'
-         : '<span data-testid="amend-line" onclick="event.stopPropagation();c2AmendLine(' + i + ')" title="Fix this line"'
-           + ' style="cursor:pointer;font-size:15px;color:var(--grey);padding:0 2px">✎</span>')
+      /**
+       * ⭐ A PARTLY DELIVERED LINE STAYS EDITABLE — Athi, 2026-08-14: *"partial delivery can be amendable, that
+       * is what makes it interesting."*
+       *
+       * ⚠️ THIS ROW SHOWED A PADLOCK THE MOMENT ANY DELIVERY EXISTED, which was right under yesterday's rule and
+       * wrong under today's. It would have made the headline change untestable from every screen: the server
+       * accepts the amendment, and the only way to reach it is hidden.
+       *
+       * The server is the authority now, and it refuses exactly three things (below-delivered · unit change ·
+       * removal) with a message naming the remedy. So the pencil is always offered on a live line and the chip
+       * says why an edit might come back refused — a warning beats a locked door that cannot explain itself.
+       *
+       * ⚠️ THE WHOLE TERNARY IS PARENTHESISED, and it was not for one commit. `a + b ? c : d` parses as
+       * `(a + b) ? c : d`, so every piece of the row built so far became the CONDITION — always truthy — and was
+       * thrown away, leaving a row that was nothing but a padlock. It parsed cleanly and rendered nonsense.
+       */
+      + ((((d.line_delivery||{})[e.line_id]||{}).delivered)
+         ? '<span title="Part of this line has been delivered. It can still be corrected, but not below what has gone out, and its unit is fixed." style="font-size:11px;color:#b0641c;font-weight:700">◧ '
+           + (((d.line_delivery||{})[e.line_id]||{}).delivered) + ' out</span>'
+         : '')
+      + '<span data-testid="amend-line" onclick="event.stopPropagation();c2AmendLine(' + i + ')" title="Fix this line"'
+        + ' style="cursor:pointer;font-size:15px;color:var(--grey);padding:0 2px">✎</span>'
       + '</span></div>'
       + '<div style="margin-top:3px;font-size:13.5px;color:var(--ink-2,#6b665e);font-variant-numeric:tabular-nums">' + was + esc(c2q(l)) + (l.price != null ? ' × ' + c2Money(l.price) : '') + '</div>'
       + (l.comment ? '<div style="margin-top:5px;font-size:12.5px;color:#2c5d7c;background:#eef4f8;border-radius:5px;padding:4px 8px;display:inline-block">' + esc(l.comment) + '</div>' : '')

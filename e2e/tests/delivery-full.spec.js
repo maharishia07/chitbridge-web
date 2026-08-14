@@ -73,7 +73,7 @@ test.describe('DELIVERY — in full', () => {
     expect(nb ? nb.complete : false, 'and is not complete').toBe(false);
   });
 
-  test('DEL-02 · a delivered line refuses amendment — the receipt lock', async ({ page }) => {
+  test('DEL-02 · a delivered line amends UP but never below what went out', async ({ page }) => {
     await mintEntity(page);
     const S = await setup(page);
     await page.evaluate(async (x) => api('c2DeliverLines', { params: { id: x.chit_id },
@@ -84,12 +84,34 @@ test.describe('DELIVERY — in full', () => {
     const amend = await page.evaluate(async (x) => {
       try {
         await api('amend', { params: { id: x.chit_id },
-          body: { edits: [{ line_index: 0, line_id: x.a, line: { particulars: 'Onion', quantity: 99 }, reason_code: 'misread_by_ai' }] } });
+          body: { edits: [{ line_index: 0, line_id: x.a, line: { particulars: 'Onion', quantity: 99, unit: 'kg' }, reason_code: 'misread_by_ai' }] } });
         return { ok: true };
       } catch (e) { return { ok: false, message: String(e && e.message || e) }; }
     }, S);
-    expect(amend.ok, 'a delivered line cannot be amended').toBe(false);
-    expect(amend.message, 'and the refusal says which line and what to do instead').toMatch(/delivered/i);
+    /**
+     * ⭐ THE RULE CHANGED, AND THIS SPEC IS THE RECORD OF IT.
+     *
+     * Athi wrote it on 2026-08-13 as *"once the receipt is made, then no more amendments"*, which I implemented
+     * as "any delivery at all locks the line". On 2026-08-14 he reversed it: *"partial delivery can be amendable,
+     * that is what makes it interesting."* The old rule froze the 60 still owed because 40 had gone out — the
+     * part someone most needs to change.
+     *
+     * ⚠️ SO AMENDING UP IS NOW ALLOWED, and the guard moved to the three things that are genuinely unsafe:
+     * below-delivered, a unit change, and removal. Those are asserted below.
+     */
+    expect(amend.ok, 'a partly delivered line amends UPWARD — 10 delivered, 99 ordered is legal').toBe(true);
+
+    const below = await page.evaluate(async (x) => {
+      try {
+        await api('amend', { params: { id: x.chit_id },
+          body: { edits: [{ line_index: 0, line_id: x.a, line: { particulars: 'Onion', quantity: 1, unit: 'kg' }, reason_code: 'quantity_change' }] } });
+        return { ok: true };
+      } catch (e) { return { ok: false, message: String(e && e.message || e) }; }
+    }, S);
+    /* ⚠️ THE ONE THAT MATTERS: reducing below what has gone out would make delivered goods vanish from the
+       arithmetic. That is a return, and it needs a negative event so both figures stay on the record. */
+    expect(below.ok, 'but NOT below what has already been delivered — that is a return, not an amendment').toBe(false);
+    expect(below.message, 'and the refusal names the remedy').toMatch(/delivered/i);
 
     const removal = await page.evaluate(async (x) => {
       try {
@@ -105,7 +127,7 @@ test.describe('DELIVERY — in full', () => {
     const ok = await page.evaluate(async (x) => {
       try {
         await api('amend', { params: { id: x.chit_id },
-          body: { edits: [{ line_index: 1, line_id: x.b, line: { particulars: 'Potato', quantity: 7 }, reason_code: 'misread_by_ai' }] } });
+          body: { edits: [{ line_index: 1, line_id: x.b, line: { particulars: 'Potato', quantity: 7, unit: 'kg' }, reason_code: 'misread_by_ai' }] } });
         return true;
       } catch (e) { return false; }
     }, S);
