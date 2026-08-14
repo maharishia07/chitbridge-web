@@ -1519,8 +1519,8 @@ function priChip(p){ return (!p||p==="normal")?"":`<span class="prichip pri-${p}
 let UI = {...UI0, selected:new Set(), aggStates:new Set(["open","act","close"])};
 
 const MENUS = {
-  entity:{top:[["compose","✉️","Compose",""],["task","📥","Task",""],["order","📤","Order",""],["folders","📁","Folders",""],["drafts","📝","Drafts",""],["trash","🗑️","Trash",""],["archive","🗄️","Archive",""]], rest:[["intake","📨","Intake"],["traceability","🧭","Traceability"],["network","🔗","Network"],["suppliers","🏭","Suppliers"],["customers","🛍️","Customers"],["catalogue","🗂️","Catalogue"],["readiness","🛡️","Trade ready"],["coassists","🧑‍🤝‍🧑","Co-assists"],["mis","📊","MIS"],["disputes","⚖️","Disputes"],["profile","👤","Profile"],["settings","⚙️","Settings"],["assistreview","🧠","Assistant"]], tag:"Owner does structure."},
-  actor:{top:[["compose","✉️","Compose",""],["task","📥","Task",""],["order","📤","Order",""],["folders","📁","Folders",""],["drafts","📝","Drafts",""],["trash","🗑️","Trash",""],["archive","🗄️","Archive",""]], rest:[["suppliers","🏭","Suppliers"],["profile","👤","Profile"]], tag:"Commerce yes, structure no."},
+  entity:{top:[["compose","✉️","Compose",""],["task","📥","Task",""],["order","📤","Order",""],["folders","📁","Folders",""],["drafts","📝","Drafts",""],["trash","🗑️","Trash",""],["archive","🗄️","Archive",""]], rest:[["worklist","🧰","Everyone's work"],["intake","📨","Intake"],["traceability","🧭","Traceability"],["network","🔗","Network"],["suppliers","🏭","Suppliers"],["customers","🛍️","Customers"],["catalogue","🗂️","Catalogue"],["readiness","🛡️","Trade ready"],["coassists","🧑‍🤝‍🧑","Co-assists"],["mis","📊","MIS"],["disputes","⚖️","Disputes"],["profile","👤","Profile"],["settings","⚙️","Settings"],["assistreview","🧠","Assistant"]], tag:"Owner does structure."},
+  actor:{top:[["compose","✉️","Compose",""],["task","📥","Task",""],["order","📤","Order",""],["worklist","🧰","My work",""],["folders","📁","Folders",""],["drafts","📝","Drafts",""],["trash","🗑️","Trash",""],["archive","🗄️","Archive",""]], rest:[["suppliers","🏭","Suppliers"],["profile","👤","Profile"]], tag:"Commerce yes, structure no."},
   customer:{top:[["order","📤","My orders",""]], rest:[["shops","🏬","Find a shop"]], tag:"You see only your orders."},
 };
 const PURPOSE = {
@@ -1533,6 +1533,7 @@ const PURPOSE = {
   suppliers:"Suppliers you buy from — pull their catalogue into a cart.",
   customers:"Your CRM — everyone who ordered from your storefront. They exist only under your shop; the platform never takes them over.",
   catalogue:"What you sell — products and price.",
+  worklist:"Every line assigned across every chit — grouped by date, by person or by order. A co-assist sees only their own.",
   readiness:"Your trade readiness — gather the clearances your standards require; buyers see them as verified confidence.",
   coassists:"Manage who acts for you — people now; connectors, devices, processes, agents next. For structure use Network.",
   mis:"Numbers — performance across the network.",
@@ -1657,6 +1658,9 @@ function renderApp(){
     if(UI.nav==="settings") loadSettings();
     if(UI.nav==="network") loadNetwork();
     if(UI.nav==="intake" && typeof loadIntake==="function") loadIntake();
+    /* ⭐ MY WORK — every line assigned to me, across every chit (b143 + /folders/worklist). Lazy: the endpoint
+       existed for weeks with nothing calling it, which is what made per-line assignment unusable. */
+    if(UI.nav==="worklist"){ ensureCap("worklist").then(function(){ if(typeof wlLoad==="function" && !WL.data && !WL.busy) wlLoad(); }); }
     if(UI.nav==="suppliers") loadSuppliers();
     if(UI.nav==="customers") loadCustomers();
     if(UI.nav==="catalogue") loadCatalogue();
@@ -3840,6 +3844,8 @@ function mainBody(){
   if(String(UI.nav).indexOf('folder:')===0 && typeof _folderView==='function') return _folderView();
   if(UI.nav==="folders") return foldersScreen();
   if(UI.nav==="intake" && typeof intakeScreen==="function") return intakeScreen();   // app/cap-intake.js (lazy)
+  if(UI.nav==="worklist") return (typeof worklistScreen==="function") ? worklistScreen()
+    : '<div style="padding:18px 16px;color:var(--grey);font-size:12.5px"><span class="spin"></span> loading your work…</div>';
   /* ⚠️ DESIGN 2 — a SEPARATE screen, not a variant of the detail pane. Athi: "do not alter the existing one, keep
      it." Design 1 is the chit as one unit of work; this is the chit as many. Reached only from the ⧉ Lines button,
      renders through its own module, and if cap-chit2.js never loads nothing else notices. */
@@ -5031,7 +5037,22 @@ function contentItems(c){
     const open=UI.openLines.has('line'+idx);
     const clip=atts.length?`<span class="lineclip" onclick="event.stopPropagation();toggleLine(${idx})">📎 ${atts.length} ${open?'▾':'▸'}</span>`:"";
     const strip=(atts.length&&open)?`<div class="lineImgs">${attTileGrid(atts,'line'+idx)}</div>`:"";
-    const pen=(c.canAmend===false)?'':`<span class="lineclip" data-testid="amend-line" title="Fix this line" onclick="event.stopPropagation();amendLine(${idx})" style="cursor:pointer">✎</span>`;
+    /**
+     * ⭐ A DELIVERED LINE IS SETTLED — no ✎, a 🔒 instead.
+     *
+     * Athi, 2026-08-14: *"once the receipt is made, then no more amendments."* The server refuses it (amend.record
+     * throws LINE_DELIVERED), and this is the courtesy half: offering an edit that will be refused is worse than
+     * not offering it, because the person types first and finds out after.
+     *
+     * ⚠️ PER LINE. Its neighbours stay editable — freezing a whole order because two lines shipped would block
+     * correcting the eleven that have not.
+     */
+    const _dlv=((c.line_delivery||{})[e.line_id]||{});
+    const _settled=!!(_dlv.events&&_dlv.events.length);
+    const pen=(c.canAmend===false)?''
+      :(_settled
+        ? `<span class="lineclip" title="Delivered — the order cannot be changed for this line. To correct what moved, record a delivery." style="opacity:.55;cursor:default">🔒</span>`
+        : `<span class="lineclip" data-testid="amend-line" title="Fix this line" onclick="event.stopPropagation();amendLine(${idx})" style="cursor:pointer">✎</span>`);
     const was=e.history&&e.history.length?lineWas(e.history):'';
     if(e.removed){
       /* ⚠️ REMOVED, NOT DELETED. The reason shows because "we misread this" and "we cannot supply this" are

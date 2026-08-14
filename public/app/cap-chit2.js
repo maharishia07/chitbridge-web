@@ -218,8 +218,15 @@ function c2PaneOrd(d){
       + '<span style="display:flex;gap:6px;align-items:center;flex:none">'
       + c2PickBadge(l, i)
       + '<span style="font-variant-numeric:tabular-nums;font-size:14px">' + (l.price != null ? c2Money((c2n(l.quantity) || 0) * c2n(l.price)) : '') + '</span>'
-      + '<span data-testid="amend-line" onclick="event.stopPropagation();c2AmendLine(' + i + ')" title="Fix this line"'
-      + ' style="cursor:pointer;font-size:15px;color:var(--grey);padding:0 2px">✎</span>'
+      /* Same rule as Design 1: a delivered line is settled, so it shows a lock rather than an edit that the
+         server would refuse. The refusal itself lives in amend.record — this only stops someone typing first. */
+      /* ⚠️ THE WHOLE TERNARY IS PARENTHESISED, and it was not for one commit. `a + b ? c : d` parses as
+         `(a + b) ? c : d`, so every piece of the row built so far became the CONDITION — always truthy — and was
+         thrown away, leaving a row that was nothing but a padlock. It parsed cleanly and rendered nonsense. */
+      + ((((d.line_delivery||{})[e.line_id]||{}).events||[]).length
+         ? '<span title="Delivered — the order cannot be changed for this line" style="opacity:.55;font-size:14px">🔒</span>'
+         : '<span data-testid="amend-line" onclick="event.stopPropagation();c2AmendLine(' + i + ')" title="Fix this line"'
+           + ' style="cursor:pointer;font-size:15px;color:var(--grey);padding:0 2px">✎</span>')
       + '</span></div>'
       + '<div style="margin-top:3px;font-size:13.5px;color:var(--ink-2,#6b665e);font-variant-numeric:tabular-nums">' + was + esc(c2q(l)) + (l.price != null ? ' × ' + c2Money(l.price) : '') + '</div>'
       + (l.comment ? '<div style="margin-top:5px;font-size:12.5px;color:#2c5d7c;background:#eef4f8;border-radius:5px;padding:4px 8px;display:inline-block">' + esc(l.comment) + '</div>' : '')
@@ -436,6 +443,16 @@ async function c2Deliver(line_id, unit, back){
  * them well. Switching costs nothing: no fetch, no state beyond which tab is lit.
  */
 function c2WorkView(v){ C2.work = v; c2Paint(); }
+/**
+ * A grouping heading — the name is the loudest thing on the row, because it is what you are scanning for.
+ * c2Grp() is a small grey uppercase LABEL, right for "What is left" and wrong for a person's name.
+ */
+function c2GrpBig(title, right, tone){
+  return '<div style="padding:14px 16px 6px;display:flex;justify-content:space-between;align-items:baseline;'
+    + 'border-top:1px solid var(--line);background:#fbfbfa">'
+    + '<span style="font-size:16px;font-weight:800;color:' + (tone || 'var(--ink,#1c2128)') + '">' + title + '</span>'
+    + '<span style="font-size:12.5px;color:var(--grey)">' + (right || '') + '</span></div>';
+}
 function c2WorkTabs(){
   var tabs = [['line','By line'],['person','By person'],['date','By date']];
   return '<div style="display:flex;gap:6px;padding:9px 16px;border-bottom:1px solid var(--line)">'
@@ -447,6 +464,13 @@ function c2WorkTabs(){
       }).join('') + '</div>';
 }
 /** Overdue first — a date view that buried what is late under what is not would be worse than no date view. */
+/** "Mon 17 Aug" — the actual date, because "This week" does not tell anyone which day to be ready. */
+function c2DateLabel(d){
+  try {
+    var t = new Date(String(d) + 'T00:00:00');
+    return t.toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short' });
+  } catch (e) { return String(d); }
+}
 function c2DueBucket(due){
   if(!due) return { k:'zz', label:'No date' };
   var d = String(due).slice(0,10);
@@ -473,79 +497,63 @@ function c2PaneWork(d){
   });
   out += c2WorkTabs();
   var view = C2.work || 'line';
-  /* ⚠️ HOISTED ON PURPOSE. `var prog` is also declared further down for the By-line summary; `var` hoists the
-     NAME but not the value, so reading it in the branches below would have handed c2WorkRow an undefined map and
-     thrown on the first row — in the By-date view only, which is the one nobody had opened yet. */
   prog = d.line_delivery || {};
 
-  /* ── BY PERSON — who do I chase ─────────────────────────────────────────────────────────────────────────── */
-  if (view === 'person') {
-    var names = Object.keys(people).sort(function(a, b){
-      /* Unassigned last: it is a gap to fill, not a person to chase, and putting it first buries the roster. */
-      if (a === 'Unassigned') return 1; if (b === 'Unassigned') return -1; return a.localeCompare(b);
-    });
-    out += c2Grp('Who has what', names.length + ' ' + (names.length === 1 ? 'person' : 'people'));
-    out += names.map(function(k){
-      var mineLines = people[k];
-      var left = 0, anyLeft = false;
-      mineLines.forEach(function(e){
-        var l = e.live || e.original || {}; var p = (d.line_delivery || {})[e.line_id] || {};
-        var ord = c2n(l.quantity); if (ord == null) return;
-        anyLeft = true; left += Math.max(0, ord - (p.delivered || 0));
-      });
-      /* The person is the HEADING; the rows underneath are the full line rows, identical to By line. */
-      return c2Grp(k, mineLines.length + ' line' + (mineLines.length === 1 ? '' : 's')
-                      + (anyLeft ? ' · ' + (Math.round(left * 1000) / 1000) + ' left' : ''))
-        + mineLines.map(function(e){ return c2WorkRow(e, asg, d.line_delivery || {}); }).join('');
-    }).join('');
-    return out;
-  }
-
-  /* ── BY DATE — what is late ─────────────────────────────────────────────────────────────────────────────── */
-  if (view === 'date') {
-    var buckets = {};
-    lines.forEach(function(e){
-      var a = asg[e.line_id] || {};
-      var b = c2DueBucket(a.due_date);
-      (buckets[b.k] = buckets[b.k] || { label: b.label, rows: [] }).rows.push({ e: e, a: a });
-    });
-    var keys = Object.keys(buckets).sort();
-    if (!keys.length) return out + '<div style="padding:14px 16px;font-size:12.5px;color:var(--grey)">Nothing is assigned yet, so nothing has a date.</div>';
-    out += keys.map(function(k){
-      var b = buckets[k];
-      var overdue = b.label === 'Overdue';
-      /* The date bucket is the HEADING; the rows are the same full line rows. Overdue is marked on the heading,
-         not by rewriting the row — a row that looks different in one view is a row someone has to re-learn. */
-      return c2Grp((overdue ? '⚠️ ' : '') + b.label, b.rows.length + ' line' + (b.rows.length === 1 ? '' : 's'))
-        + b.rows.map(function(r){ return c2WorkRow(r.e, asg, prog); }).join('');
-    }).join('');
-    return out;
-  }
-
   /**
-   * ⭐ THE OPERATIONAL SUMMARY — Athi, 2026-08-13: *"we should be able to see the summary of what is given, what
-   * is left, which date it is assigned."*
+   * ⭐ ONE ARRAY, THREE KEY ORDERS — Athi, 2026-08-14: *"it is just an array of data which has three different
+   * views? product, by date by name; another one is name, date, product; third one is date, name and product?"*
    *
-   * ⚠️ IT BELONGS ON **US**, not THEM, and that is not a layout choice. It mixes a SHARED fact (what has been
-   * delivered) with a PRIVATE one (who is doing it). The same table on the shared side would hand the customer
-   * your roster and your capacity.
+   * Exactly that, and his framing is better than the code I had written: I hand-rolled three branches for one
+   * operation parameterised by the ORDER of its grouping keys, which is why I got the date view wrong twice in an
+   * hour. Now the view is DATA — a list of keys — and the renderer is generic:
    *
-   * ⚠️ AND IT IS ALL DERIVED. Ordered comes from the live line, delivered is summed from the delivery rows, left
-   * is the difference, and the assignee is the latest row of the chain. Nothing here is stored, so nothing here
-   * can disagree with the tabs it summarises.
+   *   By line    []              the flat list
+   *   By person  ['who','date']  person, then their dates
+   *   By date    ['date','who']  date, then who owes it
+   *
+   * A fourth ordering is a line of configuration, not a fourth branch. And the row automatically drops whatever
+   * the headings above it already said, so no view can repeat itself the way the first two did.
    */
-  var totOrd = 0, totLeft = 0, anyVal = false;
-  lines.forEach(function(e){
-    var l = e.live || e.original || {}; var p = prog[e.line_id] || {};
-    if (l.price != null && l.quantity != null) {
-      anyVal = true;
-      totOrd += c2n(l.quantity) * c2n(l.price);
-      totLeft += Math.max(0, (c2n(l.quantity) - (p.delivered || 0))) * c2n(l.price);
-    }
-  });
-  out += c2Grp('What is left', anyVal ? (c2Money(totLeft) + ' of ' + c2Money(totOrd)) : '');
-  out += '<div style="display:flex;font-size:10.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--grey);padding:0 16px 4px;font-weight:600">'
-    + '<span style="flex:1">Item</span><span style="width:62px;text-align:right">Given</span><span style="width:62px;text-align:right">Left</span></div>';
+  var GROUPERS = {
+    who: {
+      of: function(e){ return (asg[e.line_id] || {}).assignee_name || 'Unassigned'; },
+      label: function(k){ return esc(k); },
+      sort: function(x, y){ if (x === 'Unassigned') return 1; if (y === 'Unassigned') return -1; return x.localeCompare(y); },
+      tone: function(k){ return k === 'Unassigned' ? 'var(--grey)' : null; },
+    },
+    date: {
+      of: function(e){ return ((asg[e.line_id] || {}).due_date || '').slice(0, 10); },
+      /* The real date, with the relative word beside it — "This week" alone never says which day to be ready. */
+      label: function(k){
+        if (!k) return 'No date';
+        var b = c2DueBucket(k);
+        return esc(c2DateLabel(k)) + ' <span style="font-size:12px;font-weight:600;color:'
+          + (b.label === 'Overdue' ? '#c0453b' : 'var(--grey)') + '">· ' + b.label + '</span>';
+      },
+      /* Undated last: it is the only work nobody is waiting for on a particular day. */
+      sort: function(x, y){ if (!x) return 1; if (!y) return -1; return x.localeCompare(y); },
+      tone: function(k){ return (k && c2DueBucket(k).label === 'Overdue') ? '#c0453b' : null; },
+    },
+  };
+
+  function renderGroup(rows, keys, depth){
+    if (!keys.length) return rows.map(function(e){ return c2WorkRow(e, asg, prog, view); }).join('');
+    var g = GROUPERS[keys[0]], rest = keys.slice(1);
+    var buckets = {};
+    rows.forEach(function(e){ var k = g.of(e); (buckets[k] = buckets[k] || []).push(e); });
+    return Object.keys(buckets).sort(g.sort).map(function(k){
+      var n = buckets[k].length;
+      var head = depth === 0
+        ? c2GrpBig((g.tone(k) === '#c0453b' ? '⚠️ ' : '') + g.label(k), n + ' line' + (n === 1 ? '' : 's'), g.tone(k))
+        /* A nested heading is a sub-heading — quieter, or the two compete and neither reads as the grouping. */
+        : '<div style="padding:6px 16px 2px;font-size:12.5px;font-weight:700;color:var(--grey)">' + g.label(k) + '</div>';
+      return head + renderGroup(buckets[k], rest, depth + 1);
+    }).join('');
+  }
+
+  var KEYS = { line: [], person: ['who', 'date'], date: ['date', 'who'] };
+  if (!lines.length) return out + '<div style="padding:14px 16px;font-size:12.5px;color:var(--grey)">No lines on this chit.</div>';
+  if (view !== 'line') return out + renderGroup(lines, KEYS[view] || [], 0);
 
   out += lines.map(function(e){ return c2WorkRow(e, asg, prog); }).join('');
   return out;
@@ -564,7 +572,14 @@ function c2PaneWork(d){
  * So the row is rendered ONCE, here, and every view groups the same rows under a different heading. A field added
  * to this function appears in all three, which is the only way three views stay three views of one thing.
  */
-function c2WorkRow(e, asg, prog){
+/**
+ * ⚠️ THE ROW DROPS WHAT THE HEADING ALREADY SAID. Athi, 2026-08-14: *"under item name need not be repeated, do I
+ * need to say all this? only the date."* Under a heading that reads LAXMAN, printing "◍ laxman" on every row is
+ * noise that pushes the thing you came to read further down. ctx says which grouping is above:
+ *   'person' → show the DATE only     'date' → show the PERSON only     'line' → show both
+ */
+function c2WorkRow(e, asg, prog, ctx){
+  var indent = (ctx === 'person' || ctx === 'date') ? 'padding-left:28px;' : '';
   var a = asg[e.line_id] || {};
   var l = e.live || e.original || {};
   var p = prog[e.line_id] || {};
@@ -579,9 +594,17 @@ function c2WorkRow(e, asg, prog){
       + '<span style="width:62px;text-align:right;font-variant-numeric:tabular-nums;font-size:13.5px;font-weight:' + (done ? '400' : '700') + ';color:' + (done ? '#2f6b4f' : 'var(--ink)') + '">' + (left === null ? '—' : (done ? '✓' : left)) + '</span>'
       + '<span style="color:var(--grey);width:12px;text-align:right;font-size:12px">✎</span></div>'
       /* Who has it and when it is due — the two things that turn "what is left" into "who do I chase". */
-      + (a.assignee_name ? '<div style="margin-top:5px;font-size:12px;color:#5b5340;background:#f4f1e8;border-radius:5px;padding:3px 8px;display:inline-block">◍ ' + esc(a.assignee_name) + (a.task ? ' · ' + esc(a.task) : '') + (a.due_date ? ' · due ' + esc(String(a.due_date).slice(0, 10)) : '') + '</div>'
-          : '<div style="margin-top:5px;font-size:12px;color:var(--grey)">unassigned' + (left ? ' · nobody is doing this' : '') + '</div>')
-      + ((a.history || []).length ? '<div style="margin-top:4px;font-size:11px;color:var(--grey)">was ' + esc(a.history.map(function(h){ return h.assignee_name || 'unassigned'; }).join(' → ')) + '</div>' : '')
+      + (function(){
+          /* Each view puts what it groups by in the HEADING, so the row shows only what is left to say.
+             By person → the date.   By date → nothing (date AND person are both headings).   By line → both. */
+          var who = (ctx === 'person' || ctx === 'date') ? '' : esc(a.assignee_name || '');   // both group by who
+          var when = (ctx === 'date') ? '' : (a.due_date ? 'due ' + esc(String(a.due_date).slice(0, 10)) : '');
+          var bits = [who, a.task ? esc(a.task) : '', when].filter(Boolean);
+          if (!a.assignee_name) return '<div style="margin-top:4px;font-size:12px;color:var(--grey)">unassigned' + (left ? ' · nobody is doing this' : '') + '</div>';
+          if (!bits.length) return '';
+          return '<div style="margin-top:4px;font-size:12px;color:#5b5340;background:#f4f1e8;border-radius:5px;padding:3px 8px;display:inline-block">◍ ' + bits.join(' · ') + '</div>';
+        })()
+      + (ctx === 'line' && (a.history || []).length ? '<div style="margin-top:4px;font-size:11px;color:var(--grey)">was ' + esc(a.history.map(function(h){ return h.assignee_name || 'unassigned'; }).join(' → ')) + '</div>' : '')
       /* ⚠️ SURFACED HERE TOO. A line the two parties disagree about is a line you cannot call finished, and this
          is the screen where someone decides what still needs doing. */
       + (p.divergent ? '<div style="margin-top:4px;font-size:11px;color:#b0641c">⚠️ they say ' + p.theirs + ', you say ' + p.delivered + '</div>' : '')
