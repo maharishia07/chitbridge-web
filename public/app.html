@@ -5101,11 +5101,22 @@ function amdOpen(e, idx, chit_id, rawText, opts){
   AMD.orig=e.original||{};
   AMD.raw=(e.original&&(e.original.asked_as||e.original.raw_phrase))||rawText||'';
   amendPaint();
-  /* ⚠️ QUERIED BY WHAT THEY WROTE when we have it, not by the name on the line. On an ambiguous line the line's
-     name IS the sender's raw phrase, so the two agree — but once someone has half-corrected it, asking the
-     catalogue about our own corrected text would return the item we already chose and hide the alternatives that
-     caused the question. The shortlist has to be computed from the words that were actually ambiguous. */
-  api('catOverlay',{params:{id:AMD.chit},query:{q:((AMD.orig&&AMD.orig.raw_phrase)||AMD.line.particulars||'')}})
+  /**
+   * ⚠️ QUERIED BY THE ITEM PHRASE — NOT `raw_phrase`, WHICH IS THE WHOLE SENTENCE.
+   *
+   * I had this querying `raw_phrase` first, with a comment asserting it was the right call. It is not, and it made
+   * the picker show nothing on every real line. `raw_phrase` is what the sender wrote for the whole line —
+   * "நாட்டு தக்காளி 3 கிரேட், ஏ கிரேடு மட்டும்" — quantity, unit and qualifiers included. The matcher compares a
+   * phrase against catalogue NAMES and SYNONYMS; a whole sentence equals neither, and substring matching runs on
+   * names only, so a Tamil synonym inside a longer sentence never matches. Result: unmatched, no candidates, and
+   * the card silently fell back to the quantity stepper — which is exactly what Athi saw twice this morning.
+   *
+   * `asked_as` (what they called the ITEM, kept when the catalogue renamed it) then `particulars` (the extracted
+   * item name, which on an unresolved line IS the sender's word for it) are the phrases the reader itself matched
+   * on. Asking the catalogue the same question the reader asked is the only way the answers can agree.
+   */
+  api('catOverlay',{params:{id:AMD.chit},
+    query:{q:((AMD.orig&&AMD.orig.asked_as)||AMD.line.particulars||(AMD.orig&&AMD.orig.raw_phrase)||'')}})
     .then(r=>{ AMD.cat=r||{has_catalogue:false}; if(AMD.idx!==idx) return;
       /**
        * ⭐ AN UNRESOLVED LINE OPENS ON THE PICKER, however it was opened.
