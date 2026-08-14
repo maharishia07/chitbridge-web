@@ -473,6 +473,10 @@ function c2PaneWork(d){
   });
   out += c2WorkTabs();
   var view = C2.work || 'line';
+  /* ⚠️ HOISTED ON PURPOSE. `var prog` is also declared further down for the By-line summary; `var` hoists the
+     NAME but not the value, so reading it in the branches below would have handed c2WorkRow an undefined map and
+     thrown on the first row — in the By-date view only, which is the one nobody had opened yet. */
+  prog = d.line_delivery || {};
 
   /* ── BY PERSON — who do I chase ─────────────────────────────────────────────────────────────────────────── */
   if (view === 'person') {
@@ -489,13 +493,10 @@ function c2PaneWork(d){
         var ord = c2n(l.quantity); if (ord == null) return;
         anyLeft = true; left += Math.max(0, ord - (p.delivered || 0));
       });
-      return '<div style="padding:11px 16px;border-bottom:1px solid var(--line)">'
-        + '<div style="display:flex;align-items:baseline;gap:8px">'
-        + '<span style="flex:1;font-weight:600">' + esc(k) + '</span>'
-        + '<span style="font-size:12px;color:var(--grey)">' + mineLines.length + ' line' + (mineLines.length === 1 ? '' : 's')
-        + (anyLeft ? ' · ' + (Math.round(left * 1000) / 1000) + ' left' : '') + '</span></div>'
-        + '<div style="font-size:12.5px;color:var(--grey);margin-top:3px">'
-        + mineLines.map(function(e){ return esc((e.live || e.original || {}).particulars || ''); }).join(' · ') + '</div></div>';
+      /* The person is the HEADING; the rows underneath are the full line rows, identical to By line. */
+      return c2Grp(k, mineLines.length + ' line' + (mineLines.length === 1 ? '' : 's')
+                      + (anyLeft ? ' · ' + (Math.round(left * 1000) / 1000) + ' left' : ''))
+        + mineLines.map(function(e){ return c2WorkRow(e, asg, d.line_delivery || {}); }).join('');
     }).join('');
     return out;
   }
@@ -513,16 +514,10 @@ function c2PaneWork(d){
     out += keys.map(function(k){
       var b = buckets[k];
       var overdue = b.label === 'Overdue';
-      return c2Grp(b.label, b.rows.length + ' line' + (b.rows.length === 1 ? '' : 's'))
-        + b.rows.map(function(r){
-            var l = r.e.live || r.e.original || {};
-            return '<div onclick="c2AssignOpen(&quot;' + r.e.line_id + '&quot;)" style="padding:10px 16px;border-bottom:1px solid var(--line);cursor:pointer">'
-              + '<div style="display:flex;align-items:baseline;gap:8px">'
-              + '<span style="flex:1;font-weight:500' + (overdue ? ';color:#c0453b' : '') + '">' + esc(l.particulars || '') + '</span>'
-              + '<span style="font-size:12px;color:' + (overdue ? '#c0453b' : 'var(--grey)') + '">'
-              + (r.a.due_date ? esc(String(r.a.due_date).slice(0, 10)) : 'no date') + '</span></div>'
-              + '<div style="font-size:12px;color:var(--grey);margin-top:2px">' + esc(r.a.assignee_name || 'unassigned') + '</div></div>';
-          }).join('');
+      /* The date bucket is the HEADING; the rows are the same full line rows. Overdue is marked on the heading,
+         not by rewriting the row — a row that looks different in one view is a row someone has to re-learn. */
+      return c2Grp((overdue ? '⚠️ ' : '') + b.label, b.rows.length + ' line' + (b.rows.length === 1 ? '' : 's'))
+        + b.rows.map(function(r){ return c2WorkRow(r.e, asg, prog); }).join('');
     }).join('');
     return out;
   }
@@ -539,7 +534,6 @@ function c2PaneWork(d){
    * is the difference, and the assignee is the latest row of the chain. Nothing here is stored, so nothing here
    * can disagree with the tabs it summarises.
    */
-  var prog = d.line_delivery || {};
   var totOrd = 0, totLeft = 0, anyVal = false;
   lines.forEach(function(e){
     var l = e.live || e.original || {}; var p = prog[e.line_id] || {};
@@ -553,15 +547,32 @@ function c2PaneWork(d){
   out += '<div style="display:flex;font-size:10.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--grey);padding:0 16px 4px;font-weight:600">'
     + '<span style="flex:1">Item</span><span style="width:62px;text-align:right">Given</span><span style="width:62px;text-align:right">Left</span></div>';
 
-  out += lines.map(function(e){
-    var a = asg[e.line_id] || {};
-    var l = e.live || e.original || {};
-    var p = prog[e.line_id] || {};
-    var ord = c2n(l.quantity), got = p.delivered || 0;
-    var left = (ord == null) ? null : Math.max(0, Math.round((ord - got) * 1000) / 1000);
-    var done = (left === 0 && ord != null);
-    /* Opens an OVERLAY rather than expanding underneath — the row keeps its height, so nothing below it moves. */
-    return '<div onclick="c2AssignOpen(\'' + e.line_id + '\')" style="padding:11px 16px;border-bottom:1px solid var(--line);cursor:pointer">'
+  out += lines.map(function(e){ return c2WorkRow(e, asg, prog); }).join('');
+  return out;
+}
+
+/**
+ * ⭐ ONE ROW, THREE GROUPINGS — Athi, 2026-08-14, seeing the person view lose everything but the names:
+ * *"each name underneath item name and quantity what is left etc, same way for date also, so it is three
+ * different view of the same data but no information is missing."*
+ *
+ * He is right, and my first pass got it wrong in the way that matters: By person rendered a comma-joined list of
+ * names and silently dropped the quantity, what was given, what is left, the due date and the divergence flag.
+ * That is not a different VIEW of the data, it is less data — and the person who switched to it to see who to
+ * chase would then have to switch back to find out what they owe.
+ *
+ * So the row is rendered ONCE, here, and every view groups the same rows under a different heading. A field added
+ * to this function appears in all three, which is the only way three views stay three views of one thing.
+ */
+function c2WorkRow(e, asg, prog){
+  var a = asg[e.line_id] || {};
+  var l = e.live || e.original || {};
+  var p = prog[e.line_id] || {};
+  var ord = c2n(l.quantity), got = p.delivered || 0;
+  var left = (ord == null) ? null : Math.max(0, Math.round((ord - got) * 1000) / 1000);
+  var done = (left === 0 && ord != null);
+  /* Opens an OVERLAY rather than expanding underneath — the row keeps its height, so nothing below it moves. */
+  return '<div onclick="c2AssignOpen(\'' + e.line_id + '\')" style="padding:11px 16px;border-bottom:1px solid var(--line);cursor:pointer">'
       + '<div style="display:flex;align-items:baseline;gap:8px">'
       + '<span style="flex:1;font-weight:500">' + esc(l.particulars || '') + '<span style="color:var(--grey);font-weight:400;font-size:12.5px"> · ' + esc(c2q(l)) + '</span></span>'
       + '<span style="width:62px;text-align:right;font-variant-numeric:tabular-nums;font-size:13.5px">' + got + '</span>'
@@ -574,10 +585,7 @@ function c2PaneWork(d){
       /* ⚠️ SURFACED HERE TOO. A line the two parties disagree about is a line you cannot call finished, and this
          is the screen where someone decides what still needs doing. */
       + (p.divergent ? '<div style="margin-top:4px;font-size:11px;color:#b0641c">⚠️ they say ' + p.theirs + ', you say ' + p.delivered + '</div>' : '')
-      + '</div>'
-      ;
-  }).join('');
-  return out;
+      + '</div>';
 }
 /**
  * ⚠️ AN OVERLAY, NOT AN INLINE EXPANSION. Athi, 2026-08-13: *"whenever a modification is being done, if you are
