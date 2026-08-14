@@ -556,7 +556,29 @@ const CFG = {
   STAGE: "dev",                                                     // points at the live dev API (Railway). Flip in the build-preview ribbon if present.
   ASSIST_LLM: false,                                                // tier-1 LLM for the assistant — OFF until the /api/assist proxy exists; answer() falls through to the library floor.
   get MODE(){ return "live"; },                                     // compat shim: core.js still reads CFG.MODE. There is no mock stage — the demo is gone.
-  get API_BASE(){ return STAGES[this.STAGE].base || ""; },          // derived from the current stage
+  /**
+   * ⭐ API_BASE — the stage's base, unless this page is being served from localhost.
+   *
+   * Athi, 2026-08-14, after measuring 9.3s to open a chit in production and 0.62s against a local API:
+   * *"even i would be happy if we build locally as much as we can and push when all the test completed."*
+   *
+   * The cause is not the code. Railway runs in Singapore and Supabase in Mumbai, so EVERY SQL statement costs
+   * ~250ms; the same statement from a machine in India costs ~35ms. Developing against the cloud means paying a
+   * quarter of a second per statement on every click, plus a deploy cycle to see any change at all.
+   *
+   * ⚠️ IT CAN NEVER AFFECT PRODUCTION: Vercel is not localhost, so this branch is unreachable there. And the
+   * localStorage override wins over both, so a local page can still be pointed at the cloud API deliberately —
+   * `localStorage.cb_api_base = "https://…"` — which is what you want when reproducing something cloud-specific.
+   */
+  get API_BASE(){
+    try {
+      const forced = localStorage.getItem('cb_api_base');
+      if (forced) return forced === 'stage' ? (STAGES[this.STAGE].base || '') : forced;
+      const h = location.hostname;
+      if (h === 'localhost' || h === '127.0.0.1') return 'http://localhost:3000';
+    } catch (e) { /* storage blocked — fall through to the stage */ }
+    return STAGES[this.STAGE].base || "";
+  },
 };
 /* Endpoint map. ✓ = matches build registry · ? = ASSUMED, confirm before live.
    Correct any path here in ONE place. */
@@ -5166,7 +5188,9 @@ function amdOpen(e, idx, chit_id, rawText, opts){
        * ⚠️ ONLY WHILE UNRESOLVED. Once a pick is made the card returns to the stepper, so re-opening ✎ to fix a
        * quantity does not drag someone back through a choice they already made.
        */
-      if((AMD.cat.candidates||[]).length && !AMD.picked){ AMD.wantPick=false; AMD.view='item'; }
+      /* ⚠️ NO LONGER JUMPS TO A SEPARATE SCREEN. The choices render INSIDE the card now, so switching the
+         view here would replace the one overlay Athi asked for with the two-screen shuffle it replaced. */
+      AMD.wantPick=false;
       amendPaint(); })
     .catch(()=>{ AMD.cat={has_catalogue:false}; if(AMD.idx===idx) amendPaint(); });
 }
@@ -5203,6 +5227,10 @@ function amdStep(d){
 }
 function amdSetQty(v){ const n=Number(v); if(Number.isFinite(n)&&n>=0) AMD.line.quantity=n; }
 function amdSetNote(v){ AMD.line.comment=v; }
+/* ⚠️ THE PRICE WAS NOT EDITABLE AT ALL. Athi: "amend qty, price etc" — the card carried a name and a quantity
+   and no price, on the one screen whose job is fixing a line. Blank clears it; a non-number is ignored rather
+   than stored as NaN, which would read on screen as "no price" and quietly drop the line from every total. */
+function amdSetPrice(v){ const t=String(v).trim(); if(t===''){ AMD.line.price=null; return; } const n=Number(t); if(Number.isFinite(n)&&n>=0) AMD.line.price=n; }
 function amdPickItem(i){
   const x=((AMD.cat&&AMD.cat.items)||[])[+i]; if(!x){ amdView('main'); return; }
   /* ⚠️ THE CATALOGUE CARRIES MORE THAN THE NAME. Fixing "thakkali" to "Tomato" corrects one word and leaves the
@@ -5271,6 +5299,52 @@ function amdPriceText(x){
   const cur = x.currency || ((typeof cbCurrency==='function') ? cbCurrency(x.price) : null);
   return esc((cur?cur+' ':'') + amt);
 }
+/**
+ * ⭐ amdShortlistHTML(cands, cat, totalItems) — the two or three items a person chooses between.
+ *
+ * ⚠️ IT WAS CALLED AND NEVER DEFINED, AND NOTHING SAID SO. An earlier attempt to extract it broke the file, the
+ * file was reverted, and the call site survived the revert. The ReferenceError then landed inside the catalogue
+ * fetch's .then(), where the .catch() swallowed it and repainted the card WITHOUT any choices — so the screen
+ * looked like a feature that had never been built, on a page with an empty console. Athi hit it as "why is this
+ * box appearing at all". A swallowed error is worse than a crash: a crash gets fixed.
+ *
+ * ⚠️ RADIOS, NOT BUTTONS. These rows are the SAME product name at different prices, so the variant and the price
+ * are the only things that distinguish them and must be the loud part. And the price sits ON the row: the sole
+ * reason the reader refused to choose was that the prices differ.
+ */
+function amdShortlistHTML(cands, cat, totalItems){
+  if(!cands || !cands.length) return '';
+  const l = AMD.line || {};
+  const head = '<div style="font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#8a6d1e;margin-bottom:5px">'
+    + (cands.length===1 ? 'closest match' : 'which of these ' + cands.length + '?') + '</div>'
+    + '<div style="font-size:11.5px;color:var(--grey);margin-bottom:9px;line-height:1.45">“'
+    + esc(AMD.raw || l.particulars || '') + '” answers to '
+    + (cat && cat.ambiguous ? ('<b>' + cat.ambiguous + '</b> catalogue names') : 'more than one grade')
+    + ' — the prices differ, so nothing was picked for you.</div>';
+  const rows = cands.map(function(x, i){
+    const on = AMD.pickedKey === x.key;
+    const st = x.status && x.status !== 'available';
+    return '<label data-testid="amd-cand" style="display:flex;align-items:center;gap:11px;cursor:pointer;padding:11px 12px;'
+      + 'margin-bottom:7px;border:1.5px solid ' + (on?'var(--blue)':'var(--line)') + ';border-radius:11px;background:' + (on?'#f2f7fd':'#fff') + '">'
+      + '<input type="radio" name="amdcand" ' + (on?'checked':'') + ' onchange="amdPickCand(' + i + ')" '
+      + 'style="width:19px;height:19px;flex:none;accent-color:var(--blue)">'
+      + '<span style="flex:1;min-width:0">'
+      + '<span style="font-size:15px;font-weight:700">' + esc(x.name || x.label || '') + '</span>'
+      + (x.variant ? '<span style="font-size:13px;color:#245a9e;font-weight:700"> · ' + esc(x.variant) + '</span>' : '')
+      + (st ? '<div style="font-size:11px;color:#b0641c;margin-top:1px">⚠️ ' + esc(x.status_text || x.status) + '</div>' : '')
+      + '</span>'
+      + '<span style="text-align:right;flex:none">'
+      + '<span style="font-size:16px;font-weight:800">' + amdPriceText(x) + '</span>'
+      + (x.unit ? '<div style="font-size:11px;color:var(--grey)">per ' + esc(x.unit) + '</div>' : '')
+      + '</span></label>';
+  }).join('');
+  /* ⚠️ NOT "show all 0 items" — on the first paint the shortlist can come from the LINE and the full catalogue has
+     not arrived yet. Offering a list of nothing is worse than saying it is still coming. */
+  const all = totalItems
+    ? '<button class="btn" style="width:100%;margin:2px 0 4px;font-size:13px" onclick="amdView(\'itemall\')">none of these — show all ' + totalItems + ' items</button>'
+    : '<div style="font-size:11.5px;color:var(--grey);text-align:center;padding:6px 0">loading the rest of the catalogue…</div>';
+  return head + rows + all;
+}
 function amendPaint(){
   const l=AMD.line||{}, o=AMD.orig||{}, cat=AMD.cat;
 
@@ -5292,7 +5366,8 @@ function amendPaint(){
      * an ambiguity the wrong way and never notices: the whole reason the machine refused was that the two prices
      * differ. Status rides along too — an out-of-stock item is still pickable, but you should know before you pick.
      */
-    const shortlist = cands.length ? `
+    const shortlist = amdShortlistHTML(cands, cat, items.length);
+    const _dead = cands.length ? `
       <div style="font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#8a6d1e;margin-bottom:5px">
         ${cands.length===1?'closest match':'which of these '+cands.length+'?'}</div>
       <div style="font-size:11.5px;color:var(--grey);margin-bottom:9px;line-height:1.45">
@@ -5357,24 +5432,57 @@ function amendPaint(){
       &nbsp;→&nbsp;<b style="color:#245a9e">${esc([l.particulars,l.quantity,l.unit].filter(Boolean).join(' '))}</b></div>`:'';
   const ic=(g,t,fn,col)=>`<button class="btn" data-testid="amd-${String(t).toLowerCase().split(' ')[0]}" title="${t}" onclick="${fn}" style="flex:1;height:50px;font-size:21px;${col||''}">${g}</button>`;
 
-  modal(`${wrote}
-    <div onclick="amdView('item')" style="cursor:pointer;text-align:center;font-size:19px;font-weight:800;margin-bottom:2px">${esc(l.particulars||'—')}</div>
-    <div style="text-align:center;font-size:10.5px;color:var(--grey);margin-bottom:14px">tap the name to change it${AMD.picked?' · from catalogue':''}</div>
+  /**
+   * ── ⭐ ONE OVERLAY, THE WHOLE LINE ────────────────────────────────────────────────────────────────────────────
+   *
+   * Athi, 2026-08-14: *"why this box appearing at all… the editor should bring the entire item in an overlay box,
+   * so both options are overlay with the CRUD."*
+   *
+   * He is right and the old card was a navigation puzzle for a five-second job. It showed a name you had to TAP to
+   * change, a stepper, and nothing else — so correcting an item meant card → picker → back → card, and the price
+   * (the number the whole argument is about) was not on it AT ALL.
+   *
+   * There are only ever two situations and both fit on one card:
+   *   the catalogue offers several  →  choose one, or remove the line
+   *   the item is settled           →  fix the quantity or the price, or remove the line
+   *
+   * So: the choices, the quantity, the unit, the price, the note and Remove, all visible together. No drilling.
+   */
+  const cands0=(cat&&cat.candidates)||[];
+  const showCands = cands0.length && !AMD.picked;
+  const items0=(cat&&cat.items)||[];
+  const money = (n)=> (n===''||n==null||isNaN(Number(n))) ? '' : String(Number(n));
+  const total = (Number(l.quantity)>0 && Number(l.price)>0)
+    ? '<span style="color:var(--grey)"> = </span><b>'+esc(money(Math.round(Number(l.quantity)*Number(l.price)*100)/100))+'</b>' : '';
 
-    <div style="display:flex;align-items:center;gap:10px;justify-content:center">
-      <button class="btn" onclick="amdStep(-1)" style="width:56px;height:56px;font-size:26px;border-radius:28px">−</button>
-      <input inputmode="decimal" value="${esc(String(l.quantity??''))}" oninput="amdSetQty(this.value)"
-             style="width:96px;text-align:center;font-size:24px;font-weight:800;padding:9px;border:1px solid var(--line);border-radius:11px">
-      <span onclick="amdView('unit')" style="cursor:pointer;font-size:16px;font-weight:700;min-width:62px;text-align:center;border-bottom:2px dotted var(--line)">${esc(l.unit||'unit')}</span>
-      <button class="btn" onclick="amdStep(1)" style="width:56px;height:56px;font-size:26px;border-radius:28px">+</button>
+  modal(`${wrote}
+    ${showCands ? `<div style="margin-bottom:14px">${amdShortlistHTML(cands0, cat, items0.length)}</div>` : ''}
+
+    <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:3px">
+      <div style="font-size:18px;font-weight:800;flex:1;min-width:0">${esc(l.particulars||'—')}</div>
+      ${items0.length||cands0.length ? `<span onclick="amdView('itemall')" style="cursor:pointer;font-size:11.5px;color:var(--blue);font-weight:700;white-space:nowrap">change item</span>` : ''}
     </div>
-    <div style="text-align:center;font-size:10.5px;color:var(--grey);margin:6px 0 14px">tap the number for the keypad · tap the unit to change it</div>
+    <div style="font-size:10.5px;color:var(--grey);margin-bottom:12px">${AMD.picked?'from your catalogue':'as the reader read it'}</div>
+
+    <div style="display:flex;align-items:center;gap:9px;margin-bottom:4px">
+      <button class="btn" onclick="amdStep(-1)" style="width:46px;height:46px;font-size:24px;border-radius:23px;flex:none">−</button>
+      <input inputmode="decimal" value="${esc(String(l.quantity??''))}" oninput="amdSetQty(this.value)"
+             style="width:74px;text-align:center;font-size:21px;font-weight:800;padding:8px;border:1px solid var(--line);border-radius:10px">
+      <span onclick="amdView('unit')" style="cursor:pointer;font-size:15px;font-weight:700;min-width:52px;text-align:center;border-bottom:2px dotted var(--line)">${esc(l.unit||'unit')}</span>
+      <button class="btn" onclick="amdStep(1)" style="width:46px;height:46px;font-size:24px;border-radius:23px;flex:none">+</button>
+      <span style="color:var(--grey);font-size:15px">×</span>
+      <input inputmode="decimal" data-testid="amd-price" value="${esc(money(l.price))}" oninput="amdSetPrice(this.value)" placeholder="price"
+             style="width:84px;text-align:center;font-size:17px;font-weight:700;padding:8px;border:1px solid var(--line);border-radius:10px">
+    </div>
+    <div style="font-size:11.5px;color:var(--grey);margin-bottom:12px">quantity · unit · price${total}</div>
+
+    <input value="${esc(l.comment||'')}" oninput="amdSetNote(this.value)" placeholder="note for this line (optional)"
+           style="width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:13.5px;margin-bottom:12px">
     ${diff}
     <div style="display:flex;gap:8px">
-      ${ic('✓','Save','amendSave()','background:var(--blue);color:#fff;font-weight:800')}
-      ${ic(l.comment?'📝•':'📝','Note',"amdView('note')")}
-      ${ic('🗑','Remove this line',"amdView('remove')",'color:#c0453b')}
-      ${ic('✕','Cancel','closeModal()')}
+      ${ic('✓ Save','Save','amendSave()','background:var(--blue);color:#fff;font-weight:800;font-size:15px')}
+      ${ic('🗑 Remove','Remove this line',"amdView('remove')",'color:#c0453b;font-size:15px')}
+      ${ic('✕','Cancel','closeModal()','flex:0 0 58px')}
     </div>`);
 }
 

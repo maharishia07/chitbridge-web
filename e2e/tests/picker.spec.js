@@ -100,10 +100,9 @@ test.describe('PICKER — two catalogue items answer to one name', () => {
     console.log('\n  OVERLAY CALLS: ' + JSON.stringify(overlayCalls));
     console.log('  PAGE ERRORS  : ' + JSON.stringify(pageErrors));
     console.log('  STATE        : ' + JSON.stringify(state) + '\n');
-    const picker = page.getByTestId('amd-picker');
-    await expect(picker,
-      'the card must open ON the picker for an unresolved line — landing on the quantity stepper is the bug Athi hit'
-    ).toBeVisible({ timeout: 15000 });
+    /* ⭐ ONE OVERLAY: the choices, the quantity, the price and Remove are all on the SAME card now. */
+    const picker = page.getByTestId('amd-cand').first();
+    await expect(picker, 'the choices must be ON the card, not behind a tap').toBeVisible({ timeout: 15000 });
 
     const cands = page.getByTestId('amd-cand');
     await expect(cands, 'both catalogue items must be offered — a shortlist of one is not a choice').toHaveCount(2);
@@ -112,8 +111,10 @@ test.describe('PICKER — two catalogue items answer to one name', () => {
        hides them lets someone resolve the ambiguity wrongly and never notice. */
     await expect(cands.first()).toContainText('30');
     await expect(cands.nth(1)).toContainText('36');
-    await expect(picker).toContainText('Tomato Native');
-    await expect(picker).toContainText('Tomato Hybrid');
+    /* ⚠️ ASSERT ON THE CARD, NOT ON ONE ROW.  is the FIRST candidate now, so asking it to contain both
+       names could never pass — the names live in different rows of the same overlay. */
+    await expect(page.locator('body')).toContainText('Tomato Native');
+    await expect(page.locator('body')).toContainText('Tomato Hybrid');
 
     // ── pick the SECOND one, so a pass cannot come from a default ───────────────────────────────────────────────
     await cands.nth(1).click();
@@ -180,6 +181,106 @@ test.describe('PICKER — two catalogue items answer to one name', () => {
        in the run beats an impression, and a threshold guessed today would just fail on a cold Railway container. */
   });
 
+  /**
+   * ⭐ PICK-03 · THE WHOLE LIFECYCLE IN ONE RUN — resolve, correct, remove.
+   *
+   * Athi, 2026-08-14: *"extend the spec to cover amend quantity and remove … cover all the screen please."*
+   *
+   * Each step asserts on what was STORED, not on what the page happens to render — after a save the app returns to
+   * the list, so screen assertions test the navigation rather than the correction. That distinction cost three
+   * red runs this morning.
+   */
+  test('PICK-03 · resolve the item, correct the quantity, then remove the line', async ({ page }) => {
+    const stored = async (id) => page.evaluate(async (cid) => {
+      const d = await api('chit', { params: { id: cid } });
+      const e = (d.live_set || [])[0] || {};
+      const l = e.live || e.original || {};
+      return { particulars: l.particulars, price: l.price, quantity: l.quantity,
+               removed: !!e.removed, reason: e.reason_code || null, versions: e.versions || 0 };
+    }, id);
+
+    await mintEntity(page);
+    await page.evaluate(async (items) => {
+      for (const it of items) await api('prodAdd', { body: { item_data: it } });
+    }, ITEMS);
+
+    const subject = 'Lifecycle ' + Date.now();
+    await composeChit(page, { subject, item: SYN, qty: 3, self: true });
+    await clickNav(page, 'task');
+    await settle(page);
+    await page.getByText(subject).first().click();
+    await settle(page);
+    const sel = await page.evaluate(() => UI.sel);
+
+    // ── 1 · RESOLVE the ambiguity ───────────────────────────────────────────────────────────────────────────────
+    await page.getByTestId('amend-line').first().click();
+    await page.waitForResponse((r) => /catalogue-overlay/.test(r.url()), { timeout: 30000 }).catch(() => null);
+    await expect(page.getByTestId('amd-cand').first(), 'the choices render INSIDE the one card now').toBeVisible({ timeout: 15000 });
+    await page.getByTestId('amd-cand').nth(1).click();
+    await settle(page);
+    await page.getByTestId('amd-save').click();
+    await page.waitForResponse((r) => /\/amend/.test(r.url()) && r.request().method() === 'POST').catch(() => null);
+    await settle(page);
+
+    let s = await stored(sel);
+    expect(s.particulars, 'the ambiguity is resolved to the chosen item').toContain('Tomato Hybrid');
+    expect(Number(s.price), 'and priced from the catalogue').toBe(36);
+    console.log('  1 · resolved  -> ' + JSON.stringify(s));
+
+    // ── 2 · CORRECT THE QUANTITY — the commonest correction of all ───────────────────────────────────────────────
+    await page.getByText(subject).first().click();
+    await settle(page);
+    await page.getByTestId('amend-line').first().click();
+    await page.waitForResponse((r) => /catalogue-overlay/.test(r.url()), { timeout: 30000 }).catch(() => null);
+    await settle(page);
+    /* ⚠️ THE CARD MUST NOT OPEN ON THE PICKER NOW. The line is resolved, so re-opening ✎ to fix a number must not
+       drag someone back through a choice they already made — the exact regression the `!AMD.picked` guard exists
+       to prevent, and the only way to catch it is to amend the same line twice. */
+    await expect(page.getByTestId('amd-cand'), 'a resolved line shows no choices — the question is answered').toHaveCount(0);
+    const qty = page.locator('input[inputmode="decimal"]').first();
+    await qty.fill('5');
+    await page.getByTestId('amd-save').click();
+    await page.waitForResponse((r) => /\/amend/.test(r.url()) && r.request().method() === 'POST').catch(() => null);
+    await settle(page);
+
+    s = await stored(sel);
+    expect(Number(s.quantity), 'the corrected quantity is stored').toBe(5);
+    expect(s.particulars, 'and the resolved item survives a second correction').toContain('Tomato Hybrid');
+    console.log('  2 · qty 3→5   -> ' + JSON.stringify(s));
+
+    // ── 3 · REMOVE the line, with a reason ──────────────────────────────────────────────────────────────────────
+    await page.getByText(subject).first().click();
+    await settle(page);
+    await page.getByTestId('amend-line').first().click();
+    await page.waitForResponse((r) => /catalogue-overlay/.test(r.url()), { timeout: 30000 }).catch(() => null);
+    await settle(page);
+    await page.getByTestId('amd-remove').click();          // 🗑 → the reason sheet
+    await settle(page);
+    /* ⚠️ REMOVING ASKS WHY, and it is not bookkeeping: "they never asked for this" and "not available" produce an
+       identical empty line and mean opposite things — the second leaves a customer expecting a delivery. */
+    await page.getByText(/not available/i).first().click();
+    await page.waitForResponse((r) => /\/amend/.test(r.url()) && r.request().method() === 'POST').catch(() => null);
+    await settle(page);
+
+    s = await stored(sel);
+    expect(s.removed, 'the line is removed').toBe(true);
+    expect(s.reason, 'and the reason is on the record — not just the fact of removal').toBe('stock_unavailable');
+    console.log('  3 · removed   -> ' + JSON.stringify(s));
+
+    /* ⚠️ REMOVED IS NOT DELETED. It must still be ON the chit, struck through, counting in nothing — deleting it
+       would make the chit disagree with the message it came from. */
+    await page.getByText(subject).first().click();
+    await settle(page);
+    /* ⚠️ IT SHOWS THE ORIGINAL WORDS, NOT THE RESOLVED NAME — and that is right, though it caught me out. Once a
+       line is removed there is no live version, so the row falls back to what the customer actually wrote. The
+       point of keeping it on screen is evidence of the request, and "thakkali" is the evidence; "Tomato Hybrid"
+       was our interpretation of it. */
+    await expect(page.locator('body'), 'a removed line stays visible as evidence it was asked for')
+      .toContainText('thakkali');
+    await expect(page.locator('body'), 'and says WHY — "not available" and "never asked for" mean opposite things')
+      .toContainText(/not available/i);
+  });
+
   test('PICK-02 · a line the catalogue answers unambiguously does NOT open a picker', async ({ page }) => {
     /* ⚠️ THE NEGATIVE CASE, AND IT IS NOT PADDING. If the card opened on a picker for every line, PICK-01 would
        pass while the feature was wrong in the more common direction — asking a person to choose when there is
@@ -200,8 +301,8 @@ test.describe('PICKER — two catalogue items answer to one name', () => {
     await page.waitForResponse((r) => /catalogue-overlay/.test(r.url()), { timeout: 30000 }).catch(() => null);
     await settle(page);
 
-    await expect(page.getByTestId('amd-picker'),
-      'one catalogue answer means no question — the card must open on the stepper').toHaveCount(0);
+    await expect(page.getByTestId('amd-cand'),
+      'one catalogue answer means no question — no choices on the card').toHaveCount(0);
     await expect(page.getByTestId('amd-save'), 'the ordinary correction card is what should appear').toBeVisible();
   });
 });

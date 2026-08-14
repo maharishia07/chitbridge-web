@@ -28,7 +28,10 @@ if (typeof EP !== 'undefined') {
   });
 }
 
-var C2 = { id: null, side: 'them', tab: 'msg', data: null, costs: null, busy: false, err: null };
+var C2 = { id: null, side: 'them', tab: 'msg', data: null, costs: null, busy: false, err: null,
+  /* Which QUESTION the Work tab is answering. Athi, 2026-08-14: "the work tab has 3 views, one is assignment
+     view, and another one is person view ... another one should be date and time view?" */
+  work: 'line' };
 
 /* ── the shell ─────────────────────────────────────────────────────────────────────────────────────────────── */
 var C2_TABS = {
@@ -420,6 +423,42 @@ async function c2Deliver(line_id, unit, back){
 }
 
 /* ── US · work ─────────────────────────────────────────────────────────────────────────────────────────────── */
+/**
+ * ⭐ THREE VIEWS OF ONE SET OF ROWS — Athi, 2026-08-14.
+ *
+ * They are not three screens; they are three QUESTIONS asked of the same assignments:
+ *   By line    what is left on each item, and who has it   — the fulfilment question
+ *   By person  what is on each person's plate              — the "who do I chase" question
+ *   By date    what is due when, overdue first             — the "what is late" question
+ *
+ * ⚠️ INTERNAL TABS, NOT A LONGER PAGE. The old pane stacked the person roll-up ON TOP of the line list, so both
+ * were always half-visible and neither was readable — the screen answered every question at once and none of
+ * them well. Switching costs nothing: no fetch, no state beyond which tab is lit.
+ */
+function c2WorkView(v){ C2.work = v; c2Paint(); }
+function c2WorkTabs(){
+  var tabs = [['line','By line'],['person','By person'],['date','By date']];
+  return '<div style="display:flex;gap:6px;padding:9px 16px;border-bottom:1px solid var(--line)">'
+    + tabs.map(function(t){
+        var on = (C2.work || 'line') === t[0];
+        return '<span onclick="c2WorkView(&quot;' + t[0] + '&quot;)" data-testid="work-' + t[0] + '" style="cursor:pointer;font-size:12.5px;'
+          + 'border:1px solid ' + (on?'var(--blue)':'var(--line)') + ';' + (on?'background:var(--blue);color:#fff;font-weight:700;':'')
+          + 'border-radius:8px;padding:4px 11px">' + t[1] + '</span>';
+      }).join('') + '</div>';
+}
+/** Overdue first — a date view that buried what is late under what is not would be worse than no date view. */
+function c2DueBucket(due){
+  if(!due) return { k:'zz', label:'No date' };
+  var d = String(due).slice(0,10);
+  var today = new Date(); today.setHours(0,0,0,0);
+  var t = new Date(d + 'T00:00:00');
+  var days = Math.round((t - today) / 86400000);
+  if(days < 0)  return { k:'a', label:'Overdue' };
+  if(days === 0)return { k:'b', label:'Today' };
+  if(days === 1)return { k:'c', label:'Tomorrow' };
+  if(days <= 7) return { k:'d', label:'This week' };
+  return { k:'e', label:'Later' };
+}
 function c2PaneWork(d){
   var asg = d.line_assignment || {};
   var lines = (d.live_set || []).filter(function(e){ return !e.removed; });
@@ -432,11 +471,61 @@ function c2PaneWork(d){
     var key = (a && a.assignee_name) || 'Unassigned';
     (people[key] = people[key] || []).push(e);
   });
-  out += c2Grp('Who has what', Object.keys(people).length + ' ' + (Object.keys(people).length === 1 ? 'person' : 'people'));
-  out += Object.keys(people).map(function(k){
-    return '<div style="padding:9px 16px;border-bottom:1px solid var(--line)"><div style="font-weight:500">' + esc(k) + '</div>'
-      + '<div style="font-size:12.5px;color:var(--grey);margin-top:2px">' + people[k].map(function(e){ return esc((e.live || e.original || {}).particulars || ''); }).join(' · ') + '</div></div>';
-  }).join('');
+  out += c2WorkTabs();
+  var view = C2.work || 'line';
+
+  /* ── BY PERSON — who do I chase ─────────────────────────────────────────────────────────────────────────── */
+  if (view === 'person') {
+    var names = Object.keys(people).sort(function(a, b){
+      /* Unassigned last: it is a gap to fill, not a person to chase, and putting it first buries the roster. */
+      if (a === 'Unassigned') return 1; if (b === 'Unassigned') return -1; return a.localeCompare(b);
+    });
+    out += c2Grp('Who has what', names.length + ' ' + (names.length === 1 ? 'person' : 'people'));
+    out += names.map(function(k){
+      var mineLines = people[k];
+      var left = 0, anyLeft = false;
+      mineLines.forEach(function(e){
+        var l = e.live || e.original || {}; var p = (d.line_delivery || {})[e.line_id] || {};
+        var ord = c2n(l.quantity); if (ord == null) return;
+        anyLeft = true; left += Math.max(0, ord - (p.delivered || 0));
+      });
+      return '<div style="padding:11px 16px;border-bottom:1px solid var(--line)">'
+        + '<div style="display:flex;align-items:baseline;gap:8px">'
+        + '<span style="flex:1;font-weight:600">' + esc(k) + '</span>'
+        + '<span style="font-size:12px;color:var(--grey)">' + mineLines.length + ' line' + (mineLines.length === 1 ? '' : 's')
+        + (anyLeft ? ' · ' + (Math.round(left * 1000) / 1000) + ' left' : '') + '</span></div>'
+        + '<div style="font-size:12.5px;color:var(--grey);margin-top:3px">'
+        + mineLines.map(function(e){ return esc((e.live || e.original || {}).particulars || ''); }).join(' · ') + '</div></div>';
+    }).join('');
+    return out;
+  }
+
+  /* ── BY DATE — what is late ─────────────────────────────────────────────────────────────────────────────── */
+  if (view === 'date') {
+    var buckets = {};
+    lines.forEach(function(e){
+      var a = asg[e.line_id] || {};
+      var b = c2DueBucket(a.due_date);
+      (buckets[b.k] = buckets[b.k] || { label: b.label, rows: [] }).rows.push({ e: e, a: a });
+    });
+    var keys = Object.keys(buckets).sort();
+    if (!keys.length) return out + '<div style="padding:14px 16px;font-size:12.5px;color:var(--grey)">Nothing is assigned yet, so nothing has a date.</div>';
+    out += keys.map(function(k){
+      var b = buckets[k];
+      var overdue = b.label === 'Overdue';
+      return c2Grp(b.label, b.rows.length + ' line' + (b.rows.length === 1 ? '' : 's'))
+        + b.rows.map(function(r){
+            var l = r.e.live || r.e.original || {};
+            return '<div onclick="c2AssignOpen(&quot;' + r.e.line_id + '&quot;)" style="padding:10px 16px;border-bottom:1px solid var(--line);cursor:pointer">'
+              + '<div style="display:flex;align-items:baseline;gap:8px">'
+              + '<span style="flex:1;font-weight:500' + (overdue ? ';color:#c0453b' : '') + '">' + esc(l.particulars || '') + '</span>'
+              + '<span style="font-size:12px;color:' + (overdue ? '#c0453b' : 'var(--grey)') + '">'
+              + (r.a.due_date ? esc(String(r.a.due_date).slice(0, 10)) : 'no date') + '</span></div>'
+              + '<div style="font-size:12px;color:var(--grey);margin-top:2px">' + esc(r.a.assignee_name || 'unassigned') + '</div></div>';
+          }).join('');
+    }).join('');
+    return out;
+  }
 
   /**
    * ⭐ THE OPERATIONAL SUMMARY — Athi, 2026-08-13: *"we should be able to see the summary of what is given, what
