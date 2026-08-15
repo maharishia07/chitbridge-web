@@ -1805,14 +1805,27 @@ function menuBtn(x){
   const fs=(UI.folders||[]).filter(f=>(f.scope||'task')===key);
   const open=trackIsOpen(key);
   /* The chevron only appears when there is something to collapse — a disclosure control for nothing is noise. */
-  const chev=fs.length?`<span data-testid="nav-collapse-${key}" onclick="event.stopPropagation();toggleTrack('${key}')" title="${open?'Collapse':'Expand'}" style="margin-left:auto;padding:0 4px;opacity:.6;font-size:11px">${open?'▾':'▸'}</span>`:'';
-  const btn=`<button class="${on?'on':''}" data-testid="nav-${key}" onclick="${click}"><span class="ic">${ic}</span>${label}${chev}</button>`;
+  /**
+   * ⭐ THE "+" LIVES ON THE TRACK, NOT ON A ROW OF ITS OWN — Athi, 2026-08-15: *"is there any way + new folder can
+   * be made much simpler? It takes more space… or a + icon in the same task folder."*
+   *
+   * ⚠️ IT COST TWO FULL ROWS FOR AN ACTION NOBODY TAKES DAILY. "＋ New folder" sat under Task AND under Order, at
+   * the same weight as the places you visit every day — a rail is a list of WHERE, and this was a WHAT, repeated.
+   *
+   * ⚠️ AND IT SHOWS EVEN WITH NO FOLDERS, unlike the chevron. The chevron is a disclosure for something that
+   * exists; the plus is how the first one gets made, so hiding it until you have one would leave no way in.
+   */
+  const plus=`<span data-testid="nav-newfolder-${key}" onclick="event.stopPropagation();newFolderIn('${key}')" title="New folder in ${label}" style="margin-left:auto;padding:0 3px;opacity:.5;font-size:13px;font-weight:700">＋</span>`;
+  const chev=fs.length?`<span data-testid="nav-collapse-${key}" onclick="event.stopPropagation();toggleTrack('${key}')" title="${open?'Collapse':'Expand'} folders" style="padding:0 3px;opacity:.6;font-size:11px">${open?'▾':'▸'}</span>`:'';
+  const btn=`<button class="${on?'on':''}" data-testid="nav-${key}" onclick="${click}"><span class="ic">${ic}</span>${label}${plus}${chev}</button>`;
   return open ? btn+navFolders(key,fs) : btn;
 }
 /* The sub-folders of one track, indented under it. Loaded with the nav, so they are there before you look for them. */
 function navFolders(track,fs){
   const rows=fs.map(f=>`<button class="${UI.folderSel===f.folder_id?'on':''}" data-testid="nav-folder-${esc(f.folder_id)}" onclick="navToFolder('${esc(f.folder_id)}')" style="padding-left:30px;font-size:12.5px"><span class="ic" style="font-size:12px">📁</span>${esc(f.name)}${f.count?`<span style="margin-left:auto;font-size:10.5px;color:var(--grey)">${f.count}</span>`:''}</button>`).join('');
-  return rows+`<button data-testid="nav-newfolder-${track}" onclick="newFolderIn('${track}')" style="padding-left:30px;font-size:11.5px;color:var(--grey)"><span class="ic" style="font-size:12px">＋</span>New folder</button>`;
+  /* The "＋ New folder" row that used to live here has moved onto the track button itself — see menuBtn. It was
+     two rail rows for an action taken once a month, sitting at the same weight as the screens you open daily. */
+  return rows;
 }
 /**
  * ⚠️ A FOLDER OPENS THE TRACK'S OWN PANEL, FILTERED — it is not a second screen.
