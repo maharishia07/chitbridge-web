@@ -17,7 +17,21 @@
  * right for a list and wrong for a conversation — you would read a reply with the question it answers missing.
  * The per-chit route already returns the full line thread; opening asks it.
  */
-var RPL = { data: null, busy: false, err: null, all: false, open: {}, full: {}, sending: {} };
+var RPL = { data: null, busy: false, err: null, all: false, track: '', open: {}, full: {}, sending: {} };
+
+/**
+ * ⭐ TASK OR ORDER — Athi, 2026-08-15: *"both task and order messages, is there a way to segregate?"*
+ *
+ * ⚠️ THEY ARE DIFFERENT WORK ARRIVING IN ONE LIST. "Did they answer MY order" is chasing; "the customer said
+ * something about the job they gave me" is being chased. The server has always known which — chit_header.direction
+ * — and the screen showed neither, so the two read as one undifferentiated pile.
+ *
+ * ⚠️ FILTERED CLIENT-SIDE, DELIBERATELY. The rows are already here; a round trip to hide some of them would make
+ * a filter slower than the list it filters, and the counts on the chips could not be shown until it returned.
+ */
+var RPLTRACK = { order: { icon: '📤', label: 'Order', hint: 'chits you sent' },
+                 task:  { icon: '📥', label: 'Task',  hint: 'chits you received' } };
+function rplTrack(t){ RPL.track = (RPL.track === t) ? '' : t; RPL.open = {}; msgPaint(); }
 
 if (typeof EP !== 'undefined') {
   Object.assign(EP, {
@@ -56,7 +70,11 @@ function msgThreads(){
     if (!by[k]) { by[k] = { key: k, chit_id: m.chit_id, line_id: m.line_id || null, msgs: [] }; order.push(k); }
     by[k].msgs.push(m);
   });
-  return order.map(function(k){
+  return order.filter(function(k){
+    /* The filter applies to the THREAD, not the message — a conversation belongs to one chit and therefore to
+       one track, so filtering per message could split an exchange in half. */
+    return !RPL.track || (by[k].msgs[0].track === RPL.track);
+  }).map(function(k){
     var t = by[k];
     /* The inbox arrives newest-first; a thread reads oldest-first, and its headline is the newest. */
     t.msgs.sort(function(a, b){ return String(a.created_at).localeCompare(String(b.created_at)); });
@@ -185,6 +203,10 @@ function messagesScreen(){
           +   '<span style="width:8px;flex:none">' + (isNew ? '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#2c5aa0"></span>' : '') + '</span>'
           +   '<div style="flex:1;min-width:0">'
           +     '<div style="display:flex;gap:8px;align-items:baseline">'
+          /* The track rides on every row, not just when filtering — a list you have to filter to understand is a
+             list that has not told you anything yet. */
+          +       '<span title="' + esc((RPLTRACK[m.track] || {}).hint || '') + '" style="flex:none;font-size:11px;color:var(--grey)">'
+          +         esc((RPLTRACK[m.track] || {}).icon || '') + '</span>'
           +       '<b style="font-size:13.5px' + (isNew ? ';font-weight:800' : '') + '">' + what + '</b>'
           /* ⚠️ A CLOSED CHIT IS MARKED, NEVER HIDDEN — a complaint about a closed order arrives exactly here. */
           +       (closed ? '<span style="font-size:10.5px;font-weight:700;color:#b0641c;background:#fdf4e9;border-radius:4px;padding:1px 5px">' + esc(m.chit_status) + '</span>' : '')
@@ -228,14 +250,29 @@ function messagesScreen(){
   var n = msgUnread();
   return '<div style="flex:1;min-height:0;overflow-y:auto">'
     + '<div style="padding:13px 16px;border-bottom:1px solid var(--line)">'
-    +   '<div style="font-weight:700;font-size:16px">Replies' + (n ? ' <span style="font-size:12.5px;color:#2c5aa0">· ' + n + ' new</span>' : '') + '</div>'
+    +   '<div style="font-weight:700;font-size:16px">Messages' + (n ? ' <span style="font-size:12.5px;color:#2c5aa0">· ' + n + ' new</span>' : '') + '</div>'
     +   '<div style="font-size:12px;color:var(--grey);margin-top:2px">One conversation per line, across every chit. Read and reply here.</div>'
+    + '</div>'
+    /* ── segregate by track ─────────────────────────────────────────────────────────────────────────────────
+       ⚠️ THE COUNTS ARE ON THE CHIPS. A filter that does not say how much is behind it makes you click it to find
+       out, and clicking to discover there is nothing there is the interaction people remember. */
+    + '<div style="display:flex;gap:7px;align-items:center;padding:8px 16px;border-bottom:1px solid var(--line-soft,#eee);flex-wrap:wrap">'
+    +   ['', 'order', 'task'].map(function(k){
+          var on = RPL.track === k;
+          var n = k ? (RPL.data || []).filter(function(m){ return m.track === k; }).length : (RPL.data || []).length;
+          var lbl = k ? ((RPLTRACK[k].icon) + ' ' + RPLTRACK[k].label) : 'All';
+          return '<span data-testid="msg-track-' + (k || 'all') + '" onclick="rplTrack(&quot;' + k + '&quot;)"'
+            + ' title="' + esc(k ? RPLTRACK[k].hint : 'every conversation') + '"'
+            + ' style="cursor:pointer;font-size:12.5px;border:1px solid ' + (on ? 'var(--blue)' : 'var(--line)') + ';'
+            + (on ? 'background:var(--blue);color:#fff;font-weight:700;' : '') + 'border-radius:8px;padding:3px 10px">'
+            + lbl + (n ? ' <span style="opacity:.7">' + n + '</span>' : '') + '</span>';
+        }).join('')
+    +   '<span style="margin-left:auto;font-size:11.5px;color:var(--grey)">📌 keeps a conversation here after you read it</span>'
     + '</div>'
     + '<div style="display:flex;gap:14px;align-items:center;padding:8px 16px;border-bottom:1px solid var(--line)">'
     +   '<label style="display:inline-flex;align-items:center;gap:5px;font-size:12.5px;cursor:pointer">'
     +     '<input type="checkbox" data-testid="msg-all" ' + (RPL.all ? 'checked' : '')
     +     ' onchange="msgShowAll()" style="width:15px;height:15px;accent-color:var(--blue)">everything, including dealt with</label>'
-    +   '<span style="margin-left:auto;font-size:11.5px;color:var(--grey)">📌 keeps a conversation here after you read it</span>'
     + '</div>'
     + body + '</div>';
 }

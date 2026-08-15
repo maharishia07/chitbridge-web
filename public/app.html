@@ -1554,12 +1554,17 @@ const MENUS = {
      */
     /* ⭐ REPLIES sits with Task and Order because it is the same kind of thing — a place where work arrives from
        outside. Athi: *"can we bring external new messages under rail?"* */
-    ["Rail", [["task","📥","Task",""],["order","📤","Order",""],["messages","💬","Replies",""],["drafts","📝","Drafts",""],["archive","🗄️","Archive",""],["trash","🗑️","Trash",""]]],
+    ["Rail", [["task","📥","Task",""],["order","📤","Order",""],["messages","💬","Messages",""],["drafts","📝","Drafts",""],["archive","🗄️","Archive",""],["trash","🗑️","Trash",""]]],
     ["Work",    [["worklist","🧰","Everyone's work"],["intake","📨","Intake"],["disputes","⚖️","Disputes"]]],
     ["Business",[["catalogue","🗂️","Catalogue"],["customers","🛍️","Customers"],["suppliers","🏭","Suppliers"],["network","🔗","Network"],["coassists","🧑‍🤝‍🧑","Co-assists"]]],
     ["Insight", [["mis","📊","MIS"],["traceability","🧭","Traceability"],["readiness","🛡️","Trade ready"]]],
   ], tag:"Owner does structure."},
-  actor:{top:[["compose","✉️","Compose",""],["task","📥","Task",""],["order","📤","Order",""],["worklist","🧰","My work",""],["folders","📁","Folders",""],["drafts","📝","Drafts",""],["trash","🗑️","Trash",""],["archive","🗄️","Archive",""]], rest:[["suppliers","🏭","Suppliers"],["profile","👤","Profile"]], tag:"Commerce yes, structure no."},
+  /* ⭐ AN ACTOR GETS REPLIES TOO — Athi, 2026-08-15: *"can you show me message from … actor view?"* The screen
+     existed and the actor rail had no door to it, so a co-assist could be asked a direct question by a customer
+     and have no way to see it. Safe to add only because the route scopes an actor to conversations about work
+     they hold; before that scope existed this row would have handed every co-assist the whole business's
+     customer correspondence. */
+  actor:{top:[["compose","✉️","Compose",""],["task","📥","Task",""],["order","📤","Order",""],["messages","💬","Messages",""],["worklist","🧰","My work",""],["folders","📁","Folders",""],["drafts","📝","Drafts",""],["trash","🗑️","Trash",""],["archive","🗄️","Archive",""]], rest:[["suppliers","🏭","Suppliers"],["profile","👤","Profile"]], tag:"Commerce yes, structure no."},
   customer:{top:[["order","📤","My orders",""]], rest:[["shops","🏬","Find a shop"]], tag:"You see only your orders."},
 };
 const PURPOSE = {
