@@ -1678,7 +1678,10 @@ function renderApp(){
              resolves against <body> — which put this at y=46 while the avatar sits at y=76, i.e. floating ABOVE
              the thing it belongs to and over the stage bar. It needs a positioned ancestor of its own. -->
         <div style="position:relative">
-        <div class="av" data-testid="icon-avatar" onclick="UI.avMenu=!UI.avMenu;renderApp()" style="cursor:pointer" title="${esc(SESSION.name||'')} — account">${(SESSION.name||"?")[0]}</div>
+        <!-- ⚠️ THE CARET IS THE WHOLE POINT. Athi went looking for Settings and Profile after I moved them here:
+             a plain circular letter does not say "menu", it says "avatar", so the two screens read as DELETED
+             rather than relocated. A control that hides things must look like a control. -->
+        <div class="av" data-testid="icon-avatar" onclick="UI.avMenu=!UI.avMenu;renderApp()" style="cursor:pointer;position:relative" title="Profile, settings and sign out">${(SESSION.name||"?")[0]}<span style="position:absolute;right:-3px;bottom:-3px;background:var(--ink);color:#fff;border-radius:50%;width:13px;height:13px;font-size:8px;display:flex;align-items:center;justify-content:center;border:1.5px solid #fff">${UI.avMenu?'▴':'▾'}</span></div>
         ${UI.avMenu?`<div class="avmenu" data-testid="avatar-menu" style="position:absolute;top:calc(100% + 6px);right:0;z-index:60;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);min-width:180px;overflow:hidden">
           <div style="padding:9px 13px;border-bottom:1px solid var(--line)"><div style="font-weight:700;font-size:13px">${esc(SESSION.name||'')}</div><div style="font-size:11.5px;color:var(--grey)">${esc(role)} · ${esc(SESSION.entity||'')}</div></div>
           <button data-testid="nav-profile" onclick="UI.avMenu=false;navTo('profile')" style="display:block;width:100%;text-align:left;border:0;background:none;padding:10px 13px;font-size:13.5px;cursor:pointer">👤 Profile</button>
