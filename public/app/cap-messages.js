@@ -211,7 +211,11 @@ function messagesScreen(){
           /* ⚠️ A CLOSED CHIT IS MARKED, NEVER HIDDEN — a complaint about a closed order arrives exactly here. */
           +       (closed ? '<span style="font-size:10.5px;font-weight:700;color:#b0641c;background:#fdf4e9;border-radius:4px;padding:1px 5px">' + esc(m.chit_status) + '</span>' : '')
           +       '<span style="font-size:11.5px;color:var(--grey);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + sub + '</span>'
-          +       (t.msgs.length > 1 ? '<span style="font-size:11px;color:var(--grey);flex:none">' + t.msgs.length + ' msgs</span>' : '')
+          /* ⚠️ THE FULL COUNT ONCE IT IS KNOWN. The inbox only returns unread-or-kept, so this said "3 msgs" over
+             a conversation that turned out to hold 5 — a number that disagreed with the thread it labelled the
+             moment you opened it. Once the thread is fetched, its own length is the truthful one. */
+          +       (function(){ var n = (RPL.full[t.key] || t.msgs).length;
+                    return n > 1 ? '<span style="font-size:11px;color:var(--grey);flex:none">' + n + ' msgs</span>' : ''; })()
           +       '<span style="font-size:11.5px;color:var(--grey);flex:none">' + esc(msgWhen(m.created_at)) + '</span>'
           +     '</div>'
           +     '<div style="font-size:13px;color:var(--ink-2,#41474e);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'
@@ -221,10 +225,51 @@ function messagesScreen(){
           +     ' style="flex:none;cursor:pointer;font-size:14px;opacity:' + (t.kept ? '1' : '.35') + '">📌</span>'
           + '</div>'
           + (open ? '<div style="padding:0 14px 13px 32px">'
-              /* ── the conversation, oldest first, each side shaded differently ─────────────────────────────── */
+              /**
+               * ⭐ THE JUMPS GO AT THE TOP — Athi, 2026-08-15: *"open order / task in the top."*
+               *
+               * ⚠️ THEY WERE BELOW THE CONVERSATION, so on a long thread you scrolled past everything to reach
+               * the two links that answer "what is this actually about" — the question you have BEFORE reading,
+               * not after. And with newest-first they sat below the oldest message, which is the furthest point
+               * on the screen from where the eye starts.
+               */
+              + '<div style="display:flex;gap:10px;align-items:center;padding:2px 0 8px;border-bottom:1px solid var(--line-soft,#f0efec);margin-bottom:6px">'
+              +   (t.line_id ? '<span data-testid="msg-open-line" onclick="rplOpenLine(&quot;' + t.chit_id + '&quot;,&quot;' + t.line_id + '&quot;)"'
+                    + ' style="cursor:pointer;font-size:12px;color:var(--blue);font-weight:700">↗ Open the line</span>' : '')
+              +   '<span data-testid="msg-open-chit" onclick="rplOpenChit(&quot;' + t.chit_id + '&quot;)" style="cursor:pointer;font-size:12px;color:var(--blue)">↗ Open the '
+              +     ((RPLTRACK[m.track] || {}).label || 'order').toLowerCase() + '</span>'
+              /* ⚠️ NO SECOND COUNT HERE. This said "2 in this conversation" beside a row reading "3 msgs" — two
+                 numbers for one fact, from two different sources, disagreeing in plain sight. The row already
+                 carries it, and it now carries the truthful one. */
+              + '</div>'
+              /**
+               * ⭐ THE REPLY BOX SITS ABOVE THE CONVERSATION — Athi, 2026-08-15: *"reply message also on top,
+               * otherwise you have to scroll to find the order, message box and so on."*
+               *
+               * ⚠️ EVERY ACTION IS NOW WITHIN ONE SCREEN OF THE ROW YOU TAPPED. With the box at the bottom, a
+               * long conversation put the two things you came to do — jump to the work, or answer — at the far
+               * end of a scroll, past messages you had already read. Reading is browsing; replying is the task.
+               * The task goes first.
+               */
+              + '<textarea id="msg_reply_' + rid + '" data-testid="msg-reply" rows="2" placeholder="Reply to ' + esc(m.sender_display_name || 'them') + '…"'
+              +   ' style="width:100%;box-sizing:border-box;font:inherit;font-size:14px;line-height:1.5;padding:9px 11px;border:1px solid var(--line);border-radius:8px;resize:vertical"></textarea>'
+              + '<div style="display:flex;gap:10px;align-items:center;margin-top:7px">'
+              +   '<span style="font-size:11.5px;color:#b0641c">📤 The other party sees this, on their own copy.</span>'
+              +   '<button class="btn pri" data-testid="msg-send" onclick="msgSend(&quot;' + t.key + '&quot;)"'
+              +     ' style="width:auto;flex:0 0 auto;margin:0 0 0 auto;padding:8px 16px">' + (RPL.sending[t.key] ? 'Sending…' : 'Reply') + '</button>'
+              + '</div>'
+              /* ── the conversation, newest first, each side shaded differently ─────────────────────────────── */
+              + '<div style="border-top:1px solid var(--line-soft,#f0efec);margin-top:11px;padding-top:5px"></div>'
               + (full === undefined ? '<div style="font-size:12.5px;color:var(--grey);padding:4px 0"><span class="spin"></span> reading the conversation…</div>'
                  : full === null ? '<div style="font-size:12.5px;color:#c0453b;padding:4px 0">Could not read the rest of this conversation — the newest message is above.</div>'
-                 : full.map(function(x){
+                 /**
+                  * ⭐ NEWEST FIRST — Athi, 2026-08-15: *"latest message on top, reverse order."*
+                  *
+                  * ⚠️ AND IT MATCHES THE LIST ABOVE IT. The inbox is newest-first; a thread that opened
+                  * oldest-first made the eye travel to the bottom to find the thing the row had just previewed —
+                  * two reading directions on one screen, and the reply box is at the bottom anyway.
+                  */
+                 : full.slice().reverse().map(function(x){
                      var mine = msgIsMine(x);
                      return '<div style="margin:6px 0;padding:8px 11px;border-radius:9px;font-size:13px;line-height:1.5;'
                        + (mine ? 'background:#eef4f8;margin-left:28px' : 'background:#f6f5f2;margin-right:28px') + '">'
@@ -233,26 +278,6 @@ function messagesScreen(){
                        +   '<span style="margin-left:auto;font-size:11px;color:var(--grey)">' + esc(msgWhen(x.created_at)) + '</span></div>'
                        + '<div style="white-space:pre-wrap">' + esc(x.message_text || '') + '</div></div>';
                    }).join(''))
-              + '<textarea id="msg_reply_' + rid + '" data-testid="msg-reply" rows="2" placeholder="Reply to ' + esc(m.sender_display_name || 'them') + '…"'
-              +   ' style="width:100%;box-sizing:border-box;font:inherit;font-size:14px;line-height:1.5;padding:9px 11px;border:1px solid var(--line);border-radius:8px;resize:vertical;margin-top:8px"></textarea>'
-              + '<div style="display:flex;gap:10px;align-items:center;margin-top:7px">'
-              /**
-               * ⭐ FROM THE MESSAGE TO THE WORK — Athi, 2026-08-15: *"can we open the task from message directly?
-               * Or the line item in case of design 2? If that is being done, then I guess it is a good
-               * completion."*
-               *
-               * ⚠️ A MESSAGE IS A QUESTION ABOUT SOMETHING, and until now answering it meant remembering which
-               * order it was, going to find it, and finding the line again. Two doors: the LINE when the
-               * conversation names one (the card with what is left, the history, the cost), and the ORDER for
-               * everything else.
-               */
-              +   (t.line_id ? '<span data-testid="msg-open-line" onclick="rplOpenLine(&quot;' + t.chit_id + '&quot;,&quot;' + t.line_id + '&quot;)"'
-                    + ' style="cursor:pointer;font-size:12px;color:var(--blue);font-weight:700">Open the line</span>' : '')
-              +   '<span data-testid="msg-open-chit" onclick="rplOpenChit(&quot;' + t.chit_id + '&quot;)" style="cursor:pointer;font-size:12px;color:var(--blue)">Open the order</span>'
-              +   '<button class="btn pri" data-testid="msg-send" onclick="msgSend(&quot;' + t.key + '&quot;)"'
-              +     ' style="width:auto;flex:0 0 auto;margin:0 0 0 auto;padding:8px 16px">' + (RPL.sending[t.key] ? 'Sending…' : 'Reply') + '</button>'
-              + '</div>'
-              + '<div style="margin-top:6px;font-size:11.5px;color:#b0641c">📤 The other party sees this, on their own copy.</div>'
               + '</div>' : '')
           + '</div>';
       }).join('');
