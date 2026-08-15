@@ -115,6 +115,43 @@ console.log('\n3 · .btn in a flex row');
   if (!found) pass('no unguarded .btn beside a growing sibling');
 }
 
+// ── 6 · TWO FILES MUST NOT CLAIM THE SAME GLOBAL ────────────────────────────────────────────────────────────
+/**
+ * ⭐⭐ THIS CHECK EXISTS BECAUSE I SHIPPED EXACTLY THIS BUG, FOUR TIMES, ON 2026-08-15.
+ *
+ * `catalogue-ui.js` assigned `root.CBCatalogue` — the same global `catalogue-model.js` has always exported. Both
+ * are loaded by app.html, mine loads second, so it OVERWROTE the other. `CBCatalogue.STANDARDS`, `.PALETTE`,
+ * `.ensure`, `.toJSONSchema`, `.upsertItem` all became undefined, which silently broke the catalogue setup screen
+ * (cap-catalogue.js calls four of those). Nothing threw at load. It rode through four pushes.
+ *
+ * ⚠️ CHECK 2 DID NOT CATCH IT and could not: it compares each cap file against app.html's own declarations, not
+ * cap files against each other. A collision between two lazily-loaded modules is invisible to it.
+ *
+ * ⚠️ AND IT IS INVISIBLE TO EVERY OTHER GATE TOO. `node --check` passes — the code is valid. The e2e suite
+ * passed 25/25 — nothing it drives touches the catalogue setup screen. A screen nobody's spec opens is a screen
+ * that can be dead for a week.
+ *
+ * The rule: exactly one file may assign any given `root.X` / `window.X`.
+ */
+console.log('\n6 · one global, one owner');
+{
+  const files = [['app.html', app]].concat(CAPS.map((f) => [f, fs.readFileSync(path.join(WEB, 'app', f), 'utf8')]));
+  const owners = {};
+  files.forEach(([name, src]) => {
+    /* `root.X = `, `window.X = `, `globalThis.X = ` at an assignment, not a read. */
+    [...src.matchAll(/\b(?:root|window|globalThis)\.([A-Z][A-Za-z0-9_$]*)\s*=(?!=)/g)].forEach((m) => {
+      (owners[m[1]] = owners[m[1]] || new Set()).add(name);
+    });
+  });
+  const clashes = Object.keys(owners).filter((k) => owners[k].size > 1);
+  if (clashes.length) {
+    clashes.forEach((k) => fail('`' + k + '` is assigned by ' + [...owners[k]].join(' AND ')
+      + ' — whichever loads last wins and the other file\'s API silently disappears'));
+  } else {
+    pass(Object.keys(owners).length + ' globals, each with exactly one owner');
+  }
+}
+
 // ── 5 · a REPLACEMENT RENDERER MUST EMIT EVERY HOOK THE ONE IT REPLACES DOES ────────────────────────────────
 /**
  * ⭐⭐ THIS CHECK EXISTS BECAUSE I DROPPED THREE HOOKS IN ONE AFTERNOON, ONE SPEC AT A TIME.

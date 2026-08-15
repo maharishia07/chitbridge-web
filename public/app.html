@@ -552,6 +552,9 @@ img.attImg{object-fit:cover;display:block}
 <!-- The redesigned catalogue ROW. A renderer only — it owns no quantity rule; every mutation routes through
      CBCart. Loaded AFTER cart-ui.js because it reads CBCart.fmt. -->
 <script src="/app/catalogue-ui.js"></script>
+<!-- Offers as a subject of their own — a PURE engine, not wired to a screen yet. Loaded so Definitions can
+     read its registry of kinds; see SPEC-offers-tax.md. -->
+<script src="/app/offers.js"></script>
 <!-- ATTACH + VIEW, shared. Loaded here so `cbAttachType` is the SINGLE type→icon mapping for every screen; the
      copy that used to live in this file is gone. See BACKLOG-attach-ui-sweep.md for what is deliberately NOT
      swept yet and why. -->
@@ -1598,7 +1601,7 @@ const MENUS = {
        outside. Athi: *"can we bring external new messages under rail?"* */
     ["Rail", [["task","📥","Task",""],["order","📤","Order",""],["messages","💬","Messages",""],["drafts","📝","Drafts",""],["archive","🗄️","Archive",""],["trash","🗑️","Trash",""]]],
     ["Work",    [["worklist","🧰","Everyone's work"],["intake","📨","Intake"],["disputes","⚖️","Disputes"]]],
-    ["Business",[["catalogue","🗂️","Catalogue"],["customers","🛍️","Customers"],["suppliers","🏭","Suppliers"],["network","🔗","Network"],["coassists","🧑‍🤝‍🧑","Co-assists"]]],
+    ["Business",[["catalogue","🗂️","Catalogue"],["definitions","🧱","Definitions"],["customers","🛍️","Customers"],["suppliers","🏭","Suppliers"],["network","🔗","Network"],["coassists","🧑‍🤝‍🧑","Co-assists"]]],
     ["Insight", [["mis","📊","MIS"],["traceability","🧭","Traceability"],["readiness","🛡️","Trade ready"]]],
   ], tag:"Owner does structure."},
   /* ⭐ AN ACTOR GETS REPLIES TOO — Athi, 2026-08-15: *"can you show me message from … actor view?"* The screen
@@ -1652,7 +1655,7 @@ const PURPOSE = {
    /app/cap-<name>.js (classic script, shared global scope). CAP_OF maps a screen to its
    capability; unlisted screens are Core (eager, always loaded). renderApp shows "Loading…"
    and re-renders once the capability arrives. Grow CAP_OF as screens migrate out. */
-const CAP_OF = { mis:'admin', profile:'admin', settings:'admin', coassists:'workforce', assistreview:'admin', connectors:'connector', disputes:'dispute', folders:'folders', readiness:'readiness', traceability:'traceability', network:'network', intake:'intake', messages:'messages' };
+const CAP_OF = { definitions:'definitions', mis:'admin', profile:'admin', settings:'admin', coassists:'workforce', assistreview:'admin', connectors:'connector', disputes:'dispute', folders:'folders', readiness:'readiness', traceability:'traceability', network:'network', intake:'intake', messages:'messages' };
 // nav items gated by an entity capability (the itemised toggle) — hidden unless SESSION.capabilities holds the key.
 const CAP_GATED = { connectors:'connector', disputes:'dispute' };
 const CAP_LOADED = {};
@@ -2080,7 +2083,7 @@ function ccCatPickHTML(){
      and then load the item"*. This used to swap in a one-line "Loading your catalogue…" and then swap in a
      completely different screen 2.2 SECONDS later (measured on the cold path). Now the search box and the rows
      are where they will be, greyed, and the real rows replace them in place. Nothing moves when the data lands. */
-  if(UI._catState==='loading') return CBCatalogue.skeletonHTML({ rows:8 });
+  if(UI._catState==='loading') return CBCatUI.skeletonHTML({ rows:8 });
   if(!(STORE.catalogue||[]).length)
     return `<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:10px 12px;font-size:12.5px;color:#6b5a36">${UI._catState==='error'?esc(MSG.catalogueLoadErr()):'Your catalogue is empty — a chit needs at least one line item. <a onclick="closeModal();navTo(\'catalogue\')" style="color:#3F66A6;cursor:pointer;font-weight:600">Add a product in Catalogue first &rarr;</a>'}</div>`;
   /**
@@ -2113,7 +2116,7 @@ function ccCatPickHTML(){
    * `cart:false` — the chip lives in the modal header beside the ✕ (see compose()), so the picker row is the
    * search box alone, full width.
    */
-  return CBCatalogue.pickerHTML(c, {
+  return CBCatUI.pickerHTML(c, {
     cart:false, committed: CC.items, noteFn:'ccSetLineNote',
     attachFn:'ccAddItemFiles', chips:ccItemChips,
     checkoutLabel:'+ Add to the chit',
@@ -2138,7 +2141,7 @@ function ccCartSync(){
   const cat = { shop:{ bridge_id:'self' }, items:(STORE.catalogue||[]).map((p,i)=>({
     item_id:'sc'+i, item_data:Object.assign({}, p, { name:p.particulars, unit:p.unit||'unit', price:p.price }) })) };
   if(UI._ccCart) UI._ccCart.setCatalogue(cat);
-  else UI._ccCart = CBCart.create(cat, { listEl:'cbpick_cc', barEl:'cbcartbar_cc', renderer:CBCatalogue,
+  else UI._ccCart = CBCart.create(cat, { listEl:'cbpick_cc', barEl:'cbcartbar_cc', renderer: CBCatUI,
          /* ⚠️ NO `barHideEmpty` — the chip is ALWAYS in the title bar. It used to appear only once the cart held
             something, on the reasoning that an inert grey cart is a control that never does anything. Athi could
             not find it: *"couldnt find cart symbol in the screen on top"*. A permanent, quiet target beats a
@@ -3154,7 +3157,7 @@ function supOpenProfile(id){
 }
 /** The cart's own repaint target: the whole detail pane, which is what the bar and the list live inside. */
 function supCartOpts(x){
-  return { listEl:'cbpick_sup', barEl:'cbcartbar_sup', renderer:CBCatalogue, checkoutLabel:'Check out →',
+  return { listEl:'cbpick_sup', barEl:'cbcartbar_sup', renderer: CBCatUI, checkoutLabel:'Check out →',
            from:supName(x), cartTitle:'Your order',
            // The cart hands over; THIS screen decides what "next" means. Checking out of the popup is the same
            // action as pressing the footer's primary, so it lands on the same step rather than a second path.
@@ -3235,7 +3238,7 @@ function supCartHTML(){
      published hooks named above, so they are passed IN rather than left to the helper to guess.
      No `committed` here: Suppliers checks out straight into the step flow, so there is no separate "already on
      the chit" set to show — inventing one would be a screen telling a story its own flow does not have. */
-  return CBCatalogue.pickerHTML(c, {
+  return CBCatUI.pickerHTML(c, {
     checkoutLabel:'Check out →', emptyHint:'Press + on what you need',
     empty:'Nothing in their catalogue matches that.',
     barEl:'cbcartbar_sup', listEl:'cbpick_sup',
@@ -4200,6 +4203,7 @@ function mainBody(){
      it." Design 1 is the chit as one unit of work; this is the chit as many. Reached only from the ⧉ Lines button,
      renders through its own module, and if cap-chit2.js never loads nothing else notices. */
   if(UI.nav==="chit2" && typeof chit2Screen==="function") return chit2Screen();      // app/cap-chit2.js (lazy)
+  if(UI.nav==="definitions") return definitionsScreen();   // app/cap-definitions.js (lazy)
   if(UI.nav==="traceability") return traceabilityScreen();
   if(UI.nav==="readiness") return readinessScreen();
       if(UI.nav==="disputes") return disputesScreen();

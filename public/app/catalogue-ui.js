@@ -20,9 +20,9 @@
  * it grows its own coerce(), there are two carts again and they will disagree.
  *
  * ── WHAT IT DOES OWN ─────────────────────────────────────────────────────────────────────────────────────────────
- *   CBCatalogue.pickerHTML(cart, opts)   the sticky header, the rows, the commit strip, the on-the-chit block
- *   CBCatalogue.paint(cart, opts)        repaint in place
- *   CBCatalogue.observe()                wire lazy media after any paint
+ *   CBCatUI.pickerHTML(cart, opts)   the sticky header, the rows, the commit strip, the on-the-chit block
+ *   CBCatUI.paint(cart, opts)        repaint in place
+ *   CBCatUI.observe()                wire lazy media after any paint
  *
  * `cart` is a handle from `CBCart.create()`. Nothing else is needed.
  *
@@ -208,7 +208,7 @@
       var t = tileFor(name);
       return '<span class="cbcat-thumb cbcat-skel">'
         + '<img data-src="' + esc(m.src) + '" alt="" loading="lazy" decoding="async"'
-        + ' onerror="CBCatalogue.fellBack(this,\'' + esc(t.bg) + '\',\'' + esc(t.letter) + '\')">'
+        + ' onerror="CBCatUI.fellBack(this,\'' + esc(t.bg) + '\',\'' + esc(t.letter) + '\')">'
         + (m.kind === 'video' ? '<span class="cbcat-play">▶</span>' : '') + '</span>';
     })();
 
@@ -480,7 +480,7 @@
      *
      * The images come back with `data-src` and no `src`; something must observe them AFTER the HTML lands in the
      * DOM. Three hosts paint this string in three different ways (a modal body, a re-rendered panel, a step
-     * body), so requiring each to remember `CBCatalogue.observe()` afterwards guarantees one of them forgets and
+     * body), so requiring each to remember `CBCatUI.observe()` afterwards guarantees one of them forgets and
      * that catalogue silently shows grey boxes forever.
      *
      * cart-ui learned the hard way that side effects belong nowhere near a renderer — a `setCatalogue()` here
@@ -770,7 +770,7 @@
     (document.head || document.documentElement).appendChild(s);
   }
 
-  root.CBCatalogue = {
+  root.CBCatUI = {
     /* listInto/barInto ARE the renderer-hook contract cart-ui looks for — see rendererOf() there. */
     listInto: listInto, barInto: barInto,
     pickerHTML: pickerHTML, listHTML: listHTML, rowHTML: rowHTML,

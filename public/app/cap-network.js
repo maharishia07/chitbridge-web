@@ -1277,7 +1277,7 @@ function _netCartRelease(){
   UI._netOrder = null;
 }
 function _netCartOpts(){
-  return { listEl: 'cbpick_net', barEl: 'cbcartbar_net', renderer: CBCatalogue,
+  return { listEl: 'cbpick_net', barEl: 'cbcartbar_net', renderer: CBCatUI,
            cartTitle: 'Your request', checkoutLabel: 'Check out →',
            // ⚠️ THE ONE SCREEN THAT ASKS FOR STOCK. A supplier publishes a catalogue; a network store also reports
            // what it HAS, and which store to ask is the question this screen exists to answer. Everywhere else
@@ -1334,7 +1334,7 @@ function _netStepItems(){
   return (netIsMe() ? '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:10px;padding:9px 12px;font-size:12.5px;color:#6b5a36;margin:0 0 9px">⚠ This is your own store. You cannot send yourself a request — pick another store.</div>' : '')
     /* ⭐ The redesigned row (app/catalogue-ui.js), shared with Compose and Suppliers. The placeholder differs
        here because it is somebody else's store, not yours. */
-    + CBCatalogue.pickerHTML(c, {
+    + CBCatUI.pickerHTML(c, {
         placeholder:'Search this store’s catalogue…',
         checkoutLabel:'Check out →', emptyHint:'Press + on what you need',
         empty:'Nothing in this store’s catalogue matches that.',
