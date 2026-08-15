@@ -940,7 +940,19 @@ function _screenChain(){ var sc=curScreen(); var chain=[sc];
   (parents[sc]||[]).forEach(function(p){ if(chain.indexOf(p)<0) chain.push(p); }); return chain.join(','); }
 function curScreen(){ try{ if(_assistCtx) return _assistCtx; if(typeof SESSION!=="undefined" && SESSION.token) return _fineScreen(); const h=location.hash||""; if(h.indexOf("register")>=0) return "register"; if(h.indexOf("login")>=0) return "login"; return "welcome"; }catch(_){ return "welcome"; } }
 function mountAssist(){ if(document.getElementById("assistfab")) return;
-  const b=document.createElement("div"); b.id="assistfab"; b.style.cssText="position:fixed;right:16px;bottom:16px;z-index:300";
+  /**
+   * ⚠️ z-index 270 — BELOW `.mover` (280), and that is the whole point. At 300 the pill floated OVER every modal,
+   * and on a 625px-wide window it landed squarely on top of compose's primary button: "Next: To →" ran x411-596,
+   * the pill x490-609, and the pill won every click. The wizard could not be advanced on a narrow screen at all.
+   *
+   * Sitting under the overlay fixes it without anyone having to remember to hide and re-show it: a modal covers it,
+   * and the moment compose is MINIMISED (the host goes display:none, the draft is kept) the assistant is back on
+   * its own. A rule that needs no bookkeeping cannot fall out of step with the thing it tracks.
+   *
+   * `.composepill` stays at 300 deliberately — it is bottom-LEFT and belongs to the minimised state, so it neither
+   * collides with this nor needs to sit under a modal.
+   */
+  const b=document.createElement("div"); b.id="assistfab"; b.style.cssText="position:fixed;right:16px;bottom:16px;z-index:270";
   b.innerHTML=`<button data-testid="assistant-open" onclick="openAssist()" title="Ask the assistant" style="border:0;border-radius:24px;padding:10px 16px;background:#3F66A6;color:#fff;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.18);font-size:14px">💬 Assistant</button>`;
   document.body.appendChild(b);
   const h=document.createElement("div"); h.id="assisthost"; document.body.appendChild(h);
@@ -2055,13 +2067,13 @@ function ccCatPickHTML(){
    * catalogue payload instead, variants will group here too with no change to this code.
    */
   const c = UI._ccCart; if(!c) return '';
-  return `<div id="cbcartbar_cc">${c.barHTML()}</div>`
-    + `<input class="inp" style="margin:0 0 7px" placeholder="Search this catalogue…" value="${esc((c.state()||{}).q||'')}"`
-    + ` data-testid="pick-search-cc" oninput="ccPickSearch(this.value)">`
-    + `<div id="cbpick_cc" data-testid="pick-cc">${c.listHTML()}</div>`;
+  /* ⭐ ONE helper renders bar + search + list, and pins the first two. This was three hand-assembled lines here,
+     three more in supplierCatHTML, and three more in Network — so the sticky fix had to be made once and could
+     only be made once. See CBCart.pickerHTML. */
+  /* `cart:false` — the chip lives in the modal header beside the ✕ (see compose()), so the picker row is the
+     search box alone, full width. */
+  return c.pickerHTML({ cart:false, searchTestid:'pick-search-cc', listTestid:'pick-cc' });
 }
-/* Search repaints the LIST only — repainting the picker would take the focus out of the box being typed in. */
-function ccPickSearch(q){ if(UI._ccCart) UI._ccCart.search(q); }
 /**
  * ccCartSync — create or re-point the compose cart. Called ONLY where STORE.catalogue actually changes: when the
  * modal opens, and when the async product fetch lands.
@@ -2075,6 +2087,8 @@ function ccCartSync(){
     item_id:'sc'+i, item_data:{ name:p.particulars, unit:p.unit||'unit', price:p.price } })) };
   if(UI._ccCart) UI._ccCart.setCatalogue(cat);
   else UI._ccCart = CBCart.create(cat, { listEl:'cbpick_cc', barEl:'cbcartbar_cc',
+         /* The chip sits in the modal header, so it shows only once there is something in it — see barHideEmpty. */
+         barHideEmpty:true,
          checkoutLabel:'+ Add to the chit', cartTitle:'Lines to add', emptyHint:'Press + on what this chit is for',
          noCatalogue:'Your catalogue is empty.', onCheckout:ccAddPicked, onChange:ccRenderCatPick });
 }
@@ -2125,7 +2139,10 @@ async function compose(prefill){ UI.drawer=false; CC={items:(prefill&&prefill.it
   // A fresh compose is a fresh cart: whatever was ticked in the LAST chit is not an instruction about this one.
   ccCartRelease(); ccCartSync();
   UI._ccFlow = ccStepsFor();
-  modal(`<div class="mhd"><div class="t">✉️ Compose — author a chit <button data-testid="icon-help-compose" onclick="openAssist('compose')" title="Ask the assistant about composing" style="border:1px solid var(--line);background:#fff;color:#3F66A6;border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;vertical-align:middle">?</button></div><div class="s" id="cc_sub">create your own record, then bridge it</div></div>
+  /* ⭐ THE CART CHIP LIVES IN THE HEADER, level with the ✕ — Athi, 2026-08-15: *"cart icon can be on the top,
+     where x is there"*. `right:42px` clears the ✕ (26px wide at right:9px). The slot is always in the DOM so
+     paintBar has something to fill; it renders nothing until the cart holds a line. */
+  modal(`<div class="mhd" style="position:relative"><div class="t">✉️ Compose — author a chit <button data-testid="icon-help-compose" onclick="openAssist('compose')" title="Ask the assistant about composing" style="border:1px solid var(--line);background:#fff;color:#3F66A6;border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;vertical-align:middle">?</button></div><div class="s" id="cc_sub">create your own record, then bridge it</div><div id="cbcartbar_cc" class="cbpick-cartslot" style="position:absolute;right:42px;top:9px"></div></div>
    <div class="mbody">
      <div id="cc_rail"></div>
      <div id="cc_body"></div>
@@ -2235,8 +2252,12 @@ function ccOriginHTML(){
   </div>`;
 }
 function ccStepItems(){
-  const pick=`<div style="font-family:'Space Grotesk';font-weight:600;font-size:12px;color:var(--grey);margin:2px 0 4px">${(CC.items||[]).length?'Add more':'Line items'} · from ${UI._supplier?('<b>'+esc(UI._supplier.name)+'</b>&rsquo;s catalogue'):'your catalogue'}</div>
-     <div id="cc_catpick">${ccCatPickHTML()}</div>
+  /* ⚠️ THE "Line items · from your catalogue" LABEL IS GONE, deliberately. The step chip above already says
+     Items, the search box says "Search this catalogue", and every row carries a price — the label repeated all
+     three and cost a row of the one screen that is nothing but a list. It survives ONLY for a supplier, where
+     WHOSE catalogue you are in is a fact you cannot get from anywhere else on the step. */
+  const pick=(UI._supplier?`<div style="font-family:'Space Grotesk';font-weight:600;font-size:12px;color:var(--grey);margin:2px 0 4px">From <b>${esc(UI._supplier.name)}</b>&rsquo;s catalogue</div>`:'')
+   + `<div id="cc_catpick">${ccCatPickHTML()}</div>
      <div style="display:flex;gap:6px;margin-top:6px"><input class="inp" id="cc_mname" data-testid="chit-item-name" placeholder="Or type an item name" style="flex:1"><input class="inp" id="cc_mqty" data-testid="chit-item-qty" inputmode="numeric" value="1" style="width:50px" title="Qty"><input class="inp" id="cc_mprice" data-testid="chit-item-price" inputmode="numeric" placeholder="Price" style="width:74px"><button class="composebtn" data-testid="chit-item-add" onclick="ccAddManual()">+ Add</button></div>
      <div style="display:flex;gap:6px;margin-top:6px"><input class="inp" id="cc_aidesc" data-testid="chit-ai-desc" placeholder="✨ Or describe the order in words — AI fills the rows" style="flex:1"><button class="composebtn" id="cc_aibtn" data-testid="chit-ai-fill" onclick="ccAiFill()" title="AI turns your description into line items; you review and edit before sending">✨ Fill</button></div>`;
   const lines=`<div id="cc_items" style="margin-top:8px"></div>
@@ -3090,13 +3111,10 @@ async function supCatalogueFull(sid){
  */
 function supCartHTML(){
   const c=UI._supCart; if(!c) return '';
-  return `<div id="cbcartbar_sup">${c.barHTML()}</div>`
-    + `<input class="inp" style="margin:0 0 7px" placeholder="Search this catalogue…" value="${esc((c.state()||{}).q||'')}"`
-    + ` data-testid="pick-search-sup" oninput="supPickSearch(this.value)">`
-    + `<div id="cbpick_sup" data-testid="sup-catalogue">${c.listHTML()}</div>`;
+  /* ⭐ Shared with Compose and Network — CBCart.pickerHTML. The two testids below are the published hooks named
+     above, so they are passed IN rather than left to the helper to guess. */
+  return c.pickerHTML({ searchTestid:'pick-search-sup', listTestid:'sup-catalogue' });
 }
-/* Search repaints the LIST only — repainting the pane would take the focus out of the box being typed in. */
-function supPickSearch(q){ if(UI._supCart) UI._supCart.search(q); }
 function loadSupplierConfidence(bridge){
   if(!bridge){ UI.supRd=null; return; }
   UI.supRd={bridge:bridge, loading:true}; paintSupDetail();

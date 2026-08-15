@@ -386,27 +386,54 @@
   function accent(ns) { return opt(ns, 'accent', '#3F66A6'); }
   function soft(ns) { return opt(ns, 'soft', '#eef4ff'); }
 
-  /** The bar. THE WHOLE BAR OPENS THE CART — bag, count and summary alike; a 12px link is not a tap target. */
+  /**
+   * The cart control. THE WHOLE THING OPENS THE CART — bag, badge and total alike; a 12px link is not a tap target.
+   *
+   * Athi, 2026-08-15: *"wasting so much of space in top … cart can be an icon on the top"*.
+   *
+   * ⭐ IT IS A CHIP, NOT A BAR, AND THAT BUYS A WHOLE ROW. It used to be a full-width box on its own line above the
+   * search box — two stacked rows of chrome before the first product, on a screen whose entire job is choosing
+   * products. As a chip it sits INSIDE the search row, so the header costs one row instead of two: on the 854px
+   * laptop that moved the first product up ~100px, and on a phone it is the difference between seeing two products
+   * and seeing none.
+   *
+   * ⚠️ `cbcart-bar` AND `cart-count-<ns>` ARE PUBLISHED HOOKS — e2e/tests/render-smoke.spec.js clicks the class and
+   * order-steps.spec.js asserts the badge. The look changed; the names deliberately did not. Renaming them here is
+   * how a spec goes quietly green against nothing.
+   *
+   * ⚠️ NO position:sticky HERE ANY MORE, AND THAT WAS THE ORIGINAL BUG. This element carried `position:sticky;top:0`
+   * from the start — and never once stuck, because each screen wrapped it in a div of exactly its own height, so it
+   * had zero range to travel in. Sticky belongs on `.cbpick-stick`, the wrapper that spans chip AND search and is
+   * as tall as the list. A sticky rule on a box that cannot move is indistinguishable from no rule at all.
+   */
   function barHTML(ns) {
     var n = lines(ns), u = units(ns), T = total(ns), on = n > 0, a = accent(ns);
-    return '<div class="cbcart-bar" data-testid="cart-' + esc(ns) + '"' + (on ? ' onclick="CBCart.open(\'' + esc(ns) + '\')"' : '')
-      + ' style="position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:10px;margin:11px 0 9px;padding:10px 12px;'
-      + 'border-radius:11px;border:1px solid ' + (on ? a : '#e3e6ea') + ';background:' + (on ? soft(ns) : '#f7f8fa') + ';'
-      + (on ? 'cursor:pointer' : '') + '">'
-      + '<span style="position:relative;font-size:19px;line-height:1">🛒'
-      + (on ? '<span data-testid="cart-count-' + esc(ns) + '" style="position:absolute;top:-6px;right:-9px;background:' + a
-            + ';color:#fff;border-radius:9px;min-width:18px;height:18px;padding:0 4px;font-size:11px;font-weight:800;'
-            + 'line-height:18px;text-align:center">' + u + '</span>' : '')
+    /**
+     * ⭐ `barHideEmpty` — NOTHING AT ALL WHEN THE CART IS EMPTY. Set by hosts that park the chip in a header
+     * (compose does, beside the ✕) rather than in the picker row. In the row an empty cart is a useful target
+     * with a hint on it; in a title bar it is a permanent grey blob that never does anything, sitting in the one
+     * place the eye checks first. So the chip APPEARS when there is something in it, and is absent until then.
+     *
+     * ⚠️ paintBar still runs on every change (touched → paint → paintBar), so the slot fills and empties on its
+     * own. The element must exist in the DOM even while this returns '' — it is the container that persists.
+     */
+    if (!on && opt(ns, 'barHideEmpty')) return '';
+    var sum = on ? (n + ' line' + (n === 1 ? '' : 's')
+                   + (T.amount ? ' · ' + fmt(ns, T.amount) + (T.partial ? '+' : '') : '')) : '';
+    return '<div class="cbcart-bar' + (on ? ' on' : '') + '" data-testid="cart-' + esc(ns) + '"'
+      + (on ? ' onclick="CBCart.open(\'' + esc(ns) + '\')" title="Open the cart to review and add these lines"'
+            : ' title="' + esc(opt(ns, 'emptyHint', 'Press + on what you need')) + '"')
+      + ' style="border-color:' + (on ? a : '#e3e6ea') + ';background:' + (on ? a : '#f7f8fa') + '">'
+      + '<span class="cbcart-bag">🛒'
+      + (on ? '<span data-testid="cart-count-' + esc(ns) + '" class="cbcart-n" style="color:' + a + '">' + u + '</span>' : '')
       + '</span>'
-      + '<span style="font-size:13px;font-weight:800">'
-      + (on ? (n + ' line' + (n === 1 ? '' : 's') + ' · ' + u + ' unit' + (u === 1 ? '' : 's')
-               + (T.amount ? ' · ' + fmt(ns, T.amount) + (T.partial ? '+' : '') : ''))
-            : '<span style="font-weight:400;color:#6a707a">' + esc(opt(ns, 'emptyHint', 'Press + on what you need')) + '</span>')
-      + '</span>'
-      + (on ? '<span style="font-size:11.5px;color:' + a + ';font-weight:700">View cart ›</span>' : '')
-      + (on ? '<span onclick="event.stopPropagation();CBCart.clear(\'' + esc(ns) + '\')" style="cursor:pointer;font-size:11.5px;color:#6a707a">Clear</span>' : '')
+      /* ⚠️ The summary HIDES on a narrow screen (see .cbcart-sum), never the badge. The count is the fact you cannot
+         lose; the money is the detail, and it is one tap away in the cart itself. */
+      + (on ? '<span class="cbcart-sum">' + esc(sum) + '</span>' : '')
+      + (on ? '<span class="cbcart-x" onclick="event.stopPropagation();CBCart.clear(\'' + esc(ns) + '\')"'
+            + ' title="Clear the cart">✕</span>' : '')
       + '</div>'
-      + (on && T.partial ? '<div style="color:#8a5a1e;font-size:11.5px;margin:5px 0 0">Some lines have no price — the total covers only the priced ones.</div>' : '');
+      + (on && T.partial ? '<div class="cbcart-partial">Some lines have no price — the total covers only the priced ones.</div>' : '');
   }
 
   /**
@@ -587,6 +614,47 @@
     if (typeof fn === 'function') fn(selected(ns), total(ns));
   }
 
+  /**
+   * pickerHTML(ns, o) — THE WHOLE PICKER: cart bar, search box, list, in that order.
+   *
+   * Athi, 2026-08-15: *"search and cart should be stable"* … *"it is a single js i guess, you have to reuse it"*.
+   *
+   * ⚠️ WHY THIS IS A FUNCTION AND NOT THREE LINES AT EACH CALL SITE. Compose (app.html:2058), Suppliers
+   * (app.html:3093) and Network (cap-network.js:1335) each hand-assembled `bar + <input> + list` — the same three
+   * pieces, three times, with three different search wrappers around one call. So the bar could only ever be fixed
+   * in one screen at a time, and the two that were not being looked at kept the defect. That is the exact shape of
+   * the standing rule: a second call site means a helper, now.
+   *
+   * ⭐ THE BAR AND THE SEARCH BOX STICK; ONLY THE LIST SCROLLS. A catalogue of 56 products is 3,000px tall, so
+   * picking means scrolling — and the cart bar, sitting in flow at the top, went to -913px on the first flick.
+   * While choosing you could no longer see what you had chosen, what it came to, or reach Clear or View cart, and
+   * the search box that would have saved the scrolling had gone with it. The running total is not a decoration
+   * here; it is the number a person is deciding against.
+   *
+   * ⚠️ SEARCH REPAINTS THE LIST ONLY — never the picker. Repainting the picker would replace the input being typed
+   * into and take the caret with it. That is why this calls CBCart.search (which is paintList) rather than the
+   * screen's own onChange, and it is why the three per-screen wrappers this replaces all existed.
+   */
+  function pickerHTML(ns, o) {
+    o = o || {};
+    var barId = opt(ns, 'barEl'), listId = opt(ns, 'listEl');
+    /* `cart:false` — the host renders the chip somewhere of its own (compose puts it in the modal header, level
+       with the ✕) and owns an element with the barEl id there. The row is then search alone, full width. */
+    return '<div class="cbpick-stick">'
+      +   '<div class="cbpick-row">'
+      +     (o.cart === false ? ''
+            : '<div id="' + esc(barId) + '" class="cbpick-cartslot">' + barHTML(ns) + '</div>')
+      +     '<input class="inp cbpick-q" placeholder="' + esc(o.placeholder || 'Search this catalogue…') + '"'
+      +     ' value="' + esc((C[ns] || {}).q || '') + '"'
+      +     (o.searchTestid ? ' data-testid="' + esc(o.searchTestid) + '"' : '')
+      +     ' oninput="CBCart.search(\'' + esc(ns) + '\', this.value)">'
+      +   '</div>'
+      + '</div>'
+      + '<div id="' + esc(listId) + '"' + (o.listTestid ? ' data-testid="' + esc(o.listTestid) + '"' : '') + '>'
+      +   listHTML(ns)
+      + '</div>';
+  }
+
   /* ── painting. Each piece repaints on its own, deliberately. ─────────────────────────────────────────────── */
   function paintList(ns) { var el = doc(opt(ns, 'listEl')); if (el) el.innerHTML = listHTML(ns); }
   function paintBar(ns) { var el = doc(opt(ns, 'barEl')); if (el) el.innerHTML = barHTML(ns); }
@@ -641,7 +709,54 @@
       styleEl.textContent = '.cbcart-ov{position:fixed;inset:0;background:rgba(15,22,32,.5);display:none;'
         + 'align-items:center;justify-content:center;padding:14px;z-index:1200}.cbcart-ov.on{display:flex}'
         + '.cbcart-ovc{background:#fff;width:100%;max-width:470px;border-radius:15px;padding:17px 18px 20px;'
-        + 'max-height:86vh;overflow:auto}';
+        + 'max-height:86vh;overflow:auto}'
+        /**
+         * ⭐ THE PICKER HEADER STICKS — see pickerHTML. `top:0` pins it to whichever ancestor scrolls, which is
+         * the modal body in Compose and the page in Suppliers/Network, so one rule covers all three.
+         *
+         * ⚠️ THE BACKGROUND MUST BE OPAQUE. A sticky element with a transparent background lets the list scroll
+         * THROUGH it — the rows and the cart total draw on top of each other and both become unreadable. #fff is
+         * what all three hosts sit on today; if a dark surface ever hosts a picker this is the line to change.
+         *
+         * ⚠️ z-index above the rows but well below .cbcart-ov (1200), so the cart popup still covers the header
+         * that opened it.
+         */
+        /**
+         * ⚠️ `top:-11px`, NOT `top:0`, AND THE NUMBER IS NOT ARBITRARY. A sticky offset is measured from the scroll
+         * container's PADDING edge, and every host here pads its scroller (.mbody is `11px 12px`). At top:0 the
+         * header parked 11px below the top of the scrollport and the list scrolled through the gap above it — the
+         * product rows drew over the cart. Pulling it up by that padding parks it flush; the matching padding-top
+         * keeps the gap when it is at rest. `--cbpick-gap` is here so a host with different padding can set it
+         * rather than discover this the way it was discovered here.
+         */
+        + ':root{--cbpick-gap:11px}'
+        + '.cbpick-stick{position:sticky;top:calc(-1 * var(--cbpick-gap));z-index:6;background:#fff;'
+        + 'padding:var(--cbpick-gap) 0 0}'
+        /* ONE row: the cart chip takes what it needs, the search box takes the rest. */
+        + '.cbpick-row{display:flex;align-items:center;gap:8px;margin:0 0 7px}'
+        + '.cbpick-row .cbpick-q{flex:1 1 auto;min-width:0;margin:0}'
+        + '.cbpick-cartslot{flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-start;gap:3px}'
+        /* The chip. Sized to sit level with the input beside it, never taller. */
+        + '.cbcart-bar{display:inline-flex;align-items:center;gap:7px;border:1px solid #e3e6ea;border-radius:10px;'
+        /* 40px, because `.inp` beside it is 40px. A chip two pixels short of the field it shares a row with reads
+           as a misalignment even to someone who could not name what is wrong. */
+        + 'padding:0 10px;height:40px;box-sizing:border-box;white-space:nowrap;user-select:none}'
+        + '.cbcart-bar.on{cursor:pointer;color:#fff}'
+        + '.cbcart-bag{position:relative;font-size:17px;line-height:1}'
+        + '.cbcart-n{position:absolute;top:-7px;right:-9px;background:#fff;border-radius:9px;min-width:17px;'
+        /* 11px, not the 10.5px this started at — the legibility floor. The count is the one fact the chip must
+           carry on a phone (the money hides below 520px), so it is the last thing that should be squinted at. */
+        + 'height:18px;padding:0 4px;font-size:11px;font-weight:800;line-height:18px;text-align:center}'
+        + '.cbcart-sum{font-size:12.5px;font-weight:800}'
+        + '.cbcart-x{font-size:12px;font-weight:800;opacity:.75;cursor:pointer;padding:0 1px}'
+        + '.cbcart-x:hover{opacity:1}'
+        + '.cbcart-partial{color:#8a5a1e;font-size:11.5px;max-width:190px;line-height:1.3;white-space:normal}'
+        /**
+         * ⚠️ MOBILE: THE MONEY GOES, THE COUNT STAYS. Below 520px the summary would push the search box down to a
+         * second row, which costs more than it tells you — so it is the summary that yields, never the badge or the
+         * search field. What survives is: how many are in the cart, and the box to find the next one.
+         */
+        + '@media(max-width:520px){.cbcart-sum{display:none}.cbcart-bar{padding:0 8px;gap:5px}}';
       (document.head || document.documentElement).appendChild(styleEl);
     }
   }
@@ -720,6 +835,7 @@
       /* rendering */
       barHTML: function () { return barHTML(ns); },
       listHTML: function () { return listHTML(ns); },
+      pickerHTML: function (o) { return pickerHTML(ns, o); },
       popupHTML: function () { return popupHTML(ns); },
       paint: function () { paint(ns); return h; },
 
@@ -812,7 +928,7 @@
     add: add, dec: dec, setQty: setQty, setOffer: setOffer, offerState: offerState,
     group: group, clear: clear, search: search, addAdhoc: addAdhoc, models: MODELS,
     open: open, close: close, checkout: checkout,
-    barHTML: barHTML, listHTML: listHTML, popupHTML: popupHTML,
+    barHTML: barHTML, listHTML: listHTML, popupHTML: popupHTML, pickerHTML: pickerHTML,
     paint: paint, paintList: paintList, paintBar: paintBar, paintPopup: paintPopup
   };
   /**

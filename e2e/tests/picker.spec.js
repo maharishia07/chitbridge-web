@@ -27,6 +27,39 @@ const ITEMS = [
   { name: 'Tomato Hybrid', unit: 'kg', price: 36, synonyms: [SYN, 'hybrid thakkali'] },
 ];
 
+/**
+ * ⭐⭐ SEED ONCE, BY NAME. THIS FUNCTION IS THE FIX FOR A WHOLE DAY OF FALSE REDS.
+ *
+ * Every test here used to call `api('prodAdd', …)` unconditionally, and every test in the `authed` project shares
+ * ONE minted account — `mintEntity` short-circuits when a session already exists. So PICK-01 seeded Tomato
+ * Native + Tomato Hybrid, and then PICK-03 seeded them AGAIN into the same catalogue.
+ *
+ * By the time PICK-03 opened the picker, four catalogue rows answered to "thakkali". The overlay said so, plainly
+ * and correctly — *"which of these 4?"* over *"answers to 2 catalogue names"* — and the app was right every time.
+ * The spec was the thing that was wrong.
+ *
+ * ⚠️ AND IT MADE THE SUITE NON-DETERMINISTIC IN A WAY THAT LOOKED LIKE A CODE REGRESSION. Whether a run passed
+ * depended on whether auth.setup had minted a FRESH entity that run or reused a stale `.auth/` state with a
+ * catalogue already seeded. On 2026-08-15 that produced "clean tree passes, my branch fails" across five runs and
+ * a four-configuration bisect, all of it noise: the branch was never involved.
+ *
+ * Two lessons worth keeping:
+ *   · a shared account plus non-idempotent seeding is a time bomb, and it goes off as somebody else's bug;
+ *   · "it passes on main and fails on my branch" is evidence about the RUNS, not about the branch.
+ */
+async function seedProducts(page, items) {
+  return page.evaluate(async (want) => {
+    const have = (await api('prodList')) || [];
+    const names = new Set(have.map((p) => String(((p.item_data || p).name || '')).toLowerCase()));
+    const added = [];
+    for (const it of want) {
+      if (names.has(String(it.name).toLowerCase())) continue;   // already there — adding it again is the bug
+      added.push(await api('prodAdd', { body: { item_data: it } }));
+    }
+    return { existing: have.length, added: added.length };
+  }, items);
+}
+
 test.describe('PICKER — two catalogue items answer to one name', () => {
   test.setTimeout(180_000);
 
@@ -58,12 +91,10 @@ test.describe('PICKER — two catalogue items answer to one name', () => {
 
     // ── setup · two products that share a synonym ───────────────────────────────────────────────────────────────
     // Through the app's own api() so the session and the entity context are the real ones, not a fabricated token.
-    const made = await page.evaluate(async (items) => {
-      const out = [];
-      for (const it of items) out.push(await api('prodAdd', { body: { item_data: it } }));
-      return out.length;
-    }, ITEMS);
-    expect(made).toBe(2);
+    /* ⚠️ NOT `expect(made).toBe(2)` any more. Seeding is idempotent now, so on a reused account the correct
+       result is 0 added — asserting that two were CREATED would fail on exactly the runs the helper fixes. What
+       matters is that both exist afterwards, which the shortlist assertions below prove far better. */
+    await seedProducts(page, ITEMS);
 
     // ── the line · raised with the AMBIGUOUS word, exactly as a customer would write it ──────────────────────────
     const subject = 'Picker ' + Date.now();
@@ -107,17 +138,27 @@ test.describe('PICKER — two catalogue items answer to one name', () => {
     const cands = page.getByTestId('amd-cand');
     await expect(cands, 'both catalogue items must be offered — a shortlist of one is not a choice').toHaveCount(2);
 
+    /**
+     * ⚠️ EACH ITEM BY NAME, NOT BY POSITION. These two rows TIE — both catalogue names carry the synonym
+     * "thakkali", which is the entire point of the fixture — so the server has nothing to break the tie with and
+     * the order it returns them in is not guaranteed. Asserting `first()` contains "30" therefore passes or
+     * fails on luck: on 2026-08-15 it came back "Tomato Hybrid · INR 36" and reported a cart change as the cause.
+     *
+     * Row-by-name is also a STRONGER assertion than the pair it replaces: it says each named item shows ITS OWN
+     * price on ITS OWN row, where `first()/nth(1)` only said the two prices appeared in some order, and the two
+     * `body` assertions only said the names appeared somewhere on the page.
+     */
+    const native = cands.filter({ hasText: 'Tomato Native' });
+    const hybrid = cands.filter({ hasText: 'Tomato Hybrid' });
+    await expect(native, 'Tomato Native must be offered by name').toHaveCount(1);
+    await expect(hybrid, 'Tomato Hybrid must be offered by name').toHaveCount(1);
     /* ⚠️ THE PRICE MUST BE ON THE ROW. The only reason the reader refused was that the prices differ; a picker that
        hides them lets someone resolve the ambiguity wrongly and never notice. */
-    await expect(cands.first()).toContainText('30');
-    await expect(cands.nth(1)).toContainText('36');
-    /* ⚠️ ASSERT ON THE CARD, NOT ON ONE ROW.  is the FIRST candidate now, so asking it to contain both
-       names could never pass — the names live in different rows of the same overlay. */
-    await expect(page.locator('body')).toContainText('Tomato Native');
-    await expect(page.locator('body')).toContainText('Tomato Hybrid');
+    await expect(native, "the ₹30 item's price must be on the ₹30 item's row").toContainText('30');
+    await expect(hybrid, "the ₹36 item's price must be on the ₹36 item's row").toContainText('36');
 
-    // ── pick the SECOND one, so a pass cannot come from a default ───────────────────────────────────────────────
-    await cands.nth(1).click();
+    // ── pick the HYBRID by name — the one every assertion below is about, and not whichever came back second ────
+    await hybrid.click();
     await settle(page);
 
     const save = page.getByTestId('amd-save');
@@ -200,9 +241,7 @@ test.describe('PICKER — two catalogue items answer to one name', () => {
     }, id);
 
     await mintEntity(page);
-    await page.evaluate(async (items) => {
-      for (const it of items) await api('prodAdd', { body: { item_data: it } });
-    }, ITEMS);
+    await seedProducts(page, ITEMS);
 
     const subject = 'Lifecycle ' + Date.now();
     await composeChit(page, { subject, item: SYN, qty: 3, self: true });
@@ -216,7 +255,28 @@ test.describe('PICKER — two catalogue items answer to one name', () => {
     await page.getByTestId('amend-line').first().click();
     await page.waitForResponse((r) => /catalogue-overlay/.test(r.url()), { timeout: 30000 }).catch(() => null);
     await expect(page.getByTestId('amd-cand').first(), 'the choices render INSIDE the one card now').toBeVisible({ timeout: 15000 });
-    await page.getByTestId('amd-cand').nth(1).click();
+    /**
+     * ⚠️⚠️ WAIT FOR THE OVERLAY TO SETTLE TO TWO. THIS LINE IS THE WHOLE BUG.
+     *
+     * The card paints TWICE: once from the line's own shortlist, then again when the catalogue-overlay response
+     * lands. For a moment BOTH are in the DOM and there are FOUR `amd-cand` rows, not two — the bisect artifact
+     * named them exactly: "resolved to 2 elements … nth(1) … nth(3)".
+     *
+     * Clicking during that window is what made this test unreliable, in two different disguises:
+     *   · with `nth(1)` it clicked the STALE card's second row, so the save stored the wrong item and the failure
+     *     read `Expected substring: "Tomato Hybrid"` — which looks like the app choosing wrongly;
+     *   · with a by-name filter it matched the same item in BOTH cards and died on strict mode.
+     * One cause, two symptoms, and I chased the second one as though it were a new bug.
+     *
+     * PICK-01 never had this problem for a reason worth copying rather than admiring: it asserts
+     * `toHaveCount(2)` before it touches anything, which waits the second paint out. Same here.
+     *
+     * ⭐ AND IT IS A REAL ASSERTION, not a sleep: a card that settles to anything other than two candidates for
+     * a two-item ambiguity is a genuine defect, and this will now say so.
+     */
+    const cands03 = page.getByTestId('amd-cand');
+    await expect(cands03, 'the card must settle to exactly the two ambiguous items').toHaveCount(2);
+    await cands03.filter({ hasText: 'Tomato Hybrid' }).click();
     await settle(page);
     await page.getByTestId('amd-save').click();
     await page.waitForResponse((r) => /\/amend/.test(r.url()) && r.request().method() === 'POST').catch(() => null);
@@ -286,9 +346,9 @@ test.describe('PICKER — two catalogue items answer to one name', () => {
        pass while the feature was wrong in the more common direction — asking a person to choose when there is
        nothing to choose between is worse than not asking, because it trains them to click through it. */
     await mintEntity(page);
-    await page.evaluate(async () => {
-      await api('prodAdd', { body: { item_data: { name: 'Carrot Ooty', unit: 'kg', price: 55, synonyms: ['ooty carrot'] } } });
-    });
+    /* Same helper — a second Carrot Ooty would make "one obvious match" into two, which is the case this test
+       exists to prove does NOT happen. */
+    await seedProducts(page, [{ name: 'Carrot Ooty', unit: 'kg', price: 55, synonyms: ['ooty carrot'] }]);
 
     const subject = 'Unambiguous ' + Date.now();
     await composeChit(page, { subject, item: 'ooty carrot', qty: 2, self: true });

@@ -1332,11 +1332,9 @@ function _netStepsFor(){
 function _netStepItems(){
   var c = UI._netCart; if (!c) return '';
   return (netIsMe() ? '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:10px;padding:9px 12px;font-size:12.5px;color:#6b5a36;margin:0 0 9px">⚠ This is your own store. You cannot send yourself a request — pick another store.</div>' : '')
-    + '<div id="cbcartbar_net">' + c.barHTML() + '</div>'
-    + '<input class="inp" style="margin:0 0 7px" placeholder="Search this store’s catalogue…"'
-    + ' value="' + esc((c.state() || {}).q || '') + '" data-testid="pick-search-net"'
-    + ' oninput="netPickSearch(this.value)">'
-    + '<div id="cbpick_net" data-testid="pick-net">' + c.listHTML() + '</div>';
+    /* ⭐ Shared with Compose and Suppliers — CBCart.pickerHTML. The placeholder differs here (it is somebody
+       else's store, not yours), which is the one thing the helper takes as an option. */
+    + c.pickerHTML({ placeholder:'Search this store’s catalogue…', searchTestid:'pick-search-net', listTestid:'pick-net' });
 }
 function _netStepDetails(){
   var o = _netOrderState();
@@ -1378,8 +1376,8 @@ function _netStepReview(){
     + '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:10px;padding:9px 12px;font-size:12.5px;color:#6b5a36;margin:10px 0">'
     + 'Their price, in their currency, exactly as their catalogue states it. Nothing is converted.</div>';
 }
-/* Search repaints the LIST only — repainting the panel would take the focus out of the box being typed in. */
-function netPickSearch(q){ if (UI._netCart) UI._netCart.search(q); }
+/* netPickSearch lived here — the third of three identical one-line wrappers around cart.search(). CBCart.pickerHTML
+   now calls CBCart.search directly, so all three are gone rather than left as doors nobody uses. */
 function netBrowse(entityId, name, bridgeId){
   UI._brSel = { entity_id: entityId, name: name, bridge_id: bridgeId };
   UI._brItems = null; UI._brCat = null; UI._brBusy = true;

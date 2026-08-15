@@ -67,19 +67,52 @@ console.log('\n2 · global name collisions');
 }
 
 // ── 3 · .btn inside a flex row without the width override ───────────────────────────────────────────────────
+/**
+ * ⚠️ THIS CHECK WAS FLAGGING THE CURE AS THE DISEASE, and produced 24 warnings that were mostly noise.
+ *
+ * The old rule was "a line with `class="btn"` that also mentions flex". That matched `<button class="btn"
+ * style="flex:1">` — which is CORRECT — and 2-button rows, which are harmless. A warning list that is mostly
+ * false positives is a list nobody reads, so it was hiding whatever real instances it contained.
+ *
+ * Measured in a live page on 2026-08-15, row 400px wide, with the global `.btn{width:100%}`:
+ *
+ *   <input style="flex:1"> + <button class="btn">              INPUT 27px · BUTTON 367px   ← THE BUG
+ *   <input style="flex:1"> + <button class="btn" width:auto>   INPUT 349px · BUTTON 45px   ← correct
+ *   <input>                + <button class="btn">              INPUT 197px · BUTTON 197px  ← harmless
+ *   <button class="btn" flex:1> ×2                             197px · 197px               ← harmless
+ *
+ * So the fault is NARROW: a `.btn` that overrides neither `width` nor `flex` on ITSELF, standing beside a
+ * sibling that grows. As a flex item its `width:100%` becomes a 100% flex-basis and it takes the whole row,
+ * crushing the field next to it to nothing. That — not "flex was mentioned nearby" — is what to warn about.
+ */
 console.log('\n3 · .btn in a flex row');
 {
   let found = 0;
+  /* The button's OWN style attribute, not the whole line — the line contains its siblings' styles too, which is
+     exactly how `<input style="flex:1">` next door made a bare button look guarded. */
+  const BTN = /<button[^>]*class=\\?"btn[^"\\]*\\?"[^>]*>/g;
   [['app.html', app]].concat(CAPS.map((f) => [f, fs.readFileSync(path.join(WEB, 'app', f), 'utf8')]))
     .forEach(([name, src]) => {
       src.split('\n').forEach((line, i) => {
-        if (!/class=\\?"btn/.test(line)) return;
-        if (/width:\s*auto/.test(line)) return;                       // overridden — fine
-        if (!/flex|display:\s*flex/.test(line) && !/wlBtn|cbAttachButton/.test(line)) return;
-        found++; warn(name + ':' + (i + 1) + ' — .btn in a flex context without width:auto (it will eat the row)');
+        /**
+         * ⚠️ THE TRIGGER IS A GROWING SIBLING, NOT `display:flex`. Two bare `.btn`s in a flex row measure
+         * 197/197 in a 400px row — they split it evenly and nothing is crushed. It is only when something
+         * ELSE on the row wants to grow that an unguarded 100%-wide button starves it. Stripping the buttons
+         * out first is what makes "a sibling grows" answerable: `<input style="flex:1">` next door was
+         * previously making a bare button look guarded, because the flex was on the same LINE.
+         */
+        const siblings = line.replace(BTN, '');
+        if (!/flex:\s*1/.test(siblings)) return;
+        (line.match(BTN) || []).forEach((tag) => {
+          const own = (tag.match(/style=\\?"([^"\\]*)/) || [])[1] || '';
+          if (/width:\s*auto/.test(own) || /flex:/.test(own)) return;   // guarded on itself — fine
+          found++;
+          warn(name + ':' + (i + 1) + ' — .btn beside a growing sibling with no width:auto or flex: of its own'
+            + ' (it takes the row and crushes the field)');
+        });
       });
     });
-  if (!found) pass('no unguarded .btn inside a flex row');
+  if (!found) pass('no unguarded .btn beside a growing sibling');
 }
 
 // ── 4 · text below the legibility floor ─────────────────────────────────────────────────────────────────────

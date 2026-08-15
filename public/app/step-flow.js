@@ -247,7 +247,18 @@
       + '.cbst.done{border-color:#cfe0d6;background:var(--cbst-soft,#f2f9f5);color:var(--cbst-accent,#2c7a43)}'
       + '.cbst.now{border-color:var(--cbst-accent,#3F66A6);background:var(--cbst-accent,#3F66A6);color:#fff;font-weight:700}'
       + '.cbst.now .n{background:rgba(255,255,255,.24)}'
-      + '.cbst-foot{display:flex;gap:10px;align-items:center;flex-wrap:wrap}'
+      /**
+       * ⚠️ `width:100%` — WITHOUT IT THE FOOTER COLLAPSES AND THE LABELS WRAP. This div is itself a flex ITEM of
+       * the modal's `.mfoot`, and a flex item defaults to `flex:0 1 auto` — so it shrank to its content, 254px
+       * inside an 820px footer. The buttons then inherited `flex:1 1 0` from `.modal .mfoot button` and split
+       * THAT, giving three 78px buttons whose labels broke onto two lines: a 35px "Cancel" beside a 52px
+       * "Next: To →". Measured on 2026-08-15, not guessed.
+       *
+       * `nowrap` on the buttons is the second half: a footer button's label is the name of an action, and an
+       * action whose name breaks mid-phrase reads as a rendering fault even when the layout is otherwise fine.
+       */
+      + '.cbst-foot{display:flex;gap:10px;align-items:center;flex-wrap:wrap;width:100%}'
+      + '.cbst-foot button{white-space:nowrap}'
       + '.cbst-foot button{border-radius:10px;padding:11px 16px;font-size:13.5px;font-weight:700;cursor:pointer;'
       + 'border:1px solid #e3e6ea;background:#fff}'
       + '.cbst-foot button.pri{flex:1;background:var(--cbst-accent,#3F66A6);color:#fff;border-color:var(--cbst-accent,#3F66A6)}'

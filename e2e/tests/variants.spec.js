@@ -216,8 +216,18 @@ test.describe('variants', () => {
     // Connect to Beta by email — create-or-reuse, so re-runs are fine.
     await page.getByTestId('sup-add-input').fill(SHOP.email);
     await page.getByTestId('sup-add').click();
-    const row = page.locator('[data-testid^="sup-row-"]').first();
-    await expect(row).toBeVisible();
+    /**
+     * ⚠️ BETA BY NAME, NOT `.first()`. This spec is titled "open Beta" and asserts Beta's products, but it used
+     * to click whichever row sorted first — and the list is sorted by ★ Preferred, over an account that every
+     * other spec in the `authed` project shares and adds its own suppliers to. So "first" is whoever happened to
+     * get there, and on 2026-08-15 that was a supplier with NO catalogue: the picker rendered correctly and
+     * said "Nothing published yet.", and the spec reported it as Beta's products being missing.
+     *
+     * A test that names one thing and clicks another cannot tell you which of the two is broken. This one cost
+     * an afternoon deciding whether a cart change had emptied a catalogue it never touches.
+     */
+    const row = page.locator('[data-testid^="sup-row-"]').filter({ hasText: SHOP.name }).first();
+    await expect(row, 'Beta was added but no row for them appeared').toBeVisible();
 
     // Open them.
     await row.click();
