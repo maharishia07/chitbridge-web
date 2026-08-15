@@ -2114,7 +2114,7 @@ function ccCatPickHTML(){
    * search box alone, full width.
    */
   return CBCatalogue.pickerHTML(c, {
-    cart:false, hideEmptyChip:true, committed: CC.items,
+    cart:false, committed: CC.items, noteFn:'ccSetLineNote',
     checkoutLabel:'+ Add to the chit',
     emptyHint:'Press + on what this chit is for',
     empty: UI._supplier ? 'Nothing in their catalogue matches that.' : 'Nothing in your catalogue matches that.',
@@ -2131,12 +2131,17 @@ function ccCatPickHTML(){
  * one loop louder: it is what the namespaced API forced, and what a held handle exists to make impossible.
  */
 function ccCartSync(){
+  /* ⚠️ THE SECOND PLACE THE RECORD WAS FLATTENED. Same rule as above: spread, never enumerate. `name` is the
+     alias cart-ui reads; everything else rides along, which is what lets the cart honour `order` (the six
+     quantity models) and what will let a row show an HSN code or a GI certificate without touching this line. */
   const cat = { shop:{ bridge_id:'self' }, items:(STORE.catalogue||[]).map((p,i)=>({
-    item_id:'sc'+i, item_data:{ name:p.particulars, unit:p.unit||'unit', price:p.price } })) };
+    item_id:'sc'+i, item_data:Object.assign({}, p, { name:p.particulars, unit:p.unit||'unit', price:p.price }) })) };
   if(UI._ccCart) UI._ccCart.setCatalogue(cat);
   else UI._ccCart = CBCart.create(cat, { listEl:'cbpick_cc', barEl:'cbcartbar_cc', renderer:CBCatalogue,
-         /* The chip sits in the modal header, so it shows only once there is something in it — see barHideEmpty. */
-         barHideEmpty:true,
+         /* ⚠️ NO `barHideEmpty` — the chip is ALWAYS in the title bar. It used to appear only once the cart held
+            something, on the reasoning that an inert grey cart is a control that never does anything. Athi could
+            not find it: *"couldnt find cart symbol in the screen on top"*. A permanent, quiet target beats a
+            helpful absence — you cannot learn where a thing is if it is only there sometimes. */
          checkoutLabel:'+ Add to the chit', cartTitle:'Lines to add', emptyHint:'Press + on what this chit is for',
          noCatalogue:'Your catalogue is empty.', onCheckout:ccAddPicked, onChange:ccRenderCatPick });
 }
@@ -2166,6 +2171,19 @@ function ccAddPicked(){
   if(take.length < picked.length && e) e.textContent = "Added "+take.length+" — line items are capped at "+cap+", so "+(picked.length-take.length)+" were not added.";
   if(UI._ccCart) UI._ccCart.clear();
   ccRenderItems();
+}
+/**
+ * ⭐ ccSetLineNote — the custom message on a committed line. Athi: *"we should add provision to pass custom
+ * message like what we get in whatsapp"*.
+ *
+ * ⚠️ IT DOES NOT REPAINT. The input is live in the DOM and the person is typing in it; repainting on every
+ * keystroke would replace the element under the caret and throw focus to the top of the document — the same
+ * mistake `search()` avoids by repainting the list and never the picker. The value is already on screen because
+ * they typed it; state only has to catch up.
+ */
+function ccSetLineNote(i, v){
+  if(!CC.items || !CC.items[i]) return;
+  CC.items[i].comment = String(v == null ? '' : v).slice(0, 300);
 }
 function ccRenderCatPick(){ const h=document.getElementById('cc_catpick'); if(h) h.innerHTML=ccCatPickHTML(); }
 async function compose(prefill){ UI.drawer=false; CC={items:(prefill&&prefill.items)?prefill.items.slice():[],rcpts:(prefill&&prefill.recipients)?prefill.recipients.slice():[],fields:{}}; UI._forwardFrom=(prefill&&prefill.forwardFrom)||null; UI._draftId=(prefill&&prefill.draftId)||null; UI._supplier=(prefill&&prefill.supplier)?prefill.supplier:null;
@@ -2212,7 +2230,26 @@ async function compose(prefill){ UI.drawer=false; CC={items:(prefill&&prefill.it
   if(!UI._supplier){
     try{
       const _prods=(await api("prodList"))||[];
-      STORE.catalogue=_prods.map(function(x){ var d=x.item_data||x; return {particulars:d.name||d.product||'item', unit:d.unit||'unit', price:cbAmount(d.price)}; });
+      /**
+       * ⚠️⚠️ CARRY THE WHOLE RECORD. THIS LINE USED TO ENUMERATE THREE FIELDS AND THROW THE REST AWAY.
+       *
+       * Athi, 2026-08-15: *"product should be able to carry million parameters if required, what we have is
+       * sample"*. He is right, and the backend already agrees — `item_data` is jsonb and stores whatever is put
+       * in it. Measured with a real Pochampally silk record: 16 fields in (sku, gtin, hsn, gi_certificate,
+       * handloom_mark, tier pricing, incoterm, lead_time_days, moq, care, notes_for_buyer, nested origin and
+       * attributes) and THREE fields out. Everything a trade document actually needs was discarded here, before
+       * any screen could see it.
+       *
+       * ⚠️ AND IT SILENTLY DISABLED THE ORDER MODELS. `order:{model:'pack',step:6}` died on this line, so a
+       * product sold in sixes became a loose count in compose — while Suppliers and Network, which pass the
+       * catalogue payload through untouched, enforced it correctly. The same product obeying two different rules
+       * depending on which screen you opened.
+       *
+       * The rule now: SPREAD, never enumerate. `particulars` is added as the display alias the flat shape uses;
+       * nothing is removed. A field added to the catalogue next month arrives here without anyone editing this.
+       */
+      STORE.catalogue=_prods.map(function(x){ var d=x.item_data||x;
+        return Object.assign({}, d, { particulars:d.name||d.product||'item', unit:d.unit||'unit', price:cbAmount(d.price) }); });
       UI._catState='ready';
     }catch(e){ UI._catState=(STORE.catalogue||[]).length?'ready':'error'; }
     ccCartSync();          // the products just arrived — point the cart at them before painting it
@@ -2463,7 +2500,34 @@ async function submitCompose(isDraft){
   if(!isDraft && !tos.length){ if(err)err.textContent="Add at least one To recipient (or Save draft)."; return; }
   if(!isDraft && !CC.items.length){ if(err)err.textContent="Add at least one line item to send (or Save draft)."; return; }
   const schema_values={}; ccSchema().forEach(f=>{ schema_values[f.field_key]=ccField(f.field_key); });
-  const line_items=CC.items.map(it=>({particulars:it.particulars,quantity:+it.qty||0,price:+it.price||0,total:ccLineTotal(it)}));
+  /**
+   * ⚠️⚠️ `unit` WAS NOT BEING SENT, AND THAT IS THE SERIOUS ONE.
+   *
+   * Proven by sending this exact payload and reading the row back: a chit composed in the UI stored
+   * {seq, price, total, quantity, particulars} — no unit at all. "10 Tamarind" — ten WHAT.
+   *
+   * That lands directly on lib/deliverline.js, which exists BECAUSE a unit mismatch let 12 pieces close a 10 kg
+   * line. Delivery matching compares units; a line authored here had none to compare, so the guard it was
+   * written to enforce could never fire on compose-authored chits.
+   *
+   * `comment` is the buyer's own words for that line — "beans fresh please", the thing a WhatsApp order is
+   * actually made of. The model has carried it since intake (lib/capture.js maps it per line, the amend card
+   * edits it); compose simply had no way to enter one and no way to send it.
+   *
+   * ⚠️ A LINE IS NOT THE WHOLE PRODUCT, and that is deliberate. The catalogue record may hold a million fields;
+   * the LINE carries what describes the obligation, plus `ref` — the frozen pointer to the catalogue row and
+   * what it said at the time (b146). That is the loose-until-stamped rule: the line does not copy the
+   * catalogue, it cites it.
+   */
+  const line_items=CC.items.map(it=>({
+    particulars:it.particulars,
+    unit:it.unit||'unit',
+    quantity:+it.qty||0,
+    price:+it.price||0,
+    total:ccLineTotal(it),
+    comment:it.comment||'',
+    ref:it.ref||null
+  }));
   const recipients=CC.rcpts.map(r=>({name:r.name,role:r.role,self:!!r.self}));
   return await sendChit({ recipients, isDraft:!!isDraft, send_as_label, subject, schema_values, line_items,
     priority:CC.priority||val("cc_priority")||"normal", files:CC.files||[], itemFiles:CC.items,
@@ -3056,9 +3120,13 @@ function supSendOrder(x, isDraft){
     send_as_label:(typeof SESSION!=='undefined'&&SESSION.entity)||'',
     subject:o.subject||supDefaultSubject(x),
     schema_values:{ subject:o.subject||supDefaultSubject(x), delivery_by:o.by||'', deliver_to:o.addr||'', note:o.note||'' },
-    line_items:sel.map(function(p){ return { particulars:p.name, quantity:+p.qty||0,
+    /* ⚠️ SAME OMISSION AS COMPOSE — no unit went out from here either, so a supplier order for 10 of something
+       arrived with no statement of what 10 meant. `unit` comes off the cart's own selection, which has always
+       had it; it simply was not being passed on. */
+    line_items:sel.map(function(p){ return { particulars:p.name, unit:p.unit||'unit', quantity:+p.qty||0,
       price:+(typeof cbAmount==='function'?cbAmount(p.price):p.price)||0,
-      total:(+p.qty||0)*(+(typeof cbAmount==='function'?cbAmount(p.price):p.price)||0) }; }),
+      total:(+p.qty||0)*(+(typeof cbAmount==='function'?cbAmount(p.price):p.price)||0),
+      comment:p.comment||'' }; }),
     priority:'normal',
     onSent:function(){ supCartRelease(); },
     onError:function(m){ toast(m, true); }

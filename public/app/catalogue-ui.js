@@ -194,10 +194,21 @@
         return '<span class="cbcat-thumb cbcat-tile" style="background:' + t.bg + '" aria-hidden="true">'
           + esc(t.letter) + '</span>';
       }
-      /* ⭐ data-src, NOT src. The observer fills it when the row nears the viewport. `loading="lazy"` is set too
-         as a belt-and-braces for the case where the observer never runs. */
+      /**
+       * ⭐ data-src, NOT src. The observer fills it when the row nears the viewport. `loading="lazy"` is set too
+       * as a belt-and-braces for the case where the observer never runs.
+       *
+       * ⚠️ AND AN onerror FALLBACK TO THE TILE. A product declaring a photograph that 404s rendered a BLANK
+       * WHITE BOX — seen on screen the moment a test record carried a placeholder path that does not exist yet.
+       * That is the worst of the three outcomes: worse than the letter tile, and worse than an honest empty
+       * state, because it reads as a rendering fault. Media URLs rot — a bucket is emptied, a key is renamed, a
+       * catalogue is copied between entities — so the row must degrade to something deliberate rather than to
+       * nothing.
+       */
+      var t = tileFor(name);
       return '<span class="cbcat-thumb cbcat-skel">'
-        + '<img data-src="' + esc(m.src) + '" alt="" loading="lazy" decoding="async">'
+        + '<img data-src="' + esc(m.src) + '" alt="" loading="lazy" decoding="async"'
+        + ' onerror="CBCatalogue.fellBack(this,\'' + esc(t.bg) + '\',\'' + esc(t.letter) + '\')">'
         + (m.kind === 'video' ? '<span class="cbcat-play">▶</span>' : '') + '</span>';
     })();
 
@@ -358,15 +369,36 @@
    * ADDITIVE and never reorders the list beneath the hand that is adding to it — the existing code deliberately
    * fixes lines-first vs picker-first once per entry to the step, and that restraint is correct.
    */
-  function committedHTML(ns, lines) {
+  function committedHTML(ns, lines, noteFn) {
     if (!lines || !lines.length) return '';
     return '<div class="cbcat-onchit" data-testid="cbcat-onchit">'
       + '<div class="cbcat-onchit-t">On the chit · ' + lines.length + ' line' + (lines.length === 1 ? '' : 's') + '</div>'
-      + lines.map(function (l) {
+      + lines.map(function (l, i) {
           var q = Number(l.qty || l.quantity || 0), p = Number(l.price || 0);
-          return '<div class="cbcat-li"><span class="cbcat-li-n">' + esc(l.particulars || l.name || 'item') + '</span>'
+          /**
+           * ⭐⭐ THE CUSTOM MESSAGE — Athi: *"we should add provision to pass custom message like what we get in
+           * whatsapp"*.
+           *
+           * This is not a new field. `comment` has ridden on a line since intake: lib/capture.js maps it from a
+           * WhatsApp order, the amend card edits it, and it is what carries "last time not fresh — please send
+           * new stock". What was missing was any way to WRITE one when you author a chit yourself, and any way
+           * to send it if you had — the send path enumerated four fields and comment was not among them.
+           *
+           * It belongs HERE, on the committed line, and not in the cart: the cart stages quantities, and a note
+           * is a statement about an obligation that now exists. Placed under the line it is about, so there is
+           * never a question which line it refers to.
+           */
+          var note = noteFn
+            ? '<input class="cbcat-note" value="' + esc(l.comment || '') + '"'
+              + ' data-testid="cbcat-note-' + i + '"'
+              + ' placeholder="add a message for this line — e.g. fresh stock please"'
+              + ' oninput="' + esc(noteFn) + '(' + i + ',this.value)">'
+            : (l.comment ? '<div class="cbcat-noteread">' + esc(l.comment) + '</div>' : '');
+          return '<div class="cbcat-liwrap">'
+            + '<div class="cbcat-li"><span class="cbcat-li-n">' + esc(l.particulars || l.name || 'item') + '</span>'
             + '<span class="cbcat-li-q">' + esc(q) + ' ' + esc(l.unit || '') + '</span>'
-            + '<span class="cbcat-li-p">' + esc(money(ns, q * p)) + '</span></div>';
+            + '<span class="cbcat-li-p">' + esc(money(ns, q * p)) + '</span></div>'
+            + note + '</div>';
         }).join('')
       + '</div>';
   }
@@ -442,7 +474,7 @@
      */
     if (typeof setTimeout === 'function') setTimeout(function () { observe(); }, 0);
     return '<div class="cbcat-wrap" data-testid="cbcat-' + esc(cart.ns) + '">'
-      + committedHTML(cart.ns, opts.committed)
+      + committedHTML(cart.ns, opts.committed, opts.noteFn)
       + '<div class="cbcat-hdr">'
       /**
        * ⚠️⚠️ `cart:false` MEANS THE HOST ALREADY OWNS AN ELEMENT WITH THIS ID — DO NOT RENDER A SECOND ONE.
@@ -471,10 +503,16 @@
   function chipHTML(cart, opts) {
     var n = cart.lines(), T = cart.total();
     /**
-     * ⚠️ BOTH SPELLINGS, BECAUSE THE OPTION CROSSES A BOUNDARY. `barHideEmpty` is what a screen passes to
-     * CBCart.create (cart-ui's own barHTML reads it); `hideEmptyChip` is what it passes to this renderer. Compose
-     * set the first and this read only the second, so an inert grey cart sat permanently in the modal title bar —
-     * a control that never does anything, parked in the one place the eye checks first.
+     * ⚠️ THE CART IS ALWAYS ON SCREEN NOW — Athi: *"couldnt find cart symbol in the screen on top, it has to
+     * open as a overlay"*.
+     *
+     * I had hidden it while empty, reasoning that an inert grey cart in the title bar is a control that never
+     * does anything. That was wrong for the reason that matters more: a cart you cannot SEE is a cart you cannot
+     * learn the position of, and someone hunting for it mid-order does not care that it would have appeared
+     * eventually. A permanent, quiet target beats a helpful absence.
+     *
+     * `hideEmptyChip`/`barHideEmpty` still work for a host that genuinely wants it gone; compose no longer sets
+     * either. Empty, it is dimmed and inert — the overlay has nothing to show and opening it would be a dead end.
      */
     if (!n && (opts.hideEmptyChip || opts.barHideEmpty)) return '';
     /**
@@ -532,6 +570,20 @@
    * the list is in a container the observer cannot see into, a person must still be able to reach row 41. A
    * lazy list with no manual escape is a list with rows nobody can get to.
    */
+  /**
+   * The image failed. Turn its box back into the letter tile rather than leaving a blank.
+   *
+   * ⚠️ The <img> is REMOVED, not hidden — a broken img left in the DOM keeps its alt box and its own failed
+   * layout, and some browsers draw a placeholder glyph over the tile behind it.
+   */
+  function fellBack(img, bg, letter) {
+    var box = img && img.parentElement; if (!box) return;
+    img.remove();
+    box.className = 'cbcat-thumb cbcat-tile';
+    box.style.background = bg;
+    box.textContent = letter;
+  }
+
   function observeMore(rootEl) {
     var sentinels = (rootEl || document).querySelectorAll('[data-cbcat-more]');
     if (!sentinels.length) return;
@@ -686,7 +738,13 @@
       '.cbcat-li{display:flex;gap:8px;padding:3px 0;font-size:12.5px}',
       '.cbcat-li-n{flex:1;min-width:0}',
       '.cbcat-li-q,.cbcat-li-p{font-variant-numeric:tabular-nums;white-space:nowrap}',
-      '.cbcat-li-p{font-weight:700}'
+      '.cbcat-li-p{font-weight:700}',
+      '.cbcat-liwrap{padding:2px 0}',
+      '.cbcat-note{display:block;width:100%;box-sizing:border-box;margin:3px 0 5px;padding:6px 9px;',
+      'border:1px dashed #c3d3e8;border-radius:8px;font-size:12px;font-family:inherit;background:#fff;',
+      'color:var(--ink,#0F2E3D)}',
+      '.cbcat-note:focus{border-style:solid;border-color:var(--blue,#3F66A6);outline:none}',
+      '.cbcat-noteread{font-size:12px;color:#4a6b8a;padding:1px 0 4px}'
     ].join('');
     (document.head || document.documentElement).appendChild(s);
   }
@@ -698,6 +756,6 @@
     commitHTML: commitHTML, committedHTML: committedHTML, chipHTML: chipHTML,
     paint: paint, observe: observe, ensureCss: ensureCss,
     mediaOf: mediaOf, tileFor: tileFor, hintOf: hintOf,
-    skeletonHTML: skeletonHTML, growWindow: growWindow
+    skeletonHTML: skeletonHTML, growWindow: growWindow, fellBack: fellBack
   };
 })(typeof window !== 'undefined' ? window : this);
