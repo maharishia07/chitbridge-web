@@ -625,8 +625,14 @@ function wlBtn(label, testid, call, primary){
     /* width:auto and margin:0 are not styling — they are the two overrides that make .btn usable inside a row. */
     + ' style="width:auto;flex:0 0 auto;margin:0;padding:0 18px;white-space:nowrap">' + label + '</button>';
 }
+/**
+ * ⚠️ IT WRAPS. Found by looking at the real card at 360px rather than reasoning about it: the who/date/Save row
+ * came to ~367px in 336px of space, so Save was CLIPPED at the card edge — visible as "Sav" — and the modal grew
+ * a horizontal scrollbar. Without wrapping, a row of three controls is one long translation or one wide date
+ * picker away from putting its own button out of reach, on every screen narrower than the one it was built on.
+ */
 function wlFieldRow(fields, button){
-  return '<div style="display:flex;gap:8px;align-items:stretch">' + fields + button + '</div>';
+  return '<div style="display:flex;gap:8px;align-items:stretch;flex-wrap:wrap">' + fields + button + '</div>';
 }
 /** A text/number input that will actually take a value: it grows, and min-width:0 lets it shrink below its
  *  intrinsic size instead of forcing the row wider than the card. */
@@ -808,8 +814,15 @@ function wlLineHTML(loading){
     }).join('');
     body += '<div style="padding:2px 0 12px">'
       + '<div style="display:flex;gap:8px">'
-      +   '<select id="wl_who" data-testid="wl-who-sel" style="flex:1;font-size:14.5px;padding:9px 11px;border:1px solid var(--line);border-radius:8px">' + opts + '</select>'
-      +   '<input id="wl_due" data-testid="wl-due-inp" type="date" value="' + esc(String(r.due_date || '').slice(0, 10)) + '" style="font-size:14.5px;padding:9px 11px;border:1px solid var(--line);border-radius:8px">'
+      /* ⚠️ min-width:0 ON BOTH. A <select> and a date <input> both refuse to shrink below their content by
+         default, which is what pushed Save past the card edge — the row could not give way, so the button went
+         over the side. With wrapping above and this here, the pair shrinks first and Save drops to its own line
+         only when it genuinely cannot fit. */
+      +   '<select id="wl_who" data-testid="wl-who-sel" style="flex:1 1 40%;min-width:0;font-size:14.5px;padding:9px 11px;border:1px solid var(--line);border-radius:8px">' + opts + '</select>'
+      /* ⚠️ A DATE FIELD HAS A FLOOR, unlike the name beside it. Shrunk to 125px it rendered "11-08-202" — the
+         YEAR cut off, which is the one part of a due date you cannot guess from context. min-width holds it at a
+         readable size and the row wraps instead; a truncated date is worse than a second line. */
+      +   '<input id="wl_due" data-testid="wl-due-inp" type="date" value="' + esc(String(r.due_date || '').slice(0, 10)) + '" style="flex:1 1 145px;min-width:145px;font-size:14.5px;padding:9px 8px;border:1px solid var(--line);border-radius:8px">'
       +   wlBtn('Save', 'wl-line-save', 'wlLineSave()', true)
       + '</div>'
       /* ⚠️ THIS ONE IS DELIBERATELY FULL WIDTH — it is the section's own verb, not a field's companion, so .btn's
