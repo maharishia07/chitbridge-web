@@ -545,7 +545,46 @@ function wlRender(rows, keys, depth, path){
  * opens. Fetching them for every row of a fifty-row list to serve the one row someone taps is the habit this
  * codebase refuses.
  */
-var WLL = { row: null, det: null, actors: null, loading: false, failed: false, msgs: null, msgErr: false };
+var WLL = { row: null, det: null, actors: null, loading: false, failed: false,
+  /* Two threads, kept apart in state as well as on screen — see wlThreadSec. */
+  msgs: null, msgErr: false, ext: null, extErr: false };
+
+/**
+ * ⭐ WHO THE OTHER PARTY IS — Athi, 2026-08-15: *"if we bring the contact details of the external party on the
+ * top, I guess this is complete information around a line item."*
+ *
+ * ⚠️ CB DOES NOT HOLD THE COUNTERPARTY'S PHONE OR EMAIL, and it should not: those belong to your own customer
+ * record, not to a chit. What the chit knows for certain is WHO the parties are and their bridge ids — which is
+ * the identity you can act on, and the thing that is true regardless of how stale your address book is.
+ *
+ * ⚠️ SELF IS MARKED, NOT HIDDEN. On a self-chit both sides are you, and a card that quietly dropped one would
+ * make a one-party document look like a two-party one — which is exactly the state where sending an "external"
+ * message does nothing useful and you would have no way to tell.
+ */
+function wlParties(det){
+  var h = (det && det.header) || {};
+  var list = h.all_recipients || [];
+  if (!list.length) return '';
+  var seen = {}, out = [];
+  list.forEach(function(p){
+    var k = (p.entity_id || p.display_name) + '·' + p.role;
+    if (seen[k]) return; seen[k] = 1;
+    out.push(p);
+  });
+  var mine = function(p){ return typeof ccIsSelf === 'function' && ccIsSelf(p.display_name); };
+  var everyoneIsMe = out.every(mine);
+  return '<div style="display:flex;gap:14px;flex-wrap:wrap;align-items:baseline;padding:8px 0 2px;border-bottom:1px solid var(--line-soft,#f0efec);margin-bottom:8px">'
+    + out.map(function(p){
+        return '<div style="font-size:12.5px">'
+          + '<span style="color:var(--grey);text-transform:uppercase;font-size:10px;font-weight:800;letter-spacing:.06em">' + esc(p.role || '') + '</span> '
+          + '<b>' + esc(p.display_name || '—') + '</b>'
+          + (mine(p) ? ' <span style="color:var(--grey)">(you)</span>' : '')
+          + (p.bridge_id ? ' <span style="color:var(--grey);font-family:ui-monospace,monospace;font-size:11px">' + esc(p.bridge_id) + '</span>' : '')
+          + '</div>';
+      }).join('')
+    + (everyoneIsMe ? '<div style="font-size:11.5px;color:#b0641c;font-weight:600">⚠️ this chit has no other party — an external message would come back to you</div>' : '')
+    + '</div>';
+}
 /**
  * ⭐ THE ENTITY'S OWN CURRENCY, NEVER A BARE NUMBER — Athi, 2026-08-15: *"you are saying 80 charged, I am not
  * sure what that 80 means, it should be associated with the currency."*
@@ -674,6 +713,46 @@ function wlInput(id, opts){
  * panel element — one that has never been made movable. Four separate call sites each remembering to do that is
  * three chances to forget, which is why this is a function.
  */
+/**
+ * ⭐⭐ WHAT YOU TYPED SURVIVES A REPAINT — Athi, 2026-08-15: *"I change the date to 24th and save. It is not
+ * getting saved and moved to the new date."*
+ *
+ * ⚠️ HE WAS NOT MISREADING THE SCREEN — THE SCREEN WAS LYING. Reproduced live: the field showed 2026-08-24 and
+ * the save sent 2026-08-21. A background fetch (the message threads load when their section is opened) finishes,
+ * calls wlPaintCard, and modal() replaces innerHTML — so every field is rebuilt from the STALE row object while
+ * the person is still looking at what they typed. The value they can see is not the value that exists.
+ *
+ * ⚠️ AND IT IS NOT A DATE BUG. The same repaint eats a delivery quantity, a cost, a half-written note — anything
+ * entered in the seconds after opening the card, which is all of them. It silently discards work and then saves
+ * the old value, which is the worst of the three possible outcomes: it looks like it worked.
+ *
+ * So a repaint carries the live field values across. `skip` lets a deliberate action (sending a note) clear its
+ * own box, because there restoring the text would be just as wrong.
+ */
+function wlKeepFields(skip){
+  var out = {};
+  try {
+    var host = document.getElementById('modalhost');
+    if (!host) return out;
+    [].forEach.call(host.querySelectorAll('input[id],select[id],textarea[id]'), function(e){
+      if (skip && e.id === skip) return;
+      if (e.type === 'checkbox' || e.type === 'radio') return;
+      out[e.id] = e.value;
+    });
+  } catch (e) {}
+  return out;
+}
+function wlRestoreFields(vals){
+  try {
+    Object.keys(vals || {}).forEach(function(id){
+      var e = document.getElementById(id);
+      /* ⚠️ Only when the field still exists AND the repaint did not already carry a value — a section that was
+         closed and reopened should show what the server says, not a ghost of a previous edit. */
+      if (e && vals[id] !== undefined && vals[id] !== '') e.value = vals[id];
+    });
+  } catch (e) {}
+}
+
 function wlPaintCard(loading){
   /**
    * ⚠️ THE CARD IS SIZED AGAINST THE PHONE, NOT THE BROWSER — Athi, 2026-08-15: *"mobile window is much larger
@@ -684,6 +763,7 @@ function wlPaintCard(loading){
    * layout nobody using the app on a phone could ever hit, sitting on the screen we are supposed to be judging.
    * Measuring the shell and capping to it means the preview shows what the phone shows.
    */
+  var keep = wlKeepFields(WLL._clearBox); WLL._clearBox = null;
   var shell = document.querySelector('.shell');
   var cap = shell ? Math.round(shell.getBoundingClientRect().width) : 0;
   var mob = (typeof UI !== 'undefined' && UI.vp === 'mob');
@@ -698,6 +778,9 @@ function wlPaintCard(loading){
       if (p && cap && parseFloat(p.style.width) > cap) p.style.width = cap + 'px';
     }
   } catch (e) { /* best-effort — a card that will not drag is still a usable card */ }
+  /* ⚠️ AFTER everything else. makeMovable can restore geometry and re-lay the panel out; putting values back
+     before that runs risks them being wiped by the very repaint they were saved from. */
+  wlRestoreFields(keep);
 }
 
 function wlSec(k){
@@ -706,31 +789,92 @@ function wlSec(k){
   /* ⚠️ FETCHED WHEN THE SECTION IS OPENED, not when the card is. Notes are the least-read thing on this card;
      loading them for every line someone glances at would be one request per glance for data almost nobody asks
      for. Same rule as the actor list and the history. */
-  if (WLL.tab === 'msg' && WLL.msgs === null && !WLL.msgErr) wlMsgLoad();
+  if (WLL.tab === 'msg' && WLL.msgs === null && !WLL.msgErr) wlMsgLoad('msg');
+  if (WLL.tab === 'ext' && WLL.ext  === null && !WLL.extErr) wlMsgLoad('ext');
 }
-async function wlMsgLoad(){
-  var r = WLL.row; if (!r) return;
+/**
+ * A section heading: caret · name · a hint of what is inside, so you can choose without opening.
+ *
+ * ⚠️ AT MODULE SCOPE, NOT A CLOSURE. It began as a local inside wlLineHTML, which was fine until the thread
+ * renderer — a separate function — needed to emit the same heading. A heading drawn two ways is two sections
+ * that stop looking like siblings the first time one of them is touched.
+ */
+function wlSecHead(k, name, hint, tone){
+  var on = WLL.tab === k;
+  return '<div data-testid="wl-sec-' + k + '" onclick="wlSec(&quot;' + k + '&quot;)" style="cursor:pointer;display:flex;gap:9px;align-items:baseline;'
+    + 'padding:11px 2px;border-top:1px solid var(--line)">'
+    + '<span style="width:12px;color:var(--grey);font-size:11px">' + (on ? '▾' : '▸') + '</span>'
+    + '<span style="font-weight:700;font-size:14px;color:' + (on ? 'var(--ink,#1c2128)' : 'var(--ink-2,#41474e)') + '">' + name + '</span>'
+    + '<span style="margin-left:auto;font-size:12px;color:' + (tone || 'var(--grey)') + '">' + (hint || '') + '</span></div>';
+}
+
+/** ⚠️ THE ONE PLACE THE TWO THREADS DIFFER. Everything else about them is shared, deliberately. */
+var WLTHREAD = { msg: { type: 'internal', box: 'wl_msg' }, ext: { type: 'external', box: 'wl_ext' } };
+
+/**
+ * ⭐ ONE RENDERER, TWO THREADS — because the ONLY thing that differs is who can read it, and that is exactly the
+ * difference a reader must never have to work out. A second copy of this function for the external panel would
+ * mean two places to change a label, and the day they disagreed about which one is private is the day someone
+ * types a price complaint into the wrong box.
+ */
+function wlThreadSec(k, title, list, err, o){
+  var n = list ? list.length : 0;
+  var loading = (list === null && !err);
+  var out = wlSecHead(k, title,
+    loading ? (WLL.tab === k ? 'checking…' : o.hint)
+      : err ? 'could not read' : (n ? n + (n === 1 ? ' message' : ' messages') : 'none yet'),
+    err ? '#c0453b' : o.tone);
+  if (WLL.tab !== k) return out;
+  out += '<div style="padding:2px 0 12px">';
+  if (loading) out += '<div style="font-size:12.5px;color:var(--grey)"><span class="spin"></span> checking…</div>';
+  else if (err) out += '<div style="font-size:12.5px;color:#c0453b">Could not read these just now — this does NOT mean there are none.</div>';
+  else if (!n) out += '<div style="font-size:12.5px;color:var(--grey)">Checked — ' + esc(o.empty) + '.</div>';
+  else out += list.map(function(m){
+    return '<div style="padding:6px 0;border-bottom:1px solid var(--line-soft,#f0efec);font-size:13px">'
+      + '<div style="display:flex;gap:8px;align-items:baseline">'
+      +   '<b style="font-size:12.5px">' + esc(m.sender_display_name || '—') + '</b>'
+      +   '<span style="margin-left:auto;color:var(--grey);font-size:11.5px">' + esc(String(m.created_at || '').slice(0, 10)) + '</span></div>'
+      /* pre-wrap, because the box is three lines tall now and people use them. */
+      + '<div style="margin-top:2px;line-height:1.5;white-space:pre-wrap">' + esc(m.message_text || '') + '</div></div>';
+  }).join('');
+  out += '<div style="margin-top:10px">'
+    + wlInput(WLTHREAD[k].box, { testid: 'wl-' + k + '-box', lines: 3, placeholder: o.placeholder })
+    + '<div style="display:flex;justify-content:flex-end;margin-top:8px">'
+    +   wlBtn(o.verb, 'wl-' + k + '-add', 'wlMsgSave(&quot;' + k + '&quot;)', true) + '</div></div>'
+    /* ⚠️ SAID PLAINLY, EVERY TIME, IN BOTH PANELS. A person deciding whether to write "customer is difficult, do
+       not promise Friday" must not have to remember which box they are in. */
+    + '<div style="margin-top:7px;font-size:11.5px;color:' + (o.tone || 'var(--grey)') + ';line-height:1.5">' + o.foot + '</div>'
+    + '</div>';
+  return out;
+}
+
+async function wlMsgLoad(k){
+  var r = WLL.row, t = WLTHREAD[k]; if (!r || !t) return;
+  var key = (k === 'msg') ? 'msgs' : 'ext', errKey = (k === 'msg') ? 'msgErr' : 'extErr';
   try {
-    var out = await api('wlMsgs', { params: { id: r.chit_id }, query: { thread_type: 'internal', line_id: r.line_id } });
+    var out = await api('wlMsgs', { params: { id: r.chit_id }, query: { thread_type: t.type, line_id: r.line_id } });
     var list = (out && (out.messages || out.items || (Array.isArray(out) ? out : []))) || [];
-    /* ⚠️ FILTERED AGAIN CLIENT-SIDE. Before b155 the server ignores line_id and returns the whole internal
-       thread, so without this the card would show the chit's notes as though they were this line's. */
-    WLL.msgs = list.filter(function(m){ return !m.line_id || m.line_id === r.line_id; });
-  } catch (e) { WLL.msgErr = true; }
+    /* ⚠️ FILTERED AGAIN CLIENT-SIDE. Before b155 the server ignores line_id and returns the whole thread, so
+       without this the card would show the CHIT's messages as though they belonged to this line. */
+    WLL[key] = list.filter(function(m){ return !m.line_id || m.line_id === r.line_id; });
+  } catch (e) { WLL[errKey] = true; }
   if (document.getElementById('modalhost')) wlPaintCard(WLL.loading);
 }
-async function wlMsgSave(){
-  var r = WLL.row; if (!r) return;
-  var el = document.getElementById('wl_msg');
+async function wlMsgSave(k){
+  var r = WLL.row, t = WLTHREAD[k]; if (!r || !t) return;
+  var el = document.getElementById(t.box);
   var txt = el ? String(el.value).trim() : '';
-  if (!txt) { toast('Nothing to add'); return; }
+  if (!txt) { toast('Nothing to send'); return; }
   try {
     await api('wlMsgAdd', { params: { id: r.chit_id },
-      body: { message_text: txt, thread_type: 'internal', line_id: r.line_id } });
-    WLL.msgs = null; WLL.msgErr = false;
-    await wlMsgLoad();
-    toast('Note added — team only');
-  } catch (e) { toast((e && e.message) || 'Could not add that note'); }
+      body: { message_text: txt, thread_type: t.type, line_id: r.line_id } });
+    /* ⚠️ The box it was sent from is the one field that must NOT be restored, or the note reappears as though
+       it had failed to send and gets sent twice. */
+    WLL._clearBox = t.box;
+    if (k === 'msg') { WLL.msgs = null; WLL.msgErr = false; } else { WLL.ext = null; WLL.extErr = false; }
+    await wlMsgLoad(k);
+    toast(k === 'msg' ? 'Note added — team only' : 'Sent — the other party can see it');
+  } catch (e) { toast((e && e.message) || 'Could not send that'); }
 }
 
 function wlLineHTML(loading){
@@ -761,14 +905,7 @@ function wlLineHTML(loading){
     + '</div>';
 
   /* ── a heading: caret · name · a hint of what is inside, so you can choose without opening ───────────────── */
-  var sec = function(k, name, hint, tone){
-    var on = WLL.tab === k;
-    return '<div data-testid="wl-sec-' + k + '" onclick="wlSec(&quot;' + k + '&quot;)" style="cursor:pointer;display:flex;gap:9px;align-items:baseline;'
-      + 'padding:11px 2px;border-top:1px solid var(--line)">'
-      + '<span style="width:12px;color:var(--grey);font-size:11px">' + (on ? '▾' : '▸') + '</span>'
-      + '<span style="font-weight:700;font-size:14px;color:' + (on ? 'var(--ink,#1c2128)' : 'var(--ink-2,#41474e)') + '">' + name + '</span>'
-      + '<span style="margin-left:auto;font-size:12px;color:' + (tone || 'var(--grey)') + '">' + (hint || '') + '</span></div>';
-  };
+  var sec = wlSecHead;
   var body = '';
 
   // ── ① HISTORY ────────────────────────────────────────────────────────────────────────────────────────────
@@ -889,49 +1026,33 @@ function wlLineHTML(loading){
       + '</div>';
   }
 
-  // ── ⑤ INTERNAL MESSAGES ──────────────────────────────────────────────────────────────────────────────────
+  // ── ⑤ ⑥ THE TWO THREADS ──────────────────────────────────────────────────────────────────────────────────
   /**
-   * ⭐ Athi, 2026-08-15: *"can we bring another collapsable for messages — like internal messages, add, view."*
+   * ⭐ Athi, 2026-08-15: *"can we add the external message tab as well … I guess this is complete information
+   * around a line item."*
    *
-   * ⚠️ THE SAME STORE THE MESSAGE CENTRE USES, never a second one. The cheap route was a thread in
-   * chit_line_assignment.note — private, append-only, attributed, zero migration. It would also have been a
-   * SECOND messaging system: no attachments, no per-copy replication, no dispute linkage, drifting from the real
-   * one, and leaving "where are the messages" with two answers. b155 gives chit_messages the one thing it
-   * lacked — which line a message is about.
+   * ⚠️ ONE IMPLEMENTATION, TWO THREADS — because the ONLY thing that differs is who can read it, and that is
+   * exactly the difference a reader must never have to work out. Writing the external panel as a second copy of
+   * the internal one would mean two places to change a label, and the day they disagreed about which is private
+   * would be the day someone typed a price complaint into the wrong box.
    *
-   * ⚠️ INTERNAL MEANS INTERNAL. thread_type='internal' is a single copy visible to this entity alone: the
-   * counterparty never sees it, exactly as on the chit screen. b155 changed what a message is ABOUT and nothing
-   * about who can read it.
+   * ⚠️ THE SAME STORE THE MESSAGE CENTRE USES, never a second one. b155 gave chit_messages the one thing it
+   * lacked — which line a message is about. A thread in chit_line_assignment.note would have cost no migration
+   * and been a parallel messaging system with no attachments and no per-copy replication.
    */
-  var msgs = WLL.msgs;
-  var nMsg = msgs ? msgs.length : 0;
-  body += sec('msg', 'Internal notes',
-    (msgs === null && !WLL.msgErr) ? (WLL.tab === 'msg' ? 'checking…' : 'team only')
-      : WLL.msgErr ? 'could not read' : (nMsg ? nMsg + (nMsg === 1 ? ' note' : ' notes') : 'none yet'),
-    WLL.msgErr ? '#c0453b' : null);
-  if (WLL.tab === 'msg') {
-    body += '<div style="padding:2px 0 12px">';
-    if (msgs === null && !WLL.msgErr) body += '<div style="font-size:12.5px;color:var(--grey)"><span class="spin"></span> checking for notes…</div>';
-    else if (WLL.msgErr) body += '<div style="font-size:12.5px;color:#c0453b">Could not read the notes just now — this does NOT mean there are none.</div>';
-    else if (!nMsg) body += '<div style="font-size:12.5px;color:var(--grey)">Checked — no notes on this line yet.</div>';
-    else body += msgs.map(function(m){
-      return '<div style="padding:6px 0;border-bottom:1px solid var(--line-soft,#f0efec);font-size:13px">'
-        + '<div style="display:flex;gap:8px;align-items:baseline">'
-        +   '<b style="font-size:12.5px">' + esc(m.sender_display_name || '—') + '</b>'
-        +   '<span style="margin-left:auto;color:var(--grey);font-size:11.5px">' + esc(String(m.created_at || '').slice(0, 10)) + '</span></div>'
-        + '<div style="margin-top:2px;line-height:1.5">' + esc(m.message_text || '') + '</div></div>';
-    }).join('');
-    /* The box gets its own line and the button sits under it — a textarea beside a button leaves the button
-       floating against three empty lines, and the box narrower for no gain. */
-    body += '<div style="margin-top:10px">'
-      + wlInput('wl_msg', { testid: 'wl-msg', lines: 3, placeholder: 'A note for your team about this line — what happened, what to watch for' })
-      + '<div style="display:flex;justify-content:flex-end;margin-top:8px">' + wlBtn('Add note', 'wl-msg-add', 'wlMsgSave()', true) + '</div>'
-      + '</div>'
-      /* ⚠️ SAID PLAINLY, EVERY TIME. A person deciding whether to write "customer is difficult, do not promise
-         Friday" must not have to remember who can read it. */
-      + '<div style="margin-top:7px;font-size:11.5px;color:var(--grey);line-height:1.5">🔒 Team only — the other party never sees these.</div>'
-      + '</div>';
-  }
+  body += wlThreadSec('msg', 'Internal notes', WLL.msgs, WLL.msgErr, {
+    hint: 'team only', empty: 'no notes on this line yet', verb: 'Add note',
+    placeholder: 'A note for your team about this line — what happened, what to watch for',
+    foot: '🔒 Team only — the other party never sees these.', tone: null,
+  });
+  body += wlThreadSec('ext', 'Message the other party', WLL.ext, WLL.extErr, {
+    hint: 'they see this', empty: 'nothing sent on this line yet', verb: 'Send',
+    placeholder: 'A message about this line that the other party will see',
+    /* ⚠️ STATED AS A CONSEQUENCE, NOT A CATEGORY. "External" is a word about our data model; "they will see
+       this" is the thing the person is actually deciding. */
+    foot: '📤 The other party sees this, on their own copy. It cannot be unsent — a correction is another message.',
+    tone: '#b0641c',
+  });
 
   /* ── what was asked for: always shown when it exists, never behind a heading ─────────────────────────────
      ⚠️ THIS ONE IS NOT COLLAPSED, deliberately. It is the evidence for everything above it — what the customer
@@ -949,7 +1070,7 @@ function wlLineHTML(loading){
 
   return '<div class="mhd"><div class="t">' + esc(r.particulars || 'Line') + (done ? ' <span style="font-size:13px;color:#3d7a4e">✓ done</span>' : '') + '</div>'
     + '<div class="s">' + esc(r.subject || 'chit') + '</div></div>'
-    + '<div class="mbody">' + bar + asked + body + '</div>'
+    + '<div class="mbody">' + bar + wlParties(WLL.det) + asked + body + '</div>'
     + '<div class="mfoot"><button onclick="closeModal()">Close</button>'
     + '<button data-testid="wl-open-order" onclick="wlOpen(&quot;' + r.chit_id + '&quot;)">Open the order</button></div>';
 }
