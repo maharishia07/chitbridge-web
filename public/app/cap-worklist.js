@@ -41,6 +41,9 @@ if (typeof EP !== 'undefined') {
     wlAssign:  { m: 'POST', p: '/api/chits/:id/assign-lines',  ok: 'y' },
     wlChit:    { m: 'GET',  p: '/api/chits/:id',               ok: 'y' },
     wlActors:  { m: 'GET',  p: '/api/actors',                  ok: 'y' },
+    /* b155 — the INTERNAL thread, narrowed to one line. Same store the message centre uses; never a second one. */
+    wlMsgs:    { m: 'GET',  p: '/api/chits/:id/messages',       ok: 'y' },
+    wlMsgAdd:  { m: 'POST', p: '/api/chits/:id/messages',       ok: 'y' },
   });
 }
 
@@ -542,7 +545,7 @@ function wlRender(rows, keys, depth, path){
  * opens. Fetching them for every row of a fifty-row list to serve the one row someone taps is the habit this
  * codebase refuses.
  */
-var WLL = { row: null, det: null, actors: null, loading: false, failed: false };
+var WLL = { row: null, det: null, actors: null, loading: false, failed: false, msgs: null, msgErr: false };
 /**
  * ⭐ THE ENTITY'S OWN CURRENCY, NEVER A BARE NUMBER — Athi, 2026-08-15: *"you are saying 80 charged, I am not
  * sure what that 80 means, it should be associated with the currency."*
@@ -563,6 +566,8 @@ async function wlLine(line_id){
      next line you opened had a section already expanded and tapping that heading COLLAPSED it — a toggle that
      does the opposite of what it looks like it will do, depending on what you did last. */
   WLL.row = r; WLL.det = null; WLL.tab = null; WLL.loading = true; WLL.failed = false;
+  /* ⚠️ Cleared per line, or the next card opens showing the previous line's notes as its own. */
+  WLL.msgs = null; WLL.msgErr = false;
   modal(wlLineHTML(true));
   try {
     WLL.det = await api('wlChit', { params: { id: r.chit_id } });
@@ -601,7 +606,38 @@ async function wlLine(line_id){
  * screen was not slow; it was ANSWERING A QUESTION IT HAD NOT ASKED YET, which is worse, because the reader
  * believes the wrong answer and acts on it.
  */
-function wlSec(k){ WLL.tab = (WLL.tab === k) ? null : k; modal(wlLineHTML(WLL.loading)); }
+function wlSec(k){
+  WLL.tab = (WLL.tab === k) ? null : k;
+  modal(wlLineHTML(WLL.loading));
+  /* ⚠️ FETCHED WHEN THE SECTION IS OPENED, not when the card is. Notes are the least-read thing on this card;
+     loading them for every line someone glances at would be one request per glance for data almost nobody asks
+     for. Same rule as the actor list and the history. */
+  if (WLL.tab === 'msg' && WLL.msgs === null && !WLL.msgErr) wlMsgLoad();
+}
+async function wlMsgLoad(){
+  var r = WLL.row; if (!r) return;
+  try {
+    var out = await api('wlMsgs', { params: { id: r.chit_id }, query: { thread_type: 'internal', line_id: r.line_id } });
+    var list = (out && (out.messages || out.items || (Array.isArray(out) ? out : []))) || [];
+    /* ⚠️ FILTERED AGAIN CLIENT-SIDE. Before b155 the server ignores line_id and returns the whole internal
+       thread, so without this the card would show the chit's notes as though they were this line's. */
+    WLL.msgs = list.filter(function(m){ return !m.line_id || m.line_id === r.line_id; });
+  } catch (e) { WLL.msgErr = true; }
+  if (document.getElementById('modalhost')) modal(wlLineHTML(WLL.loading));
+}
+async function wlMsgSave(){
+  var r = WLL.row; if (!r) return;
+  var el = document.getElementById('wl_msg');
+  var txt = el ? String(el.value).trim() : '';
+  if (!txt) { toast('Nothing to add'); return; }
+  try {
+    await api('wlMsgAdd', { params: { id: r.chit_id },
+      body: { message_text: txt, thread_type: 'internal', line_id: r.line_id } });
+    WLL.msgs = null; WLL.msgErr = false;
+    await wlMsgLoad();
+    toast('Note added — team only');
+  } catch (e) { toast((e && e.message) || 'Could not add that note'); }
+}
 
 function wlLineHTML(loading){
   var r = WLL.row || {}, d = WLL.det || {};
@@ -745,6 +781,48 @@ function wlLineHTML(loading){
       + '<div style="margin-top:8px"><button class="btn" data-testid="wl-mark-done" onclick="wlSetState(' + (done ? '&quot;open&quot;' : '&quot;done&quot;') + ')" style="width:100%;padding:9px">'
       +   (done ? '↩ Reopen this subtask' : '✓ Mark this subtask done') + '</button></div>'
       + '<div style="margin-top:7px;font-size:11.5px;color:var(--grey);line-height:1.5">Handing it on keeps the old assignment as history. Marking it done takes it off the work list — it does not mean the goods went out.</div>'
+      + '</div>';
+  }
+
+  // ── ⑤ INTERNAL MESSAGES ──────────────────────────────────────────────────────────────────────────────────
+  /**
+   * ⭐ Athi, 2026-08-15: *"can we bring another collapsable for messages — like internal messages, add, view."*
+   *
+   * ⚠️ THE SAME STORE THE MESSAGE CENTRE USES, never a second one. The cheap route was a thread in
+   * chit_line_assignment.note — private, append-only, attributed, zero migration. It would also have been a
+   * SECOND messaging system: no attachments, no per-copy replication, no dispute linkage, drifting from the real
+   * one, and leaving "where are the messages" with two answers. b155 gives chit_messages the one thing it
+   * lacked — which line a message is about.
+   *
+   * ⚠️ INTERNAL MEANS INTERNAL. thread_type='internal' is a single copy visible to this entity alone: the
+   * counterparty never sees it, exactly as on the chit screen. b155 changed what a message is ABOUT and nothing
+   * about who can read it.
+   */
+  var msgs = WLL.msgs;
+  var nMsg = msgs ? msgs.length : 0;
+  body += sec('msg', 'Internal notes',
+    (msgs === null && !WLL.msgErr) ? (WLL.tab === 'msg' ? 'checking…' : 'team only')
+      : WLL.msgErr ? 'could not read' : (nMsg ? nMsg + (nMsg === 1 ? ' note' : ' notes') : 'none yet'),
+    WLL.msgErr ? '#c0453b' : null);
+  if (WLL.tab === 'msg') {
+    body += '<div style="padding:2px 0 12px">';
+    if (msgs === null && !WLL.msgErr) body += '<div style="font-size:12.5px;color:var(--grey)"><span class="spin"></span> checking for notes…</div>';
+    else if (WLL.msgErr) body += '<div style="font-size:12.5px;color:#c0453b">Could not read the notes just now — this does NOT mean there are none.</div>';
+    else if (!nMsg) body += '<div style="font-size:12.5px;color:var(--grey)">Checked — no notes on this line yet.</div>';
+    else body += msgs.map(function(m){
+      return '<div style="padding:6px 0;border-bottom:1px solid var(--line-soft,#f0efec);font-size:13px">'
+        + '<div style="display:flex;gap:8px;align-items:baseline">'
+        +   '<b style="font-size:12.5px">' + esc(m.sender_display_name || '—') + '</b>'
+        +   '<span style="margin-left:auto;color:var(--grey);font-size:11.5px">' + esc(String(m.created_at || '').slice(0, 10)) + '</span></div>'
+        + '<div style="margin-top:2px;line-height:1.5">' + esc(m.message_text || '') + '</div></div>';
+    }).join('');
+    body += '<div style="display:flex;gap:8px;margin-top:10px">'
+      + '<input id="wl_msg" data-testid="wl-msg" placeholder="A note for your team about this line" style="flex:1 1 auto;min-width:0;font-size:14px;padding:10px 12px;border:1px solid var(--line);border-radius:8px">'
+      + '<button class="btn pri" data-testid="wl-msg-add" onclick="wlMsgSave()" style="flex:0 0 auto;padding:0 18px;white-space:nowrap">Add</button>'
+      + '</div>'
+      /* ⚠️ SAID PLAINLY, EVERY TIME. A person deciding whether to write "customer is difficult, do not promise
+         Friday" must not have to remember who can read it. */
+      + '<div style="margin-top:7px;font-size:11.5px;color:var(--grey);line-height:1.5">🔒 Team only — the other party never sees these.</div>'
       + '</div>';
   }
 
