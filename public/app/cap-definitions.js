@@ -28,7 +28,39 @@
  * on screen and mean opposite things.
  */
 
-var CBDEF = { open: {} };
+var CBDEF = { open: {}, mine: null, loading: false, err: '' };
+
+/**
+ * ════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+ *  AUTHORING — your own named things, on top of the kinds the system knows.
+ * ════════════════════════════════════════════════════════════════════════════════════════════════════════════════
+ *
+ * Athi decided the rule this is built on, 2026-08-16: **"frozen by value when stamped."** Loose while a catalogue
+ * merely references a definition — edit it and every adopter sees the new terms. Frozen the moment a chit is
+ * minted, because a chit whose terms change after they were agreed is not evidence of anything.
+ *
+ * ⭐ WHICH KINDS ARE AUTHORABLE, AND WHY NOT ALL OF THEM. A definition is only meaningful where its RULES have a
+ * shape someone can fill in. `category` (a named list) and `ordermodel` ("Carton of 6" = pack/step 6) and `offer`
+ * (a kind plus its conditions) all do. `facet` and `datatype` do not — they are vocabulary the system uses to
+ * describe a catalogue, not things you name instances of. Offering a Create button against those would invite
+ * someone to author a thing that can never be adopted.
+ *
+ * ⚠️ THE FORM IS DRIVEN BY THE REGISTRY, NOT BY A LIST HERE. `ordermodel` offers exactly the models cart-ui
+ * publishes; `offer` offers exactly the kinds offers.js publishes. Add a model next month and it is offerable
+ * with no edit to this file — the same discipline as the showcase above it.
+ */
+var CBDEF_AUTHORABLE = {
+  category:   { icon: '🗃️', title: 'Categories', one: 'category',
+                blurb: 'A named list of products. The simplest definition, and the one with no freeze semantics '
+                     + 'to worry about — a category has no terms that could change under a chit.' },
+  ordermodel: { icon: '🔢', title: 'Order models', one: 'order model',
+                blurb: 'A quantity rule with a NAME, so a product adopts “Carton of 6” rather than repeating '
+                     + 'pack/step 6. ⚠️ Change it to 12 and every product that adopted it moves — which is either '
+                     + 'exactly what you want or a catastrophe, and is why adoption freezes at the mint.' },
+  offer:      { icon: '🏷️', title: 'Offers', one: 'offer',
+                blurb: 'An offer kind plus its conditions. Nothing evaluates these at order time yet — authoring '
+                     + 'them is the step before that.' }
+};
 
 /**
  * ⭐ WORKED EXAMPLES — Athi: *"a link to its webpage, for example hs code, how it is used etc, some kind of
@@ -279,6 +311,194 @@ function cbDefOfferLabel(k){
   })[k] || k;
 }
 
+/* ── my definitions: load, author, edit, retire ──────────────────────────────────────────────────────────────── */
+
+/**
+ * ⚠️ ONE LOAD, NOT ONE PER SECTION. Three authorable kinds could mean three round trips on every paint; the
+ * route already filters by kind, but the SHELF is one thing and reads as one thing. `?all=1` so retired
+ * definitions are in hand — they are hidden by default in the UI, but a retired item you cannot see is how
+ * someone re-creates a definition they already retired.
+ */
+async function cbDefLoad(force){
+  if (CBDEF.mine && !force) return;
+  if (CBDEF.loading) return;
+  CBDEF.loading = true; CBDEF.err = '';
+  try {
+    var r = await api('defList', { params: { all: 1 } });
+    CBDEF.mine = (r && r.definitions) || [];
+  } catch (e) {
+    /* ⚠️ A LOAD FAILURE IS SAID, NOT SWALLOWED INTO AN EMPTY SHELF. "you have none" and "we could not ask" look
+       identical as an empty list and mean opposite things — the same rule the "not loaded" registry rows follow.
+       503 is the honest, expected case before b160 has run anywhere. */
+    CBDEF.mine = [];
+    CBDEF.err = (e && e.message) || 'Could not read your definitions.';
+  }
+  CBDEF.loading = false;
+  renderApp();
+}
+
+function cbDefMineOf(kind){
+  return (CBDEF.mine || []).filter(function (d) { return d.kind === kind && d.status !== 'retired'; });
+}
+function cbDefRetiredOf(kind){
+  return (CBDEF.mine || []).filter(function (d) { return d.kind === kind && d.status === 'retired'; });
+}
+
+/** The rule fields a kind offers — read from the registries, never listed here. */
+function cbDefRuleFields(kind, sub){
+  if (kind === 'category') {
+    return [{ k: 'members', label: 'Products in this category', ph: 'one name per line', area: true }];
+  }
+  if (kind === 'ordermodel') {
+    /* The shape each model actually uses. ⚠️ cart-ui's MODELS decide behaviour; these are the inputs those
+       models read (`o.step`, `o.min`, `o.max`), so the names must match what coerce/next look for. */
+    var f = [];
+    if (sub === 'pack' || sub === 'measure' || sub === 'range') f.push({ k: 'step', label: 'Step', ph: '6', num: true });
+    if (sub === 'range') { f.push({ k: 'min', label: 'Minimum', ph: '5', num: true });
+                           f.push({ k: 'max', label: 'Maximum', ph: '500', num: true }); }
+    if (sub === 'offer') { f.push({ k: 'price_min', label: 'Lowest price you will accept', num: true });
+                           f.push({ k: 'price_max', label: 'Highest', num: true }); }
+    return f;
+  }
+  if (kind === 'offer') {
+    var g = [];
+    if (sub === 'percent_off' || sub === 'threshold') g.push({ k: 'percent', label: 'Percent off', ph: '10', num: true });
+    if (sub === 'amount_off' || sub === 'threshold')  g.push({ k: 'amount', label: 'Amount off', num: true });
+    if (sub === 'threshold') { g.push({ k: 'min_amount', label: 'Spend at least', num: true });
+                               g.push({ k: 'min_qty', label: '…or this many items', num: true }); }
+    if (sub === 'buy_x_get_y') { g.push({ k: 'buy', label: 'Buy', ph: '1', num: true });
+                                 g.push({ k: 'get', label: 'Get', ph: '1', num: true });
+                                 g.push({ k: 'get_percent', label: '% off the free ones (100 = free)', num: true }); }
+    if (sub === 'price_range') { g.push({ k: 'min', label: 'Band minimum', num: true });
+                                 g.push({ k: 'max', label: 'Band maximum', num: true }); }
+    if (sub === 'shipping') g.push({ k: 'percent', label: '% off shipping (blank = free)', num: true });
+    /* Conditions every offer kind shares — the ones offers.js evaluates in within(). */
+    g.push({ k: 'valid_from', label: 'Valid from', ph: 'YYYY-MM-DD' });
+    g.push({ k: 'valid_to',   label: 'Valid to',   ph: 'YYYY-MM-DD' });
+    g.push({ k: 'region',     label: 'Region', ph: 'blank = everywhere' });
+    return g;
+  }
+  return [];
+}
+
+/** The sub-kinds a kind offers — READ FROM THE REGISTRY, so this file never holds the list. */
+function cbDefSubKinds(kind){
+  if (kind === 'ordermodel') return (typeof CBCart !== 'undefined' && CBCart.models) ? Object.keys(CBCart.models) : [];
+  if (kind === 'offer')      return (typeof CBOffers !== 'undefined' && CBOffers.kinds) ? CBOffers.kinds : [];
+  return [];
+}
+
+var CBDEF_FORM = null;   // { kind, sub, name, note, rules, id, version }
+
+function cbDefNew(kind){
+  var subs = cbDefSubKinds(kind);
+  CBDEF_FORM = { kind: kind, sub: subs[0] || '', name: '', note: '', rules: {}, id: null };
+  cbDefPaintForm();
+}
+async function cbDefEdit(id){
+  var d = (CBDEF.mine || []).filter(function (x) { return x.definition_id === id; })[0];
+  if (!d) return;
+  CBDEF_FORM = { kind: d.kind, sub: d.sub_kind || '', name: d.name || '', note: d.note || '',
+                 rules: JSON.parse(JSON.stringify(d.rules || {})), id: id, version: d.current_version };
+  cbDefPaintForm();
+}
+function cbDefSetSub(v){ CBDEF_FORM.sub = v; cbDefPaintForm(); }
+function cbDefSetField(k, v){ CBDEF_FORM[k] = v; }
+function cbDefSetRule(k, v, num){
+  if (v === '' || v == null) delete CBDEF_FORM.rules[k];
+  else CBDEF_FORM.rules[k] = num ? Number(v) : v;
+}
+
+function cbDefFormHTML(){
+  var f = CBDEF_FORM; if (!f) return '';
+  var A = CBDEF_AUTHORABLE[f.kind] || {};
+  var subs = cbDefSubKinds(f.kind);
+  var fields = cbDefRuleFields(f.kind, f.sub);
+  var editing = !!f.id;
+
+  return '<h3 style="margin:0 0 4px">' + (editing ? 'Edit' : 'New') + ' ' + cbDefEsc(A.one || f.kind) + '</h3>'
+    /**
+     * ⭐ THE FREEZE RULE IS SAID ON THE EDIT FORM, WHERE IT MATTERS. Someone changing "Carton of 6" to 12 needs
+     * to know, at that moment, that chits already stamped keep the 6 — otherwise the safe behaviour reads as a
+     * bug ("I changed it and the old order still says 6") and someone 'fixes' it.
+     */
+    + (editing
+        ? '<div class="cbdef-freeze">Editing the rules saves a <b>new version</b>. Chits already stamped keep the '
+          + 'version they froze — they do not move. Currently at v' + cbDefEsc(f.version || 1) + '.</div>'
+        : '')
+    + (subs.length
+        ? '<label class="fl">Kind</label><select class="inp" onchange="cbDefSetSub(this.value)">'
+          + subs.map(function (s) {
+              return '<option value="' + cbDefEsc(s) + '"' + (s === f.sub ? ' selected' : '') + '>'
+                + cbDefEsc(s) + '</option>'; }).join('') + '</select>'
+        : '')
+    + '<label class="fl">Name</label>'
+    + '<input class="inp" data-testid="cbdef-name" value="' + cbDefEsc(f.name) + '"'
+    + ' placeholder="' + (f.kind === 'ordermodel' ? 'Carton of 6' : f.kind === 'offer' ? 'Diwali 10%' : 'Spices') + '"'
+    + ' oninput="cbDefSetField(\'name\',this.value)">'
+    + (fields.length ? '<div class="cbdef-rules">' + fields.map(function (x) {
+        var v = f.rules[x.k]; v = (v == null ? '' : v);
+        return '<label class="fl">' + cbDefEsc(x.label) + '</label>'
+          + (x.area
+              ? '<textarea class="inp" rows="4" placeholder="' + cbDefEsc(x.ph || '') + '"'
+                + ' oninput="cbDefSetRule(\'' + x.k + '\',this.value.split(\'\\n\').filter(Boolean))">'
+                + cbDefEsc(Array.isArray(v) ? v.join('\n') : v) + '</textarea>'
+              : '<input class="inp" value="' + cbDefEsc(v) + '" placeholder="' + cbDefEsc(x.ph || '') + '"'
+                + ' oninput="cbDefSetRule(\'' + x.k + '\',this.value,' + (x.num ? 'true' : 'false') + ')">');
+      }).join('') + '</div>' : '')
+    + '<label class="fl">Note</label>'
+    + '<input class="inp" value="' + cbDefEsc(f.note) + '" placeholder="optional"'
+    + ' oninput="cbDefSetField(\'note\',this.value)">'
+    + '<div class="err" id="cbdef_err"></div>'
+    + '<div style="display:flex;gap:8px;margin-top:14px">'
+    +   '<button class="composebtn" style="flex:1" onclick="closeModal()">Cancel</button>'
+    +   '<button class="composebtn pri" style="flex:1" data-testid="cbdef-save" onclick="cbDefSave()">'
+    +   (editing ? 'Save' : 'Create') + '</button>'
+    + '</div>';
+}
+function cbDefPaintForm(){ modal(cbDefFormHTML()); }
+
+async function cbDefSave(){
+  var f = CBDEF_FORM; if (!f) return;
+  var err = document.getElementById('cbdef_err');
+  if (!f.name || !f.name.trim()) { if (err) err.textContent = 'A name is needed — it is how this gets cited.'; return; }
+  try {
+    if (f.id) {
+      /**
+       * ⚠️ THE RULES ARE ALWAYS SENT ON AN EDIT, and the server decides whether that is a new version. Deciding
+       * "did the rules change" here would mean the client owns the versioning rule — and two clients would
+       * eventually disagree about whether something was a change.
+       */
+      await api('defSave', { params: { id: f.id },
+        body: { name: f.name.trim(), note: f.note, rules: f.rules } });
+      toast('Saved — a new version if the rules changed.');
+    } else {
+      await api('defAdd', { body: { kind: f.kind, sub_kind: f.sub || null,
+                                    name: f.name.trim(), note: f.note, rules: f.rules } });
+      toast('Created as a draft.');
+    }
+    closeModal(); CBDEF_FORM = null;
+    await cbDefLoad(true);
+  } catch (e) {
+    if (err) err.textContent = (e && e.message) || 'Could not save that.';
+  }
+}
+
+async function cbDefSetStatus(id, status){
+  try { await api('defSave', { params: { id: id }, body: { status: status } });
+        toast(status === 'live' ? 'Live — it can be adopted now.' : 'Back to draft.');
+        await cbDefLoad(true); }
+  catch (e) { toast((e && e.message) || 'Could not change that.'); }
+}
+async function cbDefRetire(id, name){
+  /* ⚠️ The confirm says what actually happens. "Delete?" would be a lie — the row survives so that chits which
+     cited it stay explainable, and someone who believes they erased something is owed the truth. */
+  if (!confirm('Retire "' + name + '"?\n\nIt leaves the shelf and cannot be adopted again.\n'
+             + 'It is NOT deleted — chits that already cite it stay explainable.')) return;
+  try { await api('defRetire', { params: { id: id } }); toast('Retired.'); await cbDefLoad(true); }
+  catch (e) { toast((e && e.message) || 'Could not retire that.'); }
+}
+
 /* ── render ──────────────────────────────────────────────────────────────────────────────────────────────────── */
 function cbDefEsc(s){
   return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
@@ -328,6 +548,52 @@ function cbDefSectionHTML(s){
   return '<div class="cbdef-sec">' + head + '<div class="cbdef-body">' + body + '</div></div>';
 }
 
+/**
+ * ⭐ YOUR OWN DEFINITIONS — rendered ABOVE the registry showcase, because what you made matters more to you
+ * than what the system knows. The showcase becomes reference material once you have your own shelf.
+ */
+function cbDefMineHTML(){
+  if (CBDEF.mine === null) { cbDefLoad(); return '<div class="cbdef-loading">Reading your shelf…</div>'; }
+
+  var out = Object.keys(CBDEF_AUTHORABLE).map(function (kind) {
+    var A = CBDEF_AUTHORABLE[kind];
+    var mine = cbDefMineOf(kind), retired = cbDefRetiredOf(kind);
+    var rows = mine.map(function (d) {
+      var live = d.status === 'live';
+      return '<div class="cbdef-mine-row" data-testid="cbdef-mine-' + cbDefEsc(d.definition_id) + '">'
+        + '<span class="cbdef-mine-n">' + cbDefEsc(d.name) + '</span>'
+        + (d.sub_kind ? '<code class="cbdef-code">' + cbDefEsc(d.sub_kind) + '</code>' : '')
+        + '<span class="cbdef-badge ' + (live ? 'live' : 'draft') + '">' + (live ? 'live' : 'draft') + '</span>'
+        /* ⭐ THE VERSION IS ON SCREEN. It is the thing a stamped chit points at, so hiding it would make the
+           freeze rule invisible in the one place someone might need to check it. */
+        + '<span class="cbdef-ver">v' + cbDefEsc(d.current_version) + '</span>'
+        + '<span class="cbdef-acts">'
+        +   '<span onclick="cbDefEdit(\'' + cbDefEsc(d.definition_id) + '\')">Edit</span>'
+        +   '<span onclick="cbDefSetStatus(\'' + cbDefEsc(d.definition_id) + '\',\'' + (live ? 'draft' : 'live') + '\')">'
+        +   (live ? 'Unpublish' : 'Publish') + '</span>'
+        +   '<span onclick="cbDefRetire(\'' + cbDefEsc(d.definition_id) + '\',\'' + cbDefEsc(d.name) + '\')">Retire</span>'
+        + '</span></div>';
+    }).join('');
+
+    return '<div class="cbdef-sec">'
+      + '<div class="cbdef-head cbdef-head-mine">'
+      +   '<span class="cbdef-ico">' + A.icon + '</span>'
+      +   '<span class="cbdef-t">' + cbDefEsc(A.title) + '</span>'
+      +   '<span class="cbdef-n">' + mine.length + (retired.length ? ' · ' + retired.length + ' retired' : '') + '</span>'
+      +   '<button class="cbdef-new" data-testid="cbdef-new-' + kind + '" onclick="cbDefNew(\'' + kind + '\')">+ New</button>'
+      + '</div>'
+      + '<div class="cbdef-body">'
+      +   '<div class="cbdef-blurb">' + cbDefEsc(A.blurb) + '</div>'
+      /* ⚠️ An empty shelf says what to do, not "0 results". Nobody arrives here knowing what a definition is for. */
+      +   (rows || '<div class="cbdef-none">None yet. <b>+ New</b> to name one — then a catalogue can adopt it.</div>')
+      + '</div></div>';
+  }).join('');
+
+  return '<div class="cbdef-mine">'
+    + (CBDEF.err ? '<div class="cbdef-err">' + cbDefEsc(CBDEF.err) + '</div>' : '')
+    + out + '</div>';
+}
+
 function cbDefHTML(){
   var secs = cbDefRegistries();
   return '<div class="cbdef-wrap" data-testid="definitions">'
@@ -345,11 +611,18 @@ function cbDefHTML(){
      * feature invites someone to hunt for the Create button and conclude the screen is broken. The honest
      * version of "read-only first" says so out loud.
      */
-    + '<div class="cbdef-note-box">This is a <b>read-only showcase</b>. Nothing here can be created or edited '
-    + 'yet — and the reason is deliberate: attaching a definition to a catalogue has to decide what happens at '
-    + 'the mint. A chit that resolves its terms from a definition someone edits next week is a chit whose terms '
-    + 'changed after they were agreed. Loose while referenced, <b>frozen by value when stamped</b> — that rule '
-    + 'gets built before the Create button does.</div>'
+    /**
+     * ⚠️ THIS BANNER SAID "read-only showcase" FOR ABOUT AN HOUR AFTER IT STOPPED BEING TRUE. A screen that
+     * describes itself wrongly is worse than one that says nothing: someone reads it, believes the Create button
+     * is decorative, and stops looking. Copy is part of the build, not a label applied afterwards.
+     */
+    + '<div class="cbdef-note-box">Name your own below — a category, an order model, an offer. '
+    + 'A definition stays <b>loose while a catalogue references it</b>: edit it and every catalogue that adopted '
+    + 'it sees the new terms. It is <b>frozen by value the moment a chit is stamped</b>, so a chit keeps the '
+    + 'version it agreed even after you change the shelf. '
+    + '<span style="opacity:.8">Adoption — attaching one to a catalogue — comes next.</span></div>'
+    + cbDefMineHTML()
+    + '<div class="cbdef-shelfhd">What the system knows — the shapes available to you</div>'
     + secs.map(cbDefSectionHTML).join('')
     + '</div>';
 }
@@ -406,7 +679,27 @@ function cbDefCss(){
     '.cbdef-link a:hover{text-decoration:underline}',
     '.cbdef-empty{font-size:12.5px;color:#b4453f;padding:6px 0 2px;max-width:66ch}',
     '.cbdef-src{margin-top:10px;font-size:11px;color:#9aa3a7}',
-    '.cbdef-src code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11px}'
+    '.cbdef-src code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11px}',
+    '.cbdef-mine{margin-bottom:22px}',
+    '.cbdef-shelfhd{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--grey);margin:18px 0 8px;font-weight:700}',
+    '.cbdef-head-mine{cursor:default}',
+    '.cbdef-head-mine:hover{background:transparent}',
+    '.cbdef-new{margin-left:10px;border:1px solid var(--blue,#3F66A6);background:var(--blue,#3F66A6);color:#fff;border-radius:8px;padding:4px 11px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;flex:none}',
+    '.cbdef-mine-row{display:flex;align-items:center;gap:9px;padding:8px 0;border-bottom:1px dashed #eee9e0;flex-wrap:wrap}',
+    '.cbdef-mine-row:last-child{border-bottom:0}',
+    '.cbdef-mine-n{font-size:13.5px;font-weight:700}',
+    '.cbdef-badge{font-size:10.5px;font-weight:700;border-radius:6px;padding:1px 7px;text-transform:uppercase;letter-spacing:.04em}',
+    '.cbdef-badge.live{background:#e6f4ec;color:#2c7a43}',
+    '.cbdef-badge.draft{background:#f4f2ec;color:#8a6d1e}',
+    '.cbdef-ver{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11px;color:#9aa3a7}',
+    '.cbdef-acts{margin-left:auto;display:flex;gap:12px}',
+    '.cbdef-acts span{font-size:11.5px;color:var(--blue,#3F66A6);cursor:pointer;font-weight:600}',
+    '.cbdef-acts span:hover{text-decoration:underline}',
+    '.cbdef-none{font-size:12.5px;color:var(--grey);padding:4px 0}',
+    '.cbdef-loading{padding:14px 0;font-size:12.5px;color:var(--grey)}',
+    '.cbdef-err{font-size:12.5px;color:#b4453f;background:#fbeceb;border:1px solid #f0c9c6;border-radius:9px;padding:8px 11px;margin-bottom:10px}',
+    '.cbdef-freeze{font-size:12px;line-height:1.5;color:#6b5a36;background:var(--gold-soft,#F7F1E4);border:1px solid var(--gold-line,#E8D9BC);border-radius:9px;padding:8px 11px;margin:8px 0 10px}',
+    '.cbdef-rules{border-left:2px solid var(--gold-line,#E8D9BC);padding-left:11px;margin:10px 0}'
   ].join('');
   (document.head || document.documentElement).appendChild(s);
 }

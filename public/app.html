@@ -739,6 +739,13 @@ const EP = {
   supPatch:        {m:"PATCH", p:"/api/relationships/suppliers/:id", ok:"y"},           // Stage B — owner-side fields (nickname/preferred/notes/category)
   supCatalogue:    {m:"GET",   p:"/api/relationships/suppliers/:sid/catalogue", ok:"✓"},
   readinessOf:     {m:"GET",   p:"/api/governance/readiness/:bridge_id", ok:"y"},// their catalogue → compose line items
+  /* DEFINITIONS (b160) — the entity's own named things. Loose while referenced, FROZEN BY VALUE when stamped. */
+  defList:         {m:"GET",   p:"/api/definitions",             ok:"y"},   // ?kind= ?status= ?all=1
+  defGet:          {m:"GET",   p:"/api/definitions/:id",         ok:"y"},   // + full version history
+  defAdd:          {m:"POST",  p:"/api/definitions",             ok:"y"},
+  defSave:         {m:"PUT",   p:"/api/definitions/:id",         ok:"y"},   // rules change => NEW VERSION
+  defRetire:       {m:"DELETE",p:"/api/definitions/:id",         ok:"y"},   // retires, never deletes
+  defFreeze:       {m:"POST",  p:"/api/definitions/freeze",      ok:"y"},   // the copy AND the pointer
   prodList:        {m:"GET",   p:"/api/products",                ok:"✓"},
   prodAdd:         {m:"POST",  p:"/api/products",                ok:"✓"},  // {item_data:{name,price}}
   prodDel:         {m:"DELETE",p:"/api/products/:id",            ok:"✓"},
