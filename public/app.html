@@ -656,7 +656,9 @@ const EP = {
   shopStatus:      {m:"PATCH",p:"/api/entities/profile",         ok:"✓"},  // shop status = PATCH profile {business_status}
   dispute:         {m:"POST", p:"/api/chits/:id/disputes",       ok:"✓"},  // raise dispute (built)
   delChit:         {m:"DELETE",p:"/api/chits/:id",               ok:"✓"},  // exists (soft-void/trash)
-  restore:         {m:"POST", p:"/api/chits/:id/restore",        ok:"✓"},  // undo soft-delete — baseline-11
+  /* `restore` was declared twice (here and below); an object literal keeps only the LAST, so this one never
+     existed at runtime. Both pointed at the same path so nothing broke — but the same class of silent shadowing
+     is what made a finished screen render as a stub earlier today. One key, one definition. */
   purgeChit:       {m:"DELETE", p:"/api/chits/:id/purge",        ok:"✓"},  // permanent hard-delete of a DRAFT only
   unread:          {m:"GET",  p:"/api/chits/unread",             ok:"✓"},  // per-actor unread chit_ids — baseline-11
   assignBulk:      {m:"POST", p:"/api/chits/assign-bulk",        ok:"✓"},  // built (baseline-4); frontend wire pending — panel-fixes #2
@@ -700,7 +702,7 @@ const EP = {
   saveProfile:     {m:"PATCH", p:"/api/entities/profile",        ok:"✓"},  // {gstn,address,business_status}
   getSettings:     {m:"GET",   p:"/api/actors/settings",         ok:"✓"},
   saveSettings:    {m:"PUT",   p:"/api/actors/settings",         ok:"✓"},
-  entitySearch:    {m:"GET",   p:"/api/entities/search",         ok:"✓"},  // ?q=
+  /* `entitySearch` likewise — declared again further down, which is the definition that actually applied. */
   connList:        {m:"GET",   p:"/api/connections/list",        ok:"✓"},
   connPending:     {m:"GET",   p:"/api/connections/pending",     ok:"✓"},
   connRequest:     {m:"POST",  p:"/api/connections/request",     ok:"✓"},  // {to_entity_id}
@@ -4383,12 +4385,48 @@ async function loadNotifs(){ if(CFG.MODE==='demo') return;
   try{ const r=await api("notifications"); _notifs=(r&&r.notifications)||[]; UI.notifCount=(r&&r.count!=null)?r.count:_notifs.length;
     const d=document.getElementById('belldot'); if(d){ d.textContent=UI.notifCount||""; d.style.display=UI.notifCount?'':'none'; } }catch(_){}
 }
+/**
+ * ⭐ WHAT A NOTIFICATION SAYS, AND WHETHER IT IS FOR YOU.
+ *
+ * ⚠️ EVERY ROW USED TO RENDER AS "•". The ICON map listed dispute_raised, accepted, completed, assigned — and the
+ * actions this feed ACTUALLY carries are message_sent, delivered_line, assigned_line and status_completed. Not
+ * one of the four was in the map. Measured live: 30 rows, 30 bullets.
+ *
+ * ⚠️ AND IT PRINTED THE COLUMN NAME AT PEOPLE. "BuyerHand · delivered line — 3P Rice" is a database action with
+ * its underscores swapped for spaces. A notification is a sentence someone reads in half a second.
+ *
+ * ⭐ "FOR YOU" IS THE SPLIT EVERY MATURE FEED MAKES (GitHub's Participating vs All, Linear's Inbox vs Activity):
+ * things that name you first, ambient activity after. ⚠️ AND THE SERVER ALREADY COMPUTED IT — `assigned_to_me`
+ * and `dispute_for_me` have been on the payload all along, unused by the screen.
+ */
+const NOTIF_KIND = {
+  message_sent:     { i: '💬', say: (n) => 'wrote about' },
+  delivered_line:   { i: '📦', say: (n) => 'recorded a delivery on' },
+  assigned_line:    { i: '👤', say: (n) => 'assigned a line on' },
+  status_completed: { i: '✅', say: (n) => 'completed' },
+  status_cancelled: { i: '🚫', say: (n) => 'cancelled' },
+  accepted:         { i: '✍️', say: (n) => 'accepted' },
+  dispute_raised:   { i: '⚑', say: (n) => 'raised a dispute on' },
+  dispute_resolved: { i: '✅', say: (n) => 'resolved a dispute on' },
+  voided:           { i: '🚫', say: (n) => 'voided' },
+};
 function mapNotif(n){
-  const ICON={dispute_raised:'⚑',dispute_resolved:'✅',voided:'🚫',accepted:'✍️',completed:'✅',assigned:'👤'};
-  const subj=n.manual_subject||n.auto_subject||'a chit';
-  return { i: ICON[n.action]||'•',
-           t: (n.action_by_display_name?esc(n.action_by_display_name)+' · ':'')+esc(String(n.action||'update').replace(/_/g,' '))+' — '+esc(subj),
-           s: n.created_at?new Date(n.created_at).toLocaleString('en-IN', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'' };
+  const k = NOTIF_KIND[n.action] || { i: '•', say: () => String(n.action || 'updated').replace(/_/g, ' ') };
+  const subj = n.manual_subject || n.auto_subject || 'a chit';
+  const mine = !!(n.assigned_to_me || n.dispute_for_me);
+  return { i: k.i, mine: mine, chit: n.chit_id || null,
+           t: (n.action_by_display_name ? '<b>' + esc(n.action_by_display_name) + '</b> ' : '')
+              + esc(k.say(n)) + ' <b>' + esc(subj) + '</b>',
+           /* The detail is the message text or the new status — the bit that saves opening it. */
+           d: n.detail ? esc(String(n.detail).slice(0, 90)) : (n.new_status ? esc(n.new_status) : ''),
+           s: n.created_at ? new Date(n.created_at).toLocaleString('en-IN', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : '' };
+}
+/* Clicking a notification opens the thing it is about. A feed you cannot act from is a list of regrets. */
+function notifOpen(chit_id){
+  if (!chit_id) return;
+  closeNotif();
+  if (typeof openChit2 === 'function' && typeof ensureCap === 'function') ensureCap('chit2').then(function(){ openChit2(chit_id); });
+  else if (typeof openChit === 'function') openChit(chit_id);
 }
 async function openNotifications(){
   /* ⭐ OPENING IS SEEING. The badge counts what arrived since the last look, so looking is what moves the
@@ -4400,10 +4438,36 @@ async function openNotifications(){
   if(live) await loadNotifs();
   if(!UI.notifOpen) return;   // user may have closed it during the await
   const items = _notifs.map(mapNotif);
-  const foot  = live ? (items.length+" recent") : "Demo notifications — endpoint pending (ATH-109 §11).";
+  /**
+   * ⭐ FOR YOU, THEN EVERYTHING ELSE — the split GitHub calls Participating/All and Linear calls Inbox/Activity.
+   *
+   * ⚠️ IT WAS ONE UNDIFFERENTIATED LIST, so a line assigned to you sat between two ambient status changes with
+   * nothing separating them. The flags to do this — `assigned_to_me` and `dispute_for_me` — have been on the
+   * payload the whole time: the server was already answering the question and nobody asked it.
+   */
+  const forMe = items.filter(function(x){ return x.mine; });
+  const rest  = items.filter(function(x){ return !x.mine; });
+  const nrow = function(x){
+    return '<div class="notifrow"' + (x.chit ? ' onclick="notifOpen(\'' + x.chit + '\')" style="cursor:pointer"' : '') + '>'
+      + '<span class="ni">' + x.i + '</span><div style="min-width:0">'
+      + '<div class="nt">' + x.t + '</div>'
+      + (x.d ? '<div style="font-size:11.5px;color:var(--ink-2,#5b6470);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + x.d + '</div>' : '')
+      + '<div class="ns">' + x.s + '</div></div></div>';
+  };
+  const nhead = function(t){
+    return '<div style="padding:8px 12px 3px;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--grey)">' + t + '</div>';
+  };
+  /* ⚠️ SAY THAT IT POLLS. The bell is dimmed because there is no push transport; the panel must not then imply
+     live delivery. An unfinished capability that admits it is one somebody comes back to. */
+  const foot = live ? (items.length + ' recent · refreshes every 20s')
+                    : 'Demo notifications — endpoint pending (ATH-109 §11).';
+  const body = items.length
+    ? (forMe.length ? nhead('For you') + forMe.map(nrow).join('') : '')
+      + (rest.length ? (forMe.length ? nhead('Everything else') : '') + rest.map(nrow).join('') : '')
+    : '<div class="notifrow"><div class="nt" style="color:var(--grey)">No notifications yet.</div></div>';
   host.innerHTML=`<div class="notifover" onclick="closeNotif()"><div class="notifpanel" onclick="event.stopPropagation()">
-    <div class="notifhd">Notifications<span style="margin-left:auto;font-size:9px;color:var(--grey);font-family:'Space Mono',monospace">${EP.notifications.p}</span></div>
-    ${items.length?lazyWrap('notif', items, x=>`<div class="notifrow"><span class="ni">${x.i}</span><div><div class="nt">${x.t}</div><div class="ns">${x.s}</div></div></div>`, ''):'<div class="notifrow"><div class="nt" style="color:var(--grey)">No notifications yet.</div></div>'}
+    <div class="notifhd">Activity${forMe.length?`<span style="margin-left:8px;background:#2c5aa0;color:#fff;border-radius:9px;padding:1px 7px;font-size:10.5px;font-weight:800">${forMe.length} for you</span>`:''}</div>
+    ${body}
     <div class="notiffoot">${foot}</div>
   </div></div>`;
 }

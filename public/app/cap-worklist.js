@@ -350,7 +350,7 @@ function worklistScreen(){
     +   (mine2 ? 'you' : 'your team') + ', across every chit.</div></div>'
     /* ── group by ──────────────────────────────────────────────────────────────────────────────────────────── */
     + '<div style="display:flex;gap:6px;align-items:center;padding:9px 16px;border-bottom:1px solid var(--line-soft,#eee);flex-wrap:wrap">'
-    +   '<span style="font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--grey);margin-right:2px">group by</span>'
+    +   '<span style="font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--grey);margin-right:2px">group by</span>'
     +   KEYS.map(function(x){ return chip(x[0], x[1], prim === x[0], 'wlPrimary(&quot;' + x[0] + '&quot;)', 'wl-view-' + x[0]); }).join('')
     +   '<input type="date" value="' + esc(WL.due || '') + '" onchange="wlDue(this.value)" '
     +     'style="margin-left:auto;font-size:12px;padding:3px 7px;border:1px solid var(--line);border-radius:8px">'
@@ -358,7 +358,7 @@ function worklistScreen(){
     + '</div>'
     /* ── then split by · and the disclosure controls ────────────────────────────────────────────────────────── */
     + '<div style="display:flex;gap:14px;align-items:center;padding:8px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap">'
-    +   '<span style="font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--grey)">then split by</span>'
+    +   '<span style="font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--grey)">then split by</span>'
     +   KEYS.map(function(x){ return box(x[0], x[1]); }).join('')
     +   (sec ? '' : '<span style="font-size:11.5px;color:var(--grey);font-style:italic">not split — every line under its ' + esc(prim === 'who' ? 'person' : prim === 'date' ? 'date' : prim === 'item' ? 'product' : 'order') + '</span>')
     /* ⭐ THE PIVOT SWITCH. Off, you get the raw lines; on, the same product merges and its quantity totals — the
@@ -576,7 +576,7 @@ function wlParties(det){
   return '<div style="display:flex;gap:14px;flex-wrap:wrap;align-items:baseline;padding:8px 0 2px;border-bottom:1px solid var(--line-soft,#f0efec);margin-bottom:8px">'
     + out.map(function(p){
         return '<div style="font-size:12.5px">'
-          + '<span style="color:var(--grey);text-transform:uppercase;font-size:10px;font-weight:800;letter-spacing:.06em">' + esc(p.role || '') + '</span> '
+          + '<span style="color:var(--grey);text-transform:uppercase;font-size:11px;font-weight:800;letter-spacing:.06em">' + esc(p.role || '') + '</span> '
           + '<b>' + esc(p.display_name || '—') + '</b>'
           + (mine(p) ? ' <span style="color:var(--grey)">(you)</span>' : '')
           + (p.bridge_id ? ' <span style="color:var(--grey);font-family:ui-monospace,monospace;font-size:11px">' + esc(p.bridge_id) + '</span>' : '')

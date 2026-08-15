@@ -832,6 +832,24 @@ function chit2Screen(){
     + '<div style="padding:10px 16px 0;display:flex">' + side + '</div>'
     + '<div style="padding:7px 16px 0;font-size:11.5px;color:var(--grey);text-align:center">'
     + (C2.side === 'them' ? 'Both parties hold everything on this side' : 'Assignment, notes and cost — they never see this') + '</div>'
+    /**
+     * ⭐ THE DOOR TO THE SERVICE CLOCK — and until now there wasn't one.
+     *
+     * ⚠️ `openServiceClock()` existed in app.html and NOTHING CALLED IT. Two references in the whole codebase:
+     * the definition, and a comment in cap-service.js saying "the entry point is not here, it lives in app.html".
+     * It did — uncalled. So svcGet/svcRespond/svcResolve/svcPause, the whole SLA capability, was unreachable: a
+     * shipped feature with no way in, which is the kind of thing that stays unnoticed precisely because nobody
+     * can stumble over it.
+     *
+     * ⚠️ IT OPENS ONTO AN HONEST 503 UNTIL b147 IS RUN. svcOpen catches the error and shows the server's own
+     * words ("The service clock needs b147 on this environment"), so the door tells the truth about the room
+     * rather than pretending or crashing.
+     *
+     * It sits on the US side because an SLA is how WE are serving — the counterparty never sees this side.
+     */
+    + (C2.side === 'us' ? '<div style="padding:6px 16px 0;text-align:center">'
+        + '<span data-testid="c2-service-clock" onclick="openServiceClock(\'' + C2.id + '\')"'
+        + ' style="cursor:pointer;font-size:12px;color:var(--blue)">⏱ Service clock &amp; SLA</span></div>' : '')
     + (sum ? '<div style="padding:6px 16px 0;font-size:12px;color:var(--grey);text-align:center">' + sum.complete + ' of ' + sum.lines + ' lines delivered</div>' : '')
     + '<div style="display:flex;border-bottom:1px solid var(--line);margin-top:10px">' + tabs + '</div>'
     + '</div>'

@@ -209,7 +209,7 @@ function messagesScreen(){
           +         esc((RPLTRACK[m.track] || {}).icon || '') + '</span>'
           +       '<b style="font-size:13.5px' + (isNew ? ';font-weight:800' : '') + '">' + what + '</b>'
           /* ⚠️ A CLOSED CHIT IS MARKED, NEVER HIDDEN — a complaint about a closed order arrives exactly here. */
-          +       (closed ? '<span style="font-size:10.5px;font-weight:700;color:#b0641c;background:#fdf4e9;border-radius:4px;padding:1px 5px">' + esc(m.chit_status) + '</span>' : '')
+          +       (closed ? '<span style="font-size:11px;font-weight:700;color:#b0641c;background:#fdf4e9;border-radius:4px;padding:1px 5px">' + esc(m.chit_status) + '</span>' : '')
           +       '<span style="font-size:11.5px;color:var(--grey);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + sub + '</span>'
           /* ⚠️ THE FULL COUNT ONCE IT IS KNOWN. The inbox only returns unread-or-kept, so this said "3 msgs" over
              a conversation that turned out to hold 5 — a number that disagreed with the thread it labelled the
