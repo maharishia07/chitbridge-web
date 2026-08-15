@@ -32,6 +32,23 @@
   // Part D · pricing — where a price ORIGINATES (basis) and how it is HELD (by ref = loose/resolved at seal · by value = frozen).
   var PRICE_BASIS = ['global', 'system', 'user', 'manual'];   // global market stage · ERP/system · user choice at order · hand-entered
   var PRICE_BY = ['ref', 'value'];                            // ref → resolved from source at seal (loose) · value → frozen amount now
+  /**
+   * ⭐ WHERE A PRICE IS REFERRED FROM — Athi, 2026-08-16: *"can we say where prices are refered from, or accessed
+   * from, example, url, website"*.
+   *
+   * `basis` already said WHAT KIND of source a price comes from (a market stage, an ERP, the user, a hand entry).
+   * What was missing is WHERE — and "where" is the half that makes a price checkable by the other party. A number
+   * whose origin is "global" is an assertion; a number whose origin is a named publisher, a URL, and a reading
+   * date is EVIDENCE. In a dispute those are not the same object.
+   *
+   * ⚠️ THIS IS THE ATTESTATION RULE APPLIED TO MONEY: verified, not self-asserted. The same reason a KYB claim
+   * carries its issuer and its check date.
+   *
+   * `at` (when it was read) matters as much as `url`. A commodity price with no reading date cannot be checked
+   * against anything — the page it came from has moved on, and "it said 4,200" becomes unfalsifiable. Whoever
+   * disputes it deserves to know which day's number this was.
+   */
+  var PRICE_ORIGIN = ['url', 'publisher', 'exchange', 'system', 'contract', 'manual'];
   function viaFor(leg) { return leg === 'compute' ? ['AI', 'ERP'] : ['ERP', 'IoT']; }
 
   // ---- THE MAXIMUM DATATYPE PALETTE ----
@@ -57,6 +74,19 @@
     { k: 'url',          label: 'Link',                    note: 'spec sheet, page' },
     { k: 'geo',          label: 'Location',                note: 'origin, delivery point' },
     { k: 'formula',      label: 'Computed (formula)',      note: 'derived by a co-assist, then sealed' },
+    /**
+     * ⭐ Athi, 2026-08-16: *"under field data type, consists of, means, this item consists of the following item"*.
+     *
+     * The CONCEPT already existed as the `bom` FACET (`bom:[{item, qty}]`) — a bill of materials for the whole
+     * product. What was missing is that a FIELD could not be one, so a product could not say "this pack consists
+     * of…" as an attribute alongside its others; the composition had to be the product's own top-level bom or
+     * nowhere.
+     *
+     * ⚠️ SAME SHAPE AS THE FACET, ON PURPOSE — `[{item, qty}]`. A second shape for the same idea is how the
+     * traceability walk ends up with two things to understand and mass-balance ends up reconciling one of them.
+     */
+    { k: 'composition',  label: 'Consists of (bill of materials)',
+      note: 'this item consists of these items, each with a quantity — same shape as the product bom' },
   ];
   var METHODS = [   // how the whole catalogue sells (one per catalogue)
     { k: 'cart',     label: 'Cart (qty × price)' }, { k: 'qty', label: 'Quantity only' },
@@ -67,7 +97,7 @@
   var FACETS = ['identity', 'variants', 'units', 'standards', 'media', 'bom', 'pricing', 'loop', 'feedback'];
   var PRICING_MODELS = ['fixed', 'range', 'tiered', 'market-ref', 'negotiated'];
   // the whole grammar, in one place — what the AI composes from
-  function PALETTE(){ return { datatypes: DATATYPES, legs: LEGS, viaFor: viaFor, methods: METHODS, facets: FACETS, pricingModels: PRICING_MODELS, standards: STD_SCHEMES, priceBy: PRICE_BY, priceBasis: PRICE_BASIS }; }
+  function PALETTE(){ return { datatypes: DATATYPES, priceOrigin: PRICE_ORIGIN, legs: LEGS, viaFor: viaFor, methods: METHODS, facets: FACETS, pricingModels: PRICING_MODELS, standards: STD_SCHEMES, priceBy: PRICE_BY, priceBasis: PRICE_BASIS }; }
   function leg(k) { for (var i = 0; i < LEGS.length; i++) if (LEGS[i].k === k) return LEGS[i]; return null; }
 
   // ---- normalize / migrate a draft to the current shape (moved out of the UI's _ensureCat) ----
@@ -94,6 +124,28 @@
       if (!p.basis) p.basis = 'global';
       if (!p.by) p.by = 'ref';
       if (p.source === undefined) p.source = '';
+      /**
+       * ⭐ THE PROVENANCE OF THE NUMBER — where it was referred from, and when it was read.
+       *
+       * ⚠️ ADDITIVE AND OPTIONAL. Every price written before today has none of these, and a missing origin means
+       * "not stated", never "invalid" — the same rule products.js applies to a missing status. Demanding it
+       * retroactively would invalidate every existing price at once.
+       *
+       *   origin     one of PRICE_ORIGIN — the KIND of place ('url', 'exchange', 'contract'…)
+       *   url        where it can be looked at. ⚠️ Not fetched by us; see below.
+       *   ref        the identifier AT that place — a contract number, a symbol, an ERP price-list id
+       *   at         ISO datetime the figure was READ. Without this a market price cannot be checked at all.
+       *   as_read    what the source actually said, verbatim, before any conversion or markup
+       *
+       * ⚠️ `as_read` IS NOT `amount`. `amount` is what this catalogue charges; `as_read` is what the source said.
+       * They differ by markup, conversion, rounding — and keeping both is what lets someone audit the step
+       * between them instead of taking it on trust. Collapsing them would hide exactly the part worth checking.
+       */
+      if (p.origin === undefined)  p.origin = '';
+      if (p.url === undefined)     p.url = '';
+      if (p.ref === undefined)     p.ref = '';
+      if (p.at === undefined)      p.at = '';
+      if (p.as_read === undefined) p.as_read = null;
       if (p.amount === undefined) p.amount = null;
       if (p.currency === undefined) p.currency = '';
       if (p.region === undefined) p.region = '';
@@ -133,7 +185,49 @@
       region: p.region || c.context.region || '',
       validFrom: p.validFrom, validTo: p.validTo,
       state: p.by === 'value' ? 'frozen (by value)' : 'loose (by ref — resolves at seal)',
+      /* Where it came from, carried through so the schema and every consumer see it — not just the editor. */
+      origin: p.origin || '', url: p.url || '', ref: p.ref || '', at: p.at || '', as_read: p.as_read,
+      /**
+       * ⭐ ONE LINE A HUMAN CAN READ, and it is the whole point of the feature: a price should be able to say
+       * where it came from without anyone opening the JSON.
+       *
+       * ⚠️ IT SAYS "no source stated" RATHER THAN GOING QUIET. A price with no provenance is a legitimate,
+       * common thing — most prices are simply set by the seller — but it must LOOK different from one that has
+       * provenance, or an unverifiable number and an auditable one are indistinguishable on screen. That
+       * difference is the feature.
+       */
+      provenance: priceProvenance(p)
     };
+  }
+
+  /** A short, human sentence for where a price was referred from. Empty inputs are said, not hidden. */
+  function priceProvenance(p) {
+    if (!p) return 'no source stated';
+    var bits = [];
+    if (p.origin) bits.push(p.origin);
+    if (p.source) bits.push(p.source);
+    if (p.ref) bits.push('ref ' + p.ref);
+    if (p.url) bits.push(p.url);
+    if (p.at) bits.push('read ' + p.at);
+    /* ⚠️ `as_read` is shown ALONGSIDE, never instead of, the charged amount — the gap between them is the
+       markup, and hiding it would hide the one number a counterparty would want to see. */
+    if (p.as_read != null && p.as_read !== '') bits.push('source said ' + p.as_read);
+    return bits.length ? bits.join(' · ') : 'no source stated';
+  }
+
+  /**
+   * ⚠️ THE URL IS RECORDED, NOT FETCHED — and that is a deliberate refusal, not a missing feature.
+   *
+   * Fetching a price from a supplier's page at seal time would make a chit's terms depend on a third-party
+   * server being up, unchanged, and honest at that exact moment. It would also mean the two parties can compute
+   * different totals from the same chit, which is the one thing this product cannot allow.
+   *
+   * So the URL is provenance: it says where a human read the number, so the other party can go and look. If
+   * automated resolution is ever wanted it belongs on a scheduled reading that writes an `as_read` with a
+   * timestamp — a fact captured once and then frozen — not a live lookup inside a mint.
+   */
+  function priceIsCheckable(p) {
+    return !!(p && (p.url || (p.origin && p.ref)) && p.at);
   }
 
   // ---- the four-leg chain as DATA (the UI draws it; the harness reasons over it) ----
@@ -190,9 +284,19 @@
   // This is what an AI would emit per purpose (LLMs speak JSON Schema); RJSF / JSON Forms / json-editor render it
   // for free. We only add the CB-unique bits as extension keywords. Our model stays a thin PROFILE over the standard.
   function _jkey(n){ return (n || '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || 'field'; }
+  /**
+   * ⚠️ AN UNMAPPED TYPE FALLS BACK TO `{type:'string'}` SILENTLY (see toJSONSchema below) — which is fine for the
+   * text-ish types and WRONG for any structured one. A `composition` field exported as a string would look valid,
+   * validate against nothing useful, and be discovered by whoever consumed the schema rather than by us.
+   */
   var TYPE_TO_JSONSCHEMA = {
     text: { type: 'string' }, number: { type: 'number' }, date: { type: 'string', format: 'date' },
     choice: { type: 'string' }, range: { type: 'object', properties: { min: { type: 'number' }, max: { type: 'number' } } },
+    /* ⭐ "consists of" — the same `[{item, qty}]` shape the product-level `bom` facet uses. Deliberately identical:
+       one idea, one shape, so the traceability walk and mass-balance have a single thing to understand. */
+    composition: { type: 'array', items: { type: 'object',
+      properties: { item: { type: 'string' }, qty: { type: 'number' }, unit: { type: 'string' } },
+      required: ['item'] } },
   };
   function toJSONSchema(c, opts) {
     c = ensure(c); opts = opts || {};
@@ -426,7 +530,8 @@
 
   return {
     LEGS: LEGS, TYPES: TYPES, viaFor: viaFor, leg: leg,
-    STD_SCHEMES: STD_SCHEMES, PRICE_BASIS: PRICE_BASIS, PRICE_BY: PRICE_BY,
+    STD_SCHEMES: STD_SCHEMES, PRICE_BASIS: PRICE_BASIS, PRICE_BY: PRICE_BY, PRICE_ORIGIN: PRICE_ORIGIN,
+    priceProvenance: priceProvenance, priceIsCheckable: priceIsCheckable,
     DATATYPES: DATATYPES, METHODS: METHODS, FACETS: FACETS, PRICING_MODELS: PRICING_MODELS, PALETTE: PALETTE,
     ensure: ensure, toBase: toBase, resolvePrice: resolvePrice, routeChain: routeChain,
     deriveComputeJob: deriveComputeJob, canonicalInputs: canonicalInputs, validate: validate,

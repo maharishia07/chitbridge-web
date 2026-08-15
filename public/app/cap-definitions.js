@@ -79,6 +79,19 @@ function cbDefRegistries(){
     source: 'app/catalogue-model.js · PRICING_MODELS',
     rows: P && P.pricingModels ? P.pricingModels.map(function (k) { return { code: k, label: k }; }) : null
   });
+  /**
+   * ⭐ WHERE A PRICE IS REFERRED FROM — Athi, 2026-08-16: *"can we say where prices are refered from, or accessed
+   * from, example, url, website"*. `basis` said what KIND of source; this says WHERE, and that is the half that
+   * makes a price checkable by the other party rather than merely asserted.
+   */
+  out.push({
+    key: 'priceorigin', icon: '🔗', title: 'Price sources',
+    blurb: 'Where a price was referred from — and when it was read. A price with a named source, a link and a '
+         + 'reading date is evidence; one without is an assertion. Both are allowed; they must not look alike.',
+    source: 'app/catalogue-model.js · PRICE_ORIGIN',
+    rows: P && P.priceOrigin ? P.priceOrigin.map(function (o) {
+      return { code: o, label: cbDefOriginLabel(o), note: cbDefOriginNote(o) }; }) : null
+  });
   out.push({
     key: 'method', icon: '🧾', title: 'Selling methods',
     blurb: 'How a whole catalogue sells. One per catalogue.',
@@ -89,8 +102,11 @@ function cbDefRegistries(){
     key: 'datatype', icon: '🔤', title: 'Field datatypes',
     blurb: 'What a catalogue field can hold — the palette a field set is built from.',
     source: 'app/catalogue-model.js · DATATYPES',
+    /* ⚠️ The palette carries a `note` per datatype and this screen was dropping it — the note is the half that
+       says what the type is FOR ("expiry, harvest", "value + unit"), which is exactly what someone reading this
+       list needs. Showing the code and the label alone made the list look like jargon. */
     rows: P && P.datatypes ? P.datatypes.map(function (d) {
-      return { code: d.k || d, label: d.label || d.k || d }; }) : null
+      return { code: d.k || d, label: d.label || d.k || d, note: d.note || '' }; }) : null
   });
   out.push({
     key: 'standard', icon: '📐', title: 'Standards',
@@ -98,11 +114,24 @@ function cbDefRegistries(){
     source: 'app/catalogue-model.js · STD_SCHEMES',
     rows: P && P.standards ? P.standards.map(function (s) { return { code: s, label: s }; }) : null
   });
+  /**
+   * ⭐ FACETS GET THEIR MEANING SPELLED OUT — Athi, 2026-08-16: *"under field data type, consists of, means, this
+   * item consists of the following item"*.
+   *
+   * He was reading `bom` and asking what it means. It IS "consists of" — a bill of materials,
+   * `bom:[{item, qty}]`, already in the model (catalogue-model.js line 10 and FACETS). But a screen that prints
+   * the bare code `bom` is a screen only its author can read, and the question proved it: the concept was
+   * present and unfindable.
+   *
+   * ⚠️ THE CODE STILL SHOWS. `bom` is what the data says and what anyone integrating will see; renaming it here
+   * would make this screen disagree with the payload. Code AND plain words, not one or the other.
+   */
   out.push({
     key: 'facet', icon: '🧩', title: 'Catalogue facets',
-    blurb: 'The parts a catalogue definition is made of.',
+    blurb: 'The parts a catalogue definition is made of. A catalogue declares which of these it uses.',
     source: 'app/catalogue-model.js · FACETS',
-    rows: P && P.facets ? P.facets.map(function (f) { return { code: f, label: f }; }) : null
+    rows: P && P.facets ? P.facets.map(function (f) {
+      return { code: f, label: cbDefFacetLabel(f), note: cbDefFacetNote(f) }; }) : null
   });
 
   return out;
@@ -119,6 +148,53 @@ function cbDefModelNote(k){
     pick:    'One or none. No quantity control at all; a second press must not make it two.',
     offer:   'A quantity AND your price, inside the seller’s band. Two facts about one line.'
   })[k] || '';
+}
+/**
+ * What each facet MEANS, in the words a person would use. ⚠️ Prose about the model, not a second copy of it —
+ * `catalogue-model.js` owns what a facet does; if these ever disagree, it is right and this is stale.
+ */
+function cbDefFacetLabel(f){
+  return ({
+    identity: 'Identity — what it is',
+    variants: 'Variants — sizes, grades, finishes',
+    units:    'Units — base unit and conversions',
+    standards:'Standards — HS, GS1, cited by reference',
+    media:    'Media — images and video',
+    bom:      'Consists of — what it is made from',
+    pricing:  'Pricing — how the price is arrived at',
+    loop:     'Loop — what comes back (returns, empties)',
+    feedback: 'Feedback — what buyers said'
+  })[f] || f;
+}
+function cbDefFacetNote(f){
+  return ({
+    /* ⭐ Athi's own words for it: "this item consists of the following item". */
+    bom:      'A bill of materials — this item consists of these items, each with a quantity. It is what makes a finished good traceable back to what went into it, and what mass-balance reconciles across parties.',
+    variants: 'One product, several purchasable lines. The variant is what distinguishes them — 1L / 4L / 10L.',
+    units:    'The base unit and the factors to convert into it. ⚠️ This is what delivery matching compares; a line with no unit cannot be matched against a delivery.',
+    loop:     'The returnable half of a trade — crates, drums, pallets that come back.',
+    pricing:  'Declared today; ⚠️ not yet evaluated at order time.'
+  })[f] || '';
+}
+function cbDefOriginLabel(o){
+  return ({
+    url:       'A web page',
+    publisher: 'A named publisher',
+    exchange:  'An exchange or index',
+    system:    'An ERP or price list',
+    contract:  'A signed contract',
+    manual:    'Set by hand'
+  })[o] || o;
+}
+function cbDefOriginNote(o){
+  return ({
+    url:       'A link anyone can open. ⚠️ Recorded, never fetched at seal — a chit whose total depends on a third-party page being up is a chit two parties can compute differently.',
+    publisher: 'A mandi board, a trade journal, an association circular. Carries the publisher and the date read.',
+    exchange:  'A traded reference — a symbol and a reading date. Without the date a market price cannot be checked against anything.',
+    system:    'Your own ERP or a price-list id. The ref is the identifier there.',
+    contract:  'A number you agreed. The ref is the contract number, which is what makes it findable later.',
+    manual:    'You set it. Honest and unverifiable — which is fine, as long as it does not look like the others.'
+  })[o] || '';
 }
 function cbDefOfferLabel(k){
   return ({
