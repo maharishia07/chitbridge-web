@@ -369,7 +369,60 @@
    * ADDITIVE and never reorders the list beneath the hand that is adding to it — the existing code deliberately
    * fixes lines-first vs picker-first once per entry to the step, and that restraint is correct.
    */
-  function committedHTML(ns, lines, noteFn, attachFn, chips) {
+  /**
+   * ⭐⭐ OFFERS, EVALUATED AT ORDER TIME — the last unwired piece of the arc.
+   *
+   * `offers.js` has been pure and proven (27/0) and called by nothing. This is where it gets called: over the
+   * lines that are actually ON the chit, not over the staging cart.
+   *
+   * ⚠️ THE CART STAGES; THE ORDER IS WHAT AN OFFER APPLIES TO. Evaluating the cart would show a discount against
+   * a basket nobody has committed, and it would move every time a quantity is nudged — a number that flickers is
+   * a number nobody trusts. The offer is a statement about the obligation being created.
+   *
+   * ⚠️ EVERY ADJUSTMENT AND EVERY *SKIPPED* OFFER IS RENDERED. `evaluate()` returns `notes` (the shortfalls —
+   * "₹300 more needed") and `skipped` (expired, wrong region, no line qualifies). Showing only what applied
+   * would hide the two most useful things a person can be told: what they nearly had, and why an offer they
+   * expected did not fire.
+   */
+  function offersHTML(ns, lines, offers, sym) {
+    if (!offers || !offers.length || !root.CBOffers) return '';
+    var ev;
+    try {
+      ev = root.CBOffers.evaluate({
+        lines: lines.map(function (l, i) {
+          return { key: String(i), item_id: l.item_id, sku: l.sku, category: l.category,
+                   qty: Number(l.qty || l.quantity || 0), unitPrice: Number(l.price || 0) };
+        }),
+        offers: offers,
+        money: function (n) { return money(ns, n); }
+      });
+    } catch (e) {
+      /* ⚠️ A PRICING ENGINE THAT THROWS MUST NOT TAKE THE ORDER DOWN. The lines and their prices are already
+         correct without it; an offer failing to evaluate costs a discount, not the ability to order. */
+      return '<div class="cbcat-offnote">Offers could not be applied just now — the prices above stand.</div>';
+    }
+    if (!ev.adjustments.length && !ev.notes.length) return '';
+
+    var rows = ev.adjustments.map(function (a) {
+      return '<div class="cbcat-offrow"><span class="cbcat-offn">' + esc(a.label) + '</span>'
+        + '<span class="cbcat-offw">' + esc(a.why) + '</span>'
+        + '<span class="cbcat-offa">' + esc(money(ns, a.amount)) + '</span></div>';
+    }).join('');
+    /* ⭐ "You are ₹300 away" is the single most useful thing a cart can say, and the engine already knows it. */
+    var notes = ev.notes.map(function (nte) {
+      return '<div class="cbcat-offrow note"><span class="cbcat-offn">' + esc(nte.label) + '</span>'
+        + '<span class="cbcat-offw">' + esc(nte.why) + '</span></div>';
+    }).join('');
+
+    return '<div class="cbcat-offers" data-testid="cbcat-offers">'
+      + '<div class="cbcat-offhd">Offers applied</div>' + rows + notes
+      + (ev.adjustments.length
+          ? '<div class="cbcat-offtot"><span>After offers</span><span>' + esc(money(ns, ev.total)) + '</span></div>'
+          : '')
+      + '</div>';
+  }
+
+  function committedHTML(ns, lines, noteFn, attachFn, chips, offers) {
     if (!lines || !lines.length) return '';
     return '<div class="cbcat-onchit" data-testid="cbcat-onchit">'
       + '<div class="cbcat-onchit-t">On the chit · ' + lines.length + ' line' + (lines.length === 1 ? '' : 's') + '</div>'
@@ -416,6 +469,10 @@
             + '<span class="cbcat-li-p">' + esc(money(ns, q * p)) + '</span></div>'
             + note + (att ? '<div class="cbcat-attrow">' + att + '</div>' : '') + '</div>';
         }).join('')
+      /* ⭐ The offer breakdown, under the lines it applies to. ⚠️ My first wiring of this matched an identical
+         `+ '</div>';` earlier in the file and landed in the wrong function — the engine ran, returned two
+         adjustments, and nothing rendered. An anchored replace on a repeated string is not an anchor. */
+      + offersHTML(ns, lines, offers)
       + '</div>';
   }
 
@@ -490,7 +547,7 @@
      */
     if (typeof setTimeout === 'function') setTimeout(function () { observe(); }, 0);
     return '<div class="cbcat-wrap" data-testid="cbcat-' + esc(cart.ns) + '">'
-      + committedHTML(cart.ns, opts.committed, opts.noteFn, opts.attachFn, opts.chips)
+      + committedHTML(cart.ns, opts.committed, opts.noteFn, opts.attachFn, opts.chips, opts.offers)
       + '<div class="cbcat-hdr">'
       /**
        * ⚠️⚠️ `cart:false` MEANS THE HOST ALREADY OWNS AN ELEMENT WITH THIS ID — DO NOT RENDER A SECOND ONE.
@@ -754,6 +811,15 @@
       '.cbcat-li{display:flex;gap:8px;padding:3px 0;font-size:12.5px}',
       '.cbcat-li-n{flex:1;min-width:0}',
       '.cbcat-li-q,.cbcat-li-p{font-variant-numeric:tabular-nums;white-space:nowrap}',
+      '.cbcat-offers{margin-top:8px;padding-top:8px;border-top:1px dashed #d8e4f3}',
+      '.cbcat-offhd{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#2c7a43;margin-bottom:4px}',
+      '.cbcat-offrow{display:flex;align-items:baseline;gap:8px;padding:2px 0;font-size:12px}',
+      '.cbcat-offrow.note{color:#8a5a1e}',
+      '.cbcat-offn{font-weight:700;flex:none}',
+      '.cbcat-offw{flex:1;min-width:0;color:var(--grey,#7C8085);font-size:11.5px}',
+      '.cbcat-offa{font-variant-numeric:tabular-nums;font-weight:700;color:#2c7a43;white-space:nowrap}',
+      '.cbcat-offtot{display:flex;justify-content:space-between;font-size:12.5px;font-weight:800;padding-top:5px;margin-top:4px;border-top:1px solid #d8e4f3;font-variant-numeric:tabular-nums}',
+      '.cbcat-offnote{font-size:11.5px;color:#8a5a1e;padding:6px 0 2px}',
       '.cbcat-li-p{font-weight:700}',
       '.cbcat-liwrap{padding:2px 0}',
       '.cbcat-note{display:block;width:100%;box-sizing:border-box;margin:3px 0 5px;padding:6px 9px;',

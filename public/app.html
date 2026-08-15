@@ -740,7 +740,19 @@ const EP = {
   supCatalogue:    {m:"GET",   p:"/api/relationships/suppliers/:sid/catalogue", ok:"✓"},
   readinessOf:     {m:"GET",   p:"/api/governance/readiness/:bridge_id", ok:"y"},// their catalogue → compose line items
   /* DEFINITIONS (b160) — the entity's own named things. Loose while referenced, FROZEN BY VALUE when stamped. */
-  defList:         {m:"GET",   p:"/api/definitions",             ok:"y"},   // ?kind= ?status= ?all=1
+  /**
+   * ⚠️⚠️ THE QUERY IS IN THE PATH, NOT IN `params`. api() substitutes `:id`-style PATH tokens; it does not append
+   * leftover params as a query string. Passing {kind:'offer'} therefore requested `/api/definitions` with NO
+   * query at all — silently — and compose evaluated an ORDER MODEL as an offer, which the engine correctly
+   * rejected as "unknown kind: pack". Proven by intercepting fetch: the URL had no `?`.
+   *
+   * ⚠️ AND I NEARLY MISDIAGNOSED IT TWICE — first as a stale client cache, then as a server filter bug. Both were
+   * wrong; the server filters correctly when asked directly. Watching the request settled it in one call, where
+   * two rounds of reasoning had not.
+   */
+  defList:         {m:"GET",   p:"/api/definitions",             ok:"y"},   // ?all=1 via defListAll
+  defListLive:     {m:"GET",   p:"/api/definitions?kind=offer&status=live", ok:"y"},   // the offers a cart applies
+  defListAll:      {m:"GET",   p:"/api/definitions?all=1",       ok:"y"},   // the shelf, incl. retired
   defGet:          {m:"GET",   p:"/api/definitions/:id",         ok:"y"},   // + full version history
   defAdd:          {m:"POST",  p:"/api/definitions",             ok:"y"},
   defSave:         {m:"PUT",   p:"/api/definitions/:id",         ok:"y"},   // rules change => NEW VERSION
@@ -2126,6 +2138,9 @@ function ccCatPickHTML(){
   return CBCatUI.pickerHTML(c, {
     cart:false, committed: CC.items, noteFn:'ccSetLineNote',
     attachFn:'ccAddItemFiles', chips:ccItemChips,
+    /* ⭐ THE OFFERS THAT APPLY TO THIS ORDER — evaluated over the committed lines, not the staging cart. See
+       ccLoadOffers: only LIVE definitions, because a draft offer is one you are still writing. */
+    offers: CC.offers || [],
     checkoutLabel:'+ Add to the chit',
     emptyHint:'Press + on what this chit is for',
     empty: UI._supplier ? 'Nothing in their catalogue matches that.' : 'Nothing in your catalogue matches that.',
@@ -2192,6 +2207,29 @@ function ccAddPicked(){
  * mistake `search()` avoids by repainting the list and never the picker. The value is already on screen because
  * they typed it; state only has to catch up.
  */
+/**
+ * ⭐⭐ ccLoadOffers — the entity's LIVE offers, shaped for the engine.
+ *
+ * ⚠️ LIVE ONLY. A draft offer is one you are still writing; applying it to a real order would give a customer a
+ * discount you had not decided to give, and "never apply what was not earned" cuts both ways. Retired ones are
+ * excluded by the route's own default.
+ *
+ * ⚠️ FAILURE IS SILENT HERE, AND ONLY HERE. If the shelf cannot be read, compose still works and the prices
+ * stand — an offer is a reduction ON TOP of a correct order, so losing it costs a discount, not the ability to
+ * trade. That is the opposite of the freeze at the mint, which MUST fail loudly: there, a missing term means a
+ * chit is stamped without something it claims to carry.
+ */
+async function ccLoadOffers(){
+  try {
+    var r = await api('defListLive');
+    CC.offers = ((r && r.definitions) || []).map(function(d){
+      /* The engine takes { id, kind, ...rules }; a definition stores { definition_id, sub_kind, rules }. The
+         definition_id is carried as `id` so an applied offer can be cited — and therefore FROZEN — by id. */
+      return Object.assign({ id: d.definition_id, kind: d.sub_kind, label: d.name }, d.rules || {});
+    });
+  } catch (e) { CC.offers = []; }
+  ccRenderCatPick();
+}
 function ccSetLineNote(i, v){
   if(!CC.items || !CC.items[i]) return;
   CC.items[i].comment = String(v == null ? '' : v).slice(0, 300);
@@ -2215,6 +2253,9 @@ async function compose(prefill){ UI.drawer=false; CC={items:(prefill&&prefill.it
   else { STORE.catalogue = STORE.catalogue||[]; UI._catState = (STORE.catalogue.length ? 'ready' : 'loading'); }
   // A fresh compose is a fresh cart: whatever was ticked in the LAST chit is not an instruction about this one.
   ccCartRelease(); ccCartSync();
+  /* ⭐ Offers load in the BACKGROUND, deliberately unawaited — the picker must open at once, and an offer is a
+     reduction on top of a correct order rather than a precondition for one. ccLoadOffers repaints when it lands. */
+  CC.offers = []; ccLoadOffers();
   UI._ccFlow = ccStepsFor();
   /* ⭐ THE CART CHIP LIVES IN THE HEADER, level with the ✕ — Athi, 2026-08-15: *"cart icon can be on the top,
      where x is there"*. `right:42px` clears the ✕ (26px wide at right:9px). The slot is always in the DOM so
@@ -2547,6 +2588,29 @@ async function submitCompose(isDraft){
   CC.items.forEach(function(it){ (it.definition_ids||[]).forEach(function(id){
     if (id && _defIds.indexOf(id) < 0) _defIds.push(id); }); });
   (CC.definition_ids||[]).forEach(function(id){ if (id && _defIds.indexOf(id) < 0) _defIds.push(id); });
+
+  /**
+   * ⭐⭐ AN OFFER THAT ACTUALLY APPLIED IS CITED, AND THEREFORE FROZEN.
+   *
+   * ⚠️ ONLY THE ONES THAT FIRED. The shelf may hold five live offers and this order may qualify for one; freezing
+   * all five would put terms on the chit that were never applied to it — and a chit listing an offer it did not
+   * receive is worse than a chit listing none, because it reads as a promise.
+   *
+   * ⚠️ Re-evaluated HERE rather than read off the screen. What is rendered is a view; what is sent must be
+   * computed from the lines actually being sent, or a stale repaint could ship a discount for a basket that has
+   * since changed.
+   */
+  try {
+    if ((CC.offers||[]).length && typeof CBOffers !== 'undefined') {
+      var _ev = CBOffers.evaluate({
+        lines: CC.items.map(function(it,i){ return { key:String(i), qty:+it.qty||0, unitPrice:+it.price||0 }; }),
+        offers: CC.offers
+      });
+      _ev.adjustments.forEach(function(a){
+        if (a.offer_id && _defIds.indexOf(a.offer_id) < 0) _defIds.push(a.offer_id);
+      });
+    }
+  } catch (e) { /* an offer engine failure must not block a send — the lines and prices stand on their own */ }
 
   const line_items=CC.items.map(it=>({
     particulars:it.particulars,

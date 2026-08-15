@@ -324,7 +324,10 @@ async function cbDefLoad(force){
   if (CBDEF.loading) return;
   CBDEF.loading = true; CBDEF.err = '';
   try {
-    var r = await api('defList', { params: { all: 1 } });
+    /* ⚠️ `defListAll`, not defList with params — api() substitutes PATH tokens and silently drops leftover
+       params, so `{all:1}` never reached the server. The shelf was therefore hiding retired definitions by
+       accident rather than by request, which happened to look right. */
+    var r = await api('defListAll');
     CBDEF.mine = (r && r.definitions) || [];
   } catch (e) {
     /* ⚠️ A LOAD FAILURE IS SAID, NOT SWALLOWED INTO AN EMPTY SHELF. "you have none" and "we could not ask" look
