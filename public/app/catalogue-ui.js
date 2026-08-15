@@ -41,7 +41,7 @@
      before being written. A colliding top-level declaration throws at load, the <script> still fires onload, the
      loader believes the capability arrived, and the screen renders a stub with nothing anywhere naming the cause.
      That bug cost hours on 2026-08-15 (`MSG` in cap-messages) and it is invisible to `node --check`. */
-  var CBCAT = { io: null, seq: 0 };
+  var CBCAT = { io: null, moreIo: null, seq: 0, win: {} };
 
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
@@ -78,18 +78,37 @@
   }
 
   /**
-   * ⭐ THE MEDIA COLUMN IS DECIDED PER CATALOGUE, NOT PER ROW — and this is the one place the drawing and the
-   * implementation deliberately differ.
+   * ⭐⭐ THE LETTER TILE — Athi, 2026-08-15: *"can we create a box with different colors rendering with the first
+   * letter of the product"*.
    *
-   * A box that appears on some rows and not others makes the list jump as media loads and makes two rows
-   * uncomparable, so within a catalogue it must be all-or-nothing. But the product has ZERO images today, so
-   * rendering it unconditionally would add 52px of empty grey to every row of every catalogue on all four
-   * surfaces, forever, in exchange for nothing. So: if no item in THIS catalogue declares media, no column.
-   * The first upload brings it in, for that catalogue only.
+   * This retires the compromise that came before it. The column used to be hidden until a catalogue had a real
+   * photograph, because the alternative was 52px of empty grey on every row for nothing. A coloured initial is
+   * not nothing: it gives a text-only list the visual rhythm that makes it scannable, it distinguishes
+   * "Tamarind" from "Toor Dal" at a glance, and it does it TODAY — the product has zero images and the schema
+   * for them is not built (see SPEC-object-storage.md).
+   *
+   * So the column is now always present, and a real photograph simply replaces the tile when one exists.
+   *
+   * ⚠️ THE COLOUR IS DERIVED, NOT RANDOM. Hue comes from a hash of the name, so a product is the same colour on
+   * every screen, every session, for every party — which is what makes it a recognition aid rather than
+   * decoration. Random-per-render would be actively worse than grey: it would teach the eye a pattern that is
+   * not true.
+   *
+   * ⚠️ SATURATION AND LIGHTNESS ARE FIXED so white text stays legible on every hue, and the yellow-green band
+   * (where a given lightness reads much brighter) is darkened. A tile whose letter cannot be read is a worse
+   * empty box than the empty box.
    */
-  function hasMedia(rows) {
-    for (var i = 0; i < rows.length; i++) if (rows[i].type !== 'product' && mediaOf(rows[i])) return true;
-    return false;
+  function tileFor(name) {
+    var s = String(name == null ? '' : name).trim();
+    var h = 0;
+    for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+    var hue = h % 360;
+    /* 40°–190° is the yellow→green stretch that reads bright at a given lightness; drop it so contrast holds. */
+    var light = (hue > 40 && hue < 190) ? 34 : 44;
+    return {
+      bg: 'hsl(' + hue + ',38%,' + light + '%)',
+      letter: (s.charAt(0) || '?').toUpperCase()
+    };
   }
 
   /**
@@ -148,7 +167,7 @@
   }
 
   /* ── one row ─────────────────────────────────────────────────────────────────────────────────────────────── */
-  function rowHTML(cart, r, opts, withMedia) {
+  function rowHTML(cart, r, opts) {
     var d = dataOf(r), id = r.item_id, q = cart.qtyOf(id);
     /**
      * ⚠️⚠️ THE PRICE COMES FROM CBCart.unitPrice — ns-first, off the ROOT export. It is NOT on the handle.
@@ -167,15 +186,20 @@
     var name = r.variant || d.name || d.product || 'item';
     var hint = hintOf(r);
 
-    var media = withMedia ? (function () {
+    var media = (function () {
       var m = mediaOf(r);
-      if (!m) return '<span class="cbcat-thumb"><span class="cbcat-nomedia" title="no photograph">▣</span></span>';
+      if (!m) {
+        /* No photograph — the derived letter tile, which is a real visual rather than a placeholder for one. */
+        var t = tileFor(name);
+        return '<span class="cbcat-thumb cbcat-tile" style="background:' + t.bg + '" aria-hidden="true">'
+          + esc(t.letter) + '</span>';
+      }
       /* ⭐ data-src, NOT src. The observer fills it when the row nears the viewport. `loading="lazy"` is set too
          as a belt-and-braces for the case where the observer never runs. */
       return '<span class="cbcat-thumb cbcat-skel">'
         + '<img data-src="' + esc(m.src) + '" alt="" loading="lazy" decoding="async">'
         + (m.kind === 'video' ? '<span class="cbcat-play">▶</span>' : '') + '</span>';
-    })() : '';
+    })();
 
     /**
      * The price column. An offer REPLACES the asking price in the maths, so it replaces it here too — with the
@@ -200,8 +224,10 @@
     var price = u.offered
       ? '<s class="cbcat-was">' + esc(money(cart.ns, u.asking)) + '</s>' + offerInput
       : (offerInput || (isFinite(u.amount) ? esc(money(cart.ns, u.amount)) : '<span class="cbcat-noprice">no price</span>'));
-    /* The line total, ONLY once there is a quantity to multiply by — a price × 1 restated is noise. */
-    var lineTotal = (q && isFinite(u.amount))
+    /* The line total, ONLY once there is a quantity to MULTIPLY by — `q > 1`, not `q`. At quantity 1 it prints
+       the same number twice under itself, which is exactly the noise the rule was written to avoid; I had the
+       comment right and the condition wrong, and it showed as ₹65 over ₹65 on screen. */
+    var lineTotal = (q > 1 && isFinite(u.amount))
       ? '<div class="cbcat-linetotal">' + esc(money(cart.ns, u.amount * q)) + '</div>' : '';
 
     return '<div class="cbcat-row' + (q ? ' on' : '') + (r.variant ? ' cbcat-var' : '') + '"'
@@ -221,17 +247,89 @@
       + '<span class="cbcat-all" onclick="CBCart.group(\'' + esc(cart.ns) + '\',' + i + ')">add all</span></div>';
   }
 
+  /**
+   * ⭐⭐ THE LIST IS WINDOWED — Athi, 2026-08-15: *"you can load max of 25 to 50 line item at once and you keep
+   * loading the rest according to the swipe"*.
+   *
+   * A catalogue of 56 rows is 3,008px of DOM built on every single repaint — and a repaint happens on every `+`,
+   * every `−`, every keystroke in the search box. A real wholesale catalogue is not 56 rows, it is thousands,
+   * and at that size the stepper would visibly lag behind the finger pressing it.
+   *
+   * So: `pageSize` rows (40), then a sentinel at the bottom. When the sentinel comes into view the window grows
+   * and the list repaints. This is the standing on-demand rule applied to the list itself — never pre-load, and
+   * build only what someone is actually looking at.
+   *
+   * ⚠️ THE WINDOW RESETS WHEN THE QUERY CHANGES. Without that, searching after scrolling deep would render the
+   * first 200 rows of a 3-row result — mostly nothing — and the reset has to happen HERE, because search goes
+   * straight through CBCart.search to paintList and never passes through the picker.
+   *
+   * ⚠️ `content-visibility:auto` on the row is NOT a substitute. That skips PAINT for off-screen rows; this
+   * skips BUILDING them. The first costs layout, the second costs string concatenation and innerHTML on every
+   * keystroke — and only the second is what makes a large catalogue feel slow.
+   */
+  function windowOf(cart, opts, total) {
+    var st = CBCAT.win[cart.ns] || (CBCAT.win[cart.ns] = { shown: 0, q: null });
+    var q = (cart.state() || {}).q || '';
+    var page = Number(opts.pageSize) || 40;
+    if (st.q !== q) { st.q = q; st.shown = page; }        // a new query starts at the top, always
+    if (!st.shown) st.shown = page;
+    return { shown: Math.min(st.shown, total), page: page, more: st.shown < total, total: total };
+  }
+  function growWindow(ns) {
+    var st = CBCAT.win[ns]; if (!st) return;
+    st.shown += (st.page || 40);
+    if (root.CBCart && root.CBCart.paintList) root.CBCart.paintList(ns);
+  }
+
   function listHTML(cart, opts) {
     var rows = cart.rows() || [];
     if (!rows.length) {
       return '<div class="cbcat-empty">' + esc(opts.empty || 'Nothing matches that.') + '</div>';
     }
-    var withMedia = hasMedia(rows);
+    var w = windowOf(cart, opts, rows.length);
     var out = '';
-    for (var i = 0; i < rows.length; i++) {
-      out += rows[i].type === 'product' ? groupHTML(cart, rows[i], i) : rowHTML(cart, rows[i], opts, withMedia);
+    for (var i = 0; i < w.shown; i++) {
+      out += rows[i].type === 'product' ? groupHTML(cart, rows[i], i) : rowHTML(cart, rows[i], opts);
+    }
+    if (w.more) {
+      /* The sentinel says how many are left, so a long catalogue is honest about its size rather than just
+         ending. observe() wires it to grow the window when it is scrolled to. */
+      out += '<div class="cbcat-more" data-cbcat-more="' + esc(cart.ns) + '" data-testid="cbcat-more">'
+        + '<span class="cbcat-spin"></span>' + (w.total - w.shown) + ' more</div>';
     }
     return out;
+  }
+
+  /**
+   * ⭐ THE SKELETON — what the catalogue looks like while it is still arriving.
+   *
+   * Athi: *"instead of another different page, show loading catalogue page and then load the item"*. Before this
+   * the cold path replaced the whole step with the words "Loading your catalogue…" for 2.2 SECONDS (measured),
+   * and then swapped in a completely different screen. Two different layouts for one action.
+   *
+   * Now the same layout appears immediately — search box in its place, rows in theirs — and the rows fill in.
+   * Nothing moves when the data lands, which is the entire point: a person can start reading, and aim at the
+   * search box, before the first row exists.
+   */
+  function skeletonHTML(opts) {
+    opts = opts || {};
+    ensureCss();
+    var n = Number(opts.rows) || 8, out = '';
+    for (var i = 0; i < n; i++) {
+      out += '<div class="cbcat-row cbcat-skelrow">'
+        + '<span class="cbcat-thumb cbcat-skel"></span>'
+        + '<span class="cbcat-meat"><span class="cbcat-skelbar" style="width:' + (44 + (i * 7) % 38) + '%"></span>'
+        + '<span class="cbcat-skelbar cbcat-skelbar-sm" style="width:18%"></span></span>'
+        + '<span class="cbcat-pr"><span class="cbcat-skelbar" style="width:70%"></span></span>'
+        + '<span class="cbcat-ctl"><span class="cbcat-skeldot"></span></span>'
+        + '</div>';
+    }
+    return '<div class="cbcat-wrap">'
+      + '<div class="cbcat-hdr">'
+      +   '<input class="cbcat-q" disabled placeholder="' + esc(opts.placeholder || 'Search this catalogue…') + '">'
+      + '</div>'
+      + '<div class="cbcat-list" aria-busy="true">' + out + '</div>'
+      + '</div>';
   }
 
   /**
@@ -292,13 +390,33 @@
 
   /* The two entry points CBCart's renderer hook calls. They paint INTO the element it already owns, so there is
      one repaint path rather than two competing ones. */
+  /**
+   * ⚠️⚠️ CREATE-TIME OPTIONS FIRST, RENDER-TIME OPTIONS ON TOP — and this order is a bug fix, not a preference.
+   *
+   * Stashing the renderer's options on the handle in pickerHTML leaves a WINDOW: anything that repaints before
+   * the picker has rendered once gets `{}`. On 2026-08-15 that put an inert grey cart permanently in compose's
+   * modal title bar — `hideEmptyChip` had not been stashed yet when the first paintBar ran, and nothing ever
+   * repainted it while the cart was still empty. A control that never does anything, parked where the eye checks
+   * first.
+   *
+   * The screen's CBCart.create() options are available from the moment the cart exists, so they are the floor.
+   * That makes rendering independent of WHEN it happens, which is the only way to be sure with three hosts that
+   * each paint differently.
+   */
+  function optsFor(cart) {
+    var made = (cart.state() || {}).opts || {};
+    var o = {}, k;
+    for (k in made) o[k] = made[k];
+    var late = cart.__cbcatOpts || {};
+    for (k in late) o[k] = late[k];
+    return o;
+  }
   function listInto(el, cart) {
-    var o = cart.__cbcatOpts || {};
-    el.innerHTML = listHTML(cart, o);
+    el.innerHTML = listHTML(cart, optsFor(cart));
     observe(el);
   }
   function barInto(el, cart) {
-    el.innerHTML = chipHTML(cart, cart.__cbcatOpts || {});
+    el.innerHTML = chipHTML(cart, optsFor(cart));
   }
 
   function pickerHTML(cart, opts) {
@@ -326,7 +444,17 @@
     return '<div class="cbcat-wrap" data-testid="cbcat-' + esc(cart.ns) + '">'
       + committedHTML(cart.ns, opts.committed)
       + '<div class="cbcat-hdr">'
-      +   '<span id="' + esc(barId) + '" class="cbcat-chipslot">' + chipHTML(cart, opts) + '</span>'
+      /**
+       * ⚠️⚠️ `cart:false` MEANS THE HOST ALREADY OWNS AN ELEMENT WITH THIS ID — DO NOT RENDER A SECOND ONE.
+       *
+       * Compose puts the chip slot in the modal title bar beside the ✕, and that slot carries `cbcartbar_cc`.
+       * When this branch was dropped during the id refactor, the row rendered its own slot with the SAME id:
+       * two elements, one id, and `getElementById` returns whichever comes first — so `paintBar` updated one
+       * chip and left the other frozen at whatever it said when the modal opened. Two carts on screen
+       * disagreeing about what is in the cart, which is precisely the thing this whole helper exists to prevent.
+       */
+      +   (opts.cart === false ? ''
+          : '<span id="' + esc(barId) + '" class="cbcat-chipslot">' + chipHTML(cart, opts) + '</span>')
       +   '<input class="cbcat-q" placeholder="' + esc(opts.placeholder || 'Search this catalogue…') + '"'
       +   ' value="' + esc((cart.state() || {}).q || '') + '"'
       +   (opts.searchTestid ? ' data-testid="' + esc(opts.searchTestid) + '"' : '')
@@ -341,8 +469,14 @@
   }
 
   function chipHTML(cart, opts) {
-    var n = cart.lines(), T = cart.total(), sym = opts.sym || '₹';
-    if (!n && opts.hideEmptyChip) return '';
+    var n = cart.lines(), T = cart.total();
+    /**
+     * ⚠️ BOTH SPELLINGS, BECAUSE THE OPTION CROSSES A BOUNDARY. `barHideEmpty` is what a screen passes to
+     * CBCart.create (cart-ui's own barHTML reads it); `hideEmptyChip` is what it passes to this renderer. Compose
+     * set the first and this read only the second, so an inert grey cart sat permanently in the modal title bar —
+     * a control that never does anything, parked in the one place the eye checks first.
+     */
+    if (!n && (opts.hideEmptyChip || opts.barHideEmpty)) return '';
     /**
      * ⚠️ `cbcart-bar` AND `cart-count-<ns>` ARE CARRIED OVER DELIBERATELY. They are published hooks —
      * render-smoke.spec.js clicks the class, order-steps.spec.js asserts the badge — and this chip IS the cart
@@ -388,6 +522,34 @@
       }, { rootMargin: '120px' });
     }
     (rootEl || document).querySelectorAll('img[data-src]').forEach(function (im) { CBCAT.io.observe(im); });
+    observeMore(rootEl);
+  }
+
+  /**
+   * The "N more" sentinel. Scrolling to it grows the window — the swipe IS the trigger, no button to press.
+   *
+   * ⚠️ NO OBSERVER, NO PAGING — so the sentinel is also a CLICK target. If IntersectionObserver is missing, or
+   * the list is in a container the observer cannot see into, a person must still be able to reach row 41. A
+   * lazy list with no manual escape is a list with rows nobody can get to.
+   */
+  function observeMore(rootEl) {
+    var sentinels = (rootEl || document).querySelectorAll('[data-cbcat-more]');
+    if (!sentinels.length) return;
+    if (typeof IntersectionObserver === 'undefined') return;   // the onclick below still works
+    if (!CBCAT.moreIo) {
+      CBCAT.moreIo = new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) {
+          if (!e.isIntersecting) return;
+          var ns = e.target.getAttribute('data-cbcat-more');
+          CBCAT.moreIo.unobserve(e.target);
+          if (ns) growWindow(ns);
+        });
+      }, { rootMargin: '300px' });   // grow BEFORE the bottom is reached, so the list never visibly stops
+    }
+    sentinels.forEach(function (s) {
+      s.onclick = function () { growWindow(s.getAttribute('data-cbcat-more')); };
+      CBCAT.moreIo.observe(s);
+    });
   }
 
   function paint(cart, opts, hostId) {
@@ -437,6 +599,14 @@
       '.cbcat-thumb{flex:none;width:52px;height:52px;border-radius:9px;background:#ECE7DE;',
       'border:1px solid var(--line,#E7E2D8);overflow:hidden;position:relative;display:grid;place-items:center}',
       '.cbcat-thumb img{width:100%;height:100%;object-fit:cover;display:block}',
+      /* The letter tile. White on a derived mid-tone hue — see tileFor for why the colour is a hash and not a
+         random pick, and why the yellow-green band is darkened. */
+      /* ⚠️ NORMAL WEIGHT, not 800 — Athi: "keep the letter normal, bold letter not looking ok". He is right: the
+         tile is a quiet recognition aid sitting beside the product NAME, and a heavy letter competes with the
+         name for the same glance. The colour already does the identifying work; the letter only has to confirm
+         it. */
+      '.cbcat-tile{color:#fff;font-weight:400;font-size:20px;line-height:1;letter-spacing:.02em;',
+      'font-family:ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif;user-select:none}',
       '.cbcat-nomedia{font-size:17px;opacity:.4}',
       '.cbcat-play{position:absolute;inset:0;display:grid;place-items:center;background:rgba(15,46,61,.34);',
       'color:#fff;font-size:15px}',
@@ -474,10 +644,36 @@
       '.cbcat-cnt{font-size:11px;color:#6a707a}',
       '.cbcat-all{font-size:11px;color:var(--blue,#3F66A6);font-weight:700;cursor:pointer;margin-left:auto}',
       '.cbcat-empty{padding:30px 8px;color:#6a707a;font-size:13.5px;text-align:center}',
+      /* the window sentinel */
+      '.cbcat-more{display:flex;align-items:center;justify-content:center;gap:8px;padding:14px 8px;',
+      'color:#6a707a;font-size:12px;cursor:pointer}',
+      '.cbcat-spin{width:12px;height:12px;border:2px solid #d7d2c8;border-top-color:#9aa3a7;border-radius:50%;',
+      'display:inline-block;animation:cbcatspin .7s linear infinite}',
+      '@keyframes cbcatspin{to{transform:rotate(360deg)}}',
+      '@media(prefers-reduced-motion:reduce){.cbcat-spin{animation:none}}',
+      /* the skeleton — the same row shape, so nothing moves when the real data lands */
+      '.cbcat-skelrow{pointer-events:none}',
+      '.cbcat-skelbar{display:block;height:11px;border-radius:5px;margin:3px 0;',
+      'background:linear-gradient(100deg,#ECE7DE 30%,#f6f2ea 50%,#ECE7DE 70%);background-size:220% 100%;',
+      'animation:cbcatsk 1.1s linear infinite}',
+      '.cbcat-skelbar-sm{height:8px;opacity:.7}',
+      '.cbcat-skeldot{display:inline-block;width:30px;height:30px;border-radius:50%;background:#ECE7DE}',
+      '@media(prefers-reduced-motion:reduce){.cbcat-skelbar{animation:none}}',
 
-      '.cbcat-commit{display:flex;align-items:center;gap:10px;padding:10px 12px;margin-top:8px;',
+      /**
+       * ⚠️⚠️ STICKY AT THE BOTTOM — because the first version reproduced the very bug it exists to fix.
+       *
+       * The strip renders after the list, and the list is 3,000px tall. So the one control that says "these
+       * lines are not on the chit yet" sat three thousand pixels below the thing you were reading — the exact
+       * below-the-fold failure the on-the-chit block was added to solve, recreated one element later. Visible on
+       * screen within a minute of wiring it: two items added, chip counting, and no commit strip anywhere.
+       *
+       * Pinned to the bottom of the scroll area it is always in view while you pick, which is when it matters.
+       */
+      '.cbcat-commit{position:sticky;bottom:0;z-index:6;display:flex;align-items:center;gap:10px;',
+      'padding:10px 12px;margin-top:8px;',
       'background:var(--gold-soft,#F7F1E4);border:1px solid var(--gold-line,#E8D9BC);border-radius:10px;',
-      'font-size:12.5px;color:#6b5a36}',
+      'font-size:12.5px;color:#6b5a36;box-shadow:0 -6px 12px -10px rgba(15,46,61,.45)}',
       '.cbcat-commit b{color:var(--ink,#0F2E3D)}',
       '.cbcat-commit button{margin-left:auto;background:var(--blue,#3F66A6);color:#fff;',
       'border:1px solid var(--blue,#3F66A6);border-radius:9px;padding:9px 15px;font-weight:700;font-size:13px;',
@@ -501,6 +697,7 @@
     pickerHTML: pickerHTML, listHTML: listHTML, rowHTML: rowHTML,
     commitHTML: commitHTML, committedHTML: committedHTML, chipHTML: chipHTML,
     paint: paint, observe: observe, ensureCss: ensureCss,
-    mediaOf: mediaOf, hasMedia: hasMedia, hintOf: hintOf
+    mediaOf: mediaOf, tileFor: tileFor, hintOf: hintOf,
+    skeletonHTML: skeletonHTML, growWindow: growWindow
   };
 })(typeof window !== 'undefined' ? window : this);

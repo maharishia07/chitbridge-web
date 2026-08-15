@@ -369,6 +369,22 @@
   .appwrap{flex:1;min-height:0;display:flex;flex-direction:column}
   .appwrap.m{background:#dcd5c8}
   .appwrap.m .shell{max-width:440px;width:100%;margin:0 auto;border-left:1px solid var(--line);border-right:1px solid var(--line)}
+  /* ⚠️ Modals live OUTSIDE .appwrap (#modalhost is its sibling), so the frame above cannot reach them — see
+     setVP. Without these two rules the compose modal renders 602px wide inside a 440px phone. The floating
+     assistant and the minimised-compose pill are pinned to the viewport for the same reason and get the same
+     treatment, or they sit in the grey margin beside the phone rather than on it. */
+  /* ⚠️ WIDTH ONLY. My first version also set `min-height:100%` and `.mbody{max-height:none}` to make it look
+     like a full-screen phone sheet — and that pushed the FOOTER off the bottom of the window, so Cancel /
+     Save draft / Next were unreachable without scrolling past 56 catalogue rows. On a real phone the existing
+     `@media(max-width:680px)` rules already keep the body scrolling inside a fixed height with the footer
+     pinned; the preview's job is to REPRODUCE the phone, not to invent a layout the phone does not have. */
+  body.vpmob .mover{padding:18px 0}
+  body.vpmob .modal,body.vpmob .modal.wide{width:440px;max-width:440px}
+  /* ⚠️ z-index 270 sits BELOW .mover (280) deliberately — see mountAssist. At 300 this pill covered compose's
+     primary button on a narrow screen and the wizard could not be advanced at all. */
+  #assistfab{position:fixed;right:16px;bottom:16px;z-index:270}
+  body.vpmob #assistfab{right:calc(50% - 220px + 16px)}
+  body.vpmob .composepill{left:calc(50% - 220px + 16px)}
   .divider{background:var(--line);display:flex;align-items:center;justify-content:center;cursor:col-resize;transition:background .15s}
   .divider:hover{background:var(--blue)}
   .divider .grip{width:3px;height:26px;border-radius:3px;background:var(--grey);opacity:.55}
@@ -959,7 +975,11 @@ function mountAssist(){ if(document.getElementById("assistfab")) return;
    * `.composepill` stays at 300 deliberately — it is bottom-LEFT and belongs to the minimised state, so it neither
    * collides with this nor needs to sit under a modal.
    */
-  const b=document.createElement("div"); b.id="assistfab"; b.style.cssText="position:fixed;right:16px;bottom:16px;z-index:270";
+  /* ⚠️ POSITIONING MOVED TO CSS (#assistfab in the stylesheet). It was an inline cssText, and an inline style
+     beats any stylesheet rule without !important — so the mobile-preview rule that pulls this inside the phone
+     frame was silently ignored and the pill sat in the grey margin beside it. A control positioned inline is a
+     control no stylesheet can ever reposition. */
+  const b=document.createElement("div"); b.id="assistfab";
   b.innerHTML=`<button data-testid="assistant-open" onclick="openAssist()" title="Ask the assistant" style="border:0;border-radius:24px;padding:10px 16px;background:#3F66A6;color:#fff;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.18);font-size:14px">💬 Assistant</button>`;
   document.body.appendChild(b);
   const h=document.createElement("div"); h.id="assisthost"; document.body.appendChild(h);
@@ -2056,7 +2076,11 @@ function ccSendAsOptions(){
 // renders the picker for the current state — loading / ready (list) / empty / load-failed; ccRenderCatPick refreshes it
 // in place once the fetch resolves. UI._catState drives which state is shown.
 function ccCatPickHTML(){
-  if(UI._catState==='loading') return `<div style="font-size:12px;color:var(--grey);display:flex;align-items:center;gap:7px;padding:3px 0"><span class="spin"></span> Loading your catalogue…</div>`;
+  /* ⭐ THE SAME LAYOUT WHILE IT LOADS — Athi: *"instead of another different page, show loading catalogue page
+     and then load the item"*. This used to swap in a one-line "Loading your catalogue…" and then swap in a
+     completely different screen 2.2 SECONDS later (measured on the cold path). Now the search box and the rows
+     are where they will be, greyed, and the real rows replace them in place. Nothing moves when the data lands. */
+  if(UI._catState==='loading') return CBCatalogue.skeletonHTML({ rows:8 });
   if(!(STORE.catalogue||[]).length)
     return `<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:10px 12px;font-size:12.5px;color:#6b5a36">${UI._catState==='error'?esc(MSG.catalogueLoadErr()):'Your catalogue is empty — a chit needs at least one line item. <a onclick="closeModal();navTo(\'catalogue\')" style="color:#3F66A6;cursor:pointer;font-weight:600">Add a product in Catalogue first &rarr;</a>'}</div>`;
   /**
@@ -2090,7 +2114,7 @@ function ccCatPickHTML(){
    * search box alone, full width.
    */
   return CBCatalogue.pickerHTML(c, {
-    cart:false, committed: CC.items,
+    cart:false, hideEmptyChip:true, committed: CC.items,
     checkoutLabel:'+ Add to the chit',
     emptyHint:'Press + on what this chit is for',
     empty: UI._supplier ? 'Nothing in their catalogue matches that.' : 'Nothing in your catalogue matches that.',
@@ -5317,8 +5341,31 @@ function modeRibbon(){
 /* viewport + divider prefs (local; durable home = entity Settings, backlog) */
 function lsGet(k,def){try{const v=localStorage.getItem(k);return v==null?def:v;}catch(e){return def;}}
 function lsSet(k,v){try{localStorage.setItem(k,v);}catch(e){}}
-function applyPrefs(){UI.vp=lsGet('cb_vp',(window.innerWidth<=820?'mob':'lap'));UI.lw=parseInt(lsGet('cb_lw',340),10)||340;UI.lh=parseInt(lsGet('cb_lh',300),10)||300;try{UI.voice=(localStorage.getItem('cb_voice')==='1');}catch(_){UI.voice=false;}}
-function setVP(v){UI.vp=v;lsSet('cb_vp',v);renderApp();}
+/* ⚠️ THE BODY CLASS IS SET HERE TOO, NOT ONLY IN setVP. `vp` is restored from localStorage on load, so someone
+   who left the app in Mobile and reloads never passes through setVP — and the modals would break out of the
+   frame again on exactly the reload that looks like a fresh start. */
+function applyPrefs(){UI.vp=lsGet('cb_vp',(window.innerWidth<=820?'mob':'lap'));
+  try{ document.body.classList.toggle('vpmob', UI.vp==='mob'); }catch(_){}UI.lw=parseInt(lsGet('cb_lw',340),10)||340;UI.lh=parseInt(lsGet('cb_lh',300),10)||300;try{UI.voice=(localStorage.getItem('cb_voice')==='1');}catch(_){UI.voice=false;}}
+/**
+ * ⚠️⚠️ THE MOBILE FRAME HAS TO REACH THE MODALS, AND A CLASS ON <body> IS THE ONLY THING THAT CAN.
+ *
+ * `.appwrap.m .shell{max-width:440px}` frames the app — but `#modalhost` is a SIBLING of `.appwrap`, not a
+ * descendant, so that rule can never touch it. Measured 2026-08-15 with Mobile on: shell 440px starting at
+ * x=93, modal 602px starting at x=7. Every modal — compose, the cart popup, the amend card, RAID,
+ * notifications — broke straight out of the phone and covered the whole window.
+ *
+ * ⚠️ THIS IS A PREVIEW BUG, NOT A CUSTOMER BUG, and the distinction is worth keeping straight: on a real phone
+ * the viewport IS ~400px and `.modal.wide{width:97vw}` already handles it. What was broken is the ability to
+ * EVALUATE mobile — and since compose, the cart and amend all live in modals, that was most of the product's
+ * real work invisible at the size most of it will be used at.
+ *
+ * The class goes on <body> because that is the only ancestor both `.appwrap` and `#modalhost` share.
+ */
+function setVP(v){
+  UI.vp=v; lsSet('cb_vp',v);
+  try{ document.body.classList.toggle('vpmob', v==='mob'); }catch(_){}
+  renderApp();
+}
 let DRAG=false;
 function startDrag(e){DRAG=true;e.preventDefault();document.body.style.userSelect='none';}
 function onDrag(e){
