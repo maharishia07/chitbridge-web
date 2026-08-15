@@ -119,7 +119,16 @@ function messagesScreen(){
       body = rows.map(function(m){
         var open = !!RPL.open[m.message_id];
         var isNew = !m.read_at;
-        var where = esc(m.manual_subject || m.auto_subject || 'chit') + (m.particulars ? ' · <b>' + esc(m.particulars) + '</b>' : '');
+        /**
+         * ⭐ A CLOSED CHIT IS MARKED, NOT HIDDEN. A message arriving on a completed or cancelled order is often
+         * the most important one in the inbox — "you marked it complete but the dal never came" arrives exactly
+         * then. Hiding it would hide the one that needed answering; showing the state tells you what you are
+         * walking into before you reply.
+         */
+        var closed = ['completed', 'cancelled', 'rejected'].indexOf(m.chit_status) >= 0;
+        var where = esc(m.manual_subject || m.auto_subject || 'chit')
+          + (closed ? ' <span style="font-size:10.5px;font-weight:700;color:#b0641c;background:#fdf4e9;border-radius:4px;padding:1px 5px">' + esc(m.chit_status) + '</span>' : '')
+          + (m.particulars ? ' · <b>' + esc(m.particulars) + '</b>' : '');
         return '<div data-testid="msg-row" style="border-bottom:1px solid var(--line);' + (isNew ? 'background:#f7fbff;' : '') + '">'
           + '<div onclick="msgOpen(&quot;' + m.message_id + '&quot;)" style="cursor:pointer;padding:11px 14px;display:flex;gap:10px;align-items:baseline">'
           +   '<span style="width:8px;flex:none">' + (isNew ? '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#2c5aa0"></span>' : '') + '</span>'

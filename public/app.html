@@ -584,6 +584,9 @@ const CFG = {
 /* Endpoint map. ✓ = matches build registry · ? = ASSUMED, confirm before live.
    Correct any path here in ONE place. */
 const EP = {
+  /* ⚠️ IN THE CORE TABLE, NOT cap-messages. The rail needs the unread count before that capability has ever been
+     loaded — the badge is the reason you go to the screen, so it cannot depend on having been there. */
+  msgCount:        {m:"GET",  p:"/api/folders/messages?count=1", ok:"y"},
   // --- assistant tier-1 LLM proxy — NOT BUILT yet; gated off via CFG.ASSIST_LLM. The model key stays SERVER-side. ---
   assist:          {m:"POST", p:"/api/assist",                  ok:"?"},  // backend proxies to the model (no-oversell prompt + library grounding)
   assistQuestions: {m:"GET",  p:"/api/assist/questions",        ok:"y"},  // DB-backed Q&A library, context-filtered (?context=screen). Single source; feeds the AI too.
@@ -1708,6 +1711,9 @@ function renderApp(){
     if(UI.nav==="network") loadNetwork();
     if(UI.nav==="intake" && typeof loadIntake==="function") loadIntake();
     if(UI.nav==="messages" && typeof loadMessages==="function" && typeof RPL!=="undefined" && RPL.data===null && !RPL.busy) loadMessages();
+    /* One integer, once per session — see ?count=1. `undefined` means "not yet asked", so an entity with zero
+       unread does not re-request on every paint. Same shape as the folder prefetch above. */
+    if(UI.replyCount===undefined && SESSION.token){ UI.replyCount=0; loadReplyCount(); }
     /* ⭐ MY WORK — every line assigned to me, across every chit (b143 + /folders/worklist). Lazy: the endpoint
        existed for weeks with nothing calling it, which is what made per-line assignment unusable. */
     if(UI.nav==="worklist"){ ensureCap("worklist").then(function(){ if(typeof wlLoad==="function" && !WL.data && !WL.busy) wlLoad(); }); }
@@ -1824,6 +1830,23 @@ function menuBtn(x){
   // A track is "on" only when NO folder is selected — otherwise the folder below it is the one you are in.
   const on=(key==='task'||key==='order') ? (UI.nav===key && !UI.folderSel) : UI.nav===key;
   const click=key==="compose"?`compose()`:`navTo('${key}')`;
+  /**
+   * ⭐ THE UNREAD BADGE — Athi, 2026-08-15: *"will it show how many unread new messages?"*
+   *
+   * ⚠️ AND THIS HAS TO SIT ABOVE THE EARLY RETURN BELOW. I first put it after, so `messages` returned on the
+   * generic line and never reached the branch: UI.replyCount was 3 and the rail showed nothing. A guard clause
+   * that returns for "everything except two keys" swallows every later special case silently.
+   *
+   * ⚠️ THE OLD 💬 BADGE HAS NEVER WORKED, separately. unreadCount() counts `m.unread` over chits already in
+   * memory, and mapApiMsg sets `unread:false` on every message it builds — so that number was structurally
+   * always zero on a badge that looked authoritative. This one reads b156's real server-side state.
+   */
+  if(key==='messages'){
+    const n=UI.replyCount||0;
+    return `<button class="${on?'on':''}" data-testid="nav-${key}" onclick="${click}"><span class="ic">${ic}</span>${label}`
+      + (n?`<span data-testid="nav-messages-badge" style="margin-left:auto;background:#2c5aa0;color:#fff;border-radius:9px;padding:1px 7px;font-size:10.5px;font-weight:800">${n}</span>`:'')
+      + `</button>`;
+  }
   if(key!=='task'&&key!=='order') return `<button class="${on?'on':''}" data-testid="nav-${key}" onclick="${click}"><span class="ic">${ic}</span>${label}</button>`;
   const fs=(UI.folders||[]).filter(f=>(f.scope||'task')===key);
   const open=trackIsOpen(key);
@@ -1838,6 +1861,14 @@ function menuBtn(x){
    * ⚠️ AND IT SHOWS EVEN WITH NO FOLDERS, unlike the chevron. The chevron is a disclosure for something that
    * exists; the plus is how the first one gets made, so hiding it until you have one would leave no way in.
    */
+  /**
+   * ⭐ THE UNREAD BADGE — Athi, 2026-08-15: *"will it show how many unread new messages?"*
+   *
+   * ⚠️ THE OLD 💬 BADGE HAS NEVER WORKED. unreadCount() counts `m.unread` over chits already in memory, and
+   * mapApiMsg sets `unread:false` on every message it builds — so the number was structurally always zero, on a
+   * badge that looked authoritative. b156 gives real server-side read state; this reads that.
+   */
+
   const plus=`<span data-testid="nav-newfolder-${key}" onclick="event.stopPropagation();newFolderIn('${key}')" title="New folder in ${label}" style="margin-left:auto;padding:0 3px;opacity:.5;font-size:13px;font-weight:700">＋</span>`;
   const chev=fs.length?`<span data-testid="nav-collapse-${key}" onclick="event.stopPropagation();toggleTrack('${key}')" title="${open?'Collapse':'Expand'} folders" style="padding:0 3px;opacity:.6;font-size:11px">${open?'▾':'▸'}</span>`:'';
   const btn=`<button class="${on?'on':''}" data-testid="nav-${key}" onclick="${click}"><span class="ic">${ic}</span>${label}${plus}${chev}</button>`;
@@ -4294,6 +4325,18 @@ function filterPanel(){ const f=UI.filter||{};
 }
 let _notifs=[];
 function notifBadge(){ return UI.notifCount||0; }
+/**
+ * How many external messages are genuinely NEW. Declared here rather than in cap-messages because the RAIL needs
+ * it before that capability has ever been loaded — the badge is the reason you go to the screen, so it cannot
+ * depend on having been there.
+ */
+async function loadReplyCount(){
+  try {
+    const r = await api('msgCount');
+    const n = (r && (r.count || 0)) || 0;
+    if (n !== UI.replyCount) { UI.replyCount = n; renderApp(); }
+  } catch (e) { /* a badge that cannot load is a badge that shows nothing, not an error on the screen */ }
+}
 async function loadNotifs(){ if(CFG.MODE==='demo') return;
   try{ const r=await api("notifications"); _notifs=(r&&r.notifications)||[]; UI.notifCount=(r&&r.count!=null)?r.count:_notifs.length;
     const d=document.getElementById('belldot'); if(d){ d.textContent=UI.notifCount||""; d.style.display=UI.notifCount?'':'none'; } }catch(_){}
