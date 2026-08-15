@@ -365,7 +365,10 @@ test.describe('WORKLIST — one person, every chit', () => {
      * entered against a completed line and the record read 180 of 120. The tick now opens the line itself.
      */
     await expect(page.locator('#modalhost'), 'the tick opens the LINE, history and all').toContainText('Act Rice');
-    await expect(page.locator('#modalhost'), 'with the delivery field on the same card').toContainText('record a delivery');
+    /* ⚠️ SECTIONS ARE CLOSED UNTIL ASKED FOR — Athi, 2026-08-15: *"human brain cannot process too many item at
+       one."* The union of the two windows had to be of the INFORMATION, not of the screen space, so everything
+       past the summary is a heading you open. The spec opens them the way a person does. */
+    await page.getByTestId('wl-sec-del').click();
     await page.locator('#wl_qty').fill('20');
     await page.locator('#wl_ref').fill('DC-WL-1');
     await page.getByTestId('wl-record').click();
@@ -383,9 +386,9 @@ test.describe('WORKLIST — one person, every chit', () => {
     await page.getByTestId('wl-expand-all').click();
     await settle(page);
     await page.getByTestId('wl-row').filter({ hasText: 'WL act ' + s.s }).first()
-      .getByTestId('wl-cost').evaluate((n) => n.click());
+      .getByTestId('wl-done').evaluate((n) => n.click());
     await settle(page);
-    await expect(page.locator('#modalhost')).toContainText('add a part, labour or a charge');
+    await page.getByTestId('wl-sec-cost').click();
     /* ⚠️ THE COST QUANTITY HAS ITS OWN FIELD (wl_cqty), SEPARATE FROM THE DELIVERY QUANTITY (wl_qty). On one
        merged card the two must never share an input: typing 2 hours of labour into the box that records goods
        delivered is exactly the confusion the merge was supposed to end. */
@@ -457,13 +460,21 @@ test.describe('WORKLIST — one person, every chit', () => {
     await page.waitForResponse((r) => /\/api\/chits\//.test(r.url()), { timeout: 30000 }).catch(() => null);
     await settle(page);
     const card = page.locator('#modalhost');
-    await expect(card, 'the remainder is the headline figure').toContainText('60');
-    /* ⭐ THE TRANSPARENCY ASK: the instruction that travelled with the order reaches the person doing the work. */
-    await expect(card, 'the original instruction is visible to whoever does the work')
+    await expect(card, 'the remainder is the headline figure, pinned above the sections').toContainText('60');
+    /**
+     * ⭐ THE TRANSPARENCY ASK, AND IT IS THE ONE THING NOT COLLAPSED.
+     *
+     * ⚠️ Everything else on this card is behind a heading; the original words are not, deliberately. They are the
+     * evidence for every figure above them, and a person who has to go looking for evidence will not.
+     */
+    await expect(card, 'the original instruction is in view without opening anything')
       .toContainText('last time the quality was not good');
-    await expect(card, 'and the delivery history is there, with its reference').toContainText('DC-CARD');
+
+    await page.getByTestId('wl-sec-hist').click();
+    await expect(card, 'and the delivery history is one tap in, with its reference').toContainText('DC-CARD');
 
     // ── ③ REASSIGN AND RE-DATE, IN ONE SAVE ─────────────────────────────────────────────────────────────────
+    await page.getByTestId('wl-sec-who').click();
     await page.getByTestId('wl-who-sel').selectOption(s.B);
     await page.getByTestId('wl-due-inp').fill('2026-12-20');
     await Promise.all([
@@ -492,6 +503,7 @@ test.describe('WORKLIST — one person, every chit', () => {
        settle() only waits out the busy overlay — which can clear before the refetch lands. This passed alone and
        failed in the full suite, where production is answering slower: the classic shape of asserting on a screen
        that has not been told the news yet. */
+    await page.getByTestId('wl-sec-who').click();
     await Promise.all([
       page.waitForResponse((r) => /folders\/worklist/.test(r.url()), { timeout: 30000 }).catch(() => null),
       page.getByTestId('wl-mark-done').click(),

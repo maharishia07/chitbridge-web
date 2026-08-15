@@ -228,15 +228,15 @@ function wlRow(r, ctx, depth){
        the card, so the modal you wanted is sitting on a screen that navigated out from under it. */
     + '<span style="display:flex;gap:2px;flex:none;align-items:center">'
     /**
-     * ⚠️ ONE DESTINATION, NOT THREE. These used to open their own little card, which is precisely how a delivery
-     * got recorded without its history in view. They now open the SAME line card the row does — the tick is a
-     * shortcut to a place, not a second place. Kept as separate affordances because they still say what the row
-     * is FOR at a glance, which a bare chevron does not.
+     * ⭐ ONE ICON — Athi, 2026-08-15: *"all in one means we don't need two icons, just one is enough."*
+     *
+     * ⚠️ TWO ICONS WERE LEFT OVER FROM A DESIGN THAT NO LONGER EXISTED. The tick and the rupee once opened two
+     * different little cards; once both opened the same line card they were the same button drawn twice, asking
+     * the reader to choose between identical outcomes. A choice that has no consequence still costs a moment to
+     * make, on every row.
      */
-    +   '<span data-testid="wl-done" title="Record a delivery — opens the line, with its history" onclick="event.stopPropagation();wlLine(&quot;' + r.line_id + '&quot;)"'
-    +     ' style="cursor:pointer;font-size:13px;padding:2px 6px;border-radius:6px;color:#3d7a4e;background:#eef6f0;font-weight:800">✓</span>'
-    +   '<span data-testid="wl-cost" title="Add a part, labour or a charge — opens the line" onclick="event.stopPropagation();wlLine(&quot;' + r.line_id + '&quot;)"'
-    +     ' style="cursor:pointer;font-size:13px;padding:2px 6px;border-radius:6px;color:#2c5d7c;background:#eef4f8;font-weight:800">₹</span>'
+    +   '<span data-testid="wl-done" title="Open this line — history, delivery, cost, who has it" onclick="event.stopPropagation();wlLine(&quot;' + r.line_id + '&quot;)"'
+    +     ' style="cursor:pointer;font-size:13px;padding:2px 9px;border-radius:6px;color:#2c5d7c;background:#eef4f8;font-weight:800">⋯</span>'
     +   '<span style="color:var(--grey);font-size:12px;padding-left:3px">›</span></span></div>'
     /* ⚠️ WHICH ORDER IT CAME FROM. A line without its chit is an instruction with no context — you cannot ring the
        customer, check the rest of the order, or know who is waiting. */
@@ -542,11 +542,27 @@ function wlRender(rows, keys, depth, path){
  * opens. Fetching them for every row of a fifty-row list to serve the one row someone taps is the habit this
  * codebase refuses.
  */
-var WLL = { row: null, det: null, actors: null };
+var WLL = { row: null, det: null, actors: null, loading: false, failed: false };
+/**
+ * ⭐ THE ENTITY'S OWN CURRENCY, NEVER A BARE NUMBER — Athi, 2026-08-15: *"you are saying 80 charged, I am not
+ * sure what that 80 means, it should be associated with the currency."*
+ *
+ * ⚠️ fmtMoney() AND SESSION.currency BOTH ALREADY EXISTED and this card used neither. A naked figure beside the
+ * word "charged" is not a small omission: money is the one number on the screen a person may act on outside the
+ * system, and it was the only one carrying no unit while every quantity beside it carried one.
+ */
+function wlMoney(v){
+  if (v === null || v === undefined || v === '') return '';
+  var code = (typeof SESSION !== 'undefined' && SESSION.currency) || 'INR';
+  return (typeof fmtMoney === 'function') ? fmtMoney(v, code) : (code + ' ' + v);
+}
 async function wlLine(line_id){
   var r = wlRows(WL.data || {}).filter(function(x){ return x.line_id === line_id; })[0];
   if (!r) return;
-  WLL.row = r; WLL.det = null;
+  /* ⚠️ RESET THE OPEN SECTION ON EVERY OPEN. Left as module state it survived the card being closed, so the
+     next line you opened had a section already expanded and tapping that heading COLLAPSED it — a toggle that
+     does the opposite of what it looks like it will do, depending on what you did last. */
+  WLL.row = r; WLL.det = null; WLL.tab = null; WLL.loading = true; WLL.failed = false;
   modal(wlLineHTML(true));
   try {
     WLL.det = await api('wlChit', { params: { id: r.chit_id } });
@@ -554,132 +570,203 @@ async function wlLine(line_id){
       var a = await api('wlActors').catch(function(){ return null; });
       WLL.actors = (a && (a.actors || a.items || (Array.isArray(a) ? a : []))) || [];
     }
-  } catch (e) { /* the card still works without history — it just cannot show it */ }
+  } catch (e) {
+    /* ⚠️ A FAILED READ IS NOT AN EMPTY ONE. Swallowed silently, the card said "nothing recorded"
+       about a line that may have a page of history — the reader is told a fact, not that the question could not
+       be answered, and there is no way for them to tell the difference. */
+    WLL.failed = true;
+  }
+  WLL.loading = false;
   var host = document.getElementById('modalhost');
   if (host && host.innerHTML) modal(wlLineHTML(false));
 }
+/**
+ * ⭐ FOUR SECTIONS, ONE OPEN AT A TIME — Athi, 2026-08-15: *"getting confused with the details given here … do it
+ * as a sliding one, say View history, Add delivery, Add cost, set status as 3 or 4 headings and should be able to
+ * check individually. Human brain cannot process too many items at one, and interpretation will take time."*
+ *
+ * ⚠️ I OVERCORRECTED. Merging the two windows was right — the split caused a real over-delivery — but I merged
+ * them by STACKING everything, which answers "where is the history" by making the reader hold six things at once.
+ * The union he asked for was of the INFORMATION, not of the screen space.
+ *
+ * So the numbers that decide anything stay pinned at the top, and everything else is a closed heading with a hint
+ * on it. Nothing is more than one tap away and nothing is in the way.
+ *
+ * ⚠️ ACCORDION, NOT INDEPENDENT TOGGLES. Two open sections is the wall again, one section at a time.
+ */
+/**
+ * ⚠️ IT PASSED loading=false UNCONDITIONALLY, and that is the whole of Athi's "you are stating no history and
+ * then loading the data". Open a section while the fetch is still in flight and the card rendered as though the
+ * answer were in — so an empty result set read "nothing recorded" a moment before the entries appeared. The
+ * screen was not slow; it was ANSWERING A QUESTION IT HAD NOT ASKED YET, which is worse, because the reader
+ * believes the wrong answer and acts on it.
+ */
+function wlSec(k){ WLL.tab = (WLL.tab === k) ? null : k; modal(wlLineHTML(WLL.loading)); }
+
 function wlLineHTML(loading){
   var r = WLL.row || {}, d = WLL.det || {};
   var prog = ((d.line_delivery || {})[r.line_id]) || {};
   var events = prog.events || [], added = prog.added || [];
   var done = r.state === 'done';
-  var lbl = function(t){ return '<div style="font-size:10.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--grey);margin:14px 0 5px">' + t + '</div>'; };
 
-  /* ── ⭐ WHAT WAS ACTUALLY ASKED FOR ──────────────────────────────────────────────────────────────────────────
-     ⚠️ THE RAW PHRASE GOES FIRST, ABOVE THE TIDY NAME. The matched name is a CONCLUSION — "2 boxes of the usual
-     rice" became "Rice Ponni Boiled · 24 kg" — and the person holding the sack is the last one who can catch a
-     wrong conclusion. They were the one person never shown the evidence. */
-  var asked = '';
-  if (r.raw_phrase || r.asked_as || r.comment || r.needs_human) {
-    asked = lbl('what was asked for')
-      + '<div style="background:#f4f1e8;border-left:3px solid #b0641c;border-radius:0 7px 7px 0;padding:9px 12px;font-size:13.5px;line-height:1.55">'
-      + (r.raw_phrase ? '<div style="font-style:italic;color:#5b5340">“' + esc(r.raw_phrase) + '”</div>' : '')
-      + (r.asked_as ? '<div style="margin-top:4px;font-size:12.5px;color:var(--grey)">written as <b>' + esc(r.asked_as) + '</b> · matched to <b>' + esc(r.particulars || '') + '</b></div>' : '')
-      + (r.comment ? '<div style="margin-top:6px;color:#2c5d7c">' + esc(r.comment) + '</div>' : '')
-      + (r.needs_human ? '<div style="margin-top:6px;font-size:12.5px;color:#c0453b;font-weight:700">⚠️ this line was flagged for a person to check</div>' : '')
-      + '</div>';
-  }
-
-  /* ── progress, and the history behind it ─────────────────────────────────────────────────────────────────── */
   /**
-   * ⚠️ OVER-DELIVERY MUST SAY "OVER", NOT "0 LEFT". `left` is clamped at zero, which is right for "how much more
-   * to send" and actively misleading as a headline: Athi's screenshot reads "0 kg left · 180 out of 120 kg", so
-   * the one number in the largest type on the card was hiding a 60 kg excess. Excess is the thing you most need
-   * told, because unlike a shortfall nobody chases it.
+   * ⚠️ OVER-DELIVERY MUST SAY "OVER", NOT "0 LEFT". `left` is clamped at zero — right for "how much more to send",
+   * misleading as a headline: the card once read "0 kg left · 180 out of 120 kg", so the biggest number on it was
+   * hiding a 60 kg excess. Excess is the thing you most need told, because unlike a shortfall nobody chases it.
    */
   var ordered = r.quantity == null ? null : Number(r.quantity);
   var got = Number(r.delivered || 0);
   var over = (ordered != null && got > ordered) ? Math.round((got - ordered) * 1000) / 1000 : 0;
   var left = r.left == null ? null : r.left;
   var big = over ? String(over) : (left == null ? '—' : String(left));
-  var bar = '<div style="display:flex;gap:16px;align-items:baseline;font-variant-numeric:tabular-nums">'
-    + '<div><div style="font-size:22px;font-weight:800;color:' + (over ? '#c0453b' : left === 0 ? '#3d7a4e' : '#b0641c') + '">'
-    +   esc(big) + '</div><div style="font-size:11px;color:' + (over ? '#c0453b' : 'var(--grey)') + ';font-weight:' + (over ? 700 : 400) + '">'
-    +   esc(r.unit || '') + (over ? ' OVER' : ' left') + '</div></div>'
-    + '<div style="font-size:13px;color:var(--grey)">' + esc(String(got)) + ' out of ' + esc(String(ordered == null ? '—' : ordered)) + ' ' + esc(r.unit || '') + '</div>'
-    + (prog.charged ? '<div style="margin-left:auto;text-align:right"><div style="font-size:17px;font-weight:800;color:#2c5d7c">' + esc(String(prog.charged)) + '</div><div style="font-size:11px;color:var(--grey)">charged</div></div>' : '')
+
+  /* ── the summary, always visible: the three figures anything else is decided against ─────────────────────── */
+  var bar = '<div style="display:flex;gap:18px;align-items:baseline;font-variant-numeric:tabular-nums;padding-bottom:4px">'
+    + '<div><span style="font-size:26px;font-weight:800;color:' + (over ? '#c0453b' : left === 0 ? '#3d7a4e' : '#b0641c') + '">' + esc(big) + '</span>'
+    +   '<span style="font-size:12.5px;font-weight:700;color:' + (over ? '#c0453b' : 'var(--grey)') + ';margin-left:4px">' + esc(r.unit || '') + (over ? ' over' : ' left') + '</span></div>'
+    + '<div style="font-size:13px;color:var(--grey)">' + esc(String(got)) + ' delivered of ' + esc(String(ordered == null ? '—' : ordered)) + ' ' + esc(r.unit || '') + '</div>'
+    + (prog.charged ? '<div style="margin-left:auto;font-size:13px;color:#2c5d7c;font-weight:700">' + esc(wlMoney(prog.charged)) + ' <span style="font-weight:400;color:var(--grey)">charged</span></div>' : '')
     + '</div>';
 
-  var hist = '';
-  if (loading) hist = '<div style="font-size:12.5px;color:var(--grey);padding:6px 0"><span class="spin"></span> reading the history…</div>';
-  else if (!events.length && !added.length) hist = '<div style="font-size:12.5px;color:var(--grey);padding:4px 0">Nothing recorded against this line yet.</div>';
-  else {
-    hist = events.concat([]).map(function(e){
-      return '<div style="display:flex;gap:10px;align-items:baseline;padding:5px 0;border-bottom:1px solid var(--line-soft,#f0efec);font-size:13px">'
-        + '<span style="font-weight:700;font-variant-numeric:tabular-nums;color:' + (e.quantity < 0 ? '#c0453b' : 'var(--ink)') + '">'
-        +   (e.quantity < 0 ? '' : '+') + esc(String(e.quantity)) + ' ' + esc(e.unit || '') + '</span>'
-        + '<span style="color:var(--grey);font-size:12px">' + esc(e.reference || e.note || '') + '</span>'
-        + '<span style="margin-left:auto;color:var(--grey);font-size:11.5px">' + esc(String(e.at || '').slice(0, 10)) + ' · ' + esc(e.by_actor || e.by || '') + '</span></div>';
-    }).join('')
-    + added.map(function(a){
-      return '<div style="display:flex;gap:10px;align-items:baseline;padding:5px 0;border-bottom:1px solid var(--line-soft,#f0efec);font-size:13px">'
-        + '<span style="color:#2c5d7c;font-weight:700">₹ ' + esc(String(a.amount == null ? '' : a.amount)) + '</span>'
-        + '<span>' + esc(a.particulars || '') + (a.quantity ? ' <span style="color:var(--grey)">· ' + esc(String(a.quantity)) + ' ' + esc(a.unit || '') + '</span>' : '') + '</span>'
-        + '<span style="margin-left:auto;color:var(--grey);font-size:11.5px">' + esc(String(a.at || '').slice(0, 10)) + '</span></div>';
-    }).join('');
+  /* ── a heading: caret · name · a hint of what is inside, so you can choose without opening ───────────────── */
+  var sec = function(k, name, hint, tone){
+    var on = WLL.tab === k;
+    return '<div data-testid="wl-sec-' + k + '" onclick="wlSec(&quot;' + k + '&quot;)" style="cursor:pointer;display:flex;gap:9px;align-items:baseline;'
+      + 'padding:11px 2px;border-top:1px solid var(--line)">'
+      + '<span style="width:12px;color:var(--grey);font-size:11px">' + (on ? '▾' : '▸') + '</span>'
+      + '<span style="font-weight:700;font-size:14px;color:' + (on ? 'var(--ink,#1c2128)' : 'var(--ink-2,#41474e)') + '">' + name + '</span>'
+      + '<span style="margin-left:auto;font-size:12px;color:' + (tone || 'var(--grey)') + '">' + (hint || '') + '</span></div>';
+  };
+  var body = '';
+
+  // ── ① HISTORY ────────────────────────────────────────────────────────────────────────────────────────────
+  var nEv = events.length + added.length;
+  body += sec('hist', 'History',
+    loading ? 'checking…' : WLL.failed ? 'could not read' : (nEv ? nEv + (nEv === 1 ? ' entry' : ' entries') : 'none yet'),
+    WLL.failed ? '#c0453b' : null);
+  if (WLL.tab === 'hist') {
+    body += '<div style="padding:0 0 10px">';
+    if (loading) body += '<div style="font-size:12.5px;color:var(--grey)"><span class="spin"></span> checking for earlier entries…</div>';
+    else if (WLL.failed) body += '<div style="font-size:12.5px;color:#c0453b">Could not read the history just now — this does NOT mean there is none. Close and reopen to try again.</div>';
+    else if (!nEv) body += '<div style="font-size:12.5px;color:var(--grey)">Checked — nothing has been recorded against this line yet.</div>';
+    else {
+      body += events.map(function(e){
+        return '<div style="display:flex;gap:10px;align-items:baseline;padding:5px 0;border-bottom:1px solid var(--line-soft,#f0efec);font-size:13px">'
+          + '<span style="font-weight:700;font-variant-numeric:tabular-nums;min-width:72px;color:' + (e.quantity < 0 ? '#c0453b' : 'var(--ink)') + '">'
+          +   (e.quantity < 0 ? '' : '+') + esc(String(e.quantity)) + ' ' + esc(e.unit || '') + '</span>'
+          + '<span style="color:var(--grey);font-size:12px;flex:1">' + esc(e.reference || e.note || '') + '</span>'
+          + '<span style="color:var(--grey);font-size:11.5px">' + esc(String(e.at || '').slice(0, 10)) + ' · ' + esc(e.by_actor || e.by || '') + '</span></div>';
+      }).join('')
+      + added.map(function(a){
+        return '<div style="display:flex;gap:10px;align-items:baseline;padding:5px 0;border-bottom:1px solid var(--line-soft,#f0efec);font-size:13px">'
+          + '<span style="color:#2c5d7c;font-weight:700;min-width:82px">' + esc(wlMoney(a.amount)) + '</span>'
+          + '<span style="flex:1">' + esc(a.particulars || '') + (a.quantity ? ' <span style="color:var(--grey)">· ' + esc(String(a.quantity)) + ' ' + esc(a.unit || '') + '</span>' : '') + '</span>'
+          + '<span style="color:var(--grey);font-size:11.5px">' + esc(String(a.at || '').slice(0, 10)) + '</span></div>';
+      }).join('');
+    }
+    body += '</div>';
   }
 
-  /* ── who holds it, and when it is due — both changeable, both append-only behind the scenes ──────────────── */
-  var opts = '<option value="">Unassigned</option>' + (WLL.actors || []).map(function(a){
-    var id = a.actor_id || a.identity_id, nm = a.display_name || a.name || '';
-    return '<option value="' + esc(id) + '"' + (id === r.actor_id ? ' selected' : '') + '>' + esc(nm) + '</option>';
-  }).join('');
+  // ── ② RECORD A DELIVERY ──────────────────────────────────────────────────────────────────────────────────
+  body += sec('del', 'Add a delivery', over ? esc(String(over)) + ' ' + esc(r.unit || '') + ' over' : (left == null ? '' : esc(String(left)) + ' ' + esc(r.unit || '') + ' left'), over ? '#c0453b' : null);
+  if (WLL.tab === 'del') {
+    /**
+     * ⚠️ ONE BIG FIELD, AND THE UNIT INSIDE IT. The previous version squeezed the number box to a third of the
+     * row with its unit on a line beneath — where a stray "+" turned that caption into "kgNaN", and the box was
+     * too narrow to read what you had typed. The figure being entered is the most important thing on this
+     * section; it gets the width.
+     *
+     * ⚠️ AND IT DEFAULTS TO WHAT IS LEFT, NEVER WHAT WAS ORDERED. On an untouched line those are the same number,
+     * which is exactly why the wrong one survived — it is only wrong AFTER a part delivery, the case this screen
+     * exists for, and it is what put 180 against a 120 kg line.
+     */
+    body += '<div style="padding:2px 0 12px">'
+      + '<div style="display:flex;gap:8px;align-items:stretch">'
+      +   '<div style="flex:1 1 auto;min-width:0;position:relative">'
+      +     '<input id="wl_qty" data-testid="wl-qty" type="number" step="any" inputmode="decimal" value="' + esc(String(over ? -over : (left == null ? '' : left))) + '"'
+      +       ' style="width:100%;font-size:21px;font-weight:800;padding:11px 46px 11px 13px;border:1px solid var(--line);border-radius:9px;font-variant-numeric:tabular-nums">'
+      +     '<span style="position:absolute;right:13px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--grey);font-weight:700;pointer-events:none">' + esc(r.unit || '') + '</span>'
+      +   '</div>'
+      /* ⚠️ THE BUTTON GREW AND ATE THE FIELD. With both on flex:1 the button took half the row, and 46px of right
+         padding for the unit suffix left the number box too narrow to show what had been typed — Athi could not
+         feed a number in. The figure being entered is the point of this section; it takes the width, and the
+         button shrinks to its label. */
+    +   '<button class="btn pri" data-testid="wl-record" onclick="wlActSave(&quot;done&quot;)" style="flex:0 0 auto;padding:0 18px;font-size:15px;white-space:nowrap">Record</button>'
+      + '</div>'
+      + '<input id="wl_ref" placeholder="docket number, or a note" style="width:100%;margin-top:8px;font-size:14px;padding:9px 12px;border:1px solid var(--line);border-radius:8px">'
+      + '<div style="margin-top:7px;font-size:11.5px;color:var(--grey);line-height:1.5">'
+      +   (over ? '<b style="color:#c0453b">Already ' + esc(String(over)) + ' ' + esc(r.unit || '') + ' over — the negative figure above returns it.</b>'
+             : 'Pre-filled with what is left. A negative figure corrects an earlier delivery; nothing is deleted.')
+      + '</div></div>';
+  }
+
+  // ── ③ ADD A COST ─────────────────────────────────────────────────────────────────────────────────────────
+  body += sec('cost', 'Add a cost', added.length ? added.length + ' added' : 'part, labour, charge');
+  if (WLL.tab === 'cost') {
+    body += '<div style="padding:2px 0 12px">'
+      + '<input id="wl_what" data-testid="wl-what" placeholder="What was it for — brake shoe, labour, call-out" style="width:100%;font-size:14.5px;padding:10px 12px;border:1px solid var(--line);border-radius:8px">'
+      + '<div style="display:flex;gap:8px;margin-top:8px">'
+      +   '<input id="wl_cqty" type="number" step="any" inputmode="decimal" placeholder="how many" style="flex:1;font-size:14.5px;padding:10px 12px;border:1px solid var(--line);border-radius:8px">'
+      +   '<input id="wl_cunit" placeholder="unit" style="flex:1;font-size:14.5px;padding:10px 12px;border:1px solid var(--line);border-radius:8px">'
+      +   '<input id="wl_amt" data-testid="wl-amt" type="number" step="any" inputmode="decimal" placeholder="cost in ' + esc(((typeof SESSION !== 'undefined' && SESSION.currency) || 'INR')) + '" style="flex:1;font-size:14.5px;padding:10px 12px;border:1px solid var(--line);border-radius:8px">'
+      +   '<button class="btn" data-testid="wl-addcost" onclick="wlActSave(&quot;cost&quot;)" style="padding:0 18px">Add</button>'
+      + '</div>'
+      /* ⚠️ Its own quantity field, never the delivery one: 2 hours of labour typed into the goods box is exactly
+         the confusion merging the windows was meant to end. */
+      + '<div style="margin-top:7px;font-size:11.5px;color:var(--grey);line-height:1.5">This adds to the line, it does not deliver it. Units are never added together — only the money totals.</div>'
+      + '</div>';
+  }
+
+  // ── ④ WHO, WHEN, AND WHETHER IT IS DONE ──────────────────────────────────────────────────────────────────
+  /* ⚠️ ONE DATE FORMAT PER SCREEN. This hint printed a raw 2026-08-11 while every heading and row beside it reads
+     'Tue, 11 Aug' — two formats for one fact makes a reader stop and check whether they mean the same thing. */
+  var whoHint = esc((r.who && r.who !== 'Unassigned') ? r.who : 'unassigned')
+    + (r.due_date ? ' · ' + esc(wlDateLabel(r.due_date).text) : '');
+  body += sec('who', 'Who and when', done ? '✓ done' : whoHint, done ? '#3d7a4e' : null);
+  if (WLL.tab === 'who') {
+    /**
+     * ⚠️ THE CURRENT HOLDER IS ALWAYS AN OPTION, even if the actor list did not load. Without this the select
+     * fell back to just 'Unassigned' — and pressing Save then UNASSIGNED the line, quietly, as a side effect of a
+     * failed background request the reader never saw. A dropdown that cannot show the current value must not be
+     * able to change it by accident.
+     */
+    var known = (WLL.actors || []).some(function(a){ return (a.actor_id || a.identity_id) === r.actor_id; });
+    var extra = (!known && r.actor_id) ? [{ actor_id: r.actor_id, display_name: r.who }] : [];
+    var opts = '<option value="">Unassigned</option>' + extra.concat(WLL.actors || []).map(function(a){
+      var id = a.actor_id || a.identity_id, nm = a.display_name || a.name || '';
+      return '<option value="' + esc(id) + '"' + (id === r.actor_id ? ' selected' : '') + '>' + esc(nm) + '</option>';
+    }).join('');
+    body += '<div style="padding:2px 0 12px">'
+      + '<div style="display:flex;gap:8px">'
+      +   '<select id="wl_who" data-testid="wl-who-sel" style="flex:1;font-size:14.5px;padding:9px 11px;border:1px solid var(--line);border-radius:8px">' + opts + '</select>'
+      +   '<input id="wl_due" data-testid="wl-due-inp" type="date" value="' + esc(String(r.due_date || '').slice(0, 10)) + '" style="font-size:14.5px;padding:9px 11px;border:1px solid var(--line);border-radius:8px">'
+      +   '<button class="btn pri" data-testid="wl-line-save" onclick="wlLineSave()" style="padding:0 18px">Save</button>'
+      + '</div>'
+      + '<div style="margin-top:8px"><button class="btn" data-testid="wl-mark-done" onclick="wlSetState(' + (done ? '&quot;open&quot;' : '&quot;done&quot;') + ')" style="width:100%;padding:9px">'
+      +   (done ? '↩ Reopen this subtask' : '✓ Mark this subtask done') + '</button></div>'
+      + '<div style="margin-top:7px;font-size:11.5px;color:var(--grey);line-height:1.5">Handing it on keeps the old assignment as history. Marking it done takes it off the work list — it does not mean the goods went out.</div>'
+      + '</div>';
+  }
+
+  /* ── what was asked for: always shown when it exists, never behind a heading ─────────────────────────────
+     ⚠️ THIS ONE IS NOT COLLAPSED, deliberately. It is the evidence for everything above it — what the customer
+     actually wrote before anything matched it to a catalogue item — and a person who has to go looking for it
+     will not. It is short, so it costs almost nothing to leave in view. */
+  var asked = '';
+  if (r.raw_phrase || r.asked_as || r.comment || r.needs_human) {
+    asked = '<div style="margin-top:12px;background:#f4f1e8;border-left:3px solid #b0641c;border-radius:0 7px 7px 0;padding:9px 12px;font-size:13px;line-height:1.55">'
+      + (r.raw_phrase ? '<div style="font-style:italic;color:#5b5340">“' + esc(r.raw_phrase) + '”</div>' : '')
+      + (r.asked_as ? '<div style="font-size:12.5px;color:var(--grey)">asked as <b>' + esc(r.asked_as) + '</b></div>' : '')
+      + (r.comment ? '<div style="color:#2c5d7c">' + esc(r.comment) + '</div>' : '')
+      + (r.needs_human ? '<div style="font-size:12.5px;color:#c0453b;font-weight:700">⚠️ flagged for a person to check</div>' : '')
+      + '</div>';
+  }
 
   return '<div class="mhd"><div class="t">' + esc(r.particulars || 'Line') + (done ? ' <span style="font-size:13px;color:#3d7a4e">✓ done</span>' : '') + '</div>'
     + '<div class="s">' + esc(r.subject || 'chit') + '</div></div>'
-    + '<div class="mbody">'
-    +   bar
-    +   asked
-    +   lbl('history')
-    +   hist
-    /**
-     * ⭐ RECORD IT HERE, UNDER THE HISTORY THAT SHOULD INFORM IT — Athi, 2026-08-15: *"the tick mark is not
-     * bringing the history, so I am delivering in excess … I guess we don't need two tabs. The tick mark can
-     * bring the history also, so you know the history and you should be able to part deliver and/or consider
-     * closing the task. Can you see what is the union of both the window and bring the best of both?"*
-     *
-     * ⚠️ TWO WINDOWS CAUSED A REAL OVER-DELIVERY. The ✓ card asked for a quantity and pre-filled the ORDERED
-     * figure, with no idea 120 had already gone out; the history lived in a different window nobody had open at
-     * the moment of typing. 120 was entered against a line already complete and the result was 180 of 120. The
-     * fix is not a warning — it is putting the number and the evidence for it in the same field of view.
-     *
-     * ⚠️ AND IT DEFAULTS TO WHAT IS LEFT, NOT TO WHAT WAS ORDERED. On a line with nothing delivered those are the
-     * same number, which is exactly why the wrong one survived so long: it is only wrong AFTER a part delivery,
-     * which is the case this whole screen exists for.
-     */
-    +   lbl('record a delivery')
-    +   '<div style="display:flex;gap:9px;align-items:flex-end">'
-    +     '<div style="flex:1"><input id="wl_qty" data-testid="wl-qty" type="number" step="any" value="' + esc(String(left == null ? '' : left)) + '"'
-    +       ' style="width:100%;font-size:17px;font-weight:700;padding:9px 11px;border:1px solid var(--line);border-radius:8px">'
-    +       '<div style="font-size:11px;color:var(--grey);margin-top:3px">' + esc(r.unit || '')
-    +       + (left != null ? ' · pre-filled with what is left, not what was ordered' : '') + '</div></div>'
-    +     '<input id="wl_ref" placeholder="docket / note" style="flex:1;font-size:14.5px;padding:9px 11px;border:1px solid var(--line);border-radius:8px">'
-    +     '<button class="btn pri" data-testid="wl-record" onclick="wlActSave(&quot;done&quot;)" style="padding:9px 15px">Record</button>'
-    +   '</div>'
-    +   '<div style="margin-top:6px;font-size:11.5px;color:var(--grey);line-height:1.5">A negative figure corrects an earlier delivery — nothing is ever deleted.'
-    +     (over ? ' <b style="color:#c0453b">This line is already ' + esc(String(over)) + ' ' + esc(r.unit || '') + ' over; a negative entry is how you put that right.</b>' : '') + '</div>'
-    +   lbl('add a part, labour or a charge')
-    +   '<div style="display:flex;gap:9px;align-items:flex-end">'
-    +     '<input id="wl_what" data-testid="wl-what" placeholder="Brake shoe, labour, call-out…" style="flex:2;font-size:14.5px;padding:9px 11px;border:1px solid var(--line);border-radius:8px">'
-    +     '<input id="wl_cqty" type="number" step="any" placeholder="qty" style="flex:.7;font-size:14.5px;padding:9px 11px;border:1px solid var(--line);border-radius:8px">'
-    +     '<input id="wl_cunit" placeholder="unit" style="flex:.8;font-size:14.5px;padding:9px 11px;border:1px solid var(--line);border-radius:8px">'
-    +     '<input id="wl_amt" data-testid="wl-amt" type="number" step="any" placeholder="cost" style="flex:1;font-size:14.5px;padding:9px 11px;border:1px solid var(--line);border-radius:8px">'
-    +     '<button class="btn" data-testid="wl-addcost" onclick="wlActSave(&quot;cost&quot;)" style="padding:9px 15px">Add</button>'
-    +   '</div>'
-    +   lbl('who is doing it, and by when')
-    +   '<div style="display:flex;gap:10px">'
-    +     '<select id="wl_who" data-testid="wl-who-sel" style="flex:1;font-size:14.5px;padding:8px 10px;border:1px solid var(--line);border-radius:8px">' + opts + '</select>'
-    +     '<input id="wl_due" data-testid="wl-due-inp" type="date" value="' + esc(String(r.due_date || '').slice(0, 10)) + '" style="font-size:14.5px;padding:8px 10px;border:1px solid var(--line);border-radius:8px">'
-    +   '</div>'
-    +   '<div style="margin-top:6px;font-size:11.5px;color:var(--grey);line-height:1.5">Handing it on keeps the old assignment as history — nothing is overwritten.</div>'
-    + '</div>'
-    + '<div class="mfoot" style="flex-wrap:wrap;gap:8px">'
-    +   '<button onclick="wlOpen(&quot;' + r.chit_id + '&quot;)">Open the order</button>'
-    /* ⚠️ MARK-DONE CARRIES THE ASSIGNEE AND DATE FORWARD, so pressing it is not a quiet unassignment. */
-    +   '<button data-testid="wl-mark-done" onclick="wlSetState(' + (done ? '&quot;open&quot;' : '&quot;done&quot;') + ')">'
-    +     (done ? 'Reopen' : 'Mark done') + '</button>'
-    +   '<button class="pri" data-testid="wl-line-save" onclick="wlLineSave()">Save</button>'
-    + '</div>';
+    + '<div class="mbody">' + bar + asked + body + '</div>'
+    + '<div class="mfoot"><button onclick="closeModal()">Close</button>'
+    + '<button data-testid="wl-open-order" onclick="wlOpen(&quot;' + r.chit_id + '&quot;)">Open the order</button></div>';
 }
 /**
  * ⭐ ONE WINDOW — Athi, 2026-08-15: *"we don't need two tabs, the tick mark can bring the history also, so you
