@@ -3987,7 +3987,12 @@ function makeMovable(panel, opts){
     // control bar: grip + A-/A+
     var bar = document.createElement('div');
     bar.setAttribute('data-mv','bar');
-    bar.style.cssText = 'position:absolute;top:6px;left:8px;display:flex;gap:4px;align-items:center;z-index:6';
+    /* ⚠️ THE BAR'S POSITION IS WHY THIS WAS DISABLED FOR MODALS. Pinned top-left it sat on top of the title and
+       the close button, so the note below says modals were "kept plain + centered". That was a workaround for a
+       placement, not a reason movable modals are wrong — opts.barAt:'right' puts it clear of both, so a modal can
+       have the same drag/resize/zoom every other panel has. Default is unchanged. */
+    bar.style.cssText = 'position:absolute;top:6px;' + (opts.barAt === 'right' ? 'right:42px;' : 'left:8px;')
+      + 'display:flex;gap:4px;align-items:center;z-index:6';
     var grip = document.createElement('span'); grip.textContent = '⠿'; grip.title = 'Drag';
     grip.style.cssText = 'cursor:grab;color:#9aa3a7;font-size:14px;line-height:1;user-select:none;padding:2px 3px';
     var btn = function(t, ti, fn){ var b = document.createElement('button'); b.type = 'button'; b.title = ti; b.textContent = t;
@@ -3998,6 +4003,28 @@ function makeMovable(panel, opts){
     bar.appendChild(grip);
     bar.appendChild(btn('A−','Smaller text', function(){ setFs(-0.1); }));
     bar.appendChild(btn('A+','Larger text', function(){ setFs(0.1); }));
+    /**
+     * ⭐ MINIMISE — Athi, 2026-08-15: *"minimize icon all required."*
+     *
+     * ⚠️ IT HIDES, IT NEVER CLOSES. A minimise that discards the panel loses whatever was typed into it and is
+     * indistinguishable from the ✕ beside it — so this only collapses the panel to its header, and the same
+     * button restores it. Everything in the fields is still there when it comes back.
+     */
+    if (opts.minimise) {
+      var min = false;
+      var mb = btn('–', 'Minimise', function(){
+        min = !min;
+        [].slice.call(panel.children).forEach(function(c){
+          if (c === bar || c.getAttribute('data-mv') === 'rz' || c.classList.contains('mx')) return;
+          if (c.classList.contains('mhd')) return;                 // the header stays, so it can be restored
+          c.style.display = min ? 'none' : '';
+        });
+        panel.style.height = min ? 'auto' : panel.style.height;
+        mb.textContent = min ? '□' : '–';
+        mb.title = min ? 'Restore' : 'Minimise';
+      });
+      bar.appendChild(mb);
+    }
     panel.appendChild(bar);
     // drag by grip
     var d = null;

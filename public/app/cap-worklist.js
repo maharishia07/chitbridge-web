@@ -568,7 +568,7 @@ async function wlLine(line_id){
   WLL.row = r; WLL.det = null; WLL.tab = null; WLL.loading = true; WLL.failed = false;
   /* ⚠️ Cleared per line, or the next card opens showing the previous line's notes as its own. */
   WLL.msgs = null; WLL.msgErr = false;
-  modal(wlLineHTML(true));
+  wlPaintCard(true);
   try {
     WLL.det = await api('wlChit', { params: { id: r.chit_id } });
     if (!WLL.actors) {
@@ -583,7 +583,7 @@ async function wlLine(line_id){
   }
   WLL.loading = false;
   var host = document.getElementById('modalhost');
-  if (host && host.innerHTML) modal(wlLineHTML(false));
+  if (host && host.innerHTML) wlPaintCard(false);
 }
 /**
  * ⭐ FOUR SECTIONS, ONE OPEN AT A TIME — Athi, 2026-08-15: *"getting confused with the details given here … do it
@@ -638,6 +638,20 @@ function wlFieldRow(fields, button){
  *  intrinsic size instead of forcing the row wider than the card. */
 function wlInput(id, opts){
   opts = opts || {};
+  /**
+   * ⭐ A NOTE IS A BOX — Athi, 2026-08-15: *"look at the message, it has to be a box, not a text in a single
+   * line."*
+   *
+   * ⚠️ A ONE-LINE INPUT DOES NOT JUST LOOK WRONG FOR THIS, IT CHANGES WHAT PEOPLE WRITE. You cannot see what you
+   * typed past about forty characters, so the note that would have said "customer rejected the first two sacks,
+   * damp at the bottom — check before loading Friday" becomes "damp". The field was quietly editing the record.
+   */
+  if (opts.lines) {
+    return '<textarea id="' + id + '"' + (opts.testid ? ' data-testid="' + opts.testid + '"' : '')
+      + ' rows="' + opts.lines + '"' + (opts.placeholder ? ' placeholder="' + esc(opts.placeholder) + '"' : '')
+      + ' style="width:100%;box-sizing:border-box;font:inherit;font-size:14px;line-height:1.5;padding:10px 12px;'
+      + 'border:1px solid var(--line);border-radius:8px;resize:vertical;min-height:' + (opts.lines * 22 + 20) + 'px"></textarea>';
+  }
   return '<input id="' + id + '"' + (opts.testid ? ' data-testid="' + opts.testid + '"' : '')
     + (opts.type ? ' type="' + opts.type + '" step="any" inputmode="decimal"' : '')
     + (opts.value != null ? ' value="' + esc(String(opts.value)) + '"' : '')
@@ -646,9 +660,49 @@ function wlInput(id, opts){
     + ';padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-variant-numeric:tabular-nums">';
 }
 
+/**
+ * ⭐ ONE PAINT, SO THE WINDOW BEHAVES THE SAME EVERY TIME — Athi, 2026-08-15: *"can we increase the size of the
+ * total window, also can we add an adjustable size, drag at the bottom, the window should be able to move
+ * anywhere, minimize icon — all required."*
+ *
+ * ⚠️ ALL OF THAT ALREADY EXISTED as makeMovable(), used by the assistant panel. It was switched OFF for modals
+ * with the note *"the movable A−/A+/grip bar overlapped titles & close"* — a placement problem recorded as a
+ * capability decision. opts.barAt:'right' clears the title and the ✕, so the card gets drag, resize, zoom and
+ * persisted geometry without any of it being rebuilt here.
+ *
+ * ⚠️ AND IT MUST BE RE-APPLIED ON EVERY PAINT. modal() replaces innerHTML, so each section toggle creates a NEW
+ * panel element — one that has never been made movable. Four separate call sites each remembering to do that is
+ * three chances to forget, which is why this is a function.
+ */
+function wlPaintCard(loading){
+  /**
+   * ⚠️ THE CARD IS SIZED AGAINST THE PHONE, NOT THE BROWSER — Athi, 2026-08-15: *"mobile window is much larger
+   * than the mobile size, it should not exceed the window which is underneath."*
+   *
+   * `.modal.wide` is `width:820px; max-width:94vw`, and in the build preview `vw` is the REAL browser width while
+   * the phone frame (`.shell`) is 440px. So on a wide monitor an 820px card floated over a 440px device — a
+   * layout nobody using the app on a phone could ever hit, sitting on the screen we are supposed to be judging.
+   * Measuring the shell and capping to it means the preview shows what the phone shows.
+   */
+  var shell = document.querySelector('.shell');
+  var cap = shell ? Math.round(shell.getBoundingClientRect().width) : 0;
+  var mob = (typeof UI !== 'undefined' && UI.vp === 'mob');
+  modal(wlLineHTML(loading), !mob);   // `wide` on a laptop — 360px is what folded "0 kg left" in two
+  try {
+    var p = document.querySelector('#modalhost .modal');
+    if (p && cap) p.style.maxWidth = cap + 'px';
+    if (p && typeof makeMovable === 'function') {
+      makeMovable(p, { key: 'cb_wl_line', minW: 320, minH: 240, barAt: 'right', minimise: true });
+      /* ⚠️ A SAVED WIDTH CAN OUTLIVE THE VIEWPORT IT WAS SET IN. Drag it wide on a laptop, switch to the phone
+         preview, and makeMovable restores 820px inside a 440px frame. The cap has to apply AFTER the restore. */
+      if (p && cap && parseFloat(p.style.width) > cap) p.style.width = cap + 'px';
+    }
+  } catch (e) { /* best-effort — a card that will not drag is still a usable card */ }
+}
+
 function wlSec(k){
   WLL.tab = (WLL.tab === k) ? null : k;
-  modal(wlLineHTML(WLL.loading));
+  wlPaintCard(WLL.loading);
   /* ⚠️ FETCHED WHEN THE SECTION IS OPENED, not when the card is. Notes are the least-read thing on this card;
      loading them for every line someone glances at would be one request per glance for data almost nobody asks
      for. Same rule as the actor list and the history. */
@@ -663,7 +717,7 @@ async function wlMsgLoad(){
        thread, so without this the card would show the chit's notes as though they were this line's. */
     WLL.msgs = list.filter(function(m){ return !m.line_id || m.line_id === r.line_id; });
   } catch (e) { WLL.msgErr = true; }
-  if (document.getElementById('modalhost')) modal(wlLineHTML(WLL.loading));
+  if (document.getElementById('modalhost')) wlPaintCard(WLL.loading);
 }
 async function wlMsgSave(){
   var r = WLL.row; if (!r) return;
@@ -697,10 +751,12 @@ function wlLineHTML(loading){
   var big = over ? String(over) : (left == null ? '—' : String(left));
 
   /* ── the summary, always visible: the three figures anything else is decided against ─────────────────────── */
-  var bar = '<div style="display:flex;gap:18px;align-items:baseline;font-variant-numeric:tabular-nums;padding-bottom:4px">'
-    + '<div><span style="font-size:26px;font-weight:800;color:' + (over ? '#c0453b' : left === 0 ? '#3d7a4e' : '#b0641c') + '">' + esc(big) + '</span>'
+  /* ⚠️ nowrap ON THE HEADLINE FIGURE. At 360px "0 kg left" folded onto two lines — the number on one, "left" on
+     the next — which reads as two separate facts for a moment. A figure and its unit are one token. */
+  var bar = '<div style="display:flex;gap:18px;align-items:baseline;font-variant-numeric:tabular-nums;padding-bottom:4px;flex-wrap:wrap">'
+    + '<div style="white-space:nowrap"><span style="font-size:26px;font-weight:800;color:' + (over ? '#c0453b' : left === 0 ? '#3d7a4e' : '#b0641c') + '">' + esc(big) + '</span>'
     +   '<span style="font-size:12.5px;font-weight:700;color:' + (over ? '#c0453b' : 'var(--grey)') + ';margin-left:4px">' + esc(r.unit || '') + (over ? ' over' : ' left') + '</span></div>'
-    + '<div style="font-size:13px;color:var(--grey)">' + esc(String(got)) + ' delivered of ' + esc(String(ordered == null ? '—' : ordered)) + ' ' + esc(r.unit || '') + '</div>'
+    + '<div style="font-size:13px;color:var(--grey);white-space:nowrap">' + esc(String(got)) + ' delivered of ' + esc(String(ordered == null ? '—' : ordered)) + ' ' + esc(r.unit || '') + '</div>'
     + (prog.charged ? '<div style="margin-left:auto;font-size:13px;color:#2c5d7c;font-weight:700">' + esc(wlMoney(prog.charged)) + ' <span style="font-weight:400;color:var(--grey)">charged</span></div>' : '')
     + '</div>';
 
@@ -865,9 +921,11 @@ function wlLineHTML(loading){
         +   '<span style="margin-left:auto;color:var(--grey);font-size:11.5px">' + esc(String(m.created_at || '').slice(0, 10)) + '</span></div>'
         + '<div style="margin-top:2px;line-height:1.5">' + esc(m.message_text || '') + '</div></div>';
     }).join('');
+    /* The box gets its own line and the button sits under it — a textarea beside a button leaves the button
+       floating against three empty lines, and the box narrower for no gain. */
     body += '<div style="margin-top:10px">'
-      + wlFieldRow(wlInput('wl_msg', { testid: 'wl-msg', placeholder: 'A note for your team about this line' }),
-          wlBtn('Add', 'wl-msg-add', 'wlMsgSave()', true))
+      + wlInput('wl_msg', { testid: 'wl-msg', lines: 3, placeholder: 'A note for your team about this line — what happened, what to watch for' })
+      + '<div style="display:flex;justify-content:flex-end;margin-top:8px">' + wlBtn('Add note', 'wl-msg-add', 'wlMsgSave()', true) + '</div>'
       + '</div>'
       /* ⚠️ SAID PLAINLY, EVERY TIME. A person deciding whether to write "customer is difficult, do not promise
          Friday" must not have to remember who can read it. */
