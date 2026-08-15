@@ -2533,6 +2533,21 @@ async function submitCompose(isDraft){
    * what it said at the time (b146). That is the loose-until-stamped rule: the line does not copy the
    * catalogue, it cites it.
    */
+  /**
+   * ⭐ WHICH DEFINITIONS THIS CHIT CITES — the adoption half of "frozen by value when stamped".
+   *
+   * A line adopts a definition by reference (`it.definition_ids`), which stays LOOSE while it sits in a cart:
+   * edit "Carton of 6" and the cart follows. `sendChit` freezes them at the mint, so the chit keeps the version
+   * it agreed even after the shelf moves.
+   *
+   * ⚠️ DEDUPLICATED. Ten lines citing one offer must freeze it ONCE — ten copies of the same snapshot on one
+   * chit is ten things that can be read as ten different terms by whoever opens it later.
+   */
+  const _defIds = [];
+  CC.items.forEach(function(it){ (it.definition_ids||[]).forEach(function(id){
+    if (id && _defIds.indexOf(id) < 0) _defIds.push(id); }); });
+  (CC.definition_ids||[]).forEach(function(id){ if (id && _defIds.indexOf(id) < 0) _defIds.push(id); });
+
   const line_items=CC.items.map(it=>({
     particulars:it.particulars,
     unit:it.unit||'unit',
@@ -2544,6 +2559,8 @@ async function submitCompose(isDraft){
   }));
   const recipients=CC.rcpts.map(r=>({name:r.name,role:r.role,self:!!r.self}));
   return await sendChit({ recipients, isDraft:!!isDraft, send_as_label, subject, schema_values, line_items,
+    /* ⭐ The terms this chit cites — frozen inside sendChit at the mint, not here. */
+    definition_ids:_defIds,
     priority:CC.priority||val("cc_priority")||"normal", files:CC.files||[], itemFiles:CC.items,
     promote_draft_id:UI._draftId||undefined, forwarded_from:UI._forwardFrom||undefined,
     onError:function(m){ if(err)err.textContent=m; } });
@@ -2566,11 +2583,49 @@ async function submitCompose(isDraft){
  * ⚠️ THE ATTACHMENT PASSES ARE PART OF SENDING, not of the modal. A chit whose files were uploaded by one caller
  * and not another is the same chit with different evidence on it.
  */
+/**
+ * ⭐⭐ FREEZE THE TERMS THIS CHIT CITES — Athi's decision, 2026-08-16: *"frozen by value when stamped."*
+ *
+ * Returns the snapshot to embed, or null. Every definition the chit references is resolved ONCE, here, and the
+ * result travels ON the chit — both the rules copy and the version pointer.
+ *
+ * ⚠️ THIS IS THE ONLY PLACE IT HAPPENS, and that is the point. `sendChit` is the single mint path every screen
+ * goes through (compose, suppliers, network, storefront), so freezing here means no screen can mint a chit whose
+ * terms are still loose. A second freeze site would eventually be a screen that forgot.
+ *
+ * ⚠️ A DRAFT IS NOT STAMPED, SO A DRAFT IS NOT FROZEN. A draft is your own working copy — its terms SHOULD move
+ * with the shelf until you actually send it. Freezing at save would hand someone a draft quoting terms they have
+ * since changed, which is the mirror of the bug this rule exists to prevent.
+ */
+async function cbFreezeTerms(v){
+  var ids = (v.definition_ids || []).filter(Boolean);
+  if (!ids.length || v.isDraft) return null;
+  try {
+    var r = await api('defFreeze', { body: { definition_ids: ids } });
+    /**
+     * ⚠️ A MISSING TERM STOPS THE SEND. If a chit cites three definitions and only two resolve, sending it would
+     * stamp a chit short of a term the sender believed it carried — and nobody would find out until the dispute,
+     * which is the worst possible moment. Better to refuse now and say which one.
+     */
+    if (r && (r.missing || []).length) {
+      throw new Error('A term this chit cites could not be read (' + r.missing.length + '). Nothing was sent.');
+    }
+    return (r && r.frozen && r.frozen.length) ? { frozen_terms: r.frozen, frozen_at: r.frozen_at } : null;
+  } catch (e) {
+    /* ⚠️ 503 = b160 not applied on this deployment. A chit that cites nothing is unaffected, so a chit that DOES
+       cite something must not be silently sent without its terms — it fails, loudly, with the reason. */
+    throw new Error((e && e.message) || 'Could not freeze the terms this chit cites.');
+  }
+}
+
 async function sendChit(v){
   v = v || {};
   const fail = typeof v.onError==='function' ? v.onError : function(m){ toast(m, true); };
   try{
     busyShow(v.isDraft?'Saving draft…':'Sending chit…');
+    /* ⭐ Before anything is created. A failure here must leave NO chit behind — a chit that exists while its
+       terms do not is the same broken promise as an attachment row whose bytes never landed. */
+    const _frozen = await cbFreezeTerms(v);
     const r=await api("createChit",{body:{recipients:v.recipients||[], is_draft:!!v.isDraft, send_as_label:v.send_as_label,
       subject:v.subject, schema_values:v.schema_values||{}, line_items:v.line_items||[],
       external_priority:v.priority||"normal", promote_draft_id:v.promote_draft_id, forwarded_from:v.forwarded_from,
@@ -2581,7 +2636,13 @@ async function sendChit(v){
       /* ⚠️ business_json WINS OVER schema_values on the server — it reads `business_json || {schema_values}`, so
          sending both as-is would silently drop every schema field. Merged here, once, rather than left as a trap
          for the next caller that needs provenance AND a filled form. */
-      ...(v.business_json?{business_json:{...v.business_json, ...(Object.keys(v.schema_values||{}).length?{schema_values:v.schema_values}:{})}}:{}),
+      /* ⭐ The frozen terms ride in business_json, which the server copies onto EVERY party's chit — so both
+         sides hold the same snapshot of what was agreed, which is the entire point of freezing it. */
+      ...((v.business_json || _frozen)
+        ? {business_json:{...(v.business_json||{}),
+            ...(Object.keys(v.schema_values||{}).length?{schema_values:v.schema_values}:{}),
+            ...(_frozen||{})}}
+        : {}),
       ...(v.self_copy?{self_copy:v.self_copy}:{})}});
     const _newId=r&&r.chit_id;
     if(_newId && (v.files||[]).length){ busyShow('Attaching files…'); for(const f of v.files){ try{ await attUpload(_newId, f); }catch(e){ toast('Attachment "'+f.name+'" failed.'); } } }
@@ -5177,7 +5238,7 @@ function detailInner(){
   // Provenance leads the content tab: before "what was asked for" is readable, "who asked, and are they anyone we
   // know" has to be. It is a no-op on every chit raised inside the rail.
   if(UI.dtab==="content") body=`${viaBlock(c)}<div class="itab">${items}<div class="ir tot"><span>Total</span><span class="qt">${fmtMoney(c.amt,c.currency)}</span></div></div>
-     ${chitAttBlock(c)}`;
+     ${chitTermsBlock(c)}${chitAttBlock(c)}`;
   if(UI.dtab==="messages") body=messagesTab(c);
   if(UI.dtab==="status") body=statusTabHtml(c);
   if(UI.dtab==="summary") body=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
@@ -6032,6 +6093,47 @@ async function amendSave(forceNull, reason_code){
 }
 
 /* whole-chit attachments (documents, clips not tied to one line) */
+/**
+ * ⭐⭐ THE TERMS THIS CHIT FROZE — the visible end of "frozen by value when stamped".
+ *
+ * A chit that carries frozen terms and does not SHOW them is a chit nobody knows carries them. The freeze is
+ * only useful if, months later, someone can open the chit and read what was agreed without being told where to
+ * look — that is what makes it evidence rather than a database column.
+ *
+ * ⚠️ IT SHOWS THE VERSION AND THE FREEZE TIME, not just the rules. "10% off" is a claim; "10% off, from version 1
+ * of Diwali 10%, frozen 16 Aug" is a claim that can be checked against the shelf — including by the counterparty,
+ * who holds this same copy and cannot see the shelf at all.
+ *
+ * ⚠️ NOTHING IS RESOLVED AT READ TIME. The rules rendered here are the ones ON the chit. Looking them up live
+ * would show today's terms on yesterday's agreement, which is precisely the failure the freeze prevents.
+ */
+function chitTermsBlock(c){
+  var bj = (c && (c.business_json || (c.header && c.header.business_json))) || {};
+  var terms = bj.frozen_terms || [];
+  if (!terms.length) return '';
+  return '<div class="itab" style="margin-top:12px">'
+    + '<div style="font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#7a5e22;'
+    + 'padding:8px 2px 4px">Terms this chit agreed'
+    + (bj.frozen_at ? '<span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--grey)"> · frozen '
+        + esc(new Date(bj.frozen_at).toLocaleString()) + '</span>' : '')
+    + '</div>'
+    + terms.map(function(t){
+        var r = t.rules || {};
+        /* The rules, said plainly. ⚠️ Whatever the kind carries is shown — enumerating a fixed set of fields
+           here would silently hide a condition the offer actually had. */
+        var parts = Object.keys(r).map(function(k){ return esc(k) + ' ' + esc(r[k]); });
+        return '<div class="ir" style="align-items:flex-start">'
+          + '<span><b>' + esc(t.name || t.kind) + '</b>'
+          + (t.sub_kind ? ' <span style="font-size:11px;color:var(--grey)">' + esc(t.sub_kind) + '</span>' : '')
+          + (parts.length ? '<div style="font-size:12px;color:var(--grey);margin-top:2px">' + parts.join(' · ') + '</div>' : '')
+          + '</span>'
+          /* ⭐ The version pointer, on screen. This is what someone checks against the shelf when they disagree. */
+          + '<span class="qt" style="font-size:11px;color:#9aa3a7">v' + esc(t.version) + '</span></div>';
+      }).join('')
+    + '<div style="font-size:11px;color:var(--grey);padding:6px 2px 2px">These terms are frozen — editing the '
+    + 'definition afterwards does not change this chit.</div></div>';
+}
+
 function chitAttBlock(c){
   const atts=attsVis(c.atts);
   if(!atts.length) return "";
