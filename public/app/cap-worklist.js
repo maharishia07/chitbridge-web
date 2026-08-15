@@ -606,6 +606,40 @@ async function wlLine(line_id){
  * screen was not slow; it was ANSWERING A QUESTION IT HAD NOT ASKED YET, which is worse, because the reader
  * believes the wrong answer and acts on it.
  */
+/**
+ * ⭐ ONE INPUT-AND-BUTTON ROW, DEFINED ONCE — and the reason it kept going wrong.
+ *
+ * Athi, 2026-08-15: *"the record chip, add chip are much bigger but no space to type information … I mentioned
+ * two times already."* He is right, and I fixed the symptom twice instead of the cause.
+ *
+ * ⚠️ THE CAUSE IS `.btn { width: 100% }` IN THE GLOBAL CSS. In a flex row that makes the button claim the entire
+ * container as its basis, so it swallows the row and squeezes the field to nothing — and `flex:0 0 auto` does not
+ * save you, because the width is still 100%. A `margin-top:16px` on the same class then knocks it out of line
+ * with the input beside it. Three hand-written rows meant three chances to get it wrong, and I took two of them.
+ *
+ * So the row is a function now. The field gets the space, the button gets its label, and neither can drift from
+ * the other two.
+ */
+function wlBtn(label, testid, call, primary){
+  return '<button class="btn' + (primary ? ' pri' : '') + '" data-testid="' + testid + '" onclick="' + call + '"'
+    /* width:auto and margin:0 are not styling — they are the two overrides that make .btn usable inside a row. */
+    + ' style="width:auto;flex:0 0 auto;margin:0;padding:0 18px;white-space:nowrap">' + label + '</button>';
+}
+function wlFieldRow(fields, button){
+  return '<div style="display:flex;gap:8px;align-items:stretch">' + fields + button + '</div>';
+}
+/** A text/number input that will actually take a value: it grows, and min-width:0 lets it shrink below its
+ *  intrinsic size instead of forcing the row wider than the card. */
+function wlInput(id, opts){
+  opts = opts || {};
+  return '<input id="' + id + '"' + (opts.testid ? ' data-testid="' + opts.testid + '"' : '')
+    + (opts.type ? ' type="' + opts.type + '" step="any" inputmode="decimal"' : '')
+    + (opts.value != null ? ' value="' + esc(String(opts.value)) + '"' : '')
+    + (opts.placeholder ? ' placeholder="' + esc(opts.placeholder) + '"' : '')
+    + ' style="flex:' + (opts.grow || 1) + ' 1 auto;min-width:0;font-size:' + (opts.big ? '19px;font-weight:800' : '14px')
+    + ';padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-variant-numeric:tabular-nums">';
+}
+
 function wlSec(k){
   WLL.tab = (WLL.tab === k) ? null : k;
   modal(wlLineHTML(WLL.loading));
@@ -717,19 +751,14 @@ function wlLineHTML(loading){
      * exists for, and it is what put 180 against a 120 kg line.
      */
     body += '<div style="padding:2px 0 12px">'
-      + '<div style="display:flex;gap:8px;align-items:stretch">'
-      +   '<div style="flex:1 1 auto;min-width:0;position:relative">'
-      +     '<input id="wl_qty" data-testid="wl-qty" type="number" step="any" inputmode="decimal" value="' + esc(String(over ? -over : (left == null ? '' : left))) + '"'
-      +       ' style="width:100%;font-size:21px;font-weight:800;padding:11px 46px 11px 13px;border:1px solid var(--line);border-radius:9px;font-variant-numeric:tabular-nums">'
-      +     '<span style="position:absolute;right:13px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--grey);font-weight:700;pointer-events:none">' + esc(r.unit || '') + '</span>'
-      +   '</div>'
-      /* ⚠️ THE BUTTON GREW AND ATE THE FIELD. With both on flex:1 the button took half the row, and 46px of right
-         padding for the unit suffix left the number box too narrow to show what had been typed — Athi could not
-         feed a number in. The figure being entered is the point of this section; it takes the width, and the
-         button shrinks to its label. */
-    +   '<button class="btn pri" data-testid="wl-record" onclick="wlActSave(&quot;done&quot;)" style="flex:0 0 auto;padding:0 18px;font-size:15px;white-space:nowrap">Record</button>'
-      + '</div>'
-      + '<input id="wl_ref" placeholder="docket number, or a note" style="width:100%;margin-top:8px;font-size:14px;padding:9px 12px;border:1px solid var(--line);border-radius:8px">'
+      /* The unit is a label BESIDE the field, not padding inside it. Reserving 46px of the box for a suffix is
+         what left no room to see the number on a narrow card. */
+      + wlFieldRow(
+          wlInput('wl_qty', { testid: 'wl-qty', type: 'number', big: true, grow: 2,
+                              value: over ? -over : (left == null ? '' : left) })
+          + '<span style="flex:0 0 auto;align-self:center;font-size:13px;color:var(--grey);font-weight:700">' + esc(r.unit || '') + '</span>',
+          wlBtn('Record', 'wl-record', 'wlActSave(&quot;done&quot;)', true))
+      + '<div style="margin-top:8px">' + wlInput('wl_ref', { placeholder: 'docket number, or a note' }) + '</div>'
       + '<div style="margin-top:7px;font-size:11.5px;color:var(--grey);line-height:1.5">'
       +   (over ? '<b style="color:#c0453b">Already ' + esc(String(over)) + ' ' + esc(r.unit || '') + ' over — the negative figure above returns it.</b>'
              : 'Pre-filled with what is left. A negative figure corrects an earlier delivery; nothing is deleted.')
@@ -740,12 +769,17 @@ function wlLineHTML(loading){
   body += sec('cost', 'Add a cost', added.length ? added.length + ' added' : 'part, labour, charge');
   if (WLL.tab === 'cost') {
     body += '<div style="padding:2px 0 12px">'
-      + '<input id="wl_what" data-testid="wl-what" placeholder="What was it for — brake shoe, labour, call-out" style="width:100%;font-size:14.5px;padding:10px 12px;border:1px solid var(--line);border-radius:8px">'
+      + wlInput('wl_what', { testid: 'wl-what', placeholder: 'What was it for — brake shoe, labour, call-out' })
+      /* ⚠️ FOUR FIELDS AND A BUTTON DO NOT FIT ONE ROW ON A PHONE. The quantity pair goes on its own line so each
+         box stays wide enough to read, rather than four slivers and a button that ate them. */
       + '<div style="display:flex;gap:8px;margin-top:8px">'
-      +   '<input id="wl_cqty" type="number" step="any" inputmode="decimal" placeholder="how many" style="flex:1;font-size:14.5px;padding:10px 12px;border:1px solid var(--line);border-radius:8px">'
-      +   '<input id="wl_cunit" placeholder="unit" style="flex:1;font-size:14.5px;padding:10px 12px;border:1px solid var(--line);border-radius:8px">'
-      +   '<input id="wl_amt" data-testid="wl-amt" type="number" step="any" inputmode="decimal" placeholder="cost in ' + esc(((typeof SESSION !== 'undefined' && SESSION.currency) || 'INR')) + '" style="flex:1;font-size:14.5px;padding:10px 12px;border:1px solid var(--line);border-radius:8px">'
-      +   '<button class="btn" data-testid="wl-addcost" onclick="wlActSave(&quot;cost&quot;)" style="padding:0 18px">Add</button>'
+      +   wlInput('wl_cqty', { type: 'number', placeholder: 'how many' })
+      +   wlInput('wl_cunit', { placeholder: 'unit' })
+      + '</div>'
+      + '<div style="margin-top:8px">'
+      +   wlFieldRow(wlInput('wl_amt', { testid: 'wl-amt', type: 'number', grow: 2,
+              placeholder: 'cost in ' + ((typeof SESSION !== 'undefined' && SESSION.currency) || 'INR') }),
+            wlBtn('Add', 'wl-addcost', 'wlActSave(&quot;cost&quot;)'))
       + '</div>'
       /* ⚠️ Its own quantity field, never the delivery one: 2 hours of labour typed into the goods box is exactly
          the confusion merging the windows was meant to end. */
@@ -776,9 +810,11 @@ function wlLineHTML(loading){
       + '<div style="display:flex;gap:8px">'
       +   '<select id="wl_who" data-testid="wl-who-sel" style="flex:1;font-size:14.5px;padding:9px 11px;border:1px solid var(--line);border-radius:8px">' + opts + '</select>'
       +   '<input id="wl_due" data-testid="wl-due-inp" type="date" value="' + esc(String(r.due_date || '').slice(0, 10)) + '" style="font-size:14.5px;padding:9px 11px;border:1px solid var(--line);border-radius:8px">'
-      +   '<button class="btn pri" data-testid="wl-line-save" onclick="wlLineSave()" style="padding:0 18px">Save</button>'
+      +   wlBtn('Save', 'wl-line-save', 'wlLineSave()', true)
       + '</div>'
-      + '<div style="margin-top:8px"><button class="btn" data-testid="wl-mark-done" onclick="wlSetState(' + (done ? '&quot;open&quot;' : '&quot;done&quot;') + ')" style="width:100%;padding:9px">'
+      /* ⚠️ THIS ONE IS DELIBERATELY FULL WIDTH — it is the section's own verb, not a field's companion, so .btn's
+         width:100% is right here. Kept explicit so it reads as a choice rather than the bug the others had. */
+      + '<div style="margin-top:8px"><button class="btn" data-testid="wl-mark-done" onclick="wlSetState(' + (done ? '&quot;open&quot;' : '&quot;done&quot;') + ')" style="width:100%;margin:0;padding:11px">'
       +   (done ? '↩ Reopen this subtask' : '✓ Mark this subtask done') + '</button></div>'
       + '<div style="margin-top:7px;font-size:11.5px;color:var(--grey);line-height:1.5">Handing it on keeps the old assignment as history. Marking it done takes it off the work list — it does not mean the goods went out.</div>'
       + '</div>';
@@ -816,9 +852,9 @@ function wlLineHTML(loading){
         +   '<span style="margin-left:auto;color:var(--grey);font-size:11.5px">' + esc(String(m.created_at || '').slice(0, 10)) + '</span></div>'
         + '<div style="margin-top:2px;line-height:1.5">' + esc(m.message_text || '') + '</div></div>';
     }).join('');
-    body += '<div style="display:flex;gap:8px;margin-top:10px">'
-      + '<input id="wl_msg" data-testid="wl-msg" placeholder="A note for your team about this line" style="flex:1 1 auto;min-width:0;font-size:14px;padding:10px 12px;border:1px solid var(--line);border-radius:8px">'
-      + '<button class="btn pri" data-testid="wl-msg-add" onclick="wlMsgSave()" style="flex:0 0 auto;padding:0 18px;white-space:nowrap">Add</button>'
+    body += '<div style="margin-top:10px">'
+      + wlFieldRow(wlInput('wl_msg', { testid: 'wl-msg', placeholder: 'A note for your team about this line' }),
+          wlBtn('Add', 'wl-msg-add', 'wlMsgSave()', true))
       + '</div>'
       /* ⚠️ SAID PLAINLY, EVERY TIME. A person deciding whether to write "customer is difficult, do not promise
          Friday" must not have to remember who can read it. */
