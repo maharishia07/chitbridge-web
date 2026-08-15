@@ -115,6 +115,48 @@ console.log('\n3 · .btn in a flex row');
   if (!found) pass('no unguarded .btn beside a growing sibling');
 }
 
+// ── 5 · a REPLACEMENT RENDERER MUST EMIT EVERY HOOK THE ONE IT REPLACES DOES ────────────────────────────────
+/**
+ * ⭐⭐ THIS CHECK EXISTS BECAUSE I DROPPED THREE HOOKS IN ONE AFTERNOON, ONE SPEC AT A TIME.
+ *
+ * catalogue-ui.js renders the same rows cart-ui.js does, into the same elements, for the same specs. On
+ * 2026-08-15 it shipped without `cbcart-bar` (render-smoke clicks the class), without `cart-count-<ns>`
+ * (order-steps asserts the badge), and without `cart-add` (order-steps clicks it — and that one timed out for
+ * 15 seconds waiting for a button that was on screen the whole time under a different name).
+ *
+ * Each was found by a different failing test, twenty minutes apart. None of them fails loudly: a renamed hook
+ * looks exactly like a feature that is missing, and a spec that cannot find a control cannot tell you whether
+ * the control is broken or merely renamed.
+ *
+ * So the sets are compared mechanically. If cart-ui emits a testid, catalogue-ui must too — or the omission has
+ * to be stated here, deliberately, with a reason.
+ */
+console.log('\n5 · renderer hook parity (cart-ui → catalogue-ui)');
+{
+  const rd = (p) => { try { return fs.readFileSync(path.join(WEB, 'app', p), 'utf8'); } catch (e) { return ''; } };
+  const cart = rd('cart-ui.js'), cat = rd('catalogue-ui.js');
+  if (!cat) { pass('catalogue-ui.js not present — nothing to compare'); }
+  else {
+    /* Literal testids only. The interpolated ones (`cart-' + ns`) are compared by their stable prefix. */
+    const ids = (src) => new Set([...src.matchAll(/data-testid="([a-z-]+)(?:'|")/g)].map((m) => m[1]));
+    const missing = [...ids(cart)].filter((k) => !ids(cat).has(k));
+    /* Classes a spec addresses directly. */
+    const classes = ['cbcart-bar'];
+    const missingCls = classes.filter((c) => cart.includes(c) && !cat.includes(c));
+    const gone = missing.concat(missingCls);
+    /* `cart-checkout` lives in cart-ui's POPUP, which catalogue-ui does not replace — the popup is still
+       cart-ui's. Declared here so it is a decision rather than an oversight. */
+    const OK_TO_OMIT = ['cart-checkout'];
+    const real = gone.filter((k) => OK_TO_OMIT.indexOf(k) < 0);
+    if (real.length) {
+      fail('catalogue-ui.js does not emit hooks cart-ui.js does: ' + real.join(', ')
+        + '  — a renamed hook is indistinguishable from a missing feature');
+    } else {
+      pass('catalogue-ui emits every hook cart-ui does (omitting only: ' + OK_TO_OMIT.join(', ') + ')');
+    }
+  }
+}
+
 // ── 4 · text below the legibility floor ─────────────────────────────────────────────────────────────────────
 console.log('\n4 · font-size floor (11px)');
 {

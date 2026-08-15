@@ -533,6 +533,9 @@ img.attImg{object-fit:cover;display:block}
 <script src="/app/catalogue-model.js"></script>
 <script src="/app/catalogue-lines.js"></script>
 <script src="/app/cart-ui.js"></script>
+<!-- The redesigned catalogue ROW. A renderer only — it owns no quantity rule; every mutation routes through
+     CBCart. Loaded AFTER cart-ui.js because it reads CBCart.fmt. -->
+<script src="/app/catalogue-ui.js"></script>
 <!-- ATTACH + VIEW, shared. Loaded here so `cbAttachType` is the SINGLE type→icon mapping for every screen; the
      copy that used to live in this file is gone. See BACKLOG-attach-ui-sweep.md for what is deliberately NOT
      swept yet and why. -->
@@ -2074,9 +2077,26 @@ function ccCatPickHTML(){
   /* ⭐ ONE helper renders bar + search + list, and pins the first two. This was three hand-assembled lines here,
      three more in supplierCatHTML, and three more in Network — so the sticky fix had to be made once and could
      only be made once. See CBCart.pickerHTML. */
-  /* `cart:false` — the chip lives in the modal header beside the ✕ (see compose()), so the picker row is the
-     search box alone, full width. */
-  return c.pickerHTML({ cart:false, searchTestid:'pick-search-cc', listTestid:'pick-cc' });
+  /**
+   * ⭐ THE REDESIGNED ROW (app/catalogue-ui.js). Compose goes first ON PURPOSE — it is the only one of the four
+   * order surfaces that is NOT public, so a design change lands where a mistake costs a reload rather than a
+   * storefront outage.
+   *
+   * ⚠️ `committed: CC.items` is the fix for "3,198px below the fold": what is already ON the chit renders at the
+   * TOP of the step instead of under 3,008px of catalogue. It is additive — the list beneath it does not reorder,
+   * because ccStepItems still fixes lines-first vs picker-first once per entry to the step.
+   *
+   * `cart:false` — the chip lives in the modal header beside the ✕ (see compose()), so the picker row is the
+   * search box alone, full width.
+   */
+  return CBCatalogue.pickerHTML(c, {
+    cart:false, committed: CC.items,
+    checkoutLabel:'+ Add to the chit',
+    emptyHint:'Press + on what this chit is for',
+    empty: UI._supplier ? 'Nothing in their catalogue matches that.' : 'Nothing in your catalogue matches that.',
+    barEl:'cbcartbar_cc', listEl:'cbpick_cc',
+    searchTestid:'pick-search-cc', listTestid:'pick-cc'
+  });
 }
 /**
  * ccCartSync — create or re-point the compose cart. Called ONLY where STORE.catalogue actually changes: when the
@@ -2090,7 +2110,7 @@ function ccCartSync(){
   const cat = { shop:{ bridge_id:'self' }, items:(STORE.catalogue||[]).map((p,i)=>({
     item_id:'sc'+i, item_data:{ name:p.particulars, unit:p.unit||'unit', price:p.price } })) };
   if(UI._ccCart) UI._ccCart.setCatalogue(cat);
-  else UI._ccCart = CBCart.create(cat, { listEl:'cbpick_cc', barEl:'cbcartbar_cc',
+  else UI._ccCart = CBCart.create(cat, { listEl:'cbpick_cc', barEl:'cbcartbar_cc', renderer:CBCatalogue,
          /* The chip sits in the modal header, so it shows only once there is something in it — see barHideEmpty. */
          barHideEmpty:true,
          checkoutLabel:'+ Add to the chit', cartTitle:'Lines to add', emptyHint:'Press + on what this chit is for',
@@ -3038,7 +3058,7 @@ function supOpenProfile(id){
 }
 /** The cart's own repaint target: the whole detail pane, which is what the bar and the list live inside. */
 function supCartOpts(x){
-  return { listEl:'cbpick_sup', barEl:'cbcartbar_sup', checkoutLabel:'Check out →',
+  return { listEl:'cbpick_sup', barEl:'cbcartbar_sup', renderer:CBCatalogue, checkoutLabel:'Check out →',
            from:supName(x), cartTitle:'Your order',
            // The cart hands over; THIS screen decides what "next" means. Checking out of the popup is the same
            // action as pressing the footer's primary, so it lands on the same step rather than a second path.
@@ -3115,9 +3135,16 @@ async function supCatalogueFull(sid){
  */
 function supCartHTML(){
   const c=UI._supCart; if(!c) return '';
-  /* ⭐ Shared with Compose and Network — CBCart.pickerHTML. The two testids below are the published hooks named
-     above, so they are passed IN rather than left to the helper to guess. */
-  return c.pickerHTML({ searchTestid:'pick-search-sup', listTestid:'sup-catalogue' });
+  /* ⭐ The redesigned row (app/catalogue-ui.js), shared with Compose and Network. The two testids are the
+     published hooks named above, so they are passed IN rather than left to the helper to guess.
+     No `committed` here: Suppliers checks out straight into the step flow, so there is no separate "already on
+     the chit" set to show — inventing one would be a screen telling a story its own flow does not have. */
+  return CBCatalogue.pickerHTML(c, {
+    checkoutLabel:'Check out →', emptyHint:'Press + on what you need',
+    empty:'Nothing in their catalogue matches that.',
+    barEl:'cbcartbar_sup', listEl:'cbpick_sup',
+    searchTestid:'pick-search-sup', listTestid:'sup-catalogue'
+  });
 }
 function loadSupplierConfidence(bridge){
   if(!bridge){ UI.supRd=null; return; }

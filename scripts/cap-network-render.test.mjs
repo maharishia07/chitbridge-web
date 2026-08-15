@@ -85,6 +85,16 @@ runInContext(read('public/app/step-flow.js'), ctx, { filename: 'step-flow.js' })
 runInContext(read('public/app/catalogue-model.js'), ctx, { filename: 'catalogue-model.js' });
 runInContext(read('public/app/catalogue-lines.js'), ctx, { filename: 'catalogue-lines.js' });
 runInContext(read('public/app/cart-ui.js'), ctx, { filename: 'cart-ui.js' });
+/**
+ * ⚠️ AFTER cart-ui.js, BECAUSE catalogue-ui READS CBCart.fmt — the same order app.html loads them in, and the
+ * reason that order is asserted rather than assumed.
+ *
+ * This line was missing for about ten minutes after cap-network.js started calling CBCatalogue.pickerHTML, and
+ * the harness went 5 FAILED immediately. That is the harness earning its place: the browser would have thrown
+ * `CBCatalogue is not defined` on the Network browse screen, which is behind a login AND behind ensureCap(), so
+ * no browser spec reaches it — this is the only thing standing between that and a broken screen in production.
+ */
+runInContext(read('public/app/catalogue-ui.js'), ctx, { filename: 'catalogue-ui.js' });
 runInContext(read('public/app/cap-network.js'), ctx, { filename: 'cap-network.js' });
 
 console.log('\ncap-network · the browse screen renders');

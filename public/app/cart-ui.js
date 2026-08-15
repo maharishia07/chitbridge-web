@@ -656,8 +656,38 @@
   }
 
   /* ── painting. Each piece repaints on its own, deliberately. ─────────────────────────────────────────────── */
-  function paintList(ns) { var el = doc(opt(ns, 'listEl')); if (el) el.innerHTML = listHTML(ns); }
-  function paintBar(ns) { var el = doc(opt(ns, 'barEl')); if (el) el.innerHTML = barHTML(ns); }
+  /**
+   * ⭐⭐ THE RENDERER HOOK — how a screen adopts the redesigned row WITHOUT a second repaint path.
+   *
+   * A screen may pass `renderer: CBCatalogue` to create(). When it does, THESE functions produce the new markup
+   * into the SAME elements (`listEl` / `barEl`), so there is still exactly one place that repaints a list and one
+   * place that repaints a bar.
+   *
+   * ⚠️ THE ALTERNATIVE WAS A SILENT BUG, AND THE cap-network HARNESS CAUGHT IT WITHIN A MINUTE. My first wiring
+   * had catalogue-ui render its own element ids. Everything looked right — until you typed in the search box:
+   * `search()` calls `paintList()`, which writes into `opt(ns,'listEl')`, which no longer existed. No error, no
+   * missing element on screen, just a search field that quietly stopped filtering. A repaint that targets an id
+   * nobody renders is invisible in every way except the one that matters.
+   *
+   * ⚠️ THE IDS ARE THE CONTRACT. `cbpick_net`, `cbcartbar_net`, `cbpick_sup`, `cbpick_cc` are what paintList and
+   * paintBar address AND what the harness asserts. A renderer may change the markup inside them; it may not
+   * change where they are.
+   */
+  function handleOf(ns) { var s = C[ns]; return (s && s.handle) || null; }
+  function rendererOf(ns) {
+    var r = opt(ns, 'renderer');
+    return (r && typeof r.listInto === 'function' && handleOf(ns)) ? r : null;
+  }
+  function paintList(ns) {
+    var el = doc(opt(ns, 'listEl')); if (!el) return;
+    var r = rendererOf(ns);
+    if (r) r.listInto(el, handleOf(ns)); else el.innerHTML = listHTML(ns);
+  }
+  function paintBar(ns) {
+    var el = doc(opt(ns, 'barEl')); if (!el) return;
+    var r = rendererOf(ns);
+    if (r) r.barInto(el, handleOf(ns)); else el.innerHTML = barHTML(ns);
+  }
   function paint(ns) {
     paintBar(ns); paintList(ns);
     // A screen may show the cart somewhere else too — a footer button count, a disabled Next. It registers a
@@ -918,6 +948,10 @@
       /** Let it go. A held cart that is never released is a leak the namespaced API could not even express. */
       destroy: function () { close(ns); delete C[ns]; }
     };
+    /* ⚠️ The handle is kept on the state so paintList/paintBar can hand it to a `renderer` (see rendererOf).
+       Everything else in this file works from `ns`; a renderer works from the handle, because a renderer is a
+       CALLER of this API and must not reach into C[ns]. This is the one bridge between the two. */
+    if (C[ns]) C[ns].handle = h;
     return h;
   }
 
@@ -929,6 +963,12 @@
     group: group, clear: clear, search: search, addAdhoc: addAdhoc, models: MODELS,
     open: open, close: close, checkout: checkout,
     barHTML: barHTML, listHTML: listHTML, popupHTML: popupHTML, pickerHTML: pickerHTML,
+    /* ⚠️ EXPORTED SO catalogue-ui.js CANNOT GROW A SECOND MONEY FORMATTER. It briefly had one, and that is
+       precisely how the two would drift: `fmt` honours `groupDigits`/`locale` per screen (off by default on
+       purpose — grouping ₹3400 into ₹3,400 broke variants.spec and would restyle a public page as a side
+       effect of a refactor). A renderer that formats money its own way is a renderer that will one day print a
+       different number from the cart popup beside it. */
+    fmt: fmt, symbolOf: sym,
     paint: paint, paintList: paintList, paintBar: paintBar, paintPopup: paintPopup
   };
   /**

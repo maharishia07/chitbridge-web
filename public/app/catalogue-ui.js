@@ -49,9 +49,16 @@
     });
   }
   function dataOf(r) { return (r && r.item && (r.item.item_data || r.item)) || {}; }
-  function money(sym, n) {
+  /**
+   * ⚠️ MONEY IS FORMATTED BY CBCart.fmt, NOT HERE. This file had its own `money()` for about an hour and that was
+   * a mistake of exactly the kind it is written to avoid: `fmt` honours the screen's `groupDigits`/`locale`
+   * (grouping is OFF by default on purpose — turning ₹3400 into ₹3,400 broke a spec and would restyle a public
+   * page as a side effect of a refactor). A second formatter means this renderer and the cart popup beside it can
+   * one day print different numbers for the same line, and nobody would know which was right.
+   */
+  function money(ns, n) {
     if (n == null || !isFinite(n)) return '';
-    return (sym || '₹') + (Math.round(Number(n) * 100) / 100);
+    return (root.CBCart && root.CBCart.fmt) ? root.CBCart.fmt(ns, n) : String(n);
   }
 
   /**
@@ -110,26 +117,52 @@
     var call = function (fn, arg) {
       return 'CBCart.' + fn + '(\'' + esc(ns) + '\',\'' + esc(id) + '\'' + (arg === undefined ? '' : ',' + arg) + ')';
     };
+    /**
+     * ⚠️⚠️ `data-testid="cart-add"` IS A PUBLISHED HOOK AND GOES ON EVERY ADD CONTROL — the pick toggle, the bare
+     * `+`, and the `+` inside the stepper. That is exactly where cart-ui's stepperHTML puts it (lines 452, 457,
+     * 472), and order-steps.spec.js clicks `getByTestId('cart-add').first()`.
+     *
+     * I first used my own `cbcat-add-<id>` instead and the spec timed out after 15s waiting for a button that
+     * was on screen the whole time under a different name. Renaming a published hook does not fail loudly; it
+     * fails as a test that cannot find a thing a human can see.
+     *
+     * The per-row id survives as `data-cbcat` so the harness can still target one specific row — an extra
+     * attribute, not a second data-testid, because an element gets exactly one of those.
+     */
     if (m === 'pick') {
       /* ⚠️ NO STEPPER AT ALL. `pick` is one or none — a second press must not make it two, so there must be no
          control that invites one. The model already refuses it; offering a + that does nothing would be worse. */
-      return '<button type="button" class="cbcat-pick' + (q ? ' on' : '') + '" data-testid="cbcat-pick-' + esc(id) + '"'
+      return '<button type="button" class="cbcat-pick' + (q ? ' on' : '') + '"'
+        + ' data-testid="cart-add" data-cbcat="pick-' + esc(id) + '"'
         + ' onclick="' + (q ? call('setQty', '0') : call('add')) + '">' + (q ? '✓ Added' : 'Add') + '</button>';
     }
     var out = q
       ? '<span class="cbcat-stp"><button type="button" aria-label="less" onclick="' + call('dec') + '">−</button>'
         + '<input value="' + esc(q) + '" inputmode="decimal" aria-label="quantity"'
         + ' onchange="CBCart.setQty(\'' + esc(ns) + '\',\'' + esc(id) + '\',this.value)"></span>'
-        + '<button type="button" class="cbcat-add" aria-label="more" onclick="' + call('add') + '">+</button>'
-      : '<button type="button" class="cbcat-add" data-testid="cbcat-add-' + esc(id) + '" aria-label="add"'
-        + ' onclick="' + call('add') + '">+</button>';
+        + '<button type="button" class="cbcat-add" data-testid="cart-add" data-cbcat="add-' + esc(id) + '"'
+        + ' aria-label="more" onclick="' + call('add') + '">+</button>'
+      : '<button type="button" class="cbcat-add" data-testid="cart-add" data-cbcat="add-' + esc(id) + '"'
+        + ' aria-label="add" onclick="' + call('add') + '">+</button>';
     return out;
   }
 
   /* ── one row ─────────────────────────────────────────────────────────────────────────────────────────────── */
   function rowHTML(cart, r, opts, withMedia) {
     var d = dataOf(r), id = r.item_id, q = cart.qtyOf(id);
-    var u = cart.unitPrice ? cart.unitPrice(r) : { amount: d.price, offered: false, asking: d.price };
+    /**
+     * ⚠️⚠️ THE PRICE COMES FROM CBCart.unitPrice — ns-first, off the ROOT export. It is NOT on the handle.
+     *
+     * This line read `cart.unitPrice ? cart.unitPrice(r) : { amount: d.price, … }` and shipped a catalogue where
+     * EVERY ROW SAID "no price". `unitPrice` is not one of the handle's methods, so the fallback always won —
+     * and the fallback guessed `item_data.price`, which is not where cart-ui finds a price (it walks offers,
+     * asking price and the row's own shape). A supplier's whole catalogue rendered as unpriced.
+     *
+     * That is the same mistake as the money formatter, one hour later: reimplementing something cart-ui owns
+     * instead of calling it. There is now NO fallback — if the shared reader cannot be reached, that is a load
+     * order bug and it should be loud, not quietly priced at nothing.
+     */
+    var u = root.CBCart.unitPrice(cart.ns, r);
     var sym = opts.sym || '₹';
     var name = r.variant || d.name || d.product || 'item';
     var hint = hintOf(r);
@@ -165,11 +198,11 @@
         + ' onchange="CBCart.setOffer(\'' + esc(cart.ns) + '\',\'' + esc(id) + '\',this.value)">'
       : '';
     var price = u.offered
-      ? '<s class="cbcat-was">' + esc(money(sym, u.asking)) + '</s>' + offerInput
-      : (offerInput || (isFinite(u.amount) ? esc(money(sym, u.amount)) : '<span class="cbcat-noprice">no price</span>'));
+      ? '<s class="cbcat-was">' + esc(money(cart.ns, u.asking)) + '</s>' + offerInput
+      : (offerInput || (isFinite(u.amount) ? esc(money(cart.ns, u.amount)) : '<span class="cbcat-noprice">no price</span>'));
     /* The line total, ONLY once there is a quantity to multiply by — a price × 1 restated is noise. */
     var lineTotal = (q && isFinite(u.amount))
-      ? '<div class="cbcat-linetotal">' + esc(money(sym, u.amount * q)) + '</div>' : '';
+      ? '<div class="cbcat-linetotal">' + esc(money(cart.ns, u.amount * q)) + '</div>' : '';
 
     return '<div class="cbcat-row' + (q ? ' on' : '') + (r.variant ? ' cbcat-var' : '') + '"'
       + ' data-testid="cbcat-row-' + esc(id) + '">'
@@ -211,7 +244,7 @@
   function commitHTML(cart, opts) {
     var n = cart.lines(), T = cart.total();
     if (!n) return '';
-    var amt = T && T.amount ? money(opts.sym || '₹', T.amount) + (T.partial ? '+' : '') : '';
+    var amt = T && T.amount ? money(cart.ns, T.amount) + (T.partial ? '+' : '') : '';
     return '<div class="cbcat-commit" data-testid="cbcat-commit-' + esc(cart.ns) + '">'
       + '<span><b>' + n + ' line' + (n === 1 ? '' : 's') + '</b> ready'
       + (amt ? ' · ' + esc(amt) : '') + ' — <b>not on the chit yet</b></span>'
@@ -227,27 +260,71 @@
    * ADDITIVE and never reorders the list beneath the hand that is adding to it — the existing code deliberately
    * fixes lines-first vs picker-first once per entry to the step, and that restraint is correct.
    */
-  function committedHTML(lines, opts) {
+  function committedHTML(ns, lines) {
     if (!lines || !lines.length) return '';
-    var sym = opts.sym || '₹';
     return '<div class="cbcat-onchit" data-testid="cbcat-onchit">'
       + '<div class="cbcat-onchit-t">On the chit · ' + lines.length + ' line' + (lines.length === 1 ? '' : 's') + '</div>'
       + lines.map(function (l) {
           var q = Number(l.qty || l.quantity || 0), p = Number(l.price || 0);
           return '<div class="cbcat-li"><span class="cbcat-li-n">' + esc(l.particulars || l.name || 'item') + '</span>'
             + '<span class="cbcat-li-q">' + esc(q) + ' ' + esc(l.unit || '') + '</span>'
-            + '<span class="cbcat-li-p">' + esc(money(sym, q * p)) + '</span></div>';
+            + '<span class="cbcat-li-p">' + esc(money(ns, q * p)) + '</span></div>';
         }).join('')
       + '</div>';
   }
 
   /* ── the whole picker ────────────────────────────────────────────────────────────────────────────────────── */
+  /**
+   * ⚠️⚠️ THE ELEMENT IDS ARE THE CART'S, NOT OURS. `barEl` and `listEl` come from the screen's CBCart.create()
+   * options — `cbpick_cc`, `cbpick_sup`, `cbpick_net`, `cbcartbar_*` — because those are exactly what
+   * CBCart.paintList/paintBar address when anything changes, and what the harness asserts.
+   *
+   * My first version invented `cbcatlist_<ns>` instead. Everything rendered correctly and the bug was invisible
+   * until you typed: `search()` → `paintList()` → an element id nobody rendered → the search box quietly stopped
+   * filtering. The cap-network harness went 5 FAILED and named it. An id is a contract, not a detail.
+   */
+  function idsOf(cart, opts) {
+    return {
+      bar:  opts.barEl  || 'cbcartbar_' + cart.ns,
+      list: opts.listEl || 'cbpick_' + cart.ns
+    };
+  }
+
+  /* The two entry points CBCart's renderer hook calls. They paint INTO the element it already owns, so there is
+     one repaint path rather than two competing ones. */
+  function listInto(el, cart) {
+    var o = cart.__cbcatOpts || {};
+    el.innerHTML = listHTML(cart, o);
+    observe(el);
+  }
+  function barInto(el, cart) {
+    el.innerHTML = chipHTML(cart, cart.__cbcatOpts || {});
+  }
+
   function pickerHTML(cart, opts) {
     opts = opts || {};
-    var barId = 'cbcatbar_' + cart.ns, listId = 'cbcatlist_' + cart.ns;
+    /* ⚠️ Stashed on the handle so the renderer hook (which is called with only the handle) paints with the SAME
+       options the screen chose — otherwise a repaint after pressing + would silently drop the checkout label,
+       the empty text and the placeholder, and the row would change under the hand that touched it. */
+    cart.__cbcatOpts = opts;
+    var ids = idsOf(cart, opts), barId = ids.bar, listId = ids.list;
     ensureCss();
+    /**
+     * ⚠️ A SIDE EFFECT IN A RENDER FUNCTION, AND WHY THIS ONE IS SAFE.
+     *
+     * The images come back with `data-src` and no `src`; something must observe them AFTER the HTML lands in the
+     * DOM. Three hosts paint this string in three different ways (a modal body, a re-rendered panel, a step
+     * body), so requiring each to remember `CBCatalogue.observe()` afterwards guarantees one of them forgets and
+     * that catalogue silently shows grey boxes forever.
+     *
+     * cart-ui learned the hard way that side effects belong nowhere near a renderer — a `setCatalogue()` here
+     * would repaint → sync → repaint forever. The difference is that `observe()` only sets `img.src`: it touches
+     * no cart state, fires no onChange, and is idempotent, so it cannot loop. Scheduled on a timeout so it runs
+     * after the caller has inserted the string, whenever and however it does that.
+     */
+    if (typeof setTimeout === 'function') setTimeout(function () { observe(); }, 0);
     return '<div class="cbcat-wrap" data-testid="cbcat-' + esc(cart.ns) + '">'
-      + committedHTML(opts.committed, opts)
+      + committedHTML(cart.ns, opts.committed)
       + '<div class="cbcat-hdr">'
       +   '<span id="' + esc(barId) + '" class="cbcat-chipslot">' + chipHTML(cart, opts) + '</span>'
       +   '<input class="cbcat-q" placeholder="' + esc(opts.placeholder || 'Search this catalogue…') + '"'
@@ -266,12 +343,18 @@
   function chipHTML(cart, opts) {
     var n = cart.lines(), T = cart.total(), sym = opts.sym || '₹';
     if (!n && opts.hideEmptyChip) return '';
-    return '<button type="button" class="cbcat-chip' + (n ? ' on' : '') + '"'
-      + ' data-testid="cbcat-cart-' + esc(cart.ns) + '"'
+    /**
+     * ⚠️ `cbcart-bar` AND `cart-count-<ns>` ARE CARRIED OVER DELIBERATELY. They are published hooks —
+     * render-smoke.spec.js clicks the class, order-steps.spec.js asserts the badge — and this chip IS the cart
+     * bar, restyled. Dropping the names because the markup is new is how a spec goes quietly green against
+     * nothing; the cap-network harness caught exactly that here and said so.
+     */
+    return '<button type="button" class="cbcart-bar cbcat-chip' + (n ? ' on' : '') + '"'
+      + ' data-testid="cart-' + esc(cart.ns) + '"'
       + (n ? ' onclick="CBCart.open(\'' + esc(cart.ns) + '\')"' : ' disabled')
       + ' title="' + esc(n ? 'Open the cart' : (opts.emptyHint || 'Press + on what you need')) + '">'
-      + '<span class="cbcat-bag">🛒' + (n ? '<span class="cbcat-n" data-testid="cbcat-count-' + esc(cart.ns) + '">' + n + '</span>' : '') + '</span>'
-      + (n && T.amount ? '<span class="cbcat-sum">' + esc(money(sym, T.amount)) + '</span>' : '')
+      + '<span class="cbcat-bag">🛒' + (n ? '<span class="cbcat-n" data-testid="cart-count-' + esc(cart.ns) + '">' + n + '</span>' : '') + '</span>'
+      + (n && T.amount ? '<span class="cbcat-sum">' + esc(money(cart.ns, T.amount)) + '</span>' : '')
       + '</button>';
   }
 
@@ -413,6 +496,8 @@
   }
 
   root.CBCatalogue = {
+    /* listInto/barInto ARE the renderer-hook contract cart-ui looks for — see rendererOf() there. */
+    listInto: listInto, barInto: barInto,
     pickerHTML: pickerHTML, listHTML: listHTML, rowHTML: rowHTML,
     commitHTML: commitHTML, committedHTML: committedHTML, chipHTML: chipHTML,
     paint: paint, observe: observe, ensureCss: ensureCss,
