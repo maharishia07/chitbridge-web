@@ -4,3 +4,6 @@ dist/
 e2e/wizard-shots/
 e2e/test-results/
 e2e/playwright-report/
+
+# local design previews — served by the dev server, NEVER deployed (would publish internal notes publicly)
+public/_design/
