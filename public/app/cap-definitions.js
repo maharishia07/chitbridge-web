@@ -30,6 +30,63 @@
 
 var CBDEF = { open: {} };
 
+/**
+ * ⭐ WORKED EXAMPLES — Athi: *"a link to its webpage, for example hs code, how it is used etc, some kind of
+ * usage so the users can connect the context"*.
+ *
+ * ⚠️ THIS IS THE ONE PLACE THIS SCREEN HOLDS CONTENT OF ITS OWN, and it is deliberate: an example is
+ * EXPLANATION, not data. The kinds themselves still come from the registries — nothing here invents a scheme,
+ * adds one, or changes what the system supports. If a scheme is removed from STD_SCHEMES its example simply
+ * stops being reachable, because the row it hangs on is gone.
+ *
+ * ⚠️ LINKS POINT AT THE ISSUING AUTHORITY. Not a lookup site, not a blog: only the defining body will still be
+ * correct next year, and only it can settle an argument about what a code means.
+ */
+var CBDEF_EG = {
+  'HS': {
+    label: 'HS — Harmonized System',
+    who: 'World Customs Organization',
+    note: 'The customs code for a physical good. Every cross-border shipment is classified with one, and the '
+        + 'duty rate, the paperwork and often the licence all follow from it. India extends it to 8 digits (HSN) '
+        + 'and GST rates are set against those.',
+    eg: '0902.30 — black tea, in packets of 3 kg or less',
+    url: 'https://www.wcotradetools.org/en/harmonized-system'
+  },
+  'GS1 GPC': {
+    label: 'GS1 GPC — Global Product Classification',
+    who: 'GS1',
+    note: 'What a retailer\'s systems use to group products — the "brick" a product belongs to. Different job '
+        + 'from HS: GPC is for trade and shelf, HS is for customs.',
+    eg: '10000025 — Tea (ready to drink)',
+    url: 'https://www.gs1.org/standards/gpc'
+  },
+  'Schema.org': {
+    label: 'Schema.org — web vocabulary',
+    who: 'Schema.org (Google, Microsoft, Yahoo, Yandex)',
+    note: 'How a product is described so machines reading a web page understand it. ⚠️ Worth knowing that it '
+        + 'models price on the OFFER, not on the product — the same good sells at different prices to different '
+        + 'buyers. Our own model notes that as a gap.',
+    eg: 'Product / Offer / priceSpecification',
+    url: 'https://schema.org/Product'
+  },
+  'UNSPSC': {
+    label: 'UNSPSC — UN Standard Products & Services Code',
+    who: 'GS1 US, for the United Nations',
+    note: 'The classification most procurement departments and tenders ask for. If a buyer says "give me your '
+        + 'UNSPSC", this is it.',
+    eg: '50201706 — Tea',
+    url: 'https://www.unspsc.org/'
+  },
+  'custom': {
+    label: 'custom — your own scheme',
+    who: 'you',
+    note: 'Your internal grouping, or one a particular buyer imposes. ⚠️ It travels with the catalogue but no '
+        + 'outside party can resolve it — so it is a label, not a standard, and should not be used where a real '
+        + 'scheme exists.',
+    eg: 'GRADE-A / GRADE-B'
+  }
+};
+
 /* ── the registries, read live ───────────────────────────────────────────────────────────────────────────────── */
 function cbDefRegistries(){
   var out = [];
@@ -108,11 +165,25 @@ function cbDefRegistries(){
     rows: P && P.datatypes ? P.datatypes.map(function (d) {
       return { code: d.k || d, label: d.label || d.k || d, note: d.note || '' }; }) : null
   });
+  /**
+   * ⭐ EXAMPLES AND LINKS — Athi, 2026-08-16: *"what we may need is an example where possible, a link to its
+   * webpage, for example hs code, how it is used etc, some kind of usage so the users can connect the context"*.
+   *
+   * A list of scheme names teaches nobody what to do. "HS" means nothing until you see `0902.30` next to
+   * "black tea, packets under 3kg" and the sentence explaining that customs reads it and duty follows from it.
+   *
+   * ⚠️ THE LINKS GO TO THE ISSUING AUTHORITY, not to a blog or a lookup service. A standard is only useful if
+   * you can reach the body that defines it — and that is also the only source that will still be right next
+   * year. Same rule the price provenance work applied to money.
+   */
   out.push({
     key: 'standard', icon: '📐', title: 'Standards',
-    blurb: 'Classification schemes a product can cite, by reference.',
+    blurb: 'Classification schemes a product can cite. ⚠️ Always BY REFERENCE — you cite the code, you never '
+         + 'copy the scheme. The issuing body owns it and keeps it current.',
     source: 'app/catalogue-model.js · STD_SCHEMES',
-    rows: P && P.standards ? P.standards.map(function (s) { return { code: s, label: s }; }) : null
+    rows: P && P.standards ? P.standards.map(function (s) {
+      var e = CBDEF_EG[s] || {};
+      return { code: s, label: e.label || s, note: e.note, eg: e.eg, url: e.url, who: e.who }; }) : null
   });
   /**
    * ⭐ FACETS GET THEIR MEANING SPELLED OUT — Athi, 2026-08-16: *"under field data type, consists of, means, this
@@ -241,7 +312,13 @@ function cbDefSectionHTML(s){
       return '<div class="cbdef-row">'
         + '<code class="cbdef-code">' + cbDefEsc(r.code) + '</code>'
         + '<span class="cbdef-lab">' + cbDefEsc(r.label) + '</span>'
+        + (r.who ? '<span class="cbdef-who">' + cbDefEsc(r.who) + '</span>' : '')
         + (r.note ? '<div class="cbdef-note">' + cbDefEsc(r.note) + '</div>' : '')
+        /* ⭐ A worked example is what turns a scheme name into something someone can act on. */
+        + (r.eg ? '<div class="cbdef-eg"><span class="cbdef-eglab">e.g.</span> ' + cbDefEsc(r.eg) + '</div>' : '')
+        /* ⚠️ rel="noopener" — a target=_blank link without it hands the opened page a handle on ours. */
+        + (r.url ? '<div class="cbdef-link"><a href="' + cbDefEsc(r.url) + '" target="_blank" rel="noopener noreferrer">'
+                 + cbDefEsc(r.url.replace(/^https?:\/\//, '')) + ' ↗</a></div>' : '')
         + '</div>';
     }).join('');
   }
@@ -320,6 +397,13 @@ function cbDefCss(){
     'background:#f4f2ec;border-radius:5px;padding:1px 6px;margin-right:8px;color:#5a5245}',
     '.cbdef-lab{font-size:13px;font-weight:600}',
     '.cbdef-note{font-size:12px;color:var(--grey);margin-top:3px;line-height:1.5;max-width:66ch}',
+    '.cbdef-who{font-size:11px;color:#9aa3a7;margin-left:8px}',
+    '.cbdef-eg{font-size:12px;margin-top:4px;background:var(--gold-soft,#F7F1E4);border:1px solid var(--gold-line,#E8D9BC);',
+    'border-radius:7px;padding:4px 9px;display:inline-block;max-width:66ch;font-family:ui-monospace,SFMono-Regular,Consolas,monospace}',
+    '.cbdef-eglab{font-weight:700;color:#8a6d1e;font-family:inherit}',
+    '.cbdef-link{margin-top:4px}',
+    '.cbdef-link a{font-size:11.5px;color:var(--blue,#3F66A6);text-decoration:none}',
+    '.cbdef-link a:hover{text-decoration:underline}',
     '.cbdef-empty{font-size:12.5px;color:#b4453f;padding:6px 0 2px;max-width:66ch}',
     '.cbdef-src{margin-top:10px;font-size:11px;color:#9aa3a7}',
     '.cbdef-src code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11px}'
