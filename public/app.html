@@ -108,6 +108,7 @@
   .topbar .ham{display:none;border:0;background:none;color:#fff;font-size:20px}
 
   .menu{background:#0F2E3D;color:#bcccd6;padding:12px 10px;display:flex;flex-direction:column;overflow-y:auto;border-top:1px solid rgba(255,255,255,.06)}
+  .menu .grpsep{height:1px;background:var(--line);margin:7px 10px 3px}
   .menu .grp{font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#5f7d8c;margin:10px 8px 5px}
   .menu button{display:flex;align-items:center;gap:10px;border:0;background:none;color:#bcccd6;text-align:left;font-size:13px;font-weight:500;padding:9px 10px;border-radius:9px;width:100%}
   .menu button .ic{width:16px;text-align:center}.menu button .ct{margin-left:auto;font-size:9.5px;background:rgba(255,255,255,.12);border-radius:10px;padding:1px 6px}
@@ -1519,7 +1520,30 @@ function priChip(p){ return (!p||p==="normal")?"":`<span class="prichip pri-${p}
 let UI = {...UI0, selected:new Set(), aggStates:new Set(["open","act","close"])};
 
 const MENUS = {
-  entity:{top:[["compose","✉️","Compose",""],["task","📥","Task",""],["order","📤","Order",""],["folders","📁","Folders",""],["drafts","📝","Drafts",""],["trash","🗑️","Trash",""],["archive","🗄️","Archive",""]], rest:[["worklist","🧰","Everyone's work"],["intake","📨","Intake"],["traceability","🧭","Traceability"],["network","🔗","Network"],["suppliers","🏭","Suppliers"],["customers","🛍️","Customers"],["catalogue","🗂️","Catalogue"],["readiness","🛡️","Trade ready"],["coassists","🧑‍🤝‍🧑","Co-assists"],["mis","📊","MIS"],["disputes","⚖️","Disputes"],["profile","👤","Profile"],["settings","⚙️","Settings"],["assistreview","🧠","Assistant"]], tag:"Owner does structure."},
+  /**
+   * ⭐ FOUR GROUPS THAT EACH ANSWER A DIFFERENT QUESTION — Athi, 2026-08-15: *"left side menu, what are required
+   * and what are not required, or make it more elegant."*
+   *
+   * ⚠️ IT WAS 23 ITEMS IN TWO BUCKETS, AND THE SECOND HELD FOURTEEN. "Manage" contained the daily worklist, the
+   * catalogue, trade-readiness and Settings — so the rail could not be scanned by region and every visit meant
+   * reading labels from the top. It also overflowed the viewport, which put Profile, Settings and Assistant
+   * permanently below the fold.
+   *
+   * ⚠️ COMPOSE STANDS ALONE, above the groups. It is the only VERB in a list of PLACES (his call, and right):
+   * everything else takes you somewhere, Compose makes something.
+   *
+   * Two removals, no capability lost: ASSISTANT already has a permanent floating button bottom-right, and
+   * PROFILE/SETTINGS move to the avatar menu — the two least-visited screens were holding prime rail space.
+   */
+  entity:{ lead:["compose","✉️","Compose"], groups:[
+    /* ⭐ "RAIL", NOT "MAILBOX" — Athi, 2026-08-15. His own positioning has been that CB is a governed RAIL and
+       that mailbox is the older, smaller framing; the rail is what the product is pitched as. The heading over
+       Task and Order is the first place a person reads either word, so it should be the right one. */
+    ["Rail", [["task","📥","Task",""],["order","📤","Order",""],["drafts","📝","Drafts",""],["folders","📁","Folders",""],["archive","🗄️","Archive",""],["trash","🗑️","Trash",""]]],
+    ["Work",    [["worklist","🧰","Everyone's work"],["intake","📨","Intake"],["disputes","⚖️","Disputes"]]],
+    ["Business",[["catalogue","🗂️","Catalogue"],["customers","🛍️","Customers"],["suppliers","🏭","Suppliers"],["network","🔗","Network"],["coassists","🧑‍🤝‍🧑","Co-assists"]]],
+    ["Insight", [["mis","📊","MIS"],["traceability","🧭","Traceability"],["readiness","🛡️","Trade ready"]]],
+  ], tag:"Owner does structure."},
   actor:{top:[["compose","✉️","Compose",""],["task","📥","Task",""],["order","📤","Order",""],["worklist","🧰","My work",""],["folders","📁","Folders",""],["drafts","📝","Drafts",""],["trash","🗑️","Trash",""],["archive","🗄️","Archive",""]], rest:[["suppliers","🏭","Suppliers"],["profile","👤","Profile"]], tag:"Commerce yes, structure no."},
   customer:{top:[["order","📤","My orders",""]], rest:[["shops","🏬","Find a shop"]], tag:"You see only your orders."},
 };
@@ -1632,12 +1656,25 @@ function renderApp(){
       <button class="msgc" id="msgcbtn" data-testid="icon-messages" onclick="openMsgCenter()" title="Messages" aria-label="Messages">💬<span class="bdot" id="msgcdot" style="${unreadCount()?'':'display:none'}">${unreadCount()}</span></button>
       ${role!=="customer"?`<button class="bell" id="bellbtn" data-testid="icon-notifications" onclick="openNotifications()" title="Notifications" aria-label="Notifications">🔔<span class="bdot" id="belldot" style="${notifBadge()?'':'display:none'}">${notifBadge()}</span></button>`:''}
       <div class="who">${statusControl(role)}<div class="nmwrap" style="text-align:right"><div class="nm">${SESSION.name}</div><div class="rl">${role} · ${SESSION.entity||""}</div></div>
-        <div class="av">${(SESSION.name||"?")[0]}</div>
+        <!-- ⭐ THE AVATAR IS NOW A MENU. Profile and Settings were the two least-visited screens in the rail and
+             were holding prime space in it; every app puts them behind the avatar, and the avatar was already
+             here doing nothing but showing a letter. -->
+        <!-- ⚠️ THE WRAPPER IS LOAD-BEARING. .topbar is position:static, so an absolutely-positioned menu inside it
+             resolves against <body> — which put this at y=46 while the avatar sits at y=76, i.e. floating ABOVE
+             the thing it belongs to and over the stage bar. It needs a positioned ancestor of its own. -->
+        <div style="position:relative">
+        <div class="av" data-testid="icon-avatar" onclick="UI.avMenu=!UI.avMenu;renderApp()" style="cursor:pointer" title="${esc(SESSION.name||'')} — account">${(SESSION.name||"?")[0]}</div>
+        ${UI.avMenu?`<div class="avmenu" data-testid="avatar-menu" style="position:absolute;top:calc(100% + 6px);right:0;z-index:60;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);min-width:180px;overflow:hidden">
+          <div style="padding:9px 13px;border-bottom:1px solid var(--line)"><div style="font-weight:700;font-size:13px">${esc(SESSION.name||'')}</div><div style="font-size:11.5px;color:var(--grey)">${esc(role)} · ${esc(SESSION.entity||'')}</div></div>
+          <button data-testid="nav-profile" onclick="UI.avMenu=false;navTo('profile')" style="display:block;width:100%;text-align:left;border:0;background:none;padding:10px 13px;font-size:13.5px;cursor:pointer">👤 Profile</button>
+          <button data-testid="nav-settings" onclick="UI.avMenu=false;navTo('settings')" style="display:block;width:100%;text-align:left;border:0;background:none;padding:10px 13px;font-size:13.5px;cursor:pointer">⚙️ Settings</button>
+          <button onclick="UI.avMenu=false;logout()" style="display:block;width:100%;text-align:left;border:0;background:none;padding:10px 13px;font-size:13.5px;cursor:pointer;border-top:1px solid var(--line);color:#c0453b">↩ Sign out</button>
+        </div>`:''}
+        </div>
         <button class="so" data-testid="icon-logout" onclick="logout()" title="Sign out" aria-label="Sign out"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button></div>
     </div>
     <div class="menu ${UI.drawer?'open':''}">
-      <div class="grp">Mailbox</div>${M.top.map(menuBtn).join("")}
-      <div class="grp">${role==="customer"?"More":"Manage"}</div>${M.rest.filter(function(it){ var g=CAP_GATED[it[0]]; return !g || ((SESSION.capabilities||[]).indexOf(g)>=0); }).map(menuBtn).join("")}
+      ${menuBody(M, role)}
       <div class="tagl">${M.tag}</div>
     </div>
     <div class="main">
@@ -1703,6 +1740,56 @@ function navTitle(){const all={...Object.fromEntries(Object.values(MENUS).flatMa
  * to remember to visit. It also makes the Task/Order choice DISAPPEAR: a folder created under Task IS a Task
  * folder, so nobody is asked a question the position already answers.
  */
+/**
+ * The rail body. Takes the NEW grouped shape when a role defines one, and the old top/rest pair otherwise —
+ * ⚠️ deliberately, because actor and customer still use the old shape and a rail that renders nothing is a
+ * signed-in user with no way to move. One role changed; the others keep working untouched.
+ */
+function menuBody(M, role){
+  var gate = function(it){ var g = CAP_GATED[it[0]]; return !g || ((SESSION.capabilities||[]).indexOf(g) >= 0); };
+  if (!M.groups) {
+    return '<div class="grp">Mailbox</div>' + M.top.map(menuBtn).join('')
+      + '<div class="grp">' + (role === 'customer' ? 'More' : 'Manage') + '</div>'
+      + M.rest.filter(gate).map(menuBtn).join('');
+  }
+  /* Compose sits above every heading — the one verb among places, with a rule under it rather than a label. */
+  var out = M.lead ? menuBtn(M.lead) + '<div class="grpsep"></div>' : '';
+  M.groups.forEach(function(g){
+    var items = g[1].filter(gate);
+    /* ⚠️ A HEADING WITH NOTHING UNDER IT IS WORSE THAN NO HEADING — capability gating can empty a whole group,
+       and an empty "Work" would read as a screen that failed to load rather than one you cannot use. */
+    if (!items.length) return;
+    /**
+     * ⭐ COLLAPSIBLE — Athi, 2026-08-15: *"your grouping, it has to be a collapsable window."*
+     *
+     * ⚠️ AND THE GROUP HOLDING THE CURRENT SCREEN NEVER COLLAPSES. Otherwise you close "Business", navigate to
+     * Catalogue from somewhere else, and the rail shows no highlighted item anywhere — so the one question a rail
+     * must always answer, "where am I", has no answer on screen.
+     */
+    var here = items.some(function(it){ return it[0] === UI.nav; });
+    var shut = !here && navGroupShut(g[0]);
+    out += '<div class="grp" data-testid="grp-' + g[0].toLowerCase() + '" onclick="toggleNavGroup(\'' + g[0] + '\')"'
+      + ' style="cursor:pointer;display:flex;align-items:center;gap:5px" title="' + (shut ? 'Show' : 'Hide') + ' ' + g[0] + '">'
+      + '<span style="font-size:9px;opacity:.7">' + (shut ? '▸' : '▾') + '</span>' + g[0]
+      + (shut ? '<span style="margin-left:auto;opacity:.55;font-weight:600">' + items.length + '</span>' : '') + '</div>';
+    if (!shut) out += items.map(menuBtn).join('');
+  });
+  return out;
+}
+/** Which rail groups are collapsed. Persisted, because a rail you re-tidy on every reload is not tidy. */
+function navGroupShut(name){
+  try { return (JSON.parse(localStorage.getItem('cb_nav_shut') || '[]') || []).indexOf(name) >= 0; }
+  catch (e) { return false; }
+}
+function toggleNavGroup(name){
+  try {
+    var l = JSON.parse(localStorage.getItem('cb_nav_shut') || '[]') || [];
+    var i = l.indexOf(name);
+    if (i >= 0) l.splice(i, 1); else l.push(name);
+    localStorage.setItem('cb_nav_shut', JSON.stringify(l));
+  } catch (e) {}
+  renderApp();
+}
 function menuBtn(x){
   const[key,ic,label]=x;
   // A track is "on" only when NO folder is selected — otherwise the folder below it is the one you are in.
