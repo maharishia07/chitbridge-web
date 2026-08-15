@@ -533,6 +533,10 @@ img.attImg{object-fit:cover;display:block}
 <script src="/app/catalogue-model.js"></script>
 <script src="/app/catalogue-lines.js"></script>
 <script src="/app/cart-ui.js"></script>
+<!-- ATTACH + VIEW, shared. Loaded here so `cbAttachType` is the SINGLE type→icon mapping for every screen; the
+     copy that used to live in this file is gone. See BACKLOG-attach-ui-sweep.md for what is deliberately NOT
+     swept yet and why. -->
+<script src="/app/attach-ui.js"></script>
 <!-- the shared step flow: rail, guard and footer for every screen that composes an order one step at a time -->
 <script src="/app/step-flow.js"></script>
 <!-- module 4 (LOCAL PROTOTYPE — not promoted): enhanced catalogue "face" setup (adopt/build → one face → conforming items). -->
@@ -2384,7 +2388,7 @@ function ccRenderItems(){ const h=document.getElementById("cc_items"); if(!h)ret
     : `<div style="font-size:12px;color:var(--grey);padding:4px 0">No items yet — pick from the catalogue or type one above.</div>`;
   ccRenderTotal();
 }
-function ccItemChips(i){ var it=CC.items[i]||{}; var fs=it.files||[]; return fs.map(function(f,k){ return '<span style="display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:7px;padding:2px 7px;margin:2px 5px 0 0;font-size:11px;background:#fff">'+attIcon(attType(f.type,f.name))+' '+esc(f.name.length>20?f.name.slice(0,20)+'…':f.name)+' <span onclick="ccDelItemFile('+i+','+k+')" style="cursor:pointer;color:#9aa3a7">✕</span></span>'; }).join(''); }
+function ccItemChips(i){ var it=CC.items[i]||{}; var fs=it.files||[]; return fs.map(function(f,k){ return '<span style="display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:7px;padding:2px 7px;margin:2px 5px 0 0;font-size:11px;background:#fff">'+attIcon(cbAttachType(f.type,f.name))+' '+esc(f.name.length>20?f.name.slice(0,20)+'…':f.name)+' <span onclick="ccDelItemFile('+i+','+k+')" style="cursor:pointer;color:#9aa3a7">✕</span></span>'; }).join(''); }
 function ccAddItemFiles(i,files){ var it=CC.items[i]; if(!it)return; it.files=it.files||[]; for(var k=0;k<files.length;k++){ var f=files[k]; if(f.size>6*1024*1024){ toast(f.name+' is over 6MB — skipped.'); continue; } it.files.push(f); } var el=document.getElementById('cc_itf_'+i); if(el)el.innerHTML=ccItemChips(i); }
 function ccDelItemFile(i,k){ var it=CC.items[i]; if(it&&it.files){ it.files.splice(k,1); } var el=document.getElementById('cc_itf_'+i); if(el)el.innerHTML=ccItemChips(i); }
 /* ⚠️ ccSetRTab / ccRenderSummary REMOVED with the four right-hand tabs (Line items · Attachments · Delivery ·
@@ -2495,7 +2499,7 @@ async function sendChit(v){
 }
 function ccAddFiles(files){ CC.files=CC.files||[]; for(var k=0;k<files.length;k++){ var f=files[k]; if(f.size>6*1024*1024){ toast(f.name+' is over 6MB — skipped.'); continue; } CC.files.push(f); } ccRenderFiles(); }
 function ccDelFile(i){ (CC.files||[]).splice(i,1); ccRenderFiles(); }
-function ccRenderFiles(){ var h=document.getElementById('cc_files'); if(!h)return; var fs=CC.files||[]; h.innerHTML=fs.length?fs.map(function(f,i){ return '<span style="display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:7px;padding:2px 7px;margin:0 5px 5px 0;font-size:11px;background:#fff">'+attIcon(attType(f.type,f.name))+' '+esc(f.name.length>26?f.name.slice(0,26)+'…':f.name)+' <span onclick="ccDelFile('+i+')" style="cursor:pointer;color:#9aa3a7">✕</span></span>'; }).join(''):''; }
+function ccRenderFiles(){ var h=document.getElementById('cc_files'); if(!h)return; var fs=CC.files||[]; h.innerHTML=fs.length?fs.map(function(f,i){ return '<span style="display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:7px;padding:2px 7px;margin:0 5px 5px 0;font-size:11px;background:#fff">'+attIcon(cbAttachType(f.type,f.name))+' '+esc(f.name.length>26?f.name.slice(0,26)+'…':f.name)+' <span onclick="ccDelFile('+i+')" style="cursor:pointer;color:#9aa3a7">✕</span></span>'; }).join(''):''; }
 /* Compose embedded assistant (ATH-117 pattern) */
 // COMPOSE_HELP -> app/cap-help.js (lazy).
 /* (removed) composeHelpBox + composeAsk + composeAskFree — the Compose "?" now renders from ASSIST_LIB via
@@ -5125,7 +5129,7 @@ function messagesTab(c){
   const head=`<div class="msghd"><span class="mh-t">Messages (${msgCount(c)})</span><button class="composebtn ${open?'on':''}" onclick="toggleCompose()">${open?'✕ Close':'✏️ New message'}</button></div>`;
   return `<div class="msgtab">${head}<div class="msglist"><div class="msgfilters">${scopeFilter}${typeFilter}${msgSearchSort()}</div><div class="thread">${thread}</div>${open?`<div class="composeov" onclick="if(event.target===this)toggleCompose()"><div class="composeov-card"><div class="composeov-bar"><button class="composeov-x" onclick="toggleCompose()" title="Close" aria-label="Close">✕</button></div>${composer}</div></div>`:''}</div></div>`;
 }
-function msgChips(){ var fs=UI.msgFiles||[]; return fs.map(function(f,i){ return '<span style="display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:7px;padding:2px 7px;font-size:11px;background:#fff">'+attIcon(attType(f.type,f.name))+' '+esc(f.name.length>18?f.name.slice(0,18)+'…':f.name)+' <span onclick="msgDelFile('+i+')" style="cursor:pointer;color:#9aa3a7">✕</span></span>'; }).join(''); }
+function msgChips(){ var fs=UI.msgFiles||[]; return fs.map(function(f,i){ return '<span style="display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:7px;padding:2px 7px;font-size:11px;background:#fff">'+attIcon(cbAttachType(f.type,f.name))+' '+esc(f.name.length>18?f.name.slice(0,18)+'…':f.name)+' <span onclick="msgDelFile('+i+')" style="cursor:pointer;color:#9aa3a7">✕</span></span>'; }).join(''); }
 function msgAddFiles(files){ UI.msgFiles=UI.msgFiles||[]; for(var k=0;k<files.length;k++){ var f=files[k]; if(f.size>6*1024*1024){ toast(f.name+' is over 6MB — skipped.'); continue; } UI.msgFiles.push(f); } var el=document.getElementById('msgfileschips'); if(el)el.innerHTML=msgChips(); }
 function msgDelFile(i){ (UI.msgFiles||[]).splice(i,1); var el=document.getElementById('msgfileschips'); if(el)el.innerHTML=msgChips(); }
 function busyShow(msg){ var h=document.getElementById('busyhost'); if(!h){ h=document.createElement('div'); h.id='busyhost'; document.body.appendChild(h); } h.innerHTML='<div class="busyov"><div class="busybox"><span class="bspin"></span><span>'+esc(msg||'Working…')+'</span></div></div>'; }
@@ -5319,12 +5323,15 @@ function attMedia(a,size){
   return `<div class="attImg ${big?'big':''}" style="background:${bg}"><span style="font-size:${big?'40px':'20px'}">${attIcon(a.t)}</span>${a.t==='video'?'<span class="vlen">0:12</span>':''}</div>`;
 }
 /* ── real attachments (platform-independent): bytes pulled ON DEMAND — GET /api/attachments/:id is auth'd, so fetch→blobURL ── */
-function attType(mime,name){ mime=String(mime||''); name=String(name||'').toLowerCase(); if(mime.indexOf('image/')===0)return 'image'; if(mime.indexOf('video/')===0)return 'video'; if(mime==='application/pdf'||/\.pdf$/.test(name))return 'pdf';
-  /* ⚠️ TEXT IS READABLE, SO READ IT. It used to fall through to 'doc', which offers a DOWNLOAD — and the commonest
-     text attachment on the rail is the original inbound message, attached as evidence precisely so someone can
-     check the lines against it. Making them download a file to read one sentence defeats the reason it is there. */
-  if(mime.indexOf('text/')===0||/\.(txt|md|log)$/.test(name))return 'text'; if(/sheet|excel|csv/.test(mime)||/\.(xlsx|xls|csv)$/.test(name))return 'xlsx'; if(/word|document/.test(mime)||/\.(docx|doc)$/.test(name))return 'docx'; if(/zip|compress/.test(mime)||/\.zip$/.test(name))return 'zip'; return 'doc'; }
-function mapAtt(a){ return { id:a.id, n:a.name||'file', t:attType(a.mime,a.name), mime:a.mime||'', size:a.size||0, line_index:(a.line_index==null?null:a.line_index) }; }
+/* ⭐ attType LIVED HERE AND IS NOW `cbAttachType` IN app/attach-ui.js — one mapping, every screen.
+   The two were identical but for one thing, and it was a real (if small) bug: this copy lower-cased the NAME and
+   not the MIME, so `IMAGE/PNG` fell through to 'doc' and offered a download instead of a picture. The helper
+   lower-cases both.
+   ⚠️ The rule that mattered survives the move and is restated there: TEXT IS READABLE, SO READ IT. It used to
+   fall through to 'doc', and the commonest text attachment on the rail is the original inbound message, attached
+   as evidence precisely so someone can check the lines against it. Making them download a file to read one
+   sentence defeats the reason it is there. */
+function mapAtt(a){ return { id:a.id, n:a.name||'file', t:cbAttachType(a.mime,a.name), mime:a.mime||'', size:a.size||0, line_index:(a.line_index==null?null:a.line_index) }; }
 function fileToB64(file){ return new Promise(function(res,rej){ var r=new FileReader(); r.onload=function(){res(String(r.result).replace(/^data:[^;]+;base64,/,''));}; r.onerror=function(){rej(new Error('read failed'));}; r.readAsDataURL(file); }); }
 async function attUpload(chit_id, file, extra){ var data_base64=await fileToB64(file); var body=Object.assign({chit_id:chit_id, name:file.name, mime:file.type||'application/octet-stream', data_base64:data_base64}, extra||{}); return await api("attUpload",{body:body}); }
 var _attUrls={};
