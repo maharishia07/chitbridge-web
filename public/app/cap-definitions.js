@@ -62,7 +62,17 @@ function cbDefRegistries(){
   });
 
   /* The catalogue's own grammar — datatypes, selling methods, facets, pricing models, standards. */
-  var P = (typeof CBCatalogueModel !== 'undefined' && CBCatalogueModel.PALETTE) ? CBCatalogueModel.PALETTE() : null;
+  /**
+   * ⚠️ `CBCatalogue`, NOT `CBCatalogueModel` — I invented the second name and five of the seven sections read
+   * "not loaded" while the data was sitting right there. The registry's real global is CBCatalogue (see
+   * catalogue-model.js line 18, `root.CBCatalogue = M`), which is precisely the name catalogue-ui.js was
+   * clobbering an hour ago; renaming that one to CBCatUI is what freed it.
+   *
+   * ⭐ Worth noting the honest-empty-state rule earned its keep twice in one evening: "not loaded" is what
+   * surfaced BOTH the missing offers.js script tag and this wrong name. Had the section rendered as an empty
+   * list, both would have read as "there are none" and neither would have been found.
+   */
+  var P = (typeof CBCatalogue !== 'undefined' && CBCatalogue.PALETTE) ? CBCatalogue.PALETTE() : null;
   out.push({
     key: 'pricing', icon: '💱', title: 'Pricing models',
     blurb: 'How a price is arrived at. ⚠️ Declared today, not yet evaluated at order time.',
@@ -203,7 +213,18 @@ function cbDefCss(){
   var s = document.createElement('style');
   s.id = 'cbdef_css';
   s.textContent = [
-    '.cbdef-wrap{padding:14px 16px 40px;max-width:820px}',
+    /**
+     * ⚠️⚠️ THE SCREEN MUST OWN ITS OWN SCROLLING. `#mainbody` is `flex:1; display:flex; flex-direction:column;
+     * min-height:0` — a flex COLUMN that does not scroll. A screen that just returns tall HTML gets clipped in
+     * silence: measured here at 2,071px of content in a 799px viewport with `overflow-y: visible`, so 1,272px —
+     * every section below Offer kinds — was simply unreachable. Nothing errors, the page just ends.
+     *
+     * Peer screens (cap-readiness and friends) each wrap their body in an `overflow:auto` pane for exactly this
+     * reason. `flex:1` so it takes the remaining height rather than its content's height, and `min-height:0`
+     * because a flex item's default `min-height:auto` refuses to shrink below its content and would put the
+     * overflow back where it started.
+     */
+    '.cbdef-wrap{flex:1;min-height:0;overflow-y:auto;padding:14px 16px 40px;max-width:820px}',
     '.cbdef-hd{display:flex;align-items:center;gap:8px;margin-bottom:6px}',
     '.cbdef-lede{font-size:13px;color:var(--grey);line-height:1.55;margin-bottom:10px;max-width:66ch}',
     '.cbdef-note-box{font-size:12.5px;line-height:1.55;color:#6b5a36;background:var(--gold-soft);',

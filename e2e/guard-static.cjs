@@ -135,7 +135,18 @@ console.log('\n3 · .btn in a flex row');
  */
 console.log('\n6 · one global, one owner');
 {
-  const files = [['app.html', app]].concat(CAPS.map((f) => [f, fs.readFileSync(path.join(WEB, 'app', f), 'utf8')]));
+  /**
+   * ⚠️ COMMENTS ARE STRIPPED FIRST, AND THAT IS NOT FUSSINESS — this check flagged ITSELF within an hour of being
+   * written. cap-definitions.js explains the collision it was written after, quoting `root.CBCatalogue = M` in
+   * prose, and the guard read the quotation as an assignment. A check that cannot tell code from a comment ABOUT
+   * code will punish exactly the files that document their own history, which is the opposite of what we want.
+   *
+   * ⚠️ Strings are deliberately NOT stripped: a global assigned via `window['X'] =` is rare here, but a real
+   * assignment hidden in a template literal is a genuine collision and should still be caught.
+   */
+  const decomment = (s) => s.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:])\/\/.*$/gm, '$1');
+  const files = [['app.html', app]].concat(CAPS.map((f) => [f, fs.readFileSync(path.join(WEB, 'app', f), 'utf8')]))
+    .map(([name, src]) => [name, decomment(src)]);
   const owners = {};
   files.forEach(([name, src]) => {
     /* `root.X = `, `window.X = `, `globalThis.X = ` at an assignment, not a read. */
