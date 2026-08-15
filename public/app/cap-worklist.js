@@ -227,9 +227,15 @@ function wlRow(r, ctx, depth){
     /* ⚠️ event.stopPropagation() ON BOTH — without it the row's own handler also fires and the chit opens behind
        the card, so the modal you wanted is sitting on a screen that navigated out from under it. */
     + '<span style="display:flex;gap:2px;flex:none;align-items:center">'
-    +   '<span data-testid="wl-done" title="Record a delivery against this line" onclick="event.stopPropagation();wlAct(&quot;' + r.line_id + '&quot;,&quot;' + r.chit_id + '&quot;,&quot;done&quot;)"'
+    /**
+     * ⚠️ ONE DESTINATION, NOT THREE. These used to open their own little card, which is precisely how a delivery
+     * got recorded without its history in view. They now open the SAME line card the row does — the tick is a
+     * shortcut to a place, not a second place. Kept as separate affordances because they still say what the row
+     * is FOR at a glance, which a bare chevron does not.
+     */
+    +   '<span data-testid="wl-done" title="Record a delivery — opens the line, with its history" onclick="event.stopPropagation();wlLine(&quot;' + r.line_id + '&quot;)"'
     +     ' style="cursor:pointer;font-size:13px;padding:2px 6px;border-radius:6px;color:#3d7a4e;background:#eef6f0;font-weight:800">✓</span>'
-    +   '<span data-testid="wl-cost" title="Add a part, labour or a charge to this line" onclick="event.stopPropagation();wlAct(&quot;' + r.line_id + '&quot;,&quot;' + r.chit_id + '&quot;,&quot;cost&quot;)"'
+    +   '<span data-testid="wl-cost" title="Add a part, labour or a charge — opens the line" onclick="event.stopPropagation();wlLine(&quot;' + r.line_id + '&quot;)"'
     +     ' style="cursor:pointer;font-size:13px;padding:2px 6px;border-radius:6px;color:#2c5d7c;background:#eef4f8;font-weight:800">₹</span>'
     +   '<span style="color:var(--grey);font-size:12px;padding-left:3px">›</span></span></div>'
     /* ⚠️ WHICH ORDER IT CAME FROM. A line without its chit is an instruction with no context — you cannot ring the
@@ -520,72 +526,6 @@ function wlRender(rows, keys, depth, path){
  * ⚠️ THE ROW TAP STILL OPENS THE CHIT, unchanged. These are deliberate extra affordances, not a re-purposed tap:
  * a list where tapping does something different depending on where you land is a list people stop trusting.
  */
-var WLACT = { row: null };
-function wlAct(line_id, chit_id, kind){
-  var rows = wlRows(WL.data || {});
-  var r = rows.filter(function(x){ return x.line_id === line_id; })[0];
-  if (!r) return;
-  WLACT.row = r;
-  var q = (r.quantity == null ? '' : r.quantity), u = r.unit || '';
-  var body = (kind === 'cost')
-    /* ⚠️ PARTICULARS IS REQUIRED, and the server refuses without it — a cost that cannot say what it was for is
-       unreadable a week later, which is when someone actually asks. */
-    ? '<label style="font-size:12px;font-weight:700;color:var(--grey)">WHAT WAS IT FOR</label>'
-      + '<input id="wl_what" placeholder="Brake shoe, labour, call-out…" style="width:100%;font-size:15px;padding:9px 11px;border:1px solid var(--line);border-radius:8px;margin:4px 0 12px">'
-      + '<div style="display:flex;gap:10px">'
-      +   '<div style="flex:1"><label style="font-size:12px;font-weight:700;color:var(--grey)">HOW MANY</label>'
-      +     '<input id="wl_qty" type="number" step="any" placeholder="1" style="width:100%;font-size:15px;padding:9px 11px;border:1px solid var(--line);border-radius:8px;margin-top:4px"></div>'
-      +   '<div style="flex:1"><label style="font-size:12px;font-weight:700;color:var(--grey)">UNIT</label>'
-      +     '<input id="wl_unit" placeholder="piece, hour, litre" style="width:100%;font-size:15px;padding:9px 11px;border:1px solid var(--line);border-radius:8px;margin-top:4px"></div>'
-      +   '<div style="flex:1"><label style="font-size:12px;font-weight:700;color:var(--grey)">COST</label>'
-      +     '<input id="wl_amt" type="number" step="any" placeholder="0.00" style="width:100%;font-size:15px;padding:9px 11px;border:1px solid var(--line);border-radius:8px;margin-top:4px"></div>'
-      + '</div>'
-      + '<div style="margin-top:10px;font-size:11.5px;color:var(--grey);line-height:1.5">This adds to the line, it does not deliver it. Units are never added together — a litre and an hour stay apart; only the money totals.</div>'
-    : '<div style="display:flex;gap:10px;align-items:flex-end">'
-      +   '<div style="flex:1"><label style="font-size:12px;font-weight:700;color:var(--grey)">DELIVERED</label>'
-      +     '<input id="wl_qty" type="number" step="any" value="' + esc(String(q)) + '" style="width:100%;font-size:17px;font-weight:700;padding:9px 11px;border:1px solid var(--line);border-radius:8px;margin-top:4px"></div>'
-      +   '<div style="font-size:15px;color:var(--grey);padding-bottom:11px">' + esc(u) + '</div>'
-      + '</div>'
-      + '<label style="font-size:12px;font-weight:700;color:var(--grey);display:block;margin-top:12px">REFERENCE <span style="font-weight:400">(docket, "left at the gate", anything)</span></label>'
-      + '<input id="wl_ref" style="width:100%;font-size:15px;padding:9px 11px;border:1px solid var(--line);border-radius:8px;margin-top:4px">'
-      + '<div style="margin-top:10px;font-size:11.5px;color:var(--grey);line-height:1.5">Recorded as YOUR claim, in both copies. A negative figure corrects an earlier one — nothing is ever deleted.</div>';
-
-  modal('<div class="mhd"><div class="t">' + (kind === 'cost' ? 'Add cost' : 'Record delivery') + '</div>'
-    + '<div class="s">' + esc(r.particulars || 'line') + ' · ' + esc(r.subject || 'chit') + '</div></div>'
-    + '<div class="mbody">' + body + '</div>'
-    + '<div class="mfoot"><button onclick="closeModal()">Cancel</button>'
-    + '<button class="pri" data-testid="wl-act-save" onclick="wlActSave(&quot;' + kind + '&quot;)">'
-    + (kind === 'cost' ? 'Add' : 'Record') + '</button></div>');
-}
-async function wlActSave(kind){
-  var r = WLACT.row; if (!r) return;
-  var g = function(id){ var e = document.getElementById(id); return e ? e.value.trim() : ''; };
-  var row = { line_id: r.line_id };
-  if (kind === 'cost') {
-    row.kind = 'add';
-    row.particulars = g('wl_what');
-    row.quantity = g('wl_qty') === '' ? 0 : Number(g('wl_qty'));
-    row.unit = g('wl_unit') || null;
-    row.amount = g('wl_amt') === '' ? null : Number(g('wl_amt'));
-    if (!row.particulars) { toast('Say what the cost was for'); return; }
-    if (!row.quantity && !row.amount) { toast('Give a quantity or an amount'); return; }
-  } else {
-    row.quantity = Number(g('wl_qty'));
-    row.unit = r.unit || null;
-    row.reference = g('wl_ref') || null;
-    if (!isFinite(row.quantity) || row.quantity === 0) { toast('A delivery needs a quantity'); return; }
-  }
-  try {
-    await api('wlDeliver', { params: { id: r.chit_id }, body: { rows: [row] } });
-    closeModal();
-    toast(kind === 'cost' ? 'Added to the line' : 'Delivery recorded');
-    /* ⚠️ RELOAD RATHER THAN PATCH THE ROW IN PLACE. The roll-ups above it are derived from every row in the
-       group, so a local edit would leave the headings stating a total that no longer matches what is under them —
-       the class of drift that makes people stop believing the numbers. */
-    await wlLoad();
-  } catch (e) { toast((e && e.message) || 'Could not record that'); }
-}
-
 /**
  * ⭐ THE LINE CARD — everything you can do to one subtask, in one pane.
  *
@@ -641,11 +581,22 @@ function wlLineHTML(loading){
   }
 
   /* ── progress, and the history behind it ─────────────────────────────────────────────────────────────────── */
+  /**
+   * ⚠️ OVER-DELIVERY MUST SAY "OVER", NOT "0 LEFT". `left` is clamped at zero, which is right for "how much more
+   * to send" and actively misleading as a headline: Athi's screenshot reads "0 kg left · 180 out of 120 kg", so
+   * the one number in the largest type on the card was hiding a 60 kg excess. Excess is the thing you most need
+   * told, because unlike a shortfall nobody chases it.
+   */
+  var ordered = r.quantity == null ? null : Number(r.quantity);
+  var got = Number(r.delivered || 0);
+  var over = (ordered != null && got > ordered) ? Math.round((got - ordered) * 1000) / 1000 : 0;
   var left = r.left == null ? null : r.left;
+  var big = over ? String(over) : (left == null ? '—' : String(left));
   var bar = '<div style="display:flex;gap:16px;align-items:baseline;font-variant-numeric:tabular-nums">'
-    + '<div><div style="font-size:22px;font-weight:800;color:' + (left === 0 ? '#3d7a4e' : '#b0641c') + '">'
-    +   (left == null ? '—' : esc(String(left))) + '</div><div style="font-size:11px;color:var(--grey)">' + esc(r.unit || '') + ' left</div></div>'
-    + '<div style="font-size:13px;color:var(--grey)">' + esc(String(r.delivered || 0)) + ' out of ' + esc(String(r.quantity == null ? '—' : r.quantity)) + ' ' + esc(r.unit || '') + '</div>'
+    + '<div><div style="font-size:22px;font-weight:800;color:' + (over ? '#c0453b' : left === 0 ? '#3d7a4e' : '#b0641c') + '">'
+    +   esc(big) + '</div><div style="font-size:11px;color:' + (over ? '#c0453b' : 'var(--grey)') + ';font-weight:' + (over ? 700 : 400) + '">'
+    +   esc(r.unit || '') + (over ? ' OVER' : ' left') + '</div></div>'
+    + '<div style="font-size:13px;color:var(--grey)">' + esc(String(got)) + ' out of ' + esc(String(ordered == null ? '—' : ordered)) + ' ' + esc(r.unit || '') + '</div>'
     + (prog.charged ? '<div style="margin-left:auto;text-align:right"><div style="font-size:17px;font-weight:800;color:#2c5d7c">' + esc(String(prog.charged)) + '</div><div style="font-size:11px;color:var(--grey)">charged</div></div>' : '')
     + '</div>';
 
@@ -681,6 +632,40 @@ function wlLineHTML(loading){
     +   asked
     +   lbl('history')
     +   hist
+    /**
+     * ⭐ RECORD IT HERE, UNDER THE HISTORY THAT SHOULD INFORM IT — Athi, 2026-08-15: *"the tick mark is not
+     * bringing the history, so I am delivering in excess … I guess we don't need two tabs. The tick mark can
+     * bring the history also, so you know the history and you should be able to part deliver and/or consider
+     * closing the task. Can you see what is the union of both the window and bring the best of both?"*
+     *
+     * ⚠️ TWO WINDOWS CAUSED A REAL OVER-DELIVERY. The ✓ card asked for a quantity and pre-filled the ORDERED
+     * figure, with no idea 120 had already gone out; the history lived in a different window nobody had open at
+     * the moment of typing. 120 was entered against a line already complete and the result was 180 of 120. The
+     * fix is not a warning — it is putting the number and the evidence for it in the same field of view.
+     *
+     * ⚠️ AND IT DEFAULTS TO WHAT IS LEFT, NOT TO WHAT WAS ORDERED. On a line with nothing delivered those are the
+     * same number, which is exactly why the wrong one survived so long: it is only wrong AFTER a part delivery,
+     * which is the case this whole screen exists for.
+     */
+    +   lbl('record a delivery')
+    +   '<div style="display:flex;gap:9px;align-items:flex-end">'
+    +     '<div style="flex:1"><input id="wl_qty" data-testid="wl-qty" type="number" step="any" value="' + esc(String(left == null ? '' : left)) + '"'
+    +       ' style="width:100%;font-size:17px;font-weight:700;padding:9px 11px;border:1px solid var(--line);border-radius:8px">'
+    +       '<div style="font-size:11px;color:var(--grey);margin-top:3px">' + esc(r.unit || '')
+    +       + (left != null ? ' · pre-filled with what is left, not what was ordered' : '') + '</div></div>'
+    +     '<input id="wl_ref" placeholder="docket / note" style="flex:1;font-size:14.5px;padding:9px 11px;border:1px solid var(--line);border-radius:8px">'
+    +     '<button class="btn pri" data-testid="wl-record" onclick="wlActSave(&quot;done&quot;)" style="padding:9px 15px">Record</button>'
+    +   '</div>'
+    +   '<div style="margin-top:6px;font-size:11.5px;color:var(--grey);line-height:1.5">A negative figure corrects an earlier delivery — nothing is ever deleted.'
+    +     (over ? ' <b style="color:#c0453b">This line is already ' + esc(String(over)) + ' ' + esc(r.unit || '') + ' over; a negative entry is how you put that right.</b>' : '') + '</div>'
+    +   lbl('add a part, labour or a charge')
+    +   '<div style="display:flex;gap:9px;align-items:flex-end">'
+    +     '<input id="wl_what" data-testid="wl-what" placeholder="Brake shoe, labour, call-out…" style="flex:2;font-size:14.5px;padding:9px 11px;border:1px solid var(--line);border-radius:8px">'
+    +     '<input id="wl_cqty" type="number" step="any" placeholder="qty" style="flex:.7;font-size:14.5px;padding:9px 11px;border:1px solid var(--line);border-radius:8px">'
+    +     '<input id="wl_cunit" placeholder="unit" style="flex:.8;font-size:14.5px;padding:9px 11px;border:1px solid var(--line);border-radius:8px">'
+    +     '<input id="wl_amt" data-testid="wl-amt" type="number" step="any" placeholder="cost" style="flex:1;font-size:14.5px;padding:9px 11px;border:1px solid var(--line);border-radius:8px">'
+    +     '<button class="btn" data-testid="wl-addcost" onclick="wlActSave(&quot;cost&quot;)" style="padding:9px 15px">Add</button>'
+    +   '</div>'
     +   lbl('who is doing it, and by when')
     +   '<div style="display:flex;gap:10px">'
     +     '<select id="wl_who" data-testid="wl-who-sel" style="flex:1;font-size:14.5px;padding:8px 10px;border:1px solid var(--line);border-radius:8px">' + opts + '</select>'
@@ -695,6 +680,44 @@ function wlLineHTML(loading){
     +     (done ? 'Reopen' : 'Mark done') + '</button>'
     +   '<button class="pri" data-testid="wl-line-save" onclick="wlLineSave()">Save</button>'
     + '</div>';
+}
+/**
+ * ⭐ ONE WINDOW — Athi, 2026-08-15: *"we don't need two tabs, the tick mark can bring the history also, so you
+ * know the history and you should be able to part deliver and/or consider closing the task. Can you see what is
+ * the union of both the window and bring the best of both?"*
+ *
+ * ⚠️ THE TWO WINDOWS CAUSED A REAL OVER-DELIVERY, and it is worth being precise about how. The old ✓ card asked
+ * for a quantity and pre-filled the ORDERED figure, knowing nothing about what had already gone out; the history
+ * lived in a different window nobody had open while typing. So 120 was entered against a line already complete,
+ * and the record now reads 180 out of 120. Not a slip — the screen supplied the wrong number and hid the evidence
+ * that would have corrected it.
+ */
+async function wlActSave(kind){
+  var r = WLL.row; if (!r) return;
+  var g = function(id){ var e = document.getElementById(id); return e ? String(e.value).trim() : ''; };
+  var row = { line_id: r.line_id };
+  if (kind === 'cost') {
+    row.kind = 'add';
+    row.particulars = g('wl_what');
+    row.quantity = g('wl_cqty') === '' ? 0 : Number(g('wl_cqty'));
+    row.unit = g('wl_cunit') || null;
+    row.amount = g('wl_amt') === '' ? null : Number(g('wl_amt'));
+    if (!row.particulars) { toast('Say what the cost was for'); return; }
+    if (!row.quantity && !row.amount) { toast('Give a quantity or an amount'); return; }
+  } else {
+    row.quantity = Number(g('wl_qty'));
+    row.unit = r.unit || null;
+    row.reference = g('wl_ref') || null;
+    if (!isFinite(row.quantity) || row.quantity === 0) { toast('A delivery needs a quantity'); return; }
+  }
+  try {
+    await api('wlDeliver', { params: { id: r.chit_id }, body: { rows: [row] } });
+    closeModal();
+    toast(kind === 'cost' ? 'Added to the line' : 'Delivery recorded');
+    /* ⚠️ RELOAD RATHER THAN PATCH THE ROW. The roll-ups above it are derived from every row in the group, so a
+       local edit would leave the headings stating a total that no longer matches what is under them. */
+    await wlLoad();
+  } catch (e) { toast((e && e.message) || 'Could not record that'); }
 }
 async function wlSetState(state){
   var r = WLL.row; if (!r) return;

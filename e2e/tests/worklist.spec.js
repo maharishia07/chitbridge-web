@@ -356,10 +356,19 @@ test.describe('WORKLIST — one person, every chit', () => {
     await settle(page);
     /* ⚠️ THE CHIT MUST NOT HAVE OPENED BEHIND THE CARD. The row carries its own tap handler, so without
        stopPropagation the modal lands on a screen that navigated out from under it. */
-    await expect(page.locator('#modalhost'), 'the card is open').toContainText('Record delivery');
+    /**
+     * ⭐ ONE WINDOW — Athi, 2026-08-15: *"we don't need two tabs, the tick mark can bring the history also … can
+     * you see what is the union of both the window and bring the best of both?"*
+     *
+     * ⚠️ THE TWO-WINDOW VERSION CAUSED A REAL OVER-DELIVERY. The old ✓ card pre-filled the ORDERED quantity,
+     * knowing nothing about what had gone out, while the history sat in a window nobody had open — so 120 was
+     * entered against a completed line and the record read 180 of 120. The tick now opens the line itself.
+     */
+    await expect(page.locator('#modalhost'), 'the tick opens the LINE, history and all').toContainText('Act Rice');
+    await expect(page.locator('#modalhost'), 'with the delivery field on the same card').toContainText('record a delivery');
     await page.locator('#wl_qty').fill('20');
     await page.locator('#wl_ref').fill('DC-WL-1');
-    await page.getByTestId('wl-act-save').click();
+    await page.getByTestId('wl-record').click();
     await settle(page);
 
     let p = await page.evaluate(async (x) => {
@@ -376,12 +385,15 @@ test.describe('WORKLIST — one person, every chit', () => {
     await page.getByTestId('wl-row').filter({ hasText: 'WL act ' + s.s }).first()
       .getByTestId('wl-cost').evaluate((n) => n.click());
     await settle(page);
-    await expect(page.locator('#modalhost')).toContainText('Add cost');
+    await expect(page.locator('#modalhost')).toContainText('add a part, labour or a charge');
+    /* ⚠️ THE COST QUANTITY HAS ITS OWN FIELD (wl_cqty), SEPARATE FROM THE DELIVERY QUANTITY (wl_qty). On one
+       merged card the two must never share an input: typing 2 hours of labour into the box that records goods
+       delivered is exactly the confusion the merge was supposed to end. */
     await page.locator('#wl_what').fill('Handling charge');
-    await page.locator('#wl_qty').fill('2');
-    await page.locator('#wl_unit').fill('hour');
+    await page.locator('#wl_cqty').fill('2');
+    await page.locator('#wl_cunit').fill('hour');
     await page.locator('#wl_amt').fill('450');
-    await page.getByTestId('wl-act-save').click();
+    await page.getByTestId('wl-addcost').click();
     await settle(page);
 
     p = await page.evaluate(async (x) => {
