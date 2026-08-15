@@ -1760,19 +1760,25 @@ function menuBody(M, role){
        and an empty "Work" would read as a screen that failed to load rather than one you cannot use. */
     if (!items.length) return;
     /**
-     * ⭐ COLLAPSIBLE — Athi, 2026-08-15: *"your grouping, it has to be a collapsable window."*
+     * ⭐ EVERY GROUP COLLAPSES, INCLUDING THE ONE YOU ARE IN — Athi, 2026-08-15: *"why is rail not collapsing,
+     * that also can collapse."*
      *
-     * ⚠️ AND THE GROUP HOLDING THE CURRENT SCREEN NEVER COLLAPSES. Otherwise you close "Business", navigate to
-     * Catalogue from somewhere else, and the rail shows no highlighted item anywhere — so the one question a rail
-     * must always answer, "where am I", has no answer on screen.
+     * ⚠️ MY FIRST RULE WAS TOO STRONG. I made the group holding the current screen refuse to collapse, to protect
+     * the one question a rail must always answer — "where am I". But you are nearly always inside Rail, so the
+     * most-used group became the one that would not close, and from the outside that reads as broken rather than
+     * protective.
+     *
+     * The guarantee is kept and the restriction dropped: a collapsed group that holds the current screen still
+     * shows THAT ONE ITEM under its heading. You lose the five you were not using and keep the one you are on.
      */
-    var here = items.some(function(it){ return it[0] === UI.nav; });
-    var shut = !here && navGroupShut(g[0]);
+    var here = items.filter(function(it){ return it[0] === UI.nav; });
+    var shut = navGroupShut(g[0]);
+    var shown = shut ? here : items;
     out += '<div class="grp" data-testid="grp-' + g[0].toLowerCase() + '" onclick="toggleNavGroup(\'' + g[0] + '\')"'
       + ' style="cursor:pointer;display:flex;align-items:center;gap:5px" title="' + (shut ? 'Show' : 'Hide') + ' ' + g[0] + '">'
       + '<span style="font-size:9px;opacity:.7">' + (shut ? '▸' : '▾') + '</span>' + g[0]
       + (shut ? '<span style="margin-left:auto;opacity:.55;font-weight:600">' + items.length + '</span>' : '') + '</div>';
-    if (!shut) out += items.map(menuBtn).join('');
+    out += shown.map(menuBtn).join('');
   });
   return out;
 }
