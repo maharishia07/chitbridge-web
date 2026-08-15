@@ -57,9 +57,12 @@ var CBDEF_AUTHORABLE = {
                 blurb: 'A quantity rule with a NAME, so a product adopts “Carton of 6” rather than repeating '
                      + 'pack/step 6. ⚠️ Change it to 12 and every product that adopted it moves — which is either '
                      + 'exactly what you want or a catastrophe, and is why adoption freezes at the mint.' },
+  /* ⚠️ This blurb said "nothing evaluates these at order time yet" — true when written, false since offers were
+     wired into compose. Stale copy is the same failure as the "read-only showcase" banner: someone reads it,
+     believes the feature is inert, and never tries it. */
   offer:      { icon: '🏷️', title: 'Offers', one: 'offer',
-                blurb: 'An offer kind plus its conditions. Nothing evaluates these at order time yet — authoring '
-                     + 'them is the step before that.' }
+                blurb: 'An offer kind plus its conditions. Publish one and it applies to orders in compose — the '
+                     + 'breakdown shows what came off and, when it does not fire, how far short the order is.' }
 };
 
 /**
@@ -162,11 +165,18 @@ function cbDefRegistries(){
    * list, both would have read as "there are none" and neither would have been found.
    */
   var P = (typeof CBCatalogue !== 'undefined' && CBCatalogue.PALETTE) ? CBCatalogue.PALETTE() : null;
+  /**
+   * ⚠️ THE BLURB USED TO SAY "not yet evaluated at order time" AND THAT IS NO LONGER TRUE — `price-resolve.js`
+   * evaluates them (28/0). A screen that keeps describing a gap after the gap is filled is the same failure as
+   * the "read-only showcase" banner that outlived read-only by an hour: someone reads it and stops looking.
+   */
   out.push({
     key: 'pricing', icon: '💱', title: 'Pricing models',
-    blurb: 'How a price is arrived at. ⚠️ Declared today, not yet evaluated at order time.',
+    blurb: 'How a price is arrived at. A catalogue can declare several — a list price, a bulk tier, a regional '
+         + 'or time-boxed one — and the resolver picks the MOST SPECIFIC that applies, never the cheapest.',
     source: 'app/catalogue-model.js · PRICING_MODELS',
-    rows: P && P.pricingModels ? P.pricingModels.map(function (k) { return { code: k, label: k }; }) : null
+    rows: P && P.pricingModels ? P.pricingModels.map(function (k) {
+      return { code: k, label: cbDefPricingLabel(k), note: cbDefPricingNote(k) }; }) : null
   });
   /**
    * ⭐ WHERE A PRICE IS REFERRED FROM — Athi, 2026-08-16: *"can we say where prices are refered from, or accessed
@@ -278,6 +288,24 @@ function cbDefFacetNote(f){
     loop:     'The returnable half of a trade — crates, drums, pallets that come back.',
     pricing:  'Declared today; ⚠️ not yet evaluated at order time.'
   })[f] || '';
+}
+function cbDefPricingLabel(k){
+  return ({
+    fixed:        'Fixed — one declared amount',
+    range:        'Range — a band, not a number',
+    tiered:       'Tiered — the price changes with quantity',
+    'market-ref': 'Market reference — read from a published source',
+    negotiated:   'Negotiated — agreed per counterparty'
+  })[k] || k;
+}
+function cbDefPricingNote(k){
+  return ({
+    fixed:        'What you charge, full stop. Most prices are this, and that is fine.',
+    range:        '⚠️ A band is a CONSTRAINT, not a discount — a price outside it is reported as a violation, never quietly clamped to fit.',
+    tiered:       'A qualifying tier RE-PRICES the line; it is not a discount off the list price. ⚠️ Tiers are per line — 30 of one product does not earn the 30-tier on another.',
+    'market-ref': 'A published figure, with WHERE it was read and WHEN. ⚠️ Recorded, never fetched live at seal — a chit whose total depends on someone else\'s page being up is a chit two parties can compute differently.',
+    negotiated:   'What you and one counterparty agreed. ⚠️ Frozen onto the chit at the mint, so it survives the shelf changing afterwards.'
+  })[k] || '';
 }
 function cbDefOriginLabel(o){
   return ({
