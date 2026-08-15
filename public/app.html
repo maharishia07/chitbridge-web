@@ -2115,6 +2115,7 @@ function ccCatPickHTML(){
    */
   return CBCatalogue.pickerHTML(c, {
     cart:false, committed: CC.items, noteFn:'ccSetLineNote',
+    attachFn:'ccAddItemFiles', chips:ccItemChips,
     checkoutLabel:'+ Add to the chit',
     emptyHint:'Press + on what this chit is for',
     empty: UI._supplier ? 'Nothing in their catalogue matches that.' : 'Nothing in your catalogue matches that.',
@@ -2470,8 +2471,11 @@ function ccRenderItems(){ const h=document.getElementById("cc_items"); if(!h)ret
   ccRenderTotal();
 }
 function ccItemChips(i){ var it=CC.items[i]||{}; var fs=it.files||[]; return fs.map(function(f,k){ return '<span style="display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:7px;padding:2px 7px;margin:2px 5px 0 0;font-size:11px;background:#fff">'+attIcon(cbAttachType(f.type,f.name))+' '+esc(f.name.length>20?f.name.slice(0,20)+'…':f.name)+' <span onclick="ccDelItemFile('+i+','+k+')" style="cursor:pointer;color:#9aa3a7">✕</span></span>'; }).join(''); }
-function ccAddItemFiles(i,files){ var it=CC.items[i]; if(!it)return; it.files=it.files||[]; for(var k=0;k<files.length;k++){ var f=files[k]; if(f.size>6*1024*1024){ toast(f.name+' is over 6MB — skipped.'); continue; } it.files.push(f); } var el=document.getElementById('cc_itf_'+i); if(el)el.innerHTML=ccItemChips(i); }
-function ccDelItemFile(i,k){ var it=CC.items[i]; if(it&&it.files){ it.files.splice(k,1); } var el=document.getElementById('cc_itf_'+i); if(el)el.innerHTML=ccItemChips(i); }
+/* ⚠️ BOTH BLOCKS REPAINT NOW. The chips used to live only in `cc_items`, which renders BELOW the whole
+   catalogue — so a person who attached a photo saw nothing happen, because the confirmation was 3,000px away.
+   The on-the-chit block is where the eye is, so it has to be refreshed too or the file looks like it was lost. */
+function ccAddItemFiles(i,files){ var it=CC.items[i]; if(!it)return; it.files=it.files||[]; for(var k=0;k<files.length;k++){ var f=files[k]; if(f.size>6*1024*1024){ toast(f.name+' is over 6MB — skipped.'); continue; } it.files.push(f); } var el=document.getElementById('cc_itf_'+i); if(el)el.innerHTML=ccItemChips(i); ccRenderCatPick(); }
+function ccDelItemFile(i,k){ var it=CC.items[i]; if(it&&it.files){ it.files.splice(k,1); } var el=document.getElementById('cc_itf_'+i); if(el)el.innerHTML=ccItemChips(i); ccRenderCatPick(); }
 /* ⚠️ ccSetRTab / ccRenderSummary REMOVED with the four right-hand tabs (Line items · Attachments · Delivery ·
    Summary). The tabs were a second navigation INSIDE a screen that is now itself navigated: Line items became step
    1, Attachments moved onto Details where the other things describing the chit live, and Summary became the Review

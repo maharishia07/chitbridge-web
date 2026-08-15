@@ -219,6 +219,156 @@ function cbAttachB64(file){
   });
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════
+ *  DEFERRED MODE — attach a picture to something that does not exist yet.
+ * ═══════════════════════════════════════════════════════════════════════════════════════════════════════════════
+ *
+ * Athi, 2026-08-15: *"on the cart data we can add message, picture, attachment etc"* → *"go ahead with the
+ * deferred mode"*.
+ *
+ * `cbAttachPick` posts immediately against an existing `chit_id`. A CART LINE HAS NO CHIT — that is the whole
+ * point of a cart, and it is why the sweep of compose stalled: three upload sites in app.html (2461, 2464, 5146)
+ * all collect files first and upload after the chit is created, because before that there is nothing to attach
+ * to. Asking someone to attach a file to a chit that does not exist yet is not a call-site change, it is a
+ * different shape.
+ *
+ *   stage(bucket, {line_index})   pick a file and HOLD it — validated now, uploaded later
+ *   staged(bucket)                what is held, for rendering chips
+ *   unstage(bucket, key)          remove one before it is ever sent
+ *   flush(bucket, chit_id)        upload everything held, against the chit that now exists
+ *
+ * ⚠️⚠️ A STAGED FILE HAS NO AUDIENCE YET, AND THAT IS THE HONEST STATE — not a gap to paper over. The server
+ * derives who gets a copy from the row the attachment is pinned to, and until the chit exists there is no row.
+ * So nothing here may promise, display, or imply an audience. It is a file on your machine that you INTEND to
+ * attach; the audience is decided at flush, by what it is pinned to, exactly as for an immediate upload.
+ *
+ * ⚠️⚠️ VALIDATION HAPPENS AT STAGE TIME, NOT AT FLUSH. Refusing a 9 MB photo the moment it is chosen is the
+ * whole reason the size check lives client-side. Discovering it at flush would mean the chit has ALREADY BEEN
+ * SENT and the evidence silently did not go with it — the worst possible moment to find out.
+ */
+CBATT.stage = {};      /* bucket -> [{ key, file, line_index, name, size, mime }] */
+CBATT.stageSeq = 0;
+
+function cbAttachStaged(bucket){ return (CBATT.stage[bucket] || []).slice(); }
+function cbAttachClearStage(bucket){ delete CBATT.stage[bucket]; }
+function cbAttachUnstage(bucket, key){
+  var list = CBATT.stage[bucket] || [];
+  CBATT.stage[bucket] = list.filter(function (s) { return String(s.key) !== String(key); });
+  try { document.dispatchEvent(new CustomEvent('cb-attach-staged', { detail: { bucket: bucket } })); } catch (_) {}
+}
+
+/**
+ * stage — choose a file now, send it later. Returns the staged entry, or null if cancelled/refused.
+ *
+ * ⚠️ THE SAME LIMITS AS AN IMMEDIATE UPLOAD, APPLIED HERE. A staged file that is too large is refused at the
+ * picker; it must never be discovered at flush, when the chit is already gone.
+ */
+async function cbAttachStage(bucket, opts){
+  opts = opts || {};
+  var file = await cbAttachChoose();
+  if (!file) return null;                                  // cancelled — silent, cancelling is not an error
+  if (file.size > CBATT.maxBytes) {
+    toast('"' + file.name + '" is ' + cbAttachSize(file.size) + ' — the limit is ' + cbAttachSize(CBATT.maxBytes) + '. Send a smaller copy.');
+    return null;
+  }
+  if (!file.size) { toast('"' + file.name + '" is empty'); return null; }
+
+  var entry = { key: 'stg' + (++CBATT.stageSeq), file: file, name: file.name, size: file.size,
+                mime: file.type || 'application/octet-stream',
+                line_index: (opts.line_index == null || opts.line_index === '' || isNaN(+opts.line_index))
+                  ? null : +opts.line_index };
+  (CBATT.stage[bucket] = CBATT.stage[bucket] || []).push(entry);
+  /* ⚠️ The File object is held, NOT its base64. Encoding several photos up front would put three times their
+     size in memory for as long as the compose modal is open, for bytes that may never be sent. Encode at flush,
+     one at a time. */
+  try { document.dispatchEvent(new CustomEvent('cb-attach-staged', { detail: { bucket: bucket, entry: entry } })); } catch (_) {}
+  return entry;
+}
+
+/**
+ * ⭐ flush — the chit now exists; send what was held.
+ *
+ * Returns { uploaded: [att], failed: [{name, why}] } and NEVER THROWS, because the chit has already been sent by
+ * the time this runs and an exception here would surface as "your chit failed" when it did not.
+ *
+ * ⚠️⚠️ FAILURES ARE REPORTED AND THE FILES ARE KEPT STAGED. The tempting shortcut is to clear the bucket at the
+ * end regardless — but a chit that exists while its evidence does not is precisely the broken promise this
+ * codebase keeps refusing (see storage-object.js: an attachment row whose bytes never landed). Keeping the
+ * failures staged means a retry is possible; clearing them means the photo is gone and nobody knows.
+ *
+ * ⚠️ SEQUENTIAL, NOT Promise.all. Each file is a base64 body up to 6 MB; firing five at once on a phone
+ * connection is how one of them times out and takes an unrelated one with it. Slower and finishable beats
+ * parallel and partly lost.
+ */
+async function cbAttachFlush(bucket, chit_id, opts){
+  opts = opts || {};
+  var list = CBATT.stage[bucket] || [];
+  if (!list.length) return { uploaded: [], failed: [] };
+  if (!chit_id) return { uploaded: [], failed: list.map(function (s) { return { name: s.name, why: 'no chit to attach to' }; }) };
+
+  var uploaded = [], failed = [], kept = [];
+  for (var i = 0; i < list.length; i++) {
+    var s = list[i];
+    try {
+      var body = { chit_id: chit_id, name: s.name, mime: s.mime, data_base64: await cbAttachB64(s.file) };
+      if (s.line_index != null) body.line_index = s.line_index;
+      if (opts.message_id != null) body.message_id = opts.message_id;
+      uploaded.push(await api(cbAttachEP(), { body: body }));
+    } catch (e) {
+      failed.push({ name: s.name, why: (e && e.message) || 'upload failed' });
+      kept.push(s);                                   /* keep it — a retry must still be possible */
+    }
+  }
+  if (kept.length) CBATT.stage[bucket] = kept; else delete CBATT.stage[bucket];
+
+  /* ⚠️ SAID OUT LOUD. A partial failure that only appears in a return value is a partial failure nobody sees. */
+  if (failed.length) {
+    toast(failed.length + ' of ' + list.length + ' file(s) did not attach — they are still here, try again.');
+  }
+  try { document.dispatchEvent(new CustomEvent('cb-attach-flushed', { detail: { bucket: bucket, chit_id: chit_id, uploaded: uploaded, failed: failed } })); } catch (_) {}
+  return { uploaded: uploaded, failed: failed };
+}
+
+/** Chips for what is staged — the same shape cbAttachList renders, but for files that have no id yet. */
+function cbAttachStagedChips(bucket, opts){
+  opts = opts || {};
+  cbAttachCss();
+  var list = CBATT.stage[bucket] || [];
+  if (!list.length) return '';
+  return list.filter(function (s) {
+    return opts.line_index == null ? true : String(s.line_index) === String(opts.line_index);
+  }).map(function (s) {
+    return '<span class="cbatt-chip" data-testid="cbatt-staged">'
+      + cbAttachIcon(cbAttachType(s.mime, s.name)) + ' ' + cbAttachSafeText(s.name)
+      + ' <span style="color:#6a707a">' + cbAttachSize(s.size) + '</span>'
+      /* ⚠️ "not sent yet" is said on the chip, not implied by its position. A staged file looks exactly like an
+         attached one otherwise, and the difference matters: one is evidence, the other is an intention. */
+      + ' <span style="font-size:10px;color:#8a5a1e">not sent yet</span>'
+      + ' <span onclick="cbAttachUnstage(\'' + cbAttachSafe(bucket) + '\',\'' + cbAttachSafe(s.key) + '\')"'
+      + ' style="cursor:pointer;color:#9aa3a7;font-weight:800" title="Remove">✕</span></span>';
+  }).join('');
+}
+/* ⚠️ NOT cbAttachSafe. That one strips to [A-Za-z0-9_.:-] and is for values going into an ATTRIBUTE or an inline
+   handler; using it on a filename would silently mangle "வெங்காயம் bill.pdf" into something unrecognisable. Text
+   in the document body needs escaping, not stripping — two different jobs, two different functions. */
+function cbAttachSafeText(s){
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+
+/* One style tag, injected once — attach-ui had none because every previous caller styled its own chips. */
+function cbAttachCss(){
+  if (typeof document === 'undefined' || document.getElementById('cbatt_css')) return;
+  var s = document.createElement('style');
+  s.id = 'cbatt_css';
+  s.textContent = '.cbatt-chip{display:inline-flex;align-items:center;gap:5px;border:1px dashed #c9a86a;'
+    + 'border-radius:8px;padding:3px 8px;margin:2px 5px 2px 0;font-size:11.5px;background:#fdfaf3;'
+    + 'color:var(--ink,#0F2E3D);max-width:100%}'
+    + '.cbatt-chip.sent{border-style:solid;border-color:#e3e6ea;background:#fff}';
+  (document.head || document.documentElement).appendChild(s);
+}
+
 /**
  * cbAttachPick(ctxJson) → Promise resolving to the new attachment { id, name, mime, size }, or null if the
  * person cancelled or the upload failed (failures toast; the caller does not have to catch).

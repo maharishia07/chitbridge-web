@@ -369,7 +369,7 @@
    * ADDITIVE and never reorders the list beneath the hand that is adding to it — the existing code deliberately
    * fixes lines-first vs picker-first once per entry to the step, and that restraint is correct.
    */
-  function committedHTML(ns, lines, noteFn) {
+  function committedHTML(ns, lines, noteFn, attachFn, chips) {
     if (!lines || !lines.length) return '';
     return '<div class="cbcat-onchit" data-testid="cbcat-onchit">'
       + '<div class="cbcat-onchit-t">On the chit · ' + lines.length + ' line' + (lines.length === 1 ? '' : 's') + '</div>'
@@ -394,11 +394,27 @@
               + ' placeholder="add a message for this line — e.g. fresh stock please"'
               + ' oninput="' + esc(noteFn) + '(' + i + ',this.value)">'
             : (l.comment ? '<div class="cbcat-noteread">' + esc(l.comment) + '</div>' : '');
+          /**
+           * ⭐ A PICTURE ON THE LINE — Athi: *"on the cart data we can add message, picture, attachment etc"*.
+           *
+           * ⚠️ THIS SURFACES MACHINERY THAT ALREADY EXISTED RATHER THAN ADDING A SECOND ONE. compose has staged
+           * per-line files since before this redesign — `CC.items[i].files`, ccAddItemFiles, ccItemChips, and the
+           * upload loop that runs once the chit is created. The control was in `cc_items`, the block that renders
+           * BELOW the whole catalogue — the same 3,198px problem the on-the-chit block exists to fix. So the
+           * feature was not missing, it was unreachable.
+           *
+           * ⚠️ The files are held, not uploaded: a cart line has no chit to attach to yet, and asking the server
+           * to pin bytes to something that does not exist is how a row ends up referencing nothing.
+           */
+          var att = (attachFn ? '<label class="cbcat-clip" title="Attach a picture or file to this line">📎'
+              + '<input type="file" multiple style="display:none"'
+              + ' onchange="' + esc(attachFn) + '(' + i + ',this.files);this.value=\'\'"></label>' : '')
+            + (typeof chips === 'function' ? '<span class="cbcat-chips">' + (chips(i) || '') + '</span>' : '');
           return '<div class="cbcat-liwrap">'
             + '<div class="cbcat-li"><span class="cbcat-li-n">' + esc(l.particulars || l.name || 'item') + '</span>'
             + '<span class="cbcat-li-q">' + esc(q) + ' ' + esc(l.unit || '') + '</span>'
             + '<span class="cbcat-li-p">' + esc(money(ns, q * p)) + '</span></div>'
-            + note + '</div>';
+            + note + (att ? '<div class="cbcat-attrow">' + att + '</div>' : '') + '</div>';
         }).join('')
       + '</div>';
   }
@@ -474,7 +490,7 @@
      */
     if (typeof setTimeout === 'function') setTimeout(function () { observe(); }, 0);
     return '<div class="cbcat-wrap" data-testid="cbcat-' + esc(cart.ns) + '">'
-      + committedHTML(cart.ns, opts.committed, opts.noteFn)
+      + committedHTML(cart.ns, opts.committed, opts.noteFn, opts.attachFn, opts.chips)
       + '<div class="cbcat-hdr">'
       /**
        * ⚠️⚠️ `cart:false` MEANS THE HOST ALREADY OWNS AN ELEMENT WITH THIS ID — DO NOT RENDER A SECOND ONE.
@@ -744,7 +760,12 @@
       'border:1px dashed #c3d3e8;border-radius:8px;font-size:12px;font-family:inherit;background:#fff;',
       'color:var(--ink,#0F2E3D)}',
       '.cbcat-note:focus{border-style:solid;border-color:var(--blue,#3F66A6);outline:none}',
-      '.cbcat-noteread{font-size:12px;color:#4a6b8a;padding:1px 0 4px}'
+      '.cbcat-noteread{font-size:12px;color:#4a6b8a;padding:1px 0 4px}',
+      '.cbcat-attrow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:0 0 4px}',
+      '.cbcat-clip{cursor:pointer;border:1px solid var(--line,#E7E2D8);border-radius:8px;padding:3px 8px;',
+      'font-size:13px;background:#fff;flex:none;line-height:1.4}',
+      '.cbcat-clip:hover{border-color:var(--blue,#3F66A6)}',
+      '.cbcat-chips{display:inline-flex;flex-wrap:wrap;gap:2px;align-items:center}'
     ].join('');
     (document.head || document.documentElement).appendChild(s);
   }
