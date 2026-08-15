@@ -1549,7 +1549,9 @@ const MENUS = {
      * The screen itself still exists and still works; it simply has no rail row. Deleting the code would have
      * been the tidier-looking move and the wrong one — nothing else renders a folder's rules pane.
      */
-    ["Rail", [["task","📥","Task",""],["order","📤","Order",""],["drafts","📝","Drafts",""],["archive","🗄️","Archive",""],["trash","🗑️","Trash",""]]],
+    /* ⭐ REPLIES sits with Task and Order because it is the same kind of thing — a place where work arrives from
+       outside. Athi: *"can we bring external new messages under rail?"* */
+    ["Rail", [["task","📥","Task",""],["order","📤","Order",""],["messages","💬","Replies",""],["drafts","📝","Drafts",""],["archive","🗄️","Archive",""],["trash","🗑️","Trash",""]]],
     ["Work",    [["worklist","🧰","Everyone's work"],["intake","📨","Intake"],["disputes","⚖️","Disputes"]]],
     ["Business",[["catalogue","🗂️","Catalogue"],["customers","🛍️","Customers"],["suppliers","🏭","Suppliers"],["network","🔗","Network"],["coassists","🧑‍🤝‍🧑","Co-assists"]]],
     ["Insight", [["mis","📊","MIS"],["traceability","🧭","Traceability"],["readiness","🛡️","Trade ready"]]],
@@ -1583,7 +1585,7 @@ const PURPOSE = {
    /app/cap-<name>.js (classic script, shared global scope). CAP_OF maps a screen to its
    capability; unlisted screens are Core (eager, always loaded). renderApp shows "Loading…"
    and re-renders once the capability arrives. Grow CAP_OF as screens migrate out. */
-const CAP_OF = { mis:'admin', profile:'admin', settings:'admin', coassists:'workforce', assistreview:'admin', connectors:'connector', disputes:'dispute', folders:'folders', readiness:'readiness', traceability:'traceability', network:'network', intake:'intake' };
+const CAP_OF = { mis:'admin', profile:'admin', settings:'admin', coassists:'workforce', assistreview:'admin', connectors:'connector', disputes:'dispute', folders:'folders', readiness:'readiness', traceability:'traceability', network:'network', intake:'intake', messages:'messages' };
 // nav items gated by an entity capability (the itemised toggle) — hidden unless SESSION.capabilities holds the key.
 const CAP_GATED = { connectors:'connector', disputes:'dispute' };
 const CAP_LOADED = {};
@@ -1705,6 +1707,7 @@ function renderApp(){
     if(UI.nav==="settings") loadSettings();
     if(UI.nav==="network") loadNetwork();
     if(UI.nav==="intake" && typeof loadIntake==="function") loadIntake();
+    if(UI.nav==="messages" && typeof loadMessages==="function" && typeof RPL!=="undefined" && RPL.data===null && !RPL.busy) loadMessages();
     /* ⭐ MY WORK — every line assigned to me, across every chit (b143 + /folders/worklist). Lazy: the endpoint
        existed for weeks with nothing calling it, which is what made per-line assignment unusable. */
     if(UI.nav==="worklist"){ ensureCap("worklist").then(function(){ if(typeof wlLoad==="function" && !WL.data && !WL.busy) wlLoad(); }); }
@@ -1741,7 +1744,17 @@ function startAutoRefresh(sec){ if(_autoRefreshTimer) clearInterval(_autoRefresh
 // Logout never stopped the timer, so a signed-out tab kept polling and repainting. A thing that starts on sign-in
 // must have a way to stop on sign-out, or it outlives the session that justified it.
 function stopAutoRefresh(){ if(_autoRefreshTimer){ clearInterval(_autoRefreshTimer); _autoRefreshTimer=null; } }
-function navTitle(){const all={...Object.fromEntries(Object.values(MENUS).flatMap(m=>[...m.top,...m.rest]).map(x=>[x[0],x[2]]))};return all[UI.nav]||UI.nav;}
+/**
+ * ⚠️ IT READ m.top DIRECTLY AND BROKE THE WHOLE SCREEN. This flattens every role's menu to map a nav key to its
+ * label, and the entity role now carries `groups` instead of `top`/`rest` — so it threw "m.top is not iterable"
+ * and the app rendered "Couldn't load". A shape change has to be answered everywhere the shape is read, and a
+ * helper three hundred lines away is exactly where that gets missed.
+ */
+function menuItemsOf(m){
+  return [].concat(m.lead ? [m.lead] : [], m.top || [], m.rest || [],
+                   (m.groups || []).reduce(function(a, g){ return a.concat(g[1]); }, []));
+}
+function navTitle(){const all={...Object.fromEntries(Object.values(MENUS).flatMap(menuItemsOf).map(x=>[x[0],x[2]]))};return all[UI.nav]||UI.nav;}
 /**
  * ⚠️ FOLDERS HANG UNDER THE TRACK THEY BELONG TO. Athi, 2026-08-10: *"possibly we can create folder under task and
  * order… if we can segregate underneath it would be easier i guess instead of a separate panel called folder."*
@@ -3960,6 +3973,7 @@ function mainBody(){
   if(String(UI.nav).indexOf('folder:')===0 && typeof _folderView==='function') return _folderView();
   if(UI.nav==="folders") return foldersScreen();
   if(UI.nav==="intake" && typeof intakeScreen==="function") return intakeScreen();   // app/cap-intake.js (lazy)
+  if(UI.nav==="messages" && typeof messagesScreen==="function") return messagesScreen();   // app/cap-messages.js (lazy)
   if(UI.nav==="worklist") return (typeof worklistScreen==="function") ? worklistScreen()
     : '<div style="padding:18px 16px;color:var(--grey);font-size:12.5px"><span class="spin"></span> loading your work…</div>';
   /* ⚠️ DESIGN 2 — a SEPARATE screen, not a variant of the detail pane. Athi: "do not alter the existing one, keep
