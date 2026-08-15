@@ -584,6 +584,7 @@ const CFG = {
 /* Endpoint map. ✓ = matches build registry · ? = ASSUMED, confirm before live.
    Correct any path here in ONE place. */
 const EP = {
+  notifSeen:       {m:"POST", p:"/api/notifications/seen",   ok:"y"},   // b157 — move the badge watermark
   /* ⚠️ IN THE CORE TABLE, NOT cap-messages. The rail needs the unread count before that capability has ever been
      loaded — the badge is the reason you go to the screen, so it cannot depend on having been there. */
   msgCount:        {m:"GET",  p:"/api/folders/messages?count=1", ok:"y"},
@@ -1690,8 +1691,20 @@ function renderApp(){
       <button class="ham" data-testid="nav-drawer" onclick="UI.drawer=!UI.drawer;renderApp()">☰</button>
       <div class="b">${logoMark(20)} <span class="bt">Chit &amp; Bridge</span></div>
       <button class="info" id="legendbtn" data-testid="icon-legend" onclick="openLegend()" title="What we serve — capabilities &amp; features" aria-label="Capabilities and features map">🔑</button>
-      <button class="msgc" id="msgcbtn" data-testid="icon-messages" onclick="openMsgCenter()" title="Messages" aria-label="Messages">💬<span class="bdot" id="msgcdot" style="${unreadCount()?'':'display:none'}">${unreadCount()}</span></button>
-      ${role!=="customer"?`<button class="bell" id="bellbtn" data-testid="icon-notifications" onclick="openNotifications()" title="Notifications" aria-label="Notifications">🔔<span class="bdot" id="belldot" style="${notifBadge()?'':'display:none'}">${notifBadge()}</span></button>`:''}
+      <!-- ⭐ 💬 DROPPED — Athi, 2026-08-15: *"if the message is duplicate, we can drop the icon … but messaging
+           not required. If we have anything else like RAID, we can keep it as a RAID icon."*
+           The message centre duplicated the Messages screen and did it worse: unreadCount() counts m.unread over
+           chits already in memory, and mapApiMsg sets unread:false on every message it builds — so that badge was
+           structurally always zero. Messages under RAIL does the same job with real server-side read state.
+           The panel's one unique thing was the RAID report, which now has its own door. -->
+      <button class="msgc" id="raidbtn" data-testid="icon-raid" onclick="openRaidReport()" title="RAID report — governance overview" aria-label="RAID report">📋</button>
+      <!-- ⚠️ GREYED ON PURPOSE — Athi, 2026-08-15: *"is it push notification? … if not we have to bring it now or
+           make it as backlog, and grey the icon so we know that we have to work on."*
+           It is NOT push. There is no WebSocket, no SSE, no web-push, no FCM anywhere in the API — the only
+           mechanism is startAutoRefresh()'s 20-second poll. So the bell is dimmed and says so on hover: an
+           unfinished capability that LOOKS finished is worse than one that admits it, because nobody comes back
+           to it. The dimming comes off when a real transport lands. -->
+      ${role!=="customer"?`<button class="bell" id="bellbtn" data-testid="icon-notifications" onclick="openNotifications()" title="Activity — refreshes every 20s (real push not built yet)" aria-label="Activity" style="opacity:.55">🔔<span class="bdot" id="belldot" style="${notifBadge()?'':'display:none'}">${notifBadge()}</span></button>`:''}
       <div class="who">${statusControl(role)}<div class="nmwrap" style="text-align:right"><div class="nm">${SESSION.name}</div><div class="rl">${role} · ${SESSION.entity||""}</div></div>
         <!-- ⭐ THE AVATAR IS NOW A MENU. Profile and Settings were the two least-visited screens in the rail and
              were holding prime space in it; every app puts them behind the avatar, and the avatar was already
@@ -4377,7 +4390,10 @@ function mapNotif(n){
            t: (n.action_by_display_name?esc(n.action_by_display_name)+' · ':'')+esc(String(n.action||'update').replace(/_/g,' '))+' — '+esc(subj),
            s: n.created_at?new Date(n.created_at).toLocaleString('en-IN', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}):'' };
 }
-async function openNotifications(){ const host=document.getElementById("lbhost"); if(!host)return;
+async function openNotifications(){
+  /* ⭐ OPENING IS SEEING. The badge counts what arrived since the last look, so looking is what moves the
+     watermark — a separate "mark all read" is a button people do not press, after which the number lies. */
+  try { api("notifSeen").then(function(){ UI.notifCount=0; var d=document.getElementById("belldot"); if(d)d.style.display="none"; }).catch(function(){}); } catch(e){} const host=document.getElementById("lbhost"); if(!host)return;
   if(UI.notifOpen){ closeNotif(); return; }
   UI.notifOpen=true;
   const live = CFG.MODE!=='demo';
