@@ -236,7 +236,19 @@ function messagesScreen(){
               + '<textarea id="msg_reply_' + rid + '" data-testid="msg-reply" rows="2" placeholder="Reply to ' + esc(m.sender_display_name || 'them') + '…"'
               +   ' style="width:100%;box-sizing:border-box;font:inherit;font-size:14px;line-height:1.5;padding:9px 11px;border:1px solid var(--line);border-radius:8px;resize:vertical;margin-top:8px"></textarea>'
               + '<div style="display:flex;gap:10px;align-items:center;margin-top:7px">'
-              +   '<span onclick="rplOpenChit(&quot;' + t.chit_id + '&quot;)" style="cursor:pointer;font-size:12px;color:var(--blue)">Open the order</span>'
+              /**
+               * ⭐ FROM THE MESSAGE TO THE WORK — Athi, 2026-08-15: *"can we open the task from message directly?
+               * Or the line item in case of design 2? If that is being done, then I guess it is a good
+               * completion."*
+               *
+               * ⚠️ A MESSAGE IS A QUESTION ABOUT SOMETHING, and until now answering it meant remembering which
+               * order it was, going to find it, and finding the line again. Two doors: the LINE when the
+               * conversation names one (the card with what is left, the history, the cost), and the ORDER for
+               * everything else.
+               */
+              +   (t.line_id ? '<span data-testid="msg-open-line" onclick="rplOpenLine(&quot;' + t.chit_id + '&quot;,&quot;' + t.line_id + '&quot;)"'
+                    + ' style="cursor:pointer;font-size:12px;color:var(--blue);font-weight:700">Open the line</span>' : '')
+              +   '<span data-testid="msg-open-chit" onclick="rplOpenChit(&quot;' + t.chit_id + '&quot;)" style="cursor:pointer;font-size:12px;color:var(--blue)">Open the order</span>'
               +   '<button class="btn pri" data-testid="msg-send" onclick="msgSend(&quot;' + t.key + '&quot;)"'
               +     ' style="width:auto;flex:0 0 auto;margin:0 0 0 auto;padding:8px 16px">' + (RPL.sending[t.key] ? 'Sending…' : 'Reply') + '</button>'
               + '</div>'
@@ -275,6 +287,34 @@ function messagesScreen(){
     +     ' onchange="msgShowAll()" style="width:15px;height:15px;accent-color:var(--blue)">everything, including dealt with</label>'
     + '</div>'
     + body + '</div>';
+}
+
+/**
+ * ⭐ OPEN THE LINE CARD THIS CONVERSATION IS ABOUT.
+ *
+ * ⚠️ THE WORKLIST MAY NOT BE LOADED, AND THE LINE MAY NOT BE IN IT. wlLine() looks the row up in WL.data, which
+ * is the worklist's own list — and that list deliberately excludes finished work and closed chits. A message
+ * about a line you already marked done would find nothing and silently do nothing, which is the worst outcome:
+ * the link looks broken rather than inapplicable.
+ *
+ * So: load the capability, load the worklist if it has never been fetched, look for the line — and if it is not
+ * there (done, unassigned, closed), fall back to opening the ORDER rather than failing quietly.
+ */
+async function rplOpenLine(chit_id, line_id){
+  try {
+    /* ⚠️ THE FIRST CLICK IS SLOW AND MUST NOT LOOK DEAD. It loads a capability and then the whole worklist before
+       it can find the row — several seconds on the cloud link, during which nothing on screen changes and the
+       only reasonable conclusion is that the link is broken. Subsequent clicks are instant (WL.data is cached),
+       which is exactly the pattern that makes this easy to miss in testing. */
+    if (typeof WL === 'undefined' || WL.data === null) toast('Opening the line…');
+    if (typeof ensureCap === 'function') await ensureCap('worklist');
+    if (typeof WL !== 'undefined' && WL.data === null && typeof wlLoad === 'function') await wlLoad();
+    var found = (typeof wlRows === 'function' && typeof WL !== 'undefined')
+      ? wlRows(WL.data || {}).filter(function(r){ return r.line_id === line_id; })[0] : null;
+    if (found && typeof wlLine === 'function') { await wlLine(line_id); return; }
+    toast('That line is not on the work list any more — opening the order');
+  } catch (e) { /* fall through to the order */ }
+  rplOpenChit(chit_id);
 }
 
 /* Opening the order reuses the chit opener when it is loaded, and falls back to plain nav. */

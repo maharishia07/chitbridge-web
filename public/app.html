@@ -1564,7 +1564,24 @@ const MENUS = {
      and have no way to see it. Safe to add only because the route scopes an actor to conversations about work
      they hold; before that scope existed this row would have handed every co-assist the whole business's
      customer correspondence. */
-  actor:{top:[["compose","✉️","Compose",""],["task","📥","Task",""],["order","📤","Order",""],["messages","💬","Messages",""],["worklist","🧰","My work",""],["folders","📁","Folders",""],["drafts","📝","Drafts",""],["trash","🗑️","Trash",""],["archive","🗄️","Archive",""]], rest:[["suppliers","🏭","Suppliers"],["profile","👤","Profile"]], tag:"Commerce yes, structure no."},
+  /**
+   * ⭐ THE ACTOR RAIL, SAME SHAPE AS THE OWNER'S — Athi, 2026-08-15: *"the actor panel shows folder and profile,
+   * are they two different panels? Can you check the panel for actor and confirm all are fine, same as owner
+   * within their level of access."*
+   *
+   * ⚠️ THEY WERE TWO DEFINITIONS AND I ONLY MODERNISED ONE. The owner rail was regrouped, made collapsible, and
+   * had Folders and Profile removed; the actor kept the old flat top/rest list with both still in it. So a
+   * co-assist saw a rail that behaved differently from their employer's and still carried two rows the owner had
+   * been told were gone — the kind of drift that starts the moment a screen is defined twice.
+   *
+   * ⚠️ SAME SHAPE, NOT SAME CONTENTS. An actor keeps Task, Order, Messages and their own work; Catalogue,
+   * Customers, MIS, Co-assists and the rest stay out — that is the level-of-access half, and it is unchanged.
+   */
+  actor:{ lead:["compose","✉️","Compose"], groups:[
+    ["Rail", [["task","📥","Task",""],["order","📤","Order",""],["messages","💬","Messages",""],["drafts","📝","Drafts",""],["archive","🗄️","Archive",""],["trash","🗑️","Trash",""]]],
+    ["Work", [["worklist","🧰","My work"]]],
+    ["Business", [["suppliers","🏭","Suppliers"]]],
+  ], tag:"Commerce yes, structure no."},
   customer:{top:[["order","📤","My orders",""]], rest:[["shops","🏬","Find a shop"]], tag:"You see only your orders."},
 };
 const PURPOSE = {
@@ -1690,7 +1707,11 @@ function renderApp(){
         ${UI.avMenu?`<div class="avmenu" data-testid="avatar-menu" style="position:absolute;top:calc(100% + 6px);right:0;z-index:60;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);min-width:180px;overflow:hidden">
           <div style="padding:9px 13px;border-bottom:1px solid var(--line)"><div style="font-weight:700;font-size:13px">${esc(SESSION.name||'')}</div><div style="font-size:11.5px;color:var(--grey)">${esc(role)} · ${esc(SESSION.entity||'')}</div></div>
           <button data-testid="nav-profile" onclick="UI.avMenu=false;navTo('profile')" style="display:block;width:100%;text-align:left;border:0;background:none;padding:10px 13px;font-size:13.5px;cursor:pointer">👤 Profile</button>
-          <button data-testid="nav-settings" onclick="UI.avMenu=false;navTo('settings')" style="display:block;width:100%;text-align:left;border:0;background:none;padding:10px 13px;font-size:13.5px;cursor:pointer">⚙️ Settings</button>
+          <!-- ⚠️ SETTINGS IS ENTITY ADMINISTRATION, NOT A PERSONAL SCREEN. Moving Profile behind the avatar put
+               Settings there too, and the avatar renders for every role — so a co-assist would have found the
+               business's policy flags and channel bindings one click from their own name. The rail never offered
+               it to them; the avatar menu must not either. -->
+          ${role==="entity"?`<button data-testid="nav-settings" onclick="UI.avMenu=false;navTo('settings')" style="display:block;width:100%;text-align:left;border:0;background:none;padding:10px 13px;font-size:13.5px;cursor:pointer">⚙️ Settings</button>`:''}
           <button onclick="UI.avMenu=false;logout()" style="display:block;width:100%;text-align:left;border:0;background:none;padding:10px 13px;font-size:13.5px;cursor:pointer;border-top:1px solid var(--line);color:#c0453b">↩ Sign out</button>
         </div>`:''}
         </div>
