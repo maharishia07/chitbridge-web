@@ -1539,7 +1539,17 @@ const MENUS = {
     /* ⭐ "RAIL", NOT "MAILBOX" — Athi, 2026-08-15. His own positioning has been that CB is a governed RAIL and
        that mailbox is the older, smaller framing; the rail is what the product is pitched as. The heading over
        Task and Order is the first place a person reads either word, so it should be the right one. */
-    ["Rail", [["task","📥","Task",""],["order","📤","Order",""],["drafts","📝","Drafts",""],["folders","📁","Folders",""],["archive","🗄️","Archive",""],["trash","🗑️","Trash",""]]],
+    /**
+     * ⚠️ NO "FOLDERS" ITEM — Athi, 2026-08-15: *"if we have folder under task and order, separate folder not
+     * required?"* Right, once the folders hang under their tracks. But it was not purely a duplicate and the
+     * check mattered: that screen also held RENAME and DELETE, which nothing else offered. Metrics, Group sum
+     * and Rules were already on the Task and Order headers and folder-aware, so only those two were orphans —
+     * they now sit on the folder's own crumb, which is where you are when you want them.
+     *
+     * The screen itself still exists and still works; it simply has no rail row. Deleting the code would have
+     * been the tidier-looking move and the wrong one — nothing else renders a folder's rules pane.
+     */
+    ["Rail", [["task","📥","Task",""],["order","📤","Order",""],["drafts","📝","Drafts",""],["archive","🗄️","Archive",""],["trash","🗑️","Trash",""]]],
     ["Work",    [["worklist","🧰","Everyone's work"],["intake","📨","Intake"],["disputes","⚖️","Disputes"]]],
     ["Business",[["catalogue","🗂️","Catalogue"],["customers","🛍️","Customers"],["suppliers","🏭","Suppliers"],["network","🔗","Network"],["coassists","🧑‍🤝‍🧑","Co-assists"]]],
     ["Insight", [["mis","📊","MIS"],["traceability","🧭","Traceability"],["readiness","🛡️","Trade ready"]]],
@@ -4030,6 +4040,7 @@ function taskPanel(){
         ${_fsel ? `<span data-testid="crumb-track" onclick="clearFolder()" title="Back to all of ${esc(_tname.slice(2))}" style="cursor:pointer;color:var(--blue)">${_tname}</span><span style="color:var(--grey);font-weight:400">/</span><span data-testid="crumb-folder" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📁 ${esc(_fsel.name)}</span>`
                 : `<span data-testid="crumb-track">${_tname}</span>`}
       </b><span style="color:#8a7c58">— ${_tdesc}</span>
+      ${_fsel?`<span data-testid="folder-rename" onclick="renameFolder('${esc(_fsel.folder_id)}')" title="Rename this folder" style="cursor:pointer;color:var(--blue);font-size:11.5px;margin-left:2px">Rename</span><span data-testid="folder-delete" onclick="deleteFolder('${esc(_fsel.folder_id)}')" title="Delete this folder — the chits inside are NOT deleted" style="cursor:pointer;color:#c0453b;font-size:11.5px">Delete</span>`:''}
       ${_btns}<button class="composebtn" style="${_isTrack?'':'margin-left:auto'}" onclick="toggleListHelp()">${UI.listHelp?'✕ Close':'❓ Help'}</button>
     </div>${UI.listHelp?`<div style="padding:11px 12px;border-bottom:1px solid var(--line);overflow-y:auto;max-height:52%">${assistPage(_ak)}</div>`:''}`;
   const list = `<div class="list">${helpStrip}
