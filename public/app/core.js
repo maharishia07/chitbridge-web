@@ -36,15 +36,69 @@ function unwrap(j){
 // --- shared in-flight feedback (every panel goes through api(), so this is uniform) ---
 let _inflight = 0;
 const _lockKeys = new Set();
+/**
+ * ⭐ SAY IT IN WORDS (Athi, 2026-08-16: *"we have to show explicit inprogress bar while reading the data, what
+ * you are showing as part of the browser is not good enough"*).
+ *
+ * There WAS a bar — a 3px gradient hairline pinned to the top of the window. Three things were wrong with it:
+ * it sat at the extreme top of the WINDOW, where browser and dev chrome also live, it was thin enough to read as
+ * decoration, and — the one that actually mattered — it carried NO WORDS, so it never actually
+ * said that data was being read. A silent hairline is not feedback; it is an animation.
+ *
+ * Now it is a labelled pill — "Reading data…" plus the count when several reads are in flight — beside a thicker
+ * sweep. Driven from the one place every panel already funnels through, so no screen has to remember to show it.
+ *
+ * ⚠️ A SHORT DELAY BEFORE IT APPEARS. A read that returns in 80ms should not flash a banner; a spinner that
+ * blinks on every keystroke-driven fetch is worse than none. It waits ~180ms, so only reads a person can
+ * actually perceive get announced.
+ */
+let _netBusyT = null;
 function _netBusy(on){
   let b = document.getElementById('netbusy');
   if(!b){
     b = document.createElement('div'); b.id='netbusy';
-    b.style.cssText='position:fixed;top:0;left:0;height:3px;width:100%;z-index:9999;pointer-events:none;display:none;background:linear-gradient(90deg,transparent,#3F66A6,transparent);background-size:40% 100%;background-repeat:no-repeat;animation:netbusy 1.1s linear infinite';
-    const s=document.createElement('style'); s.textContent='@keyframes netbusy{0%{background-position:-40% 0}100%{background-position:140% 0}}';
+    b.style.cssText='position:fixed;z-index:9999;pointer-events:none;display:none';
+    b.innerHTML='<div id="netbusy-card"><span id="netbusy-ring"></span><span id="netbusy-txt">Reading data…</span></div>';
+    const s=document.createElement('style');
+    s.textContent='@keyframes nbspin{to{transform:rotate(360deg)}}'
+      +'@keyframes nbin{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}'
+      +'#netbusy-card{display:inline-flex;align-items:center;gap:9px;background:#0F2E3D;color:#fff;'
+      +'font:600 12.5px/1 "Segoe UI",system-ui,sans-serif;padding:11px 16px;border-radius:22px;'
+      +'box-shadow:0 6px 22px rgba(15,46,61,.30);animation:nbin .14s ease-out}'
+      +'#netbusy-ring{width:14px;height:14px;border:2px solid rgba(255,255,255,.32);border-top-color:#fff;'
+      +'border-radius:50%;animation:nbspin .7s linear infinite;flex:none}'
+      +'@media (prefers-reduced-motion:reduce){#netbusy-ring,#netbusy-card{animation:none}}';
     (document.head||document.documentElement).appendChild(s); (document.body||document.documentElement).appendChild(b);
   }
-  b.style.display = on ? 'block' : 'none';
+  if(on){
+    const paint = function(){
+      const t = document.getElementById('netbusy-txt');
+      if(t) t.textContent = _inflight > 1 ? ('Reading data… (' + _inflight + ')') : 'Reading data…';
+      /**
+       * ⚠️ CENTRED ON THE PANE BEING READ (Athi: *"it is coming somewhere in the screen, it has to be in the
+       * center of the current panel"*). Pinned top-right it sat among the browser and dev chrome — technically
+       * visible, nowhere near where the eye already is. Centre it on the working surface instead, preferring the
+       * detail pane, then the panel, then the main body, and only falling back to the viewport when a screen has
+       * none of those (login, onboarding).
+       */
+      const host = document.getElementById('detailpane') || document.getElementById('panel')
+                || document.getElementById('mainbody') || null;
+      const r = host && host.getBoundingClientRect();
+      b.style.display = 'block';
+      if (r && r.width > 40 && r.height > 40){
+        b.style.left = Math.round(r.left + r.width / 2) + 'px';
+        b.style.top  = Math.round(r.top + r.height / 2) + 'px';
+      } else {
+        b.style.left = '50%'; b.style.top = '50%';
+      }
+      b.style.transform = 'translate(-50%,-50%)';
+    };
+    if(b.style.display === 'block') paint();                    // already up — just refresh the count
+    else if(!_netBusyT) _netBusyT = setTimeout(function(){ _netBusyT = null; if(_inflight > 0) paint(); }, 180);
+  } else {
+    if(_netBusyT){ clearTimeout(_netBusyT); _netBusyT = null; }
+    b.style.display = 'none';
+  }
 }
 // --- tester message/event log (in-memory ring buffer; surfaced by the in-app Message console) ---
 const __cblog = [];

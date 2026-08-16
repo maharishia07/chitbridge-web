@@ -222,5 +222,74 @@ console.log('\n4 · font-size floor (11px)');
   else pass('nothing below 11px');
 }
 
+// ── 7 · FILE INTEGRITY — control bytes that survive a syntax check ───────────────────────────────────────────
+/**
+ * ⚠️ WRITTEN BECAUSE IT HAPPENED (2026-08-16). A NUL byte landed inside a string literal in cap-admin.js where a
+ * space was meant. `node --check` PASSED. The browser ran the file. The app worked. The only symptom was that
+ * grep started reporting "Binary file … matches", and it was found by accident during an unrelated search.
+ *
+ * A syntax check is not an integrity check: JS parsers accept control characters inside string literals happily,
+ * so the corruption is invisible to every tool that only asks "does this parse". It breaks grep, diff, blame and
+ * review — the tools you reach for when something else is already wrong.
+ */
+console.log('\n7 · file integrity (control bytes)');
+{
+  const bad = [];
+  [['app.html', APP]].concat(CAPS.map((f) => [f, path.join(WEB, 'app', f)]))
+    .forEach(([name, file]) => {
+      const buf = fs.readFileSync(file);
+      /* Tab (9), LF (10), CR (13) are legitimate. Everything else below 0x20, and 0x7F, is not. */
+      for (let i = 0; i < buf.length; i++) {
+        const b = buf[i];
+        if (b === 9 || b === 10 || b === 13) continue;
+        if (b < 0x20 || b === 0x7f) {
+          const line = buf.slice(0, i).toString('utf8').split('\n').length;
+          bad.push(name + ':' + line + ' byte 0x' + b.toString(16).padStart(2, '0'));
+          break;   // one report per file is enough to send someone looking
+        }
+      }
+    });
+  if (bad.length) fail('control byte in source (invisible to node --check) — ' + bad.join(', '));
+  else pass(1 + CAPS.length + ' files, no stray control bytes');
+}
+
+// ── 8 · ONE data-testid, ONE ELEMENT ─────────────────────────────────────────────────────────────────────────
+/**
+ * ⚠️ ALSO WRITTEN BECAUSE IT HAPPENED. `sup-remove` was emitted twice — once on the supplier record panel, once
+ * on the order footer — and Playwright's strict mode rejects an ambiguous locator, so the spec died with
+ * "resolved to 2 elements". It cost three full suite runs to find, because the failure surfaced as a timeout on
+ * an unrelated step rather than as "you have two of these".
+ *
+ * ⚠️ A WARNING, NOT A FAILURE, for two separate reasons.
+ *
+ * First, precedent: there are 14 today, and check 4 already records why failing the build on pre-existing debt
+ * nobody can clear in one sitting turns a guard into something people switch off.
+ *
+ * Second, and more important — THIS CHECK CANNOT PROVE A VIOLATION. Two emit sites for one testid are perfectly
+ * legal when they are branches of the same conditional: only one is ever in the document, so Playwright sees
+ * exactly one. `sup-remove` was a real bug because BOTH rendered at once; `reg-submit` may well be an if/else.
+ * Static analysis cannot tell those apart, so this points at candidates and a person decides. Do not promote it
+ * to a hard fail — it would fail correct code.
+ */
+console.log('\n8 · duplicate data-testid');
+{
+  const seen = {};
+  [['app.html', app]].concat(CAPS.map((f) => [f, fs.readFileSync(path.join(WEB, 'app', f), 'utf8')]))
+    .forEach(([name, src]) => {
+      [...src.matchAll(/data-testid\s*=\s*["']([^"'${}+]+)["']/g)].forEach((m) => {
+        const id = m[1].trim();
+        if (!id) return;
+        (seen[id] = seen[id] || []).push(name);
+      });
+    });
+  const dupes = Object.entries(seen).filter(([, where]) => where.length > 1);
+  if (dupes.length) {
+    warn(dupes.length + ' data-testid emitted more than once — candidates, not proof (see note above); '
+      + 'a strict-mode failure only occurs when two render TOGETHER — '
+      + dupes.slice(0, 6).map(([id, w]) => id + ' ×' + w.length + ' (' + [...new Set(w)].join(', ') + ')').join('; ')
+      + (dupes.length > 6 ? ' …' : ''));
+  } else pass(Object.keys(seen).length + ' literal testids, each emitted once');
+}
+
 console.log('\n== GUARD ==  ' + hard + ' failure(s) · ' + soft + ' warning(s)');
 process.exit(hard ? 1 : 0);

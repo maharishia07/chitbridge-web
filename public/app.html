@@ -143,10 +143,37 @@
   .lhfolded{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:8px;cursor:pointer}
   .fchip{display:inline-flex;align-items:center;gap:4px;background:var(--gold-soft);border:1px solid #e3d9bd;color:#6b5a36;border-radius:20px;padding:2px 9px;font-size:11.5px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .colcog.fold{margin-right:7px}
+  /**
+   * ⚠️ TRADE READY ROLLS ITS OWN TWO PANES and therefore inherited NONE of the shell's mobile behaviour. On a
+   * phone it rendered both columns side by side — a 300px list and a detail squeezed to about 120px, breaking to
+   * one word per line. `.panel` handles this for every other screen; this one never used `.panel`, so it needed
+   * its own collapse. Same rule as the shell: below the breakpoint you see the list OR the detail, never both.
+   */
+  /* ⚠️ !important because the width is an INLINE style (`width:300px`) on the element, and inline beats a class
+     rule. Without it the list stayed 300px wide on a phone with dead space beside it — the collapse "worked" and
+     changed nothing visible, which is the most misleading kind of half-fix. */
+  .appwrap.m .rdpanes .rdlist{width:100%!important;flex:1 1 auto!important;border-right:0}
+  .appwrap.m .rdpanes .rddetail{display:none}
+  .appwrap.m .rdpanes.showdetail .rdlist{display:none}
+  .appwrap.m .rdpanes.showdetail .rddetail{display:block;flex:1 1 auto}
   /* ── MIS · the four bands in the two-pane shell (app/cap-admin.js) ───────────────────────────────────────── */
   /* .detail supplies no padding of its own — every other screen wraps its content in a padded block (.db, .dh),
      so MIS must bring its own or the bars run flush to the window edge. */
-  #misbody{flex:1;min-height:0;overflow-y:auto;padding:16px 18px}
+  /**
+   * ⚠️ ALL THREE BODIES, NOT JUST MIS. #misbody got this and #setbody / #profbody did not, so Settings ran
+   * 1568px of content inside a 799px pane with `overflow-y:visible` and NO scrollbar — 769px was simply
+   * unreachable, and nothing on screen said so. Content that overflows without a scroll container does not look
+   * broken; it looks finished, which is why it went unnoticed until Athi asked how he would know.
+   */
+  #misbody,#setbody,#profbody{flex:1;min-height:0;overflow-y:auto;padding:16px 18px}
+  /* A scrollbar you can SEE. Windows overlay bars fade out when idle, so the only cue that there is more is a
+     cue that is not being shown. */
+  #misbody::-webkit-scrollbar,#setbody::-webkit-scrollbar,#profbody::-webkit-scrollbar{width:10px}
+  #misbody::-webkit-scrollbar-thumb,#setbody::-webkit-scrollbar-thumb,#profbody::-webkit-scrollbar-thumb{
+    background:#d3d8de;border-radius:6px;border:2px solid #fff}
+  #misbody::-webkit-scrollbar-thumb:hover,#setbody::-webkit-scrollbar-thumb:hover,#profbody::-webkit-scrollbar-thumb:hover{background:#b9c1ca}
+  /* Says the page has ended, rather than leaving you to guess whether it stopped or stalled. */
+  .capend{text-align:center;font-size:11px;color:var(--grey);padding:16px 0 6px;letter-spacing:.04em}
   .misbar{display:flex;align-items:center;gap:9px;padding:9px 12px;flex-wrap:wrap;border-bottom:1px solid var(--line)}
   .misttl{font-family:'Space Grotesk';font-weight:700;font-size:14px}
   .misbar .seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
@@ -155,6 +182,48 @@
   .misbar-r{margin-left:auto;display:flex;align-items:center;gap:8px}
   .misasof{font-size:11px;color:var(--grey);font-family:'Space Mono'}
   .misrow{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}
+  /* Nested rail rows (the 7 governance layers under Settings → Governance). Indented and quieter than a section,
+     so the hierarchy is visible without a second control. */
+  /* Governance rows grouped by who controls them — the group heading answers "what can I change?" before you
+     read a single row, so the per-row class chip becomes confirmation rather than the only signal. */
+  .govtitle{font-family:'Space Grotesk';font-weight:700;font-size:19px;letter-spacing:-.01em;color:var(--ink)}
+  .govsub{font-size:11.5px;color:var(--grey);margin:3px 0 0;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .govdesc{font-size:12.5px;color:#3a4a54;line-height:1.55;margin:8px 0 4px}
+  .govgrp{margin-top:10px;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
+  /* The whole header is the hit target — a chevron alone is a 12px tap area, which on a phone is a miss. */
+  .govgrp-h{display:flex;align-items:center;gap:8px;width:100%;text-align:left;border:0;cursor:pointer;
+            background:var(--paper);padding:10px 12px;font-size:12px;font-weight:800;letter-spacing:.03em;
+            text-transform:uppercase;color:var(--ink);font-family:inherit}
+  .govgrp-h:hover{background:#f2efe8}
+  .govgrp.open .govgrp-h{border-bottom:1px solid var(--line)}
+  /* The title holds its width and the NOTE gives way first — as a bare text node in a squeezed flex row it was
+     the thing that collapsed, breaking "NOT CONFIGURED YET" over three lines while the note sat comfortable. */
+  .govgrp-t{flex:0 1 auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .govchev{font-size:11px;color:var(--grey);width:11px;flex:none}
+  .govcount{font-family:'Space Mono';font-size:11px;font-weight:700;color:var(--blue);
+            background:#EDF2F9;border-radius:20px;padding:1px 8px;flex:none}
+  .govnote{font-weight:600;letter-spacing:0;text-transform:none;color:var(--grey);font-size:11px;
+           margin-left:auto;text-align:right;min-width:0;flex:0 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .govgrp-b{padding:2px 12px 6px}
+  .govgrp-b .govrow:last-child{border-bottom:0}
+  @media(max-width:560px){ .govnote{display:none} }
+  /**
+   * name : value on one line, the meaning on its own line beneath — the SAME SHAPE for every row at every width.
+   * As a third column it changed shape row by row (a select is tall, a short value is not) and reflowed at the
+   * breakpoint, so nothing lined up; uniformity is what makes a list of settings scannable, not column count.
+   * Tracks are minmax(0,…) so a long value shortens its column instead of pushing the pane sideways.
+   */
+  .govrow{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);
+          gap:3px 12px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)}
+  .govrow-k{font-size:12.5px;color:var(--ink);font-weight:600;min-width:0;overflow-wrap:anywhere}
+  .govrow-v{font-size:12.5px;color:var(--ink);min-width:0;overflow-wrap:anywhere}
+  .govrow-v select.inp{width:100%;min-width:0;margin:0}
+  .govrow-c{grid-column:1/-1;min-width:0}
+  .govtag{display:inline-block;font-size:11px;line-height:1.35;border-radius:6px;padding:2px 8px;
+          font-weight:600;max-width:100%;overflow-wrap:anywhere}
+  .misrow.sub{padding-left:26px;background:var(--paper)}
+  .misrow.sub .code{font-weight:600;font-size:12.5px}
+  .misrow.sub.sel{background:#EDF2F9}
   .misval{font-family:'Space Mono';font-size:15px;font-weight:700;text-align:right;white-space:nowrap;line-height:1.2}
   .misval small{display:block;font-family:inherit;font-size:11px;font-weight:600;color:var(--grey)}
   .misval.ok{color:var(--ok)} .misval.warn{color:var(--prog)}
@@ -1869,7 +1938,15 @@ function renderApp(){
    * the guard at the thing being protected, so it holds however it is reached.
    */
   if(!SESSION.token){ stopAutoRefresh(); return go("#/login"); }
+  /**
+   * ⚠️ THE MENU FALLS BACK TO `entity`; THE SETTINGS LINK DID NOT — and that is why ⚙️ Settings was missing.
+   * MENUS has three keys (entity · actor · customer) and `MENUS[role]||MENUS.entity` quietly covers anything else,
+   * so an owner gets the ENTITY MENU. The Settings button then tested the raw `role==="entity"`, which an owner
+   * fails — you get the entity's menu without the entity's Settings. Resolve it once, the same way, and the two
+   * cannot disagree again. Confirmed present in the deployed build too, so this predates today's work.
+   */
   const role=SESSION.role, M=MENUS[role]||MENUS.entity;
+  const isEntityUser = (role!=='actor' && role!=='customer');
   if(role==="customer" && (UI.nav==="task"||UI.nav==="compose")) UI.nav="order";
   // once per session: is this entity a helpdesk? (generalises the helpdesk business-layer gate off the hardcoded name)
   if(SESSION.token && role!=="customer" && SESSION._hdChecked===undefined){ SESSION._hdChecked=true;
@@ -1927,7 +2004,7 @@ function renderApp(){
                Settings there too, and the avatar renders for every role — so a co-assist would have found the
                business's policy flags and channel bindings one click from their own name. The rail never offered
                it to them; the avatar menu must not either. -->
-          ${role==="entity"?`<button data-testid="nav-settings" onclick="UI.avMenu=false;navTo('settings')" style="display:block;width:100%;text-align:left;border:0;background:none;padding:10px 13px;font-size:13.5px;cursor:pointer">⚙️ Settings</button>`:''}
+          ${isEntityUser?`<button data-testid="nav-settings" onclick="UI.avMenu=false;navTo('settings')" style="display:block;width:100%;text-align:left;border:0;background:none;padding:10px 13px;font-size:13.5px;cursor:pointer">⚙️ Settings</button>`:''}
           <button onclick="UI.avMenu=false;logout()" style="display:block;width:100%;text-align:left;border:0;background:none;padding:10px 13px;font-size:13.5px;cursor:pointer;border-top:1px solid var(--line);color:#c0453b">↩ Sign out</button>
         </div>`:''}
         </div>
@@ -4822,8 +4899,8 @@ function taskPanel(){
       ${_btns}<button class="composebtn" style="${_isTrack?'':'margin-left:auto'}" onclick="toggleListHelp()">${UI.listHelp?'✕ Close':'❓ Help'}</button>
     </div>${UI.listHelp?`<div style="padding:11px 12px;border-bottom:1px solid var(--line);overflow-y:auto;max-height:52%">${assistPage(_ak)}</div>`:''}`;
   /**
-   * ⭐ THE FOLD (Athi, 2026-08-16). Six bands stacked up before the first chit — measured at 218px, 24% of a
-   * 897px viewport, about six chits' worth of screen spent on controls you set occasionally.
+   * ⭐ THE FOLD (Athi, 2026-08-16). Six bands stacked up before the first chit — measured at 218px, about 24% of
+   * an 885px-tall viewport, roughly six chits' worth of screen spent on controls you set occasionally.
    *
    * The split is BY HOW OFTEN YOU TOUCH A BAND, not by what looks tidy: Open/Act/Close, the count and the column
    * header are read on every glance and never fold. Unassigned/Assigned, the search box and the tool strip are

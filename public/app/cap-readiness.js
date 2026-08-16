@@ -189,6 +189,9 @@ function _rdExpand(it){
 }
 // ── TWO-PANE master-detail (list ↔ detail, like Task/Co-assist) — selecting preserves scroll (no jump) ──
 function _rdSelect(std,doc){
+  /* ⚠️ ON MOBILE THE DETAIL COVERS THE LIST — see the .rdpanes note in app.html. Record that we are in it so
+     the pane and its back button render; on a laptop both stay side by side and this flag is ignored. */
+  if(UI.vp==='mob') UI.rdMDetail=true;
   var sc=document.getElementById('rdlist'); var top=sc?sc.scrollTop:0;
   UI.rdSel = std+'|'+doc;
   if(typeof renderApp==='function') renderApp();
@@ -364,7 +367,7 @@ var COMMETA = {
     advice:'Packing credit funds production BEFORE shipment; bill discounting / factoring advances cash against the receivable so you do not wait out the buyer credit term.',
     life:[['Working-capital need','now'],['Apply for finance','next'],['Funds advanced','next']] },
 };
-function _rdComSelect(i){ UI.comSel=i; if(typeof renderApp==='function') renderApp(); }
+function _rdComSelect(i){ UI.comSel=i; if(UI.vp==='mob') UI.rdMDetail=true; if(typeof renderApp==='function') renderApp(); }
 function _rdComRow(g, i, sel){
   var on=(i===sel);
   var onrail=g.covered_onrail?'<span title="already evidenced on the rail" style="font-size:9px;color:#2f8f5b;font-weight:800;flex:0 0 auto">● rail</span>':'';
@@ -410,9 +413,10 @@ function _rdComTwoPane(){
   if(UI.commerce.error || !UI.commerce.cluster) return '<div style="flex:1;padding:20px;color:var(--grey);font-size:13px">Could not load commercial cover'+(UI.commerce.error?(' — '+esc(UI.commerce.error)):'')+'.</div>';
   var list=UI.commerce.cluster, sel=(UI.comSel!=null && UI.comSel<list.length)?UI.comSel:0; UI.comSel=sel;
   var left=list.map(function(g,i){return _rdComRow(g,i,sel);}).join('');
-  return '<div style="flex:1;display:flex;min-height:0;overflow:hidden">'
-    +'<div id="comlist" style="width:300px;flex:0 0 auto;border-right:1px solid var(--line);overflow-y:auto;background:#fff;padding:8px 6px 30px">'+left+'</div>'
-    +'<div style="flex:1;min-width:0;overflow-y:auto;background:#fbfcfe">'+_rdComDetail(list[sel])+'</div></div>';
+  return '<div class="rdpanes'+(UI.rdMDetail?' showdetail':'')+'" style="flex:1;display:flex;min-height:0;overflow:hidden">'
+    +'<div id="comlist" class="rdlist" style="width:300px;flex:0 0 auto;border-right:1px solid var(--line);overflow-y:auto;background:#fff;padding:8px 6px 30px">'+left+'</div>'
+    +'<div class="rddetail" style="flex:1;min-width:0;overflow-y:auto;background:#fbfcfe">'
+      +'<button class="dback" style="margin:10px 0 0 14px" onclick="rdBack()">‹ Back</button>'+_rdComDetail(list[sel])+'</div></div>';
 }
 // a two-pane (list ↔ detail) for one tab's set of items
 function _rdTwoPane(list){
@@ -420,10 +424,14 @@ function _rdTwoPane(list){
   if(!UI.rdSel || !list.some(function(i){return i.standard+'|'+i.doc===UI.rdSel;})) UI.rdSel = list[0].standard+'|'+list[0].doc;
   var sel=list.filter(function(i){return i.standard+'|'+i.doc===UI.rdSel;})[0];
   var left=list.map(function(i){return _rdRow(i,UI.rdSel);}).join('');
-  return '<div style="flex:1;display:flex;min-height:0;overflow:hidden">'
-    +'<div id="rdlist" style="width:300px;flex:0 0 auto;border-right:1px solid var(--line);overflow-y:auto;background:#fff;padding:8px 6px 30px">'+left+'</div>'
-    +'<div id="rddetail" style="flex:1;min-width:0;overflow-y:auto;background:#fbfcfe">'+_rdDetailPane(sel)+'</div></div>';
+  return '<div class="rdpanes'+(UI.rdMDetail?' showdetail':'')+'" style="flex:1;display:flex;min-height:0;overflow:hidden">'
+    +'<div id="rdlist" class="rdlist" style="width:300px;flex:0 0 auto;border-right:1px solid var(--line);overflow-y:auto;background:#fff;padding:8px 6px 30px">'+left+'</div>'
+    +'<div id="rddetail" class="rddetail" style="flex:1;min-width:0;overflow-y:auto;background:#fbfcfe">'
+      +'<button class="dback" style="margin:10px 0 0 14px" onclick="rdBack()">‹ Back</button>'+_rdDetailPane(sel)+'</div></div>';
 }
+/* Leave the detail on mobile. On a laptop nothing calls this — the back button it belongs to is .dback, which the
+   shell only shows under .appwrap.m. */
+function rdBack(){ UI.rdMDetail=false; if(typeof renderApp==='function') renderApp(); }
 // Trade ready — FULL-WIDTH, uniform with Task. Tabs: Certification (standing) · Clearance (per-shipment) · Commercial.
 function readinessScreen(){
   var tab=UI.rdTab||'certification';

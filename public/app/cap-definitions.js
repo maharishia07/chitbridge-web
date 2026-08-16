@@ -128,7 +128,7 @@ function cbDefRegistries(){
 
   /* Order models — the quantity rule a catalogue declares per item. cart-ui owns them. */
   out.push({
-    key: 'ordermodel', icon: '🔢', title: 'Order models',
+    key: 'ordermodel', icon: '🔢', title: 'Order model kinds',
     blurb: 'How a line is quantified. The catalogue declares it per item; every screen obeys.',
     source: 'app/cart-ui.js · MODELS',
     rows: (typeof CBCart !== 'undefined' && CBCart.models)

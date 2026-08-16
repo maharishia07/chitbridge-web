@@ -123,7 +123,11 @@ function misScreen(){
   var list = '<div class="list"><div class="lh" style="padding:0">' + bar + '</div>'
     + '<div class="rows" id="mis_rail">' + rail + '</div></div>';
   var detail = '<div class="detail" id="detailpane"><div id="misbody">'
-    + (m ? misBandHTML(misBand(), m) : '<div class="loadwrap"><span class="spin"></span> loading…</div>') + '</div></div>';
+    /* ⚠️ NO INLINE SPINNER, AND A WAY OUT WHILE IT LOADS. api() already shows the centred "Reading data…" pill,
+       so a second spinner in the pane is two indicators for one fetch. And on mobile the loading pane COVERS the
+       rail — without this button a slow read (measured ~3.6s against Railway) strands you on a blank screen. */
+    + (m ? misBandHTML(misBand(), m)
+         : '<button class="dback" data-testid="cap-back" onclick="backToList()">‹ Back</button>') + '</div></div>';
   var divider = '<div class="divider" id="divider" onmousedown="startDrag(event)" ontouchstart="startDrag(event)" role="separator" aria-label="Resize panes"><span class="grip"></span></div>';
   /**
    * ⚠️ ITS OWN RAIL WIDTH, not the shared UI.lw. Task and Suppliers hold lists of unbounded, variable-length rows,
@@ -151,15 +155,28 @@ function misHeadline(k, m){
   return { v: '·', s: '' };
 }
 
+/* Athi: *"scroll not appearing, how do i know i reached the bottom"* — so say so, rather than leaving a stopped
+   page indistinguishable from a stalled one. */
+function _capEnd(){ return '<div class="capend">— end —</div>'; }
 function misBandHTML(k, m){
-  if (k === 'overview') return misOverview(m);
-  if (k === 'position') return misPosition(m);
-  if (k === 'flow')     return misFlow(m);
-  if (k === 'friction') return misFriction(m);
-  if (k === 'trust')    return misTrust(m);
-  return '';
+  var body = (k === 'overview') ? misOverview(m)
+    : (k === 'position') ? misPosition(m)
+    : (k === 'flow')     ? misFlow(m)
+    : (k === 'friction') ? misFriction(m)
+    : (k === 'trust')    ? misTrust(m) : '';
+  return body ? (body + _capEnd()) : '';
 }
-function _misHead(t, s){ return '<div class="dh">' + esc(t) + '</div><div class="ds" style="margin-bottom:14px">' + esc(s) + '</div>'; }
+/**
+ * ⚠️ THE BACK BUTTON IS PART OF THE HEADING, not an optional extra. On mobile the detail pane COVERS the rail,
+ * so a section without a way back is a dead end — the same failure as the Find-a-product panel on a laptop, and
+ * it reached three screens at once because they share this helper. `.dback` is the shell's mobile-only back
+ * control: hidden on a laptop where the rail is still visible beside you, shown exactly when it is not.
+ */
+/* ⚠️ The back button is separable from the title, because Governance drops the title (the rail already names it)
+   but still needs a way back on mobile. Losing it with the heading is exactly the dead-end fixed earlier. */
+function _misBack(){ return '<button class="dback" data-testid="cap-back" onclick="backToList()">‹ Back</button>'; }
+function _misHead(t, s){
+  return _misBack() + '<div class="dh">' + esc(t) + '</div><div class="ds" style="margin-bottom:14px">' + esc(s) + '</div>'; }
 function _misSplitBar(m){
   var tot = m.committed + m.forecast;
   if (!tot) return '<div class="misnote">No value on any chit yet.</div>';
@@ -431,7 +448,10 @@ async function loadMIS(){
 var PROF_SECS = [
   { key:'identity',   name:'Identity',    q:'Who you are on the rail' },
   { key:'storefront', name:'Storefront',  q:'What customers can see' },
-  { key:'governance', name:'Governance',  q:'Rights and jurisdiction' },
+  /* ⚠️ NOT "Governance" — Settings has a section by that name too, and two rows with one name in two screens is
+     a collision even when the content differs. This one is your RESOLVED position (Governed by · Basics · Rights ·
+     Allowances · Jurisdiction); the Settings one is the 7-layer model those values descend from. */
+  { key:'governance', name:'Your rights',  q:'What this entity may do' },
   { key:'vault',      name:'Documents',   q:'Fill forms once, reuse' }
 ];
 function profSec(){ return UI.profSec || 'identity'; }
@@ -454,21 +474,32 @@ function profileScreen(){
   var list = '<div class="list"><div class="lh" style="padding:0"><div class="misbar"><span class="misttl">👤 Profile</span>'
     + '<span class="misbar-r"><span class="misasof">' + esc(e.display_name || '') + '</span></span></div></div>'
     + '<div class="rows" id="prof_rail">' + rail + '</div></div>';
-  var detail = '<div class="detail" id="detailpane"><div id="profbody"><div class="loadwrap"><span class="spin"></span> loading…</div></div></div>';
+  var detail = '<div class="detail" id="detailpane"><div id="profbody"><button class="dback" data-testid="cap-back" onclick="backToList()">‹ Back</button></div></div>';
   var divider = '<div class="divider" id="divider" onmousedown="startDrag(event)" ontouchstart="startDrag(event)" role="separator" aria-label="Resize panes"><span class="grip"></span></div>';
   if (UI.misLw == null) UI.misLw = 320;
   var lw = Math.min(UI.misLw, Math.max(260, Math.round((window.innerWidth || 1200) * 0.42)));
   return '<div class="panel' + ((UI.vp === 'mob' && UI.mdetail) ? ' showdetail' : '') + '" id="panel" style="--lw:' + lw + 'px;--lh:' + (UI.lh || 300) + 'px">' + list + divider + detail + '</div>';
 }
 
+/**
+ * ⚠️ ONE READ AT A TIME. The post-render hook fires loadProfile on EVERY render, and a section switch renders —
+ * so with the API at ~3.6s a round trip, switching sections stacked four and five identical `me` reads and the
+ * pane sat on its spinner behind all of them. The in-flight guard makes the extra renders free.
+ */
+let _profBusy = false;
 async function loadProfile(){ const h=document.getElementById("profbody"); if(!h)return;
   if(SESSION.role==='actor') return loadActorProfile(h);   // actors get their own profile, not the entity's
+  if(UI._me){ h.innerHTML = profSecHTML(profSec(), UI._me); if(profSec()==='vault') loadVault(); return; }
+  if(_profBusy) return;
+  _profBusy = true;
   try{ const e=(await api("me"))||{}; UI._me=e;
     h.innerHTML = profSecHTML(profSec(), e);
     if (profSec() === 'vault') loadVault();   // the trade documents vault (async — pre-fills authority forms)
-  }catch(e){ h.innerHTML=scrErr(e); } }
+  }catch(e){ h.innerHTML=scrErr(e); }
+  finally { _profBusy = false; } }
 
-function profSecHTML(k, e){
+function profSecHTML(k, e){ var b = _profSecBody(k, e); return b ? (b + _capEnd()) : ''; }
+function _profSecBody(k, e){
   if (k === 'identity') return _misHead('Identity', 'Who you are on the rail — and how others find you.')
     + `<div class="${_CARD}"><div class="kv"><b>Name</b> · ${esc(e.display_name)}</div><div class="kv"><b>Bridge ID</b> · ${esc(e.bridge_id)}</div><div class="kv"><b>Email</b> · ${esc(e.email)}</div></div>
       <label class="fl">User ID <span style="color:var(--grey);font-size:11px">— others add you with this</span></label><input class="inp" id="pf_uid" value="${esc(e.user_id||'')}" placeholder="e.g. yourname or you@email.com">
@@ -480,7 +511,7 @@ function profSecHTML(k, e){
       <div class="err" id="pf_err"></div><button class="composebtn" style="margin-top:11px" onclick="saveProfile()">Save profile</button>`;
   if (k === 'storefront') return _misHead('Storefront', 'What customers see when they open your link.')
     + storefrontCardHTML(e);
-  if (k === 'governance') return _misHead('Governance', 'Where you are minted, and what that entitles you to.')
+  if (k === 'governance') return _misHead('Your rights', 'What this entity may do — resolved from the layers above it.')
     + (govCardHTML(e.governance) || '<div class="misnote">No governance resolved for this entity yet.</div>');
   if (k === 'vault') return _misHead('Trade documents', 'Provide these once — every authority form is then pre-filled.')
     + '<div id="vaulthost"><div class="loadwrap"><span class="spin"></span> loading…</div></div>';
@@ -614,23 +645,156 @@ const GOV=[
     ['Assignment model','both · entity setting','entity'],
     ['Default max tasks / actor','10 · entity setting','entity'] ] }
 ];
-function govKlass(k){ var M={bound:['lock · bound','#fbeceb','#b4453f'],bound_set:['pick-from-set','#EEF3FB','#3F66A6'],advisory:['advisory · mutable','#E4F0E9','#2F6B49'],chosen:['tighten-only','#F5ECD6','#7a5e22'],free:['free · TBD','#efeee9','#8a8a82'],inherited:['inherited · frozen','#EEF3FB','#3F66A6'],entity:['entity setting','#E4F0E9','#2F6B49'],metered:['metered ↑ · licensing','#EFEAF6','#5b4a86'],protected:['protected · platform','#E7EBF0','#46546b']}; var x=M[k]||M.free; return '<span style="font-size:9.5px;font-family:\'Space Mono\';background:'+x[1]+';color:'+x[2]+';border-radius:5px;padding:1px 6px;white-space:nowrap">'+x[0]+'</span>'; }
+/**
+ * ⚠️ REWRITTEN FOR A READER, NOT A DEVELOPER. These were 9.5px Space Mono chips reading "advisory · mutable",
+ * "lock · bound", "free · TBD" — below the 11px legibility floor, in the data font, and in vocabulary that only
+ * means anything if you already know the model. Every row carried one, so a layer was a wall of nine-colour
+ * jargon and the actual question ("can I change this?") was the hardest thing on the screen to answer.
+ *
+ * Now: plain words, at the floor, and only where they add something the GROUP HEADING has not already said.
+ */
+var GOV_KLASS = {
+  advisory:  { say:'you can change this',        tone:'yours' },
+  entity:    { say:'you set this',               tone:'yours' },
+  bound_set: { say:'choose from a fixed list',   tone:'yours' },
+  chosen:    { say:'you can only make it stricter', tone:'yours' },
+  bound:     { say:'locked by the layer above',  tone:'fixed' },
+  inherited: { say:'inherited, frozen',          tone:'fixed' },
+  protected: { say:'set by the platform',        tone:'fixed' },
+  metered:   { say:'counted for licensing',      tone:'fixed' },
+  free:      { say:'not set yet',                tone:'none'  }
+};
+/**
+ * ⚠️ PERMISSION IS NOT THE SAME AS "THERE IS A CONTROL HERE", and conflating them made this screen lie.
+ *
+ * The class says what the LAYER permits. Translating `advisory · mutable` to the plain "you can change this" read
+ * as a promise about THIS SCREEN — and 4 of the 19 rows carrying it (Message max length, Catalogue visibility,
+ * Attachment types, Attachment max size) are rendered as plain text with nothing to click. The old jargon was
+ * vague enough to survive that gap; plain English is not, which is a good argument for plain English and a bad
+ * argument for leaving it unchecked.
+ *
+ * So the wording now depends on whether the row actually offers a control. Same governance, honest sentence.
+ */
+function govKlass(k, hasControl){
+  var x = GOV_KLASS[k] || GOV_KLASS.free;
+  var col = x.tone==='yours' ? ['#E4F0E9','#2F6B49'] : x.tone==='fixed' ? ['#E7EBF0','#46546b'] : ['#efeee9','#7a7a72'];
+  var say = x.say;
+  if (x.tone === 'yours' && !hasControl){
+    col = ['#F5ECD6','#7a5e22'];
+    say = say + ' — no control here yet';
+  }
+  return '<span class="govtag" style="background:'+col[0]+';color:'+col[1]+'">'+say+'</span>';
+}
 var TIMEZONES=['Asia/Kolkata','UTC','Europe/London','Europe/Berlin','America/New_York','America/Los_Angeles','America/Sao_Paulo','Asia/Dubai','Asia/Singapore','Asia/Tokyo','Australia/Sydney','Africa/Johannesburg'];
 var LANGS=[['en','English'],['ta','Tamil'],['hi','Hindi']];
 var GOVSET=(function(){ var d={currency:'INR',timezone:'Asia/Kolkata',language:'en'}; try{ return Object.assign(d, JSON.parse(localStorage.getItem('cb_govset')||'{}')); }catch(_){ return d; } })();
 function govSetVal(k,v){ GOVSET[k]=v; try{ localStorage.setItem('cb_govset', JSON.stringify(GOVSET)); }catch(_){ } var h=document.getElementById('govblock'); if(h)h.outerHTML=govLayersBlock(); }
-function govSel(k,opts){ return '<select class="inp" style="width:auto;min-width:160px;padding:4px 8px;font-size:12px" onchange="govSetVal(\''+k+'\',this.value)">'+opts.map(function(o){ var v=Array.isArray(o)?o[0]:o, l=Array.isArray(o)?(o[0]+' · '+o[1]):o; return '<option value="'+esc(v)+'"'+(GOVSET[k]===v?' selected':'')+'>'+esc(l)+'</option>'; }).join('')+'</select>'; }
-function govRowHtml(label,valHtml,klass){ return '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--line)"><span style="flex:1;font-size:12.5px;color:var(--ink)">'+esc(label)+'</span><span style="font-size:12px;color:var(--grey);font-family:\'Space Mono\'">'+valHtml+'</span>'+govKlass(klass)+'</div>'; }
-function govSetTab(i){ UI.govTab=i; var h=document.getElementById('govblock'); if(h)h.outerHTML=govLayersBlock(); }
+/* ⚠️ FLUID, NOT min-width:160px. The inline `width:auto;min-width:160px` beat the column rule (inline always
+   does), so the select rendered 213px inside a 140px cell and hung 19px past the pane. Third inline-vs-class
+   collision on this screen today; when a component must fit an unknown container, it cannot carry a hard floor. */
+function govSel(k,opts){ return '<select class="inp" style="width:100%;min-width:0;padding:4px 8px;font-size:12px" onchange="govSetVal(\''+k+'\',this.value)">'+opts.map(function(o){ var v=Array.isArray(o)?o[0]:o, l=Array.isArray(o)?(o[0]+' · '+o[1]):o; return '<option value="'+esc(v)+'"'+(GOVSET[k]===v?' selected':'')+'>'+esc(l)+'</option>'; }).join('')+'</select>'; }
+/**
+ * ⚠️ WRAPS INSTEAD OF PUSHING THE PANE SIDEWAYS. Label + value + class-tag on one non-wrapping flex line needed
+ * ~469px; inside Settings the pane is ~358px, so the row forced the WHOLE DETAIL PANE to scroll horizontally
+ * (measured: 111px over) and the tags read "advisory · mut…". A row that cannot fit should fold onto a second
+ * line — the pane scrolling sideways is never the right answer, it just moves the problem to the whole screen.
+ */
+/**
+ * ⭐ THREE COLUMNS — name : value : what it means (Athi, 2026-08-16: *"like Currency : data : comment"*).
+ *
+ * It was a single flex line with the value and a jargon chip crowded after the label, wrapping raggedly when it
+ * did not fit. As a table it can be READ DOWN: every label starts at the same x, every value at the same x, and
+ * the comment column answers "can I change this?" on the row itself rather than in a legend at the bottom.
+ *
+ * ⚠️ The comment repeats within a group, and that is fine HERE — a column of like values is scannable, where
+ * the same text as loose chips after each value was noise. The layout is what changed the answer.
+ */
+function govRowHtml(label,valHtml,klass){
+  /* Does this row actually offer a way to change it? Read from the rendered value, so the comment can never drift
+     from the control — add a select to a row and its wording corrects itself. */
+  var hasControl = /<select|<input|<textarea|<button/i.test(String(valHtml));
+  return '<div class="govrow"><span class="govrow-k">'+esc(label)+'</span>'
+    + '<span class="govrow-v">'+valHtml+'</span>'
+    + '<span class="govrow-c">'+govKlass(klass, hasControl)+'</span></div>';
+}
+/* In Settings the layers are rail rows, so the RAIL has to repaint too (to move the highlight); elsewhere the
+   in-place swap is still right. renderApp covers both — Settings paints from cache, so it is not a re-fetch. */
+/* Open state is per-group and sticks while you move between layers — you are usually asking the same question
+   ("what can I change?") of each one in turn, and re-collapsing on every switch would fight that. */
+function govToggleGrp(k){ UI.govOpen = UI.govOpen || { yours:true, fixed:false, none:false };
+  UI.govOpen[k] = !UI.govOpen[k];
+  var h=document.getElementById('govblock'); if(h) h.outerHTML=govLayersBlock(); }
+function govSetTab(i){ UI.govTab=i;
+  if (UI.nav === 'settings'){ if(UI.vp==='mob'){ UI.mdetail=true; } renderApp(); if(typeof loadSettings==='function') loadSettings(); return; }
+  var h=document.getElementById('govblock'); if(h)h.outerHTML=govLayersBlock(); }
 function govLayersBlock(){ var t=UI.govTab||0; var L=GOV[t];
   var tabs=GOV.map(function(g,i){ return '<button class="composebtn'+(i===t?' on':'')+'" style="font-size:11px;padding:5px 9px" onclick="govSetTab('+i+')">'+esc(g.n)+'</button>'; }).join('');
-  var rowsHtml='';
-  if(t===0){ rowsHtml+=govRowHtml('Currency',govSel('currency',CURRENCIES),'advisory'); rowsHtml+=govRowHtml('Timezone',govSel('timezone',TIMEZONES),'advisory'); rowsHtml+=govRowHtml('Language',govSel('language',LANGS),'bound_set'); }
-  else if(t===6){ var ll=(LANGS.filter(function(x){return x[0]===GOVSET.language;})[0]||['',''])[1]||GOVSET.language; rowsHtml+=govRowHtml('Currency (inherited)',esc(GOVSET.currency)+' · from Constitution','inherited'); rowsHtml+=govRowHtml('Timezone (inherited)',esc(GOVSET.timezone)+' · from Constitution','inherited'); rowsHtml+=govRowHtml('Language (inherited)',esc(GOVSET.language)+' ('+esc(ll)+') · from Constitution','inherited'); }
-  rowsHtml+=L.rows.map(function(r){ return govRowHtml(r[0],esc(r[1]),r[2]); }).join('');
+  /**
+   * ⭐ SPLIT BY WHO CONTROLS IT (Athi, 2026-08-16: *"we have to see how we can split between what is static and
+   * what can change"*). The distinction already existed — it was encoded in a nine-value class on every row — but
+   * it was a small chip at the right edge, so answering "what can I actually change here?" meant decoding nine
+   * tags line by line. It is the first question anyone brings to a governance screen, so it becomes the structure.
+   *
+   * ⚠️ THREE GROUPS, NOT TWO. `free` means "not configured yet, lands here later" — it is neither yours to change
+   * nor fixed above you, and filing it under either would be a claim the data does not make.
+   */
+  var YOURS = { advisory:1, entity:1, bound_set:1, chosen:1 };   // set it, pick from a set, or tighten it
+  var FIXED = { bound:1, inherited:1, protected:1, metered:1 };  // decided upstream or by the platform
+  var _rows=[];
+  var push=function(label,val,klass){ _rows.push([label,val,klass]); };
+  if(t===0){ push('Currency',govSel('currency',CURRENCIES),'advisory'); push('Timezone',govSel('timezone',TIMEZONES),'advisory'); push('Language',govSel('language',LANGS),'bound_set'); }
+  else if(t===6){ var ll=(LANGS.filter(function(x){return x[0]===GOVSET.language;})[0]||['',''])[1]||GOVSET.language; push('Currency (inherited)',esc(GOVSET.currency)+' · from Constitution','inherited'); push('Timezone (inherited)',esc(GOVSET.timezone)+' · from Constitution','inherited'); push('Language (inherited)',esc(GOVSET.language)+' ('+esc(ll)+') · from Constitution','inherited'); }
+  L.rows.forEach(function(r){ push(r[0],esc(r[1]),r[2]); });
+  /**
+   * ⭐ COLLAPSIBLE GROUPS (Athi, 2026-08-16). A layer can run to nineteen rows, and the three groups are not
+   * equally interesting: "Yours to set" is the reason you opened the screen, "Fixed above you" is reference, and
+   * "Not configured yet" is a placeholder. Opening all three every time buries the actionable one under the other
+   * two — so the one you can act on opens, the rest stay shut with their count visible and open on a click.
+   *
+   * ⚠️ The count sits in the HEADER, not inside the panel, so a shut group still tells you how much is in it.
+   * A collapsed section that hides even its own size is just missing information.
+   */
+  var grp=function(key,title,note,pick){
+    var hit=_rows.filter(function(r){ return pick(r[2]); });
+    if(!hit.length) return '';
+    UI.govOpen = UI.govOpen || { yours:true, fixed:false, none:false };
+    var open = !!UI.govOpen[key];
+    return '<div class="govgrp'+(open?' open':'')+'">'
+      + '<button class="govgrp-h" data-testid="gov-grp-'+key+'" onclick="govToggleGrp(\''+key+'\')" aria-expanded="'+open+'">'
+        + '<span class="govchev">'+(open?'▾':'▸')+'</span><span class="govgrp-t">'+title+'</span>'
+        + '<span class="govcount">'+hit.length+'</span><span class="govnote">'+note+'</span></button>'
+      + (open ? ('<div class="govgrp-b">'+hit.map(function(r){ return govRowHtml(r[0],r[1],r[2]); }).join('')+'</div>') : '')
+      + '</div>';
+  };
+  var rowsHtml = grp('yours','Yours to set','you control these', function(k){ return YOURS[k]; })
+    + grp('fixed','Fixed above you','inherited or platform-bound', function(k){ return FIXED[k]; })
+    + grp('none','Not configured yet','arrives from the layer later', function(k){ return !YOURS[k] && !FIXED[k]; });
   if(t===0){ rowsHtml+='<div style="margin:13px 0 2px;font-family:\'Space Grotesk\';font-weight:700;font-size:12.5px;color:#46546b">⚙ Installation · platform-only (master)</div>'+govRowHtml('Cloud provider','AWS','protected')+govRowHtml('Region','ap-south-1','protected')+govRowHtml('Storage adapter','db → S3 / Azure / GCS','protected')+govRowHtml('Storage bucket','chitbridge-prod-•••','protected')+govRowHtml('Secrets / keys','•••• managed (never exposed)','protected')+govRowHtml('System health','● healthy','protected'); rowsHtml+='<div style="margin:13px 0 2px;font-family:\'Space Grotesk\';font-weight:700;font-size:12.5px;color:#5b4a86">↑ Metered up to Constitution · for licensing</div>'+govRowHtml('Entities provisioned','1','metered')+govRowHtml('Networks formed','0','metered')+govRowHtml('Chits issued','—','metered')+govRowHtml('Data stored','—','metered')+govRowHtml('Plan tier','Free · 5 entities / 10 chits-day / 1 network','metered'); }
-  var foot=(t===0)?'Change a value above, then open <b>tab 7 · Consolidation</b> — the entity inherits it via the boilerplate. <i>Stub: in production these arrive from the layer, not this screen.</i>':(t===6)?'These ride down from the layers into the <b>boilerplate</b> every entity copies at registration, and <b>freeze</b> onto each chit at send. <i>Stub — later set from the real layer.</i>':'<b>bound</b> = inherited &amp; locked · <b>advisory</b> = entity may change when upstream leaves it free · <b>free</b> = not configured yet, lands here later.';
-  return '<div id="govblock" style="'+_CARD+'"><div class="sec" style="margin:0 0 8px">🏛️ Governance · 7 layers <span style="font-size:10px;font-family:\'Space Mono\';background:#f3f0e8;color:#7a5e22;border-radius:5px;padding:1px 6px">stub · perception</span></div><div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:11px">'+tabs+'</div><div style="font-family:\'Space Grotesk\';font-weight:700;font-size:14px">'+esc(L.n)+' <span style="font-size:10.5px;color:var(--grey);font-weight:400">· '+esc(L.tag)+'</span></div><div style="font-size:12px;color:var(--grey);margin:2px 0 9px">'+esc(L.desc)+'</div>'+rowsHtml+'<div style="font-size:11px;color:var(--grey);margin-top:9px;line-height:1.5">'+foot+'</div></div>';
+  var inRail = (UI.nav === 'settings');   /* rail carries the layers in Settings; chips elsewhere */
+  var foot=(t===0)?'Change a value above, then open <b>tab 7 · Consolidation</b> — the entity inherits it via the boilerplate. <i>Stub: in production these arrive from the layer, not this screen.</i>':(t===6)?'These ride down from the layers into the <b>boilerplate</b> every entity copies at registration, and <b>freeze</b> onto each chit at send. <i>Stub — later set from the real layer.</i>'/* ⚠️ THE GENERIC LEGEND IS GONE. It defined `bound` / `advisory` / `free` — words this screen no longer uses,
+   because every row now says what it means in plain English on the row itself. A legend for vocabulary that is
+   not on the page is the stale-copy bug in its purest form: correct once, then quietly describing nothing. */
+:'';
+  /* ⚠️ "stub · perception" was internal shorthand on a user-facing screen. The honest part of it — that these are
+     not enforced yet — is worth keeping and is now said in words a reader can act on. */
+  /**
+   * ⭐ THE LAYER IS THE SUBJECT, so it is the heading — name first, then which of the seven it is, then what it
+   * means, then the groups. It used to open with "🏛️ Governance · 7 layers" (which the rail already says) and
+   * carry the layer name in smaller type underneath, so the screen led with its category instead of its content.
+   *
+   * ⚠️ The layer NAME comes from GOV[i].n, which is "1 · Constitution" — the ordinal is stripped for the heading
+   * and stated properly as "Layer 1 of 7", rather than printing "1 · Constitution" beside "Layer 1 of 7" twice.
+   */
+  /* The layer's own name, ordinal and all — "1 · Constitution" — is the heading. The separate "Layer 1 of 7" line
+     said the same thing a second way; the rail shows all seven, so position is already visible there. */
+  return '<div id="govblock" style="'+_CARD+'">'
+    + (inRail?'':'<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:11px">'+tabs+'</div>')
+    + '<div class="govtitle">'+esc(L.n)+'</div>'
+    + '<div class="govsub">'+esc(L.tag)
+      + ' <span class="govtag" style="background:#F5ECD6;color:#7a5e22">shown, not enforced yet</span></div>'
+    + '<div class="govdesc">'+esc(L.desc)+'</div>'
+    + rowsHtml
+    + (foot ? ('<div style="font-size:11px;color:var(--grey);margin-top:11px;line-height:1.5">'+foot+'</div>') : '') + '</div>';
 }
 /* ═══ SETTINGS ══════════════════════════════════════════════════════════════════════════════════════════════
  * Eight cards in one scroll — governance layers, assignment, auto-assign, attachment policy, AI, channels, policy
@@ -644,7 +808,7 @@ var SET_SECS = [
   { key:'work',       name:'Work',        q:'How tasks reach people' },
   { key:'policy',     name:'Policy',      q:'Rules on your records' },
   { key:'channels',   name:'Channels',    q:'Where work arrives from' },
-  { key:'governance', name:'Governance',  q:'The layers you sit under' },
+  { key:'governance', name:'Governance layers', q:'Where your rights come from' },
   { key:'blueprints', name:'Blueprints',  q:'Shared catalogue designs' }
 ];
 function setSec(){ return UI.setSec || 'work'; }
@@ -652,13 +816,30 @@ function setSec(){ return UI.setSec || 'work'; }
 function setSetSec(k){ UI.setSec = k; renderApp(); _capShowDetail(); loadSettings(); }
 
 function settingsScreen(){
+  /**
+   * ⭐ THE 7 GOVERNANCE LAYERS ARE RAIL ROWS (Athi, 2026-08-16: *"under governance you can bring all 7 layers and
+   * each can bring its own data right side"*). They were a strip of chips INSIDE the right pane — a second
+   * navigation nested in a section, so the screen had two different ways of choosing a thing depending on how
+   * deep you were. The rail already is the way you choose a thing; the layers just belong in it.
+   *
+   * They appear only while Governance is the open section, so the rail stays five rows when it is not.
+   */
   var rail = SET_SECS.map(function(s){
-    return '<div class="row misrow' + (setSec() === s.key ? ' sel' : '') + '" data-testid="set-sec-' + s.key + '" onclick="setSetSec(\'' + s.key + '\')">'
+    var row = '<div class="row misrow' + (setSec() === s.key ? ' sel' : '') + '" data-testid="set-sec-' + s.key + '" onclick="setSetSec(\'' + s.key + '\')">'
       + '<div class="main2"><div class="l1"><span class="code">' + esc(s.name) + '</span></div><div class="l2">' + esc(s.q) + '</div></div></div>';
+    if (s.key === 'governance' && setSec() === 'governance' && typeof GOV !== 'undefined'){
+      row += GOV.map(function(g, i){
+        var on = ((UI.govTab || 0) === i);
+        return '<div class="row misrow sub' + (on ? ' sel' : '') + '" data-testid="gov-layer-' + i + '" onclick="govSetTab(' + i + ')">'
+          + '<div class="main2"><div class="l1"><span class="code">' + esc(g.n) + '</span></div>'
+          + '<div class="l2">' + esc(g.tag || '') + '</div></div></div>';
+      }).join('');
+    }
+    return row;
   }).join('');
   var list = '<div class="list"><div class="lh" style="padding:0"><div class="misbar"><span class="misttl">⚙️ Settings</span></div></div>'
     + '<div class="rows" id="set_rail">' + rail + '</div></div>';
-  var detail = '<div class="detail" id="detailpane"><div id="setbody"><div class="loadwrap"><span class="spin"></span> loading…</div></div></div>';
+  var detail = '<div class="detail" id="detailpane"><div id="setbody"><button class="dback" data-testid="cap-back" onclick="backToList()">‹ Back</button></div></div>';
   var divider = '<div class="divider" id="divider" onmousedown="startDrag(event)" ontouchstart="startDrag(event)" role="separator" aria-label="Resize panes"><span class="grip"></span></div>';
   if (UI.misLw == null) UI.misLw = 320;
   var lw = Math.min(UI.misLw, Math.max(260, Math.round((window.innerWidth || 1200) * 0.42)));
@@ -687,7 +868,8 @@ async function loadSettings(){ const h=document.getElementById("setbody"); if(!h
 function paintSettings(s, _daOpts){ const h=document.getElementById("setbody"); if(!h)return;
   { const k = setSec();
     const notYet = '<div style="background:#fbeceb;border:1px solid #f0c9c6;border-radius:8px;padding:8px 11px;font-size:11.5px;color:#b4453f;margin-bottom:11px">⏳ These preferences are saved but <b>not yet active</b> — they don\'t change behaviour yet.</div>';
-    if (k === 'work') h.innerHTML = _misHead('Work', 'How tasks reach the people and co-assists who do them.')
+    var out = "";
+    if (k === "work") out = _misHead('Work', 'How tasks reach the people and co-assists who do them.')
       + `<div style="${_CARD}">${notYet}
       <label class="fl">Assignment model</label><select class="inp" id="st_am">${opt(["pull","push","both"],s.assignment_model||"both")}</select>
       <label class="fl">Default max tasks per actor</label><input class="inp" id="st_mt" inputmode="numeric" value="${esc(s.default_max_tasks||10)}">
@@ -695,14 +877,20 @@ function paintSettings(s, _daOpts){ const h=document.getElementById("setbody"); 
       <label class="fl" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="st_ar" ${s.auto_return_on_short_break?'checked':''}> Auto-return tasks on short break</label>
       <div class="err" id="st_err"></div><button class="composebtn" style="margin-top:9px" onclick="saveSettings()">Save settings</button></div>`
       + autoAssignCard(s,_daOpts) + aiSettingsCard();
-    else if (k === 'policy') h.innerHTML = _misHead('Policy', 'Rules that govern your own records.')
+    else if (k === "policy") out = _misHead('Policy', 'Rules that govern your own records.')
       + policyFlagsCard()
       + `<div style="border:1px solid var(--line);border-radius:11px;padding:13px;margin-top:10px"><div class="sec" style="margin:0 0 6px">📎 Attachment policy <span style="font-size:10px;font-family:'Space Mono';background:#f3f0e8;color:#7a5e22;border-radius:5px;padding:1px 6px">governance · stub</span></div><label class="fl">Allowed types</label><input class="inp" id="st_atttypes" value="image, pdf, docx, xlsx, csv, zip"><label class="fl">Max size per file (MB)</label><input class="inp" id="st_attsize" inputmode="numeric" value="10"><label class="fl">Max attachments per chit</label><input class="inp" id="st_attcount" inputmode="numeric" value="10"><div style="font-size:11px;color:var(--grey);margin-top:6px">Where allowed-types / size / count rules live (enforced backend-side). Not active yet.</div></div>`;
-    else if (k === 'channels'){ h.innerHTML = _misHead('Channels', 'The inbound numbers and addresses that become chits.') + channelsCard();
+    else if (k === "channels"){ out = _misHead('Channels', 'The inbound numbers and addresses that become chits.') + channelsCard();
       loadChannels();   // async — the card paints itself in when the read lands
     }
-    else if (k === 'governance') h.innerHTML = _misHead('Governance', 'The layers your entity is minted under.') + govLayersBlock();
-    else if (k === 'blueprints') h.innerHTML = _misHead('Blueprints', 'Catalogue designs you publish or adopt.') + blueprintSettingsHTML();
+    /* ⚠️ NO SECTION HEADING HERE (Athi: *"governance, the layers your entity minted under, not required.. just
+       1. Constitution under Governance"*). The rail row already says Governance and the selected layer is the
+       subject — repeating the section name above it pushed the actual content down for no information. */
+    else if (k === "governance") out = _misBack() + govLayersBlock();
+    else if (k === "blueprints") out = _misHead('Blueprints', 'Catalogue designs you publish or adopt.') + blueprintSettingsHTML();
+    /* One assignment, so the end marker is appended in one place rather than five — and cannot be forgotten on a
+       branch added later. */
+    h.innerHTML = out + (out ? _capEnd() : '');
   } }
 async function saveSettings(){ const x=document.getElementById("st_err"); if(x)x.textContent="";
   try{ await api("saveSettings",{body:{assignment_model:val("st_am"),default_max_tasks:+val("st_mt")||10,all_task_visible:document.getElementById("st_av").checked,auto_return_on_short_break:document.getElementById("st_ar").checked}}); toast(MSG.settingsSaved()); }catch(e){ if(x)x.textContent=e.message; } }
