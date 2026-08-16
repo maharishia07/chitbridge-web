@@ -76,26 +76,26 @@ function _traceBatchPicker(){
     return '<div onclick="UI.traceId=\'' + b.chit_id + '\';runTrace(\'forward\')" title="Click to trace this batch" '
       + 'style="cursor:pointer;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:#fff;display:flex;flex-direction:column;gap:2px">'
       + '<div style="display:flex;align-items:center;gap:7px"><b style="font-size:13px">' + name + '</b>'
-        + (b.is_origin ? '<span style="font-size:11px;font-weight:800;color:#2c5aa0;background:#eaf1fb;border-radius:5px;padding:1px 5px">ORIGIN</span>' : '') + '</div>'
-      + (meta ? '<div style="font-size:11px;color:var(--grey)">' + meta + '</div>' : '')
-      + '<div style="font-family:monospace;font-size:11px;color:#8a94a3;word-break:break-all">' + esc(b.chit_id) + '</div>'
+        + (b.is_origin ? '<span style="font-size:var(--fs-1);font-weight:800;color:#2c5aa0;background:#eaf1fb;border-radius:5px;padding:1px 5px">ORIGIN</span>' : '') + '</div>'
+      + (meta ? '<div style="font-size:var(--fs-1);color:var(--grey)">' + meta + '</div>' : '')
+      + '<div style="font-family:monospace;font-size:var(--fs-1);color:#8a94a3;word-break:break-all">' + esc(b.chit_id) + '</div>'
       + '</div>';
   }).join('');
   return '<div style="padding:10px 18px 4px">'
-    + '<div style="font-size:11px;font-weight:800;color:var(--grey);letter-spacing:.05em;margin-bottom:7px">YOUR BATCHES — click one to trace</div>'
+    + '<div style="font-size:var(--fs-1);font-weight:800;color:var(--grey);letter-spacing:.05em;margin-bottom:7px">YOUR BATCHES — click one to trace</div>'
     + '<div style="display:grid;gap:7px;grid-template-columns:repeat(auto-fill,minmax(210px,1fr))">' + rows + '</div></div>';
 }
 
 function _traceChip(n, isTerm){
   var label = esc(n.product || '(no product)');
   var qty = (n.qty != null) ? (' · ' + esc(String(n.qty)) + esc(n.unit ? (' ' + n.unit) : '')) : '';
-  var badge = n.is_origin ? '<span style="font-size:11px;font-weight:800;color:#2c5aa0;background:#eaf1fb;border-radius:6px;padding:1px 5px;margin-left:6px">ORIGIN</span>'
-            : (isTerm ? '<span style="font-size:11px;font-weight:800;color:#a5382e;background:#fdecea;border-radius:6px;padding:1px 5px;margin-left:6px">EXPOSED</span>' : '');
+  var badge = n.is_origin ? '<span style="font-size:var(--fs-1);font-weight:800;color:#2c5aa0;background:#eaf1fb;border-radius:6px;padding:1px 5px;margin-left:6px">ORIGIN</span>'
+            : (isTerm ? '<span style="font-size:var(--fs-1);font-weight:800;color:#a5382e;background:#fdecea;border-radius:6px;padding:1px 5px;margin-left:6px">EXPOSED</span>' : '');
   var bd = isTerm ? '#e6a79f' : (n.is_origin ? '#a9c6ef' : 'var(--line)');
   var bg = isTerm ? '#fef6f5' : (n.is_origin ? '#f4f8fe' : '#fff');
   return '<span style="display:inline-flex;align-items:center;border:1px solid ' + bd + ';background:' + bg + ';border-radius:9px;padding:5px 9px;font-size:12px;margin:3px 5px 3px 0">'
     + '<b style="font-weight:700">' + label + '</b>' + qty
-    + '<span style="color:var(--grey);font-family:monospace;font-size:11px;margin-left:7px">' + _traceShort(n.chit_id) + '</span>' + badge + '</span>';
+    + '<span style="color:var(--grey);font-family:monospace;font-size:var(--fs-1);margin-left:7px">' + _traceShort(n.chit_id) + '</span>' + badge + '</span>';
 }
 
 function _traceFwd(r){
@@ -106,17 +106,17 @@ function _traceFwd(r){
   var saved = Math.max(0, blanket - targeted) * cost;
 
   var banner = '<div style="margin:16px 18px;padding:16px 18px;border:1px solid #e6a79f;background:linear-gradient(180deg,#fef6f5,#fdeceae0);border-radius:12px">'
-    + '<div style="font-size:20px;font-weight:800;color:#a5382e">🚨 Recall set — ' + targeted + ' place' + (targeted === 1 ? '' : 's') + ' hold this batch</div>'
-    + '<div style="font-size:12.5px;color:#7a4139;margin-top:3px">' + (r.depth_max || 0) + ' hop' + ((r.depth_max || 0) === 1 ? '' : 's') + ' deep · '
+    + '<div style="font-size:var(--fs-5);font-weight:800;color:#a5382e">🚨 Recall set — ' + targeted + ' place' + (targeted === 1 ? '' : 's') + ' hold this batch</div>'
+    + '<div style="font-size:var(--fs-2);color:#7a4139;margin-top:3px">' + (r.depth_max || 0) + ' hop' + ((r.depth_max || 0) === 1 ? '' : 's') + ' deep · '
       + (r.terminals || []).length + ' exposed endpoint' + ((r.terminals || []).length === 1 ? '' : 's') + '</div>'
-    + '<div style="margin-top:11px;font-size:14px;font-weight:800;color:#2c7a43">' + _traceRs(saved) + ' saved'
+    + '<div style="margin-top:11px;font-size:var(--fs-3);font-weight:800;color:#2c7a43">' + _traceRs(saved) + ' saved'
       + '<span style="font-weight:600;color:var(--grey);font-size:12px"> — recall these ' + targeted + ', not a blanket ~' + blanket + '</span></div>'
     + ((r.flagged || 0) > 0 ? '<div style="margin-top:11px;font-size:13px;font-weight:800;color:#fff;background:#c0453b;border-radius:9px;padding:7px 12px;display:inline-block">⚠ ' + r.flagged + ' node' + (r.flagged === 1 ? '' : 's') + ' fail mass-balance — more went OUT than came IN</div>' : '')
     + '</div>';
 
   return banner
     + '<div style="padding:4px 20px 22px">'
-    + '<div style="font-size:11px;font-weight:800;color:var(--grey);letter-spacing:.05em;margin:6px 0 6px">'
+    + '<div style="font-size:var(--fs-1);font-weight:800;color:var(--grey);letter-spacing:.05em;margin:6px 0 6px">'
       + (r.reconstructed ? 'RECONSTRUCTED FROM BATCH “' + esc(r.by_batch || '') + '” — no links used' : 'WHO HOLDS IT — recall tree') + '</div>'
     + _traceTree(r) + '</div>';
 }
@@ -131,13 +131,13 @@ function _traceNode(n, isTerm){
   if (n.sender_name) bits.push('from ' + esc(n.sender_name));
   if (n.qty != null) bits.push('<b style="color:#3a4048">' + esc(String(n.qty)) + esc(n.unit ? (' ' + n.unit) : '') + '</b>');
   if (n.product) bits.push(esc(n.product));
-  bits.push('<span style="font-family:monospace;font-size:11px;opacity:.6">' + _traceShort(n.chit_id) + '</span>');
-  var badge = n.is_origin ? '<span style="font-size:11px;font-weight:800;color:#2c5aa0;background:#eaf1fb;border-radius:6px;padding:1px 6px;margin-left:7px">ORIGIN</span>'
-            : (isTerm ? '<span style="font-size:11px;font-weight:800;color:#a5382e;background:#fdecea;border-radius:6px;padding:1px 6px;margin-left:7px">EXPOSED</span>' : '');
-  if (isRed) badge += '<span style="font-size:11px;font-weight:800;color:#fff;background:#c0453b;border-radius:6px;padding:1px 6px;margin-left:7px">⚠ OUT &gt; IN</span>';
+  bits.push('<span style="font-family:monospace;font-size:var(--fs-1);opacity:.6">' + _traceShort(n.chit_id) + '</span>');
+  var badge = n.is_origin ? '<span style="font-size:var(--fs-1);font-weight:800;color:#2c5aa0;background:#eaf1fb;border-radius:6px;padding:1px 6px;margin-left:7px">ORIGIN</span>'
+            : (isTerm ? '<span style="font-size:var(--fs-1);font-weight:800;color:#a5382e;background:#fdecea;border-radius:6px;padding:1px 6px;margin-left:7px">EXPOSED</span>' : '');
+  if (isRed) badge += '<span style="font-size:var(--fs-1);font-weight:800;color:#fff;background:#c0453b;border-radius:6px;padding:1px 6px;margin-left:7px">⚠ OUT &gt; IN</span>';
   var dot = (isRed || isTerm) ? '#c0453b' : (n.is_origin ? '#2c5aa0' : '#8a94a3');
   var balLine = isRed
-    ? '<div style="font-size:11px;color:#a5382e;font-weight:700;margin-left:17px;margin-top:2px">claimed ' + _traceQ(bal.out) + ' out, received ' + _traceQ(bal.in) + ' in — <u>' + _traceQ(bal.delta) + ' ' + esc(bal.base_unit || '') + ' unaccounted</u></div>'
+    ? '<div style="font-size:var(--fs-1);color:#a5382e;font-weight:700;margin-left:17px;margin-top:2px">claimed ' + _traceQ(bal.out) + ' out, received ' + _traceQ(bal.in) + ' in — <u>' + _traceQ(bal.delta) + ' ' + esc(bal.base_unit || '') + ' unaccounted</u></div>'
     : '';
   return '<div style="padding:6px 0' + (isRed ? ';background:#fdf3f2;border-radius:9px' : '') + '">'
     + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap' + (isRed ? ';padding-left:6px' : '') + '">'
@@ -172,12 +172,12 @@ function _traceBwd(r){
   var byId = {}; nodes.forEach(function(n){ byId[n.chit_id] = n; });
   var head = '<div style="margin:16px 18px;padding:14px 18px;border:1px solid #a9c6ef;background:#f4f8fe;border-radius:12px">'
     + '<div style="font-size:18px;font-weight:800;color:#2c5aa0">◂ Provenance — to source</div>'
-    + '<div style="font-size:12.5px;color:#3a4d6b;margin-top:2px">' + r.hops + ' hop' + (r.hops === 1 ? '' : 's') + ' from the flagged node back to origin</div></div>';
+    + '<div style="font-size:var(--fs-2);color:#3a4d6b;margin-top:2px">' + r.hops + ' hop' + (r.hops === 1 ? '' : 's') + ' from the flagged node back to origin</div></div>';
   var steps = path.map(function(cid, i){
     var n = byId[cid] || { chit_id: cid };
-    var arrow = i < path.length - 1 ? '<div style="color:var(--grey);font-size:14px;padding:2px 0 2px 22px">↓</div>' : '';
+    var arrow = i < path.length - 1 ? '<div style="color:var(--grey);font-size:var(--fs-3);padding:2px 0 2px 22px">↓</div>' : '';
     var tag = (i === 0) ? 'SOURCE' : (i === path.length - 1 ? 'FLAGGED' : 'HOP ' + i);
-    return '<div style="padding:2px 18px"><span style="font-size:11px;font-weight:800;color:var(--grey);margin-right:8px">' + tag + '</span>' + _traceChip(n, false) + '</div>' + arrow;
+    return '<div style="padding:2px 18px"><span style="font-size:var(--fs-1);font-weight:800;color:var(--grey);margin-right:8px">' + tag + '</span>' + _traceChip(n, false) + '</div>' + arrow;
   }).join('');
   return head + '<div style="padding:6px 0 18px">' + steps + '</div>';
 }

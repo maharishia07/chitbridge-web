@@ -215,7 +215,7 @@ function cbcatSeedAsk(){
   }).join('');
   modal('<div class="mhd"><div class="t">Start from a standard set</div>'
     + '<div class="s">real categories from the Google Product Taxonomy</div></div>'
-    + '<div class="mbody"><div style="font-size:12.5px;line-height:1.6;color:var(--ink);margin-bottom:10px">'
+    + '<div class="mbody"><div style="font-size:var(--fs-2);line-height:1.6;color:var(--ink);margin-bottom:10px">'
     + 'Pick the trade you are in and its usual categories are added, nested as the standard nests them. '
     + '<b>Nothing you already have is changed</b> — names that already exist are skipped.'
     + '<div style="font-size:11.5px;color:var(--grey);margin-top:6px">⚠️ These are a starting point, not a '
@@ -376,7 +376,7 @@ function cbcatDetailHTML(){
 }
 function cbcatStatsHTML(){
   var n = cbcatVisible().length;
-  return '<span style="font-size:11px;color:var(--grey)">' + n + ' categor' + (n === 1 ? 'y' : 'ies') + '</span>'
+  return '<span style="font-size:var(--fs-1);color:var(--grey)">' + n + ' categor' + (n === 1 ? 'y' : 'ies') + '</span>'
     /* ⭐ The uncategorised count is a to-do list, so it is a BUTTON — it takes you to the products it is
        counting rather than merely reporting a number you then have to go and find by hand. */
     + ((CBCAT_UI.counts && CBCAT_UI.counts.none)
@@ -415,7 +415,7 @@ function cbcatSchemesHTML(){
           + (r.note ? '<span class="cbcat-also">' + esc(r.note) + '</span>' : '') + '</div>';
       }).join('')
     + '</div>'
-    + '<div style="font-size:11px;color:var(--grey);margin-top:5px">read from <code>' + esc(s.source) + '</code></div>';
+    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:5px">read from <code>' + esc(s.source) + '</code></div>';
 }
 /**
  * The parent picker. ⚠️ Options are indented with the same depth the list uses, so "sits under" is answered by
@@ -444,7 +444,7 @@ function categoriesScreen(){
   cbcatCss();
   var list = '<div class="list"><div class="lh">'
     + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:9px">'
-    +   '<span style="font-family:\'Space Grotesk\';font-weight:700;font-size:14px">🏷️ Categories</span>'
+    +   '<span style="font-family:\'Space Grotesk\';font-weight:700;font-size:var(--fs-3)">🏷️ Categories</span>'
     + '</div>'
     + '<button class="composebtn" style="width:100%;justify-content:center" data-testid="catg-new" onclick="cbcatNew()">+ New category</button>'
     + '<button class="composebtn" style="width:100%;justify-content:center;margin-top:7px;background:#fff;color:var(--blue);border:1px solid var(--line)" data-testid="catg-seed" onclick="cbcatSeedAsk()">📐 Start from a standard set</button>'
@@ -468,19 +468,19 @@ function cbcatCss(){
   s.textContent = [
     '.cbcat-n{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11.5px;color:var(--grey);',
     'background:var(--paper);border:1px solid var(--line);border-radius:20px;padding:1px 9px;flex:0 0 auto}',
-    '.cbcat-badge{font-size:11px;font-weight:700;border-radius:6px;padding:1px 7px;text-transform:uppercase;letter-spacing:.04em}',
+    '.cbcat-badge{font-size:var(--fs-1);font-weight:700;border-radius:6px;padding:1px 7px;text-transform:uppercase;letter-spacing:.04em}',
     '.cbcat-badge.ret{background:#eceaea;color:#6f6a6a}',
-    '.cbcat-err{font-size:12.5px;color:#b4453f;background:#fbeceb;border:1px solid #f0c9c6;border-radius:9px;padding:8px 11px;margin:8px 0}',
+    '.cbcat-err{font-size:var(--fs-2);color:#b4453f;background:#fbeceb;border:1px solid #f0c9c6;border-radius:9px;padding:8px 11px;margin:8px 0}',
     '.cbcat-note{font-size:12px;line-height:1.55;color:#6b5a36;background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;margin-bottom:11px}',
     '.cbcat-note.warn{color:#8a5a1e}',
     '.cbcat-stat{display:flex;align-items:baseline;gap:9px;margin-bottom:4px}',
     '.cbcat-stat .v{font-size:26px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}',
-    '.cbcat-stat .k{font-size:12.5px;color:var(--grey)}',
+    '.cbcat-stat .k{font-size:var(--fs-2);color:var(--grey)}',
     '.cbcat-plist{border:1px solid var(--line);border-radius:9px;overflow:hidden}',
     '.cbcat-prow{display:flex;gap:9px;align-items:baseline;padding:7px 11px;font-size:13px;border-bottom:1px dashed var(--line)}',
     '.cbcat-prow:last-child{border-bottom:0}',
-    '.cbcat-also{margin-left:auto;font-size:11px;color:var(--grey);white-space:nowrap}',
-    '.cbcat-none{font-size:12.5px;color:var(--grey);line-height:1.6}'
+    '.cbcat-also{margin-left:auto;font-size:var(--fs-1);color:var(--grey);white-space:nowrap}',
+    '.cbcat-none{font-size:var(--fs-2);color:var(--grey);line-height:1.6}'
   ].join('');
   (document.head || document.documentElement).appendChild(s);
 }

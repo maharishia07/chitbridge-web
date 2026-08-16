@@ -181,8 +181,8 @@ function msgIsMine(m){
 
 function messagesScreen(){
   var body;
-  if (RPL.busy && !RPL.data) body = '<div style="padding:18px 16px;color:var(--grey);font-size:12.5px"><span class="spin"></span> checking for replies…</div>';
-  else if (RPL.err) body = '<div style="padding:18px 16px;color:#c0453b;font-size:12.5px">' + esc(RPL.err) + '</div>';
+  if (RPL.busy && !RPL.data) body = '<div style="padding:18px 16px;color:var(--grey);font-size:var(--fs-2)"><span class="spin"></span> checking for replies…</div>';
+  else if (RPL.err) body = '<div style="padding:18px 16px;color:#c0453b;font-size:var(--fs-2)">' + esc(RPL.err) + '</div>';
   else {
     var threads = msgThreads();
     if (!threads.length) {
@@ -205,24 +205,24 @@ function messagesScreen(){
           +     '<div style="display:flex;gap:8px;align-items:baseline">'
           /* The track rides on every row, not just when filtering — a list you have to filter to understand is a
              list that has not told you anything yet. */
-          +       '<span title="' + esc((RPLTRACK[m.track] || {}).hint || '') + '" style="flex:none;font-size:11px;color:var(--grey)">'
+          +       '<span title="' + esc((RPLTRACK[m.track] || {}).hint || '') + '" style="flex:none;font-size:var(--fs-1);color:var(--grey)">'
           +         esc((RPLTRACK[m.track] || {}).icon || '') + '</span>'
           +       '<b style="font-size:13.5px' + (isNew ? ';font-weight:800' : '') + '">' + what + '</b>'
           /* ⚠️ A CLOSED CHIT IS MARKED, NEVER HIDDEN — a complaint about a closed order arrives exactly here. */
-          +       (closed ? '<span style="font-size:11px;font-weight:700;color:#b0641c;background:#fdf4e9;border-radius:4px;padding:1px 5px">' + esc(m.chit_status) + '</span>' : '')
+          +       (closed ? '<span style="font-size:var(--fs-1);font-weight:700;color:#b0641c;background:#fdf4e9;border-radius:4px;padding:1px 5px">' + esc(m.chit_status) + '</span>' : '')
           +       '<span style="font-size:11.5px;color:var(--grey);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + sub + '</span>'
           /* ⚠️ THE FULL COUNT ONCE IT IS KNOWN. The inbox only returns unread-or-kept, so this said "3 msgs" over
              a conversation that turned out to hold 5 — a number that disagreed with the thread it labelled the
              moment you opened it. Once the thread is fetched, its own length is the truthful one. */
           +       (function(){ var n = (RPL.full[t.key] || t.msgs).length;
-                    return n > 1 ? '<span style="font-size:11px;color:var(--grey);flex:none">' + n + ' msgs</span>' : ''; })()
+                    return n > 1 ? '<span style="font-size:var(--fs-1);color:var(--grey);flex:none">' + n + ' msgs</span>' : ''; })()
           +       '<span style="font-size:11.5px;color:var(--grey);flex:none">' + esc(msgWhen(m.created_at)) + '</span>'
           +     '</div>'
           +     '<div style="font-size:13px;color:var(--ink-2,#41474e);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'
           +       '<b style="font-weight:600">' + esc(m.sender_display_name || '—') + ':</b> ' + esc(m.message_text || '') + '</div>'
           +   '</div>'
           +   '<span data-testid="msg-keep" onclick="msgKeep(&quot;' + t.key + '&quot;,event)" title="' + (t.kept ? 'Kept here — click to release' : 'Keep this conversation in the tab') + '"'
-          +     ' style="flex:none;cursor:pointer;font-size:14px;opacity:' + (t.kept ? '1' : '.35') + '">📌</span>'
+          +     ' style="flex:none;cursor:pointer;font-size:var(--fs-3);opacity:' + (t.kept ? '1' : '.35') + '">📌</span>'
           + '</div>'
           + (open ? '<div style="padding:0 14px 13px 32px">'
               /**
@@ -252,7 +252,7 @@ function messagesScreen(){
                * The task goes first.
                */
               + '<textarea id="msg_reply_' + rid + '" data-testid="msg-reply" rows="2" placeholder="Reply to ' + esc(m.sender_display_name || 'them') + '…"'
-              +   ' style="width:100%;box-sizing:border-box;font:inherit;font-size:14px;line-height:1.5;padding:9px 11px;border:1px solid var(--line);border-radius:9px;resize:vertical"></textarea>'
+              +   ' style="width:100%;box-sizing:border-box;font:inherit;font-size:var(--fs-3);line-height:1.5;padding:9px 11px;border:1px solid var(--line);border-radius:9px;resize:vertical"></textarea>'
               + '<div style="display:flex;gap:10px;align-items:center;margin-top:7px">'
               +   '<span style="font-size:11.5px;color:#b0641c">📤 The other party sees this, on their own copy.</span>'
               +   '<button class="btn pri" data-testid="msg-send" onclick="msgSend(&quot;' + t.key + '&quot;)"'
@@ -260,8 +260,8 @@ function messagesScreen(){
               + '</div>'
               /* ── the conversation, newest first, each side shaded differently ─────────────────────────────── */
               + '<div style="border-top:1px solid var(--line-soft,#f0efec);margin-top:11px;padding-top:5px"></div>'
-              + (full === undefined ? '<div style="font-size:12.5px;color:var(--grey);padding:4px 0"><span class="spin"></span> reading the conversation…</div>'
-                 : full === null ? '<div style="font-size:12.5px;color:#c0453b;padding:4px 0">Could not read the rest of this conversation — the newest message is above.</div>'
+              + (full === undefined ? '<div style="font-size:var(--fs-2);color:var(--grey);padding:4px 0"><span class="spin"></span> reading the conversation…</div>'
+                 : full === null ? '<div style="font-size:var(--fs-2);color:#c0453b;padding:4px 0">Could not read the rest of this conversation — the newest message is above.</div>'
                  /**
                   * ⭐ NEWEST FIRST — Athi, 2026-08-15: *"latest message on top, reverse order."*
                   *
@@ -275,7 +275,7 @@ function messagesScreen(){
                        + (mine ? 'background:#eef4f8;margin-left:28px' : 'background:#f6f5f2;margin-right:28px') + '">'
                        + '<div style="display:flex;gap:8px;align-items:baseline;margin-bottom:2px">'
                        +   '<b style="font-size:11.5px;color:' + (mine ? '#2c5aa0' : '#5b5340') + '">' + esc(mine ? 'You' : (x.sender_display_name || '—')) + '</b>'
-                       +   '<span style="margin-left:auto;font-size:11px;color:var(--grey)">' + esc(msgWhen(x.created_at)) + '</span></div>'
+                       +   '<span style="margin-left:auto;font-size:var(--fs-1);color:var(--grey)">' + esc(msgWhen(x.created_at)) + '</span></div>'
                        + '<div style="white-space:pre-wrap">' + esc(x.message_text || '') + '</div></div>';
                    }).join(''))
               + '</div>' : '')
@@ -287,7 +287,7 @@ function messagesScreen(){
   var n = msgUnread();
   return '<div style="flex:1;min-height:0;overflow-y:auto">'
     + '<div style="padding:13px 16px;border-bottom:1px solid var(--line)">'
-    +   '<div style="font-weight:700;font-size:16px">Messages' + (n ? ' <span style="font-size:12.5px;color:#2c5aa0">· ' + n + ' new</span>' : '') + '</div>'
+    +   '<div style="font-weight:700;font-size:var(--fs-4)">Messages' + (n ? ' <span style="font-size:var(--fs-2);color:#2c5aa0">· ' + n + ' new</span>' : '') + '</div>'
     +   '<div style="font-size:12px;color:var(--grey);margin-top:2px">One conversation per line, across every chit. Read and reply here.</div>'
     + '</div>'
     /* ── segregate by track ─────────────────────────────────────────────────────────────────────────────────
@@ -300,14 +300,14 @@ function messagesScreen(){
           var lbl = k ? ((RPLTRACK[k].icon) + ' ' + RPLTRACK[k].label) : 'All';
           return '<span data-testid="msg-track-' + (k || 'all') + '" onclick="rplTrack(&quot;' + k + '&quot;)"'
             + ' title="' + esc(k ? RPLTRACK[k].hint : 'every conversation') + '"'
-            + ' style="cursor:pointer;font-size:12.5px;border:1px solid ' + (on ? 'var(--blue)' : 'var(--line)') + ';'
+            + ' style="cursor:pointer;font-size:var(--fs-2);border:1px solid ' + (on ? 'var(--blue)' : 'var(--line)') + ';'
             + (on ? 'background:var(--blue);color:#fff;font-weight:700;' : '') + 'border-radius:9px;padding:3px 10px">'
             + lbl + (n ? ' <span style="opacity:.7">' + n + '</span>' : '') + '</span>';
         }).join('')
     +   '<span style="margin-left:auto;font-size:11.5px;color:var(--grey)">📌 keeps a conversation here after you read it</span>'
     + '</div>'
     + '<div style="display:flex;gap:14px;align-items:center;padding:8px 16px;border-bottom:1px solid var(--line)">'
-    +   '<label style="display:inline-flex;align-items:center;gap:5px;font-size:12.5px;cursor:pointer">'
+    +   '<label style="display:inline-flex;align-items:center;gap:5px;font-size:var(--fs-2);cursor:pointer">'
     +     '<input type="checkbox" data-testid="msg-all" ' + (RPL.all ? 'checked' : '')
     +     ' onchange="msgShowAll()" style="width:15px;height:15px;accent-color:var(--blue)">everything, including dealt with</label>'
     + '</div>'

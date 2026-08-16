@@ -33,7 +33,7 @@ var _INTAKE = { list: null, busy: false, err: null, working: {}, sim: false, mig
 function intakeScreen(){
   return '<div class="list" style="flex:1;min-width:0">'
     + '<div class="lh"><div style="display:flex;align-items:center;gap:8px;margin-bottom:9px">'
-    + '<span style="font-family:\'Space Grotesk\';font-weight:700;font-size:14px">📥 Intake</span>'
+    + '<span style="font-family:\'Space Grotesk\';font-weight:700;font-size:var(--fs-3)">📥 Intake</span>'
     + '<button onclick="openAssist(\'intake\')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:#fff;color:#3F66A6;border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button>'
     + '<button data-testid="intake-refresh" onclick="loadIntake()" style="margin-left:auto;border:1px solid var(--line);background:var(--paper);border-radius:9px;padding:4px 9px;font-size:11.5px;cursor:pointer">↻ Refresh</button>'
     + '<button data-testid="intake-simulate-open" onclick="intakeToggleSim()" style="border:1px solid var(--line);background:var(--paper);border-radius:9px;padding:4px 9px;font-size:11.5px;cursor:pointer">✚ Record a message</button>'
@@ -49,7 +49,7 @@ function intakeScreen(){
      * A per-message toggle models a business that changes sides between messages. Real ones do not — a shop sells,
      * a factory receives — so it is one entity setting, read server-side at raise, and this only POINTS at it.
      */
-    + '<div style="font-size:11px;color:var(--grey);margin-top:5px">Inbound lines are priced from your catalogue when this entity is set to <b>sell</b> — '
+    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:5px">Inbound lines are priced from your catalogue when this entity is set to <b>sell</b> — '
     + '<a onclick="navTo(\'settings\')" style="color:#3F66A6;cursor:pointer;font-weight:600">Settings → Policy flags</a>.</div>'
     + '</div><div id="intake_body" style="flex:1;overflow:auto;padding:12px 14px">' + intakeBodyHTML() + '</div></div>';
 }
@@ -59,13 +59,13 @@ function paintIntake(){ var h=document.getElementById('intake_body'); if(h) h.in
 function _chn(c){
   var M={ whatsapp:['#25D366','WhatsApp'], email:['#3F66A6','Email'], web:['#6a44a8','Web'], sms:['#b07a2b','SMS'] };
   var m=M[c]||['#6a707a', String(c||'channel')];
-  return '<span style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#fff;background:'
+  return '<span style="font-size:var(--fs-1);font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#fff;background:'
     + m[0] + ';border-radius:5px;padding:2px 7px">' + esc(m[1]) + '</span>';
 }
 function intakeSimHTML(){
   if(!_INTAKE.sim) return '';
   return '<div style="border:1px solid var(--line);border-radius:12px;padding:12px 13px;margin-bottom:12px;background:var(--paper)">'
-    + '<div style="font-weight:700;font-size:12.5px;margin-bottom:6px">Record an inbound message</div>'
+    + '<div style="font-weight:700;font-size:var(--fs-2);margin-bottom:6px">Record an inbound message</div>'
     + '<div style="font-size:11.5px;color:var(--grey);margin-bottom:8px">The WhatsApp and email webhooks exist but are not connected to a provider yet, so this is how a message gets onto the queue today. It goes through the SAME capture the webhook uses — nothing is faked.</div>'
     + '<div style="display:flex;gap:8px;flex-wrap:wrap">'
     + '<select class="inp" id="in_ch" data-testid="intake-sim-channel" style="max-width:130px"><option value="whatsapp">WhatsApp</option><option value="email">Email</option><option value="web">Web</option><option value="sms">SMS</option></select>'
@@ -79,14 +79,14 @@ function intakeBodyHTML(){
   if(_INTAKE.busy && !_INTAKE.list) return intakeSimHTML()+'<div class="loadwrap"><span class="spin"></span> reading the queue…</div>';
   /* b104 is applied in production, but an environment without it answers 503 — say which it is, because "no
      messages" and "the table does not exist" look identical on screen and mean completely different things. */
-  if(!_INTAKE.migrated) return '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:11px 13px;font-size:12.5px;color:#6b5a36">'
+  if(!_INTAKE.migrated) return '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:11px 13px;font-size:var(--fs-2);color:#6b5a36">'
     + 'The intake queue is not migrated on this environment (b104). The screen is here; the table is not.</div>';
-  if(_INTAKE.err) return intakeSimHTML()+'<div style="background:#fbeceb;border:1px solid #f0c9c6;border-radius:9px;padding:11px 13px;font-size:12.5px;color:#b4453f">'+esc(_INTAKE.err)+'</div>';
+  if(_INTAKE.err) return intakeSimHTML()+'<div style="background:#fbeceb;border:1px solid #f0c9c6;border-radius:9px;padding:11px 13px;font-size:var(--fs-2);color:#b4453f">'+esc(_INTAKE.err)+'</div>';
   var L=_INTAKE.list||[];
   if(!L.length) return intakeSimHTML()
     + '<div class="empty" style="padding:36px 12px;text-align:center;color:var(--grey)"><div style="font-size:34px">📥</div>'
     + '<div style="font-weight:700;color:var(--ink);margin-top:8px">Nothing waiting</div>'
-    + '<div style="font-size:12.5px;margin-top:5px">Messages from WhatsApp, email and the web land here — raw, until you turn one into a chit.</div></div>';
+    + '<div style="font-size:var(--fs-2);margin-top:5px">Messages from WhatsApp, email and the web land here — raw, until you turn one into a chit.</div></div>';
   return intakeSimHTML() + L.map(intakeCardHTML).join('');
 }
 function intakeCardHTML(c){
@@ -94,8 +94,8 @@ function intakeCardHTML(c){
   return '<div class="cap" data-testid="intake-row" style="border:1px solid var(--line);border-radius:12px;padding:12px 13px;margin-bottom:10px;background:#fff">'
     + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">' + _chn(c.channel)
     + '<span style="font-size:11.5px;color:var(--grey)">' + esc(c.sender_name||c.sender_ref||'unknown sender') + '</span>'
-    + (c.sender_name&&c.sender_ref?'<span style="font-size:11px;color:var(--grey);font-family:ui-monospace,Menlo,monospace">'+esc(c.sender_ref)+'</span>':'')
-    + '<span style="margin-left:auto;font-size:11px;color:var(--grey)">' + esc(String(c.created_at||'').slice(0,16).replace('T',' ')) + '</span></div>'
+    + (c.sender_name&&c.sender_ref?'<span style="font-size:var(--fs-1);color:var(--grey);font-family:ui-monospace,Menlo,monospace">'+esc(c.sender_ref)+'</span>':'')
+    + '<span style="margin-left:auto;font-size:var(--fs-1);color:var(--grey)">' + esc(String(c.created_at||'').slice(0,16).replace('T',' ')) + '</span></div>'
     /* ⚠️ THE RAW TEXT IS UNTRUSTED and is shown as TEXT, never as markup. esc() is the whole guard: a capture is a
        stranger's words arriving from outside the rail. */
     + '<div style="font-size:13px;margin:8px 0;white-space:pre-wrap">' + esc(c.raw_text||'') + '</div>'
@@ -114,14 +114,14 @@ function intakeCardHTML(c){
        so comment, unit_size, unit_price and unplaced were invisible whether the reader captured them or not — at
        exactly the moment a person decides whether the reading is right. A button that shows the actual JSON is the
        difference between tuning a prompt and guessing at one. */
-    + '<button data-testid="intake-json" onclick="intakeShowJson(\''+esc(c.id)+'\')" title="See exactly what was read, and what the chit would carry" style="border:1px solid var(--line);background:#fff;border-radius:9px;padding:9px 13px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:ui-monospace,Menlo,monospace">{ } JSON</button>'
+    + '<button data-testid="intake-json" onclick="intakeShowJson(\''+esc(c.id)+'\')" title="See exactly what was read, and what the chit would carry" style="border:1px solid var(--line);background:#fff;border-radius:9px;padding:9px 13px;font-size:var(--fs-2);font-weight:700;cursor:pointer;font-family:ui-monospace,Menlo,monospace">{ } JSON</button>'
     + '</div>'
     + (w.err?'<div style="color:#b4453f;font-size:12px;margin-top:6px">'+esc(w.err)+'</div>':'')
     + '</div>';
 }
 function intakeDraftHTML(c, s){
   var li=(s.line_items||[]);
-  return '<div style="background:#f7f6fd;border:1px solid #e4dff6;border-radius:9px;padding:10px 12px;margin-top:8px;font-size:12.5px">'
+  return '<div style="background:#f7f6fd;border:1px solid #e4dff6;border-radius:9px;padding:10px 12px;margin-top:8px;font-size:var(--fs-2)">'
     + '<div style="font-weight:700;margin-bottom:4px">✨ AI draft <span style="font-weight:400;color:var(--grey)">— proposed, not evidence. You confirm.</span></div>'
     + (s.subject?'<div style="margin-bottom:4px"><b>Subject:</b> '+esc(s.subject)+'</div>':'')
     + li.map(function(l){ return '<div style="display:flex;justify-content:space-between;padding:3px 0;border-top:1px dashed var(--line);font-size:12px">'
@@ -138,8 +138,8 @@ function intakeDraftHTML(c, s){
       /* Order-level facts that have no line of their own — and `unplaced` in red, because a fact the reader could
          not place is the single most useful thing on this card when tuning. */
       + ['delivery_at','delivery_address','notes'].filter(function(k){ return s[k]; }).map(function(k){
-          return '<div style="font-size:11px;color:var(--grey);margin-top:3px">' + esc(k.replace('_',' ')) + ': ' + esc(s[k]) + '</div>'; }).join('')
-      + (s.unplaced ? '<div style="font-size:11px;color:#b4453f;margin-top:3px">⚠️ not placed anywhere: ' + esc(s.unplaced) + '</div>' : '')
+          return '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px">' + esc(k.replace('_',' ')) + ': ' + esc(s[k]) + '</div>'; }).join('')
+      + (s.unplaced ? '<div style="font-size:var(--fs-1);color:#b4453f;margin-top:3px">⚠️ not placed anywhere: ' + esc(s.unplaced) + '</div>' : '')
     + (s.notes?'<div style="margin-top:5px;color:var(--grey)">'+esc(s.notes)+'</div>':'')
     + '</div>';
 }
@@ -313,7 +313,7 @@ async function intakeShowJson(id){
 
   modal('<div class="mhd"><div class="t">{ } What the reader saw</div>'
     + '<div class="s">the message → what was read → what the chit would carry</div></div>'
-    + '<div class="mbody" id="ijson"><div style="padding:18px;color:var(--grey);font-size:12.5px"><span class="spin"></span> building…</div></div>'
+    + '<div class="mbody" id="ijson"><div style="padding:18px;color:var(--grey);font-size:var(--fs-2)"><span class="spin"></span> building…</div></div>'
     + '<div class="mfoot"><button class="composebtn" onclick="closeModal()">Close</button></div>', true);
 
   /* Stage 3 needs the server, and it may legitimately refuse — nothing read yet (409), or not migrated. A refusal
@@ -348,8 +348,8 @@ function _jsonBlock(title, obj){
   var id='jb'+Math.random().toString(36).slice(2,8);
   return '<div style="border-bottom:1px solid var(--line)">'
     + '<div style="display:flex;align-items:center;gap:8px;padding:9px 14px 5px">'
-    +   '<span style="font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey)">'+esc(title)+'</span>'
-    +   '<span onclick="_copyJson(\''+id+'\')" style="margin-left:auto;font-size:11px;color:var(--blue);cursor:pointer">copy</span>'
+    +   '<span style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey)">'+esc(title)+'</span>'
+    +   '<span onclick="_copyJson(\''+id+'\')" style="margin-left:auto;font-size:var(--fs-1);color:var(--blue);cursor:pointer">copy</span>'
     + '</div>'
     + '<pre id="'+id+'" style="margin:0;padding:0 14px 12px;font:11.5px/1.55 ui-monospace,Menlo,Consolas,monospace;'
     +   'white-space:pre-wrap;word-break:break-word;max-height:46vh;overflow:auto;color:#243038">'+esc(txt)+'</pre></div>';

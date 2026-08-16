@@ -604,7 +604,7 @@
 
     if (o_model === 'pick') {
       return '<button data-testid="cart-add" onclick="event.stopPropagation();CBCart.setQty(\'' + esc(ns) + '\',\'' + esc(id) + '\',' + (q ? 0 : 1) + ')"'
-        + ' style="border-radius:20px;padding:6px 14px;font-size:12.5px;font-weight:700;cursor:pointer;border:1.5px solid ' + a
+        + ' style="border-radius:20px;padding:6px 14px;font-size:var(--fs-2);font-weight:700;cursor:pointer;border:1.5px solid ' + a
         + ';background:' + (q ? a : '#fff') + ';color:' + (q ? '#fff' : a) + '">' + (q ? '✓ Added' : 'Add') + '</button>';
     }
     if (!q) {
@@ -655,16 +655,16 @@
     if (opt(ns, 'hideAvail', true)) return '';
     var a = dataOf(r).avail;
     if (!a || a.qty === undefined || a.qty === null) {
-      return ' <span style="color:#8a94a3;font-size:11px">· avl —</span>';
+      return ' <span style="color:#8a94a3;font-size:var(--fs-1)">· avl —</span>';
     }
     var col = Number(a.qty) > 0 ? '#2c7a43' : '#a5382e';
-    if (!a.as_of) return ' <span style="font-size:11px;color:' + col + '">· avl ' + esc(a.qty)
-      + '</span><span style="font-size:11px;color:#8a5a1e"> dt ?</span>';
+    if (!a.as_of) return ' <span style="font-size:var(--fs-1);color:' + col + '">· avl ' + esc(a.qty)
+      + '</span><span style="font-size:var(--fs-1);color:#8a5a1e"> dt ?</span>';
     // Older than the staleness window gets an amber date and a marker — a word would cost a line it does not have.
     var days = (new Date() - new Date(a.as_of)) / 864e5;
     var stale = days > Number(opt(ns, 'staleDays', 14));
-    return ' <span style="font-size:11px;color:' + col + '">· avl ' + esc(a.qty) + '</span>'
-      + '<span style="font-size:11px;color:' + (stale ? '#8a5a1e' : '#8a94a3') + '"> dt ' + esc(shortDate(a.as_of))
+    return ' <span style="font-size:var(--fs-1);color:' + col + '">· avl ' + esc(a.qty) + '</span>'
+      + '<span style="font-size:var(--fs-1);color:' + (stale ? '#8a5a1e' : '#8a94a3') + '"> dt ' + esc(shortDate(a.as_of))
       + (stale ? ' ⚠' : '') + '</span>';
   }
   /** The model's own note under the row — "sold in 12s", "min 5 · max 500". Silent when there is nothing to say. */
@@ -673,11 +673,11 @@
     /* ⚠️ SAY IT, do not fall silent. An unresolved model is the one case where this note has something urgent
        to add — the row cannot be ordered and the reader deserves to know why rather than finding the controls
        inert. `loading` is transient and says so; `missing` means the definition is gone. */
-    if (!m) return ' <span style="color:#b4453f;font-size:11px">· ' + (o.unresolved === 'loading'
+    if (!m) return ' <span style="color:#b4453f;font-size:var(--fs-1)">· ' + (o.unresolved === 'loading'
       ? 'reading its order model…' : 'order model unavailable — cannot be ordered') + '</span>';
     var h = m.hint(o);
     if (!h) return '';
-    return ' <span style="color:#8a949c;font-size:11px">· ' + esc(h) + '</span>';
+    return ' <span style="color:#8a949c;font-size:var(--fs-1)">· ' + esc(h) + '</span>';
   }
 
   function listHTML(ns) {
@@ -702,11 +702,11 @@
         var inCart = ids.filter(function (id) { return s.sel[id]; }).length;
         return '<div style="padding:10px 2px 3px;display:flex;align-items:center;gap:8px">'
           + '<b style="font-size:13.5px">' + esc(r.label) + '</b>'
-          + '<span style="font-size:11px;color:#6a707a">' + r.count + ' options</span>'
-          + (inCart ? '<span style="font-size:11px;color:' + a + ';font-weight:700">' + inCart + ' in cart</span>' : '')
-          + '<span onclick="CBCart.group(\'' + esc(ns) + '\',' + i + ')" style="cursor:pointer;font-size:11px;color:' + a + '">'
+          + '<span style="font-size:var(--fs-1);color:#6a707a">' + r.count + ' options</span>'
+          + (inCart ? '<span style="font-size:var(--fs-1);color:' + a + ';font-weight:700">' + inCart + ' in cart</span>' : '')
+          + '<span onclick="CBCart.group(\'' + esc(ns) + '\',' + i + ')" style="cursor:pointer;font-size:var(--fs-1);color:' + a + '">'
           + (inCart === ids.length && ids.length ? 'clear all' : 'add all') + '</span>'
-          + (r.options ? '<span style="font-size:11px;color:#6a707a;margin-left:auto">' + esc(r.options) + '</span>' : '')
+          + (r.options ? '<span style="font-size:var(--fs-1);color:#6a707a;margin-left:auto">' + esc(r.options) + '</span>' : '')
           + '</div>';
       }
       var d = dataOf(r), q = qtyOf(ns, r.item_id), u = unitPrice(ns, r), p = u.amount;
@@ -719,7 +719,7 @@
         // price still shown, struck through, because hiding what they asked for is its own dishonesty.
         + (u.offered
             ? '<span style="text-decoration:line-through;opacity:.55">' + esc(fmt(ns, u.asking)) + '</span> '
-              + '<b style="color:#1d2530">' + esc(fmt(ns, p)) + '</b> <span style="font-size:11px">your offer</span>'
+              + '<b style="color:#1d2530">' + esc(fmt(ns, p)) + '</b> <span style="font-size:var(--fs-1)">your offer</span>'
             : (isFinite(p) ? esc(fmt(ns, p)) : 'no price'))
         // The line's own total, only once there is a quantity to multiply by — a price × 1 restated is noise.
         + (q && isFinite(p) ? ' <span style="color:#1d2530;font-weight:800">· ' + esc(fmt(ns, p * q)) + '</span>' : '')
@@ -756,13 +756,13 @@
               + ' <span style="color:#6a707a;font-size:11.5px">' + esc(l.unit) + '</span>'
               + '<div style="font-size:12px;color:#6a707a">'
               + (l.offered ? '<span style="text-decoration:line-through;opacity:.55">' + esc(fmt(ns, l.asking_price)) + '</span> ' : '')
-              + (isFinite(p) ? esc(fmt(ns, p)) : 'no price') + (l.offered ? ' <span style="font-size:11px">your offer</span>' : '')
+              + (isFinite(p) ? esc(fmt(ns, p)) : 'no price') + (l.offered ? ' <span style="font-size:var(--fs-1)">your offer</span>' : '')
               + (isFinite(p) ? ' <span style="color:#1d2530;font-weight:800">· ' + esc(fmt(ns, p * l.qty)) + '</span>' : '') + '</div></span>'
               + stepperHTML(ns, l.item_id, l.qty)
               + '<span onclick="CBCart.setQty(\'' + esc(ns) + '\',\'' + esc(l.item_id) + '\',0)" title="remove"'
               + ' style="cursor:pointer;color:#9aa3a7;font-weight:800;padding:0 3px">×</span></div>';
           }).join('')
-          + '<div style="display:flex;padding:11px 2px;border-top:2px solid #e3e6ea;font-size:14px;font-weight:800">'
+          + '<div style="display:flex;padding:11px 2px;border-top:2px solid #e3e6ea;font-size:var(--fs-3);font-weight:800">'
           + '<span style="flex:1">' + (T.offered ? 'Total at your offer' : 'Total') + '</span>'
           + '<span>' + (T.amount ? esc(fmt(ns, T.amount)) + (T.partial ? '+' : '') : '—') + '</span></div>'
           + (T.partial ? '<div style="color:#8a5a1e;font-size:11.5px">Some lines have no price — the total covers only the priced ones.</div>' : '')
@@ -955,7 +955,7 @@
         + 'height:28px;padding:0 11px;font:inherit;font-size:12px;color:#3c4350;cursor:pointer;white-space:nowrap}'
         + '.cbpick-chip:hover{border-color:#c6ccd4}'
         + '.cbpick-chip.on{font-weight:700}'
-        + '.cbpick-chipn{font-size:11px;opacity:.6;font-variant-numeric:tabular-nums}'
+        + '.cbpick-chipn{font-size:var(--fs-1);opacity:.6;font-variant-numeric:tabular-nums}'
         /* The chip. Sized to sit level with the input beside it, never taller. */
         + '.cbcart-bar{display:inline-flex;align-items:center;gap:7px;border:1px solid #e3e6ea;border-radius:9px;'
         /* 40px, because `.inp` beside it is 40px. A chip two pixels short of the field it shares a row with reads
@@ -966,8 +966,8 @@
         + '.cbcart-n{position:absolute;top:-7px;right:-9px;background:#fff;border-radius:9px;min-width:17px;'
         /* 11px, not the 10.5px this started at — the legibility floor. The count is the one fact the chip must
            carry on a phone (the money hides below 520px), so it is the last thing that should be squinted at. */
-        + 'height:18px;padding:0 4px;font-size:11px;font-weight:800;line-height:18px;text-align:center}'
-        + '.cbcart-sum{font-size:12.5px;font-weight:800}'
+        + 'height:18px;padding:0 4px;font-size:var(--fs-1);font-weight:800;line-height:18px;text-align:center}'
+        + '.cbcart-sum{font-size:var(--fs-2);font-weight:800}'
         + '.cbcart-x{font-size:12px;font-weight:800;opacity:.75;cursor:pointer;padding:0 1px}'
         + '.cbcart-x:hover{opacity:1}'
         + '.cbcart-partial{color:#8a5a1e;font-size:11.5px;max-width:190px;line-height:1.3;white-space:normal}'

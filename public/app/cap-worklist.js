@@ -226,7 +226,7 @@ function wlRow(r, ctx, depth){
     + '<div style="display:flex;align-items:baseline;gap:8px">'
     + '<span style="flex:1;font-weight:500;font-size:13.5px;color:var(--ink-2,#41474e)' + (done ? ';text-decoration:line-through' : '') + '">'
     + (done ? '<span style="color:#3d7a4e;font-weight:800;text-decoration:none">✓ </span>' : '') + lead
-    + (tail ? '<span style="color:var(--grey);font-weight:400;font-size:12.5px">' + tail + '</span>' : '') + '</span>'
+    + (tail ? '<span style="color:var(--grey);font-weight:400;font-size:var(--fs-2)">' + tail + '</span>' : '') + '</span>'
     /* ⚠️ event.stopPropagation() ON BOTH — without it the row's own handler also fires and the chit opens behind
        the card, so the modal you wanted is sitting on a screen that navigated out from under it. */
     + '<span style="display:flex;gap:2px;flex:none;align-items:center">'
@@ -289,28 +289,28 @@ function wlHead(title, right, tone, id){
   return '<div data-testid="wl-head"' + (id ? ' onclick="wlToggle(&quot;' + esc(id) + '&quot;)"' : '')
     + ' style="' + (id ? 'cursor:pointer;' : '') + 'padding:14px 16px 6px;display:flex;justify-content:space-between;align-items:baseline;'
     + 'border-top:1px solid var(--line);background:#fbfbfa">'
-    + '<span style="font-size:16px;font-weight:800;color:' + (tone || 'var(--ink,#1c2128)') + '">' + title + '</span>'
-    + '<span style="font-size:12.5px;color:var(--grey)">' + (right || '') + '</span></div>';
+    + '<span style="font-size:var(--fs-4);font-weight:800;color:' + (tone || 'var(--ink,#1c2128)') + '">' + title + '</span>'
+    + '<span style="font-size:var(--fs-2);color:var(--grey)">' + (right || '') + '</span></div>';
 }
 
 function worklistScreen(){
   var body;
-  if (WL.busy && !WL.data) body = '<div style="padding:18px 16px;color:var(--grey);font-size:12.5px"><span class="spin"></span> reading your work…</div>';
-  else if (WL.err) body = '<div style="padding:18px 16px;color:#c0453b;font-size:12.5px">' + esc(WL.err) + '</div>';
+  if (WL.busy && !WL.data) body = '<div style="padding:18px 16px;color:var(--grey);font-size:var(--fs-2)"><span class="spin"></span> reading your work…</div>';
+  else if (WL.err) body = '<div style="padding:18px 16px;color:#c0453b;font-size:var(--fs-2)">' + esc(WL.err) + '</div>';
   else {
     var d = WL.data || {};
     var mine = !!d.scoped_to_self;
     var rows = wlRows(d);
 
     if (!d.migrated) {
-      body = '<div style="padding:18px 16px;font-size:12.5px;color:var(--grey)">Per-line assignment is not migrated on this environment (b143), so there is nothing to list.</div>';
+      body = '<div style="padding:18px 16px;font-size:var(--fs-2);color:var(--grey)">Per-line assignment is not migrated on this environment (b143), so there is nothing to list.</div>';
     } else if (!rows.length) {
       /* ⚠️ TWO DIFFERENT EMPTIES. "Nothing is assigned to you" and "nothing is assigned to anyone" send opposite
          signals — one means you are free, the other means the work has not been handed out. */
       /* ⚠️ THREE DIFFERENT EMPTIES NOW. "Nothing assigned to you", "nothing assigned to anyone", and "everything
          you had is finished" mean completely different things, and the third is the one worth saying out loud. */
       var hid = wlDoneCount(d);
-      body = '<div style="padding:18px 16px;font-size:12.5px;color:var(--grey)">'
+      body = '<div style="padding:18px 16px;font-size:var(--fs-2);color:var(--grey)">'
         + (hid ? 'Everything here is done — ' + hid + ' finished line' + (hid === 1 ? '' : 's') + ' hidden. Tick “show ' + hid + ' done” to see them.'
               : (mine ? 'Nothing is assigned to you right now.' : 'No lines are assigned to anyone yet — open a chit and assign its lines.'))
         + (WL.due ? ' (filtered to ' + esc(WL.due) + ')' : '') + '</div>';
@@ -329,7 +329,7 @@ function worklistScreen(){
   var sec = (active[1] && active[1] !== 'item') ? active[1] : null;
 
   var chip = function(k, label, on, fn, testid){
-    return '<span data-testid="' + testid + '" onclick="' + fn + '" style="cursor:pointer;font-size:12.5px;border:1px solid '
+    return '<span data-testid="' + testid + '" onclick="' + fn + '" style="cursor:pointer;font-size:var(--fs-2);border:1px solid '
       + (on ? 'var(--blue)' : 'var(--line)') + ';' + (on ? 'background:var(--blue);color:#fff;font-weight:700;' : '')
       + 'border-radius:9px;padding:4px 11px">' + label + '</span>';
   };
@@ -338,19 +338,19 @@ function worklistScreen(){
   var box = function(k, label){
     if (k === prim || k === 'item') return '';   // item has its own switch — it is a roll-up, not a split
     var on = sec === k;
-    return '<label style="display:inline-flex;align-items:center;gap:5px;font-size:12.5px;color:var(--ink-2,#41474e);cursor:pointer">'
+    return '<label style="display:inline-flex;align-items:center;gap:5px;font-size:var(--fs-2);color:var(--ink-2,#41474e);cursor:pointer">'
       + '<input type="checkbox" data-testid="wl-then-' + k + '" ' + (on ? 'checked' : '')
       + ' onchange="wlThen(&quot;' + k + '&quot;)" style="width:15px;height:15px;accent-color:var(--blue)">' + label + '</label>';
   };
 
   return '<div style="flex:1;min-height:0;overflow-y:auto">'
     + '<div style="padding:13px 16px;border-bottom:1px solid var(--line)">'
-    +   '<div style="font-weight:700;font-size:16px">' + (mine2 ? 'My work' : 'Everyone\'s work') + '</div>'
+    +   '<div style="font-weight:700;font-size:var(--fs-4)">' + (mine2 ? 'My work' : 'Everyone\'s work') + '</div>'
     +   '<div style="font-size:12px;color:var(--grey);margin-top:2px">Every line assigned to '
     +   (mine2 ? 'you' : 'your team') + ', across every chit.</div></div>'
     /* ── group by ──────────────────────────────────────────────────────────────────────────────────────────── */
     + '<div style="display:flex;gap:6px;align-items:center;padding:9px 16px;border-bottom:1px solid var(--line-soft,#eee);flex-wrap:wrap">'
-    +   '<span style="font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--grey);margin-right:2px">group by</span>'
+    +   '<span style="font-size:var(--fs-1);font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--grey);margin-right:2px">group by</span>'
     +   KEYS.map(function(x){ return chip(x[0], x[1], prim === x[0], 'wlPrimary(&quot;' + x[0] + '&quot;)', 'wl-view-' + x[0]); }).join('')
     +   '<input type="date" value="' + esc(WL.due || '') + '" onchange="wlDue(this.value)" '
     +     'style="margin-left:auto;font-size:12px;padding:3px 7px;border:1px solid var(--line);border-radius:9px">'
@@ -358,17 +358,17 @@ function worklistScreen(){
     + '</div>'
     /* ── then split by · and the disclosure controls ────────────────────────────────────────────────────────── */
     + '<div style="display:flex;gap:14px;align-items:center;padding:8px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap">'
-    +   '<span style="font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--grey)">then split by</span>'
+    +   '<span style="font-size:var(--fs-1);font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--grey)">then split by</span>'
     +   KEYS.map(function(x){ return box(x[0], x[1]); }).join('')
     +   (sec ? '' : '<span style="font-size:11.5px;color:var(--grey);font-style:italic">not split — every line under its ' + esc(prim === 'who' ? 'person' : prim === 'date' ? 'date' : prim === 'item' ? 'product' : 'order') + '</span>')
     /* ⭐ THE PIVOT SWITCH. Off, you get the raw lines; on, the same product merges and its quantity totals — the
        answer to "what is my demand for that product", which is a sum you should never be doing by eye. */
-    +   (prim === 'item' ? '' : '<label style="display:inline-flex;align-items:center;gap:5px;font-size:12.5px;color:var(--ink-2,#41474e);cursor:pointer">'
+    +   (prim === 'item' ? '' : '<label style="display:inline-flex;align-items:center;gap:5px;font-size:var(--fs-2);color:var(--ink-2,#41474e);cursor:pointer">'
     +     '<input type="checkbox" data-testid="wl-byitem" ' + (WL.byItem === false ? '' : 'checked')
     +     ' onchange="wlByItem()" style="width:15px;height:15px;accent-color:var(--blue)">total by product</label>')
     /* ⚠️ SAY HOW MANY ARE HIDDEN. A list that quietly drops rows is a list people stop trusting the moment they
        notice — and they always notice. The count is the honest half of the filter. */
-    +   (wlDoneCount(d2) ? '<label style="display:inline-flex;align-items:center;gap:5px;font-size:12.5px;color:var(--ink-2,#41474e);cursor:pointer">'
+    +   (wlDoneCount(d2) ? '<label style="display:inline-flex;align-items:center;gap:5px;font-size:var(--fs-2);color:var(--ink-2,#41474e);cursor:pointer">'
     +     '<input type="checkbox" data-testid="wl-showdone" ' + (WL.showDone ? 'checked' : '')
     +     ' onchange="wlDone()" style="width:15px;height:15px;accent-color:var(--blue)">show ' + wlDoneCount(d2) + ' done</label>' : '')
     +   '<span style="margin-left:auto;display:flex;gap:10px">'
@@ -500,7 +500,7 @@ function wlRender(rows, keys, depth, path){
      */
     var id = wlId(path, key, k);
     var isOpen = !!WL.open[id];
-    var caret = '<span style="display:inline-block;width:13px;color:var(--grey);font-size:11px">' + (isOpen ? '▾' : '▸') + '</span>';
+    var caret = '<span style="display:inline-block;width:13px;color:var(--grey);font-size:var(--fs-1)">' + (isOpen ? '▾' : '▸') + '</span>';
     /* Every level carries its OWN roll-up: a breakdown that only totals at the top is a total, not a breakdown. */
     var head = depth === 0
       ? wlHead(caret + (tone === '#c0453b' ? '⚠️ ' : '') + title, wlRollupText(rs), tone, id)
@@ -575,11 +575,11 @@ function wlParties(det){
   var everyoneIsMe = out.every(mine);
   return '<div style="display:flex;gap:14px;flex-wrap:wrap;align-items:baseline;padding:8px 0 2px;border-bottom:1px solid var(--line-soft,#f0efec);margin-bottom:8px">'
     + out.map(function(p){
-        return '<div style="font-size:12.5px">'
-          + '<span style="color:var(--grey);text-transform:uppercase;font-size:11px;font-weight:800;letter-spacing:.06em">' + esc(p.role || '') + '</span> '
+        return '<div style="font-size:var(--fs-2)">'
+          + '<span style="color:var(--grey);text-transform:uppercase;font-size:var(--fs-1);font-weight:800;letter-spacing:.06em">' + esc(p.role || '') + '</span> '
           + '<b>' + esc(p.display_name || '—') + '</b>'
           + (mine(p) ? ' <span style="color:var(--grey)">(you)</span>' : '')
-          + (p.bridge_id ? ' <span style="color:var(--grey);font-family:ui-monospace,monospace;font-size:11px">' + esc(p.bridge_id) + '</span>' : '')
+          + (p.bridge_id ? ' <span style="color:var(--grey);font-family:ui-monospace,monospace;font-size:var(--fs-1)">' + esc(p.bridge_id) + '</span>' : '')
           + '</div>';
       }).join('')
     + (everyoneIsMe ? '<div style="font-size:11.5px;color:#b0641c;font-weight:600">⚠️ this chit has no other party — an external message would come back to you</div>' : '')
@@ -688,7 +688,7 @@ function wlInput(id, opts){
   if (opts.lines) {
     return '<textarea id="' + id + '"' + (opts.testid ? ' data-testid="' + opts.testid + '"' : '')
       + ' rows="' + opts.lines + '"' + (opts.placeholder ? ' placeholder="' + esc(opts.placeholder) + '"' : '')
-      + ' style="width:100%;box-sizing:border-box;font:inherit;font-size:14px;line-height:1.5;padding:10px 12px;'
+      + ' style="width:100%;box-sizing:border-box;font:inherit;font-size:var(--fs-3);line-height:1.5;padding:10px 12px;'
       + 'border:1px solid var(--line);border-radius:9px;resize:vertical;min-height:' + (opts.lines * 22 + 20) + 'px"></textarea>';
   }
   return '<input id="' + id + '"' + (opts.testid ? ' data-testid="' + opts.testid + '"' : '')
@@ -803,8 +803,8 @@ function wlSecHead(k, name, hint, tone){
   var on = WLL.tab === k;
   return '<div data-testid="wl-sec-' + k + '" onclick="wlSec(&quot;' + k + '&quot;)" style="cursor:pointer;display:flex;gap:9px;align-items:baseline;'
     + 'padding:11px 2px;border-top:1px solid var(--line)">'
-    + '<span style="width:12px;color:var(--grey);font-size:11px">' + (on ? '▾' : '▸') + '</span>'
-    + '<span style="font-weight:700;font-size:14px;color:' + (on ? 'var(--ink,#1c2128)' : 'var(--ink-2,#41474e)') + '">' + name + '</span>'
+    + '<span style="width:12px;color:var(--grey);font-size:var(--fs-1)">' + (on ? '▾' : '▸') + '</span>'
+    + '<span style="font-weight:700;font-size:var(--fs-3);color:' + (on ? 'var(--ink,#1c2128)' : 'var(--ink-2,#41474e)') + '">' + name + '</span>'
     + '<span style="margin-left:auto;font-size:12px;color:' + (tone || 'var(--grey)') + '">' + (hint || '') + '</span></div>';
 }
 
@@ -826,13 +826,13 @@ function wlThreadSec(k, title, list, err, o){
     err ? '#c0453b' : o.tone);
   if (WLL.tab !== k) return out;
   out += '<div style="padding:2px 0 12px">';
-  if (loading) out += '<div style="font-size:12.5px;color:var(--grey)"><span class="spin"></span> checking…</div>';
-  else if (err) out += '<div style="font-size:12.5px;color:#c0453b">Could not read these just now — this does NOT mean there are none.</div>';
-  else if (!n) out += '<div style="font-size:12.5px;color:var(--grey)">Checked — ' + esc(o.empty) + '.</div>';
+  if (loading) out += '<div style="font-size:var(--fs-2);color:var(--grey)"><span class="spin"></span> checking…</div>';
+  else if (err) out += '<div style="font-size:var(--fs-2);color:#c0453b">Could not read these just now — this does NOT mean there are none.</div>';
+  else if (!n) out += '<div style="font-size:var(--fs-2);color:var(--grey)">Checked — ' + esc(o.empty) + '.</div>';
   else out += list.map(function(m){
     return '<div style="padding:6px 0;border-bottom:1px solid var(--line-soft,#f0efec);font-size:13px">'
       + '<div style="display:flex;gap:8px;align-items:baseline">'
-      +   '<b style="font-size:12.5px">' + esc(m.sender_display_name || '—') + '</b>'
+      +   '<b style="font-size:var(--fs-2)">' + esc(m.sender_display_name || '—') + '</b>'
       +   '<span style="margin-left:auto;color:var(--grey);font-size:11.5px">' + esc(String(m.created_at || '').slice(0, 10)) + '</span></div>'
       /* pre-wrap, because the box is three lines tall now and people use them. */
       + '<div style="margin-top:2px;line-height:1.5;white-space:pre-wrap">' + esc(m.message_text || '') + '</div></div>';
@@ -899,7 +899,7 @@ function wlLineHTML(loading){
      the next — which reads as two separate facts for a moment. A figure and its unit are one token. */
   var bar = '<div style="display:flex;gap:18px;align-items:baseline;font-variant-numeric:tabular-nums;padding-bottom:4px;flex-wrap:wrap">'
     + '<div style="white-space:nowrap"><span style="font-size:26px;font-weight:800;color:' + (over ? '#c0453b' : left === 0 ? '#3d7a4e' : '#b0641c') + '">' + esc(big) + '</span>'
-    +   '<span style="font-size:12.5px;font-weight:700;color:' + (over ? '#c0453b' : 'var(--grey)') + ';margin-left:4px">' + esc(r.unit || '') + (over ? ' over' : ' left') + '</span></div>'
+    +   '<span style="font-size:var(--fs-2);font-weight:700;color:' + (over ? '#c0453b' : 'var(--grey)') + ';margin-left:4px">' + esc(r.unit || '') + (over ? ' over' : ' left') + '</span></div>'
     + '<div style="font-size:13px;color:var(--grey);white-space:nowrap">' + esc(String(got)) + ' delivered of ' + esc(String(ordered == null ? '—' : ordered)) + ' ' + esc(r.unit || '') + '</div>'
     + (prog.charged ? '<div style="margin-left:auto;font-size:13px;color:#2c5d7c;font-weight:700">' + esc(wlMoney(prog.charged)) + ' <span style="font-weight:400;color:var(--grey)">charged</span></div>' : '')
     + '</div>';
@@ -915,9 +915,9 @@ function wlLineHTML(loading){
     WLL.failed ? '#c0453b' : null);
   if (WLL.tab === 'hist') {
     body += '<div style="padding:0 0 10px">';
-    if (loading) body += '<div style="font-size:12.5px;color:var(--grey)"><span class="spin"></span> checking for earlier entries…</div>';
-    else if (WLL.failed) body += '<div style="font-size:12.5px;color:#c0453b">Could not read the history just now — this does NOT mean there is none. Close and reopen to try again.</div>';
-    else if (!nEv) body += '<div style="font-size:12.5px;color:var(--grey)">Checked — nothing has been recorded against this line yet.</div>';
+    if (loading) body += '<div style="font-size:var(--fs-2);color:var(--grey)"><span class="spin"></span> checking for earlier entries…</div>';
+    else if (WLL.failed) body += '<div style="font-size:var(--fs-2);color:#c0453b">Could not read the history just now — this does NOT mean there is none. Close and reopen to try again.</div>';
+    else if (!nEv) body += '<div style="font-size:var(--fs-2);color:var(--grey)">Checked — nothing has been recorded against this line yet.</div>';
     else {
       body += events.map(function(e){
         return '<div style="display:flex;gap:10px;align-items:baseline;padding:5px 0;border-bottom:1px solid var(--line-soft,#f0efec);font-size:13px">'
@@ -1062,9 +1062,9 @@ function wlLineHTML(loading){
   if (r.raw_phrase || r.asked_as || r.comment || r.needs_human) {
     asked = '<div style="margin-top:12px;background:#f4f1e8;border-left:3px solid #b0641c;border-radius:0 7px 7px 0;padding:9px 12px;font-size:13px;line-height:1.55">'
       + (r.raw_phrase ? '<div style="font-style:italic;color:#5b5340">“' + esc(r.raw_phrase) + '”</div>' : '')
-      + (r.asked_as ? '<div style="font-size:12.5px;color:var(--grey)">asked as <b>' + esc(r.asked_as) + '</b></div>' : '')
+      + (r.asked_as ? '<div style="font-size:var(--fs-2);color:var(--grey)">asked as <b>' + esc(r.asked_as) + '</b></div>' : '')
       + (r.comment ? '<div style="color:#2c5d7c">' + esc(r.comment) + '</div>' : '')
-      + (r.needs_human ? '<div style="font-size:12.5px;color:#c0453b;font-weight:700">⚠️ flagged for a person to check</div>' : '')
+      + (r.needs_human ? '<div style="font-size:var(--fs-2);color:#c0453b;font-weight:700">⚠️ flagged for a person to check</div>' : '')
       + '</div>';
   }
 

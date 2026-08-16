@@ -286,7 +286,7 @@ function catsetRowsHTML(){
     return '<div class="row' + (s.key === cur ? ' sel' : '') + '" data-testid="catset-sec-' + s.key + '"'
       + ' onclick="catsetSetSec(\'' + s.key + '\')">'
       + '<div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:8px">'
-      +   '<span style="font-size:14px">' + s.icon + '</span>'
+      +   '<span style="font-size:var(--fs-3)">' + s.icon + '</span>'
       +   '<b style="font-size:13.5px">' + esc(s.name) + '</b></div>'
       + '<div style="font-size:11.5px;color:var(--grey);margin-top:1px;padding-left:22px">' + esc(s.q) + '</div></div>'
       + '<div class="rowgo" aria-hidden="true">›</div></div>';
@@ -296,7 +296,7 @@ function catalogueSetupHubScreen(){
   catsetCss();
   var list = '<div class="list"><div class="lh">'
     + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'
-    +   '<span style="font-family:\'Space Grotesk\';font-weight:700;font-size:14px">⚙️ Catalogue setup</span></div>'
+    +   '<span style="font-family:\'Space Grotesk\';font-weight:700;font-size:var(--fs-3)">⚙️ Catalogue setup</span></div>'
     + '<div style="font-size:11.5px;color:var(--grey);line-height:1.5">How your catalogue is <b>shaped</b>. '
     + 'The products themselves live in <span onclick="navTo(\'catalogue\')" style="color:var(--blue);font-weight:600;cursor:pointer">Catalogue</span>, '
     + 'and how they are sorted in <span onclick="navTo(\'categories\')" style="color:var(--blue);font-weight:600;cursor:pointer">Categories</span>.</div>'
@@ -319,7 +319,7 @@ function catsetCss(){
     'border-radius:9px;padding:9px 11px;margin-top:10px}',
     '.catset-ca{display:flex;flex-wrap:wrap;gap:8px;padding:0 14px 13px}',
     '.catset-ca .composebtn{width:auto;padding:8px 14px}',
-    '.catset-load,.catset-none{font-size:12.5px;color:var(--grey);padding:2px 0 4px}',
+    '.catset-load,.catset-none{font-size:var(--fs-2);color:var(--grey);padding:2px 0 4px}',
     '.catset-dlist{border:1px solid var(--line);border-radius:9px;overflow:hidden}',
     '.catset-drow{display:flex;align-items:center;gap:9px;padding:8px 11px;font-size:13px;',
     'border-bottom:1px dashed var(--line);flex-wrap:wrap}',
@@ -327,9 +327,9 @@ function catsetCss(){
     '.catset-drow.ret{opacity:.72}',
     '.catset-drow.ret .dn{text-decoration:line-through;color:var(--grey)}',
     '.catset-drow .dn{font-weight:600;flex:1;min-width:0}',
-    '.catset-drow .dk{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11px;',
+    '.catset-drow .dk{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:var(--fs-1);',
     'background:var(--paper);border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:var(--grey)}',
-    '.catset-drow .dst{font-size:11px;font-weight:700;border-radius:6px;padding:1px 7px;text-transform:uppercase;letter-spacing:.04em}',
+    '.catset-drow .dst{font-size:var(--fs-1);font-weight:700;border-radius:6px;padding:1px 7px;text-transform:uppercase;letter-spacing:.04em}',
     '.catset-drow .dst.live{background:#e6f4ec;color:#2c7a43}',
     '.catset-drow .dst.draft{background:#f4f2ec;color:#8a6d1e}',
     '.catset-drow .dst.retired{background:#eceaea;color:#6f6a6a}',
@@ -337,17 +337,17 @@ function catsetCss(){
     '.catset-drow .da:hover{text-decoration:underline}',
     /* The vocabulary blocks. Quieter than the controls above them — this is reference, not something to act on. */
     '.catset-reg{border:1px solid var(--line);border-radius:12px;background:var(--paper);margin-bottom:12px;overflow:hidden}',
-    '.catset-regh{display:flex;align-items:center;gap:8px;padding:10px 13px 0;font-size:12.5px;font-weight:700}',
-    '.catset-regn{margin-left:auto;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11px;',
+    '.catset-regh{display:flex;align-items:center;gap:8px;padding:10px 13px 0;font-size:var(--fs-2);font-weight:700}',
+    '.catset-regn{margin-left:auto;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:var(--fs-1);',
     'color:var(--grey);background:#fff;border:1px solid var(--line);border-radius:20px;padding:1px 8px}',
     '.catset-regb{font-size:12px;line-height:1.55;color:var(--grey);padding:4px 13px 9px}',
     '.catset-regrows{display:flex;flex-direction:column;gap:1px;background:var(--line);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}',
-    '.catset-regrow{display:flex;align-items:baseline;gap:9px;background:#fff;padding:6px 13px;font-size:12.5px;flex-wrap:wrap}',
+    '.catset-regrow{display:flex;align-items:baseline;gap:9px;background:#fff;padding:6px 13px;font-size:var(--fs-2);flex-wrap:wrap}',
     '.catset-regrow code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11.5px;color:var(--ink);flex:0 0 auto}',
     '.catset-regrow .rl{color:var(--ink)}',
     '.catset-regrow .rn{color:var(--grey);font-size:11.5px;flex:1;min-width:0}',
-    '.catset-regsrc{font-size:11px;color:var(--grey);padding:7px 13px}',
-    '.catset-regsrc code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11px}'
+    '.catset-regsrc{font-size:var(--fs-1);color:var(--grey);padding:7px 13px}',
+    '.catset-regsrc code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:var(--fs-1)}'
   ].join('');
   (document.head || document.documentElement).appendChild(s);
 }

@@ -53,7 +53,7 @@ async function aiDraftCommerce(skill, label){
 // the ONE reusable invoke+review modal — every path funnels here (mirrors lib/ai.js single pipe). `attach` (optional) =
 // a clearance target {standard,doc,title,skill}; a DOCUMENT draft can then be ACCEPTED → filed as that clearance's evidence.
 async function _aiDraft(skill, label, ctx, attach){
-  if(typeof modal==='function') modal('<div class="mhd"><div class="t">✨ Draft with AI — '+esc(label)+'</div></div><div class="mbody" style="padding:16px"><div id="aidbody" style="font-size:12.5px;color:var(--grey)">✨ Invoking the co-assist… drafting from what this order/profile holds.</div></div>', true);
+  if(typeof modal==='function') modal('<div class="mhd"><div class="t">✨ Draft with AI — '+esc(label)+'</div></div><div class="mbody" style="padding:16px"><div id="aidbody" style="font-size:var(--fs-2);color:var(--grey)">✨ Invoking the co-assist… drafting from what this order/profile holds.</div></div>', true);
   try{
     var r = await api('aiDraft', {body:{skill_id:skill, context:ctx}});
     var draft = (r&&r.draft)||'', cost = (r&&r.usage&&r.usage.est_cost_usd);
@@ -63,7 +63,7 @@ async function _aiDraft(skill, label, ctx, attach){
     var acceptBtn = (attach && r && r.kind==='document')
       ? '<button onclick="_aiAccept()" title="File this document as the evidence backing '+esc(attach.title||attach.doc)+' — a chit on your rail" style="'+bs+';flex:1;border:1px solid #2f8f5b;background:#2f8f5b;color:#fff">✓ Accept &amp; attach as evidence</button>' : '';
     var html = '<style>'+(typeof _AI_MDCSS!=='undefined'?_AI_MDCSS:'')+'</style>'
-      + '<div style="font-size:11px;color:#6d5bd0;background:#f2effc;border:1px solid #ddd4f5;border-radius:9px;padding:8px 11px;margin-bottom:12px;line-height:1.5">🤖 <b>AI proposal — not evidence.</b> '+esc((r&&r.note)||'Review and confirm before you use it.')+(cost!=null?' <span style="color:var(--grey)">· cost $'+cost+'</span>':'')+'</div>'
+      + '<div style="font-size:var(--fs-1);color:#6d5bd0;background:#f2effc;border:1px solid #ddd4f5;border-radius:9px;padding:8px 11px;margin-bottom:12px;line-height:1.5">🤖 <b>AI proposal — not evidence.</b> '+esc((r&&r.note)||'Review and confirm before you use it.')+(cost!=null?' <span style="color:var(--grey)">· cost $'+cost+'</span>':'')+'</div>'
       + '<div class="amddoc" style="background:#fff;border:1px solid var(--line);border-radius:9px;padding:16px 20px;max-height:52vh;overflow:auto">'+(typeof _aiMd==='function'?_aiMd(draft):esc(draft))+'</div>'
       + '<div style="display:flex;gap:8px;margin-top:13px;flex-wrap:wrap">'
         + acceptBtn
@@ -105,9 +105,9 @@ function _aiPdf(){
     +'.hd{border-bottom:2px solid #6d5bd0;padding-bottom:12px;margin-bottom:18px}'
     +'.brand{font-weight:800;letter-spacing:.05em;color:#6d5bd0;font-size:12px}'
     +'.doctitle{font-size:22px;font-weight:800;margin-top:4px;color:#141a22}'
-    +'.meta{font-size:11px;color:#7a8494;margin-top:5px}'
-    +'.stamp{display:inline-block;margin-top:9px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#8a5f11;background:#fdf3e3;border:1px solid #f0dcae;border-radius:5px;padding:3px 8px}'
-    +'.foot{margin-top:26px;padding-top:10px;border-top:1px solid #e6eaf0;font-size:11px;color:#9aa3b0;text-align:center}'
+    +'.meta{font-size:var(--fs-1);color:#7a8494;margin-top:5px}'
+    +'.stamp{display:inline-block;margin-top:9px;font-size:var(--fs-1);font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#8a5f11;background:#fdf3e3;border:1px solid #f0dcae;border-radius:5px;padding:3px 8px}'
+    +'.foot{margin-top:26px;padding-top:10px;border-top:1px solid #e6eaf0;font-size:var(--fs-1);color:#9aa3b0;text-align:center}'
     +(typeof _AI_MDCSS!=='undefined'?_AI_MDCSS:'')+'.amddoc{font-size:12px}';
   var when=new Date().toLocaleString();
   w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>'+esc(d.label||'AI draft')+'</title><style>'+pcss+'</style></head><body><div class="pg">'
@@ -136,8 +136,8 @@ var _RUNGRANK={verified:4,attested:3,documented:2,declared:1};
 // HELD = live & valid AND backed by REAL evidence (document / attested / verified). A bare 'declared' claim does NOT count.
 function _rdHeld(it){ if(!it) return false; var live=(it.status==='gathered'||it.status==='expiring'); return live && (_RUNGRANK[it.rung]||0)>=2; }
 function _rdRungChip(it){ var r=it&&it.rung, map={verified:['#2f8f5b','verified'],attested:['#0e7c74','attested'],documented:['#c98a1a','documented'],declared:['#8a94a6','declared']}, x=map[r];
-  if(!x) return '<span title="not yet evidenced" style="font-size:11px;color:var(--line);flex:0 0 auto">—</span>';
-  return '<span title="trust rung — how strongly it is evidenced" style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;color:'+x[0]+';background:'+x[0]+'1e;border-radius:4px;padding:2px 5px;flex:0 0 auto">'+x[1]+'</span>'; }
+  if(!x) return '<span title="not yet evidenced" style="font-size:var(--fs-1);color:var(--line);flex:0 0 auto">—</span>';
+  return '<span title="trust rung — how strongly it is evidenced" style="font-size:var(--fs-1);font-weight:800;text-transform:uppercase;letter-spacing:.03em;color:'+x[0]+';background:'+x[0]+'1e;border-radius:4px;padding:2px 5px;flex:0 0 auto">'+x[1]+'</span>'; }
 // persist the current lane to the entity's profile (+ local restore) — the selectors ARE the saved profile now.
 function saveLane(){
   var vert=UI.laneVertical||'paint', dest=UI.laneDest||'EU', origin=UI.laneOrigin||'IN';
@@ -153,7 +153,7 @@ function _rdStatus(st){
 function _rungBadge(r){
   var map={verified:['#2f8f5b','Verified'],attested:['#0e7c74','Attested'],documented:['#c98a1a','Documented'],declared:['#8a94a6','Declared']};
   var x=map[r]; if(!x) return '';
-  return '<span style="font-size:11px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;border-radius:5px;padding:2px 6px;background:'+x[0]+'22;color:'+x[0]+';margin-left:7px" title="trust rung">'+x[1]+'</span>';
+  return '<span style="font-size:var(--fs-1);font-weight:800;letter-spacing:.03em;text-transform:uppercase;border-radius:5px;padding:2px 6px;background:'+x[0]+'22;color:'+x[0]+';margin-left:7px" title="trust rung">'+x[1]+'</span>';
 }
 // ── per-topic LIFECYCLE model (client-side) — each clearance is a process with states, an AI role + a partner option ──
 var LIFE = {
@@ -166,25 +166,25 @@ var LIFE = {
   'exim-policy':{life:[['IEC obtained','now'],['Declaration filed','next'],['Cleared','next']],use:'Hold a valid IEC and complete the export declaration.',ai:{lvl:'L3',gate:'confirm',t:'AI verifies the IEC and prepares the export declaration.'},partner:'Customs broker (CHA)'}
 };
 function _life(std, status){ return LIFE[std] || {life:[['Pending',status==='pending'?'now':'done'],['Gathered',(status==='gathered'||status==='expiring')?'now':'next'],['Verified','next']],use:'Gather this clearance and keep it valid.',ai:{lvl:'L2',gate:'approve',t:'AI helps assemble and file the evidence; you approve.'},partner:null}; }
-function _rdSub(t){ return '<div style="font-size:11px;font-weight:800;color:var(--grey);letter-spacing:.05em;text-transform:uppercase;margin:13px 0 6px">'+t+'</div>'; }
-function _rdKv(k,v){ return '<div style="display:flex;gap:8px;padding:3px 0;font-size:12.5px"><span style="text-transform:uppercase;color:var(--grey);min-width:96px;font-size:11px;letter-spacing:.03em;padding-top:1px">'+k+'</span><span style="color:var(--ink);font-weight:500">'+esc(String(v))+'</span></div>'; }
+function _rdSub(t){ return '<div style="font-size:var(--fs-1);font-weight:800;color:var(--grey);letter-spacing:.05em;text-transform:uppercase;margin:13px 0 6px">'+t+'</div>'; }
+function _rdKv(k,v){ return '<div style="display:flex;gap:8px;padding:3px 0;font-size:var(--fs-2)"><span style="text-transform:uppercase;color:var(--grey);min-width:96px;font-size:var(--fs-1);letter-spacing:.03em;padding-top:1px">'+k+'</span><span style="color:var(--ink);font-weight:500">'+esc(String(v))+'</span></div>'; }
 function _rdExpand(it){
   var L=_life(it.standard, it.status);
   var steps=L.life.map(function(s){ var c=s[1]; var col=c==='done'?'#2f8f5b':(c==='now'?'var(--blue)':'#c9d2dc'); var ic=c==='done'?'✓':(c==='now'?'●':'○');
-    return '<div style="display:flex;align-items:center;gap:9px;padding:4px 0;font-size:12.5px;color:'+(c==='next'?'var(--grey)':'var(--ink)')+'"><span style="width:18px;height:18px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:800;color:#fff;background:'+col+';flex:0 0 auto">'+ic+'</span>'+esc(s[0])+(c==='now'?' <span style="font-size:11px;color:var(--blue);font-weight:800;text-transform:uppercase;letter-spacing:.04em">you are here</span>':'')+'</div>';
+    return '<div style="display:flex;align-items:center;gap:9px;padding:4px 0;font-size:var(--fs-2);color:'+(c==='next'?'var(--grey)':'var(--ink)')+'"><span style="width:18px;height:18px;border-radius:50%;display:grid;place-items:center;font-size:var(--fs-1);font-weight:800;color:#fff;background:'+col+';flex:0 0 auto">'+ic+'</span>'+esc(s[0])+(c==='now'?' <span style="font-size:var(--fs-1);color:var(--blue);font-weight:800;text-transform:uppercase;letter-spacing:.04em">you are here</span>':'')+'</div>';
   }).join('');
   var ev=_rdKv('Trust rung', it.rung||'—')+_rdKv('Status', it.status||'—')+(it.valid_until?_rdKv('Valid until', String(it.valid_until).slice(0,10)):'')
     +(it.rung==='verified'&&it.verified_at?_rdKv('Verified at source', String(it.verified_at).slice(0,10)+(it.verified_by?' · '+esc(it.verified_by):'')):'')
     +(it.evidence_ref&&/^[0-9a-f-]{20,}$/i.test(String(it.evidence_ref))?_rdKv('Evidence','document on the rail'):'');
   var ai=L.ai;
-  var partner=L.partner?'<div style="margin-top:11px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:#faf6ee;display:flex;align-items:center;gap:8px"><div style="flex:1;min-width:0"><span style="font-size:11px;font-weight:800;color:#8a5e22;text-transform:uppercase;letter-spacing:.05em">Or hand it to a partner</span><div style="font-size:12.5px;margin-top:3px;font-weight:600">'+esc(L.partner)+'</div></div><button onclick="aiSuggestPartner(\''+esc(it.standard)+'\',\''+esc(it.doc)+'\')" title="AI suggests who can carry this + what to ask them" style="flex:0 0 auto;font-size:11px;font-weight:700;border:1px solid #6d5bd0;background:#fff;color:#6d5bd0;border-radius:6px;padding:6px 10px;cursor:pointer">✨ Suggest</button></div>':'';
+  var partner=L.partner?'<div style="margin-top:11px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:#faf6ee;display:flex;align-items:center;gap:8px"><div style="flex:1;min-width:0"><span style="font-size:var(--fs-1);font-weight:800;color:#8a5e22;text-transform:uppercase;letter-spacing:.05em">Or hand it to a partner</span><div style="font-size:var(--fs-2);margin-top:3px;font-weight:600">'+esc(L.partner)+'</div></div><button onclick="aiSuggestPartner(\''+esc(it.standard)+'\',\''+esc(it.doc)+'\')" title="AI suggests who can carry this + what to ask them" style="flex:0 0 auto;font-size:var(--fs-1);font-weight:700;border:1px solid #6d5bd0;background:#fff;color:#6d5bd0;border-radius:6px;padding:6px 10px;cursor:pointer">✨ Suggest</button></div>':'';
   return '<div style="border-top:1px solid var(--line);padding:12px 15px 15px;background:#fbfcfe">'
     +_rdSub('Its lifecycle')+steps
     +_rdSub('Evidence · current version')+'<div>'+ev+'</div>'
-    +_rdSub('How you use it')+'<div style="font-size:12.5px;color:var(--ink)">'+esc(L.use)+'</div>'
-    +_rdSub('🤖 How AI enables it')+'<div style="font-size:12.5px;color:var(--grey)"><b style="color:var(--blue)">'+ai.lvl+'</b> · gate: '+esc(ai.gate)+' — '+esc(ai.t)+'</div>'
+    +_rdSub('How you use it')+'<div style="font-size:var(--fs-2);color:var(--ink)">'+esc(L.use)+'</div>'
+    +_rdSub('🤖 How AI enables it')+'<div style="font-size:var(--fs-2);color:var(--grey)"><b style="color:var(--blue)">'+ai.lvl+'</b> · gate: '+esc(ai.gate)+' — '+esc(ai.t)+'</div>'
     +partner
-    +'<div style="font-size:11px;color:var(--grey);margin-top:12px;border-left:3px solid #8a5e22;padding-left:9px;line-height:1.45">Versioned: when a buyer folds this into an order they keep a <b>snapshot</b> — later changes never alter their copy.</div>'
+    +'<div style="font-size:var(--fs-1);color:var(--grey);margin-top:12px;border-left:3px solid #8a5e22;padding-left:9px;line-height:1.45">Versioned: when a buyer folds this into an order they keep a <b>snapshot</b> — later changes never alter their copy.</div>'
   +'</div>';
 }
 // ── TWO-PANE master-detail (list ↔ detail, like Task/Co-assist) — selecting preserves scroll (no jump) ──
@@ -200,11 +200,11 @@ function _rdSelect(std,doc){
 function _rdRow(it, selKey){
   var k=it.standard+'|'+it.doc, on=(k===selKey);
   var held=_rdHeld(it);   // green ONLY with real (documented/verified), valid evidence — a bare 'declared' claim is NOT held
-  var box='<span onclick="event.stopPropagation();'+(held?'_rdSelect':'gatherReadiness')+'(\''+esc(it.standard)+'\',\''+esc(it.doc)+'\')" title="'+(held?'Held — real, valid evidence':'Not held — click to provide evidence')+'" style="width:16px;height:16px;border-radius:4px;border:1.5px solid '+(held?'#2f8f5b':'var(--line)')+';background:'+(held?'#2f8f5b':'#fff')+';color:#fff;display:inline-grid;place-items:center;font-size:11px;font-weight:800;flex:0 0 auto;cursor:pointer">'+(held?'✓':'')+'</span>';
+  var box='<span onclick="event.stopPropagation();'+(held?'_rdSelect':'gatherReadiness')+'(\''+esc(it.standard)+'\',\''+esc(it.doc)+'\')" title="'+(held?'Held — real, valid evidence':'Not held — click to provide evidence')+'" style="width:16px;height:16px;border-radius:4px;border:1.5px solid '+(held?'#2f8f5b':'var(--line)')+';background:'+(held?'#2f8f5b':'#fff')+';color:#fff;display:inline-grid;place-items:center;font-size:var(--fs-1);font-weight:800;flex:0 0 auto;cursor:pointer">'+(held?'✓':'')+'</span>';
   return '<div onclick="_rdSelect(\''+esc(it.standard)+'\',\''+esc(it.doc)+'\')" style="display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:9px;cursor:pointer;margin:2px 0;background:'+(on?'#eef3fb':'transparent')+';border:1px solid '+(on?'var(--blue)':'transparent')+'">'
     +box
-    +'<div style="min-width:0;flex:1"><div style="font-weight:'+(on?'700':'600')+';font-size:12.5px;color:'+(on?'var(--blue)':'var(--ink)')+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(it.title||it.doc)+'</div></div>'
-    +(_rdIdType(it)?'<span title="Live source-check available — verified at the registry" style="font-size:11px;flex:0 0 auto">🔗</span>':'')
+    +'<div style="min-width:0;flex:1"><div style="font-weight:'+(on?'700':'600')+';font-size:var(--fs-2);color:'+(on?'var(--blue)':'var(--ink)')+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(it.title||it.doc)+'</div></div>'
+    +(_rdIdType(it)?'<span title="Live source-check available — verified at the registry" style="font-size:var(--fs-1);flex:0 0 auto">🔗</span>':'')
     +_rdRungChip(it)+'</div>';
 }
 function _rdDetailPane(it){
@@ -242,7 +242,7 @@ async function loadCommerce(){
 function _frmBadge(c){
   var map={market:['#2857b8','market'],credit:['#8a5e22','credit'],liquidity:['#0e7c74','liquidity'],operational:['#7a4fb0','operational']};
   var x=map[c]||['#8a94a6',String(c||'—')];
-  return '<span style="font-size:11px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;border-radius:5px;padding:2px 6px;background:'+x[0]+'1e;color:'+x[0]+'">FRM · '+x[1]+'</span>';
+  return '<span style="font-size:var(--fs-1);font-weight:800;letter-spacing:.03em;text-transform:uppercase;border-radius:5px;padding:2px 6px;background:'+x[0]+'1e;color:'+x[0]+'">FRM · '+x[1]+'</span>';
 }
 // ── MY READINESS (supplier) — spin the globe: readiness resolved per destination ──
 async function loadLanes(){
@@ -294,7 +294,7 @@ function _rdDestSelectors(){
 // header: tabs (Clearances | Commercial cover) within Trade ready + the spin-the-globe selectors on the Clearances tab.
 function _rdHeader(){
   var tab=UI.rdTab||'certification';
-  var tb=function(k,lbl){ return '<div onclick="UI.rdTab=\''+k+'\';if(typeof renderApp===\'function\')renderApp()" style="padding:9px 15px;font-size:12.5px;font-weight:700;cursor:pointer;border-bottom:2px solid '+(tab===k?'var(--blue)':'transparent')+';color:'+(tab===k?'var(--blue)':'var(--grey)')+'">'+lbl+'</div>'; };
+  var tb=function(k,lbl){ return '<div onclick="UI.rdTab=\''+k+'\';if(typeof renderApp===\'function\')renderApp()" style="padding:9px 15px;font-size:var(--fs-2);font-weight:700;cursor:pointer;border-bottom:2px solid '+(tab===k?'var(--blue)':'transparent')+';color:'+(tab===k?'var(--blue)':'var(--grey)')+'">'+lbl+'</div>'; };
   return '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex:none;padding:0 12px;border-bottom:1px solid var(--line);background:#fff">'
     +'<div style="display:flex;gap:2px">'+tb('certification','Certification')+tb('clearance','Clearance')+tb('commercial','Commercial')+'</div>'
     +'<div style="margin-left:auto;display:flex;align-items:center;gap:8px;padding:6px 0;flex-wrap:wrap">'+(tab!=='commercial'?_rdDestSelectors():'')
@@ -304,13 +304,13 @@ function _rdHeader(){
 }
 // STANDARD display names for the matrix (fallback = the key)
 var STDNAME={ 'exim-policy':'Export policy (IEC · HS · declaration · Incoterms)','iso-9001':'ISO 9001 — Quality','iso-14001':'ISO 14001 — Environmental','iso-27000':'ISO 27001 — Information security','iso-45001':'ISO 45001 — Occupational safety','reach':'REACH — chemical registration','sds':'Safety Data Sheet (GHS)','tsca':'TSCA — US chemical inventory','bis':'BIS — India conformity','haccp':'HACCP — food safety','fssai':'FSSAI licence','phyto':'Phytosanitary certificate','eu-health':'EU health certificate','oeko-tex':'OEKO-TEX Standard 100','gots':'GOTS — organic textiles','flammability':'Flammability (16 CFR 1610)','ce-rohs':'CE / RoHS conformity','weee':'WEEE registration','battery-comp':'UN 38.3 — battery','who-gmp':'WHO-GMP — Good Manufacturing Practice','cdsco':'CDSCO manufacturing licence','copp':'Certificate of Pharmaceutical Product','fda-drug':'US FDA drug registration','iatf-16949':'IATF 16949 — Automotive quality','ece-approval':'ECE Type Approval (UNECE)' };
-function _mtxCell(on,common,color){ return '<td style="text-align:center;padding:8px 5px;border-bottom:1px solid var(--line)">'+(on?'<span style="display:inline-block;width:19px;height:19px;border-radius:6px;background:'+(common?'#2f8f5b':color)+';color:#fff;font-size:11px;font-weight:800;line-height:19px">✓</span>':'<span style="color:var(--line)">·</span>')+'</td>'; }
+function _mtxCell(on,common,color){ return '<td style="text-align:center;padding:8px 5px;border-bottom:1px solid var(--line)">'+(on?'<span style="display:inline-block;width:19px;height:19px;border-radius:6px;background:'+(common?'#2f8f5b':color)+';color:#fff;font-size:var(--fs-1);font-weight:800;line-height:19px">✓</span>':'<span style="color:var(--line)">·</span>')+'</td>'; }
 // the sector × standard matrix — LIVE from the engine (resolve every sector for the current lane), common vs specific.
 async function openSectorMatrix(){
   var secs=[['paint','🧪','Chemical','#2857b8'],['food','🍎','Food','#2f8f5b'],['textiles','🧵','Textiles','#9a4db0'],['electronics','🔌','Electronics','#a0601a'],['pharma','💊','Pharma','#0e7c74'],['automobile','🚗','Auto','#b4532a']];
   var dest=UI.laneDest||'EU', origin=UI.laneOrigin||'IN';
   if(typeof modal==='function'){
-    modal('<div class="mhd" style="display:flex;align-items:center;gap:8px"><div class="t" style="flex:1">🧮 Sector × standard — common vs specific</div><button onclick="closeModal()" title="Close" style="border:0;background:none;cursor:pointer;font-size:20px;line-height:1;color:var(--grey);padding:0 2px">✕</button></div><div class="mbody" style="padding:14px 16px"><div id="mtxbody" style="font-size:12.5px;color:var(--grey)">Resolving every sector for '+esc(origin)+' → '+esc(dest)+'…</div></div>');
+    modal('<div class="mhd" style="display:flex;align-items:center;gap:8px"><div class="t" style="flex:1">🧮 Sector × standard — common vs specific</div><button onclick="closeModal()" title="Close" style="border:0;background:none;cursor:pointer;font-size:var(--fs-5);line-height:1;color:var(--grey);padding:0 2px">✕</button></div><div class="mbody" style="padding:14px 16px"><div id="mtxbody" style="font-size:var(--fs-2);color:var(--grey)">Resolving every sector for '+esc(origin)+' → '+esc(dest)+'…</div></div>');
     try{ var mp=document.querySelector('#modalhost .modal'); if(mp) mp.setAttribute('data-movable','1'); }catch(_){}   // plain closeable modal — no movable-panel controls
   }
   var rows={};
@@ -321,16 +321,16 @@ async function openSectorMatrix(){
   }
   var list=Object.keys(rows).map(function(k){ var on=secs.map(function(s){return !!rows[k].sectors[s[0]];}); return {std:k,name:STDNAME[k]||k,on:on,n:on.filter(Boolean).length}; });
   list.sort(function(a,b){ return (b.n-a.n)||a.std.localeCompare(b.std); });
-  var head='<tr><th style="text-align:left;padding:8px 6px;font-size:11px;text-transform:uppercase;color:var(--grey);border-bottom:1px solid var(--line)">Standard</th>'+secs.map(function(s){return '<th style="padding:8px 4px;font-size:11px;border-bottom:1px solid var(--line);color:'+s[3]+';white-space:nowrap">'+s[1]+'<br>'+s[2]+'</th>';}).join('')+'</tr>';
+  var head='<tr><th style="text-align:left;padding:8px 6px;font-size:var(--fs-1);text-transform:uppercase;color:var(--grey);border-bottom:1px solid var(--line)">Standard</th>'+secs.map(function(s){return '<th style="padding:8px 4px;font-size:var(--fs-1);border-bottom:1px solid var(--line);color:'+s[3]+';white-space:nowrap">'+s[1]+'<br>'+s[2]+'</th>';}).join('')+'</tr>';
   var rowH=function(r){ var common=r.n===secs.length; return '<tr'+(common?' style="background:#eaf6ee"':'')+'><td style="padding:8px 6px;font-weight:600;font-size:12px;border-bottom:1px solid var(--line);color:'+(common?'#2f8f5b':'var(--ink)')+'">'+esc(r.name)+'</td>'+r.on.map(function(v,i){return _mtxCell(v,common,secs[i][3]);}).join('')+'</tr>'; };
-  var band=function(t){return '<tr><td colspan="'+(secs.length+1)+'" style="padding:11px 6px 3px;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--grey)">'+t+'</td></tr>';};
+  var band=function(t){return '<tr><td colspan="'+(secs.length+1)+'" style="padding:11px 6px 3px;font-size:var(--fs-1);font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--grey)">'+t+'</td></tr>';};
   var common=list.filter(function(r){return r.n===secs.length;}), spec=list.filter(function(r){return r.n!==secs.length;});
   var html='<div style="font-size:11.5px;color:var(--grey);margin-bottom:9px">Lane held constant ('+esc(origin)+' → '+esc(dest)+') — only the sector changes. A full row is the <b>common backbone</b>; a single ✓ is <b>sector-specific</b>.</div>'
     +'<div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%;min-width:430px">'+head
     +band('● Common — every sector')+common.map(rowH).join('')
     +band('◆ Sector-specific')+spec.map(rowH).join('')
     +'</table></div>'
-    +'<div style="margin-top:12px;font-size:11px;color:var(--grey)">required = <b>common backbone</b> ∪ <b>sector-specific</b> ∪ <b>destination-specific</b> — derived, never enumerated.</div>'
+    +'<div style="margin-top:12px;font-size:var(--fs-1);color:var(--grey)">required = <b>common backbone</b> ∪ <b>sector-specific</b> ∪ <b>destination-specific</b> — derived, never enumerated.</div>'
     +'<div style="margin-top:12px;text-align:center;font-family:\'Space Grotesk\',system-ui;font-weight:700;font-size:11.5px;color:var(--blue);letter-spacing:.04em">Chit &amp; Bridge</div>';
   var el=document.getElementById('mtxbody'); if(el) el.innerHTML=html;
 }
@@ -370,9 +370,9 @@ var COMMETA = {
 function _rdComSelect(i){ UI.comSel=i; if(UI.vp==='mob') UI.rdMDetail=true; if(typeof renderApp==='function') renderApp(); }
 function _rdComRow(g, i, sel){
   var on=(i===sel);
-  var onrail=g.covered_onrail?'<span title="already evidenced on the rail" style="font-size:11px;color:#2f8f5b;font-weight:800;flex:0 0 auto">● rail</span>':'';
+  var onrail=g.covered_onrail?'<span title="already evidenced on the rail" style="font-size:var(--fs-1);color:#2f8f5b;font-weight:800;flex:0 0 auto">● rail</span>':'';
   return '<div onclick="_rdComSelect('+i+')" style="display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:9px;cursor:pointer;margin:2px 0;background:'+(on?'#eef3fb':'transparent')+';border:1px solid '+(on?'var(--blue)':'transparent')+'">'
-    +'<div style="min-width:0;flex:1"><div style="font-weight:'+(on?'700':'600')+';font-size:12.5px;color:'+(on?'var(--blue)':'var(--ink)')+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(g.label)+'</div></div>'
+    +'<div style="min-width:0;flex:1"><div style="font-weight:'+(on?'700':'600')+';font-size:var(--fs-2);color:'+(on?'var(--blue)':'var(--ink)')+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(g.label)+'</div></div>'
     +onrail+_frmBadge(g.frm_class)+'</div>';
 }
 function _rdComLadder(attestor, top){
@@ -380,12 +380,12 @@ function _rdComLadder(attestor, top){
   var order={declared:0,documented:1,attested:2,verified:3}, topIx=(order[top]!=null?order[top]:2);
   var cols={declared:'#8a94a6',documented:'#c98a1a',attested:'#0e7c74',verified:'#2f8f5b'};
   return rungs.map(function(r){ var ix=order[r[0]], reach=ix<=topIx, c=cols[r[0]];
-    return '<div style="display:flex;align-items:center;gap:9px;padding:3px 0;font-size:12px;opacity:'+(reach?'1':'.38')+'"><span style="width:9px;height:9px;border-radius:50%;background:'+c+';flex:0 0 auto"></span><b style="text-transform:uppercase;font-size:11px;letter-spacing:.03em;color:'+c+';min-width:82px">'+r[0]+'</b><span style="color:var(--grey)">'+esc(r[1])+'</span></div>';
+    return '<div style="display:flex;align-items:center;gap:9px;padding:3px 0;font-size:12px;opacity:'+(reach?'1':'.38')+'"><span style="width:9px;height:9px;border-radius:50%;background:'+c+';flex:0 0 auto"></span><b style="text-transform:uppercase;font-size:var(--fs-1);letter-spacing:.03em;color:'+c+';min-width:82px">'+r[0]+'</b><span style="color:var(--grey)">'+esc(r[1])+'</span></div>';
   }).join('');
 }
 function _rdComSteps(life){
   return (life||[]).map(function(s){ var c=s[1], col=c==='done'?'#2f8f5b':(c==='now'?'var(--blue)':'#c9d2dc'), ic=c==='done'?'✓':(c==='now'?'●':'○');
-    return '<div style="display:flex;align-items:center;gap:9px;padding:4px 0;font-size:12.5px;color:'+(c==='next'?'var(--grey)':'var(--ink)')+'"><span style="width:18px;height:18px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:800;color:#fff;background:'+col+';flex:0 0 auto">'+ic+'</span>'+esc(s[0])+(c==='now'?' <span style="font-size:11px;color:var(--blue);font-weight:800;text-transform:uppercase;letter-spacing:.04em">you are here</span>':'')+'</div>';
+    return '<div style="display:flex;align-items:center;gap:9px;padding:4px 0;font-size:var(--fs-2);color:'+(c==='next'?'var(--grey)':'var(--ink)')+'"><span style="width:18px;height:18px;border-radius:50%;display:grid;place-items:center;font-size:var(--fs-1);font-weight:800;color:#fff;background:'+col+';flex:0 0 auto">'+ic+'</span>'+esc(s[0])+(c==='now'?' <span style="font-size:var(--fs-1);color:var(--blue);font-weight:800;text-transform:uppercase;letter-spacing:.04em">you are here</span>':'')+'</div>';
   }).join('');
 }
 function _rdComDetail(g){
@@ -394,18 +394,18 @@ function _rdComDetail(g){
   var names=(g.instruments||[]).map(function(i){return esc(i.name);}).join(' · ');
   var draftBtn = (m.ai&&m.ai.skill)
     ? '<button onclick="aiDraftCommerce(\''+m.ai.skill+'\',\''+esc(g.label)+'\')" title="AI drafts this from the current lane — you review and confirm (never autonomous)" style="font-size:12px;font-weight:700;border:1px solid #6d5bd0;background:#f2effc;color:#6d5bd0;border-radius:9px;padding:7px 12px;cursor:pointer">✨ Draft with AI</button>' : '';
-  var partner = m.partner ? '<div style="margin-top:11px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:#faf6ee"><span style="font-size:11px;font-weight:800;color:#8a5e22;text-transform:uppercase;letter-spacing:.05em">Or hand it to a partner</span><div style="font-size:12.5px;margin-top:3px;font-weight:600">'+esc(m.partner)+'</div></div>' : '';
+  var partner = m.partner ? '<div style="margin-top:11px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:#faf6ee"><span style="font-size:var(--fs-1);font-weight:800;color:#8a5e22;text-transform:uppercase;letter-spacing:.05em">Or hand it to a partner</span><div style="font-size:var(--fs-2);margin-top:3px;font-weight:600">'+esc(m.partner)+'</div></div>' : '';
   var ai=m.ai||{};
   var aiLine = '<b style="color:var(--blue)">'+esc(ai.lvl||'L2')+'</b> · gate: '+esc(ai.gate||'confirm')+' — '+esc(ai.t||'AI role to be defined.')+(ai.skill?'':' <i style="color:#8a94a6">(skill coming)</i>');
-  return '<div style="padding:14px 16px 0"><div style="display:flex;align-items:flex-start;gap:10px"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:15px">'+esc(g.label)+'</div><div style="font-size:11.5px;color:var(--grey);margin-top:4px;display:flex;align-items:center;gap:7px;flex-wrap:wrap">'+_frmBadge(g.frm_class)+(g.covered_onrail?'<span style="color:#2f8f5b;font-weight:700;font-size:11px">● already on rail</span>':'')+'</div></div><div style="flex:0 0 auto">'+draftBtn+'</div></div></div>'
+  return '<div style="padding:14px 16px 0"><div style="display:flex;align-items:flex-start;gap:10px"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:15px">'+esc(g.label)+'</div><div style="font-size:11.5px;color:var(--grey);margin-top:4px;display:flex;align-items:center;gap:7px;flex-wrap:wrap">'+_frmBadge(g.frm_class)+(g.covered_onrail?'<span style="color:#2f8f5b;font-weight:700;font-size:var(--fs-1)">● already on rail</span>':'')+'</div></div><div style="flex:0 0 auto">'+draftBtn+'</div></div></div>'
     +'<div style="border-top:1px solid var(--line);margin:12px 0 0;padding:2px 16px 16px">'
-    + _rdSub('Instruments')+'<div style="font-size:12.5px;color:var(--ink)">'+(names||'—')+'</div>'
-    + _rdSub('Advice')+'<div style="font-size:12.5px;color:var(--ink);line-height:1.5">'+esc(m.advice||'—')+'</div>'
+    + _rdSub('Instruments')+'<div style="font-size:var(--fs-2);color:var(--ink)">'+(names||'—')+'</div>'
+    + _rdSub('Advice')+'<div style="font-size:var(--fs-2);color:var(--ink);line-height:1.5">'+esc(m.advice||'—')+'</div>'
     + _rdSub('Trust ladder · who stands behind it')+'<div>'+_rdComLadder(m.attestor, m.top)+'</div>'
     + (m.life?(_rdSub('Its lifecycle')+_rdComSteps(m.life)):'')
-    + _rdSub('🤖 How AI enables it')+'<div style="font-size:12.5px;color:var(--grey)">'+aiLine+'</div>'
+    + _rdSub('🤖 How AI enables it')+'<div style="font-size:var(--fs-2);color:var(--grey)">'+aiLine+'</div>'
     + partner
-    + '<div style="font-size:11px;color:var(--grey);margin-top:12px;border-left:3px solid #8a5e22;padding-left:9px;line-height:1.45">When you send the order, the chosen cover folds onto the buyer\'s copy (frozen) beside the clearances — same as certificates.</div>'
+    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:12px;border-left:3px solid #8a5e22;padding-left:9px;line-height:1.45">When you send the order, the chosen cover folds onto the buyer\'s copy (frozen) beside the clearances — same as certificates.</div>'
   +'</div>';
 }
 function _rdComTwoPane(){
@@ -452,8 +452,8 @@ function verifyReadiness(standard, doc, id_type){
   UI.rdVerify = { standard:standard, doc:doc, id_type:id_type };
   var inS='width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:13px;margin:5px 0 13px;box-sizing:border-box';
   var body = '<div class="mbody" style="padding:16px 18px">'
-    +'<div style="font-size:12.5px;color:var(--grey);margin-bottom:12px">Check your <b>'+id_type.toUpperCase()+'</b>. When a registry is connected this confirms it against the source of truth — the top <b>verified</b> rung. Until then it validates the format and records a <b>declared</b> claim (never a false “verified”).</div>'
-    +'<label style="font-size:11px;font-weight:700;color:var(--grey)">'+id_type.toUpperCase()+' number</label>'
+    +'<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:12px">Check your <b>'+id_type.toUpperCase()+'</b>. When a registry is connected this confirms it against the source of truth — the top <b>verified</b> rung. Until then it validates the format and records a <b>declared</b> claim (never a false “verified”).</div>'
+    +'<label style="font-size:var(--fs-1);font-weight:700;color:var(--grey)">'+id_type.toUpperCase()+' number</label>'
     +'<input id="vf_id" placeholder="'+(id_type==='iec'?'e.g. AAACR1234B':id_type.toUpperCase()+' number')+'" style="'+inS+'">'
     +'<div id="vf_err" style="color:#c0453b;font-size:12px;margin-bottom:8px"></div>'
     +'<button id="vf_btn" onclick="submitVerify()" style="width:100%;background:#2f8f5b;color:#fff;border:0;border-radius:9px;padding:11px;font-weight:700;cursor:pointer">🔗 Verify ID</button>'
@@ -479,9 +479,9 @@ function gatherReadiness(standard, doc){
   UI.rdGather = { standard:standard, doc:doc, title:(it&&it.title)||doc };
   var far = new Date(Date.now()+365*86400000).toISOString().slice(0,10);
   var inS = 'width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:13px;margin:5px 0 13px;box-sizing:border-box';
-  var lbl = 'font-size:11px;font-weight:700;color:var(--grey)';
+  var lbl = 'font-size:var(--fs-1);font-weight:700;color:var(--grey)';
   var body = '<div class="mbody" style="padding:16px 18px">'
-    +'<div style="font-size:12.5px;color:var(--grey);margin-bottom:13px">This records the clearance as a <b>chit on the rail</b> that carries your document — provenanced &amp; private. Buyers see only that it\'s met + its validity.</div>'
+    +'<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:13px">This records the clearance as a <b>chit on the rail</b> that carries your document — provenanced &amp; private. Buyers see only that it\'s met + its validity.</div>'
     +'<label style="'+lbl+'">Document (PDF/image · ≤ 6 MB)</label>'
     +'<input id="gd_file" type="file" style="'+inS+'">'
     +'<label style="'+lbl+'">Reference / number (optional)</label>'

@@ -37,7 +37,7 @@ async function loadFolders(){
 function _folderTree(parentId, depth){
   var kids=(UI.folders||[]).filter(function(f){ return (f.parent_id||null)===(parentId||null); });
   return kids.map(function(f){ var sel=UI.folderSel===f.folder_id;
-    return '<div style="display:flex;align-items:center;gap:6px;padding:6px 8px;padding-left:'+(8+depth*15)+'px;border-radius:9px;cursor:pointer;font-size:12.5px;'+(sel?'background:#eef4fc;color:#2c5aa0;font-weight:700':'color:#3a4048')+'" onclick="selectFolder(\''+f.folder_id+'\')">📁 '+esc(f.name)+'<span style="margin-left:auto;font-size:11px;color:var(--grey)">'+(f.count||0)+'</span></div>'+_folderTree(f.folder_id, depth+1);
+    return '<div style="display:flex;align-items:center;gap:6px;padding:6px 8px;padding-left:'+(8+depth*15)+'px;border-radius:9px;cursor:pointer;font-size:var(--fs-2);'+(sel?'background:#eef4fc;color:#2c5aa0;font-weight:700':'color:#3a4048')+'" onclick="selectFolder(\''+f.folder_id+'\')">📁 '+esc(f.name)+'<span style="margin-left:auto;font-size:var(--fs-1);color:var(--grey)">'+(f.count||0)+'</span></div>'+_folderTree(f.folder_id, depth+1);
   }).join('');
 }
 function foldersScreen(){
@@ -46,7 +46,7 @@ function foldersScreen(){
   var right= UI.folderSel ? _folderView() : emptyState('📁','Pick a folder','Or create one, then file chits into it with 📁 Move.');
   return '<div style="display:flex;height:100%;min-height:0">'
     +'<div style="width:250px;border-right:1px solid var(--line);overflow:auto;padding:12px 8px;flex:0 0 auto">'
-      +'<div style="font-size:11px;font-weight:800;color:var(--grey);letter-spacing:.05em;padding:2px 8px 8px">FOLDERS</div>'
+      +'<div style="font-size:var(--fs-1);font-weight:800;color:var(--grey);letter-spacing:.05em;padding:2px 8px 8px">FOLDERS</div>'
       +tree
       +'<div style="font-size:12px;color:var(--blue);padding:9px 8px 4px;cursor:pointer" onclick="newFolder()">＋ New folder</div></div>'
     +'<div style="flex:1;overflow:auto;min-width:0" id="detailpane">'+right+'</div></div>';
@@ -66,14 +66,14 @@ function _folderView(){
   var head='<div style="padding:14px 18px;border-bottom:1px solid var(--line)"><div style="font-size:17px;font-weight:800">📁 '+esc(f.name)+'</div>'
     +'<div style="font-size:11.5px;color:var(--grey);margin-top:2px">source = the sender / co-assist · destination = this folder</div>'
     +'<div style="display:flex;gap:6px;margin-top:11px;align-items:center">'+tab(!arch,'Current','setFolderArch(false)')+tab(arch,'Archive','setFolderArch(true)')
-    +'<span style="margin-left:auto;font-size:11px;color:var(--blue);cursor:pointer" onclick="renameFolder(\''+UI.folderSel+'\')">Rename</span>'
-    +'<span style="font-size:11px;color:#c0453b;cursor:pointer;margin-left:14px" onclick="deleteFolder(\''+UI.folderSel+'\')">Delete</span></div>'
+    +'<span style="margin-left:auto;font-size:var(--fs-1);color:var(--blue);cursor:pointer" onclick="renameFolder(\''+UI.folderSel+'\')">Rename</span>'
+    +'<span style="font-size:var(--fs-1);color:#c0453b;cursor:pointer;margin-left:14px" onclick="deleteFolder(\''+UI.folderSel+'\')">Delete</span></div>'
     /* ⚠️ PANES, NOT A DENSER PANE. Rules and metrics are each a full job; crushed into the chit list they would be
        unreadable on a phone and barely readable anywhere. One job per tab — the shape the compose flow already uses. */
     +'<div style="display:flex;gap:6px;margin-top:10px">'+_ftab('chits','📄 Chits')+_ftab('metrics','📊 Metrics')+_ftab('rules','⚙️ Rules')+'</div></div>';
   var list;
-  if(UI.folderChits===undefined) list='<div style="padding:16px;color:var(--grey);font-size:12.5px">Loading…</div>';
-  else if(!UI.folderChits.length) list='<div style="padding:22px 18px;color:var(--grey);font-size:12.5px">Nothing '+(arch?'in Archive':'here')+' yet. From Task, use 📁 Move to file a chit into this folder.</div>';
+  if(UI.folderChits===undefined) list='<div style="padding:16px;color:var(--grey);font-size:var(--fs-2)">Loading…</div>';
+  else if(!UI.folderChits.length) list='<div style="padding:22px 18px;color:var(--grey);font-size:var(--fs-2)">Nothing '+(arch?'in Archive':'here')+' yet. From Task, use 📁 Move to file a chit into this folder.</div>';
   else list=UI.folderChits.map(function(c){
     var bj=c.business_json; if(typeof bj==='string'){ try{ bj=JSON.parse(bj); }catch(e){ bj=null; } }
     var isDev=!!(bj&&bj.kind==='device_signal');
@@ -82,7 +82,7 @@ function _folderView(){
     var line2 = isDev ? ('🛰️ '+esc(bj.sub_type||bj.signal||'signal')+((bj.value!=null&&bj.value!=='')?(' = '+esc(String(bj.value))+esc(bj.unit||'')):'')+' · raised by <b>'+raiser+'</b>') : ('from '+esc(c.sender_entity_display_name||raiser));
     var when=(typeof fmtAt==='function'?esc(fmtAt(c.created_at)):'');
     var openA=(typeof openChit==='function')?('openChit(\''+c.chit_id+'\')'):'';
-    return '<div style="display:flex;gap:11px;padding:12px 18px;border-bottom:1px solid #f0f2f4;cursor:pointer" onclick="'+openA+'"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13.5px">'+(isDev?'🛢️ ':'')+subj+'</div><div style="font-size:11.5px;color:var(--grey);margin-top:2px">'+line2+'</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex:0 0 auto"><span style="font-size:11px;color:var(--grey)">'+when+'</span><span style="font-size:11px;color:var(--blue);border:1px solid #cfe0f4;background:#f2f7fd;border-radius:9px;padding:2px 8px" onclick="event.stopPropagation();moveChit(\''+c.chit_id+'\')">📁 Move</span></div></div>';
+    return '<div style="display:flex;gap:11px;padding:12px 18px;border-bottom:1px solid #f0f2f4;cursor:pointer" onclick="'+openA+'"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13.5px">'+(isDev?'🛢️ ':'')+subj+'</div><div style="font-size:11.5px;color:var(--grey);margin-top:2px">'+line2+'</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex:0 0 auto"><span style="font-size:var(--fs-1);color:var(--grey)">'+when+'</span><span style="font-size:var(--fs-1);color:var(--blue);border:1px solid #cfe0f4;background:#f2f7fd;border-radius:9px;padding:2px 8px" onclick="event.stopPropagation();moveChit(\''+c.chit_id+'\')">📁 Move</span></div></div>';
   }).join('');
   // The chit list is now ONE of three panes; metrics and rules render themselves.
   if(_FLD.tab==='metrics') return head+_folderMetricsPane();
@@ -319,12 +319,12 @@ function _gsMoney(v, mixed){
   if (!v || !v.length) return '<span style="color:var(--grey)">—</span>';
   /* ⚠️ SIDE BY SIDE, NEVER SUMMED. A figure spanning two currencies means nothing, most convincingly when tidy. */
   return v.map(function(x){ return '<b>' + esc(x.currency) + ' ' + esc(String(x.total)) + '</b>'; }).join('<span style="color:var(--grey)"> + </span>')
-    + (mixed ? '<div style="font-size:11px;color:#8a5a1e">not added together</div>' : '');
+    + (mixed ? '<div style="font-size:var(--fs-1);color:#8a5a1e">not added together</div>' : '');
 }
 function _groupSumPane(){
-  if (_FLD.busy && !_FLD.gs) return '<div style="padding:18px;color:var(--grey);font-size:12.5px"><span class="spin"></span> adding it up…</div>';
-  if (_FLD.err) return '<div style="padding:18px;color:#c0453b;font-size:12.5px">' + esc(_FLD.err) + '</div>';
-  var g = _FLD.gs; if (!g) return '<div style="padding:18px;color:var(--grey);font-size:12.5px">Nothing to add up.</div>';
+  if (_FLD.busy && !_FLD.gs) return '<div style="padding:18px;color:var(--grey);font-size:var(--fs-2)"><span class="spin"></span> adding it up…</div>';
+  if (_FLD.err) return '<div style="padding:18px;color:#c0453b;font-size:var(--fs-2)">' + esc(_FLD.err) + '</div>';
+  var g = _FLD.gs; if (!g) return '<div style="padding:18px;color:var(--grey);font-size:var(--fs-2)">Nothing to add up.</div>';
   var out = '<div style="padding:14px 18px">';
 
   /* ⚠️ A SELECTION MUST SAY SO, AND SAY IF IT LOST ANY. The scope toggle below is hidden here because neither
@@ -360,13 +360,13 @@ function _groupSumPane(){
 
   var req = g.requirement || [];
   if (req.length) {
-    out += '<div style="display:flex;font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);padding:0 0 4px"><span style="flex:1">Item</span><span style="width:110px;text-align:right">Quantity</span><span style="width:130px;text-align:right">Cost</span><span style="width:74px;text-align:right">Parties</span></div>';
+    out += '<div style="display:flex;font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);padding:0 0 4px"><span style="flex:1">Item</span><span style="width:110px;text-align:right">Quantity</span><span style="width:130px;text-align:right">Cost</span><span style="width:74px;text-align:right">Parties</span></div>';
     out += req.map(function(l, i){
       var open = !!(_FLD.gsOpen || {})[i];
       var name = esc(l.item) + (l.variant ? ' <span style="color:var(--grey);font-weight:600">· ' + esc(l.variant) + '</span>' : '');
       var head = '<div onclick="gsToggle(' + i + ')" style="display:flex;align-items:center;cursor:pointer;padding:7px 0;border-top:1px solid var(--line);font-size:13px">'
         + '<span style="flex:1;min-width:0">' + (open ? '▾' : '▸') + ' ' + name
-        + (l.matched_by_spelling ? ' <span title="matched through a misspelling" style="font-size:11px;color:#8a6d1f">≈</span>' : '') + '</span>'
+        + (l.matched_by_spelling ? ' <span title="matched through a misspelling" style="font-size:var(--fs-1);color:#8a6d1f">≈</span>' : '') + '</span>'
         /**
          * ⚠️ A SPLIT TOTAL IS NOT ZERO — SHOW A DASH.
          *
@@ -401,12 +401,12 @@ function _groupSumPane(){
               + '<span style="width:74px"></span></div>';
           }).join('')
         + '</div>' : '';
-      var partial = (open && l.value_partial) ? '<div style="font-size:11px;color:#8a5a1e;padding:0 0 8px 16px">⚠️ ' + l.value_partial.unpriced + ' of ' + (l.value_partial.priced + l.value_partial.unpriced) + ' have no price yet — the cost above is the priced part only, <b>not</b> the cost of this line.</div>' : '';
-      var split = l.unit_split ? '<div style="font-size:11px;color:#c0453b;padding:0 0 8px 16px">⚠️ ' + esc(l.flagged || 'unit split') + ' — ' + l.unit_split.map(function(u){ return esc(u.qty + ' ' + u.unit); }).join(' + ') + '</div>' : '';
+      var partial = (open && l.value_partial) ? '<div style="font-size:var(--fs-1);color:#8a5a1e;padding:0 0 8px 16px">⚠️ ' + l.value_partial.unpriced + ' of ' + (l.value_partial.priced + l.value_partial.unpriced) + ' have no price yet — the cost above is the priced part only, <b>not</b> the cost of this line.</div>' : '';
+      var split = l.unit_split ? '<div style="font-size:var(--fs-1);color:#c0453b;padding:0 0 8px 16px">⚠️ ' + esc(l.flagged || 'unit split') + ' — ' + l.unit_split.map(function(u){ return esc(u.qty + ' ' + u.unit); }).join(' + ') + '</div>' : '';
       return head + rows + partial + split;
     }).join('');
   } else {
-    out += '<div style="color:var(--grey);font-size:12.5px;padding:8px 0">Nothing totalled. ' + (g.chits_with_lines ? 'The lines here did not resolve to catalogue items — see below.' : 'None of these chits carry line items.') + '</div>';
+    out += '<div style="color:var(--grey);font-size:var(--fs-2);padding:8px 0">Nothing totalled. ' + (g.chits_with_lines ? 'The lines here did not resolve to catalogue items — see below.' : 'None of these chits carry line items.') + '</div>';
   }
 
   /* ⚠️ THE FLAGS TRAVEL WITH THE TOTALS, never on a separate screen nobody opens. A total with a gap beside it
@@ -419,17 +419,17 @@ function _groupSumPane(){
   ];
   blocks.forEach(function(bk){
     var arr = bk[2] || []; if (!arr.length) return;
-    out += '<div style="margin-top:12px"><div style="font-size:11px;font-weight:800;color:#8a5a1e;margin-bottom:3px">' + bk[1] + ' (' + arr.length + ')</div>'
+    out += '<div style="margin-top:12px"><div style="font-size:var(--fs-1);font-weight:800;color:#8a5a1e;margin-bottom:3px">' + bk[1] + ' (' + arr.length + ')</div>'
       + arr.slice(0, 25).map(function(x){ return '<div style="font-size:11.5px;color:var(--grey);padding:2px 0">· ' + bk[3](x) + '</div>'; }).join('')
-      + (arr.length > 25 ? '<div style="font-size:11px;color:var(--grey)">…and ' + (arr.length - 25) + ' more</div>' : '') + '</div>';
+      + (arr.length > 25 ? '<div style="font-size:var(--fs-1);color:var(--grey)">…and ' + (arr.length - 25) + ' more</div>' : '') + '</div>';
   });
 
   var mo = g.money || {};
   out += '<div style="margin-top:16px;border-top:1px solid var(--line);padding-top:10px">'
-    + '<div style="font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin-bottom:4px">Agreed value of these chits</div>'
+    + '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin-bottom:4px">Agreed value of these chits</div>'
     + ((mo.by_currency || []).length ? (mo.by_currency || []).map(function(x){ return '<span style="display:inline-block;border:1px solid var(--line);border-radius:9px;padding:3px 9px;margin:0 6px 6px 0;font-size:12px"><b>' + esc(x.currency) + '</b> ' + esc(String(x.total)) + ' <span style="color:var(--grey)">· ' + x.chits + ' chit' + (x.chits === 1 ? '' : 's') + '</span></span>'; }).join('') : '<span style="font-size:12px;color:var(--grey)">nothing with an agreed value</span>')
-    + (((mo.excluded || {}).awaiting_agreement) ? '<div style="font-size:11px;color:var(--grey)">' + mo.excluded.awaiting_agreement + ' chit(s) have no agreed value yet and are excluded — not counted as zero.</div>' : '')
-    + '<div style="font-size:11px;color:var(--grey);margin-top:4px">⚠️ This is the <b>agreed value of the chits</b>, which is a different question from the <b>cost of the requirement</b> above — a chit can carry priced lines and no agreed total, or the reverse.</div>'
+    + (((mo.excluded || {}).awaiting_agreement) ? '<div style="font-size:var(--fs-1);color:var(--grey)">' + mo.excluded.awaiting_agreement + ' chit(s) have no agreed value yet and are excluded — not counted as zero.</div>' : '')
+    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">⚠️ This is the <b>agreed value of the chits</b>, which is a different question from the <b>cost of the requirement</b> above — a chit can carry priced lines and no agreed total, or the reverse.</div>'
     + '</div></div>';
   return out;
 }
@@ -438,9 +438,9 @@ function _groupSumPane(){
 function _mBox(label, value, hint, tone){
   var col = tone === 'bad' ? '#c0453b' : tone === 'warn' ? '#8a5a1e' : 'var(--ink)';
   return '<div style="flex:1;min-width:104px;border:1px solid var(--line);border-radius:9px;padding:10px 12px;background:#fff">'
-    + '<div style="font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey)">' + esc(label) + '</div>'
+    + '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey)">' + esc(label) + '</div>'
     + '<div style="font-size:19px;font-weight:800;margin-top:3px;color:' + col + '">' + esc(String(value)) + '</div>'
-    + (hint ? '<div style="font-size:11px;color:var(--grey);margin-top:2px">' + esc(hint) + '</div>' : '') + '</div>';
+    + (hint ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">' + esc(hint) + '</div>' : '') + '</div>';
 }
 /**
  * ⭐ THE RECONCILIATION — Athi, 2026-08-10: *"total number of tasks in the database should be the sum of all the
@@ -469,23 +469,23 @@ function _reconStrip(){
     var s = f.segments || {};
     return '<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-top:1px solid var(--line);font-size:12px">'
       + '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📁 ' + esc(f.name) + '</span>'
-      + '<span style="color:var(--grey);font-size:11px">' + (s.open || 0) + ' open · ' + (s.unassigned || 0) + ' unassigned</span>'
+      + '<span style="color:var(--grey);font-size:var(--fs-1)">' + (s.open || 0) + ' open · ' + (s.unassigned || 0) + ' unassigned</span>'
       + '<span style="font-weight:800;min-width:34px;text-align:right">' + f.own + '</span>'
-      + (f.tree !== f.own ? '<span style="color:var(--grey);font-size:11px;min-width:52px;text-align:right">' + f.tree + ' w/ sub</span>' : '<span style="min-width:52px"></span>')
+      + (f.tree !== f.own ? '<span style="color:var(--grey);font-size:var(--fs-1);min-width:52px;text-align:right">' + f.tree + ' w/ sub</span>' : '<span style="min-width:52px"></span>')
       + '</div>';
   }).join('') : '<div style="font-size:11.5px;color:var(--grey);padding:5px 0">No folders on this track yet — everything is unfiled, which is why the two numbers match trivially.</div>';
 
   return '<div style="border:1px solid var(--line);border-radius:9px;padding:11px 13px;margin-bottom:12px;background:#fbfbfd">'
-    + '<div style="font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey)">Does it add up?</div>'
+    + '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey)">Does it add up?</div>'
     + '<div style="font-size:13px;margin-top:3px">' + sums + ' &nbsp; ' + verdict + '</div>'
-    + '<div style="font-size:11px;color:var(--grey);margin-top:2px">' + (r.overall || {}).assigned + ' assigned · ' + (r.overall || {}).unassigned + ' unassigned — a chit can be open and unassigned, and that is the pile worth seeing.</div>'
+    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">' + (r.overall || {}).assigned + ' assigned · ' + (r.overall || {}).unassigned + ' unassigned — a chit can be open and unassigned, and that is the pile worth seeing.</div>'
     + '<div style="margin-top:8px">' + rows + '</div>'
     + (r.reconciles ? '' : '<div style="font-size:11.5px;color:#c0453b;margin-top:7px">⚠️ Filed count and the sum of the folders disagree. A chit is filed into a folder this login cannot see.</div>')
     + '</div>';
 }
 function _folderMetricsPane(){
-  if (_FLD.busy && !_FLD.metrics) return '<div style="padding:18px;color:var(--grey);font-size:12.5px"><span class="spin"></span> measuring…</div>';
-  var m = _FLD.metrics; if (!m) return '<div style="padding:18px;color:var(--grey);font-size:12.5px">No metrics yet.</div>';
+  if (_FLD.busy && !_FLD.metrics) return '<div style="padding:18px;color:var(--grey);font-size:var(--fs-2)"><span class="spin"></span> measuring…</div>';
+  var m = _FLD.metrics; if (!m) return '<div style="padding:18px;color:var(--grey);font-size:var(--fs-2)">No metrics yet.</div>';
   var c = m.clock || {}, d = m.disputes || {}, mo = m.money || {};
   var dash = function(v, suffix){ return (v === null || v === undefined) ? '—' : (v + (suffix || '')); };
 
@@ -493,8 +493,8 @@ function _folderMetricsPane(){
     ? (mo.by_currency || []).map(function(b){ return '<span style="display:inline-block;border:1px solid var(--line);border-radius:9px;padding:3px 9px;margin:0 6px 6px 0;font-size:12px"><b>' + esc(b.currency) + '</b> ' + esc(String(b.total)) + ' <span style="color:var(--grey)">· ' + b.chits + ' chit' + (b.chits === 1 ? '' : 's') + '</span></span>'; }).join('')
     : '<span style="font-size:12px;color:var(--grey)">nothing with an agreed value</span>';
   /* ⚠️ NEVER ONE TOTAL ACROSS CURRENCIES, and the reason is said on screen rather than left as a design note. */
-  var moneyNote = (mo.mixed ? '<div style="font-size:11px;color:#8a5a1e;margin-top:2px">⚠️ More than one currency — these are <b>not</b> added together. A single total across currencies is a number that means nothing.</div>' : '')
-    + (((mo.excluded || {}).awaiting_agreement) ? '<div style="font-size:11px;color:var(--grey);margin-top:2px">' + mo.excluded.awaiting_agreement + ' chit(s) have no agreed value yet and are excluded — they are not counted as zero.</div>' : '');
+  var moneyNote = (mo.mixed ? '<div style="font-size:var(--fs-1);color:#8a5a1e;margin-top:2px">⚠️ More than one currency — these are <b>not</b> added together. A single total across currencies is a number that means nothing.</div>' : '')
+    + (((mo.excluded || {}).awaiting_agreement) ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">' + mo.excluded.awaiting_agreement + ' chit(s) have no agreed value yet and are excluded — they are not counted as zero.</div>' : '');
 
   return '<div style="padding:14px 18px">'
     + _reconStrip()
@@ -512,9 +512,9 @@ function _folderMetricsPane(){
     + _mBox('To close', dash(c.median_to_close_days, 'd'), 'time to finished')
     + _mBox('Disputed', dash(d.rate_pct, '%'), (d.open || 0) + ' open now', (d.open ? 'bad' : null))
     + '</div>'
-    + '<div style="margin-top:14px"><div style="font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin-bottom:5px">Value</div>'
+    + '<div style="margin-top:14px"><div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin-bottom:5px">Value</div>'
     + money + moneyNote + '</div>'
-    + '<div style="font-size:11px;color:var(--grey);margin-top:14px;line-height:1.5">A dash means <b>nothing to measure</b>, which is not the same as zero. '
+    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:14px;line-height:1.5">A dash means <b>nothing to measure</b>, which is not the same as zero. '
     + '“Overdue” is <b>your</b> setting — change it in Settings → Policy flags, and every folder and scorecard follows.</div>'
     + '</div>';
 }
@@ -596,19 +596,19 @@ function _ruleRow(r, i, n){
         + mvBtn('↓', i < n - 1, 'Run later — the rule below will beat this one',      'ruleMove(\'' + esc(r.rule_id) + '\',1)')
         + '</span>' : '')
     + '<label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" data-testid="rule-enabled" ' + (r.enabled ? 'checked' : '') + ' onchange="ruleToggle(\'' + esc(r.rule_id) + '\',this.checked)"><span style="font-weight:700;font-size:13px">' + esc(r.name || 'Rule') + '</span></label>'
-    + '<span style="margin-left:auto;font-size:11px;color:#c0453b;cursor:pointer" onclick="ruleDelete(\'' + esc(r.rule_id) + '\')">Delete</span></div>'
+    + '<span style="margin-left:auto;font-size:var(--fs-1);color:#c0453b;cursor:pointer" onclick="ruleDelete(\'' + esc(r.rule_id) + '\')">Delete</span></div>'
     /* ⚠️ AT TRACK LEVEL A RULE MUST NAME ITS DESTINATION. "file here" is only meaningful standing inside the
        folder; in the all-rules list it would read as if every rule filed into the same place, which is the exact
        confusion this list exists to remove. */
-    + '<div style="font-size:12.5px;margin-top:6px">When ' + terms + ' → ' + (_fldTrack() ? ('file into <b>📁 ' + esc(_fldFolderName(r.folder_id)) + '</b>') : 'file here') + '</div>'
+    + '<div style="font-size:var(--fs-2);margin-top:6px">When ' + terms + ' → ' + (_fldTrack() ? ('file into <b>📁 ' + esc(_fldFolderName(r.folder_id)) + '</b>') : 'file here') + '</div>'
     /* Observability: a rule that quietly stopped matching should be visible, not assumed to be working. */
-    + '<div style="font-size:11px;color:var(--grey);margin-top:4px">'
+    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">'
     + (r.match_count ? ('filed ' + r.match_count + ' chit' + (r.match_count == 1 ? '' : 's') + (r.last_matched_at ? ' · last ' + esc(String(r.last_matched_at).slice(0, 10)) : '')) : 'has not matched anything yet')
     + '</div></div>';
 }
 
 function _folderRulesPane(){
-  if (_FLD.busy && _FLD.rules === null) return '<div style="padding:18px;color:var(--grey);font-size:12.5px"><span class="spin"></span> reading rules…</div>';
+  if (_FLD.busy && _FLD.rules === null) return '<div style="padding:18px;color:var(--grey);font-size:var(--fs-2)"><span class="spin"></span> reading rules…</div>';
   var rules = _FLD.rules || [];
   var d = _FLD.draft;
   var out = '<div style="padding:14px 18px">';
@@ -626,7 +626,7 @@ function _folderRulesPane(){
   if (_FLD.rulesNote) out += '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;font-size:11.5px;color:#6b5a36;margin-bottom:9px">' + esc(_FLD.rulesNote) + '</div>';
   if (_FLD.err) out += '<div style="color:#c0453b;font-size:12px;margin-bottom:8px">' + esc(_FLD.err) + '</div>';
 
-  out += rules.length ? rules.map(function(r, i){ return _ruleRow(r, i, rules.length); }).join('') : '<div style="color:var(--grey);font-size:12.5px;padding:6px 0 12px">No rules yet. Everything arrives unfiled until you add one.</div>';
+  out += rules.length ? rules.map(function(r, i){ return _ruleRow(r, i, rules.length); }).join('') : '<div style="color:var(--grey);font-size:var(--fs-2);padding:6px 0 12px">No rules yet. Everything arrives unfiled until you add one.</div>';
 
   /* ⚠️ NO "ADD A RULE" AT TRACK LEVEL, and this is a real constraint rather than an omission: a rule's whole
      definition is "file into THIS folder", so from the track there is no destination to write down. Offering the
@@ -638,18 +638,18 @@ function _folderRulesPane(){
   } else {
     var opts = Object.keys(_RULE_HELP).map(function(k){ return '<option value="' + k + '"' + (d.term === k ? ' selected' : '') + '>' + esc(k) + '</option>'; }).join('');
     out += '<div style="border:1px solid var(--line);border-radius:12px;padding:12px 13px;background:var(--paper)">'
-      + '<div style="font-weight:700;font-size:12.5px;margin-bottom:8px">New rule</div>'
+      + '<div style="font-weight:700;font-size:var(--fs-2);margin-bottom:8px">New rule</div>'
       + '<input class="inp" data-testid="rule-name" placeholder="Name it (optional) — e.g. Ramesh invoices" value="' + esc(d.name || '') + '" oninput="ruleDraftSet(\'name\',this.value)" style="margin-bottom:8px">'
       + '<div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center">'
-      + '<span style="font-size:12.5px">When</span>'
+      + '<span style="font-size:var(--fs-2)">When</span>'
       + '<select class="inp" data-testid="rule-term" style="max-width:150px" onchange="ruleDraftSet(\'term\',this.value);_fldPaint()">' + opts + '</select>'
       + '<input class="inp" data-testid="rule-value" style="flex:1;min-width:130px" placeholder="' + esc(_RULE_HELP[d.term] || '') + '" value="' + esc(d.val || '') + '" oninput="ruleDraftSet(\'val\',this.value)">'
-      + '<span style="font-size:12.5px">→ file here</span></div>'
-      + '<div style="font-size:11px;color:var(--grey);margin-top:5px">' + esc(_RULE_HELP[d.term] || '') + '</div>'
+      + '<span style="font-size:var(--fs-2)">→ file here</span></div>'
+      + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:5px">' + esc(_RULE_HELP[d.term] || '') + '</div>'
       /* ⚠️ ONE TERM PER RULE, ON PURPOSE. Mixed AND/OR is what makes Outlook rules unpredictable past a handful:
          nobody can hold the precedence in their head, so the rule that fires is not the rule that was meant.
          Two conditions = two rules, in order — which is legible. */
-      + '<div style="font-size:11px;color:var(--grey);margin-top:3px">One condition per rule. Need two? Make two rules — they run in order, and the first match wins.</div>'
+      + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px">One condition per rule. Need two? Make two rules — they run in order, and the first match wins.</div>'
       + '<div style="display:flex;gap:8px;margin-top:10px">'
       + '<button data-testid="rule-preview" onclick="rulePreview()" style="border:1px solid var(--line);background:#fff;border-radius:9px;padding:9px 15px;font-size:13px;font-weight:700;cursor:pointer">🔎 What would this catch?</button>'
       + '<button class="composebtn" data-testid="rule-save" onclick="ruleSave()">Save rule</button>'
@@ -658,12 +658,12 @@ function _folderRulesPane(){
     if (_FLD.preview) {
       var p = _FLD.preview;
       out += '<div style="margin-top:11px;border-top:1px dashed var(--line);padding-top:9px">'
-        + '<div style="font-size:12.5px;font-weight:700">' + p.matched + ' of your last ' + p.scanned + ' chits would have been filed here</div>'
+        + '<div style="font-size:var(--fs-2);font-weight:700">' + p.matched + ' of your last ' + p.scanned + ' chits would have been filed here</div>'
         + (p.matched ? '<div style="margin-top:5px">' + p.sample.map(function(s){
             return '<div style="font-size:11.5px;padding:3px 0;border-top:1px solid #f0f2f4"><b>' + esc(s.subject || '(no subject)') + '</b> <span style="color:var(--grey)">· ' + esc(s.counterparty || '—') + ' · ' + esc(String(s.created_at || '').slice(0, 10)) + '</span></div>'; }).join('')
-          + (p.matched > p.sample.length ? '<div style="font-size:11px;color:var(--grey);margin-top:4px">…and ' + (p.matched - p.sample.length) + ' more</div>' : '') + '</div>'
+          + (p.matched > p.sample.length ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">…and ' + (p.matched - p.sample.length) + ' more</div>' : '') + '</div>'
           : '<div style="font-size:11.5px;color:#8a5a1e;margin-top:4px">⚠️ Nothing matched. A rule that catches nothing looks enabled and does nothing — check the term before saving.</div>')
-        + '<div style="font-size:11px;color:var(--grey);margin-top:6px">This is a preview only. Saving affects <b>new arrivals</b>; nothing already filed moves.</div></div>';
+        + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">This is a preview only. Saving affects <b>new arrivals</b>; nothing already filed moves.</div></div>';
     }
     out += '</div>';
   }

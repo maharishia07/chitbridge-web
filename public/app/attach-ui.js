@@ -164,14 +164,14 @@ function cbAttachList(atts, opts){
       + 'border-radius:6px;padding:' + pad + ';margin:0 5px 5px 0;font-size:11.5px;background:#fff;max-width:100%">'
       +   '<span style="font-size:12px;flex:none">' + cbAttachIcon(a.t) + '</span>'
       +   '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(short) + '</span>'
-      +   '<span style="font-size:11px;color:var(--grey);flex:none">' + esc(meta) + '</span>'
+      +   '<span style="font-size:var(--fs-1);color:var(--grey);flex:none">' + esc(meta) + '</span>'
       + '</span>';
   }).join('');
 
   return (opts.title ? '<div style="font-size:11.5px;color:var(--grey);margin:6px 0 4px">' + esc(opts.title)
                        + ' · ' + rows.length + '</div>' : '')
     + '<div data-testid="cb-attach-list" style="display:flex;flex-wrap:wrap;align-items:center">' + html + '</div>'
-    + (opts.note ? '<div style="font-size:11px;color:#b0641c;margin-top:2px">' + esc(opts.note) + '</div>' : '');
+    + (opts.note ? '<div style="font-size:var(--fs-1);color:#b0641c;margin-top:2px">' + esc(opts.note) + '</div>' : '');
 }
 
 /**
@@ -205,7 +205,7 @@ function cbAttachButton(ctx){
     + ' style="width:auto;flex:0 0 auto;margin:0;padding:6px 12px;font-size:11.5px;font-weight:700;'
     + 'border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink);cursor:pointer">'
     + esc(ctx.label || '📎 Attach a file') + '</button>'
-    + (ctx.note ? '<span style="font-size:11px;color:#b0641c;margin-left:8px">' + esc(ctx.note) + '</span>' : '');
+    + (ctx.note ? '<span style="font-size:var(--fs-1);color:#b0641c;margin-left:8px">' + esc(ctx.note) + '</span>' : '');
 }
 
 /* Read one File to bare base64 (the data: prefix stripped — the server strips it too, but sending it doubles
@@ -343,7 +343,7 @@ function cbAttachStagedChips(bucket, opts){
       + ' <span style="color:#6a707a">' + cbAttachSize(s.size) + '</span>'
       /* ⚠️ "not sent yet" is said on the chip, not implied by its position. A staged file looks exactly like an
          attached one otherwise, and the difference matters: one is evidence, the other is an intention. */
-      + ' <span style="font-size:11px;color:#8a5a1e">not sent yet</span>'
+      + ' <span style="font-size:var(--fs-1);color:#8a5a1e">not sent yet</span>'
       + ' <span onclick="cbAttachUnstage(\'' + cbAttachSafe(bucket) + '\',\'' + cbAttachSafe(s.key) + '\')"'
       + ' style="cursor:pointer;color:#9aa3a7;font-weight:800" title="Remove">✕</span></span>';
   }).join('');
