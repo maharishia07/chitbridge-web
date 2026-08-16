@@ -15,12 +15,33 @@ if (typeof EP !== 'undefined') { Object.assign(EP, {
 }); }
 // ── TRADE DOCUMENTS VAULT — the recurring inputs a business provides ONCE that pre-fill every authority form. Grouped;
 // matches the backend whitelist (lib/profile.js VAULT_SCHEMA). Gather here → forms are ~70% pre-filled thereafter. ──
+/* ⚠️ INCOTERMS® 2020 — THE ELEVEN RULES, IN THE ICC'S OWN TWO GROUPS. This was a free-text box with an "e.g. CIF"
+   placeholder, in the one field a customs form quotes verbatim; free text there guarantees CIF / c.i.f. / "CIF
+   Chennai" all meaning the same thing and none of them matching. The split is not cosmetic: FAS/FOB/CFR/CIF are
+   defined ONLY for sea and inland waterway, so a business shipping by air that picks FOB has written a term that
+   does not apply to its shipment. Grouping them the way the ICC does makes that visible at the moment of choosing.
+   ⚠️ Adopted, not invented — this list is the standard's, and it is versioned (2020). It is the same set the
+   commerce layer treats as source-entities; when that lands, this list is what it must agree with. */
+var INCOTERMS=[
+  ['Any mode of transport', [['EXW','EXW — Ex Works'],['FCA','FCA — Free Carrier'],['CPT','CPT — Carriage Paid To'],
+    ['CIP','CIP — Carriage and Insurance Paid To'],['DAP','DAP — Delivered at Place'],
+    ['DPU','DPU — Delivered at Place Unloaded'],['DDP','DDP — Delivered Duty Paid']]],
+  ['Sea and inland waterway only', [['FAS','FAS — Free Alongside Ship'],['FOB','FOB — Free on Board'],
+    ['CFR','CFR — Cost and Freight'],['CIF','CIF — Cost, Insurance and Freight']]]
+];
+/* Same grouped shape as INCOTERMS so one renderer serves both; an empty group name emits no <optgroup>.
+   ⚠️ Value === label here on purpose: an authority form PRINTS the mode, so what is stored is what is printed. */
+var SHIP_MODES=[['', [['Sea','Sea'],['Air','Air'],['Road','Road'],['Rail','Rail'],['Courier','Courier'],['Multimodal','Multimodal']]]];
+/* ⚠️ PLACEHOLDERS EARN THEIR PLACE — a hint goes where the format cannot be guessed (GSTIN, PAN, IFSC, SWIFT) or
+   where the acronym is opaque (IEC, AD code, LUT). They were scattered instead: Country got "e.g. India" while
+   IFSC — 11 characters in a fixed shape — got nothing, and free-text "Mode" got a hint it did not need.
+   A 4th slot holds select options; present means a dropdown, absent means a text box. */
 var VAULT_UI=[
-  {g:'identity', t:'🏢 Business identity', f:[['legal_name','Legal name','as registered'],['trade_name','Trade / brand name',''],['address','Address',''],['city','City',''],['state','State',''],['pincode','PIN / ZIP',''],['country','Country','e.g. India'],['email','Email',''],['phone','Phone','']]},
+  {g:'identity', t:'🏢 Business identity', f:[['legal_name','Legal name','as registered'],['trade_name','Trade / brand name','if different'],['address','Address','street / building'],['city','City',''],['state','State',''],['pincode','PIN / ZIP',''],['country','Country',''],['email','Email',''],['phone','Phone','']]},
   {g:'signatory', t:'✍️ Authorised signatory', f:[['name','Name',''],['designation','Designation','e.g. Director']]},
-  {g:'registrations', t:'🪪 Registrations', f:[['gstin','GSTIN','15-char'],['pan','PAN',''],['iec','IEC','Import-Export Code'],['ad_code','AD code','bank AD code'],['lut','LUT','export LUT no.']]},
-  {g:'banking', t:'🏦 Banking', f:[['bank_name','Bank name',''],['account_no','Account no.',''],['ifsc','IFSC',''],['swift','SWIFT / BIC',''],['ad_branch','AD branch','']]},
-  {g:'logistics', t:'🚢 Logistics defaults', f:[['port_loading','Port of loading','e.g. Nhava Sheva'],['incoterm','Preferred Incoterm','e.g. CIF'],['mode','Mode','Sea / Air']]}
+  {g:'registrations', t:'🪪 Registrations', f:[['gstin','GSTIN','15 characters'],['pan','PAN','10 characters'],['iec','IEC','Import-Export Code'],['ad_code','AD code','bank AD code'],['lut','LUT','export LUT no.']]},
+  {g:'banking', t:'🏦 Banking', f:[['bank_name','Bank name',''],['account_no','Account no.',''],['ifsc','IFSC','11 characters'],['swift','SWIFT / BIC','8 or 11 characters'],['ad_branch','AD branch','']]},
+  {g:'logistics', t:'🚢 Logistics defaults', f:[['port_loading','Port of loading','e.g. Nhava Sheva'],['incoterm','Preferred Incoterm','',INCOTERMS],['mode','Mode','',SHIP_MODES]]}
 ];
 function vaultCardHTML(vault, encrypted){
   vault=vault||{};
@@ -29,8 +50,25 @@ function vaultCardHTML(vault, encrypted){
     ? '<div style="font-size:11px;color:#256e47;background:#eaf6ee;border:1px solid #bfe3cb;border-radius:9px;padding:7px 10px;margin:6px 0 2px">🔒 <b>Encrypted at rest</b> — stored ciphertext-only (a database dump can\'t read it). Safe for real banking &amp; tax details.</div>'
     : '<div style="font-size:11px;color:#8a5f11;background:#fdf3e3;border:1px solid #f0dcae;border-radius:9px;padding:7px 10px;margin:6px 0 2px">⚠ <b>Encryption not configured</b> — the vault won\'t save until the platform sets its encryption key. Use <b>dummy data only</b> for now.</div>';
   var groups=VAULT_UI.map(function(G){
-    var fields=G.f.map(function(fl){ var k=fl[0], v=(vault[G.g]&&vault[G.g][k])||'';
-      return '<div style="display:flex;flex-direction:column;gap:2px"><label style="font-size:11px;color:var(--grey);font-weight:600">'+esc(fl[1])+'</label><input class="inp" id="v_'+G.g+'_'+k+'" value="'+esc(v)+'" placeholder="'+esc(fl[2]||'')+'" style="margin:0"></div>'; }).join('');
+    var fields=G.f.map(function(fl){ var k=fl[0], v=(vault[G.g]&&vault[G.g][k])||'', id='v_'+G.g+'_'+k;
+      /* A 4th slot means a closed set → a dropdown. ⚠️ The blank option is FIRST and stays selectable: these are
+         defaults, not answers, and a business with no usual Incoterm must be able to say so rather than being
+         handed one it never chose. An unrecognised stored value is kept as its own option instead of being
+         silently dropped — free text saved before this was a dropdown must survive being looked at. */
+      var ctl;
+      if (fl[3]) {
+        var known=false;
+        var body=fl[3].map(function(grp){
+          var opts=grp[1].map(function(o){ if(o[0]===v) known=true;
+            return '<option value="'+esc(o[0])+'"'+(o[0]===v?' selected':'')+'>'+esc(o[1])+'</option>'; }).join('');
+          return grp[0] ? '<optgroup label="'+esc(grp[0])+'">'+opts+'</optgroup>' : opts;
+        }).join('');
+        var keep = (v && !known) ? '<option value="'+esc(v)+'" selected>'+esc(v)+' — not a standard code</option>' : '';
+        ctl='<select class="inp" id="'+id+'" style="margin:0"><option value=""'+(v?'':' selected')+'>— none —</option>'+keep+body+'</select>';
+      } else {
+        ctl='<input class="inp" id="'+id+'" value="'+esc(v)+'" placeholder="'+esc(fl[2]||'')+'" style="margin:0">';
+      }
+      return '<div style="display:flex;flex-direction:column;gap:2px"><label style="font-size:11px;color:var(--grey);font-weight:600">'+esc(fl[1])+'</label>'+ctl+'</div>'; }).join('');
     return '<div style="margin-top:13px"><div style="font-size:12px;font-weight:700;color:var(--ink);margin-bottom:7px">'+G.t+'</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+fields+'</div></div>';
   }).join('');
   return '<div style="'+_CARD+';margin-top:10px"><div class="sec" style="margin:0">🗂 Trade documents vault <span style="font-size:11px;font-weight:600;color:var(--grey)">— fill once · pre-fills every form</span></div>'
@@ -500,14 +538,16 @@ async function loadMIS(){
  * where one ended and the next began, which is how the storefront's "Is your shop open?" came to sit a few
  * hundred pixels under identity's "Shop status" and read as its contradiction.
  */
+/* ⚠️ NO `q` SUBTITLE HERE — profileScreen() renders these as tabs and _misHead already prints the full sentence
+   above each section. The short version was a second, worse copy of it. */
 var PROF_SECS = [
-  { key:'identity',   name:'Identity',    q:'Who you are on the rail' },
-  { key:'storefront', name:'Storefront',  q:'What customers can see' },
+  { key:'identity',   name:'Identity'   },
+  { key:'storefront', name:'Storefront' },
   /* ⚠️ NOT "Governance" — Settings has a section by that name too, and two rows with one name in two screens is
      a collision even when the content differs. This one is your RESOLVED position (Governed by · Basics · Rights ·
      Allowances · Jurisdiction); the Settings one is the 7-layer model those values descend from. */
-  { key:'governance', name:'Your rights',  q:'What this entity may do' },
-  { key:'vault',      name:'Documents',   q:'Fill forms once, reuse' }
+  { key:'governance', name:'Your rights' },
+  { key:'vault',      name:'Documents'   }
 ];
 function profSec(){ return UI.profSec || 'identity'; }
 /**
@@ -516,24 +556,36 @@ function profSec(){ return UI.profSec || 'identity'; }
  * the document, so loadProfile's `if(!h) return` bailed and every section sat on the spinner forever. It worked on
  * FIRST entry only, because arriving at the screen triggers a second render that the section switch does not.
  */
-function profSetSec(k){ UI.profSec = k; renderApp(); _capShowDetail(); if (UI._me) { const h=document.getElementById('profbody');
+function profSetSec(k){ UI.profSec = k; renderApp(); if (UI._me) { const h=document.getElementById('profbody');
   if (h){ h.innerHTML = profSecHTML(k, UI._me); if (k === 'vault') loadVault(); } } else { loadProfile(); } }
 
+/**
+ * ⚠️ TABS, NOT A MASTER-DETAIL PANE (Athi, 2026-08-16). The list pane earns its width when it holds a GROWING
+ * list — chits, suppliers, categories — where scanning and selecting is the work. Profile holds exactly four
+ * fixed sections, forever, so a 320px scrollable column sat ~75% empty at every viewport while the forms it
+ * pushed aside wrapped in ~400px. The sections were navigation, not data.
+ *
+ * ⚠️ AND THE SUBTITLES GO WITH IT. Each rail row carried a `q` ("Who you are on the rail") that was a truncation
+ * of the description _misHead already prints above the section ("Who you are on the rail — and how others find
+ * you."). Two copies of one sentence, the shorter one first. The tab carries the name; the head keeps the sentence.
+ *
+ * ⚠️ NO BACK BUTTON AND NO showdetail: tabs are their own navigation on mobile too, so the master-detail dance
+ * (‹ Back, _capShowDetail, the drag divider) is not simplified here — it is GONE, along with the state it kept.
+ */
 function profileScreen(){
   if (SESSION.role === 'actor') return scr('👤 Profile', 'profbody', 'profile');   // actors keep the simple card
   var e = UI._me || {};
-  var rail = PROF_SECS.map(function(s){
-    return '<div class="row misrow' + (profSec() === s.key ? ' sel' : '') + '" data-testid="prof-sec-' + s.key + '" onclick="profSetSec(\'' + s.key + '\')">'
-      + '<div class="main2"><div class="l1"><span class="code">' + esc(s.name) + '</span></div><div class="l2">' + esc(s.q) + '</div></div></div>';
+  var tabs = PROF_SECS.map(function(s){
+    return '<button type="button" class="' + (profSec() === s.key ? 'on' : '') + '" data-testid="prof-sec-' + s.key + '"'
+      + ' onclick="profSetSec(\'' + s.key + '\')">' + esc(s.name) + '</button>';
   }).join('');
-  var list = '<div class="list"><div class="lh" style="padding:0"><div class="misbar"><span class="misttl">👤 Profile</span>'
-    + '<span class="misbar-r"><span class="misasof">' + esc(e.display_name || '') + '</span></span></div></div>'
-    + '<div class="rows" id="prof_rail">' + rail + '</div></div>';
-  var detail = '<div class="detail" id="detailpane"><div id="profbody"><button class="dback" data-testid="cap-back" onclick="backToList()">‹ Back</button></div></div>';
-  var divider = '<div class="divider" id="divider" onmousedown="startDrag(event)" ontouchstart="startDrag(event)" role="separator" aria-label="Resize panes"><span class="grip"></span></div>';
-  if (UI.misLw == null) UI.misLw = 320;
-  var lw = Math.min(UI.misLw, Math.max(260, Math.round((window.innerWidth || 1200) * 0.42)));
-  return '<div class="panel' + ((UI.vp === 'mob' && UI.mdetail) ? ' showdetail' : '') + '" id="panel" style="--lw:' + lw + 'px;--lh:' + (UI.lh || 300) + 'px">' + list + divider + detail + '</div>';
+  return '<div style="flex:1;min-height:0;overflow-y:auto"><div style="padding:14px;max-width:640px;margin:0 auto">'
+    + '<div class="misbar" style="margin-bottom:9px"><span class="misttl">👤 Profile</span>'
+    + '<span class="misbar-r"><span class="misasof">' + esc(e.display_name || '') + '</span></span></div>'
+    + '<div class="statetabs" role="tablist">' + tabs + '</div>'
+    /* ⚠️ SHIPS A SPINNER, NOT AN EMPTY DIV — if the `me` fetch is already in flight this render paints nothing
+       of its own, and a blank panel under live tabs reads as a broken screen rather than a loading one. */
+    + '<div id="profbody"><div class="loadwrap"><span class="spin"></span> loading…</div></div></div></div>';
 }
 
 /**
@@ -548,9 +600,14 @@ async function loadProfile(){ const h=document.getElementById("profbody"); if(!h
   if(_profBusy) return;
   _profBusy = true;
   try{ const e=(await api("me"))||{}; UI._me=e;
-    h.innerHTML = profSecHTML(profSec(), e);
+    /* ⚠️ RE-QUERY THE HOST AFTER THE AWAIT. renderApp() rebuilds the screen wholesale, so a repaint that lands
+       while this fetch is in flight — switching viewport, opening the menu — detaches the node captured above.
+       Writing to that stale reference paints into a node no longer in the document and the panel stays blank
+       with no error anywhere. Every await in this file that is followed by a DOM write has the same hazard. */
+    const h2=document.getElementById("profbody"); if(!h2) return;
+    h2.innerHTML = profSecHTML(profSec(), e);
     if (profSec() === 'vault') loadVault();   // the trade documents vault (async — pre-fills authority forms)
-  }catch(e){ h.innerHTML=scrErr(e); }
+  }catch(e){ const h3=document.getElementById("profbody"); if(h3) h3.innerHTML=scrErr(e); }
   finally { _profBusy = false; } }
 
 /**
