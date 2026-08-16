@@ -35,8 +35,12 @@ test.describe('Module · Catalogue (full CRUD)', () => {
     });
 
     await test.step('DELETE', async () => {
-      page.once('dialog', (d) => d.accept());                    // delProduct() uses window.confirm()
+      /* ⚠️ IN-APP CONFIRM NOW, NOT window.confirm() — delProduct routes through confirmAsk (2026-08-16, the
+         native-dialog sweep). The old `page.once('dialog', …)` handler is not just unnecessary, it is a trap:
+         it never fires, so it silently does nothing, and the click alone would leave the modal open with the
+         product still there. Confirming a destructive action is now a real click on a real button. */
       await page.getByTestId('cat-delete').click();
+      await page.getByTestId('confirm-ok').click();
       await expect(page.getByText(name)).toHaveCount(0);         // gone from the list
     });
   });

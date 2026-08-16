@@ -108,6 +108,7 @@ test.describe('Capture connector · Intake', () => {
     await page.getByTestId('nav-intake').click();
     await expect(page.getByTestId('intake-dismiss').first()).toBeVisible({ timeout: 15000 });
     await page.getByTestId('intake-dismiss').first().click();
+    await page.getByTestId('confirm-ok').click();     // in-app confirm since the native-dialog sweep
     await expect(page.getByTestId('intake-row')).toHaveCount(before, { timeout: 15000 });
   });
 
@@ -126,6 +127,11 @@ test.describe('Capture connector · Intake', () => {
     await expect(page.locator('#intake_body')).toContainText(TEXT);
 
     await page.getByTestId('intake-dismiss').first().click();
+    /* ⚠️ IN-APP CONFIRM NOW (2026-08-16 native-dialog sweep) — the `page.on('dialog')` above no longer fires for
+       this one. It stays for the simulate step; THIS click is what actually dismisses. Without it the assertion
+       below would fail with the message still on screen, looking like a broken dismiss rather than a spec that
+       never pressed the button. */
+    await page.getByTestId('confirm-ok').click();
     /**
      * It leaves the PENDING queue — and the row is NOT deleted. The capture stays in the table marked dismissed,
      * as a receipt that the message arrived and was deliberately not turned into a chit. "We never got it" and
