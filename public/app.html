@@ -2595,11 +2595,11 @@ function clearFolder(){ UI.folderSel=null; UI.sel=null; UI.detail=null; renderAp
 /* ⚠️ ALSO OPENS FROM THE TRACK, not only from inside a folder. Athi: *"even in task, bring metrics and rules as
    icon, give the same ux and functionalities."* Task and Order ARE folders — the ones you are always in — so the
    same two panes answer the same two questions one level up. It is the identical modal; only the scope differs. */
-async function openFolderPane(tab){
+async function openFolderPane(tab, opts){
   await ensureCap('folders');
   const f=UI.folderSel?((UI.folders||[]).find(x=>x.folder_id===UI.folderSel)||{name:'Folder'}):null;
   const where=f?('📁 '+esc(f.name)):(UI.folder==='order'?'📤 Order':'📥 Task');
-  _FLD.tab=tab; _FLD.metrics=null; _FLD.recon=null; _FLD.rules=null; _FLD.gs=null; _FLD.gsOpen={}; _FLD.gsAll=false; _FLD.err=null; _FLD.draft=null; _FLD.preview=null;
+  _FLD.tab=tab; _FLD.metrics=null; _FLD.recon=null; _FLD.rules=null; _FLD.gs=null; _FLD.gsOpen={}; _FLD.gsAll=false; _FLD.gsIds=(opts&&opts.chit_ids)||null; _FLD.err=null; _FLD.draft=null; _FLD.preview=null;
   const _title={rules:'⚙️ Rules', groupsum:'🧮 Group sum', metrics:'📊 Metrics'}[tab]||'📊 Metrics';
   const _sub={
     rules:    f?'what gets filed in here automatically':'every rule on this track, and where each one files',
@@ -6630,8 +6630,29 @@ function todo(k){ const t=PENDING[k]||{label:k,ref:""}; toast(MSG.comingSoon(t.l
 function selBar(){const ids=UI.selected;const all=`<button onclick="selectAllRows()">☑ All</button>`;const clr=`<button onclick="UI.selected.clear();renderApp()">Clear</button>`;
   if(UI.folder==='trash'){ return `<div class="selbar" id="selbar">☑ ${ids.size} selected<span class="sp">${all}<button class="pri" onclick="bulkRestore()">↩ Restore</button><button onclick="bulkPurge()">🗑 Delete forever</button>${clr}</span></div>`; }
   if(UI.folder==='archive'){ return `<div class="selbar" id="selbar">☑ ${ids.size} selected<span class="sp">${all}<button class="pri" onclick="bulkUnarchive()">↩ Unarchive</button>${clr}</span></div>`; }
-  const sum=UI.rows.filter(c=>ids.has(c.id)).reduce((a,c)=>a+c.amt,0);const rb=rollupBuckets();const ticked=hasRollup()?[...UI.aggStates].reduce((a,s)=>a+((rb[s]&&rb[s].s)||0),0):UI.rows.filter(c=>UI.aggStates.has(c.state)).reduce((a,c)=>a+c.amt,0);const lbl=ids.size?`☑ ${ids.size} selected · Σ ${inr(sum)}`:`states ✓ ${[...UI.aggStates].map(cap).join(" · ")||'none'} · Σ(all) ${inr(ticked)}`;return `<div class="selbar" id="selbar">${lbl}<span class="sp">${all}<button onclick="sumScope()">Sum →</button><button onclick="quickStatus()">Status</button><button class="pri" onclick="quickAssign()">Assign</button>${clr}</span></div>`;}
+  const sum=UI.rows.filter(c=>ids.has(c.id)).reduce((a,c)=>a+c.amt,0);const rb=rollupBuckets();const ticked=hasRollup()?[...UI.aggStates].reduce((a,s)=>a+((rb[s]&&rb[s].s)||0),0):UI.rows.filter(c=>UI.aggStates.has(c.state)).reduce((a,c)=>a+c.amt,0);const lbl=ids.size?`☑ ${ids.size} selected · Σ ${inr(sum)}`:`states ✓ ${[...UI.aggStates].map(cap).join(" · ")||'none'} · Σ(all) ${inr(ticked)}`;return `<div class="selbar" id="selbar">${lbl}<span class="sp">${all}<button onclick="sumScope()">Sum →</button>${ids.size?`<button onclick="groupSumSelected()" title="Quantity per item across the ticked chits — what you actually need to buy">🧮 Group sum</button>`:``}<button onclick="quickStatus()">Status</button><button class="pri" onclick="quickAssign()">Assign</button>${clr}</span></div>`;}
 function updateSelBar(){const el=document.getElementById("selbar");if(el)el.outerHTML=selBar();}
+/**
+ * ⭐ 🧮 GROUP SUM OVER THE TICKED CHITS (backlog 31). Athi: *"is the group sum happens for multiselect chit?"*
+ *
+ * Σ Sum on this bar totals MONEY only, in a toast. The per-item breakdown — "across these five I need 40kg onion
+ * and 25 bunches of curry leaf" — was reachable only for a whole track or folder, which is the least likely place
+ * to want it: you tick the five orders you are about to source, not a folder.
+ *
+ * ⚠️ ONE CONSOLIDATION PATH. This opens the SAME pane with the SAME endpoint and only changes which rows are
+ * selected. The unit rules — never invent a conversion — live in lib/consolidate.js and there must stay exactly
+ * one of them; a second "sum for a selection" implementation would be free to drift from it, and the drift would
+ * show up as money.
+ */
+async function groupSumSelected(){
+  const ids=[...UI.selected];
+  if(!ids.length){ toast("Tick some chits first."); return; }
+  await ensureCap('folders');
+  /* ⚠️ PASSED IN, NOT SET BEFOREHAND. openFolderPane() resets every pane field on the way in — as it should, or
+     a stale total from the last folder flashes up — so setting _FLD.gsIds here and calling it would wipe the
+     very thing we came to say. The caller declares the selection; the reset stays unconditional. */
+  openFolderPane('groupsum', { chit_ids: ids });
+}
 function sumScope(){
   const sel=UI.rows.filter(c=>UI.selected.has(c.id));
   if(sel.length){ // explicit picks → exact sum of the selected (loaded) records

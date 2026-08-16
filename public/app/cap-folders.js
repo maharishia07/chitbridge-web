@@ -293,7 +293,13 @@ async function loadGroupSum(){
   var fid = (UI.folderSel && !_FLD.gsAll) ? UI.folderSel : null;
   var scope = UI.folderSel ? ((UI.folders || []).find(function(f){ return f.folder_id === UI.folderSel; }) || {}).scope || 'task'
                            : (UI.folder === 'order' ? 'order' : 'task');
-  try { _FLD.gs = await api('folderGroupSum', { query: { scope: scope, folder_id: fid || undefined } }); _FLD.err = null; }
+  /* ⭐ A TICKED SELECTION WINS OVER THE FOLDER (backlog 31). `_FLD.gsIds` is set only by the select bar's
+     🧮 button, so the ordinary folder/track reading is untouched when nothing is ticked.
+     ⚠️ The folder filter is dropped for a selection on purpose — you ticked those chits, and silently
+     intersecting them with the folder you happen to be standing in would drop rows you explicitly chose. */
+  var ids = (_FLD.gsIds && _FLD.gsIds.length) ? _FLD.gsIds : null;
+  if (ids) fid = null;
+  try { _FLD.gs = await api('folderGroupSum', { query: { scope: scope, folder_id: fid || undefined, chit_ids: ids ? ids.join(',') : undefined } }); _FLD.err = null; }
   catch (e) {
     var m = (e && e.message) || '';
     /* ⚠️ NAME THE ACTUAL CAUSE. Unlike the Rules pane there is no older endpoint to fall back to, so a 404 here
@@ -321,7 +327,24 @@ function _groupSumPane(){
   var g = _FLD.gs; if (!g) return '<div style="padding:18px;color:var(--grey);font-size:12.5px">Nothing to add up.</div>';
   var out = '<div style="padding:14px 18px">';
 
-  if (UI.folderSel) {
+  /* ⚠️ A SELECTION MUST SAY SO, AND SAY IF IT LOST ANY. The scope toggle below is hidden here because neither
+     reading applies — this is neither "this folder" nor "the whole track", it is the chits you ticked. And if
+     fewer came back than were asked for, that is stated rather than absorbed: the difference is chits outside
+     this track or beyond the row limit, and a pane headed "5 chits" when you ticked 7 is a quiet lie. */
+  /* ⚠️ VERSION SKEW MUST NOT LOOK LIKE AN ANSWER. An API that predates `chit_ids` ignores the parameter and
+     happily returns the WHOLE TRACK — 19 chits when the user ticked 2 — and every number below would be right
+     for a question they did not ask. Seen live while building this. So the claim is checked against the reply:
+     we asked for a selection, and if the server did not confirm one, say the selection was ignored. */
+  if (_FLD.gsIds && _FLD.gsIds.length && !g.selected) {
+    out += '<div style="background:#fbeceb;border:1px solid #f0c9c6;border-radius:9px;padding:8px 11px;font-size:11.5px;color:#8c3a34;margin-bottom:10px">'
+      + '⚠️ <b>Your selection was ignored.</b> This server does not support totalling a ticked set yet, so the figures below are for the <b>whole track</b>, not your ' + _FLD.gsIds.length + ' chits.</div>';
+  } else if (g.selected) {
+    var miss = (g.selection_requested || 0) - (g.chits || 0);
+    out += '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:8px 11px;font-size:11.5px;color:#6b5a36;margin-bottom:10px">'
+      + '☑ <b>' + (g.chits || 0) + ' ticked chit' + ((g.chits === 1) ? '' : 's') + '</b> — not this folder or the whole track.'
+      + (miss > 0 ? ' ⚠️ ' + miss + ' of the ' + g.selection_requested + ' you ticked are not on this track and were left out.' : '')
+      + '</div>';
+  } else if (UI.folderSel) {
     var b = function(on, lbl, arg){ return '<span onclick="gsScope(' + arg + ')" style="cursor:pointer;border:1px solid var(--line);border-radius:9px;padding:3px 10px;font-size:11.5px;margin-right:6px;' + (on ? 'background:var(--blue);color:#fff;border-color:var(--blue);font-weight:700' : 'background:#fff') + '">' + lbl + '</span>'; };
     out += '<div style="margin-bottom:10px">' + b(!_FLD.gsAll, 'This folder', 'false') + b(!!_FLD.gsAll, 'Whole track — every folder', 'true') + '</div>';
   }
