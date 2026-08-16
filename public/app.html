@@ -1073,6 +1073,10 @@ const EP = {
   netAvail:        {m:"GET",  p:"/api/network-design/availability",       ok:"✓"},
   netStores:       {m:"GET",  p:"/api/network-design/stores",             ok:"✓"},  // the network as a LIST — browse a store the supplier way  // who in my network has this — real stock, with its source and date
   prodAvail:       {m:"PUT",  p:"/api/products/:id/availability",         ok:"✓"},  // this store reports what it has, and when that was true
+  /* ⭐ PRODUCT ENQUIRY (backlog 9, case 2) — ask about an item BEFORE there is a chit. Rides on chit_messages
+     via b161's generalised anchor, so it is the same thread engine and the same inbox, not a second one. */
+  enquiryRead:     {m:"GET",  p:"/api/catalogue/enquiry/:itemId",        ok:"y"},
+  enquirySend:     {m:"POST", p:"/api/catalogue/enquiry/:itemId",        ok:"✓"},
   catFaceGet:      {m:"GET",  p:"/api/catalogue-face",                    ok:"✓"},  // b112 — load this entity's saved catalogue face (cross-device)
   catFacePut:      {m:"PUT",  p:"/api/catalogue-face",                    ok:"✓"},  // b112 — save (upsert) the whole catalogue face config
   schemaFields:    {m:"GET",  p:"/api/schemas/fields",                     ok:"✓"},  // the columns this catalogue declares — what a variant can be keyed or grouped on
@@ -3911,8 +3915,15 @@ function supFindBodyHTML(){
            USD would have had their number relabelled as rupees — a wrong price that looks perfectly normal. */
         + r.hits.map(function(p){ const d=p.item_data||p;
             const cur=(r.cat&&r.cat.supplier&&r.cat.supplier.currency_code)||(r.cat&&r.cat.shop&&r.cat.shop.currency)||myCur();
+            /* ⭐ ASK ABOUT IT (backlog 9). Athi: *"need to have a quick enquiry about the product or details
+               about it… it is an enquiry."* This is the moment the question actually occurs — you have found
+               who lists it and you want to know the lead time before committing to an order. Only shown when
+               the row carries an item_id: the fan-out fallback returns bare item_data with no id, and a button
+               that cannot identify its subject would fail on click rather than be absent. */
             return '<div class="sfline"><span>'+esc(d.name||d.product||'item')+'</span><span class="mono">'
-              +esc(fmtMoney(cbAmount(d.price),cur))+' / '+esc(d.unit||'unit')+'</span></div>'; }).join('')
+              +esc(fmtMoney(cbAmount(d.price),cur))+' / '+esc(d.unit||'unit')
+              +(p.item_id ? ' <button type="button" data-testid="enq-ask" onclick="enquiryOpen(\''+esc(p.item_id)+'\',\''+esc(String(d.name||d.product||'item').replace(/'/g,''))+'\')" style="margin-left:7px;border:1px solid var(--line);background:#fff;border-radius:7px;padding:1px 8px;font-size:11px;color:var(--blue);cursor:pointer">Ask</button>' : '')
+              +'</span></div>'; }).join('')
         /* ⚠️ SAY WHEN THE LIST IS CUT. Six per supplier is a display cap, and an unannounced cap reads as "that
            is all they have" — the same class of lie as reporting an unreported store as zero. The server knows
            the real overflow (`more`); only the fan-out fallback cannot, and there it is simply absent. */
@@ -3927,6 +3938,76 @@ function supFindBodyHTML(){
   }
   return body;
 }
+/* ═══ PRODUCT ENQUIRY (backlog 9, case 2) ═══════════════════════════════════════════════════════════════════
+ * Ask a supplier about an item before there is anything to order — availability, spec, lead time.
+ *
+ * ⚠️ IT IS THE SAME OBJECT AS A CHIT MESSAGE, with a different subject. b161 generalised the anchor rather than
+ * adding a `product_enquiry` table precisely so this needs no second thread engine, no second unread count and
+ * no second set of per-copy rules — all of which would drift from the ones that already work.
+ *
+ * ⚠️ CASE 2 ONLY: business → supplier, both sides CB entities. A storefront customer has no inbox, and
+ * answering them needs channel-outbound, which has no receipt yet. Inviting a question nobody can answer would
+ * be worse than not offering it.
+ */
+var _ENQ = null;   // { item_id, name, msgs, busy, err }
+async function enquiryOpen(item_id, name){
+  _ENQ = { item_id: item_id, name: name || 'this item', msgs: null, busy: true, err: null };
+  modal('<div class="mhd"><div class="t">💬 Ask about ' + esc(_ENQ.name) + '</div>'
+    + '<div class="s">A question before there is an order — availability, spec, lead time. It reaches them like any other message.</div></div>'
+    + '<div class="mbody" id="enqbody" style="padding:14px 18px">'
+    + '<div style="color:var(--grey);font-size:12.5px"><span class="spin"></span> reading…</div></div>', true);
+  await enquiryLoad();
+}
+async function enquiryLoad(){
+  if (!_ENQ) return;
+  try { var r = await api('enquiryRead', { params: { itemId: _ENQ.item_id } });
+        _ENQ.msgs = (r && r.messages) || []; _ENQ.migrated = !(r && r.migrated === false); _ENQ.err = null; }
+  catch (e) { _ENQ.err = (e && e.message) || 'Could not read this conversation.'; }
+  _ENQ.busy = false; enquiryPaint();
+}
+function enquiryPaint(){
+  var h = document.getElementById('enqbody'); if (!h || !_ENQ) return;
+  var out = '';
+  if (_ENQ.err) out += '<div style="color:#c0453b;font-size:12px;margin-bottom:8px">' + esc(_ENQ.err) + '</div>';
+  /* ⚠️ SAY WHEN THE FEATURE IS NOT INSTALLED, rather than showing an empty thread. b162 ships as SQL Athi runs;
+     between the code deploy and that run, an empty list would read as "no one has asked" — which is a different
+     and misleading fact. */
+  if (_ENQ.migrated === false) {
+    out += '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;font-size:11.5px;color:#6b5a36;margin-bottom:9px">'
+      + '⚠️ Product enquiries are not enabled on this deployment yet (needs b162). Nothing has been lost — there is simply nowhere to put the question.</div>';
+  }
+  var msgs = _ENQ.msgs || [];
+  out += msgs.length
+    ? msgs.map(function(m){
+        var mine = (m.sender_entity_id === SESSION.entity);
+        return '<div style="border:1px solid var(--line);border-radius:9px;padding:9px 11px;margin-bottom:7px;background:' + (mine ? 'var(--paper)' : '#fff') + '">'
+          + '<div style="font-size:11px;color:var(--grey);margin-bottom:3px">' + esc(m.sender_display_name || (mine ? 'You' : 'Them'))
+          + ' · ' + esc(String(m.created_at || '').slice(0, 16).replace('T', ' ')) + '</div>'
+          + '<div style="font-size:12.5px;white-space:pre-wrap">' + esc(m.message_text || '') + '</div></div>';
+      }).join('')
+    : '<div style="color:var(--grey);font-size:12.5px;padding:4px 0 10px">No questions yet. Ask the first one.</div>';
+  out += '<textarea id="enq_text" rows="3" placeholder="e.g. is this available in 25kg, and what is the lead time?" style="width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:9px;padding:9px 11px;font-size:13px;resize:vertical;margin-top:6px"></textarea>'
+    + '<div class="err" id="enq_err" style="margin-top:6px"></div>'
+    + '<button class="composebtn" data-testid="enq-send" style="margin-top:9px" onclick="enquirySend()">Send question</button>';
+  h.innerHTML = out;
+}
+async function enquirySend(){
+  if (!_ENQ) return;
+  var t = document.getElementById('enq_text'), err = document.getElementById('enq_err');
+  var txt = (t && t.value || '').trim();
+  if (err) err.textContent = '';
+  if (!txt) { if (err) err.textContent = 'Type a question first.'; return; }
+  try {
+    await api('enquirySend', { params: { itemId: _ENQ.item_id }, body: { message_text: txt, thread_type: 'external' } });
+    if (t) t.value = '';
+    await enquiryLoad();
+  } catch (e) {
+    /* ⚠️ A 404 HERE MEANS "you may not ask about this" AND "it does not exist" — the server refuses to say which,
+       on purpose. Reflecting that ambiguity honestly is better than inventing a reason we do not have. */
+    if (err) err.textContent = (e && e.message) || 'Could not send that question.';
+  }
+}
+
 function supFindHTML(){
   if(!UI.supFind) return '';
   /* Not .supslide — it is a MODE BODY now, sitting in the flow beneath the tabs, not an overlay across them. */
