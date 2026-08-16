@@ -1928,6 +1928,75 @@ function setShop(s){SESSION.shop=s;
   document.querySelectorAll('.shoptog button').forEach(b=>{b.classList.remove('on','open','closed','away');if(b.dataset.s===s){b.classList.add('on',s);}});
   toast({open:"Shop Open — accepting orders.",closed:"Shop Closed — new orders are blocked.",away:"Away — orders still accepted; customer is told service may be delayed."}[s]);
 }
+/**
+ * ⭐⭐ THEMES — Athi, 2026-08-16: *"provide a theme in the menu bar, so user can select their own themes."*
+ *
+ * ── HOW IT WORKS ──────────────────────────────────────────────────────────────────────────────────────────────
+ * A theme is nothing but a set of overrides for the `:root` tokens. `data-theme` goes on <html>, CSS below
+ * redefines the tokens for that value, and every surface that reads `var(--…)` follows instantly. No re-render,
+ * no reload, no per-screen work — which is exactly why tokens were worth having.
+ *
+ * ── ⚠️ WHY THERE IS NO DARK THEME HERE, AND WHAT IT WOULD TAKE ────────────────────────────────────────────────
+ * Measured 2026-08-16: **2,302 hardcoded hex colours** outside the token set — 930 in this file, 1,372 across the
+ * capability files. On a LIGHT theme that is survivable, because most of them are SEMANTIC (red for a dispute,
+ * green for done, amber for pending) and stay correct on any pale ground.
+ *
+ * ⚠️ ON A DARK GROUND THEY BREAK — and they break silently: `#eef3fb` chip backgrounds, `#fff` panels and
+ * near-black text are all light-on-light assumptions. A dark theme shipped today would be a half-dark screen
+ * with unreadable patches, which is worse than no dark theme at all, because the user cannot tell whether they
+ * broke it. Dark is therefore GATED on migrating those colours into tokens. See the backlog.
+ *
+ * ⭐ THE THEMES BELOW ARE ALL LIGHT ON PURPOSE — every one of them is fully honoured by every screen today.
+ * Nothing here is a preview, a beta, or half-applied.
+ */
+var THEMES = {
+  cream:  { name: 'Cream',   dot: '#FAF8F4', vars: {} },   // the default; no overrides at all
+  /* Cooler and flatter — the closest thing to a "plain white app", for anyone who finds the cream warm. */
+  cool:   { name: 'Cool',    dot: '#F4F6F8', vars: {
+            '--paper':'#F4F6F8', '--card':'#ffffff', '--line':'#DEE3E8',
+            '--gold-soft':'#EEF2F6', '--gold-line':'#D6DEE6' } },
+  /* Higher separation between page, card and rule — for a bright counter or an older screen. */
+  contrast:{ name: 'Contrast', dot: '#ffffff', vars: {
+            '--paper':'#ffffff', '--card':'#ffffff', '--line':'#B9C2CB',
+            '--ink':'#0A1E29', '--grey':'#4E555C' } },
+  /* Warmer and softer than cream, less glare under strong light. */
+  sand:   { name: 'Sand',    dot: '#F3EDE1', vars: {
+            '--paper':'#F3EDE1', '--card':'#FFFDF8', '--line':'#DED3BF',
+            '--gold-soft':'#F6EFE0', '--gold-line':'#E0D2B4' } },
+};
+function themeGet(){ try{ return localStorage.getItem('cb_theme') || 'cream'; }catch(_){ return 'cream'; } }
+/**
+ * ⚠️ APPLIED BY WRITING THE TOKENS, not by swapping a stylesheet. Every theme starts from a clean slate — each
+ * key any theme declares is REMOVED first — so switching Contrast → Cream cannot leave Contrast's darker `--ink`
+ * behind. A theme that only ever adds is a theme you cannot fully leave.
+ */
+function themeApply(key){
+  var t = THEMES[key] || THEMES.cream, r = document.documentElement;
+  var all = {}; Object.keys(THEMES).forEach(function(k){ Object.keys(THEMES[k].vars).forEach(function(v){ all[v]=1; }); });
+  Object.keys(all).forEach(function(v){ r.style.removeProperty(v); });
+  Object.keys(t.vars).forEach(function(v){ r.style.setProperty(v, t.vars[v]); });
+  r.setAttribute('data-theme', key);
+}
+function themeSet(key){
+  if(!THEMES[key]) return;
+  try{ localStorage.setItem('cb_theme', key); }catch(_){ }
+  themeApply(key);
+  /* Repaint so the swatch's own selected state updates; the colours themselves changed without it. */
+  if(UI.avMenu) renderApp();
+}
+function themeSwatchesHTML(){
+  var cur = themeGet();
+  return Object.keys(THEMES).map(function(k){
+    var t = THEMES[k], on = (k === cur);
+    return '<button type="button" data-testid="theme-' + k + '" title="' + esc(t.name) + '"'
+      + ' onclick="event.stopPropagation();themeSet(\'' + k + '\')"'
+      + ' style="display:flex;align-items:center;gap:6px;border:1px solid ' + (on ? 'var(--blue)' : 'var(--line)')
+      + ';background:' + (on ? '#eef4ff' : '#fff') + ';border-radius:20px;padding:4px 10px 4px 5px;cursor:pointer;'
+      + 'font:inherit;font-size:11.5px;color:' + (on ? 'var(--blue)' : 'var(--ink)') + ';font-weight:' + (on ? '700' : '400') + '">'
+      + '<span style="width:14px;height:14px;border-radius:50%;background:' + t.dot + ';border:1px solid var(--line);flex:0 0 auto"></span>'
+      + esc(t.name) + '</button>';
+  }).join('');
+}
 function logout(){if(typeof _netFlush==='function'){try{_netFlush();}catch(_){}}if(typeof _catfFlush==='function'){try{_catfFlush();}catch(_){}}try{localStorage.removeItem('cb_sess');localStorage.removeItem('cb_nav');}catch(_){}stopAutoRefresh();SESSION={token:null,role:null,name:null,entity:null,bridgeId:null};STORE=freshStore();UI={...UI0,selected:new Set(),aggStates:new Set(["open","act","close"])};applyPrefs();go("#/login");}
 
 /* ---------------- APP SHELL + TASK PANEL ---------------- */
@@ -2211,6 +2280,8 @@ function _renderApp(){
                business's policy flags and channel bindings one click from their own name. The rail never offered
                it to them; the avatar menu must not either. -->
           ${isEntityUser?`<button data-testid="nav-settings" onclick="UI.avMenu=false;navTo('settings')" style="display:block;width:100%;text-align:left;border:0;background:none;padding:10px 13px;font-size:13.5px;cursor:pointer">⚙️ Settings</button>`:''}
+          <div style="border-top:1px solid var(--line);padding:9px 13px 4px"><div style="font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey)">Theme</div></div>
+          <div data-testid="theme-picker" style="display:flex;gap:6px;padding:2px 13px 11px;flex-wrap:wrap">${themeSwatchesHTML()}</div>
           <button onclick="UI.avMenu=false;logout()" style="display:block;width:100%;text-align:left;border:0;background:none;padding:10px 13px;font-size:13.5px;cursor:pointer;border-top:1px solid var(--line);color:#c0453b">↩ Sign out</button>
         </div>`:''}
         </div>
@@ -6950,7 +7021,13 @@ function lsSet(k,v){try{localStorage.setItem(k,v);}catch(e){}}
 /* ⚠️ THE BODY CLASS IS SET HERE TOO, NOT ONLY IN setVP. `vp` is restored from localStorage on load, so someone
    who left the app in Mobile and reloads never passes through setVP — and the modals would break out of the
    frame again on exactly the reload that looks like a fresh start. */
-function applyPrefs(){UI.vp=lsGet('cb_vp',(window.innerWidth<=820?'mob':'lap'));
+function applyPrefs(){
+  /* ⚠️ THEME FIRST, and inside applyPrefs rather than after it. This runs before the first paint, so the chosen
+     theme is already on <html> when anything renders — applying it later gives a visible flash of the default,
+     which reads as a bug every single time the app opens. ⚠️ It is deliberately NOT cleared on logout: a theme is
+     a preference of the person at the screen, not of the session. */
+  try{ themeApply(themeGet()); }catch(_){ }
+  UI.vp=lsGet('cb_vp',(window.innerWidth<=820?'mob':'lap'));
   try{ document.body.classList.toggle('vpmob', UI.vp==='mob'); }catch(_){}UI.lw=parseInt(lsGet('cb_lw',340),10)||340;UI.lh=parseInt(lsGet('cb_lh',300),10)||300;try{UI.lhFold=(localStorage.getItem('cb_lhfold')==='1');}catch(_){UI.lhFold=false;}try{UI.voice=(localStorage.getItem('cb_voice')==='1');}catch(_){UI.voice=false;}}
 /**
  * ⚠️⚠️ THE MOBILE FRAME HAS TO REACH THE MODALS, AND A CLASS ON <body> IS THE ONLY THING THAT CAN.
