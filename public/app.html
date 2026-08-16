@@ -196,9 +196,17 @@
             text-transform:uppercase;color:var(--ink);font-family:inherit}
   .govgrp-h:hover{background:#f2efe8}
   .govgrp.open .govgrp-h{border-bottom:1px solid var(--line)}
-  /* The title holds its width and the NOTE gives way first — as a bare text node in a squeezed flex row it was
-     the thing that collapsed, breaking "NOT CONFIGURED YET" over three lines while the note sat comfortable. */
-  .govgrp-t{flex:0 1 auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /**
+   * ⚠️ A CONTAINER QUERY, NOT A MEDIA QUERY — because the constraint is the PANE, not the window.
+   *
+   * `@media(max-width:560px)` never fired here: the window is 897px wide while the detail pane it governs is
+   * ~340px, so the note kept its space and the title truncated to "NOT CONFIGU…". Media queries ask how big the
+   * SCREEN is; every two-pane screen in this app needs to ask how big THIS PANE is. Below 420px of pane the note
+   * is dropped and the title gets the room — it is the label, the note is a gloss.
+   */
+  .govgrp{container-type:inline-size}
+  .govgrp-t{flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  @container (max-width:420px){ .govnote{display:none} }
   .govchev{font-size:11px;color:var(--grey);width:11px;flex:none}
   .govcount{font-family:'Space Mono';font-size:11px;font-weight:700;color:var(--blue);
             background:#EDF2F9;border-radius:20px;padding:1px 8px;flex:none}
@@ -206,7 +214,7 @@
            margin-left:auto;text-align:right;min-width:0;flex:0 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .govgrp-b{padding:2px 12px 6px}
   .govgrp-b .govrow:last-child{border-bottom:0}
-  @media(max-width:560px){ .govnote{display:none} }
+  /* the viewport-based rule this replaced never fired — the pane, not the window, was the constraint */
   /**
    * name : value on one line, the meaning on its own line beneath — the SAME SHAPE for every row at every width.
    * As a third column it changed shape row by row (a select is tall, a short value is not) and reflowed at the
@@ -282,6 +290,12 @@
   .misstatus .dot{width:9px;height:9px;border-radius:50%;flex:none;display:inline-block}
   .miswhy{font-size:12.5px;color:#3a4a54;margin-top:13px;padding-left:13px;border-left:2px solid var(--line);line-height:1.6}
   .mistrust{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px}
+  /* Usage against a declared limit — a meter, which is the right form for "one ratio against a ceiling". */
+  .misplanrow{padding:11px 0;border-bottom:1px solid var(--line)}
+  .misplanhead{display:flex;align-items:baseline;justify-content:space-between;gap:10px;font-size:12.5px;font-weight:600}
+  .misplanv{font-family:'Space Mono';font-size:13px;font-weight:700;white-space:nowrap}
+  .misplanbar{height:7px;border-radius:5px;background:var(--line);overflow:hidden;margin-top:7px}
+  .misplanbar i{display:block;height:100%;border-radius:5px}
   .misov{padding:13px 0;border-top:1px solid var(--line)}
   .misov:first-of-type{border-top:0;padding-top:2px}
   .misovh{display:flex;align-items:baseline;gap:9px;margin-bottom:7px;flex-wrap:wrap}

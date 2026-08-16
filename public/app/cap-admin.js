@@ -74,7 +74,9 @@ var MIS_BANDS = [
   { key:'position', name:'Position', q:'How much is real?' },
   { key:'flow',     name:'Flow',     q:'What is moving?' },
   { key:'friction', name:'Friction', q:'What is stuck?' },
-  { key:'trust',    name:'Trust',    q:'Who can I rely on?' }
+  { key:'trust',    name:'Trust',    q:'Who can I rely on?' },
+  /* The outcome half of the plan declared in Governance → Constitution. It is a metric, so it lives here. */
+  { key:'plan',     name:'Plan',     q:'What have I used?' }
 ];
 /**
  * ⚠️ THE STATUS→MONEY MAPPING, AND THE TRAP IN IT. `cancelled` and `rejected` live in the `close` bucket beside
@@ -151,6 +153,7 @@ function misHeadline(k, m){
     if (un) return { v: m.waiting.length + un, s: un + ' unanswered', tone:'warn' };
     return { v: m.waiting.length, s: m.waiting.length ? ('oldest ' + m.waiting[0].age) : 'nothing stuck', tone: m.waiting.length ? 'warn' : 'ok' };
   }
+  if (k === 'plan')     return { v: (UI._misToday==null?'·':UI._misToday), s:'of '+PLAN.chitsPerDay+' today' };
   if (k === 'trust')    return { v: m.suppliers, s: m.open_disputes ? (m.open_disputes + ' disputes') : '0 disputes', tone: m.open_disputes ? 'warn' : 'ok' };
   return { v: '·', s: '' };
 }
@@ -163,7 +166,8 @@ function misBandHTML(k, m){
     : (k === 'position') ? misPosition(m)
     : (k === 'flow')     ? misFlow(m)
     : (k === 'friction') ? misFriction(m)
-    : (k === 'trust')    ? misTrust(m) : '';
+    : (k === 'trust')    ? misTrust(m)
+    : (k === 'plan')     ? misPlan(m) : '';
   return body ? (body + _capEnd()) : '';
 }
 /**
@@ -297,6 +301,37 @@ function misTrust(m){
     /* ⚠️ The band I most want and have NOT verified is computable. Say so rather than show a score I cannot stand behind. */
     + '<div class="miswhy">⚠️ <b>Counterparty reliability</b> — who confirms fast, who delivers short — is the most valuable thing this band could report and is <b>not built</b>. It needs behaviour over time that nothing currently records. Shown as plain counts until that exists, rather than as a score.</div>';
 }
+/**
+ * ⭐ USAGE AGAINST THE DECLARED PLAN. The limits come from PLAN (declared in Governance → Constitution); this band
+ * only measures. One declaration, one report.
+ *
+ * ⚠️ IT SAYS WHAT IT CANNOT COUNT. `Networks formed` and `Data stored` have no client-side source, so they say so
+ * instead of rendering `0` — which would read as "you have none" rather than "we did not look". That distinction
+ * is the same one the supplier search makes between "not listed" and "can't tell", and the `—` these rows used to
+ * show on the governance card is exactly the ambiguity being removed.
+ */
+function misPlan(m){
+  var meter = function(label, used, limit, note){
+    if (limit == null) return '<div class="govrow"><span class="govrow-k">'+esc(label)+'</span>'
+      + '<span class="govrow-v" style="color:var(--grey)">'+esc(note||'not counted here')+'</span></div>';
+    var pct = Math.min(100, Math.round((used / limit) * 100));
+    var tone = pct >= 100 ? 'var(--disp)' : pct >= 80 ? 'var(--prog)' : 'var(--blue)';
+    return '<div class="misplanrow"><div class="misplanhead"><span>'+esc(label)+'</span>'
+      + '<span class="misplanv">'+used+' <span style="color:var(--grey);font-weight:600">of '+limit+'</span></span></div>'
+      + '<div class="misplanbar"><i style="width:'+pct+'%;background:'+tone+'"></i></div></div>';
+  };
+  var todayStart = new Date(); todayStart.setHours(0,0,0,0);
+  var chitsToday = (UI._misStamps || []).filter(function(t){ return t >= todayStart.getTime(); }).length;
+  return _misHead('Plan', 'What you have used against the limits your plan declares.')
+    + '<div class="misnote" style="margin-bottom:12px"><b>'+esc(PLAN.tier)+'</b> plan · limits declared in '
+      + '<b onclick="navTo(\'settings\');UI.setSec=\'governance\';UI.govTab=0" style="cursor:pointer;color:var(--blue)">Governance → Constitution →</b></div>'
+    + meter('Entities', 1, PLAN.entities)
+    + meter('Chits today', chitsToday, PLAN.chitsPerDay)
+    + meter('Networks formed', 0, null, 'not counted on this screen')
+    + meter('Data stored', 0, null, 'not counted on this screen')
+    + '<div class="miswhy">These four sat on the governance card as <b>metered</b> rows, two of them showing '
+      + '<b>—</b> while this screen was already counting chits. Limits are declared there; what you used is measured here.</div>';
+}
 function misOverview(m){
   var sec = function(name, q, inner){
     return '<div class="misov"><div class="misovh"><span class="misovn">' + esc(name) + '</span><span class="misnote">' + esc(q) + '</span></div>' + inner + '</div>';
@@ -370,6 +405,10 @@ async function loadMIS(){
     waiting.sort(function(a, b){ return b.ageMs - a.ageMs; });
 
     /* Weekly buckets when the span is wide, daily when it is short — a 7-day window has no weeks in it. */
+    /* Kept for the Plan band, which counts against a per-DAY limit and so cannot use the period-windowed series. */
+    UI._misStamps = chits.map(function(c){ return (new Date(c.created_at)).getTime(); }).filter(function(t){ return t; });
+    { const _t0 = new Date(); _t0.setHours(0,0,0,0);
+      UI._misToday = UI._misStamps.filter(function(t){ return t >= _t0.getTime(); }).length; }
     const stamps = inWindow.map(function(c){ return (new Date(c.created_at)).getTime(); }).filter(function(t){ return t; }).sort();
     let series = [], bucketName = 'week';
     if (stamps.length){
@@ -659,6 +698,64 @@ function govCatVis(){
   if (cap.max && cap.max !== 'public' && cap.enforced === false) out += ' (declared, not enforced)';
   return out;
 }
+/**
+ * The assignment model as SAVED, not as asserted. The row read a literal 'both · entity setting' while the real
+ * value is written by Settings → Work through saveSettings — so changing it there left Governance still claiming
+ * "both".
+ *
+ * ⚠️ It also says the value is not enforced, because Settings' own banner says exactly that ("saved but not yet
+ * active"). A governance screen repeating a stored value while omitting that nothing acts on it is the same
+ * overstatement as a cap that does not bind.
+ */
+/**
+ * ⭐ STANDARDS AND UNITS COME FROM THE CATALOGUE MODEL, not from a dash in this file.
+ *
+ * Both rows read `—` while `catalogue-model.js` has held the real registries all along — `STD_SCHEMES`
+ * (HS · GS1 GPC · Schema.org · UNSPSC · custom) and `STANDARDS` — and Definitions already surfaces them, citing
+ * "app/catalogue-model.js · STD_SCHEMES" as its source. So the governance screen was showing "not configured" for
+ * something configured in two other places.
+ *
+ * ⚠️ NAMES ONLY, AND CAPPED. The point of the row is that a registry exists and where it lives — not to mirror
+ * its contents, which is how a second copy starts. Definitions remains the place to read them in full.
+ */
+/**
+ * ⭐ THE PLAN IS A DECLARATION; ITS CONSUMPTION IS A METRIC (Athi, 2026-08-16: *"metered for constitution are
+ * really the MIS? … setting up here and show the outcome in MIS"*).
+ *
+ * Constitution used to carry five "metered" rows — Entities provisioned · Networks formed · Chits issued · Data
+ * stored · Plan tier — mixing the two. Four were MEASUREMENTS sitting on a configuration screen, and two of them
+ * (`Chits issued`, `Data stored`) rendered as `—` while **MIS was computing the real chit count on the next
+ * screen along**. A governance card showing a dash for a number the product already knows is the clearest
+ * possible case for splitting declaration from outcome.
+ *
+ * Governance now declares PLAN and nothing else. MIS reads the same object and reports usage against it.
+ */
+var PLAN = { tier:'Free', entities:5, chitsPerDay:10, networks:1 };
+function govPlanBlock(){
+  return '<div style="margin:15px 0 2px;font-family:\'Space Grotesk\';font-weight:700;font-size:12.5px;color:#5b4a86">↑ Your plan · what it entitles you to</div>'
+    + govRowHtml('Plan tier', esc(PLAN.tier), 'bound')
+    + govRowHtml('Entities allowed', String(PLAN.entities), 'bound')
+    + govRowHtml('Chits per day', String(PLAN.chitsPerDay), 'bound')
+    + govRowHtml('Networks allowed', String(PLAN.networks), 'bound')
+    + '<div class="misnote" style="margin-top:9px">These are the limits. <b onclick="navTo(\'mis\');UI.misBand=\'plan\'" style="cursor:pointer;color:var(--blue)">See what you have used in MIS →</b></div>';
+}
+function govCodeStandards(){
+  var M = (typeof CBCatalogue !== 'undefined') ? CBCatalogue : null;
+  var s = M && M.STD_SCHEMES;
+  if (!s || !s.length) return 'no scheme registry loaded';
+  return s.slice(0, 4).join(' · ') + (s.length > 4 ? ' +' + (s.length - 4) : '') + ' — see Definitions';
+}
+function govUnits(){
+  var M = (typeof CBCatalogue !== 'undefined') ? CBCatalogue : null;
+  var st = M && M.STANDARDS;
+  var n = st ? (Array.isArray(st) ? st.length : Object.keys(st).length) : 0;
+  return n ? (n + ' declared in the catalogue model — see Definitions') : 'not declared yet';
+}
+function govAssignModel(){
+  var s = UI._set && UI._set.s;
+  if (!s) return 'open Settings → Work to read it';
+  return (s.assignment_model || 'both') + ' — saved, not yet enforced';
+}
 /* The cap's own explanation, when the server gives one. Shown under the row rather than truncated into it. */
 function govCatVisWhy(){
   var cap = (UI._me && UI._me.visibility_cap) || {};
@@ -717,14 +814,14 @@ const GOV=[
   { n:'3 · Vertical', tag:'business type', desc:'Defaults for your line of business.', rows:[
     ['Business vertical','—','free'],['Default units','—','free'],['Vertical currency default','—','free'] ] },
   { n:'4 · Standards', tag:'codes / units', desc:'Measurement & coding standards.', rows:[
-    ['Units of measure','—','free'],['Code standards (HSN / SKU)','—','free'] ] },
+    ['Units of measure', govUnits, 'free'], ['Code standards (HSN / SKU)', govCodeStandards, 'free'] ] },
   { n:'5 · Content', tag:'shared assets · versioned', desc:'Shared catalogue / manuals / images published once & carried by reference, not copied.', rows:[
     ['Shared catalogue / manuals / images','published once · referenced','free'],['Asset reference','asset_id @ version','free'],
     ['On update','new version; frozen chits keep the old','free'] ] },
   { n:'6 · ERP', tag:'integration', desc:'System integration adapters.', rows:[
     ['ERP adapter','—','free'],['Sync mode','—','free'] ] },
   { n:'7 · Consolidation', tag:'→ boilerplate the entity inherits', desc:'The 7 layers consolidate into the Boilerplate every entity copies at registration; the locale below is inherited from Constitution.', rows:[
-    ['Assignment model','both · entity setting','entity'],
+    ['Assignment model', govAssignModel, 'entity'],
     ['Default max tasks / actor','10 · entity setting','entity'] ] }
 ];
 /**
@@ -774,14 +871,15 @@ function govKlass(k, hasControl){
   }
   return '<span class="govtag" style="background:'+col[0]+';color:'+col[1]+'">'+say+'</span>';
 }
-var TIMEZONES=['Asia/Kolkata','UTC','Europe/London','Europe/Berlin','America/New_York','America/Los_Angeles','America/Sao_Paulo','Asia/Dubai','Asia/Singapore','Asia/Tokyo','Australia/Sydney','Africa/Johannesburg'];
-var LANGS=[['en','English'],['ta','Tamil'],['hi','Hindi']];
-var GOVSET=(function(){ var d={currency:'INR',timezone:'Asia/Kolkata',language:'en'}; try{ return Object.assign(d, JSON.parse(localStorage.getItem('cb_govset')||'{}')); }catch(_){ return d; } })();
-function govSetVal(k,v){ GOVSET[k]=v; try{ localStorage.setItem('cb_govset', JSON.stringify(GOVSET)); }catch(_){ } var h=document.getElementById('govblock'); if(h)h.outerHTML=govLayersBlock(); }
-/* ⚠️ FLUID, NOT min-width:160px. The inline `width:auto;min-width:160px` beat the column rule (inline always
-   does), so the select rendered 213px inside a 140px cell and hung 19px past the pane. Third inline-vs-class
-   collision on this screen today; when a component must fit an unknown container, it cannot carry a hard floor. */
-function govSel(k,opts){ return '<select class="inp" style="width:100%;min-width:0;padding:4px 8px;font-size:12px" onchange="govSetVal(\''+k+'\',this.value)">'+opts.map(function(o){ var v=Array.isArray(o)?o[0]:o, l=Array.isArray(o)?(o[0]+' · '+o[1]):o; return '<option value="'+esc(v)+'"'+(GOVSET[k]===v?' selected':'')+'>'+esc(l)+'</option>'; }).join('')+'</select>'; }
+/**
+ * ⚠️ TIMEZONES / LANGS / GOVSET / govSetVal / govSel WERE HERE AND ARE DELETED (2026-08-16).
+ *
+ * They existed only to drive three <select>s on this card that wrote to localStorage `cb_govset` — a store no
+ * other code in the app ever read. Removing the decoy controls left all five with zero callers, so keeping them
+ * would leave the machinery for a fake setting sitting in the file waiting to be wired up by mistake.
+ *
+ * ⚠️ CURRENCIES is NOT removed — it is a shared global from Core, used elsewhere.
+ */
 /**
  * ⚠️ WRAPS INSTEAD OF PUSHING THE PANE SIDEWAYS. Label + value + class-tag on one non-wrapping flex line needed
  * ~469px; inside Settings the pane is ~358px, so the row forced the WHOLE DETAIL PANE to scroll horizontally
@@ -840,8 +938,29 @@ function govLayersBlock(){ var t=UI.govTab||0; var L=GOV[t];
   var FIXED = { bound:1, inherited:1, protected:1, metered:1 };  // decided upstream or by the platform
   var _rows=[];
   var push=function(label,val,klass){ _rows.push([label,val,klass]); };
-  if(t===0){ push('Currency',govSel('currency',CURRENCIES),'advisory'); push('Timezone',govSel('timezone',TIMEZONES),'advisory'); push('Language',govSel('language',LANGS),'bound_set'); }
-  else if(t===6){ var ll=(LANGS.filter(function(x){return x[0]===GOVSET.language;})[0]||['',''])[1]||GOVSET.language; push('Currency (inherited)',esc(GOVSET.currency)+' · from Constitution','inherited'); push('Timezone (inherited)',esc(GOVSET.timezone)+' · from Constitution','inherited'); push('Language (inherited)',esc(GOVSET.language)+' ('+esc(ll)+') · from Constitution','inherited'); }
+  /**
+   * ⚠️ THE THREE DECOY CONTROLS ARE GONE. Currency, Timezone and Language were working `<select>`s that persisted
+   * to localStorage (`cb_govset`) and were read by NOTHING except this screen. Money renders from
+   * `SESSION.currency` via myCur(); timezone and language have no store and no reader at all. So the only
+   * editable controls on the governance card were the three that changed nothing — the most convincing thing on
+   * the screen and the least real. A stub you cannot edit is honest; one that accepts and remembers your input
+   * is not.
+   *
+   * Now: Currency shows the entity's ACTUAL value, read-only because no write path exists (adding a select before
+   * the endpoint would recreate exactly the problem). Timezone and Language say plainly that nothing sets them.
+   */
+  if(t===0){
+    push('Currency', esc(typeof myCur==='function' ? myCur() : (SESSION.currency||'INR')) + ' — from your entity record', 'bound');
+    push('Timezone', 'not stored anywhere yet', 'free');
+    push('Language', 'not stored anywhere yet', 'free');
+  }
+  /* ⚠️ The Consolidation view inherited from GOVSET — the localStorage decoy — so it echoed a value nothing
+     used. It reads the same real sources the Constitution row does, and says so where there is none. */
+  else if(t===6){
+    push('Currency (inherited)', esc(typeof myCur==='function' ? myCur() : (SESSION.currency||'INR')) + ' · from your entity record', 'inherited');
+    push('Timezone (inherited)', 'nothing to inherit — not stored', 'free');
+    push('Language (inherited)', 'nothing to inherit — not stored', 'free');
+  }
   L.rows.forEach(function(r){ push(r[0],esc(govVal(r[1])),r[2]); });   // literal or live — govVal resolves both
   /**
    * ⭐ COLLAPSIBLE GROUPS (Athi, 2026-08-16). A layer can run to nineteen rows, and the three groups are not
@@ -867,7 +986,7 @@ function govLayersBlock(){ var t=UI.govTab||0; var L=GOV[t];
   var rowsHtml = grp('yours','Yours to set','you control these', function(k){ return YOURS[k]; })
     + grp('fixed','Fixed above you','inherited or platform-bound', function(k){ return FIXED[k]; })
     + grp('none','Not configured yet','arrives from the layer later', function(k){ return !YOURS[k] && !FIXED[k]; });
-  if(t===0){ rowsHtml+='<div style="margin:13px 0 2px;font-family:\'Space Grotesk\';font-weight:700;font-size:12.5px;color:#46546b">⚙ Installation · platform-only (master)</div>'+govRowHtml('Cloud provider','AWS','protected')+govRowHtml('Region','ap-south-1','protected')+govRowHtml('Storage adapter','db → S3 / Azure / GCS','protected')+govRowHtml('Storage bucket','chitbridge-prod-•••','protected')+govRowHtml('Secrets / keys','•••• managed (never exposed)','protected')+govRowHtml('System health','● healthy','protected'); rowsHtml+='<div style="margin:13px 0 2px;font-family:\'Space Grotesk\';font-weight:700;font-size:12.5px;color:#5b4a86">↑ Metered up to Constitution · for licensing</div>'+govRowHtml('Entities provisioned','1','metered')+govRowHtml('Networks formed','0','metered')+govRowHtml('Chits issued','—','metered')+govRowHtml('Data stored','—','metered')+govRowHtml('Plan tier','Free · 5 entities / 10 chits-day / 1 network','metered'); }
+  if(t===0){ rowsHtml+='<div style="margin:13px 0 2px;font-family:\'Space Grotesk\';font-weight:700;font-size:12.5px;color:#46546b">⚙ Installation · platform-only (master)</div>'+govRowHtml('Cloud provider','AWS','protected')+govRowHtml('Region','ap-south-1','protected')+govRowHtml('Storage adapter','db → S3 / Azure / GCS','protected')+govRowHtml('Storage bucket','chitbridge-prod-•••','protected')+govRowHtml('Secrets / keys','•••• managed (never exposed)','protected')+govRowHtml('System health','● healthy','protected'); rowsHtml += govPlanBlock(); }
   var inRail = (UI.nav === 'settings');   /* rail carries the layers in Settings; chips elsewhere */
   var foot=(t===0)?'Change a value above, then open <b>tab 7 · Consolidation</b> — the entity inherits it via the boilerplate. <i>Stub: in production these arrive from the layer, not this screen.</i>':(t===6)?'These ride down from the layers into the <b>boilerplate</b> every entity copies at registration, and <b>freeze</b> onto each chit at send. <i>Stub — later set from the real layer.</i>'/* ⚠️ THE GENERIC LEGEND IS GONE. It defined `bound` / `advisory` / `free` — words this screen no longer uses,
    because every row now says what it means in plain English on the row itself. A legend for vocabulary that is

@@ -72,6 +72,7 @@ Every fetch funnels through `api()` in `app/core.js`, which drives `_netBusy()` 
 - **Anything clickable gets `cursor:pointer`.** `.tool` had none — over emoji, `cursor:auto` resolves to the I-beam.
 - **Watch cascade collisions.** `.composebtn` sets `color:#fff` for a coloured background; a neighbouring rule set `background:#fff`. The button was present, sized, clickable and **invisible**.
 - **Fit content to its container.** An `fr` track sizes to min-content — grid children need `min-width:0` or bars overflow the pane.
+- ⚠️ **Use a container query, not a media query.** Every two-pane screen must ask how big **this pane** is, not how big the screen is. `@media(max-width:560px)` never fires for a 340px detail pane inside a 900px window — a heading truncated to `NOT CONFIGU…` while the rule sat idle. Put `container-type:inline-size` on the block and query that.
 - ⚠️ **Inline styles beat your class rule.** Three separate bugs in one day: a `width:300px` list that would not collapse on mobile, and a `min-width:160px` select that hung past its pane. If a component must fit an unknown container it cannot carry a hard width — fix the component, don't paper over it with `!important`.
 - **Wide content scrolls in its own box** (`overflow-x:auto`), never the page.
 - **`.detail` supplies no padding**; bring your own or content runs to the window edge.
