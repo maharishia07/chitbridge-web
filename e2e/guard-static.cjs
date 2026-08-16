@@ -187,18 +187,52 @@ console.log('\n5 · renderer hook parity (cart-ui → catalogue-ui)');
   else {
     /* Literal testids only. The interpolated ones (`cart-' + ns`) are compared by their stable prefix. */
     const ids = (src) => new Set([...src.matchAll(/data-testid="([a-z-]+)(?:'|")/g)].map((m) => m[1]));
-    const missing = [...ids(cart)].filter((k) => !ids(cat).has(k));
+    /**
+     * ⭐ DELEGATION COUNTS AS PARITY, and it is the OUTCOME THIS CHECK SHOULD PREFER.
+     *
+     * catalogue-ui may render a shared piece by calling `CBCart.<export>(…)` instead of re-emitting the markup.
+     * That is strictly better than copying it — one definition of what the thing is — but a literal text scan
+     * sees an absent testid and fails. Before this, the only way to quiet it was the allowlist, which is how a
+     * correct failure got waved through for an afternoon.
+     *
+     * So: for every `CBCart.x(` that catalogue-ui calls, resolve `x` through cart-ui's export block to the
+     * function it names, take that function's body, and credit the testids it emits.
+     */
+    const delegated = new Set();
+    {
+      const calls = [...cat.matchAll(/CBCart\.([A-Za-z_$][\w$]*)\s*\(/g)].map((m) => m[1]);
+      for (const name of new Set(calls)) {
+        // `categoriesHTML: catgsHTML,` — the export name may differ from the function name.
+        const map = new RegExp('\\b' + name + '\\s*:\\s*([A-Za-z_$][\\w$]*)').exec(cart);
+        const fn = (map && map[1]) || name;
+        const at = cart.search(new RegExp('function\\s+' + fn + '\\s*\\('));
+        if (at < 0) continue;
+        /* Body = up to the next top-level `function ` declaration. Crude, and deliberately so: over-crediting a
+           neighbouring helper is a far smaller sin here than failing a file that genuinely delegates. */
+        const next = cart.slice(at + 8).search(/\n  function\s+[A-Za-z_$]/);
+        const body = cart.slice(at, next < 0 ? undefined : at + 8 + next);
+        for (const m of body.matchAll(/data-testid="([a-z-]+)(?:'|")/g)) delegated.add(m[1]);
+      }
+    }
+    const missing = [...ids(cart)].filter((k) => !ids(cat).has(k) && !delegated.has(k));
     /* Classes a spec addresses directly. */
     const classes = ['cbcart-bar'];
     const missingCls = classes.filter((c) => cart.includes(c) && !cat.includes(c));
     const gone = missing.concat(missingCls);
-    /* `cart-checkout` lives in cart-ui's POPUP, which catalogue-ui does not replace — the popup is still
-       cart-ui's. Declared here so it is a decision rather than an oversight.
-       `pick-catg` is the same shape: the category strip is emitted by `pickerHTML`, the sticky search chrome.
-       A renderer swaps `listInto`/`barInto` — the LIST and the BAR — and never the chrome above them, so there
-       is nothing for catalogue-ui to mirror. ⚠️ If a renderer ever takes over the picker itself, delete this
-       entry rather than extending it; at that point the parity IS the thing being checked. */
-    const OK_TO_OMIT = ['cart-checkout', 'pick-catg'];
+    /**
+     * `cart-checkout` lives in cart-ui's POPUP, which catalogue-ui does not replace — the popup is still
+     * cart-ui's. Declared here so it is a decision rather than an oversight.
+     *
+     * ⚠️⚠️ `pick-catg` WAS ON THIS LIST FOR AN AFTERNOON AND THAT WAS A MISTAKE. I justified it as "the category
+     * strip is in the sticky search chrome, and a renderer only swaps the list and the bar". False —
+     * catalogue-ui has its OWN pickerHTML and replaces the chrome wholesale, and compose uses that one. So the
+     * chips were invisible on the busiest order surface in the product, and this check had said so.
+     *
+     * ⭐ THE LESSON IS ABOUT THE LIST, NOT THE HOOK: an allowlist entry is a claim about the code, and a wrong
+     * claim here converts a correct failure into permanent silence. Anything added must be verified by READING
+     * the other file, not by reasoning about what a renderer "should" replace.
+     */
+    const OK_TO_OMIT = ['cart-checkout'];
     const real = gone.filter((k) => OK_TO_OMIT.indexOf(k) < 0);
     if (real.length) {
       fail('catalogue-ui.js does not emit hooks cart-ui.js does: ' + real.join(', ')

@@ -564,6 +564,26 @@
       +   ' value="' + esc((cart.state() || {}).q || '') + '"'
       +   (opts.searchTestid ? ' data-testid="' + esc(opts.searchTestid) + '"' : '')
       +   ' oninput="CBCart.search(\'' + esc(cart.ns) + '\', this.value)">'
+      /**
+       * ⭐⭐ THE CATEGORY STRIP — DELEGATED, NOT COPIED (Athi, 2026-08-16: *"can we add a category to the
+       * product?"*, and the strip was missing from the one surface he uses).
+       *
+       * ⚠️ I BUILT THIS INTO cart-ui's pickerHTML AND STOPPED, on the reasoning that a renderer swaps the LIST
+       * and the BAR but never the search chrome above them. That is false, and this function is the proof: the
+       * redesigned renderer has its own pickerHTML and replaces the chrome wholesale. Compose uses this one, so
+       * the strip was invisible on the busiest order surface in the product.
+       *
+       * ⚠️ guard-static check 5 CAUGHT THIS AND I OVERRODE IT. It failed on `pick-catg` missing from this file;
+       * I added it to OK_TO_OMIT with the wrong justification. The guard was right. The entry is now removed so
+       * it can never be waved through again — if you are about to add a hook to one picker and not the other,
+       * that failure is the whole point.
+       *
+       * The markup and the counting live in CBCart (catgsHTML/catgTally), so there is ONE definition of what a
+       * category chip is; this file only decides where it sits.
+       */
+      +   '<div id="' + esc(listId) + '_catg" class="cbpick-catgs">'
+      +     (typeof CBCart.categoriesHTML === 'function' ? CBCart.categoriesHTML(cart.ns) : '')
+      +   '</div>'
       + '</div>'
       + '<div id="' + esc(listId) + '" class="cbcat-list"'
       +   (opts.listTestid ? ' data-testid="' + esc(opts.listTestid) + '"' : '') + '>'

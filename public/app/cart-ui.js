@@ -1088,6 +1088,10 @@
     group: group, clear: clear, search: search, addAdhoc: addAdhoc, models: MODELS,
     /* `category` is the chips' inline onclick, the same front-door route as add/search. */
     category: catgSet, categories: catgTally,
+    /* ⚠️ EXPORTED so catalogue-ui can render the SAME strip rather than growing a second one. It has its own
+       pickerHTML (it replaces the search chrome, not just the list), so without this the chips exist on one
+       picker and not the other — which is exactly how they went missing from compose. */
+    categoriesHTML: catgsHTML,
     open: open, close: close, checkout: checkout,
     barHTML: barHTML, listHTML: listHTML, popupHTML: popupHTML, pickerHTML: pickerHTML,
     /* ⚠️ EXPORTED SO catalogue-ui.js CANNOT GROW A SECOND MONEY FORMATTER. It briefly had one, and that is

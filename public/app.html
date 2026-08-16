@@ -4740,7 +4740,58 @@ async function _cfImportRun(btn, decisions, out){
   }finally{ btn.textContent = was; }
 }
 
-function prodEditForm(d){ return ctField('name','Name',d.name||'')+`<div style="display:flex;gap:10px"><div style="flex:1">`+ctField('unit','Unit',d.unit||'',"placeholder=\"piece / kg / tonne\"")+`</div><div style="flex:1"><label class="fl">Price</label><div style="display:flex;align-items:stretch"><span style="display:flex;align-items:center;padding:0 11px;border:1px solid var(--line);border-right:0;border-radius:10px 0 0 10px;background:#f2f1ed;color:#6b7176;font-weight:700;font-size:13.5px;white-space:nowrap" title="${myCur()} — your business currency">${esc(curSym())}</span><input class="inp" id="ct_price" data-testid="cat-field-price" inputmode="numeric" style="border-radius:0 10px 10px 0" value="${cbHasPrice(d.price)?cbAmount(d.price):''}"></div></div></div>`+ctField('code','Code / HSN',pCode(d))+`<label class="fl">Description</label><textarea class="inp" id="ct_desc" data-testid="cat-field-desc" style="width:100%;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13.5px;min-height:58px;resize:vertical;background:var(--paper)">${esc(pDesc(d))}</textarea>`; }
+/**
+ * ⭐⭐ CATEGORY ON THE PRODUCT FORM — the form people actually use.
+ *
+ * ⚠️ THIS IS THE GAP ATHI FOUND (2026-08-16: *"can we add a category to the product?"*). The picker was built
+ * into `catfFillItem` — the catalogue WIZARD's "Add an item" form — and there is a second, older and far more
+ * travelled path to authoring a product: New product → prodEditForm. Wiring one and calling the feature done is
+ * how a capability ships that nobody can reach. ⚠️ Two authoring paths for one object is the thing to notice;
+ * until they are merged, anything added to one belongs in both.
+ *
+ * Renders NOTHING until a category exists — a lone "— none —" dropdown teaches that the feature is empty rather
+ * than that it is unused. The load is fired here and repaints once, because a form cannot wait for a fetch.
+ */
+function ctCategoryField(d){
+  d = d || {};
+  if(typeof _CATG==='undefined' || _CATG===null){
+    if(typeof cbCatgLive==='function') cbCatgLive().then(function(){ if(UI.nav==='catalogue' && UI.prodMode!=='view') paintProdDetail(); });
+    return '';
+  }
+  if(!_CATG.length) return '<label class="fl">Category</label><div style="font-size:12px;color:var(--grey);margin:2px 0 4px">None declared yet. <span onclick="ctNewCategory()" style="color:var(--blue);font-weight:600;cursor:pointer">Create one</span> — or under Definitions → Categories.</div>';
+  const cur = d.category || '';
+  return '<label class="fl">Category</label>'
+    + '<div style="display:flex;gap:8px;align-items:stretch">'
+    +   '<select class="inp" id="ct_category" data-testid="cat-field-category" style="flex:1">'
+    +     '<option value="">— none —</option>'
+    +     _CATG.map(function(c){ return '<option value="'+esc(c.id)+'"'+(c.id===cur?' selected':'')+'>'+esc(c.name)+'</option>'; }).join('')
+    +   '</select>'
+    +   '<button type="button" data-testid="cat-category-new" onclick="ctNewCategory()" title="New category" style="flex:0 0 auto;border:1px solid var(--line);background:#fff;border-radius:10px;padding:0 13px;color:var(--blue);font-weight:700;font-size:13.5px;cursor:pointer">＋</button>'
+    + '</div>'
+    /* ⚠️ An unresolved id is SHOWN, not hidden. A product carrying a category that was retired (or that came from
+       an import) would otherwise silently read as "— none —", and the next save would erase it for real. */
+    + ((cur && !_CATG.some(function(c){ return c.id===cur; }))
+        ? '<div style="font-size:11.5px;color:#8a5a1e;margin-top:4px">⚠ This product cites a category that is no longer live'
+          + (d.category_name ? ' (“'+esc(d.category_name)+'”)' : '') + '. Saving now will clear it.</div>'
+        : '');
+}
+/**
+ * Create without leaving the form — the same dialog and the same publish-live rule as the wizard's version.
+ * ⚠️ ensureCap FIRST: `cbCatgAskNew`/`cbCatgCreate` live in cap-catalogue.js, which is LAZY and is NOT loaded by
+ * the product screen. Calling it directly works only if you happened to open the wizard earlier in the session —
+ * the worst kind of bug, because it works when you test it and not when someone else does.
+ */
+function ctNewCategory(){
+  ensureCap('catalogue')
+    .then(function(){
+      cbCatgAskNew(function(c){
+        paintProdDetail();
+        setTimeout(function(){ const s=document.getElementById('ct_category'); if(s) s.value=c.id; }, 0);
+      });
+    })
+    .catch(function(){ toast('Could not open that — categories are also under Definitions → Categories.', true); });
+}
+function prodEditForm(d){ return ctField('name','Name',d.name||'')+`<div style="display:flex;gap:10px"><div style="flex:1">`+ctField('unit','Unit',d.unit||'',"placeholder=\"piece / kg / tonne\"")+`</div><div style="flex:1"><label class="fl">Price</label><div style="display:flex;align-items:stretch"><span style="display:flex;align-items:center;padding:0 11px;border:1px solid var(--line);border-right:0;border-radius:10px 0 0 10px;background:#f2f1ed;color:#6b7176;font-weight:700;font-size:13.5px;white-space:nowrap" title="${myCur()} — your business currency">${esc(curSym())}</span><input class="inp" id="ct_price" data-testid="cat-field-price" inputmode="numeric" style="border-radius:0 10px 10px 0" value="${cbHasPrice(d.price)?cbAmount(d.price):''}"></div></div></div>`+ctField('code','Code / HSN',pCode(d))+ctCategoryField(d)+`<label class="fl">Description</label><textarea class="inp" id="ct_desc" data-testid="cat-field-desc" style="width:100%;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13.5px;min-height:58px;resize:vertical;background:var(--paper)">${esc(pDesc(d))}</textarea>`; }
 /* ═══ EVERY FIELD THIS ITEM CARRIES ════════════════════════════════════════════════════════════════════════════
  * Athi, 2026-08-13: *"the other information like synonym etc are not visible… clicking one item possibly bring
  * the field name and its item vertically as an overlay showcasing all the fields but graying the field which
@@ -5045,7 +5096,28 @@ function prodDetailHTML(){
   }
   return `${head}<div class="db">${body}</div><div class="actbar">${bar}</div>`;
 }
-function ctReadForm(orig){ return Object.assign({}, orig||{}, { name:(val("ct_name")||'').trim(), unit:(val("ct_unit")||'').trim()||'unit', price:+val("ct_price")||0, code:(val("ct_code")||'').trim(), desc:(val("ct_desc")||'').trim() }); }
+/**
+ * ⭐ THE CATEGORY IS READ HERE, WHICH IS WHY IT IS ONE FIELD AND NOT TWO. Both saves — add and edit — go through
+ * ctReadForm, so there is no second place for them to disagree about what a category is.
+ *
+ * ⚠️ BOTH THE ID AND THE NAME. `category` is the definition_id (my reference — rename in Definitions and every
+ * product follows). `category_name` is a VALUE written once, because a counterparty holding this item in their
+ * copy cannot resolve my definition_id and never will. See [[reference-cb-core-principle]]. The name copy is
+ * deliberately NOT kept in step with a later rename: my renaming a shelf must not silently relabel a product
+ * already sitting in someone else's catalogue.
+ */
+function ctReadForm(orig){
+  const base = Object.assign({}, orig||{}, { name:(val("ct_name")||'').trim(), unit:(val("ct_unit")||'').trim()||'unit', price:+val("ct_price")||0, code:(val("ct_code")||'').trim(), desc:(val("ct_desc")||'').trim() });
+  const sel = document.getElementById('ct_category');
+  /* No select on screen (no categories declared yet) → leave whatever the product already had. Absent is not
+     "cleared": a form that cannot show a field must never be the thing that erases it. */
+  if(!sel) return base;
+  const id = sel.value || '';
+  if(!id){ delete base.category; delete base.category_name; return base; }
+  const c = (typeof _CATG!=='undefined' && _CATG || []).filter(function(x){ return x.id===id; })[0];
+  base.category = id; if(c) base.category_name = c.name;
+  return base;
+}
 async function saveNewProduct(){ const err=document.getElementById("ct_err"); if(err)err.textContent=""; const data=ctReadForm({}); if(!data.name){ if(err)err.textContent="Name is required."; return; }
   try{ const r=await api("prodAdd",{body:{item_data:data}}); const nid=(r&&r.item&&r.item.item_id)||null; toast("Product added ✓"); if(window.CBOffline)CBOffline.clearDraft('prod.new'); UI.prodMode='view'; UI.prodSel=nid; await loadCatalogue(); if(nid){ UI.prodSel=nid; paintProdList(); paintProdDetail(); } }catch(e){ if(err)err.textContent=(e&&e.message)||"Could not add the product — please try again."; } }
 async function saveProduct(id){ const err=document.getElementById("ct_err"); if(err)err.textContent=""; const p=(UI.prods||[]).find(x=>prodId(x)===id); const data=ctReadForm(pData(p)); if(!data.name){ if(err)err.textContent="Name is required."; return; }
