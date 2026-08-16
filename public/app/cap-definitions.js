@@ -424,9 +424,18 @@ function cbDefRetiredOf(kind){
 
 /** The rule fields a kind offers — read from the registries, never listed here. */
 function cbDefRuleFields(kind, sub){
-  if (kind === 'category') {
-    return [{ k: 'members', label: 'Products in this category', ph: 'one name per line', area: true }];
-  }
+  /**
+   * ⚠️ `category` HAS NO RULE FIELDS, AND THAT IS THE FIX (Athi's call, 2026-08-16).
+   *
+   * It used to offer `members` — "products in this category, one name per line". That was the old way of saying
+   * the relationship, by TYPED NAME, and it now competes with products that cite the category by definition_id.
+   * Two ways to say one thing, and the typed one matched nothing: nobody reads `members`, so a name typed there
+   * classified no product at all. A field that looks like it works and does nothing is worse than no field.
+   *
+   * Membership is set from the Catalogue — tick products, press Categorise — and is stored on the PRODUCT, which
+   * is the only side that can carry it across an entity boundary (catgSetOn in core.js).
+   */
+  if (kind === 'category') return [];
   if (kind === 'requirement') {
     /* ⚠️ STANDARD KEYS, NOT FREE TEXT — the whole point is that these match what a supplier's readiness record
        is keyed by, so "ISO 9001" typed by hand would match nothing. The form renders the real, available keys as

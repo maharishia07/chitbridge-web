@@ -1275,7 +1275,17 @@ var POLICY_FLAGS = [
      everything, but that is not going to be the case."* Which side of the trade an entity is on does not change
      message to message — which is why this is a setting here and not the per-raise toggle I first built. */
   { key:'trade_side',        label:'This entity',           type:'enum',   options:['sell','receive'],              def:'sell', level:'entity',        gov:'entity',   help:'SELL — inbound messages are priced from your catalogue where the item matches. RECEIVE — they are not: a catalogue price is what you SELL at, and pricing goods coming IN off it puts a figure on the record nobody agreed.' },
-  { key:'self_copy_pref',    label:'Self-chit copy',        type:'enum',   options:['both','sent','received'],      def:'both', level:'entity',        gov:'entity',   help:'A chit to yourself: keep both copies, only the Order (sent), or only the Task (received).' },
+  /**
+   * ⚠️ `def` WAS `both` HERE TOO — A THIRD DECLARATION OF ONE DEFAULT. The engine (routes/chits.js) did
+   * `received`, lib/policy.js said `both`, and so did this. Three statements of one rule, two of them wrong.
+   * ⭐ Athi settled it 2026-08-16: *"mostly it is task, a billing counter, very rarely this become order… so the
+   * default is task, if the user changes to order copy, then we need to honour that"* — which is exactly what the
+   * engine already did. The saved column is read first; this is only the fallback, so an explicit choice stands.
+   * ⚠️ Guarded by tests/policy-defaults.test.js in the API repo, which reads BOTH sides and fails if they part.
+   */
+  { key:'self_copy_pref',    label:'Self-chit copy',        type:'enum',   options:['received','both','sent'],
+    labels:{ received:'Task only', both:'Both Task and Order', sent:'Order only' },
+    def:'received', level:'entity',        gov:'entity',   help:'A chit to yourself is usually work you gave yourself, so it lands in Task. Change it if you also want it filed under Order.' },
   { key:'chit_expiry_days',  label:'Chit expiry (days)',    type:'number', def:0,  level:'work-pattern', gov:'chosen',   help:'0 = no expiry. Auto-closes a chit after N days. Tighten-only, per work pattern.' },
   { key:'retention_days',    label:'Retention (days)',      type:'number', def:0,  level:'entity',        gov:'chosen',   help:'0 = keep. Per-copy retention; governed auto-purge is destructive → human-gated.' },
   { key:'dispute_scope',     label:'Dispute messages',      type:'enum',   options:['per-party','shared'],          def:'per-party', level:'platform', gov:'bound', help:'Per-party confidential scoping is the USP — platform-bound, cannot be relaxed.' },
@@ -1311,7 +1321,15 @@ function paintPolicy(){ var h=document.getElementById('polflags'); if(h) h.inner
 function _polControl(def){ var v=_polVal(def);
   if(_polLocked(def.gov)) return '<span style="font-weight:700;font-size:12.5px">'+esc(String(v))+'</span> <span style="font-size:10px" title="locked / inherited — cannot change here">🔒</span>';
   var dis=_POL.busy?' disabled':'';
-  if(def.type==='enum') return '<select'+dis+' data-testid="pol-'+esc(def.key)+'" onchange="setPolFlag(\''+def.key+'\',this.value)" style="padding:5px 8px;border:1px solid var(--line);border-radius:7px;font-size:12.5px">'+def.options.map(function(o){ return '<option'+(String(v)===String(o)?' selected':'')+'>'+esc(o)+'</option>'; }).join('')+'</select>';
+  /**
+   * ⚠️ THE VALUE IS THE CODE; THE LABEL IS FOR A PERSON. This rendered raw enum codes — a dropdown offering
+   * "both · sent · received" against a setting about self-chits, where the words a person recognises are Task and
+   * Order. `received` means "Task only" and nothing on screen said so. Athi, 2026-08-16, reasoning it out loud:
+   * *"mostly it is task, a billing counter, very rarely this become order"* — that is the vocabulary, and the
+   * control should have been speaking it.
+   * ⚠️ `value` stays the code, so what is SENT is unchanged. Only the words move.
+   */
+  if(def.type==='enum') return '<select'+dis+' data-testid="pol-'+esc(def.key)+'" onchange="setPolFlag(\''+def.key+'\',this.value)" style="padding:5px 8px;border:1px solid var(--line);border-radius:7px;font-size:12.5px">'+def.options.map(function(o){ var lbl=(def.labels&&def.labels[o])||o; return '<option value="'+esc(o)+'"'+(String(v)===String(o)?' selected':'')+'>'+esc(lbl)+'</option>'; }).join('')+'</select>';
   if(def.type==='number') return '<input type="number"'+dis+' data-testid="pol-'+esc(def.key)+'" value="'+esc(String(v))+'" onchange="setPolFlag(\''+def.key+'\',this.value)" style="width:90px;padding:5px 8px;border:1px solid var(--line);border-radius:7px;font-size:12.5px">';
   return '<input'+dis+' value="'+esc(String(v))+'" onchange="setPolFlag(\''+def.key+'\',this.value)" style="padding:5px 8px;border:1px solid var(--line);border-radius:7px;font-size:12.5px">';
 }
