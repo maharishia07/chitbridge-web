@@ -346,7 +346,14 @@ function catfFillItem(){
   /* The category shelf is read ONCE, before the schema is built, then cached — the enum has to exist at the
      moment json-editor renders, and re-opening the form must not re-fetch. `cbCatgLive` resolves even on
      failure, so a dead shelf costs the dropdown and nothing else. */
-  if (_CATG === null) { cbCatgLive().then(function(){ catfFillItem(); }); return; }
+  /* ⚠️ BOTH SHELVES, ONE GATE. Order models need the same treatment for the same reason — the enum must exist
+     at the moment json-editor renders — and gating them separately would re-enter this function twice and
+     rebuild the form under the user. Both resolve even on failure, so a dead shelf costs a dropdown, not the
+     form. */
+  if (_CATG === null || cbDefsCached('ordermodel') === null) {
+    Promise.all([cbCatgLive(), cbOrderLive()]).then(function(){ catfFillItem(); });
+    return;
+  }
   var c = CBCatalogue.ensure(f.catalogue);
   var full = CBCatalogue.toJSONSchema(c, { method: f.method, currency: _catfCcy(), facets: _catfFacets(f) });
   // ADD FORM = only the fields the OWNER types: identity + unit + the CB gap. Hide system-fed (ERP), computed (AI),
@@ -369,6 +376,28 @@ function catfFillItem(){
       type: 'string', title: 'Category',
       enum: [''].concat(cats.map(function(c){ return c.id; })),
       options: { enum_titles: ['— none —'].concat(cats.map(function(c){ return c.name; })) }
+    } });
+  }
+  /**
+   * ⭐⭐ ORDER MODEL, ADOPTED BY REFERENCE (backlog 17) — the same enum trick as category above, for the same
+   * reason: `enum` carries definition_ids, `enum_titles` carries the names. The product stores the ID, so
+   * "Carton of 6" is corrected in one place instead of retyped on fifty items.
+   *
+   * ⚠️ NARROWED BY WHAT THIS CATALOGUE CAN SELL (backlog 18) — a text catalogue offers none at all, and the
+   * field simply does not appear rather than offering a choice that cannot work.
+   *
+   * ⚠️ NOT REQUIRED. A product with no order model falls to the inline default, exactly as before; making this
+   * mandatory would block the save on a decision most owners have no reason to make on item one.
+   */
+  var oms = (typeof cbDefsCached === 'function' && cbDefsCached('ordermodel')) || [];
+  var allowed = (typeof CBCatalogue !== 'undefined' && CBCatalogue.modelsForMethod)
+    ? CBCatalogue.modelsForMethod(f.method) : null;
+  var omPick = oms.filter(function(d){ return !allowed || allowed.indexOf(d.sub) >= 0; });
+  if (omPick.length) {
+    schema.properties = Object.assign({}, schema.properties, { order_ref: {
+      type: 'string', title: 'Order model',
+      enum: [''].concat(omPick.map(function(d){ return d.definition_id; })),
+      options: { enum_titles: ['— default —'].concat(omPick.map(function(d){ return d.name + ' (' + d.sub + ')'; })) }
     } });
   }
   window._catfSchema = schema;
@@ -414,6 +443,19 @@ function catfCaptureItem(){
       var _c = (_CATG || []).filter(function(c){ return c.id === item_data.category; })[0];
       if (_c) item_data.category_name = _c.name;
     } else { delete item_data.category; }   // '— none —' is the empty enum value; store nothing rather than ''
+    /**
+     * ⭐⭐ THE ORDER MODEL IS STORED AS A POINTER, AND ONLY A POINTER (backlog 17).
+     *
+     * `order_ref` is a form field; the stored shape is `order: { ref }`. ⚠️ NO COPY OF THE VALUES IS KEPT HERE —
+     * that is the entire difference between this and typing `pack, step 6` on fifty items. A copy would go stale
+     * the moment the definition is corrected, and the product would then disagree with its own model with no way
+     * to tell which was meant. The values are frozen onto the CHIT at the mint, where being fixed is the point.
+     * ⚠️ Unlike `category`, no `_name` twin is written. A category name is denormalised for a counterparty who
+     * cannot resolve my ids; an order model's terms reach them through the frozen snapshot instead, which is
+     * both the copy AND the pointer — strictly better than a loose name.
+     */
+    if (item_data.order_ref) { item_data.order = { ref: item_data.order_ref }; }
+    delete item_data.order_ref;
     UI.catf.items = UI.catf.items || []; UI.catf.items.push(item); _catfSave();   // keep a local copy for the instant customer preview
     if (typeof closeModal === 'function') closeModal();
     if (typeof api === 'function') {

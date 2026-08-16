@@ -200,17 +200,39 @@ function catgSetOn(d, ids){
  * (cap-catalogue.js, lazy) need it, and a loader behind a lazy load is a loader half the callers cannot reach.
  * ONE owner, one cache — the alternative is compose fetching its own copy and the two drifting.
  */
+/**
+ * ⭐ ONE LIVE-DEFINITION LOADER, KEYED BY KIND — extracted 2026-08-17 when order models became the second
+ * caller, which is exactly the case the note below anticipated. Categories and order models want the same
+ * thing: the live definitions of one kind, cached, with one in-flight request no matter how many forms open.
+ * ⚠️ Returns the RAW definitions. Each caller shapes what it needs — a category wants {id,name}, an order model
+ * wants its sub-kind and rules — because a shared loader that also imposed a shape would just be two functions
+ * with a shared cache and a lie in the middle.
+ */
+var _DEFS = {};            // kind → raw definitions, as last read
+var _defsReq = {};         // kind → in-flight promise
+function cbDefsLive(kind, force){
+  if (!force && _DEFS[kind]) return Promise.resolve(_DEFS[kind]);
+  if (!force && _defsReq[kind]) return _defsReq[kind];
+  if (typeof api !== 'function') return Promise.resolve([]);
+  /* ⚠️ `query`, not a fourth hardcoded alias. `defListLive` is pinned to kind=offer; copying it for categories
+     and again for order models is how a list of aliases becomes a list of near-duplicates. */
+  _defsReq[kind] = api('defList', { query: { kind: kind, status: 'live' } })
+    .then(function(r){ _DEFS[kind] = (r && r.definitions) || []; _defsReq[kind] = null; return _DEFS[kind]; })
+    .catch(function(){ _defsReq[kind] = null; return _DEFS[kind] || []; });
+  return _defsReq[kind];
+}
+/** Synchronous read of whatever was last loaded — for render paths that cannot await. */
+function cbDefsCached(kind){ return _DEFS[kind] || null; }
+
 var _CATG = null;          // [{id,name}] — the live shelf, as last read
 var _catgReq = null;       // in-flight promise, so a form opening twice does not fetch twice
 function cbCatgLive(force){
   if (!force && _CATG) return Promise.resolve(_CATG);
   if (!force && _catgReq) return _catgReq;
   if (typeof api !== 'function') return Promise.resolve([]);
-  /* ⚠️ `query`, not a fourth hardcoded alias. `defListLive` is pinned to kind=offer; copying it for categories
-     and again for order models is how a list of aliases becomes a list of near-duplicates. */
-  _catgReq = api('defList', { query: { kind: 'category', status: 'live' } })
-    .then(function(r){
-      _CATG = ((r && r.definitions) || []).map(function(d){ return { id: d.definition_id, name: d.name }; });
+  _catgReq = cbDefsLive('category', force)
+    .then(function(defs){
+      _CATG = (defs || []).map(function(d){ return { id: d.definition_id, name: d.name }; });
       _catgReq = null; return _CATG;
     })
     /**
@@ -221,6 +243,44 @@ function cbCatgLive(force){
      */
     .catch(function(){ _catgReq = null; return _CATG || []; });
   return _catgReq;
+}
+
+/* ══ ORDER MODELS, ADOPTED BY REFERENCE (backlog 17) ═════════════════════════════════════════════════════════
+ * A definition wraps one of cart-ui's MODELS with a NAME — "Carton of 6" = `pack, step 6` — so a product adopts
+ * the name instead of the rule being retyped on fifty items. The product stores `order = { ref:<definition_id> }`
+ * and NEVER the values, so a correction to the definition reaches every product that adopted it.
+ *
+ * ⚠️⚠️ THAT PROPAGATION IS THE WHOLE RISK, AND IT IS WHY THE MINT FREEZES. Changing "Carton of 6" to 12 moves
+ * every adopting product, which is either exactly what you want or a catastrophe. So the rule is two-speed:
+ *   browsing / editing → resolve LIVE, so a correction propagates
+ *   at the mint        → FREEZE the resolved values onto the chit, so a later change cannot rewrite what was
+ *                        agreed (POST /api/definitions/freeze already returns exactly that snapshot)
+ */
+function cbOrderLive(force){ return cbDefsLive('ordermodel', force); }
+/**
+ * Resolve a stored `order` into the flat declaration cart-ui reads. Synchronous, because every render path that
+ * needs it is synchronous; it reads the cache cbOrderLive() fills.
+ *
+ * ⚠️⚠️ AN UNRESOLVED REFERENCE MUST NOT QUIETLY BECOME `count`. cart-ui defaults an unknown model to `count`,
+ * so returning a bare `{ref}` would silently turn "Carton of 6" into "6 each" — the same number, a different
+ * promise, and no error anywhere. Instead the marker is carried out so callers can REFUSE to quantify and say
+ * the model could not be read. Losing a category costs a filter; losing an order model would change what was
+ * ordered, and those two failures do not deserve the same softness.
+ */
+function cbOrderDecl(order){
+  var o = order || {};
+  if (!o.ref) return o;                                  // inline declaration — unchanged, still supported
+  var defs = cbDefsCached('ordermodel');
+  if (!defs) { cbOrderLive(); return { ref: o.ref, unresolved: 'loading' }; }
+  var d = null;
+  for (var i = 0; i < defs.length; i++) if (defs[i].definition_id === o.ref) { d = defs[i]; break; }
+  /* ⚠️ A RETIRED definition still resolves if the server returned it — "do not offer this any more" is not
+     "this never happened". Only a genuinely missing one is unresolved. */
+  if (!d) return { ref: o.ref, unresolved: 'missing' };
+  var out = { ref: o.ref, model: d.sub, name: d.name };
+  var rules = d.rules || {};
+  for (var k in rules) if (Object.prototype.hasOwnProperty.call(rules, k) && out[k] === undefined) out[k] = rules[k];
+  return out;
 }
 
 async function api(key, {params, query, body}={}){

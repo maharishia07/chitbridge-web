@@ -136,10 +136,21 @@
   function declOf(ns, r) {
     var s = C[ns] || {}, d = (r && (r.item && (r.item.item_data || r.item))) || {};
     var o = d.order || (s.cat && s.cat.shop && s.cat.shop.order) || {};
-    return (o && typeof o === 'object') ? o : {};
+    if (!o || typeof o !== 'object') return {};
+    /* ⭐ ADOPTED BY REFERENCE (backlog 17): `{ref:<definition_id>}` resolves LIVE, so a correction to
+       "Carton of 6" reaches every product that adopted it. The values are frozen onto the chit at the mint,
+       never stored on the product. An inline declaration still works and is left untouched. */
+    return (o.ref && typeof cbOrderDecl === 'function') ? cbOrderDecl(o) : o;
   }
+  /**
+   * ⚠️⚠️ AN UNRESOLVED REFERENCE DOES NOT FALL BACK TO `count`. That default is right for a MISSING model and
+   * catastrophic for an UNREADABLE one: "Carton of 6" would silently become "6 each" — same number, different
+   * promise, no error anywhere, and the customer receives six boxes or six items depending on nobody's decision.
+   * Callers get null and must refuse to quantify rather than guess.
+   */
   function modelOf(ns, r) {
     var o = declOf(ns, r);
+    if (o && o.unresolved) return null;
     return MODELS[o.model] || MODELS.count;
   }
   /** Row lookup by id — models need the declaration, and every mutation is given only an id. */
@@ -260,6 +271,18 @@
                  // The MODEL travels with the line, so what was agreed can be read back later — a '4' means
                  // something different on a pack of 12 than on a metre of cable.
                  model: o.model || 'count',
+                 /**
+                  * ⭐⭐ CITE THE ORDER MODEL SO THE MINT FREEZES IT (backlog 17). `definition_ids` is the
+                  * existing adoption channel: sendChit() collects every line's ids and POSTs them to
+                  * /definitions/freeze, stamping the version that was agreed.
+                  *
+                  * ⚠️ WITHOUT THIS THE REFERENCE WOULD STAY LOOSE FOREVER. `model` above travels as a bare word
+                  * — "pack" — and pack of WHAT is in the definition. Changing "Carton of 6" to 12 next month
+                  * would re-read a chit already agreed at 6, and the chit itself could not prove otherwise.
+                  * The freeze is what makes the reference safe; citing it is what triggers the freeze.
+                  * ⚠️ Deduplicated upstream in sendChit, so fifty lines on one model freeze it once.
+                  */
+                 definition_ids: (d.order && d.order.ref) ? [d.order.ref] : [],
                  offer: (s.offers && s.offers[r.item_id]) != null ? s.offers[r.item_id] : null };
       });
   }
@@ -416,6 +439,10 @@
   function put(ns, id, raw) {
     var s = C[ns]; if (!s) return;
     var r = rowById(ns, id), o = declOf(ns, r), m = modelOf(ns, r);
+    /* ⚠️ REFUSE TO QUANTIFY AN UNREADABLE MODEL. Coercing with the default would accept the number under the
+       wrong rule — "Carton of 6" silently becoming "6 each" — so the line takes no quantity until its
+       definition can be read. Refusing is visible; guessing is not. */
+    if (!m) return;
     var v = m.coerce(raw, o);
     if (v > 0) s.sel[id] = v; else delete s.sel[id];
     touched(ns);
@@ -423,6 +450,7 @@
   function step(ns, id, dir) {
     var s = C[ns]; if (!s) return;
     var r = rowById(ns, id), o = declOf(ns, r), m = modelOf(ns, r);
+    if (!m) return;                                   // same reason as put() — no stepping under a guessed rule
     put(ns, id, m.next(s.sel[id] || 0, dir, o));
   }
   function add(ns, id) { step(ns, id, +1); }
@@ -641,7 +669,13 @@
   }
   /** The model's own note under the row — "sold in 12s", "min 5 · max 500". Silent when there is nothing to say. */
   function hintHTML(ns, r) {
-    var o = declOf(ns, r), m = modelOf(ns, r), h = m.hint(o);
+    var o = declOf(ns, r), m = modelOf(ns, r);
+    /* ⚠️ SAY IT, do not fall silent. An unresolved model is the one case where this note has something urgent
+       to add — the row cannot be ordered and the reader deserves to know why rather than finding the controls
+       inert. `loading` is transient and says so; `missing` means the definition is gone. */
+    if (!m) return ' <span style="color:#b4453f;font-size:11px">· ' + (o.unresolved === 'loading'
+      ? 'reading its order model…' : 'order model unavailable — cannot be ordered') + '</span>';
+    var h = m.hint(o);
     if (!h) return '';
     return ' <span style="color:#8a949c;font-size:11px">· ' + esc(h) + '</span>';
   }
