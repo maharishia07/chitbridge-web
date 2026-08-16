@@ -8,6 +8,10 @@
 if (typeof EP !== 'undefined') { Object.assign(EP, {
   vaultGet:  {m:'GET', p:'/api/governance/profile',       ok:'y'},   // returns the trade profile incl. .vault
   vaultSave: {m:'PUT', p:'/api/governance/profile/vault', ok:'y'},
+  /* ⚠️ SAME PATH AS cap-messages' msgInbox, under a DIFFERENT KEY. The EP registry rejects duplicate keys
+     (guard-static check 1), and MIS must not depend on the messages capability having been opened first —
+     Friction counts unattended messages whether or not you have ever visited Messages. */
+  misMsgs: {m:'GET', p:'/api/folders/messages', ok:'y'},
 }); }
 // ── TRADE DOCUMENTS VAULT — the recurring inputs a business provides ONCE that pre-fill every authority form. Grouped;
 // matches the backend whitelist (lib/profile.js VAULT_SCHEMA). Gather here → forms are ~70% pre-filled thereafter. ──
@@ -49,35 +53,439 @@ async function saveVaultUI(){
   try{ await api('vaultSave',{body:{vault:vault}}); if(window.CBOffline)CBOffline.clearDraft('app.vault'); if(typeof toast==='function')toast('Vault saved ✓'); }
   catch(e){ if(err)err.textContent=(e&&e.message)||'Could not save the vault'; }
 }
-/* ---- MIS ---- */
-function misScreen(){ return scr("📊 MIS","misbody","mis"); }
-async function loadMIS(){ const h=document.getElementById("misbody"); if(!h)return;
-  try{ const [inb,dq,ac,sp]=await Promise.all([api("inbox"),api("disputeQueue").catch(()=>({})),api("actors").catch(()=>({})),api("supList").catch(()=>({}))]);
-    const chits=(inb||[]).map(mapApiChit); const byState={open:0,act:0,close:0}; let value=0; chits.forEach(c=>{byState[c.state]=(byState[c.state]||0)+1; value+=c.amt||0;});
-    const openDisp=dq.total_open!=null?dq.total_open:((dq.my_disputes||[]).length+(dq.other_disputes||[]).length);
-    const stat=(label,v)=>`<div style="${_CARD};text-align:center;margin:0"><div style="font-size:21px;font-weight:800;font-family:'Space Grotesk'">${v}</div><div style="font-size:11px;color:var(--grey)">${label}</div></div>`;
-    UI._mis={ chits:chits.length, deal_value:value, currency:'INR', open:byState.open, in_progress:byState.act, closed:byState.close, open_disputes:openDisp, co_assists:(ac||[]).length, suppliers:(sp||[]).length };
-    h.innerHTML=`${menuAssist('mis')}<div style="display:flex;justify-content:flex-end;margin-bottom:8px"><button onclick="aiRun('metrics-narrate',UI._mis,{title:'📊 Explain my metrics'})" title="AI narrates what your numbers say" style="font-size:12px;font-weight:700;border:1px solid #6d5bd0;background:#f2effc;color:#6d5bd0;border-radius:8px;padding:7px 12px;cursor:pointer">✨ Explain</button></div><div style="display:grid;grid-template-columns:repeat(2,1fr);gap:9px">
-      ${stat("Chits",chits.length)}${stat("Deal value",inr(value))}
-      ${stat("Open",byState.open)}${stat("In progress",byState.act)}
-      ${stat("Closed",byState.close)}${stat("Open disputes",openDisp)}
-      ${stat("Co-assists",(ac||[]).length)}${stat("Suppliers",(sp||[]).length)}</div>
-      <div style="margin-top:10px;color:var(--grey);font-size:11px">Computed on view from your live data — there is no MIS route on the legacy backend yet (a server-side rollup is the production model).</div>`;
-  }catch(e){ h.innerHTML=scrErr(e); } }
+/* ═══ MIS ═══════════════════════════════════════════════════════════════════════════════════════════════════
+ * ⭐ REBUILT 2026-08-16. It was eight equal tiles — chits, value, open, in progress, closed, disputes, co-assists,
+ * suppliers — and the trouble was not the layout, it was that EVERY ONE OF THOSE NUMBERS IS KNOWABLE INSIDE A
+ * SINGLE COMPANY. CB stands between parties and sees both sides of a transaction, which no single ERP does, and
+ * the old screen spent that vantage point on counts an accounts package already prints.
+ *
+ * Four bands, ordered by "would you act on this today", in the app's own two-pane shell (Athi: *"how do we bring
+ * it as two sided panel? because all should be similar"*) — the rail is the set, the right pane is the selected
+ * thing, exactly as Task→chit and Suppliers→catalogue. The rail carries each band's HEADLINE, so it is a summary
+ * in its own right and the old tile grid is condensed rather than lost. `Overview` renders all four at once, which
+ * is the one thing a two-pane shell would otherwise have cost (Athi: *"each at a time, or an option bar on top"*).
+ *
+ * ⚠️ NOTHING HERE IS INVENTED. Every figure is derived from chits already fetched. Where a number would require
+ * logic that does not exist yet (counterparty reliability, mass balance) the band says so rather than showing a
+ * plausible score — the same discipline netAvail set by waiting for lib/availability.js.
+ */
+var MIS_BANDS = [
+  { key:'overview', name:'Overview', q:'Everything, condensed' },
+  { key:'position', name:'Position', q:'How much is real?' },
+  { key:'flow',     name:'Flow',     q:'What is moving?' },
+  { key:'friction', name:'Friction', q:'What is stuck?' },
+  { key:'trust',    name:'Trust',    q:'Who can I rely on?' }
+];
+/**
+ * ⚠️ THE STATUS→MONEY MAPPING, AND THE TRAP IN IT. `cancelled` and `rejected` live in the `close` bucket beside
+ * `completed`, so "committed = closed" would count DEAD value as real money. They are excluded from both sides and
+ * reported separately — silently dropping them would be a lie of omission, and folding them in would be worse.
+ */
+var MIS_COMMITTED = { accepted:1, in_progress:1, partial:1, completed:1 };   // someone said yes
+var MIS_FORECAST  = { pending:1, delivered:1, read:1 };                      // sent, nobody has committed
+var MIS_DEAD      = { cancelled:1, rejected:1 };
+
+/**
+ * ⚠️ ON MOBILE, PICKING A ROW MUST SLIDE TO THE DETAIL. The shell hides .detail under .appwrap.m unless the panel
+ * carries .showdetail, so without this the three new two-pane screens showed their rail and then did nothing at
+ * all when tapped — the row highlighted and the content stayed invisible. selectSupplier has always done this;
+ * one helper rather than the same three lines in MIS, Profile and Settings.
+ */
+function _capShowDetail(){
+  if (UI.vp !== 'mob') return;
+  UI.mdetail = true;
+  var p = document.getElementById('panel'); if (p) p.classList.add('showdetail');
+}
+function misBand(){ return UI.misBand || 'overview'; }
+/* Repaint from the cached model when we have one — switching band is not a reason to re-fetch five endpoints. */
+function misSetBand(k){ UI.misBand = k; renderApp(); _capShowDetail();
+  if (UI._mis){ const h=document.getElementById('misbody'); if (h) h.innerHTML = misBandHTML(k, UI._mis); } else { loadMIS(); } }
+function misPeriod(){ return UI.misPeriod || 'all'; }
+function misSetPeriod(p){ UI.misPeriod = p; renderApp(); loadMIS(); }   // a new window DOES need the data re-bucketed
+
+function misScreen(){
+  var m = UI._mis;
+  var rail = MIS_BANDS.map(function(b){
+    var sel = (misBand() === b.key) ? ' sel' : '';
+    var hv = m ? misHeadline(b.key, m) : { v:'·', s:'' };
+    return '<div class="row misrow' + sel + '" data-testid="mis-band-' + b.key + '" onclick="misSetBand(\'' + b.key + '\')">'
+      + '<div class="main2"><div class="l1"><span class="code">' + esc(b.name) + '</span></div>'
+        + '<div class="l2">' + esc(b.q) + '</div></div>'
+      + '<div class="misval' + (hv.tone ? ' ' + hv.tone : '') + '">' + hv.v + '<small>' + esc(hv.s) + '</small></div></div>';
+  }).join('');
+  var seg = function(p, l){ return '<button class="' + (misPeriod() === p ? 'on' : '') + '" onclick="misSetPeriod(\'' + p + '\')">' + l + '</button>'; };
+  /* The period bar sits ABOVE the split because it reframes all four bands at once; anything scoped to one band
+     lives inside that band. Same rule that puts the Suppliers tabs above its list. */
+  var bar = '<div class="misbar"><span class="misttl">📊 MIS</span>'
+    + '<span class="seg">' + seg('7', '7 days') + seg('30', '30 days') + seg('all', 'All time') + '</span>'
+    + '<span class="misbar-r">' + (m ? '<span class="misasof">live · ' + esc(m.asOf) + '</span>' : '')
+    + '<button class="composebtn" onclick="aiRun(\'metrics-narrate\',UI._mis,{title:\'📊 Explain my metrics\'})" title="AI narrates what your numbers say">✨ Explain</button></span></div>';
+  var list = '<div class="list"><div class="lh" style="padding:0">' + bar + '</div>'
+    + '<div class="rows" id="mis_rail">' + rail + '</div></div>';
+  var detail = '<div class="detail" id="detailpane"><div id="misbody">'
+    + (m ? misBandHTML(misBand(), m) : '<div class="loadwrap"><span class="spin"></span> loading…</div>') + '</div></div>';
+  var divider = '<div class="divider" id="divider" onmousedown="startDrag(event)" ontouchstart="startDrag(event)" role="separator" aria-label="Resize panes"><span class="grip"></span></div>';
+  /**
+   * ⚠️ ITS OWN RAIL WIDTH, not the shared UI.lw. Task and Suppliers hold lists of unbounded, variable-length rows,
+   * so people drag those panes wide — and MIS then inherited that width for FIVE FIXED ROWS, pushing its detail
+   * pane off the screen entirely. The rail's content here has a natural size; borrowing another screen's is what
+   * made it wrong. Still draggable — startDrag writes UI.lw, and misLw only supplies the default.
+   */
+  if (UI.misLw == null) UI.misLw = 320;
+  var lw = Math.min(UI.misLw, Math.max(260, Math.round((window.innerWidth || 1200) * 0.42)));
+  return '<div class="panel' + ((UI.vp === 'mob' && UI.mdetail) ? ' showdetail' : '') + '" id="panel" style="--lw:' + lw + 'px;--lh:' + (UI.lh || 300) + 'px">' + list + divider + detail + '</div>';
+}
+
+/* The rail doubles as the summary, so each row needs its own headline — one number and one word of context. */
+function misHeadline(k, m){
+  if (k === 'overview') return { v: MIS_BANDS.length - 1, s: 'bands' };
+  if (k === 'position') return { v: inr(m.committed), s: 'committed' };
+  if (k === 'flow')     return { v: m.chits, s: m.periodLabel };
+  if (k === 'friction'){
+    const un = (m.unattended || []).length;
+    /* The headline leads with whichever is worse — an unanswered message is friction the chit queue never showed. */
+    if (un) return { v: m.waiting.length + un, s: un + ' unanswered', tone:'warn' };
+    return { v: m.waiting.length, s: m.waiting.length ? ('oldest ' + m.waiting[0].age) : 'nothing stuck', tone: m.waiting.length ? 'warn' : 'ok' };
+  }
+  if (k === 'trust')    return { v: m.suppliers, s: m.open_disputes ? (m.open_disputes + ' disputes') : '0 disputes', tone: m.open_disputes ? 'warn' : 'ok' };
+  return { v: '·', s: '' };
+}
+
+function misBandHTML(k, m){
+  if (k === 'overview') return misOverview(m);
+  if (k === 'position') return misPosition(m);
+  if (k === 'flow')     return misFlow(m);
+  if (k === 'friction') return misFriction(m);
+  if (k === 'trust')    return misTrust(m);
+  return '';
+}
+function _misHead(t, s){ return '<div class="dh">' + esc(t) + '</div><div class="ds" style="margin-bottom:14px">' + esc(s) + '</div>'; }
+function _misSplitBar(m){
+  var tot = m.committed + m.forecast;
+  if (!tot) return '<div class="misnote">No value on any chit yet.</div>';
+  var cp = Math.round(m.committed / tot * 100);
+  return '<div class="misplit"><span style="background:var(--blue);width:' + cp + '%"></span>'
+    + '<span style="background:var(--gold);width:' + (100 - cp) + '%"></span></div>'
+    + '<div class="miskey"><span class="k"><i class="sw" style="background:var(--blue)"></i> Committed ' + inr(m.committed) + '</span>'
+    + '<span class="k"><i class="sw" style="background:var(--gold)"></i> Forecast ' + inr(m.forecast) + '</span></div>';
+}
+function _misStack(m){
+  var t = m.chits || 1;
+  var seg = function(n, col){ return n ? '<span style="background:' + col + ';width:' + (n / t * 100) + '%">' + n + '</span>' : ''; };
+  return '<div class="misstack">' + seg(m.open, 'var(--blue)') + seg(m.in_progress, 'var(--prog)') + seg(m.closed, 'var(--ok)') + '</div>'
+    + '<div class="miskey"><span class="k"><i class="sw" style="background:var(--blue)"></i> Open</span>'
+    + '<span class="k"><i class="sw" style="background:var(--prog)"></i> In progress</span>'
+    + '<span class="k"><i class="sw" style="background:var(--ok)"></i> Closed</span></div>';
+}
+/* A real series off created_at — no invented shape. Flat line when there is only one bucket, which is honest. */
+function _misSpark(series){
+  if (!series || series.length < 2) return '<div class="misnote">Not enough history yet for a trend — one bucket of data.</div>';
+  var max = Math.max.apply(null, series.map(function(p){ return p.n; })) || 1;
+  var pts = series.map(function(p, i){
+    var x = 6 + i * (288 / (series.length - 1));
+    return Math.round(x) + ',' + Math.round(50 - (p.n / max) * 42);
+  }).join(' ');
+  var last = pts.split(' ').pop().split(',');
+  return '<svg class="misspark" viewBox="0 0 300 56" preserveAspectRatio="none" role="img" aria-label="Chits per period, latest ' + series[series.length - 1].n + '">'
+    + '<polyline points="' + pts + '" fill="none" stroke="var(--blue)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
+    + '<circle cx="' + last[0] + '" cy="' + last[1] + '" r="4" fill="var(--blue)" stroke="#fff" stroke-width="2"/></svg>';
+}
+
+function misPosition(m){
+  var tot = m.committed + m.forecast;
+  var pct = tot ? Math.round(m.committed / tot * 100) : 0;
+  return _misHead('Position', 'How much of the pipeline is authoritative, and how much is still a forecast.')
+    + '<div class="mistwo"><div>'
+      + '<div class="mislbl">Committed · someone said yes</div>'
+      + '<div class="mishero">' + inr(m.committed) + '</div>'
+      + '<div class="misnote">' + pct + '% of the book is authoritative — accepted, in progress or completed.</div>'
+      + _misSplitBar(m)
+    + '</div><div>'
+      + '<div class="mislbl">Forecast · nobody has committed</div>'
+      + '<div class="misfore">' + inr(m.forecast) + '</div>'
+      + '<div class="misnote" style="margin-top:7px">Sent or received but not yet accepted. Real work — nobody has promised it.</div>'
+      + (m.dead ? '<div class="miswarn">' + inr(m.dead) + ' on cancelled or rejected chits, counted in neither.</div>' : '')
+    + '</div></div>'
+    + '<div class="miswhy">The old screen showed <b>' + inr(m.committed + m.forecast + m.dead) + '</b> as one “deal value”, blending all three — which <b>overstates the book</b>.</div>';
+}
+function misFlow(m){
+  return _misHead('Flow', 'What is moving through the rail, and at what rate.')
+    + '<div class="mistwo"><div>'
+      + '<div class="mislbl">Chits by state</div><div class="misbig">' + m.chits + '</div>' + _misStack(m)
+      + '<div class="miswhy">Three peer tiles hid that <b>' + m.open + ' + ' + m.in_progress + ' + ' + m.closed + ' = ' + m.chits + '</b>.</div>'
+    + '</div><div>'
+      + '<div class="mislbl">Chits per ' + esc(m.bucketName) + '</div>'
+      + '<div class="misbig">' + m.chits + (m.delta ? ' <span class="misdelta">▲ ' + m.delta + '</span>' : '') + '</div>'
+      + _misSpark(m.series)
+    + '</div></div>';
+}
+/* Ageing as a distribution, not a number — the oldest bucket carries the warning tone because that is the one
+   worth acting on. An empty bucket renders as a flat rule rather than vanishing, so the scale stays readable. */
+function _misAgeing(m){
+  const tot = m.waiting.length; if (!tot) return '';
+  const max = Math.max.apply(null, m.ageing.map(function(b){ return b.n; })) || 1;
+  const cells = m.ageing.map(function(b, i){
+    const warn = (i >= 2 && b.n > 0);
+    return '<div class="misage' + (warn ? ' warn' : '') + '">'
+      + '<div class="misagebar"><i style="height:' + Math.round((b.n / max) * 100) + '%"></i></div>'
+      + '<div class="misagen">' + b.n + '</div><div class="misagek">' + b.k + '</div></div>';
+  }).join('');
+  return '<div class="mislbl" style="margin-top:16px">Ageing · how long they have waited</div>'
+    + '<div class="misageing">' + cells + '</div>';
+}
+function _misUnattended(m){
+  const u = m.unattended || [];
+  if (!u.length) return '<div class="misnote" style="margin-top:14px">✓ No unanswered messages.</div>';
+  const rows = u.slice(0, 4).map(function(x){
+    return '<div class="misunrow"><span class="misunage">' + esc(x.age) + '</span>'
+      + '<span class="misuntxt"><b>' + esc(x.from) + '</b> — ' + esc(x.text) + '</span></div>';
+  }).join('');
+  return '<div class="mislbl" style="margin-top:16px">Unanswered messages · ' + u.length + ' waiting on you</div>'
+    + '<div class="misunatt">' + rows
+    + (u.length > 4 ? '<div class="misnote" style="padding:6px 0 0">…and ' + (u.length - 4) + ' more.</div>' : '')
+    + '</div>';
+}
+function misFriction(m){
+  var rows = m.waiting.slice(0, 12).map(function(w){
+    return '<tr><td>' + esc(w.on) + '</td><td>' + esc(w.subject) + '</td><td class="num">' + esc(w.age) + '</td>'
+      + '<td class="num">' + (w.amt ? inr(w.amt) : '—') + '</td>'
+      + '<td><span class="misclock ' + w.who + '">◷ ' + (w.who === 'mine' ? 'Mine' : 'Theirs') + '</span></td></tr>';
+  }).join('');
+  return _misHead('Friction', 'Where time is being lost — and whose clock is running.')
+    + '<div class="misstatus">' + (m.open_disputes
+        ? '<i class="dot" style="background:var(--disp)"></i> <b>' + m.open_disputes + ' open dispute' + (m.open_disputes === 1 ? '' : 's') + '</b>'
+        : '<i class="dot" style="background:var(--ok)"></i> <b>No open disputes</b>')
+      + '<span class="misnote" style="margin-left:8px">· ' + m.chits + ' chits · ' + (m.open_disputes ? 'needs resolving' : 'nothing to resolve') + '</span></div>'
+    + _misAgeing(m) + _misUnattended(m)
+    + (rows
+      ? '<div class="mislbl" style="margin-top:18px">The queue · oldest first</div>'
+        + '<div class="misscroll"><table class="mistable"><thead><tr><th>Waiting on</th><th>Chit</th><th>Age</th><th>Value</th><th>Whose clock</th></tr></thead><tbody>' + rows + '</tbody></table></div>'
+      : '<div class="misnote" style="margin-top:12px">Nothing is waiting — every chit has been accepted or closed.</div>')
+    + '<div class="miswhy">Disputes sit here as a <b>status</b>, not a count: <b>0</b> in a plain tile read exactly like <b>Suppliers 2</b>, when one is a health signal and the other is inventory.</div>';
+}
+function misTrust(m){
+  var chan = m.byChannel;
+  var chanTxt = Object.keys(chan).length
+    ? Object.keys(chan).map(function(c){ return chan[c] + ' by ' + esc(c); }).join(' · ')
+    : 'none captured — everything entered by hand';
+  return _misHead('Trust', 'Who you deal with, and how the work reaches you.')
+    + '<div class="mistrust">'
+      + '<div><div class="mislbl">Counterparties</div><div class="misbig" style="font-size:24px">' + m.parties + '</div>'
+        + '<div class="misnote">' + (m.partyNames.length ? esc(m.partyNames.slice(0, 3).join(' · ')) : 'no counterparties yet') + '</div></div>'
+      + '<div><div class="mislbl">Suppliers on your list</div><div class="misbig" style="font-size:24px">' + m.suppliers + '</div>'
+        + '<div class="misnote">' + m.co_assists + ' co-assist' + (m.co_assists === 1 ? '' : 's') + ' working the rail</div></div>'
+      + '<div><div class="mislbl">How work arrives</div><div class="misbig" style="font-size:24px">' + m.captured + ' <span style="font-size:13px;color:var(--grey)">of ' + m.chits + '</span></div>'
+        + '<div class="misnote">' + chanTxt + '</div></div>'
+    + '</div>'
+    /* ⚠️ The band I most want and have NOT verified is computable. Say so rather than show a score I cannot stand behind. */
+    + '<div class="miswhy">⚠️ <b>Counterparty reliability</b> — who confirms fast, who delivers short — is the most valuable thing this band could report and is <b>not built</b>. It needs behaviour over time that nothing currently records. Shown as plain counts until that exists, rather than as a score.</div>';
+}
+function misOverview(m){
+  var sec = function(name, q, inner){
+    return '<div class="misov"><div class="misovh"><span class="misovn">' + esc(name) + '</span><span class="misnote">' + esc(q) + '</span></div>' + inner + '</div>';
+  };
+  var tot = m.committed + m.forecast, pct = tot ? Math.round(m.committed / tot * 100) : 0;
+  return _misHead('Overview', 'All four bands at once — open one on the left for its detail.')
+    + sec('Position', 'How much of the pipeline is real?',
+        '<div class="mistwo"><div><div class="mishero" style="font-size:30px">' + inr(m.committed) + '</div>'
+        + '<div class="misnote">committed · ' + pct + '% of the book</div></div><div>' + _misSplitBar(m) + '</div></div>')
+    + sec('Flow', 'What is moving through the rail?',
+        '<div class="mistwo"><div>' + _misStack(m) + '</div><div>' + _misSpark(m.series) + '</div></div>')
+    + sec('Friction', 'Where is time being lost?',
+        '<div class="misstatus">' + (m.open_disputes
+          ? '<i class="dot" style="background:var(--disp)"></i> <b>' + m.open_disputes + ' open</b>'
+          : '<i class="dot" style="background:var(--ok)"></i> <b>No open disputes</b>')
+        + '<span style="margin-left:9px">' + (m.waiting.length
+            ? '<b>' + m.waiting.length + ' waiting</b> — ' + m.waitTheirs + ' on <span class="misclock theirs">◷ Theirs</span> ' + m.waitMine + ' on <span class="misclock mine">◷ Mine</span>'
+            : 'nothing waiting') + '</span></div>'
+        + ((m.unattended || []).length
+            ? '<div class="misnote" style="margin-top:6px">⚠ <b>' + m.unattended.length + ' unanswered message'
+              + (m.unattended.length === 1 ? '' : 's') + '</b> — oldest ' + esc(m.unattended[0].age) + '</div>'
+            : '')
+        + _misAgeing(m))
+    + sec('Trust', 'Who can I rely on?',
+        '<div class="misnote"><b>' + m.parties + ' counterparties</b> · ' + m.captured + ' of ' + m.chits + ' chits captured from a channel · ' + m.suppliers + ' suppliers</div>');
+}
+
+async function loadMIS(){
+  if (!document.getElementById('mis_rail')) return;
+  try{
+    /* ⚠️ BOTH SIDES, NOT JUST inbox. "Whose clock" is unanswerable from received copies alone — everything would
+       read as mine. Merged by id so a self-chit, which lands in both, is counted once. */
+    const [inb, snt, dq, ac, sp, msgRaw] = await Promise.all([
+      api('inbox'), api('sent').catch(function(){ return []; }),
+      api('disputeQueue').catch(function(){ return {}; }),
+      api('actors').catch(function(){ return []; }), api('supList').catch(function(){ return []; }),
+      api('misMsgs').catch(function(){ return []; })
+    ]);
+    const seen = {}, chits = [];
+    (inb || []).concat(snt || []).forEach(function(raw){
+      const c = mapApiChit(raw); if (!c || seen[c.id]) return; seen[c.id] = 1;
+      c._iSent = !!SESSION.entity && (c.sender || '') === SESSION.entity;
+      chits.push(c);
+    });
+
+    const days = misPeriod() === 'all' ? null : parseInt(misPeriod(), 10);
+    const cutoff = days ? (Date.now() - days * 864e5) : null;
+    const inWindow = chits.filter(function(c){ return !cutoff || (new Date(c.created_at)).getTime() >= cutoff; });
+
+    let committed = 0, forecast = 0, dead = 0;
+    const byState = { open:0, act:0, close:0 };
+    const byChannel = {}; let captured = 0;
+    const parties = {}; const waiting = [];
+    const now = Date.now();
+    inWindow.forEach(function(c){
+      const st = c._status || 'pending', amt = c.amt || 0;
+      if (MIS_DEAD[st]) dead += amt; else if (MIS_COMMITTED[st]) committed += amt; else if (MIS_FORECAST[st]) forecast += amt;
+      byState[c.state] = (byState[c.state] || 0) + 1;
+      if (c.via && c.via.channel){ captured++; byChannel[c.via.channel] = (byChannel[c.via.channel] || 0) + 1; }
+      const other = c._iSent ? (c.party || '') : (c.sender || c.party || '');
+      if (other && other !== SESSION.entity) parties[other] = 1;
+      if (MIS_FORECAST[st]){
+        const ageMs = now - (new Date(c.created_at)).getTime();
+        const d = Math.floor(ageMs / 864e5), h = Math.floor(ageMs / 36e5);
+        waiting.push({ on:'Acceptance', subject:c.code || '—', amt:amt, ageMs:ageMs,
+                       age: d >= 1 ? (d + 'd') : (h + 'h'),
+                       /* I sent it → they owe the answer. It came to me → the clock is mine. */
+                       who: c._iSent ? 'theirs' : 'mine' });
+      }
+    });
+    waiting.sort(function(a, b){ return b.ageMs - a.ageMs; });
+
+    /* Weekly buckets when the span is wide, daily when it is short — a 7-day window has no weeks in it. */
+    const stamps = inWindow.map(function(c){ return (new Date(c.created_at)).getTime(); }).filter(function(t){ return t; }).sort();
+    let series = [], bucketName = 'week';
+    if (stamps.length){
+      const spanDays = (stamps[stamps.length - 1] - stamps[0]) / 864e5;
+      const size = spanDays > 21 ? 7 : 1; bucketName = size === 7 ? 'week' : 'day';
+      const buckets = {};
+      stamps.forEach(function(t){ const b = Math.floor((t - stamps[0]) / (size * 864e5)); buckets[b] = (buckets[b] || 0) + 1; });
+      const maxB = Math.max.apply(null, Object.keys(buckets).map(Number));
+      for (let i = 0; i <= maxB; i++) series.push({ n: buckets[i] || 0 });
+    }
+    const delta = series.length >= 2 ? (series[series.length - 1].n - series[series.length - 2].n) : 0;
+
+    /**
+     * ⭐ AGEING + UNATTENDED (Athi, 2026-08-16: *"can we bring aging, message unattended etc"*).
+     *
+     * Ageing is the classic receivables question asked of the rail: not "how many are waiting" but "how long have
+     * they been waiting", because a day-old wait and a fortnight-old wait are not the same fact and a single count
+     * hides which you have.
+     *
+     * ⚠️ AN UNANSWERED MESSAGE IS TIME LOST TOO, and it was invisible here. A counterparty asking "can you deliver
+     * before 7pm" and getting no reply is exactly the friction this band exists to surface — it just never had a
+     * chit status to show up under. Inbound and unread, aged the same way; messages I sent are not my delay.
+     */
+    const AGE_BUCKETS = [
+      { k:'<1d',  max:1 }, { k:'1–3d', max:3 }, { k:'3–7d', max:7 }, { k:'7d+', max:Infinity }
+    ];
+    const ageing = AGE_BUCKETS.map(function(b){ return { k:b.k, n:0 }; });
+    waiting.forEach(function(w){
+      const d = w.ageMs / 864e5;
+      for (let i = 0; i < AGE_BUCKETS.length; i++){ if (d < AGE_BUCKETS[i].max){ ageing[i].n++; break; } }
+    });
+
+    const msgs = (msgRaw && (msgRaw.messages || msgRaw.items || (Array.isArray(msgRaw) ? msgRaw : []))) || [];
+    const unattended = msgs.filter(function(m){
+      /* Unread AND not mine — my own outbound message sitting unread is THEIR clock, not a task of mine. */
+      return !m.read_at && m.sender_entity_id !== SESSION.entityId;
+    }).map(function(m){
+      const ms = now - (new Date(m.created_at)).getTime();
+      const d = Math.floor(ms / 864e5), h = Math.floor(ms / 36e5);
+      return { from:m.sender_display_name || '—', text:(m.message_text || '').slice(0, 90),
+               subject:m.manual_subject || m.auto_subject || '—', ageMs:ms, age: d >= 1 ? (d + 'd') : (h + 'h') };
+    }).sort(function(a, b){ return b.ageMs - a.ageMs; });
+
+    const openDisp = dq.total_open != null ? dq.total_open : (((dq.my_disputes || []).length) + ((dq.other_disputes || []).length));
+    UI._mis = {
+      chits: inWindow.length, committed: committed, forecast: forecast, dead: dead,
+      open: byState.open, in_progress: byState.act, closed: byState.close,
+      open_disputes: openDisp, co_assists: (ac || []).length, suppliers: (sp || []).length,
+      parties: Object.keys(parties).length, partyNames: Object.keys(parties),
+      captured: captured, byChannel: byChannel,
+      waiting: waiting, waitMine: waiting.filter(function(w){ return w.who === 'mine'; }).length,
+      waitTheirs: waiting.filter(function(w){ return w.who === 'theirs'; }).length,
+      ageing: ageing, unattended: unattended,
+      series: series, bucketName: bucketName, delta: delta > 0 ? delta : 0,
+      periodLabel: misPeriod() === 'all' ? 'all time' : ('last ' + misPeriod() + 'd'),
+      asOf: new Date().toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' }),
+      currency: 'INR'
+    };
+    const h = document.getElementById('misbody'); if (h) h.innerHTML = misBandHTML(misBand(), UI._mis);
+    const r = document.getElementById('mis_rail');
+    if (r) r.innerHTML = MIS_BANDS.map(function(b){
+      const sel = (misBand() === b.key) ? ' sel' : '', hv = misHeadline(b.key, UI._mis);
+      return '<div class="row misrow' + sel + '" data-testid="mis-band-' + b.key + '" onclick="misSetBand(\'' + b.key + '\')">'
+        + '<div class="main2"><div class="l1"><span class="code">' + esc(b.name) + '</span></div><div class="l2">' + esc(b.q) + '</div></div>'
+        + '<div class="misval' + (hv.tone ? ' ' + hv.tone : '') + '">' + hv.v + '<small>' + esc(hv.s) + '</small></div></div>';
+    }).join('');
+  }catch(e){ const h = document.getElementById('misbody'); if (h) h.innerHTML = scrErr(e); } }
 
 /* ---- PROFILE ---- */
-function profileScreen(){ return scr("👤 Profile","profbody","profile"); }
+/* ═══ PROFILE ═══════════════════════════════════════════════════════════════════════════════════════════════
+ * Same two-pane grammar as MIS, Task and Suppliers — sections on the left, the selected section on the right.
+ * It was one long scroll of four unrelated cards (identity, storefront, governance, vault) with no way to tell
+ * where one ended and the next began, which is how the storefront's "Is your shop open?" came to sit a few
+ * hundred pixels under identity's "Shop status" and read as its contradiction.
+ */
+var PROF_SECS = [
+  { key:'identity',   name:'Identity',    q:'Who you are on the rail' },
+  { key:'storefront', name:'Storefront',  q:'What customers can see' },
+  { key:'governance', name:'Governance',  q:'Rights and jurisdiction' },
+  { key:'vault',      name:'Documents',   q:'Fill forms once, reuse' }
+];
+function profSec(){ return UI.profSec || 'identity'; }
+/**
+ * ⚠️ REPAINT THE BODY DIRECTLY — do not rely on the post-render hook. renderApp() rewrites the pane to its
+ * "loading…" placeholder and the `if(UI.nav==="profile") loadProfile()` hook fires while #profbody is not yet in
+ * the document, so loadProfile's `if(!h) return` bailed and every section sat on the spinner forever. It worked on
+ * FIRST entry only, because arriving at the screen triggers a second render that the section switch does not.
+ */
+function profSetSec(k){ UI.profSec = k; renderApp(); _capShowDetail(); if (UI._me) { const h=document.getElementById('profbody');
+  if (h){ h.innerHTML = profSecHTML(k, UI._me); if (k === 'vault') loadVault(); } } else { loadProfile(); } }
+
+function profileScreen(){
+  if (SESSION.role === 'actor') return scr('👤 Profile', 'profbody', 'profile');   // actors keep the simple card
+  var e = UI._me || {};
+  var rail = PROF_SECS.map(function(s){
+    return '<div class="row misrow' + (profSec() === s.key ? ' sel' : '') + '" data-testid="prof-sec-' + s.key + '" onclick="profSetSec(\'' + s.key + '\')">'
+      + '<div class="main2"><div class="l1"><span class="code">' + esc(s.name) + '</span></div><div class="l2">' + esc(s.q) + '</div></div></div>';
+  }).join('');
+  var list = '<div class="list"><div class="lh" style="padding:0"><div class="misbar"><span class="misttl">👤 Profile</span>'
+    + '<span class="misbar-r"><span class="misasof">' + esc(e.display_name || '') + '</span></span></div></div>'
+    + '<div class="rows" id="prof_rail">' + rail + '</div></div>';
+  var detail = '<div class="detail" id="detailpane"><div id="profbody"><div class="loadwrap"><span class="spin"></span> loading…</div></div></div>';
+  var divider = '<div class="divider" id="divider" onmousedown="startDrag(event)" ontouchstart="startDrag(event)" role="separator" aria-label="Resize panes"><span class="grip"></span></div>';
+  if (UI.misLw == null) UI.misLw = 320;
+  var lw = Math.min(UI.misLw, Math.max(260, Math.round((window.innerWidth || 1200) * 0.42)));
+  return '<div class="panel' + ((UI.vp === 'mob' && UI.mdetail) ? ' showdetail' : '') + '" id="panel" style="--lw:' + lw + 'px;--lh:' + (UI.lh || 300) + 'px">' + list + divider + detail + '</div>';
+}
+
 async function loadProfile(){ const h=document.getElementById("profbody"); if(!h)return;
   if(SESSION.role==='actor') return loadActorProfile(h);   // actors get their own profile, not the entity's
-  try{ const e=(await api("me"))||{};
-    h.innerHTML=`${menuAssist('profile')}<div style="${_CARD}"><div class="kv"><b>Name</b> · ${esc(e.display_name)}</div><div class="kv"><b>Bridge ID</b> · ${esc(e.bridge_id)}</div><div class="kv"><b>Email</b> · ${esc(e.email)}</div>
+  try{ const e=(await api("me"))||{}; UI._me=e;
+    h.innerHTML = profSecHTML(profSec(), e);
+    if (profSec() === 'vault') loadVault();   // the trade documents vault (async — pre-fills authority forms)
+  }catch(e){ h.innerHTML=scrErr(e); } }
+
+function profSecHTML(k, e){
+  if (k === 'identity') return _misHead('Identity', 'Who you are on the rail — and how others find you.')
+    + `<div class="${_CARD}"><div class="kv"><b>Name</b> · ${esc(e.display_name)}</div><div class="kv"><b>Bridge ID</b> · ${esc(e.bridge_id)}</div><div class="kv"><b>Email</b> · ${esc(e.email)}</div></div>
       <label class="fl">User ID <span style="color:var(--grey);font-size:11px">— others add you with this</span></label><input class="inp" id="pf_uid" value="${esc(e.user_id||'')}" placeholder="e.g. yourname or you@email.com">
       <label class="fl">GSTN</label><input class="inp" id="pf_gstn" value="${esc(e.gstn)}">
       <label class="fl">Address</label><input class="inp" id="pf_addr" value="${esc(e.address)}">
-      <label class="fl">Shop status</label><select class="inp" id="pf_bs">${opt(["open","closed","away"],e.business_status)}</select>
-      <div class="err" id="pf_err"></div><button class="composebtn" style="margin-top:9px" onclick="saveProfile()">Save profile</button></div>${storefrontCardHTML(e)}${govCardHTML(e.governance)}<div id="vaulthost"></div>`;
-    loadVault();   // the trade documents vault (async — pre-fills authority forms)
-  }catch(e){ h.innerHTML=scrErr(e); } }
+      <label class="fl">Are you trading? <span style="color:var(--grey);font-size:11px">— whether you are open for business</span></label>
+      <select class="inp" id="pf_bs">${opt(["open","closed","away"],e.business_status)}</select>
+      <div class="misnote" style="margin-top:5px">⚠️ Separate from who can <b>see</b> your catalogue — that lives under <b onclick="profSetSec('storefront')" style="cursor:pointer;color:var(--blue)">Storefront</b>.</div>
+      <div class="err" id="pf_err"></div><button class="composebtn" style="margin-top:11px" onclick="saveProfile()">Save profile</button>`;
+  if (k === 'storefront') return _misHead('Storefront', 'What customers see when they open your link.')
+    + storefrontCardHTML(e);
+  if (k === 'governance') return _misHead('Governance', 'Where you are minted, and what that entitles you to.')
+    + (govCardHTML(e.governance) || '<div class="misnote">No governance resolved for this entity yet.</div>');
+  if (k === 'vault') return _misHead('Trade documents', 'Provide these once — every authority form is then pre-filled.')
+    + '<div id="vaulthost"><div class="loadwrap"><span class="spin"></span> loading…</div></div>';
+  return '';
+}
 // "Your governance" — the entity's resolved governance (from attributes): where it's minted, its platform, its basics
 // (with provenance ⟵ platform), rights + allowances + jurisdiction. Entity-simple; honest "minted, not enforced yet".
 function govCardHTML(g){
@@ -127,7 +535,11 @@ function storefrontCardHTML(e){
     // The cap comes from /me (`visibility_cap`): the operator who provisioned this entity, then the plan. When it
     // is capped, the switch is DISABLED and says WHO capped it — offering a working-looking control that 403s on
     // save is the same lie as a button that reports success and does nothing.
-    +'<label class="fl" style="margin-top:12px">Is your shop open?</label>'
+    /* ⚠️ RENAMED FROM "Is your shop open?". That is the same English question as identity's "Shop status", but a
+       different fact — this one is public/network/private VISIBILITY, that one is open/closed/away TRADING. The
+       screen read "Shop status: open" above "Is your shop open?: Closed", and I misread it as a contradiction
+       with the source in front of me. Two names for one question is a bug even when both values are correct. */
+    +'<label class="fl" style="margin-top:12px">Who can see your catalogue</label>'
     +'<select class="inp" id="pf_catvis" data-testid="pf-catvis" style="max-width:340px"'+(capped?' disabled':'')+'>'
       // THREE TIERS (b115). `network` is the warehouse case: invisible to the world, visible to the businesses
       // under the same network. Worded by WHO SEES IT rather than by the value, because "network" means nothing to
@@ -220,7 +632,38 @@ function govLayersBlock(){ var t=UI.govTab||0; var L=GOV[t];
   var foot=(t===0)?'Change a value above, then open <b>tab 7 · Consolidation</b> — the entity inherits it via the boilerplate. <i>Stub: in production these arrive from the layer, not this screen.</i>':(t===6)?'These ride down from the layers into the <b>boilerplate</b> every entity copies at registration, and <b>freeze</b> onto each chit at send. <i>Stub — later set from the real layer.</i>':'<b>bound</b> = inherited &amp; locked · <b>advisory</b> = entity may change when upstream leaves it free · <b>free</b> = not configured yet, lands here later.';
   return '<div id="govblock" style="'+_CARD+'"><div class="sec" style="margin:0 0 8px">🏛️ Governance · 7 layers <span style="font-size:10px;font-family:\'Space Mono\';background:#f3f0e8;color:#7a5e22;border-radius:5px;padding:1px 6px">stub · perception</span></div><div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:11px">'+tabs+'</div><div style="font-family:\'Space Grotesk\';font-weight:700;font-size:14px">'+esc(L.n)+' <span style="font-size:10.5px;color:var(--grey);font-weight:400">· '+esc(L.tag)+'</span></div><div style="font-size:12px;color:var(--grey);margin:2px 0 9px">'+esc(L.desc)+'</div>'+rowsHtml+'<div style="font-size:11px;color:var(--grey);margin-top:9px;line-height:1.5">'+foot+'</div></div>';
 }
-function settingsScreen(){ return scr("⚙️ Settings","setbody","settings"); }
+/* ═══ SETTINGS ══════════════════════════════════════════════════════════════════════════════════════════════
+ * Eight cards in one scroll — governance layers, assignment, auto-assign, attachment policy, AI, channels, policy
+ * flags, blueprints — with nothing marking where one subject ended and the next began. Grouped into five sections
+ * in the same two-pane shell the rest of the app uses.
+ *
+ * ⚠️ The "saved but NOT YET ACTIVE" warning stays exactly where it is. It is the most useful sentence on the
+ * screen: a preference that is stored and unenforced looks identical to one that works.
+ */
+var SET_SECS = [
+  { key:'work',       name:'Work',        q:'How tasks reach people' },
+  { key:'policy',     name:'Policy',      q:'Rules on your records' },
+  { key:'channels',   name:'Channels',    q:'Where work arrives from' },
+  { key:'governance', name:'Governance',  q:'The layers you sit under' },
+  { key:'blueprints', name:'Blueprints',  q:'Shared catalogue designs' }
+];
+function setSec(){ return UI.setSec || 'work'; }
+/* Same reason as profSetSec — the hook fires before #setbody exists, so drive the load explicitly. */
+function setSetSec(k){ UI.setSec = k; renderApp(); _capShowDetail(); loadSettings(); }
+
+function settingsScreen(){
+  var rail = SET_SECS.map(function(s){
+    return '<div class="row misrow' + (setSec() === s.key ? ' sel' : '') + '" data-testid="set-sec-' + s.key + '" onclick="setSetSec(\'' + s.key + '\')">'
+      + '<div class="main2"><div class="l1"><span class="code">' + esc(s.name) + '</span></div><div class="l2">' + esc(s.q) + '</div></div></div>';
+  }).join('');
+  var list = '<div class="list"><div class="lh" style="padding:0"><div class="misbar"><span class="misttl">⚙️ Settings</span></div></div>'
+    + '<div class="rows" id="set_rail">' + rail + '</div></div>';
+  var detail = '<div class="detail" id="detailpane"><div id="setbody"><div class="loadwrap"><span class="spin"></span> loading…</div></div></div>';
+  var divider = '<div class="divider" id="divider" onmousedown="startDrag(event)" ontouchstart="startDrag(event)" role="separator" aria-label="Resize panes"><span class="grip"></span></div>';
+  if (UI.misLw == null) UI.misLw = 320;
+  var lw = Math.min(UI.misLw, Math.max(260, Math.round((window.innerWidth || 1200) * 0.42)));
+  return '<div class="panel' + ((UI.vp === 'mob' && UI.mdetail) ? ' showdetail' : '') + '" id="panel" style="--lw:' + lw + 'px;--lh:' + (UI.lh || 300) + 'px">' + list + divider + detail + '</div>';
+}
 // AI assists settings = a REDIRECT to Co-assists (the enable + rule live WITH the actor, next to Human/IoT/ERP —
 // a lit AI slot is an actor whose actions are disputable chits, so its control belongs where it's held accountable).
 function aiSettingsCard(){ return '<div style="'+_CARD+'"><div class="sec" style="margin:0 0 6px">🤖 AI assists <span style="font-size:10px;font-family:\'Space Mono\';background:#f3f0e8;color:#7a5e22;border-radius:5px;padding:1px 6px">governed</span></div>'
@@ -228,19 +671,39 @@ function aiSettingsCard(){ return '<div style="'+_CARD+'"><div class="sec" style
   +'<button class="composebtn" style="margin-top:10px" onclick="goCoassistAI()">Configure AI assists in Co-assists →</button></div>'; }
 function goCoassistAI(){ try{ if(typeof UI!=='undefined') UI.acTypeF='ai'; }catch(_){}
   if(typeof navTo==='function') navTo('coassists'); else if(typeof go==='function') go('#/coassists'); }
+/**
+ * ⚠️ FETCH ONCE, PAINT MANY. Switching section is not a reason to re-read settings and the actor list — and until
+ * this cache existed every switch fired both again, so the pane sat on its spinner while a round trip completed
+ * for data it already had.
+ */
 async function loadSettings(){ const h=document.getElementById("setbody"); if(!h)return;
+  if (UI._set){ return paintSettings(UI._set.s, UI._set.daOpts); }
   try{ const [s,_acts]=await Promise.all([api("getSettings").then(r=>r||{}), api("actors").then(r=>(r||[]).map(mapApiActor)).catch(()=>[])]);
     const _assign=_acts.filter(a=>hatAssignable(a.hat));
     const _daOpts='<option value="">— none (leave in pool) —</option>'+_assign.map(a=>`<option value="${a.id}"${s.default_assignee_actor_id===a.id?' selected':''}>${esc(a.name)}</option>`).join('');
-    h.innerHTML=`${menuAssist('settings')}${govLayersBlock()}<div style="${_CARD}">
-      <div style="background:#fbeceb;border:1px solid #f0c9c6;border-radius:8px;padding:8px 11px;font-size:11.5px;color:#b4453f;margin-bottom:11px">⏳ These preferences are saved but <b>not yet active</b> — they don't change behaviour yet.</div>
+    UI._set={ s:s, daOpts:_daOpts };
+    paintSettings(s, _daOpts);
+  }catch(e){ h.innerHTML=scrErr(e); } }
+function paintSettings(s, _daOpts){ const h=document.getElementById("setbody"); if(!h)return;
+  { const k = setSec();
+    const notYet = '<div style="background:#fbeceb;border:1px solid #f0c9c6;border-radius:8px;padding:8px 11px;font-size:11.5px;color:#b4453f;margin-bottom:11px">⏳ These preferences are saved but <b>not yet active</b> — they don\'t change behaviour yet.</div>';
+    if (k === 'work') h.innerHTML = _misHead('Work', 'How tasks reach the people and co-assists who do them.')
+      + `<div style="${_CARD}">${notYet}
       <label class="fl">Assignment model</label><select class="inp" id="st_am">${opt(["pull","push","both"],s.assignment_model||"both")}</select>
       <label class="fl">Default max tasks per actor</label><input class="inp" id="st_mt" inputmode="numeric" value="${esc(s.default_max_tasks||10)}">
       <label class="fl" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="st_av" ${s.all_task_visible?'checked':''}> All tasks visible to all co-assists</label>
       <label class="fl" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="st_ar" ${s.auto_return_on_short_break?'checked':''}> Auto-return tasks on short break</label>
-      <div class="err" id="st_err"></div><button class="composebtn" style="margin-top:9px" onclick="saveSettings()">Save settings</button></div>${autoAssignCard(s,_daOpts)}<div style="border:1px solid var(--line);border-radius:11px;padding:13px;margin-top:10px"><div class="sec" style="margin:0 0 6px">📎 Attachment policy <span style="font-size:10px;font-family:'Space Mono';background:#f3f0e8;color:#7a5e22;border-radius:5px;padding:1px 6px">governance · stub</span></div><label class="fl">Allowed types</label><input class="inp" id="st_atttypes" value="image, pdf, docx, xlsx, csv, zip"><label class="fl">Max size per file (MB)</label><input class="inp" id="st_attsize" inputmode="numeric" value="10"><label class="fl">Max attachments per chit</label><input class="inp" id="st_attcount" inputmode="numeric" value="10"><div style="font-size:11px;color:var(--grey);margin-top:6px">Where allowed-types / size / count rules live (enforced backend-side). Not active yet.</div></div>${aiSettingsCard()}${channelsCard()}${policyFlagsCard()}${blueprintSettingsHTML()}`;
-    loadChannels();   // async — the card paints itself in when the read lands
-  }catch(e){ h.innerHTML=scrErr(e); } }
+      <div class="err" id="st_err"></div><button class="composebtn" style="margin-top:9px" onclick="saveSettings()">Save settings</button></div>`
+      + autoAssignCard(s,_daOpts) + aiSettingsCard();
+    else if (k === 'policy') h.innerHTML = _misHead('Policy', 'Rules that govern your own records.')
+      + policyFlagsCard()
+      + `<div style="border:1px solid var(--line);border-radius:11px;padding:13px;margin-top:10px"><div class="sec" style="margin:0 0 6px">📎 Attachment policy <span style="font-size:10px;font-family:'Space Mono';background:#f3f0e8;color:#7a5e22;border-radius:5px;padding:1px 6px">governance · stub</span></div><label class="fl">Allowed types</label><input class="inp" id="st_atttypes" value="image, pdf, docx, xlsx, csv, zip"><label class="fl">Max size per file (MB)</label><input class="inp" id="st_attsize" inputmode="numeric" value="10"><label class="fl">Max attachments per chit</label><input class="inp" id="st_attcount" inputmode="numeric" value="10"><div style="font-size:11px;color:var(--grey);margin-top:6px">Where allowed-types / size / count rules live (enforced backend-side). Not active yet.</div></div>`;
+    else if (k === 'channels'){ h.innerHTML = _misHead('Channels', 'The inbound numbers and addresses that become chits.') + channelsCard();
+      loadChannels();   // async — the card paints itself in when the read lands
+    }
+    else if (k === 'governance') h.innerHTML = _misHead('Governance', 'The layers your entity is minted under.') + govLayersBlock();
+    else if (k === 'blueprints') h.innerHTML = _misHead('Blueprints', 'Catalogue designs you publish or adopt.') + blueprintSettingsHTML();
+  } }
 async function saveSettings(){ const x=document.getElementById("st_err"); if(x)x.textContent="";
   try{ await api("saveSettings",{body:{assignment_model:val("st_am"),default_max_tasks:+val("st_mt")||10,all_task_visible:document.getElementById("st_av").checked,auto_return_on_short_break:document.getElementById("st_ar").checked}}); toast(MSG.settingsSaved()); }catch(e){ if(x)x.textContent=e.message; } }
 /* ---- POLICY FLAGS — per-entity governance toggles, SERVER-PERSISTED (b130).

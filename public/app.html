@@ -143,6 +143,71 @@
   .lhfolded{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:8px;cursor:pointer}
   .fchip{display:inline-flex;align-items:center;gap:4px;background:var(--gold-soft);border:1px solid #e3d9bd;color:#6b5a36;border-radius:20px;padding:2px 9px;font-size:11.5px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .colcog.fold{margin-right:7px}
+  /* ── MIS · the four bands in the two-pane shell (app/cap-admin.js) ───────────────────────────────────────── */
+  /* .detail supplies no padding of its own — every other screen wraps its content in a padded block (.db, .dh),
+     so MIS must bring its own or the bars run flush to the window edge. */
+  #misbody{flex:1;min-height:0;overflow-y:auto;padding:16px 18px}
+  .misbar{display:flex;align-items:center;gap:9px;padding:9px 12px;flex-wrap:wrap;border-bottom:1px solid var(--line)}
+  .misttl{font-family:'Space Grotesk';font-weight:700;font-size:14px}
+  .misbar .seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+  .misbar .seg button{border:0;background:#fff;color:var(--grey);font-size:11.5px;font-weight:700;padding:5px 11px;cursor:pointer}
+  .misbar .seg button.on{background:var(--ink);color:#fff}
+  .misbar-r{margin-left:auto;display:flex;align-items:center;gap:8px}
+  .misasof{font-size:11px;color:var(--grey);font-family:'Space Mono'}
+  .misrow{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}
+  .misval{font-family:'Space Mono';font-size:15px;font-weight:700;text-align:right;white-space:nowrap;line-height:1.2}
+  .misval small{display:block;font-family:inherit;font-size:11px;font-weight:600;color:var(--grey)}
+  .misval.ok{color:var(--ok)} .misval.warn{color:var(--prog)}
+  .mislbl{font-size:11px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--grey)}
+  .mishero{font-family:'Space Mono';font-size:38px;font-weight:700;letter-spacing:-.03em;line-height:1.05;margin:3px 0 2px}
+  .misfore{font-family:'Space Mono';font-size:22px;font-weight:600;color:var(--grey)}
+  .misbig{font-family:'Space Mono';font-size:26px;font-weight:700}
+  .misdelta{font-size:13px;font-weight:600;color:var(--ok)}
+  .misnote{font-size:12.5px;color:var(--grey);line-height:1.55}
+  .miswarn{font-size:12px;color:#8a5a1e;background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:8px;padding:6px 9px;margin-top:9px}
+  /* ⚠️ min-width:0 ON THE CHILDREN. An `fr` track sizes to min-content by default, so the split bar and the
+     stacked bar pushed the grid wider than the pane and ran off the right edge — the "Closed" segment was
+     literally cut in half. The classic grid overflow, and invisible until you look at the rendered page. */
+  .mistwo{display:grid;grid-template-columns:1.3fr 1fr;gap:22px;align-items:start}
+  .mistwo>*{min-width:0}
+  .misov,.mistrust>*{min-width:0}
+  .misplit{height:11px;border-radius:7px;overflow:hidden;display:flex;gap:2px;margin:12px 0 8px}
+  .misstack{height:30px;border-radius:8px;overflow:hidden;display:flex;gap:2px;margin:10px 0 8px}
+  .misstack span{display:flex;align-items:center;justify-content:center;color:#fff;font-family:'Space Mono';font-size:12px;font-weight:700}
+  .miskey{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:#3a4a54}
+  .miskey .k{display:inline-flex;align-items:center;gap:6px}
+  .miskey .sw{width:10px;height:10px;border-radius:3px;flex:none}
+  .misspark{display:block;width:100%;height:56px;margin-top:6px;overflow:visible}
+  .misscroll{overflow-x:auto}
+  .mistable{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:12px}
+  .mistable th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--grey);font-weight:800;padding:0 10px 7px 0;white-space:nowrap}
+  .mistable td{padding:8px 10px 8px 0;border-top:1px solid var(--line)}
+  .mistable td.num{font-family:'Space Mono';font-variant-numeric:tabular-nums;white-space:nowrap}
+  .misclock{font-size:11px;font-weight:700;border-radius:20px;padding:2px 9px;white-space:nowrap;display:inline-flex;align-items:center;gap:5px}
+  .misclock.mine{background:var(--gold-soft);border:1px solid var(--gold-line);color:#6b5a36}
+  .misclock.theirs{background:#EDF2F9;border:1px solid var(--line);color:var(--blue)}
+  .misageing{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px}
+  .misage{text-align:center}
+  .misagebar{height:44px;background:var(--paper);border:1px solid var(--line);border-radius:7px;display:flex;align-items:flex-end;overflow:hidden}
+  .misagebar i{display:block;width:100%;background:var(--blue);border-radius:0 0 6px 6px}
+  .misage.warn .misagebar i{background:var(--prog)}
+  .misagen{font-family:'Space Mono';font-size:15px;font-weight:700;margin-top:4px}
+  .misage.warn .misagen{color:var(--prog)}
+  .misagek{font-size:11px;color:var(--grey)}
+  .misunatt{margin-top:7px}
+  .misunrow{display:flex;gap:9px;align-items:baseline;padding:6px 0;border-top:1px dashed var(--line);font-size:12.5px}
+  .misunrow:first-child{border-top:0}
+  .misunage{font-family:'Space Mono';font-size:11px;font-weight:700;color:#8a5a1e;background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:20px;padding:1px 8px;flex:0 0 auto}
+  .misuntxt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#3a4a54}
+  .misstatus{display:flex;align-items:center;gap:7px;font-size:12.5px;flex-wrap:wrap}
+  .misstatus .dot{width:9px;height:9px;border-radius:50%;flex:none;display:inline-block}
+  .miswhy{font-size:12.5px;color:#3a4a54;margin-top:13px;padding-left:13px;border-left:2px solid var(--line);line-height:1.6}
+  .mistrust{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px}
+  .misov{padding:13px 0;border-top:1px solid var(--line)}
+  .misov:first-of-type{border-top:0;padding-top:2px}
+  .misovh{display:flex;align-items:baseline;gap:9px;margin-bottom:7px;flex-wrap:wrap}
+  .misovn{font-size:13px;font-weight:700}
+  @media(max-width:900px){ .mistwo{grid-template-columns:1fr;gap:12px} }
   /* The selected supplier's full record, inline under its row in the left pane. */
   .supinfo{border-left:3px solid var(--blue);background:var(--paper);padding:9px 13px 11px;margin:0 0 2px}
   .supkv{display:flex;gap:10px;padding:5px 0;border-bottom:1px dashed var(--line);font-size:12.5px}
@@ -1737,7 +1802,12 @@ const PURPOSE = {
   settings:"Toolbar, saved views, archive schedule, your drive, status table.",
   assistreview:"Questions the assistant couldn't answer, captured for review. Write an answer to serve it live, or reject — approved answers appear in the assistant instantly.",
   shops:"Find a shop you have a bridge with.",
-  profile:"Your shift and assignment.",
+  /* ⚠️ ROLE-DEPENDENT. One blurb served both, and it was written for the ACTOR — so an OWNER opening their
+     business identity, storefront and governance was told "Your shift and assignment." menuAssist resolves it
+     per role rather than describing one of the two screens and hoping. */
+  profile:(typeof SESSION!=='undefined'&&SESSION&&SESSION.role==='actor')
+    ? "Your shift and assignment."
+    : "Your business identity, your storefront, and the rights you hold.",
 };
 
 /* ── Capability loader (progressive load) ── each capability is an independently-loaded
