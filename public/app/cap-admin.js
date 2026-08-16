@@ -624,10 +624,92 @@ async function saveActorPin(){ const x=document.getElementById("pf_err"); if(x)x
   try{ await api("changePin",{body:{current_pin:c,new_pin:n,confirm_pin:n2}}); toast("PIN changed ✓"); ['pf_cpin','pf_npin','pf_npin2'].forEach(function(i){ var el=document.getElementById(i); if(el)el.value=''; }); }
   catch(e){ if(x)x.textContent=e.message; } }
 /* ---- SETTINGS + governance (7-layer perception stub) ---- */
+/**
+ * ⭐ MODEL A — GOVERNANCE DECLARES, EVERY OTHER SCREEN REFERS (Athi, 2026-08-16: *"model a, we need to bring
+ * unification. then only we can refer in only one place."*).
+ *
+ * GOV is the single declaration table. Before this, several rows here were ALSO hardcoded in the screen that acts
+ * on them — the attachment list `image, pdf, docx, xlsx, csv, zip` existed as two independent string literals in
+ * this one file, so Governance and Settings → Policy could disagree and nothing would notice.
+ *
+ * ⚠️ A CONSUMER MUST NOT COPY THE VALUE. Read it with govDecl(label) and render what comes back. If a label is
+ * renamed here the lookup returns null and the consumer shows "not declared" — loud, and better than a stale copy
+ * that keeps rendering the old answer forever. Full audit: C:\dev\RECONCILE-declarations.md.
+ */
+/**
+ * The catalogue-visibility CAP, read from the entity rather than asserted. `UI._me` is the profile payload, so
+ * this is whatever the server last said. Before Profile has been opened there is nothing to read — and it says so
+ * rather than guessing, because a governance row inventing "private" is exactly the drift being removed.
+ */
+/**
+ * ⚠️ THE CAP CARRIES MORE THAN A MAXIMUM, and the old row dropped all of it. The server returns
+ * `{max, by, enforced, reason}` — e.g. *"The free plan declares no public catalogue, but plan enforcement is off"*
+ * with `enforced:false`. A cap that is DECLARED BUT NOT ENFORCED is a different fact from one that binds, and it is
+ * precisely the kind of thing a governance screen exists to say out loud. Printing only "private (cap)" threw away
+ * both who set it and whether it actually holds.
+ */
+function govCatVis(){
+  var e = UI._me;
+  if (!e) return 'open Profile → Storefront to read it';
+  var cap = e.visibility_cap || {};
+  var vis = e.catalogue_visibility || 'private';
+  var out = vis;
+  if (cap.max && cap.max !== 'public') out += ' · capped at ' + cap.max + (cap.by ? ' by ' + cap.by : '');
+  /* Say when a declared cap is NOT binding — otherwise the screen implies a constraint that is not applied. */
+  if (cap.max && cap.max !== 'public' && cap.enforced === false) out += ' (declared, not enforced)';
+  return out;
+}
+/* The cap's own explanation, when the server gives one. Shown under the row rather than truncated into it. */
+function govCatVisWhy(){
+  var cap = (UI._me && UI._me.visibility_cap) || {};
+  return cap.reason ? String(cap.reason) : '';
+}
+/**
+ * ⚠️ THE VALUE, NOT A SECOND CONTROL (Athi: *"whatever is there in profile if already works, remove the stub in
+ * governance and bring the same here"*). Right — the stub is gone and Governance now shows the REAL value.
+ *
+ * But it shows it read-only, with a link to where it is set. Putting Profile's `<select>` here too would give one
+ * value two controls, which is the duplication being removed, only worse: two places to change it and no way to
+ * tell which one last won. One owner, many viewers.
+ */
+function govOwnedElsewhere(where, nav){ return '<button class="govref-go" onclick="'+nav+'">change in '+esc(where)+' →</button>'; }
+/* A declared value may be a literal or a function of live state — resolve it the same way everywhere, so no
+   consumer has to know which kind it got. */
+function govVal(v){ try { return (typeof v === 'function') ? v() : v; } catch(_){ return '—'; } }
+function govDecl(label){
+  for (var i=0; i<GOV.length; i++){
+    var rows = GOV[i].rows || [];
+    for (var j=0; j<rows.length; j++){
+      if (rows[j][0] === label) return { value:govVal(rows[j][1]), klass:rows[j][2], layer:GOV[i].n, layerIndex:i };
+    }
+  }
+  return null;
+}
+/* Render a declared value read-only, with where it was declared and a way to go there. The consumer screen shows
+   the value; it does not own it. */
+function govRefHTML(label){
+  var d = govDecl(label);
+  if (!d) return '<div class="misnote">⚠️ <b>'+esc(label)+'</b> is not declared in Governance — nothing to show.</div>';
+  return '<div class="govref"><span class="govref-k">'+esc(label)+'</span>'
+    + '<span class="govref-v">'+esc(d.value)+'</span>'
+    + '<button class="govref-go" onclick="govGoTo('+d.layerIndex+')" title="Open the layer that declares this">'
+      + esc(d.layer)+' →</button></div>';
+}
+function govGoTo(i){ UI.govTab=i; UI.setSec='governance'; if(UI.vp==='mob'){ UI.mdetail=true; }
+  renderApp(); if(typeof loadSettings==='function') loadSettings(); }
+
 const GOV=[
   { n:'1 · Constitution', tag:'platform · top layer', desc:'Platform-wide rules every entity inherits at mint. Set the locale here → it flows down into the boilerplate.', rows:[
     ['Message max length','unbounded','advisory'],['Max schemas / entity','2','bound'],
-    ['Catalogue visibility','private (cap)','chosen'],['Attachment types','image, pdf, docx, xlsx, csv, zip','advisory'],
+    /* ⚠️ RESOLVED, NOT HARDCODED. This row read a literal 'private (cap)' while the real cap lives on the entity
+       as `visibility_cap` (server-set, applied by Profile → Storefront, which disables the control and says "set
+       by your network operator"). The behaviour was already Model A — the layer caps, Profile chooses within it —
+       but this row asserted a value independently, so a network operator lifting the cap would leave Governance
+       still saying "private" with nothing to notice. Reads the same source now. */
+    /* ⚠️ THE FUNCTION, NOT ITS RESULT. GOV is a const built once at load, so `govCatVis()` here would evaluate
+       before UI._me exists and freeze on "not read yet" forever. A declaration that depends on live state has to
+       be resolved at RENDER time — govVal() below unwraps it. */
+    ['Catalogue visibility', govCatVis, 'chosen'],['Attachment types','image, pdf, docx, xlsx, csv, zip','advisory'],
     ['Attachment max size','10 MB','advisory'] ] },
   { n:'2 · Jurisdiction', tag:'country / legal', desc:'Country-specific legal & tax frame (locale bundle lands partly here).', rows:[
     ['Country','—','free'],['Tax regime (GST / VAT)','—','free'],['Legal framework','—','free'],
@@ -679,7 +761,14 @@ function govKlass(k, hasControl){
   var x = GOV_KLASS[k] || GOV_KLASS.free;
   var col = x.tone==='yours' ? ['#E4F0E9','#2F6B49'] : x.tone==='fixed' ? ['#E7EBF0','#46546b'] : ['#efeee9','#7a7a72'];
   var say = x.say;
-  if (x.tone === 'yours' && !hasControl){
+  /**
+   * ⚠️ `=== false`, NOT `!hasControl`. Only a caller that has actually LOOKED may claim there is no control.
+   * policyFlagsCard calls govKlass(def.gov) with one argument and renders its select separately, so `undefined`
+   * was read as "no control" and every policy flag suddenly said "no control here yet" beside a working dropdown.
+   * The same mistake as the rows this caveat was written to fix, pointing the other way: an assertion made from
+   * absence of information rather than from evidence.
+   */
+  if (x.tone === 'yours' && hasControl === false){
     col = ['#F5ECD6','#7a5e22'];
     say = say + ' — no control here yet';
   }
@@ -713,9 +802,18 @@ function govRowHtml(label,valHtml,klass){
   /* Does this row actually offer a way to change it? Read from the rendered value, so the comment can never drift
      from the control — add a select to a row and its wording corrects itself. */
   var hasControl = /<select|<input|<textarea|<button/i.test(String(valHtml));
+  /* Rows whose value is owned by another screen say where, so the reader is never left hunting for the control —
+     and there is still only ONE control. */
+  var OWNER = { 'Catalogue visibility': ['Profile → Storefront', "navTo('profile');UI.profSec='storefront'"],
+                'Assignment model':     ['Settings → Work',      "setSetSec('work')"] };
+  var own = OWNER[label];
+  var why = (label === 'Catalogue visibility') ? govCatVisWhy() : '';
   return '<div class="govrow"><span class="govrow-k">'+esc(label)+'</span>'
-    + '<span class="govrow-v">'+valHtml+'</span>'
-    + '<span class="govrow-c">'+govKlass(klass, hasControl)+'</span></div>';
+    + '<span class="govrow-v">'+valHtml
+      + (own ? ' <button class="govref-go" onclick="'+own[1]+'">'+esc(own[0])+' →</button>' : '')
+    + '</span>'
+    + '<span class="govrow-c">'+govKlass(klass, hasControl || !!own)+'</span></div>'
+    + (why ? '<div class="govwhy">'+esc(why)+'</div>' : '');
 }
 /* In Settings the layers are rail rows, so the RAIL has to repaint too (to move the highlight); elsewhere the
    in-place swap is still right. renderApp covers both — Settings paints from cache, so it is not a re-fetch. */
@@ -744,7 +842,7 @@ function govLayersBlock(){ var t=UI.govTab||0; var L=GOV[t];
   var push=function(label,val,klass){ _rows.push([label,val,klass]); };
   if(t===0){ push('Currency',govSel('currency',CURRENCIES),'advisory'); push('Timezone',govSel('timezone',TIMEZONES),'advisory'); push('Language',govSel('language',LANGS),'bound_set'); }
   else if(t===6){ var ll=(LANGS.filter(function(x){return x[0]===GOVSET.language;})[0]||['',''])[1]||GOVSET.language; push('Currency (inherited)',esc(GOVSET.currency)+' · from Constitution','inherited'); push('Timezone (inherited)',esc(GOVSET.timezone)+' · from Constitution','inherited'); push('Language (inherited)',esc(GOVSET.language)+' ('+esc(ll)+') · from Constitution','inherited'); }
-  L.rows.forEach(function(r){ push(r[0],esc(r[1]),r[2]); });
+  L.rows.forEach(function(r){ push(r[0],esc(govVal(r[1])),r[2]); });   // literal or live — govVal resolves both
   /**
    * ⭐ COLLAPSIBLE GROUPS (Athi, 2026-08-16). A layer can run to nineteen rows, and the three groups are not
    * equally interesting: "Yours to set" is the reason you opened the screen, "Fixed above you" is reference, and
@@ -879,7 +977,22 @@ function paintSettings(s, _daOpts){ const h=document.getElementById("setbody"); 
       + autoAssignCard(s,_daOpts) + aiSettingsCard();
     else if (k === "policy") out = _misHead('Policy', 'Rules that govern your own records.')
       + policyFlagsCard()
-      + `<div style="border:1px solid var(--line);border-radius:11px;padding:13px;margin-top:10px"><div class="sec" style="margin:0 0 6px">📎 Attachment policy <span style="font-size:10px;font-family:'Space Mono';background:#f3f0e8;color:#7a5e22;border-radius:5px;padding:1px 6px">governance · stub</span></div><label class="fl">Allowed types</label><input class="inp" id="st_atttypes" value="image, pdf, docx, xlsx, csv, zip"><label class="fl">Max size per file (MB)</label><input class="inp" id="st_attsize" inputmode="numeric" value="10"><label class="fl">Max attachments per chit</label><input class="inp" id="st_attcount" inputmode="numeric" value="10"><div style="font-size:11px;color:var(--grey);margin-top:6px">Where allowed-types / size / count rules live (enforced backend-side). Not active yet.</div></div>`;
+      /**
+       * ⚠️ THIS CARD USED TO RE-DECLARE THE ATTACHMENT RULES. It carried its own `<input>`s pre-filled with
+       * `image, pdf, docx, xlsx, csv, zip` and `10` — the exact strings ALSO written into the Constitution layer,
+       * as two independent literals in this same file. Nothing read one from the other, nothing compared them, and
+       * neither was saved anywhere, so they could sit disagreeing forever with no symptom.
+       *
+       * Under Model A the declaration lives in GOV and this screen REFERS to it. The inputs are gone on purpose:
+       * an editable field for a value this screen does not own is the same lie as "you can change this" on a row
+       * with no control. When the layer marks it `advisory` AND an edit path exists, the control belongs here —
+       * not before.
+       */
+      + '<div style="border:1px solid var(--line);border-radius:11px;padding:13px;margin-top:10px">'
+        + '<div class="sec" style="margin:0 0 8px">📎 Attachment policy</div>'
+        + '<div class="misnote" style="margin-bottom:9px">Declared once, in the governance layers. Shown here so you can see what applies.</div>'
+        + govRefHTML('Attachment types') + govRefHTML('Attachment max size')
+      + '</div>';
     else if (k === "channels"){ out = _misHead('Channels', 'The inbound numbers and addresses that become chits.') + channelsCard();
       loadChannels();   // async — the card paints itself in when the read lands
     }
