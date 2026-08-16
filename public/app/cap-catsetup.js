@@ -40,6 +40,10 @@ var CATSET_SECS = [
    * rhythm of the other sections, and nothing like the rhythm of the product list.
    */
   { key: 'offers',   icon: '🏷️', name: 'Offers',           q: 'Discounts, tiers and deals' },
+  /* ⭐ PRICING IS ITS OWN SECTION (Athi's call). Pricing models and price SOURCES belong together and are
+     neither a column nor a storefront setting: one says how a price is arrived at, the other where it was read
+     from and when. Price provenance is close to the traceability story, so it is named rather than buried. */
+  { key: 'pricing',  icon: '💱', name: 'Pricing',          q: 'How a price is arrived at' },
   /* ⭐ ORDER MODELS BELONG HERE FOR THE SAME REASON VARIANTS DO — "Carton of 6" is a quantity RULE a product
      adopts, i.e. part of how the catalogue is shaped, not a product record. It was in Definitions only because
      everything definition-backed was. */
@@ -108,6 +112,51 @@ function catsetSetSec(k){
 }
 function catsetBack(){ UI.mdetail = false; var p = document.getElementById('panel'); if (p) p.classList.remove('showdetail'); }
 
+/**
+ * ⭐ THE VOCABULARY BLOCKS — rehomed from Definitions, NOT copied out of it.
+ *
+ * Athi, 2026-08-16: *"before dropping find home for all the items we have got it here, once it gets the home,
+ * then we can drop it."* So each of the nine read-only registry sections now renders under the control it
+ * describes, and Definitions can go.
+ *
+ * ⚠️ THE ROWS STILL COME FROM `cbDefRegistries()`, which still reads the live registries (cart-ui MODELS,
+ * offers.js KINDS, catalogue-model UNITS/DATATYPES/METHODS/FACETS/PRICING_MODELS/PRICE_ORIGIN). Re-listing any of
+ * them here would create a second statement of what the system supports, and the second one is always the one
+ * that goes stale. Add a unit to catalogue-model tomorrow and it appears here with no edit to this file — the
+ * same discipline Definitions itself was built on.
+ *
+ * ⚠️ VISIBLE, NOT FOLDED — Athi asked for that explicitly. Someone meeting "tiered pricing" for the first time
+ * should not have to know to expand something to find out what the options are.
+ */
+function catsetRegistry(keys){
+  if (typeof cbDefRegistries !== 'function') {
+    ensureCap('definitions').then(function(){ catsetPaintDetail(); });
+    return '<div class="catset-load">reading the registry…</div>';
+  }
+  var all = cbDefRegistries(), want = {};
+  keys.forEach(function(k){ want[k] = 1; });
+  var secs = all.filter(function(s){ return want[s.key]; });
+  if (!secs.length) return '';
+  return secs.map(function(s){
+    var rows = s.rows || [];
+    return '<div class="catset-reg">'
+      + '<div class="catset-regh">' + s.icon + ' ' + esc(s.title)
+      +   '<span class="catset-regn">' + rows.length + '</span></div>'
+      + '<div class="catset-regb">' + esc(s.blurb) + '</div>'
+      + (rows.length
+          ? '<div class="catset-regrows">' + rows.map(function(r){
+              return '<div class="catset-regrow"><code>' + esc(r.code) + '</code>'
+                + '<span class="rl">' + esc(r.label || '') + '</span>'
+                + (r.note ? '<span class="rn">' + esc(r.note) + '</span>' : '') + '</div>';
+            }).join('') + '</div>'
+          : '<div class="catset-none">not loaded</div>')
+      /* Naming the source file is the honest half: it says this list is READ, not authored here, so nobody goes
+         looking for an edit button that should not exist. */
+      + '<div class="catset-regsrc">read from <code>' + esc(s.source) + '</code></div>'
+      + '</div>';
+  }).join('');
+}
+
 /* ── the sections ────────────────────────────────────────────────────────────────────────────────────────────── */
 function catsetCard(title, body, actions){
   return '<div class="catset-card"><div class="catset-ct">' + title + '</div>'
@@ -123,7 +172,18 @@ function catsetBody(k){
       + '<div class="catset-std">In PIM terms this is the <b>family</b> — the template that describes a product. '
       + '⚠️ A product has <b>one</b> template but can sit in <b>many</b> categories. They are different '
       + 'mechanisms, which is why categories live on their own screen.</div>',
-      '<button class="composebtn pri" data-testid="catset-columns" onclick="startFromStandardSet()">📐 Add a standard set</button>');
+      '<button class="composebtn pri" data-testid="catset-columns" onclick="startFromStandardSet()">📐 Add a standard set</button>')
+    /* Units and datatypes describe what a column can BE — so they sit under the control that adds columns. */
+    + catsetRegistry(['unit', 'datatype']);
+  }
+  if (k === 'pricing') {
+    return catsetCard('How a price is arrived at, and where it came from',
+      'A catalogue can declare more than one — a list price, a bulk tier, a regional price, a negotiated one. '
+      + 'And a price that was read from somewhere carries <b>where</b> and <b>when</b>.'
+      + '<div class="catset-std">⚠️ A price with no source is not wrong, it is just unattributable — and a '
+      + 'market-referenced price without a reading date is a rumour. That is the same rule the availability '
+      + 'engine applies to a stock figure: a number without a timestamp is not an answer.</div>', '')
+    + catsetRegistry(['pricing', 'priceorigin']);
   }
   if (k === 'variants') {
     return catsetCard('One product, several sizes',
@@ -143,7 +203,8 @@ function catsetBody(k){
       + 'authored once here rather than edited on a product. <b>Live</b> offers apply; a draft is one you are '
       + 'still writing.</div>',
       '<button class="composebtn pri" data-testid="catset-offer-new" onclick="catsetDefNew(\'offer\')">+ New offer</button>')
-    + catsetCard('Your offers', catsetDefListHTML('offer', 'offer'), '');
+    + catsetCard('Your offers', catsetDefListHTML('offer', 'offer'), '')
+    + catsetRegistry(['offer']);
   }
   if (k === 'ordermodels') {
     return catsetCard('How a quantity is counted',
@@ -154,7 +215,8 @@ function catsetBody(k){
       + 'which is either exactly what you want or a catastrophe. Chits already stamped keep the version they '
       + 'froze, which is why adoption freezes at the mint.</div>',
       '<button class="composebtn pri" data-testid="catset-om-new" onclick="catsetDefNew(\'ordermodel\')">+ New order model</button>')
-    + catsetCard('Your order models', catsetDefListHTML('ordermodel', 'order model'), '');
+    + catsetCard('Your order models', catsetDefListHTML('ordermodel', 'order model'), '')
+    + catsetRegistry(['ordermodel']);
   }
   if (k === 'data') {
     return catsetCard('Bring a spreadsheet in',
@@ -176,7 +238,9 @@ function catsetBody(k){
       + '<div class="catset-std">In PIM terms this is the <b>channel</b> — the same products, presented for a '
       + 'particular audience. ⚠️ It changes what buyers see, so it is deliberately behind its own step-by-step '
       + 'setup rather than a row of switches.</div>',
-      '<button class="composebtn pri" data-testid="catset-face" onclick="UI.nav=\'cataloguesetup\';renderApp()">⚙ Open catalogue setup</button>');
+      '<button class="composebtn pri" data-testid="catset-face" onclick="UI.nav=\'cataloguesetup\';renderApp()">⚙ Open catalogue setup</button>')
+    /* Selling methods and facets describe what a buyer meets, so they read under the storefront control. */
+    + catsetRegistry(['method', 'facet']);
   }
   return '';
 }
@@ -246,7 +310,20 @@ function catsetCss(){
     '.catset-drow .dst.draft{background:#f4f2ec;color:#8a6d1e}',
     '.catset-drow .dst.retired{background:#eceaea;color:#6f6a6a}',
     '.catset-drow .da{font-size:11.5px;color:var(--blue);cursor:pointer;font-weight:600}',
-    '.catset-drow .da:hover{text-decoration:underline}'
+    '.catset-drow .da:hover{text-decoration:underline}',
+    /* The vocabulary blocks. Quieter than the controls above them — this is reference, not something to act on. */
+    '.catset-reg{border:1px solid var(--line);border-radius:11px;background:var(--paper);margin-bottom:12px;overflow:hidden}',
+    '.catset-regh{display:flex;align-items:center;gap:8px;padding:10px 13px 0;font-size:12.5px;font-weight:700}',
+    '.catset-regn{margin-left:auto;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11px;',
+    'color:var(--grey);background:#fff;border:1px solid var(--line);border-radius:20px;padding:1px 8px}',
+    '.catset-regb{font-size:12px;line-height:1.55;color:var(--grey);padding:4px 13px 9px}',
+    '.catset-regrows{display:flex;flex-direction:column;gap:1px;background:var(--line);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}',
+    '.catset-regrow{display:flex;align-items:baseline;gap:9px;background:#fff;padding:6px 13px;font-size:12.5px;flex-wrap:wrap}',
+    '.catset-regrow code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11.5px;color:var(--ink);flex:0 0 auto}',
+    '.catset-regrow .rl{color:var(--ink)}',
+    '.catset-regrow .rn{color:var(--grey);font-size:11.5px;flex:1;min-width:0}',
+    '.catset-regsrc{font-size:11px;color:var(--grey);padding:7px 13px}',
+    '.catset-regsrc code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:10.5px}'
   ].join('');
   (document.head || document.documentElement).appendChild(s);
 }

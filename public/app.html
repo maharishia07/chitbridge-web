@@ -1968,12 +1968,24 @@ const MENUS = {
     /* ⭐ CATEGORIES SITS NEXT TO CATALOGUE, not inside Definitions (Athi, 2026-08-16: *"bring the category as a
        panel next to catalogue"*). It is where you shape the shelf, so it belongs beside the shelf — Definitions
        still LISTS categories, but authoring now has one home and Definitions points at it. */
-    /* ⭐ THE PIM SPLIT (Akeneo shape, Athi's call 2026-08-16). Four jobs that were one toolbar:
-       Catalogue = the product RECORDS · Categories = classification (many per product) ·
-       Catalogue setup = the template, the variant axis, import/export and the storefront channel.
-       ⚠️ Categories is a SIBLING of Catalogue, not a section of setup, because categories CLASSIFY while the
-       template DESCRIBES — one product has many categories and one template. Different mechanisms. */
-    ["Business",[["catalogue","🗂️","Catalogue"],["categories","🏷️","Categories"],["catsetup","⚙️","Catalogue setup"],["definitions","🧱","Definitions"],["customers","🛍️","Customers"],["suppliers","🏭","Suppliers"],["network","🔗","Network"],["coassists","🧑‍🤝‍🧑","Co-assists"]]],
+    /**
+     * ⭐ THE PIM SPLIT, AND ITS OWN RAIL SECTION (Akeneo shape; Athi 2026-08-16: *"catalogue items can be kept as
+     * one section in the menu"*). Three jobs that were one toolbar:
+     *   Catalogue       the product RECORDS
+     *   Categories      classification — MANY per product
+     *   Catalogue setup the template, variants, offers, order models, pricing, import/export, storefront
+     *
+     * ⚠️ Categories is a SIBLING of Catalogue, not a section of setup, because categories CLASSIFY while the
+     * template DESCRIBES — one product has many categories and one template. Different mechanisms.
+     *
+     * ⚠️ NO "DEFINITIONS" ROW. Every tenant it held was rehomed first — categories and the classification
+     * schemes to Categories; order models, offers, units, datatypes, methods, facets, pricing models and price
+     * sources to Catalogue setup; required certificates to Suppliers. The screen was dropped only once nothing
+     * lived there. ⚠️ `cap-definitions.js` REMAINS as the form provider — cbDefNew/cbDefEdit still own every
+     * kind's form, read from the live registries. Dropping the screen must not mean rewriting the forms.
+     */
+    ["Catalogue",[["catalogue","🗂️","Catalogue"],["categories","🏷️","Categories"],["catsetup","⚙️","Catalogue setup"]]],
+    ["Business",[["customers","🛍️","Customers"],["suppliers","🏭","Suppliers"],["network","🔗","Network"],["coassists","🧑‍🤝‍🧑","Co-assists"]]],
     ["Insight", [["mis","📊","MIS"],["traceability","🧭","Traceability"],["readiness","🛡️","Trade ready"]]],
   ], tag:"Owner does structure."},
   /* ⭐ AN ACTOR GETS REPLIES TOO — Athi, 2026-08-15: *"can you show me message from … actor view?"* The screen
@@ -2034,7 +2046,7 @@ const PURPOSE = {
    /app/cap-<name>.js (classic script, shared global scope). CAP_OF maps a screen to its
    capability; unlisted screens are Core (eager, always loaded). renderApp shows "Loading…"
    and re-renders once the capability arrives. Grow CAP_OF as screens migrate out. */
-const CAP_OF = { definitions:'definitions', mis:'admin', profile:'admin', settings:'admin', coassists:'workforce', assistreview:'admin', connectors:'connector', disputes:'dispute', folders:'folders', readiness:'readiness', traceability:'traceability', network:'network', intake:'intake', messages:'messages' };
+const CAP_OF = { definitions:'definitions', categories:'categories', catsetup:'catsetup', mis:'admin', profile:'admin', settings:'admin', coassists:'workforce', assistreview:'admin', connectors:'connector', disputes:'dispute', folders:'folders', readiness:'readiness', traceability:'traceability', network:'network', intake:'intake', messages:'messages' };
 // nav items gated by an entity capability (the itemised toggle) — hidden unless SESSION.capabilities holds the key.
 const CAP_GATED = { connectors:'connector', disputes:'dispute' };
 const CAP_LOADED = {};
@@ -3493,9 +3505,13 @@ function suppliersScreen(){
         <span class="suptabs">
           <button class="${UI.supFind?'':'on'}" data-testid="sup-tab-list" onclick="supFindClose()">🏭 Suppliers</button>
           <button class="${UI.supFind?'on':''}" data-testid="sup-find" onclick="supFindOpen()">🔎 Find a product</button>
+          <!-- ⭐ REQUIRED CERTIFICATES LIVES HERE NOW (Athi, 2026-08-16: "move requirement next to suppliers").
+               It is what YOU require of a supplier before trading — a fact about who you buy from, not about
+               what you sell, which is why it was the odd tenant left in Definitions. -->
+          <button class="${UI.supReq?'on':''}" data-testid="sup-tab-req" onclick="supReqOpen()">📋 Required certificates</button>
         </span>
         <button onclick="openAssist('suppliers')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:#fff;color:#3F66A6;border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none;margin-left:auto">?</button></div>
-      ${UI.supFind?'':`<div style="display:flex;gap:7px"><input class="inp" id="sp_add" data-testid="sup-add-input" placeholder="Add supplier — type a name, User ID or email" style="flex:1" autocomplete="off" oninput="supSearch(this.value)" onkeydown="if(event.key==='Enter')addSupplier()"><button class="composebtn" data-testid="sup-add" onclick="addSupplier()">Add</button></div>
+      ${(UI.supFind||UI.supReq)?'':`<div style="display:flex;gap:7px"><input class="inp" id="sp_add" data-testid="sup-add-input" placeholder="Add supplier — type a name, User ID or email" style="flex:1" autocomplete="off" oninput="supSearch(this.value)" onkeydown="if(event.key==='Enter')addSupplier()"><button class="composebtn" data-testid="sup-add" onclick="addSupplier()">Add</button></div>
       <div id="sp_sugg" class="ccsugg"></div>
       <div class="err" id="sp_err" style="margin-top:6px"></div>
       <div class="srch" style="margin-top:8px">🔍 <input placeholder="Search suppliers, category, ID" value="${esc(UI.supQ||'')}" oninput="UI.supQ=this.value;paintSupList()"></div>
@@ -3503,7 +3519,8 @@ function suppliersScreen(){
     </div>
     <!-- ⚠️ Find REPLACES the list body rather than overlaying it. As an inset:0 overlay it covered .lh too — and
          .lh is where the tabs live, so the control for leaving the mode was underneath the mode. -->
-    <div class="rows" id="sup_rows" style="${UI.supFind?'display:none':''}">${UI._supLoading?'<div class="loadwrap"><span class="spin"></span> loading…</div>':supRowsHTML()}</div>
+    <div class="rows" id="sup_rows" style="${(UI.supFind||UI.supReq)?'display:none':''}">${UI._supLoading?'<div class="loadwrap"><span class="spin"></span> loading…</div>':supRowsHTML()}</div>
+    ${UI.supReq?`<div class="rows" id="sup_req">${supReqHTML()}</div>`:''}
     <div id="supfind_host">${supFindHTML()}</div>
     <div id="supslide_host">${supSlideHTML()}</div>
   </div>`;
@@ -3761,8 +3778,46 @@ function supFindHTML(){
 }
 /* Both are MODE switches — the header (tabs, add row, supplier search) differs between them, so the screen is
    re-rendered rather than a fragment repainted. */
-function supFindOpen(){ UI.supFind=true; UI.supPanel=false; renderApp(); const i=document.getElementById('sf_q'); if(i)i.focus(); }
-function supFindClose(){ UI.supFind=false; renderApp(); }
+function supFindOpen(){ UI.supFind=true; UI.supReq=false; UI.supPanel=false; renderApp(); const i=document.getElementById('sf_q'); if(i)i.focus(); }
+function supFindClose(){ UI.supFind=false; UI.supReq=false; renderApp(); }
+/**
+ * ⭐ REQUIRED CERTIFICATES — the buyer's own floor, rehomed from Definitions.
+ *
+ * ⚠️ AUTHORING STILL BELONGS TO cap-definitions. `requirement` is a definition like any other — versioned,
+ * retirable, cited by id — and its form already knows how to render the standard-key chips. This tab LISTS and
+ * links; it does not re-implement. Rehoming a thing must not mean rebuilding it.
+ */
+function supReqOpen(){ UI.supFind=false; UI.supReq=true; UI.supPanel=false; renderApp(); supReqLoad(); }
+var _SUPREQ = null;
+async function supReqLoad(force){
+  if(_SUPREQ && !force) return;
+  try{ const r=await api('defList',{query:{kind:'requirement', all:1}});
+    _SUPREQ=((r&&r.definitions)||[]).map(d=>({id:d.definition_id,name:d.name,status:d.status||'draft',
+      standards:((d.rules&&d.rules.standards)||[])}));
+  }catch(e){ _SUPREQ=[]; }
+  const h=document.getElementById('sup_req'); if(h) h.innerHTML=supReqHTML();
+}
+function supReqHTML(){
+  if(_SUPREQ===null) return '<div class="loadwrap"><span class="spin"></span> loading…</div>';
+  const rows=_SUPREQ.map(function(d){
+    const n=(d.standards||[]).length;
+    return `<div class="row" data-testid="sup-req-${esc(d.id)}"${d.status==='retired'?' style="opacity:.72"':''}>
+      <div class="main2"><div class="l1"><span class="code"${d.status==='retired'?' style="text-decoration:line-through"':''}>${esc(d.name)}</span>
+        <span class="optchip" style="background:var(--paper);color:var(--grey)">${n} certificate${n===1?'':'s'}</span></div>
+        <div class="l2">${n?esc((d.standards||[]).join(' · ')):'nothing required yet'}</div></div></div>`;
+  }).join('');
+  return `<div style="padding:11px 12px">
+    <div style="font-size:12.5px;line-height:1.6;color:var(--ink);margin-bottom:10px">
+      What <b>you</b> require of a supplier before trading. Declare it once and every supplier is measured against
+      your list instead of against every standard in the system.
+      <div style="font-size:11.5px;color:var(--grey);margin-top:6px">⚠️ It scopes what you are <b>shown</b>. It
+      cannot waive a rule the destination or the product imposes — those are not yours to drop.</div>
+    </div>
+    <button class="composebtn" style="width:100%;justify-content:center" data-testid="sup-req-new"
+      onclick="ensureCap('definitions').then(function(){cbDefNew('requirement')})">+ New requirement</button>
+    <div style="margin-top:10px">${rows||'<div style="font-size:12.5px;color:var(--grey);padding:6px 0">None yet. Without a list, a supplier is measured against every standard in the system — which is why a paint supplier gets asked for a pharmaceutical licence.</div>'}</div>
+  </div>`;
+}
 function paintSupFind(){ const b=document.getElementById('sf_body'); if(b) b.innerHTML=supFindBodyHTML(); }
 
 function supOpenPanel(id){ UI.supSel=id; UI.supPanel=true; paintSupSlide(); }
@@ -5467,7 +5522,13 @@ function mainBody(){
      it." Design 1 is the chit as one unit of work; this is the chit as many. Reached only from the ⧉ Lines button,
      renders through its own module, and if cap-chit2.js never loads nothing else notices. */
   if(UI.nav==="chit2" && typeof chit2Screen==="function") return chit2Screen();      // app/cap-chit2.js (lazy)
-  if(UI.nav==="definitions") return definitionsScreen();   // app/cap-definitions.js (lazy)
+  /**
+   * ⚠️ `definitions` IS NO LONGER A SCREEN — it redirects (2026-08-16). Everything it held was rehomed first;
+   * this catches an old bookmark, a stale `cb_nav` in someone's localStorage, or a link written before the move,
+   * and lands them where the content actually went rather than on the stub screen.
+   * ⚠️ Catalogue setup, not Catalogue: seven of the nine things that lived here are catalogue STRUCTURE.
+   */
+  if(UI.nav==="definitions"){ UI.nav="catsetup"; try{localStorage.setItem("cb_nav","catsetup");}catch(_){ } }
   if(UI.nav==="traceability") return traceabilityScreen();
   if(UI.nav==="readiness") return readinessScreen();
       if(UI.nav==="disputes") return disputesScreen();

@@ -203,8 +203,11 @@ function cbcatDetailHTML(){
 
   var c = (CBCAT_UI.list || []).filter(function(x){ return x.id === CBCAT_UI.sel; })[0];
   if (!c) {
+    /* ⚠️ THE SCHEMES SHOW HERE TOO. They describe classification in general, not one category — so hanging them
+       only off a selected row meant they were invisible on the screen someone lands on. */
     return '<div class="db"><div class="empty"><div class="big">🏷️</div><div class="t">Pick a category</div>'
-      + '<div>Or make a new one. Categories sort your catalogue and give buyers a way to narrow it.</div></div></div>';
+      + '<div>Or make a new one. Categories sort your catalogue and give buyers a way to narrow it.</div></div>'
+      + cbcatSchemesHTML() + '</div>';
   }
   var n = (CBCAT_UI.counts && CBCAT_UI.counts.by[c.id]) || 0;
   var ret = c.status === 'retired';
@@ -228,6 +231,7 @@ function cbcatDetailHTML(){
           + (mine.length > 60 ? '<div class="cbcat-prow" style="color:var(--grey)">+' + (mine.length - 60) + ' more</div>' : '')
           + '</div>'
         : '<div class="cbcat-none">Nothing here yet. Attach products from <span onclick="navTo(\'catalogue\')" style="color:var(--blue);font-weight:600;cursor:pointer">Catalogue</span> — tick them and press <b>Categorise</b>.</div>')
+    + cbcatSchemesHTML()
     + '</div>'
     + '<div class="actbar">'
     +   (ret ? '<button class="pri" data-testid="catg-relive" onclick="cbcatRelive(\'' + esc(c.id) + '\')">Put back on the shelf</button>'
@@ -244,6 +248,39 @@ function cbcatStatsHTML(){
         ? '<button data-testid="catg-uncat" onclick="cbcatGoUncategorised()" style="margin-left:auto;border:1px solid var(--gold-line);background:var(--gold-soft);border-radius:8px;padding:4px 9px;font-size:11.5px;color:#6b5a36;cursor:pointer">'
           + CBCAT_UI.counts.none + ' uncategorised →</button>'
         : '');
+}
+/**
+ * ⭐ THE CLASSIFICATION SCHEMES — rehomed here from Definitions (Athi's call, 2026-08-16).
+ *
+ * HS · GS1 GPC · Schema.org · UNSPSC · custom. These belong beside Categories because **they do the same job**:
+ * they classify a product. Your categories are YOUR names for your shelf; a scheme is the world's name for the
+ * same thing, and a product can carry both.
+ *
+ * ⭐ AND GS1 GPC IS THE ONE THE CATEGORY-TREE BACKLOG POINTS AT — the standard whose brick code each category is
+ * meant to carry eventually (backlog 22). Putting the scheme list beside the category list means the standard
+ * sits next to the thing it standardises, rather than in a screen about definitions in general.
+ *
+ * ⚠️ ALWAYS BY REFERENCE — you cite the code, you never copy the scheme. The blurb says so because it is the
+ * whole difference between citing HS 1006 and inventing a private meaning for it.
+ * ⚠️ Rows come from `cbDefRegistries()`, so this is a second READER of one list, never a second copy.
+ */
+function cbcatSchemesHTML(){
+  if (typeof cbDefRegistries !== 'function') {
+    ensureCap('definitions').then(function(){ cbcatPaintDetail(); });
+    return '';
+  }
+  var s = cbDefRegistries().filter(function(x){ return x.key === 'standard'; })[0];
+  if (!s || !(s.rows || []).length) return '';
+  return '<div class="sec" style="margin-top:14px">Classification schemes</div>'
+    + '<div class="cbcat-note" style="margin-bottom:8px">' + esc(s.blurb) + '</div>'
+    + '<div class="cbcat-plist">'
+    + s.rows.map(function(r){
+        return '<div class="cbcat-prow"><code style="font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11.5px">'
+          + esc(r.code) + '</code><span style="margin-left:8px">' + esc(r.label || '') + '</span>'
+          + (r.note ? '<span class="cbcat-also">' + esc(r.note) + '</span>' : '') + '</div>';
+      }).join('')
+    + '</div>'
+    + '<div style="font-size:11px;color:var(--grey);margin-top:5px">read from <code>' + esc(s.source) + '</code></div>';
 }
 function cbcatPaintList(){
   var b = document.getElementById('cbcat_rows'); if (b) b.innerHTML = cbcatRowsHTML();
