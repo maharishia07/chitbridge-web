@@ -151,7 +151,20 @@
   .topbar .info{border:0;background:none;color:#9fb4bf;font-size:16px;cursor:pointer;padding:2px 5px;line-height:1}
   .topbar .info.on{color:var(--gold)}
 
-  .panel{flex:1;display:grid;grid-template-columns:var(--lw,340px) 7px minmax(0,1fr);min-height:0;position:relative}
+  /**
+   * ⚠️ THE LIST WIDTH IS CLAMPED SO THE DETAIL ALWAYS SURVIVES.
+   *
+   * `--lw` is a saved drag preference, and a preference made on a wide window becomes a trap on a narrow one:
+   * Athi's stored 599px left the detail pane about 85px wide on a laptop, wrapping body text to one character
+   * per line. The drag handler already clamps while dragging (`r.width-260`), but nothing re-clamps on RENDER —
+   * so the trap only appears after the window changes, which is exactly when nobody connects it to a divider
+   * they dragged days ago.
+   *
+   * min() applies the same floor at paint time, on every two-pane screen at once. 300px is a readable column;
+   * the preference is honoured up to that point and silently ignored past it, which is the right precedence —
+   * a preference may shape a layout, it may not break it.
+   */
+  .panel{flex:1;display:grid;grid-template-columns:min(var(--lw,340px), calc(100% - 300px)) 7px minmax(0,1fr);min-height:0;position:relative}
   .list{display:flex;flex-direction:column;min-width:0;min-height:0;background:#fff}
   .lh{padding:10px 12px;border-bottom:1px solid var(--line)}
   .folders{display:flex;gap:4px;margin-bottom:8px}
@@ -1955,7 +1968,12 @@ const MENUS = {
     /* ⭐ CATEGORIES SITS NEXT TO CATALOGUE, not inside Definitions (Athi, 2026-08-16: *"bring the category as a
        panel next to catalogue"*). It is where you shape the shelf, so it belongs beside the shelf — Definitions
        still LISTS categories, but authoring now has one home and Definitions points at it. */
-    ["Business",[["catalogue","🗂️","Catalogue"],["categories","🏷️","Categories"],["definitions","🧱","Definitions"],["customers","🛍️","Customers"],["suppliers","🏭","Suppliers"],["network","🔗","Network"],["coassists","🧑‍🤝‍🧑","Co-assists"]]],
+    /* ⭐ THE PIM SPLIT (Akeneo shape, Athi's call 2026-08-16). Four jobs that were one toolbar:
+       Catalogue = the product RECORDS · Categories = classification (many per product) ·
+       Catalogue setup = the template, the variant axis, import/export and the storefront channel.
+       ⚠️ Categories is a SIBLING of Catalogue, not a section of setup, because categories CLASSIFY while the
+       template DESCRIBES — one product has many categories and one template. Different mechanisms. */
+    ["Business",[["catalogue","🗂️","Catalogue"],["categories","🏷️","Categories"],["catsetup","⚙️","Catalogue setup"],["definitions","🧱","Definitions"],["customers","🛍️","Customers"],["suppliers","🏭","Suppliers"],["network","🔗","Network"],["coassists","🧑‍🤝‍🧑","Co-assists"]]],
     ["Insight", [["mis","📊","MIS"],["traceability","🧭","Traceability"],["readiness","🛡️","Trade ready"]]],
   ], tag:"Owner does structure."},
   /* ⭐ AN ACTOR GETS REPLIES TOO — Athi, 2026-08-15: *"can you show me message from … actor view?"* The screen
@@ -1994,6 +2012,7 @@ const PURPOSE = {
   customers:"Your CRM — everyone who ordered from your storefront. They exist only under your shop; the platform never takes them over.",
   catalogue:"What you sell — products and price.",
   categories:"How your shelf is sorted. Make a category here, then tick products in the Catalogue and attach them. A product can sit in several.",
+  catsetup:"How your catalogue is SHAPED — the columns every product records, which lines are variants of one another, spreadsheets in and out, and how customers order. The products themselves live in Catalogue.",
   worklist:"Every line assigned across every chit — grouped by date, by person or by order. A co-assist sees only their own.",
   readiness:"Your trade readiness — gather the clearances your standards require; buyers see them as verified confidence.",
   coassists:"Manage who acts for you — people now; connectors, devices, processes, agents next. For structure use Network.",
@@ -2211,6 +2230,11 @@ function _renderApp(){
     if(UI.nav==="categories"){
       const had = CAP_LOADED["categories"];
       ensureCap("categories").then(function(){ if(!had) renderApp(); cbcatLoad(); });
+    }
+    /* Same one-time-transition rule as above — see the re-entrancy note on renderApp. */
+    if(UI.nav==="catsetup"){
+      const hadCs = CAP_LOADED["catsetup"];
+      ensureCap("catsetup").then(function(){ if(!hadCs) renderApp(); });
     }
     if(UI.nav==="mis" && typeof loadMIS==="function") loadMIS();
     if(UI.nav==="coassists") loadCoassists();
@@ -4338,10 +4362,23 @@ async function composeFromSupplier(id){ const d=UI.supDet, x=d&&d.supplier; if(!
             items:items, subject:o.subject||'' });
 }
 /* CATALOGUE (own products) — two-sided master/detail. Full CRUD is live (PATCH /products/:id), so Edit persists. */
+/**
+ * ⚠️ THIS SCREEN IS PRODUCT RECORDS ONLY, AS OF 2026-08-16.
+ *
+ * Athi: *"we are clubbing product management and catalogue management in one roof, so it is confusing."* He was
+ * right and the PIM standard agrees. Variants · Standard set · Check & import · Template · Export all MOVED to
+ * Catalogue setup (cap-catsetup.js), because they are three different jobs from "the products in front of me":
+ * the attribute template, the variant axis, and moving data in and out.
+ *
+ * ⚠️ NOTHING WAS REIMPLEMENTED. The setup screen calls declareVariants / startFromStandardSet /
+ * checkCatalogueFile / downloadCatalogueTemplate / exportCatalogueCSV, which still live in this file. Moving a
+ * control must not become rewriting it — that is how a re-organisation smuggles in behaviour changes nobody
+ * asked for and nobody tests.
+ */
 function catalogueScreen(){
   const list = `<div class="list">
     <div class="lh">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:14px">🗂️ Catalogue</span><button onclick="openAssist('catalogue')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:#fff;color:#3F66A6;border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button><span onclick="UI.nav='cataloguesetup';renderApp()" title="New: catalogue face setup (prototype)" style="margin-left:auto;cursor:pointer;font-size:11px;font-weight:600;color:var(--blue);border:1px solid var(--line);border-radius:7px;padding:3px 9px">⚙ Set up (new)</span></div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:14px">🗂️ Catalogue</span><button onclick="openAssist('catalogue')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:#fff;color:#3F66A6;border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button></div>
       <button class="composebtn" style="width:100%;justify-content:center" data-testid="cat-new-product" onclick="newProduct()">+ New product</button>
       <div class="srch" style="margin-top:8px">🔍 <input data-testid="cat-search" placeholder="Search name, code, unit" value="${esc(UI.prodQ||'')}" oninput="UI.prodQ=this.value;paintProdList()"></div>
       ${prodCatgStripHTML()}
@@ -4350,16 +4387,8 @@ function catalogueScreen(){
         <span style="font-size:11px;color:var(--grey)" id="ct_count">${prodVisible().length} product(s)</span>
         <button data-testid="cat-select" onclick="prodPickMode(!UI.prodPick)" title="Tick several products, then attach them to a category at once"
           style="border:1px solid var(--line);background:${UI.prodPick?'var(--blue)':'var(--paper)'};color:${UI.prodPick?'#fff':'var(--ink)'};border-radius:8px;padding:4px 9px;font-size:11.5px;cursor:pointer">☑ Select</button>
-        <button data-testid="cat-variants" onclick="declareVariants()" title="One product, several sizes — say which lines belong together"
-          style="margin-left:auto;border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:4px 9px;font-size:11.5px;color:var(--ink);cursor:pointer">🔗 Variants</button>
-        <button data-testid="cat-starter-set" onclick="startFromStandardSet()" title="Add the columns your trade expects"
-          style="border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:4px 9px;font-size:11.5px;color:var(--ink);cursor:pointer">📐 Standard set</button>
-        <button data-testid="cat-check-csv" onclick="checkCatalogueFile()" title="Read a spreadsheet, choose what each column becomes, then import"
-          style="border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:4px 9px;font-size:11.5px;color:var(--ink);cursor:pointer">🔍 Check &amp; import</button>
-        <button data-testid="cat-template-csv" onclick="downloadCatalogueTemplate(this)" title="Download a blank sheet in your catalogue's own format"
-          style="border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:4px 9px;font-size:11.5px;color:var(--ink);cursor:pointer">📄 Template</button>
-        <button data-testid="cat-export-csv" onclick="exportCatalogueCSV(this)" title="Download every product as a spreadsheet"
-          style="border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:4px 9px;font-size:11.5px;color:var(--ink);cursor:pointer">⬇ Export CSV</button>
+        <button data-testid="cat-setup" onclick="navTo('catsetup')" title="Columns, variants, import and export, storefront"
+          style="margin-left:auto;border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:4px 9px;font-size:11.5px;color:var(--ink);cursor:pointer">⚙️ Setup</button>
       </div>
     </div>
     <div class="rows" id="ct_rows">${UI._prodLoading?'<div class="loadwrap"><span class="spin"></span> loading…</div>':prodRowsHTML()}</div>
@@ -5449,6 +5478,8 @@ function mainBody(){
   if(UI.nav==="customers") return customersScreen();
   if(UI.nav==="cataloguesetup" && typeof catalogueSetupScreen==="function") return catalogueSetupScreen();  // LOCAL PROTOTYPE
   if(UI.nav==="catalogue") return catalogueScreen();
+  if(UI.nav==="catsetup") return (typeof catalogueSetupHubScreen==="function") ? catalogueSetupHubScreen()
+    : `<div class="panel" id="panel" style="--lw:${UI.lw}px"><div class="list"><div class="rows"><div class="loadwrap"><span class="spin"></span> loading…</div></div></div><div class="divider"></div><div class="detail" id="detailpane"></div></div>`;
   if(UI.nav==="categories") return (typeof categoriesScreen==="function") ? categoriesScreen()
     : `<div class="panel" id="panel" style="--lw:${UI.lw}px"><div class="list"><div class="rows"><div class="loadwrap"><span class="spin"></span> loading…</div></div></div><div class="divider"></div><div class="detail" id="detailpane"></div></div>`;
   if(UI.nav==="mis") return misScreen();

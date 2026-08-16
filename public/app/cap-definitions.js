@@ -64,15 +64,19 @@ var CBDEF_AUTHORABLE = {
                      + 'about — a category has no terms that could change under a chit. ⚠️ A product can sit in '
                      + 'several. Created and renamed under <b>Categories</b>, beside the Catalogue.' },
   ordermodel: { icon: '🔢', title: 'Order models', one: 'order model',
+                home: { nav: 'catsetup', sec: 'ordermodels', label: 'Open Catalogue setup →' },
                 blurb: 'A quantity rule with a NAME, so a product adopts “Carton of 6” rather than repeating '
                      + 'pack/step 6. ⚠️ Change it to 12 and every product that adopted it moves — which is either '
-                     + 'exactly what you want or a catastrophe, and is why adoption freezes at the mint.' },
+                     + 'exactly what you want or a catastrophe, and is why adoption freezes at the mint. '
+                     + 'Authored under <b>Catalogue setup</b>.' },
   /* ⚠️ This blurb said "nothing evaluates these at order time yet" — true when written, false since offers were
      wired into compose. Stale copy is the same failure as the "read-only showcase" banner: someone reads it,
      believes the feature is inert, and never tries it. */
   offer:      { icon: '🏷️', title: 'Offers', one: 'offer',
+                home: { nav: 'catsetup', sec: 'offers', label: 'Open Catalogue setup →' },
                 blurb: 'An offer kind plus its conditions. Publish one and it applies to orders in compose — the '
-                     + 'breakdown shows what came off and, when it does not fire, how far short the order is.' },
+                     + 'breakdown shows what came off and, when it does not fire, how far short the order is. '
+                     + 'Authored under <b>Catalogue setup</b>.' },
   /**
    * ⭐⭐ BACKLOG 7 — THE BUYER'S OWN FLOOR. Athi, 2026-08-16: *"the entity should declare what minimum
    * certification he needs to have business and it has to check only those available, eventhough the supplier
@@ -637,6 +641,16 @@ async function cbDefSetStatus(id, status){
    to be system message"*. `confirmAsk` (app.html) is the one replacement; this was one of the 8 stragglers.
    ⚠️ The wording says what actually happens. "Delete?" would be a lie — the row survives so that chits which
    cited it stay explainable, and someone who believes they erased something is owed the truth. */
+/**
+ * Go to the screen that OWNS a kind, and land on the right section of it.
+ * ⚠️ The section is set BEFORE navigating AND again after the capability loads — the target screen reads
+ * `CATSET.sec` as it renders, and on a cold load it renders before this file's `then` would have run.
+ */
+function cbDefGoHome(nav, sec){
+  if (sec && nav === 'catsetup') { if (typeof CATSET === 'undefined') window.CATSET = { sec: sec }; else CATSET.sec = sec; }
+  navTo(nav);
+  if (sec && nav === 'catsetup') ensureCap('catsetup').then(function(){ CATSET.sec = sec; if (typeof catsetPaint === 'function') catsetPaint(); });
+}
 function cbDefRetire(id, name){
   confirmAsk('Retire “' + cbDefEsc(name) + '”?',
     'It leaves the shelf and <b>cannot be adopted again</b>.'
@@ -809,7 +823,7 @@ function cbDefMineHTML(){
          ⚠️ A kind with a `home` is authored on ITS OWN SCREEN, so this offers the door rather than a second
          Create form. Two places to author one thing is the duplication this screen exists to have removed. */
       +   (A.home
-            ? '<button class="cbdef-new" data-testid="cbdef-home-' + kind + '" onclick="event.stopPropagation();navTo(\'' + A.home.nav + '\')">' + cbDefEsc(A.home.label) + '</button>'
+            ? '<button class="cbdef-new" data-testid="cbdef-home-' + kind + '" onclick="event.stopPropagation();cbDefGoHome(\'' + A.home.nav + '\',\'' + (A.home.sec || '') + '\')">' + cbDefEsc(A.home.label) + '</button>'
             : '<button class="cbdef-new" data-testid="cbdef-new-' + kind + '" onclick="event.stopPropagation();cbDefNew(\'' + kind + '\')">+ New</button>')
       +   '<span class="cbdef-caret">' + (mopen ? '▾' : '▸') + '</span>'
       + '</div>'
