@@ -35,6 +35,28 @@
    * there is no role in which a lighter value was the right one.
    */
   :root{--ink:#0F2E3D;--blue:#3F66A6;--blue-d:#345488;--gold:#C9A86A;--gold-soft:#F7F1E4;--gold-line:#E8D9BC;--paper:#FAF8F4;--card:#fff;--line:#E7E2D8;--grey:#61666c;--ok:#27794c;--prog:#7d6126;--disp:#b4453f;--shadow:0 1px 2px rgba(15,46,61,.05),0 12px 34px rgba(15,46,61,.08)}
+  /* ⭐ TYPE · SPACING · RADIUS TOKENS (2026-08-16, backlog 26). Athi, after asking whether the font work was
+     page-by-page: *"backlog type and spacing tokens and you can work autonomously later."*
+     ⚠️ THE ANSWER TO THAT QUESTION IS WHY THESE EXIST: where a token exists, one line changes the whole product
+     — `--grey` moved once and lifted every caption in the app. Where one does not, it is a file-by-file sweep,
+     which is exactly why 410 font sizes had to be swept by hand across eight files.
+     ⚠️ The problem was never the COUNT of values, it was that pairs sat 1–2px apart doing one job: `8px 12px`
+     ×10, `9px 12px` ×10 and `7px 12px` ×2 are three paddings for one purpose. Invisible one at a time, and the
+     reason nothing quite lines up.
+     ⚠️ NAME THEM, NEVER RENUMBER THEM. A scale whose steps get renumbered later is worse than no scale, because
+     every existing use silently shifts. New values get a new name; --fs-2 is 12.5px forever.
+     ⚠️ --fs-1 IS THE FLOOR at 11px. Anything below it was unreadable and is a bug, not a style (backlog 4).
+     ⚠️ FIVE LITERALS STAY BELOW THE FLOOR ON PURPOSE, and they are all the same case: a NUMERAL inside a
+     fixed-size circle or pill — the unread dot, the two menu counts, the state-tab count, the avatar status dot.
+     A digit is not prose; it is read as a quantity at a glance, and raising it means resizing the circle it sits
+     in. They are deliberately left as literals rather than tokenised, so that `font-size:var(--fs-*)` means
+     "typography" everywhere and the guard's remaining count stays a short, explainable list instead of a
+     permanent nag. ⚠️ Do not add to that list — new text takes --fs-1 or larger. */
+  :root{
+    --fs-1:11px;--fs-2:12.5px;--fs-3:14px;--fs-4:16px;--fs-5:20px;--fs-6:28px;
+    --sp-1:4px;--sp-2:8px;--sp-3:12px;--sp-4:16px;--sp-5:24px;--sp-6:32px;
+    --r-sm:6px;--r-md:9px;--r-lg:12px;
+  }
   *{box-sizing:border-box}html,body{margin:0;height:100%}
   body{background:var(--paper);color:var(--ink);font-family:Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
   button,input,select{font:inherit}button{cursor:pointer}
@@ -158,7 +180,7 @@
   .menu button{display:flex;align-items:center;gap:10px;border:0;background:none;color:#bcccd6;text-align:left;font-size:13px;font-weight:500;padding:9px 10px;border-radius:9px;width:100%}
   .menu button .ic{width:16px;text-align:center}.menu button .ct{margin-left:auto;font-size:9.5px;background:rgba(255,255,255,.12);border-radius:9px;padding:1px 6px}
   .menu button:hover{background:rgba(255,255,255,.06)}.menu button.on{background:var(--blue);color:#fff}
-  .menu .tagl{margin-top:auto;font-size:9.5px;color:#93adba;line-height:1.5;padding:8px}   /* was #6f8b99 — 3.94:1 */
+  .menu .tagl{margin-top:auto;font-size:var(--fs-1);color:#93adba;line-height:1.5;padding:8px}   /* was #6f8b99 — 3.94:1 */
 
   .main{min-width:0;display:flex;flex-direction:column;overflow:hidden;background:var(--paper)}
   .purpose{display:flex;align-items:center;gap:10px;padding:0 16px;max-height:0;overflow:hidden;background:#fff;font-size:12px;color:var(--mut,#5d6b73);transition:max-height .22s ease,padding .22s ease}
@@ -496,7 +518,7 @@
   .filterpanel label{display:flex;align-items:center;gap:6px;cursor:pointer}
   .filterpanel .fp-foot{display:flex;align-items:center;gap:10px;border-top:1px solid var(--line);padding-top:7px}
   .filterpanel .fp-foot button{border:1px solid var(--line);background:#fff;border-radius:6px;font-size:11px;font-weight:700;padding:4px 10px;color:var(--blue);cursor:pointer}
-  .filterpanel .fp-note{margin-left:auto;font-size:9px;color:var(--grey);font-family:'Space Mono',monospace}
+  .filterpanel .fp-note{margin-left:auto;font-size:var(--fs-1);color:var(--grey);font-family:'Space Mono',monospace}
   .notifover{position:fixed;inset:0;z-index:250;background:rgba(8,24,32,.18)}
   .notifpanel{position:absolute;top:54px;right:14px;width:300px;max-width:88vw;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);overflow:hidden}
   .notifhd{display:flex;align-items:center;font-family:'Space Grotesk';font-weight:700;font-size:13px;color:var(--ink);padding:11px 13px;border-bottom:1px solid var(--line)}
@@ -536,12 +558,12 @@
   .optrow.sel .rdo{border-color:var(--blue)}
   .optrow.sel .rdo::after{content:'';width:8px;height:8px;border-radius:50%;background:var(--blue)}
   .optrow .oc{flex:1;min-width:0}.optrow .on{font-size:13px;font-weight:700;color:var(--ink)}.optrow .om{font-size:11px;color:var(--grey)}
-  .optchip{font-size:9.5px;font-weight:700;border-radius:9px;padding:2px 8px;white-space:nowrap}
+  .optchip{font-size:var(--fs-1);font-weight:700;border-radius:9px;padding:2px 8px;white-space:nowrap}
   .optchip.on{color:#1f7a4d;background:#e3f3ea}.optchip.brk{color:#8a6d1f;background:#f6edd6}.optchip.off{color:#777;background:#eee}
   .dtabs{flex-wrap:wrap}
   .dh{position:relative}
   .dmsg{position:absolute;top:0;right:0;border:1px solid #cfe0ec;background:#EAF1F6;color:var(--blue);font-size:11px;font-weight:700;border-radius:9px;padding:3px 9px;cursor:pointer}
-  .rowmsg{font-size:9px;font-weight:700;color:#3f66a6;background:#EAF1F6;border:0.5px solid #cfe0ec;border-radius:5px;padding:0 5px;white-space:nowrap;cursor:pointer}
+  .rowmsg{font-size:var(--fs-1);font-weight:700;color:#3f66a6;background:#EAF1F6;border:0.5px solid #cfe0ec;border-radius:5px;padding:0 5px;white-space:nowrap;cursor:pointer}
   .msglink{border:1px solid var(--line);background:#fff;color:var(--blue);font-size:12px;font-weight:700;border-radius:9px;padding:8px 13px;cursor:pointer}
   .msgtab{display:flex;flex-direction:column}
   .msgfilter{display:flex;gap:6px;margin-bottom:10px}
@@ -576,7 +598,7 @@
   .bubble.int{background:#f3f5f7;border-left:3px solid #8aa0ad}
   .bubble.ext{background:#eef5ff;border-left:3px solid var(--blue)}
   .bubble .bh{display:flex;align-items:center;gap:8px;margin-bottom:3px}
-  .mbadge{font-size:9px;font-weight:700;border-radius:6px;padding:1px 7px}
+  .mbadge{font-size:var(--fs-1);font-weight:700;border-radius:6px;padding:1px 7px}
   .mbadge.int{background:#e2e8ec;color:#4a5e6a}.mbadge.ext{background:#dbeafe;color:var(--blue)}
   .bubble .ath{font-size:11px;font-weight:700;color:var(--ink)}.bubble .tm{font-size:11px;color:var(--grey);margin-left:auto}
   .bubble .bb{font-size:13px;color:var(--ink);line-height:1.45}
@@ -614,12 +636,12 @@
   .topbar .msgc{position:relative;border:0;background:none;color:#cfe0e8;font-size:15px;cursor:pointer;padding:2px 4px;line-height:1}
   /* (the .msgc dot is styled with .bell's, above — one rule, both dots) */
   .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-  .unreadtag{font-size:8.5px;font-weight:800;color:#fff;background:#d65a5a;border-radius:6px;padding:0 5px;margin-left:4px}
+  .unreadtag{font-size:var(--fs-1);font-weight:800;color:#fff;background:#d65a5a;border-radius:6px;padding:0 5px;margin-left:4px}
   .unreaddot{width:7px;height:7px;border-radius:50%;background:#d65a5a;margin-left:2px}
   .row .unreaddot{display:inline-block;vertical-align:middle;margin:0 5px 0 0}
   .row.unread{background:#fbf7ee}
   .row.unread .code{font-weight:800}
-  .mtype{font-size:9px;font-weight:700;border-radius:6px;padding:1px 6px}
+  .mtype{font-size:var(--fs-1);font-weight:700;border-radius:6px;padding:1px 6px}
   .mtype.info{background:#eef2f6;color:#5a6b78}.mtype.query{background:#fbeede;color:#9a6b16}.mtype.decision{background:#e3f3ea;color:#1f7a4d}
   .typesel{display:flex;gap:5px;margin-bottom:7px}
   .typesel button{border:1px solid var(--line);background:#fff;border-radius:6px;font-size:11px;font-weight:700;padding:4px 9px;color:var(--grey);cursor:pointer}
@@ -640,9 +662,9 @@
   .raidtoggle{padding:9px 12px;border-top:1px solid var(--line);font-size:11px;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
   .raidtoggle button{border:1px solid var(--line);background:#fff;border-radius:6px;font-size:11px;font-weight:700;padding:4px 9px;color:var(--grey);cursor:pointer}
   .raidtoggle button.on{background:var(--blue);color:#fff;border-color:var(--blue)}
-  .raidtoggle .hint{flex-basis:100%;font-weight:400;color:var(--grey);font-size:9.5px}
+  .raidtoggle .hint{flex-basis:100%;font-weight:400;color:var(--grey);font-size:var(--fs-1)}
   .custflag{color:#c0392b;font-weight:800;margin-right:4px}
-  .prichip{font-size:9px;font-weight:700;border-radius:5px;padding:0 6px;white-space:nowrap}
+  .prichip{font-size:var(--fs-1);font-weight:700;border-radius:5px;padding:0 6px;white-space:nowrap}
   .prichip.pri-urgent{background:#FCEBEB;color:#A32D2D}.prichip.pri-low{background:#F1EFE8;color:#5F5E5A}
   .dchips{display:flex;gap:8px;align-items:center;margin-top:8px}
   .prichip-btn{font-size:11px;font-weight:700;border-radius:6px;padding:3px 9px;cursor:pointer;border:1px solid var(--line);background:#fff;color:var(--ink)}
@@ -666,9 +688,9 @@
   .row .party{font-size:11.5px;color:#42525a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .row .amt{margin-left:auto;font-family:'Space Grotesk';font-weight:700;font-size:12px}
   .row .l2{font-size:11px;color:var(--grey);margin-top:3px;display:flex;align-items:center;gap:7px}
-  .proof{font-size:8.5px;font-weight:700;border-radius:5px;padding:1px 5px}
+  .proof{font-size:var(--fs-1);font-weight:700;border-radius:5px;padding:1px 5px}
   .proof.ok{background:#E9F4EE;color:var(--ok)}.proof.wait{background:var(--gold-soft);color:var(--prog)}
-  .chipst{font-size:9px;font-weight:700;border-radius:20px;padding:2px 9px;border:1px solid transparent;cursor:pointer;white-space:nowrap}
+  .chipst{font-size:var(--fs-1);font-weight:700;border-radius:20px;padding:2px 9px;border:1px solid transparent;cursor:pointer;white-space:nowrap}
   .st-open{background:#E8F0F4;color:var(--blue);border-color:#cfe0ec}.st-act{background:var(--gold-soft);color:var(--prog);border-color:var(--gold-line)}.st-close{background:#E9F4EE;color:var(--ok);border-color:#bfe0cd}
   .rowacts{display:flex;gap:6px;margin-top:8px}
   .rowacts button{flex:1;font-size:11px;font-weight:700;border:1px solid var(--line);background:#fff;border-radius:6px;padding:5px;color:var(--ink)}
@@ -772,13 +794,13 @@
   .attTile:hover{background:#F4F8FB;border-color:var(--blue)}
   .attTileIcon{font-size:30px;line-height:1}
   .attTileName{font-size:11.5px;color:var(--ink);font-weight:600;word-break:break-word;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-  .attTileMeta{font-size:9.5px;color:var(--grey);text-transform:uppercase;letter-spacing:.04em}
+  .attTileMeta{font-size:var(--fs-1);color:var(--grey);text-transform:uppercase;letter-spacing:.04em}
   .attImg .vlen{position:absolute;bottom:4px;right:6px;font-size:11px;background:rgba(0,0,0,.45);color:#fff;border-radius:4px;padding:0 4px}
   .attNote{font-size:11px;color:var(--grey);margin-top:8px;line-height:1.5}
   .itab .ir.hasatt{cursor:pointer}
   .lineclip{margin-left:10px;font-size:11px;font-weight:700;color:var(--blue);background:#EAF1F6;border:0.5px solid #cfe0ec;border-radius:6px;padding:1px 7px;cursor:pointer;white-space:nowrap}
   .lineImgs{display:flex;gap:7px;padding:9px 11px;background:#FBFAF6;border-bottom:0.5px solid var(--line);overflow-x:auto}
-  .rowclip{font-size:9px;font-weight:700;color:var(--blue);background:#EAF1F6;border:0.5px solid #cfe0ec;border-radius:5px;padding:0 5px;white-space:nowrap}
+  .rowclip{font-size:var(--fs-1);font-weight:700;color:var(--blue);background:#EAF1F6;border:0.5px solid #cfe0ec;border-radius:5px;padding:0 5px;white-space:nowrap}
   .lbover{position:fixed;inset:0;background:rgba(8,24,32,.85);z-index:300;display:flex;align-items:center;justify-content:center;padding:18px}
   .lbbox{width:560px;max-width:100%;background:#0f2530;border-radius:14px;overflow:hidden}
   .lbtop{display:flex;align-items:center;gap:14px;padding:11px 14px;color:#cfe0e8;font-size:12.5px;font-weight:600}
@@ -803,7 +825,7 @@ button:focus-visible,.composebtn:focus-visible,.pri:focus-visible{outline:2px so
 .composer .chtoggle + .typesel{display:inline-flex;vertical-align:middle;margin-left:10px}
 .composer .chtoggle + .typesel::before{content:"|";color:var(--line);font-weight:700;margin-right:10px;display:flex;align-items:center}
 .tl .ev.next::before{background:#fff;border:1.5px dashed #b9c2c7;width:7px;height:7px}
-.tl .ev.next .ea::after{content:" (upcoming)";font-size:9px;font-family:'Space Mono';color:#9aa3a7;font-weight:400}
+.tl .ev.next .ea::after{content:" (upcoming)";font-size:var(--fs-1);font-family:'Space Mono';color:#9aa3a7;font-weight:400}
 img.attImg{object-fit:cover;display:block}
 .attpdf{width:100%;height:60vh;border:0;background:#fff}
 .atttext{width:100%;max-height:60vh;overflow:auto;margin:0;padding:16px 18px;background:#fff;color:#243038;font:12.5px/1.65 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:pre-wrap;word-break:break-word;text-align:left}
@@ -811,7 +833,7 @@ img.attImg{object-fit:cover;display:block}
 .lhead{display:grid;align-items:center;gap:8px;position:sticky;top:0;z-index:3;background:#fff;border-bottom:1.5px solid var(--line);padding:7px 12px;font-size:11px;font-weight:700;color:var(--grey);text-transform:uppercase;letter-spacing:.3px}
 .lhcell{display:flex;align-items:center;white-space:nowrap;overflow:hidden}
 .lhcell.sortable{cursor:pointer}.lhcell.sortable:hover{color:var(--blue)}
-.sarr{font-size:9px;margin-left:3px;color:var(--blue)}
+.sarr{font-size:var(--fs-1);margin-left:3px;color:var(--blue)}
 .lrow{display:grid;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--line);cursor:pointer;font-size:12.5px}
 .lrow:hover{background:var(--paper)}
 .lrow.unread{background:#f5f9fd}
@@ -835,7 +857,7 @@ img.attImg{object-fit:cover;display:block}
 .subjtext{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .lrow.unread .subjtext{font-weight:800}
 .udot{width:8px;height:8px;border-radius:50%;background:var(--blue);flex:0 0 auto;display:inline-block}
-.rflag{font-size:9px;font-weight:800;border-radius:5px;padding:1px 6px;white-space:nowrap;border:1px solid;flex:0 0 auto}
+.rflag{font-size:var(--fs-1);font-weight:800;border-radius:5px;padding:1px 6px;white-space:nowrap;border:1px solid;flex:0 0 auto}
 .rflag.disp{background:#fbeceb;color:#b4453f;border-color:#f0c9c6}
 .rflag.cust{background:#FCEBEB;color:#A32D2D;border-color:#e3a0a0}
 .rflag.urg{background:#FCEBEB;color:#A32D2D;border-color:#e3a0a0}
@@ -852,7 +874,7 @@ img.attImg{object-fit:cover;display:block}
 .colcog{border:0;background:none;cursor:pointer;font-size:13px;color:var(--grey);justify-self:end;padding:0 2px}
 .colmenu{position:absolute;right:10px;top:30px;z-index:6;background:#fff;border:1px solid var(--line);border-radius:9px;box-shadow:0 8px 24px rgba(0,0,0,.16);padding:8px 11px;display:flex;flex-direction:column;gap:5px;font-size:12px;text-transform:none;font-weight:400;color:var(--ink)}
 .colmenu label{display:flex;gap:7px;align-items:center;cursor:pointer;white-space:nowrap}
-.optchip.mini{font-size:9px;padding:0 5px}.optchip.mini.r{background:#fbeceb;color:#b4453f;border-color:#f0c9c6}
+.optchip.mini{font-size:var(--fs-1);padding:0 5px}.optchip.mini.r{background:#fbeceb;color:#b4453f;border-color:#f0c9c6}
 /* ⚠️ WRAPS INSTEAD OF OVERFLOWING. Fold toggle + count + sort + key + columns needs ~280px, and the list pane is
    draggable down to 210 — below which the row spilled sideways out of its own pane. A control strip that cannot
    fit must fold onto a second line; it must not decide the pane is wider than it is. */
@@ -1350,7 +1372,7 @@ function blueprintCardHTML(id){
     +'<div style="font-size:11.5px;font-weight:800;color:#1f7a3d;margin:14px 0 2px">✎ OPEN — yours to set, within bounds</div>'+_bpRows(wp.open,'open')
     +'<div style="font-size:11.5px;font-weight:800;color:#2b4a72;margin:14px 0 2px">↑ REPORTS UP — health &amp; events to governance</div><div style="font-size:12.5px;color:var(--ink);padding-top:4px">'+wp.reportsUp.map(esc).join(' · ')+'</div>'
     +(wp.workflow?('<div style="font-size:11.5px;font-weight:800;color:#5a3fa0;margin:16px 0 4px">🔀 WORKFLOW — how deep this can reach</div>'
-      +wp.workflow.map(function(st,i){ return '<div style="display:flex;gap:9px;align-items:flex-start;padding:5px 0'+(i?';border-top:1px dashed var(--line)':'')+'"><span style="flex:none;width:20px;height:20px;border-radius:50%;background:'+(st.done?'#e8f4ee':'#f2eefb')+';color:'+(st.done?'#2f8f5b':'#6a44a8')+';font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center">'+(i+1)+'</span><div style="flex:1"><span style="font-size:12.5px;font-weight:700;color:var(--ink)">'+esc(st.t)+'</span> <span style="font-size:9.5px;font-weight:800;color:'+(st.done?'#2f8f5b':'#9a7bd0')+'"> '+(st.done?'✅ built':'○ extensible')+'</span><div style="color:var(--grey);font-size:11px;line-height:1.4">'+esc(st.d)+'</div></div></div>'; }).join('')
+      +wp.workflow.map(function(st,i){ return '<div style="display:flex;gap:9px;align-items:flex-start;padding:5px 0'+(i?';border-top:1px dashed var(--line)':'')+'"><span style="flex:none;width:20px;height:20px;border-radius:50%;background:'+(st.done?'#e8f4ee':'#f2eefb')+';color:'+(st.done?'#2f8f5b':'#6a44a8')+';font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center">'+(i+1)+'</span><div style="flex:1"><span style="font-size:12.5px;font-weight:700;color:var(--ink)">'+esc(st.t)+'</span> <span style="font-size:var(--fs-1);font-weight:800;color:'+(st.done?'#2f8f5b':'#9a7bd0')+'"> '+(st.done?'✅ built':'○ extensible')+'</span><div style="color:var(--grey);font-size:11px;line-height:1.4">'+esc(st.d)+'</div></div></div>'; }).join('')
       +'<div style="font-size:11px;color:var(--grey);margin-top:9px;line-height:1.5">The first steps are built today; the rest are the <b>same shape</b> — a resolved knob or a chained mode (SMS · AI · robot · escalation). The workflow reaches <b>as deep as you declare it</b> — this is the depth, in one place.</div>'):'')
     +'<div style="font-size:11px;color:var(--grey);margin-top:13px;line-height:1.5">Read-only showcase — the governance cascade for this mode, earmarked by the layer that set it. Enforcement + editable knobs come next.</div>'
     +'</div>';
@@ -1457,7 +1479,7 @@ async function askHelpDesk(){ const q=(_assistPending||'').trim(); if(!q) return
 function renderAssist(ans){ const h=document.getElementById("assisthost"); if(!h||!_assistOpen) return; const pre=!(typeof SESSION!=="undefined" && SESSION.token); const sugg=assistSuggest();
   const _pb=(typeof PURPOSE!=='undefined'&&PURPOSE[curScreen()])?PURPOSE[curScreen()]:''; const purposeHTML=_pb?`<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:8px 10px;font-size:11.5px;color:#6b5a36;line-height:1.5;margin-bottom:9px">${esc(_pb)}</div>`:'';
   h.innerHTML=`<div style="position:fixed;right:16px;bottom:70px;z-index:301;width:360px;max-width:92vw;background:#fff;border:1px solid #e3e0d8;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.22);overflow:hidden">
-    <div style="display:flex;align-items:center;gap:8px;padding:11px 13px;border-bottom:1px solid #e3e0d8;font-family:'Space Grotesk';font-weight:700;font-size:13px">💬 Assistant <span style="font-size:9.5px;font-family:'Space Mono';background:#f3f0e8;color:#7a5e22;border-radius:5px;padding:1px 6px">${pre?"fit check":"help"}</span><button data-testid="assist-close" onclick="closeAssist()" style="margin-left:auto;border:0;background:none;cursor:pointer;color:#9aa3a7;font-size:15px">✕</button></div>
+    <div style="display:flex;align-items:center;gap:8px;padding:11px 13px;border-bottom:1px solid #e3e0d8;font-family:'Space Grotesk';font-weight:700;font-size:13px">💬 Assistant <span style="font-size:var(--fs-1);font-family:'Space Mono';background:#f3f0e8;color:#7a5e22;border-radius:5px;padding:1px 6px">${pre?"fit check":"help"}</span><button data-testid="assist-close" onclick="closeAssist()" style="margin-left:auto;border:0;background:none;cursor:pointer;color:#9aa3a7;font-size:15px">✕</button></div>
     <div style="padding:11px 13px;max-height:52vh;overflow:auto">
       ${purposeHTML}<div style="font-size:12px;color:#777;margin-bottom:8px">${pre?"Tell me your business and I will be honest about whether this fits.":"Describe what you are trying to do."}</div>
       <div id="assist_ans" style="font-size:12.5px;color:#222;line-height:1.55;margin-bottom:10px">${ans||""}</div>
@@ -1465,7 +1487,7 @@ function renderAssist(ans){ const h=document.getElementById("assisthost"); if(!h
       <div style="display:flex;gap:7px"><input id="assist_in" data-testid="assist-input" placeholder="${pre?"e.g. I run a timber yard…":"e.g. how do I assign a task?"}" style="flex:1;border:1px solid #e3e0d8;border-radius:9px;padding:7px 9px;font-size:12.5px" onkeydown="if(event.key==='Enter')assistAsk()"><button data-testid="assist-ask" onclick="assistAsk()" style="border:0;border-radius:9px;padding:0 12px;background:#3F66A6;color:#fff;font-weight:700;cursor:pointer">Ask</button></div>
       ${pre?'':'<div style="margin-top:9px;text-align:center"><button data-testid="assist-compliance" onclick="checkCompliance()" style="border:0.5px solid #e3e0d8;border-radius:9px;padding:6px 10px;font-size:11.5px;background:#fff;cursor:pointer">🛡️ Check compliance</button></div>'}
     </div>
-    <div style="padding:7px 13px;font-size:9.5px;color:#9aa3a7;background:#faf8f3">Honest by design · sample answers from the library · richer AI coming.</div>
+    <div style="padding:7px 13px;font-size:var(--fs-1);color:#9aa3a7;background:#faf8f3">Honest by design · sample answers from the library · richer AI coming.</div>
   </div>`;
 }
 /* ===================== COMPLIANCE CONFORM-CHECK (AI-as-actor, first light) =====================
@@ -1490,7 +1512,7 @@ function ccRender(res){
   const std=_ccStds.find(s=>s.standard===_ccPick)||_ccStds[0]; if(!std) return;
   const opts=_ccStds.map(s=>`<option value="${esc(s.standard)}" ${s.standard===_ccPick?'selected':''}>${esc(s.title)} (${esc(s.standard)})</option>`).join("");
   const fields=(std.points||[]).map(_ccField).join('<div style="height:9px"></div>');
-  modal(`<div style="font-family:'Space Grotesk';font-weight:700;font-size:15px;margin-bottom:3px">🛡️ Compliance check <span style="font-size:9.5px;font-family:'Space Mono';background:#f3f0e8;color:#7a5e22;border-radius:5px;padding:1px 6px;vertical-align:middle">first light</span></div>
+  modal(`<div style="font-family:'Space Grotesk';font-weight:700;font-size:15px;margin-bottom:3px">🛡️ Compliance check <span style="font-size:var(--fs-1);font-family:'Space Mono';background:#f3f0e8;color:#7a5e22;border-radius:5px;padding:1px 6px;vertical-align:middle">first light</span></div>
     <div style="font-size:11.5px;color:#777;margin-bottom:11px">Check a transaction's data against a standard. The verdict is computed from the rules — the AI only explains it.</div>
     <label style="font-size:11.5px;color:#555">Standard</label>
     <select onchange="ccPickStd(this.value)" style="width:100%;border:1px solid #e3e0d8;border-radius:9px;padding:7px 9px;font-size:12.5px;margin:3px 0 12px">${opts}</select>
@@ -1589,7 +1611,7 @@ function renderMsgConsole(){ const host=document.getElementById("lbhost"); if(!h
   host.innerHTML=`<div class="notifover" onclick="closeMsgConsole()"><div class="notifpanel" style="max-width:560px;width:94vw" onclick="event.stopPropagation()">
     <div class="notifhd">🧪 Message log<span style="margin-left:auto;font-size:11px;color:var(--grey)">${rows.length}/${all.length}</span></div>
     <div style="display:flex;gap:5px;padding:8px 13px;flex-wrap:wrap;align-items:center">${chip('all','All')}${chip('info','Info')}${chip('warn','Warning')}${chip('error','Critical')}${chip('debug','Requests')}<button onclick="clearMsgLog()" style="margin-left:auto;border:0.5px solid var(--line);border-radius:6px;padding:2px 8px;font-size:11px;background:#fff;cursor:pointer">Clear</button></div>
-    <div style="max-height:52vh;overflow:auto">${rows.length?rows.map(e=>`<div style="display:flex;gap:8px;padding:6px 13px;border-top:1px solid var(--line);font-size:11.5px;align-items:baseline"><span style="color:var(--grey);font-family:'Space Mono';font-size:9.5px;white-space:nowrap">${new Date(e.t).toLocaleTimeString()}</span><span style="color:${COL[e.level]||'#3F66A6'};font-weight:800;font-size:8.5px;text-transform:uppercase;white-space:nowrap">${esc(e.level)}</span><span style="color:var(--ink);word-break:break-word">${esc(e.text)}</span></div>`).join(""):'<div style="padding:16px;color:var(--grey);font-size:12.5px">No messages yet — interact with the app and they appear here.</div>'}</div>
+    <div style="max-height:52vh;overflow:auto">${rows.length?rows.map(e=>`<div style="display:flex;gap:8px;padding:6px 13px;border-top:1px solid var(--line);font-size:11.5px;align-items:baseline"><span style="color:var(--grey);font-family:'Space Mono';font-size:var(--fs-1);white-space:nowrap">${new Date(e.t).toLocaleTimeString()}</span><span style="color:${COL[e.level]||'#3F66A6'};font-weight:800;font-size:var(--fs-1);text-transform:uppercase;white-space:nowrap">${esc(e.level)}</span><span style="color:var(--ink);word-break:break-word">${esc(e.text)}</span></div>`).join(""):'<div style="padding:16px;color:var(--grey);font-size:12.5px">No messages yet — interact with the app and they appear here.</div>'}</div>
     <div class="notiffoot">Tester view · captures every toast + API call. Not shown in production.</div>
   </div></div>`;
 }
@@ -2466,7 +2488,7 @@ function menuBody(M, role){
     var shown = shut ? here : items;
     out += '<div class="grp" data-testid="grp-' + g[0].toLowerCase() + '" onclick="toggleNavGroup(\'' + g[0] + '\')"'
       + ' style="cursor:pointer;display:flex;align-items:center;gap:5px" title="' + (shut ? 'Show' : 'Hide') + ' ' + g[0] + '">'
-      + '<span style="font-size:9px;opacity:.7">' + (shut ? '▸' : '▾') + '</span>' + g[0]
+      + '<span style="font-size:var(--fs-1);opacity:.7">' + (shut ? '▸' : '▾') + '</span>' + g[0]
       + (shut ? '<span style="margin-left:auto;opacity:.55;font-weight:600">' + items.length + '</span>' : '') + '</div>';
     out += shown.map(menuBtn).join('');
   });
@@ -3045,8 +3067,8 @@ function ccDelRcpt(i){ CC.rcpts.splice(i,1); ccRenderRcpts(); }
 function ccFlipRcpt(i){ const order=["to","cc","for"]; const r=CC.rcpts[i]; if(!r)return; for(let k=1;k<=order.length;k++){ const nx=order[(order.indexOf(r.role)+k)%order.length]; if(nx===r.role||ccRoleCount(nx)<(LIMITS[nx]||99)){ r.role=nx; break; } } ccRenderRcpts(); }
 function ccRenderRcpts(){ const h=document.getElementById("cc_rcpts");
   if(h){ h.innerHTML = CC.rcpts.length ? CC.rcpts.map((r,i)=>{ const col=r.role==="to"?"#3F66A6":r.role==="cc"?"#7a5e22":"#5F6B70"; const bg=r.role==="to"?"#EEF3FB":r.role==="cc"?"#F4ECD8":"#EFEBE2";
-    if(UI._supplier){ return `<span style="display:inline-flex;align-items:center;gap:5px;border:0.5px solid #cfe0f4;background:#EEF3FB;border-radius:9px;padding:4px 9px;margin:0 5px 5px 0;font-size:12px;font-weight:600;color:#3F66A6">🏭 ${esc(r.name)}${r.bridge?'<span style="font-family:monospace;font-size:9px;opacity:.8"> · '+esc(r.bridge)+'</span>':''} <span style="font-weight:400;color:var(--grey)">· locked</span></span>`; }
-    return `<span style="display:inline-flex;align-items:center;gap:5px;border:0.5px solid var(--line);border-radius:9px;padding:3px 7px;margin:0 5px 5px 0;font-size:11.5px"><span onclick="ccFlipRcpt(${i})" title="Flip role (To/CC/For)" style="cursor:pointer;font-family:'Space Mono';font-size:9.5px;background:${bg};color:${col};border-radius:5px;padding:1px 5px">${r.role.toUpperCase()}</span>${esc(r.name)}${r.bridge?'<span style="font-family:monospace;font-size:9px;color:#9aa3a7"> · '+esc(r.bridge)+'</span>':''}${r.self?'<span style="color:#3F66A6;font-size:11px"> · self</span>':''}<span onclick="ccDelRcpt(${i})" style="cursor:pointer;color:#9aa3a7">✕</span></span>`; }).join("") : `<div style="font-size:12px;color:var(--grey)">No recipients yet — add To / CC / For above.</div>`; }
+    if(UI._supplier){ return `<span style="display:inline-flex;align-items:center;gap:5px;border:0.5px solid #cfe0f4;background:#EEF3FB;border-radius:9px;padding:4px 9px;margin:0 5px 5px 0;font-size:12px;font-weight:600;color:#3F66A6">🏭 ${esc(r.name)}${r.bridge?'<span style="font-family:monospace;font-size:var(--fs-1);opacity:.8"> · '+esc(r.bridge)+'</span>':''} <span style="font-weight:400;color:var(--grey)">· locked</span></span>`; }
+    return `<span style="display:inline-flex;align-items:center;gap:5px;border:0.5px solid var(--line);border-radius:9px;padding:3px 7px;margin:0 5px 5px 0;font-size:11.5px"><span onclick="ccFlipRcpt(${i})" title="Flip role (To/CC/For)" style="cursor:pointer;font-family:'Space Mono';font-size:var(--fs-1);background:${bg};color:${col};border-radius:5px;padding:1px 5px">${r.role.toUpperCase()}</span>${esc(r.name)}${r.bridge?'<span style="font-family:monospace;font-size:var(--fs-1);color:#9aa3a7"> · '+esc(r.bridge)+'</span>':''}${r.self?'<span style="color:#3F66A6;font-size:11px"> · self</span>':''}<span onclick="ccDelRcpt(${i})" style="cursor:pointer;color:#9aa3a7">✕</span></span>`; }).join("") : `<div style="font-size:12px;color:var(--grey)">No recipients yet — add To / CC / For above.</div>`; }
   if(UI._ccFlow) UI._ccFlow.paintFoot();   // a recipient added or removed changes whether To can be left
   const capEl=document.getElementById("cc_rcap"); if(capEl) capEl.textContent="To "+ccRoleCount("to")+"/"+LIMITS.to+" · CC "+ccRoleCount("cc")+"/"+LIMITS.cc+" · For "+ccRoleCount("for")+"/"+LIMITS.for+" — tap a role chip to flip"; }
 async function ccAiFill(){
@@ -3377,7 +3399,7 @@ const ASSIST_PAGES = {
 };
 function assistPage(key){ const p=ASSIST_PAGES[key]; if(!p) return menuAssist(key);
   const groups=p.groups.map(g=>`<div style="${_CARD}"><div style="font-family:'Space Grotesk';font-weight:600;font-size:12.5px;color:var(--ink);display:flex;align-items:center;gap:7px;margin-bottom:6px"><span style="color:var(--blue)">▸</span>${esc(g.title)}</div>${g.rows.map((r,i)=>`<div style="display:flex;gap:9px;align-items:baseline;padding:4px 0;${i?'border-top:0.5px solid #F0ECE2':''}"><span style="font-family:'Space Mono';font-size:11px;color:var(--blue);min-width:118px;flex-shrink:0">${esc(r[0])}</span><span style="font-size:12px;color:var(--ink);line-height:1.5">${esc(r[1])}</span></div>`).join("")}</div>`).join("");
-  return `<div style="background:var(--gold-soft);border:0.5px solid var(--gold-line);border-radius:12px;padding:9px 11px;font-size:12px;color:#6b5a36;line-height:1.5;margin-bottom:9px"><b style="font-family:'Space Grotesk'">${key==='order'?'Order':'Task'} — what it is &amp; how to use it</b> <span style="font-size:9.5px;font-family:'Space Mono';background:#fff;color:#7a5e22;border:0.5px solid var(--gold-line);border-radius:5px;padding:1px 6px">assistance page</span><div style="margin-top:4px">${esc(p.intro)}</div></div>${groups}<div style="${_CARD}"><div style="font-size:11.5px;color:var(--grey);margin-bottom:6px">Ask the assistant <span style="font-size:9.5px;font-family:'Space Mono';background:var(--gold-soft);color:#7a5e22;border-radius:5px;padding:1px 6px">web demo</span></div><div style="display:flex;gap:8px"><input class="inp" id="m_in_${key}" placeholder="Ask about ${esc(key)}…"><button style="${_BTN}" onclick="mAskFree('${key}')">Ask</button></div><div id="m_ans_${key}" style="font-size:13px;color:var(--ink);margin-top:9px;line-height:1.55"></div></div>`;
+  return `<div style="background:var(--gold-soft);border:0.5px solid var(--gold-line);border-radius:12px;padding:9px 11px;font-size:12px;color:#6b5a36;line-height:1.5;margin-bottom:9px"><b style="font-family:'Space Grotesk'">${key==='order'?'Order':'Task'} — what it is &amp; how to use it</b> <span style="font-size:var(--fs-1);font-family:'Space Mono';background:#fff;color:#7a5e22;border:0.5px solid var(--gold-line);border-radius:5px;padding:1px 6px">assistance page</span><div style="margin-top:4px">${esc(p.intro)}</div></div>${groups}<div style="${_CARD}"><div style="font-size:11.5px;color:var(--grey);margin-bottom:6px">Ask the assistant <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--gold-soft);color:#7a5e22;border-radius:5px;padding:1px 6px">web demo</span></div><div style="display:flex;gap:8px"><input class="inp" id="m_in_${key}" placeholder="Ask about ${esc(key)}…"><button style="${_BTN}" onclick="mAskFree('${key}')">Ask</button></div><div id="m_ans_${key}" style="font-size:13px;color:var(--ink);margin-top:9px;line-height:1.55"></div></div>`;
 }
 function addActorModal(){
   const ent=(typeof SESSION!=="undefined"&&SESSION.entity)||"";
@@ -6658,21 +6680,21 @@ function backToList(){UI.mdetail=false;const p=document.getElementById("panel");
 function renderDetail(){return detailInner();}
 function _rungChipCB(r){
   var M={verified:['✅','#1a7f37','#e7f5ec'],attested:['🔗','#245a9e','#e8f0fb'],documented:['📄','#8a6d1f','#faf3dd'],declared:['✍️','#666666','#eeeeee']};
-  var m=M[r]||M.declared; return '<span style="font-size:9px;font-weight:800;padding:1px 6px;border-radius:9px;white-space:nowrap;color:'+m[1]+';background:'+m[2]+'">'+m[0]+' '+String(r||'declared').toUpperCase()+'</span>';
+  var m=M[r]||M.declared; return '<span style="font-size:var(--fs-1);font-weight:800;padding:1px 6px;border-radius:9px;white-space:nowrap;color:'+m[1]+';background:'+m[2]+'">'+m[0]+' '+String(r||'declared').toUpperCase()+'</span>';
 }
 function _frmChipCB(f){
   var M={market:['#2857b8','market'],credit:['#8a5e22','credit'],liquidity:['#0e7c74','liquidity'],operational:['#7a4fb0','operational']};
-  var x=M[f]||['#8a94a6',String(f||'—')]; return '<span style="font-size:8.5px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;border-radius:5px;padding:1px 6px;background:'+x[0]+'1e;color:'+x[0]+'">FRM · '+x[1]+'</span>';
+  var x=M[f]||['#8a94a6',String(f||'—')]; return '<span style="font-size:var(--fs-1);font-weight:800;letter-spacing:.03em;text-transform:uppercase;border-radius:5px;padding:1px 6px;background:'+x[0]+'1e;color:'+x[0]+'">FRM · '+x[1]+'</span>';
 }
 function commercialBlock(c){
   var cm=c&&c.commercial; if(!cm||!cm.areas||!cm.areas.length) return "";
   var when="send"; try{ when=new Date(cm.folded_at).toLocaleDateString(); }catch(e){}
   var rows=cm.areas.map(function(a){
-    var rail=a.on_rail?'<span style="font-size:8.5px;color:#2f8f5b;font-weight:800;white-space:nowrap">● on rail</span>':'<span style="font-size:8.5px;color:var(--grey);white-space:nowrap">applicable</span>';
-    var inst=(a.instruments&&a.instruments.length)?'<div style="font-size:9px;color:var(--grey);margin-top:1px">'+esc(a.instruments.join(" · "))+'</div>':'';
+    var rail=a.on_rail?'<span style="font-size:var(--fs-1);color:#2f8f5b;font-weight:800;white-space:nowrap">● on rail</span>':'<span style="font-size:var(--fs-1);color:var(--grey);white-space:nowrap">applicable</span>';
+    var inst=(a.instruments&&a.instruments.length)?'<div style="font-size:var(--fs-1);color:var(--grey);margin-top:1px">'+esc(a.instruments.join(" · "))+'</div>':'';
     return '<div style="display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-top:1px solid var(--line)"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:12px">'+esc(a.label)+'</div>'+inst+'</div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">'+_frmChipCB(a.frm_class)+rail+'</div></div>';
   }).join("");
-  return '<div class="itab" style="margin-top:10px;padding:10px"><div class="sec" style="margin:0;display:flex;align-items:center;gap:6px">💳 Commercial cover<span style="margin-left:auto;font-size:9px;color:var(--grey);font-weight:600">'+(cm.incoterm?esc(cm.incoterm)+" · ":"")+'folded on '+when+'</span></div><div style="font-size:11px;color:var(--grey);margin:2px 0 4px">The commercial-cover framework for this order — payment, transit, currency &amp; credit risk. Items marked on-rail are already evidenced by the supplier record.</div>'+rows+'</div>';
+  return '<div class="itab" style="margin-top:10px;padding:10px"><div class="sec" style="margin:0;display:flex;align-items:center;gap:6px">💳 Commercial cover<span style="margin-left:auto;font-size:var(--fs-1);color:var(--grey);font-weight:600">'+(cm.incoterm?esc(cm.incoterm)+" · ":"")+'folded on '+when+'</span></div><div style="font-size:11px;color:var(--grey);margin:2px 0 4px">The commercial-cover framework for this order — payment, transit, currency &amp; credit risk. Items marked on-rail are already evidenced by the supplier record.</div>'+rows+'</div>';
 }
 /**
  * viaBlock — where this chit came from, when it came from OUTSIDE the rail.
@@ -6733,7 +6755,7 @@ function viaBlock(c){
   function row(label, value){ return value ? '<div style="display:flex;gap:8px;font-size:11px;padding:2px 0"><span style="color:var(--grey);min-width:86px">'+esc(label)+'</span><span style="font-family:ui-monospace,Menlo,monospace;word-break:break-all">'+esc(value)+'</span></div>' : ''; }
   return '<div class="itab" style="padding:10px 12px;margin-bottom:9px">'
     + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
-    + '<span style="font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#fff;background:'+m[0]+';border-radius:5px;padding:2px 7px">'+esc(m[1])+'</span>'
+    + '<span style="font-size:var(--fs-1);font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#fff;background:'+m[0]+';border-radius:5px;padding:2px 7px">'+esc(m[1])+'</span>'
     + '<span style="font-weight:700;font-size:12px">Came in from outside the rail</span></div>'
     + '<div style="margin-top:6px">'
     + row('Asked by', (v.from_name?v.from_name+' · ':'')+(v.from||'unknown'))
@@ -6763,11 +6785,11 @@ function clearancesBlock(c){
   var cl=c&&c.clearances; if(!cl||!cl.items||!cl.items.length) return "";
   var when="send"; try{ when=new Date(cl.folded_at).toLocaleDateString(); }catch(e){}
   var rows=cl.items.map(function(it){
-    var vinfo=it.verified_at?'<div style="font-size:9px;color:var(--ok);font-weight:700">✓ source-checked '+esc(String(it.verified_at).slice(0,10))+(it.verified_by?' · '+esc(it.verified_by):'')+'</div>':'';
-    var vu=it.valid_until?'<span style="font-size:9px;color:var(--grey);white-space:nowrap">valid to '+esc(String(it.valid_until).slice(0,10))+'</span>':'';
-    return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--line)"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:12px">'+esc(it.title||it.standard||it.doc||"clearance")+'</div><div style="font-size:9px;color:var(--grey)">'+esc(it.standard||"")+(it.doc?" · "+esc(it.doc):"")+'</div>'+vinfo+'</div>'+vu+_rungChipCB(it.rung)+'</div>';
+    var vinfo=it.verified_at?'<div style="font-size:var(--fs-1);color:var(--ok);font-weight:700">✓ source-checked '+esc(String(it.verified_at).slice(0,10))+(it.verified_by?' · '+esc(it.verified_by):'')+'</div>':'';
+    var vu=it.valid_until?'<span style="font-size:var(--fs-1);color:var(--grey);white-space:nowrap">valid to '+esc(String(it.valid_until).slice(0,10))+'</span>':'';
+    return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--line)"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:12px">'+esc(it.title||it.standard||it.doc||"clearance")+'</div><div style="font-size:var(--fs-1);color:var(--grey)">'+esc(it.standard||"")+(it.doc?" · "+esc(it.doc):"")+'</div>'+vinfo+'</div>'+vu+_rungChipCB(it.rung)+'</div>';
   }).join("");
-  return '<div class="itab" style="margin-top:10px;padding:10px"><div class="sec" style="margin:0;display:flex;align-items:center;gap:6px">🛡 Supplier clearances<span style="margin-left:auto;font-size:9px;color:var(--grey);font-weight:600">folded on '+when+'</span></div><div style="font-size:11px;color:var(--grey);margin:2px 0 4px">Frozen onto this order when the supplier sent it — the clearances they held, each at its trust rung. This is your independent buyer copy.</div>'+rows+'</div>';
+  return '<div class="itab" style="margin-top:10px;padding:10px"><div class="sec" style="margin:0;display:flex;align-items:center;gap:6px">🛡 Supplier clearances<span style="margin-left:auto;font-size:var(--fs-1);color:var(--grey);font-weight:600">folded on '+when+'</span></div><div style="font-size:11px;color:var(--grey);margin:2px 0 4px">Frozen onto this order when the supplier sent it — the clearances they held, each at its trust rung. This is your independent buyer copy.</div>'+rows+'</div>';
 }
 function _aiMd(md){
   var L=String(md||'').replace(/\r/g,'').split('\n'),o=[],i=0;
@@ -7014,7 +7036,7 @@ function markChitRead(id){ const c=(STORE.chits||[]).find(x=>x.id==id); if(c)(c.
 function refreshMsgBadge(){ const n=unreadCount(); const d=document.getElementById('msgcdot'); if(d){ d.textContent=n; d.style.display=n?'flex':'none'; } }
 function openMsgCenter(){ const host=document.getElementById("lbhost"); if(!host)return; if(UI.msgcOpen){ closeMsgCenter(); return; } UI.msgcOpen=true;
   const items=(STORE.chits||[]).map(c=>{ const ms=(c.msgs||[]).filter(m=>SESSION.role!=="customer"||m.scope==="external"); if(!ms.length)return null; const last=ms[ms.length-1]; const unread=ms.filter(m=>m.unread).length; return {id:c.id,code:c.code,party:c.party,last,unread}; }).filter(Boolean).reverse();
-  host.innerHTML=`<div class="notifover" onclick="closeMsgCenter()"><div class="notifpanel" onclick="event.stopPropagation()"><div class="notifhd">💬 Messages<span style="margin-left:auto;font-size:9px;color:var(--grey)">across all chits</span></div><div style="padding:8px 12px;border-bottom:1px solid var(--line)"><button class="msglink" style="width:100%" onclick="openRaidReport()">📊 RAID report — governance overview</button></div>${items.length?items.map(x=>`<div class="notifrow" style="cursor:pointer" onclick="openFromCenter('${x.id}')"><span class="ni">${x.unread?'🔵':'💬'}</span><div style="flex:1;min-width:0"><div class="nt"><b>${x.code}</b> · ${x.party}${x.unread?` <span class="unreadtag">${x.unread} new</span>`:''}</div><div class="ns">${x.last?((x.last.scope==='external'?'↔ ':'🔒 ')+(x.last.body.length>44?x.last.body.slice(0,44)+'…':x.last.body)):''}</div></div></div>`).join(""):'<div class="notiffoot">No messages yet.</div>'}<div class="notiffoot">Tap a chit to open its conversation. External messages also land in the other party's message centre.</div><div class="raidtoggle">⚙ Message types: <button class="${SESSION.msgTypes!=='gov'?'on':''}" onclick="setMsgTypeSet('lean')">Lean</button><button class="${SESSION.msgTypes==='gov'?'on':''}" onclick="setMsgTypeSet('gov')">Governance (RAID)</button><div class="hint">A Settings preview — configurable per entity in production.</div></div></div></div>`;
+  host.innerHTML=`<div class="notifover" onclick="closeMsgCenter()"><div class="notifpanel" onclick="event.stopPropagation()"><div class="notifhd">💬 Messages<span style="margin-left:auto;font-size:var(--fs-1);color:var(--grey)">across all chits</span></div><div style="padding:8px 12px;border-bottom:1px solid var(--line)"><button class="msglink" style="width:100%" onclick="openRaidReport()">📊 RAID report — governance overview</button></div>${items.length?items.map(x=>`<div class="notifrow" style="cursor:pointer" onclick="openFromCenter('${x.id}')"><span class="ni">${x.unread?'🔵':'💬'}</span><div style="flex:1;min-width:0"><div class="nt"><b>${x.code}</b> · ${x.party}${x.unread?` <span class="unreadtag">${x.unread} new</span>`:''}</div><div class="ns">${x.last?((x.last.scope==='external'?'↔ ':'🔒 ')+(x.last.body.length>44?x.last.body.slice(0,44)+'…':x.last.body)):''}</div></div></div>`).join(""):'<div class="notiffoot">No messages yet.</div>'}<div class="notiffoot">Tap a chit to open its conversation. External messages also land in the other party's message centre.</div><div class="raidtoggle">⚙ Message types: <button class="${SESSION.msgTypes!=='gov'?'on':''}" onclick="setMsgTypeSet('lean')">Lean</button><button class="${SESSION.msgTypes==='gov'?'on':''}" onclick="setMsgTypeSet('gov')">Governance (RAID)</button><div class="hint">A Settings preview — configurable per entity in production.</div></div></div></div>`;
 }
 function closeMsgCenter(){ UI.msgcOpen=false; const h=document.getElementById("lbhost"); if(h)h.innerHTML=""; }
 function openFromCenter(id){ closeMsgCenter(); openChitMsgs(id); }
@@ -7023,7 +7045,7 @@ function openRaidReport(){ const host=document.getElementById("lbhost"); if(!hos
   const counts={}, samples={}; (STORE.chits||[]).forEach(c=>{ (c.msgs||[]).forEach(m=>{ if(SESSION.role==="customer"&&m.scope!=="external")return; const k=m.type||"info"; counts[k]=(counts[k]||0)+1; (samples[k]=samples[k]||[]); if(samples[k].length<3)samples[k].push({code:c.code,body:m.body}); }); });
   const keys=Object.keys(MTYPES).filter(k=>counts[k]); const total=keys.reduce((a,k)=>a+counts[k],0); const max=Math.max(1,...keys.map(k=>counts[k]));
   const rows=keys.length?keys.map(k=>{ const d=MTYPES[k]; const w=Math.round(counts[k]/max*100); return `<div class="raidrow"><div class="rl"><span class="mtype ${d.cls}">${d.icon} ${d.label}</span><b>${counts[k]}</b></div><div class="rbar"><span class="rbarfill ${d.cls}" style="width:${w}%"></span></div><div class="rsamp">${samples[k].map(x=>`<div>· <b>${x.code}</b> ${x.body.length>50?x.body.slice(0,50)+'…':x.body}</div>`).join("")}</div></div>`; }).join(""):'<div class="msgempty">No tagged messages in this period yet.</div>';
-  host.innerHTML=`<div class="notifover" onclick="closeMsgCenter()"><div class="notifpanel raid" onclick="event.stopPropagation()"><div class="notifhd">📊 RAID report<span style="margin-left:auto;font-size:9px;color:var(--grey)">this period · ${total} items</span></div><div class="raidbody">${rows}</div><div class="notiffoot">Governance register rolled up from tagged messages across all chits. In production this is a backend report over a chosen period, per entity / oversight scope.</div></div></div>`;
+  host.innerHTML=`<div class="notifover" onclick="closeMsgCenter()"><div class="notifpanel raid" onclick="event.stopPropagation()"><div class="notifhd">📊 RAID report<span style="margin-left:auto;font-size:var(--fs-1);color:var(--grey)">this period · ${total} items</span></div><div class="raidbody">${rows}</div><div class="notiffoot">Governance register rolled up from tagged messages across all chits. In production this is a backend report over a chosen period, per entity / oversight scope.</div></div></div>`;
 }
 
 /* actions wired to API */
@@ -7073,7 +7095,7 @@ async function pickAssign(id){
   UI.actors=actors; const c=UI.rows.find(x=>x.id===id)||UI.detail||{}; MODALS.pick={id, actorId:null, pri:(c.custPri?'urgent':'normal'), reason:''};
   const rows=actors.map(a=>{ const off=(a.shift==="off"); const max=a.max||0; const full=(max>0 && a.load>=max); const assignable=hatAssignable(a.hat); const dis=off||full||!assignable;
     const chip=a.shift==="on_shift"?'<span class="optchip on">on shift</span>':a.shift==="on_break"?'<span class="optchip brk">on break</span>':'<span class="optchip off">off</span>';
-    return `<div class="optrow ${dis?'dis':''}" data-a="${a.id}" ${dis?'':`onclick="pickActor('${a.id}')"`}><span class="rdo"></span><div class="oc"><div class="on">${esc(a.name)} <span class="optchip" style="font-size:9px;background:#eef3fb;color:#345488;border-color:#cfe0f4">${hatLabel(a.hat)}</span></div><div class="om">load ${a.load}${max?'/'+max:''}${!assignable?' · not assignable (hat)':off?' · off duty':full?' · at capacity':''}</div></div>${chip}</div>`;
+    return `<div class="optrow ${dis?'dis':''}" data-a="${a.id}" ${dis?'':`onclick="pickActor('${a.id}')"`}><span class="rdo"></span><div class="oc"><div class="on">${esc(a.name)} <span class="optchip" style="font-size:var(--fs-1);background:#eef3fb;color:#345488;border-color:#cfe0f4">${hatLabel(a.hat)}</span></div><div class="om">load ${a.load}${max?'/'+max:''}${!assignable?' · not assignable (hat)':off?' · off duty':full?' · at capacity':''}</div></div>${chip}</div>`;
   }).join("");
   const prisel=`<div class="msec">Priority</div><div class="prisel">${["urgent","normal","low"].map(p=>`<button class="pri-${p} ${MODALS.pick.pri===p?'on':''}" data-p="${p}" onclick="pickPri('${p}')">${PRI[p].label}</button>`).join("")}</div>`;
   const reasonbox=`<div class="msec">Reason <span id="reasonhint" class="rh">${MODALS.pick.pri==='urgent'?'— Urgent needs one':'(optional)'}</span></div><textarea id="assignreason" class="mreason" placeholder="Why this assignment / this urgency…" oninput="MODALS.pick.reason=this.value;syncAssignOk()"></textarea>`;
@@ -7096,7 +7118,7 @@ async function pickAssignBulk(ids){
   UI.actors=actors; MODALS.pick={ids, actorId:null, bulk:true};
   const rows=actors.map(a=>{ const off=(a.shift==="off"); const max=a.max||0; const full=(max>0 && a.load>=max); const assignable=hatAssignable(a.hat); const dis=off||full||!assignable;
     const chip=a.shift==="on_shift"?'<span class="optchip on">on shift</span>':a.shift==="on_break"?'<span class="optchip brk">on break</span>':'<span class="optchip off">off</span>';
-    return `<div class="optrow ${dis?'dis':''}" data-a="${a.id}" ${dis?'':`onclick="pickActor('${a.id}')"`}><span class="rdo"></span><div class="oc"><div class="on">${esc(a.name)} <span class="optchip" style="font-size:9px;background:#eef3fb;color:#345488;border-color:#cfe0f4">${hatLabel(a.hat)}</span></div><div class="om">load ${a.load}${max?'/'+max:''}${!assignable?' · not assignable (hat)':off?' · off duty':full?' · at capacity':''}</div></div>${chip}</div>`;
+    return `<div class="optrow ${dis?'dis':''}" data-a="${a.id}" ${dis?'':`onclick="pickActor('${a.id}')"`}><span class="rdo"></span><div class="oc"><div class="on">${esc(a.name)} <span class="optchip" style="font-size:var(--fs-1);background:#eef3fb;color:#345488;border-color:#cfe0f4">${hatLabel(a.hat)}</span></div><div class="om">load ${a.load}${max?'/'+max:''}${!assignable?' · not assignable (hat)':off?' · off duty':full?' · at capacity':''}</div></div>${chip}</div>`;
   }).join("");
   modal(`<div class="mhd"><div class="t">Assign ${ids.length} chit${ids.length>1?'s':''}</div><div class="s">to one co-assist (bulk)</div></div><div class="mbody">${rows||'<div style="padding:14px;color:var(--grey);font-size:13px">No co-assists yet.</div>'}<div style="padding:6px 0 2px"><button class="composebtn" onclick="addActorModal()">+ New co-assist</button></div></div><div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="pri" id="mok" disabled onclick="confirmAssign()">Assign all</button></div>`);
 }
@@ -7804,7 +7826,7 @@ function chitTermsBlock(c){
 function chitAttBlock(c){
   const atts=attsVis(c.atts);
   if(!atts.length) return "";
-  return `<div class="sec" style="display:flex;align-items:center;gap:7px">📎 Whole-chit attachments · ${atts.length}<span style="margin-left:auto;font-size:9px;color:var(--ok);font-weight:700">✓ co-signed</span></div>
+  return `<div class="sec" style="display:flex;align-items:center;gap:7px">📎 Whole-chit attachments · ${atts.length}<span style="margin-left:auto;font-size:var(--fs-1);color:var(--ok);font-weight:700">✓ co-signed</span></div>
     ${attTileGrid(atts,'chit')}
     <div class="attNote">Part of the co-signed record — both parties hold the same set &amp; leaves with the chit on sunset.</div>`;
 }
