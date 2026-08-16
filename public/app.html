@@ -3950,8 +3950,59 @@ function supCartHTML(){
     searchTestid:'pick-search-sup', listTestid:'sup-catalogue'
   });
 }
+/**
+ * ⭐⭐ YOUR OWN FLOOR — the `requirement` definitions you have published (backlog 7).
+ *
+ * ⚠️ LIVE ONLY, and the same reasoning as offers: a draft requirement is one you are still writing, and judging
+ * a supplier against a half-written list is worse than not judging them at all.
+ *
+ * ⚠️ FAILS SOFT TO `[]`, WHICH MEANS "no list declared", WHICH MEANS THE UNSCOPED WORDING. That is the safe
+ * direction: a shelf that cannot be read must never turn into "this supplier meets your requirements".
+ */
+var _REQ = null, _reqReq = null;
+function cbRequirementsLive(force){
+  if(!force && _REQ) return Promise.resolve(_REQ);
+  if(!force && _reqReq) return _reqReq;
+  _reqReq = api('defList', { query:{ kind:'requirement', status:'live' } })
+    .then(function(r){
+      var keys = {}, out = [];
+      ((r && r.definitions) || []).forEach(function(d){
+        ((d.rules && d.rules.standards) || []).forEach(function(s){
+          s = String(s || '').trim(); if (!s || keys[s]) return; keys[s] = 1; out.push(s);
+        });
+      });
+      _REQ = out; _reqReq = null; return out;
+    })
+    .catch(function(){ _reqReq = null; return (_REQ = []); });
+  return _reqReq;
+}
+/**
+ * supRequiredScope(readinessData) → { need, met, missing[] } | null
+ *
+ * `null` means "no usable list" — the caller then falls back to the unscoped wording.
+ *
+ * ⚠️ AN EMPTY LIST IS ALSO `null`, ON PURPOSE. A published `requirement` with nothing ticked would otherwise
+ * satisfy itself and every supplier would read "✓ has all 0 certificates you require" — a green tick earned by
+ * asking for nothing. Every path with no real list must land on the wording that claims less, never more.
+ */
+function supRequiredScope(rd){
+  if(!_REQ || !_REQ.length || !rd) return null;
+  const items = rd.clearances || [];
+  /* ⚠️ A standard is met if ANY of its documents is met — readiness is keyed standard+doc, so one standard can
+     carry several rows, and requiring every row would mark a supplier short for a document nobody asked for. */
+  const metBy = {};
+  items.forEach(function(it){
+    const k = it.standard; if(!k) return;
+    if(metBy[k] === undefined) metBy[k] = false;
+    if(it.status === 'gathered' || it.status === 'expiring') metBy[k] = true;
+  });
+  const missing = _REQ.filter(function(k){ return !metBy[k]; });
+  return { need:_REQ.length, met:_REQ.length - missing.length, missing:missing };
+}
 function loadSupplierConfidence(bridge){
   if(!bridge){ UI.supRd=null; return; }
+  /* Read your own list alongside theirs — it decides how their answer is phrased. Cached, so this is one call. */
+  if(_REQ === null) cbRequirementsLive().then(function(){ if(UI.supDet) { paintSupDetail(); paintSupList(); } });
   UI.supRd={bridge:bridge, loading:true}; paintSupDetail();
   /* ⚠️ paintSupList TOO. Readiness arrives after the panes are drawn, and the LEFT card now reports clearance
      standing as well — repainting only the right left the card stuck on "not loaded" beside a right pane that had
@@ -4047,7 +4098,12 @@ function supDetailHTML(){
      * read as 35 obligations checked and failed. What it actually means is that nothing has been recorded at all,
      * against a list that is not even scoped to this supplier (see the FLOOR in lib/readiness.js).
      */
-    const c=UI.supRd&&UI.supRd.data&&UI.supRd.data.summary, bad=c&&!c.ready;
+    const c=UI.supRd&&UI.supRd.data&&UI.supRd.data.summary;
+    /* ⚠️ `bad` DRIVES THE CHIP'S COLOUR, so it has to agree with the sentence. Leaving it on the unscoped
+       `!c.ready` would paint an amber warning next to "✓ has all 3 certificates you require" — a chip arguing
+       with its own text is worse than either state alone. */
+    const _rq=supRequiredScope(UI.supRd&&UI.supRd.data);
+    const bad = _rq ? _rq.missing.length>0 : (c&&!c.ready);
     /* ⚠️ ALWAYS RENDERED, never display:none — order-steps.spec asserts sup-chip is VISIBLE, and a hidden element
        fails that. It carries a clean state as readily as a warning, so there is nothing to hide. */
     /**
@@ -4067,7 +4123,24 @@ function supDetailHTML(){
      * looking at. Not yours."*). The chip and the card must not be vaguer than the panel behind them.
      */
     const who = supName(x);
-    const warnTxt = !c ? 'their certificates — not loaded'
+    /**
+     * ⭐⭐ SCOPED TO WHAT *YOU* REQUIRE, WHEN YOU HAVE SAID (backlog 7). Athi, 2026-08-16: *"the entity should
+     * declare what minimum certification he needs to have business and it has to check only those available,
+     * eventhough the supplier may have n certificates"*.
+     *
+     * With a `requirement` definition published, the count is measured against YOUR list. Without one it falls
+     * back to the unscoped wording below, which deliberately states only what it can defend.
+     *
+     * ⚠️ THE ENGINE IS UNTOUCHED. `readinessOf` still returns the full floor; this narrows the SENTENCE, not the
+     * check — narrowing the floor itself would be relaxing a deliberate guard. And it cannot waive a rule the
+     * destination or the product imposes: those are not in this list and are not the buyer's to drop.
+     */
+    const req = _rq;
+    const warnTxt = req
+      ? (req.missing.length === 0
+          ? `✓ ${esc(who)} has all ${req.need} certificate${req.need===1?'':'s'} you require`
+          : `⚠ ${esc(who)}: ${req.missing.length} of your ${req.need} required certificate${req.need===1?'':'s'} missing`)
+      : !c ? 'their certificates — not loaded'
       : !bad ? `✓ ${esc(who)} has ${c.met||0} certificate${(c.met||0)===1?'':'s'} on file`
       : (c.met||0)===0 ? `⚠ ${esc(who)} has no certificates on file yet`
       : `⚠ ${esc(who)}: ${(c.total||0)-(c.met||0)} certificate${((c.total||0)-(c.met||0))===1?'':'s'} still to come`;

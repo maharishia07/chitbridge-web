@@ -62,7 +62,26 @@ var CBDEF_AUTHORABLE = {
      believes the feature is inert, and never tries it. */
   offer:      { icon: '🏷️', title: 'Offers', one: 'offer',
                 blurb: 'An offer kind plus its conditions. Publish one and it applies to orders in compose — the '
-                     + 'breakdown shows what came off and, when it does not fire, how far short the order is.' }
+                     + 'breakdown shows what came off and, when it does not fire, how far short the order is.' },
+  /**
+   * ⭐⭐ BACKLOG 7 — THE BUYER'S OWN FLOOR. Athi, 2026-08-16: *"the entity should declare what minimum
+   * certification he needs to have business and it has to check only those available, eventhough the supplier
+   * may have n certificates"*.
+   *
+   * A paint supplier was being told it lacked a pharmaceutical manufacturing licence, because the supplier card
+   * asked `readinessOf` with no vertical and hit the FLOOR in lib/readiness.js, which returns every active
+   * standard in the system. Forty unheld certificates is not forty gaps.
+   *
+   * ⚠️ THIS DOES NOT NARROW THE ENGINE, AND MUST NOT. The floor is a deliberate guard and narrowing it would be
+   * relaxing it. This is a SECOND, buyer-owned list that scopes what the SUPPLIER CARD reports — the two coexist,
+   * and the one you cannot waive stays where it is. ⚠️ Destination and product regulatory requirements are NOT
+   * this: a buyer does not get to declare away a customs rule.
+   */
+  requirement:{ icon: '📋', title: 'Required certificates', one: 'requirement',
+                blurb: 'What YOU require of a supplier before you will trade with them — ISO 9001, FSSAI, a GST '
+                     + 'registration. Declare it once and every supplier is measured against your list instead of '
+                     + 'against every standard in the system. ⚠️ It scopes what you are shown; it cannot waive a '
+                     + 'rule the destination or the product imposes.' }
 };
 
 /**
@@ -394,6 +413,12 @@ function cbDefRuleFields(kind, sub){
   if (kind === 'category') {
     return [{ k: 'members', label: 'Products in this category', ph: 'one name per line', area: true }];
   }
+  if (kind === 'requirement') {
+    /* ⚠️ STANDARD KEYS, NOT FREE TEXT — the whole point is that these match what a supplier's readiness record
+       is keyed by, so "ISO 9001" typed by hand would match nothing. The form renders the real, available keys as
+       chips to tap (cbDefStdChips), so the list is authored from the system's own vocabulary. */
+    return [{ k: 'standards', label: 'Certificates you require', ph: 'one standard key per line', area: true }];
+  }
   if (kind === 'ordermodel') {
     /* The shape each model actually uses. ⚠️ cart-ui's MODELS decide behaviour; these are the inputs those
        models read (`o.step`, `o.min`, `o.max`), so the names must match what coerce/next look for. */
@@ -479,7 +504,13 @@ function cbDefFormHTML(){
         : '')
     + '<label class="fl">Name</label>'
     + '<input class="inp" data-testid="cbdef-name" value="' + cbDefEsc(f.name) + '"'
-    + ' placeholder="' + (f.kind === 'ordermodel' ? 'Carton of 6' : f.kind === 'offer' ? 'Diwali 10%' : 'Spices') + '"'
+    /* ⚠️ Per KIND. The fallthrough used to hand `requirement` the category placeholder — a form headed "New
+       requirement" asking for a name and suggesting "Spices". A placeholder is an instruction; a wrong one
+       teaches the wrong thing. */
+    + ' placeholder="' + (f.kind === 'ordermodel' ? 'Carton of 6'
+                        : f.kind === 'offer'      ? 'Diwali 10%'
+                        : f.kind === 'requirement'? 'Minimum for food suppliers'
+                        :                           'Spices') + '"'
     + ' oninput="cbDefSetField(\'name\',this.value)">'
     + (fields.length ? '<div class="cbdef-rules">' + fields.map(function (x) {
         var v = f.rules[x.k]; v = (v == null ? '' : v);
@@ -490,7 +521,7 @@ function cbDefFormHTML(){
                 + cbDefEsc(Array.isArray(v) ? v.join('\n') : v) + '</textarea>'
               : '<input class="inp" value="' + cbDefEsc(v) + '" placeholder="' + cbDefEsc(x.ph || '') + '"'
                 + ' oninput="cbDefSetRule(\'' + x.k + '\',this.value,' + (x.num ? 'true' : 'false') + ')">');
-      }).join('') + '</div>' : '')
+      }).join('') + cbDefStdChipsHTML() + '</div>' : '')
     + '<label class="fl">Note</label>'
     + '<input class="inp" value="' + cbDefEsc(f.note) + '" placeholder="optional"'
     + ' oninput="cbDefSetField(\'note\',this.value)">'
@@ -501,7 +532,64 @@ function cbDefFormHTML(){
     +   (editing ? 'Save' : 'Create') + '</button>'
     + '</div>';
 }
-function cbDefPaintForm(){ modal(cbDefFormHTML()); }
+/**
+ * ⭐ THE STANDARDS A BUYER CAN REQUIRE — read from the system, never typed.
+ *
+ * ⚠️ SOURCED FROM YOUR OWN readiness call, and that is not a workaround. `/api/governance/readiness` with no
+ * vertical returns THE FLOOR — every active standard, with titles. That unscoped list is the exact complaint
+ * behind backlog 7 when it is used to judge a supplier, and it is exactly the right thing to use as a MENU: the
+ * full vocabulary is what you want to choose from, and precisely not what you want to be measured against.
+ *
+ * Cached, and failure is silent: the textarea still works, you just have to know the keys.
+ */
+var _CBDEF_STDS = null, _cbdefStdReq = null;
+function cbDefStdsLoad(){
+  if (_CBDEF_STDS) return Promise.resolve(_CBDEF_STDS);
+  if (_cbdefStdReq) return _cbdefStdReq;
+  /* ⚠️ ensureCap FIRST. `readinessOwn` is registered by cap-readiness.js, which is LAZY — calling api() without
+     it throws "no endpoint readinessOwn". Registering a second copy of the alias here would satisfy the call and
+     break the guard's one-global-one-owner rule, which is the wrong trade. */
+  _cbdefStdReq = ensureCap('readiness').then(function(){ return api('readinessOwn'); }).then(function(d){
+    var seen = {}, out = [];
+    ((d && d.clearances) || []).forEach(function(c){
+      if (!c.standard || seen[c.standard]) return;
+      seen[c.standard] = 1; out.push({ key: c.standard, title: c.title || c.standard });
+    });
+    out.sort(function(a,b){ return a.key.localeCompare(b.key); });
+    _CBDEF_STDS = out; _cbdefStdReq = null; return out;
+  }).catch(function(){ _cbdefStdReq = null; return (_CBDEF_STDS = []); });
+  return _cbdefStdReq;
+}
+function cbDefStdChipsHTML(){
+  var f = CBDEF_FORM; if (!f || f.kind !== 'requirement') return '';
+  var list = _CBDEF_STDS;
+  if (list === null) return '<div class="cbdef-stdhint">Reading the standards list…</div>';
+  if (!list.length) return '<div class="cbdef-stdhint">Could not read the standards list — type the keys directly, '
+    + 'one per line.</div>';
+  var chosen = {}; (f.rules.standards || []).forEach(function(s){ chosen[String(s).trim()] = 1; });
+  return '<div class="cbdef-stdhint">Tap to add or remove. ' + list.length + ' available.</div>'
+    + '<div class="cbdef-stds">' + list.map(function(s){
+        var on = !!chosen[s.key];
+        return '<button type="button" class="cbdef-stdchip' + (on ? ' on' : '') + '"'
+          + ' title="' + cbDefEsc(s.title) + '"'
+          + ' onclick="cbDefToggleStd(\'' + cbDefEsc(s.key) + '\')">' + (on ? '✓ ' : '') + cbDefEsc(s.key) + '</button>';
+      }).join('') + '</div>';
+}
+function cbDefToggleStd(key){
+  var f = CBDEF_FORM; if (!f) return;
+  var cur = (f.rules.standards || []).map(function(s){ return String(s).trim(); }).filter(Boolean);
+  var i = cur.indexOf(key);
+  if (i >= 0) cur.splice(i, 1); else cur.push(key);
+  f.rules.standards = cur;
+  cbDefPaintForm();
+}
+function cbDefPaintForm(){
+  modal(cbDefFormHTML());
+  /* Load once, then repaint — the chips cannot render before the list exists, and the form must not wait for it. */
+  if (CBDEF_FORM && CBDEF_FORM.kind === 'requirement' && _CBDEF_STDS === null) {
+    cbDefStdsLoad().then(function(){ if (CBDEF_FORM && CBDEF_FORM.kind === 'requirement') cbDefPaintForm(); });
+  }
+}
 
 async function cbDefSave(){
   var f = CBDEF_FORM; if (!f) return;
@@ -857,7 +945,15 @@ function cbDefCss(){
     '.cbdef-loading{padding:14px 0;font-size:12.5px;color:var(--grey)}',
     '.cbdef-err{font-size:12.5px;color:#b4453f;background:#fbeceb;border:1px solid #f0c9c6;border-radius:9px;padding:8px 11px;margin-bottom:10px}',
     '.cbdef-freeze{font-size:12px;line-height:1.5;color:#6b5a36;background:var(--gold-soft,#F7F1E4);border:1px solid var(--gold-line,#E8D9BC);border-radius:9px;padding:8px 11px;margin:8px 0 10px}',
-    '.cbdef-rules{border-left:2px solid var(--gold-line,#E8D9BC);padding-left:11px;margin:10px 0}'
+    '.cbdef-rules{border-left:2px solid var(--gold-line,#E8D9BC);padding-left:11px;margin:10px 0}',
+    /* The standards menu. Scrolls rather than wraps to twelve rows — the textarea above it is the record; this is
+       a way of filling it without knowing the keys by heart. */
+    '.cbdef-stdhint{font-size:11.5px;color:var(--grey);margin:8px 0 5px}',
+    '.cbdef-stds{display:flex;flex-wrap:wrap;gap:5px;max-height:132px;overflow-y:auto;padding:2px 1px}',
+    '.cbdef-stdchip{border:1px solid var(--line);background:#fff;border-radius:20px;height:26px;padding:0 10px;'
+      + 'font:inherit;font-size:11.5px;color:var(--ink);cursor:pointer;white-space:nowrap}',
+    '.cbdef-stdchip:hover{border-color:#c6ccd4}',
+    '.cbdef-stdchip.on{background:#EDF2F9;border-color:var(--blue,#3F66A6);color:var(--blue,#3F66A6);font-weight:700}'
   ].join('');
   (document.head || document.documentElement).appendChild(s);
 }
