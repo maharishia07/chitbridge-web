@@ -322,7 +322,21 @@ function misPlan(m){
   };
   var todayStart = new Date(); todayStart.setHours(0,0,0,0);
   var chitsToday = (UI._misStamps || []).filter(function(t){ return t >= todayStart.getTime(); }).length;
+  /**
+   * The subscription window, when there is one. ⚠️ It says "no period recorded" rather than assuming open-ended —
+   * a plan with no dates and a plan valid forever look identical on screen but are not the same claim, and only
+   * one of them is true here.
+   */
+  var w = planWindow();
+  var period = !w
+    ? '<span class="govtag" style="background:#efeee9;color:#7a7a72">no period recorded</span>'
+    : w.state === 'expired'
+      ? '<span class="govtag" style="background:#fbeceb;color:#b4453f">expired '+w.days+'d ago</span>'
+      : w.state === 'not yet started'
+        ? '<span class="govtag" style="background:#F5ECD6;color:#7a5e22">starts in '+w.days+'d</span>'
+        : '<span class="govtag" style="background:#E4F0E9;color:#2F6B49">active'+(w.days!=null?(' · '+w.days+'d left'):'')+'</span>';
   return _misHead('Plan', 'What you have used against the limits your plan declares.')
+    + '<div class="misnote" style="margin-bottom:10px">'+period+'</div>'
     + '<div class="misnote" style="margin-bottom:12px"><b>'+esc(PLAN.tier)+'</b> plan · limits declared in '
       + '<b onclick="navTo(\'settings\');UI.setSec=\'governance\';UI.govTab=0" style="cursor:pointer;color:var(--blue)">Governance → Constitution →</b></div>'
     + meter('Entities', 1, PLAN.entities)
@@ -730,10 +744,36 @@ function govCatVis(){
  *
  * Governance now declares PLAN and nothing else. MIS reads the same object and reports usage against it.
  */
-var PLAN = { tier:'Free', entities:5, chitsPerDay:10, networks:1 };
+/**
+ * ⭐ A PLAN IS A SUBSCRIPTION, so it has a validity window (Athi, 2026-08-16: *"valid from and to date need to
+ * bring in if it is a subscription model"*). Right — a plan with no period cannot express renewal, lapse, or
+ * "this limit applied last month but not this one".
+ *
+ * ⚠️ THE DATES ARE DECLARED AS A SHAPE, NOT AS DATA — validFrom/validTo are null because NOTHING SUPPLIES THEM.
+ * There is no plan_tier, plan_expires, subscription or billing column in the API, and lib/assist-kb.js:68 states
+ * plainly that "Subscription tiers, usage quotas … are in design, not yet live". Putting plausible dates here
+ * would make a stub look like a record — the exact failure just removed from Currency and the clearance count.
+ *
+ * The precedent for the real thing already exists in this codebase: product versions carry valid_from/valid_to
+ * and are queried by instant (`routes/products.js`). A plan should follow that shape, not invent its own.
+ */
+var PLAN = { tier:'Free', entities:5, chitsPerDay:10, networks:1, validFrom:null, validTo:null };
+/* Where a plan sits in time. Returns null when there is no window to reason about — callers must not guess. */
+function planWindow(){
+  if (!PLAN.validFrom && !PLAN.validTo) return null;
+  var now = Date.now();
+  var from = PLAN.validFrom ? Date.parse(PLAN.validFrom) : null;
+  var to   = PLAN.validTo   ? Date.parse(PLAN.validTo)   : null;
+  if (to && now > to)     return { state:'expired', to:to, days:Math.ceil((now-to)/864e5) };
+  if (from && now < from) return { state:'not yet started', from:from, days:Math.ceil((from-now)/864e5) };
+  return { state:'active', to:to, days: to ? Math.ceil((to-now)/864e5) : null };
+}
 function govPlanBlock(){
   return '<div style="margin:15px 0 2px;font-family:\'Space Grotesk\';font-weight:700;font-size:12.5px;color:#5b4a86">↑ Your plan · what it entitles you to</div>'
     + govRowHtml('Plan tier', esc(PLAN.tier), 'bound')
+    /* The subscription period. `free` is the honest class: not yours to set, and not set by anyone else either. */
+    + govRowHtml('Valid from', PLAN.validFrom ? esc(PLAN.validFrom) : 'no subscription record yet', PLAN.validFrom ? 'bound' : 'free')
+    + govRowHtml('Valid to',   PLAN.validTo   ? esc(PLAN.validTo)   : 'no subscription record yet', PLAN.validTo   ? 'bound' : 'free')
     + govRowHtml('Entities allowed', String(PLAN.entities), 'bound')
     + govRowHtml('Chits per day', String(PLAN.chitsPerDay), 'bound')
     + govRowHtml('Networks allowed', String(PLAN.networks), 'bound')
@@ -1026,7 +1066,10 @@ var SET_SECS = [
   { key:'policy',     name:'Policy',      q:'Rules on your records' },
   { key:'channels',   name:'Channels',    q:'Where work arrives from' },
   { key:'governance', name:'Governance layers', q:'Where your rights come from' },
-  { key:'blueprints', name:'Blueprints',  q:'Shared catalogue designs' }
+  /* ⚠️ NAMED FOR WHAT IT RENDERS. I called this "Blueprints · Shared catalogue designs" when splitting Settings
+     into sections, taking the name from the function (blueprintSettingsHTML) without reading its output — it
+     renders WORK_PATTERNS, "Governed by work pattern". Nothing about catalogue blueprints appears on it. */
+  { key:'blueprints', name:'Work patterns',  q:'How each action is governed' }
 ];
 function setSec(){ return UI.setSec || 'work'; }
 /* Same reason as profSetSec — the hook fires before #setbody exists, so drive the load explicitly. */
@@ -1119,7 +1162,7 @@ function paintSettings(s, _daOpts){ const h=document.getElementById("setbody"); 
        1. Constitution under Governance"*). The rail row already says Governance and the selected layer is the
        subject — repeating the section name above it pushed the actual content down for no information. */
     else if (k === "governance") out = _misBack() + govLayersBlock();
-    else if (k === "blueprints") out = _misHead('Blueprints', 'Catalogue designs you publish or adopt.') + blueprintSettingsHTML();
+    else if (k === "blueprints") out = _misHead('Work patterns', 'Each action is a governed pattern — what is sealed, and what you may set.') + blueprintSettingsHTML();
     /* One assignment, so the end marker is appended in one place rather than five — and cannot be forgotten on a
        branch added later. */
     h.innerHTML = out + (out ? _capEnd() : '');
