@@ -32,64 +32,147 @@ var INCOTERMS=[
 /* Same grouped shape as INCOTERMS so one renderer serves both; an empty group name emits no <optgroup>.
    ⚠️ Value === label here on purpose: an authority form PRINTS the mode, so what is stored is what is printed. */
 var SHIP_MODES=[['', [['Sea','Sea'],['Air','Air'],['Road','Road'],['Rail','Rail'],['Courier','Courier'],['Multimodal','Multimodal']]]];
-/* ⚠️ PLACEHOLDERS EARN THEIR PLACE — a hint goes where the format cannot be guessed (GSTIN, PAN, IFSC, SWIFT) or
-   where the acronym is opaque (IEC, AD code, LUT). They were scattered instead: Country got "e.g. India" while
-   IFSC — 11 characters in a fixed shape — got nothing, and free-text "Mode" got a hint it did not need.
-   A 4th slot holds select options; present means a dropdown, absent means a text box. */
-var VAULT_UI=[
-  {g:'identity', t:'🏢 Business identity', f:[['legal_name','Legal name','as registered'],['trade_name','Trade / brand name','if different'],['address','Address','street / building'],['city','City',''],['state','State',''],['pincode','PIN / ZIP',''],['country','Country',''],['email','Email',''],['phone','Phone','']]},
-  {g:'signatory', t:'✍️ Authorised signatory', f:[['name','Name',''],['designation','Designation','e.g. Director']]},
-  {g:'registrations', t:'🪪 Registrations', f:[['gstin','GSTIN','15 characters'],['pan','PAN','10 characters'],['iec','IEC','Import-Export Code'],['ad_code','AD code','bank AD code'],['lut','LUT','export LUT no.']]},
-  {g:'banking', t:'🏦 Banking', f:[['bank_name','Bank name',''],['account_no','Account no.',''],['ifsc','IFSC','11 characters'],['swift','SWIFT / BIC','8 or 11 characters'],['ad_branch','AD branch','']]},
-  {g:'logistics', t:'🚢 Logistics defaults', f:[['port_loading','Port of loading','e.g. Nhava Sheva'],['incoterm','Preferred Incoterm','',INCOTERMS],['mode','Mode','',SHIP_MODES]]}
-];
+/* ⭐⭐ THE VAULT IS REPEATABLE SECTIONS OF ROWS THE USER NAMES (Athi, 2026-08-16: *"add the name of the details and
+   then the value as well, so we don't need to look at the entire world... we give option like bank, licence
+   details and so on, let them add more rows if they want to"*).
+   ⚠️ The fixed field list it replaces was entirely INDIAN — gstin·pan·iec·ad_code·lut·ifsc·pincode. A German
+   supplier had nowhere to put a USt-IdNr, and every new country was a code change. Naming your own rows is
+   universal by construction.
+   ⚠️ SECTIONS REPEAT because one business has two banks — export receipts and domestic — each with its own
+   name/IFSC/account set, which a single fixed "Banking" group could not hold at all. */
+var VAULT_SECTION_TYPES = { identity:'🏢 Business identity', signatory:'✍️ Authorised signatory', bank:'🏦 Bank',
+  licence:'🪪 Licence & registration', logistics:'🚢 Logistics defaults', other:'📋 Other details' };
+/* SUGGESTED names per section — [label, tag]. ⚠️ SUGGESTIONS, NEVER RESTRICTIONS: typing anything else is
+   accepted and stored as-is. Picking a suggestion sets the row's TAG, which is what lets a form pre-fill find it
+   and what lets the verify layer check it. A row with no tag is a perfectly good row that simply cannot do those
+   two things. This list starts at what we already had and grows when a real trade needs a name — the alternative
+   was encoding every jurisdiction's registrations up front, which never converges. */
+var VAULT_SUGGEST = {
+  identity:  [['Legal name','legal_name'],['Trade / brand name','trade_name'],['Address','address'],['City','city'],['State','state'],['PIN / ZIP','pincode'],['Country','country'],['Email','email'],['Phone','phone']],
+  signatory: [['Name','name'],['Designation','designation']],
+  bank:      [['Bank name','bank_name'],['Account no.','account_no'],['IFSC code','ifsc'],['IBAN','iban'],['SWIFT / BIC','swift'],['AD branch','ad_branch'],['Branch','branch']],
+  licence:   [['GSTIN','gstin'],['PAN','pan'],['IEC','iec'],['LUT','lut'],['AD code','ad_code'],['LEI','lei'],['VAT number','vat'],['EIN','ein'],['CIN','cin']],
+  logistics: [['Port of loading','port_loading'],['Preferred Incoterm','incoterm'],['Mode','mode']],
+  other:     [],
+};
+/* Hints only where the format cannot be guessed, keyed by TAG rather than position — a row keeps its hint
+   wherever the user puts it. ⚠️ These are India-shaped on purpose (GSTIN/PAN/IFSC) but they are now attached to
+   OPTIONAL tags, so a business that never uses them never sees them. */
+var VAULT_HINT = { gstin:'15 characters', pan:'10 characters', ifsc:'11 characters', swift:'8 or 11 characters',
+  iban:'up to 34 characters', lei:'20 characters', iec:'Import-Export Code', ad_code:'bank AD code',
+  lut:'export LUT no.', port_loading:'e.g. Nhava Sheva', legal_name:'as registered', designation:'e.g. Director' };
+/* ⚠️ A CLOSED SET SURVIVES INSIDE THE FREE-FORM MODEL, and the tag is what carries it: a row tagged `incoterm`
+   renders the eleven ICC rules, one tagged `mode` renders the transport modes. Free-naming did not cost us the
+   controlled vocabulary where a controlled vocabulary is right — it just stopped being mandatory everywhere. */
+var VAULT_ENUM = { incoterm:INCOTERMS, mode:SHIP_MODES };
 function vaultCardHTML(vault, encrypted){
   vault=vault||{};
   // F1 — honest at-rest signal. Encrypted (AES-256-GCM, key never in DB) → safe for real data; not configured → dummy only.
   var encBanner = encrypted
     ? '<div style="font-size:11px;color:#256e47;background:#eaf6ee;border:1px solid #bfe3cb;border-radius:9px;padding:7px 10px;margin:6px 0 2px">🔒 <b>Encrypted at rest</b> — stored ciphertext-only (a database dump can\'t read it). Safe for real banking &amp; tax details.</div>'
     : '<div style="font-size:11px;color:#8a5f11;background:#fdf3e3;border:1px solid #f0dcae;border-radius:9px;padding:7px 10px;margin:6px 0 2px">⚠ <b>Encryption not configured</b> — the vault won\'t save until the platform sets its encryption key. Use <b>dummy data only</b> for now.</div>';
-  var groups=VAULT_UI.map(function(G){
-    var fields=G.f.map(function(fl){ var k=fl[0], v=(vault[G.g]&&vault[G.g][k])||'', id='v_'+G.g+'_'+k;
-      /* A 4th slot means a closed set → a dropdown. ⚠️ The blank option is FIRST and stays selectable: these are
-         defaults, not answers, and a business with no usual Incoterm must be able to say so rather than being
-         handed one it never chose. An unrecognised stored value is kept as its own option instead of being
-         silently dropped — free text saved before this was a dropdown must survive being looked at. */
-      var ctl;
-      if (fl[3]) {
-        var known=false;
-        var body=fl[3].map(function(grp){
-          var opts=grp[1].map(function(o){ if(o[0]===v) known=true;
-            return '<option value="'+esc(o[0])+'"'+(o[0]===v?' selected':'')+'>'+esc(o[1])+'</option>'; }).join('');
-          return grp[0] ? '<optgroup label="'+esc(grp[0])+'">'+opts+'</optgroup>' : opts;
-        }).join('');
-        var keep = (v && !known) ? '<option value="'+esc(v)+'" selected>'+esc(v)+' — not a standard code</option>' : '';
-        ctl='<select class="inp" id="'+id+'" style="margin:0"><option value=""'+(v?'':' selected')+'>— none —</option>'+keep+body+'</select>';
-      } else {
-        ctl='<input class="inp" id="'+id+'" value="'+esc(v)+'" placeholder="'+esc(fl[2]||'')+'" style="margin:0">';
-      }
-      return '<div style="display:flex;flex-direction:column;gap:2px"><label style="font-size:11px;color:var(--grey);font-weight:600">'+esc(fl[1])+'</label>'+ctl+'</div>'; }).join('');
-    return '<div style="margin-top:13px"><div style="font-size:12px;font-weight:700;color:var(--ink);margin-bottom:7px">'+G.t+'</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+fields+'</div></div>';
-  }).join('');
+  var secs=(UI._vault&&UI._vault.sections)||[];
+  var body=secs.length ? secs.map(vaultSectionHTML).join('')
+    : '<div style="color:var(--grey);font-size:12px;padding:9px 0">Nothing here yet. Add a section below and name the details you actually have — anything we don’t recognise is still saved.</div>';
+  var addOpts=Object.keys(VAULT_SECTION_TYPES).map(function(t){ return '<option value="'+t+'">'+esc(VAULT_SECTION_TYPES[t])+'</option>'; }).join('');
   return '<div style="'+_CARD+';margin-top:10px"><div class="sec" style="margin:0">🗂 Trade documents vault <span style="font-size:11px;font-weight:600;color:var(--grey)">— fill once · pre-fills every form</span></div>'
-    +'<div style="font-size:11px;color:var(--grey);margin:3px 0 2px;line-height:1.5">These recurring details auto-fill your Commercial Invoice, Packing List and other authority forms. At form time you\'ll only be asked the shipment-specifics (invoice no, dates, ports).</div>'
+    +'<div style="font-size:11px;color:var(--grey);margin:3px 0 2px;line-height:1.5">These recurring details auto-fill your Commercial Invoice, Packing List and other authority forms. At form time you\'ll only be asked the shipment-specifics (invoice no, dates, ports). <b>Name each detail the way you know it</b> — the suggestions are a shortcut, never a limit.</div>'
     +encBanner
-    +groups
+    +body
+    +'<div style="display:flex;gap:7px;align-items:center;margin-top:13px;flex-wrap:wrap">'
+      +'<select class="inp" id="v_addtype" style="max-width:210px;margin:0">'+addOpts+'</select>'
+      +'<button class="composebtn ghost" data-testid="vault-add-section" onclick="vaultAddSection()">+ add section</button></div>'
     +'<div class="err" id="vault_err" style="margin-top:8px"></div>'
-    +'<button class="composebtn" style="margin-top:11px" onclick="saveVaultUI()">Save vault</button></div>';
+    +'<button class="composebtn" style="margin-top:11px" data-testid="vault-save" onclick="saveVaultUI()">Save vault</button></div>';
+}
+/* One section — its type, an optional label that tells two of the same kind apart, and its rows. */
+function vaultSectionHTML(sec, i){
+  var rows=(sec.rows||[]).map(function(r,j){ return vaultRowHTML(r,i,j,sec.type); }).join('');
+  return '<div style="border:1px solid var(--line);border-radius:11px;padding:11px 12px;margin-top:11px;background:var(--paper)">'
+    +'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">'
+      +'<span style="font-size:12px;font-weight:700;color:var(--ink)">'+esc(VAULT_SECTION_TYPES[sec.type]||sec.type)+'</span>'
+      /* ⚠️ THE LABEL IS WHAT MAKES REPEATS USABLE. Two sections both reading "Bank" are indistinguishable at a
+         glance and unusable at form time — "which account do I invoice against?" has no answer. */
+      +'<input class="inp" style="flex:1;min-width:120px;max-width:230px;margin:0;font-size:12px" placeholder="label it — e.g. Export receipts" value="'+esc(sec.label||'')+'" oninput="vaultSetSection('+i+',this.value)">'
+      +'<button type="button" title="Remove this section" onclick="vaultDelSection('+i+')" style="margin-left:auto;border:1px solid var(--line);background:#fff;color:#c0453b;border-radius:8px;min-width:28px;min-height:28px;cursor:pointer">×</button>'
+    +'</div>'
+    +rows
+    +'<button class="composebtn ghost" style="margin-top:8px" onclick="vaultAddRow('+i+')">+ add detail</button></div>';
+}
+/* One row: the name the USER gives it, and the value. The tag rides along invisibly when the name is one we know. */
+function vaultRowHTML(r,i,j,type){
+  var tag=r.tag||'', hint=VAULT_HINT[tag]||'', enums=VAULT_ENUM[tag];
+  var val;
+  if (enums) {
+    /* ⚠️ Blank stays FIRST and selectable — these are defaults, not answers. An unrecognised stored value is kept
+       as its own option and MARKED, never silently dropped: free text saved before this was a list must survive. */
+    var known=false;
+    var opts=enums.map(function(g){
+      var o=g[1].map(function(x){ if(x[0]===r.value) known=true;
+        return '<option value="'+esc(x[0])+'"'+(x[0]===r.value?' selected':'')+'>'+esc(x[1])+'</option>'; }).join('');
+      return g[0]?'<optgroup label="'+esc(g[0])+'">'+o+'</optgroup>':o; }).join('');
+    var keep=(r.value&&!known)?'<option value="'+esc(r.value)+'" selected>'+esc(r.value)+' — not a standard code</option>':'';
+    val='<select class="inp" style="flex:1;min-width:130px;margin:0" onchange="vaultSetRow('+i+','+j+',\'value\',this.value)">'
+      +'<option value=""'+(r.value?'':' selected')+'>— none —</option>'+keep+opts+'</select>';
+  } else {
+    val='<input class="inp" style="flex:1;min-width:130px;margin:0" value="'+esc(r.value||'')+'" placeholder="'+esc(hint)+'" oninput="vaultSetRow('+i+','+j+',\'value\',this.value)">';
+  }
+  return '<div style="display:flex;gap:7px;align-items:center;margin-bottom:6px;flex-wrap:wrap">'
+    +'<input class="inp" list="vsug_'+esc(type)+'" style="flex:0 0 190px;min-width:140px;margin:0" placeholder="detail name — e.g. IFSC code" value="'+esc(r.name||'')+'" oninput="vaultSetRow('+i+','+j+',\'name\',this.value)">'
+    +val
+    +'<button type="button" title="Remove this detail" onclick="vaultDelRow('+i+','+j+')" style="border:1px solid var(--line);background:#fff;color:var(--grey);border-radius:8px;min-width:28px;min-height:28px;cursor:pointer">×</button></div>';
+}
+/* The suggestion lists — one <datalist> per section type, emitted once. A datalist SUGGESTS and never restricts,
+   which is exactly the contract we want: type "IFSC code" and get the tag, type anything else and keep it. */
+function vaultDatalists(){
+  return Object.keys(VAULT_SUGGEST).map(function(t){
+    return '<datalist id="vsug_'+t+'">'+VAULT_SUGGEST[t].map(function(s){ return '<option value="'+esc(s[0])+'">'; }).join('')+'</datalist>';
+  }).join('');
+}
+function _vaultSecs(){ UI._vault=UI._vault||{sections:[]}; UI._vault.sections=UI._vault.sections||[]; return UI._vault.sections; }
+function _vaultPaint(){ var h=document.getElementById('vaulthost'); if(h) h.innerHTML=vaultCardHTML(null,UI._vaultEnc)+vaultDatalists()+_capEnd(); }
+function vaultAddSection(){ var s=document.getElementById('v_addtype');
+  _vaultSecs().push({type:(s&&s.value)||'other',label:'',rows:[{name:'',value:''}]}); _vaultPaint(); }
+function vaultDelSection(i){ _vaultSecs().splice(i,1); _vaultPaint(); }
+function vaultSetSection(i,v){ var s=_vaultSecs()[i]; if(s) s.label=v; }   // no repaint — would drop focus mid-word
+function vaultAddRow(i){ var s=_vaultSecs()[i]; if(s){ (s.rows=s.rows||[]).push({name:'',value:''}); _vaultPaint(); } }
+function vaultDelRow(i,j){ var s=_vaultSecs()[i]; if(s&&s.rows){ s.rows.splice(j,1); _vaultPaint(); } }
+/**
+ * ⚠️ THE TAG IS SET FROM THE NAME, AND ONLY WHEN THE NAME MATCHES A SUGGESTION. Typing a name we know silently
+ * tags the row so forms can pre-fill it and verify can check it; typing anything else clears the tag and the row
+ * is stored exactly as written. The user is never told about tags and never has to care — which is the point.
+ * ⚠️ NO REPAINT ON TYPING. Rebuilding the host mid-keystroke drops focus and the caret, so the model is updated
+ * in place; only structural changes (add/remove) repaint. The one exception is a name that gains or loses an
+ * ENUM tag, where the value control itself has to change shape.
+ */
+function vaultSetRow(i,j,field,v){
+  var s=_vaultSecs()[i]; if(!s||!s.rows||!s.rows[j]) return;
+  var r=s.rows[j];
+  if(field!=='name'){ r[field]=v; return; }
+  r.name=v;
+  var before=r.tag||'';
+  var hit=(VAULT_SUGGEST[s.type]||[]).filter(function(x){ return x[0].toLowerCase()===String(v).trim().toLowerCase(); })[0];
+  r.tag=hit?hit[1]:'';
+  if(!!VAULT_ENUM[before] !== !!VAULT_ENUM[r.tag]) _vaultPaint();
 }
 async function loadVault(){
   var host=document.getElementById('vaulthost'); if(!host) return;
   /* ⚠️ THE END MARKER IS PAINTED HERE, NOT BY profSecHTML — it is a claim that you have seen everything, so it
      must not appear beside a spinner. Appended synchronously with the content it terminates, on both paths. */
-  try{ var p=(await api('vaultGet'))||{}; host.innerHTML=vaultCardHTML(p.vault||{}, !!p.vault_encrypted)+_capEnd(); }
-  catch(e){ host.innerHTML=vaultCardHTML({}, false)+_capEnd(); }
-  if(window.CBOffline)CBOffline.autodraft(host,'app.vault',{overwrite:true});   // restore unsaved edits over the server copy
+  try{ var p=(await api('vaultGet'))||{};
+    /* The server normalises legacy group-shaped vaults to {sections} on read, so there is exactly one shape here. */
+    UI._vault={sections:((p.vault||{}).sections)||[]}; UI._vaultEnc=!!p.vault_encrypted;
+  }catch(e){ UI._vault={sections:[]}; UI._vaultEnc=false; }
+  var h2=document.getElementById('vaulthost'); if(!h2) return;   // ⚠️ re-query: a repaint may have landed mid-fetch
+  h2.innerHTML=vaultCardHTML(null,UI._vaultEnc)+vaultDatalists()+_capEnd();
+  if(window.CBOffline)CBOffline.autodraft(h2,'app.vault',{overwrite:true});   // restore unsaved edits over the server copy
 }
 async function saveVaultUI(){
   var err=document.getElementById('vault_err'); if(err)err.textContent='';
-  var vault={};
-  VAULT_UI.forEach(function(G){ var grp={}; G.f.forEach(function(fl){ var el=document.getElementById('v_'+G.g+'_'+fl[0]); var v=el?(el.value||'').trim():''; if(v)grp[fl[0]]=v; }); if(Object.keys(grp).length)vault[G.g]=grp; });
+  /* ⚠️ THE MODEL IS THE TRUTH, not the DOM — every control writes straight into UI._vault as it is typed, so the
+     save reads one object rather than scraping ids. That is what makes repeatable sections possible at all: there
+     is no stable id to scrape when the same section can exist twice. The server drops empty rows; we send as-is. */
+  var vault={sections:_vaultSecs()};
   try{ await api('vaultSave',{body:{vault:vault}}); if(window.CBOffline)CBOffline.clearDraft('app.vault'); if(typeof toast==='function')toast('Vault saved ✓'); }
   catch(e){ if(err)err.textContent=(e&&e.message)||'Could not save the vault'; }
 }
