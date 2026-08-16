@@ -8,7 +8,33 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
-  :root{--ink:#0F2E3D;--blue:#3F66A6;--blue-d:#345488;--gold:#C9A86A;--gold-soft:#F7F1E4;--gold-line:#E8D9BC;--paper:#FAF8F4;--card:#fff;--line:#E7E2D8;--grey:#7C8085;--ok:#2f8f5b;--prog:#9a7b34;--disp:#b4453f;--shadow:0 1px 2px rgba(15,46,61,.05),0 12px 34px rgba(15,46,61,.08)}
+  /**
+   * ⭐ `--grey` WAS #7C8085 AND FAILED WCAG AA ON EVERY GROUND IT LANDS ON (backlog 16.1).
+   *
+   * Athi, 2026-08-16, comparing a mockup to the app: *"this panel looks good, with black background, letters are
+   * sharp and very professional, but our design not getting the same, why?"* Measured rather than guessed, and
+   * this was the largest single cause: 3.75:1 on paper, 3.97 on white, 3.46–3.57 on the tinted cards — against a
+   * 4.5:1 floor. It is the colour on every caption, sub-label and note, so a large share of the words on screen
+   * were below the readability line. That reads as SOFT, which is the opposite of sharp.
+   *
+   * #61666c measures 5.04–5.79 across all six grounds (paper · white · gold-soft · #f2efe8 · #eef3fb · #EDF2F9)
+   * while staying far lighter than --ink at 13.39:1, so the hierarchy between a heading and its note survives.
+   *
+   * ⚠️ CHANGED AS A TOKEN, NOT A SWEEP — everything already says `var(--grey)`, so one line lifts every caption
+   * at once and nothing can be missed. ⚠️ VERIFY WITH design-guard.spec.js, never by eye: the contrast checker
+   * caught six of my own false readings the day it was written.
+   *
+   * ⚠️ `--ok` AND `--prog` MOVED FOR THE SAME REASON — and the catch is that each is read against ITS OWN tinted
+   * chip, not against paper. #2f8f5b on the green chip #E9F4EE is 3.58:1; #9a7b34 on the gold chip is 3.55. Two
+   * of the three lifecycle chips were below the line while looking perfectly deliberate. (--blue was already
+   * fine at 4.97, which is exactly why the other two went unnoticed — a set where most members pass reads as a
+   * set that passes.) Now 4.75 and 5.17 on their chips.
+   *
+   * ⚠️ Both tokens are ALSO used as swatch and bar FILLS (the MIS stack, the ageing meters). Darkening helps
+   * there too — a fill sits on paper or white, so more contrast is strictly better. Checked before changing:
+   * there is no role in which a lighter value was the right one.
+   */
+  :root{--ink:#0F2E3D;--blue:#3F66A6;--blue-d:#345488;--gold:#C9A86A;--gold-soft:#F7F1E4;--gold-line:#E8D9BC;--paper:#FAF8F4;--card:#fff;--line:#E7E2D8;--grey:#61666c;--ok:#27794c;--prog:#7d6126;--disp:#b4453f;--shadow:0 1px 2px rgba(15,46,61,.05),0 12px 34px rgba(15,46,61,.08)}
   *{box-sizing:border-box}html,body{margin:0;height:100%}
   body{background:var(--paper);color:var(--ink);font-family:Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
   button,input,select{font:inherit}button{cursor:pointer}
@@ -109,11 +135,13 @@
 
   .menu{background:#0F2E3D;color:#bcccd6;padding:12px 10px;display:flex;flex-direction:column;overflow-y:auto;border-top:1px solid rgba(255,255,255,.06)}
   .menu .grpsep{height:1px;background:var(--line);margin:7px 10px 3px}
-  .menu .grp{font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#5f7d8c;margin:10px 8px 5px}
+  /* ⚠️ #5f7d8c measured 3.25:1 on the navy — the two lowest-contrast runs on the whole screen were here, in the
+     nav, where every session starts. #8fa9b6 is 5.76:1 and still clearly recessive against the 8.62:1 items. */
+  .menu .grp{font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#8fa9b6;margin:10px 8px 5px}
   .menu button{display:flex;align-items:center;gap:10px;border:0;background:none;color:#bcccd6;text-align:left;font-size:13px;font-weight:500;padding:9px 10px;border-radius:9px;width:100%}
   .menu button .ic{width:16px;text-align:center}.menu button .ct{margin-left:auto;font-size:9.5px;background:rgba(255,255,255,.12);border-radius:10px;padding:1px 6px}
   .menu button:hover{background:rgba(255,255,255,.06)}.menu button.on{background:var(--blue);color:#fff}
-  .menu .tagl{margin-top:auto;font-size:9.5px;color:#6f8b99;line-height:1.5;padding:8px}
+  .menu .tagl{margin-top:auto;font-size:9.5px;color:#93adba;line-height:1.5;padding:8px}   /* was #6f8b99 — 3.94:1 */
 
   .main{min-width:0;display:flex;flex-direction:column;overflow:hidden;background:var(--paper)}
   .purpose{display:flex;align-items:center;gap:10px;padding:0 16px;max-height:0;overflow:hidden;background:#fff;font-size:12px;color:var(--mut,#5d6b73);transition:max-height .22s ease,padding .22s ease}
@@ -375,7 +403,15 @@
   .tool:hover{background:var(--paper);border-color:#c3ccd2}
   .tool.on{background:var(--ink);color:#fff;border-color:var(--ink)}
   .topbar .bell{position:relative;border:0;background:none;color:#cfe0e8;font-size:16px;cursor:pointer;padding:2px 4px;line-height:1}
-  .topbar .bell .bdot{position:absolute;top:-2px;right:-3px;background:#d65a5a;color:#fff;font-size:8px;font-weight:800;min-width:13px;height:13px;border-radius:7px;display:flex;align-items:center;justify-content:center;padding:0 3px}
+  /**
+   * ⚠️ ONE RULE FOR BOTH DOTS. This selector existed TWICE, byte-identical — once under `.bell`, once under
+   * `.msgc` — so the unread-mail dot and the notification dot were two declarations of one thing, and darkening
+   * one would have silently left the other pale. Second call site means a shared rule.
+   * ⚠️ #d65a5a measured 3.84:1 against white text. `--disp` is 5.44:1 and is already the token for "something
+   * needs attention", which is exactly what this dot means. Size 9px in a 15px disc — still small, but the count
+   * is the one fact this control has to carry (the sub-11px sweep is backlog 4).
+   */
+  .topbar .bell .bdot,.topbar .msgc .bdot{position:absolute;top:-2px;right:-3px;background:var(--disp);color:#fff;font-size:9px;font-weight:800;min-width:15px;height:15px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 3px}
   .filterpanel{margin-top:8px;border:1px solid var(--line);border-radius:9px;background:#fff;padding:9px 11px;display:flex;flex-direction:column;gap:7px;font-size:12px}
   .filterpanel .fp-row{display:flex;align-items:center;gap:9px;justify-content:space-between}
   .filterpanel select{font-size:12px;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:#fff}
@@ -492,7 +528,7 @@
   .bspin{width:18px;height:18px;border:3px solid #D8E4F4;border-top-color:var(--blue);border-radius:50%;animation:bspin .7s linear infinite;flex:none}
   @keyframes bspin{to{transform:rotate(360deg)}}
   .topbar .msgc{position:relative;border:0;background:none;color:#cfe0e8;font-size:15px;cursor:pointer;padding:2px 4px;line-height:1}
-  .topbar .msgc .bdot{position:absolute;top:-2px;right:-3px;background:#d65a5a;color:#fff;font-size:8px;font-weight:800;min-width:13px;height:13px;border-radius:7px;display:flex;align-items:center;justify-content:center;padding:0 3px}
+  /* (the .msgc dot is styled with .bell's, above — one rule, both dots) */
   .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
   .unreadtag{font-size:8.5px;font-weight:800;color:#fff;background:#d65a5a;border-radius:7px;padding:0 5px;margin-left:4px}
   .unreaddot{width:7px;height:7px;border-radius:50%;background:#d65a5a;margin-left:2px}
@@ -750,8 +786,18 @@ img.attImg{object-fit:cover;display:block}
 .colmenu label:has(input:checked){background:#E3EDF8;color:var(--blue);font-weight:600}
 .colmenu input[type=checkbox]{width:14px;height:14px;accent-color:var(--blue)}
 .prichip.pri-high{background:#fdeccc;color:#8a5a12;border-color:#e6c98f}
-.starcell{cursor:pointer;color:#cfd6da;font-size:14px;display:inline-block}
-.starcell.on{color:#e8b923}
+/**
+ * ⚠️ #cfd6da MEASURED 1.09–1.47:1 — the star was not recessive, it was invisible, and it is a CONTROL. WCAG
+ * 1.4.11 puts the floor for a UI glyph at 3:1. ⚠️ Recessive means "clearly there and clearly secondary", never
+ * "gone".
+ *
+ * ⚠️ AND IT IS SIZED TO THE SELECTED ROW, NOT THE ORDINARY ONE. My first pick (#848f97) cleared 3:1 on paper
+ * and white and I would have called it done — the live scan then measured 2.45, because the star a person is
+ * most likely to be looking at sits on the SELECTED row, #cfe0f2, a lighter ground than either. A colour is
+ * only as good as its worst ground, and the worst ground is rarely the default one. Measure on screen.
+ */
+.starcell{cursor:pointer;color:#697479;font-size:14px;display:inline-block}
+.starcell.on{color:#997009}   /* was #e8b923 — 1.74:1, a "set" state you could not see it was set */
 .starcell:hover{color:#e8b923}
 .srch{position:relative}
 .advbtn{border:1px solid var(--line);background:#fff;border-radius:7px;padding:1px 7px;font-size:12px;cursor:pointer;color:var(--grey);margin-left:4px}
@@ -3383,7 +3429,7 @@ function supRowHTML(x){
   const id=x.supplier_list_id, label=supName(x), sub=x.nickname?x.display_name:(x.bridge_id||'');
   const cat=x.has_catalogue?'<span class="optchip" style="background:#E8F0F4;color:#3F66A6;border-color:#cfe0ec">📕 catalogue</span>':'<span class="optchip" style="background:#F1EFE8;color:#8a857a">no catalogue</span>';
   return `<div class="row ${id===UI.supSel?'sel':''}" data-testid="sup-row-${id}" onclick="selectSupplier('${id}')">
-    <button title="Preferred — tap to toggle" onclick="event.stopPropagation();toggleSupPref('${id}')" style="background:none;border:0;font-size:15px;line-height:1;padding:0;color:${x.preferred?'#e0a92b':'#d9c88f'};flex:0 0 auto;margin-top:1px">${x.preferred?'★':'☆'}</button>
+    <button title="Preferred — tap to toggle" onclick="event.stopPropagation();toggleSupPref('${id}')" style="background:none;border:0;font-size:15px;line-height:1;padding:0;color:${x.preferred?'#997009':'#697479'};flex:0 0 auto;margin-top:1px">${x.preferred?'★':'☆'}</button>
     <div class="main2"><div class="l1"><span class="code">${esc(label)}</span>${x.category?`<span class="optchip" style="background:var(--gold-soft);color:#7a5e22;border-color:var(--gold-line)">${esc(x.category)}</span>`:''}<span class="amt">${cat}</span></div>
       <div class="l2">${esc(sub)}${x.nickname?` · <span class="mono">${esc(x.bridge_id||'')}</span>`:''}</div></div>
     <button class="rowinfo" data-testid="sup-details-${id}" title="Their full record" onclick="event.stopPropagation();supOpenPanel('${id}')">ⓘ</button>
@@ -4999,7 +5045,7 @@ function taskPanel(){
       <b style="font-family:'Space Grotesk';font-size:13px;display:flex;align-items:center;gap:6px;min-width:0">
         ${_fsel ? `<span data-testid="crumb-track" onclick="clearFolder()" title="Back to all of ${esc(_tname.slice(2))}" style="cursor:pointer;color:var(--blue)">${_tname}</span><span style="color:var(--grey);font-weight:400">/</span><span data-testid="crumb-folder" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📁 ${esc(_fsel.name)}</span>`
                 : `<span data-testid="crumb-track">${_tname}</span>`}
-      </b><span style="color:#8a7c58">— ${_tdesc}</span>
+      </b><span style="color:#726546">— ${_tdesc}</span>${/* was #8a7c58 — 3.65:1 on the gold-soft band; 5.09 now */''}
       ${_fsel?`<span data-testid="folder-rename" onclick="renameFolder('${esc(_fsel.folder_id)}')" title="Rename this folder" style="cursor:pointer;color:var(--blue);font-size:11.5px;margin-left:2px">Rename</span><span data-testid="folder-delete" onclick="deleteFolder('${esc(_fsel.folder_id)}')" title="Delete this folder — the chits inside are NOT deleted" style="cursor:pointer;color:#c0453b;font-size:11.5px">Delete</span>`:''}
       ${_btns}<button class="composebtn" style="${_isTrack?'':'margin-left:auto'}" onclick="toggleListHelp()">${UI.listHelp?'✕ Close':'❓ Help'}</button>
     </div>${UI.listHelp?`<div style="padding:11px 12px;border-bottom:1px solid var(--line);overflow-y:auto;max-height:52%">${assistPage(_ak)}</div>`:''}`;
@@ -5716,9 +5762,39 @@ function statusChip(c){
   if(UI.folder==='order') return '<span class="chipst st-'+c.state+'" title="status — set by the receiver">'+String(c.state||'').toUpperCase()+'</span>';
   return '<span class="chipst st-'+c.state+'" data-testid="chit-status-'+c.id+'" onclick="event.stopPropagation();pickChitStatus(\''+c.id+'\')" title="change status">'+String(c.state||'').toUpperCase()+' ▾</span>';
 }
+/**
+ * ⚠️ THE EMPTY MESSAGE MUST NAME THE FILTER THAT IS ACTUALLY APPLIED (backlog 2).
+ *
+ * Trash held ten chits and the screen said *"Nothing in Open"*. The row filter is already suppressed for
+ * drafts/trash/archive/order (see visibleRows) — but this message went on naming `UI.state` anyway, a state that
+ * is not being applied to this view and has not been since you left Task.
+ *
+ * Someone trying to recover a deleted chit was told there was nothing there, and told it in terms of a filter
+ * they could not see and had not set. ⭐ An empty state has one job: say what you are looking at and what to do
+ * next. Naming a filter that is not in force fails both, and invites the conclusion that the delete was
+ * permanent — the data was fine and the screen denied it.
+ */
+function _emptyWhere(){
+  if(UI.selectMode) return 'the ticked states';
+  if(UI.search) return 'this search';
+  if(typeof advActive==='function' && advActive()) return 'these filters';
+  const named = { drafts:'Drafts', trash:'Trash', archive:'Archive', order:'Orders' };
+  if(named[UI.folder]) return named[UI.folder];
+  /* A named folder someone made themselves — say its name, not "this view". */
+  const f=(UI.folders||[]).find(x=>x.folder_id===UI.folder); if(f&&f.name) return f.name;
+  return cap(UI.state||'this view');
+}
+function _emptyHint(){
+  if(!pgDone('list')) return 'More may be further down — Load more.';
+  if(UI.folder==='trash')   return 'Nothing has been deleted, or it has already been emptied.';
+  if(UI.folder==='archive') return 'Nothing archived yet.';
+  if(UI.folder==='drafts')  return 'Chits you start but do not send wait here.';
+  if(UI.search || (typeof advActive==='function' && advActive())) return 'Try a different term, or clear the filters.';
+  return 'No chits here — try another tab.';
+}
 function renderRows(){
   const rows=visibleRows();
-  if(!rows.length) return listHeader()+`<div class="empty"><div class="big">📭</div><div class="t">Nothing in ${UI.selectMode?'the ticked states':cap(UI.state||'this view')}</div><div>${pgDone('list')?'No chits here — try another tab.':'More may be further down — Load more.'}</div></div>`+(pgDone('list')?'':pgFooter('list'));
+  if(!rows.length) return listHeader()+`<div class="empty"><div class="big">📭</div><div class="t">Nothing in ${esc(_emptyWhere())}</div><div>${esc(_emptyHint())}</div></div>`+(pgDone('list')?'':pgFooter('list'));
   return listHeader() + rows.map(rowGrid).join("") + pgFooter('list');
 }
 function toggleSel(id){UI.selected.has(id)?UI.selected.delete(id):UI.selected.add(id);paintRowsOnly();updateSelBar();}
