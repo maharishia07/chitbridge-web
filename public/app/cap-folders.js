@@ -496,10 +496,18 @@ async function _ruleDelete(id){
 }
 
 function _fldFolderName(id){ var f = (UI.folders || []).find(function(x){ return x.folder_id === id; }); return (f && f.name) || 'a folder'; }
-function _ruleRow(r){
+/* ⚠️ THE ORDINAL IS NOT DECORATION. The pane promises "they run in order, and the first match wins" — a promise
+   that is TRUE (the server reads ORDER BY sort, created_at and match.firstMatch stops at the first hit) but was
+   invisible: a stack of identical cards gives the reader no way to tell WHICH rule wins when two overlap, which
+   is the single question this list exists to answer. Numbering them makes the running order readable.
+   ⚠️ The order is not yet EDITABLE — see backlog 32. Showing it is still strictly better than hiding it: a user
+   who can see that rule 1 beats rule 3 can fix the conflict by rewriting a condition, which they cannot do while
+   the precedence is guesswork. */
+function _ruleRow(r, i){
   var terms = Object.keys(r.when || {}).map(function(k){ return '<span style="font-family:ui-monospace,Menlo,monospace;font-size:11.5px">' + esc(k) + '</span> <b>' + esc(String(r.when[k])) + '</b>'; }).join(' <span style="color:var(--grey)">and</span> ');
   return '<div style="border:1px solid var(--line);border-radius:9px;padding:11px 13px;margin-bottom:8px;background:#fff">'
     + '<div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap">'
+    + '<span title="Runs ' + (i === 0 ? 'first' : 'after the ' + i + ' above') + '" style="flex:0 0 auto;min-width:20px;height:20px;border-radius:5px;background:var(--paper);border:1px solid var(--line);color:var(--grey);font-size:11px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;font-variant-numeric:tabular-nums">' + (i + 1) + '</span>'
     + '<label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" data-testid="rule-enabled" ' + (r.enabled ? 'checked' : '') + ' onchange="ruleToggle(\'' + esc(r.rule_id) + '\',this.checked)"><span style="font-weight:700;font-size:13px">' + esc(r.name || 'Rule') + '</span></label>'
     + '<span style="margin-left:auto;font-size:11px;color:#c0453b;cursor:pointer" onclick="ruleDelete(\'' + esc(r.rule_id) + '\')">Delete</span></div>'
     /* ⚠️ AT TRACK LEVEL A RULE MUST NAME ITS DESTINATION. "file here" is only meaningful standing inside the
@@ -524,12 +532,14 @@ function _folderRulesPane(){
        ? ('Every rule on <b>' + (_trk === 'order' ? 'Order' : 'Task') + '</b>, in the order they run. '
           + '⚠️ Rules only conflict with <b>each other</b> — two folders both claiming supplier invoices is invisible from inside either one, which is why they are listed together here.')
        : 'A rule files <b>new arrivals</b> into this folder automatically. ')
-    + ' ⚠️ It only <b>files</b> — it never changes a chit’s status, value or counterparty. Filing is a view on your own copy; anything more belongs to a person.</div>';
+    + ' ⚠️ It only <b>files</b> — it never changes a chit’s status, value or counterparty. Filing is a view on your own copy; anything more belongs to a person.'
+    + (rules.length > 1 ? ' They run <b>in the numbered order</b> and the first one that matches wins — the rest never see that chit.' : '')
+    + '</div>';
 
   if (_FLD.rulesNote) out += '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;font-size:11.5px;color:#6b5a36;margin-bottom:9px">' + esc(_FLD.rulesNote) + '</div>';
   if (_FLD.err) out += '<div style="color:#c0453b;font-size:12px;margin-bottom:8px">' + esc(_FLD.err) + '</div>';
 
-  out += rules.length ? rules.map(_ruleRow).join('') : '<div style="color:var(--grey);font-size:12.5px;padding:6px 0 12px">No rules yet. Everything arrives unfiled until you add one.</div>';
+  out += rules.length ? rules.map(function(r, i){ return _ruleRow(r, i); }).join('') : '<div style="color:var(--grey);font-size:12.5px;padding:6px 0 12px">No rules yet. Everything arrives unfiled until you add one.</div>';
 
   /* ⚠️ NO "ADD A RULE" AT TRACK LEVEL, and this is a real constraint rather than an omission: a rule's whole
      definition is "file into THIS folder", so from the track there is no destination to write down. Offering the
