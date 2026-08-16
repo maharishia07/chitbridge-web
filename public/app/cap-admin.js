@@ -12,6 +12,11 @@ if (typeof EP !== 'undefined') { Object.assign(EP, {
      (guard-static check 1), and MIS must not depend on the messages capability having been opened first —
      Friction counts unattended messages whether or not you have ever visited Messages. */
   misMsgs: {m:'GET', p:'/api/folders/messages', ok:'y'},
+  /* ⭐ THE SERVER'S MEASUREMENT (backlog 29). MIS was the THIRD implementation of open/overdue/ageing/unread;
+     lib/measure.js already served the folder pane and the counterparty scorecard. This makes it three consumers
+     of one definition rather than two definitions. ⚠️ Above all it brings OVERDUE, which MIS simply did not have
+     — the screen titled "What is stuck?" did not know what late meant. */
+  misMetrics: {m:'GET', p:'/api/folders/mis', ok:'y'},
 }); }
 // ── TRADE DOCUMENTS VAULT — the recurring inputs a business provides ONCE that pre-fill every authority form. Grouped;
 // matches the backend whitelist (lib/profile.js VAULT_SCHEMA). Gather here → forms are ~70% pre-filled thereafter. ──
@@ -380,6 +385,36 @@ function _misAgeing(m){
   return '<div class="mislbl" style="margin-top:16px">Ageing · how long they have waited</div>'
     + '<div class="misageing">' + cells + '</div>';
 }
+/**
+ * ⭐⭐ OVERDUE — the number MIS did not have (backlog 29).
+ *
+ * `overdue` is a POLICY, not an opinion: `overdue_days` is set in Settings and obeyed by the folder Metrics pane
+ * and the counterparty scorecard, both reading lib/measure.js. MIS — the screen titled *"What is stuck?"* — never
+ * mentioned it, so setting overdue to 3 days changed every other surface and left this one exactly as it was.
+ *
+ * ⚠️ IT SAYS THE THRESHOLD OUT LOUD. "6 overdue" is unfalsifiable on its own; "6 past 7 days" can be checked, and
+ * tells the reader that the number moves when the policy moves rather than when the business does.
+ *
+ * ⚠️ WHEN THE MEASUREMENT IS UNAVAILABLE IT SAYS SO. It does NOT fall back to counting in the browser — a silent
+ * second implementation is exactly the drift this replaced, and the fallback would be invisible precisely when
+ * the two disagree.
+ */
+function _misOverdue(m){
+  var s = m.srv;
+  if (!s || !s.all) {
+    return '<div class="misnote" style="margin-top:14px">⚠️ Overdue is unavailable — the server measurement could not be read. '
+      + 'It is deliberately <b>not</b> recomputed here: a second count that quietly disagreed with the folder pane would be worse than none.</div>';
+  }
+  var n = s.all.overdue || 0, d = s.overdue_days;
+  var mine = (s.received && s.received.overdue) || 0, theirs = (s.sent && s.sent.overdue) || 0;
+  return '<div class="mislbl" style="margin-top:16px">Overdue · past ' + esc(String(d)) + ' day' + (d === 1 ? '' : 's') + '</div>'
+    + '<div class="misstatus">'
+    + (n ? '<i class="dot" style="background:var(--disp)"></i> <b>' + n + ' overdue</b>'
+         : '<i class="dot" style="background:var(--ok)"></i> <b>Nothing overdue</b>')
+    + '<span class="misnote" style="margin-left:8px">· ' + mine + ' received · ' + theirs + ' sent</span></div>'
+    + '<div class="misnote" style="margin-top:4px">The threshold is the <b onclick="navTo(\'settings\')" style="cursor:pointer;color:var(--blue)">overdue policy</b> — '
+    + 'the same one the folder pane and the supplier scorecard obey, so all three move together.</div>';
+}
 function _misUnattended(m){
   const u = m.unattended || [];
   if (!u.length) return '<div class="misnote" style="margin-top:14px">✓ No unanswered messages.</div>';
@@ -403,7 +438,7 @@ function misFriction(m){
         ? '<i class="dot" style="background:var(--disp)"></i> <b>' + m.open_disputes + ' open dispute' + (m.open_disputes === 1 ? '' : 's') + '</b>'
         : '<i class="dot" style="background:var(--ok)"></i> <b>No open disputes</b>')
       + '<span class="misnote" style="margin-left:8px">· ' + m.chits + ' chits · ' + (m.open_disputes ? 'needs resolving' : 'nothing to resolve') + '</span></div>'
-    + _misAgeing(m) + _misUnattended(m)
+    + _misOverdue(m) + _misAgeing(m) + _misUnattended(m)
     + (rows
       ? '<div class="mislbl" style="margin-top:18px">The queue · oldest first</div>'
         + '<div class="misscroll"><table class="mistable"><thead><tr><th>Waiting on</th><th>Chit</th><th>Age</th><th>Value</th><th>Whose clock</th></tr></thead><tbody>' + rows + '</tbody></table></div>'
@@ -504,11 +539,19 @@ async function loadMIS(){
   try{
     /* ⚠️ BOTH SIDES, NOT JUST inbox. "Whose clock" is unanswerable from received copies alone — everything would
        read as mine. Merged by id so a self-chit, which lands in both, is counted once. */
-    const [inb, snt, dq, ac, sp, msgRaw] = await Promise.all([
+    /* ⚠️ The window is computed BEFORE the fetch because the server has to measure the same one — see `since`
+       below. A period selector on screen beside a figure measured over all time is worse than no selector. */
+    const _days = misPeriod() === 'all' ? null : parseInt(misPeriod(), 10);
+    const _since = _days ? new Date(Date.now() - _days * 864e5).toISOString() : undefined;
+    const [inb, snt, dq, ac, sp, msgRaw, srv] = await Promise.all([
       api('inbox'), api('sent').catch(function(){ return []; }),
       api('disputeQueue').catch(function(){ return {}; }),
       api('actors').catch(function(){ return []; }), api('supList').catch(function(){ return []; }),
-      api('misMsgs').catch(function(){ return []; })
+      api('misMsgs').catch(function(){ return []; }),
+      /* ⚠️ Fails SOFT to null, not to a client-computed substitute. If the measurement is unavailable the screen
+         must say the number is unavailable — quietly falling back to a second implementation is precisely the
+         drift this endpoint exists to end, and it would be invisible. */
+      api('misMetrics', { query: { since: _since } }).catch(function(){ return null; })
     ]);
     const seen = {}, chits = [];
     (inb || []).concat(snt || []).forEach(function(raw){
@@ -517,8 +560,10 @@ async function loadMIS(){
       chits.push(c);
     });
 
-    const days = misPeriod() === 'all' ? null : parseInt(misPeriod(), 10);
-    const cutoff = days ? (Date.now() - days * 864e5) : null;
+    /* ⚠️ ONE window, derived once above and reused — the client filter and the server's `since` must be the same
+       boundary or the two halves of this screen describe different fortnights. */
+    const days = _days;
+    const cutoff = _since ? Date.parse(_since) : null;
     const inWindow = chits.filter(function(c){ return !cutoff || (new Date(c.created_at)).getTime() >= cutoff; });
 
     let committed = 0, forecast = 0, dead = 0;
@@ -603,6 +648,10 @@ async function loadMIS(){
       waitTheirs: waiting.filter(function(w){ return w.who === 'theirs'; }).length,
       ageing: ageing, unattended: unattended,
       series: series, bucketName: bucketName, delta: delta > 0 ? delta : 0,
+      /* ⭐ THE SERVER'S MEASUREMENT (backlog 29) — the same lib/measure.js the folder pane and the counterparty
+         scorecard read, so all three now agree by construction rather than by coincidence. `srv` is null when
+         the call failed; every reader must handle that rather than fall back to a second implementation. */
+      srv: srv,
       periodLabel: misPeriod() === 'all' ? 'all time' : ('last ' + misPeriod() + 'd'),
       asOf: new Date().toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' }),
       currency: 'INR'
