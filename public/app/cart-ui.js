@@ -248,7 +248,10 @@
       .map(function (r) {
         var d = dataOf(r);
         var o = declOf(ns, r), u = unitPrice(ns, r), q = Number(s.sel[r.item_id]) || 1;
-        return { item_id: r.item_id, item: r.item, qty: q, name: nameOf(r),
+        /* ⭐ THE LINE CARRIES ITS CATEGORIES so an offer can target them (offers.js `applies_to.category`).
+           ⚠️ That field has existed in the engine all along and never matched anything, because nothing here
+           emitted one — a filter with no data to filter on fails closed and looks like a feature that works. */
+        return { item_id: r.item_id, item: r.item, qty: q, name: nameOf(r), categories: catgsOf(r),
                  unit: d.unit || 'unit', price: d.price, code: d.code || d.sku || null,
                  // The price that COUNTS for this line, and the line's own total — computed once, here, so no
                  // screen has to decide again whether an offer beats the catalogue.

@@ -465,6 +465,9 @@ function cbDefRuleFields(kind, sub){
     if (sub === 'price_range') { g.push({ k: 'min', label: 'Band minimum', num: true });
                                  g.push({ k: 'max', label: 'Band maximum', num: true }); }
     if (sub === 'shipping') g.push({ k: 'percent', label: '% off shipping (blank = free)', num: true });
+    /* ⭐ TARGETING — "10% off Paints" (backlog 20). The engine has read `applies_to.category` all along; nothing
+       ever SET it, and no cart line carried a category to match against, so the field was dead on both sides. */
+    g.push({ k: 'applies_to.category', label: 'Applies to', pick: 'category' });
     /* Conditions every offer kind shares — the ones offers.js evaluates in within(). */
     g.push({ k: 'valid_from', label: 'Valid from', ph: 'YYYY-MM-DD' });
     g.push({ k: 'valid_to',   label: 'Valid to',   ph: 'YYYY-MM-DD' });
@@ -497,11 +500,63 @@ async function cbDefEdit(id){
 }
 function cbDefSetSub(v){ CBDEF_FORM.sub = v; cbDefPaintForm(); }
 function cbDefSetField(k, v){ CBDEF_FORM[k] = v; }
+/**
+ * ⚠️ DOTTED KEYS WRITE NESTED, so a field can address `applies_to.category` without this form growing a
+ * translation layer between what it shows and what it stores. The alternative — a flat `applies_to_category` key
+ * remapped at save time — puts the offer's real shape in two places, and the engine only ever reads one of them.
+ * Clearing the last key of a branch removes the empty parent too: `applies_to:{}` is not the same as no
+ * `applies_to`, and offers.js treats a present-but-empty scope as a filter that matches nothing.
+ */
 function cbDefSetRule(k, v, num){
-  if (v === '' || v == null) delete CBDEF_FORM.rules[k];
-  else CBDEF_FORM.rules[k] = num ? Number(v) : v;
+  var R = CBDEF_FORM.rules, parts = String(k).split('.');
+  if (parts.length === 1) {
+    if (v === '' || v == null) delete R[k];
+    else R[k] = num ? Number(v) : v;
+    return;
+  }
+  var head = parts[0], tail = parts.slice(1).join('.');
+  if (v === '' || v == null) {
+    if (R[head]) { delete R[head][tail]; if (!Object.keys(R[head]).length) delete R[head]; }
+    return;
+  }
+  if (!R[head] || typeof R[head] !== 'object') R[head] = {};
+  R[head][tail] = num ? Number(v) : v;
+}
+function cbDefGetRule(k){
+  var R = CBDEF_FORM.rules, parts = String(k).split('.');
+  if (parts.length === 1) return R[k];
+  var head = R[parts[0]];
+  return (head && typeof head === 'object') ? head[parts.slice(1).join('.')] : undefined;
 }
 
+/**
+ * ⭐ A PICKER FIELD — currently only categories, which is what makes "10% off Grains" expressible at all.
+ *
+ * ⚠️ IT STORES THE definition_id, NOT THE NAME. An offer that said `applies_to.category = "Grains"` would stop
+ * matching the moment the category was renamed — and renaming is the one thing categories are designed to make
+ * safe. Same rule as a product's membership.
+ *
+ * ⚠️ IF THE SHELF IS EMPTY THE FIELD SAYS SO rather than rendering an empty select. A dropdown with one blank
+ * option reads as "this offer cannot be targeted", when the truth is "you have no categories yet".
+ */
+function cbDefPickHTML(x, v){
+  var list = (typeof _CATG !== 'undefined' && _CATG) ? _CATG : null;
+  if (list === null) {
+    if (typeof cbCatgLive === 'function') cbCatgLive().then(function(){ if (CBDEF_FORM) cbDefPaintForm(); });
+    return '<div class="cbdef-hint">reading your categories…</div>';
+  }
+  if (!list.length) {
+    return '<div class="cbdef-hint">No categories yet, so this offer applies to <b>everything</b>. '
+      + 'Make one under <b>Categories</b> to target it.</div>';
+  }
+  return '<select class="inp" data-testid="cbdef-pick-' + cbDefEsc(x.k) + '"'
+    + ' onchange="cbDefSetRule(\'' + x.k + '\',this.value)">'
+    + '<option value="">— everything —</option>'
+    + list.map(function (c) {
+        return '<option value="' + cbDefEsc(c.id) + '"' + (String(v) === String(c.id) ? ' selected' : '') + '>'
+          + cbDefEsc(c.name) + '</option>'; }).join('')
+    + '</select>';
+}
 function cbDefFormHTML(){
   var f = CBDEF_FORM; if (!f) return '';
   var A = CBDEF_AUTHORABLE[f.kind] || {};
@@ -536,7 +591,8 @@ function cbDefFormHTML(){
                         :                           'Spices') + '"'
     + ' oninput="cbDefSetField(\'name\',this.value)">'
     + (fields.length ? '<div class="cbdef-rules">' + fields.map(function (x) {
-        var v = f.rules[x.k]; v = (v == null ? '' : v);
+        var v = cbDefGetRule(x.k); v = (v == null ? '' : v);
+        if (x.pick) return '<label class="fl">' + cbDefEsc(x.label) + '</label>' + cbDefPickHTML(x, v);
         return '<label class="fl">' + cbDefEsc(x.label) + '</label>'
           + (x.area
               ? '<textarea class="inp" rows="4" placeholder="' + cbDefEsc(x.ph || '') + '"'

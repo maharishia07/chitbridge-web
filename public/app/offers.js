@@ -247,7 +247,21 @@
     return lines.filter(function (l) {
       if (s.item_ids && s.item_ids.indexOf(l.item_id) < 0) return false;
       if (s.skus && s.skus.indexOf(l.sku) < 0) return false;
-      if (s.category && String(l.category || '') !== String(s.category)) return false;
+      /**
+       * ⭐ A LINE HAS MANY CATEGORIES; THE OFFER NAMES ONE. It matches if the line carries that one.
+       *
+       * ⚠️ This read `l.category` — singular — and no caller has ever emitted that field, so `applies_to.category`
+       * matched nothing and every offer using it silently applied to no lines at all. It failed CLOSED, which is
+       * why nobody noticed: an offer that never fires looks like an offer nobody triggered.
+       *
+       * ⚠️ STILL FAILS CLOSED when the line carries no categories. An offer targeted at Grains must not fall
+       * back to "applies to everything" on an unclassified product — that is a discount nobody agreed to.
+       */
+      if (s.category) {
+        var lc = l.categories || (l.category ? [l.category] : []);
+        if (!lc.length) return false;
+        if (lc.map(String).indexOf(String(s.category)) < 0) return false;
+      }
       if (s.min_unit_price != null && l.unitPrice < Number(s.min_unit_price)) return false;
       if (s.max_unit_price != null && l.unitPrice > Number(s.max_unit_price)) return false;
       return true;
@@ -272,7 +286,20 @@
     input = input || {};
     var lines = (input.lines || []).map(function (l, i) {
       var qty = Number(l.qty) || 0, up = Number(l.unitPrice) || 0;
-      return { key: l.key == null ? String(i) : l.key, item_id: l.item_id, sku: l.sku, category: l.category,
+      /**
+       * ⚠️ THIS NORMALISER IS A WHITELIST, AND THAT IS WHERE THE TARGETING BUG LIVED. It rebuilds each line from
+       * named fields, so anything a caller sends that is not listed here is silently dropped before any rule
+       * sees it. `categories` was added to cart-ui's line and to eligibleFor, both correct, and the offer still
+       * never fired — because the field died in between, with no error and no missing-property anywhere to find.
+       *
+       * ⭐ A whitelist is right for an engine that has to be deterministic. But it means ADDING A FIELD IS A
+       * TWO-PLACE CHANGE, and the second place is invisible from either end. If a rule reads something a line
+       * carries, check here first.
+       */
+      var cats = Array.isArray(l.categories) ? l.categories.map(String)
+               : (l.category ? [String(l.category)] : []);
+      return { key: l.key == null ? String(i) : l.key, item_id: l.item_id, sku: l.sku,
+               category: l.category, categories: cats,
                qty: qty, unitPrice: up, gross: R2(qty * up) };
     });
     var ctx = {
