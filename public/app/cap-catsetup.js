@@ -101,7 +101,31 @@ function catsetDefListHTML(kind, one){
             + '<span class="da" onclick="catsetDefRetire(\'' + kind + '\',\'' + esc(d.id) + '\',\'' + esc(String(d.name).replace(/'/g, '')) + '\')">Retire</span>')
       + '</div>';
   };
-  return '<div class="catset-dlist">' + live.map(row).join('') + ret.map(row).join('') + '</div>';
+  /**
+   * ⚠️⚠️ ORPHANS ARE SURFACED, NEVER SILENTLY BROKEN (backlog 18). Narrowing a catalogue's selling method
+   * strands any order model already using a kind the new method cannot sell. Those definitions still exist and
+   * still work on lines that reference them — so the honest move is to SAY SO, not to hide them from the list
+   * (which would read as "deleted") and not to rewrite them (which would change what a product means without
+   * anyone asking).
+   * ⚠️ This REPORTS. It does not enforce, and deciding what should happen to an orphan is a product call that
+   * has deliberately not been made here.
+   */
+  var orphanNote = '';
+  if (kind === 'ordermodel' && typeof CBCatalogue !== 'undefined' && CBCatalogue.orphanModels) {
+    var meth = (typeof UI !== 'undefined' && UI.catf && UI.catf.method) || null;
+    var used = live.map(function(d){ return d.sub; }).filter(Boolean);
+    var orph = meth ? CBCatalogue.orphanModels(meth, used) : [];
+    if (orph.length) {
+      var uniq = orph.filter(function(v, i){ return orph.indexOf(v) === i; });
+      orphanNote = '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;font-size:11.5px;color:#6b5a36;margin-bottom:9px">'
+        + '⚠️ <b>' + uniq.length + ' order model' + (uniq.length === 1 ? '' : 's') + ' this catalogue can no longer sell</b> — '
+        + uniq.map(function(x){ return '<code>' + esc(x) + '</code>'; }).join(' · ')
+        + '. A <b>' + esc(meth) + '</b> catalogue does not support ' + (uniq.length === 1 ? 'it' : 'them') + '. '
+        + 'They still work on products that already use them; nothing has been changed or removed. '
+        + 'Either change the selling method back, or move those products onto a supported model.</div>';
+    }
+  }
+  return orphanNote + '<div class="catset-dlist">' + live.map(row).join('') + ret.map(row).join('') + '</div>';
 }
 
 function catsetSec(){ return CATSET.sec || 'columns'; }

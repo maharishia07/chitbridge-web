@@ -94,6 +94,55 @@
     { k: 'text',     label: 'Information only' },    { k: 'subscription', label: 'Subscription / recurring' },
     { k: 'quote',    label: 'Quote / tender' },
   ];
+  /**
+   * ⭐⭐ WHAT EACH SELLING METHOD CAN ACTUALLY SELL (backlog 18).
+   *
+   * Athi, 2026-08-16: *"so a catalogue choose what it wants to display, if you have not chosen range, your
+   * catalogue will not work for range?"* — checked, and the answer was worse than "it will not work": **nothing
+   * validated it at all.** A catalogue set to `text` could hold a product with a `pack` model and a step of 6.
+   * Nothing rejected it, nothing warned, and the two disagreed at ORDER TIME — i.e. the customer found out.
+   *
+   * ⚠️⚠️ `range` AND `qtyprice` MEAN TWO DIFFERENT THINGS, and this table is where that stops being invisible:
+   *   METHODS.range  — the whole CATALOGUE sells by price range      (one per catalogue)
+   *   MODELS.range   — this LINE is quantified min/max               (one per line)
+   * Same word, two levels. Naming them apart is a bigger change than this; naming the RELATIONSHIP is what was
+   * actually missing, and that is what lives here.
+   *
+   * ⚠️ THE FIRST CUT IS THE PIPELINE, and it is the reported bug: `text` and `form` are `payload` catalogues —
+   * they do not sell quantities at all, so they support NO order model. Everything else is `commerce`.
+   * ⚠️ `offer` is available wherever commerce is: an offer line is a price mechanism, not a quantity shape.
+   */
+  var METHOD_MODELS = {
+    cart:         ['count', 'measure', 'pack', 'range', 'pick', 'offer'],
+    qty:          ['count', 'measure', 'pack', 'range', 'pick'],          // no price → no offer
+    range:        ['count', 'measure', 'pack', 'range', 'pick', 'offer'],
+    qtyprice:     ['count', 'measure', 'pack', 'range', 'pick', 'offer'],
+    subscription: ['count', 'measure', 'pack'],                            // a recurring line is a fixed shape
+    quote:        ['count', 'measure', 'pack', 'range', 'pick', 'offer'],  // a quote may ask for anything
+    text:         [],                                                      // payload — nothing to quantify
+    form:         [],                                                      // payload
+  };
+  /**
+   * The models a method supports. ⚠️ FAILS OPEN: an unknown or absent method returns EVERY model, because the
+   * damage runs one way — hiding a model the catalogue genuinely supports silently removes a capability the
+   * owner already relies on, while showing one it does not is caught by the orphan check below. Never narrow on
+   * a guess.
+   */
+  function modelsForMethod(method) {
+    var m = METHOD_MODELS[method];
+    return m ? m.slice() : ['count', 'measure', 'pack', 'range', 'pick', 'offer'];
+  }
+  /**
+   * ⚠️ SURFACE, NEVER SILENTLY BREAK. A catalogue that narrows its method later would orphan products already
+   * using a dropped model. Those must be REPORTED, not quietly stopped from working — the same "not listed vs
+   * can't tell" distinction the supplier search makes. This returns them; deciding what happens to them is a
+   * product call and deliberately not made here.
+   */
+  function orphanModels(method, usedModels) {
+    if (!METHOD_MODELS[method]) return [];        // unknown method → nothing is provably orphaned
+    var ok = METHOD_MODELS[method];
+    return (usedModels || []).filter(function (u) { return ok.indexOf(u) < 0; });
+  }
   var FACETS = ['identity', 'variants', 'units', 'standards', 'media', 'bom', 'pricing', 'loop', 'feedback'];
   var PRICING_MODELS = ['fixed', 'range', 'tiered', 'market-ref', 'negotiated'];
   /**
@@ -581,7 +630,7 @@
     LEGS: LEGS, TYPES: TYPES, viaFor: viaFor, leg: leg,
     STD_SCHEMES: STD_SCHEMES, PRICE_BASIS: PRICE_BASIS, PRICE_BY: PRICE_BY, PRICE_ORIGIN: PRICE_ORIGIN,
     priceProvenance: priceProvenance, priceIsCheckable: priceIsCheckable,
-    DATATYPES: DATATYPES, METHODS: METHODS, FACETS: FACETS, PRICING_MODELS: PRICING_MODELS, UNITS: UNITS, UNIT_ALIASES: UNIT_ALIASES, PALETTE: PALETTE,
+    DATATYPES: DATATYPES, METHODS: METHODS, FACETS: FACETS, PRICING_MODELS: PRICING_MODELS, UNITS: UNITS, UNIT_ALIASES: UNIT_ALIASES, METHOD_MODELS: METHOD_MODELS, modelsForMethod: modelsForMethod, orphanModels: orphanModels, PALETTE: PALETTE,
     ensure: ensure, toBase: toBase, resolvePrice: resolvePrice, routeChain: routeChain,
     deriveComputeJob: deriveComputeJob, canonicalInputs: canonicalInputs, validate: validate,
     toJSONSchema: toJSONSchema,

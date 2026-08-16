@@ -479,7 +479,27 @@ function cbDefRuleFields(kind, sub){
 
 /** The sub-kinds a kind offers — READ FROM THE REGISTRY, so this file never holds the list. */
 function cbDefSubKinds(kind){
-  if (kind === 'ordermodel') return (typeof CBCart !== 'undefined' && CBCart.models) ? Object.keys(CBCart.models) : [];
+  if (kind === 'ordermodel') {
+    var all = (typeof CBCart !== 'undefined' && CBCart.models) ? Object.keys(CBCart.models) : [];
+    /**
+     * ⭐ NARROWED BY WHAT THE CATALOGUE CAN ACTUALLY SELL (backlog 18). Athi: *"so a catalogue choose what it
+     * wants to display, if you have not chosen range, your catalogue will not work for range?"* — it did not
+     * refuse, it did not warn, and the two disagreed at ORDER TIME, which is to say the customer found out.
+     * A `text` catalogue is a payload catalogue: it sells no quantities, so it offers no order models.
+     *
+     * ⚠️ FAILS OPEN, DELIBERATELY. If the catalogue's method is not loaded here we offer EVERYTHING, because the
+     * damage is asymmetric: hiding a model the catalogue genuinely supports silently removes a capability the
+     * owner already relies on and gives them no way to ask for it back, while offering one it does not support
+     * is caught downstream by the orphan check. Never narrow on a guess.
+     */
+    var method = (typeof UI !== 'undefined' && UI.catf && UI.catf.method) || null;
+    if (!method || typeof CBCatalogue === 'undefined' || !CBCatalogue.modelsForMethod) return all;
+    var ok = CBCatalogue.modelsForMethod(method);
+    var narrowed = all.filter(function(m){ return ok.indexOf(m) >= 0; });
+    /* ⚠️ A method that supports NOTHING still returns nothing — that is the point for `text`/`form`, and the
+       caller shows why rather than rendering an empty picker with no explanation. */
+    return narrowed;
+  }
   if (kind === 'offer')      return (typeof CBOffers !== 'undefined' && CBOffers.kinds) ? CBOffers.kinds : [];
   return [];
 }
@@ -488,6 +508,14 @@ var CBDEF_FORM = null;   // { kind, sub, name, note, rules, id, version }
 
 function cbDefNew(kind){
   var subs = cbDefSubKinds(kind);
+  /* ⚠️ AN EMPTY PICKER MUST EXPLAIN ITSELF. A `text`/`form` catalogue supports no order models at all, and a
+     form offering nothing with no reason reads as broken rather than as correct. Say which setting caused it
+     and where to change it — the alternative is the owner concluding the feature is missing. */
+  if (kind === 'ordermodel' && !subs.length) {
+    var meth = (typeof UI !== 'undefined' && UI.catf && UI.catf.method) || 'this';
+    toast('A ' + meth + ' catalogue does not sell quantities, so it has no order models. Change the selling method in Catalogue setup first.');
+    return;
+  }
   CBDEF_FORM = { kind: kind, sub: subs[0] || '', name: '', note: '', rules: {}, id: null };
   cbDefPaintForm();
 }
