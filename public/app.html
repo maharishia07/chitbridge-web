@@ -5762,7 +5762,7 @@ function taskPanel(){
   if(UI.search) _chips.push('🔍 '+esc(UI.search));
   if(advActive()) _chips.push('▽ filtered');
   const foldedBar = (_folded && _chips.length)
-    ? `<div class="lhfolded" onclick="toggleLhFold()" title="Expand search, filters and tools">${_chips.map(c=>'<span class="fchip">'+c+'</span>').join('')}</div>` : '';
+    ? `<div class="lhfolded" onclick="toggleLhFold()" title="Show the search box, filter chips and the icon row">${_chips.map(c=>'<span class="fchip">'+c+'</span>').join('')}</div>` : '';
   const srchBar = `<div class="srch">🔍 <input placeholder="${isCust?'Search my orders':'Search chits, party, item'}" id="listsrch" value="${esc(UI.search||'')}" oninput="onSrch('list', this.value)"><span id="srchadv">${advBtnHtml()}</span></div>`;
   /* Built as a string first so a fold that leaves nothing behind drops the whole band — otherwise .lh keeps its
      10px padding and 1px border and the fold silently costs 21px of the 98px it just saved. */
@@ -6205,7 +6205,7 @@ function pgFooter(id){ const p=PG[id]; if(!p)return ''; const c=p.cfg.count();
   return '<div class="listend">— end of list —</div>'; }
 /* static footer for small, non-paginated lists (count + end marker, no Load more) */
 /* the Task/Order list bar */
-function pgPaintTotal(){ const lt=document.getElementById("listtotal"); if(!lt)return; lt.innerHTML='<span class="lttxt"><button class="colcog fold" onclick="event.stopPropagation();toggleLhFold()" title="'+(UI.lhFold?'Show search, filters and tools':'Fold search, filters and tools out of the way')+'">'+(UI.lhFold?'⌄':'⌃')+' filters</button>'+esc(pgTotalText('list'))+'</span><span class="lttools">'+sortPresetSelect()+'<button class="colcog" onclick="event.stopPropagation();toggleLegend()" title="Legend / key">🔑 key</button>'+(UI.legendOpen?listLegend():'')+'<button class="colcog" onclick="event.stopPropagation();toggleColMenu()" title="Choose columns">⚙ columns</button>'+(UI.colMenu?colChooser():'')+'</span>'; }
+function pgPaintTotal(){ const lt=document.getElementById("listtotal"); if(!lt)return; lt.innerHTML='<span class="lttxt"><button class="colcog fold" onclick="event.stopPropagation();toggleLhFold()" title="'+(UI.lhFold?'Show search, filters and tools':'Fold search, filters and tools out of the way')+'">'+(UI.lhFold?'⌄ show tools':'⌃ hide tools')+'</button>'+esc(pgTotalText('list'))+'</span><span class="lttools">'+sortPresetSelect()+'<button class="colcog" onclick="event.stopPropagation();toggleLegend()" title="Legend / key">🔑 key</button>'+(UI.legendOpen?listLegend():'')+'<button class="colcog" onclick="event.stopPropagation();toggleColMenu()" title="Choose columns">⚙ columns</button>'+(UI.colMenu?colChooser():'')+'</span>'; }
 function toggleLegend(){ UI.legendOpen=!UI.legendOpen; UI.colMenu=false; pgPaintTotal(); }
 /* The fold control lives in .listtotal because that row is ALWAYS rendered. The state tabs would have been the
    natural home, but stTabs is suppressed on drafts/trash/archive/order and whenever a search is active — the
