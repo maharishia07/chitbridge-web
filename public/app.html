@@ -712,7 +712,11 @@ img.attImg{object-fit:cover;display:block}
 .colmenu{position:absolute;right:10px;top:30px;z-index:6;background:#fff;border:1px solid var(--line);border-radius:9px;box-shadow:0 8px 24px rgba(0,0,0,.16);padding:8px 11px;display:flex;flex-direction:column;gap:5px;font-size:12px;text-transform:none;font-weight:400;color:var(--ink)}
 .colmenu label{display:flex;gap:7px;align-items:center;cursor:pointer;white-space:nowrap}
 .optchip.mini{font-size:9px;padding:0 5px}.optchip.mini.r{background:#fbeceb;color:#b4453f;border-color:#f0c9c6}
-.listtotal{display:flex;align-items:center;justify-content:space-between;position:relative}
+/* ⚠️ WRAPS INSTEAD OF OVERFLOWING. Fold toggle + count + sort + key + columns needs ~280px, and the list pane is
+   draggable down to 210 — below which the row spilled sideways out of its own pane. A control strip that cannot
+   fit must fold onto a second line; it must not decide the pane is wider than it is. */
+.listtotal{display:flex;align-items:center;justify-content:space-between;position:relative;flex-wrap:wrap;gap:4px 8px}
+.listtotal .lttools{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .lttools{position:relative;display:flex;align-items:center;gap:6px}
 .colcog{font-size:11px;color:var(--blue);font-family:inherit;border:0;background:none;cursor:pointer}
 .colcog:hover{text-decoration:underline}
