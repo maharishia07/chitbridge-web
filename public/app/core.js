@@ -25,7 +25,20 @@ function unwrap(j){
    * on entities with a full catalogue. One convention, applied to a response it was never designed for, quietly
    * disabled two features and produced not a single error message.
    */
-  if("token" in j || "my_disputes" in j || "header" in j || "has_catalogue" in j) return j; // auth / structured / compound -> whole, untouched
+  /**
+   * ⚠️ `searched` JOINS THE LIST FOR THE THIRD INSTANCE OF THIS EXACT BUG (2026-08-16, found by Athi within
+   * minutes of the deploy: *"find product is not finding the product"*).
+   *
+   * `/suppliers/availability` returns a COMPOUND — {q, results[], count, searched} — and the collapse below sees
+   * `results` and returns ONLY that array. `r.results` was then undefined at every call site, so a working
+   * endpoint answered "no supplier lists that" for every product on the shelf.
+   *
+   * ⭐ THE PATTERN IS NOW UNMISTAKABLE: a compound response whose array key happens to be on the collapse list
+   * loses everything else, silently, with no error anywhere. It has now disabled the catalogue overlay, the
+   * "which item?" sheet, and this. `supCatalogueFull` bypasses api() entirely for the same reason.
+   * ⚠️ IF YOU ADD AN ENDPOINT THAT RETURNS AN ARRAY BESIDE ANY OTHER KEY, IT BELONGS ON THIS LINE.
+   */
+  if("token" in j || "my_disputes" in j || "header" in j || "has_catalogue" in j || "searched" in j) return j; // auth / structured / compound -> whole, untouched
   for(const k of ["chits","messages","connections","requests","suppliers","items","results","actors"]) if(Array.isArray(j[k])){ const a=j[k]; for(const mk of ["total","page","limit"]) if(mk in j){ try{ Object.defineProperty(a, mk, {value:j[mk], enumerable:false, configurable:true, writable:true}); }catch(_){ a[mk]=j[mk]; } } return a; }
   if(j.entity) return j.entity;
   if(j.settings) return j.settings;

@@ -3563,17 +3563,21 @@ async function supFindRun(q){
   try{
     const r=await api('supAvailability',{query:{q:q}});
     if(String(UI._sfQ||'').trim().toLowerCase()!==needle) return;      // superseded while in flight
+    /* ⚠️ BOTH SHAPES. unwrap() collapses a response with a `results` array to the bare array unless the compound
+       is declared (core.js) — reading `r.results` alone is what shipped broken. Accepting either costs nothing
+       and means this cannot be re-broken by a change to a shared helper three files away. */
+    const rows = Array.isArray(r) ? r : ((r && r.results) || []);
     const byId={}; (UI.sups||[]).forEach(function(s){ byId[s.supplier_list_id]=s; });
-    UI._sfRes=(r.results||[]).map(function(x){
+    UI._sfRes=rows.map(function(x){
       return { sup: byId[x.supplier_list_id] || { supplier_list_id:x.supplier_list_id, display_name:x.display_name,
                                                   bridge_id:x.bridge_id, nickname:x.nickname, preferred:x.preferred },
-               state: x.state, err: x.error,
+               state: x.state, err: x.error, more: x.more || 0,
                /* The card reads `d.name/price/unit` off `item_data||p`, so a flat row already satisfies it. */
                hits: x.hits || [],
                /* Only ever read for the supplier's currency — keep that, drop the rest of the catalogue. */
                cat: { shop:{ currency:x.currency } } };
     });
-    UI._sfDone=UI._sfTotal=(r.searched!=null?r.searched:UI._sfRes.length);
+    UI._sfDone=UI._sfTotal=((r && r.searched!=null) ? r.searched : UI._sfRes.length);
     UI._sfBusy=false; paintSupFind();
     return;
   }catch(e){
@@ -3638,6 +3642,10 @@ function supFindBodyHTML(){
             const cur=(r.cat&&r.cat.supplier&&r.cat.supplier.currency_code)||(r.cat&&r.cat.shop&&r.cat.shop.currency)||myCur();
             return '<div class="sfline"><span>'+esc(d.name||d.product||'item')+'</span><span class="mono">'
               +esc(fmtMoney(cbAmount(d.price),cur))+' / '+esc(d.unit||'unit')+'</span></div>'; }).join('')
+        /* ⚠️ SAY WHEN THE LIST IS CUT. Six per supplier is a display cap, and an unannounced cap reads as "that
+           is all they have" — the same class of lie as reporting an unreported store as zero. The server knows
+           the real overflow (`more`); only the fan-out fallback cannot, and there it is simply absent. */
+        + ((r.more>0) ? '<div class="sfline" style="color:var(--grey)"><span>+'+r.more+' more — <b>Open →</b> to see them all</span><span></span></div>' : '')
         + '</div>';
     };
     body = prog
