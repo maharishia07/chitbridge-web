@@ -193,8 +193,12 @@ console.log('\n5 · renderer hook parity (cart-ui → catalogue-ui)');
     const missingCls = classes.filter((c) => cart.includes(c) && !cat.includes(c));
     const gone = missing.concat(missingCls);
     /* `cart-checkout` lives in cart-ui's POPUP, which catalogue-ui does not replace — the popup is still
-       cart-ui's. Declared here so it is a decision rather than an oversight. */
-    const OK_TO_OMIT = ['cart-checkout'];
+       cart-ui's. Declared here so it is a decision rather than an oversight.
+       `pick-catg` is the same shape: the category strip is emitted by `pickerHTML`, the sticky search chrome.
+       A renderer swaps `listInto`/`barInto` — the LIST and the BAR — and never the chrome above them, so there
+       is nothing for catalogue-ui to mirror. ⚠️ If a renderer ever takes over the picker itself, delete this
+       entry rather than extending it; at that point the parity IS the thing being checked. */
+    const OK_TO_OMIT = ['cart-checkout', 'pick-catg'];
     const real = gone.filter((k) => OK_TO_OMIT.indexOf(k) < 0);
     if (real.length) {
       fail('catalogue-ui.js does not emit hooks cart-ui.js does: ' + real.join(', ')

@@ -551,6 +551,76 @@ async function loadProfile(){ const h=document.getElementById("profbody"); if(!h
   }catch(e){ h.innerHTML=scrErr(e); }
   finally { _profBusy = false; } }
 
+/**
+ * ⭐ THE FOUR NAMES, AND WHICH ARE COMPULSORY (Athi, 2026-08-16: *"need to mention about user name context, entity
+ * name, employee naming convention and end customer user name convention, what is must, what it means etc"*).
+ *
+ * ⚠️ EVERY RULE HERE IS READ OFF THE SERVER'S OWN VALIDATORS, not written from memory — `routes/entities.js`
+ * (display_name, user_id), `routes/actors.js` (display_name, actor_key), `lib/bridgeid.js` (the alphabet), and
+ * `routes/catalogue.js` (the customer row). If a validator changes and this text does not, this becomes the stale
+ * copy the rest of today was spent removing. **Cite the file when you edit it.**
+ */
+var NAMING = [
+  { who:'Your business', what:'Entity name', field:'display_name', must:'optional',
+    rule:'2–255 characters. Anything you like.',
+    why:'What counterparties see on a chit. Change it any time — nothing cites it, everything cites your ID.',
+    src:'routes/entities.js:34' },
+  { who:'Your business', what:'Bridge ID', field:'bridge_id', must:'given to you',
+    rule:'CB + 8 characters. Generated, never chosen.',
+    why:'Your permanent public address on the rail. ⚠️ The alphabet leaves out I, O, 0 and 1 on purpose — a '
+       + 'bridge ID has to survive being read aloud down a phone.',
+    src:'lib/bridgeid.js' },
+  { who:'Your business', what:'User ID', field:'user_id', must:'optional, but this is how people add you',
+    rule:'An email address, OR: at least 8 characters, letters/numbers/dots/dashes, no spaces. '
+       + 'Case-insensitive and unique across the platform.',
+    why:'The handle you give someone so they can add you as a supplier. Without one they need your Bridge ID.',
+    src:'routes/entities.js:452' },
+  { who:'Your people', what:'Co-assist name', field:'display_name', must:'REQUIRED',
+    rule:'At least 2 characters.',
+    why:'The name that appears against work they do — on an assignment, in a timeline, on a dispute.',
+    src:'routes/actors.js:120' },
+  { who:'Your people', what:'Co-assist key', field:'actor_key', must:'REQUIRED',
+    rule:'At least 4 characters, LOWERCASE LETTERS AND NUMBERS ONLY — no spaces, dots or dashes.',
+    why:'What they sign in with. Stricter than a User ID because it is typed at a counter, often in a hurry, '
+       + 'sometimes on a phone.',
+    src:'routes/actors.js:121' },
+  { who:'Your people', what:'Role', field:'actor_role', must:'optional',
+    rule:'Up to 100 characters. Free text — "counter", "driver", "accounts".',
+    why:'⚠️ A label, not a permission. What they may DO is the hat (view_only · act · audit · mis · manager), '
+       + 'set separately.',
+    src:'routes/actors.js:123' },
+  { who:'Your customers', what:'Customer name', field:'display_name', must:'as they give it',
+    rule:'No format rule — a customer types their own name at checkout.',
+    why:'They are identified by the phone or email they confirm with a one-time code, not by the name. '
+       + '⚠️ Two customers may share a name; they are still two records.',
+    src:'routes/catalogue.js:585' }
+];
+function namingRulesHTML(){
+  var open = !!UI._namingOpen;
+  var rows = NAMING.map(function(n){
+    var tone = /REQUIRED/.test(n.must) ? 'req' : /given to you/.test(n.must) ? 'auto' : 'opt';
+    return '<div class="namerow">'
+      + '<div class="namehd"><span class="namewhat">' + esc(n.what) + '</span>'
+      +   '<code class="namefield">' + esc(n.field) + '</code>'
+      +   '<span class="namemust ' + tone + '">' + esc(n.must) + '</span></div>'
+      + '<div class="namerule">' + esc(n.rule) + '</div>'
+      + '<div class="namewhy">' + n.why + '</div></div>';
+  });
+  /* Grouped by WHOSE name it is — the question is never "what is display_name", it is "what do I call my staff". */
+  var out = '', last = '';
+  NAMING.forEach(function(n, i){
+    if (n.who !== last){ out += '<div class="namegrp">' + esc(n.who) + '</div>'; last = n.who; }
+    out += rows[i];
+  });
+  return '<div class="namebox">'
+    + '<button class="namehead" data-testid="naming-toggle" onclick="UI._namingOpen=!UI._namingOpen;loadProfile()">'
+    +   '<span>' + (open ? '▾' : '▸') + '</span> What these names mean, and which are compulsory</button>'
+    + (open ? ('<div class="namebody">' + out
+    +   '<div class="misnote" style="margin-top:10px">⚠️ Names are labels; <b>IDs are identity</b>. Everything the '
+    +   'system stores points at an ID, so renaming is always safe — a chit, a supplier link or an adopted '
+    +   'definition follows the rename rather than breaking.</div></div>') : '')
+    + '</div>';
+}
 function profSecHTML(k, e){ var b = _profSecBody(k, e); return b ? (b + _capEnd()) : ''; }
 function _profSecBody(k, e){
   if (k === 'identity') return _misHead('Identity', 'Who you are on the rail — and how others find you.')
@@ -561,7 +631,8 @@ function _profSecBody(k, e){
       <label class="fl">Are you trading? <span style="color:var(--grey);font-size:11px">— whether you are open for business</span></label>
       <select class="inp" id="pf_bs">${opt(["open","closed","away"],e.business_status)}</select>
       <div class="misnote" style="margin-top:5px">⚠️ Separate from who can <b>see</b> your catalogue — that lives under <b onclick="profSetSec('storefront')" style="cursor:pointer;color:var(--blue)">Storefront</b>.</div>
-      <div class="err" id="pf_err"></div><button class="composebtn" style="margin-top:11px" onclick="saveProfile()">Save profile</button>`;
+      <div class="err" id="pf_err"></div><button class="composebtn" style="margin-top:11px" onclick="saveProfile()">Save profile</button>`
+    + namingRulesHTML();
   if (k === 'storefront') return _misHead('Storefront', 'What customers see when they open your link.')
     + storefrontCardHTML(e);
   if (k === 'governance') return _misHead('Your rights', 'What this entity may do — resolved from the layers above it.')
@@ -1149,6 +1220,11 @@ function paintSettings(s, _daOpts){ const h=document.getElementById("setbody"); 
       <label class="fl" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="st_av" ${s.all_task_visible?'checked':''}> All tasks visible to all co-assists</label>
       <label class="fl" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="st_ar" ${s.auto_return_on_short_break?'checked':''}> Auto-return tasks on short break</label>
       <div class="err" id="st_err"></div><button class="composebtn" style="margin-top:9px" onclick="saveSettings()">Save settings</button></div>`
+      /* Model A: co-assist naming is DECLARED in Profile → Identity (NAMING). This is a pointer, never a copy. */
+      + '<div class="misnote" style="margin-top:10px">What to call a co-assist — what is required, and why the '
+      + 'sign-in key is stricter than a User ID — is set out under '
+      + '<a href="#" onclick="navTo(\'profile\');profSetSec(\'identity\');UI._namingOpen=true;return false">'
+      + 'Profile → Identity</a>.</div>'
       + autoAssignCard(s,_daOpts) + aiSettingsCard();
     else if (k === "policy") out = _misHead('Policy', 'Rules that govern your own records.')
       + policyFlagsCard()
@@ -1378,8 +1454,17 @@ async function chBind(channel){
 /* ⚠️ CONFIRMED WHEN TURNING IT ON, not when turning it off. Switching it on changes what happens while nobody is
    watching, which is exactly the kind of change that should be read once before it takes effect. Switching it off
    only ever means "back to a person pressing Raise" — nothing to warn about. Repaints from the server either way. */
-async function chSetAutoRaise(id, on){
-  if(on && !confirm('Raise messages on this line automatically?\n\nA chit will appear in your Task list without anyone present. It is an inquiry — a record, not an obligation — and it still says the sender is unverified.\n\nAnything the co-assist cannot read stays in Intake for you.')){ await loadChannels(); return; }
+function chSetAutoRaise(id, on){
+  if(!on) return _chSetAutoRaise(id, false);
+  confirmAsk('Raise messages on this line automatically?',
+    'A chit will appear in your Task list <b>without anyone present</b>. It is an inquiry — a record, not an '
+    + 'obligation — and it still says the sender is unverified.'
+    + '<div style="margin-top:7px">Anything the co-assist cannot read stays in <b>Intake</b> for you.</div>',
+    'Turn it on', function(){ _chSetAutoRaise(id, true); });
+  /* ⚠️ The toggle already moved on screen. Cancelling must put it back, and only a reload knows the real state. */
+  loadChannels();
+}
+async function _chSetAutoRaise(id, on){
   try{ await api('channelAutoRaise',{params:{id:id}, body:{on:!!on}}); await loadChannels(); }
   catch(e){ toast((e&&e.message)||'Could not change that.', true); await loadChannels(); }
 }
@@ -1387,8 +1472,13 @@ async function chSetTemplate(id, name, state){
   try{ await api('channelTemplate',{params:{id:id}, body:{name:name, state:state}}); await loadChannels(); }
   catch(e){ toast((e&&e.message)||'Could not update the template.', true); }
 }
-async function chUnbind(id){
-  if(!confirm('Unbind this address?\n\nMessages sent to it will stop reaching your intake inbox. Captures you have already received are untouched.')) return;
+function chUnbind(id){
+  confirmAsk('Unbind this address?',
+    'Messages sent to it will <b>stop reaching your intake inbox</b>.'
+    + '<div style="margin-top:7px">Captures you have already received are untouched.</div>',
+    'Unbind', function(){ _chUnbind(id); }, true);
+}
+async function _chUnbind(id){
   try{ await api('channelUnbind',{params:{id:id}}); await loadChannels(); }
   catch(e){ toast((e&&e.message)||'Could not unbind that.', true); }
 }

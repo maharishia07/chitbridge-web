@@ -261,17 +261,110 @@
       });
   }
 
+  /* ── categories ──────────────────────────────────────────────────────────────────────────────────────────────
+   * ⚠️ THE STATE IS `s.catg`, NOT `s.cat`. `s.cat` is the CATALOGUE and has been since this file was written —
+   * naming the category filter `cat` would have silently replaced every screen's product list with a string.
+   * The near-miss is the whole reason this comment is here.
+   *
+   * ⭐ A CATEGORY IS STORED AS A definition_id AND ONLY EVER AS A definition_id (BACKLOG 15: *"Store the
+   * `definition_id`, never the name. Refer, do not copy"*). The label comes from the `categories` map the host
+   * passes in — so renaming a category in Definitions renames it everywhere, which is the entire point of a
+   * definition. ⚠️ If no map is supplied the id itself is shown rather than nothing: an unresolved reference
+   * should look wrong, not look absent.
+   */
+  /* ⚠️ A NAMED SENTINEL, and not a leading space. My first cut used `' none'` — written twice — and BOTH spaces
+     serialised as NUL bytes, which `node --check` passes and only the static guard catches. One constant now:
+     no second literal to get wrong, and no whitespace to be eaten. A definition_id can never collide with it. */
+  var CATG_NONE = '__none';
+  function catgOf(r) { var d = dataOf(r); return d.category || d.category_id || ''; }
+  /**
+   * ⭐⭐ A definition_id IS MEANINGLESS ACROSS AN ENTITY BOUNDARY, and this is where that stops being theory.
+   *
+   * On YOUR catalogue the host passes `categories` — your live definitions — and an id resolves to a name. On a
+   * SUPPLIER's or a network peer's catalogue it cannot: their category is their definition, in their entity, and
+   * we have no right to read it. So the published item may carry `category_name` as a VALUE beside the id, and
+   * that value is what a counterparty reads.
+   *
+   * ⚠️ That is not a workaround, it is [[reference-cb-core-principle]] applied to a label: a reference is only
+   * resolvable inside the entity that owns it, so anything that must survive the crossing travels as a copy.
+   * The id stays for the owner (rename follows); the name travels for everyone else (rename does not follow, and
+   * must not — a counterparty's screen should not silently relabel itself).
+   */
+  function catgLabel(ns, r, id) {
+    var m = opt(ns, 'categories', null);
+    /* ⚠️ A FUNCTION IS ALLOWED, and compose needs it. Options are captured once at create(); the shelf arrives
+       later, on the same async trip as the offers. A captured `null` would stay null for the life of the cart
+       and every chip would read as a raw id. A getter is read at paint time, so late is fine. */
+    if (typeof m === 'function') { try { m = m(); } catch (e) { m = null; } }
+    if (m && m.length) { for (var i = 0; i < m.length; i++) if (String(m[i].id) === String(id)) return m[i].name; }
+    var carried = r ? dataOf(r).category_name : null;
+    return carried ? String(carried) : String(id);
+  }
+  /** Label without a row to hand — the empty-state message. Reads the tally so it says the same word the chip does. */
+  function catgName(ns, id) {
+    var t = catgTally(ns);
+    for (var i = 0; i < t.length; i++) if (String(t[i].id) === String(id)) return t[i].name;
+    return String(id);
+  }
+  /** Counts come from the CATALOGUE, never from the filtered rows — a chip that recounts itself as you filter is
+   *  a chip that reads 0 next to the list it is showing. */
+  function catgTally(ns) {
+    var s = C[ns]; if (!s) return [];
+    var all = rowsOf(s.cat), seen = {}, label = {}, order = [], none = 0;
+    for (var i = 0; i < all.length; i++) {
+      if (all[i].type === 'product') continue;
+      var c = catgOf(all[i]);
+      if (!c) { none++; continue; }
+      if (seen[c] === undefined) { seen[c] = 0; order.push(c); label[c] = catgLabel(ns, all[i], c); }
+      seen[c]++;
+    }
+    var out = order.map(function (c) { return { id: c, name: label[c], n: seen[c] }; });
+    out.sort(function (a, b) { return a.name.localeCompare(b.name); });
+    /* ⭐ Athi, 2026-08-16: *"uncategorised chip when count above zero"*. Below zero it is not a category anyone
+       needs to be told about; above zero it is the only chip that tells you there is tidying to do. It sorts LAST
+       because it is a gap in the data, not a section of the shelf. */
+    if (none) out.push({ id: CATG_NONE, name: 'Uncategorised', n: none, none: true });
+    return out;
+  }
+  function catgSet(ns, v) {
+    var s = C[ns]; if (!s) return;
+    s.catg = (s.catg === v) ? '' : v;          // tapping the active chip clears it — no separate "All" to hunt for
+    paintCatgs(ns); paintList(ns);
+  }
+  /** ⚠️ Its own element, repainted on its own. Repainting the sticky row would take the search input — and the
+   *  caret inside it — with it, which is the same trap documented on pickerHTML. */
+  function catgsHTML(ns) {
+    var s = C[ns]; if (!s) return '';
+    var t = catgTally(ns);
+    /* One category is not a choice, and zero is not a strip. Nothing on screen until there is something to pick. */
+    if (t.length < 2) return '';
+    var a = accent(ns), sf = soft(ns);
+    var chip = function (id, label, n, on) {
+      return '<button type="button" class="cbpick-chip' + (on ? ' on' : '') + '"'
+        + (on ? ' style="background:' + sf + ';border-color:' + a + ';color:' + a + '"' : '')
+        + ' data-testid="pick-catg' + (id ? '' : '-all') + '"'
+        + ' onclick="CBCart.category(\'' + esc(ns) + '\',\'' + esc(id) + '\')">'
+        + esc(label) + (n == null ? '' : ' <span class="cbpick-chipn">' + n + '</span>') + '</button>';
+    };
+    return chip('', 'All', null, !s.catg)
+      + t.map(function (c) { return chip(c.id, c.name, c.n, s.catg === c.id); }).join('');
+  }
+  function paintCatgs(ns) { var el = doc(opt(ns, 'listEl') + '_catg'); if (el) el.innerHTML = catgsHTML(ns); }
+
   /* ── the visible rows ────────────────────────────────────────────────────────────────────────────────────── */
   function rows(ns) {
     var s = C[ns]; if (!s) return [];
-    var all = rowsOf(s.cat), q = (s.q || '').trim().toLowerCase();
-    if (!q) return all;                       // the list is ALWAYS the full list — the cart is a popup, not a filter
+    var all = rowsOf(s.cat), q = (s.q || '').trim().toLowerCase(), g = s.catg || '';
+    if (!q && !g) return all;                 // the list is ALWAYS the full list — the cart is a popup, not a filter
     var out = [], pend = null, took = false;
     for (var i = 0; i < all.length; i++) {
       var r = all[i];
       if (r.type === 'product') { pend = r; took = false; continue; }
-      var hay = (nameOf(r) + ' ' + (dataOf(r).unit || '') + ' ' + (dataOf(r).code || '')).toLowerCase();
-      if (hay.indexOf(q) === -1) continue;
+      if (g) { var c = catgOf(r); if (g === CATG_NONE ? !!c : String(c) !== g) continue; }
+      if (q) {
+        var hay = (nameOf(r) + ' ' + (dataOf(r).unit || '') + ' ' + (dataOf(r).code || '')).toLowerCase();
+        if (hay.indexOf(q) === -1) continue;
+      }
       if (pend && !took) { out.push(pend); took = true; }   // a matched variant keeps its heading, for context
       out.push(r);
     }
@@ -524,8 +617,16 @@
     var s = C[ns]; if (!s) return '';
     var rs = rows(ns), a = accent(ns);
     if (!rs.length) {
-      return '<div style="padding:34px 8px;color:#6a707a;font-size:13.5px;text-align:center">'
-        + esc(s.q ? 'Nothing matches that.' : opt(ns, 'noCatalogue', 'Nothing published yet.')) + '</div>';
+      /* ⚠️ SAY WHICH FILTER EMPTIED IT. "Nothing matches that" beside an active category chip sends someone to
+         retype a search term that was never the problem. */
+      var why = (s.q && s.catg) ? 'Nothing in ' + esc(catgName(ns, s.catg)) + ' matches that.'
+              : s.catg ? 'Nothing in ' + esc(catgName(ns, s.catg)) + ' yet.'
+              : s.q ? 'Nothing matches that.'
+              : esc(opt(ns, 'noCatalogue', 'Nothing published yet.'));
+      return '<div style="padding:34px 8px;color:#6a707a;font-size:13.5px;text-align:center">' + why
+        + (s.catg ? '<div style="margin-top:8px"><button type="button" class="cbpick-chip"'
+            + ' onclick="CBCart.category(\'' + esc(ns) + '\',\'\')">Show everything</button></div>' : '')
+        + '</div>';
     }
     return rs.map(function (r, i) {
       if (r.type === 'product') {
@@ -649,6 +750,10 @@
       +     (o.searchTestid ? ' data-testid="' + esc(o.searchTestid) + '"' : '')
       +     ' oninput="CBCart.search(\'' + esc(ns) + '\', this.value)">'
       +   '</div>'
+      /* ⭐ Athi, 2026-08-16: *"it should be below the search, scrolling"*. Inside the sticky block, so the way you
+         narrow the list stays reachable however far down the list you are. It renders NOTHING until there are at
+         least two categories, so every screen that has none looks exactly as it did before. */
+      +   '<div id="' + esc(listId) + '_catg" class="cbpick-catgs">' + catgsHTML(ns) + '</div>'
       + '</div>'
       + '<div id="' + esc(listId) + '"' + (o.listTestid ? ' data-testid="' + esc(o.listTestid) + '"' : '') + '>'
       +   listHTML(ns)
@@ -766,6 +871,24 @@
         + '.cbpick-row{display:flex;align-items:center;gap:8px;margin:0 0 7px}'
         + '.cbpick-row .cbpick-q{flex:1 1 auto;min-width:0;margin:0}'
         + '.cbpick-cartslot{flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-start;gap:3px}'
+        /* ⭐ THE CATEGORY STRIP — one scrolling row under the search, inside the sticky block.
+           ⚠️ `flex-wrap:nowrap` + `overflow-x:auto` ON PURPOSE. Wrapping is the obvious choice and it is wrong
+           here: a shop with 14 categories would push the product list two rows further down on every screen, and
+           this row is sticky — it would eat the list permanently. Scrolling costs one gesture and costs nothing
+           when there are three chips. `:empty` collapses the whole thing so a catalogue without categories has
+           not so much as a margin. */
+        + '.cbpick-catgs{display:flex;flex-wrap:nowrap;gap:6px;overflow-x:auto;overflow-y:hidden;'
+        + 'margin:0 0 8px;padding-bottom:2px;scrollbar-width:thin;-webkit-overflow-scrolling:touch}'
+        + '.cbpick-catgs:empty{display:none}'
+        + '.cbpick-catgs::-webkit-scrollbar{height:5px}'
+        + '.cbpick-catgs::-webkit-scrollbar-thumb{background:#d6dae0;border-radius:3px}'
+        + '.cbpick-chip{flex:0 0 auto;border:1px solid #e3e6ea;background:#fff;border-radius:20px;'
+        /* 28px and 12px: smaller than the cart chip beside the search (this narrows a list, it does not hold
+           money), still above the legibility floor. */
+        + 'height:28px;padding:0 11px;font:inherit;font-size:12px;color:#3c4350;cursor:pointer;white-space:nowrap}'
+        + '.cbpick-chip:hover{border-color:#c6ccd4}'
+        + '.cbpick-chip.on{font-weight:700}'
+        + '.cbpick-chipn{font-size:11px;opacity:.6;font-variant-numeric:tabular-nums}'
         /* The chip. Sized to sit level with the input beside it, never taller. */
         + '.cbcart-bar{display:inline-flex;align-items:center;gap:7px;border:1px solid #e3e6ea;border-radius:10px;'
         /* 40px, because `.inp` beside it is 40px. A chip two pixels short of the field it shares a row with reads
@@ -858,6 +981,8 @@
       group: function (i) { group(ns, i); return h; },
       clear: function () { clear(ns); return h; },
       search: function (q) { search(ns, q); return h; },
+      /* Repaint the chips alone — for a host whose category shelf lands after the picker is already on screen. */
+      paintCategories: function () { paintCatgs(ns); return h; },
       /* the cart popup */
       open: function () { open(ns); return h; },
       close: function () { close(ns); return h; },
@@ -961,6 +1086,8 @@
     lines: lines, units: units, total: total, qtyOf: qtyOf, unitPrice: unitPrice,
     add: add, dec: dec, setQty: setQty, setOffer: setOffer, offerState: offerState,
     group: group, clear: clear, search: search, addAdhoc: addAdhoc, models: MODELS,
+    /* `category` is the chips' inline onclick, the same front-door route as add/search. */
+    category: catgSet, categories: catgTally,
     open: open, close: close, checkout: checkout,
     barHTML: barHTML, listHTML: listHTML, popupHTML: popupHTML, pickerHTML: pickerHTML,
     /* ⚠️ EXPORTED SO catalogue-ui.js CANNOT GROW A SECOND MONEY FORMATTER. It briefly had one, and that is

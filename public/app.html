@@ -309,6 +309,27 @@
   .supacts{display:flex;align-items:center;gap:7px;margin-top:10px;flex-wrap:wrap}
   .supacts button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:5px 11px;font-size:12px;font-weight:700;cursor:pointer}
   .supacts button:hover{background:var(--paper)}
+  /* Naming conventions — a reference block, so it reads as a table you consult, not prose you wade through. */
+  .namebox{border:1px solid var(--line);border-radius:11px;margin-top:14px;overflow:hidden;background:#fff}
+  .namehead{display:flex;align-items:center;gap:8px;width:100%;text-align:left;border:0;cursor:pointer;
+            background:var(--paper);padding:10px 12px;font:inherit;font-size:12.5px;font-weight:700;color:var(--ink)}
+  .namehead:hover{background:#f2efe8}
+  .namebody{padding:10px 12px 12px}
+  .namegrp{font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);
+           margin:13px 0 5px;padding-bottom:3px;border-bottom:1px solid var(--line)}
+  .namegrp:first-child{margin-top:0}
+  .namerow{padding:8px 0;border-bottom:1px dashed var(--line)}
+  .namerow:last-child{border-bottom:0}
+  .namehd{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .namewhat{font-size:12.5px;font-weight:700;color:var(--ink)}
+  .namefield{font-family:'Space Mono';font-size:11px;background:var(--paper);border:1px solid var(--line);
+             border-radius:5px;padding:1px 6px;color:var(--grey)}
+  .namemust{font-size:11px;font-weight:700;border-radius:20px;padding:1px 9px}
+  .namemust.req{background:#fbeceb;color:#b4453f}
+  .namemust.opt{background:var(--paper);color:var(--grey);border:1px solid var(--line)}
+  .namemust.auto{background:#EDF2F9;color:var(--blue)}
+  .namerule{font-size:12.5px;color:var(--ink);margin-top:4px}
+  .namewhy{font-size:12px;color:var(--grey);line-height:1.55;margin-top:3px}
   .supacts button.supact-pri{background:var(--blue);border-color:var(--blue);color:#fff}
   .supacts button.supact-pri:hover{filter:brightness(1.06)}
   /* The sliding panel. .list is the positioning context; the panel covers it and animates in from the left. */
@@ -2288,10 +2309,11 @@ function trackIsOpen(t){ const o=UI.trackOpen||{}; return o[t]!==false; }   // d
 /* ⚠️ THE TRACK IS THE ANSWER, so the dialog does not ask for it. Creating under Order makes an Order folder. */
 async function newFolderIn(track){
   await ensureCap('folders');
-  const name=(typeof prompt==='function')?prompt('New '+(track==='order'?'Order':'Task')+' folder:'):'';
-  if(!name||!name.trim())return;
-  try{ await api('folderCreate',{body:{name:name.trim(), scope:track}}); await loadFolders(); renderApp(); }
-  catch(e){ toast((e&&e.message)||'Could not create the folder', true); }
+  promptAsk('New '+(track==='order'?'Order':'Task')+' folder', { label:'Folder name', okLabel:'Create' },
+    async function(name){
+      try{ await api('folderCreate',{body:{name:name, scope:track}}); await loadFolders(); renderApp(); }
+      catch(e){ toast((e&&e.message)||'Could not create the folder', true); }
+    });
 }
 function navTo(k){UI.nav=k;UI.drawer=false;UI.mdetail=false;UI.sel=null;UI.detail=null;if(k==="task")UI.folder="task";if(k==="order")UI.folder="order";if(["drafts","trash","archive"].indexOf(k)>=0)UI.folder=k;try{localStorage.setItem("cb_nav",k);}catch(_){}renderApp();}
 /* ATH-119 — Compose / self-chit. Compose = author your own chit (the "Chit"); bridging = addressing it to a counterparty.
@@ -2414,6 +2436,10 @@ function ccCartSync(){
             not find it: *"couldnt find cart symbol in the screen on top"*. A permanent, quiet target beats a
             helpful absence — you cannot learn where a thing is if it is only there sometimes. */
          checkoutLabel:'+ Add to the chit', cartTitle:'Lines to add', emptyHint:'Press + on what this chit is for',
+         /* ⭐ YOUR OWN catalogue, so your own definitions resolve the chips' labels. On a SUPPLIER's catalogue
+            this is deliberately absent — see cart-ui `catgLabel`: their ids are not ours to read, and the name
+            travels on the item instead. */
+         categories:function(){ return (typeof _CATG !== 'undefined') ? _CATG : null; },
          noCatalogue:'Your catalogue is empty.', onCheckout:ccAddPicked, onChange:ccRenderCatPick });
 }
 /* The modal is the lifetime of BOTH the cart and the step flow. Closing compose and leaving either behind is the
@@ -2473,6 +2499,9 @@ async function ccLoadOffers(){
       return Object.assign({ id: d.definition_id, kind: d.sub_kind, label: d.name }, d.rules || {});
     });
   } catch (e) { CC.offers = []; }
+  /* The category shelf, on the same trip and with the same tolerance for failure — it labels the chips above the
+     product list. Its own cache means the item form does not fetch it a second time. */
+  try { await cbCatgLive(); if(UI._ccCart) UI._ccCart.paintCategories(); } catch (e) {}
   ccRenderCatPick();
 }
 function ccSetLineNote(i, v){
@@ -3098,11 +3127,46 @@ function actorInviteModal(head, name, login, otp){
    <div class="mfoot"><button class="pri" onclick="closeModal()">Got it</button></div>`);
 }
 // In-app confirm (replaces browser confirm()). bodyHtml is raw HTML — esc() dynamic parts in the caller.
-function confirmAsk(title, bodyHtml, okLabel, onOk, danger){
+function confirmAsk(title, bodyHtml, okLabel, onOk, danger, onCancel){
   modal(`<div class="mhd"><div class="t">${esc(title)}</div></div>
    <div class="mbody"><div style="font-size:13px;line-height:1.55;color:var(--ink)">${bodyHtml}</div></div>
    <div class="mfoot"><button data-testid="confirm-cancel" onclick="closeModal()">Cancel</button><button class="${danger?'danger':'pri'}" id="_cfmok" data-testid="confirm-ok">${esc(okLabel||'Confirm')}</button></div>`);
-  const b=document.getElementById('_cfmok'); if(b)b.onclick=function(){ closeModal(); onOk(); };
+  UI._modalDismiss = onCancel || null;                       // fires on Cancel, Escape or the backdrop — see closeModal
+  const b=document.getElementById('_cfmok'); if(b)b.onclick=function(){ UI._modalDismiss=null; closeModal(); onOk(); };
+}
+/**
+ * ⭐ In-app PROMPT — the text-entry sibling of confirmAsk, and the replacement for every `prompt()` left in the
+ * app. Athi, on the supplier panel: *"the message appears from the browser it has to be system message"*.
+ *
+ * ⚠️ THE VALUE IS READ BEFORE closeModal(), IN THIS FUNCTION. That ordering is the whole reason this exists as a
+ * helper rather than as an input pasted into confirmAsk's body: confirmAsk closes the modal and THEN calls back,
+ * so a caller reading the field in its own callback reads an element that no longer exists — an empty string,
+ * every time, which looks exactly like a user who submitted a blank name. I wrote that bug once today.
+ *
+ * onOk receives the trimmed string, and is NOT called for an empty one — no caller has ever wanted "".
+ * `hint` is raw HTML (esc dynamic parts); `title` and `value` are escaped here.
+ */
+function promptAsk(title, opts, onOk, extra){
+  opts = opts || {}; extra = extra || {};
+  const ph = opts.placeholder||'', val = opts.value||'', ok = opts.okLabel||'Save', hint = opts.hint||'';
+  modal(`<div class="mhd"><div class="t">${esc(title)}</div></div>
+   <div class="mbody">
+     ${opts.label?`<label class="fl">${esc(opts.label)}</label>`:''}
+     <input class="inp" id="_pmpt" data-testid="prompt-input" value="${esc(val)}" placeholder="${esc(ph)}"
+            maxlength="${Number(opts.maxlength)||120}" autocomplete="off">
+     ${hint?`<div style="font-size:11.5px;color:var(--grey);margin-top:7px;line-height:1.5">${hint}</div>`:''}
+   </div>
+   <div class="mfoot"><button data-testid="prompt-cancel" onclick="closeModal()">Cancel</button>${extra.extraLabel?`<button id="_pmptx" data-testid="prompt-extra">${esc(extra.extraLabel)}</button>`:''}<button class="pri" id="_pmptok" data-testid="prompt-ok">${esc(ok)}</button></div>`);
+  UI._modalDismiss = extra.onCancel || null;                 // Cancel, Escape or the backdrop — see closeModal
+  const inp=document.getElementById('_pmpt'), b=document.getElementById('_pmptok');
+  const go=function(){ const v=((inp&&inp.value)||'').trim(); if(!v){ if(inp)inp.focus(); return; } UI._modalDismiss=null; closeModal(); onOk(v); };
+  if(b)b.onclick=go;
+  /* An optional third button, for the case where "no answer" is itself a valid answer and must be said out loud
+     rather than expressed by submitting an empty box. */
+  const x=document.getElementById('_pmptx'); if(x&&extra.onExtra)x.onclick=function(){ UI._modalDismiss=null; closeModal(); extra.onExtra(); };
+  if(inp){ inp.onkeydown=function(ev){ if(ev.key==='Enter'){ ev.preventDefault(); go(); } };
+    /* Focus AND select: a rename arrives pre-filled, and the first thing anyone does is replace it. */
+    setTimeout(function(){ inp.focus(); if(val) inp.select(); }, 60); }
 }
 // Legible deactivate/remove result — spells out every binding that was cleaned (tasks, cover both ways,
 // default assignee, dispute hand-offs) so nothing quietly dangles.
@@ -3269,7 +3333,8 @@ async function netApprove(id){ try{ await api("netApprove",{params:{id},body:{}}
 async function netDecline(id){ try{ await api("netDecline",{params:{id},body:{}}); toast(MSG.netDeclined()); loadNetwork(); }catch(e){ toast(MSG.fail("decline", e)); } }
 async function netSuspend(id){ try{ await api("netSuspend",{params:{id}}); toast(MSG.netSuspended()); loadNetwork(); }catch(e){ toast(MSG.fail("suspend", e)); } }
 async function netResume(id){ try{ await api("netResume",{params:{id}}); toast(MSG.netResumed()); loadNetwork(); }catch(e){ toast(MSG.fail("resume", e)); } }
-async function netDisconnect(id){ if(!confirm("Disconnect this edge? The child subtree detaches to its own root.")) return; try{ await api("netDisconnect",{params:{id},body:{settle:false}}); toast(MSG.netDisconnected()); loadNetwork(); }catch(e){ toast(/settle/.test(e.message)?MSG.settleFirst():MSG.fail("disconnect", e)); } }
+function netDisconnect(id){ confirmAsk('Disconnect this edge?','The child subtree <b>detaches to its own root</b>. Nothing is deleted — it stops hanging from here.','Disconnect',function(){ _netDisconnect(id); },true); }
+async function _netDisconnect(id){ try{ await api("netDisconnect",{params:{id},body:{settle:false}}); toast(MSG.netDisconnected()); loadNetwork(); }catch(e){ toast(/settle/.test(e.message)?MSG.settleFirst():MSG.fail("disconnect", e)); } }
 async function netRegisterSelf(){ try{ await api("netRegister",{body:{name:SESSION.entity||SESSION.name||"My entity", businessType:"Aggregator"}}); toast(MSG.netRegistered()); loadNetwork(); }catch(e){ toast(MSG.fail("register", e)); } }
 /* SUPPLIERS */
 /* SUPPLIERS — two-sided master/detail (Stage A). Same .panel/.list/.divider/.detail skeleton as task/order,
@@ -4467,7 +4532,7 @@ async function _cfRun(btn){
  * The decisions come from the dropdowns, NOT from the preflight's suggestions: what the person sees on screen is
  * exactly what is sent. The server re-reads the file and re-checks every decision, so nothing here is trusted.
  */
-async function _cfImport(btn){
+function _cfImport(btn){
   if(!UI._cf){ if(typeof toast==='function') toast('Check a file first.'); return; }
   var out = document.getElementById('cf_out');
   var sels = Array.prototype.slice.call(document.querySelectorAll('[data-cfcol]'));
@@ -4480,10 +4545,12 @@ async function _cfImport(btn){
   var creating = decisions.filter(function(d){ return d.action === 'create'; }).length;
   var using = decisions.filter(function(d){ return d.action !== 'ignore'; }).length;
   if(!using){ if(typeof toast==='function') toast('Every column is set to be left out.'); return; }
-  if(!confirm('Import using ' + using + ' column(s)'
-    + (creating ? ', adding ' + creating + ' new column(s) to your catalogue' : '')
-    + '?\n\nProducts are added or updated. Nothing is deleted.')) return;
-
+  confirmAsk('Import using ' + using + ' column' + (using===1?'':'s') + '?',
+    (creating ? 'It also adds <b>' + creating + ' new column' + (creating===1?'':'s') + '</b> to your catalogue.<div style="margin-top:7px">' : '<div>')
+    + 'Products are <b>added or updated</b>. Nothing is deleted.</div>',
+    'Import', function(){ _cfImportRun(btn, decisions, out); });
+}
+async function _cfImportRun(btn, decisions, out){
   var was = btn.textContent; btn.disabled = true; btn.textContent = 'Importing…';
   try{
     var r = await api('prodImport', { body:{ csv: UI._cf.csv, decisions: decisions, confirm: true } });
@@ -4699,19 +4766,28 @@ function prodStatusPick(id){
     + opt('redundant', 'Redundant', 'replaced by another item — needs to say which')
     + '<button class="btn" style="width:100%;margin-top:4px" onclick="closeModal()">Cancel</button>');
 }
-async function prodSetStatus(id, status){
-  let body = { status: status };
+function prodSetStatus(id, status){
+  /* ⚠️ ASKED FOR, NOT REQUIRED — "Not available" with no end is indistinguishable from retired to everyone
+     except the person who set it, and that person forgets. So the date is offered and a blank one is accepted,
+     which promptAsk does not do (it refuses empty). Hence the extra button rather than an empty submit. */
   if (status === 'unavailable') {
-    /* ⚠️ ASKED FOR, NOT REQUIRED. "Not available" with no end is indistinguishable from retired to everyone
-       except the person who set it — and that person forgets. */
-    const u = prompt('Back on which date? (YYYY-MM-DD — leave blank if you do not know)');
-    if (u && u.trim()) body.until = u.trim();
+    return promptAsk('Not available — until when?',
+      { label:'Back on which date?', placeholder:'YYYY-MM-DD', okLabel:'Set',
+        hint:'Leave it and press <b>I don’t know</b> if there is no date yet — the item still matches orders, '
+           + 'flagged as unable to ship.' },
+      function(u){ _prodStatus(id, status, { until:u }); },
+      { extraLabel:'I don’t know', onExtra:function(){ _prodStatus(id, status, {}); } });
   }
   if (status === 'redundant') {
-    const r = prompt('Replaced by which item? (the point of "redundant" is that there is a right answer)');
-    if (!r || !r.trim()) return toast('Redundant needs a replacement — use Retired if there is none');
-    body.replaced_by = r.trim();
+    return promptAsk('Replaced by which item?',
+      { label:'Replacement', okLabel:'Set',
+        hint:'The point of <b>redundant</b> is that there is a right answer. If there is none, use <b>Retired</b>.' },
+      function(r){ _prodStatus(id, status, { replaced_by:r }); });
   }
+  _prodStatus(id, status, {});
+}
+async function _prodStatus(id, status, extra){
+  let body = Object.assign({ status: status }, extra || {});
   try { const out = await api('prodStatus', { params: { id }, body: body });
     closeModal(); await loadCatalogue(); paintProdList(); paintProdDetail();
     toast((out && out.reads_as) ? out.reads_as : ('Status: ' + status));
@@ -4806,7 +4882,8 @@ async function saveNewProduct(){ const err=document.getElementById("ct_err"); if
   try{ const r=await api("prodAdd",{body:{item_data:data}}); const nid=(r&&r.item&&r.item.item_id)||null; toast("Product added ✓"); if(window.CBOffline)CBOffline.clearDraft('prod.new'); UI.prodMode='view'; UI.prodSel=nid; await loadCatalogue(); if(nid){ UI.prodSel=nid; paintProdList(); paintProdDetail(); } }catch(e){ if(err)err.textContent=(e&&e.message)||"Could not add the product — please try again."; } }
 async function saveProduct(id){ const err=document.getElementById("ct_err"); if(err)err.textContent=""; const p=(UI.prods||[]).find(x=>prodId(x)===id); const data=ctReadForm(pData(p)); if(!data.name){ if(err)err.textContent="Name is required."; return; }
   try{ await api("prodEdit",{params:{id},body:{item_data:data}}); toast("Product updated ✓"); UI.prodMode='view'; await loadCatalogue(); UI.prodSel=id; paintProdList(); paintProdDetail(); }catch(e){ if(err)err.textContent=(e&&e.message)||"Could not add the product — please try again."; } }
-async function delProduct(id){ if(!confirm("Delete this product? This cannot be undone.")) return; try{ await api("prodDel",{params:{id}}); UI.prodSel=null; UI.mdetail=false; toast(MSG.productDeleted()); await loadCatalogue(); }catch(e){ toast(MSG.fail("delete the product", e)); } }
+function delProduct(id){ confirmAsk('Delete this product?','This <b>cannot be undone</b>. Chits that already cite it keep their frozen copy of the line.','Delete',function(){ _delProduct(id); },true); }
+async function _delProduct(id){ try{ await api("prodDel",{params:{id}}); UI.prodSel=null; UI.mdetail=false; toast(MSG.productDeleted()); await loadCatalogue(); }catch(e){ toast(MSG.fail("delete the product", e)); } }
 /* MIS — computed client-side (no MIS route on the legacy backend) */
 /* misScreen + loadMIS → app/cap-admin.js (admin capability, lazy-loaded via ensureCap) */
 /* ============================================================================================
@@ -5109,7 +5186,14 @@ function resumeCompose(){ const h=document.getElementById("modalhost"); if(h)h.s
 function renderComposePill(){ var p=document.getElementById('composepill'); if(!p){ p=document.createElement('div'); p.id='composepill'; document.body.appendChild(p); } p.className='composepill'; p.innerHTML='<span onclick="resumeCompose()" style="cursor:pointer">✏️ Resume compose</span><span onclick="discardCompose()" title="Discard draft" style="cursor:pointer;opacity:.75;font-weight:800">✕</span>'; }
 function discardCompose(){ var p=document.getElementById('composepill'); if(p)p.remove(); CC={items:[],rcpts:[],fields:{}}; closeModal(); }
 function closeModal(){ const h=document.getElementById("modalhost"); if(h){ h.style.display=''; h.innerHTML=""; }
-  UI._composeModal=false; UI._composeMin=false; UI._draftId=null; UI._supplier=null; ccCartRelease(); const p=document.getElementById('composepill'); if(p)p.remove(); }
+  UI._composeModal=false; UI._composeMin=false; UI._draftId=null; UI._supplier=null; ccCartRelease(); const p=document.getElementById('composepill'); if(p)p.remove();
+  /**
+   * ⚠️ A DISMISS HOOK, BECAUSE THERE ARE THREE WAYS OUT AND ONLY ONE IS A BUTTON. Cancel, Escape and the backdrop
+   * all land here; wiring cleanup to the Cancel button alone leaves the other two leaking. confirmAsk/promptAsk
+   * set this so a caller can say what must happen when the answer is "no" however that no was given.
+   * It is cleared BEFORE it runs — the callback may open another modal, and re-entering would recurse.
+   */
+  const d=UI._modalDismiss; UI._modalDismiss=null; if(typeof d==='function'){ try{ d(); }catch(_){ } } }
 function quickStatus(){ const ids=needTarget(); if(!ids.length)return; MODALS.stat={ids,to:null};
   const opts=[["open","Open"],["act","Act"],["close","Close"]].map(([v,l])=>`<div class="optrow" data-v="${v}" onclick="pickStatus('${v}')"><span class="rdo"></span><div class="oc"><div class="on">${l}</div></div></div>`).join("");
   modal(`<div class="mhd"><div class="t">Change status</div><div class="s">${ids.length} chit${ids.length>1?'s':''}</div></div><div class="mbody">${opts}</div><div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="pri" id="mok" disabled onclick="confirmStatus()">Set status</button></div>`);
@@ -5160,8 +5244,11 @@ async function bulkRestore(){ const ids=actionTargets(); if(!ids.length){ toast(
   if(ids.length>1) showBusy('Restoring '+ids.length+' records…'); try{ let ok=0; for(const id of ids){ try{ await api("restore",{params:{id}}); ok++; }catch(_){} } UI.selected.clear(); UI.sel=null; UI.detail=null; UI.mdetail=false; await loadList(); toast(MSG.restored?MSG.restored(ok):(ok+" restored")); announce(ok+" record"+(ok===1?"":"s")+" restored"); } finally { hideBusy(); } }
 async function bulkUnarchive(){ const ids=actionTargets(); if(!ids.length){ toast("Tick some records first (☑), or open one."); return; }
   if(ids.length>1) showBusy('Unarchiving '+ids.length+' records…'); try{ let ok=0; for(const id of ids){ try{ await api("unarchive",{params:{id}}); ok++; }catch(_){} } UI.selected.clear(); UI.sel=null; UI.detail=null; UI.mdetail=false; await loadList(); toast(ok+" unarchived"); announce(ok+" record"+(ok===1?"":"s")+" unarchived"); } finally { hideBusy(); } }
-async function bulkPurge(){ const ids=actionTargets(); if(!ids.length){ toast("Tick some records first (☑), or open one."); return; }
-  if(!confirm("Delete "+ids.length+" item(s) permanently? This can't be undone. (Only drafts can be purged — sent/received chits stay.)")) return;
+function bulkPurge(){ const ids=actionTargets(); if(!ids.length){ toast("Tick some records first (☑), or open one."); return; }
+  confirmAsk('Delete '+ids.length+' item'+(ids.length===1?'':'s')+' permanently?',
+    "This <b>can't be undone</b>.<div style=\"margin-top:7px\">Only <b>drafts</b> can be purged — sent and received chits stay where they are, because the other party holds a copy.</div>",
+    'Delete', function(){ _bulkPurge(ids); }, true); }
+async function _bulkPurge(ids){
   if(ids.length>1) showBusy('Deleting '+ids.length+' records…');
   try{ let ok=0, blocked=0; for(const id of ids){ try{ await api("purgeChit",{params:{id}}); ok++; }catch(e){ blocked++; } }
   UI.selected.clear(); UI.sel=null; UI.detail=null; UI.mdetail=false; await loadList();
@@ -6087,7 +6174,8 @@ function openRaidReport(){ const host=document.getElementById("lbhost"); if(!hos
 async function toggleStar(id){ try{ const r=await api("star",{params:{id}}); const c=UI.rows.find(function(x){return x.id===id;}); if(c)c.star=!!(r&&r.star_flag); if(UI.detail&&UI.detail.id===id)UI.detail.star=!!(r&&r.star_flag); announce(((c&&c.code)||'Chit')+((c&&c.star)?' starred':' unstarred')); paintRowsKeepScroll(); }catch(e){ toast(MSG.fail("star", e)); } }
 async function markUnread(id){ try{ await api("markUnread",{params:{id}}); const c=UI.rows.find(function(x){return x.id===id;}); if(c)c.unread=true; toast("Marked unread"); announce(((c&&c.code)||'This chit')+' marked unread'); paintRowsKeepScroll(); }catch(e){ toast(MSG.fail("mark unread", e)); } }
 async function resumeDraft(id){ try{ const r=await api("chit",{params:{id}}); const h=(r&&r.header)||{}, det=(r&&r.detail)||{}; const allr=h.all_recipients||[]; const rcpts=allr.filter(function(x){return x.role!=='sender';}).map(function(x){ return {name:x.display_name, role:(x.role==='receiver'?'to':x.role), self:ccIsSelf(x.display_name), bridge:x.bridge_id||null}; }); const items=(det.line_items||[]).map(function(li){ return {particulars:li.particulars, unit:li.unit||'unit', price:+li.price||0, qty:+li.quantity||1}; }); const pri=(h.summary_json&&h.summary_json.priority_external)||'normal'; compose({draftId:id, subject:h.manual_subject||'', items:items, recipients:rcpts, priority:pri}); }catch(e){ toast(MSG.fail("open the draft", e)); } }
-async function purgeChit(id){ if(!confirm("Delete this draft permanently? This cannot be undone.")) return; try{ await api("purgeChit",{params:{id}}); toast("Draft deleted permanently"); UI.detail=null; UI.sel=null; await loadList(); renderApp(); }catch(e){ toast(MSG.fail("delete the draft", e)); } }
+function purgeChit(id){ confirmAsk('Delete this draft permanently?','This <b>cannot be undone</b>. A draft was never sent, so nobody else holds a copy of it.','Delete',function(){ _purgeChit(id); },true); }
+async function _purgeChit(id){ try{ await api("purgeChit",{params:{id}}); toast("Draft deleted permanently"); UI.detail=null; UI.sel=null; await loadList(); renderApp(); }catch(e){ toast(MSG.fail("delete the draft", e)); } }
 async function restoreChit(id){ try{ await api("restore",{params:{id}}); toast("Restored to active"); UI.detail=null; UI.sel=null; loadList(); }catch(e){ toast(MSG.fail("restore", e)); } }
 async function unarchiveChit(id){ try{ await api("unarchive",{params:{id}}); toast("Unarchived"); UI.detail=null; UI.sel=null; loadList(); }catch(e){ toast(MSG.fail("unarchive", e)); } }
 async function forwardChit(id){ try{ const r=await api("chit",{params:{id}}); const h=(r&&r.header)||r||{}; const det=(r&&r.detail)||{}; const items=(det.line_items||[]).map(function(li){ return {particulars:li.particulars||'item', unit:'unit', price:+li.price||0, qty:+li.quantity||0}; }); const subj=(h.manual_subject||h.auto_subject||'chit'); compose({items:items, subject:'Fwd: '+subj, forwardFrom:id}); }catch(e){ toast(MSG.fail("forward", e)); } }

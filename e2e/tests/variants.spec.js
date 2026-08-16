@@ -208,14 +208,23 @@ test.describe('variants', () => {
      *
      * A confirm() in the app is a real step a person takes; a spec that drives the app has to take it too.
      */
-    page.on('dialog', (d) => d.accept());
-
+    /**
+     * ⚠️ THE CONFIRM IS NO LONGER A BROWSER DIALOG (2026-08-16) — addSupplier() goes through the app's own
+     * confirmAsk() modal now, so `page.on('dialog')` became a no-op: nobody pressed "Add supplier", no row
+     * appeared, and this failed with "Beta was added but no row for them appeared". Which was TRUE — Beta was
+     * never added.
+     *
+     * ⚠️ THIS SPEC WAS MISSED when suppliers.spec and order-steps.spec were converted, and only the FULL
+     * regression found it — the scoped set does not include variants. Worth remembering: a change to a shared
+     * interaction has to be swept across every spec that drives it, not just the ones named after the screen.
+     */
     await page.getByTestId('nav-suppliers').click();
     await expect(page.getByTestId('sup-add-input')).toBeVisible();
 
     // Connect to Beta by email — create-or-reuse, so re-runs are fine.
     await page.getByTestId('sup-add-input').fill(SHOP.email);
     await page.getByTestId('sup-add').click();
+    await page.getByTestId('confirm-ok').click();
     /**
      * ⚠️ BETA BY NAME, NOT `.first()`. This spec is titled "open Beta" and asserts Beta's products, but it used
      * to click whichever row sorted first — and the list is sorted by ★ Preferred, over an account that every

@@ -247,7 +247,13 @@ function catfStandardsModal(){
 function catfSetPurpose(v){ if (UI.catf) { UI.catf.catalogue.story = v; _catfSave(); } }
 function catfSetMethod(v){ if (UI.catf) { UI.catf.method = v; _catfSave(); renderApp(); } }
 function catfToggleFacet(k){ if (!UI.catf) return; UI.catf.facets = _catfFacets(UI.catf); UI.catf.facets[k] = !UI.catf.facets[k]; _catfSave(); renderApp(); }
-function catfReset(){ if (typeof confirm === 'function' && !confirm('Start the catalogue setup over? (items are not affected)')) return; UI.catf = null; UI.catfDraft = null; UI.catfPick = ''; try { localStorage.removeItem(_catfKey()); } catch (e) {} _catfSetDirty(true); _catfQueuePush(); renderApp(); }
+function catfReset(){
+  confirmAsk('Start the catalogue setup over?',
+    'The setup choices are cleared and you begin again.'
+    + '<div style="margin-top:7px">Your <b>items are not affected</b> — nothing in the catalogue is removed.</div>',
+    'Start over', _catfReset, true);
+}
+function _catfReset(){ UI.catf = null; UI.catfDraft = null; UI.catfPick = ''; try { localStorage.removeItem(_catfKey()); } catch (e) {} _catfSetDirty(true); _catfQueuePush(); renderApp(); }
 // Hand off to the REAL catalogue screen — the owned items were persisted via prodAdd; view/edit/delete live there.
 function catfManage(){ UI.nav = 'catalogue'; if (typeof renderApp === 'function') renderApp(); if (typeof loadCatalogue === 'function') loadCatalogue(); }
 // PUBLISH AS BLUEPRINT (source-as-entity, b78): turn this store's catalogue into an adoptable source other stores
@@ -337,6 +343,10 @@ function _catfLoadJE(){
 }
 function catfFillItem(){
   var f = UI.catf || UI.catfDraft; if (!f) { if (typeof toast === 'function') toast('Set up a catalogue first.'); return; }
+  /* The category shelf is read ONCE, before the schema is built, then cached — the enum has to exist at the
+     moment json-editor renders, and re-opening the form must not re-fetch. `cbCatgLive` resolves even on
+     failure, so a dead shelf costs the dropdown and nothing else. */
+  if (_CATG === null) { cbCatgLive().then(function(){ catfFillItem(); }); return; }
   var c = CBCatalogue.ensure(f.catalogue);
   var full = CBCatalogue.toJSONSchema(c, { method: f.method, currency: _catfCcy(), facets: _catfFacets(f) });
   // ADD FORM = only the fields the OWNER types: identity + unit + the CB gap. Hide system-fed (ERP), computed (AI),
@@ -344,20 +354,66 @@ function catfFillItem(){
   var props = {}; Object.keys(full.properties || {}).forEach(function(k){ var p = full.properties[k]; var leg = p['x-cb-leg']; var role = p['x-cb-role']; if (role === 'identity' || role === 'unit' || !leg || leg === 'cb') props[k] = p; });
   if (['cart', 'range', 'qtyprice'].indexOf(f.method) >= 0 && !props.price) props.price = { type: 'number', title: 'Price (' + _catfCcy() + ')' };
   var schema = Object.assign({}, full, { properties: props }); delete schema['$schema'];
+  /**
+   * ⭐ CATEGORY, INJECTED AS AN ENUM — the form already renders an enum as a <select>, so the pick costs no new
+   * widget. `enum` carries definition_ids and `options.enum_titles` carries the names: json-editor shows the
+   * title and stores the value, which is exactly the refer-don't-copy rule expressed in a form library.
+   *
+   * ⚠️ IT IS NOT REQUIRED, and that is a decision. An item with no category is Uncategorised — countable,
+   * chip-visible, fixable later. Blocking the save until someone classifies a product is how a catalogue stops
+   * being filled in at all.
+   */
+  var cats = _CATG || [];
+  if (cats.length) {
+    schema.properties = Object.assign({}, schema.properties, { category: {
+      type: 'string', title: 'Category',
+      enum: [''].concat(cats.map(function(c){ return c.id; })),
+      options: { enum_titles: ['— none —'].concat(cats.map(function(c){ return c.name; })) }
+    } });
+  }
   window._catfSchema = schema;
   var style = '<style>#cat_je > div > h3,#cat_je .je-object__title{font-size:13px;font-weight:700;margin:0}#cat_je label{display:block;font-size:11px;color:#6a707a;font-weight:600;margin:9px 0 3px}#cat_je input[type=text],#cat_je input[type=number],#cat_je select,#cat_je textarea{width:100%;box-sizing:border-box;padding:7px 9px;border:1px solid var(--line);border-radius:7px;font-size:13px;background:var(--paper,#fff)}#cat_je .je-indented-panel{border:none;padding:0;margin:0}#cat_je p.je-object__title + *{margin-top:0}#cat_je .je-header{margin-bottom:2px}</style>';
-  modal('<div class="mhd"><div class="t">Add an item</div></div><div class="mbody" style="padding:0"><div style="padding:14px 18px">' + style + '<div style="font-size:11.5px;color:var(--grey);margin-bottom:12px">Fill in the details for this item.</div><div id="cat_je" style="color:var(--grey);font-size:12px">…</div><div id="cat_je_out" style="margin-top:12px"></div><div style="display:flex;gap:8px;margin-top:16px"><button class="pri" onclick="catfCaptureItem()" style="padding:9px 16px">Save item</button><button onclick="closeModal()" style="padding:9px 16px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--grey)">Cancel</button></div></div></div>', true);
+  modal('<div class="mhd"><div class="t">Add an item</div></div><div class="mbody" style="padding:0"><div style="padding:14px 18px">' + style + '<div style="font-size:11.5px;color:var(--grey);margin-bottom:12px">Fill in the details for this item.</div><div id="cat_je" style="color:var(--grey);font-size:12px">…</div><div id="cat_je_out" style="margin-top:12px"></div><div style="display:flex;gap:8px;margin-top:16px;align-items:center"><button class="pri" onclick="catfCaptureItem()" style="padding:9px 16px">Save item</button><button onclick="closeModal()" style="padding:9px 16px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--grey)">Cancel</button><button data-testid="catg-new" onclick="catfNewCategory()" style="margin-left:auto;padding:9px 14px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--blue);font-weight:600">＋ New category</button></div></div></div>', true);
   _catfLoadJE().then(function(){
     setTimeout(function(){ var el = document.getElementById('cat_je'); if (!el) return; el.innerHTML = '';
-      try { if (window._catfJE) { try { window._catfJE.destroy(); } catch (e) {} } window._catfJE = new window.JSONEditor(el, { schema: window._catfSchema, theme: 'html', disable_edit_json: true, disable_properties: true, disable_collapse: true, no_additional_properties: true }); } catch (e) { el.innerHTML = '<div style="color:#a5382e;font-size:12px">json-editor failed: ' + esc(e.message) + '</div>'; }
+      try { if (window._catfJE) { try { window._catfJE.destroy(); } catch (e) {} } window._catfJE = new window.JSONEditor(el, { schema: window._catfSchema, theme: 'html', disable_edit_json: true, disable_properties: true, disable_collapse: true, no_additional_properties: true });
+        /* ⚠️ RESTORED HERE, NOT ON A TIMER. Creating a category re-opens this form, and everything already typed
+           has to come back. A `setTimeout` in the caller would be guessing at when the editor exists; this is the
+           one place that KNOWS, because it just built it. */
+        if (window._catfPending) { try { window._catfJE.setValue(window._catfPending); } catch (e) {} window._catfPending = null; }
+      } catch (e) { el.innerHTML = '<div style="color:#a5382e;font-size:12px">json-editor failed: ' + esc(e.message) + '</div>'; }
     }, 40);
   }).catch(function(){ var el = document.getElementById('cat_je'); if (el) el.innerHTML = '<div style="color:#a5382e;font-size:12px">Could not load the json-editor library (/app/vendor/json-editor.min.js).</div>'; });
+}
+/** ⭐ The second half of Athi's ask — *"create category should be there"* — without leaving the item form.
+ *  What is already typed is carried through and the new category comes back selected. */
+function catfNewCategory(){
+  var keep = null; try { keep = window._catfJE && window._catfJE.getValue(); } catch (e) {}
+  cbCatgAskNew(function(c){
+    if (keep) { keep.category = c.id; window._catfPending = keep; }
+    catfFillItem();     // rebuilds the schema, so the enum now contains the category that was just created
+  });
 }
 function catfCaptureItem(){
   if (!window._catfJE) return; var v; try { v = window._catfJE.getValue(); } catch (e) { return; }
   if (UI.catf) {   // committed catalogue → SAVE to the real catalogue via the existing products API (behind the scenes)
     var item = Object.assign({ _src: 'manual' }, v || {});
     var item_data = Object.assign({}, v || {}, { name: (v && (v.product || v.name)) || 'item' });   // existing catalogue reads item_data.name/unit/price
+    /**
+     * ⭐ BOTH THE ID AND THE NAME, ON PURPOSE — and this is the one place the two-in-one is not a duplicate.
+     *
+     * `category` is the definition_id: MY reference, so renaming in Definitions renames it on my screens.
+     * `category_name` is a VALUE, written once, for everyone who is not me — a counterparty holding this item in
+     * their copy cannot resolve my definition_id and never will. [[reference-cb-core-principle]]: a reference is
+     * only resolvable inside the entity that owns it; anything that must cross the boundary crosses as a copy.
+     *
+     * ⚠️ The copy is deliberately NOT kept in step with a later rename. My renaming a shelf is not an event that
+     * should silently relabel a product already sitting in someone else's catalogue.
+     */
+    if (item_data.category) {
+      var _c = (_CATG || []).filter(function(c){ return c.id === item_data.category; })[0];
+      if (_c) item_data.category_name = _c.name;
+    } else { delete item_data.category; }   // '— none —' is the empty enum value; store nothing rather than ''
     UI.catf.items = UI.catf.items || []; UI.catf.items.push(item); _catfSave();   // keep a local copy for the instant customer preview
     if (typeof closeModal === 'function') closeModal();
     if (typeof api === 'function') {
@@ -398,6 +454,48 @@ var CW_STEPS = ['Vertical', 'Blueprint', 'From ERP', 'Manual', 'Price', 'Tax · 
  * how CATF_METHODS and METHODS came to disagree by four values without anyone noticing.
  */
 var CW_UNITS = (typeof CBCatalogue !== 'undefined' && CBCatalogue.UNITS) ? CBCatalogue.UNITS : [];
+/* ══ CATEGORIES — the adoption side of a definition ═══════════════════════════════════════════════════════════
+ * ⭐ BACKLOG 15, Athi 2026-08-16: *"so we have to have list category and create category should be there."*
+ *
+ * Definitions could author a category, publish it live, and toast *"Live — it can be adopted now."* — with
+ * nowhere in the product to adopt it. This is that nowhere, filled: the item form offers the live ones, and
+ * makes a new one without leaving the form.
+ *
+ * ⚠️ WHAT IS STORED IS THE definition_id. Never the name. Rename the category in Definitions and every product
+ * follows, because no product ever copied the word. This is the same rule that keeps the Constitution single —
+ * declare once, refer everywhere — and it is the reason a category needs no freeze semantics: there is nothing
+ * in it that could change the meaning of a stamped chit.
+ */
+/* ⚠️  /  LIVE IN core.js — compose (app.html) needs the shelf and this
+   capability is lazy-loaded, so the loader cannot live behind the lazy load. Authoring stays here. */
+/** ⭐ Inline create, PUBLISHED LIVE. A draft would not appear in the picker that just sent you here — you would
+ *  create a category and watch it not arrive. Two calls because the API separates authoring from publishing;
+ *  that separation is right for Definitions and merely invisible here. */
+async function cbCatgCreate(name){
+  name = String(name || '').trim();
+  if (name.length < 2) throw new Error('Give the category a name of at least 2 characters.');
+  var dup = (_CATG || []).filter(function(c){ return c.name.toLowerCase() === name.toLowerCase(); })[0];
+  if (dup) return dup;      // ⚠️ Silently reusing the existing one beats minting a second shelf with one name.
+  var r = await api('defAdd', { body: { kind: 'category', sub_kind: null, name: name, note: '', rules: {} } });
+  var id = r && (r.definition_id || (r.definition && r.definition.definition_id));
+  if (!id) throw new Error('Created, but the server did not return an id.');
+  await api('defSave', { params: { id: id }, body: { status: 'live' } });
+  await cbCatgLive(true);
+  return { id: id, name: name };
+}
+/** The dialog — `promptAsk` (app.html), the in-app text prompt. It owns the focus, the Enter key, the trim and
+ *  the read-before-close ordering, so nothing about those is decided here. */
+function cbCatgAskNew(onDone){
+  if (typeof promptAsk !== 'function') return;
+  promptAsk('New category', { label:'What is it called?', placeholder:'e.g. Fasteners', maxlength:60,
+    okLabel:'Create',
+    hint:'It goes on the shelf as <b>live</b>, so you can use it straight away. Rename it any time under '
+       + 'Definitions — your products follow the rename.' },
+    function(v){
+      cbCatgCreate(v).then(function(c){ toast('“' + c.name + '” added ✓'); if (onDone) onDone(c); })
+                     .catch(function(e){ toast((e && e.message) || 'Could not create that.'); });
+    });
+}
 function cwToggleUnit(u){ var w = UI.cw; w.units = w.units || []; var i = w.units.indexOf(u); if (i >= 0) w.units.splice(i, 1); else w.units.push(u); renderApp(); }
 function cwAddUnit(){ var w = UI.cw; var u = (val('cw_newunit') || '').trim(); if (!u) return; w.units = w.units || []; if (w.units.indexOf(u) < 0) w.units.push(u); renderApp(); }
 function _cwLoggedIn(){ return typeof SESSION !== 'undefined' && !!SESSION.token; }
@@ -858,13 +956,18 @@ function cwFinish(){
       return a !== undefined && a !== null && a !== '' && isFinite(Number(a));
     });
     var noPrice = Math.max(0, picked.length - priced.length);
-    var msg = 'Adopt "' + ((w.built && w.built.title) || w.source) + '" into your catalogue?\n\n'
-      + '• ' + priced.length + ' item(s) with your price — these go live\n'
-      + (noPrice ? ('• ' + noPrice + ' item(s) with NO price — adopted, but NOT shown in your shop until you price them\n') : '')
-      + '\nThe brand keeps its names, images and colours. You own only your prices.';
-    if (!confirm(msg)) { afterAdopt(); return; }
-    if (typeof toast === 'function') toast('Adopting by reference…');
-    api('catalogueAdopt', { body: { source: w.source, commercials: com } }).then(afterAdopt).catch(function(e){ if (typeof toast === 'function') toast('Reference adopt failed: ' + ((e && e.message) || '')); afterAdopt(); });
+    var li = function(t){ return '<div style="display:flex;gap:7px;margin-top:5px"><span>•</span><span>' + t + '</span></div>'; };
+    var msg = li('<b>' + priced.length + '</b> item' + (priced.length===1?'':'s') + ' with your price — these <b>go live</b>')
+      + (noPrice ? li('<b>' + noPrice + '</b> item' + (noPrice===1?'':'s') + ' with <b>no price</b> — adopted, but <b>not shown in your shop</b> until you price them') : '')
+      + '<div style="margin-top:9px">The brand keeps its names, images and colours. <b>You own only your prices.</b></div>';
+    /* ⚠️ afterAdopt RUNS ON EVERY PATH — it persists the OWNED items, which have nothing to do with whether you
+       adopt the brand by reference. Saying no to the reference adopt must not silently drop the items you typed
+       yourself. Hence the 6th argument: Cancel, Escape and the backdrop all reach it. */
+    confirmAsk('Adopt “' + esc((w.built && w.built.title) || w.source) + '” into your catalogue?', msg, 'Adopt',
+      function(){
+        if (typeof toast === 'function') toast('Adopting by reference…');
+        api('catalogueAdopt', { body: { source: w.source, commercials: com } }).then(afterAdopt).catch(function(e){ if (typeof toast === 'function') toast('Reference adopt failed: ' + ((e && e.message) || '')); afterAdopt(); });
+      }, false, afterAdopt);
   } else { afterAdopt(); }
 }
 

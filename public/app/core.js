@@ -123,6 +123,34 @@ const OUTBOX_KEYS = new Set([
   'netDesignPut',   // b111 — whole-document upsert, idempotent → safe to queue + replay offline
 ]);
 
+/* ══ THE LIVE CATEGORY SHELF ═════════════════════════════════════════════════════════════════════════════════
+ * ⚠️ IT LIVES IN core.js AND NOT IN cap-catalogue.js. Both compose (app.html, always loaded) and the item form
+ * (cap-catalogue.js, lazy) need it, and a loader behind a lazy load is a loader half the callers cannot reach.
+ * ONE owner, one cache — the alternative is compose fetching its own copy and the two drifting.
+ */
+var _CATG = null;          // [{id,name}] — the live shelf, as last read
+var _catgReq = null;       // in-flight promise, so a form opening twice does not fetch twice
+function cbCatgLive(force){
+  if (!force && _CATG) return Promise.resolve(_CATG);
+  if (!force && _catgReq) return _catgReq;
+  if (typeof api !== 'function') return Promise.resolve([]);
+  /* ⚠️ `query`, not a fourth hardcoded alias. `defListLive` is pinned to kind=offer; copying it for categories
+     and again for order models is how a list of aliases becomes a list of near-duplicates. */
+  _catgReq = api('defList', { query: { kind: 'category', status: 'live' } })
+    .then(function(r){
+      _CATG = ((r && r.definitions) || []).map(function(d){ return { id: d.definition_id, name: d.name }; });
+      _catgReq = null; return _CATG;
+    })
+    /**
+     * ⚠️ FAILING SOFT IS CORRECT HERE, and it is worth saying why since the opposite rule applies at the mint.
+     * A category is a way of FINDING a product; losing it costs a filter, not a fact. An item saved without one
+     * is Uncategorised — visible, chip-counted, fixable. Refusing to let someone add an item because a
+     * classification shelf could not be read would be the tail wagging the dog.
+     */
+    .catch(function(){ _catgReq = null; return _CATG || []; });
+  return _catgReq;
+}
+
 async function api(key, {params, query, body}={}){
   const ep = EP[key]; if(!ep) throw new Error("no endpoint "+key);
   cblog('debug', ep.m + ' ' + key);

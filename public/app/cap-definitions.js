@@ -377,7 +377,9 @@ async function cbDefLoad(force){
     CBDEF.err = (e && e.message) || 'Could not read your definitions.';
   }
   CBDEF.loading = false;
-  renderApp();
+  /* Same reason as cbDefToggle — this lands AFTER the screen is up, so a full render would yank a reader who has
+     already scrolled back to the top. cbDefRepaint falls back to renderApp when the wrap is not present. */
+  cbDefRepaint();
 }
 
 function cbDefMineOf(kind){
@@ -533,11 +535,17 @@ async function cbDefSetStatus(id, status){
         await cbDefLoad(true); }
   catch (e) { toast((e && e.message) || 'Could not change that.'); }
 }
-async function cbDefRetire(id, name){
-  /* ⚠️ The confirm says what actually happens. "Delete?" would be a lie — the row survives so that chits which
-     cited it stay explainable, and someone who believes they erased something is owed the truth. */
-  if (!confirm('Retire "' + name + '"?\n\nIt leaves the shelf and cannot be adopted again.\n'
-             + 'It is NOT deleted — chits that already cite it stay explainable.')) return;
+/* ⚠️ In-app dialog, not `confirm()` — Athi, on the supplier panel: *"the message appears from the browser it has
+   to be system message"*. `confirmAsk` (app.html) is the one replacement; this was one of the 8 stragglers.
+   ⚠️ The wording says what actually happens. "Delete?" would be a lie — the row survives so that chits which
+   cited it stay explainable, and someone who believes they erased something is owed the truth. */
+function cbDefRetire(id, name){
+  confirmAsk('Retire “' + cbDefEsc(name) + '”?',
+    'It leaves the shelf and <b>cannot be adopted again</b>.'
+    + '<div style="margin-top:7px">It is <b>not deleted</b> — chits that already cite it stay explainable.</div>',
+    'Retire', function(){ _cbDefRetire(id); }, true);
+}
+async function _cbDefRetire(id){
   try { await api('defRetire', { params: { id: id } }); toast('Retired.'); await cbDefLoad(true); }
   catch (e) { toast((e && e.message) || 'Could not retire that.'); }
 }
@@ -551,7 +559,39 @@ function cbDefEsc(s){
 
 /* ⚠️ renderApp(), not a local paint — this screen returns HTML to the router like every other
    capability, so the router is the only thing that owns the frame. */
-function cbDefToggle(k){ CBDEF.open[k] = !CBDEF.open[k]; renderApp(); }
+/**
+ * ⚠️ REPAINT IN PLACE, KEEPING THE SCROLL (Athi, 2026-08-16: *"when I click the below items in defn screen, it
+ * jumps to the top"*).
+ *
+ * It called renderApp(), which rebuilds the whole screen — and a fresh DOM starts at scrollTop 0. So opening the
+ * ninth section threw you back to the first, and you had to scroll down again to see what you had just opened.
+ * The further down the page a section is, the worse it gets, which is exactly backwards.
+ *
+ * Swapping only the definitions block and restoring the offset keeps the section you clicked under your cursor.
+ * ⚠️ Read scrollTop BEFORE the innerHTML swap — after it the element has been rebuilt and reports 0.
+ */
+function cbDefScroller(){
+  var w = document.querySelector('.cbdef-wrap');
+  /* The scroller may be the wrap or an ancestor, depending on the shell — walk up to whichever actually scrolls. */
+  var n = w;
+  while (n && n !== document.body){ if (n.scrollHeight > n.clientHeight + 1) return n; n = n.parentElement; }
+  return document.scrollingElement || document.documentElement;
+}
+function cbDefRepaint(){
+  var host = document.querySelector('.cbdef-wrap');
+  if (!host){ renderApp(); return; }                       // not on the screen — fall back
+  var y = (cbDefScroller() || {}).scrollTop || 0;
+  host.outerHTML = cbDefHTML();
+  /**
+   * ⚠️ RE-QUERY THE SCROLLER AFTER THE SWAP. My first version held a REFERENCE across `outerHTML =`, which
+   * destroys the element — so it dutifully restored the offset onto a node no longer in the document, and the
+   * page still jumped to the top. Measured: 574 → 0. The scroller here IS `.cbdef-wrap` (or an ancestor of it),
+   * which is precisely the node being replaced, so the reference can never survive.
+   */
+  var sc = cbDefScroller();
+  if (sc) sc.scrollTop = y;
+}
+function cbDefToggle(k){ CBDEF.open[k] = !CBDEF.open[k]; cbDefRepaint(); }
 
 function cbDefSectionHTML(s){
   var open = !!CBDEF.open[s.key];
@@ -595,6 +635,26 @@ function cbDefSectionHTML(s){
  * ⭐ YOUR OWN DEFINITIONS — rendered ABOVE the registry showcase, because what you made matters more to you
  * than what the system knows. The showcase becomes reference material once you have your own shelf.
  */
+/**
+ * The registry rows for one authorable kind, rendered INSIDE that kind's section. Reads `cbDefRegistries()` — the
+ * same source the standalone sections used — so merging the two sections did not create a second list.
+ *
+ * ⚠️ Returns nothing when the registry has not loaded, rather than an empty "kinds" heading with nothing under it.
+ * An empty list and a missing source look identical and mean opposite things; the standalone section says "not
+ * loaded" in its count, and here the honest move is to show no heading at all.
+ */
+function cbDefKindsInline(kind){
+  var s = cbDefRegistries().filter(function (x) { return x.key === kind; })[0];
+  if (!s || !s.rows || !s.rows.length) return '';
+  return '<div class="cbdef-kindsin">'
+    + '<div class="cbdef-kindshd">Built from — ' + s.rows.length + ' kind' + (s.rows.length === 1 ? '' : 's') + '</div>'
+    + s.rows.map(function (r) {
+        return '<div class="cbdef-kindrow"><code class="cbdef-code">' + cbDefEsc(r.code) + '</code>'
+          + '<span class="cbdef-kindlbl">' + cbDefEsc(r.label) + '</span>'
+          + (r.note ? '<span class="cbdef-kindnote">' + cbDefEsc(r.note) + '</span>' : '') + '</div>';
+      }).join('')
+    + '</div>';
+}
 function cbDefMineHTML(){
   if (CBDEF.mine === null) { cbDefLoad(); return '<div class="cbdef-loading">Reading your shelf…</div>'; }
 
@@ -603,10 +663,18 @@ function cbDefMineHTML(){
     var mine = cbDefMineOf(kind), retired = cbDefRetiredOf(kind);
     var rows = mine.map(function (d) {
       var live = d.status === 'live';
-      return '<div class="cbdef-mine-row" data-testid="cbdef-mine-' + cbDefEsc(d.definition_id) + '">'
+      /**
+       * ⚠️ THREE STATES, NOT TWO (backlog 19; Athi: *"if the offer are retired then that has to be shown as
+       * retired as well"*). This was `live ? 'live' : 'draft'` — a boolean for a column with THREE values, so a
+       * RETIRED definition rendered as **draft**. Worse than hiding it: "draft" reads as *not finished, you might
+       * publish it*, when the truth is *withdrawn, and it can never be adopted again* — so someone reads the badge
+       * and tries to publish it.
+       */
+      var st = d.status === 'live' ? 'live' : d.status === 'retired' ? 'retired' : 'draft';
+      return '<div class="cbdef-mine-row' + (st === 'retired' ? ' is-retired' : '') + '" data-testid="cbdef-mine-' + cbDefEsc(d.definition_id) + '">'
         + '<span class="cbdef-mine-n">' + cbDefEsc(d.name) + '</span>'
         + (d.sub_kind ? '<code class="cbdef-code">' + cbDefEsc(d.sub_kind) + '</code>' : '')
-        + '<span class="cbdef-badge ' + (live ? 'live' : 'draft') + '">' + (live ? 'live' : 'draft') + '</span>'
+        + '<span class="cbdef-badge ' + st + '">' + st + '</span>'
         /* ⭐ THE VERSION IS ON SCREEN. It is the thing a stamped chit points at, so hiding it would make the
            freeze rule invisible in the one place someone might need to check it. */
         + '<span class="cbdef-ver">v' + cbDefEsc(d.current_version) + '</span>'
@@ -618,18 +686,40 @@ function cbDefMineHTML(){
         + '</span></div>';
     }).join('');
 
+    /**
+     * ⭐ THE SAME SHELL AS THE REGISTRY SECTIONS (Athi, 2026-08-16: *"also the categories, order models and offers
+     * also the same way if it look and feel it will be good … otherwise they look different"*).
+     *
+     * They already shared `cbdef-sec` and `cbdef-head`, but had NO CARET and NO TOGGLE — always open, while every
+     * other section on the page collapsed. One page, two behaviours for the same-looking row, which is exactly
+     * what made them read as a different kind of thing.
+     *
+     * ⚠️ They DEFAULT OPEN, unlike the registries. That is a difference in default, not in form — these are your
+     * own definitions and there are few of them, so hiding them behind a click on arrival would be worse. The
+     * affordance is identical either way.
+     */
+    var mkey = 'mine:' + kind;
+    if (CBDEF.open[mkey] === undefined) CBDEF.open[mkey] = true;
+    var mopen = !!CBDEF.open[mkey];
     return '<div class="cbdef-sec">'
-      + '<div class="cbdef-head cbdef-head-mine">'
+      + '<div class="cbdef-head cbdef-head-mine" data-testid="cbdef-mine-head-' + kind + '"'
+      +   ' onclick="cbDefToggle(\'' + mkey + '\')">'
       +   '<span class="cbdef-ico">' + A.icon + '</span>'
       +   '<span class="cbdef-t">' + cbDefEsc(A.title) + '</span>'
       +   '<span class="cbdef-n">' + mine.length + (retired.length ? ' · ' + retired.length + ' retired' : '') + '</span>'
-      +   '<button class="cbdef-new" data-testid="cbdef-new-' + kind + '" onclick="cbDefNew(\'' + kind + '\')">+ New</button>'
+      /* stopPropagation — otherwise "+ New" also collapses the section it is about to add to. */
+      +   '<button class="cbdef-new" data-testid="cbdef-new-' + kind + '" onclick="event.stopPropagation();cbDefNew(\'' + kind + '\')">+ New</button>'
+      +   '<span class="cbdef-caret">' + (mopen ? '▾' : '▸') + '</span>'
       + '</div>'
-      + '<div class="cbdef-body">'
+      + (mopen ? ('<div class="cbdef-body">'
       +   '<div class="cbdef-blurb">' + cbDefEsc(A.blurb) + '</div>'
       /* ⚠️ An empty shelf says what to do, not "0 results". Nobody arrives here knowing what a definition is for. */
       +   (rows || '<div class="cbdef-none">None yet. <b>+ New</b> to name one — then a catalogue can adopt it.</div>')
-      + '</div></div>';
+      /* The vocabulary this kind is built from, in the same section rather than a second one further down. Still
+         read STRAIGHT from the registry — folding the sections together must not fold in a copy of the list. */
+      +   cbDefKindsInline(kind)
+      + '</div>') : '')
+      + '</div>';
   }).join('');
 
   return '<div class="cbdef-mine">'
@@ -664,9 +754,25 @@ function cbDefHTML(){
     + 'it sees the new terms. It is <b>frozen by value the moment a chit is stamped</b>, so a chit keeps the '
     + 'version it agreed even after you change the shelf. '
     + '<span style="opacity:.8">Adoption — attaching one to a catalogue — comes next.</span></div>'
+    /**
+     * ⭐ ONE SECTION PER SUBJECT (Athi, 2026-08-16: *"order model and order model kinds looks similar if so, one
+     * has to be removed. and should bring it together"*).
+     *
+     * "Order models" (yours) and "Order model kinds" (the vocabulary) were two sections with the SAME key and the
+     * SAME icon, one above the other — so the page asked you to hold a distinction it never explained. Same for
+     * Offers / Offer kinds. They are now folded into one section each: your named ones, then the kinds they are
+     * built from. The registry list still comes from the registry — nothing is copied.
+     *
+     * ⚠️ Renaming one of them would not have fixed it. Two rows about one subject is the problem; a better label
+     * only makes the split easier to describe.
+     */
     + cbDefMineHTML()
-    + '<div class="cbdef-shelfhd">What the system knows — the shapes available to you</div>'
-    + secs.map(cbDefSectionHTML).join('')
+    + (function(){
+        var rest = secs.filter(function(s){ return !CBDEF_AUTHORABLE[s.key]; });
+        if (!rest.length) return '';
+        return '<div class="cbdef-shelfhd">What the system knows — the shapes available to you</div>'
+             + rest.map(cbDefSectionHTML).join('');
+      })()
     + '</div>';
 }
 
@@ -734,6 +840,15 @@ function cbDefCss(){
     '.cbdef-badge{font-size:10.5px;font-weight:700;border-radius:6px;padding:1px 7px;text-transform:uppercase;letter-spacing:.04em}',
     '.cbdef-badge.live{background:#e6f4ec;color:#2c7a43}',
     '.cbdef-badge.draft{background:#f4f2ec;color:#8a6d1e}',
+    /* Retired is visually SPENT — struck name, grey badge — so it can never be mistaken for a draft awaiting publish. */
+    '.cbdef-badge.retired{background:#eceaea;color:#6f6a6a}',
+    '.cbdef-kindsin{margin-top:12px;border-top:1px dashed var(--line);padding-top:9px}',
+    '.cbdef-kindshd{font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin-bottom:5px}',
+    '.cbdef-kindrow{display:flex;gap:9px;align-items:baseline;padding:3px 0;font-size:12.5px;flex-wrap:wrap}',
+    '.cbdef-kindlbl{color:var(--ink)}',
+    '.cbdef-kindnote{color:var(--grey);font-size:11.5px;flex:1;min-width:0}',
+    '.cbdef-mine-row.is-retired .cbdef-mine-n{text-decoration:line-through;color:var(--grey)}',
+    '.cbdef-mine-row.is-retired{opacity:.82}',
     '.cbdef-ver{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11px;color:#9aa3a7}',
     '.cbdef-acts{margin-left:auto;display:flex;gap:12px}',
     '.cbdef-acts span{font-size:11.5px;color:var(--blue,#3F66A6);cursor:pointer;font-weight:600}',

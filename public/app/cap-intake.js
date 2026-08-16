@@ -175,8 +175,12 @@ async function intakeStructure(id){
   }catch(e){ _INTAKE.working[id]={err:(e&&e.message)||'AI could not read that message.'}; }
   paintIntake();
 }
-async function intakeDismiss(id){
-  if(!confirm('Dismiss this message?\n\nIt stays on the capture queue as dismissed — a receipt that it arrived and was not turned into a chit.')) return;
+function intakeDismiss(id){
+  confirmAsk('Dismiss this message?',
+    'It stays on the capture queue as <b>dismissed</b> — a receipt that it arrived and was not turned into a chit.',
+    'Dismiss', function(){ _intakeDismiss(id); });
+}
+async function _intakeDismiss(id){
   try{ await api('captureDismiss',{params:{id:id}}); await loadIntake(); }
   catch(e){ toast((e&&e.message)||'Could not dismiss it', true); }
 }

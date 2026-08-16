@@ -95,16 +95,20 @@ function _ftab(k,label){
   return '<span data-testid="folder-tab-'+k+'" onclick="setFolderTab(\''+k+'\')" style="cursor:pointer;font-size:12px;font-weight:700;padding:5px 13px;border-radius:16px;'
     +(on?'background:var(--ink);color:#fff':'border:1px solid var(--line);color:#586069')+'">'+label+'</span>';
 }
-async function newFolder(){
-  var name=(typeof prompt==='function')?prompt('New folder name:'):''; if(!name||!name.trim())return;
-  try{ await api('folderCreate',{body:{name:name.trim()}}); UI.folders=undefined; loadFolders(); if(typeof toast==='function')toast('Folder created.'); }
-  catch(e){ if(typeof toast==='function')toast((e&&e.message)||'Create failed'); }
+function newFolder(){
+  promptAsk('New folder', { label:'Folder name', placeholder:'e.g. Awaiting payment', okLabel:'Create' },
+    async function(name){
+      try{ await api('folderCreate',{body:{name:name}}); UI.folders=undefined; loadFolders(); if(typeof toast==='function')toast('Folder created.'); }
+      catch(e){ if(typeof toast==='function')toast((e&&e.message)||'Create failed'); }
+    });
 }
-async function renameFolder(id){
+function renameFolder(id){
   var f=(UI.folders||[]).find(function(x){return x.folder_id===id;})||{};
-  var name=(typeof prompt==='function')?prompt('Rename folder:', f.name||''):''; if(!name||!name.trim())return;
-  try{ await api('folderRename',{params:{id:id},body:{name:name.trim()}}); UI.folders=undefined; loadFolders(); }
-  catch(e){ if(typeof toast==='function')toast((e&&e.message)||'Rename failed'); }
+  promptAsk('Rename folder', { label:'Folder name', value:f.name||'', okLabel:'Rename' },
+    async function(name){
+      try{ await api('folderRename',{params:{id:id},body:{name:name}}); UI.folders=undefined; loadFolders(); }
+      catch(e){ if(typeof toast==='function')toast((e&&e.message)||'Rename failed'); }
+    });
 }
 function deleteFolder(id){
   var run=async function(){ try{ await api('folderDelete',{params:{id:id}}); UI.folderSel=null; UI.folderChits=undefined; UI.folders=undefined; loadFolders(); }catch(e){ if(typeof toast==='function')toast((e&&e.message)||'Delete failed'); } };
@@ -465,8 +469,12 @@ async function ruleToggle(id, on){
   try { await api('folderRuleUpdate', { params: { rule_id: id }, body: { enabled: !!on } }); _FLD.rules = null; await loadFolderRules(); }
   catch (e) { _FLD.err = (e && e.message) || 'Could not change that.'; _fldPaint(); }
 }
-async function ruleDelete(id){
-  if (!confirm('Delete this rule?\n\nChits already filed stay where they are — a rule only decides what happens next.')) return;
+function ruleDelete(id){
+  confirmAsk('Delete this rule?',
+    'Chits already filed <b>stay where they are</b> — a rule only decides what happens next.',
+    'Delete', function(){ _ruleDelete(id); }, true);
+}
+async function _ruleDelete(id){
   try { await api('folderRuleDelete', { params: { rule_id: id } }); _FLD.rules = null; await loadFolderRules(); }
   catch (e) { _FLD.err = (e && e.message) || 'Could not delete it.'; _fldPaint(); }
 }

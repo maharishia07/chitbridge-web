@@ -284,39 +284,41 @@ function _netRerender(){   // keep the detail pane's scroll position stable acro
 
 function netNewNetwork(){
   var ent = SESSION.entity || SESSION.name || 'My entity';
-  var purpose = (typeof prompt === 'function') ? prompt('Name this network (what it is for):', ent + ' network') : (ent + ' network');
-  if (purpose === null) return;
-  var rootKey = _netKey();
-  UI.net = { id: 'net-' + Date.now().toString(36), purpose: (purpose || ent + ' network'), built: false,
-    nodes: [{ key: rootKey, name: ent, parent_key: null, owned: true, root: true, holds: [], purpose: 'This entity — the top of the network.' }], sel: rootKey };
-  _netSave(); _netRerender();
+  promptAsk('Name this network', { label:'What is it for?', value: ent + ' network', okLabel:'Create' },
+    function(purpose){
+      var rootKey = _netKey();
+      UI.net = { id: 'net-' + Date.now().toString(36), purpose: purpose, built: false,
+        nodes: [{ key: rootKey, name: ent, parent_key: null, owned: true, root: true, holds: [], purpose: 'This entity — the top of the network.' }], sel: rootKey };
+      _netSave(); _netRerender();
+    });
 }
-function netAddChild(parentKey){
+/* ⚠️ ONE ADD, TWO OWNERSHIPS. netAddChild and netAddPartner were the same twelve lines differing in a boolean
+   and a sentence — a second call site is a helper, so this is it. What actually differs is the ONLY thing worth
+   spelling out: whether you hold its key. */
+function _netAddNode(parentKey, owned){
   _netInit(); if (!UI.net) return;
   var P = _netNode(parentKey); if (!P) return;
-  var name = (typeof prompt === 'function') ? prompt('New OWNED node under "' + P.name + '" (a branch, unit or depot you own):', '') : '';
-  if (!name || !name.trim()) return;
-  var n = { key: _netKey(), name: name.trim(), parent_key: parentKey, owned: true, holds: ['catalogue'], purpose: '', catalogue: { template: 'custom', fields: [] } };
-  UI.net.nodes.push(n); UI.net.sel = n.key; UI.net.tab = 'general'; UI.net.built = false;
-  _netSave(); _netRerender();
+  promptAsk(owned ? 'New owned node' : 'New partner',
+    { label:'Name', placeholder: owned ? 'a branch, unit or depot you own' : 'an independent business joining you',
+      okLabel:'Add',
+      hint: 'Under <b>' + esc(P.name) + '</b>. ' + (owned
+        ? 'You hold its key — it is part of your entity.'
+        : 'You will <b>not</b> hold its key; it stays an independent business, and its catalogue shows here.') },
+    function(name){
+      var n = { key: _netKey(), name: name, parent_key: parentKey, owned: !!owned, holds: ['catalogue'], purpose: '', catalogue: { template: 'custom', fields: [] } };
+      UI.net.nodes.push(n); UI.net.sel = n.key; UI.net.tab = 'general'; UI.net.built = false;
+      _netSave(); _netRerender();
+    });
 }
-function netAddPartner(parentKey){
-  _netInit(); if (!UI.net) return;
-  var P = _netNode(parentKey); if (!P) return;
-  var name = (typeof prompt === 'function') ? prompt('Partner — an INDEPENDENT business joining under "' + P.name + '" (you won\'t hold its key; its catalogue shows here):', '') : '';
-  if (!name || !name.trim()) return;
-  var n = { key: _netKey(), name: name.trim(), parent_key: parentKey, owned: false, holds: ['catalogue'], purpose: '', catalogue: { template: 'custom', fields: [] } };
-  UI.net.nodes.push(n); UI.net.sel = n.key; UI.net.tab = 'general'; UI.net.built = false;
-  _netSave(); _netRerender();
-}
+function netAddChild(parentKey){ _netAddNode(parentKey, true); }
+function netAddPartner(parentKey){ _netAddNode(parentKey, false); }
 // Selecting a different store lands on GENERAL rather than wherever you happened to be — the tab that was open
 // for the last store is rarely the one you want for this one, and arriving mid-subject hides who you are editing.
 function netSelect(key){ _netInit(); if (UI.net) { UI.net.sel = key; UI.net.tab = 'general'; } _netRerender(); }
 function netRename(key){
   var n = _netNode(key); if (!n) return;
-  var name = (typeof prompt === 'function') ? prompt('Rename node:', n.name) : n.name;
-  if (name === null || !name.trim()) return;
-  n.name = name.trim(); _netMark(); _netRerender();
+  promptAsk('Rename node', { label:'Name', value:n.name, okLabel:'Rename' },
+    function(name){ n.name = name; _netMark(); _netRerender(); });
 }
 function netSetPurpose(key, val){ var n = _netNode(key); if (!n) return; n.purpose = val; _netSave(); }   // no re-render while typing
 function netSetPartnerRef(key, val){ var n = _netNode(key); if (!n) return; n.partner_ref = String(val || '').trim(); _netSave(); }
@@ -564,8 +566,9 @@ function netDelete(key){
     + (live ? '<b>' + live + ' of these ' + (live === 1 ? 'is a live store' : 'are live stores')
               + '</b> — they keep trading and keep their logins. This design just stops tracking them, and rebuilding will not adopt them back.'
             : 'Nothing was created yet, so nothing is lost.');
-  if (typeof confirmAsk === 'function') confirmAsk(live ? 'Remove from the design?' : 'Remove node', msg, 'Remove', go, true);
-  else if (typeof window !== 'undefined' && window.confirm('Remove ' + n.name + '?')) go();
+  /* ⚠️ No `window.confirm` fallback. It was unreachable — confirmAsk lives in app.html and is loaded before any
+     capability — and an unreachable fallback is just a browser dialog waiting for a refactor to expose it. */
+  confirmAsk(live ? 'Remove from the design?' : 'Remove node', msg, 'Remove', go, true);
 }
 
 /* ── CHANGING YOUR MIND ───────────────────────────────────────────────────────────────────────────────────────
@@ -2362,10 +2365,13 @@ function _netRootIsSet(){ return !!((UI.net && UI.net.root_handle) || UI._netRoo
 /* Choose the network name. Every store is prefixed with it, so it is the most consequential name on the page. */
 function netSetNetworkName(){
   var cur = _netRootHandle();
-  var want = (typeof prompt === 'function')
-    ? prompt('The network name.\n\nEvery store is prefixed with it — ' + cur + '.north, ' + cur + '.south.\nIt is also your own User ID, so people can use it to add you as a supplier.\n\nLetters, numbers and dashes only — no spaces.', cur)
-    : null;
-  if (want === null) return;
+  promptAsk('The network name', { label:'Network name', value:cur, okLabel:'Save', maxlength:60,
+    hint:'Every store is prefixed with it — <b>' + esc(cur) + '.north</b>, <b>' + esc(cur) + '.south</b>.<br>'
+       + 'It is also your own <b>User ID</b>, so people can use it to add you as a supplier.<br>'
+       + 'Letters, numbers and dashes only — no spaces.' },
+    function(want){ _netSaveNetworkName(want); });
+}
+function _netSaveNetworkName(want){
   var s = String(want).trim().toLowerCase();
   if (!s) return;
   if (!/^[a-z0-9][a-z0-9-]*$/.test(s) || /-$/.test(s)) {
