@@ -63,7 +63,23 @@ module.exports = defineConfig({
       // step-flow.spec.js — a brand-new spec was silently excluded from every project and reported as
       // "No tests found". A test that is skipped because of a name collision is worse than a failing one:
       // it looks like it passed. Any future `<something>-flow.spec.js` would have hit the same wall.
-      testIgnore: [/[\\/]onboarding\.spec\.js$/, /[\\/]flow\.spec\.js$/, /[\\/]redproof\.spec\.js$/, /[\\/]swarm\.spec\.js$/],
+      /**
+       * ⚠️⚠️ EVERY noauth SPEC MUST BE IGNORED HERE, not just the first four. `testMatch` is `.*\.spec\.js`, so
+       * anything absent from this list runs in BOTH projects — and the noauth specs then run WITH a saved
+       * session, which is the wrong context for every one of them by definition.
+       *
+       * Found 2026-08-17 running `--project=authed` as a regression: signed-out failed because a signed-in tab
+       * correctly stays at `#/` rather than redirecting to login, and currency-matrix's empty-shop cases failed
+       * because they are CUSTOMER views that must arrive with no session. Three failures, none of them real,
+       * against a change set that had nothing to do with any of it — which is the expensive kind of false
+       * negative: it sends you looking for a regression that was never there.
+       *
+       * ⚠️ KEEP THIS IN SYNC WITH THE noauth testMatch BELOW. Two lists describing one fact is the flaw; until
+       * they are derived from one another, adding a spec to noauth means adding it here in the same commit.
+       */
+      testIgnore: [/[\\/]onboarding\.spec\.js$/, /[\\/]flow\.spec\.js$/, /[\\/]redproof\.spec\.js$/, /[\\/]swarm\.spec\.js$/,
+        /[\\/]signed-out\.spec\.js$/, /[\\/]currency-matrix\.spec\.js$/, /[\\/]mode-survives-order\.spec\.js$/,
+        /[\\/]variants\.spec\.js$/, /[\\/]network-cascade\.spec\.js$/, /[\\/]render-smoke\.spec\.js$/],
     },
     // 3 · flows that must start LOGGED OUT (they test onboarding itself / the welcome screen)
     {
