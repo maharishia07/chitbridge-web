@@ -26,12 +26,13 @@ const SHOP = { email: 'beta@test-cb.com', name: 'Beta Fresh' };
 test.describe('Order step flow', () => {
   test('★★ SUPPLIERS — the catalogue IS the screen, and the flow walks Items → Details → Review', async ({ page }) => {
     await mintEntity(page);
-    page.on('dialog', (d) => d.accept());          // addSupplier() confirms before it posts
-
+    // addSupplier() confirms before it posts — via the app's own confirmAsk() modal since 2026-08-16, not a
+    // native dialog, so it needs a real click rather than a page.on('dialog') handler.
     await page.getByTestId('nav-suppliers').click();
     await expect(page.getByTestId('sup-add-input')).toBeVisible();
     await page.getByTestId('sup-add-input').fill(SHOP.email);
     await page.getByTestId('sup-add').click();
+    await page.getByTestId('confirm-ok').click();
     const row = page.locator('[data-testid^="sup-row-"]').first();
     await expect(row).toBeVisible();
     await row.click();
@@ -96,10 +97,10 @@ test.describe('Order step flow', () => {
 
   test('★ SUPPLIERS — the rail cannot be used to skip a step that is not answered', async ({ page }) => {
     await mintEntity(page);
-    page.on('dialog', (d) => d.accept());
     await page.getByTestId('nav-suppliers').click();
     await page.getByTestId('sup-add-input').fill(SHOP.email);
     await page.getByTestId('sup-add').click();
+    await page.getByTestId('confirm-ok').click();      // in-app confirm, not a browser dialog
     await page.locator('[data-testid^="sup-row-"]').first().click();
     await expect(page.getByTestId('sup-catalogue')).toBeVisible({ timeout: 15000 });
 

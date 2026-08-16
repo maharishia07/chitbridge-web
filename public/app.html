@@ -137,7 +137,63 @@
   .srch{display:flex;align-items:center;gap:7px;background:var(--paper);border:1px solid var(--line);border-radius:9px;padding:8px 10px;font-size:12.5px;color:var(--grey)}
   .srch input{border:0;background:none;outline:0;font-size:12.5px;width:100%;color:var(--ink)}
   .tools{display:flex;gap:5px;margin-top:8px;flex-wrap:wrap}
-  .tool{width:30px;height:30px;border:1px solid var(--line);background:#fff;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;color:#54616a;position:relative}
+  /* Folded: the band keeps only what is ACTIVE, so a live search or an Assigned scope stays on screen as a chip. */
+  .lh.folded{padding:7px 12px}
+  .lh.folded .statetabs{margin-bottom:0}
+  .lhfolded{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:8px;cursor:pointer}
+  .fchip{display:inline-flex;align-items:center;gap:4px;background:var(--gold-soft);border:1px solid #e3d9bd;color:#6b5a36;border-radius:20px;padding:2px 9px;font-size:11.5px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .colcog.fold{margin-right:7px}
+  /* The selected supplier's full record, inline under its row in the left pane. */
+  .supinfo{border-left:3px solid var(--blue);background:var(--paper);padding:9px 13px 11px;margin:0 0 2px}
+  .supkv{display:flex;gap:10px;padding:5px 0;border-bottom:1px dashed var(--line);font-size:12.5px}
+  .supkv b{flex:0 0 88px;color:var(--grey);font-size:11px;text-transform:uppercase;letter-spacing:.3px;font-weight:700}
+  .supkv span{flex:1;min-width:0;overflow-wrap:anywhere}
+  .supacts{display:flex;align-items:center;gap:7px;margin-top:10px;flex-wrap:wrap}
+  .supacts button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:5px 11px;font-size:12px;font-weight:700;cursor:pointer}
+  .supacts button:hover{background:var(--paper)}
+  .supacts button.supact-pri{background:var(--blue);border-color:var(--blue);color:#fff}
+  .supacts button.supact-pri:hover{filter:brightness(1.06)}
+  /* The sliding panel. .list is the positioning context; the panel covers it and animates in from the left. */
+  .list{position:relative}
+  .supslide{position:absolute;inset:0;z-index:6;background:#fff;display:flex;flex-direction:column;
+            animation:supslidein .17s ease-out}
+  @keyframes supslidein{from{transform:translateX(-14px);opacity:.4}to{transform:none;opacity:1}}
+  @media (prefers-reduced-motion:reduce){ .supslide{animation:none} }
+  .supslide-h{display:flex;align-items:center;gap:9px;padding:9px 12px;border-bottom:1px solid var(--line);flex:0 0 auto}
+  /**
+   * ⚠️ ITS OWN CLASS, NOT .dback — .dback is `display:none` except under .appwrap.m, i.e. it is the MOBILE back
+   * button. Reusing it here meant that on a laptop the panel had no way out at all: open "Find a product" and the
+   * supplier list was simply gone. Athi hit it immediately. A panel that covers the only route back must carry a
+   * route back that is visible in the same breakpoint it covers.
+   */
+  .supback{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);background:#fff;color:var(--blue);
+           font-weight:700;font-size:12px;padding:5px 11px;border-radius:8px;cursor:pointer;flex:0 0 auto}
+  .supback:hover{background:var(--paper)}
+  .supslide-t{font-family:'Space Grotesk';font-weight:700;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .supslide-b{flex:1;min-height:0;overflow-y:auto;padding:10px 12px}
+  .supslide .supinfo{border-left:0;background:transparent;padding:0}
+  #supfind_host{flex:1;min-height:0;display:flex}
+  .supfindpanel{flex:1;min-height:0;display:flex;flex-direction:column}
+  .suptabs{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+  .suptabs button{border:0;background:#fff;color:var(--grey);font-size:12px;font-weight:700;padding:6px 12px;cursor:pointer}
+  .suptabs button.on{background:var(--ink);color:#fff}
+  .rowinfo{border:1px solid var(--line);background:#fff;color:var(--blue);border-radius:7px;width:24px;height:24px;
+           font-size:12px;line-height:1;cursor:pointer;flex:0 0 auto;align-self:center}
+  .rowinfo:hover{background:var(--paper)}
+  .sfhit{border:1px solid var(--line);border-radius:10px;padding:8px 11px;margin-bottom:8px;background:#fff}
+  .sfhit-h{display:flex;align-items:center;gap:7px;font-size:13px;margin-bottom:5px}
+  .sfhit-h button{margin-left:auto;border:1px solid var(--line);background:#fff;border-radius:7px;padding:3px 9px;font-size:11.5px;font-weight:700;color:var(--blue);cursor:pointer}
+  .sfline{display:flex;gap:9px;justify-content:space-between;font-size:12.5px;padding:3px 0;border-top:1px dashed var(--line)}
+  .sfnote{font-size:12px;line-height:1.6;color:#6b5a36;background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:7px 10px;margin-top:8px}
+  .sfnote.quiet{background:var(--paper);border-color:var(--line);color:var(--grey)}
+  .viafrom{display:inline-flex;align-items:center;gap:3px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* The `?` is deliberately quiet but always present — an unverified name must never read as a verified party. */
+  .unver{margin-left:2px;flex:0 0 auto;width:15px;height:15px;border-radius:50%;background:#f0e6cf;color:#8a6d2f;font-size:11px;line-height:15px;text-align:center;cursor:help}
+  /* ⚠️ cursor:pointer WAS MISSING. Every .tool is clickable and carries a tooltip (Change status, Assign,
+     Select, Raise dispute, Delete), but with cursor:auto the emoji glyph inside resolves to the I-BEAM text
+     cursor — so the one strip that looks most like buttons was the only one that did not behave like them. */
+  .tool{width:30px;height:30px;border:1px solid var(--line);background:#fff;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;color:#54616a;position:relative;cursor:pointer;user-select:none}
+  .tool:hover{background:var(--paper);border-color:#c3ccd2}
   .tool.on{background:var(--ink);color:#fff;border-color:var(--ink)}
   .topbar .bell{position:relative;border:0;background:none;color:#cfe0e8;font-size:16px;cursor:pointer;padding:2px 4px;line-height:1}
   .topbar .bell .bdot{position:absolute;top:-2px;right:-3px;background:#d65a5a;color:#fff;font-size:8px;font-weight:800;min-width:13px;height:13px;border-radius:7px;display:flex;align-items:center;justify-content:center;padding:0 3px}
@@ -464,6 +520,17 @@ img.attImg{object-fit:cover;display:block}
 .lrow.acc-disp{box-shadow:inset 3px 0 0 var(--disp)}
 .lrow.acc-urg{box-shadow:inset 3px 0 0 #d98a3a}
 .lrow.sel{background:#cfe0f2;box-shadow:inset 0 0 0 2px var(--blue), inset 4px 0 0 var(--blue-d);position:relative;z-index:1}
+/* Hover overlay: the whole line, including every column the fold dropped. pointer-events:none so it can never
+   sit between the cursor and the row underneath it. */
+#rowpeek{position:fixed;display:none;z-index:60;pointer-events:none;max-width:340px;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 26px rgba(20,30,40,.16);padding:9px 11px;font-size:12px;line-height:1.45}
+#rowpeek .pkr{display:flex;gap:10px;padding:2px 0}
+#rowpeek .pkr+.pkr{border-top:1px solid #f0f3f5}
+#rowpeek .pkk{flex:0 0 84px;color:var(--grey);font-size:11px;text-transform:uppercase;letter-spacing:.3px}
+#rowpeek .pkv{flex:1;min-width:0;color:var(--ink);overflow-wrap:anywhere}
+/* The subject cell is built to ELLIPSIS inside a fixed grid track; in the overlay it must do the opposite and
+   show the whole string, so unwind the clamp on the wrapper as well as the text. */
+#rowpeek .pkv .subjtext{overflow:visible;text-overflow:clip;white-space:normal}
+#rowpeek .pkv .subjwrap{flex-wrap:wrap;min-width:0}
 .subjwrap{display:flex;align-items:center;gap:5px;min-width:0}
 .subjwrap .lead{flex:0 0 auto;display:flex;align-items:center;gap:4px}
 .subjtext{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
@@ -2859,7 +2926,7 @@ function actorInviteModal(head, name, login, otp){
 function confirmAsk(title, bodyHtml, okLabel, onOk, danger){
   modal(`<div class="mhd"><div class="t">${esc(title)}</div></div>
    <div class="mbody"><div style="font-size:13px;line-height:1.55;color:var(--ink)">${bodyHtml}</div></div>
-   <div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="${danger?'danger':'pri'}" id="_cfmok">${esc(okLabel||'Confirm')}</button></div>`);
+   <div class="mfoot"><button data-testid="confirm-cancel" onclick="closeModal()">Cancel</button><button class="${danger?'danger':'pri'}" id="_cfmok" data-testid="confirm-ok">${esc(okLabel||'Confirm')}</button></div>`);
   const b=document.getElementById('_cfmok'); if(b)b.onclick=function(){ closeModal(); onOk(); };
 }
 // Legible deactivate/remove result — spells out every binding that was cleaned (tasks, cover both ways,
@@ -3035,14 +3102,25 @@ async function netRegisterSelf(){ try{ await api("netRegister",{body:{name:SESSI
 function suppliersScreen(){
   const list = `<div class="list">
     <div class="lh">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:14px">🏭 Suppliers</span><button onclick="openAssist('suppliers')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:#fff;color:#3F66A6;border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button></div>
-      <div style="display:flex;gap:7px"><input class="inp" id="sp_add" data-testid="sup-add-input" placeholder="Add supplier — type a name, User ID or email" style="flex:1" autocomplete="off" oninput="supSearch(this.value)" onkeydown="if(event.key==='Enter')addSupplier()"><button class="composebtn" data-testid="sup-add" onclick="addSupplier()">Add</button></div>
+      <!-- ⭐ Athi, 2026-08-16: *"find product on the top, same place as supplier?"* — the two are peers, not a
+           screen and a feature buried under it, so they read as two tabs on the same row. -->
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px">
+        <span class="suptabs">
+          <button class="${UI.supFind?'':'on'}" data-testid="sup-tab-list" onclick="supFindClose()">🏭 Suppliers</button>
+          <button class="${UI.supFind?'on':''}" data-testid="sup-find" onclick="supFindOpen()">🔎 Find a product</button>
+        </span>
+        <button onclick="openAssist('suppliers')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:#fff;color:#3F66A6;border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none;margin-left:auto">?</button></div>
+      ${UI.supFind?'':`<div style="display:flex;gap:7px"><input class="inp" id="sp_add" data-testid="sup-add-input" placeholder="Add supplier — type a name, User ID or email" style="flex:1" autocomplete="off" oninput="supSearch(this.value)" onkeydown="if(event.key==='Enter')addSupplier()"><button class="composebtn" data-testid="sup-add" onclick="addSupplier()">Add</button></div>
       <div id="sp_sugg" class="ccsugg"></div>
       <div class="err" id="sp_err" style="margin-top:6px"></div>
       <div class="srch" style="margin-top:8px">🔍 <input placeholder="Search suppliers, category, ID" value="${esc(UI.supQ||'')}" oninput="UI.supQ=this.value;paintSupList()"></div>
-      <div style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:11px;color:var(--grey)"><span id="sp_count">${supCount()} supplier(s)</span><span style="margin-left:auto;display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden"><button onclick="setSupSort(true)" style="border:0;background:${supPrefFirst()?'var(--blue)':'#fff'};color:${supPrefFirst()?'#fff':'var(--grey)'};font-size:11px;font-weight:700;padding:4px 9px">★ Preferred</button><button onclick="setSupSort(false)" style="border:0;background:${!supPrefFirst()?'var(--blue)':'#fff'};color:${!supPrefFirst()?'#fff':'var(--grey)'};font-size:11px;font-weight:700;padding:4px 9px">A–Z</button></span></div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:11px;color:var(--grey)"><span id="sp_count">${supCountText()}</span><span style="margin-left:auto;display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden"><button onclick="setSupSort(true)" style="border:0;background:${supPrefFirst()?'var(--blue)':'#fff'};color:${supPrefFirst()?'#fff':'var(--grey)'};font-size:11px;font-weight:700;padding:4px 9px">★ Preferred</button><button onclick="setSupSort(false)" style="border:0;background:${!supPrefFirst()?'var(--blue)':'#fff'};color:${!supPrefFirst()?'#fff':'var(--grey)'};font-size:11px;font-weight:700;padding:4px 9px">A–Z</button></span></div>`}
     </div>
-    <div class="rows" id="sup_rows">${UI._supLoading?'<div class="loadwrap"><span class="spin"></span> loading…</div>':supRowsHTML()}</div>
+    <!-- ⚠️ Find REPLACES the list body rather than overlaying it. As an inset:0 overlay it covered .lh too — and
+         .lh is where the tabs live, so the control for leaving the mode was underneath the mode. -->
+    <div class="rows" id="sup_rows" style="${UI.supFind?'display:none':''}">${UI._supLoading?'<div class="loadwrap"><span class="spin"></span> loading…</div>':supRowsHTML()}</div>
+    <div id="supfind_host">${supFindHTML()}</div>
+    <div id="supslide_host">${supSlideHTML()}</div>
   </div>`;
   const detail = `<div class="detail" id="detailpane">${supDetailHTML()}</div>`;
   const divider = `<div class="divider" id="divider" onmousedown="startDrag(event)" ontouchstart="startDrag(event)" role="separator" aria-label="Resize panes"><span class="grip"></span></div>`;
@@ -3068,10 +3146,200 @@ function supRowHTML(x){
     <button title="Preferred — tap to toggle" onclick="event.stopPropagation();toggleSupPref('${id}')" style="background:none;border:0;font-size:15px;line-height:1;padding:0;color:${x.preferred?'#e0a92b':'#d9c88f'};flex:0 0 auto;margin-top:1px">${x.preferred?'★':'☆'}</button>
     <div class="main2"><div class="l1"><span class="code">${esc(label)}</span>${x.category?`<span class="optchip" style="background:var(--gold-soft);color:#7a5e22;border-color:var(--gold-line)">${esc(x.category)}</span>`:''}<span class="amt">${cat}</span></div>
       <div class="l2">${esc(sub)}${x.nickname?` · <span class="mono">${esc(x.bridge_id||'')}</span>`:''}</div></div>
+    <button class="rowinfo" data-testid="sup-details-${id}" title="Their full record" onclick="event.stopPropagation();supOpenPanel('${id}')">ⓘ</button>
     <div class="rowgo" aria-hidden="true">›</div></div>`;
 }
-function supRowsHTML(){ const rows=supVisible(); if(!rows.length) return '<div class="empty"><div class="big">🏭</div><div class="t">No suppliers yet</div><div>Add one above by their User ID or email.</div></div>'; return rows.map(supRowHTML).join(''); }
-function paintSupList(){ const b=document.getElementById('sup_rows'); if(b)b.innerHTML=supRowsHTML(); const c=document.getElementById('sp_count'); if(c)c.textContent=supCount()+' supplier(s)'; }
+/**
+ * ⭐ THE SUPPLIER'S FULL RECORD, ON THE LEFT (Athi, 2026-08-16: *"left hand side panel should show max information
+ * about the supplier, if they want to edit, a click button to edit information. right hand side only to show the
+ * product information"*).
+ *
+ * This is everything supOpenProfile() used to hide behind a "Details ›" chip and a modal. A modal was the wrong
+ * home for it: you consult a supplier's category, your note about them and their clearance standing WHILE picking
+ * items, and a modal you must dismiss to get back to the catalogue makes the two mutually exclusive. Beside the
+ * catalogue, both are on screen at once.
+ *
+ * ⚠️ EDIT IS A BUTTON, NOT A MODE ON THE RIGHT. The right pane is the products, so editing opens over this card
+ * rather than replacing the catalogue.
+ */
+function supInfoCardHTML(x){
+  const r=UI.supRd, sm=(r&&r.data&&r.data.summary)||null;
+  const kv=function(k,v,mono){ return '<div class="supkv"><b>'+k+'</b><span'+(mono?' class="mono"':'')+'>'+v+'</span></div>'; };
+  /**
+   * ⭐ WHAT THIS ROW IS (Athi, 2026-08-16: *"like ISO9001, GSTN number etc, what he is declaring"*). Exactly that —
+   * the standards, licences and registrations THE SUPPLIER declares: ISO 9001, BIS, FSSAI, a GST registration.
+   *
+   * ⚠️ DECLARED IS NOT VERIFIED, and the row must not blur them. The summary counts `verified` and `attested`
+   * separately from the rest for a reason — every clearance on this account today carries `rung: null`, i.e. self-
+   * asserted at best. Calling a self-declaration "met" is the same overreach as rendering an unverified WhatsApp
+   * display name as a counterparty. So: say how many are DECLARED, and say separately how many are VERIFIED.
+   */
+  const dec=(sm&&sm.met)||0, ver=(sm&&sm.verified)||0;
+  const clr = !sm ? '<span style="color:var(--grey)">not loaded</span>'
+    : dec===0 ? '<span style="color:#8a5a1e;font-weight:700">none declared yet</span>'
+              : '<span style="color:#2e6b3f;font-weight:700">'+dec+' declared</span>'
+                + (ver? ' <span style="color:#2e6b3f">· '+ver+' verified</span>'
+                      : ' <span style="color:var(--grey)">· none verified</span>');
+  /**
+   * ⭐ THE IDENTIFYING DETAILS (Athi, 2026-08-16: *"minimum supplier details like contact number, email id, GSTN
+   * etc should be visible"*). GSTN, address and verified status come from the PUBLIC storefront payload the panel
+   * already holds — `shop` in /suppliers/:id/catalogue — so showing them costs no request and adds no exposure.
+   *
+   * ⚠️ CONTACT NUMBER AND EMAIL ARE DELIBERATELY ABSENT, and this is not an oversight. They exist on `identities`,
+   * but they are NOT in the public `shop` object, and relationships.js:145 rules on precisely this: adding a
+   * supplier is unilateral, so the link is SELF-ASSERTED and "must NOT authorise anything beyond public. A tier
+   * that shows more needs bilateral consent, which supplier_list does not model." Anyone could add this entity
+   * without asking; handing out their phone number for it is the leak that rule exists to prevent.
+   */
+  const shop=(UI.supDet && UI.supDet.supplier && UI.supDet.supplier.supplier_list_id===x.supplier_list_id
+              && UI.supDet.cat && UI.supDet.cat.shop) || null;
+  return '<div class="supinfo" data-testid="sup-info">'
+    + kv('Legal name', esc(x.display_name||'—')+(shop&&shop.is_verified?' <span title="Verified business" style="color:#2e6b3f">✓</span>':''))
+    + kv('Your name', esc(x.nickname||'—'))
+    + kv('User ID', esc(x.bridge_id||'—'), true)
+    + (shop? kv('GSTN', shop.gstn?('<span class="mono">'+esc(shop.gstn)+'</span>'):'<span style="color:var(--grey)">not published</span>') : '')
+    + (shop? kv('Address', esc(shop.address||'—')) : '')
+    + kv('Category', esc(x.category||'—'))
+    + kv('Notes', esc(x.notes||'—'))
+    + kv('Preferred', x.preferred?'★ yes':'—')
+    + kv('Catalogue', x.has_catalogue?'📕 published':'<span style="color:var(--grey)">none published</span>')
+    + kv('Certificates', clr + '<div style="color:var(--grey);font-size:11px;margin-top:2px">standards &amp; licences they declare — ISO 9001, BIS, FSSAI, GST registration</div>')
+    + '<div class="supacts">'
+      /* ⚠️ NOT .composebtn — it sets color:#fff for a coloured background, and .supacts button sets background:#fff.
+         The two together rendered white-on-white: the button was there, sized and clickable, and invisible. */
+      + '<button class="supact-pri" data-testid="sup-edit" onclick="event.stopPropagation();supEdit(\''+x.supplier_list_id+'\')">✎ Edit</button>'
+      + '<button data-testid="sup-passport" onclick="event.stopPropagation();viewSupplierPassport(\''+esc(x.bridge_id)+'\',\''+String(supName(x)).replace(/[\\']/g,'')+'\')">Passport →</button>'
+      + '<button data-testid="sup-remove" onclick="event.stopPropagation();delSupplier(\''+x.supplier_list_id+'\')" style="margin-left:auto;color:#c0453b">Remove</button>'
+    + '</div></div>';
+}
+/**
+ * ⚠️ THE CARD USED TO RENDER INLINE UNDER ITS ROW, AND THAT DOES NOT SCALE. Athi, 2026-08-16: *"if 10 supplier,
+ * each supplier takes half page. so we may have to show more supplier list"*. Right — the record is ~300px, so
+ * one open supplier pushed the rest of the list off screen. Fine at one supplier, useless at ten.
+ *
+ * It is now a panel that SLIDES OVER the list, with a back button. The list keeps its full height and stays
+ * dense; the record gets the room it needs; neither is traded for the other.
+ */
+function supRowsHTML(){ const rows=supVisible(); if(!rows.length) return '<div class="empty"><div class="big">🏭</div><div class="t">No suppliers yet</div><div>Add one above by their User ID or email.</div></div>';
+  return rows.map(supRowHTML).join(''); }
+function supSlideHTML(){
+  const x=(UI.sups||[]).find(function(s){ return s.supplier_list_id===UI.supSel; });
+  if(!x || !UI.supPanel) return '';
+  return '<div class="supslide" id="supslide">'
+    + '<div class="supslide-h"><button class="supback" data-testid="sup-back" onclick="supClosePanel()">‹ Suppliers</button>'
+      + '<div class="supslide-t">'+esc(supName(x))+(x.preferred?' <span style="color:#e0a92b">★</span>':'')+'</div></div>'
+    + '<div class="supslide-b">'+supInfoCardHTML(x)+'</div></div>';
+}
+/* ══ WHICH OF MY SUPPLIERS SELLS THIS? ════════════════════════════════════════════════════════════════════════
+   Athi, 2026-08-16: *"do we have a chance to seach the product under all the suppliers, similar to network?"*
+
+   Modelled on netAvailSearch (cap-network.js) — ask every one, and say plainly what each answer is worth. The
+   discipline that screen set is the part worth copying: it waited for real data rather than shipping invented
+   figures, and it names the states that decide whether a person can trust the result.
+
+   ⚠️ IT READS EXACTLY WHAT ANYONE COULD READ ANONYMOUSLY. /suppliers/:id/catalogue returns the PUBLIC storefront
+   payload and nothing more, deliberately — relationships.js:145 spells out why: adding a supplier is unilateral,
+   so being "related" is SELF-ASSERTED and must not authorise a wider view. Fanning out client-side therefore adds
+   zero exposure; it is the same data, gathered.
+
+   ⚠️ THE THREE ANSWERS ARE NOT THE SAME, and the UI must not flatten them:
+     HAS IT        the item is in their published catalogue, with a price
+     NO CATALOGUE  they have published nothing — this is NOT "they don't sell it", it is "we cannot know"
+     NOT LISTED    they have a catalogue and this item is not in it
+   Collapsing the middle one into "no" is the same lie as drawing an unreported store as 0. */
+var _supFindT=null;
+function supFindSearch(v){
+  UI._sfQ=String(v||'');
+  if(_supFindT) clearTimeout(_supFindT);
+  const q=UI._sfQ.trim();
+  if(q.length<2){ UI._sfRes=null; UI._sfBusy=false; paintSupFind(); return; }
+  UI._sfBusy=true; paintSupFind();
+  /* Debounced: a keystroke is not a question, and this walks every supplier's catalogue. */
+  _supFindT=setTimeout(function(){ supFindRun(q); }, 400);
+}
+async function supFindRun(q){
+  const sups=(UI.sups||[]).slice();
+  const needle=q.toLowerCase();
+  const out=[];
+  UI._sfDone=0; UI._sfTotal=sups.length;
+  for(const s of sups){
+    if(String(UI._sfQ||'').trim().toLowerCase()!==needle) return;   // a newer query superseded this one
+    if(!s.has_catalogue){ out.push({sup:s, state:'nocat', hits:[]}); UI._sfDone++; paintSupFind(); continue; }
+    try{
+      /* Cached per supplier — searching three words in a row must not refetch the same catalogue three times. */
+      UI._sfCache=UI._sfCache||{};
+      let cat=UI._sfCache[s.supplier_entity_id];
+      if(!cat){ cat=await supCatalogueFull(s.supplier_entity_id); UI._sfCache[s.supplier_entity_id]=cat; }
+      /* ⚠️ item_data OR FLAT — the catalogue payload wraps items, exactly as the mapper at the end of
+         selectSupplier() unwraps them. Reading it.name directly matched nothing and looked like "no supplier
+         stocks it", which is the worst possible way for a search to be broken. */
+      const hits=(cat.items||[]).filter(function(p){
+        const d=p.item_data||p;
+        return ((d.name||d.product||'')+' '+(d.code||d.hsn||d.sku||'')).toLowerCase().indexOf(needle)>=0;
+      });
+      out.push({sup:s, state:hits.length?'has':'miss', hits:hits.slice(0,6), cat:cat});
+    }catch(e){ out.push({sup:s, state:'err', err:(e&&e.message)||'failed', hits:[]}); }
+    UI._sfDone++; UI._sfRes=out.slice(); paintSupFind();
+  }
+  UI._sfBusy=false; UI._sfRes=out; paintSupFind();
+}
+/* ⚠️ THE BODY IS ITS OWN FUNCTION so the repaint can call it directly. The first version built the whole panel and
+   then split the string on '<div id="sf_body">' to recover the inner part — a parser made of substring surgery,
+   which breaks the moment the wrapper markup changes and gives no error when it does. */
+function supFindBodyHTML(){
+  const q=String(UI._sfQ||'').trim();
+  let body;
+  if(q.length<2){
+    body='<div style="padding:22px 4px;color:var(--grey);font-size:12.5px;line-height:1.7">'
+      + 'Type a product name or code. <b>Every supplier you have added is asked</b>, and each answers from their '
+      + 'published catalogue.<div style="margin-top:9px;font-size:12px">A supplier who has published no catalogue '
+      + 'comes back as <b>can\'t tell</b> — never as "no". Not knowing and not stocking are different answers.</div></div>';
+  } else {
+    const res=UI._sfRes||[];
+    const has=res.filter(function(r){return r.state==='has';});
+    const nocat=res.filter(function(r){return r.state==='nocat';});
+    const miss=res.filter(function(r){return r.state==='miss';});
+    const err=res.filter(function(r){return r.state==='err';});
+    const prog=UI._sfBusy?('<div style="font-size:11.5px;color:var(--grey);padding:5px 0"><span class="spin"></span> asking '+(UI._sfDone||0)+' of '+(UI._sfTotal||0)+'…</div>'):'';
+    const card=function(r){
+      return '<div class="sfhit"><div class="sfhit-h"><b>'+esc(supName(r.sup))+'</b>'
+        +(r.sup.preferred?'<span style="color:#e0a92b">★</span>':'')
+        +'<button onclick="selectSupplier(\''+r.sup.supplier_list_id+'\')">Open →</button></div>'
+        /* ⚠️ THE SUPPLIER'S CURRENCY, not inr(). inr() formats in MY currency (myCur()), so a supplier pricing in
+           USD would have had their number relabelled as rupees — a wrong price that looks perfectly normal. */
+        + r.hits.map(function(p){ const d=p.item_data||p;
+            const cur=(r.cat&&r.cat.supplier&&r.cat.supplier.currency_code)||(r.cat&&r.cat.shop&&r.cat.shop.currency)||myCur();
+            return '<div class="sfline"><span>'+esc(d.name||d.product||'item')+'</span><span class="mono">'
+              +esc(fmtMoney(cbAmount(d.price),cur))+' / '+esc(d.unit||'unit')+'</span></div>'; }).join('')
+        + '</div>';
+    };
+    body = prog
+      + (has.length? has.map(card).join('') : (UI._sfBusy?'':'<div style="padding:14px 4px;font-size:12.5px;color:var(--grey)">No supplier lists that.</div>'))
+      + (nocat.length? '<div class="sfnote"><b>Can\'t tell — '+nocat.length+' supplier'+(nocat.length===1?'':'s')+' published no catalogue:</b> '+nocat.map(function(r){return esc(supName(r.sup));}).join(', ')+'</div>' : '')
+      + (miss.length? '<div class="sfnote quiet">Not listed by '+miss.length+' supplier'+(miss.length===1?'':'s')+' with a catalogue.</div>' : '')
+      + (err.length? '<div class="sfnote" style="color:#c0453b">Could not read '+err.length+': '+err.map(function(r){return esc(supName(r.sup));}).join(', ')+'</div>' : '');
+  }
+  return body;
+}
+function supFindHTML(){
+  if(!UI.supFind) return '';
+  /* Not .supslide — it is a MODE BODY now, sitting in the flow beneath the tabs, not an overlay across them. */
+  return '<div class="supfindpanel" id="supfind">'
+    + '<div class="supslide-b"><div class="srch">🔍 <input id="sf_q" data-testid="sup-find-input" placeholder="Product name or code" value="'+esc(UI._sfQ||'')+'" oninput="supFindSearch(this.value)"></div>'
+    + '<div id="sf_body">'+supFindBodyHTML()+'</div></div></div>';
+}
+/* Both are MODE switches — the header (tabs, add row, supplier search) differs between them, so the screen is
+   re-rendered rather than a fragment repainted. */
+function supFindOpen(){ UI.supFind=true; UI.supPanel=false; renderApp(); const i=document.getElementById('sf_q'); if(i)i.focus(); }
+function supFindClose(){ UI.supFind=false; renderApp(); }
+function paintSupFind(){ const b=document.getElementById('sf_body'); if(b) b.innerHTML=supFindBodyHTML(); }
+
+function supOpenPanel(id){ UI.supSel=id; UI.supPanel=true; paintSupSlide(); }
+function supClosePanel(){ UI.supPanel=false; paintSupSlide(); }
+function paintSupSlide(){ const h=document.getElementById('supslide_host'); if(h) h.innerHTML=supSlideHTML(); paintSupList(); }
+/* "1 supplier(s)" — the parenthesised plural is a shrug where the code already knows the number. */
+function supCountText(){ const n=supCount(); return n+(n===1?' supplier':' suppliers'); }
+function paintSupList(){ const b=document.getElementById('sup_rows'); if(b)b.innerHTML=supRowsHTML(); const c=document.getElementById('sp_count'); if(c)c.textContent=supCountText(); }
 function paintSupDetail(){ const dp=document.getElementById('detailpane'); if(dp){ dp.className='detail'; dp.innerHTML=supDetailHTML(); } }
 /* ===================== CUSTOMERS (CRM) — end-customers locked UNDER this shop (parent_entity_id = shop).
    Everyone who ordered/signed-in via the storefront; the platform never shares them. GET /api/relationships/customers. */
@@ -3180,7 +3448,9 @@ function supStepsFor(x){
     sendLabel:function(){ return 'Send order to '+supName(x); },
     cancelLabel:'Their details',
     draftLabel:'Save draft',
-    onCancel:function(){ supOpenProfile(x.supplier_list_id); },
+    /* One record, one place. This used to open supOpenProfile() — a modal listing the same fields the left panel
+       now shows, so the same facts had two renderings to keep in step. */
+    onCancel:function(){ supOpenPanel(x.supplier_list_id); },
     onDraft:function(){ supSendOrder(x, true); },
     onSend:function(){ supSendOrder(x, false); },
     // A step CHANGE is a navigation, so the whole pane is rebuilt — "Remove from list" belongs only on the
@@ -3276,20 +3546,27 @@ function supSendOrder(x, isDraft){
 }
 /** Their details — profile, clearances and the way out of the list. The chip opens it; it is never where a WARNING
  *  first appears, only where the detail behind one lives. */
-function supOpenProfile(id){
-  var x=(UI.sups||[]).find(function(s){return s.supplier_list_id===id;}); if(!x) return;
-  var r=UI.supRd, sm=(r&&r.data&&r.data.summary)||null;
-  var kv=function(k,v){ return '<div style="display:flex;gap:9px;padding:7px 0;border-bottom:1px dashed var(--line);font-size:13px">'
-    + '<b style="min-width:96px;color:var(--grey);font-size:11px;text-transform:uppercase;font-weight:700">'+k+'</b><span>'+v+'</span></div>'; };
-  modal('<div class="mh">🏭 '+esc(supName(x))+'</div><div class="mb">'
-    + (sm&&!sm.ready?'<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:10px;padding:9px 12px;font-size:12.5px;color:#6b5a36;margin-bottom:9px">⚠ '
-        +((sm.total||0)-(sm.met||0))+' clearance(s) outstanding · '+(sm.met||0)+'/'+(sm.total||0)+' met — status only, their evidence stays theirs.</div>':'')
-    + kv('Legal name', esc(x.display_name||'—')) + kv('Your name', esc(x.nickname||'—'))
-    + kv('User ID', '<span class="mono">'+esc(x.bridge_id||'')+'</span>')
-    + kv('Category', esc(x.category||'—')) + kv('Notes', esc(x.notes||'—'))
-    + '<div style="margin-top:12px"><button data-testid="sup-passport" onclick="viewSupplierPassport(\''+esc(x.bridge_id)+'\',\''+String(supName(x)).replace(/[\\\\']/g,'')+'\')" style="border:1px solid var(--line);background:#fff;border-radius:8px;padding:7px 11px;font-size:12px;font-weight:700;cursor:pointer">'+esc(supName(x))+'&rsquo;s passport &rarr;</button></div>'
-    + '</div><div class="mf"><button class="pri" onclick="closeModal()">Close</button></div>', true);
+/**
+ * Edit opens over the left card. ⚠️ It reuses the SAME field ids the right-pane edit mode used (sp_nick, sp_cat,
+ * sp_notes) so saveSupplier() reads them unchanged — moving a form must not fork the function that saves it.
+ */
+function supEdit(id){
+  const x=(UI.sups||[]).find(function(s){return s.supplier_list_id===id;}); if(!x) return;
+  modal('<div class="mhd"><div class="t">Edit '+esc(supName(x))+'</div><div class="s">Your own details for this supplier — they never see them</div></div>'
+    + '<div class="mbody">'
+    + '<label class="fl">Your name for them</label><input class="inp" id="sp_nick" data-testid="sup-nick" value="'+esc(x.nickname||'')+'" placeholder="e.g. Acme (local yard)">'
+    + '<label class="fl">Category / tag</label><input class="inp" id="sp_cat" data-testid="sup-category" value="'+esc(x.category||'')+'">'
+    + '<label class="fl">Notes</label><input class="inp" id="sp_notes" data-testid="sup-notes" value="'+esc(x.notes||'')+'" placeholder="contact person, terms…">'
+    + '<label class="fl" style="margin-top:12px">Preferred</label>'
+    + '<div><button onclick="toggleSupPref(\''+id+'\')" style="border:1px solid var(--line);border-radius:8px;background:'+(x.preferred?'var(--blue)':'#fff')+';color:'+(x.preferred?'#fff':'var(--grey)')+';font-size:12px;font-weight:700;padding:6px 13px">★ '+(x.preferred?'Preferred':'Not preferred')+'</button></div>'
+    + '<div class="err" id="sp_ederr" style="margin-top:8px"></div></div>'
+    + '<div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="pri" data-testid="sup-save" onclick="saveSupplier(\''+id+'\')">Save</button></div>');
 }
+/* ⚠️ supOpenProfile() WAS HERE AND IS GONE (2026-08-16). It rendered the supplier's record in a modal — the same
+   fields supInfoCardHTML() now shows in the left panel, with its own copy of the clearance wording that had
+   already drifted ("N clearance(s) outstanding" against met:0, the phrasing Athi could not parse). Two renderings
+   of one record is how that drift happens. Its last two callers were repointed: the footer's "Their details" to
+   the panel, and the warning chip to the passport, which is what the warning is actually about. */
 /** The cart's own repaint target: the whole detail pane, which is what the bar and the list live inside. */
 function supCartOpts(x){
   return { listEl:'cbpick_sup', barEl:'cbcartbar_sup', renderer: CBCatUI, checkoutLabel:'Check out →',
@@ -3303,11 +3580,18 @@ function supCartOpts(x){
 }
 async function selectSupplier(id, silent){
   UI.supSel=id; UI.supMode='view';
+  /**
+   * ⚠️ SELECTING DOES NOT OPEN THE RECORD PANEL. It did, and that was wrong twice over: the slide-over covers the
+   * list, so after picking one supplier you could not click the next without pressing back first — and the e2e
+   * proved it literally, with `.supkv … intercepts pointer events` on the second row click. Selecting a supplier
+   * means "show me their catalogue"; reading their record is a separate intent with its own button on the row.
+   */
+  UI.supFind=false;
   // A new supplier gets a new cart. The SAME supplier keeps the one you have been filling — the screen knows which
   // it is, so the cart never has to guess (that guess is what create() exists to remove).
   if(UI._supCartFor && UI._supCartFor!==id) supCartRelease();
   if((UI.vp==='mob') && !silent){ UI.mdetail=true; const p=document.getElementById('panel'); if(p)p.classList.add('showdetail'); }
-  paintSupList();
+  paintSupSlide();
   const x=(UI.sups||[]).find(s=>s.supplier_list_id===id); if(!x){ supCartRelease(); return; }
   UI.supDet={supplier:x, items:null, loading:!!x.has_catalogue}; paintSupDetail();
   loadSupplierConfidence(x.bridge_id);
@@ -3383,7 +3667,10 @@ function supCartHTML(){
 function loadSupplierConfidence(bridge){
   if(!bridge){ UI.supRd=null; return; }
   UI.supRd={bridge:bridge, loading:true}; paintSupDetail();
-  api('readinessOf',{params:{bridge_id:bridge}}).then(function(d){ UI.supRd={bridge:bridge, data:d}; if(UI.supDet&&UI.supDet.supplier&&UI.supDet.supplier.bridge_id===bridge) paintSupDetail(); })
+  /* ⚠️ paintSupList TOO. Readiness arrives after the panes are drawn, and the LEFT card now reports clearance
+     standing as well — repainting only the right left the card stuck on "not loaded" beside a right pane that had
+     already rendered the answer. Two readers of one async value; both have to be told when it lands. */
+  api('readinessOf',{params:{bridge_id:bridge}}).then(function(d){ UI.supRd={bridge:bridge, data:d}; if(UI.supDet&&UI.supDet.supplier&&UI.supDet.supplier.bridge_id===bridge){ paintSupDetail(); paintSupList(); } })
     .catch(function(e){ UI.supRd={bridge:bridge, err:(e&&e.message)||''}; });
 }
 /* ⚠️ supConfidenceStrip REMOVED — the step flow replaced it. Its whole job was a panel inside the pane saying
@@ -3447,33 +3734,60 @@ async function viewSupplierPassport(bridge, name){
 function setSupMode(m){ UI.supMode=m; paintSupDetail(); }
 function supDetailHTML(){
   const d=UI.supDet, x=d&&d.supplier;
+  /**
+   * ⚠️ WHILE SEARCHING ACROSS ALL SUPPLIERS, THIS PANE MUST NOT SHOW ONE OF THEM. Athi, 2026-08-16: *"when you are
+   * in find a product, right handside still shows the gamma product list, that will mislead"*. Exactly — the left
+   * asks "who has this?" while the right displayed whichever supplier happened to be selected last, so results
+   * from Alpha appeared beside a catalogue headed Gamma. Two panes answering different questions with no sign
+   * that they are unrelated is worse than one pane saying nothing.
+   */
+  if(UI.supFind) return `<div class="empty"><div class="big">🔎</div><div class="t">Searching every supplier</div>`
+    + `<div>Results are on the left, grouped by who stocks it. Pick <b>Open →</b> on one to bring their catalogue back here.</div></div>`;
   if(!x) return `<div class="empty"><div class="big">🏭</div><div class="t">Select a supplier</div><div>Pick one to see their profile and catalogue, then compose an order.</div></div>`;
   const back=`<button class="dback" onclick="backToList()">‹ Suppliers</button>`;
-  const seg=(m,l)=>`<button onclick="setSupMode('${m}')" style="border:0;background:${(UI.supMode==='edit'?'edit':'view')===m?'var(--ink)':'#fff'};color:${(UI.supMode==='edit'?'edit':'view')===m?'#fff':'var(--grey)'};font-size:12px;font-weight:700;padding:6px 15px">${l}</button>`;
-  const toggle=`<div style="display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-top:10px">${seg('view','View')}${seg('edit','Edit')}</div>`;
-  const head=`<div class="dh">${back}<div class="dt">${esc(supName(x))} ${x.preferred?'<span style="color:#e0a92b">★</span>':''}</div><div class="ds">${x.category?esc(x.category)+' · ':''}<span class="mono">${esc(x.bridge_id||'')}</span></div>${toggle}</div>`;
+  /* ⚠️ NO View/Edit TOGGLE HERE ANY MORE — this pane is the products. The record and its Edit button live on the
+     left card (supInfoCardHTML). The heading keeps only what names the catalogue you are looking at. */
+  const head=`<div class="dh">${back}<div class="dt">${esc(supName(x))} ${x.preferred?'<span style="color:#e0a92b">★</span>':''}</div><div class="ds">what you can order from them</div></div>`;
   let body, bar;
-  if(UI.supMode==='edit'){
-    body=`<div class="sec">Edit — your details for this supplier</div>
-      <label class="fl">Your name for them</label><input class="inp" id="sp_nick" data-testid="sup-nick" value="${esc(x.nickname||'')}" placeholder="e.g. Acme (local yard)">
-      <label class="fl">Category / tag</label><input class="inp" id="sp_cat" data-testid="sup-category" value="${esc(x.category||'')}">
-      <label class="fl">Notes</label><input class="inp" id="sp_notes" data-testid="sup-notes" value="${esc(x.notes||'')}" placeholder="contact person, terms…">
-      <label class="fl" style="margin-top:12px">Preferred</label>
-      <div><button onclick="toggleSupPref('${x.supplier_list_id}')" style="border:1px solid var(--line);border-radius:8px;background:${x.preferred?'var(--blue)':'#fff'};color:${x.preferred?'#fff':'var(--grey)'};font-size:12px;font-weight:700;padding:6px 13px">★ ${x.preferred?'Preferred':'Not preferred'}</button></div>
-      <div class="err" id="sp_ederr" style="margin-top:8px"></div>`;
-    bar=`<button class="pri" data-testid="sup-save" onclick="saveSupplier('${x.supplier_list_id}')">Save</button><button onclick="setSupMode('view')">Cancel</button>`;
-  } else {
+  {
     /**
-     * ⚠️ THE PROFILE MOVED BEHIND THE CHIP, THE WARNING DID NOT. Selecting a supplier means you intend to order
-     * from them, so the catalogue is the default view and the profile is what costs a tap — the exception moves,
-     * not the main job. But an outstanding-clearance warning stays ON the chip: discovering at Review that you are
-     * ordering from someone who cannot clear customs is discovering it too late.
+     * ⚠️ THE RECORD MOVED LEFT; THE WARNING DID NOT. The identity half of this chip is now on the left card, but
+     * the clearance warning STAYS on the right, because it is not supplier information — it is an alert about the
+     * order being built in this pane. On mobile the left pane is hidden while you pick items, so a warning that
+     * lived only there would be invisible at exactly the moment it matters. The original note held: discovering at
+     * Review that you are ordering from someone who cannot clear customs is discovering it too late.
+     *
+     * ⚠️ AND IT NO LONGER CLAIMS MORE THAN IT KNOWS. With met:0 the old wording — "35 clearances outstanding" —
+     * read as 35 obligations checked and failed. What it actually means is that nothing has been recorded at all,
+     * against a list that is not even scoped to this supplier (see the FLOOR in lib/readiness.js).
      */
     const c=UI.supRd&&UI.supRd.data&&UI.supRd.data.summary, bad=c&&!c.ready;
-    const chip=`<div style="padding:2px 0 0"><div data-testid="sup-chip" onclick="supOpenProfile('${x.supplier_list_id}')" style="display:inline-flex;align-items:center;gap:9px;border:1px solid var(--line);border-radius:22px;padding:6px 8px 6px 13px;background:#fff;cursor:pointer">`
-      + `<b style="font-size:13.5px">${esc(supName(x))}</b>`
-      + `<span class="mono" style="font-size:11px;color:var(--grey)">${esc(x.bridge_id||'')}</span>`
-      + (bad?`<span style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:20px;padding:2px 9px;font-size:11px;color:#8a5a1e;font-weight:700">⚠ ${(c.total||0)-(c.met||0)} clearances outstanding</span>`:'')
+    /* ⚠️ ALWAYS RENDERED, never display:none — order-steps.spec asserts sup-chip is VISIBLE, and a hidden element
+       fails that. It carries a clean state as readily as a warning, so there is nothing to hide. */
+    /**
+     * ⚠️ PLAIN LANGUAGE, AND NO NUMBER WE KNOW IS WRONG. Athi, 2026-08-16: *"what is no clearence recorded, i
+     * don't understand that"* — fair, and my wording was the problem twice over.
+     *
+     * "Clearance" is the internal word; the thing a person recognises is a CERTIFICATE OR LICENCE the supplier has
+     * to show. And the count was worse than the word: the 35 is the unscoped floor from lib/readiness.js — every
+     * standard in the system, including pharmaceutical licences for a paint company. Printing "35 listed" invites
+     * the reader to believe 35 things genuinely apply here. They do not, so the number is gone until the set is
+     * scoped (see FINDING-readiness-floor-unscoped.md); what is left is the part that is true — none on file.
+     */
+    /**
+     * ⚠️ SAY WHOSE. Athi, 2026-08-16: *"whose certificate we are looking for, is it supplier certificate?"* — a
+     * bare "no certificates on file" beside your own account name reads as an accusation about YOU. It is the
+     * SUPPLIER'S, and the passport already knew this needed saying out loud (line ~3709: *"the supplier you are
+     * looking at. Not yours."*). The chip and the card must not be vaguer than the panel behind them.
+     */
+    const who = supName(x);
+    const warnTxt = !c ? 'their certificates — not loaded'
+      : !bad ? `✓ ${esc(who)} has ${c.met||0} certificate${(c.met||0)===1?'':'s'} on file`
+      : (c.met||0)===0 ? `⚠ ${esc(who)} has no certificates on file yet`
+      : `⚠ ${esc(who)}: ${(c.total||0)-(c.met||0)} certificate${((c.total||0)-(c.met||0))===1?'':'s'} still to come`;
+    /* The chip is a CERTIFICATES warning, so it opens the certificates — the passport — not the profile. */
+    const chip=`<div style="padding:2px 0 0"><div data-testid="sup-chip" onclick="viewSupplierPassport('${esc(x.bridge_id)}','${String(supName(x)).replace(/[\\']/g,'')}')" style="display:inline-flex;align-items:center;gap:9px;border:1px solid ${bad?'var(--gold-line)':'var(--line)'};border-radius:22px;padding:6px 8px 6px 13px;background:${bad?'var(--gold-soft)':'#fff'};cursor:pointer">`
+      + `<span style="font-size:11.5px;color:${bad?'#8a5a1e':'#2e6b3f'};font-weight:700">${warnTxt}</span>`
       + `<span style="background:var(--paper);border-radius:20px;padding:3px 10px;font-size:11.5px;color:var(--blue);font-weight:700">Details ›</span></div></div>`;
     let catcard;
     if(!x.has_catalogue) catcard=`<div class="sec">Order from them</div><div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;font-size:12px;color:#6b5a36">No catalogue published yet — nothing to order.</div>`;
@@ -3486,27 +3800,48 @@ function supDetailHTML(){
       ? `<div id="sup_rail">${UI._supFlow.railHTML()}</div><div style="font-size:11.5px;color:var(--grey);margin:0 0 8px" id="sup_sub">${esc(UI._supFlow.steps()[UI._supFlow.index()].t||'')}</div>`
         + `<div id="sup_body">${UI._supFlow.bodyHTML()}</div>`
       : catcard);
-    // Removing a supplier belongs on the browsing step, not halfway through composing them an order.
-    const onItems = stepped && UI._supFlow.index()===0;
-    bar = (stepped ? `<div id="sup_foot" style="flex:1">${UI._supFlow.footHTML()}</div>` : '')
-      + ((!stepped || onItems) ? `<button class="warn" data-testid="sup-remove" onclick="delSupplier('${x.supplier_list_id}')">Remove from list</button>` : '');
+    /* ⚠️ "Remove from list" USED TO LIVE HERE and is gone. Managing the relationship is not product information,
+       so it belongs on the record panel with Edit and Passport — and while it lived in both places it carried the
+       SAME data-testid as the card's, which is a strict-mode violation the moment a spec asks for `sup-remove`.
+       Two buttons doing one job is how one testid ends up meaning two things. */
+    bar = (stepped ? `<div id="sup_foot" style="flex:1">${UI._supFlow.footHTML()}</div>` : '');
   }
   return `${head}<div class="db">${body}</div><div class="actbar">${bar}</div>`;
 }
 let _spSearchT=null;
 function supSearch(q){ clearTimeout(_spSearchT); q=(q||'').trim(); const h=document.getElementById('sp_sugg'); if(q.length<2){ if(h)h.innerHTML=''; return; } _spSearchT=setTimeout(async function(){ try{ const r=await api("entitySearch",{query:{q:q}}); supRenderSugg(Array.isArray(r)?r:((r&&r.results)||[])); }catch(_){ const hh=document.getElementById('sp_sugg'); if(hh)hh.innerHTML=''; } }, 250); }
 function supRenderSugg(list){ UI._supSugg=list||[]; const h=document.getElementById('sp_sugg'); if(!h)return; if(!UI._supSugg.length){ h.innerHTML='<div class="ccsugg-empty">No matching business found</div>'; return; } h.innerHTML=UI._supSugg.slice(0,8).map(function(e,i){ return '<div class="ccsugg-item" onclick="supPick('+i+')"><span class="ccsugg-nm">'+esc(e.display_name||'')+'</span><span class="ccsugg-id">'+esc(e.bridge_id||'')+'</span></div>'; }).join(''); }
-async function supPick(i){ const e=(UI._supSugg||[])[i]; if(!e)return; const h=document.getElementById('sp_sugg'); if(h)h.innerHTML=''; const err=document.getElementById('sp_err'); if(err)err.textContent=''; const a=document.getElementById('sp_add'); if(a)a.value=e.display_name||''; if(!confirm('Add ' + (e.display_name||e.bridge_id) + ' (' + e.bridge_id + ') as your supplier?\n\nThey are not asked and are not notified — this is your own list. You will see what their public storefront shows.')){ if(a)a.value=''; return; } try{ await api("supAdd",{body:{supplier_bridge_id:e.bridge_id}}); toast('Supplier added ✓'); if(a)a.value=''; await loadSuppliers(); }catch(ex){ if(err)err.textContent=ex.message; } }
+async function supPick(i){ const e=(UI._supSugg||[])[i]; if(!e)return; const h=document.getElementById('sp_sugg'); if(h)h.innerHTML=''; const err=document.getElementById('sp_err'); if(err)err.textContent=''; const a=document.getElementById('sp_add'); if(a)a.value=e.display_name||'';
+  /* ⚠️ confirmAsk, NOT a second confirm helper — this file already had one (line ~2885), and I very nearly wrote
+     a parallel Promise-based twin before spotting it. Callback style is what it offers, so the work moves inside. */
+  confirmAsk('Add '+(e.display_name||e.bridge_id)+' as your supplier?',
+    '<b>'+esc(e.bridge_id||'')+'</b><br><br>They are <b>not asked and are not notified</b> — this is your own list. You will see what their public storefront shows.',
+    'Add supplier', async function(){
+      try{ await api("supAdd",{body:{supplier_bridge_id:e.bridge_id}}); toast('Supplier added ✓'); if(a)a.value=''; await loadSuppliers(); }
+      catch(ex){ if(err)err.textContent=ex.message; }
+    }); }
 async function addSupplier(){ const x=document.getElementById("sp_err"); if(x)x.textContent=""; const bid=(val("sp_add")||"").trim(); if(!bid){ if(x)x.textContent="Enter a supplier's name, User ID or email."; return; } const h=document.getElementById('sp_sugg'); if(h)h.innerHTML=''; if(!isUserId(bid)){ if(x)x.textContent="Type a name and pick from the list, or enter a User ID (8+ chars) / email."; return; }
-  if(!confirm('Add ' + bid + ' as your supplier?\n\nThey are not asked and are not notified — this is your own list. You will see what their public storefront shows.')) return;
-  try{ await api("supAdd",{body:{supplier_bridge_id:bid}}); toast("Supplier added ✓"); const a=document.getElementById('sp_add'); if(a)a.value=''; await loadSuppliers(); }catch(e){ if(x)x.textContent=e.message; } }
-async function delSupplier(id){ const _s=(UI.sups||[]).find(function(v){return v.supplier_list_id===id;}); const _n=_s?supName(_s):'this supplier'; if(!confirm('Remove ' + _n + ' from your supplier list?\n\nTheir catalogue and their business are untouched — only your own list entry is removed.')) return; try{ await api("supDel",{params:{id}}); UI.supSel=null; UI.supDet=null; UI.mdetail=false; supCartRelease(); toast(MSG.supplierRemoved()); await loadSuppliers(); }catch(e){ toast(MSG.fail("remove the supplier", e)); } }
+  confirmAsk('Add '+bid+' as your supplier?',
+    'They are <b>not asked and are not notified</b> — this is your own list. You will see what their public storefront shows.',
+    'Add supplier', async function(){
+      try{ await api("supAdd",{body:{supplier_bridge_id:bid}}); toast("Supplier added ✓"); const a=document.getElementById('sp_add'); if(a)a.value=''; await loadSuppliers(); }
+      catch(e){ if(x)x.textContent=e.message; }
+    }); }
+async function delSupplier(id){ const _s=(UI.sups||[]).find(function(v){return v.supplier_list_id===id;}); const _n=_s?supName(_s):'this supplier';
+  confirmAsk('Remove '+_n+' from your supplier list?',
+    'Their catalogue and their business are <b>untouched</b> — only your own list entry is removed.',
+    'Remove', async function(){
+      try{ await api("supDel",{params:{id}}); UI.supSel=null; UI.supDet=null; UI.mdetail=false; supCartRelease(); toast(MSG.supplierRemoved()); await loadSuppliers(); }
+      catch(e){ toast(MSG.fail("remove the supplier", e)); }
+    }, true); }
 async function toggleSupPref(id){ const x=(UI.sups||[]).find(s=>s.supplier_list_id===id); if(!x)return; const nv=!x.preferred;
   try{ await api("supPatch",{params:{id},body:{preferred:nv}}); x.preferred=nv; if(UI.supDet&&UI.supDet.supplier&&UI.supDet.supplier.supplier_list_id===id)UI.supDet.supplier.preferred=nv; paintSupList(); paintSupDetail(); toast(nv?"Marked preferred ★":"Removed preferred"); }
   catch(e){ toast(MSG.fail("update the supplier", e)+" — needs the Stage-B migration"); } }
 async function saveSupplier(id){ const err=document.getElementById("sp_ederr"); if(err)err.textContent="";
   const body={ nickname:val("sp_nick")||null, category:val("sp_cat")||null, notes:val("sp_notes")||null };
-  try{ await api("supPatch",{params:{id},body}); const x=(UI.sups||[]).find(s=>s.supplier_list_id===id); if(x){ x.nickname=body.nickname; x.category=body.category; x.notes=body.notes; } if(UI.supDet&&UI.supDet.supplier)Object.assign(UI.supDet.supplier, body); UI.supMode='view'; paintSupList(); paintSupDetail(); toast("Supplier updated ✓"); }
+  try{ await api("supPatch",{params:{id},body}); const x=(UI.sups||[]).find(s=>s.supplier_list_id===id); if(x){ x.nickname=body.nickname; x.category=body.category; x.notes=body.notes; } if(UI.supDet&&UI.supDet.supplier)Object.assign(UI.supDet.supplier, body); UI.supMode='view';
+    closeModal();   /* the form is a modal now, not a mode on the right pane */
+    paintSupList(); paintSupDetail(); toast("Supplier updated ✓"); }
   catch(e){ if(err)err.textContent=((e&&e.message)||"Failed")+" — this needs the Stage-B migration applied."; } }
 async function composeFromSupplier(id){ const d=UI.supDet, x=d&&d.supplier; if(!x||x.supplier_list_id!==id)return;
   // TICKED LINES FIRST. A variant carries its parent's name into the order line ("Tussar Emulsion 4L") — an order
@@ -4416,11 +4751,44 @@ function taskPanel(){
       ${_fsel?`<span data-testid="folder-rename" onclick="renameFolder('${esc(_fsel.folder_id)}')" title="Rename this folder" style="cursor:pointer;color:var(--blue);font-size:11.5px;margin-left:2px">Rename</span><span data-testid="folder-delete" onclick="deleteFolder('${esc(_fsel.folder_id)}')" title="Delete this folder — the chits inside are NOT deleted" style="cursor:pointer;color:#c0453b;font-size:11.5px">Delete</span>`:''}
       ${_btns}<button class="composebtn" style="${_isTrack?'':'margin-left:auto'}" onclick="toggleListHelp()">${UI.listHelp?'✕ Close':'❓ Help'}</button>
     </div>${UI.listHelp?`<div style="padding:11px 12px;border-bottom:1px solid var(--line);overflow-y:auto;max-height:52%">${assistPage(_ak)}</div>`:''}`;
+  /**
+   * ⭐ THE FOLD (Athi, 2026-08-16). Six bands stacked up before the first chit — measured at 218px, 24% of a
+   * 897px viewport, about six chits' worth of screen spent on controls you set occasionally.
+   *
+   * The split is BY HOW OFTEN YOU TOUCH A BAND, not by what looks tidy: Open/Act/Close, the count and the column
+   * header are read on every glance and never fold. Unassigned/Assigned, the search box and the tool strip are
+   * set occasionally, and those three collapse (~98px, roughly three more rows).
+   *
+   * ⚠️ FOLDING MUST NEVER HIDE ACTIVE STATE. A folded search box with a live search term leaves you looking at a
+   * filtered list with no visible reason why — the same failure as Trash reporting "Nothing in Open" while
+   * holding 10 chits: the screen quietly contradicts the data. So anything ACTIVE stays on as a chip; only idle
+   * controls disappear, and the chip expands the fold when clicked.
+   */
+  const _folded = !!UI.lhFold;
+  const _chips = [];
+  if(UI.folder==='task' && !isCust){
+    if(role==='actor' && UI.sub==='all') _chips.push('All Task');
+    else if(role!=='actor' && taskScope()==='assigned') _chips.push('Assigned');
+  }
+  if(UI.search) _chips.push('🔍 '+esc(UI.search));
+  if(advActive()) _chips.push('▽ filtered');
+  const foldedBar = (_folded && _chips.length)
+    ? `<div class="lhfolded" onclick="toggleLhFold()" title="Expand search, filters and tools">${_chips.map(c=>'<span class="fchip">'+c+'</span>').join('')}</div>` : '';
+  const srchBar = `<div class="srch">🔍 <input placeholder="${isCust?'Search my orders':'Search chits, party, item'}" id="listsrch" value="${esc(UI.search||'')}" oninput="onSrch('list', this.value)"><span id="srchadv">${advBtnHtml()}</span></div>`;
+  /* Built as a string first so a fold that leaves nothing behind drops the whole band — otherwise .lh keeps its
+     10px padding and 1px border and the fold silently costs 21px of the 98px it just saved. */
+  /**
+   * ⚠️ THE TOOLS DO NOT FOLD IN TRASH AND ARCHIVE. Everywhere else they are conveniences that also exist on the
+   * open chit, so folding them costs nothing. In these two views they are Restore / Unarchive / Delete-forever —
+   * the ONLY route back for something already deleted, and there is no other control anywhere on the screen that
+   * does it. Folding them would mean: fold once, open Trash, and find no way to recover anything. That is the
+   * same failure as Trash reporting "Nothing in Open" while holding 10 chits — the screen removing a recovery the
+   * data fully supports — and it is worse, because here the chit really would be stuck.
+   */
+  const _keepTools = (UI.folder==='trash' || UI.folder==='archive');
+  const lhInner = `${folders}${_folded?foldedBar:sub}${stTabs}${_folded?'':srchBar}${(_folded&&!_keepTools)?'':tools}${sel}`;
   const list = `<div class="list">${helpStrip}
-    <div class="lh">${folders}${sub}${stTabs}
-      <div class="srch">🔍 <input placeholder="${isCust?'Search my orders':'Search chits, party, item'}" id="listsrch" value="${esc(UI.search||'')}" oninput="onSrch('list', this.value)"><span id="srchadv">${advBtnHtml()}</span></div>
-      ${tools}${sel}
-    </div>
+    ${lhInner.trim() ? `<div class="lh${_folded?' folded':''}">${lhInner}</div>` : ''}
     <div class="listtotal" id="listtotal"></div>
     <div class="rows" id="rows" onscroll="onRowsScroll()" style="--coltpl:${colTemplate()}">${UI.loading?'<div class="loadwrap"><span class="spin"></span> loading…</div>':renderRows()}</div>
   </div>`;
@@ -4435,7 +4803,9 @@ function rollupBuckets(){ const ST={pending:'open',delivered:'open',read:'open',
   const b={open:{c:0,s:0},act:{c:0,s:0},close:{c:0,s:0}}; (UI.rollup||[]).forEach(g=>{ const k=ST[g.key]||'open'; if(b[k]){ b[k].c+=(+g.chits||0); b[k].s+=(+g.total_value||0); } }); return b; }
 function hasRollup(){ return !!(UI.rollup && UI.rollup.length); }
 // tab label: loaded / true-total (nn/mmmm) — true total from the rollup, loaded from the current page
-function stCount(s){ const loaded=countStates()[s]; const t=hasRollup()?rollupBuckets()[s].c:loaded; return loaded+'/'+t; }
+/* `9/9 · 5/5 · 2/2` — the two numbers are loaded and total, so once a list is fully loaded EVERY tab reads X/X
+   and the slash carries nothing. Show the pair only while they actually differ, i.e. while more is still coming. */
+function stCount(s){ const loaded=countStates()[s]; const t=hasRollup()?rollupBuckets()[s].c:loaded; return loaded===t? (''+t) : (loaded+'/'+t); }
 /* cap → app/helpers.js */
 function setSub(s){UI.sub=s;UI.sel=null;UI.detail=null;renderApp();}
 function toggleListHelp(){ UI.listHelp=!UI.listHelp; renderApp(); }
@@ -4563,7 +4933,8 @@ function minimiseCompose(){ const h=document.getElementById("modalhost"); if(!h)
 function resumeCompose(){ const h=document.getElementById("modalhost"); if(h)h.style.display=''; UI._composeMin=false; const p=document.getElementById('composepill'); if(p)p.remove(); setTimeout(function(){ var t=document.getElementById('cf_subject'); if(t)t.focus(); },20); }
 function renderComposePill(){ var p=document.getElementById('composepill'); if(!p){ p=document.createElement('div'); p.id='composepill'; document.body.appendChild(p); } p.className='composepill'; p.innerHTML='<span onclick="resumeCompose()" style="cursor:pointer">✏️ Resume compose</span><span onclick="discardCompose()" title="Discard draft" style="cursor:pointer;opacity:.75;font-weight:800">✕</span>'; }
 function discardCompose(){ var p=document.getElementById('composepill'); if(p)p.remove(); CC={items:[],rcpts:[],fields:{}}; closeModal(); }
-function closeModal(){ const h=document.getElementById("modalhost"); if(h){ h.style.display=''; h.innerHTML=""; } UI._composeModal=false; UI._composeMin=false; UI._draftId=null; UI._supplier=null; ccCartRelease(); const p=document.getElementById('composepill'); if(p)p.remove(); }
+function closeModal(){ const h=document.getElementById("modalhost"); if(h){ h.style.display=''; h.innerHTML=""; }
+  UI._composeModal=false; UI._composeMin=false; UI._draftId=null; UI._supplier=null; ccCartRelease(); const p=document.getElementById('composepill'); if(p)p.remove(); }
 function quickStatus(){ const ids=needTarget(); if(!ids.length)return; MODALS.stat={ids,to:null};
   const opts=[["open","Open"],["act","Act"],["close","Close"]].map(([v,l])=>`<div class="optrow" data-v="${v}" onclick="pickStatus('${v}')"><span class="rdo"></span><div class="oc"><div class="on">${l}</div></div></div>`).join("");
   modal(`<div class="mhd"><div class="t">Change status</div><div class="s">${ids.length} chit${ids.length>1?'s':''}</div></div><div class="mbody">${opts}</div><div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="pri" id="mok" disabled onclick="confirmStatus()">Set status</button></div>`);
@@ -4822,15 +5193,25 @@ async function pgNext(id){ const p=PG[id]; if(!p||p.loading||p.done) return;
 function pgFirst(id){ pgReset(id); return pgNext(id); }
 function pgScroll(id){ const p=PG[id]; if(!p||p.loading||p.done)return; const el=p.cfg.el&&p.cfg.el(); if(!el)return; if(el.scrollTop+el.clientHeight >= el.scrollHeight-220) pgNext(id); }
 function pgFill(id){ const p=PG[id]; if(!p||p.loading||p.done)return; const el=p.cfg.el&&p.cfg.el(); if(!el)return; if(el.scrollHeight <= el.clientHeight+8) pgNext(id); }
-function pgTotalText(id){ const p=PG[id]; if(!p||!p.total)return ''; const shown=Math.min(p.cfg.count(),p.total); return 'Showing '+shown+' of '+p.total+(p.done?' · all loaded':' · scroll for more'); }
+/* ⚠️ SAID THE SAME THING TWICE: this line read "Showing 16 of 16 · all loaded" while the sentinel at the bottom
+   of the same list read "16 total · end of list". Once everything is loaded there is no progress left to report,
+   so this one states the count plainly and lets the bottom marker be the thing that says the list has ended. */
+function pgTotalText(id){ const p=PG[id]; if(!p||!p.total)return ''; const shown=Math.min(p.cfg.count(),p.total);
+  return p.done ? (p.total+(p.total===1?' chit':' chits')) : ('Showing '+shown+' of '+p.total+' · scroll for more'); }
 function pgFooter(id){ const p=PG[id]; if(!p)return ''; const c=p.cfg.count();
   if(p.loading) return '<div class="listend"><span class="spin"></span> loading more…'+(p.total>0?(' ('+c+'/'+p.total+')'):'')+'</div>';
   if(!p.done) return '<div class="listend"><button class="composebtn" onclick="pgNext(\''+id+'\')">↓ Load more</button>'+(p.total>0?('<span style="color:var(--grey)">'+c+' of '+p.total+' loaded</span>'):'')+'</div>';
-  return '<div class="listend">— end of list'+(p.total>0?(' · '+p.total+' total'):'')+' —</div>'; }
+  /* The total is stated once, at the top (pgTotalText). Down here the only new information is that the list has
+     ended — repeating "16 total" was the second half of the same duplication. */
+  return '<div class="listend">— end of list —</div>'; }
 /* static footer for small, non-paginated lists (count + end marker, no Load more) */
 /* the Task/Order list bar */
-function pgPaintTotal(){ const lt=document.getElementById("listtotal"); if(!lt)return; lt.innerHTML='<span class="lttxt">'+esc(pgTotalText('list'))+'</span><span class="lttools">'+sortPresetSelect()+'<button class="colcog" onclick="event.stopPropagation();toggleLegend()" title="Legend / key">🔑 key</button>'+(UI.legendOpen?listLegend():'')+'<button class="colcog" onclick="event.stopPropagation();toggleColMenu()" title="Choose columns">⚙ columns</button>'+(UI.colMenu?colChooser():'')+'</span>'; }
+function pgPaintTotal(){ const lt=document.getElementById("listtotal"); if(!lt)return; lt.innerHTML='<span class="lttxt"><button class="colcog fold" onclick="event.stopPropagation();toggleLhFold()" title="'+(UI.lhFold?'Show search, filters and tools':'Fold search, filters and tools out of the way')+'">'+(UI.lhFold?'⌄':'⌃')+' filters</button>'+esc(pgTotalText('list'))+'</span><span class="lttools">'+sortPresetSelect()+'<button class="colcog" onclick="event.stopPropagation();toggleLegend()" title="Legend / key">🔑 key</button>'+(UI.legendOpen?listLegend():'')+'<button class="colcog" onclick="event.stopPropagation();toggleColMenu()" title="Choose columns">⚙ columns</button>'+(UI.colMenu?colChooser():'')+'</span>'; }
 function toggleLegend(){ UI.legendOpen=!UI.legendOpen; UI.colMenu=false; pgPaintTotal(); }
+/* The fold control lives in .listtotal because that row is ALWAYS rendered. The state tabs would have been the
+   natural home, but stTabs is suppressed on drafts/trash/archive/order and whenever a search is active — the
+   control would have vanished in exactly the views where you most want the space back. */
+function toggleLhFold(){ UI.lhFold=!UI.lhFold; try{ localStorage.setItem('cb_lhfold', UI.lhFold?'1':'0'); }catch(_){} renderApp(); }
 function listLegend(){ return '<div class="keypanel" onclick="event.stopPropagation()"><h4>Legend / key</h4><div class="keygrid">'
  +'<div class="kbox"><div class="kt"><span class="udot"></span> Unread</div><div class="kd">New activity you haven\'t opened — blue bar + bold subject + dot.</div></div>'
  +'<div class="kbox"><div class="kt"><span class="rflag disp">⚑ dispute</span></div><div class="kd">An open dispute (red bar). Resolve from the chit.</div></div>'
@@ -4935,7 +5316,30 @@ function attnFlag(c){ var ext=c.priExt||'normal', int=c.pri||'normal', cust=!!c.
   return '<span class="rflag '+cls+'" title="'+esc(title)+'">⚑ '+lbl+'</span>'; }
 const LISTCOLS = [
   { key:'star',     label:'★',        sort:null,       w:'34px',  cell:function(c){ return '<span class="starcell'+(c.star?' on':'')+'" onclick="event.stopPropagation();toggleStar(\''+c.id+'\')" title="Star">'+(c.star?'★':'☆')+'</span>'; } },
-  { key:'from',     label:'From',     sort:'from',     w:'minmax(110px,1.2fr)', cell:function(c){ return esc((UI.folder==='order' ? (c.party||'') : (c.sender||c.party||'')) || '—'); } },
+  /**
+   * ⭐ FROM, FOR A CHIT THAT CAME IN OVER A CHANNEL (Athi, 2026-08-16: *"if it is self chit, from shows the same
+   * entity, if it is from outside, then the from should show the real from"*).
+   *
+   * A captured WhatsApp/email order is minted on YOUR OWN entity — correctly, because the person who sent it is
+   * not a CB entity and never will be. But that made every captured row read `From: mytest`, i.e. the account
+   * holder, while the actual originator sat unread in summary_json.via. routes/chits.js:559 puts `via` on the
+   * summary for exactly this reason — *"provenance that has to be dug for is provenance nobody reads"* — and the
+   * one list it was meant for was ignoring it.
+   *
+   * ⚠️ SHOWN AS CLAIMED, NOT AS VERIFIED. via.sender_verified is false for everything captured today, and the API
+   * is emphatic that "the sender is verified" must never arrive as a truthy string. So an unverified name renders
+   * with the channel it arrived on and a `?` marker: this is who the message SAYS it is from. Rendering it plain
+   * would make a WhatsApp display name — which anyone can set to anything — look like a verified counterparty.
+   */
+  { key:'from',     label:'From',     sort:'from',     w:'minmax(110px,1.2fr)', cell:function(c){
+      const v=c.via;
+      if(UI.folder!=='order' && v && v.channel){
+        const who=v.from_name||v.from||'unknown sender';
+        const icon={whatsapp:'🟢',email:'✉️',sms:'💬',telegram:'🔵'}[v.channel]||'⇢';
+        return '<span class="viafrom" title="Arrived over '+esc(v.channel)+' — '+(v.sender_verified?'sender verified':'sender NOT verified; this is the name the message claims')+'">'
+          +icon+' '+esc(who)+(v.sender_verified?'':'<span class="unver" title="Not a verified entity — as claimed by the sender">?</span>')+'</span>';
+      }
+      return esc((UI.folder==='order' ? (c.party||'') : (c.sender||c.party||'')) || '—'); } },
   { key:'subject',  label:'Subject',  sort:'subject',  w:'minmax(150px,2fr)',   cell:function(c){ var lead=(c.unread?'<span class="udot" title="Unread"></span>':'')+(c.dispute?'<span class="rflag disp" title="Open dispute">⚑ dispute</span>':(c.dispResolved>0?'<span class="rflag disp" style="background:#e8f3ec;color:#2f7a45;border-color:#cde7d4" title="Dispute resolved">⚑ resolved</span>':''))+attnFlag(c); return '<div class="subjwrap">'+(lead?'<span class="lead">'+lead+'</span>':'')+'<span class="subjtext" title="'+esc(c.code||'')+'"><b>'+esc(c.code||'—')+'</b>'+(c.isDraft?' <span class="optchip mini">draft</span>':'')+'</span></div>'; } },
   { key:'date',     label:'Date',     sort:'date',     w:'128px',  cell:function(c){ return esc(lcDate(c.created_at)); } },
   { key:'amount',   label:'Amount',   sort:'amount',   w:'108px', align:'right', cell:function(c){ return '<span style="font-family:\'Space Mono\'">'+(c.amt?fmtMoney(c.amt,c.currency):'—')+'</span>'; } },
@@ -4951,22 +5355,91 @@ const LISTCOLS = [
 const DEFCOLS = ['star','from','subject','date','amount','priext','priority','assignto','status'];
 function getCols(){ try{ const s=JSON.parse(localStorage.getItem('cb_cols')||'null'); if(Array.isArray(s)&&s.length) return s; }catch(_){ } return DEFCOLS.slice(); }
 function visibleCols(){ const set=UI.cols||getCols(); return LISTCOLS.filter(function(c){ return set.indexOf(c.key)>=0; }); }
-function colTemplate(){ const sel = (UI.selectMode&&SESSION.role!=='customer') ? '26px ' : ''; return sel + visibleCols().map(function(c){ return (UI.colW&&UI.colW[c.key]) ? UI.colW[c.key] : c.w; }).join(' '); }
+
+/**
+ * ⚠️ THE LIST WAS RENDERING 1089px OF COLUMNS INTO A 653px PANE — measured live, 436px hanging off the right
+ * edge with NO horizontal scrollbar. Five of nine columns were unreachable, and not the throwaway ones:
+ * AMOUNT and STATUS were both past the edge. At the DEFAULT pane width (--lw:340px) it is far worse — DEFCOLS
+ * has hard minimums summing to 894px, so the default view could never fit its own default columns.
+ *
+ * So the column set is now FITTED to the pane instead of asserted. Columns are dropped by the priority below,
+ * lowest first, until the rest fit. Nothing becomes unreachable: whatever is folded away is shown in full by
+ * the hover overlay (rowPeekShow), which renders the user's WHOLE chosen set through the same col.cell()
+ * renderers the grid uses — one definition of a cell, two places it is painted.
+ */
+const COLPRIO = ['subject','star','status','date','amount','from','items','att','msgs','type','priority','priext','assignto'];
+/**
+ * ⚠️ THE DECLARED MINIMUM, DELIBERATELY NOT UI.colW. A manual column resize is a PREFERENCE — "give Subject more
+ * room" — and it was being read as a FLOOR. Athi had dragged Subject to 269px; that 269 then outranked Amount and
+ * Status in the fit and pushed both off the right edge. Dragging one column wider must never evict another.
+ */
+function colMinPx(c){ const m=/(\d+(?:\.\d+)?)px/.exec(c.w); return m?parseFloat(m[1]):80; }
+/* Manual widths are honoured only while the whole row still fits; past that the declared minmax()/fr take over
+   and the pane divides itself. */
+function manualWidthsFit(cols){
+  const avail=(UI.lw||340)-24-((UI.selectMode&&SESSION.role!=='customer')?34:0);
+  let sum=0; cols.forEach(function(c,i){ const w=(UI.colW&&UI.colW[c.key])||c.w; const m=/(\d+(?:\.\d+)?)px/.exec(w); sum+=(m?parseFloat(m[1]):80)+(i?8:0); });
+  return sum<=avail;
+}
+function fittedCols(){
+  const chosen=visibleCols(); if(!chosen.length) return chosen;
+  const avail=(UI.lw||340)-24-((UI.selectMode&&SESSION.role!=='customer')?34:0);   // 24 = .lrow padding 12+12
+  const order=chosen.slice().sort(function(a,b){ return COLPRIO.indexOf(a.key)-COLPRIO.indexOf(b.key); });
+  /* ⚠️ THE TOP-PRIORITY COLUMN IS UNCONDITIONAL. Fitting it like the rest let a narrow pane drop SUBJECT — whose
+     150px min did not fit — and keep 📎 instead, because 46px did. A row you cannot identify is not a row. */
+  const must=order[0]; const keep={}; keep[must.key]=1; let used=colMinPx(must), n=1;
+  order.slice(1).forEach(function(c){ const need=colMinPx(c)+8; if(used+need<=avail){ keep[c.key]=1; used+=need; n++; } });
+  return chosen.filter(function(c){ return keep[c.key]; });
+}
+function colTemplate(){ const sel = (UI.selectMode&&SESSION.role!=='customer') ? '26px ' : '';
+  const cols=fittedCols(), useManual=manualWidthsFit(cols);
+  return sel + cols.map(function(c){ return (useManual&&UI.colW&&UI.colW[c.key]) ? UI.colW[c.key] : c.w; }).join(' '); }
+
+/* The overlay Athi asked for: hover a row, see the ENTIRE line — including every column the fold dropped. */
+function rowPeekShow(ev,id){
+  const c=(UI.rows||[]).filter(function(r){ return r.id===id; })[0]; if(!c) return;
+  const rows=visibleCols().map(function(col){
+    if(col.key==='star') return '';                      // an action control, not a fact about the chit
+    let v=''; try{ v=col.cell(c)||''; }catch(_){ return ''; }
+    const plain=String(v).replace(/<[^>]*>/g,'').trim();
+    if(!plain || plain==='—') return '';                 // the em-dash placeholder is "no value" — do not restate it
+    return '<div class="pkr"><span class="pkk">'+esc(col.key==='from'&&UI.folder==='order'?'To':col.label)+'</span><span class="pkv">'+v+'</span></div>';
+  }).join('');
+  if(!rows) return;
+  let e=document.getElementById('rowpeek');
+  if(!e){ e=document.createElement('div'); e.id='rowpeek'; document.body.appendChild(e); }
+  e.innerHTML=rows; e.style.display='block';
+  const r=ev.currentTarget.getBoundingClientRect(), b=e.getBoundingClientRect();
+  e.style.top =Math.max(8, Math.min(r.top, window.innerHeight-b.height-12))+'px';
+  e.style.left=Math.max(8, Math.min(r.right+10, window.innerWidth-b.width-12))+'px';
+}
+function rowPeekHide(){ const e=document.getElementById('rowpeek'); if(e) e.style.display='none'; }
 function lcDate(ts){ try{ const d=new Date(ts); if(isNaN(d)) return ''; const sameY=d.getFullYear()===new Date().getFullYear(); return d.toLocaleString('en-IN', sameY?{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}:{day:'2-digit',month:'short',year:'2-digit',hour:'2-digit',minute:'2-digit'}); }catch(_){ return ''; } }
 function listHeader(){ const tpl=colTemplate(); const sel = (UI.selectMode&&SESSION.role!=='customer') ? '<span></span>' : '';
-  const cells = visibleCols().map(function(c){ const active = UI.sort===c.sort && c.sort; const arrow = active ? (UI.dir==='asc'?' ▲':' ▼') : (c.sort?' ⇅':''); return '<span class="lhcell'+(c.sort?' sortable':'')+(c.align==='right'?' ra':'')+'" '+(c.sort?('onclick="sortBy(\''+c.sort+'\')"'):'')+'>'+esc(c.key==='from'&&UI.folder==='order'?'To':c.label)+'<span class="sarr">'+arrow+'</span><span class="colrz" onmousedown="colResizeStart(event,\''+c.key+'\')" onclick="event.stopPropagation()"></span></span>'; }).join('');
+  const cells = fittedCols().map(function(c){ const active = UI.sort===c.sort && c.sort; const arrow = active ? (UI.dir==='asc'?' ▲':' ▼') : (c.sort?' ⇅':''); return '<span class="lhcell'+(c.sort?' sortable':'')+(c.align==='right'?' ra':'')+'" '+(c.sort?('onclick="sortBy(\''+c.sort+'\')"'):'')+'>'+esc(c.key==='from'&&UI.folder==='order'?'To':c.label)+'<span class="sarr">'+arrow+'</span><span class="colrz" onmousedown="colResizeStart(event,\''+c.key+'\')" onclick="event.stopPropagation()"></span></span>'; }).join('');
   return '<div class="lhead" style="grid-template-columns:var(--coltpl)">'+sel+cells+'</div>'; }
 function rowGrid(c){ const tpl=colTemplate();
   const cbx = (UI.selectMode&&SESSION.role!=='customer') ? '<span class="cbx '+(UI.selected.has(c.id)?'on':'')+'" onclick="event.stopPropagation();toggleSel(\''+c.id+'\')">'+(UI.selected.has(c.id)?'✓':'')+'</span>' : '';
-  const cells = visibleCols().map(function(col){ return '<span class="lcell'+(col.align==='right'?' ra':'')+'">'+col.cell(c)+'</span>'; }).join('');
+  const cells = fittedCols().map(function(col){ return '<span class="lcell'+(col.align==='right'?' ra':'')+'">'+col.cell(c)+'</span>'; }).join('');
   const acc = c.dispute?'acc-disp':(c.unread?'acc-unread':((c.priExt==='urgent'||c.pri==='urgent')?'acc-urg':''));
-  return '<div class="lrow '+(c.id===UI.sel?'sel':'')+' '+(c.unread?'unread':'')+' '+acc+'" style="grid-template-columns:var(--coltpl)" onclick="'+(UI.selectMode?'toggleSel':'openChit')+'(\''+c.id+'\')">'+cbx+cells+'</div>'; }
+  return '<div class="lrow '+(c.id===UI.sel?'sel':'')+' '+(c.unread?'unread':'')+' '+acc+'" style="grid-template-columns:var(--coltpl)" onmouseenter="rowPeekShow(event,\''+c.id+'\')" onmouseleave="rowPeekHide()" onclick="rowPeekHide();'+(UI.selectMode?'toggleSel':'openChit')+'(\''+c.id+'\')">'+cbx+cells+'</div>'; }
 function sortBy(key){ if(UI.sort===key){ UI.dir = (UI.dir==='asc'?'desc':'asc'); } else { UI.sort=key; UI.dir = ((key==='date'||key==='priority')?'desc':'asc'); } UI.colMenu=false; UI.sel=null; UI.detail=null; persistSort(); loadList(); }
 function toggleColMenu(){ UI.colMenu=!UI.colMenu; paintRowsKeepScroll(); }
 function colChooser(){ const set=UI.cols||getCols(); return '<div class="colmenu">'+LISTCOLS.map(function(c){ return '<label><input type="checkbox" '+(set.indexOf(c.key)>=0?'checked':'')+' onchange="toggleCol(\''+c.key+'\')"> '+esc(c.label||c.key)+'</label>'; }).join('')+'</div>'; }
 function toggleCol(key){ let set=(UI.cols||getCols()).slice(); const i=set.indexOf(key); if(i>=0){ if(set.length>1) set.splice(i,1); } else { set.push(key); } UI.cols=set; try{ localStorage.setItem('cb_cols', JSON.stringify(set)); }catch(_){ } paintRowsKeepScroll(); }
 /* ── column resize + sort presets + persistence (Cluster L/M) ─────────────────────────── */
-function applyColTpl(){ const r=document.getElementById("rows"); if(r) r.style.setProperty("--coltpl", colTemplate()); }
+/**
+ * ⚠️ SETTING --coltpl ALONE IS NOT ENOUGH ANY MORE. The template used to be a fixed list, so a width change could
+ * never alter WHICH columns exist. Now that the set is fitted to the pane, dragging the divider can add or drop a
+ * column — and then the cells rendered in the DOM no longer line up with the track list, which silently shifts
+ * every value one column sideways. So repaint whenever the fitted SET changes, not merely its widths.
+ * listHeader() is emitted by renderRows(), so the one repaint updates the header too.
+ */
+let _fitKey='';
+function applyColTpl(){ const r=document.getElementById("rows"); if(!r) return;
+  const keys=fittedCols().map(function(c){ return c.key; }).join(',');
+  if(keys!==_fitKey){ _fitKey=keys; const st=r.scrollTop; r.innerHTML=renderRows(); r.scrollTop=st; }
+  r.style.setProperty("--coltpl", colTemplate()); }
 let _rz=null;
 function colResizeStart(e,key){ e.preventDefault(); e.stopPropagation(); const cell=e.target.closest(".lhcell"); const w=cell?cell.offsetWidth:120; _rz={key:key, x:e.clientX, w:w}; document.addEventListener("mousemove",colResizeMove); document.addEventListener("mouseup",colResizeEnd); document.body.style.userSelect="none"; }
 function colResizeMove(e){ if(!_rz)return; const dx=e.clientX-_rz.x; const nw=Math.max(48,_rz.w+dx); UI.colW=UI.colW||{}; UI.colW[_rz.key]=nw+"px"; applyColTpl(); }
@@ -5556,7 +6029,7 @@ function lsSet(k,v){try{localStorage.setItem(k,v);}catch(e){}}
    who left the app in Mobile and reloads never passes through setVP — and the modals would break out of the
    frame again on exactly the reload that looks like a fresh start. */
 function applyPrefs(){UI.vp=lsGet('cb_vp',(window.innerWidth<=820?'mob':'lap'));
-  try{ document.body.classList.toggle('vpmob', UI.vp==='mob'); }catch(_){}UI.lw=parseInt(lsGet('cb_lw',340),10)||340;UI.lh=parseInt(lsGet('cb_lh',300),10)||300;try{UI.voice=(localStorage.getItem('cb_voice')==='1');}catch(_){UI.voice=false;}}
+  try{ document.body.classList.toggle('vpmob', UI.vp==='mob'); }catch(_){}UI.lw=parseInt(lsGet('cb_lw',340),10)||340;UI.lh=parseInt(lsGet('cb_lh',300),10)||300;try{UI.lhFold=(localStorage.getItem('cb_lhfold')==='1');}catch(_){UI.lhFold=false;}try{UI.voice=(localStorage.getItem('cb_voice')==='1');}catch(_){UI.voice=false;}}
 /**
  * ⚠️⚠️ THE MOBILE FRAME HAS TO REACH THE MODALS, AND A CLASS ON <body> IS THE ONLY THING THAT CAN.
  *
@@ -5583,7 +6056,9 @@ function onDrag(e){
   if(!DRAG)return;const panel=document.getElementById("panel");if(!panel)return;
   const r=panel.getBoundingClientRect();const pt=e.touches?e.touches[0]:e;
   if(UI.vp==='mob'){let h=pt.clientY-r.top;h=Math.max(120,Math.min(r.height-150,h));UI.lh=Math.round(h);panel.style.setProperty('--lh',UI.lh+'px');}
-  else{let w=pt.clientX-r.left;w=Math.max(210,Math.min(r.width-260,w));UI.lw=Math.round(w);panel.style.setProperty('--lw',UI.lw+'px');}
+  /* applyColTpl() re-fits the column set to the new pane width — without it the list keeps rendering the
+     column set from whatever width the pane happened to have when it was last painted. */
+  else{let w=pt.clientX-r.left;w=Math.max(210,Math.min(r.width-260,w));UI.lw=Math.round(w);panel.style.setProperty('--lw',UI.lw+'px');applyColTpl();}
 }
 function endDrag(){if(!DRAG)return;DRAG=false;document.body.style.userSelect='';lsSet('cb_lw',UI.lw);lsSet('cb_lh',UI.lh);}
 document.addEventListener('mousemove',onDrag);document.addEventListener('touchmove',onDrag,{passive:false});

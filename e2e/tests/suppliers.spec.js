@@ -19,29 +19,40 @@ test.describe('Module · Suppliers', () => {
     await mintEntity(page);                                            // entity B = the buyer (the authed session)
 
     /**
-     * ⚠️ ACCEPT THE CONFIRMS. Both addSupplier() and delSupplier() ask before they post, and Playwright
-     * auto-DISMISSES dialogs unless a handler says otherwise — so the add silently returned, no row ever appeared,
-     * and this failed at `sup-row-` with "element(s) not found" as though the SCREEN were broken. It was not: the
-     * spec never took a step a real person takes. variants.spec.js hit the identical trap and documented it; this
-     * spec was never given the same fix.
+     * ⚠️ THE CONFIRM IS NO LONGER A BROWSER DIALOG (2026-08-16). It used to be a native confirm(), which Playwright
+     * auto-DISMISSES unless a handler says otherwise — hence the `page.on('dialog', …)` that used to live here.
+     * Add / remove now go through the app's own confirmAsk() modal, so the dialog handler became a no-op: nobody
+     * pressed "Add supplier", no row appeared, and this failed at `sup-row-` with "element(s) not found" as though
+     * the SCREEN were broken. Same false signal as before, opposite cause. Press the real button instead.
      */
-    page.on('dialog', (d) => d.accept());
+    const confirmOK = () => page.getByTestId('confirm-ok').click();
 
     await test.step('CREATE — add A by email', async () => {
       await page.getByTestId('nav-suppliers').click();
       await page.getByTestId('sup-add-input').fill(A.email);
       await page.getByTestId('sup-add').click();
+      await confirmOK();
       await expect(page.locator('[data-testid^="sup-row-"]').first()).toBeVisible();
     });
-    await test.step('READ + UPDATE — open, switch to Edit, save a nickname', async () => {
-      await page.locator('[data-testid^="sup-row-"]').first().click();
-      await page.getByText('Edit').click();                            // view→edit segment (not testid-tagged)
+    await test.step('READ + UPDATE — open, Edit, save a nickname', async () => {
+      /* The record moved to a slide-over on the LEFT (2026-08-16), opened by the row's ⓘ — NOT by selecting the
+         row, which means "show me their catalogue". Tagged rather than matched by text: getByText('Edit') also
+         matches the modal's own "Edit <name>" heading once it opens. */
+      await page.locator('[data-testid^="sup-details-"]').first().click();
+      await page.getByTestId('sup-edit').click();
       await page.getByTestId('sup-nick').fill('Local yard');
       await page.getByTestId('sup-save').click();
+      /* ⚠️ WAIT FOR THE MODAL TO GO. Save closes it only after the PATCH resolves, so the next step raced ahead and
+         its click landed on the still-open form — reported as "<label class="fl">Notes"> … intercepts pointer
+         events", which reads like a broken button rather than a step taken too early. */
+      await expect(page.locator('#modalhost')).toBeEmpty();
     });
     await test.step('DELETE — remove from list', async () => {
-      await page.locator('[data-testid^="sup-row-"]').first().click();
+      /* ⚠️ NO SECOND ⓘ CLICK. Saving leaves the record panel OPEN — correctly, you are still looking at that
+         supplier — so re-opening it meant clicking ⓘ *through* the panel already covering it, reported as
+         "<span>—</span> from #supslide_host … intercepts pointer events". Remove is right there; press it. */
       await page.getByTestId('sup-remove').click();
+      await confirmOK();
       await expect(page.locator('[data-testid^="sup-row-"]')).toHaveCount(0);
     });
   });
