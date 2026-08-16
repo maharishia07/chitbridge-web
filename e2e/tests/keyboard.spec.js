@@ -107,6 +107,18 @@ test.describe('Keyboard operability · the counter runs on the keyboard', () => 
   // visits the fields in a logical order. A trap (focus can't move on) is a counter-speed killer.
   test('[KBD-02] focus order is logical and there are no keyboard traps', async ({ page }) => {
     await mintEntity(page);
+    /**
+     * ⚠️ ON A NARROW VIEWPORT THE NAV IS A CLOSED DRAWER, and this test did not model that: it clicked
+     * `nav-compose` directly, which Playwright reports as visible and enabled while `.appwrap.m .menu` holds it
+     * at translateX(-100%) — measured at left:-106px, outside the viewport. It failed as "element is outside of
+     * the viewport", which reads like flake and is not; it is the mobile navigation working as designed.
+     *
+     * ⭐ Opening the drawer first is also the STRONGER test, because it is what a keyboard user on a phone
+     * actually has to do: reach the hamburger, open it, then reach compose. Clicking straight through skipped
+     * the one step unique to mobile.
+     */
+    const burger = page.getByTestId('nav-drawer');
+    if (await burger.isVisible().catch(() => false)) await burger.click();
     await page.getByTestId('nav-compose').click();     // open compose (setup for the focus check)
     await page.locator('body').press('Tab');
     const seen = [];
