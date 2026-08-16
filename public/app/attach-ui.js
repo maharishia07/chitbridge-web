@@ -343,7 +343,7 @@ function cbAttachStagedChips(bucket, opts){
       + ' <span style="color:#6a707a">' + cbAttachSize(s.size) + '</span>'
       /* ⚠️ "not sent yet" is said on the chip, not implied by its position. A staged file looks exactly like an
          attached one otherwise, and the difference matters: one is evidence, the other is an intention. */
-      + ' <span style="font-size:10px;color:#8a5a1e">not sent yet</span>'
+      + ' <span style="font-size:11px;color:#8a5a1e">not sent yet</span>'
       + ' <span onclick="cbAttachUnstage(\'' + cbAttachSafe(bucket) + '\',\'' + cbAttachSafe(s.key) + '\')"'
       + ' style="cursor:pointer;color:#9aa3a7;font-weight:800" title="Remove">✕</span></span>';
   }).join('');

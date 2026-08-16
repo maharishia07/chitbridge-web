@@ -68,7 +68,7 @@ function _erpReceiptsHTML(){
     var oc=r.outcome||'', col=oc==='processed'?'#2f8f5b':(oc==='failed'?'#c0453b':(oc==='duplicate'?'#8a6d1e':'#586069'));
     return '<div style="display:flex;align-items:center;gap:9px;padding:9px 0;border-bottom:1px dashed var(--line);font-size:12.5px">'
       +'<div style="flex:1;min-width:0"><b>'+esc(r.doc_ref||r.doc_type||'document')+'</b>'+(r.doc_type?' <span style="color:var(--grey);font-size:11px">'+esc(r.doc_type)+'</span>':'')
-      +'<div style="color:var(--grey);font-size:10.5px;margin-top:1px;font-family:monospace">#'+esc(String(r.payload_hash||'').slice(0,12))+'… · '+esc((typeof _ago==='function'?_ago(r.received_at):'')||'')+'</div></div>'
+      +'<div style="color:var(--grey);font-size:11px;margin-top:1px;font-family:monospace">#'+esc(String(r.payload_hash||'').slice(0,12))+'… · '+esc((typeof _ago==='function'?_ago(r.received_at):'')||'')+'</div></div>'
       +'<span style="font-weight:700;font-size:11px;color:'+col+'">'+esc(oc)+'</span>'
       +(r.chit_id?'<button class="composebtn" style="padding:2px 9px;font-size:11px" onclick="openChit(\''+esc(r.chit_id)+'\')">Open chit</button>':'')+'</div>';
   }).join('');
@@ -76,7 +76,7 @@ function _erpReceiptsHTML(){
 }
 function _hdot(h){ return healthDot(h); }   // shared: helpers.js healthDot/sigLabel
 function _sig(s){ return sigLabel(s); }
-function _tile(k,v){ return '<div style="background:#f4f6f8;border:1px solid var(--line);border-radius:11px;padding:10px 11px;min-width:0"><div style="font-size:10.5px;color:var(--grey);text-transform:uppercase;letter-spacing:.03em">'+k+'</div><div style="font-size:19px;font-weight:800;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+v+'</div></div>'; }
+function _tile(k,v){ return '<div style="background:#f4f6f8;border:1px solid var(--line);border-radius:11px;padding:10px 11px;min-width:0"><div style="font-size:11px;color:var(--grey);text-transform:uppercase;letter-spacing:.03em">'+k+'</div><div style="font-size:19px;font-weight:800;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+v+'</div></div>'; }
 function piCockpit(x){
   var iot=acTypeOf(x)==='iot', health=UI.acHealth||'offline';
   var tchip=iot?'<span class="optchip" style="background:#eaf2fb;color:#2c5aa0;border-color:#cfe0f4">🛰️ IoT</span>':'<span class="optchip" style="background:#f1ecf9;color:#6b3fa0;border-color:#ddcff2">🔌 ERP</span>';
@@ -100,7 +100,7 @@ function piCockpit(x){
   else if(UI.acConnsErr) list='<div style="padding:10px 2px;color:#c0453b;font-size:12px">⚠ '+esc(UI.acConnsErr)+' <button class="composebtn" style="padding:2px 9px;font-size:11px;margin-left:6px" onclick="acLoadDevices(\''+x.id+'\')">Retry</button></div>';
   else if(!conns.length) list='<div style="padding:10px 2px;color:var(--grey);font-size:12.5px">No '+(iot?'devices':'endpoints')+' yet. Tap ＋ to add one.</div>';
   else list=conns.map(function(c){ var cfg=c.conn_config||{}; var det=iot?[cfg.folder?('📁 '+cfg.folder):null,(cfg.classes&&cfg.classes.length)?('🏷 '+cfg.classes.join('/')):null,cfg.topic,cfg.device_id].filter(Boolean).join(' · '):(cfg.path||'');
-    return '<div style="display:flex;align-items:center;gap:9px;padding:10px 0;border-bottom:1px dashed var(--line);font-size:12.5px"><div style="flex:1;min-width:0"><b>'+esc(c.ref)+'</b>'+(c.bridge_id?' <code style="background:#f6f6f4;border:1px solid #eee;border-radius:5px;padding:0 5px;font-size:10.5px;color:var(--grey)">'+esc(c.bridge_id)+'</code>':'')+(det?'<div style="color:var(--grey);font-size:11px;margin-top:1px">'+esc(det)+'</div>':'')+'</div>'+_sig(c.enabled===false?'silent':c.signal)+'<button class="composebtn" style="padding:2px 9px;font-size:11px" onclick="acToggleDevice(\''+x.id+'\','+c.connection_id+','+(c.enabled?'false':'true')+')">'+(c.enabled?'Disable':'Enable')+'</button></div>';
+    return '<div style="display:flex;align-items:center;gap:9px;padding:10px 0;border-bottom:1px dashed var(--line);font-size:12.5px"><div style="flex:1;min-width:0"><b>'+esc(c.ref)+'</b>'+(c.bridge_id?' <code style="background:#f6f6f4;border:1px solid #eee;border-radius:5px;padding:0 5px;font-size:11px;color:var(--grey)">'+esc(c.bridge_id)+'</code>':'')+(det?'<div style="color:var(--grey);font-size:11px;margin-top:1px">'+esc(det)+'</div>':'')+'</div>'+_sig(c.enabled===false?'silent':c.signal)+'<button class="composebtn" style="padding:2px 9px;font-size:11px" onclick="acToggleDevice(\''+x.id+'\','+c.connection_id+','+(c.enabled?'false':'true')+')">'+(c.enabled?'Disable':'Enable')+'</button></div>';
   }).join('');
   // Obvious, labelled installer button (the bare 📦 header icon was too easy to miss) + an inline caution: this DOWNLOAD
   // reissues the key, so any device already running this gateway goes silent until reflashed. The confirm gates it too.

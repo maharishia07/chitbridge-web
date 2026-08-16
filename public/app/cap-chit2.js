@@ -140,7 +140,7 @@ function c2PaneMsg(d){
 
   out += '<div style="padding:16px">';
   if (text) {
-    out += '<div style="font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin-bottom:6px">what they wrote</div>'
+    out += '<div style="font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin-bottom:6px">what they wrote</div>'
       + '<div style="font-size:15px;line-height:1.9">' + esc(text) + (text.length >= 400 ? '<span style="color:var(--grey)"> … </span>' : '') + '</div>';
     if (origin.length) {
       out += '<div style="margin-top:8px"><span onclick="openLightbox(\'chit2\',' + atts.indexOf(origin[0]) + ')" style="cursor:pointer;color:var(--blue);font-size:12.5px">📄 open the full original</span></div>';
@@ -203,7 +203,7 @@ function c2PaneOrd(d){
                   customer_clarified: 'customer changed it', rate_agreed: 'rate agreed' }[e.reason_code] || 'removed';
       return '<div style="padding:11px 16px;border-bottom:1px solid var(--line);opacity:.55">'
         + '<s>' + esc(l.particulars || '') + ' · ' + esc(c2q(l)) + '</s>'
-        + '<span style="margin-left:8px;font-size:10.5px;font-weight:700;color:#8a5a1e;background:#faf3dd;border-radius:5px;padding:1px 6px">' + esc(why) + '</span></div>';
+        + '<span style="margin-left:8px;font-size:11px;font-weight:700;color:#8a5a1e;background:#faf3dd;border-radius:5px;padding:1px 6px">' + esc(why) + '</span></div>';
     }
     var was = (e.history || []).slice(0, 1).map(function(h){
       return '<s style="color:var(--grey);margin-right:6px">' + esc([h.particulars, h.quantity, h.unit].filter(Boolean).join(' ')) + '</s>';
@@ -211,7 +211,7 @@ function c2PaneOrd(d){
     /* Emphasis, not exclusion: mine sits at full weight, everyone else's is dimmed but perfectly readable. */
     return '<div style="padding:11px 16px;border-bottom:1px solid var(--line);' + (mine ? 'background:#f6f8fb' : 'opacity:.62') + '">'
       + '<div style="display:flex;justify-content:space-between;gap:10px">'
-      + '<span style="font-weight:' + (mine ? '700' : '500') + ';font-size:14.5px">' + esc(l.particulars || 'Item') + (mine ? ' <span style="font-size:10px;color:var(--blue);font-weight:800">YOURS</span>' : '') + '</span>'
+      + '<span style="font-weight:' + (mine ? '700' : '500') + ';font-size:14.5px">' + esc(l.particulars || 'Item') + (mine ? ' <span style="font-size:11px;color:var(--blue);font-weight:800">YOURS</span>' : '') + '</span>'
       /* ⭐ THE CORRECTION AFFORDANCE. Athi, 2026-08-13: *"maybe a html line with edit icon would be useful"* — and
          he was righter than that. This screen had NO way to open the correction card at all, so an unpriced or
          misread line was a dead end by construction: the reader's refusal was visible and unanswerable. */
@@ -295,7 +295,7 @@ function c2PickBadge(l, i){
   if (!n) return '';
   return '<span onclick="event.stopPropagation();c2AmendPick(' + i + ')"'
     + ' title="The catalogue has more than one of these — pick which, and the price comes with it"'
-    + ' style="cursor:pointer;font-size:10px;font-weight:800;color:#8a6d1e;background:#faf3dd;border:1px solid #e6d9a8;'
+    + ' style="cursor:pointer;font-size:11px;font-weight:800;color:#8a6d1e;background:#faf3dd;border:1px solid #e6d9a8;'
     + 'border-radius:5px;padding:2px 7px;white-space:nowrap">⚠️ pick item</span>';
 }
 
@@ -335,7 +335,7 @@ function c2RepricePaint(){
     + '</div>';
 
   body += will.length
-    ? '<div style="font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin-bottom:4px">Will change (' + will.length + ')</div>'
+    ? '<div style="font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin-bottom:4px">Will change (' + will.length + ')</div>'
       + will.map(function(w){
           return '<div style="display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-top:1px solid var(--line);font-size:13px">'
             + '<span style="flex:1;min-width:0"><b>' + esc(w.particulars || '') + '</b>'
@@ -351,7 +351,7 @@ function c2RepricePaint(){
   /* ⚠️ WHAT CANNOT BE PRICED IS SHOWN HERE, NOT LEFT AT ZERO. Athi: "if the exact item not found, then highlight
      for the cost to be updated." A chit that looks priced while a third of it is not is the failure this avoids. */
   if (need.length) {
-    body += '<div style="margin-top:14px;font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#b0641c;margin-bottom:4px">⚠️ Needs a price from you (' + need.length + ')</div>'
+    body += '<div style="margin-top:14px;font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#b0641c;margin-bottom:4px">⚠️ Needs a price from you (' + need.length + ')</div>'
       + need.map(function(n){
           return '<div style="padding:5px 0;border-top:1px solid var(--line);font-size:12.5px"><b>' + esc(n.particulars || '') + '</b> '
             + '<span style="color:var(--grey)">' + esc(n.reason) + '</span></div>';

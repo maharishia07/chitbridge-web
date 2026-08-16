@@ -31,7 +31,7 @@ function svcDur(ms){
 }
 function svcChip(txt, tone){
   var c = { bad: ['#c0453b', '#fdecea'], warn: ['#8a6d1e', '#faf3dd'], ok: ['#2f6b4f', '#e6f4ec'], flat: ['#5b6670', '#eef1f4'] }[tone || 'flat'];
-  return '<span style="font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:' + c[0]
+  return '<span style="font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:' + c[0]
     + ';background:' + c[1] + ';border-radius:5px;padding:2px 7px;white-space:nowrap">' + esc(txt) + '</span>';
 }
 
@@ -50,7 +50,7 @@ function svcClockBlock(c, r){
   }
   var big = function(label, val, breached){
     return '<div style="flex:1;min-width:120px">'
-      + '<div style="font-size:9.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--grey)">' + esc(label) + '</div>'
+      + '<div style="font-size:11px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--grey)">' + esc(label) + '</div>'
       + '<div style="font-size:21px;font-weight:800;font-variant-numeric:tabular-nums;color:' + (breached ? '#c0453b' : 'var(--ink,#1c2128)') + '">' + esc(val) + '</div></div>';
   };
   var agreed = '<div style="display:flex;gap:16px;flex-wrap:wrap">'
@@ -74,11 +74,11 @@ function svcClockBlock(c, r){
     + '⚖️ The two sides do not agree — ' + esc(svcDur(c.disputed_pause_ms)) + ' of paused time is rejected</div>'
     + '<div style="display:flex;gap:0;flex-wrap:wrap">'
     + '<div style="flex:1;min-width:150px;padding:11px 13px;border-right:1px solid var(--line)">'
-    +   '<div style="font-size:9.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--grey)">as agreed · every pause honoured</div>'
+    +   '<div style="font-size:11px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--grey)">as agreed · every pause honoured</div>'
     +   '<div style="font-size:19px;font-weight:800;font-variant-numeric:tabular-nums;color:' + (c.as_agreed.resolve_breached ? '#c0453b' : '#2f6b4f') + '">' + esc(svcDur(c.as_agreed.resolve_ms)) + '</div>'
     +   '<div style="margin-top:3px">' + (c.as_agreed.resolve_breached ? svcChip('breached', 'bad') : svcChip('within target', 'ok')) + '</div></div>'
     + '<div style="flex:1;min-width:150px;padding:11px 13px">'
-    +   '<div style="font-size:9.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--grey)">contested · rejected pauses removed</div>'
+    +   '<div style="font-size:11px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--grey)">contested · rejected pauses removed</div>'
     +   '<div style="font-size:19px;font-weight:800;font-variant-numeric:tabular-nums;color:' + (c.contested.resolve_breached ? '#c0453b' : '#2f6b4f') + '">' + esc(svcDur(c.contested.resolve_ms)) + '</div>'
     +   '<div style="margin-top:3px">' + (c.contested.resolve_breached ? svcChip('breached', 'bad') : svcChip('within target', 'ok')) + '</div></div>'
     + '</div>'
@@ -138,7 +138,7 @@ function svcPaint(){
     + (r.impact ? esc(r.impact) + ' impact · ' + esc(r.urgency) + ' urgency · ' : '')
     + (c.resolved ? 'resolved' : (c.paused_now ? 'paused' : 'running')) + '</div>'
     + svcClockBlock(c, r)
-    + '<div style="margin-top:16px;font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey)">Pauses (' + pauses.length + ')</div>'
+    + '<div style="margin-top:16px;font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey)">Pauses (' + pauses.length + ')</div>'
     + (pauses.length ? pauses.map(svcPauseRow).join('')
         : '<div style="font-size:12.5px;color:var(--grey);padding:8px 0">None — the clock has run continuously.</div>')
     + '<div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">'

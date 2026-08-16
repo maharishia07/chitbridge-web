@@ -256,7 +256,7 @@ function _gsMoney(v, mixed){
   if (!v || !v.length) return '<span style="color:var(--grey)">—</span>';
   /* ⚠️ SIDE BY SIDE, NEVER SUMMED. A figure spanning two currencies means nothing, most convincingly when tidy. */
   return v.map(function(x){ return '<b>' + esc(x.currency) + ' ' + esc(String(x.total)) + '</b>'; }).join('<span style="color:var(--grey)"> + </span>')
-    + (mixed ? '<div style="font-size:10px;color:#8a5a1e">not added together</div>' : '');
+    + (mixed ? '<div style="font-size:11px;color:#8a5a1e">not added together</div>' : '');
 }
 function _groupSumPane(){
   if (_FLD.busy && !_FLD.gs) return '<div style="padding:18px;color:var(--grey);font-size:12.5px"><span class="spin"></span> adding it up…</div>';
@@ -280,13 +280,13 @@ function _groupSumPane(){
 
   var req = g.requirement || [];
   if (req.length) {
-    out += '<div style="display:flex;font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);padding:0 0 4px"><span style="flex:1">Item</span><span style="width:110px;text-align:right">Quantity</span><span style="width:130px;text-align:right">Cost</span><span style="width:74px;text-align:right">Parties</span></div>';
+    out += '<div style="display:flex;font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);padding:0 0 4px"><span style="flex:1">Item</span><span style="width:110px;text-align:right">Quantity</span><span style="width:130px;text-align:right">Cost</span><span style="width:74px;text-align:right">Parties</span></div>';
     out += req.map(function(l, i){
       var open = !!(_FLD.gsOpen || {})[i];
       var name = esc(l.item) + (l.variant ? ' <span style="color:var(--grey);font-weight:600">· ' + esc(l.variant) + '</span>' : '');
       var head = '<div onclick="gsToggle(' + i + ')" style="display:flex;align-items:center;cursor:pointer;padding:7px 0;border-top:1px solid var(--line);font-size:13px">'
         + '<span style="flex:1;min-width:0">' + (open ? '▾' : '▸') + ' ' + name
-        + (l.matched_by_spelling ? ' <span title="matched through a misspelling" style="font-size:9px;color:#8a6d1f">≈</span>' : '') + '</span>'
+        + (l.matched_by_spelling ? ' <span title="matched through a misspelling" style="font-size:11px;color:#8a6d1f">≈</span>' : '') + '</span>'
         + '<span style="width:110px;text-align:right;font-weight:800">' + esc(String(l.total)) + ' ' + esc(l.canonical_unit || '') + '</span>'
         + '<span style="width:130px;text-align:right">' + _gsMoney(l.value, l.value_mixed) + '</span>'
         + '<span style="width:74px;text-align:right;color:var(--grey);font-size:11.5px">' + l.stores + '</span></div>';
@@ -330,7 +330,7 @@ function _groupSumPane(){
 
   var mo = g.money || {};
   out += '<div style="margin-top:16px;border-top:1px solid var(--line);padding-top:10px">'
-    + '<div style="font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin-bottom:4px">Agreed value of these chits</div>'
+    + '<div style="font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin-bottom:4px">Agreed value of these chits</div>'
     + ((mo.by_currency || []).length ? (mo.by_currency || []).map(function(x){ return '<span style="display:inline-block;border:1px solid var(--line);border-radius:8px;padding:3px 9px;margin:0 6px 6px 0;font-size:12px"><b>' + esc(x.currency) + '</b> ' + esc(String(x.total)) + ' <span style="color:var(--grey)">· ' + x.chits + ' chit' + (x.chits === 1 ? '' : 's') + '</span></span>'; }).join('') : '<span style="font-size:12px;color:var(--grey)">nothing with an agreed value</span>')
     + (((mo.excluded || {}).awaiting_agreement) ? '<div style="font-size:11px;color:var(--grey)">' + mo.excluded.awaiting_agreement + ' chit(s) have no agreed value yet and are excluded — not counted as zero.</div>' : '')
     + '<div style="font-size:11px;color:var(--grey);margin-top:4px">⚠️ This is the <b>agreed value of the chits</b>, which is a different question from the <b>cost of the requirement</b> above — a chit can carry priced lines and no agreed total, or the reverse.</div>'
@@ -342,9 +342,9 @@ function _groupSumPane(){
 function _mBox(label, value, hint, tone){
   var col = tone === 'bad' ? '#c0453b' : tone === 'warn' ? '#8a5a1e' : 'var(--ink)';
   return '<div style="flex:1;min-width:104px;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:#fff">'
-    + '<div style="font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey)">' + esc(label) + '</div>'
+    + '<div style="font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey)">' + esc(label) + '</div>'
     + '<div style="font-size:19px;font-weight:800;margin-top:3px;color:' + col + '">' + esc(String(value)) + '</div>'
-    + (hint ? '<div style="font-size:10.5px;color:var(--grey);margin-top:2px">' + esc(hint) + '</div>' : '') + '</div>';
+    + (hint ? '<div style="font-size:11px;color:var(--grey);margin-top:2px">' + esc(hint) + '</div>' : '') + '</div>';
 }
 /**
  * ⭐ THE RECONCILIATION — Athi, 2026-08-10: *"total number of tasks in the database should be the sum of all the
@@ -380,7 +380,7 @@ function _reconStrip(){
   }).join('') : '<div style="font-size:11.5px;color:var(--grey);padding:5px 0">No folders on this track yet — everything is unfiled, which is why the two numbers match trivially.</div>';
 
   return '<div style="border:1px solid var(--line);border-radius:10px;padding:11px 13px;margin-bottom:12px;background:#fbfbfd">'
-    + '<div style="font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey)">Does it add up?</div>'
+    + '<div style="font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey)">Does it add up?</div>'
     + '<div style="font-size:13px;margin-top:3px">' + sums + ' &nbsp; ' + verdict + '</div>'
     + '<div style="font-size:11px;color:var(--grey);margin-top:2px">' + (r.overall || {}).assigned + ' assigned · ' + (r.overall || {}).unassigned + ' unassigned — a chit can be open and unassigned, and that is the pile worth seeing.</div>'
     + '<div style="margin-top:8px">' + rows + '</div>'
@@ -416,7 +416,7 @@ function _folderMetricsPane(){
     + _mBox('To close', dash(c.median_to_close_days, 'd'), 'time to finished')
     + _mBox('Disputed', dash(d.rate_pct, '%'), (d.open || 0) + ' open now', (d.open ? 'bad' : null))
     + '</div>'
-    + '<div style="margin-top:14px"><div style="font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin-bottom:5px">Value</div>'
+    + '<div style="margin-top:14px"><div style="font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin-bottom:5px">Value</div>'
     + money + moneyNote + '</div>'
     + '<div style="font-size:11px;color:var(--grey);margin-top:14px;line-height:1.5">A dash means <b>nothing to measure</b>, which is not the same as zero. '
     + '“Overdue” is <b>your</b> setting — change it in Settings → Policy flags, and every folder and scorecard follows.</div>'

@@ -59,7 +59,7 @@ function paintIntake(){ var h=document.getElementById('intake_body'); if(h) h.in
 function _chn(c){
   var M={ whatsapp:['#25D366','WhatsApp'], email:['#3F66A6','Email'], web:['#6a44a8','Web'], sms:['#b07a2b','SMS'] };
   var m=M[c]||['#6a707a', String(c||'channel')];
-  return '<span style="font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#fff;background:'
+  return '<span style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#fff;background:'
     + m[0] + ';border-radius:5px;padding:2px 7px">' + esc(m[1]) + '</span>';
 }
 function intakeSimHTML(){
@@ -348,7 +348,7 @@ function _jsonBlock(title, obj){
   var id='jb'+Math.random().toString(36).slice(2,8);
   return '<div style="border-bottom:1px solid var(--line)">'
     + '<div style="display:flex;align-items:center;gap:8px;padding:9px 14px 5px">'
-    +   '<span style="font-size:10.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey)">'+esc(title)+'</span>'
+    +   '<span style="font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey)">'+esc(title)+'</span>'
     +   '<span onclick="_copyJson(\''+id+'\')" style="margin-left:auto;font-size:11px;color:var(--blue);cursor:pointer">copy</span>'
     + '</div>'
     + '<pre id="'+id+'" style="margin:0;padding:0 14px 12px;font:11.5px/1.55 ui-monospace,Menlo,Consolas,monospace;'
