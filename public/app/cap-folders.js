@@ -179,6 +179,63 @@ async function _allRulesPerFolder(track){
   return { rules: out, migrated: migrated };
 }
 
+/**
+ * ⭐ EVERY RULE THE ENTITY HAS, ACROSS BOTH TRACKS — the list a reorder must be computed against.
+ * ⚠️ NOT the same as _allRulesPerFolder(track), and the difference is the whole correctness argument: `sort` is
+ * ENTITY-WIDE (one ORDER BY over every rule), while any view — a folder, a track — shows only a slice. Renumber
+ * a slice 0..n-1 and you collide with the rules outside it, silently reshuffling folders the user was not even
+ * looking at. So the move is decided in the visible list and APPLIED to the full one.
+ */
+async function _allRulesForSort(){
+  var fs = UI.folders || [], out = [];
+  for (var i = 0; i < fs.length; i++) {
+    try {
+      var r = await api('folderRules', { params: { id: fs[i].folder_id } });
+      (r && r.rules || []).forEach(function(x){ out.push(x); });
+    } catch (e) { /* one unreadable folder must not scramble the rest — it simply keeps its place */ }
+  }
+  out.sort(function(a, b){ return (a.sort - b.sort) || String(a.created_at).localeCompare(String(b.created_at)); });
+  return out;
+}
+/**
+ * Move a rule one place earlier (dir -1) or later (dir +1) in the running order.
+ * ⚠️ "One place" means one place IN THE LIST THE USER IS LOOKING AT. Inside a folder, moving up means beating the
+ * rule above it in that folder — not landing between two rules of some other folder they cannot see. So the
+ * neighbour is chosen from the visible list, then the moved rule is placed relative to that neighbour in the
+ * full list. ⚠️ Only rows whose `sort` actually changes are written: the first move on legacy data renumbers
+ * everything once (every row ships as 0), and after that a swap touches two.
+ */
+async function ruleMove(id, dir){
+  var vis = _FLD.rules || [];
+  var vi = -1; for (var k = 0; k < vis.length; k++) if (vis[k].rule_id === id) vi = k;
+  var ti = vi + dir;
+  if (vi < 0 || ti < 0 || ti >= vis.length) return;           // at the end — the button is disabled anyway
+  var neighbour = vis[ti].rule_id;
+
+  _FLD.busy = true; _FLD.err = ''; _fldPaint();
+  try {
+    var all = await _allRulesForSort();
+    var from = -1; for (var a = 0; a < all.length; a++) if (all[a].rule_id === id) from = a;
+    if (from < 0) throw new Error('Could not find that rule to move it.');
+    var moved = all.splice(from, 1)[0];
+    /* ⚠️ Find the neighbour AFTER the removal. Splicing shifts every index past `from`, so a target computed
+       before it lands one place off in exactly half the cases — the classic move-item-in-array bug. */
+    var ni = -1; for (var b = 0; b < all.length; b++) if (all[b].rule_id === neighbour) ni = b;
+    if (ni < 0) throw new Error('Could not place the rule.');
+    all.splice(dir < 0 ? ni : ni + 1, 0, moved);
+
+    var writes = [];
+    all.forEach(function(r, i){
+      if (r.sort !== i) writes.push(api('folderRuleUpdate', { params: { rule_id: r.rule_id }, body: { sort: i } }));
+    });
+    await Promise.all(writes);
+    _FLD.rules = null; await loadFolderRules();
+  } catch (e) {
+    _FLD.err = (e && e.message) || 'Could not change the order.';
+    _FLD.busy = false; _fldPaint();
+  }
+}
+
 async function loadFolderMetrics(){
   _FLD.busy = true; _FLD.recon = null; _fldPaint();
   var track = _fldTrack();
@@ -503,11 +560,18 @@ function _fldFolderName(id){ var f = (UI.folders || []).find(function(x){ return
    ⚠️ The order is not yet EDITABLE — see backlog 32. Showing it is still strictly better than hiding it: a user
    who can see that rule 1 beats rule 3 can fix the conflict by rewriting a condition, which they cannot do while
    the precedence is guesswork. */
-function _ruleRow(r, i){
+function _ruleRow(r, i, n){
   var terms = Object.keys(r.when || {}).map(function(k){ return '<span style="font-family:ui-monospace,Menlo,monospace;font-size:11.5px">' + esc(k) + '</span> <b>' + esc(String(r.when[k])) + '</b>'; }).join(' <span style="color:var(--grey)">and</span> ');
   return '<div style="border:1px solid var(--line);border-radius:9px;padding:11px 13px;margin-bottom:8px;background:#fff">'
     + '<div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap">'
-    + '<span title="Runs ' + (i === 0 ? 'first' : 'after the ' + i + ' above') + '" style="flex:0 0 auto;min-width:20px;height:20px;border-radius:5px;background:var(--paper);border:1px solid var(--line);color:var(--grey);font-size:11px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;font-variant-numeric:tabular-nums">' + (i + 1) + '</span>'
+    + '<span title="Runs ' + (i === 0 ? 'first' : 'after the ' + i + ' above') + '" style="flex:0 0 auto;min-width:20px;height:20px;border-radius:5px;background:var(--paper);border:1px solid var(--line);color:var(--grey);font-size:var(--fs-1);font-weight:700;display:inline-flex;align-items:center;justify-content:center;font-variant-numeric:tabular-nums">' + (i + 1) + '</span>'
+    /* ⚠️ ↑ ↓, NOT ← →: this is a vertical list, and the glyph has to match the axis the thing actually moves on.
+       Disabled at the ends rather than hidden — see mvBtn(). Only shown when there is somewhere to move TO: a
+       single rule cannot be reordered, and two dead buttons beside it just invite a click that does nothing. */
+    + (n > 1 ? '<span style="display:inline-flex;gap:3px;flex:0 0 auto">'
+        + mvBtn('↑', i > 0,     'Run earlier — this rule will beat the one above it', 'ruleMove(\'' + esc(r.rule_id) + '\',-1)')
+        + mvBtn('↓', i < n - 1, 'Run later — the rule below will beat this one',      'ruleMove(\'' + esc(r.rule_id) + '\',1)')
+        + '</span>' : '')
     + '<label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" data-testid="rule-enabled" ' + (r.enabled ? 'checked' : '') + ' onchange="ruleToggle(\'' + esc(r.rule_id) + '\',this.checked)"><span style="font-weight:700;font-size:13px">' + esc(r.name || 'Rule') + '</span></label>'
     + '<span style="margin-left:auto;font-size:11px;color:#c0453b;cursor:pointer" onclick="ruleDelete(\'' + esc(r.rule_id) + '\')">Delete</span></div>'
     /* ⚠️ AT TRACK LEVEL A RULE MUST NAME ITS DESTINATION. "file here" is only meaningful standing inside the
@@ -533,13 +597,13 @@ function _folderRulesPane(){
           + '⚠️ Rules only conflict with <b>each other</b> — two folders both claiming supplier invoices is invisible from inside either one, which is why they are listed together here.')
        : 'A rule files <b>new arrivals</b> into this folder automatically. ')
     + ' ⚠️ It only <b>files</b> — it never changes a chit’s status, value or counterparty. Filing is a view on your own copy; anything more belongs to a person.'
-    + (rules.length > 1 ? ' They run <b>in the numbered order</b> and the first one that matches wins — the rest never see that chit.' : '')
+    + (rules.length > 1 ? ' They run <b>in the numbered order</b> and the first one that matches wins — the rest never see that chit. Use ↑ ↓ to change which rule gets first refusal.' : '')
     + '</div>';
 
   if (_FLD.rulesNote) out += '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;font-size:11.5px;color:#6b5a36;margin-bottom:9px">' + esc(_FLD.rulesNote) + '</div>';
   if (_FLD.err) out += '<div style="color:#c0453b;font-size:12px;margin-bottom:8px">' + esc(_FLD.err) + '</div>';
 
-  out += rules.length ? rules.map(function(r, i){ return _ruleRow(r, i); }).join('') : '<div style="color:var(--grey);font-size:12.5px;padding:6px 0 12px">No rules yet. Everything arrives unfiled until you add one.</div>';
+  out += rules.length ? rules.map(function(r, i){ return _ruleRow(r, i, rules.length); }).join('') : '<div style="color:var(--grey);font-size:12.5px;padding:6px 0 12px">No rules yet. Everything arrives unfiled until you add one.</div>';
 
   /* ⚠️ NO "ADD A RULE" AT TRACK LEVEL, and this is a real constraint rather than an omission: a rule's whole
      definition is "file into THIS folder", so from the track there is no destination to write down. Offering the
