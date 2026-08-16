@@ -785,11 +785,24 @@ function govCodeStandards(){
   if (!s || !s.length) return 'no scheme registry loaded';
   return s.slice(0, 4).join(' · ') + (s.length > 4 ? ' +' + (s.length - 4) : '') + ' — see Definitions';
 }
+/**
+ * ⚠️ I GOT THIS WRONG FIRST TIME and it is worth recording. This row is "Units of measure", and I pointed it at
+ * `CBCatalogue.STANDARDS` because the name looked close enough — but STANDARDS holds ADOPTED SPECIFICATIONS
+ * (JSON Schema 2020-12, RFC 7386 merge-patch, GS1 GTIN, PIM, MDM survivorship). It reported "19 declared" for a
+ * registry of units that does not exist. A confident number pointing at the wrong table is worse than a dash,
+ * because a dash invites the question and a number closes it.
+ *
+ * ⚠️ THERE IS NO CENTRAL UNITS REGISTRY. The only list is `CW_UNITS` inside the catalogue wizard (cap-catalogue.js),
+ * which is a screen, not a model — so units cannot be declared, referenced or governed. That is a real Model A gap
+ * and it is stated here rather than papered over.
+ */
 function govUnits(){
+  /* Reads the MODEL now, not the wizard — so it resolves whether or not the catalogue capability has been opened.
+     Reaching across to another lazily-loaded capability's global was the reason this row used to read empty. */
   var M = (typeof CBCatalogue !== 'undefined') ? CBCatalogue : null;
-  var st = M && M.STANDARDS;
-  var n = st ? (Array.isArray(st) ? st.length : Object.keys(st).length) : 0;
-  return n ? (n + ' declared in the catalogue model — see Definitions') : 'not declared yet';
+  var u = M && M.UNITS;
+  if (!u || !u.length) return 'no units registry loaded';
+  return u.length + ' declared · ' + u.slice(0, 5).join(' · ') + (u.length > 5 ? ' +' + (u.length - 5) : '');
 }
 function govAssignModel(){
   var s = UI._set && UI._set.s;

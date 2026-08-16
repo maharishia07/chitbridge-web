@@ -388,7 +388,16 @@ function catalogueSetupScreen(){
 
 /* ===================== SETUP WIZARD — fill the catalogue step by step (each source optional / partial) ===================== */
 var CW_STEPS = ['Vertical', 'Blueprint', 'From ERP', 'Manual', 'Price', 'Tax · finish'];
-var CW_UNITS = ['kg', 'gram', 'litre', 'ml', 'piece', 'count', 'unit', 'pack', 'box', 'dozen', 'tonne', 'barrel', 'metre', 'sqft', 'roll'];
+/**
+ * ⚠️ THE LIST MOVED TO THE MODEL (catalogue-model.js · UNITS). This is now an alias, not a declaration — the
+ * wizard is a screen and had no business owning the registry every line item depends on. Keeping the CW_UNITS
+ * name means the two call sites below are untouched, so this is a move with no behaviour change to review.
+ *
+ * ⚠️ The fallback is deliberately EMPTY rather than a second copy of the list. If the model ever fails to load,
+ * an empty unit picker is a visible fault; a quietly-duplicated list is the exact drift being removed — that is
+ * how CATF_METHODS and METHODS came to disagree by four values without anyone noticing.
+ */
+var CW_UNITS = (typeof CBCatalogue !== 'undefined' && CBCatalogue.UNITS) ? CBCatalogue.UNITS : [];
 function cwToggleUnit(u){ var w = UI.cw; w.units = w.units || []; var i = w.units.indexOf(u); if (i >= 0) w.units.splice(i, 1); else w.units.push(u); renderApp(); }
 function cwAddUnit(){ var w = UI.cw; var u = (val('cw_newunit') || '').trim(); if (!u) return; w.units = w.units || []; if (w.units.indexOf(u) < 0) w.units.push(u); renderApp(); }
 function _cwLoggedIn(){ return typeof SESSION !== 'undefined' && !!SESSION.token; }

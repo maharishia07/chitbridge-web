@@ -96,6 +96,23 @@
   ];
   var FACETS = ['identity', 'variants', 'units', 'standards', 'media', 'bom', 'pricing', 'loop', 'feedback'];
   var PRICING_MODELS = ['fixed', 'range', 'tiered', 'market-ref', 'negotiated'];
+  /**
+   * ⭐ UNITS OF MEASURE — MOVED HERE FROM THE WIZARD (2026-08-16).
+   *
+   * This list lived as `CW_UNITS` inside cap-catalogue.js — a SCREEN, and a lazily-loaded capability at that. The
+   * unit is the one thing every single line item carries, and it had no home in the model: it could not be
+   * declared, published in Definitions, or referred to under Model A. Governance's "Units of measure" row read
+   * `—`, and when I first wired it I pointed it at STANDARDS (adopted specifications) and confidently reported
+   * "19 declared" for a registry that did not exist.
+   *
+   * ⚠️ IT ALSO CREATED A CROSS-CAPABILITY DEPENDENCY: cap-admin had to reach for a global owned by cap-catalogue,
+   * which is only defined once that capability has been opened. Here in the model both read the same export and
+   * neither has to have visited the other's screen.
+   *
+   * ⚠️ ORDER AND SPELLING PRESERVED EXACTLY as the wizard had them — this is a move, not a redesign. Any addition
+   * (or a switch to UN/CEFACT codes) is a separate, deliberate change.
+   */
+  var UNITS = ['kg', 'gram', 'litre', 'ml', 'piece', 'count', 'unit', 'pack', 'box', 'dozen', 'tonne', 'barrel', 'metre', 'sqft', 'roll'];
   // the whole grammar, in one place — what the AI composes from
   function PALETTE(){ return { datatypes: DATATYPES, priceOrigin: PRICE_ORIGIN, legs: LEGS, viaFor: viaFor, methods: METHODS, facets: FACETS, pricingModels: PRICING_MODELS, standards: STD_SCHEMES, priceBy: PRICE_BY, priceBasis: PRICE_BASIS }; }
   function leg(k) { for (var i = 0; i < LEGS.length; i++) if (LEGS[i].k === k) return LEGS[i]; return null; }
@@ -532,7 +549,7 @@
     LEGS: LEGS, TYPES: TYPES, viaFor: viaFor, leg: leg,
     STD_SCHEMES: STD_SCHEMES, PRICE_BASIS: PRICE_BASIS, PRICE_BY: PRICE_BY, PRICE_ORIGIN: PRICE_ORIGIN,
     priceProvenance: priceProvenance, priceIsCheckable: priceIsCheckable,
-    DATATYPES: DATATYPES, METHODS: METHODS, FACETS: FACETS, PRICING_MODELS: PRICING_MODELS, PALETTE: PALETTE,
+    DATATYPES: DATATYPES, METHODS: METHODS, FACETS: FACETS, PRICING_MODELS: PRICING_MODELS, UNITS: UNITS, PALETTE: PALETTE,
     ensure: ensure, toBase: toBase, resolvePrice: resolvePrice, routeChain: routeChain,
     deriveComputeJob: deriveComputeJob, canonicalInputs: canonicalInputs, validate: validate,
     toJSONSchema: toJSONSchema,

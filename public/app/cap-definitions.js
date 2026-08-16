@@ -198,6 +198,18 @@ function cbDefRegistries(){
     rows: P && P.methods ? P.methods.map(function (m) { return { code: m.k, label: m.label }; }) : null
   });
   out.push({
+    /**
+     * ⭐ UNITS OF MEASURE — a declared kind as of 2026-08-16. The list used to live inside the catalogue wizard as
+     * `CW_UNITS`, so the one attribute every line item carries could not be declared or referred to anywhere. It
+     * is in the model now, which means this screen can publish it and Governance can point at it.
+     */
+    key: 'unit', icon: '⚖️', title: 'Units of measure',
+    blurb: 'What a quantity is counted in — the same list the catalogue wizard offers on every item.',
+    source: 'app/catalogue-model.js · UNITS',
+    rows: (typeof CBCatalogue !== 'undefined' && CBCatalogue.UNITS)
+      ? CBCatalogue.UNITS.map(function (u) { return { code: u, label: u }; }) : null
+  });
+  out.push({
     key: 'datatype', icon: '🔤', title: 'Field datatypes',
     blurb: 'What a catalogue field can hold — the palette a field set is built from.',
     source: 'app/catalogue-model.js · DATATYPES',
