@@ -113,6 +113,38 @@
    * (or a switch to UN/CEFACT codes) is a separate, deliberate change.
    */
   var UNITS = ['kg', 'gram', 'litre', 'ml', 'piece', 'count', 'unit', 'pack', 'box', 'dozen', 'tonne', 'barrel', 'metre', 'sqft', 'roll'];
+  /**
+   * ⭐⭐ UNIT ALIASES — one unit, many spellings (backlog 30). Found while checking Group sum: every unit-split
+   * warning on the live account was the SAME UNIT failing to match itself across scripts —
+   * `0 bunch + 20 கட்டு + 5 kattu`, `0 kg + 8 கிலோ`, `37 litre + 10 லிட்டர்`. They arrive through the WhatsApp
+   * captures in Tamil; the catalogue knew `kg` and had no idea `கிலோ` was one. Six items could not be totalled.
+   *
+   * ⭐ The precedent is right here in this file: a product already knows "thakkali" is a tomato via `synonyms`.
+   * A unit knew nothing. This is that same idea, for units.
+   *
+   * ⚠️⚠️ AN ALIAS IS A RENAME, NEVER A CONVERSION — the entire safety property.
+   *   `கிலோ → kg`   RENAME. Same quantity, different script. No number changes, always safe.
+   *   `crate → kg`  CONVERSION. Entity-specific (20kg for one supplier, 25 for another) and stays REFUSED
+   *                 unless declared on the item. Mixing the two into one table would silently re-enable the
+   *                 exact money error lib/consolidate.js was written to prevent.
+   * ⚠️ OBSERVED, NOT INVENTED — every spelling below was seen on real captures. Grow it from what arrives.
+   * ⚠️ MIRRORED IN chitbridge-api/lib/units.js, which is where totalling reads it. Change both or neither.
+   */
+  var UNIT_ALIASES = {
+    kg:    ['கிலோ', 'கிலோகிராம்', 'kilo', 'kilos', 'kilogram', 'kilograms', 'kgs', 'kilogramme'],
+    gram:  ['கிராம்', 'grams', 'gm', 'gms', 'gramme'],
+    litre: ['லிட்டர்', 'liter', 'liters', 'litres', 'ltr', 'ltrs'],
+    ml:    ['மில்லி', 'millilitre', 'millilitres', 'milliliter', 'mls'],
+    piece: ['பீஸ்', 'pieces', 'pcs', 'pc', 'nos', 'no'],
+    bunch: ['கட்டு', 'kattu', 'bunches'],
+    pack:  ['பேக்', 'packet', 'packets', 'pkt', 'pkts', 'packs'],
+    box:   ['பாக்ஸ்', 'boxes', 'carton', 'cartons'],
+    dozen: ['டஜன்', 'dozens', 'dzn'],
+    tonne: ['டன்', 'ton', 'tons', 'tonnes', 'mt'],
+    metre: ['மீட்டர்', 'meter', 'meters', 'metres', 'mtr'],
+    count: ['எண்ணிக்கை', 'counts'],
+    unit:  ['யூனிட்', 'units'],
+  };
   // the whole grammar, in one place — what the AI composes from
   function PALETTE(){ return { datatypes: DATATYPES, priceOrigin: PRICE_ORIGIN, legs: LEGS, viaFor: viaFor, methods: METHODS, facets: FACETS, pricingModels: PRICING_MODELS, standards: STD_SCHEMES, priceBy: PRICE_BY, priceBasis: PRICE_BASIS }; }
   function leg(k) { for (var i = 0; i < LEGS.length; i++) if (LEGS[i].k === k) return LEGS[i]; return null; }
@@ -549,7 +581,7 @@
     LEGS: LEGS, TYPES: TYPES, viaFor: viaFor, leg: leg,
     STD_SCHEMES: STD_SCHEMES, PRICE_BASIS: PRICE_BASIS, PRICE_BY: PRICE_BY, PRICE_ORIGIN: PRICE_ORIGIN,
     priceProvenance: priceProvenance, priceIsCheckable: priceIsCheckable,
-    DATATYPES: DATATYPES, METHODS: METHODS, FACETS: FACETS, PRICING_MODELS: PRICING_MODELS, UNITS: UNITS, PALETTE: PALETTE,
+    DATATYPES: DATATYPES, METHODS: METHODS, FACETS: FACETS, PRICING_MODELS: PRICING_MODELS, UNITS: UNITS, UNIT_ALIASES: UNIT_ALIASES, PALETTE: PALETTE,
     ensure: ensure, toBase: toBase, resolvePrice: resolvePrice, routeChain: routeChain,
     deriveComputeJob: deriveComputeJob, canonicalInputs: canonicalInputs, validate: validate,
     toJSONSchema: toJSONSchema,
