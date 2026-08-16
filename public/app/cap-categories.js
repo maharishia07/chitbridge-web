@@ -235,10 +235,19 @@ function cbcatDetailHTML(){
               + '<button data-testid="catg-retire" onclick="cbcatRetire(\'' + esc(c.id) + '\')">Retire</button>')
     + '</div>';
 }
+function cbcatStatsHTML(){
+  var n = cbcatVisible().length;
+  return '<span style="font-size:11px;color:var(--grey)">' + n + ' categor' + (n === 1 ? 'y' : 'ies') + '</span>'
+    /* ⭐ The uncategorised count is a to-do list, so it is a BUTTON — it takes you to the products it is
+       counting rather than merely reporting a number you then have to go and find by hand. */
+    + ((CBCAT_UI.counts && CBCAT_UI.counts.none)
+        ? '<button data-testid="catg-uncat" onclick="cbcatGoUncategorised()" style="margin-left:auto;border:1px solid var(--gold-line);background:var(--gold-soft);border-radius:8px;padding:4px 9px;font-size:11.5px;color:#6b5a36;cursor:pointer">'
+          + CBCAT_UI.counts.none + ' uncategorised →</button>'
+        : '');
+}
 function cbcatPaintList(){
   var b = document.getElementById('cbcat_rows'); if (b) b.innerHTML = cbcatRowsHTML();
-  var c = document.getElementById('cbcat_count');
-  if (c) c.textContent = cbcatVisible().length + ' categor' + (cbcatVisible().length === 1 ? 'y' : 'ies');
+  var s = document.getElementById('cbcat_stats'); if (s) s.innerHTML = cbcatStatsHTML();
 }
 function cbcatPaintDetail(){ var d = document.getElementById('detailpane'); if (d) { d.className = 'detail'; d.innerHTML = cbcatDetailHTML(); } }
 function cbcatPaint(){ cbcatPaintList(); cbcatPaintDetail(); }
@@ -251,15 +260,10 @@ function categoriesScreen(){
     + '</div>'
     + '<button class="composebtn" style="width:100%;justify-content:center" data-testid="catg-new" onclick="cbcatNew()">+ New category</button>'
     + '<div class="srch" style="margin-top:8px">🔍 <input data-testid="catg-search" placeholder="Search categories" value="' + esc(CBCAT_UI.q || '') + '" oninput="cbcatSearch(this.value)"></div>'
-    + '<div style="margin-top:8px;display:flex;align-items:center;gap:8px">'
-    +   '<span style="font-size:11px;color:var(--grey)" id="cbcat_count">' + cbcatVisible().length + ' categories</span>'
-    +   (CBCAT_UI.counts && CBCAT_UI.counts.none
-          /* ⭐ The uncategorised count is a to-do list, so it is a BUTTON — it takes you to the products it is
-             counting rather than merely reporting them. */
-          ? '<button data-testid="catg-uncat" onclick="cbcatGoUncategorised()" style="margin-left:auto;border:1px solid var(--gold-line);background:var(--gold-soft);border-radius:8px;padding:4px 9px;font-size:11.5px;color:#6b5a36;cursor:pointer">'
-            + CBCAT_UI.counts.none + ' uncategorised →</button>'
-          : '')
-    + '</div>'
+    /* ⚠️ ITS OWN ELEMENT, REPAINTED WITH THE ROWS. The counts arrive AFTER the screen is built, and the header is
+       rendered once by categoriesScreen() — so anything derived from counts that lives up here is stale forever.
+       The uncategorised button was invisible on the first look for exactly that reason. */
+    + '<div id="cbcat_stats" style="margin-top:8px;display:flex;align-items:center;gap:8px">' + cbcatStatsHTML() + '</div>'
     + '</div><div class="rows" id="cbcat_rows">' + cbcatRowsHTML() + '</div></div>';
   var detail = '<div class="detail" id="detailpane">' + cbcatDetailHTML() + '</div>';
   var divider = '<div class="divider" id="divider" onmousedown="startDrag(event)" ontouchstart="startDrag(event)" role="separator" aria-label="Resize panes"><span class="grip"></span></div>';
