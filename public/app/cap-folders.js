@@ -287,7 +287,23 @@ function _groupSumPane(){
       var head = '<div onclick="gsToggle(' + i + ')" style="display:flex;align-items:center;cursor:pointer;padding:7px 0;border-top:1px solid var(--line);font-size:13px">'
         + '<span style="flex:1;min-width:0">' + (open ? '▾' : '▸') + ' ' + name
         + (l.matched_by_spelling ? ' <span title="matched through a misspelling" style="font-size:11px;color:#8a6d1f">≈</span>' : '') + '</span>'
-        + '<span style="width:110px;text-align:right;font-weight:800">' + esc(String(l.total)) + ' ' + esc(l.canonical_unit || '') + '</span>'
+        /**
+         * ⚠️ A SPLIT TOTAL IS NOT ZERO — SHOW A DASH.
+         *
+         * When no conversion is defined the server correctly refuses to invent one, so `total` holds only the
+         * part in the canonical unit — which is frequently 0. This rendered that 0 as the HEADLINE, so Curry
+         * Leaves read **“0 bunch · INR 0”** while carrying 25 கட்டு. The warning explaining it sat in 11px red
+         * text underneath, and the number a person actually reads said there was nothing there.
+         *
+         * ⭐ The app already states this rule on the Metrics pane — *"A dash means nothing to measure, which is
+         * not the same as zero"* — and the line immediately below already honours it for an unpriced value. This
+         * is the same rule applied to quantity: measured, not measurable, and zero are three different facts.
+         */
+        + '<span style="width:110px;text-align:right;font-weight:800">'
+        + (l.unit_split
+            ? '<span style="color:#c0453b" title="units that cannot be added — see the split below">—</span>'
+            : esc(String(l.total)) + ' ' + esc(l.canonical_unit || ''))
+        + '</span>'
         + '<span style="width:130px;text-align:right">' + _gsMoney(l.value, l.value_mixed) + '</span>'
         + '<span style="width:74px;text-align:right;color:var(--grey);font-size:11.5px">' + l.stores + '</span></div>';
       /* THE DRILLDOWN — Athi: "on click the down below need to know who are all asked". The roster comes straight
