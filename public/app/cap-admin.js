@@ -538,16 +538,14 @@ async function loadMIS(){
  * where one ended and the next began, which is how the storefront's "Is your shop open?" came to sit a few
  * hundred pixels under identity's "Shop status" and read as its contradiction.
  */
-/* ⚠️ NO `q` SUBTITLE HERE — profileScreen() renders these as tabs and _misHead already prints the full sentence
-   above each section. The short version was a second, worse copy of it. */
 var PROF_SECS = [
-  { key:'identity',   name:'Identity'   },
-  { key:'storefront', name:'Storefront' },
+  { key:'identity',   name:'Identity',    q:'Who you are on the rail' },
+  { key:'storefront', name:'Storefront',  q:'What customers can see' },
   /* ⚠️ NOT "Governance" — Settings has a section by that name too, and two rows with one name in two screens is
      a collision even when the content differs. This one is your RESOLVED position (Governed by · Basics · Rights ·
      Allowances · Jurisdiction); the Settings one is the 7-layer model those values descend from. */
-  { key:'governance', name:'Your rights' },
-  { key:'vault',      name:'Documents'   }
+  { key:'governance', name:'Your rights',  q:'What this entity may do' },
+  { key:'vault',      name:'Documents',   q:'Fill forms once, reuse' }
 ];
 function profSec(){ return UI.profSec || 'identity'; }
 /**
@@ -556,36 +554,31 @@ function profSec(){ return UI.profSec || 'identity'; }
  * the document, so loadProfile's `if(!h) return` bailed and every section sat on the spinner forever. It worked on
  * FIRST entry only, because arriving at the screen triggers a second render that the section switch does not.
  */
-function profSetSec(k){ UI.profSec = k; renderApp(); if (UI._me) { const h=document.getElementById('profbody');
+function profSetSec(k){ UI.profSec = k; renderApp(); _capShowDetail(); if (UI._me) { const h=document.getElementById('profbody');
   if (h){ h.innerHTML = profSecHTML(k, UI._me); if (k === 'vault') loadVault(); } } else { loadProfile(); } }
 
 /**
- * ⚠️ TABS, NOT A MASTER-DETAIL PANE (Athi, 2026-08-16). The list pane earns its width when it holds a GROWING
- * list — chits, suppliers, categories — where scanning and selecting is the work. Profile holds exactly four
- * fixed sections, forever, so a 320px scrollable column sat ~75% empty at every viewport while the forms it
- * pushed aside wrapped in ~400px. The sections were navigation, not data.
- *
- * ⚠️ AND THE SUBTITLES GO WITH IT. Each rail row carried a `q` ("Who you are on the rail") that was a truncation
- * of the description _misHead already prints above the section ("Who you are on the rail — and how others find
- * you."). Two copies of one sentence, the shorter one first. The tab carries the name; the head keeps the sentence.
- *
- * ⚠️ NO BACK BUTTON AND NO showdetail: tabs are their own navigation on mobile too, so the master-detail dance
- * (‹ Back, _capShowDetail, the drag divider) is not simplified here — it is GONE, along with the state it kept.
+ * ⚠️ THE TWO-SIDED PANEL IS THE SHAPE, AND IT IS NOT NEGOTIABLE PER SCREEN (Athi, 2026-08-16: *"it has to be
+ * uniform two sided, so it nicely works in phone as well"*). I briefly made this tabs because the rail sits
+ * ~75% empty on a desktop viewport — which traded a real density gain for the thing that actually matters:
+ * every screen behaving the same way, and list→tap→detail→back being the mobile pattern throughout. A screen
+ * that is uniform everywhere beats a screen that is optimal once. Density is fixed by the pane, not by the shape.
  */
 function profileScreen(){
   if (SESSION.role === 'actor') return scr('👤 Profile', 'profbody', 'profile');   // actors keep the simple card
   var e = UI._me || {};
-  var tabs = PROF_SECS.map(function(s){
-    return '<button type="button" class="' + (profSec() === s.key ? 'on' : '') + '" data-testid="prof-sec-' + s.key + '"'
-      + ' onclick="profSetSec(\'' + s.key + '\')">' + esc(s.name) + '</button>';
+  var rail = PROF_SECS.map(function(s){
+    return '<div class="row misrow' + (profSec() === s.key ? ' sel' : '') + '" data-testid="prof-sec-' + s.key + '" onclick="profSetSec(\'' + s.key + '\')">'
+      + '<div class="main2"><div class="l1"><span class="code">' + esc(s.name) + '</span></div><div class="l2">' + esc(s.q) + '</div></div></div>';
   }).join('');
-  return '<div style="flex:1;min-height:0;overflow-y:auto"><div style="padding:14px;max-width:640px;margin:0 auto">'
-    + '<div class="misbar" style="margin-bottom:9px"><span class="misttl">👤 Profile</span>'
-    + '<span class="misbar-r"><span class="misasof">' + esc(e.display_name || '') + '</span></span></div>'
-    + '<div class="statetabs" role="tablist">' + tabs + '</div>'
-    /* ⚠️ SHIPS A SPINNER, NOT AN EMPTY DIV — if the `me` fetch is already in flight this render paints nothing
-       of its own, and a blank panel under live tabs reads as a broken screen rather than a loading one. */
-    + '<div id="profbody"><div class="loadwrap"><span class="spin"></span> loading…</div></div></div></div>';
+  var list = '<div class="list"><div class="lh" style="padding:0"><div class="misbar"><span class="misttl">👤 Profile</span>'
+    + '<span class="misbar-r"><span class="misasof">' + esc(e.display_name || '') + '</span></span></div></div>'
+    + '<div class="rows" id="prof_rail">' + rail + '</div></div>';
+  var detail = '<div class="detail" id="detailpane"><div id="profbody"><button class="dback" data-testid="cap-back" onclick="backToList()">‹ Back</button></div></div>';
+  var divider = '<div class="divider" id="divider" onmousedown="startDrag(event)" ontouchstart="startDrag(event)" role="separator" aria-label="Resize panes"><span class="grip"></span></div>';
+  if (UI.misLw == null) UI.misLw = 320;
+  var lw = Math.min(UI.misLw, Math.max(260, Math.round((window.innerWidth || 1200) * 0.42)));
+  return '<div class="panel' + ((UI.vp === 'mob' && UI.mdetail) ? ' showdetail' : '') + '" id="panel" style="--lw:' + lw + 'px;--lh:' + (UI.lh || 300) + 'px">' + list + divider + detail + '</div>';
 }
 
 /**
