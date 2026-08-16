@@ -42,8 +42,10 @@ function vaultCardHTML(vault, encrypted){
 }
 async function loadVault(){
   var host=document.getElementById('vaulthost'); if(!host) return;
-  try{ var p=(await api('vaultGet'))||{}; host.innerHTML=vaultCardHTML(p.vault||{}, !!p.vault_encrypted); }
-  catch(e){ host.innerHTML=vaultCardHTML({}, false); }
+  /* ⚠️ THE END MARKER IS PAINTED HERE, NOT BY profSecHTML — it is a claim that you have seen everything, so it
+     must not appear beside a spinner. Appended synchronously with the content it terminates, on both paths. */
+  try{ var p=(await api('vaultGet'))||{}; host.innerHTML=vaultCardHTML(p.vault||{}, !!p.vault_encrypted)+_capEnd(); }
+  catch(e){ host.innerHTML=vaultCardHTML({}, false)+_capEnd(); }
   if(window.CBOffline)CBOffline.autodraft(host,'app.vault',{overwrite:true});   // restore unsaved edits over the server copy
 }
 async function saveVaultUI(){
@@ -621,12 +623,19 @@ function namingRulesHTML(){
     +   'definition follows the rename rather than breaking.</div></div>') : '')
     + '</div>';
 }
-function profSecHTML(k, e){ var b = _profSecBody(k, e); return b ? (b + _capEnd()) : ''; }
+/* ⚠️ AN ASYNC SECTION PAINTS ITS OWN END MARKER. "— end —" says the panel is complete; appended here it landed
+   directly under the vault's "loading…", telling the reader they had seen everything while nothing had arrived.
+   The vault is the only section whose body is a placeholder rather than its content — see loadVault(). */
+function profSecHTML(k, e){
+  var b = _profSecBody(k, e);
+  if (!b) return '';
+  return k === 'vault' ? b : (b + _capEnd());
+}
 function _profSecBody(k, e){
   if (k === 'identity') return _misHead('Identity', 'Who you are on the rail — and how others find you.')
     + `<div class="${_CARD}"><div class="kv"><b>Name</b> · ${esc(e.display_name)}</div><div class="kv"><b>Bridge ID</b> · ${esc(e.bridge_id)}</div><div class="kv"><b>Email</b> · ${esc(e.email)}</div></div>
       <label class="fl">User ID <span style="color:var(--grey);font-size:11px">— others add you with this</span></label><input class="inp" id="pf_uid" value="${esc(e.user_id||'')}" placeholder="e.g. yourname or you@email.com">
-      <label class="fl">GSTN</label><input class="inp" id="pf_gstn" value="${esc(e.gstn)}">
+      <label class="fl">GSTIN <span style="color:var(--grey);font-size:11px">— 15 characters</span></label><input class="inp" id="pf_gstn" value="${esc(e.gstn)}" placeholder="15-char">
       <label class="fl">Address</label><input class="inp" id="pf_addr" value="${esc(e.address)}">
       <label class="fl">Are you trading? <span style="color:var(--grey);font-size:11px">— whether you are open for business</span></label>
       <select class="inp" id="pf_bs">${opt(["open","closed","away"],e.business_status)}</select>
@@ -675,7 +684,7 @@ function storefrontCardHTML(e){
     +'<div class="sec" style="margin:0 0 8px">🛍️ Customer storefront</div>'
     +'<div style="font-size:12px;color:var(--grey);line-height:1.5;margin-bottom:8px">Share this link — anyone can open it and order from your catalogue. No account needed (they confirm with a one-time code).</div>'
     +'<div style="background:#f4f6f8;border:1px solid var(--line);border-radius:9px;padding:8px 10px"><span class="mono" id="sf_url" style="font-size:11.5px;word-break:break-all">'+esc(url)+'</span></div>'
-    +'<div style="display:flex;gap:8px;margin-top:8px"><button class="composebtn" onclick="sfCopy()">📋 Copy link</button><button class="composebtn" style="background:#fff" onclick="window.open(document.getElementById(\'sf_url\').textContent,\'_blank\')">Open ↗</button></div>'
+    +'<div style="display:flex;gap:8px;margin-top:8px"><button class="composebtn" onclick="sfCopy()">📋 Copy link</button><button class="composebtn ghost" onclick="window.open(document.getElementById(\'sf_url\').textContent,\'_blank\')">Open ↗</button></div>'
     // ── IS THE SHOP OPEN AT ALL? ─────────────────────────────────────────────────────────────────────────────
     // Athi, 2026-08-06: "it says the store does not have a public catalogue — how do I make it public?"
     //
@@ -1544,7 +1553,7 @@ async function loadGaps(){ const h=document.getElementById("kbbody"); if(!h)retu
       +'<label class="fl">Question</label><input class="inp" id="kb_q" data-testid="kb-question" placeholder="e.g. How do I export to Excel?">'
       +'<label class="fl">Answer</label><textarea class="inp" id="kb_a" data-testid="kb-answer" rows="4" placeholder="The answer the assistant should give…" style="width:100%;resize:vertical"></textarea>'
       +'<label class="fl">Context <span style="color:var(--grey);font-size:11px">— screens (comma), or * for everywhere</span></label><input class="inp" id="kb_c" data-testid="kb-context" placeholder="e.g. task, order  (or *)" value="*">'
-      +'<div class="err" id="kb_err"></div><div style="display:flex;gap:7px;margin-top:9px"><button class="composebtn" id="kb_pub" data-testid="kb-publish" onclick="publishAnswer()">📣 Publish to catalogue</button><button class="composebtn" data-testid="kb-new" style="background:#fff" onclick="kbNew()">＋ New / clear</button></div>'
+      +'<div class="err" id="kb_err"></div><div style="display:flex;gap:7px;margin-top:9px"><button class="composebtn" id="kb_pub" data-testid="kb-publish" onclick="publishAnswer()">📣 Publish to catalogue</button><button class="composebtn ghost" data-testid="kb-new" onclick="kbNew()">＋ New / clear</button></div>'
       +'<div style="font-size:11px;color:var(--grey);margin-top:6px">Add a new answer, or press <b>Edit</b> on one below to refine it. Served to the assistant instantly (catalogue → projection).</div></div>'
     : '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:11px 13px;font-size:12.5px;color:#6b5a36;margin-bottom:11px">This is the help-desk knowledge base. Queries arrive as chits in <b>GOV-01-Help</b>\'s Task inbox — operate as GOV-01-Help to answer, close, and publish here.</div>';
   h.innerHTML=form+'<div style="font-size:12px;color:var(--grey);margin:12px 0 6px">Published answers (<span id="kb_n">…</span>)</div><div id="kb_list"><div class="loadwrap"><span class="spin"></span> loading…</div></div>';
