@@ -1037,6 +1037,9 @@ const EP = {
   supDel:          {m:"DELETE",p:"/api/relationships/suppliers/:id", ok:"✓"},
   supPatch:        {m:"PATCH", p:"/api/relationships/suppliers/:id", ok:"y"},           // Stage B — owner-side fields (nickname/preferred/notes/category)
   supCatalogue:    {m:"GET",   p:"/api/relationships/suppliers/:sid/catalogue", ok:"✓"},
+  /* ⚠️ ok:"y" — NEW, and the client falls back to the per-supplier fan-out when it 404s. Web and API deploy
+     separately, so "the endpoint is not there yet" is a normal state, not an error. */
+  supAvailability: {m:"GET",   p:"/api/relationships/suppliers/availability",    ok:"y"},   // one query, every supplier
   readinessOf:     {m:"GET",   p:"/api/governance/readiness/:bridge_id", ok:"y"},// their catalogue → compose line items
   /* DEFINITIONS (b160) — the entity's own named things. Loose while referenced, FROZEN BY VALUE when stamped. */
   /**
@@ -3543,7 +3546,45 @@ function supFindSearch(v){
   /* Debounced: a keystroke is not a question, and this walks every supplier's catalogue. */
   _supFindT=setTimeout(function(){ supFindRun(q); }, 400);
 }
+/**
+ * ⭐ ONE CALL WHEN THE SERVER HAS IT, THE OLD FAN-OUT WHEN IT DOES NOT (backlog 8).
+ *
+ * ⚠️ THE FALLBACK IS NOT DEFENSIVE PADDING — IT IS REQUIRED. The web app deploys to Vercel and the API deploys
+ * to Railway, separately and in either order. A browser running today's app.html against yesterday's API is a
+ * routine state for minutes at a time, and without this the panel would answer *"No supplier lists that"* for
+ * every product — which is a wrong answer, not an error, and nobody would report it as a bug.
+ *
+ * A 404 means "old API". Anything else — a 500, a timeout — falls back too: this search has a slower path that
+ * is known to work, and using it costs a few seconds where failing costs the answer.
+ */
 async function supFindRun(q){
+  const needle=q.toLowerCase();
+  UI._sfDone=0; UI._sfTotal=(UI.sups||[]).length;
+  try{
+    const r=await api('supAvailability',{query:{q:q}});
+    if(String(UI._sfQ||'').trim().toLowerCase()!==needle) return;      // superseded while in flight
+    const byId={}; (UI.sups||[]).forEach(function(s){ byId[s.supplier_list_id]=s; });
+    UI._sfRes=(r.results||[]).map(function(x){
+      return { sup: byId[x.supplier_list_id] || { supplier_list_id:x.supplier_list_id, display_name:x.display_name,
+                                                  bridge_id:x.bridge_id, nickname:x.nickname, preferred:x.preferred },
+               state: x.state, err: x.error,
+               /* The card reads `d.name/price/unit` off `item_data||p`, so a flat row already satisfies it. */
+               hits: x.hits || [],
+               /* Only ever read for the supplier's currency — keep that, drop the rest of the catalogue. */
+               cat: { shop:{ currency:x.currency } } };
+    });
+    UI._sfDone=UI._sfTotal=(r.searched!=null?r.searched:UI._sfRes.length);
+    UI._sfBusy=false; paintSupFind();
+    return;
+  }catch(e){
+    if(String(UI._sfQ||'').trim().toLowerCase()!==needle) return;
+    cblog('debug','supAvailability unavailable, falling back to the per-supplier fan-out: '+((e&&e.message)||e));
+  }
+  return supFindRunFanout(q);
+}
+/* ⚠️ KEPT, NOT DELETED. It is the fallback above, and it is also the only path that works against an API that
+   has not been deployed yet — which is every moment between the two deploys. */
+async function supFindRunFanout(q){
   const sups=(UI.sups||[]).slice();
   const needle=q.toLowerCase();
   const out=[];
