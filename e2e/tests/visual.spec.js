@@ -1,6 +1,19 @@
 // VISUAL REGRESSION (reviewer §4) — baseline SETTLED screens, diff pixels each run, fail on unexpected shift/overlap/break.
 // ⚠ ONLY on STABLE flows — a screen still being redesigned "fails" on every intentional change (noise). First run creates
 // the baseline; commit it once the screen is settled. Runs at the counter viewport (config). Add screens as they settle.
+//
+// ══ ⚠️ THIS TEST ROTTED FOR THREE WEEKS, AND THAT IS THE FAILURE WORTH LEARNING FROM ══════════════════════════════
+// Baseline committed 2026-07-28. By 2026-08-16 it was failing by 41,358 px — and `app.html` had had 113 commits in
+// between. Not a regression: three weeks of intentional design change measured against a snapshot nobody refreshed.
+//
+// ⭐ A PERMANENTLY-RED TEST IS WORSE THAN NO TEST. It fails every run, so its failure stops carrying information,
+// and the one time it catches something real nobody looks. It was still red on the morning of the contrast pass,
+// which is how ~773 px of genuine colour change hid inside 41k of noise.
+//
+// ⚠️ SO: RE-BASELINE DELIBERATELY, AND SOON AFTER A SETTLED CHANGE — not "eventually". If this screen is being
+// actively redesigned, take it OUT of the suite rather than let it sit red. And when re-baselining, LOOK at the
+// screen first: the point is to confirm nothing is broken, not to make the number go away. Re-based 2026-08-16
+// after confirming the sign-in screen renders clean — no overlap, no clipping.
 const { test, expect } = require('@playwright/test');
 const { mintEntity } = require('../fixtures');
 
