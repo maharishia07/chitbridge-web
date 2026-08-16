@@ -11,13 +11,14 @@
  * distinguish from "the feature is not built yet", which is why it belongs in a spec.
  *
  * It mints its OWN entity rather than using a real one: the test writes chits, and a proving run must not leave
- * debris in an account someone is also testing by hand.
+ * debris in an account someone is also testing by hand. ⚠️ That sentence was written here long before it was
+ * TRUE — see the describe block below. It is true now, and enforced (mintInContext throws if a session leaks).
  *
  * Watch it:  npx playwright test picker --headed --project=authed
  * Time-travel it:  npx playwright test picker --project=authed --trace on   then  npx playwright show-trace
  */
 const { test, expect } = require('@playwright/test');
-const { mintEntity, composeChit, clickNav, settle } = require('../fixtures');
+const { mintInContext, composeChit, clickNav, settle } = require('../fixtures');
 
 /* One synonym on TWO different catalogue names — the exact shape of Athi's veg catalogue, and the shape that makes
    the reader refuse: it knows both, so any price would be a coin toss. */
@@ -60,14 +61,49 @@ async function seedProducts(page, items) {
   }, items);
 }
 
-test.describe('PICKER — two catalogue items answer to one name', () => {
+/**
+ * ⭐⭐ THE ISOLATION, AND WHY THE HEADER COMMENT WAS A LIE (backlog 1 — "blocking a push").
+ *
+ * The comment at the top of this file said *"It mints its OWN entity rather than using a real one"*. It did not.
+ * `mintEntity(page)` **short-circuits and returns `{existing:true}` whenever a session already exists**, and in
+ * the `authed` project a saved session ALWAYS exists — so this spec silently inherited whatever entity ran
+ * before it. Playwright orders spec files alphabetically, so when `chits.spec` was rewritten it began running
+ * first, and `picker.spec` started failing. Nothing about the picker had changed.
+ *
+ * ⚠️ THE DOCUMENTED ISOLATION NEVER HAPPENED, WHICH IS WORSE THAN HAVING NONE. A file that says it is isolated
+ * is a file nobody re-checks, so every later failure gets attributed to the code under test. This one cost a
+ * four-configuration bisect and presented, twice, as *"clean tree passes, my branch fails"*.
+ *
+ * `mintInContext` is the fix and it already existed — a context with `storageState: undefined`, which forces a
+ * real mint, and which THROWS rather than proceeding if a session leaks in. Adopt, don't reinvent.
+ *
+ * ⚠️ Serial, and one context for the FILE: the three tests share a seeded catalogue on purpose (seedProducts is
+ * idempotent by name), and the point here is isolation from OTHER SPECS, not from each other.
+ */
+test.describe.serial('PICKER — two catalogue items answer to one name', () => {
   test.setTimeout(180_000);
 
-  test('PICK-01 · an ambiguous line offers both items with prices, and picking one prices the line', async ({ page }) => {
+  let CTX = null, PAGE = null;
+  test.beforeAll(async ({ browser }) => {
+    const who = await mintInContext(browser);
+    CTX = who.context; PAGE = who.page;
+  });
+  test.afterAll(async () => { if (CTX) await CTX.close().catch(() => {}); });
+  /* ⚠️ The page outlives each test, so its listeners do too. Without this, test 2 inherits test 1's `pageerror`
+     handler pushing into an array test 1 has already asserted on — a leak that only shows up as a confusing
+     error attributed to the wrong test. */
+  test.afterEach(async () => {
+    if (!PAGE) return;
+    PAGE.removeAllListeners('pageerror');
+    PAGE.removeAllListeners('console');
+    PAGE.removeAllListeners('response');
+  });
+
+  test('PICK-01 · an ambiguous line offers both items with prices, and picking one prices the line', async () => {
+    const page = PAGE;
     const timings = {};
     const mark = async (label, fn) => { const t = Date.now(); const r = await fn(); timings[label] = Date.now() - t; return r; };
 
-    await mintEntity(page);
 
     /* DIAGNOSTIC: what the browser actually asks the catalogue, and what it gets back. Two failures this
        morning were invisible because nobody could see this exchange. */
@@ -231,7 +267,8 @@ test.describe('PICKER — two catalogue items answer to one name', () => {
    * the list, so screen assertions test the navigation rather than the correction. That distinction cost three
    * red runs this morning.
    */
-  test('PICK-03 · resolve the item, correct the quantity, then remove the line', async ({ page }) => {
+  test('PICK-03 · resolve the item, correct the quantity, then remove the line', async () => {
+    const page = PAGE;
     const stored = async (id) => page.evaluate(async (cid) => {
       const d = await api('chit', { params: { id: cid } });
       const e = (d.live_set || [])[0] || {};
@@ -240,7 +277,6 @@ test.describe('PICKER — two catalogue items answer to one name', () => {
                removed: !!e.removed, reason: e.reason_code || null, versions: e.versions || 0 };
     }, id);
 
-    await mintEntity(page);
     await seedProducts(page, ITEMS);
 
     const subject = 'Lifecycle ' + Date.now();
@@ -341,11 +377,11 @@ test.describe('PICKER — two catalogue items answer to one name', () => {
       .toContainText(/not available/i);
   });
 
-  test('PICK-02 · a line the catalogue answers unambiguously does NOT open a picker', async ({ page }) => {
+  test('PICK-02 · a line the catalogue answers unambiguously does NOT open a picker', async () => {
+    const page = PAGE;
     /* ⚠️ THE NEGATIVE CASE, AND IT IS NOT PADDING. If the card opened on a picker for every line, PICK-01 would
        pass while the feature was wrong in the more common direction — asking a person to choose when there is
        nothing to choose between is worse than not asking, because it trains them to click through it. */
-    await mintEntity(page);
     /* Same helper — a second Carrot Ooty would make "one obvious match" into two, which is the case this test
        exists to prove does NOT happen. */
     await seedProducts(page, [{ name: 'Carrot Ooty', unit: 'kg', price: 55, synonyms: ['ooty carrot'] }]);
