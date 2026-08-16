@@ -35,9 +35,9 @@ function traceabilityScreen(){
     + '</div>'
     + '<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-top:10px;font-size:11.5px;color:var(--grey)">'
       + '<label>₹ / node&nbsp;<input value="' + cost + '" oninput="UI.traceCost=_traceNum(this.value,5000)" '
-        + 'style="width:80px;padding:4px 7px;border:1px solid var(--line);border-radius:7px;font-size:12px"></label>'
+        + 'style="width:80px;padding:4px 7px;border:1px solid var(--line);border-radius:6px;font-size:12px"></label>'
       + '<label>blanket-recall size&nbsp;<input value="' + blanket + '" oninput="UI.traceBlanket=_traceNum(this.value,200)" '
-        + 'style="width:70px;padding:4px 7px;border:1px solid var(--line);border-radius:7px;font-size:12px"></label>'
+        + 'style="width:70px;padding:4px 7px;border:1px solid var(--line);border-radius:6px;font-size:12px"></label>'
       + '<span>— the ₹ saved is targeted recall vs a blanket recall of your whole network.</span>'
     + '</div>'
     + '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px;padding-top:11px;border-top:1px dashed var(--line)">'
@@ -51,7 +51,7 @@ function traceabilityScreen(){
 
   var body;
   if (UI.traceLoading) body = loader('Walking the chain…');
-  else if (res && res.error) body = '<div style="margin:22px 18px;padding:14px 16px;border:1px solid #f0c9c4;background:#fdf3f2;border-radius:10px;font-size:13px;color:#a5382e">' + esc(res.error) + '</div>';
+  else if (res && res.error) body = '<div style="margin:22px 18px;padding:14px 16px;border:1px solid #f0c9c4;background:#fdf3f2;border-radius:9px;font-size:13px;color:#a5382e">' + esc(res.error) + '</div>';
   else if (res && res.dir === 'forward') body = _traceFwd(res);
   else if (res && res.dir === 'backward') body = _traceBwd(res);
   else body = emptyState('🧭', 'Flag a batch to trace it', 'Paste a batch or chit id above, then Recall set ▸ (who it reached) or ◂ To source (where it came from).');
@@ -111,7 +111,7 @@ function _traceFwd(r){
       + (r.terminals || []).length + ' exposed endpoint' + ((r.terminals || []).length === 1 ? '' : 's') + '</div>'
     + '<div style="margin-top:11px;font-size:14px;font-weight:800;color:#2c7a43">' + _traceRs(saved) + ' saved'
       + '<span style="font-weight:600;color:var(--grey);font-size:12px"> — recall these ' + targeted + ', not a blanket ~' + blanket + '</span></div>'
-    + ((r.flagged || 0) > 0 ? '<div style="margin-top:11px;font-size:13px;font-weight:800;color:#fff;background:#c0453b;border-radius:8px;padding:7px 12px;display:inline-block">⚠ ' + r.flagged + ' node' + (r.flagged === 1 ? '' : 's') + ' fail mass-balance — more went OUT than came IN</div>' : '')
+    + ((r.flagged || 0) > 0 ? '<div style="margin-top:11px;font-size:13px;font-weight:800;color:#fff;background:#c0453b;border-radius:9px;padding:7px 12px;display:inline-block">⚠ ' + r.flagged + ' node' + (r.flagged === 1 ? '' : 's') + ' fail mass-balance — more went OUT than came IN</div>' : '')
     + '</div>';
 
   return banner
@@ -139,7 +139,7 @@ function _traceNode(n, isTerm){
   var balLine = isRed
     ? '<div style="font-size:11px;color:#a5382e;font-weight:700;margin-left:17px;margin-top:2px">claimed ' + _traceQ(bal.out) + ' out, received ' + _traceQ(bal.in) + ' in — <u>' + _traceQ(bal.delta) + ' ' + esc(bal.base_unit || '') + ' unaccounted</u></div>'
     : '';
-  return '<div style="padding:6px 0' + (isRed ? ';background:#fdf3f2;border-radius:8px' : '') + '">'
+  return '<div style="padding:6px 0' + (isRed ? ';background:#fdf3f2;border-radius:9px' : '') + '">'
     + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap' + (isRed ? ';padding-left:6px' : '') + '">'
       + '<span style="width:9px;height:9px;border-radius:50%;background:' + dot + ';flex:0 0 auto"></span>'
       + '<span style="font-weight:700;font-size:13.5px' + (isRed ? ';color:#a5382e' : '') + '">' + who + '</span>' + badge + '</div>'

@@ -330,8 +330,8 @@ function c2RepricePaint(){
 
   var will = p.will_price || [], need = p.needs_price || [];
   var body = '<div style="display:flex;gap:6px;margin-bottom:12px">'
-    + ['<span onclick="c2RepriceScope(false)" style="cursor:pointer;border:1px solid ' + (C2R.only_unpriced ? 'var(--line)' : 'var(--blue)') + ';' + (C2R.only_unpriced ? '' : 'background:var(--blue);color:#fff;font-weight:700;') + 'border-radius:8px;padding:4px 11px;font-size:12px">Every line</span>',
-       '<span onclick="c2RepriceScope(true)" style="cursor:pointer;border:1px solid ' + (C2R.only_unpriced ? 'var(--blue)' : 'var(--line)') + ';' + (C2R.only_unpriced ? 'background:var(--blue);color:#fff;font-weight:700;' : '') + 'border-radius:8px;padding:4px 11px;font-size:12px">Only lines with no price</span>'].join('')
+    + ['<span onclick="c2RepriceScope(false)" style="cursor:pointer;border:1px solid ' + (C2R.only_unpriced ? 'var(--line)' : 'var(--blue)') + ';' + (C2R.only_unpriced ? '' : 'background:var(--blue);color:#fff;font-weight:700;') + 'border-radius:9px;padding:4px 11px;font-size:12px">Every line</span>',
+       '<span onclick="c2RepriceScope(true)" style="cursor:pointer;border:1px solid ' + (C2R.only_unpriced ? 'var(--blue)' : 'var(--line)') + ';' + (C2R.only_unpriced ? 'background:var(--blue);color:#fff;font-weight:700;' : '') + 'border-radius:9px;padding:4px 11px;font-size:12px">Only lines with no price</span>'].join('')
     + '</div>';
 
   body += will.length
@@ -514,7 +514,7 @@ function c2WorkTabs(){
         var on = (C2.work || 'line') === t[0];
         return '<span onclick="c2WorkView(&quot;' + t[0] + '&quot;)" data-testid="work-' + t[0] + '" style="cursor:pointer;font-size:12.5px;'
           + 'border:1px solid ' + (on?'var(--blue)':'var(--line)') + ';' + (on?'background:var(--blue);color:#fff;font-weight:700;':'')
-          + 'border-radius:8px;padding:4px 11px">' + t[1] + '</span>';
+          + 'border-radius:9px;padding:4px 11px">' + t[1] + '</span>';
       }).join('') + '</div>';
 }
 /** Overdue first — a date view that buried what is late under what is not would be worse than no date view. */
@@ -699,12 +699,12 @@ function c2AssignOpen(line_id){
   modal('<h3 style="margin:0 0 3px">Assign this line</h3>'
     + '<div style="font-size:13px;color:var(--grey);margin-bottom:14px">' + esc(l.particulars || '') + ' · ' + esc(c2q(l)) + '</div>'
     + '<label style="display:block;font-size:11px;color:var(--grey);margin-bottom:3px">ASSIGN TO</label>'
-    + '<select id="c2a_' + line_id + '" style="width:100%;box-sizing:border-box;padding:9px;border:1px solid var(--line);border-radius:7px;font-size:14px;margin-bottom:10px"><option value="">Unassigned</option>' + opts + '</select>'
+    + '<select id="c2a_' + line_id + '" style="width:100%;box-sizing:border-box;padding:9px;border:1px solid var(--line);border-radius:6px;font-size:14px;margin-bottom:10px"><option value="">Unassigned</option>' + opts + '</select>'
     + '<div style="display:flex;gap:9px;margin-bottom:14px">'
     + '<div style="flex:1"><label style="display:block;font-size:11px;color:var(--grey);margin-bottom:3px">TASK</label>'
-    + '<input id="c2t_' + line_id + '" value="' + esc(a.task || '') + '" placeholder="packing" style="width:100%;box-sizing:border-box;padding:9px;border:1px solid var(--line);border-radius:7px;font-size:14px"></div>'
+    + '<input id="c2t_' + line_id + '" value="' + esc(a.task || '') + '" placeholder="packing" style="width:100%;box-sizing:border-box;padding:9px;border:1px solid var(--line);border-radius:6px;font-size:14px"></div>'
     + '<div style="flex:1"><label style="display:block;font-size:11px;color:var(--grey);margin-bottom:3px">DUE</label>'
-    + '<input id="c2d_' + line_id + '" type="date" value="' + esc(a.due_date ? String(a.due_date).slice(0, 10) : '') + '" style="width:100%;box-sizing:border-box;padding:9px;border:1px solid var(--line);border-radius:7px;font-size:14px"></div></div>'
+    + '<input id="c2d_' + line_id + '" type="date" value="' + esc(a.due_date ? String(a.due_date).slice(0, 10) : '') + '" style="width:100%;box-sizing:border-box;padding:9px;border:1px solid var(--line);border-radius:6px;font-size:14px"></div></div>'
     + ((a.history || []).length ? '<div style="font-size:11.5px;color:var(--grey);margin-bottom:12px">previously ' + esc(a.history.map(function(h){ return h.assignee_name || 'unassigned'; }).join(' → ')) + '</div>' : '')
     + '<div style="display:flex;gap:8px"><button class="btn" style="flex:1" onclick="closeModal()">Cancel</button>'
     + '<button class="btn pri" style="flex:1" onclick="c2Assign(\'' + line_id + '\')">Assign</button></div>');

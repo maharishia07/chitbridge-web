@@ -252,7 +252,7 @@ function messagesScreen(){
                * The task goes first.
                */
               + '<textarea id="msg_reply_' + rid + '" data-testid="msg-reply" rows="2" placeholder="Reply to ' + esc(m.sender_display_name || 'them') + '…"'
-              +   ' style="width:100%;box-sizing:border-box;font:inherit;font-size:14px;line-height:1.5;padding:9px 11px;border:1px solid var(--line);border-radius:8px;resize:vertical"></textarea>'
+              +   ' style="width:100%;box-sizing:border-box;font:inherit;font-size:14px;line-height:1.5;padding:9px 11px;border:1px solid var(--line);border-radius:9px;resize:vertical"></textarea>'
               + '<div style="display:flex;gap:10px;align-items:center;margin-top:7px">'
               +   '<span style="font-size:11.5px;color:#b0641c">📤 The other party sees this, on their own copy.</span>'
               +   '<button class="btn pri" data-testid="msg-send" onclick="msgSend(&quot;' + t.key + '&quot;)"'
@@ -301,7 +301,7 @@ function messagesScreen(){
           return '<span data-testid="msg-track-' + (k || 'all') + '" onclick="rplTrack(&quot;' + k + '&quot;)"'
             + ' title="' + esc(k ? RPLTRACK[k].hint : 'every conversation') + '"'
             + ' style="cursor:pointer;font-size:12.5px;border:1px solid ' + (on ? 'var(--blue)' : 'var(--line)') + ';'
-            + (on ? 'background:var(--blue);color:#fff;font-weight:700;' : '') + 'border-radius:8px;padding:3px 10px">'
+            + (on ? 'background:var(--blue);color:#fff;font-weight:700;' : '') + 'border-radius:9px;padding:3px 10px">'
             + lbl + (n ? ' <span style="opacity:.7">' + n + '</span>' : '') + '</span>';
         }).join('')
     +   '<span style="margin-left:auto;font-size:11.5px;color:var(--grey)">📌 keeps a conversation here after you read it</span>'

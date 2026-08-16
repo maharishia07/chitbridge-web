@@ -380,7 +380,7 @@ function cbcatStatsHTML(){
     /* ⭐ The uncategorised count is a to-do list, so it is a BUTTON — it takes you to the products it is
        counting rather than merely reporting a number you then have to go and find by hand. */
     + ((CBCAT_UI.counts && CBCAT_UI.counts.none)
-        ? '<button data-testid="catg-uncat" onclick="cbcatGoUncategorised()" style="margin-left:auto;border:1px solid var(--gold-line);background:var(--gold-soft);border-radius:8px;padding:4px 9px;font-size:11.5px;color:#6b5a36;cursor:pointer">'
+        ? '<button data-testid="catg-uncat" onclick="cbcatGoUncategorised()" style="margin-left:auto;border:1px solid var(--gold-line);background:var(--gold-soft);border-radius:9px;padding:4px 9px;font-size:11.5px;color:#6b5a36;cursor:pointer">'
           + CBCAT_UI.counts.none + ' uncategorised →</button>'
         : '');
 }

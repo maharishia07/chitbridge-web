@@ -589,12 +589,12 @@
       off = '<input placeholder="your price" value="' + esc(os.value == null ? '' : String(os.value)) + '" inputmode="decimal"'
         + ' onchange="CBCart.setOffer(\'' + esc(ns) + '\',\'' + esc(id) + '\',this.value)"'
         + ' style="width:78px;padding:5px;border:1.5px solid ' + (os.value != null && !os.ok ? '#b4453f' : '#e3e6ea')
-        + ';border-radius:7px;font-size:13px;text-align:right">';
+        + ';border-radius:6px;font-size:13px;text-align:right">';
     }
     return '<span style="display:inline-flex;align-items:center;gap:8px" onclick="event.stopPropagation()">' + off
       + '<button style="' + rnd + '" onclick="CBCart.dec(\'' + esc(ns) + '\',\'' + esc(id) + '\')">−</button>'
       + '<input value="' + esc(String(q)) + '" inputmode="decimal" onchange="CBCart.setQty(\'' + esc(ns) + '\',\'' + esc(id) + '\',this.value)"'
-      + ' style="width:52px;padding:5px;border:1px solid #e3e6ea;border-radius:7px;font-size:13px;text-align:center">'
+      + ' style="width:52px;padding:5px;border:1px solid #e3e6ea;border-radius:6px;font-size:13px;text-align:center">'
       + '<button data-testid="cart-add" style="' + rnd + ';background:' + a + ';color:#fff" onclick="CBCart.add(\'' + esc(ns) + '\',\'' + esc(id) + '\')">+</button></span>';
   }
   /**
@@ -923,7 +923,7 @@
         + '.cbpick-chip.on{font-weight:700}'
         + '.cbpick-chipn{font-size:11px;opacity:.6;font-variant-numeric:tabular-nums}'
         /* The chip. Sized to sit level with the input beside it, never taller. */
-        + '.cbcart-bar{display:inline-flex;align-items:center;gap:7px;border:1px solid #e3e6ea;border-radius:10px;'
+        + '.cbcart-bar{display:inline-flex;align-items:center;gap:7px;border:1px solid #e3e6ea;border-radius:9px;'
         /* 40px, because `.inp` beside it is 40px. A chip two pixels short of the field it shares a row with reads
            as a misalignment even to someone who could not name what is wrong. */
         + 'padding:0 10px;height:40px;box-sizing:border-box;white-space:nowrap;user-select:none}'

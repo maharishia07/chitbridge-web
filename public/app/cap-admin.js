@@ -26,8 +26,8 @@ function vaultCardHTML(vault, encrypted){
   vault=vault||{};
   // F1 — honest at-rest signal. Encrypted (AES-256-GCM, key never in DB) → safe for real data; not configured → dummy only.
   var encBanner = encrypted
-    ? '<div style="font-size:11px;color:#256e47;background:#eaf6ee;border:1px solid #bfe3cb;border-radius:8px;padding:7px 10px;margin:6px 0 2px">🔒 <b>Encrypted at rest</b> — stored ciphertext-only (a database dump can\'t read it). Safe for real banking &amp; tax details.</div>'
-    : '<div style="font-size:11px;color:#8a5f11;background:#fdf3e3;border:1px solid #f0dcae;border-radius:8px;padding:7px 10px;margin:6px 0 2px">⚠ <b>Encryption not configured</b> — the vault won\'t save until the platform sets its encryption key. Use <b>dummy data only</b> for now.</div>';
+    ? '<div style="font-size:11px;color:#256e47;background:#eaf6ee;border:1px solid #bfe3cb;border-radius:9px;padding:7px 10px;margin:6px 0 2px">🔒 <b>Encrypted at rest</b> — stored ciphertext-only (a database dump can\'t read it). Safe for real banking &amp; tax details.</div>'
+    : '<div style="font-size:11px;color:#8a5f11;background:#fdf3e3;border:1px solid #f0dcae;border-radius:9px;padding:7px 10px;margin:6px 0 2px">⚠ <b>Encryption not configured</b> — the vault won\'t save until the platform sets its encryption key. Use <b>dummy data only</b> for now.</div>';
   var groups=VAULT_UI.map(function(G){
     var fields=G.f.map(function(fl){ var k=fl[0], v=(vault[G.g]&&vault[G.g][k])||'';
       return '<div style="display:flex;flex-direction:column;gap:2px"><label style="font-size:11px;color:var(--grey);font-weight:600">'+esc(fl[1])+'</label><input class="inp" id="v_'+G.g+'_'+k+'" value="'+esc(v)+'" placeholder="'+esc(fl[2]||'')+'" style="margin:0"></div>'; }).join('');
@@ -705,10 +705,10 @@ function storefrontCardHTML(e){
                 +'<option value="private"'+(vis==='private'||!vis?' selected':'')+'>Closed — the link shows nothing, to anyone</option>')
     +'</select>'
     +(capped
-      ? '<div style="margin-top:7px;font-size:12px;color:#6a44a8;background:#F0EAF9;border:1px solid #e3d5f5;border-radius:8px;padding:7px 10px">🔒 '+esc(cap.reason||'This entity may not publish a public catalogue.')+'<div style="color:var(--grey);margin-top:3px">You cannot change this here — it is set '+(cap.by==='operator'?'by whoever provisioned this entity':'by your plan')+'.</div></div>'
+      ? '<div style="margin-top:7px;font-size:12px;color:#6a44a8;background:#F0EAF9;border:1px solid #e3d5f5;border-radius:9px;padding:7px 10px">🔒 '+esc(cap.reason||'This entity may not publish a public catalogue.')+'<div style="color:var(--grey);margin-top:3px">You cannot change this here — it is set '+(cap.by==='operator'?'by whoever provisioned this entity':'by your plan')+'.</div></div>'
       : (vis==='network'
-          ? '<div style="margin-top:7px;font-size:12px;color:#6a44a8;background:#F0EAF9;border:1px solid #e3d5f5;border-radius:8px;padding:7px 10px">🔗 <b>Network only.</b> Businesses under your network see this catalogue. A shopper on the link above sees nothing — and neither does an outside business that adds you as a supplier.</div>'
-          : (vis!=='public' ? '<div style="margin-top:7px;font-size:12px;color:#B4483C;background:#FBEDEA;border:1px solid #f3d9d5;border-radius:8px;padding:7px 10px">⚠ Your shop is CLOSED. The link above will show &ldquo;this shop has no public catalogue&rdquo; — to customers and to other businesses looking at you as a supplier.</div>' : '')))
+          ? '<div style="margin-top:7px;font-size:12px;color:#6a44a8;background:#F0EAF9;border:1px solid #e3d5f5;border-radius:9px;padding:7px 10px">🔗 <b>Network only.</b> Businesses under your network see this catalogue. A shopper on the link above sees nothing — and neither does an outside business that adds you as a supplier.</div>'
+          : (vis!=='public' ? '<div style="margin-top:7px;font-size:12px;color:#B4483C;background:#FBEDEA;border:1px solid #f3d9d5;border-radius:9px;padding:7px 10px">⚠ Your shop is CLOSED. The link above will show &ldquo;this shop has no public catalogue&rdquo; — to customers and to other businesses looking at you as a supplier.</div>' : '')))
     +'<label class="fl" style="margin-top:12px">Customer access</label><select class="inp" id="pf_sfaccess" style="max-width:340px">'+sfopts+'</select>'
     +'<div class="err" id="pf_err2"></div><button class="composebtn" style="margin-top:9px" onclick="saveStorefront()">Save storefront</button>'
     +'</div>';
@@ -728,7 +728,7 @@ function loadActorProfile(h){
   const login=(p.actor_key&&p.parent_entity_name)?(p.actor_key+'@'+p.parent_entity_name):(SESSION.name||'');
   const kv=(l,v)=>`<div style="display:flex;gap:10px;padding:9px 13px;border-bottom:1px dashed var(--line);font-size:13px;align-items:baseline"><b style="min-width:104px;color:var(--grey);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.4px">${l}</b><span style="font-weight:600;flex:1">${(v==null||v==='')?'—':v}</span></div>`;
   h.innerHTML=`${menuAssist('profile')}<div class="sec">Your profile</div>
-    <div class="itab" style="border:1px solid var(--line);border-radius:11px;overflow:hidden;margin-bottom:10px">
+    <div class="itab" style="border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:10px">
       ${kv('Name',esc(SESSION.name||p.display_name||''))}
       ${kv('Login','<span class="mono">'+esc(login)+'</span>')}
       ${kv('Role',esc(p.actor_role||''))}
@@ -1211,7 +1211,7 @@ async function loadSettings(){ const h=document.getElementById("setbody"); if(!h
   }catch(e){ h.innerHTML=scrErr(e); } }
 function paintSettings(s, _daOpts){ const h=document.getElementById("setbody"); if(!h)return;
   { const k = setSec();
-    const notYet = '<div style="background:#fbeceb;border:1px solid #f0c9c6;border-radius:8px;padding:8px 11px;font-size:11.5px;color:#b4453f;margin-bottom:11px">⏳ These preferences are saved but <b>not yet active</b> — they don\'t change behaviour yet.</div>';
+    const notYet = '<div style="background:#fbeceb;border:1px solid #f0c9c6;border-radius:9px;padding:8px 11px;font-size:11.5px;color:#b4453f;margin-bottom:11px">⏳ These preferences are saved but <b>not yet active</b> — they don\'t change behaviour yet.</div>';
     var out = "";
     if (k === "work") out = _misHead('Work', 'How tasks reach the people and co-assists who do them.')
       + `<div style="${_CARD}">${notYet}
@@ -1239,7 +1239,7 @@ function paintSettings(s, _daOpts){ const h=document.getElementById("setbody"); 
        * with no control. When the layer marks it `advisory` AND an edit path exists, the control belongs here —
        * not before.
        */
-      + '<div style="border:1px solid var(--line);border-radius:11px;padding:13px;margin-top:10px">'
+      + '<div style="border:1px solid var(--line);border-radius:12px;padding:13px;margin-top:10px">'
         + '<div class="sec" style="margin:0 0 8px">📎 Attachment policy</div>'
         + '<div class="misnote" style="margin-bottom:9px">Declared once, in the governance layers. Shown here so you can see what applies.</div>'
         + govRefHTML('Attachment types') + govRefHTML('Attachment max size')
@@ -1329,9 +1329,9 @@ function _polControl(def){ var v=_polVal(def);
    * control should have been speaking it.
    * ⚠️ `value` stays the code, so what is SENT is unchanged. Only the words move.
    */
-  if(def.type==='enum') return '<select'+dis+' data-testid="pol-'+esc(def.key)+'" onchange="setPolFlag(\''+def.key+'\',this.value)" style="padding:5px 8px;border:1px solid var(--line);border-radius:7px;font-size:12.5px">'+def.options.map(function(o){ var lbl=(def.labels&&def.labels[o])||o; return '<option value="'+esc(o)+'"'+(String(v)===String(o)?' selected':'')+'>'+esc(lbl)+'</option>'; }).join('')+'</select>';
-  if(def.type==='number') return '<input type="number"'+dis+' data-testid="pol-'+esc(def.key)+'" value="'+esc(String(v))+'" onchange="setPolFlag(\''+def.key+'\',this.value)" style="width:90px;padding:5px 8px;border:1px solid var(--line);border-radius:7px;font-size:12.5px">';
-  return '<input'+dis+' value="'+esc(String(v))+'" onchange="setPolFlag(\''+def.key+'\',this.value)" style="padding:5px 8px;border:1px solid var(--line);border-radius:7px;font-size:12.5px">';
+  if(def.type==='enum') return '<select'+dis+' data-testid="pol-'+esc(def.key)+'" onchange="setPolFlag(\''+def.key+'\',this.value)" style="padding:5px 8px;border:1px solid var(--line);border-radius:6px;font-size:12.5px">'+def.options.map(function(o){ var lbl=(def.labels&&def.labels[o])||o; return '<option value="'+esc(o)+'"'+(String(v)===String(o)?' selected':'')+'>'+esc(lbl)+'</option>'; }).join('')+'</select>';
+  if(def.type==='number') return '<input type="number"'+dis+' data-testid="pol-'+esc(def.key)+'" value="'+esc(String(v))+'" onchange="setPolFlag(\''+def.key+'\',this.value)" style="width:90px;padding:5px 8px;border:1px solid var(--line);border-radius:6px;font-size:12.5px">';
+  return '<input'+dis+' value="'+esc(String(v))+'" onchange="setPolFlag(\''+def.key+'\',this.value)" style="padding:5px 8px;border:1px solid var(--line);border-radius:6px;font-size:12.5px">';
 }
 
 /* ---- CHANNELS — the inbound on-ramps. Which number / address reaches THIS entity's intake inbox (b123).
@@ -1546,7 +1546,7 @@ async function loadGaps(){ const h=document.getElementById("kbbody"); if(!h)retu
       +'<label class="fl">Context <span style="color:var(--grey);font-size:11px">— screens (comma), or * for everywhere</span></label><input class="inp" id="kb_c" data-testid="kb-context" placeholder="e.g. task, order  (or *)" value="*">'
       +'<div class="err" id="kb_err"></div><div style="display:flex;gap:7px;margin-top:9px"><button class="composebtn" id="kb_pub" data-testid="kb-publish" onclick="publishAnswer()">📣 Publish to catalogue</button><button class="composebtn" data-testid="kb-new" style="background:#fff" onclick="kbNew()">＋ New / clear</button></div>'
       +'<div style="font-size:11px;color:var(--grey);margin-top:6px">Add a new answer, or press <b>Edit</b> on one below to refine it. Served to the assistant instantly (catalogue → projection).</div></div>'
-    : '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:10px;padding:11px 13px;font-size:12.5px;color:#6b5a36;margin-bottom:11px">This is the help-desk knowledge base. Queries arrive as chits in <b>GOV-01-Help</b>\'s Task inbox — operate as GOV-01-Help to answer, close, and publish here.</div>';
+    : '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:11px 13px;font-size:12.5px;color:#6b5a36;margin-bottom:11px">This is the help-desk knowledge base. Queries arrive as chits in <b>GOV-01-Help</b>\'s Task inbox — operate as GOV-01-Help to answer, close, and publish here.</div>';
   h.innerHTML=form+'<div style="font-size:12px;color:var(--grey);margin:12px 0 6px">Published answers (<span id="kb_n">…</span>)</div><div id="kb_list"><div class="loadwrap"><span class="spin"></span> loading…</div></div>';
   if(window.CBOffline)CBOffline.autodraft(h,'kb.form');   // draft the question/answer/context you're writing
   try{ _kbItems=(await api("assistQuestions"))||[]; const n=document.getElementById("kb_n"); if(n)n.textContent=_kbItems.length;

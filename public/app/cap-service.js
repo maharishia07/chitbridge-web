@@ -44,7 +44,7 @@ function svcChip(txt, tone){
  */
 function svcClockBlock(c, r){
   if (!c.has_target) {
-    return '<div style="background:#faf3dd;border:1px solid #e6d9a8;border-radius:8px;padding:11px 13px;font-size:12.5px;color:#6b5a36">'
+    return '<div style="background:#faf3dd;border:1px solid #e6d9a8;border-radius:9px;padding:11px 13px;font-size:12.5px;color:#6b5a36">'
       + '<b>No priority set yet</b> — so there is no target, and nothing is being reported as late. '
       + 'Set impact and urgency to start measuring.</div>';
   }

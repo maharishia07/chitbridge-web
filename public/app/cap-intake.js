@@ -35,8 +35,8 @@ function intakeScreen(){
     + '<div class="lh"><div style="display:flex;align-items:center;gap:8px;margin-bottom:9px">'
     + '<span style="font-family:\'Space Grotesk\';font-weight:700;font-size:14px">📥 Intake</span>'
     + '<button onclick="openAssist(\'intake\')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:#fff;color:#3F66A6;border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button>'
-    + '<button data-testid="intake-refresh" onclick="loadIntake()" style="margin-left:auto;border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:4px 9px;font-size:11.5px;cursor:pointer">↻ Refresh</button>'
-    + '<button data-testid="intake-simulate-open" onclick="intakeToggleSim()" style="border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:4px 9px;font-size:11.5px;cursor:pointer">✚ Record a message</button>'
+    + '<button data-testid="intake-refresh" onclick="loadIntake()" style="margin-left:auto;border:1px solid var(--line);background:var(--paper);border-radius:9px;padding:4px 9px;font-size:11.5px;cursor:pointer">↻ Refresh</button>'
+    + '<button data-testid="intake-simulate-open" onclick="intakeToggleSim()" style="border:1px solid var(--line);background:var(--paper);border-radius:9px;padding:4px 9px;font-size:11.5px;cursor:pointer">✚ Record a message</button>'
     + '</div>'
     + '<div style="font-size:11.5px;color:var(--grey);line-height:1.5">A message is a <b>notice</b>; a chit is an <b>obligation</b>. Nothing here becomes a chit until you confirm it.</div>'
     /**
@@ -64,7 +64,7 @@ function _chn(c){
 }
 function intakeSimHTML(){
   if(!_INTAKE.sim) return '';
-  return '<div style="border:1px solid var(--line);border-radius:11px;padding:12px 13px;margin-bottom:12px;background:var(--paper)">'
+  return '<div style="border:1px solid var(--line);border-radius:12px;padding:12px 13px;margin-bottom:12px;background:var(--paper)">'
     + '<div style="font-weight:700;font-size:12.5px;margin-bottom:6px">Record an inbound message</div>'
     + '<div style="font-size:11.5px;color:var(--grey);margin-bottom:8px">The WhatsApp and email webhooks exist but are not connected to a provider yet, so this is how a message gets onto the queue today. It goes through the SAME capture the webhook uses — nothing is faked.</div>'
     + '<div style="display:flex;gap:8px;flex-wrap:wrap">'
@@ -79,9 +79,9 @@ function intakeBodyHTML(){
   if(_INTAKE.busy && !_INTAKE.list) return intakeSimHTML()+'<div class="loadwrap"><span class="spin"></span> reading the queue…</div>';
   /* b104 is applied in production, but an environment without it answers 503 — say which it is, because "no
      messages" and "the table does not exist" look identical on screen and mean completely different things. */
-  if(!_INTAKE.migrated) return '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:10px;padding:11px 13px;font-size:12.5px;color:#6b5a36">'
+  if(!_INTAKE.migrated) return '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:11px 13px;font-size:12.5px;color:#6b5a36">'
     + 'The intake queue is not migrated on this environment (b104). The screen is here; the table is not.</div>';
-  if(_INTAKE.err) return intakeSimHTML()+'<div style="background:#fbeceb;border:1px solid #f0c9c6;border-radius:10px;padding:11px 13px;font-size:12.5px;color:#b4453f">'+esc(_INTAKE.err)+'</div>';
+  if(_INTAKE.err) return intakeSimHTML()+'<div style="background:#fbeceb;border:1px solid #f0c9c6;border-radius:9px;padding:11px 13px;font-size:12.5px;color:#b4453f">'+esc(_INTAKE.err)+'</div>';
   var L=_INTAKE.list||[];
   if(!L.length) return intakeSimHTML()
     + '<div class="empty" style="padding:36px 12px;text-align:center;color:var(--grey)"><div style="font-size:34px">📥</div>'
@@ -91,7 +91,7 @@ function intakeBodyHTML(){
 }
 function intakeCardHTML(c){
   var w=_INTAKE.working[c.id]||{}, s=c.structured||w.structured;
-  return '<div class="cap" data-testid="intake-row" style="border:1px solid var(--line);border-radius:11px;padding:12px 13px;margin-bottom:10px;background:#fff">'
+  return '<div class="cap" data-testid="intake-row" style="border:1px solid var(--line);border-radius:12px;padding:12px 13px;margin-bottom:10px;background:#fff">'
     + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">' + _chn(c.channel)
     + '<span style="font-size:11.5px;color:var(--grey)">' + esc(c.sender_name||c.sender_ref||'unknown sender') + '</span>'
     + (c.sender_name&&c.sender_ref?'<span style="font-size:11px;color:var(--grey);font-family:ui-monospace,Menlo,monospace">'+esc(c.sender_ref)+'</span>':'')

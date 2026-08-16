@@ -37,7 +37,7 @@ async function loadFolders(){
 function _folderTree(parentId, depth){
   var kids=(UI.folders||[]).filter(function(f){ return (f.parent_id||null)===(parentId||null); });
   return kids.map(function(f){ var sel=UI.folderSel===f.folder_id;
-    return '<div style="display:flex;align-items:center;gap:6px;padding:6px 8px;padding-left:'+(8+depth*15)+'px;border-radius:8px;cursor:pointer;font-size:12.5px;'+(sel?'background:#eef4fc;color:#2c5aa0;font-weight:700':'color:#3a4048')+'" onclick="selectFolder(\''+f.folder_id+'\')">📁 '+esc(f.name)+'<span style="margin-left:auto;font-size:11px;color:var(--grey)">'+(f.count||0)+'</span></div>'+_folderTree(f.folder_id, depth+1);
+    return '<div style="display:flex;align-items:center;gap:6px;padding:6px 8px;padding-left:'+(8+depth*15)+'px;border-radius:9px;cursor:pointer;font-size:12.5px;'+(sel?'background:#eef4fc;color:#2c5aa0;font-weight:700':'color:#3a4048')+'" onclick="selectFolder(\''+f.folder_id+'\')">📁 '+esc(f.name)+'<span style="margin-left:auto;font-size:11px;color:var(--grey)">'+(f.count||0)+'</span></div>'+_folderTree(f.folder_id, depth+1);
   }).join('');
 }
 function foldersScreen(){
@@ -82,7 +82,7 @@ function _folderView(){
     var line2 = isDev ? ('🛰️ '+esc(bj.sub_type||bj.signal||'signal')+((bj.value!=null&&bj.value!=='')?(' = '+esc(String(bj.value))+esc(bj.unit||'')):'')+' · raised by <b>'+raiser+'</b>') : ('from '+esc(c.sender_entity_display_name||raiser));
     var when=(typeof fmtAt==='function'?esc(fmtAt(c.created_at)):'');
     var openA=(typeof openChit==='function')?('openChit(\''+c.chit_id+'\')'):'';
-    return '<div style="display:flex;gap:11px;padding:12px 18px;border-bottom:1px solid #f0f2f4;cursor:pointer" onclick="'+openA+'"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13.5px">'+(isDev?'🛢️ ':'')+subj+'</div><div style="font-size:11.5px;color:var(--grey);margin-top:2px">'+line2+'</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex:0 0 auto"><span style="font-size:11px;color:var(--grey)">'+when+'</span><span style="font-size:11px;color:var(--blue);border:1px solid #cfe0f4;background:#f2f7fd;border-radius:8px;padding:2px 8px" onclick="event.stopPropagation();moveChit(\''+c.chit_id+'\')">📁 Move</span></div></div>';
+    return '<div style="display:flex;gap:11px;padding:12px 18px;border-bottom:1px solid #f0f2f4;cursor:pointer" onclick="'+openA+'"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13.5px">'+(isDev?'🛢️ ':'')+subj+'</div><div style="font-size:11.5px;color:var(--grey);margin-top:2px">'+line2+'</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex:0 0 auto"><span style="font-size:11px;color:var(--grey)">'+when+'</span><span style="font-size:11px;color:var(--blue);border:1px solid #cfe0f4;background:#f2f7fd;border-radius:9px;padding:2px 8px" onclick="event.stopPropagation();moveChit(\''+c.chit_id+'\')">📁 Move</span></div></div>';
   }).join('');
   // The chit list is now ONE of three panes; metrics and rules render themselves.
   if(_FLD.tab==='metrics') return head+_folderMetricsPane();
@@ -265,7 +265,7 @@ function _groupSumPane(){
   var out = '<div style="padding:14px 18px">';
 
   if (UI.folderSel) {
-    var b = function(on, lbl, arg){ return '<span onclick="gsScope(' + arg + ')" style="cursor:pointer;border:1px solid var(--line);border-radius:8px;padding:3px 10px;font-size:11.5px;margin-right:6px;' + (on ? 'background:var(--blue);color:#fff;border-color:var(--blue);font-weight:700' : 'background:#fff') + '">' + lbl + '</span>'; };
+    var b = function(on, lbl, arg){ return '<span onclick="gsScope(' + arg + ')" style="cursor:pointer;border:1px solid var(--line);border-radius:9px;padding:3px 10px;font-size:11.5px;margin-right:6px;' + (on ? 'background:var(--blue);color:#fff;border-color:var(--blue);font-weight:700' : 'background:#fff') + '">' + lbl + '</span>'; };
     out += '<div style="margin-bottom:10px">' + b(!_FLD.gsAll, 'This folder', 'false') + b(!!_FLD.gsAll, 'Whole track — every folder', 'true') + '</div>';
   }
 
@@ -331,7 +331,7 @@ function _groupSumPane(){
   var mo = g.money || {};
   out += '<div style="margin-top:16px;border-top:1px solid var(--line);padding-top:10px">'
     + '<div style="font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin-bottom:4px">Agreed value of these chits</div>'
-    + ((mo.by_currency || []).length ? (mo.by_currency || []).map(function(x){ return '<span style="display:inline-block;border:1px solid var(--line);border-radius:8px;padding:3px 9px;margin:0 6px 6px 0;font-size:12px"><b>' + esc(x.currency) + '</b> ' + esc(String(x.total)) + ' <span style="color:var(--grey)">· ' + x.chits + ' chit' + (x.chits === 1 ? '' : 's') + '</span></span>'; }).join('') : '<span style="font-size:12px;color:var(--grey)">nothing with an agreed value</span>')
+    + ((mo.by_currency || []).length ? (mo.by_currency || []).map(function(x){ return '<span style="display:inline-block;border:1px solid var(--line);border-radius:9px;padding:3px 9px;margin:0 6px 6px 0;font-size:12px"><b>' + esc(x.currency) + '</b> ' + esc(String(x.total)) + ' <span style="color:var(--grey)">· ' + x.chits + ' chit' + (x.chits === 1 ? '' : 's') + '</span></span>'; }).join('') : '<span style="font-size:12px;color:var(--grey)">nothing with an agreed value</span>')
     + (((mo.excluded || {}).awaiting_agreement) ? '<div style="font-size:11px;color:var(--grey)">' + mo.excluded.awaiting_agreement + ' chit(s) have no agreed value yet and are excluded — not counted as zero.</div>' : '')
     + '<div style="font-size:11px;color:var(--grey);margin-top:4px">⚠️ This is the <b>agreed value of the chits</b>, which is a different question from the <b>cost of the requirement</b> above — a chit can carry priced lines and no agreed total, or the reverse.</div>'
     + '</div></div>';
@@ -341,7 +341,7 @@ function _groupSumPane(){
 /* ── metrics ──────────────────────────────────────────────────────────────────────────────────────────────────── */
 function _mBox(label, value, hint, tone){
   var col = tone === 'bad' ? '#c0453b' : tone === 'warn' ? '#8a5a1e' : 'var(--ink)';
-  return '<div style="flex:1;min-width:104px;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:#fff">'
+  return '<div style="flex:1;min-width:104px;border:1px solid var(--line);border-radius:9px;padding:10px 12px;background:#fff">'
     + '<div style="font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey)">' + esc(label) + '</div>'
     + '<div style="font-size:19px;font-weight:800;margin-top:3px;color:' + col + '">' + esc(String(value)) + '</div>'
     + (hint ? '<div style="font-size:11px;color:var(--grey);margin-top:2px">' + esc(hint) + '</div>' : '') + '</div>';
@@ -379,7 +379,7 @@ function _reconStrip(){
       + '</div>';
   }).join('') : '<div style="font-size:11.5px;color:var(--grey);padding:5px 0">No folders on this track yet — everything is unfiled, which is why the two numbers match trivially.</div>';
 
-  return '<div style="border:1px solid var(--line);border-radius:10px;padding:11px 13px;margin-bottom:12px;background:#fbfbfd">'
+  return '<div style="border:1px solid var(--line);border-radius:9px;padding:11px 13px;margin-bottom:12px;background:#fbfbfd">'
     + '<div style="font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey)">Does it add up?</div>'
     + '<div style="font-size:13px;margin-top:3px">' + sums + ' &nbsp; ' + verdict + '</div>'
     + '<div style="font-size:11px;color:var(--grey);margin-top:2px">' + (r.overall || {}).assigned + ' assigned · ' + (r.overall || {}).unassigned + ' unassigned — a chit can be open and unassigned, and that is the pile worth seeing.</div>'
@@ -394,7 +394,7 @@ function _folderMetricsPane(){
   var dash = function(v, suffix){ return (v === null || v === undefined) ? '—' : (v + (suffix || '')); };
 
   var money = (mo.by_currency || []).length
-    ? (mo.by_currency || []).map(function(b){ return '<span style="display:inline-block;border:1px solid var(--line);border-radius:8px;padding:3px 9px;margin:0 6px 6px 0;font-size:12px"><b>' + esc(b.currency) + '</b> ' + esc(String(b.total)) + ' <span style="color:var(--grey)">· ' + b.chits + ' chit' + (b.chits === 1 ? '' : 's') + '</span></span>'; }).join('')
+    ? (mo.by_currency || []).map(function(b){ return '<span style="display:inline-block;border:1px solid var(--line);border-radius:9px;padding:3px 9px;margin:0 6px 6px 0;font-size:12px"><b>' + esc(b.currency) + '</b> ' + esc(String(b.total)) + ' <span style="color:var(--grey)">· ' + b.chits + ' chit' + (b.chits === 1 ? '' : 's') + '</span></span>'; }).join('')
     : '<span style="font-size:12px;color:var(--grey)">nothing with an agreed value</span>';
   /* ⚠️ NEVER ONE TOTAL ACROSS CURRENCIES, and the reason is said on screen rather than left as a design note. */
   var moneyNote = (mo.mixed ? '<div style="font-size:11px;color:#8a5a1e;margin-top:2px">⚠️ More than one currency — these are <b>not</b> added together. A single total across currencies is a number that means nothing.</div>' : '')
@@ -482,7 +482,7 @@ async function _ruleDelete(id){
 function _fldFolderName(id){ var f = (UI.folders || []).find(function(x){ return x.folder_id === id; }); return (f && f.name) || 'a folder'; }
 function _ruleRow(r){
   var terms = Object.keys(r.when || {}).map(function(k){ return '<span style="font-family:ui-monospace,Menlo,monospace;font-size:11.5px">' + esc(k) + '</span> <b>' + esc(String(r.when[k])) + '</b>'; }).join(' <span style="color:var(--grey)">and</span> ');
-  return '<div style="border:1px solid var(--line);border-radius:10px;padding:11px 13px;margin-bottom:8px;background:#fff">'
+  return '<div style="border:1px solid var(--line);border-radius:9px;padding:11px 13px;margin-bottom:8px;background:#fff">'
     + '<div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap">'
     + '<label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" data-testid="rule-enabled" ' + (r.enabled ? 'checked' : '') + ' onchange="ruleToggle(\'' + esc(r.rule_id) + '\',this.checked)"><span style="font-weight:700;font-size:13px">' + esc(r.name || 'Rule') + '</span></label>'
     + '<span style="margin-left:auto;font-size:11px;color:#c0453b;cursor:pointer" onclick="ruleDelete(\'' + esc(r.rule_id) + '\')">Delete</span></div>'
@@ -524,7 +524,7 @@ function _folderRulesPane(){
     out += '<button class="composebtn" data-testid="rule-new" onclick="ruleDraftNew()">+ Add a rule</button>';
   } else {
     var opts = Object.keys(_RULE_HELP).map(function(k){ return '<option value="' + k + '"' + (d.term === k ? ' selected' : '') + '>' + esc(k) + '</option>'; }).join('');
-    out += '<div style="border:1px solid var(--line);border-radius:11px;padding:12px 13px;background:var(--paper)">'
+    out += '<div style="border:1px solid var(--line);border-radius:12px;padding:12px 13px;background:var(--paper)">'
       + '<div style="font-weight:700;font-size:12.5px;margin-bottom:8px">New rule</div>'
       + '<input class="inp" data-testid="rule-name" placeholder="Name it (optional) — e.g. Ramesh invoices" value="' + esc(d.name || '') + '" oninput="ruleDraftSet(\'name\',this.value)" style="margin-bottom:8px">'
       + '<div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center">'

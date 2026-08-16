@@ -331,7 +331,7 @@ function worklistScreen(){
   var chip = function(k, label, on, fn, testid){
     return '<span data-testid="' + testid + '" onclick="' + fn + '" style="cursor:pointer;font-size:12.5px;border:1px solid '
       + (on ? 'var(--blue)' : 'var(--line)') + ';' + (on ? 'background:var(--blue);color:#fff;font-weight:700;' : '')
-      + 'border-radius:8px;padding:4px 11px">' + label + '</span>';
+      + 'border-radius:9px;padding:4px 11px">' + label + '</span>';
   };
   /* ⚠️ A CHECKBOX, NOT A THIRD CHIP. "Group by date, and do not split by person" is a different act from "group by
      person" — presenting it as another radio would make the one thing Athi asked for unreachable. */
@@ -353,7 +353,7 @@ function worklistScreen(){
     +   '<span style="font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--grey);margin-right:2px">group by</span>'
     +   KEYS.map(function(x){ return chip(x[0], x[1], prim === x[0], 'wlPrimary(&quot;' + x[0] + '&quot;)', 'wl-view-' + x[0]); }).join('')
     +   '<input type="date" value="' + esc(WL.due || '') + '" onchange="wlDue(this.value)" '
-    +     'style="margin-left:auto;font-size:12px;padding:3px 7px;border:1px solid var(--line);border-radius:8px">'
+    +     'style="margin-left:auto;font-size:12px;padding:3px 7px;border:1px solid var(--line);border-radius:9px">'
     +   (WL.due ? '<span onclick="wlDue(\'\')" style="cursor:pointer;font-size:12px;color:var(--blue);padding:4px">clear</span>' : '')
     + '</div>'
     /* ── then split by · and the disclosure controls ────────────────────────────────────────────────────────── */
@@ -689,14 +689,14 @@ function wlInput(id, opts){
     return '<textarea id="' + id + '"' + (opts.testid ? ' data-testid="' + opts.testid + '"' : '')
       + ' rows="' + opts.lines + '"' + (opts.placeholder ? ' placeholder="' + esc(opts.placeholder) + '"' : '')
       + ' style="width:100%;box-sizing:border-box;font:inherit;font-size:14px;line-height:1.5;padding:10px 12px;'
-      + 'border:1px solid var(--line);border-radius:8px;resize:vertical;min-height:' + (opts.lines * 22 + 20) + 'px"></textarea>';
+      + 'border:1px solid var(--line);border-radius:9px;resize:vertical;min-height:' + (opts.lines * 22 + 20) + 'px"></textarea>';
   }
   return '<input id="' + id + '"' + (opts.testid ? ' data-testid="' + opts.testid + '"' : '')
     + (opts.type ? ' type="' + opts.type + '" step="any" inputmode="decimal"' : '')
     + (opts.value != null ? ' value="' + esc(String(opts.value)) + '"' : '')
     + (opts.placeholder ? ' placeholder="' + esc(opts.placeholder) + '"' : '')
     + ' style="flex:' + (opts.grow || 1) + ' 1 auto;min-width:0;font-size:' + (opts.big ? '19px;font-weight:800' : '14px')
-    + ';padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-variant-numeric:tabular-nums">';
+    + ';padding:10px 12px;border:1px solid var(--line);border-radius:9px;font-variant-numeric:tabular-nums">';
 }
 
 /**
@@ -1011,11 +1011,11 @@ function wlLineHTML(loading){
          default, which is what pushed Save past the card edge — the row could not give way, so the button went
          over the side. With wrapping above and this here, the pair shrinks first and Save drops to its own line
          only when it genuinely cannot fit. */
-      +   '<select id="wl_who" data-testid="wl-who-sel" style="flex:1 1 40%;min-width:0;font-size:14.5px;padding:9px 11px;border:1px solid var(--line);border-radius:8px">' + opts + '</select>'
+      +   '<select id="wl_who" data-testid="wl-who-sel" style="flex:1 1 40%;min-width:0;font-size:14.5px;padding:9px 11px;border:1px solid var(--line);border-radius:9px">' + opts + '</select>'
       /* ⚠️ A DATE FIELD HAS A FLOOR, unlike the name beside it. Shrunk to 125px it rendered "11-08-202" — the
          YEAR cut off, which is the one part of a due date you cannot guess from context. min-width holds it at a
          readable size and the row wraps instead; a truncated date is worse than a second line. */
-      +   '<input id="wl_due" data-testid="wl-due-inp" type="date" value="' + esc(String(r.due_date || '').slice(0, 10)) + '" style="flex:1 1 145px;min-width:145px;font-size:14.5px;padding:9px 8px;border:1px solid var(--line);border-radius:8px">'
+      +   '<input id="wl_due" data-testid="wl-due-inp" type="date" value="' + esc(String(r.due_date || '').slice(0, 10)) + '" style="flex:1 1 145px;min-width:145px;font-size:14.5px;padding:9px 8px;border:1px solid var(--line);border-radius:9px">'
       +   wlBtn('Save', 'wl-line-save', 'wlLineSave()', true)
       + '</div>'
       /* ⚠️ THIS ONE IS DELIBERATELY FULL WIDTH — it is the section's own verb, not a field's companion, so .btn's

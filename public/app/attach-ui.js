@@ -161,7 +161,7 @@ function cbAttachList(atts, opts){
     return '<span data-testid="cb-attach-item" onclick="cbAttachOpen(\'' + cbAttachSafe(a.id) + '\')"'
       + ' title="' + esc(a.name + ' — ' + meta) + '"'
       + ' style="display:inline-flex;align-items:center;gap:5px;cursor:pointer;border:1px solid var(--line);'
-      + 'border-radius:7px;padding:' + pad + ';margin:0 5px 5px 0;font-size:11.5px;background:#fff;max-width:100%">'
+      + 'border-radius:6px;padding:' + pad + ';margin:0 5px 5px 0;font-size:11.5px;background:#fff;max-width:100%">'
       +   '<span style="font-size:12px;flex:none">' + cbAttachIcon(a.t) + '</span>'
       +   '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(short) + '</span>'
       +   '<span style="font-size:11px;color:var(--grey);flex:none">' + esc(meta) + '</span>'
@@ -203,7 +203,7 @@ function cbAttachButton(ctx){
     + ' onclick="cbAttachPick(\'' + arg + '\')"'
     + ' title="' + esc(ctx.title || 'Attach a file (max 6 MB)') + '"'
     + ' style="width:auto;flex:0 0 auto;margin:0;padding:6px 12px;font-size:11.5px;font-weight:700;'
-    + 'border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);cursor:pointer">'
+    + 'border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink);cursor:pointer">'
     + esc(ctx.label || '📎 Attach a file') + '</button>'
     + (ctx.note ? '<span style="font-size:11px;color:#b0641c;margin-left:8px">' + esc(ctx.note) + '</span>' : '');
 }
@@ -363,7 +363,7 @@ function cbAttachCss(){
   var s = document.createElement('style');
   s.id = 'cbatt_css';
   s.textContent = '.cbatt-chip{display:inline-flex;align-items:center;gap:5px;border:1px dashed #c9a86a;'
-    + 'border-radius:8px;padding:3px 8px;margin:2px 5px 2px 0;font-size:11.5px;background:#fdfaf3;'
+    + 'border-radius:9px;padding:3px 8px;margin:2px 5px 2px 0;font-size:11.5px;background:#fdfaf3;'
     + 'color:var(--ink,#0F2E3D);max-width:100%}'
     + '.cbatt-chip.sent{border-style:solid;border-color:#e3e6ea;background:#fff}';
   (document.head || document.documentElement).appendChild(s);

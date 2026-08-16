@@ -286,7 +286,7 @@ function catsetCss(){
   if (document.getElementById('catset_css')) return;
   var s = document.createElement('style'); s.id = 'catset_css';
   s.textContent = [
-    '.catset-card{border:1px solid var(--line);border-radius:11px;background:#fff;margin-bottom:12px;overflow:hidden}',
+    '.catset-card{border:1px solid var(--line);border-radius:12px;background:#fff;margin-bottom:12px;overflow:hidden}',
     '.catset-ct{font-size:13.5px;font-weight:700;padding:11px 14px 0}',
     '.catset-cb{font-size:13px;line-height:1.6;color:var(--ink);padding:6px 14px 12px}',
     /* The standards note is set apart because it explains the WHY, which a person reads once and then never
@@ -312,7 +312,7 @@ function catsetCss(){
     '.catset-drow .da{font-size:11.5px;color:var(--blue);cursor:pointer;font-weight:600}',
     '.catset-drow .da:hover{text-decoration:underline}',
     /* The vocabulary blocks. Quieter than the controls above them — this is reference, not something to act on. */
-    '.catset-reg{border:1px solid var(--line);border-radius:11px;background:var(--paper);margin-bottom:12px;overflow:hidden}',
+    '.catset-reg{border:1px solid var(--line);border-radius:12px;background:var(--paper);margin-bottom:12px;overflow:hidden}',
     '.catset-regh{display:flex;align-items:center;gap:8px;padding:10px 13px 0;font-size:12.5px;font-weight:700}',
     '.catset-regn{margin-left:auto;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11px;',
     'color:var(--grey);background:#fff;border:1px solid var(--line);border-radius:20px;padding:1px 8px}',
