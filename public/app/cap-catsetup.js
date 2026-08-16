@@ -305,7 +305,7 @@ function catsetCss(){
     '.catset-drow .dn{font-weight:600;flex:1;min-width:0}',
     '.catset-drow .dk{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11px;',
     'background:var(--paper);border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:var(--grey)}',
-    '.catset-drow .dst{font-size:10.5px;font-weight:700;border-radius:6px;padding:1px 7px;text-transform:uppercase;letter-spacing:.04em}',
+    '.catset-drow .dst{font-size:11px;font-weight:700;border-radius:6px;padding:1px 7px;text-transform:uppercase;letter-spacing:.04em}',
     '.catset-drow .dst.live{background:#e6f4ec;color:#2c7a43}',
     '.catset-drow .dst.draft{background:#f4f2ec;color:#8a6d1e}',
     '.catset-drow .dst.retired{background:#eceaea;color:#6f6a6a}',
@@ -323,7 +323,7 @@ function catsetCss(){
     '.catset-regrow .rl{color:var(--ink)}',
     '.catset-regrow .rn{color:var(--grey);font-size:11.5px;flex:1;min-width:0}',
     '.catset-regsrc{font-size:11px;color:var(--grey);padding:7px 13px}',
-    '.catset-regsrc code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:10.5px}'
+    '.catset-regsrc code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11px}'
   ].join('');
   (document.head || document.documentElement).appendChild(s);
 }

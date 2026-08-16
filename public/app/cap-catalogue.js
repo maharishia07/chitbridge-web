@@ -207,12 +207,12 @@ function catfFieldMapHTML(){
     + '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;margin-top:6px;min-width:640px">'
     + '<thead><tr style="border-bottom:2px solid var(--line)">'
     + ['ours', 'schema.org', 'Medusa', 'other', 'note'].map(function(h){
-        return '<th style="text-align:left;padding:0 8px 5px 0;font-size:9.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey)">' + h + '</th>'; }).join('')
+        return '<th style="text-align:left;padding:0 8px 5px 0;font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey)">' + h + '</th>'; }).join('')
     + '</tr></thead><tbody>' + rows + '</tbody></table></div>'
     + hdr('NOT CARRIED', 'named so the absence is a decision, not an oversight')
     + GAPS.map(function(g){ return '<div style="padding:7px 0;border-bottom:1px dashed var(--line)">'
         + '<span style="font-size:11.5px;font-weight:700">' + esc(g.key) + '</span>'
-        + '<span style="font-size:10px;color:var(--grey)"> · ' + esc(g.from) + '</span>'
+        + '<span style="font-size:11px;color:var(--grey)"> · ' + esc(g.from) + '</span>'
         + '<div style="font-size:11.5px;color:var(--grey);line-height:1.5;margin-top:2px">' + esc(g.why) + '</div></div>'; }).join('')
     + hdr('WHERE WE DIFFER', 'recorded, not silently changed — renaming a live field is a migration')
     + CON.map(function(c){ return '<div style="padding:8px 0;border-bottom:1px dashed var(--line)">'
@@ -224,11 +224,11 @@ function catfFieldMapHTML(){
 }
 function catfStandardsModal(){
   var S = (CBCatalogue.STANDARDS || []);
-  var badge = function(st){ var c = st === 'in code' ? ['#2c7a43', '#e6f4ec'] : st === 'by reference' ? ['#2c5aa0', '#e8eef7'] : st === 'vocabulary' ? ['#6a4fa0', '#efeafa'] : ['#8a6d1e', '#f6efd8']; return '<span style="font-size:9.5px;font-weight:700;color:' + c[0] + ';background:' + c[1] + ';border-radius:5px;padding:2px 7px;white-space:nowrap">' + esc(st) + '</span>'; };
+  var badge = function(st){ var c = st === 'in code' ? ['#2c7a43', '#e6f4ec'] : st === 'by reference' ? ['#2c5aa0', '#e8eef7'] : st === 'vocabulary' ? ['#6a4fa0', '#efeafa'] : ['#8a6d1e', '#f6efd8']; return '<span style="font-size:11px;font-weight:700;color:' + c[0] + ';background:' + c[1] + ';border-radius:5px;padding:2px 7px;white-space:nowrap">' + esc(st) + '</span>'; };
   var row = function(s){ return '<div style="padding:10px 0;border-bottom:1px solid var(--line)">'
-    + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-size:13px;font-weight:700;color:#1c2128">' + esc(s.name) + '</span>' + badge(s.status) + '<span style="font-size:10px;color:var(--grey)">' + esc(s.body) + '</span></div>'
+    + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-size:13px;font-weight:700;color:#1c2128">' + esc(s.name) + '</span>' + badge(s.status) + '<span style="font-size:11px;color:var(--grey)">' + esc(s.body) + '</span></div>'
     + '<div style="font-size:12px;color:var(--grey);margin-top:3px;line-height:1.5">' + esc(s.role) + '</div>'
-    + '<div style="font-size:10.5px;color:#9aa3a7;margin-top:3px">' + (s.where && s.where !== '—' ? 'in: <code>' + esc(s.where) + '</code> · ' : '') + '<a href="' + esc(s.spec) + '" target="_blank" rel="noopener" style="color:#2c5aa0">spec ↗</a></div>'
+    + '<div style="font-size:11px;color:#9aa3a7;margin-top:3px">' + (s.where && s.where !== '—' ? 'in: <code>' + esc(s.where) + '</code> · ' : '') + '<a href="' + esc(s.spec) + '" target="_blank" rel="noopener" style="color:#2c5aa0">spec ↗</a></div>'
     + '</div>'; };
   var grp = function(title, st){ var rows = S.filter(function(s){ return s.status === st; }); return rows.length ? '<div style="font-size:11px;font-weight:800;color:#2c5aa0;letter-spacing:.05em;margin-top:14px">' + esc(title) + '</div>' + rows.map(row).join('') : ''; };
   var body = '<div style="padding:14px 18px;max-height:72vh;overflow:auto">'
@@ -237,7 +237,7 @@ function catfStandardsModal(){
     + grp('VOCABULARY ALIGNMENT (naming, not an engine)', 'vocabulary')
     + grp('HELD BY REFERENCE (link out, never mirror)', 'by reference')
     + grp('ON THE ROADMAP', 'roadmap')
-    + '<div style="font-size:10.5px;color:var(--grey);font-style:italic;margin-top:14px">Multi-source fill + smooth modification = <b>PIM</b> built on <b>MDM golden records</b>, edited with <b>RFC 7386 JSON Merge Patch</b>, de-duplicated by <b>GS1 GTIN/SKU</b>. Cross-company sync (GDSN) is the same discipline, later.</div>'
+    + '<div style="font-size:11px;color:var(--grey);font-style:italic;margin-top:14px">Multi-source fill + smooth modification = <b>PIM</b> built on <b>MDM golden records</b>, edited with <b>RFC 7386 JSON Merge Patch</b>, de-duplicated by <b>GS1 GTIN/SKU</b>. Cross-company sync (GDSN) is the same discipline, later.</div>'
     + catfFieldMapHTML()
     + '</div>';
   if (typeof modal === 'function') modal('<div class="mhd"><div class="t">📐 Built on open standards</div></div><div class="mbody" style="padding:0">' + body + '</div>', true);
@@ -426,7 +426,7 @@ function catfCaptureItem(){
   var out = document.getElementById('cat_je_out'); if (!out) return;   // draft preview → just show the JSON
   out.innerHTML = '<div style="font-size:11px;font-weight:800;color:#2c7a43;letter-spacing:.05em">CAPTURED ITEM — conforms to the schema</div>'
     + '<pre style="background:#0f1720;color:#d6e2f0;border-radius:8px;padding:10px 12px;font-size:11px;overflow:auto;max-height:30vh;margin-top:6px;white-space:pre">' + esc(JSON.stringify(v, null, 2)) + '</pre>'
-    + '<div style="font-size:10.5px;color:var(--grey);font-style:italic;margin-top:4px">A real catalogue_item — this is the JSON that gets sealed onto the chit.</div>';
+    + '<div style="font-size:11px;color:var(--grey);font-style:italic;margin-top:4px">A real catalogue_item — this is the JSON that gets sealed onto the chit.</div>';
 }
 function _catfItemToRow(it){ it = it || {}; var name = it.product || it.name || 'item'; var unit = it.unit || ''; var price = (it.price != null ? it.price : (it.rate != null ? it.rate : '')); var values = {}; Object.keys(it).forEach(function(k){ if (k.charAt(0) !== '_' && ['product', 'name', 'unit', 'price', 'rate'].indexOf(k) < 0 && it[k] !== '' && it[k] != null) values[k] = it[k]; }); return { name: name, unit: unit, price: price, values: values }; }
 function catfCustomerPreview(){
@@ -532,7 +532,7 @@ function _cwRemaining(w){ var cov = _cwCovered(w); return _cwRequired(w).filter(
 
 function _catfWizard(){
   _cwInit(); var w = UI.cw, step = w.step;
-  var bar = '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:16px">' + CW_STEPS.map(function(s, i){ var n = i + 1, on = n === step, done = n < step; return '<span onclick="cwGo(' + n + ')" style="cursor:pointer;display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:' + (on ? '#2c5aa0' : done ? '#2c7a43' : 'var(--grey)') + '"><span style="width:19px;height:19px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:9.5px;background:' + (on ? '#2c5aa0' : done ? '#2c7a43' : '#eef1f5') + ';color:' + (on || done ? '#fff' : 'var(--grey)') + '">' + (done ? '✓' : n) + '</span>' + esc(s) + '</span>' + (n < CW_STEPS.length ? '<span style="color:#c8d0d9">›</span>' : ''); }).join('') + '</div>';
+  var bar = '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:16px">' + CW_STEPS.map(function(s, i){ var n = i + 1, on = n === step, done = n < step; return '<span onclick="cwGo(' + n + ')" style="cursor:pointer;display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:' + (on ? '#2c5aa0' : done ? '#2c7a43' : 'var(--grey)') + '"><span style="width:19px;height:19px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;background:' + (on ? '#2c5aa0' : done ? '#2c7a43' : '#eef1f5') + ';color:' + (on || done ? '#fff' : 'var(--grey)') + '">' + (done ? '✓' : n) + '</span>' + esc(s) + '</span>' + (n < CW_STEPS.length ? '<span style="color:#c8d0d9">›</span>' : ''); }).join('') + '</div>';
   var raw = [null, _cwStep1, _cwStep2, _cwStep3, _cwStep4, _cwStep5, _cwStep6][step](w);
   var body = (step === 1 || step === 2) ? raw : _cwTwo(raw, _cwPreview(w));   // steps 1 & 2 own their two-panel; 3–6 get the running preview on the right
   var nav = '<div style="display:flex;gap:10px;margin-top:20px;align-items:center">'
@@ -550,9 +550,9 @@ function _cwPreview(w){
   var title = (w.built && w.built.title) || (CATF_KB[w.vertical] && CATF_KB[w.vertical].product) || (w.purpose ? 'Your catalogue' : '—');
   var head = '<div style="font-size:11px;font-weight:800;color:#2c5aa0;letter-spacing:.05em">YOUR CATALOGUE SO FAR</div>'
     + '<div style="margin-top:6px;font-size:12.5px;font-weight:700">' + esc(title) + '</div>'
-    + '<div style="font-size:10.5px;color:var(--grey)">cart · ' + esc(_catfCcy()) + ' · sold by ' + esc(_cwUnitStr(w)) + (w.source ? ' · blueprint ' + esc(w.source) : '') + '</div>';
-  var fieldsHtml = fields.length ? '<div style="margin-top:11px;font-size:10px;font-weight:700;color:#6a707a;text-transform:uppercase;letter-spacing:.04em">Fields</div>' + fields.map(function(f){ var src = cov[_cwNorm(f.name)]; var b = src === 'blueprint' ? ['📎 blueprint', '#6a44a8'] : src === 'erp' ? ['🔗 ERP', '#b07b1e'] : src === 'manual' ? ['✍ you', '#2c7a43'] : ['· to fill', '#9aa3a7']; return '<div style="display:flex;align-items:center;gap:6px;font-size:11.5px;padding:1px 0"><span style="flex:1;color:#3a4048">' + esc(f.name) + '</span><span style="font-size:9px;font-weight:700;color:' + b[1] + ';background:' + b[1] + '18;border-radius:4px;padding:1px 6px">' + b[0] + '</span></div>'; }).join('') : '';
-  var itemsHtml = items.length ? '<div style="margin-top:11px;font-size:10px;font-weight:700;color:#6a707a;text-transform:uppercase;letter-spacing:.04em">Items · ' + items.length + '</div>' + items.slice(0, 7).map(function(it){ var p = w.prices[it.name]; return '<div style="display:flex;align-items:center;gap:6px;font-size:11.5px;padding:1px 0"><span style="flex:1">' + esc(it.name) + '</span><span style="font-weight:600;color:' + (p != null && p !== '' ? '#1c2128' : '#a5382e') + '">' + (p != null && p !== '' ? esc(_catfMoney(p)) : 'no price') + '</span></div>'; }).join('') : '';
+    + '<div style="font-size:11px;color:var(--grey)">cart · ' + esc(_catfCcy()) + ' · sold by ' + esc(_cwUnitStr(w)) + (w.source ? ' · blueprint ' + esc(w.source) : '') + '</div>';
+  var fieldsHtml = fields.length ? '<div style="margin-top:11px;font-size:11px;font-weight:700;color:#6a707a;text-transform:uppercase;letter-spacing:.04em">Fields</div>' + fields.map(function(f){ var src = cov[_cwNorm(f.name)]; var b = src === 'blueprint' ? ['📎 blueprint', '#6a44a8'] : src === 'erp' ? ['🔗 ERP', '#b07b1e'] : src === 'manual' ? ['✍ you', '#2c7a43'] : ['· to fill', '#9aa3a7']; return '<div style="display:flex;align-items:center;gap:6px;font-size:11.5px;padding:1px 0"><span style="flex:1;color:#3a4048">' + esc(f.name) + '</span><span style="font-size:11px;font-weight:700;color:' + b[1] + ';background:' + b[1] + '18;border-radius:4px;padding:1px 6px">' + b[0] + '</span></div>'; }).join('') : '';
+  var itemsHtml = items.length ? '<div style="margin-top:11px;font-size:11px;font-weight:700;color:#6a707a;text-transform:uppercase;letter-spacing:.04em">Items · ' + items.length + '</div>' + items.slice(0, 7).map(function(it){ var p = w.prices[it.name]; return '<div style="display:flex;align-items:center;gap:6px;font-size:11.5px;padding:1px 0"><span style="flex:1">' + esc(it.name) + '</span><span style="font-weight:600;color:' + (p != null && p !== '' ? '#1c2128' : '#a5382e') + '">' + (p != null && p !== '' ? esc(_catfMoney(p)) : 'no price') + '</span></div>'; }).join('') : '';
   var taxHtml = (w.tax && w.tax.rate) ? '<div style="margin-top:9px;font-size:11px;color:var(--grey)">Tax: ' + esc(w.tax.label || 'GST') + ' ' + esc(w.tax.rate) + '%</div>' : '';
   return head + fieldsHtml + itemsHtml + taxHtml;
 }
@@ -570,7 +570,7 @@ function _cwMethodBlock(w){
   return '<div style="margin-bottom:14px">'
     + '<div style="font-size:11px;color:var(--grey);margin-bottom:5px">How customers order <span style="color:#9aa3a7">— this decides what data comes back to you on the order</span></div>'
     + '<div style="display:flex;gap:5px;flex-wrap:wrap">' + CATF_METHODS.map(chip).join('') + '</div>'
-    + '<div style="margin-top:6px;font-size:10.5px;color:#2c5aa0;background:#eef4fc;border:1px solid #cfe0f4;border-radius:7px;padding:5px 9px">'
+    + '<div style="margin-top:6px;font-size:11px;color:#2c5aa0;background:#eef4fc;border:1px solid #cfe0f4;border-radius:7px;padding:5px 9px">'
     + '<b>You receive:</b> ' + esc(sel.receives) + '</div></div>';
 }
 function _cwStep1(w){
@@ -589,9 +589,9 @@ function _cwStep1(w){
           + '<div style="display:flex;gap:5px;flex-wrap:wrap">' + CW_UNITS.map(function(u){ return chip(u, true); }).join('') + extra.map(function(u){ return chip(u, false); }).join('') + '</div>'
           + '<div style="display:flex;gap:6px;margin-top:7px"><input id="cw_newunit" placeholder="add a unit (e.g. drum, coil)" style="width:170px;padding:4px 8px;border:1px solid var(--line);border-radius:6px;font-size:11.5px"><button onclick="cwAddUnit()" style="padding:4px 11px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--blue);font-weight:600;font-size:11px;cursor:pointer">Add</button></div></div>'; })()
       + _cwMethodBlock(w)
-      + order.map(function(sec){ return '<div style="margin-bottom:11px"><div style="font-size:10.5px;font-weight:700;color:#6a707a;text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">' + esc(sec) + '</div>' + secs[sec].map(function(f){ var idx = w.fieldSel.indexOf(f); return '<label style="display:flex;align-items:center;gap:8px;padding:2px 0;cursor:pointer"><input type="checkbox" ' + (f.on ? 'checked' : '') + ' onchange="cwToggleField(' + idx + ')"><span style="font-size:12px;font-weight:' + (f.on ? 600 : 400) + ';color:' + (f.on ? '#1c2128' : 'var(--grey)') + '">' + esc(f.name) + '</span><span style="font-size:9.5px;color:#9aa3a7;background:#eef1f5;border-radius:4px;padding:1px 6px">' + esc(f.type) + '</span>' + (f._bp ? '<span style="font-size:9px;color:#6a44a8" title="from blueprint">📎</span>' : f._added ? '<span style="font-size:9px;color:#2c7a43" title="you added">＋</span>' : '') + '</label>'; }).join('') + '</div>'; }).join('')
-      + '<div style="font-size:10.5px;color:#2c7a43;font-style:italic;border-top:1px solid var(--line);padding-top:8px">' + on + ' fields selected · sold by ' + esc(_cwUnitStr(w)) + '</div>'
-      + '<div style="margin-top:8px"><div style="font-size:10px;font-weight:700;color:#6a707a;text-transform:uppercase;letter-spacing:.04em">Add a data type</div><div style="display:flex;gap:6px;margin-top:5px"><input id="cw_newfield" placeholder="field name" style="flex:1;min-width:0;padding:5px 8px;border:1px solid var(--line);border-radius:6px;font-size:12px"><select id="cw_newtype" style="padding:5px;border:1px solid var(--line);border-radius:6px;font-size:11px">' + ['text', 'number', 'choice', 'date', 'boolean'].map(function(t){ return '<option>' + t + '</option>'; }).join('') + '</select><button onclick="cwAddCustomField()" style="padding:5px 10px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--blue);font-weight:600;font-size:11px;cursor:pointer">Add</button></div><div style="font-size:10px;color:var(--grey);margin-top:4px">Uncheck any you don\'t need · add any that are missing. Adopting a blueprint (step 2) adds its fields here too 📎.</div></div>';
+      + order.map(function(sec){ return '<div style="margin-bottom:11px"><div style="font-size:11px;font-weight:700;color:#6a707a;text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">' + esc(sec) + '</div>' + secs[sec].map(function(f){ var idx = w.fieldSel.indexOf(f); return '<label style="display:flex;align-items:center;gap:8px;padding:2px 0;cursor:pointer"><input type="checkbox" ' + (f.on ? 'checked' : '') + ' onchange="cwToggleField(' + idx + ')"><span style="font-size:12px;font-weight:' + (f.on ? 600 : 400) + ';color:' + (f.on ? '#1c2128' : 'var(--grey)') + '">' + esc(f.name) + '</span><span style="font-size:11px;color:#9aa3a7;background:#eef1f5;border-radius:4px;padding:1px 6px">' + esc(f.type) + '</span>' + (f._bp ? '<span style="font-size:11px;color:#6a44a8" title="from blueprint">📎</span>' : f._added ? '<span style="font-size:11px;color:#2c7a43" title="you added">＋</span>' : '') + '</label>'; }).join('') + '</div>'; }).join('')
+      + '<div style="font-size:11px;color:#2c7a43;font-style:italic;border-top:1px solid var(--line);padding-top:8px">' + on + ' fields selected · sold by ' + esc(_cwUnitStr(w)) + '</div>'
+      + '<div style="margin-top:8px"><div style="font-size:11px;font-weight:700;color:#6a707a;text-transform:uppercase;letter-spacing:.04em">Add a data type</div><div style="display:flex;gap:6px;margin-top:5px"><input id="cw_newfield" placeholder="field name" style="flex:1;min-width:0;padding:5px 8px;border:1px solid var(--line);border-radius:6px;font-size:12px"><select id="cw_newtype" style="padding:5px;border:1px solid var(--line);border-radius:6px;font-size:11px">' + ['text', 'number', 'choice', 'date', 'boolean'].map(function(t){ return '<option>' + t + '</option>'; }).join('') + '</select><button onclick="cwAddCustomField()" style="padding:5px 10px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--blue);font-weight:600;font-size:11px;cursor:pointer">Add</button></div><div style="font-size:11px;color:var(--grey);margin-top:4px">Uncheck any you don\'t need · add any that are missing. Adopting a blueprint (step 2) adds its fields here too 📎.</div></div>';
   } else {
     right = '<div style="color:var(--grey);font-size:12.5px;text-align:center;margin-top:44px">Describe the catalogue on the left →<br>I\'ll suggest the fields to store, grouped in sections, for you to pick.</div>';
   }
@@ -604,29 +604,29 @@ function _cwStep2Fields(w){
   var sel = w.sel ? (w.built && w.built.finishes || []).filter(function(it){ return it.name === w.sel; })[0] : null;
   var head = '<div style="font-size:11px;font-weight:800;color:#2c5aa0;letter-spacing:.05em">FIELDS' + (sel ? ' <span style="color:#6a44a8">· ' + esc(sel.name) + '</span>' : '') + '</div>';
   if (!fields.length) return head + '<div style="font-size:12px;color:var(--grey);margin-top:8px">Pick fields in step 1 first. Adopting a blueprint (right) adds its fields here.</div>';
-  var rows = fields.map(function(f){ var v = sel ? sel[f._bpKey || f.name] : undefined; var vstr = (v == null) ? '' : (Array.isArray(v) ? v.map(function(x){ return (x && typeof x === 'object') ? (x.name || '') : x; }).join(', ') : (typeof v === 'object' ? (v.name || JSON.stringify(v)) : String(v))); return '<div style="display:flex;gap:8px;padding:3px 0;border-bottom:1px dashed var(--line);font-size:11.5px"><span style="flex:0 0 148px;color:#3a4048">' + esc(f.name) + (f._bp ? ' <span style="color:#6a44a8;font-size:9px">📎</span>' : f._added ? ' <span style="color:#2c7a43;font-size:9px">＋</span>' : '') + '</span><span style="flex:1;color:' + (vstr ? '#1c2128' : '#9aa3a7') + '">' + (sel ? (vstr ? esc(vstr) : '—') : '<span style="font-size:10px">value shows when you click a product ›</span>') + '</span></div>'; }).join('');
+  var rows = fields.map(function(f){ var v = sel ? sel[f._bpKey || f.name] : undefined; var vstr = (v == null) ? '' : (Array.isArray(v) ? v.map(function(x){ return (x && typeof x === 'object') ? (x.name || '') : x; }).join(', ') : (typeof v === 'object' ? (v.name || JSON.stringify(v)) : String(v))); return '<div style="display:flex;gap:8px;padding:3px 0;border-bottom:1px dashed var(--line);font-size:11.5px"><span style="flex:0 0 148px;color:#3a4048">' + esc(f.name) + (f._bp ? ' <span style="color:#6a44a8;font-size:11px">📎</span>' : f._added ? ' <span style="color:#2c7a43;font-size:11px">＋</span>' : '') + '</span><span style="flex:1;color:' + (vstr ? '#1c2128' : '#9aa3a7') + '">' + (sel ? (vstr ? esc(vstr) : '—') : '<span style="font-size:11px">value shows when you click a product ›</span>') + '</span></div>'; }).join('');
   var refF = fields.filter(function(f){ return f._bp; }).map(function(f){ return f.name; });
   var todo = fields.filter(function(f){ return !f._bp; }).map(function(f){ return f.name; });
   var mode = w.adoptMode || 'reference';
-  var summary = w.source ? '<div style="margin-top:6px;font-size:10.5px;line-height:1.6;border-bottom:1px solid var(--line);padding-bottom:8px">'
+  var summary = w.source ? '<div style="margin-top:6px;font-size:11px;line-height:1.6;border-bottom:1px solid var(--line);padding-bottom:8px">'
     + '<div><span style="color:' + (mode === 'value' ? '#2c5aa0' : '#6a44a8') + ';font-weight:700">' + (mode === 'value' ? '📋 filled by value · ' : '📎 filled by reference · ') + refF.length + '</span> <span style="color:var(--grey)">' + esc(refF.join(' · ') || '—') + '</span></div>'
     + (todo.length ? '<div><span style="color:#2c7a43;font-weight:700">✍ you still fill · ' + todo.length + '</span> <span style="color:var(--grey)">' + esc(todo.join(' · ')) + '</span></div>' : '')
     + '</div>' : '';
-  var swatches = (sel && sel.combinations && sel.combinations.length) ? '<div style="margin-top:10px;border-top:1px solid var(--line);padding-top:8px"><div style="font-size:10px;font-weight:700;color:#6a707a;text-transform:uppercase;letter-spacing:.04em">Colour combinations</div>' + sel.combinations.map(_cwCombo).join('') + '</div>' : '';
+  var swatches = (sel && sel.combinations && sel.combinations.length) ? '<div style="margin-top:10px;border-top:1px solid var(--line);padding-top:8px"><div style="font-size:11px;font-weight:700;color:#6a707a;text-transform:uppercase;letter-spacing:.04em">Colour combinations</div>' + sel.combinations.map(_cwCombo).join('') + '</div>' : '';
   return head + summary + '<div style="margin-top:8px">' + rows + '</div>' + swatches;
 }
 /* render products with the blueprint's OWN look & feel — colour swatches, chips, accent, story */
 function _cwSwatch(c){ return '<span title="' + esc((c.name || '') + ' ' + (c.hex || '')) + '" style="display:inline-block;width:15px;height:15px;border-radius:50%;background:' + esc(c.hex || '#ccc') + ';border:1px solid rgba(0,0,0,.15);vertical-align:middle;margin-right:2px"></span>'; }
-function _cwCombo(cm){ return '<div style="display:flex;align-items:center;gap:6px;margin-top:3px"><span>' + ((cm.colours || []).map(_cwSwatch).join('')) + '</span><span style="font-size:10px;color:#3a4048;font-weight:600">' + esc(cm.name || '') + '</span></div>'; }
+function _cwCombo(cm){ return '<div style="display:flex;align-items:center;gap:6px;margin-top:3px"><span>' + ((cm.colours || []).map(_cwSwatch).join('')) + '</span><span style="font-size:11px;color:#3a4048;font-weight:600">' + esc(cm.name || '') + '</span></div>'; }
 function _cwProductCard(w, it){
   var on = w.chosen[it.name] !== false, seld = w.sel === it.name;
   var accent = (w.built && w.built.formatting && w.built.formatting.accent) || '#6a44a8';
   var nm = esc(it.name).replace(/'/g, "\\'");
-  var chips = [it.texture_family, it.region].filter(Boolean).map(function(c){ return '<span style="font-size:9.5px;background:' + accent + '18;color:' + accent + ';border-radius:4px;padding:1px 6px">' + esc(c) + '</span>'; }).join('') + (it.effect || []).map(function(e){ return '<span style="font-size:9.5px;background:#f3f0e8;color:#7a5e22;border-radius:4px;padding:1px 6px">' + esc(e) + '</span>'; }).join('');
+  var chips = [it.texture_family, it.region].filter(Boolean).map(function(c){ return '<span style="font-size:11px;background:' + accent + '18;color:' + accent + ';border-radius:4px;padding:1px 6px">' + esc(c) + '</span>'; }).join('') + (it.effect || []).map(function(e){ return '<span style="font-size:11px;background:#f3f0e8;color:#7a5e22;border-radius:4px;padding:1px 6px">' + esc(e) + '</span>'; }).join('');
   var combos = (it.combinations || []).slice(0, 2).map(_cwCombo).join('');
   return '<div onclick="cwSelectProduct(\'' + nm + '\')" style="border:1px solid ' + (seld ? accent : 'var(--line)') + ';border-radius:11px;padding:10px 12px;margin-top:6px;background:' + (seld ? accent + '0c' : '#fff') + ';cursor:pointer">'
     + (it.photo ? '<div style="height:96px;background:#f4f6f8 center/cover no-repeat;background-image:url(' + it.photo + ');border-radius:8px;margin-bottom:7px"></div>' : '')
-    + '<div style="display:flex;align-items:center;gap:8px"><input type="checkbox" ' + (on ? 'checked' : '') + ' onclick="event.stopPropagation()" onchange="cwToggleItem(\'' + nm + '\')"><span style="font-weight:700;font-size:13px">' + esc(it.name) + '</span><span style="font-size:10px;color:#9aa3a7">' + esc(it.scale || '') + (it.sheen ? ' · ' + esc(it.sheen) : '') + '</span><span style="margin-left:auto;color:' + accent + ';font-weight:700">' + (seld ? '▸' : '') + '</span></div>'
+    + '<div style="display:flex;align-items:center;gap:8px"><input type="checkbox" ' + (on ? 'checked' : '') + ' onclick="event.stopPropagation()" onchange="cwToggleItem(\'' + nm + '\')"><span style="font-weight:700;font-size:13px">' + esc(it.name) + '</span><span style="font-size:11px;color:#9aa3a7">' + esc(it.scale || '') + (it.sheen ? ' · ' + esc(it.sheen) : '') + '</span><span style="margin-left:auto;color:' + accent + ';font-weight:700">' + (seld ? '▸' : '') + '</span></div>'
     + (it.inspiration ? '<div style="font-size:11px;color:#6a707a;margin:5px 0;line-height:1.45">' + esc(it.inspiration) + '</div>' : '')
     + (chips ? '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px">' + chips + '</div>' : '')
     + (combos ? '<div style="margin-top:6px">' + combos + '</div>' : '')
@@ -645,22 +645,22 @@ function _cwStep2Products(w){
     var otherCount = all.filter(function(s){ return !matchVert(s); }).length;
     var scopeLabel = w.bpAll ? 'All types' : (storeGroup ? (storeGroup + ' family' + (w.vertical ? ' · ' + esc(w.vertical) : '')) : ('For ' + esc(w.vertical || 'your catalogue')));
     var search = '<input id="cw_bp_search" value="' + esc(w.bpQuery || '') + '" oninput="cwSetBpQuery(this.value)" placeholder="🔎 search blueprints…" style="width:100%;box-sizing:border-box;padding:7px 10px;border:1px solid var(--line);border-radius:8px;font-size:12.5px">';
-    var scope = '<div style="font-size:10.5px;color:var(--grey);margin:6px 0">' + scopeLabel + ' · ' + filtered.length + ' blueprint(s)'
+    var scope = '<div style="font-size:11px;color:var(--grey);margin:6px 0">' + scopeLabel + ' · ' + filtered.length + ' blueprint(s)'
       + ((otherCount && !w.bpAll) ? ' · <span onclick="cwToggleBpAll()" style="cursor:pointer;color:var(--blue);font-weight:600">show all (' + otherCount + ' other)</span>' : ((w.bpAll && w.vertical) ? ' · <span onclick="cwToggleBpAll()" style="cursor:pointer;color:var(--blue);font-weight:600">only ' + esc(w.vertical) + '</span>' : '')) + '</div>';
     var skipRow = '<div onclick="cwPickSource(\'\')" style="cursor:pointer;padding:7px 11px;border-bottom:1px solid var(--line);background:' + (!w.source ? '#f4f6f8' : '#fff') + ';font-size:12px;color:var(--grey)">— skip (build without a blueprint) —</div>';
     var rows = filtered.map(function(s){ var on = w.source === s.key;
       return '<div onclick="cwPickSource(\'' + esc(s.key) + '\')" style="cursor:pointer;padding:8px 11px;border-bottom:1px solid var(--line);background:' + (on ? '#eef4ff' : '#fff') + '">'
         + '<div style="display:flex;align-items:center;gap:8px"><span style="font-weight:' + (on ? 700 : 600) + ';font-size:12.5px">' + esc(s.title) + '</span>'
-        + (s.for_vertical ? '<span style="font-size:9.5px;color:#6a44a8;background:#efeafa;border-radius:4px;padding:1px 6px">' + esc(s.for_vertical) + '</span>' : '')
-        + '<span style="margin-left:auto;font-size:10px;color:var(--grey)">' + s.item_count + ' item(s)</span></div>'
-        + (s.for_entity ? '<div style="font-size:10px;color:#9aa3a7;margin-top:1px">' + esc(s.for_entity) + '</div>' : '') + '</div>'; }).join('');
+        + (s.for_vertical ? '<span style="font-size:11px;color:#6a44a8;background:#efeafa;border-radius:4px;padding:1px 6px">' + esc(s.for_vertical) + '</span>' : '')
+        + '<span style="margin-left:auto;font-size:11px;color:var(--grey)">' + s.item_count + ' item(s)</span></div>'
+        + (s.for_entity ? '<div style="font-size:11px;color:#9aa3a7;margin-top:1px">' + esc(s.for_entity) + '</div>' : '') + '</div>'; }).join('');
     var empty = '<div style="font-size:11.5px;color:var(--grey);padding:9px 11px">No blueprints' + (q ? ' match “' + esc(q) + '”' : ((w.vertical && !w.bpAll) ? ' for ' + esc(w.vertical) : '')) + '.' + ((otherCount && !w.bpAll) ? ' <span onclick="cwToggleBpAll()" style="cursor:pointer;color:var(--blue);font-weight:600">Show all verticals.</span>' : '') + '</div>';
     picker = search + scope + '<div style="max-height:220px;overflow:auto;border:1px solid var(--line);border-radius:9px">' + skipRow + (filtered.length ? rows : empty) + '</div>';
   }
-  var rights = w.source ? '<div style="margin-top:6px;font-size:10.5px;color:#2e7a45">🔓 Rights ok <span style="color:var(--grey)">— you may use this blueprint (distributor grant)</span></div>' : '';
+  var rights = w.source ? '<div style="margin-top:6px;font-size:11px;color:#2e7a45">🔓 Rights ok <span style="color:var(--grey)">— you may use this blueprint (distributor grant)</span></div>' : '';
   var mode = w.adoptMode || 'reference';
   var modeToggle = w.source ? '<div style="margin-top:8px;font-size:11px;color:#3a4048">by: <span onclick="cwSetAdoptMode(\'reference\')" style="cursor:pointer;font-weight:700;padding:2px 9px;border-radius:11px;border:1px solid ' + (mode === 'reference' ? '#2c7a43' : 'var(--line)') + ';color:' + (mode === 'reference' ? '#fff' : 'var(--grey)') + ';background:' + (mode === 'reference' ? '#2c7a43' : '#fff') + '">reference</span> <span onclick="cwSetAdoptMode(\'value\')" style="cursor:pointer;font-weight:700;padding:2px 9px;border-radius:11px;border:1px solid ' + (mode === 'value' ? '#2c5aa0' : 'var(--line)') + ';color:' + (mode === 'value' ? '#fff' : 'var(--grey)') + ';background:' + (mode === 'value' ? '#2c5aa0' : '#fff') + '">value</span></div>' : '';
-  var products = (w.built && w.built.finishes) ? '<div style="margin-top:12px;display:flex;align-items:center;gap:8px"><span style="font-size:11px;font-weight:800;color:#6a44a8;letter-spacing:.05em">PRODUCTS · ' + w.built.finishes.length + '</span><span style="font-size:9.5px;color:var(--grey)">tick to sell · click to inspect</span><span onclick="cwChooseAll(true)" style="cursor:pointer;font-size:10px;color:var(--blue);margin-left:auto">all</span><span style="color:#c8d0d9">·</span><span onclick="cwChooseAll(false)" style="cursor:pointer;font-size:10px;color:var(--blue)">none</span></div>' + w.built.finishes.map(function(it){ return _cwProductCard(w, it); }).join('') : '';
+  var products = (w.built && w.built.finishes) ? '<div style="margin-top:12px;display:flex;align-items:center;gap:8px"><span style="font-size:11px;font-weight:800;color:#6a44a8;letter-spacing:.05em">PRODUCTS · ' + w.built.finishes.length + '</span><span style="font-size:11px;color:var(--grey)">tick to sell · click to inspect</span><span onclick="cwChooseAll(true)" style="cursor:pointer;font-size:11px;color:var(--blue);margin-left:auto">all</span><span style="color:#c8d0d9">·</span><span onclick="cwChooseAll(false)" style="cursor:pointer;font-size:11px;color:var(--blue)">none</span></div>' + w.built.finishes.map(function(it){ return _cwProductCard(w, it); }).join('') : '';
   return '<div style="font-size:12.5px;color:#3a4048;margin-bottom:8px">Pick a <b>blueprint</b> — a ready, structured catalogue of this sort. Its <b>products</b> list here; tick the ones you sell, click one to see its field values on the left. <b>No blueprint? Skip.</b></div>' + picker + rights + modeToggle + products;
 }
 function _cwStep3(w){
@@ -670,10 +670,10 @@ function _cwStep3(w){
   var mapped = Object.keys(w.erpMap).filter(function(k){ return w.erpMap[k] && w.erpMap[k].system && w.erpMap[k].system !== '—'; }).length;
   var rows = fields.map(function(f){ var m = w.erpMap[f.name] || {}; var sys = m.system || '—'; var esn = f.name.replace(/'/g, "\\'");
     var sysSel = '<select onchange="cwSetMapSys(\'' + esn + '\',this.value)" style="font-size:11px;padding:4px;border:1px solid var(--line);border-radius:6px">' + systems.map(function(s){ return '<option' + (sys === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>';
-    var ref = sys !== '—' ? '<input value="' + esc(m.ref || '') + '" oninput="cwSetMapRef(\'' + esn + '\',this.value)" placeholder="field / code in ' + esc(sys) + '" style="flex:1;min-width:0;font-size:11px;padding:4px 7px;border:1px solid var(--line);border-radius:6px">' : '<span style="font-size:10.5px;color:var(--grey);flex:1">' + (f._bp ? '📎 from blueprint' : 'not mapped') + '</span>';
-    return '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px dashed var(--line)"><span style="flex:0 0 138px;font-size:11.5px;color:#3a4048">' + esc(f.name) + (f._bp ? ' <span style="color:#6a44a8;font-size:9px">📎</span>' : '') + '</span>' + sysSel + ref + '</div>';
+    var ref = sys !== '—' ? '<input value="' + esc(m.ref || '') + '" oninput="cwSetMapRef(\'' + esn + '\',this.value)" placeholder="field / code in ' + esc(sys) + '" style="flex:1;min-width:0;font-size:11px;padding:4px 7px;border:1px solid var(--line);border-radius:6px">' : '<span style="font-size:11px;color:var(--grey);flex:1">' + (f._bp ? '📎 from blueprint' : 'not mapped') + '</span>';
+    return '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px dashed var(--line)"><span style="flex:0 0 138px;font-size:11.5px;color:#3a4048">' + esc(f.name) + (f._bp ? ' <span style="color:#6a44a8;font-size:11px">📎</span>' : '') + '</span>' + sysSel + ref + '</div>';
   }).join('');
-  return '<div style="font-size:13px;color:#3a4048;margin-bottom:10px">Map fields to your <b>own systems (ERP / Tally / SAP)</b> so they sync from there. These <b>mapping rules are saved with the catalogue design</b> and stay for each selected item. <b>Nothing from ERP? Skip.</b></div>' + rows + (mapped ? '<div style="font-size:10.5px;color:#b07b1e;margin-top:8px">🔗 ' + mapped + ' field(s) mapped to your systems — saved as references with the design.</div>' : '');
+  return '<div style="font-size:13px;color:#3a4048;margin-bottom:10px">Map fields to your <b>own systems (ERP / Tally / SAP)</b> so they sync from there. These <b>mapping rules are saved with the catalogue design</b> and stay for each selected item. <b>Nothing from ERP? Skip.</b></div>' + rows + (mapped ? '<div style="font-size:11px;color:#b07b1e;margin-top:8px">🔗 ' + mapped + ' field(s) mapped to your systems — saved as references with the design.</div>' : '');
 }
 function _cwStep4(w){
   var mode = w.bulkMode || 'csv';
@@ -686,7 +686,7 @@ function _cwStep4(w){
       + '<textarea id="cw_bulk_csv" placeholder="name,price,pack_size,hsn\nRoyale Matt,520,4,3209\nRoyale Shyne,610,4,3209" rows="5" style="width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:12px;font-family:monospace;resize:vertical"></textarea>'
       + '<button class="pri" onclick="cwImportCSV()" style="margin-top:8px;padding:8px 15px">Import rows</button>'
       + (n ? '<div style="margin-top:8px;font-size:11.5px;color:#2c7a43">✓ ' + n + ' item(s) imported from CSV — they\'ll be in your catalogue.</div>' : '')
-      + '<div style="font-size:10.5px;color:var(--grey);margin-top:6px;font-style:italic">Excel? Save-as CSV. Hundreds of rows work in one paste.</div>';
+      + '<div style="font-size:11px;color:var(--grey);margin-top:6px;font-style:italic">Excel? Save-as CSV. Hundreds of rows work in one paste.</div>';
   } else if (mode === 'few') {
     var rem = _cwRemaining(w).filter(function(r){ return r.leg !== 'compute'; });
     body = '<div style="font-size:12.5px;color:#3a4048;margin-bottom:8px">Just a few? Fill the remaining fields by hand (or use ＋ Add item on the finished catalogue).</div>'
@@ -715,16 +715,16 @@ function _cwStep4(w){
              * it is theirs, not the model's. Without that distinction someone confirming a screenful of cards
              * cannot tell which values they actually checked.
              */
-            + (p._ai ? '<div style="margin-top:6px;font-size:9.5px;font-weight:800;color:#6d5bd0;background:#f0ecfb;border-radius:5px;padding:1px 6px;display:inline-block">✨ proposed — check it</div>' : '')
+            + (p._ai ? '<div style="margin-top:6px;font-size:11px;font-weight:800;color:#6d5bd0;background:#f0ecfb;border-radius:5px;padding:1px 6px;display:inline-block">✨ proposed — check it</div>' : '')
             + '<input value="' + esc(p.name || '') + '" oninput="cwSetPhotoField(\'' + p.id + '\',\'name\',this.value)" placeholder="item name" style="width:100%;box-sizing:border-box;margin-top:6px;padding:5px 7px;border:1px solid ' + (p._ai ? '#c9bdf0' : 'var(--line)') + ';border-radius:6px;font-size:11.5px">'
-            + '<div style="display:flex;gap:5px;margin-top:5px;align-items:center"><span style="font-size:10px;color:var(--grey)">' + esc(_catfCcy()) + '</span><input type="number" value="' + (p.price != null ? p.price : '') + '" oninput="cwSetPhotoField(\'' + p.id + '\',\'price\',this.value)" placeholder="price" style="flex:1;min-width:0;padding:4px 6px;border:1px solid var(--line);border-radius:6px;font-size:11.5px"><span onclick="cwPhotoRemove(\'' + p.id + '\')" style="cursor:pointer;color:#b23;font-size:15px;line-height:1" title="remove">×</span></div>'
+            + '<div style="display:flex;gap:5px;margin-top:5px;align-items:center"><span style="font-size:11px;color:var(--grey)">' + esc(_catfCcy()) + '</span><input type="number" value="' + (p.price != null ? p.price : '') + '" oninput="cwSetPhotoField(\'' + p.id + '\',\'price\',this.value)" placeholder="price" style="flex:1;min-width:0;padding:4px 6px;border:1px solid var(--line);border-radius:6px;font-size:11.5px"><span onclick="cwPhotoRemove(\'' + p.id + '\')" style="cursor:pointer;color:#b23;font-size:15px;line-height:1" title="remove">×</span></div>'
             + '</div>'; }).join('') + '</div>'
           + '<button onclick="cwPhotosCommit()" style="margin-top:10px;padding:8px 15px;border:1px solid #2c7a43;border-radius:9px;background:#fff;color:#2c7a43;font-weight:600">✓ Add ' + ph.length + ' photo' + (ph.length > 1 ? 's' : '') + ' to catalogue</button>'
           + (committed ? '<div style="margin-top:7px;font-size:11.5px;color:#2c7a43">✓ ' + committed + ' photo item(s) in your catalogue.</div>' : '')
         : '')
       /* ⚠️ This line used to say the co-assist was "text-only today". It is not, as of b127 — and a footnote that
          still says a feature is missing while the button for it sits above is worse than no footnote. */
-      + '<div style="font-size:10.5px;color:var(--grey);margin-top:12px;font-style:italic">Photos are downscaled and stored on the item. <b>✨ Read the labels</b> asks the co-assist to read what it can SEE into the cards — always a <b>proposal you check</b>, never a value it commits, and it fills only empty fields so anything you typed stays yours.</div>';
+      + '<div style="font-size:11px;color:var(--grey);margin-top:12px;font-style:italic">Photos are downscaled and stored on the item. <b>✨ Read the labels</b> asks the co-assist to read what it can SEE into the cards — always a <b>proposal you check</b>, never a value it commits, and it fills only empty fields so anything you typed stays yours.</div>';
   }
   return '<div style="font-size:13px;color:#3a4048;margin-bottom:10px">How do you have your items? Don\'t type hundreds — bring a <b>list</b> (CSV/Excel) or <b>photos</b>.</div>' + bar + body;
 }
@@ -996,10 +996,10 @@ function _catfAppearsTab(f, c, facets){
   var visFields = (c.fields || []).slice(0, 4);
   var ccy = _catfCcy();
   var priceOf = function(r){ return (r.price != null && r.price !== '') ? r.price : 40; };
-  var step = function(n, title, inner){ return '<div style="border:1px solid var(--line);border-radius:11px;background:#fff;padding:11px 13px;margin-top:8px"><div style="font-size:10px;font-weight:800;color:#2c5aa0;letter-spacing:.04em;margin-bottom:8px">' + n + ' · ' + title + '</div>' + inner + '</div>'; };
+  var step = function(n, title, inner){ return '<div style="border:1px solid var(--line);border-radius:11px;background:#fff;padding:11px 13px;margin-top:8px"><div style="font-size:11px;font-weight:800;color:#2c5aa0;letter-spacing:.04em;margin-bottom:8px">' + n + ' · ' + title + '</div>' + inner + '</div>'; };
   var arrow = '<div style="text-align:center;color:#c8d0d9;font-size:15px;line-height:1.1">↓</div>';
   // 1 · browse (listing grid)
-  var browse = '<div style="display:flex;gap:8px;flex-wrap:wrap">' + rows.map(function(r){ return '<div style="width:132px;border:1px solid var(--line);border-radius:9px;padding:8px 9px;background:#fff">' + (facets.media ? '<div style="height:46px;border-radius:6px;background:linear-gradient(135deg,#eef1f5,#dde3ea);margin-bottom:6px"></div>' : '') + '<div style="font-weight:600;font-size:11.5px;line-height:1.2">' + esc(r.name || 'item') + '</div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px"><span style="font-weight:700;font-size:11.5px">' + esc(_catfMoney(priceOf(r))) + '</span><span style="background:#2c5aa0;color:#fff;border-radius:4px;padding:2px 7px;font-size:10px;font-weight:600">' + (f.method === 'cart' ? 'Add' : 'View') + '</span></div></div>'; }).join('') + '</div>';
+  var browse = '<div style="display:flex;gap:8px;flex-wrap:wrap">' + rows.map(function(r){ return '<div style="width:132px;border:1px solid var(--line);border-radius:9px;padding:8px 9px;background:#fff">' + (facets.media ? '<div style="height:46px;border-radius:6px;background:linear-gradient(135deg,#eef1f5,#dde3ea);margin-bottom:6px"></div>' : '') + '<div style="font-weight:600;font-size:11.5px;line-height:1.2">' + esc(r.name || 'item') + '</div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px"><span style="font-weight:700;font-size:11.5px">' + esc(_catfMoney(priceOf(r))) + '</span><span style="background:#2c5aa0;color:#fff;border-radius:4px;padding:2px 7px;font-size:11px;font-weight:600">' + (f.method === 'cart' ? 'Add' : 'View') + '</span></div></div>'; }).join('') + '</div>';
   // 2 · product detail
   var p0 = rows[0] || {};
   var spec = visFields.map(function(fl){ var v = (p0.values && p0.values[fl.name]) || _catfSampleVal(fl.name, 0); return '<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0;border-bottom:1px dashed var(--line)"><span style="color:var(--grey)">' + esc(fl.name) + '</span><span style="font-family:monospace">' + esc(v) + '</span></div>'; }).join('');
@@ -1008,14 +1008,14 @@ function _catfAppearsTab(f, c, facets){
   var qty = 3; var up = parseFloat(priceOf(p0)) || 40; var tot = f.method === 'cart' ? up * qty : up;
   var cart = '<div style="display:flex;justify-content:space-between;font-size:12px"><span>' + esc(p0.name || 'Item') + ' × ' + qty + '</span><span style="font-weight:600">' + esc(_catfMoney(tot)) + '</span></div><div style="display:flex;justify-content:space-between;margin-top:6px;border-top:1px solid var(--line);padding-top:6px"><span style="font-weight:700">Total (' + esc(ccy) + ')</span><span style="font-weight:800">' + esc(_catfMoney(tot)) + '</span></div><div style="text-align:right;margin-top:9px"><span style="background:#2c7a43;color:#fff;border-radius:6px;padding:5px 14px;font-size:11.5px;font-weight:600">Place order</span></div>';
   // 4 · order placed → the chit (final output, both sides keep a copy)
-  var fieldLines = visFields.map(function(fl){ var v = (p0.values && p0.values[fl.name]) || _catfSampleVal(fl.name, 0); return '<div style="display:flex;justify-content:space-between;font-size:10.5px;padding:1px 0"><span style="color:var(--grey)">' + esc(fl.name) + '</span><span style="font-family:monospace;color:var(--faint,#8a929e)">' + esc(v) + '</span></div>'; }).join('');
-  var chit = '<div style="max-width:280px;margin:0 auto;border:1px solid var(--line);border-top:3px solid #2c5aa0;border-radius:10px;padding:11px 12px;background:#fbfdff"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-weight:700;font-size:12.5px">' + esc(p0.name || 'Item') + '</span><span style="font-size:9.5px;color:#2c7a43;font-weight:700">✓ placed</span></div><div style="font-size:11px;color:var(--grey);margin-top:3px">Qty ' + qty + (f.method === 'cart' ? ' · ' + esc(_catfMoney(tot)) : '') + (p0.unit ? ' ' + esc(p0.unit) : '') + '</div>' + (fieldLines ? '<div style="margin-top:6px;border-top:1px dashed var(--line);padding-top:5px">' + fieldLines + '</div>' : '') + '<div style="border-top:1px dashed var(--line);margin-top:8px;padding-top:5px;font-size:9.5px;color:var(--faint,#8a929e);font-family:monospace">🔒 sealed · arrives on the rail · both parties keep a copy</div></div>';
+  var fieldLines = visFields.map(function(fl){ var v = (p0.values && p0.values[fl.name]) || _catfSampleVal(fl.name, 0); return '<div style="display:flex;justify-content:space-between;font-size:11px;padding:1px 0"><span style="color:var(--grey)">' + esc(fl.name) + '</span><span style="font-family:monospace;color:var(--faint,#8a929e)">' + esc(v) + '</span></div>'; }).join('');
+  var chit = '<div style="max-width:280px;margin:0 auto;border:1px solid var(--line);border-top:3px solid #2c5aa0;border-radius:10px;padding:11px 12px;background:#fbfdff"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-weight:700;font-size:12.5px">' + esc(p0.name || 'Item') + '</span><span style="font-size:11px;color:#2c7a43;font-weight:700">✓ placed</span></div><div style="font-size:11px;color:var(--grey);margin-top:3px">Qty ' + qty + (f.method === 'cart' ? ' · ' + esc(_catfMoney(tot)) : '') + (p0.unit ? ' ' + esc(p0.unit) : '') + '</div>' + (fieldLines ? '<div style="margin-top:6px;border-top:1px dashed var(--line);padding-top:5px">' + fieldLines + '</div>' : '') + '<div style="border-top:1px dashed var(--line);margin-top:8px;padding-top:5px;font-size:11px;color:var(--faint,#8a929e);font-family:monospace">🔒 sealed · arrives on the rail · both parties keep a copy</div></div>';
   return '<div style="font-size:11px;font-weight:800;color:#2c7a43;letter-spacing:.05em">🛍 CUSTOMER EXPERIENCE — end to end</div>'
     + step('1', 'Browse the storefront', browse) + arrow
     + step('2', 'Open a product', detail) + arrow
     + step('3', 'Cart &amp; checkout', cart) + arrow
     + step('4', 'Order placed → the chit', chit)
-    + '<div style="font-size:10.5px;color:var(--grey);font-style:italic;margin-top:8px">This is what your customer experiences — and the chit is what both sides keep.</div>';
+    + '<div style="font-size:11px;color:var(--grey);font-style:italic;margin-top:8px">This is what your customer experiences — and the chit is what both sides keep.</div>';
 }
 
 /* the items under this face — each tagged by SOURCE (reference / manual / ERP). For referenced items the owner only sets price. */
@@ -1027,14 +1027,14 @@ function _catfItemsHtml(f){
     var t = _catfSrcTag(it._src);
     var attrs = Object.keys(it).filter(function(k){ return k.charAt(0) !== '_' && ['product', 'name', 'price', 'unit', 'rate'].indexOf(k) < 0 && it[k] != null && it[k] !== '' && typeof it[k] !== 'object'; }).slice(0, 3).map(function(k){ return esc(k) + ': ' + esc(it[k]); }).join(' · ');
     var priceCell = (it.price != null && it.price !== '')
-      ? '<span style="font-weight:700;font-size:12px">' + esc(_catfMoney(it.price)) + '</span> <span onclick="catfEditPrice(' + i + ')" style="cursor:pointer;color:var(--blue);font-size:10px">edit</span>'
+      ? '<span style="font-weight:700;font-size:12px">' + esc(_catfMoney(it.price)) + '</span> <span onclick="catfEditPrice(' + i + ')" style="cursor:pointer;color:var(--blue);font-size:11px">edit</span>'
       : '<input type="number" placeholder="set price" onchange="catfSetItemPrice(' + i + ',this.value)" title="the ONLY thing you enter for a referenced item" style="width:92px;padding:4px 7px;border:1px solid #d98b84;border-radius:6px;font-size:12px;background:#fbeeec">';
     return '<div style="border:1px solid var(--line);border-radius:9px;padding:8px 11px;margin-top:5px;background:#fff"><div style="display:flex;align-items:center;gap:8px">'
       + ((it._photo || it.photo) ? '<span style="width:26px;height:26px;border-radius:5px;background:#f4f6f8 center/cover no-repeat;background-image:url(' + (it._photo || it.photo) + ');flex:none"></span>' : (it._media ? '<span style="width:22px;height:22px;border-radius:5px;background:linear-gradient(135deg,#eef1f5,#dde3ea);flex:none"></span>' : ''))
       + '<span style="font-weight:600;font-size:12.5px">' + esc(it.product || it.name || 'item') + '</span>'
-      + '<span style="font-size:9.5px;font-weight:700;color:' + t[1] + ';background:' + t[1] + '18;border-radius:4px;padding:1px 6px">' + t[0] + '</span>'
+      + '<span style="font-size:11px;font-weight:700;color:' + t[1] + ';background:' + t[1] + '18;border-radius:4px;padding:1px 6px">' + t[0] + '</span>'
       + '<span style="margin-left:auto;display:flex;align-items:center;gap:6px">' + _catfUnitCell(f, it, i) + priceCell + '</span></div>'
-      + (attrs ? '<div style="font-size:10.5px;color:var(--grey);margin-top:3px">' + attrs + (it._src === 'reference' ? ' <span style="color:#6a44a8">· referenced, kept inside</span>' : '') + '</div>' : '') + '</div>';
+      + (attrs ? '<div style="font-size:11px;color:var(--grey);margin-top:3px">' + attrs + (it._src === 'reference' ? ' <span style="color:#6a44a8">· referenced, kept inside</span>' : '') + '</div>' : '') + '</div>';
   }).join('');
   return '<div style="font-size:11px;font-weight:800;color:#2c7a43;letter-spacing:.05em;margin-top:18px">YOUR ITEMS · ' + items.length + (needPrice ? ' <span style="color:#a5382e;font-weight:600">· ' + needPrice + ' need a price</span>' : ' <span style="color:#2c7a43">· ready</span>') + '</div><div style="margin-top:4px">' + rows + '</div>';
 }
@@ -1043,7 +1043,7 @@ function _catfItemsHtml(f){
 function _catfUnitCell(f, it, i){
   var units = (f.units && f.units.length) ? f.units : []; if (!units.length) return '';
   var sel = (units.indexOf(it.unit) >= 0) ? it.unit : units[0];
-  if (units.length === 1) return '<span style="font-size:10.5px;color:var(--grey)">/ ' + esc(sel) + '</span>';
+  if (units.length === 1) return '<span style="font-size:11px;color:var(--grey)">/ ' + esc(sel) + '</span>';
   return '<select data-testid="catf-item-unit" onchange="catfSetItemUnit(' + i + ',this.value)" title="unit this item sells by" style="padding:3px 5px;border:1px solid var(--line);border-radius:5px;font-size:11px;background:#fff;color:#3a4048">'
     + units.map(function(u){ return '<option value="' + esc(u) + '"' + (u === sel ? ' selected' : '') + '>' + esc(u) + '</option>'; }).join('') + '</select>';
 }
@@ -1069,7 +1069,7 @@ function _catfFaceView(){
       + '<span onclick="catfToggleFacet(\'' + x.k + '\')" style="cursor:pointer;font-size:11.5px;font-weight:700;padding:4px 12px;border-radius:14px;border:1px solid ' + (on ? '#2c7a43' : 'var(--line)') + ';color:' + (on ? '#fff' : 'var(--blue)') + ';background:' + (on ? '#2c7a43' : '#fff') + '">' + (on ? '✓ on' : '＋ add') + '</span></div>';
   }).join('');
   var inner = '<div style="max-width:660px">'
-    + '<div style="display:flex;align-items:center;gap:10px"><div style="font-size:18px;font-weight:800">🗂️ Catalogue face</div>' + (f.adoptedFrom ? '<span style="font-size:10.5px;font-weight:700;color:#2c5aa0;background:#eef2f7;border-radius:5px;padding:2px 8px">adopted · ' + esc(f.adoptedFrom) + '</span>' : '<span style="font-size:10.5px;font-weight:700;color:#6a4fa0;background:#efeafa;border-radius:5px;padding:2px 8px">built from your data</span>') + '</div>'
+    + '<div style="display:flex;align-items:center;gap:10px"><div style="font-size:18px;font-weight:800">🗂️ Catalogue face</div>' + (f.adoptedFrom ? '<span style="font-size:11px;font-weight:700;color:#2c5aa0;background:#eef2f7;border-radius:5px;padding:2px 8px">adopted · ' + esc(f.adoptedFrom) + '</span>' : '<span style="font-size:11px;font-weight:700;color:#6a4fa0;background:#efeafa;border-radius:5px;padding:2px 8px">built from your data</span>') + '</div>'
     + '<div style="font-size:11.5px;color:var(--grey);margin-top:4px">One face for the whole catalogue — every item conforms. ' + _catfSettingsNote() + '</div>'
     + '<label style="font-size:11px;color:var(--grey);display:block;margin-top:14px">Purpose</label>'
     + '<textarea oninput="catfSetPurpose(this.value)" rows="2" style="width:100%;margin-top:4px;box-sizing:border-box;padding:8px 10px;border:1px solid var(--line);border-radius:9px;font-size:13px;resize:vertical">' + esc(c.story || '') + '</textarea>'
@@ -1080,7 +1080,7 @@ function _catfFaceView(){
     + '<div style="font-size:11px;font-weight:800;color:#2c5aa0;letter-spacing:.05em;margin-top:16px">DEEPEN THE CATALOGUE <span style="font-weight:500;color:var(--grey)">— add only what this business needs</span></div>'
     + '<div style="margin-top:6px">' + facetRows + '</div>'
     + _catfItemsHtml(f)
-    + '<div style="font-size:10.5px;color:var(--grey);margin-top:16px">Item data comes three ways — <b>📎 from the source</b> (owner sets price only) · <b>✍ entered</b> · <b>🔗 from ERP</b>:</div>'
+    + '<div style="font-size:11px;color:var(--grey);margin-top:16px">Item data comes three ways — <b>📎 from the source</b> (owner sets price only) · <b>✍ entered</b> · <b>🔗 from ERP</b>:</div>'
     + '<div style="display:flex;gap:10px;margin-top:6px;flex-wrap:wrap">'
     + '<button class="pri" onclick="catfFillItem()" style="padding:9px 15px">＋ Add manually</button>'
     + '<button onclick="catfSyncERP()" style="padding:9px 15px;border:1px solid #b07b1e;border-radius:9px;background:#fff;color:#b07b1e;font-weight:600">🔗 From ERP</button>'
@@ -1092,7 +1092,7 @@ function _catfFaceView(){
     + '<button onclick="catfPublishBlueprint()" style="padding:9px 15px;border:1px solid #6a4fa0;border-radius:9px;background:#fff;color:#6a4fa0;font-weight:600">📢 Publish as blueprint</button>'
     + '<button onclick="catfReset()" style="padding:9px 15px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--grey)">↺ Start over</button>'
     + '</div>'
-    + '<div style="margin-top:14px;font-size:10.5px;color:var(--grey)">Items are <b>golden records</b> — each source (blueprint · ERP · CSV · capture) merges into one item, keyed by SKU, edited via JSON Merge Patch. <span onclick="catfStandardsModal()" style="cursor:pointer;color:var(--blue);font-weight:600">📐 Built on open standards →</span></div>'
+    + '<div style="margin-top:14px;font-size:11px;color:var(--grey)">Items are <b>golden records</b> — each source (blueprint · ERP · CSV · capture) merges into one item, keyed by SKU, edited via JSON Merge Patch. <span onclick="catfStandardsModal()" style="cursor:pointer;color:var(--blue);font-weight:600">📐 Built on open standards →</span></div>'
     + '</div>';
   return '<div style="flex:1;min-height:0;overflow-y:auto;padding:22px 20px">' + inner + '</div>';
 }

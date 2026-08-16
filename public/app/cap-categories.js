@@ -468,7 +468,7 @@ function cbcatCss(){
   s.textContent = [
     '.cbcat-n{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11.5px;color:var(--grey);',
     'background:var(--paper);border:1px solid var(--line);border-radius:20px;padding:1px 9px;flex:0 0 auto}',
-    '.cbcat-badge{font-size:10.5px;font-weight:700;border-radius:6px;padding:1px 7px;text-transform:uppercase;letter-spacing:.04em}',
+    '.cbcat-badge{font-size:11px;font-weight:700;border-radius:6px;padding:1px 7px;text-transform:uppercase;letter-spacing:.04em}',
     '.cbcat-badge.ret{background:#eceaea;color:#6f6a6a}',
     '.cbcat-err{font-size:12.5px;color:#b4453f;background:#fbeceb;border:1px solid #f0c9c6;border-radius:9px;padding:8px 11px;margin:8px 0}',
     '.cbcat-note{font-size:12px;line-height:1.55;color:#6b5a36;background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;margin-bottom:11px}',

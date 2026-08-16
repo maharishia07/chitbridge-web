@@ -34,7 +34,17 @@ function contrast(rgb1, rgb2) {
   return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
 }
 
-const SCREENS = ['task', 'suppliers', 'mis', 'profile', 'settings', 'catalogue', 'definitions'];
+/**
+ * ⚠️ THESE ARE NAV KEYS AND THEY MUST EXIST. `definitions` was dropped on 2026-08-16 (its tenants were rehomed to
+ * Categories, Catalogue setup and Suppliers) and this list still asked for it — so `clickNav` waited on a testid
+ * that will never appear, and BOTH tests died on the 60s timeout with no mention of the missing screen anywhere
+ * in the failure. It read as a contrast/overlap regression; it was a stale list.
+ *
+ * ⭐ A `.catch(() => {})` around a navigation HIDES exactly this. It swallows the "no such element" but not the
+ * WAIT that precedes it, so a removed screen costs the full locator timeout and reports as something else
+ * entirely. If a screen is renamed or dropped, this line changes with it.
+ */
+const SCREENS = ['task', 'suppliers', 'mis', 'profile', 'settings', 'catalogue', 'categories', 'catsetup'];
 
 test.describe('Design guard · the rendered page', () => {
 

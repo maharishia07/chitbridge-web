@@ -832,7 +832,7 @@
       '.cbcat-li-n{flex:1;min-width:0}',
       '.cbcat-li-q,.cbcat-li-p{font-variant-numeric:tabular-nums;white-space:nowrap}',
       '.cbcat-offers{margin-top:8px;padding-top:8px;border-top:1px dashed #d8e4f3}',
-      '.cbcat-offhd{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#2c7a43;margin-bottom:4px}',
+      '.cbcat-offhd{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#2c7a43;margin-bottom:4px}',
       '.cbcat-offrow{display:flex;align-items:baseline;gap:8px;padding:2px 0;font-size:12px}',
       '.cbcat-offrow.note{color:#8a5a1e}',
       '.cbcat-offn{font-weight:700;flex:none}',

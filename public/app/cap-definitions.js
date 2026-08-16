@@ -1018,7 +1018,7 @@ function cbDefCss(){
     '.cbdef-mine-row{display:flex;align-items:center;gap:9px;padding:8px 0;border-bottom:1px dashed #eee9e0;flex-wrap:wrap}',
     '.cbdef-mine-row:last-child{border-bottom:0}',
     '.cbdef-mine-n{font-size:13.5px;font-weight:700}',
-    '.cbdef-badge{font-size:10.5px;font-weight:700;border-radius:6px;padding:1px 7px;text-transform:uppercase;letter-spacing:.04em}',
+    '.cbdef-badge{font-size:11px;font-weight:700;border-radius:6px;padding:1px 7px;text-transform:uppercase;letter-spacing:.04em}',
     '.cbdef-badge.live{background:#e6f4ec;color:#2c7a43}',
     '.cbdef-badge.draft{background:#f4f2ec;color:#8a6d1e}',
     /* Retired is visually SPENT — struck name, grey badge — so it can never be mistaken for a draft awaiting publish. */
