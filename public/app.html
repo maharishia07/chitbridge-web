@@ -358,6 +358,36 @@
   .namemust.auto{background:#EDF2F9;color:var(--blue)}
   .namerule{font-size:12.5px;color:var(--ink);margin-top:4px}
   .namewhy{font-size:12px;color:var(--grey);line-height:1.55;margin-top:3px}
+  /* Categories on a product: ticks on the form, chips on the row, a select bar over the list. */
+  .ctcatgs{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 4px}
+  .ctcatg{border:1px solid var(--line);background:#fff;border-radius:20px;height:30px;padding:0 12px;
+          font:inherit;font-size:12.5px;color:var(--ink);cursor:pointer;white-space:nowrap}
+  .ctcatg:hover{border-color:#c6ccd4}
+  .ctcatg.on{background:#eef4ff;border-color:var(--blue);color:var(--blue);font-weight:700}
+  .ctcatg.gone{background:#f4f1e8;border-color:var(--gold-line);color:#6b5a36}
+  .ctcatg.add{color:var(--blue);border-style:dashed;font-weight:600}
+  .l3cat{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+  .catgchip{font-size:10.5px;background:#eef4ff;color:var(--blue);border:1px solid #d5e2f7;
+            border-radius:20px;padding:0 8px;line-height:17px;white-space:nowrap}
+  .catgchip.gone{background:#f4f1e8;color:#6b5a36;border-color:var(--gold-line);text-decoration:line-through}
+  .row.picked{background:#eef4ff}
+  .ctpick{display:flex;align-items:center;gap:9px;margin-top:8px;padding:7px 9px;background:#eef4ff;
+          border:1px solid #d5e2f7;border-radius:9px}
+  .ctpick button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:4px 10px;
+                 font-size:11.5px;cursor:pointer;color:var(--ink)}
+  .ctpick button.pri{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:700}
+  .ctpick button:disabled{opacity:.5;cursor:default}
+  /* The bulk dialog: one row per category, attach and remove as separate explicit choices. */
+  .bulklist{display:flex;flex-direction:column;gap:1px;background:var(--line);border:1px solid var(--line);
+            border-radius:9px;overflow:hidden;max-height:46vh;overflow-y:auto}
+  .bulkrow{display:flex;align-items:center;gap:9px;background:#fff;padding:8px 11px}
+  .bulkrow .bn{font-size:13px;font-weight:600;flex:1;min-width:0}
+  .bulkrow .bh{font-size:11px;color:var(--grey);white-space:nowrap}
+  .bulkrow button{border:1px solid var(--line);background:#fff;border-radius:20px;padding:3px 10px;
+                  font-size:11.5px;cursor:pointer;color:var(--ink);white-space:nowrap}
+  .bulkrow .badd.on{background:#eef4ff;border-color:var(--blue);color:var(--blue);font-weight:700}
+  .bulkrow .brem.on{background:#fbeceb;border-color:#e0a9a4;color:#b4453f;font-weight:700}
+  .bulkrow button:disabled{opacity:.4;cursor:default}
   .supacts button.supact-pri{background:var(--blue);border-color:var(--blue);color:#fff}
   .supacts button.supact-pri:hover{filter:brightness(1.06)}
   /* The sliding panel. .list is the positioning context; the panel covers it and animates in from the left. */
@@ -1922,7 +1952,10 @@ const MENUS = {
        outside. Athi: *"can we bring external new messages under rail?"* */
     ["Rail", [["task","📥","Task",""],["order","📤","Order",""],["messages","💬","Messages",""],["drafts","📝","Drafts",""],["archive","🗄️","Archive",""],["trash","🗑️","Trash",""]]],
     ["Work",    [["worklist","🧰","Everyone's work"],["intake","📨","Intake"],["disputes","⚖️","Disputes"]]],
-    ["Business",[["catalogue","🗂️","Catalogue"],["definitions","🧱","Definitions"],["customers","🛍️","Customers"],["suppliers","🏭","Suppliers"],["network","🔗","Network"],["coassists","🧑‍🤝‍🧑","Co-assists"]]],
+    /* ⭐ CATEGORIES SITS NEXT TO CATALOGUE, not inside Definitions (Athi, 2026-08-16: *"bring the category as a
+       panel next to catalogue"*). It is where you shape the shelf, so it belongs beside the shelf — Definitions
+       still LISTS categories, but authoring now has one home and Definitions points at it. */
+    ["Business",[["catalogue","🗂️","Catalogue"],["categories","🏷️","Categories"],["definitions","🧱","Definitions"],["customers","🛍️","Customers"],["suppliers","🏭","Suppliers"],["network","🔗","Network"],["coassists","🧑‍🤝‍🧑","Co-assists"]]],
     ["Insight", [["mis","📊","MIS"],["traceability","🧭","Traceability"],["readiness","🛡️","Trade ready"]]],
   ], tag:"Owner does structure."},
   /* ⭐ AN ACTOR GETS REPLIES TOO — Athi, 2026-08-15: *"can you show me message from … actor view?"* The screen
@@ -1960,6 +1993,7 @@ const PURPOSE = {
   suppliers:"Suppliers you buy from — pull their catalogue into a cart.",
   customers:"Your CRM — everyone who ordered from your storefront. They exist only under your shop; the platform never takes them over.",
   catalogue:"What you sell — products and price.",
+  categories:"How your shelf is sorted. Make a category here, then tick products in the Catalogue and attach them. A product can sit in several.",
   worklist:"Every line assigned across every chit — grouped by date, by person or by order. A co-assist sees only their own.",
   readiness:"Your trade readiness — gather the clearances your standards require; buyers see them as verified confidence.",
   coassists:"Manage who acts for you — people now; connectors, devices, processes, agents next. For structure use Network.",
@@ -2036,6 +2070,30 @@ function renderApp(){
    * the guard at the thing being protected, so it holds however it is reached.
    */
   if(!SESSION.token){ stopAutoRefresh(); return go("#/login"); }
+  /**
+   * ⚠️⚠️ RE-ENTRANCY GUARD — A RENDER HOOK MUST NEVER BE ABLE TO FREEZE THE BROWSER.
+   *
+   * renderApp() ends by running per-screen loader hooks, and several of them can call renderApp() again once an
+   * async thing lands. That is fine when the trigger is a one-time transition and catastrophic when it is not:
+   * a hook that re-renders on a promise which resolves INSTANTLY from cache recurses without ever yielding, and
+   * the tab locks hard enough that the debugger stops answering. That happened here on 2026-08-16 adding the
+   * Categories screen, and it cost more time than the screen did.
+   *
+   * ⚠️ THIS IS A BACKSTOP, NOT A LICENCE. A hook that re-renders unconditionally is still a bug and still has to
+   * be fixed — but the failure now shows up as one skipped repaint and a console line, instead of a dead tab
+   * with no way to read the error that would have explained it.
+   */
+  if(_rendering){ _renderAgain = true; cblog('debug','renderApp re-entered — deferring (a loader hook is re-rendering)'); return; }
+  _rendering = true;
+  try { return _renderApp(); }
+  finally {
+    _rendering = false;
+    /* One catch-up pass, on a new task so the stack unwinds first. Not a loop: the flag is cleared before it. */
+    if(_renderAgain){ _renderAgain = false; setTimeout(renderApp, 0); }
+  }
+}
+var _rendering = false, _renderAgain = false;
+function _renderApp(){
   /**
    * ⚠️ THE MENU FALLS BACK TO `entity`; THE SETTINGS LINK DID NOT — and that is why ⚙️ Settings was missing.
    * MENUS has three keys (entity · actor · customer) and `MENUS[role]||MENUS.entity` quietly covers anything else,
@@ -2140,6 +2198,20 @@ function renderApp(){
     if(UI.nav==="suppliers") loadSuppliers();
     if(UI.nav==="customers") loadCustomers();
     if(UI.nav==="catalogue") loadCatalogue();
+    /**
+     * ⚠️ RE-RENDER ONLY ON THE FIRST ARRIVAL, AND THE REASON IS A FROZEN TAB.
+     *
+     * This hook runs inside renderApp(). My first cut called renderApp() unconditionally once the capability
+     * resolved — and ensureCap resolves INSTANTLY from cache on every subsequent pass, so render → hook →
+     * render → hook, forever. The browser locked hard enough that the debugger stopped answering.
+     *
+     * A capability load is a one-time transition. Only the transition may re-render; after that the screen
+     * repaints through its own paint functions like every other panel.
+     */
+    if(UI.nav==="categories"){
+      const had = CAP_LOADED["categories"];
+      ensureCap("categories").then(function(){ if(!had) renderApp(); cbcatLoad(); });
+    }
     if(UI.nav==="mis" && typeof loadMIS==="function") loadMIS();
     if(UI.nav==="coassists") loadCoassists();
     if(UI.nav==="assistreview" && typeof loadGaps==="function") loadGaps();
@@ -4272,8 +4344,12 @@ function catalogueScreen(){
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:14px">🗂️ Catalogue</span><button onclick="openAssist('catalogue')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:#fff;color:#3F66A6;border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button><span onclick="UI.nav='cataloguesetup';renderApp()" title="New: catalogue face setup (prototype)" style="margin-left:auto;cursor:pointer;font-size:11px;font-weight:600;color:var(--blue);border:1px solid var(--line);border-radius:7px;padding:3px 9px">⚙ Set up (new)</span></div>
       <button class="composebtn" style="width:100%;justify-content:center" data-testid="cat-new-product" onclick="newProduct()">+ New product</button>
       <div class="srch" style="margin-top:8px">🔍 <input data-testid="cat-search" placeholder="Search name, code, unit" value="${esc(UI.prodQ||'')}" oninput="UI.prodQ=this.value;paintProdList()"></div>
+      ${prodCatgStripHTML()}
+      <div id="ct_pickbar">${prodPickBarHTML()}</div>
       <div style="margin-top:8px;display:flex;align-items:center;gap:8px">
         <span style="font-size:11px;color:var(--grey)" id="ct_count">${prodVisible().length} product(s)</span>
+        <button data-testid="cat-select" onclick="prodPickMode(!UI.prodPick)" title="Tick several products, then attach them to a category at once"
+          style="border:1px solid var(--line);background:${UI.prodPick?'var(--blue)':'var(--paper)'};color:${UI.prodPick?'#fff':'var(--ink)'};border-radius:8px;padding:4px 9px;font-size:11.5px;cursor:pointer">☑ Select</button>
         <button data-testid="cat-variants" onclick="declareVariants()" title="One product, several sizes — say which lines belong together"
           style="margin-left:auto;border:1px solid var(--line);background:var(--paper);border-radius:8px;padding:4px 9px;font-size:11.5px;color:var(--ink);cursor:pointer">🔗 Variants</button>
         <button data-testid="cat-starter-set" onclick="startFromStandardSet()" title="Add the columns your trade expects"
@@ -4300,7 +4376,156 @@ function pPrice(d){ return cbAmount(d.price); }
 function pCode(d){ return d.code||d.hsn||d.sku||''; }
 function pDesc(d){ return d.desc||d.description||d.note||''; }
 function prodId(p){ return p.item_id||p.id; }
-function prodVisible(){ const a=(UI.prods||[]); const q=(UI.prodQ||'').trim().toLowerCase(); if(!q)return a; return a.filter(p=>{const d=pData(p); return (pName(d)+' '+pCode(d)+' '+pUnit(d)+' '+pDesc(d)).toLowerCase().includes(q);}); }
+/**
+ * ⚠️ TWO FILTERS, AND THE CATEGORY ONE IS NOT A SEARCH. `UI._prodCatg` is set by the chip row and by the
+ * Categories screen handing over its "uncategorised" count — so the number you press on one screen lands you on
+ * the products it was counting, rather than reporting a figure you then have to go and find by hand.
+ */
+function prodVisible(){
+  const q=(UI.prodQ||'').trim().toLowerCase();
+  const g=UI._prodCatg||'';
+  return (UI.prods||[]).filter(p=>{
+    const d=pData(p);
+    if(g){ const ids=catgIdsOf(d); if(g==='__none' ? ids.length>0 : ids.indexOf(g)<0) return false; }
+    if(!q) return true;
+    /* The category NAMES are searchable too — typing "grains" should find what is in Grains, which is what
+       anyone expects of a search box sitting above a list that shows category chips. */
+    const names=catgNamesOf(d).join(' ');
+    const live=(typeof _CATG!=='undefined'&&_CATG||[]).filter(c=>catgIdsOf(d).indexOf(c.id)>=0).map(c=>c.name).join(' ');
+    return (pName(d)+' '+pCode(d)+' '+pUnit(d)+' '+pDesc(d)+' '+names+' '+live).toLowerCase().includes(q);
+  });
+}
+/* ── select mode + bulk categorise ───────────────────────────────────────────────────────────────────────────── */
+function prodPickMode(on){
+  UI.prodPick=!!on;
+  if(!UI.prodPicked) UI.prodPicked=new Set();
+  if(!on) UI.prodPicked.clear();
+  renderApp();
+}
+function prodTogglePick(id){
+  if(!UI.prodPicked) UI.prodPicked=new Set();
+  if(UI.prodPicked.has(id)) UI.prodPicked.delete(id); else UI.prodPicked.add(id);
+  paintProdList(); prodPickBarPaint();
+}
+/* ⚠️ ALL = ALL VISIBLE, never the whole catalogue. With a filter on, "select all" meaning 400 hidden rows is how
+   someone categorises products they have never seen. */
+function prodPickAll(){
+  if(!UI.prodPicked) UI.prodPicked=new Set();
+  const vis=prodVisible().map(prodId);
+  const every=vis.every(id=>UI.prodPicked.has(id));
+  vis.forEach(id=>{ if(every) UI.prodPicked.delete(id); else UI.prodPicked.add(id); });
+  paintProdList(); prodPickBarPaint();
+}
+function prodPickBarPaint(){ const b=document.getElementById('ct_pickbar'); if(b) b.innerHTML=prodPickBarHTML(); }
+function prodPickBarHTML(){
+  if(!UI.prodPick) return '';
+  const n=(UI.prodPicked&&UI.prodPicked.size)||0;
+  const vis=prodVisible().length;
+  return `<div class="ctpick">
+    <span class="cbx ${n&&n===vis?'on':''}" onclick="prodPickAll()" title="Select everything shown">${n&&n===vis?'✓':''}</span>
+    <span style="font-size:12px;font-weight:600">${n} selected</span>
+    <button class="pri" data-testid="cat-categorise" ${n?'':'disabled'} onclick="prodCategoriseAsk()" style="margin-left:auto">🏷️ Categorise</button>
+    <button onclick="prodPickMode(false)">Done</button>
+  </div>`;
+}
+/**
+ * ⭐⭐ BULK ATTACH — ADD, NEVER REPLACE.
+ *
+ * Athi: *"multiselect and attach to a category… this way, you can able to attach the category at once"*.
+ *
+ * ⚠️ "ATTACH" IS ADDITIVE AND THAT IS A DECISION, not an accident of implementation. A product can sit in
+ * several categories, so a bulk action that REPLACED the set would silently strip memberships that were never
+ * on screen — you tick 40 rows to add "Staples" and quietly delete "Grains" from half of them, with no way to
+ * tell afterwards. Removal is offered as its own explicit action, on the same dialog, so it can never be the
+ * accidental outcome of an add.
+ */
+function prodCategoriseAsk(){
+  const ids=Array.from(UI.prodPicked||[]);
+  if(!ids.length) return;
+  const live=(typeof _CATG!=='undefined'&&_CATG)?_CATG:[];
+  if(!live.length){ toast('Make a category first — Categories → + New category.'); return; }
+  /* What they already carry, so the dialog can say what is about to change rather than just what you chose. */
+  const have={};
+  ids.forEach(id=>{ const p=(UI.prods||[]).find(x=>prodId(x)===id); if(!p) return;
+    catgIdsOf(pData(p)).forEach(c=>{ have[c]=(have[c]||0)+1; }); });
+  UI._catgBulk={ ids:ids, add:new Set(), remove:new Set() };
+  const rows=live.map(c=>{
+    const n=have[c.id]||0;
+    return `<div class="bulkrow" data-testid="bulk-catg-${esc(c.id)}">
+      <span class="bn">${esc(c.name)}</span>
+      <span class="bh">${n?`${n} of ${ids.length} already`:''}</span>
+      <button type="button" class="badd" onclick="prodBulkToggle('${esc(c.id)}','add',this)">+ Attach</button>
+      <button type="button" class="brem" ${n?'':'disabled'} onclick="prodBulkToggle('${esc(c.id)}','remove',this)">− Remove</button>
+    </div>`;
+  }).join('');
+  modal(`<div class="mhd"><div class="t">Categorise ${ids.length} product${ids.length===1?'':'s'}</div>
+    <div class="s">attaching adds a category — it never removes the others</div></div>
+   <div class="mbody"><div class="bulklist">${rows}</div>
+     <div class="err" id="bulk_err"></div></div>
+   <div class="mfoot"><button onclick="closeModal()">Cancel</button>
+     <button class="pri" data-testid="bulk-apply" onclick="prodCategoriseApply()">Apply</button></div>`);
+}
+function prodBulkToggle(id, which, btn){
+  const B=UI._catgBulk; if(!B) return;
+  const other=which==='add'?'remove':'add';
+  if(B[which].has(id)){ B[which].delete(id); btn.classList.remove('on'); }
+  else { B[which].add(id); B[other].delete(id); btn.classList.add('on');
+    /* Attach and remove are mutually exclusive per category — asking for both is not a state worth modelling. */
+    const sib=btn.parentElement.querySelector(which==='add'?'.brem':'.badd'); if(sib) sib.classList.remove('on'); }
+}
+async function prodCategoriseApply(){
+  const B=UI._catgBulk; if(!B) return;
+  const err=document.getElementById('bulk_err');
+  if(!B.add.size && !B.remove.size){ if(err) err.textContent='Pick at least one category to attach or remove.'; return; }
+  closeModal();
+  showBusy('Categorising '+B.ids.length+' product'+(B.ids.length===1?'':'s')+'…');
+  let ok=0, failed=0;
+  try{
+    for(const id of B.ids){
+      const p=(UI.prods||[]).find(x=>prodId(x)===id); if(!p){ failed++; continue; }
+      const d=Object.assign({}, pData(p));
+      const cur=catgIdsOf(d).slice();
+      B.add.forEach(c=>{ if(cur.indexOf(c)<0) cur.push(c); });
+      const next=cur.filter(c=>!B.remove.has(c));
+      catgSetOn(d, next);
+      try{ await api('prodEdit',{params:{id:id},body:{item_data:d}}); ok++; }catch(e){ failed++; }
+    }
+  } finally { hideBusy(); }
+  UI.prodPicked.clear(); UI.prodPick=false; UI._catgBulk=null;
+  await loadCatalogue();
+  if(typeof cbcatLoad==='function' && CBCAT_UI && CBCAT_UI.list) cbcatLoad(true);
+  /* ⚠️ Report the failures. A bulk action that says "done" while three rows silently did not move is the reason
+     nobody trusts bulk actions. */
+  toast(ok+' updated'+(failed?` · ${failed} could not be saved`:' ✓'), failed?true:false);
+  renderApp();
+}
+function prodCatgFilter(v){ UI._prodCatg=(UI._prodCatg===v)?'':v; renderApp(); }
+/**
+ * The same chip row as the order picker, on the management side. ⚠️ Counts are MEMBERSHIPS — a product in two
+ * categories is counted in both, so these add up to more than the catalogue. That is the honest arithmetic and
+ * the reason the totals must never be presented as a breakdown of the whole.
+ */
+function prodCatgStripHTML(){
+  if(typeof _CATG==='undefined' || _CATG===null){
+    if(typeof cbCatgLive==='function') cbCatgLive().then(function(){ if(UI.nav==='catalogue') renderApp(); });
+    return '';
+  }
+  const all=(UI.prods||[]);
+  if(!_CATG.length && !all.length) return '';
+  const n={}; let none=0;
+  all.forEach(p=>{ const ids=catgIdsOf(pData(p)); if(!ids.length){ none++; return; } ids.forEach(c=>{ n[c]=(n[c]||0)+1; }); });
+  const live=_CATG.filter(c=>n[c.id]);            // a category with nothing in it is noise on this row
+  if(!live.length && !none) return '';
+  const g=UI._prodCatg||'';
+  const chip=(v,label,count,on)=>`<button type="button" class="cbpick-chip${on?' on':''}" data-testid="cat-catgfilter"
+      ${on?'style="background:#eef4ff;border-color:var(--blue);color:var(--blue)"':''}
+      onclick="prodCatgFilter('${esc(v)}')">${esc(label)}${count==null?'':` <span class="cbpick-chipn">${count}</span>`}</button>`;
+  return `<div class="cbpick-catgs" style="margin-top:8px">`
+    + chip('','All',null,!g)
+    + live.map(c=>chip(c.id,c.name,n[c.id],g===c.id)).join('')
+    + (none?chip('__none','Uncategorised',none,g==='__none'):'')
+    + `</div>`;
+}
 function prodRowHTML(p){ const d=pData(p), id=prodId(p);
   /* ⚠️ STATUS ON THE ROW, not only inside the item. A retired product that looks identical to a live one in the
      list is how somebody re-creates a product they already retired — which is the exact thing the flag exists to
@@ -4310,10 +4535,25 @@ function prodRowHTML(p){ const d=pData(p), id=prodId(p);
   const stChip=stC?`<span class="optchip" style="background:${stC[1]};color:${stC[0]};border-color:${stC[1]}">${stC[2]}</span>`:'';
   /* Synonyms were the field Athi could not see anywhere — the count alone tells him which rows still need words. */
   const syn=(Array.isArray(d.synonyms)&&d.synonyms.length)?`<span style="color:var(--grey)">· ${d.synonyms.length} synonyms</span>`:'';
-  return `<div class="row ${id===UI.prodSel?'sel':''}" data-testid="cat-product-${id}" onclick="selectProduct('${id}')" style="${st!=='available'?'opacity:.7':''}">
+  /* ⭐ THE CATEGORIES THIS PRODUCT CARRIES, on the row. Athi asked to attach in bulk, and a bulk action you
+     cannot verify from the list is a bulk action nobody trusts the second time. Resolved through the live shelf
+     so a rename shows here immediately; a retired one still shows, struck, because the citation survives. */
+  const cids=catgIdsOf(d), cnames=catgNamesOf(d);
+  const catChips=cids.map(function(cid,i){
+    const live=(typeof _CATG!=='undefined'&&_CATG||[]).filter(function(x){return x.id===cid;})[0];
+    const nm=live?live.name:(cnames[i]||cid);
+    return `<span class="catgchip${live?'':' gone'}" title="${live?'':'no longer live'}">${esc(nm)}</span>`;
+  }).join('');
+  /* ⭐ SELECT MODE. The tick replaces the row's normal click so a half-pressed selection can never also navigate
+     away — the same rule the chit list follows. */
+  const picking=!!UI.prodPick;
+  const ticked=picking&&UI.prodPicked&&UI.prodPicked.has(id);
+  return `<div class="row ${id===UI.prodSel?'sel':''}${ticked?' picked':''}" data-testid="cat-product-${id}" onclick="${picking?`prodTogglePick('${id}')`:`selectProduct('${id}')`}" style="${st!=='available'?'opacity:.7':''}">
+  ${picking?`<span class="cbx ${ticked?'on':''}" data-testid="cat-pick-${id}" style="flex:0 0 auto;margin-right:9px">${ticked?'✓':''}</span>`:''}
   <div class="main2"><div class="l1"><span class="code">${esc(pName(d))}${d.variant?`<span style="color:var(--grey);font-weight:400"> · ${esc(d.variant)}</span>`:''}</span><span class="optchip" style="background:var(--gold-soft);color:#7a5e22;border-color:var(--gold-line)">${esc(pUnit(d))}</span>${stChip}<span class="amt" style="margin-left:auto">${inr(pPrice(d))}</span></div>
-    <div class="l2">${pCode(d)?'<span class="mono">'+esc(pCode(d))+'</span> · ':''}${esc(pDesc(d)||'—')} ${syn}</div></div>
-  <div class="rowgo" aria-hidden="true">›</div></div>`; }
+    <div class="l2">${pCode(d)?'<span class="mono">'+esc(pCode(d))+'</span> · ':''}${esc(pDesc(d)||'—')} ${syn}</div>
+    ${catChips?`<div class="l3cat">${catChips}</div>`:''}</div>
+  ${picking?'':'<div class="rowgo" aria-hidden="true">›</div>'}</div>`; }
 /* BRIDGE — the reference catalogue (any adopted blueprint) surfaces HERE, resolved live from catalogue-mine
    (shared design/data BY REFERENCE + the entity's commercials). NOT copied into products.
    VERTICAL-AGNOSTIC: every block below is PRESENCE-DRIVEN — it renders only if the item carries that data. Paint
@@ -4752,28 +4992,52 @@ async function _cfImportRun(btn, decisions, out){
  * Renders NOTHING until a category exists — a lone "— none —" dropdown teaches that the feature is empty rather
  * than that it is unused. The load is fired here and repaints once, because a form cannot wait for a fetch.
  */
+/**
+ * ⭐⭐ CATEGORIES ON A PRODUCT — SEVERAL, NOT ONE (Athi, 2026-08-16: *"same product must be able to attach under
+ * multiple category"*).
+ *
+ * ⚠️ TICKS, NOT A MULTI-SELECT `<select multiple>`. A native multi-select requires ctrl-click to add a second
+ * value and silently drops the first when you plain-click — on a touch screen it is close to unusable, and the
+ * failure is invisible: you think you added Staples and you have replaced Grains with it. Ticks say what is on.
+ *
+ * ⚠️ A RETIRED-BUT-CITED CATEGORY IS SHOWN AND KEPT. It is not on the live shelf, so it cannot be offered as a
+ * choice — but silently omitting it means the next save quietly strips a membership nobody asked to remove.
+ */
 function ctCategoryField(d){
   d = d || {};
   if(typeof _CATG==='undefined' || _CATG===null){
     if(typeof cbCatgLive==='function') cbCatgLive().then(function(){ if(UI.nav==='catalogue' && UI.prodMode!=='view') paintProdDetail(); });
     return '';
   }
-  if(!_CATG.length) return '<label class="fl">Category</label><div style="font-size:12px;color:var(--grey);margin:2px 0 4px">None declared yet. <span onclick="ctNewCategory()" style="color:var(--blue);font-weight:600;cursor:pointer">Create one</span> — or under Definitions → Categories.</div>';
-  const cur = d.category || '';
-  return '<label class="fl">Category</label>'
-    + '<div style="display:flex;gap:8px;align-items:stretch">'
-    +   '<select class="inp" id="ct_category" data-testid="cat-field-category" style="flex:1">'
-    +     '<option value="">— none —</option>'
-    +     _CATG.map(function(c){ return '<option value="'+esc(c.id)+'"'+(c.id===cur?' selected':'')+'>'+esc(c.name)+'</option>'; }).join('')
-    +   '</select>'
-    +   '<button type="button" data-testid="cat-category-new" onclick="ctNewCategory()" title="New category" style="flex:0 0 auto;border:1px solid var(--line);background:#fff;border-radius:10px;padding:0 13px;color:var(--blue);font-weight:700;font-size:13.5px;cursor:pointer">＋</button>'
+  const cur = catgIdsOf(d), names = catgNamesOf(d);
+  if(!_CATG.length && !cur.length) return '<label class="fl">Categories</label><div style="font-size:12px;color:var(--grey);margin:2px 0 4px">None yet. <span onclick="ctNewCategory()" style="color:var(--blue);font-weight:600;cursor:pointer">Create one</span>, or manage them under <span onclick="navTo(\'categories\')" style="color:var(--blue);font-weight:600;cursor:pointer">Categories</span>.</div>';
+  const orphans = cur.filter(id => !_CATG.some(c => c.id === id));
+  return '<label class="fl">Categories</label>'
+    + '<div class="ctcatgs" id="ct_categories" data-testid="cat-field-category">'
+    +   _CATG.map(function(c){
+          const on = cur.indexOf(c.id) >= 0;
+          return '<button type="button" class="ctcatg'+(on?' on':'')+'" data-cid="'+esc(c.id)+'"'
+            + ' data-testid="cat-catg-'+esc(c.id)+'" onclick="ctToggleCatg(this)">'
+            + (on?'✓ ':'') + esc(c.name) + '</button>';
+        }).join('')
+    +   orphans.map(function(id){
+          const i = cur.indexOf(id);
+          return '<button type="button" class="ctcatg on gone" data-cid="'+esc(id)+'" onclick="ctToggleCatg(this)"'
+            + ' title="no longer live — tap to detach">✓ ' + esc(names[i] || id) + '</button>';
+        }).join('')
+    +   '<button type="button" class="ctcatg add" data-testid="cat-category-new" onclick="ctNewCategory()">＋ New</button>'
     + '</div>'
-    /* ⚠️ An unresolved id is SHOWN, not hidden. A product carrying a category that was retired (or that came from
-       an import) would otherwise silently read as "— none —", and the next save would erase it for real. */
-    + ((cur && !_CATG.some(function(c){ return c.id===cur; }))
-        ? '<div style="font-size:11.5px;color:#8a5a1e;margin-top:4px">⚠ This product cites a category that is no longer live'
-          + (d.category_name ? ' (“'+esc(d.category_name)+'”)' : '') + '. Saving now will clear it.</div>'
+    + (orphans.length
+        ? '<div style="font-size:11.5px;color:#8a5a1e;margin-top:5px">⚠ '+orphans.length+' of these '
+          + (orphans.length===1?'is':'are')+' no longer live. Kept as-is — tap to detach.</div>'
         : '');
+}
+/* One handler for every chip, so "what is selected" is read off the DOM at save time and there is no parallel
+   copy of the answer to fall out of step. */
+function ctToggleCatg(btn){
+  const on = btn.classList.toggle('on');
+  const label = btn.textContent.replace(/^✓\s*/, '');
+  btn.textContent = on ? ('✓ ' + label) : label;
 }
 /**
  * Create without leaving the form — the same dialog and the same publish-live rule as the wizard's version.
@@ -4785,8 +5049,19 @@ function ctNewCategory(){
   ensureCap('catalogue')
     .then(function(){
       cbCatgAskNew(function(c){
+        /* ⚠️ Carry the ticks through the repaint. prodEditForm rebuilds from the SAVED product, so anything
+           ticked-but-unsaved would be lost by creating a category mid-edit — which is exactly when you do it. */
+        const host=document.getElementById('ct_categories');
+        const keep=host?Array.prototype.slice.call(host.querySelectorAll('.ctcatg.on[data-cid]')).map(b=>b.getAttribute('data-cid')):[];
+        keep.push(c.id);
         paintProdDetail();
-        setTimeout(function(){ const s=document.getElementById('ct_category'); if(s) s.value=c.id; }, 0);
+        setTimeout(function(){
+          const h=document.getElementById('ct_categories'); if(!h) return;
+          keep.forEach(function(id){
+            const b=h.querySelector('.ctcatg[data-cid="'+id+'"]');
+            if(b && !b.classList.contains('on')) ctToggleCatg(b);
+          });
+        }, 0);
       });
     })
     .catch(function(){ toast('Could not open that — categories are also under Definitions → Categories.', true); });
@@ -5108,15 +5383,13 @@ function prodDetailHTML(){
  */
 function ctReadForm(orig){
   const base = Object.assign({}, orig||{}, { name:(val("ct_name")||'').trim(), unit:(val("ct_unit")||'').trim()||'unit', price:+val("ct_price")||0, code:(val("ct_code")||'').trim(), desc:(val("ct_desc")||'').trim() });
-  const sel = document.getElementById('ct_category');
-  /* No select on screen (no categories declared yet) → leave whatever the product already had. Absent is not
+  const host = document.getElementById('ct_categories');
+  /* No chips on screen (the shelf could not be read) → leave whatever the product already had. Absent is not
      "cleared": a form that cannot show a field must never be the thing that erases it. */
-  if(!sel) return base;
-  const id = sel.value || '';
-  if(!id){ delete base.category; delete base.category_name; return base; }
-  const c = (typeof _CATG!=='undefined' && _CATG || []).filter(function(x){ return x.id===id; })[0];
-  base.category = id; if(c) base.category_name = c.name;
-  return base;
+  if(!host) return base;
+  const ids = Array.prototype.slice.call(host.querySelectorAll('.ctcatg.on[data-cid]'))
+    .map(function(b){ return b.getAttribute('data-cid'); });
+  return catgSetOn(base, ids);
 }
 async function saveNewProduct(){ const err=document.getElementById("ct_err"); if(err)err.textContent=""; const data=ctReadForm({}); if(!data.name){ if(err)err.textContent="Name is required."; return; }
   try{ const r=await api("prodAdd",{body:{item_data:data}}); const nid=(r&&r.item&&r.item.item_id)||null; toast("Product added ✓"); if(window.CBOffline)CBOffline.clearDraft('prod.new'); UI.prodMode='view'; UI.prodSel=nid; await loadCatalogue(); if(nid){ UI.prodSel=nid; paintProdList(); paintProdDetail(); } }catch(e){ if(err)err.textContent=(e&&e.message)||"Could not add the product — please try again."; } }
@@ -5176,6 +5449,8 @@ function mainBody(){
   if(UI.nav==="customers") return customersScreen();
   if(UI.nav==="cataloguesetup" && typeof catalogueSetupScreen==="function") return catalogueSetupScreen();  // LOCAL PROTOTYPE
   if(UI.nav==="catalogue") return catalogueScreen();
+  if(UI.nav==="categories") return (typeof categoriesScreen==="function") ? categoriesScreen()
+    : `<div class="panel" id="panel" style="--lw:${UI.lw}px"><div class="list"><div class="rows"><div class="loadwrap"><span class="spin"></span> loading…</div></div></div><div class="divider"></div><div class="detail" id="detailpane"></div></div>`;
   if(UI.nav==="mis") return misScreen();
   if(UI.nav==="coassists") return coassistsScreen();
   if(UI.nav==="connectors"){ UI.nav="coassists"; return coassistsScreen(); }

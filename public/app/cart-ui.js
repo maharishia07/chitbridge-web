@@ -276,7 +276,20 @@
      serialised as NUL bytes, which `node --check` passes and only the static guard catches. One constant now:
      no second literal to get wrong, and no whitespace to be eaten. A definition_id can never collide with it. */
   var CATG_NONE = '__none';
-  function catgOf(r) { var d = dataOf(r); return d.category || d.category_id || ''; }
+  /**
+   * ⭐ MANY, NOT ONE (Athi, 2026-08-16). A row is counted under EVERY category it carries and matches a filter
+   * if ANY of them matches — so rice under Grains and Staples appears in both, and the two chip counts add up to
+   * more than the catalogue. That is correct and worth saying out loud: these are memberships, not a partition.
+   *
+   * ⚠️ Reads through the shared `catgIdsOf` (core.js) so the legacy single-`category` shape is understood in
+   * exactly one place. This file must never look at `d.category` itself.
+   */
+  function catgsOf(r) {
+    var d = dataOf(r);
+    if (typeof root.catgIdsOf === 'function') return root.catgIdsOf(d);
+    if (Array.isArray(d.categories)) return d.categories.map(String).filter(Boolean);
+    return d.category ? [String(d.category)] : [];
+  }
   /**
    * ⭐⭐ A definition_id IS MEANINGLESS ACROSS AN ENTITY BOUNDARY, and this is where that stops being theory.
    *
@@ -292,13 +305,21 @@
    */
   function catgLabel(ns, r, id) {
     var m = opt(ns, 'categories', null);
+    /* The travelling names are positionally aligned with the ids, so the label for THIS id is at its index. */
+    var carriedAt = function () {
+      var d = dataOf(r);
+      var ids = (typeof root.catgIdsOf === 'function') ? root.catgIdsOf(d) : [];
+      var names = (typeof root.catgNamesOf === 'function') ? root.catgNamesOf(d) : [];
+      var i = ids.indexOf(String(id));
+      return (i >= 0 && names[i]) ? String(names[i]) : null;
+    };
     /* ⚠️ A FUNCTION IS ALLOWED, and compose needs it. Options are captured once at create(); the shelf arrives
        later, on the same async trip as the offers. A captured `null` would stay null for the life of the cart
        and every chip would read as a raw id. A getter is read at paint time, so late is fine. */
     if (typeof m === 'function') { try { m = m(); } catch (e) { m = null; } }
     if (m && m.length) { for (var i = 0; i < m.length; i++) if (String(m[i].id) === String(id)) return m[i].name; }
-    var carried = r ? dataOf(r).category_name : null;
-    return carried ? String(carried) : String(id);
+    var carried = r ? carriedAt() : null;
+    return carried ? carried : String(id);
   }
   /** Label without a row to hand — the empty-state message. Reads the tally so it says the same word the chip does. */
   function catgName(ns, id) {
@@ -313,10 +334,15 @@
     var all = rowsOf(s.cat), seen = {}, label = {}, order = [], none = 0;
     for (var i = 0; i < all.length; i++) {
       if (all[i].type === 'product') continue;
-      var c = catgOf(all[i]);
-      if (!c) { none++; continue; }
-      if (seen[c] === undefined) { seen[c] = 0; order.push(c); label[c] = catgLabel(ns, all[i], c); }
-      seen[c]++;
+      var cs = catgsOf(all[i]);
+      if (!cs.length) { none++; continue; }
+      /* ⚠️ One row, several counts — a product in two categories is counted in both. The chip totals therefore
+         exceed the catalogue size, and that is the honest arithmetic for memberships. */
+      for (var j = 0; j < cs.length; j++) {
+        var c = cs[j];
+        if (seen[c] === undefined) { seen[c] = 0; order.push(c); label[c] = catgLabel(ns, all[i], c); }
+        seen[c]++;
+      }
     }
     var out = order.map(function (c) { return { id: c, name: label[c], n: seen[c] }; });
     out.sort(function (a, b) { return a.name.localeCompare(b.name); });
@@ -360,7 +386,11 @@
     for (var i = 0; i < all.length; i++) {
       var r = all[i];
       if (r.type === 'product') { pend = r; took = false; continue; }
-      if (g) { var c = catgOf(r); if (g === CATG_NONE ? !!c : String(c) !== g) continue; }
+      if (g) {
+        var cs = catgsOf(r);
+        /* ANY membership matches. Uncategorised is "carries none at all". */
+        if (g === CATG_NONE ? cs.length > 0 : cs.indexOf(g) < 0) continue;
+      }
       if (q) {
         var hay = (nameOf(r) + ' ' + (dataOf(r).unit || '') + ' ' + (dataOf(r).code || '')).toLowerCase();
         if (hay.indexOf(q) === -1) continue;

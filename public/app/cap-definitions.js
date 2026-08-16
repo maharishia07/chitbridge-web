@@ -50,9 +50,19 @@ var CBDEF = { open: {}, mine: null, loading: false, err: '' };
  * with no edit to this file — the same discipline as the showcase above it.
  */
 var CBDEF_AUTHORABLE = {
+  /**
+   * ⚠️ AUTHORING MOVED OUT — Athi, 2026-08-16: *"bring the category as a panel next to catalogue. keep creation
+   * and updation in that panel"*. Categories are still LISTED here, because this screen is the map of every
+   * definition you hold and omitting one kind would make the map lie. But the Create button is gone: two places
+   * to author one thing is exactly the duplication this screen was reconciled to remove.
+   *
+   * `home` sends the section's action to the screen that owns it — declare once, refer everywhere.
+   */
   category:   { icon: '🗃️', title: 'Categories', one: 'category',
-                blurb: 'A named list of products. The simplest definition, and the one with no freeze semantics '
-                     + 'to worry about — a category has no terms that could change under a chit.' },
+                home: { nav: 'categories', label: 'Open Categories →' },
+                blurb: 'A named list of products, and the one definition with no freeze semantics to worry '
+                     + 'about — a category has no terms that could change under a chit. ⚠️ A product can sit in '
+                     + 'several. Created and renamed under <b>Categories</b>, beside the Catalogue.' },
   ordermodel: { icon: '🔢', title: 'Order models', one: 'order model',
                 blurb: 'A quantity rule with a NAME, so a product adopts “Carton of 6” rather than repeating '
                      + 'pack/step 6. ⚠️ Change it to 12 and every product that adopted it moves — which is either '
@@ -795,8 +805,12 @@ function cbDefMineHTML(){
       +   '<span class="cbdef-ico">' + A.icon + '</span>'
       +   '<span class="cbdef-t">' + cbDefEsc(A.title) + '</span>'
       +   '<span class="cbdef-n">' + mine.length + (retired.length ? ' · ' + retired.length + ' retired' : '') + '</span>'
-      /* stopPropagation — otherwise "+ New" also collapses the section it is about to add to. */
-      +   '<button class="cbdef-new" data-testid="cbdef-new-' + kind + '" onclick="event.stopPropagation();cbDefNew(\'' + kind + '\')">+ New</button>'
+      /* stopPropagation — otherwise the button also collapses the section it is about to act on.
+         ⚠️ A kind with a `home` is authored on ITS OWN SCREEN, so this offers the door rather than a second
+         Create form. Two places to author one thing is the duplication this screen exists to have removed. */
+      +   (A.home
+            ? '<button class="cbdef-new" data-testid="cbdef-home-' + kind + '" onclick="event.stopPropagation();navTo(\'' + A.home.nav + '\')">' + cbDefEsc(A.home.label) + '</button>'
+            : '<button class="cbdef-new" data-testid="cbdef-new-' + kind + '" onclick="event.stopPropagation();cbDefNew(\'' + kind + '\')">+ New</button>')
       +   '<span class="cbdef-caret">' + (mopen ? '▾' : '▸') + '</span>'
       + '</div>'
       + (mopen ? ('<div class="cbdef-body">'

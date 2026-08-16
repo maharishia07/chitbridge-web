@@ -136,6 +136,65 @@ const OUTBOX_KEYS = new Set([
   'netDesignPut',   // b111 — whole-document upsert, idempotent → safe to queue + replay offline
 ]);
 
+/* ══ A PRODUCT'S CATEGORIES ══════════════════════════════════════════════════════════════════════════════════
+ * ⭐⭐ A PRODUCT BELONGS TO MANY CATEGORIES (Athi, 2026-08-16: *"same product must be able to attach under
+ * multiple category, and search should show the same"*). Rice is Grains AND Staples; a saree is Silk AND
+ * Wedding. One slot was the wrong model and forced a false choice at the moment of authoring.
+ *
+ * ── ONE READER, BECAUSE THERE ARE TWO SHAPES IN THE DATA ───────────────────────────────────────────────────────
+ * ⚠️ Products authored before this carry `category` (one id) + `category_name`. Products authored after carry
+ * `categories` (ids) + `category_names`. BOTH EXIST IN LIVE DATA and always will — item_data is free-form jsonb,
+ * so there is no migration that can sweep every historical row, and a counterparty's copy is not ours to edit.
+ * Everything therefore reads through `catgIdsOf`, and NOTHING reads `d.category` directly. A second place that
+ * knows the legacy shape is a second place that will forget it.
+ *
+ * ⚠️ WRITES ONLY EVER EMIT THE NEW SHAPE, and delete the old keys as they go — so a row upgrades the first time
+ * it is saved, without a migration and without a moment where both shapes are true of the same product.
+ */
+function catgIdsOf(d){
+  d = d || {};
+  if (Array.isArray(d.categories)) return d.categories.map(String).filter(Boolean);
+  if (d.category) return [String(d.category)];          // legacy single — read, never written again
+  return [];
+}
+/** The travelling names, positionally aligned with catgIdsOf. Used only where an id cannot be resolved. */
+function catgNamesOf(d){
+  d = d || {};
+  if (Array.isArray(d.category_names)) return d.category_names.map(String);
+  if (d.category_name) return [String(d.category_name)];
+  return [];
+}
+/**
+ * Write `ids` onto an item_data object, in place, and return it.
+ *
+ * ⚠️ BOTH THE IDS AND THE NAMES, for the reason that has not changed: the id is MY reference (rename in the
+ * Categories panel and every product of mine follows), the names are a VALUE copy for a counterparty who cannot
+ * resolve my definition_ids and never will — [[reference-cb-core-principle]]. The copy is deliberately not kept
+ * in step with a later rename.
+ */
+function catgSetOn(d, ids){
+  d = d || {};
+  var live = (typeof _CATG !== 'undefined' && _CATG) ? _CATG : [];
+  /* ⚠️ SNAPSHOT BEFORE DELETING. My first cut deleted the legacy keys and then tried to read them for the
+     unresolved-name fallback below — so the fallback silently found nothing and every unresolved id would have
+     been relabelled as its own uuid. Read what is there, THEN clear it. */
+  var wasIds = catgIdsOf(d), wasNames = catgNamesOf(d);
+  var clean = [], seen = {};
+  (ids || []).forEach(function(id){ id = String(id || '').trim(); if (id && !seen[id]) { seen[id] = 1; clean.push(id); } });
+  delete d.category; delete d.category_name;            // the legacy pair never survives a save
+  if (!clean.length) { delete d.categories; delete d.category_names; return d; }
+  d.categories = clean;
+  d.category_names = clean.map(function(id){
+    var c = live.filter(function(x){ return x.id === id; })[0];
+    /* ⚠️ An id we cannot resolve keeps whatever name it already travelled with, rather than being relabelled as
+       its own uuid. Losing the word is worse than holding a slightly stale one. */
+    if (c) return c.name;
+    var i = wasIds.indexOf(id);
+    return (i >= 0 && wasNames[i]) ? wasNames[i] : id;
+  });
+  return d;
+}
+
 /* ══ THE LIVE CATEGORY SHELF ═════════════════════════════════════════════════════════════════════════════════
  * ⚠️ IT LIVES IN core.js AND NOT IN cap-catalogue.js. Both compose (app.html, always loaded) and the item form
  * (cap-catalogue.js, lazy) need it, and a loader behind a lazy load is a loader half the callers cannot reach.
