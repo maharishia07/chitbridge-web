@@ -886,6 +886,10 @@ img.attImg{object-fit:cover;display:block}
 <script src="/app/helpers.js"></script>
 <!-- module 3: the canonical catalogue model (shape · migration · four-leg chain · compute-job derivation). Shared by cap-network.js and headless consumers. -->
 <script src="/app/catalogue-model.js"></script>
+<!-- ⚠️ DATA, NOT BEHAVIOUR — the per-trade starter categories (real Google Product Taxonomy nodes). Loaded
+     eagerly beside catalogue-model because it is small and the Categories screen offers it on arrival; a lazy
+     load would mean the "Start from a standard set" button appears before the sets it offers exist. -->
+<script src="/app/catalogue-starter-categories.js"></script>
 <script src="/app/catalogue-lines.js"></script>
 <script src="/app/cart-ui.js"></script>
 <!-- The redesigned catalogue ROW. A renderer only — it owns no quantity rule; every mutation routes through

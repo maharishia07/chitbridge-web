@@ -189,6 +189,76 @@ async function cbcatRelive(id){
   } catch (e) { toast((e && e.message) || 'Could not change that.', true); }
 }
 
+/**
+ * ⭐⭐ SEED A SMALL STANDARD SET — real Google Product Taxonomy nodes, per trade (backlog 22 step 3).
+ *
+ * ⚠️ OPT-IN AND CONFIRMED, NEVER AUTOMATIC. A shelf that arrives pre-filled is worse than an empty one: you
+ * cannot tell what you chose from what arrived, and the first thing anyone does is delete rows they did not ask
+ * for. Akeneo ships its demo tree the same way, for the same reason.
+ *
+ * ⚠️ IT ADDS, IT NEVER REPLACES. Anything you already made stays. A name that already exists is SKIPPED rather
+ * than duplicated or overwritten — `definition` carries UNIQUE (entity_id, kind, name), so a collision would
+ * fail the whole run otherwise, and silently renaming someone's category to make room would be worse.
+ *
+ * ⚠️ PARENTS FIRST, THEN CHILDREN. A child's `parent` is a definition_id that does not exist until its parent is
+ * created, so the run is ordered and maps taxonomy ids → our ids as it goes. Getting this backwards produces a
+ * flat list of orphans that LOOKS like a successful seed.
+ */
+function cbcatSeedAsk(){
+  if (typeof CB_STARTER_CATEGORIES === 'undefined') { toast('Starter sets are not loaded.', true); return; }
+  var opts = Object.keys(CB_STARTER_CATEGORIES).map(function(v){
+    var s = CB_STARTER_CATEGORIES[v];
+    return '<div class="bulkrow"><span class="bn">' + esc(s.title) + '</span>'
+      + '<span class="bh">' + s.nodes.length + ' categories</span>'
+      + '<button type="button" class="badd" data-testid="catg-seed-' + esc(v) + '"'
+      + ' onclick="cbcatSeedRun(\'' + esc(v) + '\')">Add these</button></div>';
+  }).join('');
+  modal('<div class="mhd"><div class="t">Start from a standard set</div>'
+    + '<div class="s">real categories from the Google Product Taxonomy</div></div>'
+    + '<div class="mbody"><div style="font-size:12.5px;line-height:1.6;color:var(--ink);margin-bottom:10px">'
+    + 'Pick the trade you are in and its usual categories are added, nested as the standard nests them. '
+    + '<b>Nothing you already have is changed</b> — names that already exist are skipped.'
+    + '<div style="font-size:11.5px;color:var(--grey);margin-top:6px">⚠️ These are a starting point, not a '
+    + 'ceiling. Rename, retire or add your own afterwards — they are ordinary categories from the moment they '
+    + 'land.</div></div>'
+    + '<div class="bulklist">' + opts + '</div></div>'
+    + '<div class="mfoot"><button onclick="closeModal()">Cancel</button></div>');
+}
+async function cbcatSeedRun(vertical){
+  var set = CB_STARTER_CATEGORIES[vertical]; if (!set) return;
+  closeModal();
+  showBusy('Adding ' + set.nodes.length + ' categories…');
+  var made = {}, added = 0, skipped = 0, failed = 0;
+  try {
+    var have = {};
+    (CBCAT_UI.list || []).forEach(function(c){ have[c.name.toLowerCase()] = c.id; });
+    /* Ordered so a parent always exists before its child asks for it. */
+    var ordered = set.nodes.slice().sort(function(a,b){ return (a.parent ? 1 : 0) - (b.parent ? 1 : 0); });
+    for (var i = 0; i < ordered.length; i++) {
+      var n = ordered[i];
+      if (have[n.name.toLowerCase()]) { made[n.gid] = have[n.name.toLowerCase()]; skipped++; continue; }
+      var parentId = n.parent ? (made[n.parent] || null) : null;
+      try {
+        var r = await api('defAdd', { body: { kind: 'category', sub_kind: null, name: n.name, note: '',
+          /* ⚠️ `gpc` keeps the taxonomy id beside the parent, so a category can later carry its standard code
+             instead of being re-matched by name. Costs nothing now and is the hook backlog 22 step 4 needs. */
+          rules: { parent: parentId, gpc: n.gid } } });
+        var id = r && (r.definition_id || (r.definition && r.definition.definition_id));
+        if (!id) { failed++; continue; }
+        await api('defSave', { params: { id: id }, body: { status: 'live' } });
+        made[n.gid] = id; have[n.name.toLowerCase()] = id; added++;
+      } catch (e) { failed++; }
+    }
+  } finally { hideBusy(); }
+  if (typeof cbCatgLive === 'function') await cbCatgLive(true);
+  await cbcatLoad(true);
+  /* ⚠️ Report skips and failures. A seed that says "done" while a third of it silently did not land is how
+     someone spends an afternoon wondering where their tree went. */
+  toast(added + ' added'
+    + (skipped ? ' · ' + skipped + ' already there' : '')
+    + (failed ? ' · ' + failed + ' could not be created' : ''), failed ? true : false);
+}
+
 /* ── interaction ─────────────────────────────────────────────────────────────────────────────────────────────── */
 function cbcatSelect(id){ CBCAT_UI.sel = id; CBCAT_UI.mode = 'view'; CBCAT_UI.form = null;
   if (UI.vp === 'mob') { UI.mdetail = true; var p = document.getElementById('panel'); if (p) p.classList.add('showdetail'); }
@@ -377,6 +447,7 @@ function categoriesScreen(){
     +   '<span style="font-family:\'Space Grotesk\';font-weight:700;font-size:14px">🏷️ Categories</span>'
     + '</div>'
     + '<button class="composebtn" style="width:100%;justify-content:center" data-testid="catg-new" onclick="cbcatNew()">+ New category</button>'
+    + '<button class="composebtn" style="width:100%;justify-content:center;margin-top:7px;background:#fff;color:var(--blue);border:1px solid var(--line)" data-testid="catg-seed" onclick="cbcatSeedAsk()">📐 Start from a standard set</button>'
     + '<div class="srch" style="margin-top:8px">🔍 <input data-testid="catg-search" placeholder="Search categories" value="' + esc(CBCAT_UI.q || '') + '" oninput="cbcatSearch(this.value)"></div>'
     /* ⚠️ ITS OWN ELEMENT, REPAINTED WITH THE ROWS. The counts arrive AFTER the screen is built, and the header is
        rendered once by categoriesScreen() — so anything derived from counts that lives up here is stale forever.
