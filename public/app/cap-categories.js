@@ -33,15 +33,13 @@ async function cbcatLoad(force){
   try {
     var r = await api('defList', { query: { kind: 'category', all: 1 } });
     CBCAT_UI.list = ((r && r.definitions) || []).map(function(d){
+      /* ⭐ `parent` RIDES IN `rules` — free-form jsonb, so a tree costs NO MIGRATION (backlog 22, step 1).
+         Same trick that let multi-category ship against live data this morning. */
       return { id: d.definition_id, name: d.name, note: d.note || '', status: d.status || 'draft',
+               parent: (d.rules && d.rules.parent) || null,
                version: d.current_version || 1, created_at: d.created_at };
     });
-    CBCAT_UI.list.sort(function(a,b){
-      /* Live first, then retired — you are almost always looking for a live one, and a retired row in the middle
-         of the list is a row you read twice. */
-      if ((a.status === 'retired') !== (b.status === 'retired')) return a.status === 'retired' ? 1 : -1;
-      return a.name.localeCompare(b.name);
-    });
+    cbcatOrder();
     await cbcatCounts();
   } catch (e) {
     CBCAT_UI.err = (e && e.message) || 'Could not read your categories.';
@@ -68,23 +66,88 @@ async function cbcatCounts(){
   } catch (e) { CBCAT_UI.counts = null; }
 }
 
+/**
+ * ⭐⭐ THE TREE — depth-first order plus a `depth` on each row (backlog 22, step 2).
+ *
+ * Every standard classification is hierarchical: GS1 GPC is 4 fixed levels (Segment › Family › Class › Brick),
+ * Google's taxonomy runs to 7. A flat list held `Grains` and `Flour`; it will not hold
+ * `Food, Beverages & Tobacco › Food Items › Grains, Rice & Cereal › Rice`, which is both what a real catalogue
+ * looks like and what a counterparty's system will send us.
+ *
+ * ⚠️ SORTING IS DONE ONCE, HERE, and the list stays flat with a `depth` — not nested arrays. Every consumer
+ * (rows, the detail pane, the parent picker) then reads one shape, and indenting is a CSS concern rather than a
+ * recursive renderer each caller has to get right.
+ *
+ * ⚠️ AN ORPHAN IS SHOWN AT THE ROOT, NEVER DROPPED. A category whose parent was retired or deleted still exists
+ * and still classifies products; hiding it would make a shelf's contents unreachable from the screen that manages
+ * shelves. ⚠️ AND A CYCLE CANNOT HANG THIS: `seen` guarantees every node is emitted exactly once, so a → b → a
+ * renders as two roots rather than looping forever. Cycles should be impossible (see cbcatWouldCycle) — this is
+ * the belt to that braces, because a UI that freezes teaches nothing about the data that froze it.
+ */
+function cbcatOrder(){
+  var all = CBCAT_UI.list || [];
+  var byParent = {}, seen = {};
+  all.forEach(function(c){ var k = c.parent || '_root'; (byParent[k] = byParent[k] || []).push(c); });
+  var ids = {}; all.forEach(function(c){ ids[c.id] = 1; });
+  /* A parent that no longer exists is a root, so its children stay reachable. */
+  all.forEach(function(c){ if (c.parent && !ids[c.parent]) { (byParent._root = byParent._root || []).push(c); } });
+  var cmp = function(a,b){
+    if ((a.status === 'retired') !== (b.status === 'retired')) return a.status === 'retired' ? 1 : -1;
+    return a.name.localeCompare(b.name);
+  };
+  var out = [];
+  (function walk(key, depth){
+    (byParent[key] || []).sort(cmp).forEach(function(c){
+      if (seen[c.id]) return;
+      seen[c.id] = 1; c.depth = depth; out.push(c);
+      walk(c.id, depth + 1);
+    });
+  })('_root', 0);
+  /* Anything still unseen was in a cycle — emit it flat rather than lose it. */
+  all.forEach(function(c){ if (!seen[c.id]) { c.depth = 0; out.push(c); } });
+  CBCAT_UI.list = out;
+}
+/** Would making `id` a child of `parentId` create a loop? Walk up from the proposed parent looking for `id`. */
+function cbcatWouldCycle(id, parentId){
+  var by = {}; (CBCAT_UI.list || []).forEach(function(c){ by[c.id] = c; });
+  var hops = 0, p = parentId;
+  while (p && hops++ < 64) { if (p === id) return true; p = by[p] ? by[p].parent : null; }
+  return false;
+}
+/** Every category except the one being edited and its own descendants — the legal parents. */
+function cbcatParentOptions(id){
+  return (CBCAT_UI.list || []).filter(function(c){
+    return c.status !== 'retired' && c.id !== id && !cbcatWouldCycle(c.id, id) && !(id && cbcatWouldCycle(id, c.id));
+  });
+}
+
 /* ── write ───────────────────────────────────────────────────────────────────────────────────────────────────── */
 async function cbcatSave(){
   var f = CBCAT_UI.form; if (!f) return;
   var name = (f.name || '').trim();
   var err = document.getElementById('cbcat_err');
   if (name.length < 2) { if (err) err.textContent = 'Give it a name of at least 2 characters.'; return; }
-  /* ⚠️ A duplicate NAME is refused here rather than merged. Two shelves reading "Grains" is indistinguishable on
-     every screen that shows only the word, and the products under each would look like one set that lost half. */
+  /**
+   * ⚠️ A duplicate NAME is refused here rather than merged. Two shelves reading "Grains" is indistinguishable on
+   * every screen that shows only the word, and the products under each would look like one set that lost half.
+   *
+   * ⚠️⚠️ THE CHECK IS GLOBAL PER ENTITY, NOT PER PARENT — AND THAT IS A REAL LIMIT ON THE TREE, not a UI choice.
+   * `definition` carries `UNIQUE (entity_id, kind, name)` (b160), so the DATABASE forbids two categories of one
+   * name however deep they sit. In a real taxonomy siblings-unique is the normal rule and repeated leaf names are
+   * everywhere — Google's has "Accessories" under a dozen branches. So a full-scale seed WILL collide.
+   * ⭐ Recorded in backlog 22: seeding beyond a small set needs that constraint relaxed to
+   * `(entity_id, kind, parent, name)`, which is a MIGRATION. Keeping this check global means the client refuses
+   * exactly what the server would refuse, instead of offering something that fails on save.
+   */
   var clash = (CBCAT_UI.list || []).filter(function(c){
     return c.id !== f.id && c.status !== 'retired' && c.name.toLowerCase() === name.toLowerCase(); })[0];
   if (clash) { if (err) err.textContent = 'You already have a live category called “' + clash.name + '”.'; return; }
   try {
     if (f.id) {
-      await api('defSave', { params: { id: f.id }, body: { name: name, note: f.note || '' } });
+      await api('defSave', { params: { id: f.id }, body: { name: name, note: f.note || '', rules: { parent: f.parent || null } } });
       toast('Renamed — every product that cites it follows.');
     } else {
-      var r = await api('defAdd', { body: { kind: 'category', sub_kind: null, name: name, note: f.note || '', rules: {} } });
+      var r = await api('defAdd', { body: { kind: 'category', sub_kind: null, name: name, note: f.note || '', rules: { parent: f.parent || null } } });
       var id = r && (r.definition_id || (r.definition && r.definition.definition_id));
       /* Live immediately: a draft category cannot be attached to anything, so it would be a shelf you cannot use. */
       if (id) await api('defSave', { params: { id: id }, body: { status: 'live' } });
@@ -130,12 +193,12 @@ async function cbcatRelive(id){
 function cbcatSelect(id){ CBCAT_UI.sel = id; CBCAT_UI.mode = 'view'; CBCAT_UI.form = null;
   if (UI.vp === 'mob') { UI.mdetail = true; var p = document.getElementById('panel'); if (p) p.classList.add('showdetail'); }
   cbcatPaint(); }
-function cbcatNew(){ CBCAT_UI.mode = 'edit'; CBCAT_UI.sel = null; CBCAT_UI.form = { id: null, name: '', note: '' };
+function cbcatNew(){ CBCAT_UI.mode = 'edit'; CBCAT_UI.sel = null; CBCAT_UI.form = { id: null, name: '', note: '', parent: CBCAT_UI.sel || null };
   if (UI.vp === 'mob') { UI.mdetail = true; var p = document.getElementById('panel'); if (p) p.classList.add('showdetail'); }
   cbcatPaint(); }
 function cbcatEdit(id){
   var c = (CBCAT_UI.list || []).filter(function(x){ return x.id === id; })[0]; if (!c) return;
-  CBCAT_UI.mode = 'edit'; CBCAT_UI.form = { id: c.id, name: c.name, note: c.note }; cbcatPaint();
+  CBCAT_UI.mode = 'edit'; CBCAT_UI.form = { id: c.id, name: c.name, note: c.note, parent: c.parent || null }; cbcatPaint();
 }
 function cbcatCancel(){ CBCAT_UI.mode = 'view'; CBCAT_UI.form = null; cbcatPaint(); }
 function cbcatField(k, v){ if (CBCAT_UI.form) CBCAT_UI.form[k] = v; }
@@ -164,7 +227,7 @@ function cbcatRowsHTML(){
     var ret = c.status === 'retired';
     return '<div class="row' + (c.id === CBCAT_UI.sel ? ' sel' : '') + '" data-testid="catg-row-' + esc(c.id) + '"'
       + ' onclick="cbcatSelect(\'' + esc(c.id) + '\')"' + (ret ? ' style="opacity:.72"' : '') + '>'
-      + '<div style="flex:1;min-width:0">'
+      + '<div style="flex:1;min-width:0;padding-left:' + ((c.depth||0)*16) + 'px">'
       +   '<div style="display:flex;align-items:center;gap:7px">'
       +     '<b style="font-size:13.5px' + (ret ? ';text-decoration:line-through' : '') + '">' + esc(c.name) + '</b>'
       +     (ret ? '<span class="cbcat-badge ret">retired</span>' : '')
@@ -192,6 +255,8 @@ function cbcatDetailHTML(){
       + '<label class="fl">Name</label>'
       + '<input class="inp" id="cbcat_name" data-testid="catg-name" value="' + esc(f.name || '') + '"'
       + ' placeholder="Grains" oninput="cbcatField(\'name\',this.value)">'
+      + '<label class="fl">Sits under</label>'
+      + cbcatParentPickHTML(f)
       + '<label class="fl">Note</label>'
       + '<input class="inp" value="' + esc(f.note || '') + '" placeholder="optional — what belongs here"'
       + ' oninput="cbcatField(\'note\',this.value)">'
@@ -281,6 +346,22 @@ function cbcatSchemesHTML(){
       }).join('')
     + '</div>'
     + '<div style="font-size:11px;color:var(--grey);margin-top:5px">read from <code>' + esc(s.source) + '</code></div>';
+}
+/**
+ * The parent picker. ⚠️ Options are indented with the same depth the list uses, so "sits under" is answered by
+ * the shape of the dropdown rather than by remembering what the tree looked like a moment ago.
+ */
+function cbcatParentPickHTML(f){
+  var opts = cbcatParentOptions(f.id);
+  if (!opts.length) return '<div style="font-size:12px;color:var(--grey);margin:2px 0 4px">Nothing to sit under yet — this will be a top-level category.</div>';
+  return '<select class="inp" data-testid="catg-parent" onchange="cbcatField(\'parent\', this.value || null)">'
+    + '<option value="">— top level —</option>'
+    + opts.map(function(c){
+        var pad = new Array((c.depth || 0) + 1).join('  ');
+        return '<option value="' + esc(c.id) + '"' + ((f.parent === c.id) ? ' selected' : '') + '>'
+          + pad + esc(c.name) + '</option>';
+      }).join('')
+    + '</select>';
 }
 function cbcatPaintList(){
   var b = document.getElementById('cbcat_rows'); if (b) b.innerHTML = cbcatRowsHTML();
