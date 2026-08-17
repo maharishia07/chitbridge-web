@@ -402,7 +402,7 @@ function catfFillItem(){
   }
   window._catfSchema = schema;
   var style = '<style>#cat_je > div > h3,#cat_je .je-object__title{font-size:13px;font-weight:700;margin:0}#cat_je label{display:block;font-size:var(--fs-1);color:#6a707a;font-weight:600;margin:9px 0 3px}#cat_je input[type=text],#cat_je input[type=number],#cat_je select,#cat_je textarea{width:100%;box-sizing:border-box;padding:7px 9px;border:1px solid var(--line);border-radius:6px;font-size:13px;background:var(--paper,#fff)}#cat_je .je-indented-panel{border:none;padding:0;margin:0}#cat_je p.je-object__title + *{margin-top:0}#cat_je .je-header{margin-bottom:2px}</style>';
-  modal('<div class="mhd"><div class="t">Add an item</div></div><div class="mbody" style="padding:0"><div style="padding:14px 18px">' + style + '<div style="font-size:11.5px;color:var(--grey);margin-bottom:12px">Fill in the details for this item.</div><div id="cat_je" style="color:var(--grey);font-size:12px">…</div><div id="cat_je_out" style="margin-top:12px"></div><div style="display:flex;gap:8px;margin-top:16px;align-items:center"><button class="pri" onclick="catfCaptureItem()" style="padding:9px 16px">Save item</button><button onclick="closeModal()" style="padding:9px 16px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--grey)">Cancel</button><button data-testid="catg-new" onclick="catfNewCategory()" style="margin-left:auto;padding:9px 14px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--blue);font-weight:600">＋ New category</button></div></div></div>', true);
+  modal('<div class="mhd"><div class="t">Add an item</div></div><div class="mbody" style="padding:0"><div style="padding:14px 18px">' + style + '<div style="font-size:11.5px;color:var(--grey);margin-bottom:12px">Fill in the details for this item.</div><div id="cat_je" style="color:var(--grey);font-size:12px">…</div><div id="cat_je_out" style="margin-top:12px"></div><div style="display:flex;gap:8px;margin-top:16px;align-items:center"><button class="pri" onclick="catfCaptureItem()" style="padding:9px 16px">Save item</button><button onclick="closeModal()" style="padding:9px 16px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--grey)">Cancel</button><button data-testid="catg-new" onclick="catfNewCategory()" style="margin-left:auto;padding:9px 14px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--blue);font-weight:600">＋ New category</button></div></div></div>', true);
   _catfLoadJE().then(function(){
     setTimeout(function(){ var el = document.getElementById('cat_je'); if (!el) return; el.innerHTML = '';
       try { if (window._catfJE) { try { window._catfJE.destroy(); } catch (e) {} } window._catfJE = new window.JSONEditor(el, { schema: window._catfSchema, theme: 'html', disable_edit_json: true, disable_properties: true, disable_collapse: true, no_additional_properties: true });
@@ -578,7 +578,7 @@ function _catfWizard(){
   var raw = [null, _cwStep1, _cwStep2, _cwStep3, _cwStep4, _cwStep5, _cwStep6][step](w);
   var body = (step === 1 || step === 2) ? raw : _cwTwo(raw, _cwPreview(w));   // steps 1 & 2 own their two-panel; 3–6 get the running preview on the right
   var nav = '<div style="display:flex;gap:10px;margin-top:20px;align-items:center">'
-    + (step > 1 ? '<button onclick="cwBack()" style="padding:9px 16px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--grey)">‹ Back</button>' : '')
+    + (step > 1 ? '<button onclick="cwBack()" style="padding:9px 16px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--grey)">‹ Back</button>' : '')
     + (step < 6 ? '<button class="pri" onclick="cwNext()" style="padding:9px 18px">Next ›</button>' : '<button class="pri" onclick="cwFinish()" style="padding:9px 18px">✓ Finish — go live</button>')
     + (step < 6 ? '<span onclick="cwFinish()" style="cursor:pointer;font-size:11.5px;color:var(--blue)">or finish now (partial is fine)</span>' : '')
     + '<span onclick="cwCancel()" style="cursor:pointer;font-size:11.5px;color:var(--grey);margin-left:auto">Cancel</span></div>';
@@ -629,11 +629,11 @@ function _cwStep1(w){
         var extra = us.filter(function(u){ return CW_UNITS.indexOf(u) < 0; });
         return '<div style="margin-bottom:14px"><div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:5px">Sold by <span style="color:#9aa3a7">— pick every unit this catalogue uses (products can differ: kg · litre · count…)</span></div>'
           + '<div style="display:flex;gap:5px;flex-wrap:wrap">' + CW_UNITS.map(function(u){ return chip(u, true); }).join('') + extra.map(function(u){ return chip(u, false); }).join('') + '</div>'
-          + '<div style="display:flex;gap:6px;margin-top:7px"><input id="cw_newunit" placeholder="add a unit (e.g. drum, coil)" style="width:170px;padding:4px 8px;border:1px solid var(--line);border-radius:6px;font-size:11.5px"><button onclick="cwAddUnit()" style="padding:4px 11px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--blue);font-weight:600;font-size:var(--fs-1);cursor:pointer">Add</button></div></div>'; })()
+          + '<div style="display:flex;gap:6px;margin-top:7px"><input id="cw_newunit" placeholder="add a unit (e.g. drum, coil)" style="width:170px;padding:4px 8px;border:1px solid var(--line);border-radius:6px;font-size:11.5px"><button onclick="cwAddUnit()" style="padding:4px 11px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--blue);font-weight:600;font-size:var(--fs-1);cursor:pointer">Add</button></div></div>'; })()
       + _cwMethodBlock(w)
       + order.map(function(sec){ return '<div style="margin-bottom:11px"><div style="font-size:var(--fs-1);font-weight:700;color:#6a707a;text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">' + esc(sec) + '</div>' + secs[sec].map(function(f){ var idx = w.fieldSel.indexOf(f); return '<label style="display:flex;align-items:center;gap:8px;padding:2px 0;cursor:pointer"><input type="checkbox" ' + (f.on ? 'checked' : '') + ' onchange="cwToggleField(' + idx + ')"><span style="font-size:12px;font-weight:' + (f.on ? 600 : 400) + ';color:' + (f.on ? '#1c2128' : 'var(--grey)') + '">' + esc(f.name) + '</span><span style="font-size:var(--fs-1);color:#9aa3a7;background:#eef1f5;border-radius:4px;padding:1px 6px">' + esc(f.type) + '</span>' + (f._bp ? '<span style="font-size:var(--fs-1);color:#6a44a8" title="from blueprint">📎</span>' : f._added ? '<span style="font-size:var(--fs-1);color:#2c7a43" title="you added">＋</span>' : '') + '</label>'; }).join('') + '</div>'; }).join('')
       + '<div style="font-size:var(--fs-1);color:#2c7a43;font-style:italic;border-top:1px solid var(--line);padding-top:8px">' + on + ' fields selected · sold by ' + esc(_cwUnitStr(w)) + '</div>'
-      + '<div style="margin-top:8px"><div style="font-size:var(--fs-1);font-weight:700;color:#6a707a;text-transform:uppercase;letter-spacing:.04em">Add a data type</div><div style="display:flex;gap:6px;margin-top:5px"><input id="cw_newfield" placeholder="field name" style="flex:1;min-width:0;padding:5px 8px;border:1px solid var(--line);border-radius:6px;font-size:12px"><select id="cw_newtype" style="padding:5px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-1)">' + ['text', 'number', 'choice', 'date', 'boolean'].map(function(t){ return '<option>' + t + '</option>'; }).join('') + '</select><button onclick="cwAddCustomField()" style="padding:5px 10px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--blue);font-weight:600;font-size:var(--fs-1);cursor:pointer">Add</button></div><div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">Uncheck any you don\'t need · add any that are missing. Adopting a blueprint (step 2) adds its fields here too 📎.</div></div>';
+      + '<div style="margin-top:8px"><div style="font-size:var(--fs-1);font-weight:700;color:#6a707a;text-transform:uppercase;letter-spacing:.04em">Add a data type</div><div style="display:flex;gap:6px;margin-top:5px"><input id="cw_newfield" placeholder="field name" style="flex:1;min-width:0;padding:5px 8px;border:1px solid var(--line);border-radius:6px;font-size:12px"><select id="cw_newtype" style="padding:5px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-1)">' + ['text', 'number', 'choice', 'date', 'boolean'].map(function(t){ return '<option>' + t + '</option>'; }).join('') + '</select><button onclick="cwAddCustomField()" style="padding:5px 10px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--blue);font-weight:600;font-size:var(--fs-1);cursor:pointer">Add</button></div><div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">Uncheck any you don\'t need · add any that are missing. Adopting a blueprint (step 2) adds its fields here too 📎.</div></div>';
   } else {
     right = '<div style="color:var(--grey);font-size:var(--fs-2);text-align:center;margin-top:44px">Describe the catalogue on the left →<br>I\'ll suggest the fields to store, grouped in sections, for you to pick.</div>';
   }
@@ -744,12 +744,12 @@ function _cwStep4(w){
        * on photos the owner only meant to attach. So: add freely, read when you choose.
        */
       + (ph.length ? '<button data-testid="cw-photo-read" onclick="cwPhotosRead()" ' + (w._phBusy ? 'disabled ' : '')
-          + 'style="margin-left:8px;padding:8px 15px;border:1px solid #6d5bd0;border-radius:9px;background:#fff;color:#6d5bd0;font-weight:600;cursor:pointer">'
+          + 'style="margin-left:8px;padding:8px 15px;border:1px solid #6d5bd0;border-radius:9px;background:var(--card);color:#6d5bd0;font-weight:600;cursor:pointer">'
           + (w._phBusy ? '✨ Reading…' : '✨ Read the labels') + '</button>' : '')
-      + (w._phErr ? '<div style="margin-top:8px;background:#fbeceb;border:1px solid #f0c9c6;border-radius:9px;padding:8px 11px;font-size:12px;color:#b4453f">' + esc(w._phErr) + '</div>' : '')
+      + (w._phErr ? '<div style="margin-top:8px;background:#fbeceb;border:1px solid #f0c9c6;border-radius:9px;padding:8px 11px;font-size:12px;color:var(--disp)">' + esc(w._phErr) + '</div>' : '')
       + (w._phNote ? '<div style="margin-top:8px;background:#f7f6fd;border:1px solid #e4dff6;border-radius:9px;padding:8px 11px;font-size:12px;color:#4a3f7a">' + esc(w._phNote) + '</div>' : '')
       + (ph.length ? '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:10px;margin-top:12px">'
-          + ph.map(function(p){ return '<div style="border:1px solid var(--line);border-radius:9px;padding:8px;background:#fff">'
+          + ph.map(function(p){ return '<div style="border:1px solid var(--line);border-radius:9px;padding:8px;background:var(--card)">'
             + '<div style="height:88px;background:#f4f6f8 center/cover no-repeat;background-image:url(' + p.url + ');border-radius:6px"></div>'
             /**
              * ⚠️ A PROPOSAL MUST NOT LOOK LIKE SOMETHING YOU TYPED. An AI-filled name and price get a purple frame
@@ -761,7 +761,7 @@ function _cwStep4(w){
             + '<input value="' + esc(p.name || '') + '" oninput="cwSetPhotoField(\'' + p.id + '\',\'name\',this.value)" placeholder="item name" style="width:100%;box-sizing:border-box;margin-top:6px;padding:5px 7px;border:1px solid ' + (p._ai ? '#c9bdf0' : 'var(--line)') + ';border-radius:6px;font-size:11.5px">'
             + '<div style="display:flex;gap:5px;margin-top:5px;align-items:center"><span style="font-size:var(--fs-1);color:var(--grey)">' + esc(_catfCcy()) + '</span><input type="number" value="' + (p.price != null ? p.price : '') + '" oninput="cwSetPhotoField(\'' + p.id + '\',\'price\',this.value)" placeholder="price" style="flex:1;min-width:0;padding:4px 6px;border:1px solid var(--line);border-radius:6px;font-size:11.5px"><span onclick="cwPhotoRemove(\'' + p.id + '\')" style="cursor:pointer;color:#b23;font-size:15px;line-height:1" title="remove">×</span></div>'
             + '</div>'; }).join('') + '</div>'
-          + '<button onclick="cwPhotosCommit()" style="margin-top:10px;padding:8px 15px;border:1px solid #2c7a43;border-radius:9px;background:#fff;color:#2c7a43;font-weight:600">✓ Add ' + ph.length + ' photo' + (ph.length > 1 ? 's' : '') + ' to catalogue</button>'
+          + '<button onclick="cwPhotosCommit()" style="margin-top:10px;padding:8px 15px;border:1px solid #2c7a43;border-radius:9px;background:var(--card);color:#2c7a43;font-weight:600">✓ Add ' + ph.length + ' photo' + (ph.length > 1 ? 's' : '') + ' to catalogue</button>'
           + (committed ? '<div style="margin-top:7px;font-size:11.5px;color:#2c7a43">✓ ' + committed + ' photo item(s) in your catalogue.</div>' : '')
         : '')
       /* ⚠️ This line used to say the co-assist was "text-only today". It is not, as of b127 — and a footnote that
@@ -785,7 +785,7 @@ function _cwStep5(w){
   var units = _cwUnitSet(w);
   return '<div style="font-size:13px;color:#3a4048;margin-bottom:10px">Set your <b>price</b> per item (' + esc(_catfCcy()) + ')' + (units.length > 1 ? ' and the <b>unit</b> it sells by' : '') + '. You can change these anytime later.</div>'
     + items.map(function(it){ var nm = esc(it.name).replace(/'/g, "\\'");
-        return '<div style="display:flex;align-items:center;gap:9px;padding:6px 10px;border:1px solid var(--line);border-radius:9px;margin-top:5px;background:#fff"><span style="font-weight:600;font-size:var(--fs-2);flex:1">' + esc(it.name) + '</span><span style="color:var(--grey);font-size:var(--fs-1)">' + esc(_catfCcy()) + '</span>'
+        return '<div style="display:flex;align-items:center;gap:9px;padding:6px 10px;border:1px solid var(--line);border-radius:9px;margin-top:5px;background:var(--card)"><span style="font-weight:600;font-size:var(--fs-2);flex:1">' + esc(it.name) + '</span><span style="color:var(--grey);font-size:var(--fs-1)">' + esc(_catfCcy()) + '</span>'
         + '<input type="number" value="' + (w.prices[it.name] != null ? w.prices[it.name] : '') + '" oninput="cwSetPrice(\'' + nm + '\',this.value)" placeholder="price" style="width:92px;padding:5px 8px;border:1px solid var(--line);border-radius:6px;font-size:12px">'
         + _cwUnitSelect(units, _cwItemUnit(w, it), 'cwSetItemUnit(\'' + nm + '\',this.value)') + '</div>'; }).join('');
 }
@@ -793,7 +793,7 @@ function _cwStep5(w){
 function _cwUnitSet(w){ return (w.units && w.units.length) ? w.units.slice() : [(CATF_KB[w.vertical] && CATF_KB[w.vertical].baseUnit) || 'unit']; }
 function _cwItemUnit(w, it){ var s = _cwUnitSet(w); var u = (w.itemUnits || {})[it.name]; return (u && s.indexOf(u) >= 0) ? u : s[0]; }
 function _cwUnitSelect(units, sel, onchange){
-  return '<select data-testid="cw-item-unit" onchange="' + onchange + '" title="unit this item sells by" style="padding:5px 6px;border:1px solid var(--line);border-radius:6px;font-size:12px;background:#fff;color:#3a4048">'
+  return '<select data-testid="cw-item-unit" onchange="' + onchange + '" title="unit this item sells by" style="padding:5px 6px;border:1px solid var(--line);border-radius:6px;font-size:12px;background:var(--card);color:#3a4048">'
     + units.map(function(u){ return '<option value="' + esc(u) + '"' + (u === sel ? ' selected' : '') + '>' + esc(u) + '</option>'; }).join('') + '</select>';
 }
 function cwSetItemUnit(name, u){ UI.cw.itemUnits = UI.cw.itemUnits || {}; UI.cw.itemUnits[name] = u; }
@@ -1038,10 +1038,10 @@ function _catfAppearsTab(f, c, facets){
   var visFields = (c.fields || []).slice(0, 4);
   var ccy = _catfCcy();
   var priceOf = function(r){ return (r.price != null && r.price !== '') ? r.price : 40; };
-  var step = function(n, title, inner){ return '<div style="border:1px solid var(--line);border-radius:12px;background:#fff;padding:11px 13px;margin-top:8px"><div style="font-size:var(--fs-1);font-weight:800;color:#2c5aa0;letter-spacing:.04em;margin-bottom:8px">' + n + ' · ' + title + '</div>' + inner + '</div>'; };
+  var step = function(n, title, inner){ return '<div style="border:1px solid var(--line);border-radius:12px;background:var(--card);padding:11px 13px;margin-top:8px"><div style="font-size:var(--fs-1);font-weight:800;color:#2c5aa0;letter-spacing:.04em;margin-bottom:8px">' + n + ' · ' + title + '</div>' + inner + '</div>'; };
   var arrow = '<div style="text-align:center;color:#c8d0d9;font-size:15px;line-height:1.1">↓</div>';
   // 1 · browse (listing grid)
-  var browse = '<div style="display:flex;gap:8px;flex-wrap:wrap">' + rows.map(function(r){ return '<div style="width:132px;border:1px solid var(--line);border-radius:9px;padding:8px 9px;background:#fff">' + (facets.media ? '<div style="height:46px;border-radius:6px;background:linear-gradient(135deg,#eef1f5,#dde3ea);margin-bottom:6px"></div>' : '') + '<div style="font-weight:600;font-size:11.5px;line-height:1.2">' + esc(r.name || 'item') + '</div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px"><span style="font-weight:700;font-size:11.5px">' + esc(_catfMoney(priceOf(r))) + '</span><span style="background:#2c5aa0;color:#fff;border-radius:4px;padding:2px 7px;font-size:var(--fs-1);font-weight:600">' + (f.method === 'cart' ? 'Add' : 'View') + '</span></div></div>'; }).join('') + '</div>';
+  var browse = '<div style="display:flex;gap:8px;flex-wrap:wrap">' + rows.map(function(r){ return '<div style="width:132px;border:1px solid var(--line);border-radius:9px;padding:8px 9px;background:var(--card)">' + (facets.media ? '<div style="height:46px;border-radius:6px;background:linear-gradient(135deg,#eef1f5,#dde3ea);margin-bottom:6px"></div>' : '') + '<div style="font-weight:600;font-size:11.5px;line-height:1.2">' + esc(r.name || 'item') + '</div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px"><span style="font-weight:700;font-size:11.5px">' + esc(_catfMoney(priceOf(r))) + '</span><span style="background:#2c5aa0;color:#fff;border-radius:4px;padding:2px 7px;font-size:var(--fs-1);font-weight:600">' + (f.method === 'cart' ? 'Add' : 'View') + '</span></div></div>'; }).join('') + '</div>';
   // 2 · product detail
   var p0 = rows[0] || {};
   var spec = visFields.map(function(fl){ var v = (p0.values && p0.values[fl.name]) || _catfSampleVal(fl.name, 0); return '<div style="display:flex;justify-content:space-between;font-size:var(--fs-1);padding:2px 0;border-bottom:1px dashed var(--line)"><span style="color:var(--grey)">' + esc(fl.name) + '</span><span style="font-family:monospace">' + esc(v) + '</span></div>'; }).join('');
@@ -1071,7 +1071,7 @@ function _catfItemsHtml(f){
     var priceCell = (it.price != null && it.price !== '')
       ? '<span style="font-weight:700;font-size:12px">' + esc(_catfMoney(it.price)) + '</span> <span onclick="catfEditPrice(' + i + ')" style="cursor:pointer;color:var(--blue);font-size:var(--fs-1)">edit</span>'
       : '<input type="number" placeholder="set price" onchange="catfSetItemPrice(' + i + ',this.value)" title="the ONLY thing you enter for a referenced item" style="width:92px;padding:4px 7px;border:1px solid #d98b84;border-radius:6px;font-size:12px;background:#fbeeec">';
-    return '<div style="border:1px solid var(--line);border-radius:9px;padding:8px 11px;margin-top:5px;background:#fff"><div style="display:flex;align-items:center;gap:8px">'
+    return '<div style="border:1px solid var(--line);border-radius:9px;padding:8px 11px;margin-top:5px;background:var(--card)"><div style="display:flex;align-items:center;gap:8px">'
       + ((it._photo || it.photo) ? '<span style="width:26px;height:26px;border-radius:5px;background:#f4f6f8 center/cover no-repeat;background-image:url(' + (it._photo || it.photo) + ');flex:none"></span>' : (it._media ? '<span style="width:22px;height:22px;border-radius:5px;background:linear-gradient(135deg,#eef1f5,#dde3ea);flex:none"></span>' : ''))
       + '<span style="font-weight:600;font-size:var(--fs-2)">' + esc(it.product || it.name || 'item') + '</span>'
       + '<span style="font-size:var(--fs-1);font-weight:700;color:' + t[1] + ';background:' + t[1] + '18;border-radius:4px;padding:1px 6px">' + t[0] + '</span>'
@@ -1086,7 +1086,7 @@ function _catfUnitCell(f, it, i){
   var units = (f.units && f.units.length) ? f.units : []; if (!units.length) return '';
   var sel = (units.indexOf(it.unit) >= 0) ? it.unit : units[0];
   if (units.length === 1) return '<span style="font-size:var(--fs-1);color:var(--grey)">/ ' + esc(sel) + '</span>';
-  return '<select data-testid="catf-item-unit" onchange="catfSetItemUnit(' + i + ',this.value)" title="unit this item sells by" style="padding:3px 5px;border:1px solid var(--line);border-radius:5px;font-size:var(--fs-1);background:#fff;color:#3a4048">'
+  return '<select data-testid="catf-item-unit" onchange="catfSetItemUnit(' + i + ',this.value)" title="unit this item sells by" style="padding:3px 5px;border:1px solid var(--line);border-radius:5px;font-size:var(--fs-1);background:var(--card);color:#3a4048">'
     + units.map(function(u){ return '<option value="' + esc(u) + '"' + (u === sel ? ' selected' : '') + '>' + esc(u) + '</option>'; }).join('') + '</select>';
 }
 function catfSetItemUnit(i, u){ if (!UI.catf || !UI.catf.items || !UI.catf.items[i]) return; UI.catf.items[i].unit = u; _catfSave(); if (UI.catf._source) _catfRepublish(); renderApp(); }
@@ -1125,14 +1125,14 @@ function _catfFaceView(){
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:16px">Item data comes three ways — <b>📎 from the source</b> (owner sets price only) · <b>✍ entered</b> · <b>🔗 from ERP</b>:</div>'
     + '<div style="display:flex;gap:10px;margin-top:6px;flex-wrap:wrap">'
     + '<button class="pri" onclick="catfFillItem()" style="padding:9px 15px">＋ Add manually</button>'
-    + '<button onclick="catfSyncERP()" style="padding:9px 15px;border:1px solid #b07b1e;border-radius:9px;background:#fff;color:#b07b1e;font-weight:600">🔗 From ERP</button>'
-    + '<button onclick="catfCustomerPreview()" style="padding:9px 15px;border:1px solid #2c7a43;border-radius:9px;background:#fff;color:#2c7a43;font-weight:600">👁 Customer experience</button>'
-    + '<button onclick="catfManage()" style="padding:9px 15px;border:1px solid #2c5aa0;border-radius:9px;background:#fff;color:#2c5aa0;font-weight:600">🗂️ Manage in Catalogue</button>'
+    + '<button onclick="catfSyncERP()" style="padding:9px 15px;border:1px solid #b07b1e;border-radius:9px;background:var(--card);color:#b07b1e;font-weight:600">🔗 From ERP</button>'
+    + '<button onclick="catfCustomerPreview()" style="padding:9px 15px;border:1px solid #2c7a43;border-radius:9px;background:var(--card);color:#2c7a43;font-weight:600">👁 Customer experience</button>'
+    + '<button onclick="catfManage()" style="padding:9px 15px;border:1px solid #2c5aa0;border-radius:9px;background:var(--card);color:#2c5aa0;font-weight:600">🗂️ Manage in Catalogue</button>'
     + '<input id="catf_photo_input" type="file" accept="image/*" multiple style="display:none" onchange="catfAddPhotos(this)">'
-    + '<button onclick="catfPhotoAttachBtn()" style="padding:9px 15px;border:1px solid #2c7a43;border-radius:9px;background:#fff;color:#2c7a43;font-weight:600">📷 Add photos</button>'
-    + '<button onclick="catfEnrichAI()" style="padding:9px 15px;border:1px solid #b07b1e;border-radius:9px;background:#fff;color:#b07b1e;font-weight:600">✨ Enrich (AI)</button>'
-    + '<button onclick="catfPublishBlueprint()" style="padding:9px 15px;border:1px solid #6a4fa0;border-radius:9px;background:#fff;color:#6a4fa0;font-weight:600">📢 Publish as blueprint</button>'
-    + '<button onclick="catfReset()" style="padding:9px 15px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--grey)">↺ Start over</button>'
+    + '<button onclick="catfPhotoAttachBtn()" style="padding:9px 15px;border:1px solid #2c7a43;border-radius:9px;background:var(--card);color:#2c7a43;font-weight:600">📷 Add photos</button>'
+    + '<button onclick="catfEnrichAI()" style="padding:9px 15px;border:1px solid #b07b1e;border-radius:9px;background:var(--card);color:#b07b1e;font-weight:600">✨ Enrich (AI)</button>'
+    + '<button onclick="catfPublishBlueprint()" style="padding:9px 15px;border:1px solid #6a4fa0;border-radius:9px;background:var(--card);color:#6a4fa0;font-weight:600">📢 Publish as blueprint</button>'
+    + '<button onclick="catfReset()" style="padding:9px 15px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--grey)">↺ Start over</button>'
     + '</div>'
     + '<div style="margin-top:14px;font-size:var(--fs-1);color:var(--grey)">Items are <b>golden records</b> — each source (blueprint · ERP · CSV · capture) merges into one item, keyed by SKU, edited via JSON Merge Patch. <span onclick="catfStandardsModal()" style="cursor:pointer;color:var(--blue);font-weight:600">📐 Built on open standards →</span></div>'
     + '</div>';

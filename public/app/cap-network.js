@@ -505,7 +505,7 @@ function _netChangeMap(changes){
       walk(n.key, depth + 1);
     });
   })(null, 0);
-  return '<div style="border:1px solid var(--line);border-radius:9px;overflow:hidden;background:#fff">' + rows.join('') + '</div>';
+  return '<div style="border:1px solid var(--line);border-radius:9px;overflow:hidden;background:var(--card)">' + rows.join('') + '</div>';
 }
 
 /** Ask, showing the map. `apply` runs only if the person agrees. */
@@ -995,7 +995,7 @@ function _netMemberScreen(){
     + '<div style="font-size:19px;font-weight:800">🔗 Your network</div>'
     + '<div style="font-size:13px;color:var(--grey);margin:8px 0 14px;line-height:1.6">You are part of <b>' + esc(rootName)
     + '</b>. The structure is set by the network operator — you can see it here, and you look after your own store, its catalogue and its people.</div>'
-    + '<div style="border:1px solid var(--line);border-radius:12px;background:#fff;overflow:hidden">' + list + '</div>'
+    + '<div style="border:1px solid var(--line);border-radius:12px;background:var(--card);overflow:hidden">' + list + '</div>'
     + '<div style="margin-top:14px;padding:11px 13px;border:1px solid var(--line);border-radius:9px;background:#fafbfc;font-size:12px;color:var(--grey);line-height:1.6">'
     + 'Only <b>' + esc(rootName) + '</b> can add, change or remove stores in this network. '
     + 'Ask them if something here is wrong.</div></div>';
@@ -1349,7 +1349,7 @@ function _netStepDetails(){
   var o = _netOrderState();
   if (!o.subject) o.subject = _netDefaultSubject();
   return '<div class="sec">Your request to ' + esc((UI._brSel && UI._brSel.name) || '') + '</div>'
-    + '<label class="fl">Subject <span style="color:#b4453f">*</span></label>'
+    + '<label class="fl">Subject <span style="color:var(--disp)">*</span></label>'
     + '<input class="inp" data-testid="net-subject" value="' + esc(o.subject) + '" oninput="UI._netOrder.subject=this.value;UI._netFlow&&UI._netFlow.paintFoot()">'
     + '<div style="display:flex;gap:10px"><div style="flex:1"><label class="fl">Needed by</label>'
     + '<input class="inp" type="date" data-testid="net-by" value="' + esc(o.by) + '" oninput="UI._netOrder.by=this.value"></div>'
@@ -1484,7 +1484,7 @@ function _netBrowseBody(){
     /* THE CHIP — who you are ordering from, and the one warning that must never hide behind a tap. */
     var head = '<div style="padding-bottom:10px;border-bottom:1px solid var(--line)">'
       + '<span onclick="netBrowseBack()" style="cursor:pointer;color:var(--blue);font-size:var(--fs-2)">‹ all stores</span>'
-      + '<div data-testid="net-chip" style="display:inline-flex;align-items:center;gap:9px;border:1px solid var(--line);border-radius:22px;padding:6px 13px;background:#fff;margin-left:8px">'
+      + '<div data-testid="net-chip" style="display:inline-flex;align-items:center;gap:9px;border:1px solid var(--line);border-radius:22px;padding:6px 13px;background:var(--card);margin-left:8px">'
       + '<b style="font-size:13.5px">' + esc(s.name) + '</b>'
       + (s.bridge_id ? '<span style="font-family:ui-monospace,Menlo,monospace;font-size:var(--fs-1);color:var(--grey)">' + esc(s.bridge_id) + '</span>' : '')
       + (netIsMe() ? '<span style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:20px;padding:2px 9px;font-size:var(--fs-1);color:#8a5a1e;font-weight:700">⚠ this is your own store</span>' : '')
@@ -1897,7 +1897,7 @@ function _methodControl(m, cur){
 }
 function _methodPreview(m){
   var inner = _methodControl(m); if (!inner) return '';
-  return '<div style="margin-top:6px;padding:9px 10px;border:1px dashed var(--line-strong,#c8d0d9);border-radius:9px;background:#fff"><div style="font-size:var(--fs-1);color:var(--faint,#8a929e);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Customer sees</div>' + inner + '</div>';
+  return '<div style="margin-top:6px;padding:9px 10px;border:1px dashed var(--line-strong,#c8d0d9);border-radius:9px;background:var(--card)"><div style="font-size:var(--fs-1);color:var(--faint,#8a929e);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Customer sees</div>' + inner + '</div>';
 }
 /* ---- the REAL OUTPUT visuals ---- */
 function _sampleVal(type){ if (type === 'number') return '123.4'; if (type === 'choice') return 'A'; if (type === 'range') return '10–20'; if (type === 'date') return '2026-07-25'; return 'text'; }
@@ -1914,7 +1914,7 @@ function _catChain(n){
   if (!fs.length && !c.product && !fb.length) return '';
   var fbCol = ['#6a4fa0', '#efeafa'];
   var card = function(head, hint, col, itemsHtml, count){
-    return '<div style="flex:1;min-width:118px;border:1px solid var(--line);border-top:3px solid ' + col[0] + ';border-radius:9px;padding:8px 9px;background:#fff">'
+    return '<div style="flex:1;min-width:118px;border:1px solid var(--line);border-top:3px solid ' + col[0] + ';border-radius:9px;padding:8px 9px;background:var(--card)">'
       + '<div style="font-size:var(--fs-1);font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:' + col[0] + '">' + esc(head) + ' <span style="color:var(--faint,#8a929e)">' + count + '</span></div>'
       + '<div style="font-size:var(--fs-1);color:var(--grey);margin:1px 0 4px">' + esc(hint) + '</div>'
       + (itemsHtml || '<span style="font-size:var(--fs-1);color:var(--faint,#8a929e)">—</span>')
@@ -1972,7 +1972,7 @@ function _catRecordPreview(n){
   var refs = (c.refs || []).filter(function(r){ return r.system && r.code; });
   var refsLine = refs.length ? refs.map(function(r){ return esc(r.system) + ':' + esc(r.code); }).join(' · ') : '';
   var rows = fs.map(function(f){ return '<div style="display:flex;align-items:center;gap:8px;padding:2px 0;font-size:11.5px"><span style="flex:0 0 116px;color:var(--grey);font-family:monospace;overflow:hidden;text-overflow:ellipsis">' + esc(f.name || '—') + '</span><span style="flex:1;color:#1c2128">' + _sampleVal(f.type) + '</span>' + _legBadge(f.leg) + '</div>'; }).join('');
-  return '<div style="margin-top:12px;padding:11px 12px;border:1px solid var(--line);border-radius:9px;background:#fff">'
+  return '<div style="margin-top:12px;padding:11px 12px;border:1px solid var(--line);border-radius:9px;background:var(--card)">'
     + '<div style="font-size:var(--fs-1);color:var(--faint,#8a929e);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">📄 Stored as a record — one item</div>'
     + '<div style="font-weight:700;font-size:var(--fs-2)">' + esc(name) + (v0 && v0.name ? ' <span style="font-weight:500;color:var(--grey);font-size:var(--fs-1)">▸ ' + esc(v0.name) + '</span>' : '') + '</div>'
     + (unitLine ? '<div style="font-size:var(--fs-1);color:var(--grey);font-family:monospace;margin:2px 0 2px">' + unitLine + '</div>' : '')
@@ -1994,7 +1994,7 @@ function _chitPreview(n){
   var st = (o.states || []).filter(function(x){ return x.name; });
   var stateFlow = st.length ? '<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:3px;align-items:center">' + st.map(function(x, i){ return (i ? '<span style="color:var(--faint,#8a929e);font-size:var(--fs-1)">→</span>' : '') + '<span style="font-size:var(--fs-1);font-weight:600;color:#3a4048;background:#eef1f5;border-radius:4px;padding:1px 6px">' + esc(x.name) + '</span>'; }).join('') + '</div>' : '';
   return '<div style="margin-top:12px;border-top:1px solid var(--line);padding-top:9px"><div style="font-size:var(--fs-1);font-weight:800;color:#2c7a43;letter-spacing:.05em">🧾 CHIT — what the customer sees</div>'
-    + '<div style="margin-top:7px;max-width:290px;border:1px solid var(--line);border-top:3px solid #2c5aa0;border-radius:12px;box-shadow:0 1px 3px rgba(20,30,45,.08);padding:12px 13px;background:#fff">'
+    + '<div style="margin-top:7px;max-width:290px;border:1px solid var(--line);border-top:3px solid #2c5aa0;border-radius:12px;box-shadow:0 1px 3px rgba(20,30,45,.08);padding:12px 13px;background:var(--card)">'
       + '<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-weight:700;font-size:13px">' + esc(name) + '</span>' + expBadge + '</div>'
       + '<div style="margin-top:6px">' + specRows + '</div>'
       + '<div style="margin-top:9px">' + _methodControl(o.method, (n.place && n.place.currency) || (typeof SESSION !== 'undefined' && SESSION.currency) || '') + '</div>'
@@ -2745,7 +2745,7 @@ function _netInheritBlock(n){
       + (note ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px;line-height:1.5">' + note + '</div>' : '')
       + '</div>';
   };
-  return '<div style="margin-top:16px;padding:4px 15px;border:1px solid var(--line);border-radius:12px;background:#fff">'
+  return '<div style="margin-top:16px;padding:4px 15px;border:1px solid var(--line);border-radius:12px;background:var(--card)">'
     + '<div style="font-size:var(--fs-1);font-weight:800;color:var(--grey);letter-spacing:.05em;padding:11px 0 0">WHAT IT TAKES FROM THE NETWORK</div>'
     + row('CURRENCY', cur, 'Stamped when the store is created, and never converted afterwards.')
     + row('COUNTRY', cty)

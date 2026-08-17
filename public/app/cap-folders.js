@@ -345,7 +345,7 @@ function _groupSumPane(){
       + (miss > 0 ? ' ⚠️ ' + miss + ' of the ' + g.selection_requested + ' you ticked are not on this track and were left out.' : '')
       + '</div>';
   } else if (UI.folderSel) {
-    var b = function(on, lbl, arg){ return '<span onclick="gsScope(' + arg + ')" style="cursor:pointer;border:1px solid var(--line);border-radius:9px;padding:3px 10px;font-size:11.5px;margin-right:6px;' + (on ? 'background:var(--blue);color:#fff;border-color:var(--blue);font-weight:700' : 'background:#fff') + '">' + lbl + '</span>'; };
+    var b = function(on, lbl, arg){ return '<span onclick="gsScope(' + arg + ')" style="cursor:pointer;border:1px solid var(--line);border-radius:9px;padding:3px 10px;font-size:11.5px;margin-right:6px;' + (on ? 'background:var(--blue);color:#fff;border-color:var(--blue);font-weight:700' : 'background:var(--card)') + '">' + lbl + '</span>'; };
     out += '<div style="margin-bottom:10px">' + b(!_FLD.gsAll, 'This folder', 'false') + b(!!_FLD.gsAll, 'Whole track — every folder', 'true') + '</div>';
   }
 
@@ -437,7 +437,7 @@ function _groupSumPane(){
 /* ── metrics ──────────────────────────────────────────────────────────────────────────────────────────────────── */
 function _mBox(label, value, hint, tone){
   var col = tone === 'bad' ? '#c0453b' : tone === 'warn' ? '#8a5a1e' : 'var(--ink)';
-  return '<div style="flex:1;min-width:104px;border:1px solid var(--line);border-radius:9px;padding:10px 12px;background:#fff">'
+  return '<div style="flex:1;min-width:104px;border:1px solid var(--line);border-radius:9px;padding:10px 12px;background:var(--card)">'
     + '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey)">' + esc(label) + '</div>'
     + '<div style="font-size:19px;font-weight:800;margin-top:3px;color:' + col + '">' + esc(String(value)) + '</div>'
     + (hint ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">' + esc(hint) + '</div>' : '') + '</div>';
@@ -585,7 +585,7 @@ function _fldFolderName(id){ var f = (UI.folders || []).find(function(x){ return
    the precedence is guesswork. */
 function _ruleRow(r, i, n){
   var terms = Object.keys(r.when || {}).map(function(k){ return '<span style="font-family:ui-monospace,Menlo,monospace;font-size:11.5px">' + esc(k) + '</span> <b>' + esc(String(r.when[k])) + '</b>'; }).join(' <span style="color:var(--grey)">and</span> ');
-  return '<div style="border:1px solid var(--line);border-radius:9px;padding:11px 13px;margin-bottom:8px;background:#fff">'
+  return '<div style="border:1px solid var(--line);border-radius:9px;padding:11px 13px;margin-bottom:8px;background:var(--card)">'
     + '<div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap">'
     + '<span title="Runs ' + (i === 0 ? 'first' : 'after the ' + i + ' above') + '" style="flex:0 0 auto;min-width:20px;height:20px;border-radius:5px;background:var(--paper);border:1px solid var(--line);color:var(--grey);font-size:var(--fs-1);font-weight:700;display:inline-flex;align-items:center;justify-content:center;font-variant-numeric:tabular-nums">' + (i + 1) + '</span>'
     /* ⚠️ ↑ ↓, NOT ← →: this is a vertical list, and the glyph has to match the axis the thing actually moves on.
@@ -651,9 +651,9 @@ function _folderRulesPane(){
          Two conditions = two rules, in order — which is legible. */
       + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px">One condition per rule. Need two? Make two rules — they run in order, and the first match wins.</div>'
       + '<div style="display:flex;gap:8px;margin-top:10px">'
-      + '<button data-testid="rule-preview" onclick="rulePreview()" style="border:1px solid var(--line);background:#fff;border-radius:9px;padding:9px 15px;font-size:13px;font-weight:700;cursor:pointer">🔎 What would this catch?</button>'
+      + '<button data-testid="rule-preview" onclick="rulePreview()" style="border:1px solid var(--line);background:var(--card);border-radius:9px;padding:9px 15px;font-size:13px;font-weight:700;cursor:pointer">🔎 What would this catch?</button>'
       + '<button class="composebtn" data-testid="rule-save" onclick="ruleSave()">Save rule</button>'
-      + '<button onclick="ruleDraftCancel()" style="border:1px solid var(--line);background:#fff;border-radius:9px;padding:9px 15px;font-size:13px;cursor:pointer;color:var(--grey)">Cancel</button></div>';
+      + '<button onclick="ruleDraftCancel()" style="border:1px solid var(--line);background:var(--card);border-radius:9px;padding:9px 15px;font-size:13px;cursor:pointer;color:var(--grey)">Cancel</button></div>';
 
     if (_FLD.preview) {
       var p = _FLD.preview;

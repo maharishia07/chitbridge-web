@@ -17,7 +17,7 @@
    * 4.5:1 floor. It is the colour on every caption, sub-label and note, so a large share of the words on screen
    * were below the readability line. That reads as SOFT, which is the opposite of sharp.
    *
-   * #61666c measures 5.04–5.79 across all six grounds (paper · white · gold-soft · #f2efe8 · #eef3fb · #EDF2F9)
+   * var(--grey) measures 5.04–5.79 across all six grounds (paper · white · gold-soft · #f2efe8 · #eef3fb · #EDF2F9)
    * while staying far lighter than --ink at 13.39:1, so the hierarchy between a heading and its note survives.
    *
    * ⚠️ CHANGED AS A TOKEN, NOT A SWEEP — everything already says `var(--grey)`, so one line lifts every caption
@@ -67,28 +67,28 @@
   /* mode ribbon */
   .moderibbon{background:var(--gold-soft);border-bottom:1px solid var(--gold-line);color:#6b5a36;font-size:var(--fs-1);font-weight:600;padding:5px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
   .moderibbon b{font-family:'Space Grotesk'}
-  .moderibbon .pill{background:#fff;border:1px solid var(--gold-line);border-radius:20px;padding:2px 9px;font-size:var(--fs-1)}
+  .moderibbon .pill{background:var(--card);border:1px solid var(--gold-line);border-radius:20px;padding:2px 9px;font-size:var(--fs-1)}
   .moderibbon .sw{margin-left:auto;display:flex;gap:6px}
-  .moderibbon .sw button{border:1px solid var(--gold-line);background:#fff;border-radius:6px;font-size:var(--fs-1);font-weight:700;padding:4px 9px;color:#6b5a36}
+  .moderibbon .sw button{border:1px solid var(--gold-line);background:var(--card);border-radius:6px;font-size:var(--fs-1);font-weight:700;padding:4px 9px;color:#6b5a36}
   .moderibbon .sw button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
   .moderibbon .sw button:disabled{opacity:.42;cursor:not-allowed}
   /* Welcome (pre-register) */
   .welwrap{max-width:860px;margin:0 auto;padding:6px 18px 70px}
   .weltop{display:flex;align-items:center;justify-content:space-between;padding:10px 0 6px}
-  .welsignin{font-size:13px;color:var(--blue);border:1px solid var(--line);border-radius:9px;padding:7px 13px;background:#fff;cursor:pointer}
+  .welsignin{font-size:13px;color:var(--blue);border:1px solid var(--line);border-radius:9px;padding:7px 13px;background:var(--card);cursor:pointer}
   .welhero{text-align:center;padding:14px 0 6px}
   .welhero h1{font-family:'Space Grotesk';font-size:26px;font-weight:600;letter-spacing:-.02em;margin:6px auto;line-height:1.15;max-width:24ch}
   .welhero p{color:var(--grey);font-size:14.5px;max-width:60ch;margin:0 auto}
 .welhero-cta{display:flex;flex-direction:column;align-items:center;gap:6px;margin-top:18px}
 .welhero-cta-sub{color:var(--grey);font-size:12px}
   .welcaps{display:flex;gap:12px;flex-wrap:wrap;margin:20px 0}
-  .welcap{flex:1;min-width:200px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:15px}
+  .welcap{flex:1;min-width:200px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:15px}
   .welcap .ci{font-size:var(--fs-5)}.welcap .cn{font-family:'Space Grotesk';font-weight:600;font-size:14.5px;margin:7px 0 3px}.welcap .cd{font-size:var(--fs-2);color:var(--grey)}
-  .welsec{background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px;margin:14px 0}
+  .welsec{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;margin:14px 0}
   .welh2{font-family:'Space Grotesk';font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--grey);font-weight:700;margin-bottom:4px}
   .welsub{font-size:var(--fs-2);color:var(--grey);margin-bottom:12px}
   .welgrid{display:flex;gap:12px;flex-wrap:wrap}
-  .welrole,.welbp{flex:1;min-width:220px;border:1.5px solid var(--line);border-radius:13px;padding:15px;cursor:pointer;transition:.15s;background:#fff}
+  .welrole,.welbp{flex:1;min-width:220px;border:1.5px solid var(--line);border-radius:13px;padding:15px;cursor:pointer;transition:.15s;background:var(--card)}
   .welrole:hover,.welbp:hover{border-color:var(--blue);transform:translateY(-1px)}
   .welrole.sel,.welbp.sel{border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,168,106,.22)}
   .welrole .ci{font-size:21px}.welrole .cn,.welbp .cn{font-family:'Space Grotesk';font-weight:600;font-size:15px;margin:5px 0 2px}
@@ -99,33 +99,33 @@
   .welfoot{color:var(--grey);font-size:11.5px;margin-top:20px;text-align:center;border-top:1px solid var(--line);padding-top:12px}
   .rchosen{background:#f3f6fb;border:1px solid #d7e2f1;border-radius:12px;padding:10px 13px;font-size:13px;margin-bottom:14px}
   .welpips{display:flex;justify-content:center;gap:7px;flex-wrap:wrap;margin:8px 0 2px}
-  .welpip{font-size:var(--fs-1);font-family:'Space Mono';color:var(--grey);background:#fff;border:1px solid var(--line);border-radius:999px;padding:4px 11px}
+  .welpip{font-size:var(--fs-1);font-family:'Space Mono';color:var(--grey);background:var(--card);border:1px solid var(--line);border-radius:999px;padding:4px 11px}
   .welpip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
   .welsplit{display:flex;gap:12px;flex-wrap:wrap;margin:14px 0}
-  .welcol{flex:1;min-width:240px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:15px}
+  .welcol{flex:1;min-width:240px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:15px}
   .welcol.is{border-top:4px solid var(--blue)}.welcol.isnot{border-top:4px solid var(--gold)}
   .welcol ul{margin:8px 0 0;padding-left:17px}.welcol li{font-size:var(--fs-2);margin:5px 0}
-  .welask{background:#fff;border:1px solid var(--line);border-radius:14px;padding:15px;margin:14px 0}
+  .welask{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:15px;margin:14px 0}
   .welask-tag{font-size:var(--fs-1);font-family:'Space Mono';background:var(--gold-soft);color:#7a5e22;border-radius:5px;padding:1px 7px;margin-left:6px}
   .welchips{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0}
-  .welchip{font-size:12px;border:1px solid var(--line);background:#fff;border-radius:999px;padding:5px 11px;cursor:pointer;color:var(--ink)}
+  .welchip{font-size:12px;border:1px solid var(--line);background:var(--card);border-radius:999px;padding:5px 11px;cursor:pointer;color:var(--ink)}
   .welchip:hover{border-color:var(--blue)}
   .welask-row{display:flex;gap:8px;margin-top:6px}.welask-row .inp{flex:1}
   .welask-ans{font-size:13px;color:var(--ink);margin-top:10px;line-height:1.5}
 
   /* auth screens */
-  .auth{flex:1;display:flex;align-items:center;justify-content:center;padding:24px;overflow-y:auto;background:linear-gradient(160deg,#0F2E3D,#143b4e 60%,#1d4d61)}
-  .card{width:440px;max-width:100%;background:#fff;border-radius:18px;box-shadow:var(--shadow);overflow:hidden}
+  .auth{flex:1;display:flex;align-items:center;justify-content:center;padding:24px;overflow-y:auto;background:linear-gradient(160deg,var(--ink),#143b4e 60%,#1d4d61)}
+  .card{width:440px;max-width:100%;background:var(--card);border-radius:18px;box-shadow:var(--shadow);overflow:hidden}
   .card .top{padding:22px 26px 8px;text-align:center}
   .brand{display:inline-flex;align-items:center;gap:10px;font-family:'Space Grotesk';font-weight:700;font-size:18px}
   .card h1{font-family:'Space Grotesk';font-size:var(--fs-5);margin:14px 0 4px}.card .sub{font-size:var(--fs-2);color:var(--grey);margin:0}
   .card .body{padding:8px 26px 24px}
   .tabs{display:flex;gap:4px;background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:4px;margin:14px 0}
   .tabs button{flex:1;border:0;background:none;color:var(--grey);font-size:12px;font-weight:700;padding:9px 6px;border-radius:9px}
-  .tabs button.on{background:#fff;color:var(--blue);box-shadow:0 1px 3px rgba(0,0,0,.07)}
+  .tabs button.on{background:var(--card);color:var(--blue);box-shadow:0 1px 3px rgba(0,0,0,.07)}
   label.fl{display:block;font-size:var(--fs-1);font-weight:700;color:var(--grey);margin:12px 0 5px;text-transform:uppercase;letter-spacing:.04em}
   .inp{width:100%;border:1px solid var(--line);border-radius:9px;padding:11px 13px;font-size:var(--fs-3);outline:0;background:var(--paper)}
-  .inp:focus{border-color:var(--blue);background:#fff}
+  .inp:focus{border-color:var(--blue);background:var(--card)}
   .row2{display:flex;gap:10px}.row2>div{flex:1}
   .btn{width:100%;border:0;border-radius:12px;padding:13px;font-weight:700;font-size:var(--fs-3);margin-top:16px;background:var(--ink);color:#fff}
   .btn.gold{background:linear-gradient(90deg,var(--gold),#b8945a);color:#3a2e16}
@@ -159,7 +159,7 @@
   .topbar .lo{border:1px solid rgba(255,255,255,.25);background:none;color:#cfe0e8;border-radius:9px;font-size:var(--fs-1);font-weight:700;padding:6px 10px}
   .topbar .ham{display:none;border:0;background:none;color:#fff;font-size:var(--fs-5)}
 
-  .menu{background:#0F2E3D;color:#bcccd6;padding:12px 10px;display:flex;flex-direction:column;overflow-y:auto;border-top:1px solid rgba(255,255,255,.06)}
+  .menu{background:var(--ink);color:#bcccd6;padding:12px 10px;display:flex;flex-direction:column;overflow-y:auto;border-top:1px solid rgba(255,255,255,.06)}
   .menu .grpsep{height:1px;background:var(--line);margin:7px 10px 3px}
   /* ⚠️ #5f7d8c measured 3.25:1 on the navy — the two lowest-contrast runs on the whole screen were here, in the
      nav, where every session starts. #8fa9b6 is 5.76:1 and still clearly recessive against the 8.62:1 items. */
@@ -183,7 +183,7 @@
   .menu .tagl{margin-top:auto;font-size:var(--fs-1);color:#93adba;line-height:1.5;padding:8px}   /* was #6f8b99 — 3.94:1 */
 
   .main{min-width:0;display:flex;flex-direction:column;overflow:hidden;background:var(--paper)}
-  .purpose{display:flex;align-items:center;gap:10px;padding:0 16px;max-height:0;overflow:hidden;background:#fff;font-size:12px;color:var(--mut,#5d6b73);transition:max-height .22s ease,padding .22s ease}
+  .purpose{display:flex;align-items:center;gap:10px;padding:0 16px;max-height:0;overflow:hidden;background:var(--card);font-size:12px;color:var(--mut,#5d6b73);transition:max-height .22s ease,padding .22s ease}
   .purpose.open{max-height:90px;padding:9px 16px;border-bottom:1px solid var(--line)}
   .purpose b{font-family:'Space Grotesk';color:var(--ink)}
   .purpose .x{margin-left:auto;border:0;background:none;color:var(--grey);font-size:var(--fs-3);cursor:pointer}
@@ -219,7 +219,7 @@
    * a preference may shape a layout, it may not break it.
    */
   .panel{flex:1;display:grid;grid-template-columns:min(var(--lw,340px), calc(100% - 300px)) 7px minmax(0,1fr);min-height:0;position:relative}
-  .list{display:flex;flex-direction:column;min-width:0;min-height:0;background:#fff}
+  .list{display:flex;flex-direction:column;min-width:0;min-height:0;background:var(--card)}
   .lh{padding:10px 12px;border-bottom:1px solid var(--line)}
   .folders{display:flex;gap:4px;margin-bottom:8px}
   .folders button{flex:1;border:1px solid var(--line);background:var(--paper);color:var(--grey);font-size:12px;font-weight:700;padding:8px;border-radius:9px}
@@ -275,7 +275,7 @@
   .misbar{display:flex;align-items:center;gap:9px;padding:9px 12px;flex-wrap:wrap;border-bottom:1px solid var(--line)}
   .misttl{font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3)}
   .misbar .seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
-  .misbar .seg button{border:0;background:#fff;color:var(--grey);font-size:11.5px;font-weight:700;padding:5px 11px;cursor:pointer}
+  .misbar .seg button{border:0;background:var(--card);color:var(--grey);font-size:11.5px;font-weight:700;padding:5px 11px;cursor:pointer}
   .misbar .seg button.on{background:var(--ink);color:#fff}
   .misbar-r{margin-left:auto;display:flex;align-items:center;gap:8px}
   .misasof{font-size:var(--fs-1);color:var(--grey);font-family:'Space Mono'}
@@ -287,7 +287,7 @@
   .govtitle{font-family:'Space Grotesk';font-weight:700;font-size:19px;letter-spacing:-.01em;color:var(--ink)}
   .govsub{font-size:11.5px;color:var(--grey);margin:3px 0 0;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
   .govdesc{font-size:var(--fs-2);color:#3a4a54;line-height:1.55;margin:8px 0 4px}
-  .govgrp{margin-top:10px;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:#fff}
+  .govgrp{margin-top:10px;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:var(--card)}
   /* The whole header is the hit target — a chevron alone is a 12px tap area, which on a phone is a miss. */
   .govgrp-h{display:flex;align-items:center;gap:8px;width:100%;text-align:left;border:0;cursor:pointer;
             background:var(--paper);padding:10px 12px;font-size:12px;font-weight:800;letter-spacing:.03em;
@@ -334,7 +334,7 @@
           padding:9px 0;border-bottom:1px solid var(--line)}
   .govref-k{font-size:var(--fs-2);font-weight:600;color:var(--ink);min-width:0;overflow-wrap:anywhere}
   .govref-v{font-size:var(--fs-2);color:var(--ink);min-width:0;overflow-wrap:anywhere}
-  .govref-go{grid-column:1/-1;justify-self:start;border:1px solid var(--line);background:#fff;color:var(--blue);
+  .govref-go{grid-column:1/-1;justify-self:start;border:1px solid var(--line);background:var(--card);color:var(--blue);
              border-radius:6px;padding:3px 9px;font-size:var(--fs-1);font-weight:700;cursor:pointer}
   .govref-go:hover{background:var(--paper)}
   .misrow.sub{padding-left:26px;background:var(--paper)}
@@ -405,10 +405,10 @@
   .supkv b{flex:0 0 88px;color:var(--grey);font-size:var(--fs-1);text-transform:uppercase;letter-spacing:.3px;font-weight:700}
   .supkv span{flex:1;min-width:0;overflow-wrap:anywhere}
   .supacts{display:flex;align-items:center;gap:7px;margin-top:10px;flex-wrap:wrap}
-  .supacts button{border:1px solid var(--line);background:#fff;border-radius:9px;padding:5px 11px;font-size:12px;font-weight:700;cursor:pointer}
+  .supacts button{border:1px solid var(--line);background:var(--card);border-radius:9px;padding:5px 11px;font-size:12px;font-weight:700;cursor:pointer}
   .supacts button:hover{background:var(--paper)}
   /* Naming conventions — a reference block, so it reads as a table you consult, not prose you wade through. */
-  .namebox{border:1px solid var(--line);border-radius:12px;margin-top:14px;overflow:hidden;background:#fff}
+  .namebox{border:1px solid var(--line);border-radius:12px;margin-top:14px;overflow:hidden;background:var(--card)}
   .namehead{display:flex;align-items:center;gap:8px;width:100%;text-align:left;border:0;cursor:pointer;
             background:var(--paper);padding:10px 12px;font:inherit;font-size:var(--fs-2);font-weight:700;color:var(--ink)}
   .namehead:hover{background:#f2efe8}
@@ -423,14 +423,14 @@
   .namefield{font-family:'Space Mono';font-size:var(--fs-1);background:var(--paper);border:1px solid var(--line);
              border-radius:5px;padding:1px 6px;color:var(--grey)}
   .namemust{font-size:var(--fs-1);font-weight:700;border-radius:20px;padding:1px 9px}
-  .namemust.req{background:#fbeceb;color:#b4453f}
+  .namemust.req{background:#fbeceb;color:var(--disp)}
   .namemust.opt{background:var(--paper);color:var(--grey);border:1px solid var(--line)}
   .namemust.auto{background:#EDF2F9;color:var(--blue)}
   .namerule{font-size:var(--fs-2);color:var(--ink);margin-top:4px}
   .namewhy{font-size:12px;color:var(--grey);line-height:1.55;margin-top:3px}
   /* Categories on a product: ticks on the form, chips on the row, a select bar over the list. */
   .ctcatgs{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 4px}
-  .ctcatg{border:1px solid var(--line);background:#fff;border-radius:20px;height:30px;padding:0 12px;
+  .ctcatg{border:1px solid var(--line);background:var(--card);border-radius:20px;height:30px;padding:0 12px;
           font:inherit;font-size:var(--fs-2);color:var(--ink);cursor:pointer;white-space:nowrap}
   .ctcatg:hover{border-color:#c6ccd4}
   .ctcatg.on{background:#eef4ff;border-color:var(--blue);color:var(--blue);font-weight:700}
@@ -443,26 +443,26 @@
   .row.picked{background:#eef4ff}
   .ctpick{display:flex;align-items:center;gap:9px;margin-top:8px;padding:7px 9px;background:#eef4ff;
           border:1px solid #d5e2f7;border-radius:9px}
-  .ctpick button{border:1px solid var(--line);background:#fff;border-radius:9px;padding:4px 10px;
+  .ctpick button{border:1px solid var(--line);background:var(--card);border-radius:9px;padding:4px 10px;
                  font-size:11.5px;cursor:pointer;color:var(--ink)}
   .ctpick button.pri{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:700}
   .ctpick button:disabled{opacity:.5;cursor:default}
   /* The bulk dialog: one row per category, attach and remove as separate explicit choices. */
   .bulklist{display:flex;flex-direction:column;gap:1px;background:var(--line);border:1px solid var(--line);
             border-radius:9px;overflow:hidden;max-height:46vh;overflow-y:auto}
-  .bulkrow{display:flex;align-items:center;gap:9px;background:#fff;padding:8px 11px}
+  .bulkrow{display:flex;align-items:center;gap:9px;background:var(--card);padding:8px 11px}
   .bulkrow .bn{font-size:13px;font-weight:600;flex:1;min-width:0}
   .bulkrow .bh{font-size:var(--fs-1);color:var(--grey);white-space:nowrap}
-  .bulkrow button{border:1px solid var(--line);background:#fff;border-radius:20px;padding:3px 10px;
+  .bulkrow button{border:1px solid var(--line);background:var(--card);border-radius:20px;padding:3px 10px;
                   font-size:11.5px;cursor:pointer;color:var(--ink);white-space:nowrap}
   .bulkrow .badd.on{background:#eef4ff;border-color:var(--blue);color:var(--blue);font-weight:700}
-  .bulkrow .brem.on{background:#fbeceb;border-color:#e0a9a4;color:#b4453f;font-weight:700}
+  .bulkrow .brem.on{background:#fbeceb;border-color:#e0a9a4;color:var(--disp);font-weight:700}
   .bulkrow button:disabled{opacity:.4;cursor:default}
   .supacts button.supact-pri{background:var(--blue);border-color:var(--blue);color:#fff}
   .supacts button.supact-pri:hover{filter:brightness(1.06)}
   /* The sliding panel. .list is the positioning context; the panel covers it and animates in from the left. */
   .list{position:relative}
-  .supslide{position:absolute;inset:0;z-index:6;background:#fff;display:flex;flex-direction:column;
+  .supslide{position:absolute;inset:0;z-index:6;background:var(--card);display:flex;flex-direction:column;
             animation:supslidein .17s ease-out}
   @keyframes supslidein{from{transform:translateX(-14px);opacity:.4}to{transform:none;opacity:1}}
   @media (prefers-reduced-motion:reduce){ .supslide{animation:none} }
@@ -473,7 +473,7 @@
    * supplier list was simply gone. Athi hit it immediately. A panel that covers the only route back must carry a
    * route back that is visible in the same breakpoint it covers.
    */
-  .supback{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);background:#fff;color:var(--blue);
+  .supback{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);background:var(--card);color:var(--blue);
            font-weight:700;font-size:12px;padding:5px 11px;border-radius:9px;cursor:pointer;flex:0 0 auto}
   .supback:hover{background:var(--paper)}
   .supslide-t{font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -482,14 +482,14 @@
   #supfind_host{flex:1;min-height:0;display:flex}
   .supfindpanel{flex:1;min-height:0;display:flex;flex-direction:column}
   .suptabs{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
-  .suptabs button{border:0;background:#fff;color:var(--grey);font-size:12px;font-weight:700;padding:6px 12px;cursor:pointer}
+  .suptabs button{border:0;background:var(--card);color:var(--grey);font-size:12px;font-weight:700;padding:6px 12px;cursor:pointer}
   .suptabs button.on{background:var(--ink);color:#fff}
-  .rowinfo{border:1px solid var(--line);background:#fff;color:var(--blue);border-radius:6px;width:24px;height:24px;
+  .rowinfo{border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:6px;width:24px;height:24px;
            font-size:12px;line-height:1;cursor:pointer;flex:0 0 auto;align-self:center}
   .rowinfo:hover{background:var(--paper)}
-  .sfhit{border:1px solid var(--line);border-radius:9px;padding:8px 11px;margin-bottom:8px;background:#fff}
+  .sfhit{border:1px solid var(--line);border-radius:9px;padding:8px 11px;margin-bottom:8px;background:var(--card)}
   .sfhit-h{display:flex;align-items:center;gap:7px;font-size:13px;margin-bottom:5px}
-  .sfhit-h button{margin-left:auto;border:1px solid var(--line);background:#fff;border-radius:6px;padding:3px 9px;font-size:11.5px;font-weight:700;color:var(--blue);cursor:pointer}
+  .sfhit-h button{margin-left:auto;border:1px solid var(--line);background:var(--card);border-radius:6px;padding:3px 9px;font-size:11.5px;font-weight:700;color:var(--blue);cursor:pointer}
   .sfline{display:flex;gap:9px;justify-content:space-between;font-size:var(--fs-2);padding:3px 0;border-top:1px dashed var(--line)}
   .sfnote{font-size:12px;line-height:1.6;color:#6b5a36;background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:7px 10px;margin-top:8px}
   .sfnote.quiet{background:var(--paper);border-color:var(--line);color:var(--grey)}
@@ -499,7 +499,7 @@
   /* ⚠️ cursor:pointer WAS MISSING. Every .tool is clickable and carries a tooltip (Change status, Assign,
      Select, Raise dispute, Delete), but with cursor:auto the emoji glyph inside resolves to the I-BEAM text
      cursor — so the one strip that looks most like buttons was the only one that did not behave like them. */
-  .tool{width:30px;height:30px;border:1px solid var(--line);background:#fff;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:13px;color:#54616a;position:relative;cursor:pointer;user-select:none}
+  .tool{width:30px;height:30px;border:1px solid var(--line);background:var(--card);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:13px;color:#54616a;position:relative;cursor:pointer;user-select:none}
   .tool:hover{background:var(--paper);border-color:#c3ccd2}
   .tool.on{background:var(--ink);color:#fff;border-color:var(--ink)}
   .topbar .bell{position:relative;border:0;background:none;color:#cfe0e8;font-size:var(--fs-4);cursor:pointer;padding:2px 4px;line-height:1}
@@ -512,15 +512,15 @@
    * is the one fact this control has to carry (the sub-11px sweep is backlog 4).
    */
   .topbar .bell .bdot,.topbar .msgc .bdot{position:absolute;top:-2px;right:-3px;background:var(--disp);color:#fff;font-size:9px;font-weight:800;min-width:15px;height:15px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 3px}
-  .filterpanel{margin-top:8px;border:1px solid var(--line);border-radius:9px;background:#fff;padding:9px 11px;display:flex;flex-direction:column;gap:7px;font-size:12px}
+  .filterpanel{margin-top:8px;border:1px solid var(--line);border-radius:9px;background:var(--card);padding:9px 11px;display:flex;flex-direction:column;gap:7px;font-size:12px}
   .filterpanel .fp-row{display:flex;align-items:center;gap:9px;justify-content:space-between}
-  .filterpanel select{font-size:12px;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:#fff}
+  .filterpanel select{font-size:12px;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--card)}
   .filterpanel label{display:flex;align-items:center;gap:6px;cursor:pointer}
   .filterpanel .fp-foot{display:flex;align-items:center;gap:10px;border-top:1px solid var(--line);padding-top:7px}
-  .filterpanel .fp-foot button{border:1px solid var(--line);background:#fff;border-radius:6px;font-size:var(--fs-1);font-weight:700;padding:4px 10px;color:var(--blue);cursor:pointer}
+  .filterpanel .fp-foot button{border:1px solid var(--line);background:var(--card);border-radius:6px;font-size:var(--fs-1);font-weight:700;padding:4px 10px;color:var(--blue);cursor:pointer}
   .filterpanel .fp-note{margin-left:auto;font-size:var(--fs-1);color:var(--grey);font-family:'Space Mono',monospace}
   .notifover{position:fixed;inset:0;z-index:250;background:rgba(8,24,32,.18)}
-  .notifpanel{position:absolute;top:54px;right:14px;width:300px;max-width:88vw;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);overflow:hidden}
+  .notifpanel{position:absolute;top:54px;right:14px;width:300px;max-width:88vw;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);overflow:hidden}
   .notifhd{display:flex;align-items:center;font-family:'Space Grotesk';font-weight:700;font-size:13px;color:var(--ink);padding:11px 13px;border-bottom:1px solid var(--line)}
   .notifrow{display:flex;gap:10px;padding:10px 13px;border-bottom:1px solid var(--line)}
   .notifrow .ni{font-size:15px}.notifrow .nt{font-size:var(--fs-2);color:var(--ink);line-height:1.35}.notifrow .ns{font-size:var(--fs-1);color:var(--grey);margin-top:2px}
@@ -528,14 +528,14 @@
   .mover{position:fixed;inset:0;z-index:280;background:rgba(8,24,32,.45);display:flex;align-items:flex-start;justify-content:center;padding:56px 16px;overflow-y:auto}
   .composepill{position:fixed;left:16px;bottom:16px;z-index:300;background:var(--blue);color:#fff;border-radius:999px;padding:9px 15px;font-size:13px;font-weight:700;box-shadow:0 8px 22px rgba(0,0,0,.28);display:flex;align-items:center;gap:10px}
   .ccsugg{margin-top:4px;max-height:200px;overflow-y:auto}
-  .ccsugg-item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 10px;cursor:pointer;border:1px solid var(--line);border-top:0;background:#fff}
+  .ccsugg-item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 10px;cursor:pointer;border:1px solid var(--line);border-top:0;background:var(--card)}
   .ccsugg-item:first-child{border-top:1px solid var(--line);border-radius:9px 8px 0 0}
   .ccsugg-item:last-child{border-radius:0 0 8px 8px}
   .ccsugg-item:hover{background:#EEF3FB}
   .ccsugg-nm{font-size:var(--fs-2);color:var(--ink)}
   .ccsugg-id{font-size:var(--fs-1);font-family:monospace;color:var(--grey);white-space:nowrap}
-  .ccsugg-empty{padding:6px 10px;font-size:var(--fs-1);color:var(--grey);border:1px solid var(--line);border-radius:9px;background:#fff}
-  .modal{width:360px;max-width:94vw;background:#fff;border-radius:14px;overflow:hidden;box-shadow:var(--shadow)}
+  .ccsugg-empty{padding:6px 10px;font-size:var(--fs-1);color:var(--grey);border:1px solid var(--line);border-radius:9px;background:var(--card)}
+  .modal{width:360px;max-width:94vw;background:var(--card);border-radius:14px;overflow:hidden;box-shadow:var(--shadow)}
   .modal.wide{width:820px;max-width:94vw}
   /* .cc-cols / .cc-col / .cc-rtabs / .cc-rtab / .ccsum-row / .cc-gutter went with the two-column compose — one job
      per step means there is no second column to size and no tab strip inside a screen that is already navigated. */
@@ -546,7 +546,7 @@
   .modal .mhd .s{font-size:12px;color:var(--grey);margin-top:2px}
   .modal .mbody{padding:11px 12px;max-height:54vh;overflow-y:auto}
   .modal .mfoot{display:flex;gap:8px;padding:11px 13px;border-top:1px solid var(--line)}
-  .modal .mfoot button{flex:1;border:1px solid var(--line);background:#fff;border-radius:9px;font-size:13px;font-weight:700;padding:9px;cursor:pointer;color:var(--ink)}
+  .modal .mfoot button{flex:1;border:1px solid var(--line);background:var(--card);border-radius:9px;font-size:13px;font-weight:700;padding:9px;cursor:pointer;color:var(--ink)}
   .modal .mfoot button.pri{background:var(--blue);color:#fff;border-color:var(--blue)}
   .modal .mfoot button.danger{background:var(--disp);color:#fff;border-color:var(--disp)}
   .modal .mfoot button:disabled{opacity:.45;cursor:not-allowed}
@@ -563,36 +563,36 @@
   .dtabs{flex-wrap:wrap}
   .dh{position:relative}
   .dmsg{position:absolute;top:0;right:0;border:1px solid #cfe0ec;background:#EAF1F6;color:var(--blue);font-size:var(--fs-1);font-weight:700;border-radius:9px;padding:3px 9px;cursor:pointer}
-  .rowmsg{font-size:var(--fs-1);font-weight:700;color:#3f66a6;background:#EAF1F6;border:0.5px solid #cfe0ec;border-radius:5px;padding:0 5px;white-space:nowrap;cursor:pointer}
-  .msglink{border:1px solid var(--line);background:#fff;color:var(--blue);font-size:12px;font-weight:700;border-radius:9px;padding:8px 13px;cursor:pointer}
+  .rowmsg{font-size:var(--fs-1);font-weight:700;color:var(--blue);background:#EAF1F6;border:0.5px solid #cfe0ec;border-radius:5px;padding:0 5px;white-space:nowrap;cursor:pointer}
+  .msglink{border:1px solid var(--line);background:var(--card);color:var(--blue);font-size:12px;font-weight:700;border-radius:9px;padding:8px 13px;cursor:pointer}
   .msgtab{display:flex;flex-direction:column}
   .msgfilter{display:flex;gap:6px;margin-bottom:10px}
-  .msgfilter button{border:1px solid var(--line);background:#fff;border-radius:9px;font-size:var(--fs-1);font-weight:700;padding:5px 10px;color:var(--grey);cursor:pointer}
+  .msgfilter button{border:1px solid var(--line);background:var(--card);border-radius:9px;font-size:var(--fs-1);font-weight:700;padding:5px 10px;color:var(--grey);cursor:pointer}
   .msgfilter button.on{background:#EAF1F8;color:var(--blue);border-color:var(--blue)}
-  .msgfilter button.on.disp{background:#fbeceb;color:#b4453f;border-color:#e0a9a4}
+  .msgfilter button.on.disp{background:#fbeceb;color:var(--disp);border-color:#e0a9a4}
   /* compact type filter — a checkbox dropdown instead of a row of buttons */
   .tdwrap{position:relative;display:inline-block}
-  .msgfbtn{border:1px solid var(--line);background:#fff;border-radius:9px;font-size:var(--fs-1);font-weight:700;padding:5px 10px;color:var(--grey);cursor:pointer}
+  .msgfbtn{border:1px solid var(--line);background:var(--card);border-radius:9px;font-size:var(--fs-1);font-weight:700;padding:5px 10px;color:var(--grey);cursor:pointer}
   .msgfbtn.on{background:#EAF1F8;color:var(--blue);border-color:var(--blue)}
-  .tdrop{position:absolute;top:30px;left:0;z-index:8;background:#fff;border:1px solid var(--line);border-radius:9px;box-shadow:0 8px 24px rgba(0,0,0,.14);padding:7px;min-width:160px;display:flex;flex-direction:column;gap:1px}
+  .tdrop{position:absolute;top:30px;left:0;z-index:8;background:var(--card);border:1px solid var(--line);border-radius:9px;box-shadow:0 8px 24px rgba(0,0,0,.14);padding:7px;min-width:160px;display:flex;flex-direction:column;gap:1px}
   .tdrow{display:flex;align-items:center;gap:8px;font-size:12px;padding:5px 7px;border-radius:6px;cursor:pointer}
   .tdrow:hover{background:var(--paper)}
   .tdclear{margin-top:3px;border:0;background:none;color:var(--blue);font-size:var(--fs-1);font-weight:700;cursor:pointer;text-align:left;padding:5px 7px}
   .bubble.disp{border-left:3px solid var(--disp);background:#fdf3f2}
-  .mbadge.disp{background:#fbe3e1;color:#b4453f}
+  .mbadge.disp{background:#fbe3e1;color:var(--disp)}
    .mbadge.disp.ok{background:#E9F4EE;color:#2f6043}
   /* dispute banner on the record — the USP surfaced in context */
   .dispbanner{padding:11px 16px;background:#fdf3f2;border-bottom:1px solid #f0c9c6}
   .dispbanner .db-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-  .dispbanner .db-tag{font-weight:800;color:#b4453f;font-size:12px}
+  .dispbanner .db-tag{font-weight:800;color:var(--disp);font-size:12px}
   .dispbanner .db-cat{font-size:var(--fs-1);font-weight:700;color:#8a3a35;background:#fbe3e1;border-radius:6px;padding:2px 8px}
   .dispbanner .db-proof{font-size:var(--fs-1);color:#2f6043;background:#E9F4EE;border:1px solid #bfe0cd;border-radius:6px;padding:2px 8px}
   .dispbanner .db-reason{font-size:var(--fs-2);color:var(--ink);margin:5px 0}
   .dispbanner .db-meta{font-size:var(--fs-1);color:var(--grey);display:flex;gap:6px;flex-wrap:wrap;align-items:center}
-  .dispbanner .dpchip{background:#fff;border:1px solid #e0b6b2;border-radius:6px;padding:1px 7px;font-size:var(--fs-1);color:#8a3a35}
+  .dispbanner .dpchip{background:var(--card);border:1px solid #e0b6b2;border-radius:6px;padding:1px 7px;font-size:var(--fs-1);color:#8a3a35}
   .dispbanner .dpchip.ok{background:#E9F4EE;border-color:#bfe0cd;color:#2f6043}
   .dispbanner .db-acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
-  .dispbanner .db-acts button,.dispbanner .db-res{border:1px solid #e0a9a4;background:#fff;color:#b4453f;border-radius:6px;font-size:var(--fs-1);font-weight:700;padding:5px 10px;cursor:pointer}
+  .dispbanner .db-acts button,.dispbanner .db-res{border:1px solid #e0a9a4;background:var(--card);color:var(--disp);border-radius:6px;font-size:var(--fs-1);font-weight:700;padding:5px 10px;cursor:pointer}
   .thread{display:flex;flex-direction:column;margin-bottom:8px}
   .bubble{border:1px solid var(--line);padding:8px 11px;margin-bottom:8px;border-radius:0 10px 10px 0}
   .bubble.int{background:#f3f5f7;border-left:3px solid #8aa0ad}
@@ -605,7 +605,7 @@
   .msgempty{text-align:center;color:var(--grey);font-size:12px;padding:20px}
   .composer{border-top:1px solid var(--line);padding-top:10px;margin-top:2px}
   .chtoggle{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-bottom:7px}
-  .chtoggle button{border:0;background:#fff;font-size:var(--fs-1);font-weight:700;padding:5px 11px;color:var(--grey);cursor:pointer}
+  .chtoggle button{border:0;background:var(--card);font-size:var(--fs-1);font-weight:700;padding:5px 11px;color:var(--grey);cursor:pointer}
   .chtoggle button.int.on{background:#5f7682;color:#fff}.chtoggle button.ext.on{background:var(--blue);color:#fff}
   .chlabel{font-size:var(--fs-1);font-weight:700;margin-bottom:7px}.chlabel.ext{color:var(--blue)}
   .composer textarea{width:100%;border:1px solid var(--line);border-radius:9px;padding:9px;font:inherit;font-size:13px;min-height:54px;resize:vertical;box-sizing:border-box}
@@ -618,19 +618,19 @@
      with color:#fff; overriding only the background to white leaves WHITE TEXT ON WHITE — the button renders as
      an empty outlined pill. That shipped twice (storefront "Open ↗", assistant "New"), because the pairing is
      invisible at the call site. Colour is set in PAIRS here so the next secondary button cannot repeat it. */
-  .composebtn.ghost{background:#fff;color:var(--blue)}
+  .composebtn.ghost{background:var(--card);color:var(--blue)}
   .composebtn.ghost:hover{background:var(--paper)}
-  .composebtn.on{background:#fff;color:var(--blue)}
+  .composebtn.on{background:var(--card);color:var(--blue)}
   .msgtab .composer{margin-top:0;margin-bottom:12px;border-top:0;border:1px solid var(--line);border-radius:12px;padding:11px;background:#fbfcfe}
   .msglist{position:relative;flex:1;min-height:0}
   .composeov{position:absolute;left:0;right:0;top:0;min-height:100%;background:rgba(22,32,42,.16);display:flex;align-items:flex-start;justify-content:center;z-index:20;padding:6px;border-radius:9px}
-  .composeov-card{width:100%;max-width:640px;max-height:80vh;overflow:auto;box-shadow:0 14px 34px rgba(0,0,0,.22);border-radius:12px;background:#fff;border:1px solid var(--blue);padding:8px}
+  .composeov-card{width:100%;max-width:640px;max-height:80vh;overflow:auto;box-shadow:0 14px 34px rgba(0,0,0,.22);border-radius:12px;background:var(--card);border:1px solid var(--blue);padding:8px}
   .composeov-card .composer textarea{min-height:64px;resize:vertical}
-  .composeov-card .composer{margin:0;border:0;border-radius:0;background:#fff;padding-top:2px}
+  .composeov-card .composer{margin:0;border:0;border-radius:0;background:var(--card);padding-top:2px}
   .composeov-bar{display:flex;align-items:center;justify-content:flex-end;padding:0 0 4px}
-  .composeov-x{border:1px solid var(--line);background:#fff;color:var(--grey);width:28px;height:28px;border-radius:50%;font-size:var(--fs-3);font-weight:800;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center}
+  .composeov-x{border:1px solid var(--line);background:var(--card);color:var(--grey);width:28px;height:28px;border-radius:50%;font-size:var(--fs-3);font-weight:800;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center}
   .busyov{position:fixed;inset:0;background:rgba(20,30,40,.30);display:flex;align-items:center;justify-content:center;z-index:9999}
-  .busybox{background:#fff;border-radius:12px;padding:15px 22px;display:flex;align-items:center;gap:12px;font-size:13.5px;font-weight:700;color:var(--ink);box-shadow:0 14px 36px rgba(0,0,0,.24)}
+  .busybox{background:var(--card);border-radius:12px;padding:15px 22px;display:flex;align-items:center;gap:12px;font-size:13.5px;font-weight:700;color:var(--ink);box-shadow:0 14px 36px rgba(0,0,0,.24)}
   .bspin{width:18px;height:18px;border:3px solid #D8E4F4;border-top-color:var(--blue);border-radius:50%;animation:bspin .7s linear infinite;flex:none}
   @keyframes bspin{to{transform:rotate(360deg)}}
   .topbar .msgc{position:relative;border:0;background:none;color:#cfe0e8;font-size:15px;cursor:pointer;padding:2px 4px;line-height:1}
@@ -644,7 +644,7 @@
   .mtype{font-size:var(--fs-1);font-weight:700;border-radius:6px;padding:1px 6px}
   .mtype.info{background:#eef2f6;color:#5a6b78}.mtype.query{background:#fbeede;color:#9a6b16}.mtype.decision{background:#e3f3ea;color:#1f7a4d}
   .typesel{display:flex;gap:5px;margin-bottom:7px}
-  .typesel button{border:1px solid var(--line);background:#fff;border-radius:6px;font-size:var(--fs-1);font-weight:700;padding:4px 9px;color:var(--grey);cursor:pointer}
+  .typesel button{border:1px solid var(--line);background:var(--card);border-radius:6px;font-size:var(--fs-1);font-weight:700;padding:4px 9px;color:var(--grey);cursor:pointer}
   .typesel button.on.info{background:#eef2f6;color:#46566a;border-color:#9fb0bd}.typesel button.on.query{background:#fbeede;color:#9a6b16;border-color:#e0b878}.typesel button.on.decision{background:#e3f3ea;color:#1f7a4d;border-color:#8fc7a8}
   .msgfilter button.on.info{background:#eef2f6;color:#46566a;border-color:#9fb0bd}.msgfilter button.on.query{background:#fbeede;color:#9a6b16;border-color:#e0b878}.msgfilter button.on.decision{background:#e3f3ea;color:#1f7a4d;border-color:#8fc7a8}
   .mtype.risk{background:#fbe3d4;color:#b5531a}.mtype.assumption{background:#ece9f6;color:#6a5aa0}.mtype.issue{background:#fbe0e0;color:#c0392b}.mtype.dependency{background:#dff0f3;color:#1f6f7e}.mtype.action{background:#e2e9fb;color:#3a52b0}
@@ -660,18 +660,18 @@
   .rbarfill.info{background:#8aa0ad}.rbarfill.query{background:#d6a93a}.rbarfill.decision{background:#3fae6f}.rbarfill.risk{background:#d98a3a}.rbarfill.assumption{background:#8a78c0}.rbarfill.issue{background:#d6584f}.rbarfill.dependency{background:#3a93a3}.rbarfill.action{background:#5b72cf}
   .rsamp{font-size:var(--fs-1);color:var(--grey);margin-top:4px;line-height:1.5}
   .raidtoggle{padding:9px 12px;border-top:1px solid var(--line);font-size:var(--fs-1);font-weight:700;color:var(--ink);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-  .raidtoggle button{border:1px solid var(--line);background:#fff;border-radius:6px;font-size:var(--fs-1);font-weight:700;padding:4px 9px;color:var(--grey);cursor:pointer}
+  .raidtoggle button{border:1px solid var(--line);background:var(--card);border-radius:6px;font-size:var(--fs-1);font-weight:700;padding:4px 9px;color:var(--grey);cursor:pointer}
   .raidtoggle button.on{background:var(--blue);color:#fff;border-color:var(--blue)}
   .raidtoggle .hint{flex-basis:100%;font-weight:400;color:var(--grey);font-size:var(--fs-1)}
   .custflag{color:#c0392b;font-weight:800;margin-right:4px}
   .prichip{font-size:var(--fs-1);font-weight:700;border-radius:5px;padding:0 6px;white-space:nowrap}
   .prichip.pri-urgent{background:#FCEBEB;color:#A32D2D}.prichip.pri-low{background:#F1EFE8;color:#5F5E5A}
   .dchips{display:flex;gap:8px;align-items:center;margin-top:8px}
-  .prichip-btn{font-size:var(--fs-1);font-weight:700;border-radius:6px;padding:3px 9px;cursor:pointer;border:1px solid var(--line);background:#fff;color:var(--ink)}
+  .prichip-btn{font-size:var(--fs-1);font-weight:700;border-radius:6px;padding:3px 9px;cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--ink)}
   .prichip-btn.pri-urgent{background:#FCEBEB;color:#A32D2D;border-color:#e3a0a0}.prichip-btn.pri-low{background:#F1EFE8;color:#5F5E5A}
   .custflag-tag{font-size:var(--fs-1);font-weight:700;color:#A32D2D;background:#FCEBEB;border-radius:6px;padding:3px 8px}
   .prisel{display:flex;gap:6px;margin:4px 0 2px}
-  .prisel button{flex:1;border:1px solid var(--line);background:#fff;border-radius:9px;font-size:11.5px;font-weight:700;padding:6px 0;color:var(--grey);cursor:pointer}
+  .prisel button{flex:1;border:1px solid var(--line);background:var(--card);border-radius:9px;font-size:11.5px;font-weight:700;padding:6px 0;color:var(--grey);cursor:pointer}
   .prisel button.on.pri-urgent{background:#FCEBEB;color:#A32D2D;border-color:#E24B4A}.prisel button.on.pri-normal{background:#EAF1F8;color:var(--blue);border-color:var(--blue)}.prisel button.on.pri-low{background:#F1EFE8;color:#444441;border-color:#B4B2A9}
   .msec{font-size:var(--fs-1);font-weight:700;color:var(--ink);margin:11px 0 4px}.msec .rh{font-weight:400;color:var(--grey)}
   .mreason{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:9px;padding:8px;font:inherit;font-size:13px;min-height:46px;resize:vertical}
@@ -679,7 +679,7 @@
   .rows{flex:1;overflow-y:auto}
   .row{padding:11px 13px;border-bottom:1px solid var(--line);cursor:pointer;display:flex;gap:9px}
   .row:hover{background:#FCFBF8}.row.sel{background:#F2F6F4;box-shadow:inset 3px 0 0 var(--blue)}.row.picked{background:#EAF1F8}
-  .cbx{width:17px;height:17px;border:1.6px solid #8a95a0;border-radius:4px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;font-size:var(--fs-1);font-weight:800;color:#fff;background:#fff;cursor:pointer;vertical-align:middle}
+  .cbx{width:17px;height:17px;border:1.6px solid #8a95a0;border-radius:4px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;font-size:var(--fs-1);font-weight:800;color:#fff;background:var(--card);cursor:pointer;vertical-align:middle}
   .cbx.on{background:var(--blue);border-color:var(--blue)}
   .cbx:hover{border-color:var(--blue)}
   .row .cbx{margin-top:2px}
@@ -693,13 +693,13 @@
   .chipst{font-size:var(--fs-1);font-weight:700;border-radius:20px;padding:2px 9px;border:1px solid transparent;cursor:pointer;white-space:nowrap}
   .st-open{background:#E8F0F4;color:var(--blue);border-color:#cfe0ec}.st-act{background:var(--gold-soft);color:var(--prog);border-color:var(--gold-line)}.st-close{background:#E9F4EE;color:var(--ok);border-color:#bfe0cd}
   .rowacts{display:flex;gap:6px;margin-top:8px}
-  .rowacts button{flex:1;font-size:var(--fs-1);font-weight:700;border:1px solid var(--line);background:#fff;border-radius:6px;padding:5px;color:var(--ink)}
+  .rowacts button{flex:1;font-size:var(--fs-1);font-weight:700;border:1px solid var(--line);background:var(--card);border-radius:6px;padding:5px;color:var(--ink)}
   .rowacts button.go{border:0;background:var(--blue);color:#fff}
   .selbar{display:flex;align-items:center;gap:8px;background:#EAF1F6;border:1px solid #cfe0ec;border-radius:9px;padding:7px 10px;margin-top:8px;font-size:11.5px;font-weight:600}
-  .selbar .sp{margin-left:auto;display:flex;gap:6px}.selbar .sp button{border:1px solid #cfe0ec;background:#fff;border-radius:6px;font-size:var(--fs-1);font-weight:700;padding:5px 9px;color:var(--blue)}
+  .selbar .sp{margin-left:auto;display:flex;gap:6px}.selbar .sp button{border:1px solid #cfe0ec;background:var(--card);border-radius:6px;font-size:var(--fs-1);font-weight:700;padding:5px 9px;color:var(--blue)}
   .selbar .sp button.pri{border:0;background:var(--blue);color:#fff}
 
-  .detail{display:flex;flex-direction:column;min-width:0;min-height:0;background:#fff;border-left:0.5px solid var(--line)}
+  .detail{display:flex;flex-direction:column;min-width:0;min-height:0;background:var(--card);border-left:0.5px solid var(--line)}
   .dh{padding:13px 16px;border-bottom:1px solid var(--line)}
   .dh .dt{font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-4)}.dh .ds{font-size:12px;color:var(--grey);margin-top:2px}
   .parties{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap;font-size:var(--fs-1)}
@@ -718,7 +718,7 @@
   .tl .ea{font-family:'Space Grotesk';font-weight:600;font-size:13px}.tl .em{font-size:11.5px;color:var(--grey)}
   .parity{display:flex;align-items:center;gap:8px;background:#E9F4EE;border:1px solid #bfe0cd;border-radius:9px;padding:10px 12px;font-size:12px;color:#2f6043}
   .actbar{display:flex;gap:8px;padding:10px 16px;border-top:1px solid var(--line);flex-wrap:wrap;background:#FCFBF8}
-  .actbar button{font-size:12px;font-weight:700;border:1px solid var(--line);background:#fff;border-radius:9px;padding:8px 12px;color:var(--ink)}
+  .actbar button{font-size:12px;font-weight:700;border:1px solid var(--line);background:var(--card);border-radius:9px;padding:8px 12px;color:var(--ink)}
   .actbar button.pri{border:0;background:var(--ink);color:#fff}.actbar button.warn{border-color:#e7b9b5;color:var(--disp)}
   .actbar button.pend{border-style:dashed;border-color:var(--gold-line);color:#9a7b34;background:var(--gold-soft)}
   .dback{display:none;align-items:center;gap:4px;border:0;background:none;color:var(--blue);font-weight:700;font-size:13px;margin-bottom:8px;padding:5px 0;cursor:pointer}
@@ -727,7 +727,7 @@
   .stub{padding:34px;text-align:center;color:var(--grey)}.stub .t{font-family:'Space Grotesk';font-weight:700;font-size:17px;color:var(--ink);margin-bottom:6px}
   .toast{position:fixed;left:50%;top:64px;transform:translateX(-50%);max-width:min(560px,92vw);background:var(--ink);color:#fff;border-radius:12px;padding:12px 18px;font-size:13px;font-weight:600;line-height:1.4;box-shadow:0 12px 34px rgba(8,24,32,.30);display:flex;align-items:center;gap:14px;z-index:9999;animation:toastIn .18s ease-out}
   @keyframes toastIn{from{opacity:0;transform:translate(-50%,-8px)}to{opacity:1;transform:translate(-50%,0)}}
-  .toast.err{background:#b4453f}
+  .toast.err{background:var(--disp)}
   .toast.warn{background:#8a6d1f}
   .toast button{border:0;background:none;color:var(--gold);font-weight:700}
   .spin{display:inline-block;width:15px;height:15px;border:2px solid #cfe0ec;border-top-color:var(--blue);border-radius:50%;animation:sp .7s linear infinite}@keyframes sp{to{transform:rotate(360deg)}}
@@ -735,7 +735,7 @@
   /* boxed loader — a card with a spinner and a blue/white ribbon running across the middle */
   .loadbox{flex:1;display:flex;align-items:center;justify-content:center;padding:24px}
   .dbload{display:flex;align-items:center;justify-content:center;gap:10px;color:var(--grey);font-size:13px;padding:52px 0}
-  .loadcard{width:min(300px,82%);background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 12px 34px rgba(8,24,32,.10);padding:24px 24px 20px;text-align:center}
+  .loadcard{width:min(300px,82%);background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 12px 34px rgba(8,24,32,.10);padding:24px 24px 20px;text-align:center}
   .spin-lg{width:26px;height:26px;border-width:3px}
   .lc-t{font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3);color:var(--ink);margin:13px 0 3px}
   .lc-s{font-size:12px;color:var(--grey);margin-bottom:15px}
@@ -790,7 +790,7 @@
   .attStrip{display:flex;gap:7px;overflow-x:auto;padding-bottom:4px}
   .attThumb{flex:0 0 auto;width:62px;height:62px;border:0.5px solid var(--line);border-radius:9px;overflow:hidden;cursor:pointer}
   .attGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:8px;margin:6px 0 8px;width:100%}
-  .attTile{border:1px solid var(--line);border-radius:9px;background:#fff;padding:12px 8px;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;text-align:center}
+  .attTile{border:1px solid var(--line);border-radius:9px;background:var(--card);padding:12px 8px;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;text-align:center}
   .attTile:hover{background:#F4F8FB;border-color:var(--blue)}
   .attTileIcon{font-size:30px;line-height:1}
   .attTileName{font-size:11.5px;color:var(--ink);font-weight:600;word-break:break-word;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
@@ -824,13 +824,13 @@ button:focus-visible,.composebtn:focus-visible,.pri:focus-visible{outline:2px so
 .composer .chtoggle{display:inline-flex;vertical-align:middle}
 .composer .chtoggle + .typesel{display:inline-flex;vertical-align:middle;margin-left:10px}
 .composer .chtoggle + .typesel::before{content:"|";color:var(--line);font-weight:700;margin-right:10px;display:flex;align-items:center}
-.tl .ev.next::before{background:#fff;border:1.5px dashed #b9c2c7;width:7px;height:7px}
+.tl .ev.next::before{background:var(--card);border:1.5px dashed #b9c2c7;width:7px;height:7px}
 .tl .ev.next .ea::after{content:" (upcoming)";font-size:var(--fs-1);font-family:'Space Mono';color:#9aa3a7;font-weight:400}
 img.attImg{object-fit:cover;display:block}
-.attpdf{width:100%;height:60vh;border:0;background:#fff}
-.atttext{width:100%;max-height:60vh;overflow:auto;margin:0;padding:16px 18px;background:#fff;color:#243038;font:12.5px/1.65 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:pre-wrap;word-break:break-word;text-align:left}
+.attpdf{width:100%;height:60vh;border:0;background:var(--card)}
+.atttext{width:100%;max-height:60vh;overflow:auto;margin:0;padding:16px 18px;background:var(--card);color:#243038;font:12.5px/1.65 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:pre-wrap;word-break:break-word;text-align:left}
 .attfile{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;min-height:160px;padding:24px;text-align:center;color:#46566a}
-.lhead{display:grid;align-items:center;gap:8px;position:sticky;top:0;z-index:3;background:#fff;border-bottom:1.5px solid var(--line);padding:7px 12px;font-size:var(--fs-1);font-weight:700;color:var(--grey);text-transform:uppercase;letter-spacing:.3px}
+.lhead{display:grid;align-items:center;gap:8px;position:sticky;top:0;z-index:3;background:var(--card);border-bottom:1.5px solid var(--line);padding:7px 12px;font-size:var(--fs-1);font-weight:700;color:var(--grey);text-transform:uppercase;letter-spacing:.3px}
 .lhcell{display:flex;align-items:center;white-space:nowrap;overflow:hidden}
 .lhcell.sortable{cursor:pointer}.lhcell.sortable:hover{color:var(--blue)}
 .sarr{font-size:var(--fs-1);margin-left:3px;color:var(--blue)}
@@ -843,7 +843,7 @@ img.attImg{object-fit:cover;display:block}
 .lrow.sel{background:#cfe0f2;box-shadow:inset 0 0 0 2px var(--blue), inset 4px 0 0 var(--blue-d);position:relative;z-index:1}
 /* Hover overlay: the whole line, including every column the fold dropped. pointer-events:none so it can never
    sit between the cursor and the row underneath it. */
-#rowpeek{position:fixed;display:none;z-index:60;pointer-events:none;max-width:340px;background:#fff;border:1px solid var(--line);border-radius:9px;box-shadow:0 8px 26px rgba(20,30,40,.16);padding:9px 11px;font-size:12px;line-height:1.45}
+#rowpeek{position:fixed;display:none;z-index:60;pointer-events:none;max-width:340px;background:var(--card);border:1px solid var(--line);border-radius:9px;box-shadow:0 8px 26px rgba(20,30,40,.16);padding:9px 11px;font-size:12px;line-height:1.45}
 #rowpeek .pkr{display:flex;gap:10px;padding:2px 0}
 #rowpeek .pkr+.pkr{border-top:1px solid #f0f3f5}
 #rowpeek .pkk{flex:0 0 84px;color:var(--grey);font-size:var(--fs-1);text-transform:uppercase;letter-spacing:.3px}
@@ -858,11 +858,11 @@ img.attImg{object-fit:cover;display:block}
 .lrow.unread .subjtext{font-weight:800}
 .udot{width:8px;height:8px;border-radius:50%;background:var(--blue);flex:0 0 auto;display:inline-block}
 .rflag{font-size:var(--fs-1);font-weight:800;border-radius:5px;padding:1px 6px;white-space:nowrap;border:1px solid;flex:0 0 auto}
-.rflag.disp{background:#fbeceb;color:#b4453f;border-color:#f0c9c6}
+.rflag.disp{background:#fbeceb;color:var(--disp);border-color:#f0c9c6}
 .rflag.cust{background:#FCEBEB;color:#A32D2D;border-color:#e3a0a0}
 .rflag.urg{background:#FCEBEB;color:#A32D2D;border-color:#e3a0a0}
 .rflag.high{background:#fdeccc;color:#8a5a12;border-color:#e6c98f}
-.keypanel{position:absolute;right:0;top:26px;z-index:30;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:12px;width:520px;max-width:88vw;max-height:70vh;overflow-y:auto}
+.keypanel{position:absolute;right:0;top:26px;z-index:30;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:12px;width:520px;max-width:88vw;max-height:70vh;overflow-y:auto}
 .keypanel h4{font-family:'Space Grotesk';font-size:var(--fs-1);margin:0 0 8px;text-transform:uppercase;letter-spacing:.4px;color:var(--grey)}
 .keygrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .kbox{border:1px solid var(--line);border-radius:9px;padding:9px 11px;font-size:11.5px;line-height:1.5}
@@ -872,9 +872,9 @@ img.attImg{object-fit:cover;display:block}
 .lcell.ra{text-align:right}
 .lhcell.ra{justify-content:flex-end}
 .colcog{border:0;background:none;cursor:pointer;font-size:13px;color:var(--grey);justify-self:end;padding:0 2px}
-.colmenu{position:absolute;right:10px;top:30px;z-index:6;background:#fff;border:1px solid var(--line);border-radius:9px;box-shadow:0 8px 24px rgba(0,0,0,.16);padding:8px 11px;display:flex;flex-direction:column;gap:5px;font-size:12px;text-transform:none;font-weight:400;color:var(--ink)}
+.colmenu{position:absolute;right:10px;top:30px;z-index:6;background:var(--card);border:1px solid var(--line);border-radius:9px;box-shadow:0 8px 24px rgba(0,0,0,.16);padding:8px 11px;display:flex;flex-direction:column;gap:5px;font-size:12px;text-transform:none;font-weight:400;color:var(--ink)}
 .colmenu label{display:flex;gap:7px;align-items:center;cursor:pointer;white-space:nowrap}
-.optchip.mini{font-size:var(--fs-1);padding:0 5px}.optchip.mini.r{background:#fbeceb;color:#b4453f;border-color:#f0c9c6}
+.optchip.mini{font-size:var(--fs-1);padding:0 5px}.optchip.mini.r{background:#fbeceb;color:var(--disp);border-color:#f0c9c6}
 /* ⚠️ WRAPS INSTEAD OF OVERFLOWING. Fold toggle + count + sort + key + columns needs ~280px, and the list pane is
    draggable down to 210 — below which the row spilled sideways out of its own pane. A control strip that cannot
    fit must fold onto a second line; it must not decide the pane is wider than it is. */
@@ -887,14 +887,14 @@ img.attImg{object-fit:cover;display:block}
 /* The chooser is now a LIST of rows rather than bare labels, because each row carries its own move controls. */
 .colmenu{max-height:60vh;overflow-y:auto;min-width:196px}
 .colmhd{font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);
-        margin:2px 0 1px;position:sticky;top:-8px;background:#fff;padding:4px 0 2px}
+        margin:2px 0 1px;position:sticky;top:-8px;background:var(--card);padding:4px 0 2px}
 .colmhd:first-child{margin-top:0}
 .colmnone{font-size:11.5px;color:var(--grey);padding:2px 0}
 .colrow{display:flex;align-items:center;gap:8px}
 .colrow label{flex:1;min-width:0;display:flex;align-items:center;gap:6px;cursor:pointer}
 /* ⚠️ 24px, not the 16px these would naturally be — they are pressed repeatedly while arranging, which is exactly
    the case where a small target costs the most. */
-.mv-btn{width:24px;height:24px;border:1px solid var(--line);background:#fff;border-radius:6px;
+.mv-btn{width:24px;height:24px;border:1px solid var(--line);background:var(--card);border-radius:6px;
            cursor:pointer;font-size:var(--fs-1);line-height:1;color:var(--ink);padding:0;flex:0 0 auto}
 .mv-btn:hover:not(:disabled){border-color:var(--blue);color:var(--blue)}
 .mv-btn:disabled{opacity:.35;cursor:default}
@@ -904,7 +904,7 @@ img.attImg{object-fit:cover;display:block}
 .lhcell{position:relative}
 .colrz{position:absolute;right:0;top:0;bottom:0;width:7px;cursor:col-resize;z-index:2}
 .colrz:hover{background:var(--blue);opacity:.5}
-.sortpreset{font-size:var(--fs-1);border:1px solid var(--line);border-radius:6px;padding:2px 5px;background:#fff;color:var(--ink);cursor:pointer;font-family:inherit}
+.sortpreset{font-size:var(--fs-1);border:1px solid var(--line);border-radius:6px;padding:2px 5px;background:var(--card);color:var(--ink);cursor:pointer;font-family:inherit}
 .colmenu label{padding:3px 8px;border-radius:6px;cursor:pointer}
 .colmenu label:has(input:checked){background:#E3EDF8;color:var(--blue);font-weight:600}
 .colmenu input[type=checkbox]{width:14px;height:14px;accent-color:var(--blue)}
@@ -923,19 +923,19 @@ img.attImg{object-fit:cover;display:block}
 .starcell.on{color:#997009}   /* was #e8b923 — 1.74:1, a "set" state you could not see it was set */
 .starcell:hover{color:#e8b923}
 .srch{position:relative}
-.advbtn{border:1px solid var(--line);background:#fff;border-radius:6px;padding:1px 7px;font-size:12px;cursor:pointer;color:var(--grey);margin-left:4px}
+.advbtn{border:1px solid var(--line);background:var(--card);border-radius:6px;padding:1px 7px;font-size:12px;cursor:pointer;color:var(--grey);margin-left:4px}
 .advbtn.on{background:#E3EDF8;color:var(--blue);border-color:var(--blue)}
-.advpanel{position:absolute;right:0;top:34px;z-index:7;background:#fff;border:1px solid var(--line);border-radius:9px;box-shadow:0 8px 26px rgba(0,0,0,.16);padding:11px 13px;width:300px;display:flex;flex-direction:column;gap:8px}
+.advpanel{position:absolute;right:0;top:34px;z-index:7;background:var(--card);border:1px solid var(--line);border-radius:9px;box-shadow:0 8px 26px rgba(0,0,0,.16);padding:11px 13px;width:300px;display:flex;flex-direction:column;gap:8px}
 .advttl{font-size:var(--fs-1);font-weight:700;color:var(--grey);text-transform:uppercase;letter-spacing:.3px}.advttl span{font-weight:400;text-transform:none;font-size:var(--fs-1);color:#9aa3a7}
 .advrow{display:flex;align-items:center;gap:6px}.advrow>label{width:60px;flex:0 0 60px;font-size:11.5px;color:var(--grey);font-weight:600}
-.advchk{flex:1;min-width:0;display:flex;align-items:center;gap:7px;font-size:12px;color:#b4453f;cursor:pointer;line-height:1.25;font-weight:600}
+.advchk{flex:1;min-width:0;display:flex;align-items:center;gap:7px;font-size:12px;color:var(--disp);cursor:pointer;line-height:1.25;font-weight:600}
 .advchk input{flex:0 0 auto}
 .advin{flex:1;border:1px solid var(--line);border-radius:6px;padding:4px 7px;font-size:12px;min-width:0;font-family:inherit}
 .advdash{font-size:var(--fs-1);color:var(--grey)}.advfoot{display:flex;justify-content:flex-end;gap:7px;margin-top:3px}
 .advx{position:absolute;top:6px;right:9px;border:0;background:none;font-size:var(--fs-3);color:#9aa3a7;cursor:pointer;line-height:1}
-.advchip{display:inline-flex;align-items:center;gap:5px;background:#E3EDF8;color:#345488;border:1px solid #cfe0f4;border-radius:12px;padding:1px 8px;font-size:var(--fs-1);margin:0 5px 0 0;white-space:nowrap}
+.advchip{display:inline-flex;align-items:center;gap:5px;background:#E3EDF8;color:var(--blue-d);border:1px solid #cfe0f4;border-radius:12px;padding:1px 8px;font-size:var(--fs-1);margin:0 5px 0 0;white-space:nowrap}
 .advchip b{cursor:pointer;font-weight:700;color:#7a8aa0}
-.advchip b:hover{color:#b4453f}
+.advchip b:hover{color:var(--disp)}
 .lhead .lhcell:not(:last-child){border-right:1px solid var(--line)}
 .lrow .lcell:not(:last-child){border-right:1px solid var(--line)}
 .lhcell{padding-right:4px}
@@ -952,7 +952,7 @@ img.attImg{object-fit:cover;display:block}
 .msgfilters .msgfilter + .msgfilter::before{content:"|";color:var(--line);font-weight:700;margin-right:10px;align-self:center}
 .msgss{display:inline-flex;align-items:center;gap:6px;margin-left:auto}
 .msgsi{border:1px solid var(--line);border-radius:6px;padding:3px 8px;font-size:11.5px;min-width:120px;font-family:inherit}
-.msgord{border:1px solid var(--line);background:#fff;border-radius:6px;padding:3px 8px;font-size:var(--fs-1);cursor:pointer;color:var(--blue);font-weight:600;white-space:nowrap}
+.msgord{border:1px solid var(--line);background:var(--card);border-radius:6px;padding:3px 8px;font-size:var(--fs-1);cursor:pointer;color:var(--blue);font-weight:600;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -1435,7 +1435,7 @@ function mountAssist(){ if(document.getElementById("assistfab")) return;
      frame was silently ignored and the pill sat in the grey margin beside it. A control positioned inline is a
      control no stylesheet can ever reposition. */
   const b=document.createElement("div"); b.id="assistfab";
-  b.innerHTML=`<button data-testid="assistant-open" onclick="openAssist()" title="Ask the assistant" style="border:0;border-radius:24px;padding:10px 16px;background:#3F66A6;color:#fff;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.18);font-size:var(--fs-3)">💬 Assistant</button>`;
+  b.innerHTML=`<button data-testid="assistant-open" onclick="openAssist()" title="Ask the assistant" style="border:0;border-radius:24px;padding:10px 16px;background:var(--blue);color:#fff;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.18);font-size:var(--fs-3)">💬 Assistant</button>`;
   document.body.appendChild(b);
   const h=document.createElement("div"); h.id="assisthost"; document.body.appendChild(h);
 }
@@ -1457,7 +1457,7 @@ function assistSuggest(){ const sc=curScreen(); const pre=!(typeof SESSION!=="un
 }
 function assistEntryHTML(e){ if(!e) return "I am not sure yet — try rephrasing, or pick a suggestion. I will not guess or oversell.";
   let html = "<b>"+esc(e.q)+"</b><br>"+esc(e.a);
-  if(e.fit) html += `<div style="margin-top:6px;font-size:var(--fs-1);color:${e.fit==="good"?"#2f8f5b":e.fit==="no"?"#b4453f":"#a9791f"}">Fit: ${e.fit==="good"?"strong":e.fit==="no"?"probably not":"depends — tell me more"}</div>`;
+  if(e.fit) html += `<div style="margin-top:6px;font-size:var(--fs-1);color:${e.fit==="good"?"#2f8f5b":e.fit==="no"?"var(--disp)":"#a9791f"}">Fit: ${e.fit==="good"?"strong":e.fit==="no"?"probably not":"depends — tell me more"}</div>`;
   const cap = e.media && e.media.caption ? `<div style="font-size:var(--fs-1);color:#9aa3a7;margin-top:4px;font-style:italic">${esc(e.media.caption)}</div>` : "";
   if(e.media && e.media.type==="img") html += `<div style="margin-top:8px"><img src="${esc(e.media.src)}" onerror="this.style.display='none'" style="max-width:100%;border-radius:9px;display:block" alt="">${cap}</div>`;
   if(e.media && e.media.type==="video") html += `<div style="margin-top:8px"><video src="${esc(e.media.src)}" controls onerror="this.style.display='none'" style="max-width:100%;border-radius:9px;display:block"></video>${cap}</div>`;
@@ -1482,14 +1482,14 @@ async function askHelpDesk(){ const q=(_assistPending||'').trim(); if(!q) return
   }catch(e){ renderAssist("Couldn't reach the help desk: "+esc((e&&e.message)||'please try again')); } }
 function renderAssist(ans){ const h=document.getElementById("assisthost"); if(!h||!_assistOpen) return; const pre=!(typeof SESSION!=="undefined" && SESSION.token); const sugg=assistSuggest();
   const _pb=(typeof PURPOSE!=='undefined'&&PURPOSE[curScreen()])?PURPOSE[curScreen()]:''; const purposeHTML=_pb?`<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:8px 10px;font-size:11.5px;color:#6b5a36;line-height:1.5;margin-bottom:9px">${esc(_pb)}</div>`:'';
-  h.innerHTML=`<div style="position:fixed;right:16px;bottom:70px;z-index:301;width:360px;max-width:92vw;background:#fff;border:1px solid #e3e0d8;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.22);overflow:hidden">
+  h.innerHTML=`<div style="position:fixed;right:16px;bottom:70px;z-index:301;width:360px;max-width:92vw;background:var(--card);border:1px solid #e3e0d8;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.22);overflow:hidden">
     <div style="display:flex;align-items:center;gap:8px;padding:11px 13px;border-bottom:1px solid #e3e0d8;font-family:'Space Grotesk';font-weight:700;font-size:13px">💬 Assistant <span style="font-size:var(--fs-1);font-family:'Space Mono';background:#f3f0e8;color:#7a5e22;border-radius:5px;padding:1px 6px">${pre?"fit check":"help"}</span><button data-testid="assist-close" onclick="closeAssist()" style="margin-left:auto;border:0;background:none;cursor:pointer;color:#9aa3a7;font-size:15px">✕</button></div>
     <div style="padding:11px 13px;max-height:52vh;overflow:auto">
       ${purposeHTML}<div style="font-size:12px;color:#777;margin-bottom:8px">${pre?"Tell me your business and I will be honest about whether this fits.":"Describe what you are trying to do."}</div>
       <div id="assist_ans" style="font-size:var(--fs-2);color:#222;line-height:1.55;margin-bottom:10px">${ans||""}</div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">${(_assistLoading && !sugg.length)?'<span style="font-size:var(--fs-1);color:#9aa3a7">loading questions…</span>':sugg.map(e=>`<button data-testid="assist-suggest-${e.id}" onclick="assistPick('${e.id}')" style="border:0.5px solid #e3e0d8;border-radius:9px;padding:3px 8px;font-size:var(--fs-1);background:#fff;cursor:pointer">${esc(e.q)}</button>`).join("")}</div>
-      <div style="display:flex;gap:7px"><input id="assist_in" data-testid="assist-input" placeholder="${pre?"e.g. I run a timber yard…":"e.g. how do I assign a task?"}" style="flex:1;border:1px solid #e3e0d8;border-radius:9px;padding:7px 9px;font-size:var(--fs-2)" onkeydown="if(event.key==='Enter')assistAsk()"><button data-testid="assist-ask" onclick="assistAsk()" style="border:0;border-radius:9px;padding:0 12px;background:#3F66A6;color:#fff;font-weight:700;cursor:pointer">Ask</button></div>
-      ${pre?'':'<div style="margin-top:9px;text-align:center"><button data-testid="assist-compliance" onclick="checkCompliance()" style="border:0.5px solid #e3e0d8;border-radius:9px;padding:6px 10px;font-size:11.5px;background:#fff;cursor:pointer">🛡️ Check compliance</button></div>'}
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">${(_assistLoading && !sugg.length)?'<span style="font-size:var(--fs-1);color:#9aa3a7">loading questions…</span>':sugg.map(e=>`<button data-testid="assist-suggest-${e.id}" onclick="assistPick('${e.id}')" style="border:0.5px solid #e3e0d8;border-radius:9px;padding:3px 8px;font-size:var(--fs-1);background:var(--card);cursor:pointer">${esc(e.q)}</button>`).join("")}</div>
+      <div style="display:flex;gap:7px"><input id="assist_in" data-testid="assist-input" placeholder="${pre?"e.g. I run a timber yard…":"e.g. how do I assign a task?"}" style="flex:1;border:1px solid #e3e0d8;border-radius:9px;padding:7px 9px;font-size:var(--fs-2)" onkeydown="if(event.key==='Enter')assistAsk()"><button data-testid="assist-ask" onclick="assistAsk()" style="border:0;border-radius:9px;padding:0 12px;background:var(--blue);color:#fff;font-weight:700;cursor:pointer">Ask</button></div>
+      ${pre?'':'<div style="margin-top:9px;text-align:center"><button data-testid="assist-compliance" onclick="checkCompliance()" style="border:0.5px solid #e3e0d8;border-radius:9px;padding:6px 10px;font-size:11.5px;background:var(--card);cursor:pointer">🛡️ Check compliance</button></div>'}
     </div>
     <div style="padding:7px 13px;font-size:var(--fs-1);color:#9aa3a7;background:#faf8f3">Honest by design · sample answers from the library · richer AI coming.</div>
   </div>`;
@@ -1521,7 +1521,7 @@ function ccRender(res){
     <label style="font-size:11.5px;color:#555">Standard</label>
     <select onchange="ccPickStd(this.value)" style="width:100%;border:1px solid #e3e0d8;border-radius:9px;padding:7px 9px;font-size:var(--fs-2);margin:3px 0 12px">${opts}</select>
     <div>${fields}</div>
-    <button onclick="ccRun()" style="width:100%;margin-top:14px;border:0;border-radius:9px;padding:10px;background:#3F66A6;color:#fff;font-weight:700;font-size:13px;cursor:pointer">Check compliance</button>
+    <button onclick="ccRun()" style="width:100%;margin-top:14px;border:0;border-radius:9px;padding:10px;background:var(--blue);color:#fff;font-weight:700;font-size:13px;cursor:pointer">Check compliance</button>
     <div id="cc_result" style="margin-top:12px">${res||''}</div>`, true);
 }
 async function ccRun(){
@@ -1533,10 +1533,10 @@ async function ccRun(){
     else if(el.value!==''){ payload[p.key]=el.value; } });
   const rh=document.getElementById("cc_result"); if(rh) rh.innerHTML='<span style="font-size:12px;color:#9aa3a7">Checking…</span>';
   let v; try{ v=await api('assistConform',{body:{standard:_ccPick, payload}}); }
-  catch(e){ if(rh) rh.innerHTML=`<div style="color:#b4453f;font-size:var(--fs-2)">Couldn't check: ${esc((e&&e.message)||'try again')}</div>`; return; }
+  catch(e){ if(rh) rh.innerHTML=`<div style="color:var(--disp);font-size:var(--fs-2)">Couldn't check: ${esc((e&&e.message)||'try again')}</div>`; return; }
   const ok=v.compliant;
-  const badge=`<div style="display:inline-block;font-weight:800;font-size:12px;padding:4px 11px;border-radius:20px;background:${ok?'#e8f5ee':'#fbeae9'};color:${ok?'#2f8f5b':'#b4453f'}">${ok?'✓ COMPLIANT':'✗ NON-COMPLIANT'}</div>`;
-  const rows=(v.points||[]).map(p=>{ const g=p.status==='ok'; return `<div style="display:flex;gap:8px;align-items:baseline;padding:4px 0;font-size:12px;border-top:1px solid #f0ede5"><span style="color:${g?'#2f8f5b':'#b4453f'};font-weight:800">${g?'✓':'✗'}</span><span style="flex:1">${esc(p.label)}</span><span style="color:#9aa3a7;font-size:var(--fs-1)">${esc(p.detail||p.status)}</span></div>`; }).join("");
+  const badge=`<div style="display:inline-block;font-weight:800;font-size:12px;padding:4px 11px;border-radius:20px;background:${ok?'#e8f5ee':'#fbeae9'};color:${ok?'#2f8f5b':'var(--disp)'}">${ok?'✓ COMPLIANT':'✗ NON-COMPLIANT'}</div>`;
+  const rows=(v.points||[]).map(p=>{ const g=p.status==='ok'; return `<div style="display:flex;gap:8px;align-items:baseline;padding:4px 0;font-size:12px;border-top:1px solid #f0ede5"><span style="color:${g?'#2f8f5b':'var(--disp)'};font-weight:800">${g?'✓':'✗'}</span><span style="flex:1">${esc(p.label)}</span><span style="color:#9aa3a7;font-size:var(--fs-1)">${esc(p.detail||p.status)}</span></div>`; }).join("");
   const narr=v.narrative?`<div style="margin-top:10px;background:#f6f4ee;border:1px solid #e7e3d8;border-radius:9px;padding:9px 11px;font-size:12px;line-height:1.55;color:#3a3a3a"><span style="font-size:var(--fs-1);color:#7a5e22;font-weight:700">🤖 ASSIST</span><br>${esc(v.narrative)}</div>`:'';
   const ab=v.acted_by||{}; const prov=`<div style="margin-top:9px;font-size:var(--fs-1);color:#9aa3a7;font-family:'Space Mono'">stamped · ${esc(ab.deputy||'ai:conform-verdict')} · ${ab.model?('narrative by '+esc(ab.model)):'deterministic only (no model key)'} · against ${esc(v.standard||_ccPick)}</div>`;
   if(rh) rh.innerHTML=badge+`<div style="margin-top:9px">${rows}</div>`+narr+prov;
@@ -1595,7 +1595,7 @@ async function cbAdopt(){
   try{ await api('catalogueAdopt',{body:{source:(window._cbSourceKey||(v.adoption_model&&v.adoption_model.source_ref)||'beta-royale-play@v1'), commercials:com}});
     if(rh)rh.innerHTML='<div style="color:#2e7a45;font-size:var(--fs-2);background:#eef7ee;border:1px solid #cfe6cf;border-radius:9px;padding:8px 10px">✓ Saved — your entity now <b>references</b> this catalogue ('+Object.keys(com).length+' finishes priced). Design &amp; colour stay shared; only your commercials were stored.</div>';
     if(typeof toast==='function')toast('Catalogue adopted ✓ (reference + commercials)');
-  }catch(e){ if(rh)rh.innerHTML='<div style="color:#b4453f;font-size:var(--fs-2)">'+esc((e&&e.message)||'save failed')+'</div>'; }
+  }catch(e){ if(rh)rh.innerHTML='<div style="color:var(--disp);font-size:var(--fs-2)">'+esc((e&&e.message)||'save failed')+'</div>'; }
 }
 async function cbViewMine(){
   var rh=document.getElementById('cb_result'); if(rh)rh.innerHTML='<span style="font-size:12px;color:#9aa3a7">Loading…</span>';
@@ -1603,19 +1603,19 @@ async function cbViewMine(){
     if(!r.count){ if(rh)rh.innerHTML='<div style="font-size:var(--fs-2);color:#6a707a">Nothing saved yet — set prices and Adopt above.</div>'; return; }
     var c=r.catalogues[0]; var priced=(c.resolved.items||[]).filter(function(it){return it.commercials;});
     if(rh)rh.innerHTML='<div style="font-size:var(--fs-2);color:#3a4048;background:#f6f4ee;border:1px solid #e7e3d8;border-radius:9px;padding:8px 10px">Persisted · <b>'+esc(c.source)+'</b> · '+priced.length+' priced:<br>'+(priced.map(function(it){var p=_refPrice(it);return esc(it.name)+' — '+(p?(esc(inr(p.v))+(p.u?'/'+esc(p.u):'')):'?');}).join(' · ')||'—')+'<div style="font-size:var(--fs-1);color:#9aa3a7;margin-top:5px">design &amp; data resolved by reference from the shared source — no copy stored</div></div>';
-  }catch(e){ if(rh)rh.innerHTML='<div style="color:#b4453f;font-size:var(--fs-2)">'+esc((e&&e.message)||'load failed')+'</div>'; }
+  }catch(e){ if(rh)rh.innerHTML='<div style="color:var(--disp);font-size:var(--fs-2)">'+esc((e&&e.message)||'load failed')+'</div>'; }
 }
 function setLogFilter(k){ _logFilter=k; renderMsgConsole(); }
 function clearMsgLog(){ if(window.__cblog) window.__cblog.length=0; renderMsgConsole(); }
 function renderMsgConsole(){ const host=document.getElementById("lbhost"); if(!host||!UI.logOpen)return;
-  const COL={debug:'#9aa3a7',info:'#3F66A6',warn:'#a9791f',error:'#b4453f'};
+  const COL={debug:'#9aa3a7',info:'var(--blue)',warn:'#a9791f',error:'var(--disp)'};
   const all=(window.__cblog||[]);
   const rows=all.filter(e=>_logFilter==='all'||e.level===_logFilter).slice(-200).reverse();
   const chip=(k,lbl)=>`<button onclick="setLogFilter('${k}')" style="border:0.5px solid var(--line);border-radius:6px;padding:2px 8px;font-size:var(--fs-1);background:${_logFilter===k?'var(--ink)':'#fff'};color:${_logFilter===k?'#fff':'var(--ink)'};cursor:pointer">${lbl}</button>`;
   host.innerHTML=`<div class="notifover" onclick="closeMsgConsole()"><div class="notifpanel" style="max-width:560px;width:94vw" onclick="event.stopPropagation()">
     <div class="notifhd">🧪 Message log<span style="margin-left:auto;font-size:var(--fs-1);color:var(--grey)">${rows.length}/${all.length}</span></div>
-    <div style="display:flex;gap:5px;padding:8px 13px;flex-wrap:wrap;align-items:center">${chip('all','All')}${chip('info','Info')}${chip('warn','Warning')}${chip('error','Critical')}${chip('debug','Requests')}<button onclick="clearMsgLog()" style="margin-left:auto;border:0.5px solid var(--line);border-radius:6px;padding:2px 8px;font-size:var(--fs-1);background:#fff;cursor:pointer">Clear</button></div>
-    <div style="max-height:52vh;overflow:auto">${rows.length?rows.map(e=>`<div style="display:flex;gap:8px;padding:6px 13px;border-top:1px solid var(--line);font-size:11.5px;align-items:baseline"><span style="color:var(--grey);font-family:'Space Mono';font-size:var(--fs-1);white-space:nowrap">${new Date(e.t).toLocaleTimeString()}</span><span style="color:${COL[e.level]||'#3F66A6'};font-weight:800;font-size:var(--fs-1);text-transform:uppercase;white-space:nowrap">${esc(e.level)}</span><span style="color:var(--ink);word-break:break-word">${esc(e.text)}</span></div>`).join(""):'<div style="padding:16px;color:var(--grey);font-size:var(--fs-2)">No messages yet — interact with the app and they appear here.</div>'}</div>
+    <div style="display:flex;gap:5px;padding:8px 13px;flex-wrap:wrap;align-items:center">${chip('all','All')}${chip('info','Info')}${chip('warn','Warning')}${chip('error','Critical')}${chip('debug','Requests')}<button onclick="clearMsgLog()" style="margin-left:auto;border:0.5px solid var(--line);border-radius:6px;padding:2px 8px;font-size:var(--fs-1);background:var(--card);cursor:pointer">Clear</button></div>
+    <div style="max-height:52vh;overflow:auto">${rows.length?rows.map(e=>`<div style="display:flex;gap:8px;padding:6px 13px;border-top:1px solid var(--line);font-size:11.5px;align-items:baseline"><span style="color:var(--grey);font-family:'Space Mono';font-size:var(--fs-1);white-space:nowrap">${new Date(e.t).toLocaleTimeString()}</span><span style="color:${COL[e.level]||'var(--blue)'};font-weight:800;font-size:var(--fs-1);text-transform:uppercase;white-space:nowrap">${esc(e.level)}</span><span style="color:var(--ink);word-break:break-word">${esc(e.text)}</span></div>`).join(""):'<div style="padding:16px;color:var(--grey);font-size:var(--fs-2)">No messages yet — interact with the app and they appear here.</div>'}</div>
     <div class="notiffoot">Tester view · captures every toast + API call. Not shown in production.</div>
   </div></div>`;
 }
@@ -1834,7 +1834,7 @@ function regVerticalChooser(){
   if(!vs.length) return '';
   return '<div style="margin:10px 0 4px"><div class="fl">Choose your setup <span style="font-weight:400;color:var(--grey)">(you can change later)</span></div>'
     + vs.map(function(v){ const sel=(REG.constitution||'')===v.key; const caps=(v.capabilities||[]).join(' · ');
-        return '<div data-testid="reg-vertical-'+esc(v.key)+'" onclick="REG.constitution=\''+esc(v.key)+'\';renderRegister()" style="border:1px solid '+(sel?'#3F66A6':'var(--line)')+';background:'+(sel?'#eef3fb':'#fff')+';border-radius:9px;padding:9px 11px;margin-bottom:7px;cursor:pointer"><div style="font-weight:700;font-size:var(--fs-2);color:var(--ink)">'+(sel?'● ':'○ ')+esc(v.label||v.key)+(v.is_default?' <span style="font-size:var(--fs-1);color:var(--grey);font-weight:400">· default</span>':'')+'</div><div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">'+(v.vertical?('vertical: '+esc(v.vertical)+' · '):'')+'includes '+esc(caps||'core')+'</div></div>';
+        return '<div data-testid="reg-vertical-'+esc(v.key)+'" onclick="REG.constitution=\''+esc(v.key)+'\';renderRegister()" style="border:1px solid '+(sel?'var(--blue)':'var(--line)')+';background:'+(sel?'#eef3fb':'#fff')+';border-radius:9px;padding:9px 11px;margin-bottom:7px;cursor:pointer"><div style="font-weight:700;font-size:var(--fs-2);color:var(--ink)">'+(sel?'● ':'○ ')+esc(v.label||v.key)+(v.is_default?' <span style="font-size:var(--fs-1);color:var(--grey);font-weight:400">· default</span>':'')+'</div><div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">'+(v.vertical?('vertical: '+esc(v.vertical)+' · '):'')+'includes '+esc(caps||'core')+'</div></div>';
       }).join('')
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin:2px 0 4px">None fits? <a onclick="regTailor();return false" style="color:var(--blue);cursor:pointer;font-weight:600">Tailor one</a> — or <a onclick="regContact();return false" style="color:var(--blue);cursor:pointer;font-weight:600">contact the team</a> to wire it quickly.</div>'
     + '</div>';
@@ -1884,7 +1884,7 @@ function renderLogin(){
       ${L.err?`<div class="err">${L.err}</div>`:""}
       <div class="hint"><b>${STAGES[CFG.STAGE].label}</b> — real OTP/PIN against the API.</div>
       ${L.cust?"":`<div class="swap">New here? <a onclick="go('#/welcome')">Create an entity</a> · <a onclick="setLoginCust(true)">Have a shop link?</a></div>`}
-      <div style="text-align:center;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)"><button onclick="openLegend()" title="See what we serve — no login" style="border:0;background:linear-gradient(180deg,#4a72b0,#3F66A6);color:#fff;border-radius:22px;padding:11px 22px;cursor:pointer;font-size:13.5px;font-weight:700;box-shadow:0 3px 12px rgba(63,102,166,.32)">🔑 See what we serve — no sign-in</button><div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">A 60-second look at where we&rsquo;re different.</div></div>
+      <div style="text-align:center;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)"><button onclick="openLegend()" title="See what we serve — no login" style="border:0;background:linear-gradient(180deg,#4a72b0,var(--blue));color:#fff;border-radius:22px;padding:11px 22px;cursor:pointer;font-size:13.5px;font-weight:700;box-shadow:0 3px 12px rgba(63,102,166,.32)">🔑 See what we serve — no sign-in</button><div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">A 60-second look at where we&rsquo;re different.</div></div>
     </div>
   </div></div>`;
   const b=document.getElementById("l_go"); if(b) b.onclick=doLogin;
@@ -2019,7 +2019,7 @@ function setShop(s){SESSION.shop=s;
  * Nothing here is a preview, a beta, or half-applied.
  */
 var THEMES = {
-  cream:  { name: 'Cream',   dot: '#FAF8F4', vars: {} },   // the default; no overrides at all
+  cream:  { name: 'Cream',   dot: 'var(--paper)', vars: {} },   // the default; no overrides at all
   /* Cooler and flatter — the closest thing to a "plain white app", for anyone who finds the cream warm. */
   cool:   { name: 'Cool',    dot: '#F4F6F8', vars: {
             '--paper':'#F4F6F8', '--card':'#ffffff', '--line':'#DEE3E8',
@@ -2341,7 +2341,7 @@ function _renderApp(){
              a plain circular letter does not say "menu", it says "avatar", so the two screens read as DELETED
              rather than relocated. A control that hides things must look like a control. -->
         <button type="button" class="av" data-testid="icon-avatar" onclick="UI.avMenu=!UI.avMenu;renderApp()" style="cursor:pointer;position:relative" title="Profile, settings and sign out">${(SESSION.name||"?")[0]}<span style="position:absolute;right:-3px;bottom:-3px;background:var(--ink);color:#fff;border-radius:50%;width:13px;height:13px;font-size:8px;display:flex;align-items:center;justify-content:center;border:1.5px solid #fff">${UI.avMenu?'▴':'▾'}</span></button>
-        ${UI.avMenu?`<div class="avmenu" data-testid="avatar-menu" style="position:absolute;top:calc(100% + 6px);right:0;z-index:60;background:#fff;border:1px solid var(--line);border-radius:9px;box-shadow:var(--shadow);min-width:180px;overflow:hidden">
+        ${UI.avMenu?`<div class="avmenu" data-testid="avatar-menu" style="position:absolute;top:calc(100% + 6px);right:0;z-index:60;background:var(--card);border:1px solid var(--line);border-radius:9px;box-shadow:var(--shadow);min-width:180px;overflow:hidden">
           <div style="padding:9px 13px;border-bottom:1px solid var(--line)"><div style="font-weight:700;font-size:13px">${esc(SESSION.name||'')}</div><div style="font-size:11.5px;color:var(--grey)">${esc(role)} · ${esc(SESSION.entity||'')}</div></div>
           <button data-testid="nav-profile" onclick="UI.avMenu=false;navTo('profile')" style="display:block;width:100%;text-align:left;border:0;background:none;padding:10px 13px;font-size:13.5px;cursor:pointer">👤 Profile</button>
           <!-- ⚠️ SETTINGS IS ENTITY ADMINISTRATION, NOT A PERSONAL SCREEN. Moving Profile behind the avatar put
@@ -2666,7 +2666,7 @@ function ccSchema(){ return DEFAULT_SCHEMA_FIELDS; }
  * Details would have shown a blank box over a value that was really still there.
  */
 function cfField(f){
-  const id="cf_"+f.field_key; const req=f.required?' <span style="color:#b4453f">*</span>':'';
+  const id="cf_"+f.field_key; const req=f.required?' <span style="color:var(--disp)">*</span>':'';
   const ph=f.placeholder?` placeholder="${esc(f.placeholder)}"`:'';
   const v=esc(ccField(f.field_key));
   const wire=` value="${v}" oninput="ccSetField('${f.field_key}', this.value)"`;
@@ -2690,7 +2690,7 @@ function ccCatPickHTML(){
      are where they will be, greyed, and the real rows replace them in place. Nothing moves when the data lands. */
   if(UI._catState==='loading') return CBCatUI.skeletonHTML({ rows:8 });
   if(!(STORE.catalogue||[]).length)
-    return `<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:10px 12px;font-size:var(--fs-2);color:#6b5a36">${UI._catState==='error'?esc(MSG.catalogueLoadErr()):'Your catalogue is empty — a chit needs at least one line item. <a onclick="closeModal();navTo(\'catalogue\')" style="color:#3F66A6;cursor:pointer;font-weight:600">Add a product in Catalogue first &rarr;</a>'}</div>`;
+    return `<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:10px 12px;font-size:var(--fs-2);color:#6b5a36">${UI._catState==='error'?esc(MSG.catalogueLoadErr()):'Your catalogue is empty — a chit needs at least one line item. <a onclick="closeModal();navTo(\'catalogue\')" style="color:var(--blue);cursor:pointer;font-weight:600">Add a product in Catalogue first &rarr;</a>'}</div>`;
   /**
    * ── THE FOURTH PLACE ─────────────────────────────────────────────────────────────────────────────────────────
    * Athi, 2026-08-08: *"the same functionality should be used in storefront and in self compose as well, these are
@@ -2853,7 +2853,7 @@ async function compose(prefill){ UI.drawer=false; CC={items:(prefill&&prefill.it
   /* ⭐ THE CART CHIP LIVES IN THE HEADER, level with the ✕ — Athi, 2026-08-15: *"cart icon can be on the top,
      where x is there"*. `right:42px` clears the ✕ (26px wide at right:9px). The slot is always in the DOM so
      paintBar has something to fill; it renders nothing until the cart holds a line. */
-  modal(`<div class="mhd" style="position:relative"><div class="t">✉️ Compose — author a chit <button data-testid="icon-help-compose" onclick="openAssist('compose')" title="Ask the assistant about composing" style="border:1px solid var(--line);background:#fff;color:#3F66A6;border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;vertical-align:middle">?</button></div><div class="s" id="cc_sub">create your own record, then bridge it</div><div id="cbcartbar_cc" class="cbpick-cartslot" style="position:absolute;right:42px;top:9px"></div></div>
+  modal(`<div class="mhd" style="position:relative"><div class="t">✉️ Compose — author a chit <button data-testid="icon-help-compose" onclick="openAssist('compose')" title="Ask the assistant about composing" style="border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;vertical-align:middle">?</button></div><div class="s" id="cc_sub">create your own record, then bridge it</div><div id="cbcartbar_cc" class="cbpick-cartslot" style="position:absolute;right:42px;top:9px"></div></div>
    <div class="mbody">
      <div id="cc_rail"></div>
      <div id="cc_body"></div>
@@ -2978,7 +2978,7 @@ function ccOriginHTML(){
     <div style="font-weight:700">✨ ${n?(n+' line'+(n===1?'':'s')+' brought in'):'Bringing the lines in…'} from ${esc(o.channelName||o.channel||'a message')} — ${who}</div>
     <div style="color:var(--grey);margin-top:3px">Read by a co-assist. <b>Proposed, not evidence</b> — check the quantities and prices before you send.</div>
     ${unpriced?`<div style="margin-top:5px;color:#6b5a36">⚠️ ${unpriced} line${unpriced===1?'':'s'} ${unpriced===1?'has':'have'} no price — your catalogue does not stock ${unpriced===1?'it':'them'}. Set one below, or send it as a quantity-only chit.</div>`:''}
-    ${ref.length?`<div style="margin-top:5px;color:#b4453f">⚠️ ${ref.length} line${ref.length===1?'':'s'} could not be placed: ${esc(ref.map(r=>(r.name||'unnamed')+' — '+r.why).join('; '))}</div>`:''}
+    ${ref.length?`<div style="margin-top:5px;color:var(--disp)">⚠️ ${ref.length} line${ref.length===1?'':'s'} could not be placed: ${esc(ref.map(r=>(r.name||'unnamed')+' — '+r.why).join('; '))}</div>`:''}
   </div>`;
 }
 function ccStepItems(){
@@ -3023,7 +3023,7 @@ function ccStepTo(){
 }
 function ccStepDetails(){
   return `<div style="font-family:'Space Grotesk';font-weight:600;font-size:12px;color:var(--grey);margin:2px 0 2px">Chit fields · from your <b>${esc((STORE.chitSchema||{schema_name:"Order"}).schema_name)}</b> schema</div>
-     ${!STORE.chitSchema?`<div style="background:#fbeceb;border:1px solid #f0c9c6;border-radius:9px;padding:7px 10px;font-size:11.5px;color:#b4453f;margin-bottom:6px">${esc(MSG.schemaDefault())}</div>`:''}
+     ${!STORE.chitSchema?`<div style="background:#fbeceb;border:1px solid #f0c9c6;border-radius:9px;padding:7px 10px;font-size:11.5px;color:var(--disp);margin-bottom:6px">${esc(MSG.schemaDefault())}</div>`:''}
      ${ccSchema().map(cfField).join("")}
      <div style="font-family:'Space Grotesk';font-weight:600;font-size:12px;color:var(--grey);margin:14px 0 4px">Attachments · <span style="font-weight:400">co-signed (use 📎 on a line for item-specific files)</span></div>
      <label class="composebtn" style="cursor:pointer">📎 Attach files<input type="file" multiple style="display:none" onchange="ccAddFiles(this.files);this.value=''"></label>
@@ -3045,10 +3045,10 @@ function ccStepReview(){
         + '<span style="flex:1">Total</span><span data-testid="cc-review-total">'+esc(fmtMoney(sum,'INR'))+'</span></div>', 0)
     + card('To', row('Recipients', (CC.rcpts||[]).length
         ? (CC.rcpts||[]).map(function(r){ return esc(r.role.toUpperCase())+' '+esc(r.name); }).join(' · ')
-        : '<span style="color:#b4453f">nobody yet</span>'), 1)
+        : '<span style="color:var(--disp)">nobody yet</span>'), 1)
     + card('Details', ccSchema().map(function(f){
         var v=ccField(f.field_key);
-        return row(esc(f.field_name), v?esc(v):(f.required?'<span style="color:#b4453f">required</span>':'—')); }).join('')
+        return row(esc(f.field_name), v?esc(v):(f.required?'<span style="color:var(--disp)">required</span>':'—')); }).join('')
         + row('Attachments', nAtt?String(nAtt):'—'), 2)
     + `<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:12px;padding:10px 12px;font-size:var(--fs-2);color:#6b5a36;line-height:1.5;margin-top:10px"><b style="font-family:'Space Grotesk'">It becomes shared the moment you bridge it.</b> A self-addressed chit is a real chit: one copy in <b>Order</b> (sent), one in <b>Task</b> (received), same thread.</div>`;
 }
@@ -3070,9 +3070,9 @@ function ccAddSelf(){ if(ccRoleCount("to")>=(LIMITS.to||99)){ toast(MSG.capHit("
 function ccDelRcpt(i){ CC.rcpts.splice(i,1); ccRenderRcpts(); }
 function ccFlipRcpt(i){ const order=["to","cc","for"]; const r=CC.rcpts[i]; if(!r)return; for(let k=1;k<=order.length;k++){ const nx=order[(order.indexOf(r.role)+k)%order.length]; if(nx===r.role||ccRoleCount(nx)<(LIMITS[nx]||99)){ r.role=nx; break; } } ccRenderRcpts(); }
 function ccRenderRcpts(){ const h=document.getElementById("cc_rcpts");
-  if(h){ h.innerHTML = CC.rcpts.length ? CC.rcpts.map((r,i)=>{ const col=r.role==="to"?"#3F66A6":r.role==="cc"?"#7a5e22":"#5F6B70"; const bg=r.role==="to"?"#EEF3FB":r.role==="cc"?"#F4ECD8":"#EFEBE2";
-    if(UI._supplier){ return `<span style="display:inline-flex;align-items:center;gap:5px;border:0.5px solid #cfe0f4;background:#EEF3FB;border-radius:9px;padding:4px 9px;margin:0 5px 5px 0;font-size:12px;font-weight:600;color:#3F66A6">🏭 ${esc(r.name)}${r.bridge?'<span style="font-family:monospace;font-size:var(--fs-1);opacity:.8"> · '+esc(r.bridge)+'</span>':''} <span style="font-weight:400;color:var(--grey)">· locked</span></span>`; }
-    return `<span style="display:inline-flex;align-items:center;gap:5px;border:0.5px solid var(--line);border-radius:9px;padding:3px 7px;margin:0 5px 5px 0;font-size:11.5px"><span onclick="ccFlipRcpt(${i})" title="Flip role (To/CC/For)" style="cursor:pointer;font-family:'Space Mono';font-size:var(--fs-1);background:${bg};color:${col};border-radius:5px;padding:1px 5px">${r.role.toUpperCase()}</span>${esc(r.name)}${r.bridge?'<span style="font-family:monospace;font-size:var(--fs-1);color:#9aa3a7"> · '+esc(r.bridge)+'</span>':''}${r.self?'<span style="color:#3F66A6;font-size:var(--fs-1)"> · self</span>':''}<span onclick="ccDelRcpt(${i})" style="cursor:pointer;color:#9aa3a7">✕</span></span>`; }).join("") : `<div style="font-size:12px;color:var(--grey)">No recipients yet — add To / CC / For above.</div>`; }
+  if(h){ h.innerHTML = CC.rcpts.length ? CC.rcpts.map((r,i)=>{ const col=r.role==="to"?"var(--blue)":r.role==="cc"?"#7a5e22":"#5F6B70"; const bg=r.role==="to"?"#EEF3FB":r.role==="cc"?"#F4ECD8":"#EFEBE2";
+    if(UI._supplier){ return `<span style="display:inline-flex;align-items:center;gap:5px;border:0.5px solid #cfe0f4;background:#EEF3FB;border-radius:9px;padding:4px 9px;margin:0 5px 5px 0;font-size:12px;font-weight:600;color:var(--blue)">🏭 ${esc(r.name)}${r.bridge?'<span style="font-family:monospace;font-size:var(--fs-1);opacity:.8"> · '+esc(r.bridge)+'</span>':''} <span style="font-weight:400;color:var(--grey)">· locked</span></span>`; }
+    return `<span style="display:inline-flex;align-items:center;gap:5px;border:0.5px solid var(--line);border-radius:9px;padding:3px 7px;margin:0 5px 5px 0;font-size:11.5px"><span onclick="ccFlipRcpt(${i})" title="Flip role (To/CC/For)" style="cursor:pointer;font-family:'Space Mono';font-size:var(--fs-1);background:${bg};color:${col};border-radius:5px;padding:1px 5px">${r.role.toUpperCase()}</span>${esc(r.name)}${r.bridge?'<span style="font-family:monospace;font-size:var(--fs-1);color:#9aa3a7"> · '+esc(r.bridge)+'</span>':''}${r.self?'<span style="color:var(--blue);font-size:var(--fs-1)"> · self</span>':''}<span onclick="ccDelRcpt(${i})" style="cursor:pointer;color:#9aa3a7">✕</span></span>`; }).join("") : `<div style="font-size:12px;color:var(--grey)">No recipients yet — add To / CC / For above.</div>`; }
   if(UI._ccFlow) UI._ccFlow.paintFoot();   // a recipient added or removed changes whether To can be left
   const capEl=document.getElementById("cc_rcap"); if(capEl) capEl.textContent="To "+ccRoleCount("to")+"/"+LIMITS.to+" · CC "+ccRoleCount("cc")+"/"+LIMITS.cc+" · For "+ccRoleCount("for")+"/"+LIMITS.for+" — tap a role chip to flip"; }
 async function ccAiFill(){
@@ -3114,7 +3114,7 @@ function ccRenderItems(){ const h=document.getElementById("cc_items"); if(!h)ret
     : `<div style="font-size:12px;color:var(--grey);padding:4px 0">No items yet — pick from the catalogue or type one above.</div>`;
   ccRenderTotal();
 }
-function ccItemChips(i){ var it=CC.items[i]||{}; var fs=it.files||[]; return fs.map(function(f,k){ return '<span style="display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:6px;padding:2px 7px;margin:2px 5px 0 0;font-size:var(--fs-1);background:#fff">'+attIcon(cbAttachType(f.type,f.name))+' '+esc(f.name.length>20?f.name.slice(0,20)+'…':f.name)+' <span onclick="ccDelItemFile('+i+','+k+')" style="cursor:pointer;color:#9aa3a7">✕</span></span>'; }).join(''); }
+function ccItemChips(i){ var it=CC.items[i]||{}; var fs=it.files||[]; return fs.map(function(f,k){ return '<span style="display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:6px;padding:2px 7px;margin:2px 5px 0 0;font-size:var(--fs-1);background:var(--card)">'+attIcon(cbAttachType(f.type,f.name))+' '+esc(f.name.length>20?f.name.slice(0,20)+'…':f.name)+' <span onclick="ccDelItemFile('+i+','+k+')" style="cursor:pointer;color:#9aa3a7">✕</span></span>'; }).join(''); }
 /* ⚠️ BOTH BLOCKS REPAINT NOW. The chips used to live only in `cc_items`, which renders BELOW the whole
    catalogue — so a person who attached a photo saw nothing happen, because the confirmation was 3,000px away.
    The on-the-chit block is where the eye is, so it has to be refreshed too or the file looks like it was lost. */
@@ -3339,7 +3339,7 @@ async function sendChit(v){
 }
 function ccAddFiles(files){ CC.files=CC.files||[]; for(var k=0;k<files.length;k++){ var f=files[k]; if(f.size>6*1024*1024){ toast(f.name+' is over 6MB — skipped.'); continue; } CC.files.push(f); } ccRenderFiles(); }
 function ccDelFile(i){ (CC.files||[]).splice(i,1); ccRenderFiles(); }
-function ccRenderFiles(){ var h=document.getElementById('cc_files'); if(!h)return; var fs=CC.files||[]; h.innerHTML=fs.length?fs.map(function(f,i){ return '<span style="display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:6px;padding:2px 7px;margin:0 5px 5px 0;font-size:var(--fs-1);background:#fff">'+attIcon(cbAttachType(f.type,f.name))+' '+esc(f.name.length>26?f.name.slice(0,26)+'…':f.name)+' <span onclick="ccDelFile('+i+')" style="cursor:pointer;color:#9aa3a7">✕</span></span>'; }).join(''):''; }
+function ccRenderFiles(){ var h=document.getElementById('cc_files'); if(!h)return; var fs=CC.files||[]; h.innerHTML=fs.length?fs.map(function(f,i){ return '<span style="display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:6px;padding:2px 7px;margin:0 5px 5px 0;font-size:var(--fs-1);background:var(--card)">'+attIcon(cbAttachType(f.type,f.name))+' '+esc(f.name.length>26?f.name.slice(0,26)+'…':f.name)+' <span onclick="ccDelFile('+i+')" style="cursor:pointer;color:#9aa3a7">✕</span></span>'; }).join(''):''; }
 /* Compose embedded assistant (ATH-117 pattern) */
 // COMPOSE_HELP -> app/cap-help.js (lazy).
 /* (removed) composeHelpBox + composeAsk + composeAskFree — the Compose "?" now renders from ASSIST_LIB via
@@ -3403,7 +3403,7 @@ const ASSIST_PAGES = {
 };
 function assistPage(key){ const p=ASSIST_PAGES[key]; if(!p) return menuAssist(key);
   const groups=p.groups.map(g=>`<div style="${_CARD}"><div style="font-family:'Space Grotesk';font-weight:600;font-size:var(--fs-2);color:var(--ink);display:flex;align-items:center;gap:7px;margin-bottom:6px"><span style="color:var(--blue)">▸</span>${esc(g.title)}</div>${g.rows.map((r,i)=>`<div style="display:flex;gap:9px;align-items:baseline;padding:4px 0;${i?'border-top:0.5px solid #F0ECE2':''}"><span style="font-family:'Space Mono';font-size:var(--fs-1);color:var(--blue);min-width:118px;flex-shrink:0">${esc(r[0])}</span><span style="font-size:12px;color:var(--ink);line-height:1.5">${esc(r[1])}</span></div>`).join("")}</div>`).join("");
-  return `<div style="background:var(--gold-soft);border:0.5px solid var(--gold-line);border-radius:12px;padding:9px 11px;font-size:12px;color:#6b5a36;line-height:1.5;margin-bottom:9px"><b style="font-family:'Space Grotesk'">${key==='order'?'Order':'Task'} — what it is &amp; how to use it</b> <span style="font-size:var(--fs-1);font-family:'Space Mono';background:#fff;color:#7a5e22;border:0.5px solid var(--gold-line);border-radius:5px;padding:1px 6px">assistance page</span><div style="margin-top:4px">${esc(p.intro)}</div></div>${groups}<div style="${_CARD}"><div style="font-size:11.5px;color:var(--grey);margin-bottom:6px">Ask the assistant <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--gold-soft);color:#7a5e22;border-radius:5px;padding:1px 6px">web demo</span></div><div style="display:flex;gap:8px"><input class="inp" id="m_in_${key}" placeholder="Ask about ${esc(key)}…"><button style="${_BTN}" onclick="mAskFree('${key}')">Ask</button></div><div id="m_ans_${key}" style="font-size:13px;color:var(--ink);margin-top:9px;line-height:1.55"></div></div>`;
+  return `<div style="background:var(--gold-soft);border:0.5px solid var(--gold-line);border-radius:12px;padding:9px 11px;font-size:12px;color:#6b5a36;line-height:1.5;margin-bottom:9px"><b style="font-family:'Space Grotesk'">${key==='order'?'Order':'Task'} — what it is &amp; how to use it</b> <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--card);color:#7a5e22;border:0.5px solid var(--gold-line);border-radius:5px;padding:1px 6px">assistance page</span><div style="margin-top:4px">${esc(p.intro)}</div></div>${groups}<div style="${_CARD}"><div style="font-size:11.5px;color:var(--grey);margin-bottom:6px">Ask the assistant <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--gold-soft);color:#7a5e22;border-radius:5px;padding:1px 6px">web demo</span></div><div style="display:flex;gap:8px"><input class="inp" id="m_in_${key}" placeholder="Ask about ${esc(key)}…"><button style="${_BTN}" onclick="mAskFree('${key}')">Ask</button></div><div id="m_ans_${key}" style="font-size:13px;color:var(--ink);margin-top:9px;line-height:1.55"></div></div>`;
 }
 function addActorModal(){
   const ent=(typeof SESSION!=="undefined"&&SESSION.entity)||"";
@@ -3412,7 +3412,7 @@ function addActorModal(){
      <div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px">What you &amp; your team see in lists — can be their full name.</div>
      <label class="fl" style="margin-top:11px">User ID <span style="color:var(--grey);font-weight:400">— how they sign in (not their name)</span></label><input class="inp" id="ac_key" oninput="acIdPrev()" placeholder="e.g. anitha">
      <div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px">Lowercase letters/numbers, min 4 — a short handle.</div>
-     <div style="background:#eef3fb;border:1px solid #cfe0f4;border-radius:9px;padding:9px 11px;margin-top:9px;font-size:12px;color:#345488">Signs in as&nbsp; <span id="ac_idprev" style="font-family:'Space Mono';font-weight:700;font-size:var(--fs-2)">${esc('…@'+entBiz())}</span></div>
+     <div style="background:#eef3fb;border:1px solid #cfe0f4;border-radius:9px;padding:9px 11px;margin-top:9px;font-size:12px;color:var(--blue-d)">Signs in as&nbsp; <span id="ac_idprev" style="font-family:'Space Mono';font-weight:700;font-size:var(--fs-2)">${esc('…@'+entBiz())}</span></div>
      <label class="fl" style="margin-top:11px">Hat (what they do)</label><select class="inp" id="ac_hat"><option value="act">Act — does the work (assignable)</option><option value="manager">Manager — acts + assigns/manages</option><option value="audit">Audit — review only</option><option value="mis">MIS — reports only</option><option value="view_only">View-only</option></select>
      <div style="font-size:11.5px;color:var(--grey);margin-top:8px;line-height:1.5">They sign in with this <b>User ID</b> under <b>${esc(ent)}</b> + a one-time code, then set their own PIN. Starts <b>on shift</b>. Only <b>Act / Manager</b> hats can be assigned work.</div>
      <div class="err" id="ac_err"></div></div>
@@ -3440,7 +3440,7 @@ function actorInviteModal(head, name, login, otp){
   modal(`<div class="mhd"><div class="t">${esc(head)}</div><div class="s">share these so ${esc(name||'they')} can sign in</div></div>
    <div class="mbody">
      <div style="${_CARD};margin-bottom:8px"><div style="font-size:var(--fs-1);color:var(--grey);text-transform:uppercase;letter-spacing:.4px">User ID</div><div style="font-family:'Space Mono';font-weight:700;font-size:var(--fs-3);margin-top:2px;word-break:break-all">${esc(login||'—')}</div></div>
-     <div style="${_CARD};background:#eef3fb;border-color:#cfe0f4;margin-bottom:8px"><div style="font-size:var(--fs-1);color:#345488;text-transform:uppercase;letter-spacing:.4px">One-time code</div><div style="font-family:'Space Mono';font-weight:800;font-size:24px;color:#345488;margin-top:2px;letter-spacing:3px">${esc(otp||'—')}</div></div>
+     <div style="${_CARD};background:#eef3fb;border-color:#cfe0f4;margin-bottom:8px"><div style="font-size:var(--fs-1);color:var(--blue-d);text-transform:uppercase;letter-spacing:.4px">One-time code</div><div style="font-family:'Space Mono';font-weight:800;font-size:24px;color:var(--blue-d);margin-top:2px;letter-spacing:3px">${esc(otp||'—')}</div></div>
      <div style="font-size:11.5px;color:var(--grey);line-height:1.5">They sign in at the login screen with the <b>User ID</b> + this <b>one-time code</b>, then set their own PIN. Lost it? Use <b>Re-invite</b> on their card for a fresh code.</div>
    </div>
    <div class="mfoot"><button class="pri" onclick="closeModal()">Got it</button></div>`);
@@ -3522,8 +3522,8 @@ function lazyReveal(id){ const s=LAZY[id]; if(!s) return; const sent=document.ge
 function lazyAttach(id){ const s=LAZY[id]; if(!s || s.shown>=s.total) return; const sent=document.getElementById('lzs_'+id); if(!sent) return;
   try{ s._io = new IntersectionObserver(function(es){ if(es.some(function(e){return e.isIntersecting;})) lazyReveal(id); }, {rootMargin:'0px'}); s._io.observe(sent); }catch(_){} }
 function scr(title,id,helpKey){
-  const q = helpKey?`<button data-testid="icon-help-${helpKey}" onclick="openAssist('${helpKey}')" title="About this screen" style="border:1px solid var(--line);background:#fff;color:#3F66A6;border-radius:50%;width:22px;height:22px;font-weight:800;cursor:pointer;font-size:13px;line-height:1;flex:none">?</button>`:'';
-  const hint = helpKey?`<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:10px">Explore <b onclick="openAssist('${helpKey}')" style="cursor:pointer;color:#3F66A6">?</b> to know more about this screen.</div>`:'';
+  const q = helpKey?`<button data-testid="icon-help-${helpKey}" onclick="openAssist('${helpKey}')" title="About this screen" style="border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:50%;width:22px;height:22px;font-weight:800;cursor:pointer;font-size:13px;line-height:1;flex:none">?</button>`:'';
+  const hint = helpKey?`<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:10px">Explore <b onclick="openAssist('${helpKey}')" style="cursor:pointer;color:var(--blue)">?</b> to know more about this screen.</div>`:'';
   return `<div style="flex:1;min-height:0;overflow-y:auto"><div style="padding:14px;max-width:640px;margin:0 auto"><div class="sec" style="font-size:15px;margin-bottom:${helpKey?'3px':'10px'};display:flex;align-items:center;gap:9px">${title}${q}</div>${hint}<div id="${id}"><div class="loadwrap"><span class="spin"></span> loading…</div></div></div></div>`;
 }
 /* esc + opt + scrErr → app/helpers.js */
@@ -3610,7 +3610,7 @@ const NET_MODEL_NOTE = {
   b2c:"A single shopfront (b2c) with internal counters. Customers buy directly; no upstream distribution."
 };
 function netView(self, tree, edges){
-  const nodes = tree.map(n=>`<div style="padding:3px 0 3px ${(n.depth||0)*20}px;font-size:13.5px">${n.depth>0?'<span style="color:var(--grey)">└ </span>':''}<b>${esc(n.name)}</b> <span style="font-family:'Space Mono';font-size:var(--fs-1);color:var(--grey)">${esc(n.bridge_id||'')}</span>${n.act!=null?` <span class="optchip" style="background:#eef3fb;color:#345488;border-color:#cfe0f4">👥 ${n.act}</span>`:''}${n.mode==='b2c'?` <span class="optchip" style="background:var(--gold-soft);color:#7a5e22;border-color:var(--gold-line);font-size:var(--fs-1)">b2c</span>`:''}${n.demo?` <span class="optchip" style="font-size:var(--fs-1)">demo</span>`:''}${n.isnew?` <span class="optchip" style="font-size:var(--fs-1);background:#eaf3ee;color:#2f8f5b;border-color:#bfe0cd">new</span>`:''}</div>`).join("");
+  const nodes = tree.map(n=>`<div style="padding:3px 0 3px ${(n.depth||0)*20}px;font-size:13.5px">${n.depth>0?'<span style="color:var(--grey)">└ </span>':''}<b>${esc(n.name)}</b> <span style="font-family:'Space Mono';font-size:var(--fs-1);color:var(--grey)">${esc(n.bridge_id||'')}</span>${n.act!=null?` <span class="optchip" style="background:#eef3fb;color:var(--blue-d);border-color:#cfe0f4">👥 ${n.act}</span>`:''}${n.mode==='b2c'?` <span class="optchip" style="background:var(--gold-soft);color:#7a5e22;border-color:var(--gold-line);font-size:var(--fs-1)">b2c</span>`:''}${n.demo?` <span class="optchip" style="font-size:var(--fs-1)">demo</span>`:''}${n.isnew?` <span class="optchip" style="font-size:var(--fs-1);background:#eaf3ee;color:#2f8f5b;border-color:#bfe0cd">new</span>`:''}</div>`).join("");
   const edgeRows = edges.map(e=>{
     const a = e.state==='requested' ? `<button class="composebtn pri" onclick="netApprove('${e.id}')">Approve</button> <button class="composebtn" onclick="netDecline('${e.id}')">Decline</button>`
       : e.state==='active' ? `<button class="composebtn" onclick="netSuspend('${e.id}')">Suspend</button> <button class="composebtn" style="color:var(--disp)" onclick="netDisconnect('${e.id}')">Disconnect</button>`
@@ -3672,7 +3672,7 @@ function suppliersScreen(){
                what you sell, which is why it was the odd tenant left in Definitions. -->
           <button class="${UI.supReq?'on':''}" data-testid="sup-tab-req" onclick="supReqOpen()">📋 Required certificates</button>
         </span>
-        <button onclick="openAssist('suppliers')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:#fff;color:#3F66A6;border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none;margin-left:auto">?</button></div>
+        <button onclick="openAssist('suppliers')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none;margin-left:auto">?</button></div>
       ${(UI.supFind||UI.supReq)?'':`<div style="display:flex;gap:7px"><input class="inp" id="sp_add" data-testid="sup-add-input" placeholder="Add supplier — type a name, User ID or email" style="flex:1" autocomplete="off" oninput="supSearch(this.value)" onkeydown="if(event.key==='Enter')addSupplier()"><button class="composebtn" data-testid="sup-add" onclick="addSupplier()">Add</button></div>
       <div id="sp_sugg" class="ccsugg"></div>
       <div class="err" id="sp_err" style="margin-top:6px"></div>
@@ -3705,7 +3705,7 @@ function supVisible(){
 function supCount(){ return supVisible().length; }
 function supRowHTML(x){
   const id=x.supplier_list_id, label=supName(x), sub=x.nickname?x.display_name:(x.bridge_id||'');
-  const cat=x.has_catalogue?'<span class="optchip" style="background:#E8F0F4;color:#3F66A6;border-color:#cfe0ec">📕 catalogue</span>':'<span class="optchip" style="background:#F1EFE8;color:#8a857a">no catalogue</span>';
+  const cat=x.has_catalogue?'<span class="optchip" style="background:#E8F0F4;color:var(--blue);border-color:#cfe0ec">📕 catalogue</span>':'<span class="optchip" style="background:#F1EFE8;color:#8a857a">no catalogue</span>';
   return `<div class="row ${id===UI.supSel?'sel':''}" data-testid="sup-row-${id}" onclick="selectSupplier('${id}')">
     <button title="Preferred — tap to toggle" onclick="event.stopPropagation();toggleSupPref('${id}')" style="background:none;border:0;font-size:15px;line-height:1;padding:0;color:${x.preferred?'#997009':'#697479'};flex:0 0 auto;margin-top:1px">${x.preferred?'★':'☆'}</button>
     <div class="main2"><div class="l1"><span class="code">${esc(label)}</span>${x.category?`<span class="optchip" style="background:var(--gold-soft);color:#7a5e22;border-color:var(--gold-line)">${esc(x.category)}</span>`:''}<span class="amt">${cat}</span></div>
@@ -3769,7 +3769,7 @@ function supInfoCardHTML(x){
     + kv('Catalogue', x.has_catalogue?'📕 published':'<span style="color:var(--grey)">none published</span>')
     + kv('Certificates', clr + '<div style="color:var(--grey);font-size:var(--fs-1);margin-top:2px">standards &amp; licences they declare — ISO 9001, BIS, FSSAI, GST registration</div>')
     + '<div class="supacts">'
-      /* ⚠️ NOT .composebtn — it sets color:#fff for a coloured background, and .supacts button sets background:#fff.
+      /* ⚠️ NOT .composebtn — it sets color:#fff for a coloured background, and .supacts button sets background:var(--card).
          The two together rendered white-on-white: the button was there, sized and clickable, and invisible. */
       + '<button class="supact-pri" data-testid="sup-edit" onclick="event.stopPropagation();supEdit(\''+x.supplier_list_id+'\')">✎ Edit</button>'
       + '<button data-testid="sup-passport" onclick="event.stopPropagation();viewSupplierPassport(\''+esc(x.bridge_id)+'\',\''+String(supName(x)).replace(/[\\']/g,'')+'\')">Passport →</button>'
@@ -3922,7 +3922,7 @@ function supFindBodyHTML(){
                that cannot identify its subject would fail on click rather than be absent. */
             return '<div class="sfline"><span>'+esc(d.name||d.product||'item')+'</span><span class="mono">'
               +esc(fmtMoney(cbAmount(d.price),cur))+' / '+esc(d.unit||'unit')
-              +(p.item_id ? ' <button type="button" data-testid="enq-ask" onclick="enquiryOpen(\''+esc(p.item_id)+'\',\''+esc(String(d.name||d.product||'item').replace(/'/g,''))+'\')" style="margin-left:7px;border:1px solid var(--line);background:#fff;border-radius:7px;padding:1px 8px;font-size:var(--fs-1);color:var(--blue);cursor:pointer">Ask</button>' : '')
+              +(p.item_id ? ' <button type="button" data-testid="enq-ask" onclick="enquiryOpen(\''+esc(p.item_id)+'\',\''+esc(String(d.name||d.product||'item').replace(/'/g,''))+'\')" style="margin-left:7px;border:1px solid var(--line);background:var(--card);border-radius:7px;padding:1px 8px;font-size:var(--fs-1);color:var(--blue);cursor:pointer">Ask</button>' : '')
               +'</span></div>'; }).join('')
         /* ⚠️ SAY WHEN THE LIST IS CUT. Six per supplier is a display cap, and an unannounced cap reads as "that
            is all they have" — the same class of lie as reporting an unreported store as zero. The server knows
@@ -4070,10 +4070,10 @@ function paintSupDetail(){ const dp=document.getElementById('detailpane'); if(dp
    Everyone who ordered/signed-in via the storefront; the platform never shares them. GET /api/relationships/customers. */
 function custDate(x){ try{ return new Date(x).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}); }catch(_){ return ''; } }
 function custContact(c){ var em=(c&&c.email)||''; var at=em.lastIndexOf('@'); var local=at>=0?em.slice(0,at):em; if(local.indexOf('=')>=0) return local.replace('=','@'); return local||(c&&c.display_name)||''; }
-function custSeg(s){ var col={new:'#345488',regular:'#2e7a45',inactive:'#9a7b34'}[s]||'#8a949c', bg={new:'#eef3fb',regular:'#e8f3ec',inactive:'#f7f2e3'}[s]||'#f4f6f8'; return '<span class="optchip" style="background:'+bg+';color:'+col+';border-color:transparent">'+esc(s||'—')+'</span>'; }
+function custSeg(s){ var col={new:'var(--blue-d)',regular:'#2e7a45',inactive:'#9a7b34'}[s]||'#8a949c', bg={new:'#eef3fb',regular:'#e8f3ec',inactive:'#f7f2e3'}[s]||'#f4f6f8'; return '<span class="optchip" style="background:'+bg+';color:'+col+';border-color:transparent">'+esc(s||'—')+'</span>'; }
 function customersScreen(){
   const list=`<div class="list"><div class="lh">
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3)">🛍️ Customers</span><button onclick="openAssist('customers')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:#fff;color:#3F66A6;border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button></div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3)">🛍️ Customers</span><button onclick="openAssist('customers')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button></div>
     <div style="font-size:11.5px;color:var(--grey);line-height:1.5">Your CRM — everyone who ordered from your storefront. They live <b>only under your shop</b>.</div>
     <div style="margin-top:7px;font-size:var(--fs-1);color:var(--grey)" id="cu_count">${(UI.custs||[]).length} customer(s)</div></div>
     <div class="rows" id="cu_rows">${UI._custLoading?'<div class="loadwrap"><span class="spin"></span> loading…</div>':custRowsHTML()}</div></div>`;
@@ -4200,7 +4200,7 @@ function supStepDetails(x){
   var o=supOrderState();
   if(!o.subject) o.subject=supDefaultSubject(x);
   return '<div class="sec">Your order to '+esc(supName(x))+'</div>'
-    + '<label class="fl">Subject <span style="color:#b4453f">*</span></label>'
+    + '<label class="fl">Subject <span style="color:var(--disp)">*</span></label>'
     + '<input class="inp" data-testid="sup-subject" value="'+esc(o.subject)+'" oninput="UI._supOrder.subject=this.value;UI._supFlow&&UI._supFlow.paintFoot()">'
     + '<div class="two"><div><label class="fl">Needed by</label>'
     + '<input class="inp" type="date" data-testid="sup-by" value="'+esc(o.by)+'" oninput="UI._supOrder.by=this.value"></div>'
@@ -4228,7 +4228,7 @@ function supStepReview(x){
         + '<div style="display:flex;padding:10px 12px;border-top:2px solid var(--line);font-size:var(--fs-3);font-weight:800">'
         + '<span style="flex:1">'+(T.offered?'Total at your offer':'Total')+'</span>'
         + '<span data-testid="sup-total">'+(T.amount?esc(String(T.amount))+(T.partial?'+':''):'—')+'</span></div>', 0)
-    + card('Details', row('Subject', esc(o.subject)||'<span style="color:#b4453f">required</span>')
+    + card('Details', row('Subject', esc(o.subject)||'<span style="color:var(--disp)">required</span>')
         + row('Needed by', o.by?esc(o.by):'—') + row('Deliver to', o.addr?esc(o.addr):'—')
         + row('Note', o.note?esc(o.note):'—'), 1)
     + '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 12px;font-size:var(--fs-2);color:#6b5a36;margin:10px 0">'
@@ -4592,7 +4592,7 @@ function supDetailHTML(){
     else if(d.loading) catcard=`<div class="sec">Order from them</div><div class="loadwrap" style="justify-content:flex-start;padding:6px 0"><span class="spin"></span> loading catalogue…</div>`;
     // has_catalogue, finished loading, and still no cart → the READ failed. Say so; rendering nothing at all would
     // look like a supplier who publishes nothing, which is a different and wrong fact.
-    else catcard=`<div class="sec">Order from them</div><div style="background:#fbeceb;border:1px solid #f0c9c6;border-radius:9px;padding:9px 11px;font-size:12px;color:#b4453f">${esc(d.err||'Could not read their catalogue.')} <span onclick="selectSupplier('${x.supplier_list_id}')" style="cursor:pointer;color:var(--blue);font-weight:600">Try again</span></div>`;
+    else catcard=`<div class="sec">Order from them</div><div style="background:#fbeceb;border:1px solid #f0c9c6;border-radius:9px;padding:9px 11px;font-size:12px;color:var(--disp)">${esc(d.err||'Could not read their catalogue.')} <span onclick="selectSupplier('${x.supplier_list_id}')" style="cursor:pointer;color:var(--blue);font-weight:600">Try again</span></div>`;
     const stepped = x.has_catalogue && !d.loading && UI._supFlow;
     body = chip + (stepped
       ? `<div id="sup_rail">${UI._supFlow.railHTML()}</div><div style="font-size:11.5px;color:var(--grey);margin:0 0 8px" id="sup_sub">${esc(UI._supFlow.steps()[UI._supFlow.index()].t||'')}</div>`
@@ -4672,7 +4672,7 @@ async function composeFromSupplier(id){ const d=UI.supDet, x=d&&d.supplier; if(!
 function catalogueScreen(){
   const list = `<div class="list">
     <div class="lh">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3)">🗂️ Catalogue</span><button onclick="openAssist('catalogue')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:#fff;color:#3F66A6;border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button></div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3)">🗂️ Catalogue</span><button onclick="openAssist('catalogue')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button></div>
       <button class="composebtn" style="width:100%;justify-content:center" data-testid="cat-new-product" onclick="newProduct()">+ New product</button>
       <div class="srch" style="margin-top:8px">🔍 <input data-testid="cat-search" placeholder="Search name, code, unit" value="${esc(UI.prodQ||'')}" oninput="UI.prodQ=this.value;paintProdList()"></div>
       ${prodCatgStripHTML()}
@@ -4892,7 +4892,7 @@ function _refPriceHTML(p,sz){ if(!p) return '<span style="color:#9aa3a7;font-siz
   return esc(inr(p.v))+(p.u?'<span style="font-size:'+(sz||11)+'px;color:#9aa3a7;font-weight:400">/'+esc(p.u)+'</span>':''); }
 function _refChips(it){ var c='';
   if(it.texture_family) c+='<span class="optchip" style="background:#F0EAF9;color:#6a44a8;border-color:transparent">'+esc(it.texture_family)+'</span>';
-  if(it.region) c+='<span class="optchip" style="background:#eef3fb;color:#345488;border-color:#cfe0f4">'+esc(it.region)+'</span>';
+  if(it.region) c+='<span class="optchip" style="background:#eef3fb;color:var(--blue-d);border-color:#cfe0f4">'+esc(it.region)+'</span>';
   return c+((it.effect||[]).map(function(e){return '<span class="optchip" style="background:#f3f0e8;color:#7a5e22;border-color:#e6d9a8">'+esc(e)+'</span>';}).join('')); }
 // the item's OWN fields — whatever this vertical happens to carry (veg: local_names · botanical_name · category).
 // Skips everything already rendered by a dedicated block, plus underscore meta.
@@ -5425,7 +5425,7 @@ function catFieldVal(k, v){
     /* Synonyms are the field Athi could not see, so they get chips rather than a comma soup — the count is the
        thing you actually want to read at a glance. */
     return '<div style="display:flex;flex-wrap:wrap;gap:4px">' + v.map(function(x){
-      return '<span style="border:1px solid var(--line);border-radius:9px;padding:1px 8px;font-size:11.5px;background:#fff">' + esc(String(x)) + '</span>';
+      return '<span style="border:1px solid var(--line);border-radius:9px;padding:1px 8px;font-size:11.5px;background:var(--card)">' + esc(String(x)) + '</span>';
     }).join('') + '</div>';
   }
   if (typeof v === 'object') {
@@ -5640,7 +5640,7 @@ function prodAvailBlock(d, id){
          <span style="font-size:var(--fs-1);font-weight:800;border-radius:5px;padding:1px 6px;${stale ? 'background:#f6ecd8;color:#8a5a1e' : 'background:#e6f4ec;color:#2c7a43'}">${esc(a.source || 'unknown')} · ${esc(age)}</span>
        </div>`;
   return `<div class="sec" style="margin-top:16px">Availability</div>
-    <div style="border:1px solid var(--line);border-radius:9px;padding:11px 13px;background:#fff">
+    <div style="border:1px solid var(--line);border-radius:9px;padding:11px 13px;background:var(--card)">
       ${state}
       <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">
         <input id="av_qty" placeholder="how many" style="width:110px;padding:7px 9px;border:1px solid var(--line);border-radius:6px;font-size:13px">
@@ -5838,9 +5838,9 @@ function taskPanel(){
   const _tdesc = {order:"chits you've sent", task:'chits received', drafts:'unsent chits', trash:'deleted chits', archive:'archived chits'}[UI.folder] || 'chits received';
   /* ⚠️ THE DESCRIPTION STAYS THE TRACK'S, inside a folder too. A folder is that list FILTERED — the chits in
      "Needs attention" are still chits received, and relabelling per folder would imply otherwise. */
-  const _btns = _isTrack ? `<button type="button" data-testid="folder-metrics-btn" onclick="openFolderPane('metrics')" title="${_fsel?'Metrics for this folder':'Metrics for this whole track — and whether the folders add up'}" style="margin-left:auto;cursor:pointer;border:1px solid var(--line);border-radius:9px;padding:0 11px;min-height:28px;display:inline-flex;align-items:center;gap:5px;font-size:11.5px;background:#fff">📊 Metrics</button>
-      <button type="button" data-testid="folder-groupsum-btn" onclick="openFolderPane('groupsum')" title="What does this pile add up to — quantity per item, cost, and who asked" style="cursor:pointer;border:1px solid var(--line);border-radius:9px;padding:0 11px;min-height:28px;display:inline-flex;align-items:center;gap:5px;font-size:11.5px;background:#fff">🧮 Group sum</button>
-      <button type="button" data-testid="folder-rules-btn" onclick="openFolderPane('rules')" title="${_fsel?'Rules that file into this folder':'Every rule on this track, and where each one files'}" style="cursor:pointer;border:1px solid var(--line);border-radius:9px;padding:0 11px;min-height:28px;display:inline-flex;align-items:center;gap:5px;font-size:11.5px;background:#fff">⚙️ Rules</button>` : '';
+  const _btns = _isTrack ? `<button type="button" data-testid="folder-metrics-btn" onclick="openFolderPane('metrics')" title="${_fsel?'Metrics for this folder':'Metrics for this whole track — and whether the folders add up'}" style="margin-left:auto;cursor:pointer;border:1px solid var(--line);border-radius:9px;padding:0 11px;min-height:28px;display:inline-flex;align-items:center;gap:5px;font-size:11.5px;background:var(--card)">📊 Metrics</button>
+      <button type="button" data-testid="folder-groupsum-btn" onclick="openFolderPane('groupsum')" title="What does this pile add up to — quantity per item, cost, and who asked" style="cursor:pointer;border:1px solid var(--line);border-radius:9px;padding:0 11px;min-height:28px;display:inline-flex;align-items:center;gap:5px;font-size:11.5px;background:var(--card)">🧮 Group sum</button>
+      <button type="button" data-testid="folder-rules-btn" onclick="openFolderPane('rules')" title="${_fsel?'Rules that file into this folder':'Every rule on this track, and where each one files'}" style="cursor:pointer;border:1px solid var(--line);border-radius:9px;padding:0 11px;min-height:28px;display:inline-flex;align-items:center;gap:5px;font-size:11.5px;background:var(--card)">⚙️ Rules</button>` : '';
   const helpStrip = isCust ? "" : `<div style="display:flex;align-items:center;gap:7px;padding:8px 12px;border-bottom:1px solid var(--line);background:var(--gold-soft);font-size:12px;color:#6b5a36;flex-wrap:wrap">
       <b style="font-family:'Space Grotesk';font-size:13px;display:flex;align-items:center;gap:6px;min-width:0">
         ${_fsel ? `<span data-testid="crumb-track" onclick="clearFolder()" title="Back to all of ${esc(_tname.slice(2))}" style="cursor:pointer;color:var(--blue)">${_tname}</span><span style="color:var(--grey);font-weight:400">/</span><span data-testid="crumb-folder" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📁 ${esc(_fsel.name)}</span>`
@@ -6840,7 +6840,7 @@ function _viaExtras(v){
   if(v.delivery_at) out.push(['🕒 Wanted', v.delivery_at, 'var(--ink)']);
   if(v.delivery_address) out.push(['📍 Deliver to', v.delivery_address, 'var(--ink)']);
   if(v.notes) out.push(['📝 They also said', v.notes, 'var(--grey)']);
-  if(v.unplaced) out.push(['⚠️ Not placed anywhere', v.unplaced, '#b4453f']);
+  if(v.unplaced) out.push(['⚠️ Not placed anywhere', v.unplaced, 'var(--disp)']);
   if(!out.length) return '';
   return '<div style="margin-top:7px">'+out.map(function(r){
     return '<div style="display:flex;gap:8px;font-size:11.5px;padding:2px 0"><span style="color:var(--grey);min-width:120px">'+esc(r[0])+'</span><span style="color:'+r[2]+'">'+esc(r[1])+'</span></div>';
@@ -6853,7 +6853,7 @@ function _viaPricing(p){
   if(p.from_catalogue) out.push('<div style="font-size:var(--fs-1);color:var(--grey)">💰 '+p.from_catalogue+' line'+(p.from_catalogue===1?'':'s')+' priced from your catalogue.</div>');
   /* ⚠️ WHAT THEY ASKED, NEXT TO WHAT WE CHARGE. Ours is used — it is ours to charge — but a customer who named a
      different figure has said something, and overwriting it invisibly is how a disagreement becomes a dispute. */
-  if((p.asked_differs||[]).length) out.push('<div style="font-size:var(--fs-1);color:#b4453f;margin-top:3px">⚠️ <b>They named a different price</b> on '
+  if((p.asked_differs||[]).length) out.push('<div style="font-size:var(--fs-1);color:var(--disp);margin-top:3px">⚠️ <b>They named a different price</b> on '
     + p.asked_differs.length+' line'+(p.asked_differs.length===1?'':'s')+': '
     + esc(p.asked_differs.map(function(a){ return a.name+' — they said '+inr(a.asked)+', your catalogue says '+inr(a.ours); }).join('; '))
     + '. Yours is on the chit; theirs is recorded here.</div>');
@@ -6867,7 +6867,7 @@ function _viaPricing(p){
 }
 function viaBlock(c){
   var v=c&&c.via; if(!v||!v.channel) return "";
-  var CH={ whatsapp:['#25D366','WhatsApp'], email:['#3F66A6','Email'], sms:['#b07a2b','SMS'], web:['#6a44a8','Web'] };
+  var CH={ whatsapp:['#25D366','WhatsApp'], email:['var(--blue)','Email'], sms:['#b07a2b','SMS'], web:['#6a44a8','Web'] };
   var m=CH[v.channel]||['#6a707a', String(v.channel)];
   function row(label, value){ return value ? '<div style="display:flex;gap:8px;font-size:var(--fs-1);padding:2px 0"><span style="color:var(--grey);min-width:86px">'+esc(label)+'</span><span style="font-family:ui-monospace,Menlo,monospace;word-break:break-all">'+esc(value)+'</span></div>' : ''; }
   return '<div class="itab" style="padding:10px 12px;margin-bottom:9px">'
@@ -6939,8 +6939,8 @@ async function askAiOrder(){
     var bs='font-size:12px;font-weight:700;border-radius:9px;padding:9px 13px;cursor:pointer';
     var html='<style>'+_AI_MDCSS+'</style>'
       +'<div style="font-size:var(--fs-1);color:#6d5bd0;background:#f2effc;border:1px solid #ddd4f5;border-radius:9px;padding:8px 11px;margin-bottom:12px;line-height:1.5">🤖 <b>AI review — informational.</b> It does not accept, pay, or commit. '+(j.usage?('<span style="color:var(--grey)">· cost $'+j.usage.est_cost_usd+'</span>'):'')+'</div>'
-      +'<div class="amddoc" style="background:#fff;border:1px solid var(--line);border-radius:9px;padding:16px 18px;max-height:56vh;overflow:auto">'+_aiMd(j.draft)+'</div>'
-      +'<div style="display:flex;gap:8px;margin-top:13px"><button onclick="_aiOrderPdf()" style="'+bs+';flex:1;border:1px solid #6d5bd0;background:#6d5bd0;color:#fff">⬇ Save as PDF</button><button onclick="closeModal()" style="'+bs+';flex:0 0 auto;border:1px solid var(--line);background:#fff">Done</button></div>';
+      +'<div class="amddoc" style="background:var(--card);border:1px solid var(--line);border-radius:9px;padding:16px 18px;max-height:56vh;overflow:auto">'+_aiMd(j.draft)+'</div>'
+      +'<div style="display:flex;gap:8px;margin-top:13px"><button onclick="_aiOrderPdf()" style="'+bs+';flex:1;border:1px solid #6d5bd0;background:#6d5bd0;color:#fff">⬇ Save as PDF</button><button onclick="closeModal()" style="'+bs+';flex:0 0 auto;border:1px solid var(--line);background:var(--card)">Done</button></div>';
     var b=document.getElementById('aiobody'); if(b)b.innerHTML=html;
   }catch(e){ var b2=document.getElementById('aiobody'); if(b2)b2.innerHTML='<div style="font-size:12px;color:#8a5f11;background:#fdf3e3;border:1px solid #f0dcae;border-radius:9px;padding:10px 12px">'+esc((e&&e.message)||'AI review failed')+'</div>'; }
 }
@@ -6953,7 +6953,7 @@ function _aiOrderPdf(){
 function askAiOrderDoc(){
   var c=UI.detail; if(!c){ if(typeof toast==='function')toast('Open an order first'); return; }
   var opts=[['commercial-invoice','Commercial Invoice'],['packing-list','Packing List'],['export-declaration','Export Declaration'],['sds','Safety Data Sheet']];
-  var btns=opts.map(function(o){ return '<button onclick="_aiOrderDoc(\''+o[0]+'\',\''+o[1]+'\')" style="display:block;width:100%;text-align:left;font-size:13px;font-weight:600;border:1px solid var(--line);background:#fff;border-radius:9px;padding:11px 13px;margin:6px 0;cursor:pointer">✨ '+esc(o[1])+'</button>'; }).join('');
+  var btns=opts.map(function(o){ return '<button onclick="_aiOrderDoc(\''+o[0]+'\',\''+o[1]+'\')" style="display:block;width:100%;text-align:left;font-size:13px;font-weight:600;border:1px solid var(--line);background:var(--card);border-radius:9px;padding:11px 13px;margin:6px 0;cursor:pointer">✨ '+esc(o[1])+'</button>'; }).join('');
   modal('<div class="mhd"><div class="t">✨ Draft a document — from this order</div></div><div class="mbody" style="padding:16px"><div style="font-size:12px;color:var(--grey);margin-bottom:8px">The co-assist drafts from THIS order (parties, line items, cover). You review &amp; confirm — never sent automatically.</div>'+btns+'</div>');
 }
 async function _aiOrderDoc(skill, label){
@@ -6972,11 +6972,11 @@ async function _aiOrderDoc(skill, label){
     var bs='font-size:12px;font-weight:700;border-radius:9px;padding:9px 13px;cursor:pointer';
     var html='<style>'+(typeof _AI_MDCSS!=='undefined'?_AI_MDCSS:'')+'</style>'
       +'<div style="font-size:var(--fs-1);color:#6d5bd0;background:#f2effc;border:1px solid #ddd4f5;border-radius:9px;padding:8px 11px;margin-bottom:12px;line-height:1.5">🤖 <b>AI proposal — not evidence.</b> Review &amp; confirm before use. '+(j.usage?('<span style="color:var(--grey)">· $'+j.usage.est_cost_usd+'</span>'):'')+'</div>'
-      +'<div class="amddoc" style="background:#fff;border:1px solid var(--line);border-radius:9px;padding:16px 18px;max-height:52vh;overflow:auto">'+_aiMd(j.draft)+'</div>'
+      +'<div class="amddoc" style="background:var(--card);border:1px solid var(--line);border-radius:9px;padding:16px 18px;max-height:52vh;overflow:auto">'+_aiMd(j.draft)+'</div>'
       +'<div style="display:flex;gap:8px;margin-top:13px;flex-wrap:wrap">'
         +'<button onclick="_aiOrderDocAccept()" title="File this document on your rail, referenced to this order" style="'+bs+';flex:1;border:1px solid #2f8f5b;background:#2f8f5b;color:#fff">✓ Accept &amp; file on rail</button>'
-        +'<button onclick="_aiOrderDocPdf()" style="'+bs+';flex:0 0 auto;border:1px solid #6d5bd0;background:#fff;color:#6d5bd0">⬇ PDF</button>'
-        +'<button onclick="closeModal()" style="'+bs+';flex:0 0 auto;border:1px solid var(--line);background:#fff">Done</button>'
+        +'<button onclick="_aiOrderDocPdf()" style="'+bs+';flex:0 0 auto;border:1px solid #6d5bd0;background:var(--card);color:#6d5bd0">⬇ PDF</button>'
+        +'<button onclick="closeModal()" style="'+bs+';flex:0 0 auto;border:1px solid var(--line);background:var(--card)">Done</button>'
       +'</div>';
     var b=document.getElementById('aoddbody'); if(b)b.innerHTML=html;
   }catch(e){ var b2=document.getElementById('aoddbody'); if(b2)b2.innerHTML='<div style="font-size:12px;color:#8a5f11;background:#fdf3e3;border:1px solid #f0dcae;border-radius:9px;padding:10px 12px">'+esc((e&&e.message)||'Draft failed')+'</div>'; }
@@ -7011,8 +7011,8 @@ async function aiRun(skill, ctx, opts){
     var bs='font-size:12px;font-weight:700;border-radius:9px;padding:9px 13px;cursor:pointer';
     var html='<style>'+(typeof _AI_MDCSS!=='undefined'?_AI_MDCSS:'')+'</style>'
       +'<div style="font-size:var(--fs-1);color:#6d5bd0;background:#f2effc;border:1px solid #ddd4f5;border-radius:9px;padding:8px 11px;margin-bottom:12px;line-height:1.5">🤖 <b>AI proposal — review before you rely on it.</b> '+(j.usage?('<span style="color:var(--grey)">· $'+j.usage.est_cost_usd+'</span>'):'')+'</div>'
-      +'<div class="amddoc" style="background:#fff;border:1px solid var(--line);border-radius:9px;padding:16px 18px;max-height:56vh;overflow:auto">'+_aiMd(j.draft)+'</div>'
-      +'<div style="display:flex;gap:8px;margin-top:13px"><button onclick="_aiRunPdf()" style="'+bs+';flex:1;border:1px solid #6d5bd0;background:#6d5bd0;color:#fff">⬇ Save as PDF</button><button onclick="closeModal()" style="'+bs+';flex:0 0 auto;border:1px solid var(--line);background:#fff">Done</button></div>';
+      +'<div class="amddoc" style="background:var(--card);border:1px solid var(--line);border-radius:9px;padding:16px 18px;max-height:56vh;overflow:auto">'+_aiMd(j.draft)+'</div>'
+      +'<div style="display:flex;gap:8px;margin-top:13px"><button onclick="_aiRunPdf()" style="'+bs+';flex:1;border:1px solid #6d5bd0;background:#6d5bd0;color:#fff">⬇ Save as PDF</button><button onclick="closeModal()" style="'+bs+';flex:0 0 auto;border:1px solid var(--line);background:var(--card)">Done</button></div>';
     var b=document.getElementById('airbody'); if(b)b.innerHTML=html;
   }catch(e){ var b2=document.getElementById('airbody'); if(b2)b2.innerHTML='<div style="font-size:12px;color:#8a5f11;background:#fdf3e3;border:1px solid #f0dcae;border-radius:9px;padding:10px 12px">'+esc((e&&e.message)||'AI failed')+'</div>'; }
 }
@@ -7043,12 +7043,12 @@ function detailInner(){
      <div class="itab" style="padding:10px"><div class="sec" style="margin:0">State</div><div class="disp" style="font-size:15px;font-weight:700">${c.state.toUpperCase()}</div></div></div>
      <div style="margin-top:10px">${proof}</div>${clearancesBlock(c)}${commercialBlock(c)}`;
   if(c._loading){ body=`<div class="dbload"><span class="spin"></span> loading details…</div>`; }
-  const actbar = (UI.folder==='drafts') ? `<button class="pri" onclick="resumeDraft('${c.id}')">✏️ Resume &amp; edit</button>` : (UI.folder==='trash') ? `<button class="pri" onclick="restoreChit('${c.id}')">↩ Restore</button>${c.isDraft?`<button class="pri" style="background:#b4453f;border-color:#b4453f;margin-left:8px" onclick="purgeChit('${c.id}')">🗑 Delete forever</button>`:''}` : (UI.folder==='archive') ? `<button class="pri" onclick="unarchiveChit('${c.id}')">↩ Unarchive</button>` : SESSION.role==="customer"
+  const actbar = (UI.folder==='drafts') ? `<button class="pri" onclick="resumeDraft('${c.id}')">✏️ Resume &amp; edit</button>` : (UI.folder==='trash') ? `<button class="pri" onclick="restoreChit('${c.id}')">↩ Restore</button>${c.isDraft?`<button class="pri" style="background:var(--disp);border-color:var(--disp);margin-left:8px" onclick="purgeChit('${c.id}')">🗑 Delete forever</button>`:''}` : (UI.folder==='archive') ? `<button class="pri" onclick="unarchiveChit('${c.id}')">↩ Unarchive</button>` : SESSION.role==="customer"
     ? `<button onclick="toggleCustPri('${c.id}')">⚑ ${c.custPri?'Priority requested':'Request priority'}</button><button class="warn" data-testid="chit-dispute" onclick="quickDispute()">⚑ Dispute</button><button onclick="askAiOrderDoc()" title="AI drafts a trade document from THIS order (invoice, packing list, export declaration, SDS) — review and confirm">✨ Draft doc</button><button onclick="askAiOrder()" title="AI reviews this order — clearances &amp; cover met, and what to ask">✨ Ask AI</button><button onclick="todo('pdf')">⬇ PDF</button>`
     : `<button data-testid="open-design2" onclick="ensureCap('chit2').then(function(){openChit2('${c.id}')})" title="Open the line-level view — assignment, per-line delivery, cost">⧉ Lines</button><button onclick="forwardChit('${c.id}')" title="Forward as a new chit">➤ Forward</button><button onclick="ensureCap('folders').then(function(){moveChit('${c.id}')})" title="File into a folder">📁 Move</button>${UI.folder!=='order'?`<button data-testid="chit-unread" onclick="markUnread('${c.id}')" title="Mark as unread">✉ Unread</button>`:''}${UI.folder!=='order'?`<button class="pri" data-testid="chit-status-btn" onclick="pickChitStatus('${c.id}')">Status ▾</button>`:''}${SESSION.role==="actor"&&UI.folder!=='order'?`<button onclick="pickAssign('${c.id}')">👥 Assign</button>`:""}<button class="warn" data-testid="chit-dispute" onclick="quickDispute()">⚑ Dispute</button>${SESSION.role==="entity"?`<button class="warn pend" data-testid="chit-void" onclick="todo('voidChit')">⊘ Void</button>`:""}<button onclick="askAiOrderDoc()" title="AI drafts a trade document from THIS order (invoice, packing list, export declaration, SDS) — review and confirm">✨ Draft doc</button><button onclick="askAiOrder()" title="AI reviews this order — clearances &amp; cover met, and what to ask">✨ Ask AI</button><button onclick="todo('pdf')">⬇ PDF</button>`;
   const dtabs=[["content","Content"],["status","Status"],["summary","Summary"],["messages","💬 Messages"+(msgCount(c)?" ("+msgCount(c)+")":"")]];
   return `<div class="dh"><button class="dback" onclick="backToList()">‹ Back to list</button><button class="dmsg" data-testid="msg-tab" onclick="setDtab('messages')" title="Messages" aria-label="Messages">💬${msgCount(c)?' '+msgCount(c):''}</button><div class="dt">${esc(c.code)} · ${esc(c.party)}</div><div class="ds">${esc(c.area)} · ${esc(c.kind)} · ${inr(c.amt)} · ${c.state.toUpperCase()}</div>
-     <div class="parties"><span class="ptag">from <b>${esc(c.sender||SESSION.entity||"You")}</b></span><span class="ptag">${c.kind==='counter'?('to <b>'+esc(SESSION.entity||'You')+'</b>'):esc(c.rsummary||('to '+(c.party||'—')))}</span>${c.kind==='counter'?`<span class="ptag">for <b>${esc(c.cust)}</b></span>`:''}</div><div class="dchips"><span class="prichip-btn pri-${c.priExt||'normal'}" style="cursor:default" title="External priority — set by the drafter at compose, locked once sent">↔ ext: ${PRI[c.priExt||'normal'].label}</span>${SESSION.role!=="customer"?`<button class="prichip-btn pri-${c.pri||'normal'}" onclick="repriority('${c.id}')" title="Internal priority — your own queue; tap to change">⚙ int: ${PRI[c.pri||'normal'].label} ▾</button>`:''}${c.custPri?'<span class="custflag-tag">⚑ Customer priority</span>':''}<span class="prichip-btn" style="cursor:default;margin-left:auto;background:#eef3fb;color:#345488;border-color:#cfe0f4" title="Currently assigned to">👤 ${c.assignee?esc(c.assignee):'Unassigned'}</span></div></div>
+     <div class="parties"><span class="ptag">from <b>${esc(c.sender||SESSION.entity||"You")}</b></span><span class="ptag">${c.kind==='counter'?('to <b>'+esc(SESSION.entity||'You')+'</b>'):esc(c.rsummary||('to '+(c.party||'—')))}</span>${c.kind==='counter'?`<span class="ptag">for <b>${esc(c.cust)}</b></span>`:''}</div><div class="dchips"><span class="prichip-btn pri-${c.priExt||'normal'}" style="cursor:default" title="External priority — set by the drafter at compose, locked once sent">↔ ext: ${PRI[c.priExt||'normal'].label}</span>${SESSION.role!=="customer"?`<button class="prichip-btn pri-${c.pri||'normal'}" onclick="repriority('${c.id}')" title="Internal priority — your own queue; tap to change">⚙ int: ${PRI[c.pri||'normal'].label} ▾</button>`:''}${c.custPri?'<span class="custflag-tag">⚑ Customer priority</span>':''}<span class="prichip-btn" style="cursor:default;margin-left:auto;background:#eef3fb;color:var(--blue-d);border-color:#cfe0f4" title="Currently assigned to">👤 ${c.assignee?esc(c.assignee):'Unassigned'}</span></div></div>
    ${(typeof disputeBanner==='function')?disputeBanner(c):''}<div class="dtabs">${dtabs.map(([k,l])=>`<button class="${UI.dtab===k?'on':''}" onclick="setDtab('${k}')">${l}</button>`).join("")}</div>
    <div class="db">${body}</div><div class="actbar">${(typeof SESSION!=='undefined'&&(SESSION.name==='GOV-01-Help'||SESSION.isHelpdesk)&&c.kind==='inquiry')?'<button class="pri" onclick="answerPublish(\''+c.id+'\')">🧠 Answer &amp; publish</button>':''}${actbar}</div>`;
 }
@@ -7095,7 +7095,7 @@ function statusSearchSort(){ return '<div class="msgss"><input id="stsrch" class
 function setStatusSearch(v){ clearTimeout(UI._stT); UI._stT=setTimeout(function(){ UI.statusSearch=(v||'').trim(); paintDetail(); var s=document.getElementById('stsrch'); if(s){ s.focus(); var n=s.value.length; try{s.setSelectionRange(n,n);}catch(_){ } } }, 300); }
 function setStatusOrder(o){ UI.statusOrder=o; paintDetail(); }
 function statusTabHtml(c){ var log=(c.log||[]); var sl=log.slice(); var q=(UI.statusSearch||'').toLowerCase(); if(q) sl=sl.filter(function(e){ return (String(statusLabel(e))+' '+(e.action_by_display_name||'')+' '+(e.detail||'')).toLowerCase().indexOf(q)>=0; }); var ordered=(UI.statusOrder==='oldest')?sl:sl.slice().reverse(); var inner=ordered.length?lazyWrap('status', ordered, statusEv, '<div class="msgempty">No matching history.</div>'):'<div class="msgempty">No status history yet.</div>'; return '<div class="msghd"><span class="mh-t">Lifecycle ('+log.length+')</span></div>'+statusSearchSort()+'<div class="tl">'+inner+'</div>'; }
-function msgBubble(m){ const ext=m.scope==="external"; const d=MTYPES[m.type]||MTYPES.info; const disp=m.isDispute; const _db=(typeof disputeBadge==='function')?disputeBadge(m):''; const head=_db?_db:`<span class="mbadge ${ext?'ext':'int'}">${ext?'↔ External':'🔒 Internal'}</span><span class="mtype ${d.cls}">${d.icon} ${d.label}</span>`; return `<div class="bubble ${ext?'ext':'int'}${disp?' disp':''}"><div class="bh">${head}<span class="ath">${esc(m.author)}</span>${m.byline?'<span class="ath" style="color:var(--grey);font-weight:400">&nbsp;· by '+esc(m.byline)+'</span>':''}<span class="tm">${m.at}</span>${m.unread?'<span class="unreaddot"></span>':''}</div><div class="bb">${esc(m.body)}</div>${(m.atts&&m.atts.length)?`<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px">${m.atts.map((a,i)=>`<span onclick="openMsgAtt('${m.id}',${i})" title="${esc(a.n)}" style="display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:6px;padding:2px 7px;font-size:var(--fs-1);background:#fff;cursor:pointer">${attIcon(a.t)} ${esc(a.n.length>22?a.n.slice(0,22)+'…':a.n)}</span>`).join('')}</div>`:''}</div>`; }
+function msgBubble(m){ const ext=m.scope==="external"; const d=MTYPES[m.type]||MTYPES.info; const disp=m.isDispute; const _db=(typeof disputeBadge==='function')?disputeBadge(m):''; const head=_db?_db:`<span class="mbadge ${ext?'ext':'int'}">${ext?'↔ External':'🔒 Internal'}</span><span class="mtype ${d.cls}">${d.icon} ${d.label}</span>`; return `<div class="bubble ${ext?'ext':'int'}${disp?' disp':''}"><div class="bh">${head}<span class="ath">${esc(m.author)}</span>${m.byline?'<span class="ath" style="color:var(--grey);font-weight:400">&nbsp;· by '+esc(m.byline)+'</span>':''}<span class="tm">${m.at}</span>${m.unread?'<span class="unreaddot"></span>':''}</div><div class="bb">${esc(m.body)}</div>${(m.atts&&m.atts.length)?`<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px">${m.atts.map((a,i)=>`<span onclick="openMsgAtt('${m.id}',${i})" title="${esc(a.n)}" style="display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:6px;padding:2px 7px;font-size:var(--fs-1);background:var(--card);cursor:pointer">${attIcon(a.t)} ${esc(a.n.length>22?a.n.slice(0,22)+'…':a.n)}</span>`).join('')}</div>`:''}</div>`; }
 function messagesTab(c){
   markChitRead(c.id); setTimeout(refreshMsgBadge,0);
   if(UI.msgDispSel && !((c.disputes||[]).some(function(d){return String(d.dispute_id)===String(UI.msgDispSel);}))) UI.msgDispSel='';
@@ -7113,7 +7113,7 @@ function messagesTab(c){
   const ch=UI.msgChan||(isCust?"external":"internal"); let kind=UI.msgKind||"info"; if(!ctypes.includes(kind))kind=ctypes[0];
   const typeSel=`<div class="typesel">${ctypes.map(k=>`<button class="${kind===k?'on '+MTYPES[k].cls:''}" title="${MTYPES[k].label}" onclick="setMsgKind('${k}')">${MTYPES[k].icon} ${MTYPES[k].short}</button>`).join("")}</div>`;
   const open=!!UI.composeOpen;
-  const attachRow=`<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:4px 0"><label title="Attach files" style="cursor:pointer;border:1px solid var(--line);border-radius:6px;padding:3px 9px;font-size:var(--fs-1);background:#fff">📎 Attach<input type="file" multiple style="display:none" onchange="msgAddFiles(this.files);this.value=''"></label><span id="msgfileschips">${msgChips()}</span></div>`;
+  const attachRow=`<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:4px 0"><label title="Attach files" style="cursor:pointer;border:1px solid var(--line);border-radius:6px;padding:3px 9px;font-size:var(--fs-1);background:var(--card)">📎 Attach<input type="file" multiple style="display:none" onchange="msgAddFiles(this.files);this.value=''"></label><span id="msgfileschips">${msgChips()}</span></div>`;
   const dispToggle=(typeof disputeToggleHtml==='function')?disputeToggleHtml(c,isCust):'';
   const composer=isCust
     ? `<div class="composer">${typeSel}<div class="chlabel ext">↔ External · ${c.party||'the shop'} will see this</div><textarea id="msgbody" data-testid="msg-body" oninput="window.CBOffline&&CBOffline.saveDraft('msg.${c.id}',this.value)" placeholder="Message to ${c.party||'the shop'}…">${(window.CBOffline&&CBOffline.loadDraft('msg.'+c.id))?esc(CBOffline.loadDraft('msg.'+c.id)):''}</textarea>${attachRow}<button class="send ext" data-testid="msg-send" onclick="sendMessage('${c.id}')">Send ${MTYPES[kind].label} ↔ external</button></div>`
@@ -7121,7 +7121,7 @@ function messagesTab(c){
   const head=`<div class="msghd"><span class="mh-t">Messages (${msgCount(c)})</span><button class="composebtn ${open?'on':''}" onclick="toggleCompose()">${open?'✕ Close':'✏️ New message'}</button></div>`;
   return `<div class="msgtab">${head}<div class="msglist"><div class="msgfilters">${scopeFilter}${typeFilter}${msgSearchSort()}</div><div class="thread">${thread}</div>${open?`<div class="composeov" onclick="if(event.target===this)toggleCompose()"><div class="composeov-card"><div class="composeov-bar"><button class="composeov-x" onclick="toggleCompose()" title="Close" aria-label="Close">✕</button></div>${composer}</div></div>`:''}</div></div>`;
 }
-function msgChips(){ var fs=UI.msgFiles||[]; return fs.map(function(f,i){ return '<span style="display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:6px;padding:2px 7px;font-size:var(--fs-1);background:#fff">'+attIcon(cbAttachType(f.type,f.name))+' '+esc(f.name.length>18?f.name.slice(0,18)+'…':f.name)+' <span onclick="msgDelFile('+i+')" style="cursor:pointer;color:#9aa3a7">✕</span></span>'; }).join(''); }
+function msgChips(){ var fs=UI.msgFiles||[]; return fs.map(function(f,i){ return '<span style="display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:6px;padding:2px 7px;font-size:var(--fs-1);background:var(--card)">'+attIcon(cbAttachType(f.type,f.name))+' '+esc(f.name.length>18?f.name.slice(0,18)+'…':f.name)+' <span onclick="msgDelFile('+i+')" style="cursor:pointer;color:#9aa3a7">✕</span></span>'; }).join(''); }
 function msgAddFiles(files){ UI.msgFiles=UI.msgFiles||[]; for(var k=0;k<files.length;k++){ var f=files[k]; if(f.size>6*1024*1024){ toast(f.name+' is over 6MB — skipped.'); continue; } UI.msgFiles.push(f); } var el=document.getElementById('msgfileschips'); if(el)el.innerHTML=msgChips(); }
 function msgDelFile(i){ (UI.msgFiles||[]).splice(i,1); var el=document.getElementById('msgfileschips'); if(el)el.innerHTML=msgChips(); }
 function busyShow(msg){ var h=document.getElementById('busyhost'); if(!h){ h=document.createElement('div'); h.id='busyhost'; document.body.appendChild(h); } h.innerHTML='<div class="busyov"><div class="busybox"><span class="bspin"></span><span>'+esc(msg||'Working…')+'</span></div></div>'; }
@@ -7212,7 +7212,7 @@ async function pickAssign(id){
   UI.actors=actors; const c=UI.rows.find(x=>x.id===id)||UI.detail||{}; MODALS.pick={id, actorId:null, pri:(c.custPri?'urgent':'normal'), reason:''};
   const rows=actors.map(a=>{ const off=(a.shift==="off"); const max=a.max||0; const full=(max>0 && a.load>=max); const assignable=hatAssignable(a.hat); const dis=off||full||!assignable;
     const chip=a.shift==="on_shift"?'<span class="optchip on">on shift</span>':a.shift==="on_break"?'<span class="optchip brk">on break</span>':'<span class="optchip off">off</span>';
-    return `<div class="optrow ${dis?'dis':''}" data-a="${a.id}" ${dis?'':`onclick="pickActor('${a.id}')"`}><span class="rdo"></span><div class="oc"><div class="on">${esc(a.name)} <span class="optchip" style="font-size:var(--fs-1);background:#eef3fb;color:#345488;border-color:#cfe0f4">${hatLabel(a.hat)}</span></div><div class="om">load ${a.load}${max?'/'+max:''}${!assignable?' · not assignable (hat)':off?' · off duty':full?' · at capacity':''}</div></div>${chip}</div>`;
+    return `<div class="optrow ${dis?'dis':''}" data-a="${a.id}" ${dis?'':`onclick="pickActor('${a.id}')"`}><span class="rdo"></span><div class="oc"><div class="on">${esc(a.name)} <span class="optchip" style="font-size:var(--fs-1);background:#eef3fb;color:var(--blue-d);border-color:#cfe0f4">${hatLabel(a.hat)}</span></div><div class="om">load ${a.load}${max?'/'+max:''}${!assignable?' · not assignable (hat)':off?' · off duty':full?' · at capacity':''}</div></div>${chip}</div>`;
   }).join("");
   const prisel=`<div class="msec">Priority</div><div class="prisel">${["urgent","normal","low"].map(p=>`<button class="pri-${p} ${MODALS.pick.pri===p?'on':''}" data-p="${p}" onclick="pickPri('${p}')">${PRI[p].label}</button>`).join("")}</div>`;
   const reasonbox=`<div class="msec">Reason <span id="reasonhint" class="rh">${MODALS.pick.pri==='urgent'?'— Urgent needs one':'(optional)'}</span></div><textarea id="assignreason" class="mreason" placeholder="Why this assignment / this urgency…" oninput="MODALS.pick.reason=this.value;syncAssignOk()"></textarea>`;
@@ -7235,7 +7235,7 @@ async function pickAssignBulk(ids){
   UI.actors=actors; MODALS.pick={ids, actorId:null, bulk:true};
   const rows=actors.map(a=>{ const off=(a.shift==="off"); const max=a.max||0; const full=(max>0 && a.load>=max); const assignable=hatAssignable(a.hat); const dis=off||full||!assignable;
     const chip=a.shift==="on_shift"?'<span class="optchip on">on shift</span>':a.shift==="on_break"?'<span class="optchip brk">on break</span>':'<span class="optchip off">off</span>';
-    return `<div class="optrow ${dis?'dis':''}" data-a="${a.id}" ${dis?'':`onclick="pickActor('${a.id}')"`}><span class="rdo"></span><div class="oc"><div class="on">${esc(a.name)} <span class="optchip" style="font-size:var(--fs-1);background:#eef3fb;color:#345488;border-color:#cfe0f4">${hatLabel(a.hat)}</span></div><div class="om">load ${a.load}${max?'/'+max:''}${!assignable?' · not assignable (hat)':off?' · off duty':full?' · at capacity':''}</div></div>${chip}</div>`;
+    return `<div class="optrow ${dis?'dis':''}" data-a="${a.id}" ${dis?'':`onclick="pickActor('${a.id}')"`}><span class="rdo"></span><div class="oc"><div class="on">${esc(a.name)} <span class="optchip" style="font-size:var(--fs-1);background:#eef3fb;color:var(--blue-d);border-color:#cfe0f4">${hatLabel(a.hat)}</span></div><div class="om">load ${a.load}${max?'/'+max:''}${!assignable?' · not assignable (hat)':off?' · off duty':full?' · at capacity':''}</div></div>${chip}</div>`;
   }).join("");
   modal(`<div class="mhd"><div class="t">Assign ${ids.length} chit${ids.length>1?'s':''}</div><div class="s">to one co-assist (bulk)</div></div><div class="mbody">${rows||'<div style="padding:14px;color:var(--grey);font-size:13px">No co-assists yet.</div>'}<div style="padding:6px 0 2px"><button class="composebtn" onclick="addActorModal()">+ New co-assist</button></div></div><div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="pri" id="mok" disabled onclick="confirmAssign()">Assign all</button></div>`);
 }
@@ -7261,7 +7261,7 @@ async function toggleCustPri(id){ const c=UI.detail||{}; const nf=!c.custPri; tr
 /* ---------------- bits ---------------- */
 function val(id){const el=document.getElementById(id);return el?el.value.trim():"";}
 function isUserId(v){ v=(v||"").trim(); return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) || v.length>=8; }
-function logoMark(s){return `<svg width="${s}" height="${s}" viewBox="0 0 32 32"><circle cx="16" cy="16" r="12.5" fill="none" stroke="#C9A86A" stroke-width="1.6"/><path d="M7 19 Q16 9 25 19" fill="none" stroke="#C9A86A" stroke-width="2.4" stroke-linecap="round"/><circle cx="7" cy="19" r="1.6" fill="#C9A86A"/><circle cx="25" cy="19" r="1.6" fill="#C9A86A"/></svg>`;}
+function logoMark(s){return `<svg width="${s}" height="${s}" viewBox="0 0 32 32"><circle cx="16" cy="16" r="12.5" fill="none" stroke="var(--gold)" stroke-width="1.6"/><path d="M7 19 Q16 9 25 19" fill="none" stroke="var(--gold)" stroke-width="2.4" stroke-linecap="round"/><circle cx="7" cy="19" r="1.6" fill="var(--gold)"/><circle cx="25" cy="19" r="1.6" fill="var(--gold)"/></svg>`;}
 function logo(){return `<div class="brand">${logoMark(26)} Chit &amp; Bridge</div>`;}
 function setStage(k){ const s=STAGES[k]; if(!s) return; if(!s.mock && !s.base){ toast(s.label+" — API base not set yet (config)."); return; } CFG.STAGE=k; if(s.mock) STORE=deepClone(DEMO); route(); }
 function modeRibbon(){
@@ -7274,7 +7274,7 @@ function modeRibbon(){
   return `<div class="moderibbon">
     <b>Build preview</b><span class="pill">${st.label}</span>
     <span style="font-size:var(--fs-1)">${st.mock?st.note:(st.base?"hitting "+st.base:"(API base not set!)")}</span>
-    <button onclick="openMsgConsole()" title="Message log — info / warning / critical / requests" style="border:0.5px solid var(--line);border-radius:6px;padding:2px 8px;font-size:var(--fs-1);background:#fff;cursor:pointer;margin-left:8px">🧪 Log</button>
+    <button onclick="openMsgConsole()" title="Message log — info / warning / critical / requests" style="border:0.5px solid var(--line);border-radius:6px;padding:2px 8px;font-size:var(--fs-1);background:var(--card);cursor:pointer;margin-left:8px">🧪 Log</button>
     ${vpsw}
     <span class="sw" style="${SESSION.token?'':'margin-left:auto'}">${stageBtns}</span>
   </div>`;
@@ -7361,7 +7361,7 @@ function attMedia(a,size){
     ? '<pre class="atttext">'+esc(a.text)+'</pre>'
     : '<div class="attfile"><div style="font-size:46px">📄</div><div style="font-weight:600;margin:8px 0 2px">'+esc(a.n||'file')+'</div><div style="font-size:var(--fs-1);color:#9aa3a7">reading…</div></div>';
   if(a&&big&&a.t!=='image') return '<div class="attfile"><div style="font-size:46px">'+(a.t==='xlsx'||a.t==='csv'?'📊':(a.t==='docx'||a.t==='doc'?'📝':(a.t==='ppt'?'📑':(a.t==='zip'?'🗜️':(a.t==='pdf'?'📄':'📎')))))+'</div><div style="font-weight:600;margin:8px 0 2px">'+esc(a.n||'file')+'</div><div style="font-size:var(--fs-1);color:#9aa3a7;text-transform:uppercase">'+esc(a.t||'file')+'</div>'+(a.src?'<a class="composebtn" style="margin-top:10px;display:inline-block" href="'+esc(a.src)+'" target="_blank" rel="noopener">Open / download</a>':'')+'</div>';
-  const bg=a.t==='image'?'#E8F0F4':a.t==='video'?'#F7F1E4':'#F1EFE8';
+  const bg=a.t==='image'?'#E8F0F4':a.t==='video'?'var(--gold-soft)':'#F1EFE8';
   return `<div class="attImg ${big?'big':''}" style="background:${bg}"><span style="font-size:${big?'40px':'20px'}">${attIcon(a.t)}</span>${a.t==='video'?'<span class="vlen">0:12</span>':''}</div>`;
 }
 /* ── real attachments (platform-independent): bytes pulled ON DEMAND — GET /api/attachments/:id is auth'd, so fetch→blobURL ── */
@@ -7992,7 +7992,7 @@ route();
 </script>
 <script>
 (function(){ if(!window.CBOffline) return;
-  function cbPill(s){ var p=document.getElementById("cbnet"); if(!p){ p=document.createElement("div"); p.id="cbnet"; p.style.cssText="position:fixed;bottom:10px;right:10px;z-index:9998;font:700 11px/1 system-ui,-apple-system,sans-serif;border-radius:999px;padding:5px 11px;border:1px solid #e5e8ee;background:#fff;color:#2f7a45;box-shadow:0 1px 4px rgba(0,0,0,.08)"; (document.body||document.documentElement).appendChild(p); } if(!p) return;
+  function cbPill(s){ var p=document.getElementById("cbnet"); if(!p){ p=document.createElement("div"); p.id="cbnet"; p.style.cssText="position:fixed;bottom:10px;right:10px;z-index:9998;font:700 11px/1 system-ui,-apple-system,sans-serif;border-radius:999px;padding:5px 11px;border:1px solid #e5e8ee;background:var(--card);color:#2f7a45;box-shadow:0 1px 4px rgba(0,0,0,.08)"; (document.body||document.documentElement).appendChild(p); } if(!p) return;
     if(s.online){ p.style.background="#fff"; p.style.color="#2f7a45"; p.textContent = s.pending ? ("\u25CF Online \u00B7 syncing "+s.pending) : "\u25CF Online"; }
     else { p.style.background="#fdf6e9"; p.style.color="#b4832a"; p.textContent = "\u26A0 Offline" + (s.pending ? " \u00B7 "+s.pending+" pending" : ""); } }
   try{ CBOffline.configure({apiBase: CFG.API_BASE, token:function(){return SESSION && SESSION.token;}, onChange:cbPill}); CBOffline.registerSW("/cb-sw.js"); }catch(e){}

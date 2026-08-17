@@ -74,7 +74,7 @@ function _traceBatchPicker(){
     var name = esc(b.product || b.to_name || 'batch');
     var meta = [ (b.qty != null ? (esc(String(b.qty)) + esc(b.unit ? (' ' + b.unit) : '')) : ''), (b.sender_name ? ('from ' + esc(b.sender_name)) : '') ].filter(Boolean).join(' · ');
     return '<div onclick="UI.traceId=\'' + b.chit_id + '\';runTrace(\'forward\')" title="Click to trace this batch" '
-      + 'style="cursor:pointer;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:#fff;display:flex;flex-direction:column;gap:2px">'
+      + 'style="cursor:pointer;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--card);display:flex;flex-direction:column;gap:2px">'
       + '<div style="display:flex;align-items:center;gap:7px"><b style="font-size:13px">' + name + '</b>'
         + (b.is_origin ? '<span style="font-size:var(--fs-1);font-weight:800;color:#2c5aa0;background:#eaf1fb;border-radius:5px;padding:1px 5px">ORIGIN</span>' : '') + '</div>'
       + (meta ? '<div style="font-size:var(--fs-1);color:var(--grey)">' + meta + '</div>' : '')

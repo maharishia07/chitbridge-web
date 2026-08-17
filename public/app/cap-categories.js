@@ -447,7 +447,7 @@ function categoriesScreen(){
     +   '<span style="font-family:\'Space Grotesk\';font-weight:700;font-size:var(--fs-3)">🏷️ Categories</span>'
     + '</div>'
     + '<button class="composebtn" style="width:100%;justify-content:center" data-testid="catg-new" onclick="cbcatNew()">+ New category</button>'
-    + '<button class="composebtn" style="width:100%;justify-content:center;margin-top:7px;background:#fff;color:var(--blue);border:1px solid var(--line)" data-testid="catg-seed" onclick="cbcatSeedAsk()">📐 Start from a standard set</button>'
+    + '<button class="composebtn" style="width:100%;justify-content:center;margin-top:7px;background:var(--card);color:var(--blue);border:1px solid var(--line)" data-testid="catg-seed" onclick="cbcatSeedAsk()">📐 Start from a standard set</button>'
     + '<div class="srch" style="margin-top:8px">🔍 <input data-testid="catg-search" placeholder="Search categories" value="' + esc(CBCAT_UI.q || '') + '" oninput="cbcatSearch(this.value)"></div>'
     /* ⚠️ ITS OWN ELEMENT, REPAINTED WITH THE ROWS. The counts arrive AFTER the screen is built, and the header is
        rendered once by categoriesScreen() — so anything derived from counts that lives up here is stale forever.
@@ -470,7 +470,7 @@ function cbcatCss(){
     'background:var(--paper);border:1px solid var(--line);border-radius:20px;padding:1px 9px;flex:0 0 auto}',
     '.cbcat-badge{font-size:var(--fs-1);font-weight:700;border-radius:6px;padding:1px 7px;text-transform:uppercase;letter-spacing:.04em}',
     '.cbcat-badge.ret{background:#eceaea;color:#6f6a6a}',
-    '.cbcat-err{font-size:var(--fs-2);color:#b4453f;background:#fbeceb;border:1px solid #f0c9c6;border-radius:9px;padding:8px 11px;margin:8px 0}',
+    '.cbcat-err{font-size:var(--fs-2);color:var(--disp);background:#fbeceb;border:1px solid #f0c9c6;border-radius:9px;padding:8px 11px;margin:8px 0}',
     '.cbcat-note{font-size:12px;line-height:1.55;color:#6b5a36;background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;margin-bottom:11px}',
     '.cbcat-note.warn{color:#8a5a1e}',
     '.cbcat-stat{display:flex;align-items:baseline;gap:9px;margin-bottom:4px}',

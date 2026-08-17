@@ -552,7 +552,7 @@ function catsetCss(){
   if (document.getElementById('catset_css')) return;
   var s = document.createElement('style'); s.id = 'catset_css';
   s.textContent = [
-    '.catset-card{border:1px solid var(--line);border-radius:12px;background:#fff;margin-bottom:12px;overflow:hidden}',
+    '.catset-card{border:1px solid var(--line);border-radius:12px;background:var(--card);margin-bottom:12px;overflow:hidden}',
     '.catset-ct{font-size:13.5px;font-weight:700;padding:11px 14px 0}',
     '.catset-cb{font-size:13px;line-height:1.6;color:var(--ink);padding:6px 14px 12px}',
     /* The standards note is set apart because it explains the WHY, which a person reads once and then never
@@ -581,11 +581,11 @@ function catsetCss(){
     '.catset-reg{border:1px solid var(--line);border-radius:12px;background:var(--paper);margin-bottom:12px;overflow:hidden}',
     '.catset-regh{display:flex;align-items:center;gap:8px;padding:10px 13px 0;font-size:var(--fs-2);font-weight:700}',
     '.catset-regn{margin-left:auto;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:var(--fs-1);',
-    'color:var(--grey);background:#fff;border:1px solid var(--line);border-radius:20px;padding:1px 8px}',
+    'color:var(--grey);background:var(--card);border:1px solid var(--line);border-radius:20px;padding:1px 8px}',
     '.catset-regb{font-size:12px;line-height:1.55;color:var(--grey);padding:4px 13px 9px}',
     '.catset-regrows{display:flex;flex-direction:column;gap:1px;background:var(--line);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}',
     /* Two lines: identity, then explanation. See the note where the markup is built. */
-    '.catset-regrow{display:block;background:#fff;padding:7px 13px;font-size:var(--fs-2)}',
+    '.catset-regrow{display:block;background:var(--card);padding:7px 13px;font-size:var(--fs-2)}',
     '.catset-regrow .rr1{display:grid;grid-template-columns:112px minmax(0,1fr);align-items:baseline;gap:10px}',
     '.catset-regrow.nocode .rr1{grid-template-columns:minmax(0,1fr)}',
     /* A tickable registry gains a checkbox column; the note indents past it so both lines share one left edge. */
@@ -628,7 +628,7 @@ function catsetCss(){
     '.lang-bar{border:1px solid var(--line);border-radius:9px;padding:8px 10px;margin:2px 0 10px;background:var(--paper)}',
     '.lang-g{display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin-bottom:5px}',
     '.lang-gh{font-size:10.5px;font-weight:800;color:var(--grey);text-transform:uppercase;letter-spacing:.05em;min-width:62px}',
-    '.lang-chip{font-size:11.5px;border:1px solid var(--line);border-radius:999px;padding:2px 10px;background:#fff;cursor:pointer;white-space:nowrap}',
+    '.lang-chip{font-size:11.5px;border:1px solid var(--line);border-radius:999px;padding:2px 10px;background:var(--card);cursor:pointer;white-space:nowrap}',
     '.lang-chip:hover{border-color:var(--blue)}',
     '.lang-chip.on{background:#E3EDF8;border-color:var(--blue);color:var(--blue);font-weight:700}',
     /* ⚠️ English reads as fixed, not disabled — a greyed chip invites clicking to find out why. */

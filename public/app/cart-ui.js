@@ -537,7 +537,7 @@
       ? Number(n).toLocaleString(opt(ns, 'locale', 'en-IN'))
       : String(n));
   }
-  function accent(ns) { return opt(ns, 'accent', '#3F66A6'); }
+  function accent(ns) { return opt(ns, 'accent', 'var(--blue)'); }
   function soft(ns) { return opt(ns, 'soft', '#eef4ff'); }
 
   /**
@@ -599,7 +599,7 @@
    */
   function stepperHTML(ns, id, q) {
     var a = accent(ns), r = rowById(ns, id), o = declOf(ns, r), o_model = (o && o.model) || 'count';
-    var rnd = 'border-radius:50%;width:28px;height:28px;flex:none;border:1.5px solid ' + a + ';background:#fff;color:' + a
+    var rnd = 'border-radius:50%;width:28px;height:28px;flex:none;border:1.5px solid ' + a + ';background:var(--card);color:' + a
       + ';font-size:17px;font-weight:700;line-height:1;cursor:pointer;display:inline-flex;align-items:center;justify-content:center';
 
     if (o_model === 'pick') {
@@ -616,7 +616,7 @@
       var os = offerState(ns, id);
       off = '<input placeholder="your price" value="' + esc(os.value == null ? '' : String(os.value)) + '" inputmode="decimal"'
         + ' onchange="CBCart.setOffer(\'' + esc(ns) + '\',\'' + esc(id) + '\',this.value)"'
-        + ' style="width:78px;padding:5px;border:1.5px solid ' + (os.value != null && !os.ok ? '#b4453f' : '#e3e6ea')
+        + ' style="width:78px;padding:5px;border:1.5px solid ' + (os.value != null && !os.ok ? 'var(--disp)' : '#e3e6ea')
         + ';border-radius:6px;font-size:13px;text-align:right">';
     }
     return '<span style="display:inline-flex;align-items:center;gap:8px" onclick="event.stopPropagation()">' + off
@@ -673,7 +673,7 @@
     /* ⚠️ SAY IT, do not fall silent. An unresolved model is the one case where this note has something urgent
        to add — the row cannot be ordered and the reader deserves to know why rather than finding the controls
        inert. `loading` is transient and says so; `missing` means the definition is gone. */
-    if (!m) return ' <span style="color:#b4453f;font-size:var(--fs-1)">· ' + (o.unresolved === 'loading'
+    if (!m) return ' <span style="color:var(--disp);font-size:var(--fs-1)">· ' + (o.unresolved === 'loading'
       ? 'reading its order model…' : 'order model unavailable — cannot be ordered') + '</span>';
     var h = m.hint(o);
     if (!h) return '';
@@ -769,7 +769,7 @@
         // Emptying the cart from inside it must not leave someone facing a blank box with no way back.
         : '<div style="padding:26px 8px;color:#6a707a;font-size:13.5px;text-align:center">Nothing in the cart yet.</div>')
       + '<div style="display:flex;gap:9px;margin-top:15px">'
-      + '<button style="' + btn + ';background:#fff;color:' + a + '" onclick="CBCart.close(\'' + esc(ns) + '\')">'
+      + '<button style="' + btn + ';background:var(--card);color:' + a + '" onclick="CBCart.close(\'' + esc(ns) + '\')">'
       + (sel.length ? 'Keep shopping' : 'Browse the catalogue') + '</button>'
       + (sel.length ? '<button data-testid="cart-checkout" style="' + btn + ';background:' + a + ';color:#fff"'
           + ' onclick="CBCart.checkout(\'' + esc(ns) + '\')">' + esc(opt(ns, 'checkoutLabel', 'Check out →')) + '</button>' : '')
@@ -910,7 +910,7 @@
       styleEl.id = 'cbcart_css';
       styleEl.textContent = '.cbcart-ov{position:fixed;inset:0;background:rgba(15,22,32,.5);display:none;'
         + 'align-items:center;justify-content:center;padding:14px;z-index:1200}.cbcart-ov.on{display:flex}'
-        + '.cbcart-ovc{background:#fff;width:100%;max-width:470px;border-radius:15px;padding:17px 18px 20px;'
+        + '.cbcart-ovc{background:var(--card);width:100%;max-width:470px;border-radius:15px;padding:17px 18px 20px;'
         + 'max-height:86vh;overflow:auto}'
         /**
          * ⭐ THE PICKER HEADER STICKS — see pickerHTML. `top:0` pins it to whichever ancestor scrolls, which is
@@ -932,7 +932,7 @@
          * rather than discover this the way it was discovered here.
          */
         + ':root{--cbpick-gap:11px}'
-        + '.cbpick-stick{position:sticky;top:calc(-1 * var(--cbpick-gap));z-index:6;background:#fff;'
+        + '.cbpick-stick{position:sticky;top:calc(-1 * var(--cbpick-gap));z-index:6;background:var(--card);'
         + 'padding:var(--cbpick-gap) 0 0}'
         /* ONE row: the cart chip takes what it needs, the search box takes the rest. */
         + '.cbpick-row{display:flex;align-items:center;gap:8px;margin:0 0 7px}'
@@ -949,7 +949,7 @@
         + '.cbpick-catgs:empty{display:none}'
         + '.cbpick-catgs::-webkit-scrollbar{height:5px}'
         + '.cbpick-catgs::-webkit-scrollbar-thumb{background:#d6dae0;border-radius:3px}'
-        + '.cbpick-chip{flex:0 0 auto;border:1px solid #e3e6ea;background:#fff;border-radius:20px;'
+        + '.cbpick-chip{flex:0 0 auto;border:1px solid #e3e6ea;background:var(--card);border-radius:20px;'
         /* 28px and 12px: smaller than the cart chip beside the search (this narrows a list, it does not hold
            money), still above the legibility floor. */
         + 'height:28px;padding:0 11px;font:inherit;font-size:12px;color:#3c4350;cursor:pointer;white-space:nowrap}'
@@ -963,7 +963,7 @@
         + 'padding:0 10px;height:40px;box-sizing:border-box;white-space:nowrap;user-select:none}'
         + '.cbcart-bar.on{cursor:pointer;color:#fff}'
         + '.cbcart-bag{position:relative;font-size:17px;line-height:1}'
-        + '.cbcart-n{position:absolute;top:-7px;right:-9px;background:#fff;border-radius:9px;min-width:17px;'
+        + '.cbcart-n{position:absolute;top:-7px;right:-9px;background:var(--card);border-radius:9px;min-width:17px;'
         /* 11px, not the 10.5px this started at — the legibility floor. The count is the one fact the chip must
            carry on a phone (the money hides below 520px), so it is the last thing that should be squinted at. */
         + 'height:18px;padding:0 4px;font-size:var(--fs-1);font-weight:800;line-height:18px;text-align:center}'

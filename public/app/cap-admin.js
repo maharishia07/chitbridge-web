@@ -99,7 +99,7 @@ function vaultSectionHTML(sec, i){
       /* ⚠️ THE LABEL IS WHAT MAKES REPEATS USABLE. Two sections both reading "Bank" are indistinguishable at a
          glance and unusable at form time — "which account do I invoice against?" has no answer. */
       +'<input class="inp" style="flex:1;min-width:120px;max-width:230px;margin:0;font-size:12px" placeholder="label it — e.g. Export receipts" value="'+esc(sec.label||'')+'" oninput="vaultSetSection('+i+',this.value)">'
-      +'<button type="button" title="Remove this section" onclick="vaultDelSection('+i+')" style="margin-left:auto;border:1px solid var(--line);background:#fff;color:#c0453b;border-radius:8px;min-width:28px;min-height:28px;cursor:pointer">×</button>'
+      +'<button type="button" title="Remove this section" onclick="vaultDelSection('+i+')" style="margin-left:auto;border:1px solid var(--line);background:var(--card);color:#c0453b;border-radius:8px;min-width:28px;min-height:28px;cursor:pointer">×</button>'
     +'</div>'
     +rows
     +'<button class="composebtn ghost" style="margin-top:8px" onclick="vaultAddRow('+i+')">+ add detail</button></div>';
@@ -128,7 +128,7 @@ function vaultRowHTML(r,i,j,type){
        a stray control belonging to nothing. Let them shrink together and the row stays one row. */
     +'<input class="inp" list="vsug_'+esc(type)+'" style="flex:1 1 130px;min-width:110px;margin:0" placeholder="detail name — e.g. IFSC code" value="'+esc(r.name||'')+'" oninput="vaultSetRow('+i+','+j+',\'name\',this.value)">'
     +val
-    +'<button type="button" title="Remove this detail" onclick="vaultDelRow('+i+','+j+')" style="border:1px solid var(--line);background:#fff;color:var(--grey);border-radius:8px;min-width:28px;min-height:28px;cursor:pointer">×</button></div>';
+    +'<button type="button" title="Remove this detail" onclick="vaultDelRow('+i+','+j+')" style="border:1px solid var(--line);background:var(--card);color:var(--grey);border-radius:8px;min-width:28px;min-height:28px;cursor:pointer">×</button></div>';
 }
 /* The suggestion lists — one <datalist> per section type, emitted once. A datalist SUGGESTS and never restricts,
    which is exactly the contract we want: type "IFSC code" and get the tag, type anything else and keep it. */
@@ -492,7 +492,7 @@ function misPlan(m){
   var period = !w
     ? '<span class="govtag" style="background:#efeee9;color:#7a7a72">no period recorded</span>'
     : w.state === 'expired'
-      ? '<span class="govtag" style="background:#fbeceb;color:#b4453f">expired '+w.days+'d ago</span>'
+      ? '<span class="govtag" style="background:#fbeceb;color:var(--disp)">expired '+w.days+'d ago</span>'
       : w.state === 'not yet started'
         ? '<span class="govtag" style="background:#F5ECD6;color:#7a5e22">starts in '+w.days+'d</span>'
         : '<span class="govtag" style="background:#E4F0E9;color:#2F6B49">active'+(w.days!=null?(' · '+w.days+'d left'):'')+'</span>';
@@ -840,7 +840,7 @@ function _profSecBody(k, e){
 function govCardHTML(g){
   if(!g) return '';
   var inst=g.installation||{}, b=g.basics||{}, j=g.jurisdiction||{};
-  var caps=(g.capabilities||[]).map(function(c){return '<span class="optchip" style="background:#eef3fb;color:#345488;border-color:#cfe0f4">'+esc(c)+'</span>';}).join(' ');
+  var caps=(g.capabilities||[]).map(function(c){return '<span class="optchip" style="background:#eef3fb;color:var(--blue-d);border-color:#cfe0f4">'+esc(c)+'</span>';}).join(' ');
   var allow=(g.allowances||[]).map(function(a){return esc(a.limit+' '+a.resource);}).join(' · ');
   var langs=(b.languages||[]).join(', ');
   var loc=[inst.cloud,inst.region,inst.zone].filter(Boolean).join(' · ');
@@ -1405,7 +1405,7 @@ async function loadSettings(){ const h=document.getElementById("setbody"); if(!h
   }catch(e){ h.innerHTML=scrErr(e); } }
 function paintSettings(s, _daOpts){ const h=document.getElementById("setbody"); if(!h)return;
   { const k = setSec();
-    const notYet = '<div style="background:#fbeceb;border:1px solid #f0c9c6;border-radius:9px;padding:8px 11px;font-size:11.5px;color:#b4453f;margin-bottom:11px">⏳ These preferences are saved but <b>not yet active</b> — they don\'t change behaviour yet.</div>';
+    const notYet = '<div style="background:#fbeceb;border:1px solid #f0c9c6;border-radius:9px;padding:8px 11px;font-size:11.5px;color:var(--disp);margin-bottom:11px">⏳ These preferences are saved but <b>not yet active</b> — they don\'t change behaviour yet.</div>';
     var out = "";
     if (k === "work") out = _misHead('Work', 'How tasks reach the people and co-assists who do them.')
       + `<div style="${_CARD}">${notYet}
@@ -1559,7 +1559,7 @@ function channelsInner(){
      this page, so a web release can land first — "Could not read your channels" would send someone hunting for a
      fault in their own account. Name the actual state: the server has not shipped this yet. */
   if(_CH.notDeployed) return head+'<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;font-size:12px;color:#6b5a36">The channels API is not on this server yet (the panel shipped ahead of it). Nothing is wrong with your account — deploy the API and reload.</div>';
-  if(_CH.err) return head+'<div style="background:#fbeceb;border:1px solid #f0c9c6;border-radius:9px;padding:9px 11px;font-size:12px;color:#b4453f">'+esc(_CH.err)+'</div>';
+  if(_CH.err) return head+'<div style="background:#fbeceb;border:1px solid #f0c9c6;border-radius:9px;padding:9px 11px;font-size:12px;color:var(--disp)">'+esc(_CH.err)+'</div>';
   if(!_CH.data) return head+'<div style="font-size:12px;color:var(--grey)">Not loaded.</div>';
   /* The route answers 200 with a note when the table is not there — say which it is, because "no channels" and
      "the store does not exist" look identical on screen and mean entirely different things. */
@@ -1704,7 +1704,7 @@ function policyFlagsInner(){
   /* A setting that cannot be stored must SAY so rather than accept a change it will lose — that is the whole
      failure this card is being rebuilt out of. */
   var warn = !_POL.migrated ? '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;font-size:11.5px;color:#6b5a36;margin-bottom:7px">Policy flags are not migrated on this environment (b130). The card is here; the column is not — changes will not save.</div>' : '';
-  var err = _POL.err ? '<div style="color:#b4453f;font-size:11.5px;margin-top:6px">'+esc(_POL.err)+'</div>' : '';
+  var err = _POL.err ? '<div style="color:var(--disp);font-size:11.5px;margin-top:6px">'+esc(_POL.err)+'</div>' : '';
   return '<div class="sec" style="margin:0 0 4px">🚩 Policy flags <span style="font-size:var(--fs-1);font-family:\'Space Mono\';background:#e7f3ea;color:#2e6b3f;border-radius:5px;padding:1px 6px">saved to your entity</span></div>'
     +'<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5;margin-bottom:6px">The per-entity toggles the <b>7-layer block above</b> doesn\'t yet carry — same governance grammar (<b>class</b> + <b>level</b>): 🔒 platform-bound you can\'t relax; <b>tighten-only</b> you can make stricter; <b>entity</b> you set freely.</div>'
     +warn+rows+err

@@ -823,7 +823,7 @@ function chit2Screen(){
    * ⚠️ The outer element must still be `flex:1;min-height:0` — #mainbody is a flex column and `.main` is
    * `overflow:hidden`, so without min-height:0 the pane grows past the viewport and nothing scrolls at all.
    */
-  return '<div style="flex:1;min-height:0;display:flex;flex-direction:column;background:#fff">'
+  return '<div style="flex:1;min-height:0;display:flex;flex-direction:column;background:var(--card)">'
     + '<div style="flex:none">'                                                   // ← the frozen part
     + '<div style="padding:10px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px">'
     + '<span onclick="c2Back()" style="cursor:pointer;color:var(--blue);font-size:13px">‹ Back</span>'

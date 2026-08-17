@@ -34,7 +34,7 @@ function intakeScreen(){
   return '<div class="list" style="flex:1;min-width:0">'
     + '<div class="lh"><div style="display:flex;align-items:center;gap:8px;margin-bottom:9px">'
     + '<span style="font-family:\'Space Grotesk\';font-weight:700;font-size:var(--fs-3)">📥 Intake</span>'
-    + '<button onclick="openAssist(\'intake\')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:#fff;color:#3F66A6;border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button>'
+    + '<button onclick="openAssist(\'intake\')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button>'
     + '<button data-testid="intake-refresh" onclick="loadIntake()" style="margin-left:auto;border:1px solid var(--line);background:var(--paper);border-radius:9px;padding:4px 9px;font-size:11.5px;cursor:pointer">↻ Refresh</button>'
     + '<button data-testid="intake-simulate-open" onclick="intakeToggleSim()" style="border:1px solid var(--line);background:var(--paper);border-radius:9px;padding:4px 9px;font-size:11.5px;cursor:pointer">✚ Record a message</button>'
     + '</div>'
@@ -50,14 +50,14 @@ function intakeScreen(){
      * a factory receives — so it is one entity setting, read server-side at raise, and this only POINTS at it.
      */
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:5px">Inbound lines are priced from your catalogue when this entity is set to <b>sell</b> — '
-    + '<a onclick="navTo(\'settings\')" style="color:#3F66A6;cursor:pointer;font-weight:600">Settings → Policy flags</a>.</div>'
+    + '<a onclick="navTo(\'settings\')" style="color:var(--blue);cursor:pointer;font-weight:600">Settings → Policy flags</a>.</div>'
     + '</div><div id="intake_body" style="flex:1;overflow:auto;padding:12px 14px">' + intakeBodyHTML() + '</div></div>';
 }
 function intakeToggleSim(){ _INTAKE.sim = !_INTAKE.sim; paintIntake(); }
 function paintIntake(){ var h=document.getElementById('intake_body'); if(h) h.innerHTML=intakeBodyHTML(); }
 
 function _chn(c){
-  var M={ whatsapp:['#25D366','WhatsApp'], email:['#3F66A6','Email'], web:['#6a44a8','Web'], sms:['#b07a2b','SMS'] };
+  var M={ whatsapp:['#25D366','WhatsApp'], email:['var(--blue)','Email'], web:['#6a44a8','Web'], sms:['#b07a2b','SMS'] };
   var m=M[c]||['#6a707a', String(c||'channel')];
   return '<span style="font-size:var(--fs-1);font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#fff;background:'
     + m[0] + ';border-radius:5px;padding:2px 7px">' + esc(m[1]) + '</span>';
@@ -81,7 +81,7 @@ function intakeBodyHTML(){
      messages" and "the table does not exist" look identical on screen and mean completely different things. */
   if(!_INTAKE.migrated) return '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:11px 13px;font-size:var(--fs-2);color:#6b5a36">'
     + 'The intake queue is not migrated on this environment (b104). The screen is here; the table is not.</div>';
-  if(_INTAKE.err) return intakeSimHTML()+'<div style="background:#fbeceb;border:1px solid #f0c9c6;border-radius:9px;padding:11px 13px;font-size:var(--fs-2);color:#b4453f">'+esc(_INTAKE.err)+'</div>';
+  if(_INTAKE.err) return intakeSimHTML()+'<div style="background:#fbeceb;border:1px solid #f0c9c6;border-radius:9px;padding:11px 13px;font-size:var(--fs-2);color:var(--disp)">'+esc(_INTAKE.err)+'</div>';
   var L=_INTAKE.list||[];
   if(!L.length) return intakeSimHTML()
     + '<div class="empty" style="padding:36px 12px;text-align:center;color:var(--grey)"><div style="font-size:34px">📥</div>'
@@ -91,7 +91,7 @@ function intakeBodyHTML(){
 }
 function intakeCardHTML(c){
   var w=_INTAKE.working[c.id]||{}, s=c.structured||w.structured;
-  return '<div class="cap" data-testid="intake-row" style="border:1px solid var(--line);border-radius:12px;padding:12px 13px;margin-bottom:10px;background:#fff">'
+  return '<div class="cap" data-testid="intake-row" style="border:1px solid var(--line);border-radius:12px;padding:12px 13px;margin-bottom:10px;background:var(--card)">'
     + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">' + _chn(c.channel)
     + '<span style="font-size:11.5px;color:var(--grey)">' + esc(c.sender_name||c.sender_ref||'unknown sender') + '</span>'
     + (c.sender_name&&c.sender_ref?'<span style="font-size:var(--fs-1);color:var(--grey);font-family:ui-monospace,Menlo,monospace">'+esc(c.sender_ref)+'</span>':'')
@@ -106,17 +106,17 @@ function intakeCardHTML(c){
        to edit, price and address it, which is what you want when the message is a starting point rather than the
        thing itself. Neither sends anything without a person pressing it. */
     + (s ? '<button class="composebtn" data-testid="intake-raise" '+(w.busy?'disabled':'')+' onclick="intakeRaise(\''+esc(c.id)+'\')" title="File this as a request in your inbox, in their words, with the message reference on it">'+(w.busy?'Raising…':'📥 Raise as a request')+'</button>'
-         + '<button data-testid="intake-make-chit" onclick="intakeMakeChit(\''+esc(c.id)+'\')" style="border:1px solid var(--line);background:#fff;border-radius:9px;padding:9px 15px;font-size:13px;font-weight:700;cursor:pointer" title="Open Compose to edit, price and address it before sending">Make this a chit →</button>'
+         + '<button data-testid="intake-make-chit" onclick="intakeMakeChit(\''+esc(c.id)+'\')" style="border:1px solid var(--line);background:var(--card);border-radius:9px;padding:9px 15px;font-size:13px;font-weight:700;cursor:pointer" title="Open Compose to edit, price and address it before sending">Make this a chit →</button>'
          : '<button class="composebtn" data-testid="intake-structure" '+(w.busy?'disabled':'')+' onclick="intakeStructure(\''+esc(c.id)+'\')">'+(w.busy?'✨ Reading…':'✨ Structure it')+'</button>')
-    + '<button data-testid="intake-dismiss" onclick="intakeDismiss(\''+esc(c.id)+'\')" style="border:1px solid var(--line);background:#fff;border-radius:9px;padding:9px 15px;font-size:13px;font-weight:700;cursor:pointer;color:var(--grey)">Dismiss</button>'
+    + '<button data-testid="intake-dismiss" onclick="intakeDismiss(\''+esc(c.id)+'\')" style="border:1px solid var(--line);background:var(--card);border-radius:9px;padding:9px 15px;font-size:13px;font-weight:700;cursor:pointer;color:var(--grey)">Dismiss</button>'
     /* ⚠️ THE CONFIRM STEP MUST SHOW WHAT IT IS ASKING YOU TO CONFIRM. Athi, 2026-08-11, after finding that
        "konjam spiciya" and "periya bottle" were nowhere on screen: this card renders only particulars + qty + unit,
        so comment, unit_size, unit_price and unplaced were invisible whether the reader captured them or not — at
        exactly the moment a person decides whether the reading is right. A button that shows the actual JSON is the
        difference between tuning a prompt and guessing at one. */
-    + '<button data-testid="intake-json" onclick="intakeShowJson(\''+esc(c.id)+'\')" title="See exactly what was read, and what the chit would carry" style="border:1px solid var(--line);background:#fff;border-radius:9px;padding:9px 13px;font-size:var(--fs-2);font-weight:700;cursor:pointer;font-family:ui-monospace,Menlo,monospace">{ } JSON</button>'
+    + '<button data-testid="intake-json" onclick="intakeShowJson(\''+esc(c.id)+'\')" title="See exactly what was read, and what the chit would carry" style="border:1px solid var(--line);background:var(--card);border-radius:9px;padding:9px 13px;font-size:var(--fs-2);font-weight:700;cursor:pointer;font-family:ui-monospace,Menlo,monospace">{ } JSON</button>'
     + '</div>'
-    + (w.err?'<div style="color:#b4453f;font-size:12px;margin-top:6px">'+esc(w.err)+'</div>':'')
+    + (w.err?'<div style="color:var(--disp);font-size:12px;margin-top:6px">'+esc(w.err)+'</div>':'')
     + '</div>';
 }
 function intakeDraftHTML(c, s){
@@ -139,7 +139,7 @@ function intakeDraftHTML(c, s){
          not place is the single most useful thing on this card when tuning. */
       + ['delivery_at','delivery_address','notes'].filter(function(k){ return s[k]; }).map(function(k){
           return '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px">' + esc(k.replace('_',' ')) + ': ' + esc(s[k]) + '</div>'; }).join('')
-      + (s.unplaced ? '<div style="font-size:var(--fs-1);color:#b4453f;margin-top:3px">⚠️ not placed anywhere: ' + esc(s.unplaced) + '</div>' : '')
+      + (s.unplaced ? '<div style="font-size:var(--fs-1);color:var(--disp);margin-top:3px">⚠️ not placed anywhere: ' + esc(s.unplaced) + '</div>' : '')
     + (s.notes?'<div style="margin-top:5px;color:var(--grey)">'+esc(s.notes)+'</div>':'')
     + '</div>';
 }

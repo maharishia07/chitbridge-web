@@ -942,7 +942,7 @@ function cbDefHTML(){
     + '<div class="cbdef-hd">'
     +   '<span style="font-family:\'Space Grotesk\';font-weight:700;font-size:var(--fs-3)">🧱 Definitions</span>'
     +   '<button onclick="openAssist(\'definitions\')" title="Ask the assistant about this screen"'
-    +   ' style="border:1px solid var(--line);background:#fff;color:#3F66A6;border-radius:50%;width:20px;'
+    +   ' style="border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:50%;width:20px;'
     +   'height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button>'
     + '</div>'
     + '<div class="cbdef-lede">Everything a catalogue can be built from. These are the <b>kinds</b> the system '
@@ -1013,7 +1013,7 @@ function cbDefCss(){
     '.cbdef-lede{font-size:13px;color:var(--grey);line-height:1.55;margin-bottom:10px;max-width:66ch}',
     '.cbdef-note-box{font-size:var(--fs-2);line-height:1.55;color:#6b5a36;background:var(--gold-soft);',
     'border:1px solid var(--gold-line);border-radius:9px;padding:10px 12px;margin-bottom:14px;max-width:66ch}',
-    '.cbdef-sec{border:1px solid var(--line);border-radius:12px;margin-bottom:9px;background:#fff;overflow:hidden}',
+    '.cbdef-sec{border:1px solid var(--line);border-radius:12px;margin-bottom:9px;background:var(--card);overflow:hidden}',
     '.cbdef-head{display:flex;align-items:center;gap:9px;padding:11px 13px;cursor:pointer;user-select:none}',
     '.cbdef-head:hover{background:#fafafa}',
     '.cbdef-ico{font-size:var(--fs-4);line-height:1}',
@@ -1029,20 +1029,20 @@ function cbDefCss(){
     '.cbdef-lab{font-size:13px;font-weight:600}',
     '.cbdef-note{font-size:12px;color:var(--grey);margin-top:3px;line-height:1.5;max-width:66ch}',
     '.cbdef-who{font-size:var(--fs-1);color:#9aa3a7;margin-left:8px}',
-    '.cbdef-eg{font-size:12px;margin-top:4px;background:var(--gold-soft,#F7F1E4);border:1px solid var(--gold-line,#E8D9BC);',
+    '.cbdef-eg{font-size:12px;margin-top:4px;background:var(--gold-soft,var(--gold-soft));border:1px solid var(--gold-line,var(--gold-line));',
     'border-radius:6px;padding:4px 9px;display:inline-block;max-width:66ch;font-family:ui-monospace,SFMono-Regular,Consolas,monospace}',
     '.cbdef-eglab{font-weight:700;color:#8a6d1e;font-family:inherit}',
     '.cbdef-link{margin-top:4px}',
-    '.cbdef-link a{font-size:11.5px;color:var(--blue,#3F66A6);text-decoration:none}',
+    '.cbdef-link a{font-size:11.5px;color:var(--blue,var(--blue));text-decoration:none}',
     '.cbdef-link a:hover{text-decoration:underline}',
-    '.cbdef-empty{font-size:var(--fs-2);color:#b4453f;padding:6px 0 2px;max-width:66ch}',
+    '.cbdef-empty{font-size:var(--fs-2);color:var(--disp);padding:6px 0 2px;max-width:66ch}',
     '.cbdef-src{margin-top:10px;font-size:var(--fs-1);color:#9aa3a7}',
     '.cbdef-src code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:var(--fs-1)}',
     '.cbdef-mine{margin-bottom:22px}',
     '.cbdef-shelfhd{font-size:var(--fs-1);text-transform:uppercase;letter-spacing:.06em;color:var(--grey);margin:18px 0 8px;font-weight:700}',
     '.cbdef-head-mine{cursor:default}',
     '.cbdef-head-mine:hover{background:transparent}',
-    '.cbdef-new{margin-left:10px;border:1px solid var(--blue,#3F66A6);background:var(--blue,#3F66A6);color:#fff;border-radius:9px;padding:4px 11px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;flex:none}',
+    '.cbdef-new{margin-left:10px;border:1px solid var(--blue,var(--blue));background:var(--blue,var(--blue));color:#fff;border-radius:9px;padding:4px 11px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;flex:none}',
     '.cbdef-mine-row{display:flex;align-items:center;gap:9px;padding:8px 0;border-bottom:1px dashed #eee9e0;flex-wrap:wrap}',
     '.cbdef-mine-row:last-child{border-bottom:0}',
     '.cbdef-mine-n{font-size:13.5px;font-weight:700}',
@@ -1060,21 +1060,21 @@ function cbDefCss(){
     '.cbdef-mine-row.is-retired{opacity:.82}',
     '.cbdef-ver{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:var(--fs-1);color:#9aa3a7}',
     '.cbdef-acts{margin-left:auto;display:flex;gap:12px}',
-    '.cbdef-acts span{font-size:11.5px;color:var(--blue,#3F66A6);cursor:pointer;font-weight:600}',
+    '.cbdef-acts span{font-size:11.5px;color:var(--blue,var(--blue));cursor:pointer;font-weight:600}',
     '.cbdef-acts span:hover{text-decoration:underline}',
     '.cbdef-none{font-size:var(--fs-2);color:var(--grey);padding:4px 0}',
     '.cbdef-loading{padding:14px 0;font-size:var(--fs-2);color:var(--grey)}',
-    '.cbdef-err{font-size:var(--fs-2);color:#b4453f;background:#fbeceb;border:1px solid #f0c9c6;border-radius:9px;padding:8px 11px;margin-bottom:10px}',
-    '.cbdef-freeze{font-size:12px;line-height:1.5;color:#6b5a36;background:var(--gold-soft,#F7F1E4);border:1px solid var(--gold-line,#E8D9BC);border-radius:9px;padding:8px 11px;margin:8px 0 10px}',
-    '.cbdef-rules{border-left:2px solid var(--gold-line,#E8D9BC);padding-left:11px;margin:10px 0}',
+    '.cbdef-err{font-size:var(--fs-2);color:var(--disp);background:#fbeceb;border:1px solid #f0c9c6;border-radius:9px;padding:8px 11px;margin-bottom:10px}',
+    '.cbdef-freeze{font-size:12px;line-height:1.5;color:#6b5a36;background:var(--gold-soft,var(--gold-soft));border:1px solid var(--gold-line,var(--gold-line));border-radius:9px;padding:8px 11px;margin:8px 0 10px}',
+    '.cbdef-rules{border-left:2px solid var(--gold-line,var(--gold-line));padding-left:11px;margin:10px 0}',
     /* The standards menu. Scrolls rather than wraps to twelve rows — the textarea above it is the record; this is
        a way of filling it without knowing the keys by heart. */
     '.cbdef-stdhint{font-size:11.5px;color:var(--grey);margin:8px 0 5px}',
     '.cbdef-stds{display:flex;flex-wrap:wrap;gap:5px;max-height:132px;overflow-y:auto;padding:2px 1px}',
-    '.cbdef-stdchip{border:1px solid var(--line);background:#fff;border-radius:20px;height:26px;padding:0 10px;'
+    '.cbdef-stdchip{border:1px solid var(--line);background:var(--card);border-radius:20px;height:26px;padding:0 10px;'
       + 'font:inherit;font-size:11.5px;color:var(--ink);cursor:pointer;white-space:nowrap}',
     '.cbdef-stdchip:hover{border-color:#c6ccd4}',
-    '.cbdef-stdchip.on{background:#EDF2F9;border-color:var(--blue,#3F66A6);color:var(--blue,#3F66A6);font-weight:700}'
+    '.cbdef-stdchip.on{background:#EDF2F9;border-color:var(--blue,var(--blue));color:var(--blue,var(--blue));font-weight:700}'
   ].join('');
   (document.head || document.documentElement).appendChild(s);
 }

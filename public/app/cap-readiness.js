@@ -64,12 +64,12 @@ async function _aiDraft(skill, label, ctx, attach){
       ? '<button onclick="_aiAccept()" title="File this document as the evidence backing '+esc(attach.title||attach.doc)+' — a chit on your rail" style="'+bs+';flex:1;border:1px solid #2f8f5b;background:#2f8f5b;color:#fff">✓ Accept &amp; attach as evidence</button>' : '';
     var html = '<style>'+(typeof _AI_MDCSS!=='undefined'?_AI_MDCSS:'')+'</style>'
       + '<div style="font-size:var(--fs-1);color:#6d5bd0;background:#f2effc;border:1px solid #ddd4f5;border-radius:9px;padding:8px 11px;margin-bottom:12px;line-height:1.5">🤖 <b>AI proposal — not evidence.</b> '+esc((r&&r.note)||'Review and confirm before you use it.')+(cost!=null?' <span style="color:var(--grey)">· cost $'+cost+'</span>':'')+'</div>'
-      + '<div class="amddoc" style="background:#fff;border:1px solid var(--line);border-radius:9px;padding:16px 20px;max-height:52vh;overflow:auto">'+(typeof _aiMd==='function'?_aiMd(draft):esc(draft))+'</div>'
+      + '<div class="amddoc" style="background:var(--card);border:1px solid var(--line);border-radius:9px;padding:16px 20px;max-height:52vh;overflow:auto">'+(typeof _aiMd==='function'?_aiMd(draft):esc(draft))+'</div>'
       + '<div style="display:flex;gap:8px;margin-top:13px;flex-wrap:wrap">'
         + acceptBtn
         + '<button onclick="_aiPdf()" style="'+bs+';flex:'+(acceptBtn?'0 0 auto':'1')+';border:1px solid #6d5bd0;background:'+(acceptBtn?'#fff':'#6d5bd0')+';color:'+(acceptBtn?'#6d5bd0':'#fff')+'">⬇ PDF</button>'
-        + '<button onclick="_aiCopy(this)" data-draft="'+esc(encodeURIComponent(draft))+'" style="'+bs+';flex:0 0 auto;border:1px solid var(--line);background:#fff;color:var(--ink)">📋 Copy</button>'
-        + '<button onclick="closeModal()" style="'+bs+';flex:0 0 auto;border:1px solid var(--line);background:#fff;color:var(--ink)">Done</button>'
+        + '<button onclick="_aiCopy(this)" data-draft="'+esc(encodeURIComponent(draft))+'" style="'+bs+';flex:0 0 auto;border:1px solid var(--line);background:var(--card);color:var(--ink)">📋 Copy</button>'
+        + '<button onclick="closeModal()" style="'+bs+';flex:0 0 auto;border:1px solid var(--line);background:var(--card);color:var(--ink)">Done</button>'
       + '</div>';
     var b=document.getElementById('aidbody'); if(b) b.innerHTML=html;
   }catch(e){
@@ -177,7 +177,7 @@ function _rdExpand(it){
     +(it.rung==='verified'&&it.verified_at?_rdKv('Verified at source', String(it.verified_at).slice(0,10)+(it.verified_by?' · '+esc(it.verified_by):'')):'')
     +(it.evidence_ref&&/^[0-9a-f-]{20,}$/i.test(String(it.evidence_ref))?_rdKv('Evidence','document on the rail'):'');
   var ai=L.ai;
-  var partner=L.partner?'<div style="margin-top:11px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:#faf6ee;display:flex;align-items:center;gap:8px"><div style="flex:1;min-width:0"><span style="font-size:var(--fs-1);font-weight:800;color:#8a5e22;text-transform:uppercase;letter-spacing:.05em">Or hand it to a partner</span><div style="font-size:var(--fs-2);margin-top:3px;font-weight:600">'+esc(L.partner)+'</div></div><button onclick="aiSuggestPartner(\''+esc(it.standard)+'\',\''+esc(it.doc)+'\')" title="AI suggests who can carry this + what to ask them" style="flex:0 0 auto;font-size:var(--fs-1);font-weight:700;border:1px solid #6d5bd0;background:#fff;color:#6d5bd0;border-radius:6px;padding:6px 10px;cursor:pointer">✨ Suggest</button></div>':'';
+  var partner=L.partner?'<div style="margin-top:11px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:#faf6ee;display:flex;align-items:center;gap:8px"><div style="flex:1;min-width:0"><span style="font-size:var(--fs-1);font-weight:800;color:#8a5e22;text-transform:uppercase;letter-spacing:.05em">Or hand it to a partner</span><div style="font-size:var(--fs-2);margin-top:3px;font-weight:600">'+esc(L.partner)+'</div></div><button onclick="aiSuggestPartner(\''+esc(it.standard)+'\',\''+esc(it.doc)+'\')" title="AI suggests who can carry this + what to ask them" style="flex:0 0 auto;font-size:var(--fs-1);font-weight:700;border:1px solid #6d5bd0;background:var(--card);color:#6d5bd0;border-radius:6px;padding:6px 10px;cursor:pointer">✨ Suggest</button></div>':'';
   return '<div style="border-top:1px solid var(--line);padding:12px 15px 15px;background:#fbfcfe">'
     +_rdSub('Its lifecycle')+steps
     +_rdSub('Evidence · current version')+'<div>'+ev+'</div>'
@@ -284,7 +284,7 @@ function _rdDestSelectors(){
   var dOpts=[['EU','European Union'],['US','United States'],['GULF','Gulf (GCC)'],['IN','Domestic (India)']];
   var vOpts=[['paint','Chemical / Paint'],['food','Food'],['textiles','Textiles'],['electronics','Electronics'],['pharma','Pharmaceutical'],['automobile','Automobile']];
   var oName=({IN:'India',US:'United States',EU:'European Union',GULF:'Gulf (GCC)'})[origin]||origin;
-  var ss='font-size:12px;font-weight:700;border:1px solid var(--line);border-radius:9px;padding:5px 8px;background:#fff;color:var(--ink)';
+  var ss='font-size:12px;font-weight:700;border:1px solid var(--line);border-radius:9px;padding:5px 8px;background:var(--card);color:var(--ink)';
   var opt=function(list,v){return list.map(function(x){return '<option value="'+x[0]+'"'+(x[0]===v?' selected':'')+'>'+x[1]+'</option>';}).join('');};
   var rd=UI.laneRd, s=(rd&&rd.summary)||{}, cnt=(rd&&!rd.error&&s.total!=null)?('<span style="font-size:11.5px;color:var(--grey)">'+(s.met||0)+' of '+(s.total||0)+' met</span>'):'';
   return '<span style="font-size:11.5px;color:var(--grey)">sector</span><select onchange="setLaneVertical(this.value)" style="'+ss+'">'+opt(vOpts,vert)+'</select>'
@@ -295,11 +295,11 @@ function _rdDestSelectors(){
 function _rdHeader(){
   var tab=UI.rdTab||'certification';
   var tb=function(k,lbl){ return '<div onclick="UI.rdTab=\''+k+'\';if(typeof renderApp===\'function\')renderApp()" style="padding:9px 15px;font-size:var(--fs-2);font-weight:700;cursor:pointer;border-bottom:2px solid '+(tab===k?'var(--blue)':'transparent')+';color:'+(tab===k?'var(--blue)':'var(--grey)')+'">'+lbl+'</div>'; };
-  return '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex:none;padding:0 12px;border-bottom:1px solid var(--line);background:#fff">'
+  return '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex:none;padding:0 12px;border-bottom:1px solid var(--line);background:var(--card)">'
     +'<div style="display:flex;gap:2px">'+tb('certification','Certification')+tb('clearance','Clearance')+tb('commercial','Commercial')+'</div>'
     +'<div style="margin-left:auto;display:flex;align-items:center;gap:8px;padding:6px 0;flex-wrap:wrap">'+(tab!=='commercial'?_rdDestSelectors():'')
       +'<button onclick="aiSuggestStandards()" title="AI suggests the standards you likely need for this sector + market" style="font-size:11.5px;font-weight:700;border:1px solid #6d5bd0;background:#f2effc;color:#6d5bd0;border-radius:9px;padding:6px 10px;cursor:pointer">✨ Standards</button>'
-      +'<button onclick="openSectorMatrix()" title="Common vs sector-specific — the sector × standard matrix" style="font-size:11.5px;font-weight:700;border:1px solid var(--line);background:#fff;color:var(--blue);border-radius:9px;padding:6px 10px;cursor:pointer">🧮 Matrix</button></div>'
+      +'<button onclick="openSectorMatrix()" title="Common vs sector-specific — the sector × standard matrix" style="font-size:11.5px;font-weight:700;border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:9px;padding:6px 10px;cursor:pointer">🧮 Matrix</button></div>'
   +'</div>';
 }
 // STANDARD display names for the matrix (fallback = the key)
@@ -414,7 +414,7 @@ function _rdComTwoPane(){
   var list=UI.commerce.cluster, sel=(UI.comSel!=null && UI.comSel<list.length)?UI.comSel:0; UI.comSel=sel;
   var left=list.map(function(g,i){return _rdComRow(g,i,sel);}).join('');
   return '<div class="rdpanes'+(UI.rdMDetail?' showdetail':'')+'" style="flex:1;display:flex;min-height:0;overflow:hidden">'
-    +'<div id="comlist" class="rdlist" style="width:300px;flex:0 0 auto;border-right:1px solid var(--line);overflow-y:auto;background:#fff;padding:8px 6px 30px">'+left+'</div>'
+    +'<div id="comlist" class="rdlist" style="width:300px;flex:0 0 auto;border-right:1px solid var(--line);overflow-y:auto;background:var(--card);padding:8px 6px 30px">'+left+'</div>'
     +'<div class="rddetail" style="flex:1;min-width:0;overflow-y:auto;background:#fbfcfe">'
       +'<button class="dback" style="margin:10px 0 0 14px" onclick="rdBack()">‹ Back</button>'+_rdComDetail(list[sel])+'</div></div>';
 }
@@ -425,7 +425,7 @@ function _rdTwoPane(list){
   var sel=list.filter(function(i){return i.standard+'|'+i.doc===UI.rdSel;})[0];
   var left=list.map(function(i){return _rdRow(i,UI.rdSel);}).join('');
   return '<div class="rdpanes'+(UI.rdMDetail?' showdetail':'')+'" style="flex:1;display:flex;min-height:0;overflow:hidden">'
-    +'<div id="rdlist" class="rdlist" style="width:300px;flex:0 0 auto;border-right:1px solid var(--line);overflow-y:auto;background:#fff;padding:8px 6px 30px">'+left+'</div>'
+    +'<div id="rdlist" class="rdlist" style="width:300px;flex:0 0 auto;border-right:1px solid var(--line);overflow-y:auto;background:var(--card);padding:8px 6px 30px">'+left+'</div>'
     +'<div id="rddetail" class="rddetail" style="flex:1;min-width:0;overflow-y:auto;background:#fbfcfe">'
       +'<button class="dback" style="margin:10px 0 0 14px" onclick="rdBack()">‹ Back</button>'+_rdDetailPane(sel)+'</div></div>';
 }
