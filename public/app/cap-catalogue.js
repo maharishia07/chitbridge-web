@@ -543,7 +543,7 @@ function cwAddUnit(){ var w = UI.cw; var u = (val('cw_newunit') || '').trim(); i
 function _cwLoggedIn(){ return typeof SESSION !== 'undefined' && !!SESSION.token; }
 function _cwInit(){
   if (!UI.cw) UI.cw = { step: 1, vertical: '', source: '', built: null, chosen: {}, erp: {}, manual: {}, prices: {}, itemUnits: {}, method: '', tax: { label: 'GST', rate: '' } };
-  if (UI._cwSources === undefined) { UI._cwSources = null; if (_cwLoggedIn()) api('catalogueSources').then(function(r){ UI._cwSources = (Array.isArray(r) ? r : (r && r.data) || []); renderApp(); }).catch(function(){ UI._cwSources = []; }); else UI._cwSources = []; }
+  if (UI._cwSources === undefined) { UI._cwSources = null; if (_cwLoggedIn()) api('catalogueSources').then(function(r){ UI._cwSources = (Array.isArray(r) ? r : (r && r.data) || []); bgRenderApp(); }).catch(function(){ UI._cwSources = []; }); else UI._cwSources = []; }
 }
 // a small field LIBRARY, grouped in sections — the AI suggests from these per purpose (stub for the real AI)
 var CW_FIELD_LIB = {
