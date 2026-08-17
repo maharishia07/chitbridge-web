@@ -201,6 +201,72 @@ function catsetRegistry(keys){
  * carrying real information and are left exactly as they are. Inventing new copy for the other three would be a
  * content change wearing a layout change's clothes.
  */
+/* ═══ UNITS OF MEASURE — grouped, aligned, and SELECTABLE ═══════════════════════════════════════════════════
+ * Athi, 2026-08-17: *"what left kg is and what right kg is, your just repeated, i am not sure of the meaning.
+ * so declaration and presentation?"* → *"can be segregated based on weight, liquid, count"* → *"here we have to
+ * give selection as well, so what has been selected will be used in the catalogue."*
+ *
+ * ⚠️ HE WAS RIGHT THAT IT MEANT NOTHING. A unit was a bare string and this rendered `{code:u, label:u}` — the
+ * SAME value in two columns. There was no declaration/presentation split to explain; there was one value shown
+ * twice. Now the columns are genuinely different things:
+ *     CODE   `kg`         stored on the line, travels on the chit, never shown to a customer
+ *     UNIT   `Kilogram`   what a person reads
+ *     ALSO   `கிலோ · kilo` spellings that fold onto this unit when a message arrives (lib/units.js)
+ *
+ * ⚠️ GROUPED BY WHAT THEY MEASURE, and the last group is the point: within Weight or Volume the ratios are
+ * universal, within Pack they are not — a box is only so many kg because THIS seller says so. That is the same
+ * line consolidate.js draws when it refuses to invent a conversion.
+ */
+var _UNITSEL = null;   // the entity's chosen units, as last read
+
+function catsetUnitsHTML(){
+  var M = (typeof CBCatalogue !== 'undefined') ? CBCatalogue : null;
+  if (!M || !M.UNIT_KINDS) return catsetCard('⚖️ Units of measure', '<div class="catset-none">not loaded</div>');
+  if (_UNITSEL === null) { catsetUnitsLoad(); return catsetCard('⚖️ Units of measure', '<div class="catset-load">reading…</div>'); }
+
+  var sel = _UNITSEL, aliases = M.UNIT_ALIASES || {}, names = M.UNIT_NAMES || {};
+  var groups = M.UNIT_KINDS.map(function(g){
+    var rows = g.units.map(function(u){
+      var on = sel.indexOf(u) >= 0;
+      var al = (aliases[u] || []).slice(0, 4).join(' · ');
+      return '<label class="uom-row' + (on ? '' : ' off') + '">'
+        + '<input type="checkbox" ' + (on ? 'checked' : '') + ' onchange="catsetUnitToggle(\'' + esc(u) + '\',this.checked)">'
+        + '<code>' + esc(u) + '</code>'
+        + '<span class="un">' + esc(names[u] || u) + '</span>'
+        + '<span class="ua">' + (al ? esc(al) + ((aliases[u] || []).length > 4 ? ' …' : '') : '—') + '</span>'
+        + '</label>';
+    }).join('');
+    return '<div class="uom-g"><div class="uom-gh">' + esc(g.label) + '</div>' + rows + '</div>';
+  }).join('');
+
+  var n = sel.length, total = M.UNIT_KINDS.reduce(function(a, g){ return a + g.units.length; }, 0);
+  return catsetCard('⚖️ Units of measure',
+    '<div class="catset-regb">What a quantity is counted in. <b>Tick the ones you trade in</b> — the product form '
+    + 'and the catalogue wizard offer only those. <b>' + n + ' of ' + total + '</b> selected.</div>'
+    + '<div class="uom-hd"><span></span><code>code</code><span class="un">unit</span><span class="ua">also accepted</span></div>'
+    + groups
+    /* ⚠️ Say what deselecting does NOT do. Someone reasonably fears that unticking `barrel` breaks the products
+       already priced in barrels; saying so up front is cheaper than them not daring to touch it. */
+    + '<div class="catset-src">Unticking stops a unit being <b>offered</b>. Products already saved in it keep it — '
+    + 'nothing is rewritten. Spellings under <i>also accepted</i> fold onto the unit when a message arrives.</div>');
+}
+async function catsetUnitsLoad(){
+  try { var f = await api('policyGet'); _UNITSEL = (f && f.flags && f.flags.units) || []; }
+  catch (e) { _UNITSEL = []; }
+  catsetPaintDetail();
+}
+async function catsetUnitToggle(u, on){
+  var next = (_UNITSEL || []).filter(function(x){ return x !== u; });
+  if (on) next.push(u);
+  /* ⚠️ REFUSE THE EMPTY SET HERE TOO, not only on the server. The server already rejects it, but a silent
+     server-side rejection would leave the box unticked on screen and the value unchanged underneath — the two
+     would disagree and only one of them is real. */
+  if (!next.length) { if (typeof toast === 'function') toast('Keep at least one unit — the product form needs something to offer.'); catsetPaintDetail(); return; }
+  _UNITSEL = next;
+  catsetPaintDetail();
+  try { await api('policySet', { body: { units: next } }); }
+  catch (e) { if (typeof toast === 'function') toast('Could not save that — ' + ((e && e.message) || 'try again')); catsetUnitsLoad(); }
+}
 function catsetCard(title, body, actions){
   var sec = CATSET_SECS.filter(function(x){ return x.key === catsetSec(); })[0];
   var dupe = sec && String(sec.q || '').trim() === String(title || '').trim();
@@ -219,7 +285,8 @@ function catsetBody(k){
       + 'mechanisms, which is why categories live on their own screen.</div>',
       '<button class="composebtn pri" data-testid="catset-columns" onclick="startFromStandardSet()">📐 Add a standard set</button>')
     /* Units and datatypes describe what a column can BE — so they sit under the control that adds columns. */
-    + catsetRegistry(['unit', 'datatype']);
+    + catsetUnitsHTML()
+    + catsetRegistry(['datatype']);
   }
   if (k === 'pricing') {
     return catsetCard('How a price is arrived at, and where it came from',
@@ -387,6 +454,21 @@ function catsetCss(){
        same information at a glance. ⚠️ Applied only when there IS nothing else to show: the moment a row has a
        note (datatypes: "expiry, harvest") the rows are right, because then the label needs something aligned
        beside it. */
+    /* ⚠️ ONE GRID TEMPLATE FOR THE HEADER AND EVERY ROW — that is what makes the columns actually line up.
+       Aligning them by padding inside separate flex rows is what produced the ragged "kg   KG" look. */
+    '.uom-hd,.uom-row{display:grid;grid-template-columns:22px 76px 128px minmax(0,1fr);align-items:center;gap:10px;padding:5px 13px}',
+    '.uom-hd{font-size:11px;color:var(--grey);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--line)}',
+    '.uom-hd code,.uom-hd .un,.uom-hd .ua{font-size:11px;color:var(--grey)}',
+    '.uom-row{border-bottom:1px solid var(--line);cursor:pointer;font-size:var(--fs-2)}',
+    '.uom-row:hover{background:var(--paper)}',
+    '.uom-row code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11.5px;color:var(--ink)}',
+    '.uom-row .un{color:var(--ink)}',
+    '.uom-row .ua{color:var(--grey);font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+    /* ⚠️ Unticked stays READABLE, not greyed to the floor — you have to be able to read a unit to decide you
+       want it back, and a list where half the rows are illegible is a list you cannot choose from. */
+    '.uom-row.off code,.uom-row.off .un{color:var(--grey)}',
+    '.uom-g{margin-top:9px}',
+    '.uom-gh{font-size:11px;font-weight:800;color:var(--grey);text-transform:uppercase;letter-spacing:.05em;padding:4px 13px 3px;background:var(--paper);border-bottom:1px solid var(--line)}',
     '.catset-regrows.chips{display:flex;flex-direction:row;flex-wrap:wrap;gap:6px;background:none;border:0;padding:2px 13px 4px}',
     '.catset-regrows.chips .catset-regrow{background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:3px 11px;font-size:11.5px}',
     '.catset-regsrc{font-size:var(--fs-1);color:var(--grey);padding:7px 13px}',

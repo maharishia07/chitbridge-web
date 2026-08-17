@@ -179,6 +179,51 @@
    * ⚠️ OBSERVED, NOT INVENTED — every spelling below was seen on real captures. Grow it from what arrives.
    * ⚠️ MIRRORED IN chitbridge-api/lib/units.js, which is where totalling reads it. Change both or neither.
    */
+  /**
+   * ⭐ THE HUMAN NAME OF A UNIT — the PRESENTATION half (Athi, 2026-08-17: *"what left kg is and what right kg
+   * is… so declaration and presentation?"*).
+   *
+   * ⚠️ HE WAS RIGHT THAT IT MEANT NOTHING. Until now a unit was a bare string, and the setup screen rendered it
+   * as `{code:u, label:u}` — the SAME value printed in two columns, which invites exactly that question and has
+   * no answer. There was no declaration/presentation split; there was one value shown twice.
+   *
+   * Now there genuinely are two things:
+   *   CODE  `kg`        what is stored on a line and travels on a chit — never shown to a customer
+   *   NAME  `Kilogram`  what a person reads
+   * ⚠️ The CODE stays the identity. Renaming here changes what is displayed and nothing that is stored, which is
+   * the same rule categories follow — names are labels, ids are identity.
+   */
+  var UNIT_NAMES = {
+    kg: 'Kilogram', gram: 'Gram', litre: 'Litre', ml: 'Millilitre', piece: 'Piece', count: 'Count',
+    unit: 'Unit', pack: 'Pack', box: 'Box', dozen: 'Dozen', tonne: 'Tonne', barrel: 'Barrel',
+    metre: 'Metre', sqft: 'Square foot', roll: 'Roll', bunch: 'Bunch',
+  };
+  /**
+   * ⭐⭐ WHAT KIND OF QUANTITY A UNIT MEASURES (Athi, 2026-08-17: *"can be segregated based on weight, liquid,
+   * count and so on, area and so on"*). Ordered — this is the display order, not a lookup.
+   *
+   * ⚠️ THIS IS NOT JUST TIDINESS, and the last group is why. Within `weight` or `volume` the ratios are UNIVERSAL
+   * (a kilogram is a thousand grams everywhere, for everyone). Within `pack` they are not: a box is only so many
+   * kilograms because THIS seller says so, and the next seller's box is a different weight. That is exactly the
+   * line lib/consolidate.js draws when it refuses to invent a conversion — so grouping the units this way makes
+   * a rule that already governs the totals visible on the screen where units are declared.
+   *
+   * ⚠️ Two units can never be added across groups at all: 5 kg + 2 litre is not a quantity, it is two quantities.
+   */
+  var UNIT_KINDS = [
+    { k: 'weight', label: 'Weight',  units: ['kg', 'gram', 'tonne'] },
+    { k: 'volume', label: 'Volume',  units: ['litre', 'ml', 'barrel'] },
+    { k: 'length', label: 'Length',  units: ['metre'] },
+    { k: 'area',   label: 'Area',    units: ['sqft'] },
+    { k: 'count',  label: 'Count',   units: ['piece', 'count', 'unit', 'dozen'] },
+    /* ⚠️ A GROUPING WHOSE SIZE THE SELLER DEFINES — the one group with no universal ratio to anything. */
+    { k: 'pack',   label: 'Pack',    units: ['pack', 'box', 'bunch', 'roll'] },
+  ];
+  /** The kind a unit belongs to, or null. Used to group the list and to say what may never be added together. */
+  function unitKind(u) {
+    for (var i = 0; i < UNIT_KINDS.length; i++) if (UNIT_KINDS[i].units.indexOf(u) >= 0) return UNIT_KINDS[i];
+    return null;
+  }
   var UNIT_ALIASES = {
     kg:    ['கிலோ', 'கிலோகிராம்', 'kilo', 'kilos', 'kilogram', 'kilograms', 'kgs', 'kilogramme'],
     gram:  ['கிராம்', 'grams', 'gm', 'gms', 'gramme'],
@@ -630,7 +675,7 @@
     LEGS: LEGS, TYPES: TYPES, viaFor: viaFor, leg: leg,
     STD_SCHEMES: STD_SCHEMES, PRICE_BASIS: PRICE_BASIS, PRICE_BY: PRICE_BY, PRICE_ORIGIN: PRICE_ORIGIN,
     priceProvenance: priceProvenance, priceIsCheckable: priceIsCheckable,
-    DATATYPES: DATATYPES, METHODS: METHODS, FACETS: FACETS, PRICING_MODELS: PRICING_MODELS, UNITS: UNITS, UNIT_ALIASES: UNIT_ALIASES, METHOD_MODELS: METHOD_MODELS, modelsForMethod: modelsForMethod, orphanModels: orphanModels, PALETTE: PALETTE,
+    DATATYPES: DATATYPES, METHODS: METHODS, FACETS: FACETS, PRICING_MODELS: PRICING_MODELS, UNITS: UNITS, UNIT_ALIASES: UNIT_ALIASES, UNIT_NAMES: UNIT_NAMES, METHOD_MODELS: METHOD_MODELS, modelsForMethod: modelsForMethod, orphanModels: orphanModels, PALETTE: PALETTE,
     ensure: ensure, toBase: toBase, resolvePrice: resolvePrice, routeChain: routeChain,
     deriveComputeJob: deriveComputeJob, canonicalInputs: canonicalInputs, validate: validate,
     toJSONSchema: toJSONSchema,
