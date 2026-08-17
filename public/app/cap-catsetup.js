@@ -163,10 +163,27 @@ function catsetRegistry(keys){
   if (!secs.length) return '';
   return secs.map(function(s){
     var rows = s.rows || [];
+    /**
+     * ⭐ TICK WHAT THIS ENTITY ACTUALLY USES (Athi, 2026-08-17: *"also the check box wherever required, so those
+     * only can be used in the catalogue"*). The registry in code is the MAXIMUM; the ticks are this entity's
+     * slice, and every picker downstream offers only the slice.
+     *
+     * ⚠️ ONLY WHERE A CHOICE CAN MEAN SOMETHING — see CATSET_SELECTABLE. `method` is ONE per catalogue, so a set
+     * would imply you can have several; `ordermodel` is already narrowed by the selling method (backlog 18) and a
+     * second, independent narrowing could disagree with the first with nothing on screen to say which won. A
+     * checkbox that cannot mean anything is worse than no checkbox.
+     */
+    var flag = CATSET_SELECTABLE[s.key];
+    var sel = flag ? _CATSEL[flag] : null;
+    if (flag && sel === undefined) { catsetSelLoad(); }
+    var picked = Array.isArray(sel) ? sel : null;
+    var n = picked ? picked.length : rows.length;
     return '<div class="catset-reg">'
       + '<div class="catset-regh">' + s.icon + ' ' + esc(s.title)
-      +   '<span class="catset-regn">' + rows.length + '</span></div>'
-      + '<div class="catset-regb">' + esc(s.blurb) + '</div>'
+      +   '<span class="catset-regn">' + (picked ? n + ' / ' + rows.length : rows.length) + '</span></div>'
+      + '<div class="catset-regb">' + esc(s.blurb)
+      +   (flag ? ' <b>Tick the ones you use</b> — only those are offered when you build a catalogue.' : '')
+      + '</div>'
       + (rows.length
           /* ⚠️ DO NOT PRINT THE CODE TWICE. Some registries have no separate code — `UNITS` maps to
              `{code:u, label:u}` because a unit IS its own name — so every row rendered "kg kg", "gram gram",
@@ -186,12 +203,16 @@ function catsetRegistry(keys){
               return !r.note && String(r.code || '') === String(r.label || '');
             }) ? ' chips' : '') + '">' + rows.map(function(r){
               var same = String(r.code || '') === String(r.label || '');
-              return '<div class="catset-regrow' + (same ? ' nocode' : '') + '">'
+              var on = picked ? picked.indexOf(String(r.code)) >= 0 : true;
+              var tag = flag ? 'label' : 'div';
+              return '<' + tag + ' class="catset-regrow' + (same ? ' nocode' : '') + (flag ? ' pick' : '') + (on ? '' : ' off') + '">'
                 + '<div class="rr1">'
+                +   (flag ? '<input type="checkbox" ' + (on ? 'checked' : '')
+                          + ' onchange="catsetSelToggle(\'' + esc(flag) + '\',\'' + esc(r.code) + '\',this.checked)">' : '')
                 +   (same ? '' : '<code>' + esc(r.code) + '</code>')
                 +   '<span class="rl">' + esc(r.label || r.code || '') + '</span>'
                 + '</div>'
-                + (r.note ? '<div class="rn">' + esc(r.note) + '</div>' : '') + '</div>';
+                + (r.note ? '<div class="rn">' + esc(r.note) + '</div>' : '') + '</' + tag + '>';
             }).join('') + '</div>'
           : '<div class="catset-none">not loaded</div>')
       /* Naming the source file is the honest half: it says this list is READ, not authored here, so nobody goes
@@ -228,7 +249,100 @@ function catsetRegistry(keys){
  * universal, within Pack they are not — a box is only so many kg because THIS seller says so. That is the same
  * line consolidate.js draws when it refuses to invent a conversion.
  */
+/**
+ * ⚠️ WHICH REGISTRIES CAN BE NARROWED, and why the two absentees are absent.
+ *   `method`     — ONE selling method per catalogue. A set implies several; you cannot have several.
+ *   `ordermodel` — already narrowed by the selling method (METHOD_MODELS, backlog 18). A second, independent
+ *                  narrowing could disagree with the first, and nothing on screen would say which one won.
+ * registry key → the policy flag that holds this entity's slice.
+ */
+var CATSET_SELECTABLE = {
+  datatype:    'datatypes',
+  pricing:     'pricing_models',
+  priceorigin: 'price_origins',
+  offer:       'offer_kinds',
+  facet:       'facets',
+};
+var _CATSEL = {};      // flag → chosen codes, as last read (undefined = not read yet)
+var _catselReq = null;
+/* ⚠️ ONE READ FOR EVERY REGISTRY ON THE SCREEN. Five registries asking for the same policy document five times
+   would be five round trips for one answer, and they would arrive out of order. */
+async function catsetSelLoad(force){
+  if (_catselReq && !force) return _catselReq;
+  _catselReq = api('policyGet').then(function(f){
+    var flags = (f && f.flags) || {};
+    Object.keys(CATSET_SELECTABLE).forEach(function(k){
+      var fl = CATSET_SELECTABLE[k]; _CATSEL[fl] = Array.isArray(flags[fl]) ? flags[fl] : [];
+    });
+    _catselReq = null; catsetPaintDetail();
+  }).catch(function(){ _catselReq = null; });
+  return _catselReq;
+}
+async function catsetSelToggle(flag, code, on){
+  var cur = _CATSEL[flag] || [];
+  var next = cur.filter(function(x){ return x !== code; });
+  if (on) next.push(code);
+  /* ⚠️ Same refusal as units, and for the same reason: an empty set is what an accidental clear-all looks like,
+     and honouring it would empty a picker in the product form with nothing on screen to explain why. */
+  if (!next.length) { if (typeof toast === 'function') toast('Keep at least one — the catalogue needs something to offer.'); catsetPaintDetail(); return; }
+  _CATSEL[flag] = next;
+  catsetPaintDetail();
+  var body = {}; body[flag] = next;
+  try { await api('policySet', { body: body }); }
+  catch (e) { if (typeof toast === 'function') toast('Could not save that — ' + ((e && e.message) || 'try again')); catsetSelLoad(true); }
+}
+
 var _UNITSEL = null;   // the entity's chosen units, as last read
+var _LANGSEL = ['en'];  // the entity's languages — a READING preference, never a parsing rule
+
+/**
+ * ⭐ THE LANGUAGE BAR (Athi, 2026-08-17: *"language picker comes from the entity settings, the same can be shown
+ * here and modify as well"*). Reads the entity's `languages` policy flag and lets it be changed in place, so the
+ * setting has one home and two doors.
+ *
+ * ⚠️⚠️ IT CHANGES WHAT IS LISTED, NOT WHAT IS UNDERSTOOD — said on screen, because the opposite is exactly what
+ * a reasonable person would assume. Every spelling in every language still folds; a Tamil message resolves
+ * whether or not Tamil is ticked here.
+ * ⚠️ English is not removable. It is the fallback every list falls back to, and a units screen with no readable
+ * column at all is not a state worth being able to reach.
+ */
+function catsetLangBar(){
+  var M = (typeof CBCatalogue !== 'undefined') ? CBCatalogue : null;
+  var langs = (M && M.UNIT_LANGS) || [];
+  if (!langs.length) return '';
+  var have = {};
+  /* Mark the languages we actually hold spellings for, so an empty pick is explained rather than puzzling. */
+  Object.keys((M && M.UNIT_ALIASES) || {}).forEach(function(u){
+    Object.keys(M.UNIT_ALIASES[u] || {}).forEach(function(lg){ if ((M.UNIT_ALIASES[u][lg] || []).length) have[lg] = 1; });
+  });
+  var chip = function(l){
+    var on = _LANGSEL.indexOf(l.code) >= 0, fixed = l.code === 'en';
+    return '<span class="lang-chip' + (on ? ' on' : '') + (fixed ? ' fixed' : '') + '"'
+      + (fixed ? ' title="English always shows — it is what every list falls back to"'
+               : ' onclick="catsetLangToggle(\'' + esc(l.code) + '\')"')
+      + '>' + (on ? '✓ ' : '') + esc(l.label) + (have[l.code] ? '' : '<span class="lang-none">no words yet</span>') + '</span>';
+  };
+  var groups = ['Common', 'Indian', 'Foreign'].map(function(g){
+    var ls = langs.filter(function(l){ return l.group === g; });
+    if (!ls.length) return '';
+    return '<div class="lang-g"><span class="lang-gh">' + esc(g) + '</span>' + ls.map(chip).join('') + '</div>';
+  }).join('');
+  return '<div class="lang-bar">' + groups
+    + '<div class="lang-note">⚠️ This changes what is <b>listed</b>, not what is <b>understood</b> — every '
+    + 'spelling in every language still folds onto its unit when a message arrives. '
+    + '<b>no words yet</b> means nobody has sent one in that language; the list grows from real messages, '
+    + 'not from a dictionary.</div></div>';
+}
+async function catsetLangToggle(code){
+  if (code === 'en') return;                        // the fallback is not removable — see above
+  var next = _LANGSEL.filter(function(x){ return x !== code; });
+  if (next.length === _LANGSEL.length) next.push(code);
+  if (next.indexOf('en') < 0) next.unshift('en');
+  _LANGSEL = next;
+  catsetPaintDetail();
+  try { await api('policySet', { body: { languages: next } }); }
+  catch (e) { if (typeof toast === 'function') toast('Could not save the language choice — ' + ((e && e.message) || 'try again')); }
+}
 
 function catsetUnitsHTML(){
   var M = (typeof CBCatalogue !== 'undefined') ? CBCatalogue : null;
@@ -242,14 +356,18 @@ function catsetUnitsHTML(){
       /* ⭐ THE SPELLINGS GO ON THEIR OWN LINE (Athi: *"each line item below show what the enumerations are"*).
          Squeezed into a right-hand column they were truncated at four and ellipsed — which hid the very thing
          worth seeing, that கிலோ and kilo and kgs all mean this row. On its own line the whole set fits. */
-      var al = (aliases[u] || []);
+      /* ⚠️ ONLY THE LANGUAGES THIS ENTITY WORKS IN ARE LISTED — but every language is still UNDERSTOOD. The
+         picker is a reading aid; lib/units.js folds all of them regardless. A screen set to Hindi that stopped
+         `கிலோ` resolving would be a parsing rule wearing a preference's clothes. */
+      var by = aliases[u] || {};
+      var shown = _LANGSEL.reduce(function(a, lg){ return a.concat((by[lg] || []).map(function(w){ return { w: w, lg: lg }; })); }, []);
       return '<label class="uom-row' + (on ? '' : ' off') + '">'
         + '<div class="ur1">'
         +   '<input type="checkbox" ' + (on ? 'checked' : '') + ' onchange="catsetUnitToggle(\'' + esc(u) + '\',this.checked)">'
         +   '<code>' + esc(u) + '</code>'
         +   '<span class="un">' + esc(names[u] || u) + '</span>'
         + '</div>'
-        + (al.length ? '<div class="ua">' + al.map(function(a){ return esc(a); }).join('<span class="sep">·</span>') + '</div>' : '')
+        + (shown.length ? '<div class="ua">' + shown.map(function(x){ return esc(x.w); }).join('<span class="sep">·</span>') + '</div>' : '')
         + '</label>';
     }).join('');
     return '<div class="uom-g"><div class="uom-gh">' + esc(g.label) + '</div>' + rows + '</div>';
@@ -259,6 +377,7 @@ function catsetUnitsHTML(){
   return catsetCard('⚖️ Units of measure',
     '<div class="catset-regb">What a quantity is counted in. <b>Tick the ones you trade in</b> — the product form '
     + 'and the catalogue wizard offer only those. <b>' + n + ' of ' + total + '</b> selected.</div>'
+    + catsetLangBar()
     + '<div class="uom-hd"><span></span><code>code</code><span class="un">unit</span></div>'
     + groups
     /* ⚠️ Say what deselecting does NOT do. Someone reasonably fears that unticking `barrel` breaks the products
@@ -267,7 +386,12 @@ function catsetUnitsHTML(){
     + 'nothing is rewritten. Spellings under <i>also accepted</i> fold onto the unit when a message arrives.</div>');
 }
 async function catsetUnitsLoad(){
-  try { var f = await api('policyGet'); _UNITSEL = (f && f.flags && f.flags.units) || []; }
+  try { var f = await api('policyGet'); var fl = (f && f.flags) || {};
+        _UNITSEL = fl.units || [];
+        /* ⚠️ English is forced in even if the stored set somehow lacks it — see catsetLangBar(). */
+        var lg = Array.isArray(fl.languages) && fl.languages.length ? fl.languages.slice() : ['en'];
+        if (lg.indexOf('en') < 0) lg.unshift('en');
+        _LANGSEL = lg; }
   catch (e) { _UNITSEL = []; }
   catsetPaintDetail();
 }
@@ -464,6 +588,15 @@ function catsetCss(){
     '.catset-regrow{display:block;background:#fff;padding:7px 13px;font-size:var(--fs-2)}',
     '.catset-regrow .rr1{display:grid;grid-template-columns:112px minmax(0,1fr);align-items:baseline;gap:10px}',
     '.catset-regrow.nocode .rr1{grid-template-columns:minmax(0,1fr)}',
+    /* A tickable registry gains a checkbox column; the note indents past it so both lines share one left edge. */
+    '.catset-regrow.pick{display:block;cursor:pointer}',
+    '.catset-regrow.pick .rr1{grid-template-columns:22px 112px minmax(0,1fr);align-items:center}',
+    '.catset-regrow.pick.nocode .rr1{grid-template-columns:22px minmax(0,1fr)}',
+    '.catset-regrow.pick .rn{padding-left:144px}',
+    '.catset-regrow.pick.nocode .rn{padding-left:32px}',
+    '.catset-regrow.pick:hover{background:var(--paper)}',
+    /* ⚠️ Unticked stays READABLE — you have to be able to read a thing to decide you want it back. */
+    '.catset-regrow.off code,.catset-regrow.off .rl{color:var(--grey)}',
     '.catset-regrow code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11.5px;color:var(--ink)}',
     '.catset-regrow .rl{color:var(--ink)}',
     /* Indented to the same edge as the name above it, and in the shared second-line colour. */
@@ -492,6 +625,16 @@ function catsetCss(){
     /* The spellings, indented to sit under the NAME so the eye reads down one edge. */
     '.uom-row .ua{margin-top:3px;padding-left:108px;color:var(--note);font-size:11.5px;line-height:1.5}',
     '.uom-row .ua .sep{color:var(--line);padding:0 5px}',
+    '.lang-bar{border:1px solid var(--line);border-radius:9px;padding:8px 10px;margin:2px 0 10px;background:var(--paper)}',
+    '.lang-g{display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin-bottom:5px}',
+    '.lang-gh{font-size:10.5px;font-weight:800;color:var(--grey);text-transform:uppercase;letter-spacing:.05em;min-width:62px}',
+    '.lang-chip{font-size:11.5px;border:1px solid var(--line);border-radius:999px;padding:2px 10px;background:#fff;cursor:pointer;white-space:nowrap}',
+    '.lang-chip:hover{border-color:var(--blue)}',
+    '.lang-chip.on{background:#E3EDF8;border-color:var(--blue);color:var(--blue);font-weight:700}',
+    /* ⚠️ English reads as fixed, not disabled — a greyed chip invites clicking to find out why. */
+    '.lang-chip.fixed{cursor:default;opacity:.9}',
+    '.lang-chip .lang-none{color:var(--grey);font-size:10px;margin-left:5px;font-weight:400}',
+    '.lang-note{font-size:11px;color:var(--note);line-height:1.5;margin-top:4px}',
     /* ⚠️ Unticked stays READABLE, not greyed to the floor — you have to be able to read a unit to decide you
        want it back, and a list where half the rows are illegible is a list you cannot choose from. */
     '.uom-row.off code,.uom-row.off .un{color:var(--grey)}',
