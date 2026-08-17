@@ -12,28 +12,44 @@ const { mintEntity } = require('../fixtures');
 test.describe('i18n · the rail speaks the chosen language', () => {
   test.describe.configure({ timeout: 150_000 });
 
-  test('[I18N-01] every registry entry has a key that the app actually asks for', async ({ page }) => {
+  /**
+   * ⚠️ THIS ASSERTS THE DIRECTION THAT SHOWS ON SCREEN, and my first version had it backwards.
+   *
+   * I first failed the run when a registry key had no rail item — and it flagged `nav.disputes`, which is a
+   * CONDITIONALLY RENDERED item, not a dead key. A rail is not a fixed list: entries appear with a capability,
+   * a role or a folder, so "every translation must have a visible item" is false by construction and the test
+   * was reporting its own wrong premise as a defect.
+   *
+   * The failure a user actually meets is the opposite one: an item IS on screen and has no translation, so it
+   * stays English in the middle of a Tamil rail. Orphans are only tidiness — reported, never failed, because a
+   * red build for an unused string teaches people to ignore the colour.
+   */
+  test('[I18N-01] nothing on the rail is left untranslated in a registered language', async ({ page }) => {
     await mintEntity(page);
     const report = await page.evaluate(() => {
       const reg = window.CBI18N || {};
       const langs = Object.keys(reg).filter((l) => l !== 'en');
-      const enKeys = new Set();
-      // the rail is the wired surface: every item asks for nav.<key>
-      document.querySelectorAll('.menu [data-testid^="nav-"]').forEach((b) => {
-        enKeys.add('nav.' + b.getAttribute('data-testid').replace(/^nav-/, ''));
-      });
-      const orphans = {};
+      const railKeys = [...document.querySelectorAll('.menu [data-testid^="nav-"]')]
+        .map((b) => 'nav.' + b.getAttribute('data-testid').replace(/^nav-/, ''))
+        // sub-items (a folder, "new folder") are data, not chrome — they are the user's own words
+        .filter((k) => !/^nav\.newfolder/.test(k));
+      const missing = {}, orphans = {};
       langs.forEach((l) => {
-        const extra = Object.keys(reg[l]).filter((k) => k.startsWith('nav.') && !enKeys.has(k));
+        const gaps = railKeys.filter((k) => !reg[l][k]);
+        if (gaps.length) missing[l] = gaps;
+        const extra = Object.keys(reg[l]).filter((k) => k.startsWith('nav.') && railKeys.indexOf(k) < 0);
         if (extra.length) orphans[l] = extra;
       });
-      return { langs, railKeys: [...enKeys], orphans };
+      return { langs, railKeys, missing, orphans };
     });
     expect(report.langs.length, 'more than English must be registered').toBeGreaterThan(0);
-    /* ⚠️ AN ORPHAN IS A TRANSLATION NOBODY WILL EVER SEE — a key that no longer matches any rail item, usually
-       because the item was renamed. It costs nothing at runtime and quietly rots the registry, so it is worth
-       naming while it is one line rather than fifty. */
-    expect(report.orphans, 'every nav.* translation must correspond to a rail item that exists').toEqual({});
+    expect(report.railKeys.length, 'the rail must have rendered').toBeGreaterThan(4);
+    if (Object.keys(report.orphans).length) {
+      console.log('NOTE · translations with no rail item on this account (usually conditional items): '
+        + JSON.stringify(report.orphans));
+    }
+    expect(report.missing, 'every rail item on screen must have a translation in each registered language')
+      .toEqual({});
   });
 
   test('[I18N-02] ⭐ switching to Tamil changes the rail, and back to English restores it', async ({ page }) => {
