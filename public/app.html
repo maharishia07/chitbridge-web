@@ -7293,7 +7293,10 @@ function applyPrefs(){
      a preference of the person at the screen, not of the session. */
   try{ themeApply(themeGet()); }catch(_){ }
   UI.vp=lsGet('cb_vp',(window.innerWidth<=820?'mob':'lap'));
-  try{ document.body.classList.toggle('vpmob', UI.vp==='mob'); }catch(_){}UI.lw=parseInt(lsGet('cb_lw',340),10)||340;UI.lh=parseInt(lsGet('cb_lh',300),10)||300;try{UI.lhFold=(localStorage.getItem('cb_lhfold')==='1');}catch(_){UI.lhFold=false;}try{UI.voice=(localStorage.getItem('cb_voice')==='1');}catch(_){UI.voice=false;}}
+  try{ document.body.classList.toggle('vpmob', UI.vp==='mob'); }catch(_){}UI.lw=parseInt(lsGet('cb_lw',340),10)||340;
+  /* Each two-pane FAMILY restores its own width — see lwKey(). A menu screen and a data list are not the same
+     kind of pane and must not share a number; 320 is the menu default MIS and Profile already use. */
+  UI.misLw=parseInt(lsGet('cb_misLw',320),10)||320; UI.catsetLw=parseInt(lsGet('cb_catsetLw',320),10)||320;UI.lh=parseInt(lsGet('cb_lh',300),10)||300;try{UI.lhFold=(localStorage.getItem('cb_lhfold')==='1');}catch(_){UI.lhFold=false;}try{UI.voice=(localStorage.getItem('cb_voice')==='1');}catch(_){UI.voice=false;}}
 /**
  * ⚠️⚠️ THE MOBILE FRAME HAS TO REACH THE MODALS, AND A CLASS ON <body> IS THE ONLY THING THAT CAN.
  *
@@ -7315,6 +7318,21 @@ function setVP(v){
   renderApp();
 }
 let DRAG=false;
+/**
+ * ⚠️ THE DIVIDER MUST WRITE THE WIDTH THE CURRENT SCREEN READS. It always wrote `UI.lw` — the chit list's width
+ * — while MIS, Profile and Settings render from `UI.misLw` and Catalogue setup now renders from `UI.catsetLw`.
+ * On those screens the drag looked like it worked (the inline `--lw` updates live) and then snapped back on the
+ * next repaint, because the value it set was never the value being read.
+ *
+ * ⚠️ It also meant one width was shared across unlike screens: dragging the Task list wider to read long
+ * subjects made Catalogue setup's seven-row menu **1031px**, leaving 439px for the pane holding the content.
+ * A chit list is DATA and earns width; a fixed menu never does.
+ */
+function lwKey(){
+  if (UI.nav === 'catsetup') return 'catsetLw';
+  if (UI.nav === 'mis' || UI.nav === 'profile' || UI.nav === 'settings') return 'misLw';
+  return 'lw';
+}
 function startDrag(e){DRAG=true;e.preventDefault();document.body.style.userSelect='none';}
 function onDrag(e){
   if(!DRAG)return;const panel=document.getElementById("panel");if(!panel)return;
@@ -7322,9 +7340,9 @@ function onDrag(e){
   if(UI.vp==='mob'){let h=pt.clientY-r.top;h=Math.max(120,Math.min(r.height-150,h));UI.lh=Math.round(h);panel.style.setProperty('--lh',UI.lh+'px');}
   /* applyColTpl() re-fits the column set to the new pane width — without it the list keeps rendering the
      column set from whatever width the pane happened to have when it was last painted. */
-  else{let w=pt.clientX-r.left;w=Math.max(210,Math.min(r.width-260,w));UI.lw=Math.round(w);panel.style.setProperty('--lw',UI.lw+'px');applyColTpl();}
+  else{let w=pt.clientX-r.left;w=Math.max(210,Math.min(r.width-260,w));UI[lwKey()]=Math.round(w);panel.style.setProperty('--lw',UI[lwKey()]+'px');applyColTpl();}
 }
-function endDrag(){if(!DRAG)return;DRAG=false;document.body.style.userSelect='';lsSet('cb_lw',UI.lw);lsSet('cb_lh',UI.lh);}
+function endDrag(){if(!DRAG)return;DRAG=false;document.body.style.userSelect='';/* persist under the SAME key the screen reads, so a width set on one screen never lands on another */lsSet('cb_'+lwKey(),UI[lwKey()]);lsSet('cb_lh',UI.lh);}
 document.addEventListener('mousemove',onDrag);document.addEventListener('touchmove',onDrag,{passive:false});
 document.addEventListener('mouseup',endDrag);document.addEventListener('touchend',endDrag);
 

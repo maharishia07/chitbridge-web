@@ -168,9 +168,18 @@ function catsetRegistry(keys){
       +   '<span class="catset-regn">' + rows.length + '</span></div>'
       + '<div class="catset-regb">' + esc(s.blurb) + '</div>'
       + (rows.length
-          ? '<div class="catset-regrows">' + rows.map(function(r){
-              return '<div class="catset-regrow"><code>' + esc(r.code) + '</code>'
-                + '<span class="rl">' + esc(r.label || '') + '</span>'
+          /* ⚠️ DO NOT PRINT THE CODE TWICE. Some registries have no separate code — `UNITS` maps to
+             `{code:u, label:u}` because a unit IS its own name — so every row rendered "kg kg", "gram gram",
+             "litre litre". Fifteen of those reads as a rendering fault, and it makes the reader look for a
+             distinction that does not exist. Show the code only where it actually differs from the label. */
+          /* Bare words → chips; anything with a code or a note keeps its rows. See the `.chips` rule. */
+          ? '<div class="catset-regrows' + (rows.every(function(r){
+              return !r.note && String(r.code || '') === String(r.label || '');
+            }) ? ' chips' : '') + '">' + rows.map(function(r){
+              var same = String(r.code || '') === String(r.label || '');
+              return '<div class="catset-regrow' + (same ? ' nocode' : '') + '">'
+                + (same ? '' : '<code>' + esc(r.code) + '</code>')
+                + '<span class="rl">' + esc(r.label || r.code || '') + '</span>'
                 + (r.note ? '<span class="rn">' + esc(r.note) + '</span>' : '') + '</div>';
             }).join('') + '</div>'
           : '<div class="catset-none">not loaded</div>')
@@ -182,8 +191,20 @@ function catsetRegistry(keys){
 }
 
 /* ── the sections ────────────────────────────────────────────────────────────────────────────────────────────── */
+/**
+ * ⚠️ NEVER PRINT THE SECTION'S OWN SUBTITLE TWICE. The detail header already shows the section's `q`, and three
+ * cards opened by repeating it verbatim one line below — "One product, several sizes" under "One product,
+ * several sizes" (variants, offers, storefront). Two identical sentences a line apart read as a rendering fault,
+ * and they cost the reader a beat working out whether the second one says something new.
+ *
+ * ⚠️ Suppressed rather than rewritten: the card titles that DO differ (pricing, order models, import) are
+ * carrying real information and are left exactly as they are. Inventing new copy for the other three would be a
+ * content change wearing a layout change's clothes.
+ */
 function catsetCard(title, body, actions){
-  return '<div class="catset-card"><div class="catset-ct">' + title + '</div>'
+  var sec = CATSET_SECS.filter(function(x){ return x.key === catsetSec(); })[0];
+  var dupe = sec && String(sec.q || '').trim() === String(title || '').trim();
+  return '<div class="catset-card">' + (dupe ? '' : '<div class="catset-ct">' + title + '</div>')
     + '<div class="catset-cb">' + body + '</div>'
     + (actions ? '<div class="catset-ca">' + actions + '</div>' : '') + '</div>';
 }
@@ -304,7 +325,21 @@ function catalogueSetupHubScreen(){
   var detail = '<div class="detail" id="detailpane">' + catsetDetailHTML() + '</div>';
   var divider = '<div class="divider" id="divider" onmousedown="startDrag(event)" ontouchstart="startDrag(event)" role="separator" aria-label="Resize panes"><span class="grip"></span></div>';
   var showDetail = (UI.vp === 'mob') && UI.mdetail;
-  return '<div class="panel ' + (showDetail ? 'showdetail' : '') + '" id="panel" style="--lw:' + UI.lw + 'px;--lh:' + UI.lh + 'px">' + list + divider + detail + '</div>';
+  /**
+   * ⚠️ ITS OWN WIDTH, NOT THE CHIT LIST'S. This read `UI.lw` — the width of the Task/Order chit list, persisted
+   * as `cb_lw`. Drag that list wider to read long subjects and this menu grows with it: measured at **1031px**
+   * for seven fixed rows, while the detail pane — which holds everything you actually came to read — was left
+   * 439px and wrapped the units into a narrow column.
+   *
+   * ⚠️ The two panes are not the same kind of thing. A chit list is DATA and earns width; this is a fixed menu
+   * of seven and never needs more. MIS and Profile already keep their own `misLw` for exactly this reason —
+   * this is that established pattern, not a new one.
+   *
+   * Still draggable, and still clamped to 42% of the window so it can never swallow the detail again.
+   */
+  if (UI.catsetLw == null) UI.catsetLw = 320;
+  var lw = Math.min(UI.catsetLw, Math.max(260, Math.round((window.innerWidth || 1200) * 0.42)));
+  return '<div class="panel ' + (showDetail ? 'showdetail' : '') + '" id="panel" style="--lw:' + lw + 'px;--lh:' + UI.lh + 'px">' + list + divider + detail + '</div>';
 }
 function catsetCss(){
   if (document.getElementById('catset_css')) return;
@@ -346,6 +381,14 @@ function catsetCss(){
     '.catset-regrow code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11.5px;color:var(--ink);flex:0 0 auto}',
     '.catset-regrow .rl{color:var(--ink)}',
     '.catset-regrow .rn{color:var(--grey);font-size:11.5px;flex:1;min-width:0}',
+    /* ⚠️ A LIST OF BARE WORDS IS NOT A TABLE. When a registry's rows carry no code and no note — units are the
+       case: fifteen entries, one short word each — stacking them full-width spends fifteen rows and most of the
+       pane's width on nothing, and the eye has to travel a screen to read what fits on two lines. Chips give the
+       same information at a glance. ⚠️ Applied only when there IS nothing else to show: the moment a row has a
+       note (datatypes: "expiry, harvest") the rows are right, because then the label needs something aligned
+       beside it. */
+    '.catset-regrows.chips{display:flex;flex-direction:row;flex-wrap:wrap;gap:6px;background:none;border:0;padding:2px 13px 4px}',
+    '.catset-regrows.chips .catset-regrow{background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:3px 11px;font-size:11.5px}',
     '.catset-regsrc{font-size:var(--fs-1);color:var(--grey);padding:7px 13px}',
     '.catset-regsrc code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:var(--fs-1)}'
   ].join('');
