@@ -949,12 +949,27 @@
         + '.cbpick-catgs:empty{display:none}'
         + '.cbpick-catgs::-webkit-scrollbar{height:5px}'
         + '.cbpick-catgs::-webkit-scrollbar-thumb{background:#d6dae0;border-radius:3px}'
-        + '.cbpick-chip{flex:0 0 auto;border:1px solid #e3e6ea;background:var(--card);border-radius:20px;'
+        /**
+         * ⭐ THE TAG SHAPE (Athi, 2026-08-17: *"the category has to be something like new product shape, square
+         * doesn't look good"*). A category is a LABEL you hang on a product, so it reads as a luggage tag —
+         * square on the left where it attaches, rounded on the right where it hangs free.
+         * ⚠️ The asymmetry is the point: a pill says "toggle", a rectangle says "cell", and neither says
+         * "this is a label attached to something". The shape now matches what the thing IS.
+         */
+        + '.cbpick-chip{flex:0 0 auto;border:1px solid var(--line);background:var(--card);'
+        + 'border-radius:4px 14px 14px 4px;'
         /* 28px and 12px: smaller than the cart chip beside the search (this narrows a list, it does not hold
            money), still above the legibility floor. */
-        + 'height:28px;padding:0 11px;font:inherit;font-size:12px;color:#3c4350;cursor:pointer;white-space:nowrap}'
-        + '.cbpick-chip:hover{border-color:#c6ccd4}'
-        + '.cbpick-chip.on{font-weight:700}'
+        /* ⚠️ THE SURFACE AND ITS TEXT MOVE TOGETHER. This set `background:var(--card)` with a hardcoded
+           `color:#3c4350`, so in a dark theme the chip went dark and the letters stayed dark — 1.63:1,
+           invisible. `--on-card` is the partner of `--card`; using anything else here is the bug. */
+        + 'height:28px;padding:0 12px;font:inherit;font-size:12px;color:var(--on-card);cursor:pointer;white-space:nowrap}'
+        + '.cbpick-chip:hover{border-color:var(--accent)}'
+        /* ⭐ SELECTED IS A SURFACE CHANGE, NOT JUST BOLDER TEXT (Athi: the letters were unreadable when picked).
+           Weight alone is a weak signal and it was carrying the whole job; now the chip takes the accent and its
+           partner text colour, so "which category am I filtered to" is answerable at a glance. */
+        + '.cbpick-chip.on{font-weight:700;background:var(--accent);border-color:var(--accent);color:var(--on-accent)}'
+        + '.cbpick-chip.on .cbpick-chipn{opacity:.85}'
         + '.cbpick-chipn{font-size:var(--fs-1);opacity:.6;font-variant-numeric:tabular-nums}'
         /* The chip. Sized to sit level with the input beside it, never taller. */
         + '.cbcart-bar{display:inline-flex;align-items:center;gap:7px;border:1px solid #e3e6ea;border-radius:9px;'

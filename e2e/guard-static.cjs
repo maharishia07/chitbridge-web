@@ -329,5 +329,33 @@ console.log('\n8 · duplicate data-testid');
   } else pass(Object.keys(seen).length + ' literal testids, each emitted once');
 }
 
+
+// ── 9 · UNPAIRED SURFACES — a themed background with hardcoded text, or the reverse ──────────────
+//
+// Athi, 2026-08-17: *"we should use couple of colors per theme and should have a definition of where it is
+// supposed to be used, so it will be consistent across design pattern."*
+//
+// ⚠️ THIS IS THE SHAPE OF EVERY CONTRAST BUG FOUND THAT DAY, without exception. The category chip set its
+// background from a token and its colour from a literal, so the surface followed the theme and the letters did
+// not — in dark the chip went dark while the text stayed dark, 1.63:1, invisible. The reverse is just as broken:
+// a literal background under themed text is a surface that CANNOT follow the theme while its letters do.
+//
+// A declaration that sets both must set them THE SAME WAY. Mixing a token with a literal is the bug.
+console.log('\n9 · unpaired surfaces (themed background + hardcoded text, or the reverse)');
+{
+  const unpaired = {};
+  const THEMED_BG_LITERAL_TEXT = /background(?:-color)?:\s*var\(--[a-z0-9-]+\)\s*;\s*color:\s*#[0-9a-fA-F]{3,6}/g;
+  const LITERAL_BG_THEMED_TEXT = /background(?:-color)?:\s*#[0-9a-fA-F]{3,6}\s*;\s*color:\s*var\(--[a-z0-9-]+\)/g;
+  [['app.html', app]].concat(CAPS.map((f) => [f, fs.readFileSync(path.join(WEB, 'app', f), 'utf8')]))
+    .forEach(([name, src]) => {
+      const n = [...src.matchAll(THEMED_BG_LITERAL_TEXT)].length + [...src.matchAll(LITERAL_BG_THEMED_TEXT)].length;
+      if (n) unpaired[name] = n;
+    });
+  const total = Object.values(unpaired).reduce((a, b) => a + b, 0);
+  /* ⚠️ A WARNING WHILE THE BACKLOG IS WORKED, for the same reason as the font-size floor: a hard fail on a
+     number nobody can clear in one sitting is a guard people switch off. What matters is that it does not GROW. */
+  if (total) warn(total + ' unpaired surface/text pairs — ' + Object.entries(unpaired).map(([k, v]) => k + ':' + v).join(', '));
+  else pass('every background sets its text the same way it sets itself');
+}
 console.log('\n== GUARD ==  ' + hard + ' failure(s) · ' + soft + ' warning(s)');
 process.exit(hard ? 1 : 0);

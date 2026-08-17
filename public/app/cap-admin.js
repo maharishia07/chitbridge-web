@@ -494,7 +494,7 @@ function misPlan(m){
     : w.state === 'expired'
       ? '<span class="govtag" style="background:#fbeceb;color:var(--disp)">expired '+w.days+'d ago</span>'
       : w.state === 'not yet started'
-        ? '<span class="govtag" style="background:#F5ECD6;color:#7a5e22">starts in '+w.days+'d</span>'
+        ? '<span class="govtag" style="background:#F5ECD6;color:var(--warn-3)">starts in '+w.days+'d</span>'
         : '<span class="govtag" style="background:#E4F0E9;color:#2F6B49">active'+(w.days!=null?(' · '+w.days+'d left'):'')+'</span>';
   return _misHead('Plan', 'What you have used against the limits your plan declares.')
     + '<div class="misnote" style="margin-bottom:10px">'+period+'</div>'
@@ -845,7 +845,7 @@ function govCardHTML(g){
   var langs=(b.languages||[]).join(', ');
   var loc=[inst.cloud,inst.region,inst.zone].filter(Boolean).join(' · ');
   return '<div style="'+_CARD+';margin-top:10px">'
-    +'<div class="sec" style="margin:0 0 8px">🏛️ Your governance <span style="font-size:var(--fs-1);font-family:\'Space Mono\';background:#f3f0e8;color:#7a5e22;border-radius:5px;padding:1px 6px">minted · not enforced yet</span></div>'
+    +'<div class="sec" style="margin:0 0 8px">🏛️ Your governance <span style="font-size:var(--fs-1);font-family:\'Space Mono\';background:#f3f0e8;color:var(--warn-3);border-radius:5px;padding:1px 6px">minted · not enforced yet</span></div>'
     +'<div class="kv"><b>Governed by</b> · '+esc(g.constitution||'—')+' <span style="color:var(--grey);font-size:var(--fs-1)">🔒 platform-set</span></div>'
     +'<div class="kv"><b>Installation</b> · '+esc(inst.label||inst.key||'—')+(loc?(' <span style="color:var(--grey);font-size:var(--fs-1)">'+esc(loc)+'</span>'):'')+'</div>'
     +'<div class="kv"><b>Basics</b> <span style="color:var(--grey);font-size:var(--fs-1)">⟵ from your platform</span> · '+esc(b.currency||'—')+' · '+esc(b.timezone||'—')+' · '+esc(b.region||'—')+(langs?(' · '+esc(langs)):'')+'</div>'
@@ -1184,7 +1184,7 @@ function govKlass(k, hasControl){
    * absence of information rather than from evidence.
    */
   if (x.tone === 'yours' && hasControl === false){
-    col = ['#F5ECD6','#7a5e22'];
+    col = ['#F5ECD6','var(--warn-3)'];
     say = say + ' — no control here yet';
   }
   return '<span class="govtag" style="background:'+col[0]+';color:'+col[1]+'">'+say+'</span>';
@@ -1326,7 +1326,7 @@ function govLayersBlock(){ var t=UI.govTab||0; var L=GOV[t];
     + (inRail?'':'<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:11px">'+tabs+'</div>')
     + '<div class="govtitle">'+esc(L.n)+'</div>'
     + '<div class="govsub">'+esc(L.tag)
-      + ' <span class="govtag" style="background:#F5ECD6;color:#7a5e22">shown, not enforced yet</span></div>'
+      + ' <span class="govtag" style="background:#F5ECD6;color:var(--warn-3)">shown, not enforced yet</span></div>'
     + '<div class="govdesc">'+esc(L.desc)+'</div>'
     + rowsHtml
     + (foot ? ('<div style="font-size:var(--fs-1);color:var(--grey);margin-top:11px;line-height:1.5">'+foot+'</div>') : '') + '</div>';
@@ -1385,7 +1385,7 @@ function settingsScreen(){
 }
 // AI assists settings = a REDIRECT to Co-assists (the enable + rule live WITH the actor, next to Human/IoT/ERP —
 // a lit AI slot is an actor whose actions are disputable chits, so its control belongs where it's held accountable).
-function aiSettingsCard(){ return '<div style="'+_CARD+'"><div class="sec" style="margin:0 0 6px">🤖 AI assists <span style="font-size:var(--fs-1);font-family:\'Space Mono\';background:#f3f0e8;color:#7a5e22;border-radius:5px;padding:1px 6px">governed</span></div>'
+function aiSettingsCard(){ return '<div style="'+_CARD+'"><div class="sec" style="margin:0 0 6px">🤖 AI assists <span style="font-size:var(--fs-1);font-family:\'Space Mono\';background:#f3f0e8;color:var(--warn-3);border-radius:5px;padding:1px 6px">governed</span></div>'
   +'<div style="font-size:12px;color:var(--grey);line-height:1.55">Turn AI helpers on or off and set each one\'s rule — the human gate, bounded by the rung floor (you can only tighten). They live with your other co-assists, because a lit AI slot is an <b>actor</b> whose every action is a chit you can dispute.</div>'
   +'<button class="composebtn" style="margin-top:10px" onclick="goCoassistAI()">Configure AI assists in Co-assists →</button></div>'; }
 function goCoassistAI(){ try{ if(typeof UI!=='undefined') UI.acTypeF='ai'; }catch(_){}

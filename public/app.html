@@ -73,6 +73,43 @@
      * because the page happens to be light.
      */
     --chrome:#0F2E3D; --chrome-ink:#bcccd6; --chrome-on:#ffffff;
+    /**
+     * ⭐⭐⭐ THE ROLE PALETTE — Athi, 2026-08-17: *"we should use couple of colors per theme and should have a
+     * definition of where it is supposed to be used, so it will be consistent across design pattern."*
+     *
+     * He is right, and this is the root cause of every contrast bug found today. The tokens above are named by
+     * VALUE (--blue-2, --grey-3, --ok-3). A value cannot tell you where to use it, so nobody knows which to
+     * pick, and a theme author has to get thirty numbers right instead of eight decisions.
+     *
+     * ⚠️⚠️ THE ACTUAL DEFECT IS UNPAIRED SURFACES. `.cbpick-chip` set `background:var(--card)` and
+     * `color:#3c4350` — the surface follows the theme, the letters do not. In dark the chip went dark and the
+     * text stayed dark: 1.63:1, invisible. Every single failure today was that same shape.
+     *
+     * ⭐ THE RULE, and it is what makes a palette a system rather than a list:
+     *      EVERY SURFACE HAS EXACTLY ONE PARTNER, AND TEXT ON THAT SURFACE USES ITS PARTNER.
+     *      Never set a background without its `--on-` colour. Never use an `--on-` colour off its surface.
+     * Follow it and "dark letters on a dark chip" is not a bug you can write.
+     *
+     *   SURFACE          TEXT ON IT        USE IT FOR
+     *   --bg             --on-bg           the page ground
+     *   --card           --on-card         a raised thing: card, row, chip, input
+     *   --sel            --on-sel          the row/chip the reader has selected
+     *   --chrome         --chrome-ink      the nav rail and topbar — dark in EVERY theme, by design
+     *   --accent         --on-accent       primary buttons, active pills, links
+     *   --ok/--warn/--danger + --on-*      done · pending · disputed. MEANING, never decoration.
+     *   --muted                            secondary text. Legible on --bg and --card, nowhere else.
+     *   --line                             rules and borders. Never text.
+     *
+     * ⚠️ MAPPED ONTO THE EXISTING TOKENS, NOT REPLACING THEM YET. ~1,500 hardcoded colours still exist; a
+     * big-bang rename would break more than it fixed. New and touched code uses these; the migration is
+     * backlogged. ⚠️ A theme overriding a surface MUST override its partner in the same edit.
+     */
+    --bg:var(--paper);        --on-bg:var(--ink);
+    --on-card:var(--ink);     --on-sel:var(--ink);
+    --accent:var(--blue);     --on-accent:#ffffff;
+    --danger:var(--disp);     --on-danger:#ffffff;
+    --on-ok:#ffffff;          --warn:var(--prog);      --on-warn:#ffffff;
+    --muted:var(--grey);
     /* 26a0Fe0f THE SELECTED ROW IS ITS OWN SURFACE. It is the one ground a reader is guaranteed to be looking at,
        and it was the last colour in the app that no theme could reach - light blue with light text on it in dark.
        Naming it is what let the dark theme give it a ground that its text can actually sit on. */
@@ -155,7 +192,7 @@
   .welcol.is{border-top:4px solid var(--blue)}.welcol.isnot{border-top:4px solid var(--gold)}
   .welcol ul{margin:8px 0 0;padding-left:17px}.welcol li{font-size:var(--fs-2);margin:5px 0}
   .welask{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:15px;margin:14px 0}
-  .welask-tag{font-size:var(--fs-1);font-family:'Space Mono';background:var(--gold-soft);color:#7a5e22;border-radius:5px;padding:1px 7px;margin-left:6px}
+  .welask-tag{font-size:var(--fs-1);font-family:'Space Mono';background:var(--gold-soft);color:var(--warn-3);border-radius:5px;padding:1px 7px;margin-left:6px}
   .welchips{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0}
   .welchip{font-size:12px;border:1px solid var(--line);background:var(--card);border-radius:999px;padding:5px 11px;cursor:pointer;color:var(--ink)}
   .welchip:hover{border-color:var(--blue)}
@@ -865,7 +902,7 @@
 button:focus-visible,.composebtn:focus-visible,.pri:focus-visible{outline:2px solid #9bb6e0;outline-offset:1px}
 .modal{position:relative}
 .mx{position:absolute;top:7px;right:9px;width:26px;height:26px;border:0;background:none;color:var(--grey-4);font-size:15px;line-height:1;cursor:pointer;border-radius:50%;z-index:3}
-.mx:hover{background:#f0f0f0;color:#555}
+.mx:hover{background:var(--hover);color:var(--on-card)}
 .listtotal{padding:5px 12px;font-size:var(--fs-1);color:var(--grey);font-family:'Space Mono';border-bottom:1px solid var(--line);background:var(--paper)}
 .listtotal:empty{display:none}
 .listend{text-align:center;padding:12px 10px;font-size:var(--fs-1);color:var(--grey);font-family:'Space Mono'}
@@ -1532,7 +1569,7 @@ async function askHelpDesk(){ const q=(_assistPending||'').trim(); if(!q) return
 function renderAssist(ans){ const h=document.getElementById("assisthost"); if(!h||!_assistOpen) return; const pre=!(typeof SESSION!=="undefined" && SESSION.token); const sugg=assistSuggest();
   const _pb=(typeof PURPOSE!=='undefined'&&PURPOSE[curScreen()])?PURPOSE[curScreen()]:''; const purposeHTML=_pb?`<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:8px 10px;font-size:11.5px;color:var(--warn-3);line-height:1.5;margin-bottom:9px">${esc(_pb)}</div>`:'';
   h.innerHTML=`<div style="position:fixed;right:16px;bottom:70px;z-index:301;width:360px;max-width:92vw;background:var(--card);border:1px solid #e3e0d8;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.22);overflow:hidden">
-    <div style="display:flex;align-items:center;gap:8px;padding:11px 13px;border-bottom:1px solid #e3e0d8;font-family:'Space Grotesk';font-weight:700;font-size:13px">💬 Assistant <span style="font-size:var(--fs-1);font-family:'Space Mono';background:#f3f0e8;color:#7a5e22;border-radius:5px;padding:1px 6px">${pre?"fit check":"help"}</span><button data-testid="assist-close" onclick="closeAssist()" style="margin-left:auto;border:0;background:none;cursor:pointer;color:var(--grey-4);font-size:15px">✕</button></div>
+    <div style="display:flex;align-items:center;gap:8px;padding:11px 13px;border-bottom:1px solid #e3e0d8;font-family:'Space Grotesk';font-weight:700;font-size:13px">💬 Assistant <span style="font-size:var(--fs-1);font-family:'Space Mono';background:#f3f0e8;color:var(--warn-3);border-radius:5px;padding:1px 6px">${pre?"fit check":"help"}</span><button data-testid="assist-close" onclick="closeAssist()" style="margin-left:auto;border:0;background:none;cursor:pointer;color:var(--grey-4);font-size:15px">✕</button></div>
     <div style="padding:11px 13px;max-height:52vh;overflow:auto">
       ${purposeHTML}<div style="font-size:12px;color:#777;margin-bottom:8px">${pre?"Tell me your business and I will be honest about whether this fits.":"Describe what you are trying to do."}</div>
       <div id="assist_ans" style="font-size:var(--fs-2);color:#222;line-height:1.55;margin-bottom:10px">${ans||""}</div>
@@ -1565,7 +1602,7 @@ function ccRender(res){
   const std=_ccStds.find(s=>s.standard===_ccPick)||_ccStds[0]; if(!std) return;
   const opts=_ccStds.map(s=>`<option value="${esc(s.standard)}" ${s.standard===_ccPick?'selected':''}>${esc(s.title)} (${esc(s.standard)})</option>`).join("");
   const fields=(std.points||[]).map(_ccField).join('<div style="height:9px"></div>');
-  modal(`<div style="font-family:'Space Grotesk';font-weight:700;font-size:15px;margin-bottom:3px">🛡️ Compliance check <span style="font-size:var(--fs-1);font-family:'Space Mono';background:#f3f0e8;color:#7a5e22;border-radius:5px;padding:1px 6px;vertical-align:middle">first light</span></div>
+  modal(`<div style="font-family:'Space Grotesk';font-weight:700;font-size:15px;margin-bottom:3px">🛡️ Compliance check <span style="font-size:var(--fs-1);font-family:'Space Mono';background:#f3f0e8;color:var(--warn-3);border-radius:5px;padding:1px 6px;vertical-align:middle">first light</span></div>
     <div style="font-size:11.5px;color:#777;margin-bottom:11px">Check a transaction's data against a standard. The verdict is computed from the rules — the AI only explains it.</div>
     <label style="font-size:11.5px;color:#555">Standard</label>
     <select onchange="ccPickStd(this.value)" style="width:100%;border:1px solid #e3e0d8;border-radius:9px;padding:7px 9px;font-size:var(--fs-2);margin:3px 0 12px">${opts}</select>
@@ -1586,7 +1623,7 @@ async function ccRun(){
   const ok=v.compliant;
   const badge=`<div style="display:inline-block;font-weight:800;font-size:12px;padding:4px 11px;border-radius:20px;background:${ok?'#e8f5ee':'#fbeae9'};color:${ok?'var(--ok-3)':'var(--disp)'}">${ok?'✓ COMPLIANT':'✗ NON-COMPLIANT'}</div>`;
   const rows=(v.points||[]).map(p=>{ const g=p.status==='ok'; return `<div style="display:flex;gap:8px;align-items:baseline;padding:4px 0;font-size:12px;border-top:1px solid #f0ede5"><span style="color:${g?'var(--ok-3)':'var(--disp)'};font-weight:800">${g?'✓':'✗'}</span><span style="flex:1">${esc(p.label)}</span><span style="color:var(--grey-4);font-size:var(--fs-1)">${esc(p.detail||p.status)}</span></div>`; }).join("");
-  const narr=v.narrative?`<div style="margin-top:10px;background:#f6f4ee;border:1px solid #e7e3d8;border-radius:9px;padding:9px 11px;font-size:12px;line-height:1.55;color:#3a3a3a"><span style="font-size:var(--fs-1);color:#7a5e22;font-weight:700">🤖 ASSIST</span><br>${esc(v.narrative)}</div>`:'';
+  const narr=v.narrative?`<div style="margin-top:10px;background:#f6f4ee;border:1px solid #e7e3d8;border-radius:9px;padding:9px 11px;font-size:12px;line-height:1.55;color:#3a3a3a"><span style="font-size:var(--fs-1);color:var(--warn-3);font-weight:700">🤖 ASSIST</span><br>${esc(v.narrative)}</div>`:'';
   const ab=v.acted_by||{}; const prov=`<div style="margin-top:9px;font-size:var(--fs-1);color:var(--grey-4);font-family:'Space Mono'">stamped · ${esc(ab.deputy||'ai:conform-verdict')} · ${ab.model?('narrative by '+esc(ab.model)):'deterministic only (no model key)'} · against ${esc(v.standard||_ccPick)}</div>`;
   if(rh) rh.innerHTML=badge+`<div style="margin-top:9px">${rows}</div>`+narr+prov;
 }
@@ -3186,7 +3223,7 @@ function ccAddSelf(){ if(ccRoleCount("to")>=(LIMITS.to||99)){ toast(MSG.capHit("
 function ccDelRcpt(i){ CC.rcpts.splice(i,1); ccRenderRcpts(); }
 function ccFlipRcpt(i){ const order=["to","cc","for"]; const r=CC.rcpts[i]; if(!r)return; for(let k=1;k<=order.length;k++){ const nx=order[(order.indexOf(r.role)+k)%order.length]; if(nx===r.role||ccRoleCount(nx)<(LIMITS[nx]||99)){ r.role=nx; break; } } ccRenderRcpts(); }
 function ccRenderRcpts(){ const h=document.getElementById("cc_rcpts");
-  if(h){ h.innerHTML = CC.rcpts.length ? CC.rcpts.map((r,i)=>{ const col=r.role==="to"?"var(--blue)":r.role==="cc"?"#7a5e22":"#5F6B70"; const bg=r.role==="to"?"var(--blue-tint)":r.role==="cc"?"#F4ECD8":"#EFEBE2";
+  if(h){ h.innerHTML = CC.rcpts.length ? CC.rcpts.map((r,i)=>{ const col=r.role==="to"?"var(--blue)":r.role==="cc"?"var(--warn-3)":"#5F6B70"; const bg=r.role==="to"?"var(--blue-tint)":r.role==="cc"?"#F4ECD8":"#EFEBE2";
     if(UI._supplier){ return `<span style="display:inline-flex;align-items:center;gap:5px;border:0.5px solid var(--blue-tint-line);background:var(--blue-tint);border-radius:9px;padding:4px 9px;margin:0 5px 5px 0;font-size:12px;font-weight:600;color:var(--blue)">🏭 ${esc(r.name)}${r.bridge?'<span style="font-family:monospace;font-size:var(--fs-1);opacity:.8"> · '+esc(r.bridge)+'</span>':''} <span style="font-weight:400;color:var(--grey)">· locked</span></span>`; }
     return `<span style="display:inline-flex;align-items:center;gap:5px;border:0.5px solid var(--line);border-radius:9px;padding:3px 7px;margin:0 5px 5px 0;font-size:11.5px"><span onclick="ccFlipRcpt(${i})" title="Flip role (To/CC/For)" style="cursor:pointer;font-family:'Space Mono';font-size:var(--fs-1);background:${bg};color:${col};border-radius:5px;padding:1px 5px">${r.role.toUpperCase()}</span>${esc(r.name)}${r.bridge?'<span style="font-family:monospace;font-size:var(--fs-1);color:var(--grey-4)"> · '+esc(r.bridge)+'</span>':''}${r.self?'<span style="color:var(--blue);font-size:var(--fs-1)"> · self</span>':''}<span onclick="ccDelRcpt(${i})" style="cursor:pointer;color:var(--grey-4)">✕</span></span>`; }).join("") : `<div style="font-size:12px;color:var(--grey)">No recipients yet — add To / CC / For above.</div>`; }
   if(UI._ccFlow) UI._ccFlow.paintFoot();   // a recipient added or removed changes whether To can be left
@@ -3519,7 +3556,7 @@ const ASSIST_PAGES = {
 };
 function assistPage(key){ const p=ASSIST_PAGES[key]; if(!p) return menuAssist(key);
   const groups=p.groups.map(g=>`<div style="${_CARD}"><div style="font-family:'Space Grotesk';font-weight:600;font-size:var(--fs-2);color:var(--ink);display:flex;align-items:center;gap:7px;margin-bottom:6px"><span style="color:var(--blue)">▸</span>${esc(g.title)}</div>${g.rows.map((r,i)=>`<div style="display:flex;gap:9px;align-items:baseline;padding:4px 0;${i?'border-top:0.5px solid #F0ECE2':''}"><span style="font-family:'Space Mono';font-size:var(--fs-1);color:var(--blue);min-width:118px;flex-shrink:0">${esc(r[0])}</span><span style="font-size:12px;color:var(--ink);line-height:1.5">${esc(r[1])}</span></div>`).join("")}</div>`).join("");
-  return `<div style="background:var(--gold-soft);border:0.5px solid var(--gold-line);border-radius:12px;padding:9px 11px;font-size:12px;color:var(--warn-3);line-height:1.5;margin-bottom:9px"><b style="font-family:'Space Grotesk'">${key==='order'?'Order':'Task'} — what it is &amp; how to use it</b> <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--card);color:#7a5e22;border:0.5px solid var(--gold-line);border-radius:5px;padding:1px 6px">assistance page</span><div style="margin-top:4px">${esc(p.intro)}</div></div>${groups}<div style="${_CARD}"><div style="font-size:11.5px;color:var(--grey);margin-bottom:6px">Ask the assistant <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--gold-soft);color:#7a5e22;border-radius:5px;padding:1px 6px">web demo</span></div><div style="display:flex;gap:8px"><input class="inp" id="m_in_${key}" placeholder="Ask about ${esc(key)}…"><button style="${_BTN}" onclick="mAskFree('${key}')">Ask</button></div><div id="m_ans_${key}" style="font-size:13px;color:var(--ink);margin-top:9px;line-height:1.55"></div></div>`;
+  return `<div style="background:var(--gold-soft);border:0.5px solid var(--gold-line);border-radius:12px;padding:9px 11px;font-size:12px;color:var(--warn-3);line-height:1.5;margin-bottom:9px"><b style="font-family:'Space Grotesk'">${key==='order'?'Order':'Task'} — what it is &amp; how to use it</b> <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--card);color:var(--warn-3);border:0.5px solid var(--gold-line);border-radius:5px;padding:1px 6px">assistance page</span><div style="margin-top:4px">${esc(p.intro)}</div></div>${groups}<div style="${_CARD}"><div style="font-size:11.5px;color:var(--grey);margin-bottom:6px">Ask the assistant <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--gold-soft);color:var(--warn-3);border-radius:5px;padding:1px 6px">web demo</span></div><div style="display:flex;gap:8px"><input class="inp" id="m_in_${key}" placeholder="Ask about ${esc(key)}…"><button style="${_BTN}" onclick="mAskFree('${key}')">Ask</button></div><div id="m_ans_${key}" style="font-size:13px;color:var(--ink);margin-top:9px;line-height:1.55"></div></div>`;
 }
 function addActorModal(){
   const ent=(typeof SESSION!=="undefined"&&SESSION.entity)||"";
@@ -3671,7 +3708,7 @@ const ORG_HELP = [
   {q:"Internal or customer-facing?", a:"Every node is internal-B2B by default (mode b2b). A node turns customer-facing (b2c) only when its mode is b2c — which needs a customer-facing plan — plus a public catalogue and the shop's open sign on. One network runs one shape: you don't mix business and consumer in the same network."},
 ];
 function orgBanner(){ return `<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:12px;padding:12px 14px;margin-bottom:12px;font-size:13px;color:var(--warn-3);line-height:1.5"><b style="font-family:'Space Grotesk'">Design your organisation here.</b> Add your own branches, units and counters as sub-entities, up to your lead node — your <b>internal</b> structure. Place your <b>actors (Co-Assist)</b> at each node; their access flows through the tree. To deal with other businesses, use <b>Connections</b>.</div>${orgHelpBox()}`; }
-function orgHelpBox(){ return `<div style="${_CARD}"><div style="font-family:'Space Grotesk';font-weight:600;font-size:13px;margin-bottom:2px">Structure &amp; access assistant <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--gold-soft);color:#7a5e22;border-radius:5px;padding:1px 7px">Web Demo · sample answers</span></div><div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:10px">How your branches and actors coordinate — where to set actors, and what access they get. (Real version: an AI handler that reads your structure, employees and grants.)</div><div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px">${ORG_HELP.map((f,i)=>`<button class="composebtn" onclick="orgAsk(${i})">${esc(f.q)}</button>`).join("")}</div><div style="display:flex;gap:8px"><input class="inp" id="org_in" placeholder="e.g. where do my branch managers fit?"><button style="${_BTN}" onclick="orgAskFree()">Ask</button></div><div id="org_ans" style="font-size:13px;color:var(--ink);margin-top:10px;line-height:1.55"></div></div>`; }
+function orgHelpBox(){ return `<div style="${_CARD}"><div style="font-family:'Space Grotesk';font-weight:600;font-size:13px;margin-bottom:2px">Structure &amp; access assistant <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--gold-soft);color:var(--warn-3);border-radius:5px;padding:1px 7px">Web Demo · sample answers</span></div><div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:10px">How your branches and actors coordinate — where to set actors, and what access they get. (Real version: an AI handler that reads your structure, employees and grants.)</div><div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px">${ORG_HELP.map((f,i)=>`<button class="composebtn" onclick="orgAsk(${i})">${esc(f.q)}</button>`).join("")}</div><div style="display:flex;gap:8px"><input class="inp" id="org_in" placeholder="e.g. where do my branch managers fit?"><button style="${_BTN}" onclick="orgAskFree()">Ask</button></div><div id="org_ans" style="font-size:13px;color:var(--ink);margin-top:10px;line-height:1.55"></div></div>`; }
 function orgAsk(i){ const f=ORG_HELP[i]; const inp=document.getElementById("org_in"); if(inp)inp.value=f.q; const o=document.getElementById("org_ans"); if(o)o.innerHTML="<b>"+esc(f.q)+"</b><br>"+esc(f.a); }
 function orgAskFree(){ const q=(val("org_in")||"").toLowerCase(); let a;
   if(/scratch|whole|automate|auto.?build|all at once|bulk|entire/.test(q))a=ORG_HELP[8].a;
@@ -3726,7 +3763,7 @@ const NET_MODEL_NOTE = {
   b2c:"A single shopfront (b2c) with internal counters. Customers buy directly; no upstream distribution."
 };
 function netView(self, tree, edges){
-  const nodes = tree.map(n=>`<div style="padding:3px 0 3px ${(n.depth||0)*20}px;font-size:13.5px">${n.depth>0?'<span style="color:var(--grey)">└ </span>':''}<b>${esc(n.name)}</b> <span style="font-family:'Space Mono';font-size:var(--fs-1);color:var(--grey)">${esc(n.bridge_id||'')}</span>${n.act!=null?` <span class="optchip" style="background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)">👥 ${n.act}</span>`:''}${n.mode==='b2c'?` <span class="optchip" style="background:var(--gold-soft);color:#7a5e22;border-color:var(--gold-line);font-size:var(--fs-1)">b2c</span>`:''}${n.demo?` <span class="optchip" style="font-size:var(--fs-1)">demo</span>`:''}${n.isnew?` <span class="optchip" style="font-size:var(--fs-1);background:#eaf3ee;color:var(--ok-3);border-color:#bfe0cd">new</span>`:''}</div>`).join("");
+  const nodes = tree.map(n=>`<div style="padding:3px 0 3px ${(n.depth||0)*20}px;font-size:13.5px">${n.depth>0?'<span style="color:var(--grey)">└ </span>':''}<b>${esc(n.name)}</b> <span style="font-family:'Space Mono';font-size:var(--fs-1);color:var(--grey)">${esc(n.bridge_id||'')}</span>${n.act!=null?` <span class="optchip" style="background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)">👥 ${n.act}</span>`:''}${n.mode==='b2c'?` <span class="optchip" style="background:var(--gold-soft);color:var(--warn-3);border-color:var(--gold-line);font-size:var(--fs-1)">b2c</span>`:''}${n.demo?` <span class="optchip" style="font-size:var(--fs-1)">demo</span>`:''}${n.isnew?` <span class="optchip" style="font-size:var(--fs-1);background:#eaf3ee;color:var(--ok-3);border-color:#bfe0cd">new</span>`:''}</div>`).join("");
   const edgeRows = edges.map(e=>{
     const a = e.state==='requested' ? `<button class="composebtn pri" onclick="netApprove('${e.id}')">Approve</button> <button class="composebtn" onclick="netDecline('${e.id}')">Decline</button>`
       : e.state==='active' ? `<button class="composebtn" onclick="netSuspend('${e.id}')">Suspend</button> <button class="composebtn" style="color:var(--disp)" onclick="netDisconnect('${e.id}')">Disconnect</button>`
@@ -3824,7 +3861,7 @@ function supRowHTML(x){
   const cat=x.has_catalogue?'<span class="optchip" style="background:#E8F0F4;color:var(--blue);border-color:#cfe0ec">📕 catalogue</span>':'<span class="optchip" style="background:#F1EFE8;color:#8a857a">no catalogue</span>';
   return `<div class="row ${id===UI.supSel?'sel':''}" data-testid="sup-row-${id}" onclick="selectSupplier('${id}')">
     <button title="Preferred — tap to toggle" onclick="event.stopPropagation();toggleSupPref('${id}')" style="background:none;border:0;font-size:15px;line-height:1;padding:0;color:${x.preferred?'#997009':'#697479'};flex:0 0 auto;margin-top:1px">${x.preferred?'★':'☆'}</button>
-    <div class="main2"><div class="l1"><span class="code">${esc(label)}</span>${x.category?`<span class="optchip" style="background:var(--gold-soft);color:#7a5e22;border-color:var(--gold-line)">${esc(x.category)}</span>`:''}<span class="amt">${cat}</span></div>
+    <div class="main2"><div class="l1"><span class="code">${esc(label)}</span>${x.category?`<span class="optchip" style="background:var(--gold-soft);color:var(--warn-3);border-color:var(--gold-line)">${esc(x.category)}</span>`:''}<span class="amt">${cat}</span></div>
       <div class="l2">${esc(sub)}${x.nickname?` · <span class="mono">${esc(x.bridge_id||'')}</span>`:''}</div></div>
     <button class="rowinfo" data-testid="sup-details-${id}" title="Their full record" onclick="event.stopPropagation();supOpenPanel('${id}')">ⓘ</button>
     <div class="rowgo" aria-hidden="true">›</div></div>`;
@@ -4989,7 +5026,7 @@ function prodRowHTML(p){ const d=pData(p), id=prodId(p);
   const ticked=picking&&UI.prodPicked&&UI.prodPicked.has(id);
   return `<div class="row ${id===UI.prodSel?'sel':''}${ticked?' picked':''}" data-testid="cat-product-${id}" onclick="${picking?`prodTogglePick('${id}')`:`selectProduct('${id}')`}" style="${st!=='available'?'opacity:.7':''}">
   ${picking?`<span class="cbx ${ticked?'on':''}" data-testid="cat-pick-${id}" style="flex:0 0 auto;margin-right:9px">${ticked?'✓':''}</span>`:''}
-  <div class="main2"><div class="l1"><span class="code">${esc(pName(d))}${d.variant?`<span style="color:var(--grey);font-weight:400"> · ${esc(d.variant)}</span>`:''}</span><span class="optchip" style="background:var(--gold-soft);color:#7a5e22;border-color:var(--gold-line)">${esc(pUnit(d))}</span>${stChip}<span class="amt" style="margin-left:auto">${inr(pPrice(d))}</span></div>
+  <div class="main2"><div class="l1"><span class="code">${esc(pName(d))}${d.variant?`<span style="color:var(--grey);font-weight:400"> · ${esc(d.variant)}</span>`:''}</span><span class="optchip" style="background:var(--gold-soft);color:var(--warn-3);border-color:var(--gold-line)">${esc(pUnit(d))}</span>${stChip}<span class="amt" style="margin-left:auto">${inr(pPrice(d))}</span></div>
     <div class="l2">${pCode(d)?'<span class="mono">'+esc(pCode(d))+'</span> · ':''}${esc(pDesc(d)||'—')} ${syn}</div>
     ${catChips?`<div class="l3cat">${catChips}</div>`:''}</div>
   ${picking?'':'<div class="rowgo" aria-hidden="true">›</div>'}</div>`; }
@@ -5009,7 +5046,7 @@ function _refPriceHTML(p,sz){ if(!p) return '<span style="color:var(--grey-4);fo
 function _refChips(it){ var c='';
   if(it.texture_family) c+='<span class="optchip" style="background:#F0EAF9;color:var(--purple-2);border-color:transparent">'+esc(it.texture_family)+'</span>';
   if(it.region) c+='<span class="optchip" style="background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)">'+esc(it.region)+'</span>';
-  return c+((it.effect||[]).map(function(e){return '<span class="optchip" style="background:#f3f0e8;color:#7a5e22;border-color:#e6d9a8">'+esc(e)+'</span>';}).join('')); }
+  return c+((it.effect||[]).map(function(e){return '<span class="optchip" style="background:#f3f0e8;color:var(--warn-3);border-color:#e6d9a8">'+esc(e)+'</span>';}).join('')); }
 // the item's OWN fields — whatever this vertical happens to carry (veg: local_names · botanical_name · category).
 // Skips everything already rendered by a dedicated block, plus underscore meta.
 var _REF_SKIP={name:1,photo:1,unit:1,scale:1,sheen:1,texture_family:1,region:1,effect:1,inspiration:1,combinations:1,tools:1,coats:1,commercials:1,sku:1,id:1};
@@ -8052,7 +8089,7 @@ function chitTermsBlock(c){
   var terms = bj.frozen_terms || [];
   if (!terms.length) return '';
   return '<div class="itab" style="margin-top:12px">'
-    + '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#7a5e22;'
+    + '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--warn-3);'
     + 'padding:8px 2px 4px">Terms this chit agreed'
     + (bj.frozen_at ? '<span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--grey)"> · frozen '
         + esc(new Date(bj.frozen_at).toLocaleString()) + '</span>' : '')

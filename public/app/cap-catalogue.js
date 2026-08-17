@@ -664,7 +664,7 @@ function _cwProductCard(w, it){
   var on = w.chosen[it.name] !== false, seld = w.sel === it.name;
   var accent = (w.built && w.built.formatting && w.built.formatting.accent) || 'var(--purple-2)';
   var nm = esc(it.name).replace(/'/g, "\\'");
-  var chips = [it.texture_family, it.region].filter(Boolean).map(function(c){ return '<span style="font-size:var(--fs-1);background:' + accent + '18;color:' + accent + ';border-radius:4px;padding:1px 6px">' + esc(c) + '</span>'; }).join('') + (it.effect || []).map(function(e){ return '<span style="font-size:var(--fs-1);background:#f3f0e8;color:#7a5e22;border-radius:4px;padding:1px 6px">' + esc(e) + '</span>'; }).join('');
+  var chips = [it.texture_family, it.region].filter(Boolean).map(function(c){ return '<span style="font-size:var(--fs-1);background:' + accent + '18;color:' + accent + ';border-radius:4px;padding:1px 6px">' + esc(c) + '</span>'; }).join('') + (it.effect || []).map(function(e){ return '<span style="font-size:var(--fs-1);background:#f3f0e8;color:var(--warn-3);border-radius:4px;padding:1px 6px">' + esc(e) + '</span>'; }).join('');
   var combos = (it.combinations || []).slice(0, 2).map(_cwCombo).join('');
   return '<div onclick="cwSelectProduct(\'' + nm + '\')" style="border:1px solid ' + (seld ? accent : 'var(--line)') + ';border-radius:12px;padding:10px 12px;margin-top:6px;background:' + (seld ? accent + '0c' : '#fff') + ';cursor:pointer">'
     + (it.photo ? '<div style="height:96px;background:#f4f6f8 center/cover no-repeat;background-image:url(' + it.photo + ');border-radius:9px;margin-bottom:7px"></div>' : '')

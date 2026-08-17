@@ -36,20 +36,26 @@ const AUDIT = `(() => {
       if (c && c !== 'rgba(0, 0, 0, 0)') return c; el = el.parentElement; }
     return getComputedStyle(document.body).backgroundColor || 'rgb(255,255,255)'; };
   const out = [];
-  document.querySelectorAll('.shell *').forEach((el) => {
-    if (el.closest('.moderibbon')) return;                 // the dev-only build ribbon is not the app
-    const t = (el.textContent || '').trim();
-    if (!t || el.children.length) return;                  // leaf text only
+  /* ⚠️⚠️ TEXT NODES, NOT LEAF ELEMENTS — and this is the bug that made an earlier version of this test USELESS.
+     Skipping any element with children means a row whose text sits inside nested spans is never checked at all.
+     It reported 40 of 42 combinations clean while the catalogue screen had category chips at 1.63:1 — dark text
+     on a dark chip, plainly invisible to anyone looking at it. A test that returns green on a broken screen is
+     worse than no test, because it stops you looking. */
+  const w = document.createTreeWalker(document.querySelector('.shell'), NodeFilter.SHOW_TEXT);
+  let node;
+  while ((node = w.nextNode())) {
+    const s = (node.nodeValue || '').trim();
+    if (!s) continue;
+    const el = node.parentElement;
+    if (!el || el.closest('.moderibbon')) continue;
+    if (el.closest('[aria-hidden="true"]')) continue;
     const cs = getComputedStyle(el);
-    if (cs.visibility === 'hidden' || cs.display === 'none' || +cs.opacity === 0) return;
-    /* 26a0Fe0f DECORATION IS NOT TEXT. A faint separator or rule is low-contrast ON PURPOSE; counting it as
-       unreadable text buries the real failures under dozens of false ones. aria-hidden is the element saying so. */
-    if (el.getAttribute('aria-hidden') === 'true' || el.closest('[aria-hidden="true"]')) return;
+    if (cs.visibility === 'hidden' || cs.display === 'none' || +cs.opacity === 0) continue;
     const f = lum(cs.color), b = lum(bgOf(el));
-    if (f === null || b === null) return;
+    if (f === null || b === null) continue;
     const r = (Math.max(f,b) + 0.05) / (Math.min(f,b) + 0.05);
     if (r < 3) out.push({ sel: (el.className || el.tagName).toString().slice(0, 40), fg: cs.color, bg: bgOf(el), r: +r.toFixed(2) });
-  });
+  }
   return out;
 })()`;
 

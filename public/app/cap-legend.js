@@ -526,7 +526,7 @@ function _realTabHtml(){
 function _workTabHtml(){
   const R='var(--accent,var(--blue))';
   const seal=t=>`<span style="font-size:var(--fs-1);color:var(--ok-3);background:#e7f3ec;border-radius:5px;padding:1px 7px">🔒 ${t}</span>`;
-  const lic =t=>`<span style="font-size:var(--fs-1);color:#7a5e22;background:var(--gold-soft,#f4eeda);border:1px solid var(--gold-line,#e0d4a8);border-radius:5px;padding:1px 7px">🎫 ${t}</span>`;
+  const lic =t=>`<span style="font-size:var(--fs-1);color:var(--warn-3);background:var(--gold-soft,#f4eeda);border:1px solid var(--gold-line,#e0d4a8);border-radius:5px;padding:1px 7px">🎫 ${t}</span>`;
   const knob=t=>`<span style="font-size:var(--fs-1);color:#9a6d1a;background:#f7efdd;border-radius:5px;padding:1px 7px">✎ ${t}</span>`;
   const up  =t=>`<span style="font-size:var(--fs-1);color:var(--grey)">↑ ${t}</span>`;
   const chain=t=>`<span style="font-size:var(--fs-1);color:${R};background:var(--blue-tint);border-radius:5px;padding:1px 7px">${t}</span>`;
@@ -612,7 +612,7 @@ function _openLegendImpl(){
   const built=CAP_CATALOGUE.filter(c=>c.load!=='planned').length;
   const loadBadge=(c)=>{
     if(c.load==='eager')  return `<span style="font-size:var(--fs-1);font-weight:700;color:var(--ok-3);background:#e8f4ee;border:1px solid #bfe0cf;border-radius:6px;padding:1px 7px">always on</span>`;
-    if(c.load==='planned')return `<span style="font-size:var(--fs-1);font-weight:700;color:#7a5e22;background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:6px;padding:1px 7px">planned</span>`;
+    if(c.load==='planned')return `<span style="font-size:var(--fs-1);font-weight:700;color:var(--warn-3);background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:6px;padding:1px 7px">planned</span>`;
     const on=!!LOADED[c.id];
     return `<span style="font-size:var(--fs-1);font-weight:700;color:${on?'var(--blue-d)':'#8a8f98'};background:${on?'var(--blue-tint)':'#f4f4f2'};border:1px solid ${on?'var(--blue-tint-line)':'var(--line)'};border-radius:6px;padding:1px 7px">lazy · ${on?'loaded ✓':'on demand'}</span>`;
   };
