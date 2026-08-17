@@ -2261,6 +2261,87 @@ var THEMES = {
             '--warn-tint':'#2A2418', '--purple-tint':'#221E33', '--neutral-tint':'#20262E',
             '--on-gold':'#2C2410', '--on-purple':'#ffffff',
             '--shadow':'0 1px 2px rgba(0,0,0,.4),0 12px 34px rgba(0,0,0,.5)' } },
+  /**
+   * ⭐⭐ SLATE — added 2026-08-17 as a TEST OF THE SYSTEM, not because the app needed an eighth theme.
+   *
+   * Athi: "just to prove our theory, can you add one more theme and check all holds good?"
+   *
+   * ⚠️ THE POINT IS WHAT IS *NOT* HERE. No CSS file was touched, no capability JS, no screen. This block is the
+   * entire theme. If the token work holds, adding it costs one object literal and the guards stay green; if it
+   * does not, this is exactly where that shows up.
+   *
+   * ⚠️ EVERY ACCENT IS MEASURED FOR **BOTH** ROLES — as a fill with white text on it, and as text on --card.
+   * Values were chosen from a candidate sweep, not by eye. The near-misses are instructive and are recorded
+   * here so the next person does not re-try them:
+   *     teal   #35A79E  as-text 5.73 but white-on-fill 2.93  → REJECTED, every button label fails
+   *     teal   #2A8F88  white-on-fill 3.90 but as-text 4.30  → REJECTED, links go muddy
+   *     violet #8A72E4  fill 3.74, text 4.48                 → REJECTED by 0.02, took #9280E8
+   *   accepted:  teal #2E9E96  3.26 / 5.15      ok #33A866  3.03 / 5.54
+   *              amber #BA8926 3.14 / 5.34      disp #E05A50 3.65 / 4.59      violet #9280E8 3.24 / 5.17
+   *
+   * ⚠️ ROW STATES take the same measured steps as dark: hover 1.158, sel-2 1.290, picked 1.535 against --card,
+   * each keeping --grey above 4.5:1 (6.65 / 5.97 / 5.01).
+   */
+  slate:  { name: 'Slate',   dot: '#1D2A2C', vars: {
+            '--paper':'#101418', '--card':'#191E24', '--line':'#2B323A',
+            '--ink':'#E7EBEF', '--ink-2':'#C6CDD4',
+            '--grey':'#A7B1BA', '--grey-2':'#9CA6B0', '--grey-3':'#939DA7', '--grey-4':'#8A939D',
+            '--blue':'#2E9E96', '--blue-d':'#45B3AB', '--blue-2':'#278A83',
+            '--blue-tint':'#16292C', '--blue-tint-line':'#27453F',
+            '--gold':'#D4B074', '--gold-soft':'#262117', '--gold-line':'#423A24',
+            '--ok':'#33A866', '--ok-2':'#33A866', '--ok-3':'#3EB673',
+            '--prog':'#BA8926', '--warn-2':'#BA8926', '--warn-3':'#C99738',
+            '--disp':'#E05A50', '--disp-2':'#C9463D',
+            '--purple':'#9280E8', '--purple-2':'#8270D8',
+            '--chrome':'#0C1418', '--chrome-ink':'#A8BCC0', '--chrome-on':'#ffffff',
+            '--sel':'#28323E', '--hover':'#232A33', '--sel-2':'#28323E', '--picked':'#2F3E4F',
+            '--blue-tint-bg':'#16292C', '--ok-tint':'#16281E', '--danger-tint':'#2E1A18',
+            '--warn-tint':'#262117', '--purple-tint':'#221E33', '--neutral-tint':'#1E242B',
+            '--on-gold':'#2C2410', '--on-purple':'#ffffff',
+            '--shadow':'0 1px 2px rgba(0,0,0,.4),0 12px 34px rgba(0,0,0,.5)' } },
+  /**
+   * ⭐⭐ AZURE and RUBY — added 2026-08-17 to TEST THE SYSTEM, at Athi's ask: "completely contrast to what we
+   * have, for example, blue scheme, red scheme". Deliberately the hardest case available: not another neutral
+   * with a different accent, but a fully HUED GROUND, which is where a token system either holds or falls over.
+   *
+   * ⚠️ RUBY IS THE REAL TEST, AND THE REASON IS THE DISPUTE RED. On a rose ground the accent wants to be red —
+   * and "disputed" is ALSO red. If those collapse into one colour the screen stops saying what it means, so the
+   * accent is pushed to ROSE/MAGENTA (#A81F4A) and the dispute semantic stays ORANGE-red (#B4453F). They are
+   * separated by HUE, not by lightness, so they remain distinct to a colourblind reader too. The rule flowery
+   * established holds: a theme may move a semantic to sit on its ground, never REPLACE what it means.
+   *
+   * ⚠️ THESE TWO NEEDED THEIR OWN --grey, AND THAT IS THE ONE REAL FINDING FROM THE EXERCISE. With the shared
+   * grey (#5F6B70), a selection band bold enough to see on a hued ground put secondary text at 4.43 (azure) and
+   * 4.34 (ruby). The choice was a weaker selection or a darker grey; a hued theme should tune its own greys, so:
+   *     azure --grey #4F5A63   card 7.06  paper 6.32  hover 6.09  sel 5.69  picked 5.11
+   *     ruby  --grey #63505A   card 7.19  paper 6.62  hover 6.28  sel 5.76  picked 4.99
+   * Both then carry BOLDER row states than cream: azure 1.159/1.240/1.383, ruby 1.143/1.248/1.439.
+   */
+  azure:  { name: 'Azure',   dot: '#1857B8', vars: {
+            '--paper':'#EDF3FB', '--card':'#ffffff', '--line':'#CDDCEF',
+            '--ink':'#0D2440', '--ink-2':'#2B4568',
+            '--grey':'#4F5A63', '--grey-2':'#5B6670', '--grey-3':'#6C7681', '--grey-4':'#7C858F',
+            '--blue':'#1857B8', '--blue-d':'#11408C', '--blue-2':'#1550A8',
+            '--blue-tint':'#E4EDFA', '--blue-tint-line':'#BFD4EF',
+            '--gold':'#C08A2E', '--gold-soft':'#FAF2E2', '--gold-line':'#E8D6B4',
+            '--ok':'#1F7A4D', '--ok-2':'#1F7A4D', '--ok-3':'#268C5A',
+            '--prog':'#8A5F14', '--warn-2':'#8A5F14', '--warn-3':'#7A5412',
+            '--disp':'#B4453F', '--disp-2':'#93332E',
+            '--purple':'#6B3FE0', '--purple-2':'#5A2FC4',
+            '--hover':'#E7EFFA', '--sel-2':'#DCE8F8', '--picked':'#CBDDF4', '--sel':'#CBDDF4' } },
+  ruby:   { name: 'Ruby',    dot: '#A81F4A', vars: {
+            '--paper':'#FBEFF0', '--card':'#FFFAFA', '--line':'#EBD3D7',
+            '--ink':'#33161C', '--ink-2':'#5A3038',
+            '--grey':'#63505A', '--grey-2':'#6F5B65', '--grey-3':'#816C77', '--grey-4':'#927D88',
+            '--blue':'#A81F4A', '--blue-d':'#84163A', '--blue-2':'#961B42',
+            '--blue-tint':'#F8E6EB', '--blue-tint-line':'#E7C2CE',
+            '--gold':'#B8862F', '--gold-soft':'#FAF1E4', '--gold-line':'#E6D3B6',
+            '--ok':'#1F7A4D', '--ok-2':'#1F7A4D', '--ok-3':'#268C5A',
+            '--prog':'#8A5F14', '--warn-2':'#8A5F14', '--warn-3':'#7A5412',
+            /* ⚠️ ORANGE-red, deliberately NOT the rose accent — see the note above. */
+            '--disp':'#B4453F', '--disp-2':'#93332E',
+            '--purple':'#7A4BC0', '--purple-2':'#663CA4',
+            '--hover':'#F9E8EA', '--sel-2':'#F4DDE1', '--picked':'#EECBD2', '--sel':'#EECBD2' } },
 };
 function themeGet(){ try{ return localStorage.getItem('cb_theme') || 'cream'; }catch(_){ return 'cream'; } }
 /**
