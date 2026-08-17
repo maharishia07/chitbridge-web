@@ -130,7 +130,18 @@
     --sel:#cfe0f2;
     /* The other three row grounds - hover, the rail's selected row, and a picked row. Same reason as --sel:
        a reader looks straight at these, and they were the last light surfaces no theme could reach. */
-    --hover:#FCFBF8; --sel-2:#F2F6F4; --picked:#EAF1F8;
+    /**
+     * ⚠️ THESE WERE TOO CLOSE TO THE ROW GROUND TO SEE (Athi: "the hover and the selected colors are almost like
+     * background color, so not much difference"). Measured against --card, `hover` was a step of 1.035 and
+     * `sel-2` 1.090 — technically different, visually the same row. A selection you cannot see is not a selection.
+     *
+     * ⚠️ THE CEILING HERE IS THE SECONDARY TEXT, NOT THE EYE. Every row carries `.l2` in --grey, so darkening the
+     * ground far enough to be obvious drags --grey under 4.5:1 — the selected row would be easy to spot and
+     * harder to read, which is a bad trade. Each step below is the strongest one that keeps --grey legible:
+     *     hover 1.103 (grey 5.25)   sel-2 1.170 (grey 4.95)   picked 1.254 (grey 4.62)
+     * Dark has far more headroom and takes bigger steps; see the dark theme.
+     */
+    --hover:#F1F4F8; --sel-2:#E6EEF8; --picked:#DAE7F6;
   }
   /* ⭐ TYPE · SPACING · RADIUS TOKENS (2026-08-16, backlog 26). Athi, after asking whether the font work was
      page-by-page: *"backlog type and spacing tokens and you can work autonomously later."*
@@ -2159,7 +2170,12 @@ var THEMES = {
   /* Warmer and softer than cream, less glare under strong light. */
   sand:   { name: 'Sand',    dot: '#F3EDE1', vars: {
             '--paper':'#F3EDE1', '--card':'#FFFDF8', '--line':'#DED3BF',
-            '--gold-soft':'#F6EFE0', '--gold-line':'#E0D2B4' } },
+            '--gold-soft':'#F6EFE0', '--gold-line':'#E0D2B4',
+            /* ⚠️ WARM steps, not the default blue ones. A blue selection band on a warm sand ground reads as a
+               foreign element pasted onto the theme — the row states have to belong to the palette they sit in.
+               `picked` is deliberately softer than sand's natural next step: #E7DCC6 looked right and put --grey
+               at 4.26:1, so the GROUND yields to the text, never the other way round. */
+            '--hover':'#F7F2E8', '--sel-2':'#EFE7D6', '--picked':'#EBE2CE' } },
   /**
    * ⭐ VIBRANT — the same layout, stronger accents. For a counter screen in daylight where the muted palette
    * washes out. ⚠️ Only the ACCENTS move; the ground stays near-white, because raising both is how a screen
@@ -2188,7 +2204,9 @@ var THEMES = {
             '--gold':'#D79A5B', '--gold-soft':'#FBF0E6', '--gold-line':'#EED9C2',
             '--ok':'#3E7D53', '--ok-2':'#3E7D53', '--ok-3':'#4C9364',
             '--disp':'#B8465A', '--disp-2':'#9A3549', '--prog':'#9A6B2E',
-            '--purple':'#8A5CC4', '--purple-2':'#74469F' } },
+            '--purple':'#8A5CC4', '--purple-2':'#74469F',
+            /* Rose steps, for the same reason sand gets warm ones — a selection belongs to its own palette. */
+            '--hover':'#F9F0F4', '--sel-2':'#F2E2EB', '--picked':'#EBD4E0' } },
   /**
    * ⭐⭐ DARK — the one that needed the token work first (backlog 27).
    *
@@ -2236,7 +2254,7 @@ var THEMES = {
             /* ⚠️ The chrome stays DARK and gains a touch of separation from the page, rather than inverting
                with --ink. In light themes the nav is darker than the page; in dark it must be lighter, or the
                navigation dissolves into the background and the shell loses its edges. */
-            '--chrome':'#0B1F2A', '--chrome-ink':'#AFC0CC', '--chrome-on':'#ffffff', '--sel':'#22303F', '--hover':'#20262E', '--sel-2':'#1F2830', '--picked':'#233043',
+            '--chrome':'#0B1F2A', '--chrome-ink':'#AFC0CC', '--chrome-on':'#ffffff', '--sel':'#2A3647', '--hover':'#262D36', '--sel-2':'#2B3646', '--picked':'#35435A',
             /* The pale tints go DARK, keeping the same relationship to their semantic: a faint ground the
                semantic's text can still sit on. Inverting them to light would put dark chips on a dark page. */
             '--blue-tint-bg':'#1B2739', '--ok-tint':'#16281E', '--danger-tint':'#2E1A18',
