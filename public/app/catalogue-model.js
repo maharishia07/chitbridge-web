@@ -675,7 +675,7 @@
     LEGS: LEGS, TYPES: TYPES, viaFor: viaFor, leg: leg,
     STD_SCHEMES: STD_SCHEMES, PRICE_BASIS: PRICE_BASIS, PRICE_BY: PRICE_BY, PRICE_ORIGIN: PRICE_ORIGIN,
     priceProvenance: priceProvenance, priceIsCheckable: priceIsCheckable,
-    DATATYPES: DATATYPES, METHODS: METHODS, FACETS: FACETS, PRICING_MODELS: PRICING_MODELS, UNITS: UNITS, UNIT_ALIASES: UNIT_ALIASES, UNIT_NAMES: UNIT_NAMES, METHOD_MODELS: METHOD_MODELS, modelsForMethod: modelsForMethod, orphanModels: orphanModels, PALETTE: PALETTE,
+    DATATYPES: DATATYPES, METHODS: METHODS, FACETS: FACETS, PRICING_MODELS: PRICING_MODELS, UNITS: UNITS, UNIT_ALIASES: UNIT_ALIASES, UNIT_NAMES: UNIT_NAMES, UNIT_KINDS: UNIT_KINDS, unitKind: unitKind, METHOD_MODELS: METHOD_MODELS, modelsForMethod: modelsForMethod, orphanModels: orphanModels, PALETTE: PALETTE,
     ensure: ensure, toBase: toBase, resolvePrice: resolvePrice, routeChain: routeChain,
     deriveComputeJob: deriveComputeJob, canonicalInputs: canonicalInputs, validate: validate,
     toJSONSchema: toJSONSchema,
