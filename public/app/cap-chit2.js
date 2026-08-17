@@ -800,7 +800,7 @@ function chit2Screen(){
 
   var side = ['them', 'us'].map(function(s){
     var on = C2.side === s;
-    return '<button onclick="c2Side(\'' + s + '\')" style="flex:1;border:1px solid ' + (on ? 'var(--ink,#1c1a17)' : 'var(--line)') + ';background:' + (on ? 'var(--ink,#1c1a17)' : 'transparent') + ';color:' + (on ? 'var(--on-accent)' : 'var(--grey)') + ';font:inherit;font-size:13.5px;padding:9px 0;cursor:pointer;font-weight:' + (on ? '600' : '400') + ';border-radius:' + (s === 'them' ? '8px 0 0 8px' : '0 8px 8px 0') + '">'
+    return '<button onclick="c2Side(\'' + s + '\')" style="flex:1;border:1px solid ' + (on ? 'var(--accent)' : 'var(--line)') + ';background:' + (on ? 'var(--accent)' : 'transparent') + ';color:' + (on ? 'var(--on-accent)' : 'var(--grey)') + ';font:inherit;font-size:13.5px;padding:9px 0;cursor:pointer;font-weight:' + (on ? '600' : '400') + ';border-radius:' + (s === 'them' ? '8px 0 0 8px' : '0 8px 8px 0') + '">'
       + (s === 'them' ? 'Them' : 'Us') + '<span style="display:block;font-size:var(--fs-1);opacity:.72;font-weight:400">' + (s === 'them' ? 'the shared record' : 'our side only') + '</span></button>';
   }).join('');
 

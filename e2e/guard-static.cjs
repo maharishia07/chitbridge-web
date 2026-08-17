@@ -398,7 +398,11 @@ console.log('\n10 · tokens used in the wrong role (a text colour as a surface)'
            status dot with --grey-4, and that is a muted dot, not a surface. Flagging it would make this check cry
            wolf on correct code, and a guard that cries wolf is a guard that gets ignored — which costs more than
            the one bug it would have caught. Text on the surface is what makes the pairing rule apply at all. */
-        n += [...code.matchAll(new RegExp('background(?:-color)?\\s*:\\s*[^;]{0,120}?var\\(' + t + '\\)[^;{}]{0,40};[^;{}]{0,160}?color\\s*:', 'g'))].length;
+        /* ⚠️ `var(--ink)` AND `var(--ink,#1c1a17)` ARE THE SAME MISTAKE, and matching only the first let the
+           chit detail's Them/Us toggle through: `background: on ? 'var(--ink,#1c1a17)' : 'transparent'` with
+           white text on it — near-white on white in every dark theme. A fallback does not change what the token
+           MEANS, so the check must not care whether one is present. Athi found that box by eye, twice. */
+        n += [...code.matchAll(new RegExp('background(?:-color)?\\s*:\\s*[^;]{0,160}?var\\(\\s*' + t + '\\s*[,)][^;{}]{0,60};[^;{}]{0,200}?color\\s*:', 'g'))].length;
       }
       if (n) bad[name] = n;
     });

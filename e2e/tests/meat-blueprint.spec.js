@@ -5,6 +5,13 @@ const { test, expect } = require('@playwright/test');
 const { mintInContext } = require('../fixtures');
 const fs = require('fs');
 const path = require('path');
+
+/**
+ * ⚠️ A PRICE IS `{ amount, currency }`, NEVER A BARE NUMBER (lib/money.js). Reading `.price` directly gave
+ * "[object Object]" and read as a broken inherit — the assertion was stale, the feature was fine.
+ */
+const amountOf = (p) => (p && typeof p === "object") ? p.amount : p;
+const currencyOf = (p) => (p && typeof p === "object") ? p.currency : null;
 const SHOTS = path.join(__dirname, '..', 'wizard-shots');
 async function shot(page, n) { fs.mkdirSync(SHOTS, { recursive: true }); await page.waitForTimeout(250); await page.screenshot({ path: path.join(SHOTS, n), fullPage: true }); }
 const slugOf = (name) => (String(name || 'store').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'store') + '@v1';
@@ -80,8 +87,10 @@ test.describe('Meat blueprint · POWERPLAY (publish → inherit)', () => {
 
     expect(whole.names, 'wholesale inherited').toContain('Chicken');
     expect(retail.names, 'retail inherited').toContain('Chicken');
-    expect(String(whole.price), 'wholesale own price').toBe('28000');
-    expect(String(retail.price), 'retail own price').toBe('240');
+    expect(String(amountOf(whole.price)), 'wholesale own price').toBe('28000');
+    expect(currencyOf(whole.price), 'and the price carries its currency — the point of the money shape').toBeTruthy();
+    expect(String(amountOf(retail.price)), 'retail own price').toBe('240');
+    expect(currencyOf(retail.price), 'and the price carries its currency').toBeTruthy();
     console.log('POWERPLAY DONE — one meat blueprint, two distributors, own prices:', whole.price, 'vs', retail.price);
   });
 });
