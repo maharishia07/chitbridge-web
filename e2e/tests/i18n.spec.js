@@ -90,8 +90,15 @@ test.describe('i18n · the rail speaks the chosen language', () => {
   test('[I18N-04] the picker is beside the theme, and says what is still English', async ({ page }) => {
     await mintEntity(page);
     await page.getByTestId('icon-avatar').click();
-    await expect(page.getByTestId('lang-picker'), 'the language picker must live with the theme picker').toBeVisible();
-    await expect(page.getByTestId('theme-picker')).toBeVisible();
+    /* ⚠️ BOTH ARE COLLAPSED NOW, deliberately — the menu used to show ten theme pills and four language
+       buttons at all times, which buried Profile and Settings under a wall of chips. So the test opens the
+       section, exactly as a person does. ⚠️ ONE AT A TIME: opening Language must CLOSE Theme, and that is
+       asserted below rather than assumed — two open panels reproduce the wall this replaced. */
+    await page.getByTestId('avsec-theme').click();
+    await expect(page.getByTestId('theme-picker'), 'clicking Theme must reveal the palette').toBeVisible();
+    await page.getByTestId('avsec-lang').click();
+    await expect(page.getByTestId('lang-picker'), 'clicking Language must reveal the picker').toBeVisible();
+    await expect(page.getByTestId('theme-picker'), 'opening one section must close the other').toHaveCount(0);
     const body = await page.getByTestId('lang-picker').locator('..').textContent();
     /* ⚠️ The honesty note is part of the feature. Four language buttons imply the app speaks four; it does not
        yet, and letting it imply otherwise is how someone switches to Tamil, sees English, and reports a bug. */
