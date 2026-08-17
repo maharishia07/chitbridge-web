@@ -218,7 +218,13 @@ async function netWhereAmI(){
   if (UI._netPlaceHtml !== undefined && UI._netPlaceHtml !== null) { host.innerHTML = UI._netPlaceHtml; return; }
   if (UI._netPlaceBusy) return;                    // in flight — leave whatever is there rather than blanking it
   UI._netPlaceBusy = true;
-  host.innerHTML = '<div style="font-size:12px;color:var(--grey)">checking your place in the network…</div>';
+  /* ⚠️ A SPINNER, NOT 12px GREY PROSE. Athi: "it takes long time to bring the data, but processing message
+     not appears". The message WAS there — one line of the faintest text on the screen, in the corner of a card,
+     while the pane it belongs to sat unchanged for three seconds. A progress indicator nobody notices is the
+     same as none, and "is it working?" is the question it exists to answer. */
+  host.innerHTML = '<div class="loadwrap" style="display:flex;align-items:center;gap:9px;padding:14px 2px;'
+    + 'font-size:var(--fs-2);color:var(--on-card)"><span class="spin"></span>'
+    + 'Finding where you sit in the network…</div>';
   try{
     // The bridge id, self-healing. An empty one used to be answered with a confident "not part of a network",
     // which is the worst possible failure here: indistinguishable from the truth, and it hands a member of a
@@ -228,29 +234,50 @@ async function netWhereAmI(){
            if(e0.bridge_id){ SESSION.bridgeId = e0.bridge_id; if(typeof setSession==='function') setSession({bridgeId:e0.bridge_id}); } }catch(_){}
     }
     if(!SESSION.bridgeId){ UI._netRole = null; UI._netPlaceBusy = false; host.innerHTML = ''; return; }   // unknown ≠ alone: say nothing
-    var self = await api('netLookup', { query: { bridgeId: SESSION.bridgeId } }).catch(function(){ return null; });
-    var me = self && (self.entity || self);
-    if(!me || !me.id){ UI._netRole = 'alone'; UI._netPlaceBusy = false; UI._netPlaceHtml = ''; host.innerHTML = ''; return; }
-
-    // ⚠️ WALK UP FIRST. `netSubtree` is me AND MY DESCENDANTS — so a leaf asking for its own subtree gets back
-    // exactly itself, which is the one view that cannot answer "where do I sit?". The path names the root
-    // (`CBV97P3TYA.CBC5QSLG3Q`), so resolve that and ask for ITS subtree: the whole network, me included.
-    var myTree = await api('netSubtree', { params: { id: me.id } }).catch(function(){ return []; });
-    myTree = Array.isArray(myTree) ? myTree : (myTree && myTree.nodes) || [];
-    var myPath = (myTree[0] && myTree[0].path) || '';
-    var rootLabel = myPath ? myPath.split('.')[0] : '';
-    var rootBridge = rootLabel ? rootLabel.replace(/_/g, '-') : '';
-
-    var nodes = myTree;
-    if(rootBridge && rootBridge !== String(me.bridgeId || me.bridge_id || '')){
-      var rootSelf = await api('netLookup', { query: { bridgeId: rootBridge } }).catch(function(){ return null; });
-      var rootId = rootSelf && (rootSelf.entity || rootSelf) && (rootSelf.entity || rootSelf).id;
-      if(rootId){
-        var whole = await api('netSubtree', { params: { id: rootId } }).catch(function(){ return null; });
-        whole = Array.isArray(whole) ? whole : (whole && whole.nodes) || null;
-        if(whole && whole.length) nodes = whole;
+    /**
+     * ⭐⭐ ONE CALL, NOT FOUR. This was: lookup(me) → subtree(me) → read the root out of the path → lookup(root)
+     * → subtree(root). Every step needs the previous one's answer, so none of it could be parallelised here —
+     * four full round trips before the screen has anything to show.
+     *
+     * ⚠️ MEASURED against production 2026-08-18: entities/me 3986ms · network-design 1578ms ·
+     * network/entities/lookup 2373ms. At those latencies the chain is 6–10 SECONDS of an empty pane. The same
+     * walk server-side is two cheap queries on one pool with no network in between — GET /network/place.
+     *
+     * ⚠️ THE OLD CHAIN IS KEPT AS A FALLBACK, deliberately: the API deploys separately from the web app, so for
+     * the minutes between the two deploys /place does not exist yet. Without this the screen would break for
+     * everyone during that window — and a 404 here is indistinguishable from "you are not in a network", which
+     * is the one wrong answer this code has already been burned by.
+     */
+    var place = await api('netPlace', { query: { bridgeId: SESSION.bridgeId } }).catch(function(){ return null; });
+    var me, nodes;
+    if (place && place.found) {
+      me = place.entity;
+      nodes = place.nodes || [];
+    } else if (place && place.found === false) {
+      UI._netRole = 'alone'; UI._netPlaceBusy = false; UI._netPlaceHtml = ''; host.innerHTML = ''; return;
+    } else {
+      // /place not deployed yet (or it failed) — walk it the old way rather than claim the user is alone.
+      var self = await api('netLookup', { query: { bridgeId: SESSION.bridgeId } }).catch(function(){ return null; });
+      me = self && (self.entity || self);
+      if(!me || !me.id){ UI._netRole = 'alone'; UI._netPlaceBusy = false; UI._netPlaceHtml = ''; host.innerHTML = ''; return; }
+      var myTree = await api('netSubtree', { params: { id: me.id } }).catch(function(){ return []; });
+      myTree = Array.isArray(myTree) ? myTree : (myTree && myTree.nodes) || [];
+      var myPath = (myTree[0] && myTree[0].path) || '';
+      var rootLabel = myPath ? myPath.split('.')[0] : '';
+      var rootBridge = rootLabel ? rootLabel.replace(/_/g, '-') : '';
+      nodes = myTree;
+      if(rootBridge && rootBridge !== String(me.bridgeId || me.bridge_id || '')){
+        var rootSelf = await api('netLookup', { query: { bridgeId: rootBridge } }).catch(function(){ return null; });
+        var rootId = rootSelf && (rootSelf.entity || rootSelf) && (rootSelf.entity || rootSelf).id;
+        if(rootId){
+          var whole = await api('netSubtree', { params: { id: rootId } }).catch(function(){ return null; });
+          whole = Array.isArray(whole) ? whole : (whole && whole.nodes) || null;
+          if(whole && whole.length) nodes = whole;
+        }
       }
     }
+    if(!me || !me.id){ UI._netRole = 'alone'; UI._netPlaceBusy = false; UI._netPlaceHtml = ''; host.innerHTML = ''; return; }
+
     // WHO AM I IN THIS NETWORK? Athi, 2026-08-08: *"if we login with any of the store, it has to show the same
     // network, but can't create or update or modify the network."* The design belongs to the OPERATOR — the root
     // of the tree. A member sees the same network, read-only. Someone on no tree at all is simply standalone.

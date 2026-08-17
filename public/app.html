@@ -1444,6 +1444,8 @@ const EP = {
   prodStarterAdopt:{m:"POST",  p:"/api/products/starter-columns",ok:"✓"},  // adopt one — ADDITIVE, never retypes an existing column
   // --- NET tree (NET-01 Spine) · live /api/network · cb_entity/cb_edge. NOTE: cb_* id-space — resolve self via netLookup(bridge_id); Dev needs backfill ---
   netLookup:      {m:"GET",  p:"/api/network/entities/lookup",            ok:"✓"},
+  /* ⭐ ONE call for "where do I sit + the whole network", replacing a four-hop dependent chain. See the route. */
+  netPlace:       {m:"GET",  p:"/api/network/place",                       ok:"✓"},
   entitySearch:   {m:"GET",  p:"/api/entities/search",                    ok:"✓"},  // ?q= live recipient lookup (name/bridge_id)
   netSubtree:     {m:"GET",  p:"/api/network/entities/:id/subtree",       ok:"✓"},
   netConnections: {m:"GET",  p:"/api/network/entities/:id/connections",   ok:"✓"},
