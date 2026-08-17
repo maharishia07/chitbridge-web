@@ -307,10 +307,10 @@ const FOUNDATION_CATALOGUE = [
  *    capabilities are lifecycles (verbs) that act ON it. The clearest contrast is a shared-document tool. ── */
 function _subjectTabHtml(){
   const vs=(them,us)=>'<tr style="border-top:1px solid var(--line)"><td style="padding:6px 9px;color:var(--grey);vertical-align:top">'+them+'</td><td style="padding:6px 9px;color:var(--ink);font-weight:600;vertical-align:top">'+us+'</td></tr>';
-  const g=(t,m,alt)=>'<div style="display:flex;gap:10px;padding:6px 10px;font-size:var(--fs-1);'+(alt?'background:var(--blue-tint-bg);':'')+'"><span style="flex:0 0 122px;font-weight:700;color:var(--blue)">'+t+'</span><span style="color:var(--ink);line-height:1.45">'+m+'</span></div>';
+  const g=(t,m,alt)=>'<div style="display:flex;gap:10px;padding:6px 10px;font-size:var(--fs-1);'+(alt?'background:var(--blue-tint-bg);':'')+';color:var(--on-card)"><span style="flex:0 0 122px;font-weight:700;color:var(--blue)">'+t+'</span><span style="color:var(--ink);line-height:1.45">'+m+'</span></div>';
   return '<div style="padding:14px 16px;overflow:visible">'
     // RAIL — the hero picture (public asset; scalable vector)
-    +'<img src="/rail-metaphor.svg" alt="Chit &amp; Bridge — a governed rail: two tracks (Task, Order), wagon = your business, private yards, dispute siding, network" loading="lazy" style="width:100%;height:auto;display:block;border:1px solid var(--line);border-radius:12px;background:var(--card)"/>'
+    +'<img src="/rail-metaphor.svg" alt="Chit &amp; Bridge — a governed rail: two tracks (Task, Order), wagon = your business, private yards, dispute siding, network" loading="lazy" style="width:100%;height:auto;display:block;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--on-card)"/>'
     +'<div style="border:1px solid #cbd8ec;background:linear-gradient(180deg,#f6f9fe,#fff);border-radius:13px;padding:14px 16px;margin:10px 0 14px">'
       +'<div style="font-family:\'Space Grotesk\';font-weight:800;font-size:18px;color:var(--ink)">Chit &amp; Bridge is a governed rail</div>'
       +'<div style="font-size:var(--fs-2);color:var(--ink);line-height:1.55;margin-top:6px"><b>Content-neutral, governance-absolute.</b> You decide <b>what</b> moves between two entities — the business defines that; we guarantee that <b>whatever moves is governed</b>. A train can\'t leave the track.</div>'
@@ -365,7 +365,7 @@ function _foundTabHtml(){
 function _stackTabHtml(){
   return '<div style="padding:12px 13px">'
     +'<div style="font-size:12px;color:var(--grey);margin-bottom:9px;line-height:1.55">The full governance stack — <b>universe → chit</b>, one spine. Every value is an <b>attribute (data)</b> the engine reads; nothing governance lives in code. Colour: <span style="color:var(--ok-3);font-weight:700">proven live</span> · <span style="color:var(--warn-2);font-weight:700">vision / design</span>. Spinning a new platform (e.g. AWS · Mexico · service-desk) = one row.</div>'
-    +'<img src="/governance-stack.svg" alt="Chit &amp; Bridge governance stack — universe to chit" loading="lazy" style="width:100%;height:auto;border:1px solid var(--line);border-radius:12px;background:var(--card)"/>'
+    +'<img src="/governance-stack.svg" alt="Chit &amp; Bridge governance stack — universe to chit" loading="lazy" style="width:100%;height:auto;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--on-card)"/>'
   +'</div>';
 }
 
@@ -403,7 +403,7 @@ function _storiesTabHtml(){
     { icon:'🏛️', name:'The Life of an Entity', blurb:'DDL → DML: author the source-entities → the boilerplate → mint an entity → its chits. Define the mould once, mint many.', url:'https://claude.ai/code/artifact/93ccd05b-fd3a-4068-a47f-9faa41d6e4b0?via=auto_preview' },
     { icon:'🌍', name:'The Life of a Trade', blurb:'One chemical shipment, buyer → seller: real template evidence moving across the engine. Swap the industry and the standards change; the commercial spine and the rail do not.', url:'/docs/life-of-a-trade.html' },
   ];
-  const card=(x)=>`<a href="${x.url}" target="_blank" rel="noopener" style="display:block;text-decoration:none;border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:11px;background:var(--card)">
+  const card=(x)=>`<a href="${x.url}" target="_blank" rel="noopener" style="display:block;text-decoration:none;border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:11px;background:var(--card);color:var(--on-card)">
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:5px"><span style="font-size:19px">${x.icon}</span><span style="font-family:'Space Grotesk';font-weight:700;font-size:15px;color:var(--ink)">${esc(x.name)}</span><span style="margin-left:auto;font-size:12px;color:var(--accent,var(--blue));font-weight:700">Open ↗</span></div>
     <div style="font-size:var(--fs-2);color:var(--grey);line-height:1.5">${esc(x.blurb)}</div></a>`;
   return `<div style="padding:12px 13px;overflow:visible">
@@ -440,7 +440,7 @@ function _edgeTabHtml(){
       +'<div style="font-size:var(--fs-1);color:var(--grey)">'+esc(s)+'</div></div>'; };
   const arrow=()=>'<span style="color:var(--grey);font-size:var(--fs-1)">→</span>';
   const _mk=(v)=>{ const m={y:['var(--ok-3)','✓'],p:['var(--warn-2)','~'],n:['var(--disp)','✗']}, c=m[v]||m.n; return '<span style="color:'+c[0]+';font-weight:700">'+c[1]+'</span>'; };
-  const crow=(n,a,b,c,d,hl)=>'<tr style="'+(hl?'background:var(--blue-tint);':'')+'border-top:1px solid var(--line)"><td style="text-align:left;padding:4px;font-weight:'+(hl?'700':'500')+';color:'+(hl?'var(--blue-2)':'var(--ink)')+'">'+n+'</td><td style="text-align:center;padding:4px">'+_mk(a)+'</td><td style="text-align:center;padding:4px">'+_mk(b)+'</td><td style="text-align:center;padding:4px">'+_mk(c)+'</td><td style="text-align:center;padding:4px">'+_mk(d)+'</td></tr>';
+  const crow=(n,a,b,c,d,hl)=>'<tr style="'+(hl?'background:var(--blue-tint);':'')+'border-top:1px solid var(--line);color:var(--on-card)"><td style="text-align:left;padding:4px;font-weight:'+(hl?'700':'500')+';color:'+(hl?'var(--blue-2)':'var(--ink)')+'">'+n+'</td><td style="text-align:center;padding:4px">'+_mk(a)+'</td><td style="text-align:center;padding:4px">'+_mk(b)+'</td><td style="text-align:center;padding:4px">'+_mk(c)+'</td><td style="text-align:center;padding:4px">'+_mk(d)+'</td></tr>';
   return '<div style="padding:14px 16px;overflow:visible">'
     +'<div style="font-size:11.5px;color:var(--grey);margin-bottom:8px">Where we aim vs the alternatives. <b>This is a positioning hypothesis</b> — our dot is a <b>target</b> (we are early/unproven); the others are established.</div>'
     +'<div style="position:relative;height:270px;margin:22px 34px 30px;border-left:1.5px solid var(--line);border-bottom:1.5px solid var(--line)">'
@@ -483,7 +483,7 @@ function _edgeTabHtml(){
       +'<div style="font-size:var(--fs-1);color:var(--grey);margin-top:5px">Cols: <b>Gov travels</b> to the distributor · <b>Neutral</b> = distributor-neutral, no host lock · <b>Info-only</b> = no logistics grab · <b>Dispute</b> = per-copy. Only CB combines governance-travels + neutral + information-only (built + harness-verified) — but <b>not yet adopted by a real brand+distributor pair</b>, so it&rsquo;s a target, not a trophy.</div>'
     +'</div>'
     +'<div style="font-size:var(--fs-1);color:var(--grey);text-align:center;padding-top:10px;border-top:1px solid var(--line);margin-top:14px">Closest analog: <b>ServiceNow</b> — one records/workflow facility, many classified lifecycles (ITSM/HR/dev). It proves the model has takers — and it won by starting <i>narrow</i> (an ITIL desk) then generalizing. Our claimed differentiator vs it: accessibility &amp; cost for the small player.</div>'
-    +'<div style="border:1px solid var(--line);border-radius:9px;padding:11px 12px;margin-top:14px;background:var(--card)">'
+    +'<div style="border:1px solid var(--line);border-radius:9px;padding:11px 12px;margin-top:14px;background:var(--card);color:var(--on-card)">'
       +'<div style="font-size:var(--fs-1);font-weight:700;color:var(--warn-2);margin-bottom:5px">🧭 Critic&rsquo;s lens (we hold ourselves to it)</div>'
       +'<div style="font-size:var(--fs-1);color:var(--ink);line-height:1.5">The honest risk: the <b>model is ahead of adoption</b> — elegant &ne; adopted. The proof that counts is <b>one real user on one blueprint</b>, not a better diagram. As a <b>concept/POC this existed for years</b>; as a <b>product it is ~2 weeks old</b> — so it is early <i>by timeline</i>, and we name what is unproven rather than oversell it.</div>'
     +'</div>'
@@ -530,12 +530,12 @@ function _workTabHtml(){
   const knob=t=>`<span style="font-size:var(--fs-1);color:#9a6d1a;background:var(--warn-tint);border-radius:5px;padding:1px 7px">✎ ${t}</span>`;
   const up  =t=>`<span style="font-size:var(--fs-1);color:var(--grey)">↑ ${t}</span>`;
   const chain=t=>`<span style="font-size:var(--fs-1);color:${R};background:var(--blue-tint);border-radius:5px;padding:1px 7px">${t}</span>`;
-  const stage=(t,d,tag)=>`<span style="display:inline-flex;flex-direction:column;background:var(--card);border:1px solid var(--line);border-radius:9px;padding:5px 9px;vertical-align:top;max-width:158px"><b style="font-size:var(--fs-1)">${esc(t)}${tag?` <span style="font-family:'Space Mono';font-size:var(--fs-1);color:${R};background:var(--blue-tint);border-radius:4px;padding:0 4px">${tag}</span>`:''}</b>${d?`<span style="color:var(--grey);font-size:var(--fs-1);line-height:1.35;margin-top:2px">${d}</span>`:''}</span>`;
+  const stage=(t,d,tag)=>`<span style="display:inline-flex;flex-direction:column;background:var(--card);border:1px solid var(--line);border-radius:9px;padding:5px 9px;vertical-align:top;max-width:158px;color:var(--on-card)"><b style="font-size:var(--fs-1)">${esc(t)}${tag?` <span style="font-family:'Space Mono';font-size:var(--fs-1);color:${R};background:var(--blue-tint);border-radius:4px;padding:0 4px">${tag}</span>`:''}</b>${d?`<span style="color:var(--grey);font-size:var(--fs-1);line-height:1.35;margin-top:2px">${d}</span>`:''}</span>`;
   const arr=`<span style="color:var(--grey);font-size:var(--fs-1);padding:0 1px">→</span>`;
   const journey=(icon,name,sub,stages)=>`<div style="border:1px solid var(--line);border-radius:12px;padding:11px 13px;margin-bottom:10px"><div style="font-weight:700;font-size:var(--fs-2);margin-bottom:8px">${icon} ${name} <span style="color:var(--grey);font-weight:500">— ${sub}</span></div><div style="display:flex;flex-wrap:wrap;gap:6px;align-items:stretch">${stages.join(arr)}</div></div>`;
   const line=o=>`<div style="border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:11px">
     <div style="display:flex;align-items:center;gap:9px">
-      <span style="width:30px;height:30px;border-radius:9px;display:grid;place-items:center;font-size:15px;background:var(--blue-tint);border:1px solid var(--line)">${o.icon}</span>
+      <span style="width:30px;height:30px;border-radius:9px;display:grid;place-items:center;font-size:15px;background:var(--blue-tint);border:1px solid var(--line);color:var(--on-card)">${o.icon}</span>
       <span style="font-family:'Space Grotesk';font-weight:700;font-size:14.5px">${esc(o.name)}</span>
       <span style="font-family:'Space Mono';font-size:var(--fs-1);color:${R};background:var(--blue-tint);border:1px solid var(--line);border-radius:6px;padding:1px 6px">${esc(o.pid)}</span>
       <span style="margin-left:auto;font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:${o.live?'var(--ok-3)':'var(--grey-2)'};border:1px ${o.live?'solid #bfe0cf':'dashed #c2c6cc'};border-radius:5px;padding:1px 6px">${o.live?'Live':'Designed'}</span>
@@ -562,7 +562,7 @@ function _workTabHtml(){
       flow:'order → delivery_note → invoice → payment → receipt — each hop\'s <b>output is the next hop\'s input</b>',
       chips:[chain('Purposes today · pattern-ize next')] },
   ];
-  const spine=[['Constitution','base@v1'],['↳ Capability','connector@v1'],['↳ Work-pattern','iot-signal@v1'],['↳ Chit','stamped']].map((s,i)=>`<div style="flex:1 1 118px;min-width:110px;padding:9px 11px;${i?'border-left:1px solid var(--line)':''};${i===3?'background:var(--blue-tint)':''}"><div style="font-family:'Space Mono';font-size:var(--fs-1);letter-spacing:.07em;text-transform:uppercase;color:var(--grey)">${s[0]}</div><div style="font-weight:700;font-size:13px;${i===3?'color:'+R:''}">${s[1]}</div></div>`).join('');
+  const spine=[['Constitution','base@v1'],['↳ Capability','connector@v1'],['↳ Work-pattern','iot-signal@v1'],['↳ Chit','stamped']].map((s,i)=>`<div style="flex:1 1 118px;min-width:110px;padding:9px 11px;${i?'border-left:1px solid var(--line)':''};${i===3?'background:var(--blue-tint)':''};color:var(--on-card)"><div style="font-family:'Space Mono';font-size:var(--fs-1);letter-spacing:.07em;text-transform:uppercase;color:var(--grey)">${s[0]}</div><div style="font-weight:700;font-size:13px;${i===3?'color:'+R:''}">${s[1]}</div></div>`).join('');
   const notif=[
     ['🏢 Entity','a copy delivered to Task / Order','mailbox lists; entity-scoped RLS'],
     ['🧑 Actor','assigned / visible change — delivery·status·message·dispute','per-actor <b>unread</b> + bell + message centre'],
@@ -595,7 +595,7 @@ function _workTabHtml(){
       stage('Pin','the chit records schema@version — verifiable forever'),
     ])}
     <div style="font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3);margin:16px 0 7px">Notifications — who gets told, and how</div>
-    <div style="overflow-x:auto;border:1px solid var(--line);border-radius:12px"><table style="width:100%;border-collapse:collapse;font-size:11.5px;min-width:520px"><tr style="background:var(--blue-tint)"><td style="padding:6px 9px;font-family:'Space Mono';font-size:var(--fs-1);letter-spacing:.06em;text-transform:uppercase;color:var(--grey)">Crew</td><td style="padding:6px 9px;font-family:'Space Mono';font-size:var(--fs-1);letter-spacing:.06em;text-transform:uppercase;color:var(--grey)">Notified by</td><td style="padding:6px 9px;font-family:'Space Mono';font-size:var(--fs-1);letter-spacing:.06em;text-transform:uppercase;color:var(--grey)">Handled</td></tr>${notif}</table></div>
+    <div style="overflow-x:auto;border:1px solid var(--line);border-radius:12px"><table style="width:100%;border-collapse:collapse;font-size:11.5px;min-width:520px"><tr style="background:var(--blue-tint);color:var(--on-card)"><td style="padding:6px 9px;font-family:'Space Mono';font-size:var(--fs-1);letter-spacing:.06em;text-transform:uppercase;color:var(--grey)">Crew</td><td style="padding:6px 9px;font-family:'Space Mono';font-size:var(--fs-1);letter-spacing:.06em;text-transform:uppercase;color:var(--grey)">Notified by</td><td style="padding:6px 9px;font-family:'Space Mono';font-size:var(--fs-1);letter-spacing:.06em;text-transform:uppercase;color:var(--grey)">Handled</td></tr>${notif}</table></div>
     <div style="font-size:var(--fs-1);color:var(--grey);line-height:1.55;margin-top:11px">Mechanism: per-actor unread = <b>chit_reads</b> vs <b>chit_status.updated_at</b>; bell + centre from the append-only <b>state_log</b>; cross-entity delivery only via the SECURITY DEFINER fns. · <b>Honest:</b> 3 patterns minted+live; the commercial run is real as purposes (not pattern-ized); AI &amp; customer rows are designed.</div>
   </div>`;
 }
@@ -632,7 +632,7 @@ function _openLegendImpl(){
     const under=c.governedUnder?`<span style="font-size:var(--fs-1);color:var(--grey)">under <b style="color:#2f6f4a;font-weight:600">${esc(c.governedUnder)}</b></span>`:'';
     const mech=(c.governedBy&&c.governedBy.length)?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:5px">${govChips(c.governedBy,'var(--ok-2)','var(--ok-tint)','var(--ok-tint)')}</div>`:'';
     const gap=(c.govGap&&c.govGap.length)?`<div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-top:5px"><span style="font-size:var(--fs-1);font-weight:700;color:var(--warn-2)">to L${c.govTarget||4}:</span>${govChips(c.govGap,'var(--warn-2)','var(--warn-tint)','var(--warn-tint)')}</div>`:'';
-    return `<div style="border:1px solid #d7e6dc;background:var(--card);border-radius:9px;padding:7px 9px;margin:0 0 9px">
+    return `<div style="border:1px solid #d7e6dc;background:var(--card);border-radius:9px;padding:7px 9px;margin:0 0 9px;color:var(--on-card)">
       <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap">${badge}${under}</div>${mech}${gap}
     </div>`;
   };
@@ -653,7 +653,7 @@ function _openLegendImpl(){
     </div>`;
   const body = (_lbTab==='subject') ? _subjectTabHtml() : (_lbTab==='stories') ? _storiesTabHtml() : (_lbTab==='found') ? _foundTabHtml() : (_lbTab==='stack') ? _stackTabHtml() : (_lbTab==='life') ? _lifeTabHtml() : (_lbTab==='sec') ? _secTabHtml() : (_lbTab==='edge') ? _edgeTabHtml() : (_lbTab==='real') ? _realTabHtml() : (_lbTab==='work') ? _workTabHtml() : capBody;
   const titles = { subject:'the subject — the sealed co-held record', stories:'the Life of… — business narratives', found:'foundations — the trust floor + proof', stack:'the governance stack — universe → chit', cap:'capabilities &amp; features', life:'lifecycle &amp; traceability', sec:'security posture', edge:'positioning &amp; edge', real:'reality &amp; how we earn it', work:'work patterns — the governed journeys' };
-  host.innerHTML=`<div class="notifover" onclick="closeLegend()"><div class="notifpanel" style="position:fixed;inset:0;width:100vw;height:100vh;max-width:none;max-height:none;border-radius:0;overflow:hidden;display:flex;flex-direction:column;background:var(--card)" onclick="event.stopPropagation()">
+  host.innerHTML=`<div class="notifover" onclick="closeLegend()"><div class="notifpanel" style="position:fixed;inset:0;width:100vw;height:100vh;max-width:none;max-height:none;border-radius:0;overflow:hidden;display:flex;flex-direction:column;background:var(--card);color:var(--on-card)" onclick="event.stopPropagation()">
     <div style="display:flex;align-items:center;gap:12px;padding:16px 20px;background:linear-gradient(180deg,#f7f9fc,#fff);border-bottom:1px solid var(--line);flex:none">
       <span style="font-size:22px">🔑</span>
       <div style="line-height:1.15"><div style="font-family:'Space Grotesk';font-weight:700;font-size:19px;color:var(--ink)">What we serve</div><div style="font-size:var(--fs-2);color:var(--grey)">${titles[_lbTab]||titles.cap}</div></div>

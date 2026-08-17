@@ -64,7 +64,7 @@ async function _aiDraft(skill, label, ctx, attach){
       ? '<button onclick="_aiAccept()" title="File this document as the evidence backing '+esc(attach.title||attach.doc)+' — a chit on your rail" style="'+bs+';flex:1;border:1px solid var(--ok-3);background:var(--ok-3);color:var(--on-ok)">✓ Accept &amp; attach as evidence</button>' : '';
     var html = '<style>'+(typeof _AI_MDCSS!=='undefined'?_AI_MDCSS:'')+'</style>'
       + '<div style="font-size:var(--fs-1);color:var(--purple);background:var(--blue-tint-bg);border:1px solid #ddd4f5;border-radius:9px;padding:8px 11px;margin-bottom:12px;line-height:1.5">🤖 <b>AI proposal — not evidence.</b> '+esc((r&&r.note)||'Review and confirm before you use it.')+(cost!=null?' <span style="color:var(--grey)">· cost $'+cost+'</span>':'')+'</div>'
-      + '<div class="amddoc" style="background:var(--card);border:1px solid var(--line);border-radius:9px;padding:16px 20px;max-height:52vh;overflow:auto">'+(typeof _aiMd==='function'?_aiMd(draft):esc(draft))+'</div>'
+      + '<div class="amddoc" style="background:var(--card);border:1px solid var(--line);border-radius:9px;padding:16px 20px;max-height:52vh;overflow:auto;color:var(--on-card)">'+(typeof _aiMd==='function'?_aiMd(draft):esc(draft))+'</div>'
       + '<div style="display:flex;gap:8px;margin-top:13px;flex-wrap:wrap">'
         + acceptBtn
         + '<button onclick="_aiPdf()" style="'+bs+';flex:'+(acceptBtn?'0 0 auto':'1')+';border:1px solid var(--purple);background:'+(acceptBtn?'var(--card)':'var(--purple)')+';color:'+(acceptBtn?'var(--purple)':'var(--on-accent)')+'">⬇ PDF</button>'
@@ -177,8 +177,8 @@ function _rdExpand(it){
     +(it.rung==='verified'&&it.verified_at?_rdKv('Verified at source', String(it.verified_at).slice(0,10)+(it.verified_by?' · '+esc(it.verified_by):'')):'')
     +(it.evidence_ref&&/^[0-9a-f-]{20,}$/i.test(String(it.evidence_ref))?_rdKv('Evidence','document on the rail'):'');
   var ai=L.ai;
-  var partner=L.partner?'<div style="margin-top:11px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--warn-tint);display:flex;align-items:center;gap:8px"><div style="flex:1;min-width:0"><span style="font-size:var(--fs-1);font-weight:800;color:var(--warn-3);text-transform:uppercase;letter-spacing:.05em">Or hand it to a partner</span><div style="font-size:var(--fs-2);margin-top:3px;font-weight:600">'+esc(L.partner)+'</div></div><button onclick="aiSuggestPartner(\''+esc(it.standard)+'\',\''+esc(it.doc)+'\')" title="AI suggests who can carry this + what to ask them" style="flex:0 0 auto;font-size:var(--fs-1);font-weight:700;border:1px solid var(--purple);background:var(--card);color:var(--purple);border-radius:6px;padding:6px 10px;cursor:pointer">✨ Suggest</button></div>':'';
-  return '<div style="border-top:1px solid var(--line);padding:12px 15px 15px;background:var(--blue-tint-bg)">'
+  var partner=L.partner?'<div style="margin-top:11px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--warn-tint);display:flex;align-items:center;gap:8px;color:var(--on-card)"><div style="flex:1;min-width:0"><span style="font-size:var(--fs-1);font-weight:800;color:var(--warn-3);text-transform:uppercase;letter-spacing:.05em">Or hand it to a partner</span><div style="font-size:var(--fs-2);margin-top:3px;font-weight:600">'+esc(L.partner)+'</div></div><button onclick="aiSuggestPartner(\''+esc(it.standard)+'\',\''+esc(it.doc)+'\')" title="AI suggests who can carry this + what to ask them" style="flex:0 0 auto;font-size:var(--fs-1);font-weight:700;border:1px solid var(--purple);background:var(--card);color:var(--purple);border-radius:6px;padding:6px 10px;cursor:pointer">✨ Suggest</button></div>':'';
+  return '<div style="border-top:1px solid var(--line);padding:12px 15px 15px;background:var(--blue-tint-bg);color:var(--on-card)">'
     +_rdSub('Its lifecycle')+steps
     +_rdSub('Evidence · current version')+'<div>'+ev+'</div>'
     +_rdSub('How you use it')+'<div style="font-size:var(--fs-2);color:var(--ink)">'+esc(L.use)+'</div>'
@@ -295,7 +295,7 @@ function _rdDestSelectors(){
 function _rdHeader(){
   var tab=UI.rdTab||'certification';
   var tb=function(k,lbl){ return '<div onclick="UI.rdTab=\''+k+'\';if(typeof renderApp===\'function\')renderApp()" style="padding:9px 15px;font-size:var(--fs-2);font-weight:700;cursor:pointer;border-bottom:2px solid '+(tab===k?'var(--blue)':'transparent')+';color:'+(tab===k?'var(--blue)':'var(--grey)')+'">'+lbl+'</div>'; };
-  return '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex:none;padding:0 12px;border-bottom:1px solid var(--line);background:var(--card)">'
+  return '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex:none;padding:0 12px;border-bottom:1px solid var(--line);background:var(--card);color:var(--on-card)">'
     +'<div style="display:flex;gap:2px">'+tb('certification','Certification')+tb('clearance','Clearance')+tb('commercial','Commercial')+'</div>'
     +'<div style="margin-left:auto;display:flex;align-items:center;gap:8px;padding:6px 0;flex-wrap:wrap">'+(tab!=='commercial'?_rdDestSelectors():'')
       +'<button onclick="aiSuggestStandards()" title="AI suggests the standards you likely need for this sector + market" style="font-size:11.5px;font-weight:700;border:1px solid var(--purple);background:var(--purple-tint);color:var(--purple);border-radius:9px;padding:6px 10px;cursor:pointer">✨ Standards</button>'
@@ -322,7 +322,7 @@ async function openSectorMatrix(){
   var list=Object.keys(rows).map(function(k){ var on=secs.map(function(s){return !!rows[k].sectors[s[0]];}); return {std:k,name:STDNAME[k]||k,on:on,n:on.filter(Boolean).length}; });
   list.sort(function(a,b){ return (b.n-a.n)||a.std.localeCompare(b.std); });
   var head='<tr><th style="text-align:left;padding:8px 6px;font-size:var(--fs-1);text-transform:uppercase;color:var(--grey);border-bottom:1px solid var(--line)">Standard</th>'+secs.map(function(s){return '<th style="padding:8px 4px;font-size:var(--fs-1);border-bottom:1px solid var(--line);color:'+s[3]+';white-space:nowrap">'+s[1]+'<br>'+s[2]+'</th>';}).join('')+'</tr>';
-  var rowH=function(r){ var common=r.n===secs.length; return '<tr'+(common?' style="background:var(--ok-tint)"':'')+'><td style="padding:8px 6px;font-weight:600;font-size:12px;border-bottom:1px solid var(--line);color:'+(common?'var(--ok-3)':'var(--ink)')+'">'+esc(r.name)+'</td>'+r.on.map(function(v,i){return _mtxCell(v,common,secs[i][3]);}).join('')+'</tr>'; };
+  var rowH=function(r){ var common=r.n===secs.length; return '<tr'+(common?' style="background:var(--ok-tint);color:var(--on-card)"':'')+'><td style="padding:8px 6px;font-weight:600;font-size:12px;border-bottom:1px solid var(--line);color:'+(common?'var(--ok-3)':'var(--ink)')+'">'+esc(r.name)+'</td>'+r.on.map(function(v,i){return _mtxCell(v,common,secs[i][3]);}).join('')+'</tr>'; };
   var band=function(t){return '<tr><td colspan="'+(secs.length+1)+'" style="padding:11px 6px 3px;font-size:var(--fs-1);font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--grey)">'+t+'</td></tr>';};
   var common=list.filter(function(r){return r.n===secs.length;}), spec=list.filter(function(r){return r.n!==secs.length;});
   var html='<div style="font-size:11.5px;color:var(--grey);margin-bottom:9px">Lane held constant ('+esc(origin)+' → '+esc(dest)+') — only the sector changes. A full row is the <b>common backbone</b>; a single ✓ is <b>sector-specific</b>.</div>'
@@ -394,7 +394,7 @@ function _rdComDetail(g){
   var names=(g.instruments||[]).map(function(i){return esc(i.name);}).join(' · ');
   var draftBtn = (m.ai&&m.ai.skill)
     ? '<button onclick="aiDraftCommerce(\''+m.ai.skill+'\',\''+esc(g.label)+'\')" title="AI drafts this from the current lane — you review and confirm (never autonomous)" style="font-size:12px;font-weight:700;border:1px solid var(--purple);background:var(--purple-tint);color:var(--purple);border-radius:9px;padding:7px 12px;cursor:pointer">✨ Draft with AI</button>' : '';
-  var partner = m.partner ? '<div style="margin-top:11px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--warn-tint)"><span style="font-size:var(--fs-1);font-weight:800;color:var(--warn-3);text-transform:uppercase;letter-spacing:.05em">Or hand it to a partner</span><div style="font-size:var(--fs-2);margin-top:3px;font-weight:600">'+esc(m.partner)+'</div></div>' : '';
+  var partner = m.partner ? '<div style="margin-top:11px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--warn-tint);color:var(--on-card)"><span style="font-size:var(--fs-1);font-weight:800;color:var(--warn-3);text-transform:uppercase;letter-spacing:.05em">Or hand it to a partner</span><div style="font-size:var(--fs-2);margin-top:3px;font-weight:600">'+esc(m.partner)+'</div></div>' : '';
   var ai=m.ai||{};
   var aiLine = '<b style="color:var(--blue)">'+esc(ai.lvl||'L2')+'</b> · gate: '+esc(ai.gate||'confirm')+' — '+esc(ai.t||'AI role to be defined.')+(ai.skill?'':' <i style="color:#8a94a6">(skill coming)</i>');
   return '<div style="padding:14px 16px 0"><div style="display:flex;align-items:flex-start;gap:10px"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:15px">'+esc(g.label)+'</div><div style="font-size:11.5px;color:var(--grey);margin-top:4px;display:flex;align-items:center;gap:7px;flex-wrap:wrap">'+_frmBadge(g.frm_class)+(g.covered_onrail?'<span style="color:var(--ok-3);font-weight:700;font-size:var(--fs-1)">● already on rail</span>':'')+'</div></div><div style="flex:0 0 auto">'+draftBtn+'</div></div></div>'
@@ -414,8 +414,8 @@ function _rdComTwoPane(){
   var list=UI.commerce.cluster, sel=(UI.comSel!=null && UI.comSel<list.length)?UI.comSel:0; UI.comSel=sel;
   var left=list.map(function(g,i){return _rdComRow(g,i,sel);}).join('');
   return '<div class="rdpanes'+(UI.rdMDetail?' showdetail':'')+'" style="flex:1;display:flex;min-height:0;overflow:hidden">'
-    +'<div id="comlist" class="rdlist" style="width:300px;flex:0 0 auto;border-right:1px solid var(--line);overflow-y:auto;background:var(--card);padding:8px 6px 30px">'+left+'</div>'
-    +'<div class="rddetail" style="flex:1;min-width:0;overflow-y:auto;background:var(--blue-tint-bg)">'
+    +'<div id="comlist" class="rdlist" style="width:300px;flex:0 0 auto;border-right:1px solid var(--line);overflow-y:auto;background:var(--card);padding:8px 6px 30px;color:var(--on-card)">'+left+'</div>'
+    +'<div class="rddetail" style="flex:1;min-width:0;overflow-y:auto;background:var(--blue-tint-bg);color:var(--on-card)">'
       +'<button class="dback" style="margin:10px 0 0 14px" onclick="rdBack()">‹ Back</button>'+_rdComDetail(list[sel])+'</div></div>';
 }
 // a two-pane (list ↔ detail) for one tab's set of items
@@ -425,8 +425,8 @@ function _rdTwoPane(list){
   var sel=list.filter(function(i){return i.standard+'|'+i.doc===UI.rdSel;})[0];
   var left=list.map(function(i){return _rdRow(i,UI.rdSel);}).join('');
   return '<div class="rdpanes'+(UI.rdMDetail?' showdetail':'')+'" style="flex:1;display:flex;min-height:0;overflow:hidden">'
-    +'<div id="rdlist" class="rdlist" style="width:300px;flex:0 0 auto;border-right:1px solid var(--line);overflow-y:auto;background:var(--card);padding:8px 6px 30px">'+left+'</div>'
-    +'<div id="rddetail" class="rddetail" style="flex:1;min-width:0;overflow-y:auto;background:var(--blue-tint-bg)">'
+    +'<div id="rdlist" class="rdlist" style="width:300px;flex:0 0 auto;border-right:1px solid var(--line);overflow-y:auto;background:var(--card);padding:8px 6px 30px;color:var(--on-card)">'+left+'</div>'
+    +'<div id="rddetail" class="rddetail" style="flex:1;min-width:0;overflow-y:auto;background:var(--blue-tint-bg);color:var(--on-card)">'
       +'<button class="dback" style="margin:10px 0 0 14px" onclick="rdBack()">‹ Back</button>'+_rdDetailPane(sel)+'</div></div>';
 }
 /* Leave the detail on mobile. On a laptop nothing calls this — the back button it belongs to is .dback, which the

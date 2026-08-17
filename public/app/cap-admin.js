@@ -93,7 +93,7 @@ function vaultCardHTML(vault, encrypted){
 /* One section — its type, an optional label that tells two of the same kind apart, and its rows. */
 function vaultSectionHTML(sec, i){
   var rows=(sec.rows||[]).map(function(r,j){ return vaultRowHTML(r,i,j,sec.type); }).join('');
-  return '<div style="border:1px solid var(--line);border-radius:11px;padding:11px 12px;margin-top:11px;background:var(--paper)">'
+  return '<div style="border:1px solid var(--line);border-radius:11px;padding:11px 12px;margin-top:11px;background:var(--paper);color:var(--on-bg)">'
     +'<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px">'
       +'<span style="font-size:12px;font-weight:700;color:var(--ink)">'+esc(VAULT_SECTION_TYPES[sec.type]||sec.type)+'</span>'
       /* ⚠️ THE LABEL IS WHAT MAKES REPEATS USABLE. Two sections both reading "Bank" are indistinguishable at a
@@ -316,18 +316,18 @@ function _misSplitBar(m){
   var tot = m.committed + m.forecast;
   if (!tot) return '<div class="misnote">No value on any chit yet.</div>';
   var cp = Math.round(m.committed / tot * 100);
-  return '<div class="misplit"><span style="background:var(--blue);width:' + cp + '%"></span>'
-    + '<span style="background:var(--gold);width:' + (100 - cp) + '%"></span></div>'
-    + '<div class="miskey"><span class="k"><i class="sw" style="background:var(--blue)"></i> Committed ' + inr(m.committed) + '</span>'
-    + '<span class="k"><i class="sw" style="background:var(--gold)"></i> Forecast ' + inr(m.forecast) + '</span></div>';
+  return '<div class="misplit"><span style="background:var(--blue);width:' + cp + '%;color:var(--on-accent)"></span>'
+    + '<span style="background:var(--gold);width:' + (100 - cp) + '%;color:var(--on-gold)"></span></div>'
+    + '<div class="miskey"><span class="k"><i class="sw" style="background:var(--blue);color:var(--on-accent)"></i> Committed ' + inr(m.committed) + '</span>'
+    + '<span class="k"><i class="sw" style="background:var(--gold);color:var(--on-gold)"></i> Forecast ' + inr(m.forecast) + '</span></div>';
 }
 function _misStack(m){
   var t = m.chits || 1;
   var seg = function(n, col){ return n ? '<span style="background:' + col + ';width:' + (n / t * 100) + '%">' + n + '</span>' : ''; };
   return '<div class="misstack">' + seg(m.open, 'var(--blue)') + seg(m.in_progress, 'var(--prog)') + seg(m.closed, 'var(--ok)') + '</div>'
-    + '<div class="miskey"><span class="k"><i class="sw" style="background:var(--blue)"></i> Open</span>'
-    + '<span class="k"><i class="sw" style="background:var(--prog)"></i> In progress</span>'
-    + '<span class="k"><i class="sw" style="background:var(--ok)"></i> Closed</span></div>';
+    + '<div class="miskey"><span class="k"><i class="sw" style="background:var(--blue);color:var(--on-accent)"></i> Open</span>'
+    + '<span class="k"><i class="sw" style="background:var(--prog);color:var(--on-warn)"></i> In progress</span>'
+    + '<span class="k"><i class="sw" style="background:var(--ok);color:var(--on-ok)"></i> Closed</span></div>';
 }
 /* A real series off created_at — no invented shape. Flat line when there is only one bucket, which is honest. */
 function _misSpark(series){
@@ -409,8 +409,8 @@ function _misOverdue(m){
   var mine = (s.received && s.received.overdue) || 0, theirs = (s.sent && s.sent.overdue) || 0;
   return '<div class="mislbl" style="margin-top:16px">Overdue · past ' + esc(String(d)) + ' day' + (d === 1 ? '' : 's') + '</div>'
     + '<div class="misstatus">'
-    + (n ? '<i class="dot" style="background:var(--disp)"></i> <b>' + n + ' overdue</b>'
-         : '<i class="dot" style="background:var(--ok)"></i> <b>Nothing overdue</b>')
+    + (n ? '<i class="dot" style="background:var(--disp);color:var(--on-danger)"></i> <b>' + n + ' overdue</b>'
+         : '<i class="dot" style="background:var(--ok);color:var(--on-ok)"></i> <b>Nothing overdue</b>')
     + '<span class="misnote" style="margin-left:8px">· ' + mine + ' received · ' + theirs + ' sent</span></div>'
     + '<div class="misnote" style="margin-top:4px">The threshold is the <b onclick="navTo(\'settings\')" style="cursor:pointer;color:var(--blue)">overdue policy</b> — '
     + 'the same one the folder pane and the supplier scorecard obey, so all three move together.</div>';
@@ -435,8 +435,8 @@ function misFriction(m){
   }).join('');
   return _misHead('Friction', 'Where time is being lost — and whose clock is running.')
     + '<div class="misstatus">' + (m.open_disputes
-        ? '<i class="dot" style="background:var(--disp)"></i> <b>' + m.open_disputes + ' open dispute' + (m.open_disputes === 1 ? '' : 's') + '</b>'
-        : '<i class="dot" style="background:var(--ok)"></i> <b>No open disputes</b>')
+        ? '<i class="dot" style="background:var(--disp);color:var(--on-danger)"></i> <b>' + m.open_disputes + ' open dispute' + (m.open_disputes === 1 ? '' : 's') + '</b>'
+        : '<i class="dot" style="background:var(--ok);color:var(--on-ok)"></i> <b>No open disputes</b>')
       + '<span class="misnote" style="margin-left:8px">· ' + m.chits + ' chits · ' + (m.open_disputes ? 'needs resolving' : 'nothing to resolve') + '</span></div>'
     + _misOverdue(m) + _misAgeing(m) + _misUnattended(m)
     + (rows
@@ -520,8 +520,8 @@ function misOverview(m){
         '<div class="mistwo"><div>' + _misStack(m) + '</div><div>' + _misSpark(m.series) + '</div></div>')
     + sec('Friction', 'Where is time being lost?',
         '<div class="misstatus">' + (m.open_disputes
-          ? '<i class="dot" style="background:var(--disp)"></i> <b>' + m.open_disputes + ' open</b>'
-          : '<i class="dot" style="background:var(--ok)"></i> <b>No open disputes</b>')
+          ? '<i class="dot" style="background:var(--disp);color:var(--on-danger)"></i> <b>' + m.open_disputes + ' open</b>'
+          : '<i class="dot" style="background:var(--ok);color:var(--on-ok)"></i> <b>No open disputes</b>')
         + '<span style="margin-left:9px">' + (m.waiting.length
             ? '<b>' + m.waiting.length + ' waiting</b> — ' + m.waitTheirs + ' on <span class="misclock theirs">◷ Theirs</span> ' + m.waitMine + ' on <span class="misclock mine">◷ Mine</span>'
             : 'nothing waiting') + '</span></div>'
@@ -868,7 +868,7 @@ function storefrontCardHTML(e){
   return '<div style="'+_CARD+';margin-top:10px">'
     +'<div class="sec" style="margin:0 0 8px">🛍️ Customer storefront</div>'
     +'<div style="font-size:12px;color:var(--grey);line-height:1.5;margin-bottom:8px">Share this link — anyone can open it and order from your catalogue. No account needed (they confirm with a one-time code).</div>'
-    +'<div style="background:var(--card);border:1px solid var(--line);border-radius:9px;padding:8px 10px"><span class="mono" id="sf_url" style="font-size:11.5px;word-break:break-all">'+esc(url)+'</span></div>'
+    +'<div style="background:var(--card);border:1px solid var(--line);border-radius:9px;padding:8px 10px;color:var(--on-card)"><span class="mono" id="sf_url" style="font-size:11.5px;word-break:break-all">'+esc(url)+'</span></div>'
     +'<div style="display:flex;gap:8px;margin-top:8px"><button class="composebtn" onclick="sfCopy()">📋 Copy link</button><button class="composebtn ghost" onclick="window.open(document.getElementById(\'sf_url\').textContent,\'_blank\')">Open ↗</button></div>'
     // ── IS THE SHOP OPEN AT ALL? ─────────────────────────────────────────────────────────────────────────────
     // Athi, 2026-08-06: "it says the store does not have a public catalogue — how do I make it public?"
@@ -1631,7 +1631,7 @@ function _chRow(c){
                 /* Show the submission text VERBATIM. Describing it would guarantee a mismatch with what Meta
                    approved, and a template whose text differs from the approved one is simply rejected. */
                 + '<div style="margin-top:4px;color:var(--grey)">Submit this to Meta word for word:</div>'
-                + '<div style="margin-top:2px;padding:5px 7px;background:var(--paper);border-radius:6px;font-family:ui-monospace,Menlo,monospace;font-size:var(--fs-1);white-space:pre-wrap">'+esc(t.body)+'</div>'
+                + '<div style="margin-top:2px;padding:5px 7px;background:var(--paper);border-radius:6px;font-family:ui-monospace,Menlo,monospace;font-size:var(--fs-1);white-space:pre-wrap;color:var(--on-bg)">'+esc(t.body)+'</div>'
                 + (state!=='approved' ? '<div style="margin-top:3px;color:var(--warn-2)">Until Meta approves this, nothing can be sent more than 24 hours after the customer last wrote.</div>' : '')
                 + '</div>'; }).join('') : '')
           ; }).join('')

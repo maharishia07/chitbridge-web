@@ -209,7 +209,7 @@ function c2PaneOrd(d){
       return '<s style="color:var(--grey);margin-right:6px">' + esc([h.particulars, h.quantity, h.unit].filter(Boolean).join(' ')) + '</s>';
     }).join('');
     /* Emphasis, not exclusion: mine sits at full weight, everyone else's is dimmed but perfectly readable. */
-    return '<div style="padding:11px 16px;border-bottom:1px solid var(--line);' + (mine ? 'background:var(--card)' : 'opacity:.62') + '">'
+    return '<div style="padding:11px 16px;border-bottom:1px solid var(--line);' + (mine ? 'background:var(--card)' : 'opacity:.62') + ';color:var(--on-card)">'
       + '<div style="display:flex;justify-content:space-between;gap:10px">'
       + '<span style="font-weight:' + (mine ? '700' : '500') + ';font-size:14.5px">' + esc(l.particulars || 'Item') + (mine ? ' <span style="font-size:var(--fs-1);color:var(--blue);font-weight:800">YOURS</span>' : '') + '</span>'
       /* ⭐ THE CORRECTION AFFORDANCE. Athi, 2026-08-13: *"maybe a html line with edit icon would be useful"* — and
@@ -503,7 +503,7 @@ function c2RollupText(entries, asg, prog){
 }
 function c2GrpBig(title, right, tone){
   return '<div style="padding:14px 16px 6px;display:flex;justify-content:space-between;align-items:baseline;'
-    + 'border-top:1px solid var(--line);background:var(--card)">'
+    + 'border-top:1px solid var(--line);background:var(--card);color:var(--on-card)">'
     + '<span style="font-size:var(--fs-4);font-weight:800;color:' + (tone || 'var(--ink,#1c2128)') + '">' + title + '</span>'
     + '<span style="font-size:var(--fs-2);color:var(--grey)">' + (right || '') + '</span></div>';
 }
@@ -823,7 +823,7 @@ function chit2Screen(){
    * ⚠️ The outer element must still be `flex:1;min-height:0` — #mainbody is a flex column and `.main` is
    * `overflow:hidden`, so without min-height:0 the pane grows past the viewport and nothing scrolls at all.
    */
-  return '<div style="flex:1;min-height:0;display:flex;flex-direction:column;background:var(--card)">'
+  return '<div style="flex:1;min-height:0;display:flex;flex-direction:column;background:var(--card);color:var(--on-card)">'
     + '<div style="flex:none">'                                                   // ← the frozen part
     + '<div style="padding:10px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px">'
     + '<span onclick="c2Back()" style="cursor:pointer;color:var(--blue);font-size:13px">‹ Back</span>'

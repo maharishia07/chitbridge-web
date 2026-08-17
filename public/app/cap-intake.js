@@ -35,8 +35,8 @@ function intakeScreen(){
     + '<div class="lh"><div style="display:flex;align-items:center;gap:8px;margin-bottom:9px">'
     + '<span style="font-family:\'Space Grotesk\';font-weight:700;font-size:var(--fs-3)">📥 Intake</span>'
     + '<button onclick="openAssist(\'intake\')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button>'
-    + '<button data-testid="intake-refresh" onclick="loadIntake()" style="margin-left:auto;border:1px solid var(--line);background:var(--paper);border-radius:9px;padding:4px 9px;font-size:11.5px;cursor:pointer">↻ Refresh</button>'
-    + '<button data-testid="intake-simulate-open" onclick="intakeToggleSim()" style="border:1px solid var(--line);background:var(--paper);border-radius:9px;padding:4px 9px;font-size:11.5px;cursor:pointer">✚ Record a message</button>'
+    + '<button data-testid="intake-refresh" onclick="loadIntake()" style="margin-left:auto;border:1px solid var(--line);background:var(--paper);border-radius:9px;padding:4px 9px;font-size:11.5px;cursor:pointer;color:var(--on-bg)">↻ Refresh</button>'
+    + '<button data-testid="intake-simulate-open" onclick="intakeToggleSim()" style="border:1px solid var(--line);background:var(--paper);border-radius:9px;padding:4px 9px;font-size:11.5px;cursor:pointer;color:var(--on-bg)">✚ Record a message</button>'
     + '</div>'
     + '<div style="font-size:11.5px;color:var(--grey);line-height:1.5">A message is a <b>notice</b>; a chit is an <b>obligation</b>. Nothing here becomes a chit until you confirm it.</div>'
     /**
@@ -64,7 +64,7 @@ function _chn(c){
 }
 function intakeSimHTML(){
   if(!_INTAKE.sim) return '';
-  return '<div style="border:1px solid var(--line);border-radius:12px;padding:12px 13px;margin-bottom:12px;background:var(--paper)">'
+  return '<div style="border:1px solid var(--line);border-radius:12px;padding:12px 13px;margin-bottom:12px;background:var(--paper);color:var(--on-bg)">'
     + '<div style="font-weight:700;font-size:var(--fs-2);margin-bottom:6px">Record an inbound message</div>'
     + '<div style="font-size:11.5px;color:var(--grey);margin-bottom:8px">The WhatsApp and email webhooks exist but are not connected to a provider yet, so this is how a message gets onto the queue today. It goes through the SAME capture the webhook uses — nothing is faked.</div>'
     + '<div style="display:flex;gap:8px;flex-wrap:wrap">'
@@ -91,7 +91,7 @@ function intakeBodyHTML(){
 }
 function intakeCardHTML(c){
   var w=_INTAKE.working[c.id]||{}, s=c.structured||w.structured;
-  return '<div class="cap" data-testid="intake-row" style="border:1px solid var(--line);border-radius:12px;padding:12px 13px;margin-bottom:10px;background:var(--card)">'
+  return '<div class="cap" data-testid="intake-row" style="border:1px solid var(--line);border-radius:12px;padding:12px 13px;margin-bottom:10px;background:var(--card);color:var(--on-card)">'
     + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">' + _chn(c.channel)
     + '<span style="font-size:11.5px;color:var(--grey)">' + esc(c.sender_name||c.sender_ref||'unknown sender') + '</span>'
     + (c.sender_name&&c.sender_ref?'<span style="font-size:var(--fs-1);color:var(--grey);font-family:ui-monospace,Menlo,monospace">'+esc(c.sender_ref)+'</span>':'')
@@ -106,7 +106,7 @@ function intakeCardHTML(c){
        to edit, price and address it, which is what you want when the message is a starting point rather than the
        thing itself. Neither sends anything without a person pressing it. */
     + (s ? '<button class="composebtn" data-testid="intake-raise" '+(w.busy?'disabled':'')+' onclick="intakeRaise(\''+esc(c.id)+'\')" title="File this as a request in your inbox, in their words, with the message reference on it">'+(w.busy?'Raising…':'📥 Raise as a request')+'</button>'
-         + '<button data-testid="intake-make-chit" onclick="intakeMakeChit(\''+esc(c.id)+'\')" style="border:1px solid var(--line);background:var(--card);border-radius:9px;padding:9px 15px;font-size:13px;font-weight:700;cursor:pointer" title="Open Compose to edit, price and address it before sending">Make this a chit →</button>'
+         + '<button data-testid="intake-make-chit" onclick="intakeMakeChit(\''+esc(c.id)+'\')" style="border:1px solid var(--line);background:var(--card);border-radius:9px;padding:9px 15px;font-size:13px;font-weight:700;cursor:pointer;color:var(--on-card)" title="Open Compose to edit, price and address it before sending">Make this a chit →</button>'
          : '<button class="composebtn" data-testid="intake-structure" '+(w.busy?'disabled':'')+' onclick="intakeStructure(\''+esc(c.id)+'\')">'+(w.busy?'✨ Reading…':'✨ Structure it')+'</button>')
     + '<button data-testid="intake-dismiss" onclick="intakeDismiss(\''+esc(c.id)+'\')" style="border:1px solid var(--line);background:var(--card);border-radius:9px;padding:9px 15px;font-size:13px;font-weight:700;cursor:pointer;color:var(--grey)">Dismiss</button>'
     /* ⚠️ THE CONFIRM STEP MUST SHOW WHAT IT IS ASKING YOU TO CONFIRM. Athi, 2026-08-11, after finding that
@@ -114,14 +114,14 @@ function intakeCardHTML(c){
        so comment, unit_size, unit_price and unplaced were invisible whether the reader captured them or not — at
        exactly the moment a person decides whether the reading is right. A button that shows the actual JSON is the
        difference between tuning a prompt and guessing at one. */
-    + '<button data-testid="intake-json" onclick="intakeShowJson(\''+esc(c.id)+'\')" title="See exactly what was read, and what the chit would carry" style="border:1px solid var(--line);background:var(--card);border-radius:9px;padding:9px 13px;font-size:var(--fs-2);font-weight:700;cursor:pointer;font-family:ui-monospace,Menlo,monospace">{ } JSON</button>'
+    + '<button data-testid="intake-json" onclick="intakeShowJson(\''+esc(c.id)+'\')" title="See exactly what was read, and what the chit would carry" style="border:1px solid var(--line);background:var(--card);border-radius:9px;padding:9px 13px;font-size:var(--fs-2);font-weight:700;cursor:pointer;font-family:ui-monospace,Menlo,monospace;color:var(--on-card)">{ } JSON</button>'
     + '</div>'
     + (w.err?'<div style="color:var(--disp);font-size:12px;margin-top:6px">'+esc(w.err)+'</div>':'')
     + '</div>';
 }
 function intakeDraftHTML(c, s){
   var li=(s.line_items||[]);
-  return '<div style="background:var(--blue-tint-bg);border:1px solid #e4dff6;border-radius:9px;padding:10px 12px;margin-top:8px;font-size:var(--fs-2)">'
+  return '<div style="background:var(--blue-tint-bg);border:1px solid #e4dff6;border-radius:9px;padding:10px 12px;margin-top:8px;font-size:var(--fs-2);color:var(--on-card)">'
     + '<div style="font-weight:700;margin-bottom:4px">✨ AI draft <span style="font-weight:400;color:var(--grey)">— proposed, not evidence. You confirm.</span></div>'
     + (s.subject?'<div style="margin-bottom:4px"><b>Subject:</b> '+esc(s.subject)+'</div>':'')
     + li.map(function(l){ return '<div style="display:flex;justify-content:space-between;padding:3px 0;border-top:1px dashed var(--line);font-size:12px">'

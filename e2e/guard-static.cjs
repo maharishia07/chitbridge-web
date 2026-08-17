@@ -395,5 +395,44 @@ console.log('\n10 · tokens used in the wrong role (a text colour as a surface)'
   if (total) warn(total + ' text tokens used as a background — ' + Object.entries(bad).map(([k, v]) => k + ':' + v).join(', '));
   else pass('no text colour is being used as a surface');
 }
+
+/**
+ * 11 · A SURFACE THAT NAMES NO TEXT COLOUR.
+ *
+ * ⚠️ THE HALF-WRITTEN DECLARATION — the one checks 9 and 10 cannot see, because there is no wrong colour to
+ * find, only a missing one. An element paints its own background and says nothing about its text, so the text
+ * inherits from an ancestor that has a DIFFERENT background.
+ *
+ * That is how the avatar menu broke: `background:var(--card)` and no colour, so Profile / Settings inherited
+ * `--chrome-ink` from the topbar — a pale grey that is correct on dark navy and invisible on a white card. In
+ * the dark theme --card is itself dark, so it looked right and the bug hid completely. Athi found it by eye,
+ * in a menu he opens every day, after three passes had reported the app clean.
+ *
+ * ⚠️ INHERITANCE ACROSS A SURFACE CHANGE IS NOT A PAIRING. The moment an element paints its own ground it stops
+ * being part of its parent's surface, and any colour still arriving from the parent was chosen for a different
+ * background. It is right only until one of the two moves.
+ */
+console.log('\n11 · surfaces that name no text colour (inline styles)');
+{
+  const SURF = ['--card','--paper','--chrome','--sel','--sel-2','--picked','--hover','--accent','--blue','--blue-2',
+    '--blue-d','--disp','--disp-2','--ok','--ok-2','--ok-3','--purple','--purple-2','--gold','--prog','--warn',
+    '--blue-tint-bg','--blue-tint','--ok-tint','--danger-tint','--warn-tint','--purple-tint','--neutral-tint','--gold-soft'];
+  const bad = {};
+  [['app.html', app]].concat(CAPS.map((f) => [f, fs.readFileSync(path.join(WEB, 'app', f), 'utf8')]))
+    .forEach(([name, src]) => {
+      let n = 0;
+      for (const m of src.matchAll(/style\s*=\s*(["'`])((?:(?!\1)[\s\S]){0,320}?)\1/g)) {
+        const st = m[2];
+        const bg = /background(?:-color)?\s*:\s*var\((--[a-z0-9-]+)\)/.exec(st);
+        if (!bg || !SURF.includes(bg[1])) continue;
+        if (/(^|;)\s*color\s*:/.test(st)) continue;
+        n++;
+      }
+      if (n) bad[name] = n;
+    });
+  const total = Object.values(bad).reduce((a, b) => a + b, 0);
+  if (total) warn(total + ' inline surfaces inherit their text colour — ' + Object.entries(bad).map(([k, v]) => k + ':' + v).join(', '));
+  else pass('every painted surface names its own text');
+}
 console.log('\n== GUARD ==  ' + hard + ' failure(s) · ' + soft + ' warning(s)');
 process.exit(hard ? 1 : 0);

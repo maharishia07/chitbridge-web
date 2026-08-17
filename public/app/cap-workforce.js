@@ -114,9 +114,9 @@ function openShowcase(url, title){
   var f=paneFrame();
   var host=document.getElementById('showcaseHost')||document.createElement('div'); host.id='showcaseHost';
   host.innerHTML='<div style="position:fixed;inset:0;background:rgba(15,22,32,.45);z-index:600" onclick="closeShowcase()"></div>'
-    +'<div style="position:fixed;'+f.css+';border-radius:'+f.radius+';background:var(--card);z-index:601;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.3);display:flex;flex-direction:column">'
+    +'<div style="position:fixed;'+f.css+';border-radius:'+f.radius+';background:var(--card);z-index:601;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.3);display:flex;flex-direction:column;color:var(--on-card)">'
     +'<div style="display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line);flex:none"><b style="font-size:15px">'+esc(title||'How it works')+'</b><button onclick="closeShowcase()" title="Close" style="margin-left:auto;border:0;background:transparent;font-size:22px;line-height:1;cursor:pointer;color:var(--grey)">×</button></div>'
-    +'<iframe src="'+esc(url)+'" title="'+esc(title||'')+'" style="flex:1;width:100%;border:0;display:block;background:var(--card)"></iframe></div>';
+    +'<iframe src="'+esc(url)+'" title="'+esc(title||'')+'" style="flex:1;width:100%;border:0;display:block;background:var(--card);color:var(--on-card)"></iframe></div>';
   document.body.appendChild(host);
 }
 function closeShowcase(){ var h=document.getElementById('showcaseHost'); if(h) h.remove(); }
@@ -254,7 +254,7 @@ function awRender(){
   // RESPONSIVE placement: FULL-SCREEN on mobile (fill · generous gaps · buttons in a bottom bar — like the
   // co-assist screens), a comfortable CENTRED CARD on laptop (not a full-bleed sheet). Below the measured bar.
   var host=awHost(), mob=((UI.vp==='mob')||(typeof window!=='undefined'&&window.innerWidth<640)), barH=((document.querySelector('.topbar')||{}).offsetHeight)||52;
-  var head='<div style="padding:16px 18px;border-bottom:1px solid #f0efec"><div style="max-width:520px;margin:0 auto;display:flex;align-items:flex-start;gap:10px"><div style="flex:1"><div style="font-size:17px;font-weight:700">'+title+'</div>'+(sub?'<div style="font-size:var(--fs-2);color:var(--grey);margin-top:3px">'+sub+'</div>':'')+'</div><button onclick="awClose()" style="border:1px solid var(--line);background:var(--card);border-radius:9px;width:32px;height:32px;cursor:pointer;flex:none">✕</button></div>'+(dots?'<div style="max-width:520px;margin:0 auto">'+dots+'</div>':'')+'</div>';
+  var head='<div style="padding:16px 18px;border-bottom:1px solid #f0efec"><div style="max-width:520px;margin:0 auto;display:flex;align-items:flex-start;gap:10px"><div style="flex:1"><div style="font-size:17px;font-weight:700">'+title+'</div>'+(sub?'<div style="font-size:var(--fs-2);color:var(--grey);margin-top:3px">'+sub+'</div>':'')+'</div><button onclick="awClose()" style="border:1px solid var(--line);background:var(--card);border-radius:9px;width:32px;height:32px;cursor:pointer;flex:none;color:var(--on-card)">✕</button></div>'+(dots?'<div style="max-width:520px;margin:0 auto">'+dots+'</div>':'')+'</div>';
   var mid='<div style="flex:1;overflow:auto;padding:22px 18px"><div style="max-width:520px;margin:0 auto">'+body+'</div></div>';
   var footbar='<div style="border-top:1px solid #f0efec;padding:14px 18px"><div style="max-width:520px;margin:0 auto;display:flex;gap:12px">'+foot+'</div></div>';
   // ONE comfortable centred card, both mobile & laptop: sized to its content (never a full-screen sheet), dim
@@ -265,7 +265,7 @@ function awRender(){
   var pane=document.getElementById('panel')||document.querySelector('.panel');
   var r=pane?pane.getBoundingClientRect():null;
   var pos=(r&&r.height>240)?('top:'+Math.round(r.top)+'px;left:'+Math.round(r.left)+'px;width:'+Math.round(r.width)+'px;height:'+Math.round(r.height)+'px'):('top:'+barH+'px;left:0;right:0;bottom:0');
-  host.innerHTML='<div style="position:fixed;'+pos+';background:var(--card);z-index:400;display:flex;flex-direction:column;overflow:hidden;box-shadow:-8px 0 24px rgba(0,0,0,.08)">'+head+mid+footbar+'</div>';
+  host.innerHTML='<div style="position:fixed;'+pos+';background:var(--card);z-index:400;display:flex;flex-direction:column;overflow:hidden;box-shadow:-8px 0 24px rgba(0,0,0,.08);color:var(--on-card)">'+head+mid+footbar+'</div>';
 }
 /* ══ CONNECTOR (Pi / system) handled IN Co-assists — the separate Connectors page is dismounted. When the
  *    selected actor is a connector, acDetailHTML renders this COCKPIT instead of the human profile. Principle:
@@ -333,8 +333,8 @@ function _acTierSummary(x){
       +'<div style="min-width:0"><div style="font-size:17px;font-weight:800">'+esc(x.name)+'</div><div style="font-size:12px;color:var(--grey)">'+esc(reg.label||'')+' · 📍 '+esc(info.site||x.site||'no site')+'</div></div>'
       +'<span style="margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:var(--fs-2);color:'+hc+'"><span style="width:9px;height:9px;border-radius:50%;background:'+hc+';display:inline-block"></span>'+esc(h)+'</span></div>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:15px 0">'
-      +'<div style="background:var(--card);border:1px solid var(--line);border-radius:12px;padding:11px 12px"><div style="font-size:var(--fs-1);color:var(--grey);text-transform:uppercase;letter-spacing:.03em">Devices</div><div style="font-size:var(--fs-5);font-weight:800;margin-top:2px">'+cnt+'</div></div>'
-      +'<div style="background:var(--card);border:1px solid var(--line);border-radius:12px;padding:11px 12px"><div style="font-size:var(--fs-1);color:var(--grey);text-transform:uppercase;letter-spacing:.03em">Health</div><div style="font-size:var(--fs-4);font-weight:800;margin-top:4px;color:'+hc+'">'+esc(h)+'</div></div>'
+      +'<div style="background:var(--card);border:1px solid var(--line);border-radius:12px;padding:11px 12px;color:var(--on-card)"><div style="font-size:var(--fs-1);color:var(--grey);text-transform:uppercase;letter-spacing:.03em">Devices</div><div style="font-size:var(--fs-5);font-weight:800;margin-top:2px">'+cnt+'</div></div>'
+      +'<div style="background:var(--card);border:1px solid var(--line);border-radius:12px;padding:11px 12px;color:var(--on-card)"><div style="font-size:var(--fs-1);color:var(--grey);text-transform:uppercase;letter-spacing:.03em">Health</div><div style="font-size:var(--fs-4);font-weight:800;margin-top:4px;color:'+hc+'">'+esc(h)+'</div></div>'
     +'</div>'
     +'<button class="composebtn pri" style="width:100%;padding:13px;font-size:13.5px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="acOpenManage(\''+x.id+'\')"><span style="font-size:var(--fs-4)">🛠️</span> Click to open the '+esc(reg.label||'')+' cockpit <span style="opacity:.85">→</span></button>'
     +'<div style="font-size:var(--fs-1);color:var(--grey);margin-top:8px;text-align:center">👆 Opens its devices, connection string &amp; package — loaded on click.</div></div>';
@@ -386,7 +386,7 @@ function acDetailHTML(){ const x=UI.acDet;
     const work=`<div class="sec">Shift &amp; load</div><div class="itab" style="padding:11px 12px">
       <div style="display:flex;align-items:center;gap:8px"><span class="optchip ${acShc(x.shift)}">${acShLabel(x.shift)}</span><span style="font-size:12px;color:var(--grey)">${x.status==='active'?'active':esc(x.status)}</span></div>
       ${(x.shift!=='on_shift' && (x.breakSince||x.returnDate)) ? '<div style="font-size:11.5px;color:var(--grey);margin-top:6px">'+(x.breakSince?('On break since '+acDate(x.breakSince)):'')+(x.returnDate?((x.breakSince?' · ':'')+'returns '+acDate(x.returnDate)):'')+'</div>' : ''}
-      <div style="font-size:var(--fs-2);margin-top:9px">Load · <b>${x.load}</b> / ${x.max||'∞'} tasks</div><div style="height:8px;background:var(--blue-tint-bg);border-radius:5px;overflow:hidden;margin-top:6px"><span style="display:block;height:100%;background:var(--blue);border-radius:5px;width:${pct}%"></span></div></div>`;
+      <div style="font-size:var(--fs-2);margin-top:9px">Load · <b>${x.load}</b> / ${x.max||'∞'} tasks</div><div style="height:8px;background:var(--blue-tint-bg);border-radius:5px;overflow:hidden;margin-top:6px;color:var(--on-card)"><span style="display:block;height:100%;background:var(--blue);border-radius:5px;width:${pct}%;color:var(--on-accent)"></span></div></div>`;
     const eng=`<div class="sec">Access / engagement</div><div style="font-size:var(--fs-1);color:#9a7b34;background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;line-height:1.5">Per-co-assist engagement (view-only · act · audit · MIS) is <b>planned, not enforced yet</b> — today a co-assist acts within the entity's scope. Default-deny per node is the roadmap.</div>`;
     const coverName = x.del?acLbl((UI.acts||[]).find(a=>a.id===x.del)):'';
     const coverSection = '<div class="sec">Leave cover</div><div class="itab" style="border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:10px">'
@@ -394,10 +394,10 @@ function acDetailHTML(){ const x=UI.acDet;
       +'<div style="padding:10px 13px"><div style="font-size:var(--fs-1);color:var(--ok-2);text-transform:uppercase;letter-spacing:.4px;font-weight:700">🤝 Covers for</div><div style="font-size:13px;margin-top:3px;line-height:1.45">'+(coversFor.length?('<b>'+esc(x.name)+'</b> takes over <b>'+coversFor.join(', ')+'</b>&rsquo;s work when they&rsquo;re away.'):'<span style="color:var(--grey)">'+esc(x.name)+' isn&rsquo;t anyone&rsquo;s cover yet.</span>')+'</div></div>'
       +'</div>';
     const loginState = x.pinSet
-      ? '<div class="sec">Login</div><div style="'+_CARD+';background:var(--ok-tint);border-color:var(--ok-2)"><div style="font-size:13px;color:var(--ok-2);font-weight:600">✓ Active — PIN set. They sign in with their User ID + PIN.</div></div>'
+      ? '<div class="sec">Login</div><div style="'+_CARD+';background:var(--ok-tint);border-color:var(--ok-2);color:var(--on-card)"><div style="font-size:13px;color:var(--ok-2);font-weight:600">✓ Active — PIN set. They sign in with their User ID + PIN.</div></div>'
       : (x.otp
-          ? '<div class="sec">Login — pending invite</div><div style="'+_CARD+';background:var(--blue-tint);border-color:var(--blue-tint-line)"><div style="font-size:var(--fs-1);color:var(--blue-d);text-transform:uppercase;letter-spacing:.4px;font-weight:700">User ID</div><div class="mono" style="font-weight:700;font-size:13px;word-break:break-all">'+esc(acLogin(x))+'</div><div style="font-size:var(--fs-1);color:var(--blue-d);text-transform:uppercase;letter-spacing:.4px;font-weight:700;margin-top:7px">One-time code</div><div class="mono" style="font-weight:800;font-size:var(--fs-5);letter-spacing:3px;color:var(--blue-d)">'+esc(x.otp)+'</div><div style="font-size:var(--fs-1);color:var(--blue-d);margin-top:6px">Share these so they can sign in &amp; set their PIN. Not set a PIN yet.</div></div>'
-          : '<div class="sec">Login — pending</div><div style="'+_CARD+';background:var(--warn-tint);border-color:var(--warn-3)"><div style="font-size:var(--fs-2);color:var(--warn-3)">No active one-time code and no PIN yet — use <b>Re-invite</b> below to issue a code.</div></div>');
+          ? '<div class="sec">Login — pending invite</div><div style="'+_CARD+';background:var(--blue-tint);border-color:var(--blue-tint-line);color:var(--on-card)"><div style="font-size:var(--fs-1);color:var(--blue-d);text-transform:uppercase;letter-spacing:.4px;font-weight:700">User ID</div><div class="mono" style="font-weight:700;font-size:13px;word-break:break-all">'+esc(acLogin(x))+'</div><div style="font-size:var(--fs-1);color:var(--blue-d);text-transform:uppercase;letter-spacing:.4px;font-weight:700;margin-top:7px">One-time code</div><div class="mono" style="font-weight:800;font-size:var(--fs-5);letter-spacing:3px;color:var(--blue-d)">'+esc(x.otp)+'</div><div style="font-size:var(--fs-1);color:var(--blue-d);margin-top:6px">Share these so they can sign in &amp; set their PIN. Not set a PIN yet.</div></div>'
+          : '<div class="sec">Login — pending</div><div style="'+_CARD+';background:var(--warn-tint);border-color:var(--warn-3);color:var(--on-card)"><div style="font-size:var(--fs-2);color:var(--warn-3)">No active one-time code and no PIN yet — use <b>Re-invite</b> below to issue a code.</div></div>');
     body=prof+coverSection+loginState+work+eng;
     if(x.status==='active'){
       bar=(x.type==='human'?(x.pinSet

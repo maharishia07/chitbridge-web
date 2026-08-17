@@ -161,7 +161,7 @@ function cbAttachList(atts, opts){
     return '<span data-testid="cb-attach-item" onclick="cbAttachOpen(\'' + cbAttachSafe(a.id) + '\')"'
       + ' title="' + esc(a.name + ' — ' + meta) + '"'
       + ' style="display:inline-flex;align-items:center;gap:5px;cursor:pointer;border:1px solid var(--line);'
-      + 'border-radius:6px;padding:' + pad + ';margin:0 5px 5px 0;font-size:11.5px;background:var(--card);max-width:100%">'
+      + 'border-radius:6px;padding:' + pad + ';margin:0 5px 5px 0;font-size:11.5px;background:var(--card);max-width:100%;color:var(--on-card)">'
       +   '<span style="font-size:12px;flex:none">' + cbAttachIcon(a.t) + '</span>'
       +   '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(short) + '</span>'
       +   '<span style="font-size:var(--fs-1);color:var(--grey);flex:none">' + esc(meta) + '</span>'

@@ -388,7 +388,7 @@ function _groupSumPane(){
         + '<span style="width:74px;text-align:right;color:var(--grey);font-size:11.5px">' + l.stores + '</span></div>';
       /* THE DRILLDOWN — Athi: "on click the down below need to know who are all asked". The roster comes straight
          from consolidate()'s attribution; nothing is recomputed to render it. */
-      var rows = open ? '<div style="padding:2px 0 8px 16px;background:var(--card)">'
+      var rows = open ? '<div style="padding:2px 0 8px 16px;background:var(--card);color:var(--on-card)">'
         + (l.breakdown || []).map(function(s){
             return '<div style="display:flex;align-items:center;font-size:12px;padding:3px 0">'
               + '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(s.store_name)
@@ -437,7 +437,7 @@ function _groupSumPane(){
 /* ── metrics ──────────────────────────────────────────────────────────────────────────────────────────────────── */
 function _mBox(label, value, hint, tone){
   var col = tone === 'bad' ? 'var(--disp)' : tone === 'warn' ? 'var(--warn-2)' : 'var(--ink)';
-  return '<div style="flex:1;min-width:104px;border:1px solid var(--line);border-radius:9px;padding:10px 12px;background:var(--card)">'
+  return '<div style="flex:1;min-width:104px;border:1px solid var(--line);border-radius:9px;padding:10px 12px;background:var(--card);color:var(--on-card)">'
     + '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey)">' + esc(label) + '</div>'
     + '<div style="font-size:19px;font-weight:800;margin-top:3px;color:' + col + '">' + esc(String(value)) + '</div>'
     + (hint ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">' + esc(hint) + '</div>' : '') + '</div>';
@@ -475,7 +475,7 @@ function _reconStrip(){
       + '</div>';
   }).join('') : '<div style="font-size:11.5px;color:var(--grey);padding:5px 0">No folders on this track yet — everything is unfiled, which is why the two numbers match trivially.</div>';
 
-  return '<div style="border:1px solid var(--line);border-radius:9px;padding:11px 13px;margin-bottom:12px;background:var(--card)">'
+  return '<div style="border:1px solid var(--line);border-radius:9px;padding:11px 13px;margin-bottom:12px;background:var(--card);color:var(--on-card)">'
     + '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey)">Does it add up?</div>'
     + '<div style="font-size:13px;margin-top:3px">' + sums + ' &nbsp; ' + verdict + '</div>'
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">' + (r.overall || {}).assigned + ' assigned · ' + (r.overall || {}).unassigned + ' unassigned — a chit can be open and unassigned, and that is the pile worth seeing.</div>'
@@ -585,7 +585,7 @@ function _fldFolderName(id){ var f = (UI.folders || []).find(function(x){ return
    the precedence is guesswork. */
 function _ruleRow(r, i, n){
   var terms = Object.keys(r.when || {}).map(function(k){ return '<span style="font-family:ui-monospace,Menlo,monospace;font-size:11.5px">' + esc(k) + '</span> <b>' + esc(String(r.when[k])) + '</b>'; }).join(' <span style="color:var(--grey)">and</span> ');
-  return '<div style="border:1px solid var(--line);border-radius:9px;padding:11px 13px;margin-bottom:8px;background:var(--card)">'
+  return '<div style="border:1px solid var(--line);border-radius:9px;padding:11px 13px;margin-bottom:8px;background:var(--card);color:var(--on-card)">'
     + '<div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap">'
     + '<span title="Runs ' + (i === 0 ? 'first' : 'after the ' + i + ' above') + '" style="flex:0 0 auto;min-width:20px;height:20px;border-radius:5px;background:var(--paper);border:1px solid var(--line);color:var(--grey);font-size:var(--fs-1);font-weight:700;display:inline-flex;align-items:center;justify-content:center;font-variant-numeric:tabular-nums">' + (i + 1) + '</span>'
     /* ⚠️ ↑ ↓, NOT ← →: this is a vertical list, and the glyph has to match the axis the thing actually moves on.
@@ -637,7 +637,7 @@ function _folderRulesPane(){
     out += '<button class="composebtn" data-testid="rule-new" onclick="ruleDraftNew()">+ Add a rule</button>';
   } else {
     var opts = Object.keys(_RULE_HELP).map(function(k){ return '<option value="' + k + '"' + (d.term === k ? ' selected' : '') + '>' + esc(k) + '</option>'; }).join('');
-    out += '<div style="border:1px solid var(--line);border-radius:12px;padding:12px 13px;background:var(--paper)">'
+    out += '<div style="border:1px solid var(--line);border-radius:12px;padding:12px 13px;background:var(--paper);color:var(--on-bg)">'
       + '<div style="font-weight:700;font-size:var(--fs-2);margin-bottom:8px">New rule</div>'
       + '<input class="inp" data-testid="rule-name" placeholder="Name it (optional) — e.g. Ramesh invoices" value="' + esc(d.name || '') + '" oninput="ruleDraftSet(\'name\',this.value)" style="margin-bottom:8px">'
       + '<div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center">'
@@ -651,7 +651,7 @@ function _folderRulesPane(){
          Two conditions = two rules, in order — which is legible. */
       + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px">One condition per rule. Need two? Make two rules — they run in order, and the first match wins.</div>'
       + '<div style="display:flex;gap:8px;margin-top:10px">'
-      + '<button data-testid="rule-preview" onclick="rulePreview()" style="border:1px solid var(--line);background:var(--card);border-radius:9px;padding:9px 15px;font-size:13px;font-weight:700;cursor:pointer">🔎 What would this catch?</button>'
+      + '<button data-testid="rule-preview" onclick="rulePreview()" style="border:1px solid var(--line);background:var(--card);border-radius:9px;padding:9px 15px;font-size:13px;font-weight:700;cursor:pointer;color:var(--on-card)">🔎 What would this catch?</button>'
       + '<button class="composebtn" data-testid="rule-save" onclick="ruleSave()">Save rule</button>'
       + '<button onclick="ruleDraftCancel()" style="border:1px solid var(--line);background:var(--card);border-radius:9px;padding:9px 15px;font-size:13px;cursor:pointer;color:var(--grey)">Cancel</button></div>';
 

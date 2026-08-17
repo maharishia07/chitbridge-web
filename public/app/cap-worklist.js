@@ -288,7 +288,7 @@ function wlRollupText(rows){
 function wlHead(title, right, tone, id){
   return '<div data-testid="wl-head"' + (id ? ' onclick="wlToggle(&quot;' + esc(id) + '&quot;)"' : '')
     + ' style="' + (id ? 'cursor:pointer;' : '') + 'padding:14px 16px 6px;display:flex;justify-content:space-between;align-items:baseline;'
-    + 'border-top:1px solid var(--line);background:var(--card)">'
+    + 'border-top:1px solid var(--line);background:var(--card);color:var(--on-card)">'
     + '<span style="font-size:var(--fs-4);font-weight:800;color:' + (tone || 'var(--ink,#1c2128)') + '">' + title + '</span>'
     + '<span style="font-size:var(--fs-2);color:var(--grey)">' + (right || '') + '</span></div>';
 }
@@ -1060,7 +1060,7 @@ function wlLineHTML(loading){
      will not. It is short, so it costs almost nothing to leave in view. */
   var asked = '';
   if (r.raw_phrase || r.asked_as || r.comment || r.needs_human) {
-    asked = '<div style="margin-top:12px;background:var(--warn-tint);border-left:3px solid #b0641c;border-radius:0 7px 7px 0;padding:9px 12px;font-size:13px;line-height:1.55">'
+    asked = '<div style="margin-top:12px;background:var(--warn-tint);border-left:3px solid #b0641c;border-radius:0 7px 7px 0;padding:9px 12px;font-size:13px;line-height:1.55;color:var(--on-card)">'
       + (r.raw_phrase ? '<div style="font-style:italic;color:var(--warn-3)">“' + esc(r.raw_phrase) + '”</div>' : '')
       + (r.asked_as ? '<div style="font-size:var(--fs-2);color:var(--grey)">asked as <b>' + esc(r.asked_as) + '</b></div>' : '')
       + (r.comment ? '<div style="color:#2c5d7c">' + esc(r.comment) + '</div>' : '')

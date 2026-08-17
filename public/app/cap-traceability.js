@@ -74,7 +74,7 @@ function _traceBatchPicker(){
     var name = esc(b.product || b.to_name || 'batch');
     var meta = [ (b.qty != null ? (esc(String(b.qty)) + esc(b.unit ? (' ' + b.unit) : '')) : ''), (b.sender_name ? ('from ' + esc(b.sender_name)) : '') ].filter(Boolean).join(' · ');
     return '<div onclick="UI.traceId=\'' + b.chit_id + '\';runTrace(\'forward\')" title="Click to trace this batch" '
-      + 'style="cursor:pointer;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--card);display:flex;flex-direction:column;gap:2px">'
+      + 'style="cursor:pointer;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--card);display:flex;flex-direction:column;gap:2px;color:var(--on-card)">'
       + '<div style="display:flex;align-items:center;gap:7px"><b style="font-size:13px">' + name + '</b>'
         + (b.is_origin ? '<span style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);background:var(--blue-tint-bg);border-radius:5px;padding:1px 5px">ORIGIN</span>' : '') + '</div>'
       + (meta ? '<div style="font-size:var(--fs-1);color:var(--grey)">' + meta + '</div>' : '')
@@ -139,7 +139,7 @@ function _traceNode(n, isTerm){
   var balLine = isRed
     ? '<div style="font-size:var(--fs-1);color:var(--disp-2);font-weight:700;margin-left:17px;margin-top:2px">claimed ' + _traceQ(bal.out) + ' out, received ' + _traceQ(bal.in) + ' in — <u>' + _traceQ(bal.delta) + ' ' + esc(bal.base_unit || '') + ' unaccounted</u></div>'
     : '';
-  return '<div style="padding:6px 0' + (isRed ? ';background:var(--danger-tint);border-radius:9px' : '') + '">'
+  return '<div style="padding:6px 0' + (isRed ? ';background:var(--danger-tint);border-radius:9px' : '') + ';color:var(--on-card)">'
     + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap' + (isRed ? ';padding-left:6px' : '') + '">'
       + '<span style="width:9px;height:9px;border-radius:50%;background:' + dot + ';flex:0 0 auto"></span>'
       + '<span style="font-weight:700;font-size:13.5px' + (isRed ? ';color:var(--disp-2)' : '') + '">' + who + '</span>' + badge + '</div>'
@@ -170,7 +170,7 @@ function _traceTree(r){
 function _traceBwd(r){
   var path = r.path || [], nodes = r.nodes || [];
   var byId = {}; nodes.forEach(function(n){ byId[n.chit_id] = n; });
-  var head = '<div style="margin:16px 18px;padding:14px 18px;border:1px solid #a9c6ef;background:var(--blue-tint-bg);border-radius:12px">'
+  var head = '<div style="margin:16px 18px;padding:14px 18px;border:1px solid #a9c6ef;background:var(--blue-tint-bg);border-radius:12px;color:var(--on-card)">'
     + '<div style="font-size:18px;font-weight:800;color:var(--blue-2)">◂ Provenance — to source</div>'
     + '<div style="font-size:var(--fs-2);color:var(--blue);margin-top:2px">' + r.hops + ' hop' + (r.hops === 1 ? '' : 's') + ' from the flagged node back to origin</div></div>';
   var steps = path.map(function(cid, i){
