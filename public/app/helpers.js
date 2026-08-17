@@ -8,7 +8,22 @@ function deepClone(x){ return JSON.parse(JSON.stringify(x)); }
 
 function esc(v){ return String(v==null?'':v).replace(/[<>"&]/g,c=>({'<':'&lt;','>':'&gt;','"':'&quot;','&':'&amp;'}[c])); }
 function opt(arr,sel){ return arr.map(o=>`<option ${o===sel?'selected':''}>${o}</option>`).join(""); }
-function scrErr(e){ return `<div class="empty"><div class="t">Couldn't load</div><div>${esc(e&&e.message)}</div></div>`; }
+/**
+ * ⚠️ ONE SHAPE FOR "IT DID NOT LOAD", because there were four. Measured across the app: "Couldn't load",
+ * "Couldn't load suppliers", "Couldn't load co-assists", "Could not load customers" — three spellings of the
+ * same sentence, some with an ⚠ icon and some with none. Four ways of saying one thing reads as four different
+ * failures to the person hitting them.
+ *
+ * ⚠️ AND IT OFFERS RETRY. A failure with no way out makes the reader reload the whole app, which costs them
+ * every bit of unsaved state on the screen. `subject` names what failed; `retry` is a call expression.
+ */
+function scrErr(e, subject, retry){
+  return '<div class="empty"><div class="big">⚠</div>'
+    + '<div class="t">'+esc("Couldn't load"+(subject?' '+subject:''))+'</div>'
+    + '<div>'+esc(e&&e.message)+'</div>'
+    + (retry ? '<button class="btn" data-testid="err-retry" onclick="'+esc(retry)+'" style="margin-top:4px">Try again</button>' : '')
+    + '</div>';
+}
 
 function cap(s){ return s[0].toUpperCase()+s.slice(1); }
 function inr_(v){ return fmtMoney(v,'INR'); }   /* R1: one money formatter — alias to fmtMoney (currency-aware) */
@@ -20,8 +35,24 @@ function healthDot(h){ return '<span title="'+esc(h||'')+'" style="display:inlin
 function sigLabel(s){ if(s==='no_signal')return '<span style="color:var(--disp);font-weight:700;font-size:var(--fs-1)">○ no signal</span>'; if(s==='live')return '<span style="color:var(--ok-3);font-weight:700;font-size:var(--fs-1)">● live</span>'; if(s==='slow')return '<span style="color:#c9962a;font-weight:700;font-size:var(--fs-1)">◐ slow</span>'; return '<span style="color:var(--grey-4);font-weight:700;font-size:var(--fs-1)">○ silent</span>'; }
 /* R6: relative time ("2m ago") — was cap-workforce._ago; a generic leaf now (reusable in folders/inbox/etc). */
 function timeAgo(ts){ if(!ts)return ''; var s=Math.floor((Date.now()-new Date(ts).getTime())/1000); if(s<0)s=0; if(s<60)return s+'s ago'; var m=Math.floor(s/60); if(m<60)return m+'m ago'; var h=Math.floor(m/60); if(h<24)return h+'h ago'; return Math.floor(h/24)+'d ago'; }
-/* R7: one empty-state + one loader — every list re-hand-rolled these. (sub may contain HTML; title is escaped.) */
-function emptyState(icon,title,sub){ return '<div class="empty"><div class="big">'+(icon||'✨')+'</div><div class="t">'+esc(title)+'</div>'+(sub?'<div>'+sub+'</div>':'')+'</div>'; }
+/**
+ * R7: one empty-state + one loader — every list re-hand-rolled these. (sub may contain HTML; title is escaped.)
+ *
+ * ⭐ `act` — THE EMPTY STATE OFFERS THE NEXT STEP. An empty screen is the FIRST screen: it is what a new user
+ * and every prospect sees before there is any data to look at, and ours described the next step in prose
+ * ("Add one with + New product") while making them go find the button. Naming the action and not offering it is
+ * the one thing an empty state must never do — it is the only moment where the app knows exactly what the
+ * person should do next.
+ *
+ *   act = { label:'+ New product', onclick:"newProduct()" }
+ */
+function emptyState(icon,title,sub,act){
+  return '<div class="empty"><div class="big">'+(icon||'✨')+'</div><div class="t">'+esc(title)+'</div>'
+    + (sub?'<div>'+sub+'</div>':'')
+    + (act&&act.label ? '<button class="btn pri" data-testid="empty-act" onclick="'+esc(act.onclick||'')
+        +'" style="margin-top:4px">'+esc(act.label)+'</button>' : '')
+    + '</div>';
+}
 function loader(label){ return '<div style="padding:40px 16px;text-align:center;color:var(--grey)"><span class="spin" style="display:inline-block;margin-bottom:10px"></span><div>'+esc(label||'Loading…')+'</div></div>'; }
 
 const CCY_LOCALE={INR:'en-IN',USD:'en-US',EUR:'de-DE',GBP:'en-GB',JPY:'ja-JP',CNY:'zh-CN',AUD:'en-AU',CAD:'en-CA',CHF:'de-CH',SGD:'en-SG',AED:'ar-AE',SAR:'ar-SA',KWD:'ar-KW',BHD:'ar-BH',OMR:'ar-OM',KRW:'ko-KR',VND:'vi-VN',THB:'th-TH',MYR:'ms-MY',IDR:'id-ID',ZAR:'en-ZA',BRL:'pt-BR',RUB:'ru-RU',NGN:'en-NG',KES:'en-KE',LKR:'si-LK',BDT:'bn-BD',PKR:'ur-PK',NPR:'ne-NP'};
