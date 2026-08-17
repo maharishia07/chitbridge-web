@@ -84,7 +84,7 @@ module.exports = defineConfig({
       testIgnore: [/[\\/]onboarding\.spec\.js$/, /[\\/]flow\.spec\.js$/, /[\\/]redproof\.spec\.js$/, /[\\/]swarm\.spec\.js$/,
         /[\\/]signed-out\.spec\.js$/, /[\\/]currency-matrix\.spec\.js$/, /[\\/]mode-survives-order\.spec\.js$/,
         /[\\/]variants\.spec\.js$/, /[\\/]network-cascade\.spec\.js$/, /[\\/]render-smoke\.spec\.js$/,
-        /[\\/]enquiry\.spec\.js$/],
+        /[\\/]enquiry\.spec\.js$/, /[\\/]message-privacy\.spec\.js$/],
     },
     // 3 · flows that must start LOGGED OUT (they test onboarding itself / the welcome screen)
     {
@@ -107,7 +107,11 @@ module.exports = defineConfig({
         /render-smoke\.spec\.js/,
         // ⭐ Product enquiry is an API-level, multi-party test: it signs in three parties itself and never wants a
         // saved session. It proves the question reaches the SELLER and that an unrelated entity sees nothing.
-        /enquiry\.spec\.js/],
+        /enquiry\.spec\.js/,
+        // ⭐⭐ The internal/external boundary, proven across TWO entities. messages.spec.js carried this as a
+        // test.skip('needs a 2nd entity') — an intention where the proof should be, on the single most
+        // consequential claim the messaging layer makes.
+        /message-privacy\.spec\.js/],
     },
     // 4 · CROSS-BROWSER + SIZE sweep of the COUNTER flows (keyboard/storefront/chits). Opt-in — run e.g.
     //     `npx playwright test --project=counter-firefox`. The default run stays Chromium@counter for speed.

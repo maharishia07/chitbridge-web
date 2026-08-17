@@ -42,7 +42,11 @@ test.describe('Module · Messages', () => {
     });
   });
 
-  // PRIVACY PROOF (skeleton, needs 2 entities): as A send an INTERNAL note + an EXTERNAL message on an A→B chit; sign in
-  // as B → B sees ONLY the external message, never the internal note. That is the internal/external boundary, proven.
-  test.skip('[MSG-02] privacy — the counterparty sees external, never internal (needs a 2nd entity)', async ({ page }) => {});
+  /**
+   * ⭐ MSG-02 LIVES IN message-privacy.spec.js NOW — as six real assertions across two entities, not a skeleton.
+   *
+   * ⚠️ It sat here as `test.skip('needs a 2nd entity')` — a written-down intention where the proof should be, on
+   * the single most consequential claim the messaging layer makes. A skipped test reads as covered in a run
+   * summary; that is the whole danger of leaving one behind.
+   */
 });
