@@ -2199,7 +2199,18 @@ var THEMES = {
   dark:   { name: 'Dark',    dot: '#161A1F', vars: {
             '--paper':'#14181D', '--card':'#1C2128', '--line':'#2E353E',
             '--ink':'#E6EAEF', '--ink-2':'#C4CCD6',
-            '--grey':'#9AA5B1', '--grey-2':'#8D98A5', '--grey-3':'#7A8492', '--grey-4':'#6E7885',
+            /* ⚠️ THE MUTED GREYS WERE TUNED BY EYE AND THEY WERE TOO DARK. A light theme's muted grey only has to
+               fall AWAY from near-black text on a pale card, so a fairly dark grey still reads. Inverted naively
+               for dark, the same relationship puts the dimmest greys within 3.6:1 of --card — section labels like
+               "YOUR PRODUCTS" and every secondary line went hazy, which is Athi's "the text color is not visible
+               in the background". Measured against --card #1C2128 and lifted until each clears 4.5:1:
+                   --grey 7.48:1   --grey-2 6.56:1   --grey-3 5.89:1   --grey-4 5.18:1
+               ⚠️ THE WHOLE SCALE MOVES, NOT JUST THE FAILING END. Lifting only --grey-3/-4 would have pushed them
+               PAST --grey-2 and inverted the ramp — four greys that no longer descend are not a scale, and every
+               "this line is less important than that one" built on them would have started lying. Four distinct
+               steps, still ordered, all now clearing 4.5:1. Collapsing them onto one legible grey would fix
+               contrast by deleting the hierarchy the greys exist to express. */
+            '--grey':'#A8B2BE', '--grey-2':'#9DA7B3', '--grey-3':'#949EAA', '--grey-4':'#8A94A0',
             '--blue':'#5A87D8', '--blue-d':'#7BA2E4', '--blue-2':'#4E79C8',
             '--blue-tint':'#1E2A3C', '--blue-tint-line':'#31445F',
             '--gold':'#D4B074', '--gold-soft':'#2A2418', '--gold-line':'#463A22',
