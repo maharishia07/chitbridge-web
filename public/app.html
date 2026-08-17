@@ -189,6 +189,7 @@
        page and we cannot see them from CSS — env() is the only thing that can, and it reports 0 on anything
        that has none, so this costs nothing where it is not needed. */
     --scroll-tail:calc(clamp(96px,20vh,200px) + env(safe-area-inset-bottom, 0px));
+    color-scheme:light;
     --r-sm:6px;--r-md:9px;--r-lg:12px;
   }
   *{box-sizing:border-box}html,body{margin:0;height:100%}
@@ -277,8 +278,24 @@
   .tabs button{flex:1;border:0;background:none;color:var(--grey);font-size:12px;font-weight:700;padding:9px 6px;border-radius:9px}
   .tabs button.on{background:var(--card);color:var(--blue);box-shadow:0 1px 3px rgba(0,0,0,.07)}
   label.fl{display:block;font-size:var(--fs-1);font-weight:700;color:var(--grey);margin:12px 0 5px;text-transform:uppercase;letter-spacing:.04em}
-  .inp{width:100%;border:1px solid var(--line);border-radius:9px;padding:11px 13px;font-size:var(--fs-3);outline:0;background:var(--paper)}
-  .inp:focus{border-color:var(--blue);background:var(--card)}
+  /**
+   * ⚠️⚠️ A FORM CONTROL DOES NOT INHERIT color — AND THAT IS THE WHOLE BUG. A <div> takes its parent's colour;
+   * an <input>, <select> or <textarea> does not. It uses the UA's own default, which is black. So this rule
+   * followed the theme with its BACKGROUND and left its TEXT behind: in any dark theme the field went dark and
+   * the letters stayed black. Athi, on the network name box: "the text is same color as background, I guess
+   * the text is completely invisible." It was.
+   *
+   * ⚠️ THE PAIRING RULE APPLIES HERE MORE STRONGLY, NOT LESS. Everywhere else in this app inheritance at least
+   * gives a themed colour and the risk is that it came from the wrong surface. On a form control inheritance
+   * does not happen at all, so a background without a colour is never right — it is only ever invisible-in-
+   * waiting, held up by the default happening to suit a light theme.
+   */
+  .inp{width:100%;border:1px solid var(--line);border-radius:9px;padding:11px 13px;font-size:var(--fs-3);outline:0;background:var(--paper);color:var(--on-bg)}
+  /* The UA renders the caret, the selection, the scrollbar, autofill and the date picker itself. color-scheme is
+     the only way to tell it which way round the page is; without it those parts stay light on a dark theme. */
+  input,select,textarea{color:var(--on-card);color-scheme:inherit}
+  input::placeholder,textarea::placeholder{color:var(--grey-4);opacity:1}
+  .inp:focus{border-color:var(--blue);background:var(--card);color:var(--on-card)}
   .row2{display:flex;gap:10px}.row2>div{flex:1}
   .btn{width:100%;border:0;border-radius:12px;padding:13px;font-weight:700;font-size:var(--fs-3);margin-top:16px;background:var(--chrome);color:var(--chrome-on)}
   .btn.gold{background:linear-gradient(90deg,var(--gold),#b8945a);color:#3a2e16}
@@ -692,7 +709,7 @@
   .topbar .bell .bdot,.topbar .msgc .bdot{position:absolute;top:-2px;right:-3px;background:var(--disp);color:var(--on-danger);font-size:9px;font-weight:800;min-width:15px;height:15px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 3px}
   .filterpanel{margin-top:8px;border:1px solid var(--line);border-radius:9px;background:var(--card);padding:9px 11px;display:flex;flex-direction:column;gap:7px;font-size:12px}
   .filterpanel .fp-row{display:flex;align-items:center;gap:9px;justify-content:space-between}
-  .filterpanel select{font-size:12px;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--card)}
+  .filterpanel select{color:var(--on-card);font-size:12px;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--card)}
   .filterpanel label{display:flex;align-items:center;gap:6px;cursor:pointer}
   .filterpanel .fp-foot{display:flex;align-items:center;gap:10px;border-top:1px solid var(--line);padding-top:7px}
   .filterpanel .fp-foot button{border:1px solid var(--line);background:var(--card);border-radius:6px;font-size:var(--fs-1);font-weight:700;padding:4px 10px;color:var(--blue);cursor:pointer}
@@ -2293,7 +2310,7 @@ var THEMES = {
    * ⚠️ `--card` is LIGHTER than `--paper`, not darker: on a dark ground a raised surface catches more light, and
    * inverting that relationship is what makes a dark theme feel inside-out.
    */
-  dark:   { name: 'Dark',    dot: '#161A1F', vars: {
+  dark:   { name: 'Dark',    dot: '#161A1F', scheme: 'dark', vars: {
             '--paper':'#14181D', '--card':'#1C2128', '--line':'#2E353E',
             '--ink':'#E6EAEF', '--ink-2':'#C4CCD6',
             /* ⚠️ THE MUTED GREYS WERE TUNED BY EYE AND THEY WERE TOO DARK. A light theme's muted grey only has to
@@ -2346,7 +2363,7 @@ var THEMES = {
    * ⚠️ ROW STATES take the same measured steps as dark: hover 1.158, sel-2 1.290, picked 1.535 against --card,
    * each keeping --grey above 4.5:1 (6.65 / 5.97 / 5.01).
    */
-  slate:  { name: 'Slate',   dot: '#1D2A2C', vars: {
+  slate:  { name: 'Slate',   dot: '#1D2A2C', scheme: 'dark', vars: {
             '--paper':'#101418', '--card':'#191E24', '--line':'#2B323A',
             '--ink':'#E7EBEF', '--ink-2':'#C6CDD4',
             '--grey':'#A7B1BA', '--grey-2':'#9CA6B0', '--grey-3':'#939DA7', '--grey-4':'#8A939D',
@@ -2418,6 +2435,10 @@ function themeApply(key){
   var all = {}; Object.keys(THEMES).forEach(function(k){ Object.keys(THEMES[k].vars).forEach(function(v){ all[v]=1; }); });
   Object.keys(all).forEach(function(v){ r.style.removeProperty(v); });
   Object.keys(t.vars).forEach(function(v){ r.style.setProperty(v, t.vars[v]); });
+  /* ⚠️ TELL THE BROWSER WHICH WAY ROUND THE PAGE IS. The caret, the text selection, the scrollbars, autofilled
+     fields and the native date picker are drawn by the UA, not by us — no token reaches them. Without this they
+     stay in light mode on a dark theme: a white autofill block, a light scrollbar, an invisible caret. */
+  r.style.colorScheme = t.scheme || 'light';
   r.setAttribute('data-theme', key);
 }
 function themeSet(key){
