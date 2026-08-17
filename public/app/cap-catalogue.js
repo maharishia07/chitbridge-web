@@ -582,7 +582,7 @@ function _catfWizard(){
     + (step < 6 ? '<button class="pri" onclick="cwNext()" style="padding:9px 18px">Next ›</button>' : '<button class="pri" onclick="cwFinish()" style="padding:9px 18px">✓ Finish — go live</button>')
     + (step < 6 ? '<span onclick="cwFinish()" style="cursor:pointer;font-size:11.5px;color:var(--blue)">or finish now (partial is fine)</span>' : '')
     + '<span onclick="cwCancel()" style="cursor:pointer;font-size:11.5px;color:var(--grey);margin-left:auto">Cancel</span></div>';
-  return '<div style="flex:1;min-height:0;overflow-y:auto;padding:22px"><div style="max-width:940px"><div style="font-size:19px;font-weight:800">🗂️ Set up your catalogue</div><div style="font-size:11.5px;color:var(--grey);margin:4px 0 16px">Currency <b>' + esc(_catfCcy()) + '</b> — from Settings · fill as much as you can, in order; each step is optional.</div>' + bar + body + nav + '</div></div>';
+  return '<div style="flex:1;min-height:0;overflow-y:auto;padding-bottom:var(--scroll-tail);padding:22px 22px var(--scroll-tail)"><div style="max-width:940px"><div style="font-size:19px;font-weight:800">🗂️ Set up your catalogue</div><div style="font-size:11.5px;color:var(--grey);margin:4px 0 16px">Currency <b>' + esc(_catfCcy()) + '</b> — from Settings · fill as much as you can, in order; each step is optional.</div>' + bar + body + nav + '</div></div>';
 }
 /* two-panel wrapper + the running "catalogue so far" preview (the right side, shared across steps 2–6) */
 function _cwTwo(left, right){ return '<div style="display:flex;gap:18px;flex-wrap:wrap"><div style="flex:0 0 46%;min-width:280px;max-width:410px">' + left + '</div><div style="flex:1;min-width:260px;border-left:1px solid var(--line);padding-left:18px">' + right + '</div></div>'; }
@@ -1136,5 +1136,5 @@ function _catfFaceView(){
     + '</div>'
     + '<div style="margin-top:14px;font-size:var(--fs-1);color:var(--grey)">Items are <b>golden records</b> — each source (blueprint · ERP · CSV · capture) merges into one item, keyed by SKU, edited via JSON Merge Patch. <span onclick="catfStandardsModal()" style="cursor:pointer;color:var(--blue);font-weight:600">📐 Built on open standards →</span></div>'
     + '</div>';
-  return '<div style="flex:1;min-height:0;overflow-y:auto;padding:22px 20px">' + inner + '</div>';
+  return '<div style="flex:1;min-height:0;overflow-y:auto;padding-bottom:var(--scroll-tail);padding:22px 20px var(--scroll-tail)">' + inner + '</div>';
 }

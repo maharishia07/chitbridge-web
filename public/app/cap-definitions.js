@@ -1008,7 +1008,7 @@ function cbDefCss(){
      * because a flex item's default `min-height:auto` refuses to shrink below its content and would put the
      * overflow back where it started.
      */
-    '.cbdef-wrap{flex:1;min-height:0;overflow-y:auto;padding:14px 16px 40px;max-width:820px}',
+    '.cbdef-wrap{flex:1;min-height:0;overflow-y:auto;padding-bottom:var(--scroll-tail);padding:14px 16px 40px;max-width:820px}',
     '.cbdef-hd{display:flex;align-items:center;gap:8px;margin-bottom:6px}',
     '.cbdef-lede{font-size:13px;color:var(--grey);line-height:1.55;margin-bottom:10px;max-width:66ch}',
     '.cbdef-note-box{font-size:var(--fs-2);line-height:1.55;color:var(--warn-3);background:var(--gold-soft);',

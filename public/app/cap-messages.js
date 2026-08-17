@@ -285,7 +285,7 @@ function messagesScreen(){
   }
 
   var n = msgUnread();
-  return '<div style="flex:1;min-height:0;overflow-y:auto">'
+  return '<div style="flex:1;min-height:0;overflow-y:auto;padding-bottom:var(--scroll-tail)">'
     + '<div style="padding:13px 16px;border-bottom:1px solid var(--line)">'
     +   '<div style="font-weight:700;font-size:var(--fs-4)">Messages' + (n ? ' <span style="font-size:var(--fs-2);color:var(--blue-2)">· ' + n + ' new</span>' : '') + '</div>'
     +   '<div style="font-size:12px;color:var(--grey);margin-top:2px">One conversation per line, across every chit. Read and reply here.</div>'

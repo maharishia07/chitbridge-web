@@ -343,7 +343,7 @@ function worklistScreen(){
       + ' onchange="wlThen(&quot;' + k + '&quot;)" style="width:15px;height:15px;accent-color:var(--blue)">' + label + '</label>';
   };
 
-  return '<div style="flex:1;min-height:0;overflow-y:auto">'
+  return '<div style="flex:1;min-height:0;overflow-y:auto;padding-bottom:var(--scroll-tail)">'
     + '<div style="padding:13px 16px;border-bottom:1px solid var(--line)">'
     +   '<div style="font-weight:700;font-size:var(--fs-4)">' + (mine2 ? 'My work' : 'Everyone\'s work') + '</div>'
     +   '<div style="font-size:12px;color:var(--grey);margin-top:2px">Every line assigned to '

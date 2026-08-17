@@ -2,7 +2,11 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- ⚠️ viewport-fit=cover is REQUIRED for env(safe-area-inset-*) to be anything but 0. Without it every
+     safe-area rule in this file is inert, and the layout silently pretends the notch and the home
+     indicator do not exist. Declaring it also means the page now extends UNDER them, so the topbar and
+     the bottom-pinned controls below must pad themselves back out. The two go together. -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Chit &amp; Bridge — app (build)</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -163,6 +167,28 @@
   :root{
     --fs-1:11px;--fs-2:12.5px;--fs-3:14px;--fs-4:16px;--fs-5:20px;--fs-6:28px;
     --sp-1:4px;--sp-2:8px;--sp-3:12px;--sp-4:16px;--sp-5:24px;--sp-6:32px;
+    /**
+     * ⭐⭐ --scroll-tail — EVERY SCROLLING PANE ENDS ABOVE THE FOLD, NOT AT IT (Athi, 2026-08-17: "when the page
+     * ends while scrolling, the content stops at the bottom of the screen… anything blocking the content at the
+     * bottom will be visible, for example assistant icon is blocking the content below").
+     *
+     * ⚠️ THREE THINGS ARE PINNED OVER THE BOTTOM OF EVERY PANE: #assistfab (right, 16px up), .composepill
+     * (left, 16px up) and the #cbnet status pill. They float ABOVE the scroll area, so the last row of any list
+     * sits underneath them and cannot be scrolled clear — there is nothing left to scroll. The content is not
+     * merely hard to read, it is unreachable: a tap lands on the button on top of it.
+     *
+     * ⚠️ WHY A TAIL AND NOT A TALLER GAP UNDER THE FAB: the FAB is fixed to the VIEWPORT and the content scrolls
+     * beneath it, so no amount of margin on the last element helps — it scrolls away with everything else. Only
+     * empty space at the END of the scroll range lets the reader push real content out from under it.
+     *
+     * 20vh is Athi's number. Clamped because a bare 20vh is ~44px on a short phone (not enough to clear a 64px
+     * button) and ~260px on a tall desktop (a lot of nothing at the end of every list).
+     */
+    /* ⚠️ + THE DEVICE'S OWN FURNITURE. Athi: "not necessarily from our application, there can be other issues
+       from the device which is being operated". A home indicator, a gesture bar or on-screen keys sit over the
+       page and we cannot see them from CSS — env() is the only thing that can, and it reports 0 on anything
+       that has none, so this costs nothing where it is not needed. */
+    --scroll-tail:calc(clamp(96px,20vh,200px) + env(safe-area-inset-bottom, 0px));
     --r-sm:6px;--r-md:9px;--r-lg:12px;
   }
   *{box-sizing:border-box}html,body{margin:0;height:100%}
@@ -181,7 +207,10 @@
      this only catches buttons that were relying on the browser's colours without knowing it. */
   button{cursor:pointer;color:inherit;background:var(--card)}
   ::-webkit-scrollbar{width:9px;height:9px}::-webkit-scrollbar-thumb{background:var(--warn-tint);border-radius:6px}
-  #root{height:100vh;display:flex;flex-direction:column}
+  /* ⚠️ 100vh IS THE WRONG UNIT ON A PHONE — it means the viewport with the browser chrome HIDDEN, so while the
+     toolbar is showing, the bottom of the app is underneath it. 100dvh tracks the live height. The vh line is
+     kept first as the fallback for anything that does not know dvh. */
+  #root{height:100vh;height:100dvh;display:flex;flex-direction:column}
   .mono{font-family:'Space Mono'}.disp{font-family:'Space Grotesk'}
 
   /* mode ribbon */
@@ -263,7 +292,13 @@
 
   /* app shell */
   .shell{flex:1;display:grid;grid-template-columns:212px 1fr;grid-template-rows:auto 1fr;min-height:0}
-  .topbar{grid-column:1/3;height:52px;display:flex;align-items:center;gap:12px;padding:0 16px;background:var(--chrome);color:var(--chrome-on)}
+  /* ⚠️ viewport-fit=cover puts this UNDER the notch. Height grows by the top inset rather than the content
+     shifting down, so the bar still looks 52px tall below the cutout. Left/right matter in LANDSCAPE, where the
+     notch is on a side — the case people forget, and the one where the avatar disappears into it. */
+  .topbar{grid-column:1/3;height:calc(52px + env(safe-area-inset-top,0px));padding-top:env(safe-area-inset-top,0px);
+          display:flex;align-items:center;gap:12px;
+          padding-left:calc(16px + env(safe-area-inset-left,0px));padding-right:calc(16px + env(safe-area-inset-right,0px));
+          background:var(--chrome);color:var(--chrome-on)}
   .topbar .b{display:flex;align-items:center;gap:9px;font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3)}
   .topbar .who{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:12px}
   .topbar .who .nm{font-weight:700}.topbar .who .rl{color:#9fb4bf;font-size:var(--fs-1)}
@@ -408,7 +443,7 @@
    * unreachable, and nothing on screen said so. Content that overflows without a scroll container does not look
    * broken; it looks finished, which is why it went unnoticed until Athi asked how he would know.
    */
-  #misbody,#setbody,#profbody{flex:1;min-height:0;overflow-y:auto;padding:16px 18px}
+  #misbody,#setbody,#profbody{flex:1;min-height:0;overflow-y:auto;padding:16px 18px var(--scroll-tail)}
   /* A scrollbar you can SEE. Windows overlay bars fade out when idle, so the only cue that there is more is a
      cue that is not being shown. */
   #misbody::-webkit-scrollbar,#setbody::-webkit-scrollbar,#profbody::-webkit-scrollbar{width:10px}
@@ -620,7 +655,7 @@
            font-weight:700;font-size:12px;padding:5px 11px;border-radius:9px;cursor:pointer;flex:0 0 auto}
   .supback:hover{background:var(--paper)}
   .supslide-t{font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .supslide-b{flex:1;min-height:0;overflow-y:auto;padding:10px 12px}
+  .supslide-b{flex:1;min-height:0;overflow-y:auto;padding:10px 12px var(--scroll-tail)}
   .supslide .supinfo{border-left:0;background:transparent;padding:0}
   #supfind_host{flex:1;min-height:0;display:flex}
   .supfindpanel{flex:1;min-height:0;display:flex;flex-direction:column}
@@ -669,7 +704,7 @@
   .notifrow .ni{font-size:15px}.notifrow .nt{font-size:var(--fs-2);color:var(--ink);line-height:1.35}.notifrow .ns{font-size:var(--fs-1);color:var(--grey);margin-top:2px}
   .notiffoot{padding:8px 13px;font-size:var(--fs-1);color:var(--grey);background:var(--paper)}
   .mover{position:fixed;inset:0;z-index:280;background:rgba(8,24,32,.45);display:flex;align-items:flex-start;justify-content:center;padding:56px 16px;overflow-y:auto}
-  .composepill{position:fixed;left:16px;bottom:16px;z-index:300;background:var(--blue);color:var(--on-accent);border-radius:999px;padding:9px 15px;font-size:13px;font-weight:700;box-shadow:0 8px 22px rgba(0,0,0,.28);display:flex;align-items:center;gap:10px}
+  .composepill{position:fixed;left:calc(16px + env(safe-area-inset-left,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:300;background:var(--blue);color:var(--on-accent);border-radius:999px;padding:9px 15px;font-size:13px;font-weight:700;box-shadow:0 8px 22px rgba(0,0,0,.28);display:flex;align-items:center;gap:10px}
   .ccsugg{margin-top:4px;max-height:200px;overflow-y:auto}
   .ccsugg-item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 10px;cursor:pointer;border:1px solid var(--line);border-top:0;background:var(--card)}
   .ccsugg-item:first-child{border-top:1px solid var(--line);border-radius:9px 8px 0 0}
@@ -828,7 +863,7 @@
   .msec{font-size:var(--fs-1);font-weight:700;color:var(--ink);margin:11px 0 4px}.msec .rh{font-weight:400;color:var(--grey)}
   .mreason{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:9px;padding:8px;font:inherit;font-size:13px;min-height:46px;resize:vertical}
   .custreq{font-size:11.5px;font-weight:700;color:var(--disp-2);background:var(--danger-tint);border-radius:9px;padding:7px 10px;margin-bottom:8px}
-  .rows{flex:1;overflow-y:auto}
+  .rows{flex:1;overflow-y:auto;padding-bottom:var(--scroll-tail)}
   .row{padding:11px 13px;border-bottom:1px solid var(--line);cursor:pointer;display:flex;gap:9px}
   /**
    * ⚠️⚠️ A SURFACE THAT SETS NO TEXT COLOUR AT ALL — the seventh way the pairing rule gets broken, and the only
@@ -875,7 +910,7 @@
   .dtabs{display:flex;gap:2px;padding:0 12px;border-bottom:1px solid var(--line)}
   .dtabs button{border:0;background:none;color:var(--grey);font-size:var(--fs-2);font-weight:600;padding:11px 13px;border-bottom:2px solid transparent;margin-bottom:-1px}
   .dtabs button.on{color:var(--ink);border-bottom-color:var(--blue)}
-  .db{flex:1;overflow-y:auto;padding:15px 16px}
+  .db{flex:1;overflow-y:auto;padding:15px 16px var(--scroll-tail)}
   .itab{border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-bottom:12px}
   .itab .ir{display:flex;padding:9px 12px;border-bottom:1px solid var(--line);font-size:var(--fs-2)}.itab .ir:last-child{border-bottom:0}
   .itab .ir .qt{margin-left:auto;color:var(--grey)}.itab .tot{background:var(--paper);font-weight:700}
@@ -927,7 +962,7 @@
   body.vpmob .modal,body.vpmob .modal.wide{width:440px;max-width:440px}
   /* ⚠️ z-index 270 sits BELOW .mover (280) deliberately — see mountAssist. At 300 this pill covered compose's
      primary button on a narrow screen and the wizard could not be advanced at all. */
-  #assistfab{position:fixed;right:16px;bottom:16px;z-index:270}
+  #assistfab{position:fixed;right:calc(16px + env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:270}
   body.vpmob #assistfab{right:calc(50% - 220px + 16px)}
   body.vpmob .composepill{left:calc(50% - 220px + 16px)}
   .divider{background:var(--line);display:flex;align-items:center;justify-content:center;cursor:col-resize;transition:background .15s}
@@ -3875,7 +3910,7 @@ function lazyAttach(id){ const s=LAZY[id]; if(!s || s.shown>=s.total) return; co
 function scr(title,id,helpKey){
   const q = helpKey?`<button data-testid="icon-help-${helpKey}" onclick="openAssist('${helpKey}')" title="About this screen" style="border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:50%;width:22px;height:22px;font-weight:800;cursor:pointer;font-size:13px;line-height:1;flex:none">?</button>`:'';
   const hint = helpKey?`<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:10px">Explore <b onclick="openAssist('${helpKey}')" style="cursor:pointer;color:var(--blue)">?</b> to know more about this screen.</div>`:'';
-  return `<div style="flex:1;min-height:0;overflow-y:auto"><div style="padding:14px;max-width:640px;margin:0 auto"><div class="sec" style="font-size:15px;margin-bottom:${helpKey?'3px':'10px'};display:flex;align-items:center;gap:9px">${title}${q}</div>${hint}<div id="${id}"><div class="loadwrap"><span class="spin"></span> loading…</div></div></div></div>`;
+  return `<div style="flex:1;min-height:0;overflow-y:auto"><div style="padding:14px 14px var(--scroll-tail);max-width:640px;margin:0 auto"><div class="sec" style="font-size:15px;margin-bottom:${helpKey?'3px':'10px'};display:flex;align-items:center;gap:9px">${title}${q}</div>${hint}<div id="${id}"><div class="loadwrap"><span class="spin"></span> loading…</div></div></div></div>`;
 }
 /* esc + opt + scrErr → app/helpers.js */
 const _CARD='border:1px solid var(--line);border-radius:12px;padding:13px;margin-bottom:9px';

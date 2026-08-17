@@ -792,9 +792,9 @@ async function c2AddCost(){
 
 /* ── the screen ────────────────────────────────────────────────────────────────────────────────────────────── */
 function chit2Screen(){
-  if (C2.busy && !C2.data) return '<div style="flex:1;min-height:0;overflow-y:auto"><div style="padding:26px;color:var(--grey)"><span class="spin"></span> opening…</div></div>';
-  if (C2.err) return '<div style="flex:1;min-height:0;overflow-y:auto"><div style="padding:26px;color:var(--disp)">' + esc(C2.err) + '</div></div>';
-  var d = C2.data; if (!d) return '<div style="flex:1;min-height:0;overflow-y:auto"><div style="padding:26px;color:var(--grey)">Nothing open.</div></div>';
+  if (C2.busy && !C2.data) return '<div style="flex:1;min-height:0;overflow-y:auto;padding-bottom:var(--scroll-tail)"><div style="padding:26px;color:var(--grey)"><span class="spin"></span> opening…</div></div>';
+  if (C2.err) return '<div style="flex:1;min-height:0;overflow-y:auto;padding-bottom:var(--scroll-tail)"><div style="padding:26px;color:var(--disp)">' + esc(C2.err) + '</div></div>';
+  var d = C2.data; if (!d) return '<div style="flex:1;min-height:0;overflow-y:auto;padding-bottom:var(--scroll-tail)"><div style="padding:26px;color:var(--grey)">Nothing open.</div></div>';
   var h = d.header || {};
   var sum = d.delivery_summary;
 
@@ -853,6 +853,6 @@ function chit2Screen(){
     + (sum ? '<div style="padding:6px 16px 0;font-size:12px;color:var(--grey);text-align:center">' + sum.complete + ' of ' + sum.lines + ' lines delivered</div>' : '')
     + '<div style="display:flex;border-bottom:1px solid var(--line);margin-top:10px">' + tabs + '</div>'
     + '</div>'
-    + '<div style="flex:1;min-height:0;overflow-y:auto">' + pane(d) + '</div>'   // ← the only thing that rolls
+    + '<div style="flex:1;min-height:0;overflow-y:auto;padding-bottom:var(--scroll-tail)">' + pane(d) + '</div>'   // ← the only thing that rolls
     + '</div>';
 }
