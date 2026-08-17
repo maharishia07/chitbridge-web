@@ -59,6 +59,28 @@ test.describe('Keyboard map · the app is operable and does not fight the browse
     await expect(page.locator('.mover'), 'Ctrl-C must not open Compose').toHaveCount(0);
   });
 
+  /**
+   * ⚠️ FOUND BY RED-TEAMING, NOT BY THE FIRST VERSION OF THIS FILE. Every test I wrote exercised the keys with
+   * nothing open, so all of them passed while `c` re-entered Compose over an open Compose and a digit navigated
+   * the app UNDERNEATH the dialog — leaving the reader somewhere they never chose once they closed it.
+   * A spec only ever covers the states it thought of.
+   */
+  test('[KEY-06] ⚠️ shortcuts do not reach through an open layer', async ({ page }) => {
+    await mintEntity(page);
+    await page.keyboard.press('c');
+    await expect(page.locator('.mover').first()).toBeVisible({ timeout: 15000 });
+    const navBefore = await page.evaluate(() => window.UI && window.UI.nav);
+
+    await page.keyboard.press('3');              // would navigate behind the modal
+    await page.keyboard.press('c');              // would re-enter compose over itself
+    await page.waitForTimeout(600);
+
+    expect(await page.evaluate(() => window.UI && window.UI.nav),
+      'a digit must not navigate the screen underneath an open modal').toBe(navBefore);
+    expect(await page.locator('.mover').count(),
+      'c must not stack a second Compose on top of the one already open').toBe(1);
+  });
+
   test('[KEY-05] c opens compose, Escape steps back out of it', async ({ page }) => {
     await mintEntity(page);
     await page.keyboard.press('c');

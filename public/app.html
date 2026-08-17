@@ -335,7 +335,12 @@
   .topbar .lo{border:1px solid rgba(255,255,255,.25);background:none;color:#cfe0e8;border-radius:9px;font-size:var(--fs-1);font-weight:700;padding:6px 10px}
   .topbar .ham{display:none;border:0;background:none;color:#fff;font-size:var(--fs-5)}
 
-  .menu{background:var(--chrome);color:var(--chrome-ink);padding:12px 10px;display:flex;flex-direction:column;overflow-y:auto;border-top:1px solid rgba(255,255,255,.06)}
+  /* ⚠️ THE RAIL NEEDS THE INSETS TOO — I padded the topbar for viewport-fit=cover and stopped there, which is
+     half a fix. In LANDSCAPE on a notched phone the cutout is on a SIDE, and the side it is on is where this
+     rail lives: the nav labels would sit under it. The bottom inset matters as well, because the rail runs the
+     full height and its last item would otherwise land in the gesture bar. */
+  .menu{background:var(--chrome);color:var(--chrome-ink);display:flex;flex-direction:column;overflow-y:auto;border-top:1px solid rgba(255,255,255,.06);
+        padding:12px calc(10px + env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) calc(10px + env(safe-area-inset-left,0px))}
   .menu .grpsep{height:1px;background:var(--line);margin:7px 10px 3px}
   /* ⚠️ #5f7d8c measured 3.25:1 on the navy — the two lowest-contrast runs on the whole screen were here, in the
      nav, where every session starts. #8fa9b6 is 5.76:1 and still clearly recessive against the 8.62:1 items. */
@@ -1989,6 +1994,20 @@ document.addEventListener('keydown', function (e) {
     return;
   }
   if (typing) return;                            // Rule 1
+  /**
+   * ⚠️⚠️ RULE 4, FOUND BY RED-TEAMING MY OWN HANDLER AND MISSED BY MY OWN SPEC: A SHORTCUT MUST NOT REACH
+   * THROUGH AN OPEN LAYER.
+   *
+   * With a modal up and focus not in a field, `c` re-entered Compose over the Compose already open, and `3`
+   * navigated the app UNDERNEATH the dialog — so closing it later dropped the reader somewhere they never chose.
+   * Escape is exempt because it is the one key whose whole job is that layer, and it is handled above.
+   *
+   * The tests I wrote passed because every one of them exercised the keys with nothing open. A spec only ever
+   * covers the states it thought of.
+   */
+  var mh = document.getElementById('modalhost');
+  var lbh = document.getElementById('lbhost');
+  if ((mh && mh.innerHTML.trim()) || (lbh && lbh.innerHTML.trim()) || document.getElementById('cbkeys_ov')) return;
 
   if (e.key === '?') { cbKeysOverlay(true); e.preventDefault(); return; }
   if (typeof SESSION === 'undefined' || !SESSION.token) return;   // the rest are for a signed-in app only
