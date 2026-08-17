@@ -411,6 +411,34 @@ async function catsetUnitToggle(u, on){
   try { await api('policySet', { body: { units: next } }); }
   catch (e) { if (typeof toast === 'function') toast('Could not save that — ' + ((e && e.message) || 'try again')); catsetUnitsLoad(); }
 }
+/**
+ * ⚠️ THIS SCREEN NEVER SHOWED WHAT IT HAD DONE. Its two siblings — offers and order models — each list what you
+ * created underneath the button. Variants declared a grouping into thin air: no list, no current state, nothing
+ * to look at afterwards. Athi opened it and could not tell what the screen was for, which is a fair reading of
+ * a page that takes a decision and then shows you nothing.
+ *
+ * ⚠️ SAME LAZY-LOAD IDIOM as catsetDefListHTML — cache, kick off the read, repaint when it lands. Deliberately
+ * not a second pattern: `undefined` means not read yet, `null` means the read failed.
+ */
+var CATSET_FACE;
+function catsetFaceLoad(){
+  return api('catFaceGet')
+    .then(function(r){ CATSET_FACE = (r && r.face) || null; })
+    .catch(function(){ CATSET_FACE = null; });
+}
+/* Called by _vSave so the card reflects a save without a round trip. */
+function catsetFaceSet(f){ CATSET_FACE = f || null; }
+function catsetVariantStateHTML(){
+  if (CATSET_FACE === undefined) { catsetFaceLoad().then(catsetPaintDetail); return '<div class="catset-load">reading…</div>'; }
+  var id = (CATSET_FACE && CATSET_FACE.identity) || {};
+  var opts = id.options || [];
+  if (!id.group) return '<div class="catset-none">Not grouped yet — every line stands as its own product.</div>';
+  return '<div class="catset-drow" data-testid="catset-variant-state">'
+    + '<span class="dn">Grouped by <b>' + esc(id.group) + '</b></span>'
+    + (opts.length ? '<code class="dk">told apart by ' + esc(opts.join(', ')) + '</code>'
+                   : '<code class="dk">no distinguishing column yet</code>')
+    + '<span class="da" onclick="declareVariants()">Change</span></div>';
+}
 function catsetCard(title, body, actions){
   var sec = CATSET_SECS.filter(function(x){ return x.key === catsetSec(); })[0];
   var dupe = sec && String(sec.q || '').trim() === String(title || '').trim();
@@ -447,7 +475,8 @@ function catsetBody(k){
       + 'shop then shows one product with its options instead of three unrelated rows.'
       + '<div class="catset-std">In PIM terms this is the <b>product model</b> and its <b>variant axis</b>: which '
       + 'attribute varies, and which stay common across the group.</div>',
-      '<button class="composebtn pri" data-testid="catset-variants" onclick="declareVariants()">🔗 Declare variants</button>');
+      '<button class="composebtn pri" data-testid="catset-variants" onclick="declareVariants()">🔗 Declare variants</button>')
+    + catsetCard('What you have declared', catsetVariantStateHTML(), '');
   }
   if (k === 'offers') {
     return catsetCard('Discounts, tiers and deals',
