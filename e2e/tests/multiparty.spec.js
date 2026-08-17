@@ -30,6 +30,14 @@ test.describe('Multiparty · the real capability', () => {
   });
 
   // THE USP, LIVE — 3 parties, targeted dispute, privacy. Uses the same multi-context pattern.
+  /**
+   * ⚠️ THE CONFIDENTIALITY HALF OF THIS IS NOW PROVEN IN dispute-privacy.spec.js — six assertions across THREE
+   * entities: B sees the dispute, C on the same chit sees ZERO (not a redacted one, and not a count), a
+   * stranger sees nothing. That spec is API-level, so it needs no manual step and runs on every regression.
+   *
+   * ⚠️ THIS one stays skipped ON PURPOSE: what it adds beyond that is the RESOLVE flow through the real UI,
+   * which still needs a human to confirm. Leaving it skipped is honest; leaving the CLAIM unproven was not.
+   */
   test.skip('[MP-02] A → B,C; A disputes with B only → B sees it, C does not (the USP)', async ({ browser }) => {
     // TODO: mint A, B, C in 3 contexts. A composes a chit To B + To C, send.
     //   A opens it → chit-dispute → TICK only B → dispute-reason → dispute-raise → dispute-room-send a private note.

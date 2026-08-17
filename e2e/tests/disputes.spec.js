@@ -37,6 +37,14 @@ test.describe('Module · Disputes', () => {
   // THE USP — but the resolve UI (open-dispute dropdown → "Resolve <party>") is runtime-rendered and my automated
   // diagnostics can't reliably reach it. Skipped until the exact resolve interaction is confirmed from a manual watch
   // (Athi walks it → gives the clicks, like the raise-flow screenshots) — then finalise the "sees/excluded/resolve" steps.
+  /**
+   * ⚠️ THE CONFIDENTIALITY HALF OF THIS IS NOW PROVEN IN dispute-privacy.spec.js — six assertions across THREE
+   * entities: B sees the dispute, C on the same chit sees ZERO (not a redacted one, and not a count), a
+   * stranger sees nothing. That spec is API-level, so it needs no manual step and runs on every regression.
+   *
+   * ⚠️ THIS one stays skipped ON PURPOSE: what it adds beyond that is the RESOLVE flow through the real UI,
+   * which still needs a human to confirm. Leaving it skipped is honest; leaving the CLAIM unproven was not.
+   */
   test.skip('[DISP-02] USP — A disputes with B only; B sees it, C does NOT; A resolves (needs manual resolve-UI confirm)', async ({ browser }) => {
     test.slow();   // 3 entities minted in 3 contexts → needs 3× the default timeout
     const A = await mintInContext(browser);   // sender / raiser
