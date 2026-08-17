@@ -173,14 +173,25 @@ function catsetRegistry(keys){
              "litre litre". Fifteen of those reads as a rendering fault, and it makes the reader look for a
              distinction that does not exist. Show the code only where it actually differs from the label. */
           /* Bare words → chips; anything with a code or a note keeps its rows. See the `.chips` rule. */
+          /**
+           * ⭐ TWO LINES, NOT THREE COLUMNS (Athi, 2026-08-17: *"align properly and any information regarding the
+           * particular field can be mentioned below, so it is easier to read"*).
+           *
+           * ⚠️ The note was a third column competing for the same row, so a long one squeezed the label and a
+           * short one left a gap — nothing lined up down the page. Line 1 is the identity (code + name) on a
+           * fixed grid so every code and every name align; line 2 is the explanation, indented under the name
+           * and in its own colour so the eye can skip it or read it, but never confuse it with a name.
+           */
           ? '<div class="catset-regrows' + (rows.every(function(r){
               return !r.note && String(r.code || '') === String(r.label || '');
             }) ? ' chips' : '') + '">' + rows.map(function(r){
               var same = String(r.code || '') === String(r.label || '');
               return '<div class="catset-regrow' + (same ? ' nocode' : '') + '">'
-                + (same ? '' : '<code>' + esc(r.code) + '</code>')
-                + '<span class="rl">' + esc(r.label || r.code || '') + '</span>'
-                + (r.note ? '<span class="rn">' + esc(r.note) + '</span>' : '') + '</div>';
+                + '<div class="rr1">'
+                +   (same ? '' : '<code>' + esc(r.code) + '</code>')
+                +   '<span class="rl">' + esc(r.label || r.code || '') + '</span>'
+                + '</div>'
+                + (r.note ? '<div class="rn">' + esc(r.note) + '</div>' : '') + '</div>';
             }).join('') + '</div>'
           : '<div class="catset-none">not loaded</div>')
       /* Naming the source file is the honest half: it says this list is READ, not authored here, so nobody goes
@@ -228,12 +239,17 @@ function catsetUnitsHTML(){
   var groups = M.UNIT_KINDS.map(function(g){
     var rows = g.units.map(function(u){
       var on = sel.indexOf(u) >= 0;
-      var al = (aliases[u] || []).slice(0, 4).join(' · ');
+      /* ⭐ THE SPELLINGS GO ON THEIR OWN LINE (Athi: *"each line item below show what the enumerations are"*).
+         Squeezed into a right-hand column they were truncated at four and ellipsed — which hid the very thing
+         worth seeing, that கிலோ and kilo and kgs all mean this row. On its own line the whole set fits. */
+      var al = (aliases[u] || []);
       return '<label class="uom-row' + (on ? '' : ' off') + '">'
-        + '<input type="checkbox" ' + (on ? 'checked' : '') + ' onchange="catsetUnitToggle(\'' + esc(u) + '\',this.checked)">'
-        + '<code>' + esc(u) + '</code>'
-        + '<span class="un">' + esc(names[u] || u) + '</span>'
-        + '<span class="ua">' + (al ? esc(al) + ((aliases[u] || []).length > 4 ? ' …' : '') : '—') + '</span>'
+        + '<div class="ur1">'
+        +   '<input type="checkbox" ' + (on ? 'checked' : '') + ' onchange="catsetUnitToggle(\'' + esc(u) + '\',this.checked)">'
+        +   '<code>' + esc(u) + '</code>'
+        +   '<span class="un">' + esc(names[u] || u) + '</span>'
+        + '</div>'
+        + (al.length ? '<div class="ua">' + al.map(function(a){ return esc(a); }).join('<span class="sep">·</span>') + '</div>' : '')
         + '</label>';
     }).join('');
     return '<div class="uom-g"><div class="uom-gh">' + esc(g.label) + '</div>' + rows + '</div>';
@@ -243,7 +259,7 @@ function catsetUnitsHTML(){
   return catsetCard('⚖️ Units of measure',
     '<div class="catset-regb">What a quantity is counted in. <b>Tick the ones you trade in</b> — the product form '
     + 'and the catalogue wizard offer only those. <b>' + n + ' of ' + total + '</b> selected.</div>'
-    + '<div class="uom-hd"><span></span><code>code</code><span class="un">unit</span><span class="ua">also accepted</span></div>'
+    + '<div class="uom-hd"><span></span><code>code</code><span class="un">unit</span></div>'
     + groups
     /* ⚠️ Say what deselecting does NOT do. Someone reasonably fears that unticking `barrel` breaks the products
        already priced in barrels; saying so up front is cheaper than them not daring to touch it. */
@@ -444,10 +460,15 @@ function catsetCss(){
     'color:var(--grey);background:#fff;border:1px solid var(--line);border-radius:20px;padding:1px 8px}',
     '.catset-regb{font-size:12px;line-height:1.55;color:var(--grey);padding:4px 13px 9px}',
     '.catset-regrows{display:flex;flex-direction:column;gap:1px;background:var(--line);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}',
-    '.catset-regrow{display:flex;align-items:baseline;gap:9px;background:#fff;padding:6px 13px;font-size:var(--fs-2);flex-wrap:wrap}',
-    '.catset-regrow code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11.5px;color:var(--ink);flex:0 0 auto}',
+    /* Two lines: identity, then explanation. See the note where the markup is built. */
+    '.catset-regrow{display:block;background:#fff;padding:7px 13px;font-size:var(--fs-2)}',
+    '.catset-regrow .rr1{display:grid;grid-template-columns:112px minmax(0,1fr);align-items:baseline;gap:10px}',
+    '.catset-regrow.nocode .rr1{grid-template-columns:minmax(0,1fr)}',
+    '.catset-regrow code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11.5px;color:var(--ink)}',
     '.catset-regrow .rl{color:var(--ink)}',
-    '.catset-regrow .rn{color:var(--grey);font-size:11.5px;flex:1;min-width:0}',
+    /* Indented to the same edge as the name above it, and in the shared second-line colour. */
+    '.catset-regrow .rn{margin-top:2px;padding-left:122px;color:var(--note);font-size:11.5px;line-height:1.5}',
+    '.catset-regrow.nocode .rn{padding-left:0}',
     /* ⚠️ A LIST OF BARE WORDS IS NOT A TABLE. When a registry's rows carry no code and no note — units are the
        case: fifteen entries, one short word each — stacking them full-width spends fifteen rows and most of the
        pane's width on nothing, and the eye has to travel a screen to read what fits on two lines. Chips give the
@@ -456,14 +477,21 @@ function catsetCss(){
        beside it. */
     /* ⚠️ ONE GRID TEMPLATE FOR THE HEADER AND EVERY ROW — that is what makes the columns actually line up.
        Aligning them by padding inside separate flex rows is what produced the ragged "kg   KG" look. */
-    '.uom-hd,.uom-row{display:grid;grid-template-columns:22px 76px 128px minmax(0,1fr);align-items:center;gap:10px;padding:5px 13px}',
-    '.uom-hd{font-size:11px;color:var(--grey);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--line)}',
-    '.uom-hd code,.uom-hd .un,.uom-hd .ua{font-size:11px;color:var(--grey)}',
-    '.uom-row{border-bottom:1px solid var(--line);cursor:pointer;font-size:var(--fs-2)}',
+    /* ⚠️ ONE COLOUR FOR EVERY SECOND LINE, defined once. The second line is always the same KIND of thing — an
+       explanation or a set of spellings — so it must look the same everywhere it appears, or the reader has to
+       re-learn the page in each section. Slate-blue rather than plain grey: visibly a different hue from the
+       near-black name, so the two never blur, while still clearly secondary. */
+    ':root{--note:#5a7290}',
+    '.uom-hd{display:grid;grid-template-columns:22px 76px minmax(0,1fr);align-items:center;gap:10px;padding:5px 13px;font-size:11px;color:var(--grey);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--line)}',
+    '.uom-hd code,.uom-hd .un{font-size:11px;color:var(--grey)}',
+    '.uom-row{display:block;border-bottom:1px solid var(--line);cursor:pointer;font-size:var(--fs-2);padding:6px 13px}',
+    '.uom-row .ur1{display:grid;grid-template-columns:22px 76px minmax(0,1fr);align-items:center;gap:10px}',
     '.uom-row:hover{background:var(--paper)}',
     '.uom-row code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11.5px;color:var(--ink)}',
     '.uom-row .un{color:var(--ink)}',
-    '.uom-row .ua{color:var(--grey);font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+    /* The spellings, indented to sit under the NAME so the eye reads down one edge. */
+    '.uom-row .ua{margin-top:3px;padding-left:108px;color:var(--note);font-size:11.5px;line-height:1.5}',
+    '.uom-row .ua .sep{color:var(--line);padding:0 5px}',
     /* ⚠️ Unticked stays READABLE, not greyed to the floor — you have to be able to read a unit to decide you
        want it back, and a list where half the rows are illegible is a list you cannot choose from. */
     '.uom-row.off code,.uom-row.off .un{color:var(--grey)}',
