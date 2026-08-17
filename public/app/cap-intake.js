@@ -57,7 +57,7 @@ function intakeToggleSim(){ _INTAKE.sim = !_INTAKE.sim; paintIntake(); }
 function paintIntake(){ var h=document.getElementById('intake_body'); if(h) h.innerHTML=intakeBodyHTML(); }
 
 function _chn(c){
-  var M={ whatsapp:['#25D366','WhatsApp'], email:['var(--blue)','Email'], web:['var(--purple-2)','Web'], sms:['#b07a2b','SMS'] };
+  var M={ whatsapp:['var(--ok-2)','WhatsApp'], email:['var(--blue)','Email'], web:['var(--purple-2)','Web'], sms:['var(--warn-2)','SMS'] };
   var m=M[c]||['var(--grey-2)', String(c||'channel')];
   return '<span style="font-size:var(--fs-1);font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#fff;background:'
     + m[0] + ';border-radius:5px;padding:2px 7px">' + esc(m[1]) + '</span>';

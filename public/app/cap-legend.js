@@ -379,7 +379,7 @@ var _lbFontScale; try{ _lbFontScale=parseFloat(localStorage.getItem('cb_lb_fs'))
 function lbFont(d){ _lbFontScale=Math.max(0.85,Math.min(1.6,(_lbFontScale||1)+d*0.1)); try{ localStorage.setItem('cb_lb_fs',_lbFontScale); }catch(_){} var b=document.getElementById('lbbody'); if(b) b.style.zoom=_lbFontScale; }
 
 function _lifeTabHtml(){
-  const SS={ ok:['var(--ok-3)','✅'], built:['#a9791f','◐'], todo:['var(--grey-4)','○'] };
+  const SS={ ok:['var(--ok-3)','✅'], built:['var(--warn-2)','◐'], todo:['var(--grey-4)','○'] };
   const row=(r)=>{ const [c,ic]=SS[r.st]||SS.todo;
     return `<div style="display:flex;gap:8px;align-items:flex-start;font-size:11.5px;padding:3px 0;border-bottom:1px dashed var(--line)"><span style="color:${c};flex:none">${ic}</span><span class="mono" style="flex:none;color:var(--grey);width:46px">${esc(r.id)}</span><span style="flex:1">${esc(r.fr)}</span><span style="flex:1;color:var(--grey)">${esc(r.test)}</span></div>`; };
   const grp=(g)=>`<div style="border:1px solid var(--line);border-radius:12px;padding:12px 13px;margin-bottom:11px">
@@ -414,7 +414,7 @@ function _storiesTabHtml(){
 }
 
 function _secTabHtml(){
-  const LV={ strong:['var(--ok-3)','✓ strong'], partial:['#a9791f','◐ partial'], gap:['#c0453b','○ gap'] };
+  const LV={ strong:['var(--ok-3)','✓ strong'], partial:['var(--warn-2)','◐ partial'], gap:['var(--disp)','○ gap'] };
   const row=(s)=>{ const [c,lbl]=LV[s.lvl]||LV.gap;
     return `<div style="border:1px solid var(--line);border-radius:12px;padding:11px 13px;margin-bottom:9px">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:13px">${esc(s.area)}</span><span style="margin-left:auto;font-size:var(--fs-1);font-weight:800;color:${c}">${lbl}</span></div>
@@ -434,12 +434,12 @@ function _edgeTabHtml(){
     +'<div style="width:'+(hl?15:10)+'px;height:'+(hl?15:10)+'px;border-radius:50%;margin:0 auto;background:'+(hl?'var(--blue)':'var(--grey-4)')+';'+(hl?'box-shadow:0 0 0 5px rgba(63,102,166,.16)':'')+'"></div>'
     +'<div style="font-size:var(--fs-1);margin-top:3px;white-space:nowrap;color:'+(hl?'var(--blue-2)':'var(--grey)')+';font-weight:'+(hl?'700':'500')+'">'+esc(label)+'</div></div>';
   const stage=(l,s,k)=>{ const on=k==='now', nx=k==='next', dn=k==='done';
-    const bg=on?'var(--blue-tint)':(nx?'#fff':'#f6f6f4'), bd=on?'var(--blue)':'var(--line)', col=on?'#2b4a72':(dn?'#8a8f98':'var(--ink)');
+    const bg=on?'var(--blue-tint)':(nx?'#fff':'var(--card)'), bd=on?'var(--blue)':'var(--line)', col=on?'var(--blue-2)':(dn?'var(--grey-2)':'var(--ink)');
     return '<div style="border:1px solid '+bd+';background:'+bg+';border-radius:9px;padding:5px 8px;text-align:center;min-width:66px">'
       +'<div style="font-size:var(--fs-1);font-weight:700;color:'+col+'">'+(dn?'✓ ':'')+esc(l)+'</div>'
       +'<div style="font-size:var(--fs-1);color:var(--grey)">'+esc(s)+'</div></div>'; };
   const arrow=()=>'<span style="color:var(--grey);font-size:var(--fs-1)">→</span>';
-  const _mk=(v)=>{ const m={y:['var(--ok-3)','✓'],p:['#a9791f','~'],n:['#c0453b','✗']}, c=m[v]||m.n; return '<span style="color:'+c[0]+';font-weight:700">'+c[1]+'</span>'; };
+  const _mk=(v)=>{ const m={y:['var(--ok-3)','✓'],p:['var(--warn-2)','~'],n:['var(--disp)','✗']}, c=m[v]||m.n; return '<span style="color:'+c[0]+';font-weight:700">'+c[1]+'</span>'; };
   const crow=(n,a,b,c,d,hl)=>'<tr style="'+(hl?'background:var(--blue-tint);':'')+'border-top:1px solid var(--line)"><td style="text-align:left;padding:4px;font-weight:'+(hl?'700':'500')+';color:'+(hl?'var(--blue-2)':'var(--ink)')+'">'+n+'</td><td style="text-align:center;padding:4px">'+_mk(a)+'</td><td style="text-align:center;padding:4px">'+_mk(b)+'</td><td style="text-align:center;padding:4px">'+_mk(c)+'</td><td style="text-align:center;padding:4px">'+_mk(d)+'</td></tr>';
   return '<div style="padding:14px 16px;overflow:visible">'
     +'<div style="font-size:11.5px;color:var(--grey);margin-bottom:8px">Where we aim vs the alternatives. <b>This is a positioning hypothesis</b> — our dot is a <b>target</b> (we are early/unproven); the others are established.</div>'
@@ -502,7 +502,7 @@ function _edgeTabHtml(){
 
 /* ── REALITY tab — full-honesty writedown: where each edge stands + how we EARN it ── */
 function _realTabHtml(){
-  const S={ real:['var(--ok-3)','LIVE'], built:['#a9791f','BUILT · unverified'], part:['#a9791f','PARTIAL'], aim:['#c0453b','ASPIRATION'] };
+  const S={ real:['var(--ok-3)','LIVE'], built:['var(--warn-2)','BUILT · unverified'], part:['var(--warn-2)','PARTIAL'], aim:['var(--disp)','ASPIRATION'] };
   const row=(claim,st,now,earn)=>{ const [c,lbl]=S[st]||S.aim;
     return '<div style="border:1px solid var(--line);border-radius:9px;padding:11px 12px;margin-bottom:9px">'
       +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:3px"><span style="font-size:12px;font-weight:700">'+esc(claim)+'</span><span style="margin-left:auto;font-size:var(--fs-1);font-weight:800;color:'+c+';white-space:nowrap">'+lbl+'</span></div>'
@@ -606,7 +606,7 @@ function _openLegendImpl(){
   _legendOpen=true;
   if(typeof _lbTab==='undefined') _lbTab='subject';   // open on THE SUBJECT (the conceptual anchor) — the sealed co-held record everything else acts on
   const LOADED=(typeof CAP_LOADED!=='undefined')?CAP_LOADED:{};
-  const SC={ done:['var(--ok-3)','✅'], partial:['#a9791f','◐'], backlog:['var(--grey-4)','○'] };
+  const SC={ done:['var(--ok-3)','✅'], partial:['var(--warn-2)','◐'], backlog:['var(--grey-4)','○'] };
   // tallies across every feature
   let d=0,p=0,b=0,nf=0; CAP_CATALOGUE.forEach(c=>c.features.forEach(f=>{ nf++; if(f.s==='done')d++; else if(f.s==='partial')p++; else b++; }));
   const built=CAP_CATALOGUE.filter(c=>c.load!=='planned').length;
@@ -630,8 +630,8 @@ function _openLegendImpl(){
       ? `<span style="font-size:var(--fs-1);font-weight:800;color:#8a8f98;background:var(--neutral-tint);border:1px solid var(--line);border-radius:6px;padding:1px 7px">gov · N/A</span>`
       : `<span title="Governance maturity — 1 declared · 2 designed · 3 enforced+isolated · 4 governed+provable · 5 audited/certified" style="font-size:var(--fs-1);font-weight:800;color:var(--ink-2);background:var(--ok-tint);border:1px solid #bfe0cf;border-radius:6px;padding:1px 7px">gov · L${c.gov}${t}</span>`;
     const under=c.governedUnder?`<span style="font-size:var(--fs-1);color:var(--grey)">under <b style="color:#2f6f4a;font-weight:600">${esc(c.governedUnder)}</b></span>`:'';
-    const mech=(c.governedBy&&c.governedBy.length)?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:5px">${govChips(c.governedBy,'#1f6f4a','#eef6f0','#cfe4d7')}</div>`:'';
-    const gap=(c.govGap&&c.govGap.length)?`<div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-top:5px"><span style="font-size:var(--fs-1);font-weight:700;color:var(--warn-2)">to L${c.govTarget||4}:</span>${govChips(c.govGap,'#8a6d1f','#fbf6e9','#e8dab4')}</div>`:'';
+    const mech=(c.governedBy&&c.governedBy.length)?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:5px">${govChips(c.governedBy,'var(--ok-2)','var(--ok-tint)','var(--ok-tint)')}</div>`:'';
+    const gap=(c.govGap&&c.govGap.length)?`<div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-top:5px"><span style="font-size:var(--fs-1);font-weight:700;color:var(--warn-2)">to L${c.govTarget||4}:</span>${govChips(c.govGap,'var(--warn-2)','var(--warn-tint)','var(--warn-tint)')}</div>`:'';
     return `<div style="border:1px solid #d7e6dc;background:var(--card);border-radius:9px;padding:7px 9px;margin:0 0 9px">
       <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap">${badge}${under}</div>${mech}${gap}
     </div>`;

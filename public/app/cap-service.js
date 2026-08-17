@@ -30,7 +30,7 @@ function svcDur(ms){
   return d + 'd' + (rh ? ' ' + rh + 'h' : '');
 }
 function svcChip(txt, tone){
-  var c = { bad: ['#c0453b', '#fdecea'], warn: ['#8a6d1e', '#faf3dd'], ok: ['#2f6b4f', '#e6f4ec'], flat: ['#5b6670', '#eef1f4'] }[tone || 'flat'];
+  var c = { bad: ['var(--disp)', 'var(--danger-tint)'], warn: ['var(--warn-2)', 'var(--warn-tint)'], ok: ['var(--ok-2)', 'var(--ok-tint)'], flat: ['var(--blue-2)', 'var(--blue-tint-bg)'] }[tone || 'flat'];
   return '<span style="font-size:var(--fs-1);font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:' + c[0]
     + ';background:' + c[1] + ';border-radius:5px;padding:2px 7px;white-space:nowrap">' + esc(txt) + '</span>';
 }
@@ -75,11 +75,11 @@ function svcClockBlock(c, r){
     + '<div style="display:flex;gap:0;flex-wrap:wrap">'
     + '<div style="flex:1;min-width:150px;padding:11px 13px;border-right:1px solid var(--line)">'
     +   '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--grey)">as agreed · every pause honoured</div>'
-    +   '<div style="font-size:19px;font-weight:800;font-variant-numeric:tabular-nums;color:' + (c.as_agreed.resolve_breached ? '#c0453b' : '#2f6b4f') + '">' + esc(svcDur(c.as_agreed.resolve_ms)) + '</div>'
+    +   '<div style="font-size:19px;font-weight:800;font-variant-numeric:tabular-nums;color:' + (c.as_agreed.resolve_breached ? 'var(--disp)' : 'var(--ok-2)') + '">' + esc(svcDur(c.as_agreed.resolve_ms)) + '</div>'
     +   '<div style="margin-top:3px">' + (c.as_agreed.resolve_breached ? svcChip('breached', 'bad') : svcChip('within target', 'ok')) + '</div></div>'
     + '<div style="flex:1;min-width:150px;padding:11px 13px">'
     +   '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--grey)">contested · rejected pauses removed</div>'
-    +   '<div style="font-size:19px;font-weight:800;font-variant-numeric:tabular-nums;color:' + (c.contested.resolve_breached ? '#c0453b' : '#2f6b4f') + '">' + esc(svcDur(c.contested.resolve_ms)) + '</div>'
+    +   '<div style="font-size:19px;font-weight:800;font-variant-numeric:tabular-nums;color:' + (c.contested.resolve_breached ? 'var(--disp)' : 'var(--ok-2)') + '">' + esc(svcDur(c.contested.resolve_ms)) + '</div>'
     +   '<div style="margin-top:3px">' + (c.contested.resolve_breached ? svcChip('breached', 'bad') : svcChip('within target', 'ok')) + '</div></div>'
     + '</div>'
     + '<div style="padding:9px 12px;font-size:11.5px;color:var(--grey);border-top:1px solid var(--line);line-height:1.5">'

@@ -21,10 +21,10 @@
 
   // ---- vocabulary (the one place these live) ----
   var LEGS = [
-    { k: 'system',   label: 'Fed by system',          short: 'System feed',   hint: 'already exists in ERP / IoT — sync it in',              col: ['#b07b1e', '#f6ecd8'] },
-    { k: 'customer', label: 'Collected from customer', short: 'From customer', hint: 'known only at order time — capture it',                  col: ['#2b6f8f', '#dcecf3'] },
-    { k: 'compute',  label: 'Computed by co-assist',   short: 'Computed',      hint: 'a co-assist (AI / ERP) computes it, the rail seals it',  col: ['#8a5cc4', '#efeafa'] },
-    { k: 'cb',       label: 'Stored in CB',            short: 'Store in CB',   hint: 'has no home today — the gap CB fills',                   col: ['var(--ok-2)', '#e6f4ec'] },
+    { k: 'system',   label: 'Fed by system',          short: 'System feed',   hint: 'already exists in ERP / IoT — sync it in',              col: ['var(--warn-2)', 'var(--warn-tint)'] },
+    { k: 'customer', label: 'Collected from customer', short: 'From customer', hint: 'known only at order time — capture it',                  col: ['var(--blue-2)', 'var(--blue-tint-bg)'] },
+    { k: 'compute',  label: 'Computed by co-assist',   short: 'Computed',      hint: 'a co-assist (AI / ERP) computes it, the rail seals it',  col: ['var(--purple-2)', 'var(--purple-tint)'] },
+    { k: 'cb',       label: 'Stored in CB',            short: 'Store in CB',   hint: 'has no home today — the gap CB fills',                   col: ['var(--ok-2)', 'var(--ok-tint)'] },
   ];
   var TYPES = ['text', 'number', 'choice', 'range', 'date'];
   // Part C · standards — external classification schemes, always BY REFERENCE (link out, never mirror).

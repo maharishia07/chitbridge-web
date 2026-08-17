@@ -15,7 +15,7 @@ function inr_(v){ return fmtMoney(v,'INR'); }   /* R1: one money formatter — a
 function nm(v, fb){ return esc(v||fb||'—'); }   /* R3: one name-with-fallback — esc(display_name || fallback) */
 function fmtAt(ts){ try{ return new Date(ts).toLocaleTimeString('en-IN', {hour:'2-digit',minute:'2-digit'}); }catch(_){ return ''; } }   /* R4: pin en-IN (12h) so time is deterministic across browsers */
 /* R5: connector/device health — ONE source (colour · dot · signal), was duplicated across cap-connector + cap-workforce. */
-function healthColor(h){ return ({live:'var(--ok-3)',slow:'#c9962a',offline:'#c0453b'})[h]||'var(--grey-4)'; }
+function healthColor(h){ return ({live:'var(--ok-3)',slow:'var(--warn-2)',offline:'var(--disp)'})[h]||'var(--grey-4)'; }
 function healthDot(h){ return '<span title="'+esc(h||'')+'" style="display:inline-block;width:9px;height:9px;border-radius:50%;background:'+healthColor(h)+'"></span>'; }
 function sigLabel(s){ if(s==='no_signal')return '<span style="color:var(--disp);font-weight:700;font-size:var(--fs-1)">○ no signal</span>'; if(s==='live')return '<span style="color:var(--ok-3);font-weight:700;font-size:var(--fs-1)">● live</span>'; if(s==='slow')return '<span style="color:#c9962a;font-weight:700;font-size:var(--fs-1)">◐ slow</span>'; return '<span style="color:var(--grey-4);font-weight:700;font-size:var(--fs-1)">○ silent</span>'; }
 /* R6: relative time ("2m ago") — was cap-workforce._ago; a generic leaf now (reusable in folders/inbox/etc). */

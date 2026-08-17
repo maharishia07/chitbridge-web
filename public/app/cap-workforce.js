@@ -77,7 +77,7 @@ function aiRowsHTML(){
   var intro='<div style="padding:11px 13px;font-size:11.5px;color:var(--grey-2);line-height:1.5;border-bottom:1px solid var(--line)">🤖 AI assists act for you as governed co-assists — each is one <b>slot</b>. Turn one on and set its rule; every action it takes is a chit you can see and dispute. <span style="color:var(--grey-4)">Rung sets the floor — you can only tighten the human gate.</span></div>';
   if(!slots.length) return intro+'<div class="empty"><div class="big">🤖</div><div class="t">No AI assists yet</div><div>They light up as slots are enabled.</div></div>';
   return intro+slots.map(function(s){ var st=aiSlotState(s), live=s.status==='live', on=st.enabled;
-    var dot=on?(live?'var(--ok-3)':'#c9a441'):'#b9b9b9';
+    var dot=on?(live?'var(--ok-3)':'var(--warn-2)'):'var(--grey-2)';
     var gateOpts=(s.gates||[]).map(function(g){ return '<option value="'+g+'"'+(st.gate===g?' selected':'')+'>'+g+'</option>'; }).join('');
     var canInvoke=on&&live&&s.invoke;
     return '<div class="row" style="cursor:default;align-items:flex-start">'
@@ -228,7 +228,7 @@ function awRender(){
     var steps=AW_STEPS[UI.awType]||[], rdy=_awReady(UI.awType);
     var icN={human:['👤','Human'],iot:['🛰️','IoT device'],erp:['🔌','ERP / API'],ai:['🤖','AI agent']}[UI.awType];
     title=icN[0]+' '+icN[1]+(rdy?'':' · explore');
-    dots='<div style="display:flex;gap:6px;margin:0 0 14px">'+steps.map(function(s,i){ var st=(UI.awStep==='done'||i<UI.awStep)?'#9cc0ea':(i===UI.awStep?'var(--blue)':'#eceae6'); return '<span style="height:4px;flex:1;border-radius:3px;background:'+st+'"></span>'; }).join('')+'<span style="height:4px;flex:1;border-radius:3px;background:'+(UI.awStep==='done'?'var(--blue)':'var(--warn-tint)')+'"></span></div>';
+    dots='<div style="display:flex;gap:6px;margin:0 0 14px">'+steps.map(function(s,i){ var st=(UI.awStep==='done'||i<UI.awStep)?'var(--blue-2)':(i===UI.awStep?'var(--blue)':'var(--warn-tint)'); return '<span style="height:4px;flex:1;border-radius:3px;background:'+st+'"></span>'; }).join('')+'<span style="height:4px;flex:1;border-radius:3px;background:'+(UI.awStep==='done'?'var(--blue)':'var(--warn-tint)')+'"></span></div>';
     if(UI.awStep==='done'){
       sub=rdy?'Done':'Preview'; body=UI.awResult||'';
       // Guard the duplicate-create: after a REAL create, do NOT offer Back (it would land on a live Create button and
@@ -293,7 +293,7 @@ function acRowHTML(x){ if(typeof acTypeOf==='function'){ var _ct=acTypeOf(x); if
   const coverNm=x.del?((UI._acNames||{})[x.del]||'—'):''; const coversNames=(UI._coversNames||{})[x.id]||[];
   const coverLines=(x.del||coversNames.length)?'<div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px;line-height:1.45">'+(x.del?('🛡 Covered by <b style="color:var(--ink);font-weight:600">'+coverNm+'</b>'):'')+((x.del&&coversNames.length)?'<br>':'')+(coversNames.length?('🤝 Covers for <b style="color:var(--ink);font-weight:600">'+coversNames.join(', ')+'</b>'):'')+'</div>':'';
   return `<div class="row ${x.id===UI.acSel?'sel':''}" data-ac="${x.id}" style="${dim}" onclick="selectActor('${x.id}')">
-    <div style="width:9px;height:9px;border-radius:50%;flex:0 0 auto;margin-top:5px;background:${x.shift==='on_shift'?'var(--ok-3)':x.shift==='on_break'?'#c9a441':'#b9b9b9'}"></div>
+    <div style="width:9px;height:9px;border-radius:50%;flex:0 0 auto;margin-top:5px;background:${x.shift==='on_shift'?'var(--ok-3)':x.shift==='on_break'?'var(--warn-2)':'var(--grey-2)'}"></div>
     <div class="main2"><div class="l1"><span class="code">${esc(x.name)}</span><span class="optchip" style="background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)">${hatLabel(x.hat)}</span>${x.pinSet?'':(x.otp?'<span class="optchip" style="background:var(--warn-tint);color:var(--warn-3);border-color:var(--warn-3)">⏳ invite</span>':'')}<span class="amt" style="margin-left:auto;font-size:11.5px;color:var(--grey)">${x.load}/${x.max||'∞'}</span></div>
       <div class="l2">${esc(x.role||'—')} · <span class="mono">${acLogin(x)}</span> <span class="optchip ${acShc(x.shift)}">${acShLabel(x.shift)}</span>${x.status!=='active'?'<span class="optchip off">'+esc(x.status)+'</span>':''}${(x.shift!=='on_shift'&&x.returnDate)?' · returns '+acDate(x.returnDate):''}</div>${coverLines}</div>
     <div class="rowgo" aria-hidden="true">›</div></div>`; }

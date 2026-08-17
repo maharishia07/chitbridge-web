@@ -714,7 +714,7 @@ function netBuild(){
     // network?"* Until now the plan read identically whether a node existed or not, which is the one thing a
     // person needs to know before pressing anything.
     var badge = n.root ? 'ANCHOR' : (n.built ? 'BUILT' : (p.owned ? 'TO CREATE' : 'PARTNER · invite'));
-    var bcol = n.root ? '#6b6f86' : (n.built ? 'var(--ok-2)' : (p.owned ? 'var(--blue-2)' : 'var(--warn-2)'));
+    var bcol = n.root ? 'var(--blue-2)' : (n.built ? 'var(--ok-2)' : (p.owned ? 'var(--blue-2)' : 'var(--warn-2)'));
     var hnd = _netHandleOf(n);
     var rows = p.lines.map(function(l){ return '<div style="font-size:12px;color:var(--ink-2);line-height:1.55;padding:1px 0">' + (l.indexOf('·') === 0 ? '<span style="color:var(--grey);padding-left:12px">' + l + '</span>' : '▸ ' + l) + '</div>'; }).join('');
     var w = p.warns.length ? '<div style="margin-top:6px;padding:6px 9px;border:1px solid #e6c4bf;border-radius:6px;background:var(--danger-tint);font-size:var(--fs-1);color:var(--disp-2)">' + p.warns.map(function(x){ return '⚠ ' + x; }).join('<br>') + '</div>' : '';
@@ -740,7 +740,7 @@ function netBuild(){
    The plan is never computed here. A preview drawn by different code from the thing it previews is a preview
    that can lie, and this one is showing a person the names their business will carry.                        */
 function _mintRow(c){
-  var vis = { 'public': ['🌐 public', 'var(--ok-2)'], 'network': ['🔒 network only', 'var(--warn-2)'], 'private': ['— private', '#6b6f86'] }[c.visibility] || ['—', '#6b6f86'];
+  var vis = { 'public': ['🌐 public', 'var(--ok-2)'], 'network': ['🔒 network only', 'var(--warn-2)'], 'private': ['— private', 'var(--blue-2)'] }[c.visibility] || ['—', 'var(--blue-2)'];
   return '<div style="display:flex;align-items:center;gap:10px;padding:8px 16px;border-bottom:1px solid var(--line)">'
     + '<div style="flex:1;min-width:0"><b style="font-size:13px">' + esc(c.name) + '</b>'
     + '<div style="font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--blue-2);margin-top:2px">' + esc(c.handle) + '</div></div>'
@@ -1104,7 +1104,7 @@ function _netAvailBody(){
     var unknown = r.qty === null || r.qty === undefined;
     var none = !unknown && r.qty <= 0;
     var qtyTxt = unknown ? 'not reported' : (r.qty + ' in stock');
-    var qtyCol = unknown ? '#8a94a3' : (none ? 'var(--disp-2)' : 'var(--ok-2)');
+    var qtyCol = unknown ? 'var(--blue-2)' : (none ? 'var(--disp-2)' : 'var(--ok-2)');
     return '<div style="padding:11px 2px;border-bottom:1px solid var(--line);' + (unknown || none ? 'opacity:.75;' : '') + '">'
       + '<div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap">'
       + '<b style="font-size:13.5px">' + esc(r.store) + '</b>'
@@ -1695,9 +1695,9 @@ function _catFieldRow(n, f, i){
     var viaList = _viaFor(f.leg);
     var viaOpts = viaList.map(function(v){ return '<option value="' + v + '"' + ((f.via || viaList[0]) === v ? ' selected' : '') + '>' + v + '</option>'; }).join('');
     var ok = _legBacked(n, f);
-    viaSel = '<select onchange="netSetCatField(\'' + n.key + '\',' + i + ',\'via\',this.value)" title="' + (ok ? 'co-assist present' : 'no matching co-assist on this node') + '" style="font-size:var(--fs-1);padding:4px;border:1px solid ' + (ok ? 'var(--line)' : '#d98b84') + ';border-radius:6px;background:' + (ok ? 'var(--card)' : 'var(--danger-tint)') + '">' + viaOpts + '</select>';
+    viaSel = '<select onchange="netSetCatField(\'' + n.key + '\',' + i + ',\'via\',this.value)" title="' + (ok ? 'co-assist present' : 'no matching co-assist on this node') + '" style="font-size:var(--fs-1);padding:4px;border:1px solid ' + (ok ? 'var(--line)' : 'var(--disp)') + ';border-radius:6px;background:' + (ok ? 'var(--card)' : 'var(--danger-tint)') + '">' + viaOpts + '</select>';
   }
-  var col = (CAT_LEGS.filter(function(l){ return l.k === f.leg; })[0] || {}).col || ['#6b6f86', '#e8e9f0'];
+  var col = (CAT_LEGS.filter(function(l){ return l.k === f.leg; })[0] || {}).col || ['var(--blue-2)', 'var(--blue-tint-bg)'];
   return '<div style="display:flex;gap:6px;align-items:center;padding:3px 0;border-left:3px solid ' + col[0] + ';padding-left:7px">'
     + '<input value="' + esc(f.name || '') + '" oninput="netSetCatField(\'' + n.key + '\',' + i + ',\'name\',this.value)" placeholder="what you need to know" style="flex:1;min-width:0;font-size:12px;padding:5px 7px;border:1px solid var(--line);border-radius:6px">'
     + '<select onchange="netSetCatField(\'' + n.key + '\',' + i + ',\'leg\',this.value)" style="font-size:var(--fs-1);padding:4px;border:1px solid var(--line);border-radius:6px">' + legOpts + '</select>'
@@ -1902,7 +1902,7 @@ function _methodPreview(m){
 /* ---- the REAL OUTPUT visuals ---- */
 function _sampleVal(type){ if (type === 'number') return '123.4'; if (type === 'choice') return 'A'; if (type === 'range') return '10–20'; if (type === 'date') return '2026-07-25'; return 'text'; }
 function _legBadge(leg){
-  var l = CAT_LEGS.filter(function(x){ return x.k === leg; })[0] || { short: '—', col: ['#6b6f86', '#e8e9f0'] };
+  var l = CAT_LEGS.filter(function(x){ return x.k === leg; })[0] || { short: '—', col: ['var(--blue-2)', 'var(--blue-tint-bg)'] };
   return '<span style="font-size:var(--fs-1);font-weight:700;text-transform:uppercase;color:' + l.col[0] + ';background:' + l.col[1] + ';border-radius:4px;padding:1px 5px">' + esc(l.short) + '</span>';
 }
 /* the headline: the four-leg information chain, drawn from the routed requirements */
@@ -1912,7 +1912,7 @@ function _catChain(n){
   var chip = function(txt, col){ return '<span style="display:inline-block;font-size:var(--fs-1);color:#1c2128;background:' + col[1] + ';border:1px solid ' + col[0] + '55;border-radius:5px;padding:1px 6px;margin:2px 3px 0 0">' + esc(txt) + '</span>'; };
   var fb = (c.feedback || []).filter(function(x){ return x.system; });
   if (!fs.length && !c.product && !fb.length) return '';
-  var fbCol = ['#6a4fa0', '#efeafa'];
+  var fbCol = ['var(--purple-2)', 'var(--purple-tint)'];
   var card = function(head, hint, col, itemsHtml, count){
     return '<div style="flex:1;min-width:118px;border:1px solid var(--line);border-top:3px solid ' + col[0] + ';border-radius:9px;padding:8px 9px;background:var(--card)">'
       + '<div style="font-size:var(--fs-1);font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:' + col[0] + '">' + esc(head) + ' <span style="color:var(--faint,var(--grey-3))">' + count + '</span></div>'
@@ -2128,13 +2128,13 @@ function _transactConfig(n){
   var copy = (n.transact || {}).copyOperator !== false;
   return '<div style="padding:12px 13px;border:1px solid var(--line);border-left:3px solid #2b6f8f;border-radius:9px;background:var(--card)">'
     + '<div style="font-size:var(--fs-1);font-weight:800;color:var(--on-card);letter-spacing:.05em">🔄 TRANSACT — does it deal directly with others?</div>'
-    + _radioOpt("netSetTransact('" + n.key + "','both')", f === 'both', 'Sends and receives', 'Talks to counterparties on its own — both directions.', '#2b6f8f', '#e4f0f4')
-    + _radioOpt("netSetTransact('" + n.key + "','send')", f === 'send', 'Sends only', 'Hands records out (to customers / downstream).', '#2b6f8f', '#e4f0f4')
-    + _radioOpt("netSetTransact('" + n.key + "','receive')", f === 'receive', 'Receives only', 'Takes records in (from suppliers / upstream).', '#2b6f8f', '#e4f0f4')
+    + _radioOpt("netSetTransact('" + n.key + "','both')", f === 'both', 'Sends and receives', 'Talks to counterparties on its own — both directions.', 'var(--blue-2)', 'var(--blue-tint-bg)')
+    + _radioOpt("netSetTransact('" + n.key + "','send')", f === 'send', 'Sends only', 'Hands records out (to customers / downstream).', 'var(--blue-2)', 'var(--blue-tint-bg)')
+    + _radioOpt("netSetTransact('" + n.key + "','receive')", f === 'receive', 'Receives only', 'Takes records in (from suppliers / upstream).', 'var(--blue-2)', 'var(--blue-tint-bg)')
     + '<div style="font-size:var(--fs-1);font-weight:800;color:#2b6f8f;letter-spacing:.05em;margin-top:12px;border-top:1px solid var(--line);padding-top:9px">COPY THE OPERATOR (HQ)?</div>'
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">If yes, HQ keeps a copy of this node\'s transactions — this is what powers <b>traceability</b> + <b>MIS</b> across the network.</div>'
-    + _radioOpt("netSetTransactCopy('" + n.key + "',true)", copy, 'Yes — copy HQ', 'The operator sees this node\'s transactions.', '#2b6f8f', '#e4f0f4')
-    + _radioOpt("netSetTransactCopy('" + n.key + "',false)", !copy, 'No — node only', 'Only the counterparties hold copies; HQ does not see them.', '#2b6f8f', '#e4f0f4')
+    + _radioOpt("netSetTransactCopy('" + n.key + "',true)", copy, 'Yes — copy HQ', 'The operator sees this node\'s transactions.', 'var(--blue-2)', 'var(--blue-tint-bg)')
+    + _radioOpt("netSetTransactCopy('" + n.key + "',false)", !copy, 'No — node only', 'Only the counterparties hold copies; HQ does not see them.', 'var(--blue-2)', 'var(--blue-tint-bg)')
     + '</div>';
 }
 function _tradereadyConfig(n){
@@ -2144,8 +2144,8 @@ function _tradereadyConfig(n){
     + '<div onclick="netAddCert(\'' + n.key + '\')" style="cursor:pointer;color:var(--blue);font-size:12px;font-weight:600;padding:5px 0">＋ add certification</div></div>' : '';
   return '<div style="padding:12px 13px;border:1px solid var(--line);border-left:3px solid #22857a;border-radius:9px;background:var(--ok-tint)">'
     + '<div style="font-size:var(--fs-1);font-weight:800;color:var(--ok-2);letter-spacing:.05em">🛡️ TRADE-READY — certifications</div>'
-    + _radioOpt("netSetTradeMode('" + n.key + "','own')", mode === 'own', 'Holds its own certifications', 'This node carries its own clearances.', '#22857a', '#daf0ec')
-    + _radioOpt("netSetTradeMode('" + n.key + "','inherit')", mode === 'inherit', "Inherits the network's", "The network's certifications apply here (cascaded).", '#22857a', '#daf0ec')
+    + _radioOpt("netSetTradeMode('" + n.key + "','own')", mode === 'own', 'Holds its own certifications', 'This node carries its own clearances.', 'var(--blue-2)', 'var(--ok-tint)')
+    + _radioOpt("netSetTradeMode('" + n.key + "','inherit')", mode === 'inherit', "Inherits the network's", "The network's certifications apply here (cascaded).", 'var(--blue-2)', 'var(--ok-tint)')
     + certList
     + '</div>';
 }
@@ -2153,8 +2153,8 @@ function _disputeConfig(n){
   var inf = (n.dispute || {}).informed !== false;
   return '<div style="padding:12px 13px;border:1px solid var(--line);border-left:3px solid #8a5cc4;border-radius:9px;background:var(--blue-tint-bg)">'
     + '<div style="font-size:var(--fs-1);font-weight:800;color:var(--blue);letter-spacing:.05em">⚖️ DISPUTE — is this node in the loop?</div>'
-    + _radioOpt("netSetDispute('" + n.key + "',true)", inf, 'Informed / involved', 'When a dispute touches this node, it is notified and can respond.', '#8a5cc4', '#efeafa')
-    + _radioOpt("netSetDispute('" + n.key + "',false)", !inf, 'Not involved', "Disputes are handled above it; this node isn't notified.", '#8a5cc4', '#efeafa')
+    + _radioOpt("netSetDispute('" + n.key + "',true)", inf, 'Informed / involved', 'When a dispute touches this node, it is notified and can respond.', 'var(--purple-2)', 'var(--purple-tint)')
+    + _radioOpt("netSetDispute('" + n.key + "',false)", !inf, 'Not involved', "Disputes are handled above it; this node isn't notified.", 'var(--purple-2)', 'var(--purple-tint)')
     + '</div>';
 }
 /* ── THE SUPPLY-CHAIN PANELS ──────────────────────────────────────────────────────────────────────────────────
@@ -2406,9 +2406,9 @@ var NET_EXPOSURE = [
 /* The tree's one-word visibility badge. Private is deliberately the QUIETEST of the three — it is the default and
    the safe state, so it should not shout; Public is the one worth noticing. */
 var NET_VIS_CHIP = {
-  'public':    { t: 'Public',  fg: 'var(--ok-2)', bg: '#e6f4ec' },
-  'protected': { t: 'Network', fg: 'var(--warn-2)', bg: '#f6ecd8' },
-  'private':   { t: 'Private', fg: '#6b6f86', bg: '#eef0f4' },
+  'public':    { t: 'Public',  fg: 'var(--ok-2)', bg: 'var(--ok-tint)' },
+  'protected': { t: 'Network', fg: 'var(--warn-2)', bg: 'var(--warn-tint)' },
+  'private':   { t: 'Private', fg: 'var(--blue-2)', bg: 'var(--blue-tint-bg)' },
 };
 /** design word → the platform's word, so a receipt written by the server can be compared with a drawing. */
 var NET_PLATFORM = { public: 'public', protected: 'network', private: 'private' };
@@ -2565,7 +2565,7 @@ function _netNetworkVisibilityBlock(){
       + '<b style="font-size:var(--fs-2);color:' + (on ? 'var(--blue-2)' : 'var(--ink-2)') + '">' + (on ? '● ' : '○ ') + label + '</b>'
       + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px;line-height:1.5">' + hint + '</div></div>';
   };
-  return '<div style="margin-top:16px;padding:13px 15px;border:1px solid ' + (unanswered ? '#e0d3b0' : '#b9cbe4') + ';border-radius:12px;background:' + (unanswered ? 'var(--warn-tint)' : 'var(--blue-tint-bg)') + '">'
+  return '<div style="margin-top:16px;padding:13px 15px;border:1px solid ' + (unanswered ? 'var(--warn-tint)' : 'var(--blue-tint-bg)') + ';border-radius:12px;background:' + (unanswered ? 'var(--warn-tint)' : 'var(--blue-tint-bg)') + '">'
     + '<div style="font-size:var(--fs-1);font-weight:800;color:' + (unanswered ? 'var(--warn-2)' : 'var(--blue-2)') + ';letter-spacing:.05em">IS THIS NETWORK PUBLIC OR PRIVATE?</div>'
     + '<div style="font-size:11.5px;color:var(--grey);margin-top:4px;line-height:1.55">Answer this first — it decides what every store below is allowed to be.</div>'
     + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:9px">'
@@ -2741,7 +2741,7 @@ function _netInheritBlock(n){
     return '<div style="padding:9px 0;border-bottom:1px solid var(--line)">'
       + '<div style="font-size:var(--fs-1);font-weight:700;letter-spacing:.04em;color:var(--grey)">' + label + '</div>'
       + '<div style="display:flex;align-items:center;gap:9px;margin-top:3px;flex-wrap:wrap"><span style="font-size:13.5px">' + esc(value) + '</span>'
-      + chip('FROM NETWORK · AT BUILD', '#eef2f7', '#5b6472') + '</div>'
+      + chip('FROM NETWORK · AT BUILD', 'var(--blue-tint-bg)', 'var(--blue-2)') + '</div>'
       + (note ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px;line-height:1.5">' + note + '</div>' : '')
       + '</div>';
   };

@@ -135,7 +135,7 @@ function _rdIdType(it){ return it ? (({gstn:'gstn'})[it.doc]||null) : null; }  /
 var _RUNGRANK={verified:4,attested:3,documented:2,declared:1};
 // HELD = live & valid AND backed by REAL evidence (document / attested / verified). A bare 'declared' claim does NOT count.
 function _rdHeld(it){ if(!it) return false; var live=(it.status==='gathered'||it.status==='expiring'); return live && (_RUNGRANK[it.rung]||0)>=2; }
-function _rdRungChip(it){ var r=it&&it.rung, map={verified:['var(--ok-3)','verified'],attested:['#0e7c74','attested'],documented:['#c98a1a','documented'],declared:['#8a94a6','declared']}, x=map[r];
+function _rdRungChip(it){ var r=it&&it.rung, map={verified:['var(--ok-3)','verified'],attested:['var(--blue-2)','attested'],documented:['var(--warn-2)','documented'],declared:['var(--blue-2)','declared']}, x=map[r];
   if(!x) return '<span title="not yet evidenced" style="font-size:var(--fs-1);color:var(--line);flex:0 0 auto">—</span>';
   return '<span title="trust rung — how strongly it is evidenced" style="font-size:var(--fs-1);font-weight:800;text-transform:uppercase;letter-spacing:.03em;color:'+x[0]+';background:'+x[0]+'1e;border-radius:4px;padding:2px 5px;flex:0 0 auto">'+x[1]+'</span>'; }
 // persist the current lane to the entity's profile (+ local restore) — the selectors ARE the saved profile now.
@@ -146,12 +146,12 @@ function saveLane(){
 }
 function _rdStatus(st){
   if(st==='gathered') return {col:'var(--ok-3)',ic:'✓',lbl:'gathered'};
-  if(st==='expiring') return {col:'#c98a1a',ic:'!',lbl:'renew soon'};
-  if(st==='expired')  return {col:'#c0453b',ic:'✕',lbl:'expired'};
-  return {col:'#8a94a6',ic:'○',lbl:'to gather'};
+  if(st==='expiring') return {col:'var(--warn-2)',ic:'!',lbl:'renew soon'};
+  if(st==='expired')  return {col:'var(--disp)',ic:'✕',lbl:'expired'};
+  return {col:'var(--blue-2)',ic:'○',lbl:'to gather'};
 }
 function _rungBadge(r){
-  var map={verified:['var(--ok-3)','Verified'],attested:['#0e7c74','Attested'],documented:['#c98a1a','Documented'],declared:['#8a94a6','Declared']};
+  var map={verified:['var(--ok-3)','Verified'],attested:['var(--blue-2)','Attested'],documented:['var(--warn-2)','Documented'],declared:['var(--blue-2)','Declared']};
   var x=map[r]; if(!x) return '';
   return '<span style="font-size:var(--fs-1);font-weight:800;letter-spacing:.03em;text-transform:uppercase;border-radius:5px;padding:2px 6px;background:'+x[0]+'22;color:'+x[0]+';margin-left:7px" title="trust rung">'+x[1]+'</span>';
 }
@@ -170,7 +170,7 @@ function _rdSub(t){ return '<div style="font-size:var(--fs-1);font-weight:800;co
 function _rdKv(k,v){ return '<div style="display:flex;gap:8px;padding:3px 0;font-size:var(--fs-2)"><span style="text-transform:uppercase;color:var(--grey);min-width:96px;font-size:var(--fs-1);letter-spacing:.03em;padding-top:1px">'+k+'</span><span style="color:var(--ink);font-weight:500">'+esc(String(v))+'</span></div>'; }
 function _rdExpand(it){
   var L=_life(it.standard, it.status);
-  var steps=L.life.map(function(s){ var c=s[1]; var col=c==='done'?'var(--ok-3)':(c==='now'?'var(--blue)':'#c9d2dc'); var ic=c==='done'?'✓':(c==='now'?'●':'○');
+  var steps=L.life.map(function(s){ var c=s[1]; var col=c==='done'?'var(--ok-3)':(c==='now'?'var(--blue)':'var(--blue-tint-bg)'); var ic=c==='done'?'✓':(c==='now'?'●':'○');
     return '<div style="display:flex;align-items:center;gap:9px;padding:4px 0;font-size:var(--fs-2);color:'+(c==='next'?'var(--grey)':'var(--ink)')+'"><span style="width:18px;height:18px;border-radius:50%;display:grid;place-items:center;font-size:var(--fs-1);font-weight:800;color:#fff;background:'+col+';flex:0 0 auto">'+ic+'</span>'+esc(s[0])+(c==='now'?' <span style="font-size:var(--fs-1);color:var(--blue);font-weight:800;text-transform:uppercase;letter-spacing:.04em">you are here</span>':'')+'</div>';
   }).join('');
   var ev=_rdKv('Trust rung', it.rung||'—')+_rdKv('Status', it.status||'—')+(it.valid_until?_rdKv('Valid until', String(it.valid_until).slice(0,10)):'')
@@ -240,8 +240,8 @@ async function loadCommerce(){
   UI.commerceLoading=false; if(typeof renderApp==='function') renderApp();
 }
 function _frmBadge(c){
-  var map={market:['#2857b8','market'],credit:['#8a5e22','credit'],liquidity:['#0e7c74','liquidity'],operational:['#7a4fb0','operational']};
-  var x=map[c]||['#8a94a6',String(c||'—')];
+  var map={market:['var(--blue-2)','market'],credit:['var(--warn-2)','credit'],liquidity:['var(--blue-2)','liquidity'],operational:['var(--purple-2)','operational']};
+  var x=map[c]||['var(--blue-2)',String(c||'—')];
   return '<span style="font-size:var(--fs-1);font-weight:800;letter-spacing:.03em;text-transform:uppercase;border-radius:5px;padding:2px 6px;background:'+x[0]+'1e;color:'+x[0]+'">FRM · '+x[1]+'</span>';
 }
 // ── MY READINESS (supplier) — spin the globe: readiness resolved per destination ──
@@ -307,7 +307,7 @@ var STDNAME={ 'exim-policy':'Export policy (IEC · HS · declaration · Incoterm
 function _mtxCell(on,common,color){ return '<td style="text-align:center;padding:8px 5px;border-bottom:1px solid var(--line)">'+(on?'<span style="display:inline-block;width:19px;height:19px;border-radius:6px;background:'+(common?'var(--ok-3)':color)+';color:#fff;font-size:var(--fs-1);font-weight:800;line-height:19px">✓</span>':'<span style="color:var(--line)">·</span>')+'</td>'; }
 // the sector × standard matrix — LIVE from the engine (resolve every sector for the current lane), common vs specific.
 async function openSectorMatrix(){
-  var secs=[['paint','🧪','Chemical','#2857b8'],['food','🍎','Food','var(--ok-3)'],['textiles','🧵','Textiles','#9a4db0'],['electronics','🔌','Electronics','#a0601a'],['pharma','💊','Pharma','#0e7c74'],['automobile','🚗','Auto','#b4532a']];
+  var secs=[['paint','🧪','Chemical','var(--blue-2)'],['food','🍎','Food','var(--ok-3)'],['textiles','🧵','Textiles','var(--purple-2)'],['electronics','🔌','Electronics','var(--warn-2)'],['pharma','💊','Pharma','var(--blue-2)'],['automobile','🚗','Auto','var(--disp)']];
   var dest=UI.laneDest||'EU', origin=UI.laneOrigin||'IN';
   if(typeof modal==='function'){
     modal('<div class="mhd" style="display:flex;align-items:center;gap:8px"><div class="t" style="flex:1">🧮 Sector × standard — common vs specific</div><button onclick="closeModal()" title="Close" style="border:0;background:none;cursor:pointer;font-size:var(--fs-5);line-height:1;color:var(--grey);padding:0 2px">✕</button></div><div class="mbody" style="padding:14px 16px"><div id="mtxbody" style="font-size:var(--fs-2);color:var(--grey)">Resolving every sector for '+esc(origin)+' → '+esc(dest)+'…</div></div>');
@@ -378,13 +378,13 @@ function _rdComRow(g, i, sel){
 function _rdComLadder(attestor, top){
   var rungs=[['declared','term agreed'],['documented','instrument drafted'],['attested',(attestor||'a bank')+' issues / confirms'],['verified','confirmed at source']];
   var order={declared:0,documented:1,attested:2,verified:3}, topIx=(order[top]!=null?order[top]:2);
-  var cols={declared:'#8a94a6',documented:'#c98a1a',attested:'#0e7c74',verified:'var(--ok-3)'};
+  var cols={declared:'var(--blue-2)',documented:'var(--warn-2)',attested:'var(--blue-2)',verified:'var(--ok-3)'};
   return rungs.map(function(r){ var ix=order[r[0]], reach=ix<=topIx, c=cols[r[0]];
     return '<div style="display:flex;align-items:center;gap:9px;padding:3px 0;font-size:12px;opacity:'+(reach?'1':'.38')+'"><span style="width:9px;height:9px;border-radius:50%;background:'+c+';flex:0 0 auto"></span><b style="text-transform:uppercase;font-size:var(--fs-1);letter-spacing:.03em;color:'+c+';min-width:82px">'+r[0]+'</b><span style="color:var(--grey)">'+esc(r[1])+'</span></div>';
   }).join('');
 }
 function _rdComSteps(life){
-  return (life||[]).map(function(s){ var c=s[1], col=c==='done'?'var(--ok-3)':(c==='now'?'var(--blue)':'#c9d2dc'), ic=c==='done'?'✓':(c==='now'?'●':'○');
+  return (life||[]).map(function(s){ var c=s[1], col=c==='done'?'var(--ok-3)':(c==='now'?'var(--blue)':'var(--blue-tint-bg)'), ic=c==='done'?'✓':(c==='now'?'●':'○');
     return '<div style="display:flex;align-items:center;gap:9px;padding:4px 0;font-size:var(--fs-2);color:'+(c==='next'?'var(--grey)':'var(--ink)')+'"><span style="width:18px;height:18px;border-radius:50%;display:grid;place-items:center;font-size:var(--fs-1);font-weight:800;color:#fff;background:'+col+';flex:0 0 auto">'+ic+'</span>'+esc(s[0])+(c==='now'?' <span style="font-size:var(--fs-1);color:var(--blue);font-weight:800;text-transform:uppercase;letter-spacing:.04em">you are here</span>':'')+'</div>';
   }).join('');
 }

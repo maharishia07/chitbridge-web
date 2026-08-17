@@ -1721,7 +1721,7 @@ async function cbViewMine(){
 function setLogFilter(k){ _logFilter=k; renderMsgConsole(); }
 function clearMsgLog(){ if(window.__cblog) window.__cblog.length=0; renderMsgConsole(); }
 function renderMsgConsole(){ const host=document.getElementById("lbhost"); if(!host||!UI.logOpen)return;
-  const COL={debug:'var(--grey-4)',info:'var(--blue)',warn:'#a9791f',error:'var(--disp)'};
+  const COL={debug:'var(--grey-4)',info:'var(--blue)',warn:'var(--warn-2)',error:'var(--disp)'};
   const all=(window.__cblog||[]);
   const rows=all.filter(e=>_logFilter==='all'||e.level===_logFilter).slice(-200).reverse();
   const chip=(k,lbl)=>`<button onclick="setLogFilter('${k}')" style="border:0.5px solid var(--line);border-radius:6px;padding:2px 8px;font-size:var(--fs-1);background:${_logFilter===k?'var(--accent)':'var(--card)'};color:${_logFilter===k?'var(--on-accent)':'var(--ink)'};cursor:pointer">${lbl}</button>`;
@@ -3255,7 +3255,7 @@ function ccAddSelf(){ if(ccRoleCount("to")>=(LIMITS.to||99)){ toast(MSG.capHit("
 function ccDelRcpt(i){ CC.rcpts.splice(i,1); ccRenderRcpts(); }
 function ccFlipRcpt(i){ const order=["to","cc","for"]; const r=CC.rcpts[i]; if(!r)return; for(let k=1;k<=order.length;k++){ const nx=order[(order.indexOf(r.role)+k)%order.length]; if(nx===r.role||ccRoleCount(nx)<(LIMITS[nx]||99)){ r.role=nx; break; } } ccRenderRcpts(); }
 function ccRenderRcpts(){ const h=document.getElementById("cc_rcpts");
-  if(h){ h.innerHTML = CC.rcpts.length ? CC.rcpts.map((r,i)=>{ const col=r.role==="to"?"var(--blue)":r.role==="cc"?"var(--warn-3)":"#5F6B70"; const bg=r.role==="to"?"var(--blue-tint)":r.role==="cc"?"#F4ECD8":"#EFEBE2";
+  if(h){ h.innerHTML = CC.rcpts.length ? CC.rcpts.map((r,i)=>{ const col=r.role==="to"?"var(--blue)":r.role==="cc"?"var(--warn-3)":"var(--grey-2)"; const bg=r.role==="to"?"var(--blue-tint)":r.role==="cc"?"var(--warn-tint)":"var(--warn-tint)";
     if(UI._supplier){ return `<span style="display:inline-flex;align-items:center;gap:5px;border:0.5px solid var(--blue-tint-line);background:var(--blue-tint);border-radius:9px;padding:4px 9px;margin:0 5px 5px 0;font-size:12px;font-weight:600;color:var(--blue)">🏭 ${esc(r.name)}${r.bridge?'<span style="font-family:monospace;font-size:var(--fs-1);opacity:.8"> · '+esc(r.bridge)+'</span>':''} <span style="font-weight:400;color:var(--grey)">· locked</span></span>`; }
     return `<span style="display:inline-flex;align-items:center;gap:5px;border:0.5px solid var(--line);border-radius:9px;padding:3px 7px;margin:0 5px 5px 0;font-size:11.5px"><span onclick="ccFlipRcpt(${i})" title="Flip role (To/CC/For)" style="cursor:pointer;font-family:'Space Mono';font-size:var(--fs-1);background:${bg};color:${col};border-radius:5px;padding:1px 5px">${r.role.toUpperCase()}</span>${esc(r.name)}${r.bridge?'<span style="font-family:monospace;font-size:var(--fs-1);color:var(--grey-4)"> · '+esc(r.bridge)+'</span>':''}${r.self?'<span style="color:var(--blue);font-size:var(--fs-1)"> · self</span>':''}<span onclick="ccDelRcpt(${i})" style="cursor:pointer;color:var(--grey-4)">✕</span></span>`; }).join("") : `<div style="font-size:12px;color:var(--grey)">No recipients yet — add To / CC / For above.</div>`; }
   if(UI._ccFlow) UI._ccFlow.paintFoot();   // a recipient added or removed changes whether To can be left
@@ -4255,7 +4255,7 @@ function paintSupDetail(){ const dp=document.getElementById('detailpane'); if(dp
    Everyone who ordered/signed-in via the storefront; the platform never shares them. GET /api/relationships/customers. */
 function custDate(x){ try{ return new Date(x).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}); }catch(_){ return ''; } }
 function custContact(c){ var em=(c&&c.email)||''; var at=em.lastIndexOf('@'); var local=at>=0?em.slice(0,at):em; if(local.indexOf('=')>=0) return local.replace('=','@'); return local||(c&&c.display_name)||''; }
-function custSeg(s){ var col={new:'var(--blue-d)',regular:'#2e7a45',inactive:'#9a7b34'}[s]||'#8a949c', bg={new:'var(--blue-tint)',regular:'#e8f3ec',inactive:'#f7f2e3'}[s]||'#f4f6f8'; return '<span class="optchip" style="background:'+bg+';color:'+col+';border-color:transparent">'+esc(s||'—')+'</span>'; }
+function custSeg(s){ var col={new:'var(--blue-d)',regular:'var(--ok-2)',inactive:'var(--warn-2)'}[s]||'var(--grey-2)', bg={new:'var(--blue-tint)',regular:'var(--ok-tint)',inactive:'var(--warn-tint)'}[s]||'var(--card)'; return '<span class="optchip" style="background:'+bg+';color:'+col+';border-color:transparent">'+esc(s||'—')+'</span>'; }
 function customersScreen(){
   const list=`<div class="list"><div class="lh">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3)">🛍️ Customers</span><button onclick="openAssist('customers')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button></div>
@@ -4663,8 +4663,8 @@ async function viewSupplierPassport(bridge, name){
     var sup = d.supplier || {}, sm = d.summary || {}, cl = d.clearances || [];
     var label = esc(sup.display_name || who);
     var ready = !!sm.ready;
-    var PILL = { gathered:['var(--ok-3)','#eaf6ee','met'], expiring:['#b07a2b','#fdf3e3','expiring'],
-                 expired:['#b4483c','#fbeae9','expired'], pending:['#8a949c','#f4f6f8','not provided'] };
+    var PILL = { gathered:['var(--ok-3)','var(--ok-tint)','met'], expiring:['var(--warn-2)','var(--warn-tint)','expiring'],
+                 expired:['var(--disp)','var(--danger-tint)','expired'], pending:['var(--grey-2)','var(--card)','not provided'] };
     var rows = cl.map(function(c){
       var p = PILL[c.status] || PILL.pending;
       return '<tr><td style="padding:6px 8px;border-bottom:1px dashed var(--line);font-size:var(--fs-2)">'+esc(c.title||c.doc||'')
@@ -4679,7 +4679,7 @@ async function viewSupplierPassport(bridge, name){
       + 'This is <b>'+label+'</b>&rsquo;s readiness — the supplier you are looking at. <b>Not yours.</b> '
       + '<span style="color:var(--grey)">User ID '+esc(sup.bridge_id||bridge)+'</span></div>'
       + '<div style="display:flex;gap:10px;align-items:center;margin-bottom:12px">'
-      + '<div style="width:38px;height:38px;border-radius:50%;background:'+(ready?'var(--ok-3)':'#c98a1a')+';color:#fff;display:grid;place-items:center;font-size:18px">'+(ready?'✓':'!')+'</div>'
+      + '<div style="width:38px;height:38px;border-radius:50%;background:'+(ready?'var(--ok-3)':'var(--warn-2)')+';color:#fff;display:grid;place-items:center;font-size:18px">'+(ready?'✓':'!')+'</div>'
       + '<div><div style="font-weight:700;font-size:13.5px">'+(ready?(label+' is import-ready'):(label+' has '+((sm.total||0)-(sm.met||0))+' clearance(s) outstanding'))+'</div>'
       + '<div style="font-size:11.5px;color:var(--grey)">'+(sm.met||0)+' of '+(sm.total||0)+' met'+(sm.expiring?' · '+sm.expiring+' expiring':'')+(sm.expired?' · '+sm.expired+' expired':'')+'</div></div></div>'
       + (rows ? '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">'+rows+'</table></div>'
@@ -5045,7 +5045,12 @@ function prodRowHTML(p){ const d=pData(p), id=prodId(p);
      list is how somebody re-creates a product they already retired — which is the exact thing the flag exists to
      prevent. An absent status means available, so a normal row shows no chip at all. */
   const st=d.status||'available';
-  const stC={unavailable:['#b0641c','#fdf4e8','not available'],retired:['#c0453b','#fdecea','retired'],redundant:['#5b5340','#f4f1e8','redundant']}[st];
+  /* ⚠️ COLOURS STORED AS DATA — the sixth and last place they hide, and no scan of `background:` can see it. These
+     six values sat in an ARRAY, three [text, background, label] triples, interpolated into the style attribute
+     further down. They are not CSS until the moment they are rendered, so every static pass walked past them and
+     they stayed hardcoded light: a pale sand chip on a dark row, on a PRODUCT ROW, which is precisely where Athi
+     was pointing. A colour is a colour wherever it is written down — a lookup table is not an exemption. */
+  const stC={unavailable:['var(--warn-2)','var(--warn-tint)','not available'],retired:['var(--disp)','var(--danger-tint)','retired'],redundant:['var(--ink-2)','var(--neutral-tint)','redundant']}[st];
   const stChip=stC?`<span class="optchip" style="background:${stC[1]};color:${stC[0]};border-color:${stC[1]}">${stC[2]}</span>`:'';
   /* Synonyms were the field Athi could not see anywhere — the count alone tells him which rows still need words. */
   const syn=(Array.isArray(d.synonyms)&&d.synonyms.length)?`<span style="color:var(--grey)">· ${d.synonyms.length} synonyms</span>`:'';
@@ -5381,20 +5386,20 @@ async function _cfRun(btn){
     // control is removed rather than merely pre-set, because a disabled dropdown still looks like a decision
     // someone could change.
     var HOW = {
-      exact:         ['✓','#2E7D5B','matches your catalogue'],
-      synonym:       ['✓','#2E7D5B','recognised under another name'],
-      contains:      ['?','#B07A2B','probably this — confirm'],
-      fuzzy:         ['?','#B07A2B','guessed — confirm this'],
-      ambiguous:     ['?','#B07A2B','could be more than one thing'],
-      'not-accepted':['—','#8A9099','your catalogue does not use this'],
-      unmatched:     ['—','#8A9099','not recognised'],
-      conflict:      ['!','#B07A2B','another column matched this better'],
-      blocked:       ['⨯','#B4483C','a file may not set this'],
-      empty:         ['—','#8A9099','this column has no heading']
+      exact:         ['✓','var(--ok-2)','matches your catalogue'],
+      synonym:       ['✓','var(--ok-2)','recognised under another name'],
+      contains:      ['?','var(--warn-2)','probably this — confirm'],
+      fuzzy:         ['?','var(--warn-2)','guessed — confirm this'],
+      ambiguous:     ['?','var(--warn-2)','could be more than one thing'],
+      'not-accepted':['—','var(--grey-2)','your catalogue does not use this'],
+      unmatched:     ['—','var(--grey-2)','not recognised'],
+      conflict:      ['!','var(--warn-2)','another column matched this better'],
+      blocked:       ['⨯','var(--disp)','a file may not set this'],
+      empty:         ['—','var(--grey-2)','this column has no heading']
     };
     var accepted = res.accepted || [];
     var rowsHtml = (r.mapping||[]).map(function(m, i){
-      var h = HOW[m.how] || ['?','#8A9099',m.how];
+      var h = HOW[m.how] || ['?','var(--grey-2)',m.how];
       var control;
       if(m.how === 'blocked' || m.how === 'empty'){
         control = '<span style="font-size:11.5px;color:'+h[1]+'">not importable</span>';
@@ -5425,7 +5430,7 @@ async function _cfRun(btn){
         ? '<span style="background:var(--ok-tint);color:var(--disp);border-radius:6px;padding:3px 9px;font-size:11.5px;font-weight:700">Every column is placed</span>'
         : '<span style="background:var(--warn-tint);color:var(--warn-3);border-radius:6px;padding:3px 9px;font-size:11.5px;font-weight:700">Check the choices below, then import</span>');
     var issues = (r.issues||[]).slice(0,25).map(function(i){
-      var c = i.severity==='error' ? '#B4483C' : (i.severity==='info' ? '#6b7176' : '#B07A2B');
+      var c = i.severity==='error' ? 'var(--disp)' : (i.severity==='info' ? 'var(--grey-2)' : 'var(--warn-2)');
       return '<li style="color:'+c+'">line '+i.row+' · <b>'+esc(i.column)+'</b> — '+esc(i.message)+'</li>';
     }).join('');
 
@@ -5481,7 +5486,7 @@ async function _cfImportRun(btn, decisions, out){
       + ((r.created_columns||[]).length ? '<div style="font-size:12px;color:var(--grey);margin-top:8px">Your catalogue now also has: '+r.created_columns.map(esc).join(', ')+'. The next template you download will include them.</div>' : '')
       + '<ul style="font-size:12px;line-height:1.6;padding-left:18px;margin:10px 0 0">'
       + (r.outcome||[]).slice(0,40).map(function(o){
-          var c = o.action==='failed' ? '#B4483C' : 'var(--ink)';
+          var c = o.action==='failed' ? 'var(--disp)' : 'var(--ink)';
           return '<li style="color:'+c+'">line '+o.line+' · '+esc(o.name||'')+' — '+esc(o.action)+(o.message?': '+esc(o.message):'')+'</li>';
         }).join('')
       + '</ul>'
@@ -5745,7 +5750,7 @@ async function prodAllFields(id){
     : '';
 
   const st = (d.status || 'available');
-  const stCol = st === 'available' ? '#2f6b4f' : st === 'unavailable' ? '#b0641c' : '#c0453b';
+  const stCol = st === 'available' ? 'var(--ok-2)' : st === 'unavailable' ? 'var(--warn-2)' : 'var(--disp)';
   modal('<h3 style="margin:0 0 3px">' + esc(pName(d)) + (d.variant ? ' <span style="color:var(--grey);font-weight:500">· ' + esc(d.variant) + '</span>' : '') + '</h3>'
     + '<div style="font-size:12px;margin-bottom:4px"><span style="color:' + stCol + ';font-weight:700">' + esc(st) + '</span>'
     + '<span style="color:var(--grey)"> · ' + Object.keys(d).length + ' fields on this item</span>' + compl + '</div>'
@@ -6992,12 +6997,12 @@ function paintDetail(){const dp=document.getElementById("detailpane");if(dp){dp.
 function backToList(){UI.mdetail=false;const p=document.getElementById("panel");if(p)p.classList.remove("showdetail");}
 function renderDetail(){return detailInner();}
 function _rungChipCB(r){
-  var M={verified:['✅','#1a7f37','#e7f5ec'],attested:['🔗','#245a9e','#e8f0fb'],documented:['📄','#8a6d1f','#faf3dd'],declared:['✍️','#666666','#eeeeee']};
+  var M={verified:['✅','var(--ok-2)','var(--ok-tint)'],attested:['🔗','var(--blue-2)','var(--blue-tint-bg)'],documented:['📄','var(--warn-2)','var(--warn-tint)'],declared:['✍️','var(--grey-2)','var(--neutral-tint)']};
   var m=M[r]||M.declared; return '<span style="font-size:var(--fs-1);font-weight:800;padding:1px 6px;border-radius:9px;white-space:nowrap;color:'+m[1]+';background:'+m[2]+'">'+m[0]+' '+String(r||'declared').toUpperCase()+'</span>';
 }
 function _frmChipCB(f){
-  var M={market:['#2857b8','market'],credit:['#8a5e22','credit'],liquidity:['#0e7c74','liquidity'],operational:['#7a4fb0','operational']};
-  var x=M[f]||['#8a94a6',String(f||'—')]; return '<span style="font-size:var(--fs-1);font-weight:800;letter-spacing:.03em;text-transform:uppercase;border-radius:5px;padding:1px 6px;background:'+x[0]+'1e;color:'+x[0]+'">FRM · '+x[1]+'</span>';
+  var M={market:['var(--blue-2)','market'],credit:['var(--warn-2)','credit'],liquidity:['var(--blue-2)','liquidity'],operational:['var(--purple-2)','operational']};
+  var x=M[f]||['var(--blue-2)',String(f||'—')]; return '<span style="font-size:var(--fs-1);font-weight:800;letter-spacing:.03em;text-transform:uppercase;border-radius:5px;padding:1px 6px;background:'+x[0]+'1e;color:'+x[0]+'">FRM · '+x[1]+'</span>';
 }
 function commercialBlock(c){
   var cm=c&&c.commercial; if(!cm||!cm.areas||!cm.areas.length) return "";
@@ -7063,7 +7068,7 @@ function _viaPricing(p){
 }
 function viaBlock(c){
   var v=c&&c.via; if(!v||!v.channel) return "";
-  var CH={ whatsapp:['#25D366','WhatsApp'], email:['var(--blue)','Email'], sms:['#b07a2b','SMS'], web:['var(--purple-2)','Web'] };
+  var CH={ whatsapp:['var(--ok-2)','WhatsApp'], email:['var(--blue)','Email'], sms:['var(--warn-2)','SMS'], web:['var(--purple-2)','Web'] };
   var m=CH[v.channel]||['var(--grey-2)', String(v.channel)];
   function row(label, value){ return value ? '<div style="display:flex;gap:8px;font-size:var(--fs-1);padding:2px 0"><span style="color:var(--grey);min-width:86px">'+esc(label)+'</span><span style="font-family:ui-monospace,Menlo,monospace;word-break:break-all">'+esc(value)+'</span></div>' : ''; }
   return '<div class="itab" style="padding:10px 12px;margin-bottom:9px">'
@@ -7557,7 +7562,7 @@ function attMedia(a,size){
     ? '<pre class="atttext">'+esc(a.text)+'</pre>'
     : '<div class="attfile"><div style="font-size:46px">📄</div><div style="font-weight:600;margin:8px 0 2px">'+esc(a.n||'file')+'</div><div style="font-size:var(--fs-1);color:var(--grey-4)">reading…</div></div>';
   if(a&&big&&a.t!=='image') return '<div class="attfile"><div style="font-size:46px">'+(a.t==='xlsx'||a.t==='csv'?'📊':(a.t==='docx'||a.t==='doc'?'📝':(a.t==='ppt'?'📑':(a.t==='zip'?'🗜️':(a.t==='pdf'?'📄':'📎')))))+'</div><div style="font-weight:600;margin:8px 0 2px">'+esc(a.n||'file')+'</div><div style="font-size:var(--fs-1);color:var(--grey-4);text-transform:uppercase">'+esc(a.t||'file')+'</div>'+(a.src?'<a class="composebtn" style="margin-top:10px;display:inline-block" href="'+esc(a.src)+'" target="_blank" rel="noopener">Open / download</a>':'')+'</div>';
-  const bg=a.t==='image'?'#E8F0F4':a.t==='video'?'var(--gold-soft)':'#F1EFE8';
+  const bg=a.t==='image'?'var(--blue-tint-bg)':a.t==='video'?'var(--gold-soft)':'var(--warn-tint)';
   return `<div class="attImg ${big?'big':''}" style="background:${bg}"><span style="font-size:${big?'40px':'20px'}">${attIcon(a.t)}</span>${a.t==='video'?'<span class="vlen">0:12</span>':''}</div>`;
 }
 /* ── real attachments (platform-independent): bytes pulled ON DEMAND — GET /api/attachments/:id is auth'd, so fetch→blobURL ── */
@@ -8189,8 +8194,8 @@ route();
 <script>
 (function(){ if(!window.CBOffline) return;
   function cbPill(s){ var p=document.getElementById("cbnet"); if(!p){ p=document.createElement("div"); p.id="cbnet"; p.style.cssText="position:fixed;bottom:10px;right:10px;z-index:9998;font:700 11px/1 system-ui,-apple-system,sans-serif;border-radius:999px;padding:5px 11px;border:1px solid #e5e8ee;background:var(--card);color:var(--ok-2);box-shadow:0 1px 4px rgba(0,0,0,.08)"; (document.body||document.documentElement).appendChild(p); } if(!p) return;
-    if(s.online){ p.style.background="#fff"; p.style.color="#2f7a45"; p.textContent = s.pending ? ("\u25CF Online \u00B7 syncing "+s.pending) : "\u25CF Online"; }
-    else { p.style.background="#fdf6e9"; p.style.color="#b4832a"; p.textContent = "\u26A0 Offline" + (s.pending ? " \u00B7 "+s.pending+" pending" : ""); } }
+    if(s.online){ p.style.background="#fff"; p.style.color="var(--ok-2)"; p.textContent = s.pending ? ("\u25CF Online \u00B7 syncing "+s.pending) : "\u25CF Online"; }
+    else { p.style.background="var(--warn-tint)"; p.style.color="var(--warn-2)"; p.textContent = "\u26A0 Offline" + (s.pending ? " \u00B7 "+s.pending+" pending" : ""); } }
   try{ CBOffline.configure({apiBase: CFG.API_BASE, token:function(){return SESSION && SESSION.token;}, onChange:cbPill}); CBOffline.registerSW("/cb-sw.js"); }catch(e){}
 })();
 </script>

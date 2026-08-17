@@ -224,7 +224,7 @@ function catfFieldMapHTML(){
 }
 function catfStandardsModal(){
   var S = (CBCatalogue.STANDARDS || []);
-  var badge = function(st){ var c = st === 'in code' ? ['var(--ok-2)', '#e6f4ec'] : st === 'by reference' ? ['var(--blue-2)', '#e8eef7'] : st === 'vocabulary' ? ['#6a4fa0', '#efeafa'] : ['#8a6d1e', '#f6efd8']; return '<span style="font-size:var(--fs-1);font-weight:700;color:' + c[0] + ';background:' + c[1] + ';border-radius:5px;padding:2px 7px;white-space:nowrap">' + esc(st) + '</span>'; };
+  var badge = function(st){ var c = st === 'in code' ? ['var(--ok-2)', 'var(--ok-tint)'] : st === 'by reference' ? ['var(--blue-2)', 'var(--blue-tint-bg)'] : st === 'vocabulary' ? ['var(--purple-2)', 'var(--purple-tint)'] : ['var(--warn-2)', 'var(--warn-tint)']; return '<span style="font-size:var(--fs-1);font-weight:700;color:' + c[0] + ';background:' + c[1] + ';border-radius:5px;padding:2px 7px;white-space:nowrap">' + esc(st) + '</span>'; };
   var row = function(s){ return '<div style="padding:10px 0;border-bottom:1px solid var(--line)">'
     + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-size:13px;font-weight:700;color:#1c2128">' + esc(s.name) + '</span>' + badge(s.status) + '<span style="font-size:var(--fs-1);color:var(--grey)">' + esc(s.body) + '</span></div>'
     + '<div style="font-size:12px;color:var(--grey);margin-top:3px;line-height:1.5">' + esc(s.role) + '</div>'
@@ -593,7 +593,7 @@ function _cwPreview(w){
   var head = '<div style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);letter-spacing:.05em">YOUR CATALOGUE SO FAR</div>'
     + '<div style="margin-top:6px;font-size:var(--fs-2);font-weight:700">' + esc(title) + '</div>'
     + '<div style="font-size:var(--fs-1);color:var(--grey)">cart · ' + esc(_catfCcy()) + ' · sold by ' + esc(_cwUnitStr(w)) + (w.source ? ' · blueprint ' + esc(w.source) : '') + '</div>';
-  var fieldsHtml = fields.length ? '<div style="margin-top:11px;font-size:var(--fs-1);font-weight:700;color:var(--grey-2);text-transform:uppercase;letter-spacing:.04em">Fields</div>' + fields.map(function(f){ var src = cov[_cwNorm(f.name)]; var b = src === 'blueprint' ? ['📎 blueprint', 'var(--purple-2)'] : src === 'erp' ? ['🔗 ERP', '#b07b1e'] : src === 'manual' ? ['✍ you', 'var(--ok-2)'] : ['· to fill', 'var(--grey-4)']; return '<div style="display:flex;align-items:center;gap:6px;font-size:11.5px;padding:1px 0"><span style="flex:1;color:var(--ink-2)">' + esc(f.name) + '</span><span style="font-size:var(--fs-1);font-weight:700;color:' + b[1] + ';background:' + b[1] + '18;border-radius:4px;padding:1px 6px">' + b[0] + '</span></div>'; }).join('') : '';
+  var fieldsHtml = fields.length ? '<div style="margin-top:11px;font-size:var(--fs-1);font-weight:700;color:var(--grey-2);text-transform:uppercase;letter-spacing:.04em">Fields</div>' + fields.map(function(f){ var src = cov[_cwNorm(f.name)]; var b = src === 'blueprint' ? ['📎 blueprint', 'var(--purple-2)'] : src === 'erp' ? ['🔗 ERP', 'var(--warn-2)'] : src === 'manual' ? ['✍ you', 'var(--ok-2)'] : ['· to fill', 'var(--grey-4)']; return '<div style="display:flex;align-items:center;gap:6px;font-size:11.5px;padding:1px 0"><span style="flex:1;color:var(--ink-2)">' + esc(f.name) + '</span><span style="font-size:var(--fs-1);font-weight:700;color:' + b[1] + ';background:' + b[1] + '18;border-radius:4px;padding:1px 6px">' + b[0] + '</span></div>'; }).join('') : '';
   var itemsHtml = items.length ? '<div style="margin-top:11px;font-size:var(--fs-1);font-weight:700;color:var(--grey-2);text-transform:uppercase;letter-spacing:.04em">Items · ' + items.length + '</div>' + items.slice(0, 7).map(function(it){ var p = w.prices[it.name]; return '<div style="display:flex;align-items:center;gap:6px;font-size:11.5px;padding:1px 0"><span style="flex:1">' + esc(it.name) + '</span><span style="font-weight:600;color:' + (p != null && p !== '' ? 'var(--blue-2)' : 'var(--disp-2)') + '">' + (p != null && p !== '' ? esc(_catfMoney(p)) : 'no price') + '</span></div>'; }).join('') : '';
   var taxHtml = (w.tax && w.tax.rate) ? '<div style="margin-top:9px;font-size:var(--fs-1);color:var(--grey)">Tax: ' + esc(w.tax.label || 'GST') + ' ' + esc(w.tax.rate) + '%</div>' : '';
   return head + fieldsHtml + itemsHtml + taxHtml;
@@ -658,7 +658,7 @@ function _cwStep2Fields(w){
   return head + summary + '<div style="margin-top:8px">' + rows + '</div>' + swatches;
 }
 /* render products with the blueprint's OWN look & feel — colour swatches, chips, accent, story */
-function _cwSwatch(c){ return '<span title="' + esc((c.name || '') + ' ' + (c.hex || '')) + '" style="display:inline-block;width:15px;height:15px;border-radius:50%;background:' + esc(c.hex || '#ccc') + ';border:1px solid rgba(0,0,0,.15);vertical-align:middle;margin-right:2px"></span>'; }
+function _cwSwatch(c){ return '<span title="' + esc((c.name || '') + ' ' + (c.hex || '')) + '" style="display:inline-block;width:15px;height:15px;border-radius:50%;background:' + esc(c.hex || 'var(--neutral-tint)') + ';border:1px solid rgba(0,0,0,.15);vertical-align:middle;margin-right:2px"></span>'; }
 function _cwCombo(cm){ return '<div style="display:flex;align-items:center;gap:6px;margin-top:3px"><span>' + ((cm.colours || []).map(_cwSwatch).join('')) + '</span><span style="font-size:var(--fs-1);color:var(--ink-2);font-weight:600">' + esc(cm.name || '') + '</span></div>'; }
 function _cwProductCard(w, it){
   var on = w.chosen[it.name] !== false, seld = w.sel === it.name;
@@ -758,7 +758,7 @@ function _cwStep4(w){
              * cannot tell which values they actually checked.
              */
             + (p._ai ? '<div style="margin-top:6px;font-size:var(--fs-1);font-weight:800;color:var(--purple);background:var(--purple-tint);border-radius:5px;padding:1px 6px;display:inline-block">✨ proposed — check it</div>' : '')
-            + '<input value="' + esc(p.name || '') + '" oninput="cwSetPhotoField(\'' + p.id + '\',\'name\',this.value)" placeholder="item name" style="width:100%;box-sizing:border-box;margin-top:6px;padding:5px 7px;border:1px solid ' + (p._ai ? '#c9bdf0' : 'var(--line)') + ';border-radius:6px;font-size:11.5px">'
+            + '<input value="' + esc(p.name || '') + '" oninput="cwSetPhotoField(\'' + p.id + '\',\'name\',this.value)" placeholder="item name" style="width:100%;box-sizing:border-box;margin-top:6px;padding:5px 7px;border:1px solid ' + (p._ai ? 'var(--blue-tint-bg)' : 'var(--line)') + ';border-radius:6px;font-size:11.5px">'
             + '<div style="display:flex;gap:5px;margin-top:5px;align-items:center"><span style="font-size:var(--fs-1);color:var(--grey)">' + esc(_catfCcy()) + '</span><input type="number" value="' + (p.price != null ? p.price : '') + '" oninput="cwSetPhotoField(\'' + p.id + '\',\'price\',this.value)" placeholder="price" style="flex:1;min-width:0;padding:4px 6px;border:1px solid var(--line);border-radius:6px;font-size:11.5px"><span onclick="cwPhotoRemove(\'' + p.id + '\')" style="cursor:pointer;color:#b23;font-size:15px;line-height:1" title="remove">×</span></div>'
             + '</div>'; }).join('') + '</div>'
           + '<button onclick="cwPhotosCommit()" style="margin-top:10px;padding:8px 15px;border:1px solid var(--ok-2);border-radius:9px;background:var(--card);color:var(--ok-2);font-weight:600">✓ Add ' + ph.length + ' photo' + (ph.length > 1 ? 's' : '') + ' to catalogue</button>'
@@ -1061,7 +1061,7 @@ function _catfAppearsTab(f, c, facets){
 }
 
 /* the items under this face — each tagged by SOURCE (reference / manual / ERP). For referenced items the owner only sets price. */
-function _catfSrcTag(src){ return src === 'reference' ? ['📎 by reference', 'var(--purple-2)'] : src === 'value' ? ['📋 by value (copy)', 'var(--blue-2)'] : src === 'erp' ? ['🔗 from ERP', '#b07b1e'] : src === 'csv' ? ['📄 imported', 'var(--ok-2)'] : src === 'capture' ? ['📷 photo', '#6a4fa0'] : ['✍ entered', 'var(--ok-2)']; }
+function _catfSrcTag(src){ return src === 'reference' ? ['📎 by reference', 'var(--purple-2)'] : src === 'value' ? ['📋 by value (copy)', 'var(--blue-2)'] : src === 'erp' ? ['🔗 from ERP', 'var(--warn-2)'] : src === 'csv' ? ['📄 imported', 'var(--ok-2)'] : src === 'capture' ? ['📷 photo', 'var(--purple-2)'] : ['✍ entered', 'var(--ok-2)']; }
 function _catfItemsHtml(f){
   var items = (f.items || []); if (!items.length) return '<div style="font-size:var(--fs-1);font-weight:800;color:var(--ok-2);letter-spacing:.05em;margin-top:18px">YOUR ITEMS · 0</div><div style="font-size:var(--fs-1);color:var(--grey);padding:4px 0">No items yet — adopt a source, add manually, or pull from ERP.</div>';
   var needPrice = items.filter(function(it){ return it.price == null || it.price === ''; }).length;

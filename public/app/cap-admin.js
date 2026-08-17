@@ -1174,7 +1174,7 @@ var GOV_KLASS = {
  */
 function govKlass(k, hasControl){
   var x = GOV_KLASS[k] || GOV_KLASS.free;
-  var col = x.tone==='yours' ? ['#E4F0E9','#2F6B49'] : x.tone==='fixed' ? ['#E7EBF0','#46546b'] : ['#efeee9','#7a7a72'];
+  var col = x.tone==='yours' ? ['var(--ok-tint)','var(--ok-2)'] : x.tone==='fixed' ? ['var(--blue-tint-bg)','var(--blue-2)'] : ['var(--warn-tint)','var(--grey-2)'];
   var say = x.say;
   /**
    * ⚠️ `=== false`, NOT `!hasControl`. Only a caller that has actually LOOKED may claim there is no control.
@@ -1184,7 +1184,7 @@ function govKlass(k, hasControl){
    * absence of information rather than from evidence.
    */
   if (x.tone === 'yours' && hasControl === false){
-    col = ['#F5ECD6','var(--warn-3)'];
+    col = ['var(--warn-tint)','var(--warn-3)'];
     say = say + ' — no control here yet';
   }
   return '<span class="govtag" style="background:'+col[0]+';color:'+col[1]+'">'+say+'</span>';
@@ -1574,11 +1574,11 @@ function _chRow(c){
      declared claim as "receiving" would be the panel telling the exact lie the migration exists to stop. */
   var verified=(c.bindings||[]).filter(function(b){ return b.status==='verified'; }).length;
   var live = c.provider_configured && verified;
-  var pill = live ? ['#2e6b3f','#e7f3ea','receiving']
-           : (bound && !verified) ? ['var(--warn-2)','#FBF6E9','claimed — awaiting confirmation']
-           : (!c.provider_configured && bound) ? ['var(--warn-2)','#FBF6E9','waiting on a provider account']
-           : (c.provider_configured && !bound) ? ['var(--warn-2)','#FBF6E9','configured — nothing bound yet']
-           : ['var(--grey-2)','#eef1f5','not set up'];
+  var pill = live ? ['var(--ok-2)','var(--ok-tint)','receiving']
+           : (bound && !verified) ? ['var(--warn-2)','var(--warn-tint)','claimed — awaiting confirmation']
+           : (!c.provider_configured && bound) ? ['var(--warn-2)','var(--warn-tint)','waiting on a provider account']
+           : (c.provider_configured && !bound) ? ['var(--warn-2)','var(--warn-tint)','configured — nothing bound yet']
+           : ['var(--grey-2)','var(--blue-tint-bg)','not set up'];
   return '<div style="padding:10px 0;border-bottom:1px solid var(--line)" data-testid="ch-row-'+esc(c.key)+'">'
     + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
     + '<span style="font-weight:600;font-size:var(--fs-2)">'+esc(c.name)+'</span>'
@@ -1589,7 +1589,7 @@ function _chRow(c){
     /* ⚠️ REPLIES ARE A SEPARATE CREDENTIAL, so a separate line. Receiving and sending are not one switch: the app
        secret verifies inbound, WHATSAPP_TOKEN sends. Saying "connected" once would promise replies we cannot make.
        Only shown where the channel actually has a return leg. */
-    + (c.key==='whatsapp' ? '<div style="font-size:var(--fs-1);margin-top:3px;color:'+(c.outbound_configured?'#2e6b3f':'var(--grey)')+'">'
+    + (c.key==='whatsapp' ? '<div style="font-size:var(--fs-1);margin-top:3px;color:'+(c.outbound_configured?'var(--ok-2)':'var(--grey)')+'">'
         + (c.outbound_configured
             ? '↩ replies on — status changes go back to the customer, within their 24-hour window'
             : '↩ replies off — needs WHATSAPP_TOKEN. Messages still arrive; nothing goes back.')
@@ -1621,7 +1621,7 @@ function _chRow(c){
              WhatsApp account; another business's approval says nothing about this one. */
           + (c.key==='whatsapp' ? (c.templates||[]).map(function(t){
               var state=((b.templates||{})[t.name])||'none';
-              var col=state==='approved'?['#2e6b3f','#e7f3ea']:state==='pending'?['var(--warn-2)','#FBF6E9']:['var(--grey-2)','#eef1f5'];
+              var col=state==='approved'?['var(--ok-2)','var(--ok-tint)']:state==='pending'?['var(--warn-2)','var(--warn-tint)']:['var(--grey-2)','var(--blue-tint-bg)'];
               return '<div style="margin:5px 0 0 10px;padding:7px 9px;border-left:2px solid var(--line);font-size:11.5px">'
                 + '<div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap"><span style="font-family:ui-monospace,Menlo,monospace">'+esc(t.name)+'</span>'
                 + '<span style="font-size:var(--fs-1);font-weight:800;color:'+col[0]+';background:'+col[1]+';border-radius:5px;padding:1px 6px">'+esc(state==='none'?'not approved':state)+'</span>'

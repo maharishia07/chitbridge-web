@@ -65,7 +65,7 @@ function _erpReceiptsHTML(){
   if(UI.acReceiptsErr) return head+'<div style="padding:10px 2px;color:var(--disp);font-size:12px">⚠ '+esc(UI.acReceiptsErr)+' <button class="composebtn" style="padding:2px 9px;font-size:var(--fs-1);margin-left:6px" onclick="acLoadReceipts(\''+esc(UI.acSel)+'\')">Retry</button></div>';
   if(!rs.length) return head+'<div style="padding:10px 2px;color:var(--grey);font-size:var(--fs-2)">No documents yet. Tap <b>📄 Send a test document</b> to run the cycle.</div>';
   var rows=rs.map(function(r){
-    var oc=r.outcome||'', col=oc==='processed'?'var(--ok-3)':(oc==='failed'?'#c0453b':(oc==='duplicate'?'#8a6d1e':'#586069'));
+    var oc=r.outcome||'', col=oc==='processed'?'var(--ok-3)':(oc==='failed'?'var(--disp)':(oc==='duplicate'?'var(--warn-2)':'var(--grey-2)'));
     return '<div style="display:flex;align-items:center;gap:9px;padding:9px 0;border-bottom:1px dashed var(--line);font-size:var(--fs-2)">'
       +'<div style="flex:1;min-width:0"><b>'+esc(r.doc_ref||r.doc_type||'document')+'</b>'+(r.doc_type?' <span style="color:var(--grey);font-size:var(--fs-1)">'+esc(r.doc_type)+'</span>':'')
       +'<div style="color:var(--grey);font-size:var(--fs-1);margin-top:1px;font-family:monospace">#'+esc(String(r.payload_hash||'').slice(0,12))+'… · '+esc((typeof _ago==='function'?_ago(r.received_at):'')||'')+'</div></div>'
@@ -92,7 +92,7 @@ function piCockpit(x){
   var _loadingT=(UI.acConns===undefined); var _cn=_loadingT?[]:(UI.acConns||[]); var _live=_cn.filter(function(c){return c.signal==='live';}).length; var _agoT=(typeof _ago==='function'?_ago(UI.acLastSeen):'');
   var tiles='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:14px 0">'
     +_tile(iot?'Devices':'Endpoints', _loadingT?'—':_cn.length)
-    +_tile('Live now', _loadingT?'—':('<span style="display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:middle;background:'+(_live>0?'var(--ok-3)':'#c0453b')+';margin-right:6px"></span>'+_live+' <small style="font-size:12px;color:var(--grey-2);font-weight:600">/ '+_cn.length+'</small>'))
+    +_tile('Live now', _loadingT?'—':('<span style="display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:middle;background:'+(_live>0?'var(--ok-3)':'var(--disp)')+';margin-right:6px"></span>'+_live+' <small style="font-size:12px;color:var(--grey-2);font-weight:600">/ '+_cn.length+'</small>'))
     +_tile('Last signal', _loadingT?'—':(_agoT||'—'))
     +'</div>';
   var conns=UI.acConns, list;

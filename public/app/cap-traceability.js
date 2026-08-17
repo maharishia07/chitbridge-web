@@ -91,8 +91,8 @@ function _traceChip(n, isTerm){
   var qty = (n.qty != null) ? (' · ' + esc(String(n.qty)) + esc(n.unit ? (' ' + n.unit) : '')) : '';
   var badge = n.is_origin ? '<span style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);background:var(--blue-tint-bg);border-radius:6px;padding:1px 5px;margin-left:6px">ORIGIN</span>'
             : (isTerm ? '<span style="font-size:var(--fs-1);font-weight:800;color:var(--disp-2);background:var(--danger-tint);border-radius:6px;padding:1px 5px;margin-left:6px">EXPOSED</span>' : '');
-  var bd = isTerm ? '#e6a79f' : (n.is_origin ? '#a9c6ef' : 'var(--line)');
-  var bg = isTerm ? '#fef6f5' : (n.is_origin ? '#f4f8fe' : '#fff');
+  var bd = isTerm ? 'var(--disp)' : (n.is_origin ? 'var(--blue-tint-bg)' : 'var(--line)');
+  var bg = isTerm ? 'var(--danger-tint)' : (n.is_origin ? 'var(--blue-tint-bg)' : '#fff');
   return '<span style="display:inline-flex;align-items:center;border:1px solid ' + bd + ';background:' + bg + ';border-radius:9px;padding:5px 9px;font-size:12px;margin:3px 5px 3px 0">'
     + '<b style="font-weight:700">' + label + '</b>' + qty
     + '<span style="color:var(--grey);font-family:monospace;font-size:var(--fs-1);margin-left:7px">' + _traceShort(n.chit_id) + '</span>' + badge + '</span>';
@@ -135,7 +135,7 @@ function _traceNode(n, isTerm){
   var badge = n.is_origin ? '<span style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);background:var(--blue-tint-bg);border-radius:6px;padding:1px 6px;margin-left:7px">ORIGIN</span>'
             : (isTerm ? '<span style="font-size:var(--fs-1);font-weight:800;color:var(--disp-2);background:var(--danger-tint);border-radius:6px;padding:1px 6px;margin-left:7px">EXPOSED</span>' : '');
   if (isRed) badge += '<span style="font-size:var(--fs-1);font-weight:800;color:var(--disp);background:#c0453b;border-radius:6px;padding:1px 6px;margin-left:7px">⚠ OUT &gt; IN</span>';
-  var dot = (isRed || isTerm) ? '#c0453b' : (n.is_origin ? 'var(--blue-2)' : '#8a94a3');
+  var dot = (isRed || isTerm) ? 'var(--disp)' : (n.is_origin ? 'var(--blue-2)' : 'var(--blue-2)');
   var balLine = isRed
     ? '<div style="font-size:var(--fs-1);color:var(--disp-2);font-weight:700;margin-left:17px;margin-top:2px">claimed ' + _traceQ(bal.out) + ' out, received ' + _traceQ(bal.in) + ' in — <u>' + _traceQ(bal.delta) + ' ' + esc(bal.base_unit || '') + ' unaccounted</u></div>'
     : '';

@@ -195,7 +195,7 @@ function wlRow(r, ctx, depth){
    */
   var qty = esc([r.quantity, r.unit].filter(function(x){ return x != null && x !== ''; }).join(' '));
   if (r.delivered > 0 && r.left != null) {
-    qty = '<b style="color:' + (r.left === 0 ? '#3d7a4e' : '#b0641c') + '">'
+    qty = '<b style="color:' + (r.left === 0 ? 'var(--ok-2)' : 'var(--warn-2)') + '">'
       + (r.left === 0 ? 'all out' : esc(String(r.left)) + ' ' + esc(r.unit || '') + ' left')
       + '</b> <span style="color:var(--grey)">· ' + esc(String(r.delivered)) + ' of ' + esc(String(r.quantity)) + '</span>';
   }
@@ -391,7 +391,7 @@ var WLG = {
           label: function(k){ if (!k) return 'No date'; var l = wlDateLabel(k);
             return esc(l.text) + ' <span style="font-size:.86em;font-weight:600;color:' + (l.overdue ? 'var(--disp)' : 'var(--grey)') + '">· ' + l.rel + '</span>'; },
           last: function(k){ return !k; },
-          tone: function(k){ return (k && wlDateLabel(k).overdue) ? '#c0453b' : null; } },
+          tone: function(k){ return (k && wlDateLabel(k).overdue) ? 'var(--disp)' : null; } },
   /**
    * ⭐ THE PRODUCT — the dimension the quantity actually belongs to.
    *
@@ -503,7 +503,7 @@ function wlRender(rows, keys, depth, path){
     var caret = '<span style="display:inline-block;width:13px;color:var(--grey);font-size:var(--fs-1)">' + (isOpen ? '▾' : '▸') + '</span>';
     /* Every level carries its OWN roll-up: a breakdown that only totals at the top is a total, not a breakdown. */
     var head = depth === 0
-      ? wlHead(caret + (tone === '#c0453b' ? '⚠️ ' : '') + title, wlRollupText(rs), tone, id)
+      ? wlHead(caret + (tone === 'var(--disp)' ? '⚠️ ' : '') + title, wlRollupText(rs), tone, id)
       : '<div onclick="wlToggle(&quot;' + esc(id) + '&quot;)" style="cursor:pointer;padding:7px ' + (ind - 2) + 'px 2px ' + ind + 'px;'
         + 'display:flex;justify-content:space-between;align-items:baseline;gap:10px">'
         + '<span style="font-size:' + lv.size + ';font-weight:' + lv.weight + ';color:' + (tone || lv.color) + '">' + caret + title + '</span>'
@@ -823,7 +823,7 @@ function wlThreadSec(k, title, list, err, o){
   var out = wlSecHead(k, title,
     loading ? (WLL.tab === k ? 'checking…' : o.hint)
       : err ? 'could not read' : (n ? n + (n === 1 ? ' message' : ' messages') : 'none yet'),
-    err ? '#c0453b' : o.tone);
+    err ? 'var(--disp)' : o.tone);
   if (WLL.tab !== k) return out;
   out += '<div style="padding:2px 0 12px">';
   if (loading) out += '<div style="font-size:var(--fs-2);color:var(--grey)"><span class="spin"></span> checking…</div>';
@@ -912,7 +912,7 @@ function wlLineHTML(loading){
   var nEv = events.length + added.length;
   body += sec('hist', 'History',
     loading ? 'checking…' : WLL.failed ? 'could not read' : (nEv ? nEv + (nEv === 1 ? ' entry' : ' entries') : 'none yet'),
-    WLL.failed ? '#c0453b' : null);
+    WLL.failed ? 'var(--disp)' : null);
   if (WLL.tab === 'hist') {
     body += '<div style="padding:0 0 10px">';
     if (loading) body += '<div style="font-size:var(--fs-2);color:var(--grey)"><span class="spin"></span> checking for earlier entries…</div>';
@@ -937,7 +937,7 @@ function wlLineHTML(loading){
   }
 
   // ── ② RECORD A DELIVERY ──────────────────────────────────────────────────────────────────────────────────
-  body += sec('del', 'Add a delivery', over ? esc(String(over)) + ' ' + esc(r.unit || '') + ' over' : (left == null ? '' : esc(String(left)) + ' ' + esc(r.unit || '') + ' left'), over ? '#c0453b' : null);
+  body += sec('del', 'Add a delivery', over ? esc(String(over)) + ' ' + esc(r.unit || '') + ' over' : (left == null ? '' : esc(String(left)) + ' ' + esc(r.unit || '') + ' left'), over ? 'var(--disp)' : null);
   if (WLL.tab === 'del') {
     /**
      * ⚠️ ONE BIG FIELD, AND THE UNIT INSIDE IT. The previous version squeezed the number box to a third of the
@@ -991,7 +991,7 @@ function wlLineHTML(loading){
      'Tue, 11 Aug' — two formats for one fact makes a reader stop and check whether they mean the same thing. */
   var whoHint = esc((r.who && r.who !== 'Unassigned') ? r.who : 'unassigned')
     + (r.due_date ? ' · ' + esc(wlDateLabel(r.due_date).text) : '');
-  body += sec('who', 'Who and when', done ? '✓ done' : whoHint, done ? '#3d7a4e' : null);
+  body += sec('who', 'Who and when', done ? '✓ done' : whoHint, done ? 'var(--ok-2)' : null);
   if (WLL.tab === 'who') {
     /**
      * ⚠️ THE CURRENT HOLDER IS ALWAYS AN OPTION, even if the actor list did not load. Without this the select
@@ -1051,7 +1051,7 @@ function wlLineHTML(loading){
     /* ⚠️ STATED AS A CONSEQUENCE, NOT A CATEGORY. "External" is a word about our data model; "they will see
        this" is the thing the person is actually deciding. */
     foot: '📤 The other party sees this, on their own copy. It cannot be unsent — a correction is another message.',
-    tone: '#b0641c',
+    tone: 'var(--warn-2)',
   });
 
   /* ── what was asked for: always shown when it exists, never behind a heading ─────────────────────────────

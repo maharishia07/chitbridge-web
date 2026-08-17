@@ -586,7 +586,7 @@ function c2PaneWork(d){
       },
       /* Undated last: it is the only work nobody is waiting for on a particular day. */
       sort: function(x, y){ if (!x) return 1; if (!y) return -1; return x.localeCompare(y); },
-      tone: function(k){ return (k && c2DueBucket(k).label === 'Overdue') ? '#c0453b' : null; },
+      tone: function(k){ return (k && c2DueBucket(k).label === 'Overdue') ? 'var(--disp)' : null; },
     },
   };
 
@@ -599,7 +599,7 @@ function c2PaneWork(d){
       var n = buckets[k].length;
       var roll = c2RollupText(buckets[k], asg, prog);
       var head = depth === 0
-        ? c2GrpBig((g.tone(k) === '#c0453b' ? '⚠️ ' : '') + g.label(k), roll, g.tone(k))
+        ? c2GrpBig((g.tone(k) === 'var(--disp)' ? '⚠️ ' : '') + g.label(k), roll, g.tone(k))
         /* A nested heading is a sub-heading — quieter, or the two compete and neither reads as the grouping.
            It still carries its own roll-up: a breakdown that only totals at the top is a total, not a breakdown. */
         : '<div style="padding:6px 16px 2px;display:flex;justify-content:space-between;align-items:baseline">'

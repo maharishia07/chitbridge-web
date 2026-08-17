@@ -538,7 +538,7 @@
       : String(n));
   }
   function accent(ns) { return opt(ns, 'accent', 'var(--blue)'); }
-  function soft(ns) { return opt(ns, 'soft', '#eef4ff'); }
+  function soft(ns) { return opt(ns, 'soft', 'var(--blue-tint-bg)'); }
 
   /**
    * The cart control. THE WHOLE THING OPENS THE CART — bag, badge and total alike; a 12px link is not a tap target.

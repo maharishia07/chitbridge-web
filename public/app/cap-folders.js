@@ -436,7 +436,7 @@ function _groupSumPane(){
 
 /* ── metrics ──────────────────────────────────────────────────────────────────────────────────────────────────── */
 function _mBox(label, value, hint, tone){
-  var col = tone === 'bad' ? '#c0453b' : tone === 'warn' ? 'var(--warn-2)' : 'var(--ink)';
+  var col = tone === 'bad' ? 'var(--disp)' : tone === 'warn' ? 'var(--warn-2)' : 'var(--ink)';
   return '<div style="flex:1;min-width:104px;border:1px solid var(--line);border-radius:9px;padding:10px 12px;background:var(--card)">'
     + '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey)">' + esc(label) + '</div>'
     + '<div style="font-size:19px;font-weight:800;margin-top:3px;color:' + col + '">' + esc(String(value)) + '</div>'
