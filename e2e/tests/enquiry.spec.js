@@ -139,4 +139,21 @@ test.describe('Product enquiry · the question reaches the seller and nobody els
       body: { message_text: '   ' } });
     expect(r.status, 'whitespace is not a question').toBe(400);
   });
+
+  /**
+   * ⚠️ CLEAN UP AFTER YOURSELF ON A SHARED FIXTURE — a critic-pass finding on my own spec.
+   *
+   * The seller here is `alpha`, which currency-matrix and mode-survives-order also use. Adding a product to it
+   * on every single run grows a fixture other specs depend on, for ever, and the cost lands on whichever of
+   * them asserts something size-sensitive first — which is precisely the shared-account drift already recorded
+   * in this repo, created by me while writing a test about isolation.
+   *
+   * ⚠️ Deliberately NOT in an afterAll: a failing run should leave its evidence in place to be looked at. This
+   * runs as the last STEP, so it happens on a green run and is skipped on a red one.
+   */
+  test('[ENQ-99] cleanup — remove the product this run added to the shared seller', async () => {
+    const r = await api(`/api/products/${itemId}`, { method: 'DELETE', token: seller });
+    expect([200, 204, 404].includes(r.status),
+      `the run's product must not be left on the shared fixture, got ${r.status}`).toBe(true);
+  });
 });

@@ -3102,10 +3102,27 @@ var CBI18N = {
         'nav.task': 'कार्य', 'nav.order': 'ऑर्डर', 'nav.messages': 'संदेश', 'nav.drafts': 'ड्राफ़्ट', 'nav.archive': 'संग्रह', 'nav.trash': 'रद्दी' },
 };
 function cbLang(){ try{ return localStorage.getItem('cb_lang') || 'en'; }catch(_){ return 'en'; } }
+/**
+ * ⚠️ I WROTE THIS AS A BARE renderApp() AND IT IS THE SAME BUG I SPENT THE NIGHT FIXING.
+ *
+ * renderApp rebuilds the shell, and the shell template carries an empty #modalhost — so switching language with
+ * Compose open would have deleted the draft. The avatar menu is reachable from anywhere, including from behind
+ * an open dialog, so this is not a theoretical path.
+ *
+ * ⚠️ bgRenderApp IS NOT THE ANSWER EITHER: it would silently do nothing, and a picker that visibly does nothing
+ * when clicked is its own bug. So the language is PERSISTED either way and the repaint waits — the rail comes
+ * back translated the moment the modal closes and the next real render happens, and nothing is lost meanwhile.
+ */
 function cbSetLang(code){
   if(!CBI18N[code]) return;
   try{ localStorage.setItem('cb_lang', code); }catch(_){}
   document.documentElement.setAttribute('lang', code);
+  var mh = document.getElementById('modalhost');
+  var lbh = document.getElementById('lbhost');
+  if ((mh && mh.innerHTML.trim()) || (lbh && lbh.innerHTML.trim())) {
+    if (typeof toast === 'function') toast('Language set — the app switches when you close this.');
+    return;
+  }
   renderApp();
 }
 /** t(key, english) — the English is the fallback, never a key name on screen. See the note above. */
