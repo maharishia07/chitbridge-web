@@ -2640,44 +2640,44 @@ function themePaletteHTML(){
   var DARK = { dark: 1, slate: 1 };
   var card = function(k){
     var t = THEMES[k], on = (k === cur);
-    return '<button type="button" data-testid="theme-' + k + '" onclick="themeSet(' + "'" + '" + k + "' + "'" + ')"'
-      + ' aria-pressed="' + (on ? 'true' : 'false') + '"'
-      + ' style="' + themeVarsStyle(k) + ';all:unset;box-sizing:border-box;cursor:pointer;display:block;'
-      + 'border-radius:12px;overflow:hidden;border:2px solid ' + (on ? 'var(--blue)' : 'var(--line)') + ';'
-      + 'box-shadow:' + (on ? '0 0 0 3px var(--blue-tint-bg)' : 'none') + '">'
-      /* the page */
-      + '<div style="background:var(--paper);color:var(--on-bg);padding:9px 9px 10px">'
-      /* a panel on it */
-      +   '<div style="background:var(--card);color:var(--on-card);border:1px solid var(--line);border-radius:8px;padding:7px 8px">'
-      +     '<div style="display:flex;align-items:center;gap:5px">'
-      +       '<span style="width:22px;height:5px;border-radius:3px;background:var(--blue);flex:0 0 auto"></span>'
-      +       '<span style="height:5px;border-radius:3px;background:var(--ink);opacity:.75;flex:1"></span>'
-      +     '</div>'
-      +     '<div style="display:flex;align-items:center;gap:4px;margin-top:6px">'
-      +       '<span style="font-size:9px;font-weight:800;background:var(--blue);color:var(--on-accent);'
-      +            'border-radius:4px;padding:1px 5px">Aa</span>'
-      +       '<span style="font-size:9px;font-weight:700;background:var(--ok-tint);color:var(--ok-2);'
-      +            'border-radius:4px;padding:1px 5px">ok</span>'
-      +       '<span style="font-size:9px;font-weight:700;background:var(--danger-tint);color:var(--disp);'
-      +            'border-radius:4px;padding:1px 5px">!</span>'
-      +     '</div>'
-      +   '</div>'
-      + '</div>'
-      /* its name, on its own chrome — so the rail colour is visible too */
-      + '<div style="background:var(--chrome);color:var(--chrome-on);font-size:11px;font-weight:700;'
-      +      'padding:5px 9px;display:flex;align-items:center;justify-content:space-between">'
-      +   '<span>' + esc(t.name) + '</span>' + (on ? '<span>✓</span>' : '')
-      + '</div></button>';
+    /* ⚠️ THE QUOTE IS BUILT, NOT TYPED. My first version wrote this onclick by concatenating quote characters
+       inline and emitted `themeSet('" + k + "')` LITERALLY — so every card called themeSet with a garbage
+       string, themeSet found no such theme, returned early, and clicking a swatch did nothing at all. It looked
+       like a dead button and was a quoting mistake. */
+    var click = "themeSet(" + Q + k + Q + ")";
+    return "<button type=\"button\" data-testid=\"theme-" + k
+      + "\" onclick=\"" + click
+      + "\" aria-pressed=\"" + (on ? "true" : "false")
+      + "\" style=\"" + themeVarsStyle(k)
+      + ";box-sizing:border-box;cursor:pointer;display:block;padding:0;font:inherit;text-align:left;border-radius:9px;overflow:hidden;background:var(--card);color:var(--on-card);border:2px solid "
+      + (on ? "var(--blue)" : "var(--line)")
+      + "\">"
+      /* the page, with a panel on it — small, because this is a menu and not a gallery */
+      + "<div style=\"background:var(--paper);color:var(--on-bg);padding:6px\">"
+      + "<div style=\"background:var(--card);color:var(--on-card);border:1px solid var(--line);border-radius:5px;padding:5px 6px\">"
+      + "<div style=\"display:flex;align-items:center;gap:4px\">"
+      + "<span style=\"width:16px;height:4px;border-radius:2px;background:var(--blue);flex:0 0 auto\"></span>"
+      + "<span style=\"height:4px;border-radius:2px;background:var(--ink);opacity:.7;flex:1\"></span></div>"
+      + "<div style=\"display:flex;gap:3px;margin-top:5px\">"
+      + "<span style=\"font-size:8px;font-weight:800;background:var(--blue);color:var(--on-accent);border-radius:3px;padding:0 4px\">Aa</span>"
+      + "<span style=\"font-size:8px;font-weight:700;background:var(--ok-tint);color:var(--ok-2);border-radius:3px;padding:0 4px\">ok</span>"
+      + "<span style=\"font-size:8px;font-weight:700;background:var(--danger-tint);color:var(--disp);border-radius:3px;padding:0 4px\">!</span>"
+      + "</div></div></div>"
+      /* the name on its own chrome, so the rail colour shows too */
+      + "<div style=\"background:var(--chrome);color:var(--chrome-on);font-size:10px;font-weight:700;padding:3px 7px;display:flex;align-items:center;justify-content:space-between\"><span>"
+      + esc(t.name)
+      + (on ? "</span><span>✓</span>" : "</span>")
+      + "</div></button>";
   };
   var grid = function(keys){
-    return '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:9px">'
-      + keys.map(card).join('') + '</div>';
+    /* 92px minimum: three across in the open menu. Athi, 2026-08-18: "look and feel is too big for theme, maybe
+       we have to optimise" — a palette in a dropdown has to stay a menu, not become a gallery. */
+    return "<div style=\"display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:6px\">" + keys.map(card).join("") + "</div>";
   };
+  var head = function(x){ return "<div style=\"font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin:2px 0 5px\">" + x + "</div>"; };
   var light = Object.keys(THEMES).filter(function(k){ return !DARK[k]; });
   var dark  = Object.keys(THEMES).filter(function(k){ return DARK[k]; });
-  var head = function(x){ return '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;'
-    + 'text-transform:uppercase;color:var(--grey);margin:2px 0 7px">' + x + '</div>'; };
-  return head('Light') + grid(light) + '<div style="height:14px"></div>' + head('Dark') + grid(dark);
+  return head("Light") + grid(light) + "<div style=\"height:10px\"></div>" + head("Dark") + grid(dark);
 }
 
 /**
@@ -2752,8 +2752,11 @@ const MENUS = {
      */
     /* ⭐ REPLIES sits with Task and Order because it is the same kind of thing — a place where work arrives from
        outside. Athi: *"can we bring external new messages under rail?"* */
-    ["Rail", [["task","📥","Task",""],["order","📤","Order",""],["messages","💬","Messages",""],["drafts","📝","Drafts",""],["archive","🗄️","Archive",""],["trash","🗑️","Trash",""]]],
-    ["Work",    [["worklist","🧰","Everyone's work"],["intake","📨","Intake"],["disputes","⚖️","Disputes"]]],
+    ["Rail", [["task","📥","Task",""],["order","📤","Order",""],["drafts","📝","Drafts",""],["archive","🗄️","Archive",""],["trash","🗑️","Trash",""]]],
+    /* ⚠️ MESSAGES MOVED OUT OF THE RAIL (Athi, 2026-08-18: *"messages can come under work in the panel rather
+       than rail"*). The RAIL is the chit lifecycle — task, order, drafts, archive, trash: places a CHIT is. A
+       message is not a place a chit sits, it is work someone has to do about one, which is what this group is. */
+    ["Work",    [["messages","💬","Messages"],["worklist","🧰","Everyone's work"],["intake","📨","Intake"],["disputes","⚖️","Disputes"]]],
     /* ⭐ CATEGORIES SITS NEXT TO CATALOGUE, not inside Definitions (Athi, 2026-08-16: *"bring the category as a
        panel next to catalogue"*). It is where you shape the shelf, so it belongs beside the shelf — Definitions
        still LISTS categories, but authoring now has one home and Definitions points at it. */
@@ -2796,8 +2799,8 @@ const MENUS = {
    * Customers, MIS, Co-assists and the rest stay out — that is the level-of-access half, and it is unchanged.
    */
   actor:{ lead:["compose","✉️","Compose"], groups:[
-    ["Rail", [["task","📥","Task",""],["order","📤","Order",""],["messages","💬","Messages",""],["drafts","📝","Drafts",""],["archive","🗄️","Archive",""],["trash","🗑️","Trash",""]]],
-    ["Work", [["worklist","🧰","My work"]]],
+    ["Rail", [["task","📥","Task",""],["order","📤","Order",""],["drafts","📝","Drafts",""],["archive","🗄️","Archive",""],["trash","🗑️","Trash",""]]],
+    ["Work", [["messages","💬","Messages"],["worklist","🧰","My work"]]],
     ["Business", [["suppliers","🏭","Suppliers"]]],
   ], tag:"Commerce yes, structure no."},
   customer:{top:[["order","📤","My orders",""]], rest:[["shops","🏬","Find a shop"]], tag:"You see only your orders."},
