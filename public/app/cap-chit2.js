@@ -203,7 +203,7 @@ function c2PaneOrd(d){
                   customer_clarified: 'customer changed it', rate_agreed: 'rate agreed' }[e.reason_code] || 'removed';
       return '<div style="padding:11px 16px;border-bottom:1px solid var(--line);opacity:.55">'
         + '<s>' + esc(l.particulars || '') + ' · ' + esc(c2q(l)) + '</s>'
-        + '<span style="margin-left:8px;font-size:var(--fs-1);font-weight:700;color:#8a5a1e;background:#faf3dd;border-radius:5px;padding:1px 6px">' + esc(why) + '</span></div>';
+        + '<span style="margin-left:8px;font-size:var(--fs-1);font-weight:700;color:var(--warn-2);background:#faf3dd;border-radius:5px;padding:1px 6px">' + esc(why) + '</span></div>';
     }
     var was = (e.history || []).slice(0, 1).map(function(h){
       return '<s style="color:var(--grey);margin-right:6px">' + esc([h.particulars, h.quantity, h.unit].filter(Boolean).join(' ')) + '</s>';
@@ -243,7 +243,7 @@ function c2PaneOrd(d){
       + '</span></div>'
       + '<div style="margin-top:3px;font-size:13.5px;color:var(--ink-2,#6b665e);font-variant-numeric:tabular-nums">' + was + esc(c2q(l)) + (l.price != null ? ' × ' + c2Money(l.price) : '') + '</div>'
       + (l.comment ? '<div style="margin-top:5px;font-size:var(--fs-2);color:#2c5d7c;background:#eef4f8;border-radius:5px;padding:4px 8px;display:inline-block">' + esc(l.comment) + '</div>' : '')
-      + (l.qty_unverified ? '<div style="margin-top:5px;font-size:var(--fs-1);color:#8a5a1e">⚠️ this number does not appear in their message — check it</div>' : '')
+      + (l.qty_unverified ? '<div style="margin-top:5px;font-size:var(--fs-1);color:var(--warn-2)">⚠️ this number does not appear in their message — check it</div>' : '')
       /* ⚠️ REJECTED IS LOUDER THAN UNVERIFIED, because it is a stronger claim: the quantity was compared against
          THIS line's own words and disagreed, so it was nulled rather than shown. */
       + (l.qty_rejected ? '<div style="margin-top:5px;font-size:var(--fs-1);color:#c0453b">⚠️ quantity rejected — ' + esc(l.qty_rejected) + '. Fix it on the line.</div>' : '')
@@ -757,7 +757,7 @@ function c2PaneCost(d){
       + '<div style="display:flex;justify-content:space-between;padding-top:7px;margin-top:4px;border-top:1px solid var(--line);font-weight:600">'
       + '<span>Margin</span><span style="color:' + ((c.margin || 0) < 0 ? '#c0453b' : '#2f6b4f') + '">' + c2Money(c.margin)
       + (c.margin_pct == null ? '' : ' · ' + c.margin_pct + '%') + '</span></div>'
-      + (c.mixed_currency ? '<div style="font-size:var(--fs-1);color:#8a5a1e;margin-top:4px">⚠️ more than one currency — these are not added together</div>' : '')
+      + (c.mixed_currency ? '<div style="font-size:var(--fs-1);color:var(--warn-2);margin-top:4px">⚠️ more than one currency — these are not added together</div>' : '')
       + '</div>';
   }
 

@@ -37,7 +37,7 @@ async function loadFolders(){
 function _folderTree(parentId, depth){
   var kids=(UI.folders||[]).filter(function(f){ return (f.parent_id||null)===(parentId||null); });
   return kids.map(function(f){ var sel=UI.folderSel===f.folder_id;
-    return '<div style="display:flex;align-items:center;gap:6px;padding:6px 8px;padding-left:'+(8+depth*15)+'px;border-radius:9px;cursor:pointer;font-size:var(--fs-2);'+(sel?'background:#eef4fc;color:#2c5aa0;font-weight:700':'color:#3a4048')+'" onclick="selectFolder(\''+f.folder_id+'\')">📁 '+esc(f.name)+'<span style="margin-left:auto;font-size:var(--fs-1);color:var(--grey)">'+(f.count||0)+'</span></div>'+_folderTree(f.folder_id, depth+1);
+    return '<div style="display:flex;align-items:center;gap:6px;padding:6px 8px;padding-left:'+(8+depth*15)+'px;border-radius:9px;cursor:pointer;font-size:var(--fs-2);'+(sel?'background:#eef4fc;color:var(--blue-2);font-weight:700':'color:var(--ink-2)')+'" onclick="selectFolder(\''+f.folder_id+'\')">📁 '+esc(f.name)+'<span style="margin-left:auto;font-size:var(--fs-1);color:var(--grey)">'+(f.count||0)+'</span></div>'+_folderTree(f.folder_id, depth+1);
   }).join('');
 }
 function foldersScreen(){
@@ -82,7 +82,7 @@ function _folderView(){
     var line2 = isDev ? ('🛰️ '+esc(bj.sub_type||bj.signal||'signal')+((bj.value!=null&&bj.value!=='')?(' = '+esc(String(bj.value))+esc(bj.unit||'')):'')+' · raised by <b>'+raiser+'</b>') : ('from '+esc(c.sender_entity_display_name||raiser));
     var when=(typeof fmtAt==='function'?esc(fmtAt(c.created_at)):'');
     var openA=(typeof openChit==='function')?('openChit(\''+c.chit_id+'\')'):'';
-    return '<div style="display:flex;gap:11px;padding:12px 18px;border-bottom:1px solid #f0f2f4;cursor:pointer" onclick="'+openA+'"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13.5px">'+(isDev?'🛢️ ':'')+subj+'</div><div style="font-size:11.5px;color:var(--grey);margin-top:2px">'+line2+'</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex:0 0 auto"><span style="font-size:var(--fs-1);color:var(--grey)">'+when+'</span><span style="font-size:var(--fs-1);color:var(--blue);border:1px solid #cfe0f4;background:#f2f7fd;border-radius:9px;padding:2px 8px" onclick="event.stopPropagation();moveChit(\''+c.chit_id+'\')">📁 Move</span></div></div>';
+    return '<div style="display:flex;gap:11px;padding:12px 18px;border-bottom:1px solid #f0f2f4;cursor:pointer" onclick="'+openA+'"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13.5px">'+(isDev?'🛢️ ':'')+subj+'</div><div style="font-size:11.5px;color:var(--grey);margin-top:2px">'+line2+'</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex:0 0 auto"><span style="font-size:var(--fs-1);color:var(--grey)">'+when+'</span><span style="font-size:var(--fs-1);color:var(--blue);border:1px solid var(--blue-tint-line);background:#f2f7fd;border-radius:9px;padding:2px 8px" onclick="event.stopPropagation();moveChit(\''+c.chit_id+'\')">📁 Move</span></div></div>';
   }).join('');
   // The chit list is now ONE of three panes; metrics and rules render themselves.
   if(_FLD.tab==='metrics') return head+_folderMetricsPane();
@@ -93,7 +93,7 @@ function _folderView(){
 function _ftab(k,label){
   var on=(_FLD.tab||'chits')===k;
   return '<span data-testid="folder-tab-'+k+'" onclick="setFolderTab(\''+k+'\')" style="cursor:pointer;font-size:12px;font-weight:700;padding:5px 13px;border-radius:16px;'
-    +(on?'background:var(--ink);color:#fff':'border:1px solid var(--line);color:#586069')+'">'+label+'</span>';
+    +(on?'background:var(--chrome);color:#fff':'border:1px solid var(--line);color:#586069')+'">'+label+'</span>';
 }
 function newFolder(){
   promptAsk('New folder', { label:'Folder name', placeholder:'e.g. Awaiting payment', okLabel:'Create' },
@@ -319,7 +319,7 @@ function _gsMoney(v, mixed){
   if (!v || !v.length) return '<span style="color:var(--grey)">—</span>';
   /* ⚠️ SIDE BY SIDE, NEVER SUMMED. A figure spanning two currencies means nothing, most convincingly when tidy. */
   return v.map(function(x){ return '<b>' + esc(x.currency) + ' ' + esc(String(x.total)) + '</b>'; }).join('<span style="color:var(--grey)"> + </span>')
-    + (mixed ? '<div style="font-size:var(--fs-1);color:#8a5a1e">not added together</div>' : '');
+    + (mixed ? '<div style="font-size:var(--fs-1);color:var(--warn-2)">not added together</div>' : '');
 }
 function _groupSumPane(){
   if (_FLD.busy && !_FLD.gs) return '<div style="padding:18px;color:var(--grey);font-size:var(--fs-2)"><span class="spin"></span> adding it up…</div>';
@@ -340,7 +340,7 @@ function _groupSumPane(){
       + '⚠️ <b>Your selection was ignored.</b> This server does not support totalling a ticked set yet, so the figures below are for the <b>whole track</b>, not your ' + _FLD.gsIds.length + ' chits.</div>';
   } else if (g.selected) {
     var miss = (g.selection_requested || 0) - (g.chits || 0);
-    out += '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:8px 11px;font-size:11.5px;color:#6b5a36;margin-bottom:10px">'
+    out += '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:8px 11px;font-size:11.5px;color:var(--warn-3);margin-bottom:10px">'
       + '☑ <b>' + (g.chits || 0) + ' ticked chit' + ((g.chits === 1) ? '' : 's') + '</b> — not this folder or the whole track.'
       + (miss > 0 ? ' ⚠️ ' + miss + ' of the ' + g.selection_requested + ' you ticked are not on this track and were left out.' : '')
       + '</div>';
@@ -354,8 +354,8 @@ function _groupSumPane(){
   out += '<div style="font-size:11.5px;color:var(--grey);margin-bottom:10px">'
     + '<b style="color:var(--ink)">' + g.chits + '</b> chit' + (g.chits === 1 ? '' : 's')
     + ' · <b style="color:var(--ink)">' + g.chits_with_lines + '</b> carry line items'
-    + (g.chits_without_lines ? ' · <span style="color:#8a5a1e">' + g.chits_without_lines + ' have none and contribute nothing</span>' : '')
-    + (g.has_catalogue ? '' : '<div style="color:#8a5a1e;margin-top:3px">⚠️ No catalogue on this entity — items are grouped by the words used, so two spellings of the same thing stay apart.</div>')
+    + (g.chits_without_lines ? ' · <span style="color:var(--warn-2)">' + g.chits_without_lines + ' have none and contribute nothing</span>' : '')
+    + (g.has_catalogue ? '' : '<div style="color:var(--warn-2);margin-top:3px">⚠️ No catalogue on this entity — items are grouped by the words used, so two spellings of the same thing stay apart.</div>')
     + '</div>';
 
   var req = g.requirement || [];
@@ -401,7 +401,7 @@ function _groupSumPane(){
               + '<span style="width:74px"></span></div>';
           }).join('')
         + '</div>' : '';
-      var partial = (open && l.value_partial) ? '<div style="font-size:var(--fs-1);color:#8a5a1e;padding:0 0 8px 16px">⚠️ ' + l.value_partial.unpriced + ' of ' + (l.value_partial.priced + l.value_partial.unpriced) + ' have no price yet — the cost above is the priced part only, <b>not</b> the cost of this line.</div>' : '';
+      var partial = (open && l.value_partial) ? '<div style="font-size:var(--fs-1);color:var(--warn-2);padding:0 0 8px 16px">⚠️ ' + l.value_partial.unpriced + ' of ' + (l.value_partial.priced + l.value_partial.unpriced) + ' have no price yet — the cost above is the priced part only, <b>not</b> the cost of this line.</div>' : '';
       var split = l.unit_split ? '<div style="font-size:var(--fs-1);color:#c0453b;padding:0 0 8px 16px">⚠️ ' + esc(l.flagged || 'unit split') + ' — ' + l.unit_split.map(function(u){ return esc(u.qty + ' ' + u.unit); }).join(' + ') + '</div>' : '';
       return head + rows + partial + split;
     }).join('');
@@ -419,7 +419,7 @@ function _groupSumPane(){
   ];
   blocks.forEach(function(bk){
     var arr = bk[2] || []; if (!arr.length) return;
-    out += '<div style="margin-top:12px"><div style="font-size:var(--fs-1);font-weight:800;color:#8a5a1e;margin-bottom:3px">' + bk[1] + ' (' + arr.length + ')</div>'
+    out += '<div style="margin-top:12px"><div style="font-size:var(--fs-1);font-weight:800;color:var(--warn-2);margin-bottom:3px">' + bk[1] + ' (' + arr.length + ')</div>'
       + arr.slice(0, 25).map(function(x){ return '<div style="font-size:11.5px;color:var(--grey);padding:2px 0">· ' + bk[3](x) + '</div>'; }).join('')
       + (arr.length > 25 ? '<div style="font-size:var(--fs-1);color:var(--grey)">…and ' + (arr.length - 25) + ' more</div>' : '') + '</div>';
   });
@@ -436,7 +436,7 @@ function _groupSumPane(){
 
 /* ── metrics ──────────────────────────────────────────────────────────────────────────────────────────────────── */
 function _mBox(label, value, hint, tone){
-  var col = tone === 'bad' ? '#c0453b' : tone === 'warn' ? '#8a5a1e' : 'var(--ink)';
+  var col = tone === 'bad' ? '#c0453b' : tone === 'warn' ? 'var(--warn-2)' : 'var(--ink)';
   return '<div style="flex:1;min-width:104px;border:1px solid var(--line);border-radius:9px;padding:10px 12px;background:var(--card)">'
     + '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey)">' + esc(label) + '</div>'
     + '<div style="font-size:19px;font-weight:800;margin-top:3px;color:' + col + '">' + esc(String(value)) + '</div>'
@@ -461,7 +461,7 @@ function _reconStrip(){
     .sort(function(a, b){ return (b.tree || b.own) - (a.tree || a.own); });
   var sums = '<b>' + r.total + '</b> total &nbsp;=&nbsp; <b>' + r.unfiled + '</b> unfiled &nbsp;+&nbsp; <b>' + r.filed + '</b> in folders';
   var verdict = r.reconciles
-    ? '<span style="color:#2f8f5b;font-weight:800">✓ adds up</span>'
+    ? '<span style="color:var(--ok-3);font-weight:800">✓ adds up</span>'
     : '<span style="color:#c0453b;font-weight:800">✗ ' + Math.abs(((r.discrepancy || {}).missing) || 0) + ' unaccounted for</span>';
   /* ⚠️ `own` AND `tree` BOTH, never one. A parent showing only its own rows makes the tree look smaller than its
      branches; showing only the roll-up makes a parent look full when everything is actually one level down. */
@@ -493,7 +493,7 @@ function _folderMetricsPane(){
     ? (mo.by_currency || []).map(function(b){ return '<span style="display:inline-block;border:1px solid var(--line);border-radius:9px;padding:3px 9px;margin:0 6px 6px 0;font-size:12px"><b>' + esc(b.currency) + '</b> ' + esc(String(b.total)) + ' <span style="color:var(--grey)">· ' + b.chits + ' chit' + (b.chits === 1 ? '' : 's') + '</span></span>'; }).join('')
     : '<span style="font-size:12px;color:var(--grey)">nothing with an agreed value</span>';
   /* ⚠️ NEVER ONE TOTAL ACROSS CURRENCIES, and the reason is said on screen rather than left as a design note. */
-  var moneyNote = (mo.mixed ? '<div style="font-size:var(--fs-1);color:#8a5a1e;margin-top:2px">⚠️ More than one currency — these are <b>not</b> added together. A single total across currencies is a number that means nothing.</div>' : '')
+  var moneyNote = (mo.mixed ? '<div style="font-size:var(--fs-1);color:var(--warn-2);margin-top:2px">⚠️ More than one currency — these are <b>not</b> added together. A single total across currencies is a number that means nothing.</div>' : '')
     + (((mo.excluded || {}).awaiting_agreement) ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">' + mo.excluded.awaiting_agreement + ' chit(s) have no agreed value yet and are excluded — they are not counted as zero.</div>' : '');
 
   return '<div style="padding:14px 18px">'
@@ -623,7 +623,7 @@ function _folderRulesPane(){
     + (rules.length > 1 ? ' They run <b>in the numbered order</b> and the first one that matches wins — the rest never see that chit. Use ↑ ↓ to change which rule gets first refusal.' : '')
     + '</div>';
 
-  if (_FLD.rulesNote) out += '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;font-size:11.5px;color:#6b5a36;margin-bottom:9px">' + esc(_FLD.rulesNote) + '</div>';
+  if (_FLD.rulesNote) out += '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;font-size:11.5px;color:var(--warn-3);margin-bottom:9px">' + esc(_FLD.rulesNote) + '</div>';
   if (_FLD.err) out += '<div style="color:#c0453b;font-size:12px;margin-bottom:8px">' + esc(_FLD.err) + '</div>';
 
   out += rules.length ? rules.map(function(r, i){ return _ruleRow(r, i, rules.length); }).join('') : '<div style="color:var(--grey);font-size:var(--fs-2);padding:6px 0 12px">No rules yet. Everything arrives unfiled until you add one.</div>';
@@ -662,7 +662,7 @@ function _folderRulesPane(){
         + (p.matched ? '<div style="margin-top:5px">' + p.sample.map(function(s){
             return '<div style="font-size:11.5px;padding:3px 0;border-top:1px solid #f0f2f4"><b>' + esc(s.subject || '(no subject)') + '</b> <span style="color:var(--grey)">· ' + esc(s.counterparty || '—') + ' · ' + esc(String(s.created_at || '').slice(0, 10)) + '</span></div>'; }).join('')
           + (p.matched > p.sample.length ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">…and ' + (p.matched - p.sample.length) + ' more</div>' : '') + '</div>'
-          : '<div style="font-size:11.5px;color:#8a5a1e;margin-top:4px">⚠️ Nothing matched. A rule that catches nothing looks enabled and does nothing — check the term before saving.</div>')
+          : '<div style="font-size:11.5px;color:var(--warn-2);margin-top:4px">⚠️ Nothing matched. A rule that catches nothing looks enabled and does nothing — check the term before saving.</div>')
         + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">This is a preview only. Saving affects <b>new arrivals</b>; nothing already filed moves.</div></div>';
     }
     out += '</div>';

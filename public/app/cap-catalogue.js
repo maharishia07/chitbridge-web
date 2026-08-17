@@ -189,7 +189,7 @@ function catfFieldMapHTML(){
   var FS = (CBCatalogue.FIELD_STANDARDS || {}), GAPS = (CBCatalogue.FIELD_GAPS || []), CON = (CBCatalogue.FIELD_CONFLICTS || []);
   var keys = Object.keys(FS);
   if (!keys.length) return '';
-  var hdr = function(t, sub){ return '<div style="font-size:var(--fs-1);font-weight:800;color:#2c5aa0;letter-spacing:.05em;margin-top:18px;border-top:1px solid var(--line);padding-top:11px">' + esc(t)
+  var hdr = function(t, sub){ return '<div style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);letter-spacing:.05em;margin-top:18px;border-top:1px solid var(--line);padding-top:11px">' + esc(t)
     + (sub ? '<span style="font-weight:500;color:var(--grey);letter-spacing:0;text-transform:none"> — ' + esc(sub) + '</span>' : '') + '</div>'; };
   var cell = function(v){ return (!v || v === '—') ? '<span style="color:#c3c9cf">—</span>' : esc(v); };
   var rows = keys.map(function(k){
@@ -199,7 +199,7 @@ function catfFieldMapHTML(){
       + '<td style="padding:6px 8px 6px 0;font-weight:700;font-size:11.5px;white-space:nowrap;vertical-align:top">' + esc(k) + '</td>'
       + '<td style="padding:6px 8px;font-size:11.5px;vertical-align:top">' + cell(f.s) + '</td>'
       + '<td style="padding:6px 8px;font-size:11.5px;vertical-align:top">' + cell(f.m) + '</td>'
-      + '<td style="padding:6px 8px;font-size:11.5px;vertical-align:top;color:#2c5aa0">' + cell(f.o) + '</td>'
+      + '<td style="padding:6px 8px;font-size:11.5px;vertical-align:top;color:var(--blue-2)">' + cell(f.o) + '</td>'
       + '<td style="padding:6px 0 6px 8px;font-size:var(--fs-1);color:' + (warn ? '#8a6d1e' : 'var(--grey)') + ';line-height:1.45;vertical-align:top">' + esc(f.n || '') + '</td>'
       + '</tr>';
   }).join('');
@@ -218,19 +218,19 @@ function catfFieldMapHTML(){
     + CON.map(function(c){ return '<div style="padding:8px 0;border-bottom:1px dashed var(--line)">'
         + '<div style="font-size:11.5px;font-weight:700">' + esc(c.ours) + '</div>'
         + '<div style="font-size:11.5px;color:var(--grey);line-height:1.5;margin-top:2px">' + esc(c.issue) + '</div>'
-        + '<div style="font-size:var(--fs-1);color:#2c5aa0;margin-top:3px">standard: ' + esc(c.standard) + '</div>'
+        + '<div style="font-size:var(--fs-1);color:var(--blue-2);margin-top:3px">standard: ' + esc(c.standard) + '</div>'
         + '<div style="font-size:var(--fs-1);color:#8a6d1e;margin-top:2px">cost: ' + esc(c.cost) + '</div>'
         + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">fix: ' + esc(c.fix) + '</div></div>'; }).join('');
 }
 function catfStandardsModal(){
   var S = (CBCatalogue.STANDARDS || []);
-  var badge = function(st){ var c = st === 'in code' ? ['#2c7a43', '#e6f4ec'] : st === 'by reference' ? ['#2c5aa0', '#e8eef7'] : st === 'vocabulary' ? ['#6a4fa0', '#efeafa'] : ['#8a6d1e', '#f6efd8']; return '<span style="font-size:var(--fs-1);font-weight:700;color:' + c[0] + ';background:' + c[1] + ';border-radius:5px;padding:2px 7px;white-space:nowrap">' + esc(st) + '</span>'; };
+  var badge = function(st){ var c = st === 'in code' ? ['var(--ok-2)', '#e6f4ec'] : st === 'by reference' ? ['var(--blue-2)', '#e8eef7'] : st === 'vocabulary' ? ['#6a4fa0', '#efeafa'] : ['#8a6d1e', '#f6efd8']; return '<span style="font-size:var(--fs-1);font-weight:700;color:' + c[0] + ';background:' + c[1] + ';border-radius:5px;padding:2px 7px;white-space:nowrap">' + esc(st) + '</span>'; };
   var row = function(s){ return '<div style="padding:10px 0;border-bottom:1px solid var(--line)">'
     + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-size:13px;font-weight:700;color:#1c2128">' + esc(s.name) + '</span>' + badge(s.status) + '<span style="font-size:var(--fs-1);color:var(--grey)">' + esc(s.body) + '</span></div>'
     + '<div style="font-size:12px;color:var(--grey);margin-top:3px;line-height:1.5">' + esc(s.role) + '</div>'
-    + '<div style="font-size:var(--fs-1);color:#9aa3a7;margin-top:3px">' + (s.where && s.where !== '—' ? 'in: <code>' + esc(s.where) + '</code> · ' : '') + '<a href="' + esc(s.spec) + '" target="_blank" rel="noopener" style="color:#2c5aa0">spec ↗</a></div>'
+    + '<div style="font-size:var(--fs-1);color:var(--grey-4);margin-top:3px">' + (s.where && s.where !== '—' ? 'in: <code>' + esc(s.where) + '</code> · ' : '') + '<a href="' + esc(s.spec) + '" target="_blank" rel="noopener" style="color:var(--blue-2)">spec ↗</a></div>'
     + '</div>'; };
-  var grp = function(title, st){ var rows = S.filter(function(s){ return s.status === st; }); return rows.length ? '<div style="font-size:var(--fs-1);font-weight:800;color:#2c5aa0;letter-spacing:.05em;margin-top:14px">' + esc(title) + '</div>' + rows.map(row).join('') : ''; };
+  var grp = function(title, st){ var rows = S.filter(function(s){ return s.status === st; }); return rows.length ? '<div style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);letter-spacing:.05em;margin-top:14px">' + esc(title) + '</div>' + rows.map(row).join('') : ''; };
   var body = '<div style="padding:14px 18px;max-height:72vh;overflow:auto">'
     + '<div style="font-size:var(--fs-2);color:var(--grey);line-height:1.6">This catalogue is <b>not bespoke</b> — it is assembled from open, named standards. We arrange existing pieces our own way; the CB-unique layer (four-leg provenance · chit/seal · per-copy · governance) rides on top.</div>'
     + grp('IMPLEMENTED IN CODE', 'in code')
@@ -324,8 +324,8 @@ function catfPublishBlueprint(){
   api('catSourcePut', { body: body }).then(function(r){
     if (r && r.ok) {
       if (typeof toast === 'function') toast('Published as blueprint ✓');
-      if (typeof modal === 'function') modal('<div class="mhd"><div class="t">📢 Published as a blueprint</div></div><div class="mbody" style="padding:16px 18px"><div style="font-size:13px;color:#3a4048;line-height:1.6">Your catalogue is now an <b>adoptable blueprint</b>. In <b>another store</b>, open <b>🗂️ Catalogue → ⚙ Set up (new) → Blueprint</b> and pick:'
-        + '<div style="margin-top:8px;font-weight:700;color:#2c5aa0">' + esc(body.title) + '</div>'
+      if (typeof modal === 'function') modal('<div class="mhd"><div class="t">📢 Published as a blueprint</div></div><div class="mbody" style="padding:16px 18px"><div style="font-size:13px;color:var(--ink-2);line-height:1.6">Your catalogue is now an <b>adoptable blueprint</b>. In <b>another store</b>, open <b>🗂️ Catalogue → ⚙ Set up (new) → Blueprint</b> and pick:'
+        + '<div style="margin-top:8px;font-weight:700;color:var(--blue-2)">' + esc(body.title) + '</div>'
         + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">source <code>' + esc(source_key) + '</code> · ' + items.length + ' item(s)' + (f.vertical ? ' · ' + esc(f.vertical) : '') + '</div>'
         + '<div style="margin-top:10px">Each distributor sets its <b>own unit + price</b> (e.g. wholesale in <b>ton</b>, retail in <b>kg</b>) — the names &amp; design travel <b>by reference</b>, not copied.</div></div></div>', true);
     } else if (typeof toast === 'function') toast('Publish failed: ' + ((r && r.error) || 'unknown'));
@@ -401,7 +401,7 @@ function catfFillItem(){
     } });
   }
   window._catfSchema = schema;
-  var style = '<style>#cat_je > div > h3,#cat_je .je-object__title{font-size:13px;font-weight:700;margin:0}#cat_je label{display:block;font-size:var(--fs-1);color:#6a707a;font-weight:600;margin:9px 0 3px}#cat_je input[type=text],#cat_je input[type=number],#cat_je select,#cat_je textarea{width:100%;box-sizing:border-box;padding:7px 9px;border:1px solid var(--line);border-radius:6px;font-size:13px;background:var(--paper,#fff)}#cat_je .je-indented-panel{border:none;padding:0;margin:0}#cat_je p.je-object__title + *{margin-top:0}#cat_je .je-header{margin-bottom:2px}</style>';
+  var style = '<style>#cat_je > div > h3,#cat_je .je-object__title{font-size:13px;font-weight:700;margin:0}#cat_je label{display:block;font-size:var(--fs-1);color:var(--grey-2);font-weight:600;margin:9px 0 3px}#cat_je input[type=text],#cat_je input[type=number],#cat_je select,#cat_je textarea{width:100%;box-sizing:border-box;padding:7px 9px;border:1px solid var(--line);border-radius:6px;font-size:13px;background:var(--paper,#fff)}#cat_je .je-indented-panel{border:none;padding:0;margin:0}#cat_je p.je-object__title + *{margin-top:0}#cat_je .je-header{margin-bottom:2px}</style>';
   modal('<div class="mhd"><div class="t">Add an item</div></div><div class="mbody" style="padding:0"><div style="padding:14px 18px">' + style + '<div style="font-size:11.5px;color:var(--grey);margin-bottom:12px">Fill in the details for this item.</div><div id="cat_je" style="color:var(--grey);font-size:12px">…</div><div id="cat_je_out" style="margin-top:12px"></div><div style="display:flex;gap:8px;margin-top:16px;align-items:center"><button class="pri" onclick="catfCaptureItem()" style="padding:9px 16px">Save item</button><button onclick="closeModal()" style="padding:9px 16px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--grey)">Cancel</button><button data-testid="catg-new" onclick="catfNewCategory()" style="margin-left:auto;padding:9px 14px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--blue);font-weight:600">＋ New category</button></div></div></div>', true);
   _catfLoadJE().then(function(){
     setTimeout(function(){ var el = document.getElementById('cat_je'); if (!el) return; el.innerHTML = '';
@@ -410,9 +410,9 @@ function catfFillItem(){
            has to come back. A `setTimeout` in the caller would be guessing at when the editor exists; this is the
            one place that KNOWS, because it just built it. */
         if (window._catfPending) { try { window._catfJE.setValue(window._catfPending); } catch (e) {} window._catfPending = null; }
-      } catch (e) { el.innerHTML = '<div style="color:#a5382e;font-size:12px">json-editor failed: ' + esc(e.message) + '</div>'; }
+      } catch (e) { el.innerHTML = '<div style="color:var(--disp-2);font-size:12px">json-editor failed: ' + esc(e.message) + '</div>'; }
     }, 40);
-  }).catch(function(){ var el = document.getElementById('cat_je'); if (el) el.innerHTML = '<div style="color:#a5382e;font-size:12px">Could not load the json-editor library (/app/vendor/json-editor.min.js).</div>'; });
+  }).catch(function(){ var el = document.getElementById('cat_je'); if (el) el.innerHTML = '<div style="color:var(--disp-2);font-size:12px">Could not load the json-editor library (/app/vendor/json-editor.min.js).</div>'; });
 }
 /** ⭐ The second half of Athi's ask — *"create category should be there"* — without leaving the item form.
  *  What is already typed is carried through and the new category comes back selected. */
@@ -466,7 +466,7 @@ function catfCaptureItem(){
     return;
   }
   var out = document.getElementById('cat_je_out'); if (!out) return;   // draft preview → just show the JSON
-  out.innerHTML = '<div style="font-size:var(--fs-1);font-weight:800;color:#2c7a43;letter-spacing:.05em">CAPTURED ITEM — conforms to the schema</div>'
+  out.innerHTML = '<div style="font-size:var(--fs-1);font-weight:800;color:var(--ok-2);letter-spacing:.05em">CAPTURED ITEM — conforms to the schema</div>'
     + '<pre style="background:#0f1720;color:#d6e2f0;border-radius:9px;padding:10px 12px;font-size:var(--fs-1);overflow:auto;max-height:30vh;margin-top:6px;white-space:pre">' + esc(JSON.stringify(v, null, 2)) + '</pre>'
     + '<div style="font-size:var(--fs-1);color:var(--grey);font-style:italic;margin-top:4px">A real catalogue_item — this is the JSON that gets sealed onto the chit.</div>';
 }
@@ -574,7 +574,7 @@ function _cwRemaining(w){ var cov = _cwCovered(w); return _cwRequired(w).filter(
 
 function _catfWizard(){
   _cwInit(); var w = UI.cw, step = w.step;
-  var bar = '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:16px">' + CW_STEPS.map(function(s, i){ var n = i + 1, on = n === step, done = n < step; return '<span onclick="cwGo(' + n + ')" style="cursor:pointer;display:inline-flex;align-items:center;gap:5px;font-size:var(--fs-1);font-weight:600;color:' + (on ? '#2c5aa0' : done ? '#2c7a43' : 'var(--grey)') + '"><span style="width:19px;height:19px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:var(--fs-1);background:' + (on ? '#2c5aa0' : done ? '#2c7a43' : '#eef1f5') + ';color:' + (on || done ? '#fff' : 'var(--grey)') + '">' + (done ? '✓' : n) + '</span>' + esc(s) + '</span>' + (n < CW_STEPS.length ? '<span style="color:#c8d0d9">›</span>' : ''); }).join('') + '</div>';
+  var bar = '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:16px">' + CW_STEPS.map(function(s, i){ var n = i + 1, on = n === step, done = n < step; return '<span onclick="cwGo(' + n + ')" style="cursor:pointer;display:inline-flex;align-items:center;gap:5px;font-size:var(--fs-1);font-weight:600;color:' + (on ? 'var(--blue-2)' : done ? 'var(--ok-2)' : 'var(--grey)') + '"><span style="width:19px;height:19px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:var(--fs-1);background:' + (on ? 'var(--blue-2)' : done ? 'var(--ok-2)' : '#eef1f5') + ';color:' + (on || done ? '#fff' : 'var(--grey)') + '">' + (done ? '✓' : n) + '</span>' + esc(s) + '</span>' + (n < CW_STEPS.length ? '<span style="color:#c8d0d9">›</span>' : ''); }).join('') + '</div>';
   var raw = [null, _cwStep1, _cwStep2, _cwStep3, _cwStep4, _cwStep5, _cwStep6][step](w);
   var body = (step === 1 || step === 2) ? raw : _cwTwo(raw, _cwPreview(w));   // steps 1 & 2 own their two-panel; 3–6 get the running preview on the right
   var nav = '<div style="display:flex;gap:10px;margin-top:20px;align-items:center">'
@@ -590,11 +590,11 @@ function _cwPreview(w){
   var fields = _cwRequired(w), cov = _cwCovered(w);
   var items = (w.built && w.built.finishes || []).filter(function(it){ return w.chosen[it.name] !== false; });
   var title = (w.built && w.built.title) || (CATF_KB[w.vertical] && CATF_KB[w.vertical].product) || (w.purpose ? 'Your catalogue' : '—');
-  var head = '<div style="font-size:var(--fs-1);font-weight:800;color:#2c5aa0;letter-spacing:.05em">YOUR CATALOGUE SO FAR</div>'
+  var head = '<div style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);letter-spacing:.05em">YOUR CATALOGUE SO FAR</div>'
     + '<div style="margin-top:6px;font-size:var(--fs-2);font-weight:700">' + esc(title) + '</div>'
     + '<div style="font-size:var(--fs-1);color:var(--grey)">cart · ' + esc(_catfCcy()) + ' · sold by ' + esc(_cwUnitStr(w)) + (w.source ? ' · blueprint ' + esc(w.source) : '') + '</div>';
-  var fieldsHtml = fields.length ? '<div style="margin-top:11px;font-size:var(--fs-1);font-weight:700;color:#6a707a;text-transform:uppercase;letter-spacing:.04em">Fields</div>' + fields.map(function(f){ var src = cov[_cwNorm(f.name)]; var b = src === 'blueprint' ? ['📎 blueprint', '#6a44a8'] : src === 'erp' ? ['🔗 ERP', '#b07b1e'] : src === 'manual' ? ['✍ you', '#2c7a43'] : ['· to fill', '#9aa3a7']; return '<div style="display:flex;align-items:center;gap:6px;font-size:11.5px;padding:1px 0"><span style="flex:1;color:#3a4048">' + esc(f.name) + '</span><span style="font-size:var(--fs-1);font-weight:700;color:' + b[1] + ';background:' + b[1] + '18;border-radius:4px;padding:1px 6px">' + b[0] + '</span></div>'; }).join('') : '';
-  var itemsHtml = items.length ? '<div style="margin-top:11px;font-size:var(--fs-1);font-weight:700;color:#6a707a;text-transform:uppercase;letter-spacing:.04em">Items · ' + items.length + '</div>' + items.slice(0, 7).map(function(it){ var p = w.prices[it.name]; return '<div style="display:flex;align-items:center;gap:6px;font-size:11.5px;padding:1px 0"><span style="flex:1">' + esc(it.name) + '</span><span style="font-weight:600;color:' + (p != null && p !== '' ? '#1c2128' : '#a5382e') + '">' + (p != null && p !== '' ? esc(_catfMoney(p)) : 'no price') + '</span></div>'; }).join('') : '';
+  var fieldsHtml = fields.length ? '<div style="margin-top:11px;font-size:var(--fs-1);font-weight:700;color:var(--grey-2);text-transform:uppercase;letter-spacing:.04em">Fields</div>' + fields.map(function(f){ var src = cov[_cwNorm(f.name)]; var b = src === 'blueprint' ? ['📎 blueprint', 'var(--purple-2)'] : src === 'erp' ? ['🔗 ERP', '#b07b1e'] : src === 'manual' ? ['✍ you', 'var(--ok-2)'] : ['· to fill', 'var(--grey-4)']; return '<div style="display:flex;align-items:center;gap:6px;font-size:11.5px;padding:1px 0"><span style="flex:1;color:var(--ink-2)">' + esc(f.name) + '</span><span style="font-size:var(--fs-1);font-weight:700;color:' + b[1] + ';background:' + b[1] + '18;border-radius:4px;padding:1px 6px">' + b[0] + '</span></div>'; }).join('') : '';
+  var itemsHtml = items.length ? '<div style="margin-top:11px;font-size:var(--fs-1);font-weight:700;color:var(--grey-2);text-transform:uppercase;letter-spacing:.04em">Items · ' + items.length + '</div>' + items.slice(0, 7).map(function(it){ var p = w.prices[it.name]; return '<div style="display:flex;align-items:center;gap:6px;font-size:11.5px;padding:1px 0"><span style="flex:1">' + esc(it.name) + '</span><span style="font-weight:600;color:' + (p != null && p !== '' ? '#1c2128' : 'var(--disp-2)') + '">' + (p != null && p !== '' ? esc(_catfMoney(p)) : 'no price') + '</span></div>'; }).join('') : '';
   var taxHtml = (w.tax && w.tax.rate) ? '<div style="margin-top:9px;font-size:var(--fs-1);color:var(--grey)">Tax: ' + esc(w.tax.label || 'GST') + ' ' + esc(w.tax.rate) + '%</div>' : '';
   return head + fieldsHtml + itemsHtml + taxHtml;
 }
@@ -608,15 +608,15 @@ function _cwMethodBlock(w){
   var cur = _cwMethod(w);
   var sel = CATF_METHODS.filter(function(m){ return m.k === cur; })[0] || CATF_METHODS[0];
   var chip = function(m){ var on = m.k === cur;
-    return '<span data-testid="cw-method-' + esc(m.k) + '" onclick="cwSetMethod(\'' + esc(m.k) + '\')" title="' + esc(m.hint) + '" style="cursor:pointer;font-size:var(--fs-1);font-weight:600;padding:3px 10px;border-radius:13px;border:1px solid ' + (on ? '#2c5aa0' : 'var(--line)') + ';color:' + (on ? '#fff' : 'var(--grey)') + ';background:' + (on ? '#2c5aa0' : '#fff') + '">' + (on ? '✓ ' : '') + esc(m.label) + '</span>'; };
+    return '<span data-testid="cw-method-' + esc(m.k) + '" onclick="cwSetMethod(\'' + esc(m.k) + '\')" title="' + esc(m.hint) + '" style="cursor:pointer;font-size:var(--fs-1);font-weight:600;padding:3px 10px;border-radius:13px;border:1px solid ' + (on ? 'var(--blue-2)' : 'var(--line)') + ';color:' + (on ? '#fff' : 'var(--grey)') + ';background:' + (on ? 'var(--blue-2)' : '#fff') + '">' + (on ? '✓ ' : '') + esc(m.label) + '</span>'; };
   return '<div style="margin-bottom:14px">'
-    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:5px">How customers order <span style="color:#9aa3a7">— this decides what data comes back to you on the order</span></div>'
+    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:5px">How customers order <span style="color:var(--grey-4)">— this decides what data comes back to you on the order</span></div>'
     + '<div style="display:flex;gap:5px;flex-wrap:wrap">' + CATF_METHODS.map(chip).join('') + '</div>'
-    + '<div style="margin-top:6px;font-size:var(--fs-1);color:#2c5aa0;background:#eef4fc;border:1px solid #cfe0f4;border-radius:6px;padding:5px 9px">'
+    + '<div style="margin-top:6px;font-size:var(--fs-1);color:var(--blue-2);background:#eef4fc;border:1px solid var(--blue-tint-line);border-radius:6px;padding:5px 9px">'
     + '<b>You receive:</b> ' + esc(sel.receives) + '</div></div>';
 }
 function _cwStep1(w){
-  var left = '<div style="font-size:13px;color:#3a4048;margin-bottom:8px">Tell me the <b>purpose</b> — the exact catalogue you want.</div>'
+  var left = '<div style="font-size:13px;color:var(--ink-2);margin-bottom:8px">Tell me the <b>purpose</b> — the exact catalogue you want.</div>'
     + '<textarea id="cw_purpose" placeholder="e.g. a chemical catalogue especially focusing on paint" rows="4" style="width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:13px;resize:vertical">' + esc(w.purpose || '') + '</textarea>'
     + '<button class="pri" onclick="cwUnderstand()" style="margin-top:8px;padding:9px 15px">Understand → suggest fields</button>'
     + (w.vertical ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:8px">reads as: <b>' + esc(w.vertical) + '</b></div>' : '');
@@ -624,16 +624,16 @@ function _cwStep1(w){
   if (w.fieldSel && w.fieldSel.length) {
     var secs = {}, order = []; w.fieldSel.forEach(function(f){ if (!secs[f.section]) { secs[f.section] = []; order.push(f.section); } secs[f.section].push(f); });
     var on = w.fieldSel.filter(function(f){ return f.on; }).length;
-    right = '<div style="font-size:var(--fs-1);font-weight:800;color:#2c5aa0;letter-spacing:.05em;margin-bottom:8px">FIELDS TO STORE <span style="font-weight:500;color:var(--grey)">— pick what this catalogue keeps</span></div>'
-      + (function(){ var us = w.units || []; var chip = function(u, known){ var on = us.indexOf(u) >= 0; return '<span onclick="cwToggleUnit(\'' + esc(u).replace(/'/g, "\\'") + '\')" style="cursor:pointer;font-size:var(--fs-1);font-weight:600;padding:3px 10px;border-radius:13px;border:1px solid ' + (on ? '#2c7a43' : 'var(--line)') + ';color:' + (on ? '#fff' : 'var(--grey)') + ';background:' + (on ? '#2c7a43' : '#fff') + '">' + (on ? '✓ ' : '') + esc(u) + (on && !known ? ' ×' : '') + '</span>'; };
+    right = '<div style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);letter-spacing:.05em;margin-bottom:8px">FIELDS TO STORE <span style="font-weight:500;color:var(--grey)">— pick what this catalogue keeps</span></div>'
+      + (function(){ var us = w.units || []; var chip = function(u, known){ var on = us.indexOf(u) >= 0; return '<span onclick="cwToggleUnit(\'' + esc(u).replace(/'/g, "\\'") + '\')" style="cursor:pointer;font-size:var(--fs-1);font-weight:600;padding:3px 10px;border-radius:13px;border:1px solid ' + (on ? 'var(--ok-2)' : 'var(--line)') + ';color:' + (on ? '#fff' : 'var(--grey)') + ';background:' + (on ? 'var(--ok-2)' : '#fff') + '">' + (on ? '✓ ' : '') + esc(u) + (on && !known ? ' ×' : '') + '</span>'; };
         var extra = us.filter(function(u){ return CW_UNITS.indexOf(u) < 0; });
-        return '<div style="margin-bottom:14px"><div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:5px">Sold by <span style="color:#9aa3a7">— pick every unit this catalogue uses (products can differ: kg · litre · count…)</span></div>'
+        return '<div style="margin-bottom:14px"><div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:5px">Sold by <span style="color:var(--grey-4)">— pick every unit this catalogue uses (products can differ: kg · litre · count…)</span></div>'
           + '<div style="display:flex;gap:5px;flex-wrap:wrap">' + CW_UNITS.map(function(u){ return chip(u, true); }).join('') + extra.map(function(u){ return chip(u, false); }).join('') + '</div>'
           + '<div style="display:flex;gap:6px;margin-top:7px"><input id="cw_newunit" placeholder="add a unit (e.g. drum, coil)" style="width:170px;padding:4px 8px;border:1px solid var(--line);border-radius:6px;font-size:11.5px"><button onclick="cwAddUnit()" style="padding:4px 11px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--blue);font-weight:600;font-size:var(--fs-1);cursor:pointer">Add</button></div></div>'; })()
       + _cwMethodBlock(w)
-      + order.map(function(sec){ return '<div style="margin-bottom:11px"><div style="font-size:var(--fs-1);font-weight:700;color:#6a707a;text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">' + esc(sec) + '</div>' + secs[sec].map(function(f){ var idx = w.fieldSel.indexOf(f); return '<label style="display:flex;align-items:center;gap:8px;padding:2px 0;cursor:pointer"><input type="checkbox" ' + (f.on ? 'checked' : '') + ' onchange="cwToggleField(' + idx + ')"><span style="font-size:12px;font-weight:' + (f.on ? 600 : 400) + ';color:' + (f.on ? '#1c2128' : 'var(--grey)') + '">' + esc(f.name) + '</span><span style="font-size:var(--fs-1);color:#9aa3a7;background:#eef1f5;border-radius:4px;padding:1px 6px">' + esc(f.type) + '</span>' + (f._bp ? '<span style="font-size:var(--fs-1);color:#6a44a8" title="from blueprint">📎</span>' : f._added ? '<span style="font-size:var(--fs-1);color:#2c7a43" title="you added">＋</span>' : '') + '</label>'; }).join('') + '</div>'; }).join('')
-      + '<div style="font-size:var(--fs-1);color:#2c7a43;font-style:italic;border-top:1px solid var(--line);padding-top:8px">' + on + ' fields selected · sold by ' + esc(_cwUnitStr(w)) + '</div>'
-      + '<div style="margin-top:8px"><div style="font-size:var(--fs-1);font-weight:700;color:#6a707a;text-transform:uppercase;letter-spacing:.04em">Add a data type</div><div style="display:flex;gap:6px;margin-top:5px"><input id="cw_newfield" placeholder="field name" style="flex:1;min-width:0;padding:5px 8px;border:1px solid var(--line);border-radius:6px;font-size:12px"><select id="cw_newtype" style="padding:5px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-1)">' + ['text', 'number', 'choice', 'date', 'boolean'].map(function(t){ return '<option>' + t + '</option>'; }).join('') + '</select><button onclick="cwAddCustomField()" style="padding:5px 10px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--blue);font-weight:600;font-size:var(--fs-1);cursor:pointer">Add</button></div><div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">Uncheck any you don\'t need · add any that are missing. Adopting a blueprint (step 2) adds its fields here too 📎.</div></div>';
+      + order.map(function(sec){ return '<div style="margin-bottom:11px"><div style="font-size:var(--fs-1);font-weight:700;color:var(--grey-2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">' + esc(sec) + '</div>' + secs[sec].map(function(f){ var idx = w.fieldSel.indexOf(f); return '<label style="display:flex;align-items:center;gap:8px;padding:2px 0;cursor:pointer"><input type="checkbox" ' + (f.on ? 'checked' : '') + ' onchange="cwToggleField(' + idx + ')"><span style="font-size:12px;font-weight:' + (f.on ? 600 : 400) + ';color:' + (f.on ? '#1c2128' : 'var(--grey)') + '">' + esc(f.name) + '</span><span style="font-size:var(--fs-1);color:var(--grey-4);background:#eef1f5;border-radius:4px;padding:1px 6px">' + esc(f.type) + '</span>' + (f._bp ? '<span style="font-size:var(--fs-1);color:var(--purple-2)" title="from blueprint">📎</span>' : f._added ? '<span style="font-size:var(--fs-1);color:var(--ok-2)" title="you added">＋</span>' : '') + '</label>'; }).join('') + '</div>'; }).join('')
+      + '<div style="font-size:var(--fs-1);color:var(--ok-2);font-style:italic;border-top:1px solid var(--line);padding-top:8px">' + on + ' fields selected · sold by ' + esc(_cwUnitStr(w)) + '</div>'
+      + '<div style="margin-top:8px"><div style="font-size:var(--fs-1);font-weight:700;color:var(--grey-2);text-transform:uppercase;letter-spacing:.04em">Add a data type</div><div style="display:flex;gap:6px;margin-top:5px"><input id="cw_newfield" placeholder="field name" style="flex:1;min-width:0;padding:5px 8px;border:1px solid var(--line);border-radius:6px;font-size:12px"><select id="cw_newtype" style="padding:5px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-1)">' + ['text', 'number', 'choice', 'date', 'boolean'].map(function(t){ return '<option>' + t + '</option>'; }).join('') + '</select><button onclick="cwAddCustomField()" style="padding:5px 10px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--blue);font-weight:600;font-size:var(--fs-1);cursor:pointer">Add</button></div><div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">Uncheck any you don\'t need · add any that are missing. Adopting a blueprint (step 2) adds its fields here too 📎.</div></div>';
   } else {
     right = '<div style="color:var(--grey);font-size:var(--fs-2);text-align:center;margin-top:44px">Describe the catalogue on the left →<br>I\'ll suggest the fields to store, grouped in sections, for you to pick.</div>';
   }
@@ -644,32 +644,32 @@ function _cwStep2(w){ return _cwTwo(_cwStep2Fields(w), _cwStep2Products(w)); }
 function _cwStep2Fields(w){
   var fields = (w.fieldSel || []).filter(function(f){ return f.on; });
   var sel = w.sel ? (w.built && w.built.finishes || []).filter(function(it){ return it.name === w.sel; })[0] : null;
-  var head = '<div style="font-size:var(--fs-1);font-weight:800;color:#2c5aa0;letter-spacing:.05em">FIELDS' + (sel ? ' <span style="color:#6a44a8">· ' + esc(sel.name) + '</span>' : '') + '</div>';
+  var head = '<div style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);letter-spacing:.05em">FIELDS' + (sel ? ' <span style="color:var(--purple-2)">· ' + esc(sel.name) + '</span>' : '') + '</div>';
   if (!fields.length) return head + '<div style="font-size:12px;color:var(--grey);margin-top:8px">Pick fields in step 1 first. Adopting a blueprint (right) adds its fields here.</div>';
-  var rows = fields.map(function(f){ var v = sel ? sel[f._bpKey || f.name] : undefined; var vstr = (v == null) ? '' : (Array.isArray(v) ? v.map(function(x){ return (x && typeof x === 'object') ? (x.name || '') : x; }).join(', ') : (typeof v === 'object' ? (v.name || JSON.stringify(v)) : String(v))); return '<div style="display:flex;gap:8px;padding:3px 0;border-bottom:1px dashed var(--line);font-size:11.5px"><span style="flex:0 0 148px;color:#3a4048">' + esc(f.name) + (f._bp ? ' <span style="color:#6a44a8;font-size:var(--fs-1)">📎</span>' : f._added ? ' <span style="color:#2c7a43;font-size:var(--fs-1)">＋</span>' : '') + '</span><span style="flex:1;color:' + (vstr ? '#1c2128' : '#9aa3a7') + '">' + (sel ? (vstr ? esc(vstr) : '—') : '<span style="font-size:var(--fs-1)">value shows when you click a product ›</span>') + '</span></div>'; }).join('');
+  var rows = fields.map(function(f){ var v = sel ? sel[f._bpKey || f.name] : undefined; var vstr = (v == null) ? '' : (Array.isArray(v) ? v.map(function(x){ return (x && typeof x === 'object') ? (x.name || '') : x; }).join(', ') : (typeof v === 'object' ? (v.name || JSON.stringify(v)) : String(v))); return '<div style="display:flex;gap:8px;padding:3px 0;border-bottom:1px dashed var(--line);font-size:11.5px"><span style="flex:0 0 148px;color:var(--ink-2)">' + esc(f.name) + (f._bp ? ' <span style="color:var(--purple-2);font-size:var(--fs-1)">📎</span>' : f._added ? ' <span style="color:var(--ok-2);font-size:var(--fs-1)">＋</span>' : '') + '</span><span style="flex:1;color:' + (vstr ? '#1c2128' : 'var(--grey-4)') + '">' + (sel ? (vstr ? esc(vstr) : '—') : '<span style="font-size:var(--fs-1)">value shows when you click a product ›</span>') + '</span></div>'; }).join('');
   var refF = fields.filter(function(f){ return f._bp; }).map(function(f){ return f.name; });
   var todo = fields.filter(function(f){ return !f._bp; }).map(function(f){ return f.name; });
   var mode = w.adoptMode || 'reference';
   var summary = w.source ? '<div style="margin-top:6px;font-size:var(--fs-1);line-height:1.6;border-bottom:1px solid var(--line);padding-bottom:8px">'
-    + '<div><span style="color:' + (mode === 'value' ? '#2c5aa0' : '#6a44a8') + ';font-weight:700">' + (mode === 'value' ? '📋 filled by value · ' : '📎 filled by reference · ') + refF.length + '</span> <span style="color:var(--grey)">' + esc(refF.join(' · ') || '—') + '</span></div>'
-    + (todo.length ? '<div><span style="color:#2c7a43;font-weight:700">✍ you still fill · ' + todo.length + '</span> <span style="color:var(--grey)">' + esc(todo.join(' · ')) + '</span></div>' : '')
+    + '<div><span style="color:' + (mode === 'value' ? 'var(--blue-2)' : 'var(--purple-2)') + ';font-weight:700">' + (mode === 'value' ? '📋 filled by value · ' : '📎 filled by reference · ') + refF.length + '</span> <span style="color:var(--grey)">' + esc(refF.join(' · ') || '—') + '</span></div>'
+    + (todo.length ? '<div><span style="color:var(--ok-2);font-weight:700">✍ you still fill · ' + todo.length + '</span> <span style="color:var(--grey)">' + esc(todo.join(' · ')) + '</span></div>' : '')
     + '</div>' : '';
-  var swatches = (sel && sel.combinations && sel.combinations.length) ? '<div style="margin-top:10px;border-top:1px solid var(--line);padding-top:8px"><div style="font-size:var(--fs-1);font-weight:700;color:#6a707a;text-transform:uppercase;letter-spacing:.04em">Colour combinations</div>' + sel.combinations.map(_cwCombo).join('') + '</div>' : '';
+  var swatches = (sel && sel.combinations && sel.combinations.length) ? '<div style="margin-top:10px;border-top:1px solid var(--line);padding-top:8px"><div style="font-size:var(--fs-1);font-weight:700;color:var(--grey-2);text-transform:uppercase;letter-spacing:.04em">Colour combinations</div>' + sel.combinations.map(_cwCombo).join('') + '</div>' : '';
   return head + summary + '<div style="margin-top:8px">' + rows + '</div>' + swatches;
 }
 /* render products with the blueprint's OWN look & feel — colour swatches, chips, accent, story */
 function _cwSwatch(c){ return '<span title="' + esc((c.name || '') + ' ' + (c.hex || '')) + '" style="display:inline-block;width:15px;height:15px;border-radius:50%;background:' + esc(c.hex || '#ccc') + ';border:1px solid rgba(0,0,0,.15);vertical-align:middle;margin-right:2px"></span>'; }
-function _cwCombo(cm){ return '<div style="display:flex;align-items:center;gap:6px;margin-top:3px"><span>' + ((cm.colours || []).map(_cwSwatch).join('')) + '</span><span style="font-size:var(--fs-1);color:#3a4048;font-weight:600">' + esc(cm.name || '') + '</span></div>'; }
+function _cwCombo(cm){ return '<div style="display:flex;align-items:center;gap:6px;margin-top:3px"><span>' + ((cm.colours || []).map(_cwSwatch).join('')) + '</span><span style="font-size:var(--fs-1);color:var(--ink-2);font-weight:600">' + esc(cm.name || '') + '</span></div>'; }
 function _cwProductCard(w, it){
   var on = w.chosen[it.name] !== false, seld = w.sel === it.name;
-  var accent = (w.built && w.built.formatting && w.built.formatting.accent) || '#6a44a8';
+  var accent = (w.built && w.built.formatting && w.built.formatting.accent) || 'var(--purple-2)';
   var nm = esc(it.name).replace(/'/g, "\\'");
   var chips = [it.texture_family, it.region].filter(Boolean).map(function(c){ return '<span style="font-size:var(--fs-1);background:' + accent + '18;color:' + accent + ';border-radius:4px;padding:1px 6px">' + esc(c) + '</span>'; }).join('') + (it.effect || []).map(function(e){ return '<span style="font-size:var(--fs-1);background:#f3f0e8;color:#7a5e22;border-radius:4px;padding:1px 6px">' + esc(e) + '</span>'; }).join('');
   var combos = (it.combinations || []).slice(0, 2).map(_cwCombo).join('');
   return '<div onclick="cwSelectProduct(\'' + nm + '\')" style="border:1px solid ' + (seld ? accent : 'var(--line)') + ';border-radius:12px;padding:10px 12px;margin-top:6px;background:' + (seld ? accent + '0c' : '#fff') + ';cursor:pointer">'
     + (it.photo ? '<div style="height:96px;background:#f4f6f8 center/cover no-repeat;background-image:url(' + it.photo + ');border-radius:9px;margin-bottom:7px"></div>' : '')
-    + '<div style="display:flex;align-items:center;gap:8px"><input type="checkbox" ' + (on ? 'checked' : '') + ' onclick="event.stopPropagation()" onchange="cwToggleItem(\'' + nm + '\')"><span style="font-weight:700;font-size:13px">' + esc(it.name) + '</span><span style="font-size:var(--fs-1);color:#9aa3a7">' + esc(it.scale || '') + (it.sheen ? ' · ' + esc(it.sheen) : '') + '</span><span style="margin-left:auto;color:' + accent + ';font-weight:700">' + (seld ? '▸' : '') + '</span></div>'
-    + (it.inspiration ? '<div style="font-size:var(--fs-1);color:#6a707a;margin:5px 0;line-height:1.45">' + esc(it.inspiration) + '</div>' : '')
+    + '<div style="display:flex;align-items:center;gap:8px"><input type="checkbox" ' + (on ? 'checked' : '') + ' onclick="event.stopPropagation()" onchange="cwToggleItem(\'' + nm + '\')"><span style="font-weight:700;font-size:13px">' + esc(it.name) + '</span><span style="font-size:var(--fs-1);color:var(--grey-4)">' + esc(it.scale || '') + (it.sheen ? ' · ' + esc(it.sheen) : '') + '</span><span style="margin-left:auto;color:' + accent + ';font-weight:700">' + (seld ? '▸' : '') + '</span></div>'
+    + (it.inspiration ? '<div style="font-size:var(--fs-1);color:var(--grey-2);margin:5px 0;line-height:1.45">' + esc(it.inspiration) + '</div>' : '')
     + (chips ? '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px">' + chips + '</div>' : '')
     + (combos ? '<div style="margin-top:6px">' + combos + '</div>' : '')
     + '</div>';
@@ -693,17 +693,17 @@ function _cwStep2Products(w){
     var rows = filtered.map(function(s){ var on = w.source === s.key;
       return '<div onclick="cwPickSource(\'' + esc(s.key) + '\')" style="cursor:pointer;padding:8px 11px;border-bottom:1px solid var(--line);background:' + (on ? '#eef4ff' : '#fff') + '">'
         + '<div style="display:flex;align-items:center;gap:8px"><span style="font-weight:' + (on ? 700 : 600) + ';font-size:var(--fs-2)">' + esc(s.title) + '</span>'
-        + (s.for_vertical ? '<span style="font-size:var(--fs-1);color:#6a44a8;background:#efeafa;border-radius:4px;padding:1px 6px">' + esc(s.for_vertical) + '</span>' : '')
+        + (s.for_vertical ? '<span style="font-size:var(--fs-1);color:var(--purple-2);background:#efeafa;border-radius:4px;padding:1px 6px">' + esc(s.for_vertical) + '</span>' : '')
         + '<span style="margin-left:auto;font-size:var(--fs-1);color:var(--grey)">' + s.item_count + ' item(s)</span></div>'
-        + (s.for_entity ? '<div style="font-size:var(--fs-1);color:#9aa3a7;margin-top:1px">' + esc(s.for_entity) + '</div>' : '') + '</div>'; }).join('');
+        + (s.for_entity ? '<div style="font-size:var(--fs-1);color:var(--grey-4);margin-top:1px">' + esc(s.for_entity) + '</div>' : '') + '</div>'; }).join('');
     var empty = '<div style="font-size:11.5px;color:var(--grey);padding:9px 11px">No blueprints' + (q ? ' match “' + esc(q) + '”' : ((w.vertical && !w.bpAll) ? ' for ' + esc(w.vertical) : '')) + '.' + ((otherCount && !w.bpAll) ? ' <span onclick="cwToggleBpAll()" style="cursor:pointer;color:var(--blue);font-weight:600">Show all verticals.</span>' : '') + '</div>';
     picker = search + scope + '<div style="max-height:220px;overflow:auto;border:1px solid var(--line);border-radius:9px">' + skipRow + (filtered.length ? rows : empty) + '</div>';
   }
   var rights = w.source ? '<div style="margin-top:6px;font-size:var(--fs-1);color:#2e7a45">🔓 Rights ok <span style="color:var(--grey)">— you may use this blueprint (distributor grant)</span></div>' : '';
   var mode = w.adoptMode || 'reference';
-  var modeToggle = w.source ? '<div style="margin-top:8px;font-size:var(--fs-1);color:#3a4048">by: <span onclick="cwSetAdoptMode(\'reference\')" style="cursor:pointer;font-weight:700;padding:2px 9px;border-radius:12px;border:1px solid ' + (mode === 'reference' ? '#2c7a43' : 'var(--line)') + ';color:' + (mode === 'reference' ? '#fff' : 'var(--grey)') + ';background:' + (mode === 'reference' ? '#2c7a43' : '#fff') + '">reference</span> <span onclick="cwSetAdoptMode(\'value\')" style="cursor:pointer;font-weight:700;padding:2px 9px;border-radius:12px;border:1px solid ' + (mode === 'value' ? '#2c5aa0' : 'var(--line)') + ';color:' + (mode === 'value' ? '#fff' : 'var(--grey)') + ';background:' + (mode === 'value' ? '#2c5aa0' : '#fff') + '">value</span></div>' : '';
-  var products = (w.built && w.built.finishes) ? '<div style="margin-top:12px;display:flex;align-items:center;gap:8px"><span style="font-size:var(--fs-1);font-weight:800;color:#6a44a8;letter-spacing:.05em">PRODUCTS · ' + w.built.finishes.length + '</span><span style="font-size:var(--fs-1);color:var(--grey)">tick to sell · click to inspect</span><span onclick="cwChooseAll(true)" style="cursor:pointer;font-size:var(--fs-1);color:var(--blue);margin-left:auto">all</span><span style="color:#c8d0d9">·</span><span onclick="cwChooseAll(false)" style="cursor:pointer;font-size:var(--fs-1);color:var(--blue)">none</span></div>' + w.built.finishes.map(function(it){ return _cwProductCard(w, it); }).join('') : '';
-  return '<div style="font-size:var(--fs-2);color:#3a4048;margin-bottom:8px">Pick a <b>blueprint</b> — a ready, structured catalogue of this sort. Its <b>products</b> list here; tick the ones you sell, click one to see its field values on the left. <b>No blueprint? Skip.</b></div>' + picker + rights + modeToggle + products;
+  var modeToggle = w.source ? '<div style="margin-top:8px;font-size:var(--fs-1);color:var(--ink-2)">by: <span onclick="cwSetAdoptMode(\'reference\')" style="cursor:pointer;font-weight:700;padding:2px 9px;border-radius:12px;border:1px solid ' + (mode === 'reference' ? 'var(--ok-2)' : 'var(--line)') + ';color:' + (mode === 'reference' ? '#fff' : 'var(--grey)') + ';background:' + (mode === 'reference' ? 'var(--ok-2)' : '#fff') + '">reference</span> <span onclick="cwSetAdoptMode(\'value\')" style="cursor:pointer;font-weight:700;padding:2px 9px;border-radius:12px;border:1px solid ' + (mode === 'value' ? 'var(--blue-2)' : 'var(--line)') + ';color:' + (mode === 'value' ? '#fff' : 'var(--grey)') + ';background:' + (mode === 'value' ? 'var(--blue-2)' : '#fff') + '">value</span></div>' : '';
+  var products = (w.built && w.built.finishes) ? '<div style="margin-top:12px;display:flex;align-items:center;gap:8px"><span style="font-size:var(--fs-1);font-weight:800;color:var(--purple-2);letter-spacing:.05em">PRODUCTS · ' + w.built.finishes.length + '</span><span style="font-size:var(--fs-1);color:var(--grey)">tick to sell · click to inspect</span><span onclick="cwChooseAll(true)" style="cursor:pointer;font-size:var(--fs-1);color:var(--blue);margin-left:auto">all</span><span style="color:#c8d0d9">·</span><span onclick="cwChooseAll(false)" style="cursor:pointer;font-size:var(--fs-1);color:var(--blue)">none</span></div>' + w.built.finishes.map(function(it){ return _cwProductCard(w, it); }).join('') : '';
+  return '<div style="font-size:var(--fs-2);color:var(--ink-2);margin-bottom:8px">Pick a <b>blueprint</b> — a ready, structured catalogue of this sort. Its <b>products</b> list here; tick the ones you sell, click one to see its field values on the left. <b>No blueprint? Skip.</b></div>' + picker + rights + modeToggle + products;
 }
 function _cwStep3(w){
   var fields = (w.fieldSel || []).filter(function(f){ return f.on; });
@@ -713,29 +713,29 @@ function _cwStep3(w){
   var rows = fields.map(function(f){ var m = w.erpMap[f.name] || {}; var sys = m.system || '—'; var esn = f.name.replace(/'/g, "\\'");
     var sysSel = '<select onchange="cwSetMapSys(\'' + esn + '\',this.value)" style="font-size:var(--fs-1);padding:4px;border:1px solid var(--line);border-radius:6px">' + systems.map(function(s){ return '<option' + (sys === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>';
     var ref = sys !== '—' ? '<input value="' + esc(m.ref || '') + '" oninput="cwSetMapRef(\'' + esn + '\',this.value)" placeholder="field / code in ' + esc(sys) + '" style="flex:1;min-width:0;font-size:var(--fs-1);padding:4px 7px;border:1px solid var(--line);border-radius:6px">' : '<span style="font-size:var(--fs-1);color:var(--grey);flex:1">' + (f._bp ? '📎 from blueprint' : 'not mapped') + '</span>';
-    return '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px dashed var(--line)"><span style="flex:0 0 138px;font-size:11.5px;color:#3a4048">' + esc(f.name) + (f._bp ? ' <span style="color:#6a44a8;font-size:var(--fs-1)">📎</span>' : '') + '</span>' + sysSel + ref + '</div>';
+    return '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px dashed var(--line)"><span style="flex:0 0 138px;font-size:11.5px;color:var(--ink-2)">' + esc(f.name) + (f._bp ? ' <span style="color:var(--purple-2);font-size:var(--fs-1)">📎</span>' : '') + '</span>' + sysSel + ref + '</div>';
   }).join('');
-  return '<div style="font-size:13px;color:#3a4048;margin-bottom:10px">Map fields to your <b>own systems (ERP / Tally / SAP)</b> so they sync from there. These <b>mapping rules are saved with the catalogue design</b> and stay for each selected item. <b>Nothing from ERP? Skip.</b></div>' + rows + (mapped ? '<div style="font-size:var(--fs-1);color:#b07b1e;margin-top:8px">🔗 ' + mapped + ' field(s) mapped to your systems — saved as references with the design.</div>' : '');
+  return '<div style="font-size:13px;color:var(--ink-2);margin-bottom:10px">Map fields to your <b>own systems (ERP / Tally / SAP)</b> so they sync from there. These <b>mapping rules are saved with the catalogue design</b> and stay for each selected item. <b>Nothing from ERP? Skip.</b></div>' + rows + (mapped ? '<div style="font-size:var(--fs-1);color:#b07b1e;margin-top:8px">🔗 ' + mapped + ' field(s) mapped to your systems — saved as references with the design.</div>' : '');
 }
 function _cwStep4(w){
   var mode = w.bulkMode || 'csv';
-  var seg = function(m, l){ var on = mode === m; return '<span onclick="cwBulkMode(\'' + m + '\')" style="cursor:pointer;font-size:11.5px;font-weight:600;padding:5px 11px;border-radius:13px;border:1px solid ' + (on ? '#2c5aa0' : 'var(--line)') + ';color:' + (on ? '#fff' : 'var(--grey)') + ';background:' + (on ? '#2c5aa0' : '#fff') + '">' + l + '</span>'; };
+  var seg = function(m, l){ var on = mode === m; return '<span onclick="cwBulkMode(\'' + m + '\')" style="cursor:pointer;font-size:11.5px;font-weight:600;padding:5px 11px;border-radius:13px;border:1px solid ' + (on ? 'var(--blue-2)' : 'var(--line)') + ';color:' + (on ? '#fff' : 'var(--grey)') + ';background:' + (on ? 'var(--blue-2)' : '#fff') + '">' + l + '</span>'; };
   var bar = '<div style="display:flex;gap:5px;margin-bottom:12px;flex-wrap:wrap">' + seg('csv', '📄 List (CSV/Excel)') + seg('few', '✍ Type a few') + seg('photos', '📷 Photos only') + '</div>';
   var body;
   if (mode === 'csv') {
     var n = (w.manualItems || []).filter(function(i){ return i._src === 'csv'; }).length;
-    body = '<div style="font-size:var(--fs-2);color:#3a4048;margin-bottom:8px">Have a list? <b>Export to CSV from Excel / Tally</b> and paste it (first row = column names). We map columns to your fields — no typing.</div>'
+    body = '<div style="font-size:var(--fs-2);color:var(--ink-2);margin-bottom:8px">Have a list? <b>Export to CSV from Excel / Tally</b> and paste it (first row = column names). We map columns to your fields — no typing.</div>'
       + '<textarea id="cw_bulk_csv" placeholder="name,price,pack_size,hsn\nRoyale Matt,520,4,3209\nRoyale Shyne,610,4,3209" rows="5" style="width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:12px;font-family:monospace;resize:vertical"></textarea>'
       + '<button class="pri" onclick="cwImportCSV()" style="margin-top:8px;padding:8px 15px">Import rows</button>'
-      + (n ? '<div style="margin-top:8px;font-size:11.5px;color:#2c7a43">✓ ' + n + ' item(s) imported from CSV — they\'ll be in your catalogue.</div>' : '')
+      + (n ? '<div style="margin-top:8px;font-size:11.5px;color:var(--ok-2)">✓ ' + n + ' item(s) imported from CSV — they\'ll be in your catalogue.</div>' : '')
       + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px;font-style:italic">Excel? Save-as CSV. Hundreds of rows work in one paste.</div>';
   } else if (mode === 'few') {
     var rem = _cwRemaining(w).filter(function(r){ return r.leg !== 'compute'; });
-    body = '<div style="font-size:var(--fs-2);color:#3a4048;margin-bottom:8px">Just a few? Fill the remaining fields by hand (or use ＋ Add item on the finished catalogue).</div>'
-      + (rem.length ? rem.map(function(r){ return '<div style="display:flex;align-items:center;gap:9px;padding:4px 0"><span style="font-size:12px;color:var(--grey);min-width:150px">' + esc(r.name) + '</span><input value="' + esc(w.manual[r.name] || '') + '" oninput="cwSetManual(\'' + r.name + '\',this.value)" placeholder="value" style="flex:1;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:12px"></div>'; }).join('') : '<div style="font-size:12px;color:#2c7a43">Nothing left — the blueprint / ERP covered it.</div>');
+    body = '<div style="font-size:var(--fs-2);color:var(--ink-2);margin-bottom:8px">Just a few? Fill the remaining fields by hand (or use ＋ Add item on the finished catalogue).</div>'
+      + (rem.length ? rem.map(function(r){ return '<div style="display:flex;align-items:center;gap:9px;padding:4px 0"><span style="font-size:12px;color:var(--grey);min-width:150px">' + esc(r.name) + '</span><input value="' + esc(w.manual[r.name] || '') + '" oninput="cwSetManual(\'' + r.name + '\',this.value)" placeholder="value" style="flex:1;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:12px"></div>'; }).join('') : '<div style="font-size:12px;color:var(--ok-2)">Nothing left — the blueprint / ERP covered it.</div>');
   } else {
     var ph = w.photos || []; var committed = (w.manualItems || []).filter(function(i){ return i._src === 'capture'; }).length;
-    body = '<div style="font-size:var(--fs-2);color:#3a4048;margin-bottom:8px">Only have <b>photos or product labels</b>? Add the pictures — each becomes an item. You confirm the name &amp; price (the same human-confirm step the <b>Capture</b> connector uses).</div>'
+    body = '<div style="font-size:var(--fs-2);color:var(--ink-2);margin-bottom:8px">Only have <b>photos or product labels</b>? Add the pictures — each becomes an item. You confirm the name &amp; price (the same human-confirm step the <b>Capture</b> connector uses).</div>'
       + '<input id="cw_photo_input" type="file" accept="image/*" multiple style="display:none" onchange="cwPhotoPick(this)">'
       + '<button class="pri" onclick="cwPhotoBtn()" style="padding:8px 15px">📷 Add photos</button>'
       /**
@@ -744,7 +744,7 @@ function _cwStep4(w){
        * on photos the owner only meant to attach. So: add freely, read when you choose.
        */
       + (ph.length ? '<button data-testid="cw-photo-read" onclick="cwPhotosRead()" ' + (w._phBusy ? 'disabled ' : '')
-          + 'style="margin-left:8px;padding:8px 15px;border:1px solid #6d5bd0;border-radius:9px;background:var(--card);color:#6d5bd0;font-weight:600;cursor:pointer">'
+          + 'style="margin-left:8px;padding:8px 15px;border:1px solid var(--purple);border-radius:9px;background:var(--card);color:var(--purple);font-weight:600;cursor:pointer">'
           + (w._phBusy ? '✨ Reading…' : '✨ Read the labels') + '</button>' : '')
       + (w._phErr ? '<div style="margin-top:8px;background:#fbeceb;border:1px solid #f0c9c6;border-radius:9px;padding:8px 11px;font-size:12px;color:var(--disp)">' + esc(w._phErr) + '</div>' : '')
       + (w._phNote ? '<div style="margin-top:8px;background:#f7f6fd;border:1px solid #e4dff6;border-radius:9px;padding:8px 11px;font-size:12px;color:#4a3f7a">' + esc(w._phNote) + '</div>' : '')
@@ -757,33 +757,33 @@ function _cwStep4(w){
              * it is theirs, not the model's. Without that distinction someone confirming a screenful of cards
              * cannot tell which values they actually checked.
              */
-            + (p._ai ? '<div style="margin-top:6px;font-size:var(--fs-1);font-weight:800;color:#6d5bd0;background:#f0ecfb;border-radius:5px;padding:1px 6px;display:inline-block">✨ proposed — check it</div>' : '')
+            + (p._ai ? '<div style="margin-top:6px;font-size:var(--fs-1);font-weight:800;color:var(--purple);background:#f0ecfb;border-radius:5px;padding:1px 6px;display:inline-block">✨ proposed — check it</div>' : '')
             + '<input value="' + esc(p.name || '') + '" oninput="cwSetPhotoField(\'' + p.id + '\',\'name\',this.value)" placeholder="item name" style="width:100%;box-sizing:border-box;margin-top:6px;padding:5px 7px;border:1px solid ' + (p._ai ? '#c9bdf0' : 'var(--line)') + ';border-radius:6px;font-size:11.5px">'
             + '<div style="display:flex;gap:5px;margin-top:5px;align-items:center"><span style="font-size:var(--fs-1);color:var(--grey)">' + esc(_catfCcy()) + '</span><input type="number" value="' + (p.price != null ? p.price : '') + '" oninput="cwSetPhotoField(\'' + p.id + '\',\'price\',this.value)" placeholder="price" style="flex:1;min-width:0;padding:4px 6px;border:1px solid var(--line);border-radius:6px;font-size:11.5px"><span onclick="cwPhotoRemove(\'' + p.id + '\')" style="cursor:pointer;color:#b23;font-size:15px;line-height:1" title="remove">×</span></div>'
             + '</div>'; }).join('') + '</div>'
-          + '<button onclick="cwPhotosCommit()" style="margin-top:10px;padding:8px 15px;border:1px solid #2c7a43;border-radius:9px;background:var(--card);color:#2c7a43;font-weight:600">✓ Add ' + ph.length + ' photo' + (ph.length > 1 ? 's' : '') + ' to catalogue</button>'
-          + (committed ? '<div style="margin-top:7px;font-size:11.5px;color:#2c7a43">✓ ' + committed + ' photo item(s) in your catalogue.</div>' : '')
+          + '<button onclick="cwPhotosCommit()" style="margin-top:10px;padding:8px 15px;border:1px solid var(--ok-2);border-radius:9px;background:var(--card);color:var(--ok-2);font-weight:600">✓ Add ' + ph.length + ' photo' + (ph.length > 1 ? 's' : '') + ' to catalogue</button>'
+          + (committed ? '<div style="margin-top:7px;font-size:11.5px;color:var(--ok-2)">✓ ' + committed + ' photo item(s) in your catalogue.</div>' : '')
         : '')
       /* ⚠️ This line used to say the co-assist was "text-only today". It is not, as of b127 — and a footnote that
          still says a feature is missing while the button for it sits above is worse than no footnote. */
       + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:12px;font-style:italic">Photos are downscaled and stored on the item. <b>✨ Read the labels</b> asks the co-assist to read what it can SEE into the cards — always a <b>proposal you check</b>, never a value it commits, and it fills only empty fields so anything you typed stays yours.</div>';
   }
-  return '<div style="font-size:13px;color:#3a4048;margin-bottom:10px">How do you have your items? Don\'t type hundreds — bring a <b>list</b> (CSV/Excel) or <b>photos</b>.</div>' + bar + body;
+  return '<div style="font-size:13px;color:var(--ink-2);margin-bottom:10px">How do you have your items? Don\'t type hundreds — bring a <b>list</b> (CSV/Excel) or <b>photos</b>.</div>' + bar + body;
 }
 function _cwStep5(w){
   // "Information only" is a listing — there is nothing to order, so there is no price to collect.
   // the PAYLOAD pipeline receives declared data, not a purchase — there is nothing to price.
   if (CATF_PIPELINE[_cwMethod(w)] === 'payload') {
     var _mp = CATF_METHODS.filter(function(m){ return m.k === _cwMethod(w); })[0] || {};
-    return '<div style="font-size:13px;color:#3a4048">This catalogue receives <b>' + esc(_mp.receives || 'data') + '</b> — nothing is bought, so no prices are collected. Change <b>How customers order</b> in step 1 if you want to take orders.</div>';
+    return '<div style="font-size:13px;color:var(--ink-2)">This catalogue receives <b>' + esc(_mp.receives || 'data') + '</b> — nothing is bought, so no prices are collected. Change <b>How customers order</b> in step 1 if you want to take orders.</div>';
   }
   var pk = Object.keys(w.erpMap || {}).filter(function(k){ return /price|rate|mrp/i.test(k) && w.erpMap[k] && w.erpMap[k].system && w.erpMap[k].system !== '—'; })[0];
-  if (pk) return '<div style="font-size:13px;color:#3a4048">Price comes from your <b>' + esc(w.erpMap[pk].system) + '</b> (' + esc(w.erpMap[pk].ref || 'mapped') + ') — nothing to set here.</div>';
+  if (pk) return '<div style="font-size:13px;color:var(--ink-2)">Price comes from your <b>' + esc(w.erpMap[pk].system) + '</b> (' + esc(w.erpMap[pk].ref || 'mapped') + ') — nothing to set here.</div>';
   var items = (w.built && w.built.finishes || []).filter(function(it){ return w.chosen[it.name] !== false; });
   if (!items.length) items = [{ name: (CATF_KB[w.vertical] && CATF_KB[w.vertical].product) || 'Item' }];
   // Step-1 units are the catalogue's ALLOWED SET; each item picks its own from it (Tomato kg · Egg count · Milk litre).
   var units = _cwUnitSet(w);
-  return '<div style="font-size:13px;color:#3a4048;margin-bottom:10px">Set your <b>price</b> per item (' + esc(_catfCcy()) + ')' + (units.length > 1 ? ' and the <b>unit</b> it sells by' : '') + '. You can change these anytime later.</div>'
+  return '<div style="font-size:13px;color:var(--ink-2);margin-bottom:10px">Set your <b>price</b> per item (' + esc(_catfCcy()) + ')' + (units.length > 1 ? ' and the <b>unit</b> it sells by' : '') + '. You can change these anytime later.</div>'
     + items.map(function(it){ var nm = esc(it.name).replace(/'/g, "\\'");
         return '<div style="display:flex;align-items:center;gap:9px;padding:6px 10px;border:1px solid var(--line);border-radius:9px;margin-top:5px;background:var(--card)"><span style="font-weight:600;font-size:var(--fs-2);flex:1">' + esc(it.name) + '</span><span style="color:var(--grey);font-size:var(--fs-1)">' + esc(_catfCcy()) + '</span>'
         + '<input type="number" value="' + (w.prices[it.name] != null ? w.prices[it.name] : '') + '" oninput="cwSetPrice(\'' + nm + '\',this.value)" placeholder="price" style="width:92px;padding:5px 8px;border:1px solid var(--line);border-radius:6px;font-size:12px">'
@@ -793,16 +793,16 @@ function _cwStep5(w){
 function _cwUnitSet(w){ return (w.units && w.units.length) ? w.units.slice() : [(CATF_KB[w.vertical] && CATF_KB[w.vertical].baseUnit) || 'unit']; }
 function _cwItemUnit(w, it){ var s = _cwUnitSet(w); var u = (w.itemUnits || {})[it.name]; return (u && s.indexOf(u) >= 0) ? u : s[0]; }
 function _cwUnitSelect(units, sel, onchange){
-  return '<select data-testid="cw-item-unit" onchange="' + onchange + '" title="unit this item sells by" style="padding:5px 6px;border:1px solid var(--line);border-radius:6px;font-size:12px;background:var(--card);color:#3a4048">'
+  return '<select data-testid="cw-item-unit" onchange="' + onchange + '" title="unit this item sells by" style="padding:5px 6px;border:1px solid var(--line);border-radius:6px;font-size:12px;background:var(--card);color:var(--ink-2)">'
     + units.map(function(u){ return '<option value="' + esc(u) + '"' + (u === sel ? ' selected' : '') + '>' + esc(u) + '</option>'; }).join('') + '</select>';
 }
 function cwSetItemUnit(name, u){ UI.cw.itemUnits = UI.cw.itemUnits || {}; UI.cw.itemUnits[name] = u; }
 function _cwStep6(w){
   var priced = Object.keys(w.prices).filter(function(k){ return w.prices[k] != null && w.prices[k] !== ''; }).length;
   var _m = CATF_METHODS.filter(function(m){ return m.k === _cwMethod(w); })[0] || CATF_METHODS[0];
-  return '<div style="font-size:13px;color:#3a4048;margin-bottom:10px">Set <b>tax</b>, then go live.</div>'
+  return '<div style="font-size:13px;color:var(--ink-2);margin-bottom:10px">Set <b>tax</b>, then go live.</div>'
     + '<div style="display:flex;gap:8px;align-items:center"><input value="' + esc(w.tax.label || 'GST') + '" oninput="cwSetTax(\'label\',this.value)" style="width:80px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:12px"><input type="number" value="' + esc(w.tax.rate || '') + '" oninput="cwSetTax(\'rate\',this.value)" placeholder="18" style="width:70px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:12px"><span style="font-size:12px;color:var(--grey)">%</span></div>'
-    + '<div style="margin-top:12px;padding:9px 12px;border:1px solid #cfe0f4;border-radius:9px;background:#eef4fc;font-size:11.5px;color:#2c5aa0">Orders arrive as <b>' + esc(_m.label) + '</b> — you receive <b>' + esc(_m.receives) + '</b>.</div>'
+    + '<div style="margin-top:12px;padding:9px 12px;border:1px solid var(--blue-tint-line);border-radius:9px;background:#eef4fc;font-size:11.5px;color:var(--blue-2)">Orders arrive as <b>' + esc(_m.label) + '</b> — you receive <b>' + esc(_m.receives) + '</b>.</div>'
     + '<div style="margin-top:10px;padding:11px 13px;border:1px solid #cfe6cf;border-radius:9px;background:#eef7ee;font-size:12px;color:#2e7a45">On finish: your entity <b>adopts</b> the blueprint (reference) + your <b>' + priced + ' price(s)</b>' + (w.source ? '' : ' — <i>no blueprint, so it saves your manual items</i>') + '. It goes <b>live</b> on your storefront. Half-filled is fine — you can add the rest anytime.</div>';
 }
 /* wizard actions */
@@ -1024,7 +1024,7 @@ function _catfSettingsNote(){ return 'Currency <b>' + esc(_catfCcy()) + '</b> ·
 /* TAB 3 — the catalogue as STANDARD JSON Schema (what an AI emits; RJSF/JSON Forms/json-editor render it). Adopt, don't reinvent. */
 function _catfMethodControl(method, price){
   var p = price != null && price !== '' ? _catfMoney(price) : _catfMoney(40);
-  var btn = 'background:#2c5aa0;color:#fff;border-radius:5px;padding:3px 10px;font-size:var(--fs-1);font-weight:600';
+  var btn = 'background:var(--blue-2);color:#fff;border-radius:5px;padding:3px 10px;font-size:var(--fs-1);font-weight:600';
   if (method === 'text') return '<span style="font-size:var(--fs-1);color:var(--grey)">information only</span>';
   if (method === 'cart') return '<span style="font-size:var(--fs-1);color:var(--grey)">Qty ▢ × ' + esc(p) + '</span> <span style="' + btn + '">Add</span>';
   if (method === 'range') return '<span style="font-size:var(--fs-1);color:var(--grey)">' + esc(_catfMoney(3200)) + ' – ' + esc(_catfMoney(3600)) + '</span> <span style="' + btn + '">Order</span>';
@@ -1038,21 +1038,21 @@ function _catfAppearsTab(f, c, facets){
   var visFields = (c.fields || []).slice(0, 4);
   var ccy = _catfCcy();
   var priceOf = function(r){ return (r.price != null && r.price !== '') ? r.price : 40; };
-  var step = function(n, title, inner){ return '<div style="border:1px solid var(--line);border-radius:12px;background:var(--card);padding:11px 13px;margin-top:8px"><div style="font-size:var(--fs-1);font-weight:800;color:#2c5aa0;letter-spacing:.04em;margin-bottom:8px">' + n + ' · ' + title + '</div>' + inner + '</div>'; };
+  var step = function(n, title, inner){ return '<div style="border:1px solid var(--line);border-radius:12px;background:var(--card);padding:11px 13px;margin-top:8px"><div style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);letter-spacing:.04em;margin-bottom:8px">' + n + ' · ' + title + '</div>' + inner + '</div>'; };
   var arrow = '<div style="text-align:center;color:#c8d0d9;font-size:15px;line-height:1.1">↓</div>';
   // 1 · browse (listing grid)
-  var browse = '<div style="display:flex;gap:8px;flex-wrap:wrap">' + rows.map(function(r){ return '<div style="width:132px;border:1px solid var(--line);border-radius:9px;padding:8px 9px;background:var(--card)">' + (facets.media ? '<div style="height:46px;border-radius:6px;background:linear-gradient(135deg,#eef1f5,#dde3ea);margin-bottom:6px"></div>' : '') + '<div style="font-weight:600;font-size:11.5px;line-height:1.2">' + esc(r.name || 'item') + '</div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px"><span style="font-weight:700;font-size:11.5px">' + esc(_catfMoney(priceOf(r))) + '</span><span style="background:#2c5aa0;color:#fff;border-radius:4px;padding:2px 7px;font-size:var(--fs-1);font-weight:600">' + (f.method === 'cart' ? 'Add' : 'View') + '</span></div></div>'; }).join('') + '</div>';
+  var browse = '<div style="display:flex;gap:8px;flex-wrap:wrap">' + rows.map(function(r){ return '<div style="width:132px;border:1px solid var(--line);border-radius:9px;padding:8px 9px;background:var(--card)">' + (facets.media ? '<div style="height:46px;border-radius:6px;background:linear-gradient(135deg,#eef1f5,#dde3ea);margin-bottom:6px"></div>' : '') + '<div style="font-weight:600;font-size:11.5px;line-height:1.2">' + esc(r.name || 'item') + '</div><div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px"><span style="font-weight:700;font-size:11.5px">' + esc(_catfMoney(priceOf(r))) + '</span><span style="background:var(--blue-2);color:#fff;border-radius:4px;padding:2px 7px;font-size:var(--fs-1);font-weight:600">' + (f.method === 'cart' ? 'Add' : 'View') + '</span></div></div>'; }).join('') + '</div>';
   // 2 · product detail
   var p0 = rows[0] || {};
   var spec = visFields.map(function(fl){ var v = (p0.values && p0.values[fl.name]) || _catfSampleVal(fl.name, 0); return '<div style="display:flex;justify-content:space-between;font-size:var(--fs-1);padding:2px 0;border-bottom:1px dashed var(--line)"><span style="color:var(--grey)">' + esc(fl.name) + '</span><span style="font-family:monospace">' + esc(v) + '</span></div>'; }).join('');
   var detail = '<div style="display:flex;gap:11px">' + (facets.media ? '<div style="width:86px;height:86px;border-radius:9px;background:linear-gradient(135deg,#eef1f5,#dde3ea);flex:none"></div>' : '') + '<div style="flex:1;min-width:0"><div style="font-weight:700;font-size:var(--fs-3)">' + esc(p0.name || c.product || 'Item') + '</div><div style="font-weight:800;font-size:15px;margin-top:2px">' + esc(_catfMoney(priceOf(p0))) + (p0.unit ? ' <span style="font-size:var(--fs-1);color:var(--grey);font-weight:400">/ ' + esc(p0.unit) + '</span>' : '') + '</div>' + (spec ? '<div style="margin-top:8px">' + spec + '</div>' : '') + '<div style="margin-top:10px">' + _catfMethodControl(f.method, p0.price) + '</div></div></div>';
   // 3 · cart & checkout
   var qty = 3; var up = parseFloat(priceOf(p0)) || 40; var tot = f.method === 'cart' ? up * qty : up;
-  var cart = '<div style="display:flex;justify-content:space-between;font-size:12px"><span>' + esc(p0.name || 'Item') + ' × ' + qty + '</span><span style="font-weight:600">' + esc(_catfMoney(tot)) + '</span></div><div style="display:flex;justify-content:space-between;margin-top:6px;border-top:1px solid var(--line);padding-top:6px"><span style="font-weight:700">Total (' + esc(ccy) + ')</span><span style="font-weight:800">' + esc(_catfMoney(tot)) + '</span></div><div style="text-align:right;margin-top:9px"><span style="background:#2c7a43;color:#fff;border-radius:6px;padding:5px 14px;font-size:11.5px;font-weight:600">Place order</span></div>';
+  var cart = '<div style="display:flex;justify-content:space-between;font-size:12px"><span>' + esc(p0.name || 'Item') + ' × ' + qty + '</span><span style="font-weight:600">' + esc(_catfMoney(tot)) + '</span></div><div style="display:flex;justify-content:space-between;margin-top:6px;border-top:1px solid var(--line);padding-top:6px"><span style="font-weight:700">Total (' + esc(ccy) + ')</span><span style="font-weight:800">' + esc(_catfMoney(tot)) + '</span></div><div style="text-align:right;margin-top:9px"><span style="background:var(--ok-2);color:#fff;border-radius:6px;padding:5px 14px;font-size:11.5px;font-weight:600">Place order</span></div>';
   // 4 · order placed → the chit (final output, both sides keep a copy)
-  var fieldLines = visFields.map(function(fl){ var v = (p0.values && p0.values[fl.name]) || _catfSampleVal(fl.name, 0); return '<div style="display:flex;justify-content:space-between;font-size:var(--fs-1);padding:1px 0"><span style="color:var(--grey)">' + esc(fl.name) + '</span><span style="font-family:monospace;color:var(--faint,#8a929e)">' + esc(v) + '</span></div>'; }).join('');
-  var chit = '<div style="max-width:280px;margin:0 auto;border:1px solid var(--line);border-top:3px solid #2c5aa0;border-radius:9px;padding:11px 12px;background:#fbfdff"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-weight:700;font-size:var(--fs-2)">' + esc(p0.name || 'Item') + '</span><span style="font-size:var(--fs-1);color:#2c7a43;font-weight:700">✓ placed</span></div><div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px">Qty ' + qty + (f.method === 'cart' ? ' · ' + esc(_catfMoney(tot)) : '') + (p0.unit ? ' ' + esc(p0.unit) : '') + '</div>' + (fieldLines ? '<div style="margin-top:6px;border-top:1px dashed var(--line);padding-top:5px">' + fieldLines + '</div>' : '') + '<div style="border-top:1px dashed var(--line);margin-top:8px;padding-top:5px;font-size:var(--fs-1);color:var(--faint,#8a929e);font-family:monospace">🔒 sealed · arrives on the rail · both parties keep a copy</div></div>';
-  return '<div style="font-size:var(--fs-1);font-weight:800;color:#2c7a43;letter-spacing:.05em">🛍 CUSTOMER EXPERIENCE — end to end</div>'
+  var fieldLines = visFields.map(function(fl){ var v = (p0.values && p0.values[fl.name]) || _catfSampleVal(fl.name, 0); return '<div style="display:flex;justify-content:space-between;font-size:var(--fs-1);padding:1px 0"><span style="color:var(--grey)">' + esc(fl.name) + '</span><span style="font-family:monospace;color:var(--faint,var(--grey-3))">' + esc(v) + '</span></div>'; }).join('');
+  var chit = '<div style="max-width:280px;margin:0 auto;border:1px solid var(--line);border-top:3px solid var(--blue-2);border-radius:9px;padding:11px 12px;background:#fbfdff"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-weight:700;font-size:var(--fs-2)">' + esc(p0.name || 'Item') + '</span><span style="font-size:var(--fs-1);color:var(--ok-2);font-weight:700">✓ placed</span></div><div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px">Qty ' + qty + (f.method === 'cart' ? ' · ' + esc(_catfMoney(tot)) : '') + (p0.unit ? ' ' + esc(p0.unit) : '') + '</div>' + (fieldLines ? '<div style="margin-top:6px;border-top:1px dashed var(--line);padding-top:5px">' + fieldLines + '</div>' : '') + '<div style="border-top:1px dashed var(--line);margin-top:8px;padding-top:5px;font-size:var(--fs-1);color:var(--faint,var(--grey-3));font-family:monospace">🔒 sealed · arrives on the rail · both parties keep a copy</div></div>';
+  return '<div style="font-size:var(--fs-1);font-weight:800;color:var(--ok-2);letter-spacing:.05em">🛍 CUSTOMER EXPERIENCE — end to end</div>'
     + step('1', 'Browse the storefront', browse) + arrow
     + step('2', 'Open a product', detail) + arrow
     + step('3', 'Cart &amp; checkout', cart) + arrow
@@ -1061,9 +1061,9 @@ function _catfAppearsTab(f, c, facets){
 }
 
 /* the items under this face — each tagged by SOURCE (reference / manual / ERP). For referenced items the owner only sets price. */
-function _catfSrcTag(src){ return src === 'reference' ? ['📎 by reference', '#6a44a8'] : src === 'value' ? ['📋 by value (copy)', '#2c5aa0'] : src === 'erp' ? ['🔗 from ERP', '#b07b1e'] : src === 'csv' ? ['📄 imported', '#2c7a43'] : src === 'capture' ? ['📷 photo', '#6a4fa0'] : ['✍ entered', '#2c7a43']; }
+function _catfSrcTag(src){ return src === 'reference' ? ['📎 by reference', 'var(--purple-2)'] : src === 'value' ? ['📋 by value (copy)', 'var(--blue-2)'] : src === 'erp' ? ['🔗 from ERP', '#b07b1e'] : src === 'csv' ? ['📄 imported', 'var(--ok-2)'] : src === 'capture' ? ['📷 photo', '#6a4fa0'] : ['✍ entered', 'var(--ok-2)']; }
 function _catfItemsHtml(f){
-  var items = (f.items || []); if (!items.length) return '<div style="font-size:var(--fs-1);font-weight:800;color:#2c7a43;letter-spacing:.05em;margin-top:18px">YOUR ITEMS · 0</div><div style="font-size:var(--fs-1);color:var(--grey);padding:4px 0">No items yet — adopt a source, add manually, or pull from ERP.</div>';
+  var items = (f.items || []); if (!items.length) return '<div style="font-size:var(--fs-1);font-weight:800;color:var(--ok-2);letter-spacing:.05em;margin-top:18px">YOUR ITEMS · 0</div><div style="font-size:var(--fs-1);color:var(--grey);padding:4px 0">No items yet — adopt a source, add manually, or pull from ERP.</div>';
   var needPrice = items.filter(function(it){ return it.price == null || it.price === ''; }).length;
   var rows = items.map(function(it, i){
     var t = _catfSrcTag(it._src);
@@ -1076,9 +1076,9 @@ function _catfItemsHtml(f){
       + '<span style="font-weight:600;font-size:var(--fs-2)">' + esc(it.product || it.name || 'item') + '</span>'
       + '<span style="font-size:var(--fs-1);font-weight:700;color:' + t[1] + ';background:' + t[1] + '18;border-radius:4px;padding:1px 6px">' + t[0] + '</span>'
       + '<span style="margin-left:auto;display:flex;align-items:center;gap:6px">' + _catfUnitCell(f, it, i) + priceCell + '</span></div>'
-      + (attrs ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px">' + attrs + (it._src === 'reference' ? ' <span style="color:#6a44a8">· referenced, kept inside</span>' : '') + '</div>' : '') + '</div>';
+      + (attrs ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px">' + attrs + (it._src === 'reference' ? ' <span style="color:var(--purple-2)">· referenced, kept inside</span>' : '') + '</div>' : '') + '</div>';
   }).join('');
-  return '<div style="font-size:var(--fs-1);font-weight:800;color:#2c7a43;letter-spacing:.05em;margin-top:18px">YOUR ITEMS · ' + items.length + (needPrice ? ' <span style="color:#a5382e;font-weight:600">· ' + needPrice + ' need a price</span>' : ' <span style="color:#2c7a43">· ready</span>') + '</div><div style="margin-top:4px">' + rows + '</div>';
+  return '<div style="font-size:var(--fs-1);font-weight:800;color:var(--ok-2);letter-spacing:.05em;margin-top:18px">YOUR ITEMS · ' + items.length + (needPrice ? ' <span style="color:var(--disp-2);font-weight:600">· ' + needPrice + ' need a price</span>' : ' <span style="color:var(--ok-2)">· ready</span>') + '</div><div style="margin-top:4px">' + rows + '</div>';
 }
 // PER-ITEM UNIT on the face row: the catalogue's units are the allowed SET, each item picks its own from it.
 // One unit → a plain label (nothing to choose); several → a dropdown.
@@ -1086,7 +1086,7 @@ function _catfUnitCell(f, it, i){
   var units = (f.units && f.units.length) ? f.units : []; if (!units.length) return '';
   var sel = (units.indexOf(it.unit) >= 0) ? it.unit : units[0];
   if (units.length === 1) return '<span style="font-size:var(--fs-1);color:var(--grey)">/ ' + esc(sel) + '</span>';
-  return '<select data-testid="catf-item-unit" onchange="catfSetItemUnit(' + i + ',this.value)" title="unit this item sells by" style="padding:3px 5px;border:1px solid var(--line);border-radius:5px;font-size:var(--fs-1);background:var(--card);color:#3a4048">'
+  return '<select data-testid="catf-item-unit" onchange="catfSetItemUnit(' + i + ',this.value)" title="unit this item sells by" style="padding:3px 5px;border:1px solid var(--line);border-radius:5px;font-size:var(--fs-1);background:var(--card);color:var(--ink-2)">'
     + units.map(function(u){ return '<option value="' + esc(u) + '"' + (u === sel ? ' selected' : '') + '>' + esc(u) + '</option>'; }).join('') + '</select>';
 }
 function catfSetItemUnit(i, u){ if (!UI.catf || !UI.catf.items || !UI.catf.items[i]) return; UI.catf.items[i].unit = u; _catfSave(); if (UI.catf._source) _catfRepublish(); renderApp(); }
@@ -1108,28 +1108,28 @@ function _catfFaceView(){
   var facetRows = CATF_FACETS.map(function(x){ var on = !!facets[x.k];
     return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)">'
       + '<div style="flex:1"><div style="font-weight:600;font-size:var(--fs-2);color:' + (on ? '#1c2128' : 'var(--grey)') + '">' + esc(x.label) + '</div><div style="font-size:var(--fs-1);color:var(--grey)">' + esc(x.hint) + '</div></div>'
-      + '<span onclick="catfToggleFacet(\'' + x.k + '\')" style="cursor:pointer;font-size:11.5px;font-weight:700;padding:4px 12px;border-radius:14px;border:1px solid ' + (on ? '#2c7a43' : 'var(--line)') + ';color:' + (on ? '#fff' : 'var(--blue)') + ';background:' + (on ? '#2c7a43' : '#fff') + '">' + (on ? '✓ on' : '＋ add') + '</span></div>';
+      + '<span onclick="catfToggleFacet(\'' + x.k + '\')" style="cursor:pointer;font-size:11.5px;font-weight:700;padding:4px 12px;border-radius:14px;border:1px solid ' + (on ? 'var(--ok-2)' : 'var(--line)') + ';color:' + (on ? '#fff' : 'var(--blue)') + ';background:' + (on ? 'var(--ok-2)' : '#fff') + '">' + (on ? '✓ on' : '＋ add') + '</span></div>';
   }).join('');
   var inner = '<div style="max-width:660px">'
-    + '<div style="display:flex;align-items:center;gap:10px"><div style="font-size:18px;font-weight:800">🗂️ Catalogue face</div>' + (f.adoptedFrom ? '<span style="font-size:var(--fs-1);font-weight:700;color:#2c5aa0;background:#eef2f7;border-radius:5px;padding:2px 8px">adopted · ' + esc(f.adoptedFrom) + '</span>' : '<span style="font-size:var(--fs-1);font-weight:700;color:#6a4fa0;background:#efeafa;border-radius:5px;padding:2px 8px">built from your data</span>') + '</div>'
+    + '<div style="display:flex;align-items:center;gap:10px"><div style="font-size:18px;font-weight:800">🗂️ Catalogue face</div>' + (f.adoptedFrom ? '<span style="font-size:var(--fs-1);font-weight:700;color:var(--blue-2);background:#eef2f7;border-radius:5px;padding:2px 8px">adopted · ' + esc(f.adoptedFrom) + '</span>' : '<span style="font-size:var(--fs-1);font-weight:700;color:#6a4fa0;background:#efeafa;border-radius:5px;padding:2px 8px">built from your data</span>') + '</div>'
     + '<div style="font-size:11.5px;color:var(--grey);margin-top:4px">One face for the whole catalogue — every item conforms. ' + _catfSettingsNote() + '</div>'
     + '<label style="font-size:var(--fs-1);color:var(--grey);display:block;margin-top:14px">Purpose</label>'
     + '<textarea oninput="catfSetPurpose(this.value)" rows="2" style="width:100%;margin-top:4px;box-sizing:border-box;padding:8px 10px;border:1px solid var(--line);border-radius:9px;font-size:13px;resize:vertical">' + esc(c.story || '') + '</textarea>'
-    + '<label style="font-size:var(--fs-1);color:var(--grey);display:block;margin-top:12px">How the store sells <span style="color:var(--faint,#8a929e)">— one method for the whole catalogue</span></label>'
+    + '<label style="font-size:var(--fs-1);color:var(--grey);display:block;margin-top:12px">How the store sells <span style="color:var(--faint,var(--grey-3))">— one method for the whole catalogue</span></label>'
     + '<select onchange="catfSetMethod(this.value)" style="margin-top:4px;padding:7px 9px;border:1px solid var(--line);border-radius:9px;font-size:13px">' + methOpts + '</select>'
     + '<div style="font-size:var(--fs-1);color:var(--grey);font-style:italic;margin-top:3px">' + esc(methHint) + '</div>'
-    + ((f.units && f.units.length) || (c.altUnits && c.altUnits.length) ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:10px">Sold by <span style="color:#1c2128;font-weight:600">' + esc((f.units && f.units.length) ? f.units.join(' · ') : [c.baseUnit].concat(c.altUnits || []).join(' · ')) + '</span> <span style="color:var(--faint,#8a929e)">— items may use any of these</span></div>' : '')
-    + '<div style="font-size:var(--fs-1);font-weight:800;color:#2c5aa0;letter-spacing:.05em;margin-top:16px">DEEPEN THE CATALOGUE <span style="font-weight:500;color:var(--grey)">— add only what this business needs</span></div>'
+    + ((f.units && f.units.length) || (c.altUnits && c.altUnits.length) ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:10px">Sold by <span style="color:#1c2128;font-weight:600">' + esc((f.units && f.units.length) ? f.units.join(' · ') : [c.baseUnit].concat(c.altUnits || []).join(' · ')) + '</span> <span style="color:var(--faint,var(--grey-3))">— items may use any of these</span></div>' : '')
+    + '<div style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);letter-spacing:.05em;margin-top:16px">DEEPEN THE CATALOGUE <span style="font-weight:500;color:var(--grey)">— add only what this business needs</span></div>'
     + '<div style="margin-top:6px">' + facetRows + '</div>'
     + _catfItemsHtml(f)
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:16px">Item data comes three ways — <b>📎 from the source</b> (owner sets price only) · <b>✍ entered</b> · <b>🔗 from ERP</b>:</div>'
     + '<div style="display:flex;gap:10px;margin-top:6px;flex-wrap:wrap">'
     + '<button class="pri" onclick="catfFillItem()" style="padding:9px 15px">＋ Add manually</button>'
     + '<button onclick="catfSyncERP()" style="padding:9px 15px;border:1px solid #b07b1e;border-radius:9px;background:var(--card);color:#b07b1e;font-weight:600">🔗 From ERP</button>'
-    + '<button onclick="catfCustomerPreview()" style="padding:9px 15px;border:1px solid #2c7a43;border-radius:9px;background:var(--card);color:#2c7a43;font-weight:600">👁 Customer experience</button>'
-    + '<button onclick="catfManage()" style="padding:9px 15px;border:1px solid #2c5aa0;border-radius:9px;background:var(--card);color:#2c5aa0;font-weight:600">🗂️ Manage in Catalogue</button>'
+    + '<button onclick="catfCustomerPreview()" style="padding:9px 15px;border:1px solid var(--ok-2);border-radius:9px;background:var(--card);color:var(--ok-2);font-weight:600">👁 Customer experience</button>'
+    + '<button onclick="catfManage()" style="padding:9px 15px;border:1px solid var(--blue-2);border-radius:9px;background:var(--card);color:var(--blue-2);font-weight:600">🗂️ Manage in Catalogue</button>'
     + '<input id="catf_photo_input" type="file" accept="image/*" multiple style="display:none" onchange="catfAddPhotos(this)">'
-    + '<button onclick="catfPhotoAttachBtn()" style="padding:9px 15px;border:1px solid #2c7a43;border-radius:9px;background:var(--card);color:#2c7a43;font-weight:600">📷 Add photos</button>'
+    + '<button onclick="catfPhotoAttachBtn()" style="padding:9px 15px;border:1px solid var(--ok-2);border-radius:9px;background:var(--card);color:var(--ok-2);font-weight:600">📷 Add photos</button>'
     + '<button onclick="catfEnrichAI()" style="padding:9px 15px;border:1px solid #b07b1e;border-radius:9px;background:var(--card);color:#b07b1e;font-weight:600">✨ Enrich (AI)</button>'
     + '<button onclick="catfPublishBlueprint()" style="padding:9px 15px;border:1px solid #6a4fa0;border-radius:9px;background:var(--card);color:#6a4fa0;font-weight:600">📢 Publish as blueprint</button>'
     + '<button onclick="catfReset()" style="padding:9px 15px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--grey)">↺ Start over</button>'

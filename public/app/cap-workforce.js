@@ -30,7 +30,7 @@ window.AC_TYPE_HOW = window.AC_TYPE_HOW || {
 function acTypeInfo(t){ var reg=(window.ACTOR_TYPES||{})[t]||{}, h=(window.AC_TYPE_HOW||{})[t]; if(!h||typeof modal!=='function')return;
   var lbl=(reg.label||t).split(/[ \/]/)[0];
   var extra=(t==='iot')?'<div style="margin-top:12px"><button class="composebtn" onclick="closeModal();openShowcase(\'/iot-howitworks.html\',\'How IoT works\')">See the full walkthrough →</button></div>':'';
-  modal('<div style="padding:2px 2px"><div style="font-size:26px">'+(reg.icon||'')+'</div><div style="font-weight:800;font-size:var(--fs-4);margin-top:4px">'+esc(lbl)+' — as a co-assist</div><div style="font-size:13px;color:#3a4048;line-height:1.6;margin-top:8px">'+esc(h.how)+'</div>'+extra+'<div style="display:flex;margin-top:16px"><button class="composebtn pri" style="flex:1" onclick="closeModal()">Got it</button></div></div>', false);
+  modal('<div style="padding:2px 2px"><div style="font-size:26px">'+(reg.icon||'')+'</div><div style="font-weight:800;font-size:var(--fs-4);margin-top:4px">'+esc(lbl)+' — as a co-assist</div><div style="font-size:13px;color:var(--ink-2);line-height:1.6;margin-top:8px">'+esc(h.how)+'</div>'+extra+'<div style="display:flex;margin-top:16px"><button class="composebtn pri" style="flex:1" onclick="closeModal()">Got it</button></div></div>', false);
 }
 // GOVERNANCE hook (invisible to end users): merge governed type defs (with their constraints) into the registry — no core change.
 function acMergeTypes(defs){ if(defs&&typeof defs==='object'){ Object.keys(defs).forEach(function(k){ window.ACTOR_TYPES[k]=Object.assign({},window.ACTOR_TYPES[k]||{},defs[k]); }); if(typeof paintAcList==='function')paintAcList(); if(typeof renderApp==='function')renderApp(); } }
@@ -64,31 +64,31 @@ function aiSetGate(key,g){ _aiPolSet(key,{gate:g}); if(typeof paintAcList==='fun
 function acCount(){ return ((UI.acTypeF||'all')==='ai') ? (window.AI_SLOTS||[]).length : acVisible().length; }
 function aiSlotInfo(key){ var s=(window.AI_SLOTS||[]).find(function(x){return x.key===key;}); if(!s||typeof modal!=='function')return; var st=aiSlotState(s);
   modal('<div style="padding:2px 2px"><div style="font-size:26px">🤖</div><div style="font-weight:800;font-size:var(--fs-4);margin-top:4px">'+esc(s.name)+'</div>'
-    +'<div style="font-size:var(--fs-1);color:#6a44a8;font-family:\'Space Mono\',monospace;margin-top:2px">ai:'+esc(s.key)+' · '+esc(s.status)+' · '+(st.enabled?'enabled':'off')+'</div>'
-    +'<div style="font-size:13px;color:#3a4048;line-height:1.6;margin-top:8px">'+esc(s.desc)+'</div>'
+    +'<div style="font-size:var(--fs-1);color:var(--purple-2);font-family:\'Space Mono\',monospace;margin-top:2px">ai:'+esc(s.key)+' · '+esc(s.status)+' · '+(st.enabled?'enabled':'off')+'</div>'
+    +'<div style="font-size:13px;color:var(--ink-2);line-height:1.6;margin-top:8px">'+esc(s.desc)+'</div>'
     +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">'
-      +'<span class="optchip" style="background:#eef3fb;color:var(--blue-d);border-color:#cfe0f4">rung · '+esc(s.rung)+' (floor)</span>'
+      +'<span class="optchip" style="background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)">rung · '+esc(s.rung)+' (floor)</span>'
       +'<span class="optchip" style="background:#f3f0e8;color:#7a5e22;border-color:#e6d9a8">human gate · '+esc(st.gate)+'</span></div>'
     +'<div style="font-size:11.5px;color:var(--grey);background:#f7f7f5;border:1px solid var(--line);border-radius:9px;padding:9px 11px;margin-top:12px;line-height:1.5">Every run is a governed chit stamped <b>acted_by</b> (deputy · model · delegator · confirmed_by). The model PROPOSES, the rail AUTHORISES, you confirm. The rung sets the floor — you can only tighten the gate.</div>'
     +'<div style="display:flex;gap:10px;margin-top:16px">'+((st.enabled&&s.status==='live'&&s.invoke)?'<button class="composebtn pri" style="flex:1" onclick="closeModal();'+esc(s.invoke)+'()">▶ Invoke</button>':'')+'<button class="composebtn" style="flex:1" onclick="closeModal()">Close</button></div></div>', false);
 }
 function aiRowsHTML(){
   var slots=window.AI_SLOTS||[];
-  var intro='<div style="padding:11px 13px;font-size:11.5px;color:#6a707a;line-height:1.5;border-bottom:1px solid var(--line)">🤖 AI assists act for you as governed co-assists — each is one <b>slot</b>. Turn one on and set its rule; every action it takes is a chit you can see and dispute. <span style="color:#9aa3a7">Rung sets the floor — you can only tighten the human gate.</span></div>';
+  var intro='<div style="padding:11px 13px;font-size:11.5px;color:var(--grey-2);line-height:1.5;border-bottom:1px solid var(--line)">🤖 AI assists act for you as governed co-assists — each is one <b>slot</b>. Turn one on and set its rule; every action it takes is a chit you can see and dispute. <span style="color:var(--grey-4)">Rung sets the floor — you can only tighten the human gate.</span></div>';
   if(!slots.length) return intro+'<div class="empty"><div class="big">🤖</div><div class="t">No AI assists yet</div><div>They light up as slots are enabled.</div></div>';
   return intro+slots.map(function(s){ var st=aiSlotState(s), live=s.status==='live', on=st.enabled;
-    var dot=on?(live?'#2f8f5b':'#c9a441'):'#b9b9b9';
+    var dot=on?(live?'var(--ok-3)':'#c9a441'):'#b9b9b9';
     var gateOpts=(s.gates||[]).map(function(g){ return '<option value="'+g+'"'+(st.gate===g?' selected':'')+'>'+g+'</option>'; }).join('');
     var canInvoke=on&&live&&s.invoke;
     return '<div class="row" style="cursor:default;align-items:flex-start">'
       +'<div style="width:9px;height:9px;border-radius:50%;flex:0 0 auto;margin-top:6px;background:'+dot+'"></div>'
       +'<div class="main2" style="width:100%;min-width:0"><div class="l1"><span class="code">'+esc(s.name)+'</span>'
-        +'<span class="optchip" style="background:#F0EAF9;color:#6a44a8;border-color:transparent">🤖 '+esc(s.key)+'</span>'
-        +'<span class="amt" style="margin-left:auto;font-size:var(--fs-1);color:'+(on?(live?'#2f8f5b':'#a9791f'):'var(--grey)')+';font-weight:600">'+(on?(live?'enabled · live':'enabled · shaped'):'off')+'</span></div>'
+        +'<span class="optchip" style="background:#F0EAF9;color:var(--purple-2);border-color:transparent">🤖 '+esc(s.key)+'</span>'
+        +'<span class="amt" style="margin-left:auto;font-size:var(--fs-1);color:'+(on?(live?'var(--ok-3)':'#a9791f'):'var(--grey)')+';font-weight:600">'+(on?(live?'enabled · live':'enabled · shaped'):'off')+'</span></div>'
         +'<div class="l2">'+esc(s.desc)+'</div>'
         +'<div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-top:8px">'
           +'<button class="composebtn'+(on?' pri':'')+'" style="padding:5px 12px;font-size:12px" onclick="aiToggle(\''+esc(s.key)+'\')">'+(on?'✓ Enabled':'Enable')+'</button>'
-          +'<span class="optchip" style="background:#eef3fb;color:var(--blue-d);border-color:#cfe0f4">rung · '+esc(s.rung)+'</span>'
+          +'<span class="optchip" style="background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)">rung · '+esc(s.rung)+'</span>'
           +'<label style="font-size:11.5px;color:var(--grey);display:inline-flex;align-items:center;gap:5px">human gate <select onchange="aiSetGate(\''+esc(s.key)+'\',this.value)" style="border:1px solid var(--line);border-radius:6px;padding:3px 6px;font-size:11.5px"'+(on?'':' disabled')+'>'+gateOpts+'</select></label>'
         +'</div>'
         +'<div style="margin-top:8px;display:flex;gap:6px;align-items:center">'
@@ -125,7 +125,7 @@ function coassistsScreen(){
   const _treg=(window.ACTOR_TYPES||{})[_tf]||null;
   const _shortLbl=_treg?(_treg.label||_tf).split(/[ \/]/)[0]:'';
   const _title=(_tf!=='all'&&_treg)?((_treg.icon?_treg.icon+' ':'')+esc(_shortLbl)+' · co-assists'):'🧑‍🤝‍🧑 Co-assists';
-  const _typeInfoBtn=(_tf!=='all'&&(window.AC_TYPE_HOW||{})[_tf])?`<button onclick="acTypeInfo('${_tf}')" title="How ${esc(_shortLbl)} co-assists work" style="border:1px solid #cfe0f4;background:#eef4fc;color:#2c5aa0;border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">i</button>`:'';
+  const _typeInfoBtn=(_tf!=='all'&&(window.AC_TYPE_HOW||{})[_tf])?`<button onclick="acTypeInfo('${_tf}')" title="How ${esc(_shortLbl)} co-assists work" style="border:1px solid var(--blue-tint-line);background:#eef4fc;color:var(--blue-2);border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">i</button>`:'';
   const list = `<div class="list">
     <div class="lh">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3)">${_title}</span><button onclick="openAssist('coassists')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button>${_typeInfoBtn}</div>
@@ -169,7 +169,7 @@ async function awFinish(){
     try{ var r=await api('addActor',{body:{display_name:name,actor_key:key,hat:d.aw_hat||'act'}});
       var lf=(r&&(r.login_format||(r.actor&&r.actor.login_format)))||(typeof coId==='function'?coId(key):key);
       var otp=(r&&(r.otp||r.dev_otp))||'';
-      UI.awResult='<div style="text-align:center"><div style="font-size:34px;margin:8px 0 6px">✉️</div><div style="font-weight:700;font-size:var(--fs-4)">Invite ready</div><div style="font-size:13px;color:#3a4048;line-height:1.7;margin-top:10px">User ID <b>'+esc(lf)+'</b><br>one-time code <b>'+esc(otp||'—')+'</b><br><br>Share these — they set a PIN and start on shift.</div></div>';
+      UI.awResult='<div style="text-align:center"><div style="font-size:34px;margin:8px 0 6px">✉️</div><div style="font-weight:700;font-size:var(--fs-4)">Invite ready</div><div style="font-size:13px;color:var(--ink-2);line-height:1.7;margin-top:10px">User ID <b>'+esc(lf)+'</b><br>one-time code <b>'+esc(otp||'—')+'</b><br><br>Share these — they set a PIN and start on shift.</div></div>';
       UI.awStep='done'; UI.awErr=null; awRender();
       if(UI.nav==='coassists' && typeof loadCoassists==='function') loadCoassists();
     }catch(e){ UI.awErr=(e&&e.message)||'Create failed'; awRender(); }
@@ -177,7 +177,7 @@ async function awFinish(){
   }
   // Pull mode (subscribe to the customer's broker) is not built yet — gate it as coming-soon, never create a dead connector.
   if(t==='iot' && (d.aw_mode||'push')==='pull'){
-    UI.awResult='<div style="text-align:center"><div style="font-size:34px;margin:8px 0 6px">🔌</div><div style="font-weight:700;font-size:var(--fs-4)">Pull mode — coming soon</div><div style="font-size:13px;color:#3a4048;line-height:1.6;margin-top:10px">Subscribing to <b>your</b> MQTT broker is on the roadmap — not live yet. For now use <b>Push</b>: a Pi / edge box we hand a one-line installer to. ‹ Back one step to switch to Push.</div><div style="font-size:11.5px;color:#2c5aa0;background:#eef3fb;border:1px solid #cfe0f4;border-radius:9px;padding:9px 11px;margin-top:14px">✨ Explore mode — not activated yet.</div></div>';
+    UI.awResult='<div style="text-align:center"><div style="font-size:34px;margin:8px 0 6px">🔌</div><div style="font-weight:700;font-size:var(--fs-4)">Pull mode — coming soon</div><div style="font-size:13px;color:var(--ink-2);line-height:1.6;margin-top:10px">Subscribing to <b>your</b> MQTT broker is on the roadmap — not live yet. For now use <b>Push</b>: a Pi / edge box we hand a one-line installer to. ‹ Back one step to switch to Push.</div><div style="font-size:11.5px;color:var(--blue-2);background:var(--blue-tint);border:1px solid var(--blue-tint-line);border-radius:9px;padding:9px 11px;margin-top:14px">✨ Explore mode — not activated yet.</div></div>';
     UI.awStep='done'; UI.awErr=null; awRender(); return;
   }
   var cfg = t==='iot' ? {mode:d.aw_mode||'push'} : {base_url:(d.aw_baseurl||'').trim()||undefined, auth_ref:(d.aw_authref||'').trim()||undefined};
@@ -195,11 +195,11 @@ async function awFinish(){
       }catch(_){}
       UI.awResult='<div style="text-align:center"><div style="font-size:34px;margin:8px 0 6px">🛰️</div><div style="font-weight:700;font-size:var(--fs-4)">Gateway created</div>'
         +(UI.awInstaller
-          ? '<div style="font-size:var(--fs-2);color:#3a4048;line-height:1.6;margin-top:10px">Its one-drop installer is <b>ready</b> (key inside). Download it whenever you\'re ready to set up the Pi:</div><button class="composebtn pri" style="margin-top:12px" onclick="awDownloadPkg()">📦 Download install package</button><div style="font-size:11.5px;color:var(--grey);margin-top:10px">Then run <span style="background:#0f1b2d;color:#cfe0f4;border-radius:6px;padding:1px 6px;font:11px ui-monospace,Consolas,monospace">sudo bash chitbridge-install.sh</span> on the Pi, and add its <b>devices</b> here.<br><b>Didn\'t download, or lost it?</b> Open the gateway → <b>📦 Create package</b> — a re-created package is identical (same gateway, fresh key). Re-creation and creation give you the exact same thing.</div>'
-          : '<div style="font-size:var(--fs-2);color:#3a4048;margin-top:10px">Open it in Co-assists → <b>📦 Create package</b> to get the installer.</div>')
+          ? '<div style="font-size:var(--fs-2);color:var(--ink-2);line-height:1.6;margin-top:10px">Its one-drop installer is <b>ready</b> (key inside). Download it whenever you\'re ready to set up the Pi:</div><button class="composebtn pri" style="margin-top:12px" onclick="awDownloadPkg()">📦 Download install package</button><div style="font-size:11.5px;color:var(--grey);margin-top:10px">Then run <span style="background:#0f1b2d;color:var(--blue-tint-line);border-radius:6px;padding:1px 6px;font:11px ui-monospace,Consolas,monospace">sudo bash chitbridge-install.sh</span> on the Pi, and add its <b>devices</b> here.<br><b>Didn\'t download, or lost it?</b> Open the gateway → <b>📦 Create package</b> — a re-created package is identical (same gateway, fresh key). Re-creation and creation give you the exact same thing.</div>'
+          : '<div style="font-size:var(--fs-2);color:var(--ink-2);margin-top:10px">Open it in Co-assists → <b>📦 Create package</b> to get the installer.</div>')
         +'</div>';
     } else {
-      UI.awResult='<div style="text-align:center"><div style="font-size:34px;margin:8px 0 6px">🔌</div><div style="font-weight:700;font-size:var(--fs-4)">System connected</div><div style="font-size:var(--fs-2);color:#3a4048;margin-top:10px">Add its endpoints in Connectors.</div></div>';
+      UI.awResult='<div style="text-align:center"><div style="font-size:34px;margin:8px 0 6px">🔌</div><div style="font-weight:700;font-size:var(--fs-4)">System connected</div><div style="font-size:var(--fs-2);color:var(--ink-2);margin-top:10px">Add its endpoints in Connectors.</div></div>';
     }
     UI.awStep='done'; UI.awErr=null; UI.connectors=undefined; awRender();
     if(UI.nav==='coassists' && typeof loadCoassists==='function') loadCoassists();   // refresh the panel so the new Pi/system shows immediately
@@ -209,7 +209,7 @@ function _awPreviewHtml(t){
   var m={ erp:{ic:'🔌',nm:'ERP / API',how:'The system\'s endpoints exchange records over the governed rail — processed then forgotten (receipt only).'},
           ai:{ic:'🤖',nm:'AI agent',how:'A governed AI drafts / answers under your rules — every action it takes is a chit you can see and dispute.'},
           iot:{ic:'🛰️',nm:'IoT device',how:'A Pi publishes readings to the connection string we issue — they become chits over the rail.'} }[t]||{ic:'',nm:t,how:''};
-  return '<div style="text-align:center"><div style="font-size:34px;margin:8px 0 6px">'+m.ic+'</div><div style="font-weight:700;font-size:var(--fs-4)">'+m.nm+' — how it works</div><div style="font-size:13px;color:#3a4048;line-height:1.6;margin-top:10px">'+m.how+'</div><div style="font-size:11.5px;color:#2c5aa0;background:#eef3fb;border:1px solid #cfe0f4;border-radius:9px;padding:9px 11px;margin-top:14px">✨ Explore mode — not activated for your entity yet.</div></div>';
+  return '<div style="text-align:center"><div style="font-size:34px;margin:8px 0 6px">'+m.ic+'</div><div style="font-weight:700;font-size:var(--fs-4)">'+m.nm+' — how it works</div><div style="font-size:13px;color:var(--ink-2);line-height:1.6;margin-top:10px">'+m.how+'</div><div style="font-size:11.5px;color:var(--blue-2);background:var(--blue-tint);border:1px solid var(--blue-tint-line);border-radius:9px;padding:9px 11px;margin-top:14px">✨ Explore mode — not activated for your entity yet.</div></div>';
 }
 function awRender(){
   var d=UI.awData||{};   // render THROUGH the app's shared modal() → same placement/backdrop/responsive as every other dialog
@@ -221,7 +221,7 @@ function awRender(){
     title='Add a co-assist'; sub='What kind of co-assist? People, devices, systems and agents can all act for you.';
     var types=[['human','👤','Human','A person who acts for you'],['iot','🛰️','IoT device','A Pi / gateway that sends signals'],['erp','🔌','ERP / API','Connect a business system'],['ai','🤖','AI agent','An autonomous co-assist']];
     body='<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'+types.map(function(t){ var rdy=_awReady(t[0]);
-      return '<div data-testid="coassist-type-'+t[0]+'" onclick="awPick(\''+t[0]+'\')" onmouseover="this.style.borderColor=\'var(--blue)\'" onmouseout="this.style.borderColor=\'#e5e2dd\'" style="border:1px solid #e5e2dd;border-radius:14px;padding:14px;cursor:pointer;'+(rdy?'':'opacity:.72')+'"><div style="font-size:24px">'+t[1]+'</div><div style="font-weight:700;font-size:var(--fs-3);margin-top:6px">'+t[2]+'</div><div style="font-size:11.5px;color:#6a707a;margin-top:2px;line-height:1.35">'+t[3]+'</div><span style="display:inline-block;margin-top:9px;font-size:var(--fs-1);font-weight:700;border-radius:20px;padding:1px 9px;'+(rdy?'background:#e8f3ec;color:#2f7a45':'background:#eef3fb;color:#2c5aa0')+'">'+(rdy?'ready':'explore')+'</span></div>';
+      return '<div data-testid="coassist-type-'+t[0]+'" onclick="awPick(\''+t[0]+'\')" onmouseover="this.style.borderColor=\'var(--blue)\'" onmouseout="this.style.borderColor=\'#e5e2dd\'" style="border:1px solid #e5e2dd;border-radius:14px;padding:14px;cursor:pointer;'+(rdy?'':'opacity:.72')+'"><div style="font-size:24px">'+t[1]+'</div><div style="font-weight:700;font-size:var(--fs-3);margin-top:6px">'+t[2]+'</div><div style="font-size:11.5px;color:var(--grey-2);margin-top:2px;line-height:1.35">'+t[3]+'</div><span style="display:inline-block;margin-top:9px;font-size:var(--fs-1);font-weight:700;border-radius:20px;padding:1px 9px;'+(rdy?'background:#e8f3ec;color:#2f7a45':'background:var(--blue-tint);color:var(--blue-2)')+'">'+(rdy?'ready':'explore')+'</span></div>';
     }).join('')+'</div>';
     foot='<button class="composebtn" style="flex:1" onclick="awClose()">Cancel</button>';
   } else {
@@ -282,7 +282,7 @@ function _ago(ts){ return timeAgo(ts); }   // shared: helpers.js timeAgo
 function _iotRowHTML(x){ var info=(UI._connInfo||{})[x.id]||{}; var t=(info.type||(typeof acTypeOf==='function'&&acTypeOf(x))||'iot'); var iot=t!=='erp';
   var h=info.health||'offline'; var hc=healthColor(h); var ago=_ago(info.last_seen);
   var cnt=(info.count!=null?info.count:0); var dim=x.status!=='active'?'opacity:.55':'';
-  var typechip='<span class="optchip" style="background:'+(iot?'#E7F0FB':'#F0EAF9')+';color:'+(iot?'#2b5c9c':'#6a44a8')+';border-color:transparent">'+(iot?'🛰️ IoT':'🔌 ERP')+'</span>';
+  var typechip='<span class="optchip" style="background:'+(iot?'#E7F0FB':'#F0EAF9')+';color:'+(iot?'#2b5c9c':'var(--purple-2)')+';border-color:transparent">'+(iot?'🛰️ IoT':'🔌 ERP')+'</span>';
   return `<div class="row ${x.id===UI.acSel?'sel':''}" data-ac="${x.id}" style="${dim}" onclick="selectActor('${x.id}')">
     <div style="width:9px;height:9px;border-radius:50%;flex:0 0 auto;margin-top:5px;background:${hc}"></div>
     <div class="main2"><div class="l1"><span class="code">${esc(x.name)}</span>${typechip}<span class="amt" style="margin-left:auto;font-size:var(--fs-1);color:${hc};font-weight:600">${esc(h)}${ago?(' · '+esc(ago)):''}</span></div>
@@ -293,8 +293,8 @@ function acRowHTML(x){ if(typeof acTypeOf==='function'){ var _ct=acTypeOf(x); if
   const coverNm=x.del?((UI._acNames||{})[x.del]||'—'):''; const coversNames=(UI._coversNames||{})[x.id]||[];
   const coverLines=(x.del||coversNames.length)?'<div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px;line-height:1.45">'+(x.del?('🛡 Covered by <b style="color:var(--ink);font-weight:600">'+coverNm+'</b>'):'')+((x.del&&coversNames.length)?'<br>':'')+(coversNames.length?('🤝 Covers for <b style="color:var(--ink);font-weight:600">'+coversNames.join(', ')+'</b>'):'')+'</div>':'';
   return `<div class="row ${x.id===UI.acSel?'sel':''}" data-ac="${x.id}" style="${dim}" onclick="selectActor('${x.id}')">
-    <div style="width:9px;height:9px;border-radius:50%;flex:0 0 auto;margin-top:5px;background:${x.shift==='on_shift'?'#2f8f5b':x.shift==='on_break'?'#c9a441':'#b9b9b9'}"></div>
-    <div class="main2"><div class="l1"><span class="code">${esc(x.name)}</span><span class="optchip" style="background:#eef3fb;color:var(--blue-d);border-color:#cfe0f4">${hatLabel(x.hat)}</span>${x.pinSet?'':(x.otp?'<span class="optchip" style="background:#fbf7ea;color:#7a5e22;border-color:#e6d9a8">⏳ invite</span>':'')}<span class="amt" style="margin-left:auto;font-size:11.5px;color:var(--grey)">${x.load}/${x.max||'∞'}</span></div>
+    <div style="width:9px;height:9px;border-radius:50%;flex:0 0 auto;margin-top:5px;background:${x.shift==='on_shift'?'var(--ok-3)':x.shift==='on_break'?'#c9a441':'#b9b9b9'}"></div>
+    <div class="main2"><div class="l1"><span class="code">${esc(x.name)}</span><span class="optchip" style="background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)">${hatLabel(x.hat)}</span>${x.pinSet?'':(x.otp?'<span class="optchip" style="background:#fbf7ea;color:#7a5e22;border-color:#e6d9a8">⏳ invite</span>':'')}<span class="amt" style="margin-left:auto;font-size:11.5px;color:var(--grey)">${x.load}/${x.max||'∞'}</span></div>
       <div class="l2">${esc(x.role||'—')} · <span class="mono">${acLogin(x)}</span> <span class="optchip ${acShc(x.shift)}">${acShLabel(x.shift)}</span>${x.status!=='active'?'<span class="optchip off">'+esc(x.status)+'</span>':''}${(x.shift!=='on_shift'&&x.returnDate)?' · returns '+acDate(x.returnDate):''}</div>${coverLines}</div>
     <div class="rowgo" aria-hidden="true">›</div></div>`; }
 function acRowsHTML(){ if((UI.acTypeF||'all')==='ai') return aiRowsHTML(); const r=acVisible(); if(!r.length){ const _tf=UI.acTypeF||'all'; const _reg=(window.ACTOR_TYPES||{})[_tf]; if(_reg&&_reg.comingSoon) return '<div class="empty"><div class="big">'+(_reg.icon||'✨')+'</div><div class="t">'+esc(_reg.label)+' — coming soon</div><div>This capability is not enabled yet. When it is, you will add '+esc(_reg.label)+' co-assists right here — same flow, new type. <span style="color:var(--blue);font-weight:600">Notify me →</span></div></div>'; if(_tf==='iot') return '<div class="empty"><div class="big">🛰️</div><div class="t">No IoT devices yet</div><div>A Pi on the rail in one drop — <a href="#" onclick="openShowcase(\'/iot-howitworks.html\',\'How IoT works\');return false" style="color:var(--blue);font-weight:600">see how it works →</a><br>then add one with <b>+ New</b> above.</div></div>'; return '<div class="empty"><div class="big">🧑‍🤝‍🧑</div><div class="t">No co-assists</div><div>Add one with <b>+ New</b> above.</div></div>'; }
@@ -368,7 +368,7 @@ function acDetailHTML(){ const x=UI.acDet;
   } else {
     const pct=x.max?Math.min(100,Math.round(x.load/x.max*100)):0;
     const kv=(l,v)=>`<div style="display:flex;gap:10px;padding:9px 13px;border-bottom:1px dashed var(--line);font-size:13px;align-items:baseline"><b style="min-width:104px;color:var(--grey);font-weight:600;font-size:var(--fs-1);text-transform:uppercase;letter-spacing:.4px">${l}</b><span style="font-weight:600;flex:1">${(v==null||v==='')?'—':v}</span></div>`;
-    const hatV='<span class="optchip" style="background:#eef3fb;color:var(--blue-d);border-color:#cfe0f4">'+hatLabel(x.hat)+'</span>'+(hatAssignable(x.hat)?'':' <span style="font-size:var(--fs-1);color:var(--grey)">not assignable</span>');
+    const hatV='<span class="optchip" style="background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)">'+hatLabel(x.hat)+'</span>'+(hatAssignable(x.hat)?'':' <span style="font-size:var(--fs-1);color:var(--grey)">not assignable</span>');
     const coversFor=(UI.acts||[]).filter(a=>a.del===x.id).map(a=>acLbl(a));
     const prof=`<div class="sec">Profile</div><div class="itab" style="border:1px solid var(--line);border-radius:12px;overflow:hidden">
       ${kv('Name',esc(x.name))}
@@ -394,7 +394,7 @@ function acDetailHTML(){ const x=UI.acDet;
     const loginState = x.pinSet
       ? '<div class="sec">Login</div><div style="'+_CARD+';background:#e7f3ea;border-color:#bfe0cd"><div style="font-size:13px;color:#2e6b3f;font-weight:600">✓ Active — PIN set. They sign in with their User ID + PIN.</div></div>'
       : (x.otp
-          ? '<div class="sec">Login — pending invite</div><div style="'+_CARD+';background:#eef3fb;border-color:#cfe0f4"><div style="font-size:var(--fs-1);color:var(--blue-d);text-transform:uppercase;letter-spacing:.4px;font-weight:700">User ID</div><div class="mono" style="font-weight:700;font-size:13px;word-break:break-all">'+esc(acLogin(x))+'</div><div style="font-size:var(--fs-1);color:var(--blue-d);text-transform:uppercase;letter-spacing:.4px;font-weight:700;margin-top:7px">One-time code</div><div class="mono" style="font-weight:800;font-size:var(--fs-5);letter-spacing:3px;color:var(--blue-d)">'+esc(x.otp)+'</div><div style="font-size:var(--fs-1);color:var(--blue-d);margin-top:6px">Share these so they can sign in &amp; set their PIN. Not set a PIN yet.</div></div>'
+          ? '<div class="sec">Login — pending invite</div><div style="'+_CARD+';background:var(--blue-tint);border-color:var(--blue-tint-line)"><div style="font-size:var(--fs-1);color:var(--blue-d);text-transform:uppercase;letter-spacing:.4px;font-weight:700">User ID</div><div class="mono" style="font-weight:700;font-size:13px;word-break:break-all">'+esc(acLogin(x))+'</div><div style="font-size:var(--fs-1);color:var(--blue-d);text-transform:uppercase;letter-spacing:.4px;font-weight:700;margin-top:7px">One-time code</div><div class="mono" style="font-weight:800;font-size:var(--fs-5);letter-spacing:3px;color:var(--blue-d)">'+esc(x.otp)+'</div><div style="font-size:var(--fs-1);color:var(--blue-d);margin-top:6px">Share these so they can sign in &amp; set their PIN. Not set a PIN yet.</div></div>'
           : '<div class="sec">Login — pending</div><div style="'+_CARD+';background:#fbf7ea;border-color:#e6d9a8"><div style="font-size:var(--fs-2);color:#7a5e22">No active one-time code and no PIN yet — use <b>Re-invite</b> below to issue a code.</div></div>');
     body=prof+coverSection+loginState+work+eng;
     if(x.status==='active'){

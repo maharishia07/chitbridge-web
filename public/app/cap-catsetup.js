@@ -117,7 +117,7 @@ function catsetDefListHTML(kind, one){
     var orph = meth ? CBCatalogue.orphanModels(meth, used) : [];
     if (orph.length) {
       var uniq = orph.filter(function(v, i){ return orph.indexOf(v) === i; });
-      orphanNote = '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;font-size:11.5px;color:#6b5a36;margin-bottom:9px">'
+      orphanNote = '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;font-size:11.5px;color:var(--warn-3);margin-bottom:9px">'
         + '⚠️ <b>' + uniq.length + ' order model' + (uniq.length === 1 ? '' : 's') + ' this catalogue can no longer sell</b> — '
         + uniq.map(function(x){ return '<code>' + esc(x) + '</code>'; }).join(' · ')
         + '. A <b>' + esc(meth) + '</b> catalogue does not support ' + (uniq.length === 1 ? 'it' : 'them') + '. '
@@ -572,7 +572,7 @@ function catsetCss(){
     '.catset-drow .dk{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:var(--fs-1);',
     'background:var(--paper);border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:var(--grey)}',
     '.catset-drow .dst{font-size:var(--fs-1);font-weight:700;border-radius:6px;padding:1px 7px;text-transform:uppercase;letter-spacing:.04em}',
-    '.catset-drow .dst.live{background:#e6f4ec;color:#2c7a43}',
+    '.catset-drow .dst.live{background:#e6f4ec;color:var(--ok-2)}',
     '.catset-drow .dst.draft{background:#f4f2ec;color:#8a6d1e}',
     '.catset-drow .dst.retired{background:#eceaea;color:#6f6a6a}',
     '.catset-drow .da{font-size:11.5px;color:var(--blue);cursor:pointer;font-weight:600}',

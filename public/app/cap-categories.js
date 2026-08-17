@@ -380,7 +380,7 @@ function cbcatStatsHTML(){
     /* ⭐ The uncategorised count is a to-do list, so it is a BUTTON — it takes you to the products it is
        counting rather than merely reporting a number you then have to go and find by hand. */
     + ((CBCAT_UI.counts && CBCAT_UI.counts.none)
-        ? '<button data-testid="catg-uncat" onclick="cbcatGoUncategorised()" style="margin-left:auto;border:1px solid var(--gold-line);background:var(--gold-soft);border-radius:9px;padding:4px 9px;font-size:11.5px;color:#6b5a36;cursor:pointer">'
+        ? '<button data-testid="catg-uncat" onclick="cbcatGoUncategorised()" style="margin-left:auto;border:1px solid var(--gold-line);background:var(--gold-soft);border-radius:9px;padding:4px 9px;font-size:11.5px;color:var(--warn-3);cursor:pointer">'
           + CBCAT_UI.counts.none + ' uncategorised →</button>'
         : '');
 }
@@ -471,8 +471,8 @@ function cbcatCss(){
     '.cbcat-badge{font-size:var(--fs-1);font-weight:700;border-radius:6px;padding:1px 7px;text-transform:uppercase;letter-spacing:.04em}',
     '.cbcat-badge.ret{background:#eceaea;color:#6f6a6a}',
     '.cbcat-err{font-size:var(--fs-2);color:var(--disp);background:#fbeceb;border:1px solid #f0c9c6;border-radius:9px;padding:8px 11px;margin:8px 0}',
-    '.cbcat-note{font-size:12px;line-height:1.55;color:#6b5a36;background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;margin-bottom:11px}',
-    '.cbcat-note.warn{color:#8a5a1e}',
+    '.cbcat-note{font-size:12px;line-height:1.55;color:var(--warn-3);background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;margin-bottom:11px}',
+    '.cbcat-note.warn{color:var(--warn-2)}',
     '.cbcat-stat{display:flex;align-items:baseline;gap:9px;margin-bottom:4px}',
     '.cbcat-stat .v{font-size:26px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}',
     '.cbcat-stat .k{font-size:var(--fs-2);color:var(--grey)}',

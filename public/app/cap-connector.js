@@ -52,9 +52,9 @@ async function acErpTest(id){
 function acHowItWorks(iot){
   if(typeof modal!=='function'){ if(typeof toast==='function')toast('Cannot open help.'); return; }
   var body = iot
-    ? '<div style="font-weight:800;font-size:var(--fs-4);margin-bottom:8px">🛰️ How an IoT connector works</div><div style="font-size:13px;color:#3a4048;line-height:1.6">A Pi or gateway holds its own key and <b>pushes</b> readings to the rail. Each exception becomes a <b>co-held chit</b> filed into your folder — the reading itself is the retained record. Health goes live by heartbeat.</div>'
-    : '<div style="font-weight:800;font-size:var(--fs-4);margin-bottom:8px">🔌 How an ERP connector works</div><div style="font-size:13px;color:#3a4048;line-height:1.6">Your ERP or middleware <b>pushes a document</b> over the governed rail. We <b>process then forget</b>: only the <b>summary</b> travels on as a co-held chit, and we keep a <b>receipt</b> — a hash of the payload plus the outcome — <b>never the raw document</b>. Retries are safe (idempotent by hash). It stays auditable and disputable against the hash, with neither side holding your ERP data.</div>'
-      +'<div style="font-size:11.5px;color:#2c5aa0;background:#eef3fb;border:1px solid #cfe0f4;border-radius:9px;padding:9px 11px;margin-top:12px">Tap <b>📄 Send a test document</b> below to run the whole loop once and watch a receipt appear.</div>';
+    ? '<div style="font-weight:800;font-size:var(--fs-4);margin-bottom:8px">🛰️ How an IoT connector works</div><div style="font-size:13px;color:var(--ink-2);line-height:1.6">A Pi or gateway holds its own key and <b>pushes</b> readings to the rail. Each exception becomes a <b>co-held chit</b> filed into your folder — the reading itself is the retained record. Health goes live by heartbeat.</div>'
+    : '<div style="font-weight:800;font-size:var(--fs-4);margin-bottom:8px">🔌 How an ERP connector works</div><div style="font-size:13px;color:var(--ink-2);line-height:1.6">Your ERP or middleware <b>pushes a document</b> over the governed rail. We <b>process then forget</b>: only the <b>summary</b> travels on as a co-held chit, and we keep a <b>receipt</b> — a hash of the payload plus the outcome — <b>never the raw document</b>. Retries are safe (idempotent by hash). It stays auditable and disputable against the hash, with neither side holding your ERP data.</div>'
+      +'<div style="font-size:11.5px;color:var(--blue-2);background:var(--blue-tint);border:1px solid var(--blue-tint-line);border-radius:9px;padding:9px 11px;margin-top:12px">Tap <b>📄 Send a test document</b> below to run the whole loop once and watch a receipt appear.</div>';
   modal('<div style="padding:2px 2px">'+body+'<div style="display:flex;margin-top:16px"><button class="composebtn pri" style="flex:1" onclick="closeModal()">Got it</button></div></div>', false);
 }
 // The ERP receipt ledger — hash + outcome only, NEVER the raw payload. Chit link opens the co-held record.
@@ -65,7 +65,7 @@ function _erpReceiptsHTML(){
   if(UI.acReceiptsErr) return head+'<div style="padding:10px 2px;color:#c0453b;font-size:12px">⚠ '+esc(UI.acReceiptsErr)+' <button class="composebtn" style="padding:2px 9px;font-size:var(--fs-1);margin-left:6px" onclick="acLoadReceipts(\''+esc(UI.acSel)+'\')">Retry</button></div>';
   if(!rs.length) return head+'<div style="padding:10px 2px;color:var(--grey);font-size:var(--fs-2)">No documents yet. Tap <b>📄 Send a test document</b> to run the cycle.</div>';
   var rows=rs.map(function(r){
-    var oc=r.outcome||'', col=oc==='processed'?'#2f8f5b':(oc==='failed'?'#c0453b':(oc==='duplicate'?'#8a6d1e':'#586069'));
+    var oc=r.outcome||'', col=oc==='processed'?'var(--ok-3)':(oc==='failed'?'#c0453b':(oc==='duplicate'?'#8a6d1e':'#586069'));
     return '<div style="display:flex;align-items:center;gap:9px;padding:9px 0;border-bottom:1px dashed var(--line);font-size:var(--fs-2)">'
       +'<div style="flex:1;min-width:0"><b>'+esc(r.doc_ref||r.doc_type||'document')+'</b>'+(r.doc_type?' <span style="color:var(--grey);font-size:var(--fs-1)">'+esc(r.doc_type)+'</span>':'')
       +'<div style="color:var(--grey);font-size:var(--fs-1);margin-top:1px;font-family:monospace">#'+esc(String(r.payload_hash||'').slice(0,12))+'… · '+esc((typeof _ago==='function'?_ago(r.received_at):'')||'')+'</div></div>'
@@ -79,7 +79,7 @@ function _sig(s){ return sigLabel(s); }
 function _tile(k,v){ return '<div style="background:#f4f6f8;border:1px solid var(--line);border-radius:12px;padding:10px 11px;min-width:0"><div style="font-size:var(--fs-1);color:var(--grey);text-transform:uppercase;letter-spacing:.03em">'+k+'</div><div style="font-size:19px;font-weight:800;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+v+'</div></div>'; }
 function piCockpit(x){
   var iot=acTypeOf(x)==='iot', health=UI.acHealth||'offline';
-  var tchip=iot?'<span class="optchip" style="background:#eaf2fb;color:#2c5aa0;border-color:#cfe0f4">🛰️ IoT</span>':'<span class="optchip" style="background:#f1ecf9;color:#6b3fa0;border-color:#ddcff2">🔌 ERP</span>';
+  var tchip=iot?'<span class="optchip" style="background:#eaf2fb;color:var(--blue-2);border-color:var(--blue-tint-line)">🛰️ IoT</span>':'<span class="optchip" style="background:#f1ecf9;color:#6b3fa0;border-color:#ddcff2">🔌 ERP</span>';
   var ico=function(t,title,on){ return '<button title="'+title+'" onclick="'+on+'" style="border:1px solid var(--line);background:var(--card);border-radius:9px;width:34px;height:34px;cursor:pointer;font-size:15px">'+t+'</button>'; };
   var header='<div style="position:sticky;top:0;background:var(--card);z-index:5;padding-bottom:10px;border-bottom:1px solid var(--line)">'
     +'<button class="dback" onclick="backToList()">‹ Co-assists</button>'
@@ -92,7 +92,7 @@ function piCockpit(x){
   var _loadingT=(UI.acConns===undefined); var _cn=_loadingT?[]:(UI.acConns||[]); var _live=_cn.filter(function(c){return c.signal==='live';}).length; var _agoT=(typeof _ago==='function'?_ago(UI.acLastSeen):'');
   var tiles='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:14px 0">'
     +_tile(iot?'Devices':'Endpoints', _loadingT?'—':_cn.length)
-    +_tile('Live now', _loadingT?'—':('<span style="display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:middle;background:'+(_live>0?'#2f8f5b':'#c0453b')+';margin-right:6px"></span>'+_live+' <small style="font-size:12px;color:#586069;font-weight:600">/ '+_cn.length+'</small>'))
+    +_tile('Live now', _loadingT?'—':('<span style="display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:middle;background:'+(_live>0?'var(--ok-3)':'#c0453b')+';margin-right:6px"></span>'+_live+' <small style="font-size:12px;color:#586069;font-weight:600">/ '+_cn.length+'</small>'))
     +_tile('Last signal', _loadingT?'—':(_agoT||'—'))
     +'</div>';
   var conns=UI.acConns, list;
@@ -113,9 +113,9 @@ function piCockpit(x){
 function _provPanel(iot, aid){
   var p=UI.acProv; if(!p) return '<div style="padding:10px 2px;color:var(--grey);font-size:12px">Loading connection string…</div>';
   var lines = iot ? 'Endpoint = '+esc(p.endpoint||'')+'\nActorKey = ••••••••  (secret — Regenerate to issue a fresh one)\nBridgeIds:\n'+((p.publishes||[]).map(function(z){return '  '+esc(z.bridge_id||'—')+'  '+esc(z.ref||'');}).join('\n')||'  (none yet)') : 'Base URL = '+esc(p.base_url||'—')+'\nAuth = '+esc(p.auth_type||'none')+(p.auth_ref?(' (ref: '+esc(p.auth_ref)+')'):'');
-  var fresh = (iot && UI.acFreshKey) ? '<div style="border:1px solid #bfe6c9;background:#eefaf0;border-radius:9px;padding:9px 11px;margin-top:9px"><div style="font-size:11.5px;font-weight:700;color:#1f7a3d;margin-bottom:5px">✅ New ActorKey — copy it to the Pi NOW, it will not be shown again:</div><pre style="background:#0f1b2d;color:#cfe0f4;border-radius:6px;padding:9px 11px;font-size:12px;overflow:auto;margin:0;user-select:all">'+esc(UI.acFreshKey)+'</pre></div>' : '';
+  var fresh = (iot && UI.acFreshKey) ? '<div style="border:1px solid #bfe6c9;background:#eefaf0;border-radius:9px;padding:9px 11px;margin-top:9px"><div style="font-size:11.5px;font-weight:700;color:#1f7a3d;margin-bottom:5px">✅ New ActorKey — copy it to the Pi NOW, it will not be shown again:</div><pre style="background:#0f1b2d;color:var(--blue-tint-line);border-radius:6px;padding:9px 11px;font-size:12px;overflow:auto;margin:0;user-select:all">'+esc(UI.acFreshKey)+'</pre></div>' : '';
   var regen = (iot && aid) ? '<div style="margin-top:9px"><button class="composebtn" onclick="acRegenKey(\''+esc(aid)+'\')">♻ Reissue raw key (advanced)</button><div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">For a <b>direct HTTPS device</b> (ESP32 etc.) that can\'t run the installer — shows the raw key once. For a Pi, use <b>📦 Get the Pi installer</b> above instead. Either way, reissuing stops any device on the old key until reflashed.</div></div>' : '';
-  return '<div style="border:1px solid #cfe0f4;background:#f2f7fd;border-radius:9px;padding:10px 12px;margin:10px 0"><div style="font-weight:700;font-size:12px;color:#2c5aa0;margin-bottom:4px">🔑 Connection string</div><pre style="background:#0f1b2d;color:#cfe0f4;border-radius:6px;padding:9px 11px;font-size:var(--fs-1);overflow:auto;margin:0;line-height:1.5">'+lines+'</pre>'+fresh+regen+'</div>';
+  return '<div style="border:1px solid var(--blue-tint-line);background:#f2f7fd;border-radius:9px;padding:10px 12px;margin:10px 0"><div style="font-weight:700;font-size:12px;color:var(--blue-2);margin-bottom:4px">🔑 Connection string</div><pre style="background:#0f1b2d;color:var(--blue-tint-line);border-radius:6px;padding:9px 11px;font-size:var(--fs-1);overflow:auto;margin:0;line-height:1.5">'+lines+'</pre>'+fresh+regen+'</div>';
 }
 // Delete a connector — RULE: only when it has NO devices attached; the backend returns 409 otherwise (we surface it).
 function acDeleteConnector(id, name){
@@ -241,7 +241,7 @@ function acReissueGate(id, mode){ UI.acReissue={id:id, mode:mode||'package'};
     +'<div style="font-size:var(--fs-2);color:#586069;line-height:1.5;margin-bottom:12px">This issues a <b>new key</b> — any device already running this gateway <b>stops</b> until you reflash it with the new installer. Only the entity or a manager may do this.</div>'
     +'<label class="fl">1 · Type the gateway\'s exact name</label><input class="inp" id="rg_name" placeholder="gateway name" style="width:100%;margin-bottom:12px">'
     +'<label class="fl">2 · One-time code (sent to the account email)</label><div style="display:flex;gap:8px;align-items:center;margin-bottom:4px"><input class="inp" id="rg_otp" inputmode="numeric" maxlength="6" placeholder="6-digit code" style="flex:1"><button class="composebtn" onclick="acReissueSendCode()">Send code</button></div>'
-    +'<div id="rg_msg" style="font-size:11.5px;color:#2c5aa0;min-height:15px;margin-bottom:10px"></div>'
+    +'<div id="rg_msg" style="font-size:11.5px;color:var(--blue-2);min-height:15px;margin-bottom:10px"></div>'
     +'<div style="display:flex;gap:10px"><button class="composebtn" style="flex:1" onclick="closeModal()">Cancel</button><button class="composebtn pri" style="flex:1" onclick="acReissueSubmit()">Reissue</button></div>'
     +'</div>', false);
 }

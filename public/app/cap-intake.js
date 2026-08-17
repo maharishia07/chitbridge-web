@@ -57,8 +57,8 @@ function intakeToggleSim(){ _INTAKE.sim = !_INTAKE.sim; paintIntake(); }
 function paintIntake(){ var h=document.getElementById('intake_body'); if(h) h.innerHTML=intakeBodyHTML(); }
 
 function _chn(c){
-  var M={ whatsapp:['#25D366','WhatsApp'], email:['var(--blue)','Email'], web:['#6a44a8','Web'], sms:['#b07a2b','SMS'] };
-  var m=M[c]||['#6a707a', String(c||'channel')];
+  var M={ whatsapp:['#25D366','WhatsApp'], email:['var(--blue)','Email'], web:['var(--purple-2)','Web'], sms:['#b07a2b','SMS'] };
+  var m=M[c]||['var(--grey-2)', String(c||'channel')];
   return '<span style="font-size:var(--fs-1);font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#fff;background:'
     + m[0] + ';border-radius:5px;padding:2px 7px">' + esc(m[1]) + '</span>';
 }
@@ -79,7 +79,7 @@ function intakeBodyHTML(){
   if(_INTAKE.busy && !_INTAKE.list) return intakeSimHTML()+'<div class="loadwrap"><span class="spin"></span> reading the queue…</div>';
   /* b104 is applied in production, but an environment without it answers 503 — say which it is, because "no
      messages" and "the table does not exist" look identical on screen and mean completely different things. */
-  if(!_INTAKE.migrated) return '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:11px 13px;font-size:var(--fs-2);color:#6b5a36">'
+  if(!_INTAKE.migrated) return '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:11px 13px;font-size:var(--fs-2);color:var(--warn-3)">'
     + 'The intake queue is not migrated on this environment (b104). The screen is here; the table is not.</div>';
   if(_INTAKE.err) return intakeSimHTML()+'<div style="background:#fbeceb;border:1px solid #f0c9c6;border-radius:9px;padding:11px 13px;font-size:var(--fs-2);color:var(--disp)">'+esc(_INTAKE.err)+'</div>';
   var L=_INTAKE.list||[];
@@ -131,7 +131,7 @@ function intakeDraftHTML(c, s){
          * person decides whether the reading is right. A confirm step must show what it is asking you to confirm.
          */
         + '<span>' + esc(l.particulars||'item')
-        + (l.comment ? '<span style="color:#6b5a36"> · ' + esc(l.comment) + '</span>' : '') + '</span>'
+        + (l.comment ? '<span style="color:var(--warn-3)"> · ' + esc(l.comment) + '</span>' : '') + '</span>'
         + '<span style="color:var(--grey);white-space:nowrap">' + esc(String(l.qty==null?'':l.qty)) + ' ' + esc(l.unit||'')
         + (l.unit_size ? ' (' + esc(l.unit_size) + ')' : '')
         + (l.unit_price ? ' @' + esc(String(l.unit_price)) : '') + '</span></div>'; }).join('')
@@ -354,7 +354,7 @@ function _jsonBlock(title, obj){
     + '<pre id="'+id+'" style="margin:0;padding:0 14px 12px;font:11.5px/1.55 ui-monospace,Menlo,Consolas,monospace;'
     +   'white-space:pre-wrap;word-break:break-word;max-height:46vh;overflow:auto;color:#243038">'+esc(txt)+'</pre></div>';
 }
-function _note(t){ return '<div style="padding:11px 14px;font-size:12px;color:#8a5a1e;background:var(--gold-soft);border-bottom:1px solid var(--line)">'+esc(t)+'</div>'; }
+function _note(t){ return '<div style="padding:11px 14px;font-size:12px;color:var(--warn-2);background:var(--gold-soft);border-bottom:1px solid var(--line)">'+esc(t)+'</div>'; }
 function _copyJson(id){
   var el=document.getElementById(id); if(!el) return;
   try{ navigator.clipboard.writeText(el.textContent); if(typeof toast==='function') toast('copied'); }catch(_){}

@@ -151,7 +151,7 @@ function disputeOverlay(c, d, open, closed){
   return '<div style="position:absolute;inset:0;background:var(--card);display:flex;flex-direction:column;z-index:30">'
     +'<div style="display:flex;align-items:center;gap:8px;padding:13px 16px;border-bottom:1px solid var(--line);background:#fdf0ef">'
       +'<span style="font-weight:700;color:var(--disp);font-size:var(--fs-3)">⚑ '+esc(cap(d.category||''))+'</span>'+proof
-      +'<button onclick="aiDisputeSummary(\''+c.id+'\',\''+d.dispute_id+'\')" title="AI summarises this dispute neutrally — it does not decide it" style="margin-left:auto;border:1px solid #6d5bd0;background:#f2effc;color:#6d5bd0;border-radius:9px;padding:6px 11px;cursor:pointer;font-size:var(--fs-2)">✨ Summarize</button>'
+      +'<button onclick="aiDisputeSummary(\''+c.id+'\',\''+d.dispute_id+'\')" title="AI summarises this dispute neutrally — it does not decide it" style="margin-left:auto;border:1px solid var(--purple);background:#f2effc;color:var(--purple);border-radius:9px;padding:6px 11px;cursor:pointer;font-size:var(--fs-2)">✨ Summarize</button>'
       +'<button onclick="disputeClose()" style="margin-left:8px;border:1px solid var(--line);background:var(--card);border-radius:9px;padding:6px 12px;cursor:pointer;font-size:var(--fs-2)">✕ Close</button></div>'
     +'<div style="padding:15px 16px;overflow:auto;flex:1">'+dd+disputeRoomBox(c,d)+'</div></div>';
 }
@@ -169,7 +169,7 @@ async function aiDisputeSummary(chitId, disputeId){
     var j=await res.json();
     if(!res.ok||!j||!j.draft) throw new Error((j&&j.message)||(res.status===503?'AI is not connected on this environment.':'Summary failed'));
     var html='<style>'+(typeof _AI_MDCSS!=='undefined'?_AI_MDCSS:'')+'</style>'
-      +'<div style="font-size:var(--fs-1);color:#6d5bd0;background:#f2effc;border:1px solid #ddd4f5;border-radius:9px;padding:8px 11px;margin-bottom:12px;line-height:1.5">🤖 <b>AI summary — neutral, informational.</b> It does not decide the dispute. '+(j.usage?('<span style="color:var(--grey)">· $'+j.usage.est_cost_usd+'</span>'):'')+'</div>'
+      +'<div style="font-size:var(--fs-1);color:var(--purple);background:#f2effc;border:1px solid #ddd4f5;border-radius:9px;padding:8px 11px;margin-bottom:12px;line-height:1.5">🤖 <b>AI summary — neutral, informational.</b> It does not decide the dispute. '+(j.usage?('<span style="color:var(--grey)">· $'+j.usage.est_cost_usd+'</span>'):'')+'</div>'
       +'<div class="amddoc" style="background:var(--card);border:1px solid var(--line);border-radius:9px;padding:15px 17px;max-height:56vh;overflow:auto">'+_aiMd(j.draft)+'</div>'
       +'<div style="margin-top:12px;text-align:right"><button onclick="closeModal()" style="font-size:12px;font-weight:700;border:1px solid var(--line);background:var(--card);border-radius:9px;padding:9px 16px;cursor:pointer">Done</button></div>';
     var b=document.getElementById('adbody'); if(b)b.innerHTML=html;
@@ -190,7 +190,7 @@ function disputeRoomBox(c, d){
   var parties=disputeParties(d);
   var st=readonly?'<span style="color:#2f7a45;font-size:11.5px;font-weight:700">✓ resolved</span>':'<span style="color:var(--disp);font-size:11.5px;font-weight:700">● open</span>';
   var resolve=readonly?'':disputeResolveBtns(parties, c.id, d.dispute_id, mine, 'db-res');
-  var suggestBtn=(readonly||typeof aiRun!=='function')?'':'<button onclick="aiResolutionSuggest(\''+c.id+'\',\''+d.dispute_id+'\')" title="AI suggests neutral resolution wording — you decide whether to resolve" style="font-size:var(--fs-1);font-weight:700;border:1px solid #6d5bd0;background:#f2effc;color:#6d5bd0;border-radius:6px;padding:5px 10px;cursor:pointer">✨ Suggest wording</button>';
+  var suggestBtn=(readonly||typeof aiRun!=='function')?'':'<button onclick="aiResolutionSuggest(\''+c.id+'\',\''+d.dispute_id+'\')" title="AI suggests neutral resolution wording — you decide whether to resolve" style="font-size:var(--fs-1);font-weight:700;border:1px solid var(--purple);background:#f2effc;color:var(--purple);border-radius:6px;padding:5px 10px;cursor:pointer">✨ Suggest wording</button>';
   var resolveWrap=(resolve||suggestBtn)?'<span style="display:inline-flex;gap:6px;flex-wrap:wrap">'+suggestBtn+resolve+'</span>':'';
   var roster=[nm(d.raised_by_display_name,'—')+' (raiser)'].concat(parties.map(function(p){ return nm(p.display_name,'party'); })).join(' · ');
   var msgs=(typeof disputeFilterMsgs==='function')?(disputeFilterMsgs((c.msgs||[]),'dispute',d.dispute_id)||[]):[];
@@ -218,7 +218,7 @@ function disputeComposeBox(c, d, to){
       +'<span id="dispfiles">'+disputeFileChips()+'</span>'
       +'<button data-testid="dispute-room-send" onclick="sendDisputeMsg(\''+c.id+'\',\''+d.dispute_id+'\')" style="margin-left:auto;background:var(--disp);color:#fff;border:none;border-radius:9px;padding:7px 14px;font-weight:600;cursor:pointer">Send ↔</button></div></div>';
 }
-function disputeFileChips(){ return (UI.dispFiles||[]).map(function(f,i){ return '<span style="display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:6px;padding:2px 7px;font-size:var(--fs-1);background:var(--card);margin-right:4px">📎 '+esc(f.name.length>18?f.name.slice(0,18)+'…':f.name)+' <span onclick="disputeDelFile('+i+')" style="cursor:pointer;color:#9aa3a7">✕</span></span>'; }).join(''); }
+function disputeFileChips(){ return (UI.dispFiles||[]).map(function(f,i){ return '<span style="display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:6px;padding:2px 7px;font-size:var(--fs-1);background:var(--card);margin-right:4px">📎 '+esc(f.name.length>18?f.name.slice(0,18)+'…':f.name)+' <span onclick="disputeDelFile('+i+')" style="cursor:pointer;color:var(--grey-4)">✕</span></span>'; }).join(''); }
 function disputeAddFiles(files){ UI.dispFiles=UI.dispFiles||[]; for(var i=0;i<files.length;i++){ var f=files[i]; if(f.size>6*1024*1024){ toast(f.name+' is over 6MB — skipped.'); continue; } UI.dispFiles.push(f); } var el=document.getElementById('dispfiles'); if(el)el.innerHTML=disputeFileChips(); }
 function disputeDelFile(i){ (UI.dispFiles||[]).splice(i,1); var el=document.getElementById('dispfiles'); if(el)el.innerHTML=disputeFileChips(); }
 /* external-only send scoped to THIS dispute (is_dispute + dispute_id) + attach staged files by message_id */

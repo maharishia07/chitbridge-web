@@ -340,12 +340,12 @@ function cbAttachStagedChips(bucket, opts){
   }).map(function (s) {
     return '<span class="cbatt-chip" data-testid="cbatt-staged">'
       + cbAttachIcon(cbAttachType(s.mime, s.name)) + ' ' + cbAttachSafeText(s.name)
-      + ' <span style="color:#6a707a">' + cbAttachSize(s.size) + '</span>'
+      + ' <span style="color:var(--grey-2)">' + cbAttachSize(s.size) + '</span>'
       /* ⚠️ "not sent yet" is said on the chip, not implied by its position. A staged file looks exactly like an
          attached one otherwise, and the difference matters: one is evidence, the other is an intention. */
-      + ' <span style="font-size:var(--fs-1);color:#8a5a1e">not sent yet</span>'
+      + ' <span style="font-size:var(--fs-1);color:var(--warn-2)">not sent yet</span>'
       + ' <span onclick="cbAttachUnstage(\'' + cbAttachSafe(bucket) + '\',\'' + cbAttachSafe(s.key) + '\')"'
-      + ' style="cursor:pointer;color:#9aa3a7;font-weight:800" title="Remove">✕</span></span>';
+      + ' style="cursor:pointer;color:var(--grey-4);font-weight:800" title="Remove">✕</span></span>';
   }).join('');
 }
 /* ⚠️ NOT cbAttachSafe. That one strips to [A-Za-z0-9_.:-] and is for values going into an ATTRIBUTE or an inline

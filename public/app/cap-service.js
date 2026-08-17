@@ -44,7 +44,7 @@ function svcChip(txt, tone){
  */
 function svcClockBlock(c, r){
   if (!c.has_target) {
-    return '<div style="background:#faf3dd;border:1px solid #e6d9a8;border-radius:9px;padding:11px 13px;font-size:var(--fs-2);color:#6b5a36">'
+    return '<div style="background:#faf3dd;border:1px solid #e6d9a8;border-radius:9px;padding:11px 13px;font-size:var(--fs-2);color:var(--warn-3)">'
       + '<b>No priority set yet</b> — so there is no target, and nothing is being reported as late. '
       + 'Set impact and urgency to start measuring.</div>';
   }
@@ -70,7 +70,7 @@ function svcClockBlock(c, r){
   /* ⭐ The case this whole module exists for: the two parties' arithmetic disagrees. */
   return agreed
     + '<div style="margin-top:12px;border:1.5px solid #c98b2f;border-radius:9px;overflow:hidden">'
-    + '<div style="background:#faf3dd;padding:8px 12px;font-size:11.5px;font-weight:700;color:#6b5a36">'
+    + '<div style="background:#faf3dd;padding:8px 12px;font-size:11.5px;font-weight:700;color:var(--warn-3)">'
     + '⚖️ The two sides do not agree — ' + esc(svcDur(c.disputed_pause_ms)) + ' of paused time is rejected</div>'
     + '<div style="display:flex;gap:0;flex-wrap:wrap">'
     + '<div style="flex:1;min-width:150px;padding:11px 13px;border-right:1px solid var(--line)">'

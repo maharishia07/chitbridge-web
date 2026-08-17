@@ -200,7 +200,7 @@ function messagesScreen(){
         var rid  = t.key.replace(/[^a-z0-9]/gi, '');
         return '<div data-testid="msg-thread" style="border-bottom:1px solid var(--line);' + (isNew ? 'background:#f7fbff;' : '') + '">'
           + '<div onclick="msgOpen(&quot;' + t.key + '&quot;)" style="cursor:pointer;padding:11px 14px;display:flex;gap:10px;align-items:baseline">'
-          +   '<span style="width:8px;flex:none">' + (isNew ? '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#2c5aa0"></span>' : '') + '</span>'
+          +   '<span style="width:8px;flex:none">' + (isNew ? '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--blue-2)"></span>' : '') + '</span>'
           +   '<div style="flex:1;min-width:0">'
           +     '<div style="display:flex;gap:8px;align-items:baseline">'
           /* The track rides on every row, not just when filtering — a list you have to filter to understand is a
@@ -274,7 +274,7 @@ function messagesScreen(){
                      return '<div style="margin:6px 0;padding:8px 11px;border-radius:9px;font-size:13px;line-height:1.5;'
                        + (mine ? 'background:#eef4f8;margin-left:28px' : 'background:#f6f5f2;margin-right:28px') + '">'
                        + '<div style="display:flex;gap:8px;align-items:baseline;margin-bottom:2px">'
-                       +   '<b style="font-size:11.5px;color:' + (mine ? '#2c5aa0' : '#5b5340') + '">' + esc(mine ? 'You' : (x.sender_display_name || '—')) + '</b>'
+                       +   '<b style="font-size:11.5px;color:' + (mine ? 'var(--blue-2)' : '#5b5340') + '">' + esc(mine ? 'You' : (x.sender_display_name || '—')) + '</b>'
                        +   '<span style="margin-left:auto;font-size:var(--fs-1);color:var(--grey)">' + esc(msgWhen(x.created_at)) + '</span></div>'
                        + '<div style="white-space:pre-wrap">' + esc(x.message_text || '') + '</div></div>';
                    }).join(''))
@@ -287,7 +287,7 @@ function messagesScreen(){
   var n = msgUnread();
   return '<div style="flex:1;min-height:0;overflow-y:auto">'
     + '<div style="padding:13px 16px;border-bottom:1px solid var(--line)">'
-    +   '<div style="font-weight:700;font-size:var(--fs-4)">Messages' + (n ? ' <span style="font-size:var(--fs-2);color:#2c5aa0">· ' + n + ' new</span>' : '') + '</div>'
+    +   '<div style="font-weight:700;font-size:var(--fs-4)">Messages' + (n ? ' <span style="font-size:var(--fs-2);color:var(--blue-2)">· ' + n + ' new</span>' : '') + '</div>'
     +   '<div style="font-size:12px;color:var(--grey);margin-top:2px">One conversation per line, across every chit. Read and reply here.</div>'
     + '</div>'
     /* ── segregate by track ─────────────────────────────────────────────────────────────────────────────────
