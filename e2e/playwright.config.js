@@ -77,9 +77,14 @@ module.exports = defineConfig({
        * ⚠️ KEEP THIS IN SYNC WITH THE noauth testMatch BELOW. Two lists describing one fact is the flaw; until
        * they are derived from one another, adding a spec to noauth means adding it here in the same commit.
        */
+      /* ⚠️ THE TWO LISTS ARE NOT INTERCHANGEABLE, so they were NOT merged. `swarm` appears here and NOT in the
+         noauth testMatch below — it is opt-in and must run in neither project by default. Deriving one list from
+         the other would quietly start running it. The duplication is real and is the lesser problem; adding a
+         noauth spec still means editing both, in the same commit. */
       testIgnore: [/[\\/]onboarding\.spec\.js$/, /[\\/]flow\.spec\.js$/, /[\\/]redproof\.spec\.js$/, /[\\/]swarm\.spec\.js$/,
         /[\\/]signed-out\.spec\.js$/, /[\\/]currency-matrix\.spec\.js$/, /[\\/]mode-survives-order\.spec\.js$/,
-        /[\\/]variants\.spec\.js$/, /[\\/]network-cascade\.spec\.js$/, /[\\/]render-smoke\.spec\.js$/],
+        /[\\/]variants\.spec\.js$/, /[\\/]network-cascade\.spec\.js$/, /[\\/]render-smoke\.spec\.js$/,
+        /[\\/]enquiry\.spec\.js$/],
     },
     // 3 · flows that must start LOGGED OUT (they test onboarding itself / the welcome screen)
     {
@@ -99,7 +104,10 @@ module.exports = defineConfig({
         // ⚠️ THE PRE-PUSH GATE. Seconds, no login, no data: did the page BOOT without throwing? Five defects in the
         // 2026-08-09 cart integration were invisible to node -c and to the unit tests, and twice took the public
         // storefront down. Run before pushing anything touching app.html, shop.html or app/*.js.
-        /render-smoke\.spec\.js/],
+        /render-smoke\.spec\.js/,
+        // ⭐ Product enquiry is an API-level, multi-party test: it signs in three parties itself and never wants a
+        // saved session. It proves the question reaches the SELLER and that an unrelated entity sees nothing.
+        /enquiry\.spec\.js/],
     },
     // 4 · CROSS-BROWSER + SIZE sweep of the COUNTER flows (keyboard/storefront/chits). Opt-in — run e.g.
     //     `npx playwright test --project=counter-firefox`. The default run stays Chromium@counter for speed.
