@@ -244,7 +244,7 @@
       + 'white-space:nowrap;border:1px solid #e3e6ea;background:var(--card);color:var(--grey-2)}'
       + '.cbst .n{width:18px;height:18px;border-radius:50%;background:rgba(0,0,0,.08);display:inline-flex;'
       + 'align-items:center;justify-content:center;font-size:var(--fs-1);font-weight:800;flex:none}'
-      + '.cbst.done{border-color:#cfe0d6;background:var(--cbst-soft,#f2f9f5);color:var(--cbst-accent,var(--ok-2))}'
+      + '.cbst.done{border-color:#cfe0d6;background:var(--cbst-soft,var(--ok-tint));color:var(--cbst-accent,var(--ok-2))}'
       + '.cbst.now{border-color:var(--cbst-accent,var(--blue));background:var(--cbst-accent,var(--blue));color:#fff;font-weight:700}'
       + '.cbst.now .n{background:rgba(255,255,255,.24)}'
       /**

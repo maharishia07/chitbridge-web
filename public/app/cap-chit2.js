@@ -751,7 +751,7 @@ function c2PaneCost(d){
     out += '<div style="padding:14px 16px;font-size:var(--fs-2);color:var(--grey);border-bottom:1px solid var(--line)">'
       + 'You can record what you spend, and see what you recorded. Totals and margin are not shown to you.</div>';
   } else {
-    out += '<div style="padding:13px 16px;border-bottom:1px solid var(--line);background:var(--wash,#f6f4f0);font-variant-numeric:tabular-nums">'
+    out += '<div style="padding:13px 16px;border-bottom:1px solid var(--line);background:var(--wash);color:var(--on-card);font-variant-numeric:tabular-nums">'
       + c2Row('Invoiced', c2Money(c.invoiced))
       + Object.keys(c.by_kind || {}).map(function(k){ return c2Row(k.charAt(0).toUpperCase() + k.slice(1), c2Money(c.by_kind[k])); }).join('')
       + '<div style="display:flex;justify-content:space-between;padding-top:7px;margin-top:4px;border-top:1px solid var(--line);font-weight:600">'

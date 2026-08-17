@@ -41,33 +41,43 @@ test.describe('Product enquiry · the question reaches the seller and nobody els
   let seller, buyer, stranger, itemId, itemName;
 
   /**
-   * ⚠️ THE SELLER IS THE KNOWN-PUBLIC SHOP, NOT A FRESH ONE — and that is a finding, not a convenience.
+   * ⭐ THE SELLER IS A FRESH ENTITY AGAIN, and that is only possible because N5 is fixed.
    *
-   * A cross-entity enquiry is gated on `buildPublicView()` succeeding for the asker, so the seller's storefront
-   * has to be genuinely reachable. A FRESH entity with `catalogue_visibility:'public'`, a catalogue face and a
-   * product still answers 404 on `/api/catalogue/:bridge` — to an anonymous visitor, to a buyer, AND to its own
-   * owner. Whatever else a new shop needs before it is servable, setting those three things is not enough.
-   * Logged as a backlog item; it is not this spec's subject and pretending otherwise would test the wrong thing.
+   * This spec originally had to borrow `alpha` — the shared shop the storefront specs use — because a brand-new
+   * entity set to `catalogue_visibility:'public'` was NOT servable: its schema's visibility was a snapshot taken
+   * at registration and never updated, so `buildPublicView()` refused it and the enquiry gate refused with it.
+   * Borrowing alpha meant this spec added a product to a shared account on every run, which is the shared-account
+   * drift already recorded in this repo — created while writing a test about isolation.
    *
-   * So the seller is `alpha@test-cb.com` (bridge CB6C7UQHUB), the shop the storefront specs already rely on and
-   * which is verified reachable above. ⚠️ It is a SHARED account, so every assertion here is scoped to an item
-   * this run creates and to a nonce inside the message — never to a total count on the account.
+   * With the fix, a fresh seller can open its own shop, so this spec now owns everything it touches and cleans up
+   * after nobody. See shop-publish.spec.js, which tests that act directly.
    */
-  test('[ENQ-00] arrange — a reachable seller, a buyer, and an unrelated third party', async () => {
-    const b = uniq('enq-buyer'); const x = uniq('enq-stranger');
-    seller = await signIn('alpha@test-cb.com', 'Alpha Paints');
-    buyer = await signIn(`${b}@test-cb.com`, 'Enq Buyer');
-    stranger = await signIn(`${x}@test-cb.com`, 'Enq Stranger');
+  test('[ENQ-00] arrange — a seller that opens its own shop, a buyer, and an unrelated third party', async () => {
+    seller = await signIn(`${uniq('enq-seller')}@test-cb.com`, 'Enq Seller');
+    buyer = await signIn(`${uniq('enq-buyer')}@test-cb.com`, 'Enq Buyer');
+    stranger = await signIn(`${uniq('enq-stranger')}@test-cb.com`, 'Enq Stranger');
     expect(seller && buyer && stranger, 'all three parties must sign in').toBeTruthy();
 
-    const shop = await api('/api/catalogue/CB6C7UQHUB');
-    expect(shop.status, 'the seller shop must be publicly reachable or the gate can never pass').toBe(200);
+    await api('/api/catalogue-face', { method: 'PUT', token: seller,
+      body: { face: { method: 'enquiry', order_input: { preset: 'enquiry', pipeline: 'payload' }, units: ['tonne'] } } });
 
     itemName = uniq('Enquirable');
     const add = await api('/api/products', { method: 'POST', token: seller,
       body: { item_data: { name: itemName, unit: 'tonne', price: 500 } } });
     itemId = add.json && add.json.item && add.json.item.item_id;
     expect(itemId, 'the seller must end up with a product to ask about').toBeTruthy();
+
+    /* ⚠️ PUBLIC LAST, and asserted — the enquiry gate is the storefront gate. If this silently failed the whole
+       spec would fail later with the SAME 404 the gate returns for a missing product, which reads as a broken
+       feature rather than a broken arrangement. */
+    const vis = await api('/api/entities/profile', { method: 'PATCH', token: seller,
+      body: { catalogue_visibility: 'public' } });
+    expect([200, 204].includes(vis.status), `the seller must be able to open its shop, got ${vis.status}`).toBe(true);
+
+    const me = await api('/api/entities/me', { token: seller });
+    const bridge = me.json && (me.json.bridge_id || (me.json.entity && me.json.entity.bridge_id));
+    const shop = await api(`/api/catalogue/${bridge}`);
+    expect(shop.status, 'the seller shop must be publicly reachable or the gate can never pass').toBe(200);
   });
 
   /**
@@ -140,20 +150,5 @@ test.describe('Product enquiry · the question reaches the seller and nobody els
     expect(r.status, 'whitespace is not a question').toBe(400);
   });
 
-  /**
-   * ⚠️ CLEAN UP AFTER YOURSELF ON A SHARED FIXTURE — a critic-pass finding on my own spec.
-   *
-   * The seller here is `alpha`, which currency-matrix and mode-survives-order also use. Adding a product to it
-   * on every single run grows a fixture other specs depend on, for ever, and the cost lands on whichever of
-   * them asserts something size-sensitive first — which is precisely the shared-account drift already recorded
-   * in this repo, created by me while writing a test about isolation.
-   *
-   * ⚠️ Deliberately NOT in an afterAll: a failing run should leave its evidence in place to be looked at. This
-   * runs as the last STEP, so it happens on a green run and is skipped on a red one.
-   */
-  test('[ENQ-99] cleanup — remove the product this run added to the shared seller', async () => {
-    const r = await api(`/api/products/${itemId}`, { method: 'DELETE', token: seller });
-    expect([200, 204, 404].includes(r.status),
-      `the run's product must not be left on the shared fixture, got ${r.status}`).toBe(true);
-  });
+
 });

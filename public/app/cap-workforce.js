@@ -228,7 +228,7 @@ function awRender(){
     var steps=AW_STEPS[UI.awType]||[], rdy=_awReady(UI.awType);
     var icN={human:['👤','Human'],iot:['🛰️','IoT device'],erp:['🔌','ERP / API'],ai:['🤖','AI agent']}[UI.awType];
     title=icN[0]+' '+icN[1]+(rdy?'':' · explore');
-    dots='<div style="display:flex;gap:6px;margin:0 0 14px">'+steps.map(function(s,i){ var st=(UI.awStep==='done'||i<UI.awStep)?'var(--blue-2)':(i===UI.awStep?'var(--blue)':'var(--warn-tint)'); return '<span style="height:4px;flex:1;border-radius:3px;background:'+st+'"></span>'; }).join('')+'<span style="height:4px;flex:1;border-radius:3px;background:'+(UI.awStep==='done'?'var(--blue)':'var(--warn-tint)')+'"></span></div>';
+    dots='<div style="display:flex;gap:6px;margin:0 0 14px">'+steps.map(function(s,i){ var st=(UI.awStep==='done'||i<UI.awStep)?'var(--blue-2)':(i===UI.awStep?'var(--blue)':'var(--warn-tint)'); return '<span style="height:4px;flex:1;border-radius:3px;background:'+st+'"></span>'; }).join('')+'<span style="height:4px;flex:1;border-radius:3px;background:'+(UI.awStep==='done'?'var(--blue)':'var(--warn-tint)')+';color:' + (UI.awStep==='done' ? 'var(--on-accent)' : 'var(--on-card)') + '"></span></div>';
     if(UI.awStep==='done'){
       sub=rdy?'Done':'Preview'; body=UI.awResult||'';
       // Guard the duplicate-create: after a REAL create, do NOT offer Back (it would land on a live Create button and

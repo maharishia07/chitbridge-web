@@ -84,7 +84,7 @@ module.exports = defineConfig({
       testIgnore: [/[\\/]onboarding\.spec\.js$/, /[\\/]flow\.spec\.js$/, /[\\/]redproof\.spec\.js$/, /[\\/]swarm\.spec\.js$/,
         /[\\/]signed-out\.spec\.js$/, /[\\/]currency-matrix\.spec\.js$/, /[\\/]mode-survives-order\.spec\.js$/,
         /[\\/]variants\.spec\.js$/, /[\\/]network-cascade\.spec\.js$/, /[\\/]render-smoke\.spec\.js$/,
-        /[\\/]enquiry\.spec\.js$/, /[\\/]message-privacy\.spec\.js$/, /[\\/]dispute-privacy\.spec\.js$/],
+        /[\\/]enquiry\.spec\.js$/, /[\\/]message-privacy\.spec\.js$/, /[\\/]dispute-privacy\.spec\.js$/, /[\\/]shop-publish\.spec\.js$/],
     },
     // 3 · flows that must start LOGGED OUT (they test onboarding itself / the welcome screen)
     {
@@ -114,7 +114,11 @@ module.exports = defineConfig({
         /message-privacy\.spec\.js/,
         // ⭐⭐ THE USP ITSELF: A disputes with B only, and C — on the same chit — never learns of it. Two
         // separate skipped tests claimed this and proved nothing; one of their titles literally ends "(the USP)".
-        /dispute-privacy\.spec\.js/],
+        /dispute-privacy\.spec\.js/,
+        // ⭐⭐ Can a NEW business open its shop? Until 2026-08-18 the answer was NO, and every storefront spec
+        // here passed anyway — because they all used alpha and gamma, two shops that were already open. A
+        // fixture already in the end state cannot test the transition into it.
+        /shop-publish\.spec\.js/],
     },
     // 4 · CROSS-BROWSER + SIZE sweep of the COUNTER flows (keyboard/storefront/chits). Opt-in — run e.g.
     //     `npx playwright test --project=counter-firefox`. The default run stays Chromium@counter for speed.

@@ -92,7 +92,7 @@ function piCockpit(x){
   var _loadingT=(UI.acConns===undefined); var _cn=_loadingT?[]:(UI.acConns||[]); var _live=_cn.filter(function(c){return c.signal==='live';}).length; var _agoT=(typeof _ago==='function'?_ago(UI.acLastSeen):'');
   var tiles='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:14px 0">'
     +_tile(iot?'Devices':'Endpoints', _loadingT?'—':_cn.length)
-    +_tile('Live now', _loadingT?'—':('<span style="display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:middle;background:'+(_live>0?'var(--ok-3)':'var(--disp)')+';margin-right:6px"></span>'+_live+' <small style="font-size:12px;color:var(--grey-2);font-weight:600">/ '+_cn.length+'</small>'))
+    +_tile('Live now', _loadingT?'—':('<span style="display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:middle;background:'+(_live>0?'var(--ok-3)':'var(--disp)')+';color:' + (_live>0 ? 'var(--on-ok)' : 'var(--on-danger)') + ';margin-right:6px"></span>'+_live+' <small style="font-size:12px;color:var(--grey-2);font-weight:600">/ '+_cn.length+'</small>'))
     +_tile('Last signal', _loadingT?'—':(_agoT||'—'))
     +'</div>';
   var conns=UI.acConns, list;

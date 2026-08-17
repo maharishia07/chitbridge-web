@@ -691,7 +691,7 @@ function _cwStep2Products(w){
       + ((otherCount && !w.bpAll) ? ' · <span onclick="cwToggleBpAll()" style="cursor:pointer;color:var(--blue);font-weight:600">show all (' + otherCount + ' other)</span>' : ((w.bpAll && w.vertical) ? ' · <span onclick="cwToggleBpAll()" style="cursor:pointer;color:var(--blue);font-weight:600">only ' + esc(w.vertical) + '</span>' : '')) + '</div>';
     var skipRow = '<div onclick="cwPickSource(\'\')" style="cursor:pointer;padding:7px 11px;border-bottom:1px solid var(--line);background:' + (!w.source ? 'var(--card)' : 'var(--card)') + ';font-size:12px;color:var(--grey)">— skip (build without a blueprint) —</div>';
     var rows = filtered.map(function(s){ var on = w.source === s.key;
-      return '<div onclick="cwPickSource(\'' + esc(s.key) + '\')" style="cursor:pointer;padding:8px 11px;border-bottom:1px solid var(--line);background:' + (on ? 'var(--blue-tint-bg)' : 'var(--card)') + '">'
+      return '<div onclick="cwPickSource(\'' + esc(s.key) + '\')" style="cursor:pointer;padding:8px 11px;border-bottom:1px solid var(--line);background:' + (on ? 'var(--blue-tint-bg)' : 'var(--card)') + ';color:' + (on ? 'var(--on-card)' : 'var(--on-card)') + '">'
         + '<div style="display:flex;align-items:center;gap:8px"><span style="font-weight:' + (on ? 700 : 600) + ';font-size:var(--fs-2)">' + esc(s.title) + '</span>'
         + (s.for_vertical ? '<span style="font-size:var(--fs-1);color:var(--purple-2);background:var(--purple-tint);border-radius:4px;padding:1px 6px">' + esc(s.for_vertical) + '</span>' : '')
         + '<span style="margin-left:auto;font-size:var(--fs-1);color:var(--grey)">' + s.item_count + ' item(s)</span></div>'

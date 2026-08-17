@@ -1720,7 +1720,7 @@ function _catFieldRow(n, f, i){
     var viaList = _viaFor(f.leg);
     var viaOpts = viaList.map(function(v){ return '<option value="' + v + '"' + ((f.via || viaList[0]) === v ? ' selected' : '') + '>' + v + '</option>'; }).join('');
     var ok = _legBacked(n, f);
-    viaSel = '<select onchange="netSetCatField(\'' + n.key + '\',' + i + ',\'via\',this.value)" title="' + (ok ? 'co-assist present' : 'no matching co-assist on this node') + '" style="font-size:var(--fs-1);padding:4px;border:1px solid ' + (ok ? 'var(--line)' : 'var(--disp)') + ';border-radius:6px;background:' + (ok ? 'var(--card)' : 'var(--danger-tint)') + '">' + viaOpts + '</select>';
+    viaSel = '<select onchange="netSetCatField(\'' + n.key + '\',' + i + ',\'via\',this.value)" title="' + (ok ? 'co-assist present' : 'no matching co-assist on this node') + '" style="font-size:var(--fs-1);padding:4px;border:1px solid ' + (ok ? 'var(--line)' : 'var(--disp)') + ';border-radius:6px;background:' + (ok ? 'var(--card)' : 'var(--danger-tint)') + ';color:' + (ok ? 'var(--on-card)' : 'var(--on-card)') + '">' + viaOpts + '</select>';
   }
   var col = (CAT_LEGS.filter(function(l){ return l.k === f.leg; })[0] || {}).col || ['var(--blue-2)', 'var(--blue-tint-bg)'];
   return '<div style="display:flex;gap:6px;align-items:center;padding:3px 0;border-left:3px solid ' + col[0] + ';padding-left:7px">'
@@ -1770,7 +1770,7 @@ function _adoptedPricing(n, c){
     + CAT_PRICE_SRC.map(function(o){
         var on = v === o.k;
         return '<div onclick="netSetPriceSrc(\'' + n.key + '\',\'' + o.k + '\')" style="cursor:pointer;flex:1;min-width:210px;'
-          + 'padding:10px 12px;border:1px solid ' + (on ? 'var(--blue-2)' : 'var(--line)') + ';border-radius:9px;background:' + (on ? 'var(--blue-tint-bg)' : 'var(--card)') + '">'
+          + 'padding:10px 12px;border:1px solid ' + (on ? 'var(--blue-2)' : 'var(--line)') + ';border-radius:9px;background:' + (on ? 'var(--blue-tint-bg)' : 'var(--card)') + ';color:' + (on ? 'var(--on-card)' : 'var(--on-card)') + '">'
           + '<b style="font-size:var(--fs-2);color:' + (on ? 'var(--blue-2)' : 'var(--blue-2)') + '">' + (on ? '● ' : '○ ') + esc(o.label) + '</b>'
           + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px;line-height:1.5">' + o.hint + '</div></div>';
       }).join('')
@@ -2032,7 +2032,7 @@ function _storefrontConfig(n){
   var e = n.exposure || 'private';
   var o = _ensureOrder(n);
   var opt = function(val, label, hint){ var on = e === val;
-    return '<div onclick="netSetExposure(\'' + n.key + '\',\'' + val + '\')" style="cursor:pointer;padding:8px 10px;border:1px solid ' + (on ? 'var(--ok-2)' : 'var(--line)') + ';border-radius:9px;background:' + (on ? 'var(--ok-tint)' : 'var(--card)') + ';margin-top:6px">'
+    return '<div onclick="netSetExposure(\'' + n.key + '\',\'' + val + '\')" style="cursor:pointer;padding:8px 10px;border:1px solid ' + (on ? 'var(--ok-2)' : 'var(--line)') + ';border-radius:9px;background:' + (on ? 'var(--ok-tint)' : 'var(--card)') + ';color:' + (on ? 'var(--on-card)' : 'var(--on-card)') + ';margin-top:6px">'
       + '<b style="font-size:var(--fs-2);color:' + (on ? 'var(--ok-2)' : 'var(--ink-2)') + '">' + (on ? '● ' : '○ ') + label + '</b>'
       + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">' + hint + '</div></div>'; };
   // Visibility MOVED to the node itself (_netVisibilityBlock). Two controls for one value is how a person sets it
@@ -2586,11 +2586,11 @@ function _netNetworkVisibilityBlock(){
   var isPublic = v === 'public';
   var btn = function(val, label, hint){
     var on = v === val;
-    return '<div onclick="netSetNetworkVisibility(\'' + val + '\')" style="cursor:pointer;flex:1;min-width:190px;padding:10px 12px;border:1px solid ' + (on ? 'var(--blue-2)' : 'var(--line)') + ';border-radius:9px;background:' + (on ? 'var(--blue-tint-bg)' : 'var(--card)') + '">'
+    return '<div onclick="netSetNetworkVisibility(\'' + val + '\')" style="cursor:pointer;flex:1;min-width:190px;padding:10px 12px;border:1px solid ' + (on ? 'var(--blue-2)' : 'var(--line)') + ';border-radius:9px;background:' + (on ? 'var(--blue-tint-bg)' : 'var(--card)') + ';color:' + (on ? 'var(--on-card)' : 'var(--on-card)') + '">'
       + '<b style="font-size:var(--fs-2);color:' + (on ? 'var(--blue-2)' : 'var(--ink-2)') + '">' + (on ? '● ' : '○ ') + label + '</b>'
       + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px;line-height:1.5">' + hint + '</div></div>';
   };
-  return '<div style="margin-top:16px;padding:13px 15px;border:1px solid ' + (unanswered ? 'var(--warn-tint)' : 'var(--blue-tint-bg)') + ';border-radius:12px;background:' + (unanswered ? 'var(--warn-tint)' : 'var(--blue-tint-bg)') + '">'
+  return '<div style="margin-top:16px;padding:13px 15px;border:1px solid ' + (unanswered ? 'var(--warn-tint)' : 'var(--blue-tint-bg)') + ';border-radius:12px;background:' + (unanswered ? 'var(--warn-tint)' : 'var(--blue-tint-bg)') + ';color:' + (unanswered ? 'var(--on-card)' : 'var(--on-card)') + '">'
     + '<div style="font-size:var(--fs-1);font-weight:800;color:' + (unanswered ? 'var(--warn-2)' : 'var(--blue-2)') + ';letter-spacing:.05em">IS THIS NETWORK PUBLIC OR PRIVATE?</div>'
     + '<div style="font-size:11.5px;color:var(--grey);margin-top:4px;line-height:1.55">Answer this first — it decides what every store below is allowed to be.</div>'
     + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:9px">'

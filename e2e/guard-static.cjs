@@ -478,5 +478,50 @@ console.log('\n12 · the shared catalogue model is require()-able');
     warn('catalogue-model.js cannot be required: ' + (e && e.message));
   }
 }
+
+/**
+ * 13 · EVERY TOKEN REFERENCED IS ACTUALLY DEFINED.
+ *
+ * ⚠️⚠️ `var(--wash, #f6f4f0)` LOOKS TOKENISED AND IS NOT. If `--wash` is never defined, the HARDCODED FALLBACK
+ * is what renders — in every theme, for ever. Five such names existed (--wash · --soft · --mut · --line-soft ·
+ * --line-strong), used ~30 times, and every colour sweep I ran walked straight past them because each one
+ * contained the string `var(`.
+ *
+ * ⚠️ IT IS THE PERFECT DISGUISE: a reviewer greps for hardcoded hex, sees `var(`, and moves on. Athi found it by
+ * eye instead — the chit cost box painted `var(--wash,…)`, so it stayed cream on a dark theme and "Invoiced" and
+ * "Margin" vanished into it.
+ *
+ * A fallback is legitimate ONLY as a defence for a token that exists. One for a token that does not is a literal
+ * with extra syntax.
+ */
+console.log('\n13 · every token referenced is defined');
+{
+  const defined = new Set(), used = new Map();
+  const srcs = [['app.html', app]].concat(CAPS.map((f) => [f, fs.readFileSync(path.join(WEB, 'app', f), 'utf8')]));
+  srcs.forEach(([, src]) => {
+    for (const m of src.matchAll(/(--[a-z0-9-]+)\s*:/g)) defined.add(m[1]);        // :root, themes, any declaration
+    for (const m of src.matchAll(/'(--[a-z0-9-]+)'\s*:/g)) defined.add(m[1]);      // theme maps: '--paper':'#fff'
+  });
+  /**
+   * ⚠️ ONLY A **LITERAL** FALLBACK IS THE BUG. `var(--cbst-accent, var(--blue))` is a deliberate host-overridable
+   * hook: undefined by design, and if nobody overrides it the value still comes from a real token and still
+   * follows the theme. `var(--wash, #f6f4f0)` is the opposite — a hex that renders for ever while wearing a
+   * token's syntax. Flagging both would bury the one that matters under three that do not, which is how a check
+   * gets ignored; I nearly shipped it that way.
+   */
+  srcs.forEach(([name, src]) => {
+    for (const m of src.matchAll(/var\(\s*(--[a-z0-9-]+)\s*(,\s*([^)]*))?\)/g)) {
+      const tok = m[1], fallback = (m[3] || '').trim();
+      if (fallback && /var\(/.test(fallback)) continue;                 // falls back to a real token — fine
+      if (!/^--[a-z][a-z0-9-]*$/.test(tok)) continue;                   // `--fs-*`, `--x` etc: selector text, not a reference
+      if (!used.has(tok)) used.set(tok, name + (fallback ? ' → ' + fallback : ' → no fallback'));
+    }
+  });
+  const missing = [...used.keys()].filter((t) => !defined.has(t));
+  if (missing.length) {
+    warn(missing.length + ' token(s) referenced but never defined — the hardcoded fallback is what renders: '
+      + missing.map((t) => t + ' (' + used.get(t) + ')').join(', '));
+  } else pass('no var(--…) refers to a token that does not exist');
+}
 console.log('\n== GUARD ==  ' + hard + ' failure(s) · ' + soft + ' warning(s)');
 process.exit(hard ? 1 : 0);

@@ -189,6 +189,20 @@
        page and we cannot see them from CSS — env() is the only thing that can, and it reports 0 on anything
        that has none, so this costs nothing where it is not needed. */
     --scroll-tail:calc(clamp(96px,20vh,200px) + env(safe-area-inset-bottom, 0px));
+    /**
+     * ⚠️⚠️ FIVE TOKENS WERE REFERENCED AND NONE OF THEM EXISTED. --wash, --soft, --mut, --line-soft and
+     * --line-strong appear ~30 times as `var(--wash,#f6f4f0)` — and because the token was never defined, the
+     * HARDCODED FALLBACK is what rendered, every time, in every theme. It reads as tokenised at a glance,
+     * which is exactly why it survived a night of colour sweeps: my scans saw `var(` and moved on.
+     *
+     * Athi found it as "invoiced, margin also not visible" — the chit cost box is background:var(--wash,…),
+     * so it stayed cream in dark while the text above it went near-white.
+     *
+     * Defined as ALIASES rather than new values: these are not five new colours, they are five names for
+     * grounds and inks that already exist. Guard check 13 now reports any token that is referenced but never defined.
+     */
+    --wash:var(--neutral-tint); --soft:var(--blue-tint-bg); --mut:var(--grey);
+    --line-soft:var(--line); --line-strong:var(--line);
     color-scheme:light;
     --r-sm:6px;--r-md:9px;--r-lg:12px;
   }
@@ -2181,7 +2195,7 @@ function regVerticalChooser(){
   if(!vs.length) return '';
   return '<div style="margin:10px 0 4px"><div class="fl">Choose your setup <span style="font-weight:400;color:var(--grey)">(you can change later)</span></div>'
     + vs.map(function(v){ const sel=(REG.constitution||'')===v.key; const caps=(v.capabilities||[]).join(' · ');
-        return '<div data-testid="reg-vertical-'+esc(v.key)+'" onclick="REG.constitution=\''+esc(v.key)+'\';renderRegister()" style="border:1px solid '+(sel?'var(--blue)':'var(--line)')+';background:'+(sel?'var(--blue-tint)':'var(--card)')+';border-radius:9px;padding:9px 11px;margin-bottom:7px;cursor:pointer"><div style="font-weight:700;font-size:var(--fs-2);color:var(--ink)">'+(sel?'● ':'○ ')+esc(v.label||v.key)+(v.is_default?' <span style="font-size:var(--fs-1);color:var(--grey);font-weight:400">· default</span>':'')+'</div><div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">'+(v.vertical?('vertical: '+esc(v.vertical)+' · '):'')+'includes '+esc(caps||'core')+'</div></div>';
+        return '<div data-testid="reg-vertical-'+esc(v.key)+'" onclick="REG.constitution=\''+esc(v.key)+'\';renderRegister()" style="border:1px solid '+(sel?'var(--blue)':'var(--line)')+';background:'+(sel?'var(--blue-tint)':'var(--card)')+';color:' + (sel ? 'var(--on-card)' : 'var(--on-card)') + ';border-radius:9px;padding:9px 11px;margin-bottom:7px;cursor:pointer"><div style="font-weight:700;font-size:var(--fs-2);color:var(--ink)">'+(sel?'● ':'○ ')+esc(v.label||v.key)+(v.is_default?' <span style="font-size:var(--fs-1);color:var(--grey);font-weight:400">· default</span>':'')+'</div><div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">'+(v.vertical?('vertical: '+esc(v.vertical)+' · '):'')+'includes '+esc(caps||'core')+'</div></div>';
       }).join('')
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin:2px 0 4px">None fits? <a onclick="regTailor();return false" style="color:var(--blue);cursor:pointer;font-weight:600">Tailor one</a> — or <a onclick="regContact();return false" style="color:var(--blue);cursor:pointer;font-weight:600">contact the team</a> to wire it quickly.</div>'
     + '</div>';
@@ -4603,7 +4617,7 @@ function enquiryPaint(){
   out += msgs.length
     ? msgs.map(function(m){
         var mine = (m.sender_entity_id === SESSION.entity);
-        return '<div style="border:1px solid var(--line);border-radius:9px;padding:9px 11px;margin-bottom:7px;background:' + (mine ? 'var(--paper)' : 'var(--card)') + '">'
+        return '<div style="border:1px solid var(--line);border-radius:9px;padding:9px 11px;margin-bottom:7px;background:' + (mine ? 'var(--paper)' : 'var(--card)') + ';color:' + (mine ? 'var(--on-bg)' : 'var(--on-card)') + '">'
           + '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:3px">' + esc(m.sender_display_name || (mine ? 'You' : 'Them'))
           + ' · ' + esc(String(m.created_at || '').slice(0, 16).replace('T', ' ')) + '</div>'
           + '<div style="font-size:var(--fs-2);white-space:pre-wrap">' + esc(m.message_text || '') + '</div></div>';
@@ -5207,7 +5221,7 @@ function supDetailHTML(){
       : (c.met||0)===0 ? `⚠ ${esc(who)} has no certificates on file yet`
       : `⚠ ${esc(who)}: ${(c.total||0)-(c.met||0)} certificate${((c.total||0)-(c.met||0))===1?'':'s'} still to come`;
     /* The chip is a CERTIFICATES warning, so it opens the certificates — the passport — not the profile. */
-    const chip=`<div style="padding:2px 0 0"><div data-testid="sup-chip" onclick="viewSupplierPassport('${esc(x.bridge_id)}','${String(supName(x)).replace(/[\\']/g,'')}')" style="display:inline-flex;align-items:center;gap:9px;border:1px solid ${bad?'var(--gold-line)':'var(--line)'};border-radius:22px;padding:6px 8px 6px 13px;background:${bad?'var(--gold-soft)':'var(--card)'};cursor:pointer">`
+    const chip=`<div style="padding:2px 0 0"><div data-testid="sup-chip" onclick="viewSupplierPassport('${esc(x.bridge_id)}','${String(supName(x)).replace(/[\\']/g,'')}')" style="display:inline-flex;align-items:center;gap:9px;border:1px solid ${bad?'var(--gold-line)':'var(--line)'};border-radius:22px;padding:6px 8px 6px 13px;background:${bad?'var(--gold-soft)':'var(--card)'};color:${bad ? 'var(--on-card)' : 'var(--on-card)'};cursor:pointer">`
       + `<span style="font-size:11.5px;color:${bad?'var(--warn-2)':'var(--ok-2)'};font-weight:700">${warnTxt}</span>`
       + `<span style="background:var(--paper);border-radius:20px;padding:3px 10px;font-size:11.5px;color:var(--blue);font-weight:700">Details ›</span></div></div>`;
     let catcard;
@@ -8365,7 +8379,7 @@ function amdShortlistHTML(cands, cat, totalItems){
     const on = AMD.pickedKey === x.key;
     const st = x.status && x.status !== 'available';
     return '<label data-testid="amd-cand" style="display:flex;align-items:center;gap:11px;cursor:pointer;padding:11px 12px;'
-      + 'margin-bottom:7px;border:1.5px solid ' + (on?'var(--blue)':'var(--line)') + ';border-radius:12px;background:' + (on?'var(--blue-tint-bg)':'var(--card)') + '">'
+      + 'margin-bottom:7px;border:1.5px solid ' + (on?'var(--blue)':'var(--line)') + ';border-radius:12px;background:' + (on?'var(--blue-tint-bg)':'var(--card)') + ';color:' + (on ? 'var(--on-card)' : 'var(--on-card)') + '">'
       + '<input type="radio" name="amdcand" ' + (on?'checked':'') + ' onchange="amdPickCand(' + i + ')" '
       + 'style="width:19px;height:19px;flex:none;accent-color:var(--blue)">'
       + '<span style="flex:1;min-width:0">'
@@ -8416,7 +8430,7 @@ function amendPaint(){
         const on = AMD.pickedKey===x.key;
         const st = x.status && x.status!=='available';
         return `<label data-testid="amd-cand" style="display:flex;align-items:center;gap:11px;cursor:pointer;padding:11px 12px;margin-bottom:7px;
-             border:1.5px solid ${on?'var(--blue)':'var(--line)'};border-radius:12px;background:${on?'var(--blue-tint-bg)':'var(--card)'}">
+             border:1.5px solid ${on?'var(--blue)':'var(--line)'};border-radius:12px;background:${on?'var(--blue-tint-bg)':'var(--card)'};color:${on ? 'var(--on-card)' : 'var(--on-card)'}">
           <input type="radio" name="amdcand" ${on?'checked':''} onchange="amdPickCand(${i})" style="width:19px;height:19px;flex:none;accent-color:var(--blue)">
           <span style="flex:1;min-width:0">
             <span style="font-size:15px;font-weight:700">${esc(x.name||x.label)}</span>

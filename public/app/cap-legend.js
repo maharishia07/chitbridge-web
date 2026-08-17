@@ -636,7 +636,7 @@ function _openLegendImpl(){
       <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap">${badge}${under}</div>${mech}${gap}
     </div>`;
   };
-  const card=(c)=>`<div style="border:1px solid var(--line);border-radius:12px;padding:11px 13px;margin-bottom:10px;background:${c.load==='planned'?'var(--card)':'var(--card)'}">
+  const card=(c)=>`<div style="border:1px solid var(--line);border-radius:12px;padding:11px 13px;margin-bottom:10px;background:${c.load==='planned'?'var(--card)':'var(--card)'};color:${c.load==='planned' ? 'var(--on-card)' : 'var(--on-card)'}">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px"><span style="font-size:15px">${c.icon}</span><span style="font-family:'Space Grotesk';font-weight:700;font-size:13.5px">${esc(c.name)}</span><span style="margin-left:auto;display:flex;gap:6px;align-items:center">${matBadge(c)}${loadBadge(c)}</span></div>
     <div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:8px;line-height:1.5">${esc(c.blurb)}</div>
     ${govBand(c)}
