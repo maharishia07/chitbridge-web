@@ -3009,7 +3009,7 @@ function _renderApp(){
             var sec = UI.avSection || null;
             var row = function(key, icon, label, value){
               var open = sec === key;
-              return `<button data-testid="avsec-${key}" onclick="UI.avSection = ${BT}${BT} + (UI.avSection==='${key}'?'':'${key}'); renderApp()"
+              return `<button data-testid="avsec-${key}" onclick="UI.avSection = (UI.avSection==='${key}'?'':'${key}'); renderApp()"
                 style="display:flex;align-items:center;gap:9px;width:100%;text-align:left;border:0;
                 background:${open?'var(--sel-2)':'none'};color:var(--on-card);padding:10px 13px;font-size:13.5px;cursor:pointer">
                 <span style="width:17px;text-align:center">${icon}</span><span>${label}</span>
