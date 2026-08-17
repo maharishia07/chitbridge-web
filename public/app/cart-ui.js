@@ -894,6 +894,7 @@
    * and the new door did not is a second implementation wearing the first one's name.
    */
   function ensureHost() {
+    ensureChipCss();
     if (typeof document === 'undefined' || document.getElementById('cbcart_ov')) return;
     var d = document.createElement('div');
     d.id = 'cbcart_ov'; d.className = 'cbcart-ov';
@@ -904,6 +905,26 @@
     // would turn a missing <body> into a message blaming the supplier's catalogue. There is always somewhere to
     // put it; failing loudly in the wrong words is worse than either failing or working.
     (document.body || document.documentElement).appendChild(d);
+  }
+
+  /**
+   * ensureChipCss — the stylesheet, on its OWN front door.
+   *
+   * ⚠️ THIS LIVED INSIDE ensureHost, AND THAT IS A BUG OF EXACTLY THE KIND ensureHost's OWN COMMENT DESCRIBES.
+   * The chip/search/category CSS was injected as a SIDE EFFECT of building the cart popup overlay. Every screen
+   * that opens a cart got it. The catalogue MANAGEMENT screen renders the same `.cbpick-chip` markup and never
+   * opens a cart — so it never got the stylesheet, and the category filter fell all the way back to the browser's
+   * default <button>: square corners and near-black label text.
+   *
+   * ⚠️ IT WAS INVISIBLE IN EVERY LIGHT THEME. UA-default black on a pale page reads fine, so for months the only
+   * symptom was "the chips look a bit square". On a dark ground the same black text sits on a dark page and the
+   * category names disappear — which is what Athi photographed: All / Flour 3 / Grains 3 / Uncategorised 55, all
+   * unreadable, while the SELECTED chip stayed visible because its colours are inline on the element.
+   *
+   * Two consumers of one stylesheet means the stylesheet needs its own entry point, not a lucky call order.
+   */
+  function ensureChipCss() {
+    if (typeof document === 'undefined') return;
     if (!document.getElementById('cbcart_css')) {
       // `styleEl`, not `st` — `st` is this module's state getter, and shadowing it here is a trap for the next edit.
       var styleEl = document.createElement('style');
@@ -1174,6 +1195,10 @@
        pickerHTML (it replaces the search chrome, not just the list), so without this the chips exist on one
        picker and not the other — which is exactly how they went missing from compose. */
     categoriesHTML: catgsHTML,
+    /* ⚠️ EXPORTED because the chip markup has TWO consumers and the stylesheet had one accidental injector. Any
+       screen emitting `.cbpick-chip` must call this; the catalogue management screen does not open a cart, so
+       relying on ensureHost to have run is relying on an unrelated feature being used first. */
+    ensureChipCss: ensureChipCss,
     open: open, close: close, checkout: checkout,
     barHTML: barHTML, listHTML: listHTML, popupHTML: popupHTML, pickerHTML: pickerHTML,
     /* ⚠️ EXPORTED SO catalogue-ui.js CANNOT GROW A SECOND MONEY FORMATTER. It briefly had one, and that is

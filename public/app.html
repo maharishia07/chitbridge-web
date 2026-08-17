@@ -5012,8 +5012,14 @@ function prodCatgStripHTML(){
   const live=_CATG.filter(c=>n[c.id]);            // a category with nothing in it is noise on this row
   if(!live.length && !none) return '';
   const g=UI._prodCatg||'';
+  /* ⚠️ THE STYLESHEET IS NOT GUARANTEED HERE. `.cbpick-chip` is cart-ui's class, and cart-ui injected its CSS as a
+     side effect of building the cart popup — which this screen never builds. Without this call the chips render as
+     raw <button>s: square, with the browser's near-black default label, invisible on a dark ground. */
+  if (window.CBCart && CBCart.ensureChipCss) CBCart.ensureChipCss();
+  /* ⚠️ NO INLINE COLOURS ON THE SELECTED CHIP. `.cbpick-chip.on` already paints the accent and its partner text;
+     setting a second, different selected style here is how the two drift apart — this one said blue-on-tint while
+     the class said white-on-accent, so the same chip looked like two different controls on two screens. */
   const chip=(v,label,count,on)=>`<button type="button" class="cbpick-chip${on?' on':''}" data-testid="cat-catgfilter"
-      ${on?'style="background:var(--blue-tint-bg);border-color:var(--blue);color:var(--blue)"':''}
       onclick="prodCatgFilter('${esc(v)}')">${esc(label)}${count==null?'':` <span class="cbpick-chipn">${count}</span>`}</button>`;
   return `<div class="cbpick-catgs" style="margin-top:8px">`
     + chip('','All',null,!g)

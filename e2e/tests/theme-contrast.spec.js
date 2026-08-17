@@ -87,6 +87,28 @@ const AUDIT = `(() => {
 test.describe('Theme contrast · every theme, every screen', () => {
   test.describe.configure({ timeout: 180_000 });
 
+  /**
+   * ⚠️⚠️ THE STATE THE SCREEN IS IN WHEN IT LOADS IS NOT THE STATE THE USER SEES.
+   *
+   * This test navigated to a screen and measured whatever painted — so it only ever judged the RESTING state.
+   * A selected row, a filter chip strip, an open menu, a picked checkbox: none of them existed at the moment of
+   * measurement, so none of them were ever checked. It reported the catalogue screen CLEAN in dark on the same
+   * build where Athi photographed unreadable category chips and an unreadable selected row.
+   *
+   * A contrast test that only sees the resting state is a test that passes the screenshot it was not shown.
+   */
+  const PREP = {
+    catalogue: async (page) => {
+      const row = page.locator('[data-testid^="cat-product-"]').first();
+      if (await row.count()) { await row.click({ timeout: 4000 }).catch(() => {}); }   // selected row + its detail
+    },
+    task: async (page) => {
+      const r = page.locator('.lrow').first();
+      if (await r.count()) { await r.click({ timeout: 4000 }).catch(() => {}); }
+    },
+  };
+  const prep = async (page, screen) => { if (PREP[screen]) { await PREP[screen](page); await page.waitForTimeout(400); } };
+
   test('[THEME-01] no theme makes text unreadable that the default theme does not', async ({ page }) => {
     await mintEntity(page);
     const themes = await page.evaluate(() => Object.keys(window.THEMES || {}));
@@ -98,6 +120,7 @@ test.describe('Theme contrast · every theme, every screen', () => {
     for (const s of SCREENS) {
       await page.evaluate((n) => window.navTo(n), s);
       await page.waitForTimeout(500);
+      await prep(page, s);
       base[s] = (await page.evaluate(AUDIT)).length;
     }
 
@@ -108,6 +131,7 @@ test.describe('Theme contrast · every theme, every screen', () => {
       for (const s of SCREENS) {
         await page.evaluate((n) => window.navTo(n), s);
         await page.waitForTimeout(500);
+        await prep(page, s);
         const bad = await page.evaluate(AUDIT);
         if (bad.length > base[s]) {
           regressions.push(`${th} / ${s}: ${bad.length} unreadable vs ${base[s]} in the default` +
