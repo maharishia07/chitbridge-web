@@ -2778,7 +2778,7 @@ function _renderApp(){
      * `UI.folders===undefined` distinguishes "not yet asked" from "asked, and you have none", so an entity with no
      * folders does not re-request on every render. (on-demand loading, still — one fetch, not one per paint.)
      */
-    if(UI.folders===undefined && SESSION.token){ UI.folders=[]; ensureCap('folders').then(function(){ if(typeof loadFolders==='function') loadFolders().then(renderApp); }); }
+    if(UI.folders===undefined && SESSION.token){ UI.folders=[]; ensureCap('folders').then(function(){ if(typeof loadFolders==='function') loadFolders().then(bgRenderApp); }); }
     if(["task","order","drafts","trash","archive"].includes(UI.nav)) loadList();
     if(UI.nav==="disputes") loadDisputes();
     if(UI.nav==="profile") loadProfile();

@@ -31,7 +31,11 @@ if (typeof EP !== 'undefined') {
 }
 async function loadFolders(){
   try{ var r=await api('foldersList'); UI.folders=(r&&r.folders)||[]; }catch(e){ UI.folders=[]; }
-  if(typeof renderApp==='function') renderApp();
+  /* ⚠️ bgRenderApp, NOT renderApp. This runs on STARTUP as well as after a user action, and renderApp rebuilds
+     the shell — including the empty #modalhost — so a folder list arriving while someone is in Compose deleted
+     their draft. Measured 2026-08-18: this was the last of seven such callers. The user-initiated callers
+     (folderCreate, rename, move) repaint themselves or navigate, so nothing loses a refresh it needed. */
+  if(typeof bgRenderApp==='function') bgRenderApp(); else if(typeof renderApp==='function') renderApp();
 }
 // recursive tree render — parent_id makes it nestable (same pattern as the Network tree)
 function _folderTree(parentId, depth){

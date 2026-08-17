@@ -1,25 +1,35 @@
 const { test, expect } = require('@playwright/test');
 const { mintEntity } = require('../fixtures');
 
-test('probe · does compose survive being left open', async ({ page }) => {
+test('probe · who repaints while a modal is open', async ({ page }) => {
   test.setTimeout(180_000);
   await mintEntity(page);
   await page.getByTestId('nav-compose').click();
   await page.getByTestId('chit-item-name').waitFor({ timeout: 20000 });
+
   await page.evaluate(() => {
-    window.__log = [];
-    const orig = window.closeModal;
-    window.closeModal = function () { window.__log.push('closeModal @' + Date.now()); return orig.apply(this, arguments); };
-    const oa = window.renderApp;
-    if (typeof oa === 'function') window.renderApp = function () { window.__log.push('renderApp @' + Date.now()); return oa.apply(this, arguments); };
+    window.__hits = [];
+    const wrap = (name) => {
+      const orig = window[name];
+      if (typeof orig !== 'function') return;
+      window[name] = function () {
+        const modalUp = !!(document.getElementById('modalhost') || {}).innerHTML;
+        const st = String(new Error().stack || '').split('\n').slice(1, 5).join(' <- ')
+          .replace(/https?:\/\/[^ )]*app(\.html|\/[a-z0-9-]+\.js)/g, '');
+        window.__hits.push(name + ' modalUp=' + modalUp + ' :: ' + st.slice(0, 300));
+        return orig.apply(this, arguments);
+      };
+    };
+    ['renderApp', 'bgRenderApp', 'closeModal'].forEach(wrap);
   });
-  for (let i = 1; i <= 6; i++) {
-    await page.waitForTimeout(5000);
-    const alive = await page.evaluate(() => document.querySelectorAll('.mover').length);
-    console.log(`T+${i * 5}s  movers=${alive}`);
-    if (!alive) break;
+
+  for (let i = 1; i <= 4; i++) {
+    await page.waitForTimeout(3000);
+    const m = await page.evaluate(() => document.querySelectorAll('.mover').length);
+    console.log('T+' + i * 3 + 's movers=' + m);
+    if (!m) break;
   }
-  const log = await page.evaluate(() => (window.__log || []).slice(0, 8));
-  console.log('LOG ' + JSON.stringify(log));
+  const hits = await page.evaluate(() => window.__hits || []);
+  hits.slice(0, 8).forEach((h) => console.log('HIT ' + h));
   expect(true).toBe(true);
 });
