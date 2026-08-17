@@ -182,7 +182,7 @@ function msgIsMine(m){
 function messagesScreen(){
   var body;
   if (RPL.busy && !RPL.data) body = '<div style="padding:18px 16px;color:var(--grey);font-size:var(--fs-2)"><span class="spin"></span> checking for replies…</div>';
-  else if (RPL.err) body = '<div style="padding:18px 16px;color:#c0453b;font-size:var(--fs-2)">' + esc(RPL.err) + '</div>';
+  else if (RPL.err) body = '<div style="padding:18px 16px;color:var(--disp);font-size:var(--fs-2)">' + esc(RPL.err) + '</div>';
   else {
     var threads = msgThreads();
     if (!threads.length) {
@@ -209,7 +209,7 @@ function messagesScreen(){
           +         esc((RPLTRACK[m.track] || {}).icon || '') + '</span>'
           +       '<b style="font-size:13.5px' + (isNew ? ';font-weight:800' : '') + '">' + what + '</b>'
           /* ⚠️ A CLOSED CHIT IS MARKED, NEVER HIDDEN — a complaint about a closed order arrives exactly here. */
-          +       (closed ? '<span style="font-size:var(--fs-1);font-weight:700;color:#b0641c;background:#fdf4e9;border-radius:4px;padding:1px 5px">' + esc(m.chit_status) + '</span>' : '')
+          +       (closed ? '<span style="font-size:var(--fs-1);font-weight:700;color:var(--warn-2);background:#fdf4e9;border-radius:4px;padding:1px 5px">' + esc(m.chit_status) + '</span>' : '')
           +       '<span style="font-size:11.5px;color:var(--grey);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + sub + '</span>'
           /* ⚠️ THE FULL COUNT ONCE IT IS KNOWN. The inbox only returns unread-or-kept, so this said "3 msgs" over
              a conversation that turned out to hold 5 — a number that disagreed with the thread it labelled the
@@ -254,14 +254,14 @@ function messagesScreen(){
               + '<textarea id="msg_reply_' + rid + '" data-testid="msg-reply" rows="2" placeholder="Reply to ' + esc(m.sender_display_name || 'them') + '…"'
               +   ' style="width:100%;box-sizing:border-box;font:inherit;font-size:var(--fs-3);line-height:1.5;padding:9px 11px;border:1px solid var(--line);border-radius:9px;resize:vertical"></textarea>'
               + '<div style="display:flex;gap:10px;align-items:center;margin-top:7px">'
-              +   '<span style="font-size:11.5px;color:#b0641c">📤 The other party sees this, on their own copy.</span>'
+              +   '<span style="font-size:11.5px;color:var(--warn-2)">📤 The other party sees this, on their own copy.</span>'
               +   '<button class="btn pri" data-testid="msg-send" onclick="msgSend(&quot;' + t.key + '&quot;)"'
               +     ' style="width:auto;flex:0 0 auto;margin:0 0 0 auto;padding:8px 16px">' + (RPL.sending[t.key] ? 'Sending…' : 'Reply') + '</button>'
               + '</div>'
               /* ── the conversation, newest first, each side shaded differently ─────────────────────────────── */
               + '<div style="border-top:1px solid var(--line-soft,#f0efec);margin-top:11px;padding-top:5px"></div>'
               + (full === undefined ? '<div style="font-size:var(--fs-2);color:var(--grey);padding:4px 0"><span class="spin"></span> reading the conversation…</div>'
-                 : full === null ? '<div style="font-size:var(--fs-2);color:#c0453b;padding:4px 0">Could not read the rest of this conversation — the newest message is above.</div>'
+                 : full === null ? '<div style="font-size:var(--fs-2);color:var(--disp);padding:4px 0">Could not read the rest of this conversation — the newest message is above.</div>'
                  /**
                   * ⭐ NEWEST FIRST — Athi, 2026-08-15: *"latest message on top, reverse order."*
                   *
@@ -301,7 +301,7 @@ function messagesScreen(){
           return '<span data-testid="msg-track-' + (k || 'all') + '" onclick="rplTrack(&quot;' + k + '&quot;)"'
             + ' title="' + esc(k ? RPLTRACK[k].hint : 'every conversation') + '"'
             + ' style="cursor:pointer;font-size:var(--fs-2);border:1px solid ' + (on ? 'var(--blue)' : 'var(--line)') + ';'
-            + (on ? 'background:var(--blue);color:#fff;font-weight:700;' : '') + 'border-radius:9px;padding:3px 10px">'
+            + (on ? 'background:var(--blue);color:var(--on-accent);font-weight:700;' : '') + 'border-radius:9px;padding:3px 10px">'
             + lbl + (n ? ' <span style="opacity:.7">' + n + '</span>' : '') + '</span>';
         }).join('')
     +   '<span style="margin-left:auto;font-size:11.5px;color:var(--grey)">📌 keeps a conversation here after you read it</span>'

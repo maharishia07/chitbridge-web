@@ -31,10 +31,23 @@ const AUDIT = `(() => {
   const lum = (c) => { const m = /rgba?\\((\\d+), (\\d+), (\\d+)/.exec(c); if (!m) return null;
     const v = [+m[1],+m[2],+m[3]].map(x => { x/=255; return x <= 0.03928 ? x/12.92 : Math.pow((x+0.055)/1.055, 2.4); });
     return 0.2126*v[0] + 0.7152*v[1] + 0.0722*v[2]; };
-  const bgOf = (el) => { let g = 0; while (el && el !== document.documentElement && g++ < 40) {
-      const c = getComputedStyle(el).backgroundColor;
-      if (c && c !== 'rgba(0, 0, 0, 0)') return c; el = el.parentElement; }
-    return getComputedStyle(document.body).backgroundColor || 'rgb(255,255,255)'; };
+  /* ⚠️ ALPHA MUST BE COMPOSITED, not treated as its own colour. A translucent white pill over the dark navy
+     topbar resolves to a MID tone that white text sits on happily — but read literally, rgba(255,255,255,.24)
+     looks like near-white and every label on it is reported unreadable. Blend it over what is behind it. */
+  const parse = (c) => { const m = /rgba?((d+),s*(d+),s*(d+)(?:,s*([d.]+))?/.exec(c);
+    return m ? { r:+m[1], g:+m[2], b:+m[3], a: m[4] === undefined ? 1 : +m[4] } : null; };
+  const over = (fg, bg) => ({ r: fg.r*fg.a + bg.r*(1-fg.a), g: fg.g*fg.a + bg.g*(1-fg.a), b: fg.b*fg.a + bg.b*(1-fg.a), a: 1 });
+  const bgOf = (el) => {
+    const stack = []; let n = el, g = 0;
+    while (n && n !== document.documentElement && g++ < 40) {
+      const c = parse(getComputedStyle(n).backgroundColor);
+      if (c && c.a > 0) { stack.push(c); if (c.a === 1) break; }
+      n = n.parentElement;
+    }
+    let base = parse(getComputedStyle(document.body).backgroundColor) || { r:255,g:255,b:255,a:1 };
+    for (let i = stack.length - 1; i >= 0; i--) base = over(stack[i], base);
+    return 'rgb(' + Math.round(base.r) + ', ' + Math.round(base.g) + ', ' + Math.round(base.b) + ')';
+  };
   const out = [];
   /* ⚠️⚠️ TEXT NODES, NOT LEAF ELEMENTS — and this is the bug that made an earlier version of this test USELESS.
      Skipping any element with children means a row whose text sits inside nested spans is never checked at all.

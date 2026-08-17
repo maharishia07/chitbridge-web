@@ -720,7 +720,7 @@
       'padding:0 12px;font-size:13.5px;font-family:inherit;background:var(--card);color:var(--ink,var(--ink))}',
       '.cbcat-chipslot{flex:0 0 auto}',
       '.cbcat-chip{display:inline-flex;align-items:center;gap:7px;height:40px;padding:0 11px;border-radius:9px;',
-      'border:1px solid var(--line,var(--line));background:#f7f8fa;white-space:nowrap;font-size:var(--fs-2);font-weight:800;',
+      'border:1px solid var(--line,var(--line));background:var(--neutral-tint);white-space:nowrap;font-size:var(--fs-2);font-weight:800;',
       'color:var(--ink,var(--ink));cursor:pointer;font-family:inherit}',
       '.cbcat-chip:disabled{cursor:default;opacity:.75}',
       '.cbcat-chip.on{background:var(--blue,var(--blue));border-color:var(--blue,var(--blue));color:#fff}',
@@ -737,7 +737,7 @@
 
       /* ⭐ content-visibility: the list is 3,008px tall today and most of it is never looked at. This skips
          layout and paint for off-screen rows; contain-intrinsic-size keeps the scrollbar honest. */
-      '.cbcat-row{display:flex;align-items:center;gap:10px;padding:8px 2px;border-bottom:1px dashed #e3e6ea;',
+      '.cbcat-row{display:flex;align-items:center;gap:10px;padding:8px 2px;border-bottom:1px dashed var(--line);',
       'content-visibility:auto;contain-intrinsic-size:auto 58px}',
       '.cbcat-row.on{background:var(--soft,#eef4ff)}',
       '.cbcat-var .cbcat-nm{padding-left:16px}',

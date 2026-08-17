@@ -138,7 +138,7 @@ function disputeBanner(c){
   if(!open.length && !closed.length) return '';
   var proof=c.proof==='ok'?'<span class="db-proof">⚖️ both-signed record</span>':'';
   var head='<div class="db-row"><span class="db-tag">⚑ '+(open.length?open.length+' dispute'+(open.length>1?'s':'')+' open on this record':'Disputes (resolved)')+'</span>'+proof+'</div>';
-  var dd='<select onchange="disputeSelect(this.value)" style="width:100%;margin-top:9px;padding:10px 12px;border:1px solid #e5c9c6;border-radius:9px;font-size:13px;background:var(--card);color:#1e2226;cursor:pointer">'
+  var dd='<select onchange="disputeSelect(this.value)" style="width:100%;margin-top:9px;padding:10px 12px;border:1px solid #e5c9c6;border-radius:9px;font-size:13px;background:var(--card);color:var(--on-card);cursor:pointer">'
     +'<option value="">— select a dispute to open —</option>'+dispOptGroup(open,'OPEN')+dispOptGroup(closed,'CLOSED')+'</select>';
   var sel=UI.dispSel?all.filter(function(d){ return String(d.dispute_id)===String(UI.dispSel); })[0]:null;   // stale id (other chit) → no overlay
   return '<div class="dispbanner">'+head+dd+'</div>'+(sel?disputeOverlay(c, sel, open, closed):'');
@@ -146,12 +146,12 @@ function disputeBanner(c){
 /* the overlay frame over the detail pane: header + ✕, a dropdown to switch, and the room */
 function disputeOverlay(c, d, open, closed){
   var proof=c.proof==='ok'?'<span class="db-proof">⚖️ both-signed record</span>':'';
-  var dd='<select onchange="disputeSelect(this.value)" style="width:100%;margin-bottom:12px;padding:8px 11px;border:1px solid #e5c9c6;border-radius:9px;font-size:var(--fs-2);background:var(--card);color:#1e2226;cursor:pointer">'
+  var dd='<select onchange="disputeSelect(this.value)" style="width:100%;margin-bottom:12px;padding:8px 11px;border:1px solid #e5c9c6;border-radius:9px;font-size:var(--fs-2);background:var(--card);color:var(--on-card);cursor:pointer">'
     +dispOptGroup(open,'OPEN')+dispOptGroup(closed,'CLOSED')+'</select>';
   return '<div style="position:absolute;inset:0;background:var(--card);display:flex;flex-direction:column;z-index:30">'
     +'<div style="display:flex;align-items:center;gap:8px;padding:13px 16px;border-bottom:1px solid var(--line);background:#fdf0ef">'
       +'<span style="font-weight:700;color:var(--disp);font-size:var(--fs-3)">⚑ '+esc(cap(d.category||''))+'</span>'+proof
-      +'<button onclick="aiDisputeSummary(\''+c.id+'\',\''+d.dispute_id+'\')" title="AI summarises this dispute neutrally — it does not decide it" style="margin-left:auto;border:1px solid var(--purple);background:#f2effc;color:var(--purple);border-radius:9px;padding:6px 11px;cursor:pointer;font-size:var(--fs-2)">✨ Summarize</button>'
+      +'<button onclick="aiDisputeSummary(\''+c.id+'\',\''+d.dispute_id+'\')" title="AI summarises this dispute neutrally — it does not decide it" style="margin-left:auto;border:1px solid var(--purple);background:var(--purple-tint);color:var(--purple);border-radius:9px;padding:6px 11px;cursor:pointer;font-size:var(--fs-2)">✨ Summarize</button>'
       +'<button onclick="disputeClose()" style="margin-left:8px;border:1px solid var(--line);background:var(--card);border-radius:9px;padding:6px 12px;cursor:pointer;font-size:var(--fs-2)">✕ Close</button></div>'
     +'<div style="padding:15px 16px;overflow:auto;flex:1">'+dd+disputeRoomBox(c,d)+'</div></div>';
 }
@@ -173,7 +173,7 @@ async function aiDisputeSummary(chitId, disputeId){
       +'<div class="amddoc" style="background:var(--card);border:1px solid var(--line);border-radius:9px;padding:15px 17px;max-height:56vh;overflow:auto">'+_aiMd(j.draft)+'</div>'
       +'<div style="margin-top:12px;text-align:right"><button onclick="closeModal()" style="font-size:12px;font-weight:700;border:1px solid var(--line);background:var(--card);border-radius:9px;padding:9px 16px;cursor:pointer">Done</button></div>';
     var b=document.getElementById('adbody'); if(b)b.innerHTML=html;
-  }catch(e){ var b2=document.getElementById('adbody'); if(b2)b2.innerHTML='<div style="font-size:12px;color:#8a5f11;background:#fdf3e3;border:1px solid #f0dcae;border-radius:9px;padding:10px 12px">'+esc((e&&e.message)||'Summary failed')+'</div>'; }
+  }catch(e){ var b2=document.getElementById('adbody'); if(b2)b2.innerHTML='<div style="font-size:12px;color:var(--warn-2);background:#fdf3e3;border:1px solid #f0dcae;border-radius:9px;padding:10px 12px">'+esc((e&&e.message)||'Summary failed')+'</div>'; }
 }
 // AI resolution wording — invoked, neutral DRAFT; the raiser still decides whether to resolve (human gate holds). Reuses global aiRun.
 function aiResolutionSuggest(chitId, disputeId){
@@ -188,9 +188,9 @@ function disputeRoomBox(c, d){
   var readonly=d.status!=='open';
   var mine=chitIsSelf(d.raised_by_entity_id, d.raised_by_display_name);
   var parties=disputeParties(d);
-  var st=readonly?'<span style="color:#2f7a45;font-size:11.5px;font-weight:700">✓ resolved</span>':'<span style="color:var(--disp);font-size:11.5px;font-weight:700">● open</span>';
+  var st=readonly?'<span style="color:var(--ok-2);font-size:11.5px;font-weight:700">✓ resolved</span>':'<span style="color:var(--disp);font-size:11.5px;font-weight:700">● open</span>';
   var resolve=readonly?'':disputeResolveBtns(parties, c.id, d.dispute_id, mine, 'db-res');
-  var suggestBtn=(readonly||typeof aiRun!=='function')?'':'<button onclick="aiResolutionSuggest(\''+c.id+'\',\''+d.dispute_id+'\')" title="AI suggests neutral resolution wording — you decide whether to resolve" style="font-size:var(--fs-1);font-weight:700;border:1px solid var(--purple);background:#f2effc;color:var(--purple);border-radius:6px;padding:5px 10px;cursor:pointer">✨ Suggest wording</button>';
+  var suggestBtn=(readonly||typeof aiRun!=='function')?'':'<button onclick="aiResolutionSuggest(\''+c.id+'\',\''+d.dispute_id+'\')" title="AI suggests neutral resolution wording — you decide whether to resolve" style="font-size:var(--fs-1);font-weight:700;border:1px solid var(--purple);background:var(--purple-tint);color:var(--purple);border-radius:6px;padding:5px 10px;cursor:pointer">✨ Suggest wording</button>';
   var resolveWrap=(resolve||suggestBtn)?'<span style="display:inline-flex;gap:6px;flex-wrap:wrap">'+suggestBtn+resolve+'</span>':'';
   var roster=[nm(d.raised_by_display_name,'—')+' (raiser)'].concat(parties.map(function(p){ return nm(p.display_name,'party'); })).join(' · ');
   var msgs=(typeof disputeFilterMsgs==='function')?(disputeFilterMsgs((c.msgs||[]),'dispute',d.dispute_id)||[]):[];
@@ -216,7 +216,7 @@ function disputeComposeBox(c, d, to){
     +'<div style="display:flex;align-items:center;gap:8px;margin-top:7px;flex-wrap:wrap">'
       +'<label style="border:1px solid var(--line);background:var(--card);border-radius:9px;padding:6px 11px;font-size:12px;cursor:pointer">📎 Attach<input type="file" multiple style="display:none" onchange="disputeAddFiles(this.files);this.value=\'\'"></label>'
       +'<span id="dispfiles">'+disputeFileChips()+'</span>'
-      +'<button data-testid="dispute-room-send" onclick="sendDisputeMsg(\''+c.id+'\',\''+d.dispute_id+'\')" style="margin-left:auto;background:var(--disp);color:#fff;border:none;border-radius:9px;padding:7px 14px;font-weight:600;cursor:pointer">Send ↔</button></div></div>';
+      +'<button data-testid="dispute-room-send" onclick="sendDisputeMsg(\''+c.id+'\',\''+d.dispute_id+'\')" style="margin-left:auto;background:var(--disp);color:var(--on-danger);border:none;border-radius:9px;padding:7px 14px;font-weight:600;cursor:pointer">Send ↔</button></div></div>';
 }
 function disputeFileChips(){ return (UI.dispFiles||[]).map(function(f,i){ return '<span style="display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:6px;padding:2px 7px;font-size:var(--fs-1);background:var(--card);margin-right:4px">📎 '+esc(f.name.length>18?f.name.slice(0,18)+'…':f.name)+' <span onclick="disputeDelFile('+i+')" style="cursor:pointer;color:var(--grey-4)">✕</span></span>'; }).join(''); }
 function disputeAddFiles(files){ UI.dispFiles=UI.dispFiles||[]; for(var i=0;i<files.length;i++){ var f=files[i]; if(f.size>6*1024*1024){ toast(f.name+' is over 6MB — skipped.'); continue; } UI.dispFiles.push(f); } var el=document.getElementById('dispfiles'); if(el)el.innerHTML=disputeFileChips(); }

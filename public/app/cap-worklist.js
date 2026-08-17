@@ -282,7 +282,7 @@ function wlRollupText(rows){
   else if (r.mixed) bits.push('mixed units');    // said plainly rather than adding numbers that do not add
   if (r.undated) bits.push(r.undated + ' undated');
   var text = bits.join(' · ');
-  if (r.overdue) text += ' · <span style="color:#c0453b;font-weight:700">' + r.overdue + ' overdue</span>';
+  if (r.overdue) text += ' · <span style="color:var(--disp);font-weight:700">' + r.overdue + ' overdue</span>';
   return text;
 }
 function wlHead(title, right, tone, id){
@@ -296,7 +296,7 @@ function wlHead(title, right, tone, id){
 function worklistScreen(){
   var body;
   if (WL.busy && !WL.data) body = '<div style="padding:18px 16px;color:var(--grey);font-size:var(--fs-2)"><span class="spin"></span> reading your work…</div>';
-  else if (WL.err) body = '<div style="padding:18px 16px;color:#c0453b;font-size:var(--fs-2)">' + esc(WL.err) + '</div>';
+  else if (WL.err) body = '<div style="padding:18px 16px;color:var(--disp);font-size:var(--fs-2)">' + esc(WL.err) + '</div>';
   else {
     var d = WL.data || {};
     var mine = !!d.scoped_to_self;
@@ -330,7 +330,7 @@ function worklistScreen(){
 
   var chip = function(k, label, on, fn, testid){
     return '<span data-testid="' + testid + '" onclick="' + fn + '" style="cursor:pointer;font-size:var(--fs-2);border:1px solid '
-      + (on ? 'var(--blue)' : 'var(--line)') + ';' + (on ? 'background:var(--blue);color:#fff;font-weight:700;' : '')
+      + (on ? 'var(--blue)' : 'var(--line)') + ';' + (on ? 'background:var(--blue);color:var(--on-accent);font-weight:700;' : '')
       + 'border-radius:9px;padding:4px 11px">' + label + '</span>';
   };
   /* ⚠️ A CHECKBOX, NOT A THIRD CHIP. "Group by date, and do not split by person" is a different act from "group by
@@ -582,7 +582,7 @@ function wlParties(det){
           + (p.bridge_id ? ' <span style="color:var(--grey);font-family:ui-monospace,monospace;font-size:var(--fs-1)">' + esc(p.bridge_id) + '</span>' : '')
           + '</div>';
       }).join('')
-    + (everyoneIsMe ? '<div style="font-size:11.5px;color:#b0641c;font-weight:600">⚠️ this chit has no other party — an external message would come back to you</div>' : '')
+    + (everyoneIsMe ? '<div style="font-size:11.5px;color:var(--warn-2);font-weight:600">⚠️ this chit has no other party — an external message would come back to you</div>' : '')
     + '</div>';
 }
 /**
@@ -827,7 +827,7 @@ function wlThreadSec(k, title, list, err, o){
   if (WLL.tab !== k) return out;
   out += '<div style="padding:2px 0 12px">';
   if (loading) out += '<div style="font-size:var(--fs-2);color:var(--grey)"><span class="spin"></span> checking…</div>';
-  else if (err) out += '<div style="font-size:var(--fs-2);color:#c0453b">Could not read these just now — this does NOT mean there are none.</div>';
+  else if (err) out += '<div style="font-size:var(--fs-2);color:var(--disp)">Could not read these just now — this does NOT mean there are none.</div>';
   else if (!n) out += '<div style="font-size:var(--fs-2);color:var(--grey)">Checked — ' + esc(o.empty) + '.</div>';
   else out += list.map(function(m){
     return '<div style="padding:6px 0;border-bottom:1px solid var(--line-soft,#f0efec);font-size:13px">'
@@ -916,7 +916,7 @@ function wlLineHTML(loading){
   if (WLL.tab === 'hist') {
     body += '<div style="padding:0 0 10px">';
     if (loading) body += '<div style="font-size:var(--fs-2);color:var(--grey)"><span class="spin"></span> checking for earlier entries…</div>';
-    else if (WLL.failed) body += '<div style="font-size:var(--fs-2);color:#c0453b">Could not read the history just now — this does NOT mean there is none. Close and reopen to try again.</div>';
+    else if (WLL.failed) body += '<div style="font-size:var(--fs-2);color:var(--disp)">Could not read the history just now — this does NOT mean there is none. Close and reopen to try again.</div>';
     else if (!nEv) body += '<div style="font-size:var(--fs-2);color:var(--grey)">Checked — nothing has been recorded against this line yet.</div>';
     else {
       body += events.map(function(e){
@@ -959,7 +959,7 @@ function wlLineHTML(loading){
           wlBtn('Record', 'wl-record', 'wlActSave(&quot;done&quot;)', true))
       + '<div style="margin-top:8px">' + wlInput('wl_ref', { placeholder: 'docket number, or a note' }) + '</div>'
       + '<div style="margin-top:7px;font-size:11.5px;color:var(--grey);line-height:1.5">'
-      +   (over ? '<b style="color:#c0453b">Already ' + esc(String(over)) + ' ' + esc(r.unit || '') + ' over — the negative figure above returns it.</b>'
+      +   (over ? '<b style="color:var(--disp)">Already ' + esc(String(over)) + ' ' + esc(r.unit || '') + ' over — the negative figure above returns it.</b>'
              : 'Pre-filled with what is left. A negative figure corrects an earlier delivery; nothing is deleted.')
       + '</div></div>';
   }
@@ -1064,7 +1064,7 @@ function wlLineHTML(loading){
       + (r.raw_phrase ? '<div style="font-style:italic;color:#5b5340">“' + esc(r.raw_phrase) + '”</div>' : '')
       + (r.asked_as ? '<div style="font-size:var(--fs-2);color:var(--grey)">asked as <b>' + esc(r.asked_as) + '</b></div>' : '')
       + (r.comment ? '<div style="color:#2c5d7c">' + esc(r.comment) + '</div>' : '')
-      + (r.needs_human ? '<div style="font-size:var(--fs-2);color:#c0453b;font-weight:700">⚠️ flagged for a person to check</div>' : '')
+      + (r.needs_human ? '<div style="font-size:var(--fs-2);color:var(--disp);font-weight:700">⚠️ flagged for a person to check</div>' : '')
       + '</div>';
   }
 

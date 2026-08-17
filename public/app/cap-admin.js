@@ -74,8 +74,8 @@ function vaultCardHTML(vault, encrypted){
   vault=vault||{};
   // F1 — honest at-rest signal. Encrypted (AES-256-GCM, key never in DB) → safe for real data; not configured → dummy only.
   var encBanner = encrypted
-    ? '<div style="font-size:var(--fs-1);color:#256e47;background:#eaf6ee;border:1px solid #bfe3cb;border-radius:9px;padding:7px 10px;margin:6px 0 2px">🔒 <b>Encrypted at rest</b> — stored ciphertext-only (a database dump can\'t read it). Safe for real banking &amp; tax details.</div>'
-    : '<div style="font-size:var(--fs-1);color:#8a5f11;background:#fdf3e3;border:1px solid #f0dcae;border-radius:9px;padding:7px 10px;margin:6px 0 2px">⚠ <b>Encryption not configured</b> — the vault won\'t save until the platform sets its encryption key. Use <b>dummy data only</b> for now.</div>';
+    ? '<div style="font-size:var(--fs-1);color:var(--ok-2);background:#eaf6ee;border:1px solid #bfe3cb;border-radius:9px;padding:7px 10px;margin:6px 0 2px">🔒 <b>Encrypted at rest</b> — stored ciphertext-only (a database dump can\'t read it). Safe for real banking &amp; tax details.</div>'
+    : '<div style="font-size:var(--fs-1);color:var(--warn-2);background:#fdf3e3;border:1px solid #f0dcae;border-radius:9px;padding:7px 10px;margin:6px 0 2px">⚠ <b>Encryption not configured</b> — the vault won\'t save until the platform sets its encryption key. Use <b>dummy data only</b> for now.</div>';
   var secs=(UI._vault&&UI._vault.sections)||[];
   var body=secs.length ? secs.map(vaultSectionHTML).join('')
     : '<div style="color:var(--grey);font-size:12px;padding:9px 0">Nothing here yet. Add a section below and name the details you actually have — anything we don’t recognise is still saved.</div>';
@@ -99,7 +99,7 @@ function vaultSectionHTML(sec, i){
       /* ⚠️ THE LABEL IS WHAT MAKES REPEATS USABLE. Two sections both reading "Bank" are indistinguishable at a
          glance and unusable at form time — "which account do I invoice against?" has no answer. */
       +'<input class="inp" style="flex:1;min-width:120px;max-width:230px;margin:0;font-size:12px" placeholder="label it — e.g. Export receipts" value="'+esc(sec.label||'')+'" oninput="vaultSetSection('+i+',this.value)">'
-      +'<button type="button" title="Remove this section" onclick="vaultDelSection('+i+')" style="margin-left:auto;border:1px solid var(--line);background:var(--card);color:#c0453b;border-radius:8px;min-width:28px;min-height:28px;cursor:pointer">×</button>'
+      +'<button type="button" title="Remove this section" onclick="vaultDelSection('+i+')" style="margin-left:auto;border:1px solid var(--line);background:var(--card);color:var(--disp);border-radius:8px;min-width:28px;min-height:28px;cursor:pointer">×</button>'
     +'</div>'
     +rows
     +'<button class="composebtn ghost" style="margin-top:8px" onclick="vaultAddRow('+i+')">+ add detail</button></div>';
@@ -492,9 +492,9 @@ function misPlan(m){
   var period = !w
     ? '<span class="govtag" style="background:#efeee9;color:#7a7a72">no period recorded</span>'
     : w.state === 'expired'
-      ? '<span class="govtag" style="background:#fbeceb;color:var(--disp)">expired '+w.days+'d ago</span>'
+      ? '<span class="govtag" style="background:var(--danger-tint);color:var(--disp)">expired '+w.days+'d ago</span>'
       : w.state === 'not yet started'
-        ? '<span class="govtag" style="background:#F5ECD6;color:var(--warn-3)">starts in '+w.days+'d</span>'
+        ? '<span class="govtag" style="background:var(--warn-tint);color:var(--warn-3)">starts in '+w.days+'d</span>'
         : '<span class="govtag" style="background:#E4F0E9;color:#2F6B49">active'+(w.days!=null?(' · '+w.days+'d left'):'')+'</span>';
   return _misHead('Plan', 'What you have used against the limits your plan declares.')
     + '<div class="misnote" style="margin-bottom:10px">'+period+'</div>'
@@ -845,7 +845,7 @@ function govCardHTML(g){
   var langs=(b.languages||[]).join(', ');
   var loc=[inst.cloud,inst.region,inst.zone].filter(Boolean).join(' · ');
   return '<div style="'+_CARD+';margin-top:10px">'
-    +'<div class="sec" style="margin:0 0 8px">🏛️ Your governance <span style="font-size:var(--fs-1);font-family:\'Space Mono\';background:#f3f0e8;color:var(--warn-3);border-radius:5px;padding:1px 6px">minted · not enforced yet</span></div>'
+    +'<div class="sec" style="margin:0 0 8px">🏛️ Your governance <span style="font-size:var(--fs-1);font-family:\'Space Mono\';background:var(--warn-tint);color:var(--warn-3);border-radius:5px;padding:1px 6px">minted · not enforced yet</span></div>'
     +'<div class="kv"><b>Governed by</b> · '+esc(g.constitution||'—')+' <span style="color:var(--grey);font-size:var(--fs-1)">🔒 platform-set</span></div>'
     +'<div class="kv"><b>Installation</b> · '+esc(inst.label||inst.key||'—')+(loc?(' <span style="color:var(--grey);font-size:var(--fs-1)">'+esc(loc)+'</span>'):'')+'</div>'
     +'<div class="kv"><b>Basics</b> <span style="color:var(--grey);font-size:var(--fs-1)">⟵ from your platform</span> · '+esc(b.currency||'—')+' · '+esc(b.timezone||'—')+' · '+esc(b.region||'—')+(langs?(' · '+esc(langs)):'')+'</div>'
@@ -902,7 +902,7 @@ function storefrontCardHTML(e){
       ? '<div style="margin-top:7px;font-size:12px;color:var(--purple-2);background:#F0EAF9;border:1px solid #e3d5f5;border-radius:9px;padding:7px 10px">🔒 '+esc(cap.reason||'This entity may not publish a public catalogue.')+'<div style="color:var(--grey);margin-top:3px">You cannot change this here — it is set '+(cap.by==='operator'?'by whoever provisioned this entity':'by your plan')+'.</div></div>'
       : (vis==='network'
           ? '<div style="margin-top:7px;font-size:12px;color:var(--purple-2);background:#F0EAF9;border:1px solid #e3d5f5;border-radius:9px;padding:7px 10px">🔗 <b>Network only.</b> Businesses under your network see this catalogue. A shopper on the link above sees nothing — and neither does an outside business that adds you as a supplier.</div>'
-          : (vis!=='public' ? '<div style="margin-top:7px;font-size:12px;color:#B4483C;background:#FBEDEA;border:1px solid #f3d9d5;border-radius:9px;padding:7px 10px">⚠ Your shop is CLOSED. The link above will show &ldquo;this shop has no public catalogue&rdquo; — to customers and to other businesses looking at you as a supplier.</div>' : '')))
+          : (vis!=='public' ? '<div style="margin-top:7px;font-size:12px;color:var(--disp);background:#FBEDEA;border:1px solid #f3d9d5;border-radius:9px;padding:7px 10px">⚠ Your shop is CLOSED. The link above will show &ldquo;this shop has no public catalogue&rdquo; — to customers and to other businesses looking at you as a supplier.</div>' : '')))
     +'<label class="fl" style="margin-top:12px">Customer access</label><select class="inp" id="pf_sfaccess" style="max-width:340px">'+sfopts+'</select>'
     +'<div class="err" id="pf_err2"></div><button class="composebtn" style="margin-top:9px" onclick="saveStorefront()">Save storefront</button>'
     +'</div>';
@@ -1326,7 +1326,7 @@ function govLayersBlock(){ var t=UI.govTab||0; var L=GOV[t];
     + (inRail?'':'<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:11px">'+tabs+'</div>')
     + '<div class="govtitle">'+esc(L.n)+'</div>'
     + '<div class="govsub">'+esc(L.tag)
-      + ' <span class="govtag" style="background:#F5ECD6;color:var(--warn-3)">shown, not enforced yet</span></div>'
+      + ' <span class="govtag" style="background:var(--warn-tint);color:var(--warn-3)">shown, not enforced yet</span></div>'
     + '<div class="govdesc">'+esc(L.desc)+'</div>'
     + rowsHtml
     + (foot ? ('<div style="font-size:var(--fs-1);color:var(--grey);margin-top:11px;line-height:1.5">'+foot+'</div>') : '') + '</div>';
@@ -1385,7 +1385,7 @@ function settingsScreen(){
 }
 // AI assists settings = a REDIRECT to Co-assists (the enable + rule live WITH the actor, next to Human/IoT/ERP —
 // a lit AI slot is an actor whose actions are disputable chits, so its control belongs where it's held accountable).
-function aiSettingsCard(){ return '<div style="'+_CARD+'"><div class="sec" style="margin:0 0 6px">🤖 AI assists <span style="font-size:var(--fs-1);font-family:\'Space Mono\';background:#f3f0e8;color:var(--warn-3);border-radius:5px;padding:1px 6px">governed</span></div>'
+function aiSettingsCard(){ return '<div style="'+_CARD+'"><div class="sec" style="margin:0 0 6px">🤖 AI assists <span style="font-size:var(--fs-1);font-family:\'Space Mono\';background:var(--warn-tint);color:var(--warn-3);border-radius:5px;padding:1px 6px">governed</span></div>'
   +'<div style="font-size:12px;color:var(--grey);line-height:1.55">Turn AI helpers on or off and set each one\'s rule — the human gate, bounded by the rung floor (you can only tighten). They live with your other co-assists, because a lit AI slot is an <b>actor</b> whose every action is a chit you can dispute.</div>'
   +'<button class="composebtn" style="margin-top:10px" onclick="goCoassistAI()">Configure AI assists in Co-assists →</button></div>'; }
 function goCoassistAI(){ try{ if(typeof UI!=='undefined') UI.acTypeF='ai'; }catch(_){}
@@ -1552,7 +1552,7 @@ function channelsCard(){
 }
 function channelsInner(){
   var head = '<div class="sec" style="margin:0 0 4px">📡 Channels '
-    + '<span style="font-size:var(--fs-1);font-family:\'Space Mono\';background:#e7f3ea;color:#2e6b3f;border-radius:5px;padding:1px 6px">inbound · live</span></div>'
+    + '<span style="font-size:var(--fs-1);font-family:\'Space Mono\';background:var(--ok-tint);color:var(--ok-2);border-radius:5px;padding:1px 6px">inbound · live</span></div>'
     + '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5;margin-bottom:8px">Where messages come in from. Bind the number or address a customer writes to, and anything sent there lands in <b>📨 Intake</b> — raw, for you to confirm into a chit. Nothing here can send on your behalf.</div>';
   if(_CH.busy && !_CH.data) return head+'<div class="loadwrap" style="justify-content:flex-start;padding:6px 0"><span class="spin"></span> reading your channels…</div>';
   /* ⚠️ A MISSING ENDPOINT IS NOT A BROKEN SCREEN, and must not be reported as one. The API deploys separately from
@@ -1698,20 +1698,20 @@ async function _chUnbind(id){
 function policyFlagsCard(){ loadPolicy(); return '<div style="'+_CARD+';margin-top:10px" id="polflags">'+policyFlagsInner()+'</div>'; }
 function policyFlagsInner(){
   var rows=POLICY_FLAGS.map(function(def){ return '<div style="display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)">'
-    +'<div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap"><span style="font-weight:600;font-size:var(--fs-2)">'+esc(def.label)+'</span>'+govKlass(def.gov)+'<span style="font-size:var(--fs-1);font-family:\'Space Mono\';background:#eef1f5;color:var(--grey-2);border-radius:5px;padding:1px 6px">'+esc(def.level)+'</span></div>'
+    +'<div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap"><span style="font-weight:600;font-size:var(--fs-2)">'+esc(def.label)+'</span>'+govKlass(def.gov)+'<span style="font-size:var(--fs-1);font-family:\'Space Mono\';background:var(--neutral-tint);color:var(--grey-2);border-radius:5px;padding:1px 6px">'+esc(def.level)+'</span></div>'
     +'<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px;line-height:1.45">'+esc(def.help)+'</div></div>'
     +'<div style="flex:none;text-align:right;min-width:120px">'+_polControl(def)+'</div></div>'; }).join('');
   /* A setting that cannot be stored must SAY so rather than accept a change it will lose — that is the whole
      failure this card is being rebuilt out of. */
   var warn = !_POL.migrated ? '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;font-size:11.5px;color:var(--warn-3);margin-bottom:7px">Policy flags are not migrated on this environment (b130). The card is here; the column is not — changes will not save.</div>' : '';
   var err = _POL.err ? '<div style="color:var(--disp);font-size:11.5px;margin-top:6px">'+esc(_POL.err)+'</div>' : '';
-  return '<div class="sec" style="margin:0 0 4px">🚩 Policy flags <span style="font-size:var(--fs-1);font-family:\'Space Mono\';background:#e7f3ea;color:#2e6b3f;border-radius:5px;padding:1px 6px">saved to your entity</span></div>'
+  return '<div class="sec" style="margin:0 0 4px">🚩 Policy flags <span style="font-size:var(--fs-1);font-family:\'Space Mono\';background:var(--ok-tint);color:var(--ok-2);border-radius:5px;padding:1px 6px">saved to your entity</span></div>'
     +'<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5;margin-bottom:6px">The per-entity toggles the <b>7-layer block above</b> doesn\'t yet carry — same governance grammar (<b>class</b> + <b>level</b>): 🔒 platform-bound you can\'t relax; <b>tighten-only</b> you can make stricter; <b>entity</b> you set freely.</div>'
     +warn+rows+err
     +'<div style="font-size:var(--fs-1);color:var(--grey);font-style:italic;margin-top:8px">Stored on the entity, not on this device. <b>Enforced today:</b> self-chit copy, and which side of the trade you are on (inbound pricing). Expiry and retention are declared, not yet enforced.</div>';
 }
 function autoAssignCard(s, daOpts){ const m=s.auto_assign_mode||'off';
-  return `<div style="${_CARD};margin-top:10px"><div class="sec" style="margin:0 0 6px">🧭 Auto-assign on receipt <span style="font-size:var(--fs-1);font-family:'Space Mono';background:#e7f3ea;color:#2e6b3f;border-radius:5px;padding:1px 6px">active</span></div>
+  return `<div style="${_CARD};margin-top:10px"><div class="sec" style="margin:0 0 6px">🧭 Auto-assign on receipt <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--ok-tint);color:var(--ok-2);border-radius:5px;padding:1px 6px">active</span></div>
     <label class="fl">Mode</label><select class="inp" id="st_aam">
       <option value="off"${m==='off'?' selected':''}>Off — received chits wait in the pool</option>
       <option value="default_assignee"${m==='default_assignee'?' selected':''}>Default assignee — all to one person</option>

@@ -577,7 +577,7 @@
     return '<div class="cbcart-bar' + (on ? ' on' : '') + '" data-testid="cart-' + esc(ns) + '"'
       + (on ? ' onclick="CBCart.open(\'' + esc(ns) + '\')" title="Open the cart to review and add these lines"'
             : ' title="' + esc(opt(ns, 'emptyHint', 'Press + on what you need')) + '"')
-      + ' style="border-color:' + (on ? a : '#e3e6ea') + ';background:' + (on ? a : '#f7f8fa') + '">'
+      + ' style="border-color:' + (on ? a : 'var(--line)') + ';background:' + (on ? a : 'var(--neutral-tint)') + '">'
       + '<span class="cbcart-bag">🛒'
       + (on ? '<span data-testid="cart-count-' + esc(ns) + '" class="cbcart-n" style="color:' + a + '">' + u + '</span>' : '')
       + '</span>'
@@ -616,13 +616,13 @@
       var os = offerState(ns, id);
       off = '<input placeholder="your price" value="' + esc(os.value == null ? '' : String(os.value)) + '" inputmode="decimal"'
         + ' onchange="CBCart.setOffer(\'' + esc(ns) + '\',\'' + esc(id) + '\',this.value)"'
-        + ' style="width:78px;padding:5px;border:1.5px solid ' + (os.value != null && !os.ok ? 'var(--disp)' : '#e3e6ea')
+        + ' style="width:78px;padding:5px;border:1.5px solid ' + (os.value != null && !os.ok ? 'var(--disp)' : 'var(--line)')
         + ';border-radius:6px;font-size:13px;text-align:right">';
     }
     return '<span style="display:inline-flex;align-items:center;gap:8px" onclick="event.stopPropagation()">' + off
       + '<button style="' + rnd + '" onclick="CBCart.dec(\'' + esc(ns) + '\',\'' + esc(id) + '\')">−</button>'
       + '<input value="' + esc(String(q)) + '" inputmode="decimal" onchange="CBCart.setQty(\'' + esc(ns) + '\',\'' + esc(id) + '\',this.value)"'
-      + ' style="width:52px;padding:5px;border:1px solid #e3e6ea;border-radius:6px;font-size:13px;text-align:center">'
+      + ' style="width:52px;padding:5px;border:1px solid var(--line);border-radius:6px;font-size:13px;text-align:center">'
       + '<button data-testid="cart-add" style="' + rnd + ';background:' + a + ';color:#fff" onclick="CBCart.add(\'' + esc(ns) + '\',\'' + esc(id) + '\')">+</button></span>';
   }
   /**
@@ -655,7 +655,7 @@
     if (opt(ns, 'hideAvail', true)) return '';
     var a = dataOf(r).avail;
     if (!a || a.qty === undefined || a.qty === null) {
-      return ' <span style="color:#8a94a3;font-size:var(--fs-1)">· avl —</span>';
+      return ' <span style="color:var(--grey-3);font-size:var(--fs-1)">· avl —</span>';
     }
     var col = Number(a.qty) > 0 ? 'var(--ok-2)' : 'var(--disp-2)';
     if (!a.as_of) return ' <span style="font-size:var(--fs-1);color:' + col + '">· avl ' + esc(a.qty)
@@ -711,7 +711,7 @@
       }
       var d = dataOf(r), q = qtyOf(ns, r.item_id), u = unitPrice(ns, r), p = u.amount;
       return '<div style="display:flex;align-items:center;gap:10px;padding:8px 2px 8px ' + (r.variant ? '20px' : '2px')
-        + ';border-bottom:1px dashed #e3e6ea;' + (q ? 'background:' + soft(ns) : '') + '">'
+        + ';border-bottom:1px dashed var(--line);' + (q ? 'background:' + soft(ns) : '') + '">'
         + '<span style="flex:1"><b style="font-size:13.5px">' + esc(r.variant || d.name || d.product || 'item') + '</b>'
         + (d.unit ? ' <span style="color:var(--grey-2);font-size:11.5px">' + esc(d.unit) + '</span>' : '')
         + '<div style="font-size:12px;color:var(--grey-2);margin-top:1px">'
@@ -751,7 +751,7 @@
       + (sel.length
         ? sel.map(function (l) {
             var p = l.unit_price;
-            return '<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px dashed #e3e6ea">'
+            return '<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px dashed var(--line)">'
               + '<span style="flex:1"><b style="font-size:13.5px">' + esc(l.name) + '</b>'
               + ' <span style="color:var(--grey-2);font-size:11.5px">' + esc(l.unit) + '</span>'
               + '<div style="font-size:12px;color:var(--grey-2)">'
@@ -762,7 +762,7 @@
               + '<span onclick="CBCart.setQty(\'' + esc(ns) + '\',\'' + esc(l.item_id) + '\',0)" title="remove"'
               + ' style="cursor:pointer;color:var(--grey-4);font-weight:800;padding:0 3px">×</span></div>';
           }).join('')
-          + '<div style="display:flex;padding:11px 2px;border-top:2px solid #e3e6ea;font-size:var(--fs-3);font-weight:800">'
+          + '<div style="display:flex;padding:11px 2px;border-top:2px solid var(--line);font-size:var(--fs-3);font-weight:800">'
           + '<span style="flex:1">' + (T.offered ? 'Total at your offer' : 'Total') + '</span>'
           + '<span>' + (T.amount ? esc(fmt(ns, T.amount)) + (T.partial ? '+' : '') : '—') + '</span></div>'
           + (T.partial ? '<div style="color:var(--warn-2);font-size:11.5px">Some lines have no price — the total covers only the priced ones.</div>' : '')
@@ -961,7 +961,7 @@
         /* 28px and 12px: smaller than the cart chip beside the search (this narrows a list, it does not hold
            money), still above the legibility floor. */
         /* ⚠️ THE SURFACE AND ITS TEXT MOVE TOGETHER. This set `background:var(--card)` with a hardcoded
-           `color:#3c4350`, so in a dark theme the chip went dark and the letters stayed dark — 1.63:1,
+           `color:var(--ink-2)`, so in a dark theme the chip went dark and the letters stayed dark — 1.63:1,
            invisible. `--on-card` is the partner of `--card`; using anything else here is the bug. */
         + 'height:28px;padding:0 12px;font:inherit;font-size:12px;color:var(--on-card);cursor:pointer;white-space:nowrap}'
         + '.cbpick-chip:hover{border-color:var(--accent)}'
@@ -972,7 +972,7 @@
         + '.cbpick-chip.on .cbpick-chipn{opacity:.85}'
         + '.cbpick-chipn{font-size:var(--fs-1);opacity:.6;font-variant-numeric:tabular-nums}'
         /* The chip. Sized to sit level with the input beside it, never taller. */
-        + '.cbcart-bar{display:inline-flex;align-items:center;gap:7px;border:1px solid #e3e6ea;border-radius:9px;'
+        + '.cbcart-bar{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:9px;'
         /* 40px, because `.inp` beside it is 40px. A chip two pixels short of the field it shares a row with reads
            as a misalignment even to someone who could not name what is wrong. */
         + 'padding:0 10px;height:40px;box-sizing:border-box;white-space:nowrap;user-select:none}'

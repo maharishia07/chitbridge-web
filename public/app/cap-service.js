@@ -97,7 +97,7 @@ function svcPauseRow(p){
   var answer = (!p.mine && p.accepted === null && !open)
     ? '<div style="display:flex;gap:6px;margin-top:7px">'
       + '<button class="btn" style="flex:1;font-size:12px" onclick="svcAnswer(\'' + esc(p.pause_id) + '\',true)">Accept this pause</button>'
-      + '<button class="btn" style="flex:1;font-size:12px;color:#c0453b" onclick="svcAnswer(\'' + esc(p.pause_id) + '\',false)">Reject — the clock kept running</button></div>'
+      + '<button class="btn" style="flex:1;font-size:12px;color:var(--disp)" onclick="svcAnswer(\'' + esc(p.pause_id) + '\',false)">Reject — the clock kept running</button></div>'
     : '';
   var endBtn = (p.mine && open)
     ? '<button class="btn" style="width:100%;margin-top:7px;font-size:12px" onclick="svcEndPause(\'' + esc(p.pause_id) + '\')">End this pause</button>' : '';
@@ -114,7 +114,7 @@ function svcPauseRow(p){
 
 function svcPaint(){
   if (SVC.busy && !SVC.data) return modal('<h3 style="margin:0 0 10px">Service clock</h3><div style="font-size:var(--fs-2);color:var(--grey)"><span class="spin"></span> reading…</div>');
-  if (SVC.err) return modal('<h3 style="margin:0 0 8px">Service clock</h3><div style="font-size:var(--fs-2);color:#c0453b">' + esc(SVC.err) + '</div>'
+  if (SVC.err) return modal('<h3 style="margin:0 0 8px">Service clock</h3><div style="font-size:var(--fs-2);color:var(--disp)">' + esc(SVC.err) + '</div>'
     + '<button class="btn" style="width:100%;margin-top:12px" onclick="closeModal()">Close</button>');
   var d = SVC.data || {};
 

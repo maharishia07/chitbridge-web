@@ -110,6 +110,20 @@
     --danger:var(--disp);     --on-danger:#ffffff;
     --on-ok:#ffffff;          --warn:var(--prog);      --on-warn:#ffffff;
     --muted:var(--grey);
+    --on-gold:#3A2E16;        --on-purple:#ffffff;
+    /**
+     * ⭐ THE TINTS — a pale ground carrying its own semantic's text. A "disputed" chip is red-on-pale-red, a
+     * "done" chip green-on-pale-green. These were written as literals every time someone needed one, which is
+     * how the app ended up with NINE near-identical pale blues and FOUR pale greens: #e3edf8, #eaf1f8, #eef4fc,
+     * #e8f0f4, #edf2f9, #eef4ff, #eaf1f6, #dbeafe, #eaf2fb — all meaning "a faint blue background".
+     *
+     * ⚠️ COLLAPSING THEM IS A VISIBLE CHANGE, and it is the point: they were never MEANT to differ, they differ
+     * because each was typed separately. One token per meaning is what makes a theme able to move them together.
+     * ⚠️ Every tint is paired with the semantic whose text sits on it — that is the whole rule, applied to the
+     * pale end of the palette.
+     */
+    --blue-tint-bg:#E9F0FA;   --ok-tint:#E6F4EC;      --danger-tint:#FBECEB;
+    --warn-tint:#F6ECD8;      --purple-tint:#F2EFFC;  --neutral-tint:#EEF1F5;
     /* 26a0Fe0f THE SELECTED ROW IS ITS OWN SURFACE. It is the one ground a reader is guaranteed to be looking at,
        and it was the last colour in the app that no theme could reach - light blue with light text on it in dark.
        Naming it is what let the dark theme give it a ground that its text can actually sit on. */
@@ -156,7 +170,7 @@
   .moderibbon .pill{background:var(--card);border:1px solid var(--gold-line);border-radius:20px;padding:2px 9px;font-size:var(--fs-1)}
   .moderibbon .sw{margin-left:auto;display:flex;gap:6px}
   .moderibbon .sw button{border:1px solid var(--gold-line);background:var(--card);border-radius:6px;font-size:var(--fs-1);font-weight:700;padding:4px 9px;color:var(--warn-3)}
-  .moderibbon .sw button.on{background:var(--chrome);color:#fff;border-color:var(--chrome)}
+  .moderibbon .sw button.on{background:var(--chrome);color:var(--chrome-on);border-color:var(--chrome)}
   .moderibbon .sw button:disabled{opacity:.42;cursor:not-allowed}
   /* Welcome (pre-register) */
   .welwrap{max-width:860px;margin:0 auto;padding:6px 18px 70px}
@@ -186,7 +200,7 @@
   .rchosen{background:#f3f6fb;border:1px solid #d7e2f1;border-radius:12px;padding:10px 13px;font-size:13px;margin-bottom:14px}
   .welpips{display:flex;justify-content:center;gap:7px;flex-wrap:wrap;margin:8px 0 2px}
   .welpip{font-size:var(--fs-1);font-family:'Space Mono';color:var(--grey);background:var(--card);border:1px solid var(--line);border-radius:999px;padding:4px 11px}
-  .welpip.on{background:var(--chrome);color:#fff;border-color:var(--chrome)}
+  .welpip.on{background:var(--chrome);color:var(--chrome-on);border-color:var(--chrome)}
   .welsplit{display:flex;gap:12px;flex-wrap:wrap;margin:14px 0}
   .welcol{flex:1;min-width:240px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:15px}
   .welcol.is{border-top:4px solid var(--blue)}.welcol.isnot{border-top:4px solid var(--gold)}
@@ -213,7 +227,7 @@
   .inp{width:100%;border:1px solid var(--line);border-radius:9px;padding:11px 13px;font-size:var(--fs-3);outline:0;background:var(--paper)}
   .inp:focus{border-color:var(--blue);background:var(--card)}
   .row2{display:flex;gap:10px}.row2>div{flex:1}
-  .btn{width:100%;border:0;border-radius:12px;padding:13px;font-weight:700;font-size:var(--fs-3);margin-top:16px;background:var(--chrome);color:#fff}
+  .btn{width:100%;border:0;border-radius:12px;padding:13px;font-weight:700;font-size:var(--fs-3);margin-top:16px;background:var(--chrome);color:var(--chrome-on)}
   .btn.gold{background:linear-gradient(90deg,var(--gold),#b8945a);color:#3a2e16}
   .btn:disabled{opacity:.5}
   .swap{text-align:center;font-size:var(--fs-2);color:var(--grey);margin-top:14px}.swap a{color:var(--blue);font-weight:700;cursor:pointer}
@@ -225,7 +239,7 @@
 
   /* app shell */
   .shell{flex:1;display:grid;grid-template-columns:212px 1fr;grid-template-rows:auto 1fr;min-height:0}
-  .topbar{grid-column:1/3;height:52px;display:flex;align-items:center;gap:12px;padding:0 16px;background:var(--chrome);color:#fff}
+  .topbar{grid-column:1/3;height:52px;display:flex;align-items:center;gap:12px;padding:0 16px;background:var(--chrome);color:var(--chrome-on)}
   .topbar .b{display:flex;align-items:center;gap:9px;font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3)}
   .topbar .who{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:12px}
   .topbar .who .nm{font-weight:700}.topbar .who .rl{color:#9fb4bf;font-size:var(--fs-1)}
@@ -233,13 +247,13 @@
      out, and as a div it was unreachable by keyboard on EVERY screen. Native beats an ARIA patch: a button
      brings the tab order, Enter/Space and the right role for a screen reader without re-declaring any of them.
      ⚠️ border/padding/font must be reset explicitly — a button does not inherit them the way the div did. */
-  .topbar .who .av{width:30px;height:30px;border-radius:50%;background:var(--gold);color:#3a2e16;display:flex;align-items:center;justify-content:center;font-weight:700;font-family:'Space Grotesk';border:0;padding:0;font-size:13px;cursor:pointer}
+  .topbar .who .av{width:30px;height:30px;border-radius:50%;background:var(--gold);color:var(--on-gold);display:flex;align-items:center;justify-content:center;font-weight:700;font-family:'Space Grotesk';border:0;padding:0;font-size:13px;cursor:pointer}
   .topbar .so{border:1px solid rgba(255,255,255,.25);background:none;color:#cfe0e8;border-radius:9px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
   .topbar .so:hover{background:rgba(255,255,255,.08)}
   .dutytog,.shoptog{display:flex;border-radius:9px;overflow:hidden;border:1px solid rgba(255,255,255,.18)}
   .dutytog button,.shoptog button{border:0;background:rgba(255,255,255,.05);color:#bcccd6;font-size:var(--fs-1);font-weight:700;padding:6px 10px;display:flex;align-items:center;gap:5px;cursor:pointer;white-space:nowrap}
   .dutytog button.on.duty,.shoptog button.on.open{background:#1f7a4d;color:#fff}
-  .dutytog button.on.brk,.shoptog button.on.away{background:var(--gold);color:#2c2410}
+  .dutytog button.on.brk,.shoptog button.on.away{background:var(--gold);color:var(--on-gold)}
   .shoptog button.on.closed{background:#9a4040;color:#fff}
   .topbar .b .bt{margin-left:2px}
   .topbar .lo{border:1px solid rgba(255,255,255,.25);background:none;color:#cfe0e8;border-radius:9px;font-size:var(--fs-1);font-weight:700;padding:6px 10px}
@@ -265,7 +279,7 @@
   .menu .grp:hover{background:rgba(255,255,255,.06)}
   .menu button{display:flex;align-items:center;gap:10px;border:0;background:none;color:#bcccd6;text-align:left;font-size:13px;font-weight:500;padding:9px 10px;border-radius:9px;width:100%}
   .menu button .ic{width:16px;text-align:center}.menu button .ct{margin-left:auto;font-size:9.5px;background:rgba(255,255,255,.12);border-radius:9px;padding:1px 6px}
-  .menu button:hover{background:rgba(255,255,255,.06)}.menu button.on{background:var(--blue);color:#fff}
+  .menu button:hover{background:rgba(255,255,255,.06)}.menu button.on{background:var(--blue);color:var(--on-accent)}
   .menu .tagl{margin-top:auto;font-size:var(--fs-1);color:#93adba;line-height:1.5;padding:8px}   /* was #6f8b99 — 3.94:1 */
 
   .main{min-width:0;display:flex;flex-direction:column;overflow:hidden;background:var(--paper)}
@@ -309,14 +323,14 @@
   .lh{padding:10px 12px;border-bottom:1px solid var(--line)}
   .folders{display:flex;gap:4px;margin-bottom:8px}
   .folders button{flex:1;border:1px solid var(--line);background:var(--paper);color:var(--grey);font-size:12px;font-weight:700;padding:8px;border-radius:9px}
-  .folders button.on{background:var(--blue);color:#fff;border-color:var(--blue)}
+  .folders button.on{background:var(--blue);color:var(--on-accent);border-color:var(--blue)}
   .statetabs{display:flex;gap:3px;background:var(--paper);border:1px solid var(--line);border-radius:9px;padding:3px;margin-bottom:8px}
   /* ⚠️ 32px MINIMUM. Open/Act/Close is the most-pressed control on the most-visited screen and rendered 25px
      tall. It is also the one whose mis-tap is expensive: the neighbouring state is a different list, so a miss
      silently changes what you are looking at rather than doing nothing. */
   .statetabs button{flex:1;border:0;background:none;color:var(--grey);font-size:var(--fs-1);font-weight:700;padding:6px;min-height:32px;border-radius:6px;display:flex;align-items:center;justify-content:center;gap:5px}
-  .statetabs button.on{background:#E3EDF8;color:var(--blue);box-shadow:inset 0 0 0 1.6px var(--blue);font-weight:800}
-  .statetabs button.on .n{background:var(--blue);color:#fff}
+  .statetabs button.on{background:var(--blue-tint-bg);color:var(--blue);box-shadow:inset 0 0 0 1.6px var(--blue);font-weight:800}
+  .statetabs button.on .n{background:var(--blue);color:var(--on-accent)}
   .statetabs .n{font-size:9px;background:rgba(0,0,0,.06);border-radius:9px;padding:0 5px}
   .srch{display:flex;align-items:center;gap:7px;background:var(--paper);border:1px solid var(--line);border-radius:9px;padding:8px 10px;font-size:var(--fs-2);color:var(--grey)}
   .srch input{border:0;background:none;outline:0;font-size:var(--fs-2);width:100%;color:var(--ink)}
@@ -362,7 +376,7 @@
   .misttl{font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3)}
   .misbar .seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
   .misbar .seg button{border:0;background:var(--card);color:var(--grey);font-size:11.5px;font-weight:700;padding:5px 11px;cursor:pointer}
-  .misbar .seg button.on{background:var(--chrome);color:#fff}
+  .misbar .seg button.on{background:var(--chrome);color:var(--chrome-on)}
   .misbar-r{margin-left:auto;display:flex;align-items:center;gap:8px}
   .misasof{font-size:var(--fs-1);color:var(--grey);font-family:'Space Mono'}
   .misrow{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}
@@ -372,7 +386,7 @@
      read a single row, so the per-row class chip becomes confirmation rather than the only signal. */
   .govtitle{font-family:'Space Grotesk';font-weight:700;font-size:19px;letter-spacing:-.01em;color:var(--ink)}
   .govsub{font-size:11.5px;color:var(--grey);margin:3px 0 0;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-  .govdesc{font-size:var(--fs-2);color:#3a4a54;line-height:1.55;margin:8px 0 4px}
+  .govdesc{font-size:var(--fs-2);color:var(--ink-2);line-height:1.55;margin:8px 0 4px}
   .govgrp{margin-top:10px;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:var(--card)}
   /* The whole header is the hit target — a chevron alone is a 12px tap area, which on a phone is a miss. */
   .govgrp-h{display:flex;align-items:center;gap:8px;width:100%;text-align:left;border:0;cursor:pointer;
@@ -445,7 +459,7 @@
   .misplit{height:11px;border-radius:6px;overflow:hidden;display:flex;gap:2px;margin:12px 0 8px}
   .misstack{height:30px;border-radius:9px;overflow:hidden;display:flex;gap:2px;margin:10px 0 8px}
   .misstack span{display:flex;align-items:center;justify-content:center;color:#fff;font-family:'Space Mono';font-size:12px;font-weight:700}
-  .miskey{display:flex;gap:14px;flex-wrap:wrap;font-size:var(--fs-2);color:#3a4a54}
+  .miskey{display:flex;gap:14px;flex-wrap:wrap;font-size:var(--fs-2);color:var(--ink-2)}
   .miskey .k{display:inline-flex;align-items:center;gap:6px}
   .miskey .sw{width:10px;height:10px;border-radius:3px;flex:none}
   .misspark{display:block;width:100%;height:56px;margin-top:6px;overflow:visible}
@@ -469,10 +483,10 @@
   .misunrow{display:flex;gap:9px;align-items:baseline;padding:6px 0;border-top:1px dashed var(--line);font-size:var(--fs-2)}
   .misunrow:first-child{border-top:0}
   .misunage{font-family:'Space Mono';font-size:var(--fs-1);font-weight:700;color:var(--warn-2);background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:20px;padding:1px 8px;flex:0 0 auto}
-  .misuntxt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#3a4a54}
+  .misuntxt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink-2)}
   .misstatus{display:flex;align-items:center;gap:7px;font-size:var(--fs-2);flex-wrap:wrap}
   .misstatus .dot{width:9px;height:9px;border-radius:50%;flex:none;display:inline-block}
-  .miswhy{font-size:var(--fs-2);color:#3a4a54;margin-top:13px;padding-left:13px;border-left:2px solid var(--line);line-height:1.6}
+  .miswhy{font-size:var(--fs-2);color:var(--ink-2);margin-top:13px;padding-left:13px;border-left:2px solid var(--line);line-height:1.6}
   .mistrust{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px}
   /* Usage against a declared limit — a meter, which is the right form for "one ratio against a ceiling". */
   .misplanrow{padding:11px 0;border-bottom:1px solid var(--line)}
@@ -509,9 +523,9 @@
   .namefield{font-family:'Space Mono';font-size:var(--fs-1);background:var(--paper);border:1px solid var(--line);
              border-radius:5px;padding:1px 6px;color:var(--grey)}
   .namemust{font-size:var(--fs-1);font-weight:700;border-radius:20px;padding:1px 9px}
-  .namemust.req{background:#fbeceb;color:var(--disp)}
+  .namemust.req{background:var(--danger-tint);color:var(--disp)}
   .namemust.opt{background:var(--paper);color:var(--grey);border:1px solid var(--line)}
-  .namemust.auto{background:#EDF2F9;color:var(--blue)}
+  .namemust.auto{background:var(--blue-tint-bg);color:var(--blue)}
   .namerule{font-size:var(--fs-2);color:var(--ink);margin-top:4px}
   .namewhy{font-size:12px;color:var(--grey);line-height:1.55;margin-top:3px}
   /* Categories on a product: ticks on the form, chips on the row, a select bar over the list. */
@@ -523,9 +537,9 @@
   .ctcatg.gone{background:#f4f1e8;border-color:var(--gold-line);color:var(--warn-3)}
   .ctcatg.add{color:var(--blue);border-style:dashed;font-weight:600}
   .l3cat{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
-  .catgchip{font-size:var(--fs-1);background:#eef4ff;color:var(--blue);border:1px solid #d5e2f7;
+  .catgchip{font-size:var(--fs-1);background:var(--blue-tint-bg);color:var(--blue);border:1px solid #d5e2f7;
             border-radius:20px;padding:0 8px;line-height:17px;white-space:nowrap}
-  .catgchip.gone{background:#f4f1e8;color:var(--warn-3);border-color:var(--gold-line);text-decoration:line-through}
+  .catgchip.gone{background:var(--warn-tint);color:var(--warn-3);border-color:var(--gold-line);text-decoration:line-through}
   .row.picked{background:#eef4ff}
   .ctpick{display:flex;align-items:center;gap:9px;margin-top:8px;padding:7px 9px;background:#eef4ff;
           border:1px solid #d5e2f7;border-radius:9px}
@@ -569,7 +583,7 @@
   .supfindpanel{flex:1;min-height:0;display:flex;flex-direction:column}
   .suptabs{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
   .suptabs button{border:0;background:var(--card);color:var(--grey);font-size:12px;font-weight:700;padding:6px 12px;cursor:pointer}
-  .suptabs button.on{background:var(--chrome);color:#fff}
+  .suptabs button.on{background:var(--chrome);color:var(--chrome-on)}
   .rowinfo{border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:6px;width:24px;height:24px;
            font-size:12px;line-height:1;cursor:pointer;flex:0 0 auto;align-self:center}
   .rowinfo:hover{background:var(--paper)}
@@ -587,7 +601,7 @@
      cursor — so the one strip that looks most like buttons was the only one that did not behave like them. */
   .tool{width:30px;height:30px;border:1px solid var(--line);background:var(--card);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--grey-2);position:relative;cursor:pointer;user-select:none}
   .tool:hover{background:var(--paper);border-color:#c3ccd2}
-  .tool.on{background:var(--chrome);color:#fff;border-color:var(--chrome)}
+  .tool.on{background:var(--chrome);color:var(--chrome-on);border-color:var(--chrome)}
   .topbar .bell{position:relative;border:0;background:none;color:#cfe0e8;font-size:var(--fs-4);cursor:pointer;padding:2px 4px;line-height:1}
   /**
    * ⚠️ ONE RULE FOR BOTH DOTS. This selector existed TWICE, byte-identical — once under `.bell`, once under
@@ -597,7 +611,7 @@
    * needs attention", which is exactly what this dot means. Size 9px in a 15px disc — still small, but the count
    * is the one fact this control has to carry (the sub-11px sweep is backlog 4).
    */
-  .topbar .bell .bdot,.topbar .msgc .bdot{position:absolute;top:-2px;right:-3px;background:var(--disp);color:#fff;font-size:9px;font-weight:800;min-width:15px;height:15px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 3px}
+  .topbar .bell .bdot,.topbar .msgc .bdot{position:absolute;top:-2px;right:-3px;background:var(--disp);color:var(--on-danger);font-size:9px;font-weight:800;min-width:15px;height:15px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 3px}
   .filterpanel{margin-top:8px;border:1px solid var(--line);border-radius:9px;background:var(--card);padding:9px 11px;display:flex;flex-direction:column;gap:7px;font-size:12px}
   .filterpanel .fp-row{display:flex;align-items:center;gap:9px;justify-content:space-between}
   .filterpanel select{font-size:12px;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--card)}
@@ -612,7 +626,7 @@
   .notifrow .ni{font-size:15px}.notifrow .nt{font-size:var(--fs-2);color:var(--ink);line-height:1.35}.notifrow .ns{font-size:var(--fs-1);color:var(--grey);margin-top:2px}
   .notiffoot{padding:8px 13px;font-size:var(--fs-1);color:var(--grey);background:var(--paper)}
   .mover{position:fixed;inset:0;z-index:280;background:rgba(8,24,32,.45);display:flex;align-items:flex-start;justify-content:center;padding:56px 16px;overflow-y:auto}
-  .composepill{position:fixed;left:16px;bottom:16px;z-index:300;background:var(--blue);color:#fff;border-radius:999px;padding:9px 15px;font-size:13px;font-weight:700;box-shadow:0 8px 22px rgba(0,0,0,.28);display:flex;align-items:center;gap:10px}
+  .composepill{position:fixed;left:16px;bottom:16px;z-index:300;background:var(--blue);color:var(--on-accent);border-radius:999px;padding:9px 15px;font-size:13px;font-weight:700;box-shadow:0 8px 22px rgba(0,0,0,.28);display:flex;align-items:center;gap:10px}
   .ccsugg{margin-top:4px;max-height:200px;overflow-y:auto}
   .ccsugg-item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 10px;cursor:pointer;border:1px solid var(--line);border-top:0;background:var(--card)}
   .ccsugg-item:first-child{border-top:1px solid var(--line);border-radius:9px 8px 0 0}
@@ -633,8 +647,8 @@
   .modal .mbody{padding:11px 12px;max-height:54vh;overflow-y:auto}
   .modal .mfoot{display:flex;gap:8px;padding:11px 13px;border-top:1px solid var(--line)}
   .modal .mfoot button{flex:1;border:1px solid var(--line);background:var(--card);border-radius:9px;font-size:13px;font-weight:700;padding:9px;cursor:pointer;color:var(--ink)}
-  .modal .mfoot button.pri{background:var(--blue);color:#fff;border-color:var(--blue)}
-  .modal .mfoot button.danger{background:var(--disp);color:#fff;border-color:var(--disp)}
+  .modal .mfoot button.pri{background:var(--blue);color:var(--on-accent);border-color:var(--blue)}
+  .modal .mfoot button.danger{background:var(--disp);color:var(--on-danger);border-color:var(--disp)}
   .modal .mfoot button:disabled{opacity:.45;cursor:not-allowed}
   .modal textarea{width:100%;border:1px solid var(--line);border-radius:9px;padding:9px;font:inherit;font-size:13px;resize:vertical;min-height:62px;box-sizing:border-box}
   .optrow{display:flex;align-items:center;gap:11px;padding:10px 11px;border:1px solid var(--line);border-radius:9px;margin-bottom:6px;cursor:pointer}
@@ -645,27 +659,27 @@
   .optrow.sel .rdo::after{content:'';width:8px;height:8px;border-radius:50%;background:var(--blue)}
   .optrow .oc{flex:1;min-width:0}.optrow .on{font-size:13px;font-weight:700;color:var(--ink)}.optrow .om{font-size:var(--fs-1);color:var(--grey)}
   .optchip{font-size:var(--fs-1);font-weight:700;border-radius:9px;padding:2px 8px;white-space:nowrap}
-  .optchip.on{color:#1f7a4d;background:#e3f3ea}.optchip.brk{color:#8a6d1f;background:#f6edd6}.optchip.off{color:#777;background:#eee}
+  .optchip.on{color:#1f7a4d;background:#e3f3ea}.optchip.brk{color:var(--warn-2);background:#f6edd6}.optchip.off{color:#777;background:#eee}
   .dtabs{flex-wrap:wrap}
   .dh{position:relative}
-  .dmsg{position:absolute;top:0;right:0;border:1px solid #cfe0ec;background:#EAF1F6;color:var(--blue);font-size:var(--fs-1);font-weight:700;border-radius:9px;padding:3px 9px;cursor:pointer}
+  .dmsg{position:absolute;top:0;right:0;border:1px solid #cfe0ec;background:var(--blue-tint-bg);color:var(--blue);font-size:var(--fs-1);font-weight:700;border-radius:9px;padding:3px 9px;cursor:pointer}
   .rowmsg{font-size:var(--fs-1);font-weight:700;color:var(--blue);background:#EAF1F6;border:0.5px solid #cfe0ec;border-radius:5px;padding:0 5px;white-space:nowrap;cursor:pointer}
   .msglink{border:1px solid var(--line);background:var(--card);color:var(--blue);font-size:12px;font-weight:700;border-radius:9px;padding:8px 13px;cursor:pointer}
   .msgtab{display:flex;flex-direction:column}
   .msgfilter{display:flex;gap:6px;margin-bottom:10px}
   .msgfilter button{border:1px solid var(--line);background:var(--card);border-radius:9px;font-size:var(--fs-1);font-weight:700;padding:5px 10px;color:var(--grey);cursor:pointer}
-  .msgfilter button.on{background:#EAF1F8;color:var(--blue);border-color:var(--blue)}
-  .msgfilter button.on.disp{background:#fbeceb;color:var(--disp);border-color:#e0a9a4}
+  .msgfilter button.on{background:var(--blue-tint-bg);color:var(--blue);border-color:var(--blue)}
+  .msgfilter button.on.disp{background:var(--danger-tint);color:var(--disp);border-color:#e0a9a4}
   /* compact type filter — a checkbox dropdown instead of a row of buttons */
   .tdwrap{position:relative;display:inline-block}
   .msgfbtn{border:1px solid var(--line);background:var(--card);border-radius:9px;font-size:var(--fs-1);font-weight:700;padding:5px 10px;color:var(--grey);cursor:pointer}
-  .msgfbtn.on{background:#EAF1F8;color:var(--blue);border-color:var(--blue)}
+  .msgfbtn.on{background:var(--blue-tint-bg);color:var(--blue);border-color:var(--blue)}
   .tdrop{position:absolute;top:30px;left:0;z-index:8;background:var(--card);border:1px solid var(--line);border-radius:9px;box-shadow:0 8px 24px rgba(0,0,0,.14);padding:7px;min-width:160px;display:flex;flex-direction:column;gap:1px}
   .tdrow{display:flex;align-items:center;gap:8px;font-size:12px;padding:5px 7px;border-radius:6px;cursor:pointer}
   .tdrow:hover{background:var(--paper)}
   .tdclear{margin-top:3px;border:0;background:none;color:var(--blue);font-size:var(--fs-1);font-weight:700;cursor:pointer;text-align:left;padding:5px 7px}
   .bubble.disp{border-left:3px solid var(--disp);background:#fdf3f2}
-  .mbadge.disp{background:#fbe3e1;color:var(--disp)}
+  .mbadge.disp{background:var(--danger-tint);color:var(--disp)}
    .mbadge.disp.ok{background:#E9F4EE;color:#2f6043}
   /* dispute banner on the record — the USP surfaced in context */
   .dispbanner{padding:11px 16px;background:#fdf3f2;border-bottom:1px solid #f0c9c6}
@@ -685,21 +699,21 @@
   .bubble.ext{background:#eef5ff;border-left:3px solid var(--blue)}
   .bubble .bh{display:flex;align-items:center;gap:8px;margin-bottom:3px}
   .mbadge{font-size:var(--fs-1);font-weight:700;border-radius:6px;padding:1px 7px}
-  .mbadge.int{background:#e2e8ec;color:#4a5e6a}.mbadge.ext{background:#dbeafe;color:var(--blue)}
+  .mbadge.int{background:#e2e8ec;color:#4a5e6a}.mbadge.ext{background:var(--blue-tint-bg);color:var(--blue)}
   .bubble .ath{font-size:var(--fs-1);font-weight:700;color:var(--ink)}.bubble .tm{font-size:var(--fs-1);color:var(--grey);margin-left:auto}
   .bubble .bb{font-size:13px;color:var(--ink);line-height:1.45}
   .msgempty{text-align:center;color:var(--grey);font-size:12px;padding:20px}
   .composer{border-top:1px solid var(--line);padding-top:10px;margin-top:2px}
   .chtoggle{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-bottom:7px}
   .chtoggle button{border:0;background:var(--card);font-size:var(--fs-1);font-weight:700;padding:5px 11px;color:var(--grey);cursor:pointer}
-  .chtoggle button.int.on{background:#5f7682;color:#fff}.chtoggle button.ext.on{background:var(--blue);color:#fff}
+  .chtoggle button.int.on{background:#5f7682;color:#fff}.chtoggle button.ext.on{background:var(--blue);color:var(--on-accent)}
   .chlabel{font-size:var(--fs-1);font-weight:700;margin-bottom:7px}.chlabel.ext{color:var(--blue)}
   .composer textarea{width:100%;border:1px solid var(--line);border-radius:9px;padding:9px;font:inherit;font-size:13px;min-height:54px;resize:vertical;box-sizing:border-box}
   .composer .send{margin-top:7px;border:0;color:#fff;border-radius:9px;font-size:var(--fs-2);font-weight:700;padding:8px 14px;cursor:pointer}
   .composer .send.int{background:#5f7682}.composer .send.ext{background:var(--blue)}
   .msghd{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
   .msghd .mh-t{font-size:12px;font-weight:700;color:var(--ink)}
-  .composebtn{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--blue);background:var(--blue);color:#fff;font-size:11.5px;font-weight:700;border-radius:9px;padding:5px 11px;cursor:pointer}
+  .composebtn{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--blue);background:var(--blue);color:var(--on-accent);font-size:11.5px;font-weight:700;border-radius:9px;padding:5px 11px;cursor:pointer}
   /* ⚠️ THE SECONDARY VARIANT MUST BE A CLASS, NOT AN INLINE background OVERRIDE. .composebtn pairs a blue fill
      with color:#fff; overriding only the background to white leaves WHITE TEXT ON WHITE — the button renders as
      an empty outlined pill. That shipped twice (storefront "Open ↗", assistant "New"), because the pairing is
@@ -733,9 +747,9 @@
   .typesel button{border:1px solid var(--line);background:var(--card);border-radius:6px;font-size:var(--fs-1);font-weight:700;padding:4px 9px;color:var(--grey);cursor:pointer}
   .typesel button.on.info{background:#eef2f6;color:#46566a;border-color:#9fb0bd}.typesel button.on.query{background:#fbeede;color:#9a6b16;border-color:#e0b878}.typesel button.on.decision{background:#e3f3ea;color:#1f7a4d;border-color:#8fc7a8}
   .msgfilter button.on.info{background:#eef2f6;color:#46566a;border-color:#9fb0bd}.msgfilter button.on.query{background:#fbeede;color:#9a6b16;border-color:#e0b878}.msgfilter button.on.decision{background:#e3f3ea;color:#1f7a4d;border-color:#8fc7a8}
-  .mtype.risk{background:#fbe3d4;color:#b5531a}.mtype.assumption{background:#ece9f6;color:#6a5aa0}.mtype.issue{background:#fbe0e0;color:#c0392b}.mtype.dependency{background:#dff0f3;color:#1f6f7e}.mtype.action{background:#e2e9fb;color:#3a52b0}
-  .typesel button.on.risk{background:#fbe3d4;color:#b5531a;border-color:#e8b48e}.typesel button.on.assumption{background:#ece9f6;color:#6a5aa0;border-color:#b9aede}.typesel button.on.issue{background:#fbe0e0;color:#c0392b;border-color:#e7a3a3}.typesel button.on.dependency{background:#dff0f3;color:#1f6f7e;border-color:#9cccd5}.typesel button.on.action{background:#e2e9fb;color:#3a52b0;border-color:#a7b6ea}
-  .msgfilter button.on.risk{background:#fbe3d4;color:#b5531a;border-color:#e8b48e}.msgfilter button.on.assumption{background:#ece9f6;color:#6a5aa0;border-color:#b9aede}.msgfilter button.on.issue{background:#fbe0e0;color:#c0392b;border-color:#e7a3a3}.msgfilter button.on.dependency{background:#dff0f3;color:#1f6f7e;border-color:#9cccd5}.msgfilter button.on.action{background:#e2e9fb;color:#3a52b0;border-color:#a7b6ea}
+  .mtype.risk{background:#fbe3d4;color:#b5531a}.mtype.assumption{background:#ece9f6;color:#6a5aa0}.mtype.issue{background:var(--danger-tint);color:var(--disp)}.mtype.dependency{background:#dff0f3;color:#1f6f7e}.mtype.action{background:#e2e9fb;color:#3a52b0}
+  .typesel button.on.risk{background:#fbe3d4;color:#b5531a;border-color:#e8b48e}.typesel button.on.assumption{background:#ece9f6;color:#6a5aa0;border-color:#b9aede}.typesel button.on.issue{background:var(--danger-tint);color:var(--disp);border-color:#e7a3a3}.typesel button.on.dependency{background:#dff0f3;color:#1f6f7e;border-color:#9cccd5}.typesel button.on.action{background:#e2e9fb;color:#3a52b0;border-color:#a7b6ea}
+  .msgfilter button.on.risk{background:#fbe3d4;color:#b5531a;border-color:#e8b48e}.msgfilter button.on.assumption{background:#ece9f6;color:#6a5aa0;border-color:#b9aede}.msgfilter button.on.issue{background:var(--danger-tint);color:var(--disp);border-color:#e7a3a3}.msgfilter button.on.dependency{background:#dff0f3;color:#1f6f7e;border-color:#9cccd5}.msgfilter button.on.action{background:#e2e9fb;color:#3a52b0;border-color:#a7b6ea}
   .notifpanel.raid{max-width:380px}
   .raidbody{padding:8px 12px 2px;max-height:46vh;overflow:auto}
   .raidrow{margin-bottom:12px}
@@ -747,21 +761,21 @@
   .rsamp{font-size:var(--fs-1);color:var(--grey);margin-top:4px;line-height:1.5}
   .raidtoggle{padding:9px 12px;border-top:1px solid var(--line);font-size:var(--fs-1);font-weight:700;color:var(--ink);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
   .raidtoggle button{border:1px solid var(--line);background:var(--card);border-radius:6px;font-size:var(--fs-1);font-weight:700;padding:4px 9px;color:var(--grey);cursor:pointer}
-  .raidtoggle button.on{background:var(--blue);color:#fff;border-color:var(--blue)}
+  .raidtoggle button.on{background:var(--blue);color:var(--on-accent);border-color:var(--blue)}
   .raidtoggle .hint{flex-basis:100%;font-weight:400;color:var(--grey);font-size:var(--fs-1)}
-  .custflag{color:#c0392b;font-weight:800;margin-right:4px}
+  .custflag{color:var(--disp);font-weight:800;margin-right:4px}
   .prichip{font-size:var(--fs-1);font-weight:700;border-radius:5px;padding:0 6px;white-space:nowrap}
-  .prichip.pri-urgent{background:#FCEBEB;color:#A32D2D}.prichip.pri-low{background:#F1EFE8;color:#5F5E5A}
+  .prichip.pri-urgent{background:var(--danger-tint);color:var(--disp-2)}.prichip.pri-low{background:#F1EFE8;color:#5F5E5A}
   .dchips{display:flex;gap:8px;align-items:center;margin-top:8px}
   .prichip-btn{font-size:var(--fs-1);font-weight:700;border-radius:6px;padding:3px 9px;cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--ink)}
-  .prichip-btn.pri-urgent{background:#FCEBEB;color:#A32D2D;border-color:#e3a0a0}.prichip-btn.pri-low{background:#F1EFE8;color:#5F5E5A}
-  .custflag-tag{font-size:var(--fs-1);font-weight:700;color:#A32D2D;background:#FCEBEB;border-radius:6px;padding:3px 8px}
+  .prichip-btn.pri-urgent{background:var(--danger-tint);color:var(--disp-2);border-color:#e3a0a0}.prichip-btn.pri-low{background:#F1EFE8;color:#5F5E5A}
+  .custflag-tag{font-size:var(--fs-1);font-weight:700;color:var(--disp-2);background:#FCEBEB;border-radius:6px;padding:3px 8px}
   .prisel{display:flex;gap:6px;margin:4px 0 2px}
   .prisel button{flex:1;border:1px solid var(--line);background:var(--card);border-radius:9px;font-size:11.5px;font-weight:700;padding:6px 0;color:var(--grey);cursor:pointer}
-  .prisel button.on.pri-urgent{background:#FCEBEB;color:#A32D2D;border-color:#E24B4A}.prisel button.on.pri-normal{background:#EAF1F8;color:var(--blue);border-color:var(--blue)}.prisel button.on.pri-low{background:#F1EFE8;color:#444441;border-color:#B4B2A9}
+  .prisel button.on.pri-urgent{background:var(--danger-tint);color:var(--disp-2);border-color:#E24B4A}.prisel button.on.pri-normal{background:var(--blue-tint-bg);color:var(--blue);border-color:var(--blue)}.prisel button.on.pri-low{background:#F1EFE8;color:#444441;border-color:#B4B2A9}
   .msec{font-size:var(--fs-1);font-weight:700;color:var(--ink);margin:11px 0 4px}.msec .rh{font-weight:400;color:var(--grey)}
   .mreason{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:9px;padding:8px;font:inherit;font-size:13px;min-height:46px;resize:vertical}
-  .custreq{font-size:11.5px;font-weight:700;color:#A32D2D;background:#FCEBEB;border-radius:9px;padding:7px 10px;margin-bottom:8px}
+  .custreq{font-size:11.5px;font-weight:700;color:var(--disp-2);background:#FCEBEB;border-radius:9px;padding:7px 10px;margin-bottom:8px}
   .rows{flex:1;overflow-y:auto}
   .row{padding:11px 13px;border-bottom:1px solid var(--line);cursor:pointer;display:flex;gap:9px}
   .row:hover{background:var(--hover)}.row.sel{background:var(--sel-2);box-shadow:inset 3px 0 0 var(--blue)}.row.picked{background:var(--picked)}
@@ -775,15 +789,15 @@
   .row .amt{margin-left:auto;font-family:'Space Grotesk';font-weight:700;font-size:12px}
   .row .l2{font-size:var(--fs-1);color:var(--grey);margin-top:3px;display:flex;align-items:center;gap:7px}
   .proof{font-size:var(--fs-1);font-weight:700;border-radius:5px;padding:1px 5px}
-  .proof.ok{background:#E9F4EE;color:var(--ok)}.proof.wait{background:var(--gold-soft);color:var(--prog)}
+  .proof.ok{background:var(--ok-tint);color:var(--ok)}.proof.wait{background:var(--gold-soft);color:var(--prog)}
   .chipst{font-size:var(--fs-1);font-weight:700;border-radius:20px;padding:2px 9px;border:1px solid transparent;cursor:pointer;white-space:nowrap}
-  .st-open{background:#E8F0F4;color:var(--blue);border-color:#cfe0ec}.st-act{background:var(--gold-soft);color:var(--prog);border-color:var(--gold-line)}.st-close{background:#E9F4EE;color:var(--ok);border-color:#bfe0cd}
+  .st-open{background:var(--blue-tint-bg);color:var(--blue);border-color:#cfe0ec}.st-act{background:var(--gold-soft);color:var(--prog);border-color:var(--gold-line)}.st-close{background:var(--ok-tint);color:var(--ok);border-color:#bfe0cd}
   .rowacts{display:flex;gap:6px;margin-top:8px}
   .rowacts button{flex:1;font-size:var(--fs-1);font-weight:700;border:1px solid var(--line);background:var(--card);border-radius:6px;padding:5px;color:var(--ink)}
-  .rowacts button.go{border:0;background:var(--blue);color:#fff}
+  .rowacts button.go{border:0;background:var(--blue);color:var(--on-accent)}
   .selbar{display:flex;align-items:center;gap:8px;background:#EAF1F6;border:1px solid #cfe0ec;border-radius:9px;padding:7px 10px;margin-top:8px;font-size:11.5px;font-weight:600}
   .selbar .sp{margin-left:auto;display:flex;gap:6px}.selbar .sp button{border:1px solid #cfe0ec;background:var(--card);border-radius:6px;font-size:var(--fs-1);font-weight:700;padding:5px 9px;color:var(--blue)}
-  .selbar .sp button.pri{border:0;background:var(--blue);color:#fff}
+  .selbar .sp button.pri{border:0;background:var(--blue);color:var(--on-accent)}
 
   .detail{display:flex;flex-direction:column;min-width:0;min-height:0;background:var(--card);border-left:0.5px solid var(--line)}
   .dh{padding:13px 16px;border-bottom:1px solid var(--line)}
@@ -805,13 +819,13 @@
   .parity{display:flex;align-items:center;gap:8px;background:#E9F4EE;border:1px solid #bfe0cd;border-radius:9px;padding:10px 12px;font-size:12px;color:#2f6043}
   .actbar{display:flex;gap:8px;padding:10px 16px;border-top:1px solid var(--line);flex-wrap:wrap;background:#FCFBF8}
   .actbar button{font-size:12px;font-weight:700;border:1px solid var(--line);background:var(--card);border-radius:9px;padding:8px 12px;color:var(--ink)}
-  .actbar button.pri{border:0;background:var(--chrome);color:#fff}.actbar button.warn{border-color:#e7b9b5;color:var(--disp)}
+  .actbar button.pri{border:0;background:var(--chrome);color:var(--chrome-on)}.actbar button.warn{border-color:#e7b9b5;color:var(--disp)}
   .actbar button.pend{border-style:dashed;border-color:var(--gold-line);color:#9a7b34;background:var(--gold-soft)}
   .dback{display:none;align-items:center;gap:4px;border:0;background:none;color:var(--blue);font-weight:700;font-size:13px;margin-bottom:8px;padding:5px 0;cursor:pointer}
   .empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:var(--grey);padding:30px;gap:8px}
   .empty .big{font-size:34px}.empty .t{font-family:'Space Grotesk';font-weight:700;font-size:15px;color:var(--ink)}
   .stub{padding:34px;text-align:center;color:var(--grey)}.stub .t{font-family:'Space Grotesk';font-weight:700;font-size:17px;color:var(--ink);margin-bottom:6px}
-  .toast{position:fixed;left:50%;top:64px;transform:translateX(-50%);max-width:min(560px,92vw);background:var(--chrome);color:#fff;border-radius:12px;padding:12px 18px;font-size:13px;font-weight:600;line-height:1.4;box-shadow:0 12px 34px rgba(8,24,32,.30);display:flex;align-items:center;gap:14px;z-index:9999;animation:toastIn .18s ease-out}
+  .toast{position:fixed;left:50%;top:64px;transform:translateX(-50%);max-width:min(560px,92vw);background:var(--chrome);color:var(--chrome-on);border-radius:12px;padding:12px 18px;font-size:13px;font-weight:600;line-height:1.4;box-shadow:0 12px 34px rgba(8,24,32,.30);display:flex;align-items:center;gap:14px;z-index:9999;animation:toastIn .18s ease-out}
   @keyframes toastIn{from{opacity:0;transform:translate(-50%,-8px)}to{opacity:1;transform:translate(-50%,0)}}
   .toast.err{background:var(--disp)}
   .toast.warn{background:#8a6d1f}
@@ -914,7 +928,7 @@ button:focus-visible,.composebtn:focus-visible,.pri:focus-visible{outline:2px so
 .tl .ev.next .ea::after{content:" (upcoming)";font-size:var(--fs-1);font-family:'Space Mono';color:var(--grey-4);font-weight:400}
 img.attImg{object-fit:cover;display:block}
 .attpdf{width:100%;height:60vh;border:0;background:var(--card)}
-.atttext{width:100%;max-height:60vh;overflow:auto;margin:0;padding:16px 18px;background:var(--card);color:#243038;font:12.5px/1.65 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:pre-wrap;word-break:break-word;text-align:left}
+.atttext{width:100%;max-height:60vh;overflow:auto;margin:0;padding:16px 18px;background:var(--card);color:var(--on-card);font:12.5px/1.65 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:pre-wrap;word-break:break-word;text-align:left}
 .attfile{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;min-height:160px;padding:24px;text-align:center;color:#46566a}
 .lhead{display:grid;align-items:center;gap:8px;position:sticky;top:0;z-index:3;background:var(--card);border-bottom:1.5px solid var(--line);padding:7px 12px;font-size:var(--fs-1);font-weight:700;color:var(--grey);text-transform:uppercase;letter-spacing:.3px}
 .lhcell{display:flex;align-items:center;white-space:nowrap;overflow:hidden}
@@ -944,9 +958,9 @@ img.attImg{object-fit:cover;display:block}
 .lrow.unread .subjtext{font-weight:800}
 .udot{width:8px;height:8px;border-radius:50%;background:var(--blue);flex:0 0 auto;display:inline-block}
 .rflag{font-size:var(--fs-1);font-weight:800;border-radius:5px;padding:1px 6px;white-space:nowrap;border:1px solid;flex:0 0 auto}
-.rflag.disp{background:#fbeceb;color:var(--disp);border-color:#f0c9c6}
-.rflag.cust{background:#FCEBEB;color:#A32D2D;border-color:#e3a0a0}
-.rflag.urg{background:#FCEBEB;color:#A32D2D;border-color:#e3a0a0}
+.rflag.disp{background:var(--danger-tint);color:var(--disp);border-color:#f0c9c6}
+.rflag.cust{background:var(--danger-tint);color:var(--disp-2);border-color:#e3a0a0}
+.rflag.urg{background:var(--danger-tint);color:var(--disp-2);border-color:#e3a0a0}
 .rflag.high{background:#fdeccc;color:#8a5a12;border-color:#e6c98f}
 .keypanel{position:absolute;right:0;top:26px;z-index:30;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:12px;width:520px;max-width:88vw;max-height:70vh;overflow-y:auto}
 .keypanel h4{font-family:'Space Grotesk';font-size:var(--fs-1);margin:0 0 8px;text-transform:uppercase;letter-spacing:.4px;color:var(--grey)}
@@ -960,7 +974,7 @@ img.attImg{object-fit:cover;display:block}
 .colcog{border:0;background:none;cursor:pointer;font-size:13px;color:var(--grey);justify-self:end;padding:0 2px}
 .colmenu{position:absolute;right:10px;top:30px;z-index:6;background:var(--card);border:1px solid var(--line);border-radius:9px;box-shadow:0 8px 24px rgba(0,0,0,.16);padding:8px 11px;display:flex;flex-direction:column;gap:5px;font-size:12px;text-transform:none;font-weight:400;color:var(--ink)}
 .colmenu label{display:flex;gap:7px;align-items:center;cursor:pointer;white-space:nowrap}
-.optchip.mini{font-size:var(--fs-1);padding:0 5px}.optchip.mini.r{background:#fbeceb;color:var(--disp);border-color:#f0c9c6}
+.optchip.mini{font-size:var(--fs-1);padding:0 5px}.optchip.mini.r{background:var(--danger-tint);color:var(--disp);border-color:#f0c9c6}
 /* ⚠️ WRAPS INSTEAD OF OVERFLOWING. Fold toggle + count + sort + key + columns needs ~280px, and the list pane is
    draggable down to 210 — below which the row spilled sideways out of its own pane. A control strip that cannot
    fit must fold onto a second line; it must not decide the pane is wider than it is. */
@@ -992,7 +1006,7 @@ img.attImg{object-fit:cover;display:block}
 .colrz:hover{background:var(--blue);opacity:.5}
 .sortpreset{font-size:var(--fs-1);border:1px solid var(--line);border-radius:6px;padding:2px 5px;background:var(--card);color:var(--ink);cursor:pointer;font-family:inherit}
 .colmenu label{padding:3px 8px;border-radius:6px;cursor:pointer}
-.colmenu label:has(input:checked){background:#E3EDF8;color:var(--blue);font-weight:600}
+.colmenu label:has(input:checked){background:var(--blue-tint-bg);color:var(--blue);font-weight:600}
 .colmenu input[type=checkbox]{width:14px;height:14px;accent-color:var(--blue)}
 .prichip.pri-high{background:#fdeccc;color:#8a5a12;border-color:#e6c98f}
 /**
@@ -1010,7 +1024,7 @@ img.attImg{object-fit:cover;display:block}
 .starcell:hover{color:#e8b923}
 .srch{position:relative}
 .advbtn{border:1px solid var(--line);background:var(--card);border-radius:6px;padding:1px 7px;font-size:12px;cursor:pointer;color:var(--grey);margin-left:4px}
-.advbtn.on{background:#E3EDF8;color:var(--blue);border-color:var(--blue)}
+.advbtn.on{background:var(--blue-tint-bg);color:var(--blue);border-color:var(--blue)}
 .advpanel{position:absolute;right:0;top:34px;z-index:7;background:var(--card);border:1px solid var(--line);border-radius:9px;box-shadow:0 8px 26px rgba(0,0,0,.16);padding:11px 13px;width:300px;display:flex;flex-direction:column;gap:8px}
 .advttl{font-size:var(--fs-1);font-weight:700;color:var(--grey);text-transform:uppercase;letter-spacing:.3px}.advttl span{font-weight:400;text-transform:none;font-size:var(--fs-1);color:var(--grey-4)}
 .advrow{display:flex;align-items:center;gap:6px}.advrow>label{width:60px;flex:0 0 60px;font-size:11.5px;color:var(--grey);font-weight:600}
@@ -1019,7 +1033,7 @@ img.attImg{object-fit:cover;display:block}
 .advin{flex:1;border:1px solid var(--line);border-radius:6px;padding:4px 7px;font-size:12px;min-width:0;font-family:inherit}
 .advdash{font-size:var(--fs-1);color:var(--grey)}.advfoot{display:flex;justify-content:flex-end;gap:7px;margin-top:3px}
 .advx{position:absolute;top:6px;right:9px;border:0;background:none;font-size:var(--fs-3);color:var(--grey-4);cursor:pointer;line-height:1}
-.advchip{display:inline-flex;align-items:center;gap:5px;background:#E3EDF8;color:var(--blue-d);border:1px solid var(--blue-tint-line);border-radius:12px;padding:1px 8px;font-size:var(--fs-1);margin:0 5px 0 0;white-space:nowrap}
+.advchip{display:inline-flex;align-items:center;gap:5px;background:var(--blue-tint-bg);color:var(--blue-d);border:1px solid var(--blue-tint-line);border-radius:12px;padding:1px 8px;font-size:var(--fs-1);margin:0 5px 0 0;white-space:nowrap}
 .advchip b{cursor:pointer;font-weight:700;color:#7a8aa0}
 .advchip b:hover{color:var(--disp)}
 .lhead .lhcell:not(:last-child){border-right:1px solid var(--line)}
@@ -1458,7 +1472,7 @@ function blueprintCardHTML(id){
   return '<div style="padding:2px 2px">'
     +'<div style="display:flex;align-items:center;gap:9px;margin-bottom:2px"><span style="font-size:22px">'+wp.icon+'</span><div><div style="font-family:\'Space Grotesk\';font-weight:800;font-size:var(--fs-4)">'+esc(wp.label)+'</div><div style="font-size:var(--fs-1);color:var(--grey)">what governs this work pattern</div></div></div>'
     +'<div style="background:#f4f8fc;border:1px solid var(--blue-tint-line);border-radius:9px;padding:8px 11px;margin:10px 0;font-size:var(--fs-2);color:#2b4a72">🎫 <b>Licence</b> · '+esc(wp.licence)+'</div>'
-    +'<div style="font-size:11.5px;font-weight:800;color:#8a6d1f;margin:8px 0 2px">🔒 SEALED — governed, cannot change</div>'+_bpRows(wp.sealed,'sealed')
+    +'<div style="font-size:11.5px;font-weight:800;color:var(--warn-2);margin:8px 0 2px">🔒 SEALED — governed, cannot change</div>'+_bpRows(wp.sealed,'sealed')
     +'<div style="font-size:11.5px;font-weight:800;color:#1f7a3d;margin:14px 0 2px">✎ OPEN — yours to set, within bounds</div>'+_bpRows(wp.open,'open')
     +'<div style="font-size:11.5px;font-weight:800;color:#2b4a72;margin:14px 0 2px">↑ REPORTS UP — health &amp; events to governance</div><div style="font-size:var(--fs-2);color:var(--ink);padding-top:4px">'+wp.reportsUp.map(esc).join(' · ')+'</div>'
     +(wp.workflow?('<div style="font-size:11.5px;font-weight:800;color:#5a3fa0;margin:16px 0 4px">🔀 WORKFLOW — how deep this can reach</div>'
@@ -1521,7 +1535,7 @@ function mountAssist(){ if(document.getElementById("assistfab")) return;
      frame was silently ignored and the pill sat in the grey margin beside it. A control positioned inline is a
      control no stylesheet can ever reposition. */
   const b=document.createElement("div"); b.id="assistfab";
-  b.innerHTML=`<button data-testid="assistant-open" onclick="openAssist()" title="Ask the assistant" style="border:0;border-radius:24px;padding:10px 16px;background:var(--blue);color:#fff;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.18);font-size:var(--fs-3)">💬 Assistant</button>`;
+  b.innerHTML=`<button data-testid="assistant-open" onclick="openAssist()" title="Ask the assistant" style="border:0;border-radius:24px;padding:10px 16px;background:var(--blue);color:var(--on-accent);font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.18);font-size:var(--fs-3)">💬 Assistant</button>`;
   document.body.appendChild(b);
   const h=document.createElement("div"); h.id="assisthost"; document.body.appendChild(h);
 }
@@ -1569,12 +1583,12 @@ async function askHelpDesk(){ const q=(_assistPending||'').trim(); if(!q) return
 function renderAssist(ans){ const h=document.getElementById("assisthost"); if(!h||!_assistOpen) return; const pre=!(typeof SESSION!=="undefined" && SESSION.token); const sugg=assistSuggest();
   const _pb=(typeof PURPOSE!=='undefined'&&PURPOSE[curScreen()])?PURPOSE[curScreen()]:''; const purposeHTML=_pb?`<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:8px 10px;font-size:11.5px;color:var(--warn-3);line-height:1.5;margin-bottom:9px">${esc(_pb)}</div>`:'';
   h.innerHTML=`<div style="position:fixed;right:16px;bottom:70px;z-index:301;width:360px;max-width:92vw;background:var(--card);border:1px solid #e3e0d8;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.22);overflow:hidden">
-    <div style="display:flex;align-items:center;gap:8px;padding:11px 13px;border-bottom:1px solid #e3e0d8;font-family:'Space Grotesk';font-weight:700;font-size:13px">💬 Assistant <span style="font-size:var(--fs-1);font-family:'Space Mono';background:#f3f0e8;color:var(--warn-3);border-radius:5px;padding:1px 6px">${pre?"fit check":"help"}</span><button data-testid="assist-close" onclick="closeAssist()" style="margin-left:auto;border:0;background:none;cursor:pointer;color:var(--grey-4);font-size:15px">✕</button></div>
+    <div style="display:flex;align-items:center;gap:8px;padding:11px 13px;border-bottom:1px solid #e3e0d8;font-family:'Space Grotesk';font-weight:700;font-size:13px">💬 Assistant <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--warn-tint);color:var(--warn-3);border-radius:5px;padding:1px 6px">${pre?"fit check":"help"}</span><button data-testid="assist-close" onclick="closeAssist()" style="margin-left:auto;border:0;background:none;cursor:pointer;color:var(--grey-4);font-size:15px">✕</button></div>
     <div style="padding:11px 13px;max-height:52vh;overflow:auto">
       ${purposeHTML}<div style="font-size:12px;color:#777;margin-bottom:8px">${pre?"Tell me your business and I will be honest about whether this fits.":"Describe what you are trying to do."}</div>
       <div id="assist_ans" style="font-size:var(--fs-2);color:#222;line-height:1.55;margin-bottom:10px">${ans||""}</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">${(_assistLoading && !sugg.length)?'<span style="font-size:var(--fs-1);color:var(--grey-4)">loading questions…</span>':sugg.map(e=>`<button data-testid="assist-suggest-${e.id}" onclick="assistPick('${e.id}')" style="border:0.5px solid #e3e0d8;border-radius:9px;padding:3px 8px;font-size:var(--fs-1);background:var(--card);cursor:pointer">${esc(e.q)}</button>`).join("")}</div>
-      <div style="display:flex;gap:7px"><input id="assist_in" data-testid="assist-input" placeholder="${pre?"e.g. I run a timber yard…":"e.g. how do I assign a task?"}" style="flex:1;border:1px solid #e3e0d8;border-radius:9px;padding:7px 9px;font-size:var(--fs-2)" onkeydown="if(event.key==='Enter')assistAsk()"><button data-testid="assist-ask" onclick="assistAsk()" style="border:0;border-radius:9px;padding:0 12px;background:var(--blue);color:#fff;font-weight:700;cursor:pointer">Ask</button></div>
+      <div style="display:flex;gap:7px"><input id="assist_in" data-testid="assist-input" placeholder="${pre?"e.g. I run a timber yard…":"e.g. how do I assign a task?"}" style="flex:1;border:1px solid #e3e0d8;border-radius:9px;padding:7px 9px;font-size:var(--fs-2)" onkeydown="if(event.key==='Enter')assistAsk()"><button data-testid="assist-ask" onclick="assistAsk()" style="border:0;border-radius:9px;padding:0 12px;background:var(--blue);color:var(--on-accent);font-weight:700;cursor:pointer">Ask</button></div>
       ${pre?'':'<div style="margin-top:9px;text-align:center"><button data-testid="assist-compliance" onclick="checkCompliance()" style="border:0.5px solid #e3e0d8;border-radius:9px;padding:6px 10px;font-size:11.5px;background:var(--card);cursor:pointer">🛡️ Check compliance</button></div>'}
     </div>
     <div style="padding:7px 13px;font-size:var(--fs-1);color:var(--grey-4);background:#faf8f3">Honest by design · sample answers from the library · richer AI coming.</div>
@@ -1596,18 +1610,18 @@ function _ccRuleHint(r){ r=r||{}; if(r.max!=null) return "must be ≤ "+r.max; i
 function _ccField(p){ const r=p.rule||{}; const id="cc_"+p.key;
   if(r.equals===true||r.equals===false) return `<label style="display:flex;align-items:center;gap:8px;font-size:var(--fs-2)"><input type="checkbox" id="${id}"> ${esc(p.label)}</label>`;
   const t=(r.max!=null||r.min!=null)?"number":"text";
-  return `<div style="display:flex;flex-direction:column;gap:3px"><label for="${id}" style="font-size:11.5px;color:#555">${esc(p.label)} <span style="color:var(--grey-4)">· ${esc(_ccRuleHint(r))}${p.obligation==='must'?' · required':''}</span></label><input id="${id}" type="${t}" ${t==='number'?'step="any"':''} style="border:1px solid #e3e0d8;border-radius:9px;padding:7px 9px;font-size:var(--fs-2)"></div>`;
+  return `<div style="display:flex;flex-direction:column;gap:3px"><label for="${id}" style="font-size:11.5px;color:var(--grey-2)">${esc(p.label)} <span style="color:var(--grey-4)">· ${esc(_ccRuleHint(r))}${p.obligation==='must'?' · required':''}</span></label><input id="${id}" type="${t}" ${t==='number'?'step="any"':''} style="border:1px solid #e3e0d8;border-radius:9px;padding:7px 9px;font-size:var(--fs-2)"></div>`;
 }
 function ccRender(res){
   const std=_ccStds.find(s=>s.standard===_ccPick)||_ccStds[0]; if(!std) return;
   const opts=_ccStds.map(s=>`<option value="${esc(s.standard)}" ${s.standard===_ccPick?'selected':''}>${esc(s.title)} (${esc(s.standard)})</option>`).join("");
   const fields=(std.points||[]).map(_ccField).join('<div style="height:9px"></div>');
-  modal(`<div style="font-family:'Space Grotesk';font-weight:700;font-size:15px;margin-bottom:3px">🛡️ Compliance check <span style="font-size:var(--fs-1);font-family:'Space Mono';background:#f3f0e8;color:var(--warn-3);border-radius:5px;padding:1px 6px;vertical-align:middle">first light</span></div>
+  modal(`<div style="font-family:'Space Grotesk';font-weight:700;font-size:15px;margin-bottom:3px">🛡️ Compliance check <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--warn-tint);color:var(--warn-3);border-radius:5px;padding:1px 6px;vertical-align:middle">first light</span></div>
     <div style="font-size:11.5px;color:#777;margin-bottom:11px">Check a transaction's data against a standard. The verdict is computed from the rules — the AI only explains it.</div>
-    <label style="font-size:11.5px;color:#555">Standard</label>
+    <label style="font-size:11.5px;color:var(--grey-2)">Standard</label>
     <select onchange="ccPickStd(this.value)" style="width:100%;border:1px solid #e3e0d8;border-radius:9px;padding:7px 9px;font-size:var(--fs-2);margin:3px 0 12px">${opts}</select>
     <div>${fields}</div>
-    <button onclick="ccRun()" style="width:100%;margin-top:14px;border:0;border-radius:9px;padding:10px;background:var(--blue);color:#fff;font-weight:700;font-size:13px;cursor:pointer">Check compliance</button>
+    <button onclick="ccRun()" style="width:100%;margin-top:14px;border:0;border-radius:9px;padding:10px;background:var(--blue);color:var(--on-accent);font-weight:700;font-size:13px;cursor:pointer">Check compliance</button>
     <div id="cc_result" style="margin-top:12px">${res||''}</div>`, true);
 }
 async function ccRun(){
@@ -2184,6 +2198,11 @@ var THEMES = {
                with --ink. In light themes the nav is darker than the page; in dark it must be lighter, or the
                navigation dissolves into the background and the shell loses its edges. */
             '--chrome':'#0B1F2A', '--chrome-ink':'#AFC0CC', '--chrome-on':'#ffffff', '--sel':'#22303F', '--hover':'#20262E', '--sel-2':'#1F2830', '--picked':'#233043',
+            /* The pale tints go DARK, keeping the same relationship to their semantic: a faint ground the
+               semantic's text can still sit on. Inverting them to light would put dark chips on a dark page. */
+            '--blue-tint-bg':'#1B2739', '--ok-tint':'#16281E', '--danger-tint':'#2E1A18',
+            '--warn-tint':'#2A2418', '--purple-tint':'#221E33', '--neutral-tint':'#20262E',
+            '--on-gold':'#2C2410', '--on-purple':'#ffffff',
             '--shadow':'0 1px 2px rgba(0,0,0,.4),0 12px 34px rgba(0,0,0,.5)' } },
 };
 function themeGet(){ try{ return localStorage.getItem('cb_theme') || 'cream'; }catch(_){ return 'cream'; } }
@@ -2493,7 +2512,7 @@ function _renderApp(){
         <!-- ⚠️ THE CARET IS THE WHOLE POINT. Athi went looking for Settings and Profile after I moved them here:
              a plain circular letter does not say "menu", it says "avatar", so the two screens read as DELETED
              rather than relocated. A control that hides things must look like a control. -->
-        <button type="button" class="av" data-testid="icon-avatar" onclick="UI.avMenu=!UI.avMenu;renderApp()" style="cursor:pointer;position:relative" title="Profile, settings and sign out">${(SESSION.name||"?")[0]}<span style="position:absolute;right:-3px;bottom:-3px;background:var(--chrome);color:#fff;border-radius:50%;width:13px;height:13px;font-size:8px;display:flex;align-items:center;justify-content:center;border:1.5px solid #fff">${UI.avMenu?'▴':'▾'}</span></button>
+        <button type="button" class="av" data-testid="icon-avatar" onclick="UI.avMenu=!UI.avMenu;renderApp()" style="cursor:pointer;position:relative" title="Profile, settings and sign out">${(SESSION.name||"?")[0]}<span style="position:absolute;right:-3px;bottom:-3px;background:var(--chrome);color:var(--chrome-on);border-radius:50%;width:13px;height:13px;font-size:8px;display:flex;align-items:center;justify-content:center;border:1.5px solid #fff">${UI.avMenu?'▴':'▾'}</span></button>
         ${UI.avMenu?`<div class="avmenu" data-testid="avatar-menu" style="position:absolute;top:calc(100% + 6px);right:0;z-index:60;background:var(--card);border:1px solid var(--line);border-radius:9px;box-shadow:var(--shadow);min-width:180px;overflow:hidden">
           <div style="padding:9px 13px;border-bottom:1px solid var(--line)"><div style="font-weight:700;font-size:13px">${esc(SESSION.name||'')}</div><div style="font-size:11.5px;color:var(--grey)">${esc(role)} · ${esc(SESSION.entity||'')}</div></div>
           <button data-testid="nav-profile" onclick="UI.avMenu=false;navTo('profile')" style="display:block;width:100%;text-align:left;border:0;background:none;padding:10px 13px;font-size:13.5px;cursor:pointer">👤 Profile</button>
@@ -2504,7 +2523,7 @@ function _renderApp(){
           ${isEntityUser?`<button data-testid="nav-settings" onclick="UI.avMenu=false;navTo('settings')" style="display:block;width:100%;text-align:left;border:0;background:none;padding:10px 13px;font-size:13.5px;cursor:pointer">⚙️ Settings</button>`:''}
           <div style="border-top:1px solid var(--line);padding:9px 13px 4px"><div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey)">Theme</div></div>
           <div data-testid="theme-picker" style="display:flex;gap:6px;padding:2px 13px 11px;flex-wrap:wrap">${themeSwatchesHTML()}</div>
-          <button onclick="UI.avMenu=false;logout()" style="display:block;width:100%;text-align:left;border:0;background:none;padding:10px 13px;font-size:13.5px;cursor:pointer;border-top:1px solid var(--line);color:#c0453b">↩ Sign out</button>
+          <button onclick="UI.avMenu=false;logout()" style="display:block;width:100%;text-align:left;border:0;background:none;padding:10px 13px;font-size:13.5px;cursor:pointer;border-top:1px solid var(--line);color:var(--disp)">↩ Sign out</button>
         </div>`:''}
         </div>
         <button class="so" data-testid="icon-logout" onclick="logout()" title="Sign out" aria-label="Sign out"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button></div>
@@ -2684,7 +2703,7 @@ function menuBtn(x){
   if(key==='messages'){
     const n=UI.replyCount||0;
     return `<button class="${on?'on':''}" data-testid="nav-${key}" onclick="${click}"><span class="ic">${ic}</span>${label}`
-      + (n?`<span data-testid="nav-messages-badge" style="margin-left:auto;background:var(--blue-2);color:#fff;border-radius:9px;padding:1px 7px;font-size:var(--fs-1);font-weight:800">${n}</span>`:'')
+      + (n?`<span data-testid="nav-messages-badge" style="margin-left:auto;background:var(--blue-2);color:var(--on-accent);border-radius:9px;padding:1px 7px;font-size:var(--fs-1);font-weight:800">${n}</span>`:'')
       + `</button>`;
   }
   if(key!=='task'&&key!=='order') return `<button class="${on?'on':''}" data-testid="nav-${key}" onclick="${click}"><span class="ic">${ic}</span>${label}</button>`;
@@ -3643,7 +3662,7 @@ function promptAsk(title, opts, onOk, extra){
 // Legible deactivate/remove result — spells out every binding that was cleaned (tasks, cover both ways,
 // default assignee, dispute hand-offs) so nothing quietly dangles.
 function actorCleanupModal(action, name, parts){
-  const rows=(parts&&parts.length)?parts.map(function(p){ return '<div style="display:flex;gap:8px;align-items:flex-start;font-size:var(--fs-2);padding:5px 0;border-bottom:1px dashed var(--line)"><span style="color:#2e6b3f;font-weight:700">✓</span><span>'+esc(p)+'</span></div>'; }).join(''):'<div style="font-size:var(--fs-2);color:var(--grey)">No active tasks, cover links, or assignments — nothing to clean.</div>';
+  const rows=(parts&&parts.length)?parts.map(function(p){ return '<div style="display:flex;gap:8px;align-items:flex-start;font-size:var(--fs-2);padding:5px 0;border-bottom:1px dashed var(--line)"><span style="color:var(--ok-2);font-weight:700">✓</span><span>'+esc(p)+'</span></div>'; }).join(''):'<div style="font-size:var(--fs-2);color:var(--grey)">No active tasks, cover links, or assignments — nothing to clean.</div>';
   modal(`<div class="mhd"><div class="t">${action==='remove'?'🗑 Removed':'🚫 Deactivated'} — ${esc(name||'co-assist')}</div></div>
    <div class="mbody"><div style="font-size:13px;line-height:1.55;color:var(--ink)">${esc(name||'They')} can no longer sign in.${action==='deactivate'?' Reactivate any time to restore access — note the bindings below are <b>not</b> auto-restored.':''}</div>
      <div style="${_CARD};margin-top:9px"><div style="font-size:var(--fs-1);text-transform:uppercase;letter-spacing:.4px;color:var(--grey);font-weight:700;margin-bottom:4px">Bindings cleaned</div>${rows}</div>
@@ -3763,7 +3782,7 @@ const NET_MODEL_NOTE = {
   b2c:"A single shopfront (b2c) with internal counters. Customers buy directly; no upstream distribution."
 };
 function netView(self, tree, edges){
-  const nodes = tree.map(n=>`<div style="padding:3px 0 3px ${(n.depth||0)*20}px;font-size:13.5px">${n.depth>0?'<span style="color:var(--grey)">└ </span>':''}<b>${esc(n.name)}</b> <span style="font-family:'Space Mono';font-size:var(--fs-1);color:var(--grey)">${esc(n.bridge_id||'')}</span>${n.act!=null?` <span class="optchip" style="background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)">👥 ${n.act}</span>`:''}${n.mode==='b2c'?` <span class="optchip" style="background:var(--gold-soft);color:var(--warn-3);border-color:var(--gold-line);font-size:var(--fs-1)">b2c</span>`:''}${n.demo?` <span class="optchip" style="font-size:var(--fs-1)">demo</span>`:''}${n.isnew?` <span class="optchip" style="font-size:var(--fs-1);background:#eaf3ee;color:var(--ok-3);border-color:#bfe0cd">new</span>`:''}</div>`).join("");
+  const nodes = tree.map(n=>`<div style="padding:3px 0 3px ${(n.depth||0)*20}px;font-size:13.5px">${n.depth>0?'<span style="color:var(--grey)">└ </span>':''}<b>${esc(n.name)}</b> <span style="font-family:'Space Mono';font-size:var(--fs-1);color:var(--grey)">${esc(n.bridge_id||'')}</span>${n.act!=null?` <span class="optchip" style="background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)">👥 ${n.act}</span>`:''}${n.mode==='b2c'?` <span class="optchip" style="background:var(--gold-soft);color:var(--warn-3);border-color:var(--gold-line);font-size:var(--fs-1)">b2c</span>`:''}${n.demo?` <span class="optchip" style="font-size:var(--fs-1)">demo</span>`:''}${n.isnew?` <span class="optchip" style="font-size:var(--fs-1);background:var(--ok-tint);color:var(--ok-3);border-color:#bfe0cd">new</span>`:''}</div>`).join("");
   const edgeRows = edges.map(e=>{
     const a = e.state==='requested' ? `<button class="composebtn pri" onclick="netApprove('${e.id}')">Approve</button> <button class="composebtn" onclick="netDecline('${e.id}')">Decline</button>`
       : e.state==='active' ? `<button class="composebtn" onclick="netSuspend('${e.id}')">Suspend</button> <button class="composebtn" style="color:var(--disp)" onclick="netDisconnect('${e.id}')">Disconnect</button>`
@@ -3858,7 +3877,7 @@ function supVisible(){
 function supCount(){ return supVisible().length; }
 function supRowHTML(x){
   const id=x.supplier_list_id, label=supName(x), sub=x.nickname?x.display_name:(x.bridge_id||'');
-  const cat=x.has_catalogue?'<span class="optchip" style="background:#E8F0F4;color:var(--blue);border-color:#cfe0ec">📕 catalogue</span>':'<span class="optchip" style="background:#F1EFE8;color:#8a857a">no catalogue</span>';
+  const cat=x.has_catalogue?'<span class="optchip" style="background:var(--blue-tint-bg);color:var(--blue);border-color:#cfe0ec">📕 catalogue</span>':'<span class="optchip" style="background:#F1EFE8;color:#8a857a">no catalogue</span>';
   return `<div class="row ${id===UI.supSel?'sel':''}" data-testid="sup-row-${id}" onclick="selectSupplier('${id}')">
     <button title="Preferred — tap to toggle" onclick="event.stopPropagation();toggleSupPref('${id}')" style="background:none;border:0;font-size:15px;line-height:1;padding:0;color:${x.preferred?'#997009':'#697479'};flex:0 0 auto;margin-top:1px">${x.preferred?'★':'☆'}</button>
     <div class="main2"><div class="l1"><span class="code">${esc(label)}</span>${x.category?`<span class="optchip" style="background:var(--gold-soft);color:var(--warn-3);border-color:var(--gold-line)">${esc(x.category)}</span>`:''}<span class="amt">${cat}</span></div>
@@ -3894,8 +3913,8 @@ function supInfoCardHTML(x){
   const dec=(sm&&sm.met)||0, ver=(sm&&sm.verified)||0;
   const clr = !sm ? '<span style="color:var(--grey)">not loaded</span>'
     : dec===0 ? '<span style="color:var(--warn-2);font-weight:700">none declared yet</span>'
-              : '<span style="color:#2e6b3f;font-weight:700">'+dec+' declared</span>'
-                + (ver? ' <span style="color:#2e6b3f">· '+ver+' verified</span>'
+              : '<span style="color:var(--ok-2);font-weight:700">'+dec+' declared</span>'
+                + (ver? ' <span style="color:var(--ok-2)">· '+ver+' verified</span>'
                       : ' <span style="color:var(--grey)">· none verified</span>');
   /**
    * ⭐ THE IDENTIFYING DETAILS (Athi, 2026-08-16: *"minimum supplier details like contact number, email id, GSTN
@@ -3911,7 +3930,7 @@ function supInfoCardHTML(x){
   const shop=(UI.supDet && UI.supDet.supplier && UI.supDet.supplier.supplier_list_id===x.supplier_list_id
               && UI.supDet.cat && UI.supDet.cat.shop) || null;
   return '<div class="supinfo" data-testid="sup-info">'
-    + kv('Legal name', esc(x.display_name||'—')+(shop&&shop.is_verified?' <span title="Verified business" style="color:#2e6b3f">✓</span>':''))
+    + kv('Legal name', esc(x.display_name||'—')+(shop&&shop.is_verified?' <span title="Verified business" style="color:var(--ok-2)">✓</span>':''))
     + kv('Your name', esc(x.nickname||'—'))
     + kv('User ID', esc(x.bridge_id||'—'), true)
     + (shop? kv('GSTN', shop.gstn?('<span class="mono">'+esc(shop.gstn)+'</span>'):'<span style="color:var(--grey)">not published</span>') : '')
@@ -3926,7 +3945,7 @@ function supInfoCardHTML(x){
          The two together rendered white-on-white: the button was there, sized and clickable, and invisible. */
       + '<button class="supact-pri" data-testid="sup-edit" onclick="event.stopPropagation();supEdit(\''+x.supplier_list_id+'\')">✎ Edit</button>'
       + '<button data-testid="sup-passport" onclick="event.stopPropagation();viewSupplierPassport(\''+esc(x.bridge_id)+'\',\''+String(supName(x)).replace(/[\\']/g,'')+'\')">Passport →</button>'
-      + '<button data-testid="sup-remove" onclick="event.stopPropagation();delSupplier(\''+x.supplier_list_id+'\')" style="margin-left:auto;color:#c0453b">Remove</button>'
+      + '<button data-testid="sup-remove" onclick="event.stopPropagation();delSupplier(\''+x.supplier_list_id+'\')" style="margin-left:auto;color:var(--disp)">Remove</button>'
     + '</div></div>';
 }
 /**
@@ -4087,7 +4106,7 @@ function supFindBodyHTML(){
       + (has.length? has.map(card).join('') : (UI._sfBusy?'':'<div style="padding:14px 4px;font-size:var(--fs-2);color:var(--grey)">No supplier lists that.</div>'))
       + (nocat.length? '<div class="sfnote"><b>Can\'t tell — '+nocat.length+' supplier'+(nocat.length===1?'':'s')+' published no catalogue:</b> '+nocat.map(function(r){return esc(supName(r.sup));}).join(', ')+'</div>' : '')
       + (miss.length? '<div class="sfnote quiet">Not listed by '+miss.length+' supplier'+(miss.length===1?'':'s')+' with a catalogue.</div>' : '')
-      + (err.length? '<div class="sfnote" style="color:#c0453b">Could not read '+err.length+': '+err.map(function(r){return esc(supName(r.sup));}).join(', ')+'</div>' : '');
+      + (err.length? '<div class="sfnote" style="color:var(--disp)">Could not read '+err.length+': '+err.map(function(r){return esc(supName(r.sup));}).join(', ')+'</div>' : '');
   }
   return body;
 }
@@ -4121,7 +4140,7 @@ async function enquiryLoad(){
 function enquiryPaint(){
   var h = document.getElementById('enqbody'); if (!h || !_ENQ) return;
   var out = '';
-  if (_ENQ.err) out += '<div style="color:#c0453b;font-size:12px;margin-bottom:8px">' + esc(_ENQ.err) + '</div>';
+  if (_ENQ.err) out += '<div style="color:var(--disp);font-size:12px;margin-bottom:8px">' + esc(_ENQ.err) + '</div>';
   /* ⚠️ SAY WHEN THE FEATURE IS NOT INSTALLED, rather than showing an empty thread. b162 ships as SQL Athi runs;
      between the code deploy and that run, an empty list would read as "no one has asked" — which is a different
      and misleading fact. */
@@ -4657,7 +4676,7 @@ async function viewSupplierPassport(bridge, name){
       + 'for that, open <b>Trade readiness</b> from the menu.</div>';
   }catch(e){
     var b2 = document.getElementById('pp_body');
-    if(b2) b2.innerHTML = '<div style="font-size:var(--fs-2);color:#B4483C">'+esc((e&&e.message)||'Could not read their passport.')+'</div>';
+    if(b2) b2.innerHTML = '<div style="font-size:var(--fs-2);color:var(--disp)">'+esc((e&&e.message)||'Could not read their passport.')+'</div>';
   }
 }
 function setSupMode(m){ UI.supMode=m; paintSupDetail(); }
@@ -5044,9 +5063,9 @@ function _refPrice(it){ var c=it.commercials||{};
 function _refPriceHTML(p,sz){ if(!p) return '<span style="color:var(--grey-4);font-size:12px;font-weight:400">no price</span>';
   return esc(inr(p.v))+(p.u?'<span style="font-size:'+(sz||11)+'px;color:var(--grey-4);font-weight:400">/'+esc(p.u)+'</span>':''); }
 function _refChips(it){ var c='';
-  if(it.texture_family) c+='<span class="optchip" style="background:#F0EAF9;color:var(--purple-2);border-color:transparent">'+esc(it.texture_family)+'</span>';
+  if(it.texture_family) c+='<span class="optchip" style="background:var(--purple-tint);color:var(--purple-2);border-color:transparent">'+esc(it.texture_family)+'</span>';
   if(it.region) c+='<span class="optchip" style="background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)">'+esc(it.region)+'</span>';
-  return c+((it.effect||[]).map(function(e){return '<span class="optchip" style="background:#f3f0e8;color:var(--warn-3);border-color:#e6d9a8">'+esc(e)+'</span>';}).join('')); }
+  return c+((it.effect||[]).map(function(e){return '<span class="optchip" style="background:var(--warn-tint);color:var(--warn-3);border-color:#e6d9a8">'+esc(e)+'</span>';}).join('')); }
 // the item's OWN fields — whatever this vertical happens to carry (veg: local_names · botanical_name · category).
 // Skips everything already rendered by a dedicated block, plus underscore meta.
 var _REF_SKIP={name:1,photo:1,unit:1,scale:1,sheen:1,texture_family:1,region:1,effect:1,inspiration:1,combinations:1,tools:1,coats:1,commercials:1,sku:1,id:1};
@@ -5288,7 +5307,7 @@ async function _vSave(btn){
     if(typeof toast === 'function') toast('Variants saved ✓');
   }catch(e){
     // The server refuses a declaration it cannot enforce (422) — show its words, they name the column.
-    if(out) out.innerHTML = '<div style="font-size:var(--fs-2);color:#B4483C">'+esc((e&&e.message)||'Could not save.')+'</div>';
+    if(out) out.innerHTML = '<div style="font-size:var(--fs-2);color:var(--disp)">'+esc((e&&e.message)||'Could not save.')+'</div>';
   }finally{ btn.disabled = false; btn.textContent = was; }
 }
 /**
@@ -5320,7 +5339,7 @@ async function _cfAdoptSet(btn){
     out.innerHTML = '<div style="font-size:var(--fs-2)">'+esc(r.message||'')+'</div>'
       + ((r.added||[]).length ? '<div style="font-size:12px;color:var(--grey);margin-top:6px">Added: '+r.added.map(esc).join(', ')+'</div>' : '')
       + ((r.unchanged||[]).length ? '<div style="font-size:12px;color:var(--grey);margin-top:4px">Already there: '+r.unchanged.map(esc).join(', ')+'</div>' : '');
-  }catch(e){ out.innerHTML = '<div style="font-size:var(--fs-2);color:#B4483C">'+esc((e&&e.message)||'Could not add the columns.')+'</div>'; }
+  }catch(e){ out.innerHTML = '<div style="font-size:var(--fs-2);color:var(--disp)">'+esc((e&&e.message)||'Could not add the columns.')+'</div>'; }
   finally{ btn.disabled = false; btn.textContent = was; }
 }
 function _cfPick(input){
@@ -5332,7 +5351,7 @@ function _cfPick(input){
 async function _cfRun(btn){
   var text = (document.getElementById('cf_text')||{}).value || '';
   var out = document.getElementById('cf_out'); if(!out) return;
-  if(!text.trim()){ out.innerHTML = '<div style="font-size:var(--fs-2);color:#B4483C">Choose a file or paste some rows first.</div>'; return; }
+  if(!text.trim()){ out.innerHTML = '<div style="font-size:var(--fs-2);color:var(--disp)">Choose a file or paste some rows first.</div>'; return; }
   var was = btn ? btn.textContent : null; if(btn){ btn.disabled = true; btn.textContent = 'Reading…'; }
   try{
     var res = await api('prodPreflight', { body:{ csv: text } });
@@ -5382,7 +5401,7 @@ async function _cfRun(btn){
     var s = r.summary || {};
     var blocking = (s.errors || 0) > 0;
     var badge = blocking
-      ? '<span style="background:#FBEDEA;color:#B4483C;border-radius:6px;padding:3px 9px;font-size:11.5px;font-weight:700">'+s.errors+' row problem(s) — fix the file first</span>'
+      ? '<span style="background:var(--danger-tint);color:var(--disp);border-radius:6px;padding:3px 9px;font-size:11.5px;font-weight:700">'+s.errors+' row problem(s) — fix the file first</span>'
       : (r.ready
         ? '<span style="background:#E6F2EC;color:#2E7D5B;border-radius:6px;padding:3px 9px;font-size:11.5px;font-weight:700">Every column is placed</span>'
         : '<span style="background:#FDF3E3;color:#B07A2B;border-radius:6px;padding:3px 9px;font-size:11.5px;font-weight:700">Check the choices below, then import</span>');
@@ -5407,7 +5426,7 @@ async function _cfRun(btn){
     if(ib){ ib.disabled = blocking; ib.style.opacity = blocking ? '.5' : '1';
       ib.title = blocking ? 'Fix the row problems first' : 'Apply these choices to your catalogue'; }
   }catch(e){
-    out.innerHTML = '<div style="font-size:var(--fs-2);color:#B4483C">'+esc((e&&e.message)||'Could not read the file.')+'</div>';
+    out.innerHTML = '<div style="font-size:var(--fs-2);color:var(--disp)">'+esc((e&&e.message)||'Could not read the file.')+'</div>';
   }finally{ if(btn){ btn.disabled = false; btn.textContent = was; } }
 }
 /**
@@ -5451,7 +5470,7 @@ async function _cfImportRun(btn, decisions, out){
     btn.disabled = true; btn.style.opacity = '.5';
     if(typeof loadProducts === 'function') loadProducts();
   }catch(e){
-    out.innerHTML = '<div style="font-size:var(--fs-2);color:#B4483C">'+esc((e&&e.message)||'Could not import.')+' Nothing was changed.</div>';
+    out.innerHTML = '<div style="font-size:var(--fs-2);color:var(--disp)">'+esc((e&&e.message)||'Could not import.')+' Nothing was changed.</div>';
     btn.disabled = false;
   }finally{ btn.textContent = was; }
 }
@@ -5790,7 +5809,7 @@ function prodAvailBlock(d, id){
        <b>unknown</b> — which is not the same as zero, and is the honest answer until you say.</div>`
     : `<div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap">
          <b style="font-size:var(--fs-4);color:${a.qty > 0 ? 'var(--ok-2)' : 'var(--disp-2)'}">${a.qty} in stock</b>
-         <span style="font-size:var(--fs-1);font-weight:800;border-radius:5px;padding:1px 6px;${stale ? 'background:#f6ecd8;color:var(--warn-2)' : 'background:#e6f4ec;color:var(--ok-2)'}">${esc(a.source || 'unknown')} · ${esc(age)}</span>
+         <span style="font-size:var(--fs-1);font-weight:800;border-radius:5px;padding:1px 6px;${stale ? 'background:var(--warn-tint);color:var(--warn-2)' : 'background:var(--ok-tint);color:var(--ok-2)'}">${esc(a.source || 'unknown')} · ${esc(age)}</span>
        </div>`;
   return `<div class="sec" style="margin-top:16px">Availability</div>
     <div style="border:1px solid var(--line);border-radius:9px;padding:11px 13px;background:var(--card)">
@@ -5999,7 +6018,7 @@ function taskPanel(){
         ${_fsel ? `<span data-testid="crumb-track" onclick="clearFolder()" title="Back to all of ${esc(_tname.slice(2))}" style="cursor:pointer;color:var(--blue)">${_tname}</span><span style="color:var(--grey);font-weight:400">/</span><span data-testid="crumb-folder" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📁 ${esc(_fsel.name)}</span>`
                 : `<span data-testid="crumb-track">${_tname}</span>`}
       </b><span style="color:var(--warn-3)">— ${_tdesc}</span>${/* was #8a7c58 — 3.65:1 on the gold-soft band; 5.09 now */''}
-      ${_fsel?`<span data-testid="folder-rename" onclick="renameFolder('${esc(_fsel.folder_id)}')" title="Rename this folder" style="cursor:pointer;color:var(--blue);font-size:11.5px;margin-left:2px">Rename</span><span data-testid="folder-delete" onclick="deleteFolder('${esc(_fsel.folder_id)}')" title="Delete this folder — the chits inside are NOT deleted" style="cursor:pointer;color:#c0453b;font-size:11.5px">Delete</span>`:''}
+      ${_fsel?`<span data-testid="folder-rename" onclick="renameFolder('${esc(_fsel.folder_id)}')" title="Rename this folder" style="cursor:pointer;color:var(--blue);font-size:11.5px;margin-left:2px">Rename</span><span data-testid="folder-delete" onclick="deleteFolder('${esc(_fsel.folder_id)}')" title="Delete this folder — the chits inside are NOT deleted" style="cursor:pointer;color:var(--disp);font-size:11.5px">Delete</span>`:''}
       ${_btns}<button class="composebtn" style="${_isTrack?'':'margin-left:auto'}" onclick="toggleListHelp()">${UI.listHelp?'✕ Close':'❓ Help'}</button>
     </div>${UI.listHelp?`<div style="padding:11px 12px;border-bottom:1px solid var(--line);overflow-y:auto;max-height:52%">${assistPage(_ak)}</div>`:''}`;
   /**
@@ -6382,7 +6401,7 @@ async function openNotifications(){
       + (rest.length ? (forMe.length ? nhead('Everything else') : '') + rest.map(nrow).join('') : '')
     : '<div class="notifrow"><div class="nt" style="color:var(--grey)">No notifications yet.</div></div>';
   host.innerHTML=`<div class="notifover" onclick="closeNotif()"><div class="notifpanel" onclick="event.stopPropagation()">
-    <div class="notifhd">Activity${forMe.length?`<span style="margin-left:8px;background:var(--blue-2);color:#fff;border-radius:9px;padding:1px 7px;font-size:var(--fs-1);font-weight:800">${forMe.length} for you</span>`:''}</div>
+    <div class="notifhd">Activity${forMe.length?`<span style="margin-left:8px;background:var(--blue-2);color:var(--on-accent);border-radius:9px;padding:1px 7px;font-size:var(--fs-1);font-weight:800">${forMe.length} for you</span>`:''}</div>
     ${body}
     <div class="notiffoot">${foot}</div>
   </div></div>`;
@@ -6601,7 +6620,7 @@ const LISTCOLS = [
           +icon+' '+esc(who)+(v.sender_verified?'':'<span class="unver" title="Not a verified entity — as claimed by the sender">?</span>')+'</span>';
       }
       return esc((UI.folder==='order' ? (c.party||'') : (c.sender||c.party||'')) || '—'); } },
-  { key:'subject',  label:'Subject',  sort:'subject',  w:'minmax(150px,2fr)',   cell:function(c){ var lead=(c.unread?'<span class="udot" title="Unread"></span>':'')+(c.dispute?'<span class="rflag disp" title="Open dispute">⚑ dispute</span>':(c.dispResolved>0?'<span class="rflag disp" style="background:#e8f3ec;color:#2f7a45;border-color:#cde7d4" title="Dispute resolved">⚑ resolved</span>':''))+attnFlag(c); return '<div class="subjwrap">'+(lead?'<span class="lead">'+lead+'</span>':'')+'<span class="subjtext" title="'+esc(c.code||'')+'"><b>'+esc(c.code||'—')+'</b>'+(c.isDraft?' <span class="optchip mini">draft</span>':'')+'</span></div>'; } },
+  { key:'subject',  label:'Subject',  sort:'subject',  w:'minmax(150px,2fr)',   cell:function(c){ var lead=(c.unread?'<span class="udot" title="Unread"></span>':'')+(c.dispute?'<span class="rflag disp" title="Open dispute">⚑ dispute</span>':(c.dispResolved>0?'<span class="rflag disp" style="background:var(--ok-tint);color:var(--ok-2);border-color:#cde7d4" title="Dispute resolved">⚑ resolved</span>':''))+attnFlag(c); return '<div class="subjwrap">'+(lead?'<span class="lead">'+lead+'</span>':'')+'<span class="subjtext" title="'+esc(c.code||'')+'"><b>'+esc(c.code||'—')+'</b>'+(c.isDraft?' <span class="optchip mini">draft</span>':'')+'</span></div>'; } },
   { key:'date',     label:'Date',     sort:'date',     w:'128px',  cell:function(c){ return esc(lcDate(c.created_at)); } },
   { key:'amount',   label:'Amount',   sort:'amount',   w:'108px', align:'right', cell:function(c){ return '<span style="font-family:\'Space Mono\'">'+(c.amt?fmtMoney(c.amt,c.currency):'—')+'</span>'; } },
   { key:'status',   label:'Status',   sort:'status',   w:'92px',  cell:function(c){ return statusChip(c); } },
@@ -7093,9 +7112,9 @@ async function askAiOrder(){
     var html='<style>'+_AI_MDCSS+'</style>'
       +'<div style="font-size:var(--fs-1);color:var(--purple);background:#f2effc;border:1px solid #ddd4f5;border-radius:9px;padding:8px 11px;margin-bottom:12px;line-height:1.5">🤖 <b>AI review — informational.</b> It does not accept, pay, or commit. '+(j.usage?('<span style="color:var(--grey)">· cost $'+j.usage.est_cost_usd+'</span>'):'')+'</div>'
       +'<div class="amddoc" style="background:var(--card);border:1px solid var(--line);border-radius:9px;padding:16px 18px;max-height:56vh;overflow:auto">'+_aiMd(j.draft)+'</div>'
-      +'<div style="display:flex;gap:8px;margin-top:13px"><button onclick="_aiOrderPdf()" style="'+bs+';flex:1;border:1px solid var(--purple);background:var(--purple);color:#fff">⬇ Save as PDF</button><button onclick="closeModal()" style="'+bs+';flex:0 0 auto;border:1px solid var(--line);background:var(--card)">Done</button></div>';
+      +'<div style="display:flex;gap:8px;margin-top:13px"><button onclick="_aiOrderPdf()" style="'+bs+';flex:1;border:1px solid var(--purple);background:var(--purple);color:var(--on-purple)">⬇ Save as PDF</button><button onclick="closeModal()" style="'+bs+';flex:0 0 auto;border:1px solid var(--line);background:var(--card)">Done</button></div>';
     var b=document.getElementById('aiobody'); if(b)b.innerHTML=html;
-  }catch(e){ var b2=document.getElementById('aiobody'); if(b2)b2.innerHTML='<div style="font-size:12px;color:#8a5f11;background:#fdf3e3;border:1px solid #f0dcae;border-radius:9px;padding:10px 12px">'+esc((e&&e.message)||'AI review failed')+'</div>'; }
+  }catch(e){ var b2=document.getElementById('aiobody'); if(b2)b2.innerHTML='<div style="font-size:12px;color:var(--warn-2);background:#fdf3e3;border:1px solid #f0dcae;border-radius:9px;padding:10px 12px">'+esc((e&&e.message)||'AI review failed')+'</div>'; }
 }
 function _aiOrderPdf(){
   var d=UI._aiOrder||{}; if(!d.draft)return; var w=window.open('','_blank'); if(!w){ if(typeof toast==='function')toast('Allow pop-ups to export the PDF'); return; }
@@ -7127,12 +7146,12 @@ async function _aiOrderDoc(skill, label){
       +'<div style="font-size:var(--fs-1);color:var(--purple);background:#f2effc;border:1px solid #ddd4f5;border-radius:9px;padding:8px 11px;margin-bottom:12px;line-height:1.5">🤖 <b>AI proposal — not evidence.</b> Review &amp; confirm before use. '+(j.usage?('<span style="color:var(--grey)">· $'+j.usage.est_cost_usd+'</span>'):'')+'</div>'
       +'<div class="amddoc" style="background:var(--card);border:1px solid var(--line);border-radius:9px;padding:16px 18px;max-height:52vh;overflow:auto">'+_aiMd(j.draft)+'</div>'
       +'<div style="display:flex;gap:8px;margin-top:13px;flex-wrap:wrap">'
-        +'<button onclick="_aiOrderDocAccept()" title="File this document on your rail, referenced to this order" style="'+bs+';flex:1;border:1px solid var(--ok-3);background:var(--ok-3);color:#fff">✓ Accept &amp; file on rail</button>'
+        +'<button onclick="_aiOrderDocAccept()" title="File this document on your rail, referenced to this order" style="'+bs+';flex:1;border:1px solid var(--ok-3);background:var(--ok-3);color:var(--on-ok)">✓ Accept &amp; file on rail</button>'
         +'<button onclick="_aiOrderDocPdf()" style="'+bs+';flex:0 0 auto;border:1px solid var(--purple);background:var(--card);color:var(--purple)">⬇ PDF</button>'
         +'<button onclick="closeModal()" style="'+bs+';flex:0 0 auto;border:1px solid var(--line);background:var(--card)">Done</button>'
       +'</div>';
     var b=document.getElementById('aoddbody'); if(b)b.innerHTML=html;
-  }catch(e){ var b2=document.getElementById('aoddbody'); if(b2)b2.innerHTML='<div style="font-size:12px;color:#8a5f11;background:#fdf3e3;border:1px solid #f0dcae;border-radius:9px;padding:10px 12px">'+esc((e&&e.message)||'Draft failed')+'</div>'; }
+  }catch(e){ var b2=document.getElementById('aoddbody'); if(b2)b2.innerHTML='<div style="font-size:12px;color:var(--warn-2);background:#fdf3e3;border:1px solid #f0dcae;border-radius:9px;padding:10px 12px">'+esc((e&&e.message)||'Draft failed')+'</div>'; }
 }
 async function _aiOrderDocAccept(){
   var d=UI._aiOrderDoc||{}; if(!d.draft){ if(typeof toast==='function')toast('Nothing to file'); return; }
@@ -7165,9 +7184,9 @@ async function aiRun(skill, ctx, opts){
     var html='<style>'+(typeof _AI_MDCSS!=='undefined'?_AI_MDCSS:'')+'</style>'
       +'<div style="font-size:var(--fs-1);color:var(--purple);background:#f2effc;border:1px solid #ddd4f5;border-radius:9px;padding:8px 11px;margin-bottom:12px;line-height:1.5">🤖 <b>AI proposal — review before you rely on it.</b> '+(j.usage?('<span style="color:var(--grey)">· $'+j.usage.est_cost_usd+'</span>'):'')+'</div>'
       +'<div class="amddoc" style="background:var(--card);border:1px solid var(--line);border-radius:9px;padding:16px 18px;max-height:56vh;overflow:auto">'+_aiMd(j.draft)+'</div>'
-      +'<div style="display:flex;gap:8px;margin-top:13px"><button onclick="_aiRunPdf()" style="'+bs+';flex:1;border:1px solid var(--purple);background:var(--purple);color:#fff">⬇ Save as PDF</button><button onclick="closeModal()" style="'+bs+';flex:0 0 auto;border:1px solid var(--line);background:var(--card)">Done</button></div>';
+      +'<div style="display:flex;gap:8px;margin-top:13px"><button onclick="_aiRunPdf()" style="'+bs+';flex:1;border:1px solid var(--purple);background:var(--purple);color:var(--on-purple)">⬇ Save as PDF</button><button onclick="closeModal()" style="'+bs+';flex:0 0 auto;border:1px solid var(--line);background:var(--card)">Done</button></div>';
     var b=document.getElementById('airbody'); if(b)b.innerHTML=html;
-  }catch(e){ var b2=document.getElementById('airbody'); if(b2)b2.innerHTML='<div style="font-size:12px;color:#8a5f11;background:#fdf3e3;border:1px solid #f0dcae;border-radius:9px;padding:10px 12px">'+esc((e&&e.message)||'AI failed')+'</div>'; }
+  }catch(e){ var b2=document.getElementById('airbody'); if(b2)b2.innerHTML='<div style="font-size:12px;color:var(--warn-2);background:#fdf3e3;border:1px solid #f0dcae;border-radius:9px;padding:10px 12px">'+esc((e&&e.message)||'AI failed')+'</div>'; }
 }
 function _aiRunPdf(){
   var d=UI._aiRun||{}; if(!d.draft)return; var w=window.open('','_blank'); if(!w){ if(typeof toast==='function')toast('Allow pop-ups to export the PDF'); return; }
@@ -7214,7 +7233,7 @@ function answerPublish(id){ const c=UI.detail; if(!c)return; const subj=c.code||
     +'<label class="fl">Answer</label><textarea class="inp" id="ap_a" rows="4" placeholder="Write the answer…" style="width:100%;resize:vertical"></textarea>'
     +'<label class="fl">Context <span style="color:var(--grey);font-size:var(--fs-1)">— screens (comma) or * for everywhere</span></label><input class="inp" id="ap_c" value="*">'
     +'<div class="err" id="ap_err"></div>'
-    +'<div style="display:flex;gap:8px;margin-top:11px"><button class="composebtn" onclick="closeModal()">Cancel</button><button class="composebtn" style="background:var(--blue);color:#fff" onclick="doAnswerPublish(\''+id+'\')">🧠 Answer &amp; publish</button></div>'
+    +'<div style="display:flex;gap:8px;margin-top:11px"><button class="composebtn" onclick="closeModal()">Cancel</button><button class="composebtn" style="background:var(--blue);color:var(--on-accent)" onclick="doAnswerPublish(\''+id+'\')">🧠 Answer &amp; publish</button></div>'
     +'</div>'); }
 async function doAnswerPublish(id){ const x=document.getElementById("ap_err"); if(x)x.textContent="";
   const q=val("ap_q"), a=val("ap_a"); const ctx=(val("ap_c")||"").split(',').map(function(s){return s.trim();}).filter(Boolean);
@@ -7597,11 +7616,11 @@ function contentItems(c){
        the reader emits raw_phrase. */
     const li0=(e.live||e.original||{});
     const unver=li0.qty_unverified?`<span title="This number does not appear anywhere in their message — check it" style="font-size:var(--fs-1);font-weight:700;color:var(--warn-2);background:#faf3dd;border-radius:5px;padding:1px 6px;white-space:nowrap">⚠️ check qty</span>`
-      :(li0.qty_rejected?`<span title="${esc(li0.qty_rejected)}" style="font-size:var(--fs-1);font-weight:700;color:#c0453b;background:#fdecea;border-radius:5px;padding:1px 6px;white-space:nowrap">⚠️ qty rejected</span>`:'');
+      :(li0.qty_rejected?`<span title="${esc(li0.qty_rejected)}" style="font-size:var(--fs-1);font-weight:700;color:var(--disp);background:#fdecea;border-radius:5px;padding:1px 6px;white-space:nowrap">⚠️ qty rejected</span>`:'');
     /* ⭐ THE CUSTOMER'S OWN WORDS, under the line (b141). Athi: *"this will give confidence to the person; the
        right message is interpreted."* Everything else on the row came out of a machine — this is the only part
        that did not, so it is the only part that can settle whether the machine read it right. */
-    const rawp=li0.raw_phrase?`<div class="ir" style="border-top:0;padding-top:0;padding-bottom:8px"><span class="nm" style="font-size:11.5px;color:var(--grey)">they wrote “${esc(li0.raw_phrase)}”${li0.phrase_says!=null?` · <b style="color:#c0453b">reads as ${esc(String(li0.phrase_says))}</b>`:''}</span></div>`:'';
+    const rawp=li0.raw_phrase?`<div class="ir" style="border-top:0;padding-top:0;padding-bottom:8px"><span class="nm" style="font-size:11.5px;color:var(--grey)">they wrote “${esc(li0.raw_phrase)}”${li0.phrase_says!=null?` · <b style="color:var(--disp)">reads as ${esc(String(li0.phrase_says))}</b>`:''}</span></div>`:'';
     /**
      * ⭐ AN UNPRICED LINE MUST SAY SO ON THE ROW, and offer the fix there.
      *
@@ -7615,7 +7634,7 @@ function contentItems(c){
      */
     const nCand=(li0.ambiguous||li0.variant_candidates||[]).length;
     const pick=(!nCand||c.canAmend===false)?'':`<span onclick="event.stopPropagation();amendPick(${idx})" title="The catalogue has more than one of these — pick which, and the price comes with it"
-      style="cursor:pointer;font-size:var(--fs-1);font-weight:800;color:#8a6d1e;background:#faf3dd;border:1px solid #e6d9a8;border-radius:5px;padding:2px 7px;white-space:nowrap">⚠️ pick item${li0.ambiguous_count>nCand?` (${nCand} of ${li0.ambiguous_count})`:''}</span>`;
+      style="cursor:pointer;font-size:var(--fs-1);font-weight:800;color:var(--warn-2);background:#faf3dd;border:1px solid #e6d9a8;border-radius:5px;padding:2px 7px;white-space:nowrap">⚠️ pick item${li0.ambiguous_count>nCand?` (${nCand} of ${li0.ambiguous_count})`:''}</span>`;
     return `<div class="ir ${atts.length?'hasatt':''}" ${atts.length?`onclick="toggleLine(${idx})"`:''}>${was?`<span class="nm">${was}<div>${esc(it[0])}</div></span>`:`<span class="nm">${esc(it[0])}</span>`}<span class="qt">${esc(it[1])}</span>${pick}${unver}${clip}${pen}</div>${rawp}${strip}`;
   }).join("");
 }
@@ -7846,7 +7865,7 @@ function amdPriceText(x){
   if(!x) return '';
   const amt = (typeof cbAmount==='function') ? cbAmount(x.price) : x.price;
   const has = (typeof cbHasPrice==='function') ? cbHasPrice(x.price) : (x.price!=null);
-  if(!has) return '<span style="color:#b0641c;font-size:12px">no price</span>';
+  if(!has) return '<span style="color:var(--warn-2);font-size:12px">no price</span>';
   const cur = x.currency || ((typeof cbCurrency==='function') ? cbCurrency(x.price) : null);
   return esc((cur?cur+' ':'') + amt);
 }
@@ -7866,7 +7885,7 @@ function amdPriceText(x){
 function amdShortlistHTML(cands, cat, totalItems){
   if(!cands || !cands.length) return '';
   const l = AMD.line || {};
-  const head = '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#8a6d1e;margin-bottom:5px">'
+  const head = '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--warn-2);margin-bottom:5px">'
     + (cands.length===1 ? 'closest match' : 'which of these ' + cands.length + '?') + '</div>'
     + '<div style="font-size:11.5px;color:var(--grey);margin-bottom:9px;line-height:1.45">“'
     + esc(AMD.raw || l.particulars || '') + '” answers to '
@@ -7882,7 +7901,7 @@ function amdShortlistHTML(cands, cat, totalItems){
       + '<span style="flex:1;min-width:0">'
       + '<span style="font-size:15px;font-weight:700">' + esc(x.name || x.label || '') + '</span>'
       + (x.variant ? '<span style="font-size:13px;color:#245a9e;font-weight:700"> · ' + esc(x.variant) + '</span>' : '')
-      + (st ? '<div style="font-size:var(--fs-1);color:#b0641c;margin-top:1px">⚠️ ' + esc(x.status_text || x.status) + '</div>' : '')
+      + (st ? '<div style="font-size:var(--fs-1);color:var(--warn-2);margin-top:1px">⚠️ ' + esc(x.status_text || x.status) + '</div>' : '')
       + '</span>'
       + '<span style="text-align:right;flex:none">'
       + '<span style="font-size:var(--fs-4);font-weight:800">' + amdPriceText(x) + '</span>'
@@ -7919,7 +7938,7 @@ function amendPaint(){
      */
     const shortlist = amdShortlistHTML(cands, cat, items.length);
     const _dead = cands.length ? `
-      <div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#8a6d1e;margin-bottom:5px">
+      <div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--warn-2);margin-bottom:5px">
         ${cands.length===1?'closest match':'which of these '+cands.length+'?'}</div>
       <div style="font-size:11.5px;color:var(--grey);margin-bottom:9px;line-height:1.45">
         “${esc(AMD.raw||l.particulars||'')}” answers to ${cat.ambiguous?('<b>'+cat.ambiguous+'</b> catalogue names'):'more than one grade'} — the prices differ, so nothing was picked for you.</div>
@@ -7932,7 +7951,7 @@ function amendPaint(){
           <span style="flex:1;min-width:0">
             <span style="font-size:15px;font-weight:700">${esc(x.name||x.label)}</span>
             ${x.variant?`<span style="font-size:13px;color:#245a9e;font-weight:700"> · ${esc(x.variant)}</span>`:''}
-            ${st?`<div style="font-size:var(--fs-1);color:#b0641c;margin-top:1px">⚠️ ${esc(x.status_text||x.status)}</div>`:''}
+            ${st?`<div style="font-size:var(--fs-1);color:var(--warn-2);margin-top:1px">⚠️ ${esc(x.status_text||x.status)}</div>`:''}
           </span>
           <span style="text-align:right;flex:none">
             <span style="font-size:var(--fs-4);font-weight:800">${amdPriceText(x)}</span>
@@ -7959,7 +7978,7 @@ function amendPaint(){
   }
   if(AMD.view==='unit'){
     const units=[...new Set([].concat(l.unit?[l.unit]:[], ((cat&&cat.items)||[]).map(x=>x.unit).filter(Boolean), AMD_UNITS))].slice(0,10);
-    return _amdSheet('Which unit?', `<div style="display:flex;gap:7px;flex-wrap:wrap">${units.map(u=>`<span onclick="amdPickUnit('${esc(u)}')" style="cursor:pointer;border:1px solid ${u===l.unit?'var(--blue)':'var(--line)'};${u===l.unit?'background:var(--blue);color:#fff;font-weight:700;':''}border-radius:18px;padding:9px 18px;font-size:15px">${esc(u)}</span>`).join('')}</div>`);
+    return _amdSheet('Which unit?', `<div style="display:flex;gap:7px;flex-wrap:wrap">${units.map(u=>`<span onclick="amdPickUnit('${esc(u)}')" style="cursor:pointer;border:1px solid ${u===l.unit?'var(--blue)':'var(--line)'};${u===l.unit?'background:var(--blue);color:var(--on-accent);font-weight:700;':''}border-radius:18px;padding:9px 18px;font-size:15px">${esc(u)}</span>`).join('')}</div>`);
   }
   if(AMD.view==='note'){
     return _amdSheet('Note for this line', `<input value="${esc(l.comment||'')}" oninput="amdSetNote(this.value)" placeholder="extra spicy, deliver 7 PM…" style="width:100%;box-sizing:border-box;padding:11px;border:1px solid var(--line);border-radius:9px;font-size:15px">`);
@@ -8031,8 +8050,8 @@ function amendPaint(){
            style="width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:13.5px;margin-bottom:12px">
     ${diff}
     <div style="display:flex;gap:8px">
-      ${ic('✓ Save','Save','amendSave()','background:var(--blue);color:#fff;font-weight:800;font-size:15px')}
-      ${ic('🗑 Remove','Remove this line',"amdView('remove')",'color:#c0453b;font-size:15px')}
+      ${ic('✓ Save','Save','amendSave()','background:var(--blue);color:var(--on-accent);font-weight:800;font-size:15px')}
+      ${ic('🗑 Remove','Remove this line',"amdView('remove')",'color:var(--disp);font-size:15px')}
       ${ic('✕','Cancel','closeModal()','flex:0 0 58px')}
     </div>`);
 }
@@ -8145,7 +8164,7 @@ route();
 </script>
 <script>
 (function(){ if(!window.CBOffline) return;
-  function cbPill(s){ var p=document.getElementById("cbnet"); if(!p){ p=document.createElement("div"); p.id="cbnet"; p.style.cssText="position:fixed;bottom:10px;right:10px;z-index:9998;font:700 11px/1 system-ui,-apple-system,sans-serif;border-radius:999px;padding:5px 11px;border:1px solid #e5e8ee;background:var(--card);color:#2f7a45;box-shadow:0 1px 4px rgba(0,0,0,.08)"; (document.body||document.documentElement).appendChild(p); } if(!p) return;
+  function cbPill(s){ var p=document.getElementById("cbnet"); if(!p){ p=document.createElement("div"); p.id="cbnet"; p.style.cssText="position:fixed;bottom:10px;right:10px;z-index:9998;font:700 11px/1 system-ui,-apple-system,sans-serif;border-radius:999px;padding:5px 11px;border:1px solid #e5e8ee;background:var(--card);color:var(--ok-2);box-shadow:0 1px 4px rgba(0,0,0,.08)"; (document.body||document.documentElement).appendChild(p); } if(!p) return;
     if(s.online){ p.style.background="#fff"; p.style.color="#2f7a45"; p.textContent = s.pending ? ("\u25CF Online \u00B7 syncing "+s.pending) : "\u25CF Online"; }
     else { p.style.background="#fdf6e9"; p.style.color="#b4832a"; p.textContent = "\u26A0 Offline" + (s.pending ? " \u00B7 "+s.pending+" pending" : ""); } }
   try{ CBOffline.configure({apiBase: CFG.API_BASE, token:function(){return SESSION && SESSION.token;}, onChange:cbPill}); CBOffline.registerSW("/cb-sw.js"); }catch(e){}

@@ -37,7 +37,7 @@ async function loadFolders(){
 function _folderTree(parentId, depth){
   var kids=(UI.folders||[]).filter(function(f){ return (f.parent_id||null)===(parentId||null); });
   return kids.map(function(f){ var sel=UI.folderSel===f.folder_id;
-    return '<div style="display:flex;align-items:center;gap:6px;padding:6px 8px;padding-left:'+(8+depth*15)+'px;border-radius:9px;cursor:pointer;font-size:var(--fs-2);'+(sel?'background:#eef4fc;color:var(--blue-2);font-weight:700':'color:var(--ink-2)')+'" onclick="selectFolder(\''+f.folder_id+'\')">📁 '+esc(f.name)+'<span style="margin-left:auto;font-size:var(--fs-1);color:var(--grey)">'+(f.count||0)+'</span></div>'+_folderTree(f.folder_id, depth+1);
+    return '<div style="display:flex;align-items:center;gap:6px;padding:6px 8px;padding-left:'+(8+depth*15)+'px;border-radius:9px;cursor:pointer;font-size:var(--fs-2);'+(sel?'background:var(--blue-tint-bg);color:var(--blue-2);font-weight:700':'color:var(--ink-2)')+'" onclick="selectFolder(\''+f.folder_id+'\')">📁 '+esc(f.name)+'<span style="margin-left:auto;font-size:var(--fs-1);color:var(--grey)">'+(f.count||0)+'</span></div>'+_folderTree(f.folder_id, depth+1);
   }).join('');
 }
 function foldersScreen(){
@@ -62,12 +62,12 @@ async function loadFolderChits(){
 function _folderView(){
   var f=(UI.folders||[]).find(function(x){return x.folder_id===UI.folderSel;})||{name:'Folder'};
   var arch=!!UI.folderArch;
-  var tab=function(on,label,onclick){ return '<span onclick="'+onclick+'" style="cursor:pointer;font-size:12px;font-weight:700;padding:5px 13px;border-radius:16px;'+(on?'background:var(--blue);color:#fff':'border:1px solid var(--line);color:#586069')+'">'+label+'</span>'; };
+  var tab=function(on,label,onclick){ return '<span onclick="'+onclick+'" style="cursor:pointer;font-size:12px;font-weight:700;padding:5px 13px;border-radius:16px;'+(on?'background:var(--blue);color:var(--on-accent)':'border:1px solid var(--line);color:var(--grey-2)')+'">'+label+'</span>'; };
   var head='<div style="padding:14px 18px;border-bottom:1px solid var(--line)"><div style="font-size:17px;font-weight:800">📁 '+esc(f.name)+'</div>'
     +'<div style="font-size:11.5px;color:var(--grey);margin-top:2px">source = the sender / co-assist · destination = this folder</div>'
     +'<div style="display:flex;gap:6px;margin-top:11px;align-items:center">'+tab(!arch,'Current','setFolderArch(false)')+tab(arch,'Archive','setFolderArch(true)')
     +'<span style="margin-left:auto;font-size:var(--fs-1);color:var(--blue);cursor:pointer" onclick="renameFolder(\''+UI.folderSel+'\')">Rename</span>'
-    +'<span style="font-size:var(--fs-1);color:#c0453b;cursor:pointer;margin-left:14px" onclick="deleteFolder(\''+UI.folderSel+'\')">Delete</span></div>'
+    +'<span style="font-size:var(--fs-1);color:var(--disp);cursor:pointer;margin-left:14px" onclick="deleteFolder(\''+UI.folderSel+'\')">Delete</span></div>'
     /* ⚠️ PANES, NOT A DENSER PANE. Rules and metrics are each a full job; crushed into the chit list they would be
        unreadable on a phone and barely readable anywhere. One job per tab — the shape the compose flow already uses. */
     +'<div style="display:flex;gap:6px;margin-top:10px">'+_ftab('chits','📄 Chits')+_ftab('metrics','📊 Metrics')+_ftab('rules','⚙️ Rules')+'</div></div>';
@@ -93,7 +93,7 @@ function _folderView(){
 function _ftab(k,label){
   var on=(_FLD.tab||'chits')===k;
   return '<span data-testid="folder-tab-'+k+'" onclick="setFolderTab(\''+k+'\')" style="cursor:pointer;font-size:12px;font-weight:700;padding:5px 13px;border-radius:16px;'
-    +(on?'background:var(--chrome);color:#fff':'border:1px solid var(--line);color:#586069')+'">'+label+'</span>';
+    +(on?'background:var(--chrome);color:var(--chrome-on)':'border:1px solid var(--line);color:var(--grey-2)')+'">'+label+'</span>';
 }
 function newFolder(){
   promptAsk('New folder', { label:'Folder name', placeholder:'e.g. Awaiting payment', okLabel:'Create' },
@@ -118,7 +118,7 @@ function deleteFolder(id){
 async function moveChit(chitId){
   if(UI.folders===undefined){ try{ var rr=await api('foldersList'); UI.folders=(rr&&rr.folders)||[]; }catch(e){ UI.folders=[]; } }   // self-load so Move works from Task, not just the Folders screen
   var opts=(UI.folders||[]).map(function(f){ return '<div style="padding:9px 12px;border-bottom:1px solid #f0f2f4;cursor:pointer" onclick="_doMove(\''+chitId+'\',\''+f.folder_id+'\')">📁 '+esc(f.name)+'</div>'; }).join('');
-  var body='<div style="max-height:320px;overflow:auto">'+(opts||'<div style="padding:12px;color:var(--grey);font-size:12px">No folders yet — create one first.</div>')+'<div style="padding:10px 12px;color:#c0453b;cursor:pointer;border-top:1px solid var(--line)" onclick="_doMove(\''+chitId+'\',null)">↩ Remove from folder (back to mailbox)</div></div>';
+  var body='<div style="max-height:320px;overflow:auto">'+(opts||'<div style="padding:12px;color:var(--grey);font-size:12px">No folders yet — create one first.</div>')+'<div style="padding:10px 12px;color:var(--disp);cursor:pointer;border-top:1px solid var(--line)" onclick="_doMove(\''+chitId+'\',null)">↩ Remove from folder (back to mailbox)</div></div>';
   if(typeof modal==='function') modal('<div class="mhd"><div class="t">📁 Move to folder</div></div><div class="mbody" style="padding:0">'+body+'</div>');
 }
 async function _doMove(chitId, folderId){
@@ -323,7 +323,7 @@ function _gsMoney(v, mixed){
 }
 function _groupSumPane(){
   if (_FLD.busy && !_FLD.gs) return '<div style="padding:18px;color:var(--grey);font-size:var(--fs-2)"><span class="spin"></span> adding it up…</div>';
-  if (_FLD.err) return '<div style="padding:18px;color:#c0453b;font-size:var(--fs-2)">' + esc(_FLD.err) + '</div>';
+  if (_FLD.err) return '<div style="padding:18px;color:var(--disp);font-size:var(--fs-2)">' + esc(_FLD.err) + '</div>';
   var g = _FLD.gs; if (!g) return '<div style="padding:18px;color:var(--grey);font-size:var(--fs-2)">Nothing to add up.</div>';
   var out = '<div style="padding:14px 18px">';
 
@@ -336,7 +336,7 @@ function _groupSumPane(){
      for a question they did not ask. Seen live while building this. So the claim is checked against the reply:
      we asked for a selection, and if the server did not confirm one, say the selection was ignored. */
   if (_FLD.gsIds && _FLD.gsIds.length && !g.selected) {
-    out += '<div style="background:#fbeceb;border:1px solid #f0c9c6;border-radius:9px;padding:8px 11px;font-size:11.5px;color:#8c3a34;margin-bottom:10px">'
+    out += '<div style="background:#fbeceb;border:1px solid #f0c9c6;border-radius:9px;padding:8px 11px;font-size:11.5px;color:var(--disp-2);margin-bottom:10px">'
       + '⚠️ <b>Your selection was ignored.</b> This server does not support totalling a ticked set yet, so the figures below are for the <b>whole track</b>, not your ' + _FLD.gsIds.length + ' chits.</div>';
   } else if (g.selected) {
     var miss = (g.selection_requested || 0) - (g.chits || 0);
@@ -345,7 +345,7 @@ function _groupSumPane(){
       + (miss > 0 ? ' ⚠️ ' + miss + ' of the ' + g.selection_requested + ' you ticked are not on this track and were left out.' : '')
       + '</div>';
   } else if (UI.folderSel) {
-    var b = function(on, lbl, arg){ return '<span onclick="gsScope(' + arg + ')" style="cursor:pointer;border:1px solid var(--line);border-radius:9px;padding:3px 10px;font-size:11.5px;margin-right:6px;' + (on ? 'background:var(--blue);color:#fff;border-color:var(--blue);font-weight:700' : 'background:var(--card)') + '">' + lbl + '</span>'; };
+    var b = function(on, lbl, arg){ return '<span onclick="gsScope(' + arg + ')" style="cursor:pointer;border:1px solid var(--line);border-radius:9px;padding:3px 10px;font-size:11.5px;margin-right:6px;' + (on ? 'background:var(--blue);color:var(--on-accent);border-color:var(--blue);font-weight:700' : 'background:var(--card)') + '">' + lbl + '</span>'; };
     out += '<div style="margin-bottom:10px">' + b(!_FLD.gsAll, 'This folder', 'false') + b(!!_FLD.gsAll, 'Whole track — every folder', 'true') + '</div>';
   }
 
@@ -366,7 +366,7 @@ function _groupSumPane(){
       var name = esc(l.item) + (l.variant ? ' <span style="color:var(--grey);font-weight:600">· ' + esc(l.variant) + '</span>' : '');
       var head = '<div onclick="gsToggle(' + i + ')" style="display:flex;align-items:center;cursor:pointer;padding:7px 0;border-top:1px solid var(--line);font-size:13px">'
         + '<span style="flex:1;min-width:0">' + (open ? '▾' : '▸') + ' ' + name
-        + (l.matched_by_spelling ? ' <span title="matched through a misspelling" style="font-size:var(--fs-1);color:#8a6d1f">≈</span>' : '') + '</span>'
+        + (l.matched_by_spelling ? ' <span title="matched through a misspelling" style="font-size:var(--fs-1);color:var(--warn-2)">≈</span>' : '') + '</span>'
         /**
          * ⚠️ A SPLIT TOTAL IS NOT ZERO — SHOW A DASH.
          *
@@ -381,7 +381,7 @@ function _groupSumPane(){
          */
         + '<span style="width:110px;text-align:right;font-weight:800">'
         + (l.unit_split
-            ? '<span style="color:#c0453b" title="units that cannot be added — see the split below">—</span>'
+            ? '<span style="color:var(--disp)" title="units that cannot be added — see the split below">—</span>'
             : esc(String(l.total)) + ' ' + esc(l.canonical_unit || ''))
         + '</span>'
         + '<span style="width:130px;text-align:right">' + _gsMoney(l.value, l.value_mixed) + '</span>'
@@ -402,7 +402,7 @@ function _groupSumPane(){
           }).join('')
         + '</div>' : '';
       var partial = (open && l.value_partial) ? '<div style="font-size:var(--fs-1);color:var(--warn-2);padding:0 0 8px 16px">⚠️ ' + l.value_partial.unpriced + ' of ' + (l.value_partial.priced + l.value_partial.unpriced) + ' have no price yet — the cost above is the priced part only, <b>not</b> the cost of this line.</div>' : '';
-      var split = l.unit_split ? '<div style="font-size:var(--fs-1);color:#c0453b;padding:0 0 8px 16px">⚠️ ' + esc(l.flagged || 'unit split') + ' — ' + l.unit_split.map(function(u){ return esc(u.qty + ' ' + u.unit); }).join(' + ') + '</div>' : '';
+      var split = l.unit_split ? '<div style="font-size:var(--fs-1);color:var(--disp);padding:0 0 8px 16px">⚠️ ' + esc(l.flagged || 'unit split') + ' — ' + l.unit_split.map(function(u){ return esc(u.qty + ' ' + u.unit); }).join(' + ') + '</div>' : '';
       return head + rows + partial + split;
     }).join('');
   } else {
@@ -462,7 +462,7 @@ function _reconStrip(){
   var sums = '<b>' + r.total + '</b> total &nbsp;=&nbsp; <b>' + r.unfiled + '</b> unfiled &nbsp;+&nbsp; <b>' + r.filed + '</b> in folders';
   var verdict = r.reconciles
     ? '<span style="color:var(--ok-3);font-weight:800">✓ adds up</span>'
-    : '<span style="color:#c0453b;font-weight:800">✗ ' + Math.abs(((r.discrepancy || {}).missing) || 0) + ' unaccounted for</span>';
+    : '<span style="color:var(--disp);font-weight:800">✗ ' + Math.abs(((r.discrepancy || {}).missing) || 0) + ' unaccounted for</span>';
   /* ⚠️ `own` AND `tree` BOTH, never one. A parent showing only its own rows makes the tree look smaller than its
      branches; showing only the roll-up makes a parent look full when everything is actually one level down. */
   var rows = fs.length ? fs.map(function(f){
@@ -480,7 +480,7 @@ function _reconStrip(){
     + '<div style="font-size:13px;margin-top:3px">' + sums + ' &nbsp; ' + verdict + '</div>'
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">' + (r.overall || {}).assigned + ' assigned · ' + (r.overall || {}).unassigned + ' unassigned — a chit can be open and unassigned, and that is the pile worth seeing.</div>'
     + '<div style="margin-top:8px">' + rows + '</div>'
-    + (r.reconciles ? '' : '<div style="font-size:11.5px;color:#c0453b;margin-top:7px">⚠️ Filed count and the sum of the folders disagree. A chit is filed into a folder this login cannot see.</div>')
+    + (r.reconciles ? '' : '<div style="font-size:11.5px;color:var(--disp);margin-top:7px">⚠️ Filed count and the sum of the folders disagree. A chit is filed into a folder this login cannot see.</div>')
     + '</div>';
 }
 function _folderMetricsPane(){
@@ -596,7 +596,7 @@ function _ruleRow(r, i, n){
         + mvBtn('↓', i < n - 1, 'Run later — the rule below will beat this one',      'ruleMove(\'' + esc(r.rule_id) + '\',1)')
         + '</span>' : '')
     + '<label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" data-testid="rule-enabled" ' + (r.enabled ? 'checked' : '') + ' onchange="ruleToggle(\'' + esc(r.rule_id) + '\',this.checked)"><span style="font-weight:700;font-size:13px">' + esc(r.name || 'Rule') + '</span></label>'
-    + '<span style="margin-left:auto;font-size:var(--fs-1);color:#c0453b;cursor:pointer" onclick="ruleDelete(\'' + esc(r.rule_id) + '\')">Delete</span></div>'
+    + '<span style="margin-left:auto;font-size:var(--fs-1);color:var(--disp);cursor:pointer" onclick="ruleDelete(\'' + esc(r.rule_id) + '\')">Delete</span></div>'
     /* ⚠️ AT TRACK LEVEL A RULE MUST NAME ITS DESTINATION. "file here" is only meaningful standing inside the
        folder; in the all-rules list it would read as if every rule filed into the same place, which is the exact
        confusion this list exists to remove. */
@@ -624,7 +624,7 @@ function _folderRulesPane(){
     + '</div>';
 
   if (_FLD.rulesNote) out += '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;font-size:11.5px;color:var(--warn-3);margin-bottom:9px">' + esc(_FLD.rulesNote) + '</div>';
-  if (_FLD.err) out += '<div style="color:#c0453b;font-size:12px;margin-bottom:8px">' + esc(_FLD.err) + '</div>';
+  if (_FLD.err) out += '<div style="color:var(--disp);font-size:12px;margin-bottom:8px">' + esc(_FLD.err) + '</div>';
 
   out += rules.length ? rules.map(function(r, i){ return _ruleRow(r, i, rules.length); }).join('') : '<div style="color:var(--grey);font-size:var(--fs-2);padding:6px 0 12px">No rules yet. Everything arrives unfiled until you add one.</div>';
 

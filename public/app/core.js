@@ -75,7 +75,7 @@ function _netBusy(on){
     const s=document.createElement('style');
     s.textContent='@keyframes nbspin{to{transform:rotate(360deg)}}'
       +'@keyframes nbin{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}'
-      +'#netbusy-card{display:inline-flex;align-items:center;gap:9px;background:var(--chrome);color:#fff;'
+      +'#netbusy-card{display:inline-flex;align-items:center;gap:9px;background:var(--chrome);color:var(--chrome-on);'
       +'font:600 12.5px/1 "Segoe UI",system-ui,sans-serif;padding:11px 16px;border-radius:22px;'
       +'box-shadow:0 6px 22px rgba(15,46,61,.30);animation:nbin .14s ease-out}'
       +'#netbusy-ring{width:14px;height:14px;border:2px solid rgba(255,255,255,.32);border-top-color:#fff;'

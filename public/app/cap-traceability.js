@@ -78,7 +78,7 @@ function _traceBatchPicker(){
       + '<div style="display:flex;align-items:center;gap:7px"><b style="font-size:13px">' + name + '</b>'
         + (b.is_origin ? '<span style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);background:#eaf1fb;border-radius:5px;padding:1px 5px">ORIGIN</span>' : '') + '</div>'
       + (meta ? '<div style="font-size:var(--fs-1);color:var(--grey)">' + meta + '</div>' : '')
-      + '<div style="font-family:monospace;font-size:var(--fs-1);color:#8a94a3;word-break:break-all">' + esc(b.chit_id) + '</div>'
+      + '<div style="font-family:monospace;font-size:var(--fs-1);color:var(--grey-3);word-break:break-all">' + esc(b.chit_id) + '</div>'
       + '</div>';
   }).join('');
   return '<div style="padding:10px 18px 4px">'

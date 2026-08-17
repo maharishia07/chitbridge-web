@@ -320,7 +320,7 @@ function _subjectTabHtml(){
     +'<div style="font-size:12px;color:var(--ink);line-height:1.55;margin-bottom:11px">Each item is a <b>governed obligation, replicated per party</b> — your own sealed copy, disputable on divergence. It is the <b>noun</b> everything else acts on; the capabilities are the <b>verbs</b>. Two tracks — <b>Task</b> (coming to you) and <b>Order</b> (going from you) — carry it; the <b>wagon is your business</b>, and the rail never opens it.</div>'
     +'<div style="font-size:var(--fs-1);font-weight:700;color:var(--ink);margin-bottom:5px">Why it isn&rsquo;t just email — or a shared workspace</div>'
     +'<table style="width:100%;border-collapse:collapse;font-size:var(--fs-1);border:1px solid var(--line);border-radius:9px;overflow:hidden">'
-      +'<tr style="background:#f4f4f2;color:var(--grey);font-weight:700;font-size:var(--fs-1)"><td style="padding:6px 9px">Them</td><td style="padding:6px 9px">Chit &amp; Bridge — the governed rail</td></tr>'
+      +'<tr style="background:var(--neutral-tint);color:var(--grey);font-weight:700;font-size:var(--fs-1)"><td style="padding:6px 9px">Them</td><td style="padding:6px 9px">Chit &amp; Bridge — the governed rail</td></tr>'
       + vs('<b>Email:</b> carries anything, guarantees nothing','Every item <b>sealed, isolated, disputable</b>')
       + vs('<b>Confluence:</b> one shared document','N sealed copies — one per party')
       + vs('Edit-in-place, last-writer-wins','Append-only; atomic per-copy fan-out')
@@ -364,7 +364,7 @@ function _foundTabHtml(){
 /* ── GOVERNANCE STACK tab — the full architecture, universe → chit (the governance-stack.svg). ── */
 function _stackTabHtml(){
   return '<div style="padding:12px 13px">'
-    +'<div style="font-size:12px;color:var(--grey);margin-bottom:9px;line-height:1.55">The full governance stack — <b>universe → chit</b>, one spine. Every value is an <b>attribute (data)</b> the engine reads; nothing governance lives in code. Colour: <span style="color:var(--ok-3);font-weight:700">proven live</span> · <span style="color:#8a6d1f;font-weight:700">vision / design</span>. Spinning a new platform (e.g. AWS · Mexico · service-desk) = one row.</div>'
+    +'<div style="font-size:12px;color:var(--grey);margin-bottom:9px;line-height:1.55">The full governance stack — <b>universe → chit</b>, one spine. Every value is an <b>attribute (data)</b> the engine reads; nothing governance lives in code. Colour: <span style="color:var(--ok-3);font-weight:700">proven live</span> · <span style="color:var(--warn-2);font-weight:700">vision / design</span>. Spinning a new platform (e.g. AWS · Mexico · service-desk) = one row.</div>'
     +'<img src="/governance-stack.svg" alt="Chit &amp; Bridge governance stack — universe to chit" loading="lazy" style="width:100%;height:auto;border:1px solid var(--line);border-radius:12px;background:var(--card)"/>'
   +'</div>';
 }
@@ -422,7 +422,7 @@ function _secTabHtml(){
       <div style="font-size:var(--fs-1);color:var(--grey);line-height:1.4"><b>Raise it:</b> ${esc(s.raise)}</div>
     </div>`; };
   return `<div style="padding:12px 13px;overflow:visible">
-    <div style="font-size:11.5px;color:var(--grey);margin-bottom:10px">What protects your data today (verified from code, 2026-07-05). Honest levels: <span style="color:var(--ok-3)">✓ strong</span> · <span style="color:#a9791f">◐ partial</span> · <span style="color:#c0453b">○ gap</span>.</div>
+    <div style="font-size:11.5px;color:var(--grey);margin-bottom:10px">What protects your data today (verified from code, 2026-07-05). Honest levels: <span style="color:var(--ok-3)">✓ strong</span> · <span style="color:#a9791f">◐ partial</span> · <span style="color:var(--disp)">○ gap</span>.</div>
     ${SEC_POSTURE.map(row).join('')}
     <div style="font-size:var(--fs-1);color:var(--grey);text-align:center;padding-top:2px">Encryption in transit (TLS) is solid; at-rest is provider disk-level (not per-column) and there is no external pen-test yet — so security is honestly capped ≤ L4 until audited.</div>
   </div>`;
@@ -484,7 +484,7 @@ function _edgeTabHtml(){
     +'</div>'
     +'<div style="font-size:var(--fs-1);color:var(--grey);text-align:center;padding-top:10px;border-top:1px solid var(--line);margin-top:14px">Closest analog: <b>ServiceNow</b> — one records/workflow facility, many classified lifecycles (ITSM/HR/dev). It proves the model has takers — and it won by starting <i>narrow</i> (an ITIL desk) then generalizing. Our claimed differentiator vs it: accessibility &amp; cost for the small player.</div>'
     +'<div style="border:1px solid var(--line);border-radius:9px;padding:11px 12px;margin-top:14px;background:#faf9f6">'
-      +'<div style="font-size:var(--fs-1);font-weight:700;color:#8a6d1f;margin-bottom:5px">🧭 Critic&rsquo;s lens (we hold ourselves to it)</div>'
+      +'<div style="font-size:var(--fs-1);font-weight:700;color:var(--warn-2);margin-bottom:5px">🧭 Critic&rsquo;s lens (we hold ourselves to it)</div>'
       +'<div style="font-size:var(--fs-1);color:var(--ink);line-height:1.5">The honest risk: the <b>model is ahead of adoption</b> — elegant &ne; adopted. The proof that counts is <b>one real user on one blueprint</b>, not a better diagram. As a <b>concept/POC this existed for years</b>; as a <b>product it is ~2 weeks old</b> — so it is early <i>by timeline</i>, and we name what is unproven rather than oversell it.</div>'
     +'</div>'
     +'<div style="margin-top:13px"><div style="font-size:var(--fs-1);font-weight:700;color:var(--ink);margin-bottom:6px">Path to confident validation</div>'
@@ -631,7 +631,7 @@ function _openLegendImpl(){
       : `<span title="Governance maturity — 1 declared · 2 designed · 3 enforced+isolated · 4 governed+provable · 5 audited/certified" style="font-size:var(--fs-1);font-weight:800;color:#1f6f4a;background:#e7f4ee;border:1px solid #bfe0cf;border-radius:6px;padding:1px 7px">gov · L${c.gov}${t}</span>`;
     const under=c.governedUnder?`<span style="font-size:var(--fs-1);color:var(--grey)">under <b style="color:#2f6f4a;font-weight:600">${esc(c.governedUnder)}</b></span>`:'';
     const mech=(c.governedBy&&c.governedBy.length)?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:5px">${govChips(c.governedBy,'#1f6f4a','#eef6f0','#cfe4d7')}</div>`:'';
-    const gap=(c.govGap&&c.govGap.length)?`<div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-top:5px"><span style="font-size:var(--fs-1);font-weight:700;color:#8a6d1f">to L${c.govTarget||4}:</span>${govChips(c.govGap,'#8a6d1f','#fbf6e9','#e8dab4')}</div>`:'';
+    const gap=(c.govGap&&c.govGap.length)?`<div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-top:5px"><span style="font-size:var(--fs-1);font-weight:700;color:var(--warn-2)">to L${c.govTarget||4}:</span>${govChips(c.govGap,'#8a6d1f','#fbf6e9','#e8dab4')}</div>`:'';
     return `<div style="border:1px solid #d7e6dc;background:#f6faf7;border-radius:9px;padding:7px 9px;margin:0 0 9px">
       <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap">${badge}${under}</div>${mech}${gap}
     </div>`;

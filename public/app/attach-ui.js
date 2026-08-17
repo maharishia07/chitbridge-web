@@ -171,7 +171,7 @@ function cbAttachList(atts, opts){
   return (opts.title ? '<div style="font-size:11.5px;color:var(--grey);margin:6px 0 4px">' + esc(opts.title)
                        + ' · ' + rows.length + '</div>' : '')
     + '<div data-testid="cb-attach-list" style="display:flex;flex-wrap:wrap;align-items:center">' + html + '</div>'
-    + (opts.note ? '<div style="font-size:var(--fs-1);color:#b0641c;margin-top:2px">' + esc(opts.note) + '</div>' : '');
+    + (opts.note ? '<div style="font-size:var(--fs-1);color:var(--warn-2);margin-top:2px">' + esc(opts.note) + '</div>' : '');
 }
 
 /**
@@ -205,7 +205,7 @@ function cbAttachButton(ctx){
     + ' style="width:auto;flex:0 0 auto;margin:0;padding:6px 12px;font-size:11.5px;font-weight:700;'
     + 'border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink);cursor:pointer">'
     + esc(ctx.label || '📎 Attach a file') + '</button>'
-    + (ctx.note ? '<span style="font-size:var(--fs-1);color:#b0641c;margin-left:8px">' + esc(ctx.note) + '</span>' : '');
+    + (ctx.note ? '<span style="font-size:var(--fs-1);color:var(--warn-2);margin-left:8px">' + esc(ctx.note) + '</span>' : '');
 }
 
 /* Read one File to bare base64 (the data: prefix stripped — the server strips it too, but sending it doubles

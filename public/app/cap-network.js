@@ -706,7 +706,7 @@ function netBuild(){
   var chip = function(v, label){ return '<span style="display:inline-block;font-size:11.5px;background:#eef2f7;border-radius:6px;padding:2px 8px;margin:2px 4px 2px 0"><b>' + v + '</b> ' + label + '</span>'; };
   var totals = '<div style="padding:12px 16px;border-bottom:1px solid var(--line)">'
     + chip(t.owned, 'entities + keys') + chip(t.partners, 'partner handshake' + (t.partners === 1 ? '' : 's')) + chip(t.cat, 'catalogue' + (t.cat === 1 ? '' : 's')) + chip(t.co, 'co-assists') + chip(t.std, 'standards') + chip(t.price, 'prices') + chip(t.trig, 'triggers') + chip(t.adapt, 'adapters')
-    + (t.warn ? '<span style="display:inline-block;font-size:11.5px;background:#fbeeec;color:var(--disp-2);border-radius:6px;padding:2px 8px;margin:2px 4px"><b>' + t.warn + '</b> ⚠ to resolve</span>' : '<span style="display:inline-block;font-size:11.5px;color:var(--ok-2);padding:2px 8px">✓ no blockers</span>')
+    + (t.warn ? '<span style="display:inline-block;font-size:11.5px;background:var(--danger-tint);color:var(--disp-2);border-radius:6px;padding:2px 8px;margin:2px 4px"><b>' + t.warn + '</b> ⚠ to resolve</span>' : '<span style="display:inline-block;font-size:11.5px;color:var(--ok-2);padding:2px 8px">✓ no blockers</span>')
     + '</div>';
   var blocks = plans.filter(function(p){ return !p.node.root || p.lines.length > 1; }).map(function(p){
     var n = p.node;
@@ -907,7 +907,7 @@ function _netGlobalChip(n){
   var netCty = String((typeof SESSION !== 'undefined' && SESSION.country) || '').toUpperCase();
   if (n.root) {
     if (!netCur && !netCty) return '';
-    return '<div style="font-size:var(--fs-1);color:#8a94a3;margin:2px 0 0 13px">'
+    return '<div style="font-size:var(--fs-1);color:var(--grey-3);margin:2px 0 0 13px">'
       + esc([netCur, netCty].filter(Boolean).join(' · ')) + ' <span style="opacity:.8">— the network\'s</span></div>';
   }
   var p = n.place || {};
@@ -922,7 +922,7 @@ function _netGlobalChip(n){
 function _netTree(parentKey, depth){
   var kids = (UI.net.nodes || []).filter(function(n){ return n.parent_key === (parentKey || null); }).sort(_netByName);
   return kids.map(function(n){ var sel = UI.net.sel === n.key; var dots = _capDots(n);
-    return '<div onclick="netSelect(\'' + n.key + '\')" style="cursor:pointer;padding:7px 9px;padding-left:' + (9 + depth * 16) + 'px;border-radius:9px;font-size:var(--fs-2);' + (sel ? 'background:#eef4fc;color:var(--blue-2);font-weight:700' : 'color:var(--ink-2)') + '">'
+    return '<div onclick="netSelect(\'' + n.key + '\')" style="cursor:pointer;padding:7px 9px;padding-left:' + (9 + depth * 16) + 'px;border-radius:9px;font-size:var(--fs-2);' + (sel ? 'background:var(--blue-tint-bg);color:var(--blue-2);font-weight:700' : 'color:var(--ink-2)') + '">'
       + (n.parent_key ? '└ ' : '◆ ') + esc(n.name) + (n.owned ? '' : ' <span title="partner">🤝</span>')
       // The visibility flag, in the tree. It is the decision this whole page exists to make, so it must be
       // readable across the WHOLE network at a glance — not one node at a time. Re-rendered by netSetExposure,
@@ -934,7 +934,7 @@ function _netTree(parentKey, depth){
       // captured on the first day and then only ever shown on the node you happened to have selected — so the
       // tree read as a list of names, and a name does not tell you why a branch exists. One line, clamped, with
       // the full text on hover: it must add meaning without turning the tree into a document.
-      + (n.purpose ? '<div title="' + esc(n.purpose) + '" style="font-size:var(--fs-1);color:#8a94a3;line-height:1.4;'
+      + (n.purpose ? '<div title="' + esc(n.purpose) + '" style="font-size:var(--fs-1);color:var(--grey-3);line-height:1.4;'
           + 'margin:2px 0 0 13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(n.purpose) + '</div>' : '')
       // ⚠️ SHOW THE EXCEPTION, NOT THE RULE. Athi, 2026-08-08: *"if the currency changes, then we can bring it in
       // the left menu — otherwise only the top node shows the currency and country."* Repeating "INR · IN" on every
@@ -982,10 +982,10 @@ function _netMemberScreen(){
       + ' <span style="font-size:var(--fs-1);color:var(--grey);font-family:ui-monospace,Menlo,monospace">' + esc(bid) + '</span>'
       // b117 — carried onto the store at Build, so a MEMBER can read why each branch exists. Until then this tree
       // was a list of names, which tells a new store nothing about the network it just joined.
-      + (n.purpose ? '<div style="font-size:var(--fs-1);color:#8a94a3;margin-top:2px;line-height:1.4">' + esc(n.purpose) + '</div>' : '')
+      + (n.purpose ? '<div style="font-size:var(--fs-1);color:var(--grey-3);margin-top:2px;line-height:1.4">' + esc(n.purpose) + '</div>' : '')
       // b119 — where it is, for a member reading the network. A store you may be asked to transfer goods to is a
       // place before it is a name.
-      + ((n.city || n.lat != null) ? '<div style="font-size:var(--fs-1);color:#8a94a3;margin-top:1px">📍 '
+      + ((n.city || n.lat != null) ? '<div style="font-size:var(--fs-1);color:var(--grey-3);margin-top:1px">📍 '
           + esc(n.city || '') + (n.lat != null && n.lng != null ? ' · locatable' : ' · not locatable')
           + (n.service_km ? ' · serves ' + esc(n.service_km) + ' km' : '') + '</div>' : '')
       + '</div>';
@@ -1134,7 +1134,7 @@ function _netAvailBody(){
           : '<span style="font-size:11.5px;color:var(--grey)">no price set</span>')
       // The provenance of the number, always. A quantity without it is not an answer.
       + '<span style="margin-left:auto;font-size:var(--fs-1);font-weight:800;letter-spacing:.03em;border-radius:5px;padding:1px 6px;'
-      + (f.stale ? 'background:#f6ecd8;color:var(--warn-2)' : 'background:#e6f4ec;color:var(--ok-2)') + '">'
+      + (f.stale ? 'background:var(--warn-tint);color:var(--warn-2)' : 'background:var(--ok-tint);color:var(--ok-2)') + '">'
       + esc((r.source || 'no source') + ' · ' + (f.label || 'no date')) + '</span></div>'
       + (unknown
           ? '<div style="font-size:var(--fs-1);color:var(--warn-2);margin-top:4px">This store carries the item but has never reported a quantity. <b>Unknown is not zero</b> — worth asking before routing around it.</div>'
@@ -1532,7 +1532,7 @@ function _netBrowseBody(){
       + (st.km !== null && st.km !== undefined ? '<span style="font-size:12px;color:var(--grey)">' + st.km + ' km</span>' : '')
       + (st.currency ? '<span style="font-size:var(--fs-1);color:var(--grey)">' + esc(st.currency) + '</span>' : '')
       + '<span style="margin-left:auto;color:var(--blue);font-size:var(--fs-2)">open catalogue ›</span>'
-      + (st.purpose ? '<div style="width:100%;font-size:11.5px;color:#8a94a3">' + esc(st.purpose) + '</div>' : '')
+      + (st.purpose ? '<div style="width:100%;font-size:11.5px;color:var(--grey-3)">' + esc(st.purpose) + '</div>' : '')
       + '</div>';
   }).join('');
 }
@@ -1848,7 +1848,7 @@ function _catConfig(n){
   if (tab === 'purpose') {
     body = '<label style="font-size:var(--fs-1);color:var(--grey);display:block;margin-top:10px">Purpose <span style="color:var(--faint,var(--grey-3))">(what this catalogue is for — in your words)</span></label>'
       + '<textarea oninput="netSetCatStory(\'' + n.key + '\',this.value)" onchange="netCatTab(\'' + n.key + '\',\'purpose\')" placeholder="e.g. Gather stock from ERP + Tally, work out the reorder, and send POs to my suppliers by EOQ." rows="3" style="width:100%;margin-top:4px;box-sizing:border-box;resize:vertical;' + _in + '">' + esc(c.story || '') + '</textarea>'
-      + '<div style="margin-top:6px;padding:7px 9px;border:1px dashed #b7a3d6;border-radius:9px;background:#f7f4fc;font-size:var(--fs-1);color:#6a4fa0">🤖 An AI assistant will read this, pull the canonical fields for this material / service, check them against your existing systems, and propose the routing. <i>Wiring later — route by hand for now.</i></div>'
+      + '<div style="margin-top:6px;padding:7px 9px;border:1px dashed #b7a3d6;border-radius:9px;background:#f7f4fc;font-size:var(--fs-1);color:var(--purple-2)">🤖 An AI assistant will read this, pull the canonical fields for this material / service, check them against your existing systems, and propose the routing. <i>Wiring later — route by hand for now.</i></div>'
       + _catInfer(n)
       + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:8px">Next: <b>Identity</b> → name the product · <b>Requirements</b> → route each field · <b>Feed back</b> → where it goes · <b>Chain</b> → the finished picture.</div>';
   } else if (tab === 'identity') {
@@ -1887,7 +1887,7 @@ function _catConfig(n){
 function _methodControl(m, cur){
   cur = cur || (typeof SESSION !== 'undefined' && SESSION.currency) || '';
   var inp = 'display:inline-block;border:1px solid var(--line);border-radius:5px;padding:2px 8px;font-size:11.5px;color:var(--grey);background:#f5f7f9';
-  var btn = 'display:inline-block;background:var(--blue-2);color:#fff;border-radius:5px;padding:3px 10px;font-size:11.5px;font-weight:600';
+  var btn = 'display:inline-block;background:var(--blue-2);color:var(--on-accent);border-radius:5px;padding:3px 10px;font-size:11.5px;font-weight:600';
   if (m === 'text') return '<span style="font-size:11.5px;color:var(--grey)">Information only — nothing to order.</span>';
   if (m === 'qty') return '<span style="' + inp + '">Qty ▢</span> &nbsp; <span style="' + btn + '">Order</span>';
   if (m === 'cart') return '<span style="' + inp + '">Qty ▢</span> <span style="font-size:11.5px;color:var(--grey)">× ' + esc(cur) + ' price</span> &nbsp; <span style="' + btn + '">Add to cart</span>';
@@ -1930,7 +1930,7 @@ function _catChain(n){
   }).join('');
   cards += card('Feed back', 'record pushed out', fbCol, fb.map(function(x){ return chip(x.system + (x.onRail ? ' · C&B' : (x.format ? ' · ' + x.format : '')), fbCol); }).join(''), fb.length);
   var trigs = (c.triggers || []).filter(function(t){ return t.watch || t.value; });
-  var loopBanner = trigs.length ? ('<div style="margin-top:8px;padding:6px 10px;border:1px solid #cdbfe6;border-radius:9px;background:#f7f4fc;font-size:var(--fs-1);color:#6a4fa0">⟳ ' + trigs.map(function(t){ return 'when <b>' + esc(t.watch || '?') + '</b> ' + esc(t.op || '') + ' <b>' + esc(t.value || '?') + '</b> → <b>' + esc(t.action || '') + '</b>' + (t.target ? ' to ' + esc(t.target) : ''); }).join(' · ') + '</div>') : '';
+  var loopBanner = trigs.length ? ('<div style="margin-top:8px;padding:6px 10px;border:1px solid #cdbfe6;border-radius:9px;background:#f7f4fc;font-size:var(--fs-1);color:var(--purple-2)">⟳ ' + trigs.map(function(t){ return 'when <b>' + esc(t.watch || '?') + '</b> ' + esc(t.op || '') + ' <b>' + esc(t.value || '?') + '</b> → <b>' + esc(t.action || '') + '</b>' + (t.target ? ' to ' + esc(t.target) : ''); }).join(' · ') + '</div>') : '';
   var bomList = (c.bom || []).filter(function(b){ return b.item; });
   var bomBanner = bomList.length ? ('<div style="margin-top:6px;font-size:var(--fs-1);color:var(--grey)">Made of: ' + bomList.map(function(b){ return esc(b.item) + '×' + (b.qty != null ? b.qty : 1); }).join(' · ') + ' <i>(reorder cascades)</i></div>') : '';
   var stds = (c.standards || []).filter(function(s){ return s.code || s.label; });
@@ -1953,11 +1953,11 @@ function _catInfer(n){
   if (/eoq|reorder|replenish|economic order|min.?max|stock level/.test(s)) computes.push('reorder / EOQ');
   if (/combine|combined|consolidat|merge|aggregat/.test(s)) computes.push('combined view');
   var bits = [];
-  if (systems.length) bits.push('<b style="color:#b07b1e">System feed</b> — ' + systems.map(function(x){ return x.toUpperCase(); }).join(', '));
+  if (systems.length) bits.push('<b style="color:var(--warn-2)">System feed</b> — ' + systems.map(function(x){ return x.toUpperCase(); }).join(', '));
   if (fromCust) bits.push('<b style="color:#2b6f8f">From customer</b> — order details at request time');
   if (computes.length) bits.push('<b style="color:#8a5cc4">Computed</b> — ' + computes.join(', ') + ' (a co-assist computes, the rail seals)');
   bits.push('<b style="color:var(--ok-2)">Store in CB</b> — the consolidated record (the gap CB fills)');
-  if (feedsBack) bits.push('<b style="color:#6a4fa0">Feed back</b> — suppliers / the named system');
+  if (feedsBack) bits.push('<b style="color:var(--purple-2)">Feed back</b> — suppliers / the named system');
   return '<div style="margin-top:8px;padding:8px 10px;border:1px solid #bcd0e8;border-radius:9px;background:#f2f7fd">'
     + '<div style="font-size:var(--fs-1);font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--blue-2);margin-bottom:4px">Reading your purpose <span style="font-weight:500;color:var(--grey);text-transform:none">— a first guess; confirm it as you route the requirements</span></div>'
     + '<div style="font-size:var(--fs-1);color:#1c2128;line-height:1.6">' + bits.join('<br>') + '</div></div>';
@@ -2191,7 +2191,7 @@ function _globalConfig(n){
   var netCty = (typeof SESSION !== 'undefined' && SESSION.country) || '—';
   var inheritNote = function(own, netVal){
     return own
-      ? '<span style="font-size:var(--fs-1);font-weight:800;background:#e6f4ec;color:var(--ok-2);border-radius:5px;padding:1px 6px">SET HERE</span>'
+      ? '<span style="font-size:var(--fs-1);font-weight:800;background:var(--ok-tint);color:var(--ok-2);border-radius:5px;padding:1px 6px">SET HERE</span>'
       : '<span style="font-size:var(--fs-1);font-weight:800;background:#eef2f7;color:#5b6472;border-radius:5px;padding:1px 6px">FROM NETWORK · AT BUILD — ' + esc(netVal) + '</span>';
   };
   return '<div style="padding:12px 13px;border:1px solid var(--line);border-left:3px solid var(--blue-2);border-radius:9px;background:#f7fafd">'

@@ -352,7 +352,7 @@ function _jsonBlock(title, obj){
     +   '<span onclick="_copyJson(\''+id+'\')" style="margin-left:auto;font-size:var(--fs-1);color:var(--blue);cursor:pointer">copy</span>'
     + '</div>'
     + '<pre id="'+id+'" style="margin:0;padding:0 14px 12px;font:11.5px/1.55 ui-monospace,Menlo,Consolas,monospace;'
-    +   'white-space:pre-wrap;word-break:break-word;max-height:46vh;overflow:auto;color:#243038">'+esc(txt)+'</pre></div>';
+    +   'white-space:pre-wrap;word-break:break-word;max-height:46vh;overflow:auto;color:var(--on-card)">'+esc(txt)+'</pre></div>';
 }
 function _note(t){ return '<div style="padding:11px 14px;font-size:12px;color:var(--warn-2);background:var(--gold-soft);border-bottom:1px solid var(--line)">'+esc(t)+'</div>'; }
 function _copyJson(id){
