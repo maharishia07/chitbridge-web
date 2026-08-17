@@ -2866,6 +2866,20 @@ function _renderApp(){
           ${isEntityUser?`<button data-testid="nav-settings" onclick="UI.avMenu=false;navTo('settings')" style="display:block;width:100%;text-align:left;border:0;background:none;padding:10px 13px;font-size:13.5px;cursor:pointer">⚙️ Settings</button>`:''}
           <div style="border-top:1px solid var(--line);padding:9px 13px 4px"><div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey)">Theme</div></div>
           <div data-testid="theme-picker" style="display:flex;gap:6px;padding:2px 13px 11px;flex-wrap:wrap">${themeSwatchesHTML()}</div>
+          <div style="border-top:1px solid var(--line);padding:9px 13px 4px"><div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey)">Language</div></div>
+          <!-- ⚠️ BESIDE THE THEME, because they are the same KIND of choice: how the app presents itself to
+               this person. Athi asked for the language to come from entity settings and be changeable here;
+               the two living apart is how one of them gets forgotten.
+               ⚠️ The note under it says the rail is translated and the rest is not. A picker that offers four
+               languages implies the app speaks four; it does not yet, and letting it imply otherwise is how
+               someone switches to Tamil, sees English everywhere, and concludes the feature is broken. -->
+          <div data-testid="lang-picker" style="display:flex;gap:6px;padding:2px 13px 4px;flex-wrap:wrap">${
+            [["en","English"],["hi","हिन्दी"],["ta","தமிழ்"],["fr","Français"]].map(function(l){
+              var on = cbLang() === l[0];
+              return `<button data-testid="lang-${l[0]}" onclick="cbSetLang(\'${l[0]}\')" style="border:1px solid ${on ? 'var(--blue)' : 'var(--line)'};background:${on ? 'var(--blue-tint-bg)' : 'var(--card)'};color:${on ? 'var(--blue)' : 'var(--on-card)'};border-radius:9px;padding:3px 9px;font-size:11.5px;font-weight:${on ? 700 : 500};cursor:pointer">${l[1]}</button>`;
+            }).join("")
+          }</div>
+          <div style="padding:0 13px 10px;font-size:var(--fs-1);color:var(--grey);line-height:1.5">The rail is translated so far — the rest of the app is still English.</div>
           <button onclick="UI.avMenu=false;logout()" style="display:block;width:100%;text-align:left;border:0;background:none;padding:10px 13px;font-size:13.5px;cursor:pointer;border-top:1px solid var(--line);color:var(--disp)">↩ Sign out</button>
         </div>`:''}
         </div>
@@ -3027,8 +3041,63 @@ function toggleNavGroup(name){
   } catch (e) {}
   renderApp();
 }
+/**
+ * ⭐⭐ t() — THE STRING REGISTRY (Athi, 2026-08-16: *"each icon we have to change the language — if french is
+ * using then all the icon should show french. If the icon text is hardcoded, we need to make it language
+ * friendly"*).
+ *
+ * ⚠️ WHAT THIS IS AND IS NOT. This is the SEAM, wired end to end through the navigation rail and proven by a
+ * spec. It is NOT a translated application: the rail speaks four languages and the rest of the app speaks
+ * English. Saying that plainly matters more than the coverage number — a half-translated screen that claims to
+ * be translated is worse than an English one, because the user cannot tell which parts they can trust.
+ *
+ * ⚠️ EVERY CALL PASSES THE ENGLISH AS ITS FALLBACK: `t('nav.mis', 'MIS')`. So a missing key degrades to the
+ * word that is there today, never to a blank or a raw `nav.mis`. A registry that can render its own key names
+ * onto the screen is a registry that will, on the day someone ships a typo.
+ *
+ * ⚠️⚠️ THE NON-ENGLISH STRINGS ARE MACHINE-DRAFTED AND NEED A NATIVE SPEAKER. They are marked here rather than
+ * in a commit message nobody will re-read. Trade words especially — "Trade ready", "Traceability", "Co-assists"
+ * are CB's own vocabulary and a literal translation of them may say something quite different in the trade.
+ * Athi's own plan for this is the right one: let a language be fetched at runtime by AI when it is not in the
+ * library, with a human confirming it — see the runtime-vocabulary backlog.
+ */
+var CBI18N = {
+  en: {},   // the fallbacks below ARE English; an empty map keeps one source of truth for it
+  fr: { 'nav.compose': 'Rédiger', 'nav.worklist': 'Travail de tous', 'nav.intake': 'Réception',
+        'nav.disputes': 'Litiges', 'nav.catalogue': 'Catalogue', 'nav.categories': 'Catégories',
+        'nav.catsetup': 'Configuration du catalogue', 'nav.customers': 'Clients', 'nav.suppliers': 'Fournisseurs',
+        'nav.network': 'Réseau', 'nav.coassists': 'Co-assistants', 'nav.mis': 'Tableau de bord',
+        'nav.traceability': 'Traçabilité', 'nav.readiness': 'Prêt au commerce' },
+  ta: { 'nav.compose': 'உருவாக்கு', 'nav.worklist': 'அனைவரின் வேலை', 'nav.intake': 'உள்வரவு',
+        'nav.disputes': 'தகராறுகள்', 'nav.catalogue': 'பட்டியல்', 'nav.categories': 'வகைகள்',
+        'nav.catsetup': 'பட்டியல் அமைப்பு', 'nav.customers': 'வாடிக்கையாளர்கள்', 'nav.suppliers': 'சப்ளையர்கள்',
+        'nav.network': 'வலையமைப்பு', 'nav.coassists': 'உதவியாளர்கள்', 'nav.mis': 'அறிக்கைகள்',
+        'nav.traceability': 'கண்டறிதல்', 'nav.readiness': 'வர்த்தக தயார்' },
+  hi: { 'nav.compose': 'लिखें', 'nav.worklist': 'सबका काम', 'nav.intake': 'आवक',
+        'nav.disputes': 'विवाद', 'nav.catalogue': 'सूची', 'nav.categories': 'श्रेणियाँ',
+        'nav.catsetup': 'सूची सेटअप', 'nav.customers': 'ग्राहक', 'nav.suppliers': 'आपूर्तिकर्ता',
+        'nav.network': 'नेटवर्क', 'nav.coassists': 'सह-सहायक', 'nav.mis': 'रिपोर्ट',
+        'nav.traceability': 'पता लगाना', 'nav.readiness': 'व्यापार तैयार' },
+};
+function cbLang(){ try{ return localStorage.getItem('cb_lang') || 'en'; }catch(_){ return 'en'; } }
+function cbSetLang(code){
+  if(!CBI18N[code]) return;
+  try{ localStorage.setItem('cb_lang', code); }catch(_){}
+  document.documentElement.setAttribute('lang', code);
+  renderApp();
+}
+/** t(key, english) — the English is the fallback, never a key name on screen. See the note above. */
+function t(key, english){
+  var m = CBI18N[cbLang()];
+  return (m && m[key]) || english || key;
+}
+
 function menuBtn(x){
-  const[key,ic,label]=x;
+  /* ⚠️ THE LABEL GOES THROUGH t() HERE, at the ONE place every rail item is built — not at the fourteen places
+     they are declared. Translating at the declaration would mean fourteen call sites to keep in step, and the
+     fifteenth would be added untranslated by someone who never saw the other fourteen. */
+  const[key,ic,label0]=x;
+  const label=t('nav.'+key, label0);
   // A track is "on" only when NO folder is selected — otherwise the folder below it is the one you are in.
   const on=(key==='task'||key==='order') ? (UI.nav===key && !UI.folderSel) : UI.nav===key;
   const click=key==="compose"?`compose()`:`navTo('${key}')`;
