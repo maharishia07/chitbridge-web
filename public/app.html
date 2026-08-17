@@ -2567,6 +2567,35 @@ var THEMES = {
             '--purple':'#7A4BC0', '--purple-2':'#663CA4',
             '--hover':'#F9E8EA', '--sel-2':'#F4DDE1', '--picked':'#EECBD2', '--sel':'#EECBD2' } },
 };
+/**
+ * ⚠️ CAPTURED BEFORE ANY THEME IS APPLIED, and that timing is the whole trick.
+ *
+ * A theme is only its OVERRIDES; everything it does not declare comes from :root. So to draw a preview of theme
+ * X while theme Y is active, we need the BASE value of every token X does not mention — and by then :root has
+ * Y's values written onto it as inline styles. Reading them later gives Y's palette wearing X's name.
+ *
+ * This runs at parse time, before themeApply() is first called (app boot, ~line 7952), so what it reads IS the
+ * base. If a preview ever renders in the wrong colours, check that ordering first.
+ */
+var THEME_BASE = (function(){
+  var out = {};
+  try {
+    var cs = getComputedStyle(document.documentElement), keys = {};
+    Object.keys(THEMES).forEach(function(k){ Object.keys(THEMES[k].vars).forEach(function(v){ keys[v] = 1; }); });
+    Object.keys(keys).forEach(function(v){ out[v] = (cs.getPropertyValue(v) || '').trim(); });
+  } catch(_) {}
+  return out;
+})();
+/** The value theme `k` would give token `v` — its own override, else the base. */
+function themeVal(k, v){
+  var t = THEMES[k] || THEMES.cream;
+  return (t.vars && t.vars[v]) || THEME_BASE[v] || '';
+}
+/** Every themed token, resolved for `k`, as an inline custom-property block. A preview drawn inside this
+ *  renders in that theme without touching the page — no apply, no flicker, no undo to get wrong. */
+function themeVarsStyle(k){
+  return Object.keys(THEME_BASE).map(function(v){ return v + ':' + themeVal(k, v); }).join(';');
+}
 function themeGet(){ try{ return localStorage.getItem('cb_theme') || 'cream'; }catch(_){ return 'cream'; } }
 /**
  * ⚠️ APPLIED BY WRITING THE TOKENS, not by swapping a stylesheet. Every theme starts from a clean slate — each
@@ -2591,20 +2620,85 @@ function themeSet(key){
   /* Repaint so the swatch's own selected state updates; the colours themselves changed without it. */
   if(UI.avMenu) renderApp();
 }
-function themeSwatchesHTML(){
+/**
+ * ⭐⭐ THE PALETTE (Athi, 2026-08-18: *"can you make it as a palette or something else — the avatar menu itself
+ * is not good now, you may have to redesign the presentation"*).
+ *
+ * ⚠️ TEN PILLS WITH A COLOURED DOT, INSIDE A 180px DROPDOWN. That is what this was, and the dot is the least
+ * informative thing a theme has: it showed the PAPER colour, so cream, sand and cool were three near-identical
+ * circles and dark and slate were two more. Nothing about the accent, the ink, or how a row looks.
+ *
+ * ⭐ SO EACH ONE NOW RENDERS ITSELF. A card drawn with that theme's own tokens — its page, its panel, its rule,
+ * a line of its ink, a chip in its accent. You choose by LOOKING, which is the only way anybody has ever chosen
+ * a colour scheme.
+ *
+ * ⚠️ NO APPLY-AND-UNDO. The preview sets the tokens as inline custom properties on its own wrapper, so ten
+ * themes render side by side, live, without the page flickering through ten palettes to draw them.
+ */
+function themePaletteHTML(){
   var cur = themeGet();
-  return Object.keys(THEMES).map(function(k){
+  var DARK = { dark: 1, slate: 1 };
+  var card = function(k){
     var t = THEMES[k], on = (k === cur);
-    return '<button type="button" data-testid="theme-' + k + '" title="' + esc(t.name) + '"'
-      + ' onclick="event.stopPropagation();themeSet(\'' + k + '\')"'
-      + ' style="display:flex;align-items:center;gap:6px;border:1px solid ' + (on ? 'var(--blue)' : 'var(--line)')
-      + ';background:' + (on ? 'var(--blue-tint-bg)' : 'var(--card)') + ';border-radius:20px;padding:4px 10px 4px 5px;cursor:pointer;'
-      + 'font:inherit;font-size:11.5px;color:' + (on ? 'var(--blue)' : 'var(--ink)') + ';font-weight:' + (on ? '700' : '400') + '">'
-      + '<span style="width:14px;height:14px;border-radius:50%;background:' + t.dot + ';border:1px solid var(--line);flex:0 0 auto"></span>'
-      + esc(t.name) + '</button>';
-  }).join('');
+    return '<button type="button" data-testid="theme-' + k + '" onclick="themeSet(' + "'" + '" + k + "' + "'" + ')"'
+      + ' aria-pressed="' + (on ? 'true' : 'false') + '"'
+      + ' style="' + themeVarsStyle(k) + ';all:unset;box-sizing:border-box;cursor:pointer;display:block;'
+      + 'border-radius:12px;overflow:hidden;border:2px solid ' + (on ? 'var(--blue)' : 'var(--line)') + ';'
+      + 'box-shadow:' + (on ? '0 0 0 3px var(--blue-tint-bg)' : 'none') + '">'
+      /* the page */
+      + '<div style="background:var(--paper);color:var(--on-bg);padding:9px 9px 10px">'
+      /* a panel on it */
+      +   '<div style="background:var(--card);color:var(--on-card);border:1px solid var(--line);border-radius:8px;padding:7px 8px">'
+      +     '<div style="display:flex;align-items:center;gap:5px">'
+      +       '<span style="width:22px;height:5px;border-radius:3px;background:var(--blue);flex:0 0 auto"></span>'
+      +       '<span style="height:5px;border-radius:3px;background:var(--ink);opacity:.75;flex:1"></span>'
+      +     '</div>'
+      +     '<div style="display:flex;align-items:center;gap:4px;margin-top:6px">'
+      +       '<span style="font-size:9px;font-weight:800;background:var(--blue);color:var(--on-accent);'
+      +            'border-radius:4px;padding:1px 5px">Aa</span>'
+      +       '<span style="font-size:9px;font-weight:700;background:var(--ok-tint);color:var(--ok-2);'
+      +            'border-radius:4px;padding:1px 5px">ok</span>'
+      +       '<span style="font-size:9px;font-weight:700;background:var(--danger-tint);color:var(--disp);'
+      +            'border-radius:4px;padding:1px 5px">!</span>'
+      +     '</div>'
+      +   '</div>'
+      + '</div>'
+      /* its name, on its own chrome — so the rail colour is visible too */
+      + '<div style="background:var(--chrome);color:var(--chrome-on);font-size:11px;font-weight:700;'
+      +      'padding:5px 9px;display:flex;align-items:center;justify-content:space-between">'
+      +   '<span>' + esc(t.name) + '</span>' + (on ? '<span>✓</span>' : '')
+      + '</div></button>';
+  };
+  var grid = function(keys){
+    return '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:9px">'
+      + keys.map(card).join('') + '</div>';
+  };
+  var light = Object.keys(THEMES).filter(function(k){ return !DARK[k]; });
+  var dark  = Object.keys(THEMES).filter(function(k){ return DARK[k]; });
+  var head = function(x){ return '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;'
+    + 'text-transform:uppercase;color:var(--grey);margin:2px 0 7px">' + x + '</div>'; };
+  return head('Light') + grid(light) + '<div style="height:14px"></div>' + head('Dark') + grid(dark);
 }
-function logout(){if(typeof _netFlush==='function'){try{_netFlush();}catch(_){}}if(typeof _catfFlush==='function'){try{_catfFlush();}catch(_){}}try{localStorage.removeItem('cb_sess');localStorage.removeItem('cb_nav');}catch(_){}stopAutoRefresh();SESSION={token:null,role:null,name:null,entity:null,bridgeId:null};STORE=freshStore();UI={...UI0,selected:new Set(),aggStates:new Set(["open","act","close"])};applyPrefs();go("#/login");}
+
+/**
+ * ⚠️ SIGN OUT NOW ASKS FIRST (Athi, 2026-08-18: *"by mistake if you click signout it goes right away, possibly
+ * you have to ask for confirmation before signing out"*).
+ *
+ * ⚠️ IT IS NOT THE SESSION THAT MATTERS, IT IS WHAT IS UNSAVED. logoutNow() flushes the network draft and the
+ * catalogue face, clears the store and resets UI — a mis-click next to the avatar threw away whatever was in
+ * flight, silently, with no way back. Signing in again does not return it.
+ *
+ * ⚠️ THE SPLIT MATTERS: logoutNow() stays callable for a FORCED sign-out (an expired session must not stop to
+ * ask permission). Today nothing calls it that way — both call sites are the two buttons — but wiring the
+ * confirmation INTO the mechanism rather than beside it is what leaves that door open.
+ */
+function logout(){
+  if (typeof confirmAsk !== 'function') return logoutNow();   // never let a missing helper trap someone in
+  confirmAsk('Sign out?',
+    'Anything you have not saved on this screen is lost. You will need your one-time code to sign back in.',
+    'Sign out', logoutNow, true);
+}
+function logoutNow(){if(typeof _netFlush==='function'){try{_netFlush();}catch(_){}}if(typeof _catfFlush==='function'){try{_catfFlush();}catch(_){}}try{localStorage.removeItem('cb_sess');localStorage.removeItem('cb_nav');}catch(_){}stopAutoRefresh();SESSION={token:null,role:null,name:null,entity:null,bridgeId:null};STORE=freshStore();UI={...UI0,selected:new Set(),aggStates:new Set(["open","act","close"])};applyPrefs();go("#/login");}
 
 /* ---------------- APP SHELL + TASK PANEL ---------------- */
 const UI0 = {nav:"task", folder:"task", sub:"my", state:"open", dtab:"content", sel:null, selectMode:false, selected:new Set(), aggStates:new Set(["open","act","close"]), drawer:false, mdetail:false, purpose:false, orgHelp:false, loading:false, rows:[], detail:null, actors:[], busy:false, vp:"lap", lw:340, lh:300, lb:null, lbGroup:null, openLines:new Set(), attGroups:{}, filterOpen:false, filter:{}, notifOpen:false, msgFilter:"all", msgChan:"internal", msgType:"all", msgKind:"info", msgcOpen:false, composeOpen:false, listHelp:false, total:0, page:1, pageLimit:50, loadingMore:false, allLoaded:false, sort:"date", dir:"desc", cols:null, colMenu:false, search:"", msgSearch:"", msgOrder:"latest", statusSearch:"", statusOrder:"latest"};
@@ -2891,7 +2985,7 @@ function _renderApp(){
            * ⚠️ INHERITANCE ACROSS A SURFACE CHANGE IS ALWAYS A BUG. The moment an element paints its own ground
            * it stops being part of its parent's surface, and any colour still arriving from that parent is a
            * colour chosen for a different background. A surface must name its own text — every time.
-           */''}${UI.avMenu?`<div class="avmenu" data-testid="avatar-menu" style="position:absolute;top:calc(100% + 6px);right:0;z-index:60;background:var(--card);color:var(--on-card);border:1px solid var(--line);border-radius:9px;box-shadow:var(--shadow);min-width:180px;overflow:hidden">
+           */''}${UI.avMenu?`<div class="avmenu" data-testid="avatar-menu" style="position:absolute;top:calc(100% + 6px);right:0;z-index:60;background:var(--card);color:var(--on-card);border:1px solid var(--line);border-radius:9px;box-shadow:var(--shadow);overflow:hidden;/* ⚠️ WIDER ONLY WHILE A SECTION IS OPEN. A permanent 320px dropdown for two lines of menu is heavy; a 180px one cannot hold a palette. It sizes to what it is currently showing. */min-width:${UI.avSection ? '320px' : '190px'};max-width:min(360px,92vw)">
           <div style="padding:9px 13px;border-bottom:1px solid var(--line)"><div style="font-weight:700;font-size:13px">${esc(SESSION.name||'')}</div><div style="font-size:11.5px;color:var(--grey)">${esc(role)} · ${esc(SESSION.entity||'')}</div></div>
           <button data-testid="nav-profile" onclick="UI.avMenu=false;navTo('profile')" style="display:block;width:100%;text-align:left;border:0;background:none;padding:10px 13px;font-size:13.5px;cursor:pointer">👤 Profile</button>
           <!-- ⚠️ SETTINGS IS ENTITY ADMINISTRATION, NOT A PERSONAL SCREEN. Moving Profile behind the avatar put
@@ -2899,22 +2993,58 @@ function _renderApp(){
                business's policy flags and channel bindings one click from their own name. The rail never offered
                it to them; the avatar menu must not either. -->
           ${isEntityUser?`<button data-testid="nav-settings" onclick="UI.avMenu=false;navTo('settings')" style="display:block;width:100%;text-align:left;border:0;background:none;padding:10px 13px;font-size:13.5px;cursor:pointer">⚙️ Settings</button>`:''}
-          <div style="border-top:1px solid var(--line);padding:9px 13px 4px"><div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey)">Theme</div></div>
-          <div data-testid="theme-picker" style="display:flex;gap:6px;padding:2px 13px 11px;flex-wrap:wrap">${themeSwatchesHTML()}</div>
-          <div style="border-top:1px solid var(--line);padding:9px 13px 4px"><div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey)">Language</div></div>
-          <!-- ⚠️ BESIDE THE THEME, because they are the same KIND of choice: how the app presents itself to
-               this person. Athi asked for the language to come from entity settings and be changeable here;
-               the two living apart is how one of them gets forgotten.
-               ⚠️ The note under it says the rail is translated and the rest is not. A picker that offers four
-               languages implies the app speaks four; it does not yet, and letting it imply otherwise is how
-               someone switches to Tamil, sees English everywhere, and concludes the feature is broken. -->
-          <div data-testid="lang-picker" style="display:flex;gap:6px;padding:2px 13px 4px;flex-wrap:wrap">${
-            [["en","English"],["hi","हिन्दी"],["ta","தமிழ்"],["fr","Français"]].map(function(l){
-              var on = cbLang() === l[0];
-              return `<button data-testid="lang-${l[0]}" onclick="cbSetLang(\'${l[0]}\')" style="border:1px solid ${on ? 'var(--blue)' : 'var(--line)'};background:${on ? 'var(--blue-tint-bg)' : 'var(--card)'};color:${on ? 'var(--blue)' : 'var(--on-card)'};border-radius:9px;padding:3px 9px;font-size:11.5px;font-weight:${on ? 700 : 500};cursor:pointer">${l[1]}</button>`;
-            }).join("")
-          }</div>
-          <div style="padding:0 13px 10px;font-size:var(--fs-1);color:var(--grey);line-height:1.5">The rail is translated so far — the rest of the app is still English.</div>
+          <!--
+            ⭐⭐ COLLAPSED BY DEFAULT (Athi, 2026-08-18: *"if you click the theme, possibly a dropdown or
+            collapsible menu — language similarly"*).
+
+            ⚠️ THE MENU WAS CARRYING EVERYTHING AT ONCE: ten theme pills and four language buttons, always open,
+            in a 180px dropdown — so the two things people actually come here for, Profile and Settings, were
+            pushed under a wall of chips. A menu that shows all of its contents at all times is a menu that has
+            stopped being one.
+
+            ⚠️ ONE SECTION OPEN AT A TIME (UI.avSection). Two expanded panels in a dropdown reproduce exactly the
+            wall this replaces, and the menu grows past the viewport on a phone.
+          -->
+          ${(function(){
+            var sec = UI.avSection || null;
+            var row = function(key, icon, label, value){
+              var open = sec === key;
+              return `<button data-testid="avsec-${key}" onclick="UI.avSection = ${BT}${BT} + (UI.avSection==='${key}'?'':'${key}'); renderApp()"
+                style="display:flex;align-items:center;gap:9px;width:100%;text-align:left;border:0;
+                background:${open?'var(--sel-2)':'none'};color:var(--on-card);padding:10px 13px;font-size:13.5px;cursor:pointer">
+                <span style="width:17px;text-align:center">${icon}</span><span>${label}</span>
+                <span style="margin-left:auto;display:flex;align-items:center;gap:7px">
+                  <span style="font-size:11.5px;color:var(--grey)">${esc(value)}</span>
+                  <span style="font-size:10px;color:var(--grey);transform:rotate(${open?90:0}deg);display:inline-block">▸</span>
+                </span></button>`;
+            };
+            var LANGS = { en:"English", hi:"हिन्दी", ta:"தமிழ்", fr:"Français" };
+            var out = '<div style="border-top:1px solid var(--line)"></div>';
+            out += row("theme", "🎨", "Theme", (THEMES[themeGet()]||{}).name || "");
+            if (sec === "theme") {
+              out += `<div data-testid="theme-picker" style="padding:4px 13px 12px;background:var(--paper);color:var(--on-bg);
+                border-top:1px solid var(--line);border-bottom:1px solid var(--line)">${themePaletteHTML()}</div>`;
+            }
+            out += row("lang", "🌐", "Language", LANGS[cbLang()] || "English");
+            if (sec === "lang") {
+              /* ⚠️ The honesty note travels WITH the picker. Four language buttons imply the app speaks four; it
+                 does not yet, and letting it imply otherwise is how someone switches to Tamil, sees English
+                 everywhere, and reports a bug that is really a scope statement. */
+              out += `<div data-testid="lang-picker" style="padding:6px 13px 10px;background:var(--paper);color:var(--on-bg);
+                border-top:1px solid var(--line);border-bottom:1px solid var(--line)">`
+                + Object.keys(LANGS).map(function(code){
+                    var on = cbLang() === code;
+                    return `<button data-testid="lang-${code}" onclick="cbSetLang('${code}')"
+                      style="border:1px solid ${on ? 'var(--blue)' : 'var(--line)'};
+                      background:${on ? 'var(--blue-tint-bg)' : 'var(--card)'};
+                      color:${on ? 'var(--blue)' : 'var(--on-card)'};border-radius:9px;padding:4px 10px;
+                      font-size:11.5px;font-weight:${on ? 700 : 500};cursor:pointer;margin:0 5px 5px 0">${LANGS[code]}</button>`;
+                  }).join("")
+                + `<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5;margin-top:2px">The rail is
+                   translated so far — the rest of the app is still English.</div></div>`;
+            }
+            return out;
+          })()}
           <button onclick="UI.avMenu=false;logout()" style="display:block;width:100%;text-align:left;border:0;background:none;padding:10px 13px;font-size:13.5px;cursor:pointer;border-top:1px solid var(--line);color:var(--disp)">↩ Sign out</button>
         </div>`:''}
         </div>
