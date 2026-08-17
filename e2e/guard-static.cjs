@@ -440,5 +440,32 @@ console.log('\n11 · surfaces that name no text colour (inline styles)');
   if (total) warn(total + ' inline surfaces inherit their text colour — ' + Object.entries(bad).map(([k, v]) => k + ':' + v).join(', '));
   else pass('every painted surface names its own text');
 }
+
+/**
+ * 12 · THE SHARED MODEL IS ACTUALLY REQUIRE()-ABLE.
+ *
+ * ⚠️ ITS FAILURE MODE IS SILENT, WHICH IS WHY IT IS WORTH A CHECK. catalogue-model.js says in its own header
+ * that it is "require()-able in Node (module.exports)" and names headless consumers that MUST route through it.
+ * The web package sets "type":"module", so every .js was ESM, the UMD wrapper's CJS branch never ran, and
+ * require() handed back an EMPTY OBJECT rather than throwing. The first consumer to believe the header would
+ * get `undefined` from every lookup and compute from nothing while appearing to run — no exception, plausible
+ * output, wrong. The same class as a vault that reads back empty.
+ *
+ * Fixed by a package.json scoped to public/app declaring commonjs, which is what those 29 plain browser scripts
+ * already are. This check exists because deleting that file would break nothing visible.
+ */
+console.log('\n12 · the shared catalogue model is require()-able');
+{
+  try {
+    const p = require.resolve(path.join(WEB, 'app', 'catalogue-model.js'));
+    delete require.cache[p];
+    const M = require(p);
+    const n = Object.keys(M || {}).length;
+    if (n > 20) pass('catalogue-model.js exports ' + n + ' symbols to Node');
+    else warn('catalogue-model.js require() yields ' + n + ' exports — its header promises Node consumers can use it');
+  } catch (e) {
+    warn('catalogue-model.js cannot be required: ' + (e && e.message));
+  }
+}
 console.log('\n== GUARD ==  ' + hard + ' failure(s) · ' + soft + ' warning(s)');
 process.exit(hard ? 1 : 0);
