@@ -367,7 +367,11 @@ function catsetUnitsHTML(){
         +   '<code>' + esc(u) + '</code>'
         +   '<span class="un">' + esc(names[u] || u) + '</span>'
         + '</div>'
-        + (shown.length ? '<div class="ua">' + shown.map(function(x){ return esc(x.w); }).join('<span class="sep">·</span>') + '</div>' : '')
+        /* ⚠️ THE SEPARATOR IS DECORATION, AND MUST SAY SO. It is a faint `·` between spellings — deliberately
+           low-contrast, because it divides rather than informs. Unmarked it is counted as unreadable TEXT by any
+           contrast audit (63 false positives on this screen alone) and, worse, a screen reader announces
+           "middle dot" between every word. aria-hidden states what it already is. */
+        + (shown.length ? '<div class="ua">' + shown.map(function(x){ return esc(x.w); }).join('<span class="sep" aria-hidden="true">·</span>') + '</div>' : '')
         + '</label>';
     }).join('');
     return '<div class="uom-g"><div class="uom-gh">' + esc(g.label) + '</div>' + rows + '</div>';

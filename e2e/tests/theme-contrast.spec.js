@@ -42,6 +42,9 @@ const AUDIT = `(() => {
     if (!t || el.children.length) return;                  // leaf text only
     const cs = getComputedStyle(el);
     if (cs.visibility === 'hidden' || cs.display === 'none' || +cs.opacity === 0) return;
+    /* 26a0Fe0f DECORATION IS NOT TEXT. A faint separator or rule is low-contrast ON PURPOSE; counting it as
+       unreadable text buries the real failures under dozens of false ones. aria-hidden is the element saying so. */
+    if (el.getAttribute('aria-hidden') === 'true' || el.closest('[aria-hidden="true"]')) return;
     const f = lum(cs.color), b = lum(bgOf(el));
     if (f === null || b === null) return;
     const r = (Math.max(f,b) + 0.05) / (Math.min(f,b) + 0.05);
