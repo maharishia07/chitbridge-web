@@ -363,7 +363,28 @@
   .lh.folded{padding:7px 12px}
   .lh.folded .statetabs{margin-bottom:0}
   .lhfolded{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:8px;cursor:pointer}
-  .fchip{display:inline-flex;align-items:center;gap:4px;background:var(--gold-soft);border:1px solid #e3d9bd;color:var(--warn-3);border-radius:20px;padding:2px 9px;font-size:11.5px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /**
+   * ⭐⭐ ONE CHIP GEOMETRY. Five classes described the same object — a small label on a row — with five different
+   * heights, paddings and corner radii, and they sit NEXT TO EACH OTHER on the same row:
+   *     .optchip  2px 8px  r9      .catgchip  0 8px + line-height:17px  r20
+   *     .chipst   2px 9px  r20     .fchip     2px 9px  r20      .prichip  0 6px  r5
+   * Nothing was "wrong" in any one of them, which is exactly why it survived: the misalignment only exists in
+   * the relationship. A unit badge sitting 2px higher than the category pill beside it is what "not aligned
+   * properly" looks like, and no single rule shows it.
+   *
+   * Fixed HEIGHT rather than symmetric padding, because padding alone does not equalise height once one variant
+   * has a border and another does not — which is how these drifted apart in the first place.
+   *
+   * ⚠️ THE VARIANTS KEEP THEIR COLOURS AND ONLY THEIR COLOURS. That is the whole point: a chip's colour says
+   * what KIND of thing it is; its geometry should say nothing at all.
+   */
+  .optchip,.catgchip,.chipst,.fchip,.prichip{display:inline-flex;align-items:center;box-sizing:border-box;
+    height:19px;padding:0 9px;border:1px solid transparent;border-radius:9px;line-height:1;
+    font-size:var(--fs-1);font-weight:700;white-space:nowrap}
+  /* ⭐ A CATEGORY KEEPS THE LUGGAGE-TAG SHAPE it has in the picker — square where it attaches, rounded where it
+     hangs free. Shape carries meaning here, so the same object looks the same in both places it appears. */
+  .catgchip{border-radius:4px 14px 14px 4px}
+  .fchip{gap:4px;background:var(--gold-soft);border-color:#e3d9bd;color:var(--warn-3);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .colcog.fold{margin-right:7px}
   /**
    * ⚠️ TRADE READY ROLLS ITS OWN TWO PANES and therefore inherited NONE of the shell's mobile behaviour. On a
@@ -561,8 +582,7 @@
   .ctcatg.gone{background:var(--warn-tint);border-color:var(--gold-line);color:var(--warn-3)}
   .ctcatg.add{color:var(--blue);border-style:dashed;font-weight:600}
   .l3cat{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
-  .catgchip{font-size:var(--fs-1);background:var(--blue-tint-bg);color:var(--blue);border:1px solid #d5e2f7;
-            border-radius:20px;padding:0 8px;line-height:17px;white-space:nowrap}
+  .catgchip{background:var(--blue-tint-bg);color:var(--blue);border-color:#d5e2f7}
   .catgchip.gone{background:var(--warn-tint);color:var(--warn-3);border-color:var(--gold-line);text-decoration:line-through}
   .ctpick{display:flex;align-items:center;gap:9px;margin-top:8px;padding:7px 9px;background:var(--blue-tint-bg);
           border:1px solid #d5e2f7;border-radius:9px}
@@ -664,11 +684,19 @@
      per step means there is no second column to size and no tab strip inside a screen that is already navigated. */
   .modal.wide .mbody{max-height:72vh}
   @media (max-width:680px){ .mover{padding:18px 7px} .modal.wide{width:97vw;max-width:97vw} .modal.wide .mbody{max-height:80vh} .modal .mbody{max-height:74vh} }
+  /**
+   * ⭐ THE THREE PARTS OF ONE MODAL SHARE A LEFT EDGE. They had 16px, 12px and 13px of horizontal padding, so
+   * the title, the content and the buttons each started at a different x — three ragged edges down a panel the
+   * reader looks at head-on. Nothing was misaligned within any single part, which is why it never got filed as
+   * a bug; it only exists between them.
+   * ⚠️ The VERTICAL padding is deliberately still free — a header may breathe more than a footer. It is the
+   * shared edge that carries the alignment, not equal boxes.
+   */
   .modal .mhd{padding:13px 16px;border-bottom:1px solid var(--line)}
   .modal .mhd .t{font-family:'Space Grotesk';font-weight:700;font-size:15px;color:var(--ink)}
   .modal .mhd .s{font-size:12px;color:var(--grey);margin-top:2px}
-  .modal .mbody{padding:11px 12px;max-height:54vh;overflow-y:auto}
-  .modal .mfoot{display:flex;gap:8px;padding:11px 13px;border-top:1px solid var(--line)}
+  .modal .mbody{padding:12px 16px;max-height:54vh;overflow-y:auto}
+  .modal .mfoot{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--line)}
   .modal .mfoot button{flex:1;border:1px solid var(--line);background:var(--card);border-radius:9px;font-size:13px;font-weight:700;padding:9px;cursor:pointer;color:var(--ink)}
   .modal .mfoot button.pri{background:var(--blue);color:var(--on-accent);border-color:var(--blue)}
   .modal .mfoot button.danger{background:var(--disp);color:var(--on-danger);border-color:var(--disp)}
@@ -681,7 +709,7 @@
   .optrow.sel .rdo{border-color:var(--blue)}
   .optrow.sel .rdo::after{content:'';width:8px;height:8px;border-radius:50%;background:var(--blue)}
   .optrow .oc{flex:1;min-width:0}.optrow .on{font-size:13px;font-weight:700;color:var(--ink)}.optrow .om{font-size:var(--fs-1);color:var(--grey)}
-  .optchip{font-size:var(--fs-1);font-weight:700;border-radius:9px;padding:2px 8px;white-space:nowrap}
+  .optchip{}
   .optchip.on{color:#1f7a4d;background:var(--ok-tint)}.optchip.brk{color:var(--warn-2);background:var(--warn-tint)}.optchip.off{color:#777;background:var(--neutral-tint)}
   .dtabs{flex-wrap:wrap}
   .dh{position:relative}
@@ -787,7 +815,7 @@
   .raidtoggle button.on{background:var(--blue);color:var(--on-accent);border-color:var(--blue)}
   .raidtoggle .hint{flex-basis:100%;font-weight:400;color:var(--grey);font-size:var(--fs-1)}
   .custflag{color:var(--disp);font-weight:800;margin-right:4px}
-  .prichip{font-size:var(--fs-1);font-weight:700;border-radius:5px;padding:0 6px;white-space:nowrap}
+  .prichip{}
   .prichip.pri-urgent{background:var(--danger-tint);color:var(--disp-2)}.prichip.pri-low{background:var(--warn-tint);color:var(--warn-3)}
   .dchips{display:flex;gap:8px;align-items:center;margin-top:8px}
   .prichip-btn{font-size:var(--fs-1);font-weight:700;border-radius:6px;padding:3px 9px;cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--ink)}
@@ -829,7 +857,7 @@
   .row .l2{font-size:var(--fs-1);color:var(--grey);margin-top:3px;display:flex;align-items:center;gap:7px}
   .proof{font-size:var(--fs-1);font-weight:700;border-radius:5px;padding:1px 5px}
   .proof.ok{background:var(--ok-tint);color:var(--ok)}.proof.wait{background:var(--gold-soft);color:var(--prog)}
-  .chipst{font-size:var(--fs-1);font-weight:700;border-radius:20px;padding:2px 9px;border:1px solid transparent;cursor:pointer;white-space:nowrap}
+  .chipst{cursor:pointer}
   .st-open{background:var(--blue-tint-bg);color:var(--blue);border-color:var(--blue)}.st-act{background:var(--gold-soft);color:var(--prog);border-color:var(--gold-line)}.st-close{background:var(--ok-tint);color:var(--ok);border-color:var(--ok-2)}
   .rowacts{display:flex;gap:6px;margin-top:8px}
   .rowacts button{flex:1;font-size:var(--fs-1);font-weight:700;border:1px solid var(--line);background:var(--card);border-radius:6px;padding:5px;color:var(--ink)}
