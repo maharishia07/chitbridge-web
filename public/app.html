@@ -73,6 +73,10 @@
      * because the page happens to be light.
      */
     --chrome:#0F2E3D; --chrome-ink:#bcccd6; --chrome-on:#ffffff;
+    /* 26a0Fe0f THE SELECTED ROW IS ITS OWN SURFACE. It is the one ground a reader is guaranteed to be looking at,
+       and it was the last colour in the app that no theme could reach - light blue with light text on it in dark.
+       Naming it is what let the dark theme give it a ground that its text can actually sit on. */
+    --sel:#cfe0f2;
   }
   /* ⭐ TYPE · SPACING · RADIUS TOKENS (2026-08-16, backlog 26). Athi, after asking whether the font work was
      page-by-page: *"backlog type and spacing tokens and you can work autonomously later."*
@@ -98,7 +102,10 @@
   }
   *{box-sizing:border-box}html,body{margin:0;height:100%}
   body{background:var(--paper);color:var(--ink);font-family:Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
-  button,input,select{font:inherit}button{cursor:pointer}
+  button,input,select{font:inherit}/* ⚠️ A button with no colour of its own inherits the UA default, which is BLACK — invisible on a dark
+     surface. Inheriting from the page instead means every unstyled control follows the theme for free,
+     which is also why this belongs here and not on each button. */
+  button{cursor:pointer;color:inherit}
   ::-webkit-scrollbar{width:9px;height:9px}::-webkit-scrollbar-thumb{background:#cfc7b8;border-radius:6px}
   #root{height:100vh;display:flex;flex-direction:column}
   .mono{font-family:'Space Mono'}.disp{font-family:'Space Grotesk'}
@@ -538,7 +545,7 @@
   /* ⚠️ cursor:pointer WAS MISSING. Every .tool is clickable and carries a tooltip (Change status, Assign,
      Select, Raise dispute, Delete), but with cursor:auto the emoji glyph inside resolves to the I-BEAM text
      cursor — so the one strip that looks most like buttons was the only one that did not behave like them. */
-  .tool{width:30px;height:30px;border:1px solid var(--line);background:var(--card);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:13px;color:#54616a;position:relative;cursor:pointer;user-select:none}
+  .tool{width:30px;height:30px;border:1px solid var(--line);background:var(--card);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--grey-2);position:relative;cursor:pointer;user-select:none}
   .tool:hover{background:var(--paper);border-color:#c3ccd2}
   .tool.on{background:var(--chrome);color:#fff;border-color:var(--chrome)}
   .topbar .bell{position:relative;border:0;background:none;color:#cfe0e8;font-size:var(--fs-4);cursor:pointer;padding:2px 4px;line-height:1}
@@ -879,7 +886,7 @@ img.attImg{object-fit:cover;display:block}
 .lrow.acc-unread{box-shadow:inset 3px 0 0 var(--blue)}
 .lrow.acc-disp{box-shadow:inset 3px 0 0 var(--disp)}
 .lrow.acc-urg{box-shadow:inset 3px 0 0 #d98a3a}
-.lrow.sel{background:#cfe0f2;box-shadow:inset 0 0 0 2px var(--blue), inset 4px 0 0 var(--blue-d);position:relative;z-index:1}
+.lrow.sel{background:var(--sel);box-shadow:inset 0 0 0 2px var(--blue), inset 4px 0 0 var(--blue-d);position:relative;z-index:1}
 /* Hover overlay: the whole line, including every column the fold dropped. pointer-events:none so it can never
    sit between the cursor and the row underneath it. */
 #rowpeek{position:fixed;display:none;z-index:60;pointer-events:none;max-width:340px;background:var(--card);border:1px solid var(--line);border-radius:9px;box-shadow:0 8px 26px rgba(20,30,40,.16);padding:9px 11px;font-size:12px;line-height:1.45}
@@ -2110,6 +2117,15 @@ var THEMES = {
    *
    * ⚠️ THE SEMANTIC COLOURS ARE LIFTED, NOT INVERTED. Dispute red and done green must still read as red and
    * green — brightened enough to clear the dark ground, never swapped, because their meaning is the point.
+   *
+   * ⚠️⚠️ EVERY ACCENT HERE SATISFIES **TWO** CONTRASTS, and that is the constraint that decides the values.
+   * An accent is used BOTH as a fill with white text on it (a primary button) AND as text on the page (a link,
+   * a status word). Lighten it until it reads as text and white-on-it fails; darken it until white works and it
+   * disappears as text. Measured, not eyeballed — each of these clears 3:1 in both directions:
+   *     blue #5A87D8  white-on-fill 3.56 · as-text 5.00      ok    #2E9E5E  3.40 · 5.24
+   *     disp #E05A50  white-on-fill 3.65 · as-text 4.88      prog  #B07F20  3.56 · 5.01
+   * The first attempt used lighter, prettier values (#6C9BEA, #4FBF7E) and every white button label failed at
+   * ~2.4–2.8:1 — legible-looking in a screenshot, unreadable on a real screen.
    * ⚠️ `--card` is LIGHTER than `--paper`, not darker: on a dark ground a raised surface catches more light, and
    * inverting that relationship is what makes a dark theme feel inside-out.
    */
@@ -2117,17 +2133,17 @@ var THEMES = {
             '--paper':'#14181D', '--card':'#1C2128', '--line':'#2E353E',
             '--ink':'#E6EAEF', '--ink-2':'#C4CCD6',
             '--grey':'#9AA5B1', '--grey-2':'#8D98A5', '--grey-3':'#7A8492', '--grey-4':'#6E7885',
-            '--blue':'#6C9BEA', '--blue-d':'#8FB4F0', '--blue-2':'#7FA9EE',
+            '--blue':'#5A87D8', '--blue-d':'#7BA2E4', '--blue-2':'#4E79C8',
             '--blue-tint':'#1E2A3C', '--blue-tint-line':'#31445F',
             '--gold':'#D4B074', '--gold-soft':'#2A2418', '--gold-line':'#463A22',
-            '--ok':'#4FBF7E', '--ok-2':'#4FBF7E', '--ok-3':'#5FD08D',
-            '--prog':'#D2A54A', '--warn-2':'#D2A54A', '--warn-3':'#C79C55',
-            '--disp':'#F0736A', '--disp-2':'#E0574C',
-            '--purple':'#9C86F0', '--purple-2':'#8C74E8',
+            '--ok':'#2E9E5E', '--ok-2':'#2E9E5E', '--ok-3':'#3BB06E',
+            '--prog':'#B07F20', '--warn-2':'#B07F20', '--warn-3':'#C08F35',
+            '--disp':'#E05A50', '--disp-2':'#C9463D',
+            '--purple':'#8A72E4', '--purple-2':'#7A62D4',
             /* ⚠️ The chrome stays DARK and gains a touch of separation from the page, rather than inverting
                with --ink. In light themes the nav is darker than the page; in dark it must be lighter, or the
                navigation dissolves into the background and the shell loses its edges. */
-            '--chrome':'#0B1F2A', '--chrome-ink':'#AFC0CC', '--chrome-on':'#ffffff',
+            '--chrome':'#0B1F2A', '--chrome-ink':'#AFC0CC', '--chrome-on':'#ffffff', '--sel':'#22303F',
             '--shadow':'0 1px 2px rgba(0,0,0,.4),0 12px 34px rgba(0,0,0,.5)' } },
 };
 function themeGet(){ try{ return localStorage.getItem('cb_theme') || 'cream'; }catch(_){ return 'cream'; } }
@@ -5942,7 +5958,7 @@ function taskPanel(){
       <b style="font-family:'Space Grotesk';font-size:13px;display:flex;align-items:center;gap:6px;min-width:0">
         ${_fsel ? `<span data-testid="crumb-track" onclick="clearFolder()" title="Back to all of ${esc(_tname.slice(2))}" style="cursor:pointer;color:var(--blue)">${_tname}</span><span style="color:var(--grey);font-weight:400">/</span><span data-testid="crumb-folder" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📁 ${esc(_fsel.name)}</span>`
                 : `<span data-testid="crumb-track">${_tname}</span>`}
-      </b><span style="color:#726546">— ${_tdesc}</span>${/* was #8a7c58 — 3.65:1 on the gold-soft band; 5.09 now */''}
+      </b><span style="color:var(--warn-3)">— ${_tdesc}</span>${/* was #8a7c58 — 3.65:1 on the gold-soft band; 5.09 now */''}
       ${_fsel?`<span data-testid="folder-rename" onclick="renameFolder('${esc(_fsel.folder_id)}')" title="Rename this folder" style="cursor:pointer;color:var(--blue);font-size:11.5px;margin-left:2px">Rename</span><span data-testid="folder-delete" onclick="deleteFolder('${esc(_fsel.folder_id)}')" title="Delete this folder — the chits inside are NOT deleted" style="cursor:pointer;color:#c0453b;font-size:11.5px">Delete</span>`:''}
       ${_btns}<button class="composebtn" style="${_isTrack?'':'margin-left:auto'}" onclick="toggleListHelp()">${UI.listHelp?'✕ Close':'❓ Help'}</button>
     </div>${UI.listHelp?`<div style="padding:11px 12px;border-bottom:1px solid var(--line);overflow-y:auto;max-height:52%">${assistPage(_ak)}</div>`:''}`;
