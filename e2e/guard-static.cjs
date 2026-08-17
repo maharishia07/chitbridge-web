@@ -314,7 +314,18 @@ console.log('\n8 · duplicate data-testid');
   const seen = {};
   [['app.html', app]].concat(CAPS.map((f) => [f, fs.readFileSync(path.join(WEB, 'app', f), 'utf8')]))
     .forEach(([name, src]) => {
-      [...src.matchAll(/data-testid\s*=\s*["']([^"'${}+]+)["']/g)].forEach((m) => {
+      /**
+       * ⚠️ A SELECTOR IS NOT AN EMISSION. `document.querySelector('[data-testid="cat-search"]')` LOOKS FOR a
+       * testid; it does not create one. Counting those inflated the duplicate list — cat-search and
+       * sup-add-input each reported ×3 when exactly one element of each is rendered, and the two extras were
+       * the keyboard shortcut looking them up.
+       *
+       * ⚠️ WORTH FIXING RATHER THAN TOLERATING, because this check already says its hits are "candidates, not
+       * proof". A check that is known to over-report AND is padded with false ones stops being read at all —
+       * and it was my own new code that padded it, which is how a guard quietly becomes decorative.
+       */
+      const emitted = src.split('\n').filter((l) => !/querySelector|querySelectorAll|\.locator\(|getByTestId/.test(l)).join('\n');
+      [...emitted.matchAll(/data-testid\s*=\s*["']([^"'${}+]+)["']/g)].forEach((m) => {
         const id = m[1].trim();
         if (!id) return;
         (seen[id] = seen[id] || []).push(name);
