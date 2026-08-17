@@ -357,5 +357,43 @@ console.log('\n9 · unpaired surfaces (themed background + hardcoded text, or th
   if (total) warn(total + ' unpaired surface/text pairs — ' + Object.entries(unpaired).map(([k, v]) => k + ':' + v).join(', '));
   else pass('every background sets its text the same way it sets itself');
 }
+
+/**
+ * 10 · A TOKEN USED IN THE WRONG ROLE.
+ *
+ * ⚠️ THIS IS THE ONE THE OTHER CHECKS CANNOT CATCH, BECAUSE NOTHING IS HARDCODED. `background:var(--ink)` is
+ * fully tokenised and follows the theme perfectly — into a wall. `--ink` is the BODY TEXT colour. On a light
+ * theme it is near-black, so a "dark selected segment" looks deliberate; in dark it inverts to near-WHITE and
+ * that segment becomes a white box with white text on it. Measured at 1.21:1 on the catalogue View/Edit toggle
+ * and again on the workforce one — the exact thing Athi photographed as "the letter inside the box is not
+ * visible at all".
+ *
+ * ⚠️ THE FIX IS NEVER TO PICK A DIFFERENT SHADE — it is to use a SURFACE token (--card/--accent/--chrome/a tint)
+ * and its declared partner. A palette only works if each token keeps one job.
+ */
+console.log('\n10 · tokens used in the wrong role (a text colour as a surface)');
+{
+  const TEXT_ONLY = ['--ink', '--ink-2', '--grey-2', '--grey-3', '--grey-4', '--on-card', '--on-bg', '--on-accent', '--on-sel', '--chrome-ink', '--chrome-on', '--on-ok', '--on-warn', '--on-danger', '--on-gold', '--on-purple'];
+  const bad = {};
+  [['app.html', app]].concat(CAPS.map((f) => [f, fs.readFileSync(path.join(WEB, 'app', f), 'utf8')]))
+    .forEach(([name, src]) => {
+      /* strip comments — this file DOCUMENTS the bug in prose, and a guard that trips on its own explanation
+         teaches people to ignore it */
+      const code = src.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/^\s*\/\/.*$/gm, ' ');
+      let n = 0;
+      for (const t of TEXT_ONLY) {
+        /* ⚠️ ONLY WHEN THE DECLARATION ALSO SETS `color:` — i.e. the surface provably CARRIES TEXT.
+           A text token's VALUE is perfectly legitimate for a mark that holds no letters: cap-legend paints a 10px
+           status dot with --grey-4, and that is a muted dot, not a surface. Flagging it would make this check cry
+           wolf on correct code, and a guard that cries wolf is a guard that gets ignored — which costs more than
+           the one bug it would have caught. Text on the surface is what makes the pairing rule apply at all. */
+        n += [...code.matchAll(new RegExp('background(?:-color)?\\s*:\\s*[^;]{0,120}?var\\(' + t + '\\)[^;{}]{0,40};[^;{}]{0,160}?color\\s*:', 'g'))].length;
+      }
+      if (n) bad[name] = n;
+    });
+  const total = Object.values(bad).reduce((a, b) => a + b, 0);
+  if (total) warn(total + ' text tokens used as a background — ' + Object.entries(bad).map(([k, v]) => k + ':' + v).join(', '));
+  else pass('no text colour is being used as a surface');
+}
 console.log('\n== GUARD ==  ' + hard + ' failure(s) · ' + soft + ' warning(s)');
 process.exit(hard ? 1 : 0);

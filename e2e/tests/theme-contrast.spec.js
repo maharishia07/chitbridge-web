@@ -24,6 +24,9 @@ const { test, expect } = require('@playwright/test');
 const { mintEntity } = require('../fixtures');
 
 const SCREENS = ['task', 'order', 'suppliers', 'catalogue', 'catsetup', 'mis'];
+/* Below this a screen is an empty state — a heading and a "nothing here yet" line — and measuring it proves
+   nothing. Deliberately low: the point is to catch a BLANK screen, not to police how busy a screen is. */
+const MIN_TEXT_NODES = 25;
 
 /* Contrast maths, run inside the page. Walks up for the real background, because a transparent element sits on
    whatever is behind it — comparing against `transparent` is how these checks quietly pass on everything. */
@@ -114,15 +117,30 @@ test.describe('Theme contrast · every theme, every screen', () => {
     const themes = await page.evaluate(() => Object.keys(window.THEMES || {}));
     expect(themes.length, 'THEMES must be readable from the page').toBeGreaterThan(1);
 
+    /* ⚠️⚠️ COUNT WHAT IS ON THE SCREEN BEFORE TRUSTING A CLEAN RESULT.
+       A fresh entity has an EMPTY catalogue: no product rows, no category chips, nothing to measure. This test
+       reported the catalogue screen clean in every theme while it was rendering an empty state — and it was on
+       exactly that screen, with 58 real products, that Athi photographed unreadable chips and an unreadable
+       selected segment. Zero failures out of zero elements is not a pass, it is a test that did not run. */
+    const density = async () => page.evaluate(`(() => {
+      const w = document.createTreeWalker(document.querySelector('.shell'), NodeFilter.SHOW_TEXT);
+      let n = 0, node; while ((node = w.nextNode())) { if ((node.nodeValue || '').trim()) n++; } return n;
+    })()`);
+
     // Baseline: whatever the DEFAULT theme already scores, per screen. A theme is judged against this.
-    const base = {};
+    const base = {}, thin = [];
     await page.evaluate(() => window.themeApply('cream'));
     for (const s of SCREENS) {
       await page.evaluate((n) => window.navTo(n), s);
       await page.waitForTimeout(500);
       await prep(page, s);
+      const d = await density();
+      if (d < MIN_TEXT_NODES) thin.push(`${s} (${d} text nodes)`);
       base[s] = (await page.evaluate(AUDIT)).length;
     }
+    /* Reported, not silently tolerated. If this fires, the fix is to SEED the screen, never to lower the bar. */
+    expect(thin, 'these screens were too empty to have been measured at all — a clean result here means nothing:\n  '
+      + thin.join('\n  ')).toEqual([]);
 
     const regressions = [];
     for (const th of themes) {

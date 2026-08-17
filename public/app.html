@@ -159,7 +159,16 @@
   button,input,select{font:inherit}/* ⚠️ A button with no colour of its own inherits the UA default, which is BLACK — invisible on a dark
      surface. Inheriting from the page instead means every unstyled control follows the theme for free,
      which is also why this belongs here and not on each button. */
-  button{cursor:pointer;color:inherit}
+  /* ⚠️⚠️ AND THE BACKGROUND HAS TO BE HERE TOO, for the same reason and it was missing.
+     `color:inherit` alone is half a rule: a <button> with no background falls back to the UA's `buttonface`
+     (~#efefef), which is a LIGHT box in every theme. Light theme: light box, dark inherited text — looks fine,
+     so nobody notices. Dark theme: the same light box, but the inherited text is now near-white, and the label
+     vanishes at ~1.1:1. Measured on the confirm dialog ("Report it", 1.06:1) and the catalogue chips, which fell
+     all the way back to UA styling. A surface and its text must be set TOGETHER or not at all — inheriting one
+     and defaulting the other is how the pair comes apart.
+     ⚠️ Class rules win on specificity, so every `.tabs button{background:none}` still does exactly what it says;
+     this only catches buttons that were relying on the browser's colours without knowing it. */
+  button{cursor:pointer;color:inherit;background:var(--card)}
   ::-webkit-scrollbar{width:9px;height:9px}::-webkit-scrollbar-thumb{background:var(--warn-tint);border-radius:6px}
   #root{height:100vh;display:flex;flex-direction:column}
   .mono{font-family:'Space Mono'}.disp{font-family:'Space Grotesk'}
@@ -214,7 +223,11 @@
   .welask-ans{font-size:13px;color:var(--ink);margin-top:10px;line-height:1.5}
 
   /* auth screens */
-  .auth{flex:1;display:flex;align-items:center;justify-content:center;padding:24px;overflow-y:auto;background:linear-gradient(160deg,var(--ink),#143b4e 60%,#1d4d61)}
+  /* ⚠️ THE GRADIENT USED `--ink` AS ITS TOP STOP. It is the body TEXT colour — near-black in light themes, so the
+     deep navy wash looked intentional; in dark it inverts to near-white and the sign-in page washes out to a pale
+     gradient with a pale card on it. `--chrome` is the token that means "a deep surface the shell sits on", and
+     it stays deep in every theme — which is the whole reason it exists. */
+  .auth{flex:1;display:flex;align-items:center;justify-content:center;padding:24px;overflow-y:auto;background:linear-gradient(160deg,var(--chrome),#143b4e 60%,#1d4d61)}
   .card{width:440px;max-width:100%;background:var(--card);border-radius:18px;box-shadow:var(--shadow);overflow:hidden}
   .card .top{padding:22px 26px 8px;text-align:center}
   .brand{display:inline-flex;align-items:center;gap:10px;font-family:'Space Grotesk';font-weight:700;font-size:18px}
@@ -1711,7 +1724,7 @@ function renderMsgConsole(){ const host=document.getElementById("lbhost"); if(!h
   const COL={debug:'var(--grey-4)',info:'var(--blue)',warn:'#a9791f',error:'var(--disp)'};
   const all=(window.__cblog||[]);
   const rows=all.filter(e=>_logFilter==='all'||e.level===_logFilter).slice(-200).reverse();
-  const chip=(k,lbl)=>`<button onclick="setLogFilter('${k}')" style="border:0.5px solid var(--line);border-radius:6px;padding:2px 8px;font-size:var(--fs-1);background:${_logFilter===k?'var(--ink)':'var(--card)'};color:${_logFilter===k?'var(--on-accent)':'var(--ink)'};cursor:pointer">${lbl}</button>`;
+  const chip=(k,lbl)=>`<button onclick="setLogFilter('${k}')" style="border:0.5px solid var(--line);border-radius:6px;padding:2px 8px;font-size:var(--fs-1);background:${_logFilter===k?'var(--accent)':'var(--card)'};color:${_logFilter===k?'var(--on-accent)':'var(--ink)'};cursor:pointer">${lbl}</button>`;
   host.innerHTML=`<div class="notifover" onclick="closeMsgConsole()"><div class="notifpanel" style="max-width:560px;width:94vw" onclick="event.stopPropagation()">
     <div class="notifhd">🧪 Message log<span style="margin-left:auto;font-size:var(--fs-1);color:var(--grey)">${rows.length}/${all.length}</span></div>
     <div style="display:flex;gap:5px;padding:8px 13px;flex-wrap:wrap;align-items:center">${chip('all','All')}${chip('info','Info')}${chip('warn','Warning')}${chip('error','Critical')}${chip('debug','Requests')}<button onclick="clearMsgLog()" style="margin-left:auto;border:0.5px solid var(--line);border-radius:6px;padding:2px 8px;font-size:var(--fs-1);background:var(--card);cursor:pointer">Clear</button></div>
@@ -5855,7 +5868,12 @@ function prodDetailHTML(){
   if(!p) return `<div class="empty"><div class="big">🗂️</div><div class="t">Select a product</div><div>Pick one to view or edit — or add a new one.</div></div>`;
   const d=pData(p), id=prodId(p);
   const back=`<button class="dback" onclick="backToList()">‹ Catalogue</button>`;
-  const seg=(m,l)=>`<button onclick="setProdMode('${m}')" style="border:0;background:${(UI.prodMode==='edit'?'edit':'view')===m?'var(--ink)':'var(--card)'};color:${(UI.prodMode==='edit'?'edit':'view')===m?'var(--on-accent)':'var(--grey)'};font-size:12px;font-weight:700;padding:6px 15px">${l}</button>`;
+  /* ⚠️ THIS SAID `background:var(--ink)`. `--ink` is the BODY TEXT colour — near-black on a light theme, which is
+     why a dark segment looked right — but in dark it inverts to near-WHITE, so the selected segment became a white
+     box with white (`--on-accent`) letters: 1.21:1, the "letter inside the box is not visible at all" Athi
+     photographed. A perfectly tokenised value, still wrong, because the token was used in the wrong ROLE.
+     Selected = the accent surface and its partner. See also the nav rail, which needed --chrome for the same reason. */
+  const seg=(m,l)=>`<button onclick="setProdMode('${m}')" style="border:0;background:${(UI.prodMode==='edit'?'edit':'view')===m?'var(--accent)':'var(--card)'};color:${(UI.prodMode==='edit'?'edit':'view')===m?'var(--on-accent)':'var(--grey)'};font-size:12px;font-weight:700;padding:6px 15px">${l}</button>`;
   const head=`<div class="dh">${back}<div class="dt">${esc(pName(d))}</div><div class="ds">${inr(pPrice(d))} / ${esc(pUnit(d))}${pCode(d)?' · '+esc(pCode(d)):''}</div><div style="display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-top:10px">${seg('view','View')}${seg('edit','Edit')}</div></div>`;
   let body, bar;
   if(UI.prodMode==='edit'){ body=`<div class="sec">Edit product</div>${prodEditForm(d)}<div class="err" id="ct_err" style="margin-top:8px"></div>`; bar=`<button class="pri" data-testid="cat-save" onclick="saveProduct('${id}')">Save</button><button onclick="setProdMode('view')">Cancel</button>`; }

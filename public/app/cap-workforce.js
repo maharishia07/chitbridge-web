@@ -350,7 +350,9 @@ function acDetailHTML(){ const x=UI.acDet;
   var _dt=(typeof acTypeOf==='function'?acTypeOf(x):'human'); var _dreg=(window.ACTOR_TYPES||{})[_dt]||{};
   if(_dreg.capability){ if(!(UI.acManageOpen && UI.acSel===x.id)) return _acTierSummary(x); var _mh=(window.ACTOR_MANAGE||{})[_dt]; if(UI.acManageLoading || typeof _mh!=='function') return _acTierLoader(x); return _mh(x); }   // TWO-TIER: instant summary, management loads on drill
   const back=`<button class="dback" onclick="backToList()">‹ Co-assists</button>`;
-  const seg=(m,l)=>`<button onclick="setAcMode('${m}')" style="border:0;background:${(UI.acMode==='edit'?'edit':'view')===m?'var(--ink)':'var(--card)'};color:${(UI.acMode==='edit'?'edit':'view')===m?'var(--on-accent)':'var(--grey)'};font-size:12px;font-weight:700;padding:6px 15px">${l}</button>`;
+  /* ⚠️ `--ink` IS TEXT, NOT A SURFACE — same bug as the catalogue View/Edit segment. In dark it inverts to
+     near-white and the selected segment becomes white-on-white (1.21:1). Selected = --accent + --on-accent. */
+  const seg=(m,l)=>`<button onclick="setAcMode('${m}')" style="border:0;background:${(UI.acMode==='edit'?'edit':'view')===m?'var(--accent)':'var(--card)'};color:${(UI.acMode==='edit'?'edit':'view')===m?'var(--on-accent)':'var(--grey)'};font-size:12px;font-weight:700;padding:6px 15px">${l}</button>`;
   const toggle=`<div style="display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-top:10px">${seg('view','View')}${seg('edit','Edit')}</div>`;
   const head=`<div class="dh">${back}<div class="dt">${esc(x.name)} <span class="optchip ${acShc(x.shift)}">${acShLabel(x.shift)}</span></div><div class="ds">${esc(x.role||'—')} · <span class="mono">${acLogin(x)}</span></div>${toggle}</div>`;
   let body, bar;
