@@ -553,7 +553,6 @@
   .catgchip{font-size:var(--fs-1);background:var(--blue-tint-bg);color:var(--blue);border:1px solid #d5e2f7;
             border-radius:20px;padding:0 8px;line-height:17px;white-space:nowrap}
   .catgchip.gone{background:var(--warn-tint);color:var(--warn-3);border-color:var(--gold-line);text-decoration:line-through}
-  .row.picked{background:var(--blue-tint-bg)}
   .ctpick{display:flex;align-items:center;gap:9px;margin-top:8px;padding:7px 9px;background:var(--blue-tint-bg);
           border:1px solid #d5e2f7;border-radius:9px}
   .ctpick button{border:1px solid var(--line);background:var(--card);border-radius:9px;padding:4px 10px;
@@ -695,7 +694,7 @@
   .mbadge.disp{background:var(--danger-tint);color:var(--disp)}
    .mbadge.disp.ok{background:var(--ok-tint);color:var(--ok-2)}
   /* dispute banner on the record — the USP surfaced in context */
-  .dispbanner{padding:11px 16px;background:var(--danger-tint);border-bottom:1px solid #f0c9c6}
+  .dispbanner{padding:11px 16px;background:var(--danger-tint);color:var(--disp);border-bottom:1px solid #f0c9c6}
   .dispbanner .db-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
   .dispbanner .db-tag{font-weight:800;color:var(--disp);font-size:12px}
   .dispbanner .db-cat{font-size:var(--fs-1);font-weight:700;color:#8a3a35;background:var(--danger-tint);border-radius:6px;padding:2px 8px}
@@ -752,7 +751,7 @@
   .unreadtag{font-size:var(--fs-1);font-weight:800;color:#fff;background:#d65a5a;border-radius:6px;padding:0 5px;margin-left:4px}
   .unreaddot{width:7px;height:7px;border-radius:50%;background:#d65a5a;margin-left:2px}
   .row .unreaddot{display:inline-block;vertical-align:middle;margin:0 5px 0 0}
-  .row.unread{background:var(--warn-tint)}
+  .row.unread{background:var(--warn-tint);color:var(--on-card)}
   .row.unread .code{font-weight:800}
   .mtype{font-size:var(--fs-1);font-weight:700;border-radius:6px;padding:1px 6px}
   .mtype.info{background:var(--blue-tint-bg);color:var(--blue)}.mtype.query{background:var(--warn-tint);color:var(--warn-3)}.mtype.decision{background:var(--ok-tint);color:var(--ok-2)}
@@ -791,7 +790,23 @@
   .custreq{font-size:11.5px;font-weight:700;color:var(--disp-2);background:var(--danger-tint);border-radius:9px;padding:7px 10px;margin-bottom:8px}
   .rows{flex:1;overflow-y:auto}
   .row{padding:11px 13px;border-bottom:1px solid var(--line);cursor:pointer;display:flex;gap:9px}
-  .row:hover{background:var(--hover)}.row.sel{background:var(--sel-2);box-shadow:inset 3px 0 0 var(--blue)}.row.picked{background:var(--picked)}
+  /**
+   * ⚠️⚠️ A SURFACE THAT SETS NO TEXT COLOUR AT ALL — the seventh way the pairing rule gets broken, and the only
+   * one with nothing wrong to find. These three rules changed the BACKGROUND under a row and said nothing about
+   * the text, which then inherited from whatever was above. Inheritance is not a pairing; it is a pairing that
+   * happens to be right, and it is only right while the ancestor and the new surface move together.
+   *
+   * ⚠️ IT IS INVISIBLE TO CHECK 9 BY CONSTRUCTION. That check looks for a themed background beside a hardcoded
+   * colour, or the reverse. Here there is no second colour to compare against — the declaration is half-written,
+   * and half-written is exactly what the check cannot see. Athi: "font color in selection".
+   *
+   * Every selection ground now names its partner explicitly. --on-sel resolves to --ink today, so this is no
+   * visual change in any current theme; the point is that the next theme cannot silently break it, because the
+   * relationship is now written down instead of inferred.
+   */
+  .row:hover{background:var(--hover);color:var(--on-card)}
+  .row.sel{background:var(--sel-2);color:var(--on-sel);box-shadow:inset 3px 0 0 var(--blue)}
+  .row.picked{background:var(--picked);color:var(--on-sel)}
   .cbx{width:17px;height:17px;border:1.6px solid #8a95a0;border-radius:4px;flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;font-size:var(--fs-1);font-weight:800;color:#fff;background:var(--card);cursor:pointer;vertical-align:middle}
   .cbx.on{background:var(--blue);border-color:var(--blue)}
   .cbx:hover{border-color:var(--blue)}
@@ -808,7 +823,7 @@
   .rowacts{display:flex;gap:6px;margin-top:8px}
   .rowacts button{flex:1;font-size:var(--fs-1);font-weight:700;border:1px solid var(--line);background:var(--card);border-radius:6px;padding:5px;color:var(--ink)}
   .rowacts button.go{border:0;background:var(--blue);color:var(--on-accent)}
-  .selbar{display:flex;align-items:center;gap:8px;background:var(--blue-tint-bg);border:1px solid #cfe0ec;border-radius:9px;padding:7px 10px;margin-top:8px;font-size:11.5px;font-weight:600}
+  .selbar{display:flex;align-items:center;gap:8px;background:var(--blue-tint-bg);color:var(--on-card);border:1px solid #cfe0ec;border-radius:9px;padding:7px 10px;margin-top:8px;font-size:11.5px;font-weight:600}
   .selbar .sp{margin-left:auto;display:flex;gap:6px}.selbar .sp button{border:1px solid #cfe0ec;background:var(--card);border-radius:6px;font-size:var(--fs-1);font-weight:700;padding:5px 9px;color:var(--blue)}
   .selbar .sp button.pri{border:0;background:var(--blue);color:var(--on-accent)}
 
@@ -840,7 +855,7 @@
   .stub{padding:34px;text-align:center;color:var(--grey)}.stub .t{font-family:'Space Grotesk';font-weight:700;font-size:17px;color:var(--ink);margin-bottom:6px}
   .toast{position:fixed;left:50%;top:64px;transform:translateX(-50%);max-width:min(560px,92vw);background:var(--chrome);color:var(--chrome-on);border-radius:12px;padding:12px 18px;font-size:13px;font-weight:600;line-height:1.4;box-shadow:0 12px 34px rgba(8,24,32,.30);display:flex;align-items:center;gap:14px;z-index:9999;animation:toastIn .18s ease-out}
   @keyframes toastIn{from{opacity:0;transform:translate(-50%,-8px)}to{opacity:1;transform:translate(-50%,0)}}
-  .toast.err{background:var(--disp)}
+  .toast.err{background:var(--disp);color:var(--on-danger)}
   .toast.warn{background:#8a6d1f}
   .toast button{border:0;background:none;color:var(--gold);font-weight:700}
   .spin{display:inline-block;width:15px;height:15px;border:2px solid #cfe0ec;border-top-color:var(--blue);border-radius:50%;animation:sp .7s linear infinite}@keyframes sp{to{transform:rotate(360deg)}}
