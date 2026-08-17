@@ -625,15 +625,30 @@ function catsetCss(){
     '.catset-regrow.pick{display:block;cursor:pointer}',
     '.catset-regrow.pick .rr1{grid-template-columns:22px 112px minmax(0,1fr);align-items:center}',
     '.catset-regrow.pick.nocode .rr1{grid-template-columns:22px minmax(0,1fr)}',
-    '.catset-regrow.pick .rn{padding-left:144px}',
-    '.catset-regrow.pick.nocode .rn{padding-left:32px}',
+    /* ⚠️ The note no longer indents — see the .rn rule. These two overrides existed only to keep the indent
+       lined up with the checkbox column, and there is no indent left to line up. */
     '.catset-regrow.pick:hover{background:var(--paper)}',
     /* ⚠️ Unticked stays READABLE — you have to be able to read a thing to decide you want it back. */
     '.catset-regrow.off code,.catset-regrow.off .rl{color:var(--grey)}',
     '.catset-regrow code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11.5px;color:var(--ink)}',
     '.catset-regrow .rl{color:var(--ink)}',
-    /* Indented to the same edge as the name above it, and in the shared second-line colour. */
-    '.catset-regrow .rn{margin-top:2px;padding-left:122px;color:var(--note);font-size:11.5px;line-height:1.5}',
+    /**
+     * ⭐⭐ THE NOTE TAKES THE FULL STRETCH, IN A BOX (Athi, 2026-08-17: *"under pricing, fixed, range underneath
+     * lot of space but the notes in the right hand occupies lot of space, so if the notes can be placed in the
+     * entire stretch within a box… it will look good and also reduce space"*).
+     *
+     * ⚠️ THE INDENT WAS COSTING HEIGHT, NOT BUYING ALIGNMENT. `padding-left:122px` pushed every note into a
+     * narrow right-hand column so it could line up under the name. In this pane — which defaults to 320px — that
+     * left the note about 172px of the 294px available, so a two-line explanation wrapped to four or five, the
+     * row grew tall, and the space beside the short label ("fixed", "range") sat empty. The alignment it bought
+     * was real and it was worth far less than the height it cost.
+     *
+     * Full width gives the note ~70% more room per line, which is roughly 40% fewer lines. The BOX is what
+     * keeps it from reading as a second name now that it no longer sits in its own column: a tinted ground and
+     * a rule down the left say "this belongs to the row above" without spending any horizontal space to say it.
+     */
+    '.catset-regrow .rn{margin-top:5px;padding:5px 9px;background:var(--neutral-tint);color:var(--note);'
+      + 'border-left:2px solid var(--line);border-radius:0 6px 6px 0;font-size:11.5px;line-height:1.45}',
     '.catset-regrow.nocode .rn{padding-left:0}',
     /* ⚠️ A LIST OF BARE WORDS IS NOT A TABLE. When a registry's rows carry no code and no note — units are the
        case: fifteen entries, one short word each — stacking them full-width spends fifteen rows and most of the
