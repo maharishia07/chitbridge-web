@@ -314,7 +314,13 @@ function netAddChild(parentKey){ _netAddNode(parentKey, true); }
 function netAddPartner(parentKey){ _netAddNode(parentKey, false); }
 // Selecting a different store lands on GENERAL rather than wherever you happened to be — the tab that was open
 // for the last store is rarely the one you want for this one, and arriving mid-subject hides who you are editing.
-function netSelect(key){ _netInit(); if (UI.net) { UI.net.sel = key; UI.net.tab = 'general'; } _netRerender(); }
+/* ⚠️ ON A PHONE, PICKING A NODE MUST BRING THE DETAIL FORWARD. The two panes are one screen at that width
+   (.appwrap.m .panel.showdetail), so without this a tap selected a node and left you looking at the list it was
+   selected in, with no indication anything had happened. Every other two-pane screen already does this — it came
+   free with the layout this screen was not using. */
+function netSelect(key){ _netInit(); if (UI.net) { UI.net.sel = key; UI.net.tab = 'general'; }
+  if (UI.vp === 'mob') UI.mdetail = true;
+  _netRerender(); }
 function netRename(key){
   var n = _netNode(key); if (!n) return;
   promptAsk('Rename node', { label:'Name', value:n.name, okLabel:'Rename' },
@@ -1603,12 +1609,31 @@ function networkScreen(){
   }
   var sel = UI.net.sel ? _netNode(UI.net.sel) : null;
   var right = sel ? _netNodeView(sel) : '<div style="padding:24px;color:var(--grey);font-size:13px">Select a node to edit it, or add a child under it.</div>';
+  /**
+   * ⚠️⚠️ THE APP'S TWO-PANE LAYOUT, NOT A SECOND ONE (Athi, 2026-08-17: *"the network screen is not following
+   * the two sided panel principle so the middle screen is not adjustable and the right hand side looks
+   * clumsy"*).
+   *
+   * This screen had hand-rolled its own columns: a left pane pinned at a hardcoded `width:300px`, a plain
+   * flex child on the right, and nothing between them. Everything the standard `.panel` carries was therefore
+   * missing — the drag handle, the remembered `--lw` width, the `calc(100% - 300px)` cap that stops the list
+   * eating the detail, and `.appwrap.m .panel.showdetail` which is how the two panes become one screen on a
+   * PHONE. That last one is the reason this matters beyond taste: on a phone the network screen was showing a
+   * 300px column and whatever was left, instead of one pane at a time.
+   *
+   * ⚠️ Same class of bug as the chip stylesheet and the phantom modal classes: the shared thing existed, was
+   * not used, and the copy silently lacked everything the original had accumulated.
+   */
+  var showDetail = !!(UI.mdetail && sel);
+  var list = '<div class="list" id="netLeftPane" style="overflow:auto;padding:12px 8px">' + _netLeftPane() + '</div>';
+  var divider = '<div class="divider" id="divider" onmousedown="startDrag(event)" ontouchstart="startDrag(event)"'
+    + ' role="separator" aria-label="Resize panes"><span class="grip"></span></div>';
+  var detail = '<div class="detail" id="netDetailPane" style="overflow:auto">' + right + '</div>';
   return '<div style="display:flex;flex-direction:column;height:100%;min-height:0">'
     + _netModeStrip()
-    + '<div style="display:flex;flex:1;min-height:0">'
-    + '<div id="netLeftPane" style="width:300px;border-right:1px solid var(--line);overflow:auto;padding:12px 8px;flex:0 0 auto">'
-      + _netLeftPane() + '</div>'
-    + '<div id="netDetailPane" style="flex:1;overflow:auto;min-width:0">' + right + '</div></div></div>';
+    + '<div class="panel' + (showDetail ? ' showdetail' : '') + '" id="panel"'
+    +   ' style="--lw:' + (UI.lw || 340) + 'px;--lh:' + (UI.lh || 260) + 'px">'
+    + list + divider + detail + '</div></div>';
 }
 
 /**
@@ -2649,24 +2674,66 @@ function _netNodeView(n){
      * because it is the title of the page rather than one of its subjects. Below the strip, one subject at a time.
      */
     + _netTabStrip(n)
-    + (_netTab() === 'general' ? _netGeneralTab(n) : _capPanel(n, _netTab()))
+    + (_netTab() === 'general' ? _netGeneralTab(n)
+       : _netTab() === 'visibility' ? _netVisibilityTab(n)
+       : _netOptionsTab(n))
     + '<div style="margin-top:16px;font-size:11.5px;color:var(--grey);line-height:1.55">When the design is done, <b>Build</b> turns each owned node into a real entity + login key, and invites each partner by handshake. Until then this is just a plan — saved, nothing created.</div>'
     + '</div>';
 }
 
-/** Which tab is showing. `general` is the landing page — the thing you almost always came here to change. */
-function _netTab(){ return (UI.net && UI.net.tab) || 'general'; }
+var NET_TABS = [
+  { k: 'general',    icon: '🌿', label: 'Hierarchy' },
+  { k: 'visibility', icon: '🔒', label: 'Visibility' },
+  { k: 'options',    icon: '⚙️', label: 'Options' },
+];
+/**
+ * Which tab is showing. `general` is the landing page — the thing you almost always came here to change.
+ * ⚠️ A capability key may still arrive here: netCapYes() sets `tab` to the capability it just switched on, and
+ * an older saved draft can carry one. Anything that is not one of the three lands on Options, which is where a
+ * capability now lives — rather than showing a blank pane for a tab that no longer exists.
+ */
+function _netTab(){
+  var t = (UI.net && UI.net.tab) || 'general';
+  for (var i = 0; i < NET_TABS.length; i++) if (NET_TABS[i].k === t) return t;
+  return 'options';
+}
 function netPickTab(t){ if (UI.net) UI.net.tab = t; _netRerender(); }
 
 function _netTabStrip(n){
   var cur = _netTab();
-  var tabs = [{ k: 'general', icon: '⚙️', label: 'General' }].concat(NET_CAPS);
-  return '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:16px;padding-bottom:12px;border-bottom:1px solid var(--line)">'
+  /**
+   * ⭐⭐ THREE TABS, NOT THIRTEEN (Athi, 2026-08-17: *"possibly we can have three tabs, one is for deciding the
+   * hierarchy, second one is to set the public or private, third one is to choose the other options"* — then:
+   * *"as a checkbox so only the required option can be chosen"*).
+   *
+   * ⚠️ THE OLD STRIP WAS General + EVERY CAPABILITY — thirteen tabs for one node. It made the twelve
+   * capabilities look like twelve places to go, when eleven of them are usually OFF and the whole question is
+   * "which of these does this store have?". A tab per capability answers that only by making you visit all
+   * twelve and remember what you saw. A checklist answers it in one look, which is what Athi asked for.
+   *
+   * The three now match the three decisions actually being made about a node, in the order they are made:
+   *   Hierarchy   — where it sits, and what hangs under it
+   *   Visibility  — who can see it. The ONE decision a network has to get right
+   *   Options     — which capabilities it holds, as ticks
+   */
+  var tabs = NET_TABS;
+  /**
+   * ⚠️ ONE ROW THAT SCROLLS, NOT A BLOCK THAT WRAPS — the same decision already taken for the category strip in
+   * cart-ui, and taken there for the same reason. General plus every capability is a lot of tabs; wrapping turns
+   * the strip into two or three rows of buttons that push the actual content down the page and change height
+   * whenever the pane is resized, so the content jumps as you drag the divider. That is the "clumsy".
+   *
+   * A horizontal scroll costs one gesture when there are many tabs and costs nothing when there are few.
+   * scroll-snap keeps a part-scrolled strip from resting mid-tab.
+   */
+  return '<div style="display:flex;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;'
+    + 'scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;'
+    + 'gap:6px;margin-top:16px;padding-bottom:12px;border-bottom:1px solid var(--line)">'
     + tabs.map(function(c){
         var on = c.k === cur;
         var yes = c.k !== 'general' && (n.holds || []).indexOf(c.k) >= 0;
         return '<span onclick="netPickTab(\'' + c.k + '\')" style="cursor:pointer;display:inline-flex;align-items:center;gap:8px;'
-          + 'padding:8px 12px;border-radius:9px;font-size:13px;white-space:nowrap;'
+          + 'flex:0 0 auto;scroll-snap-align:start;padding:8px 12px;border-radius:9px;font-size:13px;white-space:nowrap;'
           + 'background:' + (on ? 'var(--blue)' : 'transparent') + ';'
           + 'border:1px solid ' + (on ? 'var(--blue)' : 'var(--line)') + ';'
           + 'color:' + (on ? 'var(--on-accent)' : (yes || c.k === 'general' ? 'var(--blue-2)' : 'var(--blue-2)')) + ';'
@@ -2713,8 +2780,94 @@ function _netGeneralTab(n){
     // and nothing else."* Exposure used to live INSIDE the storefront capability panel, three clicks down, which
     // made the one thing a network actually has to decide the hardest thing on the screen to find.
     // The network's OWN answer sits on the root node — it is the first question, and it caps every store below.
-    + (isRoot ? _netNetworkVisibilityBlock() : (!n.owned ? '' : _netVisibilityBlock(n)))
+    /* ⚠️ MOVED, NOT COPIED — these now render in the Visibility tab. Leaving them here as well would give the
+       same control two homes that can disagree about which one you last used. */
+    + '</div>';
+}
+
+/**
+ * TAB 2 · WHO CAN SEE IT.
+ * The network's own answer sits on the ROOT and caps every store below it, so the root shows the network
+ * question and a child shows its own — never both, because only one of them is this node's to answer.
+ */
+function _netVisibilityTab(n){
+  var isRoot = !n.parent_key;
+  return '<div style="padding-top:14px">'
+    + (isRoot ? _netNetworkVisibilityBlock() : (!n.owned ? _netPartnerVisNote() : _netVisibilityBlock(n)))
     + (isRoot || !n.owned ? '' : _netInheritBlock(n))
+    + '</div>';
+}
+/* A partner is not ours to expose — it decides its own. Said plainly rather than showing a disabled control. */
+function _netPartnerVisNote(){
+  return '<div style="padding:13px 15px;border:1px solid var(--line);border-radius:12px;background:var(--neutral-tint);'
+    + 'color:var(--on-card);font-size:var(--fs-2);line-height:1.55">🤝 This is an independent business. '
+    + 'It sets its own visibility — you are agreeing to trade with it, not hosting it.</div>';
+}
+
+/**
+ * TAB 3 · WHICH CAPABILITIES IT HOLDS — as ticks (Athi: *"as a checkbox so only the required option can be
+ * chosen"*).
+ *
+ * ⚠️ THE TICKED ONE OPENS UNDERNEATH IT. A checklist that only sets flags would have hidden every capability's
+ * settings, which is a worse screen than the thirteen tabs it replaced. Ticked ⇒ its panel is right there;
+ * unticked ⇒ one line and nothing else. The list is the map and the detail, in the order you decided them.
+ */
+/**
+ * Why a capability cannot be ticked on THIS node, in words, or '' if it can.
+ *
+ * ⚠️ DELIBERATELY NARROW. Only capabilities whose whole purpose is to be SEEN are gated: a storefront is a shop
+ * window, and a shop window on a node nobody may look at is a contradiction rather than a configuration. The
+ * others stay available even on a private node, because a private store still holds a catalogue, still trades,
+ * still disputes — gating those would be tidiness dressed up as logic, and would block real setups.
+ *
+ * ⚠️ AND IT IS ABOUT EXPOSURE, NOT OWNERSHIP. A partner node is independent, so we do not gate it at all; it
+ * answers this question for itself.
+ */
+var NET_NEEDS_EXPOSURE = { storefront: 1 };
+function _netCapBlockedReason(n, capKey){
+  if (!NET_NEEDS_EXPOSURE[capKey]) return '';
+  if (!n.owned || !n.parent_key) return '';                  // partner, or the network root itself
+  var vis = n.exposure || 'private';
+  if (vis !== 'private') return '';
+  return 'Not applicable while this store is private — a storefront needs someone who can see it.';
+}
+
+function _netOptionsTab(n){
+  var holds = n.holds || [];
+  return '<div style="padding-top:14px">'
+    + '<div style="font-size:11.5px;color:var(--grey);line-height:1.55;margin-bottom:10px">'
+    + 'Tick what this store does. Only the ticked ones are set up at Build.</div>'
+    + NET_CAPS.map(function(c){
+        var on = holds.indexOf(c.k) >= 0;
+        /**
+         * ⚠️ PRIVATE RULES OPTIONS OUT (Athi: *"if it is private many capabilities are not applicable"*).
+         * A storefront on a node nobody may see is not a setting, it is a contradiction — and offering it as a
+         * tick invites someone to switch it on, see nothing happen, and conclude the feature is broken. The
+         * reason is named, and it points at the tab that would change it, because "not applicable" without
+         * "here is what to change" is just a locked door.
+         */
+        var blocked = _netCapBlockedReason(n, c.k);
+        var q = String.fromCharCode(39);   // a single quote — this string is already two levels of quoting deep
+        var call = function(fn){ return fn + '(' + q + esc(n.key) + q + ',' + q + esc(c.k) + q + ')'; };
+        return '<div style="border:1px solid ' + (on ? 'var(--blue)' : 'var(--line)') + ';border-radius:12px;'
+          + 'background:var(--card);color:var(--on-card);margin-bottom:8px;overflow:hidden'
+          + (blocked ? ';opacity:.72' : '') + '">'
+          + '<label style="display:flex;align-items:center;gap:10px;padding:11px 13px;'
+          + (blocked ? 'cursor:not-allowed' : 'cursor:pointer') + '">'
+          +   '<input type="checkbox" ' + (on ? 'checked ' : '') + (blocked ? 'disabled ' : '')
+          +     'data-testid="net-cap-' + esc(c.k) + '"'
+          +     ' onchange="this.checked?' + call('netCapYes') + ':' + call('netCapNo') + '">'
+          +   '<span style="width:18px;text-align:center;font-size:var(--fs-3)">' + c.icon + '</span>'
+          +   '<span style="font-size:var(--fs-3);font-weight:' + (on ? '700' : '500') + '">' + esc(c.label) + '</span>'
+          +   (c.soon ? '<span style="margin-left:auto;font-size:var(--fs-1);font-weight:800;color:var(--warn-2);'
+                + 'background:var(--warn-tint);border-radius:5px;padding:1px 6px">not enabled</span>' : '')
+          + '</label>'
+          + (blocked ? '<div style="padding:0 13px 11px;font-size:11.5px;color:var(--warn-2);line-height:1.55">'
+                + esc(blocked) + ' <span onclick="netPickTab(' + q + 'visibility' + q + ')"'
+                + ' style="cursor:pointer;color:var(--blue);font-weight:700">Change visibility →</span></div>' : '')
+          + (on && !blocked ? '<div style="border-top:1px solid var(--line);padding:2px 13px 12px">' + _capPanel(n, c.k) + '</div>' : '')
+          + '</div>';
+      }).join('')
     + '</div>';
 }
 

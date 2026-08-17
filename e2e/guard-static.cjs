@@ -421,6 +421,12 @@ console.log('\n11 · surfaces that name no text colour (inline styles)');
   [['app.html', app]].concat(CAPS.map((f) => [f, fs.readFileSync(path.join(WEB, 'app', f), 'utf8')]))
     .forEach(([name, src]) => {
       let n = 0;
+      /* ⚠️ JOIN CONCATENATED FRAGMENTS FIRST. Most styles in this codebase are built as `'a;' + 'b'`, so a rule
+         that reads one quoted string at a time sees `background:var(--card);` in one fragment and `color:...` in
+         the next, and reports a pair that is perfectly fine. It over-reports rather than under-reports, which is
+         the safe direction for a guard — but a check that cries wolf is one people learn to skip, and this one
+         cried wolf on the very commit that added it. Collapsing `' + '` makes it read what actually ships. */
+      src = src.replace(/'\s*\+\s*'/g, '').replace(/"\s*\+\s*"/g, '');
       for (const m of src.matchAll(/style\s*=\s*(["'`])((?:(?!\1)[\s\S]){0,320}?)\1/g)) {
         const st = m[2];
         const bg = /background(?:-color)?\s*:\s*var\((--[a-z0-9-]+)\)/.exec(st);
