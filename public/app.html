@@ -1902,6 +1902,114 @@ const MSG = {
   fail:           (verb,e)      => `Couldn't ${verb} — ${friendlyErr(e)}`,
 };
 
+/**
+ * ⭐⭐ CBKEYS — THE KEYBOARD MAP (Athi, 2026-08-16: *"may be you can create a keyboard mapping, each icon works
+ * with which key stroke"*).
+ *
+ * ⚠️ THERE WAS NO GLOBAL KEY HANDLER AT ALL before this — not even Escape. Every shortcut in the app was an
+ * `onkeydown="if(event.key==='Enter')…"` bolted to one input. So the counter could not be run from the keyboard
+ * in any sense beyond Tab, and Escape did not close a modal, which is the one key everybody tries first.
+ *
+ * ⚠️⚠️ THE HELP OVERLAY IS GENERATED FROM THIS LIST, so it cannot drift from what the app actually does. A
+ * hand-written shortcut list is wrong the first time somebody adds a key and forgets the docs — and a keyboard
+ * map that lies is worse than none, because the reader stops trusting the ones that are right.
+ *
+ * THE THREE RULES A GLOBAL HANDLER MUST FOLLOW, all of which are easy to get wrong:
+ *   1 ⚠️ NEVER FIRE WHILE SOMEONE IS TYPING. `c` must type a c in a text box, not open Compose. Escape is the
+ *        single exception — leaving a field is exactly what it is for.
+ *   2 ⚠️ NEVER TAKE A MODIFIER COMBINATION. Ctrl/Cmd/Alt belong to the browser and the OS; stealing Ctrl-F or
+ *        Cmd-L to be clever is how an app becomes unusable for the people who rely on those.
+ *   3 ⚠️ ESCAPE UNWINDS ONE LAYER AT A TIME, innermost first — lightbox, then modal, then menu, then drawer.
+ *        Closing everything at once loses work a person only meant to step back from.
+ */
+var CBKEYS = [
+  { k: 'c', label: 'Compose a chit', when: 'signed-in',
+    run: function () { if (typeof compose === 'function') compose(); } },
+  { k: '/', label: 'Jump to search', when: 'signed-in',
+    run: function () {
+      /* Whichever search this screen has — they are deliberately not one control, so the key finds the one that
+         is actually on screen rather than assuming a single global box that does not exist. */
+      var el = document.querySelector('[data-testid="cat-search"], [data-testid="sup-add-input"], #q, .cbpick-q, input[type="search"]');
+      if (el) { el.focus(); if (el.select) el.select(); }
+    } },
+  { k: '?', label: 'Show this list', when: 'always', run: function () { cbKeysOverlay(true); } },
+  { k: 'Escape', label: 'Close / step back', when: 'always', run: function () { cbKeysEscape(); } },
+  { k: '1…9', label: 'Jump to the nth item in the rail', when: 'signed-in', digits: true },
+];
+
+/** Innermost layer first — see rule 3. Returns true if something was actually closed. */
+function cbKeysEscape() {
+  var ov = document.getElementById('cbkeys_ov');
+  if (ov) { ov.remove(); return true; }
+  var lb = document.getElementById('lbhost');
+  if (lb && lb.innerHTML.trim()) { lb.innerHTML = ''; return true; }
+  var mh = document.getElementById('modalhost');
+  if (mh && mh.innerHTML.trim()) { if (typeof closeModal === 'function') closeModal(); return true; }
+  if (typeof UI !== 'undefined' && UI.avMenu) { UI.avMenu = false; renderApp(); return true; }
+  if (typeof UI !== 'undefined' && UI.drawer) { UI.drawer = false; renderApp(); return true; }
+  return false;
+}
+
+/** The overlay, built FROM CBKEYS. Toggling it twice is a no-op rather than a stack of overlays. */
+function cbKeysOverlay(show) {
+  var old = document.getElementById('cbkeys_ov');
+  if (old) { old.remove(); if (!show) return; }
+  var rows = CBKEYS.map(function (s) {
+    return '<div style="display:flex;align-items:center;gap:14px;padding:7px 0">'
+      + '<kbd style="min-width:74px;text-align:center;font-family:ui-monospace,Menlo,monospace;font-size:12px;'
+      + 'font-weight:700;background:var(--neutral-tint);color:var(--on-card);border:1px solid var(--line);'
+      + 'border-bottom-width:2px;border-radius:6px;padding:3px 8px">' + esc(s.k) + '</kbd>'
+      + '<span style="font-size:var(--fs-2);color:var(--on-card)">' + esc(s.label) + '</span></div>';
+  }).join('');
+  var d = document.createElement('div');
+  d.id = 'cbkeys_ov';
+  d.setAttribute('role', 'dialog');
+  d.setAttribute('aria-label', 'Keyboard shortcuts');
+  d.style.cssText = 'position:fixed;inset:0;z-index:1400;background:rgba(8,24,32,.45);display:flex;'
+    + 'align-items:center;justify-content:center;padding:20px';
+  d.onclick = function (e) { if (e.target === d) d.remove(); };
+  d.innerHTML = '<div style="background:var(--card);color:var(--on-card);border:1px solid var(--line);'
+    + 'border-radius:14px;box-shadow:var(--shadow);padding:18px 20px;max-width:420px;width:100%">'
+    + '<div style="font-family:\'Space Grotesk\';font-weight:800;font-size:15px;margin-bottom:4px">Keyboard</div>'
+    + '<div style="font-size:11.5px;color:var(--grey);margin-bottom:10px">Shortcuts do nothing while you are typing.</div>'
+    + rows
+    + '<div style="font-size:11.5px;color:var(--grey);margin-top:12px">Press <b>Esc</b> to close.</div></div>';
+  (document.body || document.documentElement).appendChild(d);
+}
+
+document.addEventListener('keydown', function (e) {
+  // Rule 2 — modifier combinations belong to the browser and the OS.
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  var ae = document.activeElement;
+  var typing = !!(ae && (/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName) || ae.isContentEditable));
+
+  if (e.key === 'Escape') {                      // Rule 1's single exception
+    if (typing && ae.blur) { ae.blur(); e.preventDefault(); return; }
+    if (cbKeysEscape()) e.preventDefault();
+    return;
+  }
+  if (typing) return;                            // Rule 1
+
+  if (e.key === '?') { cbKeysOverlay(true); e.preventDefault(); return; }
+  if (typeof SESSION === 'undefined' || !SESSION.token) return;   // the rest are for a signed-in app only
+
+  if (e.key === 'c') { if (typeof compose === 'function') { compose(); e.preventDefault(); } return; }
+  if (e.key === '/') {
+    var el = document.querySelector('[data-testid="cat-search"], [data-testid="sup-add-input"], #q, .cbpick-q, input[type="search"]');
+    if (el) { el.focus(); if (el.select) el.select(); e.preventDefault(); }
+    return;
+  }
+  /* 1–9 walk the rail in the order it is drawn, so the mapping needs no invented letters and stays correct when
+     the rail changes — the nth key is always the nth thing you can see. */
+  if (/^[1-9]$/.test(e.key)) {
+    /* ⚠️ `.menu` IS the rail — I first guessed `.nav`/`.rail`, neither of which exists in this app, and a
+       querySelectorAll that matches nothing fails SILENTLY: the key would simply have done nothing, for ever. */
+    var items = document.querySelectorAll('.menu [data-testid^="nav-"]');
+    var t = items[Number(e.key) - 1];
+    if (t) { t.click(); e.preventDefault(); }
+  }
+});
+
 window.addEventListener("hashchange", route);
 function route(){
   try{ mountAssist(); }catch(_){}   // floating assistant on every page (auth + pre-auth)
