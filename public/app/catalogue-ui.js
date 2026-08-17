@@ -741,7 +741,7 @@
       'content-visibility:auto;contain-intrinsic-size:auto 58px}',
       '.cbcat-row.on{background:var(--soft,#eef4ff)}',
       '.cbcat-var .cbcat-nm{padding-left:16px}',
-      '.cbcat-thumb{flex:none;width:52px;height:52px;border-radius:9px;background:#ECE7DE;',
+      '.cbcat-thumb{flex:none;width:52px;height:52px;border-radius:9px;background:var(--warn-tint);',
       'border:1px solid var(--line,var(--line));overflow:hidden;position:relative;display:grid;place-items:center}',
       '.cbcat-thumb img{width:100%;height:100%;object-fit:cover;display:block}',
       /* The letter tile. White on a derived mid-tone hue — see tileFor for why the colour is a hash and not a
@@ -802,7 +802,7 @@
       'background:linear-gradient(100deg,#ECE7DE 30%,#f6f2ea 50%,#ECE7DE 70%);background-size:220% 100%;',
       'animation:cbcatsk 1.1s linear infinite}',
       '.cbcat-skelbar-sm{height:8px;opacity:.7}',
-      '.cbcat-skeldot{display:inline-block;width:30px;height:30px;border-radius:50%;background:#ECE7DE}',
+      '.cbcat-skeldot{display:inline-block;width:30px;height:30px;border-radius:50%;background:var(--warn-tint)}',
       '@media(prefers-reduced-motion:reduce){.cbcat-skelbar{animation:none}}',
 
       /**
@@ -824,7 +824,7 @@
       'border:1px solid var(--blue,var(--blue));border-radius:9px;padding:9px 15px;font-weight:700;font-size:13px;',
       'white-space:nowrap;cursor:pointer;font-family:inherit}',
 
-      '.cbcat-onchit{padding:10px 12px;margin-bottom:9px;background:#f4f8fd;border:1px solid #d8e4f3;',
+      '.cbcat-onchit{padding:10px 12px;margin-bottom:9px;background:var(--blue-tint-bg);border:1px solid #d8e4f3;',
       'border-radius:9px}',
       '.cbcat-onchit-t{font-weight:800;font-size:var(--fs-1);text-transform:uppercase;letter-spacing:.05em;',
       'color:var(--blue-d,var(--blue-d));margin-bottom:5px}',

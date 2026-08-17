@@ -307,7 +307,7 @@ const FOUNDATION_CATALOGUE = [
  *    capabilities are lifecycles (verbs) that act ON it. The clearest contrast is a shared-document tool. ── */
 function _subjectTabHtml(){
   const vs=(them,us)=>'<tr style="border-top:1px solid var(--line)"><td style="padding:6px 9px;color:var(--grey);vertical-align:top">'+them+'</td><td style="padding:6px 9px;color:var(--ink);font-weight:600;vertical-align:top">'+us+'</td></tr>';
-  const g=(t,m,alt)=>'<div style="display:flex;gap:10px;padding:6px 10px;font-size:var(--fs-1);'+(alt?'background:#f6f9fd;':'')+'"><span style="flex:0 0 122px;font-weight:700;color:#2b4a72">'+t+'</span><span style="color:var(--ink);line-height:1.45">'+m+'</span></div>';
+  const g=(t,m,alt)=>'<div style="display:flex;gap:10px;padding:6px 10px;font-size:var(--fs-1);'+(alt?'background:var(--blue-tint-bg);':'')+'"><span style="flex:0 0 122px;font-weight:700;color:var(--blue)">'+t+'</span><span style="color:var(--ink);line-height:1.45">'+m+'</span></div>';
   return '<div style="padding:14px 16px;overflow:visible">'
     // RAIL — the hero picture (public asset; scalable vector)
     +'<img src="/rail-metaphor.svg" alt="Chit &amp; Bridge — a governed rail: two tracks (Task, Order), wagon = your business, private yards, dispute siding, network" loading="lazy" style="width:100%;height:auto;display:block;border:1px solid var(--line);border-radius:12px;background:var(--card)"/>'
@@ -348,11 +348,11 @@ function _subjectTabHtml(){
 
 /* ── FOUNDATIONS tab — the trust floor as maturity + PROOF (core hardening + atomicity now first-class). ── */
 function _foundTabHtml(){
-  const lvlBadge=(l,t)=>{ const tt=(t&&t>l)?('→L'+t):''; return '<span title="Foundation maturity — L1 exists · L2 clean mechanism · L3 enforced+isolated · L4 governed+provable · L5 audited/certified" style="font-size:var(--fs-1);font-weight:800;color:#1f6f4a;background:#e7f4ee;border:1px solid #bfe0cf;border-radius:6px;padding:1px 7px">L'+l+tt+'</span>'; };
+  const lvlBadge=(l,t)=>{ const tt=(t&&t>l)?('→L'+t):''; return '<span title="Foundation maturity — L1 exists · L2 clean mechanism · L3 enforced+isolated · L4 governed+provable · L5 audited/certified" style="font-size:var(--fs-1);font-weight:800;color:#1f6f4a;background:var(--ok-tint);border:1px solid #bfe0cf;border-radius:6px;padding:1px 7px">L'+l+tt+'</span>'; };
   const card=(f)=>'<div style="border:1px solid var(--line);border-radius:12px;padding:11px 13px;margin-bottom:10px">'
     +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><span style="font-size:15px">'+f.icon+'</span><span style="font-family:\'Space Grotesk\';font-weight:700;font-size:13.5px">'+esc(f.name)+'</span><span style="margin-left:auto">'+lvlBadge(f.level,f.target)+'</span></div>'
     +'<div style="font-size:13px;color:var(--ink);line-height:1.5;margin-bottom:6px">'+esc(f.what)+'</div>'
-    +'<div style="font-size:12px;color:var(--grey);line-height:1.5;background:#f7f9fc;border:1px solid var(--line);border-radius:9px;padding:8px 10px"><b style="color:var(--ok-3)">PROOF:</b> '+esc(f.proof)+'</div>'
+    +'<div style="font-size:12px;color:var(--grey);line-height:1.5;background:var(--card);border:1px solid var(--line);border-radius:9px;padding:8px 10px"><b style="color:var(--ok-3)">PROOF:</b> '+esc(f.proof)+'</div>'
   +'</div>';
   return '<div style="padding:12px 13px;overflow:visible">'
     +'<div style="font-size:13px;color:var(--grey);margin-bottom:10px">What the <b>subject</b> stands on — the trust floor. A capability needs only to WORK; a <b>foundation needs EVIDENCE</b>, so each carries the PROOF that makes its level evident, not asserted. Ladder: L1 exists · L2 clean mechanism · L3 enforced &amp; isolated · L4 governed &amp; provable · L5 audited/certified.</div>'
@@ -432,7 +432,7 @@ function _secTabHtml(){
 function _edgeTabHtml(){
   const pt=(x,y,label,hl)=>'<div style="position:absolute;left:'+x+'%;bottom:'+y+'%;transform:translate(-50%,50%);text-align:center;z-index:2">'
     +'<div style="width:'+(hl?15:10)+'px;height:'+(hl?15:10)+'px;border-radius:50%;margin:0 auto;background:'+(hl?'var(--blue)':'var(--grey-4)')+';'+(hl?'box-shadow:0 0 0 5px rgba(63,102,166,.16)':'')+'"></div>'
-    +'<div style="font-size:var(--fs-1);margin-top:3px;white-space:nowrap;color:'+(hl?'#2b4a72':'var(--grey)')+';font-weight:'+(hl?'700':'500')+'">'+esc(label)+'</div></div>';
+    +'<div style="font-size:var(--fs-1);margin-top:3px;white-space:nowrap;color:'+(hl?'var(--blue-2)':'var(--grey)')+';font-weight:'+(hl?'700':'500')+'">'+esc(label)+'</div></div>';
   const stage=(l,s,k)=>{ const on=k==='now', nx=k==='next', dn=k==='done';
     const bg=on?'var(--blue-tint)':(nx?'#fff':'#f6f6f4'), bd=on?'var(--blue)':'var(--line)', col=on?'#2b4a72':(dn?'#8a8f98':'var(--ink)');
     return '<div style="border:1px solid '+bd+';background:'+bg+';border-radius:9px;padding:5px 8px;text-align:center;min-width:66px">'
@@ -440,7 +440,7 @@ function _edgeTabHtml(){
       +'<div style="font-size:var(--fs-1);color:var(--grey)">'+esc(s)+'</div></div>'; };
   const arrow=()=>'<span style="color:var(--grey);font-size:var(--fs-1)">→</span>';
   const _mk=(v)=>{ const m={y:['var(--ok-3)','✓'],p:['#a9791f','~'],n:['#c0453b','✗']}, c=m[v]||m.n; return '<span style="color:'+c[0]+';font-weight:700">'+c[1]+'</span>'; };
-  const crow=(n,a,b,c,d,hl)=>'<tr style="'+(hl?'background:var(--blue-tint);':'')+'border-top:1px solid var(--line)"><td style="text-align:left;padding:4px;font-weight:'+(hl?'700':'500')+';color:'+(hl?'#2b4a72':'var(--ink)')+'">'+n+'</td><td style="text-align:center;padding:4px">'+_mk(a)+'</td><td style="text-align:center;padding:4px">'+_mk(b)+'</td><td style="text-align:center;padding:4px">'+_mk(c)+'</td><td style="text-align:center;padding:4px">'+_mk(d)+'</td></tr>';
+  const crow=(n,a,b,c,d,hl)=>'<tr style="'+(hl?'background:var(--blue-tint);':'')+'border-top:1px solid var(--line)"><td style="text-align:left;padding:4px;font-weight:'+(hl?'700':'500')+';color:'+(hl?'var(--blue-2)':'var(--ink)')+'">'+n+'</td><td style="text-align:center;padding:4px">'+_mk(a)+'</td><td style="text-align:center;padding:4px">'+_mk(b)+'</td><td style="text-align:center;padding:4px">'+_mk(c)+'</td><td style="text-align:center;padding:4px">'+_mk(d)+'</td></tr>';
   return '<div style="padding:14px 16px;overflow:visible">'
     +'<div style="font-size:11.5px;color:var(--grey);margin-bottom:8px">Where we aim vs the alternatives. <b>This is a positioning hypothesis</b> — our dot is a <b>target</b> (we are early/unproven); the others are established.</div>'
     +'<div style="position:relative;height:270px;margin:22px 34px 30px;border-left:1.5px solid var(--line);border-bottom:1.5px solid var(--line)">'
@@ -483,7 +483,7 @@ function _edgeTabHtml(){
       +'<div style="font-size:var(--fs-1);color:var(--grey);margin-top:5px">Cols: <b>Gov travels</b> to the distributor · <b>Neutral</b> = distributor-neutral, no host lock · <b>Info-only</b> = no logistics grab · <b>Dispute</b> = per-copy. Only CB combines governance-travels + neutral + information-only (built + harness-verified) — but <b>not yet adopted by a real brand+distributor pair</b>, so it&rsquo;s a target, not a trophy.</div>'
     +'</div>'
     +'<div style="font-size:var(--fs-1);color:var(--grey);text-align:center;padding-top:10px;border-top:1px solid var(--line);margin-top:14px">Closest analog: <b>ServiceNow</b> — one records/workflow facility, many classified lifecycles (ITSM/HR/dev). It proves the model has takers — and it won by starting <i>narrow</i> (an ITIL desk) then generalizing. Our claimed differentiator vs it: accessibility &amp; cost for the small player.</div>'
-    +'<div style="border:1px solid var(--line);border-radius:9px;padding:11px 12px;margin-top:14px;background:#faf9f6">'
+    +'<div style="border:1px solid var(--line);border-radius:9px;padding:11px 12px;margin-top:14px;background:var(--card)">'
       +'<div style="font-size:var(--fs-1);font-weight:700;color:var(--warn-2);margin-bottom:5px">🧭 Critic&rsquo;s lens (we hold ourselves to it)</div>'
       +'<div style="font-size:var(--fs-1);color:var(--ink);line-height:1.5">The honest risk: the <b>model is ahead of adoption</b> — elegant &ne; adopted. The proof that counts is <b>one real user on one blueprint</b>, not a better diagram. As a <b>concept/POC this existed for years</b>; as a <b>product it is ~2 weeks old</b> — so it is early <i>by timeline</i>, and we name what is unproven rather than oversell it.</div>'
     +'</div>'
@@ -525,12 +525,12 @@ function _realTabHtml(){
  *    WORK_PATTERNS in Core — keep in sync when patterns change. ── */
 function _workTabHtml(){
   const R='var(--accent,var(--blue))';
-  const seal=t=>`<span style="font-size:var(--fs-1);color:var(--ok-3);background:#e7f3ec;border-radius:5px;padding:1px 7px">🔒 ${t}</span>`;
+  const seal=t=>`<span style="font-size:var(--fs-1);color:var(--ok-3);background:var(--ok-tint);border-radius:5px;padding:1px 7px">🔒 ${t}</span>`;
   const lic =t=>`<span style="font-size:var(--fs-1);color:var(--warn-3);background:var(--gold-soft,#f4eeda);border:1px solid var(--gold-line,#e0d4a8);border-radius:5px;padding:1px 7px">🎫 ${t}</span>`;
-  const knob=t=>`<span style="font-size:var(--fs-1);color:#9a6d1a;background:#f7efdd;border-radius:5px;padding:1px 7px">✎ ${t}</span>`;
+  const knob=t=>`<span style="font-size:var(--fs-1);color:#9a6d1a;background:var(--warn-tint);border-radius:5px;padding:1px 7px">✎ ${t}</span>`;
   const up  =t=>`<span style="font-size:var(--fs-1);color:var(--grey)">↑ ${t}</span>`;
   const chain=t=>`<span style="font-size:var(--fs-1);color:${R};background:var(--blue-tint);border-radius:5px;padding:1px 7px">${t}</span>`;
-  const stage=(t,d,tag)=>`<span style="display:inline-flex;flex-direction:column;background:#f6f8fb;border:1px solid var(--line);border-radius:9px;padding:5px 9px;vertical-align:top;max-width:158px"><b style="font-size:var(--fs-1)">${esc(t)}${tag?` <span style="font-family:'Space Mono';font-size:var(--fs-1);color:${R};background:var(--blue-tint);border-radius:4px;padding:0 4px">${tag}</span>`:''}</b>${d?`<span style="color:var(--grey);font-size:var(--fs-1);line-height:1.35;margin-top:2px">${d}</span>`:''}</span>`;
+  const stage=(t,d,tag)=>`<span style="display:inline-flex;flex-direction:column;background:var(--card);border:1px solid var(--line);border-radius:9px;padding:5px 9px;vertical-align:top;max-width:158px"><b style="font-size:var(--fs-1)">${esc(t)}${tag?` <span style="font-family:'Space Mono';font-size:var(--fs-1);color:${R};background:var(--blue-tint);border-radius:4px;padding:0 4px">${tag}</span>`:''}</b>${d?`<span style="color:var(--grey);font-size:var(--fs-1);line-height:1.35;margin-top:2px">${d}</span>`:''}</span>`;
   const arr=`<span style="color:var(--grey);font-size:var(--fs-1);padding:0 1px">→</span>`;
   const journey=(icon,name,sub,stages)=>`<div style="border:1px solid var(--line);border-radius:12px;padding:11px 13px;margin-bottom:10px"><div style="font-weight:700;font-size:var(--fs-2);margin-bottom:8px">${icon} ${name} <span style="color:var(--grey);font-weight:500">— ${sub}</span></div><div style="display:flex;flex-wrap:wrap;gap:6px;align-items:stretch">${stages.join(arr)}</div></div>`;
   const line=o=>`<div style="border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:11px">
@@ -538,7 +538,7 @@ function _workTabHtml(){
       <span style="width:30px;height:30px;border-radius:9px;display:grid;place-items:center;font-size:15px;background:var(--blue-tint);border:1px solid var(--line)">${o.icon}</span>
       <span style="font-family:'Space Grotesk';font-weight:700;font-size:14.5px">${esc(o.name)}</span>
       <span style="font-family:'Space Mono';font-size:var(--fs-1);color:${R};background:var(--blue-tint);border:1px solid var(--line);border-radius:6px;padding:1px 6px">${esc(o.pid)}</span>
-      <span style="margin-left:auto;font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:${o.live?'var(--ok-3)':'#8a8f98'};border:1px ${o.live?'solid #bfe0cf':'dashed #c2c6cc'};border-radius:5px;padding:1px 6px">${o.live?'Live':'Designed'}</span>
+      <span style="margin-left:auto;font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:${o.live?'var(--ok-3)':'var(--grey-2)'};border:1px ${o.live?'solid #bfe0cf':'dashed #c2c6cc'};border-radius:5px;padding:1px 6px">${o.live?'Live':'Designed'}</span>
     </div>
     <div style="font-size:13px;color:var(--ink);background:var(--blue-tint);border-left:3px solid ${R};border-radius:0 8px 8px 0;padding:7px 11px;margin:9px 0 8px;line-height:1.5"><b style="font-family:'Space Mono';font-size:var(--fs-1);letter-spacing:.08em;text-transform:uppercase;color:${R};margin-right:7px">Achieves</b>${o.obj}</div>
     <div style="font-size:11.5px;color:var(--grey);margin-bottom:8px;line-height:1.55">${o.flow}</div>
@@ -611,12 +611,12 @@ function _openLegendImpl(){
   let d=0,p=0,b=0,nf=0; CAP_CATALOGUE.forEach(c=>c.features.forEach(f=>{ nf++; if(f.s==='done')d++; else if(f.s==='partial')p++; else b++; }));
   const built=CAP_CATALOGUE.filter(c=>c.load!=='planned').length;
   const loadBadge=(c)=>{
-    if(c.load==='eager')  return `<span style="font-size:var(--fs-1);font-weight:700;color:var(--ok-3);background:#e8f4ee;border:1px solid #bfe0cf;border-radius:6px;padding:1px 7px">always on</span>`;
+    if(c.load==='eager')  return `<span style="font-size:var(--fs-1);font-weight:700;color:var(--ok-3);background:var(--ok-tint);border:1px solid #bfe0cf;border-radius:6px;padding:1px 7px">always on</span>`;
     if(c.load==='planned')return `<span style="font-size:var(--fs-1);font-weight:700;color:var(--warn-3);background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:6px;padding:1px 7px">planned</span>`;
     const on=!!LOADED[c.id];
-    return `<span style="font-size:var(--fs-1);font-weight:700;color:${on?'var(--blue-d)':'#8a8f98'};background:${on?'var(--blue-tint)':'#f4f4f2'};border:1px solid ${on?'var(--blue-tint-line)':'var(--line)'};border-radius:6px;padding:1px 7px">lazy · ${on?'loaded ✓':'on demand'}</span>`;
+    return `<span style="font-size:var(--fs-1);font-weight:700;color:${on?'var(--blue-d)':'var(--grey-2)'};background:${on?'var(--blue-tint)':'var(--warn-tint)'};border:1px solid ${on?'var(--blue-tint-line)':'var(--line)'};border-radius:6px;padding:1px 7px">lazy · ${on?'loaded ✓':'on demand'}</span>`;
   };
-  const matBadge=(c)=>{ if(!c.maturity) return ''; const t=(c.target&&c.target>c.maturity)?`→L${c.target}`:''; return `<span title="Capability maturity — 1 Proven · 2 Packaged · 3 Itemised · 4 Governed · 5 Productized" style="font-size:var(--fs-1);font-weight:800;color:#4b3b8f;background:#efeaf9;border:1px solid #cabdf0;border-radius:6px;padding:1px 7px">L${c.maturity}${t}</span>`; };
+  const matBadge=(c)=>{ if(!c.maturity) return ''; const t=(c.target&&c.target>c.maturity)?`→L${c.target}`:''; return `<span title="Capability maturity — 1 Proven · 2 Packaged · 3 Itemised · 4 Governed · 5 Productized" style="font-size:var(--fs-1);font-weight:800;color:#4b3b8f;background:var(--purple-tint);border:1px solid #cabdf0;border-radius:6px;padding:1px 7px">L${c.maturity}${t}</span>`; };
   const featRow=(f)=>{ const [col,ic]=SC[f.s]||SC.backlog;
     return `<div style="display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--ink);padding:4px 0;line-height:1.45"><span style="color:${col};flex:none">${ic}</span><span>${esc(f.n)}</span></div>`; };
   // GOVERNANCE BAND — the SECOND axis: gov maturity + what governs it + the L4 gap (SPEC-governance-in-legend.md).
@@ -627,16 +627,16 @@ function _openLegendImpl(){
     const na=(c.gov==null);
     const t=(c.govTarget&&c.govTarget>c.gov)?`→L${c.govTarget}`:'';
     const badge=na
-      ? `<span style="font-size:var(--fs-1);font-weight:800;color:#8a8f98;background:#f0f0ee;border:1px solid var(--line);border-radius:6px;padding:1px 7px">gov · N/A</span>`
-      : `<span title="Governance maturity — 1 declared · 2 designed · 3 enforced+isolated · 4 governed+provable · 5 audited/certified" style="font-size:var(--fs-1);font-weight:800;color:#1f6f4a;background:#e7f4ee;border:1px solid #bfe0cf;border-radius:6px;padding:1px 7px">gov · L${c.gov}${t}</span>`;
+      ? `<span style="font-size:var(--fs-1);font-weight:800;color:#8a8f98;background:var(--neutral-tint);border:1px solid var(--line);border-radius:6px;padding:1px 7px">gov · N/A</span>`
+      : `<span title="Governance maturity — 1 declared · 2 designed · 3 enforced+isolated · 4 governed+provable · 5 audited/certified" style="font-size:var(--fs-1);font-weight:800;color:var(--ink-2);background:var(--ok-tint);border:1px solid #bfe0cf;border-radius:6px;padding:1px 7px">gov · L${c.gov}${t}</span>`;
     const under=c.governedUnder?`<span style="font-size:var(--fs-1);color:var(--grey)">under <b style="color:#2f6f4a;font-weight:600">${esc(c.governedUnder)}</b></span>`:'';
     const mech=(c.governedBy&&c.governedBy.length)?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:5px">${govChips(c.governedBy,'#1f6f4a','#eef6f0','#cfe4d7')}</div>`:'';
     const gap=(c.govGap&&c.govGap.length)?`<div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-top:5px"><span style="font-size:var(--fs-1);font-weight:700;color:var(--warn-2)">to L${c.govTarget||4}:</span>${govChips(c.govGap,'#8a6d1f','#fbf6e9','#e8dab4')}</div>`:'';
-    return `<div style="border:1px solid #d7e6dc;background:#f6faf7;border-radius:9px;padding:7px 9px;margin:0 0 9px">
+    return `<div style="border:1px solid #d7e6dc;background:var(--card);border-radius:9px;padding:7px 9px;margin:0 0 9px">
       <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap">${badge}${under}</div>${mech}${gap}
     </div>`;
   };
-  const card=(c)=>`<div style="border:1px solid var(--line);border-radius:12px;padding:11px 13px;margin-bottom:10px;background:${c.load==='planned'?'#faf9f5':'#fff'}">
+  const card=(c)=>`<div style="border:1px solid var(--line);border-radius:12px;padding:11px 13px;margin-bottom:10px;background:${c.load==='planned'?'var(--card)':'var(--card)'}">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px"><span style="font-size:15px">${c.icon}</span><span style="font-family:'Space Grotesk';font-weight:700;font-size:13.5px">${esc(c.name)}</span><span style="margin-left:auto;display:flex;gap:6px;align-items:center">${matBadge(c)}${loadBadge(c)}</span></div>
     <div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:8px;line-height:1.5">${esc(c.blurb)}</div>
     ${govBand(c)}

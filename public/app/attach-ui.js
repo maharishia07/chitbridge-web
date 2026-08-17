@@ -363,7 +363,7 @@ function cbAttachCss(){
   var s = document.createElement('style');
   s.id = 'cbatt_css';
   s.textContent = '.cbatt-chip{display:inline-flex;align-items:center;gap:5px;border:1px dashed var(--gold);'
-    + 'border-radius:9px;padding:3px 8px;margin:2px 5px 2px 0;font-size:11.5px;background:#fdfaf3;'
+    + 'border-radius:9px;padding:3px 8px;margin:2px 5px 2px 0;font-size:11.5px;background:var(--warn-tint);'
     + 'color:var(--ink,var(--ink));max-width:100%}'
     + '.cbatt-chip.sent{border-style:solid;border-color:#e3e6ea;background:var(--card)}';
   (document.head || document.documentElement).appendChild(s);

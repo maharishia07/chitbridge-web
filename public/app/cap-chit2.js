@@ -203,13 +203,13 @@ function c2PaneOrd(d){
                   customer_clarified: 'customer changed it', rate_agreed: 'rate agreed' }[e.reason_code] || 'removed';
       return '<div style="padding:11px 16px;border-bottom:1px solid var(--line);opacity:.55">'
         + '<s>' + esc(l.particulars || '') + ' · ' + esc(c2q(l)) + '</s>'
-        + '<span style="margin-left:8px;font-size:var(--fs-1);font-weight:700;color:var(--warn-2);background:#faf3dd;border-radius:5px;padding:1px 6px">' + esc(why) + '</span></div>';
+        + '<span style="margin-left:8px;font-size:var(--fs-1);font-weight:700;color:var(--warn-2);background:var(--warn-tint);border-radius:5px;padding:1px 6px">' + esc(why) + '</span></div>';
     }
     var was = (e.history || []).slice(0, 1).map(function(h){
       return '<s style="color:var(--grey);margin-right:6px">' + esc([h.particulars, h.quantity, h.unit].filter(Boolean).join(' ')) + '</s>';
     }).join('');
     /* Emphasis, not exclusion: mine sits at full weight, everyone else's is dimmed but perfectly readable. */
-    return '<div style="padding:11px 16px;border-bottom:1px solid var(--line);' + (mine ? 'background:#f6f8fb' : 'opacity:.62') + '">'
+    return '<div style="padding:11px 16px;border-bottom:1px solid var(--line);' + (mine ? 'background:var(--card)' : 'opacity:.62') + '">'
       + '<div style="display:flex;justify-content:space-between;gap:10px">'
       + '<span style="font-weight:' + (mine ? '700' : '500') + ';font-size:14.5px">' + esc(l.particulars || 'Item') + (mine ? ' <span style="font-size:var(--fs-1);color:var(--blue);font-weight:800">YOURS</span>' : '') + '</span>'
       /* ⭐ THE CORRECTION AFFORDANCE. Athi, 2026-08-13: *"maybe a html line with edit icon would be useful"* — and
@@ -242,7 +242,7 @@ function c2PaneOrd(d){
         + ' style="cursor:pointer;font-size:15px;color:var(--grey);padding:0 2px">✎</span>'
       + '</span></div>'
       + '<div style="margin-top:3px;font-size:13.5px;color:var(--ink-2,#6b665e);font-variant-numeric:tabular-nums">' + was + esc(c2q(l)) + (l.price != null ? ' × ' + c2Money(l.price) : '') + '</div>'
-      + (l.comment ? '<div style="margin-top:5px;font-size:var(--fs-2);color:#2c5d7c;background:#eef4f8;border-radius:5px;padding:4px 8px;display:inline-block">' + esc(l.comment) + '</div>' : '')
+      + (l.comment ? '<div style="margin-top:5px;font-size:var(--fs-2);color:#2c5d7c;background:var(--blue-tint-bg);border-radius:5px;padding:4px 8px;display:inline-block">' + esc(l.comment) + '</div>' : '')
       + (l.qty_unverified ? '<div style="margin-top:5px;font-size:var(--fs-1);color:var(--warn-2)">⚠️ this number does not appear in their message — check it</div>' : '')
       /* ⚠️ REJECTED IS LOUDER THAN UNVERIFIED, because it is a stronger claim: the quantity was compared against
          THIS line's own words and disagreed, so it was nulled rather than shown. */
@@ -295,7 +295,7 @@ function c2PickBadge(l, i){
   if (!n) return '';
   return '<span onclick="event.stopPropagation();c2AmendPick(' + i + ')"'
     + ' title="The catalogue has more than one of these — pick which, and the price comes with it"'
-    + ' style="cursor:pointer;font-size:var(--fs-1);font-weight:800;color:var(--warn-2);background:#faf3dd;border:1px solid #e6d9a8;'
+    + ' style="cursor:pointer;font-size:var(--fs-1);font-weight:800;color:var(--warn-2);background:var(--warn-tint);border:1px solid #e6d9a8;'
     + 'border-radius:5px;padding:2px 7px;white-space:nowrap">⚠️ pick item</span>';
 }
 
@@ -503,7 +503,7 @@ function c2RollupText(entries, asg, prog){
 }
 function c2GrpBig(title, right, tone){
   return '<div style="padding:14px 16px 6px;display:flex;justify-content:space-between;align-items:baseline;'
-    + 'border-top:1px solid var(--line);background:#fbfbfa">'
+    + 'border-top:1px solid var(--line);background:var(--card)">'
     + '<span style="font-size:var(--fs-4);font-weight:800;color:' + (tone || 'var(--ink,#1c2128)') + '">' + title + '</span>'
     + '<span style="font-size:var(--fs-2);color:var(--grey)">' + (right || '') + '</span></div>';
 }
@@ -540,7 +540,7 @@ function c2DueBucket(due){
 function c2PaneWork(d){
   var asg = d.line_assignment || {};
   var lines = (d.live_set || []).filter(function(e){ return !e.removed; });
-  var out = '<div style="padding:9px 16px;background:#f4f1e8;color:#5b5340;font-size:var(--fs-2);border-bottom:1px solid var(--line)">◍ Only your side sees this. The other party sees none of it.</div>';
+  var out = '<div style="padding:9px 16px;background:var(--warn-tint);color:var(--warn-3);font-size:var(--fs-2);border-bottom:1px solid var(--line)">◍ Only your side sees this. The other party sees none of it.</div>';
 
   /* Who has what — the roll-up for THIS chit. The cross-chit version is /folders/worklist. */
   var people = {};
@@ -582,7 +582,7 @@ function c2PaneWork(d){
         if (!k) return 'No date';
         var b = c2DueBucket(k);
         return esc(c2DateLabel(k)) + ' <span style="font-size:12px;font-weight:600;color:'
-          + (b.label === 'Overdue' ? '#c0453b' : 'var(--grey)') + '">· ' + b.label + '</span>';
+          + (b.label === 'Overdue' ? 'var(--disp)' : 'var(--grey)') + '">· ' + b.label + '</span>';
       },
       /* Undated last: it is the only work nobody is waiting for on a particular day. */
       sort: function(x, y){ if (!x) return 1; if (!y) return -1; return x.localeCompare(y); },
@@ -653,7 +653,7 @@ function c2WorkRow(e, asg, prog, ctx){
       + '<div style="display:flex;align-items:baseline;gap:8px">'
       + '<span style="flex:1;font-weight:500">' + esc(l.particulars || '') + '<span style="color:var(--grey);font-weight:400;font-size:var(--fs-2)"> · ' + esc(c2q(l)) + '</span></span>'
       + '<span style="width:62px;text-align:right;font-variant-numeric:tabular-nums;font-size:13.5px">' + got + '</span>'
-      + '<span style="width:62px;text-align:right;font-variant-numeric:tabular-nums;font-size:13.5px;font-weight:' + (done ? '400' : '700') + ';color:' + (done ? '#2f6b4f' : 'var(--ink)') + '">' + (left === null ? '—' : (done ? '✓' : left)) + '</span>'
+      + '<span style="width:62px;text-align:right;font-variant-numeric:tabular-nums;font-size:13.5px;font-weight:' + (done ? '400' : '700') + ';color:' + (done ? 'var(--ok-2)' : 'var(--ink)') + '">' + (left === null ? '—' : (done ? '✓' : left)) + '</span>'
       + '<span style="color:var(--grey);width:12px;text-align:right;font-size:12px">✎</span></div>'
       /* Who has it and when it is due — the two things that turn "what is left" into "who do I chase". */
       + (function(){
@@ -664,7 +664,7 @@ function c2WorkRow(e, asg, prog, ctx){
           var bits = [who, a.task ? esc(a.task) : '', when].filter(Boolean);
           if (!a.assignee_name) return '<div style="margin-top:4px;font-size:12px;color:var(--grey)">unassigned' + (left ? ' · nobody is doing this' : '') + '</div>';
           if (!bits.length) return '';
-          return '<div style="margin-top:4px;font-size:12px;color:#5b5340;background:#f4f1e8;border-radius:5px;padding:3px 8px;display:inline-block">◍ ' + bits.join(' · ') + '</div>';
+          return '<div style="margin-top:4px;font-size:12px;color:#5b5340;background:var(--warn-tint);border-radius:5px;padding:3px 8px;display:inline-block">◍ ' + bits.join(' · ') + '</div>';
         })()
       + (ctx === 'line' && (a.history || []).length ? '<div style="margin-top:4px;font-size:var(--fs-1);color:var(--grey)">was ' + esc(a.history.map(function(h){ return h.assignee_name || 'unassigned'; }).join(' → ')) + '</div>' : '')
       /* ⚠️ SURFACED HERE TOO. A line the two parties disagree about is a line you cannot call finished, and this
@@ -731,7 +731,7 @@ function c2PaneNotes(d){
   /* ⚠️ INTERNAL ONLY. The counterparty thread lives on THEM; this one never crosses. Both read from the same
      chit_messages table and are separated by scope, so a note cannot leak by being posted to the wrong screen. */
   var msgs = (d.msgs || []).filter(function(m){ return (m.scope || 'internal') === 'internal'; });
-  return '<div style="padding:9px 16px;background:#f4f1e8;color:#5b5340;font-size:var(--fs-2);border-bottom:1px solid var(--line)">◍ Internal notes — never shared with the other party.</div>'
+  return '<div style="padding:9px 16px;background:var(--warn-tint);color:var(--warn-3);font-size:var(--fs-2);border-bottom:1px solid var(--line)">◍ Internal notes — never shared with the other party.</div>'
     + (msgs.length ? msgs.map(function(m){
         return '<div style="padding:10px 16px;border-bottom:1px solid var(--line)"><div style="font-size:11.5px;color:var(--grey)">' + esc(m.author || '') + ' · ' + esc(m.at || '') + '</div><div style="font-size:13.5px;margin-top:2px">' + esc(m.body || '') + '</div></div>';
       }).join('')
@@ -741,7 +741,7 @@ function c2PaneNotes(d){
 /* ── US · cost ─────────────────────────────────────────────────────────────────────────────────────────────── */
 function c2PaneCost(d){
   var c = C2.costs;
-  var out = '<div style="padding:9px 16px;background:#f4f1e8;color:#5b5340;font-size:var(--fs-2);border-bottom:1px solid var(--line)">◍ Your numbers. The other party sees only the price they were quoted.</div>';
+  var out = '<div style="padding:9px 16px;background:var(--warn-tint);color:var(--warn-3);font-size:var(--fs-2);border-bottom:1px solid var(--line)">◍ Your numbers. The other party sees only the price they were quoted.</div>';
   if (!c) return out + '<div style="padding:18px;color:var(--grey);font-size:var(--fs-2)"><span class="spin"></span> reading…</div>';
   if (c.error) return out + '<div style="padding:16px;color:var(--disp);font-size:var(--fs-2)">' + esc(c.error) + '</div>';
 
@@ -755,7 +755,7 @@ function c2PaneCost(d){
       + c2Row('Invoiced', c2Money(c.invoiced))
       + Object.keys(c.by_kind || {}).map(function(k){ return c2Row(k.charAt(0).toUpperCase() + k.slice(1), c2Money(c.by_kind[k])); }).join('')
       + '<div style="display:flex;justify-content:space-between;padding-top:7px;margin-top:4px;border-top:1px solid var(--line);font-weight:600">'
-      + '<span>Margin</span><span style="color:' + ((c.margin || 0) < 0 ? '#c0453b' : '#2f6b4f') + '">' + c2Money(c.margin)
+      + '<span>Margin</span><span style="color:' + ((c.margin || 0) < 0 ? 'var(--disp)' : 'var(--ok-2)') + '">' + c2Money(c.margin)
       + (c.margin_pct == null ? '' : ' · ' + c.margin_pct + '%') + '</span></div>'
       + (c.mixed_currency ? '<div style="font-size:var(--fs-1);color:var(--warn-2);margin-top:4px">⚠️ more than one currency — these are not added together</div>' : '')
       + '</div>';
@@ -800,7 +800,7 @@ function chit2Screen(){
 
   var side = ['them', 'us'].map(function(s){
     var on = C2.side === s;
-    return '<button onclick="c2Side(\'' + s + '\')" style="flex:1;border:1px solid ' + (on ? 'var(--ink,#1c1a17)' : 'var(--line)') + ';background:' + (on ? 'var(--ink,#1c1a17)' : 'transparent') + ';color:' + (on ? '#fff' : 'var(--grey)') + ';font:inherit;font-size:13.5px;padding:9px 0;cursor:pointer;font-weight:' + (on ? '600' : '400') + ';border-radius:' + (s === 'them' ? '8px 0 0 8px' : '0 8px 8px 0') + '">'
+    return '<button onclick="c2Side(\'' + s + '\')" style="flex:1;border:1px solid ' + (on ? 'var(--ink,#1c1a17)' : 'var(--line)') + ';background:' + (on ? 'var(--ink,#1c1a17)' : 'transparent') + ';color:' + (on ? 'var(--on-accent)' : 'var(--grey)') + ';font:inherit;font-size:13.5px;padding:9px 0;cursor:pointer;font-weight:' + (on ? '600' : '400') + ';border-radius:' + (s === 'them' ? '8px 0 0 8px' : '0 8px 8px 0') + '">'
       + (s === 'them' ? 'Them' : 'Us') + '<span style="display:block;font-size:var(--fs-1);opacity:.72;font-weight:400">' + (s === 'them' ? 'the shared record' : 'our side only') + '</span></button>';
   }).join('');
 

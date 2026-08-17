@@ -82,7 +82,7 @@ function _folderView(){
     var line2 = isDev ? ('🛰️ '+esc(bj.sub_type||bj.signal||'signal')+((bj.value!=null&&bj.value!=='')?(' = '+esc(String(bj.value))+esc(bj.unit||'')):'')+' · raised by <b>'+raiser+'</b>') : ('from '+esc(c.sender_entity_display_name||raiser));
     var when=(typeof fmtAt==='function'?esc(fmtAt(c.created_at)):'');
     var openA=(typeof openChit==='function')?('openChit(\''+c.chit_id+'\')'):'';
-    return '<div style="display:flex;gap:11px;padding:12px 18px;border-bottom:1px solid #f0f2f4;cursor:pointer" onclick="'+openA+'"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13.5px">'+(isDev?'🛢️ ':'')+subj+'</div><div style="font-size:11.5px;color:var(--grey);margin-top:2px">'+line2+'</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex:0 0 auto"><span style="font-size:var(--fs-1);color:var(--grey)">'+when+'</span><span style="font-size:var(--fs-1);color:var(--blue);border:1px solid var(--blue-tint-line);background:#f2f7fd;border-radius:9px;padding:2px 8px" onclick="event.stopPropagation();moveChit(\''+c.chit_id+'\')">📁 Move</span></div></div>';
+    return '<div style="display:flex;gap:11px;padding:12px 18px;border-bottom:1px solid #f0f2f4;cursor:pointer" onclick="'+openA+'"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13.5px">'+(isDev?'🛢️ ':'')+subj+'</div><div style="font-size:11.5px;color:var(--grey);margin-top:2px">'+line2+'</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex:0 0 auto"><span style="font-size:var(--fs-1);color:var(--grey)">'+when+'</span><span style="font-size:var(--fs-1);color:var(--blue);border:1px solid var(--blue-tint-line);background:var(--blue-tint-bg);border-radius:9px;padding:2px 8px" onclick="event.stopPropagation();moveChit(\''+c.chit_id+'\')">📁 Move</span></div></div>';
   }).join('');
   // The chit list is now ONE of three panes; metrics and rules render themselves.
   if(_FLD.tab==='metrics') return head+_folderMetricsPane();
@@ -336,7 +336,7 @@ function _groupSumPane(){
      for a question they did not ask. Seen live while building this. So the claim is checked against the reply:
      we asked for a selection, and if the server did not confirm one, say the selection was ignored. */
   if (_FLD.gsIds && _FLD.gsIds.length && !g.selected) {
-    out += '<div style="background:#fbeceb;border:1px solid #f0c9c6;border-radius:9px;padding:8px 11px;font-size:11.5px;color:var(--disp-2);margin-bottom:10px">'
+    out += '<div style="background:var(--danger-tint);border:1px solid #f0c9c6;border-radius:9px;padding:8px 11px;font-size:11.5px;color:var(--disp-2);margin-bottom:10px">'
       + '⚠️ <b>Your selection was ignored.</b> This server does not support totalling a ticked set yet, so the figures below are for the <b>whole track</b>, not your ' + _FLD.gsIds.length + ' chits.</div>';
   } else if (g.selected) {
     var miss = (g.selection_requested || 0) - (g.chits || 0);
@@ -388,7 +388,7 @@ function _groupSumPane(){
         + '<span style="width:74px;text-align:right;color:var(--grey);font-size:11.5px">' + l.stores + '</span></div>';
       /* THE DRILLDOWN — Athi: "on click the down below need to know who are all asked". The roster comes straight
          from consolidate()'s attribution; nothing is recomputed to render it. */
-      var rows = open ? '<div style="padding:2px 0 8px 16px;background:#fbfbfd">'
+      var rows = open ? '<div style="padding:2px 0 8px 16px;background:var(--card)">'
         + (l.breakdown || []).map(function(s){
             return '<div style="display:flex;align-items:center;font-size:12px;padding:3px 0">'
               + '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(s.store_name)
@@ -475,7 +475,7 @@ function _reconStrip(){
       + '</div>';
   }).join('') : '<div style="font-size:11.5px;color:var(--grey);padding:5px 0">No folders on this track yet — everything is unfiled, which is why the two numbers match trivially.</div>';
 
-  return '<div style="border:1px solid var(--line);border-radius:9px;padding:11px 13px;margin-bottom:12px;background:#fbfbfd">'
+  return '<div style="border:1px solid var(--line);border-radius:9px;padding:11px 13px;margin-bottom:12px;background:var(--card)">'
     + '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey)">Does it add up?</div>'
     + '<div style="font-size:13px;margin-top:3px">' + sums + ' &nbsp; ' + verdict + '</div>'
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">' + (r.overall || {}).assigned + ' assigned · ' + (r.overall || {}).unassigned + ' unassigned — a chit can be open and unassigned, and that is the pile worth seeing.</div>'

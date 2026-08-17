@@ -239,12 +239,12 @@ function wlRow(r, ctx, depth){
      * make, on every row.
      */
     +   '<span data-testid="wl-done" title="Open this line — history, delivery, cost, who has it" onclick="event.stopPropagation();wlLine(&quot;' + r.line_id + '&quot;)"'
-    +     ' style="cursor:pointer;font-size:13px;padding:2px 9px;border-radius:6px;color:#2c5d7c;background:#eef4f8;font-weight:800">⋯</span>'
+    +     ' style="cursor:pointer;font-size:13px;padding:2px 9px;border-radius:6px;color:#2c5d7c;background:var(--blue-tint-bg);font-weight:800">⋯</span>'
     +   '<span style="color:var(--grey);font-size:12px;padding-left:3px">›</span></span></div>'
     /* ⚠️ WHICH ORDER IT CAME FROM. A line without its chit is an instruction with no context — you cannot ring the
        customer, check the rest of the order, or know who is waiting. */
     + (named || ordered ? '' : '<div style="font-size:11.5px;color:var(--grey);margin-top:3px">' + order + '</div>')
-    + (bits.length ? '<div style="margin-top:4px;font-size:12px;color:#5b5340;background:#f4f1e8;border-radius:5px;padding:3px 8px;display:inline-block">◍ ' + bits.join(' · ') + '</div>' : '')
+    + (bits.length ? '<div style="margin-top:4px;font-size:12px;color:#5b5340;background:var(--warn-tint);border-radius:5px;padding:3px 8px;display:inline-block">◍ ' + bits.join(' · ') + '</div>' : '')
     + '</div>';
 }
 
@@ -288,7 +288,7 @@ function wlRollupText(rows){
 function wlHead(title, right, tone, id){
   return '<div data-testid="wl-head"' + (id ? ' onclick="wlToggle(&quot;' + esc(id) + '&quot;)"' : '')
     + ' style="' + (id ? 'cursor:pointer;' : '') + 'padding:14px 16px 6px;display:flex;justify-content:space-between;align-items:baseline;'
-    + 'border-top:1px solid var(--line);background:#fbfbfa">'
+    + 'border-top:1px solid var(--line);background:var(--card)">'
     + '<span style="font-size:var(--fs-4);font-weight:800;color:' + (tone || 'var(--ink,#1c2128)') + '">' + title + '</span>'
     + '<span style="font-size:var(--fs-2);color:var(--grey)">' + (right || '') + '</span></div>';
 }
@@ -389,7 +389,7 @@ var WLG = {
           tone: function(k){ return k === 'Unassigned' ? 'var(--grey)' : null; } },
   date: { of: function(r){ return r.due_date ? String(r.due_date).slice(0, 10) : ''; },
           label: function(k){ if (!k) return 'No date'; var l = wlDateLabel(k);
-            return esc(l.text) + ' <span style="font-size:.86em;font-weight:600;color:' + (l.overdue ? '#c0453b' : 'var(--grey)') + '">· ' + l.rel + '</span>'; },
+            return esc(l.text) + ' <span style="font-size:.86em;font-weight:600;color:' + (l.overdue ? 'var(--disp)' : 'var(--grey)') + '">· ' + l.rel + '</span>'; },
           last: function(k){ return !k; },
           tone: function(k){ return (k && wlDateLabel(k).overdue) ? '#c0453b' : null; } },
   /**
@@ -898,8 +898,8 @@ function wlLineHTML(loading){
   /* ⚠️ nowrap ON THE HEADLINE FIGURE. At 360px "0 kg left" folded onto two lines — the number on one, "left" on
      the next — which reads as two separate facts for a moment. A figure and its unit are one token. */
   var bar = '<div style="display:flex;gap:18px;align-items:baseline;font-variant-numeric:tabular-nums;padding-bottom:4px;flex-wrap:wrap">'
-    + '<div style="white-space:nowrap"><span style="font-size:26px;font-weight:800;color:' + (over ? '#c0453b' : left === 0 ? '#3d7a4e' : '#b0641c') + '">' + esc(big) + '</span>'
-    +   '<span style="font-size:var(--fs-2);font-weight:700;color:' + (over ? '#c0453b' : 'var(--grey)') + ';margin-left:4px">' + esc(r.unit || '') + (over ? ' over' : ' left') + '</span></div>'
+    + '<div style="white-space:nowrap"><span style="font-size:26px;font-weight:800;color:' + (over ? 'var(--disp)' : left === 0 ? 'var(--ok-2)' : 'var(--warn-2)') + '">' + esc(big) + '</span>'
+    +   '<span style="font-size:var(--fs-2);font-weight:700;color:' + (over ? 'var(--disp)' : 'var(--grey)') + ';margin-left:4px">' + esc(r.unit || '') + (over ? ' over' : ' left') + '</span></div>'
     + '<div style="font-size:13px;color:var(--grey);white-space:nowrap">' + esc(String(got)) + ' delivered of ' + esc(String(ordered == null ? '—' : ordered)) + ' ' + esc(r.unit || '') + '</div>'
     + (prog.charged ? '<div style="margin-left:auto;font-size:13px;color:#2c5d7c;font-weight:700">' + esc(wlMoney(prog.charged)) + ' <span style="font-weight:400;color:var(--grey)">charged</span></div>' : '')
     + '</div>';
@@ -921,7 +921,7 @@ function wlLineHTML(loading){
     else {
       body += events.map(function(e){
         return '<div style="display:flex;gap:10px;align-items:baseline;padding:5px 0;border-bottom:1px solid var(--line-soft,#f0efec);font-size:13px">'
-          + '<span style="font-weight:700;font-variant-numeric:tabular-nums;min-width:72px;color:' + (e.quantity < 0 ? '#c0453b' : 'var(--ink)') + '">'
+          + '<span style="font-weight:700;font-variant-numeric:tabular-nums;min-width:72px;color:' + (e.quantity < 0 ? 'var(--disp)' : 'var(--ink)') + '">'
           +   (e.quantity < 0 ? '' : '+') + esc(String(e.quantity)) + ' ' + esc(e.unit || '') + '</span>'
           + '<span style="color:var(--grey);font-size:12px;flex:1">' + esc(e.reference || e.note || '') + '</span>'
           + '<span style="color:var(--grey);font-size:11.5px">' + esc(String(e.at || '').slice(0, 10)) + ' · ' + esc(e.by_actor || e.by || '') + '</span></div>';
@@ -1060,8 +1060,8 @@ function wlLineHTML(loading){
      will not. It is short, so it costs almost nothing to leave in view. */
   var asked = '';
   if (r.raw_phrase || r.asked_as || r.comment || r.needs_human) {
-    asked = '<div style="margin-top:12px;background:#f4f1e8;border-left:3px solid #b0641c;border-radius:0 7px 7px 0;padding:9px 12px;font-size:13px;line-height:1.55">'
-      + (r.raw_phrase ? '<div style="font-style:italic;color:#5b5340">“' + esc(r.raw_phrase) + '”</div>' : '')
+    asked = '<div style="margin-top:12px;background:var(--warn-tint);border-left:3px solid #b0641c;border-radius:0 7px 7px 0;padding:9px 12px;font-size:13px;line-height:1.55">'
+      + (r.raw_phrase ? '<div style="font-style:italic;color:var(--warn-3)">“' + esc(r.raw_phrase) + '”</div>' : '')
       + (r.asked_as ? '<div style="font-size:var(--fs-2);color:var(--grey)">asked as <b>' + esc(r.asked_as) + '</b></div>' : '')
       + (r.comment ? '<div style="color:#2c5d7c">' + esc(r.comment) + '</div>' : '')
       + (r.needs_human ? '<div style="font-size:var(--fs-2);color:var(--disp);font-weight:700">⚠️ flagged for a person to check</div>' : '')

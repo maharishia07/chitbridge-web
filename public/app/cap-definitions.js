@@ -1015,7 +1015,7 @@ function cbDefCss(){
     'border:1px solid var(--gold-line);border-radius:9px;padding:10px 12px;margin-bottom:14px;max-width:66ch}',
     '.cbdef-sec{border:1px solid var(--line);border-radius:12px;margin-bottom:9px;background:var(--card);overflow:hidden}',
     '.cbdef-head{display:flex;align-items:center;gap:9px;padding:11px 13px;cursor:pointer;user-select:none}',
-    '.cbdef-head:hover{background:#fafafa}',
+    '.cbdef-head:hover{background:var(--card)}',
     '.cbdef-ico{font-size:var(--fs-4);line-height:1}',
     '.cbdef-t{font-weight:700;font-size:13.5px}',
     '.cbdef-n{margin-left:auto;font-size:11.5px;color:var(--grey);font-variant-numeric:tabular-nums}',
@@ -1025,7 +1025,7 @@ function cbDefCss(){
     '.cbdef-row{padding:7px 0;border-bottom:1px dashed #eee9e0}',
     '.cbdef-row:last-of-type{border-bottom:0}',
     '.cbdef-code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11.5px;',
-    'background:var(--warn-tint);border-radius:5px;padding:1px 6px;margin-right:8px;color:#5a5245}',
+    'background:var(--warn-tint);border-radius:5px;padding:1px 6px;margin-right:8px;color:var(--warn-3)}',
     '.cbdef-lab{font-size:13px;font-weight:600}',
     '.cbdef-note{font-size:12px;color:var(--grey);margin-top:3px;line-height:1.5;max-width:66ch}',
     '.cbdef-who{font-size:var(--fs-1);color:var(--grey-4);margin-left:8px}',
@@ -1050,7 +1050,7 @@ function cbDefCss(){
     '.cbdef-badge.live{background:var(--ok-tint);color:var(--ok-2)}',
     '.cbdef-badge.draft{background:var(--warn-tint);color:var(--warn-2)}',
     /* Retired is visually SPENT — struck name, grey badge — so it can never be mistaken for a draft awaiting publish. */
-    '.cbdef-badge.retired{background:#eceaea;color:#6f6a6a}',
+    '.cbdef-badge.retired{background:var(--neutral-tint);color:var(--ink-2)}',
     '.cbdef-kindsin{margin-top:12px;border-top:1px dashed var(--line);padding-top:9px}',
     '.cbdef-kindshd{font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin-bottom:5px}',
     '.cbdef-kindrow{display:flex;gap:9px;align-items:baseline;padding:3px 0;font-size:var(--fs-2);flex-wrap:wrap}',
@@ -1064,7 +1064,7 @@ function cbDefCss(){
     '.cbdef-acts span:hover{text-decoration:underline}',
     '.cbdef-none{font-size:var(--fs-2);color:var(--grey);padding:4px 0}',
     '.cbdef-loading{padding:14px 0;font-size:var(--fs-2);color:var(--grey)}',
-    '.cbdef-err{font-size:var(--fs-2);color:var(--disp);background:#fbeceb;border:1px solid #f0c9c6;border-radius:9px;padding:8px 11px;margin-bottom:10px}',
+    '.cbdef-err{font-size:var(--fs-2);color:var(--disp);background:var(--danger-tint);border:1px solid #f0c9c6;border-radius:9px;padding:8px 11px;margin-bottom:10px}',
     '.cbdef-freeze{font-size:12px;line-height:1.5;color:var(--warn-3);background:var(--gold-soft,var(--gold-soft));border:1px solid var(--gold-line,var(--gold-line));border-radius:9px;padding:8px 11px;margin:8px 0 10px}',
     '.cbdef-rules{border-left:2px solid var(--gold-line,var(--gold-line));padding-left:11px;margin:10px 0}',
     /* The standards menu. Scrolls rather than wraps to twelve rows — the textarea above it is the record; this is
@@ -1074,7 +1074,7 @@ function cbDefCss(){
     '.cbdef-stdchip{border:1px solid var(--line);background:var(--card);border-radius:20px;height:26px;padding:0 10px;'
       + 'font:inherit;font-size:11.5px;color:var(--ink);cursor:pointer;white-space:nowrap}',
     '.cbdef-stdchip:hover{border-color:#c6ccd4}',
-    '.cbdef-stdchip.on{background:#EDF2F9;border-color:var(--blue,var(--blue));color:var(--blue,var(--blue));font-weight:700}'
+    '.cbdef-stdchip.on{background:var(--blue-tint-bg);border-color:var(--blue,var(--blue));color:var(--blue,var(--blue));font-weight:700}'
   ].join('');
   (document.head || document.documentElement).appendChild(s);
 }

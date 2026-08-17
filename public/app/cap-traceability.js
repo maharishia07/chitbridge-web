@@ -51,7 +51,7 @@ function traceabilityScreen(){
 
   var body;
   if (UI.traceLoading) body = loader('Walking the chain…');
-  else if (res && res.error) body = '<div style="margin:22px 18px;padding:14px 16px;border:1px solid #f0c9c4;background:#fdf3f2;border-radius:9px;font-size:13px;color:var(--disp-2)">' + esc(res.error) + '</div>';
+  else if (res && res.error) body = '<div style="margin:22px 18px;padding:14px 16px;border:1px solid #f0c9c4;background:var(--danger-tint);border-radius:9px;font-size:13px;color:var(--disp-2)">' + esc(res.error) + '</div>';
   else if (res && res.dir === 'forward') body = _traceFwd(res);
   else if (res && res.dir === 'backward') body = _traceBwd(res);
   else body = emptyState('🧭', 'Flag a batch to trace it', 'Paste a batch or chit id above, then Recall set ▸ (who it reached) or ◂ To source (where it came from).');
@@ -76,7 +76,7 @@ function _traceBatchPicker(){
     return '<div onclick="UI.traceId=\'' + b.chit_id + '\';runTrace(\'forward\')" title="Click to trace this batch" '
       + 'style="cursor:pointer;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--card);display:flex;flex-direction:column;gap:2px">'
       + '<div style="display:flex;align-items:center;gap:7px"><b style="font-size:13px">' + name + '</b>'
-        + (b.is_origin ? '<span style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);background:#eaf1fb;border-radius:5px;padding:1px 5px">ORIGIN</span>' : '') + '</div>'
+        + (b.is_origin ? '<span style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);background:var(--blue-tint-bg);border-radius:5px;padding:1px 5px">ORIGIN</span>' : '') + '</div>'
       + (meta ? '<div style="font-size:var(--fs-1);color:var(--grey)">' + meta + '</div>' : '')
       + '<div style="font-family:monospace;font-size:var(--fs-1);color:var(--grey-3);word-break:break-all">' + esc(b.chit_id) + '</div>'
       + '</div>';
@@ -89,8 +89,8 @@ function _traceBatchPicker(){
 function _traceChip(n, isTerm){
   var label = esc(n.product || '(no product)');
   var qty = (n.qty != null) ? (' · ' + esc(String(n.qty)) + esc(n.unit ? (' ' + n.unit) : '')) : '';
-  var badge = n.is_origin ? '<span style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);background:#eaf1fb;border-radius:6px;padding:1px 5px;margin-left:6px">ORIGIN</span>'
-            : (isTerm ? '<span style="font-size:var(--fs-1);font-weight:800;color:var(--disp-2);background:#fdecea;border-radius:6px;padding:1px 5px;margin-left:6px">EXPOSED</span>' : '');
+  var badge = n.is_origin ? '<span style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);background:var(--blue-tint-bg);border-radius:6px;padding:1px 5px;margin-left:6px">ORIGIN</span>'
+            : (isTerm ? '<span style="font-size:var(--fs-1);font-weight:800;color:var(--disp-2);background:var(--danger-tint);border-radius:6px;padding:1px 5px;margin-left:6px">EXPOSED</span>' : '');
   var bd = isTerm ? '#e6a79f' : (n.is_origin ? '#a9c6ef' : 'var(--line)');
   var bg = isTerm ? '#fef6f5' : (n.is_origin ? '#f4f8fe' : '#fff');
   return '<span style="display:inline-flex;align-items:center;border:1px solid ' + bd + ';background:' + bg + ';border-radius:9px;padding:5px 9px;font-size:12px;margin:3px 5px 3px 0">'
@@ -132,14 +132,14 @@ function _traceNode(n, isTerm){
   if (n.qty != null) bits.push('<b style="color:var(--ink-2)">' + esc(String(n.qty)) + esc(n.unit ? (' ' + n.unit) : '') + '</b>');
   if (n.product) bits.push(esc(n.product));
   bits.push('<span style="font-family:monospace;font-size:var(--fs-1);opacity:.6">' + _traceShort(n.chit_id) + '</span>');
-  var badge = n.is_origin ? '<span style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);background:#eaf1fb;border-radius:6px;padding:1px 6px;margin-left:7px">ORIGIN</span>'
-            : (isTerm ? '<span style="font-size:var(--fs-1);font-weight:800;color:var(--disp-2);background:#fdecea;border-radius:6px;padding:1px 6px;margin-left:7px">EXPOSED</span>' : '');
-  if (isRed) badge += '<span style="font-size:var(--fs-1);font-weight:800;color:#fff;background:#c0453b;border-radius:6px;padding:1px 6px;margin-left:7px">⚠ OUT &gt; IN</span>';
+  var badge = n.is_origin ? '<span style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);background:var(--blue-tint-bg);border-radius:6px;padding:1px 6px;margin-left:7px">ORIGIN</span>'
+            : (isTerm ? '<span style="font-size:var(--fs-1);font-weight:800;color:var(--disp-2);background:var(--danger-tint);border-radius:6px;padding:1px 6px;margin-left:7px">EXPOSED</span>' : '');
+  if (isRed) badge += '<span style="font-size:var(--fs-1);font-weight:800;color:var(--disp);background:#c0453b;border-radius:6px;padding:1px 6px;margin-left:7px">⚠ OUT &gt; IN</span>';
   var dot = (isRed || isTerm) ? '#c0453b' : (n.is_origin ? 'var(--blue-2)' : '#8a94a3');
   var balLine = isRed
     ? '<div style="font-size:var(--fs-1);color:var(--disp-2);font-weight:700;margin-left:17px;margin-top:2px">claimed ' + _traceQ(bal.out) + ' out, received ' + _traceQ(bal.in) + ' in — <u>' + _traceQ(bal.delta) + ' ' + esc(bal.base_unit || '') + ' unaccounted</u></div>'
     : '';
-  return '<div style="padding:6px 0' + (isRed ? ';background:#fdf3f2;border-radius:9px' : '') + '">'
+  return '<div style="padding:6px 0' + (isRed ? ';background:var(--danger-tint);border-radius:9px' : '') + '">'
     + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap' + (isRed ? ';padding-left:6px' : '') + '">'
       + '<span style="width:9px;height:9px;border-radius:50%;background:' + dot + ';flex:0 0 auto"></span>'
       + '<span style="font-weight:700;font-size:13.5px' + (isRed ? ';color:var(--disp-2)' : '') + '">' + who + '</span>' + badge + '</div>'
@@ -170,9 +170,9 @@ function _traceTree(r){
 function _traceBwd(r){
   var path = r.path || [], nodes = r.nodes || [];
   var byId = {}; nodes.forEach(function(n){ byId[n.chit_id] = n; });
-  var head = '<div style="margin:16px 18px;padding:14px 18px;border:1px solid #a9c6ef;background:#f4f8fe;border-radius:12px">'
+  var head = '<div style="margin:16px 18px;padding:14px 18px;border:1px solid #a9c6ef;background:var(--blue-tint-bg);border-radius:12px">'
     + '<div style="font-size:18px;font-weight:800;color:var(--blue-2)">◂ Provenance — to source</div>'
-    + '<div style="font-size:var(--fs-2);color:#3a4d6b;margin-top:2px">' + r.hops + ' hop' + (r.hops === 1 ? '' : 's') + ' from the flagged node back to origin</div></div>';
+    + '<div style="font-size:var(--fs-2);color:var(--blue);margin-top:2px">' + r.hops + ' hop' + (r.hops === 1 ? '' : 's') + ' from the flagged node back to origin</div></div>';
   var steps = path.map(function(cid, i){
     var n = byId[cid] || { chit_id: cid };
     var arrow = i < path.length - 1 ? '<div style="color:var(--grey);font-size:var(--fs-3);padding:2px 0 2px 22px">↓</div>' : '';

@@ -34,7 +34,7 @@ const AUDIT = `(() => {
   /* ⚠️ ALPHA MUST BE COMPOSITED, not treated as its own colour. A translucent white pill over the dark navy
      topbar resolves to a MID tone that white text sits on happily — but read literally, rgba(255,255,255,.24)
      looks like near-white and every label on it is reported unreadable. Blend it over what is behind it. */
-  const parse = (c) => { const m = /rgba?((d+),s*(d+),s*(d+)(?:,s*([d.]+))?/.exec(c);
+  const parse = (c) => { const m = /rgba?\\((\\d+),\\s*(\\d+),\\s*(\\d+)(?:,\\s*([\\d.]+))?/.exec(c);
     return m ? { r:+m[1], g:+m[2], b:+m[3], a: m[4] === undefined ? 1 : +m[4] } : null; };
   const over = (fg, bg) => ({ r: fg.r*fg.a + bg.r*(1-fg.a), g: fg.g*fg.a + bg.g*(1-fg.a), b: fg.b*fg.a + bg.b*(1-fg.a), a: 1 });
   const bgOf = (el) => {
@@ -67,7 +67,19 @@ const AUDIT = `(() => {
     const f = lum(cs.color), b = lum(bgOf(el));
     if (f === null || b === null) continue;
     const r = (Math.max(f,b) + 0.05) / (Math.min(f,b) + 0.05);
-    if (r < 3) out.push({ sel: (el.className || el.tagName).toString().slice(0, 40), fg: cs.color, bg: bgOf(el), r: +r.toFixed(2) });
+    /* ⚠️ Record enough to FIND it. A bare tag name sends you hunting through a screen; the text, the inline
+       style and the ancestor that actually supplied the background are what identify the one element. */
+    if (r < 3) {
+      let src = el, guard = 0;
+      while (src && getComputedStyle(src).backgroundColor === 'rgba(0, 0, 0, 0)' && guard++ < 40) src = src.parentElement;
+      out.push({
+        sel: (el.className || el.tagName).toString().slice(0, 40),
+        text: s.slice(0, 24),
+        style: (el.getAttribute('style') || '').slice(0, 70),
+        from: src ? ((src.className || src.tagName).toString().slice(0, 34) + ' [' + (src.getAttribute('style') || '').slice(0, 40) + ']') : '?',
+        fg: cs.color, bg: bgOf(el), r: +r.toFixed(2),
+      });
+    }
   }
   return out;
 })()`;
@@ -99,7 +111,8 @@ test.describe('Theme contrast · every theme, every screen', () => {
         const bad = await page.evaluate(AUDIT);
         if (bad.length > base[s]) {
           regressions.push(`${th} / ${s}: ${bad.length} unreadable vs ${base[s]} in the default` +
-            ` — e.g. ${bad.slice(0, 3).map((b) => `${b.sel} ${b.fg} on ${b.bg} = ${b.r}:1`).join(' ; ')}`);
+            bad.slice(0, 3).map((b) => `\n      · "${b.text}" in .${b.sel} — ${b.fg} on ${b.bg} = ${b.r}:1` +
+              `\n        style[${b.style}]  bg from: ${b.from}`).join(''));
         }
       }
     }

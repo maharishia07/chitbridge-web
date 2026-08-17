@@ -160,7 +160,7 @@
      surface. Inheriting from the page instead means every unstyled control follows the theme for free,
      which is also why this belongs here and not on each button. */
   button{cursor:pointer;color:inherit}
-  ::-webkit-scrollbar{width:9px;height:9px}::-webkit-scrollbar-thumb{background:#cfc7b8;border-radius:6px}
+  ::-webkit-scrollbar{width:9px;height:9px}::-webkit-scrollbar-thumb{background:var(--warn-tint);border-radius:6px}
   #root{height:100vh;display:flex;flex-direction:column}
   .mono{font-family:'Space Mono'}.disp{font-family:'Space Grotesk'}
 
@@ -195,9 +195,9 @@
   .welrole .cd,.welbp .cd{font-size:var(--fs-2);color:var(--grey)}.welbp .bt{font-size:var(--fs-1);color:var(--grey);font-family:'Space Mono'}
   .welbtns{display:flex;gap:10px;justify-content:center;margin-top:16px;flex-wrap:wrap}
   .welwrap .btn.ghost{background:transparent;color:var(--blue);border:1px solid var(--line)}
-  .welwrap .btn:disabled{background:#c7cdd2;cursor:not-allowed}
+  .welwrap .btn:disabled{background:var(--blue-tint-bg);cursor:not-allowed}
   .welfoot{color:var(--grey);font-size:11.5px;margin-top:20px;text-align:center;border-top:1px solid var(--line);padding-top:12px}
-  .rchosen{background:#f3f6fb;border:1px solid #d7e2f1;border-radius:12px;padding:10px 13px;font-size:13px;margin-bottom:14px}
+  .rchosen{background:var(--card);border:1px solid #d7e2f1;border-radius:12px;padding:10px 13px;font-size:13px;margin-bottom:14px}
   .welpips{display:flex;justify-content:center;gap:7px;flex-wrap:wrap;margin:8px 0 2px}
   .welpip{font-size:var(--fs-1);font-family:'Space Mono';color:var(--grey);background:var(--card);border:1px solid var(--line);border-radius:999px;padding:4px 11px}
   .welpip.on{background:var(--chrome);color:var(--chrome-on);border-color:var(--chrome)}
@@ -232,7 +232,7 @@
   .btn:disabled{opacity:.5}
   .swap{text-align:center;font-size:var(--fs-2);color:var(--grey);margin-top:14px}.swap a{color:var(--blue);font-weight:700;cursor:pointer}
   .hint{font-size:var(--fs-1);color:#9a7b34;background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;margin-top:12px;line-height:1.5}
-  .err{font-size:12px;color:var(--disp);background:#fbeeed;border:1px solid #e7b9b5;border-radius:9px;padding:9px 11px;margin-top:12px}
+  .err{font-size:12px;color:var(--disp);background:var(--danger-tint);border:1px solid #e7b9b5;border-radius:9px;padding:9px 11px;margin-top:12px}
   /* An empty error box still had background, border and padding — so it rendered as a pink bar with nothing
      to say, on a form where nothing had gone wrong. An error surface must be INVISIBLE until it has content. */
   .err:empty{display:none}
@@ -368,7 +368,7 @@
      cue that is not being shown. */
   #misbody::-webkit-scrollbar,#setbody::-webkit-scrollbar,#profbody::-webkit-scrollbar{width:10px}
   #misbody::-webkit-scrollbar-thumb,#setbody::-webkit-scrollbar-thumb,#profbody::-webkit-scrollbar-thumb{
-    background:#d3d8de;border-radius:6px;border:2px solid #fff}
+    background:var(--blue-tint-bg);border-radius:6px;border:2px solid #fff}
   #misbody::-webkit-scrollbar-thumb:hover,#setbody::-webkit-scrollbar-thumb:hover,#profbody::-webkit-scrollbar-thumb:hover{background:#b9c1ca}
   /* Says the page has ended, rather than leaving you to guess whether it stopped or stalled. */
   .capend{text-align:center;font-size:var(--fs-1);color:var(--grey);padding:16px 0 6px;letter-spacing:.04em}
@@ -392,7 +392,7 @@
   .govgrp-h{display:flex;align-items:center;gap:8px;width:100%;text-align:left;border:0;cursor:pointer;
             background:var(--paper);padding:10px 12px;font-size:12px;font-weight:800;letter-spacing:.03em;
             text-transform:uppercase;color:var(--ink);font-family:inherit}
-  .govgrp-h:hover{background:#f2efe8}
+  .govgrp-h:hover{background:var(--warn-tint)}
   .govgrp.open .govgrp-h{border-bottom:1px solid var(--line)}
   /**
    * ⚠️ A CONTAINER QUERY, NOT A MEDIA QUERY — because the constraint is the PANE, not the window.
@@ -407,7 +407,7 @@
   @container (max-width:420px){ .govnote{display:none} }
   .govchev{font-size:var(--fs-1);color:var(--grey);width:11px;flex:none}
   .govcount{font-family:'Space Mono';font-size:var(--fs-1);font-weight:700;color:var(--blue);
-            background:#EDF2F9;border-radius:20px;padding:1px 8px;flex:none}
+            background:var(--blue-tint-bg);border-radius:20px;padding:1px 8px;flex:none}
   .govnote{font-weight:600;letter-spacing:0;text-transform:none;color:var(--grey);font-size:var(--fs-1);
            margin-left:auto;text-align:right;min-width:0;flex:0 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .govgrp-b{padding:2px 12px 6px}
@@ -439,7 +439,7 @@
   .govref-go:hover{background:var(--paper)}
   .misrow.sub{padding-left:26px;background:var(--paper)}
   .misrow.sub .code{font-weight:600;font-size:var(--fs-2)}
-  .misrow.sub.sel{background:#EDF2F9}
+  .misrow.sub.sel{background:var(--blue-tint-bg)}
   .misval{font-family:'Space Mono';font-size:15px;font-weight:700;text-align:right;white-space:nowrap;line-height:1.2}
   .misval small{display:block;font-family:inherit;font-size:var(--fs-1);font-weight:600;color:var(--grey)}
   .misval.ok{color:var(--ok)} .misval.warn{color:var(--prog)}
@@ -470,7 +470,7 @@
   .mistable td.num{font-family:'Space Mono';font-variant-numeric:tabular-nums;white-space:nowrap}
   .misclock{font-size:var(--fs-1);font-weight:700;border-radius:20px;padding:2px 9px;white-space:nowrap;display:inline-flex;align-items:center;gap:5px}
   .misclock.mine{background:var(--gold-soft);border:1px solid var(--gold-line);color:var(--warn-3)}
-  .misclock.theirs{background:#EDF2F9;border:1px solid var(--line);color:var(--blue)}
+  .misclock.theirs{background:var(--blue-tint-bg);border:1px solid var(--line);color:var(--blue)}
   .misageing{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px}
   .misage{text-align:center}
   .misagebar{height:44px;background:var(--paper);border:1px solid var(--line);border-radius:6px;display:flex;align-items:flex-end;overflow:hidden}
@@ -511,7 +511,7 @@
   .namebox{border:1px solid var(--line);border-radius:12px;margin-top:14px;overflow:hidden;background:var(--card)}
   .namehead{display:flex;align-items:center;gap:8px;width:100%;text-align:left;border:0;cursor:pointer;
             background:var(--paper);padding:10px 12px;font:inherit;font-size:var(--fs-2);font-weight:700;color:var(--ink)}
-  .namehead:hover{background:#f2efe8}
+  .namehead:hover{background:var(--warn-tint)}
   .namebody{padding:10px 12px 12px}
   .namegrp{font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);
            margin:13px 0 5px;padding-bottom:3px;border-bottom:1px solid var(--line)}
@@ -533,15 +533,15 @@
   .ctcatg{border:1px solid var(--line);background:var(--card);border-radius:20px;height:30px;padding:0 12px;
           font:inherit;font-size:var(--fs-2);color:var(--ink);cursor:pointer;white-space:nowrap}
   .ctcatg:hover{border-color:#c6ccd4}
-  .ctcatg.on{background:#eef4ff;border-color:var(--blue);color:var(--blue);font-weight:700}
-  .ctcatg.gone{background:#f4f1e8;border-color:var(--gold-line);color:var(--warn-3)}
+  .ctcatg.on{background:var(--blue-tint-bg);border-color:var(--blue);color:var(--blue);font-weight:700}
+  .ctcatg.gone{background:var(--warn-tint);border-color:var(--gold-line);color:var(--warn-3)}
   .ctcatg.add{color:var(--blue);border-style:dashed;font-weight:600}
   .l3cat{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
   .catgchip{font-size:var(--fs-1);background:var(--blue-tint-bg);color:var(--blue);border:1px solid #d5e2f7;
             border-radius:20px;padding:0 8px;line-height:17px;white-space:nowrap}
   .catgchip.gone{background:var(--warn-tint);color:var(--warn-3);border-color:var(--gold-line);text-decoration:line-through}
-  .row.picked{background:#eef4ff}
-  .ctpick{display:flex;align-items:center;gap:9px;margin-top:8px;padding:7px 9px;background:#eef4ff;
+  .row.picked{background:var(--blue-tint-bg)}
+  .ctpick{display:flex;align-items:center;gap:9px;margin-top:8px;padding:7px 9px;background:var(--blue-tint-bg);
           border:1px solid #d5e2f7;border-radius:9px}
   .ctpick button{border:1px solid var(--line);background:var(--card);border-radius:9px;padding:4px 10px;
                  font-size:11.5px;cursor:pointer;color:var(--ink)}
@@ -555,8 +555,8 @@
   .bulkrow .bh{font-size:var(--fs-1);color:var(--grey);white-space:nowrap}
   .bulkrow button{border:1px solid var(--line);background:var(--card);border-radius:20px;padding:3px 10px;
                   font-size:11.5px;cursor:pointer;color:var(--ink);white-space:nowrap}
-  .bulkrow .badd.on{background:#eef4ff;border-color:var(--blue);color:var(--blue);font-weight:700}
-  .bulkrow .brem.on{background:#fbeceb;border-color:#e0a9a4;color:var(--disp);font-weight:700}
+  .bulkrow .badd.on{background:var(--blue-tint-bg);border-color:var(--blue);color:var(--blue);font-weight:700}
+  .bulkrow .brem.on{background:var(--danger-tint);border-color:var(--disp);color:var(--disp);font-weight:700}
   .bulkrow button:disabled{opacity:.4;cursor:default}
   .supacts button.supact-pri{background:var(--blue);border-color:var(--blue);color:#fff}
   .supacts button.supact-pri:hover{filter:brightness(1.06)}
@@ -595,12 +595,12 @@
   .sfnote.quiet{background:var(--paper);border-color:var(--line);color:var(--grey)}
   .viafrom{display:inline-flex;align-items:center;gap:3px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   /* The `?` is deliberately quiet but always present — an unverified name must never read as a verified party. */
-  .unver{margin-left:2px;flex:0 0 auto;width:15px;height:15px;border-radius:50%;background:#f0e6cf;color:#8a6d2f;font-size:var(--fs-1);line-height:15px;text-align:center;cursor:help}
+  .unver{margin-left:2px;flex:0 0 auto;width:15px;height:15px;border-radius:50%;background:var(--warn-tint);color:var(--warn-3);font-size:var(--fs-1);line-height:15px;text-align:center;cursor:help}
   /* ⚠️ cursor:pointer WAS MISSING. Every .tool is clickable and carries a tooltip (Change status, Assign,
      Select, Raise dispute, Delete), but with cursor:auto the emoji glyph inside resolves to the I-BEAM text
      cursor — so the one strip that looks most like buttons was the only one that did not behave like them. */
   .tool{width:30px;height:30px;border:1px solid var(--line);background:var(--card);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--grey-2);position:relative;cursor:pointer;user-select:none}
-  .tool:hover{background:var(--paper);border-color:#c3ccd2}
+  .tool:hover{background:var(--paper);border-color:var(--on-bg)}
   .tool.on{background:var(--chrome);color:var(--chrome-on);border-color:var(--chrome)}
   .topbar .bell{position:relative;border:0;background:none;color:#cfe0e8;font-size:var(--fs-4);cursor:pointer;padding:2px 4px;line-height:1}
   /**
@@ -652,24 +652,24 @@
   .modal .mfoot button:disabled{opacity:.45;cursor:not-allowed}
   .modal textarea{width:100%;border:1px solid var(--line);border-radius:9px;padding:9px;font:inherit;font-size:13px;resize:vertical;min-height:62px;box-sizing:border-box}
   .optrow{display:flex;align-items:center;gap:11px;padding:10px 11px;border:1px solid var(--line);border-radius:9px;margin-bottom:6px;cursor:pointer}
-  .optrow.sel{border:2px solid var(--blue);background:#EAF1F8}
+  .optrow.sel{border:2px solid var(--blue);background:var(--blue-tint-bg)}
   .optrow.dis{opacity:.5;cursor:not-allowed}
   .optrow .rdo{width:16px;height:16px;border-radius:50%;border:2px solid var(--line);flex:0 0 auto;display:flex;align-items:center;justify-content:center}
   .optrow.sel .rdo{border-color:var(--blue)}
   .optrow.sel .rdo::after{content:'';width:8px;height:8px;border-radius:50%;background:var(--blue)}
   .optrow .oc{flex:1;min-width:0}.optrow .on{font-size:13px;font-weight:700;color:var(--ink)}.optrow .om{font-size:var(--fs-1);color:var(--grey)}
   .optchip{font-size:var(--fs-1);font-weight:700;border-radius:9px;padding:2px 8px;white-space:nowrap}
-  .optchip.on{color:#1f7a4d;background:#e3f3ea}.optchip.brk{color:var(--warn-2);background:#f6edd6}.optchip.off{color:#777;background:#eee}
+  .optchip.on{color:#1f7a4d;background:var(--ok-tint)}.optchip.brk{color:var(--warn-2);background:var(--warn-tint)}.optchip.off{color:#777;background:var(--neutral-tint)}
   .dtabs{flex-wrap:wrap}
   .dh{position:relative}
   .dmsg{position:absolute;top:0;right:0;border:1px solid #cfe0ec;background:var(--blue-tint-bg);color:var(--blue);font-size:var(--fs-1);font-weight:700;border-radius:9px;padding:3px 9px;cursor:pointer}
-  .rowmsg{font-size:var(--fs-1);font-weight:700;color:var(--blue);background:#EAF1F6;border:0.5px solid #cfe0ec;border-radius:5px;padding:0 5px;white-space:nowrap;cursor:pointer}
+  .rowmsg{font-size:var(--fs-1);font-weight:700;color:var(--blue);background:var(--blue-tint-bg);border:0.5px solid #cfe0ec;border-radius:5px;padding:0 5px;white-space:nowrap;cursor:pointer}
   .msglink{border:1px solid var(--line);background:var(--card);color:var(--blue);font-size:12px;font-weight:700;border-radius:9px;padding:8px 13px;cursor:pointer}
   .msgtab{display:flex;flex-direction:column}
   .msgfilter{display:flex;gap:6px;margin-bottom:10px}
   .msgfilter button{border:1px solid var(--line);background:var(--card);border-radius:9px;font-size:var(--fs-1);font-weight:700;padding:5px 10px;color:var(--grey);cursor:pointer}
   .msgfilter button.on{background:var(--blue-tint-bg);color:var(--blue);border-color:var(--blue)}
-  .msgfilter button.on.disp{background:var(--danger-tint);color:var(--disp);border-color:#e0a9a4}
+  .msgfilter button.on.disp{background:var(--danger-tint);color:var(--disp);border-color:var(--disp)}
   /* compact type filter — a checkbox dropdown instead of a row of buttons */
   .tdwrap{position:relative;display:inline-block}
   .msgfbtn{border:1px solid var(--line);background:var(--card);border-radius:9px;font-size:var(--fs-1);font-weight:700;padding:5px 10px;color:var(--grey);cursor:pointer}
@@ -678,28 +678,28 @@
   .tdrow{display:flex;align-items:center;gap:8px;font-size:12px;padding:5px 7px;border-radius:6px;cursor:pointer}
   .tdrow:hover{background:var(--paper)}
   .tdclear{margin-top:3px;border:0;background:none;color:var(--blue);font-size:var(--fs-1);font-weight:700;cursor:pointer;text-align:left;padding:5px 7px}
-  .bubble.disp{border-left:3px solid var(--disp);background:#fdf3f2}
+  .bubble.disp{border-left:3px solid var(--disp);background:var(--danger-tint)}
   .mbadge.disp{background:var(--danger-tint);color:var(--disp)}
-   .mbadge.disp.ok{background:#E9F4EE;color:#2f6043}
+   .mbadge.disp.ok{background:var(--ok-tint);color:var(--ok-2)}
   /* dispute banner on the record — the USP surfaced in context */
-  .dispbanner{padding:11px 16px;background:#fdf3f2;border-bottom:1px solid #f0c9c6}
+  .dispbanner{padding:11px 16px;background:var(--danger-tint);border-bottom:1px solid #f0c9c6}
   .dispbanner .db-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
   .dispbanner .db-tag{font-weight:800;color:var(--disp);font-size:12px}
-  .dispbanner .db-cat{font-size:var(--fs-1);font-weight:700;color:#8a3a35;background:#fbe3e1;border-radius:6px;padding:2px 8px}
-  .dispbanner .db-proof{font-size:var(--fs-1);color:#2f6043;background:#E9F4EE;border:1px solid #bfe0cd;border-radius:6px;padding:2px 8px}
+  .dispbanner .db-cat{font-size:var(--fs-1);font-weight:700;color:#8a3a35;background:var(--danger-tint);border-radius:6px;padding:2px 8px}
+  .dispbanner .db-proof{font-size:var(--fs-1);color:#2f6043;background:var(--ok-tint);border:1px solid #bfe0cd;border-radius:6px;padding:2px 8px}
   .dispbanner .db-reason{font-size:var(--fs-2);color:var(--ink);margin:5px 0}
   .dispbanner .db-meta{font-size:var(--fs-1);color:var(--grey);display:flex;gap:6px;flex-wrap:wrap;align-items:center}
-  .dispbanner .dpchip{background:var(--card);border:1px solid #e0b6b2;border-radius:6px;padding:1px 7px;font-size:var(--fs-1);color:#8a3a35}
-  .dispbanner .dpchip.ok{background:#E9F4EE;border-color:#bfe0cd;color:#2f6043}
+  .dispbanner .dpchip{background:var(--card);border:1px solid #e0b6b2;border-radius:6px;padding:1px 7px;font-size:var(--fs-1);color:var(--on-card)}
+  .dispbanner .dpchip.ok{background:var(--ok-tint);border-color:var(--ok-2);color:#2f6043}
   .dispbanner .db-acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
   .dispbanner .db-acts button,.dispbanner .db-res{border:1px solid #e0a9a4;background:var(--card);color:var(--disp);border-radius:6px;font-size:var(--fs-1);font-weight:700;padding:5px 10px;cursor:pointer}
   .thread{display:flex;flex-direction:column;margin-bottom:8px}
   .bubble{border:1px solid var(--line);padding:8px 11px;margin-bottom:8px;border-radius:0 10px 10px 0}
-  .bubble.int{background:#f3f5f7;border-left:3px solid #8aa0ad}
-  .bubble.ext{background:#eef5ff;border-left:3px solid var(--blue)}
+  .bubble.int{background:var(--card);border-left:3px solid #8aa0ad}
+  .bubble.ext{background:var(--blue-tint-bg);border-left:3px solid var(--blue)}
   .bubble .bh{display:flex;align-items:center;gap:8px;margin-bottom:3px}
   .mbadge{font-size:var(--fs-1);font-weight:700;border-radius:6px;padding:1px 7px}
-  .mbadge.int{background:#e2e8ec;color:#4a5e6a}.mbadge.ext{background:var(--blue-tint-bg);color:var(--blue)}
+  .mbadge.int{background:var(--blue-tint-bg);color:var(--blue)}.mbadge.ext{background:var(--blue-tint-bg);color:var(--blue)}
   .bubble .ath{font-size:var(--fs-1);font-weight:700;color:var(--ink)}.bubble .tm{font-size:var(--fs-1);color:var(--grey);margin-left:auto}
   .bubble .bb{font-size:13px;color:var(--ink);line-height:1.45}
   .msgempty{text-align:center;color:var(--grey);font-size:12px;padding:20px}
@@ -721,7 +721,7 @@
   .composebtn.ghost{background:var(--card);color:var(--blue)}
   .composebtn.ghost:hover{background:var(--paper)}
   .composebtn.on{background:var(--card);color:var(--blue)}
-  .msgtab .composer{margin-top:0;margin-bottom:12px;border-top:0;border:1px solid var(--line);border-radius:12px;padding:11px;background:#fbfcfe}
+  .msgtab .composer{margin-top:0;margin-bottom:12px;border-top:0;border:1px solid var(--line);border-radius:12px;padding:11px;background:var(--blue-tint-bg)}
   .msglist{position:relative;flex:1;min-height:0}
   .composeov{position:absolute;left:0;right:0;top:0;min-height:100%;background:rgba(22,32,42,.16);display:flex;align-items:flex-start;justify-content:center;z-index:20;padding:6px;border-radius:9px}
   .composeov-card{width:100%;max-width:640px;max-height:80vh;overflow:auto;box-shadow:0 14px 34px rgba(0,0,0,.22);border-radius:12px;background:var(--card);border:1px solid var(--blue);padding:8px}
@@ -739,23 +739,23 @@
   .unreadtag{font-size:var(--fs-1);font-weight:800;color:#fff;background:#d65a5a;border-radius:6px;padding:0 5px;margin-left:4px}
   .unreaddot{width:7px;height:7px;border-radius:50%;background:#d65a5a;margin-left:2px}
   .row .unreaddot{display:inline-block;vertical-align:middle;margin:0 5px 0 0}
-  .row.unread{background:#fbf7ee}
+  .row.unread{background:var(--warn-tint)}
   .row.unread .code{font-weight:800}
   .mtype{font-size:var(--fs-1);font-weight:700;border-radius:6px;padding:1px 6px}
-  .mtype.info{background:#eef2f6;color:#5a6b78}.mtype.query{background:#fbeede;color:#9a6b16}.mtype.decision{background:#e3f3ea;color:#1f7a4d}
+  .mtype.info{background:var(--blue-tint-bg);color:var(--blue)}.mtype.query{background:var(--warn-tint);color:var(--warn-3)}.mtype.decision{background:var(--ok-tint);color:var(--ok-2)}
   .typesel{display:flex;gap:5px;margin-bottom:7px}
   .typesel button{border:1px solid var(--line);background:var(--card);border-radius:6px;font-size:var(--fs-1);font-weight:700;padding:4px 9px;color:var(--grey);cursor:pointer}
-  .typesel button.on.info{background:#eef2f6;color:#46566a;border-color:#9fb0bd}.typesel button.on.query{background:#fbeede;color:#9a6b16;border-color:#e0b878}.typesel button.on.decision{background:#e3f3ea;color:#1f7a4d;border-color:#8fc7a8}
-  .msgfilter button.on.info{background:#eef2f6;color:#46566a;border-color:#9fb0bd}.msgfilter button.on.query{background:#fbeede;color:#9a6b16;border-color:#e0b878}.msgfilter button.on.decision{background:#e3f3ea;color:#1f7a4d;border-color:#8fc7a8}
-  .mtype.risk{background:#fbe3d4;color:#b5531a}.mtype.assumption{background:#ece9f6;color:#6a5aa0}.mtype.issue{background:var(--danger-tint);color:var(--disp)}.mtype.dependency{background:#dff0f3;color:#1f6f7e}.mtype.action{background:#e2e9fb;color:#3a52b0}
-  .typesel button.on.risk{background:#fbe3d4;color:#b5531a;border-color:#e8b48e}.typesel button.on.assumption{background:#ece9f6;color:#6a5aa0;border-color:#b9aede}.typesel button.on.issue{background:var(--danger-tint);color:var(--disp);border-color:#e7a3a3}.typesel button.on.dependency{background:#dff0f3;color:#1f6f7e;border-color:#9cccd5}.typesel button.on.action{background:#e2e9fb;color:#3a52b0;border-color:#a7b6ea}
-  .msgfilter button.on.risk{background:#fbe3d4;color:#b5531a;border-color:#e8b48e}.msgfilter button.on.assumption{background:#ece9f6;color:#6a5aa0;border-color:#b9aede}.msgfilter button.on.issue{background:var(--danger-tint);color:var(--disp);border-color:#e7a3a3}.msgfilter button.on.dependency{background:#dff0f3;color:#1f6f7e;border-color:#9cccd5}.msgfilter button.on.action{background:#e2e9fb;color:#3a52b0;border-color:#a7b6ea}
+  .typesel button.on.info{background:var(--blue-tint-bg);color:var(--blue);border-color:#9fb0bd}.typesel button.on.query{background:var(--warn-tint);color:var(--warn-3);border-color:#e0b878}.typesel button.on.decision{background:var(--ok-tint);color:var(--ok-2);border-color:#8fc7a8}
+  .msgfilter button.on.info{background:var(--blue-tint-bg);color:var(--blue);border-color:#9fb0bd}.msgfilter button.on.query{background:var(--warn-tint);color:var(--warn-3);border-color:#e0b878}.msgfilter button.on.decision{background:var(--ok-tint);color:var(--ok-2);border-color:#8fc7a8}
+  .mtype.risk{background:var(--warn-tint);color:var(--warn-3)}.mtype.assumption{background:var(--blue-tint-bg);color:var(--blue)}.mtype.issue{background:var(--danger-tint);color:var(--disp)}.mtype.dependency{background:var(--blue-tint-bg);color:var(--blue)}.mtype.action{background:var(--blue-tint-bg);color:var(--blue)}
+  .typesel button.on.risk{background:var(--warn-tint);color:var(--warn-3);border-color:#e8b48e}.typesel button.on.assumption{background:var(--blue-tint-bg);color:var(--blue);border-color:#b9aede}.typesel button.on.issue{background:var(--danger-tint);color:var(--disp);border-color:var(--disp)}.typesel button.on.dependency{background:var(--blue-tint-bg);color:var(--blue);border-color:#9cccd5}.typesel button.on.action{background:var(--blue-tint-bg);color:var(--blue);border-color:#a7b6ea}
+  .msgfilter button.on.risk{background:var(--warn-tint);color:var(--warn-3);border-color:#e8b48e}.msgfilter button.on.assumption{background:var(--blue-tint-bg);color:var(--blue);border-color:#b9aede}.msgfilter button.on.issue{background:var(--danger-tint);color:var(--disp);border-color:var(--disp)}.msgfilter button.on.dependency{background:var(--blue-tint-bg);color:var(--blue);border-color:#9cccd5}.msgfilter button.on.action{background:var(--blue-tint-bg);color:var(--blue);border-color:#a7b6ea}
   .notifpanel.raid{max-width:380px}
   .raidbody{padding:8px 12px 2px;max-height:46vh;overflow:auto}
   .raidrow{margin-bottom:12px}
   .raidrow .rl{display:flex;align-items:center;gap:8px;margin-bottom:4px;font-size:12px}
   .raidrow .rl b{margin-left:auto;font-size:13px;color:var(--ink)}
-  .rbar{height:7px;background:#eef1f4;border-radius:5px;overflow:hidden}
+  .rbar{height:7px;background:var(--blue-tint-bg);border-radius:5px;overflow:hidden}
   .rbarfill{display:block;height:100%;border-radius:5px;background:var(--blue)}
   .rbarfill.info{background:#8aa0ad}.rbarfill.query{background:#d6a93a}.rbarfill.decision{background:#3fae6f}.rbarfill.risk{background:#d98a3a}.rbarfill.assumption{background:#8a78c0}.rbarfill.issue{background:#d6584f}.rbarfill.dependency{background:#3a93a3}.rbarfill.action{background:#5b72cf}
   .rsamp{font-size:var(--fs-1);color:var(--grey);margin-top:4px;line-height:1.5}
@@ -765,17 +765,17 @@
   .raidtoggle .hint{flex-basis:100%;font-weight:400;color:var(--grey);font-size:var(--fs-1)}
   .custflag{color:var(--disp);font-weight:800;margin-right:4px}
   .prichip{font-size:var(--fs-1);font-weight:700;border-radius:5px;padding:0 6px;white-space:nowrap}
-  .prichip.pri-urgent{background:var(--danger-tint);color:var(--disp-2)}.prichip.pri-low{background:#F1EFE8;color:#5F5E5A}
+  .prichip.pri-urgent{background:var(--danger-tint);color:var(--disp-2)}.prichip.pri-low{background:var(--warn-tint);color:var(--warn-3)}
   .dchips{display:flex;gap:8px;align-items:center;margin-top:8px}
   .prichip-btn{font-size:var(--fs-1);font-weight:700;border-radius:6px;padding:3px 9px;cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--ink)}
-  .prichip-btn.pri-urgent{background:var(--danger-tint);color:var(--disp-2);border-color:#e3a0a0}.prichip-btn.pri-low{background:#F1EFE8;color:#5F5E5A}
-  .custflag-tag{font-size:var(--fs-1);font-weight:700;color:var(--disp-2);background:#FCEBEB;border-radius:6px;padding:3px 8px}
+  .prichip-btn.pri-urgent{background:var(--danger-tint);color:var(--disp-2);border-color:var(--disp)}.prichip-btn.pri-low{background:var(--warn-tint);color:var(--warn-3)}
+  .custflag-tag{font-size:var(--fs-1);font-weight:700;color:var(--disp-2);background:var(--danger-tint);border-radius:6px;padding:3px 8px}
   .prisel{display:flex;gap:6px;margin:4px 0 2px}
   .prisel button{flex:1;border:1px solid var(--line);background:var(--card);border-radius:9px;font-size:11.5px;font-weight:700;padding:6px 0;color:var(--grey);cursor:pointer}
-  .prisel button.on.pri-urgent{background:var(--danger-tint);color:var(--disp-2);border-color:#E24B4A}.prisel button.on.pri-normal{background:var(--blue-tint-bg);color:var(--blue);border-color:var(--blue)}.prisel button.on.pri-low{background:#F1EFE8;color:#444441;border-color:#B4B2A9}
+  .prisel button.on.pri-urgent{background:var(--danger-tint);color:var(--disp-2);border-color:var(--disp)}.prisel button.on.pri-normal{background:var(--blue-tint-bg);color:var(--blue);border-color:var(--blue)}.prisel button.on.pri-low{background:var(--warn-tint);color:var(--warn-3);border-color:#B4B2A9}
   .msec{font-size:var(--fs-1);font-weight:700;color:var(--ink);margin:11px 0 4px}.msec .rh{font-weight:400;color:var(--grey)}
   .mreason{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:9px;padding:8px;font:inherit;font-size:13px;min-height:46px;resize:vertical}
-  .custreq{font-size:11.5px;font-weight:700;color:var(--disp-2);background:#FCEBEB;border-radius:9px;padding:7px 10px;margin-bottom:8px}
+  .custreq{font-size:11.5px;font-weight:700;color:var(--disp-2);background:var(--danger-tint);border-radius:9px;padding:7px 10px;margin-bottom:8px}
   .rows{flex:1;overflow-y:auto}
   .row{padding:11px 13px;border-bottom:1px solid var(--line);cursor:pointer;display:flex;gap:9px}
   .row:hover{background:var(--hover)}.row.sel{background:var(--sel-2);box-shadow:inset 3px 0 0 var(--blue)}.row.picked{background:var(--picked)}
@@ -791,11 +791,11 @@
   .proof{font-size:var(--fs-1);font-weight:700;border-radius:5px;padding:1px 5px}
   .proof.ok{background:var(--ok-tint);color:var(--ok)}.proof.wait{background:var(--gold-soft);color:var(--prog)}
   .chipst{font-size:var(--fs-1);font-weight:700;border-radius:20px;padding:2px 9px;border:1px solid transparent;cursor:pointer;white-space:nowrap}
-  .st-open{background:var(--blue-tint-bg);color:var(--blue);border-color:#cfe0ec}.st-act{background:var(--gold-soft);color:var(--prog);border-color:var(--gold-line)}.st-close{background:var(--ok-tint);color:var(--ok);border-color:#bfe0cd}
+  .st-open{background:var(--blue-tint-bg);color:var(--blue);border-color:var(--blue)}.st-act{background:var(--gold-soft);color:var(--prog);border-color:var(--gold-line)}.st-close{background:var(--ok-tint);color:var(--ok);border-color:var(--ok-2)}
   .rowacts{display:flex;gap:6px;margin-top:8px}
   .rowacts button{flex:1;font-size:var(--fs-1);font-weight:700;border:1px solid var(--line);background:var(--card);border-radius:6px;padding:5px;color:var(--ink)}
   .rowacts button.go{border:0;background:var(--blue);color:var(--on-accent)}
-  .selbar{display:flex;align-items:center;gap:8px;background:#EAF1F6;border:1px solid #cfe0ec;border-radius:9px;padding:7px 10px;margin-top:8px;font-size:11.5px;font-weight:600}
+  .selbar{display:flex;align-items:center;gap:8px;background:var(--blue-tint-bg);border:1px solid #cfe0ec;border-radius:9px;padding:7px 10px;margin-top:8px;font-size:11.5px;font-weight:600}
   .selbar .sp{margin-left:auto;display:flex;gap:6px}.selbar .sp button{border:1px solid #cfe0ec;background:var(--card);border-radius:6px;font-size:var(--fs-1);font-weight:700;padding:5px 9px;color:var(--blue)}
   .selbar .sp button.pri{border:0;background:var(--blue);color:var(--on-accent)}
 
@@ -816,8 +816,8 @@
   .tl .ev::before{content:"";position:absolute;left:-13px;top:3px;width:8px;height:8px;border-radius:50%;background:var(--blue)}
   .tl .ev::after{content:"";position:absolute;left:-10px;top:11px;bottom:-2px;width:1.5px;background:var(--line)}.tl .ev:last-child::after{display:none}
   .tl .ea{font-family:'Space Grotesk';font-weight:600;font-size:13px}.tl .em{font-size:11.5px;color:var(--grey)}
-  .parity{display:flex;align-items:center;gap:8px;background:#E9F4EE;border:1px solid #bfe0cd;border-radius:9px;padding:10px 12px;font-size:12px;color:#2f6043}
-  .actbar{display:flex;gap:8px;padding:10px 16px;border-top:1px solid var(--line);flex-wrap:wrap;background:#FCFBF8}
+  .parity{display:flex;align-items:center;gap:8px;background:var(--ok-tint);border:1px solid #bfe0cd;border-radius:9px;padding:10px 12px;font-size:12px;color:var(--ok-2)}
+  .actbar{display:flex;gap:8px;padding:10px 16px;border-top:1px solid var(--line);flex-wrap:wrap;background:var(--card)}
   .actbar button{font-size:12px;font-weight:700;border:1px solid var(--line);background:var(--card);border-radius:9px;padding:8px 12px;color:var(--ink)}
   .actbar button.pri{border:0;background:var(--chrome);color:var(--chrome-on)}.actbar button.warn{border-color:#e7b9b5;color:var(--disp)}
   .actbar button.pend{border-style:dashed;border-color:var(--gold-line);color:#9a7b34;background:var(--gold-soft)}
@@ -839,12 +839,12 @@
   .spin-lg{width:26px;height:26px;border-width:3px}
   .lc-t{font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3);color:var(--ink);margin:13px 0 3px}
   .lc-s{font-size:12px;color:var(--grey);margin-bottom:15px}
-  .ribbon{height:5px;border-radius:5px;background:#e8eef4;overflow:hidden;position:relative}
+  .ribbon{height:5px;border-radius:5px;background:var(--blue-tint-bg);overflow:hidden;position:relative}
   .ribbon::before{content:"";position:absolute;top:0;height:100%;width:42%;border-radius:5px;background:linear-gradient(90deg,transparent,var(--blue),#8dbbe4,transparent);animation:rib 1.15s ease-in-out infinite}
   @keyframes rib{0%{left:-42%}100%{left:100%}}
 
   .appwrap{flex:1;min-height:0;display:flex;flex-direction:column}
-  .appwrap.m{background:#dcd5c8}
+  .appwrap.m{background:var(--warn-tint)}
   .appwrap.m .shell{max-width:440px;width:100%;margin:0 auto;border-left:1px solid var(--line);border-right:1px solid var(--line)}
   /* ⚠️ Modals live OUTSIDE .appwrap (#modalhost is its sibling), so the frame above cannot reach them — see
      setVP. Without these two rules the compose modal renders 602px wide inside a 440px phone. The floating
@@ -891,16 +891,16 @@
   .attThumb{flex:0 0 auto;width:62px;height:62px;border:0.5px solid var(--line);border-radius:9px;overflow:hidden;cursor:pointer}
   .attGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:8px;margin:6px 0 8px;width:100%}
   .attTile{border:1px solid var(--line);border-radius:9px;background:var(--card);padding:12px 8px;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;text-align:center}
-  .attTile:hover{background:#F4F8FB;border-color:var(--blue)}
+  .attTile:hover{background:var(--card);border-color:var(--blue)}
   .attTileIcon{font-size:30px;line-height:1}
   .attTileName{font-size:11.5px;color:var(--ink);font-weight:600;word-break:break-word;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
   .attTileMeta{font-size:var(--fs-1);color:var(--grey);text-transform:uppercase;letter-spacing:.04em}
   .attImg .vlen{position:absolute;bottom:4px;right:6px;font-size:var(--fs-1);background:rgba(0,0,0,.45);color:#fff;border-radius:4px;padding:0 4px}
   .attNote{font-size:var(--fs-1);color:var(--grey);margin-top:8px;line-height:1.5}
   .itab .ir.hasatt{cursor:pointer}
-  .lineclip{margin-left:10px;font-size:var(--fs-1);font-weight:700;color:var(--blue);background:#EAF1F6;border:0.5px solid #cfe0ec;border-radius:6px;padding:1px 7px;cursor:pointer;white-space:nowrap}
-  .lineImgs{display:flex;gap:7px;padding:9px 11px;background:#FBFAF6;border-bottom:0.5px solid var(--line);overflow-x:auto}
-  .rowclip{font-size:var(--fs-1);font-weight:700;color:var(--blue);background:#EAF1F6;border:0.5px solid #cfe0ec;border-radius:5px;padding:0 5px;white-space:nowrap}
+  .lineclip{margin-left:10px;font-size:var(--fs-1);font-weight:700;color:var(--blue);background:var(--blue-tint-bg);border:0.5px solid #cfe0ec;border-radius:6px;padding:1px 7px;cursor:pointer;white-space:nowrap}
+  .lineImgs{display:flex;gap:7px;padding:9px 11px;background:var(--card);border-bottom:0.5px solid var(--line);overflow-x:auto}
+  .rowclip{font-size:var(--fs-1);font-weight:700;color:var(--blue);background:var(--blue-tint-bg);border:0.5px solid #cfe0ec;border-radius:5px;padding:0 5px;white-space:nowrap}
   .lbover{position:fixed;inset:0;background:rgba(8,24,32,.85);z-index:300;display:flex;align-items:center;justify-content:center;padding:18px}
   .lbbox{width:560px;max-width:100%;background:#0f2530;border-radius:14px;overflow:hidden}
   .lbtop{display:flex;align-items:center;gap:14px;padding:11px 14px;color:#cfe0e8;font-size:var(--fs-2);font-weight:600}
@@ -936,7 +936,7 @@ img.attImg{object-fit:cover;display:block}
 .sarr{font-size:var(--fs-1);margin-left:3px;color:var(--blue)}
 .lrow{display:grid;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--line);cursor:pointer;font-size:var(--fs-2)}
 .lrow:hover{background:var(--paper)}
-.lrow.unread{background:#f5f9fd}
+.lrow.unread{background:var(--blue-tint-bg)}
 .lrow.acc-unread{box-shadow:inset 3px 0 0 var(--blue)}
 .lrow.acc-disp{box-shadow:inset 3px 0 0 var(--disp)}
 .lrow.acc-urg{box-shadow:inset 3px 0 0 #d98a3a}
@@ -958,10 +958,10 @@ img.attImg{object-fit:cover;display:block}
 .lrow.unread .subjtext{font-weight:800}
 .udot{width:8px;height:8px;border-radius:50%;background:var(--blue);flex:0 0 auto;display:inline-block}
 .rflag{font-size:var(--fs-1);font-weight:800;border-radius:5px;padding:1px 6px;white-space:nowrap;border:1px solid;flex:0 0 auto}
-.rflag.disp{background:var(--danger-tint);color:var(--disp);border-color:#f0c9c6}
-.rflag.cust{background:var(--danger-tint);color:var(--disp-2);border-color:#e3a0a0}
-.rflag.urg{background:var(--danger-tint);color:var(--disp-2);border-color:#e3a0a0}
-.rflag.high{background:#fdeccc;color:#8a5a12;border-color:#e6c98f}
+.rflag.disp{background:var(--danger-tint);color:var(--disp);border-color:var(--disp)}
+.rflag.cust{background:var(--danger-tint);color:var(--disp-2);border-color:var(--disp)}
+.rflag.urg{background:var(--danger-tint);color:var(--disp-2);border-color:var(--disp)}
+.rflag.high{background:var(--warn-tint);color:var(--warn-3);border-color:#e6c98f}
 .keypanel{position:absolute;right:0;top:26px;z-index:30;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:12px;width:520px;max-width:88vw;max-height:70vh;overflow-y:auto}
 .keypanel h4{font-family:'Space Grotesk';font-size:var(--fs-1);margin:0 0 8px;text-transform:uppercase;letter-spacing:.4px;color:var(--grey)}
 .keygrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
@@ -974,7 +974,7 @@ img.attImg{object-fit:cover;display:block}
 .colcog{border:0;background:none;cursor:pointer;font-size:13px;color:var(--grey);justify-self:end;padding:0 2px}
 .colmenu{position:absolute;right:10px;top:30px;z-index:6;background:var(--card);border:1px solid var(--line);border-radius:9px;box-shadow:0 8px 24px rgba(0,0,0,.16);padding:8px 11px;display:flex;flex-direction:column;gap:5px;font-size:12px;text-transform:none;font-weight:400;color:var(--ink)}
 .colmenu label{display:flex;gap:7px;align-items:center;cursor:pointer;white-space:nowrap}
-.optchip.mini{font-size:var(--fs-1);padding:0 5px}.optchip.mini.r{background:var(--danger-tint);color:var(--disp);border-color:#f0c9c6}
+.optchip.mini{font-size:var(--fs-1);padding:0 5px}.optchip.mini.r{background:var(--danger-tint);color:var(--disp);border-color:var(--disp)}
 /* ⚠️ WRAPS INSTEAD OF OVERFLOWING. Fold toggle + count + sort + key + columns needs ~280px, and the list pane is
    draggable down to 210 — below which the row spilled sideways out of its own pane. A control strip that cannot
    fit must fold onto a second line; it must not decide the pane is wider than it is. */
@@ -1008,7 +1008,7 @@ img.attImg{object-fit:cover;display:block}
 .colmenu label{padding:3px 8px;border-radius:6px;cursor:pointer}
 .colmenu label:has(input:checked){background:var(--blue-tint-bg);color:var(--blue);font-weight:600}
 .colmenu input[type=checkbox]{width:14px;height:14px;accent-color:var(--blue)}
-.prichip.pri-high{background:#fdeccc;color:#8a5a12;border-color:#e6c98f}
+.prichip.pri-high{background:var(--warn-tint);color:var(--warn-3);border-color:#e6c98f}
 /**
  * ⚠️ #cfd6da MEASURED 1.09–1.47:1 — the star was not recessive, it was invisible, and it is a CONTROL. WCAG
  * 1.4.11 puts the floor for a UI glyph at 3:1. ⚠️ Recessive means "clearly there and clearly secondary", never
@@ -1471,12 +1471,12 @@ function blueprintCardHTML(id){
   var wp = WORK_PATTERNS[id]; if(!wp) return '<div style="padding:12px">Unknown work pattern.</div>';
   return '<div style="padding:2px 2px">'
     +'<div style="display:flex;align-items:center;gap:9px;margin-bottom:2px"><span style="font-size:22px">'+wp.icon+'</span><div><div style="font-family:\'Space Grotesk\';font-weight:800;font-size:var(--fs-4)">'+esc(wp.label)+'</div><div style="font-size:var(--fs-1);color:var(--grey)">what governs this work pattern</div></div></div>'
-    +'<div style="background:#f4f8fc;border:1px solid var(--blue-tint-line);border-radius:9px;padding:8px 11px;margin:10px 0;font-size:var(--fs-2);color:#2b4a72">🎫 <b>Licence</b> · '+esc(wp.licence)+'</div>'
+    +'<div style="background:var(--blue-tint-bg);border:1px solid var(--blue-tint-line);border-radius:9px;padding:8px 11px;margin:10px 0;font-size:var(--fs-2);color:var(--blue)">🎫 <b>Licence</b> · '+esc(wp.licence)+'</div>'
     +'<div style="font-size:11.5px;font-weight:800;color:var(--warn-2);margin:8px 0 2px">🔒 SEALED — governed, cannot change</div>'+_bpRows(wp.sealed,'sealed')
     +'<div style="font-size:11.5px;font-weight:800;color:#1f7a3d;margin:14px 0 2px">✎ OPEN — yours to set, within bounds</div>'+_bpRows(wp.open,'open')
     +'<div style="font-size:11.5px;font-weight:800;color:#2b4a72;margin:14px 0 2px">↑ REPORTS UP — health &amp; events to governance</div><div style="font-size:var(--fs-2);color:var(--ink);padding-top:4px">'+wp.reportsUp.map(esc).join(' · ')+'</div>'
     +(wp.workflow?('<div style="font-size:11.5px;font-weight:800;color:#5a3fa0;margin:16px 0 4px">🔀 WORKFLOW — how deep this can reach</div>'
-      +wp.workflow.map(function(st,i){ return '<div style="display:flex;gap:9px;align-items:flex-start;padding:5px 0'+(i?';border-top:1px dashed var(--line)':'')+'"><span style="flex:none;width:20px;height:20px;border-radius:50%;background:'+(st.done?'#e8f4ee':'#f2eefb')+';color:'+(st.done?'var(--ok-3)':'var(--purple-2)')+';font-size:var(--fs-1);font-weight:800;display:flex;align-items:center;justify-content:center">'+(i+1)+'</span><div style="flex:1"><span style="font-size:var(--fs-2);font-weight:700;color:var(--ink)">'+esc(st.t)+'</span> <span style="font-size:var(--fs-1);font-weight:800;color:'+(st.done?'var(--ok-3)':'#9a7bd0')+'"> '+(st.done?'✅ built':'○ extensible')+'</span><div style="color:var(--grey);font-size:var(--fs-1);line-height:1.4">'+esc(st.d)+'</div></div></div>'; }).join('')
+      +wp.workflow.map(function(st,i){ return '<div style="display:flex;gap:9px;align-items:flex-start;padding:5px 0'+(i?';border-top:1px dashed var(--line)':'')+'"><span style="flex:none;width:20px;height:20px;border-radius:50%;background:'+(st.done?'var(--ok-tint)':'var(--purple-tint)')+';color:'+(st.done?'var(--ok-3)':'var(--purple-2)')+';font-size:var(--fs-1);font-weight:800;display:flex;align-items:center;justify-content:center">'+(i+1)+'</span><div style="flex:1"><span style="font-size:var(--fs-2);font-weight:700;color:var(--ink)">'+esc(st.t)+'</span> <span style="font-size:var(--fs-1);font-weight:800;color:'+(st.done?'var(--ok-3)':'var(--purple-2)')+'"> '+(st.done?'✅ built':'○ extensible')+'</span><div style="color:var(--grey);font-size:var(--fs-1);line-height:1.4">'+esc(st.d)+'</div></div></div>'; }).join('')
       +'<div style="font-size:var(--fs-1);color:var(--grey);margin-top:9px;line-height:1.5">The first steps are built today; the rest are the <b>same shape</b> — a resolved knob or a chained mode (SMS · AI · robot · escalation). The workflow reaches <b>as deep as you declare it</b> — this is the depth, in one place.</div>'):'')
     +'<div style="font-size:var(--fs-1);color:var(--grey);margin-top:13px;line-height:1.5">Read-only showcase — the governance cascade for this mode, earmarked by the layer that set it. Enforcement + editable knobs come next.</div>'
     +'</div>';
@@ -1557,7 +1557,7 @@ function assistSuggest(){ const sc=curScreen(); const pre=!(typeof SESSION!=="un
 }
 function assistEntryHTML(e){ if(!e) return "I am not sure yet — try rephrasing, or pick a suggestion. I will not guess or oversell.";
   let html = "<b>"+esc(e.q)+"</b><br>"+esc(e.a);
-  if(e.fit) html += `<div style="margin-top:6px;font-size:var(--fs-1);color:${e.fit==="good"?"var(--ok-3)":e.fit==="no"?"var(--disp)":"#a9791f"}">Fit: ${e.fit==="good"?"strong":e.fit==="no"?"probably not":"depends — tell me more"}</div>`;
+  if(e.fit) html += `<div style="margin-top:6px;font-size:var(--fs-1);color:${e.fit==="good"?"var(--ok-3)":e.fit==="no"?"var(--disp)":"var(--warn-2)"}">Fit: ${e.fit==="good"?"strong":e.fit==="no"?"probably not":"depends — tell me more"}</div>`;
   const cap = e.media && e.media.caption ? `<div style="font-size:var(--fs-1);color:var(--grey-4);margin-top:4px;font-style:italic">${esc(e.media.caption)}</div>` : "";
   if(e.media && e.media.type==="img") html += `<div style="margin-top:8px"><img src="${esc(e.media.src)}" onerror="this.style.display='none'" style="max-width:100%;border-radius:9px;display:block" alt="">${cap}</div>`;
   if(e.media && e.media.type==="video") html += `<div style="margin-top:8px"><video src="${esc(e.media.src)}" controls onerror="this.style.display='none'" style="max-width:100%;border-radius:9px;display:block"></video>${cap}</div>`;
@@ -1591,7 +1591,7 @@ function renderAssist(ans){ const h=document.getElementById("assisthost"); if(!h
       <div style="display:flex;gap:7px"><input id="assist_in" data-testid="assist-input" placeholder="${pre?"e.g. I run a timber yard…":"e.g. how do I assign a task?"}" style="flex:1;border:1px solid #e3e0d8;border-radius:9px;padding:7px 9px;font-size:var(--fs-2)" onkeydown="if(event.key==='Enter')assistAsk()"><button data-testid="assist-ask" onclick="assistAsk()" style="border:0;border-radius:9px;padding:0 12px;background:var(--blue);color:var(--on-accent);font-weight:700;cursor:pointer">Ask</button></div>
       ${pre?'':'<div style="margin-top:9px;text-align:center"><button data-testid="assist-compliance" onclick="checkCompliance()" style="border:0.5px solid #e3e0d8;border-radius:9px;padding:6px 10px;font-size:11.5px;background:var(--card);cursor:pointer">🛡️ Check compliance</button></div>'}
     </div>
-    <div style="padding:7px 13px;font-size:var(--fs-1);color:var(--grey-4);background:#faf8f3">Honest by design · sample answers from the library · richer AI coming.</div>
+    <div style="padding:7px 13px;font-size:var(--fs-1);color:var(--grey-4);background:var(--card)">Honest by design · sample answers from the library · richer AI coming.</div>
   </div>`;
 }
 /* ===================== COMPLIANCE CONFORM-CHECK (AI-as-actor, first light) =====================
@@ -1617,7 +1617,7 @@ function ccRender(res){
   const opts=_ccStds.map(s=>`<option value="${esc(s.standard)}" ${s.standard===_ccPick?'selected':''}>${esc(s.title)} (${esc(s.standard)})</option>`).join("");
   const fields=(std.points||[]).map(_ccField).join('<div style="height:9px"></div>');
   modal(`<div style="font-family:'Space Grotesk';font-weight:700;font-size:15px;margin-bottom:3px">🛡️ Compliance check <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--warn-tint);color:var(--warn-3);border-radius:5px;padding:1px 6px;vertical-align:middle">first light</span></div>
-    <div style="font-size:11.5px;color:#777;margin-bottom:11px">Check a transaction's data against a standard. The verdict is computed from the rules — the AI only explains it.</div>
+    <div style="font-size:11.5px;color:var(--warn-3);margin-bottom:11px">Check a transaction's data against a standard. The verdict is computed from the rules — the AI only explains it.</div>
     <label style="font-size:11.5px;color:var(--grey-2)">Standard</label>
     <select onchange="ccPickStd(this.value)" style="width:100%;border:1px solid #e3e0d8;border-radius:9px;padding:7px 9px;font-size:var(--fs-2);margin:3px 0 12px">${opts}</select>
     <div>${fields}</div>
@@ -1635,9 +1635,9 @@ async function ccRun(){
   let v; try{ v=await api('assistConform',{body:{standard:_ccPick, payload}}); }
   catch(e){ if(rh) rh.innerHTML=`<div style="color:var(--disp);font-size:var(--fs-2)">Couldn't check: ${esc((e&&e.message)||'try again')}</div>`; return; }
   const ok=v.compliant;
-  const badge=`<div style="display:inline-block;font-weight:800;font-size:12px;padding:4px 11px;border-radius:20px;background:${ok?'#e8f5ee':'#fbeae9'};color:${ok?'var(--ok-3)':'var(--disp)'}">${ok?'✓ COMPLIANT':'✗ NON-COMPLIANT'}</div>`;
+  const badge=`<div style="display:inline-block;font-weight:800;font-size:12px;padding:4px 11px;border-radius:20px;background:${ok?'var(--ok-tint)':'var(--danger-tint)'};color:${ok?'var(--ok-3)':'var(--disp)'}">${ok?'✓ COMPLIANT':'✗ NON-COMPLIANT'}</div>`;
   const rows=(v.points||[]).map(p=>{ const g=p.status==='ok'; return `<div style="display:flex;gap:8px;align-items:baseline;padding:4px 0;font-size:12px;border-top:1px solid #f0ede5"><span style="color:${g?'var(--ok-3)':'var(--disp)'};font-weight:800">${g?'✓':'✗'}</span><span style="flex:1">${esc(p.label)}</span><span style="color:var(--grey-4);font-size:var(--fs-1)">${esc(p.detail||p.status)}</span></div>`; }).join("");
-  const narr=v.narrative?`<div style="margin-top:10px;background:#f6f4ee;border:1px solid #e7e3d8;border-radius:9px;padding:9px 11px;font-size:12px;line-height:1.55;color:#3a3a3a"><span style="font-size:var(--fs-1);color:var(--warn-3);font-weight:700">🤖 ASSIST</span><br>${esc(v.narrative)}</div>`:'';
+  const narr=v.narrative?`<div style="margin-top:10px;background:var(--warn-tint);border:1px solid #e7e3d8;border-radius:9px;padding:9px 11px;font-size:12px;line-height:1.55;color:var(--warn-3)"><span style="font-size:var(--fs-1);color:var(--warn-3);font-weight:700">🤖 ASSIST</span><br>${esc(v.narrative)}</div>`:'';
   const ab=v.acted_by||{}; const prov=`<div style="margin-top:9px;font-size:var(--fs-1);color:var(--grey-4);font-family:'Space Mono'">stamped · ${esc(ab.deputy||'ai:conform-verdict')} · ${ab.model?('narrative by '+esc(ab.model)):'deterministic only (no model key)'} · against ${esc(v.standard||_ccPick)}</div>`;
   if(rh) rh.innerHTML=badge+`<div style="margin-top:9px">${rows}</div>`+narr+prov;
 }
@@ -1669,16 +1669,16 @@ function _finishCard(it,i,unit){
     +(facts.length?'<div style="font-size:11.5px;color:var(--ink-2);margin:5px 0;line-height:1.55">'+facts.join(' · ')+'</div>':'')
     +(combos.length?'<div style="font-size:var(--fs-1);color:var(--grey-4);text-transform:uppercase;letter-spacing:.4px;font-weight:700;margin-top:6px">Colour combinations</div>'+combos.map(_combo).join(''):'')
     +(applied.length?'<div style="font-size:var(--fs-1);color:var(--grey-4);margin-top:7px">'+applied.join(' · ')+'</div>':'')
-    +'<div style="margin-top:8px;display:flex;align-items:center;gap:6px;background:#eef7ee;border:1px solid #cfe6cf;border-radius:9px;padding:6px 9px"><span style="font-size:var(--fs-1);color:#2e7a45;font-weight:700">Your price'+(u?' / '+esc(u):'')+'</span><span style="font-size:var(--fs-1);color:var(--grey-4)">₹</span><input id="com_'+i+'" inputmode="decimal" value="'+esc(price)+'" placeholder="e.g. 850" style="width:88px;border:1px solid #cfe6cf;border-radius:6px;padding:4px 7px;font-size:12px"></div>'
+    +'<div style="margin-top:8px;display:flex;align-items:center;gap:6px;background:var(--ok-tint);border:1px solid #cfe6cf;border-radius:9px;padding:6px 9px"><span style="font-size:var(--fs-1);color:var(--ok-2);font-weight:700">Your price'+(u?' / '+esc(u):'')+'</span><span style="font-size:var(--fs-1);color:var(--grey-4)">₹</span><input id="com_'+i+'" inputmode="decimal" value="'+esc(price)+'" placeholder="e.g. 850" style="width:88px;border:1px solid #cfe6cf;border-radius:6px;padding:4px 7px;font-size:12px"></div>'
     +'</div>';
 }
 function cbRenderCatalogue(v){
   var head='<div style="font-family:\'Space Grotesk\';font-weight:700;font-size:15px;margin-bottom:2px">🎨 '+esc(v.title||'Catalogue')+'</div>'
     +'<div style="font-size:var(--fs-1);color:var(--purple-2);font-family:\'Space Mono\',monospace;margin-bottom:8px">structured by ai:catalogue-structure@v1 · source '+esc(v.source||'')+'</div>';
-  var intro=v.intro?'<div style="font-size:var(--fs-2);color:var(--ink-2);line-height:1.55;background:#f6f4ee;border:1px solid #e7e3d8;border-radius:9px;padding:9px 11px;margin-bottom:10px">'+esc(v.intro)+'</div>':'';
+  var intro=v.intro?'<div style="font-size:var(--fs-2);color:var(--ink-2);line-height:1.55;background:var(--warn-tint);border:1px solid #e7e3d8;border-radius:9px;padding:9px 11px;margin-bottom:10px">'+esc(v.intro)+'</div>':'';
   var layers='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:11px">'
-    +'<div style="flex:1;min-width:180px;background:#eef4fc;border:1px solid var(--blue-tint-line);border-radius:9px;padding:9px 11px"><div style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);text-transform:uppercase;letter-spacing:.4px">Shared · minted once</div><div style="font-size:11.5px;color:var(--ink-2);margin-top:3px">Schema + design + colour + images. Inherited by <b>reference</b> — Beta stores no copy.</div></div>'
-    +'<div style="flex:1;min-width:180px;background:#eef7ee;border:1px solid #cfe6cf;border-radius:9px;padding:9px 11px"><div style="font-size:var(--fs-1);font-weight:800;color:#2e7a45;text-transform:uppercase;letter-spacing:.4px">Beta fills · per-entity</div><div style="font-size:11.5px;color:var(--ink-2);margin-top:3px">Only commercials: '+((v.commercials_fields||[]).map(function(f){return esc(f.label);}).join(' · '))+'.</div></div></div>';
+    +'<div style="flex:1;min-width:180px;background:var(--blue-tint-bg);border:1px solid var(--blue-tint-line);border-radius:9px;padding:9px 11px"><div style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);text-transform:uppercase;letter-spacing:.4px">Shared · minted once</div><div style="font-size:11.5px;color:var(--ink-2);margin-top:3px">Schema + design + colour + images. Inherited by <b>reference</b> — Beta stores no copy.</div></div>'
+    +'<div style="flex:1;min-width:180px;background:var(--ok-tint);border:1px solid #cfe6cf;border-radius:9px;padding:9px 11px"><div style="font-size:var(--fs-1);font-weight:800;color:var(--ok-2);text-transform:uppercase;letter-spacing:.4px">Beta fills · per-entity</div><div style="font-size:11.5px;color:var(--ink-2);margin-top:3px">Only commercials: '+((v.commercials_fields||[]).map(function(f){return esc(f.label);}).join(' · '))+'.</div></div></div>';
   var counts=v.counts?'<div style="font-size:11.5px;color:var(--grey-2);margin-bottom:9px">'+v.counts.finishes+' finishes · '+v.counts.combinations+' combinations · '+v.counts.colours+' colours · '+v.counts.fields+' schema fields</div>':'';
   var _u=_cardUnit(v); var items=(v.finishes||v.items||[]).map(function(it,i){return _finishCard(it,i,_u);}).join('');
   var adopt='<div style="display:flex;gap:8px;margin-top:4px"><button class="composebtn pri" onclick="cbAdopt()">Adopt &amp; save for my entity</button><button class="composebtn" onclick="cbViewMine()">View saved</button></div><div id="cb_result" style="margin-top:8px"></div>';
@@ -1693,7 +1693,7 @@ async function cbAdopt(){
   (v.finishes||v.items||[]).forEach(function(it,i){ var el=document.getElementById('com_'+i); if(el&&el.value!==''){ com[it.name]={price:Number(el.value),unit:(it.unit||_u||'')}; } });
   var rh=document.getElementById('cb_result'); if(rh)rh.innerHTML='<span style="font-size:12px;color:var(--grey-4)">Saving…</span>';
   try{ await api('catalogueAdopt',{body:{source:(window._cbSourceKey||(v.adoption_model&&v.adoption_model.source_ref)||'beta-royale-play@v1'), commercials:com}});
-    if(rh)rh.innerHTML='<div style="color:#2e7a45;font-size:var(--fs-2);background:#eef7ee;border:1px solid #cfe6cf;border-radius:9px;padding:8px 10px">✓ Saved — your entity now <b>references</b> this catalogue ('+Object.keys(com).length+' finishes priced). Design &amp; colour stay shared; only your commercials were stored.</div>';
+    if(rh)rh.innerHTML='<div style="color:#2e7a45;font-size:var(--fs-2);background:var(--ok-tint);border:1px solid #cfe6cf;border-radius:9px;padding:8px 10px">✓ Saved — your entity now <b>references</b> this catalogue ('+Object.keys(com).length+' finishes priced). Design &amp; colour stay shared; only your commercials were stored.</div>';
     if(typeof toast==='function')toast('Catalogue adopted ✓ (reference + commercials)');
   }catch(e){ if(rh)rh.innerHTML='<div style="color:var(--disp);font-size:var(--fs-2)">'+esc((e&&e.message)||'save failed')+'</div>'; }
 }
@@ -1702,7 +1702,7 @@ async function cbViewMine(){
   try{ var r=await api('catalogueMine');
     if(!r.count){ if(rh)rh.innerHTML='<div style="font-size:var(--fs-2);color:var(--grey-2)">Nothing saved yet — set prices and Adopt above.</div>'; return; }
     var c=r.catalogues[0]; var priced=(c.resolved.items||[]).filter(function(it){return it.commercials;});
-    if(rh)rh.innerHTML='<div style="font-size:var(--fs-2);color:var(--ink-2);background:#f6f4ee;border:1px solid #e7e3d8;border-radius:9px;padding:8px 10px">Persisted · <b>'+esc(c.source)+'</b> · '+priced.length+' priced:<br>'+(priced.map(function(it){var p=_refPrice(it);return esc(it.name)+' — '+(p?(esc(inr(p.v))+(p.u?'/'+esc(p.u):'')):'?');}).join(' · ')||'—')+'<div style="font-size:var(--fs-1);color:var(--grey-4);margin-top:5px">design &amp; data resolved by reference from the shared source — no copy stored</div></div>';
+    if(rh)rh.innerHTML='<div style="font-size:var(--fs-2);color:var(--ink-2);background:var(--warn-tint);border:1px solid #e7e3d8;border-radius:9px;padding:8px 10px">Persisted · <b>'+esc(c.source)+'</b> · '+priced.length+' priced:<br>'+(priced.map(function(it){var p=_refPrice(it);return esc(it.name)+' — '+(p?(esc(inr(p.v))+(p.u?'/'+esc(p.u):'')):'?');}).join(' · ')||'—')+'<div style="font-size:var(--fs-1);color:var(--grey-4);margin-top:5px">design &amp; data resolved by reference from the shared source — no copy stored</div></div>';
   }catch(e){ if(rh)rh.innerHTML='<div style="color:var(--disp);font-size:var(--fs-2)">'+esc((e&&e.message)||'load failed')+'</div>'; }
 }
 function setLogFilter(k){ _logFilter=k; renderMsgConsole(); }
@@ -1711,7 +1711,7 @@ function renderMsgConsole(){ const host=document.getElementById("lbhost"); if(!h
   const COL={debug:'var(--grey-4)',info:'var(--blue)',warn:'#a9791f',error:'var(--disp)'};
   const all=(window.__cblog||[]);
   const rows=all.filter(e=>_logFilter==='all'||e.level===_logFilter).slice(-200).reverse();
-  const chip=(k,lbl)=>`<button onclick="setLogFilter('${k}')" style="border:0.5px solid var(--line);border-radius:6px;padding:2px 8px;font-size:var(--fs-1);background:${_logFilter===k?'var(--ink)':'#fff'};color:${_logFilter===k?'#fff':'var(--ink)'};cursor:pointer">${lbl}</button>`;
+  const chip=(k,lbl)=>`<button onclick="setLogFilter('${k}')" style="border:0.5px solid var(--line);border-radius:6px;padding:2px 8px;font-size:var(--fs-1);background:${_logFilter===k?'var(--ink)':'var(--card)'};color:${_logFilter===k?'var(--on-accent)':'var(--ink)'};cursor:pointer">${lbl}</button>`;
   host.innerHTML=`<div class="notifover" onclick="closeMsgConsole()"><div class="notifpanel" style="max-width:560px;width:94vw" onclick="event.stopPropagation()">
     <div class="notifhd">🧪 Message log<span style="margin-left:auto;font-size:var(--fs-1);color:var(--grey)">${rows.length}/${all.length}</span></div>
     <div style="display:flex;gap:5px;padding:8px 13px;flex-wrap:wrap;align-items:center">${chip('all','All')}${chip('info','Info')}${chip('warn','Warning')}${chip('error','Critical')}${chip('debug','Requests')}<button onclick="clearMsgLog()" style="margin-left:auto;border:0.5px solid var(--line);border-radius:6px;padding:2px 8px;font-size:var(--fs-1);background:var(--card);cursor:pointer">Clear</button></div>
@@ -1934,7 +1934,7 @@ function regVerticalChooser(){
   if(!vs.length) return '';
   return '<div style="margin:10px 0 4px"><div class="fl">Choose your setup <span style="font-weight:400;color:var(--grey)">(you can change later)</span></div>'
     + vs.map(function(v){ const sel=(REG.constitution||'')===v.key; const caps=(v.capabilities||[]).join(' · ');
-        return '<div data-testid="reg-vertical-'+esc(v.key)+'" onclick="REG.constitution=\''+esc(v.key)+'\';renderRegister()" style="border:1px solid '+(sel?'var(--blue)':'var(--line)')+';background:'+(sel?'var(--blue-tint)':'#fff')+';border-radius:9px;padding:9px 11px;margin-bottom:7px;cursor:pointer"><div style="font-weight:700;font-size:var(--fs-2);color:var(--ink)">'+(sel?'● ':'○ ')+esc(v.label||v.key)+(v.is_default?' <span style="font-size:var(--fs-1);color:var(--grey);font-weight:400">· default</span>':'')+'</div><div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">'+(v.vertical?('vertical: '+esc(v.vertical)+' · '):'')+'includes '+esc(caps||'core')+'</div></div>';
+        return '<div data-testid="reg-vertical-'+esc(v.key)+'" onclick="REG.constitution=\''+esc(v.key)+'\';renderRegister()" style="border:1px solid '+(sel?'var(--blue)':'var(--line)')+';background:'+(sel?'var(--blue-tint)':'var(--card)')+';border-radius:9px;padding:9px 11px;margin-bottom:7px;cursor:pointer"><div style="font-weight:700;font-size:var(--fs-2);color:var(--ink)">'+(sel?'● ':'○ ')+esc(v.label||v.key)+(v.is_default?' <span style="font-size:var(--fs-1);color:var(--grey);font-weight:400">· default</span>':'')+'</div><div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">'+(v.vertical?('vertical: '+esc(v.vertical)+' · '):'')+'includes '+esc(caps||'core')+'</div></div>';
       }).join('')
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin:2px 0 4px">None fits? <a onclick="regTailor();return false" style="color:var(--blue);cursor:pointer;font-weight:600">Tailor one</a> — or <a onclick="regContact();return false" style="color:var(--blue);cursor:pointer;font-weight:600">contact the team</a> to wire it quickly.</div>'
     + '</div>';
@@ -1964,7 +1964,7 @@ function renderLogin(){
        <button class="btn" id="l_go">${L.busy?'<span class="spin"></span> …':"Continue →"}</button>`;
   } else if(L.step==="otp"){
     form = `<div ${who}>Signing in as <b>${esc(L.id)}</b> · ${L.kind} · <a onclick="loginReset()">change</a></div>
-       ${L.note?`<div style="font-size:12px;color:#7a6428;background:#fdf8ec;border:1px solid #e0d3b0;border-radius:9px;padding:9px 11px;margin:6px 0 4px;line-height:1.5">${esc(L.note)}</div>`:''}
+       ${L.note?`<div style="font-size:12px;color:#7a6428;background:var(--warn-tint);border:1px solid #e0d3b0;border-radius:9px;padding:9px 11px;margin:6px 0 4px;line-height:1.5">${esc(L.note)}</div>`:''}
        <label class="fl">${L.note?"Code from your network operator":(L.kind==="entity"?"OTP sent to your email":"OTP from your admin")}</label><input class="inp" id="l_otp" placeholder="6-digit code">
        <button class="btn" id="l_go">${L.busy?'<span class="spin"></span> Verifying…':"Verify & enter →"}</button>`;
   } else if(L.step==="pin"){
@@ -2232,7 +2232,7 @@ function themeSwatchesHTML(){
     return '<button type="button" data-testid="theme-' + k + '" title="' + esc(t.name) + '"'
       + ' onclick="event.stopPropagation();themeSet(\'' + k + '\')"'
       + ' style="display:flex;align-items:center;gap:6px;border:1px solid ' + (on ? 'var(--blue)' : 'var(--line)')
-      + ';background:' + (on ? '#eef4ff' : '#fff') + ';border-radius:20px;padding:4px 10px 4px 5px;cursor:pointer;'
+      + ';background:' + (on ? 'var(--blue-tint-bg)' : 'var(--card)') + ';border-radius:20px;padding:4px 10px 4px 5px;cursor:pointer;'
       + 'font:inherit;font-size:11.5px;color:' + (on ? 'var(--blue)' : 'var(--ink)') + ';font-weight:' + (on ? '700' : '400') + '">'
       + '<span style="width:14px;height:14px;border-radius:50%;background:' + t.dot + ';border:1px solid var(--line);flex:0 0 auto"></span>'
       + esc(t.name) + '</button>';
@@ -3146,7 +3146,7 @@ function ccOriginHTML(){
   const unpriced=(CC.items||[]).filter(i=>!(typeof cbAmount==='function'?cbAmount(i.price):i.price)).length;
   const ref=(o.refused||[]);
   const who=esc(o.from||o.channel||'a message');
-  return `<div data-testid="cc-origin" style="background:#f7f6fd;border:1px solid #e4dff6;border-radius:9px;padding:10px 12px;margin:0 0 10px;font-size:var(--fs-2)">
+  return `<div data-testid="cc-origin" style="background:var(--blue-tint-bg);border:1px solid #e4dff6;border-radius:9px;padding:10px 12px;margin:0 0 10px;font-size:var(--fs-2)">
     <div style="font-weight:700">✨ ${n?(n+' line'+(n===1?'':'s')+' brought in'):'Bringing the lines in…'} from ${esc(o.channelName||o.channel||'a message')} — ${who}</div>
     <div style="color:var(--grey);margin-top:3px">Read by a co-assist. <b>Proposed, not evidence</b> — check the quantities and prices before you send.</div>
     ${unpriced?`<div style="margin-top:5px;color:var(--warn-3)">⚠️ ${unpriced} line${unpriced===1?'':'s'} ${unpriced===1?'has':'have'} no price — your catalogue does not stock ${unpriced===1?'it':'them'}. Set one below, or send it as a quantity-only chit.</div>`:''}
@@ -3195,7 +3195,7 @@ function ccStepTo(){
 }
 function ccStepDetails(){
   return `<div style="font-family:'Space Grotesk';font-weight:600;font-size:12px;color:var(--grey);margin:2px 0 2px">Chit fields · from your <b>${esc((STORE.chitSchema||{schema_name:"Order"}).schema_name)}</b> schema</div>
-     ${!STORE.chitSchema?`<div style="background:#fbeceb;border:1px solid #f0c9c6;border-radius:9px;padding:7px 10px;font-size:11.5px;color:var(--disp);margin-bottom:6px">${esc(MSG.schemaDefault())}</div>`:''}
+     ${!STORE.chitSchema?`<div style="background:var(--danger-tint);border:1px solid #f0c9c6;border-radius:9px;padding:7px 10px;font-size:11.5px;color:var(--disp);margin-bottom:6px">${esc(MSG.schemaDefault())}</div>`:''}
      ${ccSchema().map(cfField).join("")}
      <div style="font-family:'Space Grotesk';font-weight:600;font-size:12px;color:var(--grey);margin:14px 0 4px">Attachments · <span style="font-weight:400">co-signed (use 📎 on a line for item-specific files)</span></div>
      <label class="composebtn" style="cursor:pointer">📎 Attach files<input type="file" multiple style="display:none" onchange="ccAddFiles(this.files);this.value=''"></label>
@@ -3782,7 +3782,7 @@ const NET_MODEL_NOTE = {
   b2c:"A single shopfront (b2c) with internal counters. Customers buy directly; no upstream distribution."
 };
 function netView(self, tree, edges){
-  const nodes = tree.map(n=>`<div style="padding:3px 0 3px ${(n.depth||0)*20}px;font-size:13.5px">${n.depth>0?'<span style="color:var(--grey)">└ </span>':''}<b>${esc(n.name)}</b> <span style="font-family:'Space Mono';font-size:var(--fs-1);color:var(--grey)">${esc(n.bridge_id||'')}</span>${n.act!=null?` <span class="optchip" style="background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)">👥 ${n.act}</span>`:''}${n.mode==='b2c'?` <span class="optchip" style="background:var(--gold-soft);color:var(--warn-3);border-color:var(--gold-line);font-size:var(--fs-1)">b2c</span>`:''}${n.demo?` <span class="optchip" style="font-size:var(--fs-1)">demo</span>`:''}${n.isnew?` <span class="optchip" style="font-size:var(--fs-1);background:var(--ok-tint);color:var(--ok-3);border-color:#bfe0cd">new</span>`:''}</div>`).join("");
+  const nodes = tree.map(n=>`<div style="padding:3px 0 3px ${(n.depth||0)*20}px;font-size:13.5px">${n.depth>0?'<span style="color:var(--grey)">└ </span>':''}<b>${esc(n.name)}</b> <span style="font-family:'Space Mono';font-size:var(--fs-1);color:var(--grey)">${esc(n.bridge_id||'')}</span>${n.act!=null?` <span class="optchip" style="background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)">👥 ${n.act}</span>`:''}${n.mode==='b2c'?` <span class="optchip" style="background:var(--gold-soft);color:var(--warn-3);border-color:var(--gold-line);font-size:var(--fs-1)">b2c</span>`:''}${n.demo?` <span class="optchip" style="font-size:var(--fs-1)">demo</span>`:''}${n.isnew?` <span class="optchip" style="font-size:var(--fs-1);background:var(--ok-tint);color:var(--ok-3);border-color:var(--ok-2)">new</span>`:''}</div>`).join("");
   const edgeRows = edges.map(e=>{
     const a = e.state==='requested' ? `<button class="composebtn pri" onclick="netApprove('${e.id}')">Approve</button> <button class="composebtn" onclick="netDecline('${e.id}')">Decline</button>`
       : e.state==='active' ? `<button class="composebtn" onclick="netSuspend('${e.id}')">Suspend</button> <button class="composebtn" style="color:var(--disp)" onclick="netDisconnect('${e.id}')">Disconnect</button>`
@@ -3849,7 +3849,7 @@ function suppliersScreen(){
       <div id="sp_sugg" class="ccsugg"></div>
       <div class="err" id="sp_err" style="margin-top:6px"></div>
       <div class="srch" style="margin-top:8px">🔍 <input placeholder="Search suppliers, category, ID" value="${esc(UI.supQ||'')}" oninput="UI.supQ=this.value;paintSupList()"></div>
-      <div style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:var(--fs-1);color:var(--grey)"><span id="sp_count">${supCountText()}</span><span style="margin-left:auto;display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden"><button onclick="setSupSort(true)" style="border:0;background:${supPrefFirst()?'var(--blue)':'#fff'};color:${supPrefFirst()?'#fff':'var(--grey)'};font-size:var(--fs-1);font-weight:700;padding:4px 9px">★ Preferred</button><button onclick="setSupSort(false)" style="border:0;background:${!supPrefFirst()?'var(--blue)':'#fff'};color:${!supPrefFirst()?'#fff':'var(--grey)'};font-size:var(--fs-1);font-weight:700;padding:4px 9px">A–Z</button></span></div>`}
+      <div style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:var(--fs-1);color:var(--grey)"><span id="sp_count">${supCountText()}</span><span style="margin-left:auto;display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden"><button onclick="setSupSort(true)" style="border:0;background:${supPrefFirst()?'var(--blue)':'var(--card)'};color:${supPrefFirst()?'var(--on-accent)':'var(--grey)'};font-size:var(--fs-1);font-weight:700;padding:4px 9px">★ Preferred</button><button onclick="setSupSort(false)" style="border:0;background:${!supPrefFirst()?'var(--blue)':'var(--card)'};color:${!supPrefFirst()?'var(--on-accent)':'var(--grey)'};font-size:var(--fs-1);font-weight:700;padding:4px 9px">A–Z</button></span></div>`}
     </div>
     <!-- ⚠️ Find REPLACES the list body rather than overlaying it. As an inset:0 overlay it covered .lh too — and
          .lh is where the tabs live, so the control for leaving the mode was underneath the mode. -->
@@ -3877,9 +3877,9 @@ function supVisible(){
 function supCount(){ return supVisible().length; }
 function supRowHTML(x){
   const id=x.supplier_list_id, label=supName(x), sub=x.nickname?x.display_name:(x.bridge_id||'');
-  const cat=x.has_catalogue?'<span class="optchip" style="background:var(--blue-tint-bg);color:var(--blue);border-color:#cfe0ec">📕 catalogue</span>':'<span class="optchip" style="background:#F1EFE8;color:#8a857a">no catalogue</span>';
+  const cat=x.has_catalogue?'<span class="optchip" style="background:var(--blue-tint-bg);color:var(--blue);border-color:var(--blue)">📕 catalogue</span>':'<span class="optchip" style="background:var(--warn-tint);color:var(--warn-3)">no catalogue</span>';
   return `<div class="row ${id===UI.supSel?'sel':''}" data-testid="sup-row-${id}" onclick="selectSupplier('${id}')">
-    <button title="Preferred — tap to toggle" onclick="event.stopPropagation();toggleSupPref('${id}')" style="background:none;border:0;font-size:15px;line-height:1;padding:0;color:${x.preferred?'#997009':'#697479'};flex:0 0 auto;margin-top:1px">${x.preferred?'★':'☆'}</button>
+    <button title="Preferred — tap to toggle" onclick="event.stopPropagation();toggleSupPref('${id}')" style="background:none;border:0;font-size:15px;line-height:1;padding:0;color:${x.preferred?'var(--warn-2)':'var(--grey-2)'};flex:0 0 auto;margin-top:1px">${x.preferred?'★':'☆'}</button>
     <div class="main2"><div class="l1"><span class="code">${esc(label)}</span>${x.category?`<span class="optchip" style="background:var(--gold-soft);color:var(--warn-3);border-color:var(--gold-line)">${esc(x.category)}</span>`:''}<span class="amt">${cat}</span></div>
       <div class="l2">${esc(sub)}${x.nickname?` · <span class="mono">${esc(x.bridge_id||'')}</span>`:''}</div></div>
     <button class="rowinfo" data-testid="sup-details-${id}" title="Their full record" onclick="event.stopPropagation();supOpenPanel('${id}')">ⓘ</button>
@@ -4152,7 +4152,7 @@ function enquiryPaint(){
   out += msgs.length
     ? msgs.map(function(m){
         var mine = (m.sender_entity_id === SESSION.entity);
-        return '<div style="border:1px solid var(--line);border-radius:9px;padding:9px 11px;margin-bottom:7px;background:' + (mine ? 'var(--paper)' : '#fff') + '">'
+        return '<div style="border:1px solid var(--line);border-radius:9px;padding:9px 11px;margin-bottom:7px;background:' + (mine ? 'var(--paper)' : 'var(--card)') + '">'
           + '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:3px">' + esc(m.sender_display_name || (mine ? 'You' : 'Them'))
           + ' · ' + esc(String(m.created_at || '').slice(0, 16).replace('T', ' ')) + '</div>'
           + '<div style="font-size:var(--fs-2);white-space:pre-wrap">' + esc(m.message_text || '') + '</div></div>';
@@ -4455,7 +4455,7 @@ function supEdit(id){
     + '<label class="fl">Category / tag</label><input class="inp" id="sp_cat" data-testid="sup-category" value="'+esc(x.category||'')+'">'
     + '<label class="fl">Notes</label><input class="inp" id="sp_notes" data-testid="sup-notes" value="'+esc(x.notes||'')+'" placeholder="contact person, terms…">'
     + '<label class="fl" style="margin-top:12px">Preferred</label>'
-    + '<div><button onclick="toggleSupPref(\''+id+'\')" style="border:1px solid var(--line);border-radius:9px;background:'+(x.preferred?'var(--blue)':'#fff')+';color:'+(x.preferred?'#fff':'var(--grey)')+';font-size:12px;font-weight:700;padding:6px 13px">★ '+(x.preferred?'Preferred':'Not preferred')+'</button></div>'
+    + '<div><button onclick="toggleSupPref(\''+id+'\')" style="border:1px solid var(--line);border-radius:9px;background:'+(x.preferred?'var(--blue)':'var(--card)')+';color:'+(x.preferred?'var(--on-accent)':'var(--grey)')+';font-size:12px;font-weight:700;padding:6px 13px">★ '+(x.preferred?'Preferred':'Not preferred')+'</button></div>'
     + '<div class="err" id="sp_ederr" style="margin-top:8px"></div></div>'
     + '<div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="pri" data-testid="sup-save" onclick="saveSupplier(\''+id+'\')">Save</button></div>');
 }
@@ -4756,15 +4756,15 @@ function supDetailHTML(){
       : (c.met||0)===0 ? `⚠ ${esc(who)} has no certificates on file yet`
       : `⚠ ${esc(who)}: ${(c.total||0)-(c.met||0)} certificate${((c.total||0)-(c.met||0))===1?'':'s'} still to come`;
     /* The chip is a CERTIFICATES warning, so it opens the certificates — the passport — not the profile. */
-    const chip=`<div style="padding:2px 0 0"><div data-testid="sup-chip" onclick="viewSupplierPassport('${esc(x.bridge_id)}','${String(supName(x)).replace(/[\\']/g,'')}')" style="display:inline-flex;align-items:center;gap:9px;border:1px solid ${bad?'var(--gold-line)':'var(--line)'};border-radius:22px;padding:6px 8px 6px 13px;background:${bad?'var(--gold-soft)':'#fff'};cursor:pointer">`
-      + `<span style="font-size:11.5px;color:${bad?'var(--warn-2)':'#2e6b3f'};font-weight:700">${warnTxt}</span>`
+    const chip=`<div style="padding:2px 0 0"><div data-testid="sup-chip" onclick="viewSupplierPassport('${esc(x.bridge_id)}','${String(supName(x)).replace(/[\\']/g,'')}')" style="display:inline-flex;align-items:center;gap:9px;border:1px solid ${bad?'var(--gold-line)':'var(--line)'};border-radius:22px;padding:6px 8px 6px 13px;background:${bad?'var(--gold-soft)':'var(--card)'};cursor:pointer">`
+      + `<span style="font-size:11.5px;color:${bad?'var(--warn-2)':'var(--ok-2)'};font-weight:700">${warnTxt}</span>`
       + `<span style="background:var(--paper);border-radius:20px;padding:3px 10px;font-size:11.5px;color:var(--blue);font-weight:700">Details ›</span></div></div>`;
     let catcard;
     if(!x.has_catalogue) catcard=`<div class="sec">Order from them</div><div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;font-size:12px;color:var(--warn-3)">No catalogue published yet — nothing to order.</div>`;
     else if(d.loading) catcard=`<div class="sec">Order from them</div><div class="loadwrap" style="justify-content:flex-start;padding:6px 0"><span class="spin"></span> loading catalogue…</div>`;
     // has_catalogue, finished loading, and still no cart → the READ failed. Say so; rendering nothing at all would
     // look like a supplier who publishes nothing, which is a different and wrong fact.
-    else catcard=`<div class="sec">Order from them</div><div style="background:#fbeceb;border:1px solid #f0c9c6;border-radius:9px;padding:9px 11px;font-size:12px;color:var(--disp)">${esc(d.err||'Could not read their catalogue.')} <span onclick="selectSupplier('${x.supplier_list_id}')" style="cursor:pointer;color:var(--blue);font-weight:600">Try again</span></div>`;
+    else catcard=`<div class="sec">Order from them</div><div style="background:var(--danger-tint);border:1px solid #f0c9c6;border-radius:9px;padding:9px 11px;font-size:12px;color:var(--disp)">${esc(d.err||'Could not read their catalogue.')} <span onclick="selectSupplier('${x.supplier_list_id}')" style="cursor:pointer;color:var(--blue);font-weight:600">Try again</span></div>`;
     const stepped = x.has_catalogue && !d.loading && UI._supFlow;
     body = chip + (stepped
       ? `<div id="sup_rail">${UI._supFlow.railHTML()}</div><div style="font-size:11.5px;color:var(--grey);margin:0 0 8px" id="sup_sub">${esc(UI._supFlow.steps()[UI._supFlow.index()].t||'')}</div>`
@@ -4852,7 +4852,7 @@ function catalogueScreen(){
       <div style="margin-top:8px;display:flex;align-items:center;gap:8px">
         <span style="font-size:var(--fs-1);color:var(--grey)" id="ct_count">${prodVisible().length} product(s)</span>
         <button data-testid="cat-select" onclick="prodPickMode(!UI.prodPick)" title="Tick several products, then attach them to a category at once"
-          style="border:1px solid var(--line);background:${UI.prodPick?'var(--blue)':'var(--paper)'};color:${UI.prodPick?'#fff':'var(--ink)'};border-radius:9px;padding:4px 9px;font-size:11.5px;cursor:pointer">☑ Select</button>
+          style="border:1px solid var(--line);background:${UI.prodPick?'var(--blue)':'var(--paper)'};color:${UI.prodPick?'var(--on-accent)':'var(--ink)'};border-radius:9px;padding:4px 9px;font-size:11.5px;cursor:pointer">☑ Select</button>
         <button data-testid="cat-setup" onclick="navTo('catsetup')" title="Columns, variants, import and export, storefront"
           style="margin-left:auto;border:1px solid var(--line);background:var(--paper);border-radius:9px;padding:4px 9px;font-size:11.5px;color:var(--ink);cursor:pointer">⚙️ Setup</button>
       </div>
@@ -5013,7 +5013,7 @@ function prodCatgStripHTML(){
   if(!live.length && !none) return '';
   const g=UI._prodCatg||'';
   const chip=(v,label,count,on)=>`<button type="button" class="cbpick-chip${on?' on':''}" data-testid="cat-catgfilter"
-      ${on?'style="background:#eef4ff;border-color:var(--blue);color:var(--blue)"':''}
+      ${on?'style="background:var(--blue-tint-bg);border-color:var(--blue);color:var(--blue)"':''}
       onclick="prodCatgFilter('${esc(v)}')">${esc(label)}${count==null?'':` <span class="cbpick-chipn">${count}</span>`}</button>`;
   return `<div class="cbpick-catgs" style="margin-top:8px">`
     + chip('','All',null,!g)
@@ -5065,7 +5065,7 @@ function _refPriceHTML(p,sz){ if(!p) return '<span style="color:var(--grey-4);fo
 function _refChips(it){ var c='';
   if(it.texture_family) c+='<span class="optchip" style="background:var(--purple-tint);color:var(--purple-2);border-color:transparent">'+esc(it.texture_family)+'</span>';
   if(it.region) c+='<span class="optchip" style="background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)">'+esc(it.region)+'</span>';
-  return c+((it.effect||[]).map(function(e){return '<span class="optchip" style="background:var(--warn-tint);color:var(--warn-3);border-color:#e6d9a8">'+esc(e)+'</span>';}).join('')); }
+  return c+((it.effect||[]).map(function(e){return '<span class="optchip" style="background:var(--warn-tint);color:var(--warn-3);border-color:var(--warn-3)">'+esc(e)+'</span>';}).join('')); }
 // the item's OWN fields — whatever this vertical happens to carry (veg: local_names · botanical_name · category).
 // Skips everything already rendered by a dedicated block, plus underscore meta.
 var _REF_SKIP={name:1,photo:1,unit:1,scale:1,sheen:1,texture_family:1,region:1,effect:1,inspiration:1,combinations:1,tools:1,coats:1,commercials:1,sku:1,id:1};
@@ -5077,12 +5077,12 @@ function _refFacts(it,max){ var out=[];
     out.push('<b style="color:var(--grey-2);font-weight:600">'+esc(k.replace(/_/g,' '))+'</b> '+esc(String(v))); });
   return out; }
 function _refPhoto(it,px){ var u=it.photo||it._photo;
-  return u?'<span style="width:'+px+'px;height:'+px+'px;border-radius:6px;flex:none;background:#f4f6f8 center/cover no-repeat;background-image:url('+u+')"></span>':''; }
+  return u?'<span style="width:'+px+'px;height:'+px+'px;border-radius:6px;flex:none;background:var(--card) center/cover no-repeat;background-image:url('+u+')"></span>':''; }
 function refFinishRow(it,i){
   var p=_refPrice(it), chips=_refChips(it), facts=_refFacts(it,3), combos=(it.combinations||[]);
   var applied=[]; if((it.tools||[]).length) applied.push('Applied with '+esc(it.tools.join(', '))); if(it.coats) applied.push(esc(it.coats));
   var sub=[it.scale,it.sheen].filter(Boolean).map(esc).join(' · ');
-  return '<div style="cursor:pointer;padding:12px 14px;border-bottom:1px solid var(--line)'+(UI.refSel===i?';background:#f4f6f8':'')+'" onclick="selectRefFinish('+i+')">'
+  return '<div style="cursor:pointer;padding:12px 14px;border-bottom:1px solid var(--line)'+(UI.refSel===i?';background:var(--card)':'')+'" onclick="selectRefFinish('+i+')">'
     +'<div style="display:flex;align-items:center;gap:8px">'+_refPhoto(it,30)+'<span style="font-weight:800;font-size:15px">'+esc(it.name)+'</span>'
       +(sub?'<span style="font-size:var(--fs-1);color:var(--grey-4)">'+sub+'</span>':'')
       +'<span style="margin-left:auto;font-weight:800;font-size:var(--fs-3)">'+_refPriceHTML(p)+'</span></div>'
@@ -5403,8 +5403,8 @@ async function _cfRun(btn){
     var badge = blocking
       ? '<span style="background:var(--danger-tint);color:var(--disp);border-radius:6px;padding:3px 9px;font-size:11.5px;font-weight:700">'+s.errors+' row problem(s) — fix the file first</span>'
       : (r.ready
-        ? '<span style="background:#E6F2EC;color:#2E7D5B;border-radius:6px;padding:3px 9px;font-size:11.5px;font-weight:700">Every column is placed</span>'
-        : '<span style="background:#FDF3E3;color:#B07A2B;border-radius:6px;padding:3px 9px;font-size:11.5px;font-weight:700">Check the choices below, then import</span>');
+        ? '<span style="background:var(--ok-tint);color:var(--disp);border-radius:6px;padding:3px 9px;font-size:11.5px;font-weight:700">Every column is placed</span>'
+        : '<span style="background:var(--warn-tint);color:var(--warn-3);border-radius:6px;padding:3px 9px;font-size:11.5px;font-weight:700">Check the choices below, then import</span>');
     var issues = (r.issues||[]).slice(0,25).map(function(i){
       var c = i.severity==='error' ? '#B4483C' : (i.severity==='info' ? '#6b7176' : '#B07A2B');
       return '<li style="color:'+c+'">line '+i.row+' · <b>'+esc(i.column)+'</b> — '+esc(i.message)+'</li>';
@@ -5458,7 +5458,7 @@ async function _cfImportRun(btn, decisions, out){
   try{
     var r = await api('prodImport', { body:{ csv: UI._cf.csv, decisions: decisions, confirm: true } });
     var sum = r.summary || {};
-    out.innerHTML = '<div style="background:#E6F2EC;color:#2E7D5B;border-radius:6px;padding:8px 10px;font-size:var(--fs-2);font-weight:700">'+esc(r.message||'Imported')+'</div>'
+    out.innerHTML = '<div style="background:var(--ok-tint);color:var(--ok-2);border-radius:6px;padding:8px 10px;font-size:var(--fs-2);font-weight:700">'+esc(r.message||'Imported')+'</div>'
       + ((r.created_columns||[]).length ? '<div style="font-size:12px;color:var(--grey);margin-top:8px">Your catalogue now also has: '+r.created_columns.map(esc).join(', ')+'. The next template you download will include them.</div>' : '')
       + '<ul style="font-size:12px;line-height:1.6;padding-left:18px;margin:10px 0 0">'
       + (r.outcome||[]).slice(0,40).map(function(o){
@@ -5561,7 +5561,7 @@ function ctNewCategory(){
     })
     .catch(function(){ toast('Could not open that — categories are also under Definitions → Categories.', true); });
 }
-function prodEditForm(d){ return ctField('name','Name',d.name||'')+`<div style="display:flex;gap:10px"><div style="flex:1">`+ctField('unit','Unit',d.unit||'',"placeholder=\"piece / kg / tonne\"")+`</div><div style="flex:1"><label class="fl">Price</label><div style="display:flex;align-items:stretch"><span style="display:flex;align-items:center;padding:0 11px;border:1px solid var(--line);border-right:0;border-radius:9px 0 0 10px;background:#f2f1ed;color:#6b7176;font-weight:700;font-size:13.5px;white-space:nowrap" title="${myCur()} — your business currency">${esc(curSym())}</span><input class="inp" id="ct_price" data-testid="cat-field-price" inputmode="numeric" style="border-radius:0 10px 10px 0" value="${cbHasPrice(d.price)?cbAmount(d.price):''}"></div></div></div>`+ctField('code','Code / HSN',pCode(d))+ctCategoryField(d)+`<label class="fl">Description</label><textarea class="inp" id="ct_desc" data-testid="cat-field-desc" style="width:100%;border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:13.5px;min-height:58px;resize:vertical;background:var(--paper)">${esc(pDesc(d))}</textarea>`; }
+function prodEditForm(d){ return ctField('name','Name',d.name||'')+`<div style="display:flex;gap:10px"><div style="flex:1">`+ctField('unit','Unit',d.unit||'',"placeholder=\"piece / kg / tonne\"")+`</div><div style="flex:1"><label class="fl">Price</label><div style="display:flex;align-items:stretch"><span style="display:flex;align-items:center;padding:0 11px;border:1px solid var(--line);border-right:0;border-radius:9px 0 0 10px;background:var(--warn-tint);color:var(--warn-3);font-weight:700;font-size:13.5px;white-space:nowrap" title="${myCur()} — your business currency">${esc(curSym())}</span><input class="inp" id="ct_price" data-testid="cat-field-price" inputmode="numeric" style="border-radius:0 10px 10px 0" value="${cbHasPrice(d.price)?cbAmount(d.price):''}"></div></div></div>`+ctField('code','Code / HSN',pCode(d))+ctCategoryField(d)+`<label class="fl">Description</label><textarea class="inp" id="ct_desc" data-testid="cat-field-desc" style="width:100%;border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:13.5px;min-height:58px;resize:vertical;background:var(--paper)">${esc(pDesc(d))}</textarea>`; }
 /* ═══ EVERY FIELD THIS ITEM CARRIES ════════════════════════════════════════════════════════════════════════════
  * Athi, 2026-08-13: *"the other information like synonym etc are not visible… clicking one item possibly bring
  * the field name and its item vertically as an overlay showcasing all the fields but graying the field which
@@ -5657,7 +5657,7 @@ function catUnusedRow(k, label, why, required){
   return '<div style="display:flex;gap:10px;padding:7px 0;border-bottom:1px dashed var(--line);font-size:13px">'
     + '<b style="min-width:118px;color:var(--grey);font-weight:600;font-size:var(--fs-1);text-transform:uppercase;letter-spacing:.03em">'
     + esc(String(label || k).replace(/_/g, ' ')) + '</b>'
-    + '<span style="flex:1;min-width:0;color:' + (required ? '#b0641c' : 'var(--grey)') + ';font-style:italic;font-weight:' + (required ? '700' : '400') + '">'
+    + '<span style="flex:1;min-width:0;color:' + (required ? 'var(--warn-2)' : 'var(--grey)') + ';font-style:italic;font-weight:' + (required ? '700' : '400') + '">'
     + (required ? 'required — not set' : 'not set')
     + '<span style="font-style:normal;font-weight:400;color:var(--grey);font-size:11.5px"> · ' + esc(why) + '</span>'
     + '<span style="font-style:normal;font-weight:400">' + catStdLine(k) + '</span></span></div>';
@@ -5720,7 +5720,7 @@ async function prodAllFields(id){
      percentage over "every key anyone ever imported" would fall as the catalogue grew richer, which is backwards. */
   const missReq = gapsDeclared.filter(function(f){ return f.is_required; }).length;
   const compl = declared.length
-    ? '<span style="color:' + (missReq ? '#b0641c' : 'var(--grey)') + '"> · '
+    ? '<span style="color:' + (missReq ? 'var(--warn-2)' : 'var(--grey)') + '"> · '
       + (declared.length - gapsDeclared.length) + '/' + declared.length + ' of the definition filled'
       + (missReq ? ' · ' + missReq + ' required blank' : '') + '</span>'
     : '';
@@ -5849,7 +5849,7 @@ function prodDetailHTML(){
   if(!p) return `<div class="empty"><div class="big">🗂️</div><div class="t">Select a product</div><div>Pick one to view or edit — or add a new one.</div></div>`;
   const d=pData(p), id=prodId(p);
   const back=`<button class="dback" onclick="backToList()">‹ Catalogue</button>`;
-  const seg=(m,l)=>`<button onclick="setProdMode('${m}')" style="border:0;background:${(UI.prodMode==='edit'?'edit':'view')===m?'var(--ink)':'#fff'};color:${(UI.prodMode==='edit'?'edit':'view')===m?'#fff':'var(--grey)'};font-size:12px;font-weight:700;padding:6px 15px">${l}</button>`;
+  const seg=(m,l)=>`<button onclick="setProdMode('${m}')" style="border:0;background:${(UI.prodMode==='edit'?'edit':'view')===m?'var(--ink)':'var(--card)'};color:${(UI.prodMode==='edit'?'edit':'view')===m?'var(--on-accent)':'var(--grey)'};font-size:12px;font-weight:700;padding:6px 15px">${l}</button>`;
   const head=`<div class="dh">${back}<div class="dt">${esc(pName(d))}</div><div class="ds">${inr(pPrice(d))} / ${esc(pUnit(d))}${pCode(d)?' · '+esc(pCode(d)):''}</div><div style="display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-top:10px">${seg('view','View')}${seg('edit','Edit')}</div></div>`;
   let body, bar;
   if(UI.prodMode==='edit'){ body=`<div class="sec">Edit product</div>${prodEditForm(d)}<div class="err" id="ct_err" style="margin-top:8px"></div>`; bar=`<button class="pri" data-testid="cat-save" onclick="saveProduct('${id}')">Save</button><button onclick="setProdMode('view')">Cancel</button>`; }
@@ -6620,7 +6620,7 @@ const LISTCOLS = [
           +icon+' '+esc(who)+(v.sender_verified?'':'<span class="unver" title="Not a verified entity — as claimed by the sender">?</span>')+'</span>';
       }
       return esc((UI.folder==='order' ? (c.party||'') : (c.sender||c.party||'')) || '—'); } },
-  { key:'subject',  label:'Subject',  sort:'subject',  w:'minmax(150px,2fr)',   cell:function(c){ var lead=(c.unread?'<span class="udot" title="Unread"></span>':'')+(c.dispute?'<span class="rflag disp" title="Open dispute">⚑ dispute</span>':(c.dispResolved>0?'<span class="rflag disp" style="background:var(--ok-tint);color:var(--ok-2);border-color:#cde7d4" title="Dispute resolved">⚑ resolved</span>':''))+attnFlag(c); return '<div class="subjwrap">'+(lead?'<span class="lead">'+lead+'</span>':'')+'<span class="subjtext" title="'+esc(c.code||'')+'"><b>'+esc(c.code||'—')+'</b>'+(c.isDraft?' <span class="optchip mini">draft</span>':'')+'</span></div>'; } },
+  { key:'subject',  label:'Subject',  sort:'subject',  w:'minmax(150px,2fr)',   cell:function(c){ var lead=(c.unread?'<span class="udot" title="Unread"></span>':'')+(c.dispute?'<span class="rflag disp" title="Open dispute">⚑ dispute</span>':(c.dispResolved>0?'<span class="rflag disp" style="background:var(--ok-tint);color:var(--ok-2);border-color:var(--ok-2)" title="Dispute resolved">⚑ resolved</span>':''))+attnFlag(c); return '<div class="subjwrap">'+(lead?'<span class="lead">'+lead+'</span>':'')+'<span class="subjtext" title="'+esc(c.code||'')+'"><b>'+esc(c.code||'—')+'</b>'+(c.isDraft?' <span class="optchip mini">draft</span>':'')+'</span></div>'; } },
   { key:'date',     label:'Date',     sort:'date',     w:'128px',  cell:function(c){ return esc(lcDate(c.created_at)); } },
   { key:'amount',   label:'Amount',   sort:'amount',   w:'108px', align:'right', cell:function(c){ return '<span style="font-family:\'Space Mono\'">'+(c.amt?fmtMoney(c.amt,c.currency):'—')+'</span>'; } },
   { key:'status',   label:'Status',   sort:'status',   w:'92px',  cell:function(c){ return statusChip(c); } },
@@ -7096,7 +7096,7 @@ function _aiMd(md){
   }
   return o.join('');
 }
-var _AI_MDCSS='.amddoc{color:#1e2530;font-size:var(--fs-2);line-height:1.55;font-family:-apple-system,Segoe UI,Roboto,sans-serif}.amddoc h1,.amddoc h2,.amddoc h3,.amddoc h4{margin:16px 0 7px;font-weight:700;line-height:1.25;color:#141a22}.amddoc h1{font-size:17px;padding-bottom:6px;border-bottom:2px solid #e6eaf0}.amddoc h2{font-size:14.5px}.amddoc h3,.amddoc h4{font-size:12px;text-transform:uppercase;letter-spacing:.03em;color:#5a6472}.amddoc p{margin:8px 0}.amddoc ul,.amddoc ol{margin:8px 0 8px 20px;padding:0}.amddoc li{margin:3px 0}.amddoc hr{border:0;border-top:1px solid #e6eaf0;margin:14px 0}.amddoc table.amdt{border-collapse:collapse;width:100%;margin:11px 0;font-size:11.5px}.amddoc .amdt th,.amddoc .amdt td{border:1px solid #dfe4ec;padding:7px 9px;text-align:left;vertical-align:top}.amddoc .amdt th{background:#f4f6fa;font-weight:700;color:#2a3340}.amddoc .amdt tr:nth-child(even) td{background:#fafbfd}.amddoc code{background:#f0f2f6;padding:1px 5px;border-radius:4px;font-size:var(--fs-1)}.amddoc strong{color:#141a22}';
+var _AI_MDCSS='.amddoc{color:#1e2530;font-size:var(--fs-2);line-height:1.55;font-family:-apple-system,Segoe UI,Roboto,sans-serif}.amddoc h1,.amddoc h2,.amddoc h3,.amddoc h4{margin:16px 0 7px;font-weight:700;line-height:1.25;color:#141a22}.amddoc h1{font-size:17px;padding-bottom:6px;border-bottom:2px solid #e6eaf0}.amddoc h2{font-size:14.5px}.amddoc h3,.amddoc h4{font-size:12px;text-transform:uppercase;letter-spacing:.03em;color:#5a6472}.amddoc p{margin:8px 0}.amddoc ul,.amddoc ol{margin:8px 0 8px 20px;padding:0}.amddoc li{margin:3px 0}.amddoc hr{border:0;border-top:1px solid #e6eaf0;margin:14px 0}.amddoc table.amdt{border-collapse:collapse;width:100%;margin:11px 0;font-size:11.5px}.amddoc .amdt th,.amddoc .amdt td{border:1px solid #dfe4ec;padding:7px 9px;text-align:left;vertical-align:top}.amddoc .amdt th{background:var(--card);font-weight:700;color:var(--on-card)}.amddoc .amdt tr:nth-child(even) td{background:var(--card)}.amddoc code{background:var(--blue-tint-bg);padding:1px 5px;border-radius:4px;font-size:var(--fs-1)}.amddoc strong{color:#141a22}';
 async function askAiOrder(){
   var c=UI.detail; if(!c){ if(typeof toast==='function')toast('Open an order first'); return; }
   var ctx={ subject:c.code, from:(c.sender||c.party||''), amount:c.amt, currency:c.currency,
@@ -7110,11 +7110,11 @@ async function askAiOrder(){
     UI._aiOrder={draft:j.draft,label:('Order review — '+(c.code||'')),cost:(j.usage&&j.usage.est_cost_usd)};
     var bs='font-size:12px;font-weight:700;border-radius:9px;padding:9px 13px;cursor:pointer';
     var html='<style>'+_AI_MDCSS+'</style>'
-      +'<div style="font-size:var(--fs-1);color:var(--purple);background:#f2effc;border:1px solid #ddd4f5;border-radius:9px;padding:8px 11px;margin-bottom:12px;line-height:1.5">🤖 <b>AI review — informational.</b> It does not accept, pay, or commit. '+(j.usage?('<span style="color:var(--grey)">· cost $'+j.usage.est_cost_usd+'</span>'):'')+'</div>'
+      +'<div style="font-size:var(--fs-1);color:var(--purple);background:var(--blue-tint-bg);border:1px solid #ddd4f5;border-radius:9px;padding:8px 11px;margin-bottom:12px;line-height:1.5">🤖 <b>AI review — informational.</b> It does not accept, pay, or commit. '+(j.usage?('<span style="color:var(--grey)">· cost $'+j.usage.est_cost_usd+'</span>'):'')+'</div>'
       +'<div class="amddoc" style="background:var(--card);border:1px solid var(--line);border-radius:9px;padding:16px 18px;max-height:56vh;overflow:auto">'+_aiMd(j.draft)+'</div>'
       +'<div style="display:flex;gap:8px;margin-top:13px"><button onclick="_aiOrderPdf()" style="'+bs+';flex:1;border:1px solid var(--purple);background:var(--purple);color:var(--on-purple)">⬇ Save as PDF</button><button onclick="closeModal()" style="'+bs+';flex:0 0 auto;border:1px solid var(--line);background:var(--card)">Done</button></div>';
     var b=document.getElementById('aiobody'); if(b)b.innerHTML=html;
-  }catch(e){ var b2=document.getElementById('aiobody'); if(b2)b2.innerHTML='<div style="font-size:12px;color:var(--warn-2);background:#fdf3e3;border:1px solid #f0dcae;border-radius:9px;padding:10px 12px">'+esc((e&&e.message)||'AI review failed')+'</div>'; }
+  }catch(e){ var b2=document.getElementById('aiobody'); if(b2)b2.innerHTML='<div style="font-size:12px;color:var(--warn-2);background:var(--warn-tint);border:1px solid #f0dcae;border-radius:9px;padding:10px 12px">'+esc((e&&e.message)||'AI review failed')+'</div>'; }
 }
 function _aiOrderPdf(){
   var d=UI._aiOrder||{}; if(!d.draft)return; var w=window.open('','_blank'); if(!w){ if(typeof toast==='function')toast('Allow pop-ups to export the PDF'); return; }
@@ -7143,7 +7143,7 @@ async function _aiOrderDoc(skill, label){
     UI._aiOrderDoc={draft:j.draft,label:label,orderSubject:c.code,cost:(j.usage&&j.usage.est_cost_usd)};
     var bs='font-size:12px;font-weight:700;border-radius:9px;padding:9px 13px;cursor:pointer';
     var html='<style>'+(typeof _AI_MDCSS!=='undefined'?_AI_MDCSS:'')+'</style>'
-      +'<div style="font-size:var(--fs-1);color:var(--purple);background:#f2effc;border:1px solid #ddd4f5;border-radius:9px;padding:8px 11px;margin-bottom:12px;line-height:1.5">🤖 <b>AI proposal — not evidence.</b> Review &amp; confirm before use. '+(j.usage?('<span style="color:var(--grey)">· $'+j.usage.est_cost_usd+'</span>'):'')+'</div>'
+      +'<div style="font-size:var(--fs-1);color:var(--purple);background:var(--blue-tint-bg);border:1px solid #ddd4f5;border-radius:9px;padding:8px 11px;margin-bottom:12px;line-height:1.5">🤖 <b>AI proposal — not evidence.</b> Review &amp; confirm before use. '+(j.usage?('<span style="color:var(--grey)">· $'+j.usage.est_cost_usd+'</span>'):'')+'</div>'
       +'<div class="amddoc" style="background:var(--card);border:1px solid var(--line);border-radius:9px;padding:16px 18px;max-height:52vh;overflow:auto">'+_aiMd(j.draft)+'</div>'
       +'<div style="display:flex;gap:8px;margin-top:13px;flex-wrap:wrap">'
         +'<button onclick="_aiOrderDocAccept()" title="File this document on your rail, referenced to this order" style="'+bs+';flex:1;border:1px solid var(--ok-3);background:var(--ok-3);color:var(--on-ok)">✓ Accept &amp; file on rail</button>'
@@ -7151,7 +7151,7 @@ async function _aiOrderDoc(skill, label){
         +'<button onclick="closeModal()" style="'+bs+';flex:0 0 auto;border:1px solid var(--line);background:var(--card)">Done</button>'
       +'</div>';
     var b=document.getElementById('aoddbody'); if(b)b.innerHTML=html;
-  }catch(e){ var b2=document.getElementById('aoddbody'); if(b2)b2.innerHTML='<div style="font-size:12px;color:var(--warn-2);background:#fdf3e3;border:1px solid #f0dcae;border-radius:9px;padding:10px 12px">'+esc((e&&e.message)||'Draft failed')+'</div>'; }
+  }catch(e){ var b2=document.getElementById('aoddbody'); if(b2)b2.innerHTML='<div style="font-size:12px;color:var(--warn-2);background:var(--warn-tint);border:1px solid #f0dcae;border-radius:9px;padding:10px 12px">'+esc((e&&e.message)||'Draft failed')+'</div>'; }
 }
 async function _aiOrderDocAccept(){
   var d=UI._aiOrderDoc||{}; if(!d.draft){ if(typeof toast==='function')toast('Nothing to file'); return; }
@@ -7182,11 +7182,11 @@ async function aiRun(skill, ctx, opts){
     UI._aiRun={draft:j.draft,title:title,cost:(j.usage&&j.usage.est_cost_usd)};
     var bs='font-size:12px;font-weight:700;border-radius:9px;padding:9px 13px;cursor:pointer';
     var html='<style>'+(typeof _AI_MDCSS!=='undefined'?_AI_MDCSS:'')+'</style>'
-      +'<div style="font-size:var(--fs-1);color:var(--purple);background:#f2effc;border:1px solid #ddd4f5;border-radius:9px;padding:8px 11px;margin-bottom:12px;line-height:1.5">🤖 <b>AI proposal — review before you rely on it.</b> '+(j.usage?('<span style="color:var(--grey)">· $'+j.usage.est_cost_usd+'</span>'):'')+'</div>'
+      +'<div style="font-size:var(--fs-1);color:var(--purple);background:var(--blue-tint-bg);border:1px solid #ddd4f5;border-radius:9px;padding:8px 11px;margin-bottom:12px;line-height:1.5">🤖 <b>AI proposal — review before you rely on it.</b> '+(j.usage?('<span style="color:var(--grey)">· $'+j.usage.est_cost_usd+'</span>'):'')+'</div>'
       +'<div class="amddoc" style="background:var(--card);border:1px solid var(--line);border-radius:9px;padding:16px 18px;max-height:56vh;overflow:auto">'+_aiMd(j.draft)+'</div>'
       +'<div style="display:flex;gap:8px;margin-top:13px"><button onclick="_aiRunPdf()" style="'+bs+';flex:1;border:1px solid var(--purple);background:var(--purple);color:var(--on-purple)">⬇ Save as PDF</button><button onclick="closeModal()" style="'+bs+';flex:0 0 auto;border:1px solid var(--line);background:var(--card)">Done</button></div>';
     var b=document.getElementById('airbody'); if(b)b.innerHTML=html;
-  }catch(e){ var b2=document.getElementById('airbody'); if(b2)b2.innerHTML='<div style="font-size:12px;color:var(--warn-2);background:#fdf3e3;border:1px solid #f0dcae;border-radius:9px;padding:10px 12px">'+esc((e&&e.message)||'AI failed')+'</div>'; }
+  }catch(e){ var b2=document.getElementById('airbody'); if(b2)b2.innerHTML='<div style="font-size:12px;color:var(--warn-2);background:var(--warn-tint);border:1px solid #f0dcae;border-radius:9px;padding:10px 12px">'+esc((e&&e.message)||'AI failed')+'</div>'; }
 }
 function _aiRunPdf(){
   var d=UI._aiRun||{}; if(!d.draft)return; var w=window.open('','_blank'); if(!w){ if(typeof toast==='function')toast('Allow pop-ups to export the PDF'); return; }
@@ -7608,15 +7608,15 @@ function contentItems(c){
          opposite facts — the second one leaves a customer still expecting a delivery. */
       const why={misread_by_ai:'never asked',stock_unavailable:'not available',customer_clarified:'changed',rate_agreed:'rate agreed',other:'removed'}[e.reason_code]||'removed';
       return `<div class="ir" style="opacity:.62"><span class="nm"><s>${esc(it[0])}</s></span><span class="qt"><s>${esc(it[1])}</s></span>
-        <span style="font-size:var(--fs-1);font-weight:700;color:var(--warn-2);background:#faf3dd;border-radius:5px;padding:1px 6px;white-space:nowrap">${esc(why)}</span>${pen}</div>`;
+        <span style="font-size:var(--fs-1);font-weight:700;color:var(--warn-2);background:var(--warn-tint);border-radius:5px;padding:1px 6px;white-space:nowrap">${esc(why)}</span>${pen}</div>`;
     }
     /* ⚠️ A QUANTITY THAT APPEARS NOWHERE IN WHAT THEY WROTE is the number on this chit most likely to be wrong,
        so it is marked on the row being confirmed — not buried in a summary nobody opens. The closed-class check
        (lib/numerals.js) flags rather than rejects while it is message-level; it starts rejecting per-line once
        the reader emits raw_phrase. */
     const li0=(e.live||e.original||{});
-    const unver=li0.qty_unverified?`<span title="This number does not appear anywhere in their message — check it" style="font-size:var(--fs-1);font-weight:700;color:var(--warn-2);background:#faf3dd;border-radius:5px;padding:1px 6px;white-space:nowrap">⚠️ check qty</span>`
-      :(li0.qty_rejected?`<span title="${esc(li0.qty_rejected)}" style="font-size:var(--fs-1);font-weight:700;color:var(--disp);background:#fdecea;border-radius:5px;padding:1px 6px;white-space:nowrap">⚠️ qty rejected</span>`:'');
+    const unver=li0.qty_unverified?`<span title="This number does not appear anywhere in their message — check it" style="font-size:var(--fs-1);font-weight:700;color:var(--warn-2);background:var(--warn-tint);border-radius:5px;padding:1px 6px;white-space:nowrap">⚠️ check qty</span>`
+      :(li0.qty_rejected?`<span title="${esc(li0.qty_rejected)}" style="font-size:var(--fs-1);font-weight:700;color:var(--disp);background:var(--danger-tint);border-radius:5px;padding:1px 6px;white-space:nowrap">⚠️ qty rejected</span>`:'');
     /* ⭐ THE CUSTOMER'S OWN WORDS, under the line (b141). Athi: *"this will give confidence to the person; the
        right message is interpreted."* Everything else on the row came out of a machine — this is the only part
        that did not, so it is the only part that can settle whether the machine read it right. */
@@ -7634,7 +7634,7 @@ function contentItems(c){
      */
     const nCand=(li0.ambiguous||li0.variant_candidates||[]).length;
     const pick=(!nCand||c.canAmend===false)?'':`<span onclick="event.stopPropagation();amendPick(${idx})" title="The catalogue has more than one of these — pick which, and the price comes with it"
-      style="cursor:pointer;font-size:var(--fs-1);font-weight:800;color:var(--warn-2);background:#faf3dd;border:1px solid #e6d9a8;border-radius:5px;padding:2px 7px;white-space:nowrap">⚠️ pick item${li0.ambiguous_count>nCand?` (${nCand} of ${li0.ambiguous_count})`:''}</span>`;
+      style="cursor:pointer;font-size:var(--fs-1);font-weight:800;color:var(--warn-2);background:var(--warn-tint);border:1px solid #e6d9a8;border-radius:5px;padding:2px 7px;white-space:nowrap">⚠️ pick item${li0.ambiguous_count>nCand?` (${nCand} of ${li0.ambiguous_count})`:''}</span>`;
     return `<div class="ir ${atts.length?'hasatt':''}" ${atts.length?`onclick="toggleLine(${idx})"`:''}>${was?`<span class="nm">${was}<div>${esc(it[0])}</div></span>`:`<span class="nm">${esc(it[0])}</span>`}<span class="qt">${esc(it[1])}</span>${pick}${unver}${clip}${pen}</div>${rawp}${strip}`;
   }).join("");
 }
@@ -7895,7 +7895,7 @@ function amdShortlistHTML(cands, cat, totalItems){
     const on = AMD.pickedKey === x.key;
     const st = x.status && x.status !== 'available';
     return '<label data-testid="amd-cand" style="display:flex;align-items:center;gap:11px;cursor:pointer;padding:11px 12px;'
-      + 'margin-bottom:7px;border:1.5px solid ' + (on?'var(--blue)':'var(--line)') + ';border-radius:12px;background:' + (on?'#f2f7fd':'#fff') + '">'
+      + 'margin-bottom:7px;border:1.5px solid ' + (on?'var(--blue)':'var(--line)') + ';border-radius:12px;background:' + (on?'var(--blue-tint-bg)':'var(--card)') + '">'
       + '<input type="radio" name="amdcand" ' + (on?'checked':'') + ' onchange="amdPickCand(' + i + ')" '
       + 'style="width:19px;height:19px;flex:none;accent-color:var(--blue)">'
       + '<span style="flex:1;min-width:0">'
@@ -7946,7 +7946,7 @@ function amendPaint(){
         const on = AMD.pickedKey===x.key;
         const st = x.status && x.status!=='available';
         return `<label data-testid="amd-cand" style="display:flex;align-items:center;gap:11px;cursor:pointer;padding:11px 12px;margin-bottom:7px;
-             border:1.5px solid ${on?'var(--blue)':'var(--line)'};border-radius:12px;background:${on?'#f2f7fd':'#fff'}">
+             border:1.5px solid ${on?'var(--blue)':'var(--line)'};border-radius:12px;background:${on?'var(--blue-tint-bg)':'var(--card)'}">
           <input type="radio" name="amdcand" ${on?'checked':''} onchange="amdPickCand(${i})" style="width:19px;height:19px;flex:none;accent-color:var(--blue)">
           <span style="flex:1;min-width:0">
             <span style="font-size:15px;font-weight:700">${esc(x.name||x.label)}</span>
@@ -7993,7 +7993,7 @@ function amendPaint(){
   }
 
   /* ── the card ───────────────────────────────────────────────────────────────────────────────────────────── */
-  const wrote=AMD.raw?`<div style="background:#f3f5f8;border-radius:9px;padding:9px 11px;margin-bottom:14px">
+  const wrote=AMD.raw?`<div style="background:var(--card);border-radius:9px;padding:9px 11px;margin-bottom:14px">
       <div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey)">they wrote</div>
       <div style="font-size:var(--fs-3);margin-top:2px">“${esc(AMD.raw)}”</div></div>`:'';
   const changed=(o.quantity!=null&&Number(o.quantity)!==Number(l.quantity))||(o.particulars&&o.particulars!==l.particulars)||(o.unit&&o.unit!==l.unit);

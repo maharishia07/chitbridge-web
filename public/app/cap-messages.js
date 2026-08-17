@@ -198,7 +198,7 @@ function messagesScreen(){
         var sub  = m.particulars ? esc(m.manual_subject || m.auto_subject || 'chit') : 'the order as a whole';
         var full = RPL.full[t.key];
         var rid  = t.key.replace(/[^a-z0-9]/gi, '');
-        return '<div data-testid="msg-thread" style="border-bottom:1px solid var(--line);' + (isNew ? 'background:#f7fbff;' : '') + '">'
+        return '<div data-testid="msg-thread" style="border-bottom:1px solid var(--line);' + (isNew ? 'background:var(--blue-tint-bg);' : '') + '">'
           + '<div onclick="msgOpen(&quot;' + t.key + '&quot;)" style="cursor:pointer;padding:11px 14px;display:flex;gap:10px;align-items:baseline">'
           +   '<span style="width:8px;flex:none">' + (isNew ? '<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--blue-2)"></span>' : '') + '</span>'
           +   '<div style="flex:1;min-width:0">'
@@ -209,7 +209,7 @@ function messagesScreen(){
           +         esc((RPLTRACK[m.track] || {}).icon || '') + '</span>'
           +       '<b style="font-size:13.5px' + (isNew ? ';font-weight:800' : '') + '">' + what + '</b>'
           /* ⚠️ A CLOSED CHIT IS MARKED, NEVER HIDDEN — a complaint about a closed order arrives exactly here. */
-          +       (closed ? '<span style="font-size:var(--fs-1);font-weight:700;color:var(--warn-2);background:#fdf4e9;border-radius:4px;padding:1px 5px">' + esc(m.chit_status) + '</span>' : '')
+          +       (closed ? '<span style="font-size:var(--fs-1);font-weight:700;color:var(--warn-2);background:var(--warn-tint);border-radius:4px;padding:1px 5px">' + esc(m.chit_status) + '</span>' : '')
           +       '<span style="font-size:11.5px;color:var(--grey);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + sub + '</span>'
           /* ⚠️ THE FULL COUNT ONCE IT IS KNOWN. The inbox only returns unread-or-kept, so this said "3 msgs" over
              a conversation that turned out to hold 5 — a number that disagreed with the thread it labelled the
@@ -272,9 +272,9 @@ function messagesScreen(){
                  : full.slice().reverse().map(function(x){
                      var mine = msgIsMine(x);
                      return '<div style="margin:6px 0;padding:8px 11px;border-radius:9px;font-size:13px;line-height:1.5;'
-                       + (mine ? 'background:#eef4f8;margin-left:28px' : 'background:#f6f5f2;margin-right:28px') + '">'
+                       + (mine ? 'background:var(--blue-tint-bg);margin-left:28px' : 'background:var(--warn-tint);margin-right:28px') + '">'
                        + '<div style="display:flex;gap:8px;align-items:baseline;margin-bottom:2px">'
-                       +   '<b style="font-size:11.5px;color:' + (mine ? 'var(--blue-2)' : '#5b5340') + '">' + esc(mine ? 'You' : (x.sender_display_name || '—')) + '</b>'
+                       +   '<b style="font-size:11.5px;color:' + (mine ? 'var(--blue-2)' : 'var(--warn-2)') + '">' + esc(mine ? 'You' : (x.sender_display_name || '—')) + '</b>'
                        +   '<span style="margin-left:auto;font-size:var(--fs-1);color:var(--grey)">' + esc(msgWhen(x.created_at)) + '</span></div>'
                        + '<div style="white-space:pre-wrap">' + esc(x.message_text || '') + '</div></div>';
                    }).join(''))

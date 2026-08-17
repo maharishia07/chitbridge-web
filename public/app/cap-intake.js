@@ -81,7 +81,7 @@ function intakeBodyHTML(){
      messages" and "the table does not exist" look identical on screen and mean completely different things. */
   if(!_INTAKE.migrated) return '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:11px 13px;font-size:var(--fs-2);color:var(--warn-3)">'
     + 'The intake queue is not migrated on this environment (b104). The screen is here; the table is not.</div>';
-  if(_INTAKE.err) return intakeSimHTML()+'<div style="background:#fbeceb;border:1px solid #f0c9c6;border-radius:9px;padding:11px 13px;font-size:var(--fs-2);color:var(--disp)">'+esc(_INTAKE.err)+'</div>';
+  if(_INTAKE.err) return intakeSimHTML()+'<div style="background:var(--danger-tint);border:1px solid #f0c9c6;border-radius:9px;padding:11px 13px;font-size:var(--fs-2);color:var(--disp)">'+esc(_INTAKE.err)+'</div>';
   var L=_INTAKE.list||[];
   if(!L.length) return intakeSimHTML()
     + '<div class="empty" style="padding:36px 12px;text-align:center;color:var(--grey)"><div style="font-size:34px">📥</div>'
@@ -121,7 +121,7 @@ function intakeCardHTML(c){
 }
 function intakeDraftHTML(c, s){
   var li=(s.line_items||[]);
-  return '<div style="background:#f7f6fd;border:1px solid #e4dff6;border-radius:9px;padding:10px 12px;margin-top:8px;font-size:var(--fs-2)">'
+  return '<div style="background:var(--blue-tint-bg);border:1px solid #e4dff6;border-radius:9px;padding:10px 12px;margin-top:8px;font-size:var(--fs-2)">'
     + '<div style="font-weight:700;margin-bottom:4px">✨ AI draft <span style="font-weight:400;color:var(--grey)">— proposed, not evidence. You confirm.</span></div>'
     + (s.subject?'<div style="margin-bottom:4px"><b>Subject:</b> '+esc(s.subject)+'</div>':'')
     + li.map(function(l){ return '<div style="display:flex;justify-content:space-between;padding:3px 0;border-top:1px dashed var(--line);font-size:12px">'

@@ -68,8 +68,8 @@ function aiSlotInfo(key){ var s=(window.AI_SLOTS||[]).find(function(x){return x.
     +'<div style="font-size:13px;color:var(--ink-2);line-height:1.6;margin-top:8px">'+esc(s.desc)+'</div>'
     +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">'
       +'<span class="optchip" style="background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)">rung · '+esc(s.rung)+' (floor)</span>'
-      +'<span class="optchip" style="background:var(--warn-tint);color:var(--warn-3);border-color:#e6d9a8">human gate · '+esc(st.gate)+'</span></div>'
-    +'<div style="font-size:11.5px;color:var(--grey);background:#f7f7f5;border:1px solid var(--line);border-radius:9px;padding:9px 11px;margin-top:12px;line-height:1.5">Every run is a governed chit stamped <b>acted_by</b> (deputy · model · delegator · confirmed_by). The model PROPOSES, the rail AUTHORISES, you confirm. The rung sets the floor — you can only tighten the gate.</div>'
+      +'<span class="optchip" style="background:var(--warn-tint);color:var(--warn-3);border-color:var(--blue-d)">human gate · '+esc(st.gate)+'</span></div>'
+    +'<div style="font-size:11.5px;color:var(--grey);background:var(--card);border:1px solid var(--line);border-radius:9px;padding:9px 11px;margin-top:12px;line-height:1.5">Every run is a governed chit stamped <b>acted_by</b> (deputy · model · delegator · confirmed_by). The model PROPOSES, the rail AUTHORISES, you confirm. The rung sets the floor — you can only tighten the gate.</div>'
     +'<div style="display:flex;gap:10px;margin-top:16px">'+((st.enabled&&s.status==='live'&&s.invoke)?'<button class="composebtn pri" style="flex:1" onclick="closeModal();'+esc(s.invoke)+'()">▶ Invoke</button>':'')+'<button class="composebtn" style="flex:1" onclick="closeModal()">Close</button></div></div>', false);
 }
 function aiRowsHTML(){
@@ -84,7 +84,7 @@ function aiRowsHTML(){
       +'<div style="width:9px;height:9px;border-radius:50%;flex:0 0 auto;margin-top:6px;background:'+dot+'"></div>'
       +'<div class="main2" style="width:100%;min-width:0"><div class="l1"><span class="code">'+esc(s.name)+'</span>'
         +'<span class="optchip" style="background:var(--purple-tint);color:var(--purple-2);border-color:transparent">🤖 '+esc(s.key)+'</span>'
-        +'<span class="amt" style="margin-left:auto;font-size:var(--fs-1);color:'+(on?(live?'var(--ok-3)':'#a9791f'):'var(--grey)')+';font-weight:600">'+(on?(live?'enabled · live':'enabled · shaped'):'off')+'</span></div>'
+        +'<span class="amt" style="margin-left:auto;font-size:var(--fs-1);color:'+(on?(live?'var(--ok-3)':'var(--warn-2)'):'var(--grey)')+';font-weight:600">'+(on?(live?'enabled · live':'enabled · shaped'):'off')+'</span></div>'
         +'<div class="l2">'+esc(s.desc)+'</div>'
         +'<div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-top:8px">'
           +'<button class="composebtn'+(on?' pri':'')+'" style="padding:5px 12px;font-size:12px" onclick="aiToggle(\''+esc(s.key)+'\')">'+(on?'✓ Enabled':'Enable')+'</button>'
@@ -116,7 +116,7 @@ function openShowcase(url, title){
   host.innerHTML='<div style="position:fixed;inset:0;background:rgba(15,22,32,.45);z-index:600" onclick="closeShowcase()"></div>'
     +'<div style="position:fixed;'+f.css+';border-radius:'+f.radius+';background:var(--card);z-index:601;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.3);display:flex;flex-direction:column">'
     +'<div style="display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line);flex:none"><b style="font-size:15px">'+esc(title||'How it works')+'</b><button onclick="closeShowcase()" title="Close" style="margin-left:auto;border:0;background:transparent;font-size:22px;line-height:1;cursor:pointer;color:var(--grey)">×</button></div>'
-    +'<iframe src="'+esc(url)+'" title="'+esc(title||'')+'" style="flex:1;width:100%;border:0;display:block;background:#f4f6f8"></iframe></div>';
+    +'<iframe src="'+esc(url)+'" title="'+esc(title||'')+'" style="flex:1;width:100%;border:0;display:block;background:var(--card)"></iframe></div>';
   document.body.appendChild(host);
 }
 function closeShowcase(){ var h=document.getElementById('showcaseHost'); if(h) h.remove(); }
@@ -132,8 +132,8 @@ function coassistsScreen(){
       <div style="display:flex;gap:7px"><input class="inp" id="ac_add" placeholder="New co-assist — person, device, system or agent" style="flex:1" readonly onclick="openActorWiz()"><button class="composebtn" data-testid="coassist-new" onclick="openActorWiz()">+ New</button></div>
       <div class="srch" style="margin-top:8px">🔍 <input placeholder="Search name, role, key" value="${esc(UI.acQ||'')}" oninput="UI.acQ=this.value;paintAcList()"></div>
       <div style="display:flex;align-items:center;gap:6px;margin-top:8px;font-size:var(--fs-1);color:var(--grey);flex-wrap:wrap">
-        <span style="display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden">${['active','inactive','all'].map(f=>`<button onclick="setAcFlt('${f}')" style="border:0;background:${acFlt()===f?'var(--blue)':'#fff'};color:${acFlt()===f?'#fff':'var(--grey)'};font-weight:700;font-size:var(--fs-1);padding:4px 9px;text-transform:capitalize">${f}</button>`).join('')}</span>
-        <span style="display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden">${['all'].concat(Object.keys(window.ACTOR_TYPES||{})).map(t=>{var reg=(window.ACTOR_TYPES||{})[t]||{};var on=(UI.acTypeF||'all')===t;var lbl=t==='all'?'All':((reg.icon?reg.icon+' ':'')+(reg.label||t).split(/[ \/]/)[0]);return `<button onclick="setAcTypeF('${t}')" title="${t==='all'?'all types':(reg.label||t)}${reg.comingSoon?' — coming soon':''}" style="border:0;background:${on?'var(--blue)':'#fff'};color:${on?'#fff':'var(--grey)'};font-weight:700;font-size:var(--fs-1);padding:4px 9px;white-space:nowrap${reg.comingSoon?';opacity:.55':''}">${lbl}</button>`;}).join('')}</span>
+        <span style="display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden">${['active','inactive','all'].map(f=>`<button onclick="setAcFlt('${f}')" style="border:0;background:${acFlt()===f?'var(--blue)':'var(--card)'};color:${acFlt()===f?'var(--on-accent)':'var(--grey)'};font-weight:700;font-size:var(--fs-1);padding:4px 9px;text-transform:capitalize">${f}</button>`).join('')}</span>
+        <span style="display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden">${['all'].concat(Object.keys(window.ACTOR_TYPES||{})).map(t=>{var reg=(window.ACTOR_TYPES||{})[t]||{};var on=(UI.acTypeF||'all')===t;var lbl=t==='all'?'All':((reg.icon?reg.icon+' ':'')+(reg.label||t).split(/[ \/]/)[0]);return `<button onclick="setAcTypeF('${t}')" title="${t==='all'?'all types':(reg.label||t)}${reg.comingSoon?' — coming soon':''}" style="border:0;background:${on?'var(--blue)':'var(--card)'};color:${on?'var(--on-accent)':'var(--grey)'};font-weight:700;font-size:var(--fs-1);padding:4px 9px;white-space:nowrap${reg.comingSoon?';opacity:.55':''}">${lbl}</button>`;}).join('')}</span>
         <span style="margin-left:auto" id="ac_count">${acCount()}</span></div>
     </div>
     <div class="rows" id="ac_rows">${(UI._acLoading&&(UI.acTypeF||'all')!=='ai')?'<div class="loadwrap"><span class="spin"></span> loading…</div>':acRowsHTML()}</div>
@@ -215,7 +215,7 @@ function awRender(){
   var d=UI.awData||{};   // render THROUGH the app's shared modal() → same placement/backdrop/responsive as every other dialog
   function fld(id,label,ph){ return '<div style="margin-bottom:20px"><label class="fl" style="display:block;margin-bottom:5px">'+label+'</label><input class="inp" id="'+id+'" data-testid="'+id+'" placeholder="'+ph+'" value="'+esc(d[id]||'')+'" style="width:100%"></div>'; }
   function selF(id,label,opts){ return '<div style="margin-bottom:20px"><label class="fl" style="display:block;margin-bottom:5px">'+label+'</label><select class="inp" id="'+id+'" style="width:100%">'+opts.map(function(o){ return '<option value="'+o[0]+'"'+(String(d[id])===o[0]?' selected':'')+'>'+o[1]+'</option>'; }).join('')+'</select></div>'; }
-  function how(x){ return '<div style="font-size:12px;color:var(--grey);background:#f7f7f5;border:1px solid var(--line);border-radius:9px;padding:10px 12px;line-height:1.5;margin-top:12px">'+x+'</div>'; }
+  function how(x){ return '<div style="font-size:12px;color:var(--grey);background:var(--card);border:1px solid var(--line);border-radius:9px;padding:10px 12px;line-height:1.5;margin-top:12px">'+x+'</div>'; }
   var body='', title='', sub='', dots='', foot='';
   if(UI.awType===null){
     title='Add a co-assist'; sub='What kind of co-assist? People, devices, systems and agents can all act for you.';
@@ -228,7 +228,7 @@ function awRender(){
     var steps=AW_STEPS[UI.awType]||[], rdy=_awReady(UI.awType);
     var icN={human:['👤','Human'],iot:['🛰️','IoT device'],erp:['🔌','ERP / API'],ai:['🤖','AI agent']}[UI.awType];
     title=icN[0]+' '+icN[1]+(rdy?'':' · explore');
-    dots='<div style="display:flex;gap:6px;margin:0 0 14px">'+steps.map(function(s,i){ var st=(UI.awStep==='done'||i<UI.awStep)?'#9cc0ea':(i===UI.awStep?'var(--blue)':'#eceae6'); return '<span style="height:4px;flex:1;border-radius:3px;background:'+st+'"></span>'; }).join('')+'<span style="height:4px;flex:1;border-radius:3px;background:'+(UI.awStep==='done'?'var(--blue)':'#eceae6')+'"></span></div>';
+    dots='<div style="display:flex;gap:6px;margin:0 0 14px">'+steps.map(function(s,i){ var st=(UI.awStep==='done'||i<UI.awStep)?'#9cc0ea':(i===UI.awStep?'var(--blue)':'#eceae6'); return '<span style="height:4px;flex:1;border-radius:3px;background:'+st+'"></span>'; }).join('')+'<span style="height:4px;flex:1;border-radius:3px;background:'+(UI.awStep==='done'?'var(--blue)':'var(--warn-tint)')+'"></span></div>';
     if(UI.awStep==='done'){
       sub=rdy?'Done':'Preview'; body=UI.awResult||'';
       // Guard the duplicate-create: after a REAL create, do NOT offer Back (it would land on a live Create button and
@@ -282,7 +282,7 @@ function _ago(ts){ return timeAgo(ts); }   // shared: helpers.js timeAgo
 function _iotRowHTML(x){ var info=(UI._connInfo||{})[x.id]||{}; var t=(info.type||(typeof acTypeOf==='function'&&acTypeOf(x))||'iot'); var iot=t!=='erp';
   var h=info.health||'offline'; var hc=healthColor(h); var ago=_ago(info.last_seen);
   var cnt=(info.count!=null?info.count:0); var dim=x.status!=='active'?'opacity:.55':'';
-  var typechip='<span class="optchip" style="background:'+(iot?'#E7F0FB':'#F0EAF9')+';color:'+(iot?'#2b5c9c':'var(--purple-2)')+';border-color:transparent">'+(iot?'🛰️ IoT':'🔌 ERP')+'</span>';
+  var typechip='<span class="optchip" style="background:'+(iot?'var(--blue-tint-bg)':'var(--purple-tint)')+';color:'+(iot?'var(--blue-2)':'var(--purple-2)')+';border-color:transparent">'+(iot?'🛰️ IoT':'🔌 ERP')+'</span>';
   return `<div class="row ${x.id===UI.acSel?'sel':''}" data-ac="${x.id}" style="${dim}" onclick="selectActor('${x.id}')">
     <div style="width:9px;height:9px;border-radius:50%;flex:0 0 auto;margin-top:5px;background:${hc}"></div>
     <div class="main2"><div class="l1"><span class="code">${esc(x.name)}</span>${typechip}<span class="amt" style="margin-left:auto;font-size:var(--fs-1);color:${hc};font-weight:600">${esc(h)}${ago?(' · '+esc(ago)):''}</span></div>
@@ -294,7 +294,7 @@ function acRowHTML(x){ if(typeof acTypeOf==='function'){ var _ct=acTypeOf(x); if
   const coverLines=(x.del||coversNames.length)?'<div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px;line-height:1.45">'+(x.del?('🛡 Covered by <b style="color:var(--ink);font-weight:600">'+coverNm+'</b>'):'')+((x.del&&coversNames.length)?'<br>':'')+(coversNames.length?('🤝 Covers for <b style="color:var(--ink);font-weight:600">'+coversNames.join(', ')+'</b>'):'')+'</div>':'';
   return `<div class="row ${x.id===UI.acSel?'sel':''}" data-ac="${x.id}" style="${dim}" onclick="selectActor('${x.id}')">
     <div style="width:9px;height:9px;border-radius:50%;flex:0 0 auto;margin-top:5px;background:${x.shift==='on_shift'?'var(--ok-3)':x.shift==='on_break'?'#c9a441':'#b9b9b9'}"></div>
-    <div class="main2"><div class="l1"><span class="code">${esc(x.name)}</span><span class="optchip" style="background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)">${hatLabel(x.hat)}</span>${x.pinSet?'':(x.otp?'<span class="optchip" style="background:var(--warn-tint);color:var(--warn-3);border-color:#e6d9a8">⏳ invite</span>':'')}<span class="amt" style="margin-left:auto;font-size:11.5px;color:var(--grey)">${x.load}/${x.max||'∞'}</span></div>
+    <div class="main2"><div class="l1"><span class="code">${esc(x.name)}</span><span class="optchip" style="background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)">${hatLabel(x.hat)}</span>${x.pinSet?'':(x.otp?'<span class="optchip" style="background:var(--warn-tint);color:var(--warn-3);border-color:var(--warn-3)">⏳ invite</span>':'')}<span class="amt" style="margin-left:auto;font-size:11.5px;color:var(--grey)">${x.load}/${x.max||'∞'}</span></div>
       <div class="l2">${esc(x.role||'—')} · <span class="mono">${acLogin(x)}</span> <span class="optchip ${acShc(x.shift)}">${acShLabel(x.shift)}</span>${x.status!=='active'?'<span class="optchip off">'+esc(x.status)+'</span>':''}${(x.shift!=='on_shift'&&x.returnDate)?' · returns '+acDate(x.returnDate):''}</div>${coverLines}</div>
     <div class="rowgo" aria-hidden="true">›</div></div>`; }
 function acRowsHTML(){ if((UI.acTypeF||'all')==='ai') return aiRowsHTML(); const r=acVisible(); if(!r.length){ const _tf=UI.acTypeF||'all'; const _reg=(window.ACTOR_TYPES||{})[_tf]; if(_reg&&_reg.comingSoon) return '<div class="empty"><div class="big">'+(_reg.icon||'✨')+'</div><div class="t">'+esc(_reg.label)+' — coming soon</div><div>This capability is not enabled yet. When it is, you will add '+esc(_reg.label)+' co-assists right here — same flow, new type. <span style="color:var(--blue);font-weight:600">Notify me →</span></div></div>'; if(_tf==='iot') return '<div class="empty"><div class="big">🛰️</div><div class="t">No IoT devices yet</div><div>A Pi on the rail in one drop — <a href="#" onclick="openShowcase(\'/iot-howitworks.html\',\'How IoT works\');return false" style="color:var(--blue);font-weight:600">see how it works →</a><br>then add one with <b>+ New</b> above.</div></div>'; return '<div class="empty"><div class="big">🧑‍🤝‍🧑</div><div class="t">No co-assists</div><div>Add one with <b>+ New</b> above.</div></div>'; }
@@ -333,8 +333,8 @@ function _acTierSummary(x){
       +'<div style="min-width:0"><div style="font-size:17px;font-weight:800">'+esc(x.name)+'</div><div style="font-size:12px;color:var(--grey)">'+esc(reg.label||'')+' · 📍 '+esc(info.site||x.site||'no site')+'</div></div>'
       +'<span style="margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:var(--fs-2);color:'+hc+'"><span style="width:9px;height:9px;border-radius:50%;background:'+hc+';display:inline-block"></span>'+esc(h)+'</span></div>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:15px 0">'
-      +'<div style="background:#f4f6f8;border:1px solid var(--line);border-radius:12px;padding:11px 12px"><div style="font-size:var(--fs-1);color:var(--grey);text-transform:uppercase;letter-spacing:.03em">Devices</div><div style="font-size:var(--fs-5);font-weight:800;margin-top:2px">'+cnt+'</div></div>'
-      +'<div style="background:#f4f6f8;border:1px solid var(--line);border-radius:12px;padding:11px 12px"><div style="font-size:var(--fs-1);color:var(--grey);text-transform:uppercase;letter-spacing:.03em">Health</div><div style="font-size:var(--fs-4);font-weight:800;margin-top:4px;color:'+hc+'">'+esc(h)+'</div></div>'
+      +'<div style="background:var(--card);border:1px solid var(--line);border-radius:12px;padding:11px 12px"><div style="font-size:var(--fs-1);color:var(--grey);text-transform:uppercase;letter-spacing:.03em">Devices</div><div style="font-size:var(--fs-5);font-weight:800;margin-top:2px">'+cnt+'</div></div>'
+      +'<div style="background:var(--card);border:1px solid var(--line);border-radius:12px;padding:11px 12px"><div style="font-size:var(--fs-1);color:var(--grey);text-transform:uppercase;letter-spacing:.03em">Health</div><div style="font-size:var(--fs-4);font-weight:800;margin-top:4px;color:'+hc+'">'+esc(h)+'</div></div>'
     +'</div>'
     +'<button class="composebtn pri" style="width:100%;padding:13px;font-size:13.5px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="acOpenManage(\''+x.id+'\')"><span style="font-size:var(--fs-4)">🛠️</span> Click to open the '+esc(reg.label||'')+' cockpit <span style="opacity:.85">→</span></button>'
     +'<div style="font-size:var(--fs-1);color:var(--grey);margin-top:8px;text-align:center">👆 Opens its devices, connection string &amp; package — loaded on click.</div></div>';
@@ -350,7 +350,7 @@ function acDetailHTML(){ const x=UI.acDet;
   var _dt=(typeof acTypeOf==='function'?acTypeOf(x):'human'); var _dreg=(window.ACTOR_TYPES||{})[_dt]||{};
   if(_dreg.capability){ if(!(UI.acManageOpen && UI.acSel===x.id)) return _acTierSummary(x); var _mh=(window.ACTOR_MANAGE||{})[_dt]; if(UI.acManageLoading || typeof _mh!=='function') return _acTierLoader(x); return _mh(x); }   // TWO-TIER: instant summary, management loads on drill
   const back=`<button class="dback" onclick="backToList()">‹ Co-assists</button>`;
-  const seg=(m,l)=>`<button onclick="setAcMode('${m}')" style="border:0;background:${(UI.acMode==='edit'?'edit':'view')===m?'var(--ink)':'#fff'};color:${(UI.acMode==='edit'?'edit':'view')===m?'#fff':'var(--grey)'};font-size:12px;font-weight:700;padding:6px 15px">${l}</button>`;
+  const seg=(m,l)=>`<button onclick="setAcMode('${m}')" style="border:0;background:${(UI.acMode==='edit'?'edit':'view')===m?'var(--ink)':'var(--card)'};color:${(UI.acMode==='edit'?'edit':'view')===m?'var(--on-accent)':'var(--grey)'};font-size:12px;font-weight:700;padding:6px 15px">${l}</button>`;
   const toggle=`<div style="display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-top:10px">${seg('view','View')}${seg('edit','Edit')}</div>`;
   const head=`<div class="dh">${back}<div class="dt">${esc(x.name)} <span class="optchip ${acShc(x.shift)}">${acShLabel(x.shift)}</span></div><div class="ds">${esc(x.role||'—')} · <span class="mono">${acLogin(x)}</span></div>${toggle}</div>`;
   let body, bar;
@@ -384,7 +384,7 @@ function acDetailHTML(){ const x=UI.acDet;
     const work=`<div class="sec">Shift &amp; load</div><div class="itab" style="padding:11px 12px">
       <div style="display:flex;align-items:center;gap:8px"><span class="optchip ${acShc(x.shift)}">${acShLabel(x.shift)}</span><span style="font-size:12px;color:var(--grey)">${x.status==='active'?'active':esc(x.status)}</span></div>
       ${(x.shift!=='on_shift' && (x.breakSince||x.returnDate)) ? '<div style="font-size:11.5px;color:var(--grey);margin-top:6px">'+(x.breakSince?('On break since '+acDate(x.breakSince)):'')+(x.returnDate?((x.breakSince?' · ':'')+'returns '+acDate(x.returnDate)):'')+'</div>' : ''}
-      <div style="font-size:var(--fs-2);margin-top:9px">Load · <b>${x.load}</b> / ${x.max||'∞'} tasks</div><div style="height:8px;background:#eef1f4;border-radius:5px;overflow:hidden;margin-top:6px"><span style="display:block;height:100%;background:var(--blue);border-radius:5px;width:${pct}%"></span></div></div>`;
+      <div style="font-size:var(--fs-2);margin-top:9px">Load · <b>${x.load}</b> / ${x.max||'∞'} tasks</div><div style="height:8px;background:var(--blue-tint-bg);border-radius:5px;overflow:hidden;margin-top:6px"><span style="display:block;height:100%;background:var(--blue);border-radius:5px;width:${pct}%"></span></div></div>`;
     const eng=`<div class="sec">Access / engagement</div><div style="font-size:var(--fs-1);color:#9a7b34;background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;line-height:1.5">Per-co-assist engagement (view-only · act · audit · MIS) is <b>planned, not enforced yet</b> — today a co-assist acts within the entity's scope. Default-deny per node is the roadmap.</div>`;
     const coverName = x.del?acLbl((UI.acts||[]).find(a=>a.id===x.del)):'';
     const coverSection = '<div class="sec">Leave cover</div><div class="itab" style="border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:10px">'
@@ -392,10 +392,10 @@ function acDetailHTML(){ const x=UI.acDet;
       +'<div style="padding:10px 13px"><div style="font-size:var(--fs-1);color:var(--ok-2);text-transform:uppercase;letter-spacing:.4px;font-weight:700">🤝 Covers for</div><div style="font-size:13px;margin-top:3px;line-height:1.45">'+(coversFor.length?('<b>'+esc(x.name)+'</b> takes over <b>'+coversFor.join(', ')+'</b>&rsquo;s work when they&rsquo;re away.'):'<span style="color:var(--grey)">'+esc(x.name)+' isn&rsquo;t anyone&rsquo;s cover yet.</span>')+'</div></div>'
       +'</div>';
     const loginState = x.pinSet
-      ? '<div class="sec">Login</div><div style="'+_CARD+';background:#e7f3ea;border-color:#bfe0cd"><div style="font-size:13px;color:var(--ok-2);font-weight:600">✓ Active — PIN set. They sign in with their User ID + PIN.</div></div>'
+      ? '<div class="sec">Login</div><div style="'+_CARD+';background:var(--ok-tint);border-color:var(--ok-2)"><div style="font-size:13px;color:var(--ok-2);font-weight:600">✓ Active — PIN set. They sign in with their User ID + PIN.</div></div>'
       : (x.otp
           ? '<div class="sec">Login — pending invite</div><div style="'+_CARD+';background:var(--blue-tint);border-color:var(--blue-tint-line)"><div style="font-size:var(--fs-1);color:var(--blue-d);text-transform:uppercase;letter-spacing:.4px;font-weight:700">User ID</div><div class="mono" style="font-weight:700;font-size:13px;word-break:break-all">'+esc(acLogin(x))+'</div><div style="font-size:var(--fs-1);color:var(--blue-d);text-transform:uppercase;letter-spacing:.4px;font-weight:700;margin-top:7px">One-time code</div><div class="mono" style="font-weight:800;font-size:var(--fs-5);letter-spacing:3px;color:var(--blue-d)">'+esc(x.otp)+'</div><div style="font-size:var(--fs-1);color:var(--blue-d);margin-top:6px">Share these so they can sign in &amp; set their PIN. Not set a PIN yet.</div></div>'
-          : '<div class="sec">Login — pending</div><div style="'+_CARD+';background:#fbf7ea;border-color:#e6d9a8"><div style="font-size:var(--fs-2);color:var(--warn-3)">No active one-time code and no PIN yet — use <b>Re-invite</b> below to issue a code.</div></div>');
+          : '<div class="sec">Login — pending</div><div style="'+_CARD+';background:var(--warn-tint);border-color:var(--warn-3)"><div style="font-size:var(--fs-2);color:var(--warn-3)">No active one-time code and no PIN yet — use <b>Re-invite</b> below to issue a code.</div></div>');
     body=prof+coverSection+loginState+work+eng;
     if(x.status==='active'){
       bar=(x.type==='human'?(x.pinSet

@@ -578,7 +578,7 @@ function catsetCss(){
     '.catset-drow .dst{font-size:var(--fs-1);font-weight:700;border-radius:6px;padding:1px 7px;text-transform:uppercase;letter-spacing:.04em}',
     '.catset-drow .dst.live{background:var(--ok-tint);color:var(--ok-2)}',
     '.catset-drow .dst.draft{background:var(--warn-tint);color:var(--warn-2)}',
-    '.catset-drow .dst.retired{background:#eceaea;color:#6f6a6a}',
+    '.catset-drow .dst.retired{background:var(--neutral-tint);color:var(--ink-2)}',
     '.catset-drow .da{font-size:11.5px;color:var(--blue);cursor:pointer;font-weight:600}',
     '.catset-drow .da:hover{text-decoration:underline}',
     /* The vocabulary blocks. Quieter than the controls above them — this is reference, not something to act on. */
@@ -634,7 +634,7 @@ function catsetCss(){
     '.lang-gh{font-size:10.5px;font-weight:800;color:var(--grey);text-transform:uppercase;letter-spacing:.05em;min-width:62px}',
     '.lang-chip{font-size:11.5px;border:1px solid var(--line);border-radius:999px;padding:2px 10px;background:var(--card);cursor:pointer;white-space:nowrap}',
     '.lang-chip:hover{border-color:var(--blue)}',
-    '.lang-chip.on{background:#E3EDF8;border-color:var(--blue);color:var(--blue);font-weight:700}',
+    '.lang-chip.on{background:var(--blue-tint-bg);border-color:var(--blue);color:var(--blue);font-weight:700}',
     /* ⚠️ English reads as fixed, not disabled — a greyed chip invites clicking to find out why. */
     '.lang-chip.fixed{cursor:default;opacity:.9}',
     '.lang-chip .lang-none{color:var(--grey);font-size:10px;margin-left:5px;font-weight:400}',

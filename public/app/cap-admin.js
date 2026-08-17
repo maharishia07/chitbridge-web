@@ -74,8 +74,8 @@ function vaultCardHTML(vault, encrypted){
   vault=vault||{};
   // F1 — honest at-rest signal. Encrypted (AES-256-GCM, key never in DB) → safe for real data; not configured → dummy only.
   var encBanner = encrypted
-    ? '<div style="font-size:var(--fs-1);color:var(--ok-2);background:#eaf6ee;border:1px solid #bfe3cb;border-radius:9px;padding:7px 10px;margin:6px 0 2px">🔒 <b>Encrypted at rest</b> — stored ciphertext-only (a database dump can\'t read it). Safe for real banking &amp; tax details.</div>'
-    : '<div style="font-size:var(--fs-1);color:var(--warn-2);background:#fdf3e3;border:1px solid #f0dcae;border-radius:9px;padding:7px 10px;margin:6px 0 2px">⚠ <b>Encryption not configured</b> — the vault won\'t save until the platform sets its encryption key. Use <b>dummy data only</b> for now.</div>';
+    ? '<div style="font-size:var(--fs-1);color:var(--ok-2);background:var(--ok-tint);border:1px solid #bfe3cb;border-radius:9px;padding:7px 10px;margin:6px 0 2px">🔒 <b>Encrypted at rest</b> — stored ciphertext-only (a database dump can\'t read it). Safe for real banking &amp; tax details.</div>'
+    : '<div style="font-size:var(--fs-1);color:var(--warn-2);background:var(--warn-tint);border:1px solid #f0dcae;border-radius:9px;padding:7px 10px;margin:6px 0 2px">⚠ <b>Encryption not configured</b> — the vault won\'t save until the platform sets its encryption key. Use <b>dummy data only</b> for now.</div>';
   var secs=(UI._vault&&UI._vault.sections)||[];
   var body=secs.length ? secs.map(vaultSectionHTML).join('')
     : '<div style="color:var(--grey);font-size:12px;padding:9px 0">Nothing here yet. Add a section below and name the details you actually have — anything we don’t recognise is still saved.</div>';
@@ -490,12 +490,12 @@ function misPlan(m){
    */
   var w = planWindow();
   var period = !w
-    ? '<span class="govtag" style="background:#efeee9;color:#7a7a72">no period recorded</span>'
+    ? '<span class="govtag" style="background:var(--warn-tint);color:var(--warn-3)">no period recorded</span>'
     : w.state === 'expired'
       ? '<span class="govtag" style="background:var(--danger-tint);color:var(--disp)">expired '+w.days+'d ago</span>'
       : w.state === 'not yet started'
         ? '<span class="govtag" style="background:var(--warn-tint);color:var(--warn-3)">starts in '+w.days+'d</span>'
-        : '<span class="govtag" style="background:#E4F0E9;color:#2F6B49">active'+(w.days!=null?(' · '+w.days+'d left'):'')+'</span>';
+        : '<span class="govtag" style="background:var(--ok-tint);color:var(--disp)">active'+(w.days!=null?(' · '+w.days+'d left'):'')+'</span>';
   return _misHead('Plan', 'What you have used against the limits your plan declares.')
     + '<div class="misnote" style="margin-bottom:10px">'+period+'</div>'
     + '<div class="misnote" style="margin-bottom:12px"><b>'+esc(PLAN.tier)+'</b> plan · limits declared in '
@@ -868,7 +868,7 @@ function storefrontCardHTML(e){
   return '<div style="'+_CARD+';margin-top:10px">'
     +'<div class="sec" style="margin:0 0 8px">🛍️ Customer storefront</div>'
     +'<div style="font-size:12px;color:var(--grey);line-height:1.5;margin-bottom:8px">Share this link — anyone can open it and order from your catalogue. No account needed (they confirm with a one-time code).</div>'
-    +'<div style="background:#f4f6f8;border:1px solid var(--line);border-radius:9px;padding:8px 10px"><span class="mono" id="sf_url" style="font-size:11.5px;word-break:break-all">'+esc(url)+'</span></div>'
+    +'<div style="background:var(--card);border:1px solid var(--line);border-radius:9px;padding:8px 10px"><span class="mono" id="sf_url" style="font-size:11.5px;word-break:break-all">'+esc(url)+'</span></div>'
     +'<div style="display:flex;gap:8px;margin-top:8px"><button class="composebtn" onclick="sfCopy()">📋 Copy link</button><button class="composebtn ghost" onclick="window.open(document.getElementById(\'sf_url\').textContent,\'_blank\')">Open ↗</button></div>'
     // ── IS THE SHOP OPEN AT ALL? ─────────────────────────────────────────────────────────────────────────────
     // Athi, 2026-08-06: "it says the store does not have a public catalogue — how do I make it public?"
@@ -899,10 +899,10 @@ function storefrontCardHTML(e){
                 +'<option value="private"'+(vis==='private'||!vis?' selected':'')+'>Closed — the link shows nothing, to anyone</option>')
     +'</select>'
     +(capped
-      ? '<div style="margin-top:7px;font-size:12px;color:var(--purple-2);background:#F0EAF9;border:1px solid #e3d5f5;border-radius:9px;padding:7px 10px">🔒 '+esc(cap.reason||'This entity may not publish a public catalogue.')+'<div style="color:var(--grey);margin-top:3px">You cannot change this here — it is set '+(cap.by==='operator'?'by whoever provisioned this entity':'by your plan')+'.</div></div>'
+      ? '<div style="margin-top:7px;font-size:12px;color:var(--purple-2);background:var(--purple-tint);border:1px solid #e3d5f5;border-radius:9px;padding:7px 10px">🔒 '+esc(cap.reason||'This entity may not publish a public catalogue.')+'<div style="color:var(--grey);margin-top:3px">You cannot change this here — it is set '+(cap.by==='operator'?'by whoever provisioned this entity':'by your plan')+'.</div></div>'
       : (vis==='network'
-          ? '<div style="margin-top:7px;font-size:12px;color:var(--purple-2);background:#F0EAF9;border:1px solid #e3d5f5;border-radius:9px;padding:7px 10px">🔗 <b>Network only.</b> Businesses under your network see this catalogue. A shopper on the link above sees nothing — and neither does an outside business that adds you as a supplier.</div>'
-          : (vis!=='public' ? '<div style="margin-top:7px;font-size:12px;color:var(--disp);background:#FBEDEA;border:1px solid #f3d9d5;border-radius:9px;padding:7px 10px">⚠ Your shop is CLOSED. The link above will show &ldquo;this shop has no public catalogue&rdquo; — to customers and to other businesses looking at you as a supplier.</div>' : '')))
+          ? '<div style="margin-top:7px;font-size:12px;color:var(--purple-2);background:var(--purple-tint);border:1px solid #e3d5f5;border-radius:9px;padding:7px 10px">🔗 <b>Network only.</b> Businesses under your network see this catalogue. A shopper on the link above sees nothing — and neither does an outside business that adds you as a supplier.</div>'
+          : (vis!=='public' ? '<div style="margin-top:7px;font-size:12px;color:var(--disp);background:var(--danger-tint);border:1px solid #f3d9d5;border-radius:9px;padding:7px 10px">⚠ Your shop is CLOSED. The link above will show &ldquo;this shop has no public catalogue&rdquo; — to customers and to other businesses looking at you as a supplier.</div>' : '')))
     +'<label class="fl" style="margin-top:12px">Customer access</label><select class="inp" id="pf_sfaccess" style="max-width:340px">'+sfopts+'</select>'
     +'<div class="err" id="pf_err2"></div><button class="composebtn" style="margin-top:9px" onclick="saveStorefront()">Save storefront</button>'
     +'</div>';
@@ -1405,7 +1405,7 @@ async function loadSettings(){ const h=document.getElementById("setbody"); if(!h
   }catch(e){ h.innerHTML=scrErr(e); } }
 function paintSettings(s, _daOpts){ const h=document.getElementById("setbody"); if(!h)return;
   { const k = setSec();
-    const notYet = '<div style="background:#fbeceb;border:1px solid #f0c9c6;border-radius:9px;padding:8px 11px;font-size:11.5px;color:var(--disp);margin-bottom:11px">⏳ These preferences are saved but <b>not yet active</b> — they don\'t change behaviour yet.</div>';
+    const notYet = '<div style="background:var(--danger-tint);border:1px solid #f0c9c6;border-radius:9px;padding:8px 11px;font-size:11.5px;color:var(--disp);margin-bottom:11px">⏳ These preferences are saved but <b>not yet active</b> — they don\'t change behaviour yet.</div>';
     var out = "";
     if (k === "work") out = _misHead('Work', 'How tasks reach the people and co-assists who do them.')
       + `<div style="${_CARD}">${notYet}
@@ -1559,7 +1559,7 @@ function channelsInner(){
      this page, so a web release can land first — "Could not read your channels" would send someone hunting for a
      fault in their own account. Name the actual state: the server has not shipped this yet. */
   if(_CH.notDeployed) return head+'<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;font-size:12px;color:var(--warn-3)">The channels API is not on this server yet (the panel shipped ahead of it). Nothing is wrong with your account — deploy the API and reload.</div>';
-  if(_CH.err) return head+'<div style="background:#fbeceb;border:1px solid #f0c9c6;border-radius:9px;padding:9px 11px;font-size:12px;color:var(--disp)">'+esc(_CH.err)+'</div>';
+  if(_CH.err) return head+'<div style="background:var(--danger-tint);border:1px solid #f0c9c6;border-radius:9px;padding:9px 11px;font-size:12px;color:var(--disp)">'+esc(_CH.err)+'</div>';
   if(!_CH.data) return head+'<div style="font-size:12px;color:var(--grey)">Not loaded.</div>';
   /* The route answers 200 with a note when the table is not there — say which it is, because "no channels" and
      "the store does not exist" look identical on screen and mean entirely different things. */
@@ -1601,7 +1601,7 @@ function _chRow(c){
           /* declared vs verified — asserted is not confirmed, and the difference is visible. */
           /* declared vs verified — and what DECLARED actually costs you, said in the row rather than in a footnote:
              a claim that has not been confirmed receives nothing at all. */
-          + '<span style="font-size:var(--fs-1);font-weight:800;color:'+(b.status==='verified'?'#2e6b3f':'var(--warn-2)')+';background:'+(b.status==='verified'?'#e7f3ea':'#FBF6E9')+';border-radius:5px;padding:1px 6px" title="'+(b.status==='verified'?'confirmed by the platform — messages sent here reach you':'not confirmed yet — messages sent to this number reach nobody')+'">'+esc(b.status==='verified'?'verified'+(b.verified_via?' · '+b.verified_via:''):'declared — not receiving yet')+'</span>'
+          + '<span style="font-size:var(--fs-1);font-weight:800;color:'+(b.status==='verified'?'var(--ok-2)':'var(--warn-2)')+';background:'+(b.status==='verified'?'var(--ok-tint)':'var(--warn-tint)')+';border-radius:5px;padding:1px 6px" title="'+(b.status==='verified'?'confirmed by the platform — messages sent here reach you':'not confirmed yet — messages sent to this number reach nobody')+'">'+esc(b.status==='verified'?'verified'+(b.verified_via?' · '+b.verified_via:''):'declared — not receiving yet')+'</span>'
           + '<span style="margin-left:auto;cursor:pointer;color:var(--grey-4)" title="Unbind" data-testid="ch-del" onclick="chUnbind(\''+esc(b.id)+'\')">✕</span></div>'
           /**
            * ⚠️ HANDS-FREE, PER LINE (b131). Athi: *"no one will sit and create a chit from whatsapp, it has to be

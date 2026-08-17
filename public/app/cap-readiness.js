@@ -63,18 +63,18 @@ async function _aiDraft(skill, label, ctx, attach){
     var acceptBtn = (attach && r && r.kind==='document')
       ? '<button onclick="_aiAccept()" title="File this document as the evidence backing '+esc(attach.title||attach.doc)+' — a chit on your rail" style="'+bs+';flex:1;border:1px solid var(--ok-3);background:var(--ok-3);color:var(--on-ok)">✓ Accept &amp; attach as evidence</button>' : '';
     var html = '<style>'+(typeof _AI_MDCSS!=='undefined'?_AI_MDCSS:'')+'</style>'
-      + '<div style="font-size:var(--fs-1);color:var(--purple);background:#f2effc;border:1px solid #ddd4f5;border-radius:9px;padding:8px 11px;margin-bottom:12px;line-height:1.5">🤖 <b>AI proposal — not evidence.</b> '+esc((r&&r.note)||'Review and confirm before you use it.')+(cost!=null?' <span style="color:var(--grey)">· cost $'+cost+'</span>':'')+'</div>'
+      + '<div style="font-size:var(--fs-1);color:var(--purple);background:var(--blue-tint-bg);border:1px solid #ddd4f5;border-radius:9px;padding:8px 11px;margin-bottom:12px;line-height:1.5">🤖 <b>AI proposal — not evidence.</b> '+esc((r&&r.note)||'Review and confirm before you use it.')+(cost!=null?' <span style="color:var(--grey)">· cost $'+cost+'</span>':'')+'</div>'
       + '<div class="amddoc" style="background:var(--card);border:1px solid var(--line);border-radius:9px;padding:16px 20px;max-height:52vh;overflow:auto">'+(typeof _aiMd==='function'?_aiMd(draft):esc(draft))+'</div>'
       + '<div style="display:flex;gap:8px;margin-top:13px;flex-wrap:wrap">'
         + acceptBtn
-        + '<button onclick="_aiPdf()" style="'+bs+';flex:'+(acceptBtn?'0 0 auto':'1')+';border:1px solid var(--purple);background:'+(acceptBtn?'#fff':'var(--purple)')+';color:'+(acceptBtn?'var(--purple)':'#fff')+'">⬇ PDF</button>'
+        + '<button onclick="_aiPdf()" style="'+bs+';flex:'+(acceptBtn?'0 0 auto':'1')+';border:1px solid var(--purple);background:'+(acceptBtn?'var(--card)':'var(--purple)')+';color:'+(acceptBtn?'var(--purple)':'var(--on-accent)')+'">⬇ PDF</button>'
         + '<button onclick="_aiCopy(this)" data-draft="'+esc(encodeURIComponent(draft))+'" style="'+bs+';flex:0 0 auto;border:1px solid var(--line);background:var(--card);color:var(--ink)">📋 Copy</button>'
         + '<button onclick="closeModal()" style="'+bs+';flex:0 0 auto;border:1px solid var(--line);background:var(--card);color:var(--ink)">Done</button>'
       + '</div>';
     var b=document.getElementById('aidbody'); if(b) b.innerHTML=html;
   }catch(e){
     var msg=(e&&e.message)||'AI draft failed'; var b2=document.getElementById('aidbody');
-    if(b2) b2.innerHTML='<div style="font-size:12px;color:var(--warn-2);background:#fdf3e3;border:1px solid #f0dcae;border-radius:9px;padding:10px 12px">'+esc(String(msg).indexOf('503')>=0||String(msg).indexOf('not connected')>=0?'AI is not connected yet (no key on this environment).':msg)+'</div>';
+    if(b2) b2.innerHTML='<div style="font-size:12px;color:var(--warn-2);background:var(--warn-tint);border:1px solid #f0dcae;border-radius:9px;padding:10px 12px">'+esc(String(msg).indexOf('503')>=0||String(msg).indexOf('not connected')>=0?'AI is not connected yet (no key on this environment).':msg)+'</div>';
   }
 }
 function _aiCopy(btn){ try{ var t=decodeURIComponent(btn.getAttribute('data-draft')||''); if(navigator.clipboard) navigator.clipboard.writeText(t); if(typeof toast==='function') toast('Draft copied ✓'); }catch(_){ } }
@@ -106,7 +106,7 @@ function _aiPdf(){
     +'.brand{font-weight:800;letter-spacing:.05em;color:var(--purple);font-size:12px}'
     +'.doctitle{font-size:22px;font-weight:800;margin-top:4px;color:#141a22}'
     +'.meta{font-size:var(--fs-1);color:#7a8494;margin-top:5px}'
-    +'.stamp{display:inline-block;margin-top:9px;font-size:var(--fs-1);font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--warn-2);background:#fdf3e3;border:1px solid #f0dcae;border-radius:5px;padding:3px 8px}'
+    +'.stamp{display:inline-block;margin-top:9px;font-size:var(--fs-1);font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--warn-2);background:var(--warn-tint);border:1px solid #f0dcae;border-radius:5px;padding:3px 8px}'
     +'.foot{margin-top:26px;padding-top:10px;border-top:1px solid #e6eaf0;font-size:var(--fs-1);color:#9aa3b0;text-align:center}'
     +(typeof _AI_MDCSS!=='undefined'?_AI_MDCSS:'')+'.amddoc{font-size:12px}';
   var when=new Date().toLocaleString();
@@ -177,8 +177,8 @@ function _rdExpand(it){
     +(it.rung==='verified'&&it.verified_at?_rdKv('Verified at source', String(it.verified_at).slice(0,10)+(it.verified_by?' · '+esc(it.verified_by):'')):'')
     +(it.evidence_ref&&/^[0-9a-f-]{20,}$/i.test(String(it.evidence_ref))?_rdKv('Evidence','document on the rail'):'');
   var ai=L.ai;
-  var partner=L.partner?'<div style="margin-top:11px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:#faf6ee;display:flex;align-items:center;gap:8px"><div style="flex:1;min-width:0"><span style="font-size:var(--fs-1);font-weight:800;color:#8a5e22;text-transform:uppercase;letter-spacing:.05em">Or hand it to a partner</span><div style="font-size:var(--fs-2);margin-top:3px;font-weight:600">'+esc(L.partner)+'</div></div><button onclick="aiSuggestPartner(\''+esc(it.standard)+'\',\''+esc(it.doc)+'\')" title="AI suggests who can carry this + what to ask them" style="flex:0 0 auto;font-size:var(--fs-1);font-weight:700;border:1px solid var(--purple);background:var(--card);color:var(--purple);border-radius:6px;padding:6px 10px;cursor:pointer">✨ Suggest</button></div>':'';
-  return '<div style="border-top:1px solid var(--line);padding:12px 15px 15px;background:#fbfcfe">'
+  var partner=L.partner?'<div style="margin-top:11px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--warn-tint);display:flex;align-items:center;gap:8px"><div style="flex:1;min-width:0"><span style="font-size:var(--fs-1);font-weight:800;color:var(--warn-3);text-transform:uppercase;letter-spacing:.05em">Or hand it to a partner</span><div style="font-size:var(--fs-2);margin-top:3px;font-weight:600">'+esc(L.partner)+'</div></div><button onclick="aiSuggestPartner(\''+esc(it.standard)+'\',\''+esc(it.doc)+'\')" title="AI suggests who can carry this + what to ask them" style="flex:0 0 auto;font-size:var(--fs-1);font-weight:700;border:1px solid var(--purple);background:var(--card);color:var(--purple);border-radius:6px;padding:6px 10px;cursor:pointer">✨ Suggest</button></div>':'';
+  return '<div style="border-top:1px solid var(--line);padding:12px 15px 15px;background:var(--blue-tint-bg)">'
     +_rdSub('Its lifecycle')+steps
     +_rdSub('Evidence · current version')+'<div>'+ev+'</div>'
     +_rdSub('How you use it')+'<div style="font-size:var(--fs-2);color:var(--ink)">'+esc(L.use)+'</div>'
@@ -200,7 +200,7 @@ function _rdSelect(std,doc){
 function _rdRow(it, selKey){
   var k=it.standard+'|'+it.doc, on=(k===selKey);
   var held=_rdHeld(it);   // green ONLY with real (documented/verified), valid evidence — a bare 'declared' claim is NOT held
-  var box='<span onclick="event.stopPropagation();'+(held?'_rdSelect':'gatherReadiness')+'(\''+esc(it.standard)+'\',\''+esc(it.doc)+'\')" title="'+(held?'Held — real, valid evidence':'Not held — click to provide evidence')+'" style="width:16px;height:16px;border-radius:4px;border:1.5px solid '+(held?'var(--ok-3)':'var(--line)')+';background:'+(held?'var(--ok-3)':'#fff')+';color:#fff;display:inline-grid;place-items:center;font-size:var(--fs-1);font-weight:800;flex:0 0 auto;cursor:pointer">'+(held?'✓':'')+'</span>';
+  var box='<span onclick="event.stopPropagation();'+(held?'_rdSelect':'gatherReadiness')+'(\''+esc(it.standard)+'\',\''+esc(it.doc)+'\')" title="'+(held?'Held — real, valid evidence':'Not held — click to provide evidence')+'" style="width:16px;height:16px;border-radius:4px;border:1.5px solid '+(held?'var(--ok-3)':'var(--line)')+';background:'+(held?'var(--ok-3)':'var(--card)')+';color:#fff;display:inline-grid;place-items:center;font-size:var(--fs-1);font-weight:800;flex:0 0 auto;cursor:pointer">'+(held?'✓':'')+'</span>';
   return '<div onclick="_rdSelect(\''+esc(it.standard)+'\',\''+esc(it.doc)+'\')" style="display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:9px;cursor:pointer;margin:2px 0;background:'+(on?'var(--blue-tint)':'transparent')+';border:1px solid '+(on?'var(--blue)':'transparent')+'">'
     +box
     +'<div style="min-width:0;flex:1"><div style="font-weight:'+(on?'700':'600')+';font-size:var(--fs-2);color:'+(on?'var(--blue)':'var(--ink)')+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(it.title||it.doc)+'</div></div>'
@@ -218,18 +218,18 @@ function _rdDetailPane(it){
     ? '<button onclick="aiDraftReadiness(\''+esc(it.standard)+'\',\''+esc(it.doc)+'\',\''+skill+'\')" title="AI drafts this document from your order/profile data — you review and confirm (never autonomous)" style="font-size:12px;font-weight:700;border:1px solid var(--purple);background:var(--purple-tint);color:var(--purple);border-radius:9px;padding:7px 12px;cursor:pointer">✨ Draft with AI</button>' : '';
   var actBtn = (it.status==='gathered')
     ? '<span style="font-size:12px;color:'+m.col+';font-weight:700">'+m.lbl+'</span>'
-    : '<button onclick="gatherReadiness(\''+esc(it.standard)+'\',\''+esc(it.doc)+'\')" style="font-size:12px;font-weight:700;border:1px solid '+(it.status==='pending'?'var(--line)':m.col)+';background:'+(it.status==='pending'?'#fff':m.col)+';color:'+(it.status==='pending'?'#2a2f38':'#fff')+';border-radius:9px;padding:7px 13px;cursor:pointer">'+(it.status==='pending'?'Gather':'Renew')+'</button>';
+    : '<button onclick="gatherReadiness(\''+esc(it.standard)+'\',\''+esc(it.doc)+'\')" style="font-size:12px;font-weight:700;border:1px solid '+(it.status==='pending'?'var(--line)':m.col)+';background:'+(it.status==='pending'?'var(--card)':m.col)+';color:'+(it.status==='pending'?'var(--blue-2)':'var(--on-accent)')+';border-radius:9px;padding:7px 13px;cursor:pointer">'+(it.status==='pending'?'Gather':'Renew')+'</button>';
   var held=_rdHeld(it), r=it.rung, live=(it.status==='gathered'||it.status==='expiring');
   var banner = (held && r==='verified')
-      ? '<div style="margin:10px 16px 0;font-size:12px;color:var(--ok-2);background:#eaf6ee;border:1px solid #bfe3cb;border-radius:9px;padding:9px 12px">✓ <b>Verified at source</b> — the platform confirmed this against the registry. Buyers see this as met.</div>'
+      ? '<div style="margin:10px 16px 0;font-size:12px;color:var(--ok-2);background:var(--ok-tint);border:1px solid #bfe3cb;border-radius:9px;padding:9px 12px">✓ <b>Verified at source</b> — the platform confirmed this against the registry. Buyers see this as met.</div>'
     : held
-      ? '<div style="margin:10px 16px 0;font-size:12px;color:var(--ok-2);background:#eaf6ee;border:1px solid #bfe3cb;border-radius:9px;padding:9px 12px">✓ <b>Documented on the rail</b> — a real document backs this, valid. Buyers see this as met.</div>'
+      ? '<div style="margin:10px 16px 0;font-size:12px;color:var(--ok-2);background:var(--ok-tint);border:1px solid #bfe3cb;border-radius:9px;padding:9px 12px">✓ <b>Documented on the rail</b> — a real document backs this, valid. Buyers see this as met.</div>'
     : live
-      ? '<div style="margin:10px 16px 0;font-size:12px;color:var(--warn-2);background:#fdf3e3;border:1px solid #f0dcae;border-radius:9px;padding:9px 12px">⚠ <b>Declared only</b> — a bare claim, <b>not evidenced</b>. Attach a document (Gather) or <b>Verify at source</b> to make it count. Buyers do NOT treat a bare claim as met.</div>'
-      : '<div style="margin:10px 16px 0;font-size:12px;color:var(--grey);background:#f7f8fb;border:1px solid var(--line);border-radius:9px;padding:9px 12px">☐ <b>Not held.</b> Provide evidence (Gather or Verify) to check it — it stays checked only while the evidence is valid.</div>';
+      ? '<div style="margin:10px 16px 0;font-size:12px;color:var(--warn-2);background:var(--warn-tint);border:1px solid #f0dcae;border-radius:9px;padding:9px 12px">⚠ <b>Declared only</b> — a bare claim, <b>not evidenced</b>. Attach a document (Gather) or <b>Verify at source</b> to make it count. Buyers do NOT treat a bare claim as met.</div>'
+      : '<div style="margin:10px 16px 0;font-size:12px;color:var(--grey);background:var(--card);border:1px solid var(--line);border-radius:9px;padding:9px 12px">☐ <b>Not held.</b> Provide evidence (Gather or Verify) to check it — it stays checked only while the evidence is valid.</div>';
   var vmode = idType
-    ? '<div style="margin:8px 16px 0;font-size:11.5px;color:var(--ok-2);background:#eaf6ee;border:1px solid #bfe3cb;border-radius:9px;padding:8px 11px">🔗 <b>Live source-check</b> — the platform verifies this '+idType.toUpperCase()+' against the <b>source registry</b>, invoked live. Confirmed at source, not your word for it.</div>'
-    : '<div style="margin:8px 16px 0;font-size:11.5px;color:var(--grey);background:#f7f8fb;border:1px solid var(--line);border-radius:9px;padding:8px 11px">📄 <b>Document evidence</b> — your certificate + issuer link. A <b>live source-check is not wired for this standard yet</b> (it needs the issuing body’s registry).</div>';
+    ? '<div style="margin:8px 16px 0;font-size:11.5px;color:var(--ok-2);background:var(--ok-tint);border:1px solid #bfe3cb;border-radius:9px;padding:8px 11px">🔗 <b>Live source-check</b> — the platform verifies this '+idType.toUpperCase()+' against the <b>source registry</b>, invoked live. Confirmed at source, not your word for it.</div>'
+    : '<div style="margin:8px 16px 0;font-size:11.5px;color:var(--grey);background:var(--card);border:1px solid var(--line);border-radius:9px;padding:8px 11px">📄 <b>Document evidence</b> — your certificate + issuer link. A <b>live source-check is not wired for this standard yet</b> (it needs the issuing body’s registry).</div>';
   return '<div style="padding:14px 16px 0"><div style="display:flex;align-items:flex-start;gap:10px"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:15px">'+esc(it.title||it.doc)+rung+'</div><div style="font-size:11.5px;color:var(--grey);margin-top:2px">from <span class="mono" style="color:var(--blue)">'+esc(it.standard)+'</span></div></div><div style="flex:0 0 auto;display:flex;gap:6px;align-items:center">'+draftBtn+verifyBtn+actBtn+'</div></div></div>'
     + banner + vmode + _rdExpand(it);
 }
@@ -268,7 +268,7 @@ function _rdTabInfo(tab){
           clearance:'Per-shipment clearances gathered for each order into the chosen destination.',
           commercial:'Commercial cover for the deal — payment, transit, currency & financing risk (FRM). The same in every sector.' };
   var t=m[tab]; if(!t) return '';
-  return '<div style="flex:none;font-size:11.5px;color:var(--grey);padding:8px 14px;border-bottom:1px solid var(--line);background:#f9fafc"><span style="color:var(--blue);font-weight:800">ⓘ</span> '+t+' <span style="color:#8a94a6">· sector-generic — switch the sector to see it re-resolve.</span></div>';
+  return '<div style="flex:none;font-size:11.5px;color:var(--grey);padding:8px 14px;border-bottom:1px solid var(--line);background:var(--card)"><span style="color:var(--blue);font-weight:800">ⓘ</span> '+t+' <span style="color:var(--on-card)">· sector-generic — switch the sector to see it re-resolve.</span></div>';
 }
 // ── CHECK A SUPPLIER (buyer) ──
 // compact spin-the-globe: origin → destination selectors (shown in the Clearances tab header).
@@ -322,7 +322,7 @@ async function openSectorMatrix(){
   var list=Object.keys(rows).map(function(k){ var on=secs.map(function(s){return !!rows[k].sectors[s[0]];}); return {std:k,name:STDNAME[k]||k,on:on,n:on.filter(Boolean).length}; });
   list.sort(function(a,b){ return (b.n-a.n)||a.std.localeCompare(b.std); });
   var head='<tr><th style="text-align:left;padding:8px 6px;font-size:var(--fs-1);text-transform:uppercase;color:var(--grey);border-bottom:1px solid var(--line)">Standard</th>'+secs.map(function(s){return '<th style="padding:8px 4px;font-size:var(--fs-1);border-bottom:1px solid var(--line);color:'+s[3]+';white-space:nowrap">'+s[1]+'<br>'+s[2]+'</th>';}).join('')+'</tr>';
-  var rowH=function(r){ var common=r.n===secs.length; return '<tr'+(common?' style="background:#eaf6ee"':'')+'><td style="padding:8px 6px;font-weight:600;font-size:12px;border-bottom:1px solid var(--line);color:'+(common?'var(--ok-3)':'var(--ink)')+'">'+esc(r.name)+'</td>'+r.on.map(function(v,i){return _mtxCell(v,common,secs[i][3]);}).join('')+'</tr>'; };
+  var rowH=function(r){ var common=r.n===secs.length; return '<tr'+(common?' style="background:var(--ok-tint)"':'')+'><td style="padding:8px 6px;font-weight:600;font-size:12px;border-bottom:1px solid var(--line);color:'+(common?'var(--ok-3)':'var(--ink)')+'">'+esc(r.name)+'</td>'+r.on.map(function(v,i){return _mtxCell(v,common,secs[i][3]);}).join('')+'</tr>'; };
   var band=function(t){return '<tr><td colspan="'+(secs.length+1)+'" style="padding:11px 6px 3px;font-size:var(--fs-1);font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--grey)">'+t+'</td></tr>';};
   var common=list.filter(function(r){return r.n===secs.length;}), spec=list.filter(function(r){return r.n!==secs.length;});
   var html='<div style="font-size:11.5px;color:var(--grey);margin-bottom:9px">Lane held constant ('+esc(origin)+' → '+esc(dest)+') — only the sector changes. A full row is the <b>common backbone</b>; a single ✓ is <b>sector-specific</b>.</div>'
@@ -394,7 +394,7 @@ function _rdComDetail(g){
   var names=(g.instruments||[]).map(function(i){return esc(i.name);}).join(' · ');
   var draftBtn = (m.ai&&m.ai.skill)
     ? '<button onclick="aiDraftCommerce(\''+m.ai.skill+'\',\''+esc(g.label)+'\')" title="AI drafts this from the current lane — you review and confirm (never autonomous)" style="font-size:12px;font-weight:700;border:1px solid var(--purple);background:var(--purple-tint);color:var(--purple);border-radius:9px;padding:7px 12px;cursor:pointer">✨ Draft with AI</button>' : '';
-  var partner = m.partner ? '<div style="margin-top:11px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:#faf6ee"><span style="font-size:var(--fs-1);font-weight:800;color:#8a5e22;text-transform:uppercase;letter-spacing:.05em">Or hand it to a partner</span><div style="font-size:var(--fs-2);margin-top:3px;font-weight:600">'+esc(m.partner)+'</div></div>' : '';
+  var partner = m.partner ? '<div style="margin-top:11px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--warn-tint)"><span style="font-size:var(--fs-1);font-weight:800;color:var(--warn-3);text-transform:uppercase;letter-spacing:.05em">Or hand it to a partner</span><div style="font-size:var(--fs-2);margin-top:3px;font-weight:600">'+esc(m.partner)+'</div></div>' : '';
   var ai=m.ai||{};
   var aiLine = '<b style="color:var(--blue)">'+esc(ai.lvl||'L2')+'</b> · gate: '+esc(ai.gate||'confirm')+' — '+esc(ai.t||'AI role to be defined.')+(ai.skill?'':' <i style="color:#8a94a6">(skill coming)</i>');
   return '<div style="padding:14px 16px 0"><div style="display:flex;align-items:flex-start;gap:10px"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:15px">'+esc(g.label)+'</div><div style="font-size:11.5px;color:var(--grey);margin-top:4px;display:flex;align-items:center;gap:7px;flex-wrap:wrap">'+_frmBadge(g.frm_class)+(g.covered_onrail?'<span style="color:var(--ok-3);font-weight:700;font-size:var(--fs-1)">● already on rail</span>':'')+'</div></div><div style="flex:0 0 auto">'+draftBtn+'</div></div></div>'
@@ -415,7 +415,7 @@ function _rdComTwoPane(){
   var left=list.map(function(g,i){return _rdComRow(g,i,sel);}).join('');
   return '<div class="rdpanes'+(UI.rdMDetail?' showdetail':'')+'" style="flex:1;display:flex;min-height:0;overflow:hidden">'
     +'<div id="comlist" class="rdlist" style="width:300px;flex:0 0 auto;border-right:1px solid var(--line);overflow-y:auto;background:var(--card);padding:8px 6px 30px">'+left+'</div>'
-    +'<div class="rddetail" style="flex:1;min-width:0;overflow-y:auto;background:#fbfcfe">'
+    +'<div class="rddetail" style="flex:1;min-width:0;overflow-y:auto;background:var(--blue-tint-bg)">'
       +'<button class="dback" style="margin:10px 0 0 14px" onclick="rdBack()">‹ Back</button>'+_rdComDetail(list[sel])+'</div></div>';
 }
 // a two-pane (list ↔ detail) for one tab's set of items
@@ -426,7 +426,7 @@ function _rdTwoPane(list){
   var left=list.map(function(i){return _rdRow(i,UI.rdSel);}).join('');
   return '<div class="rdpanes'+(UI.rdMDetail?' showdetail':'')+'" style="flex:1;display:flex;min-height:0;overflow:hidden">'
     +'<div id="rdlist" class="rdlist" style="width:300px;flex:0 0 auto;border-right:1px solid var(--line);overflow-y:auto;background:var(--card);padding:8px 6px 30px">'+left+'</div>'
-    +'<div id="rddetail" class="rddetail" style="flex:1;min-width:0;overflow-y:auto;background:#fbfcfe">'
+    +'<div id="rddetail" class="rddetail" style="flex:1;min-width:0;overflow-y:auto;background:var(--blue-tint-bg)">'
       +'<button class="dback" style="margin:10px 0 0 14px" onclick="rdBack()">‹ Back</button>'+_rdDetailPane(sel)+'</div></div>';
 }
 /* Leave the detail on mobile. On a laptop nothing calls this — the back button it belongs to is .dback, which the

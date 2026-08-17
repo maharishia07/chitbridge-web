@@ -605,7 +605,7 @@
     if (o_model === 'pick') {
       return '<button data-testid="cart-add" onclick="event.stopPropagation();CBCart.setQty(\'' + esc(ns) + '\',\'' + esc(id) + '\',' + (q ? 0 : 1) + ')"'
         + ' style="border-radius:20px;padding:6px 14px;font-size:var(--fs-2);font-weight:700;cursor:pointer;border:1.5px solid ' + a
-        + ';background:' + (q ? a : '#fff') + ';color:' + (q ? '#fff' : a) + '">' + (q ? '✓ Added' : 'Add') + '</button>';
+        + ';background:' + (q ? a : 'var(--card)') + ';color:' + (q ? 'var(--on-accent)' : a) + '">' + (q ? '✓ Added' : 'Add') + '</button>';
     }
     if (!q) {
       return '<button data-testid="cart-add" style="' + rnd + '" onclick="event.stopPropagation();CBCart.add(\'' + esc(ns) + '\',\'' + esc(id) + '\')">+</button>';
@@ -664,7 +664,7 @@
     var days = (new Date() - new Date(a.as_of)) / 864e5;
     var stale = days > Number(opt(ns, 'staleDays', 14));
     return ' <span style="font-size:var(--fs-1);color:' + col + '">· avl ' + esc(a.qty) + '</span>'
-      + '<span style="font-size:var(--fs-1);color:' + (stale ? 'var(--warn-2)' : '#8a94a3') + '"> dt ' + esc(shortDate(a.as_of))
+      + '<span style="font-size:var(--fs-1);color:' + (stale ? 'var(--warn-2)' : 'var(--blue-2)') + '"> dt ' + esc(shortDate(a.as_of))
       + (stale ? ' ⚠' : '') + '</span>';
   }
   /** The model's own note under the row — "sold in 12s", "min 5 · max 500". Silent when there is nothing to say. */
@@ -771,7 +771,7 @@
       + '<div style="display:flex;gap:9px;margin-top:15px">'
       + '<button style="' + btn + ';background:var(--card);color:' + a + '" onclick="CBCart.close(\'' + esc(ns) + '\')">'
       + (sel.length ? 'Keep shopping' : 'Browse the catalogue') + '</button>'
-      + (sel.length ? '<button data-testid="cart-checkout" style="' + btn + ';background:' + a + ';color:#fff"'
+      + (sel.length ? '<button data-testid="cart-checkout" style="' + btn + ';background:' + a + ';color:var(--on-card)"'
           + ' onclick="CBCart.checkout(\'' + esc(ns) + '\')">' + esc(opt(ns, 'checkoutLabel', 'Check out →')) + '</button>' : '')
       + '</div>';
   }
@@ -948,7 +948,7 @@
         + 'margin:0 0 8px;padding-bottom:2px;scrollbar-width:thin;-webkit-overflow-scrolling:touch}'
         + '.cbpick-catgs:empty{display:none}'
         + '.cbpick-catgs::-webkit-scrollbar{height:5px}'
-        + '.cbpick-catgs::-webkit-scrollbar-thumb{background:#d6dae0;border-radius:3px}'
+        + '.cbpick-catgs::-webkit-scrollbar-thumb{background:var(--blue-tint-bg);border-radius:3px}'
         /**
          * ⭐ THE TAG SHAPE (Athi, 2026-08-17: *"the category has to be something like new product shape, square
          * doesn't look good"*). A category is a LABEL you hang on a product, so it reads as a luggage tag —
