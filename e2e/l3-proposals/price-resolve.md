@@ -6,6 +6,8 @@ Scan: `node e2e/prose-scan.cjs --interp --file app/price-resolve.js` → 4 inter
 Result: **4 propose-ready** on the work-list.
 ⚠️ **1 MONEY-FORMATTING DEFECT found off-list (line 150)** — see the section at the end. It is the serious one.
 
+Verified: `node e2e/l3-verify.cjs e2e/l3-proposals/price-resolve.md` → **4 pairs · 4 faithful · 0 TEXT CHANGED**.
+
 ---
 
 ## ⚠️ READ FIRST — a decision that gates every proposal in this file

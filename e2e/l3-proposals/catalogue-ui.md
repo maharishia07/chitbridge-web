@@ -7,6 +7,8 @@ Result: **0 propose-ready · 2 SKIP** on the work-list.
 Both scan hits are false positives — markup, not prose.
 ⚠️ But the two lines they sit on carry **untranslated user-facing text the scanner cannot see**, noted below.
 
+Verified: `node e2e/l3-verify.cjs e2e/l3-proposals/catalogue-ui.md` → **0 pairs** — both sites are SKIPs, nothing to check.
+
 ---
 
 ### catalogue-ui.js:163

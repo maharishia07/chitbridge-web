@@ -306,7 +306,21 @@
       now: input.now ? new Date(input.now) : new Date(),
       region: input.region, currency: input.currency, customer_group: input.customer_group,
       shipping: Number(input.shipping) || 0,
-      money: input.money || function (n) { return String(R2(n)); }
+      /**
+       * ⚠️ THE DEFAULT DROPPED THE CURRENCY ENTIRELY — `String(R2(n))` renders 7950 with no symbol, no code and
+       * no grouping. catalogue-ui.js injects a real formatter, but the call at the mint (app.html:4439) injects
+       * nothing, so that path renders a bare number the moment anyone shows or persists a `why`.
+       *
+       * ⚠️ A BARE NUMBER IS NOT A NEUTRAL FALLBACK. It invites the reader to assume their own currency, which is
+       * the exact assumption the rest of this codebase spends its effort preventing. The default now uses the
+       * currency the caller already passed in `input.currency` and formats it through the localisation layer;
+       * where even that is absent it says the amount is unlabelled rather than pretending otherwise.
+       */
+      money: input.money || function (n) {
+        var c = input.currency || '';
+        if (c && typeof CBLocale !== 'undefined') { try { return CBLocale.money(R2(n), c); } catch (_) {} }
+        return c ? (c + ' ' + R2(n)) : (R2(n) + ' (currency not stated)');
+      }
     };
     var subtotal = R2(lines.reduce(function (t, l) { return t + l.gross; }, 0));
 

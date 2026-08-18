@@ -6,6 +6,8 @@ Scan: `node e2e/prose-scan.cjs --interp --file app/cap-categories.js` → 1 inte
 Result: **1 propose-ready · 0 SKIP · 0 NEEDS-HUMAN.**
 No money in this file at all — no formatting defects to report.
 
+Verified: `node e2e/l3-verify.cjs e2e/l3-proposals/cap-categories.md` → **1 pair · 1 faithful · 0 TEXT CHANGED**.
+
 ---
 
 ### cap-categories.js:230

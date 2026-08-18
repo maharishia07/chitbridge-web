@@ -12,6 +12,10 @@ moment the file first depends on those globals. They are defined in `app.html` a
 shared global scope, so the reference resolves — but `toast`/`api` are already guarded with `typeof … === 'function'`
 here, which suggests a defensive house style worth matching if the reviewer wants it.
 
+Verified: `node e2e/l3-verify.cjs e2e/l3-proposals/cap-catalogue.md` → **8 pairs · 0 TEXT CHANGED**.
+The 6 "plural reshaping — English may change, confirm" flags are expected and correct: every one is an
+`item(s)`/`photo(s)`/`field(s)` dodge becoming a real `txn` singular/plural pair. That is the point of the pass.
+
 ---
 
 ### cap-catalogue.js:231
@@ -48,13 +52,8 @@ translator may need to move the tick (some scripts place it differently) which t
 
 ### cap-catalogue.js:897
 ```
-BEFORE  w._phNote = 'Read ' + items.length + ' item(s) from ' + slice.length
-        + ' photo(s) — the counts differ, so nothing was filled in automatically for that batch. '
-        + 'A photo of a price LIST holds several items; these cards are one item each.'
-AFTER   w._phNote = txn(
-          'Read {count} item from {photos} photos — the counts differ, so nothing was filled in automatically for that batch. A photo of a price LIST holds several items; these cards are one item each.',
-          'Read {count} items from {photos} photos — the counts differ, so nothing was filled in automatically for that batch. A photo of a price LIST holds several items; these cards are one item each.',
-          items.length, { photos: slice.length });
+BEFORE  w._phNote = 'Read ' + items.length + ' item(s) from ' + slice.length + ' photo(s) — the counts differ, so nothing was filled in automatically for that batch. A photo of a price LIST holds several items; these cards are one item each.';
+AFTER   w._phNote = txn('Read {count} item from {photos} photos — the counts differ, so nothing was filled in automatically for that batch. A photo of a price LIST holds several items; these cards are one item each.', 'Read {count} items from {photos} photos — the counts differ, so nothing was filled in automatically for that batch. A photo of a price LIST holds several items; these cards are one item each.', items.length, { photos: slice.length });
 ```
 NOTE — ⚠️ **TWO INDEPENDENT COUNTS IN ONE SENTENCE, and gettext can only pluralise on one of them.** `txn`
 pluralises on `items.length`; `{photos}` rides along as a plain variable, so "photos" is frozen plural and reads
@@ -74,11 +73,8 @@ Arabic locale that gives one Arabic-digit number and one Western-digit number in
 
 ### cap-catalogue.js:902
 ```
-BEFORE  'Read ' + read + ' photo(s) — ' + filled + ' field(s) proposed. '
-        + 'Check each one: they are the model\'s reading, not yours, until you edit or confirm them.'
-AFTER   txn('Read {count} photo — {fields} fields proposed. Check each one: they are the model\'s reading, not yours, until you edit or confirm them.',
-            'Read {count} photos — {fields} fields proposed. Check each one: they are the model\'s reading, not yours, until you edit or confirm them.',
-            read, { fields: filled });
+BEFORE  'Read ' + read + ' photo(s) — ' + filled + ' field(s) proposed. Check each one: they are the model\'s reading, not yours, until you edit or confirm them.'
+AFTER   txn('Read {count} photo — {fields} fields proposed. Check each one: they are the model\'s reading, not yours, until you edit or confirm them.', 'Read {count} photos — {fields} fields proposed. Check each one: they are the model\'s reading, not yours, until you edit or confirm them.', read, { fields: filled })
 ```
 NOTE — Same two-count limitation as :897. `filled` is only reached when non-zero (this is the truthy arm of the
 ternary), but it can legitimately be exactly 1, so "fields" reads wrong more often here than at :897. This one is
@@ -89,11 +85,8 @@ for the fields would be fully correct — but that is two sentences where there 
 
 ### cap-catalogue.js:903
 ```
-BEFORE  'Read ' + read + ' photo(s) and could not make anything out. '
-        + 'Nothing was filled in — type the details instead.'
-AFTER   txn('Read {count} photo and could not make anything out. Nothing was filled in — type the details instead.',
-            'Read {count} photos and could not make anything out. Nothing was filled in — type the details instead.',
-            read);
+BEFORE  'Read ' + read + ' photo(s) and could not make anything out. Nothing was filled in — type the details instead.'
+AFTER   txn('Read {count} photo and could not make anything out. Nothing was filled in — type the details instead.', 'Read {count} photos and could not make anything out. Nothing was filled in — type the details instead.', read)
 ```
 NOTE — Clean single-count case. No vars object needed; `{count}` is supplied by `txn`.
 

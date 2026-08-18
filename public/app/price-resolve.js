@@ -147,7 +147,24 @@
 
   function describe(p, c) {
     var bits = [];
-    bits.push((p.label || p.basis || 'price') + ' = ' + (p.currency || c.currency || '') + p.amount);
+    /**
+     * ⚠️⚠️ THIS PASTED A CURRENCY CODE ONTO A RAW NUMBER — `'INR' + 340` rendered literally as "INR340": no
+     * space, no grouping, no symbol. And the fallback chain ends in `''`, so when neither the price nor the
+     * catalogue carried a currency it rendered a BARE AMOUNT — an unlabelled number, in the one function whose
+     * entire job is answering "why am I paying 340 and not 325?".
+     *
+     * ⚠️ NOT LIVE TODAY: CBPrice is exported and nothing calls it (checked 2026-08-18). Fixed anyway, because
+     * the day something does call it the defect is a wrong price in a dispute explanation, and "it was already
+     * broken when we wired it up" is not a thing to discover then.
+     *
+     * ⚠️ AND AN ABSENT CURRENCY NOW SAYS SO. A number with no currency beside it invites the reader to assume
+     * their own — which is exactly the assumption this whole codebase spends its effort preventing.
+     */
+    var _ccy = p.currency || c.currency || '';
+    var _amt = _ccy
+      ? (typeof CBLocale !== 'undefined' ? CBLocale.money(p.amount, _ccy) : _ccy + ' ' + p.amount)
+      : (p.amount + ' (currency not stated)');
+    bits.push((p.label || p.basis || 'price') + ' = ' + _amt);
     if (p.minQty != null) bits.push('for ' + p.minQty + '+ units');
     if (p.region) bits.push('in ' + p.region);
     if (p.validFrom || p.validTo) bits.push('valid ' + (p.validFrom || '—') + ' to ' + (p.validTo || '—'));

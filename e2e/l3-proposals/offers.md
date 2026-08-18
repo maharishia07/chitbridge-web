@@ -7,6 +7,9 @@ Result: **3 propose-ready · 1 NEEDS-HUMAN** on the work-list.
 ⚠️ **1 MONEY-FORMATTING DEFECT (line 309, the default `ctx.money`)** — see the section at the end.
 Plus 7 off-list sites of the same class, listed briefly.
 
+Verified: `node e2e/l3-verify.cjs e2e/l3-proposals/offers.md` → **3 pairs · 3 faithful · 0 TEXT CHANGED**
+(the 4th site, :164, is NEEDS-HUMAN and carries no AFTER to check).
+
 ---
 
 ## ⚠️ READ FIRST — the same "is a reason UI text or a record?" question as price-resolve.js
