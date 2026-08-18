@@ -52,14 +52,14 @@
     if (p.validFrom && new Date(p.validFrom) > ctx.now) return 'starts ' + p.validFrom;
     if (p.validTo && endOf(p.validTo) < ctx.now) return 'ended ' + p.validTo;
     if (p.region && ctx.region && String(p.region).toLowerCase() !== String(ctx.region).toLowerCase())
-      return 'for ' + p.region + ', not ' + ctx.region;
+      return txf('for {region}, not {orderRegion}', { region: p.region, orderRegion: ctx.region });
     /* ⚠️ A CURRENCY MISMATCH IS A REFUSAL, NEVER A CONVERSION. Converting here would invent an exchange rate,
        silently, inside a pricing decision — and the rate used would be unrecorded and unarguable. If a catalogue
        needs a price in another currency, that is another Part D entry, declared by whoever owns the number. */
     if (p.currency && ctx.currency && String(p.currency) !== String(ctx.currency))
-      return 'priced in ' + p.currency + ', not ' + ctx.currency;
+      return txf('priced in {currency}, not {orderCurrency}', { currency: p.currency, orderCurrency: ctx.currency });
     if (p.minQty != null && ctx.qty != null && ctx.qty < Number(p.minQty))
-      return 'needs ' + p.minQty + '+, this order has ' + ctx.qty;
+      return txf('needs {minQty}+, this order has {qty}', { minQty: p.minQty, qty: ctx.qty });
     /* `by:'ref'` with no amount is LOOSE — it resolves from its source at seal, so it cannot price an order now.
        That is not an error; it is what "loose" means, and it must be said rather than treated as a broken row. */
     if (p.by === 'ref' && num(p.amount) == null) return 'loose — resolves from ' + (p.source || 'its source') + ' at seal';
@@ -165,7 +165,7 @@
       ? (typeof CBLocale !== 'undefined' ? CBLocale.money(p.amount, _ccy) : _ccy + ' ' + p.amount)
       : (p.amount + ' (currency not stated)');
     bits.push((p.label || p.basis || 'price') + ' = ' + _amt);
-    if (p.minQty != null) bits.push('for ' + p.minQty + '+ units');
+    if (p.minQty != null) bits.push(txf('for {minQty}+ units', { minQty: p.minQty }));
     if (p.region) bits.push('in ' + p.region);
     if (p.validFrom || p.validTo) bits.push('valid ' + (p.validFrom || '—') + ' to ' + (p.validTo || '—'));
     return bits.join(' · ');

@@ -227,7 +227,7 @@ function cbcatSeedAsk(){
 async function cbcatSeedRun(vertical){
   var set = CB_STARTER_CATEGORIES[vertical]; if (!set) return;
   closeModal();
-  showBusy('Adding ' + set.nodes.length + ' categories…');
+  showBusy(txn('Adding {count} category…', 'Adding {count} categories…', set.nodes.length));
   var made = {}, added = 0, skipped = 0, failed = 0;
   try {
     var have = {};
