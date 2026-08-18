@@ -116,7 +116,12 @@ test.describe('Standards · where they bite, and why we bother', () => {
       /* ⚠️ A standard named without a place is trivia. "GS1 — SKU identity" tells a reader nothing they can act
          on; "used in Catalogue › product identity, because the three-way match needs both sides to agree this is
          the same product" is the difference between a compliance list and an explanation. */
-      expect(r.at.length, r.n + ' says where it is used').toBeGreaterThan(3);
+      /* ⚠️ A LENGTH HEURISTIC IS A PROXY, AND THIS ONE MISJUDGED A CORRECT ANSWER. "IAM" is three characters
+         and is exactly where ISO/IEC 24760 is used — the shortest true answer on the page. The rule I actually
+         want is "not empty and not a dash", so that is what it now checks. A test that forces padding to pass
+         teaches people to pad. */
+      expect(r.at.trim(), r.n + ' says where it is used').not.toBe('');
+      expect(r.at.trim(), r.n + ' names a place, not a dash').not.toMatch(/^[—–-]$/);
       expect(r.why.length, r.n + ' says what failure it removes').toBeGreaterThan(25);
     }
   });
