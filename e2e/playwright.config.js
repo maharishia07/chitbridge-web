@@ -84,7 +84,8 @@ module.exports = defineConfig({
       testIgnore: [/[\\/]onboarding\.spec\.js$/, /[\\/]flow\.spec\.js$/, /[\\/]redproof\.spec\.js$/, /[\\/]swarm\.spec\.js$/,
         /[\\/]signed-out\.spec\.js$/, /[\\/]currency-matrix\.spec\.js$/, /[\\/]mode-survives-order\.spec\.js$/,
         /[\\/]variants\.spec\.js$/, /[\\/]network-cascade\.spec\.js$/, /[\\/]render-smoke\.spec\.js$/,
-        /[\\/]enquiry\.spec\.js$/, /[\\/]message-privacy\.spec\.js$/, /[\\/]dispute-privacy\.spec\.js$/, /[\\/]shop-publish\.spec\.js$/],
+        /[\\/]enquiry\.spec\.js$/, /[\\/]message-privacy\.spec\.js$/, /[\\/]dispute-privacy\.spec\.js$/,
+        /[\\/]shop-publish\.spec\.js$/, /[\\/]notif-clear\.spec\.js$/],
     },
     // 3 · flows that must start LOGGED OUT (they test onboarding itself / the welcome screen)
     {
@@ -118,7 +119,10 @@ module.exports = defineConfig({
         // ⭐⭐ Can a NEW business open its shop? Until 2026-08-18 the answer was NO, and every storefront spec
         // here passed anyway — because they all used alpha and gamma, two shops that were already open. A
         // fixture already in the end state cannot test the transition into it.
-        /shop-publish\.spec\.js/],
+        /shop-publish\.spec\.js/,
+        // ⚠️ Activity clear is TWO-PARTY of necessity: the feed excludes your OWN actions by design, so a single
+        // entity can do anything it likes and its Activity list stays empty.
+        /notif-clear\.spec\.js/],
     },
     // 4 · CROSS-BROWSER + SIZE sweep of the COUNTER flows (keyboard/storefront/chits). Opt-in — run e.g.
     //     `npx playwright test --project=counter-firefox`. The default run stays Chromium@counter for speed.
