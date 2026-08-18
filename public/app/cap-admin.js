@@ -1400,7 +1400,20 @@ var SET_SECS = [
    * this?" — and splitting them across a menu and a settings page means someone who needs two of the three
    * finds one of them. Athi: *"we can see how to bring the look and feel as a separate unit."*
    */
-  { key:'appearance', name:'Appearance',   q:'Theme, text size and motion' }
+  { key:'appearance', name:'Appearance',   q:'Theme, text size and motion' },
+  /**
+   * ⭐⭐ STANDARDS — what the PLATFORM follows, what YOU follow, and what your TRADE follows.
+   *
+   * Athi, 2026-08-18: *"under standards, possibly we can bring two section — what this platform follows, what
+   * the end user is going to follow. All implementation standards can be specified here, so all comes under one
+   * roof. And then specific to entity for commercial standard."*
+   *
+   * ⚠️ THE STATUS COLUMN IS THE WHOLE POINT, and a list without it would be marketing. Some of these are
+   * implemented and tested, some are half-done, some are only decided — and a compliance page that flattens
+   * those three into one tick is worse than no page, because someone will rely on it. Anything not in force
+   * says what is missing, in its own row.
+   */
+  { key:'standards',  name:'Standards',    q:'What we follow, what you follow' }
 ];
 function setSec(){ return UI.setSec || 'work'; }
 /* Same reason as profSetSec — the hook fires before #setbody exists, so drive the load explicitly. */
@@ -1479,6 +1492,167 @@ async function loadSettings(){ const h=document.getElementById("setbody"); if(!h
  * themes would drift the day someone adds a sixteenth, and the one that was forgotten would be the one a
  * reader happened to be looking at. One palette, two places it can appear.
  */
+
+/**
+ * ⭐ THE REGISTER OF STANDARDS. One row per standard, so adding one is a line of data and never a screen edit.
+ *
+ * ⚠️ STATUS IS NOT DECORATION. `live` means implemented and covered by a test; `part` means partly, and the
+ * row MUST say what is missing; `plan` means decided but not built. Athi's standing rule is that we name what
+ * is unproven rather than oversell it — and a standards page is exactly where overselling would do most harm,
+ * because it is the page someone would quote to a buyer.
+ */
+var STANDARDS = [
+  { g:'Localisation', n:'BCP 47 (RFC 5646)',      w:'Language tags — en-IN, ar-AE, ta',                 s:'live' },
+  { g:'Localisation', n:'UTS #35 · CLDR',         w:'Locale data and the -u- extensions (nu·hc·ca·fw)',  s:'live' },
+  { g:'Localisation', n:'RFC 4647',               w:'Language priority list and matching',               s:'live' },
+  { g:'Localisation', n:'ECMA-402 (Intl)',        w:'Number, money, date, collation, direction',         s:'live' },
+  { g:'Localisation', n:'IANA tz database',       w:'Time zones — via the engine, not a kept table',     s:'live' },
+  { g:'Localisation', n:'ISO 4217',               w:'Currency codes on every price',                     s:'live' },
+  { g:'Localisation', n:'ISO 8601',               w:'Timestamps in storage and transport',               s:'part', note:'Display follows the reader\'s locale by design, which is not ISO form.' },
+  { g:'Localisation', n:'GNU gettext',            w:'String catalogue — the English is the key',         s:'part', note:'Primitive and a 449-entry catalogue exist; the call sites are not wrapped yet.' },
+
+  { g:'Accessibility', n:'WCAG 2.2 — 1.4.3 / 1.4.6', w:'Text contrast, measured not asserted',           s:'live', note:'455 computed checks across 15 themes, 0 failures.' },
+  { g:'Accessibility', n:'WCAG 2.2 — 1.4.4',      w:'Resize text to 132% without loss of function',      s:'live' },
+  { g:'Accessibility', n:'WCAG 2.2 — 2.3.3',      w:'Animation from interactions can be turned off',     s:'live' },
+  { g:'Accessibility', n:'WCAG 2.2 — full audit', w:'Keyboard, focus order, names and roles',            s:'part', note:'Keymap and focus states exist; no independent audit has been run.' },
+  { g:'Accessibility', n:'Okabe–Ito',             w:'Colour-universal palette for colour blindness',     s:'live' },
+  { g:'Accessibility', n:'CSS Logical Properties', w:'Right-to-left layout without a second stylesheet', s:'live', note:'378 physical properties converted.' },
+
+  { g:'Records & data', n:'RFC 7386',             w:'JSON merge-patch for catalogue golden records',     s:'live' },
+  { g:'Records & data', n:'GS1',                  w:'SKU / GTIN identity on catalogue items',            s:'part', note:'Codes are carried and matched; check-digit validation is not enforced.' },
+  { g:'Records & data', n:'ISO 17442 (LEI)',      w:'Legal Entity Identifier',                           s:'part', note:'A field exists to record it; the value is not verified against GLEIF.' },
+  { g:'Records & data', n:'ISO 6523',             w:'Organisation identifier SCHEME, so an id says which register it came from', s:'plan' },
+  { g:'Records & data', n:'UN/LOCODE',            w:'Places, ports and terminals',                       s:'plan' },
+
+  { g:'Platform',     n:'RFC 7519 (JWT)',         w:'Session tokens',                                    s:'live' },
+  { g:'Platform',     n:'Idempotency-Key',        w:'A mutation runs at most once, even on replay',       s:'live' },
+  { g:'Platform',     n:'PostgreSQL RLS',         w:'Tenant isolation enforced by the database',         s:'live', note:'FORCE RLS on the entity-data tables; identities is a documented carve-out for cross-tenant discovery.' },
+
+  { g:'Commercial',   n:'Incoterms 2020 (ICC)',   w:'Who bears cost and risk, and to what point',        s:'part', note:'Carried on instruments and forms; not yet enforced against the shipment record.' },
+  { g:'Commercial',   n:'UCP 600 · ISBP 745',     w:'Documentary credits',                               s:'plan' },
+  { g:'Commercial',   n:'HS codes (WCO)',         w:'Tariff classification on goods',                    s:'plan' },
+  { g:'Commercial',   n:'ISO 20022',              w:'Financial messaging',                               s:'plan' }
+];
+
+function stdTab(){ return UI.stdTab || 'platform'; }
+function setStdTab(k){ UI.stdTab = k; renderApp(); _capShowDetail(); loadSettings(); }
+
+function standardsSettingsHTML(){
+  var Q = String.fromCharCode(39);
+  var card = function(inner){ return '<div style="' + _CARD + '">' + inner + '</div>'; };
+  var tab = stdTab();
+
+  var BADGE = {
+    live: ['In force',  'var(--ok-tint)',     'var(--ok-2)'],
+    part: ['Partly',    'var(--warn-tint)',   'var(--warn-2)'],
+    plan: ['Planned',   'var(--neutral-tint)','var(--grey)']
+  };
+
+  var seg = [['platform','What we follow'],['yours','What you follow'],['commercial','Your trade']].map(function(x){
+    var on = tab === x[0];
+    return '<button type="button" data-testid="std-tab-' + x[0] + '" onclick="setStdTab(' + Q + x[0] + Q + ')"'
+      + ' aria-pressed="' + (on ? 'true' : 'false') + '"'
+      + ' style="flex:1;cursor:pointer;font:inherit;padding:7px 8px;font-size:var(--fs-2);font-weight:' + (on ? 800 : 500) + ';'
+      + 'border:2px solid ' + (on ? 'var(--blue)' : 'var(--line)') + ';border-radius:9px;'
+      + 'background:' + (on ? 'var(--blue-tint-bg)' : 'var(--card)') + ';color:var(--on-card)">' + x[1] + '</button>';
+  }).join('');
+
+  var row = function(st){
+    var b = BADGE[st.s] || BADGE.plan;
+    return '<div style="padding:8px 0;border-block-start:1px solid var(--line)">'
+      + '<div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap">'
+      +   '<b style="font-size:var(--fs-2);color:var(--on-card)">' + esc(st.n) + '</b>'
+      +   '<span style="font-size:9px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;'
+      +     'background:' + b[1] + ';color:' + b[2] + ';border-radius:4px;padding:1px 6px">' + b[0] + '</span>'
+      + '</div>'
+      + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px;line-height:1.5">' + esc(st.w) + '</div>'
+      /* ⚠️ A "partly" or "planned" row without this line would be the overclaim the status was meant to prevent. */
+      + (st.note ? '<div style="font-size:var(--fs-1);color:var(--warn-2);margin-top:3px;line-height:1.5">⚠️ ' + esc(st.note) + '</div>' : '')
+      + '</div>';
+  };
+
+  var groupsOf = function(list){
+    var seen = [], out = '';
+    list.forEach(function(st){ if (seen.indexOf(st.g) < 0) seen.push(st.g); });
+    seen.forEach(function(g){
+      out += card('<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin-bottom:2px">' + esc(g) + '</div>'
+        + list.filter(function(st){ return st.g === g; }).map(row).join(''));
+    });
+    return out;
+  };
+
+  var body;
+  if (tab === 'platform') {
+    var plat = STANDARDS.filter(function(st){ return st.g !== 'Commercial'; });
+    var n = { live:0, part:0, plan:0 };
+    STANDARDS.forEach(function(st){ n[st.s]++; });
+    body = card('<div style="font-size:var(--fs-2);line-height:1.6;color:var(--on-card)">'
+        + 'What ChitBridge itself implements. <b>We adopt standards rather than invent formats</b> — a record '
+        + 'that only this platform can read is a record you do not own.'
+        + '<div style="margin-top:7px;font-size:var(--fs-1);color:var(--grey)">'
+        + '<b style="color:var(--ok-2)">' + n.live + ' in force</b> · '
+        + '<b style="color:var(--warn-2)">' + n.part + ' partly</b> · '
+        + n.plan + ' planned. '
+        + 'Rows that are not in force say what is missing — a page like this is quoted to buyers, so an '
+        + 'overstatement here would do more harm than a gap.'
+        + '</div></div>')
+      + groupsOf(plat);
+
+  } else if (tab === 'yours') {
+    /* ⚠️ READ FROM THE LIVE SETTINGS, never a stored copy. A page describing what you follow that had drifted
+       from what you actually set would be the one place a wrong answer is guaranteed to be believed. */
+    var DAY = { 1:'Mon', 2:'Tue', 3:'Wed', 4:'Thu', 5:'Fri', 6:'Sat', 7:'Sun' };
+    var r = CBLocale.regionInfo();
+    var th = (typeof THEMES !== 'undefined' && THEMES[typeof themeGet === 'function' ? themeGet() : 'cream']) || {};
+    var mine = [
+      ['Region',        r ? r.name : 'Not set'],
+      ['Languages',     CBLocale.langs().map(function(x, i){ return (i + 1) + '. ' + CBLocale.langName(x); }).join('  ·  ')],
+      ['Reading order', CBLocale.dir() === 'rtl' ? 'Right to left ←' : 'Left to right →'],
+      ['Locale tag',    '<code>' + esc(CBLocale.tag()) + '</code>'],
+      ['Numbers',       esc(CBLocale.number(123456789.5))],
+      ['Money',         esc(CBLocale.money(123456.5, (typeof SESSION !== 'undefined' && SESSION && SESSION.currency) || 'INR'))],
+      ['Date',          esc(CBLocale.date(Date.now()))],
+      ['Time',          esc(CBLocale.time(Date.now()))],
+      ['Time zone',     esc(CBLocale.timezone())],
+      ['Working days',  CBLocale.workdays().map(function(d){ return DAY[d]; }).join(' ') + (CBLocale.hasWorkdayOverride() ? '  (you set these)' : '  (regional default)')],
+      ['Theme',         esc(th.name || '—') + (th.a11y ? '  · meets WCAG ' + esc(th.a11y.level) : '')],
+      ['Text size',     (typeof TEXT_SIZES !== 'undefined' && typeof textSize === 'function')
+                          ? (function(){ var m = TEXT_SIZES.filter(function(x){ return x[0] === textSize(); })[0]; return m ? m[1] + ' (' + Math.round(m[2] * 100) + '%)' : '—'; })() : '—'],
+      ['Motion',        (typeof motionPref === 'function') ? ({ auto:'Follow my device', reduce:'Reduced', full:'Always animate' }[motionPref()] || '—') : '—']
+    ];
+    body = card('<div style="font-size:var(--fs-2);line-height:1.6;color:var(--on-card)">'
+        + 'The conventions <b>your</b> screens follow. Every line here is a live reading of your own settings, '
+        + 'not a stored copy — change one in Localisation or Appearance and this moves with it.'
+        + '</div>')
+      + card('<div data-testid="std-yours">' + mine.map(function(x){
+          return '<div style="display:flex;gap:10px;padding:5px 0;border-block-start:1px solid var(--line);font-size:var(--fs-2)">'
+            + '<span style="min-width:112px;color:var(--grey)">' + x[0] + '</span>'
+            + '<b style="color:var(--on-card);min-width:0;word-break:break-word">' + x[1] + '</b></div>';
+        }).join('') + '</div>')
+      + card('<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.6">'
+        + '⚠️ <b>None of this changes what anyone wrote.</b> These settings govern the chrome and the way figures '
+        + 'are written. Product names, catalogue entries, chit subjects, messages and dispute reasons stay in the '
+        + 'language and the currency their author used — a chit is a shared record, and one that read differently '
+        + 'to each party would not be a record.</div>');
+
+  } else {
+    body = card('<div style="font-size:var(--fs-2);line-height:1.6;color:var(--on-card)">'
+        + 'The commercial standards <b>your entity</b> trades under. These are not platform settings — they are '
+        + 'terms you and your counterparty agree, and the platform\'s job is to carry them onto the record so '
+        + 'nobody has to remember which version applied.'
+        + '</div>')
+      + groupsOf(STANDARDS.filter(function(st){ return st.g === 'Commercial'; }))
+      + card('<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.6">'
+        + '⚠️ <b>Carried is not the same as enforced,</b> and the difference matters to a buyer. An Incoterm on a '
+        + 'chit today records what was agreed; it does not yet check the shipment against it. That gap is stated '
+        + 'here rather than left for someone to discover in a dispute.</div>');
+  }
+
+  return _misHead('Standards', 'What this platform follows, what you follow, and what your trade follows.')
+    + '<div style="display:flex;gap:7px;margin-bottom:10px">' + seg + '</div>'
+    + body;
+}
+
 function appearanceSettingsHTML(){
   var card = function(inner){ return '<div style="' + _CARD + '">' + inner + '</div>'; };
   /* ⚠️ Q IS DEFINED HERE, in the SHIPPED function — not in the script that generated it. This is the fourth
@@ -1827,6 +2001,7 @@ function paintSettings(s, _daOpts){ const h=document.getElementById("setbody"); 
     var out = "";
     if (k === "locale") out = localeSettingsHTML();
     else if (k === "appearance") out = appearanceSettingsHTML();
+    else if (k === "standards") out = standardsSettingsHTML();
     else if (k === "work") out = _misHead('Work', 'How tasks reach the people and co-assists who do them.')
       + `<div style="${_CARD}">${notYet}
       <label class="fl">Assignment model</label><select class="inp" id="st_am">${opt(["pull","push","both"],s.assignment_model||"both")}</select>
