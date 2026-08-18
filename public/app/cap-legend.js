@@ -527,7 +527,10 @@ function _workTabHtml(){
   const R='var(--accent,var(--blue))';
   const seal=t=>`<span style="font-size:var(--fs-1);color:var(--ok-3);background:var(--ok-tint);border-radius:5px;padding:1px 7px">🔒 ${t}</span>`;
   const lic =t=>`<span style="font-size:var(--fs-1);color:var(--warn-3);background:var(--gold-soft,#f4eeda);border:1px solid var(--gold-line,#e0d4a8);border-radius:5px;padding:1px 7px">🎫 ${t}</span>`;
-  const knob=t=>`<span style="font-size:var(--fs-1);color:#9a6d1a;background:var(--warn-tint);border-radius:5px;padding:1px 7px">✎ ${t}</span>`;
+  /* ⚠️ WAS A HARDCODED #9a6d1a ON A THEMED GROUND — the defect Athi spotted on this tab. The ink was fixed
+     while --warn-tint moved with the theme, so it measured 3.91:1 on every light theme and 3.36:1 on Dark:
+     BELOW AA in all fifteen. --warn-2 is the ink this tint exists to carry, and it is measured in every theme. */
+  const knob=t=>`<span style="font-size:var(--fs-1);color:var(--warn-2);background:var(--warn-tint);border-radius:5px;padding:1px 7px">✎ ${t}</span>`;
   const up  =t=>`<span style="font-size:var(--fs-1);color:var(--grey)">↑ ${t}</span>`;
   const chain=t=>`<span style="font-size:var(--fs-1);color:${R};background:var(--blue-tint);border-radius:5px;padding:1px 7px">${t}</span>`;
   const stage=(t,d,tag)=>`<span style="display:inline-flex;flex-direction:column;background:var(--card);border:1px solid var(--line);border-radius:9px;padding:5px 9px;vertical-align:top;max-width:158px;color:var(--on-card)"><b style="font-size:var(--fs-1)">${esc(t)}${tag?` <span style="font-family:'Space Mono';font-size:var(--fs-1);color:${R};background:var(--blue-tint);border-radius:4px;padding:0 4px">${tag}</span>`:''}</b>${d?`<span style="color:var(--grey);font-size:var(--fs-1);line-height:1.35;margin-top:2px">${d}</span>`:''}</span>`;

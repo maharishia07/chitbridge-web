@@ -557,5 +557,50 @@ console.log('\n14 · direction is logical, not physical (RTL-ready)');
     + Object.entries(bad).map(([k, v]) => k + ':' + v).join(', '));
   else pass('no margin/padding/border-left|right or text-align:left|right outside comments');
 }
+/**
+ * ⭐⭐ 15 · HARDCODED INK ON A THEMED GROUND — the class that produced the bug Athi found in Work patterns.
+ *
+ * A chip written as `color:#9a6d1a; background:var(--warn-tint)` has ONE HALF THAT MOVES and one that does
+ * not. The ground follows the theme into a dark palette; the ink stays exactly where it was typed. It measured
+ * 3.91:1 on every light theme and 3.36:1 on Dark — below AA in all fifteen — and no amount of theme work would
+ * ever have fixed it, because a11y-contrast.cjs measures TOKENS and this colour is not one. It took a person
+ * looking at the screen, which is precisely the check we are trying not to depend on.
+ *
+ * ⚠️ #fff IS EXEMPT, DELIBERATELY. White text on a coloured FILL must stay white in every theme — that rule is
+ * stated in app.html's own token block and is why --on-accent exists. Flagging it would bury the real cases
+ * under 36 correct ones.
+ *
+ * ⚠️ A WARNING, NOT A FAILURE, TODAY. There are dozens of these and clearing them is a sweep rather than a
+ * line, so this reports the count and the worst files instead of blocking every commit until the backlog is
+ * done. It should become a hard failure the day the count reaches zero; until then its job is to stop the
+ * number growing unnoticed, which is how it got to dozens in the first place.
+ */
+console.log('\n15 · hardcoded ink on a themed ground');
+{
+  const NEAR = 140;
+  const bad = {};
+  [['app.html', app]].concat(CAPS.map((f) => [f, fs.readFileSync(path.join(WEB, 'app', f), 'utf8')]))
+    .forEach(([name, src]) => {
+      const code = src.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/^\s*\/\/.*$/gm, ' ');
+      let n = 0;
+      const re = /color\s*:\s*(#[0-9a-fA-F]{3,8})/g;
+      let m;
+      while ((m = re.exec(code))) {
+        const ink = m[1].toLowerCase();
+        if (ink === '#fff' || ink === '#ffffff') continue;   // white on a fill is the documented rule
+        /* Only flag it when a THEMED ground is declared nearby — a hardcoded ink on a hardcoded background is
+           a self-consistent (if unthemed) pair, and lumping the two together would make the count meaningless. */
+        const around = code.slice(Math.max(0, m.index - NEAR), m.index + NEAR);
+        if (/background\s*:\s*(var\(|linear-gradient\([^)]*var\()/.test(around)) n++;
+      }
+      if (n) bad[name] = n;
+    });
+  const total = Object.values(bad).reduce((a, b) => a + b, 0);
+  if (total) {
+    warn(total + ' hardcoded text colours on a var() background — one half moves with the theme, the other '
+      + 'does not: ' + Object.entries(bad).sort((x, y) => y[1] - x[1]).slice(0, 6).map(([k, v]) => k + ':' + v).join(', '));
+  } else pass('every text colour on a themed ground is itself a token');
+}
+
 console.log('\n== GUARD ==  ' + hard + ' failure(s) · ' + soft + ' warning(s)');
 process.exit(hard ? 1 : 0);

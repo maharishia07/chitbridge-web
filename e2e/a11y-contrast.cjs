@@ -112,6 +112,28 @@ const ACCENTS = ['--blue', '--ok', '--prog', '--disp', '--purple', '--gold'];
 const GREYS = ['--grey', '--grey-2', '--grey-3', '--grey-4'];
 /* The row states. A reader is guaranteed to be looking at the selected row, so muted text must survive on it. */
 const ROWS = ['--card', '--hover', '--sel-2', '--picked'];
+/**
+ * ⭐⭐ A TINT IS HALF OF A PAIR, NOT A DECORATION — and this list is the half the tool was missing.
+ *
+ * Athi, 2026-08-18, looking at the Legend's Work patterns tab: *"the colour seems to be something that we
+ * haven't caught."* He was right, and the miss was structural rather than a slip: every accent check above
+ * measures against `--card`, so the one surface these colours are actually PRINTED ON — their own tint — was
+ * never measured at all. `--ok-tint` exists precisely so `--ok-2` text can sit on it; that is why nine
+ * near-identical pale blues were collapsed into one token in the first place.
+ *
+ * Every status chip in the product rides on this pairing: done, disputed, in progress, every count badge. The
+ * first run found 9 failures including --warn-2 at 3.33:1 in Vibrant and --blue-2 at 3.51:1 in Dark. Nobody had
+ * reported those either — a chip is small and easy to squint past, which is exactly why it needs measuring
+ * instead of looking at.
+ */
+const TINT_PAIRS = [
+  ['--blue-tint-bg', '--blue-2'], ['--ok-tint', '--ok-2'], ['--danger-tint', '--disp'],
+  ['--warn-tint', '--warn-2'], ['--purple-tint', '--purple-2'], ['--neutral-tint', '--grey'],
+  /* ⚠️ THERE ARE TWO BLUE TINTS AND THEY ARE USED DIFFERENTLY — --blue-tint is the pale CALLOUT ground and
+     --blue-tint-bg is the chip ground. Checking only one left the other unmeasured, which is how a chip at
+     4.06:1 survived on the Legend's Work patterns tab until someone looked at it. */
+  ['--blue-tint', '--blue'],
+];
 
 let failures = 0, checks = 0;
 const lines = [];
@@ -175,6 +197,13 @@ Object.keys(THEMES).forEach((key) => {
        body bar would rule out every usable accent and leave a grey product. */
     const on = v('--on-' + a.slice(2)) || '#ffffff';
     check(key, a + ' as fill, its ink on it', ratio(on, c), LARGE, 'button labels');
+  });
+
+  /* The tints, against the ink they exist to carry — see the note on TINT_PAIRS. */
+  TINT_PAIRS.forEach(([tint, ink]) => {
+    const bg = v(tint), fg = v(ink);
+    if (!bg || !fg) return;
+    check(key, ink + ' on ' + tint, ratio(fg, bg), TEXT, 'status chips');
   });
 
   /* ⚠️ 1.4.11 IS A FAILURE ONLY WHERE THE THEME PROMISED IT. Our --line is a hairline DIVIDER between rows and
