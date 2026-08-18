@@ -127,7 +127,7 @@ function dispOpp(d){ var p=disputeParties(d); return p.length?p.map(function(x){
 function dispOptGroup(list, label){
   if(!list.length) return '';
   return '<optgroup label="'+label+'">'+list.map(function(d){
-    return '<option value="'+d.dispute_id+'"'+(String(UI.dispSel)===String(d.dispute_id)?' selected':'')+'>'+esc(cap(d.category||'')+' · with '+dispOpp(d)+' · '+(d.status==='open'?'● open':'✓ resolved'))+'</option>';
+    return '<option value="'+esc(d.dispute_id)+'"'+(String(UI.dispSel)===String(d.dispute_id)?' selected':'')+'>'+esc(cap(d.category||'')+' · with '+dispOpp(d)+' · '+(d.status==='open'?'● open':'✓ resolved'))+'</option>';
   }).join('')+'</optgroup>';
 }
 /* the DETAIL dropdown (always shown when disputes exist) + the overlay when one is picked */

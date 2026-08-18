@@ -361,7 +361,7 @@ function acDetailHTML(){ const x=UI.acDet;
       <label class="fl">Display name</label><input class="inp" id="ac_ename" value="${esc(x.name)}">
       <label class="fl">Role</label><input class="inp" id="ac_erole" value="${esc(x.role||'')}" placeholder="e.g. Dispatch, Accounts">
       <label class="fl">Hat (only Act / Manager can be assigned work)</label><select class="inp" id="ac_ehat" style="max-width:240px">${['act','manager','audit','mis','view_only'].map(h=>'<option value="'+h+'"'+(x.hat===h?' selected':'')+'>'+hatLabel(h)+'</option>').join('')}</select>
-      <label class="fl">Leave-cover delegate (covers auto-assigned work while on leave)</label><select class="inp" id="ac_edel" style="max-width:240px"><option value="">— none —</option>${(UI.acts||[]).filter(a=>a.id!==x.id && hatAssignable(a.hat)).map(a=>'<option value="'+a.id+'"'+(x.del===a.id?' selected':'')+'>'+esc(a.name)+'</option>').join('')}</select>
+      <label class="fl">Leave-cover delegate (covers auto-assigned work while on leave)</label><select class="inp" id="ac_edel" style="max-width:240px"><option value="">— none —</option>${(UI.acts||[]).filter(a=>a.id!==x.id && hatAssignable(a.hat)).map(a=>'<option value="'+esc(a.id)+'"'+(x.del===a.id?' selected':'')+'>'+esc(a.name)+'</option>').join('')}</select>
       <label class="fl">Max concurrent tasks</label><input class="inp" id="ac_emax" inputmode="numeric" value="${x.max||''}" style="width:120px">
       <label class="fl">Phone</label><input class="inp" id="ac_ephone" value="${esc(x.phone||'')}" placeholder="optional">
       <div class="err" id="ac_ederr" style="margin-top:8px"></div>

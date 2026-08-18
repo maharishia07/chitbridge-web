@@ -1822,7 +1822,11 @@ function localeSettingsHTML(){
   var cur = (function(){ try { return localStorage.getItem('cb_locale') || ''; } catch(_) { return ''; } })();
   var sel = function(id, list, val, fn){
     return '<select class="inp" data-testid="' + id + '" onchange="' + fn + '(this.value)">'
-      + list.map(function(o){ return '<option value="' + o[0] + '"' + (val === o[0] ? ' selected' : '') + '>' + esc(o[1]) + '</option>'; }).join('')
+      /* ⚠️ ESCAPE THE VALUE TOO, not only the label. `o[0]` lands inside `value="…"` — an unescaped quote
+         there closes the attribute and everything after it becomes markup. Every list passed here today is
+         ours or the engine's, so nothing is exploitable right now; that is precisely why it would survive
+         until the day someone passes a list built from stored data, which is one edit away on this screen. */
+      + list.map(function(o){ return '<option value="' + esc(o[0]) + '"' + (val === o[0] ? ' selected' : '') + '>' + esc(o[1]) + '</option>'; }).join('')
       + '</select>';
   };
   var card = function(inner){ return '<div style="' + _CARD + '">' + inner + '</div>'; };
@@ -1850,7 +1854,10 @@ function localeSettingsHTML(){
      year. Where the engine will not supply one, a short list beats an empty select. */
   var tzCur = (function(){ try { return localStorage.getItem('cb_tz') || ''; } catch(_) { return ''; } })();
   var tzAll = CBLocale.zones();
-  var tzOpts = [['', 'Follow this device — ' + CBLocale.timezone()]].concat(
+  /* ⚠️ esc() — the zone comes from localStorage (and, via b165, from a row another device wrote), so it is not
+     ours to trust. Every OTHER render of it on this screen was escaped; this one label was not, which is exactly
+     how one gets missed: the value LOOKS like a constant because it usually reads "Asia/Kolkata". */
+  var tzOpts = [['', 'Follow this device — ' + esc(CBLocale.timezone())]].concat(
     (tzAll.length ? tzAll : ['Asia/Kolkata','Asia/Dubai','Asia/Riyadh','Europe/London','Europe/Berlin','America/New_York','UTC'])
       .map(function(z){ return [z, z.split('/').join(' / ')]; }));
 
