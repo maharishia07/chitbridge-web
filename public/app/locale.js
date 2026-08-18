@@ -114,8 +114,73 @@
       var t = base + '-u-' + u.join('-');
       try { new Intl.NumberFormat(t); return t; } catch (_) { return base; }
     },
-    setExt: function (k, v) { set('cb_' + k, v || ''); L.apply(); },
+    setExt: function (k, v) { set('cb_' + k, v || ''); L.apply(); L.push(); },
     getExt: function (k) { return get('cb_' + k, ''); },
+
+    /* ══ THE CHOICE BELONGS TO THE PERSON, NOT THE BROWSER (b165) ═════════════════════════════════════════════
+     *
+     * ⚠️ Everything above stores to localStorage, which is keyed by BROWSER PROFILE. On its own that means the
+     * same person sees two different products on their phone and their laptop, and clearing site data reverts an
+     * Arabic reader to English left-to-right — the product becoming unreadable on a device they have not yet
+     * visited. So the same six values also live on the identity row, and these two functions keep them in step.
+     *
+     * ⚠️ LOCAL STAYS THE FAST PATH, DELIBERATELY. The cache is read synchronously at boot, before any network
+     * call, so the first paint is already in the reader's language — there is no flash of English. The server
+     * value arrives later and only matters when it DIFFERS, which is exactly the new-device case.
+     */
+    KEYS: ['lang', 'locale', 'nu', 'hc', 'ca', 'fw'],
+
+    /** Read the local answer as the object the API stores. Absent values stay absent — '' means "use default". */
+    prefs: function () {
+      var out = {};
+      L.KEYS.forEach(function (k) { var v = get('cb_' + k, ''); if (v) out[k] = v; });
+      return out;
+    },
+
+    /**
+     * Seed from the server. Returns true if anything actually changed, so the caller can re-render ONLY then —
+     * an unconditional re-render on every boot would undo work in progress for no reason.
+     *
+     * ⚠️ THE SERVER WINS, AND THAT IS THE WHOLE FEATURE. This is the moment a new device learns who is reading.
+     * Preferring the local cache here would mean a fresh browser keeps its blank default and the person's real
+     * choice never arrives — which is the defect, not the fix.
+     *
+     * ⚠️ EXCEPT WHEN THE SERVER HAS NOTHING. An empty object is "never chosen", not "chose the default", so a
+     * reader who set their language before b165 ran keeps it instead of having it wiped by an empty row.
+     */
+    hydrate: function (prefs) {
+      if (!prefs || typeof prefs !== 'object') return false;
+      var incoming = 0;
+      L.KEYS.forEach(function (k) { if (prefs[k]) incoming++; });
+      if (!incoming) return false;
+
+      var changed = false;
+      L.KEYS.forEach(function (k) {
+        var was = get('cb_' + k, ''), now = String(prefs[k] || '');
+        if (was !== now) { set('cb_' + k, now); changed = true; }
+      });
+      if (changed) L.apply();
+      return changed;
+    },
+
+    /**
+     * Send the local answer up. Debounced, because the picker fires on every `change` and someone trying three
+     * formats to see which they like should cost one write, not three.
+     *
+     * ⚠️ FIRE AND FORGET, ON PURPOSE. The setting has ALREADY applied locally and the screen has already
+     * re-rendered; the person can see it worked. Surfacing a failure here would contradict what is on screen. It
+     * is registered in OUTBOX_KEYS, so offline it queues and replays on reconnect rather than being lost — and
+     * before b165 runs the API replies {pending:true}, which is equally nothing to report.
+     */
+    push: function () {
+      if (L._t) { try { clearTimeout(L._t); } catch (_) {} }
+      L._t = setTimeout(function () {
+        try {
+          if (typeof root.api !== 'function' || !(root.SESSION && root.SESSION.token)) return;
+          root.api('savePrefs', { body: L.prefs() }).catch(function () {});
+        } catch (_) {}
+      }, 400);
+    },
 
     /**
      * ⚠️⚠️ THE WEEKEND IS NOT SATURDAY AND SUNDAY, and for a TRADE platform that is load-bearing rather than
@@ -148,8 +213,8 @@
     /** 'rtl' or 'ltr' — derived from the language, never from the locale. */
     dir: function () { return RTL[String(L.lang()).slice(0, 2)] ? 'rtl' : 'ltr'; },
 
-    setLang: function (v) { set('cb_lang', v); L.apply(); },
-    setLocale: function (v) { set('cb_locale', v); L.apply(); },
+    setLang: function (v) { set('cb_lang', v); L.apply(); L.push(); },
+    setLocale: function (v) { set('cb_locale', v); L.apply(); L.push(); },
 
     /** Stamp the document so CSS and screen readers both know. The 378 logical properties do the rest. */
     apply: function () {

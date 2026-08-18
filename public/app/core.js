@@ -128,6 +128,7 @@ const OUTBOX_KEYS = new Set([
   'actorBreak','actorStatus','actorPinReset','actorDelegate','assign','unassign','actorEdit',
   'resolveDispute',
   'saveProfile','shopStatus','saveSettings','vaultSave','profileSave',
+  'savePrefs',      // b165 — idempotent whole-object overwrite of one's own preferences; the caller ignores the body
   'connRespond','netApprove','netDecline','netSuspend','netResume','netDisconnect',
   'supDel','supPatch','prodDel','prodEdit','folderRename','folderDelete','folderMove',
   'connectorDelete','connectorConnToggle',

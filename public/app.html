@@ -38,7 +38,7 @@
    * there too — a fill sits on paper or white, so more contrast is strictly better. Checked before changing:
    * there is no role in which a lighter value was the right one.
    */
-  :root{--ink:#0F2E3D;--blue:#3F66A6;--blue-d:#345488;--gold:#C9A86A;--gold-soft:#F7F1E4;--gold-line:#E8D9BC;--paper:#FAF8F4;--card:#fff;--line:#E7E2D8;--grey:#61666c;--ok:#27794c;--prog:#7d6126;--disp:#b4453f;--shadow:0 1px 2px rgba(15,46,61,.05),0 12px 34px rgba(15,46,61,.08)}
+  :root{--ink:#0F2E3D;--blue:#3F66A6;--blue-d:#345488;--gold:#C9A86A;--gold-soft:#F7F1E4;--gold-line:#E8D9BC;--paper:#FAF8F4;--card:#fff;--line:#E7E2D8;--grey:#494F56;--ok:#27794c;--prog:#7d6126;--disp:#b4453f;--shadow:0 1px 2px rgba(15,46,61,.05),0 12px 34px rgba(15,46,61,.08)}
   /**
    * ⭐⭐ THE SECOND COLOUR LAYER (2026-08-17) — the semantic colours the app actually uses, beyond the 14 originals.
    *
@@ -57,7 +57,20 @@
    */
   :root{
     --ink-2:#3a4048;                                  /* secondary body text */
-    --grey-2:#6a707a; --grey-3:#8a929e; --grey-4:#9aa3a7;
+    /**
+     * ⚠️⚠️ MEASURED, NOT CHOSEN BY EYE — and the old values FAILED. app.html was carrying --grey-3 at 3.14:1
+     * and --grey-4 at 2.57:1 against a white card, and both are used at --fs-1, the SMALLEST size in the app
+     * (69 uses of --grey-4 alone). WCAG 1.4.3 asks 4.5:1 there. So every timestamp, hint and secondary count in
+     * every LIGHT theme was below the bar — the dark theme was retuned this way in an earlier pass and the light
+     * base never was, which is why the same complaint kept coming back on light screens only.
+     *
+     * ⚠️ THE RAMP HAD TO COMPRESS, and that is a real trade rather than a free win. Muted text must clear 4.5:1
+     * on the DARKEST ground it can land on — a tinted selected row, not the white card — and that ceiling is
+     * about #61666c. Four steps below it cannot also be far apart. So the hierarchy these greys express is now
+     * carried by a narrower band: still ordered, still four distinct steps, all legible. Keeping them spread
+     * would have meant keeping two of them unreadable, which is not a hierarchy anyone can see either.
+     */
+    --grey-2:#545A61; --grey-3:#5D636A; --grey-4:#646A72;
     --blue-2:#2c5aa0;                                 /* the stronger blue: headings, active chips */
     --blue-tint:#eef3fb; --blue-tint-line:#cfe0f4;    /* the pale blue callout + its border */
     --ok-2:#2c7a43; --ok-3:#2f8f5b;                   /* the two other greens */
@@ -145,7 +158,7 @@
      *     hover 1.103 (grey 5.25)   sel-2 1.170 (grey 4.95)   picked 1.254 (grey 4.62)
      * Dark has far more headroom and takes bigger steps; see the dark theme.
      */
-    --hover:#F1F4F8; --sel-2:#E6EEF8; --picked:#DAE7F6;
+    --hover:#F1F4F8; --sel-2:#E6EEF8; --picked:#E0EBF8;
   }
   /* ⭐ TYPE · SPACING · RADIUS TOKENS (2026-08-16, backlog 26). Athi, after asking whether the font work was
      page-by-page: *"backlog type and spacing tokens and you can work autonomously later."*
@@ -1400,6 +1413,7 @@ const EP = {
   resolveDispute:  {m:"PUT",  p:"/api/chits/:id/disputes/:disputeId/resolve", ok:"✓"},  // {resolution_note}
   me:              {m:"GET",   p:"/api/entities/me",             ok:"✓"},
   saveProfile:     {m:"PATCH", p:"/api/entities/profile",        ok:"✓"},  // {gstn,address,business_status}
+  savePrefs:       {m:"PATCH", p:"/api/entities/me/locale",       ok:"✓"},  // b165 · the PERSON's localisation choice, not the business's
   getSettings:     {m:"GET",   p:"/api/actors/settings",         ok:"✓"},
   saveSettings:    {m:"PUT",   p:"/api/actors/settings",         ok:"✓"},
   /* `entitySearch` likewise — declared again further down, which is the definition that actually applied. */
@@ -2404,7 +2418,7 @@ var THEMES = {
                foreign element pasted onto the theme — the row states have to belong to the palette they sit in.
                `picked` is deliberately softer than sand's natural next step: #E7DCC6 looked right and put --grey
                at 4.26:1, so the GROUND yields to the text, never the other way round. */
-            '--hover':'#F7F2E8', '--sel-2':'#EFE7D6', '--picked':'#EBE2CE' } },
+            '--hover':'#F7F2E8', '--sel-2':'#F1EADC', '--picked':'#F0E9DA' } },  /* ⚠️ lifted a step: the old #EBE2CE was the darkest ground in the whole product and alone set the ceiling for the muted greys everywhere */
   /**
    * ⭐ VIBRANT — the same layout, stronger accents. For a counter screen in daylight where the muted palette
    * washes out. ⚠️ Only the ACCENTS move; the ground stays near-white, because raising both is how a screen
@@ -2413,8 +2427,8 @@ var THEMES = {
   vibrant:{ name: 'Vibrant', dot: '#1F5FD0', vars: {
             '--paper':'#FBFCFE', '--card':'#ffffff', '--line':'#D8E0EA',
             '--blue':'#1F5FD0', '--blue-d':'#164AA8', '--blue-2':'#1B4FB5',
-            '--ok':'#0F8A4A', '--ok-2':'#0F8A4A', '--ok-3':'#17A45C',
-            '--disp':'#D6392E', '--disp-2':'#B32C23', '--prog':'#B3730B',
+            '--ok':'#0F8749', '--ok-2':'#0F8A4A', '--ok-3':'#17A45C',
+            '--disp':'#D6392E', '--disp-2':'#B32C23', '--prog':'#A4690A',
             '--warn-2':'#B3730B', '--purple':'#6B3FE0', '--purple-2':'#5A2FC4',
             '--blue-tint':'#E8F0FE', '--blue-tint-line':'#BBD3F7',
             '--gold':'#E0A82E', '--gold-soft':'#FDF4E0', '--gold-line':'#F0DCA8' } },
@@ -2426,8 +2440,8 @@ var THEMES = {
    */
   flowery:{ name: 'Flowery', dot: '#F6EAF0', vars: {
             '--paper':'#FBF3F6', '--card':'#FFFCFD', '--line':'#EBD9E2',
-            '--ink':'#3A2430', '--ink-2':'#5A3A48', '--grey':'#6E5560',
-            '--grey-2':'#7C626D', '--grey-3':'#9A8590', '--grey-4':'#B09CA6',
+            '--ink':'#3A2430', '--ink-2':'#5A3A48', '--grey':'#513E47',
+            '--grey-2':'#5A4750', '--grey-3':'#5F5258', '--grey-4':'#665A60',
             '--blue':'#8A4E8F', '--blue-d':'#6F3E74', '--blue-2':'#7A4480',
             '--blue-tint':'#F7EDF7', '--blue-tint-line':'#E4CDE6',
             '--gold':'#D79A5B', '--gold-soft':'#FBF0E6', '--gold-line':'#EED9C2',
@@ -2472,14 +2486,14 @@ var THEMES = {
                "this line is less important than that one" built on them would have started lying. Four distinct
                steps, still ordered, all now clearing 4.5:1. Collapsing them onto one legible grey would fix
                contrast by deleting the hierarchy the greys exist to express. */
-            '--grey':'#A8B2BE', '--grey-2':'#9DA7B3', '--grey-3':'#949EAA', '--grey-4':'#8A94A0',
+            '--grey':'#D4D9DF', '--grey-2':'#C5CBD2', '--grey-3':'#B7BEC6', '--grey-4':'#ABB3BB',
             '--blue':'#5A87D8', '--blue-d':'#7BA2E4', '--blue-2':'#4E79C8',
             '--blue-tint':'#1E2A3C', '--blue-tint-line':'#31445F',
             '--gold':'#D4B074', '--gold-soft':'#2A2418', '--gold-line':'#463A22',
             '--ok':'#2E9E5E', '--ok-2':'#2E9E5E', '--ok-3':'#3BB06E',
             '--prog':'#B07F20', '--warn-2':'#B07F20', '--warn-3':'#C08F35',
-            '--disp':'#E05A50', '--disp-2':'#C9463D',
-            '--purple':'#8A72E4', '--purple-2':'#7A62D4',
+            '--disp':'#E15E54', '--disp-2':'#C9463D',
+            '--purple':'#8E77E5', '--purple-2':'#7A62D4',
             /* ⚠️ The chrome stays DARK and gains a touch of separation from the page, rather than inverting
                with --ink. In light themes the nav is darker than the page; in dark it must be lighter, or the
                navigation dissolves into the background and the shell loses its edges. */
@@ -2514,7 +2528,7 @@ var THEMES = {
   slate:  { name: 'Slate',   dot: '#1D2A2C', scheme: 'dark', vars: {
             '--paper':'#101418', '--card':'#191E24', '--line':'#2B323A',
             '--ink':'#E7EBEF', '--ink-2':'#C6CDD4',
-            '--grey':'#A7B1BA', '--grey-2':'#9CA6B0', '--grey-3':'#939DA7', '--grey-4':'#8A939D',
+            '--grey':'#C9D0D5', '--grey-2':'#BCC3C9', '--grey-3':'#AEB6BD', '--grey-4':'#A4ABB2',
             '--blue':'#2E9E96', '--blue-d':'#45B3AB', '--blue-2':'#278A83',
             '--blue-tint':'#16292C', '--blue-tint-line':'#27453F',
             '--gold':'#D4B074', '--gold-soft':'#262117', '--gold-line':'#423A24',
@@ -2549,7 +2563,7 @@ var THEMES = {
   azure:  { name: 'Azure',   dot: '#1857B8', vars: {
             '--paper':'#EDF3FB', '--card':'#ffffff', '--line':'#CDDCEF',
             '--ink':'#0D2440', '--ink-2':'#2B4568',
-            '--grey':'#4F5A63', '--grey-2':'#5B6670', '--grey-3':'#6C7681', '--grey-4':'#7C858F',
+            '--grey':'#3D454C', '--grey-2':'#464E56', '--grey-3':'#4F575F', '--grey-4':'#585E66',
             '--blue':'#1857B8', '--blue-d':'#11408C', '--blue-2':'#1550A8',
             '--blue-tint':'#E4EDFA', '--blue-tint-line':'#BFD4EF',
             '--gold':'#C08A2E', '--gold-soft':'#FAF2E2', '--gold-line':'#E8D6B4',
@@ -2561,7 +2575,7 @@ var THEMES = {
   ruby:   { name: 'Ruby',    dot: '#A81F4A', vars: {
             '--paper':'#FBEFF0', '--card':'#FFFAFA', '--line':'#EBD3D7',
             '--ink':'#33161C', '--ink-2':'#5A3038',
-            '--grey':'#63505A', '--grey-2':'#6F5B65', '--grey-3':'#816C77', '--grey-4':'#927D88',
+            '--grey':'#4A3B43', '--grey-2':'#54444C', '--grey-3':'#5D4D55', '--grey-4':'#64555D',
             '--blue':'#A81F4A', '--blue-d':'#84163A', '--blue-2':'#961B42',
             '--blue-tint':'#F8E6EB', '--blue-tint-line':'#E7C2CE',
             '--gold':'#B8862F', '--gold-soft':'#FAF1E4', '--gold-line':'#E6D3B6',
@@ -2571,6 +2585,143 @@ var THEMES = {
             '--disp':'#B4453F', '--disp-2':'#93332E',
             '--purple':'#7A4BC0', '--purple-2':'#663CA4',
             '--hover':'#F9E8EA', '--sel-2':'#F4DDE1', '--picked':'#EECBD2', '--sel':'#EECBD2' } },
+
+  /* ══════════════════════════════════════════════════════════════════════════════════════════════════════════
+   * ⭐⭐ THE ACCESSIBILITY THEMES — designed for a specific need, and SAYING SO.
+   *
+   * Athi, 2026-08-18: *"can we build theme related to special needs so it can be spelt loud and clear?"*
+   *
+   * ⚠️⚠️ THE FIRST THING TO UNDERSTAND IS THAT "ACCESSIBLE" IS NOT ONE SETTING. High Contrast and Soft Paper
+   * below are OPPOSITES — one pushes text to pure black on pure white, the other deliberately refuses to. Both
+   * are correct, for different people. A reader with low vision needs maximum separation; a reader with visual
+   * stress or dyslexia is often made WORSE by it, because high-contrast black on white increases the glare and
+   * the letter-swimming they are already fighting. A single "accessibility mode" button would have to pick one
+   * of those two people and fail the other. That is why this is a set of NAMED themes and not a switch.
+   *
+   * ⚠️ EACH THEME DECLARES THE LEVEL IT MEETS, AND THE DECLARATION IS TESTED. `a11y.level` is read by
+   * e2e/a11y-contrast.cjs, which computes every pairing and fails if a claim does not hold. A card that tells
+   * someone with low vision "AAA — 7:1" is making a promise on their behalf, and a promise made by eye is a
+   * guess with a standard's name on it: nobody can look at #3A4046 on white and know whether it is 6.8 or 7.2.
+   *
+   * ⚠️ COLOUR-VISION IS NOT FIXED BY CHANGING THE BACKGROUND. The Colour Vision theme changes the SEMANTICS —
+   * the green/red pair carrying "done" and "disputed" — because that pair is exactly what a colour-blind reader
+   * cannot separate. Its replacements are not chosen by eye either: they are the Okabe–Ito colour-universal
+   * palette, published for this purpose and already standard in scientific figures. Adopting it beats inventing
+   * our own eight colours and hoping.
+   * ══════════════════════════════════════════════════════════════════════════════════════════════════════════ */
+
+  hc:     { name: 'High Contrast', dot: '#000000',
+            a11y: { level:'AAA', forWho:'low vision',
+                    standard:'WCAG 2.2 AAA (1.4.6) — 7:1 body text',
+                    says:'Maximum separation. Pure black on white, heavier rules, darker accents.' },
+            vars: {
+            '--paper':'#FFFFFF', '--card':'#FFFFFF', '--line':'#4A5158',
+            '--ink':'#000000', '--ink-2':'#0D1114',
+            /* All four clear 7:1 on the DEEPEST row state, not merely on the card. */
+            '--grey':'#22272C', '--grey-2':'#2B3036', '--grey-3':'#34393F', '--grey-4':'#3C4248',
+            '--blue':'#0B3C8C', '--blue-d':'#082E6D', '--blue-2':'#0B3C8C',
+            '--blue-tint':'#EAF0FA', '--blue-tint-line':'#4A5158',
+            '--gold':'#7A5F1E', '--gold-soft':'#FFFFFF', '--gold-line':'#4A5158',
+            '--ok':'#0A5A30', '--ok-2':'#0A5A30', '--ok-3':'#0A5A30',
+            '--prog':'#5A4200', '--warn-2':'#5A4200', '--warn-3':'#5A4200',
+            '--disp':'#941410', '--disp-2':'#941410',
+            '--purple':'#4B2A8C', '--purple-2':'#4B2A8C',
+            '--blue-tint-bg':'#EAF0FA', '--ok-tint':'#E6F3EB', '--danger-tint':'#FBEBEA',
+            '--warn-tint':'#F6EFDC', '--purple-tint':'#EFEBFA', '--neutral-tint':'#EFF2F5',
+            '--hover':'#F2F5F8', '--sel-2':'#E8EDF2', '--picked':'#DEE5EC',
+            '--on-gold':'#FFFFFF' } },
+
+  hcdark: { name: 'High Contrast Dark', dot: '#FFFFFF', scheme: 'dark',
+            a11y: { level:'AAA', forWho:'light sensitivity together with low vision',
+                    standard:'WCAG 2.2 AAA (1.4.6) — 7:1 body text',
+                    says:'The same separation without the glare — for photophobia, migraine and eye strain.' },
+            vars: {
+            '--paper':'#000000', '--card':'#000000', '--line':'#B6BEC6',
+            '--ink':'#FFFFFF', '--ink-2':'#F0F2F4',
+            '--grey':'#EDEFF1', '--grey-2':'#DCDFE3', '--grey-3':'#CBCFD4', '--grey-4':'#BCC1C7',
+            '--blue':'#8FBEFF', '--blue-d':'#A9CFFF', '--blue-2':'#8FBEFF',
+            '--blue-tint':'#0B1520', '--blue-tint-line':'#B6BEC6',
+            '--gold':'#F0C24E', '--gold-soft':'#14100A', '--gold-line':'#B6BEC6',
+            '--ok':'#6EE39C', '--ok-2':'#6EE39C', '--ok-3':'#6EE39C',
+            '--prog':'#F5C95A', '--warn-2':'#F5C95A', '--warn-3':'#F5C95A',
+            '--disp':'#FFA9A0', '--disp-2':'#FFA9A0',
+            '--purple':'#CBB3FF', '--purple-2':'#CBB3FF',
+            '--blue-tint-bg':'#0B1520', '--ok-tint':'#07160D', '--danger-tint':'#1A0908',
+            '--warn-tint':'#14100A', '--purple-tint':'#110C1C', '--neutral-tint':'#0D0F11',
+            '--chrome':'#000000', '--chrome-ink':'#EDEFF1', '--chrome-on':'#FFFFFF',
+            '--sel':'#1F2933', '--hover':'#141414', '--sel-2':'#1C1C1C', '--picked':'#262626',
+            /* ⚠️ THE PAIRED INK FLIPS TO BLACK, and this is the half that is easy to miss. Every accent here is
+               LIGHT so it can clear 7:1 against a black page — which means a white button label on those fills
+               would be invisible. A theme that overrides a surface must override its partner in the same edit;
+               that rule is what this block exists to honour. */
+            '--on-blue':'#000000', '--on-ok':'#000000', '--on-prog':'#000000', '--on-warn':'#000000',
+            '--on-disp':'#000000', '--on-danger':'#000000', '--on-purple':'#000000',
+            '--on-accent':'#000000', '--on-gold':'#000000',
+            '--shadow':'0 0 0 1px #B6BEC6' } },
+
+  cvd:    { name: 'Colour Vision', dot: '#0072B2',
+            a11y: { level:'AA', forWho:'colour blindness — red/green and blue/yellow',
+                    standard:'Okabe–Ito colour-universal palette · WCAG 2.2 AA',
+                    says:'Replaces the green/red status pair with blue and orange, which stay distinct under every type of colour blindness.' },
+            vars: {
+            '--paper':'#F7F8F9', '--card':'#FFFFFF', '--line':'#767F88',
+            '--ink':'#101418', '--ink-2':'#2B3138',
+            '--grey':'#3F464D', '--grey-2':'#484F57', '--grey-3':'#515861', '--grey-4':'#59616A',
+            /* ⭐ OKABE–ITO, darkened only as far as the contrast bars require — the HUES are the published ones.
+               Blue #0072B2 and vermillion #D55E00 are the pair that survives deuteranopia, protanopia AND
+               tritanopia; green-for-done with red-for-disputed is precisely the pair that does not. */
+            '--blue':'#005B8F', '--blue-d':'#00476F', '--blue-2':'#005B8F',
+            '--blue-tint':'#E4F0F7', '--blue-tint-line':'#A9CBDE',
+            '--gold':'#8A6100', '--gold-soft':'#FBF3E2', '--gold-line':'#D8C79E', '--on-gold':'#FFFFFF',
+            '--ok':'#00674B', '--ok-2':'#00674B', '--ok-3':'#00674B',
+            '--prog':'#8A5F00', '--warn-2':'#8A5F00', '--warn-3':'#8A5F00',
+            '--disp':'#A34700', '--disp-2':'#8A3C00',
+            '--purple':'#93447A', '--purple-2':'#93447A',
+            '--blue-tint-bg':'#E4F0F7', '--ok-tint':'#E0EFEA', '--danger-tint':'#F9EAE0',
+            '--warn-tint':'#F7EFDD', '--purple-tint':'#F3E9F0', '--neutral-tint':'#EEF1F4',
+            '--hover':'#F1F4F7', '--sel-2':'#E6EBF0', '--picked':'#DCE3EA' } },
+
+  calm:   { name: 'Calm', dot: '#8A9BA8',
+            a11y: { level:'AA', forWho:'migraine, sensory sensitivity, attention',
+                    standard:'WCAG 2.2 AA · reduced luminance and saturation',
+                    says:'Nothing shouts. Low saturation and low glare, for anyone who finds a bright screen tiring.' },
+            vars: {
+            '--paper':'#EFEFED', '--card':'#F8F8F6', '--line':'#7B7B76',
+            '--ink':'#23262A', '--ink-2':'#3B3F44',
+            '--grey':'#464B51', '--grey-2':'#4E535A', '--grey-3':'#565B62', '--grey-4':'#5C616A',
+            '--blue':'#456179', '--blue-d':'#374E61', '--blue-2':'#456179',
+            '--blue-tint':'#E7ECEF', '--blue-tint-line':'#C3CDD4',
+            '--gold':'#8A7642', '--gold-soft':'#F2EFE6', '--gold-line':'#D6CDB6',
+            '--ok':'#3D6B52', '--ok-2':'#3D6B52', '--ok-3':'#3D6B52',
+            '--prog':'#7A6438', '--warn-2':'#7A6438', '--warn-3':'#7A6438',
+            '--disp':'#8C4A45', '--disp-2':'#7A3F3A',
+            '--purple':'#5F5478', '--purple-2':'#5F5478',
+            '--blue-tint-bg':'#E7ECEF', '--ok-tint':'#E6EDE9', '--danger-tint':'#F0E7E6',
+            '--warn-tint':'#EFEBE1', '--purple-tint':'#EAE8EE', '--neutral-tint':'#EBEBE8',
+            '--hover':'#F2F2EF', '--sel-2':'#E8E8E4', '--picked':'#DEDEDA',
+            '--shadow':'0 1px 2px rgba(35,38,42,.04)' } },
+
+  softpaper:{ name: 'Soft Paper', dot: '#F6E8CE',
+            a11y: { level:'AA', forWho:'dyslexia and visual stress (Irlen)',
+                    standard:'WCAG 2.2 AA · tinted ground; contrast held BELOW maximum on purpose',
+                    says:'A warm tinted page instead of white. Black on white increases glare and letter-swimming for many dyslexic readers, so this deliberately does not maximise contrast.' },
+            vars: {
+            '--paper':'#F7EEDC', '--card':'#FCF6E9', '--line':'#877A62',
+            /* ⚠️ NOT #000000, AND THAT IS THE ENTIRE POINT OF THIS THEME. A soft dark brown on a tinted ground is
+               what the visual-stress reading supports; pure black on pure white is what it warns against. This
+               theme claims AA and stops there DELIBERATELY — pushing it to AAA would undo the reason it exists. */
+            '--ink':'#2E2721', '--ink-2':'#453B31',
+            '--grey':'#54483C', '--grey-2':'#5D5144', '--grey-3':'#665A4C', '--grey-4':'#6D6153',
+            '--blue':'#2F5B86', '--blue-d':'#24486B', '--blue-2':'#2F5B86',
+            '--blue-tint':'#E9EFF4', '--blue-tint-line':'#C2D2DF',
+            '--gold':'#8A6A2A', '--gold-soft':'#F6ECD6', '--gold-line':'#DCC9A4', '--on-gold':'#FFFFFF',
+            '--ok':'#3F6B45', '--ok-2':'#3F6B45', '--ok-3':'#3F6B45',
+            '--prog':'#7E5F1F', '--warn-2':'#7E5F1F', '--warn-3':'#7E5F1F',
+            '--disp':'#94413A', '--disp-2':'#7E362F',
+            '--purple':'#5F4A85', '--purple-2':'#5F4A85',
+            '--blue-tint-bg':'#E9EFF4', '--ok-tint':'#E9F0E8', '--danger-tint':'#F6E9E5',
+            '--warn-tint':'#F5EBD5', '--purple-tint':'#EDE9F2', '--neutral-tint':'#F2ECDF',
+            '--hover':'#F8F1E2', '--sel-2':'#F2E9D6', '--picked':'#EBE0C9' } },
 };
 /**
  * ⚠️ CAPTURED BEFORE ANY THEME IS APPLIED, and that timing is the whole trick.
@@ -2684,10 +2835,72 @@ function themePaletteHTML(){
     return "<div style=\"display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:6px\">" + keys.map(card).join("") + "</div>";
   };
   var head = function(x){ return "<div style=\"font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin:2px 0 5px\">" + x + "</div>"; };
-  var light = Object.keys(THEMES).filter(function(k){ return !DARK[k]; });
-  var dark  = Object.keys(THEMES).filter(function(k){ return DARK[k]; });
-  return head("Light") + grid(light) + "<div style=\"height:10px\"></div>" + head("Dark") + grid(dark);
+
+  /**
+   * ⭐⭐ THE ACCESSIBILITY THEMES SIT IN THE SAME PALETTE, in their own labelled group — NOT behind a separate
+   * "accessibility" menu. That placement is the decision, and it is deliberate:
+   *
+   * ⚠️ A SEPARATE MENU IS ONLY FINDABLE BY SOMEONE WHO ALREADY KNOWS TO LOOK FOR IT. The person who needs High
+   * Contrast is not necessarily someone who thinks of themselves as having a disability and goes hunting for an
+   * accessibility section — very often they are simply someone whose eyes are tired, or who is reading a phone
+   * in the sun, or who is 60. Putting these where everyone already goes to change the look means they get found
+   * by the people who need them, and it stops "accessible" reading as a separate lesser product.
+   *
+   * ⚠️ AND THEY ARE PRESENTED AS ROWS, NOT TILES. A 92px swatch can carry a name; it cannot carry "who this is
+   * for" and "which standard it meets", and those two lines ARE the feature. Athi, 2026-08-18: *"can we build
+   * theme related to special needs so it can be spelt loud and clear?"* — a swatch labelled only "Soft Paper"
+   * is not spelt out at all, and nobody would guess it exists for dyslexia and visual stress.
+   */
+  var a11yRow = function(k){
+    var t = THEMES[k], on = (k === cur), a = t.a11y || {};
+    var Q2 = String.fromCharCode(39);
+    return "<button type=\"button\" data-testid=\"theme-" + k + "\" onclick=\"themeSet(" + Q2 + k + Q2 + ")\""
+      + " aria-pressed=\"" + (on ? "true" : "false") + "\""
+      + " style=\"" + themeVarsStyle(k)
+      + ";box-sizing:border-box;width:100%;cursor:pointer;display:flex;gap:9px;align-items:flex-start;text-align:start;font:inherit;"
+      + "padding:8px 9px;margin-bottom:6px;border-radius:9px;background:var(--card);color:var(--on-card);border:2px solid "
+      + (on ? "var(--blue)" : "var(--line)") + "\">"
+      /* the swatch: page, card, rule and one accent — enough to judge the theme from */
+      + "<span style=\"flex:0 0 auto;width:30px;height:30px;border-radius:6px;background:var(--paper);border:1px solid var(--line);display:flex;align-items:center;justify-content:center\">"
+      +   "<span style=\"width:16px;height:16px;border-radius:3px;background:var(--card);border:1px solid var(--line);display:flex;align-items:center;justify-content:center\">"
+      +     "<span style=\"width:8px;height:2px;border-radius:1px;background:var(--blue)\"></span></span></span>"
+      + "<span style=\"min-width:0;flex:1\">"
+      +   "<span style=\"display:flex;align-items:center;gap:6px;flex-wrap:wrap\">"
+      +     "<b style=\"font-size:var(--fs-2);color:var(--on-card)\">" + esc(t.name) + "</b>"
+      /* ⚠️ THE LEVEL IS A BADGE, AND IT IS TESTED. e2e/a11y-contrast.cjs computes every pairing in this theme
+         and fails if the level shown here does not hold — so this badge is a measurement, not a label. */
+      +     "<span style=\"font-size:9px;font-weight:800;letter-spacing:.04em;background:var(--ok-tint);color:var(--ok-2);border-radius:4px;padding:1px 5px\">WCAG " + esc(a.level || "AA") + "</span>"
+      +     (on ? "<span style=\"margin-inline-start:auto;color:var(--blue);font-weight:800\">✓</span>" : "")
+      +   "</span>"
+      +   "<span style=\"display:block;font-size:var(--fs-1);color:var(--on-card);margin-top:2px;line-height:1.45\">" + esc(a.says || "") + "</span>"
+      +   "<span style=\"display:block;font-size:var(--fs-1);color:var(--grey);margin-top:3px;line-height:1.45\">"
+      +     "<b>For:</b> " + esc(a.forWho || "") + " &nbsp;·&nbsp; " + esc(a.standard || "")
+      +   "</span>"
+      + "</span></button>";
+  };
+
+  var isA11y = function(k){ return !!THEMES[k].a11y; };
+  var light = Object.keys(THEMES).filter(function(k){ return !DARK[k] && !isA11y(k); });
+  var dark  = Object.keys(THEMES).filter(function(k){ return DARK[k] && !isA11y(k); });
+  var needs = Object.keys(THEMES).filter(isA11y);
+
+  return head("Light") + grid(light)
+    + "<div style=\"height:10px\"></div>" + head("Dark") + grid(dark)
+    + "<div style=\"height:12px\"></div>"
+    + head("Designed for specific needs")
+    /* ⚠️ SAYING WHY THE SET IS NOT ONE BUTTON. High Contrast and Soft Paper are opposites — maximum separation
+       helps low vision and actively harms many dyslexic readers. Without this line the pair looks like an
+       inconsistency; with it, it is the point. */
+    + "<div style=\"font-size:var(--fs-1);color:var(--grey);line-height:1.5;margin:0 0 7px\">"
+    +   "There is no single accessible setting — <b>High Contrast</b> and <b>Soft Paper</b> are opposites, and each is right for different eyes. "
+    +   "Every level shown below is measured, not claimed."
+    + "</div>"
+    + needs.map(a11yRow).join("")
+    + "<div style=\"font-size:var(--fs-1);color:var(--grey);line-height:1.5;margin-top:4px\">"
+    +   "Standard: <b>WCAG 2.2</b> (contrast 1.4.3 / 1.4.6 / 1.4.11) · colour-blind palette: <b>Okabe–Ito</b>."
+    + "</div>";
 }
+
 
 /**
  * ⚠️ SIGN OUT NOW ASKS FIRST (Athi, 2026-08-18: *"by mistake if you click signout it goes right away, possibly
@@ -2948,6 +3161,10 @@ function _renderApp(){
       // is no longer cosmetic: it tells someone they are typing INR while the server records USD.
       // `unwrap()` returns j.entity for /me, so read both shapes.
       var _e=(r&&r.entity)||r||{}; if(_e.currency_code) SESSION.currency=_e.currency_code; if(_e.country) SESSION.country=_e.country;
+      // b165 — THE READER'S OWN LOCALISATION, arriving from their identity row rather than from this browser.
+      // hydrate() returns true only when the server actually differs from the local cache, so the common case
+      // (same device, same person) costs nothing; the new-device case repaints once, in their language.
+      try{ if(_e.locale_prefs && CBLocale.hydrate(_e.locale_prefs)) bgRenderApp(); }catch(_){}
       if(SESSION.role!=='customer')ensureCap('dispute').then(bgRenderApp).catch(function(){}); bgRenderApp(); }).catch(function(e){ SESSION.capabilities=SESSION.capabilities||[]; }); }
   const _cap = CAP_OF[UI.nav];
   const _capLoading = !!(_cap && !CAP_LOADED[_cap]);
