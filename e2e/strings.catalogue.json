@@ -1,0 +1,2190 @@
+[
+ {
+  "msgid": "2-way",
+  "source": "app/cap-legend.js:463"
+ },
+ {
+  "msgid": "7-layer block above",
+  "source": "app/cap-admin.js:1883"
+ },
+ {
+  "msgid": "A · IDENTITY + ORDER",
+  "source": "app/cap-network.js:1826"
+ },
+ {
+  "msgid": "A chit is a shared record",
+  "source": "app/cap-admin.js:1565"
+ },
+ {
+  "msgid": "A dash means",
+  "source": "app/cap-folders.js:521"
+ },
+ {
+  "msgid": "A message is a",
+  "source": "app/cap-intake.js:41"
+ },
+ {
+  "msgid": "A Pi on the rail in one drop —",
+  "source": "app/cap-workforce.js:300"
+ },
+ {
+  "msgid": "A price is",
+  "source": "app/cap-network.js:2260"
+ },
+ {
+  "msgid": "A–Z",
+  "source": "app.html:4680"
+ },
+ {
+  "msgid": "A+",
+  "source": "app/cap-legend.js:662"
+ },
+ {
+  "msgid": "A−",
+  "source": "app/cap-legend.js:661"
+ },
+ {
+  "msgid": "Aa",
+  "source": "app.html:2822"
+ },
+ {
+  "msgid": "Accept this pause",
+  "source": "app/cap-service.js:99"
+ },
+ {
+  "msgid": "Access / engagement",
+  "source": "app/cap-workforce.js:390"
+ },
+ {
+  "msgid": "Achieves",
+  "source": "app/cap-legend.js:580"
+ },
+ {
+  "msgid": "Act",
+  "source": "app.html:7464"
+ },
+ {
+  "msgid": "ACT",
+  "source": "app.html:7428"
+ },
+ {
+  "msgid": "Act — does the work (assignable)",
+  "source": "app.html:4416"
+ },
+ {
+  "msgid": "Act / Manager",
+  "source": "app.html:4417"
+ },
+ {
+  "msgid": "Add",
+  "source": "app.html:4676"
+ },
+ {
+  "msgid": "Add a data type",
+  "source": "app/cap-catalogue.js:636"
+ },
+ {
+  "msgid": "Add a new answer, or press",
+  "source": "app/cap-admin.js:1916"
+ },
+ {
+  "msgid": "Add an item",
+  "source": "app/cap-catalogue.js:405"
+ },
+ {
+  "msgid": "Add as a new column",
+  "source": "app.html:6232"
+ },
+ {
+  "msgid": "Add everything to the cart",
+  "source": "app.html:5191"
+ },
+ {
+  "msgid": "Add product",
+  "source": "app.html:6689"
+ },
+ {
+  "msgid": "Add these",
+  "source": "app/cap-categories.js:214"
+ },
+ {
+  "msgid": "Add these columns",
+  "source": "app.html:6172"
+ },
+ {
+  "msgid": "Add to cart",
+  "source": "app/cap-network.js:1945"
+ },
+ {
+  "msgid": "Add to the queue",
+  "source": "app/cap-intake.js:75"
+ },
+ {
+  "msgid": "Address",
+  "source": "app/cap-admin.js:824"
+ },
+ {
+  "msgid": "Advanced search",
+  "source": "app.html:7461"
+ },
+ {
+  "msgid": "Affordable",
+  "source": "app/cap-legend.js:463"
+ },
+ {
+  "msgid": "After offers",
+  "source": "app/catalogue-ui.js:420"
+ },
+ {
+  "msgid": "Age",
+  "source": "app/cap-admin.js:444"
+ },
+ {
+  "msgid": "Agreed value of these chits",
+  "source": "app/cap-folders.js:433"
+ },
+ {
+  "msgid": "All",
+  "source": "app.html:7143"
+ },
+ {
+  "msgid": "All Task",
+  "source": "app.html:6816"
+ },
+ {
+  "msgid": "Allowances",
+  "source": "app/cap-admin.js:853"
+ },
+ {
+  "msgid": "Alternative units",
+  "source": "app/cap-network.js:1833"
+ },
+ {
+  "msgid": "Amount",
+  "source": "app.html:7462"
+ },
+ {
+  "msgid": "Amount (high → low)",
+  "source": "app.html:7151"
+ },
+ {
+  "msgid": "Answer",
+  "source": "app.html:8161"
+ },
+ {
+  "msgid": "Any",
+  "source": "app.html:7464"
+ },
+ {
+  "msgid": "Apply",
+  "source": "app.html:5789"
+ },
+ {
+  "msgid": "Apply changes",
+  "source": "app/cap-network.js:555"
+ },
+ {
+  "msgid": "As easy as a mailbox",
+  "source": "app/cap-legend.js:317"
+ },
+ {
+  "msgid": "Ask",
+  "source": "app.html:1751"
+ },
+ {
+  "msgid": "Ask the assistant",
+  "source": "app.html:4406"
+ },
+ {
+  "msgid": "Asking every store…",
+  "source": "app/cap-network.js:1079"
+ },
+ {
+  "msgid": "Assign",
+  "source": "app.html:8320"
+ },
+ {
+  "msgid": "Assign all",
+  "source": "app.html:8340"
+ },
+ {
+  "msgid": "Assign this line",
+  "source": "app/cap-chit2.js:699"
+ },
+ {
+  "msgid": "ASSIGN TO",
+  "source": "app/cap-chit2.js:701"
+ },
+ {
+  "msgid": "Assigned",
+  "source": "app.html:6817"
+ },
+ {
+  "msgid": "Assignment model",
+  "source": "app/cap-admin.js:1586"
+ },
+ {
+  "msgid": "Attachments ·",
+  "source": "app.html:4028"
+ },
+ {
+  "msgid": "Audit — review only",
+  "source": "app.html:4416"
+ },
+ {
+  "msgid": "Auto-return tasks on short break",
+  "source": "app/cap-admin.js:1589"
+ },
+ {
+  "msgid": "Availability",
+  "source": "app.html:6656"
+ },
+ {
+  "msgid": "Available",
+  "source": "app.html:7718"
+ },
+ {
+  "msgid": "Away",
+  "source": "app.html:2368"
+ },
+ {
+  "msgid": "B · KNOWN AS",
+  "source": "app/cap-network.js:1837"
+ },
+ {
+  "msgid": "Back",
+  "source": "app/cap-service.js:180"
+ },
+ {
+  "msgid": "Base unit",
+  "source": "app/cap-network.js:1831"
+ },
+ {
+  "msgid": "Basics",
+  "source": "app/cap-admin.js:851"
+ },
+ {
+  "msgid": "Beta fills · per-entity",
+  "source": "app.html:1841"
+ },
+ {
+  "msgid": "Bind",
+  "source": "app/cap-admin.js:1815"
+ },
+ {
+  "msgid": "Branch name",
+  "source": "app.html:4625"
+ },
+ {
+  "msgid": "Branches are created",
+  "source": "app.html:4629"
+ },
+ {
+  "msgid": "Build",
+  "source": "app/cap-network.js:2707"
+ },
+ {
+  "msgid": "Build preview",
+  "source": "app.html:8375"
+ },
+ {
+  "msgid": "C · STANDARDS",
+  "source": "app/cap-network.js:1846"
+ },
+ {
+  "msgid": "Calendar",
+  "source": "app/cap-admin.js:1539"
+ },
+ {
+  "msgid": "Came in from outside the rail",
+  "source": "app.html:7976"
+ },
+ {
+  "msgid": "Cancel",
+  "source": "app.html:4419"
+ },
+ {
+  "msgid": "Capture",
+  "source": "app/cap-catalogue.js:738"
+ },
+ {
+  "msgid": "CAPTURED, NOT ENFORCED",
+  "source": "app/cap-network.js:1792"
+ },
+ {
+  "msgid": "Catalogue",
+  "source": "app/cap-categories.js:368"
+ },
+ {
+  "msgid": "Catalogue setup",
+  "source": "app/cap-definitions.js:71"
+ },
+ {
+  "msgid": "Categories",
+  "source": "app.html:6350"
+ },
+ {
+  "msgid": "Categorise",
+  "source": "app/cap-categories.js:368"
+ },
+ {
+  "msgid": "Category / tag",
+  "source": "app.html:5283"
+ },
+ {
+  "msgid": "CC",
+  "source": "app.html:4009"
+ },
+ {
+  "msgid": "CERTIFICATIONS",
+  "source": "app/cap-network.js:2933"
+ },
+ {
+  "msgid": "Chain",
+  "source": "app/cap-network.js:1905"
+ },
+ {
+  "msgid": "Change",
+  "source": "app.html:4039"
+ },
+ {
+  "msgid": "Change PIN",
+  "source": "app/cap-admin.js:935"
+ },
+ {
+  "msgid": "Change status",
+  "source": "app.html:7068"
+ },
+ {
+  "msgid": "Change visibility →",
+  "source": "app/cap-network.js:2894"
+ },
+ {
+  "msgid": "Channel",
+  "source": "app/cap-legend.js:463"
+ },
+ {
+  "msgid": "Check",
+  "source": "app.html:6082"
+ },
+ {
+  "msgid": "Check compliance",
+  "source": "app.html:1784"
+ },
+ {
+  "msgid": "Check your",
+  "source": "app/cap-readiness.js:455"
+ },
+ {
+  "msgid": "Checking…",
+  "source": "app.html:1794"
+ },
+ {
+  "msgid": "Chit",
+  "source": "app/cap-admin.js:444"
+ },
+ {
+  "msgid": "Chits by state",
+  "source": "app/cap-admin.js:366"
+ },
+ {
+  "msgid": "Choose a PIN",
+  "source": "app.html:2258"
+ },
+ {
+  "msgid": "Choose your setup",
+  "source": "app.html:2217"
+ },
+ {
+  "msgid": "Choose your vertical",
+  "source": "app.html:2143"
+ },
+ {
+  "msgid": "Classification schemes",
+  "source": "app/cap-categories.js:409"
+ },
+ {
+  "msgid": "Clear",
+  "source": "app.html:1877"
+ },
+ {
+  "msgid": "Clear all",
+  "source": "app.html:7285"
+ },
+ {
+  "msgid": "Close",
+  "source": "app.html:1644"
+ },
+ {
+  "msgid": "CLOSE",
+  "source": "app.html:7428"
+ },
+ {
+  "msgid": "Closed",
+  "source": "app.html:2367"
+ },
+ {
+  "msgid": "Co-assists",
+  "source": "app.html:4623"
+ },
+ {
+  "msgid": "Code",
+  "source": "app.html:7152"
+ },
+ {
+  "msgid": "Colour combinations",
+  "source": "app.html:1830"
+ },
+ {
+  "msgid": "Committed · someone said yes",
+  "source": "app/cap-admin.js:351"
+ },
+ {
+  "msgid": "Compose",
+  "source": "app.html:8129"
+ },
+ {
+  "msgid": "Computed",
+  "source": "app/cap-network.js:2010"
+ },
+ {
+  "msgid": "Confirm new PIN",
+  "source": "app/cap-admin.js:934"
+ },
+ {
+  "msgid": "Context",
+  "source": "app.html:8162"
+ },
+ {
+  "msgid": "Context governs →",
+  "source": "app/cap-network.js:1864"
+ },
+ {
+  "msgid": "Continue to register →",
+  "source": "app.html:2145"
+ },
+ {
+  "msgid": "Convert",
+  "source": "app/cap-network.js:1810"
+ },
+ {
+  "msgid": "Copy",
+  "source": "app/cap-network.js:366"
+ },
+ {
+  "msgid": "Cost",
+  "source": "app/cap-folders.js:367"
+ },
+ {
+  "msgid": "Counter",
+  "source": "app.html:7145"
+ },
+ {
+  "msgid": "Counterparties",
+  "source": "app/cap-admin.js:455"
+ },
+ {
+  "msgid": "Counterparty reliability",
+  "source": "app/cap-admin.js:463"
+ },
+ {
+  "msgid": "Create",
+  "source": "app.html:4419"
+ },
+ {
+  "msgid": "Create an entity",
+  "source": "app.html:2268"
+ },
+ {
+  "msgid": "Create one",
+  "source": "app.html:6350"
+ },
+ {
+  "msgid": "Crew",
+  "source": "app/cap-legend.js:598"
+ },
+ {
+  "msgid": "Current PIN",
+  "source": "app/cap-admin.js:932"
+ },
+ {
+  "msgid": "Customer access",
+  "source": "app/cap-admin.js:906"
+ },
+ {
+  "msgid": "Customer sees",
+  "source": "app/cap-network.js:1952"
+ },
+ {
+  "msgid": "D · PRICING",
+  "source": "app/cap-network.js:1863"
+ },
+ {
+  "msgid": "Date",
+  "source": "app.html:7463"
+ },
+ {
+  "msgid": "Decide",
+  "source": "app/cap-network.js:1810"
+ },
+ {
+  "msgid": "Declared only",
+  "source": "app/cap-readiness.js:228"
+ },
+ {
+  "msgid": "DEEPEN THE CATALOGUE",
+  "source": "app/cap-catalogue.js:1122"
+ },
+ {
+  "msgid": "Default",
+  "source": "app.html:7149"
+ },
+ {
+  "msgid": "Default / overflow assignee",
+  "source": "app/cap-admin.js:1894"
+ },
+ {
+  "msgid": "Default assignee",
+  "source": "app/cap-connector.js:143"
+ },
+ {
+  "msgid": "Default max tasks per actor",
+  "source": "app/cap-admin.js:1587"
+ },
+ {
+  "msgid": "Delete",
+  "source": "app.html:6868"
+ },
+ {
+  "msgid": "Deliver to",
+  "source": "app.html:5207"
+ },
+ {
+  "msgid": "Delivered",
+  "source": "app/cap-chit2.js:416"
+ },
+ {
+  "msgid": "Delivery",
+  "source": "app/cap-dispute.js:277"
+ },
+ {
+  "msgid": "Description",
+  "source": "app.html:6406"
+ },
+ {
+  "msgid": "Details",
+  "source": "app.html:5958"
+ },
+ {
+  "msgid": "Details ›",
+  "source": "app.html:5589"
+ },
+ {
+  "msgid": "Device id",
+  "source": "app/cap-connector.js:137"
+ },
+ {
+  "msgid": "Devices",
+  "source": "app/cap-workforce.js:336"
+ },
+ {
+  "msgid": "Dismiss",
+  "source": "app/cap-intake.js:111"
+ },
+ {
+  "msgid": "Display name",
+  "source": "app.html:4411"
+ },
+ {
+  "msgid": "Dispute",
+  "source": "app/cap-dispute.js:109"
+ },
+ {
+  "msgid": "Disputed only",
+  "source": "app.html:7147"
+ },
+ {
+  "msgid": "Disputes sit here as a",
+  "source": "app/cap-admin.js:446"
+ },
+ {
+  "msgid": "Docs",
+  "source": "app/cap-dispute.js:277"
+ },
+ {
+  "msgid": "Document (PDF/image · ≤ 6 MB)",
+  "source": "app/cap-readiness.js:485"
+ },
+ {
+  "msgid": "Document evidence",
+  "source": "app/cap-readiness.js:232"
+ },
+ {
+  "msgid": "Documented on the rail",
+  "source": "app/cap-readiness.js:226"
+ },
+ {
+  "msgid": "Done",
+  "source": "app.html:5751"
+ },
+ {
+  "msgid": "DUE",
+  "source": "app/cap-chit2.js:706"
+ },
+ {
+  "msgid": "Duty / Break",
+  "source": "app/cap-admin.js:936"
+ },
+ {
+  "msgid": "Each action is a governed",
+  "source": "app.html:1647"
+ },
+ {
+  "msgid": "Each distributor sets its",
+  "source": "app/cap-catalogue.js:330"
+ },
+ {
+  "msgid": "Each item is a",
+  "source": "app/cap-legend.js:320"
+ },
+ {
+  "msgid": "Each new store gets a",
+  "source": "app/cap-network.js:814"
+ },
+ {
+  "msgid": "Edit",
+  "source": "app/cap-admin.js:1916"
+ },
+ {
+  "msgid": "Edit — co-assist profile",
+  "source": "app/cap-workforce.js:360"
+ },
+ {
+  "msgid": "Editing the rules saves a",
+  "source": "app/cap-definitions.js:602"
+ },
+ {
+  "msgid": "Email",
+  "source": "app/cap-intake.js:71"
+ },
+ {
+  "msgid": "Encrypted at rest",
+  "source": "app/cap-admin.js:77"
+ },
+ {
+  "msgid": "Encryption not configured",
+  "source": "app/cap-admin.js:78"
+ },
+ {
+  "msgid": "End this pause",
+  "source": "app/cap-service.js:103"
+ },
+ {
+  "msgid": "Esc",
+  "source": "app.html:2016"
+ },
+ {
+  "msgid": "Every column is placed",
+  "source": "app.html:6248"
+ },
+ {
+  "msgid": "Every line",
+  "source": "app/cap-chit2.js:333"
+ },
+ {
+  "msgid": "Explore",
+  "source": "app.html:4526"
+ },
+ {
+  "msgid": "Export to CSV from Excel / Tally",
+  "source": "app/cap-catalogue.js:727"
+ },
+ {
+  "msgid": "EXPOSED",
+  "source": "app/cap-traceability.js:97"
+ },
+ {
+  "msgid": "Ext / Int pri",
+  "source": "app.html:7427"
+ },
+ {
+  "msgid": "Extends a",
+  "source": "app/cap-legend.js:580"
+ },
+ {
+  "msgid": "External email",
+  "source": "app/cap-connector.js:144"
+ },
+ {
+  "msgid": "External priority",
+  "source": "app.html:4021"
+ },
+ {
+  "msgid": "Feed back",
+  "source": "app/cap-network.js:1905"
+ },
+ {
+  "msgid": "FEED BACK",
+  "source": "app/cap-network.js:1923"
+ },
+ {
+  "msgid": "Fields",
+  "source": "app/cap-catalogue.js:596"
+ },
+ {
+  "msgid": "FIELDS TO STORE",
+  "source": "app/cap-catalogue.js:627"
+ },
+ {
+  "msgid": "First day of week",
+  "source": "app/cap-admin.js:1542"
+ },
+ {
+  "msgid": "FOLDERS",
+  "source": "app/cap-folders.js:53"
+ },
+ {
+  "msgid": "For a",
+  "source": "app/cap-connector.js:117"
+ },
+ {
+  "msgid": "Forecast · nobody has committed",
+  "source": "app/cap-admin.js:356"
+ },
+ {
+  "msgid": "From customer",
+  "source": "app/cap-network.js:2009"
+ },
+ {
+  "msgid": "FUNCTIONAL (FR)",
+  "source": "app/cap-legend.js:389"
+ },
+ {
+  "msgid": "Gateway created",
+  "source": "app/cap-workforce.js:196"
+ },
+ {
+  "msgid": "Get started →",
+  "source": "app.html:2136"
+ },
+ {
+  "msgid": "Got it",
+  "source": "app.html:4446"
+ },
+ {
+  "msgid": "Gov travels",
+  "source": "app/cap-legend.js:476"
+ },
+ {
+  "msgid": "GOV-01-Help",
+  "source": "app/cap-admin.js:1917"
+ },
+ {
+  "msgid": "Governance (RAID)",
+  "source": "app.html:8256"
+ },
+ {
+  "msgid": "Governance → Constitution →",
+  "source": "app/cap-admin.js:502"
+ },
+ {
+  "msgid": "Governed",
+  "source": "app/cap-legend.js:463"
+ },
+ {
+  "msgid": "GS1 GTIN/SKU",
+  "source": "app/cap-catalogue.js:240"
+ },
+ {
+  "msgid": "GSTIN",
+  "source": "app/cap-admin.js:823"
+ },
+ {
+  "msgid": "Hat (what they do)",
+  "source": "app.html:4416"
+ },
+ {
+  "msgid": "Have",
+  "source": "app/cap-network.js:2358"
+ },
+ {
+  "msgid": "Health",
+  "source": "app/cap-workforce.js:337"
+ },
+ {
+  "msgid": "High",
+  "source": "app.html:7465"
+ },
+ {
+  "msgid": "High Contrast",
+  "source": "app.html:2895"
+ },
+ {
+  "msgid": "Hour cycle",
+  "source": "app/cap-admin.js:1536"
+ },
+ {
+  "msgid": "How customers order",
+  "source": "app/cap-catalogue.js:613"
+ },
+ {
+  "msgid": "How it works",
+  "source": "app/cap-workforce.js:96"
+ },
+ {
+  "msgid": "How the store sells",
+  "source": "app/cap-catalogue.js:1118"
+ },
+ {
+  "msgid": "How this looks",
+  "source": "app/cap-admin.js:1552"
+ },
+ {
+  "msgid": "How work arrives",
+  "source": "app/cap-admin.js:459"
+ },
+ {
+  "msgid": "How your catalogue is",
+  "source": "app/cap-catsetup.js:561"
+ },
+ {
+  "msgid": "I am here to…",
+  "source": "app.html:2141"
+ },
+ {
+  "msgid": "I don’t know",
+  "source": "app.html:6607"
+ },
+ {
+  "msgid": "I have the codes — done",
+  "source": "app/cap-network.js:857"
+ },
+ {
+  "msgid": "Identity",
+  "source": "app/cap-network.js:1905"
+ },
+ {
+  "msgid": "IDs are identity",
+  "source": "app/cap-admin.js:806"
+ },
+ {
+  "msgid": "Import",
+  "source": "app.html:6083"
+ },
+ {
+  "msgid": "Import rows",
+  "source": "app/cap-catalogue.js:729"
+ },
+ {
+  "msgid": "In PIM terms this is the",
+  "source": "app/cap-catsetup.js:455"
+ },
+ {
+  "msgid": "In progress",
+  "source": "app/cap-admin.js:329"
+ },
+ {
+  "msgid": "Info-only",
+  "source": "app/cap-legend.js:476"
+ },
+ {
+  "msgid": "Intake",
+  "source": "app/cap-admin.js:1848"
+ },
+ {
+  "msgid": "Invite ready",
+  "source": "app/cap-workforce.js:172"
+ },
+ {
+  "msgid": "Issue a new sign-in code",
+  "source": "app/cap-network.js:2799"
+ },
+ {
+  "msgid": "It is",
+  "source": "app/cap-definitions.js:750"
+ },
+ {
+  "msgid": "Item",
+  "source": "app/cap-folders.js:367"
+ },
+ {
+  "msgid": "Item data comes three ways —",
+  "source": "app/cap-catalogue.js:1125"
+ },
+ {
+  "msgid": "Items are",
+  "source": "app/cap-catalogue.js:1137"
+ },
+ {
+  "msgid": "Its one-drop installer is",
+  "source": "app/cap-workforce.js:198"
+ },
+ {
+  "msgid": "Keep — exception classes",
+  "source": "app/cap-connector.js:142"
+ },
+ {
+  "msgid": "Keyboard",
+  "source": "app.html:2013"
+ },
+ {
+  "msgid": "Kind",
+  "source": "app.html:7142"
+ },
+ {
+  "msgid": "L1–5",
+  "source": "app/cap-legend.js:651"
+ },
+ {
+  "msgid": "Language",
+  "source": "app/cap-admin.js:1522"
+ },
+ {
+  "msgid": "Latest on top",
+  "source": "app.html:7755"
+ },
+ {
+  "msgid": "Lean",
+  "source": "app.html:8256"
+ },
+ {
+  "msgid": "Leave cover",
+  "source": "app/cap-workforce.js:392"
+ },
+ {
+  "msgid": "Leave it out",
+  "source": "app.html:6225"
+ },
+ {
+  "msgid": "Legend / key",
+  "source": "app.html:7423"
+ },
+ {
+  "msgid": "List is built by",
+  "source": "app/cap-network.js:1920"
+ },
+ {
+  "msgid": "Live",
+  "source": "app/cap-catsetup.js:488"
+ },
+ {
+  "msgid": "Live source-check",
+  "source": "app/cap-readiness.js:231"
+ },
+ {
+  "msgid": "Loading commercial cover…",
+  "source": "app/cap-readiness.js:412"
+ },
+ {
+  "msgid": "Loading connection string…",
+  "source": "app/cap-connector.js:114"
+ },
+ {
+  "msgid": "Loading record",
+  "source": "app.html:7856"
+ },
+ {
+  "msgid": "Loading the network…",
+  "source": "app/cap-network.js:1554"
+ },
+ {
+  "msgid": "Loading your batches…",
+  "source": "app/cap-traceability.js:75"
+ },
+ {
+  "msgid": "Loading…",
+  "source": "app.html:1861"
+ },
+ {
+  "msgid": "Login",
+  "source": "app/cap-workforce.js:397"
+ },
+ {
+  "msgid": "Login — pending",
+  "source": "app/cap-workforce.js:400"
+ },
+ {
+  "msgid": "Login — pending invite",
+  "source": "app/cap-workforce.js:399"
+ },
+ {
+  "msgid": "LOOP",
+  "source": "app/cap-network.js:1911"
+ },
+ {
+  "msgid": "MADE OF",
+  "source": "app/cap-network.js:1841"
+ },
+ {
+  "msgid": "Mailbox",
+  "source": "app.html:3390"
+ },
+ {
+  "msgid": "Make these changes",
+  "source": "app/cap-network.js:558"
+ },
+ {
+  "msgid": "Make this a chit →",
+  "source": "app/cap-intake.js:109"
+ },
+ {
+  "msgid": "Manager — acts + assigns/manages",
+  "source": "app.html:4416"
+ },
+ {
+  "msgid": "Map fields to your",
+  "source": "app/cap-catalogue.js:718"
+ },
+ {
+  "msgid": "Margin",
+  "source": "app/cap-chit2.js:758"
+ },
+ {
+  "msgid": "Mark responded",
+  "source": "app/cap-service.js:145"
+ },
+ {
+  "msgid": "Max concurrent tasks",
+  "source": "app/cap-workforce.js:365"
+ },
+ {
+  "msgid": "Max items per order",
+  "source": "app/cap-network.js:2083"
+ },
+ {
+  "msgid": "MDM golden records",
+  "source": "app/cap-catalogue.js:240"
+ },
+ {
+  "msgid": "Messages · latest first",
+  "source": "app/cap-dispute.js:208"
+ },
+ {
+  "msgid": "MIS",
+  "source": "app/cap-network.js:2187"
+ },
+ {
+  "msgid": "MIS — reports only",
+  "source": "app.html:4416"
+ },
+ {
+  "msgid": "Mode",
+  "source": "app/cap-admin.js:1889"
+ },
+ {
+  "msgid": "Move status",
+  "source": "app.html:7083"
+ },
+ {
+  "msgid": "Move to Trash",
+  "source": "app.html:7103"
+ },
+ {
+  "msgid": "My Task",
+  "source": "app.html:6816"
+ },
+ {
+  "msgid": "N/A",
+  "source": "app/cap-legend.js:652"
+ },
+ {
+  "msgid": "N/E",
+  "source": "app/cap-network.js:2772"
+ },
+ {
+  "msgid": "Name",
+  "source": "app/cap-categories.js:325"
+ },
+ {
+  "msgid": "Need",
+  "source": "app/cap-network.js:2359"
+ },
+ {
+  "msgid": "Needed by",
+  "source": "app.html:5205"
+ },
+ {
+  "msgid": "Network only",
+  "source": "app/cap-network.js:2607"
+ },
+ {
+  "msgid": "Neutral",
+  "source": "app/cap-legend.js:476"
+ },
+ {
+  "msgid": "New PIN",
+  "source": "app/cap-admin.js:933"
+ },
+ {
+  "msgid": "New product",
+  "source": "app.html:6689"
+ },
+ {
+  "msgid": "New rule",
+  "source": "app/cap-folders.js:645"
+ },
+ {
+  "msgid": "Next ›",
+  "source": "app/cap-catalogue.js:582"
+ },
+ {
+  "msgid": "No AI assists yet",
+  "source": "app/cap-workforce.js:78"
+ },
+ {
+  "msgid": "No IoT devices yet",
+  "source": "app/cap-workforce.js:300"
+ },
+ {
+  "msgid": "No matching business found",
+  "source": "app.html:4060"
+ },
+ {
+  "msgid": "No open disputes",
+  "source": "app/cap-admin.js:439"
+ },
+ {
+  "msgid": "No priority set yet",
+  "source": "app/cap-service.js:48"
+ },
+ {
+  "msgid": "Normal",
+  "source": "app.html:7465"
+ },
+ {
+  "msgid": "Not in the network model yet",
+  "source": "app.html:4633"
+ },
+ {
+  "msgid": "Not on for",
+  "source": "app/cap-network.js:2956"
+ },
+ {
+  "msgid": "Not set",
+  "source": "app.html:6575"
+ },
+ {
+  "msgid": "Note",
+  "source": "app.html:5209"
+ },
+ {
+  "msgid": "Note (what you are waiting for)",
+  "source": "app/cap-service.js:176"
+ },
+ {
+  "msgid": "Notes",
+  "source": "app.html:5284"
+ },
+ {
+  "msgid": "Nothing is created",
+  "source": "app/cap-network.js:1634"
+ },
+ {
+  "msgid": "Nothing on your rail yet — use",
+  "source": "app.html:8129"
+ },
+ {
+  "msgid": "Nothing overdue",
+  "source": "app/cap-admin.js:413"
+ },
+ {
+  "msgid": "Nothing waiting",
+  "source": "app/cap-intake.js:88"
+ },
+ {
+  "msgid": "Notified by",
+  "source": "app/cap-legend.js:598"
+ },
+ {
+  "msgid": "Notify me →",
+  "source": "app/cap-workforce.js:300"
+ },
+ {
+  "msgid": "Numbering system",
+  "source": "app/cap-admin.js:1533"
+ },
+ {
+  "msgid": "Off-rail inlets",
+  "source": "app/cap-network.js:2091"
+ },
+ {
+  "msgid": "Offer",
+  "source": "app/cap-catalogue.js:1032"
+ },
+ {
+  "msgid": "Offers applied",
+  "source": "app/catalogue-ui.js:418"
+ },
+ {
+  "msgid": "OK",
+  "source": "app.html:6112"
+ },
+ {
+  "msgid": "Okabe–Ito",
+  "source": "app.html:2900"
+ },
+ {
+  "msgid": "Oldest on top",
+  "source": "app.html:7755"
+ },
+ {
+  "msgid": "On the rail",
+  "source": "app/cap-network.js:2090"
+ },
+ {
+  "msgid": "One-time code",
+  "source": "app.html:4443"
+ },
+ {
+  "msgid": "Only",
+  "source": "app.html:7118"
+ },
+ {
+  "msgid": "Only have",
+  "source": "app/cap-catalogue.js:738"
+ },
+ {
+  "msgid": "Only lines with no price",
+  "source": "app/cap-chit2.js:334"
+ },
+ {
+  "msgid": "Open",
+  "source": "app.html:2366"
+ },
+ {
+  "msgid": "OPEN",
+  "source": "app.html:7428"
+ },
+ {
+  "msgid": "Open / download",
+  "source": "app.html:8463"
+ },
+ {
+  "msgid": "Open →",
+  "source": "app.html:4913"
+ },
+ {
+  "msgid": "Open ↗",
+  "source": "app/cap-admin.js:872"
+ },
+ {
+  "msgid": "Open chit",
+  "source": "app/cap-connector.js:73"
+ },
+ {
+  "msgid": "Open in compose →",
+  "source": "app.html:5243"
+ },
+ {
+  "msgid": "Open it in Co-assists →",
+  "source": "app/cap-workforce.js:199"
+ },
+ {
+  "msgid": "Open the gateway →",
+  "source": "app/cap-workforce.js:198"
+ },
+ {
+  "msgid": "Open the order",
+  "source": "app/cap-worklist.js:1075"
+ },
+ {
+  "msgid": "Or hand it to a partner",
+  "source": "app/cap-readiness.js:180"
+ },
+ {
+  "msgid": "Order",
+  "source": "app.html:4053"
+ },
+ {
+  "msgid": "Order from them",
+  "source": "app.html:5591"
+ },
+ {
+  "msgid": "ORIGIN",
+  "source": "app/cap-traceability.js:83"
+ },
+ {
+  "msgid": "Other",
+  "source": "app.html:6523"
+ },
+ {
+  "msgid": "OWNED",
+  "source": "app/cap-network.js:2669"
+ },
+ {
+  "msgid": "Parties",
+  "source": "app/cap-folders.js:367"
+ },
+ {
+  "msgid": "Passport →",
+  "source": "app.html:4775"
+ },
+ {
+  "msgid": "Path to confident validation",
+  "source": "app/cap-legend.js:490"
+ },
+ {
+  "msgid": "Pause",
+  "source": "app/cap-service.js:181"
+ },
+ {
+  "msgid": "Pause the clock",
+  "source": "app/cap-service.js:146"
+ },
+ {
+  "msgid": "Payment",
+  "source": "app/cap-dispute.js:277"
+ },
+ {
+  "msgid": "Peer",
+  "source": "app/cap-legend.js:463"
+ },
+ {
+  "msgid": "Phone",
+  "source": "app/cap-workforce.js:366"
+ },
+ {
+  "msgid": "Pick a",
+  "source": "app/cap-catalogue.js:706"
+ },
+ {
+  "msgid": "Pick a category",
+  "source": "app/cap-categories.js:343"
+ },
+ {
+  "msgid": "PIM",
+  "source": "app/cap-catalogue.js:240"
+ },
+ {
+  "msgid": "Place",
+  "source": "app/cap-network.js:2939"
+ },
+ {
+  "msgid": "PLACE",
+  "source": "app/cap-network.js:2936"
+ },
+ {
+  "msgid": "Place order",
+  "source": "app/cap-catalogue.js:1051"
+ },
+ {
+  "msgid": "Preferred",
+  "source": "app.html:5285"
+ },
+ {
+  "msgid": "Press",
+  "source": "app.html:2016"
+ },
+ {
+  "msgid": "Price",
+  "source": "app.html:5961"
+ },
+ {
+  "msgid": "Priority",
+  "source": "app.html:7465"
+ },
+ {
+  "msgid": "Priority (queue)",
+  "source": "app.html:7150"
+ },
+ {
+  "msgid": "Product (browse name)",
+  "source": "app/cap-network.js:1827"
+ },
+ {
+  "msgid": "Products",
+  "source": "app/cap-categories.js:357"
+ },
+ {
+  "msgid": "Profile",
+  "source": "app/cap-workforce.js:375"
+ },
+ {
+  "msgid": "Proposed, not evidence",
+  "source": "app.html:3979"
+ },
+ {
+  "msgid": "Publish an answer",
+  "source": "app/cap-admin.js:1911"
+ },
+ {
+  "msgid": "Published answers (",
+  "source": "app/cap-admin.js:1918"
+ },
+ {
+  "msgid": "Pull mode — coming soon",
+  "source": "app/cap-workforce.js:180"
+ },
+ {
+  "msgid": "Purpose",
+  "source": "app/cap-catalogue.js:1116"
+ },
+ {
+  "msgid": "PURPOSE",
+  "source": "app/cap-network.js:2801"
+ },
+ {
+  "msgid": "Push",
+  "source": "app/cap-workforce.js:180"
+ },
+ {
+  "msgid": "Put back on the shelf",
+  "source": "app/cap-categories.js:372"
+ },
+ {
+  "msgid": "Qty ▢",
+  "source": "app/cap-catalogue.js:1031"
+ },
+ {
+  "msgid": "Qty ▢ · your price ▢",
+  "source": "app/cap-catalogue.js:1032"
+ },
+ {
+  "msgid": "Quality",
+  "source": "app/cap-dispute.js:277"
+ },
+ {
+  "msgid": "Quantity",
+  "source": "app/cap-dispute.js:277"
+ },
+ {
+  "msgid": "Question",
+  "source": "app.html:8160"
+ },
+ {
+  "msgid": "Raise dispute",
+  "source": "app/cap-dispute.js:277"
+ },
+ {
+  "msgid": "Raise messages on this line",
+  "source": "app/cap-admin.js:1791"
+ },
+ {
+  "msgid": "Re-invite",
+  "source": "app.html:4444"
+ },
+ {
+  "msgid": "Reading data…",
+  "source": "app/core.js:74"
+ },
+ {
+  "msgid": "Reading the standards list…",
+  "source": "app/cap-definitions.js:673"
+ },
+ {
+  "msgid": "Reading their catalogue…",
+  "source": "app/cap-network.js:1525"
+ },
+ {
+  "msgid": "Reading your purpose",
+  "source": "app/cap-network.js:2014"
+ },
+ {
+  "msgid": "Reading your shelf…",
+  "source": "app/cap-definitions.js:864"
+ },
+ {
+  "msgid": "Reason",
+  "source": "app.html:8318"
+ },
+ {
+  "msgid": "Recipient ·",
+  "source": "app.html:4006"
+ },
+ {
+  "msgid": "Recipients ·",
+  "source": "app.html:4009"
+ },
+ {
+  "msgid": "Record an inbound message",
+  "source": "app/cap-intake.js:68"
+ },
+ {
+  "msgid": "Record clearance on the rail",
+  "source": "app/cap-readiness.js:492"
+ },
+ {
+  "msgid": "Reference",
+  "source": "app.html:6557"
+ },
+ {
+  "msgid": "Reference / number (optional)",
+  "source": "app/cap-readiness.js:487"
+ },
+ {
+  "msgid": "Register into network",
+  "source": "app.html:4633"
+ },
+ {
+  "msgid": "Registering as",
+  "source": "app.html:2112"
+ },
+ {
+  "msgid": "Reissue",
+  "source": "app/cap-connector.js:245"
+ },
+ {
+  "msgid": "Reject — the clock kept running",
+  "source": "app/cap-service.js:100"
+ },
+ {
+  "msgid": "Remove",
+  "source": "app.html:4776"
+ },
+ {
+  "msgid": "Rename",
+  "source": "app.html:6868"
+ },
+ {
+  "msgid": "Report it",
+  "source": "app.html:6666"
+ },
+ {
+  "msgid": "Requirements",
+  "source": "app/cap-network.js:1905"
+ },
+ {
+  "msgid": "REQUIREMENTS",
+  "source": "app/cap-network.js:1915"
+ },
+ {
+  "msgid": "Resolution",
+  "source": "app/cap-service.js:204"
+ },
+ {
+  "msgid": "Resolution note (required)",
+  "source": "app/cap-dispute.js:293"
+ },
+ {
+  "msgid": "Resolve",
+  "source": "app/cap-dispute.js:32"
+ },
+ {
+  "msgid": "Resource path",
+  "source": "app/cap-connector.js:138"
+ },
+ {
+  "msgid": "Retire",
+  "source": "app/cap-categories.js:374"
+ },
+ {
+  "msgid": "Retired",
+  "source": "app.html:6615"
+ },
+ {
+  "msgid": "Retry",
+  "source": "app/cap-connector.js:65"
+ },
+ {
+  "msgid": "RFC 7386 JSON Merge Patch",
+  "source": "app/cap-catalogue.js:240"
+ },
+ {
+  "msgid": "Rights",
+  "source": "app/cap-admin.js:852"
+ },
+ {
+  "msgid": "Role",
+  "source": "app/cap-workforce.js:362"
+ },
+ {
+  "msgid": "Rows",
+  "source": "app.html:6261"
+ },
+ {
+  "msgid": "Runs the real",
+  "source": "app/cap-connector.js:109"
+ },
+ {
+  "msgid": "Save",
+  "source": "app.html:5288"
+ },
+ {
+  "msgid": "Save auto-assign",
+  "source": "app/cap-admin.js:1896"
+ },
+ {
+  "msgid": "Save grouping",
+  "source": "app.html:6128"
+ },
+ {
+  "msgid": "Save item",
+  "source": "app/cap-catalogue.js:405"
+ },
+ {
+  "msgid": "Save profile",
+  "source": "app/cap-admin.js:828"
+ },
+ {
+  "msgid": "Save rule",
+  "source": "app/cap-folders.js:659"
+ },
+ {
+  "msgid": "Save settings",
+  "source": "app/cap-admin.js:1590"
+ },
+ {
+  "msgid": "Save storefront",
+  "source": "app/cap-admin.js:907"
+ },
+ {
+  "msgid": "Save vault",
+  "source": "app/cap-admin.js:91"
+ },
+ {
+  "msgid": "Saving…",
+  "source": "app.html:1854"
+ },
+ {
+  "msgid": "Searching every supplier",
+  "source": "app.html:5520"
+ },
+ {
+  "msgid": "See the full walkthrough →",
+  "source": "app/cap-workforce.js:32"
+ },
+ {
+  "msgid": "See what you have used in MIS →",
+  "source": "app/cap-admin.js:1045"
+ },
+ {
+  "msgid": "Select",
+  "source": "app.html:7284"
+ },
+ {
+  "msgid": "Select a chit",
+  "source": "app.html:8128"
+ },
+ {
+  "msgid": "Select a co-assist",
+  "source": "app/cap-workforce.js:349"
+ },
+ {
+  "msgid": "Select a customer",
+  "source": "app.html:5092"
+ },
+ {
+  "msgid": "Select a product",
+  "source": "app.html:6691"
+ },
+ {
+  "msgid": "Select a supplier",
+  "source": "app.html:5522"
+ },
+ {
+  "msgid": "Send",
+  "source": "app.html:8234"
+ },
+ {
+  "msgid": "Send ↔",
+  "source": "app/cap-dispute.js:219"
+ },
+ {
+  "msgid": "Send as",
+  "source": "app.html:4020"
+ },
+ {
+  "msgid": "Send code",
+  "source": "app/cap-connector.js:243"
+ },
+ {
+  "msgid": "Send offer",
+  "source": "app/cap-network.js:1947"
+ },
+ {
+  "msgid": "Send question",
+  "source": "app.html:4991"
+ },
+ {
+  "msgid": "Service",
+  "source": "app.html:7146"
+ },
+ {
+  "msgid": "Service clock",
+  "source": "app/cap-service.js:116"
+ },
+ {
+  "msgid": "ServiceNow",
+  "source": "app/cap-legend.js:485"
+ },
+ {
+  "msgid": "Set",
+  "source": "app/cap-catalogue.js:803"
+ },
+ {
+  "msgid": "SET HERE",
+  "source": "app/cap-network.js:2246"
+ },
+ {
+  "msgid": "Set on the",
+  "source": "app/cap-network.js:2934"
+ },
+ {
+  "msgid": "Set status",
+  "source": "app.html:6579"
+ },
+ {
+  "msgid": "Set your",
+  "source": "app/cap-catalogue.js:786"
+ },
+ {
+  "msgid": "Settings",
+  "source": "app/cap-catalogue.js:1016"
+ },
+ {
+  "msgid": "Settings → Policy flags",
+  "source": "app/cap-intake.js:53"
+ },
+ {
+  "msgid": "Shared · minted once",
+  "source": "app.html:1840"
+ },
+ {
+  "msgid": "Show everything",
+  "source": "app/cart-ui.js:695"
+ },
+ {
+  "msgid": "Shown — in this order",
+  "source": "app.html:7715"
+ },
+ {
+  "msgid": "Sign in",
+  "source": "app.html:2149"
+ },
+ {
+  "msgid": "Signs in as",
+  "source": "app/cap-network.js:2799"
+ },
+ {
+  "msgid": "Sits under",
+  "source": "app/cap-categories.js:328"
+ },
+ {
+  "msgid": "SMS",
+  "source": "app/cap-intake.js:71"
+ },
+ {
+  "msgid": "Soft Paper",
+  "source": "app.html:2895"
+ },
+ {
+  "msgid": "Sold by",
+  "source": "app/cap-catalogue.js:630"
+ },
+ {
+  "msgid": "Sort",
+  "source": "app.html:7148"
+ },
+ {
+  "msgid": "Speak status changes aloud",
+  "source": "app.html:7429"
+ },
+ {
+  "msgid": "Stage B",
+  "source": "app/cap-workforce.js:368"
+ },
+ {
+  "msgid": "Standard",
+  "source": "app.html:1781"
+ },
+ {
+  "msgid": "Start from a standard set",
+  "source": "app/cap-categories.js:216"
+ },
+ {
+  "msgid": "Start the clock",
+  "source": "app/cap-service.js:128"
+ },
+ {
+  "msgid": "State",
+  "source": "app.html:8143"
+ },
+ {
+  "msgid": "Status",
+  "source": "app.html:7464"
+ },
+ {
+  "msgid": "Store in CB",
+  "source": "app/cap-network.js:2011"
+ },
+ {
+  "msgid": "Storefront",
+  "source": "app/cap-admin.js:827"
+ },
+ {
+  "msgid": "Subject",
+  "source": "app.html:5203"
+ },
+ {
+  "msgid": "Subscribing to",
+  "source": "app/cap-workforce.js:180"
+ },
+ {
+  "msgid": "Suppliers 2",
+  "source": "app/cap-admin.js:446"
+ },
+ {
+  "msgid": "Suppliers on your list",
+  "source": "app/cap-admin.js:457"
+ },
+ {
+  "msgid": "System connected",
+  "source": "app/cap-workforce.js:202"
+ },
+ {
+  "msgid": "System feed",
+  "source": "app/cap-network.js:2008"
+ },
+ {
+  "msgid": "Tailor one",
+  "source": "app.html:2221"
+ },
+ {
+  "msgid": "Take back",
+  "source": "app/cap-chit2.js:417"
+ },
+ {
+  "msgid": "Tap",
+  "source": "app/cap-connector.js:57"
+ },
+ {
+  "msgid": "Task",
+  "source": "app.html:4053"
+ },
+ {
+  "msgid": "TASK",
+  "source": "app/cap-chit2.js:704"
+ },
+ {
+  "msgid": "Task-only signal chit",
+  "source": "app/cap-legend.js:550"
+ },
+ {
+  "msgid": "Tell me the",
+  "source": "app/cap-catalogue.js:619"
+ },
+ {
+  "msgid": "TEST",
+  "source": "app/cap-legend.js:389"
+ },
+ {
+  "msgid": "TEXT EDITED",
+  "source": "app/cap-network.js:2555"
+ },
+ {
+  "msgid": "The full governance stack —",
+  "source": "app/cap-legend.js:367"
+ },
+ {
+  "msgid": "The journeys that travel",
+  "source": "app/cap-legend.js:583"
+ },
+ {
+  "msgid": "The old screen showed",
+  "source": "app/cap-admin.js:361"
+ },
+ {
+  "msgid": "The per-entity toggles the",
+  "source": "app/cap-admin.js:1883"
+ },
+ {
+  "msgid": "The queue · oldest first",
+  "source": "app/cap-admin.js:443"
+ },
+ {
+  "msgid": "The threshold is the",
+  "source": "app/cap-admin.js:415"
+ },
+ {
+  "msgid": "THEIR USER ID",
+  "source": "app/cap-network.js:2794"
+ },
+ {
+  "msgid": "Them",
+  "source": "app/cap-legend.js:323"
+ },
+ {
+  "msgid": "Then run",
+  "source": "app/cap-workforce.js:198"
+ },
+ {
+  "msgid": "They are",
+  "source": "app.html:5616"
+ },
+ {
+  "msgid": "They have to accept it",
+  "source": "app/cap-network.js:2796"
+ },
+ {
+  "msgid": "They named a different price",
+  "source": "app.html:7956"
+ },
+ {
+  "msgid": "They sign in with this",
+  "source": "app.html:4417"
+ },
+ {
+  "msgid": "This",
+  "source": "app.html:8234"
+ },
+ {
+  "msgid": "This catalogue is",
+  "source": "app/cap-catalogue.js:235"
+ },
+ {
+  "msgid": "This category is",
+  "source": "app/cap-categories.js:354"
+ },
+ {
+  "msgid": "This changes the",
+  "source": "app/cap-network.js:554"
+ },
+ {
+  "msgid": "This is a positioning hypothesis",
+  "source": "app/cap-legend.js:445"
+ },
+ {
+  "msgid": "This is waiting on",
+  "source": "app/cap-service.js:178"
+ },
+ {
+  "msgid": "This issues a",
+  "source": "app/cap-connector.js:241"
+ },
+ {
+  "msgid": "This records the clearance as a",
+  "source": "app/cap-readiness.js:484"
+ },
+ {
+  "msgid": "Three peer tiles hid that",
+  "source": "app/cap-admin.js:367"
+ },
+ {
+  "msgid": "Tick the ones you trade in",
+  "source": "app/cap-catsetup.js:382"
+ },
+ {
+  "msgid": "Tick the ones you use",
+  "source": "app/cap-catsetup.js:185"
+ },
+ {
+  "msgid": "TO BE CREATED",
+  "source": "app/cap-network.js:2541"
+ },
+ {
+  "msgid": "TOP · YOUR ENTITY",
+  "source": "app/cap-network.js:2668"
+ },
+ {
+  "msgid": "Topic",
+  "source": "app/cap-connector.js:137"
+ },
+ {
+  "msgid": "Total",
+  "source": "app.html:4045"
+ },
+ {
+  "msgid": "Track as a service request",
+  "source": "app/cap-service.js:123"
+ },
+ {
+  "msgid": "Trade readiness",
+  "source": "app.html:5504"
+ },
+ {
+  "msgid": "Trade-ready",
+  "source": "app/cap-network.js:2934"
+ },
+ {
+  "msgid": "Trash",
+  "source": "app.html:7103"
+ },
+ {
+  "msgid": "Try again",
+  "source": "app.html:5595"
+ },
+ {
+  "msgid": "Turn on for this store",
+  "source": "app/cap-network.js:2958"
+ },
+ {
+  "msgid": "Unassigned",
+  "source": "app.html:6817"
+ },
+ {
+  "msgid": "Under which node",
+  "source": "app.html:4626"
+ },
+ {
+  "msgid": "Understand → suggest fields",
+  "source": "app/cap-catalogue.js:621"
+ },
+ {
+  "msgid": "Undo",
+  "source": "app.html:1517"
+ },
+ {
+  "msgid": "Unknown is not zero",
+  "source": "app/cap-network.js:1173"
+ },
+ {
+  "msgid": "Unread",
+  "source": "app.html:7424"
+ },
+ {
+  "msgid": "Unticking stops a unit being",
+  "source": "app/cap-catsetup.js:389"
+ },
+ {
+  "msgid": "Urgent",
+  "source": "app.html:7465"
+ },
+ {
+  "msgid": "User ID",
+  "source": "app.html:4413"
+ },
+ {
+  "msgid": "Valid until",
+  "source": "app/cap-readiness.js:489"
+ },
+ {
+  "msgid": "Value",
+  "source": "app.html:8142"
+ },
+ {
+  "msgid": "Variants",
+  "source": "app/cap-network.js:1829"
+ },
+ {
+  "msgid": "Verified at source",
+  "source": "app/cap-readiness.js:224"
+ },
+ {
+  "msgid": "Verify at source",
+  "source": "app/cap-readiness.js:228"
+ },
+ {
+  "msgid": "View saved",
+  "source": "app.html:1844"
+ },
+ {
+  "msgid": "View-only",
+  "source": "app.html:4416"
+ },
+ {
+  "msgid": "Waiting on",
+  "source": "app/cap-admin.js:444"
+ },
+ {
+  "msgid": "We",
+  "source": "app/cap-legend.js:345"
+ },
+ {
+  "msgid": "Web",
+  "source": "app/cap-intake.js:71"
+ },
+ {
+  "msgid": "Web Demo · sample answers",
+  "source": "app.html:4558"
+ },
+ {
+  "msgid": "What is never translated",
+  "source": "app/cap-admin.js:1562"
+ },
+ {
+  "msgid": "WHAT IT TAKES FROM THE NETWORK",
+  "source": "app/cap-network.js:2929"
+ },
+ {
+  "msgid": "What the",
+  "source": "app/cap-legend.js:358"
+ },
+ {
+  "msgid": "What they wrote",
+  "source": "app.html:7986"
+ },
+ {
+  "msgid": "What we serve",
+  "source": "app/cap-legend.js:659"
+ },
+ {
+  "msgid": "WhatsApp",
+  "source": "app/cap-intake.js:71"
+ },
+ {
+  "msgid": "When",
+  "source": "app/cap-folders.js:648"
+ },
+ {
+  "msgid": "When the design is done,",
+  "source": "app/cap-network.js:2707"
+ },
+ {
+  "msgid": "Who can see your catalogue",
+  "source": "app/cap-admin.js:891"
+ },
+ {
+  "msgid": "Whose clock",
+  "source": "app/cap-admin.js:444"
+ },
+ {
+  "msgid": "Why",
+  "source": "app/cap-service.js:174"
+ },
+ {
+  "msgid": "YOU",
+  "source": "app/cap-network.js:1144"
+ },
+ {
+  "msgid": "You decide",
+  "source": "app/cap-legend.js:316"
+ },
+ {
+  "msgid": "Your",
+  "source": "app/cap-admin.js:936"
+ },
+ {
+  "msgid": "Your bogie is empty",
+  "source": "app.html:8129"
+ },
+ {
+  "msgid": "Your catalogue is now an",
+  "source": "app/cap-catalogue.js:327"
+ },
+ {
+  "msgid": "YOUR CATALOGUE SO FAR",
+  "source": "app/cap-catalogue.js:593"
+ },
+ {
+  "msgid": "Your ERP or middleware",
+  "source": "app/cap-connector.js:56"
+ },
+ {
+  "msgid": "YOUR ITEMS · 0",
+  "source": "app/cap-catalogue.js:1066"
+ },
+ {
+  "msgid": "Your mobile OTP",
+  "source": "app.html:2241"
+ },
+ {
+  "msgid": "Your name for them",
+  "source": "app.html:5282"
+ },
+ {
+  "msgid": "Your PIN",
+  "source": "app.html:2254"
+ },
+ {
+  "msgid": "Your price ▢",
+  "source": "app/cap-network.js:1947"
+ },
+ {
+  "msgid": "Your profile",
+  "source": "app/cap-admin.js:924"
+ },
+ {
+  "msgid": "YOURS",
+  "source": "app/cap-chit2.js:214"
+ }
+]

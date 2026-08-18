@@ -9,13 +9,6 @@
 const { test, expect } = require('@playwright/test');
 const { mintEntity } = require('../fixtures');
 
-const openPalette = async (page) => {
-  await page.evaluate(() => window.navTo('settings'));
-  await page.waitForTimeout(1000);
-  await page.getByTestId('set-sec-appearance').click().catch(() => {});
-  await page.waitForTimeout(700);
-};
-
 test.describe('Accessibility themes · spelt out and measured', () => {
   test.describe.configure({ timeout: 180_000 });
 

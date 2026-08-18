@@ -3251,8 +3251,23 @@ function _renderApp(){
             var out = '<div style="border-top:1px solid var(--line)"></div>';
             out += row("theme", "🎨", "Theme", (THEMES[themeGet()]||{}).name || "");
             if (sec === "theme") {
+              /**
+               * ⚠️ THE PANEL SCROLLS — it stopped fitting the moment the accessibility themes arrived. Five rows
+               * that each carry a name, a description, an audience and a standard are much taller than a grid of
+               * swatches, and the dropdown clips (`overflow:hidden`), so the last themes were simply unreachable:
+               * the ones a reader with low vision most needed were the ones off the bottom.
+               *
+               * ⚠️ A VIEWPORT-RELATIVE HEIGHT, NOT A PIXEL ONE. The menu hangs from the topbar, so a fixed max
+               * height that fits a laptop runs off the bottom of a phone. 52vh leaves the rest of the menu — and
+               * the page behind it — visible on every screen.
+               *
+               * ⚠️ overscroll-behavior:contain stops the scroll CHAINING to the page. Without it, reaching the
+               * end of the palette starts scrolling the list underneath, and the menu appears to jump away from
+               * under the finger — the classic dropdown-inside-a-scrolling-page defect.
+               */
               out += `<div data-testid="theme-picker" style="padding:4px 13px 12px;background:var(--paper);color:var(--on-bg);
-                border-top:1px solid var(--line);border-bottom:1px solid var(--line)">${themePaletteHTML()}</div>`;
+                border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+                max-height:min(52vh,440px);overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch">${themePaletteHTML()}</div>`;
             }
             out += row("lang", "🌐", "Language", LANGS[cbLang()] || "English");
             if (sec === "lang") {
