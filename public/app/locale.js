@@ -71,6 +71,68 @@
       return lang && lang !== 'en' ? lang : FALLBACK;
     },
 
+    /**
+     * ⭐⭐ THE STANDARD ALREADY HAS EVERY KNOB — WE ADOPT IT RATHER THAN INVENT A SETTINGS MODEL.
+     *
+     * Athi, 2026-08-18: *"let the number format 000,000,000.00 or 00,00,000.00, million or lakhs… similarly if
+     * different format exists, currency format, same, and date format in different lines. What other parameters
+     * to be brought here, do we have any international standard exists which we can adopt straight away here?"*
+     *
+     * Yes: **BCP 47** (RFC 5646) plus the **Unicode locale extension** (`-u-`, UTS #35 / CLDR). Every parameter
+     * below is a documented subtag, and `Intl` already implements all of them — so a preference is not a bespoke
+     * flag we then have to teach every formatter about, it is one more subtag on the tag we already pass.
+     *
+     *   nu  numbering system   latn 123 · arab ١٢٣ · deva १२३
+     *   hc  hour cycle         h12 09:15 pm · h23 21:15
+     *   ca  calendar           gregory · islamic-umalqura (Rabiʻ I 5, 1448 AH) · indian · buddhist
+     *   fw  first day of week  mon … sun
+     *   co  collation          how a list sorts
+     *   cu  currency           the default one
+     *
+     * ⚠️ GROUPING IS NOT A SUBTAG, AND THAT IS THE RIGHT ANSWER. "000,000,000.00 vs 00,00,000.00" — millions vs
+     * lakhs — is a property of the LOCALE, not a separate switch: `en-US` gives 123,456,789.5 and `en-IN` gives
+     * 12,34,56,789.5 because CLDR knows India groups in lakhs. Offering it as its own control would let someone
+     * pick a combination no locale on earth uses, and then read a number that means nothing to anybody.
+     * ⭐ So the format picker IS the grouping picker. One choice, no contradictions possible.
+     */
+    tag: function () {
+      var base = L.locale(), u = [];
+      var nu = get('cb_nu', ''), hc = get('cb_hc', ''), ca = get('cb_ca', ''), fw = get('cb_fw', '');
+      if (nu) u.push('nu-' + nu);
+      if (hc) u.push('hc-' + hc);
+      if (ca) u.push('ca-' + ca);
+      if (fw) u.push('fw-' + fw);
+      /**
+       * ⚠️ TWO DIFFERENT FAILURES, AND ONLY ONE OF THEM THROWS — measured, because I first wrote this comment
+       * claiming the check caught both.
+       *   · malformed SYNTAX (`-u-nu-`)      → Intl throws, and this try/catch drops back to the bare locale
+       *   · an unknown VALUE (`-u-nu-wibble`) → Intl does NOT throw; it ignores the subtag and uses the default
+       * Both end safe, but for different reasons, and it is worth saying so: the try/catch is not what makes the
+       * second case safe — Intl's own tolerance is.
+       */
+      if (!u.length) return base;
+      var t = base + '-u-' + u.join('-');
+      try { new Intl.NumberFormat(t); return t; } catch (_) { return base; }
+    },
+    setExt: function (k, v) { set('cb_' + k, v || ''); L.apply(); },
+    getExt: function (k) { return get('cb_' + k, ''); },
+
+    /**
+     * ⚠️⚠️ THE WEEKEND IS NOT SATURDAY AND SUNDAY, and for a TRADE platform that is load-bearing rather than
+     * trivia. CLDR: `ar-AE` weekend is [6,7] — Friday and Saturday. `en-IN` is [7] — Sunday only. So "due in
+     * three working days" lands on a different date in Dubai, Mumbai and Berlin, and any SLA, due date or
+     * ageing calculation that assumes Sat/Sun is quietly wrong for most of the market this product is aimed at.
+     * Exposed here so the answer comes from CLDR rather than from whoever writes the next date helper.
+     */
+    weekInfo: function () {
+      try { return new Intl.Locale(L.locale()).weekInfo || null; } catch (_) { return null; }
+    },
+    isWeekend: function (d) {
+      var w = L.weekInfo(); if (!w || !w.weekend) return false;
+      var iso = ((new Date(d).getDay() + 6) % 7) + 1;    /* JS Sun=0 → ISO Mon=1…Sun=7 */
+      return w.weekend.indexOf(iso) >= 0;
+    },
+
     /** 'rtl' or 'ltr' — derived from the language, never from the locale. */
     dir: function () { return RTL[String(L.lang()).slice(0, 2)] ? 'rtl' : 'ltr'; },
 
@@ -93,7 +155,7 @@
      * `narrowSymbol` keeps "$1,234" rather than "US$1,234" where the locale allows it.
      */
     money: function (amount, code) {
-      var n = Number(amount || 0), c = code || 'INR', loc = L.locale();
+      var n = Number(amount || 0), c = code || 'INR', loc = L.tag();
       try { return new Intl.NumberFormat(loc, { style: 'currency', currency: c, currencyDisplay: 'narrowSymbol' }).format(n); }
       catch (e) {
         try { return new Intl.NumberFormat(loc, { style: 'currency', currency: c }).format(n); }
@@ -102,24 +164,24 @@
     },
 
     number: function (n, opts) {
-      try { return new Intl.NumberFormat(L.locale(), opts || undefined).format(Number(n || 0)); }
+      try { return new Intl.NumberFormat(L.tag(), opts || undefined).format(Number(n || 0)); }
       catch (_) { return String(n); }
     },
 
     time: function (ts) {
-      try { return new Date(ts).toLocaleTimeString(L.locale(), { hour: '2-digit', minute: '2-digit' }); }
+      try { return new Date(ts).toLocaleTimeString(L.tag(), { hour: '2-digit', minute: '2-digit' }); }
       catch (_) { return ''; }
     },
 
     date: function (ts, opts) {
-      try { return new Date(ts).toLocaleDateString(L.locale(), opts || { day: '2-digit', month: 'short', year: 'numeric' }); }
+      try { return new Date(ts).toLocaleDateString(L.tag(), opts || { day: '2-digit', month: 'short', year: 'numeric' }); }
       catch (_) { return ''; }
     },
 
     /** Date AND time together — the shape `toLocaleString` gives, so call sites convert one-for-one. */
     datetime: function (ts, opts) {
       try {
-        return new Date(ts).toLocaleString(L.locale(),
+        return new Date(ts).toLocaleString(L.tag(),
           opts || { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
       } catch (_) { return ''; }
     },
@@ -130,7 +192,7 @@
      * clothes. A supplier list that will not sort correctly is unusable long before it is untranslated.
      */
     compare: function (a, b) {
-      try { return new Intl.Collator(L.locale(), { numeric: true, sensitivity: 'base' }).compare(String(a), String(b)); }
+      try { return new Intl.Collator(L.tag(), { numeric: true, sensitivity: 'base' }).compare(String(a), String(b)); }
       catch (_) { return String(a).localeCompare(String(b)); }
     },
     sort: function (arr, keyFn) {

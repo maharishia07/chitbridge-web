@@ -1462,72 +1462,116 @@ async function loadSettings(){ const h=document.getElementById("setbody"); if(!h
  * pick an unreadable combination and then report the app as broken.
  */
 function localeSettingsHTML(){
+  /* ⚠️ THE QUOTE IS BUILT HERE, NOT IN THE SCRIPT THAT WROTE THIS FILE. Third time: BT, then Q in the palette,
+     now Q again. A generator-only constant emitted into shipped code PARSES fine and dies at render. The only
+     check that catches it is running the function — which is what caught this one, before it shipped. */
+  var Q = String.fromCharCode(39);
   var d = CBLocale.describe();
   var LANGS = { en:'English', hi:'हिन्दी', ta:'தமிழ்', fr:'Français' };
+
+  /**
+   * ⭐ THE CONTROLS CARRY THE STANDARD'S OWN NAMES — "numbering system", "hour cycle", "calendar", "first day of
+   * week" are the CLDR/UTS-35 terms, not invented ones. Anyone who knows the standard recognises them; anyone
+   * who does not can look them up and find the same words. Inventing friendlier labels would make this screen
+   * the only place in the world that calls them that.
+   */
   var FORMATS = [
     ['', 'Same as language'],
-    ['en-IN', 'India — en-IN'], ['en-US', 'United States — en-US'], ['en-GB', 'United Kingdom — en-GB'],
-    ['de-DE', 'Germany — de-DE'], ['fr-FR', 'France — fr-FR'],
-    ['ar-AE', 'UAE — ar-AE (Western digits)'], ['ar-EG', 'Egypt — ar-EG (Eastern digits ١٢٣)'],
-    ['ja-JP', 'Japan — ja-JP'],
+    ['en-IN', 'India — 12,34,56,789.50 (lakh · crore)'],
+    ['en-US', 'United States — 123,456,789.50 (million)'],
+    ['en-GB', 'United Kingdom — 123,456,789.50'],
+    ['de-DE', 'Germany — 123.456.789,50'],
+    ['fr-FR', 'France — 123 456 789,50'],
+    ['ar-AE', 'UAE — Arabic, Western digits'],
+    ['ar-EG', 'Egypt — Arabic, Eastern digits ١٢٣'],
+    ['ja-JP', 'Japan — 123,456,789.50'],
   ];
-  var cur = (function(){ try { return localStorage.getItem('cb_locale') || ''; } catch(_) { return ''; } })();
+  var NUMERALS = [['', 'Follow the format'], ['latn', 'Western — 123'], ['arab', 'Eastern Arabic — ١٢٣'], ['deva', 'Devanagari — १२३']];
+  var HOURS    = [['', 'Follow the format'], ['h12', '12-hour — 09:15 pm'], ['h23', '24-hour — 21:15']];
+  var CALS     = [['', 'Follow the format'], ['gregory', 'Gregorian'], ['islamic-umalqura', 'Hijri (Umm al-Qura)'], ['indian', 'Indian national'], ['buddhist', 'Buddhist']];
+  var WEEK     = [['', 'Follow the format'], ['mon', 'Monday'], ['sun', 'Sunday'], ['sat', 'Saturday']];
 
+  var cur = (function(){ try { return localStorage.getItem('cb_locale') || ''; } catch(_) { return ''; } })();
+  var sel = function(id, list, val, fn){
+    return '<select class="inp" data-testid="' + id + '" onchange="' + fn + '(this.value)">'
+      + list.map(function(o){ return '<option value="' + o[0] + '"' + (val === o[0] ? ' selected' : '') + '>' + esc(o[1]) + '</option>'; }).join('')
+      + '</select>';
+  };
   var langBtns = Object.keys(LANGS).map(function(k){
     var on = d.lang === k;
-    return '<button data-testid="loc-lang-' + k + '" onclick="localeSetLang(\'' + k + '\')"'
+    return '<button data-testid="loc-lang-' + k + '" onclick="localeSetLang(' + Q + k + Q + ')"'
       + ' style="border:1px solid ' + (on ? 'var(--blue)' : 'var(--line)') + ';'
       + 'background:' + (on ? 'var(--blue-tint-bg)' : 'var(--card)') + ';color:' + (on ? 'var(--blue)' : 'var(--on-card)') + ';'
       + 'border-radius:9px;padding:5px 11px;font-size:var(--fs-2);font-weight:' + (on ? 700 : 500) + ';cursor:pointer;margin:0 6px 6px 0">'
       + LANGS[k] + '</button>';
   }).join('');
 
-  var fmtSel = '<select class="inp" data-testid="loc-format" onchange="localeSetFormat(this.value)">'
-    + FORMATS.map(function(f){
-        return '<option value="' + f[0] + '"' + (cur === f[0] ? ' selected' : '') + '>' + esc(f[1]) + '</option>';
-      }).join('') + '</select>';
-
-  var sorted = CBLocale.sort(['Zebra', 'Ähnlich', 'apple', 'Ökonom', 'banana']).join(' · ');
-
-  var row = function(k, v){
-    return '<div style="display:flex;gap:10px;padding:5px 0;font-size:var(--fs-2)">'
-      + '<span style="min-width:104px;color:var(--grey)">' + k + '</span>'
-      + '<b style="color:var(--on-card)">' + v + '</b></div>';
+  var line = function(k, v){
+    return '<div style="display:flex;gap:10px;padding:4px 0;font-size:var(--fs-2)">'
+      + '<span style="min-width:108px;color:var(--grey)">' + k + '</span>'
+      + '<b style="color:var(--on-card);min-width:0;word-break:break-word">' + v + '</b></div>';
   };
+  var wi = CBLocale.weekInfo() || {};
+  var DAY = { 1:'Mon', 2:'Tue', 3:'Wed', 4:'Thu', 5:'Fri', 6:'Sat', 7:'Sun' };
+  var weekend = (wi.weekend || []).map(function(x){ return DAY[x] || x; }).join(' + ') || '—';
 
-  return _misHead('Localisation', 'What changes when the reader changes. Eight decisions, in one place.')
-    + '<div style="' + _CARD + '">'
-    +   '<label class="fl">Language <span style="font-weight:400;color:var(--grey)">— the words</span></label>'
-    +   '<div style="margin:4px 0 6px">' + langBtns + '</div>'
-    +   '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5">'
-    +     'The navigation is translated so far — the rest of the app is still English.</div>'
-    + '</div>'
-    + '<div style="' + _CARD + '">'
-    +   '<label class="fl">Number &amp; date format <span style="font-weight:400;color:var(--grey)">— how figures are written</span></label>'
-    +   fmtSel
-    +   '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px;line-height:1.5">'
-    +     '⚠️ Separate from the language on purpose. You can read English and still group money the Indian way, '
-    +     'or read Arabic with Western digits.</div>'
-    + '</div>'
-    /* the preview — see the note above the function */
+  var card = function(inner){ return '<div style="' + _CARD + '">' + inner + '</div>'; };
+
+  return _misHead('Localisation', 'What changes when the reader changes. Standard: BCP 47 + the Unicode locale extension (CLDR).')
+
+    + card('<label class="fl">Language <span style="font-weight:400;color:var(--grey)">— the words</span></label>'
+        + '<div style="margin:4px 0 6px">' + langBtns + '</div>'
+        + '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5">The navigation is translated so far — the rest of the app is still English.</div>')
+
+    + card('<label class="fl">Number &amp; currency format</label>'
+        + sel('loc-format', FORMATS, cur, 'localeSetFormat')
+        + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px;line-height:1.55">'
+        + '⚠️ <b>Grouping is not a separate switch, and that is deliberate.</b> Millions or lakhs is a property of '
+        + 'the format itself — CLDR knows India groups 12,34,56,789 and the US groups 123,456,789. Offering it '
+        + 'apart would let you pick a combination no locale on earth uses.</div>')
+
+    + card('<label class="fl">Numbering system <span style="font-weight:400;color:var(--grey)">— <code>-u-nu-</code></span></label>'
+        + sel('loc-nu', NUMERALS, CBLocale.getExt('nu'), 'localeSetNu'))
+
+    + card('<label class="fl">Hour cycle <span style="font-weight:400;color:var(--grey)">— <code>-u-hc-</code></span></label>'
+        + sel('loc-hc', HOURS, CBLocale.getExt('hc'), 'localeSetHc'))
+
+    + card('<label class="fl">Calendar <span style="font-weight:400;color:var(--grey)">— <code>-u-ca-</code></span></label>'
+        + sel('loc-ca', CALS, CBLocale.getExt('ca'), 'localeSetCa'))
+
+    + card('<label class="fl">First day of week <span style="font-weight:400;color:var(--grey)">— <code>-u-fw-</code></span></label>'
+        + sel('loc-fw', WEEK, CBLocale.getExt('fw'), 'localeSetFw')
+        + '<div style="font-size:var(--fs-1);color:var(--warn-2);margin-top:7px;line-height:1.55">'
+        + '⚠️ <b>Your weekend here is ' + esc(weekend) + '.</b> It is not Saturday and Sunday everywhere — the UAE '
+        + 'weekend is Friday + Saturday, India\'s is Sunday alone. Any due date counted in <i>working</i> days '
+        + 'lands on a different day in Dubai, Mumbai and Berlin.</div>')
+
+    /* THE PREVIEW — see the note on this function. Every control above is an abstraction; this is the only place
+       the choice becomes visible before it is made. */
     + '<div style="' + _CARD + ';background:var(--neutral-tint);color:var(--on-card)" data-testid="loc-preview">'
-    +   '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin-bottom:6px">'
-    +     'How this looks</div>'
-    +   row('Money', esc(CBLocale.money(123456.5, 'USD')) + ' &nbsp;·&nbsp; ' + esc(CBLocale.money(123456.5, 'INR')))
-    +   row('Number', esc(CBLocale.number(1234567.89)))
-    +   row('Date', esc(d.sampleDate))
-    +   row('Time', esc(d.sampleTime))
-    +   row('Sorting', esc(sorted))
-    +   row('Direction', d.dir === 'rtl' ? 'right to left ←' : 'left to right →')
+    +   '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin-bottom:6px">How this looks</div>'
+    +   line('Number', esc(CBLocale.number(123456789.5)))
+    +   line('Money', esc(CBLocale.money(123456.5, 'INR')) + ' &nbsp;·&nbsp; ' + esc(CBLocale.money(123456.5, 'USD')))
+    +   line('Date', esc(CBLocale.date(Date.now())))
+    +   line('Time', esc(CBLocale.time(Date.now())))
+    +   line('Sorting', esc(CBLocale.sort(['Zebra','Ähnlich','apple','Ökonom','banana']).join(' · ')))
+    +   line('Direction', d.dir === 'rtl' ? 'right to left ←' : 'left to right →')
+    +   line('Locale tag', '<code>' + esc(CBLocale.tag()) + '</code>')
     + '</div>'
-    + '<div style="' + _CARD + '">'
-    +   '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin-bottom:5px">'
-    +     'What is never translated</div>'
-    +   '<div style="font-size:var(--fs-2);line-height:1.55;color:var(--on-card)">'
-    +     'Product names, chit subjects, message text and dispute reasons stay in the words their author wrote. '
-    +     '<b>A chit is a shared record</b> — one that read differently to each party would not be a record.</div>'
-    + '</div>';
+
+    + card('<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin-bottom:5px">What is never translated</div>'
+        + '<div style="font-size:var(--fs-2);line-height:1.55;color:var(--on-card)">'
+        + 'Product names, chit subjects, message text and dispute reasons stay in the words their author wrote. '
+        + '<b>A chit is a shared record</b> — one that read differently to each party would not be a record.</div>');
 }
+function localeSetLang(k){ CBLocale.setLang(k); renderApp(); _capShowDetail(); loadSettings(); }
+function localeSetFormat(v){ CBLocale.setLocale(v); renderApp(); _capShowDetail(); loadSettings(); }
+/* One handler shape per subtag — each re-renders so the preview above moves with the choice. */
+function localeSetNu(v){ CBLocale.setExt('nu', v); renderApp(); _capShowDetail(); loadSettings(); }
+function localeSetHc(v){ CBLocale.setExt('hc', v); renderApp(); _capShowDetail(); loadSettings(); }
+function localeSetCa(v){ CBLocale.setExt('ca', v); renderApp(); _capShowDetail(); loadSettings(); }
+function localeSetFw(v){ CBLocale.setExt('fw', v); renderApp(); _capShowDetail(); loadSettings(); }
+
 /* Both re-render the whole screen, so the preview above updates with the choice — which is the point of it. */
 function localeSetLang(k){ CBLocale.setLang(k); UI._set = UI._set; renderApp(); _capShowDetail(); loadSettings(); }
 function localeSetFormat(v){ CBLocale.setLocale(v); renderApp(); _capShowDetail(); loadSettings(); }
