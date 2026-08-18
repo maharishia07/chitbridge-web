@@ -674,7 +674,21 @@ async function loadMIS(){
  * hundred pixels under identity's "Shop status" and read as its contradiction.
  */
 var PROF_SECS = [
-  { key:'identity',   name:'Identity',    q:'Who you are on the rail' },
+  /**
+   * ⭐⭐ IAM — and the NAME is the small part. Athi asked for "Identity" to become IAM with five identity
+   * classes (entity · employee · customer · supplier · IoT/AI/ERP), then said: *"do not take my words as
+   * decision, think and provide a better alternate if possible."*
+   *
+   * ⚠️ THE FIVE-CLASS TABLE WOULD HAVE BEEN WRONG, and wrong in a way that contradicts the product. Of those
+   * five, this business ADMINISTERS exactly two — itself and its co-assists (machines are co-assists; same
+   * table, different actor_type). A customer self-identifies with a one-time code. A supplier is another
+   * business with its own IAM. Five rows with an "Access" column implies you grant access to all five; you
+   * cannot, so three would sit permanently empty and read as "not built yet" rather than "not yours to set".
+   *
+   * ⭐ SO IT IS STRUCTURED BY BOUNDARY — inside · at the edge · outside. That is the same sovereignty the rest
+   * of the rail rests on, and it turns the asymmetry from an apology into the content.
+   */
+  { key:'identity',   name:'IAM',         q:'Who can act, and what they may do' },
   { key:'storefront', name:'Storefront',  q:'What customers can see' },
   /* ⚠️ NOT "Governance" — Settings has a section by that name too, and two rows with one name in two screens is
      a collision even when the content differs. This one is your RESOLVED position (Governed by · Basics · Rights ·
@@ -782,6 +796,279 @@ var NAMING = [
        + '⚠️ Two customers may share a name; they are still two records.',
     src:'routes/catalogue.js:585' }
 ];
+/**
+ * ⭐⭐ IAM — who can act for this business, and what each of them may do.
+ *
+ * ── WHY BOUNDARY, NOT CLASS ─────────────────────────────────────────────────────────────────────────────────
+ *
+ * Athi listed five classes and then said *"do not take my words as decision, think and provide a better
+ * alternate if possible."* Testing his five against what this business actually ADMINISTERS:
+ *
+ *     this business    yes          co-assists       yes (machines are co-assists — same table, actor_type)
+ *     customers        NO — they self-identify with a one-time code; you set terms, not identities
+ *     suppliers        NO — another business, with its own IAM; you hold a relationship
+ *
+ * ⚠️ Five rows with an "Access" column implies you grant access to all five. You cannot. Three would sit
+ * permanently empty, and an empty column reads as "not built yet" rather than "not yours to set" — which would
+ * contradict the sovereignty the whole rail rests on. So the spine is INSIDE · EDGE · OUTSIDE, and the
+ * asymmetry becomes the content instead of an apology.
+ *
+ * ── WHY TWO TABS ────────────────────────────────────────────────────────────────────────────────────────────
+ *
+ * ⭐ Identity and access have DIFFERENT TRUTH VALUES, and one table would hide that. Naming is solid — the rules
+ * are real and enforced by server validators. Access was a promise two-fifths kept until this afternoon: the hat
+ * existed, was offered as a choice, and was enforced in two places out of ~130. One table would have rendered
+ * "View-only" beside a real name and a real key, in the same weight, as though all three were equally true.
+ *
+ * They are also read on different days: naming is set up once, access is checked whenever someone arrives or
+ * leaves.
+ *
+ * ── ⭐⭐ PROVENANCE IS A COLUMN, BECAUSE "WHY CAN'T I DO THIS?" IS THE REAL QUESTION ─────────────────────────
+ *
+ * Athi asked whether access is *"direct, derived and so on"*, and then *"what about network?"*. The network is
+ * not a fourth bucket — it is the EDGE ACCESS FLOWS ALONG, and it appears in all three:
+ *
+ *     DIRECT    set on this identity, here          the hat · can_see_costs
+ *     DERIVED   follows from WHERE YOU SIT          a co-assist's reach follows its node in the tree
+ *     CAPPED    descends from your operator         "a store can be no more open than the thing it sits inside
+ *                                                    — the narrowest wins" (lib/network-build.js)
+ *     THEIRS    another business decided            not shown as a permission at all, because it is not ours
+ *
+ * ⚠️ DERIVED and CAPPED are the two nobody can find today, because no screen says "this is true because of where
+ * you sit". Naming the provenance is what makes this page answer the question people actually ask.
+ */
+function iamTab(){ return UI.iamTab || 'who'; }
+function setIamTab(t){ UI.iamTab = t; renderApp(); _capShowDetail(); loadProfile(); }
+
+/* ⚠️ SAME API AS CO-ASSISTS — Athi: "assume we need to have it in another place, then that has to be the same
+   api and should behave the same way." This is `api('actors')`, the endpoint cap-workforce already uses, cached
+   on UI so switching tabs does not re-fetch. IAM never writes an actor; it links to Co-assists to do that. */
+async function iamLoadActors(){
+  if (UI._iamActors) return UI._iamActors;
+  try { UI._iamActors = (await api('actors', { query: { status: 'all' } })) || []; }
+  catch (_) { UI._iamActors = []; }
+  return UI._iamActors;
+}
+
+var IAM_HAT = {
+  manager:   ['Manager',   'acts, and assigns work to others'],
+  act:       ['Act',       'does the work'],
+  audit:     ['Audit',     'review only'],
+  mis:       ['MIS',       'reports'],
+  view_only: ['View-only', 'read only']
+};
+var IAM_WRITES = ['act', 'manager'];
+
+function iamHTML(e){
+  var Q = String.fromCharCode(39);
+  var tab = iamTab();
+  /* kick the fetch on first paint; the tab repaints when it lands */
+  if (!UI._iamActors) { iamLoadActors().then(function(){ if (profSec() === 'identity') { _capShowDetail(); loadProfile(); } }); }
+
+  var seg = [['who','Who'],['access','What they may do']].map(function(x){
+    var on = tab === x[0];
+    return '<button type="button" data-testid="iam-tab-' + x[0] + '" onclick="setIamTab(' + Q + x[0] + Q + ')"'
+      + ' aria-pressed="' + (on ? 'true' : 'false') + '"'
+      + ' style="flex:1;cursor:pointer;font:inherit;padding:7px 8px;font-size:var(--fs-2);font-weight:' + (on ? 800 : 500) + ';'
+      + 'border:2px solid ' + (on ? 'var(--blue)' : 'var(--line)') + ';border-radius:9px;'
+      + 'background:' + (on ? 'var(--blue-tint-bg)' : 'var(--card)') + ';color:var(--on-card)">' + x[1] + '</button>';
+  }).join('');
+
+  return _misHead('IAM', 'Who can act for this business, and what each of them may do.')
+    + '<div style="display:flex;gap:7px;margin-bottom:11px">' + seg + '</div>'
+    + (tab === 'who' ? iamWhoHTML(e) : iamAccessHTML(e));
+}
+
+/* ══ shared pieces ══════════════════════════════════════════════════════════════════════════════════════════ */
+
+function _iamCard(inner){ return '<div style="' + _CARD + '">' + inner + '</div>'; }
+function _iamHead(t, sub){
+  return '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin-bottom:' + (sub ? '3px' : '6px') + '">' + t + '</div>'
+    + (sub ? '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.55;margin-bottom:7px">' + sub + '</div>' : '');
+}
+/** The boundary badge. ⚠️ Same three words everywhere, so the spine is learnable in one read. */
+function _iamZone(z){
+  var C = { inside: ['var(--ok-tint)', 'var(--ok-2)', 'INSIDE'],
+            edge:   ['var(--warn-tint)', 'var(--warn-2)', 'AT THE EDGE'],
+            outside:['var(--neutral-tint)', 'var(--grey)', 'OUTSIDE'] }[z];
+  return '<span style="font-size:var(--fs-1);font-weight:800;letter-spacing:.04em;background:' + C[0] + ';color:' + C[1]
+    + ';border-radius:4px;padding:1px 6px">' + C[2] + '</span>';
+}
+
+/* ══ WHO ════════════════════════════════════════════════════════════════════════════════════════════════════ */
+
+function iamWhoHTML(e){
+  var Q = String.fromCharCode(39);
+  var acts = UI._iamActors || [];
+  var people = acts.filter(function(a){ return !a.actor_type || a.actor_type === 'human'; });
+  var machines = acts.filter(function(a){ return a.actor_type && a.actor_type !== 'human'; });
+
+  var line = function(what, named, signin, where, nav) {
+    return '<div style="padding:6px 0;border-block-start:1px solid var(--line)">'
+      + '<div style="font-size:var(--fs-2);color:var(--on-card)"><b>' + what + '</b>' + (named ? ' · ' + named : '') + '</div>'
+      + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px;line-height:1.5">'
+      +   'Named by ' + esc(signin[0]) + ' · signs in with ' + esc(signin[1])
+      +   (nav ? ' · <a href="#" onclick="' + nav + ';return false" style="color:var(--blue);font-weight:600">' + esc(where) + ' →</a>' : '')
+      + '</div></div>';
+  };
+
+  return _iamCard(_iamHead(_iamZone('inside') + ' &nbsp;You administer these',
+      'Identities this business creates, names and can remove.')
+    + line('This business', esc(e.display_name || '—'), ['Bridge ID + User ID', 'a one-time code to your email'], '', '')
+    + line('People', people.length ? people.length + ' co-assist' + (people.length === 1 ? '' : 's') : 'none yet',
+        ['name + actor key', 'their actor key and a code'], 'Co-assists', "navTo('coassists')")
+    /* ⚠️ MACHINES ARE CO-ASSISTS, not a fifth class — same table, different actor_type. Listing them separately
+       would imply a separate identity model and a separate place to manage them; there is neither. */
+    + line('Machines &amp; agents', machines.length ? machines.length + ' (IoT · AI · ERP)' : 'none yet',
+        ['name + actor key', 'a device key or connector credential'], 'Co-assists', "navTo('coassists')")
+    + line('Branches &amp; units', 'sub-entities in your network',
+        ['their own Bridge ID', 'their own credentials'], 'Network', "navTo('network')"))
+
+  + _iamCard(_iamHead(_iamZone('edge') + ' &nbsp;You set the terms — they identify themselves',
+      'You never create these identities and cannot remove one. You decide what the door does.')
+    + line('Customers', 'anyone who opens your storefront',
+        ['the name they type at checkout', 'a code to their phone or email'], 'Storefront', "profSetSec('storefront')"))
+
+  + _iamCard(_iamHead(_iamZone('outside') + ' &nbsp;They govern themselves',
+      'Other businesses. You hold a relationship, not a permission.')
+    + line('Suppliers', 'businesses you buy from',
+        ['their own User ID', 'their own business account'], 'Suppliers', "navTo('suppliers')")
+    + line('Network peers', 'businesses connected to you',
+        ['their own Bridge ID', 'their own business account'], 'Network', "navTo('network')")
+    /* ⚠️ THE SENTENCE THAT MAKES THE WHOLE STRUCTURE MAKE SENSE. Athi: "For third party, user id is the key,
+       that cannot be changed so supplier, if they want to add, they have to use the user id." Listing a supplier
+       beside a co-assist without this implies you grant them access, which is exactly backwards. */
+    + '<div style="font-size:var(--fs-2);line-height:1.6;color:var(--on-card);margin-top:8px">'
+    + '⚠️ <b>You do not give these access.</b> Each holds its own IAM and decides for itself. What you type to '
+    + 'add one is their <b>User ID</b> — which is why yours matters: it is the handle another business types to '
+    + 'find <i>you</i>.</div>')
+
+  + '<div style="' + _CARD + ';margin-top:10px">'
+    + '<label class="fl">This business</label>'
+    + '<div class="kv"><b>Name</b> · ' + esc(e.display_name || '') + '</div>'
+    + '<div class="kv"><b>Bridge ID</b> · ' + esc(e.bridge_id || '') + '</div>'
+    + '<label class="fl">User ID <span style="color:var(--grey);font-weight:400;font-size:var(--fs-1)">— the handle another business types to add you</span></label>'
+    + '<input class="inp" id="pf_uid" value="' + esc(e.user_id || '') + '">'
+    + '<label class="fl">GSTIN <span style="color:var(--grey);font-weight:400;font-size:var(--fs-1)">— 15 characters</span></label>'
+    + '<input class="inp" id="pf_gstn" value="' + esc(e.gstn || '') + '">'
+    + '<label class="fl">Address</label><input class="inp" id="pf_addr" value="' + esc(e.address || '') + '">'
+    /* ⚠️ "Are you trading?" IS NOT A VISIBILITY SETTING. Athi read the two as contradictory because they sat
+       together: business_status answers ARE YOU TRADING, catalogue_visibility answers WHO MAY SEE YOUR
+       CATALOGUE. Different questions, similar words — so the note names both and points at the other. */
+    + '<label class="fl">Are you trading? <span style="color:var(--grey);font-weight:400;font-size:var(--fs-1)">— open, closed or away</span></label>'
+    + '<select class="inp" id="pf_bs">' + opt(['open','closed','away'], e.business_status) + '</select>'
+    + '<div class="misnote" style="margin-top:5px">⚠️ This is <b>whether you are trading</b> — nothing to do with who may '
+    + '<b>see</b> your catalogue. That is <b onclick="profSetSec(' + Q + 'storefront' + Q + ')" style="cursor:pointer;color:var(--blue)">Storefront</b>.</div>'
+    + '<div class="err" id="pf_err"></div>'
+    + '<button class="composebtn" style="margin-top:11px" onclick="saveProfile()">Save profile</button>'
+  + '</div>'
+
+  + namingRulesHTML();
+}
+
+/* ══ WHAT THEY MAY DO ═══════════════════════════════════════════════════════════════════════════════════════ */
+
+/**
+ * ⚠️⚠️ EVERY ROW NAMES ITS PROVENANCE, and that is the point of the tab. "Why can't I do this?" is the question
+ * people actually ask, and today the answer is unfindable for two of the four kinds:
+ *
+ *   DIRECT   set on this identity, here                    → change it here
+ *   DERIVED  follows from where you sit in the tree        → nobody set it; no screen says so
+ *   CAPPED   descends from your operator, narrowest wins   → visible, not yours to lift
+ *   THEIRS   another business decided                      → not a permission of yours at all
+ */
+function iamAccessHTML(e){
+  var Q = String.fromCharCode(39);
+  var acts = UI._iamActors || [];
+  var cap = e.visibility_cap || { max: 'public', by: null };
+  var vis = e.catalogue_visibility || 'private';
+
+  var PROV = {
+    direct:  ['DIRECT',  'var(--blue-tint-bg)', 'var(--blue-2)'],
+    derived: ['DERIVED', 'var(--purple-tint)',  'var(--purple-2)'],
+    capped:  ['CAPPED',  'var(--warn-tint)',    'var(--warn-2)'],
+    theirs:  ['THEIRS',  'var(--neutral-tint)', 'var(--grey)']
+  };
+  var prov = function(k){
+    var c = PROV[k];
+    return '<span title="' + esc(k) + '" style="font-size:var(--fs-1);font-weight:800;letter-spacing:.04em;background:' + c[1]
+      + ';color:' + c[2] + ';border-radius:4px;padding:1px 6px">' + c[0] + '</span>';
+  };
+
+  var row = function(who, what, p, note, nav, navLabel){
+    return '<div style="padding:7px 0;border-block-start:1px solid var(--line)">'
+      + '<div style="display:flex;gap:7px;align-items:baseline;flex-wrap:wrap">'
+      +   '<b style="font-size:var(--fs-2);color:var(--on-card)">' + who + '</b>'
+      +   '<span style="font-size:var(--fs-2);color:var(--on-card)">' + what + '</span>'
+      +   prov(p)
+      + '</div>'
+      + (note ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px;line-height:1.5">' + note
+          + (nav ? ' <a href="#" onclick="' + nav + ';return false" style="color:var(--blue);font-weight:600">' + esc(navLabel) + ' →</a>' : '')
+          + '</div>' : '')
+      + '</div>';
+  };
+
+  /* per-person hats, from the SAME endpoint Co-assists uses */
+  var hatRows = acts.length ? acts.map(function(a){
+    var h = a.hat || 'act';
+    var L = IAM_HAT[h] || [h, ''];
+    var writes = IAM_WRITES.indexOf(h) >= 0;
+    return row(esc(a.display_name || a.actor_key || '—'),
+      '<b>' + esc(L[0]) + '</b> <span style="color:var(--grey)">— ' + esc(L[1]) + '</span>',
+      'direct',
+      writes ? 'May create and change records.'
+             : '⚠️ Read only — cannot create or change records. Enforced on every write since 2026-08-18.',
+      "navTo('coassists')", 'Co-assists');
+  }).join('') : '<div style="font-size:var(--fs-1);color:var(--grey);padding:7px 0;border-block-start:1px solid var(--line)">No co-assists yet.</div>';
+
+  return _iamCard(_iamHead(_iamZone('inside') + ' &nbsp;People and machines — the hat',
+      'One setting per co-assist, set by you, enforced on every write.')
+    + hatRows)
+
+  + _iamCard(_iamHead(_iamZone('inside') + ' &nbsp;Where they sit',
+      'Access nobody set — it follows from position in your network.')
+    + row('Co-assists at a node', 'reach the work of that node and below', 'derived',
+        'Placed in the tree, not granted on a screen. Move the person, and their reach moves with them.',
+        "navTo('network')", 'Network')
+    + row('Costs', (function(){
+        var n = acts.filter(function(a){ return a.can_see_costs; }).length;
+        return n ? '<b>' + n + '</b> may see buying prices and margin' : 'nobody may see buying prices';
+      })(), 'direct',
+        'A separate switch from the hat — the only per-person permission besides it.',
+        "navTo('coassists')", 'Co-assists'))
+
+  + _iamCard(_iamHead(_iamZone('edge') + ' &nbsp;Customers',
+      'You set the door; nobody is granted anything individually.')
+    + row('Anyone with your link', (e.storefront_access === 'login' ? 'must sign in before browsing' : 'may browse, signs in to order'), 'direct',
+        'One rule for every customer. There is no per-customer permission, by design.',
+        "profSetSec('storefront')", 'Storefront')
+    + row('Your catalogue', 'is <b>' + esc(vis) + '</b>', (cap.max === 'private' ? 'capped' : 'direct'),
+        cap.max === 'private'
+          ? '⚠️ Capped at <b>private</b> by ' + esc(cap.by || 'your network operator') + '. A store can be no more open than the thing it sits inside — the narrowest wins.'
+          : 'You choose this. It also decides whether your storefront link opens at all.',
+        "profSetSec('storefront')", 'Storefront'))
+
+  + _iamCard(_iamHead(_iamZone('outside') + ' &nbsp;Other businesses',
+      'Not permissions of yours.')
+    + row('Suppliers &amp; peers', 'decide for themselves', 'theirs',
+        'Their own IAM answers this. You hold a relationship — what their staff may do is their business, governed by their hats, in their records.',
+        "navTo('suppliers')", 'Suppliers')
+    + row('Your network operator', 'may co-hold and walk your subtree', 'capped',
+        'Where a bounded network names an operator, that operator can trace across it for oversight. Visibility is co-holding.',
+        "navTo('network')", 'Network'))
+
+  /* ⚠️ THE HONEST FOOTER. Two of the four provenances are things a reader CANNOT CHANGE, and a permissions
+     screen that does not say so invites people to hunt for a switch that does not exist. */
+  + _iamCard(_iamHead('What this page cannot change')
+    + '<div style="font-size:var(--fs-2);line-height:1.6;color:var(--on-card)">'
+    + '<b>DERIVED</b> access follows position — move the person in <b>Network</b>, not here. '
+    + '<b>CAPPED</b> access descends from your operator and cannot be lifted from inside. '
+    + '<b>THEIRS</b> is another business&rsquo;s answer and never appears as a setting of yours.<br>'
+    + '⚠️ Only <b>DIRECT</b> rows have a switch, and every one of them links to the screen that owns it — '
+    + 'one control, many viewers.'
+    + '</div>');
+}
+
 function namingRulesHTML(){
   var open = !!UI._namingOpen;
   var rows = NAMING.map(function(n){
@@ -817,7 +1104,8 @@ function profSecHTML(k, e){
   return k === 'vault' ? b : (b + _capEnd());
 }
 function _profSecBody(k, e){
-  if (k === 'identity') return _misHead('Identity', 'Who you are on the rail — and how others find you.')
+  if (k === 'identity') return iamHTML(e);
+  if (k === '__iam_old') return _misHead('Identity', 'Who you are on the rail — and how others find you.')
     + `<div class="${_CARD}"><div class="kv"><b>Name</b> · ${esc(e.display_name)}</div><div class="kv"><b>Bridge ID</b> · ${esc(e.bridge_id)}</div><div class="kv"><b>Email</b> · ${esc(e.email)}</div></div>
       <label class="fl">User ID <span style="color:var(--grey);font-size:var(--fs-1)">— others add you with this</span></label><input class="inp" id="pf_uid" value="${esc(e.user_id||'')}" placeholder="e.g. yourname or you@email.com">
       <label class="fl">GSTIN <span style="color:var(--grey);font-size:var(--fs-1)">— 15 characters</span></label><input class="inp" id="pf_gstn" value="${esc(e.gstn)}" placeholder="15-char">
