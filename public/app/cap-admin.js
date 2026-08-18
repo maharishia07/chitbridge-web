@@ -1547,8 +1547,9 @@ function appearanceSettingsHTML(){
         + 'the font shipped with the app before it can be offered.<br>'
         + '<b>Colour-vision preview</b> — showing you what deuteranopia does to your own screen, rather than asking '
         + 'you to take the Colour Vision theme on trust.<br>'
-        + '<b>These choices are still per-device.</b> Your theme and text size live in this browser, so a second '
-        + 'device starts fresh — the same defect the localisation settings had until b165, and the same fix applies.'
+        + '<b>These follow you, not this browser.</b> Your theme, text size and motion are stored against you '
+        + '(b166), so signing in on another device brings them with you — because someone who needs High Contrast '
+        + 'needs it everywhere, not only where they first found it.'
         + '</div>')
 
     + '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5;margin-top:8px">'
