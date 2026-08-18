@@ -867,7 +867,28 @@ function storefrontCardHTML(e){
     .map(function(o){return '<option value="'+o[0]+'"'+(acc===o[0]?' selected':'')+'>'+o[1]+'</option>';}).join('');
   return '<div style="'+_CARD+';margin-top:10px">'
     +'<div class="sec" style="margin:0 0 8px">🛍️ Customer storefront</div>'
-    +'<div style="font-size:12px;color:var(--grey);line-height:1.5;margin-bottom:8px">Share this link — anyone can open it and order from your catalogue. No account needed (they confirm with a one-time code).</div>'
+    /**
+     * ⚠️⚠️ THE LINK WAS OFFERED UNCONDITIONALLY AND THE OWNER WAS THE ONE MISLED. Athi, 2026-08-18:
+     * *"Storefront screen is not working from the open link."*
+     *
+     * It was not working because his catalogue is not public — but this card said "Share this link — anyone can
+     * open it and order from your catalogue" whatever the visibility was, and the link then answered
+     * **"Shop not found"**. That message is deliberately vague: it is the anti-enumeration answer, identical for
+     * "no such entity" and "catalogue is private", so that walking the bridge-id space tells a stranger nothing.
+     *
+     * ⭐ RIGHT FOR A STRANGER, WRONG FOR THE OWNER. The owner is authenticated, owns this entity, and is looking
+     * at their own settings — telling them exactly why their link is dead costs nothing and is the only way they
+     * can fix it. So the vagueness stays on the PUBLIC page and the truth is told HERE.
+     */
+    +(vis === 'public'
+      ? '<div style="font-size:12px;color:var(--grey);line-height:1.5;margin-bottom:8px">Share this link — anyone can open it and order from your catalogue.</div>'
+      : '<div style="font-size:12px;line-height:1.55;margin-bottom:8px;background:var(--warn-tint);color:var(--warn-2);border-radius:8px;padding:8px 10px">'
+        + '⚠️ <b>This link will not open yet.</b> Your catalogue is <b>' + esc(vis) + '</b>, so anyone following it — including you — sees '
+        + '&ldquo;Shop not found&rdquo;. That wording is deliberately vague to strangers; here is the real reason.'
+        + (capped
+            ? ' It is capped at <b>private</b> by ' + esc((cap.by || 'your network operator')) + ', so the switch below cannot lift it.'
+            : ' Set <b>Catalogue visibility</b> below to <b>public</b> and the link starts working immediately.')
+        + '</div>')
     +'<div style="background:var(--card);border:1px solid var(--line);border-radius:9px;padding:8px 10px;color:var(--on-card)"><span class="mono" id="sf_url" style="font-size:11.5px;word-break:break-all">'+esc(url)+'</span></div>'
     +'<div style="display:flex;gap:8px;margin-top:8px"><button class="composebtn" onclick="sfCopy()">📋 Copy link</button><button class="composebtn ghost" onclick="window.open(document.getElementById(\'sf_url\').textContent,\'_blank\')">Open ↗</button></div>'
     // ── IS THE SHOP OPEN AT ALL? ─────────────────────────────────────────────────────────────────────────────

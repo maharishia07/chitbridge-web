@@ -346,7 +346,35 @@ async function api(key, {params, query, body}={}){
       throw new Error(ep.m==='GET' ? "You're offline — showing last-loaded data where available." : "You're offline — this needs a connection. Your typed work is saved.");
     }
     if(!res.ok){
-      let msg="", j=null; try{ j=await res.json(); msg=j.message||j.error||""; }catch(_){}
+      /**
+       * ⚠️⚠️ THE SPECIFIC REASON WAS BEING THROWN AWAY. Athi, 2026-08-18: *"Trying to update the profile, it
+       * says validation failed, not sure what it is. Need to have explanation so people understand and update
+       * accordingly."* He was right, and the message he needed already existed.
+       *
+       * express-validator answers with `{ error:'Validation failed', details:[{field, message}] }`, and the
+       * MESSAGES ARE GOOD — *"A User ID cannot contain spaces — try alpha-timers."* This line read `j.message ||
+       * j.error` and never looked at `details`, so every one of them collapsed into the two useless words
+       * "Validation failed". The product knew exactly what was wrong and refused to say.
+       *
+       * ⚠️ THE FIELD NAME IS PREFIXED, because "must be at least 8 characters" is unanswerable when a form has
+       * six fields. Naming the field is the difference between a message and a hint.
+       * ⚠️ AND ALL OF THEM ARE SHOWN, not just the first — fixing one error only to be told about the next is
+       * the interaction people describe as "fighting the form".
+       */
+      let msg="", j=null;
+      try{
+        j=await res.json();
+        if(j && Array.isArray(j.details) && j.details.length){
+          msg = j.details.map(function(d){
+            var f = d && d.field ? String(d.field).replace(/_/g,' ') : '';
+            var m = (d && d.message) || '';
+            /* "Invalid value" is express-validator's default and says nothing; name the field at least. */
+            if(/^invalid value$/i.test(m)) m = 'is not valid';
+            return f ? (f.charAt(0).toUpperCase()+f.slice(1)+': '+m) : m;
+          }).filter(Boolean).join('  ·  ');
+        }
+        if(!msg) msg = j.message || j.error || "";
+      }catch(_){}
       if(j && j.offline){ throw new Error(ep.m==='GET' ? "You're offline — showing last-loaded data where available." : "You're offline — your work is saved and will sync when you reconnect."); }
       cblog(res.status>=500?'error':'warn', ep.m+' '+key+' → '+res.status+(msg?' · '+msg:''));
       if(res.status===401){ SESSION={}; try{localStorage.removeItem("cb_token");localStorage.removeItem("cb_sess");}catch(_){} if(typeof go==="function") go("#/login"); throw new Error(msg||"Session expired — please sign in again."); }
