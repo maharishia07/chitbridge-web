@@ -1390,7 +1390,17 @@ var SET_SECS = [
   /* ⚠️ ITS OWN SECTION, NOT A ROW UNDER SOMETHING ELSE. Localisation is eight decisions — language, direction,
      numerals, numbers, money, dates, times and sort order — and they were scattered across five files and three
      hardcoded 'en-IN' pins. A concern that large filed under "Work" is a concern nobody finds. */
-  { key:'locale',     name:'Localisation', q:'Language, formats and direction' }
+  { key:'locale',     name:'Localisation', q:'Language, formats and direction' },
+  /**
+   * ⭐ APPEARANCE IS ITS OWN SECTION, because it outgrew the avatar dropdown the moment the themes started
+   * explaining themselves. Fifteen themes, five of which carry an audience and a standard, do not fit a menu
+   * that hangs off a topbar — the phone-sized scrolling panel there is a patch, and this is the real home.
+   *
+   * ⚠️ AND BECAUSE TEXT SIZE AND MOTION BELONG NEXT TO THE THEMES. They are the same decision — "can I use
+   * this?" — and splitting them across a menu and a settings page means someone who needs two of the three
+   * finds one of them. Athi: *"we can see how to bring the look and feel as a separate unit."*
+   */
+  { key:'appearance', name:'Appearance',   q:'Theme, text size and motion' }
 ];
 function setSec(){ return UI.setSec || 'work'; }
 /* Same reason as profSetSec — the hook fires before #setbody exists, so drive the load explicitly. */
@@ -1461,6 +1471,92 @@ async function loadSettings(){ const h=document.getElementById("setbody"); if(!h
  * ⚠️ DIRECTION IS SHOWN, NOT CHOSEN. It follows the language, and offering it as a control invites somebody to
  * pick an unreadable combination and then report the app as broken.
  */
+
+/**
+ * The Appearance screen — theme, text size and motion, with the standard stated on every claim.
+ *
+ * ⚠️ IT REUSES themePaletteHTML() RATHER THAN DRAWING ITS OWN SWATCHES. Two renderers for the same fifteen
+ * themes would drift the day someone adds a sixteenth, and the one that was forgotten would be the one a
+ * reader happened to be looking at. One palette, two places it can appear.
+ */
+function appearanceSettingsHTML(){
+  var card = function(inner){ return '<div style="' + _CARD + '">' + inner + '</div>'; };
+  /* ⚠️ Q IS DEFINED HERE, in the SHIPPED function — not in the script that generated it. This is the fourth
+     time a generator-only constant has been emitted into shipped code (BT, then Q twice, now this). It always
+     PARSES, because a bare identifier is valid syntax, so node --check and the guard both pass and it only
+     dies when the line finally runs — reaching Athi as "the buttons do nothing". A generator that writes code
+     must be tested by RUNNING its output, which is what caught this one before it shipped. */
+  var Q = String.fromCharCode(39);
+  var cur = (typeof textSize === 'function') ? textSize() : 'm';
+  var mot = (typeof motionPref === 'function') ? motionPref() : 'auto';
+
+  var pill = function(id, on, click, label, sub){
+    return '<button type="button" data-testid="' + id + '" onclick="' + click + '"'
+      + ' aria-pressed="' + (on ? 'true' : 'false') + '"'
+      + ' style="flex:1;min-width:0;cursor:pointer;font:inherit;text-align:center;padding:7px 6px;border-radius:9px;'
+      + 'border:2px solid ' + (on ? 'var(--blue)' : 'var(--line)') + ';'
+      + 'background:' + (on ? 'var(--blue-tint-bg)' : 'var(--card)') + ';color:var(--on-card)">'
+      + '<span style="display:block;font-weight:' + (on ? 800 : 600) + ';font-size:var(--fs-2)">' + esc(label) + '</span>'
+      + (sub ? '<span style="display:block;font-size:var(--fs-1);color:var(--grey);margin-top:2px">' + esc(sub) + '</span>' : '')
+      + '</button>';
+  };
+
+  var sizes = (typeof TEXT_SIZES !== 'undefined' ? TEXT_SIZES : []).map(function(x){
+    return pill('ap-fs-' + x[0], cur === x[0], 'textSizeSet(' + Q + x[0] + Q + ')', x[1], Math.round(x[2] * 100) + '%');
+  }).join('');
+
+  var motions = [
+    ['auto',   'Follow my device', 'the usual'],
+    ['reduce', 'Reduce motion',    'no animation'],
+    ['full',   'Always animate',   'override']
+  ].map(function(x){
+    return pill('ap-motion-' + x[0], mot === x[0], 'motionSet(' + Q + x[0] + Q + ')', x[1], x[2]);
+  }).join('');
+
+  return _misHead('Appearance', 'How this looks and moves. Every accessibility claim here is measured, not asserted.')
+
+    + card('<label class="fl">Theme</label>'
+        + '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5;margin:0 0 8px">'
+        + 'Fifteen themes. The five under <b>Designed for specific needs</b> each name who they are for and which '
+        + 'standard they meet — and those levels are computed by a test, so a card claiming 7:1 has been checked.'
+        + '</div>'
+        + (typeof themePaletteHTML === 'function' ? themePaletteHTML() : ''))
+
+    + card('<label class="fl">Text size</label>'
+        + '<div style="display:flex;gap:7px;margin:5px 0 7px">' + sizes + '</div>'
+        /* ⚠️ SAYING WHAT IT DOES *NOT* DO. The six size tokens are multiplied together, so headings stay bigger
+           than captions — a single flat font size would make every screen legible and structureless at once. */
+        + '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5">'
+        + 'The whole type scale moves together, so headings stay larger than captions. '
+        + '<b>This text is showing at ' + esc(String(Math.round(((TEXT_SIZES.filter(function(x){return x[0]===cur;})[0]||[0,0,1])[2]) * 100))) + '%.</b>'
+        + '</div>')
+
+    + card('<label class="fl">Motion</label>'
+        + '<div style="display:flex;gap:7px;margin:5px 0 7px">' + motions + '</div>'
+        + '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5">'
+        + '⚠️ <b>Movement is a health setting, not a matter of polish.</b> Animation triggers migraine, nausea and '
+        + 'vertigo for people with vestibular disorders. <b>Follow my device</b> honours the setting you already '
+        + 'made in Windows, macOS, iOS or Android — you should not have to ask us separately.'
+        + '</div>')
+
+    /* ⚠️ WHAT IS NOT HERE YET, SAID PLAINLY. A settings page that silently lacks the control someone came for
+       wastes their time twice: once looking, once wondering whether they missed it. */
+    + card('<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin-bottom:5px">Not here yet</div>'
+        + '<div style="font-size:var(--fs-2);line-height:1.6;color:var(--on-card)">'
+        + '<b>Typeface</b> — a dyslexia-friendly face (Atkinson Hyperlegible, free, from the Braille Institute) needs '
+        + 'the font shipped with the app before it can be offered.<br>'
+        + '<b>Colour-vision preview</b> — showing you what deuteranopia does to your own screen, rather than asking '
+        + 'you to take the Colour Vision theme on trust.<br>'
+        + '<b>These choices are still per-device.</b> Your theme and text size live in this browser, so a second '
+        + 'device starts fresh — the same defect the localisation settings had until b165, and the same fix applies.'
+        + '</div>')
+
+    + '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5;margin-top:8px">'
+    +   'Standards: <b>WCAG 2.2</b> (1.4.3 / 1.4.6 contrast · 1.4.4 resize text · 2.3.3 animation from interactions) · '
+    +   'colour-blind palette <b>Okabe–Ito</b>.'
+    + '</div>';
+}
+
 function localeSettingsHTML(){
   /* ⚠️ THE QUOTE IS BUILT HERE, NOT IN THE SCRIPT THAT WROTE THIS FILE. Third time: BT, then Q in the palette,
      now Q again. A generator-only constant emitted into shipped code PARSES fine and dies at render. The only
@@ -1581,6 +1677,7 @@ function paintSettings(s, _daOpts){ const h=document.getElementById("setbody"); 
     const notYet = '<div style="background:var(--danger-tint);border:1px solid #f0c9c6;border-radius:9px;padding:8px 11px;font-size:11.5px;color:var(--disp);margin-bottom:11px">⏳ These preferences are saved but <b>not yet active</b> — they don\'t change behaviour yet.</div>';
     var out = "";
     if (k === "locale") out = localeSettingsHTML();
+    else if (k === "appearance") out = appearanceSettingsHTML();
     else if (k === "work") out = _misHead('Work', 'How tasks reach the people and co-assists who do them.')
       + `<div style="${_CARD}">${notYet}
       <label class="fl">Assignment model</label><select class="inp" id="st_am">${opt(["pull","push","both"],s.assignment_model||"both")}</select>

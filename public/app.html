@@ -693,6 +693,31 @@
             animation:supslidein .17s ease-out}
   @keyframes supslidein{from{transform:translateX(-14px);opacity:.4}to{transform:none;opacity:1}}
   @media (prefers-reduced-motion:reduce){ .supslide{animation:none} }
+
+  /**
+   * ⚠️ REDUCED MOTION IS A HEALTH SETTING, not a preference about polish. Movement triggers migraine, nausea and
+   * vertigo in people with vestibular disorders, and for them an animation is not merely unwanted.
+   *
+   * ⚠️ THE OS ASKS FIRST. Anyone who has set it in Windows, macOS, iOS or Android has already answered this
+   * question once, and the honest default is to believe them rather than make them find our copy of the switch.
+   * data-motion="reduce" is the explicit override for devices that cannot express it; data-motion="full" is the
+   * escape hatch for someone whose OS says reduce but who wants motion HERE.
+   */
+  @media (prefers-reduced-motion:reduce){
+    :root:not([data-motion="full"]) *,
+    :root:not([data-motion="full"]) *::before,
+    :root:not([data-motion="full"]) *::after{
+      animation-duration:.001ms !important; animation-iteration-count:1 !important;
+      transition-duration:.001ms !important; scroll-behavior:auto !important;
+    }
+  }
+  :root[data-motion="reduce"] *,
+  :root[data-motion="reduce"] *::before,
+  :root[data-motion="reduce"] *::after{
+    animation-duration:.001ms !important; animation-iteration-count:1 !important;
+    transition-duration:.001ms !important; scroll-behavior:auto !important;
+  }
+
   .supslide-h{display:flex;align-items:center;gap:9px;padding:9px 12px;border-bottom:1px solid var(--line);flex:0 0 auto}
   /**
    * ⚠️ ITS OWN CLASS, NOT .dback — .dback is `display:none` except under .appwrap.m, i.e. it is the MOBILE back
@@ -2769,6 +2794,61 @@ function themeApply(key){
   r.style.colorScheme = t.scheme || 'light';
   r.setAttribute('data-theme', key);
 }
+
+/**
+ * ⭐⭐ APPEARANCE — the look-and-feel decisions that are NOT the theme.
+ *
+ * Athi has asked for this as its own unit twice: *"we can see how to bring the look and feel as a separate unit.
+ * similarly selection of font, font size etc need to be taken care of"* and *"anything in terms of inclusivity
+ * has to be thought over"*.
+ *
+ * ⚠️ TEXT SIZE AND MOTION ARE ACCESSIBILITY, NOT DECORATION — which is why they sit beside the themes rather
+ * than in a "preferences" drawer. Someone who needs 130% text needs it as much as someone who needs 7:1
+ * contrast, and a person whose migraine is triggered by movement is not expressing a taste.
+ *
+ * ⚠️ THE TYPE SCALE IS MULTIPLIED, NOT REPLACED. The six --fs tokens encode a HIERARCHY — a caption is smaller
+ * than a heading for a reason, and that relationship has to survive the change. Setting one flat font size would
+ * make every screen legible and structureless at the same time.
+ */
+var FS_BASE = { '--fs-1':11, '--fs-2':12.5, '--fs-3':14, '--fs-4':16, '--fs-5':20, '--fs-6':28 };
+var TEXT_SIZES = [
+  ['s',  'Small',   0.92],
+  ['m',  'Default', 1],
+  ['l',  'Large',   1.15],
+  ['xl', 'Larger',  1.32]
+];
+
+function apGet(k, d){ try{ return localStorage.getItem(k) || d; }catch(_){ return d; } }
+function apSet(k, v){ try{ localStorage.setItem(k, v); }catch(_){} }
+
+function textSize(){ return apGet('cb_fs', 'm'); }
+function motionPref(){ return apGet('cb_motion', 'auto'); }
+
+/**
+ * ⚠️ APPLIED BY WRITING THE TOKENS, exactly as themeApply does — one mechanism for "the look changes", not two.
+ * At the default it REMOVES the overrides rather than writing 1× values, so the stylesheet stays the source of
+ * truth for anyone who has expressed no preference.
+ */
+function appearanceApply(){
+  try {
+    var r = document.documentElement;
+    var row = TEXT_SIZES.filter(function(x){ return x[0] === textSize(); })[0] || TEXT_SIZES[1];
+    Object.keys(FS_BASE).forEach(function(tok){
+      if (row[2] === 1) r.style.removeProperty(tok);
+      else r.style.setProperty(tok, (Math.round(FS_BASE[tok] * row[2] * 10) / 10) + 'px');
+    });
+    /* ⚠️ THREE STATES, NOT TWO. "auto" means follow the operating system, which is what a person who set
+       reduce-motion in Windows or iOS has already asked for once and should not have to ask again. The explicit
+       values exist for the reverse cases: a device that cannot express it, and someone who wants motion back. */
+    var m = motionPref();
+    r.setAttribute('data-motion', m === 'auto' ? '' : m);
+    if (m === 'auto') r.removeAttribute('data-motion');
+  } catch(_){}
+}
+
+function textSizeSet(v){ apSet('cb_fs', v); appearanceApply(); renderApp(); if(typeof _capShowDetail==='function')_capShowDetail(); if(typeof loadSettings==='function')loadSettings(); }
+function motionSet(v){ apSet('cb_motion', v); appearanceApply(); renderApp(); if(typeof _capShowDetail==='function')_capShowDetail(); if(typeof loadSettings==='function')loadSettings(); }
+
 function themeSet(key){
   if(!THEMES[key]) return;
   try{ localStorage.setItem('cb_theme', key); }catch(_){ }
@@ -8441,6 +8521,9 @@ function applyPrefs(){
      which reads as a bug every single time the app opens. ⚠️ It is deliberately NOT cleared on logout: a theme is
      a preference of the person at the screen, not of the session. */
   try{ themeApply(themeGet()); }catch(_){ }
+  /* Same reasoning as the theme above: applied BEFORE first paint, or the text visibly resizes a moment
+     after the screen appears — which reads as a rendering bug rather than a preference being honoured. */
+  try{ appearanceApply(); }catch(_){ }
   UI.vp=lsGet('cb_vp',(window.innerWidth<=820?'mob':'lap'));
   try{ document.body.classList.toggle('vpmob', UI.vp==='mob'); }catch(_){}UI.lw=parseInt(lsGet('cb_lw',340),10)||340;
   /* Each two-pane FAMILY restores its own width — see lwKey(). A menu screen and a data list are not the same
