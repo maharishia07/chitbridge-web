@@ -1347,7 +1347,11 @@ var SET_SECS = [
   /* ⚠️ NAMED FOR WHAT IT RENDERS. I called this "Blueprints · Shared catalogue designs" when splitting Settings
      into sections, taking the name from the function (blueprintSettingsHTML) without reading its output — it
      renders WORK_PATTERNS, "Governed by work pattern". Nothing about catalogue blueprints appears on it. */
-  { key:'blueprints', name:'Work patterns',  q:'How each action is governed' }
+  { key:'blueprints', name:'Work patterns',  q:'How each action is governed' },
+  /* ⚠️ ITS OWN SECTION, NOT A ROW UNDER SOMETHING ELSE. Localisation is eight decisions — language, direction,
+     numerals, numbers, money, dates, times and sort order — and they were scattered across five files and three
+     hardcoded 'en-IN' pins. A concern that large filed under "Work" is a concern nobody finds. */
+  { key:'locale',     name:'Localisation', q:'Language, formats and direction' }
 ];
 function setSec(){ return UI.setSec || 'work'; }
 /* Same reason as profSetSec — the hook fires before #setbody exists, so drive the load explicitly. */
@@ -1403,11 +1407,98 @@ async function loadSettings(){ const h=document.getElementById("setbody"); if(!h
     UI._set={ s:s, daOpts:_daOpts };
     paintSettings(s, _daOpts);
   }catch(e){ h.innerHTML=scrErr(e); } }
+/**
+ * ⭐⭐ THE LOCALISATION SCREEN.
+ *
+ * ⚠️ THE LIVE PREVIEW IS THE MOST IMPORTANT COMPONENT ON IT, and it is not decoration. Every other control here
+ * is an abstraction — nobody can predict what `ar-EG` does to a number, or that Arabic switches the page
+ * direction, or that French moves the currency symbol to the end. Showing the result BEFORE the choice is the
+ * difference between a setting and a guess. Ship this without the preview and people will set a locale, meet
+ * unexpected digits somewhere else entirely, and file it as a bug.
+ *
+ * ⭐ LANGUAGE AND FORMAT ARE TWO CONTROLS, deliberately. An Indian trader may want English words with Indian
+ * grouping; a Gulf buyer Arabic words with Western digits. Tying them forces a choice nobody asked to make.
+ *
+ * ⚠️ DIRECTION IS SHOWN, NOT CHOSEN. It follows the language, and offering it as a control invites somebody to
+ * pick an unreadable combination and then report the app as broken.
+ */
+function localeSettingsHTML(){
+  var d = CBLocale.describe();
+  var LANGS = { en:'English', hi:'हिन्दी', ta:'தமிழ்', fr:'Français' };
+  var FORMATS = [
+    ['', 'Same as language'],
+    ['en-IN', 'India — en-IN'], ['en-US', 'United States — en-US'], ['en-GB', 'United Kingdom — en-GB'],
+    ['de-DE', 'Germany — de-DE'], ['fr-FR', 'France — fr-FR'],
+    ['ar-AE', 'UAE — ar-AE (Western digits)'], ['ar-EG', 'Egypt — ar-EG (Eastern digits ١٢٣)'],
+    ['ja-JP', 'Japan — ja-JP'],
+  ];
+  var cur = (function(){ try { return localStorage.getItem('cb_locale') || ''; } catch(_) { return ''; } })();
+
+  var langBtns = Object.keys(LANGS).map(function(k){
+    var on = d.lang === k;
+    return '<button data-testid="loc-lang-' + k + '" onclick="localeSetLang(\'' + k + '\')"'
+      + ' style="border:1px solid ' + (on ? 'var(--blue)' : 'var(--line)') + ';'
+      + 'background:' + (on ? 'var(--blue-tint-bg)' : 'var(--card)') + ';color:' + (on ? 'var(--blue)' : 'var(--on-card)') + ';'
+      + 'border-radius:9px;padding:5px 11px;font-size:var(--fs-2);font-weight:' + (on ? 700 : 500) + ';cursor:pointer;margin:0 6px 6px 0">'
+      + LANGS[k] + '</button>';
+  }).join('');
+
+  var fmtSel = '<select class="inp" data-testid="loc-format" onchange="localeSetFormat(this.value)">'
+    + FORMATS.map(function(f){
+        return '<option value="' + f[0] + '"' + (cur === f[0] ? ' selected' : '') + '>' + esc(f[1]) + '</option>';
+      }).join('') + '</select>';
+
+  var sorted = CBLocale.sort(['Zebra', 'Ähnlich', 'apple', 'Ökonom', 'banana']).join(' · ');
+
+  var row = function(k, v){
+    return '<div style="display:flex;gap:10px;padding:5px 0;font-size:var(--fs-2)">'
+      + '<span style="min-width:104px;color:var(--grey)">' + k + '</span>'
+      + '<b style="color:var(--on-card)">' + v + '</b></div>';
+  };
+
+  return _misHead('Localisation', 'What changes when the reader changes. Eight decisions, in one place.')
+    + '<div style="' + _CARD + '">'
+    +   '<label class="fl">Language <span style="font-weight:400;color:var(--grey)">— the words</span></label>'
+    +   '<div style="margin:4px 0 6px">' + langBtns + '</div>'
+    +   '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5">'
+    +     'The navigation is translated so far — the rest of the app is still English.</div>'
+    + '</div>'
+    + '<div style="' + _CARD + '">'
+    +   '<label class="fl">Number &amp; date format <span style="font-weight:400;color:var(--grey)">— how figures are written</span></label>'
+    +   fmtSel
+    +   '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px;line-height:1.5">'
+    +     '⚠️ Separate from the language on purpose. You can read English and still group money the Indian way, '
+    +     'or read Arabic with Western digits.</div>'
+    + '</div>'
+    /* the preview — see the note above the function */
+    + '<div style="' + _CARD + ';background:var(--neutral-tint);color:var(--on-card)" data-testid="loc-preview">'
+    +   '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin-bottom:6px">'
+    +     'How this looks</div>'
+    +   row('Money', esc(CBLocale.money(123456.5, 'USD')) + ' &nbsp;·&nbsp; ' + esc(CBLocale.money(123456.5, 'INR')))
+    +   row('Number', esc(CBLocale.number(1234567.89)))
+    +   row('Date', esc(d.sampleDate))
+    +   row('Time', esc(d.sampleTime))
+    +   row('Sorting', esc(sorted))
+    +   row('Direction', d.dir === 'rtl' ? 'right to left ←' : 'left to right →')
+    + '</div>'
+    + '<div style="' + _CARD + '">'
+    +   '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin-bottom:5px">'
+    +     'What is never translated</div>'
+    +   '<div style="font-size:var(--fs-2);line-height:1.55;color:var(--on-card)">'
+    +     'Product names, chit subjects, message text and dispute reasons stay in the words their author wrote. '
+    +     '<b>A chit is a shared record</b> — one that read differently to each party would not be a record.</div>'
+    + '</div>';
+}
+/* Both re-render the whole screen, so the preview above updates with the choice — which is the point of it. */
+function localeSetLang(k){ CBLocale.setLang(k); UI._set = UI._set; renderApp(); _capShowDetail(); loadSettings(); }
+function localeSetFormat(v){ CBLocale.setLocale(v); renderApp(); _capShowDetail(); loadSettings(); }
+
 function paintSettings(s, _daOpts){ const h=document.getElementById("setbody"); if(!h)return;
   { const k = setSec();
     const notYet = '<div style="background:var(--danger-tint);border:1px solid #f0c9c6;border-radius:9px;padding:8px 11px;font-size:11.5px;color:var(--disp);margin-bottom:11px">⏳ These preferences are saved but <b>not yet active</b> — they don\'t change behaviour yet.</div>';
     var out = "";
-    if (k === "work") out = _misHead('Work', 'How tasks reach the people and co-assists who do them.')
+    if (k === "locale") out = localeSettingsHTML();
+    else if (k === "work") out = _misHead('Work', 'How tasks reach the people and co-assists who do them.')
       + `<div style="${_CARD}">${notYet}
       <label class="fl">Assignment model</label><select class="inp" id="st_am">${opt(["pull","push","both"],s.assignment_model||"both")}</select>
       <label class="fl">Default max tasks per actor</label><input class="inp" id="st_mt" inputmode="numeric" value="${esc(s.default_max_tasks||10)}">
