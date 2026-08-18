@@ -1061,6 +1061,39 @@ function govCodeStandards(){
  * which is a screen, not a model — so units cannot be declared, referenced or governed. That is a real Model A gap
  * and it is stated here rather than papered over.
  */
+/**
+ * ⭐⭐ LOCALISATION RESOLVES INTO GOVERNANCE LAYER 2 (Athi, 2026-08-18: *"where is the localisation layer, it is
+ * missing in the governance layer?"*).
+ *
+ * ⚠️ HE WAS RIGHT AND IT WAS HALF-THERE. Layer 2 · Jurisdiction has said "locale bundle lands partly here" since
+ * it was written, and carries a "Date / number format" row — which read a literal em-dash. The DECLARATION
+ * existed and nothing resolved it, so the layer claimed to govern something it could not see.
+ *
+ * That is the same defect `govCatVis` was written to fix: a row asserting a value independently of the thing it
+ * describes, which is fine until the two disagree and the screen keeps saying the old answer.
+ *
+ * ⚠️ FUNCTIONS, NOT THEIR RESULTS. GOV is a const built once at load, before CBLocale has read storage —
+ * `govLocaleFormat()` here would freeze on whatever was true at parse time. govVal() unwraps them at render.
+ *
+ * ── MODEL A, the same shape as visibility ─────────────────────────────────────────────────────────────────
+ * The LAYER declares what a jurisdiction permits. Settings › Localisation is where a person CHOOSES WITHIN it.
+ * The layer caps; the profile chooses. Localisation is not a separate concern from governance — it is one of
+ * the seven layers, and the settings screen is its chooser.
+ */
+function govLocaleLang(){
+  try {
+    var m = { en:'English', hi:'हिन्दी (Hindi)', ta:'தமிழ் (Tamil)', fr:'Français (French)' };
+    var l = CBLocale.lang();
+    return (m[l] || l) + ' · interface';
+  } catch(_){ return '—'; }
+}
+function govLocaleFormat(){
+  try { return CBLocale.locale() + ' · ' + CBLocale.money(1234.5, 'INR') + ' · ' + CBLocale.date(Date.now()); }
+  catch(_){ return '—'; }
+}
+function govLocaleDir(){
+  try { return CBLocale.dir() === 'rtl' ? 'right to left (RTL)' : 'left to right (LTR)'; } catch(_){ return '—'; }
+}
 function govUnits(){
   /* Reads the MODEL now, not the wizard — so it resolves whether or not the catalogue capability has been opened.
      Reaching across to another lazily-loaded capability's global was the reason this row used to read empty. */
@@ -1126,9 +1159,15 @@ const GOV=[
        be resolved at RENDER time — govVal() below unwraps it. */
     ['Catalogue visibility', govCatVis, 'chosen'],['Attachment types','image, pdf, docx, xlsx, csv, zip','advisory'],
     ['Attachment max size','10 MB','advisory'] ] },
-  { n:'2 · Jurisdiction', tag:'country / legal', desc:'Country-specific legal & tax frame (locale bundle lands partly here).', rows:[
+  /* ⚠️ THE LOCALISATION ROWS RESOLVE LIVE — see govLocaleLang/Format/Dir above. They read '—' until 2026-08-18:
+     the layer declared it governed the locale bundle and could not see it. Chosen in Settings › Localisation,
+     which is this layer's chooser, exactly as Profile → Storefront is the chooser for visibility. */
+  { n:'2 · Jurisdiction', tag:'country / legal · localisation', desc:'Country-specific legal & tax frame, and the locale bundle: language, formats and reading direction. Chosen in Settings › Localisation.', rows:[
     ['Country','—','free'],['Tax regime (GST / VAT)','—','free'],['Legal framework','—','free'],
-    ['Date / number format','—','free'] ] },
+    ['Interface language', govLocaleLang, 'chosen'],
+    ['Date / number format', govLocaleFormat, 'chosen'],
+    ['Reading direction', govLocaleDir, 'chosen'],
+    ['Sort order','follows the format locale','free'] ] },
   { n:'3 · Vertical', tag:'business type', desc:'Defaults for your line of business.', rows:[
     ['Business vertical','—','free'],['Default units','—','free'],['Vertical currency default','—','free'] ] },
   { n:'4 · Standards', tag:'codes / units', desc:'Measurement & coding standards.', rows:[
