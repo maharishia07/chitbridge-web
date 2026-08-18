@@ -153,7 +153,7 @@ function _rdStatus(st){
 function _rungBadge(r){
   var map={verified:['var(--ok-3)','Verified'],attested:['var(--blue-2)','Attested'],documented:['var(--warn-2)','Documented'],declared:['var(--blue-2)','Declared']};
   var x=map[r]; if(!x) return '';
-  return '<span style="font-size:var(--fs-1);font-weight:800;letter-spacing:.03em;text-transform:uppercase;border-radius:5px;padding:2px 6px;background:'+x[0]+'22;color:'+x[0]+';margin-left:7px" title="trust rung">'+x[1]+'</span>';
+  return '<span style="font-size:var(--fs-1);font-weight:800;letter-spacing:.03em;text-transform:uppercase;border-radius:5px;padding:2px 6px;background:'+x[0]+'22;color:'+x[0]+';margin-inline-start:7px" title="trust rung">'+x[1]+'</span>';
 }
 // ── per-topic LIFECYCLE model (client-side) — each clearance is a process with states, an AI role + a partner option ──
 var LIFE = {
@@ -184,7 +184,7 @@ function _rdExpand(it){
     +_rdSub('How you use it')+'<div style="font-size:var(--fs-2);color:var(--ink)">'+esc(L.use)+'</div>'
     +_rdSub('🤖 How AI enables it')+'<div style="font-size:var(--fs-2);color:var(--grey)"><b style="color:var(--blue)">'+ai.lvl+'</b> · gate: '+esc(ai.gate)+' — '+esc(ai.t)+'</div>'
     +partner
-    +'<div style="font-size:var(--fs-1);color:var(--grey);margin-top:12px;border-left:3px solid #8a5e22;padding-left:9px;line-height:1.45">Versioned: when a buyer folds this into an order they keep a <b>snapshot</b> — later changes never alter their copy.</div>'
+    +'<div style="font-size:var(--fs-1);color:var(--grey);margin-top:12px;border-inline-start:3px solid #8a5e22;padding-inline-start:9px;line-height:1.45">Versioned: when a buyer folds this into an order they keep a <b>snapshot</b> — later changes never alter their copy.</div>'
   +'</div>';
 }
 // ── TWO-PANE master-detail (list ↔ detail, like Task/Co-assist) — selecting preserves scroll (no jump) ──
@@ -297,7 +297,7 @@ function _rdHeader(){
   var tb=function(k,lbl){ return '<div onclick="UI.rdTab=\''+k+'\';if(typeof renderApp===\'function\')renderApp()" style="padding:9px 15px;font-size:var(--fs-2);font-weight:700;cursor:pointer;border-bottom:2px solid '+(tab===k?'var(--blue)':'transparent')+';color:'+(tab===k?'var(--blue)':'var(--grey)')+'">'+lbl+'</div>'; };
   return '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex:none;padding:0 12px;border-bottom:1px solid var(--line);background:var(--card);color:var(--on-card)">'
     +'<div style="display:flex;gap:2px">'+tb('certification','Certification')+tb('clearance','Clearance')+tb('commercial','Commercial')+'</div>'
-    +'<div style="margin-left:auto;display:flex;align-items:center;gap:8px;padding:6px 0;flex-wrap:wrap">'+(tab!=='commercial'?_rdDestSelectors():'')
+    +'<div style="margin-inline-start:auto;display:flex;align-items:center;gap:8px;padding:6px 0;flex-wrap:wrap">'+(tab!=='commercial'?_rdDestSelectors():'')
       +'<button onclick="aiSuggestStandards()" title="AI suggests the standards you likely need for this sector + market" style="font-size:11.5px;font-weight:700;border:1px solid var(--purple);background:var(--purple-tint);color:var(--purple);border-radius:9px;padding:6px 10px;cursor:pointer">✨ Standards</button>'
       +'<button onclick="openSectorMatrix()" title="Common vs sector-specific — the sector × standard matrix" style="font-size:11.5px;font-weight:700;border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:9px;padding:6px 10px;cursor:pointer">🧮 Matrix</button></div>'
   +'</div>';
@@ -321,7 +321,7 @@ async function openSectorMatrix(){
   }
   var list=Object.keys(rows).map(function(k){ var on=secs.map(function(s){return !!rows[k].sectors[s[0]];}); return {std:k,name:STDNAME[k]||k,on:on,n:on.filter(Boolean).length}; });
   list.sort(function(a,b){ return (b.n-a.n)||a.std.localeCompare(b.std); });
-  var head='<tr><th style="text-align:left;padding:8px 6px;font-size:var(--fs-1);text-transform:uppercase;color:var(--grey);border-bottom:1px solid var(--line)">Standard</th>'+secs.map(function(s){return '<th style="padding:8px 4px;font-size:var(--fs-1);border-bottom:1px solid var(--line);color:'+s[3]+';white-space:nowrap">'+s[1]+'<br>'+s[2]+'</th>';}).join('')+'</tr>';
+  var head='<tr><th style="text-align:start;padding:8px 6px;font-size:var(--fs-1);text-transform:uppercase;color:var(--grey);border-bottom:1px solid var(--line)">Standard</th>'+secs.map(function(s){return '<th style="padding:8px 4px;font-size:var(--fs-1);border-bottom:1px solid var(--line);color:'+s[3]+';white-space:nowrap">'+s[1]+'<br>'+s[2]+'</th>';}).join('')+'</tr>';
   var rowH=function(r){ var common=r.n===secs.length; return '<tr'+(common?' style="background:var(--ok-tint);color:var(--on-card)"':'')+'><td style="padding:8px 6px;font-weight:600;font-size:12px;border-bottom:1px solid var(--line);color:'+(common?'var(--ok-3)':'var(--ink)')+'">'+esc(r.name)+'</td>'+r.on.map(function(v,i){return _mtxCell(v,common,secs[i][3]);}).join('')+'</tr>'; };
   var band=function(t){return '<tr><td colspan="'+(secs.length+1)+'" style="padding:11px 6px 3px;font-size:var(--fs-1);font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--grey)">'+t+'</td></tr>';};
   var common=list.filter(function(r){return r.n===secs.length;}), spec=list.filter(function(r){return r.n!==secs.length;});
@@ -405,7 +405,7 @@ function _rdComDetail(g){
     + (m.life?(_rdSub('Its lifecycle')+_rdComSteps(m.life)):'')
     + _rdSub('🤖 How AI enables it')+'<div style="font-size:var(--fs-2);color:var(--grey)">'+aiLine+'</div>'
     + partner
-    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:12px;border-left:3px solid #8a5e22;padding-left:9px;line-height:1.45">When you send the order, the chosen cover folds onto the buyer\'s copy (frozen) beside the clearances — same as certificates.</div>'
+    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:12px;border-inline-start:3px solid #8a5e22;padding-inline-start:9px;line-height:1.45">When you send the order, the chosen cover folds onto the buyer\'s copy (frozen) beside the clearances — same as certificates.</div>'
   +'</div>';
 }
 function _rdComTwoPane(){
@@ -414,7 +414,7 @@ function _rdComTwoPane(){
   var list=UI.commerce.cluster, sel=(UI.comSel!=null && UI.comSel<list.length)?UI.comSel:0; UI.comSel=sel;
   var left=list.map(function(g,i){return _rdComRow(g,i,sel);}).join('');
   return '<div class="rdpanes'+(UI.rdMDetail?' showdetail':'')+'" style="flex:1;display:flex;min-height:0;overflow:hidden">'
-    +'<div id="comlist" class="rdlist" style="width:300px;flex:0 0 auto;border-right:1px solid var(--line);overflow-y:auto;background:var(--card);padding:8px 6px 30px;color:var(--on-card)">'+left+'</div>'
+    +'<div id="comlist" class="rdlist" style="width:300px;flex:0 0 auto;border-inline-end:1px solid var(--line);overflow-y:auto;background:var(--card);padding:8px 6px 30px;color:var(--on-card)">'+left+'</div>'
     +'<div class="rddetail" style="flex:1;min-width:0;overflow-y:auto;background:var(--blue-tint-bg);color:var(--on-card)">'
       +'<button class="dback" style="margin:10px 0 0 14px" onclick="rdBack()">‹ Back</button>'+_rdComDetail(list[sel])+'</div></div>';
 }
@@ -425,7 +425,7 @@ function _rdTwoPane(list){
   var sel=list.filter(function(i){return i.standard+'|'+i.doc===UI.rdSel;})[0];
   var left=list.map(function(i){return _rdRow(i,UI.rdSel);}).join('');
   return '<div class="rdpanes'+(UI.rdMDetail?' showdetail':'')+'" style="flex:1;display:flex;min-height:0;overflow:hidden">'
-    +'<div id="rdlist" class="rdlist" style="width:300px;flex:0 0 auto;border-right:1px solid var(--line);overflow-y:auto;background:var(--card);padding:8px 6px 30px;color:var(--on-card)">'+left+'</div>'
+    +'<div id="rdlist" class="rdlist" style="width:300px;flex:0 0 auto;border-inline-end:1px solid var(--line);overflow-y:auto;background:var(--card);padding:8px 6px 30px;color:var(--on-card)">'+left+'</div>'
     +'<div id="rddetail" class="rddetail" style="flex:1;min-width:0;overflow-y:auto;background:var(--blue-tint-bg);color:var(--on-card)">'
       +'<button class="dback" style="margin:10px 0 0 14px" onclick="rdBack()">‹ Back</button>'+_rdDetailPane(sel)+'</div></div>';
 }

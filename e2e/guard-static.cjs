@@ -527,5 +527,35 @@ console.log('\n13 · every token referenced is defined');
       + missing.map((t) => t + ' (' + used.get(t) + ')').join(', '));
   } else pass('no var(--…) refers to a token that does not exist');
 }
+
+/**
+ * 14 · NO PHYSICAL DIRECTION PROPERTIES.
+ *
+ * ⚠️ `margin-left` is a promise about the SCREEN. `margin-inline-start` is a promise about the READING ORDER —
+ * it follows `dir`, so one attribute on <html> mirrors the whole interface instead of 378 hand-edits. That
+ * conversion is done; this check is what stops it being undone one convenient `margin-left` at a time.
+ *
+ * ⚠️ IT IS THE PREREQUISITE FOR ARABIC, and for Hebrew, Urdu and Farsi at no extra cost. A single physical
+ * property does not look like a bug in English and never will — which is exactly why it needs a machine to
+ * notice it rather than a reviewer.
+ *
+ * ⚠️ COMMENTS ARE EXCLUDED. Several of them legitimately DISCUSS `padding-left` — including the note explaining
+ * why an indent was removed. A guard that trips on the record of a decision teaches people to delete the record.
+ */
+console.log('\n14 · direction is logical, not physical (RTL-ready)');
+{
+  const PHYS = /\b(margin|padding|border)-(left|right)\b|text-align\s*:\s*(left|right)\b/g;
+  const bad = {};
+  [['app.html', app]].concat(CAPS.map((f) => [f, fs.readFileSync(path.join(WEB, 'app', f), 'utf8')]))
+    .forEach(([name, src]) => {
+      const code = src.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/^\s*\/\/.*$/gm, ' ');
+      const n = (code.match(PHYS) || []).length;
+      if (n) bad[name] = n;
+    });
+  const total = Object.values(bad).reduce((a, b) => a + b, 0);
+  if (total) warn(total + ' physical direction properties — these do not mirror in RTL: '
+    + Object.entries(bad).map(([k, v]) => k + ':' + v).join(', '));
+  else pass('no margin/padding/border-left|right or text-align:left|right outside comments');
+}
 console.log('\n== GUARD ==  ' + hard + ' failure(s) · ' + soft + ' warning(s)');
 process.exit(hard ? 1 : 0);

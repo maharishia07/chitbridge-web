@@ -191,7 +191,7 @@ function c2PaneOrd(d){
     + (unpriced ? ' · <span style="color:var(--warn-2)">' + unpriced + ' with no price</span>' : ''));
   out += '<div style="padding:9px 16px;border-bottom:1px solid var(--line)">'
     + '<button class="btn" onclick="c2RepricePreview()">₹ Price from catalogue</button>'
-    + '<span style="font-size:11.5px;color:var(--grey);margin-left:9px">shows what would change before anything is written</span></div>';
+    + '<span style="font-size:11.5px;color:var(--grey);margin-inline-start:9px">shows what would change before anything is written</span></div>';
 
   out += lines.map(function(e, i){
     var l = e.live || e.original || {};
@@ -203,10 +203,10 @@ function c2PaneOrd(d){
                   customer_clarified: 'customer changed it', rate_agreed: 'rate agreed' }[e.reason_code] || 'removed';
       return '<div style="padding:11px 16px;border-bottom:1px solid var(--line);opacity:.55">'
         + '<s>' + esc(l.particulars || '') + ' · ' + esc(c2q(l)) + '</s>'
-        + '<span style="margin-left:8px;font-size:var(--fs-1);font-weight:700;color:var(--warn-2);background:var(--warn-tint);border-radius:5px;padding:1px 6px">' + esc(why) + '</span></div>';
+        + '<span style="margin-inline-start:8px;font-size:var(--fs-1);font-weight:700;color:var(--warn-2);background:var(--warn-tint);border-radius:5px;padding:1px 6px">' + esc(why) + '</span></div>';
     }
     var was = (e.history || []).slice(0, 1).map(function(h){
-      return '<s style="color:var(--grey);margin-right:6px">' + esc([h.particulars, h.quantity, h.unit].filter(Boolean).join(' ')) + '</s>';
+      return '<s style="color:var(--grey);margin-inline-end:6px">' + esc([h.particulars, h.quantity, h.unit].filter(Boolean).join(' ')) + '</s>';
     }).join('');
     /* Emphasis, not exclusion: mine sits at full weight, everyone else's is dimmed but perfectly readable. */
     return '<div style="padding:11px 16px;border-bottom:1px solid var(--line);' + (mine ? 'background:var(--card)' : 'opacity:.62') + ';color:var(--on-card)">'
@@ -343,7 +343,7 @@ function c2RepricePaint(){
             /* ⚠️ REPLACING A STATED FIGURE IS CALLED OUT. Filling an empty price and overwriting one the customer
                wrote are different acts, and only a person can say whether the second is right. */
             + (w.replaces_stated_price ? '<div style="font-size:var(--fs-1);color:var(--warn-2)">replaces the price on the chit</div>' : '')
-            + '</span><span style="text-align:right;font-variant-numeric:tabular-nums">'
+            + '</span><span style="text-align:end;font-variant-numeric:tabular-nums">'
             + (w.price != null ? '<s style="color:var(--grey)">' + c2Money(w.price) + '</s> ' : '') + '<b>' + c2Money(w.to) + '</b></span></div>';
         }).join('')
     : '<div style="font-size:var(--fs-2);color:var(--grey)">Nothing to change — every line already matches the catalogue.</div>';
@@ -641,7 +641,7 @@ function c2PaneWork(d){
  *   'person' → show the DATE only     'date' → show the PERSON only     'line' → show both
  */
 function c2WorkRow(e, asg, prog, ctx){
-  var indent = (ctx === 'person' || ctx === 'date') ? 'padding-left:28px;' : '';
+  var indent = (ctx === 'person' || ctx === 'date') ? 'padding-inline-start:28px;' : '';
   var a = asg[e.line_id] || {};
   var l = e.live || e.original || {};
   var p = prog[e.line_id] || {};
@@ -652,9 +652,9 @@ function c2WorkRow(e, asg, prog, ctx){
   return '<div onclick="c2AssignOpen(\'' + e.line_id + '\')" style="padding:11px 16px;border-bottom:1px solid var(--line);cursor:pointer">'
       + '<div style="display:flex;align-items:baseline;gap:8px">'
       + '<span style="flex:1;font-weight:500">' + esc(l.particulars || '') + '<span style="color:var(--grey);font-weight:400;font-size:var(--fs-2)"> · ' + esc(c2q(l)) + '</span></span>'
-      + '<span style="width:62px;text-align:right;font-variant-numeric:tabular-nums;font-size:13.5px">' + got + '</span>'
-      + '<span style="width:62px;text-align:right;font-variant-numeric:tabular-nums;font-size:13.5px;font-weight:' + (done ? '400' : '700') + ';color:' + (done ? 'var(--ok-2)' : 'var(--ink)') + '">' + (left === null ? '—' : (done ? '✓' : left)) + '</span>'
-      + '<span style="color:var(--grey);width:12px;text-align:right;font-size:12px">✎</span></div>'
+      + '<span style="width:62px;text-align:end;font-variant-numeric:tabular-nums;font-size:13.5px">' + got + '</span>'
+      + '<span style="width:62px;text-align:end;font-variant-numeric:tabular-nums;font-size:13.5px;font-weight:' + (done ? '400' : '700') + ';color:' + (done ? 'var(--ok-2)' : 'var(--ink)') + '">' + (left === null ? '—' : (done ? '✓' : left)) + '</span>'
+      + '<span style="color:var(--grey);width:12px;text-align:end;font-size:12px">✎</span></div>'
       /* Who has it and when it is due — the two things that turn "what is left" into "who do I chase". */
       + (function(){
           /* Each view puts what it groups by in the HEADING, so the row shows only what is left to say.

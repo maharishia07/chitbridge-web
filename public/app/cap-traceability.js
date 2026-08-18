@@ -89,13 +89,13 @@ function _traceBatchPicker(){
 function _traceChip(n, isTerm){
   var label = esc(n.product || '(no product)');
   var qty = (n.qty != null) ? (' · ' + esc(String(n.qty)) + esc(n.unit ? (' ' + n.unit) : '')) : '';
-  var badge = n.is_origin ? '<span style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);background:var(--blue-tint-bg);border-radius:6px;padding:1px 5px;margin-left:6px">ORIGIN</span>'
-            : (isTerm ? '<span style="font-size:var(--fs-1);font-weight:800;color:var(--disp-2);background:var(--danger-tint);border-radius:6px;padding:1px 5px;margin-left:6px">EXPOSED</span>' : '');
+  var badge = n.is_origin ? '<span style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);background:var(--blue-tint-bg);border-radius:6px;padding:1px 5px;margin-inline-start:6px">ORIGIN</span>'
+            : (isTerm ? '<span style="font-size:var(--fs-1);font-weight:800;color:var(--disp-2);background:var(--danger-tint);border-radius:6px;padding:1px 5px;margin-inline-start:6px">EXPOSED</span>' : '');
   var bd = isTerm ? 'var(--disp)' : (n.is_origin ? 'var(--blue-tint-bg)' : 'var(--line)');
   var bg = isTerm ? 'var(--danger-tint)' : (n.is_origin ? 'var(--blue-tint-bg)' : '#fff');
   return '<span style="display:inline-flex;align-items:center;border:1px solid ' + bd + ';background:' + bg + ';border-radius:9px;padding:5px 9px;font-size:12px;margin:3px 5px 3px 0">'
     + '<b style="font-weight:700">' + label + '</b>' + qty
-    + '<span style="color:var(--grey);font-family:monospace;font-size:var(--fs-1);margin-left:7px">' + _traceShort(n.chit_id) + '</span>' + badge + '</span>';
+    + '<span style="color:var(--grey);font-family:monospace;font-size:var(--fs-1);margin-inline-start:7px">' + _traceShort(n.chit_id) + '</span>' + badge + '</span>';
 }
 
 function _traceFwd(r){
@@ -132,18 +132,18 @@ function _traceNode(n, isTerm){
   if (n.qty != null) bits.push('<b style="color:var(--ink-2)">' + esc(String(n.qty)) + esc(n.unit ? (' ' + n.unit) : '') + '</b>');
   if (n.product) bits.push(esc(n.product));
   bits.push('<span style="font-family:monospace;font-size:var(--fs-1);opacity:.6">' + _traceShort(n.chit_id) + '</span>');
-  var badge = n.is_origin ? '<span style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);background:var(--blue-tint-bg);border-radius:6px;padding:1px 6px;margin-left:7px">ORIGIN</span>'
-            : (isTerm ? '<span style="font-size:var(--fs-1);font-weight:800;color:var(--disp-2);background:var(--danger-tint);border-radius:6px;padding:1px 6px;margin-left:7px">EXPOSED</span>' : '');
-  if (isRed) badge += '<span style="font-size:var(--fs-1);font-weight:800;color:var(--disp);background:#c0453b;border-radius:6px;padding:1px 6px;margin-left:7px">⚠ OUT &gt; IN</span>';
+  var badge = n.is_origin ? '<span style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);background:var(--blue-tint-bg);border-radius:6px;padding:1px 6px;margin-inline-start:7px">ORIGIN</span>'
+            : (isTerm ? '<span style="font-size:var(--fs-1);font-weight:800;color:var(--disp-2);background:var(--danger-tint);border-radius:6px;padding:1px 6px;margin-inline-start:7px">EXPOSED</span>' : '');
+  if (isRed) badge += '<span style="font-size:var(--fs-1);font-weight:800;color:var(--disp);background:#c0453b;border-radius:6px;padding:1px 6px;margin-inline-start:7px">⚠ OUT &gt; IN</span>';
   var dot = (isRed || isTerm) ? 'var(--disp)' : (n.is_origin ? 'var(--blue-2)' : 'var(--blue-2)');
   var balLine = isRed
-    ? '<div style="font-size:var(--fs-1);color:var(--disp-2);font-weight:700;margin-left:17px;margin-top:2px">claimed ' + _traceQ(bal.out) + ' out, received ' + _traceQ(bal.in) + ' in — <u>' + _traceQ(bal.delta) + ' ' + esc(bal.base_unit || '') + ' unaccounted</u></div>'
+    ? '<div style="font-size:var(--fs-1);color:var(--disp-2);font-weight:700;margin-inline-start:17px;margin-top:2px">claimed ' + _traceQ(bal.out) + ' out, received ' + _traceQ(bal.in) + ' in — <u>' + _traceQ(bal.delta) + ' ' + esc(bal.base_unit || '') + ' unaccounted</u></div>'
     : '';
   return '<div style="padding:6px 0' + (isRed ? ';background:var(--danger-tint);border-radius:9px' : '') + ';color:var(--on-card)">'
-    + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap' + (isRed ? ';padding-left:6px' : '') + '">'
+    + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap' + (isRed ? ';padding-inline-start:6px' : '') + '">'
       + '<span style="width:9px;height:9px;border-radius:50%;background:' + dot + ';flex:0 0 auto"></span>'
       + '<span style="font-weight:700;font-size:13.5px' + (isRed ? ';color:var(--disp-2)' : '') + '">' + who + '</span>' + badge + '</div>'
-    + '<div style="font-size:11.5px;color:var(--grey);margin-left:17px;margin-top:1px' + (isRed ? ';padding-left:6px' : '') + '">' + bits.join(' · ') + '</div>'
+    + '<div style="font-size:11.5px;color:var(--grey);margin-inline-start:17px;margin-top:1px' + (isRed ? ';padding-inline-start:6px' : '') + '">' + bits.join(' · ') + '</div>'
     + balLine
     + '</div>';
 }
@@ -161,7 +161,7 @@ function _traceTree(r){
     var n = byId[id] || { chit_id:id };
     var kidHtml = (kids[id] || []).map(render).join('');
     return '<div>' + _traceNode(n, !!term[id])
-      + (kidHtml ? ('<div style="margin-left:8px;border-left:1.5px solid var(--line);padding-left:15px">' + kidHtml + '</div>') : '')
+      + (kidHtml ? ('<div style="margin-inline-start:8px;border-inline-start:1.5px solid var(--line);padding-inline-start:15px">' + kidHtml + '</div>') : '')
       + '</div>';
   }
   return roots.map(render).join('');
@@ -177,7 +177,7 @@ function _traceBwd(r){
     var n = byId[cid] || { chit_id: cid };
     var arrow = i < path.length - 1 ? '<div style="color:var(--grey);font-size:var(--fs-3);padding:2px 0 2px 22px">↓</div>' : '';
     var tag = (i === 0) ? 'SOURCE' : (i === path.length - 1 ? 'FLAGGED' : 'HOP ' + i);
-    return '<div style="padding:2px 18px"><span style="font-size:var(--fs-1);font-weight:800;color:var(--grey);margin-right:8px">' + tag + '</span>' + _traceChip(n, false) + '</div>' + arrow;
+    return '<div style="padding:2px 18px"><span style="font-size:var(--fs-1);font-weight:800;color:var(--grey);margin-inline-end:8px">' + tag + '</span>' + _traceChip(n, false) + '</div>' + arrow;
   }).join('');
   return head + '<div style="padding:6px 0 18px">' + steps + '</div>';
 }

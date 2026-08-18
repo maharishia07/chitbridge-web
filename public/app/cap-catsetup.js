@@ -549,7 +549,7 @@ function catsetRowsHTML(){
       + '<div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:8px">'
       +   '<span style="font-size:var(--fs-3)">' + s.icon + '</span>'
       +   '<b style="font-size:13.5px">' + esc(s.name) + '</b></div>'
-      + '<div style="font-size:11.5px;color:var(--grey);margin-top:1px;padding-left:22px">' + esc(s.q) + '</div></div>'
+      + '<div style="font-size:11.5px;color:var(--grey);margin-top:1px;padding-inline-start:22px">' + esc(s.q) + '</div></div>'
       + '<div class="rowgo" aria-hidden="true">›</div></div>';
   }).join('');
 }
@@ -613,7 +613,7 @@ function catsetCss(){
     /* The vocabulary blocks. Quieter than the controls above them — this is reference, not something to act on. */
     '.catset-reg{border:1px solid var(--line);border-radius:12px;background:var(--paper);margin-bottom:12px;overflow:hidden}',
     '.catset-regh{display:flex;align-items:center;gap:8px;padding:10px 13px 0;font-size:var(--fs-2);font-weight:700}',
-    '.catset-regn{margin-left:auto;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:var(--fs-1);',
+    '.catset-regn{margin-inline-start:auto;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:var(--fs-1);',
     'color:var(--grey);background:var(--card);border:1px solid var(--line);border-radius:20px;padding:1px 8px}',
     '.catset-regb{font-size:12px;line-height:1.55;color:var(--grey);padding:4px 13px 9px}',
     '.catset-regrows{display:flex;flex-direction:column;gap:1px;background:var(--line);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}',
@@ -648,8 +648,8 @@ function catsetCss(){
      * a rule down the left say "this belongs to the row above" without spending any horizontal space to say it.
      */
     '.catset-regrow .rn{margin-top:5px;padding:5px 9px;background:var(--neutral-tint);color:var(--note);'
-      + 'border-left:2px solid var(--line);border-radius:0 6px 6px 0;font-size:11.5px;line-height:1.45}',
-    '.catset-regrow.nocode .rn{padding-left:0}',
+      + 'border-inline-start:2px solid var(--line);border-radius:0 6px 6px 0;font-size:11.5px;line-height:1.45}',
+    '.catset-regrow.nocode .rn{padding-inline-start:0}',
     /* ⚠️ A LIST OF BARE WORDS IS NOT A TABLE. When a registry's rows carry no code and no note — units are the
        case: fifteen entries, one short word each — stacking them full-width spends fifteen rows and most of the
        pane's width on nothing, and the eye has to travel a screen to read what fits on two lines. Chips give the
@@ -671,7 +671,7 @@ function catsetCss(){
     '.uom-row code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11.5px;color:var(--ink)}',
     '.uom-row .un{color:var(--ink)}',
     /* The spellings, indented to sit under the NAME so the eye reads down one edge. */
-    '.uom-row .ua{margin-top:3px;padding-left:108px;color:var(--note);font-size:11.5px;line-height:1.5}',
+    '.uom-row .ua{margin-top:3px;padding-inline-start:108px;color:var(--note);font-size:11.5px;line-height:1.5}',
     '.uom-row .ua .sep{color:var(--line);padding:0 5px}',
     '.lang-bar{border:1px solid var(--line);border-radius:9px;padding:8px 10px;margin:2px 0 10px;background:var(--paper)}',
     '.lang-g{display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin-bottom:5px}',
@@ -681,7 +681,7 @@ function catsetCss(){
     '.lang-chip.on{background:var(--blue-tint-bg);border-color:var(--blue);color:var(--blue);font-weight:700}',
     /* ⚠️ English reads as fixed, not disabled — a greyed chip invites clicking to find out why. */
     '.lang-chip.fixed{cursor:default;opacity:.9}',
-    '.lang-chip .lang-none{color:var(--grey);font-size:10px;margin-left:5px;font-weight:400}',
+    '.lang-chip .lang-none{color:var(--grey);font-size:10px;margin-inline-start:5px;font-weight:400}',
     '.lang-note{font-size:11px;color:var(--note);line-height:1.5;margin-top:4px}',
     /* ⚠️ Unticked stays READABLE, not greyed to the floor — you have to be able to read a unit to decide you
        want it back, and a list where half the rows are illegible is a list you cannot choose from. */

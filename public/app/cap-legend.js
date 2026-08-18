@@ -350,7 +350,7 @@ function _subjectTabHtml(){
 function _foundTabHtml(){
   const lvlBadge=(l,t)=>{ const tt=(t&&t>l)?('→L'+t):''; return '<span title="Foundation maturity — L1 exists · L2 clean mechanism · L3 enforced+isolated · L4 governed+provable · L5 audited/certified" style="font-size:var(--fs-1);font-weight:800;color:#1f6f4a;background:var(--ok-tint);border:1px solid #bfe0cf;border-radius:6px;padding:1px 7px">L'+l+tt+'</span>'; };
   const card=(f)=>'<div style="border:1px solid var(--line);border-radius:12px;padding:11px 13px;margin-bottom:10px">'
-    +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><span style="font-size:15px">'+f.icon+'</span><span style="font-family:\'Space Grotesk\';font-weight:700;font-size:13.5px">'+esc(f.name)+'</span><span style="margin-left:auto">'+lvlBadge(f.level,f.target)+'</span></div>'
+    +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><span style="font-size:15px">'+f.icon+'</span><span style="font-family:\'Space Grotesk\';font-weight:700;font-size:13.5px">'+esc(f.name)+'</span><span style="margin-inline-start:auto">'+lvlBadge(f.level,f.target)+'</span></div>'
     +'<div style="font-size:13px;color:var(--ink);line-height:1.5;margin-bottom:6px">'+esc(f.what)+'</div>'
     +'<div style="font-size:12px;color:var(--grey);line-height:1.5;background:var(--card);border:1px solid var(--line);border-radius:9px;padding:8px 10px"><b style="color:var(--ok-3)">PROOF:</b> '+esc(f.proof)+'</div>'
   +'</div>';
@@ -404,7 +404,7 @@ function _storiesTabHtml(){
     { icon:'🌍', name:'The Life of a Trade', blurb:'One chemical shipment, buyer → seller: real template evidence moving across the engine. Swap the industry and the standards change; the commercial spine and the rail do not.', url:'/docs/life-of-a-trade.html' },
   ];
   const card=(x)=>`<a href="${x.url}" target="_blank" rel="noopener" style="display:block;text-decoration:none;border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:11px;background:var(--card);color:var(--on-card)">
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:5px"><span style="font-size:19px">${x.icon}</span><span style="font-family:'Space Grotesk';font-weight:700;font-size:15px;color:var(--ink)">${esc(x.name)}</span><span style="margin-left:auto;font-size:12px;color:var(--accent,var(--blue));font-weight:700">Open ↗</span></div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:5px"><span style="font-size:19px">${x.icon}</span><span style="font-family:'Space Grotesk';font-weight:700;font-size:15px;color:var(--ink)">${esc(x.name)}</span><span style="margin-inline-start:auto;font-size:12px;color:var(--accent,var(--blue));font-weight:700">Open ↗</span></div>
     <div style="font-size:var(--fs-2);color:var(--grey);line-height:1.5">${esc(x.blurb)}</div></a>`;
   return `<div style="padding:12px 13px;overflow:visible">
     <div style="font-size:11.5px;color:var(--grey);margin-bottom:12px">The <b>business narratives</b> — the product told from the value side, followable end-to-end (not feature ads). Open each in a new tab.</div>
@@ -417,7 +417,7 @@ function _secTabHtml(){
   const LV={ strong:['var(--ok-3)','✓ strong'], partial:['var(--warn-2)','◐ partial'], gap:['var(--disp)','○ gap'] };
   const row=(s)=>{ const [c,lbl]=LV[s.lvl]||LV.gap;
     return `<div style="border:1px solid var(--line);border-radius:12px;padding:11px 13px;margin-bottom:9px">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:13px">${esc(s.area)}</span><span style="margin-left:auto;font-size:var(--fs-1);font-weight:800;color:${c}">${lbl}</span></div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:13px">${esc(s.area)}</span><span style="margin-inline-start:auto;font-size:var(--fs-1);font-weight:800;color:${c}">${lbl}</span></div>
       <div style="font-size:11.5px;color:var(--ink);line-height:1.45;margin-bottom:4px">${esc(s.what)}</div>
       <div style="font-size:var(--fs-1);color:var(--grey);line-height:1.4"><b>Raise it:</b> ${esc(s.raise)}</div>
     </div>`; };
@@ -430,7 +430,7 @@ function _secTabHtml(){
 
 /* ── EDGE tab — positioning hypothesis vs alternatives (NOT a scoreboard; our dot is a TARGET) ── */
 function _edgeTabHtml(){
-  const pt=(x,y,label,hl)=>'<div style="position:absolute;left:'+x+'%;bottom:'+y+'%;transform:translate(-50%,50%);text-align:center;z-index:2">'
+  const pt=(x,y,label,hl)=>'<div style="position:absolute;inset-inline-start:'+x+'%;bottom:'+y+'%;transform:translate(-50%,50%);text-align:center;z-index:2">'
     +'<div style="width:'+(hl?15:10)+'px;height:'+(hl?15:10)+'px;border-radius:50%;margin:0 auto;background:'+(hl?'var(--blue)':'var(--grey-4)')+';'+(hl?'box-shadow:0 0 0 5px rgba(63,102,166,.16)':'')+'"></div>'
     +'<div style="font-size:var(--fs-1);margin-top:3px;white-space:nowrap;color:'+(hl?'var(--blue-2)':'var(--grey)')+';font-weight:'+(hl?'700':'500')+'">'+esc(label)+'</div></div>';
   const stage=(l,s,k)=>{ const on=k==='now', nx=k==='next', dn=k==='done';
@@ -440,19 +440,19 @@ function _edgeTabHtml(){
       +'<div style="font-size:var(--fs-1);color:var(--grey)">'+esc(s)+'</div></div>'; };
   const arrow=()=>'<span style="color:var(--grey);font-size:var(--fs-1)">→</span>';
   const _mk=(v)=>{ const m={y:['var(--ok-3)','✓'],p:['var(--warn-2)','~'],n:['var(--disp)','✗']}, c=m[v]||m.n; return '<span style="color:'+c[0]+';font-weight:700">'+c[1]+'</span>'; };
-  const crow=(n,a,b,c,d,hl)=>'<tr style="'+(hl?'background:var(--blue-tint);':'')+'border-top:1px solid var(--line);color:var(--on-card)"><td style="text-align:left;padding:4px;font-weight:'+(hl?'700':'500')+';color:'+(hl?'var(--blue-2)':'var(--ink)')+'">'+n+'</td><td style="text-align:center;padding:4px">'+_mk(a)+'</td><td style="text-align:center;padding:4px">'+_mk(b)+'</td><td style="text-align:center;padding:4px">'+_mk(c)+'</td><td style="text-align:center;padding:4px">'+_mk(d)+'</td></tr>';
+  const crow=(n,a,b,c,d,hl)=>'<tr style="'+(hl?'background:var(--blue-tint);':'')+'border-top:1px solid var(--line);color:var(--on-card)"><td style="text-align:start;padding:4px;font-weight:'+(hl?'700':'500')+';color:'+(hl?'var(--blue-2)':'var(--ink)')+'">'+n+'</td><td style="text-align:center;padding:4px">'+_mk(a)+'</td><td style="text-align:center;padding:4px">'+_mk(b)+'</td><td style="text-align:center;padding:4px">'+_mk(c)+'</td><td style="text-align:center;padding:4px">'+_mk(d)+'</td></tr>';
   return '<div style="padding:14px 16px;overflow:visible">'
     +'<div style="font-size:11.5px;color:var(--grey);margin-bottom:8px">Where we aim vs the alternatives. <b>This is a positioning hypothesis</b> — our dot is a <b>target</b> (we are early/unproven); the others are established.</div>'
-    +'<div style="position:relative;height:270px;margin:22px 34px 30px;border-left:1.5px solid var(--line);border-bottom:1.5px solid var(--line)">'
-      +'<div style="position:absolute;left:50%;top:0;bottom:0;border-left:1px dashed var(--line)"></div>'
-      +'<div style="position:absolute;top:50%;left:0;right:0;border-top:1px dashed var(--line)"></div>'
-      +'<div style="position:absolute;right:4px;top:4px;font-size:var(--fs-1);color:#8fae86;font-weight:700;text-align:right">governed<br>+ accessible<br>= the gap</div>'
+    +'<div style="position:relative;height:270px;margin:22px 34px 30px;border-inline-start:1.5px solid var(--line);border-bottom:1.5px solid var(--line)">'
+      +'<div style="position:absolute;inset-inline-start:50%;top:0;bottom:0;border-inline-start:1px dashed var(--line)"></div>'
+      +'<div style="position:absolute;top:50%;inset-inline-start:0;inset-inline-end:0;border-top:1px dashed var(--line)"></div>'
+      +'<div style="position:absolute;inset-inline-end:4px;top:4px;font-size:var(--fs-1);color:#8fae86;font-weight:700;text-align:end">governed<br>+ accessible<br>= the gap</div>'
       + pt(15,84,'Email · chat · sheets',false)
       + pt(84,15,'ServiceNow · SAP · EDI',false)
       + pt(68,27,'Blockchain B2B',false)
       + pt(80,80,'Chit & Bridge',true)
-      +'<div style="position:absolute;left:-2px;bottom:-22px;font-size:var(--fs-1);color:var(--grey)">weak ← <b>governance &amp; trust</b> → strong</div>'
-      +'<div style="position:absolute;left:-24px;top:-16px;font-size:var(--fs-1);color:var(--grey)">↑ accessible / leveling</div>'
+      +'<div style="position:absolute;inset-inline-start:-2px;bottom:-22px;font-size:var(--fs-1);color:var(--grey)">weak ← <b>governance &amp; trust</b> → strong</div>'
+      +'<div style="position:absolute;inset-inline-start:-24px;top:-16px;font-size:var(--fs-1);color:var(--grey)">↑ accessible / leveling</div>'
     +'</div>'
     +'<div style="font-size:var(--fs-1);color:var(--ink);line-height:1.5">'
       +'<b>The edge:</b> the top-right — <b>enterprise-grade governance a small player can actually use</b> — is empty. Email is accessible but ungoverned; SAP/ServiceNow/EDI are governed but heavy &amp; costly; blockchain B2B is trust-heavy but hard. We aim at <b>governed AND leveling</b>: a solo trader transacts on the same rail as a multinational.'
@@ -460,7 +460,7 @@ function _edgeTabHtml(){
     +'<div style="margin-top:16px"><div style="font-size:var(--fs-1);font-weight:700;color:var(--ink);margin-bottom:5px">Communication lens — two-way between entities</div>'
       +'<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:6px">Two-way exists elsewhere; being two-way <i>and</i> peer <i>and</i> governed <i>and</i> affordable does not.</div>'
       +'<table style="width:100%;border-collapse:collapse;font-size:var(--fs-1)">'
-        +'<tr style="color:var(--grey);font-weight:700;font-size:var(--fs-1)"><td style="text-align:left;padding:3px 4px">Channel</td><td style="padding:3px 4px">2-way</td><td style="padding:3px 4px">Peer</td><td style="padding:3px 4px">Governed</td><td style="padding:3px 4px">Affordable</td></tr>'
+        +'<tr style="color:var(--grey);font-weight:700;font-size:var(--fs-1)"><td style="text-align:start;padding:3px 4px">Channel</td><td style="padding:3px 4px">2-way</td><td style="padding:3px 4px">Peer</td><td style="padding:3px 4px">Governed</td><td style="padding:3px 4px">Affordable</td></tr>'
         + crow('Email','y','y','n','y',false)
         + crow('Slack Connect / Teams','y','p','n','y',false)
         + crow('EDI','y','n','p','n',false)
@@ -473,7 +473,7 @@ function _edgeTabHtml(){
     +'<div style="margin-top:16px"><div style="font-size:var(--fs-1);font-weight:700;color:var(--ink);margin-bottom:5px">Distribution lens — the same edge, a second domain</div>'
       +'<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:6px">Source-governed distribution competes with catalogue/commerce tools, not email. A brand&rsquo;s governance <b>rides to any distributor</b>; CB carries the <b>information + rules</b>, ERP does the logistics — no marketplace lock-in, no logistics grab.</div>'
       +'<table style="width:100%;border-collapse:collapse;font-size:var(--fs-1)">'
-        +'<tr style="color:var(--grey);font-weight:700;font-size:var(--fs-1)"><td style="text-align:left;padding:3px 4px">Channel</td><td style="padding:3px 4px">Gov travels</td><td style="padding:3px 4px">Neutral</td><td style="padding:3px 4px">Info-only</td><td style="padding:3px 4px">Dispute</td></tr>'
+        +'<tr style="color:var(--grey);font-weight:700;font-size:var(--fs-1)"><td style="text-align:start;padding:3px 4px">Channel</td><td style="padding:3px 4px">Gov travels</td><td style="padding:3px 4px">Neutral</td><td style="padding:3px 4px">Info-only</td><td style="padding:3px 4px">Dispute</td></tr>'
         + crow('Brand storefront (Shopify)','n','n','n','n',false)
         + crow('Marketplace / distributor portal','p','n','n','n',false)
         + crow('PIM (Salsify / Akeneo)','p','y','y','n',false)
@@ -505,7 +505,7 @@ function _realTabHtml(){
   const S={ real:['var(--ok-3)','LIVE'], built:['var(--warn-2)','BUILT · unverified'], part:['var(--warn-2)','PARTIAL'], aim:['var(--disp)','ASPIRATION'] };
   const row=(claim,st,now,earn)=>{ const [c,lbl]=S[st]||S.aim;
     return '<div style="border:1px solid var(--line);border-radius:9px;padding:11px 12px;margin-bottom:9px">'
-      +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:3px"><span style="font-size:12px;font-weight:700">'+esc(claim)+'</span><span style="margin-left:auto;font-size:var(--fs-1);font-weight:800;color:'+c+';white-space:nowrap">'+lbl+'</span></div>'
+      +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:3px"><span style="font-size:12px;font-weight:700">'+esc(claim)+'</span><span style="margin-inline-start:auto;font-size:var(--fs-1);font-weight:800;color:'+c+';white-space:nowrap">'+lbl+'</span></div>'
       +'<div style="font-size:var(--fs-1);color:var(--ink);line-height:1.45;margin-bottom:3px"><b>Now:</b> '+esc(now)+'</div>'
       +'<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.4"><b>To earn it:</b> '+esc(earn)+'</div></div>'; };
   return '<div style="padding:14px 16px;overflow:visible">'
@@ -538,9 +538,9 @@ function _workTabHtml(){
       <span style="width:30px;height:30px;border-radius:9px;display:grid;place-items:center;font-size:15px;background:var(--blue-tint);border:1px solid var(--line);color:var(--on-card)">${o.icon}</span>
       <span style="font-family:'Space Grotesk';font-weight:700;font-size:14.5px">${esc(o.name)}</span>
       <span style="font-family:'Space Mono';font-size:var(--fs-1);color:${R};background:var(--blue-tint);border:1px solid var(--line);border-radius:6px;padding:1px 6px">${esc(o.pid)}</span>
-      <span style="margin-left:auto;font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:${o.live?'var(--ok-3)':'var(--grey-2)'};border:1px ${o.live?'solid #bfe0cf':'dashed #c2c6cc'};border-radius:5px;padding:1px 6px">${o.live?'Live':'Designed'}</span>
+      <span style="margin-inline-start:auto;font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:${o.live?'var(--ok-3)':'var(--grey-2)'};border:1px ${o.live?'solid #bfe0cf':'dashed #c2c6cc'};border-radius:5px;padding:1px 6px">${o.live?'Live':'Designed'}</span>
     </div>
-    <div style="font-size:13px;color:var(--ink);background:var(--blue-tint);border-left:3px solid ${R};border-radius:0 8px 8px 0;padding:7px 11px;margin:9px 0 8px;line-height:1.5"><b style="font-family:'Space Mono';font-size:var(--fs-1);letter-spacing:.08em;text-transform:uppercase;color:${R};margin-right:7px">Achieves</b>${o.obj}</div>
+    <div style="font-size:13px;color:var(--ink);background:var(--blue-tint);border-inline-start:3px solid ${R};border-radius:0 8px 8px 0;padding:7px 11px;margin:9px 0 8px;line-height:1.5"><b style="font-family:'Space Mono';font-size:var(--fs-1);letter-spacing:.08em;text-transform:uppercase;color:${R};margin-inline-end:7px">Achieves</b>${o.obj}</div>
     <div style="font-size:11.5px;color:var(--grey);margin-bottom:8px;line-height:1.55">${o.flow}</div>
     <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">${o.chips.join('')}</div>
   </div>`;
@@ -562,7 +562,7 @@ function _workTabHtml(){
       flow:'order → delivery_note → invoice → payment → receipt — each hop\'s <b>output is the next hop\'s input</b>',
       chips:[chain('Purposes today · pattern-ize next')] },
   ];
-  const spine=[['Constitution','base@v1'],['↳ Capability','connector@v1'],['↳ Work-pattern','iot-signal@v1'],['↳ Chit','stamped']].map((s,i)=>`<div style="flex:1 1 118px;min-width:110px;padding:9px 11px;${i?'border-left:1px solid var(--line)':''};${i===3?'background:var(--blue-tint)':''};color:var(--on-card)"><div style="font-family:'Space Mono';font-size:var(--fs-1);letter-spacing:.07em;text-transform:uppercase;color:var(--grey)">${s[0]}</div><div style="font-weight:700;font-size:13px;${i===3?'color:'+R:''}">${s[1]}</div></div>`).join('');
+  const spine=[['Constitution','base@v1'],['↳ Capability','connector@v1'],['↳ Work-pattern','iot-signal@v1'],['↳ Chit','stamped']].map((s,i)=>`<div style="flex:1 1 118px;min-width:110px;padding:9px 11px;${i?'border-inline-start:1px solid var(--line)':''};${i===3?'background:var(--blue-tint)':''};color:var(--on-card)"><div style="font-family:'Space Mono';font-size:var(--fs-1);letter-spacing:.07em;text-transform:uppercase;color:var(--grey)">${s[0]}</div><div style="font-weight:700;font-size:13px;${i===3?'color:'+R:''}">${s[1]}</div></div>`).join('');
   const notif=[
     ['🏢 Entity','a copy delivered to Task / Order','mailbox lists; entity-scoped RLS'],
     ['🧑 Actor','assigned / visible change — delivery·status·message·dispute','per-actor <b>unread</b> + bell + message centre'],
@@ -577,7 +577,7 @@ function _workTabHtml(){
     ${lines.map(line).join('')}
     <div style="border:1px solid ${R};background:linear-gradient(180deg,var(--blue-tint),var(--bg,#fff));border-radius:13px;padding:14px 16px;margin:6px 0 16px">
       <div style="font-family:'Space Grotesk';font-weight:800;font-size:15px;color:${R}">A catalogue is a contract, not a list</div>
-      <div style="font-size:13px;color:var(--ink);background:var(--card);border-left:3px solid ${R};border-radius:0 8px 8px 0;padding:7px 11px;margin:9px 0;line-height:1.5"><b style="font-family:'Space Mono';font-size:var(--fs-1);letter-spacing:.08em;text-transform:uppercase;color:${R};margin-right:7px">Achieves</b>Extends a <b>brand's governance to every customer through any distributor</b> — control without custody.</div>
+      <div style="font-size:13px;color:var(--ink);background:var(--card);border-inline-start:3px solid ${R};border-radius:0 8px 8px 0;padding:7px 11px;margin:9px 0;line-height:1.5"><b style="font-family:'Space Mono';font-size:var(--fs-1);letter-spacing:.08em;text-transform:uppercase;color:${R};margin-inline-end:7px">Achieves</b>Extends a <b>brand's governance to every customer through any distributor</b> — control without custody.</div>
       <div style="font-size:var(--fs-2);color:var(--ink);line-height:1.55">The source's governance amalgamated into one construct that <b>travels</b>: the order runs under the source's minted rules wherever served, the distributor <b>can't override</b>, and the chit <b>freezes the exact version</b> seen. Bogie line-up public (browse), cargo private (order), source rules = the sealed wagon-spec that binds every yard.</div>
     </div>
     <div style="font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3);margin:14px 0 8px">The journeys that travel</div>
@@ -637,7 +637,7 @@ function _openLegendImpl(){
     </div>`;
   };
   const card=(c)=>`<div style="border:1px solid var(--line);border-radius:12px;padding:11px 13px;margin-bottom:10px;background:${c.load==='planned'?'var(--card)':'var(--card)'};color:${c.load==='planned' ? 'var(--on-card)' : 'var(--on-card)'}">
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px"><span style="font-size:15px">${c.icon}</span><span style="font-family:'Space Grotesk';font-weight:700;font-size:13.5px">${esc(c.name)}</span><span style="margin-left:auto;display:flex;gap:6px;align-items:center">${matBadge(c)}${loadBadge(c)}</span></div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px"><span style="font-size:15px">${c.icon}</span><span style="font-family:'Space Grotesk';font-weight:700;font-size:13.5px">${esc(c.name)}</span><span style="margin-inline-start:auto;display:flex;gap:6px;align-items:center">${matBadge(c)}${loadBadge(c)}</span></div>
     <div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:8px;line-height:1.5">${esc(c.blurb)}</div>
     ${govBand(c)}
     ${c.features.map(featRow).join('')}
@@ -645,7 +645,7 @@ function _openLegendImpl(){
   const capBody=`
     <div style="padding:11px 13px 6px;font-size:11.5px;color:var(--grey);border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;gap:10px;align-items:center">
       <span><b style="color:var(--ink)">${built}</b> live capabilities · <b style="color:var(--ink)">${nf}</b> features</span>
-      <span style="margin-left:auto">Status: <span style="color:var(--ok-3)">✅ done ${d}</span> · <span style="color:#a9791f">◐ partial ${p}</span> · <span style="color:var(--grey-4)">○ backlog ${b}</span></span>
+      <span style="margin-inline-start:auto">Status: <span style="color:var(--ok-3)">✅ done ${d}</span> · <span style="color:#a9791f">◐ partial ${p}</span> · <span style="color:var(--grey-4)">○ backlog ${b}</span></span>
     </div>
     <div style="padding:12px 13px;overflow:visible">${CAP_CATALOGUE.map(card).join('')}
       <div style="font-size:var(--fs-1);color:var(--grey);text-align:center;padding-top:4px">Load: <b>always on</b> ships with the app · <b>lazy</b> loads on first use · <b>planned</b> not built yet. · <b>L1–5</b> maturity: 1 Proven · 2 Packaged · 3 Itemised · 4 Governed · 5 Productized (→ = target). Kept true to the code.</div>
@@ -657,10 +657,10 @@ function _openLegendImpl(){
     <div style="display:flex;align-items:center;gap:12px;padding:16px 20px;background:linear-gradient(180deg,#f7f9fc,#fff);border-bottom:1px solid var(--line);flex:none">
       <span style="font-size:22px">🔑</span>
       <div style="line-height:1.15"><div style="font-family:'Space Grotesk';font-weight:700;font-size:19px;color:var(--ink)">What we serve</div><div style="font-size:var(--fs-2);color:var(--grey)">${titles[_lbTab]||titles.cap}</div></div>
-      <div style="margin-left:auto;display:flex;align-items:center;gap:6px">
+      <div style="margin-inline-start:auto;display:flex;align-items:center;gap:6px">
         <button onclick="lbFont(-1)" title="Smaller text" style="border:1px solid var(--line);background:none;cursor:pointer;font-size:12px;font-weight:700;color:var(--grey);border-radius:6px;width:27px;height:27px;line-height:1;padding:0">A−</button>
         <button onclick="lbFont(1)" title="Larger text" style="border:1px solid var(--line);background:none;cursor:pointer;font-size:15px;font-weight:700;color:var(--ink);border-radius:6px;width:27px;height:27px;line-height:1;padding:0">A+</button>
-        <button onclick="closeLegend()" style="border:0;background:none;cursor:pointer;font-size:26px;line-height:1;color:var(--grey);margin-left:4px" aria-label="Close">✕</button>
+        <button onclick="closeLegend()" style="border:0;background:none;cursor:pointer;font-size:26px;line-height:1;color:var(--grey);margin-inline-start:4px" aria-label="Close">✕</button>
       </div>
     </div>
     <div style="flex:none">${_lbTabBar()}</div>

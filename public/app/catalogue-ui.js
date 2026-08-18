@@ -726,10 +726,10 @@
       '.cbcat-chip.on{background:var(--blue,var(--blue));border-color:var(--blue,var(--blue));color:#fff}',
       /* margin-right clears the badge, which is absolutely positioned 9px past the bag's right edge — without it
          the count sits on top of the total and both become unreadable at a glance. */
-      '.cbcat-bag{position:relative;font-size:17px;line-height:1;margin-right:6px}',
+      '.cbcat-bag{position:relative;font-size:17px;line-height:1;margin-inline-end:6px}',
       '.cbcat-sum{font-variant-numeric:tabular-nums}',
       /* 11px, the legibility floor. The count is the one fact the chip must carry on a phone. */
-      '.cbcat-n{position:absolute;top:-7px;right:-9px;background:var(--card);color:var(--blue,var(--blue));border-radius:9px;',
+      '.cbcat-n{position:absolute;top:-7px;inset-inline-end:-9px;background:var(--card);color:var(--blue,var(--blue));border-radius:9px;',
       'min-width:18px;height:18px;padding:0 4px;font-size:var(--fs-1);font-weight:800;line-height:18px;text-align:center}',
       /* ⚠️ Below 520px the MONEY yields, never the badge and never the search box. How many are in the cart is
          the fact you cannot lose; the total is one tap away inside the cart itself. */
@@ -740,7 +740,7 @@
       '.cbcat-row{display:flex;align-items:center;gap:10px;padding:8px 2px;border-bottom:1px dashed var(--line);',
       'content-visibility:auto;contain-intrinsic-size:auto 58px}',
       '.cbcat-row.on{background:var(--soft,#eef4ff)}',
-      '.cbcat-var .cbcat-nm{padding-left:16px}',
+      '.cbcat-var .cbcat-nm{padding-inline-start:16px}',
       '.cbcat-thumb{flex:none;width:52px;height:52px;border-radius:9px;background:var(--warn-tint);',
       'border:1px solid var(--line,var(--line));overflow:hidden;position:relative;display:grid;place-items:center}',
       '.cbcat-thumb img{width:100%;height:100%;object-fit:cover;display:block}',
@@ -764,7 +764,7 @@
       '.cbcat-sub{display:block;font-size:11.5px;color:var(--grey-2);margin-top:1px}',
       '.cbcat-hint{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:var(--fs-1)}',
       /* ⚠️ FIXED COLUMNS, or the price column zig-zags. Measured: ₹340 at x=740 and ₹149 at x=628 before this. */
-      '.cbcat-pr{flex:none;min-width:78px;text-align:right;font-weight:700;font-size:13.5px;',
+      '.cbcat-pr{flex:none;min-width:78px;text-align:end;font-weight:700;font-size:13.5px;',
       'font-variant-numeric:tabular-nums;white-space:nowrap}',
       '.cbcat-was{opacity:.55;font-weight:400;font-size:11.5px}',
       '.cbcat-noprice{color:var(--grey-2);font-weight:400;font-size:12px}',
@@ -779,7 +779,7 @@
       'text-align:center;font-size:13px;font-variant-numeric:tabular-nums;font-family:inherit}',
       /* Sits INSIDE the price column, so it must not widen it — hence the same 78px the column is. */
       '.cbcat-offer{display:block;width:100%;height:28px;border:1px solid var(--blue,var(--blue));border-radius:6px;',
-      'padding:0 7px;font-size:var(--fs-2);text-align:right;font-family:inherit;margin-top:2px;',
+      'padding:0 7px;font-size:var(--fs-2);text-align:end;font-family:inherit;margin-top:2px;',
       'font-variant-numeric:tabular-nums}',
       '.cbcat-pick{border:1px solid var(--line,var(--line));background:var(--card);border-radius:9px;padding:7px 13px;',
       'font-size:var(--fs-2);font-weight:700;color:var(--ink,var(--ink));cursor:pointer;font-family:inherit;',
@@ -787,7 +787,7 @@
       '.cbcat-pick.on{background:var(--blue,var(--blue));border-color:var(--blue,var(--blue));color:#fff}',
       '.cbcat-grp{padding:11px 2px 3px;display:flex;align-items:center;gap:9px;font-size:13px}',
       '.cbcat-cnt{font-size:var(--fs-1);color:var(--grey-2)}',
-      '.cbcat-all{font-size:var(--fs-1);color:var(--blue,var(--blue));font-weight:700;cursor:pointer;margin-left:auto}',
+      '.cbcat-all{font-size:var(--fs-1);color:var(--blue,var(--blue));font-weight:700;cursor:pointer;margin-inline-start:auto}',
       '.cbcat-empty{padding:30px 8px;color:var(--grey-2);font-size:13.5px;text-align:center}',
       /* the window sentinel */
       '.cbcat-more{display:flex;align-items:center;justify-content:center;gap:8px;padding:14px 8px;',
@@ -820,7 +820,7 @@
       'background:var(--gold-soft,var(--gold-soft));border:1px solid var(--gold-line,var(--gold-line));border-radius:9px;',
       'font-size:var(--fs-2);color:var(--warn-3);box-shadow:0 -6px 12px -10px rgba(15,46,61,.45)}',
       '.cbcat-commit b{color:var(--ink,var(--ink))}',
-      '.cbcat-commit button{margin-left:auto;background:var(--blue,var(--blue));color:#fff;',
+      '.cbcat-commit button{margin-inline-start:auto;background:var(--blue,var(--blue));color:#fff;',
       'border:1px solid var(--blue,var(--blue));border-radius:9px;padding:9px 15px;font-weight:700;font-size:13px;',
       'white-space:nowrap;cursor:pointer;font-family:inherit}',
 

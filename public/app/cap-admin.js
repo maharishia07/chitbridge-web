@@ -99,7 +99,7 @@ function vaultSectionHTML(sec, i){
       /* ⚠️ THE LABEL IS WHAT MAKES REPEATS USABLE. Two sections both reading "Bank" are indistinguishable at a
          glance and unusable at form time — "which account do I invoice against?" has no answer. */
       +'<input class="inp" style="flex:1;min-width:120px;max-width:230px;margin:0;font-size:12px" placeholder="label it — e.g. Export receipts" value="'+esc(sec.label||'')+'" oninput="vaultSetSection('+i+',this.value)">'
-      +'<button type="button" title="Remove this section" onclick="vaultDelSection('+i+')" style="margin-left:auto;border:1px solid var(--line);background:var(--card);color:var(--disp);border-radius:8px;min-width:28px;min-height:28px;cursor:pointer">×</button>'
+      +'<button type="button" title="Remove this section" onclick="vaultDelSection('+i+')" style="margin-inline-start:auto;border:1px solid var(--line);background:var(--card);color:var(--disp);border-radius:8px;min-width:28px;min-height:28px;cursor:pointer">×</button>'
     +'</div>'
     +rows
     +'<button class="composebtn ghost" style="margin-top:8px" onclick="vaultAddRow('+i+')">+ add detail</button></div>';
@@ -411,7 +411,7 @@ function _misOverdue(m){
     + '<div class="misstatus">'
     + (n ? '<i class="dot" style="background:var(--disp);color:var(--on-danger)"></i> <b>' + n + ' overdue</b>'
          : '<i class="dot" style="background:var(--ok);color:var(--on-ok)"></i> <b>Nothing overdue</b>')
-    + '<span class="misnote" style="margin-left:8px">· ' + mine + ' received · ' + theirs + ' sent</span></div>'
+    + '<span class="misnote" style="margin-inline-start:8px">· ' + mine + ' received · ' + theirs + ' sent</span></div>'
     + '<div class="misnote" style="margin-top:4px">The threshold is the <b onclick="navTo(\'settings\')" style="cursor:pointer;color:var(--blue)">overdue policy</b> — '
     + 'the same one the folder pane and the supplier scorecard obey, so all three move together.</div>';
 }
@@ -437,7 +437,7 @@ function misFriction(m){
     + '<div class="misstatus">' + (m.open_disputes
         ? '<i class="dot" style="background:var(--disp);color:var(--on-danger)"></i> <b>' + m.open_disputes + ' open dispute' + (m.open_disputes === 1 ? '' : 's') + '</b>'
         : '<i class="dot" style="background:var(--ok);color:var(--on-ok)"></i> <b>No open disputes</b>')
-      + '<span class="misnote" style="margin-left:8px">· ' + m.chits + ' chits · ' + (m.open_disputes ? 'needs resolving' : 'nothing to resolve') + '</span></div>'
+      + '<span class="misnote" style="margin-inline-start:8px">· ' + m.chits + ' chits · ' + (m.open_disputes ? 'needs resolving' : 'nothing to resolve') + '</span></div>'
     + _misOverdue(m) + _misAgeing(m) + _misUnattended(m)
     + (rows
       ? '<div class="mislbl" style="margin-top:18px">The queue · oldest first</div>'
@@ -522,7 +522,7 @@ function misOverview(m){
         '<div class="misstatus">' + (m.open_disputes
           ? '<i class="dot" style="background:var(--disp);color:var(--on-danger)"></i> <b>' + m.open_disputes + ' open</b>'
           : '<i class="dot" style="background:var(--ok);color:var(--on-ok)"></i> <b>No open disputes</b>')
-        + '<span style="margin-left:9px">' + (m.waiting.length
+        + '<span style="margin-inline-start:9px">' + (m.waiting.length
             ? '<b>' + m.waiting.length + ' waiting</b> — ' + m.waitTheirs + ' on <span class="misclock theirs">◷ Theirs</span> ' + m.waitMine + ' on <span class="misclock mine">◷ Mine</span>'
             : 'nothing waiting') + '</span></div>'
         + ((m.unattended || []).length
@@ -1583,7 +1583,7 @@ function _chRow(c){
     + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
     + '<span style="font-weight:600;font-size:var(--fs-2)">'+esc(c.name)+'</span>'
     + '<span style="font-size:var(--fs-1);font-weight:800;color:'+pill[0]+';background:'+pill[1]+';border-radius:5px;padding:1px 7px" data-testid="ch-status-'+esc(c.key)+'">'+pill[2]+'</span>'
-    + '<span style="margin-left:auto;font-size:var(--fs-1);color:var(--blue);cursor:pointer;font-weight:600" data-testid="ch-add-'+esc(c.key)+'" onclick="chToggleAdd(\''+esc(c.key)+'\')">'+(_CH.adding===c.key?'cancel':'+ bind')+'</span>'
+    + '<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--blue);cursor:pointer;font-weight:600" data-testid="ch-add-'+esc(c.key)+'" onclick="chToggleAdd(\''+esc(c.key)+'\')">'+(_CH.adding===c.key?'cancel':'+ bind')+'</span>'
     + '</div>'
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">'+esc(c.hint)+'</div>'
     /* ⚠️ REPLIES ARE A SEPARATE CREDENTIAL, so a separate line. Receiving and sending are not one switch: the app
@@ -1602,7 +1602,7 @@ function _chRow(c){
           /* declared vs verified — and what DECLARED actually costs you, said in the row rather than in a footnote:
              a claim that has not been confirmed receives nothing at all. */
           + '<span style="font-size:var(--fs-1);font-weight:800;color:'+(b.status==='verified'?'var(--ok-2)':'var(--warn-2)')+';background:'+(b.status==='verified'?'var(--ok-tint)':'var(--warn-tint)')+';border-radius:5px;padding:1px 6px" title="'+(b.status==='verified'?'confirmed by the platform — messages sent here reach you':'not confirmed yet — messages sent to this number reach nobody')+'">'+esc(b.status==='verified'?'verified'+(b.verified_via?' · '+b.verified_via:''):'declared — not receiving yet')+'</span>'
-          + '<span style="margin-left:auto;cursor:pointer;color:var(--grey-4)" title="Unbind" data-testid="ch-del" onclick="chUnbind(\''+esc(b.id)+'\')">✕</span></div>'
+          + '<span style="margin-inline-start:auto;cursor:pointer;color:var(--grey-4)" title="Unbind" data-testid="ch-del" onclick="chUnbind(\''+esc(b.id)+'\')">✕</span></div>'
           /**
            * ⚠️ HANDS-FREE, PER LINE (b131). Athi: *"no one will sit and create a chit from whatsapp, it has to be
            * automatic without anyone's presence."*
@@ -1622,11 +1622,11 @@ function _chRow(c){
           + (c.key==='whatsapp' ? (c.templates||[]).map(function(t){
               var state=((b.templates||{})[t.name])||'none';
               var col=state==='approved'?['var(--ok-2)','var(--ok-tint)']:state==='pending'?['var(--warn-2)','var(--warn-tint)']:['var(--grey-2)','var(--blue-tint-bg)'];
-              return '<div style="margin:5px 0 0 10px;padding:7px 9px;border-left:2px solid var(--line);font-size:11.5px">'
+              return '<div style="margin:5px 0 0 10px;padding:7px 9px;border-inline-start:2px solid var(--line);font-size:11.5px">'
                 + '<div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap"><span style="font-family:ui-monospace,Menlo,monospace">'+esc(t.name)+'</span>'
                 + '<span style="font-size:var(--fs-1);font-weight:800;color:'+col[0]+';background:'+col[1]+';border-radius:5px;padding:1px 6px">'+esc(state==='none'?'not approved':state)+'</span>'
                 + '<span style="color:var(--grey)">'+esc(t.category)+' · '+esc(t.language)+'</span>'
-                + '<span style="margin-left:auto;color:var(--blue);cursor:pointer;font-weight:600" data-testid="ch-tpl-toggle" onclick="chSetTemplate(\''+esc(b.id)+'\',\''+esc(t.name)+'\',\''+(state==='approved'?'pending':'approved')+'\')">'
+                + '<span style="margin-inline-start:auto;color:var(--blue);cursor:pointer;font-weight:600" data-testid="ch-tpl-toggle" onclick="chSetTemplate(\''+esc(b.id)+'\',\''+esc(t.name)+'\',\''+(state==='approved'?'pending':'approved')+'\')">'
                 + (state==='approved'?'mark not approved':'mark approved')+'</span></div>'
                 /* Show the submission text VERBATIM. Describing it would guarantee a mismatch with what Meta
                    approved, and a template whose text differs from the approved one is simply rejected. */
@@ -1700,7 +1700,7 @@ function policyFlagsInner(){
   var rows=POLICY_FLAGS.map(function(def){ return '<div style="display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)">'
     +'<div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap"><span style="font-weight:600;font-size:var(--fs-2)">'+esc(def.label)+'</span>'+govKlass(def.gov)+'<span style="font-size:var(--fs-1);font-family:\'Space Mono\';background:var(--neutral-tint);color:var(--grey-2);border-radius:5px;padding:1px 6px">'+esc(def.level)+'</span></div>'
     +'<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px;line-height:1.45">'+esc(def.help)+'</div></div>'
-    +'<div style="flex:none;text-align:right;min-width:120px">'+_polControl(def)+'</div></div>'; }).join('');
+    +'<div style="flex:none;text-align:end;min-width:120px">'+_polControl(def)+'</div></div>'; }).join('');
   /* A setting that cannot be stored must SAY so rather than accept a change it will lose — that is the whole
      failure this card is being rebuilt out of. */
   var warn = !_POL.migrated ? '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;font-size:11.5px;color:var(--warn-3);margin-bottom:7px">Policy flags are not migrated on this environment (b130). The card is here; the column is not — changes will not save.</div>' : '';

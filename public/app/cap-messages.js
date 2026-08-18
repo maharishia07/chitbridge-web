@@ -272,10 +272,10 @@ function messagesScreen(){
                  : full.slice().reverse().map(function(x){
                      var mine = msgIsMine(x);
                      return '<div style="margin:6px 0;padding:8px 11px;border-radius:9px;font-size:13px;line-height:1.5;'
-                       + (mine ? 'background:var(--blue-tint-bg);margin-left:28px' : 'background:var(--warn-tint);margin-right:28px') + ';color:var(--on-card)">'
+                       + (mine ? 'background:var(--blue-tint-bg);margin-inline-start:28px' : 'background:var(--warn-tint);margin-inline-end:28px') + ';color:var(--on-card)">'
                        + '<div style="display:flex;gap:8px;align-items:baseline;margin-bottom:2px">'
                        +   '<b style="font-size:11.5px;color:' + (mine ? 'var(--blue-2)' : 'var(--warn-2)') + '">' + esc(mine ? 'You' : (x.sender_display_name || '—')) + '</b>'
-                       +   '<span style="margin-left:auto;font-size:var(--fs-1);color:var(--grey)">' + esc(msgWhen(x.created_at)) + '</span></div>'
+                       +   '<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey)">' + esc(msgWhen(x.created_at)) + '</span></div>'
                        + '<div style="white-space:pre-wrap">' + esc(x.message_text || '') + '</div></div>';
                    }).join(''))
               + '</div>' : '')
@@ -304,7 +304,7 @@ function messagesScreen(){
             + (on ? 'background:var(--blue);color:var(--on-accent);font-weight:700;' : '') + 'border-radius:9px;padding:3px 10px">'
             + lbl + (n ? ' <span style="opacity:.7">' + n + '</span>' : '') + '</span>';
         }).join('')
-    +   '<span style="margin-left:auto;font-size:11.5px;color:var(--grey)">📌 keeps a conversation here after you read it</span>'
+    +   '<span style="margin-inline-start:auto;font-size:11.5px;color:var(--grey)">📌 keeps a conversation here after you read it</span>'
     + '</div>'
     + '<div style="display:flex;gap:14px;align-items:center;padding:8px 16px;border-bottom:1px solid var(--line)">'
     +   '<label style="display:inline-flex;align-items:center;gap:5px;font-size:var(--fs-2);cursor:pointer">'

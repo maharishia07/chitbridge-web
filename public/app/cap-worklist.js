@@ -240,7 +240,7 @@ function wlRow(r, ctx, depth){
      */
     +   '<span data-testid="wl-done" title="Open this line — history, delivery, cost, who has it" onclick="event.stopPropagation();wlLine(&quot;' + r.line_id + '&quot;)"'
     +     ' style="cursor:pointer;font-size:13px;padding:2px 9px;border-radius:6px;color:#2c5d7c;background:var(--blue-tint-bg);font-weight:800">⋯</span>'
-    +   '<span style="color:var(--grey);font-size:12px;padding-left:3px">›</span></span></div>'
+    +   '<span style="color:var(--grey);font-size:12px;padding-inline-start:3px">›</span></span></div>'
     /* ⚠️ WHICH ORDER IT CAME FROM. A line without its chit is an instruction with no context — you cannot ring the
        customer, check the rest of the order, or know who is waiting. */
     + (named || ordered ? '' : '<div style="font-size:11.5px;color:var(--grey);margin-top:3px">' + order + '</div>')
@@ -350,10 +350,10 @@ function worklistScreen(){
     +   (mine2 ? 'you' : 'your team') + ', across every chit.</div></div>'
     /* ── group by ──────────────────────────────────────────────────────────────────────────────────────────── */
     + '<div style="display:flex;gap:6px;align-items:center;padding:9px 16px;border-bottom:1px solid var(--line-soft,#eee);flex-wrap:wrap">'
-    +   '<span style="font-size:var(--fs-1);font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--grey);margin-right:2px">group by</span>'
+    +   '<span style="font-size:var(--fs-1);font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--grey);margin-inline-end:2px">group by</span>'
     +   KEYS.map(function(x){ return chip(x[0], x[1], prim === x[0], 'wlPrimary(&quot;' + x[0] + '&quot;)', 'wl-view-' + x[0]); }).join('')
     +   '<input type="date" value="' + esc(WL.due || '') + '" onchange="wlDue(this.value)" '
-    +     'style="margin-left:auto;font-size:12px;padding:3px 7px;border:1px solid var(--line);border-radius:9px">'
+    +     'style="margin-inline-start:auto;font-size:12px;padding:3px 7px;border:1px solid var(--line);border-radius:9px">'
     +   (WL.due ? '<span onclick="wlDue(\'\')" style="cursor:pointer;font-size:12px;color:var(--blue);padding:4px">clear</span>' : '')
     + '</div>'
     /* ── then split by · and the disclosure controls ────────────────────────────────────────────────────────── */
@@ -371,7 +371,7 @@ function worklistScreen(){
     +   (wlDoneCount(d2) ? '<label style="display:inline-flex;align-items:center;gap:5px;font-size:var(--fs-2);color:var(--ink-2,#41474e);cursor:pointer">'
     +     '<input type="checkbox" data-testid="wl-showdone" ' + (WL.showDone ? 'checked' : '')
     +     ' onchange="wlDone()" style="width:15px;height:15px;accent-color:var(--blue)">show ' + wlDoneCount(d2) + ' done</label>' : '')
-    +   '<span style="margin-left:auto;display:flex;gap:10px">'
+    +   '<span style="margin-inline-start:auto;display:flex;gap:10px">'
     +     '<span data-testid="wl-expand-all" onclick="wlAll(true)" style="cursor:pointer;font-size:12px;color:var(--blue)">expand all</span>'
     +     '<span data-testid="wl-collapse-all" onclick="wlAll(false)" style="cursor:pointer;font-size:12px;color:var(--blue)">collapse all</span>'
     +   '</span>'
@@ -507,7 +507,7 @@ function wlRender(rows, keys, depth, path){
       : '<div onclick="wlToggle(&quot;' + esc(id) + '&quot;)" style="cursor:pointer;padding:7px ' + (ind - 2) + 'px 2px ' + ind + 'px;'
         + 'display:flex;justify-content:space-between;align-items:baseline;gap:10px">'
         + '<span style="font-size:' + lv.size + ';font-weight:' + lv.weight + ';color:' + (tone || lv.color) + '">' + caret + title + '</span>'
-        + '<span style="font-size:11.5px;color:var(--grey);text-align:right;flex:none">' + wlRollupText(rs) + '</span></div>';
+        + '<span style="font-size:11.5px;color:var(--grey);text-align:end;flex:none">' + wlRollupText(rs) + '</span></div>';
     return head + (isOpen ? wlRender(rs, rest, depth + 1, path.concat([key, k])) : '');
   }).join('');
   return html;
@@ -805,7 +805,7 @@ function wlSecHead(k, name, hint, tone){
     + 'padding:11px 2px;border-top:1px solid var(--line)">'
     + '<span style="width:12px;color:var(--grey);font-size:var(--fs-1)">' + (on ? '▾' : '▸') + '</span>'
     + '<span style="font-weight:700;font-size:var(--fs-3);color:' + (on ? 'var(--ink,#1c2128)' : 'var(--ink-2,#41474e)') + '">' + name + '</span>'
-    + '<span style="margin-left:auto;font-size:12px;color:' + (tone || 'var(--grey)') + '">' + (hint || '') + '</span></div>';
+    + '<span style="margin-inline-start:auto;font-size:12px;color:' + (tone || 'var(--grey)') + '">' + (hint || '') + '</span></div>';
 }
 
 /** ⚠️ THE ONE PLACE THE TWO THREADS DIFFER. Everything else about them is shared, deliberately. */
@@ -833,7 +833,7 @@ function wlThreadSec(k, title, list, err, o){
     return '<div style="padding:6px 0;border-bottom:1px solid var(--line-soft,#f0efec);font-size:13px">'
       + '<div style="display:flex;gap:8px;align-items:baseline">'
       +   '<b style="font-size:var(--fs-2)">' + esc(m.sender_display_name || '—') + '</b>'
-      +   '<span style="margin-left:auto;color:var(--grey);font-size:11.5px">' + esc(String(m.created_at || '').slice(0, 10)) + '</span></div>'
+      +   '<span style="margin-inline-start:auto;color:var(--grey);font-size:11.5px">' + esc(String(m.created_at || '').slice(0, 10)) + '</span></div>'
       /* pre-wrap, because the box is three lines tall now and people use them. */
       + '<div style="margin-top:2px;line-height:1.5;white-space:pre-wrap">' + esc(m.message_text || '') + '</div></div>';
   }).join('');
@@ -899,9 +899,9 @@ function wlLineHTML(loading){
      the next — which reads as two separate facts for a moment. A figure and its unit are one token. */
   var bar = '<div style="display:flex;gap:18px;align-items:baseline;font-variant-numeric:tabular-nums;padding-bottom:4px;flex-wrap:wrap">'
     + '<div style="white-space:nowrap"><span style="font-size:26px;font-weight:800;color:' + (over ? 'var(--disp)' : left === 0 ? 'var(--ok-2)' : 'var(--warn-2)') + '">' + esc(big) + '</span>'
-    +   '<span style="font-size:var(--fs-2);font-weight:700;color:' + (over ? 'var(--disp)' : 'var(--grey)') + ';margin-left:4px">' + esc(r.unit || '') + (over ? ' over' : ' left') + '</span></div>'
+    +   '<span style="font-size:var(--fs-2);font-weight:700;color:' + (over ? 'var(--disp)' : 'var(--grey)') + ';margin-inline-start:4px">' + esc(r.unit || '') + (over ? ' over' : ' left') + '</span></div>'
     + '<div style="font-size:13px;color:var(--grey);white-space:nowrap">' + esc(String(got)) + ' delivered of ' + esc(String(ordered == null ? '—' : ordered)) + ' ' + esc(r.unit || '') + '</div>'
-    + (prog.charged ? '<div style="margin-left:auto;font-size:13px;color:#2c5d7c;font-weight:700">' + esc(wlMoney(prog.charged)) + ' <span style="font-weight:400;color:var(--grey)">charged</span></div>' : '')
+    + (prog.charged ? '<div style="margin-inline-start:auto;font-size:13px;color:#2c5d7c;font-weight:700">' + esc(wlMoney(prog.charged)) + ' <span style="font-weight:400;color:var(--grey)">charged</span></div>' : '')
     + '</div>';
 
   /* ── a heading: caret · name · a hint of what is inside, so you can choose without opening ───────────────── */
@@ -1060,7 +1060,7 @@ function wlLineHTML(loading){
      will not. It is short, so it costs almost nothing to leave in view. */
   var asked = '';
   if (r.raw_phrase || r.asked_as || r.comment || r.needs_human) {
-    asked = '<div style="margin-top:12px;background:var(--warn-tint);border-left:3px solid #b0641c;border-radius:0 7px 7px 0;padding:9px 12px;font-size:13px;line-height:1.55;color:var(--on-card)">'
+    asked = '<div style="margin-top:12px;background:var(--warn-tint);border-inline-start:3px solid #b0641c;border-radius:0 7px 7px 0;padding:9px 12px;font-size:13px;line-height:1.55;color:var(--on-card)">'
       + (r.raw_phrase ? '<div style="font-style:italic;color:var(--warn-3)">“' + esc(r.raw_phrase) + '”</div>' : '')
       + (r.asked_as ? '<div style="font-size:var(--fs-2);color:var(--grey)">asked as <b>' + esc(r.asked_as) + '</b></div>' : '')
       + (r.comment ? '<div style="color:#2c5d7c">' + esc(r.comment) + '</div>' : '')

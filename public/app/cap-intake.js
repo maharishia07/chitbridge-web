@@ -35,7 +35,7 @@ function intakeScreen(){
     + '<div class="lh"><div style="display:flex;align-items:center;gap:8px;margin-bottom:9px">'
     + '<span style="font-family:\'Space Grotesk\';font-weight:700;font-size:var(--fs-3)">📥 Intake</span>'
     + '<button onclick="openAssist(\'intake\')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button>'
-    + '<button data-testid="intake-refresh" onclick="loadIntake()" style="margin-left:auto;border:1px solid var(--line);background:var(--paper);border-radius:9px;padding:4px 9px;font-size:11.5px;cursor:pointer;color:var(--on-bg)">↻ Refresh</button>'
+    + '<button data-testid="intake-refresh" onclick="loadIntake()" style="margin-inline-start:auto;border:1px solid var(--line);background:var(--paper);border-radius:9px;padding:4px 9px;font-size:11.5px;cursor:pointer;color:var(--on-bg)">↻ Refresh</button>'
     + '<button data-testid="intake-simulate-open" onclick="intakeToggleSim()" style="border:1px solid var(--line);background:var(--paper);border-radius:9px;padding:4px 9px;font-size:11.5px;cursor:pointer;color:var(--on-bg)">✚ Record a message</button>'
     + '</div>'
     + '<div style="font-size:11.5px;color:var(--grey);line-height:1.5">A message is a <b>notice</b>; a chit is an <b>obligation</b>. Nothing here becomes a chit until you confirm it.</div>'
@@ -95,7 +95,7 @@ function intakeCardHTML(c){
     + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">' + _chn(c.channel)
     + '<span style="font-size:11.5px;color:var(--grey)">' + esc(c.sender_name||c.sender_ref||'unknown sender') + '</span>'
     + (c.sender_name&&c.sender_ref?'<span style="font-size:var(--fs-1);color:var(--grey);font-family:ui-monospace,Menlo,monospace">'+esc(c.sender_ref)+'</span>':'')
-    + '<span style="margin-left:auto;font-size:var(--fs-1);color:var(--grey)">' + esc(String(c.created_at||'').slice(0,16).replace('T',' ')) + '</span></div>'
+    + '<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey)">' + esc(String(c.created_at||'').slice(0,16).replace('T',' ')) + '</span></div>'
     /* ⚠️ THE RAW TEXT IS UNTRUSTED and is shown as TEXT, never as markup. esc() is the whole guard: a capture is a
        stranger's words arriving from outside the rail. */
     + '<div style="font-size:13px;margin:8px 0;white-space:pre-wrap">' + esc(c.raw_text||'') + '</div>'
@@ -349,7 +349,7 @@ function _jsonBlock(title, obj){
   return '<div style="border-bottom:1px solid var(--line)">'
     + '<div style="display:flex;align-items:center;gap:8px;padding:9px 14px 5px">'
     +   '<span style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey)">'+esc(title)+'</span>'
-    +   '<span onclick="_copyJson(\''+id+'\')" style="margin-left:auto;font-size:var(--fs-1);color:var(--blue);cursor:pointer">copy</span>'
+    +   '<span onclick="_copyJson(\''+id+'\')" style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--blue);cursor:pointer">copy</span>'
     + '</div>'
     + '<pre id="'+id+'" style="margin:0;padding:0 14px 12px;font:11.5px/1.55 ui-monospace,Menlo,Consolas,monospace;'
     +   'white-space:pre-wrap;word-break:break-word;max-height:46vh;overflow:auto;color:var(--on-card)">'+esc(txt)+'</pre></div>';

@@ -84,7 +84,7 @@ function aiRowsHTML(){
       +'<div style="width:9px;height:9px;border-radius:50%;flex:0 0 auto;margin-top:6px;background:'+dot+'"></div>'
       +'<div class="main2" style="width:100%;min-width:0"><div class="l1"><span class="code">'+esc(s.name)+'</span>'
         +'<span class="optchip" style="background:var(--purple-tint);color:var(--purple-2);border-color:transparent">🤖 '+esc(s.key)+'</span>'
-        +'<span class="amt" style="margin-left:auto;font-size:var(--fs-1);color:'+(on?(live?'var(--ok-3)':'var(--warn-2)'):'var(--grey)')+';font-weight:600">'+(on?(live?'enabled · live':'enabled · shaped'):'off')+'</span></div>'
+        +'<span class="amt" style="margin-inline-start:auto;font-size:var(--fs-1);color:'+(on?(live?'var(--ok-3)':'var(--warn-2)'):'var(--grey)')+';font-weight:600">'+(on?(live?'enabled · live':'enabled · shaped'):'off')+'</span></div>'
         +'<div class="l2">'+esc(s.desc)+'</div>'
         +'<div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-top:8px">'
           +'<button class="composebtn'+(on?' pri':'')+'" style="padding:5px 12px;font-size:12px" onclick="aiToggle(\''+esc(s.key)+'\')">'+(on?'✓ Enabled':'Enable')+'</button>'
@@ -106,16 +106,16 @@ function paneFrame(){
   // laptop = the whole list+detail region → rounded panel; mobile = full-width content → full view, edge-to-edge.
   var mob = (window.UI && UI.vp==='mob');
   var m=document.getElementById('mainbody'); var mr=m?m.getBoundingClientRect():null;
-  if(mr && mr.width>60 && mr.height>120) return {css:'top:'+Math.round(mr.top)+'px;left:'+Math.round(mr.left)+'px;width:'+Math.round(mr.width)+'px;height:'+Math.round(mr.height)+'px', radius: mob?'0':'14px'};
+  if(mr && mr.width>60 && mr.height>120) return {css:'top:'+Math.round(mr.top)+'px;inset-inline-start:'+Math.round(mr.left)+'px;width:'+Math.round(mr.width)+'px;height:'+Math.round(mr.height)+'px', radius: mob?'0':'14px'};
   var bar=document.querySelector('.topbar'); var barH=bar?Math.round(bar.getBoundingClientRect().height):52;
-  return {css:'top:'+barH+'px;left:0;right:0;bottom:0', radius:'0'};   // last-resort: full below the top bar
+  return {css:'top:'+barH+'px;inset-inline-start:0;inset-inline-end:0;bottom:0', radius:'0'};   // last-resort: full below the top bar
 }
 function openShowcase(url, title){
   var f=paneFrame();
   var host=document.getElementById('showcaseHost')||document.createElement('div'); host.id='showcaseHost';
   host.innerHTML='<div style="position:fixed;inset:0;background:rgba(15,22,32,.45);z-index:600" onclick="closeShowcase()"></div>'
     +'<div style="position:fixed;'+f.css+';border-radius:'+f.radius+';background:var(--card);z-index:601;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.3);display:flex;flex-direction:column;color:var(--on-card)">'
-    +'<div style="display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line);flex:none"><b style="font-size:15px">'+esc(title||'How it works')+'</b><button onclick="closeShowcase()" title="Close" style="margin-left:auto;border:0;background:transparent;font-size:22px;line-height:1;cursor:pointer;color:var(--grey)">×</button></div>'
+    +'<div style="display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line);flex:none"><b style="font-size:15px">'+esc(title||'How it works')+'</b><button onclick="closeShowcase()" title="Close" style="margin-inline-start:auto;border:0;background:transparent;font-size:22px;line-height:1;cursor:pointer;color:var(--grey)">×</button></div>'
     +'<iframe src="'+esc(url)+'" title="'+esc(title||'')+'" style="flex:1;width:100%;border:0;display:block;background:var(--card);color:var(--on-card)"></iframe></div>';
   document.body.appendChild(host);
 }
@@ -134,7 +134,7 @@ function coassistsScreen(){
       <div style="display:flex;align-items:center;gap:6px;margin-top:8px;font-size:var(--fs-1);color:var(--grey);flex-wrap:wrap">
         <span style="display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden">${['active','inactive','all'].map(f=>`<button onclick="setAcFlt('${f}')" style="border:0;background:${acFlt()===f?'var(--blue)':'var(--card)'};color:${acFlt()===f?'var(--on-accent)':'var(--grey)'};font-weight:700;font-size:var(--fs-1);padding:4px 9px;text-transform:capitalize">${f}</button>`).join('')}</span>
         <span style="display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden">${['all'].concat(Object.keys(window.ACTOR_TYPES||{})).map(t=>{var reg=(window.ACTOR_TYPES||{})[t]||{};var on=(UI.acTypeF||'all')===t;var lbl=t==='all'?'All':((reg.icon?reg.icon+' ':'')+(reg.label||t).split(/[ \/]/)[0]);return `<button onclick="setAcTypeF('${t}')" title="${t==='all'?'all types':(reg.label||t)}${reg.comingSoon?' — coming soon':''}" style="border:0;background:${on?'var(--blue)':'var(--card)'};color:${on?'var(--on-accent)':'var(--grey)'};font-weight:700;font-size:var(--fs-1);padding:4px 9px;white-space:nowrap${reg.comingSoon?';opacity:.55':''}">${lbl}</button>`;}).join('')}</span>
-        <span style="margin-left:auto" id="ac_count">${acCount()}</span></div>
+        <span style="margin-inline-start:auto" id="ac_count">${acCount()}</span></div>
     </div>
     <div class="rows" id="ac_rows">${(UI._acLoading&&(UI.acTypeF||'all')!=='ai')?'<div class="loadwrap"><span class="spin"></span> loading…</div>':acRowsHTML()}</div>
   </div>`;
@@ -264,7 +264,7 @@ function awRender(){
   // Reuses the app's own coordinates instead of guessing — content lives inside via head/mid(scroll)/footbar.
   var pane=document.getElementById('panel')||document.querySelector('.panel');
   var r=pane?pane.getBoundingClientRect():null;
-  var pos=(r&&r.height>240)?('top:'+Math.round(r.top)+'px;left:'+Math.round(r.left)+'px;width:'+Math.round(r.width)+'px;height:'+Math.round(r.height)+'px'):('top:'+barH+'px;left:0;right:0;bottom:0');
+  var pos=(r&&r.height>240)?('top:'+Math.round(r.top)+'px;inset-inline-start:'+Math.round(r.left)+'px;width:'+Math.round(r.width)+'px;height:'+Math.round(r.height)+'px'):('top:'+barH+'px;inset-inline-start:0;inset-inline-end:0;bottom:0');
   host.innerHTML='<div style="position:fixed;'+pos+';background:var(--card);z-index:400;display:flex;flex-direction:column;overflow:hidden;box-shadow:-8px 0 24px rgba(0,0,0,.08);color:var(--on-card)">'+head+mid+footbar+'</div>';
 }
 /* ══ CONNECTOR (Pi / system) handled IN Co-assists — the separate Connectors page is dismounted. When the
@@ -285,7 +285,7 @@ function _iotRowHTML(x){ var info=(UI._connInfo||{})[x.id]||{}; var t=(info.type
   var typechip='<span class="optchip" style="background:'+(iot?'var(--blue-tint-bg)':'var(--purple-tint)')+';color:'+(iot?'var(--blue-2)':'var(--purple-2)')+';border-color:transparent">'+(iot?'🛰️ IoT':'🔌 ERP')+'</span>';
   return `<div class="row ${x.id===UI.acSel?'sel':''}" data-ac="${x.id}" style="${dim}" onclick="selectActor('${x.id}')">
     <div style="width:9px;height:9px;border-radius:50%;flex:0 0 auto;margin-top:5px;background:${hc}"></div>
-    <div class="main2"><div class="l1"><span class="code">${esc(x.name)}</span>${typechip}<span class="amt" style="margin-left:auto;font-size:var(--fs-1);color:${hc};font-weight:600">${esc(h)}${ago?(' · '+esc(ago)):''}</span></div>
+    <div class="main2"><div class="l1"><span class="code">${esc(x.name)}</span>${typechip}<span class="amt" style="margin-inline-start:auto;font-size:var(--fs-1);color:${hc};font-weight:600">${esc(h)}${ago?(' · '+esc(ago)):''}</span></div>
       <div class="l2">📍 ${esc(info.site||x.site||'no site')} · <b>${cnt}</b> ${iot?(cnt===1?'device':'devices'):(cnt===1?'endpoint':'endpoints')}</div></div>
     <div class="rowgo" aria-hidden="true">›</div></div>`; }
 function acRowHTML(x){ if(typeof acTypeOf==='function'){ var _ct=acTypeOf(x); if(_ct==='iot'||_ct==='erp') return _iotRowHTML(x); }
@@ -294,7 +294,7 @@ function acRowHTML(x){ if(typeof acTypeOf==='function'){ var _ct=acTypeOf(x); if
   const coverLines=(x.del||coversNames.length)?'<div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px;line-height:1.45">'+(x.del?('🛡 Covered by <b style="color:var(--ink);font-weight:600">'+coverNm+'</b>'):'')+((x.del&&coversNames.length)?'<br>':'')+(coversNames.length?('🤝 Covers for <b style="color:var(--ink);font-weight:600">'+coversNames.join(', ')+'</b>'):'')+'</div>':'';
   return `<div class="row ${x.id===UI.acSel?'sel':''}" data-ac="${x.id}" style="${dim}" onclick="selectActor('${x.id}')">
     <div style="width:9px;height:9px;border-radius:50%;flex:0 0 auto;margin-top:5px;background:${x.shift==='on_shift'?'var(--ok-3)':x.shift==='on_break'?'var(--warn-2)':'var(--grey-2)'}"></div>
-    <div class="main2"><div class="l1"><span class="code">${esc(x.name)}</span><span class="optchip" style="background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)">${hatLabel(x.hat)}</span>${x.pinSet?'':(x.otp?'<span class="optchip" style="background:var(--warn-tint);color:var(--warn-3);border-color:var(--warn-3)">⏳ invite</span>':'')}<span class="amt" style="margin-left:auto;font-size:11.5px;color:var(--grey)">${x.load}/${x.max||'∞'}</span></div>
+    <div class="main2"><div class="l1"><span class="code">${esc(x.name)}</span><span class="optchip" style="background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)">${hatLabel(x.hat)}</span>${x.pinSet?'':(x.otp?'<span class="optchip" style="background:var(--warn-tint);color:var(--warn-3);border-color:var(--warn-3)">⏳ invite</span>':'')}<span class="amt" style="margin-inline-start:auto;font-size:11.5px;color:var(--grey)">${x.load}/${x.max||'∞'}</span></div>
       <div class="l2">${esc(x.role||'—')} · <span class="mono">${acLogin(x)}</span> <span class="optchip ${acShc(x.shift)}">${acShLabel(x.shift)}</span>${x.status!=='active'?'<span class="optchip off">'+esc(x.status)+'</span>':''}${(x.shift!=='on_shift'&&x.returnDate)?' · returns '+acDate(x.returnDate):''}</div>${coverLines}</div>
     <div class="rowgo" aria-hidden="true">›</div></div>`; }
 function acRowsHTML(){ if((UI.acTypeF||'all')==='ai') return aiRowsHTML(); const r=acVisible(); if(!r.length){ const _tf=UI.acTypeF||'all'; const _reg=(window.ACTOR_TYPES||{})[_tf]; if(_reg&&_reg.comingSoon) return '<div class="empty"><div class="big">'+(_reg.icon||'✨')+'</div><div class="t">'+esc(_reg.label)+' — coming soon</div><div>This capability is not enabled yet. When it is, you will add '+esc(_reg.label)+' co-assists right here — same flow, new type. <span style="color:var(--blue);font-weight:600">Notify me →</span></div></div>'; if(_tf==='iot') return '<div class="empty"><div class="big">🛰️</div><div class="t">No IoT devices yet</div><div>A Pi on the rail in one drop — <a href="#" onclick="openShowcase(\'/iot-howitworks.html\',\'How IoT works\');return false" style="color:var(--blue);font-weight:600">see how it works →</a><br>then add one with <b>+ New</b> above.</div></div>'; return emptyState('🧑‍🤝‍🧑','No co-assists','People, devices and AI that work alongside you.',{label:'+ New co-assist',onclick:'openActorWiz()'}); }
@@ -331,7 +331,7 @@ function _acTierSummary(x){
     +'<button class="dback" onclick="backToList()">‹ Co-assists</button>'
     +'<div style="display:flex;align-items:center;gap:11px;margin-top:8px"><span style="font-size:26px">'+(reg.icon||'🔌')+'</span>'
       +'<div style="min-width:0"><div style="font-size:17px;font-weight:800">'+esc(x.name)+'</div><div style="font-size:12px;color:var(--grey)">'+esc(reg.label||'')+' · 📍 '+esc(info.site||x.site||'no site')+'</div></div>'
-      +'<span style="margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:var(--fs-2);color:'+hc+'"><span style="width:9px;height:9px;border-radius:50%;background:'+hc+';display:inline-block"></span>'+esc(h)+'</span></div>'
+      +'<span style="margin-inline-start:auto;display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:var(--fs-2);color:'+hc+'"><span style="width:9px;height:9px;border-radius:50%;background:'+hc+';display:inline-block"></span>'+esc(h)+'</span></div>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:15px 0">'
       +'<div style="background:var(--card);border:1px solid var(--line);border-radius:12px;padding:11px 12px;color:var(--on-card)"><div style="font-size:var(--fs-1);color:var(--grey);text-transform:uppercase;letter-spacing:.03em">Devices</div><div style="font-size:var(--fs-5);font-weight:800;margin-top:2px">'+cnt+'</div></div>'
       +'<div style="background:var(--card);border:1px solid var(--line);border-radius:12px;padding:11px 12px;color:var(--on-card)"><div style="font-size:var(--fs-1);color:var(--grey);text-transform:uppercase;letter-spacing:.03em">Health</div><div style="font-size:var(--fs-4);font-weight:800;margin-top:4px;color:'+hc+'">'+esc(h)+'</div></div>'
@@ -343,7 +343,7 @@ function _acTierLoader(x){
   var _t=(typeof acTypeOf==='function'?acTypeOf(x):''); var reg=(window.ACTOR_TYPES||{})[_t]||{};
   return '<div style="padding:16px"><button class="dback" onclick="backToList()">‹ Co-assists</button>'
     +'<div style="padding:46px 16px;text-align:center;color:var(--grey)"><span class="spin" style="display:inline-block;margin-bottom:12px"></span><div>Loading '+esc(reg.label||'')+' cockpit…</div>'
-    +(UI.acManageErr?('<div style="color:var(--disp);margin-top:12px;font-size:var(--fs-2)">'+esc(UI.acManageErr)+' <button class="composebtn" style="padding:2px 9px;font-size:var(--fs-1);margin-left:6px" onclick="acOpenManage(\''+x.id+'\')">Retry</button></div>'):'')+'</div></div>';
+    +(UI.acManageErr?('<div style="color:var(--disp);margin-top:12px;font-size:var(--fs-2)">'+esc(UI.acManageErr)+' <button class="composebtn" style="padding:2px 9px;font-size:var(--fs-1);margin-inline-start:6px" onclick="acOpenManage(\''+x.id+'\')">Retry</button></div>'):'')+'</div></div>';
 }
 function acDetailHTML(){ const x=UI.acDet;
   if(!x) return `<div class="empty"><div class="big">🧑‍🤝‍🧑</div><div class="t">Select a co-assist</div><div>Pick one to see their profile, shift and access — or manage them.</div></div>`;

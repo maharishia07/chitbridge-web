@@ -73,7 +73,7 @@ function svcClockBlock(c, r){
     + '<div style="background:var(--warn-tint);padding:8px 12px;font-size:11.5px;font-weight:700;color:var(--warn-3)">'
     + '⚖️ The two sides do not agree — ' + esc(svcDur(c.disputed_pause_ms)) + ' of paused time is rejected</div>'
     + '<div style="display:flex;gap:0;flex-wrap:wrap">'
-    + '<div style="flex:1;min-width:150px;padding:11px 13px;border-right:1px solid var(--line)">'
+    + '<div style="flex:1;min-width:150px;padding:11px 13px;border-inline-end:1px solid var(--line)">'
     +   '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--grey)">as agreed · every pause honoured</div>'
     +   '<div style="font-size:19px;font-weight:800;font-variant-numeric:tabular-nums;color:' + (c.as_agreed.resolve_breached ? 'var(--disp)' : 'var(--ok-2)') + '">' + esc(svcDur(c.as_agreed.resolve_ms)) + '</div>'
     +   '<div style="margin-top:3px">' + (c.as_agreed.resolve_breached ? svcChip('breached', 'bad') : svcChip('within target', 'ok')) + '</div></div>'

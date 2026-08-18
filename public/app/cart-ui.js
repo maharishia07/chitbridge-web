@@ -617,7 +617,7 @@
       off = '<input placeholder="your price" value="' + esc(os.value == null ? '' : String(os.value)) + '" inputmode="decimal"'
         + ' onchange="CBCart.setOffer(\'' + esc(ns) + '\',\'' + esc(id) + '\',this.value)"'
         + ' style="width:78px;padding:5px;border:1.5px solid ' + (os.value != null && !os.ok ? 'var(--disp)' : 'var(--line)')
-        + ';border-radius:6px;font-size:13px;text-align:right">';
+        + ';border-radius:6px;font-size:13px;text-align:end">';
     }
     return '<span style="display:inline-flex;align-items:center;gap:8px" onclick="event.stopPropagation()">' + off
       + '<button style="' + rnd + '" onclick="CBCart.dec(\'' + esc(ns) + '\',\'' + esc(id) + '\')">−</button>'
@@ -706,7 +706,7 @@
           + (inCart ? '<span style="font-size:var(--fs-1);color:' + a + ';font-weight:700">' + inCart + ' in cart</span>' : '')
           + '<span onclick="CBCart.group(\'' + esc(ns) + '\',' + i + ')" style="cursor:pointer;font-size:var(--fs-1);color:' + a + '">'
           + (inCart === ids.length && ids.length ? 'clear all' : 'add all') + '</span>'
-          + (r.options ? '<span style="font-size:var(--fs-1);color:var(--grey-2);margin-left:auto">' + esc(r.options) + '</span>' : '')
+          + (r.options ? '<span style="font-size:var(--fs-1);color:var(--grey-2);margin-inline-start:auto">' + esc(r.options) + '</span>' : '')
           + '</div>';
       }
       var d = dataOf(r), q = qtyOf(ns, r.item_id), u = unitPrice(ns, r), p = u.amount;
@@ -999,7 +999,7 @@
         + 'padding:0 10px;height:40px;box-sizing:border-box;white-space:nowrap;user-select:none}'
         + '.cbcart-bar.on{cursor:pointer;color:#fff}'
         + '.cbcart-bag{position:relative;font-size:17px;line-height:1}'
-        + '.cbcart-n{position:absolute;top:-7px;right:-9px;background:var(--card);border-radius:9px;min-width:17px;'
+        + '.cbcart-n{position:absolute;top:-7px;inset-inline-end:-9px;background:var(--card);border-radius:9px;min-width:17px;'
         /* 11px, not the 10.5px this started at — the legibility floor. The count is the one fact the chip must
            carry on a phone (the money hides below 520px), so it is the last thing that should be squinted at. */
         + 'height:18px;padding:0 4px;font-size:var(--fs-1);font-weight:800;line-height:18px;text-align:center}'

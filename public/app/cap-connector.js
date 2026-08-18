@@ -62,7 +62,7 @@ function _erpReceiptsHTML(){
   var rs=UI.acReceipts;
   var head='<div class="sec" style="margin-top:16px">Receipts'+(Array.isArray(rs)?(' <span style="color:var(--grey);font-weight:400">('+rs.length+')</span>'):'')+'</div>';
   if(rs===undefined) return head+'<div style="padding:10px 2px;color:var(--grey);font-size:var(--fs-2)">Loading…</div>';
-  if(UI.acReceiptsErr) return head+'<div style="padding:10px 2px;color:var(--disp);font-size:12px">⚠ '+esc(UI.acReceiptsErr)+' <button class="composebtn" style="padding:2px 9px;font-size:var(--fs-1);margin-left:6px" onclick="acLoadReceipts(\''+esc(UI.acSel)+'\')">Retry</button></div>';
+  if(UI.acReceiptsErr) return head+'<div style="padding:10px 2px;color:var(--disp);font-size:12px">⚠ '+esc(UI.acReceiptsErr)+' <button class="composebtn" style="padding:2px 9px;font-size:var(--fs-1);margin-inline-start:6px" onclick="acLoadReceipts(\''+esc(UI.acSel)+'\')">Retry</button></div>';
   if(!rs.length) return head+'<div style="padding:10px 2px;color:var(--grey);font-size:var(--fs-2)">No documents yet. Tap <b>📄 Send a test document</b> to run the cycle.</div>';
   var rows=rs.map(function(r){
     var oc=r.outcome||'', col=oc==='processed'?'var(--ok-3)':(oc==='failed'?'var(--disp)':(oc==='duplicate'?'var(--warn-2)':'var(--grey-2)'));
@@ -84,7 +84,7 @@ function piCockpit(x){
   var header='<div style="position:sticky;top:0;background:var(--card);z-index:5;padding-bottom:10px;border-bottom:1px solid var(--line);color:var(--on-card)">'
     +'<button class="dback" onclick="backToList()">‹ Co-assists</button>'
     +'<div style="display:flex;align-items:center;gap:9px;margin-top:6px"><span style="font-size:var(--fs-4);font-weight:700">'+esc(x.name)+'</span> '+tchip+' '+_hdot(health)
-      +'<span style="margin-left:auto;display:inline-flex;gap:7px">'+ico('ℹ️','How it works',"acHowItWorks("+(iot?'true':'false')+")")+ico('⚡',(iot?'Test connection':'Ping — mark live'),"acPing('"+x.id+"')")+ico('🔑','Connection string',"UI.acProvOpen=!UI.acProvOpen;paintAcDetail()")+(iot?ico('📦','Create package — one-drop Pi installer',"acCreatePackage('"+x.id+"')"):'')+ico('＋','Add '+(iot?'device':'endpoint'),"UI.acAddDev=!UI.acAddDev;paintAcDetail()")+ico('🗑','Delete this '+(iot?'gateway':'system'),"acDeleteConnector('"+x.id+"','"+esc(x.name).replace(/'/g,"\\'")+"')")+'</span></div>'
+      +'<span style="margin-inline-start:auto;display:inline-flex;gap:7px">'+ico('ℹ️','How it works',"acHowItWorks("+(iot?'true':'false')+")")+ico('⚡',(iot?'Test connection':'Ping — mark live'),"acPing('"+x.id+"')")+ico('🔑','Connection string',"UI.acProvOpen=!UI.acProvOpen;paintAcDetail()")+(iot?ico('📦','Create package — one-drop Pi installer',"acCreatePackage('"+x.id+"')"):'')+ico('＋','Add '+(iot?'device':'endpoint'),"UI.acAddDev=!UI.acAddDev;paintAcDetail()")+ico('🗑','Delete this '+(iot?'gateway':'system'),"acDeleteConnector('"+x.id+"','"+esc(x.name).replace(/'/g,"\\'")+"')")+'</span></div>'
     +'<div style="font-size:11.5px;color:var(--grey);margin-top:3px">📍 '+esc(x.site||'no site')+' · '+esc(health)+'</div></div>';
   var offline = health==='offline' ? '<div style="background:var(--danger-tint);border:1px solid #f0c9c6;color:var(--disp);border-radius:9px;padding:9px 11px;font-size:12px;font-weight:600;margin:10px 0">⚠ '+(iot?'Gateway':'System')+' OFFLINE — no '+(iot?'device':'endpoint')+' below can signal until it is back.</div>' : '';
   var prov = UI.acProvOpen ? _provPanel(iot, x.id) : '';
@@ -92,12 +92,12 @@ function piCockpit(x){
   var _loadingT=(UI.acConns===undefined); var _cn=_loadingT?[]:(UI.acConns||[]); var _live=_cn.filter(function(c){return c.signal==='live';}).length; var _agoT=(typeof _ago==='function'?_ago(UI.acLastSeen):'');
   var tiles='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:14px 0">'
     +_tile(iot?'Devices':'Endpoints', _loadingT?'—':_cn.length)
-    +_tile('Live now', _loadingT?'—':('<span style="display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:middle;background:'+(_live>0?'var(--ok-3)':'var(--disp)')+';color:' + (_live>0 ? 'var(--on-ok)' : 'var(--on-danger)') + ';margin-right:6px"></span>'+_live+' <small style="font-size:12px;color:var(--grey-2);font-weight:600">/ '+_cn.length+'</small>'))
+    +_tile('Live now', _loadingT?'—':('<span style="display:inline-block;width:9px;height:9px;border-radius:50%;vertical-align:middle;background:'+(_live>0?'var(--ok-3)':'var(--disp)')+';color:' + (_live>0 ? 'var(--on-ok)' : 'var(--on-danger)') + ';margin-inline-end:6px"></span>'+_live+' <small style="font-size:12px;color:var(--grey-2);font-weight:600">/ '+_cn.length+'</small>'))
     +_tile('Last signal', _loadingT?'—':(_agoT||'—'))
     +'</div>';
   var conns=UI.acConns, list;
   if(conns===undefined) list='<div style="padding:16px;color:var(--grey);font-size:var(--fs-2)">Loading…</div>';
-  else if(UI.acConnsErr) list='<div style="padding:10px 2px;color:var(--disp);font-size:12px">⚠ '+esc(UI.acConnsErr)+' <button class="composebtn" style="padding:2px 9px;font-size:var(--fs-1);margin-left:6px" onclick="acLoadDevices(\''+x.id+'\')">Retry</button></div>';
+  else if(UI.acConnsErr) list='<div style="padding:10px 2px;color:var(--disp);font-size:12px">⚠ '+esc(UI.acConnsErr)+' <button class="composebtn" style="padding:2px 9px;font-size:var(--fs-1);margin-inline-start:6px" onclick="acLoadDevices(\''+x.id+'\')">Retry</button></div>';
   else if(!conns.length) list='<div style="padding:10px 2px;color:var(--grey);font-size:var(--fs-2)">No '+(iot?'devices':'endpoints')+' yet. Tap ＋ to add one.</div>';
   else list=conns.map(function(c){ var cfg=c.conn_config||{}; var det=iot?[cfg.folder?('📁 '+cfg.folder):null,(cfg.classes&&cfg.classes.length)?('🏷 '+cfg.classes.join('/')):null,cfg.topic,cfg.device_id].filter(Boolean).join(' · '):(cfg.path||'');
     return '<div style="display:flex;align-items:center;gap:9px;padding:10px 0;border-bottom:1px dashed var(--line);font-size:var(--fs-2)"><div style="flex:1;min-width:0"><b>'+esc(c.ref)+'</b>'+(c.bridge_id?' <code style="background:var(--card);border:1px solid #eee;border-radius:5px;padding:0 5px;font-size:var(--fs-1);color:var(--grey)">'+esc(c.bridge_id)+'</code>':'')+(det?'<div style="color:var(--grey);font-size:var(--fs-1);margin-top:1px">'+esc(det)+'</div>':'')+'</div>'+_sig(c.enabled===false?'silent':c.signal)+'<button class="composebtn" style="padding:2px 9px;font-size:var(--fs-1)" onclick="acToggleDevice(\''+x.id+'\','+c.connection_id+','+(c.enabled?'false':'true')+')">'+(c.enabled?'Disable':'Enable')+'</button></div>';

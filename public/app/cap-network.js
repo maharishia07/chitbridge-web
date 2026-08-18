@@ -534,7 +534,7 @@ function _netChangeMap(changes){
       rows.push('<div style="display:flex;gap:9px;align-items:baseline;padding:5px 12px 5px ' + (12 + depth * 18) + 'px;'
         + (ch ? 'background:var(--warn-tint);' : '') + ';color:var(--on-card)">'
         + '<span style="font-size:var(--fs-2);' + (ch ? 'font-weight:700' : '') + '">' + (depth ? '└ ' : '◆ ') + esc(n.name) + '</span>'
-        + '<span style="margin-left:auto">' + chip + '</span></div>');
+        + '<span style="margin-inline-start:auto">' + chip + '</span></div>');
       walk(n.key, depth + 1);
     });
   })(null, 0);
@@ -749,7 +749,7 @@ function netBuild(){
     var badge = n.root ? 'ANCHOR' : (n.built ? 'BUILT' : (p.owned ? 'TO CREATE' : 'PARTNER · invite'));
     var bcol = n.root ? 'var(--blue-2)' : (n.built ? 'var(--ok-2)' : (p.owned ? 'var(--blue-2)' : 'var(--warn-2)'));
     var hnd = _netHandleOf(n);
-    var rows = p.lines.map(function(l){ return '<div style="font-size:12px;color:var(--ink-2);line-height:1.55;padding:1px 0">' + (l.indexOf('·') === 0 ? '<span style="color:var(--grey);padding-left:12px">' + l + '</span>' : '▸ ' + l) + '</div>'; }).join('');
+    var rows = p.lines.map(function(l){ return '<div style="font-size:12px;color:var(--ink-2);line-height:1.55;padding:1px 0">' + (l.indexOf('·') === 0 ? '<span style="color:var(--grey);padding-inline-start:12px">' + l + '</span>' : '▸ ' + l) + '</div>'; }).join('');
     var w = p.warns.length ? '<div style="margin-top:6px;padding:6px 9px;border:1px solid #e6c4bf;border-radius:6px;background:var(--danger-tint);font-size:var(--fs-1);color:var(--disp-2)">' + p.warns.map(function(x){ return '⚠ ' + x; }).join('<br>') + '</div>' : '';
     return '<div style="padding:11px 16px;border-bottom:1px solid var(--line)">'
       + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:2px"><b style="font-size:13px">' + esc(n.name) + '</b><span style="font-size:var(--fs-1);font-weight:700;letter-spacing:.03em;color:' + bcol + ';border:1px solid ' + bcol + '55;border-radius:4px;padding:1px 5px">' + badge + '</span></div>'
@@ -955,13 +955,13 @@ function _netGlobalChip(n){
 function _netTree(parentKey, depth){
   var kids = (UI.net.nodes || []).filter(function(n){ return n.parent_key === (parentKey || null); }).sort(_netByName);
   return kids.map(function(n){ var sel = UI.net.sel === n.key; var dots = _capDots(n);
-    return '<div onclick="netSelect(\'' + n.key + '\')" style="cursor:pointer;padding:7px 9px;padding-left:' + (9 + depth * 16) + 'px;border-radius:9px;font-size:var(--fs-2);' + (sel ? 'background:var(--blue-tint-bg);color:var(--blue-2);font-weight:700' : 'color:var(--ink-2)') + '">'
+    return '<div onclick="netSelect(\'' + n.key + '\')" style="cursor:pointer;padding:7px 9px;padding-inline-start:' + (9 + depth * 16) + 'px;border-radius:9px;font-size:var(--fs-2);' + (sel ? 'background:var(--blue-tint-bg);color:var(--blue-2);font-weight:700' : 'color:var(--ink-2)') + '">'
       + (n.parent_key ? '└ ' : '◆ ') + esc(n.name) + (n.owned ? '' : ' <span title="partner">🤝</span>')
       // The visibility flag, in the tree. It is the decision this whole page exists to make, so it must be
       // readable across the WHOLE network at a glance — not one node at a time. Re-rendered by netSetExposure,
       // so changing it on the right updates here immediately.
       + (n.root || !n.owned ? '' : _netVisChip(n))
-      + (dots ? '<span style="font-size:var(--fs-1);margin-left:5px;opacity:.9">' + dots + '</span>' : '')
+      + (dots ? '<span style="font-size:var(--fs-1);margin-inline-start:5px;opacity:.9">' + dots + '</span>' : '')
       // WHAT THIS STORE IS FOR, under its name. Athi, 2026-08-08: *"if we can bring the purpose of the store as a
       // comment or readable text under each store, that makes the network tree more meaningful."* The purpose was
       // captured on the first day and then only ever shown on the node you happened to have selected — so the
@@ -1008,7 +1008,7 @@ function _netMemberScreen(){
     var depth = Math.max(0, String(n.path || '').split('.').length - 1);
     var isMe = bid === mine;
     return '<div style="padding:8px 10px 8px ' + (12 + depth * 18) + 'px;font-size:13px;border-bottom:1px solid var(--line);'
-      + (isMe ? 'background:var(--purple-tint);border-left:3px solid var(--purple-2);' : '') + ';color:var(--on-card)">'
+      + (isMe ? 'background:var(--purple-tint);border-inline-start:3px solid var(--purple-2);' : '') + ';color:var(--on-card)">'
       + (depth ? '<span style="color:var(--grey)">└ </span>' : '◆ ')
       + (isMe ? '<b>' + esc(n.name || bid) + '</b> <span style="font-size:var(--fs-1);color:var(--purple-2);font-weight:700">← you</span>'
               : esc(n.name || bid))
@@ -1124,7 +1124,7 @@ function _netAvailBody(){
       + '<span style="color:var(--grey);font-size:12px;width:12px">' + (open ? '▾' : '▸') + '</span>'
       + '<b style="font-size:var(--fs-3)">' + esc(g.name) + '</b>'
       + (g.code ? '<span style="font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:var(--grey)">' + esc(g.code) + '</span>' : '')
-      + '<span style="margin-left:auto;font-size:var(--fs-2);color:' + (g.have.length ? 'var(--ok-2)' : 'var(--blue-2)') + ';font-weight:700">'
+      + '<span style="margin-inline-start:auto;font-size:var(--fs-2);color:' + (g.have.length ? 'var(--ok-2)' : 'var(--blue-2)') + ';font-weight:700">'
       + (g.have.length ? g.total + ' across ' + g.have.length + ' store' + (g.have.length === 1 ? '' : 's')
                        : 'nobody has reported any')
       + (g.unknown ? '<span style="font-weight:400;color:var(--warn-2)"> · ' + g.unknown + ' unknown</span>' : '')
@@ -1144,7 +1144,7 @@ function _netAvailBody(){
       + (r.is_me ? '<span style="font-size:var(--fs-1);font-weight:800;color:var(--purple-2);background:var(--purple-tint);border-radius:5px;padding:1px 6px">YOU</span>' : '')
       + (r.city ? '<span style="font-size:12px;color:var(--grey)">' + esc(r.city) + '</span>' : '')
       + '<span style="font-size:12px;color:var(--grey)">' + (r.km === null || r.km === undefined ? 'distance unknown' : r.km + ' km') + '</span>'
-      + '<b style="margin-left:auto;font-size:15px;color:' + qtyCol + '">' + qtyTxt + '</b></div>'
+      + '<b style="margin-inline-start:auto;font-size:15px;color:' + qtyCol + '">' + qtyTxt + '</b></div>'
       // WHEN, next to how many — the question was never just "who has it".
       + (function(){
           var e = r.eta || {};
@@ -1166,7 +1166,7 @@ function _netAvailBody(){
             + Number(r.price).toLocaleString(undefined, { maximumFractionDigits: 2 }) + '</span>'
           : '<span style="font-size:11.5px;color:var(--grey)">no price set</span>')
       // The provenance of the number, always. A quantity without it is not an answer.
-      + '<span style="margin-left:auto;font-size:var(--fs-1);font-weight:800;letter-spacing:.03em;border-radius:5px;padding:1px 6px;'
+      + '<span style="margin-inline-start:auto;font-size:var(--fs-1);font-weight:800;letter-spacing:.03em;border-radius:5px;padding:1px 6px;'
       + (f.stale ? 'background:var(--warn-tint);color:var(--warn-2)' : 'background:var(--ok-tint);color:var(--ok-2)') + '">'
       + esc((r.source || 'no source') + ' · ' + (f.label || 'no date')) + '</span></div>'
       + (unknown
@@ -1402,9 +1402,9 @@ function _netStepReview(){
     + '<span style="min-width:96px;color:var(--grey);font-size:11.5px">' + k + '</span><span style="flex:1">' + v + '</span></div>'; };
   var card = function(h, inner, edit){ return '<div style="border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-top:8px">'
     + '<div style="background:var(--paper);padding:8px 12px;font-size:var(--fs-1);font-weight:800;color:var(--grey);text-transform:uppercase;letter-spacing:.05em;display:flex">' + h
-    + (edit != null ? '<span style="margin-left:auto;color:var(--blue);cursor:pointer;text-transform:none;letter-spacing:0;font-size:11.5px" onclick="UI._netFlow.go(' + edit + ')">Change</span>' : '')
+    + (edit != null ? '<span style="margin-inline-start:auto;color:var(--blue);cursor:pointer;text-transform:none;letter-spacing:0;font-size:11.5px" onclick="UI._netFlow.go(' + edit + ')">Change</span>' : '')
     + '</div>' + inner + '</div>'; };
-  return card('To<span style="margin-left:auto;font-weight:400;text-transform:none;letter-spacing:0">fixed — this is their request</span>',
+  return card('To<span style="margin-inline-start:auto;font-weight:400;text-transform:none;letter-spacing:0">fixed — this is their request</span>',
         '<div style="padding:8px 12px;font-size:13px"><b>' + esc(s.name || '') + '</b> <span style="color:var(--grey);font-size:11.5px">' + esc(s.bridge_id || '') + '</span></div>')
     + card('Items · ' + sel.length, sel.map(function(l){
         return row(l.qty + ' × ' + esc(l.unit), '<span style="flex:1">' + esc(l.name) + '</span>'
@@ -1517,7 +1517,7 @@ function _netBrowseBody(){
     /* THE CHIP — who you are ordering from, and the one warning that must never hide behind a tap. */
     var head = '<div style="padding-bottom:10px;border-bottom:1px solid var(--line)">'
       + '<span onclick="netBrowseBack()" style="cursor:pointer;color:var(--blue);font-size:var(--fs-2)">‹ all stores</span>'
-      + '<div data-testid="net-chip" style="display:inline-flex;align-items:center;gap:9px;border:1px solid var(--line);border-radius:22px;padding:6px 13px;background:var(--card);margin-left:8px;color:var(--on-card)">'
+      + '<div data-testid="net-chip" style="display:inline-flex;align-items:center;gap:9px;border:1px solid var(--line);border-radius:22px;padding:6px 13px;background:var(--card);margin-inline-start:8px;color:var(--on-card)">'
       + '<b style="font-size:13.5px">' + esc(s.name) + '</b>'
       + (s.bridge_id ? '<span style="font-family:ui-monospace,Menlo,monospace;font-size:var(--fs-1);color:var(--grey)">' + esc(s.bridge_id) + '</span>' : '')
       + (netIsMe() ? '<span style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:20px;padding:2px 9px;font-size:var(--fs-1);color:var(--warn-2);font-weight:700">⚠ this is your own store</span>' : '')
@@ -1564,7 +1564,7 @@ function _netBrowseBody(){
       + (st.city ? '<span style="font-size:12px;color:var(--grey)">' + esc(st.city) + '</span>' : '')
       + (st.km !== null && st.km !== undefined ? '<span style="font-size:12px;color:var(--grey)">' + st.km + ' km</span>' : '')
       + (st.currency ? '<span style="font-size:var(--fs-1);color:var(--grey)">' + esc(st.currency) + '</span>' : '')
-      + '<span style="margin-left:auto;color:var(--blue);font-size:var(--fs-2)">open catalogue ›</span>'
+      + '<span style="margin-inline-start:auto;color:var(--blue);font-size:var(--fs-2)">open catalogue ›</span>'
       + (st.purpose ? '<div style="width:100%;font-size:11.5px;color:var(--grey-3)">' + esc(st.purpose) + '</div>' : '')
       + '</div>';
   }).join('');
@@ -1750,7 +1750,7 @@ function _catFieldRow(n, f, i){
     viaSel = '<select onchange="netSetCatField(\'' + n.key + '\',' + i + ',\'via\',this.value)" title="' + (ok ? 'co-assist present' : 'no matching co-assist on this node') + '" style="font-size:var(--fs-1);padding:4px;border:1px solid ' + (ok ? 'var(--line)' : 'var(--disp)') + ';border-radius:6px;background:' + (ok ? 'var(--card)' : 'var(--danger-tint)') + ';color:' + (ok ? 'var(--on-card)' : 'var(--on-card)') + '">' + viaOpts + '</select>';
   }
   var col = (CAT_LEGS.filter(function(l){ return l.k === f.leg; })[0] || {}).col || ['var(--blue-2)', 'var(--blue-tint-bg)'];
-  return '<div style="display:flex;gap:6px;align-items:center;padding:3px 0;border-left:3px solid ' + col[0] + ';padding-left:7px">'
+  return '<div style="display:flex;gap:6px;align-items:center;padding:3px 0;border-inline-start:3px solid ' + col[0] + ';padding-inline-start:7px">'
     + '<input value="' + esc(f.name || '') + '" oninput="netSetCatField(\'' + n.key + '\',' + i + ',\'name\',this.value)" placeholder="what you need to know" style="flex:1;min-width:0;font-size:12px;padding:5px 7px;border:1px solid var(--line);border-radius:6px">'
     + '<select onchange="netSetCatField(\'' + n.key + '\',' + i + ',\'leg\',this.value)" style="font-size:var(--fs-1);padding:4px;border:1px solid var(--line);border-radius:6px">' + legOpts + '</select>'
     + viaSel
@@ -1787,9 +1787,9 @@ function netSetPriceSrc(key, v){ var n = _netNode(key); if (!n) return; _ensureC
 function _adoptedPricing(n, c){
   var cur = (n.place && n.place.currency) || (typeof SESSION !== 'undefined' && SESSION.currency) || 'the network\'s';
   var v = c.priceSrc || 'own';
-  return '<div style="margin:10px 0 14px;padding:11px 13px;border:1px solid var(--line);border-left:3px solid var(--blue-2);border-radius:9px;background:var(--blue-tint-bg);color:var(--on-card)">'
+  return '<div style="margin:10px 0 14px;padding:11px 13px;border:1px solid var(--line);border-inline-start:3px solid var(--blue-2);border-radius:9px;background:var(--blue-tint-bg);color:var(--on-card)">'
     + '<div style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);letter-spacing:.05em">HOW THIS STORE PRICES WHAT IT ADOPTED'
-    + ' <span style="background:var(--blue-tint-bg);color:var(--blue);border-radius:5px;padding:1px 6px;margin-left:5px">CAPTURED, NOT ENFORCED</span></div>'
+    + ' <span style="background:var(--blue-tint-bg);color:var(--blue);border-radius:5px;padding:1px 6px;margin-inline-start:5px">CAPTURED, NOT ENFORCED</span></div>'
     + '<div style="font-size:11.5px;color:var(--grey);margin-top:4px;line-height:1.5">The <b>product</b> stays the '
     + 'network\'s — a corrected picture or spec reaches every store. Only the <b>price</b> is ever this store\'s, '
     + 'stamped in <b>' + esc(cur) + '</b> and never converted afterwards.</div>'
@@ -1819,7 +1819,7 @@ function _catConfig(n){
   var loadOpts = CAT_LOADS.map(function(l){ return '<option value="' + l + '"' + ((c.loadedBy || 'manual') === l ? ' selected' : '') + '>' + l + '</option>'; }).join('');
   var unbacked = (c.fields || []).filter(function(f){ return (f.leg === 'system' || f.leg === 'compute') && !_legBacked(n, f); });
   var legNote = unbacked.length ? ('<div style="font-size:var(--fs-1);color:var(--disp-2);margin-top:6px;border-top:1px dotted var(--line);padding-top:5px">⚠ ' + unbacked.length + ' field' + (unbacked.length > 1 ? 's' : '') + ' needing a co-assist that this node doesn\'t carry — add the ERP / IoT / AI co-assist, or route ' + (unbacked.length > 1 ? 'them' : 'it') + ' to another leg.</div>') : '';
-  var legLegend = CAT_LEGS.map(function(l){ return '<span style="font-size:var(--fs-1);color:' + l.col[0] + ';background:' + l.col[1] + ';border-radius:4px;padding:1px 6px;margin-right:4px">' + l.short + '</span>'; }).join('');
+  var legLegend = CAT_LEGS.map(function(l){ return '<span style="font-size:var(--fs-1);color:' + l.col[0] + ';background:' + l.col[1] + ';border-radius:4px;padding:1px 6px;margin-inline-end:4px">' + l.short + '</span>'; }).join('');
   var _in = 'font-size:11.5px;padding:5px 7px;border:1px solid var(--line);border-radius:6px';
   var variantRows = (c.variants || []).map(function(v, i){ return '<div style="display:flex;gap:6px;align-items:center;padding:2px 0"><input value="' + esc(v.name || '') + '" oninput="netSetVariant(\'' + n.key + '\',' + i + ',this.value)" placeholder="variant (e.g. Sunlit Ivory · Matte · 4L)" style="flex:1;min-width:0;' + _in + '"><span onclick="netDelVariant(\'' + n.key + '\',' + i + ')" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 3px">×</span></div>'; }).join('');
   var altRows = (c.altUnits || []).map(function(u, i){ return '<div style="display:flex;gap:4px;align-items:center;padding:2px 0"><input value="' + esc(u.unit || '') + '" oninput="netSetAltUnit(\'' + n.key + '\',' + i + ',\'unit\',this.value)" placeholder="unit" style="width:66px;' + _in + '"><span style="font-size:var(--fs-1);color:var(--grey)">1=</span><input type="number" min="1" value="' + (u.num || 1) + '" oninput="netSetAltUnit(\'' + n.key + '\',' + i + ',\'num\',this.value)" style="width:48px;' + _in + '"><span style="font-size:var(--fs-1);color:var(--grey)">/</span><input type="number" min="1" value="' + (u.den || 1) + '" oninput="netSetAltUnit(\'' + n.key + '\',' + i + ',\'den\',this.value)" style="width:48px;' + _in + '"><span style="font-size:var(--fs-1);color:var(--grey)">' + esc(c.baseUnit || 'base') + '</span><span onclick="netDelAltUnit(\'' + n.key + '\',' + i + ')" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 3px">×</span></div>'; }).join('');
@@ -1857,7 +1857,7 @@ function _catConfig(n){
     return '<div style="border:1px solid var(--line);border-radius:9px;padding:7px 9px;margin-top:6px">'
       + '<div style="display:flex;gap:6px;align-items:center"><input value="' + esc(p.label || '') + '" oninput="netSetPrice(\'' + n.key + '\',' + i + ',\'label\',this.value)" placeholder="price label (list · trade · spot)" style="flex:1;min-width:0;' + _in + '"><span onclick="netDelPrice(\'' + n.key + '\',' + i + ')" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 3px">×</span></div>'
       + '<div style="display:flex;gap:6px;align-items:center;margin-top:5px"><select onchange="netSetPrice(\'' + n.key + '\',' + i + ',\'basis\',this.value)" style="font-size:var(--fs-1);padding:4px;border:1px solid var(--line);border-radius:6px">' + basisOpts + '</select><select onchange="netSetPrice(\'' + n.key + '\',' + i + ',\'by\',this.value)" style="font-size:var(--fs-1);padding:4px;border:1px solid var(--line);border-radius:6px">' + byOpts + '</select>' + valField + '</div>'
-      + '<div style="display:flex;gap:6px;align-items:center;margin-top:5px;font-size:var(--fs-1);color:var(--grey)">valid <input type="date" value="' + esc(p.validFrom || '') + '" onchange="netSetPrice(\'' + n.key + '\',' + i + ',\'validFrom\',this.value)" style="' + _in + '">→<input type="date" value="' + esc(p.validTo || '') + '" onchange="netSetPrice(\'' + n.key + '\',' + i + ',\'validTo\',this.value)" style="' + _in + '"> · region <input value="' + esc(p.region || '') + '" oninput="netSetPrice(\'' + n.key + '\',' + i + ',\'region\',this.value)" placeholder="' + esc(ctx.region || 'inherit') + '" style="width:78px;' + _in + '"><span style="margin-left:auto;font-size:var(--fs-1);font-weight:600;color:' + (p.by === 'value' ? 'var(--ok-2)' : 'var(--purple-2)') + '">' + (p.by === 'value' ? 'frozen' : 'loose · resolves at seal') + '</span></div>'
+      + '<div style="display:flex;gap:6px;align-items:center;margin-top:5px;font-size:var(--fs-1);color:var(--grey)">valid <input type="date" value="' + esc(p.validFrom || '') + '" onchange="netSetPrice(\'' + n.key + '\',' + i + ',\'validFrom\',this.value)" style="' + _in + '">→<input type="date" value="' + esc(p.validTo || '') + '" onchange="netSetPrice(\'' + n.key + '\',' + i + ',\'validTo\',this.value)" style="' + _in + '"> · region <input value="' + esc(p.region || '') + '" oninput="netSetPrice(\'' + n.key + '\',' + i + ',\'region\',this.value)" placeholder="' + esc(ctx.region || 'inherit') + '" style="width:78px;' + _in + '"><span style="margin-inline-start:auto;font-size:var(--fs-1);font-weight:600;color:' + (p.by === 'value' ? 'var(--ok-2)' : 'var(--purple-2)') + '">' + (p.by === 'value' ? 'frozen' : 'loose · resolves at seal') + '</span></div>'
       + '</div>';
   }).join('') || '<div style="font-size:var(--fs-1);color:var(--grey);padding:2px 0">No prices — information-only catalogue.</div>';
   var partPricing = '<label style="font-size:var(--fs-1);color:var(--grey);display:block;margin-top:10px"><b style="font-weight:800;color:var(--blue-2);letter-spacing:.05em">D · PRICING</b> <span style="color:var(--faint,var(--grey-3))">— governed by context; by ref (loose) or by value (frozen)</span></label>'
@@ -1880,7 +1880,7 @@ function _catConfig(n){
       + ' <input value="' + esc(t.value || '') + '" oninput="netSetTrigger(\'' + n.key + '\',' + i + ',\'value\',this.value)" placeholder="EOQ / min" style="width:70px;' + sm + '">'
       + ' → <select onchange="netSetTrigger(\'' + n.key + '\',' + i + ',\'action\',this.value)" style="' + sm + '">' + actSel + '</select>'
       + ' to <input value="' + esc(t.target || '') + '" oninput="netSetTrigger(\'' + n.key + '\',' + i + ',\'target\',this.value)" placeholder="supplier / system" style="width:110px;' + sm + '">'
-      + '<span onclick="netDelTrigger(\'' + n.key + '\',' + i + ')" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 3px;margin-left:auto">×</span></div>';
+      + '<span onclick="netDelTrigger(\'' + n.key + '\',' + i + ')" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 3px;margin-inline-start:auto">×</span></div>';
   }).join('') || '<div style="font-size:var(--fs-1);color:var(--grey);padding:2px 0">No triggers — the catalogue is static (a human decides when to act).</div>';
   // ---- five focused tabs: a human fills a few things at a time (no more one long scroll) ----
   var tab = (UI.net && UI.net.catTab) || 'purpose';
@@ -1928,7 +1928,7 @@ function _catConfig(n){
       + '<div onclick="netExportCat(\'' + n.key + '\')" style="cursor:pointer;display:inline-block;margin-top:10px;font-size:11.5px;font-weight:600;color:var(--blue);border:1px solid var(--line);border-radius:6px;padding:5px 11px">⤓ Export draft (JSON)</div>'
       + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">Feeds the compute→seal harness — the design drives the run.</div>';
   }
-  return '<div style="margin-top:10px;padding:12px 13px;border:1px solid var(--line);border-left:3px solid var(--blue-2);border-radius:9px;background:var(--blue-tint-bg);color:var(--on-card)">'
+  return '<div style="margin-top:10px;padding:12px 13px;border:1px solid var(--line);border-inline-start:3px solid var(--blue-2);border-radius:9px;background:var(--blue-tint-bg);color:var(--on-card)">'
     + '<div style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);letter-spacing:.05em">🗂️ CATALOGUE — complete the information chain</div>'
     + tabBar
     + '<div style="margin-top:6px">' + body + '</div>'
@@ -2102,7 +2102,7 @@ function _storefrontConfig(n){
     + '<div onclick="netAddAttach(\'' + n.key + '\')" style="cursor:pointer;color:var(--blue);font-size:12px;font-weight:600;padding:5px 0">＋ add attachment</div>'
     + '<textarea oninput="netSetOrderNotes(\'' + n.key + '\',this.value)" placeholder="notes…" style="width:100%;margin-top:6px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:12px;box-sizing:border-box;min-height:2.4rem;resize:vertical">' + esc(o.notes || '') + '</textarea>'
     + '</div>';
-  return '<div style="margin-top:10px;padding:12px 13px;border:1px solid var(--line);border-left:3px solid var(--ok-2);border-radius:9px;background:var(--ok-tint);color:var(--on-card)">' + view + order + _chitPreview(n) + '</div>';
+  return '<div style="margin-top:10px;padding:12px 13px;border:1px solid var(--line);border-inline-start:3px solid var(--ok-2);border-radius:9px;background:var(--ok-tint);color:var(--on-card)">' + view + order + _chitPreview(n) + '</div>';
 }
 /* setters for the four remaining panels */
 /* co-assist: normalized shape + per-kind setters (Human roles · IoT gateways→devices · ERP system+label · AI role+autonomy) */
@@ -2164,7 +2164,7 @@ function _coassistConfig(n){
       + '<span style="font-size:var(--fs-1);color:var(--grey)">count</span><input type="number" min="0" value="' + (c.ai.count || '') + '" oninput="netCaAiCount(\'' + n.key + '\',this.value)" placeholder="0" style="width:64px;padding:4px 6px;border:1px solid var(--line);border-radius:6px;font-size:12px"></div>'
     + '<div style="display:flex;gap:6px;align-items:center;margin-top:6px;flex-wrap:wrap"><input value="' + esc(c.ai.role || '') + '" oninput="netCaAiRole(\'' + n.key + '\',this.value)" placeholder="what it does" style="flex:1 0 110px;min-width:0;font-size:11.5px;padding:4px 7px;border:1px solid var(--line);border-radius:6px"><span style="font-size:var(--fs-1);color:var(--grey)">autonomy</span><select onchange="netCaAiAutonomy(\'' + n.key + '\',this.value)" style="font-size:11.5px;padding:4px;border:1px solid var(--line);border-radius:6px">' + auOpts + '</select></div>'
     + '</div>';
-  return '<div style="padding:12px 13px;border:1px solid var(--line);border-left:3px solid #8a5cc4;border-radius:9px;background:var(--blue-tint-bg);color:var(--on-card)">'
+  return '<div style="padding:12px 13px;border:1px solid var(--line);border-inline-start:3px solid #8a5cc4;border-radius:9px;background:var(--blue-tint-bg);color:var(--on-card)">'
     + '<div style="font-size:var(--fs-1);font-weight:800;color:var(--blue);letter-spacing:.05em">🧑‍🤝‍🧑 CO-ASSISTS — under THIS branch</div>'
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px">Each is created under this node (login <b>key@branch</b>), not the network.</div>'
     + '<div style="margin-top:4px">' + human + iot + erp + ai + '</div>'
@@ -2178,7 +2178,7 @@ function _radioOpt(onclick, on, label, hint, color, bg){
 function _transactConfig(n){
   var f = (n.transact || {}).flow || 'both';
   var copy = (n.transact || {}).copyOperator !== false;
-  return '<div style="padding:12px 13px;border:1px solid var(--line);border-left:3px solid #2b6f8f;border-radius:9px;background:var(--card);color:var(--on-card)">'
+  return '<div style="padding:12px 13px;border:1px solid var(--line);border-inline-start:3px solid #2b6f8f;border-radius:9px;background:var(--card);color:var(--on-card)">'
     + '<div style="font-size:var(--fs-1);font-weight:800;color:var(--on-card);letter-spacing:.05em">🔄 TRANSACT — does it deal directly with others?</div>'
     + _radioOpt("netSetTransact('" + n.key + "','both')", f === 'both', 'Sends and receives', 'Talks to counterparties on its own — both directions.', 'var(--blue-2)', 'var(--blue-tint-bg)')
     + _radioOpt("netSetTransact('" + n.key + "','send')", f === 'send', 'Sends only', 'Hands records out (to customers / downstream).', 'var(--blue-2)', 'var(--blue-tint-bg)')
@@ -2194,7 +2194,7 @@ function _tradereadyConfig(n){
   var certList = mode === 'own' ? '<div style="margin-top:8px">'
     + (certs.length ? certs.map(function(c, i){ return '<div style="display:flex;gap:6px;align-items:center;padding:3px 0"><input value="' + esc(c) + '" oninput="netSetCert(\'' + n.key + '\',' + i + ',this.value)" placeholder="certification (e.g. FSC, ISO 9001)" style="flex:1;font-size:12px;padding:5px 7px;border:1px solid var(--line);border-radius:6px"><span onclick="netDelCert(\'' + n.key + '\',' + i + ')" title="remove" style="cursor:pointer;color:var(--grey);font-weight:700;padding:0 4px">×</span></div>'; }).join('') : '<div style="font-size:var(--fs-1);color:var(--grey)">No certifications yet.</div>')
     + '<div onclick="netAddCert(\'' + n.key + '\')" style="cursor:pointer;color:var(--blue);font-size:12px;font-weight:600;padding:5px 0">＋ add certification</div></div>' : '';
-  return '<div style="padding:12px 13px;border:1px solid var(--line);border-left:3px solid #22857a;border-radius:9px;background:var(--ok-tint);color:var(--on-card)">'
+  return '<div style="padding:12px 13px;border:1px solid var(--line);border-inline-start:3px solid #22857a;border-radius:9px;background:var(--ok-tint);color:var(--on-card)">'
     + '<div style="font-size:var(--fs-1);font-weight:800;color:var(--ok-2);letter-spacing:.05em">🛡️ TRADE-READY — certifications</div>'
     + _radioOpt("netSetTradeMode('" + n.key + "','own')", mode === 'own', 'Holds its own certifications', 'This node carries its own clearances.', 'var(--blue-2)', 'var(--ok-tint)')
     + _radioOpt("netSetTradeMode('" + n.key + "','inherit')", mode === 'inherit', "Inherits the network's", "The network's certifications apply here (cascaded).", 'var(--blue-2)', 'var(--ok-tint)')
@@ -2203,7 +2203,7 @@ function _tradereadyConfig(n){
 }
 function _disputeConfig(n){
   var inf = (n.dispute || {}).informed !== false;
-  return '<div style="padding:12px 13px;border:1px solid var(--line);border-left:3px solid #8a5cc4;border-radius:9px;background:var(--blue-tint-bg);color:var(--on-card)">'
+  return '<div style="padding:12px 13px;border:1px solid var(--line);border-inline-start:3px solid #8a5cc4;border-radius:9px;background:var(--blue-tint-bg);color:var(--on-card)">'
     + '<div style="font-size:var(--fs-1);font-weight:800;color:var(--blue);letter-spacing:.05em">⚖️ DISPUTE — is this node in the loop?</div>'
     + _radioOpt("netSetDispute('" + n.key + "',true)", inf, 'Informed / involved', 'When a dispute touches this node, it is notified and can respond.', 'var(--purple-2)', 'var(--purple-tint)')
     + _radioOpt("netSetDispute('" + n.key + "',false)", !inf, 'Not involved', "Disputes are handled above it; this node isn't notified.", 'var(--purple-2)', 'var(--purple-tint)')
@@ -2246,7 +2246,7 @@ function _globalConfig(n){
       ? '<span style="font-size:var(--fs-1);font-weight:800;background:var(--ok-tint);color:var(--ok-2);border-radius:5px;padding:1px 6px">SET HERE</span>'
       : '<span style="font-size:var(--fs-1);font-weight:800;background:var(--blue-tint-bg);color:var(--ok-2);border-radius:5px;padding:1px 6px">FROM NETWORK · AT BUILD — ' + esc(netVal) + '</span>';
   };
-  return '<div style="padding:12px 13px;border:1px solid var(--line);border-left:3px solid var(--blue-2);border-radius:9px;background:var(--blue-tint-bg);color:var(--on-card)">'
+  return '<div style="padding:12px 13px;border:1px solid var(--line);border-inline-start:3px solid var(--blue-2);border-radius:9px;background:var(--blue-tint-bg);color:var(--on-card)">'
     + '<div style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);letter-spacing:.05em">🌍 GLOBAL — CURRENCY · PLACE · TIME</div>'
     + '<div style="font-size:11.5px;color:var(--grey);margin-top:4px;line-height:1.5">The three things that change '
     + 'because this store is somewhere else. Leave a field blank and it takes the network\'s.</div>'
@@ -2299,7 +2299,7 @@ function _fulfilConfig(n){
   var p = _netPlace(n);
   var km = p.km;
   var declared = p.dispatch !== undefined && p.dispatch !== null && p.dispatch !== '';
-  return '<div style="padding:12px 13px;border:1px solid var(--line);border-left:3px solid #2b6f8f;border-radius:9px;background:var(--card);color:var(--on-card)">'
+  return '<div style="padding:12px 13px;border:1px solid var(--line);border-inline-start:3px solid #2b6f8f;border-radius:9px;background:var(--card);color:var(--on-card)">'
     + '<div style="font-size:var(--fs-1);font-weight:800;color:var(--on-card);letter-spacing:.05em">🚚 HOW FAST THIS STORE CAN SEND</div>'
     + '<div style="font-size:11.5px;color:var(--grey);margin-top:4px;line-height:1.5">Three numbers this store knows. '
     + 'They are what lets the network answer <b>when</b>, not just who and how far.</div>'
@@ -2349,9 +2349,9 @@ var NET_SOON_FORM = {
 function _soonConfig(n, k){
   var s = NET_SOON[k], c = _capMeta(k) || {}, form = NET_SOON_FORM[k] || [], v = _netSoonVal(n, k);
   if (!s) return '';
-  return '<div style="padding:12px 13px;border:1px solid var(--line);border-left:3px solid #8a94a3;border-radius:9px;background:var(--card);color:var(--on-card)">'
+  return '<div style="padding:12px 13px;border:1px solid var(--line);border-inline-start:3px solid #8a94a3;border-radius:9px;background:var(--card);color:var(--on-card)">'
     + '<div style="font-size:var(--fs-1);font-weight:800;color:var(--on-card);letter-spacing:.05em">' + c.icon + ' ' + esc((c.label || '').toUpperCase())
-    + ' <span style="background:var(--blue-tint-bg);border-radius:5px;padding:1px 6px;margin-left:5px;color:var(--on-card)">CAPTURED, NOT ENFORCED</span></div>'
+    + ' <span style="background:var(--blue-tint-bg);border-radius:5px;padding:1px 6px;margin-inline-start:5px;color:var(--on-card)">CAPTURED, NOT ENFORCED</span></div>'
     + '<div style="font-size:var(--fs-2);color:var(--ink-2);margin-top:6px;line-height:1.5"><b>' + esc(s.q) + '</b></div>'
     + form.map(function(f){ return _fieldLabel(f[1]) + _inp(v[f[0]], "netSetSoon('" + n.key + "','" + k + "','" + f[0] + "',this.value)", f[2]); }).join('')
     + '<div style="margin-top:11px;font-size:11.5px;line-height:1.55;border-top:1px dashed var(--line);padding-top:8px">'
@@ -2538,21 +2538,21 @@ function _netVisChip(n){
   var pl = _netPlanFor(n);
   if (pl && pl.kind === 'create') {
     return '<span style="font-size:var(--fs-1);font-weight:800;letter-spacing:.02em;color:var(--blue-2);background:var(--blue-tint-bg);'
-      + 'border:1px dashed var(--blue-2);border-radius:5px;padding:0 5px;margin-left:6px;vertical-align:middle">TO BE CREATED</span>'
-      + '<span style="font-size:var(--fs-1);font-weight:700;color:#6b7280;margin-left:5px">' + esc(_netPlatLab[pl.to] || pl.to) + '</span>';
+      + 'border:1px dashed var(--blue-2);border-radius:5px;padding:0 5px;margin-inline-start:6px;vertical-align:middle">TO BE CREATED</span>'
+      + '<span style="font-size:var(--fs-1);font-weight:700;color:#6b7280;margin-inline-start:5px">' + esc(_netPlatLab[pl.to] || pl.to) + '</span>';
   }
   var p = _netPending(n);
   if (p) {
     // The change, IN the map, exactly as it will be applied — struck through so it reads as a move, not a state.
-    return '<span style="font-size:var(--fs-1);font-weight:800;margin-left:6px;vertical-align:middle">'
+    return '<span style="font-size:var(--fs-1);font-weight:800;margin-inline-start:6px;vertical-align:middle">'
       + '<s style="color:var(--disp-2)">' + esc(_netPlatLab[p.from] || p.from) + '</s>'
       + ' <span style="color:var(--warn-2)">→ ' + esc(_netPlatLab[p.to] || p.to) + '</span></span>';
   }
   var c = NET_VIS_CHIP[n.exposure || 'private'] || NET_VIS_CHIP.private;
   return '<span style="font-size:var(--fs-1);font-weight:800;letter-spacing:.02em;color:' + c.fg + ';background:' + c.bg
-    + ';border-radius:5px;padding:1px 5px;margin-left:6px;vertical-align:middle">' + c.t + '</span>'
+    + ';border-radius:5px;padding:1px 5px;margin-inline-start:6px;vertical-align:middle">' + c.t + '</span>'
     // The purpose moved but the visibility did not — still outstanding, still has to say so.
-    + (pl && pl.kind === 'change' ? '<span title="the wording on the store has not been updated yet" style="font-size:var(--fs-1);font-weight:800;color:var(--warn-2);background:var(--warn-tint);border-radius:5px;padding:1px 5px;margin-left:4px;vertical-align:middle">TEXT EDITED</span>' : '');
+    + (pl && pl.kind === 'change' ? '<span title="the wording on the store has not been updated yet" style="font-size:var(--fs-1);font-weight:800;color:var(--warn-2);background:var(--warn-tint);border-radius:5px;padding:1px 5px;margin-inline-start:4px;vertical-align:middle">TEXT EDITED</span>' : '');
 }
 
 /* The most open a store may be, given the NETWORK's own visibility. Athi: *"what if the network is private? Then
@@ -2665,9 +2665,9 @@ function _netVisibilityBlock(n){
 function _netNodeView(n){
   var isRoot = !n.parent_key;
   var childCount = (UI.net.nodes || []).filter(function(x){ return x.parent_key === n.key; }).length;
-  var badge = isRoot ? '<span style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);background:var(--blue-tint-bg);border-radius:6px;padding:2px 7px;margin-left:9px;vertical-align:middle">TOP · YOUR ENTITY</span>'
-    : (n.owned ? '<span style="font-size:var(--fs-1);font-weight:800;color:var(--ok-2);background:var(--ok-tint);border-radius:6px;padding:2px 7px;margin-left:9px;vertical-align:middle">OWNED</span>'
-               : '<span style="font-size:var(--fs-1);font-weight:800;color:var(--warn-2);background:var(--warn-tint);border-radius:6px;padding:2px 7px;margin-left:9px;vertical-align:middle">🤝 PARTNER</span>');
+  var badge = isRoot ? '<span style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);background:var(--blue-tint-bg);border-radius:6px;padding:2px 7px;margin-inline-start:9px;vertical-align:middle">TOP · YOUR ENTITY</span>'
+    : (n.owned ? '<span style="font-size:var(--fs-1);font-weight:800;color:var(--ok-2);background:var(--ok-tint);border-radius:6px;padding:2px 7px;margin-inline-start:9px;vertical-align:middle">OWNED</span>'
+               : '<span style="font-size:var(--fs-1);font-weight:800;color:var(--warn-2);background:var(--warn-tint);border-radius:6px;padding:2px 7px;margin-inline-start:9px;vertical-align:middle">🤝 PARTNER</span>');
   var kindLine = isRoot ? 'The top of the network — your own entity.'
     : (n.owned ? 'An owned node — at Build it becomes a real entity with a login key <b>you hold</b>.'
                : 'An independent business — at Build it\'s a <b>handshake</b> (no key held). Its catalogue is visible here.');
@@ -2676,7 +2676,7 @@ function _netNodeView(n){
     // The handle, directly under the name: the network prefix is not a detail, it IS the store's identity on the
     // platform, and it is what gets typed into "add a supplier" or a login box.
     + (_netHandleOf(n) ? '<div style="font-family:ui-monospace,Menlo,monospace;font-size:13px;color:var(--blue-2);margin-top:3px">' + esc(_netHandleOf(n))
-        + (n.built ? '' : '<span style="font-family:inherit;font-size:var(--fs-1);color:var(--grey);margin-left:7px">— the name it will be given</span>') + '</div>' : '')
+        + (n.built ? '' : '<span style="font-family:inherit;font-size:var(--fs-1);color:var(--grey);margin-inline-start:7px">— the name it will be given</span>') + '</div>' : '')
     // The network name, said out loud and CHANGEABLE. It is the most consequential name on the page — every store
     // carries it — and it used to be derived from the display name without anyone being asked.
     + (isRoot ? '<div style="margin-top:5px;display:flex;align-items:center;gap:9px;flex-wrap:wrap">'
@@ -2784,7 +2784,7 @@ function _netGeneralTab(n){
       + '<button onclick="netAddPartner(\'' + n.key + '\')" style="padding:8px 13px">🤝 Add partner</button>'
       + (isRoot ? '' : '<button onclick="netRename(\'' + n.key + '\')" style="padding:8px 13px">✏️ Rename</button><button onclick="netDelete(\'' + n.key + '\')" style="padding:8px 13px">🗑️ Remove</button>'
           // The arrangement everyone sees. Applied to the stores at the next Build, like every other change.
-          + '<span style="margin-left:4px;display:inline-flex;gap:4px">'
+          + '<span style="margin-inline-start:4px;display:inline-flex;gap:4px">'
           + '<button onclick="netMove(\'' + n.key + '\',-1)" title="Move up among its siblings" style="padding:8px 11px">↑</button>'
           + '<button onclick="netMove(\'' + n.key + '\',1)" title="Move down among its siblings" style="padding:8px 11px">↓</button></span>')
     + '</div>'
@@ -2886,7 +2886,7 @@ function _netOptionsTab(n){
           +     ' onchange="this.checked?' + call('netCapYes') + ':' + call('netCapNo') + '">'
           +   '<span style="width:18px;text-align:center;font-size:var(--fs-3)">' + c.icon + '</span>'
           +   '<span style="font-size:var(--fs-3);font-weight:' + (on ? '700' : '500') + '">' + esc(c.label) + '</span>'
-          +   (c.soon ? '<span style="margin-left:auto;font-size:var(--fs-1);font-weight:800;color:var(--warn-2);'
+          +   (c.soon ? '<span style="margin-inline-start:auto;font-size:var(--fs-1);font-weight:800;color:var(--warn-2);'
                 + 'background:var(--warn-tint);border-radius:5px;padding:1px 6px">not enabled</span>' : '')
           + '</label>'
           + (blocked ? '<div style="padding:0 13px 11px;font-size:11.5px;color:var(--warn-2);line-height:1.55">'

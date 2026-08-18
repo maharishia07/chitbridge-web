@@ -205,7 +205,7 @@ function cbAttachButton(ctx){
     + ' style="width:auto;flex:0 0 auto;margin:0;padding:6px 12px;font-size:11.5px;font-weight:700;'
     + 'border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink);cursor:pointer">'
     + esc(ctx.label || '📎 Attach a file') + '</button>'
-    + (ctx.note ? '<span style="font-size:var(--fs-1);color:var(--warn-2);margin-left:8px">' + esc(ctx.note) + '</span>' : '');
+    + (ctx.note ? '<span style="font-size:var(--fs-1);color:var(--warn-2);margin-inline-start:8px">' + esc(ctx.note) + '</span>' : '');
 }
 
 /* Read one File to bare base64 (the data: prefix stripped — the server strips it too, but sending it doubles
@@ -443,7 +443,7 @@ function cbAttachChoose(){
   return new Promise(function(resolve){
     var input = document.createElement('input');
     input.type = 'file';
-    input.style.cssText = 'position:fixed;left:-9999px;width:1px;height:1px';
+    input.style.cssText = 'position:fixed;inset-inline-start:-9999px;width:1px;height:1px';
     var done = false;
     function finish(f){ if (done) return; done = true; try { input.remove(); } catch (_) {} resolve(f || null); }
     input.addEventListener('change', function(){ finish(input.files && input.files[0]); });

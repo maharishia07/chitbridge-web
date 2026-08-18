@@ -232,7 +232,7 @@
   .moderibbon{background:var(--gold-soft);border-bottom:1px solid var(--gold-line);color:var(--warn-3);font-size:var(--fs-1);font-weight:600;padding:5px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
   .moderibbon b{font-family:'Space Grotesk'}
   .moderibbon .pill{background:var(--card);border:1px solid var(--gold-line);border-radius:20px;padding:2px 9px;font-size:var(--fs-1)}
-  .moderibbon .sw{margin-left:auto;display:flex;gap:6px}
+  .moderibbon .sw{margin-inline-start:auto;display:flex;gap:6px}
   .moderibbon .sw button{border:1px solid var(--gold-line);background:var(--card);border-radius:6px;font-size:var(--fs-1);font-weight:700;padding:4px 9px;color:var(--warn-3)}
   .moderibbon .sw button.on{background:var(--chrome);color:var(--chrome-on);border-color:var(--chrome)}
   .moderibbon .sw button:disabled{opacity:.42;cursor:not-allowed}
@@ -268,9 +268,9 @@
   .welsplit{display:flex;gap:12px;flex-wrap:wrap;margin:14px 0}
   .welcol{flex:1;min-width:240px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:15px}
   .welcol.is{border-top:4px solid var(--blue)}.welcol.isnot{border-top:4px solid var(--gold)}
-  .welcol ul{margin:8px 0 0;padding-left:17px}.welcol li{font-size:var(--fs-2);margin:5px 0}
+  .welcol ul{margin:8px 0 0;padding-inline-start:17px}.welcol li{font-size:var(--fs-2);margin:5px 0}
   .welask{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:15px;margin:14px 0}
-  .welask-tag{font-size:var(--fs-1);font-family:'Space Mono';background:var(--gold-soft);color:var(--warn-3);border-radius:5px;padding:1px 7px;margin-left:6px}
+  .welask-tag{font-size:var(--fs-1);font-family:'Space Mono';background:var(--gold-soft);color:var(--warn-3);border-radius:5px;padding:1px 7px;margin-inline-start:6px}
   .welchips{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0}
   .welchip{font-size:12px;border:1px solid var(--line);background:var(--card);border-radius:999px;padding:5px 11px;cursor:pointer;color:var(--ink)}
   .welchip:hover{border-color:var(--blue)}
@@ -328,10 +328,10 @@
      notch is on a side — the case people forget, and the one where the avatar disappears into it. */
   .topbar{grid-column:1/3;height:calc(52px + env(safe-area-inset-top,0px));padding-top:env(safe-area-inset-top,0px);
           display:flex;align-items:center;gap:12px;
-          padding-left:calc(16px + env(safe-area-inset-left,0px));padding-right:calc(16px + env(safe-area-inset-right,0px));
+          padding-inline-start:calc(16px + env(safe-area-inset-left,0px));padding-inline-end:calc(16px + env(safe-area-inset-right,0px));
           background:var(--chrome);color:var(--chrome-on)}
   .topbar .b{display:flex;align-items:center;gap:9px;font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3)}
-  .topbar .who{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:12px}
+  .topbar .who{margin-inline-start:auto;display:flex;align-items:center;gap:10px;font-size:12px}
   .topbar .who .nm{font-weight:700}.topbar .who .rl{color:#9fb4bf;font-size:var(--fs-1)}
   /* ⚠️ A REAL <button>, NOT A DIV WITH AN onclick — this gates Profile, Settings, the theme picker and Sign
      out, and as a div it was unreachable by keyboard on EVERY screen. Native beats an ARIA patch: a button
@@ -345,7 +345,7 @@
   .dutytog button.on.duty,.shoptog button.on.open{background:#1f7a4d;color:#fff}
   .dutytog button.on.brk,.shoptog button.on.away{background:var(--gold);color:var(--on-gold)}
   .shoptog button.on.closed{background:#9a4040;color:#fff}
-  .topbar .b .bt{margin-left:2px}
+  .topbar .b .bt{margin-inline-start:2px}
   .topbar .lo{border:1px solid rgba(255,255,255,.25);background:none;color:#cfe0e8;border-radius:9px;font-size:var(--fs-1);font-weight:700;padding:6px 10px}
   .topbar .ham{display:none;border:0;background:none;color:#fff;font-size:var(--fs-5)}
 
@@ -372,8 +372,8 @@
   .menu .grp{font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:#8fa9b6;margin:8px 4px 2px;
              padding:6px 4px;min-height:24px;display:flex;align-items:center;border-radius:6px;cursor:pointer}
   .menu .grp:hover{background:rgba(255,255,255,.06)}
-  .menu button{display:flex;align-items:center;gap:10px;border:0;background:none;color:#bcccd6;text-align:left;font-size:13px;font-weight:500;padding:9px 10px;border-radius:9px;width:100%}
-  .menu button .ic{width:16px;text-align:center}.menu button .ct{margin-left:auto;font-size:9.5px;background:rgba(255,255,255,.12);border-radius:9px;padding:1px 6px}
+  .menu button{display:flex;align-items:center;gap:10px;border:0;background:none;color:#bcccd6;text-align:start;font-size:13px;font-weight:500;padding:9px 10px;border-radius:9px;width:100%}
+  .menu button .ic{width:16px;text-align:center}.menu button .ct{margin-inline-start:auto;font-size:9.5px;background:rgba(255,255,255,.12);border-radius:9px;padding:1px 6px}
   .menu button:hover{background:rgba(255,255,255,.06)}.menu button.on{background:var(--blue);color:var(--on-accent)}
   .menu .tagl{margin-top:auto;font-size:var(--fs-1);color:#93adba;line-height:1.5;padding:8px}   /* was #6f8b99 — 3.94:1 */
 
@@ -381,7 +381,7 @@
   .purpose{display:flex;align-items:center;gap:10px;padding:0 16px;max-height:0;overflow:hidden;background:var(--card);font-size:12px;color:var(--mut,#5d6b73);transition:max-height .22s ease,padding .22s ease}
   .purpose.open{max-height:90px;padding:9px 16px;border-bottom:1px solid var(--line)}
   .purpose b{font-family:'Space Grotesk';color:var(--ink)}
-  .purpose .x{margin-left:auto;border:0;background:none;color:var(--grey);font-size:var(--fs-3);cursor:pointer}
+  .purpose .x{margin-inline-start:auto;border:0;background:none;color:var(--grey);font-size:var(--fs-3);cursor:pointer}
   .topbar .info{border:0;background:none;color:#9fb4bf;font-size:var(--fs-4);cursor:pointer;padding:2px 5px;line-height:1}
   /**
    * ⭐ TOOLBAR ICONS ARE A FINGERTIP TALL — measured, not guessed. They rendered ~30×20px, because `padding:2px`
@@ -456,7 +456,7 @@
      hangs free. Shape carries meaning here, so the same object looks the same in both places it appears. */
   .catgchip{border-radius:4px 14px 14px 4px}
   .fchip{gap:4px;background:var(--gold-soft);border-color:#e3d9bd;color:var(--warn-3);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .colcog.fold{margin-right:7px}
+  .colcog.fold{margin-inline-end:7px}
   /**
    * ⚠️ TRADE READY ROLLS ITS OWN TWO PANES and therefore inherited NONE of the shell's mobile behaviour. On a
    * phone it rendered both columns side by side — a 300px list and a detail squeezed to about 120px, breaking to
@@ -466,7 +466,7 @@
   /* ⚠️ !important because the width is an INLINE style (`width:300px`) on the element, and inline beats a class
      rule. Without it the list stayed 300px wide on a phone with dead space beside it — the collapse "worked" and
      changed nothing visible, which is the most misleading kind of half-fix. */
-  .appwrap.m .rdpanes .rdlist{width:100%!important;flex:1 1 auto!important;border-right:0}
+  .appwrap.m .rdpanes .rdlist{width:100%!important;flex:1 1 auto!important;border-inline-end:0}
   .appwrap.m .rdpanes .rddetail{display:none}
   .appwrap.m .rdpanes.showdetail .rdlist{display:none}
   .appwrap.m .rdpanes.showdetail .rddetail{display:block;flex:1 1 auto}
@@ -493,7 +493,7 @@
   .misbar .seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
   .misbar .seg button{border:0;background:var(--card);color:var(--grey);font-size:11.5px;font-weight:700;padding:5px 11px;cursor:pointer}
   .misbar .seg button.on{background:var(--chrome);color:var(--chrome-on)}
-  .misbar-r{margin-left:auto;display:flex;align-items:center;gap:8px}
+  .misbar-r{margin-inline-start:auto;display:flex;align-items:center;gap:8px}
   .misasof{font-size:var(--fs-1);color:var(--grey);font-family:'Space Mono'}
   .misrow{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}
   /* Nested rail rows (the 7 governance layers under Settings → Governance). Indented and quieter than a section,
@@ -505,7 +505,7 @@
   .govdesc{font-size:var(--fs-2);color:var(--ink-2);line-height:1.55;margin:8px 0 4px}
   .govgrp{margin-top:10px;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:var(--card)}
   /* The whole header is the hit target — a chevron alone is a 12px tap area, which on a phone is a miss. */
-  .govgrp-h{display:flex;align-items:center;gap:8px;width:100%;text-align:left;border:0;cursor:pointer;
+  .govgrp-h{display:flex;align-items:center;gap:8px;width:100%;text-align:start;border:0;cursor:pointer;
             background:var(--paper);padding:10px 12px;font-size:12px;font-weight:800;letter-spacing:.03em;
             text-transform:uppercase;color:var(--ink);font-family:inherit}
   .govgrp-h:hover{background:var(--warn-tint)}
@@ -525,7 +525,7 @@
   .govcount{font-family:'Space Mono';font-size:var(--fs-1);font-weight:700;color:var(--blue);
             background:var(--blue-tint-bg);border-radius:20px;padding:1px 8px;flex:none}
   .govnote{font-weight:600;letter-spacing:0;text-transform:none;color:var(--grey);font-size:var(--fs-1);
-           margin-left:auto;text-align:right;min-width:0;flex:0 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+           margin-inline-start:auto;text-align:end;min-width:0;flex:0 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .govgrp-b{padding:2px 12px 6px}
   .govgrp-b .govrow:last-child{border-bottom:0}
   /* the viewport-based rule this replaced never fired — the pane, not the window, was the constraint */
@@ -553,10 +553,10 @@
   .govref-go{grid-column:1/-1;justify-self:start;border:1px solid var(--line);background:var(--card);color:var(--blue);
              border-radius:6px;padding:3px 9px;font-size:var(--fs-1);font-weight:700;cursor:pointer}
   .govref-go:hover{background:var(--paper)}
-  .misrow.sub{padding-left:26px;background:var(--paper)}
+  .misrow.sub{padding-inline-start:26px;background:var(--paper)}
   .misrow.sub .code{font-weight:600;font-size:var(--fs-2)}
   .misrow.sub.sel{background:var(--blue-tint-bg)}
-  .misval{font-family:'Space Mono';font-size:15px;font-weight:700;text-align:right;white-space:nowrap;line-height:1.2}
+  .misval{font-family:'Space Mono';font-size:15px;font-weight:700;text-align:end;white-space:nowrap;line-height:1.2}
   .misval small{display:block;font-family:inherit;font-size:var(--fs-1);font-weight:600;color:var(--grey)}
   .misval.ok{color:var(--ok)} .misval.warn{color:var(--prog)}
   .mislbl{font-size:var(--fs-1);font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--grey)}
@@ -581,7 +581,7 @@
   .misspark{display:block;width:100%;height:56px;margin-top:6px;overflow:visible}
   .misscroll{overflow-x:auto}
   .mistable{width:100%;border-collapse:collapse;font-size:var(--fs-2);margin-top:12px}
-  .mistable th{text-align:left;font-size:var(--fs-1);text-transform:uppercase;letter-spacing:.07em;color:var(--grey);font-weight:800;padding:0 10px 7px 0;white-space:nowrap}
+  .mistable th{text-align:start;font-size:var(--fs-1);text-transform:uppercase;letter-spacing:.07em;color:var(--grey);font-weight:800;padding:0 10px 7px 0;white-space:nowrap}
   .mistable td{padding:8px 10px 8px 0;border-top:1px solid var(--line)}
   .mistable td.num{font-family:'Space Mono';font-variant-numeric:tabular-nums;white-space:nowrap}
   .misclock{font-size:var(--fs-1);font-weight:700;border-radius:20px;padding:2px 9px;white-space:nowrap;display:inline-flex;align-items:center;gap:5px}
@@ -602,7 +602,7 @@
   .misuntxt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink-2)}
   .misstatus{display:flex;align-items:center;gap:7px;font-size:var(--fs-2);flex-wrap:wrap}
   .misstatus .dot{width:9px;height:9px;border-radius:50%;flex:none;display:inline-block}
-  .miswhy{font-size:var(--fs-2);color:var(--ink-2);margin-top:13px;padding-left:13px;border-left:2px solid var(--line);line-height:1.6}
+  .miswhy{font-size:var(--fs-2);color:var(--ink-2);margin-top:13px;padding-inline-start:13px;border-inline-start:2px solid var(--line);line-height:1.6}
   .mistrust{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px}
   /* Usage against a declared limit — a meter, which is the right form for "one ratio against a ceiling". */
   .misplanrow{padding:11px 0;border-bottom:1px solid var(--line)}
@@ -616,7 +616,7 @@
   .misovn{font-size:13px;font-weight:700}
   @media(max-width:900px){ .mistwo{grid-template-columns:1fr;gap:12px} }
   /* The selected supplier's full record, inline under its row in the left pane. */
-  .supinfo{border-left:3px solid var(--blue);background:var(--paper);padding:9px 13px 11px;margin:0 0 2px}
+  .supinfo{border-inline-start:3px solid var(--blue);background:var(--paper);padding:9px 13px 11px;margin:0 0 2px}
   .supkv{display:flex;gap:10px;padding:5px 0;border-bottom:1px dashed var(--line);font-size:var(--fs-2)}
   .supkv b{flex:0 0 88px;color:var(--grey);font-size:var(--fs-1);text-transform:uppercase;letter-spacing:.3px;font-weight:700}
   .supkv span{flex:1;min-width:0;overflow-wrap:anywhere}
@@ -625,7 +625,7 @@
   .supacts button:hover{background:var(--paper)}
   /* Naming conventions — a reference block, so it reads as a table you consult, not prose you wade through. */
   .namebox{border:1px solid var(--line);border-radius:12px;margin-top:14px;overflow:hidden;background:var(--card)}
-  .namehead{display:flex;align-items:center;gap:8px;width:100%;text-align:left;border:0;cursor:pointer;
+  .namehead{display:flex;align-items:center;gap:8px;width:100%;text-align:start;border:0;cursor:pointer;
             background:var(--paper);padding:10px 12px;font:inherit;font-size:var(--fs-2);font-weight:700;color:var(--ink)}
   .namehead:hover{background:var(--warn-tint)}
   .namebody{padding:10px 12px 12px}
@@ -692,7 +692,7 @@
   .supback:hover{background:var(--paper)}
   .supslide-t{font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .supslide-b{flex:1;min-height:0;overflow-y:auto;padding:10px 12px var(--scroll-tail)}
-  .supslide .supinfo{border-left:0;background:transparent;padding:0}
+  .supslide .supinfo{border-inline-start:0;background:transparent;padding:0}
   #supfind_host{flex:1;min-height:0;display:flex}
   .supfindpanel{flex:1;min-height:0;display:flex;flex-direction:column}
   .suptabs{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
@@ -703,13 +703,13 @@
   .rowinfo:hover{background:var(--paper)}
   .sfhit{border:1px solid var(--line);border-radius:9px;padding:8px 11px;margin-bottom:8px;background:var(--card)}
   .sfhit-h{display:flex;align-items:center;gap:7px;font-size:13px;margin-bottom:5px}
-  .sfhit-h button{margin-left:auto;border:1px solid var(--line);background:var(--card);border-radius:6px;padding:3px 9px;font-size:11.5px;font-weight:700;color:var(--blue);cursor:pointer}
+  .sfhit-h button{margin-inline-start:auto;border:1px solid var(--line);background:var(--card);border-radius:6px;padding:3px 9px;font-size:11.5px;font-weight:700;color:var(--blue);cursor:pointer}
   .sfline{display:flex;gap:9px;justify-content:space-between;font-size:var(--fs-2);padding:3px 0;border-top:1px dashed var(--line)}
   .sfnote{font-size:12px;line-height:1.6;color:var(--warn-3);background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:7px 10px;margin-top:8px}
   .sfnote.quiet{background:var(--paper);border-color:var(--line);color:var(--grey)}
   .viafrom{display:inline-flex;align-items:center;gap:3px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   /* The `?` is deliberately quiet but always present — an unverified name must never read as a verified party. */
-  .unver{margin-left:2px;flex:0 0 auto;width:15px;height:15px;border-radius:50%;background:var(--warn-tint);color:var(--warn-3);font-size:var(--fs-1);line-height:15px;text-align:center;cursor:help}
+  .unver{margin-inline-start:2px;flex:0 0 auto;width:15px;height:15px;border-radius:50%;background:var(--warn-tint);color:var(--warn-3);font-size:var(--fs-1);line-height:15px;text-align:center;cursor:help}
   /* ⚠️ cursor:pointer WAS MISSING. Every .tool is clickable and carries a tooltip (Change status, Assign,
      Select, Raise dispute, Delete), but with cursor:auto the emoji glyph inside resolves to the I-BEAM text
      cursor — so the one strip that looks most like buttons was the only one that did not behave like them. */
@@ -725,22 +725,22 @@
    * needs attention", which is exactly what this dot means. Size 9px in a 15px disc — still small, but the count
    * is the one fact this control has to carry (the sub-11px sweep is backlog 4).
    */
-  .topbar .bell .bdot,.topbar .msgc .bdot{position:absolute;top:-2px;right:-3px;background:var(--disp);color:var(--on-danger);font-size:9px;font-weight:800;min-width:15px;height:15px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 3px}
+  .topbar .bell .bdot,.topbar .msgc .bdot{position:absolute;top:-2px;inset-inline-end:-3px;background:var(--disp);color:var(--on-danger);font-size:9px;font-weight:800;min-width:15px;height:15px;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 3px}
   .filterpanel{margin-top:8px;border:1px solid var(--line);border-radius:9px;background:var(--card);padding:9px 11px;display:flex;flex-direction:column;gap:7px;font-size:12px}
   .filterpanel .fp-row{display:flex;align-items:center;gap:9px;justify-content:space-between}
   .filterpanel select{color:var(--on-card);font-size:12px;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:var(--card)}
   .filterpanel label{display:flex;align-items:center;gap:6px;cursor:pointer}
   .filterpanel .fp-foot{display:flex;align-items:center;gap:10px;border-top:1px solid var(--line);padding-top:7px}
   .filterpanel .fp-foot button{border:1px solid var(--line);background:var(--card);border-radius:6px;font-size:var(--fs-1);font-weight:700;padding:4px 10px;color:var(--blue);cursor:pointer}
-  .filterpanel .fp-note{margin-left:auto;font-size:var(--fs-1);color:var(--grey);font-family:'Space Mono',monospace}
+  .filterpanel .fp-note{margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey);font-family:'Space Mono',monospace}
   .notifover{position:fixed;inset:0;z-index:250;background:rgba(8,24,32,.18)}
-  .notifpanel{position:absolute;top:54px;right:14px;width:300px;max-width:88vw;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);overflow:hidden}
+  .notifpanel{position:absolute;top:54px;inset-inline-end:14px;width:300px;max-width:88vw;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);overflow:hidden}
   .notifhd{display:flex;align-items:center;font-family:'Space Grotesk';font-weight:700;font-size:13px;color:var(--ink);padding:11px 13px;border-bottom:1px solid var(--line)}
   .notifrow{display:flex;gap:10px;padding:10px 13px;border-bottom:1px solid var(--line)}
   .notifrow .ni{font-size:15px}.notifrow .nt{font-size:var(--fs-2);color:var(--ink);line-height:1.35}.notifrow .ns{font-size:var(--fs-1);color:var(--grey);margin-top:2px}
   .notiffoot{padding:8px 13px;font-size:var(--fs-1);color:var(--grey);background:var(--paper)}
   .mover{position:fixed;inset:0;z-index:280;background:rgba(8,24,32,.45);display:flex;align-items:flex-start;justify-content:center;padding:56px 16px;overflow-y:auto}
-  .composepill{position:fixed;left:calc(16px + env(safe-area-inset-left,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:300;background:var(--blue);color:var(--on-accent);border-radius:999px;padding:9px 15px;font-size:13px;font-weight:700;box-shadow:0 8px 22px rgba(0,0,0,.28);display:flex;align-items:center;gap:10px}
+  .composepill{position:fixed;inset-inline-start:calc(16px + env(safe-area-inset-left,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:300;background:var(--blue);color:var(--on-accent);border-radius:999px;padding:9px 15px;font-size:13px;font-weight:700;box-shadow:0 8px 22px rgba(0,0,0,.28);display:flex;align-items:center;gap:10px}
   .ccsugg{margin-top:4px;max-height:200px;overflow-y:auto}
   .ccsugg-item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 10px;cursor:pointer;border:1px solid var(--line);border-top:0;background:var(--card)}
   .ccsugg-item:first-child{border-top:1px solid var(--line);border-radius:9px 8px 0 0}
@@ -785,7 +785,7 @@
   .optchip.on{color:#1f7a4d;background:var(--ok-tint)}.optchip.brk{color:var(--warn-2);background:var(--warn-tint)}.optchip.off{color:#777;background:var(--neutral-tint)}
   .dtabs{flex-wrap:wrap}
   .dh{position:relative}
-  .dmsg{position:absolute;top:0;right:0;border:1px solid #cfe0ec;background:var(--blue-tint-bg);color:var(--blue);font-size:var(--fs-1);font-weight:700;border-radius:9px;padding:3px 9px;cursor:pointer}
+  .dmsg{position:absolute;top:0;inset-inline-end:0;border:1px solid #cfe0ec;background:var(--blue-tint-bg);color:var(--blue);font-size:var(--fs-1);font-weight:700;border-radius:9px;padding:3px 9px;cursor:pointer}
   .rowmsg{font-size:var(--fs-1);font-weight:700;color:var(--blue);background:var(--blue-tint-bg);border:0.5px solid #cfe0ec;border-radius:5px;padding:0 5px;white-space:nowrap;cursor:pointer}
   .msglink{border:1px solid var(--line);background:var(--card);color:var(--blue);font-size:12px;font-weight:700;border-radius:9px;padding:8px 13px;cursor:pointer}
   .msgtab{display:flex;flex-direction:column}
@@ -797,11 +797,11 @@
   .tdwrap{position:relative;display:inline-block}
   .msgfbtn{border:1px solid var(--line);background:var(--card);border-radius:9px;font-size:var(--fs-1);font-weight:700;padding:5px 10px;color:var(--grey);cursor:pointer}
   .msgfbtn.on{background:var(--blue-tint-bg);color:var(--blue);border-color:var(--blue)}
-  .tdrop{position:absolute;top:30px;left:0;z-index:8;background:var(--card);border:1px solid var(--line);border-radius:9px;box-shadow:0 8px 24px rgba(0,0,0,.14);padding:7px;min-width:160px;display:flex;flex-direction:column;gap:1px}
+  .tdrop{position:absolute;top:30px;inset-inline-start:0;z-index:8;background:var(--card);border:1px solid var(--line);border-radius:9px;box-shadow:0 8px 24px rgba(0,0,0,.14);padding:7px;min-width:160px;display:flex;flex-direction:column;gap:1px}
   .tdrow{display:flex;align-items:center;gap:8px;font-size:12px;padding:5px 7px;border-radius:6px;cursor:pointer}
   .tdrow:hover{background:var(--paper)}
-  .tdclear{margin-top:3px;border:0;background:none;color:var(--blue);font-size:var(--fs-1);font-weight:700;cursor:pointer;text-align:left;padding:5px 7px}
-  .bubble.disp{border-left:3px solid var(--disp);background:var(--danger-tint)}
+  .tdclear{margin-top:3px;border:0;background:none;color:var(--blue);font-size:var(--fs-1);font-weight:700;cursor:pointer;text-align:start;padding:5px 7px}
+  .bubble.disp{border-inline-start:3px solid var(--disp);background:var(--danger-tint)}
   .mbadge.disp{background:var(--danger-tint);color:var(--disp)}
    .mbadge.disp.ok{background:var(--ok-tint);color:var(--ok-2)}
   /* dispute banner on the record — the USP surfaced in context */
@@ -818,12 +818,12 @@
   .dispbanner .db-acts button,.dispbanner .db-res{border:1px solid #e0a9a4;background:var(--card);color:var(--disp);border-radius:6px;font-size:var(--fs-1);font-weight:700;padding:5px 10px;cursor:pointer}
   .thread{display:flex;flex-direction:column;margin-bottom:8px}
   .bubble{border:1px solid var(--line);padding:8px 11px;margin-bottom:8px;border-radius:0 10px 10px 0}
-  .bubble.int{background:var(--card);border-left:3px solid #8aa0ad}
-  .bubble.ext{background:var(--blue-tint-bg);border-left:3px solid var(--blue)}
+  .bubble.int{background:var(--card);border-inline-start:3px solid #8aa0ad}
+  .bubble.ext{background:var(--blue-tint-bg);border-inline-start:3px solid var(--blue)}
   .bubble .bh{display:flex;align-items:center;gap:8px;margin-bottom:3px}
   .mbadge{font-size:var(--fs-1);font-weight:700;border-radius:6px;padding:1px 7px}
   .mbadge.int{background:var(--blue-tint-bg);color:var(--blue)}.mbadge.ext{background:var(--blue-tint-bg);color:var(--blue)}
-  .bubble .ath{font-size:var(--fs-1);font-weight:700;color:var(--ink)}.bubble .tm{font-size:var(--fs-1);color:var(--grey);margin-left:auto}
+  .bubble .ath{font-size:var(--fs-1);font-weight:700;color:var(--ink)}.bubble .tm{font-size:var(--fs-1);color:var(--grey);margin-inline-start:auto}
   .bubble .bb{font-size:13px;color:var(--ink);line-height:1.45}
   .msgempty{text-align:center;color:var(--grey);font-size:12px;padding:20px}
   .composer{border-top:1px solid var(--line);padding-top:10px;margin-top:2px}
@@ -846,7 +846,7 @@
   .composebtn.on{background:var(--card);color:var(--blue)}
   .msgtab .composer{margin-top:0;margin-bottom:12px;border-top:0;border:1px solid var(--line);border-radius:12px;padding:11px;background:var(--blue-tint-bg)}
   .msglist{position:relative;flex:1;min-height:0}
-  .composeov{position:absolute;left:0;right:0;top:0;min-height:100%;background:rgba(22,32,42,.16);display:flex;align-items:flex-start;justify-content:center;z-index:20;padding:6px;border-radius:9px}
+  .composeov{position:absolute;inset-inline-start:0;inset-inline-end:0;top:0;min-height:100%;background:rgba(22,32,42,.16);display:flex;align-items:flex-start;justify-content:center;z-index:20;padding:6px;border-radius:9px}
   .composeov-card{width:100%;max-width:640px;max-height:80vh;overflow:auto;box-shadow:0 14px 34px rgba(0,0,0,.22);border-radius:12px;background:var(--card);border:1px solid var(--blue);padding:8px}
   .composeov-card .composer textarea{min-height:64px;resize:vertical}
   .composeov-card .composer{margin:0;border:0;border-radius:0;background:var(--card);padding-top:2px}
@@ -859,8 +859,8 @@
   .topbar .msgc{position:relative;border:0;background:none;color:#cfe0e8;font-size:15px;cursor:pointer;padding:2px 4px;line-height:1}
   /* (the .msgc dot is styled with .bell's, above — one rule, both dots) */
   .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-  .unreadtag{font-size:var(--fs-1);font-weight:800;color:#fff;background:#d65a5a;border-radius:6px;padding:0 5px;margin-left:4px}
-  .unreaddot{width:7px;height:7px;border-radius:50%;background:#d65a5a;margin-left:2px}
+  .unreadtag{font-size:var(--fs-1);font-weight:800;color:#fff;background:#d65a5a;border-radius:6px;padding:0 5px;margin-inline-start:4px}
+  .unreaddot{width:7px;height:7px;border-radius:50%;background:#d65a5a;margin-inline-start:2px}
   .row .unreaddot{display:inline-block;vertical-align:middle;margin:0 5px 0 0}
   .row.unread{background:var(--warn-tint);color:var(--on-card)}
   .row.unread .code{font-weight:800}
@@ -877,7 +877,7 @@
   .raidbody{padding:8px 12px 2px;max-height:46vh;overflow:auto}
   .raidrow{margin-bottom:12px}
   .raidrow .rl{display:flex;align-items:center;gap:8px;margin-bottom:4px;font-size:12px}
-  .raidrow .rl b{margin-left:auto;font-size:13px;color:var(--ink)}
+  .raidrow .rl b{margin-inline-start:auto;font-size:13px;color:var(--ink)}
   .rbar{height:7px;background:var(--blue-tint-bg);border-radius:5px;overflow:hidden}
   .rbarfill{display:block;height:100%;border-radius:5px;background:var(--blue)}
   .rbarfill.info{background:#8aa0ad}.rbarfill.query{background:#d6a93a}.rbarfill.decision{background:#3fae6f}.rbarfill.risk{background:#d98a3a}.rbarfill.assumption{background:#8a78c0}.rbarfill.issue{background:#d6584f}.rbarfill.dependency{background:#3a93a3}.rbarfill.action{background:#5b72cf}
@@ -886,7 +886,7 @@
   .raidtoggle button{border:1px solid var(--line);background:var(--card);border-radius:6px;font-size:var(--fs-1);font-weight:700;padding:4px 9px;color:var(--grey);cursor:pointer}
   .raidtoggle button.on{background:var(--blue);color:var(--on-accent);border-color:var(--blue)}
   .raidtoggle .hint{flex-basis:100%;font-weight:400;color:var(--grey);font-size:var(--fs-1)}
-  .custflag{color:var(--disp);font-weight:800;margin-right:4px}
+  .custflag{color:var(--disp);font-weight:800;margin-inline-end:4px}
   .prichip{}
   .prichip.pri-urgent{background:var(--danger-tint);color:var(--disp-2)}.prichip.pri-low{background:var(--warn-tint);color:var(--warn-3)}
   .dchips{display:flex;gap:8px;align-items:center;margin-top:8px}
@@ -925,7 +925,7 @@
   .row .main2{flex:1;min-width:0}
   .row .l1{display:flex;align-items:center;gap:7px}.row .code{font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-2)}
   .row .party{font-size:11.5px;color:#42525a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .row .amt{margin-left:auto;font-family:'Space Grotesk';font-weight:700;font-size:12px}
+  .row .amt{margin-inline-start:auto;font-family:'Space Grotesk';font-weight:700;font-size:12px}
   .row .l2{font-size:var(--fs-1);color:var(--grey);margin-top:3px;display:flex;align-items:center;gap:7px}
   .proof{font-size:var(--fs-1);font-weight:700;border-radius:5px;padding:1px 5px}
   .proof.ok{background:var(--ok-tint);color:var(--ok)}.proof.wait{background:var(--gold-soft);color:var(--prog)}
@@ -935,10 +935,10 @@
   .rowacts button{flex:1;font-size:var(--fs-1);font-weight:700;border:1px solid var(--line);background:var(--card);border-radius:6px;padding:5px;color:var(--ink)}
   .rowacts button.go{border:0;background:var(--blue);color:var(--on-accent)}
   .selbar{display:flex;align-items:center;gap:8px;background:var(--blue-tint-bg);color:var(--on-card);border:1px solid #cfe0ec;border-radius:9px;padding:7px 10px;margin-top:8px;font-size:11.5px;font-weight:600}
-  .selbar .sp{margin-left:auto;display:flex;gap:6px}.selbar .sp button{border:1px solid #cfe0ec;background:var(--card);border-radius:6px;font-size:var(--fs-1);font-weight:700;padding:5px 9px;color:var(--blue)}
+  .selbar .sp{margin-inline-start:auto;display:flex;gap:6px}.selbar .sp button{border:1px solid #cfe0ec;background:var(--card);border-radius:6px;font-size:var(--fs-1);font-weight:700;padding:5px 9px;color:var(--blue)}
   .selbar .sp button.pri{border:0;background:var(--blue);color:var(--on-accent)}
 
-  .detail{display:flex;flex-direction:column;min-width:0;min-height:0;background:var(--card);border-left:0.5px solid var(--line)}
+  .detail{display:flex;flex-direction:column;min-width:0;min-height:0;background:var(--card);border-inline-start:0.5px solid var(--line)}
   .dh{padding:13px 16px;border-bottom:1px solid var(--line)}
   .dh .dt{font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-4)}.dh .ds{font-size:12px;color:var(--grey);margin-top:2px}
   .parties{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap;font-size:var(--fs-1)}
@@ -949,11 +949,11 @@
   .db{flex:1;overflow-y:auto;padding:15px 16px var(--scroll-tail)}
   .itab{border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-bottom:12px}
   .itab .ir{display:flex;padding:9px 12px;border-bottom:1px solid var(--line);font-size:var(--fs-2)}.itab .ir:last-child{border-bottom:0}
-  .itab .ir .qt{margin-left:auto;color:var(--grey)}.itab .tot{background:var(--paper);font-weight:700}
+  .itab .ir .qt{margin-inline-start:auto;color:var(--grey)}.itab .tot{background:var(--paper);font-weight:700}
   .sec{font-size:var(--fs-1);font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--grey);margin:14px 0 8px}
-  .tl{position:relative;padding-left:15px}.tl .ev{position:relative;padding:0 0 12px}
-  .tl .ev::before{content:"";position:absolute;left:-13px;top:3px;width:8px;height:8px;border-radius:50%;background:var(--blue)}
-  .tl .ev::after{content:"";position:absolute;left:-10px;top:11px;bottom:-2px;width:1.5px;background:var(--line)}.tl .ev:last-child::after{display:none}
+  .tl{position:relative;padding-inline-start:15px}.tl .ev{position:relative;padding:0 0 12px}
+  .tl .ev::before{content:"";position:absolute;inset-inline-start:-13px;top:3px;width:8px;height:8px;border-radius:50%;background:var(--blue)}
+  .tl .ev::after{content:"";position:absolute;inset-inline-start:-10px;top:11px;bottom:-2px;width:1.5px;background:var(--line)}.tl .ev:last-child::after{display:none}
   .tl .ea{font-family:'Space Grotesk';font-weight:600;font-size:13px}.tl .em{font-size:11.5px;color:var(--grey)}
   .parity{display:flex;align-items:center;gap:8px;background:var(--ok-tint);border:1px solid #bfe0cd;border-radius:9px;padding:10px 12px;font-size:12px;color:var(--ok-2)}
   .actbar{display:flex;gap:8px;padding:10px 16px;border-top:1px solid var(--line);flex-wrap:wrap;background:var(--card)}
@@ -964,7 +964,7 @@
   .empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:var(--grey);padding:30px;gap:8px}
   .empty .big{font-size:34px}.empty .t{font-family:'Space Grotesk';font-weight:700;font-size:15px;color:var(--ink)}
   .stub{padding:34px;text-align:center;color:var(--grey)}.stub .t{font-family:'Space Grotesk';font-weight:700;font-size:17px;color:var(--ink);margin-bottom:6px}
-  .toast{position:fixed;left:50%;top:64px;transform:translateX(-50%);max-width:min(560px,92vw);background:var(--chrome);color:var(--chrome-on);border-radius:12px;padding:12px 18px;font-size:13px;font-weight:600;line-height:1.4;box-shadow:0 12px 34px rgba(8,24,32,.30);display:flex;align-items:center;gap:14px;z-index:9999;animation:toastIn .18s ease-out}
+  .toast{position:fixed;inset-inline-start:50%;top:64px;transform:translateX(-50%);max-width:min(560px,92vw);background:var(--chrome);color:var(--chrome-on);border-radius:12px;padding:12px 18px;font-size:13px;font-weight:600;line-height:1.4;box-shadow:0 12px 34px rgba(8,24,32,.30);display:flex;align-items:center;gap:14px;z-index:9999;animation:toastIn .18s ease-out}
   @keyframes toastIn{from{opacity:0;transform:translate(-50%,-8px)}to{opacity:1;transform:translate(-50%,0)}}
   .toast.err{background:var(--disp);color:var(--on-danger)}
   .toast.warn{background:#8a6d1f}
@@ -980,11 +980,11 @@
   .lc-s{font-size:12px;color:var(--grey);margin-bottom:15px}
   .ribbon{height:5px;border-radius:5px;background:var(--blue-tint-bg);overflow:hidden;position:relative}
   .ribbon::before{content:"";position:absolute;top:0;height:100%;width:42%;border-radius:5px;background:linear-gradient(90deg,transparent,var(--blue),#8dbbe4,transparent);animation:rib 1.15s ease-in-out infinite}
-  @keyframes rib{0%{left:-42%}100%{left:100%}}
+  @keyframes rib{0%{inset-inline-start:-42%}100%{inset-inline-start:100%}}
 
   .appwrap{flex:1;min-height:0;display:flex;flex-direction:column}
   .appwrap.m{background:var(--warn-tint)}
-  .appwrap.m .shell{max-width:440px;width:100%;margin:0 auto;border-left:1px solid var(--line);border-right:1px solid var(--line)}
+  .appwrap.m .shell{max-width:440px;width:100%;margin:0 auto;border-inline-start:1px solid var(--line);border-inline-end:1px solid var(--line)}
   /* ⚠️ Modals live OUTSIDE .appwrap (#modalhost is its sibling), so the frame above cannot reach them — see
      setVP. Without these two rules the compose modal renders 602px wide inside a 440px phone. The floating
      assistant and the minimised-compose pill are pinned to the viewport for the same reason and get the same
@@ -998,25 +998,25 @@
   body.vpmob .modal,body.vpmob .modal.wide{width:440px;max-width:440px}
   /* ⚠️ z-index 270 sits BELOW .mover (280) deliberately — see mountAssist. At 300 this pill covered compose's
      primary button on a narrow screen and the wizard could not be advanced at all. */
-  #assistfab{position:fixed;right:calc(16px + env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:270}
-  body.vpmob #assistfab{right:calc(50% - 220px + 16px)}
-  body.vpmob .composepill{left:calc(50% - 220px + 16px)}
+  #assistfab{position:fixed;inset-inline-end:calc(16px + env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:270}
+  body.vpmob #assistfab{inset-inline-end:calc(50% - 220px + 16px)}
+  body.vpmob .composepill{inset-inline-start:calc(50% - 220px + 16px)}
   .divider{background:var(--line);display:flex;align-items:center;justify-content:center;cursor:col-resize;transition:background .15s}
   .divider:hover{background:var(--blue)}
   .divider .grip{width:3px;height:26px;border-radius:3px;background:var(--grey);opacity:.55}
   .appwrap.m .divider{cursor:row-resize}.appwrap.m .divider .grip{width:26px;height:3px}
   .appwrap.m .shell{grid-template-columns:1fr;position:relative;overflow:hidden}
   .appwrap.m .topbar .ham{display:block}
-  .appwrap.m .menu{position:absolute;top:52px;bottom:0;left:0;width:230px;z-index:80;transform:translateX(-100%);transition:.25s}
+  .appwrap.m .menu{position:absolute;top:52px;bottom:0;inset-inline-start:0;width:230px;z-index:80;transform:translateX(-100%);transition:.25s}
   .appwrap.m .menu.open{transform:translateX(0)}
   .appwrap.m .panel{grid-template-columns:1fr;grid-template-rows:1fr}
   .appwrap.m .divider{display:none}
-  .appwrap.m .detail{display:none;border-left:0}
+  .appwrap.m .detail{display:none;border-inline-start:0}
   .appwrap.m .panel.showdetail .list{display:none}
   .appwrap.m .panel.showdetail .detail{display:flex}
   .appwrap.m .dback{display:inline-flex}
   .row .rowgo{display:none}
-  .appwrap.m .row .rowgo{display:flex;align-items:center;color:var(--grey);font-size:22px;line-height:1;padding-left:6px;align-self:center}
+  .appwrap.m .row .rowgo{display:flex;align-items:center;color:var(--grey);font-size:22px;line-height:1;padding-inline-start:6px;align-self:center}
   .appwrap.m .row{align-items:center}.appwrap.m .main2{flex:1;min-width:0}
   .appwrap.m .who .rl{display:none}
   .appwrap.m .who .nmwrap{display:none}
@@ -1034,10 +1034,10 @@
   .attTileIcon{font-size:30px;line-height:1}
   .attTileName{font-size:11.5px;color:var(--ink);font-weight:600;word-break:break-word;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
   .attTileMeta{font-size:var(--fs-1);color:var(--grey);text-transform:uppercase;letter-spacing:.04em}
-  .attImg .vlen{position:absolute;bottom:4px;right:6px;font-size:var(--fs-1);background:rgba(0,0,0,.45);color:#fff;border-radius:4px;padding:0 4px}
+  .attImg .vlen{position:absolute;bottom:4px;inset-inline-end:6px;font-size:var(--fs-1);background:rgba(0,0,0,.45);color:#fff;border-radius:4px;padding:0 4px}
   .attNote{font-size:var(--fs-1);color:var(--grey);margin-top:8px;line-height:1.5}
   .itab .ir.hasatt{cursor:pointer}
-  .lineclip{margin-left:10px;font-size:var(--fs-1);font-weight:700;color:var(--blue);background:var(--blue-tint-bg);border:0.5px solid #cfe0ec;border-radius:6px;padding:1px 7px;cursor:pointer;white-space:nowrap}
+  .lineclip{margin-inline-start:10px;font-size:var(--fs-1);font-weight:700;color:var(--blue);background:var(--blue-tint-bg);border:0.5px solid #cfe0ec;border-radius:6px;padding:1px 7px;cursor:pointer;white-space:nowrap}
   .lineImgs{display:flex;gap:7px;padding:9px 11px;background:var(--card);border-bottom:0.5px solid var(--line);overflow-x:auto}
   .rowclip{font-size:var(--fs-1);font-weight:700;color:var(--blue);background:var(--blue-tint-bg);border:0.5px solid #cfe0ec;border-radius:5px;padding:0 5px;white-space:nowrap}
   .lbover{position:fixed;inset:0;background:rgba(8,24,32,.85);z-index:300;display:flex;align-items:center;justify-content:center;padding:18px}
@@ -1054,25 +1054,25 @@
 .composebtn:active,.pri:active,.mfoot button:active,.btn:active{transform:translateY(1px);filter:brightness(.96)}
 button:focus-visible,.composebtn:focus-visible,.pri:focus-visible{outline:2px solid #9bb6e0;outline-offset:1px}
 .modal{position:relative}
-.mx{position:absolute;top:7px;right:9px;width:26px;height:26px;border:0;background:none;color:var(--grey-4);font-size:15px;line-height:1;cursor:pointer;border-radius:50%;z-index:3}
+.mx{position:absolute;top:7px;inset-inline-end:9px;width:26px;height:26px;border:0;background:none;color:var(--grey-4);font-size:15px;line-height:1;cursor:pointer;border-radius:50%;z-index:3}
 .mx:hover{background:var(--hover);color:var(--on-card)}
 .listtotal{padding:5px 12px;font-size:var(--fs-1);color:var(--grey);font-family:'Space Mono';border-bottom:1px solid var(--line);background:var(--paper)}
 .listtotal:empty{display:none}
 .listend{text-align:center;padding:12px 10px;font-size:var(--fs-1);color:var(--grey);font-family:'Space Mono'}
-.listend button{margin-right:8px}
+.listend button{margin-inline-end:8px}
 .composer .chtoggle{display:inline-flex;vertical-align:middle}
-.composer .chtoggle + .typesel{display:inline-flex;vertical-align:middle;margin-left:10px}
-.composer .chtoggle + .typesel::before{content:"|";color:var(--line);font-weight:700;margin-right:10px;display:flex;align-items:center}
+.composer .chtoggle + .typesel{display:inline-flex;vertical-align:middle;margin-inline-start:10px}
+.composer .chtoggle + .typesel::before{content:"|";color:var(--line);font-weight:700;margin-inline-end:10px;display:flex;align-items:center}
 .tl .ev.next::before{background:var(--card);border:1.5px dashed #b9c2c7;width:7px;height:7px}
 .tl .ev.next .ea::after{content:" (upcoming)";font-size:var(--fs-1);font-family:'Space Mono';color:var(--grey-4);font-weight:400}
 img.attImg{object-fit:cover;display:block}
 .attpdf{width:100%;height:60vh;border:0;background:var(--card)}
-.atttext{width:100%;max-height:60vh;overflow:auto;margin:0;padding:16px 18px;background:var(--card);color:var(--on-card);font:12.5px/1.65 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:pre-wrap;word-break:break-word;text-align:left}
+.atttext{width:100%;max-height:60vh;overflow:auto;margin:0;padding:16px 18px;background:var(--card);color:var(--on-card);font:12.5px/1.65 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;white-space:pre-wrap;word-break:break-word;text-align:start}
 .attfile{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;min-height:160px;padding:24px;text-align:center;color:#46566a}
 .lhead{display:grid;align-items:center;gap:8px;position:sticky;top:0;z-index:3;background:var(--card);border-bottom:1.5px solid var(--line);padding:7px 12px;font-size:var(--fs-1);font-weight:700;color:var(--grey);text-transform:uppercase;letter-spacing:.3px}
 .lhcell{display:flex;align-items:center;white-space:nowrap;overflow:hidden}
 .lhcell.sortable{cursor:pointer}.lhcell.sortable:hover{color:var(--blue)}
-.sarr{font-size:var(--fs-1);margin-left:3px;color:var(--blue)}
+.sarr{font-size:var(--fs-1);margin-inline-start:3px;color:var(--blue)}
 .lrow{display:grid;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--line);cursor:pointer;font-size:var(--fs-2)}
 .lrow:hover{background:var(--paper)}
 .lrow.unread{background:var(--blue-tint-bg)}
@@ -1101,17 +1101,17 @@ img.attImg{object-fit:cover;display:block}
 .rflag.cust{background:var(--danger-tint);color:var(--disp-2);border-color:var(--disp)}
 .rflag.urg{background:var(--danger-tint);color:var(--disp-2);border-color:var(--disp)}
 .rflag.high{background:var(--warn-tint);color:var(--warn-3);border-color:#e6c98f}
-.keypanel{position:absolute;right:0;top:26px;z-index:30;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:12px;width:520px;max-width:88vw;max-height:70vh;overflow-y:auto}
+.keypanel{position:absolute;inset-inline-end:0;top:26px;z-index:30;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:12px;width:520px;max-width:88vw;max-height:70vh;overflow-y:auto}
 .keypanel h4{font-family:'Space Grotesk';font-size:var(--fs-1);margin:0 0 8px;text-transform:uppercase;letter-spacing:.4px;color:var(--grey)}
 .keygrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .kbox{border:1px solid var(--line);border-radius:9px;padding:9px 11px;font-size:11.5px;line-height:1.5}
 .kbox .kt{font-family:'Space Grotesk';font-weight:700;margin-bottom:3px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .kbox .kd{color:var(--grey)}
 .lcell{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.lcell.ra{text-align:right}
+.lcell.ra{text-align:end}
 .lhcell.ra{justify-content:flex-end}
 .colcog{border:0;background:none;cursor:pointer;font-size:13px;color:var(--grey);justify-self:end;padding:0 2px}
-.colmenu{position:absolute;right:10px;top:30px;z-index:6;background:var(--card);border:1px solid var(--line);border-radius:9px;box-shadow:0 8px 24px rgba(0,0,0,.16);padding:8px 11px;display:flex;flex-direction:column;gap:5px;font-size:12px;text-transform:none;font-weight:400;color:var(--ink)}
+.colmenu{position:absolute;inset-inline-end:10px;top:30px;z-index:6;background:var(--card);border:1px solid var(--line);border-radius:9px;box-shadow:0 8px 24px rgba(0,0,0,.16);padding:8px 11px;display:flex;flex-direction:column;gap:5px;font-size:12px;text-transform:none;font-weight:400;color:var(--ink)}
 .colmenu label{display:flex;gap:7px;align-items:center;cursor:pointer;white-space:nowrap}
 .optchip.mini{font-size:var(--fs-1);padding:0 5px}.optchip.mini.r{background:var(--danger-tint);color:var(--disp);border-color:var(--disp)}
 /* ⚠️ WRAPS INSTEAD OF OVERFLOWING. Fold toggle + count + sort + key + columns needs ~280px, and the list pane is
@@ -1122,7 +1122,7 @@ img.attImg{object-fit:cover;display:block}
 .lttools{position:relative;display:flex;align-items:center;gap:6px}
 .colcog{font-size:var(--fs-1);color:var(--blue);font-family:inherit;border:0;background:none;cursor:pointer}
 .colcog:hover{text-decoration:underline}
-.lttools .colmenu{right:0;top:24px}
+.lttools .colmenu{inset-inline-end:0;top:24px}
 /* The chooser is now a LIST of rows rather than bare labels, because each row carries its own move controls. */
 .colmenu{max-height:60vh;overflow-y:auto;min-width:196px}
 .colmhd{font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);
@@ -1141,7 +1141,7 @@ img.attImg{object-fit:cover;display:block}
    every other label — the list would read as ragged rather than as two tidy groups. */
 .mv-sp{width:24px;flex:0 0 auto}
 .lhcell{position:relative}
-.colrz{position:absolute;right:0;top:0;bottom:0;width:7px;cursor:col-resize;z-index:2}
+.colrz{position:absolute;inset-inline-end:0;top:0;bottom:0;width:7px;cursor:col-resize;z-index:2}
 .colrz:hover{background:var(--blue);opacity:.5}
 .sortpreset{font-size:var(--fs-1);border:1px solid var(--line);border-radius:6px;padding:2px 5px;background:var(--card);color:var(--ink);cursor:pointer;font-family:inherit}
 .colmenu label{padding:3px 8px;border-radius:6px;cursor:pointer}
@@ -1162,34 +1162,34 @@ img.attImg{object-fit:cover;display:block}
 .starcell.on{color:#997009}   /* was #e8b923 — 1.74:1, a "set" state you could not see it was set */
 .starcell:hover{color:#e8b923}
 .srch{position:relative}
-.advbtn{border:1px solid var(--line);background:var(--card);border-radius:6px;padding:1px 7px;font-size:12px;cursor:pointer;color:var(--grey);margin-left:4px}
+.advbtn{border:1px solid var(--line);background:var(--card);border-radius:6px;padding:1px 7px;font-size:12px;cursor:pointer;color:var(--grey);margin-inline-start:4px}
 .advbtn.on{background:var(--blue-tint-bg);color:var(--blue);border-color:var(--blue)}
-.advpanel{position:absolute;right:0;top:34px;z-index:7;background:var(--card);border:1px solid var(--line);border-radius:9px;box-shadow:0 8px 26px rgba(0,0,0,.16);padding:11px 13px;width:300px;display:flex;flex-direction:column;gap:8px}
+.advpanel{position:absolute;inset-inline-end:0;top:34px;z-index:7;background:var(--card);border:1px solid var(--line);border-radius:9px;box-shadow:0 8px 26px rgba(0,0,0,.16);padding:11px 13px;width:300px;display:flex;flex-direction:column;gap:8px}
 .advttl{font-size:var(--fs-1);font-weight:700;color:var(--grey);text-transform:uppercase;letter-spacing:.3px}.advttl span{font-weight:400;text-transform:none;font-size:var(--fs-1);color:var(--grey-4)}
 .advrow{display:flex;align-items:center;gap:6px}.advrow>label{width:60px;flex:0 0 60px;font-size:11.5px;color:var(--grey);font-weight:600}
 .advchk{flex:1;min-width:0;display:flex;align-items:center;gap:7px;font-size:12px;color:var(--disp);cursor:pointer;line-height:1.25;font-weight:600}
 .advchk input{flex:0 0 auto}
 .advin{flex:1;border:1px solid var(--line);border-radius:6px;padding:4px 7px;font-size:12px;min-width:0;font-family:inherit}
 .advdash{font-size:var(--fs-1);color:var(--grey)}.advfoot{display:flex;justify-content:flex-end;gap:7px;margin-top:3px}
-.advx{position:absolute;top:6px;right:9px;border:0;background:none;font-size:var(--fs-3);color:var(--grey-4);cursor:pointer;line-height:1}
+.advx{position:absolute;top:6px;inset-inline-end:9px;border:0;background:none;font-size:var(--fs-3);color:var(--grey-4);cursor:pointer;line-height:1}
 .advchip{display:inline-flex;align-items:center;gap:5px;background:var(--blue-tint-bg);color:var(--blue-d);border:1px solid var(--blue-tint-line);border-radius:12px;padding:1px 8px;font-size:var(--fs-1);margin:0 5px 0 0;white-space:nowrap}
 .advchip b{cursor:pointer;font-weight:700;color:#7a8aa0}
 .advchip b:hover{color:var(--disp)}
-.lhead .lhcell:not(:last-child){border-right:1px solid var(--line)}
-.lrow .lcell:not(:last-child){border-right:1px solid var(--line)}
-.lhcell{padding-right:4px}
-.lcell{padding-right:4px}
+.lhead .lhcell:not(:last-child){border-inline-end:1px solid var(--line)}
+.lrow .lcell:not(:last-child){border-inline-end:1px solid var(--line)}
+.lhcell{padding-inline-end:4px}
+.lcell{padding-inline-end:4px}
 .colrz:hover{background:var(--blue);opacity:.35}
 .composebtn,.pri,.mfoot button,.btn,.advbtn{box-shadow:0 1.5px 0 rgba(0,0,0,.13)}
 .composebtn:active,.pri:active,.mfoot button:active,.btn:active,.advbtn:active{transform:translateY(1.5px);box-shadow:0 0 0 rgba(0,0,0,0);filter:brightness(.95)}
 .msgtab .msgfilter{display:inline-flex;flex-wrap:wrap;vertical-align:middle}
-.msgtab .msgfilter + .msgfilter{margin-left:10px}
-.msgtab .msgfilter + .msgfilter::before{content:"|";color:var(--line);font-weight:700;margin-right:10px;align-self:center}
+.msgtab .msgfilter + .msgfilter{margin-inline-start:10px}
+.msgtab .msgfilter + .msgfilter::before{content:"|";color:var(--line);font-weight:700;margin-inline-end:10px;align-self:center}
 .msgfilters{display:flex;flex-wrap:wrap;align-items:center;margin-bottom:10px}
 .msgfilters .msgfilter{margin-bottom:0}
-.msgfilters .msgfilter + .msgfilter{margin-left:10px}
-.msgfilters .msgfilter + .msgfilter::before{content:"|";color:var(--line);font-weight:700;margin-right:10px;align-self:center}
-.msgss{display:inline-flex;align-items:center;gap:6px;margin-left:auto}
+.msgfilters .msgfilter + .msgfilter{margin-inline-start:10px}
+.msgfilters .msgfilter + .msgfilter::before{content:"|";color:var(--line);font-weight:700;margin-inline-end:10px;align-self:center}
+.msgss{display:inline-flex;align-items:center;gap:6px;margin-inline-start:auto}
 .msgsi{border:1px solid var(--line);border-radius:6px;padding:3px 8px;font-size:11.5px;min-width:120px;font-family:inherit}
 .msgord{border:1px solid var(--line);background:var(--card);border-radius:6px;padding:3px 8px;font-size:var(--fs-1);cursor:pointer;color:var(--blue);font-weight:600;white-space:nowrap}
 </style>
@@ -1605,8 +1605,8 @@ const WORK_PATTERNS = {
 function _bpRows(items, kind){
   return items.map(function(it){
     var name = it.flag || it.knob;
-    var meta = kind==='sealed' ? ('<span style="margin-left:auto;font-size:var(--fs-1);color:var(--grey)">⟵ '+esc(it.by)+'</span>')
-             : kind==='open'   ? ('<span style="margin-left:auto;font-size:var(--fs-1);color:var(--grey)">'+esc(it.bounds)+'</span>') : '';
+    var meta = kind==='sealed' ? ('<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey)">⟵ '+esc(it.by)+'</span>')
+             : kind==='open'   ? ('<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey)">'+esc(it.bounds)+'</span>') : '';
     return '<div style="display:flex;gap:8px;align-items:baseline;padding:5px 0;font-size:var(--fs-2);border-top:1px dashed var(--line)"><span style="min-width:148px;color:var(--grey)">'+esc(name)+'</span><b style="color:var(--ink)">'+esc(it.value)+'</b>'+meta+'</div>';
   }).join('');
 }
@@ -1629,7 +1629,7 @@ function blueprintSettingsHTML(){
   return '<div class="sec" style="margin-top:18px">⚙ Governed by work pattern</div>'
     +'<div style="font-size:11.5px;color:var(--grey);margin-bottom:9px;line-height:1.5">Each action is a governed <b>work pattern</b>. Open one to see its cascade — 🎫 licence · 🔒 sealed (and which layer sealed it) · ✎ open knobs · ↑ what it reports up. <i>Read-only showcase.</i></div>'
     +Object.keys(WORK_PATTERNS).map(function(id){ var wp=WORK_PATTERNS[id];
-      return '<button class="composebtn" style="display:flex;align-items:center;gap:10px;width:100%;text-align:left;margin-bottom:7px;padding:10px 12px" onclick="openBlueprint(\''+id+'\')"><span style="font-size:var(--fs-4)">'+wp.icon+'</span><span style="flex:1"><b>'+esc(wp.label)+'</b><div style="font-size:var(--fs-1);color:var(--grey)">'+wp.sealed.length+' sealed · '+wp.open.length+' open · 🎫 '+esc(wp.licence)+'</div></span><span style="color:var(--grey);font-size:15px">ℹ️</span></button>';
+      return '<button class="composebtn" style="display:flex;align-items:center;gap:10px;width:100%;text-align:start;margin-bottom:7px;padding:10px 12px" onclick="openBlueprint(\''+id+'\')"><span style="font-size:var(--fs-4)">'+wp.icon+'</span><span style="flex:1"><b>'+esc(wp.label)+'</b><div style="font-size:var(--fs-1);color:var(--grey)">'+wp.sealed.length+' sealed · '+wp.open.length+' open · 🎫 '+esc(wp.licence)+'</div></span><span style="color:var(--grey);font-size:15px">ℹ️</span></button>';
     }).join('');
 }
 /* ── Floating AI assistant — context-sensitive, library-backed, pre + post auth, honest (no overselling). ──
@@ -1725,8 +1725,8 @@ async function askHelpDesk(){ const q=(_assistPending||'').trim(); if(!q) return
   }catch(e){ renderAssist("Couldn't reach the help desk: "+esc((e&&e.message)||'please try again')); } }
 function renderAssist(ans){ const h=document.getElementById("assisthost"); if(!h||!_assistOpen) return; const pre=!(typeof SESSION!=="undefined" && SESSION.token); const sugg=assistSuggest();
   const _pb=(typeof PURPOSE!=='undefined'&&PURPOSE[curScreen()])?PURPOSE[curScreen()]:''; const purposeHTML=_pb?`<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:8px 10px;font-size:11.5px;color:var(--warn-3);line-height:1.5;margin-bottom:9px">${esc(_pb)}</div>`:'';
-  h.innerHTML=`<div style="position:fixed;right:16px;bottom:70px;z-index:301;width:360px;max-width:92vw;background:var(--card);border:1px solid #e3e0d8;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.22);overflow:hidden;color:var(--on-card)">
-    <div style="display:flex;align-items:center;gap:8px;padding:11px 13px;border-bottom:1px solid #e3e0d8;font-family:'Space Grotesk';font-weight:700;font-size:13px">💬 Assistant <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--warn-tint);color:var(--warn-3);border-radius:5px;padding:1px 6px">${pre?"fit check":"help"}</span><button data-testid="assist-close" onclick="closeAssist()" style="margin-left:auto;border:0;background:none;cursor:pointer;color:var(--grey-4);font-size:15px">✕</button></div>
+  h.innerHTML=`<div style="position:fixed;inset-inline-end:16px;bottom:70px;z-index:301;width:360px;max-width:92vw;background:var(--card);border:1px solid #e3e0d8;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.22);overflow:hidden;color:var(--on-card)">
+    <div style="display:flex;align-items:center;gap:8px;padding:11px 13px;border-bottom:1px solid #e3e0d8;font-family:'Space Grotesk';font-weight:700;font-size:13px">💬 Assistant <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--warn-tint);color:var(--warn-3);border-radius:5px;padding:1px 6px">${pre?"fit check":"help"}</span><button data-testid="assist-close" onclick="closeAssist()" style="margin-inline-start:auto;border:0;background:none;cursor:pointer;color:var(--grey-4);font-size:15px">✕</button></div>
     <div style="padding:11px 13px;max-height:52vh;overflow:auto">
       ${purposeHTML}<div style="font-size:12px;color:#777;margin-bottom:8px">${pre?"Tell me your business and I will be honest about whether this fits.":"Describe what you are trying to do."}</div>
       <div id="assist_ans" style="font-size:var(--fs-2);color:#222;line-height:1.55;margin-bottom:10px">${ans||""}</div>
@@ -1856,8 +1856,8 @@ function renderMsgConsole(){ const host=document.getElementById("lbhost"); if(!h
   const rows=all.filter(e=>_logFilter==='all'||e.level===_logFilter).slice(-200).reverse();
   const chip=(k,lbl)=>`<button onclick="setLogFilter('${k}')" style="border:0.5px solid var(--line);border-radius:6px;padding:2px 8px;font-size:var(--fs-1);background:${_logFilter===k?'var(--accent)':'var(--card)'};color:${_logFilter===k?'var(--on-accent)':'var(--ink)'};cursor:pointer">${lbl}</button>`;
   host.innerHTML=`<div class="notifover" onclick="closeMsgConsole()"><div class="notifpanel" style="max-width:560px;width:94vw" onclick="event.stopPropagation()">
-    <div class="notifhd">🧪 Message log<span style="margin-left:auto;font-size:var(--fs-1);color:var(--grey)">${rows.length}/${all.length}</span></div>
-    <div style="display:flex;gap:5px;padding:8px 13px;flex-wrap:wrap;align-items:center">${chip('all','All')}${chip('info','Info')}${chip('warn','Warning')}${chip('error','Critical')}${chip('debug','Requests')}<button onclick="clearMsgLog()" style="margin-left:auto;border:0.5px solid var(--line);border-radius:6px;padding:2px 8px;font-size:var(--fs-1);background:var(--card);cursor:pointer;color:var(--on-card)">Clear</button></div>
+    <div class="notifhd">🧪 Message log<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey)">${rows.length}/${all.length}</span></div>
+    <div style="display:flex;gap:5px;padding:8px 13px;flex-wrap:wrap;align-items:center">${chip('all','All')}${chip('info','Info')}${chip('warn','Warning')}${chip('error','Critical')}${chip('debug','Requests')}<button onclick="clearMsgLog()" style="margin-inline-start:auto;border:0.5px solid var(--line);border-radius:6px;padding:2px 8px;font-size:var(--fs-1);background:var(--card);cursor:pointer;color:var(--on-card)">Clear</button></div>
     <div style="max-height:52vh;overflow:auto">${rows.length?rows.map(e=>`<div style="display:flex;gap:8px;padding:6px 13px;border-top:1px solid var(--line);font-size:11.5px;align-items:baseline"><span style="color:var(--grey);font-family:'Space Mono';font-size:var(--fs-1);white-space:nowrap">${new Date(e.t).toLocaleTimeString()}</span><span style="color:${COL[e.level]||'var(--blue)'};font-weight:800;font-size:var(--fs-1);text-transform:uppercase;white-space:nowrap">${esc(e.level)}</span><span style="color:var(--ink);word-break:break-word">${esc(e.text)}</span></div>`).join(""):'<div style="padding:16px;color:var(--grey);font-size:var(--fs-2)">No messages yet — interact with the app and they appear here.</div>'}</div>
     <div class="notiffoot">Tester view · captures every toast + API call. Not shown in production.</div>
   </div></div>`;
@@ -2129,7 +2129,7 @@ function renderWelcome(){
   }
   document.getElementById("root").innerHTML = modeRibbon() + `
   <div class="welwrap">
-    <div class="weltop">${logo()}<button class="welsignin" onclick="openLegend()" title="See what we serve — no login" style="margin-right:8px">🔑 What we serve</button><button class="welsignin" data-testid="nav-signin" onclick="go('#/login')">Sign in</button></div>
+    <div class="weltop">${logo()}<button class="welsignin" onclick="openLegend()" title="See what we serve — no login" style="margin-inline-end:8px">🔑 What we serve</button><button class="welsignin" data-testid="nav-signin" onclick="go('#/login')">Sign in</button></div>
     ${welPips()}
     ${body}
     <div class="welfoot">Preview → vertical → register · selection defaults to one Blueprint for now (the settings/schema cascade is a later juncture).</div>
@@ -2655,7 +2655,7 @@ function themePaletteHTML(){
       + "\" onclick=\"" + click
       + "\" aria-pressed=\"" + (on ? "true" : "false")
       + "\" style=\"" + themeVarsStyle(k)
-      + ";box-sizing:border-box;cursor:pointer;display:block;padding:0;font:inherit;text-align:left;border-radius:9px;overflow:hidden;background:var(--card);color:var(--on-card);border:2px solid "
+      + ";box-sizing:border-box;cursor:pointer;display:block;padding:0;font:inherit;text-align:start;border-radius:9px;overflow:hidden;background:var(--card);color:var(--on-card);border:2px solid "
       + (on ? "var(--blue)" : "var(--line)")
       + "\">"
       /* the page, with a panel on it — small, because this is a menu and not a gallery */
@@ -2970,7 +2970,7 @@ function _renderApp(){
            unfinished capability that LOOKS finished is worse than one that admits it, because nobody comes back
            to it. The dimming comes off when a real transport lands. -->
       ${role!=="customer"?`<button class="bell" id="bellbtn" data-testid="icon-notifications" onclick="openNotifications()" title="Activity — refreshes every 20s (real push not built yet)" aria-label="Activity" style="opacity:.55">🔔<span class="bdot" id="belldot" style="${notifBadge()?'':'display:none'}">${notifBadge()}</span></button>`:''}
-      <div class="who">${statusControl(role)}<div class="nmwrap" style="text-align:right"><div class="nm">${SESSION.name}</div><div class="rl">${role} · ${SESSION.entity||""}</div></div>
+      <div class="who">${statusControl(role)}<div class="nmwrap" style="text-align:end"><div class="nm">${SESSION.name}</div><div class="rl">${role} · ${SESSION.entity||""}</div></div>
         <!-- ⭐ THE AVATAR IS NOW A MENU. Profile and Settings were the two least-visited screens in the rail and
              were holding prime space in it; every app puts them behind the avatar, and the avatar was already
              here doing nothing but showing a letter. -->
@@ -2981,7 +2981,7 @@ function _renderApp(){
         <!-- ⚠️ THE CARET IS THE WHOLE POINT. Athi went looking for Settings and Profile after I moved them here:
              a plain circular letter does not say "menu", it says "avatar", so the two screens read as DELETED
              rather than relocated. A control that hides things must look like a control. -->
-        <button type="button" class="av" data-testid="icon-avatar" onclick="UI.avMenu=!UI.avMenu;renderApp()" style="cursor:pointer;position:relative" title="Profile, settings and sign out">${(SESSION.name||"?")[0]}<span style="position:absolute;right:-3px;bottom:-3px;background:var(--chrome);color:var(--chrome-on);border-radius:50%;width:13px;height:13px;font-size:8px;display:flex;align-items:center;justify-content:center;border:1.5px solid #fff">${UI.avMenu?'▴':'▾'}</span></button>
+        <button type="button" class="av" data-testid="icon-avatar" onclick="UI.avMenu=!UI.avMenu;renderApp()" style="cursor:pointer;position:relative" title="Profile, settings and sign out">${(SESSION.name||"?")[0]}<span style="position:absolute;inset-inline-end:-3px;bottom:-3px;background:var(--chrome);color:var(--chrome-on);border-radius:50%;width:13px;height:13px;font-size:8px;display:flex;align-items:center;justify-content:center;border:1.5px solid #fff">${UI.avMenu?'▴':'▾'}</span></button>
         ${/**
            * ⚠️⚠️ `color:var(--on-card)` IS LOAD-BEARING — without it this menu is unreadable in every LIGHT theme.
            *
@@ -2994,14 +2994,14 @@ function _renderApp(){
            * ⚠️ INHERITANCE ACROSS A SURFACE CHANGE IS ALWAYS A BUG. The moment an element paints its own ground
            * it stops being part of its parent's surface, and any colour still arriving from that parent is a
            * colour chosen for a different background. A surface must name its own text — every time.
-           */''}${UI.avMenu?`<div class="avmenu" data-testid="avatar-menu" style="position:absolute;top:calc(100% + 6px);right:0;z-index:60;background:var(--card);color:var(--on-card);border:1px solid var(--line);border-radius:9px;box-shadow:var(--shadow);overflow:hidden;/* ⚠️ WIDER ONLY WHILE A SECTION IS OPEN. A permanent 320px dropdown for two lines of menu is heavy; a 180px one cannot hold a palette. It sizes to what it is currently showing. */min-width:${UI.avSection ? '320px' : '190px'};max-width:min(360px,92vw)">
+           */''}${UI.avMenu?`<div class="avmenu" data-testid="avatar-menu" style="position:absolute;top:calc(100% + 6px);inset-inline-end:0;z-index:60;background:var(--card);color:var(--on-card);border:1px solid var(--line);border-radius:9px;box-shadow:var(--shadow);overflow:hidden;/* ⚠️ WIDER ONLY WHILE A SECTION IS OPEN. A permanent 320px dropdown for two lines of menu is heavy; a 180px one cannot hold a palette. It sizes to what it is currently showing. */min-width:${UI.avSection ? '320px' : '190px'};max-width:min(360px,92vw)">
           <div style="padding:9px 13px;border-bottom:1px solid var(--line)"><div style="font-weight:700;font-size:13px">${esc(SESSION.name||'')}</div><div style="font-size:11.5px;color:var(--grey)">${esc(role)} · ${esc(SESSION.entity||'')}</div></div>
-          <button data-testid="nav-profile" onclick="UI.avMenu=false;navTo('profile')" style="display:block;width:100%;text-align:left;border:0;background:none;padding:10px 13px;font-size:13.5px;cursor:pointer">👤 Profile</button>
+          <button data-testid="nav-profile" onclick="UI.avMenu=false;navTo('profile')" style="display:block;width:100%;text-align:start;border:0;background:none;padding:10px 13px;font-size:13.5px;cursor:pointer">👤 Profile</button>
           <!-- ⚠️ SETTINGS IS ENTITY ADMINISTRATION, NOT A PERSONAL SCREEN. Moving Profile behind the avatar put
                Settings there too, and the avatar renders for every role — so a co-assist would have found the
                business's policy flags and channel bindings one click from their own name. The rail never offered
                it to them; the avatar menu must not either. -->
-          ${isEntityUser?`<button data-testid="nav-settings" onclick="UI.avMenu=false;navTo('settings')" style="display:block;width:100%;text-align:left;border:0;background:none;padding:10px 13px;font-size:13.5px;cursor:pointer">⚙️ Settings</button>`:''}
+          ${isEntityUser?`<button data-testid="nav-settings" onclick="UI.avMenu=false;navTo('settings')" style="display:block;width:100%;text-align:start;border:0;background:none;padding:10px 13px;font-size:13.5px;cursor:pointer">⚙️ Settings</button>`:''}
           <!--
             ⭐⭐ COLLAPSED BY DEFAULT (Athi, 2026-08-18: *"if you click the theme, possibly a dropdown or
             collapsible menu — language similarly"*).
@@ -3019,10 +3019,10 @@ function _renderApp(){
             var row = function(key, icon, label, value){
               var open = sec === key;
               return `<button data-testid="avsec-${key}" onclick="UI.avSection = (UI.avSection==='${key}'?'':'${key}'); renderApp()"
-                style="display:flex;align-items:center;gap:9px;width:100%;text-align:left;border:0;
+                style="display:flex;align-items:center;gap:9px;width:100%;text-align:start;border:0;
                 background:${open?'var(--sel-2)':'none'};color:var(--on-card);padding:10px 13px;font-size:13.5px;cursor:pointer">
                 <span style="width:17px;text-align:center">${icon}</span><span>${label}</span>
-                <span style="margin-left:auto;display:flex;align-items:center;gap:7px">
+                <span style="margin-inline-start:auto;display:flex;align-items:center;gap:7px">
                   <span style="font-size:11.5px;color:var(--grey)">${esc(value)}</span>
                   <span style="font-size:10px;color:var(--grey);transform:rotate(${open?90:0}deg);display:inline-block">▸</span>
                 </span></button>`;
@@ -3054,7 +3054,7 @@ function _renderApp(){
             }
             return out;
           })()}
-          <button onclick="UI.avMenu=false;logout()" style="display:block;width:100%;text-align:left;border:0;background:none;padding:10px 13px;font-size:13.5px;cursor:pointer;border-top:1px solid var(--line);color:var(--disp)">↩ Sign out</button>
+          <button onclick="UI.avMenu=false;logout()" style="display:block;width:100%;text-align:start;border:0;background:none;padding:10px 13px;font-size:13.5px;cursor:pointer;border-top:1px solid var(--line);color:var(--disp)">↩ Sign out</button>
         </div>`:''}
         </div>
         <button class="so" data-testid="icon-logout" onclick="logout()" title="Sign out" aria-label="Sign out"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button></div>
@@ -3196,7 +3196,7 @@ function menuBody(M, role){
     out += '<div class="grp" data-testid="grp-' + g[0].toLowerCase() + '" onclick="toggleNavGroup(\'' + g[0] + '\')"'
       + ' style="cursor:pointer;display:flex;align-items:center;gap:5px" title="' + (shut ? 'Show' : 'Hide') + ' ' + g[0] + '">'
       + '<span style="font-size:var(--fs-1);opacity:.7">' + (shut ? '▸' : '▾') + '</span>' + g[0]
-      + (shut ? '<span style="margin-left:auto;opacity:.55;font-weight:600">' + items.length + '</span>' : '') + '</div>';
+      + (shut ? '<span style="margin-inline-start:auto;opacity:.55;font-weight:600">' + items.length + '</span>' : '') + '</div>';
     out += shown.map(menuBtn).join('');
   });
   return out;
@@ -3309,7 +3309,7 @@ function menuBtn(x){
   if(key==='messages'){
     const n=UI.replyCount||0;
     return `<button class="${on?'on':''}" data-testid="nav-${key}" onclick="${click}"><span class="ic">${ic}</span>${label}`
-      + (n?`<span data-testid="nav-messages-badge" style="margin-left:auto;background:var(--blue-2);color:var(--on-accent);border-radius:9px;padding:1px 7px;font-size:var(--fs-1);font-weight:800">${n}</span>`:'')
+      + (n?`<span data-testid="nav-messages-badge" style="margin-inline-start:auto;background:var(--blue-2);color:var(--on-accent);border-radius:9px;padding:1px 7px;font-size:var(--fs-1);font-weight:800">${n}</span>`:'')
       + `</button>`;
   }
   if(key!=='task'&&key!=='order') return `<button class="${on?'on':''}" data-testid="nav-${key}" onclick="${click}"><span class="ic">${ic}</span>${label}</button>`;
@@ -3337,14 +3337,14 @@ function menuBtn(x){
   /* ⚠️ 26×26 MINIMUM. This rendered 19×17 — the smallest control in the rail, and it sits directly on top of the
      row that navigates, so a miss does not do nothing: it takes you somewhere. A control whose failure mode is
      "the wrong thing happened" needs more room than one whose failure mode is "nothing happened". */
-  const plus=`<span data-testid="nav-newfolder-${key}" onclick="event.stopPropagation();newFolderIn('${key}')" title="New folder in ${label}" style="margin-left:auto;min-width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center;opacity:.5;font-size:13px;font-weight:700">＋</span>`;
+  const plus=`<span data-testid="nav-newfolder-${key}" onclick="event.stopPropagation();newFolderIn('${key}')" title="New folder in ${label}" style="margin-inline-start:auto;min-width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center;opacity:.5;font-size:13px;font-weight:700">＋</span>`;
   const chev=fs.length?`<span data-testid="nav-collapse-${key}" onclick="event.stopPropagation();toggleTrack('${key}')" title="${open?'Collapse':'Expand'} folders" style="padding:0 3px;opacity:.6;font-size:var(--fs-1)">${open?'▾':'▸'}</span>`:'';
   const btn=`<button class="${on?'on':''}" data-testid="nav-${key}" onclick="${click}"><span class="ic">${ic}</span>${label}${plus}${chev}</button>`;
   return open ? btn+navFolders(key,fs) : btn;
 }
 /* The sub-folders of one track, indented under it. Loaded with the nav, so they are there before you look for them. */
 function navFolders(track,fs){
-  const rows=fs.map(f=>`<button class="${UI.folderSel===f.folder_id?'on':''}" data-testid="nav-folder-${esc(f.folder_id)}" onclick="navToFolder('${esc(f.folder_id)}')" style="padding-left:30px;font-size:var(--fs-2)"><span class="ic" style="font-size:12px">📁</span>${esc(f.name)}${f.count?`<span style="margin-left:auto;font-size:var(--fs-1);color:var(--grey)">${f.count}</span>`:''}</button>`).join('');
+  const rows=fs.map(f=>`<button class="${UI.folderSel===f.folder_id?'on':''}" data-testid="nav-folder-${esc(f.folder_id)}" onclick="navToFolder('${esc(f.folder_id)}')" style="padding-inline-start:30px;font-size:var(--fs-2)"><span class="ic" style="font-size:12px">📁</span>${esc(f.name)}${f.count?`<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey)">${f.count}</span>`:''}</button>`).join('');
   /* The "＋ New folder" row that used to live here has moved onto the track button itself — see menuBtn. It was
      two rail rows for an action taken once a month, sitting at the same weight as the screens you open daily. */
   return rows;
@@ -3631,7 +3631,7 @@ async function compose(prefill){ UI.drawer=false; CC={items:(prefill&&prefill.it
   /* ⭐ THE CART CHIP LIVES IN THE HEADER, level with the ✕ — Athi, 2026-08-15: *"cart icon can be on the top,
      where x is there"*. `right:42px` clears the ✕ (26px wide at right:9px). The slot is always in the DOM so
      paintBar has something to fill; it renders nothing until the cart holds a line. */
-  modal(`<div class="mhd" style="position:relative"><div class="t">✉️ Compose — author a chit <button data-testid="icon-help-compose" onclick="openAssist('compose')" title="Ask the assistant about composing" style="border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;vertical-align:middle">?</button></div><div class="s" id="cc_sub">create your own record, then bridge it</div><div id="cbcartbar_cc" class="cbpick-cartslot" style="position:absolute;right:42px;top:9px"></div></div>
+  modal(`<div class="mhd" style="position:relative"><div class="t">✉️ Compose — author a chit <button data-testid="icon-help-compose" onclick="openAssist('compose')" title="Ask the assistant about composing" style="border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;vertical-align:middle">?</button></div><div class="s" id="cc_sub">create your own record, then bridge it</div><div id="cbcartbar_cc" class="cbpick-cartslot" style="position:absolute;inset-inline-end:42px;top:9px"></div></div>
    <div class="mbody">
      <div id="cc_rail"></div>
      <div id="cc_body"></div>
@@ -3769,7 +3769,7 @@ function ccStepItems(){
      <div style="display:flex;gap:6px;margin-top:6px"><input class="inp" id="cc_mname" data-testid="chit-item-name" placeholder="Or type an item name" style="flex:1"><input class="inp" id="cc_mqty" data-testid="chit-item-qty" inputmode="numeric" value="1" style="width:50px" title="Qty"><input class="inp" id="cc_mprice" data-testid="chit-item-price" inputmode="numeric" placeholder="Price" style="width:74px"><button class="composebtn" data-testid="chit-item-add" onclick="ccAddManual()">+ Add</button></div>
      <div style="display:flex;gap:6px;margin-top:6px"><input class="inp" id="cc_aidesc" data-testid="chit-ai-desc" placeholder="✨ Or describe the order in words — AI fills the rows" style="flex:1"><button class="composebtn" id="cc_aibtn" data-testid="chit-ai-fill" onclick="ccAiFill()" title="AI turns your description into line items; you review and edit before sending">✨ Fill</button></div>`;
   const lines=`<div id="cc_items" style="margin-top:8px"></div>
-     <div id="cc_total" style="text-align:right;font-weight:700;font-size:13px;margin-top:6px"></div>`;
+     <div id="cc_total" style="text-align:end;font-weight:700;font-size:13px;margin-top:6px"></div>`;
   /**
    * ⚠️ WHAT IS ALREADY ON THE CHIT COMES FIRST. Empty, the picker leads — you are here to choose. Non-empty, the
    * lines lead, because the question has changed from "what are you sending" to "is this right".
@@ -3814,7 +3814,7 @@ function ccStepReview(){
     + '<span style="min-width:104px;color:var(--grey);font-size:11.5px">'+k+'</span><span style="flex:1">'+v+'</span></div>'; };
   var card=function(h,inner,edit){ return '<div style="border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-top:8px">'
     + '<div style="background:var(--paper);padding:8px 12px;font-size:var(--fs-1);font-weight:800;color:var(--grey);text-transform:uppercase;letter-spacing:.05em;display:flex">'+h
-    + (edit!=null?'<span style="margin-left:auto;color:var(--blue);cursor:pointer;text-transform:none;letter-spacing:0;font-size:11.5px" onclick="UI._ccFlow.go('+edit+')">Change</span>':'')
+    + (edit!=null?'<span style="margin-inline-start:auto;color:var(--blue);cursor:pointer;text-transform:none;letter-spacing:0;font-size:11.5px" onclick="UI._ccFlow.go('+edit+')">Change</span>':'')
     + '</div>'+inner+'</div>'; };
   return card('Lines · '+(CC.items||[]).length,
         (CC.items||[]).map(function(l){ return row((l.qty||1)+' × '+esc(l.unit||'unit'),
@@ -3888,7 +3888,7 @@ function ccQty(i,v){ if(CC.items[i])CC.items[i].qty=Math.max(0,+v||0);
   ccRenderTotal(); }
 function ccLineTotal(it){ return (+it.qty||0)*(+it.price||0); }
 function ccRenderItems(){ const h=document.getElementById("cc_items"); if(!h)return;
-  h.innerHTML = CC.items.length ? CC.items.map((it,i)=>`<div style="display:flex;gap:6px;align-items:center;margin-bottom:2px"><span style="flex:1;font-size:var(--fs-2)">${esc(it.particulars)}</span><input class="inp" style="width:60px" inputmode="numeric" value="${it.qty}" oninput="ccQty(${i},this.value)"><span style="font-size:11.5px;color:var(--grey);width:64px;text-align:right">${inr(it.price)}</span><span id="cc_lt_${i}" style="font-size:12px;width:80px;text-align:right;font-family:'Space Mono'">${inr(ccLineTotal(it))}</span><label class="composebtn" title="Attach to this item" style="cursor:pointer;padding:4px 7px">📎<input type="file" multiple style="display:none" onchange="ccAddItemFiles(${i},this.files);this.value=''"></label><button class="composebtn" onclick="ccDelItem(${i})">✕</button></div><div id="cc_itf_${i}" style="margin:1px 0 7px 0">${ccItemChips(i)}</div>`).join("")
+  h.innerHTML = CC.items.length ? CC.items.map((it,i)=>`<div style="display:flex;gap:6px;align-items:center;margin-bottom:2px"><span style="flex:1;font-size:var(--fs-2)">${esc(it.particulars)}</span><input class="inp" style="width:60px" inputmode="numeric" value="${it.qty}" oninput="ccQty(${i},this.value)"><span style="font-size:11.5px;color:var(--grey);width:64px;text-align:end">${inr(it.price)}</span><span id="cc_lt_${i}" style="font-size:12px;width:80px;text-align:end;font-family:'Space Mono'">${inr(ccLineTotal(it))}</span><label class="composebtn" title="Attach to this item" style="cursor:pointer;padding:4px 7px">📎<input type="file" multiple style="display:none" onchange="ccAddItemFiles(${i},this.files);this.value=''"></label><button class="composebtn" onclick="ccDelItem(${i})">✕</button></div><div id="cc_itf_${i}" style="margin:1px 0 7px 0">${ccItemChips(i)}</div>`).join("")
     : `<div style="font-size:12px;color:var(--grey);padding:4px 0">No items yet — pick from the catalogue or type one above.</div>`;
   ccRenderTotal();
 }
@@ -4450,12 +4450,12 @@ function suppliersScreen(){
                what you sell, which is why it was the odd tenant left in Definitions. -->
           <button class="${UI.supReq?'on':''}" data-testid="sup-tab-req" onclick="supReqOpen()">📋 Required certificates</button>
         </span>
-        <button onclick="openAssist('suppliers')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none;margin-left:auto">?</button></div>
+        <button onclick="openAssist('suppliers')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none;margin-inline-start:auto">?</button></div>
       ${(UI.supFind||UI.supReq)?'':`<div style="display:flex;gap:7px"><input class="inp" id="sp_add" data-testid="sup-add-input" placeholder="Add supplier — type a name, User ID or email" style="flex:1" autocomplete="off" oninput="supSearch(this.value)" onkeydown="if(event.key==='Enter')addSupplier()"><button class="composebtn" data-testid="sup-add" onclick="addSupplier()">Add</button></div>
       <div id="sp_sugg" class="ccsugg"></div>
       <div class="err" id="sp_err" style="margin-top:6px"></div>
       <div class="srch" style="margin-top:8px">🔍 <input placeholder="Search suppliers, category, ID" value="${esc(UI.supQ||'')}" oninput="UI.supQ=this.value;paintSupList()"></div>
-      <div style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:var(--fs-1);color:var(--grey)"><span id="sp_count">${supCountText()}</span><span style="margin-left:auto;display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden"><button onclick="setSupSort(true)" style="border:0;background:${supPrefFirst()?'var(--blue)':'var(--card)'};color:${supPrefFirst()?'var(--on-accent)':'var(--grey)'};font-size:var(--fs-1);font-weight:700;padding:4px 9px">★ Preferred</button><button onclick="setSupSort(false)" style="border:0;background:${!supPrefFirst()?'var(--blue)':'var(--card)'};color:${!supPrefFirst()?'var(--on-accent)':'var(--grey)'};font-size:var(--fs-1);font-weight:700;padding:4px 9px">A–Z</button></span></div>`}
+      <div style="display:flex;align-items:center;gap:8px;margin-top:8px;font-size:var(--fs-1);color:var(--grey)"><span id="sp_count">${supCountText()}</span><span style="margin-inline-start:auto;display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden"><button onclick="setSupSort(true)" style="border:0;background:${supPrefFirst()?'var(--blue)':'var(--card)'};color:${supPrefFirst()?'var(--on-accent)':'var(--grey)'};font-size:var(--fs-1);font-weight:700;padding:4px 9px">★ Preferred</button><button onclick="setSupSort(false)" style="border:0;background:${!supPrefFirst()?'var(--blue)':'var(--card)'};color:${!supPrefFirst()?'var(--on-accent)':'var(--grey)'};font-size:var(--fs-1);font-weight:700;padding:4px 9px">A–Z</button></span></div>`}
     </div>
     <!-- ⚠️ Find REPLACES the list body rather than overlaying it. As an inset:0 overlay it covered .lh too — and
          .lh is where the tabs live, so the control for leaving the mode was underneath the mode. -->
@@ -4551,7 +4551,7 @@ function supInfoCardHTML(x){
          The two together rendered white-on-white: the button was there, sized and clickable, and invisible. */
       + '<button class="supact-pri" data-testid="sup-edit" onclick="event.stopPropagation();supEdit(\''+x.supplier_list_id+'\')">✎ Edit</button>'
       + '<button data-testid="sup-passport" onclick="event.stopPropagation();viewSupplierPassport(\''+esc(x.bridge_id)+'\',\''+String(supName(x)).replace(/[\\']/g,'')+'\')">Passport →</button>'
-      + '<button data-testid="sup-remove" onclick="event.stopPropagation();delSupplier(\''+x.supplier_list_id+'\')" style="margin-left:auto;color:var(--disp)">Remove</button>'
+      + '<button data-testid="sup-remove" onclick="event.stopPropagation();delSupplier(\''+x.supplier_list_id+'\')" style="margin-inline-start:auto;color:var(--disp)">Remove</button>'
     + '</div></div>';
 }
 /**
@@ -4700,7 +4700,7 @@ function supFindBodyHTML(){
                that cannot identify its subject would fail on click rather than be absent. */
             return '<div class="sfline"><span>'+esc(d.name||d.product||'item')+'</span><span class="mono">'
               +esc(fmtMoney(cbAmount(d.price),cur))+' / '+esc(d.unit||'unit')
-              +(p.item_id ? ' <button type="button" data-testid="enq-ask" onclick="enquiryOpen(\''+esc(p.item_id)+'\',\''+esc(String(d.name||d.product||'item').replace(/'/g,''))+'\')" style="margin-left:7px;border:1px solid var(--line);background:var(--card);border-radius:7px;padding:1px 8px;font-size:var(--fs-1);color:var(--blue);cursor:pointer">Ask</button>' : '')
+              +(p.item_id ? ' <button type="button" data-testid="enq-ask" onclick="enquiryOpen(\''+esc(p.item_id)+'\',\''+esc(String(d.name||d.product||'item').replace(/'/g,''))+'\')" style="margin-inline-start:7px;border:1px solid var(--line);background:var(--card);border-radius:7px;padding:1px 8px;font-size:var(--fs-1);color:var(--blue);cursor:pointer">Ask</button>' : '')
               +'</span></div>'; }).join('')
         /* ⚠️ SAY WHEN THE LIST IS CUT. Six per supplier is a display cap, and an unannounced cap reads as "that
            is all they have" — the same class of lie as reporting an unreported store as zero. The server knows
@@ -4861,7 +4861,7 @@ function customersScreen(){
   return `<div class="panel ${showDetail?'showdetail':''}" id="panel" style="--lw:${UI.lw}px;--lh:${UI.lh}px">${list}${divider}${detail}</div>`;
 }
 function custRowHTML(c){ var sel=c.customer_identity_id===UI.custSel, n=(c.txn_count||0);
-  return '<div class="row '+(sel?'sel':'')+'" onclick="selectCust(\''+c.customer_identity_id+'\')"><div class="main2"><div class="l1"><span class="code">'+esc(c.display_name||custContact(c))+'</span>'+custSeg(c.segment)+'<span class="amt" style="margin-left:auto;font-size:var(--fs-1);color:var(--grey)">'+n+' order'+(n===1?'':'s')+'</span></div><div class="l2"><span class="mono">'+esc(custContact(c))+'</span>'+(c.last_txn_at?(' · last '+esc(custDate(c.last_txn_at))):'')+'</div></div><div class="rowgo" aria-hidden="true">›</div></div>'; }
+  return '<div class="row '+(sel?'sel':'')+'" onclick="selectCust(\''+c.customer_identity_id+'\')"><div class="main2"><div class="l1"><span class="code">'+esc(c.display_name||custContact(c))+'</span>'+custSeg(c.segment)+'<span class="amt" style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey)">'+n+' order'+(n===1?'':'s')+'</span></div><div class="l2"><span class="mono">'+esc(custContact(c))+'</span>'+(c.last_txn_at?(' · last '+esc(custDate(c.last_txn_at))):'')+'</div></div><div class="rowgo" aria-hidden="true">›</div></div>'; }
 function custRowsHTML(){ var r=UI.custs||[]; if(!r.length) return emptyState('🛍️','No customers yet','When someone orders from your storefront they appear here — your CRM.'); return r.map(custRowHTML).join(''); }
 function paintCustList(){ var b=document.getElementById('cu_rows'); if(b)b.innerHTML=custRowsHTML(); var c=document.getElementById('cu_count'); if(c)c.textContent=(UI.custs||[]).length+' customer(s)'; }
 function paintCustDetail(){ var dp=document.getElementById('detailpane'); if(dp){ dp.className='detail'; dp.innerHTML=custDetailHTML(); } }
@@ -4995,9 +4995,9 @@ function supStepReview(x){
     + '<span style="min-width:96px;color:var(--grey);font-size:11.5px">'+k+'</span><span style="flex:1">'+v+'</span></div>'; };
   var card=function(h,inner,edit){ return '<div style="border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-top:8px">'
     + '<div style="background:var(--paper);padding:8px 12px;font-size:var(--fs-1);font-weight:800;color:var(--grey);text-transform:uppercase;letter-spacing:.05em;display:flex">'+h
-    + (edit!=null?'<span style="margin-left:auto;color:var(--blue);cursor:pointer;text-transform:none;letter-spacing:0;font-size:11.5px" onclick="UI._supFlow.go('+edit+')">Change</span>':'')
+    + (edit!=null?'<span style="margin-inline-start:auto;color:var(--blue);cursor:pointer;text-transform:none;letter-spacing:0;font-size:11.5px" onclick="UI._supFlow.go('+edit+')">Change</span>':'')
     + '</div>'+inner+'</div>'; };
-  return card('To<span style="margin-left:auto;font-weight:400;text-transform:none;letter-spacing:0">fixed — this is their order</span>',
+  return card('To<span style="margin-inline-start:auto;font-weight:400;text-transform:none;letter-spacing:0">fixed — this is their order</span>',
         '<div style="padding:8px 12px;font-size:13px"><b>'+esc(supName(x))+'</b> <span class="mono" style="color:var(--grey);font-size:11.5px">'+esc(x.bridge_id||'')+'</span></div>')
     + card('Items · '+sel.length, sel.map(function(l){
         return row(l.qty+' × '+esc(l.unit), '<span style="flex:1">'+esc(l.name)+'</span>'
@@ -5262,7 +5262,7 @@ async function viewSupplierPassport(bridge, name){
       var p = PILL[c.status] || PILL.pending;
       return '<tr><td style="padding:6px 8px;border-bottom:1px dashed var(--line);font-size:var(--fs-2)">'+esc(c.title||c.doc||'')
         + '<div style="font-size:var(--fs-1);color:var(--grey)">'+esc(c.standard||'')+(c.scope?' · '+esc(c.scope):'')+'</div></td>'
-        + '<td style="padding:6px 8px;border-bottom:1px dashed var(--line);text-align:right;white-space:nowrap">'
+        + '<td style="padding:6px 8px;border-bottom:1px dashed var(--line);text-align:end;white-space:nowrap">'
         + '<span style="font-size:var(--fs-1);font-weight:700;color:'+p[0]+';background:'+p[1]+';border-radius:6px;padding:2px 8px">'+p[2]+'</span>'
         + (c.valid_until?'<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">until '+esc(String(c.valid_until).slice(0,10))+'</div>':'')
         + '</td></tr>';
@@ -5460,7 +5460,7 @@ function catalogueScreen(){
         <button data-testid="cat-select" onclick="prodPickMode(!UI.prodPick)" title="Tick several products, then attach them to a category at once"
           style="border:1px solid var(--line);background:${UI.prodPick?'var(--blue)':'var(--paper)'};color:${UI.prodPick?'var(--on-accent)':'var(--ink)'};border-radius:9px;padding:4px 9px;font-size:11.5px;cursor:pointer">☑ Select</button>
         <button data-testid="cat-setup" onclick="navTo('catsetup')" title="Columns, variants, import and export, storefront"
-          style="margin-left:auto;border:1px solid var(--line);background:var(--paper);border-radius:9px;padding:4px 9px;font-size:11.5px;color:var(--ink);cursor:pointer">⚙️ Setup</button>
+          style="margin-inline-start:auto;border:1px solid var(--line);background:var(--paper);border-radius:9px;padding:4px 9px;font-size:11.5px;color:var(--ink);cursor:pointer">⚙️ Setup</button>
       </div>
     </div>
     <div class="rows" id="ct_rows">${UI._prodLoading?'<div class="loadwrap"><span class="spin"></span> loading…</div>':prodRowsHTML()}</div>
@@ -5525,7 +5525,7 @@ function prodPickBarHTML(){
   return `<div class="ctpick">
     <span class="cbx ${n&&n===vis?'on':''}" onclick="prodPickAll()" title="Select everything shown">${n&&n===vis?'✓':''}</span>
     <span style="font-size:12px;font-weight:600">${n} selected</span>
-    <button class="pri" data-testid="cat-categorise" ${n?'':'disabled'} onclick="prodCategoriseAsk()" style="margin-left:auto">🏷️ Categorise</button>
+    <button class="pri" data-testid="cat-categorise" ${n?'':'disabled'} onclick="prodCategoriseAsk()" style="margin-inline-start:auto">🏷️ Categorise</button>
     <button onclick="prodPickMode(false)">Done</button>
   </div>`;
 }
@@ -5661,8 +5661,8 @@ function prodRowHTML(p){ const d=pData(p), id=prodId(p);
   const picking=!!UI.prodPick;
   const ticked=picking&&UI.prodPicked&&UI.prodPicked.has(id);
   return `<div class="row ${id===UI.prodSel?'sel':''}${ticked?' picked':''}" data-testid="cat-product-${id}" onclick="${picking?`prodTogglePick('${id}')`:`selectProduct('${id}')`}" style="${st!=='available'?'opacity:.7':''}">
-  ${picking?`<span class="cbx ${ticked?'on':''}" data-testid="cat-pick-${id}" style="flex:0 0 auto;margin-right:9px">${ticked?'✓':''}</span>`:''}
-  <div class="main2"><div class="l1"><span class="code">${esc(pName(d))}${d.variant?`<span style="color:var(--grey);font-weight:400"> · ${esc(d.variant)}</span>`:''}</span><span class="optchip" style="background:var(--gold-soft);color:var(--warn-3);border-color:var(--gold-line)">${esc(pUnit(d))}</span>${stChip}<span class="amt" style="margin-left:auto">${inr(pPrice(d))}</span></div>
+  ${picking?`<span class="cbx ${ticked?'on':''}" data-testid="cat-pick-${id}" style="flex:0 0 auto;margin-inline-end:9px">${ticked?'✓':''}</span>`:''}
+  <div class="main2"><div class="l1"><span class="code">${esc(pName(d))}${d.variant?`<span style="color:var(--grey);font-weight:400"> · ${esc(d.variant)}</span>`:''}</span><span class="optchip" style="background:var(--gold-soft);color:var(--warn-3);border-color:var(--gold-line)">${esc(pUnit(d))}</span>${stChip}<span class="amt" style="margin-inline-start:auto">${inr(pPrice(d))}</span></div>
     <div class="l2">${pCode(d)?'<span class="mono">'+esc(pCode(d))+'</span> · ':''}${esc(pDesc(d)||'—')} ${syn}</div>
     ${catChips?`<div class="l3cat">${catChips}</div>`:''}</div>
   ${picking?'':'<div class="rowgo" aria-hidden="true">›</div>'}</div>`; }
@@ -5702,7 +5702,7 @@ function refFinishRow(it,i){
   return '<div style="cursor:pointer;padding:12px 14px;border-bottom:1px solid var(--line)'+(UI.refSel===i?';background:var(--card)':'')+';color:var(--on-card)" onclick="selectRefFinish('+i+')">'
     +'<div style="display:flex;align-items:center;gap:8px">'+_refPhoto(it,30)+'<span style="font-weight:800;font-size:15px">'+esc(it.name)+'</span>'
       +(sub?'<span style="font-size:var(--fs-1);color:var(--grey-4)">'+sub+'</span>':'')
-      +'<span style="margin-left:auto;font-weight:800;font-size:var(--fs-3)">'+_refPriceHTML(p)+'</span></div>'
+      +'<span style="margin-inline-start:auto;font-weight:800;font-size:var(--fs-3)">'+_refPriceHTML(p)+'</span></div>'
     +(it.inspiration?'<div style="font-size:12px;color:var(--grey-2);margin:4px 0 7px;line-height:1.5">'+esc(it.inspiration)+'</div>':'')
     +(chips?'<div style="display:flex;gap:5px;flex-wrap:wrap;margin:6px 0 7px">'+chips+'</div>':'')
     +(facts.length?'<div style="font-size:11.5px;color:var(--ink-2);margin:5px 0 2px;line-height:1.55">'+facts.join(' · ')+'</div>':'')
@@ -5830,7 +5830,7 @@ async function downloadCatalogueTemplate(btn){
     modal('<div class="mhd">📄 Catalogue template</div><div class="mbody">'
       + '<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:9px">Downloaded as <b>' + esc(t.filename||'') + '</b> — these are the columns your catalogue accepts. Dashed ones are optional.</div>'
       + '<div style="margin-bottom:10px">' + cols + '</div>'
-      + '<ul style="font-size:var(--fs-2);line-height:1.65;padding-left:18px;margin:0">'
+      + '<ul style="font-size:var(--fs-2);line-height:1.65;padding-inline-start:18px;margin:0">'
       + (t.notes||[]).map(function(n){ return '<li>' + esc(n) + '</li>'; }).join('')
       + '</ul></div><div class="mfoot"><button class="pri" onclick="closeModal()">Got it</button></div>');
   }catch(e){
@@ -6033,10 +6033,10 @@ async function _cfRun(btn){
     out.innerHTML = badge
       + '<div style="font-size:var(--fs-2);margin:9px 0 6px">'+s.rows+' row(s) read · <b>'+s.importable+'</b> would import · '+s.errors+' error(s) · '+s.warnings+' warning(s)</div>'
       + '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse"><thead><tr>'
-      + ['In your file','','What to do with it','Why'].map(function(h){ return '<th style="text-align:left;padding:5px 8px;font-size:var(--fs-1);text-transform:uppercase;color:var(--grey);border-bottom:1px solid var(--line)">'+h+'</th>'; }).join('')
+      + ['In your file','','What to do with it','Why'].map(function(h){ return '<th style="text-align:start;padding:5px 8px;font-size:var(--fs-1);text-transform:uppercase;color:var(--grey);border-bottom:1px solid var(--line)">'+h+'</th>'; }).join('')
       + '</tr></thead><tbody>'+rowsHtml+'</tbody></table></div>'
-      + ((r.notes||[]).length ? '<ul style="font-size:12px;line-height:1.6;padding-left:18px;margin:10px 0 0">'+r.notes.map(function(n){ return '<li>'+esc(n)+'</li>'; }).join('')+'</ul>' : '')
-      + (issues ? '<div style="font-size:var(--fs-1);text-transform:uppercase;color:var(--grey);margin:10px 0 4px">Rows</div><ul style="font-size:12px;line-height:1.6;padding-left:18px;margin:0">'+issues+'</ul>'
+      + ((r.notes||[]).length ? '<ul style="font-size:12px;line-height:1.6;padding-inline-start:18px;margin:10px 0 0">'+r.notes.map(function(n){ return '<li>'+esc(n)+'</li>'; }).join('')+'</ul>' : '')
+      + (issues ? '<div style="font-size:var(--fs-1);text-transform:uppercase;color:var(--grey);margin:10px 0 4px">Rows</div><ul style="font-size:12px;line-height:1.6;padding-inline-start:18px;margin:0">'+issues+'</ul>'
           + ((r.issues||[]).length>25 ? '<div style="font-size:11.5px;color:var(--grey);margin-top:5px">…and '+((r.issues||[]).length-25)+' more.</div>' : '') : '')
       + '<div style="font-size:11.5px;color:var(--grey);margin-top:11px;border-top:1px solid var(--line);padding-top:8px">Reading the file changed nothing. <b>Import</b> applies the choices above — it adds and updates products, and never deletes one.</div>';
 
@@ -6080,7 +6080,7 @@ async function _cfImportRun(btn, decisions, out){
     var sum = r.summary || {};
     out.innerHTML = '<div style="background:var(--ok-tint);color:var(--ok-2);border-radius:6px;padding:8px 10px;font-size:var(--fs-2);font-weight:700">'+esc(r.message||'Imported')+'</div>'
       + ((r.created_columns||[]).length ? '<div style="font-size:12px;color:var(--grey);margin-top:8px">Your catalogue now also has: '+r.created_columns.map(esc).join(', ')+'. The next template you download will include them.</div>' : '')
-      + '<ul style="font-size:12px;line-height:1.6;padding-left:18px;margin:10px 0 0">'
+      + '<ul style="font-size:12px;line-height:1.6;padding-inline-start:18px;margin:10px 0 0">'
       + (r.outcome||[]).slice(0,40).map(function(o){
           var c = o.action==='failed' ? 'var(--disp)' : 'var(--ink)';
           return '<li style="color:'+c+'">line '+o.line+' · '+esc(o.name||'')+' — '+esc(o.action)+(o.message?': '+esc(o.message):'')+'</li>';
@@ -6181,7 +6181,7 @@ function ctNewCategory(){
     })
     .catch(function(){ toast('Could not open that — categories are also under Definitions → Categories.', true); });
 }
-function prodEditForm(d){ return ctField('name','Name',d.name||'')+`<div style="display:flex;gap:10px"><div style="flex:1">`+ctField('unit','Unit',d.unit||'',"placeholder=\"piece / kg / tonne\"")+`</div><div style="flex:1"><label class="fl">Price</label><div style="display:flex;align-items:stretch"><span style="display:flex;align-items:center;padding:0 11px;border:1px solid var(--line);border-right:0;border-radius:9px 0 0 10px;background:var(--warn-tint);color:var(--warn-3);font-weight:700;font-size:13.5px;white-space:nowrap" title="${myCur()} — your business currency">${esc(curSym())}</span><input class="inp" id="ct_price" data-testid="cat-field-price" inputmode="numeric" style="border-radius:0 10px 10px 0" value="${cbHasPrice(d.price)?cbAmount(d.price):''}"></div></div></div>`+ctField('code','Code / HSN',pCode(d))+ctCategoryField(d)+`<label class="fl">Description</label><textarea class="inp" id="ct_desc" data-testid="cat-field-desc" style="width:100%;border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:13.5px;min-height:58px;resize:vertical;background:var(--paper);color:var(--on-bg)">${esc(pDesc(d))}</textarea>`; }
+function prodEditForm(d){ return ctField('name','Name',d.name||'')+`<div style="display:flex;gap:10px"><div style="flex:1">`+ctField('unit','Unit',d.unit||'',"placeholder=\"piece / kg / tonne\"")+`</div><div style="flex:1"><label class="fl">Price</label><div style="display:flex;align-items:stretch"><span style="display:flex;align-items:center;padding:0 11px;border:1px solid var(--line);border-inline-end:0;border-radius:9px 0 0 10px;background:var(--warn-tint);color:var(--warn-3);font-weight:700;font-size:13.5px;white-space:nowrap" title="${myCur()} — your business currency">${esc(curSym())}</span><input class="inp" id="ct_price" data-testid="cat-field-price" inputmode="numeric" style="border-radius:0 10px 10px 0" value="${cbHasPrice(d.price)?cbAmount(d.price):''}"></div></div></div>`+ctField('code','Code / HSN',pCode(d))+ctCategoryField(d)+`<label class="fl">Description</label><textarea class="inp" id="ct_desc" data-testid="cat-field-desc" style="width:100%;border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:13.5px;min-height:58px;resize:vertical;background:var(--paper);color:var(--on-bg)">${esc(pDesc(d))}</textarea>`; }
 /* ═══ EVERY FIELD THIS ITEM CARRIES ════════════════════════════════════════════════════════════════════════════
  * Athi, 2026-08-13: *"the other information like synonym etc are not visible… clicking one item possibly bring
  * the field name and its item vertically as an overlay showcasing all the fields but graying the field which
@@ -6364,7 +6364,7 @@ function prodStatusPick(id){
   const d = p ? pData(p) : {};
   const opt = function(v, label, why){
     const on = (d.status || 'available') === v;
-    return '<button class="btn" style="width:100%;margin-bottom:7px;text-align:left;' + (on ? 'border-color:var(--blue);font-weight:700' : '') + '" onclick="prodSetStatus(\'' + id + '\',\'' + v + '\')">'
+    return '<button class="btn" style="width:100%;margin-bottom:7px;text-align:start;' + (on ? 'border-color:var(--blue);font-weight:700' : '') + '" onclick="prodSetStatus(\'' + id + '\',\'' + v + '\')">'
       + esc(label) + '<div style="font-size:var(--fs-1);color:var(--grey);font-weight:400">' + esc(why) + '</div></button>';
   };
   modal('<h3 style="margin:0 0 4px">Status · ' + esc(pName(d)) + '</h3>'
@@ -6485,7 +6485,7 @@ function prodDetailHTML(){
     const nfields = Object.keys(d).length;
     body = `<div class="sec">Product</div>${prodViewFields(d)}`
       + `<div style="padding:9px 12px"><button class="composebtn" data-testid="cat-all-fields" onclick="prodAllFields('${id}')">🗂️ All ${nfields} fields</button>`
-      + `<span style="font-size:11.5px;color:var(--grey);margin-left:9px">synonyms, status, and anything imported</span></div>`
+      + `<span style="font-size:11.5px;color:var(--grey);margin-inline-start:9px">synonyms, status, and anything imported</span></div>`
       + prodAvailBlock(d,id);
     bar=`<button class="pri" data-testid="cat-edit" onclick="setProdMode('edit')">✎ Edit</button><button data-testid="cat-status" onclick="prodStatusPick('${id}')">◍ Status</button><button class="warn" data-testid="cat-delete" onclick="delProduct('${id}')">Delete</button>`;
   }
@@ -6635,7 +6635,7 @@ function taskPanel(){
   const _tdesc = {order:"chits you've sent", task:'chits received', drafts:'unsent chits', trash:'deleted chits', archive:'archived chits'}[UI.folder] || 'chits received';
   /* ⚠️ THE DESCRIPTION STAYS THE TRACK'S, inside a folder too. A folder is that list FILTERED — the chits in
      "Needs attention" are still chits received, and relabelling per folder would imply otherwise. */
-  const _btns = _isTrack ? `<button type="button" data-testid="folder-metrics-btn" onclick="openFolderPane('metrics')" title="${_fsel?'Metrics for this folder':'Metrics for this whole track — and whether the folders add up'}" style="margin-left:auto;cursor:pointer;border:1px solid var(--line);border-radius:9px;padding:0 11px;min-height:28px;display:inline-flex;align-items:center;gap:5px;font-size:11.5px;background:var(--card);color:var(--on-card)">📊 Metrics</button>
+  const _btns = _isTrack ? `<button type="button" data-testid="folder-metrics-btn" onclick="openFolderPane('metrics')" title="${_fsel?'Metrics for this folder':'Metrics for this whole track — and whether the folders add up'}" style="margin-inline-start:auto;cursor:pointer;border:1px solid var(--line);border-radius:9px;padding:0 11px;min-height:28px;display:inline-flex;align-items:center;gap:5px;font-size:11.5px;background:var(--card);color:var(--on-card)">📊 Metrics</button>
       <button type="button" data-testid="folder-groupsum-btn" onclick="openFolderPane('groupsum')" title="What does this pile add up to — quantity per item, cost, and who asked" style="cursor:pointer;border:1px solid var(--line);border-radius:9px;padding:0 11px;min-height:28px;display:inline-flex;align-items:center;gap:5px;font-size:11.5px;background:var(--card);color:var(--on-card)">🧮 Group sum</button>
       <button type="button" data-testid="folder-rules-btn" onclick="openFolderPane('rules')" title="${_fsel?'Rules that file into this folder':'Every rule on this track, and where each one files'}" style="cursor:pointer;border:1px solid var(--line);border-radius:9px;padding:0 11px;min-height:28px;display:inline-flex;align-items:center;gap:5px;font-size:11.5px;background:var(--card);color:var(--on-card)">⚙️ Rules</button>` : '';
   const helpStrip = isCust ? "" : `<div style="display:flex;align-items:center;gap:7px;padding:8px 12px;border-bottom:1px solid var(--line);background:var(--gold-soft);font-size:12px;color:var(--warn-3);flex-wrap:wrap">
@@ -6643,8 +6643,8 @@ function taskPanel(){
         ${_fsel ? `<span data-testid="crumb-track" onclick="clearFolder()" title="Back to all of ${esc(_tname.slice(2))}" style="cursor:pointer;color:var(--blue)">${_tname}</span><span style="color:var(--grey);font-weight:400">/</span><span data-testid="crumb-folder" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📁 ${esc(_fsel.name)}</span>`
                 : `<span data-testid="crumb-track">${_tname}</span>`}
       </b><span style="color:var(--warn-3)">— ${_tdesc}</span>${/* was #8a7c58 — 3.65:1 on the gold-soft band; 5.09 now */''}
-      ${_fsel?`<span data-testid="folder-rename" onclick="renameFolder('${esc(_fsel.folder_id)}')" title="Rename this folder" style="cursor:pointer;color:var(--blue);font-size:11.5px;margin-left:2px">Rename</span><span data-testid="folder-delete" onclick="deleteFolder('${esc(_fsel.folder_id)}')" title="Delete this folder — the chits inside are NOT deleted" style="cursor:pointer;color:var(--disp);font-size:11.5px">Delete</span>`:''}
-      ${_btns}<button class="composebtn" style="${_isTrack?'':'margin-left:auto'}" onclick="toggleListHelp()">${UI.listHelp?'✕ Close':'❓ Help'}</button>
+      ${_fsel?`<span data-testid="folder-rename" onclick="renameFolder('${esc(_fsel.folder_id)}')" title="Rename this folder" style="cursor:pointer;color:var(--blue);font-size:11.5px;margin-inline-start:2px">Rename</span><span data-testid="folder-delete" onclick="deleteFolder('${esc(_fsel.folder_id)}')" title="Delete this folder — the chits inside are NOT deleted" style="cursor:pointer;color:var(--disp);font-size:11.5px">Delete</span>`:''}
+      ${_btns}<button class="composebtn" style="${_isTrack?'':'margin-inline-start:auto'}" onclick="toggleListHelp()">${UI.listHelp?'✕ Close':'❓ Help'}</button>
     </div>${UI.listHelp?`<div style="padding:11px 12px;border-bottom:1px solid var(--line);overflow-y:auto;max-height:52%">${assistPage(_ak)}</div>`:''}`;
   /**
    * ⭐ THE FOLD (Athi, 2026-08-16). Six bands stacked up before the first chit — measured at 218px, about 24% of
@@ -6725,7 +6725,11 @@ function makeMovable(panel, opts){
     var saved = null; try{ saved = JSON.parse(localStorage.getItem(key) || 'null'); }catch(e){}
     var fs = (saved && saved.fs) || 1;
     function save(){ try{ localStorage.setItem(key, JSON.stringify({
-      left: parseFloat(panel.style.left), top: parseFloat(panel.style.top),
+      /* ⚠️ `left` HERE IS A JAVASCRIPT PROPERTY NAME, NOT A CSS ONE. The logical-properties sweep rewrote it to
+       `inset-inline-start:` and broke the parse — an object key cannot contain hyphens unquoted. A find-and-
+       replace over files that are half CSS-in-strings and half JS will always find one of these; the lesson is
+       that the parse check is what catches it, so run it every time. */
+    left: parseFloat(panel.style.left), top: parseFloat(panel.style.top),
       width: parseFloat(panel.style.width), height: parseFloat(panel.style.height), fs: fs })); }catch(e){} }
     function clampIntoView(){
       var r = panel.getBoundingClientRect();
@@ -6746,7 +6750,7 @@ function makeMovable(panel, opts){
        the close button, so the note below says modals were "kept plain + centered". That was a workaround for a
        placement, not a reason movable modals are wrong — opts.barAt:'right' puts it clear of both, so a modal can
        have the same drag/resize/zoom every other panel has. Default is unchanged. */
-    bar.style.cssText = 'position:absolute;top:6px;' + (opts.barAt === 'right' ? 'right:42px;' : 'left:8px;')
+    bar.style.cssText = 'position:absolute;top:6px;' + (opts.barAt === 'right' ? 'inset-inline-end:42px;' : 'inset-inline-start:8px;')
       + 'display:flex;gap:4px;align-items:center;z-index:6';
     var grip = document.createElement('span'); grip.textContent = '⠿'; grip.title = 'Drag';
     grip.style.cssText = 'cursor:grab;color:var(--grey-4);font-size:var(--fs-3);line-height:1;user-select:none;padding:2px 3px';
@@ -6791,7 +6795,7 @@ function makeMovable(panel, opts){
       document.addEventListener('mousemove', dmove); document.addEventListener('mouseup', dup); e.preventDefault(); });
     // resize corner
     var rz = document.createElement('div'); rz.setAttribute('data-mv','rz');
-    rz.style.cssText = 'position:absolute;right:2px;bottom:2px;width:16px;height:16px;cursor:nwse-resize;z-index:6;background:linear-gradient(135deg,transparent 48%,rgba(0,0,0,.22) 48%);border-radius:0 0 8px 0';
+    rz.style.cssText = 'position:absolute;inset-inline-end:2px;bottom:2px;width:16px;height:16px;cursor:nwse-resize;z-index:6;background:linear-gradient(135deg,transparent 48%,rgba(0,0,0,.22) 48%);border-radius:0 0 8px 0';
     panel.appendChild(rz);
     var z = null;
     function zmove(e){ if(!z) return; panel.style.width = Math.max(minW, z.w + e.clientX - z.x) + 'px';
@@ -7028,7 +7032,7 @@ async function openNotifications(repaint){
       ? (x.log_id ? ' onclick="notifToggle(\'' + x.log_id + '\')" style="cursor:pointer"' : '')
       : (x.chit ? ' onclick="notifOpen(\'' + x.chit + '\')" style="cursor:pointer"' : '');
     return '<div class="notifrow' + (on ? ' sel' : '') + '"' + click + '>'
-      + (pick ? '<span class="cbx ' + (on ? 'on' : '') + '" style="flex:0 0 auto;margin-right:2px">' + (on ? '✓' : '') + '</span>' : '')
+      + (pick ? '<span class="cbx ' + (on ? 'on' : '') + '" style="flex:0 0 auto;margin-inline-end:2px">' + (on ? '✓' : '') + '</span>' : '')
       + '<span class="ni">' + x.i + '</span><div style="min-width:0">'
       + '<div class="nt">' + x.t + '</div>'
       + (x.d ? '<div style="font-size:11.5px;color:var(--ink-2,#5b6470);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + x.d + '</div>' : '')
@@ -7050,7 +7054,7 @@ async function openNotifications(repaint){
   const foot = !live ? 'Demo notifications — endpoint pending (ATH-109 §11).'
     : '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
       + '<span style="color:var(--grey)">' + items.length + ' recent · refreshes every 20s</span>'
-      + '<span style="margin-left:auto;display:flex;gap:6px">'
+      + '<span style="margin-inline-start:auto;display:flex;gap:6px">'
       + (picking
           ? '<button data-testid="notif-clear-sel" ' + (nsel ? '' : 'disabled ')
               + 'onclick="notifClearSelected()">Clear ' + (nsel || '') + '</button>'
@@ -7063,7 +7067,7 @@ async function openNotifications(repaint){
       + (rest.length ? (forMe.length ? nhead('Everything else') : '') + rest.map(nrow).join('') : '')
     : '<div class="notifrow"><div class="nt" style="color:var(--grey)">No notifications yet.</div></div>';
   host.innerHTML=`<div class="notifover" onclick="closeNotif()"><div class="notifpanel" onclick="event.stopPropagation()">
-    <div class="notifhd">Activity${forMe.length?`<span style="margin-left:8px;background:var(--blue-2);color:var(--on-accent);border-radius:9px;padding:1px 7px;font-size:var(--fs-1);font-weight:800">${forMe.length} for you</span>`:''}</div>
+    <div class="notifhd">Activity${forMe.length?`<span style="margin-inline-start:8px;background:var(--blue-2);color:var(--on-accent);border-radius:9px;padding:1px 7px;font-size:var(--fs-1);font-weight:800">${forMe.length} for you</span>`:''}</div>
     ${body}
     <div class="notiffoot">${foot}</div>
   </div></div>`;
@@ -7685,7 +7689,7 @@ function commercialBlock(c){
     var inst=(a.instruments&&a.instruments.length)?'<div style="font-size:var(--fs-1);color:var(--grey);margin-top:1px">'+esc(a.instruments.join(" · "))+'</div>':'';
     return '<div style="display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-top:1px solid var(--line)"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:12px">'+esc(a.label)+'</div>'+inst+'</div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">'+_frmChipCB(a.frm_class)+rail+'</div></div>';
   }).join("");
-  return '<div class="itab" style="margin-top:10px;padding:10px"><div class="sec" style="margin:0;display:flex;align-items:center;gap:6px">💳 Commercial cover<span style="margin-left:auto;font-size:var(--fs-1);color:var(--grey);font-weight:600">'+(cm.incoterm?esc(cm.incoterm)+" · ":"")+'folded on '+when+'</span></div><div style="font-size:var(--fs-1);color:var(--grey);margin:2px 0 4px">The commercial-cover framework for this order — payment, transit, currency &amp; credit risk. Items marked on-rail are already evidenced by the supplier record.</div>'+rows+'</div>';
+  return '<div class="itab" style="margin-top:10px;padding:10px"><div class="sec" style="margin:0;display:flex;align-items:center;gap:6px">💳 Commercial cover<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey);font-weight:600">'+(cm.incoterm?esc(cm.incoterm)+" · ":"")+'folded on '+when+'</span></div><div style="font-size:var(--fs-1);color:var(--grey);margin:2px 0 4px">The commercial-cover framework for this order — payment, transit, currency &amp; credit risk. Items marked on-rail are already evidenced by the supplier record.</div>'+rows+'</div>';
 }
 /**
  * viaBlock — where this chit came from, when it came from OUTSIDE the rail.
@@ -7780,7 +7784,7 @@ function clearancesBlock(c){
     var vu=it.valid_until?'<span style="font-size:var(--fs-1);color:var(--grey);white-space:nowrap">valid to '+esc(String(it.valid_until).slice(0,10))+'</span>':'';
     return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--line)"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:12px">'+esc(it.title||it.standard||it.doc||"clearance")+'</div><div style="font-size:var(--fs-1);color:var(--grey)">'+esc(it.standard||"")+(it.doc?" · "+esc(it.doc):"")+'</div>'+vinfo+'</div>'+vu+_rungChipCB(it.rung)+'</div>';
   }).join("");
-  return '<div class="itab" style="margin-top:10px;padding:10px"><div class="sec" style="margin:0;display:flex;align-items:center;gap:6px">🛡 Supplier clearances<span style="margin-left:auto;font-size:var(--fs-1);color:var(--grey);font-weight:600">folded on '+when+'</span></div><div style="font-size:var(--fs-1);color:var(--grey);margin:2px 0 4px">Frozen onto this order when the supplier sent it — the clearances they held, each at its trust rung. This is your independent buyer copy.</div>'+rows+'</div>';
+  return '<div class="itab" style="margin-top:10px;padding:10px"><div class="sec" style="margin:0;display:flex;align-items:center;gap:6px">🛡 Supplier clearances<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey);font-weight:600">folded on '+when+'</span></div><div style="font-size:var(--fs-1);color:var(--grey);margin:2px 0 4px">Frozen onto this order when the supplier sent it — the clearances they held, each at its trust rung. This is your independent buyer copy.</div>'+rows+'</div>';
 }
 function _aiMd(md){
   var L=String(md||'').replace(/\r/g,'').split('\n'),o=[],i=0;
@@ -7798,7 +7802,7 @@ function _aiMd(md){
   }
   return o.join('');
 }
-var _AI_MDCSS='.amddoc{color:#1e2530;font-size:var(--fs-2);line-height:1.55;font-family:-apple-system,Segoe UI,Roboto,sans-serif}.amddoc h1,.amddoc h2,.amddoc h3,.amddoc h4{margin:16px 0 7px;font-weight:700;line-height:1.25;color:#141a22}.amddoc h1{font-size:17px;padding-bottom:6px;border-bottom:2px solid #e6eaf0}.amddoc h2{font-size:14.5px}.amddoc h3,.amddoc h4{font-size:12px;text-transform:uppercase;letter-spacing:.03em;color:#5a6472}.amddoc p{margin:8px 0}.amddoc ul,.amddoc ol{margin:8px 0 8px 20px;padding:0}.amddoc li{margin:3px 0}.amddoc hr{border:0;border-top:1px solid #e6eaf0;margin:14px 0}.amddoc table.amdt{border-collapse:collapse;width:100%;margin:11px 0;font-size:11.5px}.amddoc .amdt th,.amddoc .amdt td{border:1px solid #dfe4ec;padding:7px 9px;text-align:left;vertical-align:top}.amddoc .amdt th{background:var(--card);font-weight:700;color:var(--on-card)}.amddoc .amdt tr:nth-child(even) td{background:var(--card)}.amddoc code{background:var(--blue-tint-bg);padding:1px 5px;border-radius:4px;font-size:var(--fs-1)}.amddoc strong{color:#141a22}';
+var _AI_MDCSS='.amddoc{color:#1e2530;font-size:var(--fs-2);line-height:1.55;font-family:-apple-system,Segoe UI,Roboto,sans-serif}.amddoc h1,.amddoc h2,.amddoc h3,.amddoc h4{margin:16px 0 7px;font-weight:700;line-height:1.25;color:#141a22}.amddoc h1{font-size:17px;padding-bottom:6px;border-bottom:2px solid #e6eaf0}.amddoc h2{font-size:14.5px}.amddoc h3,.amddoc h4{font-size:12px;text-transform:uppercase;letter-spacing:.03em;color:#5a6472}.amddoc p{margin:8px 0}.amddoc ul,.amddoc ol{margin:8px 0 8px 20px;padding:0}.amddoc li{margin:3px 0}.amddoc hr{border:0;border-top:1px solid #e6eaf0;margin:14px 0}.amddoc table.amdt{border-collapse:collapse;width:100%;margin:11px 0;font-size:11.5px}.amddoc .amdt th,.amddoc .amdt td{border:1px solid #dfe4ec;padding:7px 9px;text-align:start;vertical-align:top}.amddoc .amdt th{background:var(--card);font-weight:700;color:var(--on-card)}.amddoc .amdt tr:nth-child(even) td{background:var(--card)}.amddoc code{background:var(--blue-tint-bg);padding:1px 5px;border-radius:4px;font-size:var(--fs-1)}.amddoc strong{color:#141a22}';
 async function askAiOrder(){
   var c=UI.detail; if(!c){ if(typeof toast==='function')toast('Open an order first'); return; }
   var ctx={ subject:c.code, from:(c.sender||c.party||''), amount:c.amt, currency:c.currency,
@@ -7827,7 +7831,7 @@ function _aiOrderPdf(){
 function askAiOrderDoc(){
   var c=UI.detail; if(!c){ if(typeof toast==='function')toast('Open an order first'); return; }
   var opts=[['commercial-invoice','Commercial Invoice'],['packing-list','Packing List'],['export-declaration','Export Declaration'],['sds','Safety Data Sheet']];
-  var btns=opts.map(function(o){ return '<button onclick="_aiOrderDoc(\''+o[0]+'\',\''+o[1]+'\')" style="display:block;width:100%;text-align:left;font-size:13px;font-weight:600;border:1px solid var(--line);background:var(--card);border-radius:9px;padding:11px 13px;margin:6px 0;cursor:pointer;color:var(--on-card)">✨ '+esc(o[1])+'</button>'; }).join('');
+  var btns=opts.map(function(o){ return '<button onclick="_aiOrderDoc(\''+o[0]+'\',\''+o[1]+'\')" style="display:block;width:100%;text-align:start;font-size:13px;font-weight:600;border:1px solid var(--line);background:var(--card);border-radius:9px;padding:11px 13px;margin:6px 0;cursor:pointer;color:var(--on-card)">✨ '+esc(o[1])+'</button>'; }).join('');
   modal('<div class="mhd"><div class="t">✨ Draft a document — from this order</div></div><div class="mbody" style="padding:16px"><div style="font-size:12px;color:var(--grey);margin-bottom:8px">The co-assist drafts from THIS order (parties, line items, cover). You review &amp; confirm — never sent automatically.</div>'+btns+'</div>');
 }
 async function _aiOrderDoc(skill, label){
@@ -7917,12 +7921,12 @@ function detailInner(){
      <div class="itab" style="padding:10px"><div class="sec" style="margin:0">State</div><div class="disp" style="font-size:15px;font-weight:700">${c.state.toUpperCase()}</div></div></div>
      <div style="margin-top:10px">${proof}</div>${clearancesBlock(c)}${commercialBlock(c)}`;
   if(c._loading){ body=`<div class="dbload"><span class="spin"></span> loading details…</div>`; }
-  const actbar = (UI.folder==='drafts') ? `<button class="pri" onclick="resumeDraft('${c.id}')">✏️ Resume &amp; edit</button>` : (UI.folder==='trash') ? `<button class="pri" onclick="restoreChit('${c.id}')">↩ Restore</button>${c.isDraft?`<button class="pri" style="background:var(--disp);border-color:var(--disp);margin-left:8px;color:var(--on-danger)" onclick="purgeChit('${c.id}')">🗑 Delete forever</button>`:''}` : (UI.folder==='archive') ? `<button class="pri" onclick="unarchiveChit('${c.id}')">↩ Unarchive</button>` : SESSION.role==="customer"
+  const actbar = (UI.folder==='drafts') ? `<button class="pri" onclick="resumeDraft('${c.id}')">✏️ Resume &amp; edit</button>` : (UI.folder==='trash') ? `<button class="pri" onclick="restoreChit('${c.id}')">↩ Restore</button>${c.isDraft?`<button class="pri" style="background:var(--disp);border-color:var(--disp);margin-inline-start:8px;color:var(--on-danger)" onclick="purgeChit('${c.id}')">🗑 Delete forever</button>`:''}` : (UI.folder==='archive') ? `<button class="pri" onclick="unarchiveChit('${c.id}')">↩ Unarchive</button>` : SESSION.role==="customer"
     ? `<button onclick="toggleCustPri('${c.id}')">⚑ ${c.custPri?'Priority requested':'Request priority'}</button><button class="warn" data-testid="chit-dispute" onclick="quickDispute()">⚑ Dispute</button><button onclick="askAiOrderDoc()" title="AI drafts a trade document from THIS order (invoice, packing list, export declaration, SDS) — review and confirm">✨ Draft doc</button><button onclick="askAiOrder()" title="AI reviews this order — clearances &amp; cover met, and what to ask">✨ Ask AI</button><button onclick="todo('pdf')">⬇ PDF</button>`
     : `<button data-testid="open-design2" onclick="ensureCap('chit2').then(function(){openChit2('${c.id}')})" title="Open the line-level view — assignment, per-line delivery, cost">⧉ Lines</button><button onclick="forwardChit('${c.id}')" title="Forward as a new chit">➤ Forward</button><button onclick="ensureCap('folders').then(function(){moveChit('${c.id}')})" title="File into a folder">📁 Move</button>${UI.folder!=='order'?`<button data-testid="chit-unread" onclick="markUnread('${c.id}')" title="Mark as unread">✉ Unread</button>`:''}${UI.folder!=='order'?`<button class="pri" data-testid="chit-status-btn" onclick="pickChitStatus('${c.id}')">Status ▾</button>`:''}${SESSION.role==="actor"&&UI.folder!=='order'?`<button onclick="pickAssign('${c.id}')">👥 Assign</button>`:""}<button class="warn" data-testid="chit-dispute" onclick="quickDispute()">⚑ Dispute</button>${SESSION.role==="entity"?`<button class="warn pend" data-testid="chit-void" onclick="todo('voidChit')">⊘ Void</button>`:""}<button onclick="askAiOrderDoc()" title="AI drafts a trade document from THIS order (invoice, packing list, export declaration, SDS) — review and confirm">✨ Draft doc</button><button onclick="askAiOrder()" title="AI reviews this order — clearances &amp; cover met, and what to ask">✨ Ask AI</button><button onclick="todo('pdf')">⬇ PDF</button>`;
   const dtabs=[["content","Content"],["status","Status"],["summary","Summary"],["messages","💬 Messages"+(msgCount(c)?" ("+msgCount(c)+")":"")]];
   return `<div class="dh"><button class="dback" onclick="backToList()">‹ Back to list</button><button class="dmsg" data-testid="msg-tab" onclick="setDtab('messages')" title="Messages" aria-label="Messages">💬${msgCount(c)?' '+msgCount(c):''}</button><div class="dt">${esc(c.code)} · ${esc(c.party)}</div><div class="ds">${esc(c.area)} · ${esc(c.kind)} · ${inr(c.amt)} · ${c.state.toUpperCase()}</div>
-     <div class="parties"><span class="ptag">from <b>${esc(c.sender||SESSION.entity||"You")}</b></span><span class="ptag">${c.kind==='counter'?('to <b>'+esc(SESSION.entity||'You')+'</b>'):esc(c.rsummary||('to '+(c.party||'—')))}</span>${c.kind==='counter'?`<span class="ptag">for <b>${esc(c.cust)}</b></span>`:''}</div><div class="dchips"><span class="prichip-btn pri-${c.priExt||'normal'}" style="cursor:default" title="External priority — set by the drafter at compose, locked once sent">↔ ext: ${PRI[c.priExt||'normal'].label}</span>${SESSION.role!=="customer"?`<button class="prichip-btn pri-${c.pri||'normal'}" onclick="repriority('${c.id}')" title="Internal priority — your own queue; tap to change">⚙ int: ${PRI[c.pri||'normal'].label} ▾</button>`:''}${c.custPri?'<span class="custflag-tag">⚑ Customer priority</span>':''}<span class="prichip-btn" style="cursor:default;margin-left:auto;background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)" title="Currently assigned to">👤 ${c.assignee?esc(c.assignee):'Unassigned'}</span></div></div>
+     <div class="parties"><span class="ptag">from <b>${esc(c.sender||SESSION.entity||"You")}</b></span><span class="ptag">${c.kind==='counter'?('to <b>'+esc(SESSION.entity||'You')+'</b>'):esc(c.rsummary||('to '+(c.party||'—')))}</span>${c.kind==='counter'?`<span class="ptag">for <b>${esc(c.cust)}</b></span>`:''}</div><div class="dchips"><span class="prichip-btn pri-${c.priExt||'normal'}" style="cursor:default" title="External priority — set by the drafter at compose, locked once sent">↔ ext: ${PRI[c.priExt||'normal'].label}</span>${SESSION.role!=="customer"?`<button class="prichip-btn pri-${c.pri||'normal'}" onclick="repriority('${c.id}')" title="Internal priority — your own queue; tap to change">⚙ int: ${PRI[c.pri||'normal'].label} ▾</button>`:''}${c.custPri?'<span class="custflag-tag">⚑ Customer priority</span>':''}<span class="prichip-btn" style="cursor:default;margin-inline-start:auto;background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)" title="Currently assigned to">👤 ${c.assignee?esc(c.assignee):'Unassigned'}</span></div></div>
    ${(typeof disputeBanner==='function')?disputeBanner(c):''}<div class="dtabs">${dtabs.map(([k,l])=>`<button class="${UI.dtab===k?'on':''}" onclick="setDtab('${k}')">${l}</button>`).join("")}</div>
    <div class="db">${body}</div><div class="actbar">${(typeof SESSION!=='undefined'&&(SESSION.name==='GOV-01-Help'||SESSION.isHelpdesk)&&c.kind==='inquiry')?'<button class="pri" onclick="answerPublish(\''+c.id+'\')">🧠 Answer &amp; publish</button>':''}${actbar}</div>`;
 }
@@ -8027,7 +8031,7 @@ function markChitRead(id){ const c=(STORE.chits||[]).find(x=>x.id==id); if(c)(c.
 function refreshMsgBadge(){ const n=unreadCount(); const d=document.getElementById('msgcdot'); if(d){ d.textContent=n; d.style.display=n?'flex':'none'; } }
 function openMsgCenter(){ const host=document.getElementById("lbhost"); if(!host)return; if(UI.msgcOpen){ closeMsgCenter(); return; } UI.msgcOpen=true;
   const items=(STORE.chits||[]).map(c=>{ const ms=(c.msgs||[]).filter(m=>SESSION.role!=="customer"||m.scope==="external"); if(!ms.length)return null; const last=ms[ms.length-1]; const unread=ms.filter(m=>m.unread).length; return {id:c.id,code:c.code,party:c.party,last,unread}; }).filter(Boolean).reverse();
-  host.innerHTML=`<div class="notifover" onclick="closeMsgCenter()"><div class="notifpanel" onclick="event.stopPropagation()"><div class="notifhd">💬 Messages<span style="margin-left:auto;font-size:var(--fs-1);color:var(--grey)">across all chits</span></div><div style="padding:8px 12px;border-bottom:1px solid var(--line)"><button class="msglink" style="width:100%" onclick="openRaidReport()">📊 RAID report — governance overview</button></div>${items.length?items.map(x=>`<div class="notifrow" style="cursor:pointer" onclick="openFromCenter('${x.id}')"><span class="ni">${x.unread?'🔵':'💬'}</span><div style="flex:1;min-width:0"><div class="nt"><b>${x.code}</b> · ${x.party}${x.unread?` <span class="unreadtag">${x.unread} new</span>`:''}</div><div class="ns">${x.last?((x.last.scope==='external'?'↔ ':'🔒 ')+(x.last.body.length>44?x.last.body.slice(0,44)+'…':x.last.body)):''}</div></div></div>`).join(""):'<div class="notiffoot">No messages yet.</div>'}<div class="notiffoot">Tap a chit to open its conversation. External messages also land in the other party's message centre.</div><div class="raidtoggle">⚙ Message types: <button class="${SESSION.msgTypes!=='gov'?'on':''}" onclick="setMsgTypeSet('lean')">Lean</button><button class="${SESSION.msgTypes==='gov'?'on':''}" onclick="setMsgTypeSet('gov')">Governance (RAID)</button><div class="hint">A Settings preview — configurable per entity in production.</div></div></div></div>`;
+  host.innerHTML=`<div class="notifover" onclick="closeMsgCenter()"><div class="notifpanel" onclick="event.stopPropagation()"><div class="notifhd">💬 Messages<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey)">across all chits</span></div><div style="padding:8px 12px;border-bottom:1px solid var(--line)"><button class="msglink" style="width:100%" onclick="openRaidReport()">📊 RAID report — governance overview</button></div>${items.length?items.map(x=>`<div class="notifrow" style="cursor:pointer" onclick="openFromCenter('${x.id}')"><span class="ni">${x.unread?'🔵':'💬'}</span><div style="flex:1;min-width:0"><div class="nt"><b>${x.code}</b> · ${x.party}${x.unread?` <span class="unreadtag">${x.unread} new</span>`:''}</div><div class="ns">${x.last?((x.last.scope==='external'?'↔ ':'🔒 ')+(x.last.body.length>44?x.last.body.slice(0,44)+'…':x.last.body)):''}</div></div></div>`).join(""):'<div class="notiffoot">No messages yet.</div>'}<div class="notiffoot">Tap a chit to open its conversation. External messages also land in the other party's message centre.</div><div class="raidtoggle">⚙ Message types: <button class="${SESSION.msgTypes!=='gov'?'on':''}" onclick="setMsgTypeSet('lean')">Lean</button><button class="${SESSION.msgTypes==='gov'?'on':''}" onclick="setMsgTypeSet('gov')">Governance (RAID)</button><div class="hint">A Settings preview — configurable per entity in production.</div></div></div></div>`;
 }
 function closeMsgCenter(){ UI.msgcOpen=false; const h=document.getElementById("lbhost"); if(h)h.innerHTML=""; }
 function openFromCenter(id){ closeMsgCenter(); openChitMsgs(id); }
@@ -8036,7 +8040,7 @@ function openRaidReport(){ const host=document.getElementById("lbhost"); if(!hos
   const counts={}, samples={}; (STORE.chits||[]).forEach(c=>{ (c.msgs||[]).forEach(m=>{ if(SESSION.role==="customer"&&m.scope!=="external")return; const k=m.type||"info"; counts[k]=(counts[k]||0)+1; (samples[k]=samples[k]||[]); if(samples[k].length<3)samples[k].push({code:c.code,body:m.body}); }); });
   const keys=Object.keys(MTYPES).filter(k=>counts[k]); const total=keys.reduce((a,k)=>a+counts[k],0); const max=Math.max(1,...keys.map(k=>counts[k]));
   const rows=keys.length?keys.map(k=>{ const d=MTYPES[k]; const w=Math.round(counts[k]/max*100); return `<div class="raidrow"><div class="rl"><span class="mtype ${d.cls}">${d.icon} ${d.label}</span><b>${counts[k]}</b></div><div class="rbar"><span class="rbarfill ${d.cls}" style="width:${w}%"></span></div><div class="rsamp">${samples[k].map(x=>`<div>· <b>${x.code}</b> ${x.body.length>50?x.body.slice(0,50)+'…':x.body}</div>`).join("")}</div></div>`; }).join(""):'<div class="msgempty">No tagged messages in this period yet.</div>';
-  host.innerHTML=`<div class="notifover" onclick="closeMsgCenter()"><div class="notifpanel raid" onclick="event.stopPropagation()"><div class="notifhd">📊 RAID report<span style="margin-left:auto;font-size:var(--fs-1);color:var(--grey)">this period · ${total} items</span></div><div class="raidbody">${rows}</div><div class="notiffoot">Governance register rolled up from tagged messages across all chits. In production this is a backend report over a chosen period, per entity / oversight scope.</div></div></div>`;
+  host.innerHTML=`<div class="notifover" onclick="closeMsgCenter()"><div class="notifpanel raid" onclick="event.stopPropagation()"><div class="notifhd">📊 RAID report<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey)">this period · ${total} items</span></div><div class="raidbody">${rows}</div><div class="notiffoot">Governance register rolled up from tagged messages across all chits. In production this is a backend report over a chosen period, per entity / oversight scope.</div></div></div>`;
 }
 
 /* actions wired to API */
@@ -8140,7 +8144,7 @@ function logo(){return `<div class="brand">${logoMark(26)} Chit &amp; Bridge</di
 function setStage(k){ const s=STAGES[k]; if(!s) return; if(!s.mock && !s.base){ toast(s.label+" — API base not set yet (config)."); return; } CFG.STAGE=k; if(s.mock) STORE=deepClone(DEMO); route(); }
 function modeRibbon(){
   const st = STAGES[CFG.STAGE];
-  const vpsw = SESSION.token ? `<span class="sw" style="margin-left:auto"><button class="${UI.vp==='lap'?'on':''}" onclick="setVP('lap')">💻 Laptop</button><button class="${UI.vp==='mob'?'on':''}" onclick="setVP('mob')">📱 Mobile</button></span>` : '';
+  const vpsw = SESSION.token ? `<span class="sw" style="margin-inline-start:auto"><button class="${UI.vp==='lap'?'on':''}" onclick="setVP('lap')">💻 Laptop</button><button class="${UI.vp==='mob'?'on':''}" onclick="setVP('mob')">📱 Mobile</button></span>` : '';
   const stageBtns = Object.entries(STAGES).map(([k,s])=>{
     const usable = s.mock || !!s.base;
     return `<button class="${CFG.STAGE===k?'on':''}"${usable?'':' disabled title="API base not set"'} onclick="setStage('${k}')">${s.label}</button>`;
@@ -8148,9 +8152,9 @@ function modeRibbon(){
   return `<div class="moderibbon">
     <b>Build preview</b><span class="pill">${st.label}</span>
     <span style="font-size:var(--fs-1)">${st.mock?st.note:(st.base?"hitting "+st.base:"(API base not set!)")}</span>
-    <button onclick="openMsgConsole()" title="Message log — info / warning / critical / requests" style="border:0.5px solid var(--line);border-radius:6px;padding:2px 8px;font-size:var(--fs-1);background:var(--card);cursor:pointer;margin-left:8px;color:var(--on-card)">🧪 Log</button>
+    <button onclick="openMsgConsole()" title="Message log — info / warning / critical / requests" style="border:0.5px solid var(--line);border-radius:6px;padding:2px 8px;font-size:var(--fs-1);background:var(--card);cursor:pointer;margin-inline-start:8px;color:var(--on-card)">🧪 Log</button>
     ${vpsw}
-    <span class="sw" style="${SESSION.token?'':'margin-left:auto'}">${stageBtns}</span>
+    <span class="sw" style="${SESSION.token?'':'margin-inline-start:auto'}">${stageBtns}</span>
   </div>`;
 }
 
@@ -8605,7 +8609,7 @@ function amdShortlistHTML(cands, cat, totalItems){
       + (x.variant ? '<span style="font-size:13px;color:#245a9e;font-weight:700"> · ' + esc(x.variant) + '</span>' : '')
       + (st ? '<div style="font-size:var(--fs-1);color:var(--warn-2);margin-top:1px">⚠️ ' + esc(x.status_text || x.status) + '</div>' : '')
       + '</span>'
-      + '<span style="text-align:right;flex:none">'
+      + '<span style="text-align:end;flex:none">'
       + '<span style="font-size:var(--fs-4);font-weight:800">' + amdPriceText(x) + '</span>'
       + (x.unit ? '<div style="font-size:var(--fs-1);color:var(--grey)">per ' + esc(x.unit) + '</div>' : '')
       + '</span></label>';
@@ -8655,7 +8659,7 @@ function amendPaint(){
             ${x.variant?`<span style="font-size:13px;color:#245a9e;font-weight:700"> · ${esc(x.variant)}</span>`:''}
             ${st?`<div style="font-size:var(--fs-1);color:var(--warn-2);margin-top:1px">⚠️ ${esc(x.status_text||x.status)}</div>`:''}
           </span>
-          <span style="text-align:right;flex:none">
+          <span style="text-align:end;flex:none">
             <span style="font-size:var(--fs-4);font-weight:800">${amdPriceText(x)}</span>
             ${x.unit?`<div style="font-size:var(--fs-1);color:var(--grey)">per ${esc(x.unit)}</div>`:''}
           </span></label>`;}).join('')}
@@ -8668,14 +8672,14 @@ function amendPaint(){
 
     if(cands.length) return _amdSheet('Which one did they mean?', '<div data-testid="amd-picker">'+shortlist+'</div>');
     return _amdSheet('Which item?', items.length
-      ? items.map((x,i)=>`<button class="btn" style="width:100%;margin-bottom:6px;text-align:left;font-size:15px" onclick="amdPickItem(${i})">${esc(x.label)}${x.unit?` <span style="color:var(--grey);font-size:12px">· ${esc(x.unit)}</span>`:''}</button>`).join('')
+      ? items.map((x,i)=>`<button class="btn" style="width:100%;margin-bottom:6px;text-align:start;font-size:15px" onclick="amdPickItem(${i})">${esc(x.label)}${x.unit?` <span style="color:var(--grey);font-size:12px">· ${esc(x.unit)}</span>`:''}</button>`).join('')
       : '<div style="font-size:var(--fs-2);color:var(--grey);padding:6px 0">No catalogue yet — the name stays as written.</div>');
   }
   /* The full list, reached only by rejecting the shortlist — so "none of these" stays one tap, not a hunt. */
   if(AMD.view==='itemall'){
     const items=(cat&&cat.items)||[];
     return _amdSheet('All catalogue items', (items.length
-      ? items.map((x,i)=>`<button class="btn" style="width:100%;margin-bottom:6px;text-align:left;font-size:15px" onclick="amdPickItem(${i})">${esc(x.label)}${x.unit?` <span style="color:var(--grey);font-size:12px">· ${esc(x.unit)}</span>`:''}</button>`).join('')
+      ? items.map((x,i)=>`<button class="btn" style="width:100%;margin-bottom:6px;text-align:start;font-size:15px" onclick="amdPickItem(${i})">${esc(x.label)}${x.unit?` <span style="color:var(--grey);font-size:12px">· ${esc(x.unit)}</span>`:''}</button>`).join('')
       : '<div style="font-size:var(--fs-2);color:var(--grey);padding:6px 0">No catalogue yet — the name stays as written.</div>'), 'item');
   }
   if(AMD.view==='unit'){
@@ -8690,7 +8694,7 @@ function amendPaint(){
        identical empty line and mean opposite things — the second leaves a customer expecting a delivery. */
     return modal(`<h3 style="margin:0 0 4px">Remove this line?</h3>
       <div style="font-size:var(--fs-2);color:var(--grey);margin:0 0 12px">It stays on the chit so you can see it was asked for. It just stops counting.</div>
-      ${AMD_REASONS.map(r=>`<button class="btn" style="width:100%;margin-bottom:7px;text-align:left;font-size:15px" onclick="amendSave(null,'${r[0]}')">${esc(r[1])}</button>`).join('')}
+      ${AMD_REASONS.map(r=>`<button class="btn" style="width:100%;margin-bottom:7px;text-align:start;font-size:15px" onclick="amendSave(null,'${r[0]}')">${esc(r[1])}</button>`).join('')}
       <button class="btn" style="width:100%;margin-top:4px" onclick="amdView('main')">← back</button>`);
   }
 
@@ -8835,7 +8839,7 @@ function chitTermsBlock(c){
 function chitAttBlock(c){
   const atts=attsVis(c.atts);
   if(!atts.length) return "";
-  return `<div class="sec" style="display:flex;align-items:center;gap:7px">📎 Whole-chit attachments · ${atts.length}<span style="margin-left:auto;font-size:var(--fs-1);color:var(--ok);font-weight:700">✓ co-signed</span></div>
+  return `<div class="sec" style="display:flex;align-items:center;gap:7px">📎 Whole-chit attachments · ${atts.length}<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--ok);font-weight:700">✓ co-signed</span></div>
     ${attTileGrid(atts,'chit')}
     <div class="attNote">Part of the co-signed record — both parties hold the same set &amp; leaves with the chit on sunset.</div>`;
 }
@@ -8849,7 +8853,7 @@ function paintLB(){
   if(UI.lb==null||!atts.length){host.innerHTML="";return;}
   const i=Math.min(UI.lb,atts.length-1),a=atts[i];
   host.innerHTML=`<div class="lbover" onclick="closeLightbox()"><div class="lbbox" onclick="event.stopPropagation()">
-    <div class="lbtop"><span>${a.n}</span><span style="font-weight:400;color:#9fb4bf">${i+1} / ${atts.length}</span><span style="margin-left:auto;cursor:pointer" onclick="lbDownload()">⬇</span><span class="x" onclick="closeLightbox()">✕</span></div>
+    <div class="lbtop"><span>${a.n}</span><span style="font-weight:400;color:#9fb4bf">${i+1} / ${atts.length}</span><span style="margin-inline-start:auto;cursor:pointer" onclick="lbDownload()">⬇</span><span class="x" onclick="closeLightbox()">✕</span></div>
     <div class="lbstage">${attMedia(a,'lb')}</div>
     <div class="lbnav"><button onclick="lbNav(-1)" aria-label="Previous">‹</button><div class="lbdots">${atts.map((_,k)=>`<span class="${k===i?'on':''}"></span>`).join("")}</div><button onclick="lbNav(1)" aria-label="Next">›</button></div>
   </div></div>`;
@@ -8866,7 +8870,7 @@ route();
 </script>
 <script>
 (function(){ if(!window.CBOffline) return;
-  function cbPill(s){ var p=document.getElementById("cbnet"); if(!p){ p=document.createElement("div"); p.id="cbnet"; p.style.cssText="position:fixed;bottom:10px;right:10px;z-index:9998;font:700 11px/1 system-ui,-apple-system,sans-serif;border-radius:999px;padding:5px 11px;border:1px solid #e5e8ee;background:var(--card);color:var(--ok-2);box-shadow:0 1px 4px rgba(0,0,0,.08)"; (document.body||document.documentElement).appendChild(p); } if(!p) return;
+  function cbPill(s){ var p=document.getElementById("cbnet"); if(!p){ p=document.createElement("div"); p.id="cbnet"; p.style.cssText="position:fixed;bottom:10px;inset-inline-end:10px;z-index:9998;font:700 11px/1 system-ui,-apple-system,sans-serif;border-radius:999px;padding:5px 11px;border:1px solid #e5e8ee;background:var(--card);color:var(--ok-2);box-shadow:0 1px 4px rgba(0,0,0,.08)"; (document.body||document.documentElement).appendChild(p); } if(!p) return;
     if(s.online){ p.style.background="#fff"; p.style.color="var(--ok-2)"; p.textContent = s.pending ? ("\u25CF Online \u00B7 syncing "+s.pending) : "\u25CF Online"; }
     else { p.style.background="var(--warn-tint)"; p.style.color="var(--warn-2)"; p.textContent = "\u26A0 Offline" + (s.pending ? " \u00B7 "+s.pending+" pending" : ""); } }
   try{ CBOffline.configure({apiBase: CFG.API_BASE, token:function(){return SESSION && SESSION.token;}, onChange:cbPill}); CBOffline.registerSW("/cb-sw.js"); }catch(e){}

@@ -297,7 +297,7 @@ function cbcatRowsHTML(){
     var ret = c.status === 'retired';
     return '<div class="row' + (c.id === CBCAT_UI.sel ? ' sel' : '') + '" data-testid="catg-row-' + esc(c.id) + '"'
       + ' onclick="cbcatSelect(\'' + esc(c.id) + '\')"' + (ret ? ' style="opacity:.72"' : '') + '>'
-      + '<div style="flex:1;min-width:0;padding-left:' + ((c.depth||0)*16) + 'px">'
+      + '<div style="flex:1;min-width:0;padding-inline-start:' + ((c.depth||0)*16) + 'px">'
       +   '<div style="display:flex;align-items:center;gap:7px">'
       +     '<b style="font-size:13.5px' + (ret ? ';text-decoration:line-through' : '') + '">' + esc(c.name) + '</b>'
       +     (ret ? '<span class="cbcat-badge ret">retired</span>' : '')
@@ -380,7 +380,7 @@ function cbcatStatsHTML(){
     /* ⭐ The uncategorised count is a to-do list, so it is a BUTTON — it takes you to the products it is
        counting rather than merely reporting a number you then have to go and find by hand. */
     + ((CBCAT_UI.counts && CBCAT_UI.counts.none)
-        ? '<button data-testid="catg-uncat" onclick="cbcatGoUncategorised()" style="margin-left:auto;border:1px solid var(--gold-line);background:var(--gold-soft);border-radius:9px;padding:4px 9px;font-size:11.5px;color:var(--warn-3);cursor:pointer">'
+        ? '<button data-testid="catg-uncat" onclick="cbcatGoUncategorised()" style="margin-inline-start:auto;border:1px solid var(--gold-line);background:var(--gold-soft);border-radius:9px;padding:4px 9px;font-size:11.5px;color:var(--warn-3);cursor:pointer">'
           + CBCAT_UI.counts.none + ' uncategorised →</button>'
         : '');
 }
@@ -411,7 +411,7 @@ function cbcatSchemesHTML(){
     + '<div class="cbcat-plist">'
     + s.rows.map(function(r){
         return '<div class="cbcat-prow"><code style="font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11.5px">'
-          + esc(r.code) + '</code><span style="margin-left:8px">' + esc(r.label || '') + '</span>'
+          + esc(r.code) + '</code><span style="margin-inline-start:8px">' + esc(r.label || '') + '</span>'
           + (r.note ? '<span class="cbcat-also">' + esc(r.note) + '</span>' : '') + '</div>';
       }).join('')
     + '</div>'
@@ -479,7 +479,7 @@ function cbcatCss(){
     '.cbcat-plist{border:1px solid var(--line);border-radius:9px;overflow:hidden}',
     '.cbcat-prow{display:flex;gap:9px;align-items:baseline;padding:7px 11px;font-size:13px;border-bottom:1px dashed var(--line)}',
     '.cbcat-prow:last-child{border-bottom:0}',
-    '.cbcat-also{margin-left:auto;font-size:var(--fs-1);color:var(--grey);white-space:nowrap}',
+    '.cbcat-also{margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey);white-space:nowrap}',
     '.cbcat-none{font-size:var(--fs-2);color:var(--grey);line-height:1.6}'
   ].join('');
   (document.head || document.documentElement).appendChild(s);

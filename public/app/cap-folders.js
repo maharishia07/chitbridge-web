@@ -41,7 +41,7 @@ async function loadFolders(){
 function _folderTree(parentId, depth){
   var kids=(UI.folders||[]).filter(function(f){ return (f.parent_id||null)===(parentId||null); });
   return kids.map(function(f){ var sel=UI.folderSel===f.folder_id;
-    return '<div style="display:flex;align-items:center;gap:6px;padding:6px 8px;padding-left:'+(8+depth*15)+'px;border-radius:9px;cursor:pointer;font-size:var(--fs-2);'+(sel?'background:var(--blue-tint-bg);color:var(--blue-2);font-weight:700':'color:var(--ink-2)')+'" onclick="selectFolder(\''+f.folder_id+'\')">📁 '+esc(f.name)+'<span style="margin-left:auto;font-size:var(--fs-1);color:var(--grey)">'+(f.count||0)+'</span></div>'+_folderTree(f.folder_id, depth+1);
+    return '<div style="display:flex;align-items:center;gap:6px;padding:6px 8px;padding-inline-start:'+(8+depth*15)+'px;border-radius:9px;cursor:pointer;font-size:var(--fs-2);'+(sel?'background:var(--blue-tint-bg);color:var(--blue-2);font-weight:700':'color:var(--ink-2)')+'" onclick="selectFolder(\''+f.folder_id+'\')">📁 '+esc(f.name)+'<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey)">'+(f.count||0)+'</span></div>'+_folderTree(f.folder_id, depth+1);
   }).join('');
 }
 function foldersScreen(){
@@ -49,7 +49,7 @@ function foldersScreen(){
   var tree=_folderTree(null,0)||'<div style="color:var(--grey);font-size:12px;padding:8px 6px">No folders yet — create one below.</div>';
   var right= UI.folderSel ? _folderView() : emptyState('📁','Pick a folder','Or create one, then file chits into it with 📁 Move.');
   return '<div style="display:flex;height:100%;min-height:0">'
-    +'<div style="width:250px;border-right:1px solid var(--line);overflow:auto;padding:12px 8px;flex:0 0 auto">'
+    +'<div style="width:250px;border-inline-end:1px solid var(--line);overflow:auto;padding:12px 8px;flex:0 0 auto">'
       +'<div style="font-size:var(--fs-1);font-weight:800;color:var(--grey);letter-spacing:.05em;padding:2px 8px 8px">FOLDERS</div>'
       +tree
       +'<div style="font-size:12px;color:var(--blue);padding:9px 8px 4px;cursor:pointer" onclick="newFolder()">＋ New folder</div></div>'
@@ -70,8 +70,8 @@ function _folderView(){
   var head='<div style="padding:14px 18px;border-bottom:1px solid var(--line)"><div style="font-size:17px;font-weight:800">📁 '+esc(f.name)+'</div>'
     +'<div style="font-size:11.5px;color:var(--grey);margin-top:2px">source = the sender / co-assist · destination = this folder</div>'
     +'<div style="display:flex;gap:6px;margin-top:11px;align-items:center">'+tab(!arch,'Current','setFolderArch(false)')+tab(arch,'Archive','setFolderArch(true)')
-    +'<span style="margin-left:auto;font-size:var(--fs-1);color:var(--blue);cursor:pointer" onclick="renameFolder(\''+UI.folderSel+'\')">Rename</span>'
-    +'<span style="font-size:var(--fs-1);color:var(--disp);cursor:pointer;margin-left:14px" onclick="deleteFolder(\''+UI.folderSel+'\')">Delete</span></div>'
+    +'<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--blue);cursor:pointer" onclick="renameFolder(\''+UI.folderSel+'\')">Rename</span>'
+    +'<span style="font-size:var(--fs-1);color:var(--disp);cursor:pointer;margin-inline-start:14px" onclick="deleteFolder(\''+UI.folderSel+'\')">Delete</span></div>'
     /* ⚠️ PANES, NOT A DENSER PANE. Rules and metrics are each a full job; crushed into the chit list they would be
        unreadable on a phone and barely readable anywhere. One job per tab — the shape the compose flow already uses. */
     +'<div style="display:flex;gap:6px;margin-top:10px">'+_ftab('chits','📄 Chits')+_ftab('metrics','📊 Metrics')+_ftab('rules','⚙️ Rules')+'</div></div>';
@@ -349,7 +349,7 @@ function _groupSumPane(){
       + (miss > 0 ? ' ⚠️ ' + miss + ' of the ' + g.selection_requested + ' you ticked are not on this track and were left out.' : '')
       + '</div>';
   } else if (UI.folderSel) {
-    var b = function(on, lbl, arg){ return '<span onclick="gsScope(' + arg + ')" style="cursor:pointer;border:1px solid var(--line);border-radius:9px;padding:3px 10px;font-size:11.5px;margin-right:6px;' + (on ? 'background:var(--blue);color:var(--on-accent);border-color:var(--blue);font-weight:700' : 'background:var(--card)') + '">' + lbl + '</span>'; };
+    var b = function(on, lbl, arg){ return '<span onclick="gsScope(' + arg + ')" style="cursor:pointer;border:1px solid var(--line);border-radius:9px;padding:3px 10px;font-size:11.5px;margin-inline-end:6px;' + (on ? 'background:var(--blue);color:var(--on-accent);border-color:var(--blue);font-weight:700' : 'background:var(--card)') + '">' + lbl + '</span>'; };
     out += '<div style="margin-bottom:10px">' + b(!_FLD.gsAll, 'This folder', 'false') + b(!!_FLD.gsAll, 'Whole track — every folder', 'true') + '</div>';
   }
 
@@ -364,7 +364,7 @@ function _groupSumPane(){
 
   var req = g.requirement || [];
   if (req.length) {
-    out += '<div style="display:flex;font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);padding:0 0 4px"><span style="flex:1">Item</span><span style="width:110px;text-align:right">Quantity</span><span style="width:130px;text-align:right">Cost</span><span style="width:74px;text-align:right">Parties</span></div>';
+    out += '<div style="display:flex;font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);padding:0 0 4px"><span style="flex:1">Item</span><span style="width:110px;text-align:end">Quantity</span><span style="width:130px;text-align:end">Cost</span><span style="width:74px;text-align:end">Parties</span></div>';
     out += req.map(function(l, i){
       var open = !!(_FLD.gsOpen || {})[i];
       var name = esc(l.item) + (l.variant ? ' <span style="color:var(--grey);font-weight:600">· ' + esc(l.variant) + '</span>' : '');
@@ -383,13 +383,13 @@ function _groupSumPane(){
          * not the same as zero"* — and the line immediately below already honours it for an unpriced value. This
          * is the same rule applied to quantity: measured, not measurable, and zero are three different facts.
          */
-        + '<span style="width:110px;text-align:right;font-weight:800">'
+        + '<span style="width:110px;text-align:end;font-weight:800">'
         + (l.unit_split
             ? '<span style="color:var(--disp)" title="units that cannot be added — see the split below">—</span>'
             : esc(String(l.total)) + ' ' + esc(l.canonical_unit || ''))
         + '</span>'
-        + '<span style="width:130px;text-align:right">' + _gsMoney(l.value, l.value_mixed) + '</span>'
-        + '<span style="width:74px;text-align:right;color:var(--grey);font-size:11.5px">' + l.stores + '</span></div>';
+        + '<span style="width:130px;text-align:end">' + _gsMoney(l.value, l.value_mixed) + '</span>'
+        + '<span style="width:74px;text-align:end;color:var(--grey);font-size:11.5px">' + l.stores + '</span></div>';
       /* THE DRILLDOWN — Athi: "on click the down below need to know who are all asked". The roster comes straight
          from consolidate()'s attribution; nothing is recomputed to render it. */
       var rows = open ? '<div style="padding:2px 0 8px 16px;background:var(--card);color:var(--on-card)">'
@@ -400,8 +400,8 @@ function _groupSumPane(){
                  single most useful thing to see when checking whether a total is right. */
               + (String(s.phrase || '').toLowerCase() !== String(l.item || '').toLowerCase() ? ' <span style="color:var(--grey)">— asked as “' + esc(s.phrase) + '”</span>' : '')
               + '</span>'
-              + '<span style="width:110px;text-align:right">' + esc(String(s.qty)) + ' ' + esc(s.unit || '') + '</span>'
-              + '<span style="width:130px;text-align:right">' + (s.value == null ? '<span style="color:var(--grey)" title="no price on this line — not counted as zero">—</span>' : esc((s.currency || '') + ' ' + s.value)) + '</span>'
+              + '<span style="width:110px;text-align:end">' + esc(String(s.qty)) + ' ' + esc(s.unit || '') + '</span>'
+              + '<span style="width:130px;text-align:end">' + (s.value == null ? '<span style="color:var(--grey)" title="no price on this line — not counted as zero">—</span>' : esc((s.currency || '') + ' ' + s.value)) + '</span>'
               + '<span style="width:74px"></span></div>';
           }).join('')
         + '</div>' : '';
@@ -474,8 +474,8 @@ function _reconStrip(){
     return '<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-top:1px solid var(--line);font-size:12px">'
       + '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📁 ' + esc(f.name) + '</span>'
       + '<span style="color:var(--grey);font-size:var(--fs-1)">' + (s.open || 0) + ' open · ' + (s.unassigned || 0) + ' unassigned</span>'
-      + '<span style="font-weight:800;min-width:34px;text-align:right">' + f.own + '</span>'
-      + (f.tree !== f.own ? '<span style="color:var(--grey);font-size:var(--fs-1);min-width:52px;text-align:right">' + f.tree + ' w/ sub</span>' : '<span style="min-width:52px"></span>')
+      + '<span style="font-weight:800;min-width:34px;text-align:end">' + f.own + '</span>'
+      + (f.tree !== f.own ? '<span style="color:var(--grey);font-size:var(--fs-1);min-width:52px;text-align:end">' + f.tree + ' w/ sub</span>' : '<span style="min-width:52px"></span>')
       + '</div>';
   }).join('') : '<div style="font-size:11.5px;color:var(--grey);padding:5px 0">No folders on this track yet — everything is unfiled, which is why the two numbers match trivially.</div>';
 
@@ -600,7 +600,7 @@ function _ruleRow(r, i, n){
         + mvBtn('↓', i < n - 1, 'Run later — the rule below will beat this one',      'ruleMove(\'' + esc(r.rule_id) + '\',1)')
         + '</span>' : '')
     + '<label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" data-testid="rule-enabled" ' + (r.enabled ? 'checked' : '') + ' onchange="ruleToggle(\'' + esc(r.rule_id) + '\',this.checked)"><span style="font-weight:700;font-size:13px">' + esc(r.name || 'Rule') + '</span></label>'
-    + '<span style="margin-left:auto;font-size:var(--fs-1);color:var(--disp);cursor:pointer" onclick="ruleDelete(\'' + esc(r.rule_id) + '\')">Delete</span></div>'
+    + '<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--disp);cursor:pointer" onclick="ruleDelete(\'' + esc(r.rule_id) + '\')">Delete</span></div>'
     /* ⚠️ AT TRACK LEVEL A RULE MUST NAME ITS DESTINATION. "file here" is only meaningful standing inside the
        folder; in the all-rules list it would read as if every rule filed into the same place, which is the exact
        confusion this list exists to remove. */
