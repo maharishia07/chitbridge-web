@@ -521,7 +521,8 @@
 
   /* ── rendering ───────────────────────────────────────────────────────────────────────────────────────────── */
   function doc(id) { return (typeof document !== 'undefined' && id) ? document.getElementById(id) : null; }
-  function sym(ns) { return opt(ns, 'symbol', '₹'); }
+  /* ⚠️ Same defect as catalogue-ui: the fallback assumed India. See the note there. */
+  function sym(ns) { return opt(ns, 'symbol', CBLocale.symbol((typeof SESSION !== 'undefined' && SESSION && SESSION.currency) || 'INR')); }
   /**
    * ⚠️ DIGIT GROUPING IS OFF BY DEFAULT, and that is deliberate.
    *

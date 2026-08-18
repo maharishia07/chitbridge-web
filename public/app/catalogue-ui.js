@@ -182,7 +182,10 @@
      * order bug and it should be loud, not quietly priced at nothing.
      */
     var u = root.CBCart.unitPrice(cart.ns, r);
-    var sym = opts.sym || '₹';
+    /* ⚠️ WAS '₹' AS THE DEFAULT. A symbol is not decoration — it states which currency a figure is in, and a
+       rupee sign in front of a dirham amount is a wrong number, not a cosmetic slip. The business's own currency
+       is stamped on its prices; this asks the layer for its symbol instead of assuming India. */
+    var sym = opts.sym || CBLocale.symbol((typeof SESSION !== 'undefined' && SESSION && SESSION.currency) || 'INR');
     var name = r.variant || d.name || d.product || 'item';
     var hint = hintOf(r);
 

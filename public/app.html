@@ -1526,10 +1526,7 @@ let SESSION = {token:null, role:null, name:null, entity:null, bridgeId:null};
 function myCur(){ return (typeof SESSION!=='undefined' && SESSION.currency) || 'INR'; }
 // The SYMBOL for a currency code, taken from Intl rather than a hand-kept table — it covers every currency and
 // cannot drift. Falls back to the code itself (AED shows as 'AED' in many locales, which is correct, not a bug).
-function curSym(code){ code = code || myCur();
-  try { var pt = new Intl.NumberFormat(undefined,{style:'currency',currency:code,currencyDisplay:'narrowSymbol'})
-      .formatToParts(0).find(function(x){ return x.type==='currency'; }); return (pt && pt.value) || code; }
-  catch(e){ return code; } }
+function curSym(code){ return CBLocale.symbol(code || myCur()); }   // ⚠️ was formatting with `undefined` — the OS locale, not the reader's
 // inr() is a legacy NAME, not a legacy behaviour: it now formats in the BUSINESS'S OWN currency. Renaming it
 // across 13 call sites would be churn for no gain; changing what it does fixes all 13 at once.
 const inr=n=>fmtMoney(n,myCur());
@@ -7802,7 +7799,7 @@ function rowPeekShow(ev,id){
   e.style.left=Math.max(8, Math.min(r.right+10, window.innerWidth-b.width-12))+'px';
 }
 function rowPeekHide(){ const e=document.getElementById('rowpeek'); if(e) e.style.display='none'; }
-function lcDate(ts){ try{ const d=new Date(ts); if(isNaN(d)) return ''; const sameY=d.getFullYear()===new Date().getFullYear(); return d.toLocaleString('en-IN', sameY?{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}:{day:'2-digit',month:'short',year:'2-digit',hour:'2-digit',minute:'2-digit'}); }catch(_){ return ''; } }
+function lcDate(ts){ try{ const d=new Date(ts); if(isNaN(d)) return ''; const sameY=d.getFullYear()===new Date().getFullYear(); return CBLocale.datetime(d, sameY?{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}:{day:'2-digit',month:'short',year:'2-digit',hour:'2-digit',minute:'2-digit'}); }catch(_){ return ''; } }
 function listHeader(){ const tpl=colTemplate(); const sel = (UI.selectMode&&SESSION.role!=='customer') ? '<span></span>' : '';
   const cells = fittedCols().map(function(c){ const active = UI.sort===c.sort && c.sort; const arrow = active ? (UI.dir==='asc'?' ▲':' ▼') : (c.sort?' ⇅':''); return '<span class="lhcell'+(c.sort?' sortable':'')+(c.align==='right'?' ra':'')+'" '+(c.sort?('onclick="sortBy(\''+c.sort+'\')"'):'')+'>'+esc(c.key==='from'&&UI.folder==='order'?'To':c.label)+'<span class="sarr">'+arrow+'</span><span class="colrz" onmousedown="colResizeStart(event,\''+c.key+'\')" onclick="event.stopPropagation()"></span></span>'; }).join('');
   return '<div class="lhead" style="grid-template-columns:var(--coltpl)">'+sel+cells+'</div>'; }
@@ -8069,7 +8066,7 @@ function _frmChipCB(f){
 }
 function commercialBlock(c){
   var cm=c&&c.commercial; if(!cm||!cm.areas||!cm.areas.length) return "";
-  var when="send"; try{ when=new Date(cm.folded_at).toLocaleDateString(); }catch(e){}
+  var when="send"; try{ when=CBLocale.date(cm.folded_at); }catch(e){}
   var rows=cm.areas.map(function(a){
     var rail=a.on_rail?'<span style="font-size:var(--fs-1);color:var(--ok-3);font-weight:800;white-space:nowrap">● on rail</span>':'<span style="font-size:var(--fs-1);color:var(--grey);white-space:nowrap">applicable</span>';
     var inst=(a.instruments&&a.instruments.length)?'<div style="font-size:var(--fs-1);color:var(--grey);margin-top:1px">'+esc(a.instruments.join(" · "))+'</div>':'';
@@ -8164,7 +8161,7 @@ function viaBlock(c){
 }
 function clearancesBlock(c){
   var cl=c&&c.clearances; if(!cl||!cl.items||!cl.items.length) return "";
-  var when="send"; try{ when=new Date(cl.folded_at).toLocaleDateString(); }catch(e){}
+  var when="send"; try{ when=CBLocale.date(cl.folded_at); }catch(e){}
   var rows=cl.items.map(function(it){
     var vinfo=it.verified_at?'<div style="font-size:var(--fs-1);color:var(--ok);font-weight:700">✓ source-checked '+esc(String(it.verified_at).slice(0,10))+(it.verified_by?' · '+esc(it.verified_by):'')+'</div>':'';
     var vu=it.valid_until?'<span style="font-size:var(--fs-1);color:var(--grey);white-space:nowrap">valid to '+esc(String(it.valid_until).slice(0,10))+'</span>':'';
@@ -9206,7 +9203,7 @@ function chitTermsBlock(c){
     + '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--warn-3);'
     + 'padding:8px 2px 4px">Terms this chit agreed'
     + (bj.frozen_at ? '<span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--grey)"> · frozen '
-        + esc(new Date(bj.frozen_at).toLocaleString()) + '</span>' : '')
+        + esc(CBLocale.datetime(bj.frozen_at)) + '</span>' : '')
     + '</div>'
     + terms.map(function(t){
         var r = t.rules || {};

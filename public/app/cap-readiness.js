@@ -109,7 +109,7 @@ function _aiPdf(){
     +'.stamp{display:inline-block;margin-top:9px;font-size:var(--fs-1);font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--warn-2);background:var(--warn-tint);border:1px solid #f0dcae;border-radius:5px;padding:3px 8px}'
     +'.foot{margin-top:26px;padding-top:10px;border-top:1px solid #e6eaf0;font-size:var(--fs-1);color:#9aa3b0;text-align:center}'
     +(typeof _AI_MDCSS!=='undefined'?_AI_MDCSS:'')+'.amddoc{font-size:12px}';
-  var when=new Date().toLocaleString();
+  var when=CBLocale.datetime(Date.now());
   w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>'+esc(d.label||'AI draft')+'</title><style>'+pcss+'</style></head><body><div class="pg">'
     +'<div class="hd"><div class="brand">CHIT &amp; BRIDGE</div><div class="doctitle">'+esc(d.label||'Draft')+'</div><div class="meta">Drafted by AI co-assist · '+esc(when)+(d.cost!=null?' · est. $'+d.cost:'')+'</div><div class="stamp">AI draft — not evidence until accepted</div></div>'
     +'<div class="amddoc">'+(typeof _aiMd==='function'?_aiMd(d.draft||''):esc(d.draft||''))+'</div>'

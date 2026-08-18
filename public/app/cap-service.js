@@ -106,7 +106,7 @@ function svcPauseRow(p){
     + '<span style="font-size:13px;font-weight:700">' + esc(String(p.reason || '').replace(/_/g, ' ')) + '</span>'
     + '<span style="display:flex;gap:5px">' + (open ? svcChip('running', 'warn') : '') + state + '</span></div>'
     + '<div style="font-size:11.5px;color:var(--grey);margin-top:2px">'
-    + esc(new Date(p.paused_from).toLocaleString()) + (p.paused_to ? ' → ' + esc(new Date(p.paused_to).toLocaleString()) : ' → still paused')
+    + esc(CBLocale.datetime(p.paused_from)) + (p.paused_to ? ' → ' + esc(CBLocale.datetime(p.paused_to)) : ' → still paused')
     + ' · claimed by ' + esc(p.mine ? 'you' : (p.claimed_by_name || 'the other party')) + '</div>'
     + (p.note ? '<div style="font-size:12px;margin-top:3px">' + esc(p.note) + '</div>' : '')
     + answer + endBtn + '</div>';

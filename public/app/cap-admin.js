@@ -1564,16 +1564,11 @@ function localeSettingsHTML(){
      check that catches it is running the function — which is what caught this one, before it shipped. */
   var Q = String.fromCharCode(39);
   var d = CBLocale.describe();
-  var LANGS = { en:'English', hi:'हिन्दी', ta:'தமிழ்', fr:'Français' };
 
-  /**
-   * ⭐ THE CONTROLS CARRY THE STANDARD'S OWN NAMES — "numbering system", "hour cycle", "calendar", "first day of
-   * week" are the CLDR/UTS-35 terms, not invented ones. Anyone who knows the standard recognises them; anyone
-   * who does not can look them up and find the same words. Inventing friendlier labels would make this screen
-   * the only place in the world that calls them that.
-   */
+  /* The option lists and the two builders every card below uses. ⚠️ These were lost when the language/format
+     blocks were replaced — the render harness caught it immediately, which is the whole reason it exists. */
   var FORMATS = [
-    ['', 'Same as language'],
+    ['', 'Same as region'],
     ['en-IN', 'India — 12,34,56,789.50 (lakh · crore)'],
     ['en-US', 'United States — 123,456,789.50 (million)'],
     ['en-GB', 'United Kingdom — 123,456,789.50'],
@@ -1581,7 +1576,7 @@ function localeSettingsHTML(){
     ['fr-FR', 'France — 123 456 789,50'],
     ['ar-AE', 'UAE — Arabic, Western digits'],
     ['ar-EG', 'Egypt — Arabic, Eastern digits ١٢٣'],
-    ['ja-JP', 'Japan — 123,456,789.50'],
+    ['ja-JP', 'Japan — 123,456,789.50']
   ];
   var NUMERALS = [['', 'Follow the format'], ['latn', 'Western — 123'], ['arab', 'Eastern Arabic — ١٢٣'], ['deva', 'Devanagari — १२३']];
   var HOURS    = [['', 'Follow the format'], ['h12', '12-hour — 09:15 pm'], ['h23', '24-hour — 21:15']];
@@ -1594,38 +1589,126 @@ function localeSettingsHTML(){
       + list.map(function(o){ return '<option value="' + o[0] + '"' + (val === o[0] ? ' selected' : '') + '>' + esc(o[1]) + '</option>'; }).join('')
       + '</select>';
   };
-  var langBtns = Object.keys(LANGS).map(function(k){
-    var on = d.lang === k;
-    return '<button data-testid="loc-lang-' + k + '" onclick="localeSetLang(' + Q + k + Q + ')"'
-      + ' style="border:1px solid ' + (on ? 'var(--blue)' : 'var(--line)') + ';'
-      + 'background:' + (on ? 'var(--blue-tint-bg)' : 'var(--card)') + ';color:' + (on ? 'var(--blue)' : 'var(--on-card)') + ';'
-      + 'border-radius:9px;padding:5px 11px;font-size:var(--fs-2);font-weight:' + (on ? 700 : 500) + ';cursor:pointer;margin:0 6px 6px 0">'
-      + LANGS[k] + '</button>';
-  }).join('');
-
+  var card = function(inner){ return '<div style="' + _CARD + '">' + inner + '</div>'; };
   var line = function(k, v){
     return '<div style="display:flex;gap:10px;padding:4px 0;font-size:var(--fs-2)">'
       + '<span style="min-width:108px;color:var(--grey)">' + k + '</span>'
       + '<b style="color:var(--on-card);min-width:0;word-break:break-word">' + v + '</b></div>';
   };
+  /* Working-day chips. ⚠️ ISO numbering (1 = Monday … 7 = Sunday) throughout, because that is what
+     Intl.Locale.weekInfo returns — mixing it with Date.getDay()'s 0 = Sunday moves every due date by one. */
+  var DAYFULL = { 1:'Mon', 2:'Tue', 3:'Wed', 4:'Thu', 5:'Fri', 6:'Sat', 7:'Sun' };
+  var work = CBLocale.workdays();
+  var dayChips = [1,2,3,4,5,6,7].map(function(n){
+    var on = work.indexOf(n) >= 0;
+    return '<button type="button" data-testid="loc-day-' + n + '" onclick="localeToggleWorkday(' + n + ')"'
+      + ' aria-pressed="' + (on ? 'true' : 'false') + '"'
+      + ' style="cursor:pointer;font:inherit;border-radius:8px;padding:5px 10px;font-size:var(--fs-2);'
+      + 'border:1px solid ' + (on ? 'var(--ok)' : 'var(--line)') + ';'
+      + 'background:' + (on ? 'var(--ok-tint)' : 'var(--card)') + ';'
+      + 'color:' + (on ? 'var(--ok-2)' : 'var(--grey)') + ';font-weight:' + (on ? 700 : 500) + '">'
+      + DAYFULL[n] + '</button>';
+  }).join('');
+
+  /* ⚠️ The zone list comes from the ENGINE (Intl.supportedValuesOf), not a table we would have to edit twice a
+     year. Where the engine will not supply one, a short list beats an empty select. */
+  var tzCur = (function(){ try { return localStorage.getItem('cb_tz') || ''; } catch(_) { return ''; } })();
+  var tzAll = CBLocale.zones();
+  var tzOpts = [['', 'Follow this device — ' + CBLocale.timezone()]].concat(
+    (tzAll.length ? tzAll : ['Asia/Kolkata','Asia/Dubai','Asia/Riyadh','Europe/London','Europe/Berlin','America/New_York','UTC'])
+      .map(function(z){ return [z, z.split('/').join(' / ')]; }));
+
+  var myCurCode = (typeof SESSION !== 'undefined' && SESSION && SESSION.currency) || 'INR';
   var wi = CBLocale.weekInfo() || {};
   var DAY = { 1:'Mon', 2:'Tue', 3:'Wed', 4:'Thu', 5:'Fri', 6:'Sat', 7:'Sun' };
   var weekend = (wi.weekend || []).map(function(x){ return DAY[x] || x; }).join(' + ') || '—';
 
-  var card = function(inner){ return '<div style="' + _CARD + '">' + inner + '</div>'; };
+  /**
+   * ⭐⭐ PRESENTATION AND LANGUAGE ARE NOW TWO SEPARATE CHOICES, AND THE FIRST BOUNDS THE SECOND.
+   *
+   * Athi, 2026-08-18: *"under locale, we have to split presentation style and languages separately… if the
+   * language and the style contradicts then it will be a problem, so we have to specify, for this style, these
+   * are the languages compatible out of which you can choose say two or three max."*
+   *
+   * ⚠️ Before this the screen offered four language buttons and nine formats as independent lists — 36
+   * combinations, most of which no reader on earth wants. Arabic words with lakh grouping and a Buddhist
+   * calendar was two clicks away and nothing said it was wrong.
+   */
+  var d = CBLocale.describe();
+  var region = CBLocale.region();
+  var chosen = CBLocale.langs();
+  var allowed = CBLocale.allowedLangs();
 
-  return _misHead('Localisation', 'What changes when the reader changes. Standard: BCP 47 + the Unicode locale extension (CLDR).')
+  var regionOpts = [['', 'Not set — show me everything']].concat(
+    Object.keys(CBLocale.REGIONS).map(function (k) {
+      var r = CBLocale.REGIONS[k];
+      return [k, r.name + ' — ' + r.format + ' · ' + r.langs.slice(0, 4).map(function (x) { return CBLocale.langName(x); }).join(', ')
+        + (r.langs.length > 4 ? ' …' : '')];
+    }));
 
-    + card('<label class="fl">Language <span style="font-weight:400;color:var(--grey)">— the words</span></label>'
-        + '<div style="margin:4px 0 6px">' + langBtns + '</div>'
-        + '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5">The navigation is translated so far — the rest of the app is still English.</div>')
+  /**
+   * ⚠️ A LANGUAGE IS A TOGGLE IN AN ORDERED LIST, NOT A RADIO. RFC 4647 calls this a language priority list —
+   * "I read Tamil, then English, then Hindi" — and the ORDER is what decides which version of a catalogue a
+   * reader is shown when several exist. So each chosen language carries its rank, visibly.
+   */
+  var langChips = allowed.map(function (code) {
+    var at = chosen.indexOf(code);
+    var on = at >= 0;
+    var full = !on && chosen.length >= CBLocale.MAX_LANGS;
+    return '<button type="button" data-testid="loc-lang-' + code + '"'
+      + ' onclick="localeToggleLang(' + Q + code + Q + ')"'
+      + ' aria-pressed="' + (on ? 'true' : 'false') + '"'
+      + (full ? ' disabled' : '')
+      + ' style="border:1px solid ' + (on ? 'var(--blue)' : 'var(--line)') + ';'
+      + 'background:' + (on ? 'var(--blue-tint-bg)' : 'var(--card)') + ';'
+      + 'color:' + (on ? 'var(--blue)' : (full ? 'var(--grey-4)' : 'var(--on-card)')) + ';'
+      + 'opacity:' + (full ? '.5' : '1') + ';cursor:' + (full ? 'not-allowed' : 'pointer') + ';'
+      + 'border-radius:9px;padding:5px 11px;font-size:var(--fs-2);font-weight:' + (on ? 700 : 500) + ';margin:0 6px 6px 0">'
+      + (on ? '<b style="font-family:\'Space Mono\',monospace">' + (at + 1) + '</b> ' : '')
+      + esc(CBLocale.langName(code)) + '</button>';
+  }).join('');
 
-    + card('<label class="fl">Number &amp; currency format</label>'
-        + sel('loc-format', FORMATS, cur, 'localeSetFormat')
+  return _misHead('Localisation', 'Presentation and language are separate choices — and content is never converted.')
+
+    /* ── 1 · PRESENTATION ───────────────────────────────────────────────────────────────────────────────── */
+    + card('<label class="fl">Presentation <span style="font-weight:400;color:var(--grey)">— how figures are written</span></label>'
+        + sel('loc-region', regionOpts, region, 'localeSetRegion')
         + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px;line-height:1.55">'
+        + 'A region sets the number, money, date and time conventions <b>and the languages it makes sense to read '
+        + 'in</b>. Choosing one prunes any language it does not admit, rather than leaving a combination that '
+        + 'contradicts itself.<br>'
         + '⚠️ <b>Grouping is not a separate switch, and that is deliberate.</b> Millions or lakhs is a property of '
-        + 'the format itself — CLDR knows India groups 12,34,56,789 and the US groups 123,456,789. Offering it '
-        + 'apart would let you pick a combination no locale on earth uses.</div>')
+        + 'the region itself — CLDR knows India groups 12,34,56,789 and the US groups 123,456,789. Offering it '
+        + 'apart would let you pick a combination no locale on earth uses.'
+        + '</div>')
+
+    + card('<label class="fl">Or a format directly <span style="font-weight:400;color:var(--grey)">— if no region fits</span></label>'
+        + sel('loc-format', FORMATS, cur, 'localeSetFormat'))
+
+    /* ── 2 · LANGUAGES ──────────────────────────────────────────────────────────────────────────────────── */
+    + card('<label class="fl">Languages you read <span style="font-weight:400;color:var(--grey)">— up to ' + CBLocale.MAX_LANGS + ', in order</span></label>'
+        + '<div style="margin:4px 0 6px">' + langChips + '</div>'
+        + '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.55">'
+        + 'The <b>order matters</b>. When a catalogue exists in more than one language you are shown the highest '
+        + 'one on this list that its author actually wrote. This is a <b>language priority list</b> (RFC 4647) — '
+        + 'the same thing your browser sends every website as <code>Accept-Language</code>.'
+        + (region ? '' : '<br>⚠️ No region set, so every language we name is offered. Pick a region above to see only the ones that fit.')
+        + '</div>')
+
+    /* ⚠️⚠️ THE RULE THAT MATTERS MOST ON THIS SCREEN, RAISED FROM A FOOTNOTE TO ITS OWN CARD. Athi, twice:
+       *"the panel and content in the panel, catalogue should stay in the language the origin is, no direct
+       conversion at all."* Everything above chooses BETWEEN versions a human wrote. Nothing here produces text
+       no human wrote, and that boundary is the reason a chit can be a shared record at all. */
+    + '<div style="' + _CARD + ';border-color:var(--warn-tint);background:var(--warn-tint);color:var(--on-card)">'
+    +   '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--warn-2);margin-bottom:5px">Content is never converted</div>'
+    +   '<div style="font-size:var(--fs-2);line-height:1.6">'
+    +   'These settings change the <b>chrome</b> — labels, buttons, and how figures are written. They never touch '
+    +   'what people wrote. A product name, a catalogue entry, a chit subject, a message and a dispute reason stay '
+    +   'in the language their author used.<br>'
+    +   '<b>Choosing a language picks between versions a human wrote — it does not translate anything.</b> '
+    +   'A chit is a shared record, and one that read differently to each party would not be a record.'
+    +   '</div>'
+    + '</div>'
 
     + card('<label class="fl">Numbering system <span style="font-weight:400;color:var(--grey)">— <code>-u-nu-</code></span></label>'
         + sel('loc-nu', NUMERALS, CBLocale.getExt('nu'), 'localeSetNu'))
@@ -1638,10 +1721,51 @@ function localeSettingsHTML(){
 
     + card('<label class="fl">First day of week <span style="font-weight:400;color:var(--grey)">— <code>-u-fw-</code></span></label>'
         + sel('loc-fw', WEEK, CBLocale.getExt('fw'), 'localeSetFw')
-        + '<div style="font-size:var(--fs-1);color:var(--warn-2);margin-top:7px;line-height:1.55">'
-        + '⚠️ <b>Your weekend here is ' + esc(weekend) + '.</b> It is not Saturday and Sunday everywhere — the UAE '
-        + 'weekend is Friday + Saturday, India\'s is Sunday alone. Any due date counted in <i>working</i> days '
-        + 'lands on a different day in Dubai, Mumbai and Berlin.</div>')
+        + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:7px;line-height:1.55">'
+        + 'Which column a calendar starts on. Separate from which days you actually <i>work</i> — that is below.'
+        + '</div>')
+
+    /* ══ WORKING DAYS ═══════════════════════════════════════════════════════════════════════════════════════
+     * ⚠️⚠️ LOAD-BEARING, NOT A PREFERENCE. "Due in three working days" lands on a different DATE depending on
+     * this, and until now the app had no idea. CLDR supplies the region's answer; a business overrides it
+     * because a shop that opens on Sunday is a fact, not an error to be corrected. */
+    + card('<label class="fl">Working days <span style="font-weight:400;color:var(--grey)">— what a due date counts</span></label>'
+        + '<div data-testid="loc-workdays" style="display:flex;gap:5px;flex-wrap:wrap;margin:5px 0 7px">' + dayChips + '</div>'
+        + '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.55">'
+        + (CBLocale.hasWorkdayOverride()
+            ? 'You have set these yourself. <a href="#" onclick="localeResetWorkdays();return false" data-testid="loc-workdays-reset" style="color:var(--blue)">Use the regional default</a> instead.'
+            : 'These come from <b>CLDR</b> for your region — ' + esc(weekend) + ' is the weekend here. Tap a day to override.')
+        + '<br>⚠️ <b>The weekend is not Saturday and Sunday everywhere.</b> Saudi Arabia\'s is Friday + Saturday; '
+        + 'India\'s is Sunday alone; the UAE moved to Saturday + Sunday in 2022. Any due date counted in '
+        + '<i>working</i> days lands on a different day in Riyadh, Mumbai and Berlin.'
+        + '</div>')
+
+    /* ══ TIME ZONE ══════════════════════════════════════════════════════════════════════════════════════════
+     * ⚠️ One immutable event, three different answers to "when did this happen", because every date was rendered
+     * in whatever zone the browser happened to be in. */
+    + card('<label class="fl">Time zone</label>'
+        + sel('loc-tz', tzOpts, tzCur, 'localeSetTz')
+        + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px;line-height:1.55">'
+        + 'Now showing times in <b>' + esc(CBLocale.timezone()) + '</b>. '
+        + 'A chit stamped 19:00 in Dubai reads 20:30 in Mumbai and 16:00 in London — the same instant, three '
+        + 'answers. Leave this on your device unless you want your <i>business\'s</i> clock wherever you are.'
+        + '</div>')
+
+    /* ══ CURRENCY ═══════════════════════════════════════════════════════════════════════════════════════════
+     * ⭐⭐ THE SAME RULE AS LANGUAGE, AND SAYING SO IS THE POINT OF THIS CARD. There is no "show me everything in
+     * rupees", because converting AED 500 to rupees means inventing a rate, a date for that rate, and a number
+     * nobody agreed to — exactly as translating a product name invents words nobody wrote. A price is money in
+     * a stated currency; the reader chooses how DIGITS are grouped, never what the money is. */
+    + card('<label class="fl">Currency</label>'
+        + '<div data-testid="loc-currency" style="font-size:var(--fs-2);line-height:1.6;color:var(--on-card)">'
+        + 'Your business prices in <b>' + esc(myCurCode) + ' ' + esc(CBLocale.symbol(myCurCode)) + '</b>. '
+        + '<span style="color:var(--grey)">Change that in Profile — it is a fact about your business, not about you as a reader.</span>'
+        + '<div style="margin-top:7px">Formatted for you: <b>' + esc(CBLocale.money(123456.5, myCurCode)) + '</b> '
+        + '<span style="color:var(--grey)">· a supplier quoting in USD still shows as ' + esc(CBLocale.money(123456.5, 'USD')) + '</span></div>'
+        + '<div style="margin-top:7px;color:var(--warn-2)">⚠️ <b>Amounts are never converted.</b> Converting a price '
+        + 'would mean inventing an exchange rate and a date for it — a number no party agreed to. You always see '
+        + 'the currency the price was written in.</div>'
+        + '</div>')
 
     /* THE PREVIEW — see the note on this function. Every control above is an abstraction; this is the only place
        the choice becomes visible before it is made. */
@@ -1661,7 +1785,34 @@ function localeSettingsHTML(){
         + 'Product names, chit subjects, message text and dispute reasons stay in the words their author wrote. '
         + '<b>A chit is a shared record</b> — one that read differently to each party would not be a record.</div>');
 }
-function localeSetLang(k){ CBLocale.setLang(k); renderApp(); _capShowDetail(); loadSettings(); }
+/** Choosing a region sets the format AND prunes languages it does not admit — see the note in locale.js. */
+function localeSetTz(v){ CBLocale.setTimezone(v); renderApp(); _capShowDetail(); loadSettings(); }
+/**
+ * ⚠️ THE LAST WORKING DAY CANNOT BE REMOVED. A business with no working days has no due dates at all, and every
+ * SLA calculation would divide by an empty week — a state the UI should refuse rather than the maths discover.
+ */
+function localeToggleWorkday(n){
+  var cur = CBLocale.workdays(), at = cur.indexOf(n);
+  if (at >= 0) { if (cur.length > 1) cur.splice(at, 1); } else cur.push(n);
+  CBLocale.setWorkdays(cur);
+  renderApp(); _capShowDetail(); loadSettings();
+}
+/** Clearing the override returns to CLDR's answer for the region — not to a hardcoded Mon–Fri. */
+function localeResetWorkdays(){ CBLocale.setWorkdays([]); renderApp(); _capShowDetail(); loadSettings(); }
+function localeSetRegion(v){ CBLocale.setRegion(v); renderApp(); _capShowDetail(); loadSettings(); }
+/**
+ * ⚠️ APPEND, DO NOT REPLACE — the list is ORDERED and the order is the feature. Toggling a language on puts it
+ * last (lowest priority); toggling it off closes the gap. Reordering by re-selecting is a smaller, separate
+ * design problem, and pretending a toggle could express rank would have made the order silently arbitrary.
+ * ⚠️ The last remaining language cannot be removed: a reader with no languages matches nothing at all.
+ */
+function localeToggleLang(code){
+  var cur = CBLocale.langs(), at = cur.indexOf(code);
+  if (at >= 0) { if (cur.length > 1) cur.splice(at, 1); }
+  else if (cur.length < CBLocale.MAX_LANGS) cur.push(code);
+  CBLocale.setLangs(cur);
+  renderApp(); _capShowDetail(); loadSettings();
+}
 function localeSetFormat(v){ CBLocale.setLocale(v); renderApp(); _capShowDetail(); loadSettings(); }
 /* One handler shape per subtag — each re-renders so the preview above moves with the choice. */
 function localeSetNu(v){ CBLocale.setExt('nu', v); renderApp(); _capShowDetail(); loadSettings(); }
@@ -1669,9 +1820,6 @@ function localeSetHc(v){ CBLocale.setExt('hc', v); renderApp(); _capShowDetail()
 function localeSetCa(v){ CBLocale.setExt('ca', v); renderApp(); _capShowDetail(); loadSettings(); }
 function localeSetFw(v){ CBLocale.setExt('fw', v); renderApp(); _capShowDetail(); loadSettings(); }
 
-/* Both re-render the whole screen, so the preview above updates with the choice — which is the point of it. */
-function localeSetLang(k){ CBLocale.setLang(k); UI._set = UI._set; renderApp(); _capShowDetail(); loadSettings(); }
-function localeSetFormat(v){ CBLocale.setLocale(v); renderApp(); _capShowDetail(); loadSettings(); }
 
 function paintSettings(s, _daOpts){ const h=document.getElementById("setbody"); if(!h)return;
   { const k = setSec();

@@ -46,6 +46,56 @@
      the fifth without saying why. */
   var RTL = { ar: 1, he: 1, fa: 1, ur: 1, ps: 1, sd: 1, ug: 1, yi: 1, dv: 1 };
 
+  /**
+   * ⭐⭐ PRESENTATION AND LANGUAGE ARE TWO CHOICES, AND ONE CONSTRAINS THE OTHER.
+   *
+   * Athi, 2026-08-18: *"under locale, we have to split presentation style and languages separately… if the
+   * language and the style contradicts then it will be a problem, so we have to specify, for this style, these
+   * are the languages compatible out of which you can choose say two or three max."*
+   * *"example, india, left to right, english, tamil and hindi"* · *"uae, arabic, right to left, couple of
+   * languages."*
+   *
+   * ⚠️ THE GAP THIS CLOSES. Language and format were deliberately independent — an Indian trader may want
+   * English words with lakh grouping. But independent meant UNBOUNDED: nothing stopped Arabic words with Indian
+   * formatting and a Buddhist calendar, a combination no reader on earth wants and no CLDR locale describes.
+   * Freedom without a guardrail is not flexibility, it is a way to produce a screen nobody can read.
+   *
+   * ⚠️ REGION → LANGUAGES IS CURATED, AND IT HAS TO BE. ECMA-402 exposes direction (getTextInfo) and script
+   * (maximize), but NOT CLDR's territoryInfo — the table of which languages are actually used in a territory.
+   * That data exists in CLDR and is copied here rather than invented; when `Intl` exposes it, this table should
+   * be deleted rather than maintained.
+   *
+   * ⚠️⚠️ AND ONE CORRECTION TO THE BRIEF, WHICH MEASUREMENT FORCED. A region cannot carry a single DIRECTION.
+   * The UAE list has to include English, because UAE businesses trade in it — and English is left-to-right while
+   * Arabic is right-to-left. Urdu, also used there, is right-to-left again. So direction is a property of the
+   * LANGUAGE YOU ARE READING (strictly, of its script), not of the region:
+   *     ar → ar-Arab-AE → rtl        ur → ur-Arab-PK → rtl        en → en-Latn-US → ltr
+   * Modelling direction on the region would have made "UAE + English" render right-to-left, which is exactly the
+   * contradiction this feature exists to prevent — arriving from the fix rather than the bug.
+   */
+  var REGIONS = {
+    IN: { name: 'India',                format: 'en-IN', langs: ['en', 'hi', 'ta', 'te', 'bn', 'mr', 'gu', 'kn', 'ml', 'pa'] },
+    AE: { name: 'United Arab Emirates', format: 'ar-AE', langs: ['ar', 'en', 'hi', 'ur', 'ml'] },
+    SA: { name: 'Saudi Arabia',         format: 'ar-SA', langs: ['ar', 'en', 'ur'] },
+    GB: { name: 'United Kingdom',       format: 'en-GB', langs: ['en'] },
+    US: { name: 'United States',        format: 'en-US', langs: ['en', 'es'] },
+    DE: { name: 'Germany',              format: 'de-DE', langs: ['de', 'en', 'tr'] },
+    FR: { name: 'France',               format: 'fr-FR', langs: ['fr', 'en', 'ar'] },
+    SG: { name: 'Singapore',            format: 'en-SG', langs: ['en', 'zh', 'ms', 'ta'] },
+    JP: { name: 'Japan',                format: 'ja-JP', langs: ['ja', 'en'] },
+    LK: { name: 'Sri Lanka',            format: 'si-LK', langs: ['si', 'ta', 'en'] }
+  };
+
+  /** How many languages a reader may declare. More than three is a list nobody maintains and nothing matches. */
+  var MAX_LANGS = 3;
+
+  var LANG_NAMES = {
+    en: 'English', hi: 'हिन्दी', ta: 'தமிழ்', te: 'తెలుగు', bn: 'বাংলা', mr: 'मराठी', gu: 'ગુજરાતી',
+    kn: 'ಕನ್ನಡ', ml: 'മലയാളം', pa: 'ਪੰਜਾਬੀ', ar: 'العربية', ur: 'اردو', fr: 'Français', de: 'Deutsch',
+    es: 'Español', tr: 'Türkçe', zh: '中文', ms: 'Bahasa Melayu', ja: '日本語', si: 'සිංහල'
+  };
+
+
   /* ⚠️ THE OLD DEFAULT, PRESERVED EXACTLY. Nothing about a reader who has chosen nothing may change today —
      this layer adds a capability, it does not silently re-format every existing user's screens. */
   var FALLBACK = 'en-IN';
@@ -115,6 +165,104 @@
       try { new Intl.NumberFormat(t); return t; } catch (_) { return base; }
     },
     setExt: function (k, v) { set('cb_' + k, v || ''); L.apply(); L.push(); },
+
+    /* ══ REGION · the presentation style ══════════════════════════════════════════════════════════════════ */
+
+    REGIONS: REGIONS,
+    MAX_LANGS: MAX_LANGS,
+    langName: function (code) { return LANG_NAMES[code] || code; },
+
+    region: function () { return get('cb_region', ''); },
+    regionInfo: function () { return REGIONS[L.region()] || null; },
+
+    /**
+     * Choosing a region sets the FORMAT and prunes any declared language the region does not admit.
+     *
+     * ⚠️ IT PRUNES RATHER THAN REFUSING. Someone moving their business from India to the UAE should not be told
+     * "your language list is invalid, fix it first" — they should be moved to the UAE's conventions with the
+     * languages that still make sense kept, and the ones that no longer do quietly dropped. If nothing survives,
+     * the region's own first language is the honest fallback rather than an empty list.
+     */
+    setRegion: function (code) {
+      var r = REGIONS[code];
+      set('cb_region', r ? code : '');
+      if (r) {
+        set('cb_locale', r.format);
+        var kept = L.langs().filter(function (x) { return r.langs.indexOf(x) >= 0; });
+        L.setLangs(kept.length ? kept : [r.langs[0]]);
+      }
+      L.apply();
+      L.push();
+    },
+
+    /* ══ LANGUAGES · an ORDERED priority list, which is RFC 4647's model ═══════════════════════════════════ */
+
+    /**
+     * ⚠️ A LIST, NOT A SETTING, and the order carries meaning. RFC 4647 calls this a *language priority list*:
+     * "I read Tamil, then English, then Hindi." That is precisely what is needed to decide which of several
+     * authored versions of a catalogue to show someone — and it is a standard, so it needs no invention here.
+     */
+    langs: function () {
+      var raw = get('cb_langs', '');
+      var out = raw ? raw.split(',').filter(Boolean) : [];
+      if (!out.length) { var one = get('cb_lang', ''); if (one) out = [one]; }
+      return out.length ? out.slice(0, MAX_LANGS) : ['en'];
+    },
+
+    /**
+     * ⚠️ cb_lang IS KEPT IN STEP, deliberately. Every existing screen reads it through lang(), and a migration
+     * that required all of them to learn about lists on the same day would be a rewrite, not a feature.
+     */
+    setLangs: function (arr) {
+      var list = (arr || []).filter(Boolean).slice(0, MAX_LANGS);
+      if (!list.length) list = ['en'];
+      set('cb_langs', list.join(','));
+      set('cb_lang', list[0]);
+      L.apply();
+      L.push();
+    },
+
+    /** Languages this reader may choose — the region's set, or everything we name if no region is set. */
+    allowedLangs: function () {
+      var r = L.regionInfo();
+      return r ? r.langs.slice() : Object.keys(LANG_NAMES);
+    },
+
+    /**
+     * ⭐⭐ MATCH — the function that makes "no direct conversion at all" enforceable rather than a promise.
+     *
+     * Athi: *"the panel and content in the panel, catalogue should stay in the language the origin is, no direct
+     * conversion at all."*
+     *
+     * Given the languages a piece of content ACTUALLY EXISTS IN, this returns which one to show — the reader's
+     * highest-priority language that the author actually wrote. It never returns a language the author did not
+     * write, and it returns null rather than guessing when none of them match.
+     *
+     * ⚠️ NULL MEANS "SHOW IT AS AUTHORED", NOT "TRANSLATE IT". A chit is a SHARED record; one that read
+     * differently to each party would not be a record. Matching picks between versions a human wrote. Anything
+     * that produced text no human wrote would be a different feature with a different risk, and this is the
+     * seam where that line is drawn.
+     *
+     * RFC 4647 Lookup: try the full tag, then progressively truncate ("pt-BR" matches content in "pt").
+     */
+    match: function (available) {
+      var have = (available || []).filter(Boolean);
+      if (!have.length) return null;
+      var want = L.langs();
+      for (var i = 0; i < want.length; i++) {
+        var tag = String(want[i]);
+        while (tag) {
+          for (var j = 0; j < have.length; j++) {
+            if (String(have[j]).toLowerCase() === tag.toLowerCase()) return have[j];
+            if (String(have[j]).toLowerCase().split('-')[0] === tag.toLowerCase()) return have[j];
+          }
+          var cut = tag.lastIndexOf('-');
+          tag = cut > 0 ? tag.slice(0, cut) : '';
+        }
+      }
+      return null;
+    },
+
     getExt: function (k) { return get('cb_' + k, ''); },
 
     /* ══ THE CHOICE BELONGS TO THE PERSON, NOT THE BROWSER (b165) ═════════════════════════════════════════════
@@ -128,7 +276,7 @@
      * call, so the first paint is already in the reader's language — there is no flash of English. The server
      * value arrives later and only matters when it DIFFERS, which is exactly the new-device case.
      */
-    KEYS: ['lang', 'locale', 'nu', 'hc', 'ca', 'fw'],
+    KEYS: ['lang', 'langs', 'region', 'locale', 'nu', 'hc', 'ca', 'fw', 'tz', 'workdays'],
 
     /** Read the local answer as the object the API stores. Absent values stay absent — '' means "use default". */
     prefs: function () {
@@ -174,7 +322,7 @@
 
     /**
      * ⚠️⚠️ THE WEEKEND IS NOT SATURDAY AND SUNDAY, and for a TRADE platform that is load-bearing rather than
-     * trivia. CLDR: `ar-AE` weekend is [6,7] — Friday and Saturday. `en-IN` is [7] — Sunday only. So "due in
+     * trivia. CLDR: `ar-SA` weekend is [5,6] — Friday and Saturday. `en-IN` is [7] — Sunday ALONE. So "due in
      * three working days" lands on a different date in Dubai, Mumbai and Berlin, and any SLA, due date or
      * ageing calculation that assumes Sat/Sun is quietly wrong for most of the market this product is aimed at.
      * Exposed here so the answer comes from CLDR rather than from whoever writes the next date helper.
@@ -187,6 +335,67 @@
      * ⚠️ Returns null where neither exists rather than guessing Sat/Sun — a wrong weekend is worse than no
      * weekend, because a caller can test for null and cannot test for "confidently wrong".
      */
+    /* ══ TIME ZONE ════════════════════════════════════════════════════════════════════════════════════════
+     *
+     * ⚠️ THE LAYER DID NOT OWN THIS AND EVERY DATE ON EVERY SCREEN DEPENDED ON IT. Dates were rendered in
+     * whatever zone the BROWSER is in, so a chit stamped 19:00 in Dubai reads 20:30 to the Mumbai office and
+     * 16:00 in London — three different answers to "when did this happen" for one immutable event. On a trade
+     * platform where a cut-off time decides whether a shipment made today's sailing, that is not cosmetic.
+     *
+     * ⚠️ THE DEFAULT IS THE DEVICE, AND STAYS THAT WAY. Someone travelling should see local time without being
+     * asked; the override exists for the opposite case — a person who wants their BUSINESS's zone wherever they
+     * happen to be, which is the common one for an owner reading a shop's records from abroad.
+     */
+    timezone: function () {
+      var t = get('cb_tz', '');
+      if (t) return t;
+      try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'; } catch (_) { return 'UTC'; }
+    },
+    setTimezone: function (v) { set('cb_tz', v || ''); L.apply(); L.push(); },
+    /** Every zone this engine knows — offered rather than a hand-kept list that goes stale twice a year. */
+    zones: function () {
+      try { if (typeof Intl.supportedValuesOf === 'function') return Intl.supportedValuesOf('timeZone'); } catch (_) {}
+      return [];
+    },
+
+    /* ══ WORKING DAYS ═════════════════════════════════════════════════════════════════════════════════════
+     *
+     * ⚠️⚠️ LOAD-BEARING, NOT A PREFERENCE. "Due in three working days" lands on a different date in Dubai,
+     * Mumbai and Berlin, and the app had no idea. ⚠️ AND I HAD IT WRONG IN PROSE, which is the argument for
+     * asking CLDR rather than reasoning about it: the UAE moved to a Saturday–Sunday weekend in 2022, so
+     * Friday+Saturday is SAUDI ARABIA. CLDR knew; three of my own comments did not. India's weekend is
+     * Sunday alone, Germany's is Saturday+Sunday. Any SLA, due date or ageing calculation that assumed Sat/Sun
+     * was quietly wrong for most of the market this product is aimed at.
+     *
+     * ⚠️ AND THE REGION IS ONLY THE DEFAULT. A shop that opens on Sunday is not an error to be corrected — it is
+     * a fact about that business, and it is why this is an OVERRIDE over CLDR rather than a lookup. Clearing the
+     * override returns to the region's answer rather than to a hardcoded guess.
+     *
+     * Days are ISO-8601 numbers: 1 = Monday … 7 = Sunday, matching what weekInfo returns.
+     */
+    workdays: function () {
+      var raw = get('cb_workdays', '');
+      if (raw) return raw.split(',').map(Number).filter(function (n) { return n >= 1 && n <= 7; });
+      var wi = L.weekInfo() || {};
+      var off = wi.weekend || [6, 7];
+      var out = [];
+      for (var d = 1; d <= 7; d++) if (off.indexOf(d) < 0) out.push(d);
+      return out;
+    },
+    /** Passing an empty list CLEARS the override — back to whatever CLDR says for this region. */
+    setWorkdays: function (arr) {
+      var list = (arr || []).map(Number).filter(function (n) { return n >= 1 && n <= 7; }).sort();
+      set('cb_workdays', list.length ? list.join(',') : '');
+      L.apply(); L.push();
+    },
+    hasWorkdayOverride: function () { return !!get('cb_workdays', ''); },
+    /** ⚠️ getDay() is 0=Sunday; ISO is 7=Sunday. Getting that wrong moves every due date by a day. */
+    isWorkday: function (d) {
+      var dt = (d instanceof Date) ? d : new Date(d);
+      var iso = dt.getDay() === 0 ? 7 : dt.getDay();
+      return L.workdays().indexOf(iso) >= 0;
+    },
+
     weekInfo: function () {
       try {
         var l = new Intl.Locale(L.locale());
@@ -201,7 +410,24 @@
     },
 
     /** 'rtl' or 'ltr' — derived from the language, never from the locale. */
-    dir: function () { return RTL[String(L.lang()).slice(0, 2)] ? 'rtl' : 'ltr'; },
+    /**
+     * ⚠️ DIRECTION COMES FROM THE SCRIPT, AND Intl KNOWS THE SCRIPT. `new Intl.Locale('ur').maximize()` gives
+     * ur-Arab-PK, and getTextInfo() on that says rtl — measured, not assumed. The hand-kept RTL list below is
+     * now only a fallback for engines without getTextInfo, and a list is exactly the thing that goes stale: it
+     * had nine entries and there are more right-to-left languages than that.
+     *
+     * ⚠️ AND IT IS A PROPERTY OF THE LANGUAGE, NOT THE REGION — which is why a UAE reader gets right-to-left in
+     * Arabic and left-to-right the moment they switch to English, without changing region.
+     */
+    dir: function () {
+      var lang = String(L.lang() || 'en');
+      try {
+        var m = new Intl.Locale(lang).maximize();
+        var ti = (typeof m.getTextInfo === 'function') ? m.getTextInfo() : m.textInfo;
+        if (ti && ti.direction) return ti.direction;
+      } catch (_) {}
+      return RTL[lang.slice(0, 2)] ? 'rtl' : 'ltr';
+    },
 
     setLang: function (v) { set('cb_lang', v); L.apply(); L.push(); },
     setLocale: function (v) { set('cb_locale', v); L.apply(); L.push(); },
@@ -221,6 +447,23 @@
      * ⚠️ CURRENCY FROM THE MONEY, LOCALE FROM THE READER. The whole point of the file.
      * `narrowSymbol` keeps "$1,234" rather than "US$1,234" where the locale allows it.
      */
+    /**
+     * The currency SYMBOL alone, in the reader's locale — extracted from Intl rather than kept in a table.
+     *
+     * ⚠️ THIS EXISTED OUTSIDE THE LAYER, formatting with `undefined` as its locale, which means "whatever this
+     * browser's OS is set to" — not "what this reader chose". A Tamil reader on a US-configured laptop got the
+     * US answer for a symbol the layer was supposed to own. Falling back to the CODE is correct, not a failure:
+     * AED genuinely displays as "AED" in most locales.
+     */
+    symbol: function (code) {
+      var c = code || 'INR';
+      try {
+        var pt = new Intl.NumberFormat(L.tag(), { style: 'currency', currency: c, currencyDisplay: 'narrowSymbol' })
+          .formatToParts(0).find(function (x) { return x.type === 'currency'; });
+        return (pt && pt.value) || c;
+      } catch (_) { return c; }
+    },
+
     money: function (amount, code) {
       var n = Number(amount || 0), c = code || 'INR', loc = L.tag();
       try { return new Intl.NumberFormat(loc, { style: 'currency', currency: c, currencyDisplay: 'narrowSymbol' }).format(n); }
@@ -235,13 +478,31 @@
       catch (_) { return String(n); }
     },
 
+    /**
+     * ⚠️⚠️ EVERY DATE AND TIME NOW CARRIES THE CHOSEN ZONE, and until this they carried the BROWSER'S. A chit
+     * stamped 19:00 in Dubai read 20:30 to the Mumbai office and 16:00 in London — three different answers to
+     * "when did this happen" for one immutable event. On a platform where a cut-off decides whether a shipment
+     * made today's sailing, that is not cosmetic; it is the record disagreeing with itself.
+     *
+     * ⚠️ zoned() MERGES rather than replaces, so a caller passing its own options still gets the zone. Threading
+     * it only through the defaults would have left every call site that customises the format — which is most of
+     * the interesting ones — silently rendering in the wrong zone.
+     */
+    zoned: function (opts) {
+      var o = {}; for (var k in (opts || {})) if (Object.prototype.hasOwnProperty.call(opts, k)) o[k] = opts[k];
+      try { if (!o.timeZone) o.timeZone = L.timezone(); } catch (_) {}
+      return o;
+    },
+
+    /** ⚠️ Every formatter below passes the chosen ZONE. Adding the setting without threading it through here
+        would have produced a screen that says "Asia/Dubai" above dates still rendered in the browser's zone. */
     time: function (ts) {
-      try { return new Date(ts).toLocaleTimeString(L.tag(), { hour: '2-digit', minute: '2-digit' }); }
+      try { return new Date(ts).toLocaleTimeString(L.tag(), L.zoned({ hour: '2-digit', minute: '2-digit' })); }
       catch (_) { return ''; }
     },
 
     date: function (ts, opts) {
-      try { return new Date(ts).toLocaleDateString(L.tag(), opts || { day: '2-digit', month: 'short', year: 'numeric' }); }
+      try { return new Date(ts).toLocaleDateString(L.tag(), L.zoned(opts || { day: '2-digit', month: 'short', year: 'numeric' })); }
       catch (_) { return ''; }
     },
 
@@ -249,7 +510,7 @@
     datetime: function (ts, opts) {
       try {
         return new Date(ts).toLocaleString(L.tag(),
-          opts || { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+          L.zoned(opts || { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }));
       } catch (_) { return ''; }
     },
 

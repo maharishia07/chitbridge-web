@@ -1163,7 +1163,7 @@ function _netAvailBody(){
       // inventing a rate nobody agreed.
       + (r.price !== null && r.price !== undefined
           ? '<span style="font-size:var(--fs-2);font-weight:700">' + esc(r.price_currency || '') + ' '
-            + Number(r.price).toLocaleString(undefined, { maximumFractionDigits: 2 }) + '</span>'
+            + CBLocale.number(Number(r.price), { maximumFractionDigits: 2 }) + '</span>'
           : '<span style="font-size:11.5px;color:var(--grey)">no price set</span>')
       // The provenance of the number, always. A quantity without it is not an answer.
       + '<span style="margin-inline-start:auto;font-size:var(--fs-1);font-weight:800;letter-spacing:.03em;border-radius:5px;padding:1px 6px;'

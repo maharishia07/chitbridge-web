@@ -89,9 +89,13 @@ test.describe('Localisation · the layer and its screen', () => {
       return { ae: ae && ae.weekend, inw: inw && inw.weekend };
     });
     /* ⚠️ LOAD-BEARING FOR A TRADE PLATFORM: "due in three working days" lands on a different date in Dubai and
-       Mumbai. UAE weekend is Fri+Sat; India's is Sunday alone. Any SLA that assumes Sat/Sun is wrong for most
+       Mumbai. Saudi Arabia's weekend is Fri+Sat; India's is Sunday ALONE; the UAE moved to Sat+Sun in 2022.
+       Any SLA that assumes Sat/Sun is wrong for most
        of the market this product is aimed at. */
-    expect(w.ae, 'the UAE weekend is Friday and Saturday').toEqual([6, 7]);
+    /* ⚠️ The ASSERTION was right and its LABEL was wrong — [6,7] is Saturday+Sunday. The UAE moved to a
+       Sat–Sun weekend in 2022; Fri+Sat is Saudi Arabia. A green test with a false description is worse than a
+       red one, because it teaches the next reader the wrong fact with the authority of a passing check. */
+    expect(w.ae, 'the UAE weekend is Saturday and Sunday (it changed in 2022)').toEqual([6, 7]);
     expect(w.inw, "India's weekend is Sunday alone").toEqual([7]);
   });
 
