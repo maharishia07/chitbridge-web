@@ -124,8 +124,20 @@
      * ageing calculation that assumes Sat/Sun is quietly wrong for most of the market this product is aimed at.
      * Exposed here so the answer comes from CLDR rather than from whoever writes the next date helper.
      */
+    /**
+     * ⚠️ TWO SHAPES, AND THE ONE I WROTE FIRST WORKED ONLY IN NODE. The proposal moved from a GETTER
+     * (`locale.weekInfo`) to a METHOD (`locale.getWeekInfo()`) — Node still exposes the property, Chromium
+     * exposes only the method. My spec passed against Node and failed in the browser, which is the right way
+     * round to find it, and the reason the assertion ran in a real browser rather than a harness.
+     * ⚠️ Returns null where neither exists rather than guessing Sat/Sun — a wrong weekend is worse than no
+     * weekend, because a caller can test for null and cannot test for "confidently wrong".
+     */
     weekInfo: function () {
-      try { return new Intl.Locale(L.locale()).weekInfo || null; } catch (_) { return null; }
+      try {
+        var l = new Intl.Locale(L.locale());
+        if (typeof l.getWeekInfo === 'function') return l.getWeekInfo() || null;
+        return l.weekInfo || null;
+      } catch (_) { return null; }
     },
     isWeekend: function (d) {
       var w = L.weekInfo(); if (!w || !w.weekend) return false;
