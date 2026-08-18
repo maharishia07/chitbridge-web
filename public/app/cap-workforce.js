@@ -418,20 +418,26 @@ function acResetPin(id){ const x=(UI.acts||[]).find(a=>a.id===id)||{};
     try{ const r=await api("actorPinReset",{params:{id}}); const otp=(r&&(r.otp||r.dev_otp))||''; const lf=(r&&r.login_format)||acLogin(x); actorInviteModal('🔑 PIN reset — '+(x.name||'co-assist'), x.name, lf, otp); }catch(e){ toast(MSG.fail("reset the PIN", e)); }
   }); }
 function acStatus(id, action){ const x=(UI.acts||[]).find(a=>a.id===id); if(!x)return;
-  const routed = x.load>0 ? ' Their '+x.load+' active task(s) return to the pool.' : '';
+  const routed = x.load>0 ? ' ' + txn('Their {count} active task returns to the pool.',
+                                    'Their {count} active tasks return to the pool.', x.load) : '';
   const run=async function(){ const body={action}; if(x.load>0)body.task_action='pool'; if(action==='remove')body.confirm='REMOVE';
     try{ const r=await api("actorStatus",{params:{id},body}); UI.acSel=null; UI.acDet=null; UI.mdetail=false; await loadCoassists();
       if(action==='reactivate'){ const otp=(r&&(r.otp||r.dev_otp))||''; const lf=(r&&r.login_format)||acLogin(x); actorInviteModal('↩ '+(x.name||'co-assist')+' reactivated', x.name, lf, otp); }
       else { const parts=[];
         if(r&&r.tasks_routed>0) parts.push(r.tasks_routed+' task'+(r.tasks_routed>1?'s':'')+(body.task_action==='actor'?' reassigned to a colleague':' returned to the pool'));
         if(r&&r.had_cover) parts.push('own leave-cover cleared');
-        if(r&&r.covers_removed>0) parts.push('was leave-cover for '+r.covers_removed+' — those cover links removed');
+        if(r&&r.covers_removed>0) parts.push(txn('was leave-cover for {count} — that cover link removed',
+                                         'was leave-cover for {count} — those cover links removed', r.covers_removed));
         if(r&&r.was_default_assignee) parts.push('was the default auto-assign assignee — cleared');
         if(r&&r.disputes_cleared>0) parts.push(r.disputes_cleared+' dispute hand-off'+(r.disputes_cleared>1?'s':'')+' cleared');
         actorCleanupModal(action, x.name, parts); } }
     catch(e){ toast(MSG.fail("update the co-assist", e)); } };
-  if(action==='deactivate') confirmAsk('Deactivate co-assist', 'Deactivate <b>'+esc(x.name)+'</b>? They can no longer sign in until reactivated.'+esc(routed), 'Deactivate', run, true);
-  else if(action==='remove') confirmAsk('Remove permanently', 'Permanently remove <b>'+esc(x.name)+'</b>? This cannot be undone.'+esc(routed), 'Remove', run, true);
+  if(action==='deactivate') confirmAsk('Deactivate co-assist',
+  txf('Deactivate <b>{name}</b>? They can no longer sign in until reactivated.', { name: esc(x.name) }) + esc(routed),
+  'Deactivate', run, true);
+  else if(action==='remove') confirmAsk('Remove permanently',
+  txf('Permanently remove <b>{name}</b>? This cannot be undone.', { name: esc(x.name) }) + esc(routed),
+  'Remove', run, true);
   else run(); }
 async function saveActor(id){ const err=document.getElementById("ac_ederr"); if(err)err.textContent="";
   const body={ display_name:val("ac_ename")||undefined, actor_role:val("ac_erole")||null, max_tasks:(+val("ac_emax")||undefined), phone:val("ac_ephone")||null, hat:val("ac_ehat")||undefined };

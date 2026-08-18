@@ -1861,7 +1861,12 @@ function cbRenderCatalogue(v){
   var layers='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:11px">'
     +'<div style="flex:1;min-width:180px;background:var(--blue-tint-bg);border:1px solid var(--blue-tint-line);border-radius:9px;padding:9px 11px;color:var(--on-card)"><div style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);text-transform:uppercase;letter-spacing:.4px">Shared · minted once</div><div style="font-size:11.5px;color:var(--ink-2);margin-top:3px">Schema + design + colour + images. Inherited by <b>reference</b> — Beta stores no copy.</div></div>'
     +'<div style="flex:1;min-width:180px;background:var(--ok-tint);border:1px solid #cfe6cf;border-radius:9px;padding:9px 11px;color:var(--on-card)"><div style="font-size:var(--fs-1);font-weight:800;color:var(--ok-2);text-transform:uppercase;letter-spacing:.4px">Beta fills · per-entity</div><div style="font-size:11.5px;color:var(--ink-2);margin-top:3px">Only commercials: '+((v.commercials_fields||[]).map(function(f){return esc(f.label);}).join(' · '))+'.</div></div></div>';
-  var counts=v.counts?'<div style="font-size:11.5px;color:var(--grey-2);margin-bottom:9px">'+v.counts.finishes+' finishes · '+v.counts.combinations+' combinations · '+v.counts.colours+' colours · '+v.counts.fields+' schema fields</div>':'';
+  var counts=v.counts?'<div style="font-size:11.5px;color:var(--grey-2);margin-bottom:9px">'
+  + [ txn('{count} finish',       '{count} finishes',      v.counts.finishes),
+      txn('{count} combination',  '{count} combinations',  v.counts.combinations),
+      txn('{count} colour',       '{count} colours',       v.counts.colours),
+      txn('{count} schema field', '{count} schema fields', v.counts.fields) ].join(' · ')
+  + '</div>':'';
   var _u=_cardUnit(v); var items=(v.finishes||v.items||[]).map(function(it,i){return _finishCard(it,i,_u);}).join('');
   var adopt='<div style="display:flex;gap:8px;margin-top:4px"><button class="composebtn pri" onclick="cbAdopt()">Adopt &amp; save for my entity</button><button class="composebtn" onclick="cbViewMine()">View saved</button></div><div id="cb_result" style="margin-top:8px"></div>';
   var ab=v.acted_by||{}; var prov='<div style="margin-top:8px;font-size:var(--fs-1);color:var(--grey-4);font-family:\'Space Mono\'">stamped · '+esc(ab.deputy||'ai:catalogue-structure')+' · '+(ab.model?('intro by '+esc(ab.model)):'deterministic only (no model key)')+' · inherits by reference</div>';
@@ -3198,7 +3203,7 @@ function ensureCap(name){
   return _capPromise[name] = new Promise(function(resolve, reject){
     var s=document.createElement('script'); s.src='/app/cap-'+name+'.js'; s.async=false;
     s.onload=function(){ CAP_LOADED[name]=true; resolve(); };
-    s.onerror=function(){ delete _capPromise[name]; reject(new Error('Could not load the '+name+' capability.')); };
+    s.onerror=function(){ delete _capPromise[name]; reject(new Error(txf('Could not load the {capability} capability.', { capability: name }))); };
     document.head.appendChild(s);
   });
 }
@@ -4331,7 +4336,8 @@ async function ccAiFill(){
     rows.forEach(function(li){ if(CC.items.length>=cap) return; CC.items.push({ particulars:String(li.particulars||li.description||'item'), unit:String(li.unit||'unit'), price:+li.rate||+li.price||0, qty:Math.max(0,+li.qty||+li.quantity||0) }); });
     if(el)el.value='';
     ccRenderItems();
-    if(typeof toast==='function')toast('AI filled '+rows.length+' line item'+(rows.length>1?'s':'')+' — review, edit, then send ✓');
+    if(typeof toast==='function')toast(txn('AI filled {count} line item — review, edit, then send ✓',
+          'AI filled {count} line items — review, edit, then send ✓', rows.length));
   }catch(e){ if(err)err.textContent=(e&&e.message)||'AI fill failed'; }
   finally{ var b2=document.getElementById('cc_aibtn'); if(b2){ b2.disabled=false; b2.textContent='✨ Fill'; } }
 }
@@ -4506,7 +4512,8 @@ async function cbFreezeTerms(v){
      * which is the worst possible moment. Better to refuse now and say which one.
      */
     if (r && (r.missing || []).length) {
-      throw new Error('A term this chit cites could not be read (' + r.missing.length + '). Nothing was sent.');
+      throw new Error(txf('A term this chit cites could not be read ({count}). Nothing was sent.',
+                    { count: r.missing.length }));
     }
     return (r && r.frozen && r.frozen.length) ? { frozen_terms: r.frozen, frozen_at: r.frozen_at } : null;
   } catch (e) {
@@ -4543,7 +4550,7 @@ async function sendChit(v){
         : {}),
       ...(v.self_copy?{self_copy:v.self_copy}:{})}});
     const _newId=r&&r.chit_id;
-    if(_newId && (v.files||[]).length){ busyShow('Attaching files…'); for(const f of v.files){ try{ await attUpload(_newId, f); }catch(e){ toast('Attachment "'+f.name+'" failed.'); } } }
+    if(_newId && (v.files||[]).length){ busyShow('Attaching files…'); for(const f of v.files){ try{ await attUpload(_newId, f); }catch(e){ toast(txf('Attachment "{file}" failed.', { file: f.name })); } } }
     // Per-LINE attachments, addressed by the line's index on the chit — so a file stays with the line it evidences.
     const _lines=v.itemFiles||[];
     if(_newId){ for(let _li=0;_li<_lines.length;_li++){ const _it=_lines[_li]; if(_it&&_it.files&&_it.files.length){ busyShow('Attaching files…'); for(const f of _it.files){ try{ await attUpload(_newId, f, {line_index:_li}); }catch(e){ toast('Attachment "'+f.name+'" failed.'); } } } } }
@@ -5450,7 +5457,9 @@ function supStepDetails(x){
     + '<label class="fl">Note</label>'
     + '<input class="inp" data-testid="sup-note" value="'+esc(o.note)+'" placeholder="instructions" oninput="UI._supOrder.note=this.value">'
     + '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 12px;font-size:var(--fs-2);color:var(--warn-3);margin:10px 0">'
-    + 'Asked for, not agreed — '+esc(supName(x))+' confirms the date and the price.</div>';
+    + txf('Asked for, not agreed — {supplier} confirms the date and the price.',
+      { supplier: esc(supName(x)) })
++ '</div>';
 }
 function supStepReview(x){
   var o=supOrderState(), c=UI._supCart, T=c?c.total():{amount:0}, sel=c?c.selected():[];
@@ -5732,7 +5741,9 @@ async function viewSupplierPassport(bridge, name){
     }).join('');
     body.innerHTML =
         '<div style="background:var(--blue-tint);border:1px solid #d6e2f5;border-radius:9px;padding:9px 12px;font-size:var(--fs-2);margin-bottom:11px;color:var(--on-card)">'
-      + 'This is <b>'+label+'</b>&rsquo;s readiness — the supplier you are looking at. <b>Not yours.</b> '
+      + txf('This is <b>{supplier}</b>&rsquo;s readiness — the supplier you are looking at. <b>Not yours.</b>',
+      { supplier: label })
++ ' '
       + '<span style="color:var(--grey)">User ID '+esc(sup.bridge_id||bridge)+'</span></div>'
       + '<div style="display:flex;gap:10px;align-items:center;margin-bottom:12px">'
       + '<div style="width:38px;height:38px;border-radius:50%;background:'+(ready?'var(--ok-3)':'var(--warn-2)')+';color:#fff;display:grid;place-items:center;font-size:18px">'+(ready?'✓':'!')+'</div>'
@@ -6042,7 +6053,7 @@ async function prodCategoriseApply(){
   const err=document.getElementById('bulk_err');
   if(!B.add.size && !B.remove.size){ if(err) err.textContent='Pick at least one category to attach or remove.'; return; }
   closeModal();
-  showBusy('Categorising '+B.ids.length+' product'+(B.ids.length===1?'':'s')+'…');
+  showBusy(txn('Categorising {count} product…', 'Categorising {count} products…', B.ids.length));
   let ok=0, failed=0;
   try{
     for(const id of B.ids){
@@ -6385,7 +6396,13 @@ async function _vSave(btn){
        cap-catsetup is lazily loaded — this modal opens from the catalogue screen too, where it is not there. */
     if (typeof catsetFaceSet === 'function') catsetFaceSet(face);
     if(out) out.innerHTML = '<div style="font-size:var(--fs-2);color:var(--ok-2)">Saved. '
-      + (group ? 'Lines sharing the same <b>'+esc(group)+'</b> now show as one product'+(options.length?', told apart by <b>'+options.map(esc).join(', ')+'</b>':'')+'.' : 'Every line is its own product.')
+      + (group
+    ? (options.length
+        ? txf('Lines sharing the same <b>{group}</b> now show as one product, told apart by <b>{options}</b>.',
+              { group: esc(group), options: options.map(esc).join(', ') })
+        : txf('Lines sharing the same <b>{group}</b> now show as one product.',
+              { group: esc(group) }))
+    : tx('Every line is its own product.'))
       + '</div>';
     if(typeof toast === 'function') toast('Variants saved ✓');
   }catch(e){
@@ -6790,7 +6807,7 @@ async function prodAllFields(id){
           return catUnusedRow(f.field_key, f.field_name || f.field_key, 'in your catalogue definition', !!f.is_required);
         }).join('')
       + gapsSeen.map(function(k){
-          return catUnusedRow(k, k, 'used by ' + seen[k] + ' other item' + (seen[k] === 1 ? '' : 's'), false);
+          return catUnusedRow(k, k, txn('used by {count} other item', 'used by {count} other items', seen[k]), false);
         }).join('');
   }
 
@@ -7311,11 +7328,13 @@ function quickStatus(){ const ids=needTarget(); if(!ids.length)return; MODALS.st
 function pickStatus(v){ MODALS.stat.to=v; document.querySelectorAll('.optrow').forEach(r=>r.classList.toggle('sel',r.dataset.v===v)); const b=document.getElementById('mok'); if(b)b.disabled=false; }
 async function confirmStatus(){ const {ids,to}=MODALS.stat; if(!to)return; closeModal();
   const single = ids.length===1 ? ids[0] : null; const pos = single ? chitPos(single) : null;
-  if(ids.length>1) showBusy('Moving '+ids.length+' records to '+cap(to)+'…');
+  if(ids.length>1) showBusy(txn('Moving {count} record to {status}…', 'Moving {count} records to {status}…',
+                              ids.length, { status: cap(to) }));
   try{ for(const id of ids){ try{ const _sr=await api("status",{params:{id},body:{status:({open:'pending',act:'in_progress',close:'completed'}[to]||to)}}); if(_sr&&_sr.warning)toast(_sr.warning); const i=UI.rows.findIndex(x=>x.id===id); if(i>=0)UI.rows[i].state=to; if(UI.detail&&UI.detail.id===id)UI.detail.state=to; }catch(e){ toast(MSG.fail("change status", e)); return; } }
     if(single){ afterChitAction(single, pos); }                             // same email-style cursor as advance
     else { UI.selectMode=false; UI.selected.clear(); renderApp(); }         // bulk: clear selection, full re-render
-    toast(MSG.statusSet(ids.length, to, single?((UI.rows.find(x=>x.id===single)||UI.detail||{}).code):null)); announce('Moved '+ids.length+' record'+(ids.length>1?'s':'')+' to '+cap(to));
+    toast(MSG.statusSet(ids.length, to, single?((UI.rows.find(x=>x.id===single)||UI.detail||{}).code):null)); announce(txn('Moved {count} record to {status}', 'Moved {count} records to {status}',
+             ids.length, { status: cap(to) }));
   } finally { hideBusy(); }
 }
 // Single-chit status picker — BIDIRECTIONAL (Open/Act/Close, any direction). Reuses pickStatus/confirmStatus.
@@ -7344,22 +7363,22 @@ function quickDelete(){ const ids=needTarget(); if(!ids.length)return;
   modal(`<div class="mhd"><div class="t">🗑️ Delete ${drafts.length} draft${drafts.length>1?'s':''}?</div></div><div class="mbody"><div style="font-size:13px;color:var(--ink);line-height:1.6">${drafts.length>1?'They move':'It moves'} to <b>Trash</b> — from there you can Restore or delete forever.</div></div><div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="danger" onclick="confirmDelete()">Move to Trash</button></div>`);
 }
 async function archiveSelected(){ const ids=(MODALS.arch||{}).ids||[]; if(!ids.length)return; closeModal();
-  if(ids.length>1) showBusy('Archiving '+ids.length+' records…');
+  if(ids.length>1) showBusy(txn('Archiving {count} record…', 'Archiving {count} records…', ids.length));
   try{ let ok=0; for(const id of ids){ try{ await api("archive",{params:{id}}); ok++; }catch(e){ toast(MSG.fail("archive", e)); break; } }
   UI.selected.clear(); if(UI.sel&&ids.includes(UI.sel)){UI.sel=null;UI.detail=null;UI.mdetail=false;} await loadList(); toast(ok+" archived"); announce(ok+" record"+(ok===1?"":"s")+" archived"); } finally { hideBusy(); }
 }
 /* bulk actions for Trash / Archive — operate on ticked rows, else the open chit */
 function selectAllRows(){ visibleRows().forEach(c=>UI.selected.add(c.id)); if(!UI.selectMode)UI.selectMode=true; renderApp(); }
 async function bulkRestore(){ const ids=actionTargets(); if(!ids.length){ toast("Tick some records first (☑), or open one."); return; }
-  if(ids.length>1) showBusy('Restoring '+ids.length+' records…'); try{ let ok=0; for(const id of ids){ try{ await api("restore",{params:{id}}); ok++; }catch(_){} } UI.selected.clear(); UI.sel=null; UI.detail=null; UI.mdetail=false; await loadList(); toast(MSG.restored?MSG.restored(ok):(ok+" restored")); announce(ok+" record"+(ok===1?"":"s")+" restored"); } finally { hideBusy(); } }
+  if(ids.length>1) showBusy(txn('Restoring {count} record…', 'Restoring {count} records…', ids.length)); try{ let ok=0; for(const id of ids){ try{ await api("restore",{params:{id}}); ok++; }catch(_){} } UI.selected.clear(); UI.sel=null; UI.detail=null; UI.mdetail=false; await loadList(); toast(MSG.restored?MSG.restored(ok):(ok+" restored")); announce(ok+" record"+(ok===1?"":"s")+" restored"); } finally { hideBusy(); } }
 async function bulkUnarchive(){ const ids=actionTargets(); if(!ids.length){ toast("Tick some records first (☑), or open one."); return; }
-  if(ids.length>1) showBusy('Unarchiving '+ids.length+' records…'); try{ let ok=0; for(const id of ids){ try{ await api("unarchive",{params:{id}}); ok++; }catch(_){} } UI.selected.clear(); UI.sel=null; UI.detail=null; UI.mdetail=false; await loadList(); toast(ok+" unarchived"); announce(ok+" record"+(ok===1?"":"s")+" unarchived"); } finally { hideBusy(); } }
+  if(ids.length>1) showBusy(txn('Unarchiving {count} record…', 'Unarchiving {count} records…', ids.length)); try{ let ok=0; for(const id of ids){ try{ await api("unarchive",{params:{id}}); ok++; }catch(_){} } UI.selected.clear(); UI.sel=null; UI.detail=null; UI.mdetail=false; await loadList(); toast(ok+" unarchived"); announce(ok+" record"+(ok===1?"":"s")+" unarchived"); } finally { hideBusy(); } }
 function bulkPurge(){ const ids=actionTargets(); if(!ids.length){ toast("Tick some records first (☑), or open one."); return; }
   confirmAsk('Delete '+ids.length+' item'+(ids.length===1?'':'s')+' permanently?',
     "This <b>can't be undone</b>.<div style=\"margin-top:7px\">Only <b>drafts</b> can be purged — sent and received chits stay where they are, because the other party holds a copy.</div>",
     'Delete', function(){ _bulkPurge(ids); }, true); }
 async function _bulkPurge(ids){
-  if(ids.length>1) showBusy('Deleting '+ids.length+' records…');
+  if(ids.length>1) showBusy(txn('Deleting {count} record…', 'Deleting {count} records…', ids.length));
   try{ let ok=0, blocked=0; for(const id of ids){ try{ await api("purgeChit",{params:{id}}); ok++; }catch(e){ blocked++; } }
   UI.selected.clear(); UI.sel=null; UI.detail=null; UI.mdetail=false; await loadList();
   toast(ok+" deleted"+(blocked?` · ${blocked} kept (sent/received — not removable)`:"")); announce(ok+" record"+(ok===1?"":"s")+" deleted"); } finally { hideBusy(); } }
@@ -8196,10 +8215,16 @@ function _viaPricing(p){
      different figure has said something, and overwriting it invisibly is how a disagreement becomes a dispute. */
   if((p.asked_differs||[]).length) out.push('<div style="font-size:var(--fs-1);color:var(--disp);margin-top:3px">⚠️ <b>They named a different price</b> on '
     + p.asked_differs.length+' line'+(p.asked_differs.length===1?'':'s')+': '
-    + esc(p.asked_differs.map(function(a){ return a.name+' — they said '+inr(a.asked)+', your catalogue says '+inr(a.ours); }).join('; '))
+    + esc(p.asked_differs.map(function(a){
+      return txf('{item} — they said {asked}, your catalogue says {ours}',
+                 { item: a.name, asked: inr(a.asked), ours: inr(a.ours) });
+  }).join('; '))
     + '. Yours is on the chit; theirs is recorded here.</div>');
   if((p.ambiguous||[]).length) out.push('<div style="font-size:var(--fs-1);color:var(--warn-3);margin-top:3px">⚠️ '
-    + esc(p.ambiguous.map(function(a){ return '"'+a.name+'" matches '+a.matches+' catalogue lines'; }).join('; '))
+    + esc(p.ambiguous.map(function(a){
+      return txn('"{name}" matches {count} catalogue line', '"{name}" matches {count} catalogue lines',
+                 a.matches, { name: a.name });
+  }).join('; '))
     + ' — not priced, because picking one would be a guess.</div>');
   /* ⚠️ AN UNPRICED LINE IS NOT AN ERROR. A farmer sending "milk 10 l" to a factory has no catalogue, no price and
      nothing to look up, and the chit is complete without them. Said plainly, not warned about. */
@@ -8480,7 +8505,7 @@ async function doSendMessage(id, scope){
   busyShow('Sending message…');
   let _mr; try{ var _mb={thread_type:scope,message_text:body,msg_type:UI.msgKind||"info"}; if(UI.msgAsDispute && typeof disputeDecorateSend==='function') disputeDecorateSend(_mb, body); _mr=await api("sendMsg",{params:{id},body:_mb}); if(window.CBOffline)CBOffline.clearDraft('msg.'+id); }catch(e){ busyHide(); toast(MSG.fail("send the message", e)); return; }
   const _mid=_mr&&_mr.message_id;
-  if(_mid && (UI.msgFiles||[]).length){ busyShow('Attaching '+UI.msgFiles.length+' file(s)…'); for(const f of UI.msgFiles){ try{ await attUpload(id, f, {message_id:_mid}); }catch(e){ toast('Attachment "'+f.name+'" failed.'); } } }
+  if(_mid && (UI.msgFiles||[]).length){ busyShow(txn('Attaching {count} file…', 'Attaching {count} files…', UI.msgFiles.length)); for(const f of UI.msgFiles){ try{ await attUpload(id, f, {message_id:_mid}); }catch(e){ toast('Attachment "'+f.name+'" failed.'); } } }
   UI.msgFiles=[];
   UI.composeOpen=false;
   try{ await openChit(id,true); }catch(_){}
@@ -8582,8 +8607,10 @@ async function pickAssignBulk(ids){
 }
 async function assignBulkChits(ids, actorId){
   const a=(UI.actors||STORE.actors||[]).find(x=>x.id===actorId); const who=a?a.name:'the co-assist';
-  showBusy('Assigning '+ids.length+' record'+(ids.length>1?'s':'')+' to '+who+'…');
-  announce('Moving '+ids.length+' record'+(ids.length>1?'s':'')+' to '+who);
+  showBusy(txn('Assigning {count} record to {who}…', 'Assigning {count} records to {who}…',
+             ids.length, { who: who }));
+  announce(txn('Moving {count} record to {who}', 'Moving {count} records to {who}',
+             ids.length, { who: who }));
   try{ const r=await api("assignBulk",{body:{chit_ids:ids, target_actor_id:actorId}});
     UI.selectMode=false; UI.selected.clear();
     await loadList(); renderApp();
@@ -9252,7 +9279,7 @@ async function amendSave(forceNull, reason_code){
       const s=r.synonym_candidates[0];
       /* ⚠️ NOTED, NOT APPLIED. One correction never teaches the catalogue — a synonym promotes only on N
          independent confirmations across entities, and units and grades never promote automatically at all. */
-      toast('Noted: “'+s.term+'” may mean “'+s.means+'”');
+      toast(txf('Noted: “{term}” may mean “{meaning}”', { term: s.term, meaning: s.means }));
     }
     /* Whoever opened the card says what to refresh. Design 1 reloads its detail; Design 2 reloads its own. */
     if(typeof AMD.after==='function') await AMD.after();

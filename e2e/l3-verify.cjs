@@ -102,7 +102,11 @@ function parse(md) {
     };
     const inline = (label) => {
       const m = new RegExp('^' + label + '\\s+(.+)$', 'm').exec(b);
-      return m && !/^(SKIP|NEEDS-HUMAN)/i.test(m[1]) ? m[1].trim() : null;
+      /* ⚠️ STRIP MARKDOWN CODE SPANS. The agents wrote inline entries as `expr` — backticks and all — and a
+         parser that keeps them looks for a line of source that begins with a backtick, which never exists. That
+         alone accounted for 21 of the 28 "BEFORE not found verbatim" reports. */
+      if (!m || /^(SKIP|NEEDS-HUMAN)/i.test(m[1])) return null;
+      return m[1].trim().replace(/^`+|`+$/g, '').trim();
     };
     const before = fenced('BEFORE') || inline('BEFORE');
     const after = fenced('AFTER') || inline('AFTER');

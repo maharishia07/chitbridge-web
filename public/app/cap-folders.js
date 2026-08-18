@@ -505,7 +505,7 @@ function _folderMetricsPane(){
     + '<div style="display:flex;gap:9px;flex-wrap:wrap">'
     + _mBox(_FLD.recon ? 'On this track' : 'In this folder', m.count, (m.open || 0) + ' open · ' + (m.closed || 0) + ' closed')
     + _mBox('Unread', m.unread, m.unread ? 'nobody has opened these' : 'all seen', m.unread ? 'warn' : null)
-    + _mBox('Overdue', m.overdue, 'open for ' + m.overdue_days + '+ days', m.overdue ? 'bad' : null)
+    + _mBox('Overdue', m.overdue, txf('open for {days}+ days', { days: m.overdue_days }), m.overdue ? 'bad' : null)
     + _mBox('Oldest', dash(c.oldest_age_days, 'd'), 'the one nobody is working', (c.oldest_age_days > (m.overdue_days || 7) * 3) ? 'warn' : null)
     + '</div>'
     /* ⚠️ RESPONSE and RESOLUTION side by side, never merged. Together they show "we answer fast and finish never",
@@ -607,7 +607,9 @@ function _ruleRow(r, i, n){
     + '<div style="font-size:var(--fs-2);margin-top:6px">When ' + terms + ' → ' + (_fldTrack() ? ('file into <b>📁 ' + esc(_fldFolderName(r.folder_id)) + '</b>') : 'file here') + '</div>'
     /* Observability: a rule that quietly stopped matching should be visible, not assumed to be working. */
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">'
-    + (r.match_count ? ('filed ' + r.match_count + ' chit' + (r.match_count == 1 ? '' : 's') + (r.last_matched_at ? ' · last ' + esc(String(r.last_matched_at).slice(0, 10)) : '')) : 'has not matched anything yet')
+    + (r.match_count ? (txn('filed {count} chit', 'filed {count} chits', r.match_count)
+                    + (r.last_matched_at ? ' · ' + txf('last {date}', { date: esc(String(r.last_matched_at).slice(0, 10)) }) : ''))
+                 : 'has not matched anything yet')
     + '</div></div>';
 }
 
