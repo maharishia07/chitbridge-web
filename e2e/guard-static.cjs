@@ -548,7 +548,12 @@ console.log('\n14 · direction is logical, not physical (RTL-ready)');
   const bad = {};
   [['app.html', app]].concat(CAPS.map((f) => [f, fs.readFileSync(path.join(WEB, 'app', f), 'utf8')]))
     .forEach(([name, src]) => {
-      const code = src.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/^\s*\/\/.*$/gm, ' ');
+      /* ⚠️ ALSO STRIP <code> SPANS. The Standards page DOCUMENTS this anti-pattern — "margin-left would have
+         needed a second stylesheet nobody maintains" — and the guard flagged its own explanation as a
+         violation. A checker that cannot tell a USE from a MENTION teaches people to ignore it, which is worse
+         than not having the check at all. */
+      const code = src.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/^\s*\/\/.*$/gm, ' ')
+                      .replace(/<code>[\s\S]*?<\/code>/g, ' ');
       const n = (code.match(PHYS) || []).length;
       if (n) bad[name] = n;
     });

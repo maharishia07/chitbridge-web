@@ -213,7 +213,10 @@ function stdRecordHTML(opts){
       +   '<span style="color:var(--on-card);word-break:break-all;flex:1;min-width:0">' + esc(f.v) + '</span>'
       + '</div>'
       + '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:3px">'
-      +   (f.std ? '<span style="font-size:9px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;background:' + b[0] + ';color:' + b[1] + ';border-radius:4px;padding:1px 6px">' + esc(f.std) + ' · ' + b[2] + '</span>' : '')
+      /* ⚠️ NOT 9px. Sub-11px text is hard for anyone and unusable for some of the readers this register is
+         partly about — and being small on the ACCESSIBILITY page is the worst place to be inconsistent. --fs-1 is
+         the smallest size the type scale admits, and it moves with the reader's text-size setting. */
+      +   (f.std ? '<span style="font-size:var(--fs-1);font-weight:800;letter-spacing:.04em;text-transform:uppercase;background:' + b[0] + ';color:' + b[1] + ';border-radius:4px;padding:1px 6px">' + esc(f.std) + ' · ' + b[2] + '</span>' : '')
       + '</div>'
       + (compact || !f.c ? '' : '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px;line-height:1.5">' + f.c + '</div>')
       + '</div>';
