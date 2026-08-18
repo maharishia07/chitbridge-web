@@ -1275,7 +1275,9 @@ const CFG = {
 /* Endpoint map. ✓ = matches build registry · ? = ASSUMED, confirm before live.
    Correct any path here in ONE place. */
 const EP = {
-  notifSeen:       {m:"POST", p:"/api/notifications/seen",   ok:"y"},   // b157 — move the badge watermark
+  notifSeen:       {m:"POST", p:"/api/notifications/seen",   ok:"y"},
+  /* b164 — clear one Activity row, several, or all. Records a DISMISSAL; the state_log event is untouched. */
+  notifDismiss:    {m:"POST", p:"/api/notifications/dismiss", ok:"y"},   // b157 — move the badge watermark
   /* ⚠️ IN THE CORE TABLE, NOT cap-messages. The rail needs the unread count before that capability has ever been
      loaded — the badge is the reason you go to the screen, so it cannot depend on having been there. */
   msgCount:        {m:"GET",  p:"/api/folders/messages?count=1", ok:"y"},
@@ -6986,14 +6988,22 @@ function notifOpen(chit_id){
   if (typeof openChit2 === 'function' && typeof ensureCap === 'function') ensureCap('chit2').then(function(){ openChit2(chit_id); });
   else if (typeof openChit === 'function') openChit(chit_id);
 }
-async function openNotifications(){
+/**
+ * ⚠️ `repaint` EXISTS BECAUSE THIS FUNCTION IS A TOGGLE, and I nearly shipped four calls that would have CLOSED
+ * the panel instead of redrawing it. Ticking a row, leaving pick mode, clearing — each re-renders Activity, and
+ * each would have hit `if(UI.notifOpen){ closeNotif(); return; }` and shut it. It would have reached Athi as
+ * "selecting doesn't work", with nothing in the console.
+ *
+ * A repaint also must NOT re-mark the badge seen or re-fetch: it is the same list, drawn again.
+ */
+async function openNotifications(repaint){
   /* ⭐ OPENING IS SEEING. The badge counts what arrived since the last look, so looking is what moves the
      watermark — a separate "mark all read" is a button people do not press, after which the number lies. */
-  try { api("notifSeen").then(function(){ UI.notifCount=0; var d=document.getElementById("belldot"); if(d)d.style.display="none"; }).catch(function(){}); } catch(e){} const host=document.getElementById("lbhost"); if(!host)return;
-  if(UI.notifOpen){ closeNotif(); return; }
+  if(!repaint) try { api("notifSeen").then(function(){ UI.notifCount=0; var d=document.getElementById("belldot"); if(d)d.style.display="none"; }).catch(function(){}); } catch(e){} const host=document.getElementById("lbhost"); if(!host)return;
+  if(UI.notifOpen && !repaint){ closeNotif(); return; }
   UI.notifOpen=true;
   const live = CFG.MODE!=='demo';
-  if(live) await loadNotifs();
+  if(live && !repaint) await loadNotifs();   // a repaint draws the list it already has
   if(!UI.notifOpen) return;   // user may have closed it during the await
   const items = _notifs.map(mapNotif);
   /**
@@ -7005,8 +7015,20 @@ async function openNotifications(){
    */
   const forMe = items.filter(function(x){ return x.mine; });
   const rest  = items.filter(function(x){ return !x.mine; });
+  /**
+   * ⭐ SELECTABLE ONLY WHILE PICKING (Athi: *"select messages and clear or clear all"*).
+   *
+   * ⚠️ A TICK ON EVERY ROW AT ALL TIMES WOULD COST THE COMMON CASE to serve the rare one — people open Activity
+   * to READ it, and the click that matters is the one that opens the chit. So the ticks appear when you say you
+   * are clearing, and until then the row behaves exactly as it did.
+   */
   const nrow = function(x){
-    return '<div class="notifrow"' + (x.chit ? ' onclick="notifOpen(\'' + x.chit + '\')" style="cursor:pointer"' : '') + '>'
+    var pick = !!UI.notifPick, on = pick && UI.notifSel && UI.notifSel.has(x.log_id);
+    var click = pick
+      ? (x.log_id ? ' onclick="notifToggle(\'' + x.log_id + '\')" style="cursor:pointer"' : '')
+      : (x.chit ? ' onclick="notifOpen(\'' + x.chit + '\')" style="cursor:pointer"' : '');
+    return '<div class="notifrow' + (on ? ' sel' : '') + '"' + click + '>'
+      + (pick ? '<span class="cbx ' + (on ? 'on' : '') + '" style="flex:0 0 auto;margin-right:2px">' + (on ? '✓' : '') + '</span>' : '')
       + '<span class="ni">' + x.i + '</span><div style="min-width:0">'
       + '<div class="nt">' + x.t + '</div>'
       + (x.d ? '<div style="font-size:11.5px;color:var(--ink-2,#5b6470);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + x.d + '</div>' : '')
@@ -7017,8 +7039,25 @@ async function openNotifications(){
   };
   /* ⚠️ SAY THAT IT POLLS. The bell is dimmed because there is no push transport; the panel must not then imply
      live delivery. An unfinished capability that admits it is one somebody comes back to. */
-  const foot = live ? (items.length + ' recent · refreshes every 20s')
-                    : 'Demo notifications — endpoint pending (ATH-109 §11).';
+  /**
+   * ⭐ THE FOOTER IS WHERE CLEARING LIVES, because that is where the count already was — a person reading a feed
+   * looks at the bottom to see how much of it there is, and "how much" and "get rid of it" are the same thought.
+   *
+   * ⚠️ CLEAR ALL ASKS FIRST. It is not destructive to the record — the events survive — but it is not undoable
+   * from this panel either, and a feed you cannot get back reads as lost data whether or not it is.
+   */
+  var picking = !!UI.notifPick, nsel = (UI.notifSel && UI.notifSel.size) || 0;
+  const foot = !live ? 'Demo notifications — endpoint pending (ATH-109 §11).'
+    : '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
+      + '<span style="color:var(--grey)">' + items.length + ' recent · refreshes every 20s</span>'
+      + '<span style="margin-left:auto;display:flex;gap:6px">'
+      + (picking
+          ? '<button data-testid="notif-clear-sel" ' + (nsel ? '' : 'disabled ')
+              + 'onclick="notifClearSelected()">Clear ' + (nsel || '') + '</button>'
+            + '<button data-testid="notif-pick-off" onclick="notifPick(false)">Done</button>'
+          : '<button data-testid="notif-pick-on" onclick="notifPick(true)">Select</button>'
+            + '<button data-testid="notif-clear-all" onclick="notifClearAll()">Clear all</button>')
+      + '</span></div>';
   const body = items.length
     ? (forMe.length ? nhead('For you') + forMe.map(nrow).join('') : '')
       + (rest.length ? (forMe.length ? nhead('Everything else') : '') + rest.map(nrow).join('') : '')
@@ -7029,7 +7068,47 @@ async function openNotifications(){
     <div class="notiffoot">${foot}</div>
   </div></div>`;
 }
-function closeNotif(){ UI.notifOpen=false; const h=document.getElementById("lbhost"); if(h)h.innerHTML=""; }
+function closeNotif(){ UI.notifOpen=false; UI.notifPick=false; if(UI.notifSel) UI.notifSel.clear();
+  const h=document.getElementById("lbhost"); if(h)h.innerHTML=""; }
+
+/* ⚠️ Leaving pick mode CLEARS the selection. A tick that survives closing the panel is a promise the next open
+   does not keep — you would come back to rows marked for clearing that you no longer remember choosing. */
+function notifPick(on){ UI.notifPick=!!on; if(!on && UI.notifSel) UI.notifSel.clear(); openNotifications(true); }
+function notifToggle(id){ if(!UI.notifSel) UI.notifSel=new Set();
+  if(UI.notifSel.has(id)) UI.notifSel.delete(id); else UI.notifSel.add(id); openNotifications(true); }
+
+/**
+ * ⚠️ THE EVENT IS NOT DELETED — see b164. The Activity feed is a view over state_log, the trail traceability and
+ * disputes are built on; this records that THIS entity has chosen not to look at those rows.
+ */
+async function _notifDismiss(body, saidWhat){
+  try{
+    await api('notifDismiss', { body: body });
+    UI.notifPick=false; if(UI.notifSel) UI.notifSel.clear();
+    await loadNotifs();
+    openNotifications(true);
+    if(typeof toast==='function') toast(saidWhat);
+  }catch(e){
+    /* ⚠️ NAME THE MIGRATION. "Clearing needs b164" and "clearing is broken" need different actions from a human,
+       and a generic failure here would send someone hunting a bug that is a pending SQL file. */
+    var msg = (e && e.code==='NOTIF_DISMISS_NOT_MIGRATED')
+      ? 'Clearing Activity needs migration b164 on this environment.'
+      : ((e && e.message) || 'Could not clear.');
+    if(typeof toast==='function') toast(msg);
+  }
+}
+function notifClearSelected(){
+  var ids = Array.from((UI.notifSel||new Set()));
+  if(!ids.length) return;
+  _notifDismiss({ log_ids: ids }, ids.length + (ids.length===1?' cleared':' cleared'));
+}
+function notifClearAll(){
+  /* Asks, because it cannot be undone from this panel. See the note on the footer. */
+  if(typeof confirmAsk!=='function') return _notifDismiss({ all:true }, 'Activity cleared');
+  confirmAsk('Clear all activity?',
+    'This clears your Activity list. The events themselves are kept — chits, statuses and disputes are unchanged.',
+    'Clear all', function(){ _notifDismiss({ all:true }, 'Activity cleared'); });
+}
 
 // map a LIVE API chit (chit_id/current_status/summary_json/…) into the UI row shape.
 // demo rows already have .id, so they pass straight through.
