@@ -600,6 +600,40 @@ function _workTabHtml(){
   </div>`;
 }
 
+/**
+ * ⭐⭐ WHY WE FOLLOW STANDARDS — in the Legend, because this is where the case gets MADE rather than checked.
+ *
+ * Athi, 2026-08-18: *"bring the why bother view into legend as well."*
+ *
+ * ⚠️ SAME RENDERER AS SETTINGS (stdWhyHTML in cap-standards.js), at a compact density. Two surfaces, one text —
+ * writing a shorter second version for the Legend is exactly how the two would end up saying subtly different
+ * things about the same commitment, and the Legend's would be the one a buyer had read.
+ *
+ * ⚠️ THE COUNTS ARE LIVE, not a sentence someone typed. A Legend claiming "26 standards" that had drifted from
+ * the register would be the overclaim this whole area exists to prevent — on the one surface where it is being
+ * used to persuade.
+ *
+ * ⚠️ IT LOADS ITS OWN DEPENDENCY. The register is a separate capability, so the first open re-enters this
+ * function once the script lands rather than rendering an empty tab.
+ */
+function _stdTabHtml(){
+  if (typeof stdWhyHTML !== 'function') {
+    ensureCap('standards').then(function(){ _openLegendImpl(); }).catch(function(){});
+    return '<div style="padding:16px;color:var(--grey);font-size:13px">Loading…</div>';
+  }
+  var n = stdCounts();
+  return '<div style="padding:14px 16px">'
+    + '<div style="font-size:20px;font-weight:800;color:var(--ink);margin-bottom:2px">Why we follow standards</div>'
+    + '<div style="font-size:13px;color:var(--grey);line-height:1.55;margin-bottom:12px">'
+    +   '<b style="color:var(--ok-2)">' + n.live + ' in force</b> · '
+    +   '<b style="color:var(--warn-2)">' + n.part + ' partly</b> · ' + n.plan + ' planned. '
+    +   'Every one is listed with its status in <b>Settings › Standards</b>, and the partial ones say what is '
+    +   'missing — because a page like this is quoted to buyers.'
+    + '</div>'
+    + stdWhyHTML({ compact: true })
+    + '</div>';
+}
+
 function _openLegendImpl(){
   let host=document.getElementById("lbhost");
   if(!host){ host=document.createElement('div'); host.id='lbhost'; document.body.appendChild(host); }  // pre-auth: create the host if the app shell isn't mounted (shareable /#/legend)
