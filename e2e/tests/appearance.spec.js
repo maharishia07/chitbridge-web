@@ -116,3 +116,40 @@ test.describe('Settings › Appearance', () => {
     } finally { await reset(page); }
   });
 });
+
+test.describe('Appearance · stored values we do not recognise', () => {
+  test.describe.configure({ timeout: 180_000 });
+
+  test('[AP-06] ⚠️ an unrecognised motion value falls back to the DEVICE, not to animation', async ({ page }) => {
+    await mintEntity(page);
+    try {
+      const stamped = await page.evaluate(() => {
+        try { localStorage.setItem('cb_motion', 'wobble'); } catch (_) {}
+        window.appearanceApply();
+        return document.documentElement.getAttribute('data-motion');
+      });
+      /* ⚠️ THE FAILURE IS ASYMMETRIC, which is why this is worth a test. A stamped `data-motion="wobble"`
+         matches NEITHER css rule, so a reader who had chosen "reduce" silently got animation back — a health
+         setting failing OPEN. Anything unrecognised must mean "follow the device". */
+      expect(stamped, 'nothing is stamped for a value we cannot honour').toBeNull();
+    } finally {
+      await page.evaluate(() => { try { localStorage.removeItem('cb_motion'); window.appearanceApply(); } catch (_) {} });
+    }
+  });
+
+  test('[AP-07] ⚠️ a stale theme name is not stamped on the document', async ({ page }) => {
+    await mintEntity(page);
+    try {
+      const stamped = await page.evaluate(() => {
+        try { localStorage.setItem('cb_theme', 'a-theme-that-was-removed'); } catch (_) {}
+        window.themeApply(window.themeGet());
+        return document.documentElement.getAttribute('data-theme');
+      });
+      /* It fell back to cream's VARS but stamped the unknown KEY — so the page looked right while the document
+         lied about why, every `[data-theme=...]` rule missed, and any test reading the stamp read a fiction. */
+      expect(stamped, 'the stamp names a theme that exists').toBe('cream');
+    } finally {
+      await page.evaluate(() => { try { localStorage.removeItem('cb_theme'); window.themeApply('cream'); } catch (_) {} });
+    }
+  });
+});

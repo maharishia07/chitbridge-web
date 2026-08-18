@@ -2781,7 +2781,17 @@ function themeGet(){ try{ return localStorage.getItem('cb_theme') || 'cream'; }c
  * behind. A theme that only ever adds is a theme you cannot fully leave.
  */
 function themeApply(key){
-  var t = THEMES[key] || THEMES.cream, r = document.documentElement;
+  /**
+   * ⚠️ THE STAMP MUST NAME A THEME THAT EXISTS. This fell back to cream's VARS for an unknown key but then
+   * stamped the unknown KEY on <html> — so a stale stored theme (one that was renamed or removed) left
+   * `data-theme="oldname"`, which every `[data-theme=...]` rule misses and every test reads as truth. The
+   * page looked right and the document lied about why.
+   *
+   * ⚠️ Also own-property, for the same reason as the prefs whitelist: `THEMES['constructor']` is truthy.
+   */
+  var known = Object.prototype.hasOwnProperty.call(THEMES, key) && THEMES[key] ? key : 'cream';
+  var t = THEMES[known], r = document.documentElement;
+  key = known;
   var all = {}; Object.keys(THEMES).forEach(function(k){ Object.keys(THEMES[k].vars).forEach(function(v){ all[v]=1; }); });
   Object.keys(all).forEach(function(v){ r.style.removeProperty(v); });
   Object.keys(t.vars).forEach(function(v){ r.style.setProperty(v, t.vars[v]); });
@@ -2837,9 +2847,15 @@ function appearanceApply(){
     /* ⚠️ THREE STATES, NOT TWO. "auto" means follow the operating system, which is what a person who set
        reduce-motion in Windows or iOS has already asked for once and should not have to ask again. The explicit
        values exist for the reverse cases: a device that cannot express it, and someone who wants motion back. */
+    /**
+     * ⚠️ AN UNRECOGNISED STORED VALUE MUST NOT BE STAMPED. This wrote whatever was in localStorage onto <html>,
+     * so `data-motion="wobble"` matched NEITHER css rule — and the failure is asymmetric: a reader who had
+     * chosen "reduce" silently got animation back, which is the health setting failing open. Anything we do not
+     * recognise now means "follow the device", which is the safe reading of a value we cannot honour.
+     */
     var m = motionPref();
-    r.setAttribute('data-motion', m === 'auto' ? '' : m);
-    if (m === 'auto') r.removeAttribute('data-motion');
+    if (m === 'reduce' || m === 'full') r.setAttribute('data-motion', m);
+    else r.removeAttribute('data-motion');
   } catch(_){}
 }
 
