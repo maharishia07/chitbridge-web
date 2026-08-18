@@ -95,3 +95,56 @@ test.describe('Settings › Standards', () => {
     expect(body, 'and the gap is stated rather than left for a dispute').toMatch(/not the same as enforced/i);
   });
 });
+
+test.describe('Standards · where they bite, and why we bother', () => {
+  test.describe.configure({ timeout: 240_000 });
+
+  test('[STD-06] ⭐ every standard says WHERE it is used and WHAT it removes', async ({ page }) => {
+    await mintEntity(page);
+    await page.evaluate(() => window.navTo('settings'));
+    await page.waitForTimeout(1200);
+    await page.getByTestId('set-sec-standards').click();
+    await page.waitForTimeout(700);
+    const rows = await page.evaluate(() => (window.STANDARDS || []).map((s) => ({ n: s.n, at: s.at || '', why: s.why || '' })));
+    expect(rows.length).toBeGreaterThan(15);
+    for (const r of rows) {
+      /* ⚠️ A standard named without a place is trivia. "GS1 — SKU identity" tells a reader nothing they can act
+         on; "used in Catalogue › product identity, because the three-way match needs both sides to agree this is
+         the same product" is the difference between a compliance list and an explanation. */
+      expect(r.at.length, r.n + ' says where it is used').toBeGreaterThan(3);
+      expect(r.why.length, r.n + ' says what failure it removes').toBeGreaterThan(25);
+    }
+  });
+
+  test('[STD-07] ⚠️ the argument states its COSTS, not only its benefits', async ({ page }) => {
+    await mintEntity(page);
+    await page.evaluate(() => window.navTo('settings'));
+    await page.waitForTimeout(1200);
+    await page.getByTestId('set-sec-standards').click();
+    await page.waitForTimeout(700);
+    await page.getByTestId('std-tab-why').click();
+    await page.waitForTimeout(600);
+    const body = await page.locator('#setbody').textContent();
+
+    expect(body, 'the structural reason, not "quality"').toMatch(/crosses a boundary/i);
+    /* ⚠️ A page listing only benefits would be the same overclaim the status column exists to prevent, one level
+       up. If a later edit trimmed the costs to make the page read better, this is what would catch it. */
+    expect(body, 'costs are stated').toMatch(/What it costs/i);
+    expect(body, 'including the obligation a claim creates').toMatch(/broken promise/i);
+    /* Evidence from this codebase rather than assertions — the part that turns an opinion into a case. */
+    expect(body, 'and what it has actually caught here').toMatch(/117 real failures/);
+  });
+
+  test('[STD-08] governance links to where the choice is made, rather than swallowing it', async ({ page }) => {
+    await mintEntity(page);
+    await page.evaluate(() => window.navTo('settings'));
+    await page.waitForTimeout(1200);
+    await page.getByTestId('set-sec-governance').click();
+    await page.waitForTimeout(800);
+    /* ⚠️ Governance sets the ENVELOPE; Settings picks a point inside it. Merging them would bury a weekly
+       control inside a screen visited twice a year — so the two are linked instead, and these are the links. */
+    for (const id of ['gov-to-locale', 'gov-to-appearance', 'gov-to-standards']) {
+      await expect(page.getByTestId(id).first(), id).toBeVisible();
+    }
+  });
+});
