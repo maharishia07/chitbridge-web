@@ -3685,6 +3685,70 @@ function tx(english, context){
  */
 var CBSTR = { en: {}, fr: {}, ta: {}, hi: {} };
 
+/**
+ * ⭐⭐ txf(english, vars) — a translatable sentence WITH values in it. The L3 primitive.
+ *
+ * ⚠️ THE PROBLEM IT SOLVES. Prose with a value in the middle is written by concatenation today:
+ *
+ *     'Remove ' + name + ' from your supplier list?'
+ *
+ * Those two halves cannot be translated. German puts the verb last, Tamil marks the noun with a case ending
+ * that depends on what follows, and Arabic runs the other way — so a translator handed "Remove " and " from
+ * your supplier list?" separately cannot produce a correct sentence in any of them. The whole sentence has to
+ * be ONE translatable unit with a NAMED HOLE the translator can move:
+ *
+ *     txf('Remove {name} from your supplier list?', { name: n })
+ *
+ * ⚠️ NAMED, NOT POSITIONAL. `{0}` and `{1}` are the common shortcut and they are a trap: a translator who has
+ * to reorder them must work out what each one was, and gets it wrong silently. `{name}` and `{count}` survive
+ * being moved because they say what they are.
+ *
+ * ⚠️ THE SUBSTITUTION IS NOT ESCAPED HERE, DELIBERATELY. Callers already pass `esc(x)` where the value is user
+ * data and raw markup where it is ours (a `<b>` around a count). Escaping again would double-encode the first
+ * and destroy the second. The caller owns that decision, exactly as it does today.
+ *
+ * ⚠️ A MISSING KEY LEAVES THE PLACEHOLDER VISIBLE rather than printing "undefined". `{name}` on screen is an
+ * obvious bug someone reports; "undefined" reads like data and gets ignored.
+ */
+function txf(english, vars){
+  var out = tx(english);
+  if (!vars) return out;
+  return out.replace(/\{(\w+)\}/g, function(whole, k){
+    return Object.prototype.hasOwnProperty.call(vars, k) ? String(vars[k]) : whole;
+  });
+}
+
+/**
+ * ⭐⭐ txn(one, other, n, vars) — a sentence whose wording depends on a COUNT.
+ *
+ * ⚠️ ENGLISH HAS TWO PLURAL FORMS AND THAT IS NOT UNIVERSAL. Arabic has SIX (zero, one, two, few, many,
+ * other), Russian has three, Tamil and Chinese have one. So "1 product / 2 products" is an English fact rather
+ * than a general one, and `n === 1 ? 'product' : 'products'` hard-codes English grammar into every screen that
+ * counts anything.
+ *
+ * `Intl.PluralRules` knows the real answer per language, and the catalogue keys off the CATEGORY it returns —
+ * which is why the stored key is `msgid\u0005category`, gettext's own plural convention. Until a translation
+ * exists this falls back to the two English forms, which is exactly today's behaviour and no worse.
+ *
+ * ⚠️ `{count}` IS SUPPLIED AUTOMATICALLY, and formatted through the localisation layer — because a count is a
+ * number, and a number is written differently in different places. Writing `n` into the string directly would
+ * give an Arabic reader Western digits inside an Arabic sentence.
+ */
+function txn(one, other, n, vars){
+  var count = Number(n) || 0;
+  var cat = 'other';
+  try { cat = new Intl.PluralRules(CBLocale.locale()).select(count); }
+  catch (_) { cat = count === 1 ? 'one' : 'other'; }
+  var m = CBSTR[cbLang()] || {};
+  /* the exact category, then the catch-all, then English — never a key on screen */
+  var s = m[one + '\u0005' + cat] || m[one + '\u0005other'] || (count === 1 ? one : other);
+  var all = { count: CBLocale.number(count) };
+  for (var k in (vars || {})) if (Object.prototype.hasOwnProperty.call(vars, k)) all[k] = vars[k];
+  return s.replace(/\{(\w+)\}/g, function(whole, key){
+    return Object.prototype.hasOwnProperty.call(all, key) ? String(all[key]) : whole;
+  });
+}
+
 function menuBtn(x){
   /* ⚠️ THE LABEL GOES THROUGH t() HERE, at the ONE place every rail item is built — not at the fourteen places
      they are declared. Translating at the declaration would mean fourteen call sites to keep in step, and the
