@@ -164,22 +164,12 @@
     },
 
     /**
-     * Send the local answer up. Debounced, because the picker fires on every `change` and someone trying three
-     * formats to see which they like should cost one write, not three.
-     *
-     * ⚠️ FIRE AND FORGET, ON PURPOSE. The setting has ALREADY applied locally and the screen has already
-     * re-rendered; the person can see it worked. Surfacing a failure here would contradict what is on screen. It
-     * is registered in OUTBOX_KEYS, so offline it queues and replays on reconnect rather than being lost — and
-     * before b165 runs the API replies {pending:true}, which is equally nothing to report.
+     * ⚠️ DELEGATES TO CBPrefs — the debounce, the offline queueing and the pre-migration silence are identical
+     * for every preference set, and were written here first. Keeping a second copy in this file is how the two
+     * drift apart the day one of them gains a retry.
      */
     push: function () {
-      if (L._t) { try { clearTimeout(L._t); } catch (_) {} }
-      L._t = setTimeout(function () {
-        try {
-          if (typeof root.api !== 'function' || !(root.SESSION && root.SESSION.token)) return;
-          root.api('savePrefs', { body: L.prefs() }).catch(function () {});
-        } catch (_) {}
-      }, 400);
+      try { if (root.CBPrefs) root.CBPrefs.push('locale', L.prefs()); } catch (_) {}
     },
 
     /**

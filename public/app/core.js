@@ -123,6 +123,39 @@ if (typeof window !== 'undefined') { window.__cblog = __cblog; window.cblog = cb
 // server Idempotency-Key (b109), so a replay can't double-apply. CREATES + id-returning + content-returning mutations
 // (createChit, sendMsg, dispute-raise, AI, auth, uploads) are deliberately NOT here — offline they fail gracefully and
 // the Phase-4.1 draft protects the typed input. See C:\dev\SPEC-offline-coverage.md.
+
+/**
+ * ⭐ CBPrefs — ONE way to sync a person's own preferences to their identity row (b165 locale · b166 ui).
+ *
+ * ⚠️ SHARED RATHER THAN COPIED, and the reason is not tidiness. The localisation layer and the appearance
+ * controls need exactly the same behaviour — debounce, fire-and-forget, queue when offline, stay silent before
+ * the migration runs. Written twice, the second copy drifts the first time one of them gains a retry or a log
+ * line, and the copy nobody remembered would be the one carrying somebody's accessibility setting.
+ *
+ * ⚠️ FIRE AND FORGET, ON PURPOSE. The setting has ALREADY applied locally and the screen has already
+ * re-rendered; the person can see it worked. Surfacing a failure here would contradict what is on screen. It is
+ * registered in OUTBOX_KEYS, so offline it queues and replays on reconnect — and before the migration the API
+ * answers {pending:true}, which is equally nothing to report.
+ *
+ * ⚠️ DEBOUNCED PER KIND, not globally. Someone trying three themes to see which they like should cost one
+ * write; but a theme change must never cancel a pending language change, which one shared timer would do.
+ */
+var CBPrefs = (function(){
+  var timers = {};
+  return {
+    push: function(kind, obj){
+      if (timers[kind]) { try { clearTimeout(timers[kind]); } catch(_){} }
+      timers[kind] = setTimeout(function(){
+        try {
+          if (typeof api !== 'function' || !(typeof SESSION !== 'undefined' && SESSION && SESSION.token)) return;
+          api('savePrefs', { params: { kind: kind }, body: obj || {} }).catch(function(){});
+        } catch(_){}
+      }, 400);
+    }
+  };
+})();
+try { if (typeof window !== 'undefined') window.CBPrefs = CBPrefs; } catch(_){}
+
 const OUTBOX_KEYS = new Set([
   'advance','status','setPriority','custFlag','star','voidChit','markUnread','archive','unarchive','restore','delChit','purgeChit','assignBulk',
   'actorBreak','actorStatus','actorPinReset','actorDelegate','assign','unassign','actorEdit',

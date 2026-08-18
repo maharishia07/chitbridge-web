@@ -20,7 +20,7 @@ const KEYS = ['cb_locale', 'cb_lang', 'cb_nu', 'cb_hc', 'cb_ca', 'cb_fw'];
 const restore = async (page) => {
   await page.evaluate(async (keys) => {
     keys.forEach((k) => { try { localStorage.removeItem(k); } catch (_) {} });
-    try { await window.api('savePrefs', { body: {} }); } catch (_) {}
+    try { await window.api('savePrefs', { params: { kind: 'locale' }, body: {} }); } catch (_) {}
     try { window.CBLocale.apply(); } catch (_) {}
   }, KEYS);
 };
@@ -32,7 +32,7 @@ test.describe('b165 · the localisation choice belongs to the person', () => {
     await mintEntity(page);
     try {
       const saved = await page.evaluate(async () => {
-        const r = await window.api('savePrefs', { body: { locale: 'de-DE', hc: 'h23' } });
+        const r = await window.api('savePrefs', { params: { kind: 'locale' }, body: { locale: 'de-DE', hc: 'h23' } });
         return r || {};
       });
       /* ⚠️ THE ASSERTION THAT PROVES THE MIGRATION RAN. Before b165 the route answers {pending:true} — the local
@@ -57,7 +57,7 @@ test.describe('b165 · the localisation choice belongs to the person', () => {
     await mintEntity(page);
     try {
       await page.evaluate(async () => {
-        await window.api('savePrefs', { body: { locale: 'de-DE' } });
+        await window.api('savePrefs', { params: { kind: 'locale' }, body: { locale: 'de-DE' } });
       });
 
       /* ⚠️ THE NEW-DEVICE SIMULATION. Wiping these six keys leaves the browser in exactly the state a phone the

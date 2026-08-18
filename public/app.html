@@ -1438,7 +1438,7 @@ const EP = {
   resolveDispute:  {m:"PUT",  p:"/api/chits/:id/disputes/:disputeId/resolve", ok:"✓"},  // {resolution_note}
   me:              {m:"GET",   p:"/api/entities/me",             ok:"✓"},
   saveProfile:     {m:"PATCH", p:"/api/entities/profile",        ok:"✓"},  // {gstn,address,business_status}
-  savePrefs:       {m:"PATCH", p:"/api/entities/me/locale",       ok:"✓"},  // b165 · the PERSON's localisation choice, not the business's
+  savePrefs:       {m:"PATCH", p:"/api/entities/me/prefs/:kind", ok:"✓"},  // b165/b166 · ONE endpoint for both preference sets; params:{kind:"locale"|"ui"}
   getSettings:     {m:"GET",   p:"/api/actors/settings",         ok:"✓"},
   saveSettings:    {m:"PUT",   p:"/api/actors/settings",         ok:"✓"},
   /* `entitySearch` likewise — declared again further down, which is the definition that actually applied. */
@@ -2846,13 +2846,46 @@ function appearanceApply(){
   } catch(_){}
 }
 
-function textSizeSet(v){ apSet('cb_fs', v); appearanceApply(); renderApp(); if(typeof _capShowDetail==='function')_capShowDetail(); if(typeof loadSettings==='function')loadSettings(); }
-function motionSet(v){ apSet('cb_motion', v); appearanceApply(); renderApp(); if(typeof _capShowDetail==='function')_capShowDetail(); if(typeof loadSettings==='function')loadSettings(); }
+
+/**
+ * ⚠️ THE LOOK FOLLOWS THE PERSON TOO (b166). Theme, text size and motion lived only in this browser, so someone
+ * who chose High Contrast because they have low vision got it on the shop tablet and not on their phone, and
+ * someone who set Reduce Motion because animation triggers migraine got animation back on every other device.
+ * For an ordinary preference that is an annoyance; for these it is the product becoming unusable somewhere.
+ */
+function appearancePush(){
+  try { if (typeof CBPrefs !== 'undefined') CBPrefs.push('ui', { theme: themeGet(), fs: textSize(), motion: motionPref() }); } catch(_){}
+}
+
+/**
+ * Seed appearance from the server. Returns true only if something actually CHANGED, so the caller re-renders
+ * only then — an unconditional repaint on every boot would undo work in progress for no reason.
+ *
+ * ⚠️ THE SERVER WINS, AND THAT IS THE WHOLE FEATURE — this is the moment a new device learns who is reading.
+ * ⚠️ EXCEPT WHEN THE SERVER HAS NOTHING: an empty object means "never chosen", not "chose the default", so a
+ * reader who set a theme before b166 ran keeps it rather than having it wiped by an empty row.
+ */
+function appearanceHydrate(prefs){
+  if (!prefs || typeof prefs !== 'object') return false;
+  if (!prefs.theme && !prefs.fs && !prefs.motion) return false;
+  var changed = false;
+  try {
+    if (prefs.theme && THEMES[prefs.theme] && prefs.theme !== themeGet()) { apSet('cb_theme', prefs.theme); themeApply(prefs.theme); changed = true; }
+    if (prefs.fs && prefs.fs !== textSize()) { apSet('cb_fs', prefs.fs); changed = true; }
+    if (prefs.motion && prefs.motion !== motionPref()) { apSet('cb_motion', prefs.motion); changed = true; }
+    if (changed) appearanceApply();
+  } catch(_){}
+  return changed;
+}
+
+function textSizeSet(v){ apSet('cb_fs', v); appearanceApply(); appearancePush(); renderApp(); if(typeof _capShowDetail==='function')_capShowDetail(); if(typeof loadSettings==='function')loadSettings(); }
+function motionSet(v){ apSet('cb_motion', v); appearanceApply(); appearancePush(); renderApp(); if(typeof _capShowDetail==='function')_capShowDetail(); if(typeof loadSettings==='function')loadSettings(); }
 
 function themeSet(key){
   if(!THEMES[key]) return;
   try{ localStorage.setItem('cb_theme', key); }catch(_){ }
   themeApply(key);
+  try{ appearancePush(); }catch(_){}   // b166 — the choice belongs to the person, not this browser
   /* Repaint so the swatch's own selected state updates; the colours themselves changed without it. */
   if(UI.avMenu) renderApp();
 }
@@ -3245,6 +3278,8 @@ function _renderApp(){
       // hydrate() returns true only when the server actually differs from the local cache, so the common case
       // (same device, same person) costs nothing; the new-device case repaints once, in their language.
       try{ if(_e.locale_prefs && CBLocale.hydrate(_e.locale_prefs)) bgRenderApp(); }catch(_){}
+      // b166 — and the LOOK, off the same response. Both hydrates are cheap no-ops when nothing differs.
+      try{ if(_e.ui_prefs && appearanceHydrate(_e.ui_prefs)) bgRenderApp(); }catch(_){}
       if(SESSION.role!=='customer')ensureCap('dispute').then(bgRenderApp).catch(function(){}); bgRenderApp(); }).catch(function(e){ SESSION.capabilities=SESSION.capabilities||[]; }); }
   const _cap = CAP_OF[UI.nav];
   const _capLoading = !!(_cap && !CAP_LOADED[_cap]);
