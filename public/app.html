@@ -2644,6 +2644,10 @@ function themePaletteHTML(){
        inline and emitted `themeSet('" + k + "')` LITERALLY — so every card called themeSet with a garbage
        string, themeSet found no such theme, returned early, and clicking a swatch did nothing at all. It looked
        like a dead button and was a quoting mistake. */
+    /* ⚠️ Q IS DEFINED HERE, not in the script that wrote this file. Twice now I have emitted a generator-only
+       constant into shipped code (BT, then Q) — it PARSES, because a bare identifier is valid syntax, and only
+       fails when the line finally runs. A generator that writes code has to be tested by RUNNING its output. */
+    var Q = String.fromCharCode(39);
     var click = "themeSet(" + Q + k + Q + ")";
     return "<button type=\"button\" data-testid=\"theme-" + k
       + "\" onclick=\"" + click
