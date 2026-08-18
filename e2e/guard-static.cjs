@@ -639,5 +639,47 @@ console.log('\n15 · hardcoded ink on a themed ground');
   } else pass('every text colour on a themed ground is itself a token');
 }
 
+/**
+ * ⭐⭐ 16 · A SPEC READING `window.X` FOR A SCRIPT-SCOPED GLOBAL — a test that passes for the wrong reason.
+ *
+ * `UI`, `SESSION`, `STORE` and `CAP_LOADED` are declared with `let`/`const` at the top level of app.html. Only
+ * `var` and function declarations become properties of `window`; `let` and `const` live in script scope. So
+ * `page.evaluate(() => window.UI && window.UI.nav)` returns **undefined**, always.
+ *
+ * ⚠️ AND UNDEFINED COMPARES EQUAL TO UNDEFINED. keymap.spec's KEY-06 asserted "a digit must not navigate the
+ * screen underneath an open modal" by comparing nav before and after — both undefined, so it passed no matter
+ * what the key actually did. It has been green since it was written and was protecting nothing.
+ *
+ * A test that passes for the wrong reason is worse than no test: it occupies the slot where a real check would
+ * go, and reports green while the behaviour it names is unguarded. Reading the BARE identifier is what actually
+ * reaches script scope from page.evaluate.
+ */
+console.log('\n16 · specs must not read window.X for a script-scoped global');
+{
+  const SPECS = path.join(__dirname, 'tests');
+  const SCOPED = [];
+  /* Which top-level names are let/const in app.html — computed, not listed, so a new one is covered for free. */
+  const re = /^(?:let|const)\s+([A-Za-z_$][\w$]*)/gm;
+  let m;
+  while ((m = re.exec(app))) SCOPED.push(m[1]);
+
+  const bad = [];
+  if (fs.existsSync(SPECS)) {
+    fs.readdirSync(SPECS).filter((f) => f.endsWith('.js')).forEach((f) => {
+      const src = fs.readFileSync(path.join(SPECS, f), 'utf8');
+      const code = src.replace(/\/\*[\s\S]*?\*\//g, (x) => x.replace(/[^\n]/g, ' '))
+                      .replace(/^([ \t]*)\/\/.*$/gm, (x) => x.replace(/[^\n]/g, ' '));
+      SCOPED.forEach((name) => {
+        const hit = new RegExp('window\\.' + name + '\\b', 'g');
+        const n = (code.match(hit) || []).length;
+        if (n) bad.push(f + ' reads window.' + name + ' ×' + n);
+      });
+    });
+  }
+  if (bad.length) fail(bad.length + ' spec reference(s) to a script-scoped global via window — these are always '
+    + 'undefined, and an assertion comparing two of them passes whatever the product does: ' + bad.slice(0, 6).join('; '));
+  else pass('no spec reads a let/const global off window (' + SCOPED.length + ' script-scoped names checked)');
+}
+
 console.log('\n== GUARD ==  ' + hard + ' failure(s) · ' + soft + ' warning(s)');
 process.exit(hard ? 1 : 0);

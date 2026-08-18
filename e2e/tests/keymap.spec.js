@@ -69,13 +69,22 @@ test.describe('Keyboard map · the app is operable and does not fight the browse
     await mintEntity(page);
     await page.keyboard.press('c');
     await expect(page.locator('.mover').first()).toBeVisible({ timeout: 15000 });
-    const navBefore = await page.evaluate(() => window.UI && window.UI.nav);
+    /**
+     * ⚠️⚠️ `UI` IS A TOP-LEVEL `let`, SO IT IS NOT A WINDOW PROPERTY. Only `var` and function declarations
+     * land on `window`; `let`/`const` live in script scope. So `window.UI` was `undefined` here — and the
+     * assertion below compared undefined to undefined and PASSED, whatever the digit key actually did.
+     *
+     * A test that passes for the wrong reason is worse than no test: it occupies the slot where a real check
+     * would go, and it reports green while the behaviour it names is unprotected. Reading the bare identifier
+     * is what actually reaches script scope from page.evaluate.
+     */
+    const navBefore = await page.evaluate(() => UI.nav);
 
     await page.keyboard.press('3');              // would navigate behind the modal
     await page.keyboard.press('c');              // would re-enter compose over itself
     await page.waitForTimeout(600);
 
-    expect(await page.evaluate(() => window.UI && window.UI.nav),
+    expect(await page.evaluate(() => UI.nav),
       'a digit must not navigate the screen underneath an open modal').toBe(navBefore);
     expect(await page.locator('.mover').count(),
       'c must not stack a second Compose on top of the one already open').toBe(1);

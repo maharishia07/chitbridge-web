@@ -375,7 +375,14 @@
      */
     workdays: function () {
       var raw = get('cb_workdays', '');
-      if (raw) return raw.split(',').map(Number).filter(function (n) { return n >= 1 && n <= 7; });
+      if (raw) {
+        var parsed = raw.split(',').map(Number).filter(function (n) { return n >= 1 && n <= 7; });
+        /* ⚠️ A GARBAGE OVERRIDE MUST NOT MEAN "NO WORKING DAYS". Filtering an unparseable value left an EMPTY
+           list, and an empty list is not "unset" — it is a week in which nothing is a working day, so every
+           due-date calculation built on this would run forever looking for the next one. Falling through to
+           CLDR is the only safe reading of a value we cannot understand. */
+        if (parsed.length) return parsed;
+      }
       var wi = L.weekInfo() || {};
       var off = wi.weekend || [6, 7];
       var out = [];
@@ -490,26 +497,58 @@
      */
     zoned: function (opts) {
       var o = {}; for (var k in (opts || {})) if (Object.prototype.hasOwnProperty.call(opts, k)) o[k] = opts[k];
-      try { if (!o.timeZone) o.timeZone = L.timezone(); } catch (_) {}
+      /**
+       * ⚠️⚠️ AN UNKNOWN ZONE MUST NOT BLANK EVERY DATE IN THE PRODUCT — and it did. Intl THROWS on an
+       * unrecognised timeZone, each formatter catches and returns '', so one bad stored value (a renamed zone,
+       * a synced preference from a newer browser, a hand-edited localStorage) made every timestamp on every
+       * screen render as nothing. Silently, with no error and nothing to notice but absence.
+       *
+       * A date in the wrong zone is a small wrongness. NO date at all is a broken product, so the zone is
+       * validated once here and dropped if the engine does not know it.
+       */
+      if (!o.timeZone) {
+        var tz = L.timezone();
+        try { new Intl.DateTimeFormat('en', { timeZone: tz }); o.timeZone = tz; }
+        catch (_) { /* leave it unset — the browser's own zone is a far better answer than no date */ }
+      }
       return o;
     },
 
     /** ⚠️ Every formatter below passes the chosen ZONE. Adding the setting without threading it through here
         would have produced a screen that says "Asia/Dubai" above dates still rendered in the browser's zone. */
+    /**
+     * ⚠️ AN UNPARSEABLE TIMESTAMP PRINTED "Invalid Date" ON THE SCREEN. `new Date('nonsense')` does not throw —
+     * it returns an Invalid Date, and toLocaleString on that returns the literal string "Invalid Date", which
+     * the catch below never saw because nothing was thrown. So a null or malformed `created_at` from any
+     * endpoint rendered those two words to the reader, looking like a system error rather than a missing value.
+     * An empty cell says "we do not have this"; "Invalid Date" says "we are broken".
+     */
+    _d: function (ts) {
+      /* ⚠️ null AND '' BECOME 1 JANUARY 1970, NOT AN INVALID DATE. `new Date(null)` is epoch zero and
+         `new Date('')` is invalid — so a missing timestamp rendered a real-looking date from 1970 on the
+         screen, which is worse than "Invalid Date": it looks like data. An absent value must render as absent. */
+      if (ts === null || ts === undefined || ts === '') return null;
+      var d = new Date(ts);
+      return isNaN(d.getTime()) ? null : d;
+    },
+
     time: function (ts) {
-      try { return new Date(ts).toLocaleTimeString(L.tag(), L.zoned({ hour: '2-digit', minute: '2-digit' })); }
+      var d = L._d(ts); if (!d) return '';
+      try { return d.toLocaleTimeString(L.tag(), L.zoned({ hour: '2-digit', minute: '2-digit' })); }
       catch (_) { return ''; }
     },
 
     date: function (ts, opts) {
-      try { return new Date(ts).toLocaleDateString(L.tag(), L.zoned(opts || { day: '2-digit', month: 'short', year: 'numeric' })); }
+      var d = L._d(ts); if (!d) return '';
+      try { return d.toLocaleDateString(L.tag(), L.zoned(opts || { day: '2-digit', month: 'short', year: 'numeric' })); }
       catch (_) { return ''; }
     },
 
     /** Date AND time together — the shape `toLocaleString` gives, so call sites convert one-for-one. */
     datetime: function (ts, opts) {
+      var d = L._d(ts); if (!d) return '';
       try {
-        return new Date(ts).toLocaleString(L.tag(),
+        return d.toLocaleString(L.tag(),
           L.zoned(opts || { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }));
       } catch (_) { return ''; }
     },

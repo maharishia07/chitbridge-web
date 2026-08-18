@@ -114,3 +114,69 @@ test.describe('Localisation · the layer and its screen', () => {
     expect(body, 'and the direction it implies').toMatch(/left to right|right to left/i);
   });
 });
+
+test.describe('Localisation · the edges that render nonsense', () => {
+  test.describe.configure({ timeout: 180_000 });
+
+  test('[LOC-10] ⚠️ a missing or malformed timestamp renders as ABSENT, never as text', async ({ page }) => {
+    await mintEntity(page);
+    const out = await page.evaluate(() => {
+      const L = window.CBLocale;
+      return {
+        bad: L.date('not-a-date'),
+        nul: L.date(null),
+        undef: L.date(undefined),
+        empty: L.date(''),
+        epoch: L.date(0),
+        real: L.date(Date.UTC(2026, 7, 18)),
+      };
+    });
+    /* ⚠️ `new Date('nonsense')` DOES NOT THROW — it returns an Invalid Date, and toLocaleString on that returns
+       the literal words "Invalid Date". So the try/catch never fired and those two words were printed to the
+       reader, looking like a system error rather than a missing value. */
+    expect(out.bad, 'a malformed timestamp is blank').toBe('');
+    /* ⚠️ AND `new Date(null)` IS EPOCH ZERO, not invalid — so a missing timestamp rendered "01 Jan 1970", which
+       is worse than "Invalid Date" because it looks like real data someone might act on. */
+    expect(out.nul, 'null is blank, not 1970').toBe('');
+    expect(out.undef, 'undefined is blank').toBe('');
+    expect(out.empty, 'empty string is blank').toBe('');
+    /* But a genuine epoch-zero timestamp is a real date and must still render. */
+    expect(out.epoch, 'an explicit 0 is a real instant').toMatch(/1970/);
+    expect(out.real, 'and a real date is unaffected').toMatch(/2026/);
+  });
+
+  test('[LOC-11] ⚠️ an unknown time zone must not blank every date in the product', async ({ page }) => {
+    await mintEntity(page);
+    try {
+      const out = await page.evaluate(() => {
+        window.CBLocale.setTimezone('Mars/Olympus');
+        return { date: window.CBLocale.date(Date.now()), time: window.CBLocale.time(Date.now()) };
+      });
+      /* ⚠️ Intl THROWS on an unrecognised timeZone and every formatter catches and returns ''. So one bad stored
+         value — a renamed zone, a preference synced from a newer browser, a hand-edited localStorage — made
+         every timestamp on every screen render as nothing, silently. A date in the wrong zone is a small
+         wrongness; NO date at all is a broken product. */
+      expect(out.date.length, 'dates still render').toBeGreaterThan(4);
+      expect(out.time.length, 'and so do times').toBeGreaterThan(2);
+    } finally {
+      await page.evaluate(() => { try { window.CBLocale.setTimezone(''); } catch (_) {} });
+    }
+  });
+
+  test('[LOC-12] ⚠️ a garbage working-day override must not empty the week', async ({ page }) => {
+    await mintEntity(page);
+    try {
+      const days = await page.evaluate(() => {
+        try { localStorage.setItem('cb_workdays', '99,abc'); } catch (_) {}
+        return window.CBLocale.workdays();
+      });
+      /* An empty list is not "unset" — it is a week in which nothing is a working day, so every due-date
+         calculation built on it would run forever looking for the next one. Falling through to CLDR is the only
+         safe reading of a value we cannot understand. */
+      expect(days.length, 'the week still has working days').toBeGreaterThan(0);
+      expect(days.every((d) => d >= 1 && d <= 7), 'and they are all real ISO weekdays').toBe(true);
+    } finally {
+      await page.evaluate(() => { try { localStorage.removeItem('cb_workdays'); } catch (_) {} });
+    }
+  });
+});

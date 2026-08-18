@@ -158,8 +158,11 @@ test.describe('Standards · where they bite, and why we bother', () => {
  */
 const openStdLegend = async (page) => {
   await page.evaluate(() => {
-    if (typeof window.closeLegend === 'function' && window._legendOpen) window.closeLegend();
-    if (typeof window.openLegend === 'function') window.openLegend();
+    /* ⚠️ BARE `_legendOpen`, not `window._legendOpen` — it is a top-level `let`, so it never lands on
+       window. My own version of this helper read it off window, got undefined, and therefore never closed a
+       stale lightbox: it just called openLegend(), which TOGGLES. Guard 16 caught it the same hour. */
+    if (typeof closeLegend === 'function' && _legendOpen) closeLegend();
+    if (typeof openLegend === 'function') openLegend();
   });
   await page.waitForTimeout(600);
   await page.evaluate(() => window.setLbTab && window.setLbTab('std'));
