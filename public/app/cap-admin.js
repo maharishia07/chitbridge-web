@@ -1575,6 +1575,25 @@ function standardsSettingsHTML(){
               ? '<a href="#" data-testid="std-go-' + esc(st.go) + '" onclick="stdGoto(' + Q + esc(st.go) + Q + ');return false" style="color:var(--blue);font-weight:600">' + esc(st.at) + ' →</a>'
               : '<b style="color:var(--on-card)">' + esc(st.at) + '</b>')
           + '</div>' : '')
+      /**
+       * ⭐⭐ THE WORKED VALUE. Athi, 2026-08-18: *"whenever we are saying we have followed the standard, is there
+       * any way we can show some sample record and how that will behave — example, HS code, other system
+       * reference and so on, so people can visualise."*
+       *
+       * ⚠️ "We follow GS1" is a claim a reader has to take on trust. "08901234567894 — the last digit is
+       * computed from the other thirteen, so a typo is detectable, and both sides know it is the same product
+       * without comparing names" is a claim they can SEE working. The second one survives being forwarded to a
+       * sceptical colleague; the first does not.
+       *
+       * ⚠️ The value is shown in a monospace block because it is a LITERAL — the exact bytes another system
+       * would receive. Rendering it as prose would invite the reader to think it was illustrative.
+       */
+      + (st.ex && st.ex !== '—' ? '<div style="margin-top:6px">'
+          + '<code style="display:inline-block;font-family:' + Q + 'Space Mono' + Q + ',ui-monospace,monospace;font-size:var(--fs-1);'
+          + 'background:var(--neutral-tint);color:var(--on-card);border:1px solid var(--line);border-radius:5px;'
+          + 'padding:2px 7px;word-break:break-all;max-width:100%">' + esc(st.ex) + '</code>'
+          + (st.exWhy ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px;line-height:1.55">' + st.exWhy + '</div>' : '')
+          + '</div>' : '')
       + (st.why ? '<div style="font-size:var(--fs-1);color:var(--on-card);margin-top:4px;line-height:1.55;'
           + 'border-inline-start:2px solid var(--line);padding-inline-start:8px">' + st.why + '</div>' : '')
       + '</div>';
@@ -1605,6 +1624,9 @@ function standardsSettingsHTML(){
         + 'Rows that are not in force say what is missing — a page like this is quoted to buyers, so an '
         + 'overstatement here would do more harm than a gap.'
         + '</div></div>')
+      /* ⚠️ THE RECORD COMES FIRST. The list answers "what do you follow"; the record answers "what does that
+         get me", and a reader who sees the answer to the second reads the first differently. */
+      + (typeof stdRecordHTML === 'function' ? stdRecordHTML({ compact: false }) : '')
       + groupsOf(plat);
 
   } else if (tab === 'yours') {

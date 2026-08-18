@@ -634,6 +634,9 @@ function _stdTabHtml(){
     +   'missing — because a page like this is quoted to buyers.'
     + '</div>'
     + stdWhyHTML({ compact: true })
+    /* ⚠️ Compact here: in the Legend the record is SCANNED, not studied. Same fields, same honesty markers —
+       the greyed "not built yet" rows especially, since this is the surface used to persuade. */
+    + (typeof stdRecordHTML === 'function' ? stdRecordHTML({ compact: true }) : '')
     + '</div>';
 }
 

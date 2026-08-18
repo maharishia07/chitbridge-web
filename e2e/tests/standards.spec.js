@@ -12,7 +12,15 @@ const open = async (page, tab) => {
   await page.evaluate(() => window.navTo('settings'));
   await page.waitForTimeout(1200);
   await page.getByTestId('set-sec-standards').click();
-  await page.waitForTimeout(700);
+  /**
+   * ⚠️ WAIT FOR THE REGISTER, NOT FOR A CLOCK. STANDARDS lives in cap-standards.js — its own lazily-loaded
+   * capability, shared with the Legend — so the section paints "Loading the register…" first and fills in when
+   * the script lands. A fixed 700ms held when this suite ran alone and failed under batch load, which is the
+   * least useful kind of failure: it looks like the register is empty when it has simply not arrived.
+   */
+  await page.waitForFunction(() => Array.isArray(window.STANDARDS) && window.STANDARDS.length > 0,
+    null, { timeout: 30_000 });
+  await page.waitForTimeout(300);
   if (tab) { await page.getByTestId('std-tab-' + tab).click(); await page.waitForTimeout(600); }
 };
 
@@ -101,10 +109,7 @@ test.describe('Standards · where they bite, and why we bother', () => {
 
   test('[STD-06] ⭐ every standard says WHERE it is used and WHAT it removes', async ({ page }) => {
     await mintEntity(page);
-    await page.evaluate(() => window.navTo('settings'));
-    await page.waitForTimeout(1200);
-    await page.getByTestId('set-sec-standards').click();
-    await page.waitForTimeout(700);
+    await open(page);
     const rows = await page.evaluate(() => (window.STANDARDS || []).map((s) => ({ n: s.n, at: s.at || '', why: s.why || '' })));
     expect(rows.length).toBeGreaterThan(15);
     for (const r of rows) {
@@ -118,12 +123,7 @@ test.describe('Standards · where they bite, and why we bother', () => {
 
   test('[STD-07] ⚠️ the argument states its COSTS, not only its benefits', async ({ page }) => {
     await mintEntity(page);
-    await page.evaluate(() => window.navTo('settings'));
-    await page.waitForTimeout(1200);
-    await page.getByTestId('set-sec-standards').click();
-    await page.waitForTimeout(700);
-    await page.getByTestId('std-tab-why').click();
-    await page.waitForTimeout(600);
+    await open(page, 'why');
     const body = await page.locator('#setbody').textContent();
 
     expect(body, 'the structural reason, not "quality"').toMatch(/crosses a boundary/i);
@@ -149,15 +149,32 @@ test.describe('Standards · where they bite, and why we bother', () => {
   });
 });
 
+
+/**
+ * ⚠️ openLegend() TOGGLES — calling it while the lightbox is open CLOSES it, so a test that assumed "open"
+ * could silently be asserting against a closed overlay. Force it open, then POLL for the content rather than
+ * sleeping: the Standards register is a lazily-loaded capability and a fixed wait is a timing assumption that
+ * holds alone and fails under batch load, which is exactly how this first failed.
+ */
+const openStdLegend = async (page) => {
+  await page.evaluate(() => {
+    if (typeof window.closeLegend === 'function' && window._legendOpen) window.closeLegend();
+    if (typeof window.openLegend === 'function') window.openLegend();
+  });
+  await page.waitForTimeout(600);
+  await page.evaluate(() => window.setLbTab && window.setLbTab('std'));
+  await page.waitForFunction(
+    () => { const h = document.getElementById('lbhost'); return !!h && /crosses a boundary/i.test(h.textContent || ''); },
+    null, { timeout: 30_000 }
+  );
+};
+
 test.describe('Standards in the Legend', () => {
   test.describe.configure({ timeout: 240_000 });
 
   test('[STD-09] ⭐ the Legend carries the same argument, from the same renderer', async ({ page }) => {
     await mintEntity(page);
-    await page.evaluate(() => { if (typeof window.openLegend === 'function') window.openLegend(); });
-    await page.waitForTimeout(1500);
-    await page.evaluate(() => window.setLbTab && window.setLbTab('std'));
-    await page.waitForTimeout(2500);            // cap-standards loads on demand from this surface
+    await openStdLegend(page);
     const body = await page.locator('#lbhost').textContent();
 
     expect(body, 'the structural claim, word for word').toMatch(/crosses a boundary/i);
@@ -169,10 +186,7 @@ test.describe('Standards in the Legend', () => {
 
   test('[STD-10] the Legend counts are LIVE, not a sentence someone typed', async ({ page }) => {
     await mintEntity(page);
-    await page.evaluate(() => { if (typeof window.openLegend === 'function') window.openLegend(); });
-    await page.waitForTimeout(1500);
-    await page.evaluate(() => window.setLbTab && window.setLbTab('std'));
-    await page.waitForTimeout(2500);
+    await openStdLegend(page);
     const shown = await page.locator('#lbhost').textContent();
     const real = await page.evaluate(() => {
       const n = { live: 0, part: 0, plan: 0 };
@@ -184,5 +198,42 @@ test.describe('Standards in the Legend', () => {
     expect(real.live, 'the register is loaded').toBeGreaterThan(5);
     expect(shown, 'the in-force count matches the register').toContain(real.live + ' in force');
     expect(shown, 'and so does the partial count').toContain(real.part + ' partly');
+  });
+});
+
+test.describe('Standards · made visible', () => {
+  test.describe.configure({ timeout: 240_000 });
+
+  test('[STD-11] ⭐ every claimed standard shows a worked value, and the unbuilt ones show none', async ({ page }) => {
+    await mintEntity(page);
+    await open(page);
+    const rows = await page.evaluate(() => (window.STANDARDS || []).map((s) => ({ n: s.n, s: s.s, ex: s.ex || '', exWhy: s.exWhy || '' })));
+    for (const r of rows) {
+      if (r.s === 'live' || r.s === 'part') {
+        /* ⚠️ "We follow GS1" is a claim a reader must take on trust. "08901234567894 — the last digit is
+           computed from the other thirteen, so a typo is detectable" is one they can see working, and it
+           survives being forwarded to a sceptical colleague. Anything we CLAIM must be demonstrable. */
+        if (r.n.includes('full audit')) continue;         // the one live-ish row with nothing honest to show
+        expect(r.ex.length, r.n + ' shows a worked value').toBeGreaterThan(2);
+        expect(r.ex, r.n + ' shows a real value, not a dash').not.toBe('—');
+        expect(r.exWhy.length, r.n + ' says what another system does with it').toBeGreaterThan(25);
+      }
+    }
+  });
+
+  test('[STD-12] ⚠️ the sample record marks what is NOT built rather than omitting it', async ({ page }) => {
+    await mintEntity(page);
+    await open(page, 'platform');
+    const body = await page.locator('#setbody').textContent();
+    expect(body, 'the worked record is shown').toMatch(/One chit, every standard in it/i);
+    expect(body, 'a real HS code').toContain('0904.11');
+    expect(body, 'a real GTIN').toContain('08901234567894');
+    /* ⚠️⚠️ THE ASSERTION THAT KEEPS THE DEMONSTRATION HONEST. A sample record showing ISO 6523 working today —
+       when it is only decided — would be the exact overclaim the status column exists to prevent, dressed up as
+       a demonstration. And a reader who spots one invented field stops believing the other twenty-five. */
+    expect(body, 'planned fields are labelled planned, not quietly shown as working').toMatch(/ISO 6523 · planned/i);
+    expect(body, 'and the reader is told greyed means not built').toMatch(/not built yet/i);
+    /* The one field that must never carry a standard at all. */
+    expect(body, 'the product name is marked as never translated').toMatch(/never translated/i);
   });
 });
