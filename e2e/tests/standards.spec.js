@@ -29,6 +29,10 @@ test.describe('Settings › Standards', () => {
 
   test('[STD-02] ⚠️ every standard declares a status, and nothing unfinished claims otherwise', async ({ page }) => {
     await mintEntity(page);
+    /* ⚠️ OPEN THE SECTION FIRST. cap-admin.js is a LAZILY-LOADED capability — nothing in it exists on `window`
+       until something navigates to Settings and ensureCap() fetches it. Reading STANDARDS before that returned
+       an empty list, which read exactly like "the register is empty" and is really "the file is not here yet". */
+    await open(page);
     const rows = await page.evaluate(() => (window.STANDARDS || []).map((s) => ({ n: s.n, s: s.s, note: s.note || '' })));
     expect(rows.length, 'the register is populated').toBeGreaterThan(15);
 
