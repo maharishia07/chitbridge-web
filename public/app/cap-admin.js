@@ -1259,13 +1259,25 @@ function govRowHtml(label,valHtml,klass){
   var hasControl = /<select|<input|<textarea|<button/i.test(String(valHtml));
   /* Rows whose value is owned by another screen say where, so the reader is never left hunting for the control —
      and there is still only ONE control. */
+  /**
+   * ⚠️ THE MAP HAD TWO ENTRIES AND THE PRODUCT NOW HAS FIVE OWNED VALUES. Localisation and Appearance were
+   * built after this map was written, so their governance rows declared a rule and offered no way to reach the
+   * control — the exact "left hunting for the control" this map exists to prevent, reintroduced by growth.
+   */
   var OWNER = { 'Catalogue visibility': ['Profile → Storefront', "navTo('profile');UI.profSec='storefront'"],
-                'Assignment model':     ['Settings → Work',      "setSetSec('work')"] };
+                'Assignment model':     ['Settings → Work',      "setSetSec('work')"],
+                'Interface language':   ['Settings → Localisation', "setSetSec('locale')"],
+                'Date / number format': ['Settings → Localisation', "setSetSec('locale')"],
+                'Reading direction':    ['Settings → Localisation', "setSetSec('locale')"] };
   var own = OWNER[label];
   var why = (label === 'Catalogue visibility') ? govCatVisWhy() : '';
   return '<div class="govrow"><span class="govrow-k">'+esc(label)+'</span>'
     + '<span class="govrow-v">'+valHtml
-      + (own ? ' <button class="govref-go" onclick="'+own[1]+'">'+esc(own[0])+' →</button>' : '')
+      /* ⚠️ THROUGH THE HELPER, not inlined. govOwnedElsewhere() was written for exactly this, with the
+         "one owner, many viewers" reasoning attached to it, and then this line duplicated its body — so the
+         helper sat uncalled while its explanation applied to code somewhere else. Found by the dead-surface
+         scan, which reported it as unreachable when it was really un-adopted. */
+      + (own ? ' ' + govOwnedElsewhere(own[0], own[1]) : '')
     + '</span>'
     + '<span class="govrow-c">'+govKlass(klass, hasControl || !!own)+'</span></div>'
     + (why ? '<div class="govwhy">'+esc(why)+'</div>' : '');

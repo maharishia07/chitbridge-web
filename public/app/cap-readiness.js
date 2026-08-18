@@ -118,8 +118,24 @@ function _aiPdf(){
   w.document.close(); w.focus(); setTimeout(function(){ try{ w.print(); }catch(_){ } }, 350);
 }
 // the entity's DECLARATION — which standards it holds. A checkbox = a commitment: it only counts as MET when its
-// evidence is live & valid (status gathered/expiring). loadProfile → UI.profile.adopted[]. declareToggle persists it.
-async function loadProfile(){
+// evidence is live & valid (status gathered/expiring). rdLoadDeclaration → UI.profile.adopted[]. declareToggle persists it.
+/**
+ * ⚠️⚠️ RENAMED FROM loadProfile — IT COLLIDED WITH A COMPLETELY DIFFERENT FUNCTION OF THE SAME NAME.
+ *
+ * cap-admin.js also declared `loadProfile`, and that one RENDERS THE PROFILE SCREEN into #profbody. This one
+ * loads the entity's trade declaration into UI.profile. Two lazily-loaded capabilities, one name — so whichever
+ * loaded LAST won, and the app broke in a different way depending on where the user had been:
+ *
+ *   readiness loaded last  → app.html's `if(UI.nav==="profile") loadProfile()` ran THIS function, so the
+ *                            Profile screen never rendered and sat on its "loading…" placeholder
+ *   admin loaded last      → line 438 below ran the ADMIN one, which returns early when #profbody is absent,
+ *                            so UI.profile stayed undefined and the declaration checkboxes never populated
+ *
+ * ⚠️ Neither failure throws, and neither is reachable from a first visit — you have to go to one screen and
+ * then the other, which is why it survived. Found by the dead-surface scan looking for shadowed declarations,
+ * not by anything watching behaviour.
+ */
+async function rdLoadDeclaration(){
   try{ UI.profile = await api('profileGet'); }
   catch(e){ UI.profile = {trade_mode:'domestic',markets:[],sectors:[],adopted:[]}; }
   // fold the explorer: restore the entity's SAVED lane (sector · destination) so it opens to their real trade
@@ -435,7 +451,7 @@ function rdBack(){ UI.rdMDetail=false; if(typeof renderApp==='function') renderA
 // Trade ready — FULL-WIDTH, uniform with Task. Tabs: Certification (standing) · Clearance (per-shipment) · Commercial.
 function readinessScreen(){
   var tab=UI.rdTab||'certification';
-  if(UI.profile===undefined && typeof loadProfile==='function') loadProfile();   // the entity's declaration (checkboxes)
+  if(UI.profile===undefined && typeof rdLoadDeclaration==='function') rdLoadDeclaration();   // the entity's declaration (checkboxes)
   var shell=function(inner){ return '<div style="flex:1;display:flex;flex-direction:column;min-height:0">'+_rdHeader()+_rdTabInfo(tab)+inner+'</div>'; };
   if(tab==='commercial'){
     return shell(_rdComTwoPane());
