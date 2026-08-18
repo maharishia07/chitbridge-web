@@ -81,6 +81,37 @@ var STANDARDS = [
     s:'plan',
     at:'Network · places', go:'network', why:'"Chennai" is a city, a port and three terminals. A shipment needs to know which.' },
 
+  /**
+   * ⭐ IAM STANDARDS — added after Athi asked *"can you check any specific standard should be followed as part
+   * of this IAM, if so and if it is within our control"*. The last clause is the useful one: several IAM
+   * standards exist and most are NOT ours to follow, because they govern federating identity between systems and
+   * this platform issues its own credentials. Listing those as "planned" would be padding.
+   */
+  { g:'Identity & access', n:'ISO/IEC 24760', w:'The IAM vocabulary — identity · identifier · attribute',
+    s:'part', note:'We use its distinctions; we do not implement its lifecycle model.',
+    ex:'bridge_id = identifier · display_name = attribute · the entity = identity',
+    exWhy:'⭐ This is the distinction the IAM page is built on. A Bridge ID is not an identity and a name is not an identifier — conflating them is what made "Identity" the wrong name for a page about five different kinds of party.',
+    at:'IAM', go:'identity', why:'Gives us the words for the thing we kept getting wrong: an identifier is not an identity.' },
+  { g:'Identity & access', n:'RBAC (ANSI INCITS 359)', w:'Role-based access — coarse, five roles',
+    s:'part', note:'The hat IS role-based, but roles are fixed and not composable; there is no permission-to-role assignment.',
+    ex:'view_only · act · audit · mis · manager',
+    exWhy:'One role per co-assist, enforced on every write since 2026-08-18. Not fine-grained: you cannot grant "may edit catalogue but not send chits".',
+    at:'IAM · Co-assists', go:'coassists', why:'⭐ An owner can answer "what can this person do" in one word, which is the whole point of roles over permission lists.' },
+  { g:'Identity & access', n:'NIST SP 800-63B', w:'Authentication assurance',
+    s:'part', note:'One-time code to a verified channel is roughly AAL2 single-factor; we do not claim an audited level.',
+    ex:'ravi@alpha-timers + a one-time code',
+    exWhy:'Possession of the channel proves identity. No password to leak, reuse or phish — which is why there is no password reset flow to attack.',
+    at:'Sign-in', go:'', why:'States honestly what our sign-in does and does not prove.' },
+  /* ⚠️ NOT OURS, and saying so is the point of the question. */
+  { g:'Identity & access', n:'SCIM (RFC 7644)', w:'Provisioning identities from an HR system',
+    s:'plan', ex:'—',
+    exWhy:'Not built. It matters only when a customer wants their HR system to create and remove co-assists automatically — real for a large operator, irrelevant to a shop.',
+    at:'—', go:'', why:'Removes the manual add/remove step for a business that already runs one.' },
+  { g:'Identity & access', n:'OAuth 2 · OIDC', w:'Federated sign-in',
+    s:'plan', ex:'—',
+    exWhy:'⚠️ Deliberately not adopted. We ISSUE credentials rather than delegating to an identity provider — a chit is signed by a party we authenticated, and federating that would put a third party between a business and its own record.',
+    at:'—', go:'', why:'Would let people sign in with an existing account — at the cost of who vouches for the signature.' },
+
   { g:'Platform',     n:'RFC 7519 (JWT)',         w:'Session tokens',                                    ex:"eyJhbGciOiJIUzI1NiJ9.…", exWhy:"Three base64 parts: header, claims, signature. Any reviewer can decode the middle one and see exactly what we assert about a session.",
     s:'live',
     at:'Sign-in', go:'', why:'A credential format every reviewer already knows how to audit.' },

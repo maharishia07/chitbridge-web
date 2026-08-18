@@ -874,7 +874,9 @@ function iamHTML(e){
       + 'background:' + (on ? 'var(--blue-tint-bg)' : 'var(--card)') + ';color:var(--on-card)">' + x[1] + '</button>';
   }).join('');
 
-  return _misHead('IAM', 'Who can act for this business, and what each of them may do.')
+  return _misHead('IAM · Identity &amp; Access Management',
+      '<b>Identity</b> — who each party is and what they are called. <b>Access</b> — what each of them may do, '
+      + 'and where that permission came from.')
     + '<div style="display:flex;gap:7px;margin-bottom:11px">' + seg + '</div>'
     + (tab === 'who' ? iamWhoHTML(e) : iamAccessHTML(e));
 }
@@ -913,10 +915,15 @@ function iamWhoHTML(e){
   };
 
   return _iamCard(_iamHead(_iamZone('inside') + ' &nbsp;You administer these',
-      'Identities this business creates, names and can remove.')
+      'Identities this business creates, names and can remove. Athi: <i>&ldquo;people means who works for the '
+      + 'entity, within the boundary of the entity&rdquo;</i> — that boundary is exactly what this zone draws.')
     + line('This business', esc(e.display_name || '—'), ['Bridge ID + User ID', 'a one-time code to your email'], '', '')
-    + line('People', people.length ? people.length + ' co-assist' + (people.length === 1 ? '' : 's') : 'none yet',
-        ['name + actor key', 'their actor key and a code'], 'Co-assists', "navTo('coassists')")
+    /* ⚠️ THE HANDLE IS key@user_id, NOT key@display-name — display_name has no unique index and changes when an
+       owner renames the business; user_id has one and does not. See routes/actors.js. */
+    + line('People', (people.length ? people.length + ' co-assist' + (people.length === 1 ? '' : 's') : 'none yet')
+        + ' <span style="color:var(--grey)">— they work for this business, inside its boundary</span>',
+        ['name + actor key, signing in as <b>key@' + esc(e.user_id || 'your-user-id') + '</b>', 'that handle and a one-time code'],
+        'Co-assists', "navTo('coassists')")
     /* ⚠️ MACHINES ARE CO-ASSISTS, not a fifth class — same table, different actor_type. Listing them separately
        would imply a separate identity model and a separate place to manage them; there is neither. */
     + line('Machines &amp; agents', machines.length ? machines.length + ' (IoT · AI · ERP)' : 'none yet',

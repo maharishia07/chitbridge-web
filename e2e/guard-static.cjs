@@ -672,13 +672,13 @@ console.log('\n16 · specs must not read window.X for a script-scoped global');
       SCOPED.forEach((name) => {
         const hit = new RegExp('window\\.' + name + '\\b', 'g');
         const n = (code.match(hit) || []).length;
-        if (n) bad.push(f + ' reads window.' + name + ' ×' + n);
+        if (n) bad.push(f + ' touches window.' + name + ' ×' + n);
       });
     });
   }
   if (bad.length) fail(bad.length + ' spec reference(s) to a script-scoped global via window — these are always '
     + 'undefined, and an assertion comparing two of them passes whatever the product does: ' + bad.slice(0, 6).join('; '));
-  else pass('no spec reads a let/const global off window (' + SCOPED.length + ' script-scoped names checked)');
+  else pass('no spec reads or writes a let/const global off window (' + SCOPED.length + ' script-scoped names checked)');
 }
 
 console.log('\n== GUARD ==  ' + hard + ' failure(s) · ' + soft + ' warning(s)');
