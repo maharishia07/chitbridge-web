@@ -586,9 +586,35 @@ console.log('\n15 · hardcoded ink on a themed ground');
   const bad = {};
   [['app.html', app]].concat(CAPS.map((f) => [f, fs.readFileSync(path.join(WEB, 'app', f), 'utf8')]))
     .forEach(([name, src]) => {
-      const code = src.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/^\s*\/\/.*$/gm, ' ');
+      /**
+       * ⚠️ POPUP STYLESHEETS ARE EXEMPT, AND THEIR LITERALS ARE CORRECT. A window opened with window.open() is
+       * a DIFFERENT DOCUMENT with none of our custom properties, so a token there resolves to nothing and the
+       * declaration is silently dropped. (_AI_MDCSS was setting font-size:var(--fs-2) in exactly that position
+       * and had therefore never had a controlled font size at all — found by this check.)
+       *
+       * Flagging them would make the count un-clearable, and a check that can never reach zero never gets
+       * promoted to a hard failure — it would sit at "5 warnings" forever and be ignored.
+       */
+      /**
+       * ⚠️ BLANK OUT, DO NOT COLLAPSE. Replacing a multi-line comment with a single space JOINS the code either
+       * side of it, so a `background:var(--x)` above a long comment lands within the proximity window of a
+       * `color:#hex` below it — two declarations that are nowhere near each other in the real file. That is
+       * where four of these "findings" came from, and a checker that invents its own evidence is worse than
+       * none. Preserving the newlines keeps every offset honest.
+       */
+      const blank = (m) => m.replace(/[^\n]/g, ' ');
+      const code = src.replace(/\/\*[\s\S]*?\*\//g, blank).replace(/^([ \t]*)\/\/.*$/gm, blank)
+                      .replace(/var _AI_MDCSS[\s\S]*?';/g, blank)
+                      .replace(/var css\s*=\s*'@page[\s\S]*?';/g, blank);
       let n = 0;
-      const re = /color\s*:\s*(#[0-9a-fA-F]{3,8})/g;
+      /**
+       * ⚠️ `border-color:` IS NOT INK, and the first version of this check counted it as such — `color\s*:`
+       * matches the tail of `border-color:`, `outline-color:` and `caret-color:` alike. A border is a
+       * NON-TEXT concern (1.4.11, 3:1), not a text one (1.4.3, 4.5:1), so lumping them together both
+       * overstated the count and pointed the reader at the wrong fix. The lookbehind requires the property to
+       * actually BE `color`.
+       */
+      const re = /(?<![-a-zA-Z])color\s*:\s*(#[0-9a-fA-F]{3,8})/g;
       let m;
       while ((m = re.exec(code))) {
         const ink = m[1].toLowerCase();
@@ -601,9 +627,15 @@ console.log('\n15 · hardcoded ink on a themed ground');
       if (n) bad[name] = n;
     });
   const total = Object.values(bad).reduce((a, b) => a + b, 0);
+  /**
+   * ⭐ NOW A HARD FAILURE, because the count reached zero on 2026-08-18. It shipped as a warning while there
+   * were 29 of these; a check that can never pass is a check people learn to scroll past. Holding the line at
+   * zero is cheap — reaching zero was the work.
+   */
   if (total) {
-    warn(total + ' hardcoded text colours on a var() background — one half moves with the theme, the other '
-      + 'does not: ' + Object.entries(bad).sort((x, y) => y[1] - x[1]).slice(0, 6).map(([k, v]) => k + ':' + v).join(', '));
+    fail(total + ' hardcoded text colours on a var() background — one half moves with the theme, the other does '
+      + 'not, so this is invisible until someone opens the wrong theme: '
+      + Object.entries(bad).sort((x, y) => y[1] - x[1]).slice(0, 6).map(([k, v]) => k + ':' + v).join(', '));
   } else pass('every text colour on a themed ground is itself a token');
 }
 

@@ -314,7 +314,7 @@ function _subjectTabHtml(){
     +'<div style="border:1px solid #cbd8ec;background:linear-gradient(180deg,#f6f9fe,#fff);border-radius:13px;padding:14px 16px;margin:10px 0 14px">'
       +'<div style="font-family:\'Space Grotesk\';font-weight:800;font-size:18px;color:var(--ink)">Chit &amp; Bridge is a governed rail</div>'
       +'<div style="font-size:var(--fs-2);color:var(--ink);line-height:1.55;margin-top:6px"><b>Content-neutral, governance-absolute.</b> You decide <b>what</b> moves between two entities — the business defines that; we guarantee that <b>whatever moves is governed</b>. A train can\'t leave the track.</div>'
-      +'<div style="font-size:12px;color:#2b4a72;background:var(--blue-tint);border:1px solid var(--blue-tint-line);border-radius:9px;padding:8px 11px;margin-top:10px">🧭 <b>As easy as a mailbox</b> for the end user — zero learning curve. The mailbox is how it <i>feels</i>; the rail is what it <i>is</i>.</div>'
+      +'<div style="font-size:12px;color:var(--blue-2);background:var(--blue-tint);border:1px solid var(--blue-tint-line);border-radius:9px;padding:8px 11px;margin-top:10px">🧭 <b>As easy as a mailbox</b> for the end user — zero learning curve. The mailbox is how it <i>feels</i>; the rail is what it <i>is</i>.</div>'
     +'</div>'
     +'<div style="font-size:var(--fs-1);font-weight:700;color:var(--ink);margin-bottom:5px">The subject — the sealed, co-held record <span style="color:var(--grey);font-weight:600">(the &ldquo;chit&rdquo;)</span></div>'
     +'<div style="font-size:12px;color:var(--ink);line-height:1.55;margin-bottom:11px">Each item is a <b>governed obligation, replicated per party</b> — your own sealed copy, disputable on divergence. It is the <b>noun</b> everything else acts on; the capabilities are the <b>verbs</b>. Two tracks — <b>Task</b> (coming to you) and <b>Order</b> (going from you) — carry it; the <b>wagon is your business</b>, and the rail never opens it.</div>'
@@ -348,7 +348,7 @@ function _subjectTabHtml(){
 
 /* ── FOUNDATIONS tab — the trust floor as maturity + PROOF (core hardening + atomicity now first-class). ── */
 function _foundTabHtml(){
-  const lvlBadge=(l,t)=>{ const tt=(t&&t>l)?('→L'+t):''; return '<span title="Foundation maturity — L1 exists · L2 clean mechanism · L3 enforced+isolated · L4 governed+provable · L5 audited/certified" style="font-size:var(--fs-1);font-weight:800;color:#1f6f4a;background:var(--ok-tint);border:1px solid #bfe0cf;border-radius:6px;padding:1px 7px">L'+l+tt+'</span>'; };
+  const lvlBadge=(l,t)=>{ const tt=(t&&t>l)?('→L'+t):''; return '<span title="Foundation maturity — L1 exists · L2 clean mechanism · L3 enforced+isolated · L4 governed+provable · L5 audited/certified" style="font-size:var(--fs-1);font-weight:800;color:var(--ok-2);background:var(--ok-tint);border:1px solid #bfe0cf;border-radius:6px;padding:1px 7px">L'+l+tt+'</span>'; };
   const card=(f)=>'<div style="border:1px solid var(--line);border-radius:12px;padding:11px 13px;margin-bottom:10px">'
     +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><span style="font-size:15px">'+f.icon+'</span><span style="font-family:\'Space Grotesk\';font-weight:700;font-size:13.5px">'+esc(f.name)+'</span><span style="margin-inline-start:auto">'+lvlBadge(f.level,f.target)+'</span></div>'
     +'<div style="font-size:13px;color:var(--ink);line-height:1.5;margin-bottom:6px">'+esc(f.what)+'</div>'
@@ -656,7 +656,7 @@ function _openLegendImpl(){
     const on=!!LOADED[c.id];
     return `<span style="font-size:var(--fs-1);font-weight:700;color:${on?'var(--blue-d)':'var(--grey-2)'};background:${on?'var(--blue-tint)':'var(--warn-tint)'};border:1px solid ${on?'var(--blue-tint-line)':'var(--line)'};border-radius:6px;padding:1px 7px">lazy · ${on?'loaded ✓':'on demand'}</span>`;
   };
-  const matBadge=(c)=>{ if(!c.maturity) return ''; const t=(c.target&&c.target>c.maturity)?`→L${c.target}`:''; return `<span title="Capability maturity — 1 Proven · 2 Packaged · 3 Itemised · 4 Governed · 5 Productized" style="font-size:var(--fs-1);font-weight:800;color:#4b3b8f;background:var(--purple-tint);border:1px solid #cabdf0;border-radius:6px;padding:1px 7px">L${c.maturity}${t}</span>`; };
+  const matBadge=(c)=>{ if(!c.maturity) return ''; const t=(c.target&&c.target>c.maturity)?`→L${c.target}`:''; return `<span title="Capability maturity — 1 Proven · 2 Packaged · 3 Itemised · 4 Governed · 5 Productized" style="font-size:var(--fs-1);font-weight:800;color:var(--purple-2);background:var(--purple-tint);border:1px solid #cabdf0;border-radius:6px;padding:1px 7px">L${c.maturity}${t}</span>`; };
   const featRow=(f)=>{ const [col,ic]=SC[f.s]||SC.backlog;
     return `<div style="display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--ink);padding:4px 0;line-height:1.45"><span style="color:${col};flex:none">${ic}</span><span>${esc(f.n)}</span></div>`; };
   // GOVERNANCE BAND — the SECOND axis: gov maturity + what governs it + the L4 gap (SPEC-governance-in-legend.md).
@@ -667,7 +667,7 @@ function _openLegendImpl(){
     const na=(c.gov==null);
     const t=(c.govTarget&&c.govTarget>c.gov)?`→L${c.govTarget}`:'';
     const badge=na
-      ? `<span style="font-size:var(--fs-1);font-weight:800;color:#8a8f98;background:var(--neutral-tint);border:1px solid var(--line);border-radius:6px;padding:1px 7px">gov · N/A</span>`
+      ? `<span style="font-size:var(--fs-1);font-weight:800;color:var(--grey);background:var(--neutral-tint);border:1px solid var(--line);border-radius:6px;padding:1px 7px">gov · N/A</span>`
       : `<span title="Governance maturity — 1 declared · 2 designed · 3 enforced+isolated · 4 governed+provable · 5 audited/certified" style="font-size:var(--fs-1);font-weight:800;color:var(--ink-2);background:var(--ok-tint);border:1px solid #bfe0cf;border-radius:6px;padding:1px 7px">gov · L${c.gov}${t}</span>`;
     const under=c.governedUnder?`<span style="font-size:var(--fs-1);color:var(--grey)">under <b style="color:#2f6f4a;font-weight:600">${esc(c.governedUnder)}</b></span>`:'';
     const mech=(c.governedBy&&c.governedBy.length)?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:5px">${govChips(c.governedBy,'var(--ok-2)','var(--ok-tint)','var(--ok-tint)')}</div>`:'';

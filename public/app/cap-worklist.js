@@ -239,12 +239,12 @@ function wlRow(r, ctx, depth){
      * make, on every row.
      */
     +   '<span data-testid="wl-done" title="Open this line — history, delivery, cost, who has it" onclick="event.stopPropagation();wlLine(&quot;' + r.line_id + '&quot;)"'
-    +     ' style="cursor:pointer;font-size:13px;padding:2px 9px;border-radius:6px;color:#2c5d7c;background:var(--blue-tint-bg);font-weight:800">⋯</span>'
+    +     ' style="cursor:pointer;font-size:13px;padding:2px 9px;border-radius:6px;color:var(--blue-2);background:var(--blue-tint-bg);font-weight:800">⋯</span>'
     +   '<span style="color:var(--grey);font-size:12px;padding-inline-start:3px">›</span></span></div>'
     /* ⚠️ WHICH ORDER IT CAME FROM. A line without its chit is an instruction with no context — you cannot ring the
        customer, check the rest of the order, or know who is waiting. */
     + (named || ordered ? '' : '<div style="font-size:11.5px;color:var(--grey);margin-top:3px">' + order + '</div>')
-    + (bits.length ? '<div style="margin-top:4px;font-size:12px;color:#5b5340;background:var(--warn-tint);border-radius:5px;padding:3px 8px;display:inline-block">◍ ' + bits.join(' · ') + '</div>' : '')
+    + (bits.length ? '<div style="margin-top:4px;font-size:12px;color:var(--warn-2);background:var(--warn-tint);border-radius:5px;padding:3px 8px;display:inline-block">◍ ' + bits.join(' · ') + '</div>' : '')
     + '</div>';
 }
 

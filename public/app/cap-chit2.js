@@ -242,7 +242,7 @@ function c2PaneOrd(d){
         + ' style="cursor:pointer;font-size:15px;color:var(--grey);padding:0 2px">✎</span>'
       + '</span></div>'
       + '<div style="margin-top:3px;font-size:13.5px;color:var(--ink-2,#6b665e);font-variant-numeric:tabular-nums">' + was + esc(c2q(l)) + (l.price != null ? ' × ' + c2Money(l.price) : '') + '</div>'
-      + (l.comment ? '<div style="margin-top:5px;font-size:var(--fs-2);color:#2c5d7c;background:var(--blue-tint-bg);border-radius:5px;padding:4px 8px;display:inline-block">' + esc(l.comment) + '</div>' : '')
+      + (l.comment ? '<div style="margin-top:5px;font-size:var(--fs-2);color:var(--blue-2);background:var(--blue-tint-bg);border-radius:5px;padding:4px 8px;display:inline-block">' + esc(l.comment) + '</div>' : '')
       + (l.qty_unverified ? '<div style="margin-top:5px;font-size:var(--fs-1);color:var(--warn-2)">⚠️ this number does not appear in their message — check it</div>' : '')
       /* ⚠️ REJECTED IS LOUDER THAN UNVERIFIED, because it is a stronger claim: the quantity was compared against
          THIS line's own words and disagreed, so it was nulled rather than shown. */
@@ -664,7 +664,7 @@ function c2WorkRow(e, asg, prog, ctx){
           var bits = [who, a.task ? esc(a.task) : '', when].filter(Boolean);
           if (!a.assignee_name) return '<div style="margin-top:4px;font-size:12px;color:var(--grey)">unassigned' + (left ? ' · nobody is doing this' : '') + '</div>';
           if (!bits.length) return '';
-          return '<div style="margin-top:4px;font-size:12px;color:#5b5340;background:var(--warn-tint);border-radius:5px;padding:3px 8px;display:inline-block">◍ ' + bits.join(' · ') + '</div>';
+          return '<div style="margin-top:4px;font-size:12px;color:var(--warn-2);background:var(--warn-tint);border-radius:5px;padding:3px 8px;display:inline-block">◍ ' + bits.join(' · ') + '</div>';
         })()
       + (ctx === 'line' && (a.history || []).length ? '<div style="margin-top:4px;font-size:var(--fs-1);color:var(--grey)">was ' + esc(a.history.map(function(h){ return h.assignee_name || 'unassigned'; }).join(' → ')) + '</div>' : '')
       /* ⚠️ SURFACED HERE TOO. A line the two parties disagree about is a line you cannot call finished, and this
