@@ -653,7 +653,7 @@ async function loadMIS(){
          the call failed; every reader must handle that rather than fall back to a second implementation. */
       srv: srv,
       periodLabel: misPeriod() === 'all' ? 'all time' : ('last ' + misPeriod() + 'd'),
-      asOf: new Date().toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' }),
+      asOf: CBLocale.time(Date.now()),
       currency: 'INR'
     };
     const h = document.getElementById('misbody'); if (h) h.innerHTML = misBandHTML(misBand(), UI._mis);

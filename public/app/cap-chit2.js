@@ -522,7 +522,7 @@ function c2WorkTabs(){
 function c2DateLabel(d){
   try {
     var t = new Date(String(d) + 'T00:00:00');
-    return t.toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short' });
+    return CBLocale.date(t, { weekday: 'short', day: '2-digit', month: 'short' });
   } catch (e) { return String(d); }
 }
 function c2DueBucket(due){

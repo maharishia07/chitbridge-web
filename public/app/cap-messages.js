@@ -172,7 +172,7 @@ function msgWhen(s){
     if (mins < 1) return 'just now';
     if (mins < 60) return mins + 'm ago';
     if (mins < 60 * 24) return Math.round(mins / 60) + 'h ago';
-    return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+    return CBLocale.date(d, { day: '2-digit', month: 'short' });
   } catch (e) { return String(s).slice(0, 10); }
 }
 function msgIsMine(m){

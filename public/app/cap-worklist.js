@@ -171,7 +171,7 @@ function wlDateLabel(d){
     var t = new Date(String(d).slice(0, 10) + 'T00:00:00');
     var today = new Date(); today.setHours(0, 0, 0, 0);
     var days = Math.round((t - today) / 86400000);
-    var when = t.toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short' });
+    var when = CBLocale.date(t, { weekday: 'short', day: '2-digit', month: 'short' });
     var rel = days < 0 ? 'Overdue' : days === 0 ? 'Today' : days === 1 ? 'Tomorrow' : days <= 7 ? 'This week' : 'Later';
     return { text: when, rel: rel, overdue: days < 0, today: days === 0 };
   } catch (e) { return { text: String(d), rel: '', overdue: false, today: false }; }

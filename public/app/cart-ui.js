@@ -534,7 +534,7 @@
    */
   function fmt(ns, n) {
     return sym(ns) + (opt(ns, 'groupDigits', false)
-      ? Number(n).toLocaleString(opt(ns, 'locale', 'en-IN'))
+      ? Number(n).toLocaleString(opt(ns, 'locale', CBLocale.locale()))
       : String(n));
   }
   function accent(ns) { return opt(ns, 'accent', 'var(--blue)'); }

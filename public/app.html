@@ -1202,6 +1202,9 @@ img.attImg{object-fit:cover;display:block}
 <script src="/cb-offline.js"></script>
 <script src="/app/core.js"></script>
 <!-- module 2: generic dependency-free helpers (esc/opt/scrErr/cap/inr_/fmtAt/fmtMoney/deepClone/jwtPayload) -->
+<!-- ⚠️ BEFORE helpers.js, which formats through it. The localisation layer owns every decision that changes
+     across a border: language, direction, numerals, numbers, money, dates, times and SORT ORDER. -->
+<script src="/app/locale.js"></script>
 <script src="/app/helpers.js"></script>
 <!-- module 3: the canonical catalogue model (shape · migration · four-leg chain · compute-job derivation). Shared by cap-network.js and headless consumers. -->
 <script src="/app/catalogue-model.js"></script>
@@ -3270,8 +3273,10 @@ function cbLang(){ try{ return localStorage.getItem('cb_lang') || 'en'; }catch(_
  */
 function cbSetLang(code){
   if(!CBI18N[code]) return;
-  try{ localStorage.setItem('cb_lang', code); }catch(_){}
-  document.documentElement.setAttribute('lang', code);
+  /* ⚠️ THROUGH THE LAYER, not around it. Choosing a language also chooses a DIRECTION and a set of number,
+     money, date and time formats — CBLocale.setLang applies all of them together. Setting only the strings is
+     how an Arabic interface ends up running left-to-right with Indian digit grouping. */
+  CBLocale.setLang(code);
   var mh = document.getElementById('modalhost');
   var lbh = document.getElementById('lbhost');
   if ((mh && mh.innerHTML.trim()) || (lbh && lbh.innerHTML.trim())) {
@@ -4846,7 +4851,7 @@ function paintSupList(){ const b=document.getElementById('sup_rows'); if(b)b.inn
 function paintSupDetail(){ const dp=document.getElementById('detailpane'); if(dp){ dp.className='detail'; dp.innerHTML=supDetailHTML(); } }
 /* ===================== CUSTOMERS (CRM) — end-customers locked UNDER this shop (parent_entity_id = shop).
    Everyone who ordered/signed-in via the storefront; the platform never shares them. GET /api/relationships/customers. */
-function custDate(x){ try{ return new Date(x).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}); }catch(_){ return ''; } }
+function custDate(x){ try{ return CBLocale.date(x); }catch(_){ return ''; } }
 function custContact(c){ var em=(c&&c.email)||''; var at=em.lastIndexOf('@'); var local=at>=0?em.slice(0,at):em; if(local.indexOf('=')>=0) return local.replace('=','@'); return local||(c&&c.display_name)||''; }
 function custSeg(s){ var col={new:'var(--blue-d)',regular:'var(--ok-2)',inactive:'var(--warn-2)'}[s]||'var(--grey-2)', bg={new:'var(--blue-tint)',regular:'var(--ok-tint)',inactive:'var(--warn-tint)'}[s]||'var(--card)'; return '<span class="optchip" style="background:'+bg+';color:'+col+';border-color:transparent">'+esc(s||'—')+'</span>'; }
 function customersScreen(){
@@ -6538,7 +6543,7 @@ function acType(t){ return AC_TYPE[t]||esc(t||'human'); }
 function acShc(sh){ return sh==='on_shift'?'on':sh==='on_break'?'brk':'off'; }
 function acShLabel(sh){ return sh==='on_shift'?'on shift':sh==='on_break'?'on break':'off'; }
 function acFlt(){ return UI.acFlt||'active'; }
-function acDate(ts){ if(!ts)return '—'; try{ return new Date(ts).toLocaleDateString('en-IN', {day:'2-digit',month:'2-digit',year:'numeric'}); }catch(_){ return '—'; } }
+function acDate(ts){ if(!ts)return '—'; try{ return CBLocale.date(ts, {day:'2-digit',month:'2-digit',year:'numeric'}); }catch(_){ return '—'; } }
 function acLogin(x){ return esc(x.key)+'@'+esc((SESSION.entity||'').toLowerCase()); }
 // Unambiguous label — name + User ID (names collide; the key is unique). Returns HTML (already escaped).
 function acLbl(a){ return a?(esc(a.name)+' <span class="mono" style="color:var(--grey);font-weight:400;font-size:var(--fs-1)">'+esc(a.key||'')+'</span>'):'—'; }
@@ -6983,7 +6988,7 @@ function mapNotif(n){
               + esc(k.say(n)) + ' <b>' + esc(subj) + '</b>',
            /* The detail is the message text or the new status — the bit that saves opening it. */
            d: n.detail ? esc(String(n.detail).slice(0, 90)) : (n.new_status ? esc(n.new_status) : ''),
-           s: n.created_at ? new Date(n.created_at).toLocaleString('en-IN', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : '' };
+           s: n.created_at ? CBLocale.datetime(n.created_at, {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}) : '' };
 }
 /* Clicking a notification opens the thing it is about. A feed you cannot act from is a list of regrets. */
 function notifOpen(chit_id){
@@ -7964,7 +7969,7 @@ function setMsgKind(k){ UI.msgKind=k; paintDetail(); }
 function msgSearchSort(){ return '<div class="msgss"><input id="msgsrch" class="msgsi" placeholder="Search messages" value="'+esc(UI.msgSearch||'')+'" oninput="setMsgSearch(this.value)"><button class="msgord" onclick="setMsgOrder(UI.msgOrder===\'oldest\'?\'latest\':\'oldest\')" title="Sort order">'+((UI.msgOrder==='oldest')?'↑ Oldest':'↓ Latest')+'</button></div>'; }
 function setMsgSearch(v){ clearTimeout(UI._msgT); UI._msgT=setTimeout(function(){ UI.msgSearch=(v||'').trim(); paintDetail(); var s=document.getElementById('msgsrch'); if(s){ s.focus(); var n=s.value.length; try{s.setSelectionRange(n,n);}catch(_){ } } }, 300); }
 function setMsgOrder(o){ UI.msgOrder=o; paintDetail(); }
-function fmtLogTime(ts){ try{ var d=new Date(ts); if(isNaN(d))return ''; return d.toLocaleString('en-IN', {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}); }catch(_){ return ''; } }
+function fmtLogTime(ts){ try{ var d=new Date(ts); if(isNaN(d))return ''; return CBLocale.datetime(d, {day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'}); }catch(_){ return ''; } }
 function statusLabel(e){ var a=e.action||''; if(a==='created') return 'Created'; if(a==='message_sent') return 'Message sent'; if(a==='amended') return '✎ Amended'; if(a.indexOf('status_')===0) return 'Status → '+a.slice(7); if(e.new_status) return (a||'updated')+' → '+e.new_status; return a||'event'; }
 /* ⚠️ an amendment's detail gets more room than 80 chars: it reads `quantity "5" → "2"`, and the truncation would
    land squarely on the arrow — leaving a history entry that says something changed but not to what. */

@@ -12,7 +12,11 @@ if (typeof EP !== 'undefined') {
 }
 
 function _traceNum(v, d){ v = parseInt(v, 10); return (isFinite(v) && v >= 0) ? v : d; }
-function _traceRs(v){ try { return '₹' + Number(v||0).toLocaleString('en-IN'); } catch(e){ return '₹' + (v||0); } }
+/* ⚠️ WAS `'₹' + toLocaleString('en-IN')` — a hardcoded rupee sign on every trace, whatever the chit was
+   priced in, and Indian grouping for every reader. A currency symbol is not decoration; printing ₹ on a
+   dirham amount states something false about the money. Currency now comes from the value; format from the
+   reader. ⚠️ The INR default preserves today's behaviour where a caller passes no currency. */
+function _traceRs(v, ccy){ return CBLocale.money(v || 0, ccy || 'INR'); }
 function _traceShort(id){ id = String(id||''); return id.length > 8 ? '…' + id.slice(-6) : id; }
 
 function traceabilityScreen(){
@@ -123,7 +127,8 @@ function _traceFwd(r){
 
 // Each node = a handoff, labelled by the PARTY THAT HOLDS IT (to_name) with from-whom + how much. Rendered as a
 // parent→child tree from the walk's edges; the visited-set keeps a diamond from rendering twice.
-function _traceQ(v){ try { return Number(v || 0).toLocaleString('en-IN'); } catch(e){ return String(v); } }
+/* A QUANTITY, not money — grouped for the reader, with no currency attached. */
+function _traceQ(v){ return CBLocale.number(v || 0); }
 function _traceNode(n, isTerm){
   var who = esc(n.to_name || n.product || _traceShort(n.chit_id));
   var bal = n.balance, isRed = !!(bal && bal.status === 'red');

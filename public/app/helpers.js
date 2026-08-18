@@ -28,7 +28,14 @@ function scrErr(e, subject, retry){
 function cap(s){ return s[0].toUpperCase()+s.slice(1); }
 function inr_(v){ return fmtMoney(v,'INR'); }   /* R1: one money formatter — alias to fmtMoney (currency-aware) */
 function nm(v, fb){ return esc(v||fb||'—'); }   /* R3: one name-with-fallback — esc(display_name || fallback) */
-function fmtAt(ts){ try{ return new Date(ts).toLocaleTimeString('en-IN', {hour:'2-digit',minute:'2-digit'}); }catch(_){ return ''; } }   /* R4: pin en-IN (12h) so time is deterministic across browsers */
+/**
+ * ⚠️ THE en-IN PIN IS GONE. It was deliberate and its reason was good — "so time is deterministic across
+ * browsers" for the tests — but it showed 09:15 pm to a reader in Tokyo (21:15) and Dubai (09:15 م). Keeping
+ * the test honest and the product wrong is the wrong trade: determinism belongs in the TEST, by setting a
+ * locale, not in the product by denying every reader their own.
+ * ⚠️ A reader who has chosen nothing still gets en-IN — see CBLocale's FALLBACK. Nothing changes today.
+ */
+function fmtAt(ts){ return CBLocale.time(ts); }
 /* R5: connector/device health — ONE source (colour · dot · signal), was duplicated across cap-connector + cap-workforce. */
 function healthColor(h){ return ({live:'var(--ok-3)',slow:'var(--warn-2)',offline:'var(--disp)'})[h]||'var(--grey-4)'; }
 function healthDot(h){ return '<span title="'+esc(h||'')+'" style="display:inline-block;width:9px;height:9px;border-radius:50%;background:'+healthColor(h)+'"></span>'; }
@@ -55,7 +62,16 @@ function emptyState(icon,title,sub,act){
 }
 function loader(label){ return '<div style="padding:40px 16px;text-align:center;color:var(--grey)"><span class="spin" style="display:inline-block;margin-bottom:10px"></span><div>'+esc(label||'Loading…')+'</div></div>'; }
 
-const CCY_LOCALE={INR:'en-IN',USD:'en-US',EUR:'de-DE',GBP:'en-GB',JPY:'ja-JP',CNY:'zh-CN',AUD:'en-AU',CAD:'en-CA',CHF:'de-CH',SGD:'en-SG',AED:'ar-AE',SAR:'ar-SA',KWD:'ar-KW',BHD:'ar-BH',OMR:'ar-OM',KRW:'ko-KR',VND:'vi-VN',THB:'th-TH',MYR:'ms-MY',IDR:'id-ID',ZAR:'en-ZA',BRL:'pt-BR',RUB:'ru-RU',NGN:'en-NG',KES:'en-KE',LKR:'si-LK',BDT:'bn-BD',PKR:'ur-PK',NPR:'ne-NP'};
-function fmtMoney(amount,code){ code=(code||'INR'); amount=Number(amount||0); try{ return new Intl.NumberFormat(CCY_LOCALE[code]||undefined,{style:'currency',currency:code,currencyDisplay:'narrowSymbol'}).format(amount); }catch(e){ try{ return new Intl.NumberFormat(CCY_LOCALE[code]||undefined,{style:'currency',currency:code}).format(amount); }catch(_){ return code+' '+amount.toLocaleString(); } } }
+/**
+ * ⚠️⚠️ CCY_LOCALE IS GONE, AND ITS REMOVAL IS THE POINT. It mapped a CURRENCY to a LOCALE — INR→en-IN,
+ * USD→en-US — and then formatted money with the locale of the MONEY instead of the locale of the READER.
+ * Measured: every viewer of a USD price saw $123,456.50 (US grouping) and every viewer of an INR price saw
+ * ₹1,23,456.50 (Indian lakh grouping), whoever they were. A French reader got lakh grouping. An Indian reader
+ * got US grouping. Both wrong, and wrong for everyone except the one reader the mapping happened to suit.
+ *
+ * The currency decides the SYMBOL. The reader decides the FORMAT. They are independent.
+ */
+/* ONE money formatter, and it now asks the localisation layer. See the note above CCY_LOCALE's removal. */
+function fmtMoney(amount,code){ return CBLocale.money(amount, code); }
 
 function jwtPayload(t){ try{ const p=String(t||"").split('.')[1]; if(!p) return null; return JSON.parse(atob(p.replace(/-/g,'+').replace(/_/g,'/'))); }catch(_){ return null; } }
