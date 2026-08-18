@@ -148,3 +148,41 @@ test.describe('Standards · where they bite, and why we bother', () => {
     }
   });
 });
+
+test.describe('Standards in the Legend', () => {
+  test.describe.configure({ timeout: 240_000 });
+
+  test('[STD-09] ⭐ the Legend carries the same argument, from the same renderer', async ({ page }) => {
+    await mintEntity(page);
+    await page.evaluate(() => { if (typeof window.openLegend === 'function') window.openLegend(); });
+    await page.waitForTimeout(1500);
+    await page.evaluate(() => window.setLbTab && window.setLbTab('std'));
+    await page.waitForTimeout(2500);            // cap-standards loads on demand from this surface
+    const body = await page.locator('#lbhost').textContent();
+
+    expect(body, 'the structural claim, word for word').toMatch(/crosses a boundary/i);
+    /* ⚠️ THE COSTS MUST TRAVEL TOO. The Legend is where this is used to PERSUADE, which is exactly the surface
+       where a benefits-only version would be tempting — and exactly where it would do most damage. */
+    expect(body, 'the costs travel with the benefits').toMatch(/What it costs/i);
+    expect(body, 'and the evidence from this codebase').toMatch(/117 real failures/);
+  });
+
+  test('[STD-10] the Legend counts are LIVE, not a sentence someone typed', async ({ page }) => {
+    await mintEntity(page);
+    await page.evaluate(() => { if (typeof window.openLegend === 'function') window.openLegend(); });
+    await page.waitForTimeout(1500);
+    await page.evaluate(() => window.setLbTab && window.setLbTab('std'));
+    await page.waitForTimeout(2500);
+    const shown = await page.locator('#lbhost').textContent();
+    const real = await page.evaluate(() => {
+      const n = { live: 0, part: 0, plan: 0 };
+      (window.STANDARDS || []).forEach((x) => { n[x.s]++; });
+      return n;
+    });
+    /* A Legend claiming "26 standards" that had drifted from the register would be the overclaim this whole
+       area exists to prevent — on the one surface where it is being used to persuade. */
+    expect(real.live, 'the register is loaded').toBeGreaterThan(5);
+    expect(shown, 'the in-force count matches the register').toContain(real.live + ' in force');
+    expect(shown, 'and so does the partial count').toContain(real.part + ' partly');
+  });
+});
