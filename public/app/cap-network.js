@@ -1408,7 +1408,7 @@ function _netStepReview(){
         '<div style="padding:8px 12px;font-size:13px"><b>' + esc(s.name || '') + '</b> <span style="color:var(--grey);font-size:11.5px">' + esc(s.bridge_id || '') + '</span></div>')
     + card('Items · ' + sel.length, sel.map(function(l){
         return row(l.qty + ' × ' + esc(l.unit), '<span style="flex:1">' + esc(l.name) + '</span>'
-          + '<b style="float:right">' + (l.line_total == null ? '—' : esc(String(l.line_total))) + '</b>'); }).join('')
+          + '<b style="float:inline-end">' + (l.line_total == null ? '—' : esc(String(l.line_total))) + '</b>'); }).join('')
         + '<div style="display:flex;padding:10px 12px;border-top:2px solid var(--line);font-size:var(--fs-3);font-weight:800">'
         + '<span style="flex:1">' + (T.offered ? 'Total at your offer' : 'Total') + '</span>'
         + '<span data-testid="net-total">' + (T.amount ? esc(String(T.amount)) + (T.partial ? '+' : '') : '—') + '</span></div>', 0)

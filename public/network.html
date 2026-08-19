@@ -25,7 +25,7 @@
   .cat{ font-size:11px; font-weight:800; color:var(--violet); text-transform:uppercase; letter-spacing:.5px; margin:14px 0 4px; }
   .prow{ display:flex; align-items:center; gap:10px; padding:9px 2px; border-bottom:1px dashed var(--line); }
   .pname{ flex:1; font-size:14px; }
-  .pvar{ display:inline-block; font-size:11px; color:var(--grey); border:1px solid var(--line); border-radius:6px; padding:1px 6px; margin-left:6px; }
+  .pvar{ display:inline-block; font-size:11px; color:var(--grey); border:1px solid var(--line); border-radius:6px; padding:1px 6px; margin-inline-start:6px; }
   .price{ font-weight:700; white-space:nowrap; }
   .msg{ padding:44px 16px; text-align:center; color:var(--grey); }
   .foot{ margin-top:28px; font-size:11px; color:var(--grey); text-align:center; line-height:1.6; }
@@ -85,7 +85,7 @@ function render(){
   var body = shown.length ? shown.map(function(d){
     return '<div class="dept"><div class="depthd"><div class="deptname">'+esc(d.name)+'</div>'
       + '<div class="meta">'+d.count+' product(s)'+(d.currency_code?' · '+esc(d.currency_code):'')+'</div>'
-      + '<div style="margin-left:auto"><a class="shoplink" href="shop.html?bridge='+encodeURIComponent(d.bridge_id)+'&api='+encodeURIComponent(API)+'">open this shop →</a></div></div>'
+      + '<div style="margin-inline-start:auto"><a class="shoplink" href="shop.html?bridge='+encodeURIComponent(d.bridge_id)+'&api='+encodeURIComponent(API)+'">open this shop →</a></div></div>'
       + (d.categories||[]).map(function(c){
           return '<div class="cat">'+esc(c.name)+'</div>'
             + (c.items||[]).map(function(it){

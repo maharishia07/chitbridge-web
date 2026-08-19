@@ -637,7 +637,7 @@ function catsetCss(){
      * lot of space but the notes in the right hand occupies lot of space, so if the notes can be placed in the
      * entire stretch within a box… it will look good and also reduce space"*).
      *
-     * ⚠️ THE INDENT WAS COSTING HEIGHT, NOT BUYING ALIGNMENT. `padding-left:122px` pushed every note into a
+     * ⚠️ THE INDENT WAS COSTING HEIGHT, NOT BUYING ALIGNMENT. `padding-inline-start:122px` pushed every note into a
      * narrow right-hand column so it could line up under the name. In this pane — which defaults to 320px — that
      * left the note about 172px of the 294px available, so a two-line explanation wrapped to four or five, the
      * row grew tall, and the space beside the short label ("fixed", "range") sat empty. The alignment it bought

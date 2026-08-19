@@ -439,12 +439,52 @@
     setLang: function (v) { set('cb_lang', v); L.apply(); L.push(); },
     setLocale: function (v) { set('cb_locale', v); L.apply(); L.push(); },
 
+    /**
+     * ⚠️⚠️ NONE OF THE THREE LOADED FACES CAN DRAW A SINGLE ARABIC LETTER. Space Grotesk, Inter and Space Mono
+     * are Latin. Choosing Arabic today stamps dir=rtl correctly, lays the page out correctly — and then renders
+     * the words in whatever the operating system happens to have, or in tofu boxes where it has nothing.
+     *
+     * ⭐ SO THE FACE IS FETCHED WHEN THE SCRIPT IS ACTUALLY CHOSEN, NEVER BEFORE. Athi's standing rule is never
+     * pre-load, and it is right twice here: an Arabic face is ~90KB that every English reader would otherwise
+     * pay for forever, to render nothing.
+     *
+     * ⚠️ AND IT IS APPENDED, NOT SUBSTITUTED. The stack stays Latin-first, so Latin text keeps the product's own
+     * typography and only the characters no Latin face can draw fall through to Noto. A reader who writes their
+     * business name in Arabic and their User ID in Latin sees both set correctly, in the same line.
+     *
+     * Noto Sans Arabic because it is the widest-covering libre Arabic face and the one Google Fonts serves under
+     * the same CSP origin already allowed for the Latin three — no new host, no new permission.
+     */
+    font: function (dir) {
+      if (dir !== 'rtl') return;
+      try {
+        if (document.getElementById('cb-rtl-font')) return;    // once per session, not once per render
+        var l = document.createElement('link');
+        l.id = 'cb-rtl-font';
+        l.rel = 'stylesheet';
+        l.href = 'https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;500;600;700&display=swap';
+        document.head.appendChild(l);
+        var st = document.createElement('style');
+        st.id = 'cb-rtl-font-css';
+        /* Appended to the END of each stack: Latin keeps its face, Arabic falls through to one that has it. */
+        st.textContent = ':root[dir="rtl"] body,:root[dir="rtl"] .inp,:root[dir="rtl"] button,' +
+          ':root[dir="rtl"] input,:root[dir="rtl"] textarea,:root[dir="rtl"] select' +
+          '{font-family:Inter,"Noto Sans Arabic",system-ui,sans-serif}' +
+          ':root[dir="rtl"] .disp{font-family:"Space Grotesk","Noto Sans Arabic",system-ui,sans-serif}' +
+          /* .mono stays Latin-only ON PURPOSE — it holds identifiers, which are never Arabic script. */
+          '';
+        document.head.appendChild(st);
+      } catch (_) {}
+    },
+
     /** Stamp the document so CSS and screen readers both know. The 378 logical properties do the rest. */
     apply: function () {
       try {
         var d = document.documentElement;
+        var dir = L.dir();
         d.setAttribute('lang', L.lang());
-        d.setAttribute('dir', L.dir());
+        d.setAttribute('dir', dir);
+        L.font(dir);
       } catch (_) {}
     },
 

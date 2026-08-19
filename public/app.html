@@ -239,7 +239,32 @@
      toolbar is showing, the bottom of the app is underneath it. 100dvh tracks the live height. The vh line is
      kept first as the fallback for anything that does not know dvh. */
   #root{height:100vh;height:100dvh;display:flex;flex-direction:column}
-  .mono{font-family:'Space Mono'}.disp{font-family:'Space Grotesk'}
+  /**
+   * ⭐⭐ BIDI ISOLATION — the one rule that makes every identifier survive an Arabic screen.
+   *
+   * ⚠️ THIS IS THE FAILURE THAT DOES NOT LOOK LIKE ONE. Put an LTR identifier inside a right-to-left sentence
+   * and the Unicode bidi algorithm resolves the neutral characters — the dot, the @, the dash — against the
+   * SURROUNDING direction, not the identifier's own. So inside an Arabic sentence:
+   *
+   *     acmetraders.clothing        renders as   clothing.acmetraders
+   *     ravi@acmetraders            renders as   acmetraders@ravi
+   *     CB-2026-1042                renders as   1042-2026-CB
+   *
+   * Nothing throws. Nothing looks broken. The identifier is simply WRONG, and the one person who would catch
+   * it is the Arabic reader who cannot use it. After a day spent making these identifiers load-bearing,
+   * shipping them reversed for an entire language would undo the lot.
+   *
+   * ⭐ ONE DECLARATION, EVERY CALL SITE. .mono already marks every identifier in the product — a decision made
+   * for typography, which pays off here: isolation attaches to the class that already exists, so none of the
+   * 500-odd places that render an identifier has to change, or be remembered.
+   *
+   * isolate, not embed: it treats the span as a single neutral object in the outer run, which is exactly what
+   * an identifier is — an opaque token, not a phrase to be woven into the sentence.
+   */
+  .mono{font-family:'Space Mono';unicode-bidi:isolate}
+  /* A number, a date or a code that is NOT in mono needs the same protection. */
+  .ltr,bdi,time,.num{unicode-bidi:isolate}
+  .disp{font-family:'Space Grotesk'}
 
   /* mode ribbon */
   .moderibbon{background:var(--gold-soft);border-bottom:1px solid var(--gold-line);color:var(--warn-3);font-size:var(--fs-1);font-weight:600;padding:5px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
@@ -3626,6 +3651,13 @@ function toggleNavGroup(name){
  */
 var CBI18N = {
   en: {},   // the fallbacks below ARE English; an empty map keeps one source of truth for it
+  /* Arabic — the rail, in Modern Standard Arabic. Direction is locale.js's job; these are only the words. */
+  ar: { 'nav.compose': 'إنشاء', 'nav.worklist': 'أعمال الجميع', 'nav.intake': 'الوارد',
+        'nav.disputes': 'النزاعات', 'nav.catalogue': 'الكتالوج', 'nav.categories': 'الفئات',
+        'nav.catsetup': 'إعداد الكتالوج', 'nav.customers': 'العملاء', 'nav.suppliers': 'الموردون',
+        'nav.network': 'الشبكة', 'nav.coassists': 'المساعدون', 'nav.mis': 'لوحة المعلومات',
+        'nav.traceability': 'التتبّع', 'nav.readiness': 'جاهزية التجارة',
+        'nav.task': 'المهام', 'nav.order': 'الطلبات', 'nav.messages': 'الرسائل', 'nav.drafts': 'المسودات', 'nav.archive': 'الأرشيف', 'nav.trash': 'المهملات' },
   fr: { 'nav.compose': 'Rédiger', 'nav.worklist': 'Travail de tous', 'nav.intake': 'Réception',
         'nav.disputes': 'Litiges', 'nav.catalogue': 'Catalogue', 'nav.categories': 'Catégories',
         'nav.catsetup': 'Configuration du catalogue', 'nav.customers': 'Clients', 'nav.suppliers': 'Fournisseurs',
@@ -3709,7 +3741,125 @@ function tx(english, context){
  * entries here renders English, which is honest — unlike a half-filled map, which renders a screen in two
  * languages at once and reads as a broken product rather than an untranslated one.
  */
-var CBSTR = { en: {}, fr: {}, ta: {}, hi: {} };
+var CBSTR = { en: {}, fr: {}, ta: {}, hi: {}, ar: {} };
+
+/**
+ * ⭐⭐ ARABIC — the first right-to-left language this product carries, and the first with more than two plurals.
+ *
+ * Athi, 2026-08-19: *"if at all you can work on language backlog you can work on it, arabic."*
+ *
+ * ⚠️ THE PLURAL IS THE PART THAT IS ACTUALLY DIFFERENT. English has two forms and Tamil, Hindi and French have
+ * two. Arabic has SIX — zero, one, two, few, many, other — and they are not stylistic: 3 records and 13 records
+ * take different noun forms, and "two" has its own word rather than the number 2 plus a plural.
+ *
+ *     0   لا سجلات            zero      1   سجل واحد        one       2   سجلين            two
+ *     3   ٣ سجلات             few      11   ١١ سجلًا        many     100  ١٠٠ سجل           other
+ *
+ * ⭐ txn() ALREADY HANDLED THIS AND NOBODY HAD PROVED IT. It selects with Intl.PluralRules and looks up
+ * `english + U+0005 + category`, so all six were reachable the day it was written — the two-argument signature is
+ * only the ENGLISH fallback, not the model. Arabic is the first language to exercise it, and it does so without a
+ * line of change to the function. That is what adopting gettext's format bought.
+ *
+ * ⚠️ TRANSLATION QUALITY IS A CLAIM I CANNOT VERIFY. These are Modern Standard Arabic business terms, chosen for
+ * a trade-document product, and they are careful — but "careful" is not "reviewed by someone who sells in Arabic
+ * every day". Treat this as a working catalogue that renders correctly and reads sensibly, and get a native
+ * commercial reader over the nouns before it goes near a customer. The structure is the part that is proven.
+ */
+(function () {
+  var P = String.fromCharCode(5);   // gettext's plural separator — the same byte txn() looks up with, never literal
+  var ar = {};
+
+  /** A noun in its six Arabic count forms, ready to drop into a sentence template. */
+  function forms(zero, one, two, few, many, other) {
+    return { zero: zero, one: one, two: two, few: few, many: many, other: other };
+  }
+
+  /**
+   * plural(englishOne, nounForms, template) — build all six keys from one sentence shape.
+   *
+   * The template receives the counted noun phrase, so the sentence is written ONCE and only the noun changes.
+   * Writing six near-identical sentences by hand is how a catalogue drifts.
+   */
+  function plural(englishOne, n, template) {
+    for (var k in n) if (Object.prototype.hasOwnProperty.call(n, k)) ar[englishOne + P + k] = template(n[k]);
+  }
+
+  var RECORD  = forms('لا سجلات', 'سجل واحد', 'سجلين', '{count} سجلات', '{count} سجلًا', '{count} سجل');
+  var FILE    = forms('لا ملفات', 'ملف واحد', 'ملفين', '{count} ملفات', '{count} ملفًا', '{count} ملف');
+  var PRODUCT = forms('لا منتجات', 'منتج واحد', 'منتجين', '{count} منتجات', '{count} منتجًا', '{count} منتج');
+  var LINE    = forms('لا بنود', 'بند واحد', 'بندين', '{count} بنود', '{count} بندًا', '{count} بند');
+  var ITEM    = forms('لا عناصر', 'عنصر واحد', 'عنصرين', '{count} عناصر', '{count} عنصرًا', '{count} عنصر');
+  var CAT     = forms('لا فئات', 'فئة واحدة', 'فئتين', '{count} فئات', '{count} فئة', '{count} فئة');
+  var CHIT    = forms('لا سندات', 'سند واحد', 'سندين', '{count} سندات', '{count} سندًا', '{count} سند');
+  var TASK    = forms('لا مهام', 'مهمة واحدة', 'مهمتين', '{count} مهام', '{count} مهمة', '{count} مهمة');
+  var COLOUR  = forms('لا ألوان', 'لون واحد', 'لونين', '{count} ألوان', '{count} لونًا', '{count} لون');
+  var FINISH  = forms('لا تشطيبات', 'تشطيب واحد', 'تشطيبين', '{count} تشطيبات', '{count} تشطيبًا', '{count} تشطيب');
+  var COMBO   = forms('لا تركيبات', 'تركيبة واحدة', 'تركيبتين', '{count} تركيبات', '{count} تركيبة', '{count} تركيبة');
+  var FIELD   = forms('لا حقول', 'حقل واحد', 'حقلين', '{count} حقول', '{count} حقلًا', '{count} حقل');
+
+  /* ── counted labels ─────────────────────────────────────────────────────────────────────────────────────── */
+  plural('{count} colour',       COLOUR, function (n) { return n; });
+  plural('{count} finish',       FINISH, function (n) { return n; });
+  plural('{count} combination',  COMBO,  function (n) { return n; });
+  plural('{count} schema field', FIELD,  function (n) { return n; });
+  plural('used by {count} other item', ITEM, function (n) { return 'مستخدم في ' + n + ' آخر'; });
+  plural('filed {count} chit',   CHIT,   function (n) { return 'قدّم ' + n; });
+
+  /* ── progress and confirmation ──────────────────────────────────────────────────────────────────────────── */
+  plural('Moving {count} record to {status}…',  RECORD, function (n) { return 'نقل ' + n + ' إلى {status}…'; });
+  plural('Moved {count} record to {status}',    RECORD, function (n) { return 'تم نقل ' + n + ' إلى {status}'; });
+  plural('Moving {count} record to {who}',      RECORD, function (n) { return 'نقل ' + n + ' إلى {who}'; });
+  plural('Assigning {count} record to {who}…',  RECORD, function (n) { return 'إسناد ' + n + ' إلى {who}…'; });
+  plural('Archiving {count} record…',           RECORD, function (n) { return 'أرشفة ' + n + '…'; });
+  plural('Unarchiving {count} record…',         RECORD, function (n) { return 'إلغاء أرشفة ' + n + '…'; });
+  plural('Restoring {count} record…',           RECORD, function (n) { return 'استعادة ' + n + '…'; });
+  plural('Deleting {count} record…',            RECORD, function (n) { return 'حذف ' + n + '…'; });
+  plural('Attaching {count} file…',             FILE,   function (n) { return 'إرفاق ' + n + '…'; });
+  plural('Categorising {count} product…',       PRODUCT,function (n) { return 'تصنيف ' + n + '…'; });
+  plural('Adding {count} category…',            CAT,    function (n) { return 'إضافة ' + n + '…'; });
+  plural('"{name}" matches {count} catalogue line', LINE, function (n) { return '"{name}" يطابق ' + n + ' في الكتالوج'; });
+  plural('AI filled {count} line item — review, edit, then send ✓', LINE,
+    function (n) { return 'عبّأ الذكاء الاصطناعي ' + n + ' — راجع وعدّل ثم أرسل ✓'; });
+  plural('Their {count} active task returns to the pool.', TASK,
+    function (n) { return 'تعود ' + n + ' نشطة إلى المجموعة.'; });
+  plural('was leave-cover for {count} — that cover link removed', ITEM,
+    function (n) { return 'كان بديلًا في الإجازة لـ' + n + ' — أُزيل رابط البديل'; });
+
+  /* ── sentences with values ──────────────────────────────────────────────────────────────────────────────── */
+  var simple = {
+    'Open': 'مفتوح',
+    'Every line is its own product.': 'كل بند منتج قائم بذاته.',
+    'Could not load the {capability} capability.': 'تعذّر تحميل قدرة {capability}.',
+    'Remove {name} from your supplier list?': 'إزالة {name} من قائمة الموردين؟',
+    'Attachment "{file}" failed.': 'فشل المرفق "{file}".',
+    'A term this chit cites could not be read ({count}). Nothing was sent.':
+      'تعذّرت قراءة شرط يستشهد به هذا السند ({count}). لم يُرسل شيء.',
+    'Asked for, not agreed — {supplier} confirms the date and the price.':
+      'مطلوب، وغير متفق عليه — {supplier} يؤكّد التاريخ والسعر.',
+    'This is <b>{supplier}</b>&rsquo;s readiness — the supplier you are looking at. <b>Not yours.</b>':
+      'هذه جاهزية <b>{supplier}</b> — المورّد الذي تطالعه. <b>وليست جاهزيتك.</b>',
+    'Lines sharing the same <b>{group}</b> now show as one product, told apart by <b>{options}</b>.':
+      'البنود التي تشترك في <b>{group}</b> نفسه تظهر الآن كمنتج واحد، ويُميَّز بينها بـ<b>{options}</b>.',
+    'Lines sharing the same <b>{group}</b> now show as one product.':
+      'البنود التي تشترك في <b>{group}</b> نفسه تظهر الآن كمنتج واحد.',
+    '{item} — they said {asked}, your catalogue says {ours}':
+      '{item} — قالوا {asked}، وكتالوجك يقول {ours}',
+    'Noted: “{term}” may mean “{meaning}”': 'لوحظ: قد يعني ”{term}“ ”{meaning}“',
+    'open for {days}+ days': 'مفتوح منذ {days}+ يومًا',
+    'last {date}': 'آخر مرة {date}',
+    'Deactivate <b>{name}</b>? They can no longer sign in until reactivated.':
+      'تعطيل <b>{name}</b>؟ لن يتمكّن من تسجيل الدخول حتى إعادة التفعيل.',
+    'Permanently remove <b>{name}</b>? This cannot be undone.':
+      'إزالة <b>{name}</b> نهائيًا؟ لا يمكن التراجع عن ذلك.',
+    'for {region}, not {orderRegion}': 'لـ{region}، وليس {orderRegion}',
+    'priced in {currency}, not {orderCurrency}': 'مسعّر بـ{currency}، وليس {orderCurrency}',
+    'needs {minQty}+, this order has {qty}': 'يتطلب {minQty}+، وهذا الطلب به {qty}',
+    'for {minQty}+ units': 'لـ{minQty}+ وحدة'
+  };
+  for (var k in simple) if (Object.prototype.hasOwnProperty.call(simple, k)) ar[k] = simple[k];
+
+  CBSTR.ar = ar;
+})();
 
 /**
  * ⭐⭐ txf(english, vars) — a translatable sentence WITH values in it. The L3 primitive.
@@ -3736,11 +3886,37 @@ var CBSTR = { en: {}, fr: {}, ta: {}, hi: {} };
  * ⚠️ A MISSING KEY LEAVES THE PLACEHOLDER VISIBLE rather than printing "undefined". `{name}` on screen is an
  * obvious bug someone reports; "undefined" reads like data and gets ignored.
  */
+/**
+ * ⭐⭐ bidiWrap(v) — isolate a substituted VALUE from the sentence it lands in.
+ *
+ * ⚠️ THE BUG IT PREVENTS IS INVISIBLE IN ENGLISH AND WRONG IN ARABIC. Drop a Latin value into an Arabic sentence
+ * and the Unicode bidi algorithm resolves the neutral characters around it — the comma, the dash, the question
+ * mark — against the SENTENCE's direction rather than the value's:
+ *
+ *     txf('Remove {name} from your supplier list?', { name: 'Alpha Timers, Pvt' })
+ *     in Arabic renders   Pvt ,Alpha Timers   — the comma has jumped to the wrong side of the name.
+ *
+ * ⭐ THE FIX IS TWO INVISIBLE CHARACTERS, NOT A RULE PER STRING. U+2068 FIRST STRONG ISOLATE opens a run whose
+ * direction is decided by its own first strong character; U+2069 POP DIRECTIONAL ISOLATE closes it. This is
+ * exactly what ICU MessageFormat does around its arguments — adopted rather than reinvented — and it means no
+ * translator and no caller ever has to know the hazard exists.
+ *
+ * ⚠️ ONLY WHEN THE PAGE IS RTL. In a left-to-right page these characters change nothing a reader can see, but
+ * they would still land inside every interpolated string — including any that reaches an HTML attribute or a
+ * string comparison. Costing nothing to look at is not the same as being free, so they are added only where they
+ * do work.
+ */
+function bidiWrap(v){
+  try { if (document.documentElement.getAttribute('dir') !== 'rtl') return String(v); }
+  catch (_) { return String(v); }
+  return '⁨' + String(v) + '⁩';
+}
+
 function txf(english, vars){
   var out = tx(english);
   if (!vars) return out;
   return out.replace(/\{(\w+)\}/g, function(whole, k){
-    return Object.prototype.hasOwnProperty.call(vars, k) ? String(vars[k]) : whole;
+    return Object.prototype.hasOwnProperty.call(vars, k) ? bidiWrap(vars[k]) : whole;
   });
 }
 
@@ -3771,7 +3947,7 @@ function txn(one, other, n, vars){
   var all = { count: CBLocale.number(count) };
   for (var k in (vars || {})) if (Object.prototype.hasOwnProperty.call(vars, k)) all[k] = vars[k];
   return s.replace(/\{(\w+)\}/g, function(whole, key){
-    return Object.prototype.hasOwnProperty.call(all, key) ? String(all[key]) : whole;
+    return Object.prototype.hasOwnProperty.call(all, key) ? bidiWrap(all[key]) : whole;
   });
 }
 
@@ -4307,7 +4483,7 @@ function ccStepReview(){
     + '</div>'+inner+'</div>'; };
   return card('Lines · '+(CC.items||[]).length,
         (CC.items||[]).map(function(l){ return row((l.qty||1)+' × '+esc(l.unit||'unit'),
-          '<span style="flex:1">'+esc(l.particulars)+'</span><b style="float:right">'+esc(fmtMoney(ccLineTotal(l),'INR'))+'</b>'); }).join('')
+          '<span style="flex:1">'+esc(l.particulars)+'</span><b style="float:inline-end">'+esc(fmtMoney(ccLineTotal(l),'INR'))+'</b>'); }).join('')
         + '<div style="display:flex;padding:10px 12px;border-top:2px solid var(--line);font-size:var(--fs-3);font-weight:800">'
         + '<span style="flex:1">Total</span><span data-testid="cc-review-total">'+esc(fmtMoney(sum,'INR'))+'</span></div>', 0)
     + card('To', row('Recipients', (CC.rcpts||[]).length
@@ -5495,7 +5671,7 @@ function supStepReview(x){
     + card('Items · '+sel.length, sel.map(function(l){
         return row(l.qty+' × '+esc(l.unit), '<span style="flex:1">'+esc(l.name)+'</span>'
           + (l.offered?'<span style="color:var(--grey);font-size:11.5px"> · your offer</span>':'')
-          + '<b style="float:right">'+(l.line_total==null?'—':esc(String(l.line_total)))+'</b>'); }).join('')
+          + '<b style="float:inline-end">'+(l.line_total==null?'—':esc(String(l.line_total)))+'</b>'); }).join('')
         + '<div style="display:flex;padding:10px 12px;border-top:2px solid var(--line);font-size:var(--fs-3);font-weight:800">'
         + '<span style="flex:1">'+(T.offered?'Total at your offer':'Total')+'</span>'
         + '<span data-testid="sup-total">'+(T.amount?esc(String(T.amount))+(T.partial?'+':''):'—')+'</span></div>', 0)
