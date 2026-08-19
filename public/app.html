@@ -2447,9 +2447,9 @@ function statusControl(role){
       <button data-d="break" class="${d==='break'?'on brk':''}" onclick="setDuty('break')">❚❚ Break</button></div>`;}
   if(role==="entity"){const sh=SESSION.shop||"open";
     return `<div class="shoptog" role="group" aria-label="Shop status">
-      <button data-s="open" class="${sh==='open'?'on open':''}" onclick="setShop('open')">Open</button>
-      <button data-s="closed" class="${sh==='closed'?'on closed':''}" onclick="setShop('closed')">Closed</button>
-      <button data-s="away" class="${sh==='away'?'on away':''}" onclick="setShop('away')">Away</button></div>`;}
+      <button data-s="open" class="${sh==='open'?'on open':''}" onclick="setShop('open')">${tx('Open')}</button>
+      <button data-s="closed" class="${sh==='closed'?'on closed':''}" onclick="setShop('closed')">${tx('Closed')}</button>
+      <button data-s="away" class="${sh==='away'?'on away':''}" onclick="setShop('away')">${tx('Away')}</button></div>`;}
   return "";
 }
 async function setDuty(d){ const prev=SESSION.duty||'duty';
@@ -3437,7 +3437,23 @@ function _renderApp(){
                   <span style="font-size:10px;color:var(--grey);transform:rotate(${open?90:0}deg);display:inline-block"><span class=arw>▸</span></span>
                 </span></button>`;
             };
-            var LANGS = { en:"English", hi:"हिन्दी", ta:"தமிழ்", fr:"Français" };
+            /**
+             * ⚠️⚠️ THIS LIST WAS HARDCODED AND WENT STALE THE DAY ARABIC SHIPPED. It read
+             * { en, hi, ta, fr } — so the quick picker, which is the fast path most people will use, simply did
+             * not offer the one language with a complete pack. Athi asked "where can I see the language one?"
+             * and the honest answer was "not here".
+             *
+             * ⭐ IT NOW COMES FROM THE LAYER, so it cannot go stale again: allowedLangs() is the REGION's set
+             * (RFC 4647 priority list), and langName() supplies the endonym. Add a language to locale.js and it
+             * appears here with no second edit — which is the whole reason the layer exists.
+             */
+            var LANGS = (function () {
+              var m = {};
+              try {
+                CBLocale.allowedLangs().forEach(function (c) { m[c] = CBLocale.langName(c); });
+              } catch (_) { m = { en: 'English' }; }
+              return m;
+            })();
             var out = '<div style="border-top:1px solid var(--line)"></div>';
             out += row("theme", "🎨", "Theme", (THEMES[themeGet()]||{}).name || "");
             if (sec === "theme") {
@@ -7250,7 +7266,7 @@ async function _delProduct(id){ try{ await api("prodDel",{params:{id}}); UI.prod
  * UI: two-sided master/detail (same skeleton as task/order/suppliers — draggable divider + mobile collapse).
  * ============================================================================================ */
 const AC_TYPE={human:'🧑 human', iot_device:'⚙️ device', connector:'🔌 connector', ai_agent:'🤖 AI', process_rule:'📋 rule'};
-const HAT_LABEL={view_only:'View-only', act:'Act', audit:'Audit', mis:'MIS', manager:'Manager'};
+const HAT_LABEL={view_only:tx('View-only'), act:tx('Act'), audit:tx('Audit'), mis:tx('MIS'), manager:tx('Manager')};
 function hatLabel(h){ return HAT_LABEL[h]||h||'Act'; }
 function hatAssignable(h){ return h==='act'||h==='manager'; }
 function acType(t){ return AC_TYPE[t]||esc(t||'human'); }
@@ -7351,7 +7367,7 @@ function taskPanel(){
   const _fsel = UI.folderSel ? (UI.folders||[]).find(f=>f.folder_id===UI.folderSel) : null;
   const _isTrack = (UI.folder==='task'||UI.folder==='order');
   const _tname = {order:'📤 Order', task:'📥 Task', drafts:'📝 Drafts', trash:'🗑️ Trash', archive:'🗄️ Archive'}[UI.folder] || '📥 Task';
-  const _tdesc = {order:"chits you've sent", task:'chits received', drafts:'unsent chits', trash:'deleted chits', archive:'archived chits'}[UI.folder] || 'chits received';
+  const _tdesc = {order:tx("chits you've sent"), task:tx('chits received'), drafts:tx('unsent chits'), trash:tx('deleted chits'), archive:tx('archived chits')}[UI.folder] || tx('chits received');
   /* ⚠️ THE DESCRIPTION STAYS THE TRACK'S, inside a folder too. A folder is that list FILTERED — the chits in
      "Needs attention" are still chits received, and relabelling per folder would imply otherwise. */
   const _btns = _isTrack ? `<button type="button" data-testid="folder-metrics-btn" onclick="openFolderPane('metrics')" title="${_fsel?'Metrics for this folder':'Metrics for this whole track — and whether the folders add up'}" style="margin-inline-start:auto;cursor:pointer;border:1px solid var(--line);border-radius:9px;padding:0 11px;min-height:28px;display:inline-flex;align-items:center;gap:5px;font-size:11.5px;background:var(--card);color:var(--on-card)">${tx('📊 Metrics')}</button>
@@ -7388,7 +7404,7 @@ function taskPanel(){
   if(advActive()) _chips.push('▽ filtered');
   const foldedBar = (_folded && _chips.length)
     ? `<div class="lhfolded" onclick="toggleLhFold()" title="Show the search box, filter chips and the icon row">${_chips.map(c=>'<span class="fchip">'+c+'</span>').join('')}</div>` : '';
-  const srchBar = `<div class="srch">🔍 <input placeholder="${isCust?'Search my orders':'Search chits, party, item'}" id="listsrch" value="${esc(UI.search||'')}" oninput="onSrch('list', this.value)"><span id="srchadv">${advBtnHtml()}</span></div>`;
+  const srchBar = `<div class="srch">🔍 <input placeholder="${isCust?tx('Search my orders'):tx('Search chits, party, item')}" id="listsrch" value="${esc(UI.search||'')}" oninput="onSrch('list', this.value)"><span id="srchadv">${advBtnHtml()}</span></div>`;
   /* Built as a string first so a fold that leaves nothing behind drops the whole band — otherwise .lh keeps its
      10px padding and 1px border and the fold silently costs 21px of the 98px it just saved. */
   /**
@@ -7913,7 +7929,7 @@ function pgFooter(id){ const p=PG[id]; if(!p)return ''; const c=p.cfg.count();
   return '<div class="listend">— end of list —</div>'; }
 /* static footer for small, non-paginated lists (count + end marker, no Load more) */
 /* the Task/Order list bar */
-function pgPaintTotal(){ const lt=document.getElementById("listtotal"); if(!lt)return; lt.innerHTML='<span class="lttxt"><button class="colcog fold" onclick="event.stopPropagation();toggleLhFold()" title="'+(UI.lhFold?'Show search, filters and tools':'Fold search, filters and tools out of the way')+'">'+(UI.lhFold?'⌄ show tools':'⌃ hide tools')+'</button>'+esc(pgTotalText('list'))+'</span><span class="lttools">'+sortPresetSelect()+'<button class="colcog" onclick="event.stopPropagation();toggleLegend()" title="Legend / key">' + tx('🔑 key') + '</button>'+(UI.legendOpen?listLegend():'')+'<button class="colcog" onclick="event.stopPropagation();toggleColMenu()" title="Choose columns">' + tx('⚙ columns') + '</button>'+(UI.colMenu?colChooser():'')+'</span>'; }
+function pgPaintTotal(){ const lt=document.getElementById("listtotal"); if(!lt)return; lt.innerHTML='<span class="lttxt"><button class="colcog fold" onclick="event.stopPropagation();toggleLhFold()" title="'+(UI.lhFold?'Show search, filters and tools':'Fold search, filters and tools out of the way')+'">'+(UI.lhFold?tx('⌄ show tools'):tx('⌃ hide tools'))+'</button>'+esc(pgTotalText('list'))+'</span><span class="lttools">'+sortPresetSelect()+'<button class="colcog" onclick="event.stopPropagation();toggleLegend()" title="Legend / key">' + tx('🔑 key') + '</button>'+(UI.legendOpen?listLegend():'')+'<button class="colcog" onclick="event.stopPropagation();toggleColMenu()" title="Choose columns">' + tx('⚙ columns') + '</button>'+(UI.colMenu?colChooser():'')+'</span>'; }
 function toggleLegend(){ UI.legendOpen=!UI.legendOpen; UI.colMenu=false; pgPaintTotal(); }
 /* The fold control lives in .listtotal because that row is ALWAYS rendered. The state tabs would have been the
    natural home, but stTabs is suppressed on drafts/trash/archive/order and whenever a search is active — the
@@ -8287,7 +8303,7 @@ function _emptyHint(){
   if(UI.folder==='archive') return 'Nothing archived yet.';
   if(UI.folder==='drafts')  return 'Chits you start but do not send wait here.';
   if(UI.search || (typeof advActive==='function' && advActive())) return 'Try a different term, or clear the filters.';
-  return 'No chits here — try another tab.';
+  return tx('No chits here — try another tab.');
 }
 function renderRows(){
   const rows=visibleRows();

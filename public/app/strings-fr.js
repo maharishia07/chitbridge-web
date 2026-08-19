@@ -650,3 +650,32 @@
   for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) fr[k] = pack[k];
   try { if (typeof renderApp === 'function') renderApp(); } catch (_) {}
 })();
+
+/* The worklist screen — the busiest surface, and the least covered because app.html runs --safe. */
+(function () {
+  if (typeof CBSTR === 'undefined') return;
+  var m = CBSTR.fr || (CBSTR.fr = {});
+  var pack = {
+    'Open': 'Ouvert',
+    'Closed': 'Fermé',
+    'Away': 'Absent',
+    'Act': 'Agir',
+    'Close': 'Fermer',
+    'View-only': 'Lecture seule',
+    'Audit': 'Audit',
+    'MIS': 'Tableau de bord',
+    'Manager': 'Responsable',
+    'chits received': 'chits reçus',
+    'chits you\'ve sent': 'chits envoyés',
+    'unsent chits': 'chits non envoyés',
+    'deleted chits': 'chits supprimés',
+    'archived chits': 'chits archivés',
+    '⌄ show tools': '⌄ Afficher les outils',
+    '⌃ hide tools': '⌃ Masquer les outils',
+    'No chits here — try another tab.': 'Aucun chit ici — essayez un autre onglet.',
+    'Search chits, party, item': 'Rechercher chits, parties, articles',
+    'Search my orders': 'Rechercher mes commandes'
+  };
+  for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) m[k] = pack[k];
+  try { if (typeof renderApp === 'function') renderApp(); } catch (_) {}
+})();

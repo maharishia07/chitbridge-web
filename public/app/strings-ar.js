@@ -749,3 +749,32 @@
   for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) ar[k] = pack[k];
   try { if (typeof renderApp === 'function') renderApp(); } catch (_) {}
 })();
+
+/* The worklist screen — the busiest surface, and the least covered because app.html runs --safe. */
+(function () {
+  if (typeof CBSTR === 'undefined') return;
+  var m = CBSTR.ar || (CBSTR.ar = {});
+  var pack = {
+    'Open': 'مفتوح',
+    'Closed': 'مغلق',
+    'Away': 'بعيد',
+    'Act': 'تنفيذ',
+    'Close': 'إغلاق',
+    'View-only': 'عرض فقط',
+    'Audit': 'تدقيق',
+    'MIS': 'لوحة المعلومات',
+    'Manager': 'مدير',
+    'chits received': 'السندات الواردة',
+    'chits you\'ve sent': 'السندات المرسلة',
+    'unsent chits': 'سندات غير مرسلة',
+    'deleted chits': 'سندات محذوفة',
+    'archived chits': 'سندات مؤرشفة',
+    '⌄ show tools': '⌄ إظهار الأدوات',
+    '⌃ hide tools': '⌃ إخفاء الأدوات',
+    'No chits here — try another tab.': 'لا سندات هنا — جرّب تبويبًا آخر.',
+    'Search chits, party, item': 'ابحث في السندات والأطراف والأصناف',
+    'Search my orders': 'ابحث في طلباتي'
+  };
+  for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) m[k] = pack[k];
+  try { if (typeof renderApp === 'function') renderApp(); } catch (_) {}
+})();

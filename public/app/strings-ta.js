@@ -649,3 +649,32 @@
   for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) ta[k] = pack[k];
   try { if (typeof renderApp === 'function') renderApp(); } catch (_) {}
 })();
+
+/* The worklist screen — the busiest surface, and the least covered because app.html runs --safe. */
+(function () {
+  if (typeof CBSTR === 'undefined') return;
+  var m = CBSTR.ta || (CBSTR.ta = {});
+  var pack = {
+    'Open': 'திறந்தது',
+    'Closed': 'மூடப்பட்டது',
+    'Away': 'வெளியே',
+    'Act': 'செயல்',
+    'Close': 'மூடு',
+    'View-only': 'பார்வை மட்டும்',
+    'Audit': 'தணிக்கை',
+    'MIS': 'அறிக்கைகள்',
+    'Manager': 'மேலாளர்',
+    'chits received': 'வந்த சீட்டுகள்',
+    'chits you\'ve sent': 'அனுப்பிய சீட்டுகள்',
+    'unsent chits': 'அனுப்பாத சீட்டுகள்',
+    'deleted chits': 'நீக்கிய சீட்டுகள்',
+    'archived chits': 'காப்பக சீட்டுகள்',
+    '⌄ show tools': '⌄ கருவிகளைக் காட்டு',
+    '⌃ hide tools': '⌃ கருவிகளை மறை',
+    'No chits here — try another tab.': 'இங்கே சீட்டுகள் இல்லை — வேறு தாவலைப் பார்.',
+    'Search chits, party, item': 'சீட்டு, தரப்பு, பொருள் தேடு',
+    'Search my orders': 'என் ஆர்டர்களைத் தேடு'
+  };
+  for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) m[k] = pack[k];
+  try { if (typeof renderApp === 'function') renderApp(); } catch (_) {}
+})();

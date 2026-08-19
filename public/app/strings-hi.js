@@ -651,3 +651,32 @@
   for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) hi[k] = pack[k];
   try { if (typeof renderApp === 'function') renderApp(); } catch (_) {}
 })();
+
+/* The worklist screen — the busiest surface, and the least covered because app.html runs --safe. */
+(function () {
+  if (typeof CBSTR === 'undefined') return;
+  var m = CBSTR.hi || (CBSTR.hi = {});
+  var pack = {
+    'Open': 'खुला',
+    'Closed': 'बंद',
+    'Away': 'दूर',
+    'Act': 'कार्य',
+    'Close': 'बंद करें',
+    'View-only': 'केवल देखें',
+    'Audit': 'ऑडिट',
+    'MIS': 'डैशबोर्ड',
+    'Manager': 'प्रबंधक',
+    'chits received': 'प्राप्त चिट',
+    'chits you\'ve sent': 'भेजी गई चिट',
+    'unsent chits': 'बिना भेजी चिट',
+    'deleted chits': 'मिटाई गई चिट',
+    'archived chits': 'संग्रहित चिट',
+    '⌄ show tools': '⌄ टूल दिखाएँ',
+    '⌃ hide tools': '⌃ टूल छिपाएँ',
+    'No chits here — try another tab.': 'यहाँ कोई चिट नहीं — दूसरा टैब देखें।',
+    'Search chits, party, item': 'चिट, पक्ष, आइटम खोजें',
+    'Search my orders': 'मेरे ऑर्डर खोजें'
+  };
+  for (var k in pack) if (Object.prototype.hasOwnProperty.call(pack, k)) m[k] = pack[k];
+  try { if (typeof renderApp === 'function') renderApp(); } catch (_) {}
+})();
