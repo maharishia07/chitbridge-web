@@ -2069,7 +2069,7 @@ function settingsScreen(){
     }
     return row;
   }).join('');
-  var list = '<div class="list"><div class="lh" style="padding:0"><div class="misbar"><span class="misttl">⚙️ Settings</span></div></div>'
+  var list = '<div class="list"><div class="lh" style="padding:0"><div class="misbar"><span class="misttl">' + tx('⚙️ Settings') + '</span></div></div>'
     + '<div class="rows" id="set_rail">' + rail + '</div></div>';
   var detail = '<div class="detail" id="detailpane"><div id="setbody"><button class="dback" data-testid="cap-back" onclick="backToList()">‹ Back</button></div></div>';
   var divider = '<div class="divider" id="divider" onmousedown="startDrag(event)" ontouchstart="startDrag(event)" role="separator" aria-label="Resize panes"><span class="grip"></span></div>';
@@ -2218,7 +2218,7 @@ function standardsSettingsHTML(){
     var n = { live:0, part:0, plan:0 };
     STANDARDS.forEach(function(st){ n[st.s]++; });
     body = card('<div style="font-size:var(--fs-2);line-height:1.6;color:var(--on-card)">'
-        + 'What ChitBridge itself implements. <b>We adopt standards rather than invent formats</b> — a record '
+        + 'What ChitBridge itself implements. <b>' + tx('We adopt standards rather than invent formats') + '</b> — a record '
         + 'that only this platform can read is a record you do not own.'
         + '<div style="margin-top:7px;font-size:var(--fs-1);color:var(--grey)">'
         + '<b style="color:var(--ok-2)">' + n.live + ' in force</b> · '
@@ -2264,7 +2264,7 @@ function standardsSettingsHTML(){
             + '<b style="color:var(--on-card);min-width:0;word-break:break-word">' + x[1] + '</b></div>';
         }).join('') + '</div>')
       + card('<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.6">'
-        + '⚠️ <b>None of this changes what anyone wrote.</b> These settings govern the chrome and the way figures '
+        + '⚠️ <b>' + tx('None of this changes what anyone wrote.') + '</b> These settings govern the chrome and the way figures '
         + 'are written. Product names, catalogue entries, chit subjects, messages and dispute reasons stay in the '
         + 'language and the currency their author used — a chit is a shared record, and one that read differently '
         + 'to each party would not be a record.</div>');
@@ -2342,14 +2342,14 @@ function appearanceSettingsHTML(){
 
   return _misHead('Appearance', 'How this looks and moves. Every accessibility claim here is measured, not asserted.')
 
-    + card('<label class="fl">Theme</label>'
+    + card('<label class="fl">' + tx('Theme') + '</label>'
         + '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5;margin:0 0 8px">'
-        + 'Fifteen themes. The five under <b>Designed for specific needs</b> each name who they are for and which '
+        + 'Fifteen themes. The five under <b>' + tx('Designed for specific needs') + '</b> each name who they are for and which '
         + 'standard they meet — and those levels are computed by a test, so a card claiming 7:1 has been checked.'
         + '</div>'
         + (typeof themePaletteHTML === 'function' ? themePaletteHTML() : ''))
 
-    + card('<label class="fl">Text size</label>'
+    + card('<label class="fl">' + tx('Text size') + '</label>'
         + '<div style="display:flex;gap:7px;margin:5px 0 7px">' + sizes + '</div>'
         /* ⚠️ SAYING WHAT IT DOES *NOT* DO. The six size tokens are multiplied together, so headings stay bigger
            than captions — a single flat font size would make every screen legible and structureless at once. */
@@ -2358,23 +2358,23 @@ function appearanceSettingsHTML(){
         + '<b>This text is showing at ' + esc(String(Math.round(((TEXT_SIZES.filter(function(x){return x[0]===cur;})[0]||[0,0,1])[2]) * 100))) + '%.</b>'
         + '</div>')
 
-    + card('<label class="fl">Motion</label>'
+    + card('<label class="fl">' + tx('Motion') + '</label>'
         + '<div style="display:flex;gap:7px;margin:5px 0 7px">' + motions + '</div>'
         + '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5">'
-        + '⚠️ <b>Movement is a health setting, not a matter of polish.</b> Animation triggers migraine, nausea and '
-        + 'vertigo for people with vestibular disorders. <b>Follow my device</b> honours the setting you already '
+        + '⚠️ <b>' + tx('Movement is a health setting, not a matter of polish.') + '</b> Animation triggers migraine, nausea and '
+        + 'vertigo for people with vestibular disorders. <b>' + tx('Follow my device') + '</b> honours the setting you already '
         + 'made in Windows, macOS, iOS or Android — you should not have to ask us separately.'
         + '</div>')
 
     /* ⚠️ WHAT IS NOT HERE YET, SAID PLAINLY. A settings page that silently lacks the control someone came for
        wastes their time twice: once looking, once wondering whether they missed it. */
-    + card('<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin-bottom:5px">Not here yet</div>'
+    + card('<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin-bottom:5px">' + tx('Not here yet') + '</div>'
         + '<div style="font-size:var(--fs-2);line-height:1.6;color:var(--on-card)">'
-        + '<b>Typeface</b> — a dyslexia-friendly face (Atkinson Hyperlegible, free, from the Braille Institute) needs '
+        + '<b>' + tx('Typeface') + '</b> — a dyslexia-friendly face (Atkinson Hyperlegible, free, from the Braille Institute) needs '
         + 'the font shipped with the app before it can be offered.<br>'
-        + '<b>Colour-vision preview</b> — showing you what deuteranopia does to your own screen, rather than asking '
+        + '<b>' + tx('Colour-vision preview') + '</b> — showing you what deuteranopia does to your own screen, rather than asking '
         + 'you to take the Colour Vision theme on trust.<br>'
-        + '<b>These follow you, not this browser.</b> Your theme, text size and motion are stored against you '
+        + '<b>' + tx('These follow you, not this browser.') + '</b> Your theme, text size and motion are stored against you '
         + '(b166), so signing in on another device brings them with you — because someone who needs High Contrast '
         + 'needs it everywhere, not only where they first found it.'
         + '</div>')
@@ -2511,7 +2511,7 @@ function localeSettingsHTML(){
         + 'A region sets the number, money, date and time conventions <b>and the languages it makes sense to read '
         + 'in</b>. Choosing one prunes any language it does not admit, rather than leaving a combination that '
         + 'contradicts itself.<br>'
-        + '⚠️ <b>Grouping is not a separate switch, and that is deliberate.</b> Millions or lakhs is a property of '
+        + '⚠️ <b>' + tx('Grouping is not a separate switch, and that is deliberate.') + '</b> Millions or lakhs is a property of '
         + 'the region itself — CLDR knows India groups 12,34,56,789 and the US groups 123,456,789. Offering it '
         + 'apart would let you pick a combination no locale on earth uses.'
         + '</div>')
@@ -2534,12 +2534,12 @@ function localeSettingsHTML(){
        conversion at all."* Everything above chooses BETWEEN versions a human wrote. Nothing here produces text
        no human wrote, and that boundary is the reason a chit can be a shared record at all. */
     + '<div style="' + _CARD + ';border-color:var(--warn-tint);background:var(--warn-tint);color:var(--on-card)">'
-    +   '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--warn-2);margin-bottom:5px">Content is never converted</div>'
+    +   '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--warn-2);margin-bottom:5px">' + tx('Content is never converted') + '</div>'
     +   '<div style="font-size:var(--fs-2);line-height:1.6">'
     +   'These settings change the <b>chrome</b> — labels, buttons, and how figures are written. They never touch '
     +   'what people wrote. A product name, a catalogue entry, a chit subject, a message and a dispute reason stay '
     +   'in the language their author used.<br>'
-    +   '<b>Choosing a language picks between versions a human wrote — it does not translate anything.</b> '
+    +   '<b>' + tx('Choosing a language picks between versions a human wrote — it does not translate anything.') + '</b> '
     +   'A chit is a shared record, and one that read differently to each party would not be a record.'
     +   '</div>'
     + '</div>'
@@ -2567,9 +2567,9 @@ function localeSettingsHTML(){
         + '<div data-testid="loc-workdays" style="display:flex;gap:5px;flex-wrap:wrap;margin:5px 0 7px">' + dayChips + '</div>'
         + '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.55">'
         + (CBLocale.hasWorkdayOverride()
-            ? 'You have set these yourself. <a href="#" onclick="localeResetWorkdays();return false" data-testid="loc-workdays-reset" style="color:var(--blue)">Use the regional default</a> instead.'
+            ? 'You have set these yourself. <a href="#" onclick="localeResetWorkdays();return false" data-testid="loc-workdays-reset" style="color:var(--blue)">' + tx('Use the regional default') + '</a> instead.'
             : 'These come from <b>CLDR</b> for your region — ' + esc(weekend) + ' is the weekend here. Tap a day to override.')
-        + '<br>⚠️ <b>The weekend is not Saturday and Sunday everywhere.</b> Saudi Arabia\'s is Friday + Saturday; '
+        + '<br>⚠️ <b>' + tx('The weekend is not Saturday and Sunday everywhere.') + '</b> Saudi Arabia\'s is Friday + Saturday; '
         + 'India\'s is Sunday alone; the UAE moved to Saturday + Sunday in 2022. Any due date counted in '
         + '<i>working</i> days lands on a different day in Riyadh, Mumbai and Berlin.'
         + '</div>')
@@ -2577,7 +2577,7 @@ function localeSettingsHTML(){
     /* ══ TIME ZONE ══════════════════════════════════════════════════════════════════════════════════════════
      * ⚠️ One immutable event, three different answers to "when did this happen", because every date was rendered
      * in whatever zone the browser happened to be in. */
-    + card('<label class="fl">Time zone</label>'
+    + card('<label class="fl">' + tx('Time zone') + '</label>'
         + sel('loc-tz', tzOpts, tzCur, 'localeSetTz')
         + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px;line-height:1.55">'
         + 'Now showing times in <b>' + esc(CBLocale.timezone()) + '</b>. '
@@ -2590,13 +2590,13 @@ function localeSettingsHTML(){
      * rupees", because converting AED 500 to rupees means inventing a rate, a date for that rate, and a number
      * nobody agreed to — exactly as translating a product name invents words nobody wrote. A price is money in
      * a stated currency; the reader chooses how DIGITS are grouped, never what the money is. */
-    + card('<label class="fl">Currency</label>'
+    + card('<label class="fl">' + tx('Currency') + '</label>'
         + '<div data-testid="loc-currency" style="font-size:var(--fs-2);line-height:1.6;color:var(--on-card)">'
         + 'Your business prices in <b>' + esc(myCurCode) + ' ' + esc(CBLocale.symbol(myCurCode)) + '</b>. '
-        + '<span style="color:var(--grey)">Change that in Profile — it is a fact about your business, not about you as a reader.</span>'
+        + '<span style="color:var(--grey)">' + tx('Change that in Profile — it is a fact about your business, not about you as a reader.') + '</span>'
         + '<div style="margin-top:7px">Formatted for you: <b>' + esc(CBLocale.money(123456.5, myCurCode)) + '</b> '
         + '<span style="color:var(--grey)">· a supplier quoting in USD still shows as ' + esc(CBLocale.money(123456.5, 'USD')) + '</span></div>'
-        + '<div style="margin-top:7px;color:var(--warn-2)">⚠️ <b>Amounts are never converted.</b> Converting a price '
+        + '<div style="margin-top:7px;color:var(--warn-2)">⚠️ <b>' + tx('Amounts are never converted.') + '</b> Converting a price '
         + 'would mean inventing an exchange rate and a date for it — a number no party agreed to. You always see '
         + 'the currency the price was written in.</div>'
         + '</div>')
@@ -2604,7 +2604,7 @@ function localeSettingsHTML(){
     /* THE PREVIEW — see the note on this function. Every control above is an abstraction; this is the only place
        the choice becomes visible before it is made. */
     + '<div style="' + _CARD + ';background:var(--neutral-tint);color:var(--on-card)" data-testid="loc-preview">'
-    +   '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin-bottom:6px">How this looks</div>'
+    +   '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin-bottom:6px">' + tx('How this looks') + '</div>'
     +   line('Number', esc(CBLocale.number(123456789.5)))
     +   line('Money', esc(CBLocale.money(123456.5, 'INR')) + ' &nbsp;·&nbsp; ' + esc(CBLocale.money(123456.5, 'USD')))
     +   line('Date', esc(CBLocale.date(Date.now())))
@@ -2614,10 +2614,10 @@ function localeSettingsHTML(){
     +   line('Locale tag', '<code>' + esc(CBLocale.tag()) + '</code>')
     + '</div>'
 
-    + card('<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin-bottom:5px">What is never translated</div>'
+    + card('<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin-bottom:5px">' + tx('What is never translated') + '</div>'
         + '<div style="font-size:var(--fs-2);line-height:1.55;color:var(--on-card)">'
         + 'Product names, chit subjects, message text and dispute reasons stay in the words their author wrote. '
-        + '<b>A chit is a shared record</b> — one that read differently to each party would not be a record.</div>');
+        + '<b>' + tx('A chit is a shared record') + '</b> — one that read differently to each party would not be a record.</div>');
 }
 /** Choosing a region sets the format AND prunes languages it does not admit — see the note in locale.js. */
 function localeSetTz(v){ CBLocale.setTimezone(v); renderApp(); _capShowDetail(); loadSettings(); }
@@ -2669,18 +2669,18 @@ function paintSettings(s, _daOpts){ const h=document.getElementById("setbody"); 
        */
       if (typeof STANDARDS === 'undefined') {
         out = _misHead('Standards', 'What this platform follows, what you follow, and what your trade follows.')
-            + '<div style="' + _CARD + ';color:var(--grey);font-size:var(--fs-2)">Loading the register…</div>';
+            + '<div style="' + _CARD + ';color:var(--grey);font-size:var(--fs-2)">' + tx('Loading the register…') + '</div>';
         ensureCap('standards').then(function(){ if (setSec() === 'standards') { _capShowDetail(); loadSettings(); } })
           .catch(function(e){ var h=document.getElementById('setbody'); if(h) h.innerHTML = scrErr(e); });
       } else out = standardsSettingsHTML();
     }
     else if (k === "work") out = _misHead('Work', 'How tasks reach the people and co-assists who do them.')
       + `<div style="${_CARD}">${notYet}
-      <label class="fl">Assignment model</label><select class="inp" id="st_am">${opt(["pull","push","both"],s.assignment_model||"both")}</select>
-      <label class="fl">Default max tasks per actor</label><input class="inp" id="st_mt" inputmode="numeric" value="${esc(s.default_max_tasks||10)}">
+      <label class="fl">${tx('Assignment model')}</label><select class="inp" id="st_am">${opt(["pull","push","both"],s.assignment_model||"both")}</select>
+      <label class="fl">${tx('Default max tasks per actor')}</label><input class="inp" id="st_mt" inputmode="numeric" value="${esc(s.default_max_tasks||10)}">
       <label class="fl" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="st_av" ${s.all_task_visible?'checked':''}> All tasks visible to all co-assists</label>
       <label class="fl" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="st_ar" ${s.auto_return_on_short_break?'checked':''}> Auto-return tasks on short break</label>
-      <div class="err" id="st_err"></div><button class="composebtn" style="margin-top:9px" onclick="saveSettings()">Save settings</button></div>`
+      <div class="err" id="st_err"></div><button class="composebtn" style="margin-top:9px" onclick="saveSettings()">${tx('Save settings')}</button></div>`
       /* Model A: co-assist naming is DECLARED in Profile → Identity (NAMING). This is a pointer, never a copy. */
       + '<div class="misnote" style="margin-top:10px">What to call a co-assist — what is required, and why the '
       + 'sign-in key is stricter than a User ID — is set out under '

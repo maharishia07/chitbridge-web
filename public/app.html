@@ -3869,6 +3869,37 @@ var CBSTR = { en: {}, fr: {}, ta: {}, hi: {}, ar: {} };
   };
   for (var k in simple) if (Object.prototype.hasOwnProperty.call(simple, k)) ar[k] = simple[k];
 
+  /**
+   * ⭐ SETTINGS LABELS ONLY — the explanations on that screen are deliberately NOT here.
+   *
+   * Athi, 2026-08-19: *"this product is not supposed to have a lot of text inside. It should be simple like a
+   * mailbox, no explanation whatsoever."*
+   *
+   * ⚠️ e2e/text-budget.cjs measured 6,103 of the 10,863 on-screen words as EXPLANATION. Translating a sentence
+   * that is a candidate for deletion is the most expensive possible way to be wrong — it buys a native review
+   * and a permanent maintenance obligation for copy that should not exist. Labels survive any trim; sentences
+   * wait for the trim. Add them here only once they have earned their place.
+   */
+  var settingsLabels = {
+    '⚙️ Settings': '⚙️ الإعدادات',
+    'Theme': 'السمة',
+    'Text size': 'حجم النص',
+    'Motion': 'الحركة',
+    'Typeface': 'الخط',
+    'Follow my device': 'اتبع جهازي',
+    'Not here yet': 'غير متاح بعد',
+    'Colour-vision preview': 'معاينة رؤية الألوان',
+    'Use the regional default': 'استخدم الإعداد الإقليمي',
+    'Time zone': 'المنطقة الزمنية',
+    'Currency': 'العملة',
+    'How this looks': 'كيف يبدو هذا',
+    'Loading the register…': 'جارٍ تحميل السجل…',
+    'Assignment model': 'نموذج الإسناد',
+    'Default max tasks per actor': 'الحد الأقصى للمهام لكل مساعد',
+    'Save settings': 'حفظ الإعدادات'
+  };
+  for (var sk in settingsLabels) if (Object.prototype.hasOwnProperty.call(settingsLabels, sk)) ar[sk] = settingsLabels[sk];
+
   CBSTR.ar = ar;
 })();
 
