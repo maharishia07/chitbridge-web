@@ -2269,7 +2269,7 @@ function renderLogin(){
        <button class="btn" id="l_go">${L.busy?'<span class="spin"></span> …':"View my orders →"}</button>
        <div class="swap"><a onclick="setLoginCust(false)">← Back to sign in</a></div>`;
   } else if(L.step==="id"){
-    form = `<label class="fl">User ID <span ${muted}>(email or 8+ char id · co-assist: name@entity)</span></label><input class="inp" id="l_id" placeholder="you@business.com   ·   or your User ID" value="${esc(L.id)}">
+    form = `<label class="fl">User ID <span ${muted}>(email or 8+ char id &middot; co-assist: key@user-id)</span></label><input class="inp" id="l_id" placeholder="you@business.com   ·   or your User ID" value="${esc(L.id)}">
        <button class="btn" id="l_go">${L.busy?'<span class="spin"></span> …':"Continue →"}</button>`;
   } else if(L.step==="otp"){
     form = `<div ${who}>Signing in as <b>${esc(L.id)}</b> · ${L.kind} · <a onclick="loginReset()">change</a></div>

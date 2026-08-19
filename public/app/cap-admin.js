@@ -837,7 +837,7 @@ var NAMING = [
  * ⚠️ DERIVED and CAPPED are the two nobody can find today, because no screen says "this is true because of where
  * you sit". Naming the provenance is what makes this page answer the question people actually ask.
  */
-function iamTab(){ return UI.iamTab || 'who'; }
+function iamTab(){ return UI.iamTab || 'me'; }
 function setIamTab(t){ UI.iamTab = t; renderApp(); _capShowDetail(); loadProfile(); }
 
 /* ⚠️ SAME API AS CO-ASSISTS — Athi: "assume we need to have it in another place, then that has to be the same
@@ -865,7 +865,18 @@ function iamHTML(e){
   /* kick the fetch on first paint; the tab repaints when it lands */
   if (!UI._iamActors) { iamLoadActors().then(function(){ if (profSec() === 'identity') { _capShowDetail(); loadProfile(); } }); }
 
-  var seg = [['who','Who'],['access','What they may do']].map(function(x){
+  /**
+   * ⭐⭐ THREE TABS, AND THE FIRST ONE IS THE ONLY ONE THAT ACTS. Athi, 2026-08-19: *"in the IAM tab, we can
+   * bring it as tabs, because he is going to look at only his profile, others are for information only."*
+   *
+   * ⚠️ HE IS DESCRIBING AN ASYMMETRY I HAD FLATTENED. Two of these tabs are REFERENCE — a map of who else
+   * exists and what each may do, every row linking elsewhere to change anything. One is a FORM: the reader's
+   * own business, with fields they edit and a Save button. Putting the form third, below two pages of other
+   * people's rows, buries the only thing on the screen they came to do.
+   *
+   * So "My profile" leads, and the rest is labelled for what it is.
+   */
+  var seg = [['me','My profile'],['who','Everyone else'],['access','What they may do']].map(function(x){
     var on = tab === x[0];
     return '<button type="button" data-testid="iam-tab-' + x[0] + '" onclick="setIamTab(' + Q + x[0] + Q + ')"'
       + ' aria-pressed="' + (on ? 'true' : 'false') + '"'
@@ -878,7 +889,7 @@ function iamHTML(e){
       '<b>Identity</b> — who each party is and what they are called. <b>Access</b> — what each of them may do, '
       + 'and where that permission came from.')
     + '<div style="display:flex;gap:7px;margin-bottom:11px">' + seg + '</div>'
-    + (tab === 'who' ? iamWhoHTML(e) : iamAccessHTML(e));
+    + (tab === 'me' ? iamMeHTML(e) : tab === 'who' ? iamWhoHTML(e) : iamAccessHTML(e));
 }
 
 /* ══ shared pieces ══════════════════════════════════════════════════════════════════════════════════════════ */
@@ -888,6 +899,61 @@ function _iamHead(t, sub){
   return '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin-bottom:' + (sub ? '3px' : '6px') + '">' + t + '</div>'
     + (sub ? '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.55;margin-bottom:7px">' + sub + '</div>' : '');
 }
+/**
+ * ⭐ MY PROFILE — the only tab on this screen that ACTS. Everything else is a map.
+ *
+ * ⚠️ It leads and it is the default, because a reader opening IAM is almost always here to change something
+ * about their own business. Two tabs of other people's rows in front of that is a screen that makes you scroll
+ * past everyone else to reach yourself.
+ */
+function iamMeHTML(e){
+  var Q = String.fromCharCode(39);
+  return '<div style="' + _CARD + '">'
+    + '<label class="fl">This business</label>'
+    + '<div class="kv"><b>Name</b> · ' + esc(e.display_name || '') + '</div>'
+    + '<div class="kv"><b>Bridge ID</b> · ' + esc(e.bridge_id || '') + '</div>'
+    /**
+     * ⭐⭐ THE USER ID IS THE ROOT OF EVERY OTHER NAME, and until now it was one field among five with a short
+     * hint. Athi, 2026-08-19: *"user id is the one under which the registration happens in the platform as
+     * entity identification. User name is their literal name… user name can be duplicated also, but user id
+     * cannot be duplicated."*
+     *
+     * ⚠️ HE HAD TO EXPLAIN THAT TO ME, which means the screen was not explaining it to anyone. Three things
+     * derive from this one value — a co-assist's login, a network root, and how another business finds you —
+     * and none of them said so where it is typed.
+     */
+    + '<label class="fl">User ID <span style="color:var(--grey);font-weight:400;font-size:var(--fs-1)">— your unique name on this platform</span></label>'
+    + '<input class="inp" id="pf_uid" value="' + esc(e.user_id || '') + '">'
+    + (e.user_id
+        ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px;line-height:1.55">'
+          + 'Everything else is named from this: co-assists sign in as <b>key@' + esc(e.user_id) + '</b>, a network '
+          + 'root is <b>' + esc(e.user_id) + '.store</b>, and another business adds you by typing it. '
+          + '⚠️ Unique across the platform — unlike your <b>name</b>, which may repeat.</div>'
+        /* ⚠️ AN EMPTY USER ID IS NOT A BLANK FIELD, IT IS A MISSING FOUNDATION. Say so where it is set, because
+           the screens that need it will otherwise show a plausible-looking GUESS in its place. */
+        : '<div style="font-size:var(--fs-1);color:var(--warn-2);background:var(--warn-tint);border-radius:8px;'
+          + 'padding:7px 9px;margin-top:5px;line-height:1.55">'
+          + '⚠️ <b>Not set — and three things need it.</b> Co-assists sign in as <b>key@your-user-id</b>, a network '
+          + 'root is named from it, and another business adds you by typing it. Until you choose one, other screens '
+          + 'show a <b>suggestion</b> slugged from your business name — which is not an identifier and is not saved.'
+          + '</div>')
+    + '<label class="fl">GSTIN <span style="color:var(--grey);font-weight:400;font-size:var(--fs-1)">— 15 characters</span></label>'
+    + '<input class="inp" id="pf_gstn" value="' + esc(e.gstn || '') + '">'
+    + '<label class="fl">Address</label><input class="inp" id="pf_addr" value="' + esc(e.address || '') + '">'
+    /* ⚠️ "Are you trading?" IS NOT A VISIBILITY SETTING. Athi read the two as contradictory because they sat
+       together: business_status answers ARE YOU TRADING, catalogue_visibility answers WHO MAY SEE YOUR
+       CATALOGUE. Different questions, similar words — so the note names both and points at the other. */
+    + '<label class="fl">Are you trading? <span style="color:var(--grey);font-weight:400;font-size:var(--fs-1)">— open, closed or away</span></label>'
+    + '<select class="inp" id="pf_bs">' + opt(['open','closed','away'], e.business_status) + '</select>'
+    + '<div class="misnote" style="margin-top:5px">⚠️ This is <b>whether you are trading</b> — nothing to do with who may '
+    + '<b>see</b> your catalogue. That is <b onclick="profSetSec(' + Q + 'storefront' + Q + ')" style="cursor:pointer;color:var(--blue)">Storefront</b>.</div>'
+    + '<div class="err" id="pf_err"></div>'
+    + '<button class="composebtn" style="margin-top:11px" onclick="saveProfile()">Save profile</button>'
+  + '</div>'
+
+    + namingRulesHTML();
+}
+
 /** The boundary badge. ⚠️ Same three words everywhere, so the spine is learnable in one read. */
 function _iamZone(z){
   var C = { inside: ['var(--ok-tint)', 'var(--ok-2)', 'INSIDE'],
@@ -950,50 +1016,8 @@ function iamWhoHTML(e){
     + 'add one is their <b>User ID</b> — which is why yours matters: it is the handle another business types to '
     + 'find <i>you</i>.</div>')
 
-  + '<div style="' + _CARD + ';margin-top:10px">'
-    + '<label class="fl">This business</label>'
-    + '<div class="kv"><b>Name</b> · ' + esc(e.display_name || '') + '</div>'
-    + '<div class="kv"><b>Bridge ID</b> · ' + esc(e.bridge_id || '') + '</div>'
-    /**
-     * ⭐⭐ THE USER ID IS THE ROOT OF EVERY OTHER NAME, and until now it was one field among five with a short
-     * hint. Athi, 2026-08-19: *"user id is the one under which the registration happens in the platform as
-     * entity identification. User name is their literal name… user name can be duplicated also, but user id
-     * cannot be duplicated."*
-     *
-     * ⚠️ HE HAD TO EXPLAIN THAT TO ME, which means the screen was not explaining it to anyone. Three things
-     * derive from this one value — a co-assist's login, a network root, and how another business finds you —
-     * and none of them said so where it is typed.
-     */
-    + '<label class="fl">User ID <span style="color:var(--grey);font-weight:400;font-size:var(--fs-1)">— your unique name on this platform</span></label>'
-    + '<input class="inp" id="pf_uid" value="' + esc(e.user_id || '') + '">'
-    + (e.user_id
-        ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px;line-height:1.55">'
-          + 'Everything else is named from this: co-assists sign in as <b>key@' + esc(e.user_id) + '</b>, a network '
-          + 'root is <b>' + esc(e.user_id) + '.store</b>, and another business adds you by typing it. '
-          + '⚠️ Unique across the platform — unlike your <b>name</b>, which may repeat.</div>'
-        /* ⚠️ AN EMPTY USER ID IS NOT A BLANK FIELD, IT IS A MISSING FOUNDATION. Say so where it is set, because
-           the screens that need it will otherwise show a plausible-looking GUESS in its place. */
-        : '<div style="font-size:var(--fs-1);color:var(--warn-2);background:var(--warn-tint);border-radius:8px;'
-          + 'padding:7px 9px;margin-top:5px;line-height:1.55">'
-          + '⚠️ <b>Not set — and three things need it.</b> Co-assists sign in as <b>key@your-user-id</b>, a network '
-          + 'root is named from it, and another business adds you by typing it. Until you choose one, other screens '
-          + 'show a <b>suggestion</b> slugged from your business name — which is not an identifier and is not saved.'
-          + '</div>')
-    + '<label class="fl">GSTIN <span style="color:var(--grey);font-weight:400;font-size:var(--fs-1)">— 15 characters</span></label>'
-    + '<input class="inp" id="pf_gstn" value="' + esc(e.gstn || '') + '">'
-    + '<label class="fl">Address</label><input class="inp" id="pf_addr" value="' + esc(e.address || '') + '">'
-    /* ⚠️ "Are you trading?" IS NOT A VISIBILITY SETTING. Athi read the two as contradictory because they sat
-       together: business_status answers ARE YOU TRADING, catalogue_visibility answers WHO MAY SEE YOUR
-       CATALOGUE. Different questions, similar words — so the note names both and points at the other. */
-    + '<label class="fl">Are you trading? <span style="color:var(--grey);font-weight:400;font-size:var(--fs-1)">— open, closed or away</span></label>'
-    + '<select class="inp" id="pf_bs">' + opt(['open','closed','away'], e.business_status) + '</select>'
-    + '<div class="misnote" style="margin-top:5px">⚠️ This is <b>whether you are trading</b> — nothing to do with who may '
-    + '<b>see</b> your catalogue. That is <b onclick="profSetSec(' + Q + 'storefront' + Q + ')" style="cursor:pointer;color:var(--blue)">Storefront</b>.</div>'
-    + '<div class="err" id="pf_err"></div>'
-    + '<button class="composebtn" style="margin-top:11px" onclick="saveProfile()">Save profile</button>'
-  + '</div>'
+  ;
 
-  + namingRulesHTML();
 }
 
 /* ══ WHAT THEY MAY DO ═══════════════════════════════════════════════════════════════════════════════════════ */
