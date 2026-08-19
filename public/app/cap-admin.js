@@ -1035,8 +1035,12 @@ function iamMeHTML(e){
        network root, how another business finds you — so it is not a field to retype in passing. It stays an
        input only while UNSET, because it has to be chosen once. */
     + (e.user_id
-        ? '<div class="kv" style="margin-top:9px"><b>User ID</b> · <span class="mono">' + esc(e.user_id) + '</span></div>'
-        : '<label class="fl">User ID <span style="color:var(--grey);font-weight:400;font-size:var(--fs-1)">— choose once; other names derive from it</span></label>'
+        /* ⚠️ SAY IT IS THE LOGIN. Athi, 2026-08-19: *"user id is the one, used for login purpose."* Confirmed:
+           entity sign-in resolves on LOWER(user_id) first (routes/entities.js). The profile showed the value
+           and never said what it was FOR — so the one field you type to get in read like a reference number. */
+        ? '<div class="kv" style="margin-top:9px"><b>User ID</b> · <span class="mono">' + esc(e.user_id) + '</span>'
+          + ' <span style="color:var(--grey);font-size:var(--fs-1)">— you sign in with this</span></div>'
+        : '<label class="fl">User ID <span style="color:var(--grey);font-weight:400;font-size:var(--fs-1)">— you will sign in with this</span></label>'
           + '<input class="inp" id="pf_uid" value="">')
     /**
      * ⚠️ NO EXPLANATION HERE. Athi, 2026-08-19: *"i don't want that text… this will be known in that tab."*
