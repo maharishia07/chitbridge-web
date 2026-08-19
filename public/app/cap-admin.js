@@ -876,7 +876,15 @@ function iamHTML(e){
    *
    * So "My profile" leads, and the rest is labelled for what it is.
    */
-  var seg = [['me','My profile'],['who','Everyone else'],['access','What they may do']].map(function(x){
+  /**
+   * ⭐ FOUR TABS, ONE PER KIND OF PARTY — the shape Athi approved in the profiles design.
+   *
+   * The earlier three (mine · everyone else · what they may do) split by ROLE OF THE SCREEN, which put a
+   * business, an employee and a customer on one page and then forced every row to explain which it was.
+   * Splitting by PARTY means each tab shows one thing and needs no sentence saying so — which is the point:
+   * *"we do not need any explanation."*
+   */
+  var seg = [['me','Business'],['emp','Employee'],['node','Network'],['cust','Customer']].map(function(x){
     var on = tab === x[0];
     return '<button type="button" data-testid="iam-tab-' + x[0] + '" onclick="setIamTab(' + Q + x[0] + Q + ')"'
       + ' aria-pressed="' + (on ? 'true' : 'false') + '"'
@@ -885,11 +893,14 @@ function iamHTML(e){
       + 'background:' + (on ? 'var(--blue-tint-bg)' : 'var(--card)') + ';color:var(--on-card)">' + x[1] + '</button>';
   }).join('');
 
-  return _misHead('IAM · Identity &amp; Access Management',
-      '<b>Identity</b> — who each party is and what they are called. <b>Access</b> — what each of them may do, '
-      + 'and where that permission came from.')
+  /* ⚠️ _misHead ESCAPES BOTH ARGUMENTS — it takes text, not markup. I passed HTML and it printed a literal
+     "&amp;" and a raw <b> tag on Athi's screen. Plain text only here. */
+  return _misHead('IAM · Identity and Access Management', 'Who can act for this business, and what they may do.')
     + '<div style="display:flex;gap:7px;margin-bottom:11px">' + seg + '</div>'
-    + (tab === 'me' ? iamMeHTML(e) : tab === 'who' ? iamWhoHTML(e) : iamAccessHTML(e));
+    + (tab === 'me'   ? iamMeHTML(e)
+     : tab === 'emp'  ? iamPartyHTML('emp', e)
+     : tab === 'node' ? iamPartyHTML('node', e)
+     :                  iamPartyHTML('cust', e));
 }
 
 /* ══ shared pieces ══════════════════════════════════════════════════════════════════════════════════════════ */
@@ -899,6 +910,93 @@ function _iamHead(t, sub){
   return '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin-bottom:' + (sub ? '3px' : '6px') + '">' + t + '</div>'
     + (sub ? '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.55;margin-bottom:7px">' + sub + '</div>' : '');
 }
+/**
+ * ⭐⭐ ONE TAB PER PARTY, AS ROWS. Athi, 2026-08-19: *"this is the perfect way of saying"* (the profiles design)
+ * and *"we do not need any explanation."*
+ *
+ * ⚠️ THE PROSE WAS THE BUG, NOT THE CONTENT. Everything these rows say was already on the old screen — buried
+ * in sentences that explained which party a row belonged to, because one page held all of them. Splitting by
+ * party means each tab shows ONE kind of thing, so the explanation is structural and the words can go.
+ *
+ * ⭐ AND THE ONE VISUAL RULE FROM THE DESIGN CARRIES OVER: an IDENTIFIER is monospace, a NAME is not. You can
+ * see which field is unique without being told — which is the distinction that cost a day to get straight.
+ */
+var IAM_PARTY = {
+  emp: {
+    title: 'Employee',
+    who: 'Works for this business, inside its boundary.',
+    nav: ["navTo('coassists')", 'Co-assists'],
+    rows: function (e, acts) {
+      var uid = e.user_id || 'your-user-id';
+      var n = acts.filter(function (a) { return !a.actor_type || a.actor_type === 'human'; }).length;
+      var costs = acts.filter(function (a) { return a.can_see_costs; }).length;
+      return [
+        ['Name', 'Their own', 0, 'May repeat'],
+        ['Sign-in', 'key@' + uid, 1, 'Unique inside your business'],
+        ['Hat', 'Act · Manager · Audit · MIS · View-only', 0, 'What they may do — enforced on every write'],
+        ['Role', 'Free text', 0, 'A label, not a permission'],
+        ['Can see costs', costs + ' of ' + acts.length, 0, 'Buying price and margin'],
+        ['Where they sit', 'A node in your network', 0, 'Their reach follows it'],
+        ['How many', n + (n === 1 ? ' person' : ' people'), 0, '']
+      ];
+    }
+  },
+  node: {
+    title: 'Network node',
+    who: 'A branch, unit or counter. Its own entity, under yours.',
+    nav: ["navTo('network')", 'Network'],
+    rows: function (e) {
+      var uid = e.user_id || 'your-user-id';
+      return [
+        ['Store name', 'Its own', 0, 'May repeat'],
+        ['Handle', uid + '.store', 1, 'Unique across the platform'],
+        ['Bridge ID', 'Its own, generated', 1, 'Different from yours'],
+        ['Sits under', e.display_name || 'you', 0, 'The root of the tree'],
+        ['Who can see it', 'Capped by its parent', 0, 'The narrowest wins'],
+        ['Who works there', 'Co-assists placed at the node', 0, 'Their reach follows it']
+      ];
+    }
+  },
+  cust: {
+    title: 'Customer',
+    who: 'Someone who ordered. You never created this identity.',
+    nav: ["profSetSec('storefront')", 'Storefront'],
+    rows: function (e) {
+      var bid = e.bridge_id || 'CB…';
+      return [
+        ['Name', 'As they type it', 0, 'No format rule · may repeat'],
+        ['Verified by', 'phone@' + bid + '.cr', 1, 'Unique at this shop'],
+        ['or', 'email=domain@' + bid + '.cr', 1, 'The @ becomes = so two providers stay two people'],
+        ['Proves it with', 'A one-time code', 0, 'No password'],
+        ['Access', (e.storefront_access === 'login' ? 'Sign in first' : 'Browse first'), 0, 'One rule for every customer'],
+        ['Hat', 'None', 0, 'Not staff — cannot be granted or restricted']
+      ];
+    }
+  }
+};
+
+function iamPartyHTML(key, e) {
+  var P = IAM_PARTY[key];
+  if (!P) return '';
+  var acts = UI._iamActors || [];
+  var rows = P.rows(e, acts).map(function (r) {
+    return '<div style="padding:9px 0;border-block-start:1px solid var(--line)">'
+      + '<div style="font-size:var(--fs-1);color:var(--grey);font-weight:600">' + esc(r[0]) + '</div>'
+      /* the design's one rule: identifiers are monospace and gold, names are neither */
+      + '<div style="font-size:var(--fs-2);color:' + (r[2] ? 'var(--gold)' : 'var(--on-card)') + ';margin-top:2px'
+      +   (r[2] ? ";font-family:'Space Mono',ui-monospace,monospace" : '') + '">' + esc(r[1]) + '</div>'
+      + (r[3] ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px;line-height:1.45">' + esc(r[3]) + '</div>' : '')
+      + '</div>';
+  }).join('');
+
+  return '<div style="' + _CARD + '">'
+    + '<div class="sec" style="margin:0 0 2px">' + esc(P.title) + '</div>'
+    + '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.45">' + esc(P.who) + '</div>'
+    + rows
+    + '<button class="composebtn" style="margin-top:11px" onclick="' + P.nav[0] + '">Manage in ' + esc(P.nav[1]) + ' →</button>'
+    + '</div>';
+}
+
 /**
  * ⭐ MY PROFILE — the only tab on this screen that ACTS. Everything else is a map.
  *
@@ -910,46 +1008,46 @@ function iamMeHTML(e){
   var Q = String.fromCharCode(39);
   return '<div style="' + _CARD + '">'
     + '<label class="fl">This business</label>'
-    + '<div class="kv"><b>Name</b> · ' + esc(e.display_name || '') + '</div>'
-    + '<div class="kv"><b>Bridge ID</b> · ' + esc(e.bridge_id || '') + '</div>'
-    /**
-     * ⭐⭐ THE USER ID IS THE ROOT OF EVERY OTHER NAME, and until now it was one field among five with a short
-     * hint. Athi, 2026-08-19: *"user id is the one under which the registration happens in the platform as
-     * entity identification. User name is their literal name… user name can be duplicated also, but user id
-     * cannot be duplicated."*
-     *
-     * ⚠️ HE HAD TO EXPLAIN THAT TO ME, which means the screen was not explaining it to anyone. Three things
-     * derive from this one value — a co-assist's login, a network root, and how another business finds you —
-     * and none of them said so where it is typed.
-     */
-    + '<label class="fl">User ID <span style="color:var(--grey);font-weight:400;font-size:var(--fs-1)">— your unique name on this platform</span></label>'
-    + '<input class="inp" id="pf_uid" value="' + esc(e.user_id || '') + '">'
-    + (e.user_id
-        ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px;line-height:1.55">'
-          + 'Everything else is named from this: co-assists sign in as <b>key@' + esc(e.user_id) + '</b>, a network '
-          + 'root is <b>' + esc(e.user_id) + '.store</b>, and another business adds you by typing it. '
-          + '⚠️ Unique across the platform — unlike your <b>name</b>, which may repeat.</div>'
-        /* ⚠️ AN EMPTY USER ID IS NOT A BLANK FIELD, IT IS A MISSING FOUNDATION. Say so where it is set, because
-           the screens that need it will otherwise show a plausible-looking GUESS in its place. */
-        : '<div style="font-size:var(--fs-1);color:var(--warn-2);background:var(--warn-tint);border-radius:8px;'
-          + 'padding:7px 9px;margin-top:5px;line-height:1.55">'
-          + '⚠️ <b>Not set — and three things need it.</b> Co-assists sign in as <b>key@your-user-id</b>, a network '
-          + 'root is named from it, and another business adds you by typing it. Until you choose one, other screens '
-          + 'show a <b>suggestion</b> slugged from your business name — which is not an identifier and is not saved.'
-          + '</div>')
-    + '<label class="fl">GSTIN <span style="color:var(--grey);font-weight:400;font-size:var(--fs-1)">— 15 characters</span></label>'
-    + '<input class="inp" id="pf_gstn" value="' + esc(e.gstn || '') + '">'
-    + '<label class="fl">Address</label><input class="inp" id="pf_addr" value="' + esc(e.address || '') + '">'
-    /* ⚠️ "Are you trading?" IS NOT A VISIBILITY SETTING. Athi read the two as contradictory because they sat
-       together: business_status answers ARE YOU TRADING, catalogue_visibility answers WHO MAY SEE YOUR
-       CATALOGUE. Different questions, similar words — so the note names both and points at the other. */
-    + '<label class="fl">Are you trading? <span style="color:var(--grey);font-weight:400;font-size:var(--fs-1)">— open, closed or away</span></label>'
-    + '<select class="inp" id="pf_bs">' + opt(['open','closed','away'], e.business_status) + '</select>'
-    + '<div class="misnote" style="margin-top:5px">⚠️ This is <b>whether you are trading</b> — nothing to do with who may '
-    + '<b>see</b> your catalogue. That is <b onclick="profSetSec(' + Q + 'storefront' + Q + ')" style="cursor:pointer;color:var(--blue)">Storefront</b>.</div>'
-    + '<div class="err" id="pf_err"></div>'
-    + '<button class="composebtn" style="margin-top:11px" onclick="saveProfile()">Save profile</button>'
-  + '</div>'
+    + '<div class="kv"><b>Name</b> · ' + esc(e.display_name || '') + '</div>'
+    + '<div class="kv"><b>Bridge ID</b> · ' + esc(e.bridge_id || '') + '</div>'
+    /**
+     * ⭐⭐ THE USER ID IS THE ROOT OF EVERY OTHER NAME, and until now it was one field among five with a short
+     * hint. Athi, 2026-08-19: *"user id is the one under which the registration happens in the platform as
+     * entity identification. User name is their literal name… user name can be duplicated also, but user id
+     * cannot be duplicated."*
+     *
+     * ⚠️ HE HAD TO EXPLAIN THAT TO ME, which means the screen was not explaining it to anyone. Three things
+     * derive from this one value — a co-assist's login, a network root, and how another business finds you —
+     * and none of them said so where it is typed.
+     */
+    + '<label class="fl">User ID <span style="color:var(--grey);font-weight:400;font-size:var(--fs-1)">— your unique name on this platform</span></label>'
+    + '<input class="inp" id="pf_uid" value="' + esc(e.user_id || '') + '">'
+    + (e.user_id
+        ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px;line-height:1.55">'
+          + 'Everything else is named from this: co-assists sign in as <b>key@' + esc(e.user_id) + '</b>, a network '
+          + 'root is <b>' + esc(e.user_id) + '.store</b>, and another business adds you by typing it. '
+          + '⚠️ Unique across the platform — unlike your <b>name</b>, which may repeat.</div>'
+        /* ⚠️ AN EMPTY USER ID IS NOT A BLANK FIELD, IT IS A MISSING FOUNDATION. Say so where it is set, because
+           the screens that need it will otherwise show a plausible-looking GUESS in its place. */
+        : '<div style="font-size:var(--fs-1);color:var(--warn-2);background:var(--warn-tint);border-radius:8px;'
+          + 'padding:7px 9px;margin-top:5px;line-height:1.55">'
+          + '⚠️ <b>Not set — and three things need it.</b> Co-assists sign in as <b>key@your-user-id</b>, a network '
+          + 'root is named from it, and another business adds you by typing it. Until you choose one, other screens '
+          + 'show a <b>suggestion</b> slugged from your business name — which is not an identifier and is not saved.'
+          + '</div>')
+    + '<label class="fl">GSTIN <span style="color:var(--grey);font-weight:400;font-size:var(--fs-1)">— 15 characters</span></label>'
+    + '<input class="inp" id="pf_gstn" value="' + esc(e.gstn || '') + '">'
+    + '<label class="fl">Address</label><input class="inp" id="pf_addr" value="' + esc(e.address || '') + '">'
+    /* ⚠️ "Are you trading?" IS NOT A VISIBILITY SETTING. Athi read the two as contradictory because they sat
+       together: business_status answers ARE YOU TRADING, catalogue_visibility answers WHO MAY SEE YOUR
+       CATALOGUE. Different questions, similar words — so the note names both and points at the other. */
+    + '<label class="fl">Are you trading? <span style="color:var(--grey);font-weight:400;font-size:var(--fs-1)">— open, closed or away</span></label>'
+    + '<select class="inp" id="pf_bs">' + opt(['open','closed','away'], e.business_status) + '</select>'
+    + '<div class="misnote" style="margin-top:5px">⚠️ This is <b>whether you are trading</b> — nothing to do with who may '
+    + '<b>see</b> your catalogue. That is <b onclick="profSetSec(' + Q + 'storefront' + Q + ')" style="cursor:pointer;color:var(--blue)">Storefront</b>.</div>'
+    + '<div class="err" id="pf_err"></div>'
+    + '<button class="composebtn" style="margin-top:11px" onclick="saveProfile()">Save profile</button>'
+  + '</div>'
 
     + namingRulesHTML();
 }
