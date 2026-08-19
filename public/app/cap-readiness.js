@@ -68,8 +68,8 @@ async function _aiDraft(skill, label, ctx, attach){
       + '<div style="display:flex;gap:8px;margin-top:13px;flex-wrap:wrap">'
         + acceptBtn
         + '<button onclick="_aiPdf()" style="'+bs+';flex:'+(acceptBtn?'0 0 auto':'1')+';border:1px solid var(--purple);background:'+(acceptBtn?'var(--card)':'var(--purple)')+';color:'+(acceptBtn?'var(--purple)':'var(--on-accent)')+'">⬇ PDF</button>'
-        + '<button onclick="_aiCopy(this)" data-draft="'+esc(encodeURIComponent(draft))+'" style="'+bs+';flex:0 0 auto;border:1px solid var(--line);background:var(--card);color:var(--ink)">📋 Copy</button>'
-        + '<button onclick="closeModal()" style="'+bs+';flex:0 0 auto;border:1px solid var(--line);background:var(--card);color:var(--ink)">Done</button>'
+        + '<button onclick="_aiCopy(this)" data-draft="'+esc(encodeURIComponent(draft))+'" style="'+bs+';flex:0 0 auto;border:1px solid var(--line);background:var(--card);color:var(--ink)">' + tx('📋 Copy') + '</button>'
+        + '<button onclick="closeModal()" style="'+bs+';flex:0 0 auto;border:1px solid var(--line);background:var(--card);color:var(--ink)">' + tx('Done') + '</button>'
       + '</div>';
     var b=document.getElementById('aidbody'); if(b) b.innerHTML=html;
   }catch(e){
@@ -193,7 +193,7 @@ function _rdExpand(it){
     +(it.rung==='verified'&&it.verified_at?_rdKv('Verified at source', String(it.verified_at).slice(0,10)+(it.verified_by?' · '+esc(it.verified_by):'')):'')
     +(it.evidence_ref&&/^[0-9a-f-]{20,}$/i.test(String(it.evidence_ref))?_rdKv('Evidence','document on the rail'):'');
   var ai=L.ai;
-  var partner=L.partner?'<div style="margin-top:11px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--warn-tint);display:flex;align-items:center;gap:8px;color:var(--on-card)"><div style="flex:1;min-width:0"><span style="font-size:var(--fs-1);font-weight:800;color:var(--warn-3);text-transform:uppercase;letter-spacing:.05em">Or hand it to a partner</span><div style="font-size:var(--fs-2);margin-top:3px;font-weight:600">'+esc(L.partner)+'</div></div><button onclick="aiSuggestPartner(\''+esc(it.standard)+'\',\''+esc(it.doc)+'\')" title="AI suggests who can carry this + what to ask them" style="flex:0 0 auto;font-size:var(--fs-1);font-weight:700;border:1px solid var(--purple);background:var(--card);color:var(--purple);border-radius:6px;padding:6px 10px;cursor:pointer">✨ Suggest</button></div>':'';
+  var partner=L.partner?'<div style="margin-top:11px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--warn-tint);display:flex;align-items:center;gap:8px;color:var(--on-card)"><div style="flex:1;min-width:0"><span style="font-size:var(--fs-1);font-weight:800;color:var(--warn-3);text-transform:uppercase;letter-spacing:.05em">' + tx('Or hand it to a partner') + '</span><div style="font-size:var(--fs-2);margin-top:3px;font-weight:600">'+esc(L.partner)+'</div></div><button onclick="aiSuggestPartner(\''+esc(it.standard)+'\',\''+esc(it.doc)+'\')" title="AI suggests who can carry this + what to ask them" style="flex:0 0 auto;font-size:var(--fs-1);font-weight:700;border:1px solid var(--purple);background:var(--card);color:var(--purple);border-radius:6px;padding:6px 10px;cursor:pointer">' + tx('✨ Suggest') + '</button></div>':'';
   return '<div style="border-top:1px solid var(--line);padding:12px 15px 15px;background:var(--blue-tint-bg);color:var(--on-card)">'
     +_rdSub('Its lifecycle')+steps
     +_rdSub('Evidence · current version')+'<div>'+ev+'</div>'
@@ -228,24 +228,24 @@ function _rdDetailPane(it){
   var m=_rdStatus(it.status), rung = it.rung ? _rungBadge(it.rung) : '';
   var idType = _rdIdType(it);
   var verifyBtn = (idType && it.rung!=='verified')
-    ? '<button onclick="verifyReadiness(\''+esc(it.standard)+'\',\''+esc(it.doc)+'\',\''+idType+'\')" title="Checked against the source registry, live" style="font-size:12px;font-weight:700;border:1px solid var(--ok-3);background:var(--ok-tint);color:var(--ok-3);border-radius:9px;padding:7px 12px;cursor:pointer">🔗 Verify at source</button>' : '';
+    ? '<button onclick="verifyReadiness(\''+esc(it.standard)+'\',\''+esc(it.doc)+'\',\''+idType+'\')" title="Checked against the source registry, live" style="font-size:12px;font-weight:700;border:1px solid var(--ok-3);background:var(--ok-tint);color:var(--ok-3);border-radius:9px;padding:7px 12px;cursor:pointer">' + tx('🔗 Verify at source') + '</button>' : '';
   var skill=_rdSkill(it);
   var draftBtn = skill
-    ? '<button onclick="aiDraftReadiness(\''+esc(it.standard)+'\',\''+esc(it.doc)+'\',\''+skill+'\')" title="AI drafts this document from your order/profile data — you review and confirm (never autonomous)" style="font-size:12px;font-weight:700;border:1px solid var(--purple);background:var(--purple-tint);color:var(--purple);border-radius:9px;padding:7px 12px;cursor:pointer">✨ Draft with AI</button>' : '';
+    ? '<button onclick="aiDraftReadiness(\''+esc(it.standard)+'\',\''+esc(it.doc)+'\',\''+skill+'\')" title="AI drafts this document from your order/profile data — you review and confirm (never autonomous)" style="font-size:12px;font-weight:700;border:1px solid var(--purple);background:var(--purple-tint);color:var(--purple);border-radius:9px;padding:7px 12px;cursor:pointer">' + tx('✨ Draft with AI') + '</button>' : '';
   var actBtn = (it.status==='gathered')
     ? '<span style="font-size:12px;color:'+m.col+';font-weight:700">'+m.lbl+'</span>'
     : '<button onclick="gatherReadiness(\''+esc(it.standard)+'\',\''+esc(it.doc)+'\')" style="font-size:12px;font-weight:700;border:1px solid '+(it.status==='pending'?'var(--line)':m.col)+';background:'+(it.status==='pending'?'var(--card)':m.col)+';color:'+(it.status==='pending'?'var(--blue-2)':'var(--on-accent)')+';border-radius:9px;padding:7px 13px;cursor:pointer">'+(it.status==='pending'?'Gather':'Renew')+'</button>';
   var held=_rdHeld(it), r=it.rung, live=(it.status==='gathered'||it.status==='expiring');
   var banner = (held && r==='verified')
-      ? '<div style="margin:10px 16px 0;font-size:12px;color:var(--ok-2);background:var(--ok-tint);border:1px solid #bfe3cb;border-radius:9px;padding:9px 12px">✓ <b>Verified at source</b> — the platform confirmed this against the registry. Buyers see this as met.</div>'
+      ? '<div style="margin:10px 16px 0;font-size:12px;color:var(--ok-2);background:var(--ok-tint);border:1px solid #bfe3cb;border-radius:9px;padding:9px 12px">✓ <b>' + tx('Verified at source') + '</b> — the platform confirmed this against the registry. Buyers see this as met.</div>'
     : held
-      ? '<div style="margin:10px 16px 0;font-size:12px;color:var(--ok-2);background:var(--ok-tint);border:1px solid #bfe3cb;border-radius:9px;padding:9px 12px">✓ <b>Documented on the rail</b> — a real document backs this, valid. Buyers see this as met.</div>'
+      ? '<div style="margin:10px 16px 0;font-size:12px;color:var(--ok-2);background:var(--ok-tint);border:1px solid #bfe3cb;border-radius:9px;padding:9px 12px">✓ <b>' + tx('Documented on the rail') + '</b> — a real document backs this, valid. Buyers see this as met.</div>'
     : live
-      ? '<div style="margin:10px 16px 0;font-size:12px;color:var(--warn-2);background:var(--warn-tint);border:1px solid #f0dcae;border-radius:9px;padding:9px 12px">⚠ <b>Declared only</b> — a bare claim, <b>not evidenced</b>. Attach a document (Gather) or <b>Verify at source</b> to make it count. Buyers do NOT treat a bare claim as met.</div>'
+      ? '<div style="margin:10px 16px 0;font-size:12px;color:var(--warn-2);background:var(--warn-tint);border:1px solid #f0dcae;border-radius:9px;padding:9px 12px">⚠ <b>' + tx('Declared only') + '</b> — a bare claim, <b>not evidenced</b>. Attach a document (Gather) or <b>' + tx('Verify at source') + '</b> to make it count. Buyers do NOT treat a bare claim as met.</div>'
       : '<div style="margin:10px 16px 0;font-size:12px;color:var(--grey);background:var(--card);border:1px solid var(--line);border-radius:9px;padding:9px 12px">☐ <b>Not held.</b> Provide evidence (Gather or Verify) to check it — it stays checked only while the evidence is valid.</div>';
   var vmode = idType
-    ? '<div style="margin:8px 16px 0;font-size:11.5px;color:var(--ok-2);background:var(--ok-tint);border:1px solid #bfe3cb;border-radius:9px;padding:8px 11px">🔗 <b>Live source-check</b> — the platform verifies this '+idType.toUpperCase()+' against the <b>source registry</b>, invoked live. Confirmed at source, not your word for it.</div>'
-    : '<div style="margin:8px 16px 0;font-size:11.5px;color:var(--grey);background:var(--card);border:1px solid var(--line);border-radius:9px;padding:8px 11px">📄 <b>Document evidence</b> — your certificate + issuer link. A <b>live source-check is not wired for this standard yet</b> (it needs the issuing body’s registry).</div>';
+    ? '<div style="margin:8px 16px 0;font-size:11.5px;color:var(--ok-2);background:var(--ok-tint);border:1px solid #bfe3cb;border-radius:9px;padding:8px 11px">🔗 <b>' + tx('Live source-check') + '</b> — the platform verifies this '+idType.toUpperCase()+' against the <b>source registry</b>, invoked live. Confirmed at source, not your word for it.</div>'
+    : '<div style="margin:8px 16px 0;font-size:11.5px;color:var(--grey);background:var(--card);border:1px solid var(--line);border-radius:9px;padding:8px 11px">📄 <b>' + tx('Document evidence') + '</b> — your certificate + issuer link. A <b>live source-check is not wired for this standard yet</b> (it needs the issuing body’s registry).</div>';
   return '<div style="padding:14px 16px 0"><div style="display:flex;align-items:flex-start;gap:10px"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:15px">'+esc(it.title||it.doc)+rung+'</div><div style="font-size:11.5px;color:var(--grey);margin-top:2px">from <span class="mono" style="color:var(--blue)">'+esc(it.standard)+'</span></div></div><div style="flex:0 0 auto;display:flex;gap:6px;align-items:center">'+draftBtn+verifyBtn+actBtn+'</div></div></div>'
     + banner + vmode + _rdExpand(it);
 }
@@ -314,8 +314,8 @@ function _rdHeader(){
   return '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex:none;padding:0 12px;border-bottom:1px solid var(--line);background:var(--card);color:var(--on-card)">'
     +'<div style="display:flex;gap:2px">'+tb('certification','Certification')+tb('clearance','Clearance')+tb('commercial','Commercial')+'</div>'
     +'<div style="margin-inline-start:auto;display:flex;align-items:center;gap:8px;padding:6px 0;flex-wrap:wrap">'+(tab!=='commercial'?_rdDestSelectors():'')
-      +'<button onclick="aiSuggestStandards()" title="AI suggests the standards you likely need for this sector + market" style="font-size:11.5px;font-weight:700;border:1px solid var(--purple);background:var(--purple-tint);color:var(--purple);border-radius:9px;padding:6px 10px;cursor:pointer">✨ Standards</button>'
-      +'<button onclick="openSectorMatrix()" title="Common vs sector-specific — the sector × standard matrix" style="font-size:11.5px;font-weight:700;border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:9px;padding:6px 10px;cursor:pointer">🧮 Matrix</button></div>'
+      +'<button onclick="aiSuggestStandards()" title="AI suggests the standards you likely need for this sector + market" style="font-size:11.5px;font-weight:700;border:1px solid var(--purple);background:var(--purple-tint);color:var(--purple);border-radius:9px;padding:6px 10px;cursor:pointer">' + tx('✨ Standards') + '</button>'
+      +'<button onclick="openSectorMatrix()" title="Common vs sector-specific — the sector × standard matrix" style="font-size:11.5px;font-weight:700;border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:9px;padding:6px 10px;cursor:pointer">' + tx('🧮 Matrix') + '</button></div>'
   +'</div>';
 }
 // STANDARD display names for the matrix (fallback = the key)
@@ -326,7 +326,7 @@ async function openSectorMatrix(){
   var secs=[['paint','🧪','Chemical','var(--blue-2)'],['food','🍎','Food','var(--ok-3)'],['textiles','🧵','Textiles','var(--purple-2)'],['electronics','🔌','Electronics','var(--warn-2)'],['pharma','💊','Pharma','var(--blue-2)'],['automobile','🚗','Auto','var(--disp)']];
   var dest=UI.laneDest||'EU', origin=UI.laneOrigin||'IN';
   if(typeof modal==='function'){
-    modal('<div class="mhd" style="display:flex;align-items:center;gap:8px"><div class="t" style="flex:1">🧮 Sector × standard — common vs specific</div><button onclick="closeModal()" title="Close" style="border:0;background:none;cursor:pointer;font-size:var(--fs-5);line-height:1;color:var(--grey);padding:0 2px">✕</button></div><div class="mbody" style="padding:14px 16px"><div id="mtxbody" style="font-size:var(--fs-2);color:var(--grey)">Resolving every sector for '+esc(origin)+' <span class=arw>→</span> '+esc(dest)+'…</div></div>');
+    modal('<div class="mhd" style="display:flex;align-items:center;gap:8px"><div class="t" style="flex:1">' + tx('🧮 Sector × standard — common vs specific') + '</div><button onclick="closeModal()" title="Close" style="border:0;background:none;cursor:pointer;font-size:var(--fs-5);line-height:1;color:var(--grey);padding:0 2px">✕</button></div><div class="mbody" style="padding:14px 16px"><div id="mtxbody" style="font-size:var(--fs-2);color:var(--grey)">Resolving every sector for '+esc(origin)+' <span class=arw>→</span> '+esc(dest)+'…</div></div>');
     try{ var mp=document.querySelector('#modalhost .modal'); if(mp) mp.setAttribute('data-movable','1'); }catch(_){}   // plain closeable modal — no movable-panel controls
   }
   var rows={};
@@ -337,7 +337,7 @@ async function openSectorMatrix(){
   }
   var list=Object.keys(rows).map(function(k){ var on=secs.map(function(s){return !!rows[k].sectors[s[0]];}); return {std:k,name:STDNAME[k]||k,on:on,n:on.filter(Boolean).length}; });
   list.sort(function(a,b){ return (b.n-a.n)||a.std.localeCompare(b.std); });
-  var head='<tr><th style="text-align:start;padding:8px 6px;font-size:var(--fs-1);text-transform:uppercase;color:var(--grey);border-bottom:1px solid var(--line)">Standard</th>'+secs.map(function(s){return '<th style="padding:8px 4px;font-size:var(--fs-1);border-bottom:1px solid var(--line);color:'+s[3]+';white-space:nowrap">'+s[1]+'<br>'+s[2]+'</th>';}).join('')+'</tr>';
+  var head='<tr><th style="text-align:start;padding:8px 6px;font-size:var(--fs-1);text-transform:uppercase;color:var(--grey);border-bottom:1px solid var(--line)">' + tx('Standard') + '</th>'+secs.map(function(s){return '<th style="padding:8px 4px;font-size:var(--fs-1);border-bottom:1px solid var(--line);color:'+s[3]+';white-space:nowrap">'+s[1]+'<br>'+s[2]+'</th>';}).join('')+'</tr>';
   var rowH=function(r){ var common=r.n===secs.length; return '<tr'+(common?' style="background:var(--ok-tint);color:var(--on-card)"':'')+'><td style="padding:8px 6px;font-weight:600;font-size:12px;border-bottom:1px solid var(--line);color:'+(common?'var(--ok-3)':'var(--ink)')+'">'+esc(r.name)+'</td>'+r.on.map(function(v,i){return _mtxCell(v,common,secs[i][3]);}).join('')+'</tr>'; };
   var band=function(t){return '<tr><td colspan="'+(secs.length+1)+'" style="padding:11px 6px 3px;font-size:var(--fs-1);font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--grey)">'+t+'</td></tr>';};
   var common=list.filter(function(r){return r.n===secs.length;}), spec=list.filter(function(r){return r.n!==secs.length;});
@@ -386,7 +386,7 @@ var COMMETA = {
 function _rdComSelect(i){ UI.comSel=i; if(UI.vp==='mob') UI.rdMDetail=true; if(typeof renderApp==='function') renderApp(); }
 function _rdComRow(g, i, sel){
   var on=(i===sel);
-  var onrail=g.covered_onrail?'<span title="already evidenced on the rail" style="font-size:var(--fs-1);color:var(--ok-3);font-weight:800;flex:0 0 auto">● rail</span>':'';
+  var onrail=g.covered_onrail?'<span title="already evidenced on the rail" style="font-size:var(--fs-1);color:var(--ok-3);font-weight:800;flex:0 0 auto">' + tx('● rail') + '</span>':'';
   return '<div onclick="_rdComSelect('+i+')" style="display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:9px;cursor:pointer;margin:2px 0;background:'+(on?'var(--blue-tint)':'transparent')+';border:1px solid '+(on?'var(--blue)':'transparent')+'">'
     +'<div style="min-width:0;flex:1"><div style="font-weight:'+(on?'700':'600')+';font-size:var(--fs-2);color:'+(on?'var(--blue)':'var(--ink)')+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(g.label)+'</div></div>'
     +onrail+_frmBadge(g.frm_class)+'</div>';
@@ -409,11 +409,11 @@ function _rdComDetail(g){
   var m=COMMETA[g.label]||{};
   var names=(g.instruments||[]).map(function(i){return esc(i.name);}).join(' · ');
   var draftBtn = (m.ai&&m.ai.skill)
-    ? '<button onclick="aiDraftCommerce(\''+m.ai.skill+'\',\''+esc(g.label)+'\')" title="AI drafts this from the current lane — you review and confirm (never autonomous)" style="font-size:12px;font-weight:700;border:1px solid var(--purple);background:var(--purple-tint);color:var(--purple);border-radius:9px;padding:7px 12px;cursor:pointer">✨ Draft with AI</button>' : '';
-  var partner = m.partner ? '<div style="margin-top:11px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--warn-tint);color:var(--on-card)"><span style="font-size:var(--fs-1);font-weight:800;color:var(--warn-3);text-transform:uppercase;letter-spacing:.05em">Or hand it to a partner</span><div style="font-size:var(--fs-2);margin-top:3px;font-weight:600">'+esc(m.partner)+'</div></div>' : '';
+    ? '<button onclick="aiDraftCommerce(\''+m.ai.skill+'\',\''+esc(g.label)+'\')" title="AI drafts this from the current lane — you review and confirm (never autonomous)" style="font-size:12px;font-weight:700;border:1px solid var(--purple);background:var(--purple-tint);color:var(--purple);border-radius:9px;padding:7px 12px;cursor:pointer">' + tx('✨ Draft with AI') + '</button>' : '';
+  var partner = m.partner ? '<div style="margin-top:11px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--warn-tint);color:var(--on-card)"><span style="font-size:var(--fs-1);font-weight:800;color:var(--warn-3);text-transform:uppercase;letter-spacing:.05em">' + tx('Or hand it to a partner') + '</span><div style="font-size:var(--fs-2);margin-top:3px;font-weight:600">'+esc(m.partner)+'</div></div>' : '';
   var ai=m.ai||{};
   var aiLine = '<b style="color:var(--blue)">'+esc(ai.lvl||'L2')+'</b> · gate: '+esc(ai.gate||'confirm')+' — '+esc(ai.t||'AI role to be defined.')+(ai.skill?'':' <i style="color:#8a94a6">(skill coming)</i>');
-  return '<div style="padding:14px 16px 0"><div style="display:flex;align-items:flex-start;gap:10px"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:15px">'+esc(g.label)+'</div><div style="font-size:11.5px;color:var(--grey);margin-top:4px;display:flex;align-items:center;gap:7px;flex-wrap:wrap">'+_frmBadge(g.frm_class)+(g.covered_onrail?'<span style="color:var(--ok-3);font-weight:700;font-size:var(--fs-1)">● already on rail</span>':'')+'</div></div><div style="flex:0 0 auto">'+draftBtn+'</div></div></div>'
+  return '<div style="padding:14px 16px 0"><div style="display:flex;align-items:flex-start;gap:10px"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:15px">'+esc(g.label)+'</div><div style="font-size:11.5px;color:var(--grey);margin-top:4px;display:flex;align-items:center;gap:7px;flex-wrap:wrap">'+_frmBadge(g.frm_class)+(g.covered_onrail?'<span style="color:var(--ok-3);font-weight:700;font-size:var(--fs-1)">' + tx('● already on rail') + '</span>':'')+'</div></div><div style="flex:0 0 auto">'+draftBtn+'</div></div></div>'
     +'<div style="border-top:1px solid var(--line);margin:12px 0 0;padding:2px 16px 16px">'
     + _rdSub('Instruments')+'<div style="font-size:var(--fs-2);color:var(--ink)">'+(names||'—')+'</div>'
     + _rdSub('Advice')+'<div style="font-size:var(--fs-2);color:var(--ink);line-height:1.5">'+esc(m.advice||'—')+'</div>'
@@ -425,7 +425,7 @@ function _rdComDetail(g){
   +'</div>';
 }
 function _rdComTwoPane(){
-  if(UI.commerce===undefined){ if(!UI.commerceLoading){ UI.commerceLoading=true; loadCommerce(); } return '<div style="flex:1;display:grid;place-items:center;color:var(--grey);font-size:13px">Loading commercial cover…</div>'; }
+  if(UI.commerce===undefined){ if(!UI.commerceLoading){ UI.commerceLoading=true; loadCommerce(); } return '<div style="flex:1;display:grid;place-items:center;color:var(--grey);font-size:13px">' + tx('Loading commercial cover…') + '</div>'; }
   if(UI.commerce.error || !UI.commerce.cluster) return '<div style="flex:1;padding:20px;color:var(--grey);font-size:13px">Could not load commercial cover'+(UI.commerce.error?(' — '+esc(UI.commerce.error)):'')+'.</div>';
   var list=UI.commerce.cluster, sel=(UI.comSel!=null && UI.comSel<list.length)?UI.comSel:0; UI.comSel=sel;
   var left=list.map(function(g,i){return _rdComRow(g,i,sel);}).join('');
@@ -472,9 +472,9 @@ function verifyReadiness(standard, doc, id_type){
     +'<label style="font-size:var(--fs-1);font-weight:700;color:var(--grey)">'+id_type.toUpperCase()+' number</label>'
     +'<input id="vf_id" placeholder="'+(id_type==='iec'?'e.g. AAACR1234B':id_type.toUpperCase()+' number')+'" style="'+inS+'">'
     +'<div id="vf_err" style="color:var(--disp);font-size:12px;margin-bottom:8px"></div>'
-    +'<button id="vf_btn" onclick="submitVerify()" style="width:100%;background:var(--ok-3);color:var(--on-ok);border:0;border-radius:9px;padding:11px;font-weight:700;cursor:pointer">🔗 Verify ID</button>'
+    +'<button id="vf_btn" onclick="submitVerify()" style="width:100%;background:var(--ok-3);color:var(--on-ok);border:0;border-radius:9px;padding:11px;font-weight:700;cursor:pointer">' + tx('🔗 Verify ID') + '</button>'
     +'</div>';
-  if(typeof modal==='function') modal('<div class="mhd"><div class="t">🔗 Verify registry ID</div></div>'+body);
+  if(typeof modal==='function') modal('<div class="mhd"><div class="t">' + tx('🔗 Verify registry ID') + '</div></div>'+body);
 }
 async function submitVerify(){
   var g=UI.rdVerify||{}; if(!g.standard) return;
@@ -498,14 +498,14 @@ function gatherReadiness(standard, doc){
   var lbl = 'font-size:var(--fs-1);font-weight:700;color:var(--grey)';
   var body = '<div class="mbody" style="padding:16px 18px">'
     +'<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:13px">This records the clearance as a <b>chit on the rail</b> that carries your document — provenanced &amp; private. Buyers see only that it\'s met + its validity.</div>'
-    +'<label style="'+lbl+'">Document (PDF/image · ≤ 6 MB)</label>'
+    +'<label style="'+lbl+'">' + tx('Document (PDF/image · ≤ 6 MB)') + '</label>'
     +'<input id="gd_file" type="file" style="'+inS+'">'
-    +'<label style="'+lbl+'">Reference / number (optional)</label>'
+    +'<label style="'+lbl+'">' + tx('Reference / number (optional)') + '</label>'
     +'<input id="gd_ref" placeholder="e.g. certificate no." style="'+inS+'">'
-    +'<label style="'+lbl+'">Valid until</label>'
+    +'<label style="'+lbl+'">' + tx('Valid until') + '</label>'
     +'<input id="gd_valid" type="date" value="'+far+'" style="'+inS+'">'
     +'<div id="gd_err" style="color:var(--disp);font-size:12px;margin-bottom:8px"></div>'
-    +'<button id="gd_btn" onclick="submitGather()" style="width:100%;background:var(--blue);color:var(--on-accent);border:0;border-radius:9px;padding:11px;font-weight:700;cursor:pointer">Record clearance on the rail</button>'
+    +'<button id="gd_btn" onclick="submitGather()" style="width:100%;background:var(--blue);color:var(--on-accent);border:0;border-radius:9px;padding:11px;font-weight:700;cursor:pointer">' + tx('Record clearance on the rail') + '</button>'
     +'</div>';
   if(typeof modal==='function') modal('<div class="mhd"><div class="t">🛡️ Gather clearance — '+esc(UI.rdGather.title)+'</div></div>'+body);
 }

@@ -33,10 +33,10 @@ var _INTAKE = { list: null, busy: false, err: null, working: {}, sim: false, mig
 function intakeScreen(){
   return '<div class="list" style="flex:1;min-width:0">'
     + '<div class="lh"><div style="display:flex;align-items:center;gap:8px;margin-bottom:9px">'
-    + '<span style="font-family:\'Space Grotesk\';font-weight:700;font-size:var(--fs-3)">📥 Intake</span>'
+    + '<span style="font-family:\'Space Grotesk\';font-weight:700;font-size:var(--fs-3)">' + tx('📥 Intake') + '</span>'
     + '<button onclick="openAssist(\'intake\')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button>'
-    + '<button data-testid="intake-refresh" onclick="loadIntake()" style="margin-inline-start:auto;border:1px solid var(--line);background:var(--paper);border-radius:9px;padding:4px 9px;font-size:11.5px;cursor:pointer;color:var(--on-bg)">↻ Refresh</button>'
-    + '<button data-testid="intake-simulate-open" onclick="intakeToggleSim()" style="border:1px solid var(--line);background:var(--paper);border-radius:9px;padding:4px 9px;font-size:11.5px;cursor:pointer;color:var(--on-bg)">✚ Record a message</button>'
+    + '<button data-testid="intake-refresh" onclick="loadIntake()" style="margin-inline-start:auto;border:1px solid var(--line);background:var(--paper);border-radius:9px;padding:4px 9px;font-size:11.5px;cursor:pointer;color:var(--on-bg)">' + tx('↻ Refresh') + '</button>'
+    + '<button data-testid="intake-simulate-open" onclick="intakeToggleSim()" style="border:1px solid var(--line);background:var(--paper);border-radius:9px;padding:4px 9px;font-size:11.5px;cursor:pointer;color:var(--on-bg)">' + tx('✚ Record a message') + '</button>'
     + '</div>'
     + '<div style="font-size:11.5px;color:var(--grey);line-height:1.5">A message is a <b>notice</b>; a chit is an <b>obligation</b>. Nothing here becomes a chit until you confirm it.</div>'
     /**
@@ -65,14 +65,14 @@ function _chn(c){
 function intakeSimHTML(){
   if(!_INTAKE.sim) return '';
   return '<div style="border:1px solid var(--line);border-radius:12px;padding:12px 13px;margin-bottom:12px;background:var(--paper);color:var(--on-bg)">'
-    + '<div style="font-weight:700;font-size:var(--fs-2);margin-bottom:6px">Record an inbound message</div>'
+    + '<div style="font-weight:700;font-size:var(--fs-2);margin-bottom:6px">' + tx('Record an inbound message') + '</div>'
     + '<div style="font-size:11.5px;color:var(--grey);margin-bottom:8px">The WhatsApp and email webhooks exist but are not connected to a provider yet, so this is how a message gets onto the queue today. It goes through the SAME capture the webhook uses — nothing is faked.</div>'
     + '<div style="display:flex;gap:8px;flex-wrap:wrap">'
-    + '<select class="inp" id="in_ch" data-testid="intake-sim-channel" style="max-width:130px"><option value="whatsapp">WhatsApp</option><option value="email">Email</option><option value="web">Web</option><option value="sms">SMS</option></select>'
+    + '<select class="inp" id="in_ch" data-testid="intake-sim-channel" style="max-width:130px"><option value="whatsapp">' + tx('WhatsApp') + '</option><option value="email">' + tx('Email') + '</option><option value="web">' + tx('Web') + '</option><option value="sms">SMS</option></select>'
     + '<input class="inp" id="in_from" data-testid="intake-sim-from" placeholder="from — phone or email" style="flex:1;min-width:150px">'
     + '</div>'
     + '<textarea class="inp" id="in_text" data-testid="intake-sim-text" placeholder="what they wrote — e.g. need 2 boxes of bolts and 5 m cable by friday" style="width:100%;margin-top:8px;min-height:64px;font-family:inherit"></textarea>'
-    + '<div style="margin-top:8px"><button class="composebtn" data-testid="intake-sim-add" onclick="intakeSimulate()">Add to the queue</button></div>'
+    + '<div style="margin-top:8px"><button class="composebtn" data-testid="intake-sim-add" onclick="intakeSimulate()">' + tx('Add to the queue') + '</button></div>'
     + '</div>';
 }
 function intakeBodyHTML(){
@@ -85,7 +85,7 @@ function intakeBodyHTML(){
   var L=_INTAKE.list||[];
   if(!L.length) return intakeSimHTML()
     + '<div class="empty" style="padding:36px 12px;text-align:center;color:var(--grey)"><div style="font-size:34px">📥</div>'
-    + '<div style="font-weight:700;color:var(--ink);margin-top:8px">Nothing waiting</div>'
+    + '<div style="font-weight:700;color:var(--ink);margin-top:8px">' + tx('Nothing waiting') + '</div>'
     + '<div style="font-size:var(--fs-2);margin-top:5px">Messages from WhatsApp, email and the web land here — raw, until you turn one into a chit.</div></div>';
   return intakeSimHTML() + L.map(intakeCardHTML).join('');
 }
@@ -108,7 +108,7 @@ function intakeCardHTML(c){
     + (s ? '<button class="composebtn" data-testid="intake-raise" '+(w.busy?'disabled':'')+' onclick="intakeRaise(\''+esc(c.id)+'\')" title="File this as a request in your inbox, in their words, with the message reference on it">'+(w.busy?'Raising…':'📥 Raise as a request')+'</button>'
          + '<button data-testid="intake-make-chit" onclick="intakeMakeChit(\''+esc(c.id)+'\')" style="border:1px solid var(--line);background:var(--card);border-radius:9px;padding:9px 15px;font-size:13px;font-weight:700;cursor:pointer;color:var(--on-card)" title="Open Compose to edit, price and address it before sending">Make this a chit <span class=arw>→</span></button>'
          : '<button class="composebtn" data-testid="intake-structure" '+(w.busy?'disabled':'')+' onclick="intakeStructure(\''+esc(c.id)+'\')">'+(w.busy?'✨ Reading…':'✨ Structure it')+'</button>')
-    + '<button data-testid="intake-dismiss" onclick="intakeDismiss(\''+esc(c.id)+'\')" style="border:1px solid var(--line);background:var(--card);border-radius:9px;padding:9px 15px;font-size:13px;font-weight:700;cursor:pointer;color:var(--grey)">Dismiss</button>'
+    + '<button data-testid="intake-dismiss" onclick="intakeDismiss(\''+esc(c.id)+'\')" style="border:1px solid var(--line);background:var(--card);border-radius:9px;padding:9px 15px;font-size:13px;font-weight:700;cursor:pointer;color:var(--grey)">' + tx('Dismiss') + '</button>'
     /* ⚠️ THE CONFIRM STEP MUST SHOW WHAT IT IS ASKING YOU TO CONFIRM. Athi, 2026-08-11, after finding that
        "konjam spiciya" and "periya bottle" were nowhere on screen: this card renders only particulars + qty + unit,
        so comment, unit_size, unit_price and unplaced were invisible whether the reader captured them or not — at
@@ -314,7 +314,7 @@ async function intakeShowJson(id){
   modal('<div class="mhd"><div class="t">{ } What the reader saw</div>'
     + '<div class="s">the message <span class=arw>→</span> what was read <span class=arw>→</span> what the chit would carry</div></div>'
     + '<div class="mbody" id="ijson"><div style="padding:18px;color:var(--grey);font-size:var(--fs-2)"><span class="spin"></span> building…</div></div>'
-    + '<div class="mfoot"><button class="composebtn" onclick="closeModal()">Close</button></div>', true);
+    + '<div class="mfoot"><button class="composebtn" onclick="closeModal()">' + tx('Close') + '</button></div>', true);
 
   /* Stage 3 needs the server, and it may legitimately refuse — nothing read yet (409), or not migrated. A refusal
      is INFORMATION here, so it is shown rather than swallowed: "it would not raise, and here is why". */

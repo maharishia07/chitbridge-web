@@ -45,7 +45,7 @@ function svcChip(txt, tone){
 function svcClockBlock(c, r){
   if (!c.has_target) {
     return '<div style="background:var(--warn-tint);border:1px solid #e6d9a8;border-radius:9px;padding:11px 13px;font-size:var(--fs-2);color:var(--warn-3)">'
-      + '<b>No priority set yet</b> — so there is no target, and nothing is being reported as late. '
+      + '<b>' + tx('No priority set yet') + '</b> — so there is no target, and nothing is being reported as late. '
       + 'Set impact and urgency to start measuring.</div>';
   }
   var big = function(label, val, breached){
@@ -96,11 +96,11 @@ function svcPauseRow(p){
      always errors is worse than not offering one. */
   var answer = (!p.mine && p.accepted === null && !open)
     ? '<div style="display:flex;gap:6px;margin-top:7px">'
-      + '<button class="btn" style="flex:1;font-size:12px" onclick="svcAnswer(\'' + esc(p.pause_id) + '\',true)">Accept this pause</button>'
-      + '<button class="btn" style="flex:1;font-size:12px;color:var(--disp)" onclick="svcAnswer(\'' + esc(p.pause_id) + '\',false)">Reject — the clock kept running</button></div>'
+      + '<button class="btn" style="flex:1;font-size:12px" onclick="svcAnswer(\'' + esc(p.pause_id) + '\',true)">' + tx('Accept this pause') + '</button>'
+      + '<button class="btn" style="flex:1;font-size:12px;color:var(--disp)" onclick="svcAnswer(\'' + esc(p.pause_id) + '\',false)">' + tx('Reject — the clock kept running') + '</button></div>'
     : '';
   var endBtn = (p.mine && open)
-    ? '<button class="btn" style="width:100%;margin-top:7px;font-size:12px" onclick="svcEndPause(\'' + esc(p.pause_id) + '\')">End this pause</button>' : '';
+    ? '<button class="btn" style="width:100%;margin-top:7px;font-size:12px" onclick="svcEndPause(\'' + esc(p.pause_id) + '\')">' + tx('End this pause') + '</button>' : '';
   return '<div style="border-top:1px solid var(--line);padding:10px 0">'
     + '<div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline">'
     + '<span style="font-size:13px;font-weight:700">' + esc(String(p.reason || '').replace(/_/g, ' ')) + '</span>'
@@ -113,19 +113,19 @@ function svcPauseRow(p){
 }
 
 function svcPaint(){
-  if (SVC.busy && !SVC.data) return modal('<h3 style="margin:0 0 10px">Service clock</h3><div style="font-size:var(--fs-2);color:var(--grey)"><span class="spin"></span> reading…</div>');
-  if (SVC.err) return modal('<h3 style="margin:0 0 8px">Service clock</h3><div style="font-size:var(--fs-2);color:var(--disp)">' + esc(SVC.err) + '</div>'
-    + '<button class="btn" style="width:100%;margin-top:12px" onclick="closeModal()">Close</button>');
+  if (SVC.busy && !SVC.data) return modal('<h3 style="margin:0 0 10px">' + tx('Service clock') + '</h3><div style="font-size:var(--fs-2);color:var(--grey)"><span class="spin"></span> reading…</div>');
+  if (SVC.err) return modal('<h3 style="margin:0 0 8px">' + tx('Service clock') + '</h3><div style="font-size:var(--fs-2);color:var(--disp)">' + esc(SVC.err) + '</div>'
+    + '<button class="btn" style="width:100%;margin-top:12px" onclick="closeModal()">' + tx('Close') + '</button>');
   var d = SVC.data || {};
 
   if (!d.tracked) {
     /* Not an error state — most chits are not service requests, and saying so plainly beats an empty panel. */
-    return modal('<h3 style="margin:0 0 4px">Track as a service request</h3>'
+    return modal('<h3 style="margin:0 0 4px">' + tx('Track as a service request') + '</h3>'
       + '<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:12px">Starts a response and a resolution clock. Impact and urgency are kept apart on purpose — together they decide the priority, and collapsing them into one field is how everything becomes a P1.</div>'
       + svcPickers(d)
       + '<div style="display:flex;gap:8px;margin-top:14px">'
-      + '<button class="btn" style="flex:1" onclick="closeModal()">Cancel</button>'
-      + '<button class="btn pri" style="flex:1" onclick="svcStart()">Start the clock</button></div>');
+      + '<button class="btn" style="flex:1" onclick="closeModal()">' + tx('Cancel') + '</button>'
+      + '<button class="btn pri" style="flex:1" onclick="svcStart()">' + tx('Start the clock') + '</button></div>');
   }
 
   var c = d.clock || {}, r = d.record || {};
@@ -142,10 +142,10 @@ function svcPaint(){
     + (pauses.length ? pauses.map(svcPauseRow).join('')
         : '<div style="font-size:var(--fs-2);color:var(--grey);padding:8px 0">None — the clock has run continuously.</div>')
     + '<div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">'
-    + (c.responded ? '' : '<button class="btn" style="flex:1;min-width:120px" onclick="svcRespond()">Mark responded</button>')
-    + (iPaused || c.resolved ? '' : '<button class="btn" style="flex:1;min-width:120px" onclick="svcPauseAsk()">Pause the clock</button>')
-    + (c.resolved ? '' : '<button class="btn pri" style="flex:1;min-width:120px" onclick="svcResolveAsk()">Resolve</button>')
-    + '<button class="btn" style="flex:1;min-width:90px" onclick="closeModal()">Close</button></div>');
+    + (c.responded ? '' : '<button class="btn" style="flex:1;min-width:120px" onclick="svcRespond()">' + tx('Mark responded') + '</button>')
+    + (iPaused || c.resolved ? '' : '<button class="btn" style="flex:1;min-width:120px" onclick="svcPauseAsk()">' + tx('Pause the clock') + '</button>')
+    + (c.resolved ? '' : '<button class="btn pri" style="flex:1;min-width:120px" onclick="svcResolveAsk()">' + tx('Resolve') + '</button>')
+    + '<button class="btn" style="flex:1;min-width:90px" onclick="closeModal()">' + tx('Close') + '</button></div>');
 }
 
 function svcPickers(d){
@@ -169,16 +169,16 @@ async function svcRespond(){
 }
 function svcPauseAsk(){
   var reasons = (SVC.data && SVC.data.pause_reasons) || [];
-  modal('<h3 style="margin:0 0 4px">Pause the clock</h3>'
+  modal('<h3 style="margin:0 0 4px">' + tx('Pause the clock') + '</h3>'
     + '<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:12px">The other party sees this pause and can accept or reject it. If they reject it, both figures are shown and neither is overruled.</div>'
-    + '<label class="fl">Why</label><select id="svc_reason" class="inp" style="width:100%;margin-bottom:10px">'
+    + '<label class="fl">' + tx('Why') + '</label><select id="svc_reason" class="inp" style="width:100%;margin-bottom:10px">'
     + reasons.map(function(x){ return '<option value="' + esc(x) + '">' + esc(String(x).replace(/_/g, ' ')) + '</option>'; }).join('') + '</select>'
     + '<label class="fl">Note (what you are waiting for)</label>'
     + '<input id="svc_note" class="inp" style="width:100%;margin-bottom:10px" placeholder="asked for the serial number on 14 Aug">'
     + '<label style="display:flex;gap:8px;align-items:center;font-size:var(--fs-2)"><input type="checkbox" id="svc_onother"> This is waiting on <b>them</b></label>'
     + '<div style="display:flex;gap:8px;margin-top:14px">'
-    + '<button class="btn" style="flex:1" onclick="svcPaint()">Back</button>'
-    + '<button class="btn pri" style="flex:1" onclick="svcDoPause()">Pause</button></div>');
+    + '<button class="btn" style="flex:1" onclick="svcPaint()">' + tx('Back') + '</button>'
+    + '<button class="btn pri" style="flex:1" onclick="svcDoPause()">' + tx('Pause') + '</button></div>');
 }
 async function svcDoPause(){
   var reason = (document.getElementById('svc_reason') || {}).value;
@@ -199,14 +199,14 @@ async function svcAnswer(pid, accepted){
 }
 function svcResolveAsk(){
   var codes = (SVC.data && SVC.data.resolution_codes) || [];
-  modal('<h3 style="margin:0 0 4px">Resolve</h3>'
+  modal('<h3 style="margin:0 0 4px">' + tx('Resolve') + '</h3>'
     + '<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:12px">What was done. Whether they accept it is a separate step — that gap is the record, not a gap in the record.</div>'
-    + '<label class="fl">Resolution</label><select id="svc_code" class="inp" style="width:100%;margin-bottom:10px">'
+    + '<label class="fl">' + tx('Resolution') + '</label><select id="svc_code" class="inp" style="width:100%;margin-bottom:10px">'
     + codes.map(function(x){ return '<option value="' + esc(x) + '">' + esc(String(x).replace(/_/g, ' ')) + '</option>'; }).join('') + '</select>'
-    + '<label class="fl">Note</label><input id="svc_rnote" class="inp" style="width:100%">'
+    + '<label class="fl">' + tx('Note') + '</label><input id="svc_rnote" class="inp" style="width:100%">'
     + '<div style="display:flex;gap:8px;margin-top:14px">'
-    + '<button class="btn" style="flex:1" onclick="svcPaint()">Back</button>'
-    + '<button class="btn pri" style="flex:1" onclick="svcDoResolve()">Resolve</button></div>');
+    + '<button class="btn" style="flex:1" onclick="svcPaint()">' + tx('Back') + '</button>'
+    + '<button class="btn pri" style="flex:1" onclick="svcDoResolve()">' + tx('Resolve') + '</button></div>');
 }
 async function svcDoResolve(){
   var code = (document.getElementById('svc_code') || {}).value;

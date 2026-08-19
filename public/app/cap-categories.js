@@ -211,9 +211,9 @@ function cbcatSeedAsk(){
     return '<div class="bulkrow"><span class="bn">' + esc(s.title) + '</span>'
       + '<span class="bh">' + s.nodes.length + ' categories</span>'
       + '<button type="button" class="badd" data-testid="catg-seed-' + esc(v) + '"'
-      + ' onclick="cbcatSeedRun(\'' + esc(v) + '\')">Add these</button></div>';
+      + ' onclick="cbcatSeedRun(\'' + esc(v) + '\')">' + tx('Add these') + '</button></div>';
   }).join('');
-  modal('<div class="mhd"><div class="t">Start from a standard set</div>'
+  modal('<div class="mhd"><div class="t">' + tx('Start from a standard set') + '</div>'
     + '<div class="s">real categories from the Google Product Taxonomy</div></div>'
     + '<div class="mbody"><div style="font-size:var(--fs-2);line-height:1.6;color:var(--ink);margin-bottom:10px">'
     + 'Pick the trade you are in and its usual categories are added, nested as the standard nests them. '
@@ -222,7 +222,7 @@ function cbcatSeedAsk(){
     + 'ceiling. Rename, retire or add your own afterwards — they are ordinary categories from the moment they '
     + 'land.</div></div>'
     + '<div class="bulklist">' + opts + '</div></div>'
-    + '<div class="mfoot"><button onclick="closeModal()">Cancel</button></div>');
+    + '<div class="mfoot"><button onclick="closeModal()">' + tx('Cancel') + '</button></div>');
 }
 async function cbcatSeedRun(vertical){
   var set = CB_STARTER_CATEGORIES[vertical]; if (!set) return;
@@ -322,25 +322,25 @@ function cbcatDetailHTML(){
             + 'the word — so they all follow. ⚠️ A copy of the old name travels with items already in a '
             + 'counterparty’s catalogue, and that copy deliberately does not change.</div>'
           : '')
-      + '<label class="fl">Name</label>'
+      + '<label class="fl">' + tx('Name') + '</label>'
       + '<input class="inp" id="cbcat_name" data-testid="catg-name" value="' + esc(f.name || '') + '"'
       + ' placeholder="Grains" oninput="cbcatField(\'name\',this.value)">'
-      + '<label class="fl">Sits under</label>'
+      + '<label class="fl">' + tx('Sits under') + '</label>'
       + cbcatParentPickHTML(f)
-      + '<label class="fl">Note</label>'
+      + '<label class="fl">' + tx('Note') + '</label>'
       + '<input class="inp" value="' + esc(f.note || '') + '" placeholder="optional — what belongs here"'
       + ' oninput="cbcatField(\'note\',this.value)">'
       + '<div class="err" id="cbcat_err" style="margin-top:8px"></div>'
       + '</div>'
       + '<div class="actbar"><button class="pri" data-testid="catg-save" onclick="cbcatSave()">'
-      + (editing ? 'Save' : 'Create') + '</button><button onclick="cbcatCancel()">Cancel</button></div>';
+      + (editing ? 'Save' : 'Create') + '</button><button onclick="cbcatCancel()">' + tx('Cancel') + '</button></div>';
   }
 
   var c = (CBCAT_UI.list || []).filter(function(x){ return x.id === CBCAT_UI.sel; })[0];
   if (!c) {
     /* ⚠️ THE SCHEMES SHOW HERE TOO. They describe classification in general, not one category — so hanging them
        only off a selected row meant they were invisible on the screen someone lands on. */
-    return '<div class="db"><div class="empty"><div class="big">🏷️</div><div class="t">Pick a category</div>'
+    return '<div class="db"><div class="empty"><div class="big">🏷️</div><div class="t">' + tx('Pick a category') + '</div>'
       + '<div>Or make a new one. Categories sort your catalogue and give buyers a way to narrow it.</div></div>'
       + cbcatSchemesHTML() + '</div>';
   }
@@ -354,7 +354,7 @@ function cbcatDetailHTML(){
     + (ret ? '<div class="cbcat-note warn">This category is <b>retired</b>. It cannot be attached to anything new. '
            + 'Products that already cite it keep the citation.</div>' : '')
     + '<div class="cbcat-stat"><span class="v">' + n + '</span><span class="k">product' + (n === 1 ? '' : 's') + ' in this category</span></div>'
-    + '<div class="sec">Products</div>'
+    + '<div class="sec">' + tx('Products') + '</div>'
     + (mine.length
         ? '<div class="cbcat-plist">' + mine.slice(0, 60).map(function(p){
             var d = (p.item_data || p), also = catgIdsOf(d).length - 1;
@@ -365,13 +365,13 @@ function cbcatDetailHTML(){
               + '</div>'; }).join('')
           + (mine.length > 60 ? '<div class="cbcat-prow" style="color:var(--grey)">+' + (mine.length - 60) + ' more</div>' : '')
           + '</div>'
-        : '<div class="cbcat-none">Nothing here yet. Attach products from <span onclick="navTo(\'catalogue\')" style="color:var(--blue);font-weight:600;cursor:pointer">Catalogue</span> — tick them and press <b>Categorise</b>.</div>')
+        : '<div class="cbcat-none">Nothing here yet. Attach products from <span onclick="navTo(\'catalogue\')" style="color:var(--blue);font-weight:600;cursor:pointer">' + tx('Catalogue') + '</span> — tick them and press <b>' + tx('Categorise') + '</b>.</div>')
     + cbcatSchemesHTML()
     + '</div>'
     + '<div class="actbar">'
-    +   (ret ? '<button class="pri" data-testid="catg-relive" onclick="cbcatRelive(\'' + esc(c.id) + '\')">Put back on the shelf</button>'
-            : '<button class="pri" data-testid="catg-edit" onclick="cbcatEdit(\'' + esc(c.id) + '\')">Rename</button>'
-              + '<button data-testid="catg-retire" onclick="cbcatRetire(\'' + esc(c.id) + '\')">Retire</button>')
+    +   (ret ? '<button class="pri" data-testid="catg-relive" onclick="cbcatRelive(\'' + esc(c.id) + '\')">' + tx('Put back on the shelf') + '</button>'
+            : '<button class="pri" data-testid="catg-edit" onclick="cbcatEdit(\'' + esc(c.id) + '\')">' + tx('Rename') + '</button>'
+              + '<button data-testid="catg-retire" onclick="cbcatRetire(\'' + esc(c.id) + '\')">' + tx('Retire') + '</button>')
     + '</div>';
 }
 function cbcatStatsHTML(){
@@ -406,7 +406,7 @@ function cbcatSchemesHTML(){
   }
   var s = cbDefRegistries().filter(function(x){ return x.key === 'standard'; })[0];
   if (!s || !(s.rows || []).length) return '';
-  return '<div class="sec" style="margin-top:14px">Classification schemes</div>'
+  return '<div class="sec" style="margin-top:14px">' + tx('Classification schemes') + '</div>'
     + '<div class="cbcat-note" style="margin-bottom:8px">' + esc(s.blurb) + '</div>'
     + '<div class="cbcat-plist">'
     + s.rows.map(function(r){
@@ -444,10 +444,10 @@ function categoriesScreen(){
   cbcatCss();
   var list = '<div class="list"><div class="lh">'
     + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:9px">'
-    +   '<span style="font-family:\'Space Grotesk\';font-weight:700;font-size:var(--fs-3)">🏷️ Categories</span>'
+    +   '<span style="font-family:\'Space Grotesk\';font-weight:700;font-size:var(--fs-3)">' + tx('🏷️ Categories') + '</span>'
     + '</div>'
     + '<button class="composebtn" style="width:100%;justify-content:center" data-testid="catg-new" onclick="cbcatNew()">+ New category</button>'
-    + '<button class="composebtn" style="width:100%;justify-content:center;margin-top:7px;background:var(--card);color:var(--blue);border:1px solid var(--line)" data-testid="catg-seed" onclick="cbcatSeedAsk()">📐 Start from a standard set</button>'
+    + '<button class="composebtn" style="width:100%;justify-content:center;margin-top:7px;background:var(--card);color:var(--blue);border:1px solid var(--line)" data-testid="catg-seed" onclick="cbcatSeedAsk()">' + tx('📐 Start from a standard set') + '</button>'
     + '<div class="srch" style="margin-top:8px">🔍 <input data-testid="catg-search" placeholder="Search categories" value="' + esc(CBCAT_UI.q || '') + '" oninput="cbcatSearch(this.value)"></div>'
     /* ⚠️ ITS OWN ELEMENT, REPAINTED WITH THE ROWS. The counts arrive AFTER the screen is built, and the header is
        rendered once by categoriesScreen() — so anything derived from counts that lives up here is stale forever.

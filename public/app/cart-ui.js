@@ -693,7 +693,7 @@
               : esc(opt(ns, 'noCatalogue', 'Nothing published yet.'));
       return '<div style="padding:34px 8px;color:var(--grey-2);font-size:13.5px;text-align:center">' + why
         + (s.catg ? '<div style="margin-top:8px"><button type="button" class="cbpick-chip"'
-            + ' onclick="CBCart.category(\'' + esc(ns) + '\',\'\')">Show everything</button></div>' : '')
+            + ' onclick="CBCart.category(\'' + esc(ns) + '\',\'\')">' + tx('Show everything') + '</button></div>' : '')
         + '</div>';
     }
     return rs.map(function (r, i) {

@@ -74,21 +74,21 @@ function vaultCardHTML(vault, encrypted){
   vault=vault||{};
   // F1 — honest at-rest signal. Encrypted (AES-256-GCM, key never in DB) → safe for real data; not configured → dummy only.
   var encBanner = encrypted
-    ? '<div style="font-size:var(--fs-1);color:var(--ok-2);background:var(--ok-tint);border:1px solid #bfe3cb;border-radius:9px;padding:7px 10px;margin:6px 0 2px">🔒 <b>Encrypted at rest</b> — stored ciphertext-only (a database dump can\'t read it). Safe for real banking &amp; tax details.</div>'
-    : '<div style="font-size:var(--fs-1);color:var(--warn-2);background:var(--warn-tint);border:1px solid #f0dcae;border-radius:9px;padding:7px 10px;margin:6px 0 2px">⚠ <b>Encryption not configured</b> — the vault won\'t save until the platform sets its encryption key. Use <b>dummy data only</b> for now.</div>';
+    ? '<div style="font-size:var(--fs-1);color:var(--ok-2);background:var(--ok-tint);border:1px solid #bfe3cb;border-radius:9px;padding:7px 10px;margin:6px 0 2px">🔒 <b>' + tx('Encrypted at rest') + '</b> — stored ciphertext-only (a database dump can\'t read it). Safe for real banking &amp; tax details.</div>'
+    : '<div style="font-size:var(--fs-1);color:var(--warn-2);background:var(--warn-tint);border:1px solid #f0dcae;border-radius:9px;padding:7px 10px;margin:6px 0 2px">⚠ <b>' + tx('Encryption not configured') + '</b> — the vault won\'t save until the platform sets its encryption key. Use <b>dummy data only</b> for now.</div>';
   var secs=(UI._vault&&UI._vault.sections)||[];
   var body=secs.length ? secs.map(vaultSectionHTML).join('')
     : '<div style="color:var(--grey);font-size:12px;padding:9px 0">Nothing here yet. Add a section below and name the details you actually have — anything we don’t recognise is still saved.</div>';
   var addOpts=Object.keys(VAULT_SECTION_TYPES).map(function(t){ return '<option value="'+t+'">'+esc(VAULT_SECTION_TYPES[t])+'</option>'; }).join('');
   return '<div style="'+_CARD+';margin-top:10px"><div class="sec" style="margin:0">🗂 Trade documents vault <span style="font-size:var(--fs-1);font-weight:600;color:var(--grey)">— fill once · pre-fills every form</span></div>'
-    +'<div style="font-size:var(--fs-1);color:var(--grey);margin:3px 0 2px;line-height:1.5">These recurring details auto-fill your Commercial Invoice, Packing List and other authority forms. At form time you\'ll only be asked the shipment-specifics (invoice no, dates, ports). <b>Name each detail the way you know it</b> — the suggestions are a shortcut, never a limit.</div>'
+    +'<div style="font-size:var(--fs-1);color:var(--grey);margin:3px 0 2px;line-height:1.5">These recurring details auto-fill your Commercial Invoice, Packing List and other authority forms. At form time you\'ll only be asked the shipment-specifics (invoice no, dates, ports). <b>' + tx('Name each detail the way you know it') + '</b> — the suggestions are a shortcut, never a limit.</div>'
     +encBanner
     +body
     +'<div style="display:flex;gap:7px;align-items:center;margin-top:13px;flex-wrap:wrap">'
       +'<select class="inp" id="v_addtype" style="max-width:210px;margin:0">'+addOpts+'</select>'
       +'<button class="composebtn ghost" data-testid="vault-add-section" onclick="vaultAddSection()">+ add section</button></div>'
     +'<div class="err" id="vault_err" style="margin-top:8px"></div>'
-    +'<button class="composebtn" style="margin-top:11px" data-testid="vault-save" onclick="saveVaultUI()">Save vault</button></div>';
+    +'<button class="composebtn" style="margin-top:11px" data-testid="vault-save" onclick="saveVaultUI()">' + tx('Save vault') + '</button></div>';
 }
 /* One section — its type, an optional label that tells two of the same kind apart, and its rows. */
 function vaultSectionHTML(sec, i){
@@ -249,10 +249,10 @@ function misScreen(){
   var seg = function(p, l){ return '<button class="' + (misPeriod() === p ? 'on' : '') + '" onclick="misSetPeriod(\'' + p + '\')">' + l + '</button>'; };
   /* The period bar sits ABOVE the split because it reframes all four bands at once; anything scoped to one band
      lives inside that band. Same rule that puts the Suppliers tabs above its list. */
-  var bar = '<div class="misbar"><span class="misttl">📊 MIS</span>'
+  var bar = '<div class="misbar"><span class="misttl">' + tx('📊 MIS') + '</span>'
     + '<span class="seg">' + seg('7', '7 days') + seg('30', '30 days') + seg('all', 'All time') + '</span>'
     + '<span class="misbar-r">' + (m ? '<span class="misasof">live · ' + esc(m.asOf) + '</span>' : '')
-    + '<button class="composebtn" onclick="aiRun(\'metrics-narrate\',UI._mis,{title:\'📊 Explain my metrics\'})" title="AI narrates what your numbers say">✨ Explain</button></span></div>';
+    + '<button class="composebtn" onclick="aiRun(\'metrics-narrate\',UI._mis,{title:\'📊 Explain my metrics\'})" title="AI narrates what your numbers say">' + tx('✨ Explain') + '</button></span></div>';
   var list = '<div class="list"><div class="lh" style="padding:0">' + bar + '</div>'
     + '<div class="rows" id="mis_rail">' + rail + '</div></div>';
   var detail = '<div class="detail" id="detailpane"><div id="misbody">'
@@ -348,7 +348,7 @@ function misPosition(m){
   var pct = tot ? Math.round(m.committed / tot * 100) : 0;
   return _misHead('Position', 'How much of the pipeline is authoritative, and how much is still a forecast.')
     + '<div class="mistwo"><div>'
-      + '<div class="mislbl">Committed · someone said yes</div>'
+      + '<div class="mislbl">' + tx('Committed · someone said yes') + '</div>'
       + '<div class="mishero">' + inr(m.committed) + '</div>'
       + '<div class="misnote">' + pct + '% of the book is authoritative — accepted, in progress or completed.</div>'
       + _misSplitBar(m)
@@ -363,7 +363,7 @@ function misPosition(m){
 function misFlow(m){
   return _misHead('Flow', 'What is moving through the rail, and at what rate.')
     + '<div class="mistwo"><div>'
-      + '<div class="mislbl">Chits by state</div><div class="misbig">' + m.chits + '</div>' + _misStack(m)
+      + '<div class="mislbl">' + tx('Chits by state') + '</div><div class="misbig">' + m.chits + '</div>' + _misStack(m)
       + '<div class="miswhy">Three peer tiles hid that <b>' + m.open + ' + ' + m.in_progress + ' + ' + m.closed + ' = ' + m.chits + '</b>.</div>'
     + '</div><div>'
       + '<div class="mislbl">Chits per ' + esc(m.bucketName) + '</div>'
@@ -410,7 +410,7 @@ function _misOverdue(m){
   return '<div class="mislbl" style="margin-top:16px">Overdue · past ' + esc(String(d)) + ' day' + (d === 1 ? '' : 's') + '</div>'
     + '<div class="misstatus">'
     + (n ? '<i class="dot" style="background:var(--disp);color:var(--on-danger)"></i> <b>' + n + ' overdue</b>'
-         : '<i class="dot" style="background:var(--ok);color:var(--on-ok)"></i> <b>Nothing overdue</b>')
+         : '<i class="dot" style="background:var(--ok);color:var(--on-ok)"></i> <b>' + tx('Nothing overdue') + '</b>')
     + '<span class="misnote" style="margin-inline-start:8px">· ' + mine + ' received · ' + theirs + ' sent</span></div>'
     + '<div class="misnote" style="margin-top:4px">The threshold is the <b onclick="navTo(\'settings\')" style="cursor:pointer;color:var(--blue)">overdue policy</b> — '
     + 'the same one the folder pane and the supplier scorecard obey, so all three move together.</div>';
@@ -436,14 +436,14 @@ function misFriction(m){
   return _misHead('Friction', 'Where time is being lost — and whose clock is running.')
     + '<div class="misstatus">' + (m.open_disputes
         ? '<i class="dot" style="background:var(--disp);color:var(--on-danger)"></i> <b>' + m.open_disputes + ' open dispute' + (m.open_disputes === 1 ? '' : 's') + '</b>'
-        : '<i class="dot" style="background:var(--ok);color:var(--on-ok)"></i> <b>No open disputes</b>')
+        : '<i class="dot" style="background:var(--ok);color:var(--on-ok)"></i> <b>' + tx('No open disputes') + '</b>')
       + '<span class="misnote" style="margin-inline-start:8px">· ' + m.chits + ' chits · ' + (m.open_disputes ? 'needs resolving' : 'nothing to resolve') + '</span></div>'
     + _misOverdue(m) + _misAgeing(m) + _misUnattended(m)
     + (rows
-      ? '<div class="mislbl" style="margin-top:18px">The queue · oldest first</div>'
-        + '<div class="misscroll"><table class="mistable"><thead><tr><th>Waiting on</th><th>Chit</th><th>Age</th><th>Value</th><th>Whose clock</th></tr></thead><tbody>' + rows + '</tbody></table></div>'
+      ? '<div class="mislbl" style="margin-top:18px">' + tx('The queue · oldest first') + '</div>'
+        + '<div class="misscroll"><table class="mistable"><thead><tr><th>' + tx('Waiting on') + '</th><th>' + tx('Chit') + '</th><th>' + tx('Age') + '</th><th>' + tx('Value') + '</th><th>' + tx('Whose clock') + '</th></tr></thead><tbody>' + rows + '</tbody></table></div>'
       : '<div class="misnote" style="margin-top:12px">Nothing is waiting — every chit has been accepted or closed.</div>')
-    + '<div class="miswhy">Disputes sit here as a <b>status</b>, not a count: <b>0</b> in a plain tile read exactly like <b>Suppliers 2</b>, when one is a health signal and the other is inventory.</div>';
+    + '<div class="miswhy">Disputes sit here as a <b>status</b>, not a count: <b>0</b> in a plain tile read exactly like <b>' + tx('Suppliers 2') + '</b>, when one is a health signal and the other is inventory.</div>';
 }
 function misTrust(m){
   var chan = m.byChannel;
@@ -452,15 +452,15 @@ function misTrust(m){
     : 'none captured — everything entered by hand';
   return _misHead('Trust', 'Who you deal with, and how the work reaches you.')
     + '<div class="mistrust">'
-      + '<div><div class="mislbl">Counterparties</div><div class="misbig" style="font-size:24px">' + m.parties + '</div>'
+      + '<div><div class="mislbl">' + tx('Counterparties') + '</div><div class="misbig" style="font-size:24px">' + m.parties + '</div>'
         + '<div class="misnote">' + (m.partyNames.length ? esc(m.partyNames.slice(0, 3).join(' · ')) : 'no counterparties yet') + '</div></div>'
-      + '<div><div class="mislbl">Suppliers on your list</div><div class="misbig" style="font-size:24px">' + m.suppliers + '</div>'
+      + '<div><div class="mislbl">' + tx('Suppliers on your list') + '</div><div class="misbig" style="font-size:24px">' + m.suppliers + '</div>'
         + '<div class="misnote">' + m.co_assists + ' co-assist' + (m.co_assists === 1 ? '' : 's') + ' working the rail</div></div>'
-      + '<div><div class="mislbl">How work arrives</div><div class="misbig" style="font-size:24px">' + m.captured + ' <span style="font-size:13px;color:var(--grey)">of ' + m.chits + '</span></div>'
+      + '<div><div class="mislbl">' + tx('How work arrives') + '</div><div class="misbig" style="font-size:24px">' + m.captured + ' <span style="font-size:13px;color:var(--grey)">of ' + m.chits + '</span></div>'
         + '<div class="misnote">' + chanTxt + '</div></div>'
     + '</div>'
     /* ⚠️ The band I most want and have NOT verified is computable. Say so rather than show a score I cannot stand behind. */
-    + '<div class="miswhy">⚠️ <b>Counterparty reliability</b> — who confirms fast, who delivers short — is the most valuable thing this band could report and is <b>not built</b>. It needs behaviour over time that nothing currently records. Shown as plain counts until that exists, rather than as a score.</div>';
+    + '<div class="miswhy">⚠️ <b>' + tx('Counterparty reliability') + '</b> — who confirms fast, who delivers short — is the most valuable thing this band could report and is <b>not built</b>. It needs behaviour over time that nothing currently records. Shown as plain counts until that exists, rather than as a score.</div>';
 }
 /**
  * ⭐ USAGE AGAINST THE DECLARED PLAN. The limits come from PLAN (declared in Governance → Constitution); this band
@@ -521,9 +521,9 @@ function misOverview(m){
     + sec('Friction', 'Where is time being lost?',
         '<div class="misstatus">' + (m.open_disputes
           ? '<i class="dot" style="background:var(--disp);color:var(--on-danger)"></i> <b>' + m.open_disputes + ' open</b>'
-          : '<i class="dot" style="background:var(--ok);color:var(--on-ok)"></i> <b>No open disputes</b>')
+          : '<i class="dot" style="background:var(--ok);color:var(--on-ok)"></i> <b>' + tx('No open disputes') + '</b>')
         + '<span style="margin-inline-start:9px">' + (m.waiting.length
-            ? '<b>' + m.waiting.length + ' waiting</b> — ' + m.waitTheirs + ' on <span class="misclock theirs">◷ Theirs</span> ' + m.waitMine + ' on <span class="misclock mine">◷ Mine</span>'
+            ? '<b>' + m.waiting.length + ' waiting</b> — ' + m.waitTheirs + ' on <span class="misclock theirs">' + tx('◷ Theirs') + '</span> ' + m.waitMine + ' on <span class="misclock mine">' + tx('◷ Mine') + '</span>'
             : 'nothing waiting') + '</span></div>'
         + ((m.unattended || []).length
             ? '<div class="misnote" style="margin-top:6px">⚠ <b>' + m.unattended.length + ' unanswered message'
@@ -720,7 +720,7 @@ function profileScreen(){
     return '<div class="row misrow' + (profSec() === s.key ? ' sel' : '') + '" data-testid="prof-sec-' + s.key + '" onclick="profSetSec(\'' + s.key + '\')">'
       + '<div class="main2"><div class="l1"><span class="code">' + esc(s.name) + '</span></div><div class="l2">' + esc(s.q) + '</div></div></div>';
   }).join('');
-  var list = '<div class="list"><div class="lh" style="padding:0"><div class="misbar"><span class="misttl">👤 Profile</span>'
+  var list = '<div class="list"><div class="lh" style="padding:0"><div class="misbar"><span class="misttl">' + tx('👤 Profile') + '</span>'
     + '<span class="misbar-r"><span class="misasof">' + esc(e.display_name || '') + '</span></span></div></div>'
     + '<div class="rows" id="prof_rail">' + rail + '</div></div>';
   var detail = '<div class="detail" id="detailpane"><div id="profbody"><button class="dback" data-testid="cap-back" onclick="backToList()">‹ Back</button></div></div>';
@@ -1007,7 +1007,7 @@ function iamPartyHTML(key, e) {
 function iamMeHTML(e){
   var Q = String.fromCharCode(39);
   return '<div style="' + _CARD + '">'
-    + '<label class="fl">This business</label>'
+    + '<label class="fl">' + tx('This business') + '</label>'
     /**
      * ⚠️⚠️ THIS WAS EXACTLY REVERSED, and the app's own naming table said so. Athi, 2026-08-19: *"if they are
      * different, we should be providing an option to change the name here. Not the user id."* … *"and it looks
@@ -1018,9 +1018,9 @@ function iamMeHTML(e){
      * loose. And PATCH /profile had no display_name validator at all, so the name could not be changed even by
      * the API. Both ends fixed.
      */
-    + '<label class="fl">Name</label>'
+    + '<label class="fl">' + tx('Name') + '</label>'
     + '<input class="inp" id="pf_name" value="' + esc(e.display_name || '') + '">'
-    + '<div class="kv" style="margin-top:9px"><b>Bridge ID</b> · ' + esc(e.bridge_id || '') + '</div>'
+    + '<div class="kv" style="margin-top:9px"><b>' + tx('Bridge ID') + '</b> · ' + esc(e.bridge_id || '') + '</div>'
     /**
      * ⭐⭐ THE USER ID IS THE ROOT OF EVERY OTHER NAME, and until now it was one field among five with a short
      * hint. Athi, 2026-08-19: *"user id is the one under which the registration happens in the platform as
@@ -1051,7 +1051,7 @@ function iamMeHTML(e){
          * pairing is the whole model on one screen: one identifier that everything cites and therefore cannot move,
          * one label that nothing cites and therefore can.
          */
-        ? '<div class="kv" style="margin-top:9px"><b>User ID</b> · <span class="mono">' + esc(e.user_id) + '</span>'
+        ? '<div class="kv" style="margin-top:9px"><b>' + tx('User ID') + '</b> · <span class="mono">' + esc(e.user_id) + '</span>'
           + ' <span style="color:var(--grey);font-size:var(--fs-1)">— you sign in with this · cannot be changed</span></div>'
         : '<label class="fl">User ID <span style="color:var(--grey);font-weight:400;font-size:var(--fs-1)">— you will sign in with this</span></label>'
           + '<input class="inp" id="pf_uid" value="">')
@@ -1073,16 +1073,16 @@ function iamMeHTML(e){
           + '</div>')
     + '<label class="fl">GSTIN <span style="color:var(--grey);font-weight:400;font-size:var(--fs-1)">— 15 characters</span></label>'
     + '<input class="inp" id="pf_gstn" value="' + esc(e.gstn || '') + '">'
-    + '<label class="fl">Address</label><input class="inp" id="pf_addr" value="' + esc(e.address || '') + '">'
+    + '<label class="fl">' + tx('Address') + '</label><input class="inp" id="pf_addr" value="' + esc(e.address || '') + '">'
     /* ⚠️ "Are you trading?" IS NOT A VISIBILITY SETTING. Athi read the two as contradictory because they sat
        together: business_status answers ARE YOU TRADING, catalogue_visibility answers WHO MAY SEE YOUR
        CATALOGUE. Different questions, similar words — so the note names both and points at the other. */
     + '<label class="fl">Are you trading? <span style="color:var(--grey);font-weight:400;font-size:var(--fs-1)">— open, closed or away</span></label>'
     + '<select class="inp" id="pf_bs">' + opt(['open','closed','away'], e.business_status) + '</select>'
     + '<div class="misnote" style="margin-top:5px">⚠️ This is <b>whether you are trading</b> — nothing to do with who may '
-    + '<b>see</b> your catalogue. That is <b onclick="profSetSec(' + Q + 'storefront' + Q + ')" style="cursor:pointer;color:var(--blue)">Storefront</b>.</div>'
+    + '<b>see</b> your catalogue. That is <b onclick="profSetSec(' + Q + 'storefront' + Q + ')" style="cursor:pointer;color:var(--blue)">' + tx('Storefront') + '</b>.</div>'
     + '<div class="err" id="pf_err"></div>'
-    + '<button class="composebtn" style="margin-top:11px" onclick="saveProfile()">Save profile</button>'
+    + '<button class="composebtn" style="margin-top:11px" onclick="saveProfile()">' + tx('Save profile') + '</button>'
   + '</div>'
 
     + namingRulesHTML();
@@ -1147,7 +1147,7 @@ function iamWhoHTML(e){
        beside a co-assist without this implies you grant them access, which is exactly backwards. */
     + '<div style="font-size:var(--fs-2);line-height:1.6;color:var(--on-card);margin-top:8px">'
     + '⚠️ <b>You do not give these access.</b> Each holds its own IAM and decides for itself. What you type to '
-    + 'add one is their <b>User ID</b> — which is why yours matters: it is the handle another business types to '
+    + 'add one is their <b>' + tx('User ID') + '</b> — which is why yours matters: it is the handle another business types to '
     + 'find <i>you</i>.</div>')
 
   ;
@@ -1272,10 +1272,10 @@ function iamAccessHTML(e){
      screen that does not say so invites people to hunt for a switch that does not exist. */
   + _iamCard(_iamHead('What this page cannot change')
     + '<div style="font-size:var(--fs-2);line-height:1.6;color:var(--on-card)">'
-    + '<b>DERIVED</b> access follows position — move the person in <b>Network</b>, not here. '
-    + '<b>CAPPED</b> access descends from your operator and cannot be lifted from inside. '
-    + '<b>THEIRS</b> is another business&rsquo;s answer and never appears as a setting of yours.<br>'
-    + '⚠️ Only <b>DIRECT</b> rows have a switch, and every one of them links to the screen that owns it — '
+    + '<b>' + tx('DERIVED') + '</b> access follows position — move the person in <b>' + tx('Network') + '</b>, not here. '
+    + '<b>' + tx('CAPPED') + '</b> access descends from your operator and cannot be lifted from inside. '
+    + '<b>' + tx('THEIRS') + '</b> is another business&rsquo;s answer and never appears as a setting of yours.<br>'
+    + '⚠️ Only <b>' + tx('DIRECT') + '</b> rows have a switch, and every one of them links to the screen that owns it — '
     + 'one control, many viewers.'
     + '</div>');
 }
@@ -1301,7 +1301,7 @@ function namingRulesHTML(){
     + '<button class="namehead" data-testid="naming-toggle" onclick="UI._namingOpen=!UI._namingOpen;loadProfile()">'
     +   '<span>' + (open ? '▾' : '<span class=arw>▸</span>') + '</span> What these names mean, and which are compulsory</button>'
     + (open ? ('<div class="namebody">' + out
-    +   '<div class="misnote" style="margin-top:10px">⚠️ Names are labels; <b>IDs are identity</b>. Everything the '
+    +   '<div class="misnote" style="margin-top:10px">⚠️ Names are labels; <b>' + tx('IDs are identity') + '</b>. Everything the '
     +   'system stores points at an ID, so renaming is always safe — a chit, a supplier link or an adopted '
     +   'definition follows the rename rather than breaking.</div></div>') : '')
     + '</div>';
@@ -1317,14 +1317,14 @@ function profSecHTML(k, e){
 function _profSecBody(k, e){
   if (k === 'identity') return iamHTML(e);
   if (k === '__iam_old') return _misHead('Identity', 'Who you are on the rail — and how others find you.')
-    + `<div class="${_CARD}"><div class="kv"><b>Name</b> · ${esc(e.display_name)}</div><div class="kv"><b>Bridge ID</b> · ${esc(e.bridge_id)}</div><div class="kv"><b>Email</b> · ${esc(e.email)}</div></div>
+    + `<div class="${_CARD}"><div class="kv"><b>${tx('Name')}</b> · ${esc(e.display_name)}</div><div class="kv"><b>${tx('Bridge ID')}</b> · ${esc(e.bridge_id)}</div><div class="kv"><b>${tx('Email')}</b> · ${esc(e.email)}</div></div>
       <label class="fl">User ID <span style="color:var(--grey);font-size:var(--fs-1)">— others add you with this</span></label><input class="inp" id="pf_uid" value="${esc(e.user_id||'')}" placeholder="e.g. yourname or you@email.com">
       <label class="fl">GSTIN <span style="color:var(--grey);font-size:var(--fs-1)">— 15 characters</span></label><input class="inp" id="pf_gstn" value="${esc(e.gstn)}" placeholder="15-char">
-      <label class="fl">Address</label><input class="inp" id="pf_addr" value="${esc(e.address)}">
+      <label class="fl">${tx('Address')}</label><input class="inp" id="pf_addr" value="${esc(e.address)}">
       <label class="fl">Are you trading? <span style="color:var(--grey);font-size:var(--fs-1)">— whether you are open for business</span></label>
       <select class="inp" id="pf_bs">${opt(["open","closed","away"],e.business_status)}</select>
-      <div class="misnote" style="margin-top:5px">⚠️ Separate from who can <b>see</b> your catalogue — that lives under <b onclick="profSetSec('storefront')" style="cursor:pointer;color:var(--blue)">Storefront</b>.</div>
-      <div class="err" id="pf_err"></div><button class="composebtn" style="margin-top:11px" onclick="saveProfile()">Save profile</button>`
+      <div class="misnote" style="margin-top:5px">⚠️ Separate from who can <b>see</b> your catalogue — that lives under <b onclick="profSetSec('storefront')" style="cursor:pointer;color:var(--blue)">${tx('Storefront')}</b>.</div>
+      <div class="err" id="pf_err"></div><button class="composebtn" style="margin-top:11px" onclick="saveProfile()">${tx('Save profile')}</button>`
     + namingRulesHTML();
   if (k === 'storefront') return _misHead('Storefront', 'What customers see when they open your link.')
     + storefrontCardHTML(e);
@@ -1359,12 +1359,12 @@ function govCardHTML(g){
   var loc=[inst.cloud,inst.region,inst.zone].filter(Boolean).join(' · ');
   return '<div style="'+_CARD+';margin-top:10px">'
     +'<div class="sec" style="margin:0 0 8px">🏛️ Your governance <span style="font-size:var(--fs-1);font-family:\'Space Mono\';background:var(--warn-tint);color:var(--warn-3);border-radius:5px;padding:1px 6px">minted · not enforced yet</span></div>'
-    +'<div class="kv"><b>Governed by</b> · '+esc(g.constitution||'—')+' <span style="color:var(--grey);font-size:var(--fs-1)">🔒 platform-set</span></div>'
-    +'<div class="kv"><b>Installation</b> · '+esc(inst.label||inst.key||'—')+(loc?(' <span style="color:var(--grey);font-size:var(--fs-1)">'+esc(loc)+'</span>'):'')+'</div>'
-    +'<div class="kv"><b>Basics</b> <span style="color:var(--grey);font-size:var(--fs-1)">⟵ from your platform</span> · '+esc(b.currency||'—')+' · '+esc(b.timezone||'—')+' · '+esc(b.region||'—')+(langs?(' · '+esc(langs)):'')+'</div>'
-    +'<div style="margin:7px 0 2px;font-size:var(--fs-2)"><b>Rights</b> '+(caps||'<span style="color:var(--grey);font-size:var(--fs-1)">—</span>')+'</div>'
-    +(allow?('<div class="kv"><b>Allowances</b> · '+allow+'</div>'):'')
-    +(j.disclaimer?('<div style="font-size:var(--fs-1);color:var(--grey);margin-top:7px;line-height:1.5"><b>Jurisdiction</b> — '+esc(j.mode||'')+(j.custodian===false?' · provider, not custodian':'')+'<br>'+esc(j.disclaimer)+'</div>'):'')
+    +'<div class="kv"><b>' + tx('Governed by') + '</b> · '+esc(g.constitution||'—')+' <span style="color:var(--grey);font-size:var(--fs-1)">' + tx('🔒 platform-set') + '</span></div>'
+    +'<div class="kv"><b>' + tx('Installation') + '</b> · '+esc(inst.label||inst.key||'—')+(loc?(' <span style="color:var(--grey);font-size:var(--fs-1)">'+esc(loc)+'</span>'):'')+'</div>'
+    +'<div class="kv"><b>' + tx('Basics') + '</b> <span style="color:var(--grey);font-size:var(--fs-1)">⟵ from your platform</span> · '+esc(b.currency||'—')+' · '+esc(b.timezone||'—')+' · '+esc(b.region||'—')+(langs?(' · '+esc(langs)):'')+'</div>'
+    +'<div style="margin:7px 0 2px;font-size:var(--fs-2)"><b>' + tx('Rights') + '</b> '+(caps||'<span style="color:var(--grey);font-size:var(--fs-1)">—</span>')+'</div>'
+    +(allow?('<div class="kv"><b>' + tx('Allowances') + '</b> · '+allow+'</div>'):'')
+    +(j.disclaimer?('<div style="font-size:var(--fs-1);color:var(--grey);margin-top:7px;line-height:1.5"><b>' + tx('Jurisdiction') + '</b> — '+esc(j.mode||'')+(j.custodian===false?' · provider, not custodian':'')+'<br>'+esc(j.disclaimer)+'</div>'):'')
     +'</div>';
 }
 async function saveProfile(){ const x=document.getElementById("pf_err"); if(x)x.textContent="";
@@ -1420,13 +1420,13 @@ function storefrontCardHTML(e){
   }[vis] || ['var(--danger-tint)', 'var(--disp)', 'Closed', 'Nobody can see it.'];
 
   return '<div style="' + _CARD + ';margin-top:10px">'
-    + '<div class="sec" style="margin:0 0 8px">🛍️ Customer storefront</div>'
+    + '<div class="sec" style="margin:0 0 8px">' + tx('🛍️ Customer storefront') + '</div>'
 
     /* ── 1 · THE STATE ─────────────────────────────────────────────────────────────────────────────────── */
     + '<div data-testid="sf-state" style="background:' + STATE[0] + ';color:' + STATE[1] + ';border-radius:9px;'
     +   'padding:9px 11px;font-size:var(--fs-2);line-height:1.55">'
     +   '<b>' + esc(STATE[2]) + '</b> — ' + esc(STATE[3])
-    +   (capped ? '<br>⚠️ Capped at <b>Closed</b> by ' + esc(cap.by || 'your network operator')
+    +   (capped ? '<br>⚠️ Capped at <b>' + tx('Closed') + '</b> by ' + esc(cap.by || 'your network operator')
                  + '. A store can be no more open than the thing it sits inside.' : '')
     + '</div>'
 
@@ -1438,7 +1438,7 @@ function storefrontCardHTML(e){
     + '<label class="fl" style="margin-top:12px">Who can see your catalogue</label>'
     + '<select class="inp" id="pf_catvis" data-testid="pf-catvis" style="max-width:340px"' + (capped ? ' disabled' : '') + '>'
     +   (capped
-          ? '<option value="private" selected>Closed — set by your network operator</option>'
+          ? '<option value="private" selected>' + tx('Closed — set by your network operator') + '</option>'
           : '<option value="public"' + (vis === 'public' ? ' selected' : '') + '>Open — anyone with the link can see your catalogue</option>'
           + '<option value="network"' + (vis === 'network' ? ' selected' : '') + '>Network only — the other businesses in your network can see it; the public link shows nothing</option>'
           + '<option value="private"' + (vis === 'private' || !vis ? ' selected' : '') + '>Closed — the link shows nothing, to anyone</option>')
@@ -1450,7 +1450,7 @@ function storefrontCardHTML(e){
     + '</div>'
 
     /* ── 3 · THE LINK — downstream of the state, and inert unless it can open ───────────────────────────── */
-    + '<label class="fl" style="margin-top:14px">Your storefront link</label>'
+    + '<label class="fl" style="margin-top:14px">' + tx('Your storefront link') + '</label>'
     + (live
         ? '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5;margin-bottom:6px">'
           + 'Share this — anyone can open it and order from your catalogue.</div>'
@@ -1459,14 +1459,14 @@ function storefrontCardHTML(e){
           + '⚠️ <b>This link will not open while your catalogue is ' + esc(STATE[2].toLowerCase()) + '.</b> '
           + 'Anyone following it — including you — sees &ldquo;Shop not found&rdquo;. That wording is deliberately '
           + 'vague to strangers, so that walking the id space tells them nothing; here is the real reason.'
-          + (capped ? '' : ' Set <b>Open</b> above and it starts working immediately.')
+          + (capped ? '' : ' Set <b>' + tx('Open') + '</b> above and it starts working immediately.')
           + '</div>')
     + '<div style="background:var(--card);border:1px solid var(--line);border-radius:9px;padding:8px 10px;'
     +   'color:var(--on-card);opacity:' + (live ? '1' : '.55') + '"><span class="mono" id="sf_url">' + esc(url) + '</span></div>'
     + '<div style="display:flex;gap:8px;margin-top:8px">'
-    +   '<button class="composebtn" onclick="sfCopy()"' + (live ? '' : ' disabled title="Your catalogue is not open"') + '>📋 Copy link</button>'
+    +   '<button class="composebtn" onclick="sfCopy()"' + (live ? '' : ' disabled title="Your catalogue is not open"') + '>' + tx('📋 Copy link') + '</button>'
     +   '<button class="composebtn ghost" onclick="window.open(document.getElementById(&#39;sf_url&#39;).textContent,&#39;_blank&#39;)"'
-    +     (live ? '' : ' disabled title="Your catalogue is not open"') + '>↗ Open</button>'
+    +     (live ? '' : ' disabled title="Your catalogue is not open"') + '>' + tx('↗ Open') + '</button>'
     + '</div>'
 
     /* ── 4 · CUSTOMER ACCESS — only meaningful once there is a storefront ───────────────────────────────── */
@@ -1476,7 +1476,7 @@ function storefrontCardHTML(e){
     + '<select class="inp" id="pf_sfaccess" style="max-width:340px;opacity:' + (live ? '1' : '.7') + '">' + sfopts + '</select>'
 
     + '<div class="err" id="pf_err2"></div>'
-    + '<button class="composebtn" style="margin-top:9px" onclick="saveStorefront()">Save storefront</button>'
+    + '<button class="composebtn" style="margin-top:9px" onclick="saveStorefront()">' + tx('Save storefront') + '</button>'
   + '</div>';
 }
 function sfCopy(){ var u=document.getElementById('sf_url'); if(!u)return; var t=u.textContent;
@@ -1493,19 +1493,19 @@ function loadActorProfile(h){
   const p=(typeof jwtPayload==='function'&&jwtPayload(SESSION.token))||{};
   const login=(p.actor_key&&p.parent_entity_name)?(p.actor_key+'@'+p.parent_entity_name):(SESSION.name||'');
   const kv=(l,v)=>`<div style="display:flex;gap:10px;padding:9px 13px;border-bottom:1px dashed var(--line);font-size:13px;align-items:baseline"><b style="min-width:104px;color:var(--grey);font-weight:600;font-size:var(--fs-1);text-transform:uppercase;letter-spacing:.4px">${l}</b><span style="font-weight:600;flex:1">${(v==null||v==='')?'—':v}</span></div>`;
-  h.innerHTML=`${menuAssist('profile')}<div class="sec">Your profile</div>
+  h.innerHTML=`${menuAssist('profile')}<div class="sec">${tx('Your profile')}</div>
     <div class="itab" style="border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:10px">
       ${kv('Name',esc(SESSION.name||p.display_name||''))}
       ${kv('Login','<span class="mono">'+esc(login)+'</span>')}
       ${kv('Role',esc(p.actor_role||''))}
       ${kv('Works for',esc(p.parent_entity_name||SESSION.entity||''))}
       ${kv('Status',SESSION.duty==='break'?'On break':'On duty')}</div>
-    <div style="${_CARD}"><div class="sec" style="margin:0 0 8px">🔑 Change your PIN</div>
-      <label class="fl">Current PIN</label><input class="inp" id="pf_cpin" inputmode="numeric" maxlength="4" style="max-width:150px" placeholder="4 digits">
-      <label class="fl">New PIN</label><input class="inp" id="pf_npin" inputmode="numeric" maxlength="4" style="max-width:150px" placeholder="4 digits">
-      <label class="fl">Confirm new PIN</label><input class="inp" id="pf_npin2" inputmode="numeric" maxlength="4" style="max-width:150px" placeholder="4 digits">
-      <div class="err" id="pf_err"></div><button class="composebtn" style="margin-top:9px" onclick="saveActorPin()">Change PIN</button></div>
-    <div style="font-size:var(--fs-1);color:var(--grey);margin-top:8px;line-height:1.5">Your <b>hat</b>, shift and access are managed by your entity. Set your <b>Duty / Break</b> from the top bar.</div>`;
+    <div style="${_CARD}"><div class="sec" style="margin:0 0 8px">${tx('🔑 Change your PIN')}</div>
+      <label class="fl">${tx('Current PIN')}</label><input class="inp" id="pf_cpin" inputmode="numeric" maxlength="4" style="max-width:150px" placeholder="4 digits">
+      <label class="fl">${tx('New PIN')}</label><input class="inp" id="pf_npin" inputmode="numeric" maxlength="4" style="max-width:150px" placeholder="4 digits">
+      <label class="fl">${tx('Confirm new PIN')}</label><input class="inp" id="pf_npin2" inputmode="numeric" maxlength="4" style="max-width:150px" placeholder="4 digits">
+      <div class="err" id="pf_err"></div><button class="composebtn" style="margin-top:9px" onclick="saveActorPin()">${tx('Change PIN')}</button></div>
+    <div style="font-size:var(--fs-1);color:var(--grey);margin-top:8px;line-height:1.5">Your <b>hat</b>, shift and access are managed by your entity. Set your <b>${tx('Duty / Break')}</b> from the top bar.</div>`;
 }
 async function saveActorPin(){ const x=document.getElementById("pf_err"); if(x)x.textContent="";
   const c=val("pf_cpin"), n=val("pf_npin"), n2=val("pf_npin2");
@@ -1606,7 +1606,7 @@ function planWindow(){
   return { state:'active', to:to, days: to ? Math.ceil((to-now)/864e5) : null };
 }
 function govPlanBlock(){
-  return '<div style="margin:15px 0 2px;font-family:\'Space Grotesk\';font-weight:700;font-size:var(--fs-2);color:#5b4a86">↑ Your plan · what it entitles you to</div>'
+  return '<div style="margin:15px 0 2px;font-family:\'Space Grotesk\';font-weight:700;font-size:var(--fs-2);color:#5b4a86">' + tx('↑ Your plan · what it entitles you to') + '</div>'
     + govRowHtml('Plan tier', esc(PLAN.tier), 'bound')
     /* The subscription period. `free` is the honest class: not yours to set, and not set by anyone else either. */
     + govRowHtml('Valid from', PLAN.validFrom ? esc(PLAN.validFrom) : 'no subscription record yet', PLAN.validFrom ? 'bound' : 'free')
@@ -1946,7 +1946,7 @@ function govLayersBlock(){ var t=UI.govTab||0; var L=GOV[t];
   var rowsHtml = grp('yours','Yours to set','you control these', function(k){ return YOURS[k]; })
     + grp('fixed','Fixed above you','inherited or platform-bound', function(k){ return FIXED[k]; })
     + grp('none','Not configured yet','arrives from the layer later', function(k){ return !YOURS[k] && !FIXED[k]; });
-  if(t===0){ rowsHtml+='<div style="margin:13px 0 2px;font-family:\'Space Grotesk\';font-weight:700;font-size:var(--fs-2);color:#46546b">⚙ Installation · platform-only (master)</div>'+govRowHtml('Cloud provider','AWS','protected')+govRowHtml('Region','ap-south-1','protected')+govRowHtml('Storage adapter','db <span class=arw>→</span> S3 / Azure / GCS','protected')+govRowHtml('Storage bucket','chitbridge-prod-•••','protected')+govRowHtml('Secrets / keys','•••• managed (never exposed)','protected')+govRowHtml('System health','● healthy','protected'); rowsHtml += govPlanBlock(); }
+  if(t===0){ rowsHtml+='<div style="margin:13px 0 2px;font-family:\'Space Grotesk\';font-weight:700;font-size:var(--fs-2);color:#46546b">' + tx('⚙ Installation · platform-only (master)') + '</div>'+govRowHtml('Cloud provider','AWS','protected')+govRowHtml('Region','ap-south-1','protected')+govRowHtml('Storage adapter','db <span class=arw>→</span> S3 / Azure / GCS','protected')+govRowHtml('Storage bucket','chitbridge-prod-•••','protected')+govRowHtml('Secrets / keys','•••• managed (never exposed)','protected')+govRowHtml('System health','● healthy','protected'); rowsHtml += govPlanBlock(); }
   var inRail = (UI.nav === 'settings');   /* rail carries the layers in Settings; chips elsewhere */
   var foot=(t===0)?'Change a value above, then open <b>tab 7 · Consolidation</b> — the entity inherits it via the boilerplate. <i>Stub: in production these arrive from the layer, not this screen.</i>':(t===6)?'These ride down from the layers into the <b>boilerplate</b> every entity copies at registration, and <b>freeze</b> onto each chit at send. <i>Stub — later set from the real layer.</i>'/* ⚠️ THE GENERIC LEGEND IS GONE. It defined `bound` / `advisory` / `free` — words this screen no longer uses,
    because every row now says what it means in plain English on the row itself. A legend for vocabulary that is
@@ -2701,7 +2701,7 @@ function paintSettings(s, _daOpts){ const h=document.getElementById("setbody"); 
        * not before.
        */
       + '<div style="border:1px solid var(--line);border-radius:12px;padding:13px;margin-top:10px">'
-        + '<div class="sec" style="margin:0 0 8px">📎 Attachment policy</div>'
+        + '<div class="sec" style="margin:0 0 8px">' + tx('📎 Attachment policy') + '</div>'
         + '<div class="misnote" style="margin-bottom:9px">Declared once, in the governance layers. Shown here so you can see what applies.</div>'
         + govRefHTML('Attachment types') + govRefHTML('Attachment max size')
       + '</div>';
@@ -2820,7 +2820,7 @@ function channelsCard(){
 function channelsInner(){
   var head = '<div class="sec" style="margin:0 0 4px">📡 Channels '
     + '<span style="font-size:var(--fs-1);font-family:\'Space Mono\';background:var(--ok-tint);color:var(--ok-2);border-radius:5px;padding:1px 6px">inbound · live</span></div>'
-    + '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5;margin-bottom:8px">Where messages come in from. Bind the number or address a customer writes to, and anything sent there lands in <b>📨 Intake</b> — raw, for you to confirm into a chit. Nothing here can send on your behalf.</div>';
+    + '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5;margin-bottom:8px">Where messages come in from. Bind the number or address a customer writes to, and anything sent there lands in <b>' + tx('📨 Intake') + '</b> — raw, for you to confirm into a chit. Nothing here can send on your behalf.</div>';
   if(_CH.busy && !_CH.data) return head+'<div class="loadwrap" style="justify-content:flex-start;padding:6px 0"><span class="spin"></span> reading your channels…</div>';
   /* ⚠️ A MISSING ENDPOINT IS NOT A BROKEN SCREEN, and must not be reported as one. The API deploys separately from
      this page, so a web release can land first — "Could not read your channels" would send someone hunting for a
@@ -2905,7 +2905,7 @@ function _chRow(c){
     + (_CH.adding===c.key
         ? '<div style="display:flex;gap:6px;margin-top:8px"><input class="inp" id="ch_addr" placeholder="'+esc(c.placeholder)+'" data-testid="ch-addr" style="flex:1">'
           + '<input class="inp" id="ch_label" placeholder="label (optional)" data-testid="ch-label" style="max-width:140px">'
-          + '<button class="composebtn" data-testid="ch-save" onclick="chBind(\''+esc(c.key)+'\')">Bind</button></div>'
+          + '<button class="composebtn" data-testid="ch-save" onclick="chBind(\''+esc(c.key)+'\')">' + tx('Bind') + '</button></div>'
           + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">'+esc(c.address_label)+' — the address your customers write TO, not theirs. It is a <b>claim</b>: it starts inert and receives nothing until the platform confirms the number is yours.</div>'
         : '')
     + '</div>';
@@ -2938,7 +2938,7 @@ function chSetAutoRaise(id, on){
   confirmAsk('Raise messages on this line automatically?',
     'A chit will appear in your Task list <b>without anyone present</b>. It is an inquiry — a record, not an '
     + 'obligation — and it still says the sender is unverified.'
-    + '<div style="margin-top:7px">Anything the co-assist cannot read stays in <b>Intake</b> for you.</div>',
+    + '<div style="margin-top:7px">Anything the co-assist cannot read stays in <b>' + tx('Intake') + '</b> for you.</div>',
     'Turn it on', function(){ _chSetAutoRaise(id, true); });
   /* ⚠️ The toggle already moved on screen. Cancelling must put it back, and only a reload knows the real state. */
   loadChannels();
@@ -2973,20 +2973,20 @@ function policyFlagsInner(){
   var warn = !_POL.migrated ? '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;font-size:11.5px;color:var(--warn-3);margin-bottom:7px">Policy flags are not migrated on this environment (b130). The card is here; the column is not — changes will not save.</div>' : '';
   var err = _POL.err ? '<div style="color:var(--disp);font-size:11.5px;margin-top:6px">'+esc(_POL.err)+'</div>' : '';
   return '<div class="sec" style="margin:0 0 4px">🚩 Policy flags <span style="font-size:var(--fs-1);font-family:\'Space Mono\';background:var(--ok-tint);color:var(--ok-2);border-radius:5px;padding:1px 6px">saved to your entity</span></div>'
-    +'<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5;margin-bottom:6px">The per-entity toggles the <b>7-layer block above</b> doesn\'t yet carry — same governance grammar (<b>class</b> + <b>level</b>): 🔒 platform-bound you can\'t relax; <b>tighten-only</b> you can make stricter; <b>entity</b> you set freely.</div>'
+    +'<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5;margin-bottom:6px">The per-entity toggles the <b>' + tx('7-layer block above') + '</b> doesn\'t yet carry — same governance grammar (<b>class</b> + <b>level</b>): 🔒 platform-bound you can\'t relax; <b>tighten-only</b> you can make stricter; <b>entity</b> you set freely.</div>'
     +warn+rows+err
     +'<div style="font-size:var(--fs-1);color:var(--grey);font-style:italic;margin-top:8px">Stored on the entity, not on this device. <b>Enforced today:</b> self-chit copy, and which side of the trade you are on (inbound pricing). Expiry and retention are declared, not yet enforced.</div>';
 }
 function autoAssignCard(s, daOpts){ const m=s.auto_assign_mode||'off';
   return `<div style="${_CARD};margin-top:10px"><div class="sec" style="margin:0 0 6px">🧭 Auto-assign on receipt <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--ok-tint);color:var(--ok-2);border-radius:5px;padding:1px 6px">active</span></div>
-    <label class="fl">Mode</label><select class="inp" id="st_aam">
-      <option value="off"${m==='off'?' selected':''}>Off — received chits wait in the pool</option>
-      <option value="default_assignee"${m==='default_assignee'?' selected':''}>Default assignee — all to one person</option>
-      <option value="least_loaded"${m==='least_loaded'?' selected':''}>Least-loaded — balance across the team</option>
+    <label class="fl">${tx('Mode')}</label><select class="inp" id="st_aam">
+      <option value="off"${m==='off'?' selected':''}>${tx('Off — received chits wait in the pool')}</option>
+      <option value="default_assignee"${m==='default_assignee'?' selected':''}>${tx('Default assignee — all to one person')}</option>
+      <option value="least_loaded"${m==='least_loaded'?' selected':''}>${tx('Least-loaded — balance across the team')}</option>
     </select>
-    <label class="fl">Default / overflow assignee</label><select class="inp" id="st_ada">${daOpts}</select>
-    <div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px;line-height:1.55">Only <b>Act / Manager</b> co-assists can be assigned. In <b>least-loaded</b>, ties break to whoever went longest without a new task; when everyone is at capacity it overflows to the default assignee. Anyone <b>on leave</b> routes to their delegate.</div>
-    <div class="err" id="st_aerr"></div><button class="composebtn" style="margin-top:9px" onclick="saveAutoAssign()">Save auto-assign</button></div>`;
+    <label class="fl">${tx('Default / overflow assignee')}</label><select class="inp" id="st_ada">${daOpts}</select>
+    <div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px;line-height:1.55">Only <b>${tx('Act / Manager')}</b> co-assists can be assigned. In <b>least-loaded</b>, ties break to whoever went longest without a new task; when everyone is at capacity it overflows to the default assignee. Anyone <b>on leave</b> routes to their delegate.</div>
+    <div class="err" id="st_aerr"></div><button class="composebtn" style="margin-top:9px" onclick="saveAutoAssign()">${tx('Save auto-assign')}</button></div>`;
 }
 async function saveAutoAssign(){ const x=document.getElementById("st_aerr"); if(x)x.textContent="";
   const mode=val("st_aam"), da=val("st_ada");
@@ -3001,18 +3001,18 @@ var _kbItems=[], _kbEditId='';
 async function loadGaps(){ const h=document.getElementById("kbbody"); if(!h)return;
   const me=(typeof SESSION!=='undefined')?SESSION:{}; const isHelp=(me.name==='GOV-01-Help'||me.isHelpdesk);
   const form = isHelp
-    ? '<div style="'+_CARD+'"><div class="sec" id="kb_formhd" style="margin:0 0 6px">Publish an answer</div>'
-      +'<label class="fl">Question</label><input class="inp" id="kb_q" data-testid="kb-question" placeholder="e.g. How do I export to Excel?">'
-      +'<label class="fl">Answer</label><textarea class="inp" id="kb_a" data-testid="kb-answer" rows="4" placeholder="The answer the assistant should give…" style="width:100%;resize:vertical"></textarea>'
+    ? '<div style="'+_CARD+'"><div class="sec" id="kb_formhd" style="margin:0 0 6px">' + tx('Publish an answer') + '</div>'
+      +'<label class="fl">' + tx('Question') + '</label><input class="inp" id="kb_q" data-testid="kb-question" placeholder="e.g. How do I export to Excel?">'
+      +'<label class="fl">' + tx('Answer') + '</label><textarea class="inp" id="kb_a" data-testid="kb-answer" rows="4" placeholder="The answer the assistant should give…" style="width:100%;resize:vertical"></textarea>'
       +'<label class="fl">Context <span style="color:var(--grey);font-size:var(--fs-1)">— screens (comma), or * for everywhere</span></label><input class="inp" id="kb_c" data-testid="kb-context" placeholder="e.g. task, order  (or *)" value="*">'
-      +'<div class="err" id="kb_err"></div><div style="display:flex;gap:7px;margin-top:9px"><button class="composebtn" id="kb_pub" data-testid="kb-publish" onclick="publishAnswer()">📣 Publish to catalogue</button><button class="composebtn ghost" data-testid="kb-new" onclick="kbNew()">＋ New / clear</button></div>'
-      +'<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">Add a new answer, or press <b>Edit</b> on one below to refine it. Served to the assistant instantly (catalogue <span class=arw>→</span> projection).</div></div>'
-    : '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:11px 13px;font-size:var(--fs-2);color:var(--warn-3);margin-bottom:11px">This is the help-desk knowledge base. Queries arrive as chits in <b>GOV-01-Help</b>\'s Task inbox — operate as GOV-01-Help to answer, close, and publish here.</div>';
-  h.innerHTML=form+'<div style="font-size:12px;color:var(--grey);margin:12px 0 6px">Published answers (<span id="kb_n">…</span>)</div><div id="kb_list"><div class="loadwrap"><span class="spin"></span> loading…</div></div>';
+      +'<div class="err" id="kb_err"></div><div style="display:flex;gap:7px;margin-top:9px"><button class="composebtn" id="kb_pub" data-testid="kb-publish" onclick="publishAnswer()">' + tx('📣 Publish to catalogue') + '</button><button class="composebtn ghost" data-testid="kb-new" onclick="kbNew()">＋ New / clear</button></div>'
+      +'<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">Add a new answer, or press <b>' + tx('Edit') + '</b> on one below to refine it. Served to the assistant instantly (catalogue <span class=arw>→</span> projection).</div></div>'
+    : '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:11px 13px;font-size:var(--fs-2);color:var(--warn-3);margin-bottom:11px">This is the help-desk knowledge base. Queries arrive as chits in <b>' + tx('GOV-01-Help') + '</b>\'s Task inbox — operate as GOV-01-Help to answer, close, and publish here.</div>';
+  h.innerHTML=form+'<div style="font-size:12px;color:var(--grey);margin:12px 0 6px">' + tx('Published answers (') + '<span id="kb_n">…</span>)</div><div id="kb_list"><div class="loadwrap"><span class="spin"></span> loading…</div></div>';
   if(window.CBOffline)CBOffline.autodraft(h,'kb.form');   // draft the question/answer/context you're writing
   try{ _kbItems=(await api("assistQuestions"))||[]; const n=document.getElementById("kb_n"); if(n)n.textContent=_kbItems.length;
     const L=document.getElementById("kb_list"); if(L) L.innerHTML = _kbItems.length ? _kbItems.map(function(e){
-      const eb = isHelp ? '<button class="composebtn" style="padding:2px 9px;font-size:var(--fs-1);flex:none" onclick="kbEdit(\''+esc(e.id)+'\')">Edit</button>' : '';
+      const eb = isHelp ? '<button class="composebtn" style="padding:2px 9px;font-size:var(--fs-1);flex:none" onclick="kbEdit(\''+esc(e.id)+'\')">' + tx('Edit') + '</button>' : '';
       return '<div style="'+_CARD+';padding:9px 11px"><div style="display:flex;gap:8px;align-items:flex-start"><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:var(--fs-2)">'+esc(e.q)+'</div><div style="font-size:11.5px;color:var(--grey);margin-top:2px">'+esc(e.a)+'</div><div style="font-size:var(--fs-1);color:var(--grey-4);margin-top:3px">'+esc(Array.isArray(e.context)?e.context.join(', '):'')+'</div></div>'+eb+'</div></div>'; }).join('') : '<div style="color:var(--grey);font-size:12px">None yet.</div>';
   }catch(e){ const L=document.getElementById("kb_list"); if(L)L.innerHTML=scrErr(e); } }
 function kbEdit(id){ const it=_kbItems.find(function(x){return x.id===id;}); if(!it)return; _kbEditId=id;

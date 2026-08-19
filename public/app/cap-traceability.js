@@ -49,7 +49,7 @@ function traceabilityScreen(){
       + '<input id="traceBatchIn" value="' + esc(UI.traceBatchQ || '') + '" placeholder="batch number, e.g. FG-PC-6621" '
         + 'oninput="UI.traceBatchQ=this.value" onkeydown="if(event.key===\'Enter\')runTraceByBatch()" '
         + 'style="flex:1;min-width:180px;padding:8px 11px;border:1px solid var(--line);border-radius:9px;font-size:13px;font-family:monospace">'
-      + '<button onclick="runTraceByBatch()" style="padding:8px 13px">🔎 Trace by batch #</button>'
+      + '<button onclick="runTraceByBatch()" style="padding:8px 13px">' + tx('🔎 Trace by batch #') + '</button>'
     + '</div>'
     + '</div>';
 
@@ -72,7 +72,7 @@ async function loadTraceBatches(){
   if (typeof renderApp === 'function') renderApp();
 }
 function _traceBatchPicker(){
-  if (UI.traceBatches === undefined){ loadTraceBatches(); return '<div style="padding:12px 20px;color:var(--grey);font-size:12px">Loading your batches…</div>'; }
+  if (UI.traceBatches === undefined){ loadTraceBatches(); return '<div style="padding:12px 20px;color:var(--grey);font-size:12px">' + tx('Loading your batches…') + '</div>'; }
   if (!UI.traceBatches.length) return '<div style="padding:12px 20px;color:var(--grey);font-size:12px">No traceable batches yet — seed a chain, then reload.</div>';
   var rows = UI.traceBatches.map(function(b){
     var name = esc(b.product || b.to_name || 'batch');
@@ -80,21 +80,21 @@ function _traceBatchPicker(){
     return '<div onclick="UI.traceId=\'' + b.chit_id + '\';runTrace(\'forward\')" title="Click to trace this batch" '
       + 'style="cursor:pointer;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--card);display:flex;flex-direction:column;gap:2px;color:var(--on-card)">'
       + '<div style="display:flex;align-items:center;gap:7px"><b style="font-size:13px">' + name + '</b>'
-        + (b.is_origin ? '<span style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);background:var(--blue-tint-bg);border-radius:5px;padding:1px 5px">ORIGIN</span>' : '') + '</div>'
+        + (b.is_origin ? '<span style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);background:var(--blue-tint-bg);border-radius:5px;padding:1px 5px">' + tx('ORIGIN') + '</span>' : '') + '</div>'
       + (meta ? '<div style="font-size:var(--fs-1);color:var(--grey)">' + meta + '</div>' : '')
       + '<div style="font-family:monospace;font-size:var(--fs-1);color:var(--grey-3);word-break:break-all">' + esc(b.chit_id) + '</div>'
       + '</div>';
   }).join('');
   return '<div style="padding:10px 18px 4px">'
-    + '<div style="font-size:var(--fs-1);font-weight:800;color:var(--grey);letter-spacing:.05em;margin-bottom:7px">YOUR BATCHES — click one to trace</div>'
+    + '<div style="font-size:var(--fs-1);font-weight:800;color:var(--grey);letter-spacing:.05em;margin-bottom:7px">' + tx('YOUR BATCHES — click one to trace') + '</div>'
     + '<div style="display:grid;gap:7px;grid-template-columns:repeat(auto-fill,minmax(210px,1fr))">' + rows + '</div></div>';
 }
 
 function _traceChip(n, isTerm){
   var label = esc(n.product || '(no product)');
   var qty = (n.qty != null) ? (' · ' + esc(String(n.qty)) + esc(n.unit ? (' ' + n.unit) : '')) : '';
-  var badge = n.is_origin ? '<span style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);background:var(--blue-tint-bg);border-radius:6px;padding:1px 5px;margin-inline-start:6px">ORIGIN</span>'
-            : (isTerm ? '<span style="font-size:var(--fs-1);font-weight:800;color:var(--disp-2);background:var(--danger-tint);border-radius:6px;padding:1px 5px;margin-inline-start:6px">EXPOSED</span>' : '');
+  var badge = n.is_origin ? '<span style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);background:var(--blue-tint-bg);border-radius:6px;padding:1px 5px;margin-inline-start:6px">' + tx('ORIGIN') + '</span>'
+            : (isTerm ? '<span style="font-size:var(--fs-1);font-weight:800;color:var(--disp-2);background:var(--danger-tint);border-radius:6px;padding:1px 5px;margin-inline-start:6px">' + tx('EXPOSED') + '</span>' : '');
   var bd = isTerm ? 'var(--disp)' : (n.is_origin ? 'var(--blue-tint-bg)' : 'var(--line)');
   var bg = isTerm ? 'var(--danger-tint)' : (n.is_origin ? 'var(--blue-tint-bg)' : '#fff');
   return '<span style="display:inline-flex;align-items:center;border:1px solid ' + bd + ';background:' + bg + ';border-radius:9px;padding:5px 9px;font-size:12px;margin:3px 5px 3px 0">'
@@ -137,8 +137,8 @@ function _traceNode(n, isTerm){
   if (n.qty != null) bits.push('<b style="color:var(--ink-2)">' + esc(String(n.qty)) + esc(n.unit ? (' ' + n.unit) : '') + '</b>');
   if (n.product) bits.push(esc(n.product));
   bits.push('<span style="font-family:monospace;font-size:var(--fs-1);opacity:.6">' + _traceShort(n.chit_id) + '</span>');
-  var badge = n.is_origin ? '<span style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);background:var(--blue-tint-bg);border-radius:6px;padding:1px 6px;margin-inline-start:7px">ORIGIN</span>'
-            : (isTerm ? '<span style="font-size:var(--fs-1);font-weight:800;color:var(--disp-2);background:var(--danger-tint);border-radius:6px;padding:1px 6px;margin-inline-start:7px">EXPOSED</span>' : '');
+  var badge = n.is_origin ? '<span style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);background:var(--blue-tint-bg);border-radius:6px;padding:1px 6px;margin-inline-start:7px">' + tx('ORIGIN') + '</span>'
+            : (isTerm ? '<span style="font-size:var(--fs-1);font-weight:800;color:var(--disp-2);background:var(--danger-tint);border-radius:6px;padding:1px 6px;margin-inline-start:7px">' + tx('EXPOSED') + '</span>' : '');
   if (isRed) badge += '<span style="font-size:var(--fs-1);font-weight:800;color:var(--disp);background:#c0453b;border-radius:6px;padding:1px 6px;margin-inline-start:7px">⚠ OUT &gt; IN</span>';
   var dot = (isRed || isTerm) ? 'var(--disp)' : (n.is_origin ? 'var(--blue-2)' : 'var(--blue-2)');
   var balLine = isRed

@@ -62,13 +62,13 @@ var CBDEF_AUTHORABLE = {
                 home: { nav: 'categories', label: 'Open Categories →' },
                 blurb: 'A named list of products, and the one definition with no freeze semantics to worry '
                      + 'about — a category has no terms that could change under a chit. ⚠️ A product can sit in '
-                     + 'several. Created and renamed under <b>Categories</b>, beside the Catalogue.' },
+                     + 'several. Created and renamed under <b>' + tx('Categories') + '</b>, beside the Catalogue.' },
   ordermodel: { icon: '🔢', title: 'Order models', one: 'order model',
                 home: { nav: 'catsetup', sec: 'ordermodels', label: 'Open Catalogue setup →' },
                 blurb: 'A quantity rule with a NAME, so a product adopts “Carton of 6” rather than repeating '
                      + 'pack/step 6. ⚠️ Change it to 12 and every product that adopted it moves — which is either '
                      + 'exactly what you want or a catastrophe, and is why adoption freezes at the mint. '
-                     + 'Authored under <b>Catalogue setup</b>.' },
+                     + 'Authored under <b>' + tx('Catalogue setup') + '</b>.' },
   /* ⚠️ This blurb said "nothing evaluates these at order time yet" — true when written, false since offers were
      wired into compose. Stale copy is the same failure as the "read-only showcase" banner: someone reads it,
      believes the feature is inert, and never tries it. */
@@ -76,7 +76,7 @@ var CBDEF_AUTHORABLE = {
                 home: { nav: 'catsetup', sec: 'offers', label: 'Open Catalogue setup →' },
                 blurb: 'An offer kind plus its conditions. Publish one and it applies to orders in compose — the '
                      + 'breakdown shows what came off and, when it does not fire, how far short the order is. '
-                     + 'Authored under <b>Catalogue setup</b>.' },
+                     + 'Authored under <b>' + tx('Catalogue setup') + '</b>.' },
   /**
    * ⭐⭐ BACKLOG 7 — THE BUYER'S OWN FLOOR. Athi, 2026-08-16: *"the entity should declare what minimum
    * certification he needs to have business and it has to check only those available, eventhough the supplier
@@ -575,7 +575,7 @@ function cbDefPickHTML(x, v){
   }
   if (!list.length) {
     return '<div class="cbdef-hint">No categories yet, so this offer applies to <b>everything</b>. '
-      + 'Make one under <b>Categories</b> to target it.</div>';
+      + 'Make one under <b>' + tx('Categories') + '</b> to target it.</div>';
   }
   return '<select class="inp" data-testid="cbdef-pick-' + cbDefEsc(x.k) + '"'
     + ' onchange="cbDefSetRule(\'' + x.k + '\',this.value)">'
@@ -603,12 +603,12 @@ function cbDefFormHTML(){
           + 'version they froze — they do not move. Currently at v' + cbDefEsc(f.version || 1) + '.</div>'
         : '')
     + (subs.length
-        ? '<label class="fl">Kind</label><select class="inp" onchange="cbDefSetSub(this.value)">'
+        ? '<label class="fl">' + tx('Kind') + '</label><select class="inp" onchange="cbDefSetSub(this.value)">'
           + subs.map(function (s) {
               return '<option value="' + cbDefEsc(s) + '"' + (s === f.sub ? ' selected' : '') + '>'
                 + cbDefEsc(s) + '</option>'; }).join('') + '</select>'
         : '')
-    + '<label class="fl">Name</label>'
+    + '<label class="fl">' + tx('Name') + '</label>'
     + '<input class="inp" data-testid="cbdef-name" value="' + cbDefEsc(f.name) + '"'
     /* ⚠️ Per KIND. The fallthrough used to hand `requirement` the category placeholder — a form headed "New
        requirement" asking for a name and suggesting "Spices". A placeholder is an instruction; a wrong one
@@ -629,12 +629,12 @@ function cbDefFormHTML(){
               : '<input class="inp" value="' + cbDefEsc(v) + '" placeholder="' + cbDefEsc(x.ph || '') + '"'
                 + ' oninput="cbDefSetRule(\'' + x.k + '\',this.value,' + (x.num ? 'true' : 'false') + ')">');
       }).join('') + cbDefStdChipsHTML() + '</div>' : '')
-    + '<label class="fl">Note</label>'
+    + '<label class="fl">' + tx('Note') + '</label>'
     + '<input class="inp" value="' + cbDefEsc(f.note) + '" placeholder="optional"'
     + ' oninput="cbDefSetField(\'note\',this.value)">'
     + '<div class="err" id="cbdef_err"></div>'
     + '<div style="display:flex;gap:8px;margin-top:14px">'
-    +   '<button class="composebtn" style="flex:1" onclick="closeModal()">Cancel</button>'
+    +   '<button class="composebtn" style="flex:1" onclick="closeModal()">' + tx('Cancel') + '</button>'
     +   '<button class="composebtn pri" style="flex:1" data-testid="cbdef-save" onclick="cbDefSave()">'
     +   (editing ? 'Save' : 'Create') + '</button>'
     + '</div>';
@@ -670,7 +670,7 @@ function cbDefStdsLoad(){
 function cbDefStdChipsHTML(){
   var f = CBDEF_FORM; if (!f || f.kind !== 'requirement') return '';
   var list = _CBDEF_STDS;
-  if (list === null) return '<div class="cbdef-stdhint">Reading the standards list…</div>';
+  if (list === null) return '<div class="cbdef-stdhint">' + tx('Reading the standards list…') + '</div>';
   if (!list.length) return '<div class="cbdef-stdhint">Could not read the standards list — type the keys directly, '
     + 'one per line.</div>';
   var chosen = {}; (f.rules.standards || []).forEach(function(s){ chosen[String(s).trim()] = 1; });
@@ -861,7 +861,7 @@ function cbDefKindsInline(kind){
     + '</div>';
 }
 function cbDefMineHTML(){
-  if (CBDEF.mine === null) { cbDefLoad(); return '<div class="cbdef-loading">Reading your shelf…</div>'; }
+  if (CBDEF.mine === null) { cbDefLoad(); return '<div class="cbdef-loading">' + tx('Reading your shelf…') + '</div>'; }
 
   var out = Object.keys(CBDEF_AUTHORABLE).map(function (kind) {
     var A = CBDEF_AUTHORABLE[kind];
@@ -884,10 +884,10 @@ function cbDefMineHTML(){
            freeze rule invisible in the one place someone might need to check it. */
         + '<span class="cbdef-ver">v' + cbDefEsc(d.current_version) + '</span>'
         + '<span class="cbdef-acts">'
-        +   '<span onclick="cbDefEdit(\'' + cbDefEsc(d.definition_id) + '\')">Edit</span>'
+        +   '<span onclick="cbDefEdit(\'' + cbDefEsc(d.definition_id) + '\')">' + tx('Edit') + '</span>'
         +   '<span onclick="cbDefSetStatus(\'' + cbDefEsc(d.definition_id) + '\',\'' + (live ? 'draft' : 'live') + '\')">'
         +   (live ? 'Unpublish' : 'Publish') + '</span>'
-        +   '<span onclick="cbDefRetire(\'' + cbDefEsc(d.definition_id) + '\',\'' + cbDefEsc(d.name) + '\')">Retire</span>'
+        +   '<span onclick="cbDefRetire(\'' + cbDefEsc(d.definition_id) + '\',\'' + cbDefEsc(d.name) + '\')">' + tx('Retire') + '</span>'
         + '</span></div>';
     }).join('');
 
@@ -940,7 +940,7 @@ function cbDefHTML(){
   var secs = cbDefRegistries();
   return '<div class="cbdef-wrap" data-testid="definitions">'
     + '<div class="cbdef-hd">'
-    +   '<span style="font-family:\'Space Grotesk\';font-weight:700;font-size:var(--fs-3)">🧱 Definitions</span>'
+    +   '<span style="font-family:\'Space Grotesk\';font-weight:700;font-size:var(--fs-3)">' + tx('🧱 Definitions') + '</span>'
     +   '<button onclick="openAssist(\'definitions\')" title="Ask the assistant about this screen"'
     +   ' style="border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:50%;width:20px;'
     +   'height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button>'
@@ -979,7 +979,7 @@ function cbDefHTML(){
     + (function(){
         var rest = secs.filter(function(s){ return !CBDEF_AUTHORABLE[s.key]; });
         if (!rest.length) return '';
-        return '<div class="cbdef-shelfhd">What the system knows — the shapes available to you</div>'
+        return '<div class="cbdef-shelfhd">' + tx('What the system knows — the shapes available to you') + '</div>'
              + rest.map(cbDefSectionHTML).join('');
       })()
     + '</div>';

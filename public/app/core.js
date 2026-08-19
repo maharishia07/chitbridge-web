@@ -71,7 +71,7 @@ function _netBusy(on){
   if(!b){
     b = document.createElement('div'); b.id='netbusy';
     b.style.cssText='position:fixed;z-index:9999;pointer-events:none;display:none';
-    b.innerHTML='<div id="netbusy-card"><span id="netbusy-ring"></span><span id="netbusy-txt">Reading data…</span></div>';
+    b.innerHTML='<div id="netbusy-card"><span id="netbusy-ring"></span><span id="netbusy-txt">' + tx('Reading data…') + '</span></div>';
     const s=document.createElement('style');
     s.textContent='@keyframes nbspin{to{transform:rotate(360deg)}}'
       +'@keyframes nbin{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}'

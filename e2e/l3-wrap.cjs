@@ -33,6 +33,7 @@ const file = process.argv[2];
 const from = Number(process.argv[3] || 1);
 const to = Number(process.argv[4] || Infinity);
 const APPLY = process.argv.includes('--apply');
+const SAFE  = process.argv.includes('--safe');
 if (!file) { console.log('usage: node e2e/l3-wrap.cjs <file> [from] [to] [--apply]'); process.exit(1); }
 
 const abs = path.isAbsolute(file) ? file : path.join(process.cwd(), file);
@@ -57,8 +58,36 @@ const TOKENISH = /^-u-|^[a-z]{2}(-[A-Za-z0-9]+)+$|^[A-Za-z-]+:[A-Za-z]|^\.?[a-z-
  * An em dash opening is the same tell — "— how figures are written" is a clarifier appended to a label that
  * lives outside this element, so it is only half of the phrase a reader sees.
  */
+/**
+ * ⭐⭐ LABELS ONLY. Athi, 2026-08-19: *"apply only to the labels. Once we confirm that this is the final shape of
+ * the product then we can translate those… as a user, nobody wants to know anything from the tool — if they need
+ * help they can learn from assistance."*
+ *
+ * ⚠️ SO A SENTENCE IS REFUSED HERE, not merely left untranslated. Wrapping it would put it in the catalogue,
+ * where it looks like work waiting to be done rather than copy waiting to be deleted — and every translator and
+ * every future language would then be asked to carry it. e2e/text-budget.cjs measured 6,103 of 10,863 on-screen
+ * words as explanation; none of them belong in a catalogue until the shape of the product is settled.
+ *
+ * The tell is grammatical, not length: a finite verb plus enough words, or terminal punctuation. "Assignment
+ * model" is a label. "Grouping is not a separate switch" is a claim about the world.
+ */
+const FINITE_VERB = /\b(is|are|was|were|be|been|being|has|have|had|does|do|did|can|cannot|will|would|should|must|may|might|means|shows|keeps|stays|belongs|lives|counts|follows|changes|converts|translates|picks|needs|comes|goes|makes|takes|gives|sets|holds)\b/i;
+
+/* ⚠️ AN IMPERATIVE IS A SENTENCE TOO. 'Name each detail the way you know it' has no finite verb and no
+   full stop, but it is an instruction, not a label. A button verb is short ('Save vault'); an instruction runs on. */
+const IMPERATIVE = /^(Name|Pick|Choose|Set|Add|Use|Tell|Ask|Enter|Type|Select|Give|Check|Make|Keep|Send|Start|Open|Read|Write|Bring|Leave|Drag|Drop|Click|Tap|Review|Confirm|Describe)/i;
+
+function isSentence(s) {
+  const t = s.trim();
+  if (/[.!?]$/.test(t) && !/\.\.\.$|…$/.test(t)) return true;   // a full stop, but "Loading…" is a label
+  const w = t.split(/\s+/).length;
+  if (IMPERATIVE.test(t) && w >= 5) return true;                // an instruction, not a button
+  return FINITE_VERB.test(t) && w >= 4;
+}
+
 function isCopy(s) {
   if (!s || s.length < 3 || s.length > 90) return false;
+  if (isSentence(s)) return false;                       // explanations wait for the trim
   if (!/[A-Za-z]/.test(s)) return false;                 // must contain a letter
   if (/\$\{|<|>|&[a-z#]+;/.test(s)) return false;        // interpolation, nested markup, entities
   if (/^\s|\s$/.test(s)) return false;                   // leading/trailing space changes layout
@@ -89,25 +118,144 @@ let n = 0;
  * the number is plausible. Backtick state now carries ACROSS lines; ' and " cannot span a line in JS, so those
  * still reset — which is also what makes the carry safe.
  */
-let carried = null;
+/* the context stack survives line breaks — only a template literal can legally span them */
+let stack = [];
+let inBlockComment = false;
+
+/**
+ * ⚠️⚠️ AN .html FILE IS NOT JAVASCRIPT, AND TREATING IT AS SUCH IS WHY app.html KEPT REVERTING. Outside a
+ * <script> block, " and ' are ATTRIBUTE delimiters — `<div class="x">` opens no string. Feeding that to a JS
+ * string scanner leaves it convinced it is inside a string for the rest of the file, after which every rewrite
+ * is placed by a fiction.
+ *
+ * So for HTML, only lines inside an inline <script> are eligible, and the stack is emptied at every boundary:
+ * script blocks do not share string state with each other or with the markup between them.
+ */
+const isHtml = /\.html?$/i.test(abs);
+const scriptLines = new Set();
+if (isHtml) {
+  let inScript = false;
+  lines.forEach((l, i) => {
+    const opens = /<script(?![^>]*\bsrc=)[^>]*>/i.test(l);
+    const closes = /<\/script>/i.test(l);
+    if (opens && !closes) { inScript = true; return; }
+    if (closes) { inScript = false; return; }
+    if (inScript) scriptLines.add(i + 1);
+  });
+}
 
 const out = lines.map((line, idx) => {
   const ln = idx + 1;
-  if (/^\s*(\*|\/\/|\/\*)/.test(line)) { return line; }  // a comment is not a screen
+  /**
+   * ⭐ --safe RESETS THE STATE AT EVERY LINE, so only strings that open AND close on one line are eligible.
+   *
+   * ⚠️ app.html defeated the full scanner and I stopped trying to win. Its render functions nest a template
+   * inside a ${…} inside a ternary inside a multi-line block comment whose prose quotes CSS in backticks; each
+   * fix revealed the next layer, and every wrong guess showed up 200 lines away from its cause. A scanner that
+   * is right about 90% of a file is not 90% useful — one bad rewrite reverts the whole file.
+   *
+   * So this trades recall for certainty: it cannot be wrong about which quote encloses the text, because it
+   * only looks at text whose quotes it has both seen. Fewer labels, no fiction.
+   */
+  if (SAFE) { stack = []; inBlockComment = false; }
+  if (isHtml && !scriptLines.has(ln)) { stack = []; return line; }
+  /**
+   * ⚠️⚠️ A LINE STARTING WITH * IS ONLY A COMMENT IN CODE CONTEXT. Inside a template literal it is CONTENT —
+   * this codebase embeds long HTML comments inside its templates, and their continuation lines start with * and
+   * with //. Skipping those without scanning meant the template's CLOSING backtick was never seen, so the
+   * scanner stayed "inside a template" for the remaining 200 lines and emitted the template form into
+   * single-quoted strings. That is the whole reason app.html would not parse, and the symptom appeared 230
+   * lines after the cause.
+   *
+   * So the guard applies only when nothing is open.
+   */
+  if (!stack.length && /^\s*(\*|\/\/|\/\*)/.test(line)) { return line; }
+
+  /* a block comment opened on an earlier line runs until its terminator, wherever that turns out to be */
+  if (inBlockComment) {
+    if (line.indexOf('*/') === -1) return line;
+    inBlockComment = false;
+    return line;                                       // the tail is code again, but rewriting it is not worth it
+  }
 
   let res = '';
   let i = 0;
-  let quote = carried;                                    // the delimiter that opened the current string
   const inRange = ln >= from && ln <= to;
 
   while (i < line.length) {
     const c = line[i];
+    const top = stack.length ? stack[stack.length - 1] : null;
+    const quote = top && top.q ? top.q : null;             // the delimiter that opened the current string
 
     /* escape inside a string — copy both chars, judge neither */
     if (quote && c === '\\') { res += line.slice(i, i + 2); i += 2; continue; }
 
-    if (!quote && (c === '"' || c === "'" || c === '`')) { quote = c; res += c; i++; continue; }
-    if (quote && c === quote) { quote = null; res += c; i++; continue; }
+    /* ── expression context: ${ … } inside a template. Quotes work normally in here. ── */
+    if (top && top.expr) {
+      if (c === '{') { top.depth++; res += c; i++; continue; }
+      if (c === '}') {
+        if (top.depth === 0) { stack.pop(); res += c; i++; continue; }
+        top.depth--; res += c; i++; continue;
+      }
+    }
+
+    /**
+     * ⚠️⚠️ COMMENTS AND REGEX LITERALS ARE NOT STRINGS, AND MISSING THEM CORRUPTS EVERYTHING AFTER.
+     *
+     * A backtick or apostrophe inside `// don't` or inside /[`'"]/ pushed a phantom string onto the stack and it
+     * was never popped. Thousands of lines later the scanner still believed it was inside a template, so at
+     *
+     *     return '<div class="grp">Mailbox</div>' + …
+     *
+     * it emitted the TEMPLATE form ${tx('Mailbox')} into a SINGLE-QUOTED string, and app.html would not parse.
+     * The failure surfaced 3,595 lines away from its cause, which is exactly why a scanner needs to model the
+     * language rather than pattern-match it.
+     */
+    if (!quote) {
+      if (c === '/' && line[i + 1] === '/') { res += line.slice(i); break; }
+      /**
+       * ⚠️⚠️ A BLOCK COMMENT SPANS LINES AND THIS ONE CONTAINED BACKTICKS. Inside a ${…} expression sits a long
+       * /* … *␘/ comment whose prose quotes CSS in backticks — `color:var(--on-card)`. Handling only the
+       * single-line case meant the continuation lines were scanned as CODE, each backtick pushing a phantom
+       * template onto the stack. The state has to persist.
+       */
+      if (c === '/' && line[i + 1] === '*') {
+        const end = line.indexOf('*/', i + 2);
+        if (end === -1) { inBlockComment = true; res += line.slice(i); break; }
+        res += line.slice(i, end + 2); i = end + 2; continue;
+      }
+      /* a regex literal — only where one may legally begin, so `a / b` stays division */
+      if (c === '/' && /[(,=:[!&|?{};+\-*%~^]\s*$|\b(return|typeof|case|in|of|do|else)\s*$/.test(res)) {
+        let j = i + 1, cls = false;
+        while (j < line.length) {
+          const d = line[j];
+          if (d === '\\') { j += 2; continue; }
+          if (d === '[') cls = true;
+          else if (d === ']') cls = false;
+          else if (d === '/' && !cls) break;
+          j++;
+        }
+        if (j < line.length) { res += line.slice(i, j + 1); i = j + 1; continue; }
+      }
+    }
+
+    if (!quote && (c === '"' || c === "'" || c === '`')) { stack.push({ q: c }); res += c; i++; continue; }
+    if (quote && c === quote) { stack.pop(); res += c; i++; continue; }
+
+    /**
+     * ⚠️⚠️ ${ } OPENS A FRESH CONTEXT AND THE FIRST SCANNER DID NOT KNOW IT. Inside a template's expression a
+     * single-quoted string is an ordinary string — so this is legal and common in this codebase:
+     *
+     *     `…${x.otp ? '<span …>⏳ invite</span>' : ''}…`
+     *
+     * Seeing only "we are inside a backtick", the scanner emitted the TEMPLATE form, ${tx('⏳ invite')}, into a
+     * SINGLE-QUOTED string. The quote in tx(' closed that string and the rest became bare code. That is why
+     * app.html (328 labels) and cap-workforce.js (50) both reverted — one construct, the two largest files.
+     */
+    if (quote === '`' && c === '$' && line[i + 1] === '{') {
+      stack.push({ expr: true, depth: 0 });
+      res += '${'; i += 2; continue;
+    }
 
     /* inside a string, and at the end of a tag: try to take the text up to the next '<' */
     if (quote && c === '>') {
@@ -133,8 +281,9 @@ const out = lines.map((line, idx) => {
     }
     res += c; i++;
   }
-  /* only a backtick can still be open at end of line; a stray ' or " is a scan error, not a string */
-  carried = (quote === String.fromCharCode(96)) ? quote : null;
+  /* ⚠️ A ' or " left open at end of line means the scan lost track — drop back to code rather than carry a
+     wrong state into the next line, where it would rewrite something that is not a string at all. */
+  while (stack.length && stack[stack.length-1].q && stack[stack.length-1].q !== String.fromCharCode(96)) stack.pop();
   return res;
 });
 
@@ -155,5 +304,12 @@ if (/\.js$/.test(abs)) {
   let m;
   while ((m = RE.exec(s))) { try { new Function(m[1]); } catch (_) { ok = false; break; } }
 }
-if (!ok) { fs.writeFileSync(abs, before); console.log('\n  PARSE FAILED — file reverted whole, nothing changed\n'); process.exit(1); }
+if (!ok) {
+  /* ⚠️ --keep LEAVES THE BROKEN OUTPUT so the failure can be READ. Reverting is right by default and useless
+     for diagnosis: it destroys the only evidence of what the transform got wrong. Never use it on a real file. */
+  if (process.argv.includes('--keep')) { console.log('\n  PARSE FAILED — output KEPT for diagnosis\n'); process.exit(1); }
+  fs.writeFileSync(abs, before);
+  console.log('\n  PARSE FAILED — file reverted whole, nothing changed\n');
+  process.exit(1);
+}
 console.log('\n  applied and parses clean\n');

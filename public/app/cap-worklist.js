@@ -1001,7 +1001,7 @@ function wlLineHTML(loading){
      */
     var known = (WLL.actors || []).some(function(a){ return (a.actor_id || a.identity_id) === r.actor_id; });
     var extra = (!known && r.actor_id) ? [{ actor_id: r.actor_id, display_name: r.who }] : [];
-    var opts = '<option value="">Unassigned</option>' + extra.concat(WLL.actors || []).map(function(a){
+    var opts = '<option value="">' + tx('Unassigned') + '</option>' + extra.concat(WLL.actors || []).map(function(a){
       var id = a.actor_id || a.identity_id, nm = a.display_name || a.name || '';
       return '<option value="' + esc(id) + '"' + (id === r.actor_id ? ' selected' : '') + '>' + esc(nm) + '</option>';
     }).join('');
@@ -1064,15 +1064,15 @@ function wlLineHTML(loading){
       + (r.raw_phrase ? '<div style="font-style:italic;color:var(--warn-3)">“' + esc(r.raw_phrase) + '”</div>' : '')
       + (r.asked_as ? '<div style="font-size:var(--fs-2);color:var(--grey)">asked as <b>' + esc(r.asked_as) + '</b></div>' : '')
       + (r.comment ? '<div style="color:#2c5d7c">' + esc(r.comment) + '</div>' : '')
-      + (r.needs_human ? '<div style="font-size:var(--fs-2);color:var(--disp);font-weight:700">⚠️ flagged for a person to check</div>' : '')
+      + (r.needs_human ? '<div style="font-size:var(--fs-2);color:var(--disp);font-weight:700">' + tx('⚠️ flagged for a person to check') + '</div>' : '')
       + '</div>';
   }
 
-  return '<div class="mhd"><div class="t">' + esc(r.particulars || 'Line') + (done ? ' <span style="font-size:13px;color:#3d7a4e">✓ done</span>' : '') + '</div>'
+  return '<div class="mhd"><div class="t">' + esc(r.particulars || 'Line') + (done ? ' <span style="font-size:13px;color:#3d7a4e">' + tx('✓ done') + '</span>' : '') + '</div>'
     + '<div class="s">' + esc(r.subject || 'chit') + '</div></div>'
     + '<div class="mbody">' + bar + wlParties(WLL.det) + asked + body + '</div>'
-    + '<div class="mfoot"><button onclick="closeModal()">Close</button>'
-    + '<button data-testid="wl-open-order" onclick="wlOpen(&quot;' + r.chit_id + '&quot;)">Open the order</button></div>';
+    + '<div class="mfoot"><button onclick="closeModal()">' + tx('Close') + '</button>'
+    + '<button data-testid="wl-open-order" onclick="wlOpen(&quot;' + r.chit_id + '&quot;)">' + tx('Open the order') + '</button></div>';
 }
 /**
  * ⭐ ONE WINDOW — Athi, 2026-08-15: *"we don't need two tabs, the tick mark can bring the history also, so you

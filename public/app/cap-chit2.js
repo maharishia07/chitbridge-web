@@ -143,7 +143,7 @@ function c2PaneMsg(d){
     out += '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin-bottom:6px">what they wrote</div>'
       + '<div style="font-size:15px;line-height:1.9">' + esc(text) + (text.length >= 400 ? '<span style="color:var(--grey)"> … </span>' : '') + '</div>';
     if (origin.length) {
-      out += '<div style="margin-top:8px"><span onclick="openLightbox(\'chit2\',' + atts.indexOf(origin[0]) + ')" style="cursor:pointer;color:var(--blue);font-size:var(--fs-2)">📄 open the full original</span></div>';
+      out += '<div style="margin-top:8px"><span onclick="openLightbox(\'chit2\',' + atts.indexOf(origin[0]) + ')" style="cursor:pointer;color:var(--blue);font-size:var(--fs-2)">' + tx('📄 open the full original') + '</span></div>';
     }
   } else {
     out += '<div style="color:var(--grey);font-size:13px">No original message on this chit — it was composed here rather than received.</div>';
@@ -211,7 +211,7 @@ function c2PaneOrd(d){
     /* Emphasis, not exclusion: mine sits at full weight, everyone else's is dimmed but perfectly readable. */
     return '<div style="padding:11px 16px;border-bottom:1px solid var(--line);' + (mine ? 'background:var(--card)' : 'opacity:.62') + ';color:var(--on-card)">'
       + '<div style="display:flex;justify-content:space-between;gap:10px">'
-      + '<span style="font-weight:' + (mine ? '700' : '500') + ';font-size:14.5px">' + esc(l.particulars || 'Item') + (mine ? ' <span style="font-size:var(--fs-1);color:var(--blue);font-weight:800">YOURS</span>' : '') + '</span>'
+      + '<span style="font-weight:' + (mine ? '700' : '500') + ';font-size:14.5px">' + esc(l.particulars || 'Item') + (mine ? ' <span style="font-size:var(--fs-1);color:var(--blue);font-weight:800">' + tx('YOURS') + '</span>' : '') + '</span>'
       /* ⭐ THE CORRECTION AFFORDANCE. Athi, 2026-08-13: *"maybe a html line with edit icon would be useful"* — and
          he was righter than that. This screen had NO way to open the correction card at all, so an unpriced or
          misread line was a dead end by construction: the reader's refusal was visible and unanswerable. */
@@ -296,7 +296,7 @@ function c2PickBadge(l, i){
   return '<span onclick="event.stopPropagation();c2AmendPick(' + i + ')"'
     + ' title="The catalogue has more than one of these — pick which, and the price comes with it"'
     + ' style="cursor:pointer;font-size:var(--fs-1);font-weight:800;color:var(--warn-2);background:var(--warn-tint);border:1px solid #e6d9a8;'
-    + 'border-radius:5px;padding:2px 7px;white-space:nowrap">⚠️ pick item</span>';
+    + 'border-radius:5px;padding:2px 7px;white-space:nowrap">' + tx('⚠️ pick item') + '</span>';
 }
 
 /* ── price from catalogue — PREVIEW, then apply ─────────────────────────────────────────────────────────────────
@@ -320,18 +320,18 @@ function c2RepriceScope(v){ C2R.only_unpriced = !!v; c2RepricePreview(); }
 function c2RepricePaint(){
   if (C2R.busy && !C2R.plan) return modal('<h3 style="margin:0 0 10px">₹ Price from catalogue</h3><div style="color:var(--grey);font-size:var(--fs-2)"><span class="spin"></span> checking the catalogue…</div>');
   var p = C2R.plan || {};
-  if (p.error) return modal('<h3 style="margin:0 0 10px">₹ Price from catalogue</h3><div style="color:var(--disp);font-size:var(--fs-2)">' + esc(p.error) + '</div><button class="btn" style="width:100%;margin-top:12px" onclick="closeModal()">Close</button>');
+  if (p.error) return modal('<h3 style="margin:0 0 10px">₹ Price from catalogue</h3><div style="color:var(--disp);font-size:var(--fs-2)">' + esc(p.error) + '</div><button class="btn" style="width:100%;margin-top:12px" onclick="closeModal()">' + tx('Close') + '</button>');
 
   if (!p.has_catalogue) {
     return modal('<h3 style="margin:0 0 6px">₹ Price from catalogue</h3>'
-      + '<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:12px">There is no catalogue on this entity yet, so there are no prices to pull. Add items under <b>Catalogue</b> and this will fill them in.</div>'
-      + '<button class="btn" style="width:100%" onclick="closeModal()">Close</button>');
+      + '<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:12px">There is no catalogue on this entity yet, so there are no prices to pull. Add items under <b>' + tx('Catalogue') + '</b> and this will fill them in.</div>'
+      + '<button class="btn" style="width:100%" onclick="closeModal()">' + tx('Close') + '</button>');
   }
 
   var will = p.will_price || [], need = p.needs_price || [];
   var body = '<div style="display:flex;gap:6px;margin-bottom:12px">'
-    + ['<span onclick="c2RepriceScope(false)" style="cursor:pointer;border:1px solid ' + (C2R.only_unpriced ? 'var(--line)' : 'var(--blue)') + ';' + (C2R.only_unpriced ? '' : 'background:var(--blue);color:var(--on-accent);font-weight:700;') + 'border-radius:9px;padding:4px 11px;font-size:12px">Every line</span>',
-       '<span onclick="c2RepriceScope(true)" style="cursor:pointer;border:1px solid ' + (C2R.only_unpriced ? 'var(--blue)' : 'var(--line)') + ';' + (C2R.only_unpriced ? 'background:var(--blue);color:var(--on-accent);font-weight:700;' : '') + 'border-radius:9px;padding:4px 11px;font-size:12px">Only lines with no price</span>'].join('')
+    + ['<span onclick="c2RepriceScope(false)" style="cursor:pointer;border:1px solid ' + (C2R.only_unpriced ? 'var(--line)' : 'var(--blue)') + ';' + (C2R.only_unpriced ? '' : 'background:var(--blue);color:var(--on-accent);font-weight:700;') + 'border-radius:9px;padding:4px 11px;font-size:12px">' + tx('Every line') + '</span>',
+       '<span onclick="c2RepriceScope(true)" style="cursor:pointer;border:1px solid ' + (C2R.only_unpriced ? 'var(--blue)' : 'var(--line)') + ';' + (C2R.only_unpriced ? 'background:var(--blue);color:var(--on-accent);font-weight:700;' : '') + 'border-radius:9px;padding:4px 11px;font-size:12px">' + tx('Only lines with no price') + '</span>'].join('')
     + '</div>';
 
   body += will.length
@@ -339,7 +339,7 @@ function c2RepricePaint(){
       + will.map(function(w){
           return '<div style="display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-top:1px solid var(--line);font-size:13px">'
             + '<span style="flex:1;min-width:0"><b>' + esc(w.particulars || '') + '</b>'
-            + '<div style="font-size:11.5px;color:var(--grey)"><span class=arw>→</span> ' + esc(w.matched) + (w.matched_by_spelling ? ' <span style="color:var(--warn-2)">≈ matched by spelling</span>' : '') + '</div>'
+            + '<div style="font-size:11.5px;color:var(--grey)"><span class=arw>→</span> ' + esc(w.matched) + (w.matched_by_spelling ? ' <span style="color:var(--warn-2)">' + tx('≈ matched by spelling') + '</span>' : '') + '</div>'
             /* ⚠️ REPLACING A STATED FIGURE IS CALLED OUT. Filling an empty price and overwriting one the customer
                wrote are different acts, and only a person can say whether the second is right. */
             + (w.replaces_stated_price ? '<div style="font-size:var(--fs-1);color:var(--warn-2)">replaces the price on the chit</div>' : '')
@@ -362,7 +362,7 @@ function c2RepricePaint(){
     + '<div style="font-size:11.5px;color:var(--grey);margin-bottom:12px">Nothing is written until you confirm. Each change is recorded as an amendment — the old price stays struck through.</div>'
     + body
     + '<div style="display:flex;gap:8px;margin-top:16px">'
-    + '<button class="btn" style="flex:1" onclick="closeModal()">Cancel</button>'
+    + '<button class="btn" style="flex:1" onclick="closeModal()">' + tx('Cancel') + '</button>'
     + (will.length ? '<button class="btn pri" style="flex:1" onclick="c2RepriceApply()">Apply ' + will.length + '</button>' : '')
     + '</div>');
 }
@@ -400,7 +400,7 @@ function c2PaneDel(d){
       + '<div style="margin-top:6px;height:4px;background:var(--line);border-radius:2px;overflow:hidden"><i style="display:block;height:100%;width:' + pct + '%;background:#2f6b4f"></i></div>'
       /* ⚠️ THE THREE STATES ARE KEPT APART. "They have not confirmed yet" is the NORMAL case and must not wear the
          same badge as a real disagreement, or the badge stops being read. */
-      + (p.both_agree ? '<div style="margin-top:6px;font-size:11.5px;color:#2f6b4f">✓ both of you recorded the same</div>' : '')
+      + (p.both_agree ? '<div style="margin-top:6px;font-size:11.5px;color:#2f6b4f">' + tx('✓ both of you recorded the same') + '</div>' : '')
       + (p.divergent ? '<div style="margin-top:6px;font-size:11.5px;color:var(--warn-2)">⚠️ you recorded ' + p.delivered + ', they recorded ' + p.theirs + ' — both are shown, neither is corrected</div>' : '')
       + (p.unacknowledged ? '<div style="margin-top:6px;font-size:11.5px;color:var(--grey)">they have not confirmed this yet</div>' : '')
       + ((p.events || []).length ? '<div style="margin-top:7px;font-size:11.5px;color:var(--grey)">' + p.events.map(function(v){
@@ -413,8 +413,8 @@ function c2PaneDel(d){
       + '<input id="c2dq_' + e.line_id + '" inputmode="decimal" placeholder="' + (p.pending ? String(p.pending) : 'qty') + '" style="width:74px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:13px">'
       + '<span style="font-size:var(--fs-2);color:var(--grey)">' + esc(l.unit || '') + '</span>'
       + '<input id="c2dr_' + e.line_id + '" placeholder="reference (optional)" style="flex:1;min-width:110px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:13px">'
-      + '<button class="btn pri" onclick="c2Deliver(\'' + e.line_id + '\',\'' + esc(l.unit || '') + '\')">Delivered</button>'
-      + (p.delivered ? '<button class="btn" title="Record a correcting entry — the original claim stays on the record" onclick="c2Deliver(\'' + e.line_id + '\',\'' + esc(l.unit || '') + '\',true)">Take back</button>' : '')
+      + '<button class="btn pri" onclick="c2Deliver(\'' + e.line_id + '\',\'' + esc(l.unit || '') + '\')">' + tx('Delivered') + '</button>'
+      + (p.delivered ? '<button class="btn" title="Record a correcting entry — the original claim stays on the record" onclick="c2Deliver(\'' + e.line_id + '\',\'' + esc(l.unit || '') + '\',true)">' + tx('Take back') + '</button>' : '')
       + '</div>'
       + '</div>';
   }).join('');
@@ -692,22 +692,22 @@ function c2AssignOpen(line_id){
      the honest answer — "you have not added any co-assists" — is also the instruction. */
   if (!roster.length) {
     return modal('<h3 style="margin:0 0 8px">Assign · ' + esc(l.particulars || '') + '</h3>'
-      + '<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:12px">No co-assists yet — add someone under <b>Co-assists</b> and they will appear here.</div>'
-      + '<button class="btn" style="width:100%" onclick="closeModal()">Close</button>');
+      + '<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:12px">No co-assists yet — add someone under <b>' + tx('Co-assists') + '</b> and they will appear here.</div>'
+      + '<button class="btn" style="width:100%" onclick="closeModal()">' + tx('Close') + '</button>');
   }
   var opts = roster.map(function(x){ return '<option value="' + esc(x.id) + '"' + (a.assignee_actor_id === x.id ? ' selected' : '') + '>' + esc(x.name) + '</option>'; }).join('');
-  modal('<h3 style="margin:0 0 3px">Assign this line</h3>'
+  modal('<h3 style="margin:0 0 3px">' + tx('Assign this line') + '</h3>'
     + '<div style="font-size:13px;color:var(--grey);margin-bottom:14px">' + esc(l.particulars || '') + ' · ' + esc(c2q(l)) + '</div>'
-    + '<label style="display:block;font-size:var(--fs-1);color:var(--grey);margin-bottom:3px">ASSIGN TO</label>'
-    + '<select id="c2a_' + line_id + '" style="width:100%;box-sizing:border-box;padding:9px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-3);margin-bottom:10px"><option value="">Unassigned</option>' + opts + '</select>'
+    + '<label style="display:block;font-size:var(--fs-1);color:var(--grey);margin-bottom:3px">' + tx('ASSIGN TO') + '</label>'
+    + '<select id="c2a_' + line_id + '" style="width:100%;box-sizing:border-box;padding:9px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-3);margin-bottom:10px"><option value="">' + tx('Unassigned') + '</option>' + opts + '</select>'
     + '<div style="display:flex;gap:9px;margin-bottom:14px">'
-    + '<div style="flex:1"><label style="display:block;font-size:var(--fs-1);color:var(--grey);margin-bottom:3px">TASK</label>'
+    + '<div style="flex:1"><label style="display:block;font-size:var(--fs-1);color:var(--grey);margin-bottom:3px">' + tx('TASK') + '</label>'
     + '<input id="c2t_' + line_id + '" value="' + esc(a.task || '') + '" placeholder="packing" style="width:100%;box-sizing:border-box;padding:9px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-3)"></div>'
     + '<div style="flex:1"><label style="display:block;font-size:var(--fs-1);color:var(--grey);margin-bottom:3px">DUE</label>'
     + '<input id="c2d_' + line_id + '" type="date" value="' + esc(a.due_date ? String(a.due_date).slice(0, 10) : '') + '" style="width:100%;box-sizing:border-box;padding:9px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-3)"></div></div>'
     + ((a.history || []).length ? '<div style="font-size:11.5px;color:var(--grey);margin-bottom:12px">previously ' + esc(a.history.map(function(h){ return h.assignee_name || 'unassigned'; }).join(' <span class=arw>→</span> ')) + '</div>' : '')
-    + '<div style="display:flex;gap:8px"><button class="btn" style="flex:1" onclick="closeModal()">Cancel</button>'
-    + '<button class="btn pri" style="flex:1" onclick="c2Assign(\'' + line_id + '\')">Assign</button></div>');
+    + '<div style="display:flex;gap:8px"><button class="btn" style="flex:1" onclick="closeModal()">' + tx('Cancel') + '</button>'
+    + '<button class="btn pri" style="flex:1" onclick="c2Assign(\'' + line_id + '\')">' + tx('Assign') + '</button></div>');
 }
 async function c2Assign(line_id){
   var sel = document.getElementById('c2a_' + line_id);
@@ -755,7 +755,7 @@ function c2PaneCost(d){
       + c2Row('Invoiced', c2Money(c.invoiced))
       + Object.keys(c.by_kind || {}).map(function(k){ return c2Row(k.charAt(0).toUpperCase() + k.slice(1), c2Money(c.by_kind[k])); }).join('')
       + '<div style="display:flex;justify-content:space-between;padding-top:7px;margin-top:4px;border-top:1px solid var(--line);font-weight:600">'
-      + '<span>Margin</span><span style="color:' + ((c.margin || 0) < 0 ? 'var(--disp)' : 'var(--ok-2)') + '">' + c2Money(c.margin)
+      + '<span>' + tx('Margin') + '</span><span style="color:' + ((c.margin || 0) < 0 ? 'var(--disp)' : 'var(--ok-2)') + '">' + c2Money(c.margin)
       + (c.margin_pct == null ? '' : ' · ' + c.margin_pct + '%') + '</span></div>'
       + (c.mixed_currency ? '<div style="font-size:var(--fs-1);color:var(--warn-2);margin-top:4px">⚠️ more than one currency — these are not added together</div>' : '')
       + '</div>';
@@ -776,7 +776,7 @@ function c2PaneCost(d){
     + '<input id="c2cr" placeholder="₹/hr" style="width:70px;padding:7px 9px;border:1px solid var(--line);border-radius:6px;font-size:13px">'
     + '<input id="c2ca" placeholder="or amount" style="width:90px;padding:7px 9px;border:1px solid var(--line);border-radius:6px;font-size:13px">'
     + '<input id="c2cn" placeholder="note" style="flex:1;min-width:110px;padding:7px 9px;border:1px solid var(--line);border-radius:6px;font-size:13px">'
-    + '<button class="btn pri" onclick="c2AddCost()">Add</button></div>';
+    + '<button class="btn pri" onclick="c2AddCost()">' + tx('Add') + '</button></div>';
   return out;
 }
 function c2Row(k, v){ return '<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:var(--fs-3)"><span>' + esc(k) + '</span><span>' + v + '</span></div>'; }

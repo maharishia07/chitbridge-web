@@ -1572,7 +1572,7 @@ function go(hash){location.hash=hash;}
 function toast(msg, undo){
   if(typeof cblog==='function') cblog(toastLevel(msg), msg);
   const t=document.getElementById("toast");
-  const _lvl=toastLevel(msg); t.innerHTML=`<div class="toast ${_lvl==='error'?'err':_lvl==='warn'?'warn':''}">${esc(msg)}${undo?'<button id="undoBtn">Undo</button>':''}</div>`;
+  const _lvl=toastLevel(msg); t.innerHTML=`<div class="toast ${_lvl==='error'?'err':_lvl==='warn'?'warn':''}">${esc(msg)}${undo?'<button id="undoBtn">' + tx('Undo') + '</button>':''}</div>`;
   if(undo){document.getElementById("undoBtn").onclick=()=>{undo();t.innerHTML="";};}
   clearTimeout(toast._t); toast._t=setTimeout(()=>t.innerHTML="",4500);
 }
@@ -1689,9 +1689,9 @@ function blueprintCardHTML(id){
   var wp = WORK_PATTERNS[id]; if(!wp) return '<div style="padding:12px">Unknown work pattern.</div>';
   return '<div style="padding:2px 2px">'
     +'<div style="display:flex;align-items:center;gap:9px;margin-bottom:2px"><span style="font-size:22px">'+wp.icon+'</span><div><div style="font-family:\'Space Grotesk\';font-weight:800;font-size:var(--fs-4)">'+esc(wp.label)+'</div><div style="font-size:var(--fs-1);color:var(--grey)">what governs this work pattern</div></div></div>'
-    +'<div style="background:var(--blue-tint-bg);border:1px solid var(--blue-tint-line);border-radius:9px;padding:8px 11px;margin:10px 0;font-size:var(--fs-2);color:var(--blue)">🎫 <b>Licence</b> · '+esc(wp.licence)+'</div>'
+    +'<div style="background:var(--blue-tint-bg);border:1px solid var(--blue-tint-line);border-radius:9px;padding:8px 11px;margin:10px 0;font-size:var(--fs-2);color:var(--blue)">🎫 <b>' + tx('Licence') + '</b> · '+esc(wp.licence)+'</div>'
     +'<div style="font-size:11.5px;font-weight:800;color:var(--warn-2);margin:8px 0 2px">🔒 SEALED — governed, cannot change</div>'+_bpRows(wp.sealed,'sealed')
-    +'<div style="font-size:11.5px;font-weight:800;color:#1f7a3d;margin:14px 0 2px">✎ OPEN — yours to set, within bounds</div>'+_bpRows(wp.open,'open')
+    +'<div style="font-size:11.5px;font-weight:800;color:#1f7a3d;margin:14px 0 2px">' + tx('✎ OPEN — yours to set, within bounds') + '</div>'+_bpRows(wp.open,'open')
     +'<div style="font-size:11.5px;font-weight:800;color:#2b4a72;margin:14px 0 2px">↑ REPORTS UP — health &amp; events to governance</div><div style="font-size:var(--fs-2);color:var(--ink);padding-top:4px">'+wp.reportsUp.map(esc).join(' · ')+'</div>'
     +(wp.workflow?('<div style="font-size:11.5px;font-weight:800;color:#5a3fa0;margin:16px 0 4px">🔀 WORKFLOW — how deep this can reach</div>'
       +wp.workflow.map(function(st,i){ return '<div style="display:flex;gap:9px;align-items:flex-start;padding:5px 0'+(i?';border-top:1px dashed var(--line)':'')+'"><span style="flex:none;width:20px;height:20px;border-radius:50%;background:'+(st.done?'var(--ok-tint)':'var(--purple-tint)')+';color:'+(st.done?'var(--ok-3)':'var(--purple-2)')+';font-size:var(--fs-1);font-weight:800;display:flex;align-items:center;justify-content:center">'+(i+1)+'</span><div style="flex:1"><span style="font-size:var(--fs-2);font-weight:700;color:var(--ink)">'+esc(st.t)+'</span> <span style="font-size:var(--fs-1);font-weight:800;color:'+(st.done?'var(--ok-3)':'var(--purple-2)')+'"> '+(st.done?'✅ built':'○ extensible')+'</span><div style="color:var(--grey);font-size:var(--fs-1);line-height:1.4">'+esc(st.d)+'</div></div></div>'; }).join('')
@@ -1699,9 +1699,9 @@ function blueprintCardHTML(id){
     +'<div style="font-size:var(--fs-1);color:var(--grey);margin-top:13px;line-height:1.5">Read-only showcase — the governance cascade for this mode, earmarked by the layer that set it. Enforcement + editable knobs come next.</div>'
     +'</div>';
 }
-function openBlueprint(id){ if(typeof modal!=='function')return; modal(blueprintCardHTML(id)+'<div style="display:flex;margin-top:14px"><button class="composebtn pri" style="flex:1" onclick="closeModal()">Close</button></div>', false); }
+function openBlueprint(id){ if(typeof modal!=='function')return; modal(blueprintCardHTML(id)+'<div style="display:flex;margin-top:14px"><button class="composebtn pri" style="flex:1" onclick="closeModal()">' + tx('Close') + '</button></div>', false); }
 function blueprintSettingsHTML(){
-  return '<div class="sec" style="margin-top:18px">⚙ Governed by work pattern</div>'
+  return '<div class="sec" style="margin-top:18px">' + tx('⚙ Governed by work pattern') + '</div>'
     +'<div style="font-size:11.5px;color:var(--grey);margin-bottom:9px;line-height:1.5">Each action is a governed <b>work pattern</b>. Open one to see its cascade — 🎫 licence · 🔒 sealed (and which layer sealed it) · ✎ open knobs · ↑ what it reports up. <i>Read-only showcase.</i></div>'
     +Object.keys(WORK_PATTERNS).map(function(id){ var wp=WORK_PATTERNS[id];
       return '<button class="composebtn" style="display:flex;align-items:center;gap:10px;width:100%;text-align:start;margin-bottom:7px;padding:10px 12px" onclick="openBlueprint(\''+id+'\')"><span style="font-size:var(--fs-4)">'+wp.icon+'</span><span style="flex:1"><b>'+esc(wp.label)+'</b><div style="font-size:var(--fs-1);color:var(--grey)">'+wp.sealed.length+' sealed · '+wp.open.length+' open · 🎫 '+esc(wp.licence)+'</div></span><span style="color:var(--grey);font-size:15px">ℹ️</span></button>';
@@ -1753,7 +1753,7 @@ function mountAssist(){ if(document.getElementById("assistfab")) return;
      frame was silently ignored and the pill sat in the grey margin beside it. A control positioned inline is a
      control no stylesheet can ever reposition. */
   const b=document.createElement("div"); b.id="assistfab";
-  b.innerHTML=`<button data-testid="assistant-open" onclick="openAssist()" title="Ask the assistant" style="border:0;border-radius:24px;padding:10px 16px;background:var(--blue);color:var(--on-accent);font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.18);font-size:var(--fs-3)">💬 Assistant</button>`;
+  b.innerHTML=`<button data-testid="assistant-open" onclick="openAssist()" title="Ask the assistant" style="border:0;border-radius:24px;padding:10px 16px;background:var(--blue);color:var(--on-accent);font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.18);font-size:var(--fs-3)">${tx('💬 Assistant')}</button>`;
   document.body.appendChild(b);
   const h=document.createElement("div"); h.id="assisthost"; document.body.appendChild(h);
 }
@@ -1789,7 +1789,7 @@ function assistAsk(){ const inp=document.getElementById("assist_in"); const raw=
     _assistPending = raw;   // no library answer — offer to send it to the help desk (a real chit, if signed in)
     const me=(typeof SESSION!=='undefined')?SESSION:{};
     const canAsk = !!(me.token && me.role!=='customer' && !(me.name==='GOV-01-Help'||me.isHelpdesk));
-    const btn = canAsk ? '<button class="composebtn" style="margin-top:8px" data-testid="assist-helpdesk" onclick="askHelpDesk()">📮 Send this to the help desk</button>' : '';
+    const btn = canAsk ? '<button class="composebtn" style="margin-top:8px" data-testid="assist-helpdesk" onclick="askHelpDesk()">' + tx('📮 Send this to the help desk') + '</button>' : '';
     renderAssist("I couldn't find that in the library. "+(canAsk?"Send it to the help desk and they'll add an answer.":"Try a suggestion, or rephrase.")+(btn?('<br>'+btn):''));
   });
 }
@@ -1807,7 +1807,7 @@ function renderAssist(ans){ const h=document.getElementById("assisthost"); if(!h
       <div id="assist_ans" style="font-size:var(--fs-2);color:#222;line-height:1.55;margin-bottom:10px">${ans||""}</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">${(_assistLoading && !sugg.length)?'<span style="font-size:var(--fs-1);color:var(--grey-4)">loading questions…</span>':sugg.map(e=>`<button data-testid="assist-suggest-${e.id}" onclick="assistPick('${e.id}')" style="border:0.5px solid #e3e0d8;border-radius:9px;padding:3px 8px;font-size:var(--fs-1);background:var(--card);cursor:pointer;color:var(--on-card)">${esc(e.q)}</button>`).join("")}</div>
       <div style="display:flex;gap:7px"><input id="assist_in" data-testid="assist-input" placeholder="${pre?"e.g. I run a timber yard…":"e.g. how do I assign a task?"}" style="flex:1;border:1px solid #e3e0d8;border-radius:9px;padding:7px 9px;font-size:var(--fs-2)" onkeydown="if(event.key==='Enter')assistAsk()"><button data-testid="assist-ask" onclick="assistAsk()" style="border:0;border-radius:9px;padding:0 12px;background:var(--blue);color:var(--on-accent);font-weight:700;cursor:pointer">Ask</button></div>
-      ${pre?'':'<div style="margin-top:9px;text-align:center"><button data-testid="assist-compliance" onclick="checkCompliance()" style="border:0.5px solid #e3e0d8;border-radius:9px;padding:6px 10px;font-size:11.5px;background:var(--card);cursor:pointer;color:var(--on-card)">🛡️ Check compliance</button></div>'}
+      ${pre?'':'<div style="margin-top:9px;text-align:center"><button data-testid="assist-compliance" onclick="checkCompliance()" style="border:0.5px solid #e3e0d8;border-radius:9px;padding:6px 10px;font-size:11.5px;background:var(--card);cursor:pointer;color:var(--on-card)">' + tx('🛡️ Check compliance') + '</button></div>'}
     </div>
     <div style="padding:7px 13px;font-size:var(--fs-1);color:var(--grey-4);background:var(--card)">Honest by design · sample answers from the library · richer AI coming.</div>
   </div>`;
@@ -1849,13 +1849,13 @@ async function ccRun(){
     if(r.equals===true||r.equals===false){ payload[p.key]=el.checked; }
     else if((r.max!=null||r.min!=null)){ if(el.value!=='') payload[p.key]=Number(el.value); }
     else if(el.value!==''){ payload[p.key]=el.value; } });
-  const rh=document.getElementById("cc_result"); if(rh) rh.innerHTML='<span style="font-size:12px;color:var(--grey-4)">Checking…</span>';
+  const rh=document.getElementById("cc_result"); if(rh) rh.innerHTML='<span style="font-size:12px;color:var(--grey-4)">' + tx('Checking…') + '</span>';
   let v; try{ v=await api('assistConform',{body:{standard:_ccPick, payload}}); }
   catch(e){ if(rh) rh.innerHTML=`<div style="color:var(--disp);font-size:var(--fs-2)">Couldn't check: ${esc((e&&e.message)||'try again')}</div>`; return; }
   const ok=v.compliant;
   const badge=`<div style="display:inline-block;font-weight:800;font-size:12px;padding:4px 11px;border-radius:20px;background:${ok?'var(--ok-tint)':'var(--danger-tint)'};color:${ok?'var(--ok-3)':'var(--disp)'}">${ok?'✓ COMPLIANT':'✗ NON-COMPLIANT'}</div>`;
   const rows=(v.points||[]).map(p=>{ const g=p.status==='ok'; return `<div style="display:flex;gap:8px;align-items:baseline;padding:4px 0;font-size:12px;border-top:1px solid #f0ede5"><span style="color:${g?'var(--ok-3)':'var(--disp)'};font-weight:800">${g?'✓':'✗'}</span><span style="flex:1">${esc(p.label)}</span><span style="color:var(--grey-4);font-size:var(--fs-1)">${esc(p.detail||p.status)}</span></div>`; }).join("");
-  const narr=v.narrative?`<div style="margin-top:10px;background:var(--warn-tint);border:1px solid #e7e3d8;border-radius:9px;padding:9px 11px;font-size:12px;line-height:1.55;color:var(--warn-3)"><span style="font-size:var(--fs-1);color:var(--warn-3);font-weight:700">🤖 ASSIST</span><br>${esc(v.narrative)}</div>`:'';
+  const narr=v.narrative?`<div style="margin-top:10px;background:var(--warn-tint);border:1px solid #e7e3d8;border-radius:9px;padding:9px 11px;font-size:12px;line-height:1.55;color:var(--warn-3)"><span style="font-size:var(--fs-1);color:var(--warn-3);font-weight:700">${tx('🤖 ASSIST')}</span><br>${esc(v.narrative)}</div>`:'';
   const ab=v.acted_by||{}; const prov=`<div style="margin-top:9px;font-size:var(--fs-1);color:var(--grey-4);font-family:'Space Mono'">stamped · ${esc(ab.deputy||'ai:conform-verdict')} · ${ab.model?('narrative by '+esc(ab.model)):'deterministic only (no model key)'} · against ${esc(v.standard||_ccPick)}</div>`;
   if(rh) rh.innerHTML=badge+`<div style="margin-top:9px">${rows}</div>`+narr+prov;
 }
@@ -1885,7 +1885,7 @@ function _finishCard(it,i,unit){
     +(it.inspiration?'<div style="font-size:12px;color:var(--grey-2);margin:4px 0 7px;line-height:1.5">'+esc(it.inspiration)+'</div>':'')
     +(chips?'<div style="display:flex;gap:5px;flex-wrap:wrap;margin:6px 0">'+chips+'</div>':'')
     +(facts.length?'<div style="font-size:11.5px;color:var(--ink-2);margin:5px 0;line-height:1.55">'+facts.join(' · ')+'</div>':'')
-    +(combos.length?'<div style="font-size:var(--fs-1);color:var(--grey-4);text-transform:uppercase;letter-spacing:.4px;font-weight:700;margin-top:6px">Colour combinations</div>'+combos.map(_combo).join(''):'')
+    +(combos.length?'<div style="font-size:var(--fs-1);color:var(--grey-4);text-transform:uppercase;letter-spacing:.4px;font-weight:700;margin-top:6px">' + tx('Colour combinations') + '</div>'+combos.map(_combo).join(''):'')
     +(applied.length?'<div style="font-size:var(--fs-1);color:var(--grey-4);margin-top:7px">'+applied.join(' · ')+'</div>':'')
     +'<div style="margin-top:8px;display:flex;align-items:center;gap:6px;background:var(--ok-tint);border:1px solid #cfe6cf;border-radius:9px;padding:6px 9px;color:var(--on-card)"><span style="font-size:var(--fs-1);color:var(--ok-2);font-weight:700">Your price'+(u?' / '+esc(u):'')+'</span><span style="font-size:var(--fs-1);color:var(--grey-4)">₹</span><input id="com_'+i+'" inputmode="decimal" value="'+esc(price)+'" placeholder="e.g. 850" style="width:88px;border:1px solid #cfe6cf;border-radius:6px;padding:4px 7px;font-size:12px"></div>'
     +'</div>';
@@ -1895,8 +1895,8 @@ function cbRenderCatalogue(v){
     +'<div style="font-size:var(--fs-1);color:var(--purple-2);font-family:\'Space Mono\',monospace;margin-bottom:8px">structured by ai:catalogue-structure@v1 · source '+esc(v.source||'')+'</div>';
   var intro=v.intro?'<div style="font-size:var(--fs-2);color:var(--ink-2);line-height:1.55;background:var(--warn-tint);border:1px solid #e7e3d8;border-radius:9px;padding:9px 11px;margin-bottom:10px">'+esc(v.intro)+'</div>':'';
   var layers='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:11px">'
-    +'<div style="flex:1;min-width:180px;background:var(--blue-tint-bg);border:1px solid var(--blue-tint-line);border-radius:9px;padding:9px 11px;color:var(--on-card)"><div style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);text-transform:uppercase;letter-spacing:.4px">Shared · minted once</div><div style="font-size:11.5px;color:var(--ink-2);margin-top:3px">Schema + design + colour + images. Inherited by <b>reference</b> — Beta stores no copy.</div></div>'
-    +'<div style="flex:1;min-width:180px;background:var(--ok-tint);border:1px solid #cfe6cf;border-radius:9px;padding:9px 11px;color:var(--on-card)"><div style="font-size:var(--fs-1);font-weight:800;color:var(--ok-2);text-transform:uppercase;letter-spacing:.4px">Beta fills · per-entity</div><div style="font-size:11.5px;color:var(--ink-2);margin-top:3px">Only commercials: '+((v.commercials_fields||[]).map(function(f){return esc(f.label);}).join(' · '))+'.</div></div></div>';
+    +'<div style="flex:1;min-width:180px;background:var(--blue-tint-bg);border:1px solid var(--blue-tint-line);border-radius:9px;padding:9px 11px;color:var(--on-card)"><div style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);text-transform:uppercase;letter-spacing:.4px">' + tx('Shared · minted once') + '</div><div style="font-size:11.5px;color:var(--ink-2);margin-top:3px">Schema + design + colour + images. Inherited by <b>reference</b> — Beta stores no copy.</div></div>'
+    +'<div style="flex:1;min-width:180px;background:var(--ok-tint);border:1px solid #cfe6cf;border-radius:9px;padding:9px 11px;color:var(--on-card)"><div style="font-size:var(--fs-1);font-weight:800;color:var(--ok-2);text-transform:uppercase;letter-spacing:.4px">' + tx('Beta fills · per-entity') + '</div><div style="font-size:11.5px;color:var(--ink-2);margin-top:3px">Only commercials: '+((v.commercials_fields||[]).map(function(f){return esc(f.label);}).join(' · '))+'.</div></div></div>';
   var counts=v.counts?'<div style="font-size:11.5px;color:var(--grey-2);margin-bottom:9px">'
   + [ txn('{count} finish',       '{count} finishes',      v.counts.finishes),
       txn('{count} combination',  '{count} combinations',  v.counts.combinations),
@@ -1904,7 +1904,7 @@ function cbRenderCatalogue(v){
       txn('{count} schema field', '{count} schema fields', v.counts.fields) ].join(' · ')
   + '</div>':'';
   var _u=_cardUnit(v); var items=(v.finishes||v.items||[]).map(function(it,i){return _finishCard(it,i,_u);}).join('');
-  var adopt='<div style="display:flex;gap:8px;margin-top:4px"><button class="composebtn pri" onclick="cbAdopt()">Adopt &amp; save for my entity</button><button class="composebtn" onclick="cbViewMine()">View saved</button></div><div id="cb_result" style="margin-top:8px"></div>';
+  var adopt='<div style="display:flex;gap:8px;margin-top:4px"><button class="composebtn pri" onclick="cbAdopt()">Adopt &amp; save for my entity</button><button class="composebtn" onclick="cbViewMine()">' + tx('View saved') + '</button></div><div id="cb_result" style="margin-top:8px"></div>';
   var ab=v.acted_by||{}; var prov='<div style="margin-top:8px;font-size:var(--fs-1);color:var(--grey-4);font-family:\'Space Mono\'">stamped · '+esc(ab.deputy||'ai:catalogue-structure')+' · '+(ab.model?('intro by '+esc(ab.model)):'deterministic only (no model key)')+' · inherits by reference</div>';
   window._cbCat=v;
   modal(head+intro+layers+counts+items+adopt+prov, true);
@@ -1914,14 +1914,14 @@ async function cbAdopt(){
   var v=window._cbCat; if(!v)return; var com={};
   var _u=_cardUnit(v);   // commercials are GENERIC {price, unit} — the unit is the item's own, not assumed litre
   (v.finishes||v.items||[]).forEach(function(it,i){ var el=document.getElementById('com_'+i); if(el&&el.value!==''){ com[it.name]={price:Number(el.value),unit:(it.unit||_u||'')}; } });
-  var rh=document.getElementById('cb_result'); if(rh)rh.innerHTML='<span style="font-size:12px;color:var(--grey-4)">Saving…</span>';
+  var rh=document.getElementById('cb_result'); if(rh)rh.innerHTML='<span style="font-size:12px;color:var(--grey-4)">' + tx('Saving…') + '</span>';
   try{ await api('catalogueAdopt',{body:{source:(window._cbSourceKey||(v.adoption_model&&v.adoption_model.source_ref)||'beta-royale-play@v1'), commercials:com}});
     if(rh)rh.innerHTML='<div style="color:var(--ok-2);font-size:var(--fs-2);background:var(--ok-tint);border:1px solid #cfe6cf;border-radius:9px;padding:8px 10px">✓ Saved — your entity now <b>references</b> this catalogue ('+Object.keys(com).length+' finishes priced). Design &amp; colour stay shared; only your commercials were stored.</div>';
     if(typeof toast==='function')toast('Catalogue adopted ✓ (reference + commercials)');
   }catch(e){ if(rh)rh.innerHTML='<div style="color:var(--disp);font-size:var(--fs-2)">'+esc((e&&e.message)||'save failed')+'</div>'; }
 }
 async function cbViewMine(){
-  var rh=document.getElementById('cb_result'); if(rh)rh.innerHTML='<span style="font-size:12px;color:var(--grey-4)">Loading…</span>';
+  var rh=document.getElementById('cb_result'); if(rh)rh.innerHTML='<span style="font-size:12px;color:var(--grey-4)">' + tx('Loading…') + '</span>';
   try{ var r=await api('catalogueMine');
     if(!r.count){ if(rh)rh.innerHTML='<div style="font-size:var(--fs-2);color:var(--grey-2)">Nothing saved yet — set prices and Adopt above.</div>'; return; }
     var c=r.catalogues[0]; var priced=(c.resolved.items||[]).filter(function(it){return it.commercials;});
@@ -2073,10 +2073,10 @@ function cbKeysOverlay(show) {
   d.onclick = function (e) { if (e.target === d) d.remove(); };
   d.innerHTML = '<div style="background:var(--card);color:var(--on-card);border:1px solid var(--line);'
     + 'border-radius:14px;box-shadow:var(--shadow);padding:18px 20px;max-width:420px;width:100%">'
-    + '<div style="font-family:\'Space Grotesk\';font-weight:800;font-size:15px;margin-bottom:4px">Keyboard</div>'
+    + '<div style="font-family:\'Space Grotesk\';font-weight:800;font-size:15px;margin-bottom:4px">' + tx('Keyboard') + '</div>'
     + '<div style="font-size:11.5px;color:var(--grey);margin-bottom:10px">Shortcuts do nothing while you are typing.</div>'
     + rows
-    + '<div style="font-size:11.5px;color:var(--grey);margin-top:12px">Press <b>Esc</b> to close.</div></div>';
+    + '<div style="font-size:11.5px;color:var(--grey);margin-top:12px">Press <b>' + tx('Esc') + '</b> to close.</div></div>';
   (document.body || document.documentElement).appendChild(d);
 }
 
@@ -2203,7 +2203,7 @@ function renderWelcome(){
     body = `
       <div class="welsec"><div class="welh2">I am here to…</div>
         <div class="welgrid">${roles.map(r=>`<div class="welrole ${ONB.role===r[0]?'sel':''}" data-testid="onb-role-${r[0]}" onclick="pickRole('${r[0]}')"><div class="ci">${r[1]}</div><div class="cn">${r[2]}</div><div class="cd">${r[3]}</div></div>`).join("")}</div></div>
-      ${ONB.role?`<div class="welsec"><div class="welh2">Choose your vertical</div><div class="welsub">Pick a starting point — it shapes what a deal looks like. You can refine later.</div>
+      ${ONB.role?`<div class="welsec"><div class="welh2">${tx('Choose your vertical')}</div><div class="welsub">Pick a starting point — it shapes what a deal looks like. You can refine later.</div>
         <div class="welgrid">${bps.map(b=>`<div class="welbp ${ONB.bp===b.k?'sel':''}" data-testid="onb-bp-${b.k}" onclick="pickBP('${b.k}')"><div class="cn">${b.n}</div><div class="bt">${b.t}</div><div class="cd">${b.d}</div></div>`).join("")}</div></div>`:""}
       <div class="welbtns"><button class="btn ghost" onclick="setWStep('intro')"><span class=arw>←</span> back</button><button class="btn" ${ONB.bp?"":"disabled"} data-testid="onb-continue" onclick="welToRegister()">Continue to register <span class=arw>→</span></button></div>`;
   }
@@ -2302,7 +2302,7 @@ function regVerticalChooser(){
     + vs.map(function(v){ const sel=(REG.constitution||'')===v.key; const caps=(v.capabilities||[]).join(' · ');
         return '<div data-testid="reg-vertical-'+esc(v.key)+'" onclick="REG.constitution=\''+esc(v.key)+'\';renderRegister()" style="border:1px solid '+(sel?'var(--blue)':'var(--line)')+';background:'+(sel?'var(--blue-tint)':'var(--card)')+';color:' + (sel ? 'var(--on-card)' : 'var(--on-card)') + ';border-radius:9px;padding:9px 11px;margin-bottom:7px;cursor:pointer"><div style="font-weight:700;font-size:var(--fs-2);color:var(--ink)">'+(sel?'● ':'○ ')+esc(v.label||v.key)+(v.is_default?' <span style="font-size:var(--fs-1);color:var(--grey);font-weight:400">· default</span>':'')+'</div><div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">'+(v.vertical?('vertical: '+esc(v.vertical)+' · '):'')+'includes '+esc(caps||'core')+'</div></div>';
       }).join('')
-    + '<div style="font-size:var(--fs-1);color:var(--grey);margin:2px 0 4px">None fits? <a onclick="regTailor();return false" style="color:var(--blue);cursor:pointer;font-weight:600">Tailor one</a> — or <a onclick="regContact();return false" style="color:var(--blue);cursor:pointer;font-weight:600">contact the team</a> to wire it quickly.</div>'
+    + '<div style="font-size:var(--fs-1);color:var(--grey);margin:2px 0 4px">None fits? <a onclick="regTailor();return false" style="color:var(--blue);cursor:pointer;font-weight:600">' + tx('Tailor one') + '</a> — or <a onclick="regContact();return false" style="color:var(--blue);cursor:pointer;font-weight:600">contact the team</a> to wire it quickly.</div>'
     + '</div>';
 }
 function regTailor(){ if(typeof toast==='function') toast("Tailoring — we'll wire a custom setup with you. For now, pick the closest and refine later."); }
@@ -2349,7 +2349,7 @@ function renderLogin(){
       ${form}
       ${L.err?`<div class="err">${L.err}</div>`:""}
       <div class="hint"><b>${STAGES[CFG.STAGE].label}</b> — real OTP/PIN against the API.</div>
-      ${L.cust?"":`<div class="swap">New here? <a onclick="go('#/welcome')">Create an entity</a> · <a onclick="setLoginCust(true)">Have a shop link?</a></div>`}
+      ${L.cust?"":`<div class="swap">New here? <a onclick="go('#/welcome')">${tx('Create an entity')}</a> · <a onclick="setLoginCust(true)">Have a shop link?</a></div>`}
       <div style="text-align:center;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)"><button onclick="openLegend()" title="See what we serve — no login" style="border:0;background:linear-gradient(180deg,#4a72b0,var(--blue));color:#fff;border-radius:22px;padding:11px 22px;cursor:pointer;font-size:13.5px;font-weight:700;box-shadow:0 3px 12px rgba(63,102,166,.32)">🔑 See what we serve — no sign-in</button><div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">A 60-second look at where we&rsquo;re different.</div></div>
     </div>
   </div></div>`;
@@ -3080,7 +3080,7 @@ function themePaletteHTML(){
        helps low vision and actively harms many dyslexic readers. Without this line the pair looks like an
        inconsistency; with it, it is the point. */
     + "<div style=\"font-size:var(--fs-1);color:var(--grey);line-height:1.5;margin:0 0 7px\">"
-    +   "There is no single accessible setting — <b>High Contrast</b> and <b>Soft Paper</b> are opposites, and each is right for different eyes. "
+    +   "There is no single accessible setting — <b>" + tx('High Contrast') + "</b> and <b>" + tx('Soft Paper') + "</b> are opposites, and each is right for different eyes. "
     +   "Every level shown below is measured, not claimed."
     + "</div>"
     + needs.map(a11yRow).join("")
@@ -3411,7 +3411,7 @@ function _renderApp(){
                Settings there too, and the avatar renders for every role — so a co-assist would have found the
                business's policy flags and channel bindings one click from their own name. The rail never offered
                it to them; the avatar menu must not either. -->
-          ${isEntityUser?`<button data-testid="nav-settings" onclick="UI.avMenu=false;navTo('settings')" style="display:block;width:100%;text-align:start;border:0;background:none;padding:10px 13px;font-size:13.5px;cursor:pointer">⚙️ Settings</button>`:''}
+          ${isEntityUser?`<button data-testid="nav-settings" onclick="UI.avMenu=false;navTo('settings')" style="display:block;width:100%;text-align:start;border:0;background:none;padding:10px 13px;font-size:13.5px;cursor:pointer">${tx('⚙️ Settings')}</button>`:''}
           <!--
             ⭐⭐ COLLAPSED BY DEFAULT (Athi, 2026-08-18: *"if you click the theme, possibly a dropdown or
             collapsible menu — language similarly"*).
@@ -3489,7 +3489,7 @@ function _renderApp(){
       <div class="tagl">${M.tag}</div>
     </div>
     <div class="main">
-      <div id="mainbody" style="flex:1;display:flex;flex-direction:column;min-height:0">${_capLoading ? '<div class="empty"><div class="t">Loading…</div></div>' : mainBody()}</div>
+      <div id="mainbody" style="flex:1;display:flex;flex-direction:column;min-height:0">${_capLoading ? '<div class="empty"><div class="t">' + tx('Loading…') + '</div></div>' : mainBody()}</div>
     </div>
   </div></div><div id="lbhost"></div><div id="modalhost"></div><div class="sr" id="live" aria-live="polite" role="status"></div>`;
   if(!_capLoading){
@@ -3592,7 +3592,7 @@ function navTitle(){const all={...Object.fromEntries(Object.values(MENUS).flatMa
 function menuBody(M, role){
   var gate = function(it){ var g = CAP_GATED[it[0]]; return !g || ((SESSION.capabilities||[]).indexOf(g) >= 0); };
   if (!M.groups) {
-    return '<div class="grp">Mailbox</div>' + M.top.map(menuBtn).join('')
+    return '<div class="grp">' + tx('Mailbox') + '</div>' + M.top.map(menuBtn).join('')
       + '<div class="grp">' + (role === 'customer' ? 'More' : 'Manage') + '</div>'
       + M.rest.filter(gate).map(menuBtn).join('');
   }
@@ -4491,7 +4491,7 @@ function ccStepTo(){
     ? `<div style="font-family:'Space Grotesk';font-weight:600;font-size:12px;color:var(--grey);margin:2px 0 4px">Recipient · <b>supplier order</b> <span style="font-weight:400">— locked, no CC/For</span></div>
      <div id="cc_rcpts" style="margin-top:4px"></div>
      <div id="cc_rcap" style="display:none"></div>`
-    : `<div style="font-family:'Space Grotesk';font-weight:600;font-size:12px;color:var(--grey);margin:2px 0 4px">Recipients · <b>To</b> acts · <b>CC</b> is informed · <b>For</b> = on behalf of</div>
+    : `<div style="font-family:'Space Grotesk';font-weight:600;font-size:12px;color:var(--grey);margin:2px 0 4px">Recipients · <b>To</b> acts · <b>CC</b> is informed · <b>${tx('For')}</b> = on behalf of</div>
      <div style="display:flex;gap:6px">
        <select class="inp" id="cc_rrole" style="max-width:74px"><option value="to">To</option><option value="cc">CC</option><option value="for">For</option></select>
        <input class="inp" id="cc_rname" data-testid="chit-recipient" autocomplete="off" placeholder="Type a name — matches pop up with the bridge id" oninput="ccRcptSearch(this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();ccAddRcpt();}">
@@ -4521,13 +4521,13 @@ function ccStepReview(){
     + '<span style="min-width:104px;color:var(--grey);font-size:11.5px">'+k+'</span><span style="flex:1">'+v+'</span></div>'; };
   var card=function(h,inner,edit){ return '<div style="border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-top:8px">'
     + '<div style="background:var(--paper);padding:8px 12px;font-size:var(--fs-1);font-weight:800;color:var(--grey);text-transform:uppercase;letter-spacing:.05em;display:flex">'+h
-    + (edit!=null?'<span style="margin-inline-start:auto;color:var(--blue);cursor:pointer;text-transform:none;letter-spacing:0;font-size:11.5px" onclick="UI._ccFlow.go('+edit+')">Change</span>':'')
+    + (edit!=null?'<span style="margin-inline-start:auto;color:var(--blue);cursor:pointer;text-transform:none;letter-spacing:0;font-size:11.5px" onclick="UI._ccFlow.go('+edit+')">' + tx('Change') + '</span>':'')
     + '</div>'+inner+'</div>'; };
   return card('Lines · '+(CC.items||[]).length,
         (CC.items||[]).map(function(l){ return row((l.qty||1)+' × '+esc(l.unit||'unit'),
           '<span style="flex:1">'+esc(l.particulars)+'</span><b style="float:inline-end">'+esc(fmtMoney(ccLineTotal(l),'INR'))+'</b>'); }).join('')
         + '<div style="display:flex;padding:10px 12px;border-top:2px solid var(--line);font-size:var(--fs-3);font-weight:800">'
-        + '<span style="flex:1">Total</span><span data-testid="cc-review-total">'+esc(fmtMoney(sum,'INR'))+'</span></div>', 0)
+        + '<span style="flex:1">' + tx('Total') + '</span><span data-testid="cc-review-total">'+esc(fmtMoney(sum,'INR'))+'</span></div>', 0)
     + card('To', row('Recipients', (CC.rcpts||[]).length
         ? (CC.rcpts||[]).map(function(r){ return esc(r.role.toUpperCase())+' '+esc(r.name); }).join(' · ')
         : '<span style="color:var(--disp)">nobody yet</span>'), 1)
@@ -4535,14 +4535,14 @@ function ccStepReview(){
         var v=ccField(f.field_key);
         return row(esc(f.field_name), v?esc(v):(f.required?'<span style="color:var(--disp)">required</span>':'—')); }).join('')
         + row('Attachments', nAtt?String(nAtt):'—'), 2)
-    + `<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:12px;padding:10px 12px;font-size:var(--fs-2);color:var(--warn-3);line-height:1.5;margin-top:10px"><b style="font-family:'Space Grotesk'">It becomes shared the moment you bridge it.</b> A self-addressed chit is a real chit: one copy in <b>Order</b> (sent), one in <b>Task</b> (received), same thread.</div>`;
+    + `<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:12px;padding:10px 12px;font-size:var(--fs-2);color:var(--warn-3);line-height:1.5;margin-top:10px"><b style="font-family:'Space Grotesk'">It becomes shared the moment you bridge it.</b> A self-addressed chit is a real chit: one copy in <b>${tx('Order')}</b> (sent), one in <b>${tx('Task')}</b> (received), same thread.</div>`;
 }
 /* Recipients — To (Act) / CC (Info) / For (on-behalf), capped, flippable */
 function ccIsSelf(name){ const n=String(name||"").trim().toLowerCase(); if(!n)return false; if(n==="self"||n==="me")return true; const ent=String((typeof SESSION!=="undefined"&&SESSION.entity)||"").toLowerCase(); if(n===ent)return true; return (STORE.actors||[]).some(a=>String(a.name||"").toLowerCase()===n||String(a.uid||"").toLowerCase()===n); }
 function ccRoleCount(role){ return CC.rcpts.filter(r=>r.role===role).length; }
 let _ccSearchT=null;
 function ccRcptSearch(q){ clearTimeout(_ccSearchT); q=(q||'').trim(); if(q.length<2){ ccClearSugg(); return; } _ccSearchT=setTimeout(async function(){ try{ const r=await api("entitySearch",{query:{q:q}}); ccRenderSugg(Array.isArray(r)?r:((r&&r.results)||[])); }catch(_){ ccClearSugg(); } }, 250); }
-function ccRenderSugg(list){ UI._ccSugg=list||[]; const h=document.getElementById("cc_sugg"); if(!h)return; if(!UI._ccSugg.length){ h.innerHTML='<div class="ccsugg-empty">No matching business found</div>'; return; } h.innerHTML=UI._ccSugg.map(function(e,i){ return '<div class="ccsugg-item" data-testid="chit-recipient-suggest" onclick="ccPickRcptIdx('+i+')"><span class="ccsugg-nm">'+esc(e.display_name||'')+'</span><span class="ccsugg-id">'+esc(e.bridge_id||'')+'</span></div>'; }).join(''); }
+function ccRenderSugg(list){ UI._ccSugg=list||[]; const h=document.getElementById("cc_sugg"); if(!h)return; if(!UI._ccSugg.length){ h.innerHTML='<div class="ccsugg-empty">' + tx('No matching business found') + '</div>'; return; } h.innerHTML=UI._ccSugg.map(function(e,i){ return '<div class="ccsugg-item" data-testid="chit-recipient-suggest" onclick="ccPickRcptIdx('+i+')"><span class="ccsugg-nm">'+esc(e.display_name||'')+'</span><span class="ccsugg-id">'+esc(e.bridge_id||'')+'</span></div>'; }).join(''); }
 function ccClearSugg(){ const h=document.getElementById("cc_sugg"); if(h)h.innerHTML=''; }
 function ccPickRcptIdx(i){ const e=(UI._ccSugg||[])[i]; if(!e)return; const role=val("cc_rrole")||"to"; const er=document.getElementById("cc_err"); if(er)er.textContent=""; if(ccDupeRcpt(e.display_name, e.bridge_id)){ if(er)er.textContent=e.display_name+" is already a recipient."; ccClearSugg(); return; } if(ccRoleCount(role)>=(LIMITS[role]||99)){ if(er)er.textContent=role.toUpperCase()+" is capped at "+LIMITS[role]+"."; return; } CC.rcpts.push({name:e.display_name, role:role, self:ccIsSelf(e.display_name), bridge:e.bridge_id||null}); const ne=document.getElementById("cc_rname"); if(ne)ne.value=""; ccClearSugg(); ccRenderRcpts(); }
 function ccDupeRcpt(name, bridge){ var nm=String(name||'').trim().toLowerCase(); return (CC.rcpts||[]).some(function(r){ if(bridge&&r.bridge) return r.bridge===bridge; return String(r.name||'').trim().toLowerCase()===nm; }); }
@@ -4890,11 +4890,11 @@ const ASSIST_PAGES = {
 };
 function assistPage(key){ const p=ASSIST_PAGES[key]; if(!p) return menuAssist(key);
   const groups=p.groups.map(g=>`<div style="${_CARD}"><div style="font-family:'Space Grotesk';font-weight:600;font-size:var(--fs-2);color:var(--ink);display:flex;align-items:center;gap:7px;margin-bottom:6px"><span style="color:var(--blue)"><span class=arw>▸</span></span>${esc(g.title)}</div>${g.rows.map((r,i)=>`<div style="display:flex;gap:9px;align-items:baseline;padding:4px 0;${i?'border-top:0.5px solid #F0ECE2':''}"><span style="font-family:'Space Mono';font-size:var(--fs-1);color:var(--blue);min-width:118px;flex-shrink:0">${esc(r[0])}</span><span style="font-size:12px;color:var(--ink);line-height:1.5">${esc(r[1])}</span></div>`).join("")}</div>`).join("");
-  return `<div style="background:var(--gold-soft);border:0.5px solid var(--gold-line);border-radius:12px;padding:9px 11px;font-size:12px;color:var(--warn-3);line-height:1.5;margin-bottom:9px"><b style="font-family:'Space Grotesk'">${key==='order'?'Order':'Task'} — what it is &amp; how to use it</b> <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--card);color:var(--warn-3);border:0.5px solid var(--gold-line);border-radius:5px;padding:1px 6px">assistance page</span><div style="margin-top:4px">${esc(p.intro)}</div></div>${groups}<div style="${_CARD}"><div style="font-size:11.5px;color:var(--grey);margin-bottom:6px">Ask the assistant <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--gold-soft);color:var(--warn-3);border-radius:5px;padding:1px 6px">web demo</span></div><div style="display:flex;gap:8px"><input class="inp" id="m_in_${key}" placeholder="Ask about ${esc(key)}…"><button style="${_BTN}" onclick="mAskFree('${key}')">Ask</button></div><div id="m_ans_${key}" style="font-size:13px;color:var(--ink);margin-top:9px;line-height:1.55"></div></div>`;
+  return `<div style="background:var(--gold-soft);border:0.5px solid var(--gold-line);border-radius:12px;padding:9px 11px;font-size:12px;color:var(--warn-3);line-height:1.5;margin-bottom:9px"><b style="font-family:'Space Grotesk'">${key==='order'?'Order':'Task'} — what it is &amp; how to use it</b> <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--card);color:var(--warn-3);border:0.5px solid var(--gold-line);border-radius:5px;padding:1px 6px">assistance page</span><div style="margin-top:4px">${esc(p.intro)}</div></div>${groups}<div style="${_CARD}"><div style="font-size:11.5px;color:var(--grey);margin-bottom:6px">Ask the assistant <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--gold-soft);color:var(--warn-3);border-radius:5px;padding:1px 6px">web demo</span></div><div style="display:flex;gap:8px"><input class="inp" id="m_in_${key}" placeholder="Ask about ${esc(key)}…"><button style="${_BTN}" onclick="mAskFree('${key}')">${tx('Ask')}</button></div><div id="m_ans_${key}" style="font-size:13px;color:var(--ink);margin-top:9px;line-height:1.55"></div></div>`;
 }
 function addActorModal(){
   const ent=(typeof SESSION!=="undefined"&&SESSION.entity)||"";
-  modal(`<div class="mhd"><div class="t">🧑‍💼 Add co-assist</div><div class="s">someone who acts for you</div></div>
+  modal(`<div class="mhd"><div class="t">${tx('🧑‍💼 Add co-assist')}</div><div class="s">someone who acts for you</div></div>
    <div class="mbody"><label class="fl">Display name</label><input class="inp" id="ac_name" placeholder="e.g. Anitha">
      <div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px">What you &amp; your team see in lists — can be their full name.</div>
      <label class="fl" style="margin-top:11px">User ID <span style="color:var(--grey);font-weight:400">— how they sign in (not their name)</span></label><input class="inp" id="ac_key" oninput="acIdPrev()" placeholder="e.g. anitha">
@@ -5041,8 +5041,8 @@ const ORG_HELP = [
   {q:"Build a whole new structure?", a:"Starting from scratch? List your branches and their levels, and we can register and link them in order automatically — that's an upcoming automation. For now, add them one at a time with Create branch."},
   {q:"Internal or customer-facing?", a:"Every node is internal-B2B by default (mode b2b). A node turns customer-facing (b2c) only when its mode is b2c — which needs a customer-facing plan — plus a public catalogue and the shop's open sign on. One network runs one shape: you don't mix business and consumer in the same network."},
 ];
-function orgBanner(){ return `<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:12px;padding:12px 14px;margin-bottom:12px;font-size:13px;color:var(--warn-3);line-height:1.5"><b style="font-family:'Space Grotesk'">Design your organisation here.</b> Add your own branches, units and counters as sub-entities, up to your lead node — your <b>internal</b> structure. Place your <b>actors (Co-Assist)</b> at each node; their access flows through the tree. To deal with other businesses, use <b>Connections</b>.</div>${orgHelpBox()}`; }
-function orgHelpBox(){ return `<div style="${_CARD}"><div style="font-family:'Space Grotesk';font-weight:600;font-size:13px;margin-bottom:2px">Structure &amp; access assistant <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--gold-soft);color:var(--warn-3);border-radius:5px;padding:1px 7px">Web Demo · sample answers</span></div><div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:10px">How your branches and actors coordinate — where to set actors, and what access they get. (Real version: an AI handler that reads your structure, employees and grants.)</div><div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px">${ORG_HELP.map((f,i)=>`<button class="composebtn" onclick="orgAsk(${i})">${esc(f.q)}</button>`).join("")}</div><div style="display:flex;gap:8px"><input class="inp" id="org_in" placeholder="e.g. where do my branch managers fit?"><button style="${_BTN}" onclick="orgAskFree()">Ask</button></div><div id="org_ans" style="font-size:13px;color:var(--ink);margin-top:10px;line-height:1.55"></div></div>`; }
+function orgBanner(){ return `<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:12px;padding:12px 14px;margin-bottom:12px;font-size:13px;color:var(--warn-3);line-height:1.5"><b style="font-family:'Space Grotesk'">Design your organisation here.</b> Add your own branches, units and counters as sub-entities, up to your lead node — your <b>internal</b> structure. Place your <b>actors (Co-Assist)</b> at each node; their access flows through the tree. To deal with other businesses, use <b>${tx('Connections')}</b>.</div>${orgHelpBox()}`; }
+function orgHelpBox(){ return `<div style="${_CARD}"><div style="font-family:'Space Grotesk';font-weight:600;font-size:13px;margin-bottom:2px">Structure &amp; access assistant <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--gold-soft);color:var(--warn-3);border-radius:5px;padding:1px 7px">${tx('Web Demo · sample answers')}</span></div><div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:10px">How your branches and actors coordinate — where to set actors, and what access they get. (Real version: an AI handler that reads your structure, employees and grants.)</div><div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px">${ORG_HELP.map((f,i)=>`<button class="composebtn" onclick="orgAsk(${i})">${esc(f.q)}</button>`).join("")}</div><div style="display:flex;gap:8px"><input class="inp" id="org_in" placeholder="e.g. where do my branch managers fit?"><button style="${_BTN}" onclick="orgAskFree()">${tx('Ask')}</button></div><div id="org_ans" style="font-size:13px;color:var(--ink);margin-top:10px;line-height:1.55"></div></div>`; }
 function orgAsk(i){ const f=ORG_HELP[i]; const inp=document.getElementById("org_in"); if(inp)inp.value=f.q; const o=document.getElementById("org_ans"); if(o)o.innerHTML="<b>"+esc(f.q)+"</b><br>"+esc(f.a); }
 function orgAskFree(){ const q=(val("org_in")||"").toLowerCase(); let a;
   if(/scratch|whole|automate|auto.?build|all at once|bulk|entire/.test(q))a=ORG_HELP[8].a;
@@ -5099,9 +5099,9 @@ const NET_MODEL_NOTE = {
 function netView(self, tree, edges){
   const nodes = tree.map(n=>`<div style="padding:3px 0 3px ${(n.depth||0)*20}px;font-size:13.5px">${n.depth>0?'<span style="color:var(--grey)">└ </span>':''}<b>${esc(n.name)}</b> <span style="font-family:'Space Mono';font-size:var(--fs-1);color:var(--grey)">${esc(n.bridge_id||'')}</span>${n.act!=null?` <span class="optchip" style="background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)">👥 ${n.act}</span>`:''}${n.mode==='b2c'?` <span class="optchip" style="background:var(--gold-soft);color:var(--warn-3);border-color:var(--gold-line);font-size:var(--fs-1)">b2c</span>`:''}${n.demo?` <span class="optchip" style="font-size:var(--fs-1)">demo</span>`:''}${n.isnew?` <span class="optchip" style="font-size:var(--fs-1);background:var(--ok-tint);color:var(--ok-3);border-color:var(--ok-2)">new</span>`:''}</div>`).join("");
   const edgeRows = edges.map(e=>{
-    const a = e.state==='requested' ? `<button class="composebtn pri" onclick="netApprove('${e.id}')">Approve</button> <button class="composebtn" onclick="netDecline('${e.id}')">Decline</button>`
-      : e.state==='active' ? `<button class="composebtn" onclick="netSuspend('${e.id}')">Suspend</button> <button class="composebtn" style="color:var(--disp)" onclick="netDisconnect('${e.id}')">Disconnect</button>`
-      : e.state==='suspended' ? `<button class="composebtn" onclick="netResume('${e.id}')">Resume</button> <button class="composebtn" style="color:var(--disp)" onclick="netDisconnect('${e.id}')">Disconnect</button>` : '';
+    const a = e.state==='requested' ? `<button class="composebtn pri" onclick="netApprove('${e.id}')">${tx('Approve')}</button> <button class="composebtn" onclick="netDecline('${e.id}')">${tx('Decline')}</button>`
+      : e.state==='active' ? `<button class="composebtn" onclick="netSuspend('${e.id}')">${tx('Suspend')}</button> <button class="composebtn" style="color:var(--disp)" onclick="netDisconnect('${e.id}')">${tx('Disconnect')}</button>`
+      : e.state==='suspended' ? `<button class="composebtn" onclick="netResume('${e.id}')">${tx('Resume')}</button> <button class="composebtn" style="color:var(--disp)" onclick="netDisconnect('${e.id}')">${tx('Disconnect')}</button>` : '';
     return `<div style="${_CARD}"><div style="display:flex;justify-content:space-between;align-items:center"><span><b>${esc(e.parent_name)}</b> <span style="color:var(--grey)">&rarr;</span> <b>${esc(e.child_name)}</b></span>${netStChip(e.state)}</div>${a?`<div style="margin-top:8px;display:flex;gap:6px">${a}</div>`:''}</div>`;
   }).join("")||'<div style="color:var(--grey);font-size:13px;padding:6px">No connections.</div>';
   return `${orgBanner()}<div style="${_CARD}"><div style="display:flex;justify-content:space-between;align-items:center"><span><b>${esc(self.name)}</b> · <span style="font-family:\'Space Mono\';font-size:12px">${esc(self.bridgeId||self.bridge_id||'')}</span></span><span class="optchip ${self.claimed?'on':'brk'}">${self.claimed?'claimed':'unclaimed'}</span></div><div style="font-size:11.5px;color:var(--grey);margin-top:4px">mode ${esc(self.mode||'b2b')} · ${self.mode==='b2c'?'customer-facing':'internal-B2B'} · NET-01 Spine · /api/network (preview — editing not yet live)</div></div>
@@ -5117,7 +5117,7 @@ function netView(self, tree, edges){
     <div style="${_CARD}"><label class="fl">Or connect an entity that already exists (User ID)</label><div style="display:flex;gap:8px"><input class="inp" id="net_child" placeholder="User ID or email"><button class="composebtn" onclick="netConnect('${self.id}')">🔗 Request link</button></div><div class="err" id="net_err"></div></div>
     <div class="sec" style="font-size:12px;color:var(--grey);margin:12px 0 4px">Connections / edges (${edges.length})</div>${edgeRows}`;
 }
-function netNotInModel(bid){ return `<div style="${_CARD}"><div style="font-family:\'Space Grotesk\';font-weight:600;margin-bottom:6px">Not in the network model yet</div><div style="font-size:13px;color:var(--grey);line-height:1.6">Your entity ${bid?('('+esc(bid)+') '):''}isn't in the <b>cb_*</b> network tree yet — the production backfill (legacy &rarr; cb_entity) hasn't run for it, so the live tree is empty here. Register it into the network now, or it lights up after backfill.</div><button class="composebtn pri" style="margin-top:10px" onclick="netRegisterSelf()">Register into network</button></div>`; }
+function netNotInModel(bid){ return `<div style="${_CARD}"><div style="font-family:\'Space Grotesk\';font-weight:600;margin-bottom:6px">${tx('Not in the network model yet')}</div><div style="font-size:13px;color:var(--grey);line-height:1.6">Your entity ${bid?('('+esc(bid)+') '):''}isn't in the <b>cb_*</b> network tree yet — the production backfill (legacy &rarr; cb_entity) hasn't run for it, so the live tree is empty here. Register it into the network now, or it lights up after backfill.</div><button class="composebtn pri" style="margin-top:10px" onclick="netRegisterSelf()">${tx('Register into network')}</button></div>`; }
 async function netCreateBranch(){
   const x=document.getElementById("nb_err"); if(x)x.textContent="";
   const name=val("nb_name"); const parentId=val("nb_parent");
@@ -5160,7 +5160,7 @@ function suppliersScreen(){
           <button class="${UI.supReq?'on':''}" data-testid="sup-tab-req" onclick="supReqOpen()">📋 Required certificates</button>
         </span>
         <button onclick="openAssist('suppliers')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none;margin-inline-start:auto">?</button></div>
-      ${(UI.supFind||UI.supReq)?'':`<div style="display:flex;gap:7px"><input class="inp" id="sp_add" data-testid="sup-add-input" placeholder="Add supplier — type a name, User ID or email" style="flex:1" autocomplete="off" oninput="supSearch(this.value)" onkeydown="if(event.key==='Enter')addSupplier()"><button class="composebtn" data-testid="sup-add" onclick="addSupplier()">Add</button></div>
+      ${(UI.supFind||UI.supReq)?'':`<div style="display:flex;gap:7px"><input class="inp" id="sp_add" data-testid="sup-add-input" placeholder="Add supplier — type a name, User ID or email" style="flex:1" autocomplete="off" oninput="supSearch(this.value)" onkeydown="if(event.key==='Enter')addSupplier()"><button class="composebtn" data-testid="sup-add" onclick="addSupplier()">${tx('Add')}</button></div>
       <div id="sp_sugg" class="ccsugg"></div>
       <div class="err" id="sp_err" style="margin-top:6px"></div>
       <div class="srch" style="margin-top:8px">🔍 <input placeholder="Search suppliers, category, ID" value="${esc(UI.supQ||'')}" oninput="UI.supQ=this.value;paintSupList()"></div>
@@ -5192,7 +5192,7 @@ function supVisible(){
 function supCount(){ return supVisible().length; }
 function supRowHTML(x){
   const id=x.supplier_list_id, label=supName(x), sub=x.nickname?x.display_name:(x.bridge_id||'');
-  const cat=x.has_catalogue?'<span class="optchip" style="background:var(--blue-tint-bg);color:var(--blue);border-color:var(--blue)">📕 catalogue</span>':'<span class="optchip" style="background:var(--warn-tint);color:var(--warn-3)">no catalogue</span>';
+  const cat=x.has_catalogue?'<span class="optchip" style="background:var(--blue-tint-bg);color:var(--blue);border-color:var(--blue)">' + tx('📕 catalogue') + '</span>':'<span class="optchip" style="background:var(--warn-tint);color:var(--warn-3)">no catalogue</span>';
   return `<div class="row ${id===UI.supSel?'sel':''}" data-testid="sup-row-${id}" onclick="selectSupplier('${id}')">
     <button title="Preferred — tap to toggle" onclick="event.stopPropagation();toggleSupPref('${id}')" style="background:none;border:0;font-size:15px;line-height:1;padding:0;color:${x.preferred?'var(--warn-2)':'var(--grey-2)'};flex:0 0 auto;margin-top:1px">${x.preferred?'★':'☆'}</button>
     <div class="main2"><div class="l1"><span class="code">${esc(label)}</span>${x.category?`<span class="optchip" style="background:var(--gold-soft);color:var(--warn-3);border-color:var(--gold-line)">${esc(x.category)}</span>`:''}<span class="amt">${cat}</span></div>
@@ -5258,9 +5258,9 @@ function supInfoCardHTML(x){
     + '<div class="supacts">'
       /* ⚠️ NOT .composebtn — it sets color:#fff for a coloured background, and .supacts button sets background:var(--card).
          The two together rendered white-on-white: the button was there, sized and clickable, and invisible. */
-      + '<button class="supact-pri" data-testid="sup-edit" onclick="event.stopPropagation();supEdit(\''+x.supplier_list_id+'\')">✎ Edit</button>'
+      + '<button class="supact-pri" data-testid="sup-edit" onclick="event.stopPropagation();supEdit(\''+x.supplier_list_id+'\')">' + tx('✎ Edit') + '</button>'
       + '<button data-testid="sup-passport" onclick="event.stopPropagation();viewSupplierPassport(\''+esc(x.bridge_id)+'\',\''+String(supName(x)).replace(/[\\']/g,'')+'\')">Passport <span class=arw>→</span></button>'
-      + '<button data-testid="sup-remove" onclick="event.stopPropagation();delSupplier(\''+x.supplier_list_id+'\')" style="margin-inline-start:auto;color:var(--disp)">Remove</button>'
+      + '<button data-testid="sup-remove" onclick="event.stopPropagation();delSupplier(\''+x.supplier_list_id+'\')" style="margin-inline-start:auto;color:var(--disp)">' + tx('Remove') + '</button>'
     + '</div></div>';
 }
 /**
@@ -5409,7 +5409,7 @@ function supFindBodyHTML(){
                that cannot identify its subject would fail on click rather than be absent. */
             return '<div class="sfline"><span>'+esc(d.name||d.product||'item')+'</span><span class="mono">'
               +esc(fmtMoney(cbAmount(d.price),cur))+' / '+esc(d.unit||'unit')
-              +(p.item_id ? ' <button type="button" data-testid="enq-ask" onclick="enquiryOpen(\''+esc(p.item_id)+'\',\''+esc(String(d.name||d.product||'item').replace(/'/g,''))+'\')" style="margin-inline-start:7px;border:1px solid var(--line);background:var(--card);border-radius:7px;padding:1px 8px;font-size:var(--fs-1);color:var(--blue);cursor:pointer">Ask</button>' : '')
+              +(p.item_id ? ' <button type="button" data-testid="enq-ask" onclick="enquiryOpen(\''+esc(p.item_id)+'\',\''+esc(String(d.name||d.product||'item').replace(/'/g,''))+'\')" style="margin-inline-start:7px;border:1px solid var(--line);background:var(--card);border-radius:7px;padding:1px 8px;font-size:var(--fs-1);color:var(--blue);cursor:pointer">' + tx('Ask') + '</button>' : '')
               +'</span></div>'; }).join('')
         /* ⚠️ SAY WHEN THE LIST IS CUT. Six per supplier is a display cap, and an unannounced cap reads as "that
            is all they have" — the same class of lie as reporting an unreported store as zero. The server knows
@@ -5475,7 +5475,7 @@ function enquiryPaint(){
     : '<div style="color:var(--grey);font-size:var(--fs-2);padding:4px 0 10px">No questions yet. Ask the first one.</div>';
   out += '<textarea id="enq_text" rows="3" placeholder="e.g. is this available in 25kg, and what is the lead time?" style="width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:9px;padding:9px 11px;font-size:13px;resize:vertical;margin-top:6px"></textarea>'
     + '<div class="err" id="enq_err" style="margin-top:6px"></div>'
-    + '<button class="composebtn" data-testid="enq-send" style="margin-top:9px" onclick="enquirySend()">Send question</button>';
+    + '<button class="composebtn" data-testid="enq-send" style="margin-top:9px" onclick="enquirySend()">' + tx('Send question') + '</button>';
   h.innerHTML = out;
 }
 async function enquirySend(){
@@ -5576,14 +5576,14 @@ function paintCustList(){ var b=document.getElementById('cu_rows'); if(b)b.inner
 function paintCustDetail(){ var dp=document.getElementById('detailpane'); if(dp){ dp.className='detail'; dp.innerHTML=custDetailHTML(); } }
 function selectCust(id){ UI.custSel=id; if(UI.vp==='mob'){ UI.mdetail=true; var p=document.getElementById('panel'); if(p)p.classList.add('showdetail'); } paintCustList(); paintCustDetail(); }
 function custDetailHTML(){ var c=(UI.custs||[]).find(function(x){return x.customer_identity_id===UI.custSel;});
-  if(!c) return '<div class="empty"><div class="big">🛍️</div><div class="t">Select a customer</div><div>Your storefront customers — locked under your shop, yours alone.</div></div>';
+  if(!c) return '<div class="empty"><div class="big">🛍️</div><div class="t">' + tx('Select a customer') + '</div><div>Your storefront customers — locked under your shop, yours alone.</div></div>';
   var kv=function(l,v){return '<div class="kv" style="display:flex;gap:8px;padding:9px 13px;border-bottom:1px dashed var(--line);font-size:13px"><b style="min-width:112px;color:var(--grey);font-weight:600;font-size:var(--fs-1);text-transform:uppercase">'+l+'</b><span style="font-weight:600;flex:1">'+(v==null||v===''?'—':v)+'</span></div>';};
   var mono=function(v){return '<span class="mono" style="font-size:var(--fs-1)">'+esc(v||'')+'</span>';};
   var grp=function(t,rows){return '<div class="sec">'+t+'</div><div class="itab" style="border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:12px">'+rows+'</div>';};
   var contact=c.otp_contact||c.phone||custContact(c);
   var oc=String(c.otp_contact||'');
   var chan=(oc?(oc.indexOf('@')<0&&/[0-9]/.test(oc)):!!c.phone)?'📱 Phone':'✉️ Email';
-  return '<div class="dh"><button class="dback" onclick="backToList()">‹ Customers</button><div class="dt">'+esc(c.display_name||contact)+' '+custSeg(c.segment)+'</div><div class="ds">🔒 locked under your shop · your CRM</div></div>'
+  return '<div class="dh"><button class="dback" onclick="backToList()">‹ Customers</button><div class="dt">'+esc(c.display_name||contact)+' '+custSeg(c.segment)+'</div><div class="ds">' + tx('🔒 locked under your shop · your CRM') + '</div></div>'
     +'<div class="db">'
     + grp('Identity &amp; contact',
         kv('Name',esc(c.display_name||'—'))
@@ -5675,7 +5675,7 @@ function supDefaultSubject(x){ return 'Order — '+supName(x); }
 function supStepItems(){
   return supCartHTML()
     + '<div style="margin-top:9px;font-size:11.5px;color:var(--grey)">'
-    + '<span data-testid="sup-add-all" onclick="supAddAll()" style="cursor:pointer;color:var(--blue);font-weight:600">Add everything to the cart</span>'
+    + '<span data-testid="sup-add-all" onclick="supAddAll()" style="cursor:pointer;color:var(--blue);font-weight:600">' + tx('Add everything to the cart') + '</span>'
     + ' — for a short catalogue where ticking each line is the long way round.</div>';
 }
 /** The whole catalogue, ticked. Replaces the old "Compose order — all items", which skipped the cart entirely. */
@@ -5689,11 +5689,11 @@ function supStepDetails(x){
   return '<div class="sec">Your order to '+esc(supName(x))+'</div>'
     + '<label class="fl">Subject <span style="color:var(--disp)">*</span></label>'
     + '<input class="inp" data-testid="sup-subject" value="'+esc(o.subject)+'" oninput="UI._supOrder.subject=this.value;UI._supFlow&&UI._supFlow.paintFoot()">'
-    + '<div class="two"><div><label class="fl">Needed by</label>'
+    + '<div class="two"><div><label class="fl">' + tx('Needed by') + '</label>'
     + '<input class="inp" type="date" data-testid="sup-by" value="'+esc(o.by)+'" oninput="UI._supOrder.by=this.value"></div>'
-    + '<div><label class="fl">Deliver to</label>'
+    + '<div><label class="fl">' + tx('Deliver to') + '</label>'
     + '<input class="inp" data-testid="sup-addr" value="'+esc(o.addr)+'" placeholder="site / address" oninput="UI._supOrder.addr=this.value"></div></div>'
-    + '<label class="fl">Note</label>'
+    + '<label class="fl">' + tx('Note') + '</label>'
     + '<input class="inp" data-testid="sup-note" value="'+esc(o.note)+'" placeholder="instructions" oninput="UI._supOrder.note=this.value">'
     + '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 12px;font-size:var(--fs-2);color:var(--warn-3);margin:10px 0">'
     + txf('Asked for, not agreed — {supplier} confirms the date and the price.',
@@ -5706,7 +5706,7 @@ function supStepReview(x){
     + '<span style="min-width:96px;color:var(--grey);font-size:11.5px">'+k+'</span><span style="flex:1">'+v+'</span></div>'; };
   var card=function(h,inner,edit){ return '<div style="border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-top:8px">'
     + '<div style="background:var(--paper);padding:8px 12px;font-size:var(--fs-1);font-weight:800;color:var(--grey);text-transform:uppercase;letter-spacing:.05em;display:flex">'+h
-    + (edit!=null?'<span style="margin-inline-start:auto;color:var(--blue);cursor:pointer;text-transform:none;letter-spacing:0;font-size:11.5px" onclick="UI._supFlow.go('+edit+')">Change</span>':'')
+    + (edit!=null?'<span style="margin-inline-start:auto;color:var(--blue);cursor:pointer;text-transform:none;letter-spacing:0;font-size:11.5px" onclick="UI._supFlow.go('+edit+')">' + tx('Change') + '</span>':'')
     + '</div>'+inner+'</div>'; };
   return card('To<span style="margin-inline-start:auto;font-weight:400;text-transform:none;letter-spacing:0">fixed — this is their order</span>',
         '<div style="padding:8px 12px;font-size:13px"><b>'+esc(supName(x))+'</b> <span class="mono" style="color:var(--grey);font-size:11.5px">'+esc(x.bridge_id||'')+'</span></div>')
@@ -5766,15 +5766,15 @@ function supSendOrder(x, isDraft){
  */
 function supEdit(id){
   const x=(UI.sups||[]).find(function(s){return s.supplier_list_id===id;}); if(!x) return;
-  modal('<div class="mhd"><div class="t">Edit '+esc(supName(x))+'</div><div class="s">Your own details for this supplier — they never see them</div></div>'
+  modal('<div class="mhd"><div class="t">Edit '+esc(supName(x))+'</div><div class="s">' + tx('Your own details for this supplier — they never see them') + '</div></div>'
     + '<div class="mbody">'
-    + '<label class="fl">Your name for them</label><input class="inp" id="sp_nick" data-testid="sup-nick" value="'+esc(x.nickname||'')+'" placeholder="e.g. Acme (local yard)">'
-    + '<label class="fl">Category / tag</label><input class="inp" id="sp_cat" data-testid="sup-category" value="'+esc(x.category||'')+'">'
-    + '<label class="fl">Notes</label><input class="inp" id="sp_notes" data-testid="sup-notes" value="'+esc(x.notes||'')+'" placeholder="contact person, terms…">'
-    + '<label class="fl" style="margin-top:12px">Preferred</label>'
+    + '<label class="fl">' + tx('Your name for them') + '</label><input class="inp" id="sp_nick" data-testid="sup-nick" value="'+esc(x.nickname||'')+'" placeholder="e.g. Acme (local yard)">'
+    + '<label class="fl">' + tx('Category / tag') + '</label><input class="inp" id="sp_cat" data-testid="sup-category" value="'+esc(x.category||'')+'">'
+    + '<label class="fl">' + tx('Notes') + '</label><input class="inp" id="sp_notes" data-testid="sup-notes" value="'+esc(x.notes||'')+'" placeholder="contact person, terms…">'
+    + '<label class="fl" style="margin-top:12px">' + tx('Preferred') + '</label>'
     + '<div><button onclick="toggleSupPref(\''+id+'\')" style="border:1px solid var(--line);border-radius:9px;background:'+(x.preferred?'var(--blue)':'var(--card)')+';color:'+(x.preferred?'var(--on-accent)':'var(--grey)')+';font-size:12px;font-weight:700;padding:6px 13px">★ '+(x.preferred?'Preferred':'Not preferred')+'</button></div>'
     + '<div class="err" id="sp_ederr" style="margin-top:8px"></div></div>'
-    + '<div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="pri" data-testid="sup-save" onclick="saveSupplier(\''+id+'\')">Save</button></div>');
+    + '<div class="mfoot"><button onclick="closeModal()">' + tx('Cancel') + '</button><button class="pri" data-testid="sup-save" onclick="saveSupplier(\''+id+'\')">' + tx('Save') + '</button></div>');
 }
 /* ⚠️ supOpenProfile() WAS HERE AND IS GONE (2026-08-16). It rendered the supplier's record in a modal — the same
    fields supInfoCardHTML() now shows in the left panel, with its own copy of the clearance wording that had
@@ -5960,7 +5960,7 @@ async function viewSupplierPassport(bridge, name){
   var who = name || bridge;
   modal('<div class="mhd">🛂 '+esc(who)+' — trade readiness</div><div class="mbody" id="pp_body">'
     + '<div class="loadwrap"><span class="spin"></span> reading their passport…</div></div>'
-    + '<div class="mfoot"><button class="pri" onclick="closeModal()">Close</button></div>', true);
+    + '<div class="mfoot"><button class="pri" onclick="closeModal()">' + tx('Close') + '</button></div>', true);
   try{
     var d = await api('readinessOf', { params: { bridge_id: bridge } });
     var body = document.getElementById('pp_body'); if(!body) return;
@@ -5992,7 +5992,7 @@ async function viewSupplierPassport(bridge, name){
               : '<div style="font-size:var(--fs-2);color:var(--grey)">They have no clearances recorded yet.</div>')
       + '<div style="font-size:11.5px;color:var(--grey);margin-top:12px;border-top:1px solid var(--line);padding-top:8px">'
       + 'Status and validity only — the documents themselves stay with '+label+'. Nothing here is your own readiness; '
-      + 'for that, open <b>Trade readiness</b> from the menu.</div>';
+      + 'for that, open <b>' + tx('Trade readiness') + '</b> from the menu.</div>';
   }catch(e){
     var b2 = document.getElementById('pp_body');
     if(b2) b2.innerHTML = '<div style="font-size:var(--fs-2);color:var(--disp)">'+esc((e&&e.message)||'Could not read their passport.')+'</div>';
@@ -6008,9 +6008,9 @@ function supDetailHTML(){
    * from Alpha appeared beside a catalogue headed Gamma. Two panes answering different questions with no sign
    * that they are unrelated is worse than one pane saying nothing.
    */
-  if(UI.supFind) return `<div class="empty"><div class="big">🔎</div><div class="t">Searching every supplier</div>`
+  if(UI.supFind) return `<div class="empty"><div class="big">🔎</div><div class="t">${tx('Searching every supplier')}</div>`
     + `<div>Results are on the left, grouped by who stocks it. Pick <b>Open <span class=arw>→</span></b> on one to bring their catalogue back here.</div></div>`;
-  if(!x) return `<div class="empty"><div class="big">🏭</div><div class="t">Select a supplier</div><div>Pick one to see their profile and catalogue, then compose an order.</div></div>`;
+  if(!x) return `<div class="empty"><div class="big">🏭</div><div class="t">${tx('Select a supplier')}</div><div>Pick one to see their profile and catalogue, then compose an order.</div></div>`;
   const back=`<button class="dback" onclick="backToList()">‹ Suppliers</button>`;
   /* ⚠️ NO View/Edit TOGGLE HERE ANY MORE — this pane is the products. The record and its Edit button live on the
      left card (supInfoCardHTML). The heading keeps only what names the catalogue you are looking at. */
@@ -6077,13 +6077,13 @@ function supDetailHTML(){
     /* The chip is a CERTIFICATES warning, so it opens the certificates — the passport — not the profile. */
     const chip=`<div style="padding:2px 0 0"><div data-testid="sup-chip" onclick="viewSupplierPassport('${esc(x.bridge_id)}','${String(supName(x)).replace(/[\\']/g,'')}')" style="display:inline-flex;align-items:center;gap:9px;border:1px solid ${bad?'var(--gold-line)':'var(--line)'};border-radius:22px;padding:6px 8px 6px 13px;background:${bad?'var(--gold-soft)':'var(--card)'};color:${bad ? 'var(--on-card)' : 'var(--on-card)'};cursor:pointer">`
       + `<span style="font-size:11.5px;color:${bad?'var(--warn-2)':'var(--ok-2)'};font-weight:700">${warnTxt}</span>`
-      + `<span style="background:var(--paper);border-radius:20px;padding:3px 10px;font-size:11.5px;color:var(--blue);font-weight:700">Details ›</span></div></div>`;
+      + `<span style="background:var(--paper);border-radius:20px;padding:3px 10px;font-size:11.5px;color:var(--blue);font-weight:700">${tx('Details ›')}</span></div></div>`;
     let catcard;
-    if(!x.has_catalogue) catcard=`<div class="sec">Order from them</div><div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;font-size:12px;color:var(--warn-3)">No catalogue published yet — nothing to order.</div>`;
-    else if(d.loading) catcard=`<div class="sec">Order from them</div><div class="loadwrap" style="justify-content:flex-start;padding:6px 0"><span class="spin"></span> loading catalogue…</div>`;
+    if(!x.has_catalogue) catcard=`<div class="sec">${tx('Order from them')}</div><div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;font-size:12px;color:var(--warn-3)">No catalogue published yet — nothing to order.</div>`;
+    else if(d.loading) catcard=`<div class="sec">${tx('Order from them')}</div><div class="loadwrap" style="justify-content:flex-start;padding:6px 0"><span class="spin"></span> loading catalogue…</div>`;
     // has_catalogue, finished loading, and still no cart → the READ failed. Say so; rendering nothing at all would
     // look like a supplier who publishes nothing, which is a different and wrong fact.
-    else catcard=`<div class="sec">Order from them</div><div style="background:var(--danger-tint);border:1px solid #f0c9c6;border-radius:9px;padding:9px 11px;font-size:12px;color:var(--disp)">${esc(d.err||'Could not read their catalogue.')} <span onclick="selectSupplier('${x.supplier_list_id}')" style="cursor:pointer;color:var(--blue);font-weight:600">Try again</span></div>`;
+    else catcard=`<div class="sec">${tx('Order from them')}</div><div style="background:var(--danger-tint);border:1px solid #f0c9c6;border-radius:9px;padding:9px 11px;font-size:12px;color:var(--disp)">${esc(d.err||'Could not read their catalogue.')} <span onclick="selectSupplier('${x.supplier_list_id}')" style="cursor:pointer;color:var(--blue);font-weight:600">${tx('Try again')}</span></div>`;
     const stepped = x.has_catalogue && !d.loading && UI._supFlow;
     body = chip + (stepped
       ? `<div id="sup_rail">${UI._supFlow.railHTML()}</div><div style="font-size:11.5px;color:var(--grey);margin:0 0 8px" id="sup_sub">${esc(UI._supFlow.steps()[UI._supFlow.index()].t||'')}</div>`
@@ -6099,7 +6099,7 @@ function supDetailHTML(){
 }
 let _spSearchT=null;
 function supSearch(q){ clearTimeout(_spSearchT); q=(q||'').trim(); const h=document.getElementById('sp_sugg'); if(q.length<2){ if(h)h.innerHTML=''; return; } _spSearchT=setTimeout(async function(){ try{ const r=await api("entitySearch",{query:{q:q}}); supRenderSugg(Array.isArray(r)?r:((r&&r.results)||[])); }catch(_){ const hh=document.getElementById('sp_sugg'); if(hh)hh.innerHTML=''; } }, 250); }
-function supRenderSugg(list){ UI._supSugg=list||[]; const h=document.getElementById('sp_sugg'); if(!h)return; if(!UI._supSugg.length){ h.innerHTML='<div class="ccsugg-empty">No matching business found</div>'; return; } h.innerHTML=UI._supSugg.slice(0,8).map(function(e,i){ return '<div class="ccsugg-item" onclick="supPick('+i+')"><span class="ccsugg-nm">'+esc(e.display_name||'')+'</span><span class="ccsugg-id">'+esc(e.bridge_id||'')+'</span></div>'; }).join(''); }
+function supRenderSugg(list){ UI._supSugg=list||[]; const h=document.getElementById('sp_sugg'); if(!h)return; if(!UI._supSugg.length){ h.innerHTML='<div class="ccsugg-empty">' + tx('No matching business found') + '</div>'; return; } h.innerHTML=UI._supSugg.slice(0,8).map(function(e,i){ return '<div class="ccsugg-item" onclick="supPick('+i+')"><span class="ccsugg-nm">'+esc(e.display_name||'')+'</span><span class="ccsugg-id">'+esc(e.bridge_id||'')+'</span></div>'; }).join(''); }
 async function supPick(i){ const e=(UI._supSugg||[])[i]; if(!e)return; const h=document.getElementById('sp_sugg'); if(h)h.innerHTML=''; const err=document.getElementById('sp_err'); if(err)err.textContent=''; const a=document.getElementById('sp_add'); if(a)a.value=e.display_name||'';
   /* ⚠️ confirmAsk, NOT a second confirm helper — this file already had one (line ~2885), and I very nearly wrote
      a parallel Promise-based twin before spotting it. Callback style is what it offers, so the work moves inside. */
@@ -6419,8 +6419,8 @@ function refFinishRow(it,i){
     +(it.inspiration?'<div style="font-size:12px;color:var(--grey-2);margin:4px 0 7px;line-height:1.5">'+esc(it.inspiration)+'</div>':'')
     +(chips?'<div style="display:flex;gap:5px;flex-wrap:wrap;margin:6px 0 7px">'+chips+'</div>':'')
     +(facts.length?'<div style="font-size:11.5px;color:var(--ink-2);margin:5px 0 2px;line-height:1.55">'+facts.join(' · ')+'</div>':'')
-    +(combos.length?'<div style="font-size:var(--fs-1);color:var(--grey-4);text-transform:uppercase;letter-spacing:.4px;font-weight:700;margin-bottom:2px">Colour combinations</div>'+combos.map(_combo).join(''):'')
-    +'<div style="font-size:var(--fs-1);color:var(--grey-4);margin-top:7px">'+(applied.length?applied.join(' · ')+' · ':'')+'<span style="color:var(--purple-2)">🎨 referenced</span></div>'
+    +(combos.length?'<div style="font-size:var(--fs-1);color:var(--grey-4);text-transform:uppercase;letter-spacing:.4px;font-weight:700;margin-bottom:2px">' + tx('Colour combinations') + '</div>'+combos.map(_combo).join(''):'')
+    +'<div style="font-size:var(--fs-1);color:var(--grey-4);margin-top:7px">'+(applied.length?applied.join(' · ')+' · ':'')+'<span style="color:var(--purple-2)">' + tx('🎨 referenced') + '</span></div>'
   +'</div>'; }
 function refCatRowsHTML(){ var rc=UI.refCat||[]; if(!rc.length) return '';
   var groups={}, order=[]; rc.forEach(function(it,i){ var s=it._source||'?'; if(!groups[s]){groups[s]=[];order.push(s);} groups[s].push(i); });   // STONE 3: group by SOURCE (each brand distinct)
@@ -6430,7 +6430,7 @@ function refCatRowsHTML(){ var rc=UI.refCat||[]; if(!rc.length) return '';
   return body+'<div style="padding:5px 13px 9px;font-size:var(--fs-1);color:var(--grey-4);border-bottom:1px solid var(--line)">Shared design &amp; colour by reference · your prices · each brand runs under its own rules · <span style="color:var(--blue);cursor:pointer;font-weight:600" onclick="UI.nav=\'cataloguesetup\';renderApp()">manage in ⚙ Catalogue setup</span></div>'; }
 function prodRowsHTML(){ const ref=refCatRowsHTML(); const r=prodVisible();
   if(!ref && !r.length) return emptyState('🗂️','No products yet','Add your first, or adopt a whole catalogue via 🤖 AI.',{label:'+ New product',onclick:'newProduct()'});
-  const prods = r.length ? ('<div style="padding:9px 13px 4px;font-size:var(--fs-1);color:var(--grey-4);text-transform:uppercase;letter-spacing:.4px;font-weight:800">🗂️ Your products</div>'+r.map(prodRowHTML).join('')) : '';
+  const prods = r.length ? ('<div style="padding:9px 13px 4px;font-size:var(--fs-1);color:var(--grey-4);text-transform:uppercase;letter-spacing:.4px;font-weight:800">' + tx('🗂️ Your products') + '</div>'+r.map(prodRowHTML).join('')) : '';
   return ref + prods; }
 function selectRefFinish(i){ UI.refSel=i; UI.prodSel=null; UI.prodMode='view'; if(UI.vp==='mob'){ UI.mdetail=true; var p=document.getElementById('panel'); if(p)p.classList.add('showdetail'); } paintProdList(); paintProdDetail(); }
 function backToRefList(){ UI.refSel=null; UI.mdetail=false; var p=document.getElementById('panel'); if(p)p.classList.remove('showdetail'); paintProdList(); paintProdDetail(); }
@@ -6446,10 +6446,10 @@ function refFinishDetail(it){
     +(photo?'<div style="margin-bottom:12px;display:flex">'+photo+'</div>':'')
     +(it.inspiration?'<div style="font-size:13px;color:var(--ink-2);line-height:1.6;margin-bottom:10px">'+esc(it.inspiration)+'</div>':'')
     +(chips?'<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px">'+chips+'</div>':'')
-    +(facts.length?'<div class="sec">Details</div><div style="font-size:var(--fs-2);color:var(--ink-2);line-height:1.8;margin-bottom:4px">'+facts.join('<br>')+'</div>':'')
-    +(combos.length?'<div class="sec">Colour combinations</div>'+combos.map(_combo).join(''):'')
+    +(facts.length?'<div class="sec">' + tx('Details') + '</div><div style="font-size:var(--fs-2);color:var(--ink-2);line-height:1.8;margin-bottom:4px">'+facts.join('<br>')+'</div>':'')
+    +(combos.length?'<div class="sec">' + tx('Colour combinations') + '</div>'+combos.map(_combo).join(''):'')
     +(applied.length?'<div style="font-size:11.5px;color:var(--grey-4);margin-top:10px">'+applied.join(' · ')+'</div>':'')
-    +'<div class="sec" style="margin-top:14px">Price</div><div style="font-size:17px;font-weight:800">'+(p?(esc(inr(p.v))+(p.u?' <span style="font-size:12px;color:var(--grey-4);font-weight:400">/ '+esc(p.u)+'</span>':'')):'<span style="color:var(--grey-4);font-size:13px">not priced yet</span>')+'</div>'
+    +'<div class="sec" style="margin-top:14px">' + tx('Price') + '</div><div style="font-size:17px;font-weight:800">'+(p?(esc(inr(p.v))+(p.u?' <span style="font-size:12px;color:var(--grey-4);font-weight:400">/ '+esc(p.u)+'</span>':'')):'<span style="color:var(--grey-4);font-size:13px">not priced yet</span>')+'</div>'
     +'<div style="font-size:var(--fs-1);color:var(--grey-4);margin-top:12px;font-family:\'Space Mono\'">🎨 referenced from the shared source · no copy · <span style="color:var(--blue);cursor:pointer" onclick="UI.nav=\'cataloguesetup\';renderApp()">manage prices</span></div>'
   +'</div>';
   return head+body;
@@ -6463,7 +6463,7 @@ async function loadCatalogue(){
     UI._prodLoading=false; paintProdList();
     if(UI.prodSel && !UI.prods.some(p=>prodId(p)===UI.prodSel)){ UI.prodSel=null; }
     if(UI.prodMode!=='new'){ if(!UI.prodSel && UI.prods.length && UI.vp!=='mob'){ selectProduct(prodId(UI.prods[0]), true); } else paintProdDetail(); }
-  }catch(e){ UI._prodLoading=false; const rb2=document.getElementById('ct_rows'); if(rb2)rb2.innerHTML=`<div class="empty"><div class="t">Couldn't load</div><div>${esc(e.message)}</div></div>`; }
+  }catch(e){ UI._prodLoading=false; const rb2=document.getElementById('ct_rows'); if(rb2)rb2.innerHTML=`<div class="empty"><div class="t">${tx('Couldn\'t load')}</div><div>${esc(e.message)}</div></div>`; }
 }
 function selectProduct(id, silent){ UI.refSel=null; UI.prodSel=id; UI.prodMode='view';
   if((UI.vp==='mob') && !silent){ UI.mdetail=true; const p=document.getElementById('panel'); if(p)p.classList.add('showdetail'); }
@@ -6540,12 +6540,12 @@ async function downloadCatalogueTemplate(btn){
       return '<span style="display:inline-block;border:1px solid var(--line);border-radius:6px;padding:2px 7px;margin:0 4px 4px 0;font-size:11.5px;font-family:ui-monospace,monospace;'
         + (opt ? 'color:var(--grey);border-style:dashed' : 'font-weight:600') + '">' + esc(c) + '</span>';
     }).join('');
-    modal('<div class="mhd">📄 Catalogue template</div><div class="mbody">'
+    modal('<div class="mhd">' + tx('📄 Catalogue template') + '</div><div class="mbody">'
       + '<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:9px">Downloaded as <b>' + esc(t.filename||'') + '</b> — these are the columns your catalogue accepts. Dashed ones are optional.</div>'
       + '<div style="margin-bottom:10px">' + cols + '</div>'
       + '<ul style="font-size:var(--fs-2);line-height:1.65;padding-inline-start:18px;margin:0">'
       + (t.notes||[]).map(function(n){ return '<li>' + esc(n) + '</li>'; }).join('')
-      + '</ul></div><div class="mfoot"><button class="pri" onclick="closeModal()">Got it</button></div>');
+      + '</ul></div><div class="mfoot"><button class="pri" onclick="closeModal()">' + tx('Got it') + '</button></div>');
   }catch(e){
     if(typeof toast === 'function') toast((e && e.message) || 'Could not build the template.');
   }finally{
@@ -6565,14 +6565,14 @@ async function downloadCatalogueTemplate(btn){
  */
 function checkCatalogueFile(){
   UI._cf = null;
-  modal('<div class="mhd">🔍 Check a file</div><div class="mbody">'
+  modal('<div class="mhd">' + tx('🔍 Check a file') + '</div><div class="mbody">'
     + '<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:10px">Choose a spreadsheet or paste it below. We read the column headings and show how they line up with your catalogue. <b>Nothing is imported until you say so.</b></div>'
     + '<input type="file" accept=".csv,text/csv" data-testid="cat-check-file" onchange="_cfPick(this)" style="font-size:var(--fs-2);margin-bottom:9px">'
     + '<textarea id="cf_text" data-testid="cat-check-text" placeholder="…or paste the rows here, heading row first" style="width:100%;min-height:110px;border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:var(--fs-2);font-family:ui-monospace,monospace;resize:vertical;background:var(--paper);color:var(--on-bg)"></textarea>'
     + '<div id="cf_out" style="margin-top:10px"></div>'
-    + '</div><div class="mfoot"><button class="pri" data-testid="cat-check-run" onclick="_cfRun(this)">Check</button>'
-    + '<button id="cf_import" data-testid="cat-import-run" onclick="_cfImport(this)" disabled title="Check a file first" style="opacity:.5">Import</button>'
-    + '<button onclick="closeModal()">Close</button></div>', true);
+    + '</div><div class="mfoot"><button class="pri" data-testid="cat-check-run" onclick="_cfRun(this)">' + tx('Check') + '</button>'
+    + '<button id="cf_import" data-testid="cat-import-run" onclick="_cfImport(this)" disabled title="Check a file first" style="opacity:.5">' + tx('Import') + '</button>'
+    + '<button onclick="closeModal()">' + tx('Close') + '</button></div>', true);
 }
 /**
  * declareVariants — one product, several purchasable lines.
@@ -6600,13 +6600,13 @@ async function declareVariants(){
     const NOT = ['quantity','price','price_min','price_max','price_currency','available_qty','availability','order_input'];
     const pick = fields.filter(function(f){ return NOT.indexOf(f.field_key) < 0; });
     if(!pick.length){
-      modal('<div class="mhd">🔗 Variants</div><div class="mbody"><div style="font-size:var(--fs-2)">Your catalogue has no columns to group by yet. Add one from a spreadsheet or a standard set first.</div></div><div class="mfoot"><button class="pri" onclick="closeModal()">OK</button></div>');
+      modal('<div class="mhd">' + tx('🔗 Variants') + '</div><div class="mbody"><div style="font-size:var(--fs-2)">Your catalogue has no columns to group by yet. Add one from a spreadsheet or a standard set first.</div></div><div class="mfoot"><button class="pri" onclick="closeModal()">OK</button></div>');
       return;
     }
     const opt = function(f, sel){ return '<option value="'+esc(f.field_key)+'"'+(sel===f.field_key?' selected':'')+'>'+esc(f.field_name||f.field_key)+'</option>'; };
     const chk = (cur.options)||[];
     UI._vf = face && face.face ? face.face : {};
-    modal('<div class="mhd">🔗 Variants</div><div class="mbody">'
+    modal('<div class="mhd">' + tx('🔗 Variants') + '</div><div class="mbody">'
       + '<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:12px">A product can have several purchasable lines — three pack sizes of one paint. Each line keeps its own code and its own price; this only says which lines belong together.</div>'
       + '<label class="fl">Which column identifies a line?</label>'
       + '<select id="v_key" class="inp" style="width:100%;margin-bottom:11px">'+pick.map(function(f){ return opt(f, (cur.key&&cur.key[0])||'sku'); }).join('')+'</select>'
@@ -6616,7 +6616,7 @@ async function declareVariants(){
       + '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:5px">'
       + pick.map(function(f){ return '<label style="font-size:var(--fs-2);display:flex;align-items:center;gap:5px;border:1px solid var(--line);border-radius:9px;padding:4px 9px"><input type="checkbox" data-vopt="'+esc(f.field_key)+'"'+(chk.indexOf(f.field_key)>=0?' checked':'')+'> '+esc(f.field_name||f.field_key)+'</label>'; }).join('')
       + '</div><div id="v_out" style="margin-top:11px"></div>'
-      + '</div><div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="pri" data-testid="cat-variants-save" onclick="_vSave(this)">Save grouping</button></div>');
+      + '</div><div class="mfoot"><button onclick="closeModal()">' + tx('Cancel') + '</button><button class="pri" data-testid="cat-variants-save" onclick="_vSave(this)">' + tx('Save grouping') + '</button></div>');
   }catch(e){ if(typeof toast==='function') toast((e&&e.message)||'Could not load your columns.'); }
 }
 async function _vSave(btn){
@@ -6662,11 +6662,11 @@ async function startFromStandardSet(){
   try{
     const r = await api('prodStarters');
     const opts = (r.verticals||[]).map(function(v){ return '<option value="'+esc(v.key)+'">'+esc(v.title)+' — '+v.field_count+' columns</option>'; }).join('');
-    modal('<div class="mhd">📐 Start from a standard set</div><div class="mbody">'
+    modal('<div class="mhd">' + tx('📐 Start from a standard set') + '</div><div class="mbody">'
       + '<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:10px">A new catalogue starts with name, unit and price. Pick the trade you are in and we add the columns that trade expects — you can still add your own from a spreadsheet afterwards.</div>'
       + '<select id="cf_vert" data-testid="cat-starter-pick" class="inp" style="width:100%">'+opts+'</select>'
       + '<div id="cf_vout" style="margin-top:10px"></div>'
-      + '</div><div class="mfoot"><button class="pri" data-testid="cat-starter-adopt" onclick="_cfAdoptSet(this)">Add these columns</button><button onclick="closeModal()">Close</button></div>');
+      + '</div><div class="mfoot"><button class="pri" data-testid="cat-starter-adopt" onclick="_cfAdoptSet(this)">' + tx('Add these columns') + '</button><button onclick="closeModal()">' + tx('Close') + '</button></div>');
   }catch(e){ if(typeof toast==='function') toast((e&&e.message)||'Could not load the standard sets.'); }
 }
 async function _cfAdoptSet(btn){
@@ -6719,14 +6719,14 @@ async function _cfRun(btn){
       if(m.how === 'blocked' || m.how === 'empty'){
         control = '<span style="font-size:11.5px;color:'+h[1]+'">not importable</span>';
       } else {
-        var opts = ['<option value="ignore">Leave it out</option>'];
+        var opts = ['<option value="ignore">' + tx('Leave it out') + '</option>'];
         accepted.forEach(function(f){
           var sel = (m.canonical === f) ? ' selected' : '';
           opts.push('<option value="map:'+esc(f)+'"'+sel+'>Use as '+esc(f)+'</option>');
         });
         // Only offer to CREATE where nothing in the catalogue claimed it — otherwise the obvious click is the one
         // that grows a second column meaning the same thing.
-        if(!m.canonical) opts.push('<option value="create" selected>Add as a new column</option>');
+        if(!m.canonical) opts.push('<option value="create" selected>' + tx('Add as a new column') + '</option>');
         control = '<select data-cfcol="'+esc(m.incoming||'')+'" data-testid="cf-decide-'+i+'" class="inp" style="font-size:12px;padding:3px 6px;width:100%">'+opts.join('')+'</select>';
       }
       return '<tr>'
@@ -6743,7 +6743,7 @@ async function _cfRun(btn){
       ? '<span style="background:var(--danger-tint);color:var(--disp);border-radius:6px;padding:3px 9px;font-size:11.5px;font-weight:700">'+s.errors+' row problem(s) — fix the file first</span>'
       : (r.ready
         ? '<span style="background:var(--ok-tint);color:var(--disp);border-radius:6px;padding:3px 9px;font-size:11.5px;font-weight:700">Every column is placed</span>'
-        : '<span style="background:var(--warn-tint);color:var(--warn-3);border-radius:6px;padding:3px 9px;font-size:11.5px;font-weight:700">Check the choices below, then import</span>');
+        : '<span style="background:var(--warn-tint);color:var(--warn-3);border-radius:6px;padding:3px 9px;font-size:11.5px;font-weight:700">' + tx('Check the choices below, then import') + '</span>');
     var issues = (r.issues||[]).slice(0,25).map(function(i){
       var c = i.severity==='error' ? 'var(--disp)' : (i.severity==='info' ? 'var(--grey-2)' : 'var(--warn-2)');
       return '<li style="color:'+c+'">line '+i.row+' · <b>'+esc(i.column)+'</b> — '+esc(i.message)+'</li>';
@@ -6755,9 +6755,9 @@ async function _cfRun(btn){
       + ['In your file','','What to do with it','Why'].map(function(h){ return '<th style="text-align:start;padding:5px 8px;font-size:var(--fs-1);text-transform:uppercase;color:var(--grey);border-bottom:1px solid var(--line)">'+h+'</th>'; }).join('')
       + '</tr></thead><tbody>'+rowsHtml+'</tbody></table></div>'
       + ((r.notes||[]).length ? '<ul style="font-size:12px;line-height:1.6;padding-inline-start:18px;margin:10px 0 0">'+r.notes.map(function(n){ return '<li>'+esc(n)+'</li>'; }).join('')+'</ul>' : '')
-      + (issues ? '<div style="font-size:var(--fs-1);text-transform:uppercase;color:var(--grey);margin:10px 0 4px">Rows</div><ul style="font-size:12px;line-height:1.6;padding-inline-start:18px;margin:0">'+issues+'</ul>'
+      + (issues ? '<div style="font-size:var(--fs-1);text-transform:uppercase;color:var(--grey);margin:10px 0 4px">' + tx('Rows') + '</div><ul style="font-size:12px;line-height:1.6;padding-inline-start:18px;margin:0">'+issues+'</ul>'
           + ((r.issues||[]).length>25 ? '<div style="font-size:11.5px;color:var(--grey);margin-top:5px">…and '+((r.issues||[]).length-25)+' more.</div>' : '') : '')
-      + '<div style="font-size:11.5px;color:var(--grey);margin-top:11px;border-top:1px solid var(--line);padding-top:8px">Reading the file changed nothing. <b>Import</b> applies the choices above — it adds and updates products, and never deletes one.</div>';
+      + '<div style="font-size:11.5px;color:var(--grey);margin-top:11px;border-top:1px solid var(--line);padding-top:8px">Reading the file changed nothing. <b>' + tx('Import') + '</b> applies the choices above — it adds and updates products, and never deletes one.</div>';
 
     // The Import button is enabled only when the file itself is sound. Row errors are not a warning to click past:
     // the server refuses them too, and offering the button anyway teaches people to ignore it.
@@ -6844,9 +6844,9 @@ function ctCategoryField(d){
     return '';
   }
   const cur = catgIdsOf(d), names = catgNamesOf(d);
-  if(!_CATG.length && !cur.length) return '<label class="fl">Categories</label><div style="font-size:12px;color:var(--grey);margin:2px 0 4px">None yet. <span onclick="ctNewCategory()" style="color:var(--blue);font-weight:600;cursor:pointer">Create one</span>, or manage them under <span onclick="navTo(\'categories\')" style="color:var(--blue);font-weight:600;cursor:pointer">Categories</span>.</div>';
+  if(!_CATG.length && !cur.length) return '<label class="fl">' + tx('Categories') + '</label><div style="font-size:12px;color:var(--grey);margin:2px 0 4px">None yet. <span onclick="ctNewCategory()" style="color:var(--blue);font-weight:600;cursor:pointer">' + tx('Create one') + '</span>, or manage them under <span onclick="navTo(\'categories\')" style="color:var(--blue);font-weight:600;cursor:pointer">' + tx('Categories') + '</span>.</div>';
   const orphans = cur.filter(id => !_CATG.some(c => c.id === id));
-  return '<label class="fl">Categories</label>'
+  return '<label class="fl">' + tx('Categories') + '</label>'
     + '<div class="ctcatgs" id="ct_categories" data-testid="cat-field-category">'
     +   _CATG.map(function(c){
           const on = cur.indexOf(c.id) >= 0;
@@ -6900,7 +6900,7 @@ function ctNewCategory(){
     })
     .catch(function(){ toast('Could not open that — categories are also under Definitions → Categories.', true); });
 }
-function prodEditForm(d){ return ctField('name','Name',d.name||'')+`<div style="display:flex;gap:10px"><div style="flex:1">`+ctField('unit','Unit',d.unit||'',"placeholder=\"piece / kg / tonne\"")+`</div><div style="flex:1"><label class="fl">Price</label><div style="display:flex;align-items:stretch"><span style="display:flex;align-items:center;padding:0 11px;border:1px solid var(--line);border-inline-end:0;border-radius:9px 0 0 10px;background:var(--warn-tint);color:var(--warn-3);font-weight:700;font-size:13.5px;white-space:nowrap" title="${myCur()} — your business currency">${esc(curSym())}</span><input class="inp" id="ct_price" data-testid="cat-field-price" inputmode="numeric" style="border-radius:0 10px 10px 0" value="${cbHasPrice(d.price)?cbAmount(d.price):''}"></div></div></div>`+ctField('code','Code / HSN',pCode(d))+ctCategoryField(d)+`<label class="fl">Description</label><textarea class="inp" id="ct_desc" data-testid="cat-field-desc" style="width:100%;border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:13.5px;min-height:58px;resize:vertical;background:var(--paper);color:var(--on-bg)">${esc(pDesc(d))}</textarea>`; }
+function prodEditForm(d){ return ctField('name','Name',d.name||'')+`<div style="display:flex;gap:10px"><div style="flex:1">`+ctField('unit','Unit',d.unit||'',"placeholder=\"piece / kg / tonne\"")+`</div><div style="flex:1"><label class="fl">${tx('Price')}</label><div style="display:flex;align-items:stretch"><span style="display:flex;align-items:center;padding:0 11px;border:1px solid var(--line);border-inline-end:0;border-radius:9px 0 0 10px;background:var(--warn-tint);color:var(--warn-3);font-weight:700;font-size:13.5px;white-space:nowrap" title="${myCur()} — your business currency">${esc(curSym())}</span><input class="inp" id="ct_price" data-testid="cat-field-price" inputmode="numeric" style="border-radius:0 10px 10px 0" value="${cbHasPrice(d.price)?cbAmount(d.price):''}"></div></div></div>`+ctField('code','Code / HSN',pCode(d))+ctCategoryField(d)+`<label class="fl">${tx('Description')}</label><textarea class="inp" id="ct_desc" data-testid="cat-field-desc" style="width:100%;border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:13.5px;min-height:58px;resize:vertical;background:var(--paper);color:var(--on-bg)">${esc(pDesc(d))}</textarea>`; }
 /* ═══ EVERY FIELD THIS ITEM CARRIES ════════════════════════════════════════════════════════════════════════════
  * Athi, 2026-08-13: *"the other information like synonym etc are not visible… clicking one item possibly bring
  * the field name and its item vertically as an overlay showcasing all the fields but graying the field which
@@ -7017,7 +7017,7 @@ async function prodAllFields(id){
   /* ⭐ ANYTHING THE GROUPS DID NOT CLAIM. This is what makes the overlay survive a new field being added. */
   const rest = Object.keys(d).filter(function(k){ return !shown.has(k); });
   if (rest.length) {
-    body += '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin:14px 0 2px">Other</div>'
+    body += '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin:14px 0 2px">' + tx('Other') + '</div>'
       + rest.map(function(k){ return catFieldRow(k, d[k]); }).join('');
   }
   /* ── available, not used ─────────────────────────────────────────────────────────────────────────────────── */
@@ -7051,7 +7051,7 @@ async function prodAllFields(id){
   }
 
   /* The row's own identifiers, always read-only — where this record lives, not what it says. */
-  body += '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin:14px 0 2px">Reference</div>'
+  body += '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin:14px 0 2px">' + tx('Reference') + '</div>'
     + catFieldRow('item_id', p.item_id) + catFieldRow('schema_id', p.schema_id)
     + catFieldRow('created_at', p.created_at) + catFieldRow('updated_at', p.updated_at);
 
@@ -7069,12 +7069,12 @@ async function prodAllFields(id){
   modal('<h3 style="margin:0 0 3px">' + esc(pName(d)) + (d.variant ? ' <span style="color:var(--grey);font-weight:500">· ' + esc(d.variant) + '</span>' : '') + '</h3>'
     + '<div style="font-size:12px;margin-bottom:4px"><span style="color:' + stCol + ';font-weight:700">' + esc(st) + '</span>'
     + '<span style="color:var(--grey)"> · ' + Object.keys(d).length + ' fields on this item</span>' + compl + '</div>'
-    + '<div style="font-size:11.5px;color:var(--grey);margin-bottom:6px">🔒 marks a field written by another system or stamped by an event — shown, never edited. <i>Not set</i> marks a field this catalogue has and this item leaves blank.</div>'
+    + '<div style="font-size:11.5px;color:var(--grey);margin-bottom:6px">🔒 marks a field written by another system or stamped by an event — shown, never edited. <i>' + tx('Not set') + '</i> marks a field this catalogue has and this item leaves blank.</div>'
     + '<div style="max-height:52vh;overflow-y:auto">' + body + '</div>'
     + '<div style="display:flex;gap:8px;margin-top:14px">'
-    + '<button class="btn" style="flex:1" onclick="closeModal()">Close</button>'
-    + '<button class="btn" style="flex:1" onclick="closeModal();prodStatusPick(\'' + id + '\')">Set status</button>'
-    + '<button class="btn pri" style="flex:1" onclick="closeModal();selectProduct(\'' + id + '\');setProdMode(\'edit\')">✎ Edit</button></div>', true);
+    + '<button class="btn" style="flex:1" onclick="closeModal()">' + tx('Close') + '</button>'
+    + '<button class="btn" style="flex:1" onclick="closeModal();prodStatusPick(\'' + id + '\')">' + tx('Set status') + '</button>'
+    + '<button class="btn pri" style="flex:1" onclick="closeModal();selectProduct(\'' + id + '\');setProdMode(\'edit\')">' + tx('✎ Edit') + '</button></div>', true);
 }
 
 /* ── set the lifecycle flag — Athi: "so we don't need to amend the catalogue, but we can set the flag" ──────── */
@@ -7092,7 +7092,7 @@ function prodStatusPick(id){
     + opt('unavailable', 'Not available (for now)', 'still matches, so the order records what they asked for — flagged as unable to ship')
     + opt('retired', 'Retired', 'no longer sold. New orders stop resolving to it; old chits are untouched')
     + opt('redundant', 'Redundant', 'replaced by another item — needs to say which')
-    + '<button class="btn" style="width:100%;margin-top:4px" onclick="closeModal()">Cancel</button>');
+    + '<button class="btn" style="width:100%;margin-top:4px" onclick="closeModal()">' + tx('Cancel') + '</button>');
 }
 function prodSetStatus(id, status){
   /* ⚠️ ASKED FOR, NOT REQUIRED — "Not available" with no end is indistinguishable from retired to everyone
@@ -7101,7 +7101,7 @@ function prodSetStatus(id, status){
   if (status === 'unavailable') {
     return promptAsk('Not available — until when?',
       { label:'Back on which date?', placeholder:'YYYY-MM-DD', okLabel:'Set',
-        hint:'Leave it and press <b>I don’t know</b> if there is no date yet — the item still matches orders, '
+        hint:'Leave it and press <b>' + tx('I don’t know') + '</b> if there is no date yet — the item still matches orders, '
            + 'flagged as unable to ship.' },
       function(u){ _prodStatus(id, status, { until:u }); },
       { extraLabel:'I don’t know', onExtra:function(){ _prodStatus(id, status, {}); } });
@@ -7109,7 +7109,7 @@ function prodSetStatus(id, status){
   if (status === 'redundant') {
     return promptAsk('Replaced by which item?',
       { label:'Replacement', okLabel:'Set',
-        hint:'The point of <b>redundant</b> is that there is a right answer. If there is none, use <b>Retired</b>.' },
+        hint:'The point of <b>redundant</b> is that there is a right answer. If there is none, use <b>' + tx('Retired') + '</b>.' },
       function(r){ _prodStatus(id, status, { replaced_by:r }); });
   }
   _prodStatus(id, status, {});
@@ -7123,7 +7123,7 @@ async function _prodStatus(id, status, extra){
 }
 
 function prodViewFields(d){ const kv=(l,v)=>`<div class="kv" style="display:flex;gap:8px;padding:8px 12px;border-bottom:1px dashed var(--line);font-size:13px"><b style="min-width:96px;color:var(--grey);font-weight:600;font-size:var(--fs-1);text-transform:uppercase">${l}</b><span style="font-weight:600">${v===''||v==null?'—':esc(v)}</span></div>`;
-  return `<div class="itab">${kv('Name',pName(d))}<div class="kv" style="display:flex;gap:8px;padding:8px 12px;border-bottom:1px dashed var(--line);font-size:13px"><b style="min-width:96px;color:var(--grey);font-weight:600;font-size:var(--fs-1);text-transform:uppercase">Price</b><span style="font-weight:600">${inr(pPrice(d))} <span style="color:var(--grey);font-weight:400">/ ${esc(pUnit(d))}</span></span></div>${kv('Unit',pUnit(d))}${kv('Code / HSN',pCode(d))}${kv('Description',pDesc(d))}</div>`; }
+  return `<div class="itab">${kv('Name',pName(d))}<div class="kv" style="display:flex;gap:8px;padding:8px 12px;border-bottom:1px dashed var(--line);font-size:13px"><b style="min-width:96px;color:var(--grey);font-weight:600;font-size:var(--fs-1);text-transform:uppercase">${tx('Price')}</b><span style="font-weight:600">${inr(pPrice(d))} <span style="color:var(--grey);font-weight:400">/ ${esc(pUnit(d))}</span></span></div>${kv('Unit',pUnit(d))}${kv('Code / HSN',pCode(d))}${kv('Description',pDesc(d))}</div>`; }
 /**
  * ── WHAT THIS STORE HAS, AND WHEN THAT WAS LAST TRUE ─────────────────────────────────────────────────────────
  * The other half of "where is it?" — the locator can only report what a store has said, so a store needs a place
@@ -7150,7 +7150,7 @@ function prodAvailBlock(d, id){
          <b style="font-size:var(--fs-4);color:${a.qty > 0 ? 'var(--ok-2)' : 'var(--disp-2)'}">${a.qty} in stock</b>
          <span style="font-size:var(--fs-1);font-weight:800;border-radius:5px;padding:1px 6px;${stale ? 'background:var(--warn-tint);color:var(--warn-2)' : 'background:var(--ok-tint);color:var(--ok-2)'}">${esc(a.source || 'unknown')} · ${esc(age)}</span>
        </div>`;
-  return `<div class="sec" style="margin-top:16px">Availability</div>
+  return `<div class="sec" style="margin-top:16px">${tx('Availability')}</div>
     <div style="border:1px solid var(--line);border-radius:9px;padding:11px 13px;background:var(--card);color:var(--on-card)">
       ${state}
       <div style="display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap">
@@ -7183,9 +7183,9 @@ async function saveAvail(id){
 
 function prodDetailHTML(){
   if(UI.refSel!=null && (UI.refCat||[])[UI.refSel]) return refFinishDetail(UI.refCat[UI.refSel]);   // BRIDGE: rich finish showcase
-  if(UI.prodMode==='new'){ return `<div class="dh"><button class="dback" onclick="backToList()">‹ Catalogue</button><div class="dt">New product</div><div class="ds">add to your catalogue</div></div><div class="db"><div class="sec">Product details</div>${prodEditForm({})}<div class="err" id="ct_err" style="margin-top:8px"></div></div><div class="actbar"><button class="pri" data-testid="cat-add" onclick="saveNewProduct()">Add product</button><button onclick="backToList()">Cancel</button></div>`; }
+  if(UI.prodMode==='new'){ return `<div class="dh"><button class="dback" onclick="backToList()">‹ Catalogue</button><div class="dt">${tx('New product')}</div><div class="ds">add to your catalogue</div></div><div class="db"><div class="sec">${tx('Product details')}</div>${prodEditForm({})}<div class="err" id="ct_err" style="margin-top:8px"></div></div><div class="actbar"><button class="pri" data-testid="cat-add" onclick="saveNewProduct()">${tx('Add product')}</button><button onclick="backToList()">${tx('Cancel')}</button></div>`; }
   const p=(UI.prods||[]).find(x=>prodId(x)===UI.prodSel);
-  if(!p) return `<div class="empty"><div class="big">🗂️</div><div class="t">Select a product</div><div>Pick one to view or edit — or add a new one.</div></div>`;
+  if(!p) return `<div class="empty"><div class="big">🗂️</div><div class="t">${tx('Select a product')}</div><div>Pick one to view or edit — or add a new one.</div></div>`;
   const d=pData(p), id=prodId(p);
   const back=`<button class="dback" onclick="backToList()">‹ Catalogue</button>`;
   /* ⚠️ THIS SAID `background:var(--ink)`. `--ink` is the BODY TEXT colour — near-black on a light theme, which is
@@ -7196,17 +7196,17 @@ function prodDetailHTML(){
   const seg=(m,l)=>`<button onclick="setProdMode('${m}')" style="border:0;background:${(UI.prodMode==='edit'?'edit':'view')===m?'var(--accent)':'var(--card)'};color:${(UI.prodMode==='edit'?'edit':'view')===m?'var(--on-accent)':'var(--grey)'};font-size:12px;font-weight:700;padding:6px 15px">${l}</button>`;
   const head=`<div class="dh">${back}<div class="dt">${esc(pName(d))}</div><div class="ds">${inr(pPrice(d))} / ${esc(pUnit(d))}${pCode(d)?' · '+esc(pCode(d)):''}</div><div style="display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-top:10px">${seg('view','View')}${seg('edit','Edit')}</div></div>`;
   let body, bar;
-  if(UI.prodMode==='edit'){ body=`<div class="sec">Edit product</div>${prodEditForm(d)}<div class="err" id="ct_err" style="margin-top:8px"></div>`; bar=`<button class="pri" data-testid="cat-save" onclick="saveProduct('${id}')">Save</button><button onclick="setProdMode('view')">Cancel</button>`; }
+  if(UI.prodMode==='edit'){ body=`<div class="sec">${tx('Edit product')}</div>${prodEditForm(d)}<div class="err" id="ct_err" style="margin-top:8px"></div>`; bar=`<button class="pri" data-testid="cat-save" onclick="saveProduct('${id}')">${tx('Save')}</button><button onclick="setProdMode('view')">${tx('Cancel')}</button>`; }
   else {
     /* ⚠️ THE FIVE-FIELD SUMMARY STAYS as the glance, with a way into EVERYTHING beneath it. Replacing it with the
        full list would bury the price under twenty rows of provenance; hiding the full list is what made synonyms
        invisible in the first place. Glance, then the whole record on demand. */
     const nfields = Object.keys(d).length;
-    body = `<div class="sec">Product</div>${prodViewFields(d)}`
+    body = `<div class="sec">${tx('Product')}</div>${prodViewFields(d)}`
       + `<div style="padding:9px 12px"><button class="composebtn" data-testid="cat-all-fields" onclick="prodAllFields('${id}')">🗂️ All ${nfields} fields</button>`
       + `<span style="font-size:11.5px;color:var(--grey);margin-inline-start:9px">synonyms, status, and anything imported</span></div>`
       + prodAvailBlock(d,id);
-    bar=`<button class="pri" data-testid="cat-edit" onclick="setProdMode('edit')">✎ Edit</button><button data-testid="cat-status" onclick="prodStatusPick('${id}')">◍ Status</button><button class="warn" data-testid="cat-delete" onclick="delProduct('${id}')">Delete</button>`;
+    bar=`<button class="pri" data-testid="cat-edit" onclick="setProdMode('edit')">${tx('✎ Edit')}</button><button data-testid="cat-status" onclick="prodStatusPick('${id}')">${tx('◍ Status')}</button><button class="warn" data-testid="cat-delete" onclick="delProduct('${id}')">${tx('Delete')}</button>`;
   }
   return `${head}<div class="db">${body}</div><div class="actbar">${bar}</div>`;
 }
@@ -7310,8 +7310,8 @@ function taskPanel(){
   const role=SESSION.role;
   const isCust=role==="customer";
   const folders = "";  /* Task/Order live in the left menu / mobile drawer — no duplicate toggle here */
-  const sub = (role==="actor"&&UI.folder==="task") ? `<div class="folders"><button class="${UI.sub==='my'?'on':''}" onclick="setSub('my')">My Task</button><button class="${UI.sub==='all'?'on':''}" onclick="setSub('all')">All Task</button></div>`
-    : (role!=="customer"&&UI.folder==="task") ? `<div class="folders"><button class="${taskScope()==='unassigned'?'on':''}" onclick="setTaskScope('unassigned')">Unassigned</button><button class="${taskScope()==='assigned'?'on':''}" onclick="setTaskScope('assigned')">Assigned</button></div>` : "";
+  const sub = (role==="actor"&&UI.folder==="task") ? `<div class="folders"><button class="${UI.sub==='my'?'on':''}" onclick="setSub('my')">${tx('My Task')}</button><button class="${UI.sub==='all'?'on':''}" onclick="setSub('all')">${tx('All Task')}</button></div>`
+    : (role!=="customer"&&UI.folder==="task") ? `<div class="folders"><button class="${taskScope()==='unassigned'?'on':''}" onclick="setTaskScope('unassigned')">${tx('Unassigned')}</button><button class="${taskScope()==='assigned'?'on':''}" onclick="setTaskScope('assigned')">${tx('Assigned')}</button></div>` : "";
   const counts = countStates();
   const stTabs = (["drafts","trash","archive","order"].indexOf(UI.folder)>=0 || UI.search || advActive()) ? "" : `<div class="statetabs">${["open","act","close"].map(s=>`<button class="${UI.state===s?'on '+s:''}" onclick="setState('${s}')">${UI.selectMode&&!isCust?`<span class="cbx ${UI.aggStates.has(s)?'on':''}" style="width:15px;height:15px;margin:0 5px 0 0" onclick="event.stopPropagation();toggleAgg('${s}')">${UI.aggStates.has(s)?'✓':''}</span>`:''}${cap(s)} <span class="n">${stCount(s)}</span></button>`).join("")}</div>`;
   const funnel = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>`;
@@ -7354,7 +7354,7 @@ function taskPanel(){
   const _tdesc = {order:"chits you've sent", task:'chits received', drafts:'unsent chits', trash:'deleted chits', archive:'archived chits'}[UI.folder] || 'chits received';
   /* ⚠️ THE DESCRIPTION STAYS THE TRACK'S, inside a folder too. A folder is that list FILTERED — the chits in
      "Needs attention" are still chits received, and relabelling per folder would imply otherwise. */
-  const _btns = _isTrack ? `<button type="button" data-testid="folder-metrics-btn" onclick="openFolderPane('metrics')" title="${_fsel?'Metrics for this folder':'Metrics for this whole track — and whether the folders add up'}" style="margin-inline-start:auto;cursor:pointer;border:1px solid var(--line);border-radius:9px;padding:0 11px;min-height:28px;display:inline-flex;align-items:center;gap:5px;font-size:11.5px;background:var(--card);color:var(--on-card)">📊 Metrics</button>
+  const _btns = _isTrack ? `<button type="button" data-testid="folder-metrics-btn" onclick="openFolderPane('metrics')" title="${_fsel?'Metrics for this folder':'Metrics for this whole track — and whether the folders add up'}" style="margin-inline-start:auto;cursor:pointer;border:1px solid var(--line);border-radius:9px;padding:0 11px;min-height:28px;display:inline-flex;align-items:center;gap:5px;font-size:11.5px;background:var(--card);color:var(--on-card)">${tx('📊 Metrics')}</button>
       <button type="button" data-testid="folder-groupsum-btn" onclick="openFolderPane('groupsum')" title="What does this pile add up to — quantity per item, cost, and who asked" style="cursor:pointer;border:1px solid var(--line);border-radius:9px;padding:0 11px;min-height:28px;display:inline-flex;align-items:center;gap:5px;font-size:11.5px;background:var(--card);color:var(--on-card)">🧮 Group sum</button>
       <button type="button" data-testid="folder-rules-btn" onclick="openFolderPane('rules')" title="${_fsel?'Rules that file into this folder':'Every rule on this track, and where each one files'}" style="cursor:pointer;border:1px solid var(--line);border-radius:9px;padding:0 11px;min-height:28px;display:inline-flex;align-items:center;gap:5px;font-size:11.5px;background:var(--card);color:var(--on-card)">⚙️ Rules</button>` : '';
   const helpStrip = isCust ? "" : `<div style="display:flex;align-items:center;gap:7px;padding:8px 12px;border-bottom:1px solid var(--line);background:var(--gold-soft);font-size:12px;color:var(--warn-3);flex-wrap:wrap">
@@ -7362,7 +7362,7 @@ function taskPanel(){
         ${_fsel ? `<span data-testid="crumb-track" onclick="clearFolder()" title="Back to all of ${esc(_tname.slice(2))}" style="cursor:pointer;color:var(--blue)">${_tname}</span><span style="color:var(--grey);font-weight:400">/</span><span data-testid="crumb-folder" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📁 ${esc(_fsel.name)}</span>`
                 : `<span data-testid="crumb-track">${_tname}</span>`}
       </b><span style="color:var(--warn-3)">— ${_tdesc}</span>${/* was #8a7c58 — 3.65:1 on the gold-soft band; 5.09 now */''}
-      ${_fsel?`<span data-testid="folder-rename" onclick="renameFolder('${esc(_fsel.folder_id)}')" title="Rename this folder" style="cursor:pointer;color:var(--blue);font-size:11.5px;margin-inline-start:2px">Rename</span><span data-testid="folder-delete" onclick="deleteFolder('${esc(_fsel.folder_id)}')" title="Delete this folder — the chits inside are NOT deleted" style="cursor:pointer;color:var(--disp);font-size:11.5px">Delete</span>`:''}
+      ${_fsel?`<span data-testid="folder-rename" onclick="renameFolder('${esc(_fsel.folder_id)}')" title="Rename this folder" style="cursor:pointer;color:var(--blue);font-size:11.5px;margin-inline-start:2px">${tx('Rename')}</span><span data-testid="folder-delete" onclick="deleteFolder('${esc(_fsel.folder_id)}')" title="Delete this folder — the chits inside are NOT deleted" style="cursor:pointer;color:var(--disp);font-size:11.5px">${tx('Delete')}</span>`:''}
       ${_btns}<button class="composebtn" style="${_isTrack?'':'margin-inline-start:auto'}" onclick="toggleListHelp()">${UI.listHelp?'✕ Close':'❓ Help'}</button>
     </div>${UI.listHelp?`<div style="padding:11px 12px;border-bottom:1px solid var(--line);overflow-y:auto;max-height:52%">${assistPage(_ak)}</div>`:''}`;
   /**
@@ -7549,7 +7549,7 @@ function modal(html, wide){ const h=document.getElementById("modalhost"); if(!h)
 function modalBackdrop(){ if(UI._composeModal){ minimiseCompose(); } else { closeModal(); } }
 function minimiseCompose(){ const h=document.getElementById("modalhost"); if(!h)return; h.style.display='none'; UI._composeMin=true; renderComposePill(); toast('Compose minimised — tap “Resume compose” to continue.'); }
 function resumeCompose(){ const h=document.getElementById("modalhost"); if(h)h.style.display=''; UI._composeMin=false; const p=document.getElementById('composepill'); if(p)p.remove(); setTimeout(function(){ var t=document.getElementById('cf_subject'); if(t)t.focus(); },20); }
-function renderComposePill(){ var p=document.getElementById('composepill'); if(!p){ p=document.createElement('div'); p.id='composepill'; document.body.appendChild(p); } p.className='composepill'; p.innerHTML='<span onclick="resumeCompose()" style="cursor:pointer">✏️ Resume compose</span><span onclick="discardCompose()" title="Discard draft" style="cursor:pointer;opacity:.75;font-weight:800">✕</span>'; }
+function renderComposePill(){ var p=document.getElementById('composepill'); if(!p){ p=document.createElement('div'); p.id='composepill'; document.body.appendChild(p); } p.className='composepill'; p.innerHTML='<span onclick="resumeCompose()" style="cursor:pointer">' + tx('✏️ Resume compose') + '</span><span onclick="discardCompose()" title="Discard draft" style="cursor:pointer;opacity:.75;font-weight:800">✕</span>'; }
 function discardCompose(){ var p=document.getElementById('composepill'); if(p)p.remove(); CC={items:[],rcpts:[],fields:{}}; closeModal(); }
 function closeModal(){ const h=document.getElementById("modalhost"); if(h){ h.style.display=''; h.innerHTML=""; }
   UI._composeModal=false; UI._composeMin=false; UI._draftId=null; UI._supplier=null; ccCartRelease(); const p=document.getElementById('composepill'); if(p)p.remove();
@@ -7562,7 +7562,7 @@ function closeModal(){ const h=document.getElementById("modalhost"); if(h){ h.st
   const d=UI._modalDismiss; UI._modalDismiss=null; if(typeof d==='function'){ try{ d(); }catch(_){ } } }
 function quickStatus(){ const ids=needTarget(); if(!ids.length)return; MODALS.stat={ids,to:null};
   const opts=[["open","Open"],["act","Act"],["close","Close"]].map(([v,l])=>`<div class="optrow" data-v="${v}" onclick="pickStatus('${v}')"><span class="rdo"></span><div class="oc"><div class="on">${l}</div></div></div>`).join("");
-  modal(`<div class="mhd"><div class="t">Change status</div><div class="s">${ids.length} chit${ids.length>1?'s':''}</div></div><div class="mbody">${opts}</div><div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="pri" id="mok" disabled onclick="confirmStatus()">Set status</button></div>`);
+  modal(`<div class="mhd"><div class="t">${tx('Change status')}</div><div class="s">${ids.length} chit${ids.length>1?'s':''}</div></div><div class="mbody">${opts}</div><div class="mfoot"><button onclick="closeModal()">${tx('Cancel')}</button><button class="pri" id="mok" disabled onclick="confirmStatus()">${tx('Set status')}</button></div>`);
 }
 function pickStatus(v){ MODALS.stat.to=v; document.querySelectorAll('.optrow').forEach(r=>r.classList.toggle('sel',r.dataset.v===v)); const b=document.getElementById('mok'); if(b)b.disabled=false; }
 async function confirmStatus(){ const {ids,to}=MODALS.stat; if(!to)return; closeModal();
@@ -7579,7 +7579,7 @@ async function confirmStatus(){ const {ids,to}=MODALS.stat; if(!to)return; close
 // Single-chit status picker — BIDIRECTIONAL (Open/Act/Close, any direction). Reuses pickStatus/confirmStatus.
 function pickChitStatus(id){ const c=UI.rows.find(x=>x.id===id)||UI.detail; if(!c)return; MODALS.stat={ids:[id],to:c.state};
   const opts=[["open","Open"],["act","Act"],["close","Close"]].map(([v,l])=>`<div class="optrow ${c.state===v?'sel':''}" data-v="${v}" onclick="pickStatus('${v}')"><span class="rdo"></span><div class="oc"><div class="on">${l}${c.state===v?' · current':''}</div></div></div>`).join("");
-  modal(`<div class="mhd"><div class="t">Move status</div><div class="s">${esc(c.code||'this chit')} — any direction</div></div><div class="mbody">${opts}</div><div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="pri" id="mok" onclick="confirmStatus()">Set status</button></div>`);
+  modal(`<div class="mhd"><div class="t">${tx('Move status')}</div><div class="s">${esc(c.code||'this chit')} — any direction</div></div><div class="mbody">${opts}</div><div class="mfoot"><button onclick="closeModal()">${tx('Cancel')}</button><button class="pri" id="mok" onclick="confirmStatus()">${tx('Set status')}</button></div>`);
 }
 function quickAssign(){ const ids=needTarget(); if(!ids.length)return;
   if(ids.length===1){ pickAssign(ids[0]); }
@@ -7595,11 +7595,11 @@ function quickDelete(){ const ids=needTarget(); if(!ids.length)return;
   const sent  =rows.filter(c=>!isDraft(c)).map(c=>c.id);
   if(sent.length){
     MODALS.arch={ids:sent};
-    modal(`<div class="mhd"><div class="t">Sent / received chit — can't delete</div></div><div class="mbody"><div style="font-size:13px;color:var(--ink);line-height:1.6">${sent.length>1?sent.length+' of these are':'This is'} a <b>co-held record</b> — the counterparty holds a matching copy, so ${sent.length>1?'they':'it'} can't be deleted (removal is governed by the <b>deletion policy</b>). You can <b>Archive</b> ${sent.length>1?'them':'it'} to clear ${sent.length>1?'them':'it'} from your list.${drafts.length?`<br><br><span style="color:var(--grey)">${drafts.length} draft${drafts.length>1?'s':''} in your selection can still be deleted separately.</span>`:''}</div></div><div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="pri" onclick="archiveSelected()">Archive ${sent.length}</button></div>`);
+    modal(`<div class="mhd"><div class="t">Sent / received chit — can't delete</div></div><div class="mbody"><div style="font-size:13px;color:var(--ink);line-height:1.6">${sent.length>1?sent.length+' of these are':'This is'} a <b>co-held record</b> — the counterparty holds a matching copy, so ${sent.length>1?'they':'it'} can't be deleted (removal is governed by the <b>deletion policy</b>). You can <b>${tx('Archive')}</b> ${sent.length>1?'them':'it'} to clear ${sent.length>1?'them':'it'} from your list.${drafts.length?`<br><br><span style="color:var(--grey)">${drafts.length} draft${drafts.length>1?'s':''} in your selection can still be deleted separately.</span>`:''}</div></div><div class="mfoot"><button onclick="closeModal()">${tx('Cancel')}</button><button class="pri" onclick="archiveSelected()">Archive ${sent.length}</button></div>`);
     return;
   }
   MODALS.del={ids:drafts};
-  modal(`<div class="mhd"><div class="t">🗑️ Delete ${drafts.length} draft${drafts.length>1?'s':''}?</div></div><div class="mbody"><div style="font-size:13px;color:var(--ink);line-height:1.6">${drafts.length>1?'They move':'It moves'} to <b>Trash</b> — from there you can Restore or delete forever.</div></div><div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="danger" onclick="confirmDelete()">Move to Trash</button></div>`);
+  modal(`<div class="mhd"><div class="t">🗑️ Delete ${drafts.length} draft${drafts.length>1?'s':''}?</div></div><div class="mbody"><div style="font-size:13px;color:var(--ink);line-height:1.6">${drafts.length>1?'They move':'It moves'} to <b>${tx('Trash')}</b> — from there you can Restore or delete forever.</div></div><div class="mfoot"><button onclick="closeModal()">${tx('Cancel')}</button><button class="danger" onclick="confirmDelete()">${tx('Move to Trash')}</button></div>`);
 }
 async function archiveSelected(){ const ids=(MODALS.arch||{}).ids||[]; if(!ids.length)return; closeModal();
   if(ids.length>1) showBusy(txn('Archiving {count} record…', 'Archiving {count} records…', ids.length));
@@ -7779,9 +7779,9 @@ async function openNotifications(repaint){
       + (picking
           ? '<button data-testid="notif-clear-sel" ' + (nsel ? '' : 'disabled ')
               + 'onclick="notifClearSelected()">Clear ' + (nsel || '') + '</button>'
-            + '<button data-testid="notif-pick-off" onclick="notifPick(false)">Done</button>'
-          : '<button data-testid="notif-pick-on" onclick="notifPick(true)">Select</button>'
-            + '<button data-testid="notif-clear-all" onclick="notifClearAll()">Clear all</button>')
+            + '<button data-testid="notif-pick-off" onclick="notifPick(false)">' + tx('Done') + '</button>'
+          : '<button data-testid="notif-pick-on" onclick="notifPick(true)">' + tx('Select') + '</button>'
+            + '<button data-testid="notif-clear-all" onclick="notifClearAll()">' + tx('Clear all') + '</button>')
       + '</span></div>';
   const body = items.length
     ? (forMe.length ? nhead('For you') + forMe.map(nrow).join('') : '')
@@ -7907,25 +7907,25 @@ function pgTotalText(id){ const p=PG[id]; if(!p||!p.total)return ''; const shown
   return p.done ? (p.total+(p.total===1?' chit':' chits')) : ('Showing '+shown+' of '+p.total+' · scroll for more'); }
 function pgFooter(id){ const p=PG[id]; if(!p)return ''; const c=p.cfg.count();
   if(p.loading) return '<div class="listend"><span class="spin"></span> loading more…'+(p.total>0?(' ('+c+'/'+p.total+')'):'')+'</div>';
-  if(!p.done) return '<div class="listend"><button class="composebtn" onclick="pgNext(\''+id+'\')">↓ Load more</button>'+(p.total>0?('<span style="color:var(--grey)">'+c+' of '+p.total+' loaded</span>'):'')+'</div>';
+  if(!p.done) return '<div class="listend"><button class="composebtn" onclick="pgNext(\''+id+'\')">' + tx('↓ Load more') + '</button>'+(p.total>0?('<span style="color:var(--grey)">'+c+' of '+p.total+' loaded</span>'):'')+'</div>';
   /* The total is stated once, at the top (pgTotalText). Down here the only new information is that the list has
      ended — repeating "16 total" was the second half of the same duplication. */
   return '<div class="listend">— end of list —</div>'; }
 /* static footer for small, non-paginated lists (count + end marker, no Load more) */
 /* the Task/Order list bar */
-function pgPaintTotal(){ const lt=document.getElementById("listtotal"); if(!lt)return; lt.innerHTML='<span class="lttxt"><button class="colcog fold" onclick="event.stopPropagation();toggleLhFold()" title="'+(UI.lhFold?'Show search, filters and tools':'Fold search, filters and tools out of the way')+'">'+(UI.lhFold?'⌄ show tools':'⌃ hide tools')+'</button>'+esc(pgTotalText('list'))+'</span><span class="lttools">'+sortPresetSelect()+'<button class="colcog" onclick="event.stopPropagation();toggleLegend()" title="Legend / key">🔑 key</button>'+(UI.legendOpen?listLegend():'')+'<button class="colcog" onclick="event.stopPropagation();toggleColMenu()" title="Choose columns">⚙ columns</button>'+(UI.colMenu?colChooser():'')+'</span>'; }
+function pgPaintTotal(){ const lt=document.getElementById("listtotal"); if(!lt)return; lt.innerHTML='<span class="lttxt"><button class="colcog fold" onclick="event.stopPropagation();toggleLhFold()" title="'+(UI.lhFold?'Show search, filters and tools':'Fold search, filters and tools out of the way')+'">'+(UI.lhFold?'⌄ show tools':'⌃ hide tools')+'</button>'+esc(pgTotalText('list'))+'</span><span class="lttools">'+sortPresetSelect()+'<button class="colcog" onclick="event.stopPropagation();toggleLegend()" title="Legend / key">' + tx('🔑 key') + '</button>'+(UI.legendOpen?listLegend():'')+'<button class="colcog" onclick="event.stopPropagation();toggleColMenu()" title="Choose columns">' + tx('⚙ columns') + '</button>'+(UI.colMenu?colChooser():'')+'</span>'; }
 function toggleLegend(){ UI.legendOpen=!UI.legendOpen; UI.colMenu=false; pgPaintTotal(); }
 /* The fold control lives in .listtotal because that row is ALWAYS rendered. The state tabs would have been the
    natural home, but stTabs is suppressed on drafts/trash/archive/order and whenever a search is active — the
    control would have vanished in exactly the views where you most want the space back. */
 function toggleLhFold(){ UI.lhFold=!UI.lhFold; try{ localStorage.setItem('cb_lhfold', UI.lhFold?'1':'0'); }catch(_){} renderApp(); }
-function listLegend(){ return '<div class="keypanel" onclick="event.stopPropagation()"><h4>Legend / key</h4><div class="keygrid">'
+function listLegend(){ return '<div class="keypanel" onclick="event.stopPropagation()"><h4>' + tx('Legend / key') + '</h4><div class="keygrid">'
  +'<div class="kbox"><div class="kt"><span class="udot"></span> Unread</div><div class="kd">New activity you haven\'t opened — blue bar + bold subject + dot.</div></div>'
- +'<div class="kbox"><div class="kt"><span class="rflag disp">⚑ dispute</span></div><div class="kd">An open dispute (red bar). Resolve from the chit.</div></div>'
- +'<div class="kbox"><div class="kt"><span class="rflag urg">⚑ urgent</span> <span class="rflag high">⚑ high</span></div><div class="kd">Attention flag — Ext or Int priority is above Normal, or the customer flagged it. Exact values are in the Ext/Int columns; act per your business rules.</div></div>'
- +'<div class="kbox"><div class="kt">Ext / Int pri</div><div class="kd">Ext = sender-set at compose, locked · Int = your own queue, you change it. Shown as their own columns.</div></div>'
- +'<div class="kbox"><div class="kt"><span class="chipst st-open">OPEN</span> <span class="chipst st-act">ACT</span> <span class="chipst st-close">CLOSE</span></div><div class="kd">Lifecycle stage — tap the chip to advance.</div></div>'
- +'<div class="kbox"><div class="kt">♿ Voice</div><div class="kd"><label style="cursor:pointer"><input type="checkbox" '+(UI.voice?'checked':'')+' onchange="toggleVoice()"> Speak status changes aloud</label>. Screen-reader announcements are always on.</div></div>'
+ +'<div class="kbox"><div class="kt"><span class="rflag disp">' + tx('⚑ dispute') + '</span></div><div class="kd">An open dispute (red bar). Resolve from the chit.</div></div>'
+ +'<div class="kbox"><div class="kt"><span class="rflag urg">' + tx('⚑ urgent') + '</span> <span class="rflag high">' + tx('⚑ high') + '</span></div><div class="kd">Attention flag — Ext or Int priority is above Normal, or the customer flagged it. Exact values are in the Ext/Int columns; act per your business rules.</div></div>'
+ +'<div class="kbox"><div class="kt">' + tx('Ext / Int pri') + '</div><div class="kd">Ext = sender-set at compose, locked · Int = your own queue, you change it. Shown as their own columns.</div></div>'
+ +'<div class="kbox"><div class="kt"><span class="chipst st-open">' + tx('OPEN') + '</span> <span class="chipst st-act">ACT</span> <span class="chipst st-close">' + tx('CLOSE') + '</span></div><div class="kd">Lifecycle stage — tap the chip to advance.</div></div>'
+ +'<div class="kbox"><div class="kt">' + tx('♿ Voice') + '</div><div class="kd"><label style="cursor:pointer"><input type="checkbox" '+(UI.voice?'checked':'')+' onchange="toggleVoice()"> Speak status changes aloud</label>. Screen-reader announcements are always on.</div></div>'
  +'</div></div>'; }
 function toggleVoice(){ UI.voice=!UI.voice; try{ localStorage.setItem('cb_voice', UI.voice?'1':''); }catch(_){ } if(UI.voice) announce('Voice announcements on'); }
 function announce(msg){ var el=document.getElementById('live'); if(el)el.textContent=msg; if(UI.voice && window.speechSynthesis){ try{ speechSynthesis.cancel(); speechSynthesis.speak(new SpeechSynthesisUtterance(msg)); }catch(_){ } } }
@@ -7998,7 +7998,7 @@ async function loadList(silent){
     // full-set per-state rollup (true counts + sums) — independent enrichment; repaint counts when it lands.
     if(["task","order"].includes(UI.folder) && SESSION.role!=="customer"){ try{ const rl=await api("rollup",{query:rollupQuery()}); UI.rollup=(rl&&rl.groups)||[]; UI.disputeOpen=(rl&&rl.dispute_open)||0; paintRowsOnly(); }catch(_){ UI.rollup=[]; UI.disputeOpen=0; } } else { UI.rollup=[]; UI.disputeOpen=0; }
     if(SESSION.role==="actor" && CFG.MODE!=='demo'){ try{ const u=await api("unread"); const set=new Set((u&&u.unread)||[]); UI.rows.forEach(r=>{ r.unread=set.has(r.id); }); paintRowsOnly(); }catch(_){} }
-  }catch(e){ UI.loading=false; if(!silent){ const b=document.getElementById("rows"); if(b)b.innerHTML=`<div class="empty"><div class="big">⚠</div><div class="t">Couldn't load</div><div>${e.message}</div><div style="font-size:var(--fs-1)">Check mode/endpoint, then retry.</div></div>`; } }
+  }catch(e){ UI.loading=false; if(!silent){ const b=document.getElementById("rows"); if(b)b.innerHTML=`<div class="empty"><div class="big">⚠</div><div class="t">${tx('Couldn\'t load')}</div><div>${e.message}</div><div style="font-size:var(--fs-1)">Check mode/endpoint, then retry.</div></div>`; } }
 }
 function paintRowsOnly(){const b=document.getElementById("rows"); if(b)b.innerHTML=renderRows(); document.querySelectorAll(".statetabs .n").forEach((el,i)=>{el.textContent=stCount(["open","act","close"][i]);}); pgPaintTotal(); applyColTpl();}
 function visibleRows(){
@@ -8047,7 +8047,7 @@ const LISTCOLS = [
           +icon+' '+esc(who)+(v.sender_verified?'':'<span class="unver" title="Not a verified entity — as claimed by the sender">?</span>')+'</span>';
       }
       return esc((UI.folder==='order' ? (c.party||'') : (c.sender||c.party||'')) || '—'); } },
-  { key:'subject',  label:'Subject',  sort:'subject',  w:'minmax(150px,2fr)',   cell:function(c){ var lead=(c.unread?'<span class="udot" title="Unread"></span>':'')+(c.dispute?'<span class="rflag disp" title="Open dispute">⚑ dispute</span>':(c.dispResolved>0?'<span class="rflag disp" style="background:var(--ok-tint);color:var(--ok-2);border-color:var(--ok-2)" title="Dispute resolved">⚑ resolved</span>':''))+attnFlag(c); return '<div class="subjwrap">'+(lead?'<span class="lead">'+lead+'</span>':'')+'<span class="subjtext" title="'+esc(c.code||'')+'"><b>'+esc(c.code||'—')+'</b>'+(c.isDraft?' <span class="optchip mini">draft</span>':'')+'</span></div>'; } },
+  { key:'subject',  label:'Subject',  sort:'subject',  w:'minmax(150px,2fr)',   cell:function(c){ var lead=(c.unread?'<span class="udot" title="Unread"></span>':'')+(c.dispute?'<span class="rflag disp" title="Open dispute">' + tx('⚑ dispute') + '</span>':(c.dispResolved>0?'<span class="rflag disp" style="background:var(--ok-tint);color:var(--ok-2);border-color:var(--ok-2)" title="Dispute resolved">' + tx('⚑ resolved') + '</span>':''))+attnFlag(c); return '<div class="subjwrap">'+(lead?'<span class="lead">'+lead+'</span>':'')+'<span class="subjtext" title="'+esc(c.code||'')+'"><b>'+esc(c.code||'—')+'</b>'+(c.isDraft?' <span class="optchip mini">draft</span>':'')+'</span></div>'; } },
   { key:'date',     label:'Date',     sort:'date',     w:'128px',  cell:function(c){ return esc(lcDate(c.created_at)); } },
   { key:'amount',   label:'Amount',   sort:'amount',   w:'108px', align:'right', cell:function(c){ return '<span style="font-family:\'Space Mono\'">'+(c.amt?fmtMoney(c.amt,c.currency):'—')+'</span>'; } },
   { key:'status',   label:'Status',   sort:'status',   w:'92px',  cell:function(c){ return statusChip(c); } },
@@ -8211,10 +8211,10 @@ function colChooser(){
       + '</div>';
   };
   return '<div class="colmenu">'
-    + '<div class="colmhd">Shown — in this order</div>'
+    + '<div class="colmhd">' + tx('Shown — in this order') + '</div>'
     + (chosen.length ? chosen.map(function(c,i){ return row(c,i,chosen.length,true); }).join('')
                      : '<div class="colmnone">none</div>')
-    + (rest.length ? '<div class="colmhd">Available</div>' + rest.map(function(c){ return row(c,0,0,false); }).join('') : '')
+    + (rest.length ? '<div class="colmhd">' + tx('Available') + '</div>' + rest.map(function(c){ return row(c,0,0,false); }).join('') : '')
     + '</div>';
 }
 /**
@@ -8251,7 +8251,7 @@ function colResizeMove(e){ if(!_rz)return; const dx=e.clientX-_rz.x; const nw=Ma
 function colResizeEnd(){ document.removeEventListener("mousemove",colResizeMove); document.removeEventListener("mouseup",colResizeEnd); document.body.style.userSelect=""; if(_rz){ try{ localStorage.setItem("cb_colw", JSON.stringify(UI.colW||{})); }catch(_){ } } _rz=null; }
 function persistSort(){ try{ localStorage.setItem("cb_sort", JSON.stringify({sort:UI.sort,dir:UI.dir})); }catch(_){ } }
 function setSortPreset(v){ if(v==='latest'||v==='oldest'){ UI.sort='date'; UI.dir=(v==='oldest'?'asc':'desc'); persistSort(); UI.sel=null; UI.detail=null; loadList(); } }
-function sortPresetOptions(){ const cur=(UI.sort==='date')?(UI.dir==='asc'?'oldest':'latest'):''; let o=''; if(cur===''){ o+='<option value="" selected>Sorted: '+esc(UI.sort||'')+' '+(UI.dir==='asc'?'↑':'↓')+'</option>'; } o+='<option value="latest"'+(cur==='latest'?' selected':'')+'>Latest on top</option>'; o+='<option value="oldest"'+(cur==='oldest'?' selected':'')+'>Oldest on top</option>'; return o; }
+function sortPresetOptions(){ const cur=(UI.sort==='date')?(UI.dir==='asc'?'oldest':'latest'):''; let o=''; if(cur===''){ o+='<option value="" selected>Sorted: '+esc(UI.sort||'')+' '+(UI.dir==='asc'?'↑':'↓')+'</option>'; } o+='<option value="latest"'+(cur==='latest'?' selected':'')+'>' + tx('Latest on top') + '</option>'; o+='<option value="oldest"'+(cur==='oldest'?' selected':'')+'>' + tx('Oldest on top') + '</option>'; return o; }
 function sortPresetSelect(){ return '<select class="sortpreset" title="Sort order" onchange="setSortPreset(this.value)">'+sortPresetOptions()+'</select>'; }
 // Status chip: interactive (advance status) on the Task/received side; STATIC on Order (sent) —
 // the orderer can't drive the receiver's workflow, so it's a read-only label there.
@@ -8307,10 +8307,10 @@ const PENDING = {
   notifications:{label:"Notifications",             ref:"ATH-109 §11"},
 };
 function todo(k){ const t=PENDING[k]||{label:k,ref:""}; toast(MSG.comingSoon(t.label)+(t.ref?" ("+t.ref+")":"")); }
-function selBar(){const ids=UI.selected;const all=`<button onclick="selectAllRows()">☑ All</button>`;const clr=`<button onclick="UI.selected.clear();renderApp()">Clear</button>`;
-  if(UI.folder==='trash'){ return `<div class="selbar" id="selbar">☑ ${ids.size} selected<span class="sp">${all}<button class="pri" onclick="bulkRestore()">↩ Restore</button><button onclick="bulkPurge()">🗑 Delete forever</button>${clr}</span></div>`; }
-  if(UI.folder==='archive'){ return `<div class="selbar" id="selbar">☑ ${ids.size} selected<span class="sp">${all}<button class="pri" onclick="bulkUnarchive()">↩ Unarchive</button>${clr}</span></div>`; }
-  const sum=UI.rows.filter(c=>ids.has(c.id)).reduce((a,c)=>a+c.amt,0);const rb=rollupBuckets();const ticked=hasRollup()?[...UI.aggStates].reduce((a,s)=>a+((rb[s]&&rb[s].s)||0),0):UI.rows.filter(c=>UI.aggStates.has(c.state)).reduce((a,c)=>a+c.amt,0);const lbl=ids.size?`☑ ${ids.size} selected · Σ ${inr(sum)}`:`states ✓ ${[...UI.aggStates].map(cap).join(" · ")||'none'} · Σ(all) ${inr(ticked)}`;return `<div class="selbar" id="selbar">${lbl}<span class="sp">${all}<button onclick="sumScope()">Sum <span class=arw>→</span></button>${ids.size?`<button onclick="groupSumSelected()" title="Quantity per item across the ticked chits — what you actually need to buy">🧮 Group sum</button>`:``}<button onclick="quickStatus()">Status</button><button class="pri" onclick="quickAssign()">Assign</button>${clr}</span></div>`;}
+function selBar(){const ids=UI.selected;const all=`<button onclick="selectAllRows()">${tx('☑ All')}</button>`;const clr=`<button onclick="UI.selected.clear();renderApp()">${tx('Clear')}</button>`;
+  if(UI.folder==='trash'){ return `<div class="selbar" id="selbar">☑ ${ids.size} selected<span class="sp">${all}<button class="pri" onclick="bulkRestore()">${tx('↩ Restore')}</button><button onclick="bulkPurge()">${tx('🗑 Delete forever')}</button>${clr}</span></div>`; }
+  if(UI.folder==='archive'){ return `<div class="selbar" id="selbar">☑ ${ids.size} selected<span class="sp">${all}<button class="pri" onclick="bulkUnarchive()">${tx('↩ Unarchive')}</button>${clr}</span></div>`; }
+  const sum=UI.rows.filter(c=>ids.has(c.id)).reduce((a,c)=>a+c.amt,0);const rb=rollupBuckets();const ticked=hasRollup()?[...UI.aggStates].reduce((a,s)=>a+((rb[s]&&rb[s].s)||0),0):UI.rows.filter(c=>UI.aggStates.has(c.state)).reduce((a,c)=>a+c.amt,0);const lbl=ids.size?`☑ ${ids.size} selected · Σ ${inr(sum)}`:`states ✓ ${[...UI.aggStates].map(cap).join(" · ")||'none'} · Σ(all) ${inr(ticked)}`;return `<div class="selbar" id="selbar">${lbl}<span class="sp">${all}<button onclick="sumScope()">Sum <span class=arw>→</span></button>${ids.size?`<button onclick="groupSumSelected()" title="Quantity per item across the ticked chits — what you actually need to buy">${tx('🧮 Group sum')}</button>`:``}<button onclick="quickStatus()">${tx('Status')}</button><button class="pri" onclick="quickAssign()">${tx('Assign')}</button>${clr}</span></div>`;}
 function updateSelBar(){const el=document.getElementById("selbar");if(el)el.outerHTML=selBar();}
 /**
  * ⭐ 🧮 GROUP SUM OVER THE TICKED CHITS (backlog 31). Athi: *"is the group sum happens for multiselect chit?"*
@@ -8406,11 +8406,11 @@ function commercialBlock(c){
   var cm=c&&c.commercial; if(!cm||!cm.areas||!cm.areas.length) return "";
   var when="send"; try{ when=CBLocale.date(cm.folded_at); }catch(e){}
   var rows=cm.areas.map(function(a){
-    var rail=a.on_rail?'<span style="font-size:var(--fs-1);color:var(--ok-3);font-weight:800;white-space:nowrap">● on rail</span>':'<span style="font-size:var(--fs-1);color:var(--grey);white-space:nowrap">applicable</span>';
+    var rail=a.on_rail?'<span style="font-size:var(--fs-1);color:var(--ok-3);font-weight:800;white-space:nowrap">' + tx('● on rail') + '</span>':'<span style="font-size:var(--fs-1);color:var(--grey);white-space:nowrap">applicable</span>';
     var inst=(a.instruments&&a.instruments.length)?'<div style="font-size:var(--fs-1);color:var(--grey);margin-top:1px">'+esc(a.instruments.join(" · "))+'</div>':'';
     return '<div style="display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-top:1px solid var(--line)"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:12px">'+esc(a.label)+'</div>'+inst+'</div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">'+_frmChipCB(a.frm_class)+rail+'</div></div>';
   }).join("");
-  return '<div class="itab" style="margin-top:10px;padding:10px"><div class="sec" style="margin:0;display:flex;align-items:center;gap:6px">💳 Commercial cover<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey);font-weight:600">'+(cm.incoterm?esc(cm.incoterm)+" · ":"")+'folded on '+when+'</span></div><div style="font-size:var(--fs-1);color:var(--grey);margin:2px 0 4px">The commercial-cover framework for this order — payment, transit, currency &amp; credit risk. Items marked on-rail are already evidenced by the supplier record.</div>'+rows+'</div>';
+  return '<div class="itab" style="margin-top:10px;padding:10px"><div class="sec" style="margin:0;display:flex;align-items:center;gap:6px">' + tx('💳 Commercial cover') + '<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey);font-weight:600">'+(cm.incoterm?esc(cm.incoterm)+" · ":"")+'folded on '+when+'</span></div><div style="font-size:var(--fs-1);color:var(--grey);margin:2px 0 4px">The commercial-cover framework for this order — payment, transit, currency &amp; credit risk. Items marked on-rail are already evidenced by the supplier record.</div>'+rows+'</div>';
 }
 /**
  * viaBlock — where this chit came from, when it came from OUTSIDE the rail.
@@ -8452,7 +8452,7 @@ function _viaPricing(p){
   if(p.from_catalogue) out.push('<div style="font-size:var(--fs-1);color:var(--grey)">💰 '+p.from_catalogue+' line'+(p.from_catalogue===1?'':'s')+' priced from your catalogue.</div>');
   /* ⚠️ WHAT THEY ASKED, NEXT TO WHAT WE CHARGE. Ours is used — it is ours to charge — but a customer who named a
      different figure has said something, and overwriting it invisibly is how a disagreement becomes a dispute. */
-  if((p.asked_differs||[]).length) out.push('<div style="font-size:var(--fs-1);color:var(--disp);margin-top:3px">⚠️ <b>They named a different price</b> on '
+  if((p.asked_differs||[]).length) out.push('<div style="font-size:var(--fs-1);color:var(--disp);margin-top:3px">⚠️ <b>' + tx('They named a different price') + '</b> on '
     + p.asked_differs.length+' line'+(p.asked_differs.length===1?'':'s')+': '
     + esc(p.asked_differs.map(function(a){
       return txf('{item} — they said {asked}, your catalogue says {ours}',
@@ -8478,7 +8478,7 @@ function viaBlock(c){
   return '<div class="itab" style="padding:10px 12px;margin-bottom:9px">'
     + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
     + '<span style="font-size:var(--fs-1);font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#fff;background:'+m[0]+';border-radius:5px;padding:2px 7px">'+esc(m[1])+'</span>'
-    + '<span style="font-weight:700;font-size:12px">Came in from outside the rail</span></div>'
+    + '<span style="font-weight:700;font-size:12px">' + tx('Came in from outside the rail') + '</span></div>'
     + '<div style="margin-top:6px">'
     + row('Asked by', (v.from_name?v.from_name+' · ':'')+(v.from||'unknown'))
     + row('On your line', v.to)
@@ -8488,7 +8488,7 @@ function viaBlock(c){
     /* ⚠️ WHAT THEY ACTUALLY WROTE, next to what was read out of it. The lines below are an interpretation; this is
        the thing being interpreted. Shown together because a reading you can check is a different kind of record
        from one you have to trust — and the full original is attached to this chit, held per-copy, not linked. */
-    + (v.raw_excerpt ? '<div style="margin-top:7px"><div style="font-size:var(--fs-1);font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--grey);margin-bottom:3px">What they wrote</div>'
+    + (v.raw_excerpt ? '<div style="margin-top:7px"><div style="font-size:var(--fs-1);font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--grey);margin-bottom:3px">' + tx('What they wrote') + '</div>'
         + '<div style="font-size:12px;white-space:pre-wrap;background:var(--paper);border:1px solid var(--line);border-radius:9px;padding:8px 10px;color:var(--on-bg)">'
         + esc(v.raw_excerpt) + (v.raw_excerpt.length>=400?'<span style="color:var(--grey)"> … (full text attached)</span>':'') + '</div></div>' : '')
     + (v.media_count ? '<div style="margin-top:5px;font-size:var(--fs-1);color:var(--warn-3)">📎 '+v.media_count+' attachment'+(v.media_count===1?'':'s')+' came with the message and '
@@ -8511,7 +8511,7 @@ function clearancesBlock(c){
     var vu=it.valid_until?'<span style="font-size:var(--fs-1);color:var(--grey);white-space:nowrap">valid to '+esc(String(it.valid_until).slice(0,10))+'</span>':'';
     return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--line)"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:12px">'+esc(it.title||it.standard||it.doc||"clearance")+'</div><div style="font-size:var(--fs-1);color:var(--grey)">'+esc(it.standard||"")+(it.doc?" · "+esc(it.doc):"")+'</div>'+vinfo+'</div>'+vu+_rungChipCB(it.rung)+'</div>';
   }).join("");
-  return '<div class="itab" style="margin-top:10px;padding:10px"><div class="sec" style="margin:0;display:flex;align-items:center;gap:6px">🛡 Supplier clearances<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey);font-weight:600">folded on '+when+'</span></div><div style="font-size:var(--fs-1);color:var(--grey);margin:2px 0 4px">Frozen onto this order when the supplier sent it — the clearances they held, each at its trust rung. This is your independent buyer copy.</div>'+rows+'</div>';
+  return '<div class="itab" style="margin-top:10px;padding:10px"><div class="sec" style="margin:0;display:flex;align-items:center;gap:6px">' + tx('🛡 Supplier clearances') + '<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey);font-weight:600">folded on '+when+'</span></div><div style="font-size:var(--fs-1);color:var(--grey);margin:2px 0 4px">Frozen onto this order when the supplier sent it — the clearances they held, each at its trust rung. This is your independent buyer copy.</div>'+rows+'</div>';
 }
 function _aiMd(md){
   var L=String(md||'').replace(/\r/g,'').split('\n'),o=[],i=0;
@@ -8535,7 +8535,7 @@ async function askAiOrder(){
   var ctx={ subject:c.code, from:(c.sender||c.party||''), amount:c.amt, currency:c.currency,
     line_items:(c.items||[]).map(function(it){return {description:it[0], qty:it[1]};}),
     clearances:(c.clearances&&c.clearances.items)||[], commercial:(c.commercial&&c.commercial.areas)||[] };
-  modal('<div class="mhd"><div class="t">✨ Ask AI — review this order</div></div><div class="mbody" style="padding:16px"><div id="aiobody" style="font-size:var(--fs-2);color:var(--grey)">✨ Reviewing the order — clearances, cover, and what to ask…</div></div>', true);
+  modal('<div class="mhd"><div class="t">' + tx('✨ Ask AI — review this order') + '</div></div><div class="mbody" style="padding:16px"><div id="aiobody" style="font-size:var(--fs-2);color:var(--grey)">' + tx('✨ Reviewing the order — clearances, cover, and what to ask…') + '</div></div>', true);
   try{
     var res=await fetch(CFG.API_BASE+'/api/governance/ai-draft',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+SESSION.token},body:JSON.stringify({skill_id:'order-review',context:ctx})});
     var j=await res.json();
@@ -8545,7 +8545,7 @@ async function askAiOrder(){
     var html='<style>'+_AI_MDCSS+'</style>'
       +'<div style="font-size:var(--fs-1);color:var(--purple);background:var(--blue-tint-bg);border:1px solid #ddd4f5;border-radius:9px;padding:8px 11px;margin-bottom:12px;line-height:1.5">🤖 <b>AI review — informational.</b> It does not accept, pay, or commit. '+(j.usage?('<span style="color:var(--grey)">· cost $'+j.usage.est_cost_usd+'</span>'):'')+'</div>'
       +'<div class="amddoc" style="background:var(--card);border:1px solid var(--line);border-radius:9px;padding:16px 18px;max-height:56vh;overflow:auto;color:var(--on-card)">'+_aiMd(j.draft)+'</div>'
-      +'<div style="display:flex;gap:8px;margin-top:13px"><button onclick="_aiOrderPdf()" style="'+bs+';flex:1;border:1px solid var(--purple);background:var(--purple);color:var(--on-purple)">⬇ Save as PDF</button><button onclick="closeModal()" style="'+bs+';flex:0 0 auto;border:1px solid var(--line);background:var(--card);color:var(--on-card)">Done</button></div>';
+      +'<div style="display:flex;gap:8px;margin-top:13px"><button onclick="_aiOrderPdf()" style="'+bs+';flex:1;border:1px solid var(--purple);background:var(--purple);color:var(--on-purple)">⬇ Save as PDF</button><button onclick="closeModal()" style="'+bs+';flex:0 0 auto;border:1px solid var(--line);background:var(--card);color:var(--on-card)">' + tx('Done') + '</button></div>';
     var b=document.getElementById('aiobody'); if(b)b.innerHTML=html;
   }catch(e){ var b2=document.getElementById('aiobody'); if(b2)b2.innerHTML='<div style="font-size:12px;color:var(--warn-2);background:var(--warn-tint);border:1px solid #f0dcae;border-radius:9px;padding:10px 12px">'+esc((e&&e.message)||'AI review failed')+'</div>'; }
 }
@@ -8559,7 +8559,7 @@ function askAiOrderDoc(){
   var c=UI.detail; if(!c){ if(typeof toast==='function')toast('Open an order first'); return; }
   var opts=[['commercial-invoice','Commercial Invoice'],['packing-list','Packing List'],['export-declaration','Export Declaration'],['sds','Safety Data Sheet']];
   var btns=opts.map(function(o){ return '<button onclick="_aiOrderDoc(\''+o[0]+'\',\''+o[1]+'\')" style="display:block;width:100%;text-align:start;font-size:13px;font-weight:600;border:1px solid var(--line);background:var(--card);border-radius:9px;padding:11px 13px;margin:6px 0;cursor:pointer;color:var(--on-card)">✨ '+esc(o[1])+'</button>'; }).join('');
-  modal('<div class="mhd"><div class="t">✨ Draft a document — from this order</div></div><div class="mbody" style="padding:16px"><div style="font-size:12px;color:var(--grey);margin-bottom:8px">The co-assist drafts from THIS order (parties, line items, cover). You review &amp; confirm — never sent automatically.</div>'+btns+'</div>');
+  modal('<div class="mhd"><div class="t">' + tx('✨ Draft a document — from this order') + '</div></div><div class="mbody" style="padding:16px"><div style="font-size:12px;color:var(--grey);margin-bottom:8px">The co-assist drafts from THIS order (parties, line items, cover). You review &amp; confirm — never sent automatically.</div>'+btns+'</div>');
 }
 async function _aiOrderDoc(skill, label){
   var c=UI.detail; if(!c) return;
@@ -8568,7 +8568,7 @@ async function _aiOrderDoc(skill, label){
     seller:{ name:(c.sender||SESSION.entity||'[to confirm]') }, buyer:{ name:(c.party||'[to confirm]') },
     line_items:(c.items||[]).map(function(it){return {description:it[0], qty:it[1]};}),
     clearances:(c.clearances&&c.clearances.items)||[] };
-  modal('<div class="mhd"><div class="t">✨ '+esc(label)+' — from this order</div></div><div class="mbody" style="padding:16px"><div id="aoddbody" style="font-size:var(--fs-2);color:var(--grey)">✨ Drafting from the order…</div></div>', true);
+  modal('<div class="mhd"><div class="t">✨ '+esc(label)+' — from this order</div></div><div class="mbody" style="padding:16px"><div id="aoddbody" style="font-size:var(--fs-2);color:var(--grey)">' + tx('✨ Drafting from the order…') + '</div></div>', true);
   try{
     var res=await fetch(CFG.API_BASE+'/api/governance/ai-draft',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+SESSION.token},body:JSON.stringify({skill_id:skill,context:ctx})});
     var j=await res.json();
@@ -8581,7 +8581,7 @@ async function _aiOrderDoc(skill, label){
       +'<div style="display:flex;gap:8px;margin-top:13px;flex-wrap:wrap">'
         +'<button onclick="_aiOrderDocAccept()" title="File this document on your rail, referenced to this order" style="'+bs+';flex:1;border:1px solid var(--ok-3);background:var(--ok-3);color:var(--on-ok)">✓ Accept &amp; file on rail</button>'
         +'<button onclick="_aiOrderDocPdf()" style="'+bs+';flex:0 0 auto;border:1px solid var(--purple);background:var(--card);color:var(--purple)">⬇ PDF</button>'
-        +'<button onclick="closeModal()" style="'+bs+';flex:0 0 auto;border:1px solid var(--line);background:var(--card);color:var(--on-card)">Done</button>'
+        +'<button onclick="closeModal()" style="'+bs+';flex:0 0 auto;border:1px solid var(--line);background:var(--card);color:var(--on-card)">' + tx('Done') + '</button>'
       +'</div>';
     var b=document.getElementById('aoddbody'); if(b)b.innerHTML=html;
   }catch(e){ var b2=document.getElementById('aoddbody'); if(b2)b2.innerHTML='<div style="font-size:12px;color:var(--warn-2);background:var(--warn-tint);border:1px solid #f0dcae;border-radius:9px;padding:10px 12px">'+esc((e&&e.message)||'Draft failed')+'</div>'; }
@@ -8607,7 +8607,7 @@ function _aiOrderDocPdf(){
 async function aiRun(skill, ctx, opts){
   opts=opts||{}; if(typeof modal!=='function') return;
   var title=opts.title||'✨ AI';
-  modal('<div class="mhd"><div class="t">'+esc(title)+'</div></div><div class="mbody" style="padding:16px"><div id="airbody" style="font-size:var(--fs-2);color:var(--grey)">✨ Invoking the co-assist…</div></div>', true);
+  modal('<div class="mhd"><div class="t">'+esc(title)+'</div></div><div class="mbody" style="padding:16px"><div id="airbody" style="font-size:var(--fs-2);color:var(--grey)">' + tx('✨ Invoking the co-assist…') + '</div></div>', true);
   try{
     var res=await fetch(CFG.API_BASE+'/api/governance/ai-draft',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+SESSION.token},body:JSON.stringify({skill_id:skill,context:ctx||{}})});
     var j=await res.json();
@@ -8617,7 +8617,7 @@ async function aiRun(skill, ctx, opts){
     var html='<style>'+(typeof _AI_MDCSS!=='undefined'?_AI_MDCSS:'')+'</style>'
       +'<div style="font-size:var(--fs-1);color:var(--purple);background:var(--blue-tint-bg);border:1px solid #ddd4f5;border-radius:9px;padding:8px 11px;margin-bottom:12px;line-height:1.5">🤖 <b>AI proposal — review before you rely on it.</b> '+(j.usage?('<span style="color:var(--grey)">· $'+j.usage.est_cost_usd+'</span>'):'')+'</div>'
       +'<div class="amddoc" style="background:var(--card);border:1px solid var(--line);border-radius:9px;padding:16px 18px;max-height:56vh;overflow:auto;color:var(--on-card)">'+_aiMd(j.draft)+'</div>'
-      +'<div style="display:flex;gap:8px;margin-top:13px"><button onclick="_aiRunPdf()" style="'+bs+';flex:1;border:1px solid var(--purple);background:var(--purple);color:var(--on-purple)">⬇ Save as PDF</button><button onclick="closeModal()" style="'+bs+';flex:0 0 auto;border:1px solid var(--line);background:var(--card);color:var(--on-card)">Done</button></div>';
+      +'<div style="display:flex;gap:8px;margin-top:13px"><button onclick="_aiRunPdf()" style="'+bs+';flex:1;border:1px solid var(--purple);background:var(--purple);color:var(--on-purple)">⬇ Save as PDF</button><button onclick="closeModal()" style="'+bs+';flex:0 0 auto;border:1px solid var(--line);background:var(--card);color:var(--on-card)">' + tx('Done') + '</button></div>';
     var b=document.getElementById('airbody'); if(b)b.innerHTML=html;
   }catch(e){ var b2=document.getElementById('airbody'); if(b2)b2.innerHTML='<div style="font-size:12px;color:var(--warn-2);background:var(--warn-tint);border:1px solid #f0dcae;border-radius:9px;padding:10px 12px">'+esc((e&&e.message)||'AI failed')+'</div>'; }
 }
@@ -8630,8 +8630,8 @@ function _aiRunPdf(){
 function detailInner(){
   const c=UI.detail;
   if(!c) return (UI.rows && UI.rows.length)
-    ? `<div class="empty"><div class="big">🧾</div><div class="t">Select a chit</div><div>Pick one from the list to see its content, status and summary.</div></div>`
-    : `<div class="empty"><div class="big">🚃</div><div class="t">Your bogie is empty</div><div>Nothing on your rail yet — use <b>Compose</b> to add your first chit.</div></div>`;
+    ? `<div class="empty"><div class="big">🧾</div><div class="t">${tx('Select a chit')}</div><div>Pick one from the list to see its content, status and summary.</div></div>`
+    : `<div class="empty"><div class="big">🚃</div><div class="t">Your bogie is empty</div><div>Nothing on your rail yet — use <b>${tx('Compose')}</b> to add your first chit.</div></div>`;
   const back="";
   const proof = c.proof==='ok' ? `<span class="parity">⚖️ Two-sided proof: both parties hold matching, co-signed records.</span>` : `<span class="parity" style="background:var(--gold-soft);border-color:var(--gold-line);color:var(--warn-3)">⚖️ Awaiting counter-signature — one side hasn't co-signed yet.</span>`;
   buildAttGroups(c);
@@ -8639,7 +8639,7 @@ function detailInner(){
   let body="";
   // Provenance leads the content tab: before "what was asked for" is readable, "who asked, and are they anyone we
   // know" has to be. It is a no-op on every chit raised inside the rail.
-  if(UI.dtab==="content") body=`${viaBlock(c)}<div class="itab">${items}<div class="ir tot"><span>Total</span><span class="qt">${fmtMoney(c.amt,c.currency)}</span></div></div>
+  if(UI.dtab==="content") body=`${viaBlock(c)}<div class="itab">${items}<div class="ir tot"><span>${tx('Total')}</span><span class="qt">${fmtMoney(c.amt,c.currency)}</span></div></div>
      ${chitTermsBlock(c)}${chitAttBlock(c)}`;
   if(UI.dtab==="messages") body=messagesTab(c);
   if(UI.dtab==="status") body=statusTabHtml(c);
@@ -8648,12 +8648,12 @@ function detailInner(){
      <div class="itab" style="padding:10px"><div class="sec" style="margin:0">State</div><div class="disp" style="font-size:15px;font-weight:700">${c.state.toUpperCase()}</div></div></div>
      <div style="margin-top:10px">${proof}</div>${clearancesBlock(c)}${commercialBlock(c)}`;
   if(c._loading){ body=`<div class="dbload"><span class="spin"></span> loading details…</div>`; }
-  const actbar = (UI.folder==='drafts') ? `<button class="pri" onclick="resumeDraft('${c.id}')">✏️ Resume &amp; edit</button>` : (UI.folder==='trash') ? `<button class="pri" onclick="restoreChit('${c.id}')">↩ Restore</button>${c.isDraft?`<button class="pri" style="background:var(--disp);border-color:var(--disp);margin-inline-start:8px;color:var(--on-danger)" onclick="purgeChit('${c.id}')">🗑 Delete forever</button>`:''}` : (UI.folder==='archive') ? `<button class="pri" onclick="unarchiveChit('${c.id}')">↩ Unarchive</button>` : SESSION.role==="customer"
-    ? `<button onclick="toggleCustPri('${c.id}')">⚑ ${c.custPri?'Priority requested':'Request priority'}</button><button class="warn" data-testid="chit-dispute" onclick="quickDispute()">⚑ Dispute</button><button onclick="askAiOrderDoc()" title="AI drafts a trade document from THIS order (invoice, packing list, export declaration, SDS) — review and confirm">✨ Draft doc</button><button onclick="askAiOrder()" title="AI reviews this order — clearances &amp; cover met, and what to ask">✨ Ask AI</button><button onclick="todo('pdf')">⬇ PDF</button>`
-    : `<button data-testid="open-design2" onclick="ensureCap('chit2').then(function(){openChit2('${c.id}')})" title="Open the line-level view — assignment, per-line delivery, cost">⧉ Lines</button><button onclick="forwardChit('${c.id}')" title="Forward as a new chit">➤ Forward</button><button onclick="ensureCap('folders').then(function(){moveChit('${c.id}')})" title="File into a folder">📁 Move</button>${UI.folder!=='order'?`<button data-testid="chit-unread" onclick="markUnread('${c.id}')" title="Mark as unread">✉ Unread</button>`:''}${UI.folder!=='order'?`<button class="pri" data-testid="chit-status-btn" onclick="pickChitStatus('${c.id}')">Status ▾</button>`:''}${SESSION.role==="actor"&&UI.folder!=='order'?`<button onclick="pickAssign('${c.id}')">👥 Assign</button>`:""}<button class="warn" data-testid="chit-dispute" onclick="quickDispute()">⚑ Dispute</button>${SESSION.role==="entity"?`<button class="warn pend" data-testid="chit-void" onclick="todo('voidChit')">⊘ Void</button>`:""}<button onclick="askAiOrderDoc()" title="AI drafts a trade document from THIS order (invoice, packing list, export declaration, SDS) — review and confirm">✨ Draft doc</button><button onclick="askAiOrder()" title="AI reviews this order — clearances &amp; cover met, and what to ask">✨ Ask AI</button><button onclick="todo('pdf')">⬇ PDF</button>`;
+  const actbar = (UI.folder==='drafts') ? `<button class="pri" onclick="resumeDraft('${c.id}')">✏️ Resume &amp; edit</button>` : (UI.folder==='trash') ? `<button class="pri" onclick="restoreChit('${c.id}')">${tx('↩ Restore')}</button>${c.isDraft?`<button class="pri" style="background:var(--disp);border-color:var(--disp);margin-inline-start:8px;color:var(--on-danger)" onclick="purgeChit('${c.id}')">${tx('🗑 Delete forever')}</button>`:''}` : (UI.folder==='archive') ? `<button class="pri" onclick="unarchiveChit('${c.id}')">${tx('↩ Unarchive')}</button>` : SESSION.role==="customer"
+    ? `<button onclick="toggleCustPri('${c.id}')">⚑ ${c.custPri?'Priority requested':'Request priority'}</button><button class="warn" data-testid="chit-dispute" onclick="quickDispute()">${tx('⚑ Dispute')}</button><button onclick="askAiOrderDoc()" title="AI drafts a trade document from THIS order (invoice, packing list, export declaration, SDS) — review and confirm">${tx('✨ Draft doc')}</button><button onclick="askAiOrder()" title="AI reviews this order — clearances &amp; cover met, and what to ask">${tx('✨ Ask AI')}</button><button onclick="todo('pdf')">⬇ PDF</button>`
+    : `<button data-testid="open-design2" onclick="ensureCap('chit2').then(function(){openChit2('${c.id}')})" title="Open the line-level view — assignment, per-line delivery, cost">⧉ Lines</button><button onclick="forwardChit('${c.id}')" title="Forward as a new chit">${tx('➤ Forward')}</button><button onclick="ensureCap('folders').then(function(){moveChit('${c.id}')})" title="File into a folder">${tx('📁 Move')}</button>${UI.folder!=='order'?`<button data-testid="chit-unread" onclick="markUnread('${c.id}')" title="Mark as unread">${tx('✉ Unread')}</button>`:''}${UI.folder!=='order'?`<button class="pri" data-testid="chit-status-btn" onclick="pickChitStatus('${c.id}')">${tx('Status ▾')}</button>`:''}${SESSION.role==="actor"&&UI.folder!=='order'?`<button onclick="pickAssign('${c.id}')">${tx('👥 Assign')}</button>`:""}<button class="warn" data-testid="chit-dispute" onclick="quickDispute()">${tx('⚑ Dispute')}</button>${SESSION.role==="entity"?`<button class="warn pend" data-testid="chit-void" onclick="todo('voidChit')">${tx('⊘ Void')}</button>`:""}<button onclick="askAiOrderDoc()" title="AI drafts a trade document from THIS order (invoice, packing list, export declaration, SDS) — review and confirm">${tx('✨ Draft doc')}</button><button onclick="askAiOrder()" title="AI reviews this order — clearances &amp; cover met, and what to ask">${tx('✨ Ask AI')}</button><button onclick="todo('pdf')">⬇ PDF</button>`;
   const dtabs=[["content","Content"],["status","Status"],["summary","Summary"],["messages","💬 Messages"+(msgCount(c)?" ("+msgCount(c)+")":"")]];
   return `<div class="dh"><button class="dback" onclick="backToList()">‹ Back to list</button><button class="dmsg" data-testid="msg-tab" onclick="setDtab('messages')" title="Messages" aria-label="Messages">💬${msgCount(c)?' '+msgCount(c):''}</button><div class="dt">${esc(c.code)} · ${esc(c.party)}</div><div class="ds">${esc(c.area)} · ${esc(c.kind)} · ${inr(c.amt)} · ${c.state.toUpperCase()}</div>
-     <div class="parties"><span class="ptag">from <b>${esc(c.sender||SESSION.entity||"You")}</b></span><span class="ptag">${c.kind==='counter'?('to <b>'+esc(SESSION.entity||'You')+'</b>'):esc(c.rsummary||('to '+(c.party||'—')))}</span>${c.kind==='counter'?`<span class="ptag">for <b>${esc(c.cust)}</b></span>`:''}</div><div class="dchips"><span class="prichip-btn pri-${c.priExt||'normal'}" style="cursor:default" title="External priority — set by the drafter at compose, locked once sent">↔ ext: ${PRI[c.priExt||'normal'].label}</span>${SESSION.role!=="customer"?`<button class="prichip-btn pri-${c.pri||'normal'}" onclick="repriority('${c.id}')" title="Internal priority — your own queue; tap to change">⚙ int: ${PRI[c.pri||'normal'].label} ▾</button>`:''}${c.custPri?'<span class="custflag-tag">⚑ Customer priority</span>':''}<span class="prichip-btn" style="cursor:default;margin-inline-start:auto;background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)" title="Currently assigned to">👤 ${c.assignee?esc(c.assignee):'Unassigned'}</span></div></div>
+     <div class="parties"><span class="ptag">from <b>${esc(c.sender||SESSION.entity||"You")}</b></span><span class="ptag">${c.kind==='counter'?('to <b>'+esc(SESSION.entity||'You')+'</b>'):esc(c.rsummary||('to '+(c.party||'—')))}</span>${c.kind==='counter'?`<span class="ptag">for <b>${esc(c.cust)}</b></span>`:''}</div><div class="dchips"><span class="prichip-btn pri-${c.priExt||'normal'}" style="cursor:default" title="External priority — set by the drafter at compose, locked once sent">↔ ext: ${PRI[c.priExt||'normal'].label}</span>${SESSION.role!=="customer"?`<button class="prichip-btn pri-${c.pri||'normal'}" onclick="repriority('${c.id}')" title="Internal priority — your own queue; tap to change">⚙ int: ${PRI[c.pri||'normal'].label} ▾</button>`:''}${c.custPri?'<span class="custflag-tag">' + tx('⚑ Customer priority') + '</span>':''}<span class="prichip-btn" style="cursor:default;margin-inline-start:auto;background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)" title="Currently assigned to">👤 ${c.assignee?esc(c.assignee):'Unassigned'}</span></div></div>
    ${(typeof disputeBanner==='function')?disputeBanner(c):''}<div class="dtabs">${dtabs.map(([k,l])=>`<button class="${UI.dtab===k?'on':''}" onclick="setDtab('${k}')">${l}</button>`).join("")}</div>
    <div class="db">${body}</div><div class="actbar">${(typeof SESSION!=='undefined'&&(SESSION.name==='GOV-01-Help'||SESSION.isHelpdesk)&&c.kind==='inquiry')?'<button class="pri" onclick="answerPublish(\''+c.id+'\')">🧠 Answer &amp; publish</button>':''}${actbar}</div>`;
 }
@@ -8663,10 +8663,10 @@ function answerPublish(id){ const c=UI.detail; if(!c)return; const subj=c.code||
   modal('<div class="mhd"><div class="t">🧠 Answer &amp; publish</div><div class="s">reply to the asker + add it to the knowledge base</div></div>'
     +'<div class="mbody">'
     +'<label class="fl">Question <span style="color:var(--grey);font-size:var(--fs-1)">— as it will read in the KB</span></label><input class="inp" id="ap_q" value="'+esc(subj)+'">'
-    +'<label class="fl">Answer</label><textarea class="inp" id="ap_a" rows="4" placeholder="Write the answer…" style="width:100%;resize:vertical"></textarea>'
+    +'<label class="fl">' + tx('Answer') + '</label><textarea class="inp" id="ap_a" rows="4" placeholder="Write the answer…" style="width:100%;resize:vertical"></textarea>'
     +'<label class="fl">Context <span style="color:var(--grey);font-size:var(--fs-1)">— screens (comma) or * for everywhere</span></label><input class="inp" id="ap_c" value="*">'
     +'<div class="err" id="ap_err"></div>'
-    +'<div style="display:flex;gap:8px;margin-top:11px"><button class="composebtn" onclick="closeModal()">Cancel</button><button class="composebtn" style="background:var(--blue);color:var(--on-accent)" onclick="doAnswerPublish(\''+id+'\')">🧠 Answer &amp; publish</button></div>'
+    +'<div style="display:flex;gap:8px;margin-top:11px"><button class="composebtn" onclick="closeModal()">' + tx('Cancel') + '</button><button class="composebtn" style="background:var(--blue);color:var(--on-accent)" onclick="doAnswerPublish(\''+id+'\')">🧠 Answer &amp; publish</button></div>'
     +'</div>'); }
 async function doAnswerPublish(id){ const x=document.getElementById("ap_err"); if(x)x.textContent="";
   const q=val("ap_q"), a=val("ap_a"); const ctx=(val("ap_c")||"").split(',').map(function(s){return s.trim();}).filter(Boolean);
@@ -8709,20 +8709,20 @@ function messagesTab(c){
   const f=UI.msgFilter||"all"; const sel=UI.msgTypeSel||[];
   let shown = ((f==='internal'||f==='external')?visible.filter(m=>m.scope===f):visible).filter(m=>!m.isDispute);   // dispute msgs live in the dispute panel, not the general thread
   if(sel.length) shown=shown.filter(m=>sel.includes(m.type||"info"));
-  const scopeFilter=isCust?"":`<div class="msgfilter"><button class="${f==='all'?'on':''}" onclick="setMsgFilter('all')">All</button><button class="${f==='internal'?'on':''}" onclick="setMsgFilter('internal')">🔒 Internal</button><button class="${f==='external'?'on':''}" onclick="setMsgFilter('external')">↔ External</button></div>`;
+  const scopeFilter=isCust?"":`<div class="msgfilter"><button class="${f==='all'?'on':''}" onclick="setMsgFilter('all')">${tx('All')}</button><button class="${f==='internal'?'on':''}" onclick="setMsgFilter('internal')">${tx('🔒 Internal')}</button><button class="${f==='external'?'on':''}" onclick="setMsgFilter('external')">${tx('↔ External')}</button></div>`;
   const tset=surfacedTypes(); const ctypes=isCust?["info","query"]:tset;
-  const typeMenu=UI.msgTypeMenu?`<div class="tdrop" onclick="event.stopPropagation()">${tset.map(k=>`<label class="tdrow"><input type="checkbox" ${sel.includes(k)?'checked':''} onchange="toggleMsgType('${k}')"> ${MTYPES[k].icon} ${MTYPES[k].label}</label>`).join("")}${sel.length?`<button class="tdclear" onclick="clearMsgTypes()">✕ Clear types</button>`:''}</div>`:'';
+  const typeMenu=UI.msgTypeMenu?`<div class="tdrop" onclick="event.stopPropagation()">${tset.map(k=>`<label class="tdrow"><input type="checkbox" ${sel.includes(k)?'checked':''} onchange="toggleMsgType('${k}')"> ${MTYPES[k].icon} ${MTYPES[k].label}</label>`).join("")}${sel.length?`<button class="tdclear" onclick="clearMsgTypes()">${tx('✕ Clear types')}</button>`:''}</div>`:'';
   const typeFilter=isCust?'':`<div class="tdwrap"><button class="msgfbtn${sel.length?' on':''}" onclick="event.stopPropagation();toggleMsgTypeMenu()">⚙ Types${sel.length?' ('+sel.length+')':''} ▾</button>${typeMenu}</div>`;
   if(UI.msgSearch){var _mq=UI.msgSearch.toLowerCase(); shown=shown.filter(function(m){return String((m.body||"")+" "+(m.author||"")).toLowerCase().indexOf(_mq)>=0;});} const ordered=(UI.msgOrder==="oldest")?shown.slice():shown.slice().reverse();
   const thread=ordered.length?lazyWrap('msg', ordered, msgBubble, ''):`<div class="msgempty">No messages yet — use ✏️ New message above to start one.</div>`;
   const ch=UI.msgChan||(isCust?"external":"internal"); let kind=UI.msgKind||"info"; if(!ctypes.includes(kind))kind=ctypes[0];
   const typeSel=`<div class="typesel">${ctypes.map(k=>`<button class="${kind===k?'on '+MTYPES[k].cls:''}" title="${MTYPES[k].label}" onclick="setMsgKind('${k}')">${MTYPES[k].icon} ${MTYPES[k].short}</button>`).join("")}</div>`;
   const open=!!UI.composeOpen;
-  const attachRow=`<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:4px 0"><label title="Attach files" style="cursor:pointer;border:1px solid var(--line);border-radius:6px;padding:3px 9px;font-size:var(--fs-1);background:var(--card);color:var(--on-card)">📎 Attach<input type="file" multiple style="display:none" onchange="msgAddFiles(this.files);this.value=''"></label><span id="msgfileschips">${msgChips()}</span></div>`;
+  const attachRow=`<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:4px 0"><label title="Attach files" style="cursor:pointer;border:1px solid var(--line);border-radius:6px;padding:3px 9px;font-size:var(--fs-1);background:var(--card);color:var(--on-card)">${tx('📎 Attach')}<input type="file" multiple style="display:none" onchange="msgAddFiles(this.files);this.value=''"></label><span id="msgfileschips">${msgChips()}</span></div>`;
   const dispToggle=(typeof disputeToggleHtml==='function')?disputeToggleHtml(c,isCust):'';
   const composer=isCust
     ? `<div class="composer">${typeSel}<div class="chlabel ext">↔ External · ${c.party||'the shop'} will see this</div><textarea id="msgbody" data-testid="msg-body" oninput="window.CBOffline&&CBOffline.saveDraft('msg.${c.id}',this.value)" placeholder="Message to ${c.party||'the shop'}…">${(window.CBOffline&&CBOffline.loadDraft('msg.'+c.id))?esc(CBOffline.loadDraft('msg.'+c.id)):''}</textarea>${attachRow}<button class="send ext" data-testid="msg-send" onclick="sendMessage('${c.id}')">Send ${MTYPES[kind].label} ↔ external</button></div>`
-    : `<div class="composer"><div class="chtoggle"><button class="int ${ch==='internal'?'on':''}" data-testid="msg-channel-internal" onclick="setMsgChan('internal')">🔒 Internal</button><button class="ext ${ch==='external'?'on':''}" data-testid="msg-channel-external" onclick="setMsgChan('external')">↔ External</button></div>${typeSel}${dispToggle}<textarea id="msgbody" data-testid="msg-body" oninput="window.CBOffline&&CBOffline.saveDraft('msg.${c.id}',this.value)" placeholder="${ch==='internal'?'Note for your team — stays internal':'Message to '+recipTo(c, UI.msgAsDispute)+' — they will see this'}">${(window.CBOffline&&CBOffline.loadDraft('msg.'+c.id))?esc(CBOffline.loadDraft('msg.'+c.id)):''}</textarea>${attachRow}<button class="send ${ch==='internal'?'int':'ext'}" data-testid="msg-send" onclick="sendMessage('${c.id}')">Send ${MTYPES[kind].label} · ${ch==='internal'?'🔒 internal':'↔ external'}</button></div>`;
+    : `<div class="composer"><div class="chtoggle"><button class="int ${ch==='internal'?'on':''}" data-testid="msg-channel-internal" onclick="setMsgChan('internal')">${tx('🔒 Internal')}</button><button class="ext ${ch==='external'?'on':''}" data-testid="msg-channel-external" onclick="setMsgChan('external')">${tx('↔ External')}</button></div>${typeSel}${dispToggle}<textarea id="msgbody" data-testid="msg-body" oninput="window.CBOffline&&CBOffline.saveDraft('msg.${c.id}',this.value)" placeholder="${ch==='internal'?'Note for your team — stays internal':'Message to '+recipTo(c, UI.msgAsDispute)+' — they will see this'}">${(window.CBOffline&&CBOffline.loadDraft('msg.'+c.id))?esc(CBOffline.loadDraft('msg.'+c.id)):''}</textarea>${attachRow}<button class="send ${ch==='internal'?'int':'ext'}" data-testid="msg-send" onclick="sendMessage('${c.id}')">Send ${MTYPES[kind].label} · ${ch==='internal'?'🔒 internal':'↔ external'}</button></div>`;
   const head=`<div class="msghd"><span class="mh-t">Messages (${msgCount(c)})</span><button class="composebtn ${open?'on':''}" onclick="toggleCompose()">${open?'✕ Close':'✏️ New message'}</button></div>`;
   return `<div class="msgtab">${head}<div class="msglist"><div class="msgfilters">${scopeFilter}${typeFilter}${msgSearchSort()}</div><div class="thread">${thread}</div>${open?`<div class="composeov" onclick="if(event.target===this)toggleCompose()"><div class="composeov-card"><div class="composeov-bar"><button class="composeov-x" onclick="toggleCompose()" title="Close" aria-label="Close">✕</button></div>${composer}</div></div>`:''}</div></div>`;
 }
@@ -8736,7 +8736,7 @@ function recipTo(c, isDispute){ c=c||{}; var _self=chitIsSelf; var seen={}; var 
 function sendMessage(id){
   const el=document.getElementById('msgbody'); const body=(el?el.value:"").trim(); if(!body){ toast("Type a message first."); return; }
   const ch=UI.msgChan||(SESSION.role==="customer"?"external":"internal");
-  if(ch==="external"){ const c=UI.detail||{}; const _from=esc(SESSION.entity||SESSION.name||'you'); const _to=esc(recipTo(c, UI.msgAsDispute)); modal(`<div class="mhd"><div class="t">↔ Send external message</div></div><div class="mbody"><div style="border:1px solid var(--line);border-radius:9px;overflow:hidden;font-size:13px"><div style="display:flex;gap:10px;padding:9px 12px;border-bottom:1px dashed var(--line)"><span style="min-width:34px;color:var(--grey);font-size:var(--fs-1);text-transform:uppercase;letter-spacing:.4px;padding-top:2px">From</span><b>${_from}</b></div><div style="display:flex;gap:10px;padding:9px 12px"><span style="min-width:34px;color:var(--grey);font-size:var(--fs-1);text-transform:uppercase;letter-spacing:.4px;padding-top:2px">To</span><b>${_to}</b></div></div><div style="font-size:12px;color:var(--grey);margin-top:10px;line-height:1.5">This <b>crosses the edge</b> — ${_to} will see it and be notified. Internal notes never leave your team.</div></div><div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="pri" onclick="closeModal();doSendMessage('${id}','external')">Send</button></div>`); }
+  if(ch==="external"){ const c=UI.detail||{}; const _from=esc(SESSION.entity||SESSION.name||'you'); const _to=esc(recipTo(c, UI.msgAsDispute)); modal(`<div class="mhd"><div class="t">${tx('↔ Send external message')}</div></div><div class="mbody"><div style="border:1px solid var(--line);border-radius:9px;overflow:hidden;font-size:13px"><div style="display:flex;gap:10px;padding:9px 12px;border-bottom:1px dashed var(--line)"><span style="min-width:34px;color:var(--grey);font-size:var(--fs-1);text-transform:uppercase;letter-spacing:.4px;padding-top:2px">${tx('From')}</span><b>${_from}</b></div><div style="display:flex;gap:10px;padding:9px 12px"><span style="min-width:34px;color:var(--grey);font-size:var(--fs-1);text-transform:uppercase;letter-spacing:.4px;padding-top:2px">To</span><b>${_to}</b></div></div><div style="font-size:12px;color:var(--grey);margin-top:10px;line-height:1.5">This <b>crosses the edge</b> — ${_to} will see it and be notified. Internal notes never leave your team.</div></div><div class="mfoot"><button onclick="closeModal()">${tx('Cancel')}</button><button class="pri" onclick="closeModal();doSendMessage('${id}','external')">${tx('Send')}</button></div>`); }
   else { doSendMessage(id,'internal'); }
 }
 async function doSendMessage(id, scope){
@@ -8758,7 +8758,7 @@ function markChitRead(id){ const c=(STORE.chits||[]).find(x=>x.id==id); if(c)(c.
 function refreshMsgBadge(){ const n=unreadCount(); const d=document.getElementById('msgcdot'); if(d){ d.textContent=n; d.style.display=n?'flex':'none'; } }
 function openMsgCenter(){ const host=document.getElementById("lbhost"); if(!host)return; if(UI.msgcOpen){ closeMsgCenter(); return; } UI.msgcOpen=true;
   const items=(STORE.chits||[]).map(c=>{ const ms=(c.msgs||[]).filter(m=>SESSION.role!=="customer"||m.scope==="external"); if(!ms.length)return null; const last=ms[ms.length-1]; const unread=ms.filter(m=>m.unread).length; return {id:c.id,code:c.code,party:c.party,last,unread}; }).filter(Boolean).reverse();
-  host.innerHTML=`<div class="notifover" onclick="closeMsgCenter()"><div class="notifpanel" onclick="event.stopPropagation()"><div class="notifhd">💬 Messages<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey)">across all chits</span></div><div style="padding:8px 12px;border-bottom:1px solid var(--line)"><button class="msglink" style="width:100%" onclick="openRaidReport()">📊 RAID report — governance overview</button></div>${items.length?items.map(x=>`<div class="notifrow" style="cursor:pointer" onclick="openFromCenter('${x.id}')"><span class="ni">${x.unread?'🔵':'💬'}</span><div style="flex:1;min-width:0"><div class="nt"><b>${x.code}</b> · ${x.party}${x.unread?` <span class="unreadtag">${x.unread} new</span>`:''}</div><div class="ns">${x.last?((x.last.scope==='external'?'↔ ':'🔒 ')+(x.last.body.length>44?x.last.body.slice(0,44)+'…':x.last.body)):''}</div></div></div>`).join(""):'<div class="notiffoot">No messages yet.</div>'}<div class="notiffoot">Tap a chit to open its conversation. External messages also land in the other party's message centre.</div><div class="raidtoggle">⚙ Message types: <button class="${SESSION.msgTypes!=='gov'?'on':''}" onclick="setMsgTypeSet('lean')">Lean</button><button class="${SESSION.msgTypes==='gov'?'on':''}" onclick="setMsgTypeSet('gov')">Governance (RAID)</button><div class="hint">A Settings preview — configurable per entity in production.</div></div></div></div>`;
+  host.innerHTML=`<div class="notifover" onclick="closeMsgCenter()"><div class="notifpanel" onclick="event.stopPropagation()"><div class="notifhd">${tx('💬 Messages')}<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey)">across all chits</span></div><div style="padding:8px 12px;border-bottom:1px solid var(--line)"><button class="msglink" style="width:100%" onclick="openRaidReport()">${tx('📊 RAID report — governance overview')}</button></div>${items.length?items.map(x=>`<div class="notifrow" style="cursor:pointer" onclick="openFromCenter('${x.id}')"><span class="ni">${x.unread?'🔵':'💬'}</span><div style="flex:1;min-width:0"><div class="nt"><b>${x.code}</b> · ${x.party}${x.unread?` <span class="unreadtag">${x.unread} new</span>`:''}</div><div class="ns">${x.last?((x.last.scope==='external'?'↔ ':'🔒 ')+(x.last.body.length>44?x.last.body.slice(0,44)+'…':x.last.body)):''}</div></div></div>`).join(""):'<div class="notiffoot">No messages yet.</div>'}<div class="notiffoot">Tap a chit to open its conversation. External messages also land in the other party's message centre.</div><div class="raidtoggle">⚙ Message types: <button class="${SESSION.msgTypes!=='gov'?'on':''}" onclick="setMsgTypeSet('lean')">${tx('Lean')}</button><button class="${SESSION.msgTypes==='gov'?'on':''}" onclick="setMsgTypeSet('gov')">${tx('Governance (RAID)')}</button><div class="hint">A Settings preview — configurable per entity in production.</div></div></div></div>`;
 }
 function closeMsgCenter(){ UI.msgcOpen=false; const h=document.getElementById("lbhost"); if(h)h.innerHTML=""; }
 function openFromCenter(id){ closeMsgCenter(); openChitMsgs(id); }
@@ -8767,7 +8767,7 @@ function openRaidReport(){ const host=document.getElementById("lbhost"); if(!hos
   const counts={}, samples={}; (STORE.chits||[]).forEach(c=>{ (c.msgs||[]).forEach(m=>{ if(SESSION.role==="customer"&&m.scope!=="external")return; const k=m.type||"info"; counts[k]=(counts[k]||0)+1; (samples[k]=samples[k]||[]); if(samples[k].length<3)samples[k].push({code:c.code,body:m.body}); }); });
   const keys=Object.keys(MTYPES).filter(k=>counts[k]); const total=keys.reduce((a,k)=>a+counts[k],0); const max=Math.max(1,...keys.map(k=>counts[k]));
   const rows=keys.length?keys.map(k=>{ const d=MTYPES[k]; const w=Math.round(counts[k]/max*100); return `<div class="raidrow"><div class="rl"><span class="mtype ${d.cls}">${d.icon} ${d.label}</span><b>${counts[k]}</b></div><div class="rbar"><span class="rbarfill ${d.cls}" style="width:${w}%"></span></div><div class="rsamp">${samples[k].map(x=>`<div>· <b>${x.code}</b> ${x.body.length>50?x.body.slice(0,50)+'…':x.body}</div>`).join("")}</div></div>`; }).join(""):'<div class="msgempty">No tagged messages in this period yet.</div>';
-  host.innerHTML=`<div class="notifover" onclick="closeMsgCenter()"><div class="notifpanel raid" onclick="event.stopPropagation()"><div class="notifhd">📊 RAID report<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey)">this period · ${total} items</span></div><div class="raidbody">${rows}</div><div class="notiffoot">Governance register rolled up from tagged messages across all chits. In production this is a backend report over a chosen period, per entity / oversight scope.</div></div></div>`;
+  host.innerHTML=`<div class="notifover" onclick="closeMsgCenter()"><div class="notifpanel raid" onclick="event.stopPropagation()"><div class="notifhd">${tx('📊 RAID report')}<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey)">this period · ${total} items</span></div><div class="raidbody">${rows}</div><div class="notiffoot">Governance register rolled up from tagged messages across all chits. In production this is a backend report over a chosen period, per entity / oversight scope.</div></div></div>`;
 }
 
 /* actions wired to API */
@@ -8819,10 +8819,10 @@ async function pickAssign(id){
     const chip=a.shift==="on_shift"?'<span class="optchip on">on shift</span>':a.shift==="on_break"?'<span class="optchip brk">on break</span>':'<span class="optchip off">off</span>';
     return `<div class="optrow ${dis?'dis':''}" data-a="${a.id}" ${dis?'':`onclick="pickActor('${a.id}')"`}><span class="rdo"></span><div class="oc"><div class="on">${esc(a.name)} <span class="optchip" style="font-size:var(--fs-1);background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)">${hatLabel(a.hat)}</span></div><div class="om">load ${a.load}${max?'/'+max:''}${!assignable?' · not assignable (hat)':off?' · off duty':full?' · at capacity':''}</div></div>${chip}</div>`;
   }).join("");
-  const prisel=`<div class="msec">Priority</div><div class="prisel">${["urgent","normal","low"].map(p=>`<button class="pri-${p} ${MODALS.pick.pri===p?'on':''}" data-p="${p}" onclick="pickPri('${p}')">${PRI[p].label}</button>`).join("")}</div>`;
+  const prisel=`<div class="msec">${tx('Priority')}</div><div class="prisel">${["urgent","normal","low"].map(p=>`<button class="pri-${p} ${MODALS.pick.pri===p?'on':''}" data-p="${p}" onclick="pickPri('${p}')">${PRI[p].label}</button>`).join("")}</div>`;
   const reasonbox=`<div class="msec">Reason <span id="reasonhint" class="rh">${MODALS.pick.pri==='urgent'?'— Urgent needs one':'(optional)'}</span></div><textarea id="assignreason" class="mreason" placeholder="Why this assignment / this urgency…" oninput="MODALS.pick.reason=this.value;syncAssignOk()"></textarea>`;
   const custnote=c.custPri?`<div class="custreq">⚑ Customer flagged this as priority — consider Urgent.</div>`:'';
-  modal(`<div class="mhd"><div class="t">Assign ${esc(c.code||'chit')}</div><div class="s">${esc(c.party||'')}${c.amt?' · '+inr(c.amt):''}</div></div><div class="mbody">${custnote}${rows||'<div style="padding:14px;color:var(--grey);font-size:13px">No co-assists yet.</div>'}<div style="padding:6px 0 2px"><button class="composebtn" onclick="addActorModal()">+ New co-assist</button></div>${prisel}${reasonbox}</div><div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="pri" id="mok" disabled onclick="confirmAssign()">Assign</button></div>`);
+  modal(`<div class="mhd"><div class="t">Assign ${esc(c.code||'chit')}</div><div class="s">${esc(c.party||'')}${c.amt?' · '+inr(c.amt):''}</div></div><div class="mbody">${custnote}${rows||'<div style="padding:14px;color:var(--grey);font-size:13px">No co-assists yet.</div>'}<div style="padding:6px 0 2px"><button class="composebtn" onclick="addActorModal()">+ New co-assist</button></div>${prisel}${reasonbox}</div><div class="mfoot"><button onclick="closeModal()">${tx('Cancel')}</button><button class="pri" id="mok" disabled onclick="confirmAssign()">${tx('Assign')}</button></div>`);
 }
 function pickActor(aid){ MODALS.pick.actorId=aid; document.querySelectorAll('.optrow').forEach(r=>r.classList.toggle('sel',r.dataset.a===aid)); syncAssignOk(); }
 function pickPri(p){ MODALS.pick.pri=p; document.querySelectorAll('.prisel button').forEach(b=>b.classList.toggle('on',b.dataset.p===p)); const h=document.getElementById('reasonhint'); if(h)h.textContent=p==='urgent'?'— Urgent needs one':'(optional)'; syncAssignOk(); }
@@ -8842,7 +8842,7 @@ async function pickAssignBulk(ids){
     const chip=a.shift==="on_shift"?'<span class="optchip on">on shift</span>':a.shift==="on_break"?'<span class="optchip brk">on break</span>':'<span class="optchip off">off</span>';
     return `<div class="optrow ${dis?'dis':''}" data-a="${a.id}" ${dis?'':`onclick="pickActor('${a.id}')"`}><span class="rdo"></span><div class="oc"><div class="on">${esc(a.name)} <span class="optchip" style="font-size:var(--fs-1);background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)">${hatLabel(a.hat)}</span></div><div class="om">load ${a.load}${max?'/'+max:''}${!assignable?' · not assignable (hat)':off?' · off duty':full?' · at capacity':''}</div></div>${chip}</div>`;
   }).join("");
-  modal(`<div class="mhd"><div class="t">Assign ${ids.length} chit${ids.length>1?'s':''}</div><div class="s">to one co-assist (bulk)</div></div><div class="mbody">${rows||'<div style="padding:14px;color:var(--grey);font-size:13px">No co-assists yet.</div>'}<div style="padding:6px 0 2px"><button class="composebtn" onclick="addActorModal()">+ New co-assist</button></div></div><div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="pri" id="mok" disabled onclick="confirmAssign()">Assign all</button></div>`);
+  modal(`<div class="mhd"><div class="t">Assign ${ids.length} chit${ids.length>1?'s':''}</div><div class="s">to one co-assist (bulk)</div></div><div class="mbody">${rows||'<div style="padding:14px;color:var(--grey);font-size:13px">No co-assists yet.</div>'}<div style="padding:6px 0 2px"><button class="composebtn" onclick="addActorModal()">+ New co-assist</button></div></div><div class="mfoot"><button onclick="closeModal()">${tx('Cancel')}</button><button class="pri" id="mok" disabled onclick="confirmAssign()">${tx('Assign all')}</button></div>`);
 }
 async function assignBulkChits(ids, actorId){
   const a=(UI.actors||STORE.actors||[]).find(x=>x.id===actorId); const who=a?a.name:'the co-assist';
@@ -8859,7 +8859,7 @@ async function assignBulkChits(ids, actorId){
   finally{ hideBusy(); }
 }
 function repriority(id){ const c=UI.detail||UI.rows.find(x=>x.id===id)||{}; MODALS.repri={id,pri:c.pri||"normal",reason:""};
-  modal(`<div class="mhd"><div class="t">Priority — ${c.code||'chit'}</div><div class="s">internal routing in your queue</div></div><div class="mbody">${c.custPri?'<div class="custreq">⚑ Customer flagged this as priority.</div>':''}<div class="prisel">${["urgent","normal","low"].map(p=>`<button class="pri-${p} ${MODALS.repri.pri===p?'on':''}" data-p="${p}" onclick="pickRepri('${p}')">${PRI[p].label}</button>`).join("")}</div><div class="msec">Reason <span id="repriHint" class="rh">${MODALS.repri.pri==='urgent'?'— Urgent needs one':'(optional)'}</span></div><textarea id="reprireason" class="mreason" placeholder="Why this priority…" oninput="MODALS.repri.reason=this.value;syncRepriOk()"></textarea></div><div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="pri" id="repriok" ${MODALS.repri.pri==='urgent'?'disabled':''} onclick="confirmRepri()">Set ${PRI[MODALS.repri.pri].label}</button></div>`); }
+  modal(`<div class="mhd"><div class="t">Priority — ${c.code||'chit'}</div><div class="s">internal routing in your queue</div></div><div class="mbody">${c.custPri?'<div class="custreq">⚑ Customer flagged this as priority.</div>':''}<div class="prisel">${["urgent","normal","low"].map(p=>`<button class="pri-${p} ${MODALS.repri.pri===p?'on':''}" data-p="${p}" onclick="pickRepri('${p}')">${PRI[p].label}</button>`).join("")}</div><div class="msec">Reason <span id="repriHint" class="rh">${MODALS.repri.pri==='urgent'?'— Urgent needs one':'(optional)'}</span></div><textarea id="reprireason" class="mreason" placeholder="Why this priority…" oninput="MODALS.repri.reason=this.value;syncRepriOk()"></textarea></div><div class="mfoot"><button onclick="closeModal()">${tx('Cancel')}</button><button class="pri" id="repriok" ${MODALS.repri.pri==='urgent'?'disabled':''} onclick="confirmRepri()">Set ${PRI[MODALS.repri.pri].label}</button></div>`); }
 function pickRepri(p){ MODALS.repri.pri=p; document.querySelectorAll('.prisel button').forEach(b=>b.classList.toggle('on',b.dataset.p===p)); const h=document.getElementById('repriHint'); if(h)h.textContent=p==='urgent'?'— Urgent needs one':'(optional)'; syncRepriOk(); }
 function syncRepriOk(){ const p=MODALS.repri; const b=document.getElementById('repriok'); if(!b)return; b.disabled=!(p.pri!=='urgent'||(p.reason&&p.reason.trim())); b.textContent="Set "+PRI[p.pri].label; }
 async function confirmRepri(){ const p=MODALS.repri; closeModal(); try{ await api("setPriority",{params:{id:p.id},body:{priority:p.pri,reason:p.reason}}); const i=UI.rows.findIndex(x=>x.id===p.id); if(i>=0)UI.rows[i].pri=p.pri; if(UI.detail&&UI.detail.id===p.id)UI.detail.pri=p.pri; paintDetail(); paintRowsOnly(); toast(MSG.prioritySet(PRI[p.pri].label)); announce('Internal priority set to '+PRI[p.pri].label); }catch(e){ toast(MSG.fail("set priority", e)); } }
@@ -8873,7 +8873,7 @@ function logo(){return `<div class="brand">${logoMark(26)} Chit &amp; Bridge</di
 function setStage(k){ const s=STAGES[k]; if(!s) return; if(!s.mock && !s.base){ toast(s.label+" — API base not set yet (config)."); return; } CFG.STAGE=k; if(s.mock) STORE=deepClone(DEMO); route(); }
 function modeRibbon(){
   const st = STAGES[CFG.STAGE];
-  const vpsw = SESSION.token ? `<span class="sw" style="margin-inline-start:auto"><button class="${UI.vp==='lap'?'on':''}" onclick="setVP('lap')">💻 Laptop</button><button class="${UI.vp==='mob'?'on':''}" onclick="setVP('mob')">📱 Mobile</button></span>` : '';
+  const vpsw = SESSION.token ? `<span class="sw" style="margin-inline-start:auto"><button class="${UI.vp==='lap'?'on':''}" onclick="setVP('lap')">${tx('💻 Laptop')}</button><button class="${UI.vp==='mob'?'on':''}" onclick="setVP('mob')">${tx('📱 Mobile')}</button></span>` : '';
   const stageBtns = Object.entries(STAGES).map(([k,s])=>{
     const usable = s.mock || !!s.base;
     return `<button class="${CFG.STAGE===k?'on':''}"${usable?'':' disabled title="API base not set"'} onclick="setStage('${k}')">${s.label}</button>`;
@@ -8970,7 +8970,7 @@ function attMedia(a,size){
   if(a&&a.t==='text'&&big) return a.text!=null
     ? '<pre class="atttext">'+esc(a.text)+'</pre>'
     : '<div class="attfile"><div style="font-size:46px">📄</div><div style="font-weight:600;margin:8px 0 2px">'+esc(a.n||'file')+'</div><div style="font-size:var(--fs-1);color:var(--grey-4)">reading…</div></div>';
-  if(a&&big&&a.t!=='image') return '<div class="attfile"><div style="font-size:46px">'+(a.t==='xlsx'||a.t==='csv'?'📊':(a.t==='docx'||a.t==='doc'?'📝':(a.t==='ppt'?'📑':(a.t==='zip'?'🗜️':(a.t==='pdf'?'📄':'📎')))))+'</div><div style="font-weight:600;margin:8px 0 2px">'+esc(a.n||'file')+'</div><div style="font-size:var(--fs-1);color:var(--grey-4);text-transform:uppercase">'+esc(a.t||'file')+'</div>'+(a.src?'<a class="composebtn" style="margin-top:10px;display:inline-block" href="'+esc(a.src)+'" target="_blank" rel="noopener">Open / download</a>':'')+'</div>';
+  if(a&&big&&a.t!=='image') return '<div class="attfile"><div style="font-size:46px">'+(a.t==='xlsx'||a.t==='csv'?'📊':(a.t==='docx'||a.t==='doc'?'📝':(a.t==='ppt'?'📑':(a.t==='zip'?'🗜️':(a.t==='pdf'?'📄':'📎')))))+'</div><div style="font-weight:600;margin:8px 0 2px">'+esc(a.n||'file')+'</div><div style="font-size:var(--fs-1);color:var(--grey-4);text-transform:uppercase">'+esc(a.t||'file')+'</div>'+(a.src?'<a class="composebtn" style="margin-top:10px;display:inline-block" href="'+esc(a.src)+'" target="_blank" rel="noopener">' + tx('Open / download') + '</a>':'')+'</div>';
   const bg=a.t==='image'?'var(--blue-tint-bg)':a.t==='video'?'var(--gold-soft)':'var(--warn-tint)';
   return `<div class="attImg ${big?'big':''}" style="background:${bg}"><span style="font-size:${big?'40px':'20px'}">${attIcon(a.t)}</span>${a.t==='video'?'<span class="vlen">0:12</span>':''}</div>`;
 }
@@ -9053,8 +9053,8 @@ function contentItems(c){
        (lib/numerals.js) flags rather than rejects while it is message-level; it starts rejecting per-line once
        the reader emits raw_phrase. */
     const li0=(e.live||e.original||{});
-    const unver=li0.qty_unverified?`<span title="This number does not appear anywhere in their message — check it" style="font-size:var(--fs-1);font-weight:700;color:var(--warn-2);background:var(--warn-tint);border-radius:5px;padding:1px 6px;white-space:nowrap">⚠️ check qty</span>`
-      :(li0.qty_rejected?`<span title="${esc(li0.qty_rejected)}" style="font-size:var(--fs-1);font-weight:700;color:var(--disp);background:var(--danger-tint);border-radius:5px;padding:1px 6px;white-space:nowrap">⚠️ qty rejected</span>`:'');
+    const unver=li0.qty_unverified?`<span title="This number does not appear anywhere in their message — check it" style="font-size:var(--fs-1);font-weight:700;color:var(--warn-2);background:var(--warn-tint);border-radius:5px;padding:1px 6px;white-space:nowrap">${tx('⚠️ check qty')}</span>`
+      :(li0.qty_rejected?`<span title="${esc(li0.qty_rejected)}" style="font-size:var(--fs-1);font-weight:700;color:var(--disp);background:var(--danger-tint);border-radius:5px;padding:1px 6px;white-space:nowrap">${tx('⚠️ qty rejected')}</span>`:'');
     /* ⭐ THE CUSTOMER'S OWN WORDS, under the line (b141). Athi: *"this will give confidence to the person; the
        right message is interpreted."* Everything else on the row came out of a machine — this is the only part
        that did not, so it is the only part that can settle whether the machine read it right. */
@@ -9571,7 +9571,7 @@ function chitTermsBlock(c){
 function chitAttBlock(c){
   const atts=attsVis(c.atts);
   if(!atts.length) return "";
-  return `<div class="sec" style="display:flex;align-items:center;gap:7px">📎 Whole-chit attachments · ${atts.length}<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--ok);font-weight:700">✓ co-signed</span></div>
+  return `<div class="sec" style="display:flex;align-items:center;gap:7px">📎 Whole-chit attachments · ${atts.length}<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--ok);font-weight:700">${tx('✓ co-signed')}</span></div>
     ${attTileGrid(atts,'chit')}
     <div class="attNote">Part of the co-signed record — both parties hold the same set &amp; leaves with the chit on sunset.</div>`;
 }

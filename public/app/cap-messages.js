@@ -235,7 +235,7 @@ function messagesScreen(){
                */
               + '<div style="display:flex;gap:10px;align-items:center;padding:2px 0 8px;border-bottom:1px solid var(--line-soft,#f0efec);margin-bottom:6px">'
               +   (t.line_id ? '<span data-testid="msg-open-line" onclick="rplOpenLine(&quot;' + t.chit_id + '&quot;,&quot;' + t.line_id + '&quot;)"'
-                    + ' style="cursor:pointer;font-size:12px;color:var(--blue);font-weight:700">↗ Open the line</span>' : '')
+                    + ' style="cursor:pointer;font-size:12px;color:var(--blue);font-weight:700">' + tx('↗ Open the line') + '</span>' : '')
               +   '<span data-testid="msg-open-chit" onclick="rplOpenChit(&quot;' + t.chit_id + '&quot;)" style="cursor:pointer;font-size:12px;color:var(--blue)">↗ Open the '
               +     ((RPLTRACK[m.track] || {}).label || 'order').toLowerCase() + '</span>'
               /* ⚠️ NO SECOND COUNT HERE. This said "2 in this conversation" beside a row reading "3 msgs" — two

@@ -418,9 +418,9 @@
     }).join('');
 
     return '<div class="cbcat-offers" data-testid="cbcat-offers">'
-      + '<div class="cbcat-offhd">Offers applied</div>' + rows + notes
+      + '<div class="cbcat-offhd">' + tx('Offers applied') + '</div>' + rows + notes
       + (ev.adjustments.length
-          ? '<div class="cbcat-offtot"><span>After offers</span><span>' + esc(money(ns, ev.total)) + '</span></div>'
+          ? '<div class="cbcat-offtot"><span>' + tx('After offers') + '</span><span>' + esc(money(ns, ev.total)) + '</span></div>'
           : '')
       + '</div>';
   }

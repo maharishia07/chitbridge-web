@@ -240,7 +240,7 @@ function catfStandardsModal(){
     + '<div style="font-size:var(--fs-1);color:var(--grey);font-style:italic;margin-top:14px">Multi-source fill + smooth modification = <b>PIM</b> built on <b>MDM golden records</b>, edited with <b>RFC 7386 JSON Merge Patch</b>, de-duplicated by <b>GS1 GTIN/SKU</b>. Cross-company sync (GDSN) is the same discipline, later.</div>'
     + catfFieldMapHTML()
     + '</div>';
-  if (typeof modal === 'function') modal('<div class="mhd"><div class="t">📐 Built on open standards</div></div><div class="mbody" style="padding:0">' + body + '</div>', true);
+  if (typeof modal === 'function') modal('<div class="mhd"><div class="t">' + tx('📐 Built on open standards') + '</div></div><div class="mbody" style="padding:0">' + body + '</div>', true);
   else if (typeof toast === 'function') toast((CBCatalogue.STANDARDS || []).length + ' standards adopted');
 }
    // adopt = source the full visible model
@@ -324,7 +324,7 @@ function catfPublishBlueprint(){
   api('catSourcePut', { body: body }).then(function(r){
     if (r && r.ok) {
       if (typeof toast === 'function') toast('Published as blueprint ✓');
-      if (typeof modal === 'function') modal('<div class="mhd"><div class="t">📢 Published as a blueprint</div></div><div class="mbody" style="padding:16px 18px"><div style="font-size:13px;color:var(--ink-2);line-height:1.6">Your catalogue is now an <b>adoptable blueprint</b>. In <b>another store</b>, open <b>🗂️ Catalogue <span class=arw>→</span> ⚙ Set up (new) <span class=arw>→</span> Blueprint</b> and pick:'
+      if (typeof modal === 'function') modal('<div class="mhd"><div class="t">' + tx('📢 Published as a blueprint') + '</div></div><div class="mbody" style="padding:16px 18px"><div style="font-size:13px;color:var(--ink-2);line-height:1.6">Your catalogue is now an <b>adoptable blueprint</b>. In <b>another store</b>, open <b>🗂️ Catalogue <span class=arw>→</span> ⚙ Set up (new) <span class=arw>→</span> Blueprint</b> and pick:'
         + '<div style="margin-top:8px;font-weight:700;color:var(--blue-2)">' + esc(body.title) + '</div>'
         + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">source <code>' + esc(source_key) + '</code> · ' + items.length + ' item(s)' + (f.vertical ? ' · ' + esc(f.vertical) : '') + '</div>'
         + '<div style="margin-top:10px">Each distributor sets its <b>own unit + price</b> (e.g. wholesale in <b>ton</b>, retail in <b>kg</b>) — the names &amp; design travel <b>by reference</b>, not copied.</div></div></div>', true);
@@ -402,7 +402,7 @@ function catfFillItem(){
   }
   window._catfSchema = schema;
   var style = '<style>#cat_je > div > h3,#cat_je .je-object__title{font-size:13px;font-weight:700;margin:0}#cat_je label{display:block;font-size:var(--fs-1);color:var(--grey-2);font-weight:600;margin:9px 0 3px}#cat_je input[type=text],#cat_je input[type=number],#cat_je select,#cat_je textarea{color:var(--on-card);width:100%;box-sizing:border-box;padding:7px 9px;border:1px solid var(--line);border-radius:6px;font-size:13px;background:var(--paper,#fff)}#cat_je .je-indented-panel{border:none;padding:0;margin:0}#cat_je p.je-object__title + *{margin-top:0}#cat_je .je-header{margin-bottom:2px}</style>';
-  modal('<div class="mhd"><div class="t">Add an item</div></div><div class="mbody" style="padding:0"><div style="padding:14px 18px">' + style + '<div style="font-size:11.5px;color:var(--grey);margin-bottom:12px">Fill in the details for this item.</div><div id="cat_je" style="color:var(--grey);font-size:12px">…</div><div id="cat_je_out" style="margin-top:12px"></div><div style="display:flex;gap:8px;margin-top:16px;align-items:center"><button class="pri" onclick="catfCaptureItem()" style="padding:9px 16px">Save item</button><button onclick="closeModal()" style="padding:9px 16px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--grey)">Cancel</button><button data-testid="catg-new" onclick="catfNewCategory()" style="margin-inline-start:auto;padding:9px 14px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--blue);font-weight:600">＋ New category</button></div></div></div>', true);
+  modal('<div class="mhd"><div class="t">' + tx('Add an item') + '</div></div><div class="mbody" style="padding:0"><div style="padding:14px 18px">' + style + '<div style="font-size:11.5px;color:var(--grey);margin-bottom:12px">Fill in the details for this item.</div><div id="cat_je" style="color:var(--grey);font-size:12px">…</div><div id="cat_je_out" style="margin-top:12px"></div><div style="display:flex;gap:8px;margin-top:16px;align-items:center"><button class="pri" onclick="catfCaptureItem()" style="padding:9px 16px">' + tx('Save item') + '</button><button onclick="closeModal()" style="padding:9px 16px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--grey)">' + tx('Cancel') + '</button><button data-testid="catg-new" onclick="catfNewCategory()" style="margin-inline-start:auto;padding:9px 14px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--blue);font-weight:600">＋ New category</button></div></div></div>', true);
   _catfLoadJE().then(function(){
     setTimeout(function(){ var el = document.getElementById('cat_je'); if (!el) return; el.innerHTML = '';
       try { if (window._catfJE) { try { window._catfJE.destroy(); } catch (e) {} } window._catfJE = new window.JSONEditor(el, { schema: window._catfSchema, theme: 'html', disable_edit_json: true, disable_properties: true, disable_collapse: true, no_additional_properties: true });
@@ -466,7 +466,7 @@ function catfCaptureItem(){
     return;
   }
   var out = document.getElementById('cat_je_out'); if (!out) return;   // draft preview → just show the JSON
-  out.innerHTML = '<div style="font-size:var(--fs-1);font-weight:800;color:var(--ok-2);letter-spacing:.05em">CAPTURED ITEM — conforms to the schema</div>'
+  out.innerHTML = '<div style="font-size:var(--fs-1);font-weight:800;color:var(--ok-2);letter-spacing:.05em">' + tx('CAPTURED ITEM — conforms to the schema') + '</div>'
     + '<pre style="background:#0f1720;color:#d6e2f0;border-radius:9px;padding:10px 12px;font-size:var(--fs-1);overflow:auto;max-height:30vh;margin-top:6px;white-space:pre">' + esc(JSON.stringify(v, null, 2)) + '</pre>'
     + '<div style="font-size:var(--fs-1);color:var(--grey);font-style:italic;margin-top:4px">A real catalogue_item — this is the JSON that gets sealed onto the chit.</div>';
 }
@@ -475,7 +475,7 @@ function catfCustomerPreview(){
   var f = UI.catf; if (!f) return; var c = CBCatalogue.ensure(f.catalogue); var facets = _catfFacets(f);
   var items = (f.items || []).map(_catfItemToRow);
   var tmp = Object.assign({}, f, items.length ? { sampleRows: items } : {});
-  if (typeof modal === 'function') modal('<div class="mhd"><div class="t">👁 Customer experience — end to end</div></div><div class="mbody" style="padding:0"><div style="padding:14px 18px;max-height:72vh;overflow:auto">' + _catfAppearsTab(tmp, c, facets) + '</div></div>', true);
+  if (typeof modal === 'function') modal('<div class="mhd"><div class="t">' + tx('👁 Customer experience — end to end') + '</div></div><div class="mbody" style="padding:0"><div style="padding:14px 18px;max-height:72vh;overflow:auto">' + _catfAppearsTab(tmp, c, facets) + '</div></div>', true);
 }
 
 /* ---- render ---- */
@@ -579,10 +579,10 @@ function _catfWizard(){
   var body = (step === 1 || step === 2) ? raw : _cwTwo(raw, _cwPreview(w));   // steps 1 & 2 own their two-panel; 3–6 get the running preview on the right
   var nav = '<div style="display:flex;gap:10px;margin-top:20px;align-items:center">'
     + (step > 1 ? '<button onclick="cwBack()" style="padding:9px 16px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--grey)">‹ Back</button>' : '')
-    + (step < 6 ? '<button class="pri" onclick="cwNext()" style="padding:9px 18px">Next ›</button>' : '<button class="pri" onclick="cwFinish()" style="padding:9px 18px">✓ Finish — go live</button>')
+    + (step < 6 ? '<button class="pri" onclick="cwNext()" style="padding:9px 18px">' + tx('Next ›') + '</button>' : '<button class="pri" onclick="cwFinish()" style="padding:9px 18px">' + tx('✓ Finish — go live') + '</button>')
     + (step < 6 ? '<span onclick="cwFinish()" style="cursor:pointer;font-size:11.5px;color:var(--blue)">or finish now (partial is fine)</span>' : '')
-    + '<span onclick="cwCancel()" style="cursor:pointer;font-size:11.5px;color:var(--grey);margin-inline-start:auto">Cancel</span></div>';
-  return '<div style="flex:1;min-height:0;overflow-y:auto;padding-bottom:var(--scroll-tail);padding:22px 22px var(--scroll-tail)"><div style="max-width:940px"><div style="font-size:19px;font-weight:800">🗂️ Set up your catalogue</div><div style="font-size:11.5px;color:var(--grey);margin:4px 0 16px">Currency <b>' + esc(_catfCcy()) + '</b> — from Settings · fill as much as you can, in order; each step is optional.</div>' + bar + body + nav + '</div></div>';
+    + '<span onclick="cwCancel()" style="cursor:pointer;font-size:11.5px;color:var(--grey);margin-inline-start:auto">' + tx('Cancel') + '</span></div>';
+  return '<div style="flex:1;min-height:0;overflow-y:auto;padding-bottom:var(--scroll-tail);padding:22px 22px var(--scroll-tail)"><div style="max-width:940px"><div style="font-size:19px;font-weight:800">' + tx('🗂️ Set up your catalogue') + '</div><div style="font-size:11.5px;color:var(--grey);margin:4px 0 16px">Currency <b>' + esc(_catfCcy()) + '</b> — from Settings · fill as much as you can, in order; each step is optional.</div>' + bar + body + nav + '</div></div>';
 }
 /* two-panel wrapper + the running "catalogue so far" preview (the right side, shared across steps 2–6) */
 function _cwTwo(left, right){ return '<div style="display:flex;gap:18px;flex-wrap:wrap"><div style="flex:0 0 46%;min-width:280px;max-width:410px">' + left + '</div><div style="flex:1;min-width:260px;border-inline-start:1px solid var(--line);padding-inline-start:18px">' + right + '</div></div>'; }
@@ -590,10 +590,10 @@ function _cwPreview(w){
   var fields = _cwRequired(w), cov = _cwCovered(w);
   var items = (w.built && w.built.finishes || []).filter(function(it){ return w.chosen[it.name] !== false; });
   var title = (w.built && w.built.title) || (CATF_KB[w.vertical] && CATF_KB[w.vertical].product) || (w.purpose ? 'Your catalogue' : '—');
-  var head = '<div style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);letter-spacing:.05em">YOUR CATALOGUE SO FAR</div>'
+  var head = '<div style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);letter-spacing:.05em">' + tx('YOUR CATALOGUE SO FAR') + '</div>'
     + '<div style="margin-top:6px;font-size:var(--fs-2);font-weight:700">' + esc(title) + '</div>'
     + '<div style="font-size:var(--fs-1);color:var(--grey)">cart · ' + esc(_catfCcy()) + ' · sold by ' + esc(_cwUnitStr(w)) + (w.source ? ' · blueprint ' + esc(w.source) : '') + '</div>';
-  var fieldsHtml = fields.length ? '<div style="margin-top:11px;font-size:var(--fs-1);font-weight:700;color:var(--grey-2);text-transform:uppercase;letter-spacing:.04em">Fields</div>' + fields.map(function(f){ var src = cov[_cwNorm(f.name)]; var b = src === 'blueprint' ? ['📎 blueprint', 'var(--purple-2)'] : src === 'erp' ? ['🔗 ERP', 'var(--warn-2)'] : src === 'manual' ? ['✍ you', 'var(--ok-2)'] : ['· to fill', 'var(--grey-4)']; return '<div style="display:flex;align-items:center;gap:6px;font-size:11.5px;padding:1px 0"><span style="flex:1;color:var(--ink-2)">' + esc(f.name) + '</span><span style="font-size:var(--fs-1);font-weight:700;color:' + b[1] + ';background:' + b[1] + '18;border-radius:4px;padding:1px 6px">' + b[0] + '</span></div>'; }).join('') : '';
+  var fieldsHtml = fields.length ? '<div style="margin-top:11px;font-size:var(--fs-1);font-weight:700;color:var(--grey-2);text-transform:uppercase;letter-spacing:.04em">' + tx('Fields') + '</div>' + fields.map(function(f){ var src = cov[_cwNorm(f.name)]; var b = src === 'blueprint' ? ['📎 blueprint', 'var(--purple-2)'] : src === 'erp' ? ['🔗 ERP', 'var(--warn-2)'] : src === 'manual' ? ['✍ you', 'var(--ok-2)'] : ['· to fill', 'var(--grey-4)']; return '<div style="display:flex;align-items:center;gap:6px;font-size:11.5px;padding:1px 0"><span style="flex:1;color:var(--ink-2)">' + esc(f.name) + '</span><span style="font-size:var(--fs-1);font-weight:700;color:' + b[1] + ';background:' + b[1] + '18;border-radius:4px;padding:1px 6px">' + b[0] + '</span></div>'; }).join('') : '';
   var itemsHtml = items.length ? '<div style="margin-top:11px;font-size:var(--fs-1);font-weight:700;color:var(--grey-2);text-transform:uppercase;letter-spacing:.04em">Items · ' + items.length + '</div>' + items.slice(0, 7).map(function(it){ var p = w.prices[it.name]; return '<div style="display:flex;align-items:center;gap:6px;font-size:11.5px;padding:1px 0"><span style="flex:1">' + esc(it.name) + '</span><span style="font-weight:600;color:' + (p != null && p !== '' ? 'var(--blue-2)' : 'var(--disp-2)') + '">' + (p != null && p !== '' ? esc(_catfMoney(p)) : 'no price') + '</span></div>'; }).join('') : '';
   var taxHtml = (w.tax && w.tax.rate) ? '<div style="margin-top:9px;font-size:var(--fs-1);color:var(--grey)">Tax: ' + esc(w.tax.label || 'GST') + ' ' + esc(w.tax.rate) + '%</div>' : '';
   return head + fieldsHtml + itemsHtml + taxHtml;
@@ -629,11 +629,11 @@ function _cwStep1(w){
         var extra = us.filter(function(u){ return CW_UNITS.indexOf(u) < 0; });
         return '<div style="margin-bottom:14px"><div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:5px">Sold by <span style="color:var(--grey-4)">— pick every unit this catalogue uses (products can differ: kg · litre · count…)</span></div>'
           + '<div style="display:flex;gap:5px;flex-wrap:wrap">' + CW_UNITS.map(function(u){ return chip(u, true); }).join('') + extra.map(function(u){ return chip(u, false); }).join('') + '</div>'
-          + '<div style="display:flex;gap:6px;margin-top:7px"><input id="cw_newunit" placeholder="add a unit (e.g. drum, coil)" style="width:170px;padding:4px 8px;border:1px solid var(--line);border-radius:6px;font-size:11.5px"><button onclick="cwAddUnit()" style="padding:4px 11px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--blue);font-weight:600;font-size:var(--fs-1);cursor:pointer">Add</button></div></div>'; })()
+          + '<div style="display:flex;gap:6px;margin-top:7px"><input id="cw_newunit" placeholder="add a unit (e.g. drum, coil)" style="width:170px;padding:4px 8px;border:1px solid var(--line);border-radius:6px;font-size:11.5px"><button onclick="cwAddUnit()" style="padding:4px 11px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--blue);font-weight:600;font-size:var(--fs-1);cursor:pointer">' + tx('Add') + '</button></div></div>'; })()
       + _cwMethodBlock(w)
       + order.map(function(sec){ return '<div style="margin-bottom:11px"><div style="font-size:var(--fs-1);font-weight:700;color:var(--grey-2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">' + esc(sec) + '</div>' + secs[sec].map(function(f){ var idx = w.fieldSel.indexOf(f); return '<label style="display:flex;align-items:center;gap:8px;padding:2px 0;cursor:pointer"><input type="checkbox" ' + (f.on ? 'checked' : '') + ' onchange="cwToggleField(' + idx + ')"><span style="font-size:12px;font-weight:' + (f.on ? 600 : 400) + ';color:' + (f.on ? 'var(--blue-2)' : 'var(--grey)') + '">' + esc(f.name) + '</span><span style="font-size:var(--fs-1);color:var(--grey-4);background:var(--blue-tint-bg);border-radius:4px;padding:1px 6px">' + esc(f.type) + '</span>' + (f._bp ? '<span style="font-size:var(--fs-1);color:var(--purple-2)" title="from blueprint">📎</span>' : f._added ? '<span style="font-size:var(--fs-1);color:var(--ok-2)" title="you added">＋</span>' : '') + '</label>'; }).join('') + '</div>'; }).join('')
       + '<div style="font-size:var(--fs-1);color:var(--ok-2);font-style:italic;border-top:1px solid var(--line);padding-top:8px">' + on + ' fields selected · sold by ' + esc(_cwUnitStr(w)) + '</div>'
-      + '<div style="margin-top:8px"><div style="font-size:var(--fs-1);font-weight:700;color:var(--grey-2);text-transform:uppercase;letter-spacing:.04em">Add a data type</div><div style="display:flex;gap:6px;margin-top:5px"><input id="cw_newfield" placeholder="field name" style="flex:1;min-width:0;padding:5px 8px;border:1px solid var(--line);border-radius:6px;font-size:12px"><select id="cw_newtype" style="padding:5px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-1)">' + ['text', 'number', 'choice', 'date', 'boolean'].map(function(t){ return '<option>' + t + '</option>'; }).join('') + '</select><button onclick="cwAddCustomField()" style="padding:5px 10px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--blue);font-weight:600;font-size:var(--fs-1);cursor:pointer">Add</button></div><div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">Uncheck any you don\'t need · add any that are missing. Adopting a blueprint (step 2) adds its fields here too 📎.</div></div>';
+      + '<div style="margin-top:8px"><div style="font-size:var(--fs-1);font-weight:700;color:var(--grey-2);text-transform:uppercase;letter-spacing:.04em">' + tx('Add a data type') + '</div><div style="display:flex;gap:6px;margin-top:5px"><input id="cw_newfield" placeholder="field name" style="flex:1;min-width:0;padding:5px 8px;border:1px solid var(--line);border-radius:6px;font-size:12px"><select id="cw_newtype" style="padding:5px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-1)">' + ['text', 'number', 'choice', 'date', 'boolean'].map(function(t){ return '<option>' + t + '</option>'; }).join('') + '</select><button onclick="cwAddCustomField()" style="padding:5px 10px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--blue);font-weight:600;font-size:var(--fs-1);cursor:pointer">' + tx('Add') + '</button></div><div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">Uncheck any you don\'t need · add any that are missing. Adopting a blueprint (step 2) adds its fields here too 📎.</div></div>';
   } else {
     right = '<div style="color:var(--grey);font-size:var(--fs-2);text-align:center;margin-top:44px">Describe the catalogue on the left <span class=arw>→</span><br>I\'ll suggest the fields to store, grouped in sections, for you to pick.</div>';
   }
@@ -654,7 +654,7 @@ function _cwStep2Fields(w){
     + '<div><span style="color:' + (mode === 'value' ? 'var(--blue-2)' : 'var(--purple-2)') + ';font-weight:700">' + (mode === 'value' ? '📋 filled by value · ' : '📎 filled by reference · ') + refF.length + '</span> <span style="color:var(--grey)">' + esc(refF.join(' · ') || '—') + '</span></div>'
     + (todo.length ? '<div><span style="color:var(--ok-2);font-weight:700">✍ you still fill · ' + todo.length + '</span> <span style="color:var(--grey)">' + esc(todo.join(' · ')) + '</span></div>' : '')
     + '</div>' : '';
-  var swatches = (sel && sel.combinations && sel.combinations.length) ? '<div style="margin-top:10px;border-top:1px solid var(--line);padding-top:8px"><div style="font-size:var(--fs-1);font-weight:700;color:var(--grey-2);text-transform:uppercase;letter-spacing:.04em">Colour combinations</div>' + sel.combinations.map(_cwCombo).join('') + '</div>' : '';
+  var swatches = (sel && sel.combinations && sel.combinations.length) ? '<div style="margin-top:10px;border-top:1px solid var(--line);padding-top:8px"><div style="font-size:var(--fs-1);font-weight:700;color:var(--grey-2);text-transform:uppercase;letter-spacing:.04em">' + tx('Colour combinations') + '</div>' + sel.combinations.map(_cwCombo).join('') + '</div>' : '';
   return head + summary + '<div style="margin-top:8px">' + rows + '</div>' + swatches;
 }
 /* render products with the blueprint's OWN look & feel — colour swatches, chips, accent, story */
@@ -724,9 +724,9 @@ function _cwStep4(w){
   var body;
   if (mode === 'csv') {
     var n = (w.manualItems || []).filter(function(i){ return i._src === 'csv'; }).length;
-    body = '<div style="font-size:var(--fs-2);color:var(--ink-2);margin-bottom:8px">Have a list? <b>Export to CSV from Excel / Tally</b> and paste it (first row = column names). We map columns to your fields — no typing.</div>'
+    body = '<div style="font-size:var(--fs-2);color:var(--ink-2);margin-bottom:8px">Have a list? <b>' + tx('Export to CSV from Excel / Tally') + '</b> and paste it (first row = column names). We map columns to your fields — no typing.</div>'
       + '<textarea id="cw_bulk_csv" placeholder="name,price,pack_size,hsn\nRoyale Matt,520,4,3209\nRoyale Shyne,610,4,3209" rows="5" style="width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:12px;font-family:monospace;resize:vertical"></textarea>'
-      + '<button class="pri" onclick="cwImportCSV()" style="margin-top:8px;padding:8px 15px">Import rows</button>'
+      + '<button class="pri" onclick="cwImportCSV()" style="margin-top:8px;padding:8px 15px">' + tx('Import rows') + '</button>'
       + (n ? '<div style="margin-top:8px;font-size:11.5px;color:var(--ok-2)">✓ ' + n + ' item(s) imported from CSV — they\'ll be in your catalogue.</div>' : '')
       + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px;font-style:italic">Excel? Save-as CSV. Hundreds of rows work in one paste.</div>';
   } else if (mode === 'few') {
@@ -735,9 +735,9 @@ function _cwStep4(w){
       + (rem.length ? rem.map(function(r){ return '<div style="display:flex;align-items:center;gap:9px;padding:4px 0"><span style="font-size:12px;color:var(--grey);min-width:150px">' + esc(r.name) + '</span><input value="' + esc(w.manual[r.name] || '') + '" oninput="cwSetManual(\'' + r.name + '\',this.value)" placeholder="value" style="flex:1;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:12px"></div>'; }).join('') : '<div style="font-size:12px;color:var(--ok-2)">Nothing left — the blueprint / ERP covered it.</div>');
   } else {
     var ph = w.photos || []; var committed = (w.manualItems || []).filter(function(i){ return i._src === 'capture'; }).length;
-    body = '<div style="font-size:var(--fs-2);color:var(--ink-2);margin-bottom:8px">Only have <b>photos or product labels</b>? Add the pictures — each becomes an item. You confirm the name &amp; price (the same human-confirm step the <b>Capture</b> connector uses).</div>'
+    body = '<div style="font-size:var(--fs-2);color:var(--ink-2);margin-bottom:8px">Only have <b>photos or product labels</b>? Add the pictures — each becomes an item. You confirm the name &amp; price (the same human-confirm step the <b>' + tx('Capture') + '</b> connector uses).</div>'
       + '<input id="cw_photo_input" type="file" accept="image/*" multiple style="display:none" onchange="cwPhotoPick(this)">'
-      + '<button class="pri" onclick="cwPhotoBtn()" style="padding:8px 15px">📷 Add photos</button>'
+      + '<button class="pri" onclick="cwPhotoBtn()" style="padding:8px 15px">' + tx('📷 Add photos') + '</button>'
       /**
        * ⚠️ READING IS A SEPARATE, DELIBERATE PRESS. It is not folded into "Add photos" because it COSTS — a vision
        * call per batch, on a shared key, for someone who is cash-light. An automatic read on every pick would spend
@@ -757,7 +757,7 @@ function _cwStep4(w){
              * it is theirs, not the model's. Without that distinction someone confirming a screenful of cards
              * cannot tell which values they actually checked.
              */
-            + (p._ai ? '<div style="margin-top:6px;font-size:var(--fs-1);font-weight:800;color:var(--purple);background:var(--purple-tint);border-radius:5px;padding:1px 6px;display:inline-block">✨ proposed — check it</div>' : '')
+            + (p._ai ? '<div style="margin-top:6px;font-size:var(--fs-1);font-weight:800;color:var(--purple);background:var(--purple-tint);border-radius:5px;padding:1px 6px;display:inline-block">' + tx('✨ proposed — check it') + '</div>' : '')
             + '<input value="' + esc(p.name || '') + '" oninput="cwSetPhotoField(\'' + p.id + '\',\'name\',this.value)" placeholder="item name" style="width:100%;box-sizing:border-box;margin-top:6px;padding:5px 7px;border:1px solid ' + (p._ai ? 'var(--blue-tint-bg)' : 'var(--line)') + ';border-radius:6px;font-size:11.5px">'
             + '<div style="display:flex;gap:5px;margin-top:5px;align-items:center"><span style="font-size:var(--fs-1);color:var(--grey)">' + esc(_catfCcy()) + '</span><input type="number" value="' + (p.price != null ? p.price : '') + '" oninput="cwSetPhotoField(\'' + p.id + '\',\'price\',this.value)" placeholder="price" style="flex:1;min-width:0;padding:4px 6px;border:1px solid var(--line);border-radius:6px;font-size:11.5px"><span onclick="cwPhotoRemove(\'' + p.id + '\')" style="cursor:pointer;color:#b23;font-size:15px;line-height:1" title="remove">×</span></div>'
             + '</div>'; }).join('') + '</div>'
@@ -766,7 +766,7 @@ function _cwStep4(w){
         : '')
       /* ⚠️ This line used to say the co-assist was "text-only today". It is not, as of b127 — and a footnote that
          still says a feature is missing while the button for it sits above is worse than no footnote. */
-      + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:12px;font-style:italic">Photos are downscaled and stored on the item. <b>✨ Read the labels</b> asks the co-assist to read what it can SEE into the cards — always a <b>proposal you check</b>, never a value it commits, and it fills only empty fields so anything you typed stays yours.</div>';
+      + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:12px;font-style:italic">Photos are downscaled and stored on the item. <b>' + tx('✨ Read the labels') + '</b> asks the co-assist to read what it can SEE into the cards — always a <b>proposal you check</b>, never a value it commits, and it fills only empty fields so anything you typed stays yours.</div>';
   }
   return '<div style="font-size:13px;color:var(--ink-2);margin-bottom:10px">How do you have your items? Don\'t type hundreds — bring a <b>list</b> (CSV/Excel) or <b>photos</b>.</div>' + bar + body;
 }
@@ -775,7 +775,7 @@ function _cwStep5(w){
   // the PAYLOAD pipeline receives declared data, not a purchase — there is nothing to price.
   if (CATF_PIPELINE[_cwMethod(w)] === 'payload') {
     var _mp = CATF_METHODS.filter(function(m){ return m.k === _cwMethod(w); })[0] || {};
-    return '<div style="font-size:13px;color:var(--ink-2)">This catalogue receives <b>' + esc(_mp.receives || 'data') + '</b> — nothing is bought, so no prices are collected. Change <b>How customers order</b> in step 1 if you want to take orders.</div>';
+    return '<div style="font-size:13px;color:var(--ink-2)">This catalogue receives <b>' + esc(_mp.receives || 'data') + '</b> — nothing is bought, so no prices are collected. Change <b>' + tx('How customers order') + '</b> in step 1 if you want to take orders.</div>';
   }
   var pk = Object.keys(w.erpMap || {}).filter(function(k){ return /price|rate|mrp/i.test(k) && w.erpMap[k] && w.erpMap[k].system && w.erpMap[k].system !== '—'; })[0];
   if (pk) return '<div style="font-size:13px;color:var(--ink-2)">Price comes from your <b>' + esc(w.erpMap[pk].system) + '</b> (' + esc(w.erpMap[pk].ref || 'mapped') + ') — nothing to set here.</div>';
@@ -1013,7 +1013,7 @@ function cwFinish(){
   } else { afterAdopt(); }
 }
 
-function _catfSettingsNote(){ return 'Currency <b>' + esc(_catfCcy()) + '</b> · country <b>' + esc(_catfCountry()) + '</b> — from <b>Settings</b> (set at registration), inherited here.'; }
+function _catfSettingsNote(){ return 'Currency <b>' + esc(_catfCcy()) + '</b> · country <b>' + esc(_catfCountry()) + '</b> — from <b>' + tx('Settings') + '</b> (set at registration), inherited here.'; }
 
 /* ===== two-panel SETUP: left = choose/feed · right = live "how it looks" ===== */
 
@@ -1026,10 +1026,10 @@ function _catfMethodControl(method, price){
   var p = price != null && price !== '' ? _catfMoney(price) : _catfMoney(40);
   var btn = 'background:var(--blue-2);color:var(--on-accent);border-radius:5px;padding:3px 10px;font-size:var(--fs-1);font-weight:600';
   if (method === 'text') return '<span style="font-size:var(--fs-1);color:var(--grey)">information only</span>';
-  if (method === 'cart') return '<span style="font-size:var(--fs-1);color:var(--grey)">Qty ▢ × ' + esc(p) + '</span> <span style="' + btn + '">Add</span>';
-  if (method === 'range') return '<span style="font-size:var(--fs-1);color:var(--grey)">' + esc(_catfMoney(3200)) + ' – ' + esc(_catfMoney(3600)) + '</span> <span style="' + btn + '">Order</span>';
-  if (method === 'qty') return '<span style="font-size:var(--fs-1);color:var(--grey)">Qty ▢</span> <span style="' + btn + '">Order</span>';
-  return '<span style="font-size:var(--fs-1);color:var(--grey)">Qty ▢ · your price ▢</span> <span style="' + btn + '">Offer</span>';
+  if (method === 'cart') return '<span style="font-size:var(--fs-1);color:var(--grey)">Qty ▢ × ' + esc(p) + '</span> <span style="' + btn + '">' + tx('Add') + '</span>';
+  if (method === 'range') return '<span style="font-size:var(--fs-1);color:var(--grey)">' + esc(_catfMoney(3200)) + ' – ' + esc(_catfMoney(3600)) + '</span> <span style="' + btn + '">' + tx('Order') + '</span>';
+  if (method === 'qty') return '<span style="font-size:var(--fs-1);color:var(--grey)">' + tx('Qty ▢') + '</span> <span style="' + btn + '">' + tx('Order') + '</span>';
+  return '<span style="font-size:var(--fs-1);color:var(--grey)">' + tx('Qty ▢ · your price ▢') + '</span> <span style="' + btn + '">' + tx('Offer') + '</span>';
 }
 
 /* TAB 2 — the customer front: the Amazon-style END-TO-END experience (browse → product → cart → order = chit) */
@@ -1048,11 +1048,11 @@ function _catfAppearsTab(f, c, facets){
   var detail = '<div style="display:flex;gap:11px">' + (facets.media ? '<div style="width:86px;height:86px;border-radius:9px;background:linear-gradient(135deg,#eef1f5,#dde3ea);flex:none"></div>' : '') + '<div style="flex:1;min-width:0"><div style="font-weight:700;font-size:var(--fs-3)">' + esc(p0.name || c.product || 'Item') + '</div><div style="font-weight:800;font-size:15px;margin-top:2px">' + esc(_catfMoney(priceOf(p0))) + (p0.unit ? ' <span style="font-size:var(--fs-1);color:var(--grey);font-weight:400">/ ' + esc(p0.unit) + '</span>' : '') + '</div>' + (spec ? '<div style="margin-top:8px">' + spec + '</div>' : '') + '<div style="margin-top:10px">' + _catfMethodControl(f.method, p0.price) + '</div></div></div>';
   // 3 · cart & checkout
   var qty = 3; var up = parseFloat(priceOf(p0)) || 40; var tot = f.method === 'cart' ? up * qty : up;
-  var cart = '<div style="display:flex;justify-content:space-between;font-size:12px"><span>' + esc(p0.name || 'Item') + ' × ' + qty + '</span><span style="font-weight:600">' + esc(_catfMoney(tot)) + '</span></div><div style="display:flex;justify-content:space-between;margin-top:6px;border-top:1px solid var(--line);padding-top:6px"><span style="font-weight:700">Total (' + esc(ccy) + ')</span><span style="font-weight:800">' + esc(_catfMoney(tot)) + '</span></div><div style="text-align:end;margin-top:9px"><span style="background:var(--ok-2);color:var(--on-ok);border-radius:6px;padding:5px 14px;font-size:11.5px;font-weight:600">Place order</span></div>';
+  var cart = '<div style="display:flex;justify-content:space-between;font-size:12px"><span>' + esc(p0.name || 'Item') + ' × ' + qty + '</span><span style="font-weight:600">' + esc(_catfMoney(tot)) + '</span></div><div style="display:flex;justify-content:space-between;margin-top:6px;border-top:1px solid var(--line);padding-top:6px"><span style="font-weight:700">Total (' + esc(ccy) + ')</span><span style="font-weight:800">' + esc(_catfMoney(tot)) + '</span></div><div style="text-align:end;margin-top:9px"><span style="background:var(--ok-2);color:var(--on-ok);border-radius:6px;padding:5px 14px;font-size:11.5px;font-weight:600">' + tx('Place order') + '</span></div>';
   // 4 · order placed → the chit (final output, both sides keep a copy)
   var fieldLines = visFields.map(function(fl){ var v = (p0.values && p0.values[fl.name]) || _catfSampleVal(fl.name, 0); return '<div style="display:flex;justify-content:space-between;font-size:var(--fs-1);padding:1px 0"><span style="color:var(--grey)">' + esc(fl.name) + '</span><span style="font-family:monospace;color:var(--faint,var(--grey-3))">' + esc(v) + '</span></div>'; }).join('');
-  var chit = '<div style="max-width:280px;margin:0 auto;border:1px solid var(--line);border-top:3px solid var(--blue-2);border-radius:9px;padding:11px 12px;background:var(--blue-tint-bg);color:var(--on-card)"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-weight:700;font-size:var(--fs-2)">' + esc(p0.name || 'Item') + '</span><span style="font-size:var(--fs-1);color:var(--ok-2);font-weight:700">✓ placed</span></div><div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px">Qty ' + qty + (f.method === 'cart' ? ' · ' + esc(_catfMoney(tot)) : '') + (p0.unit ? ' ' + esc(p0.unit) : '') + '</div>' + (fieldLines ? '<div style="margin-top:6px;border-top:1px dashed var(--line);padding-top:5px">' + fieldLines + '</div>' : '') + '<div style="border-top:1px dashed var(--line);margin-top:8px;padding-top:5px;font-size:var(--fs-1);color:var(--faint,var(--grey-3));font-family:monospace">🔒 sealed · arrives on the rail · both parties keep a copy</div></div>';
-  return '<div style="font-size:var(--fs-1);font-weight:800;color:var(--ok-2);letter-spacing:.05em">🛍 CUSTOMER EXPERIENCE — end to end</div>'
+  var chit = '<div style="max-width:280px;margin:0 auto;border:1px solid var(--line);border-top:3px solid var(--blue-2);border-radius:9px;padding:11px 12px;background:var(--blue-tint-bg);color:var(--on-card)"><div style="display:flex;justify-content:space-between;align-items:center"><span style="font-weight:700;font-size:var(--fs-2)">' + esc(p0.name || 'Item') + '</span><span style="font-size:var(--fs-1);color:var(--ok-2);font-weight:700">' + tx('✓ placed') + '</span></div><div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px">Qty ' + qty + (f.method === 'cart' ? ' · ' + esc(_catfMoney(tot)) : '') + (p0.unit ? ' ' + esc(p0.unit) : '') + '</div>' + (fieldLines ? '<div style="margin-top:6px;border-top:1px dashed var(--line);padding-top:5px">' + fieldLines + '</div>' : '') + '<div style="border-top:1px dashed var(--line);margin-top:8px;padding-top:5px;font-size:var(--fs-1);color:var(--faint,var(--grey-3));font-family:monospace">' + tx('🔒 sealed · arrives on the rail · both parties keep a copy') + '</div></div>';
+  return '<div style="font-size:var(--fs-1);font-weight:800;color:var(--ok-2);letter-spacing:.05em">' + tx('🛍 CUSTOMER EXPERIENCE — end to end') + '</div>'
     + step('1', 'Browse the storefront', browse) + arrow
     + step('2', 'Open a product', detail) + arrow
     + step('3', 'Cart &amp; checkout', cart) + arrow
@@ -1063,7 +1063,7 @@ function _catfAppearsTab(f, c, facets){
 /* the items under this face — each tagged by SOURCE (reference / manual / ERP). For referenced items the owner only sets price. */
 function _catfSrcTag(src){ return src === 'reference' ? ['📎 by reference', 'var(--purple-2)'] : src === 'value' ? ['📋 by value (copy)', 'var(--blue-2)'] : src === 'erp' ? ['🔗 from ERP', 'var(--warn-2)'] : src === 'csv' ? ['📄 imported', 'var(--ok-2)'] : src === 'capture' ? ['📷 photo', 'var(--purple-2)'] : ['✍ entered', 'var(--ok-2)']; }
 function _catfItemsHtml(f){
-  var items = (f.items || []); if (!items.length) return '<div style="font-size:var(--fs-1);font-weight:800;color:var(--ok-2);letter-spacing:.05em;margin-top:18px">YOUR ITEMS · 0</div><div style="font-size:var(--fs-1);color:var(--grey);padding:4px 0">No items yet — adopt a source, add manually, or pull from ERP.</div>';
+  var items = (f.items || []); if (!items.length) return '<div style="font-size:var(--fs-1);font-weight:800;color:var(--ok-2);letter-spacing:.05em;margin-top:18px">' + tx('YOUR ITEMS · 0') + '</div><div style="font-size:var(--fs-1);color:var(--grey);padding:4px 0">No items yet — adopt a source, add manually, or pull from ERP.</div>';
   var needPrice = items.filter(function(it){ return it.price == null || it.price === ''; }).length;
   var rows = items.map(function(it, i){
     var t = _catfSrcTag(it._src);
@@ -1111,9 +1111,9 @@ function _catfFaceView(){
       + '<span onclick="catfToggleFacet(\'' + x.k + '\')" style="cursor:pointer;font-size:11.5px;font-weight:700;padding:4px 12px;border-radius:14px;border:1px solid ' + (on ? 'var(--ok-2)' : 'var(--line)') + ';color:' + (on ? 'var(--on-accent)' : 'var(--blue)') + ';background:' + (on ? 'var(--ok-2)' : 'var(--card)') + '">' + (on ? '✓ on' : '＋ add') + '</span></div>';
   }).join('');
   var inner = '<div style="max-width:660px">'
-    + '<div style="display:flex;align-items:center;gap:10px"><div style="font-size:18px;font-weight:800">🗂️ Catalogue face</div>' + (f.adoptedFrom ? '<span style="font-size:var(--fs-1);font-weight:700;color:var(--blue-2);background:var(--blue-tint-bg);border-radius:5px;padding:2px 8px">adopted · ' + esc(f.adoptedFrom) + '</span>' : '<span style="font-size:var(--fs-1);font-weight:700;color:var(--purple-2);background:var(--purple-tint);border-radius:5px;padding:2px 8px">built from your data</span>') + '</div>'
+    + '<div style="display:flex;align-items:center;gap:10px"><div style="font-size:18px;font-weight:800">' + tx('🗂️ Catalogue face') + '</div>' + (f.adoptedFrom ? '<span style="font-size:var(--fs-1);font-weight:700;color:var(--blue-2);background:var(--blue-tint-bg);border-radius:5px;padding:2px 8px">adopted · ' + esc(f.adoptedFrom) + '</span>' : '<span style="font-size:var(--fs-1);font-weight:700;color:var(--purple-2);background:var(--purple-tint);border-radius:5px;padding:2px 8px">built from your data</span>') + '</div>'
     + '<div style="font-size:11.5px;color:var(--grey);margin-top:4px">One face for the whole catalogue — every item conforms. ' + _catfSettingsNote() + '</div>'
-    + '<label style="font-size:var(--fs-1);color:var(--grey);display:block;margin-top:14px">Purpose</label>'
+    + '<label style="font-size:var(--fs-1);color:var(--grey);display:block;margin-top:14px">' + tx('Purpose') + '</label>'
     + '<textarea oninput="catfSetPurpose(this.value)" rows="2" style="width:100%;margin-top:4px;box-sizing:border-box;padding:8px 10px;border:1px solid var(--line);border-radius:9px;font-size:13px;resize:vertical">' + esc(c.story || '') + '</textarea>'
     + '<label style="font-size:var(--fs-1);color:var(--grey);display:block;margin-top:12px">How the store sells <span style="color:var(--faint,var(--grey-3))">— one method for the whole catalogue</span></label>'
     + '<select onchange="catfSetMethod(this.value)" style="margin-top:4px;padding:7px 9px;border:1px solid var(--line);border-radius:9px;font-size:13px">' + methOpts + '</select>'
@@ -1122,19 +1122,19 @@ function _catfFaceView(){
     + '<div style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);letter-spacing:.05em;margin-top:16px">DEEPEN THE CATALOGUE <span style="font-weight:500;color:var(--grey)">— add only what this business needs</span></div>'
     + '<div style="margin-top:6px">' + facetRows + '</div>'
     + _catfItemsHtml(f)
-    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:16px">Item data comes three ways — <b>📎 from the source</b> (owner sets price only) · <b>✍ entered</b> · <b>🔗 from ERP</b>:</div>'
+    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:16px">Item data comes three ways — <b>' + tx('📎 from the source') + '</b> (owner sets price only) · <b>' + tx('✍ entered') + '</b> · <b>' + tx('🔗 from ERP') + '</b>:</div>'
     + '<div style="display:flex;gap:10px;margin-top:6px;flex-wrap:wrap">'
     + '<button class="pri" onclick="catfFillItem()" style="padding:9px 15px">＋ Add manually</button>'
-    + '<button onclick="catfSyncERP()" style="padding:9px 15px;border:1px solid #b07b1e;border-radius:9px;background:var(--card);color:var(--warn-2);font-weight:600">🔗 From ERP</button>'
-    + '<button onclick="catfCustomerPreview()" style="padding:9px 15px;border:1px solid var(--ok-2);border-radius:9px;background:var(--card);color:var(--ok-2);font-weight:600">👁 Customer experience</button>'
-    + '<button onclick="catfManage()" style="padding:9px 15px;border:1px solid var(--blue-2);border-radius:9px;background:var(--card);color:var(--blue-2);font-weight:600">🗂️ Manage in Catalogue</button>'
+    + '<button onclick="catfSyncERP()" style="padding:9px 15px;border:1px solid #b07b1e;border-radius:9px;background:var(--card);color:var(--warn-2);font-weight:600">' + tx('🔗 From ERP') + '</button>'
+    + '<button onclick="catfCustomerPreview()" style="padding:9px 15px;border:1px solid var(--ok-2);border-radius:9px;background:var(--card);color:var(--ok-2);font-weight:600">' + tx('👁 Customer experience') + '</button>'
+    + '<button onclick="catfManage()" style="padding:9px 15px;border:1px solid var(--blue-2);border-radius:9px;background:var(--card);color:var(--blue-2);font-weight:600">' + tx('🗂️ Manage in Catalogue') + '</button>'
     + '<input id="catf_photo_input" type="file" accept="image/*" multiple style="display:none" onchange="catfAddPhotos(this)">'
-    + '<button onclick="catfPhotoAttachBtn()" style="padding:9px 15px;border:1px solid var(--ok-2);border-radius:9px;background:var(--card);color:var(--ok-2);font-weight:600">📷 Add photos</button>'
-    + '<button onclick="catfEnrichAI()" style="padding:9px 15px;border:1px solid #b07b1e;border-radius:9px;background:var(--card);color:var(--warn-2);font-weight:600">✨ Enrich (AI)</button>'
-    + '<button onclick="catfPublishBlueprint()" style="padding:9px 15px;border:1px solid #6a4fa0;border-radius:9px;background:var(--card);color:var(--purple-2);font-weight:600">📢 Publish as blueprint</button>'
-    + '<button onclick="catfReset()" style="padding:9px 15px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--grey)">↺ Start over</button>'
+    + '<button onclick="catfPhotoAttachBtn()" style="padding:9px 15px;border:1px solid var(--ok-2);border-radius:9px;background:var(--card);color:var(--ok-2);font-weight:600">' + tx('📷 Add photos') + '</button>'
+    + '<button onclick="catfEnrichAI()" style="padding:9px 15px;border:1px solid #b07b1e;border-radius:9px;background:var(--card);color:var(--warn-2);font-weight:600">' + tx('✨ Enrich (AI)') + '</button>'
+    + '<button onclick="catfPublishBlueprint()" style="padding:9px 15px;border:1px solid #6a4fa0;border-radius:9px;background:var(--card);color:var(--purple-2);font-weight:600">' + tx('📢 Publish as blueprint') + '</button>'
+    + '<button onclick="catfReset()" style="padding:9px 15px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--grey)">' + tx('↺ Start over') + '</button>'
     + '</div>'
-    + '<div style="margin-top:14px;font-size:var(--fs-1);color:var(--grey)">Items are <b>golden records</b> — each source (blueprint · ERP · CSV · capture) merges into one item, keyed by SKU, edited via JSON Merge Patch. <span onclick="catfStandardsModal()" style="cursor:pointer;color:var(--blue);font-weight:600">📐 Built on open standards →</span></div>'
+    + '<div style="margin-top:14px;font-size:var(--fs-1);color:var(--grey)">Items are <b>golden records</b> — each source (blueprint · ERP · CSV · capture) merges into one item, keyed by SKU, edited via JSON Merge Patch. <span onclick="catfStandardsModal()" style="cursor:pointer;color:var(--blue);font-weight:600">' + tx('📐 Built on open standards →') + '</span></div>'
     + '</div>';
   return '<div style="flex:1;min-height:0;overflow-y:auto;padding-bottom:var(--scroll-tail);padding:22px 20px var(--scroll-tail)">' + inner + '</div>';
 }

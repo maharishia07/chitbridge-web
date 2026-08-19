@@ -97,8 +97,8 @@ function catsetDefListHTML(kind, one){
       + (d.sub ? '<code class="dk">' + esc(d.sub) + '</code>' : '')
       + '<span class="dst ' + esc(d.status) + '">' + esc(d.status) + '</span>'
       + (d.status === 'retired' ? ''
-          : '<span class="da" onclick="catsetDefEdit(\'' + kind + '\',\'' + esc(d.id) + '\')">Edit</span>'
-            + '<span class="da" onclick="catsetDefRetire(\'' + kind + '\',\'' + esc(d.id) + '\',\'' + esc(String(d.name).replace(/'/g, '')) + '\')">Retire</span>')
+          : '<span class="da" onclick="catsetDefEdit(\'' + kind + '\',\'' + esc(d.id) + '\')">' + tx('Edit') + '</span>'
+            + '<span class="da" onclick="catsetDefRetire(\'' + kind + '\',\'' + esc(d.id) + '\',\'' + esc(String(d.name).replace(/'/g, '')) + '\')">' + tx('Retire') + '</span>')
       + '</div>';
   };
   /**
@@ -182,7 +182,7 @@ function catsetRegistry(keys){
       + '<div class="catset-regh">' + s.icon + ' ' + esc(s.title)
       +   '<span class="catset-regn">' + (picked ? n + ' / ' + rows.length : rows.length) + '</span></div>'
       + '<div class="catset-regb">' + esc(s.blurb)
-      +   (flag ? ' <b>Tick the ones you use</b> — only those are offered when you build a catalogue.' : '')
+      +   (flag ? ' <b>' + tx('Tick the ones you use') + '</b> — only those are offered when you build a catalogue.' : '')
       + '</div>'
       + (rows.length
           /* ⚠️ DO NOT PRINT THE CODE TWICE. Some registries have no separate code — `UNITS` maps to
@@ -379,7 +379,7 @@ function catsetUnitsHTML(){
 
   var n = sel.length, total = M.UNIT_KINDS.reduce(function(a, g){ return a + g.units.length; }, 0);
   return catsetCard('⚖️ Units of measure',
-    '<div class="catset-regb">What a quantity is counted in. <b>Tick the ones you trade in</b> — the product form '
+    '<div class="catset-regb">What a quantity is counted in. <b>' + tx('Tick the ones you trade in') + '</b> — the product form '
     + 'and the catalogue wizard offer only those. <b>' + n + ' of ' + total + '</b> selected.</div>'
     + catsetLangBar()
     + '<div class="uom-hd"><span></span><code>code</code><span class="un">unit</span></div>'
@@ -437,7 +437,7 @@ function catsetVariantStateHTML(){
     + '<span class="dn">Grouped by <b>' + esc(id.group) + '</b></span>'
     + (opts.length ? '<code class="dk">told apart by ' + esc(opts.join(', ')) + '</code>'
                    : '<code class="dk">no distinguishing column yet</code>')
-    + '<span class="da" onclick="declareVariants()">Change</span></div>';
+    + '<span class="da" onclick="declareVariants()">' + tx('Change') + '</span></div>';
 }
 function catsetCard(title, body, actions){
   var sec = CATSET_SECS.filter(function(x){ return x.key === catsetSec(); })[0];
@@ -455,7 +455,7 @@ function catsetBody(k){
       + '<div class="catset-std">In PIM terms this is the <b>family</b> — the template that describes a product. '
       + '⚠️ A product has <b>one</b> template but can sit in <b>many</b> categories. They are different '
       + 'mechanisms, which is why categories live on their own screen.</div>',
-      '<button class="composebtn pri" data-testid="catset-columns" onclick="startFromStandardSet()">📐 Add a standard set</button>')
+      '<button class="composebtn pri" data-testid="catset-columns" onclick="startFromStandardSet()">' + tx('📐 Add a standard set') + '</button>')
     /* Units and datatypes describe what a column can BE — so they sit under the control that adds columns. */
     + catsetUnitsHTML()
     + catsetRegistry(['datatype']);
@@ -475,7 +475,7 @@ function catsetBody(k){
       + 'shop then shows one product with its options instead of three unrelated rows.'
       + '<div class="catset-std">In PIM terms this is the <b>product model</b> and its <b>variant axis</b>: which '
       + 'attribute varies, and which stay common across the group.</div>',
-      '<button class="composebtn pri" data-testid="catset-variants" onclick="declareVariants()">🔗 Declare variants</button>')
+      '<button class="composebtn pri" data-testid="catset-variants" onclick="declareVariants()">' + tx('🔗 Declare variants') + '</button>')
     + catsetCard('What you have declared', catsetVariantStateHTML(), '');
   }
   if (k === 'offers') {
@@ -485,7 +485,7 @@ function catsetBody(k){
       + 'not fire, how far short the order is.'
       + '<div class="catset-std">⚠️ An offer is a <b>term of trade</b>, not a product fact — it has an author, a '
       + 'validity window and a jurisdiction, and it has to survive into a dispute intact. That is why it is '
-      + 'authored once here rather than edited on a product. <b>Live</b> offers apply; a draft is one you are '
+      + 'authored once here rather than edited on a product. <b>' + tx('Live') + '</b> offers apply; a draft is one you are '
       + 'still writing.</div>',
       '<button class="composebtn pri" data-testid="catset-offer-new" onclick="catsetDefNew(\'offer\')">+ New offer</button>')
     + catsetCard('Your offers', catsetDefListHTML('offer', 'offer'), '')
@@ -510,7 +510,7 @@ function catsetBody(k){
       + '<div class="catset-std">⚠️ Nothing is imported until you confirm the column mapping. The check step is '
       + 'not a formality: it is the only place a wrong column is cheap to fix.</div>',
       '<button class="composebtn pri" data-testid="catset-import" onclick="checkCatalogueFile()">🔍 Check &amp; import</button>'
-      + '<button class="composebtn" data-testid="catset-template" onclick="downloadCatalogueTemplate(this)">📄 Blank template</button>')
+      + '<button class="composebtn" data-testid="catset-template" onclick="downloadCatalogueTemplate(this)">' + tx('📄 Blank template') + '</button>')
     + catsetCard('Take it back out',
       'Every product as a spreadsheet, in your catalogue’s own columns — for a backup, an accountant, or another '
       + 'system.',
@@ -523,7 +523,7 @@ function catsetBody(k){
       + '<div class="catset-std">In PIM terms this is the <b>channel</b> — the same products, presented for a '
       + 'particular audience. ⚠️ It changes what buyers see, so it is deliberately behind its own step-by-step '
       + 'setup rather than a row of switches.</div>',
-      '<button class="composebtn pri" data-testid="catset-face" onclick="UI.nav=\'cataloguesetup\';renderApp()">⚙ Open catalogue setup</button>')
+      '<button class="composebtn pri" data-testid="catset-face" onclick="UI.nav=\'cataloguesetup\';renderApp()">' + tx('⚙ Open catalogue setup') + '</button>')
     /* Selling methods and facets describe what a buyer meets, so they read under the storefront control. */
     + catsetRegistry(['method', 'facet']);
   }
@@ -557,10 +557,10 @@ function catalogueSetupHubScreen(){
   catsetCss();
   var list = '<div class="list"><div class="lh">'
     + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'
-    +   '<span style="font-family:\'Space Grotesk\';font-weight:700;font-size:var(--fs-3)">⚙️ Catalogue setup</span></div>'
+    +   '<span style="font-family:\'Space Grotesk\';font-weight:700;font-size:var(--fs-3)">' + tx('⚙️ Catalogue setup') + '</span></div>'
     + '<div style="font-size:11.5px;color:var(--grey);line-height:1.5">How your catalogue is <b>shaped</b>. '
-    + 'The products themselves live in <span onclick="navTo(\'catalogue\')" style="color:var(--blue);font-weight:600;cursor:pointer">Catalogue</span>, '
-    + 'and how they are sorted in <span onclick="navTo(\'categories\')" style="color:var(--blue);font-weight:600;cursor:pointer">Categories</span>.</div>'
+    + 'The products themselves live in <span onclick="navTo(\'catalogue\')" style="color:var(--blue);font-weight:600;cursor:pointer">' + tx('Catalogue') + '</span>, '
+    + 'and how they are sorted in <span onclick="navTo(\'categories\')" style="color:var(--blue);font-weight:600;cursor:pointer">' + tx('Categories') + '</span>.</div>'
     + '</div><div class="rows" id="catset_rows">' + catsetRowsHTML() + '</div></div>';
   var detail = '<div class="detail" id="detailpane">' + catsetDetailHTML() + '</div>';
   var divider = '<div class="divider" id="divider" onmousedown="startDrag(event)" ontouchstart="startDrag(event)" role="separator" aria-label="Resize panes"><span class="grip"></span></div>';

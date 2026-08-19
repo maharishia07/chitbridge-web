@@ -175,8 +175,8 @@ var STD_WHY = {
   /* ⚠️ EVIDENCE FROM THIS CODEBASE, not assertions. Each of these was found BY adopting the standard, and none
      of them would have been found by careful work alone — which is the honest case for the practice. */
   proof: [
-    'The contrast tool found <b>117 real failures</b> in themes that had already shipped — including body text at 2.57:1 in the smallest font on screen. Nobody had caught them by eye, across months.',
-    'CLDR said the <b>UAE weekend changed to Sat–Sun in 2022</b>. Four places in our own code and comments said Fri+Sat, including the label on a passing test.',
+    'The contrast tool found <b>' + tx('117 real failures') + '</b> in themes that had already shipped — including body text at 2.57:1 in the smallest font on screen. Nobody had caught them by eye, across months.',
+    'CLDR said the <b>' + tx('UAE weekend changed to Sat–Sun in 2022') + '</b>. Four places in our own code and comments said Fri+Sat, including the label on a passing test.',
     '<b>Intl proved a region cannot carry one direction</b> — the UAE needs English (LTR) beside Arabic (RTL). The design assumed it could; the standard\'s data disproved it before a user met it.',
     'The gettext extractor showed <b>1,122 of our strings are sentence fragments</b> that cannot be translated at all. Wrapping them would have produced confident nonsense in three languages.'
   ]
@@ -256,7 +256,7 @@ function stdRecordHTML(opts){
   }).join('');
 
   return '<div style="border:1px solid var(--line);border-radius:9px;padding:10px 12px;margin-bottom:9px">'
-    + '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin-bottom:4px">One chit, every standard in it</div>'
+    + '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin-bottom:4px">' + tx('One chit, every standard in it') + '</div>'
     + '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.55;margin-bottom:6px">'
     +   '500 kg of pepper leaving Chennai for Dubai. Each field carries somebody else\'s standard, so the record '
     +   'arrives already legible to a system that has never heard of us. <b>Greyed fields are not built yet</b> — '

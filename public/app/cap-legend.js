@@ -314,20 +314,20 @@ function _subjectTabHtml(){
     +'<div style="border:1px solid #cbd8ec;background:linear-gradient(180deg,#f6f9fe,#fff);border-radius:13px;padding:14px 16px;margin:10px 0 14px">'
       +'<div style="font-family:\'Space Grotesk\';font-weight:800;font-size:18px;color:var(--ink)">Chit &amp; Bridge is a governed rail</div>'
       +'<div style="font-size:var(--fs-2);color:var(--ink);line-height:1.55;margin-top:6px"><b>Content-neutral, governance-absolute.</b> You decide <b>what</b> moves between two entities — the business defines that; we guarantee that <b>whatever moves is governed</b>. A train can\'t leave the track.</div>'
-      +'<div style="font-size:12px;color:var(--blue-2);background:var(--blue-tint);border:1px solid var(--blue-tint-line);border-radius:9px;padding:8px 11px;margin-top:10px">🧭 <b>As easy as a mailbox</b> for the end user — zero learning curve. The mailbox is how it <i>feels</i>; the rail is what it <i>is</i>.</div>'
+      +'<div style="font-size:12px;color:var(--blue-2);background:var(--blue-tint);border:1px solid var(--blue-tint-line);border-radius:9px;padding:8px 11px;margin-top:10px">🧭 <b>' + tx('As easy as a mailbox') + '</b> for the end user — zero learning curve. The mailbox is how it <i>feels</i>; the rail is what it <i>is</i>.</div>'
     +'</div>'
     +'<div style="font-size:var(--fs-1);font-weight:700;color:var(--ink);margin-bottom:5px">The subject — the sealed, co-held record <span style="color:var(--grey);font-weight:600">(the &ldquo;chit&rdquo;)</span></div>'
-    +'<div style="font-size:12px;color:var(--ink);line-height:1.55;margin-bottom:11px">Each item is a <b>governed obligation, replicated per party</b> — your own sealed copy, disputable on divergence. It is the <b>noun</b> everything else acts on; the capabilities are the <b>verbs</b>. Two tracks — <b>Task</b> (coming to you) and <b>Order</b> (going from you) — carry it; the <b>wagon is your business</b>, and the rail never opens it.</div>'
+    +'<div style="font-size:12px;color:var(--ink);line-height:1.55;margin-bottom:11px">Each item is a <b>governed obligation, replicated per party</b> — your own sealed copy, disputable on divergence. It is the <b>noun</b> everything else acts on; the capabilities are the <b>verbs</b>. Two tracks — <b>' + tx('Task') + '</b> (coming to you) and <b>' + tx('Order') + '</b> (going from you) — carry it; the <b>wagon is your business</b>, and the rail never opens it.</div>'
     +'<div style="font-size:var(--fs-1);font-weight:700;color:var(--ink);margin-bottom:5px">Why it isn&rsquo;t just email — or a shared workspace</div>'
     +'<table style="width:100%;border-collapse:collapse;font-size:var(--fs-1);border:1px solid var(--line);border-radius:9px;overflow:hidden">'
-      +'<tr style="background:var(--neutral-tint);color:var(--grey);font-weight:700;font-size:var(--fs-1)"><td style="padding:6px 9px">Them</td><td style="padding:6px 9px">Chit &amp; Bridge — the governed rail</td></tr>'
+      +'<tr style="background:var(--neutral-tint);color:var(--grey);font-weight:700;font-size:var(--fs-1)"><td style="padding:6px 9px">' + tx('Them') + '</td><td style="padding:6px 9px">Chit &amp; Bridge — the governed rail</td></tr>'
       + vs('<b>Email:</b> carries anything, guarantees nothing','Every item <b>sealed, isolated, disputable</b>')
       + vs('<b>Confluence:</b> one shared document','N sealed copies — one per party')
       + vs('Edit-in-place, last-writer-wins','Append-only; atomic per-copy fan-out')
       + vs('Access control = who may see it','Isolation = you only ever hold YOUR copy')
       + vs('Divergence is a merge conflict','Divergence is a DISPUTE — a private siding')
     +'</table>'
-    +'<div style="font-size:var(--fs-1);font-weight:700;color:var(--ink);margin:14px 0 5px">Rail glossary — the whole vocabulary in one place</div>'
+    +'<div style="font-size:var(--fs-1);font-weight:700;color:var(--ink);margin:14px 0 5px">' + tx('Rail glossary — the whole vocabulary in one place') + '</div>'
     +'<div style="border:1px solid var(--line);border-radius:9px;overflow:hidden">'
       + g('🛤️ Rail','governance itself — the track a train cannot leave', false)
       + g('Two tracks','Task (coming to you) · Order (going from you)', true)
@@ -342,7 +342,7 @@ function _subjectTabHtml(){
       + g('Crew','co-assists: human · IoT · ERP · AI — same rail, same rules', false)
       + g('Roam the bogies','one connection, many facilities — never tied to one', true)
     +'</div>'
-    +'<div style="font-size:var(--fs-1);color:var(--grey);margin-top:11px;line-height:1.5">We <b>replicate ownership</b> instead of <b>sharing access</b> — and it still feels like an inbox. See <b>🧱 Foundations</b> for the proofs, and <b>⬢ Capabilities</b> for the lifecycles built on it.</div>'
+    +'<div style="font-size:var(--fs-1);color:var(--grey);margin-top:11px;line-height:1.5">We <b>replicate ownership</b> instead of <b>sharing access</b> — and it still feels like an inbox. See <b>' + tx('🧱 Foundations') + '</b> for the proofs, and <b>⬢ Capabilities</b> for the lifecycles built on it.</div>'
   +'</div>';
 }
 
@@ -357,7 +357,7 @@ function _foundTabHtml(){
   return '<div style="padding:12px 13px;overflow:visible">'
     +'<div style="font-size:13px;color:var(--grey);margin-bottom:10px">What the <b>subject</b> stands on — the trust floor. A capability needs only to WORK; a <b>foundation needs EVIDENCE</b>, so each carries the PROOF that makes its level evident, not asserted. Ladder: L1 exists · L2 clean mechanism · L3 enforced &amp; isolated · L4 governed &amp; provable · L5 audited/certified.</div>'
     +FOUNDATION_CATALOGUE.map(card).join('')
-    +'<div style="font-size:var(--fs-1);color:var(--grey);text-align:center;padding-top:2px">Security foundations are honestly capped <b>≤ L4</b> until an external pen-test exists — that’s the L5 gate.</div>'
+    +'<div style="font-size:var(--fs-1);color:var(--grey);text-align:center;padding-top:2px">Security foundations are honestly capped <b>' + tx('≤ L4') + '</b> until an external pen-test exists — that’s the L5 gate.</div>'
   +'</div>';
 }
 
@@ -386,11 +386,11 @@ function _lifeTabHtml(){
       <div style="font-family:'Space Grotesk';font-weight:700;font-size:13px;margin-bottom:4px">${esc(g.area)}</div>
       <div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:2px"><b>BR:</b> ${esc(g.br)}</div>
       <div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:8px"><b>SR:</b> ${esc(g.sr)}</div>
-      <div style="display:flex;gap:8px;font-size:var(--fs-1);color:var(--grey);font-weight:700;padding-bottom:2px"><span style="width:54px">&nbsp;</span><span style="flex:1">FUNCTIONAL (FR)</span><span style="flex:1">TEST</span></div>
+      <div style="display:flex;gap:8px;font-size:var(--fs-1);color:var(--grey);font-weight:700;padding-bottom:2px"><span style="width:54px">&nbsp;</span><span style="flex:1">${tx('FUNCTIONAL (FR)')}</span><span style="flex:1">${tx('TEST')}</span></div>
       ${g.rows.map(row).join('')}
     </div>`;
   return `<div style="padding:12px 13px;overflow:visible">
-    <div style="font-size:11.5px;color:var(--grey);margin-bottom:10px">How we work the lifecycle: every behaviour traces <b>Business <span class=arw>→</span> System <span class=arw>→</span> Functional <span class=arw>→</span> Test</b>. <span style="color:var(--ok-3)">✅ verified-live</span> · <span style="color:#a9791f">◐ built, needs a live run</span> · <span style="color:var(--grey-4)">○ backlog</span>.</div>
+    <div style="font-size:11.5px;color:var(--grey);margin-bottom:10px">How we work the lifecycle: every behaviour traces <b>Business <span class=arw>→</span> System <span class=arw>→</span> Functional <span class=arw>→</span> Test</b>. <span style="color:var(--ok-3)">${tx('✅ verified-live')}</span> · <span style="color:#a9791f">◐ built, needs a live run</span> · <span style="color:var(--grey-4)">${tx('○ backlog')}</span>.</div>
     ${TRACE_MATRIX.map(grp).join('')}
     <div style="font-size:var(--fs-1);color:var(--grey);text-align:center;padding-top:2px">Most rows are ◐ — built + parse/boot-checked; each ✅ needed a human live-run or a script. Automated tests turn ◐ <span class=arw>→</span> ✅ at scale.</div>
   </div>`;
@@ -404,7 +404,7 @@ function _storiesTabHtml(){
     { icon:'🌍', name:'The Life of a Trade', blurb:'One chemical shipment, buyer → seller: real template evidence moving across the engine. Swap the industry and the standards change; the commercial spine and the rail do not.', url:'/docs/life-of-a-trade.html' },
   ];
   const card=(x)=>`<a href="${x.url}" target="_blank" rel="noopener" style="display:block;text-decoration:none;border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:11px;background:var(--card);color:var(--on-card)">
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:5px"><span style="font-size:19px">${x.icon}</span><span style="font-family:'Space Grotesk';font-weight:700;font-size:15px;color:var(--ink)">${esc(x.name)}</span><span style="margin-inline-start:auto;font-size:12px;color:var(--accent,var(--blue));font-weight:700">Open ↗</span></div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:5px"><span style="font-size:19px">${x.icon}</span><span style="font-family:'Space Grotesk';font-weight:700;font-size:15px;color:var(--ink)">${esc(x.name)}</span><span style="margin-inline-start:auto;font-size:12px;color:var(--accent,var(--blue));font-weight:700">${tx('Open ↗')}</span></div>
     <div style="font-size:var(--fs-2);color:var(--grey);line-height:1.5">${esc(x.blurb)}</div></a>`;
   return `<div style="padding:12px 13px;overflow:visible">
     <div style="font-size:11.5px;color:var(--grey);margin-bottom:12px">The <b>business narratives</b> — the product told from the value side, followable end-to-end (not feature ads). Open each in a new tab.</div>
@@ -422,7 +422,7 @@ function _secTabHtml(){
       <div style="font-size:var(--fs-1);color:var(--grey);line-height:1.4"><b>Raise it:</b> ${esc(s.raise)}</div>
     </div>`; };
   return `<div style="padding:12px 13px;overflow:visible">
-    <div style="font-size:11.5px;color:var(--grey);margin-bottom:10px">What protects your data today (verified from code, 2026-07-05). Honest levels: <span style="color:var(--ok-3)">✓ strong</span> · <span style="color:#a9791f">◐ partial</span> · <span style="color:var(--disp)">○ gap</span>.</div>
+    <div style="font-size:11.5px;color:var(--grey);margin-bottom:10px">What protects your data today (verified from code, 2026-07-05). Honest levels: <span style="color:var(--ok-3)">${tx('✓ strong')}</span> · <span style="color:#a9791f">${tx('◐ partial')}</span> · <span style="color:var(--disp)">${tx('○ gap')}</span>.</div>
     ${SEC_POSTURE.map(row).join('')}
     <div style="font-size:var(--fs-1);color:var(--grey);text-align:center;padding-top:2px">Encryption in transit (TLS) is solid; at-rest is provider disk-level (not per-column) and there is no external pen-test yet — so security is honestly capped ≤ L4 until audited.</div>
   </div>`;
@@ -452,15 +452,15 @@ function _edgeTabHtml(){
       + pt(68,27,'Blockchain B2B',false)
       + pt(80,80,'Chit & Bridge',true)
       +'<div style="position:absolute;inset-inline-start:-2px;bottom:-22px;font-size:var(--fs-1);color:var(--grey)">weak <span class=arw>←</span> <b>governance &amp; trust</b> <span class=arw>→</span> strong</div>'
-      +'<div style="position:absolute;inset-inline-start:-24px;top:-16px;font-size:var(--fs-1);color:var(--grey)">↑ accessible / leveling</div>'
+      +'<div style="position:absolute;inset-inline-start:-24px;top:-16px;font-size:var(--fs-1);color:var(--grey)">' + tx('↑ accessible / leveling') + '</div>'
     +'</div>'
     +'<div style="font-size:var(--fs-1);color:var(--ink);line-height:1.5">'
       +'<b>The edge:</b> the top-right — <b>enterprise-grade governance a small player can actually use</b> — is empty. Email is accessible but ungoverned; SAP/ServiceNow/EDI are governed but heavy &amp; costly; blockchain B2B is trust-heavy but hard. We aim at <b>governed AND leveling</b>: a solo trader transacts on the same rail as a multinational.'
     +'</div>'
-    +'<div style="margin-top:16px"><div style="font-size:var(--fs-1);font-weight:700;color:var(--ink);margin-bottom:5px">Communication lens — two-way between entities</div>'
+    +'<div style="margin-top:16px"><div style="font-size:var(--fs-1);font-weight:700;color:var(--ink);margin-bottom:5px">' + tx('Communication lens — two-way between entities') + '</div>'
       +'<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:6px">Two-way exists elsewhere; being two-way <i>and</i> peer <i>and</i> governed <i>and</i> affordable does not.</div>'
       +'<table style="width:100%;border-collapse:collapse;font-size:var(--fs-1)">'
-        +'<tr style="color:var(--grey);font-weight:700;font-size:var(--fs-1)"><td style="text-align:start;padding:3px 4px">Channel</td><td style="padding:3px 4px">2-way</td><td style="padding:3px 4px">Peer</td><td style="padding:3px 4px">Governed</td><td style="padding:3px 4px">Affordable</td></tr>'
+        +'<tr style="color:var(--grey);font-weight:700;font-size:var(--fs-1)"><td style="text-align:start;padding:3px 4px">' + tx('Channel') + '</td><td style="padding:3px 4px">' + tx('2-way') + '</td><td style="padding:3px 4px">' + tx('Peer') + '</td><td style="padding:3px 4px">' + tx('Governed') + '</td><td style="padding:3px 4px">' + tx('Affordable') + '</td></tr>'
         + crow('Email','y','y','n','y',false)
         + crow('Slack Connect / Teams','y','p','n','y',false)
         + crow('EDI','y','n','p','n',false)
@@ -470,24 +470,24 @@ function _edgeTabHtml(){
       +'</table>'
       +'<div style="font-size:var(--fs-1);color:var(--grey);margin-top:5px">✓ yes · ~ partial · ✗ no. Ours is the only row combining <b>governed + peer + two-way</b> (all real/built); <b>affordability is the aim</b>, not yet proven — hence the ~.</div>'
     +'</div>'
-    +'<div style="margin-top:16px"><div style="font-size:var(--fs-1);font-weight:700;color:var(--ink);margin-bottom:5px">Distribution lens — the same edge, a second domain</div>'
+    +'<div style="margin-top:16px"><div style="font-size:var(--fs-1);font-weight:700;color:var(--ink);margin-bottom:5px">' + tx('Distribution lens — the same edge, a second domain') + '</div>'
       +'<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:6px">Source-governed distribution competes with catalogue/commerce tools, not email. A brand&rsquo;s governance <b>rides to any distributor</b>; CB carries the <b>information + rules</b>, ERP does the logistics — no marketplace lock-in, no logistics grab.</div>'
       +'<table style="width:100%;border-collapse:collapse;font-size:var(--fs-1)">'
-        +'<tr style="color:var(--grey);font-weight:700;font-size:var(--fs-1)"><td style="text-align:start;padding:3px 4px">Channel</td><td style="padding:3px 4px">Gov travels</td><td style="padding:3px 4px">Neutral</td><td style="padding:3px 4px">Info-only</td><td style="padding:3px 4px">Dispute</td></tr>'
+        +'<tr style="color:var(--grey);font-weight:700;font-size:var(--fs-1)"><td style="text-align:start;padding:3px 4px">' + tx('Channel') + '</td><td style="padding:3px 4px">' + tx('Gov travels') + '</td><td style="padding:3px 4px">' + tx('Neutral') + '</td><td style="padding:3px 4px">' + tx('Info-only') + '</td><td style="padding:3px 4px">' + tx('Dispute') + '</td></tr>'
         + crow('Brand storefront (Shopify)','n','n','n','n',false)
         + crow('Marketplace / distributor portal','p','n','n','n',false)
         + crow('PIM (Salsify / Akeneo)','p','y','y','n',false)
         + crow('EDI / ERP distribution','p','n','n','n',false)
         + crow('Chit &amp; Bridge','y','y','y','p',true)
       +'</table>'
-      +'<div style="font-size:var(--fs-1);color:var(--grey);margin-top:5px">Cols: <b>Gov travels</b> to the distributor · <b>Neutral</b> = distributor-neutral, no host lock · <b>Info-only</b> = no logistics grab · <b>Dispute</b> = per-copy. Only CB combines governance-travels + neutral + information-only (built + harness-verified) — but <b>not yet adopted by a real brand+distributor pair</b>, so it&rsquo;s a target, not a trophy.</div>'
+      +'<div style="font-size:var(--fs-1);color:var(--grey);margin-top:5px">Cols: <b>' + tx('Gov travels') + '</b> to the distributor · <b>' + tx('Neutral') + '</b> = distributor-neutral, no host lock · <b>' + tx('Info-only') + '</b> = no logistics grab · <b>' + tx('Dispute') + '</b> = per-copy. Only CB combines governance-travels + neutral + information-only (built + harness-verified) — but <b>not yet adopted by a real brand+distributor pair</b>, so it&rsquo;s a target, not a trophy.</div>'
     +'</div>'
-    +'<div style="font-size:var(--fs-1);color:var(--grey);text-align:center;padding-top:10px;border-top:1px solid var(--line);margin-top:14px">Closest analog: <b>ServiceNow</b> — one records/workflow facility, many classified lifecycles (ITSM/HR/dev). It proves the model has takers — and it won by starting <i>narrow</i> (an ITIL desk) then generalizing. Our claimed differentiator vs it: accessibility &amp; cost for the small player.</div>'
+    +'<div style="font-size:var(--fs-1);color:var(--grey);text-align:center;padding-top:10px;border-top:1px solid var(--line);margin-top:14px">Closest analog: <b>' + tx('ServiceNow') + '</b> — one records/workflow facility, many classified lifecycles (ITSM/HR/dev). It proves the model has takers — and it won by starting <i>narrow</i> (an ITIL desk) then generalizing. Our claimed differentiator vs it: accessibility &amp; cost for the small player.</div>'
     +'<div style="border:1px solid var(--line);border-radius:9px;padding:11px 12px;margin-top:14px;background:var(--card);color:var(--on-card)">'
       +'<div style="font-size:var(--fs-1);font-weight:700;color:var(--warn-2);margin-bottom:5px">🧭 Critic&rsquo;s lens (we hold ourselves to it)</div>'
       +'<div style="font-size:var(--fs-1);color:var(--ink);line-height:1.5">The honest risk: the <b>model is ahead of adoption</b> — elegant &ne; adopted. The proof that counts is <b>one real user on one blueprint</b>, not a better diagram. As a <b>concept/POC this existed for years</b>; as a <b>product it is ~2 weeks old</b> — so it is early <i>by timeline</i>, and we name what is unproven rather than oversell it.</div>'
     +'</div>'
-    +'<div style="margin-top:13px"><div style="font-size:var(--fs-1);font-weight:700;color:var(--ink);margin-bottom:6px">Path to confident validation</div>'
+    +'<div style="margin-top:13px"><div style="font-size:var(--fs-1);font-weight:700;color:var(--ink);margin-bottom:6px">' + tx('Path to confident validation') + '</div>'
       +'<div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center">'
         + stage('Concept / POC','years','done') + arrow()
         + stage('Product build','~2 wks · now','now') + arrow()
@@ -543,14 +543,14 @@ function _workTabHtml(){
       <span style="font-family:'Space Mono';font-size:var(--fs-1);color:${R};background:var(--blue-tint);border:1px solid var(--line);border-radius:6px;padding:1px 6px">${esc(o.pid)}</span>
       <span style="margin-inline-start:auto;font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:${o.live?'var(--ok-3)':'var(--grey-2)'};border:1px ${o.live?'solid #bfe0cf':'dashed #c2c6cc'};border-radius:5px;padding:1px 6px">${o.live?'Live':'Designed'}</span>
     </div>
-    <div style="font-size:13px;color:var(--ink);background:var(--blue-tint);border-inline-start:3px solid ${R};border-radius:0 8px 8px 0;padding:7px 11px;margin:9px 0 8px;line-height:1.5"><b style="font-family:'Space Mono';font-size:var(--fs-1);letter-spacing:.08em;text-transform:uppercase;color:${R};margin-inline-end:7px">Achieves</b>${o.obj}</div>
+    <div style="font-size:13px;color:var(--ink);background:var(--blue-tint);border-inline-start:3px solid ${R};border-radius:0 8px 8px 0;padding:7px 11px;margin:9px 0 8px;line-height:1.5"><b style="font-family:'Space Mono';font-size:var(--fs-1);letter-spacing:.08em;text-transform:uppercase;color:${R};margin-inline-end:7px">${tx('Achieves')}</b>${o.obj}</div>
     <div style="font-size:11.5px;color:var(--grey);margin-bottom:8px;line-height:1.55">${o.flow}</div>
     <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">${o.chips.join('')}</div>
   </div>`;
   const lines=[
     { icon:'🛰️', name:'IoT signal', pid:'iot-signal@v1', live:true,
       obj:'Turns a <b>physical event into a governed, owned, actionable record</b> — an exception can\'t be lost, missed, or denied.',
-      flow:'Device telemetry (ActorKey) <span class=arw>→</span> <b>resolve</b> folder·assignee·copy <span class=arw>→</span> seal · file · assign · notify <span class=arw>→</span> <b>Task-only signal chit</b> <span class=arw>→</span> escalation (SMS · AI · robot <span class=arw>→</span>∞)',
+      flow:'Device telemetry (ActorKey) <span class=arw>→</span> <b>resolve</b> folder·assignee·copy <span class=arw>→</span> seal · file · assign · notify <span class=arw>→</span> <b>' + tx('Task-only signal chit') + '</b> <span class=arw>→</span> escalation (SMS · AI · robot <span class=arw>→</span>∞)',
       chips:[seal('Copy · Task-only'),seal('Isolation · per-copy'),lic('Connector · ≤25 devices'),up('health · last-seen · exceptions/day')] },
     { icon:'✉️', name:'Send a chit', pid:'send-chit@v1', live:true,
       obj:'Two entities <b>transact on a sealed, co-held record neither can unilaterally rewrite</b> — trust without a middleman.',
@@ -580,10 +580,10 @@ function _workTabHtml(){
     ${lines.map(line).join('')}
     <div style="border:1px solid ${R};background:linear-gradient(180deg,var(--blue-tint),var(--bg,#fff));border-radius:13px;padding:14px 16px;margin:6px 0 16px">
       <div style="font-family:'Space Grotesk';font-weight:800;font-size:15px;color:${R}">A catalogue is a contract, not a list</div>
-      <div style="font-size:13px;color:var(--ink);background:var(--card);border-inline-start:3px solid ${R};border-radius:0 8px 8px 0;padding:7px 11px;margin:9px 0;line-height:1.5"><b style="font-family:'Space Mono';font-size:var(--fs-1);letter-spacing:.08em;text-transform:uppercase;color:${R};margin-inline-end:7px">Achieves</b>Extends a <b>brand's governance to every customer through any distributor</b> — control without custody.</div>
+      <div style="font-size:13px;color:var(--ink);background:var(--card);border-inline-start:3px solid ${R};border-radius:0 8px 8px 0;padding:7px 11px;margin:9px 0;line-height:1.5"><b style="font-family:'Space Mono';font-size:var(--fs-1);letter-spacing:.08em;text-transform:uppercase;color:${R};margin-inline-end:7px">${tx('Achieves')}</b>Extends a <b>brand's governance to every customer through any distributor</b> — control without custody.</div>
       <div style="font-size:var(--fs-2);color:var(--ink);line-height:1.55">The source's governance amalgamated into one construct that <b>travels</b>: the order runs under the source's minted rules wherever served, the distributor <b>can't override</b>, and the chit <b>freezes the exact version</b> seen. Bogie line-up public (browse), cargo private (order), source rules = the sealed wagon-spec that binds every yard.</div>
     </div>
-    <div style="font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3);margin:14px 0 8px">The journeys that travel</div>
+    <div style="font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3);margin:14px 0 8px">${tx('The journeys that travel')}</div>
     ${journey('🏷️','Source journey','a brand\'s governance reaches every customer, through any distributor',[
       stage('Author','brand writes its source — experience + rules, owner-gated','b78'),
       stage('Cascade','to every distributor that references it'),
@@ -597,8 +597,8 @@ function _workTabHtml(){
       stage('Travel','the frozen schema rides with every copy'),
       stage('Pin','the chit records schema@version — verifiable forever'),
     ])}
-    <div style="font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3);margin:16px 0 7px">Notifications — who gets told, and how</div>
-    <div style="overflow-x:auto;border:1px solid var(--line);border-radius:12px"><table style="width:100%;border-collapse:collapse;font-size:11.5px;min-width:520px"><tr style="background:var(--blue-tint);color:var(--on-card)"><td style="padding:6px 9px;font-family:'Space Mono';font-size:var(--fs-1);letter-spacing:.06em;text-transform:uppercase;color:var(--grey)">Crew</td><td style="padding:6px 9px;font-family:'Space Mono';font-size:var(--fs-1);letter-spacing:.06em;text-transform:uppercase;color:var(--grey)">Notified by</td><td style="padding:6px 9px;font-family:'Space Mono';font-size:var(--fs-1);letter-spacing:.06em;text-transform:uppercase;color:var(--grey)">Handled</td></tr>${notif}</table></div>
+    <div style="font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3);margin:16px 0 7px">${tx('Notifications — who gets told, and how')}</div>
+    <div style="overflow-x:auto;border:1px solid var(--line);border-radius:12px"><table style="width:100%;border-collapse:collapse;font-size:11.5px;min-width:520px"><tr style="background:var(--blue-tint);color:var(--on-card)"><td style="padding:6px 9px;font-family:'Space Mono';font-size:var(--fs-1);letter-spacing:.06em;text-transform:uppercase;color:var(--grey)">${tx('Crew')}</td><td style="padding:6px 9px;font-family:'Space Mono';font-size:var(--fs-1);letter-spacing:.06em;text-transform:uppercase;color:var(--grey)">${tx('Notified by')}</td><td style="padding:6px 9px;font-family:'Space Mono';font-size:var(--fs-1);letter-spacing:.06em;text-transform:uppercase;color:var(--grey)">${tx('Handled')}</td></tr>${notif}</table></div>
     <div style="font-size:var(--fs-1);color:var(--grey);line-height:1.55;margin-top:11px">Mechanism: per-actor unread = <b>chit_reads</b> vs <b>chit_status.updated_at</b>; bell + centre from the append-only <b>state_log</b>; cross-entity delivery only via the SECURITY DEFINER fns. · <b>Honest:</b> 3 patterns minted+live; the commercial run is real as purposes (not pattern-ized); AI &amp; customer rows are designed.</div>
   </div>`;
 }
@@ -622,15 +622,15 @@ function _workTabHtml(){
 function _stdTabHtml(){
   if (typeof stdWhyHTML !== 'function') {
     ensureCap('standards').then(function(){ _openLegendImpl(); }).catch(function(){});
-    return '<div style="padding:16px;color:var(--grey);font-size:13px">Loading…</div>';
+    return '<div style="padding:16px;color:var(--grey);font-size:13px">' + tx('Loading…') + '</div>';
   }
   var n = stdCounts();
   return '<div style="padding:14px 16px">'
-    + '<div style="font-size:20px;font-weight:800;color:var(--ink);margin-bottom:2px">Why we follow standards</div>'
+    + '<div style="font-size:20px;font-weight:800;color:var(--ink);margin-bottom:2px">' + tx('Why we follow standards') + '</div>'
     + '<div style="font-size:13px;color:var(--grey);line-height:1.55;margin-bottom:12px">'
     +   '<b style="color:var(--ok-2)">' + n.live + ' in force</b> · '
     +   '<b style="color:var(--warn-2)">' + n.part + ' partly</b> · ' + n.plan + ' planned. '
-    +   'Every one is listed with its status in <b>Settings › Standards</b>, and the partial ones say what is '
+    +   'Every one is listed with its status in <b>' + tx('Settings › Standards') + '</b>, and the partial ones say what is '
     +   'missing — because a page like this is quoted to buyers.'
     + '</div>'
     + stdWhyHTML({ compact: true })
@@ -688,15 +688,15 @@ function _openLegendImpl(){
       <span style="margin-inline-start:auto">Status: <span style="color:var(--ok-3)">✅ done ${d}</span> · <span style="color:#a9791f">◐ partial ${p}</span> · <span style="color:var(--grey-4)">○ backlog ${b}</span></span>
     </div>
     <div style="padding:12px 13px;overflow:visible">${CAP_CATALOGUE.map(card).join('')}
-      <div style="font-size:var(--fs-1);color:var(--grey);text-align:center;padding-top:4px">Load: <b>always on</b> ships with the app · <b>lazy</b> loads on first use · <b>planned</b> not built yet. · <b>L1–5</b> maturity: 1 Proven · 2 Packaged · 3 Itemised · 4 Governed · 5 Productized (<span class=arw>→</span> = target). Kept true to the code.</div>
-      <div style="font-size:var(--fs-1);color:var(--grey);text-align:center;padding-top:3px">🏛️ <b>Governance rides on each capability</b> — the green band is the SECOND axis: <b>gov L1–5</b> (1 declared · 2 designed · 3 enforced+isolated · 4 governed+provable · 5 audited) <b>under</b> its cascade layer, with the amber <b>“to L4”</b> gap. Gov usually LAGS maturity — that lag IS the distance to L4. <b>N/A</b> = static/read-only, nothing to govern.</div>
+      <div style="font-size:var(--fs-1);color:var(--grey);text-align:center;padding-top:4px">Load: <b>always on</b> ships with the app · <b>lazy</b> loads on first use · <b>planned</b> not built yet. · <b>${tx('L1–5')}</b> maturity: 1 Proven · 2 Packaged · 3 Itemised · 4 Governed · 5 Productized (<span class=arw>→</span> = target). Kept true to the code.</div>
+      <div style="font-size:var(--fs-1);color:var(--grey);text-align:center;padding-top:3px">🏛️ <b>${tx('Governance rides on each capability')}</b> — the green band is the SECOND axis: <b>gov L1–5</b> (1 declared · 2 designed · 3 enforced+isolated · 4 governed+provable · 5 audited) <b>under</b> its cascade layer, with the amber <b>“to L4”</b> gap. Gov usually LAGS maturity — that lag IS the distance to L4. <b>${tx('N/A')}</b> = static/read-only, nothing to govern.</div>
     </div>`;
   const body = (_lbTab==='subject') ? _subjectTabHtml() : (_lbTab==='stories') ? _storiesTabHtml() : (_lbTab==='found') ? _foundTabHtml() : (_lbTab==='stack') ? _stackTabHtml() : (_lbTab==='life') ? _lifeTabHtml() : (_lbTab==='sec') ? _secTabHtml() : (_lbTab==='edge') ? _edgeTabHtml() : (_lbTab==='real') ? _realTabHtml() : (_lbTab==='work') ? _workTabHtml() : (_lbTab==='std') ? _stdTabHtml() : capBody;
   const titles = { subject:'the subject — the sealed co-held record', stories:'the Life of… — business narratives', found:'foundations — the trust floor + proof', stack:'the governance stack — universe → chit', cap:'capabilities &amp; features', life:'lifecycle &amp; traceability', sec:'security posture', edge:'positioning &amp; edge', real:'reality &amp; how we earn it', work:'work patterns — the governed journeys' };
   host.innerHTML=`<div class="notifover" onclick="closeLegend()"><div class="notifpanel" style="position:fixed;inset:0;width:100vw;height:100vh;max-width:none;max-height:none;border-radius:0;overflow:hidden;display:flex;flex-direction:column;background:var(--card);color:var(--on-card)" onclick="event.stopPropagation()">
     <div style="display:flex;align-items:center;gap:12px;padding:16px 20px;background:linear-gradient(180deg,#f7f9fc,#fff);border-bottom:1px solid var(--line);flex:none">
       <span style="font-size:22px">🔑</span>
-      <div style="line-height:1.15"><div style="font-family:'Space Grotesk';font-weight:700;font-size:19px;color:var(--ink)">What we serve</div><div style="font-size:var(--fs-2);color:var(--grey)">${titles[_lbTab]||titles.cap}</div></div>
+      <div style="line-height:1.15"><div style="font-family:'Space Grotesk';font-weight:700;font-size:19px;color:var(--ink)">${tx('What we serve')}</div><div style="font-size:var(--fs-2);color:var(--grey)">${titles[_lbTab]||titles.cap}</div></div>
       <div style="margin-inline-start:auto;display:flex;align-items:center;gap:6px">
         <button onclick="lbFont(-1)" title="Smaller text" style="border:1px solid var(--line);background:none;cursor:pointer;font-size:12px;font-weight:700;color:var(--grey);border-radius:6px;width:27px;height:27px;line-height:1;padding:0">A−</button>
         <button onclick="lbFont(1)" title="Larger text" style="border:1px solid var(--line);background:none;cursor:pointer;font-size:15px;font-weight:700;color:var(--ink);border-radius:6px;width:27px;height:27px;line-height:1;padding:0">A+</button>
