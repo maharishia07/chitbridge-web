@@ -1008,8 +1008,19 @@ function iamMeHTML(e){
   var Q = String.fromCharCode(39);
   return '<div style="' + _CARD + '">'
     + '<label class="fl">This business</label>'
-    + '<div class="kv"><b>Name</b> · ' + esc(e.display_name || '') + '</div>'
-    + '<div class="kv"><b>Bridge ID</b> · ' + esc(e.bridge_id || '') + '</div>'
+    /**
+     * ⚠️⚠️ THIS WAS EXACTLY REVERSED, and the app's own naming table said so. Athi, 2026-08-19: *"if they are
+     * different, we should be providing an option to change the name here. Not the user id."* … *"and it looks
+     * reverse. That is the problem."*
+     *
+     * NAMING[0] reads: *"Change it any time — nothing cites it, everything cites your ID."* The screen made the
+     * NAME read-only text and the USER ID an editable input — the mutable fact fixed, the load-bearing one
+     * loose. And PATCH /profile had no display_name validator at all, so the name could not be changed even by
+     * the API. Both ends fixed.
+     */
+    + '<label class="fl">Name</label>'
+    + '<input class="inp" id="pf_name" value="' + esc(e.display_name || '') + '">'
+    + '<div class="kv" style="margin-top:9px"><b>Bridge ID</b> · ' + esc(e.bridge_id || '') + '</div>'
     /**
      * ⭐⭐ THE USER ID IS THE ROOT OF EVERY OTHER NAME, and until now it was one field among five with a short
      * hint. Athi, 2026-08-19: *"user id is the one under which the registration happens in the platform as
@@ -1020,8 +1031,13 @@ function iamMeHTML(e){
      * derive from this one value — a co-assist's login, a network root, and how another business finds you —
      * and none of them said so where it is typed.
      */
-    + '<label class="fl">User ID <span style="color:var(--grey);font-weight:400;font-size:var(--fs-1)">— your unique name on this platform</span></label>'
-    + '<input class="inp" id="pf_uid" value="' + esc(e.user_id || '') + '">'
+    /* ⚠️ ONCE SET, THE USER ID IS SHOWN, NOT EDITED. Everything else derives from it — a co-assist's login, a
+       network root, how another business finds you — so it is not a field to retype in passing. It stays an
+       input only while UNSET, because it has to be chosen once. */
+    + (e.user_id
+        ? '<div class="kv" style="margin-top:9px"><b>User ID</b> · <span class="mono">' + esc(e.user_id) + '</span></div>'
+        : '<label class="fl">User ID <span style="color:var(--grey);font-weight:400;font-size:var(--fs-1)">— choose once; other names derive from it</span></label>'
+          + '<input class="inp" id="pf_uid" value="">')
     /**
      * ⚠️ NO EXPLANATION HERE. Athi, 2026-08-19: *"i don't want that text… this will be known in that tab."*
      *
@@ -1335,7 +1351,11 @@ function govCardHTML(g){
     +'</div>';
 }
 async function saveProfile(){ const x=document.getElementById("pf_err"); if(x)x.textContent="";
-  try{ await api("saveProfile",{body:{user_id:val("pf_uid")||null,gstn:val("pf_gstn")||null,address:val("pf_addr")||null,business_status:val("pf_bs")}}); toast(MSG.profileSaved()); }catch(e){ if(x)x.textContent=e.message; } }
+  /* ⚠️ pf_uid only EXISTS while the User ID is unset. val() on a missing element must not send an empty
+     string, or COALESCE would be handed '' and blank a set handle. */
+  try{ var _b={display_name:val("pf_name")||null,gstn:val("pf_gstn")||null,address:val("pf_addr")||null,business_status:val("pf_bs")};
+       if(document.getElementById("pf_uid")) _b.user_id=val("pf_uid")||null;
+       await api("saveProfile",{body:_b}); toast(MSG.profileSaved()); }catch(e){ if(x)x.textContent=e.message; } }
 // 🛍️ Customer storefront — the shareable public shop link + the browse-first / login-first access mode.
 function storefrontCardHTML(e){
   /**
