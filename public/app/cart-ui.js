@@ -773,7 +773,7 @@
       + '<button style="' + btn + ';background:var(--card);color:' + a + '" onclick="CBCart.close(\'' + esc(ns) + '\')">'
       + (sel.length ? 'Keep shopping' : 'Browse the catalogue') + '</button>'
       + (sel.length ? '<button data-testid="cart-checkout" style="' + btn + ';background:' + a + ';color:var(--on-card)"'
-          + ' onclick="CBCart.checkout(\'' + esc(ns) + '\')">' + esc(opt(ns, 'checkoutLabel', 'Check out →')) + '</button>' : '')
+          + ' onclick="CBCart.checkout(\'' + esc(ns) + '\')">' + esc(opt(ns, 'checkoutLabel', 'Check out <span class=arw>→</span>')) + '</button>' : '')
       + '</div>';
   }
 

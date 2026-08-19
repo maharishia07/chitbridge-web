@@ -251,10 +251,10 @@ function paintFoot(){
   if(!S.st){ document.getElementById('rfoot').innerHTML=''; return; }
   var last=S.step===STEPS.length-1, why=blockedBecause();
   document.getElementById('rfoot').innerHTML =
-      (S.step?'<button onclick="go('+(S.step-1)+')">← Back</button>':'<button onclick="openOv()">Store details</button>')
+      (S.step?'<button onclick="go('+(S.step-1)+')"><span class=arw>←</span> Back</button>':'<button onclick="openOv()">Store details</button>')
     + '<button>Save draft</button>'
     + '<button class="pri"'+(why?' disabled title="'+esc(why)+'"':'')+' onclick="'+(last?'alert(\'(mock) request sent\')':'go('+(S.step+1)+')')+'">'
-    + (last?('Send request to '+esc(S.st.name)):(S.step===0?'Check out →':'Review →'))+'</button>';
+    + (last?('Send request to '+esc(S.st.name)):(S.step===0?'Check out <span class=arw>→</span>':'Review <span class=arw>→</span>'))+'</button>';
 }
 function paint(){
   paintList();

@@ -381,7 +381,7 @@ function cbcatStatsHTML(){
        counting rather than merely reporting a number you then have to go and find by hand. */
     + ((CBCAT_UI.counts && CBCAT_UI.counts.none)
         ? '<button data-testid="catg-uncat" onclick="cbcatGoUncategorised()" style="margin-inline-start:auto;border:1px solid var(--gold-line);background:var(--gold-soft);border-radius:9px;padding:4px 9px;font-size:11.5px;color:var(--warn-3);cursor:pointer">'
-          + CBCAT_UI.counts.none + ' uncategorised →</button>'
+          + CBCAT_UI.counts.none + ' uncategorised <span class=arw>→</span></button>'
         : '');
 }
 /**

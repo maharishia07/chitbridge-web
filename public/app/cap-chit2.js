@@ -339,7 +339,7 @@ function c2RepricePaint(){
       + will.map(function(w){
           return '<div style="display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-top:1px solid var(--line);font-size:13px">'
             + '<span style="flex:1;min-width:0"><b>' + esc(w.particulars || '') + '</b>'
-            + '<div style="font-size:11.5px;color:var(--grey)">→ ' + esc(w.matched) + (w.matched_by_spelling ? ' <span style="color:var(--warn-2)">≈ matched by spelling</span>' : '') + '</div>'
+            + '<div style="font-size:11.5px;color:var(--grey)"><span class=arw>→</span> ' + esc(w.matched) + (w.matched_by_spelling ? ' <span style="color:var(--warn-2)">≈ matched by spelling</span>' : '') + '</div>'
             /* ⚠️ REPLACING A STATED FIGURE IS CALLED OUT. Filling an empty price and overwriting one the customer
                wrote are different acts, and only a person can say whether the second is right. */
             + (w.replaces_stated_price ? '<div style="font-size:var(--fs-1);color:var(--warn-2)">replaces the price on the chit</div>' : '')
@@ -666,7 +666,7 @@ function c2WorkRow(e, asg, prog, ctx){
           if (!bits.length) return '';
           return '<div style="margin-top:4px;font-size:12px;color:var(--warn-2);background:var(--warn-tint);border-radius:5px;padding:3px 8px;display:inline-block">◍ ' + bits.join(' · ') + '</div>';
         })()
-      + (ctx === 'line' && (a.history || []).length ? '<div style="margin-top:4px;font-size:var(--fs-1);color:var(--grey)">was ' + esc(a.history.map(function(h){ return h.assignee_name || 'unassigned'; }).join(' → ')) + '</div>' : '')
+      + (ctx === 'line' && (a.history || []).length ? '<div style="margin-top:4px;font-size:var(--fs-1);color:var(--grey)">was ' + esc(a.history.map(function(h){ return h.assignee_name || 'unassigned'; }).join(' <span class=arw>→</span> ')) + '</div>' : '')
       /* ⚠️ SURFACED HERE TOO. A line the two parties disagree about is a line you cannot call finished, and this
          is the screen where someone decides what still needs doing. */
       + (p.divergent ? '<div style="margin-top:4px;font-size:var(--fs-1);color:var(--warn-2)">⚠️ they say ' + p.theirs + ', you say ' + p.delivered + '</div>' : '')
@@ -705,7 +705,7 @@ function c2AssignOpen(line_id){
     + '<input id="c2t_' + line_id + '" value="' + esc(a.task || '') + '" placeholder="packing" style="width:100%;box-sizing:border-box;padding:9px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-3)"></div>'
     + '<div style="flex:1"><label style="display:block;font-size:var(--fs-1);color:var(--grey);margin-bottom:3px">DUE</label>'
     + '<input id="c2d_' + line_id + '" type="date" value="' + esc(a.due_date ? String(a.due_date).slice(0, 10) : '') + '" style="width:100%;box-sizing:border-box;padding:9px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-3)"></div></div>'
-    + ((a.history || []).length ? '<div style="font-size:11.5px;color:var(--grey);margin-bottom:12px">previously ' + esc(a.history.map(function(h){ return h.assignee_name || 'unassigned'; }).join(' → ')) + '</div>' : '')
+    + ((a.history || []).length ? '<div style="font-size:11.5px;color:var(--grey);margin-bottom:12px">previously ' + esc(a.history.map(function(h){ return h.assignee_name || 'unassigned'; }).join(' <span class=arw>→</span> ')) + '</div>' : '')
     + '<div style="display:flex;gap:8px"><button class="btn" style="flex:1" onclick="closeModal()">Cancel</button>'
     + '<button class="btn pri" style="flex:1" onclick="c2Assign(\'' + line_id + '\')">Assign</button></div>');
 }

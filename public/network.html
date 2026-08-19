@@ -85,7 +85,7 @@ function render(){
   var body = shown.length ? shown.map(function(d){
     return '<div class="dept"><div class="depthd"><div class="deptname">'+esc(d.name)+'</div>'
       + '<div class="meta">'+d.count+' product(s)'+(d.currency_code?' · '+esc(d.currency_code):'')+'</div>'
-      + '<div style="margin-inline-start:auto"><a class="shoplink" href="shop.html?bridge='+encodeURIComponent(d.bridge_id)+'&api='+encodeURIComponent(API)+'">open this shop →</a></div></div>'
+      + '<div style="margin-inline-start:auto"><a class="shoplink" href="shop.html?bridge='+encodeURIComponent(d.bridge_id)+'&api='+encodeURIComponent(API)+'">open this shop <span class=arw>→</span></a></div></div>'
       + (d.categories||[]).map(function(c){
           return '<div class="cat">'+esc(c.name)+'</div>'
             + (c.items||[]).map(function(it){

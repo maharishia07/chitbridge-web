@@ -369,7 +369,7 @@ function _groupSumPane(){
       var open = !!(_FLD.gsOpen || {})[i];
       var name = esc(l.item) + (l.variant ? ' <span style="color:var(--grey);font-weight:600">· ' + esc(l.variant) + '</span>' : '');
       var head = '<div onclick="gsToggle(' + i + ')" style="display:flex;align-items:center;cursor:pointer;padding:7px 0;border-top:1px solid var(--line);font-size:13px">'
-        + '<span style="flex:1;min-width:0">' + (open ? '▾' : '▸') + ' ' + name
+        + '<span style="flex:1;min-width:0">' + (open ? '▾' : '<span class=arw>▸</span>') + ' ' + name
         + (l.matched_by_spelling ? ' <span title="matched through a misspelling" style="font-size:var(--fs-1);color:var(--warn-2)">≈</span>' : '') + '</span>'
         /**
          * ⚠️ A SPLIT TOTAL IS NOT ZERO — SHOW A DASH.
@@ -519,7 +519,7 @@ function _folderMetricsPane(){
     + '<div style="margin-top:14px"><div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin-bottom:5px">Value</div>'
     + money + moneyNote + '</div>'
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:14px;line-height:1.5">A dash means <b>nothing to measure</b>, which is not the same as zero. '
-    + '“Overdue” is <b>your</b> setting — change it in Settings → Policy flags, and every folder and scorecard follows.</div>'
+    + '“Overdue” is <b>your</b> setting — change it in Settings <span class=arw>→</span> Policy flags, and every folder and scorecard follows.</div>'
     + '</div>';
 }
 
@@ -604,7 +604,7 @@ function _ruleRow(r, i, n){
     /* ⚠️ AT TRACK LEVEL A RULE MUST NAME ITS DESTINATION. "file here" is only meaningful standing inside the
        folder; in the all-rules list it would read as if every rule filed into the same place, which is the exact
        confusion this list exists to remove. */
-    + '<div style="font-size:var(--fs-2);margin-top:6px">When ' + terms + ' → ' + (_fldTrack() ? ('file into <b>📁 ' + esc(_fldFolderName(r.folder_id)) + '</b>') : 'file here') + '</div>'
+    + '<div style="font-size:var(--fs-2);margin-top:6px">When ' + terms + ' <span class=arw>→</span> ' + (_fldTrack() ? ('file into <b>📁 ' + esc(_fldFolderName(r.folder_id)) + '</b>') : 'file here') + '</div>'
     /* Observability: a rule that quietly stopped matching should be visible, not assumed to be working. */
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">'
     + (r.match_count ? (txn('filed {count} chit', 'filed {count} chits', r.match_count)
@@ -650,7 +650,7 @@ function _folderRulesPane(){
       + '<span style="font-size:var(--fs-2)">When</span>'
       + '<select class="inp" data-testid="rule-term" style="max-width:150px" onchange="ruleDraftSet(\'term\',this.value);_fldPaint()">' + opts + '</select>'
       + '<input class="inp" data-testid="rule-value" style="flex:1;min-width:130px" placeholder="' + esc(_RULE_HELP[d.term] || '') + '" value="' + esc(d.val || '') + '" oninput="ruleDraftSet(\'val\',this.value)">'
-      + '<span style="font-size:var(--fs-2)">→ file here</span></div>'
+      + '<span style="font-size:var(--fs-2)"><span class=arw>→</span> file here</span></div>'
       + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:5px">' + esc(_RULE_HELP[d.term] || '') + '</div>'
       /* ⚠️ ONE TERM PER RULE, ON PURPOSE. Mixed AND/OR is what makes Outlook rules unpredictable past a handful:
          nobody can hold the precedence in their head, so the rule that fires is not the rule that was meant.

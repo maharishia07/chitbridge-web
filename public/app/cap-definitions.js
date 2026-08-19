@@ -808,7 +808,7 @@ function cbDefSectionHTML(s){
     /* ⚠️ "not loaded" is NOT "0". An empty list and a missing source look identical on screen and mean opposite
        things — one says the catalogue may have none of these, the other says this screen cannot tell you. */
     + '<span class="cbdef-n">' + (s.rows ? count + ' kind' + (count === 1 ? '' : 's') : 'not loaded') + '</span>'
-    + '<span class="cbdef-caret">' + (open ? '▾' : '▸') + '</span></div>';
+    + '<span class="cbdef-caret">' + (open ? '▾' : '<span class=arw>▸</span>') + '</span></div>';
   if (!open) return '<div class="cbdef-sec">' + head + '</div>';
 
   var body = '<div class="cbdef-blurb">' + cbDefEsc(s.blurb) + '</div>';
@@ -918,7 +918,7 @@ function cbDefMineHTML(){
       +   (A.home
             ? '<button class="cbdef-new" data-testid="cbdef-home-' + kind + '" onclick="event.stopPropagation();cbDefGoHome(\'' + A.home.nav + '\',\'' + (A.home.sec || '') + '\')">' + cbDefEsc(A.home.label) + '</button>'
             : '<button class="cbdef-new" data-testid="cbdef-new-' + kind + '" onclick="event.stopPropagation();cbDefNew(\'' + kind + '\')">+ New</button>')
-      +   '<span class="cbdef-caret">' + (mopen ? '▾' : '▸') + '</span>'
+      +   '<span class="cbdef-caret">' + (mopen ? '▾' : '<span class=arw>▸</span>') + '</span>'
       + '</div>'
       + (mopen ? ('<div class="cbdef-body">'
       +   '<div class="cbdef-blurb">' + cbDefEsc(A.blurb) + '</div>'

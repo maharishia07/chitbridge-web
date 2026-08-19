@@ -29,7 +29,7 @@ const FILES = [];
 
 const SEP = String.fromCharCode(92);
 const rel = (p) => path.relative(ROOT, p).split(SEP).join('/');
-const out = { physical: [], arrow: [] };
+const out = { physical: [], arrow: [], arrowDone: [], arrowPlain: [], arrowComment: [] };
 
 /**
  * ── 2 · PHYSICAL PROPERTIES ──────────────────────────────────────────────────────────────────────────────
@@ -53,9 +53,24 @@ const ARROWS = /[→←▸◂»«]/g;
 
 for (const f of FILES) {
   const src = fs.readFileSync(f, 'utf8');
+  let inBlock = false, inHtmlComment = false;
   src.split(/\r?\n/).forEach((line, i) => {
     /* skip the lines that DOCUMENT the rule — they name the properties without using them */
     if (/rtl-audit|logical propert|inline-start|inline-end/.test(line)) return;
+
+    /**
+     * ⚠️ A DOC COMMENT IS NOT A BACKLOG ITEM. This codebase carries very large explanatory comments, and they use
+     * → constantly for mappings. Counting them made the outstanding figure 384 when the real one is 122 — a
+     * number three times too big, which is the same kind of dishonesty as one that is too small.
+     */
+    const trimmed = line.trim();
+    const wasBlock = inBlock, wasHtmlComment = inHtmlComment;
+    if (/\/\*/.test(line) && !/\*\//.test(line.slice(line.indexOf('/*') + 2))) inBlock = true;
+    if (/\*\//.test(line)) inBlock = false;
+    if (/<!--/.test(line) && !/-->/.test(line)) inHtmlComment = true;
+    if (/-->/.test(line)) inHtmlComment = false;
+    const isComment = wasBlock || inBlock || wasHtmlComment || inHtmlComment
+      || /^\*/.test(trimmed) || /^\/\//.test(trimmed) || /^\/\*/.test(trimmed) || /^<!--/.test(trimmed);
     for (const [re, fix] of PHYS) {
       re.lastIndex = 0;
       let m;
@@ -63,7 +78,16 @@ for (const f of FILES) {
     }
     ARROWS.lastIndex = 0;
     const a = line.match(ARROWS);
-    if (a) out.arrow.push({ f: rel(f), n: i + 1, hit: a.join(' ') });
+    /**
+     * ⚠️ A WRAPPED ARROW IS A FIXED ARROW. <span class=arw> takes the CSS mirror, so counting it as outstanding
+     * would make the number never fall and the audit unreadable — the classic "linter that only goes up".
+     * Unwrapped ones are split by whether they CAN be wrapped: a plain string cannot take markup.
+     */
+    if (!a) return;
+    if (isComment) { out.arrowComment.push(1); return; }
+    const bucket = /class=.?arw/.test(line) ? 'arrowDone'
+      : (/<\/?[a-zA-Z][^>]*>/.test(line) ? 'arrow' : 'arrowPlain');
+    out[bucket].push({ f: rel(f), n: i + 1, hit: a.join(' ') });
   });
 }
 
@@ -102,8 +126,12 @@ console.log('        always: ' + (fontLink.replace(/^.*css2\?family=/, '') || '(
 console.log('        on RTL: ' + (rtlFont.replace(/^.*css2\?family=/, '') || '(none — nothing can draw Arabic)').slice(0, 86));
 
 box('4 . DIRECTIONAL GLYPHS - arrows that must flip');
-console.log('  ' + out.arrow.length + ' line(s) carrying an arrow glyph');
-for (const [f, n] of top(out.arrow, 6)) console.log('        ' + String(n).padStart(4) + '  ' + f);
+console.log('  ' + out.arrowDone.length + ' line(s) MIRRORED  (wrapped in <span class=arw>, flipped by CSS)');
+ console.log('  ' + out.arrowComment.length + ' line(s) in doc comments - invisible, nothing to do');
+console.log('  ' + out.arrow.length + ' line(s) still wrappable');
+for (const [f, n] of top(out.arrow, 5)) console.log('        ' + String(n).padStart(4) + '  ' + f);
+console.log('  ' + out.arrowPlain.length + ' line(s) in PLAIN STRINGS - cannot take markup, need a character swap');
+for (const [f, n] of top(out.arrowPlain, 5)) console.log('        ' + String(n).padStart(4) + '  ' + f);
 
 const fails = (bidiCSS ? 0 : 1) + (hasArabicFont ? 0 : 1) + (out.physical.length ? 1 : 0);
 console.log('\n== RTL AUDIT ==  ' + fails + ' blocking class(es)\n');

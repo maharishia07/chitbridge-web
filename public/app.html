@@ -264,6 +264,17 @@
   .mono{font-family:'Space Mono';unicode-bidi:isolate}
   /* A number, a date or a code that is NOT in mono needs the same protection. */
   .ltr,bdi,time,.num{unicode-bidi:isolate}
+  /**
+   * ⭐ A DIRECTIONAL GLYPH MUST MIRROR IN RTL. An arrow that means next, then or becomes points the way the
+   * reader travels — so in Arabic it points LEFT. Unicode does not mirror arrows automatically (only brackets),
+   * and no font feature does it, so the flip has to be ours.
+   *
+   * ⚠️ A TRANSFORM, NOT A SECOND CHARACTER. Swapping the codepoint would need a function call at every one of
+   * the ~140 sites and would run before the language is known at several of them. One CSS rule on a class the
+   * markup already carries costs nothing at runtime and is exactly reversible.
+   */
+  .arw{display:inline-block}
+  :root[dir=rtl] .arw{transform:scaleX(-1)}
   .disp{font-family:'Space Grotesk'}
 
   /* mode ribbon */
@@ -2185,7 +2196,7 @@ function renderWelcome(){
         <div class="welask-row"><input id="ask_in" class="inp" placeholder="Type a question…"><button class="btn" onclick="askAssist()">Ask</button></div>
         <div class="welask-ans" id="ask_ans"></div>
       </div>
-      <div class="welbtns"><button class="btn" data-testid="onb-getstarted" onclick="setWStep('select')">Get started →</button></div>`;
+      <div class="welbtns"><button class="btn" data-testid="onb-getstarted" onclick="setWStep('select')">Get started <span class=arw>→</span></button></div>`;
   } else {
     const roles=[["business","🏪","Run my business","I sell, supply, or serve customers and want my orders on a signed rail."],["agent","🤝","Bring businesses (Agent)","I onboard shops, set them up, and earn from each one I bring that stays active."]];
     const bps = ONB.role ? ONB_BP[ONB.role] : [];
@@ -2194,14 +2205,14 @@ function renderWelcome(){
         <div class="welgrid">${roles.map(r=>`<div class="welrole ${ONB.role===r[0]?'sel':''}" data-testid="onb-role-${r[0]}" onclick="pickRole('${r[0]}')"><div class="ci">${r[1]}</div><div class="cn">${r[2]}</div><div class="cd">${r[3]}</div></div>`).join("")}</div></div>
       ${ONB.role?`<div class="welsec"><div class="welh2">Choose your vertical</div><div class="welsub">Pick a starting point — it shapes what a deal looks like. You can refine later.</div>
         <div class="welgrid">${bps.map(b=>`<div class="welbp ${ONB.bp===b.k?'sel':''}" data-testid="onb-bp-${b.k}" onclick="pickBP('${b.k}')"><div class="cn">${b.n}</div><div class="bt">${b.t}</div><div class="cd">${b.d}</div></div>`).join("")}</div></div>`:""}
-      <div class="welbtns"><button class="btn ghost" onclick="setWStep('intro')">← back</button><button class="btn" ${ONB.bp?"":"disabled"} data-testid="onb-continue" onclick="welToRegister()">Continue to register →</button></div>`;
+      <div class="welbtns"><button class="btn ghost" onclick="setWStep('intro')"><span class=arw>←</span> back</button><button class="btn" ${ONB.bp?"":"disabled"} data-testid="onb-continue" onclick="welToRegister()">Continue to register <span class=arw>→</span></button></div>`;
   }
   document.getElementById("root").innerHTML = modeRibbon() + `
   <div class="welwrap">
     <div class="weltop">${logo()}<button class="welsignin" onclick="openLegend()" title="See what we serve — no login" style="margin-inline-end:8px">🔑 What we serve</button><button class="welsignin" data-testid="nav-signin" onclick="go('#/login')">Sign in</button></div>
     ${welPips()}
     ${body}
-    <div class="welfoot">Preview → vertical → register · selection defaults to one Blueprint for now (the settings/schema cascade is a later juncture).</div>
+    <div class="welfoot">Preview <span class=arw>→</span> vertical <span class=arw>→</span> register · selection defaults to one Blueprint for now (the settings/schema cascade is a later juncture).</div>
   </div>`;
 }
 let REG = {step:"form", name:"", email:"", busy:false, err:""};
@@ -2228,13 +2239,13 @@ function renderRegister(){
        <div style="font-size:11px;color:var(--grey);margin:-2px 0 8px;line-height:1.5">8 characters or more · letters, numbers and dashes · no <b>@</b> or <b>.</b> — those make an employee or a network store.<br><b>This cannot be changed later.</b> Your business name can be anything, and you set it after signing in.</div>
        <label class="fl">Email <span ${muted}>(Register.Email)</span></label><input class="inp" id="r_email" data-testid="reg-email" placeholder="you@business.in" value="${esc(R.email)}">
        ${R.err?`<div class="err">${R.err}</div>`:""}
-       <button class="btn gold" id="r_go" data-testid="reg-submit" ${R.busy?"disabled":""}>${R.busy?'<span class="spin"></span> Creating…':"Create entity →"}</button>`;
+       <button class="btn gold" id="r_go" data-testid="reg-submit" ${R.busy?"disabled":""}>${R.busy?'<span class="spin"></span> Creating…':"Create entity <span class=arw>→</span>"}</button>`;
   } else {
     form = `<div ${who}>Entity <b>${esc(R.name)}</b> — verify to enter · <a onclick="regReset()">change</a></div>
        ${regVerticalChooser()}
        <label class="fl">OTP sent to ${esc(R.email)}</label><input class="inp" id="r_otp" data-testid="reg-otp" placeholder="6-digit code">
        ${R.err?`<div class="err">${R.err}</div>`:""}
-       <button class="btn gold" id="r_go" data-testid="reg-submit" ${R.busy?"disabled":""}>${R.busy?'<span class="spin"></span> Verifying…':"Verify & enter →"}</button>`;
+       <button class="btn gold" id="r_go" data-testid="reg-submit" ${R.busy?"disabled":""}>${R.busy?'<span class="spin"></span> Verifying…':"Verify & enter <span class=arw>→</span>"}</button>`;
   }
   document.getElementById("root").innerHTML = modeRibbon() + `
   <div class="auth"><div class="card">
@@ -2312,24 +2323,24 @@ function renderLogin(){
   if(L.cust){
     form = `<label class="fl">Shop link / User ID <span ${muted}>(Login.Bridge)</span></label><input class="inp" id="l_bridge" placeholder="your User ID or email" value="${esc(L.id||'')}">
        <label class="fl">Your mobile OTP</label><input class="inp" id="l_cotp" placeholder="6-digit code">
-       <button class="btn" id="l_go">${L.busy?'<span class="spin"></span> …':"View my orders →"}</button>
-       <div class="swap"><a onclick="setLoginCust(false)">← Back to sign in</a></div>`;
+       <button class="btn" id="l_go">${L.busy?'<span class="spin"></span> …':"View my orders <span class=arw>→</span>"}</button>
+       <div class="swap"><a onclick="setLoginCust(false)"><span class=arw>←</span> Back to sign in</a></div>`;
   } else if(L.step==="id"){
     form = `<label class="fl">User ID <span ${muted}>(email or 8+ char id &middot; co-assist: key@user-id)</span></label><input class="inp" id="l_id" placeholder="you@business.com   ·   or your User ID" value="${esc(L.id)}">
-       <button class="btn" id="l_go">${L.busy?'<span class="spin"></span> …':"Continue →"}</button>`;
+       <button class="btn" id="l_go">${L.busy?'<span class="spin"></span> …':"Continue <span class=arw>→</span>"}</button>`;
   } else if(L.step==="otp"){
     form = `<div ${who}>Signing in as <b>${esc(L.id)}</b> · ${L.kind} · <a onclick="loginReset()">change</a></div>
        ${L.note?`<div style="font-size:12px;color:var(--warn-2);background:var(--warn-tint);border:1px solid #e0d3b0;border-radius:9px;padding:9px 11px;margin:6px 0 4px;line-height:1.5">${esc(L.note)}</div>`:''}
        <label class="fl">${L.note?"Code from your network operator":(L.kind==="entity"?"OTP sent to your email":"OTP from your admin")}</label><input class="inp" id="l_otp" placeholder="6-digit code">
-       <button class="btn" id="l_go">${L.busy?'<span class="spin"></span> Verifying…':"Verify & enter →"}</button>`;
+       <button class="btn" id="l_go">${L.busy?'<span class="spin"></span> Verifying…':"Verify & enter <span class=arw>→</span>"}</button>`;
   } else if(L.step==="pin"){
     form = `<div ${who}>Signing in as <b>${esc(L.id)}</b> · co-assist · <a onclick="loginReset()">change</a></div>
        <label class="fl">Your PIN</label><input class="inp" id="l_pin" placeholder="••••" type="password">
-       <button class="btn" id="l_go">${L.busy?'<span class="spin"></span> …':"Start shift →"}</button>`;
+       <button class="btn" id="l_go">${L.busy?'<span class="spin"></span> …':"Start shift <span class=arw>→</span>"}</button>`;
   } else if(L.step==="setpin"){
     form = `<div ${who}>First time — set a PIN for <b>${esc(L.id)}</b></div>
        <label class="fl">Choose a PIN</label><input class="inp" id="l_setpin" placeholder="4–6 digits" type="password">
-       <button class="btn" id="l_go">${L.busy?'<span class="spin"></span> …':"Set PIN & enter →"}</button>`;
+       <button class="btn" id="l_go">${L.busy?'<span class="spin"></span> …':"Set PIN & enter <span class=arw>→</span>"}</button>`;
   }
   document.getElementById("root").innerHTML = modeRibbon() + `
   <div class="auth"><div class="card">
@@ -3423,7 +3434,7 @@ function _renderApp(){
                 <span style="width:17px;text-align:center">${icon}</span><span>${label}</span>
                 <span style="margin-inline-start:auto;display:flex;align-items:center;gap:7px">
                   <span style="font-size:11.5px;color:var(--grey)">${esc(value)}</span>
-                  <span style="font-size:10px;color:var(--grey);transform:rotate(${open?90:0}deg);display:inline-block">▸</span>
+                  <span style="font-size:10px;color:var(--grey);transform:rotate(${open?90:0}deg);display:inline-block"><span class=arw>▸</span></span>
                 </span></button>`;
             };
             var LANGS = { en:"English", hi:"हिन्दी", ta:"தமிழ்", fr:"Français" };
@@ -3609,7 +3620,7 @@ function menuBody(M, role){
     var shown = shut ? here : items;
     out += '<div class="grp" data-testid="grp-' + g[0].toLowerCase() + '" onclick="toggleNavGroup(\'' + g[0] + '\')"'
       + ' style="cursor:pointer;display:flex;align-items:center;gap:5px" title="' + (shut ? 'Show' : 'Hide') + ' ' + g[0] + '">'
-      + '<span style="font-size:var(--fs-1);opacity:.7">' + (shut ? '▸' : '▾') + '</span>' + g[0]
+      + '<span style="font-size:var(--fs-1);opacity:.7">' + (shut ? '<span class=arw>▸</span>' : '▾') + '</span>' + g[0]
       + (shut ? '<span style="margin-inline-start:auto;opacity:.55;font-weight:600">' + items.length + '</span>' : '') + '</div>';
     out += shown.map(menuBtn).join('');
   });
@@ -4003,7 +4014,7 @@ function menuBtn(x){
      row that navigates, so a miss does not do nothing: it takes you somewhere. A control whose failure mode is
      "the wrong thing happened" needs more room than one whose failure mode is "nothing happened". */
   const plus=`<span data-testid="nav-newfolder-${key}" onclick="event.stopPropagation();newFolderIn('${key}')" title="New folder in ${label}" style="margin-inline-start:auto;min-width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center;opacity:.5;font-size:13px;font-weight:700">＋</span>`;
-  const chev=fs.length?`<span data-testid="nav-collapse-${key}" onclick="event.stopPropagation();toggleTrack('${key}')" title="${open?'Collapse':'Expand'} folders" style="padding:0 3px;opacity:.6;font-size:var(--fs-1)">${open?'▾':'▸'}</span>`:'';
+  const chev=fs.length?`<span data-testid="nav-collapse-${key}" onclick="event.stopPropagation();toggleTrack('${key}')" title="${open?'Collapse':'Expand'} folders" style="padding:0 3px;opacity:.6;font-size:var(--fs-1)">${open?'▾':'<span class=arw>▸</span>'}</span>`:'';
   const btn=`<button class="${on?'on':''}" data-testid="nav-${key}" onclick="${click}"><span class="ic">${ic}</span>${label}${plus}${chev}</button>`;
   return open ? btn+navFolders(key,fs) : btn;
 }
@@ -4847,7 +4858,7 @@ const ASSIST_PAGES = {
       ["Proof status","Track the delivery / evidence state."] ]} ]},
 };
 function assistPage(key){ const p=ASSIST_PAGES[key]; if(!p) return menuAssist(key);
-  const groups=p.groups.map(g=>`<div style="${_CARD}"><div style="font-family:'Space Grotesk';font-weight:600;font-size:var(--fs-2);color:var(--ink);display:flex;align-items:center;gap:7px;margin-bottom:6px"><span style="color:var(--blue)">▸</span>${esc(g.title)}</div>${g.rows.map((r,i)=>`<div style="display:flex;gap:9px;align-items:baseline;padding:4px 0;${i?'border-top:0.5px solid #F0ECE2':''}"><span style="font-family:'Space Mono';font-size:var(--fs-1);color:var(--blue);min-width:118px;flex-shrink:0">${esc(r[0])}</span><span style="font-size:12px;color:var(--ink);line-height:1.5">${esc(r[1])}</span></div>`).join("")}</div>`).join("");
+  const groups=p.groups.map(g=>`<div style="${_CARD}"><div style="font-family:'Space Grotesk';font-weight:600;font-size:var(--fs-2);color:var(--ink);display:flex;align-items:center;gap:7px;margin-bottom:6px"><span style="color:var(--blue)"><span class=arw>▸</span></span>${esc(g.title)}</div>${g.rows.map((r,i)=>`<div style="display:flex;gap:9px;align-items:baseline;padding:4px 0;${i?'border-top:0.5px solid #F0ECE2':''}"><span style="font-family:'Space Mono';font-size:var(--fs-1);color:var(--blue);min-width:118px;flex-shrink:0">${esc(r[0])}</span><span style="font-size:12px;color:var(--ink);line-height:1.5">${esc(r[1])}</span></div>`).join("")}</div>`).join("");
   return `<div style="background:var(--gold-soft);border:0.5px solid var(--gold-line);border-radius:12px;padding:9px 11px;font-size:12px;color:var(--warn-3);line-height:1.5;margin-bottom:9px"><b style="font-family:'Space Grotesk'">${key==='order'?'Order':'Task'} — what it is &amp; how to use it</b> <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--card);color:var(--warn-3);border:0.5px solid var(--gold-line);border-radius:5px;padding:1px 6px">assistance page</span><div style="margin-top:4px">${esc(p.intro)}</div></div>${groups}<div style="${_CARD}"><div style="font-size:11.5px;color:var(--grey);margin-bottom:6px">Ask the assistant <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--gold-soft);color:var(--warn-3);border-radius:5px;padding:1px 6px">web demo</span></div><div style="display:flex;gap:8px"><input class="inp" id="m_in_${key}" placeholder="Ask about ${esc(key)}…"><button style="${_BTN}" onclick="mAskFree('${key}')">Ask</button></div><div id="m_ans_${key}" style="font-size:13px;color:var(--ink);margin-top:9px;line-height:1.55"></div></div>`;
 }
 function addActorModal(){
@@ -5071,7 +5082,7 @@ function netView(self, tree, edges){
       <label class="fl" style="margin-top:8px">Under which node</label><select class="inp" id="nb_parent">${tree.map(n=>`<option value="${n.id}">${'— '.repeat(n.depth||0)}${esc(n.name)}</option>`).join("")}</select>
       <div style="margin-top:10px"><button style="${_BTN}" onclick="netCreateBranch()">➕ Create branch</button></div>
       <div id="nb_status" style="font-size:12px;color:var(--blue);margin-top:8px"></div><div class="err" id="nb_err"></div>
-      <div style="font-size:11.5px;color:var(--grey);margin-top:8px;line-height:1.5">Branches are created <b>one at a time</b> — register → link → approve. Building a whole new structure? <i>Auto-build (create &amp; link the tree in order) is coming.</i></div></div>
+      <div style="font-size:11.5px;color:var(--grey);margin-top:8px;line-height:1.5">Branches are created <b>one at a time</b> — register <span class=arw>→</span> link <span class=arw>→</span> approve. Building a whole new structure? <i>Auto-build (create &amp; link the tree in order) is coming.</i></div></div>
     <div style="${_CARD}"><label class="fl">Or connect an entity that already exists (User ID)</label><div style="display:flex;gap:8px"><input class="inp" id="net_child" placeholder="User ID or email"><button class="composebtn" onclick="netConnect('${self.id}')">🔗 Request link</button></div><div class="err" id="net_err"></div></div>
     <div class="sec" style="font-size:12px;color:var(--grey);margin:12px 0 4px">Connections / edges (${edges.length})</div>${edgeRows}`;
 }
@@ -5217,7 +5228,7 @@ function supInfoCardHTML(x){
       /* ⚠️ NOT .composebtn — it sets color:#fff for a coloured background, and .supacts button sets background:var(--card).
          The two together rendered white-on-white: the button was there, sized and clickable, and invisible. */
       + '<button class="supact-pri" data-testid="sup-edit" onclick="event.stopPropagation();supEdit(\''+x.supplier_list_id+'\')">✎ Edit</button>'
-      + '<button data-testid="sup-passport" onclick="event.stopPropagation();viewSupplierPassport(\''+esc(x.bridge_id)+'\',\''+String(supName(x)).replace(/[\\']/g,'')+'\')">Passport →</button>'
+      + '<button data-testid="sup-passport" onclick="event.stopPropagation();viewSupplierPassport(\''+esc(x.bridge_id)+'\',\''+String(supName(x)).replace(/[\\']/g,'')+'\')">Passport <span class=arw>→</span></button>'
       + '<button data-testid="sup-remove" onclick="event.stopPropagation();delSupplier(\''+x.supplier_list_id+'\')" style="margin-inline-start:auto;color:var(--disp)">Remove</button>'
     + '</div></div>';
 }
@@ -5355,7 +5366,7 @@ function supFindBodyHTML(){
     const card=function(r){
       return '<div class="sfhit"><div class="sfhit-h"><b>'+esc(supName(r.sup))+'</b>'
         +(r.sup.preferred?'<span style="color:#e0a92b">★</span>':'')
-        +'<button onclick="selectSupplier(\''+r.sup.supplier_list_id+'\')">Open →</button></div>'
+        +'<button onclick="selectSupplier(\''+r.sup.supplier_list_id+'\')">Open <span class=arw>→</span></button></div>'
         /* ⚠️ THE SUPPLIER'S CURRENCY, not inr(). inr() formats in MY currency (myCur()), so a supplier pricing in
            USD would have had their number relabelled as rupees — a wrong price that looks perfectly normal. */
         + r.hits.map(function(p){ const d=p.item_data||p;
@@ -5372,7 +5383,7 @@ function supFindBodyHTML(){
         /* ⚠️ SAY WHEN THE LIST IS CUT. Six per supplier is a display cap, and an unannounced cap reads as "that
            is all they have" — the same class of lie as reporting an unreported store as zero. The server knows
            the real overflow (`more`); only the fan-out fallback cannot, and there it is simply absent. */
-        + ((r.more>0) ? '<div class="sfline" style="color:var(--grey)"><span>+'+r.more+' more — <b>Open →</b> to see them all</span><span></span></div>' : '')
+        + ((r.more>0) ? '<div class="sfline" style="color:var(--grey)"><span>+'+r.more+' more — <b>Open <span class=arw>→</span></b> to see them all</span><span></span></div>' : '')
         + '</div>';
     };
     body = prog
@@ -5687,7 +5698,7 @@ function supStepReview(x){
      * default and the full one is one link away, carrying everything already entered.
      */
     + '<div style="font-size:11.5px;color:var(--grey);margin-top:6px">Need CC, attachments or a line they do not list? '
-    + '<span data-testid="sup-open-compose" onclick="composeFromSupplier(\''+esc(x.supplier_list_id)+'\')" style="cursor:pointer;color:var(--blue);font-weight:600">Open in compose →</span></div>';
+    + '<span data-testid="sup-open-compose" onclick="composeFromSupplier(\''+esc(x.supplier_list_id)+'\')" style="cursor:pointer;color:var(--blue);font-weight:600">Open in compose <span class=arw>→</span></span></div>';
 }
 /**
  * ⚠️ IT SENDS. Not "open compose pre-filled" — that would have made the redesign LONGER than what it replaced, with
@@ -5967,7 +5978,7 @@ function supDetailHTML(){
    * that they are unrelated is worse than one pane saying nothing.
    */
   if(UI.supFind) return `<div class="empty"><div class="big">🔎</div><div class="t">Searching every supplier</div>`
-    + `<div>Results are on the left, grouped by who stocks it. Pick <b>Open →</b> on one to bring their catalogue back here.</div></div>`;
+    + `<div>Results are on the left, grouped by who stocks it. Pick <b>Open <span class=arw>→</span></b> on one to bring their catalogue back here.</div></div>`;
   if(!x) return `<div class="empty"><div class="big">🏭</div><div class="t">Select a supplier</div><div>Pick one to see their profile and catalogue, then compose an order.</div></div>`;
   const back=`<button class="dback" onclick="backToList()">‹ Suppliers</button>`;
   /* ⚠️ NO View/Edit TOGGLE HERE ANY MORE — this pane is the products. The record and its Edit button live on the
@@ -7605,9 +7616,9 @@ function filterPanel(){ const f=UI.filter||{};
     <div class="fp-row"><span>Sort</span><select onchange="setFilter('sort',this.value)">
       <option value=""${!f.sort?' selected':''}>Default</option>
       <option value="priority"${f.sort==='priority'?' selected':''}>Priority (queue)</option>
-      <option value="amount"${f.sort==='amount'?' selected':''}>Amount (high → low)</option>
+      <option value="amount"${f.sort==='amount'?' selected':''}>Amount (high <span class=arw>→</span> low)</option>
       <option value="code"${f.sort==='code'?' selected':''}>Code</option></select></div>
-    <div class="fp-foot"><button onclick="clearFilter()">Clear</button><span class="fp-note">→ ${EP.filters.p} (§1)</span></div>
+    <div class="fp-foot"><button onclick="clearFilter()">Clear</button><span class="fp-note"><span class=arw>→</span> ${EP.filters.p} (§1)</span></div>
   </div>`;
 }
 let _notifs=[];
@@ -7911,7 +7922,7 @@ function closeAdvPanel(){ const p=document.querySelector(".advpanel"); if(p)p.re
 function applyAdv(){ const dc=document.getElementById("adv_disp"); UI.adv={ amount_min:val("adv_amin")||undefined, amount_max:val("adv_amax")||undefined, date_from:val("adv_dfrom")||undefined, date_to:val("adv_dto")||undefined, fstatus:val("adv_status")||undefined, priority:val("adv_pri")||undefined, dispute:(dc&&dc.checked)?'open':undefined }; UI.advOpen=false; UI.sel=null; UI.detail=null; renderApp(); }
 function clearAdv(){ UI.adv={}; UI.advOpen=false; UI.sel=null; UI.detail=null; renderApp(); }
 function advBtnHtml(){ return (typeof dispChipHtml==='function'?dispChipHtml():'')+advChips()+'<button class="advbtn '+(advActive()?'on':'')+'" onclick="event.stopPropagation();toggleAdv()" title="Advanced search">▾</button>'; }
-function advChips(){ if(!advActive())return ''; const a=UI.adv||{}; const ch=[]; if(a.amount_min||a.amount_max)ch.push(['amt','Amt '+(a.amount_min||'0')+'–'+(a.amount_max||'max')]); if(a.date_from||a.date_to)ch.push(['date',(a.date_from||'…')+'→'+(a.date_to||'…')]); if(a.fstatus)ch.push(['fstatus',a.fstatus]); if(a.priority)ch.push(['priority',a.priority]); if(a.dispute)ch.push(['dispute','⚠ dispute']); return ch.map(function(x){ return '<span class="advchip">'+esc(x[1])+'<b onclick="event.stopPropagation();delAdv(\''+x[0]+'\')">✕</b></span>'; }).join(''); }
+function advChips(){ if(!advActive())return ''; const a=UI.adv||{}; const ch=[]; if(a.amount_min||a.amount_max)ch.push(['amt','Amt '+(a.amount_min||'0')+'–'+(a.amount_max||'max')]); if(a.date_from||a.date_to)ch.push(['date',(a.date_from||'…')+'<span class=arw>→</span>'+(a.date_to||'…')]); if(a.fstatus)ch.push(['fstatus',a.fstatus]); if(a.priority)ch.push(['priority',a.priority]); if(a.dispute)ch.push(['dispute','⚠ dispute']); return ch.map(function(x){ return '<span class="advchip">'+esc(x[1])+'<b onclick="event.stopPropagation();delAdv(\''+x[0]+'\')">✕</b></span>'; }).join(''); }
 function delAdv(k){ const a=UI.adv||{}; if(k==='amt'){delete a.amount_min;delete a.amount_max;} else if(k==='date'){delete a.date_from;delete a.date_to;} else delete a[k]; UI.adv=a; UI.sel=null; UI.detail=null; renderApp(); }
 function advPanel(){ const a=UI.adv||{};
   return `<div class="advpanel" onclick="event.stopPropagation()">
@@ -8268,7 +8279,7 @@ function todo(k){ const t=PENDING[k]||{label:k,ref:""}; toast(MSG.comingSoon(t.l
 function selBar(){const ids=UI.selected;const all=`<button onclick="selectAllRows()">☑ All</button>`;const clr=`<button onclick="UI.selected.clear();renderApp()">Clear</button>`;
   if(UI.folder==='trash'){ return `<div class="selbar" id="selbar">☑ ${ids.size} selected<span class="sp">${all}<button class="pri" onclick="bulkRestore()">↩ Restore</button><button onclick="bulkPurge()">🗑 Delete forever</button>${clr}</span></div>`; }
   if(UI.folder==='archive'){ return `<div class="selbar" id="selbar">☑ ${ids.size} selected<span class="sp">${all}<button class="pri" onclick="bulkUnarchive()">↩ Unarchive</button>${clr}</span></div>`; }
-  const sum=UI.rows.filter(c=>ids.has(c.id)).reduce((a,c)=>a+c.amt,0);const rb=rollupBuckets();const ticked=hasRollup()?[...UI.aggStates].reduce((a,s)=>a+((rb[s]&&rb[s].s)||0),0):UI.rows.filter(c=>UI.aggStates.has(c.state)).reduce((a,c)=>a+c.amt,0);const lbl=ids.size?`☑ ${ids.size} selected · Σ ${inr(sum)}`:`states ✓ ${[...UI.aggStates].map(cap).join(" · ")||'none'} · Σ(all) ${inr(ticked)}`;return `<div class="selbar" id="selbar">${lbl}<span class="sp">${all}<button onclick="sumScope()">Sum →</button>${ids.size?`<button onclick="groupSumSelected()" title="Quantity per item across the ticked chits — what you actually need to buy">🧮 Group sum</button>`:``}<button onclick="quickStatus()">Status</button><button class="pri" onclick="quickAssign()">Assign</button>${clr}</span></div>`;}
+  const sum=UI.rows.filter(c=>ids.has(c.id)).reduce((a,c)=>a+c.amt,0);const rb=rollupBuckets();const ticked=hasRollup()?[...UI.aggStates].reduce((a,s)=>a+((rb[s]&&rb[s].s)||0),0):UI.rows.filter(c=>UI.aggStates.has(c.state)).reduce((a,c)=>a+c.amt,0);const lbl=ids.size?`☑ ${ids.size} selected · Σ ${inr(sum)}`:`states ✓ ${[...UI.aggStates].map(cap).join(" · ")||'none'} · Σ(all) ${inr(ticked)}`;return `<div class="selbar" id="selbar">${lbl}<span class="sp">${all}<button onclick="sumScope()">Sum <span class=arw>→</span></button>${ids.size?`<button onclick="groupSumSelected()" title="Quantity per item across the ticked chits — what you actually need to buy">🧮 Group sum</button>`:``}<button onclick="quickStatus()">Status</button><button class="pri" onclick="quickAssign()">Assign</button>${clr}</span></div>`;}
 function updateSelBar(){const el=document.getElementById("selbar");if(el)el.outerHTML=selBar();}
 /**
  * ⭐ 🧮 GROUP SUM OVER THE TICKED CHITS (backlog 31). Athi: *"is the group sum happens for multiselect chit?"*
@@ -8980,7 +8991,7 @@ function contentItems(c){
     const atts=attsVis(it[2]);
     const e=it[3]||{};                      // live-set entry: {live, original, history, removed, reason_code}
     const open=UI.openLines.has('line'+idx);
-    const clip=atts.length?`<span class="lineclip" onclick="event.stopPropagation();toggleLine(${idx})">📎 ${atts.length} ${open?'▾':'▸'}</span>`:"";
+    const clip=atts.length?`<span class="lineclip" onclick="event.stopPropagation();toggleLine(${idx})">📎 ${atts.length} ${open?'▾':'<span class=arw>▸</span>'}</span>`:"";
     const strip=(atts.length&&open)?`<div class="lineImgs">${attTileGrid(atts,'line'+idx)}</div>`:"";
     /**
      * ⭐ A DELIVERED LINE IS SETTLED — no ✎, a 🔒 instead.
@@ -9246,7 +9257,7 @@ function amdSetRef(x, how){
 function amdPickUnit(u){ AMD.line.unit=u; amdView('main'); }
 
 const _amdSheet=(title,body,back)=>modal(`<h3 style="margin:0 0 10px">${title}</h3>${body}
-  <button class="btn" style="width:100%;margin-top:8px" onclick="amdView('${back||'main'}')">← back</button>`);
+  <button class="btn" style="width:100%;margin-top:8px" onclick="amdView('${back||'main'}')"><span class=arw>←</span> back</button>`);
 
 /**
  * The price on a candidate row, from EITHER shape.
@@ -9385,7 +9396,7 @@ function amendPaint(){
     return modal(`<h3 style="margin:0 0 4px">Remove this line?</h3>
       <div style="font-size:var(--fs-2);color:var(--grey);margin:0 0 12px">It stays on the chit so you can see it was asked for. It just stops counting.</div>
       ${AMD_REASONS.map(r=>`<button class="btn" style="width:100%;margin-bottom:7px;text-align:start;font-size:15px" onclick="amendSave(null,'${r[0]}')">${esc(r[1])}</button>`).join('')}
-      <button class="btn" style="width:100%;margin-top:4px" onclick="amdView('main')">← back</button>`);
+      <button class="btn" style="width:100%;margin-top:4px" onclick="amdView('main')"><span class=arw>←</span> back</button>`);
   }
 
   /* ── the card ───────────────────────────────────────────────────────────────────────────────────────────── */
@@ -9395,7 +9406,7 @@ function amendPaint(){
   const changed=(o.quantity!=null&&Number(o.quantity)!==Number(l.quantity))||(o.particulars&&o.particulars!==l.particulars)||(o.unit&&o.unit!==l.unit);
   const diff=changed?`<div style="font-size:var(--fs-2);text-align:center;margin-bottom:12px">
       <s style="opacity:.5">${esc([o.particulars,o.quantity,o.unit].filter(Boolean).join(' '))}</s>
-      &nbsp;→&nbsp;<b style="color:#245a9e">${esc([l.particulars,l.quantity,l.unit].filter(Boolean).join(' '))}</b></div>`:'';
+      &nbsp;<span class=arw>→</span>&nbsp;<b style="color:#245a9e">${esc([l.particulars,l.quantity,l.unit].filter(Boolean).join(' '))}</b></div>`:'';
   const ic=(g,t,fn,col)=>`<button class="btn" data-testid="amd-${String(t).toLowerCase().split(' ')[0]}" title="${t}" onclick="${fn}" style="flex:1;height:50px;font-size:21px;${col||''}">${g}</button>`;
 
   /**

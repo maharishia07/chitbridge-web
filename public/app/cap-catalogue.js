@@ -324,7 +324,7 @@ function catfPublishBlueprint(){
   api('catSourcePut', { body: body }).then(function(r){
     if (r && r.ok) {
       if (typeof toast === 'function') toast('Published as blueprint ✓');
-      if (typeof modal === 'function') modal('<div class="mhd"><div class="t">📢 Published as a blueprint</div></div><div class="mbody" style="padding:16px 18px"><div style="font-size:13px;color:var(--ink-2);line-height:1.6">Your catalogue is now an <b>adoptable blueprint</b>. In <b>another store</b>, open <b>🗂️ Catalogue → ⚙ Set up (new) → Blueprint</b> and pick:'
+      if (typeof modal === 'function') modal('<div class="mhd"><div class="t">📢 Published as a blueprint</div></div><div class="mbody" style="padding:16px 18px"><div style="font-size:13px;color:var(--ink-2);line-height:1.6">Your catalogue is now an <b>adoptable blueprint</b>. In <b>another store</b>, open <b>🗂️ Catalogue <span class=arw>→</span> ⚙ Set up (new) <span class=arw>→</span> Blueprint</b> and pick:'
         + '<div style="margin-top:8px;font-weight:700;color:var(--blue-2)">' + esc(body.title) + '</div>'
         + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">source <code>' + esc(source_key) + '</code> · ' + items.length + ' item(s)' + (f.vertical ? ' · ' + esc(f.vertical) : '') + '</div>'
         + '<div style="margin-top:10px">Each distributor sets its <b>own unit + price</b> (e.g. wholesale in <b>ton</b>, retail in <b>kg</b>) — the names &amp; design travel <b>by reference</b>, not copied.</div></div></div>', true);
@@ -618,7 +618,7 @@ function _cwMethodBlock(w){
 function _cwStep1(w){
   var left = '<div style="font-size:13px;color:var(--ink-2);margin-bottom:8px">Tell me the <b>purpose</b> — the exact catalogue you want.</div>'
     + '<textarea id="cw_purpose" placeholder="e.g. a chemical catalogue especially focusing on paint" rows="4" style="width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:13px;resize:vertical">' + esc(w.purpose || '') + '</textarea>'
-    + '<button class="pri" onclick="cwUnderstand()" style="margin-top:8px;padding:9px 15px">Understand → suggest fields</button>'
+    + '<button class="pri" onclick="cwUnderstand()" style="margin-top:8px;padding:9px 15px">Understand <span class=arw>→</span> suggest fields</button>'
     + (w.vertical ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:8px">reads as: <b>' + esc(w.vertical) + '</b></div>' : '');
   var right;
   if (w.fieldSel && w.fieldSel.length) {
@@ -635,7 +635,7 @@ function _cwStep1(w){
       + '<div style="font-size:var(--fs-1);color:var(--ok-2);font-style:italic;border-top:1px solid var(--line);padding-top:8px">' + on + ' fields selected · sold by ' + esc(_cwUnitStr(w)) + '</div>'
       + '<div style="margin-top:8px"><div style="font-size:var(--fs-1);font-weight:700;color:var(--grey-2);text-transform:uppercase;letter-spacing:.04em">Add a data type</div><div style="display:flex;gap:6px;margin-top:5px"><input id="cw_newfield" placeholder="field name" style="flex:1;min-width:0;padding:5px 8px;border:1px solid var(--line);border-radius:6px;font-size:12px"><select id="cw_newtype" style="padding:5px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-1)">' + ['text', 'number', 'choice', 'date', 'boolean'].map(function(t){ return '<option>' + t + '</option>'; }).join('') + '</select><button onclick="cwAddCustomField()" style="padding:5px 10px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--blue);font-weight:600;font-size:var(--fs-1);cursor:pointer">Add</button></div><div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">Uncheck any you don\'t need · add any that are missing. Adopting a blueprint (step 2) adds its fields here too 📎.</div></div>';
   } else {
-    right = '<div style="color:var(--grey);font-size:var(--fs-2);text-align:center;margin-top:44px">Describe the catalogue on the left →<br>I\'ll suggest the fields to store, grouped in sections, for you to pick.</div>';
+    right = '<div style="color:var(--grey);font-size:var(--fs-2);text-align:center;margin-top:44px">Describe the catalogue on the left <span class=arw>→</span><br>I\'ll suggest the fields to store, grouped in sections, for you to pick.</div>';
   }
   return '<div style="display:flex;gap:18px;flex-wrap:wrap"><div style="flex:0 0 300px;max-width:340px">' + left + '</div><div style="flex:1;min-width:280px;border-inline-start:1px solid var(--line);padding-inline-start:18px">' + right + '</div></div>';
 }
@@ -668,7 +668,7 @@ function _cwProductCard(w, it){
   var combos = (it.combinations || []).slice(0, 2).map(_cwCombo).join('');
   return '<div onclick="cwSelectProduct(\'' + nm + '\')" style="border:1px solid ' + (seld ? accent : 'var(--line)') + ';border-radius:12px;padding:10px 12px;margin-top:6px;background:' + (seld ? accent + '0c' : 'var(--card)') + ';cursor:pointer">'
     + (it.photo ? '<div style="height:96px;background:var(--card) center/cover no-repeat;background-image:url(' + it.photo + ');border-radius:9px;margin-bottom:7px;color:var(--on-card)"></div>' : '')
-    + '<div style="display:flex;align-items:center;gap:8px"><input type="checkbox" ' + (on ? 'checked' : '') + ' onclick="event.stopPropagation()" onchange="cwToggleItem(\'' + nm + '\')"><span style="font-weight:700;font-size:13px">' + esc(it.name) + '</span><span style="font-size:var(--fs-1);color:var(--grey-4)">' + esc(it.scale || '') + (it.sheen ? ' · ' + esc(it.sheen) : '') + '</span><span style="margin-inline-start:auto;color:' + accent + ';font-weight:700">' + (seld ? '▸' : '') + '</span></div>'
+    + '<div style="display:flex;align-items:center;gap:8px"><input type="checkbox" ' + (on ? 'checked' : '') + ' onclick="event.stopPropagation()" onchange="cwToggleItem(\'' + nm + '\')"><span style="font-weight:700;font-size:13px">' + esc(it.name) + '</span><span style="font-size:var(--fs-1);color:var(--grey-4)">' + esc(it.scale || '') + (it.sheen ? ' · ' + esc(it.sheen) : '') + '</span><span style="margin-inline-start:auto;color:' + accent + ';font-weight:700">' + (seld ? '<span class=arw>▸</span>' : '') + '</span></div>'
     + (it.inspiration ? '<div style="font-size:var(--fs-1);color:var(--grey-2);margin:5px 0;line-height:1.45">' + esc(it.inspiration) + '</div>' : '')
     + (chips ? '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px">' + chips + '</div>' : '')
     + (combos ? '<div style="margin-top:6px">' + combos + '</div>' : '')

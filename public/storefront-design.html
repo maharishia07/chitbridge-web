@@ -222,7 +222,7 @@ function paintFoot(){
   var label = last ? (S.sent?'Place order':'Send me a code') : (S.step===0?'Check out →':'Next: '+STEPS[S.step+1].n+' →');
   var act   = last ? (S.sent?'placeOrder()':'sendCode()') : 'go('+(S.step+1)+')';
   document.getElementById('foot').innerHTML =
-      (S.step?'<button onclick="go('+(S.step-1)+')">← Back</button>':'')
+      (S.step?'<button onclick="go('+(S.step-1)+')"><span class=arw>←</span> Back</button>':'')
     + '<button class="pri"'+(why?' disabled title="'+esc(why)+'"':'')+' onclick="'+act+'">'+esc(label)+'</button>';
 }
 function paint(){

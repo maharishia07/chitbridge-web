@@ -499,7 +499,7 @@ function misPlan(m){
   return _misHead('Plan', 'What you have used against the limits your plan declares.')
     + '<div class="misnote" style="margin-bottom:10px">'+period+'</div>'
     + '<div class="misnote" style="margin-bottom:12px"><b>'+esc(PLAN.tier)+'</b> plan · limits declared in '
-      + '<b onclick="navTo(\'settings\');UI.setSec=\'governance\';UI.govTab=0" style="cursor:pointer;color:var(--blue)">Governance → Constitution →</b></div>'
+      + '<b onclick="navTo(\'settings\');UI.setSec=\'governance\';UI.govTab=0" style="cursor:pointer;color:var(--blue)">Governance <span class=arw>→</span> Constitution <span class=arw>→</span></b></div>'
     + meter('Entities', 1, PLAN.entities)
     + meter('Chits today', chitsToday, PLAN.chitsPerDay)
     + meter('Networks formed', 0, null, 'not counted on this screen')
@@ -993,7 +993,7 @@ function iamPartyHTML(key, e) {
     + '<div class="sec" style="margin:0 0 2px">' + esc(P.title) + '</div>'
     + '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.45">' + esc(P.who) + '</div>'
     + rows
-    + '<button class="composebtn" style="margin-top:11px" onclick="' + P.nav[0] + '">Manage in ' + esc(P.nav[1]) + ' →</button>'
+    + '<button class="composebtn" style="margin-top:11px" onclick="' + P.nav[0] + '">Manage in ' + esc(P.nav[1]) + ' <span class=arw>→</span></button>'
     + '</div>';
 }
 
@@ -1110,7 +1110,7 @@ function iamWhoHTML(e){
       + '<div style="font-size:var(--fs-2);color:var(--on-card)"><b>' + what + '</b>' + (named ? ' · ' + named : '') + '</div>'
       + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px;line-height:1.5">'
       +   'Named by ' + esc(signin[0]) + ' · signs in with ' + esc(signin[1])
-      +   (nav ? ' · <a href="#" onclick="' + nav + ';return false" style="color:var(--blue);font-weight:600">' + esc(where) + ' →</a>' : '')
+      +   (nav ? ' · <a href="#" onclick="' + nav + ';return false" style="color:var(--blue);font-weight:600">' + esc(where) + ' <span class=arw>→</span></a>' : '')
       + '</div></div>';
   };
 
@@ -1191,7 +1191,7 @@ function iamAccessHTML(e){
       +   prov(p)
       + '</div>'
       + (note ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px;line-height:1.5">' + note
-          + (nav ? ' <a href="#" onclick="' + nav + ';return false" style="color:var(--blue);font-weight:600">' + esc(navLabel) + ' →</a>' : '')
+          + (nav ? ' <a href="#" onclick="' + nav + ';return false" style="color:var(--blue);font-weight:600">' + esc(navLabel) + ' <span class=arw>→</span></a>' : '')
           + '</div>' : '')
       + '</div>';
   };
@@ -1233,7 +1233,7 @@ function iamAccessHTML(e){
     + 'Who gets assigned what, how many tasks at once, whether everyone can see everyone&rsquo;s work, and what '
     + 'happens on a break — one set of rules for the whole business.'
     + '<div style="margin-top:7px"><a href="#" data-testid="iam-to-work" onclick="navTo(&#39;settings&#39;);setSetSec(&#39;work&#39;);return false" '
-    + 'style="color:var(--blue);font-weight:600">Settings › Work →</a></div>'
+    + 'style="color:var(--blue);font-weight:600">Settings › Work <span class=arw>→</span></a></div>'
     + '</div>')
 
   + _iamCard(_iamHead(_iamZone('inside') + ' &nbsp;Where they sit',
@@ -1299,7 +1299,7 @@ function namingRulesHTML(){
   });
   return '<div class="namebox">'
     + '<button class="namehead" data-testid="naming-toggle" onclick="UI._namingOpen=!UI._namingOpen;loadProfile()">'
-    +   '<span>' + (open ? '▾' : '▸') + '</span> What these names mean, and which are compulsory</button>'
+    +   '<span>' + (open ? '▾' : '<span class=arw>▸</span>') + '</span> What these names mean, and which are compulsory</button>'
     + (open ? ('<div class="namebody">' + out
     +   '<div class="misnote" style="margin-top:10px">⚠️ Names are labels; <b>IDs are identity</b>. Everything the '
     +   'system stores points at an ID, so renaming is always safe — a chit, a supplier link or an adopted '
@@ -1342,7 +1342,7 @@ function _profSecBody(k, e){
     +   'whether you can change it — open the seven layers it descended through.'
     +   '</div>'
     +   '<button class="composebtn" style="margin-top:9px" data-testid="gov-to-layers" '
-    +     'onclick="navTo(\'settings\');setSetSec(\'governance\')">The seven layers →</button>'
+    +     'onclick="navTo(\'settings\');setSetSec(\'governance\')">The seven layers <span class=arw>→</span></button>'
     + '</div>';
   if (k === 'vault') return _misHead('Trade documents', 'Provide these once — every authority form is then pre-filled.')
     + '<div id="vaulthost"><div class="loadwrap"><span class="spin"></span> loading…</div></div>';
@@ -1614,7 +1614,7 @@ function govPlanBlock(){
     + govRowHtml('Entities allowed', String(PLAN.entities), 'bound')
     + govRowHtml('Chits per day', String(PLAN.chitsPerDay), 'bound')
     + govRowHtml('Networks allowed', String(PLAN.networks), 'bound')
-    + '<div class="misnote" style="margin-top:9px">These are the limits. <b onclick="navTo(\'mis\');UI.misBand=\'plan\'" style="cursor:pointer;color:var(--blue)">See what you have used in MIS →</b></div>';
+    + '<div class="misnote" style="margin-top:9px">These are the limits. <b onclick="navTo(\'mis\');UI.misBand=\'plan\'" style="cursor:pointer;color:var(--blue)">See what you have used in MIS <span class=arw>→</span></b></div>';
 }
 function govCodeStandards(){
   var M = (typeof CBCatalogue !== 'undefined') ? CBCatalogue : null;
@@ -1692,7 +1692,7 @@ function govCatVisWhy(){
  * value two controls, which is the duplication being removed, only worse: two places to change it and no way to
  * tell which one last won. One owner, many viewers.
  */
-function govOwnedElsewhere(where, nav){ return '<button class="govref-go" onclick="'+nav+'">change in '+esc(where)+' →</button>'; }
+function govOwnedElsewhere(where, nav){ return '<button class="govref-go" onclick="'+nav+'">change in '+esc(where)+' <span class=arw>→</span></button>'; }
 /* A declared value may be a literal or a function of live state — resolve it the same way everywhere, so no
    consumer has to know which kind it got. */
 function govVal(v){ try { return (typeof v === 'function') ? v() : v; } catch(_){ return '—'; } }
@@ -1713,7 +1713,7 @@ function govRefHTML(label){
   return '<div class="govref"><span class="govref-k">'+esc(label)+'</span>'
     + '<span class="govref-v">'+esc(d.value)+'</span>'
     + '<button class="govref-go" onclick="govGoTo('+d.layerIndex+')" title="Open the layer that declares this">'
-      + esc(d.layer)+' →</button></div>';
+      + esc(d.layer)+' <span class=arw>→</span></button></div>';
 }
 function govGoTo(i){ UI.govTab=i; UI.setSec='governance'; if(UI.vp==='mob'){ UI.mdetail=true; }
   renderApp(); if(typeof loadSettings==='function') loadSettings(); }
@@ -1938,7 +1938,7 @@ function govLayersBlock(){ var t=UI.govTab||0; var L=GOV[t];
     var open = !!UI.govOpen[key];
     return '<div class="govgrp'+(open?' open':'')+'">'
       + '<button class="govgrp-h" data-testid="gov-grp-'+key+'" onclick="govToggleGrp(\''+key+'\')" aria-expanded="'+open+'">'
-        + '<span class="govchev">'+(open?'▾':'▸')+'</span><span class="govgrp-t">'+title+'</span>'
+        + '<span class="govchev">'+(open?'▾':'<span class=arw>▸</span>')+'</span><span class="govgrp-t">'+title+'</span>'
         + '<span class="govcount">'+hit.length+'</span><span class="govnote">'+note+'</span></button>'
       + (open ? ('<div class="govgrp-b">'+hit.map(function(r){ return govRowHtml(r[0],r[1],r[2]); }).join('')+'</div>') : '')
       + '</div>';
@@ -1946,7 +1946,7 @@ function govLayersBlock(){ var t=UI.govTab||0; var L=GOV[t];
   var rowsHtml = grp('yours','Yours to set','you control these', function(k){ return YOURS[k]; })
     + grp('fixed','Fixed above you','inherited or platform-bound', function(k){ return FIXED[k]; })
     + grp('none','Not configured yet','arrives from the layer later', function(k){ return !YOURS[k] && !FIXED[k]; });
-  if(t===0){ rowsHtml+='<div style="margin:13px 0 2px;font-family:\'Space Grotesk\';font-weight:700;font-size:var(--fs-2);color:#46546b">⚙ Installation · platform-only (master)</div>'+govRowHtml('Cloud provider','AWS','protected')+govRowHtml('Region','ap-south-1','protected')+govRowHtml('Storage adapter','db → S3 / Azure / GCS','protected')+govRowHtml('Storage bucket','chitbridge-prod-•••','protected')+govRowHtml('Secrets / keys','•••• managed (never exposed)','protected')+govRowHtml('System health','● healthy','protected'); rowsHtml += govPlanBlock(); }
+  if(t===0){ rowsHtml+='<div style="margin:13px 0 2px;font-family:\'Space Grotesk\';font-weight:700;font-size:var(--fs-2);color:#46546b">⚙ Installation · platform-only (master)</div>'+govRowHtml('Cloud provider','AWS','protected')+govRowHtml('Region','ap-south-1','protected')+govRowHtml('Storage adapter','db <span class=arw>→</span> S3 / Azure / GCS','protected')+govRowHtml('Storage bucket','chitbridge-prod-•••','protected')+govRowHtml('Secrets / keys','•••• managed (never exposed)','protected')+govRowHtml('System health','● healthy','protected'); rowsHtml += govPlanBlock(); }
   var inRail = (UI.nav === 'settings');   /* rail carries the layers in Settings; chips elsewhere */
   var foot=(t===0)?'Change a value above, then open <b>tab 7 · Consolidation</b> — the entity inherits it via the boilerplate. <i>Stub: in production these arrive from the layer, not this screen.</i>':(t===6)?'These ride down from the layers into the <b>boilerplate</b> every entity copies at registration, and <b>freeze</b> onto each chit at send. <i>Stub — later set from the real layer.</i>'/* ⚠️ THE GENERIC LEGEND IS GONE. It defined `bound` / `advisory` / `free` — words this screen no longer uses,
    because every row now says what it means in plain English on the row itself. A legend for vocabulary that is
@@ -1990,11 +1990,11 @@ function govLayersBlock(){ var t=UI.govTab||0; var L=GOV[t];
      */
     + '<div style="margin-top:12px;padding-top:10px;border-block-start:1px solid var(--line);font-size:var(--fs-1);line-height:1.6">'
     +   '<div style="color:var(--grey);margin-bottom:5px"><b>This layer sets the envelope. You choose inside it:</b></div>'
-    +   '<a href="#" data-testid="gov-to-locale" onclick="setSetSec(' + "'locale'" + ');return false" style="color:var(--blue);font-weight:600">Localisation →</a>'
+    +   '<a href="#" data-testid="gov-to-locale" onclick="setSetSec(' + "'locale'" + ');return false" style="color:var(--blue);font-weight:600">Localisation <span class=arw>→</span></a>'
     +   '<span style="color:var(--grey)"> language, formats, time zone, working days &nbsp;·&nbsp; </span>'
-    +   '<a href="#" data-testid="gov-to-appearance" onclick="setSetSec(' + "'appearance'" + ');return false" style="color:var(--blue);font-weight:600">Appearance →</a>'
+    +   '<a href="#" data-testid="gov-to-appearance" onclick="setSetSec(' + "'appearance'" + ');return false" style="color:var(--blue);font-weight:600">Appearance <span class=arw>→</span></a>'
     +   '<span style="color:var(--grey)"> theme, text size, motion &nbsp;·&nbsp; </span>'
-    +   '<a href="#" data-testid="gov-to-standards" onclick="setSetSec(' + "'standards'" + ');return false" style="color:var(--blue);font-weight:600">Standards →</a>'
+    +   '<a href="#" data-testid="gov-to-standards" onclick="setSetSec(' + "'standards'" + ');return false" style="color:var(--blue);font-weight:600">Standards <span class=arw>→</span></a>'
     +   '<span style="color:var(--grey)"> the authority every rule above derives from, and what each one removes</span>'
     + '</div>' + '</div>';
 }
@@ -2081,7 +2081,7 @@ function settingsScreen(){
 // a lit AI slot is an actor whose actions are disputable chits, so its control belongs where it's held accountable).
 function aiSettingsCard(){ return '<div style="'+_CARD+'"><div class="sec" style="margin:0 0 6px">🤖 AI assists <span style="font-size:var(--fs-1);font-family:\'Space Mono\';background:var(--warn-tint);color:var(--warn-3);border-radius:5px;padding:1px 6px">governed</span></div>'
   +'<div style="font-size:12px;color:var(--grey);line-height:1.55">Turn AI helpers on or off and set each one\'s rule — the human gate, bounded by the rung floor (you can only tighten). They live with your other co-assists, because a lit AI slot is an <b>actor</b> whose every action is a chit you can dispute.</div>'
-  +'<button class="composebtn" style="margin-top:10px" onclick="goCoassistAI()">Configure AI assists in Co-assists →</button></div>'; }
+  +'<button class="composebtn" style="margin-top:10px" onclick="goCoassistAI()">Configure AI assists in Co-assists <span class=arw>→</span></button></div>'; }
 function goCoassistAI(){ try{ if(typeof UI!=='undefined') UI.acTypeF='ai'; }catch(_){}
   if(typeof navTo==='function') navTo('coassists'); else if(typeof go==='function') go('#/coassists'); }
 /**
@@ -2175,7 +2175,7 @@ function standardsSettingsHTML(){
       + (st.at ? '<div style="font-size:var(--fs-1);margin-top:4px;line-height:1.5">'
           + '<span style="color:var(--grey)">Used in </span>'
           + (st.go
-              ? '<a href="#" data-testid="std-go-' + esc(st.go) + '" onclick="stdGoto(' + Q + esc(st.go) + Q + ');return false" style="color:var(--blue);font-weight:600">' + esc(st.at) + ' →</a>'
+              ? '<a href="#" data-testid="std-go-' + esc(st.go) + '" onclick="stdGoto(' + Q + esc(st.go) + Q + ');return false" style="color:var(--blue);font-weight:600">' + esc(st.at) + ' <span class=arw>→</span></a>'
               : '<b style="color:var(--on-card)">' + esc(st.at) + '</b>')
           + '</div>' : '')
       /**
@@ -2685,7 +2685,7 @@ function paintSettings(s, _daOpts){ const h=document.getElementById("setbody"); 
       + '<div class="misnote" style="margin-top:10px">What to call a co-assist — what is required, and why the '
       + 'sign-in key is stricter than a User ID — is set out under '
       + '<a href="#" onclick="navTo(\'profile\');profSetSec(\'identity\');UI._namingOpen=true;return false">'
-      + 'Profile → Identity</a>.</div>'
+      + 'Profile <span class=arw>→</span> Identity</a>.</div>'
       + autoAssignCard(s,_daOpts) + aiSettingsCard();
     else if (k === "policy") out = _misHead('Policy', 'Rules that govern your own records.')
       + policyFlagsCard()
@@ -3006,7 +3006,7 @@ async function loadGaps(){ const h=document.getElementById("kbbody"); if(!h)retu
       +'<label class="fl">Answer</label><textarea class="inp" id="kb_a" data-testid="kb-answer" rows="4" placeholder="The answer the assistant should give…" style="width:100%;resize:vertical"></textarea>'
       +'<label class="fl">Context <span style="color:var(--grey);font-size:var(--fs-1)">— screens (comma), or * for everywhere</span></label><input class="inp" id="kb_c" data-testid="kb-context" placeholder="e.g. task, order  (or *)" value="*">'
       +'<div class="err" id="kb_err"></div><div style="display:flex;gap:7px;margin-top:9px"><button class="composebtn" id="kb_pub" data-testid="kb-publish" onclick="publishAnswer()">📣 Publish to catalogue</button><button class="composebtn ghost" data-testid="kb-new" onclick="kbNew()">＋ New / clear</button></div>'
-      +'<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">Add a new answer, or press <b>Edit</b> on one below to refine it. Served to the assistant instantly (catalogue → projection).</div></div>'
+      +'<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">Add a new answer, or press <b>Edit</b> on one below to refine it. Served to the assistant instantly (catalogue <span class=arw>→</span> projection).</div></div>'
     : '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:11px 13px;font-size:var(--fs-2);color:var(--warn-3);margin-bottom:11px">This is the help-desk knowledge base. Queries arrive as chits in <b>GOV-01-Help</b>\'s Task inbox — operate as GOV-01-Help to answer, close, and publish here.</div>';
   h.innerHTML=form+'<div style="font-size:12px;color:var(--grey);margin:12px 0 6px">Published answers (<span id="kb_n">…</span>)</div><div id="kb_list"><div class="loadwrap"><span class="spin"></span> loading…</div></div>';
   if(window.CBOffline)CBOffline.autodraft(h,'kb.form');   // draft the question/answer/context you're writing

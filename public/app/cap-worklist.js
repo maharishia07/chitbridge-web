@@ -500,7 +500,7 @@ function wlRender(rows, keys, depth, path){
      */
     var id = wlId(path, key, k);
     var isOpen = !!WL.open[id];
-    var caret = '<span style="display:inline-block;width:13px;color:var(--grey);font-size:var(--fs-1)">' + (isOpen ? '▾' : '▸') + '</span>';
+    var caret = '<span style="display:inline-block;width:13px;color:var(--grey);font-size:var(--fs-1)">' + (isOpen ? '▾' : '<span class=arw>▸</span>') + '</span>';
     /* Every level carries its OWN roll-up: a breakdown that only totals at the top is a total, not a breakdown. */
     var head = depth === 0
       ? wlHead(caret + (tone === 'var(--disp)' ? '⚠️ ' : '') + title, wlRollupText(rs), tone, id)
@@ -803,7 +803,7 @@ function wlSecHead(k, name, hint, tone){
   var on = WLL.tab === k;
   return '<div data-testid="wl-sec-' + k + '" onclick="wlSec(&quot;' + k + '&quot;)" style="cursor:pointer;display:flex;gap:9px;align-items:baseline;'
     + 'padding:11px 2px;border-top:1px solid var(--line)">'
-    + '<span style="width:12px;color:var(--grey);font-size:var(--fs-1)">' + (on ? '▾' : '▸') + '</span>'
+    + '<span style="width:12px;color:var(--grey);font-size:var(--fs-1)">' + (on ? '▾' : '<span class=arw>▸</span>') + '</span>'
     + '<span style="font-weight:700;font-size:var(--fs-3);color:' + (on ? 'var(--ink,#1c2128)' : 'var(--ink-2,#41474e)') + '">' + name + '</span>'
     + '<span style="margin-inline-start:auto;font-size:12px;color:' + (tone || 'var(--grey)') + '">' + (hint || '') + '</span></div>';
 }

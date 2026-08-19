@@ -50,7 +50,7 @@ function intakeScreen(){
      * a factory receives — so it is one entity setting, read server-side at raise, and this only POINTS at it.
      */
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:5px">Inbound lines are priced from your catalogue when this entity is set to <b>sell</b> — '
-    + '<a onclick="navTo(\'settings\')" style="color:var(--blue);cursor:pointer;font-weight:600">Settings → Policy flags</a>.</div>'
+    + '<a onclick="navTo(\'settings\')" style="color:var(--blue);cursor:pointer;font-weight:600">Settings <span class=arw>→</span> Policy flags</a>.</div>'
     + '</div><div id="intake_body" style="flex:1;overflow:auto;padding:12px 14px">' + intakeBodyHTML() + '</div></div>';
 }
 function intakeToggleSim(){ _INTAKE.sim = !_INTAKE.sim; paintIntake(); }
@@ -106,7 +106,7 @@ function intakeCardHTML(c){
        to edit, price and address it, which is what you want when the message is a starting point rather than the
        thing itself. Neither sends anything without a person pressing it. */
     + (s ? '<button class="composebtn" data-testid="intake-raise" '+(w.busy?'disabled':'')+' onclick="intakeRaise(\''+esc(c.id)+'\')" title="File this as a request in your inbox, in their words, with the message reference on it">'+(w.busy?'Raising…':'📥 Raise as a request')+'</button>'
-         + '<button data-testid="intake-make-chit" onclick="intakeMakeChit(\''+esc(c.id)+'\')" style="border:1px solid var(--line);background:var(--card);border-radius:9px;padding:9px 15px;font-size:13px;font-weight:700;cursor:pointer;color:var(--on-card)" title="Open Compose to edit, price and address it before sending">Make this a chit →</button>'
+         + '<button data-testid="intake-make-chit" onclick="intakeMakeChit(\''+esc(c.id)+'\')" style="border:1px solid var(--line);background:var(--card);border-radius:9px;padding:9px 15px;font-size:13px;font-weight:700;cursor:pointer;color:var(--on-card)" title="Open Compose to edit, price and address it before sending">Make this a chit <span class=arw>→</span></button>'
          : '<button class="composebtn" data-testid="intake-structure" '+(w.busy?'disabled':'')+' onclick="intakeStructure(\''+esc(c.id)+'\')">'+(w.busy?'✨ Reading…':'✨ Structure it')+'</button>')
     + '<button data-testid="intake-dismiss" onclick="intakeDismiss(\''+esc(c.id)+'\')" style="border:1px solid var(--line);background:var(--card);border-radius:9px;padding:9px 15px;font-size:13px;font-weight:700;cursor:pointer;color:var(--grey)">Dismiss</button>'
     /* ⚠️ THE CONFIRM STEP MUST SHOW WHAT IT IS ASKING YOU TO CONFIRM. Athi, 2026-08-11, after finding that
@@ -312,7 +312,7 @@ async function intakeShowJson(id){
   var structured=(c.structured)||w.structured||null;
 
   modal('<div class="mhd"><div class="t">{ } What the reader saw</div>'
-    + '<div class="s">the message → what was read → what the chit would carry</div></div>'
+    + '<div class="s">the message <span class=arw>→</span> what was read <span class=arw>→</span> what the chit would carry</div></div>'
     + '<div class="mbody" id="ijson"><div style="padding:18px;color:var(--grey);font-size:var(--fs-2)"><span class="spin"></span> building…</div></div>'
     + '<div class="mfoot"><button class="composebtn" onclick="closeModal()">Close</button></div>', true);
 

@@ -247,7 +247,7 @@ const TRACE_MATRIX = [
     sr:'Source-as-entity authors catalogue_source (experience/rules); governance resolves from source@v not host; container = mutable pointer over immutable versions (each chit pins the version); regional resolve-at-mint sealed; two-class RLS (catalogue = share-read reference, erp_handoff = per-copy WITH RLS); penetration structurally PII-free (b75-b84).',
     rows:[
       { id:'FR-K1', fr:'Brand authors its own source + experience (owner-gated)', test:'source-entity.js 6/0 — owner stamped, experience read back', st:'ok' },
-      { id:'FR-K2', fr:'Source rule enforced at order; distributor cannot override', test:'source-rules.js 3/0 — below-min → 422 "set by <source>"', st:'ok' },
+      { id:'FR-K2', fr:'Source rule enforced at order; distributor cannot override', test:'source-rules.js 3/0 — below-min <span class=arw>→</span> 422 "set by <source>"', st:'ok' },
       { id:'FR-K3', fr:'Multi-source per-source governance in one distributor', test:'multi-source.js 6/0 — same finish name, different source rule', st:'ok' },
       { id:'FR-K4', fr:'Enhance moves the pointer; a pinned chit still resolves its original version', test:'container-model 8/0 + container-wiring 6/0 — v1 pinned resolves after v2', st:'ok' },
       { id:'FR-K5', fr:'Spin the globe — region resolves currency/units/language/jurisdiction, sealed', test:'regional-scatter.js 8/0 — IN/MX/US/EU + sealed cache-hit', st:'ok' },
@@ -348,7 +348,7 @@ function _subjectTabHtml(){
 
 /* ── FOUNDATIONS tab — the trust floor as maturity + PROOF (core hardening + atomicity now first-class). ── */
 function _foundTabHtml(){
-  const lvlBadge=(l,t)=>{ const tt=(t&&t>l)?('→L'+t):''; return '<span title="Foundation maturity — L1 exists · L2 clean mechanism · L3 enforced+isolated · L4 governed+provable · L5 audited/certified" style="font-size:var(--fs-1);font-weight:800;color:var(--ok-2);background:var(--ok-tint);border:1px solid #bfe0cf;border-radius:6px;padding:1px 7px">L'+l+tt+'</span>'; };
+  const lvlBadge=(l,t)=>{ const tt=(t&&t>l)?('<span class=arw>→</span>L'+t):''; return '<span title="Foundation maturity — L1 exists · L2 clean mechanism · L3 enforced+isolated · L4 governed+provable · L5 audited/certified" style="font-size:var(--fs-1);font-weight:800;color:var(--ok-2);background:var(--ok-tint);border:1px solid #bfe0cf;border-radius:6px;padding:1px 7px">L'+l+tt+'</span>'; };
   const card=(f)=>'<div style="border:1px solid var(--line);border-radius:12px;padding:11px 13px;margin-bottom:10px">'
     +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><span style="font-size:15px">'+f.icon+'</span><span style="font-family:\'Space Grotesk\';font-weight:700;font-size:13.5px">'+esc(f.name)+'</span><span style="margin-inline-start:auto">'+lvlBadge(f.level,f.target)+'</span></div>'
     +'<div style="font-size:13px;color:var(--ink);line-height:1.5;margin-bottom:6px">'+esc(f.what)+'</div>'
@@ -364,7 +364,7 @@ function _foundTabHtml(){
 /* ── GOVERNANCE STACK tab — the full architecture, universe → chit (the governance-stack.svg). ── */
 function _stackTabHtml(){
   return '<div style="padding:12px 13px">'
-    +'<div style="font-size:12px;color:var(--grey);margin-bottom:9px;line-height:1.55">The full governance stack — <b>universe → chit</b>, one spine. Every value is an <b>attribute (data)</b> the engine reads; nothing governance lives in code. Colour: <span style="color:var(--ok-3);font-weight:700">proven live</span> · <span style="color:var(--warn-2);font-weight:700">vision / design</span>. Spinning a new platform (e.g. AWS · Mexico · service-desk) = one row.</div>'
+    +'<div style="font-size:12px;color:var(--grey);margin-bottom:9px;line-height:1.55">The full governance stack — <b>universe <span class=arw>→</span> chit</b>, one spine. Every value is an <b>attribute (data)</b> the engine reads; nothing governance lives in code. Colour: <span style="color:var(--ok-3);font-weight:700">proven live</span> · <span style="color:var(--warn-2);font-weight:700">vision / design</span>. Spinning a new platform (e.g. AWS · Mexico · service-desk) = one row.</div>'
     +'<img src="/governance-stack.svg" alt="Chit &amp; Bridge governance stack — universe to chit" loading="lazy" style="width:100%;height:auto;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--on-card)"/>'
   +'</div>';
 }
@@ -390,9 +390,9 @@ function _lifeTabHtml(){
       ${g.rows.map(row).join('')}
     </div>`;
   return `<div style="padding:12px 13px;overflow:visible">
-    <div style="font-size:11.5px;color:var(--grey);margin-bottom:10px">How we work the lifecycle: every behaviour traces <b>Business → System → Functional → Test</b>. <span style="color:var(--ok-3)">✅ verified-live</span> · <span style="color:#a9791f">◐ built, needs a live run</span> · <span style="color:var(--grey-4)">○ backlog</span>.</div>
+    <div style="font-size:11.5px;color:var(--grey);margin-bottom:10px">How we work the lifecycle: every behaviour traces <b>Business <span class=arw>→</span> System <span class=arw>→</span> Functional <span class=arw>→</span> Test</b>. <span style="color:var(--ok-3)">✅ verified-live</span> · <span style="color:#a9791f">◐ built, needs a live run</span> · <span style="color:var(--grey-4)">○ backlog</span>.</div>
     ${TRACE_MATRIX.map(grp).join('')}
-    <div style="font-size:var(--fs-1);color:var(--grey);text-align:center;padding-top:2px">Most rows are ◐ — built + parse/boot-checked; each ✅ needed a human live-run or a script. Automated tests turn ◐ → ✅ at scale.</div>
+    <div style="font-size:var(--fs-1);color:var(--grey);text-align:center;padding-top:2px">Most rows are ◐ — built + parse/boot-checked; each ✅ needed a human live-run or a script. Automated tests turn ◐ <span class=arw>→</span> ✅ at scale.</div>
   </div>`;
 }
 
@@ -438,7 +438,7 @@ function _edgeTabHtml(){
     return '<div style="border:1px solid '+bd+';background:'+bg+';border-radius:9px;padding:5px 8px;text-align:center;min-width:66px">'
       +'<div style="font-size:var(--fs-1);font-weight:700;color:'+col+'">'+(dn?'✓ ':'')+esc(l)+'</div>'
       +'<div style="font-size:var(--fs-1);color:var(--grey)">'+esc(s)+'</div></div>'; };
-  const arrow=()=>'<span style="color:var(--grey);font-size:var(--fs-1)">→</span>';
+  const arrow=()=>'<span style="color:var(--grey);font-size:var(--fs-1)"><span class=arw>→</span></span>';
   const _mk=(v)=>{ const m={y:['var(--ok-3)','✓'],p:['var(--warn-2)','~'],n:['var(--disp)','✗']}, c=m[v]||m.n; return '<span style="color:'+c[0]+';font-weight:700">'+c[1]+'</span>'; };
   const crow=(n,a,b,c,d,hl)=>'<tr style="'+(hl?'background:var(--blue-tint);':'')+'border-top:1px solid var(--line);color:var(--on-card)"><td style="text-align:start;padding:4px;font-weight:'+(hl?'700':'500')+';color:'+(hl?'var(--blue-2)':'var(--ink)')+'">'+n+'</td><td style="text-align:center;padding:4px">'+_mk(a)+'</td><td style="text-align:center;padding:4px">'+_mk(b)+'</td><td style="text-align:center;padding:4px">'+_mk(c)+'</td><td style="text-align:center;padding:4px">'+_mk(d)+'</td></tr>';
   return '<div style="padding:14px 16px;overflow:visible">'
@@ -451,7 +451,7 @@ function _edgeTabHtml(){
       + pt(84,15,'ServiceNow · SAP · EDI',false)
       + pt(68,27,'Blockchain B2B',false)
       + pt(80,80,'Chit & Bridge',true)
-      +'<div style="position:absolute;inset-inline-start:-2px;bottom:-22px;font-size:var(--fs-1);color:var(--grey)">weak ← <b>governance &amp; trust</b> → strong</div>'
+      +'<div style="position:absolute;inset-inline-start:-2px;bottom:-22px;font-size:var(--fs-1);color:var(--grey)">weak <span class=arw>←</span> <b>governance &amp; trust</b> <span class=arw>→</span> strong</div>'
       +'<div style="position:absolute;inset-inline-start:-24px;top:-16px;font-size:var(--fs-1);color:var(--grey)">↑ accessible / leveling</div>'
     +'</div>'
     +'<div style="font-size:var(--fs-1);color:var(--ink);line-height:1.5">'
@@ -516,7 +516,7 @@ function _realTabHtml(){
     + row('Dispute confidentiality (the USP)','real','Per-COPY: each party owns its dispute; messages scoped to the roster — PROVEN (dispute-scope 7/0: in a 3-party chit the non-dispute party sees 0).','Human live-run of the dispute UI; then external pen-test.')
     + row('Governed + accessible (the quadrant)','aim','The rail is governed; affordability/ease for a solo player is designed, not proven.','One real small-player user completes a real loop cheaply — the decisive wedge.')
     + row('Self-measuring maturity (this Legend)','part','An honest hand-authored scoreboard (these very tabs).','Wire it to real Delivery Records + test results so it reads automatically (the L4 step).')
-    +'<div style="font-size:var(--fs-1);color:var(--grey);text-align:center;padding-top:9px;border-top:1px solid var(--line);margin-top:6px">The ladder that earns all of it: <b>one test lifecycle → volume → pen-test → external validation.</b> Concept: years · Product: ~2 weeks. Early by timeline, honest by choice.</div>'
+    +'<div style="font-size:var(--fs-1);color:var(--grey);text-align:center;padding-top:9px;border-top:1px solid var(--line);margin-top:6px">The ladder that earns all of it: <b>one test lifecycle <span class=arw>→</span> volume <span class=arw>→</span> pen-test <span class=arw>→</span> external validation.</b> Concept: years · Product: ~2 weeks. Early by timeline, honest by choice.</div>'
   +'</div>';
 }
 
@@ -534,7 +534,7 @@ function _workTabHtml(){
   const up  =t=>`<span style="font-size:var(--fs-1);color:var(--grey)">↑ ${t}</span>`;
   const chain=t=>`<span style="font-size:var(--fs-1);color:${R};background:var(--blue-tint);border-radius:5px;padding:1px 7px">${t}</span>`;
   const stage=(t,d,tag)=>`<span style="display:inline-flex;flex-direction:column;background:var(--card);border:1px solid var(--line);border-radius:9px;padding:5px 9px;vertical-align:top;max-width:158px;color:var(--on-card)"><b style="font-size:var(--fs-1)">${esc(t)}${tag?` <span style="font-family:'Space Mono';font-size:var(--fs-1);color:${R};background:var(--blue-tint);border-radius:4px;padding:0 4px">${tag}</span>`:''}</b>${d?`<span style="color:var(--grey);font-size:var(--fs-1);line-height:1.35;margin-top:2px">${d}</span>`:''}</span>`;
-  const arr=`<span style="color:var(--grey);font-size:var(--fs-1);padding:0 1px">→</span>`;
+  const arr=`<span style="color:var(--grey);font-size:var(--fs-1);padding:0 1px"><span class=arw>→</span></span>`;
   const journey=(icon,name,sub,stages)=>`<div style="border:1px solid var(--line);border-radius:12px;padding:11px 13px;margin-bottom:10px"><div style="font-weight:700;font-size:var(--fs-2);margin-bottom:8px">${icon} ${name} <span style="color:var(--grey);font-weight:500">— ${sub}</span></div><div style="display:flex;flex-wrap:wrap;gap:6px;align-items:stretch">${stages.join(arr)}</div></div>`;
   const line=o=>`<div style="border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:11px">
     <div style="display:flex;align-items:center;gap:9px">
@@ -550,19 +550,19 @@ function _workTabHtml(){
   const lines=[
     { icon:'🛰️', name:'IoT signal', pid:'iot-signal@v1', live:true,
       obj:'Turns a <b>physical event into a governed, owned, actionable record</b> — an exception can\'t be lost, missed, or denied.',
-      flow:'Device telemetry (ActorKey) → <b>resolve</b> folder·assignee·copy → seal · file · assign · notify → <b>Task-only signal chit</b> → escalation (SMS · AI · robot →∞)',
+      flow:'Device telemetry (ActorKey) <span class=arw>→</span> <b>resolve</b> folder·assignee·copy <span class=arw>→</span> seal · file · assign · notify <span class=arw>→</span> <b>Task-only signal chit</b> <span class=arw>→</span> escalation (SMS · AI · robot <span class=arw>→</span>∞)',
       chips:[seal('Copy · Task-only'),seal('Isolation · per-copy'),lic('Connector · ≤25 devices'),up('health · last-seen · exceptions/day')] },
     { icon:'✉️', name:'Send a chit', pid:'send-chit@v1', live:true,
       obj:'Two entities <b>transact on a sealed, co-held record neither can unilaterally rewrite</b> — trust without a middleman.',
-      flow:'Line items / terms (compose) → <b>deliver co-held</b> copies → advance signals (open→act→close) → co-held record → invoice · dispute · forward',
+      flow:'Line items / terms (compose) <span class=arw>→</span> <b>deliver co-held</b> copies <span class=arw>→</span> advance signals (open<span class=arw>→</span>act<span class=arw>→</span>close) <span class=arw>→</span> co-held record <span class=arw>→</span> invoice · dispute · forward',
       chips:[seal('Isolation · per-copy (RLS)'),knob('self-copy: both / order / task'),lic('Core · unlimited'),up('delivered · status advances')] },
     { icon:'⚑', name:'Raise a dispute', pid:'raise-dispute@v1', live:true,
       obj:'Resolves disagreement <b>confidentially and per-party, with no third party</b> — the relationship survives the conflict. <i>The USP.</i>',
-      flow:'Reason / category (a party) → <b>private siding</b> → raiser resolves its own → resolution (per-party copies) → roster only',
+      flow:'Reason / category (a party) <span class=arw>→</span> <b>private siding</b> <span class=arw>→</span> raiser resolves its own <span class=arw>→</span> resolution (per-party copies) <span class=arw>→</span> roster only',
       chips:[seal('Confidentiality · roster-only'),lic('Dispute · included'),up('raised · resolved · open count')] },
     { icon:'🧾', name:'The commercial run', pid:'order → invoice → receipt', live:false,
       obj:'Carries a <b>whole trade — request to proof — with unbroken provenance at every hop</b>.',
-      flow:'order → delivery_note → invoice → payment → receipt — each hop\'s <b>output is the next hop\'s input</b>',
+      flow:'order <span class=arw>→</span> delivery_note <span class=arw>→</span> invoice <span class=arw>→</span> payment <span class=arw>→</span> receipt — each hop\'s <b>output is the next hop\'s input</b>',
       chips:[chain('Purposes today · pattern-ize next')] },
   ];
   const spine=[['Constitution','base@v1'],['↳ Capability','connector@v1'],['↳ Work-pattern','iot-signal@v1'],['↳ Chit','stamped']].map((s,i)=>`<div style="flex:1 1 118px;min-width:110px;padding:9px 11px;${i?'border-inline-start:1px solid var(--line)':''};${i===3?'background:var(--blue-tint)':''};color:var(--on-card)"><div style="font-family:'Space Mono';font-size:var(--fs-1);letter-spacing:.07em;text-transform:uppercase;color:var(--grey)">${s[0]}</div><div style="font-weight:700;font-size:13px;${i===3?'color:'+R:''}">${s[1]}</div></div>`).join('');
@@ -575,7 +575,7 @@ function _workTabHtml(){
     ['🛍️ Customer','order confirmation','OTP on the order — not a full mailbox'],
   ].map(r=>`<tr style="border-top:1px solid var(--line)"><td style="padding:7px 9px;font-weight:600;white-space:nowrap;vertical-align:top">${r[0]}</td><td style="padding:7px 9px;color:var(--ink);vertical-align:top">${r[1]}</td><td style="padding:7px 9px;color:var(--grey);vertical-align:top">${r[2]}</td></tr>`).join('');
   return `<div style="padding:13px 15px;overflow:visible">
-    <div style="font-size:var(--fs-2);color:var(--grey);line-height:1.6;margin-bottom:12px">A work pattern isn't a form — it's a <b style="color:var(--ink)">governed journey</b>: a minted, version-frozen blueprint a chit runs end-to-end, stamped with everything that governed it. Each is framed by the <b style="color:var(--ink)">higher objective it achieves</b> — no outcome → not a work pattern; the flow shows how.</div>
+    <div style="font-size:var(--fs-2);color:var(--grey);line-height:1.6;margin-bottom:12px">A work pattern isn't a form — it's a <b style="color:var(--ink)">governed journey</b>: a minted, version-frozen blueprint a chit runs end-to-end, stamped with everything that governed it. Each is framed by the <b style="color:var(--ink)">higher objective it achieves</b> — no outcome <span class=arw>→</span> not a work pattern; the flow shows how.</div>
     <div style="display:flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:16px">${spine}</div>
     ${lines.map(line).join('')}
     <div style="border:1px solid ${R};background:linear-gradient(180deg,var(--blue-tint),var(--bg,#fff));border-radius:13px;padding:14px 16px;margin:6px 0 16px">
@@ -656,7 +656,7 @@ function _openLegendImpl(){
     const on=!!LOADED[c.id];
     return `<span style="font-size:var(--fs-1);font-weight:700;color:${on?'var(--blue-d)':'var(--grey-2)'};background:${on?'var(--blue-tint)':'var(--warn-tint)'};border:1px solid ${on?'var(--blue-tint-line)':'var(--line)'};border-radius:6px;padding:1px 7px">lazy · ${on?'loaded ✓':'on demand'}</span>`;
   };
-  const matBadge=(c)=>{ if(!c.maturity) return ''; const t=(c.target&&c.target>c.maturity)?`→L${c.target}`:''; return `<span title="Capability maturity — 1 Proven · 2 Packaged · 3 Itemised · 4 Governed · 5 Productized" style="font-size:var(--fs-1);font-weight:800;color:var(--purple-2);background:var(--purple-tint);border:1px solid #cabdf0;border-radius:6px;padding:1px 7px">L${c.maturity}${t}</span>`; };
+  const matBadge=(c)=>{ if(!c.maturity) return ''; const t=(c.target&&c.target>c.maturity)?`<span class=arw>→</span>L${c.target}`:''; return `<span title="Capability maturity — 1 Proven · 2 Packaged · 3 Itemised · 4 Governed · 5 Productized" style="font-size:var(--fs-1);font-weight:800;color:var(--purple-2);background:var(--purple-tint);border:1px solid #cabdf0;border-radius:6px;padding:1px 7px">L${c.maturity}${t}</span>`; };
   const featRow=(f)=>{ const [col,ic]=SC[f.s]||SC.backlog;
     return `<div style="display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--ink);padding:4px 0;line-height:1.45"><span style="color:${col};flex:none">${ic}</span><span>${esc(f.n)}</span></div>`; };
   // GOVERNANCE BAND — the SECOND axis: gov maturity + what governs it + the L4 gap (SPEC-governance-in-legend.md).
@@ -688,7 +688,7 @@ function _openLegendImpl(){
       <span style="margin-inline-start:auto">Status: <span style="color:var(--ok-3)">✅ done ${d}</span> · <span style="color:#a9791f">◐ partial ${p}</span> · <span style="color:var(--grey-4)">○ backlog ${b}</span></span>
     </div>
     <div style="padding:12px 13px;overflow:visible">${CAP_CATALOGUE.map(card).join('')}
-      <div style="font-size:var(--fs-1);color:var(--grey);text-align:center;padding-top:4px">Load: <b>always on</b> ships with the app · <b>lazy</b> loads on first use · <b>planned</b> not built yet. · <b>L1–5</b> maturity: 1 Proven · 2 Packaged · 3 Itemised · 4 Governed · 5 Productized (→ = target). Kept true to the code.</div>
+      <div style="font-size:var(--fs-1);color:var(--grey);text-align:center;padding-top:4px">Load: <b>always on</b> ships with the app · <b>lazy</b> loads on first use · <b>planned</b> not built yet. · <b>L1–5</b> maturity: 1 Proven · 2 Packaged · 3 Itemised · 4 Governed · 5 Productized (<span class=arw>→</span> = target). Kept true to the code.</div>
       <div style="font-size:var(--fs-1);color:var(--grey);text-align:center;padding-top:3px">🏛️ <b>Governance rides on each capability</b> — the green band is the SECOND axis: <b>gov L1–5</b> (1 declared · 2 designed · 3 enforced+isolated · 4 governed+provable · 5 audited) <b>under</b> its cascade layer, with the amber <b>“to L4”</b> gap. Gov usually LAGS maturity — that lag IS the distance to L4. <b>N/A</b> = static/read-only, nothing to govern.</div>
     </div>`;
   const body = (_lbTab==='subject') ? _subjectTabHtml() : (_lbTab==='stories') ? _storiesTabHtml() : (_lbTab==='found') ? _foundTabHtml() : (_lbTab==='stack') ? _stackTabHtml() : (_lbTab==='life') ? _lifeTabHtml() : (_lbTab==='sec') ? _secTabHtml() : (_lbTab==='edge') ? _edgeTabHtml() : (_lbTab==='real') ? _realTabHtml() : (_lbTab==='work') ? _workTabHtml() : (_lbTab==='std') ? _stdTabHtml() : capBody;

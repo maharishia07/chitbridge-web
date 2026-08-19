@@ -326,7 +326,7 @@ async function openSectorMatrix(){
   var secs=[['paint','🧪','Chemical','var(--blue-2)'],['food','🍎','Food','var(--ok-3)'],['textiles','🧵','Textiles','var(--purple-2)'],['electronics','🔌','Electronics','var(--warn-2)'],['pharma','💊','Pharma','var(--blue-2)'],['automobile','🚗','Auto','var(--disp)']];
   var dest=UI.laneDest||'EU', origin=UI.laneOrigin||'IN';
   if(typeof modal==='function'){
-    modal('<div class="mhd" style="display:flex;align-items:center;gap:8px"><div class="t" style="flex:1">🧮 Sector × standard — common vs specific</div><button onclick="closeModal()" title="Close" style="border:0;background:none;cursor:pointer;font-size:var(--fs-5);line-height:1;color:var(--grey);padding:0 2px">✕</button></div><div class="mbody" style="padding:14px 16px"><div id="mtxbody" style="font-size:var(--fs-2);color:var(--grey)">Resolving every sector for '+esc(origin)+' → '+esc(dest)+'…</div></div>');
+    modal('<div class="mhd" style="display:flex;align-items:center;gap:8px"><div class="t" style="flex:1">🧮 Sector × standard — common vs specific</div><button onclick="closeModal()" title="Close" style="border:0;background:none;cursor:pointer;font-size:var(--fs-5);line-height:1;color:var(--grey);padding:0 2px">✕</button></div><div class="mbody" style="padding:14px 16px"><div id="mtxbody" style="font-size:var(--fs-2);color:var(--grey)">Resolving every sector for '+esc(origin)+' <span class=arw>→</span> '+esc(dest)+'…</div></div>');
     try{ var mp=document.querySelector('#modalhost .modal'); if(mp) mp.setAttribute('data-movable','1'); }catch(_){}   // plain closeable modal — no movable-panel controls
   }
   var rows={};
@@ -341,7 +341,7 @@ async function openSectorMatrix(){
   var rowH=function(r){ var common=r.n===secs.length; return '<tr'+(common?' style="background:var(--ok-tint);color:var(--on-card)"':'')+'><td style="padding:8px 6px;font-weight:600;font-size:12px;border-bottom:1px solid var(--line);color:'+(common?'var(--ok-3)':'var(--ink)')+'">'+esc(r.name)+'</td>'+r.on.map(function(v,i){return _mtxCell(v,common,secs[i][3]);}).join('')+'</tr>'; };
   var band=function(t){return '<tr><td colspan="'+(secs.length+1)+'" style="padding:11px 6px 3px;font-size:var(--fs-1);font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--grey)">'+t+'</td></tr>';};
   var common=list.filter(function(r){return r.n===secs.length;}), spec=list.filter(function(r){return r.n!==secs.length;});
-  var html='<div style="font-size:11.5px;color:var(--grey);margin-bottom:9px">Lane held constant ('+esc(origin)+' → '+esc(dest)+') — only the sector changes. A full row is the <b>common backbone</b>; a single ✓ is <b>sector-specific</b>.</div>'
+  var html='<div style="font-size:11.5px;color:var(--grey);margin-bottom:9px">Lane held constant ('+esc(origin)+' <span class=arw>→</span> '+esc(dest)+') — only the sector changes. A full row is the <b>common backbone</b>; a single ✓ is <b>sector-specific</b>.</div>'
     +'<div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%;min-width:430px">'+head
     +band('● Common — every sector')+common.map(rowH).join('')
     +band('◆ Sector-specific')+spec.map(rowH).join('')
