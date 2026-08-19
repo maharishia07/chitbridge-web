@@ -1032,6 +1032,29 @@ function iamAccessHTML(e){
       'One setting per co-assist, set by you, enforced on every write.')
     + hatRows)
 
+  /**
+   * ⚠️⚠️ I RECOMMENDED MOVING SETTINGS › WORK IN HERE, AND I WAS WRONG. My argument was "Work is how tasks reach
+   * PEOPLE, so it belongs with people". Checking the data settled it the other way: assignment_model,
+   * default_max_tasks, all_task_visible and auto_return_on_short_break are keyed on ENTITY_ID
+   * (routes/actors.js:1400). They are ENTITY-WIDE OPERATIONS POLICY, identical for everyone — not a property of
+   * any identity.
+   *
+   * ⭐ The test that decides it: "what may Priya do?" is answered per-person (her hat). "How does work reach
+   * Priya?" has the same answer for every co-assist in the business. The first is IAM; the second is operations.
+   *
+   * Moving it would also have forced this screen to fetch settings it otherwise never needs, and given one
+   * control two homes — the exact defect this regrouping exists to remove. So it stays where it is and IAM
+   * LINKS to it, which is the "one control, many viewers" rule applied to my own proposal.
+   */
+  + _iamCard(_iamHead(_iamZone('inside') + ' &nbsp;How work reaches them',
+      'Entity-wide, not per person — the same rules for every co-assist.')
+    + '<div style="font-size:var(--fs-2);line-height:1.6;color:var(--on-card);padding:7px 0;border-block-start:1px solid var(--line)">'
+    + 'Who gets assigned what, how many tasks at once, whether everyone can see everyone&rsquo;s work, and what '
+    + 'happens on a break — one set of rules for the whole business.'
+    + '<div style="margin-top:7px"><a href="#" data-testid="iam-to-work" onclick="navTo(&#39;settings&#39;);setSetSec(&#39;work&#39;);return false" '
+    + 'style="color:var(--blue);font-weight:600">Settings › Work →</a></div>'
+    + '</div>')
+
   + _iamCard(_iamHead(_iamZone('inside') + ' &nbsp;Where they sit',
       'Access nobody set — it follows from position in your network.')
     + row('Co-assists at a node', 'reach the work of that node and below', 'derived',
@@ -1125,7 +1148,21 @@ function _profSecBody(k, e){
   if (k === 'storefront') return _misHead('Storefront', 'What customers see when they open your link.')
     + storefrontCardHTML(e);
   if (k === 'governance') return _misHead('Your rights', 'What this entity may do — resolved from the layers above it.')
-    + (govCardHTML(e.governance) || '<div class="misnote">No governance resolved for this entity yet.</div>');
+    + (govCardHTML(e.governance) || '<div class="misnote">No governance resolved for this entity yet.</div>')
+    /**
+     * ⭐ ONE QUESTION, TWO DEPTHS, AND A ROUTE BETWEEN THEM. This card is the RESOLVED answer; Settings ›
+     * Governance layers is the seven-layer model it descended through. Neither is a duplicate of the other, but
+     * a reader who wants to know WHY their rights are what they are had no way to get from one to the other —
+     * so the two screens read like two unrelated opinions rather than an answer and its derivation.
+     */
+    + '<div style="' + _CARD + ';margin-top:10px">'
+    +   '<div style="font-size:var(--fs-2);line-height:1.6;color:var(--on-card)">'
+    +   'This is the <b>answer</b>. To see <b>where each part of it came from</b> — which layer set it, and '
+    +   'whether you can change it — open the seven layers it descended through.'
+    +   '</div>'
+    +   '<button class="composebtn" style="margin-top:9px" data-testid="gov-to-layers" '
+    +     'onclick="navTo(\'settings\');setSetSec(\'governance\')">The seven layers →</button>'
+    + '</div>';
   if (k === 'vault') return _misHead('Trade documents', 'Provide these once — every authority form is then pre-filled.')
     + '<div id="vaulthost"><div class="loadwrap"><span class="spin"></span> loading…</div></div>';
   return '';
@@ -1635,7 +1672,26 @@ function govLayersBlock(){ var t=UI.govTab||0; var L=GOV[t];
    * the endpoint would recreate exactly the problem). Timezone and Language say plainly that nothing sets them.
    */
   if(t===0){
-    push('Currency', esc(typeof myCur==='function' ? myCur() : (SESSION.currency||'INR')) + ' — from your entity record', 'bound');
+    /**
+     * ⚠️⚠️ TWO SOURCES FOR ONE FACT, AND THEY CAN DISAGREE. This row read the ENTITY RECORD
+     * (identities.currency_code, via myCur()). Profile › Your rights reads the RESOLVED governance
+     * (basics.currency — the installation's currency, bounded by the platform's allowed list,
+     * lib/govresolve.js:49). Two different columns, both rendered as the authoritative answer, on two screens.
+     *
+     * ⭐ The resolved value is the one that GOVERNS — it is what the platform and installation permit. The
+     * entity record is what this business set. Where they differ that is worth SEEING, not hiding behind
+     * whichever screen you happened to open, so the row shows both and names them.
+     */
+    (function(){
+      var _rec = (typeof myCur === 'function') ? myCur() : (SESSION.currency || 'INR');
+      var _gov = (UI._me && UI._me.governance && UI._me.governance.basics && UI._me.governance.basics.currency) || '';
+      if (_gov && _rec && String(_gov).toUpperCase() !== String(_rec).toUpperCase()) {
+        push('Currency', esc(_gov) + ' <span style="color:var(--warn-2)">— governed. Your entity record says '
+          + esc(_rec) + ', which is what your prices are stamped with.</span>', 'bound');
+      } else {
+        push('Currency', esc(_gov || _rec) + ' — from your installation, matched by your entity record', 'bound');
+      }
+    })();
     push('Timezone', 'not stored anywhere yet', 'free');
     push('Language', 'not stored anywhere yet', 'free');
   }
