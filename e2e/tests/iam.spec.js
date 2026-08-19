@@ -11,7 +11,7 @@ const openIam = async (page, tab) => {
   await page.evaluate(() => window.navTo('profile'));
   await page.waitForTimeout(1500);
   await page.evaluate(() => window.profSetSec('identity'));
-  await page.waitForFunction(() => !!document.querySelector('[data-testid="iam-tab-who"]'), null, { timeout: 20_000 });
+  await page.waitForFunction(() => !!document.querySelector('[data-testid="iam-tab-me"]'), null, { timeout: 20_000 });
   if (tab) { await page.getByTestId('iam-tab-' + tab).click(); await page.waitForTimeout(900); }
 };
 
@@ -21,8 +21,12 @@ test.describe('IAM · identity and access', () => {
   test('[IAM-01] the section is named IAM and carries both tabs', async ({ page }) => {
     await mintEntity(page);
     await openIam(page);
+    /* ⚠️ THREE tabs now, and "My profile" is the DEFAULT — the only one that acts. The other two are a map. */
+    await expect(page.getByTestId('iam-tab-me')).toBeVisible();
     await expect(page.getByTestId('iam-tab-who')).toBeVisible();
     await expect(page.getByTestId('iam-tab-access')).toBeVisible();
+    /* the editable form lives in "My profile" and must live nowhere else — one control, one home */
+    await expect(page.locator('#pf_uid'), 'the form is on the default tab').toBeVisible();
     const rail = await page.locator('#prof_rail, .rows').first().textContent();
     expect(rail, 'the rail row says IAM, not Identity').toContain('IAM');
   });
