@@ -1213,75 +1213,109 @@ async function saveProfile(){ const x=document.getElementById("pf_err"); if(x)x.
   try{ await api("saveProfile",{body:{user_id:val("pf_uid")||null,gstn:val("pf_gstn")||null,address:val("pf_addr")||null,business_status:val("pf_bs")}}); toast(MSG.profileSaved()); }catch(e){ if(x)x.textContent=e.message; } }
 // 🛍️ Customer storefront — the shareable public shop link + the browse-first / login-first access mode.
 function storefrontCardHTML(e){
-  var url=location.origin+'/shop.html?bridge='+encodeURIComponent(e.bridge_id||'');
-  var acc=e.storefront_access||'browse';
-  var vis=e.catalogue_visibility||'private';   // b114 — absent means not published (EFFECTIVE, cap applied)
-  var cap=e.visibility_cap||{max:'public',by:null,reason:''};
-  var capped=(cap.max==='private');
-  var sfopts=[['browse','Browse first — catalogue is open; sign in only to order'],['login','Login first — customer signs in before browsing']]
-    .map(function(o){return '<option value="'+o[0]+'"'+(acc===o[0]?' selected':'')+'>'+o[1]+'</option>';}).join('');
-  return '<div style="'+_CARD+';margin-top:10px">'
-    +'<div class="sec" style="margin:0 0 8px">🛍️ Customer storefront</div>'
-    /**
-     * ⚠️⚠️ THE LINK WAS OFFERED UNCONDITIONALLY AND THE OWNER WAS THE ONE MISLED. Athi, 2026-08-18:
-     * *"Storefront screen is not working from the open link."*
-     *
-     * It was not working because his catalogue is not public — but this card said "Share this link — anyone can
-     * open it and order from your catalogue" whatever the visibility was, and the link then answered
-     * **"Shop not found"**. That message is deliberately vague: it is the anti-enumeration answer, identical for
-     * "no such entity" and "catalogue is private", so that walking the bridge-id space tells a stranger nothing.
-     *
-     * ⭐ RIGHT FOR A STRANGER, WRONG FOR THE OWNER. The owner is authenticated, owns this entity, and is looking
-     * at their own settings — telling them exactly why their link is dead costs nothing and is the only way they
-     * can fix it. So the vagueness stays on the PUBLIC page and the truth is told HERE.
-     */
-    +(vis === 'public'
-      ? '<div style="font-size:12px;color:var(--grey);line-height:1.5;margin-bottom:8px">Share this link — anyone can open it and order from your catalogue.</div>'
-      : '<div style="font-size:12px;line-height:1.55;margin-bottom:8px;background:var(--warn-tint);color:var(--warn-2);border-radius:8px;padding:8px 10px">'
-        + '⚠️ <b>This link will not open yet.</b> Your catalogue is <b>' + esc(vis) + '</b>, so anyone following it — including you — sees '
-        + '&ldquo;Shop not found&rdquo;. That wording is deliberately vague to strangers; here is the real reason.'
-        + (capped
-            ? ' It is capped at <b>private</b> by ' + esc((cap.by || 'your network operator')) + ', so the switch below cannot lift it.'
-            : ' Set <b>Catalogue visibility</b> below to <b>public</b> and the link starts working immediately.')
-        + '</div>')
-    +'<div style="background:var(--card);border:1px solid var(--line);border-radius:9px;padding:8px 10px;color:var(--on-card)"><span class="mono" id="sf_url" style="font-size:11.5px;word-break:break-all">'+esc(url)+'</span></div>'
-    +'<div style="display:flex;gap:8px;margin-top:8px"><button class="composebtn" onclick="sfCopy()">📋 Copy link</button><button class="composebtn ghost" onclick="window.open(document.getElementById(\'sf_url\').textContent,\'_blank\')">Open ↗</button></div>'
-    // ── IS THE SHOP OPEN AT ALL? ─────────────────────────────────────────────────────────────────────────────
-    // Athi, 2026-08-06: "it says the store does not have a public catalogue — how do I make it public?"
-    //
-    // He could not, and neither could anyone else. b114 made publishing an EXPLICIT act and shipped no way to
-    // perform it: the only mention of catalogue_visibility in the whole front end was a read-only Settings row.
-    // The API has read and written it since b114; the control simply did not exist. So every shop sat private,
-    // its storefront link opened onto "this shop has no public catalogue", and the owner had no lever.
-    //
-    // It belongs HERE, immediately above the link it governs — a link that does not work is the symptom, and the
-    // switch that makes it work should not be on a different screen.
-    // ── A CONTROL THAT CANNOT WORK MUST NOT LOOK LIKE ONE ────────────────────────────────────────────────────
-    // The cap comes from /me (`visibility_cap`): the operator who provisioned this entity, then the plan. When it
-    // is capped, the switch is DISABLED and says WHO capped it — offering a working-looking control that 403s on
-    // save is the same lie as a button that reports success and does nothing.
-    /* ⚠️ RENAMED FROM "Is your shop open?". That is the same English question as identity's "Shop status", but a
-       different fact — this one is public/network/private VISIBILITY, that one is open/closed/away TRADING. The
-       screen read "Shop status: open" above "Is your shop open?: Closed", and I misread it as a contradiction
-       with the source in front of me. Two names for one question is a bug even when both values are correct. */
-    +'<label class="fl" style="margin-top:12px">Who can see your catalogue</label>'
-    +'<select class="inp" id="pf_catvis" data-testid="pf-catvis" style="max-width:340px"'+(capped?' disabled':'')+'>'
-      // THREE TIERS (b115). `network` is the warehouse case: invisible to the world, visible to the businesses
-      // under the same network. Worded by WHO SEES IT rather than by the value, because "network" means nothing to
-      // a shopkeeper and "the other businesses in your network" means exactly what it says.
-      +(capped ? '<option value="private" selected>Closed — set by your network operator</option>'
-               : '<option value="public"'+(vis==='public'?' selected':'')+'>Open — anyone with the link can see your catalogue</option>'
-                +'<option value="network"'+(vis==='network'?' selected':'')+'>Network only — the other businesses in your network can see it; the public cannot</option>'
-                +'<option value="private"'+(vis==='private'||!vis?' selected':'')+'>Closed — the link shows nothing, to anyone</option>')
-    +'</select>'
-    +(capped
-      ? '<div style="margin-top:7px;font-size:12px;color:var(--purple-2);background:var(--purple-tint);border:1px solid #e3d5f5;border-radius:9px;padding:7px 10px">🔒 '+esc(cap.reason||'This entity may not publish a public catalogue.')+'<div style="color:var(--grey);margin-top:3px">You cannot change this here — it is set '+(cap.by==='operator'?'by whoever provisioned this entity':'by your plan')+'.</div></div>'
-      : (vis==='network'
-          ? '<div style="margin-top:7px;font-size:12px;color:var(--purple-2);background:var(--purple-tint);border:1px solid #e3d5f5;border-radius:9px;padding:7px 10px">🔗 <b>Network only.</b> Businesses under your network see this catalogue. A shopper on the link above sees nothing — and neither does an outside business that adds you as a supplier.</div>'
-          : (vis!=='public' ? '<div style="margin-top:7px;font-size:12px;color:var(--disp);background:var(--danger-tint);border:1px solid #f3d9d5;border-radius:9px;padding:7px 10px">⚠ Your shop is CLOSED. The link above will show &ldquo;this shop has no public catalogue&rdquo; — to customers and to other businesses looking at you as a supplier.</div>' : '')))
-    +'<label class="fl" style="margin-top:12px">Customer access</label><select class="inp" id="pf_sfaccess" style="max-width:340px">'+sfopts+'</select>'
-    +'<div class="err" id="pf_err2"></div><button class="composebtn" style="margin-top:9px" onclick="saveStorefront()">Save storefront</button>'
-    +'</div>';
+  /**
+   * ⭐⭐ THE STATE LEADS, AND EVERYTHING ELSE FOLLOWS FROM IT.
+   *
+   * Athi, 2026-08-18: *"Are you trading / Shop Open, close parameter in top is no connection with what is there
+   * in this page. It has to be tidy up. Also if the shop is private, it cannot have storefront, if it is
+   * network, then it should be visible to network shops only. This page has to be fully reworked based on the
+   * entities status. Also need to answer is it independent of catalogue status."*
+   *
+   * ⚠️ THE ORDER WAS INVERTED, WHICH IS WHY IT READ AS INCOHERENT. The card opened with the shareable link and
+   * two buttons, and only THEN — twelve lines down — offered the setting that decides whether that link does
+   * anything at all. So the first thing a reader saw was an invitation to share something that, for a private
+   * catalogue, showed nothing to anyone including them.
+   *
+   * ⭐ Now: WHO CAN SEE IT first, then what follows from that. The link, the buttons and the customer-access
+   * choice are all downstream of one fact, and they now render as downstream of it.
+   *
+   * ⚠️ NOTHING IS HIDDEN WHEN CLOSED, and that is deliberate. Hiding the link and the access mode would remove
+   * the reader's ability to understand what turning it on would GIVE them — and the control that lifts it lives
+   * in this very card, so a hidden section would be a dead end. They are shown INERT and labelled, which is the
+   * honest third option between offering a broken thing and pretending it does not exist.
+   *
+   * ⚠️ AND IT ANSWERS HIS LAST QUESTION DIRECTLY. "Is it independent of catalogue status" — no. The storefront
+   * IS the catalogue's public face; there is no separate storefront switch, and pretending there was one is what
+   * made the two look unrelated.
+   */
+  var url = location.origin + '/shop.html?bridge=' + encodeURIComponent(e.bridge_id || '');
+  var acc = e.storefront_access || 'browse';
+  var vis = e.catalogue_visibility || 'private';   // b114 — absent means not published (EFFECTIVE, cap applied)
+  var cap = e.visibility_cap || { max: 'public', by: null, reason: '' };
+  var capped = (cap.max === 'private');
+  var live = (vis === 'public');                   // the only state in which a stranger's link opens
+  var sfopts = [['browse', 'Browse first — catalogue is open; sign in only to order'],
+                ['login',  'Login first — customer signs in before browsing']]
+    .map(function(o){ return '<option value="' + esc(o[0]) + '"' + (acc === o[0] ? ' selected' : '') + '>' + esc(o[1]) + '</option>'; }).join('');
+
+  /* The one-line answer to "what is my storefront right now", in the reader's terms rather than the value's. */
+  var STATE = {
+    public:  ['var(--ok-tint)', 'var(--ok-2)', 'Open', 'Anyone with the link can see your catalogue and order.'],
+    network: ['var(--purple-tint)', 'var(--purple-2)', 'Network only',
+              'The other businesses in your network can see it. The public link shows nothing.'],
+    private: ['var(--danger-tint)', 'var(--disp)', 'Closed',
+              'Nobody can see it — the link shows nothing, to anyone, including you.']
+  }[vis] || ['var(--danger-tint)', 'var(--disp)', 'Closed', 'Nobody can see it.'];
+
+  return '<div style="' + _CARD + ';margin-top:10px">'
+    + '<div class="sec" style="margin:0 0 8px">🛍️ Customer storefront</div>'
+
+    /* ── 1 · THE STATE ─────────────────────────────────────────────────────────────────────────────────── */
+    + '<div data-testid="sf-state" style="background:' + STATE[0] + ';color:' + STATE[1] + ';border-radius:9px;'
+    +   'padding:9px 11px;font-size:var(--fs-2);line-height:1.55">'
+    +   '<b>' + esc(STATE[2]) + '</b> — ' + esc(STATE[3])
+    +   (capped ? '<br>⚠️ Capped at <b>Closed</b> by ' + esc(cap.by || 'your network operator')
+                 + '. A store can be no more open than the thing it sits inside.' : '')
+    + '</div>'
+
+    /* ── 2 · THE CONTROL THAT SETS IT ──────────────────────────────────────────────────────────────────── */
+    /* ⚠️ NOT "Is your shop open?". That is the same English question as IAM's "Are you trading?" and a DIFFERENT
+       FACT — this one is public/network/private VISIBILITY, that one is open/closed/away TRADING. The screen once
+       read "Shop status: open" above "Is your shop open?: Closed", which is two names for one question even when
+       both values are correct. */
+    + '<label class="fl" style="margin-top:12px">Who can see your catalogue</label>'
+    + '<select class="inp" id="pf_catvis" data-testid="pf-catvis" style="max-width:340px"' + (capped ? ' disabled' : '') + '>'
+    +   (capped
+          ? '<option value="private" selected>Closed — set by your network operator</option>'
+          : '<option value="public"' + (vis === 'public' ? ' selected' : '') + '>Open — anyone with the link can see your catalogue</option>'
+          + '<option value="network"' + (vis === 'network' ? ' selected' : '') + '>Network only — the other businesses in your network can see it; the public link shows nothing</option>'
+          + '<option value="private"' + (vis === 'private' || !vis ? ' selected' : '') + '>Closed — the link shows nothing, to anyone</option>')
+    + '</select>'
+    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:5px;line-height:1.55">'
+    +   '⚠️ This is <b>not</b> whether you are trading — that is <b onclick="profSetSec(&#39;identity&#39;)" '
+    +   'style="cursor:pointer;color:var(--blue)">IAM › Are you trading?</b>, and the two are unrelated. '
+    +   'Your storefront <b>is</b> your catalogue&rsquo;s public face; there is no separate storefront switch.'
+    + '</div>'
+
+    /* ── 3 · THE LINK — downstream of the state, and inert unless it can open ───────────────────────────── */
+    + '<label class="fl" style="margin-top:14px">Your storefront link</label>'
+    + (live
+        ? '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5;margin-bottom:6px">'
+          + 'Share this — anyone can open it and order from your catalogue.</div>'
+        : '<div style="font-size:var(--fs-1);color:var(--warn-2);background:var(--warn-tint);border-radius:8px;'
+          + 'padding:7px 9px;margin-bottom:6px;line-height:1.55">'
+          + '⚠️ <b>This link will not open while your catalogue is ' + esc(STATE[2].toLowerCase()) + '.</b> '
+          + 'Anyone following it — including you — sees &ldquo;Shop not found&rdquo;. That wording is deliberately '
+          + 'vague to strangers, so that walking the id space tells them nothing; here is the real reason.'
+          + (capped ? '' : ' Set <b>Open</b> above and it starts working immediately.')
+          + '</div>')
+    + '<div style="background:var(--card);border:1px solid var(--line);border-radius:9px;padding:8px 10px;'
+    +   'color:var(--on-card);opacity:' + (live ? '1' : '.55') + '"><span class="mono" id="sf_url">' + esc(url) + '</span></div>'
+    + '<div style="display:flex;gap:8px;margin-top:8px">'
+    +   '<button class="composebtn" onclick="sfCopy()"' + (live ? '' : ' disabled title="Your catalogue is not open"') + '>📋 Copy link</button>'
+    +   '<button class="composebtn ghost" onclick="window.open(document.getElementById(&#39;sf_url&#39;).textContent,&#39;_blank&#39;)"'
+    +     (live ? '' : ' disabled title="Your catalogue is not open"') + '>↗ Open</button>'
+    + '</div>'
+
+    /* ── 4 · CUSTOMER ACCESS — only meaningful once there is a storefront ───────────────────────────────── */
+    + '<label class="fl" style="margin-top:14px">Customer access'
+    +   (live ? '' : ' <span style="color:var(--grey);font-weight:400;font-size:var(--fs-1)">— takes effect when your catalogue is open</span>')
+    + '</label>'
+    + '<select class="inp" id="pf_sfaccess" style="max-width:340px;opacity:' + (live ? '1' : '.7') + '">' + sfopts + '</select>'
+
+    + '<div class="err" id="pf_err2"></div>'
+    + '<button class="composebtn" style="margin-top:9px" onclick="saveStorefront()">Save storefront</button>'
+  + '</div>';
 }
 function sfCopy(){ var u=document.getElementById('sf_url'); if(!u)return; var t=u.textContent;
   if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(t).then(function(){toast('Storefront link copied ✓');}).catch(function(){toast(t);}); }
