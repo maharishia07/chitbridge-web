@@ -954,8 +954,31 @@ function iamWhoHTML(e){
     + '<label class="fl">This business</label>'
     + '<div class="kv"><b>Name</b> · ' + esc(e.display_name || '') + '</div>'
     + '<div class="kv"><b>Bridge ID</b> · ' + esc(e.bridge_id || '') + '</div>'
-    + '<label class="fl">User ID <span style="color:var(--grey);font-weight:400;font-size:var(--fs-1)">— the handle another business types to add you</span></label>'
+    /**
+     * ⭐⭐ THE USER ID IS THE ROOT OF EVERY OTHER NAME, and until now it was one field among five with a short
+     * hint. Athi, 2026-08-19: *"user id is the one under which the registration happens in the platform as
+     * entity identification. User name is their literal name… user name can be duplicated also, but user id
+     * cannot be duplicated."*
+     *
+     * ⚠️ HE HAD TO EXPLAIN THAT TO ME, which means the screen was not explaining it to anyone. Three things
+     * derive from this one value — a co-assist's login, a network root, and how another business finds you —
+     * and none of them said so where it is typed.
+     */
+    + '<label class="fl">User ID <span style="color:var(--grey);font-weight:400;font-size:var(--fs-1)">— your unique name on this platform</span></label>'
     + '<input class="inp" id="pf_uid" value="' + esc(e.user_id || '') + '">'
+    + (e.user_id
+        ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px;line-height:1.55">'
+          + 'Everything else is named from this: co-assists sign in as <b>key@' + esc(e.user_id) + '</b>, a network '
+          + 'root is <b>' + esc(e.user_id) + '.store</b>, and another business adds you by typing it. '
+          + '⚠️ Unique across the platform — unlike your <b>name</b>, which may repeat.</div>'
+        /* ⚠️ AN EMPTY USER ID IS NOT A BLANK FIELD, IT IS A MISSING FOUNDATION. Say so where it is set, because
+           the screens that need it will otherwise show a plausible-looking GUESS in its place. */
+        : '<div style="font-size:var(--fs-1);color:var(--warn-2);background:var(--warn-tint);border-radius:8px;'
+          + 'padding:7px 9px;margin-top:5px;line-height:1.55">'
+          + '⚠️ <b>Not set — and three things need it.</b> Co-assists sign in as <b>key@your-user-id</b>, a network '
+          + 'root is named from it, and another business adds you by typing it. Until you choose one, other screens '
+          + 'show a <b>suggestion</b> slugged from your business name — which is not an identifier and is not saved.'
+          + '</div>')
     + '<label class="fl">GSTIN <span style="color:var(--grey);font-weight:400;font-size:var(--fs-1)">— 15 characters</span></label>'
     + '<input class="inp" id="pf_gstn" value="' + esc(e.gstn || '') + '">'
     + '<label class="fl">Address</label><input class="inp" id="pf_addr" value="' + esc(e.address || '') + '">'

@@ -2686,7 +2686,12 @@ function _netNodeView(n){
         + '<div style="font-size:11.5px;color:var(--grey);margin-top:4px;line-height:1.55">'
         + (_netRootIsSet()
             ? 'Your User ID. Every store is prefixed with it.'
-            : 'Suggested from your business name — <b>not saved yet</b>. A handle cannot contain a space, so "'
+            /* ⚠️ "Suggested … not saved yet" was TRUE and still misread — Athi took the value for his User ID.
+               The sentence buried the important word in the middle of an explanation about spaces. It now leads
+               with what the thing IS NOT, and names the distinction: a name may repeat, a User ID may not. */
+            : '⚠️ <b>This is a suggestion, not your User ID.</b> Nothing is saved yet — it is a slug of your '
+              + '<b>business name</b>, and a name is not an identifier: names may repeat, User IDs may not. '
+              + 'A handle cannot contain a space, so "'
               + esc((typeof SESSION !== 'undefined' && SESSION.entity) || '') + '" becomes "' + esc(_netRootHandle())
               + '". Change it now if you want something else; after Build the stores keep the name they were given.')
         + '</div>' : '')
