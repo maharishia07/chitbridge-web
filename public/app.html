@@ -934,7 +934,7 @@
   /* (the .msgc dot is styled with .bell's, above — one rule, both dots) */
   .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
   .unreadtag{font-size:var(--fs-1);font-weight:800;color:#fff;background:#d65a5a;border-radius:6px;padding:0 5px;margin-inline-start:4px}
-  .unreaddot{width:7px;height:7px;border-radius:50%;background:#d65a5a;margin-inline-start:2px}
+  .unreaddot{width:8px;height:8px;border-radius:50%;background:var(--blue);flex:0 0 auto;display:inline-block;margin-inline-start:2px}
   .row .unreaddot{display:inline-block;vertical-align:middle;margin:0 5px 0 0}
   .row.unread{background:var(--warn-tint);color:var(--on-card)}
   .row.unread .code{font-weight:800}
@@ -959,8 +959,7 @@
   .raidtoggle{padding:9px 12px;border-top:1px solid var(--line);font-size:var(--fs-1);font-weight:700;color:var(--ink);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
   .raidtoggle button{border:1px solid var(--line);background:var(--card);border-radius:6px;font-size:var(--fs-1);font-weight:700;padding:4px 9px;color:var(--grey);cursor:pointer}
   .raidtoggle button.on{background:var(--blue);color:var(--on-accent);border-color:var(--blue)}
-  .raidtoggle .hint{flex-basis:100%;font-weight:400;color:var(--grey);font-size:var(--fs-1)}
-  .custflag{color:var(--disp);font-weight:800;margin-inline-end:4px}
+  .raidtoggle .hint{flex-basis:100%;font-weight:400;color:var(--grey);font-size:var(--fs-1)}
   .prichip{}
   .prichip.pri-urgent{background:var(--danger-tint);color:var(--disp-2)}.prichip.pri-low{background:var(--warn-tint);color:var(--warn-3)}
   .dchips{display:flex;gap:8px;align-items:center;margin-top:8px}

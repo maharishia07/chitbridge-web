@@ -905,11 +905,13 @@ function iamHTML(e){
 
 /* ══ shared pieces ══════════════════════════════════════════════════════════════════════════════════════════ */
 
-function _iamCard(inner){ return '<div style="' + _CARD + '">' + inner + '</div>'; }
-function _iamHead(t, sub){
-  return '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin-bottom:' + (sub ? '3px' : '6px') + '">' + t + '</div>'
-    + (sub ? '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.55;margin-bottom:7px">' + sub + '</div>' : '');
-}
+/**
+ * ⚠️⚠️ _iamCard, _iamHead and _iamZone LIVED HERE and went with iamWhoHTML/iamAccessHTML on 2026-08-19.
+ *
+ * Nothing else called them — so removing their two callers orphaned them, and dead-surface went UP from 9 to
+ * 10 rather than down. That is how the cascade announced itself, and it is the argument for reading a dead
+ * SET together rather than one at a time: the second layer only becomes visible once the first is gone.
+ */
 /**
  * ⭐⭐ ONE TAB PER PARTY, AS ROWS. Athi, 2026-08-19: *"this is the perfect way of saying"* (the profiles design)
  * and *"we do not need any explanation."*
@@ -1089,197 +1091,14 @@ function iamMeHTML(e){
 }
 
 /** The boundary badge. ⚠️ Same three words everywhere, so the spine is learnable in one read. */
-function _iamZone(z){
-  var C = { inside: ['var(--ok-tint)', 'var(--ok-2)', 'INSIDE'],
-            edge:   ['var(--warn-tint)', 'var(--warn-2)', 'AT THE EDGE'],
-            outside:['var(--neutral-tint)', 'var(--grey)', 'OUTSIDE'] }[z];
-  return '<span style="font-size:var(--fs-1);font-weight:800;letter-spacing:.04em;background:' + C[0] + ';color:' + C[1]
-    + ';border-radius:4px;padding:1px 6px">' + C[2] + '</span>';
-}
 
 /* ══ WHO ════════════════════════════════════════════════════════════════════════════════════════════════════ */
 
-function iamWhoHTML(e){
-  var Q = String.fromCharCode(39);
-  var acts = UI._iamActors || [];
-  var people = acts.filter(function(a){ return !a.actor_type || a.actor_type === 'human'; });
-  var machines = acts.filter(function(a){ return a.actor_type && a.actor_type !== 'human'; });
-
-  var line = function(what, named, signin, where, nav) {
-    return '<div style="padding:6px 0;border-block-start:1px solid var(--line)">'
-      + '<div style="font-size:var(--fs-2);color:var(--on-card)"><b>' + what + '</b>' + (named ? ' · ' + named : '') + '</div>'
-      + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px;line-height:1.5">'
-      +   'Named by ' + esc(signin[0]) + ' · signs in with ' + esc(signin[1])
-      +   (nav ? ' · <a href="#" onclick="' + nav + ';return false" style="color:var(--blue);font-weight:600">' + esc(where) + ' <span class=arw>→</span></a>' : '')
-      + '</div></div>';
-  };
-
-  return _iamCard(_iamHead(_iamZone('inside') + ' &nbsp;You administer these',
-      'Identities this business creates, names and can remove. Athi: <i>&ldquo;people means who works for the '
-      + 'entity, within the boundary of the entity&rdquo;</i> — that boundary is exactly what this zone draws.')
-    + line('This business', esc(e.display_name || '—'), ['Bridge ID + User ID', 'a one-time code to your email'], '', '')
-    /* ⚠️ THE HANDLE IS key@user_id, NOT key@display-name — display_name has no unique index and changes when an
-       owner renames the business; user_id has one and does not. See routes/actors.js. */
-    + line('People', (people.length ? people.length + ' co-assist' + (people.length === 1 ? '' : 's') : 'none yet')
-        + ' <span style="color:var(--grey)">— they work for this business, inside its boundary</span>',
-        ['name + actor key, signing in as <b>key@' + esc(e.user_id || 'your-user-id') + '</b>', 'that handle and a one-time code'],
-        'Co-assists', "navTo('coassists')")
-    /* ⚠️ MACHINES ARE CO-ASSISTS, not a fifth class — same table, different actor_type. Listing them separately
-       would imply a separate identity model and a separate place to manage them; there is neither. */
-    + line('Machines &amp; agents', machines.length ? machines.length + ' (IoT · AI · ERP)' : 'none yet',
-        ['name + actor key', 'a device key or connector credential'], 'Co-assists', "navTo('coassists')")
-    + line('Branches &amp; units', 'sub-entities in your network',
-        ['their own Bridge ID', 'their own credentials'], 'Network', "navTo('network')"))
-
-  + _iamCard(_iamHead(_iamZone('edge') + ' &nbsp;You set the terms — they identify themselves',
-      'You never create these identities and cannot remove one. You decide what the door does.')
-    + line('Customers', 'anyone who opens your storefront',
-        ['the name they type at checkout', 'a code to their phone or email'], 'Storefront', "profSetSec('storefront')"))
-
-  + _iamCard(_iamHead(_iamZone('outside') + ' &nbsp;They govern themselves',
-      'Other businesses. You hold a relationship, not a permission.')
-    + line('Suppliers', 'businesses you buy from',
-        ['their own User ID', 'their own business account'], 'Suppliers', "navTo('suppliers')")
-    + line('Network peers', 'businesses connected to you',
-        ['their own Bridge ID', 'their own business account'], 'Network', "navTo('network')")
-    /* ⚠️ THE SENTENCE THAT MAKES THE WHOLE STRUCTURE MAKE SENSE. Athi: "For third party, user id is the key,
-       that cannot be changed so supplier, if they want to add, they have to use the user id." Listing a supplier
-       beside a co-assist without this implies you grant them access, which is exactly backwards. */
-    + '<div style="font-size:var(--fs-2);line-height:1.6;color:var(--on-card);margin-top:8px">'
-    + '⚠️ <b>You do not give these access.</b> Each holds its own IAM and decides for itself. What you type to '
-    + 'add one is their <b>' + tx('User ID') + '</b> — which is why yours matters: it is the handle another business types to '
-    + 'find <i>you</i>.</div>')
-
-  ;
-
-}
-
-/* ══ WHAT THEY MAY DO ═══════════════════════════════════════════════════════════════════════════════════════ */
-
 /**
- * ⚠️⚠️ EVERY ROW NAMES ITS PROVENANCE, and that is the point of the tab. "Why can't I do this?" is the question
- * people actually ask, and today the answer is unfindable for two of the four kinds:
- *
- *   DIRECT   set on this identity, here                    → change it here
- *   DERIVED  follows from where you sit in the tree        → nobody set it; no screen says so
- *   CAPPED   descends from your operator, narrowest wins   → visible, not yours to lift
- *   THEIRS   another business decided                      → not a permission of yours at all
+ * ⚠️ iamWhoHTML and iamAccessHTML LIVED HERE and were removed 2026-08-19. They rendered the old "who can
+ * act" and "what access" panes, which the four IAM tabs replaced — orphaned by my own restructure, and
+ * found by e2e/dead-surface.cjs rather than by me remembering.
  */
-function iamAccessHTML(e){
-  var Q = String.fromCharCode(39);
-  var acts = UI._iamActors || [];
-  var cap = e.visibility_cap || { max: 'public', by: null };
-  var vis = e.catalogue_visibility || 'private';
-
-  var PROV = {
-    direct:  ['DIRECT',  'var(--blue-tint-bg)', 'var(--blue-2)'],
-    derived: ['DERIVED', 'var(--purple-tint)',  'var(--purple-2)'],
-    capped:  ['CAPPED',  'var(--warn-tint)',    'var(--warn-2)'],
-    theirs:  ['THEIRS',  'var(--neutral-tint)', 'var(--grey)']
-  };
-  var prov = function(k){
-    var c = PROV[k];
-    return '<span title="' + esc(k) + '" style="font-size:var(--fs-1);font-weight:800;letter-spacing:.04em;background:' + c[1]
-      + ';color:' + c[2] + ';border-radius:4px;padding:1px 6px">' + c[0] + '</span>';
-  };
-
-  var row = function(who, what, p, note, nav, navLabel){
-    return '<div style="padding:7px 0;border-block-start:1px solid var(--line)">'
-      + '<div style="display:flex;gap:7px;align-items:baseline;flex-wrap:wrap">'
-      +   '<b style="font-size:var(--fs-2);color:var(--on-card)">' + who + '</b>'
-      +   '<span style="font-size:var(--fs-2);color:var(--on-card)">' + what + '</span>'
-      +   prov(p)
-      + '</div>'
-      + (note ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px;line-height:1.5">' + note
-          + (nav ? ' <a href="#" onclick="' + nav + ';return false" style="color:var(--blue);font-weight:600">' + esc(navLabel) + ' <span class=arw>→</span></a>' : '')
-          + '</div>' : '')
-      + '</div>';
-  };
-
-  /* per-person hats, from the SAME endpoint Co-assists uses */
-  var hatRows = acts.length ? acts.map(function(a){
-    var h = a.hat || 'act';
-    var L = IAM_HAT[h] || [h, ''];
-    var writes = IAM_WRITES.indexOf(h) >= 0;
-    return row(esc(a.display_name || a.actor_key || '—'),
-      '<b>' + esc(L[0]) + '</b> <span style="color:var(--grey)">— ' + esc(L[1]) + '</span>',
-      'direct',
-      writes ? 'May create and change records.'
-             : '⚠️ Read only — cannot create or change records. Enforced on every write since 2026-08-18.',
-      "navTo('coassists')", 'Co-assists');
-  }).join('') : '<div style="font-size:var(--fs-1);color:var(--grey);padding:7px 0;border-block-start:1px solid var(--line)">No co-assists yet.</div>';
-
-  return _iamCard(_iamHead(_iamZone('inside') + ' &nbsp;People and machines — the hat',
-      'One setting per co-assist, set by you, enforced on every write.')
-    + hatRows)
-
-  /**
-   * ⚠️⚠️ I RECOMMENDED MOVING SETTINGS › WORK IN HERE, AND I WAS WRONG. My argument was "Work is how tasks reach
-   * PEOPLE, so it belongs with people". Checking the data settled it the other way: assignment_model,
-   * default_max_tasks, all_task_visible and auto_return_on_short_break are keyed on ENTITY_ID
-   * (routes/actors.js:1400). They are ENTITY-WIDE OPERATIONS POLICY, identical for everyone — not a property of
-   * any identity.
-   *
-   * ⭐ The test that decides it: "what may Priya do?" is answered per-person (her hat). "How does work reach
-   * Priya?" has the same answer for every co-assist in the business. The first is IAM; the second is operations.
-   *
-   * Moving it would also have forced this screen to fetch settings it otherwise never needs, and given one
-   * control two homes — the exact defect this regrouping exists to remove. So it stays where it is and IAM
-   * LINKS to it, which is the "one control, many viewers" rule applied to my own proposal.
-   */
-  + _iamCard(_iamHead(_iamZone('inside') + ' &nbsp;How work reaches them',
-      'Entity-wide, not per person — the same rules for every co-assist.')
-    + '<div style="font-size:var(--fs-2);line-height:1.6;color:var(--on-card);padding:7px 0;border-block-start:1px solid var(--line)">'
-    + 'Who gets assigned what, how many tasks at once, whether everyone can see everyone&rsquo;s work, and what '
-    + 'happens on a break — one set of rules for the whole business.'
-    + '<div style="margin-top:7px"><a href="#" data-testid="iam-to-work" onclick="navTo(&#39;settings&#39;);setSetSec(&#39;work&#39;);return false" '
-    + 'style="color:var(--blue);font-weight:600">Settings › Work <span class=arw>→</span></a></div>'
-    + '</div>')
-
-  + _iamCard(_iamHead(_iamZone('inside') + ' &nbsp;Where they sit',
-      'Access nobody set — it follows from position in your network.')
-    + row('Co-assists at a node', 'reach the work of that node and below', 'derived',
-        'Placed in the tree, not granted on a screen. Move the person, and their reach moves with them.',
-        "navTo('network')", 'Network')
-    + row('Costs', (function(){
-        var n = acts.filter(function(a){ return a.can_see_costs; }).length;
-        return n ? '<b>' + n + '</b> may see buying prices and margin' : 'nobody may see buying prices';
-      })(), 'direct',
-        'A separate switch from the hat — the only per-person permission besides it.',
-        "navTo('coassists')", 'Co-assists'))
-
-  + _iamCard(_iamHead(_iamZone('edge') + ' &nbsp;Customers',
-      'You set the door; nobody is granted anything individually.')
-    + row('Anyone with your link', (e.storefront_access === 'login' ? 'must sign in before browsing' : 'may browse, signs in to order'), 'direct',
-        'One rule for every customer. There is no per-customer permission, by design.',
-        "profSetSec('storefront')", 'Storefront')
-    + row('Your catalogue', 'is <b>' + esc(vis) + '</b>', (cap.max === 'private' ? 'capped' : 'direct'),
-        cap.max === 'private'
-          ? '⚠️ Capped at <b>private</b> by ' + esc(cap.by || 'your network operator') + '. A store can be no more open than the thing it sits inside — the narrowest wins.'
-          : 'You choose this. It also decides whether your storefront link opens at all.',
-        "profSetSec('storefront')", 'Storefront'))
-
-  + _iamCard(_iamHead(_iamZone('outside') + ' &nbsp;Other businesses',
-      'Not permissions of yours.')
-    + row('Suppliers &amp; peers', 'decide for themselves', 'theirs',
-        'Their own IAM answers this. You hold a relationship — what their staff may do is their business, governed by their hats, in their records.',
-        "navTo('suppliers')", 'Suppliers')
-    + row('Your network operator', 'may co-hold and walk your subtree', 'capped',
-        'Where a bounded network names an operator, that operator can trace across it for oversight. Visibility is co-holding.',
-        "navTo('network')", 'Network'))
-
-  /* ⚠️ THE HONEST FOOTER. Two of the four provenances are things a reader CANNOT CHANGE, and a permissions
-     screen that does not say so invites people to hunt for a switch that does not exist. */
-  + _iamCard(_iamHead('What this page cannot change')
-    + '<div style="font-size:var(--fs-2);line-height:1.6;color:var(--on-card)">'
-    + '<b>' + tx('DERIVED') + '</b> access follows position — move the person in <b>' + tx('Network') + '</b>, not here. '
-    + '<b>' + tx('CAPPED') + '</b> access descends from your operator and cannot be lifted from inside. '
-    + '<b>' + tx('THEIRS') + '</b> is another business&rsquo;s answer and never appears as a setting of yours.<br>'
-    + '⚠️ Only <b>' + tx('DIRECT') + '</b> rows have a switch, and every one of them links to the screen that owns it — '
-    + 'one control, many viewers.'
-    + '</div>');
-}
-
 function namingRulesHTML(){
   var open = !!UI._namingOpen;
   var rows = NAMING.map(function(n){
