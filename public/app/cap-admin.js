@@ -1022,18 +1022,21 @@ function iamMeHTML(e){
      */
     + '<label class="fl">User ID <span style="color:var(--grey);font-weight:400;font-size:var(--fs-1)">— your unique name on this platform</span></label>'
     + '<input class="inp" id="pf_uid" value="' + esc(e.user_id || '') + '">'
-    + (e.user_id
-        ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px;line-height:1.55">'
-          + 'Everything else is named from this: co-assists sign in as <b>key@' + esc(e.user_id) + '</b>, a network '
-          + 'root is <b>' + esc(e.user_id) + '.store</b>, and another business adds you by typing it. '
-          + '⚠️ Unique across the platform — unlike your <b>name</b>, which may repeat.</div>'
-        /* ⚠️ AN EMPTY USER ID IS NOT A BLANK FIELD, IT IS A MISSING FOUNDATION. Say so where it is set, because
-           the screens that need it will otherwise show a plausible-looking GUESS in its place. */
+    /**
+     * ⚠️ NO EXPLANATION HERE. Athi, 2026-08-19: *"i don't want that text… this will be known in that tab."*
+     *
+     * The paragraph that used to sit under this field spelt out that co-assists sign in as key@user-id, that a
+     * network root is named from it, and that it is unique unlike a name. All true — and all of it is now SHOWN
+     * as a row on the Employee and Network tabs, where the reader is looking at that party anyway.
+     *
+     * ⭐ Saying it twice is not emphasis, it is noise: the tab that owns the fact states it in place, and this
+     * field goes back to being a field. The only thing kept is the one-line warning when NOTHING is set, because
+     * an empty User ID is not a preference — other screens fill the hole with a guess.
+     */
+    + (e.user_id ? ''
         : '<div style="font-size:var(--fs-1);color:var(--warn-2);background:var(--warn-tint);border-radius:8px;'
-          + 'padding:7px 9px;margin-top:5px;line-height:1.55">'
-          + '⚠️ <b>Not set — and three things need it.</b> Co-assists sign in as <b>key@your-user-id</b>, a network '
-          + 'root is named from it, and another business adds you by typing it. Until you choose one, other screens '
-          + 'show a <b>suggestion</b> slugged from your business name — which is not an identifier and is not saved.'
+          + 'padding:7px 9px;margin-top:5px;line-height:1.5">'
+          + '⚠️ <b>Not set.</b> Until you choose one, other screens show a suggestion made from your business name.'
           + '</div>')
     + '<label class="fl">GSTIN <span style="color:var(--grey);font-weight:400;font-size:var(--fs-1)">— 15 characters</span></label>'
     + '<input class="inp" id="pf_gstn" value="' + esc(e.gstn || '') + '">'
