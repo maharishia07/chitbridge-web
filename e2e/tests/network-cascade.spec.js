@@ -31,7 +31,7 @@ async function call(path, { method = 'GET', token, body } = {}) {
 
 /** Sign in (create-or-reuse) and return a token + bridge id. */
 async function entity(email, name) {
-  await call('/api/entities/register', { method: 'POST', body: { email, display_name: name } });
+  await call('/api/entities/register', { method: 'POST', body: { email, display_name: name, user_id: 'e' + Date.now() + Math.floor(Math.random()*1e6) } });
   const v = await call('/api/entities/verify', { method: 'POST', body: { email, otp: OTP } });
   const token = (v.json || {}).token;
   const me = await call('/api/entities/me', { token });

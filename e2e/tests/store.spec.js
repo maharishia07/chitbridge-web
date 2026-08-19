@@ -12,7 +12,7 @@ const H = (t) => ({ Authorization: 'Bearer ' + t });
 
 async function mint(api, name){
   const email = `store-${name.replace(/\W+/g, '')}-${Date.now()}-${Math.floor(Math.random() * 1e5)}@node.cb`;
-  await api.post(`${API}/api/entities/register`, { data: { display_name: name, email } });
+  await api.post(`${API}/api/entities/register`, { data: { display_name: name, email, user_id: 'e' + Date.now() + Math.floor(Math.random()*1e6) } });
   const v = await (await api.post(`${API}/api/entities/verify`, { data: { email, otp: '123456' } })).json();
   return { id: v.entity.identity_id, token: v.token, name };
 }

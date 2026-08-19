@@ -25,7 +25,7 @@ async function api(path, { method = 'GET', token, body } = {}) {
   return { status: res.status, json };
 }
 async function signIn(email, name) {
-  await api('/api/entities/register', { method: 'POST', body: { email, display_name: name } });
+  await api('/api/entities/register', { method: 'POST', body: { email, display_name: name, user_id: 'e' + Date.now() + Math.floor(Math.random()*1e6) } });
   const v = await api('/api/entities/verify', { method: 'POST', body: { email, otp: OTP } });
   const j = v.json || {};
   return { token: j.token || (j.entity && j.entity.token) || null, entity: j.entity || null };

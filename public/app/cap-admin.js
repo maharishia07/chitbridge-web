@@ -1039,21 +1039,20 @@ function iamMeHTML(e){
            entity sign-in resolves on LOWER(user_id) first (routes/entities.js). The profile showed the value
            and never said what it was FOR — so the one field you type to get in read like a reference number. */
         /**
-         * ⚠️ READ-ONLY, WITH AN EXPLICIT CHANGE — not locked, and not a field you tab through.
+         * ⭐⭐ READ-ONLY. NO CHANGE, NO EDIT, NO AFFORDANCE. Athi, 2026-08-19:
          *
-         * It is now CLAIMED AT REGISTRATION from the business name, so the person did not choose it and must be
-         * able to. But it is also the LOGIN, and everything else derives from it, so changing it in passing on a
-         * profile screen would alter how they get in with no moment of intent. One click is that moment.
+         *   *"the registered user id cannot be changed. Are you able to change your Gmail id? The same way here."*
+         *
+         * ⚠️ I HAD SHIPPED A "Change" LINK HERE AND IT WAS WRONG. The reasoning was that a value claimed for you is
+         * not a value you chose, so you must be able to correct it — but that premise died the moment registration
+         * started ASKING for it. It is chosen, once, deliberately, on the screen that says it cannot be changed.
+         *
+         * ⭐ AND THE MUTABLE FIELD IS RIGHT ABOVE IT. The Name input takes anything, any format, any time. That
+         * pairing is the whole model on one screen: one identifier that everything cites and therefore cannot move,
+         * one label that nothing cites and therefore can.
          */
-        ? (UI._uidEdit
-            ? '<label class="fl">User ID <span style="color:var(--grey);font-weight:400;font-size:var(--fs-1)">— you sign in with this</span></label>'
-              + '<input class="inp" id="pf_uid" value="' + esc(e.user_id) + '">'
-              + '<div style="font-size:var(--fs-1);color:var(--warn-2);margin-top:4px;line-height:1.5">'
-              + '⚠️ Co-assists sign in as <b>key@' + esc(e.user_id) + '</b> today. Change this and they use the new one.</div>'
-            : '<div class="kv" style="margin-top:9px"><b>User ID</b> · <span class="mono">' + esc(e.user_id) + '</span>'
-              + ' <span style="color:var(--grey);font-size:var(--fs-1)">— you sign in with this</span>'
-              + ' <a href="#" data-testid="uid-change" onclick="UI._uidEdit=true;loadProfile();return false"'
-              + ' style="color:var(--blue);font-size:var(--fs-1);margin-inline-start:6px">Change</a></div>')
+        ? '<div class="kv" style="margin-top:9px"><b>User ID</b> · <span class="mono">' + esc(e.user_id) + '</span>'
+          + ' <span style="color:var(--grey);font-size:var(--fs-1)">— you sign in with this · cannot be changed</span></div>'
         : '<label class="fl">User ID <span style="color:var(--grey);font-weight:400;font-size:var(--fs-1)">— you will sign in with this</span></label>'
           + '<input class="inp" id="pf_uid" value="">')
     /**

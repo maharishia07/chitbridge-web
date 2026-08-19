@@ -2188,7 +2188,19 @@ function renderRegister(){
   const R=REG; const who='style="font-size:12px;color:var(--grey);margin-bottom:8px"'; const muted='style="color:var(--grey);font-weight:400"';
   let form="";
   if(R.step==="form"){
-    form = `${onbBanner()}<label class="fl">Business / entity name <span ${muted}>(Register.Name)</span></label><input class="inp" id="r_name" data-testid="reg-name" placeholder="Acme Traders" value="${esc(R.name)}">
+    /* ⭐⭐ THE REGISTRATION SCREEN ASKS FOR THE USER ID, NOT A NAME. Athi, 2026-08-19: *"generally what we say
+       is the id created is userid, and the name is any name"* — and *"once registered, through IAM screen they can
+       change the display name. The display name can be anything and any format. No restriction."*
+
+       So this field is the one thing that is permanent, and the only place it is ever chosen. The two banned
+       characters are the grammar of the namespace, which is why the hint names them rather than just refusing:
+           acmetraders            an ENTITY      — what you register here
+           ravi@acmetraders       an EMPLOYEE    — @ binds a person to their business
+           acmetraders.clothing   a NETWORK node — . binds a store to its network
+       Only the entity ever registers. Employees are created by the business, network stores are minted by their
+       parent, and customers register at a storefront automatically. */
+    form = `${onbBanner()}<label class="fl">User ID <span ${muted}>(Register.UserID)</span></label><input class="inp" id="r_name" data-testid="reg-name" placeholder="acmetraders" autocapitalize="off" spellcheck="false" value="${esc(R.name)}">
+       <div style="font-size:11px;color:var(--grey);margin:-2px 0 8px;line-height:1.5">8 characters or more · letters, numbers and dashes · no <b>@</b> or <b>.</b> — those make an employee or a network store.<br><b>This cannot be changed later.</b> Your business name can be anything, and you set it after signing in.</div>
        <label class="fl">Email <span ${muted}>(Register.Email)</span></label><input class="inp" id="r_email" data-testid="reg-email" placeholder="you@business.in" value="${esc(R.email)}">
        ${R.err?`<div class="err">${R.err}</div>`:""}
        <button class="btn gold" id="r_go" data-testid="reg-submit" ${R.busy?"disabled":""}>${R.busy?'<span class="spin"></span> Creating…':"Create entity →"}</button>`;
@@ -2221,13 +2233,22 @@ async function doRegister(){
   const R=REG;
   const v_name=val("r_name"), v_email=val("r_email"), v_otp=val("r_otp");
   if(R.step==="form"){
-    if(!v_name || !v_email){ R.err="Entity name and email are required."; return renderRegister(); }
-    R.name=v_name.trim(); R.email=v_email.trim();
+    if(!v_name || !v_email){ R.err="A User ID and an email address are required."; return renderRegister(); }
+    /* ⚠️ THE SAME RULE AS THE SERVER, SAID BEFORE THE ROUND TRIP — not INSTEAD of it. handleLib.checkRoot is the
+       authority (routes/entities.js refuses on its own); this only spares someone a wasted OTP request. It is
+       deliberately the same three sentences, so a person never sees two different explanations of one rule. */
+    const uid=v_name.trim().toLowerCase();
+    if(uid.indexOf("@")>=0){ R.err='A User ID cannot contain "@". That separator makes an employee sign-in — ravi@yourbusiness.'; return renderRegister(); }
+    if(uid.indexOf(".")>=0){ R.err='A User ID cannot contain ".". That separator makes a network store — yourbusiness.clothing.'; return renderRegister(); }
+    if(uid.length<8){ R.err='A User ID is at least 8 characters. "'+uid+'" is '+uid.length+'.'; return renderRegister(); }
+    if(!/^[a-z0-9][a-z0-9-]*$/.test(uid)||/-$/.test(uid)){ R.err="A User ID can use letters, numbers and dashes, starting with a letter or number."; return renderRegister(); }
+    R.name=uid; R.email=v_email.trim();
   }
   R.err=""; R.busy=true; renderRegister();
   try{
     if(R.step==="form"){
-      const r=await api("register",{body:{display_name:R.name, email:R.email}});
+      /* user_id is the permanent one; display_name simply STARTS as it and is free to change in IAM after. */
+      const r=await api("register",{body:{user_id:R.name, display_name:R.name, email:R.email}});
       R.email=(r&&r.email)||R.email; R.busy=false; R.step="otp";
       try{ const c=await api("constitutions"); REG.verticals=(c&&c.constitutions)||[]; const dv=(REG.verticals.find(function(x){return x.is_default;})||REG.verticals[0]); REG.constitution=dv?dv.key:null; }catch(_){ REG.verticals=[]; }
       return renderRegister();
