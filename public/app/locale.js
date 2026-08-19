@@ -477,14 +477,45 @@
       } catch (_) {}
     },
 
+    /**
+     * ⭐⭐ A LANGUAGE PACK IS FETCHED WHEN ITS LANGUAGE IS CHOSEN, AND NEVER BEFORE.
+     *
+     * 643 labels in one language is roughly 25KB. Carried inline in app.html for every language, that is a file
+     * every English reader downloads in full to use none of it — the exact thing Athi's standing rule forbids.
+     * So each language is its own file, `app/strings-<lang>.js`, and it arrives the same way the Arabic font
+     * does: on the switch.
+     *
+     * ⚠️ THE PACK RE-RENDERS ITSELF IN. It loads asynchronously, so by the time it arrives the screen has
+     * already been drawn in English. Each pack calls renderApp() on the way out rather than relying on the
+     * caller to guess when it landed.
+     *
+     * ⚠️ AND A MISSING PACK IS NOT AN ERROR. onerror leaves CBSTR[lang] empty and every label falls back to
+     * English, which is the honest outcome for a language nobody has translated yet.
+     */
+    pack: function (lang) {
+      if (!lang || lang === 'en') return;
+      try {
+        var id = 'cb-strings-' + lang;
+        if (document.getElementById(id)) return;             // once per session, not once per render
+        var s = document.createElement('script');
+        s.id = id;
+        s.src = 'app/strings-' + lang + '.js';
+        s.async = true;
+        s.onerror = function () { try { s.remove(); } catch (_) {} };
+        document.head.appendChild(s);
+      } catch (_) {}
+    },
+
     /** Stamp the document so CSS and screen readers both know. The 378 logical properties do the rest. */
     apply: function () {
       try {
         var d = document.documentElement;
         var dir = L.dir();
-        d.setAttribute('lang', L.lang());
+        var lang = L.lang();
+        d.setAttribute('lang', lang);
         d.setAttribute('dir', dir);
         L.font(dir);
+        L.pack(lang);
       } catch (_) {}
     },
 
