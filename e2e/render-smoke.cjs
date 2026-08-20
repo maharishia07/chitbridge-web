@@ -71,6 +71,18 @@ const ACTOR = {
   parent_user_id: 'mystorex', identity_type: 'actor', access_level: 'commenter', whole_entity: false,
 };
 
+/**
+ * srvChannels — build the payload the SERVER actually sends, then flatten it exactly as iamLoadChannels does.
+ * lib/channels.js returns { channels: [ {key, name, bindings:[…]} ] } — a catalogue of TYPES, each carrying
+ * its bindings. Reading j.channels as the rows is what made this feature show nothing.
+ */
+function srvChannels(rows){
+  const byType = { whatsapp: [], email: [], sms: [], web: [] };
+  rows.forEach(r => (byType[r.channel] = byType[r.channel] || []).push(r));
+  const payload = { channels: Object.keys(byType).map(k => ({ key: k, name: k, bindings: byType[k] })) };
+  return payload.channels.reduce((all, t) => all.concat(t.bindings || []), []);
+}
+
 const CASES = [
   ['iamMeHTML — entity, private + open',    () => ctx.iamMeHTML(ENTITY)],
   ['iamMeHTML — public + away',             () => ctx.iamMeHTML({ ...ENTITY, catalogue_visibility: 'public', business_status: 'away' })],
@@ -86,10 +98,17 @@ const CASES = [
   ['trade — all clean',                   () => { ctx.UI._rdSum = {total:7,met:7,verified:5,attested:2,documented:0,pending:0,expiring:0,expired:0}; return ctx.iamTradeBody(); }],
   ['trade — expiring and expired',        () => { ctx.UI._rdSum = {total:7,met:4,verified:2,attested:1,documented:1,pending:2,expiring:1,expired:1}; return ctx.iamTradeBody(); }],
   ['trade — read failed is not zero',     () => { ctx.UI._rdSum = null; return ctx.iamTradeBody(); }],
+  /**
+   * Channels on the profile. ⚠️ THE FIXTURE IS THE SERVER SHAPE, NOT A FLAT LIST. lib/channels.js returns a
+   * CATALOGUE OF TYPES each carrying its own bindings — and the first version of this feature read
+   * j.channels as though it were the rows, so the profile silently showed nothing. A test built on the same
+   * guess would have passed on the same mistake, which is why srvChannels() mirrors the real payload and the
+   * flattening is exercised rather than assumed.
+   */
   /* Channels on the profile — the OTHER half of "how is this store reached". A declared channel receives
      nothing, so it must never render as a working contact route. */
-  ['channels — one verified',             () => { ctx.UI._chans = [{channel:'whatsapp',address:'+919876543210',label:'Shop',status:'verified'}]; ctx.UI._chansLoaded = true; return ctx.iamMeHTML({ ...ENTITY, catalogue_visibility:'public' }); }],
-  ['channels — declared says so',         () => { ctx.UI._chans = [{channel:'whatsapp',address:'+919876543210',label:'Shop',status:'declared'}]; ctx.UI._chansLoaded = true; return ctx.iamMeHTML({ ...ENTITY, catalogue_visibility:'public' }); }],
+  ['channels — one verified',             () => { ctx.UI._chans = srvChannels([{channel:'whatsapp',address:'+919876543210',label:'Shop',status:'verified'}]); ctx.UI._chansLoaded = true; return ctx.iamMeHTML({ ...ENTITY, catalogue_visibility:'public' }); }],
+  ['channels — declared says so',         () => { ctx.UI._chans = srvChannels([{channel:'whatsapp',address:'+919876543210',label:'Shop',status:'declared'}]); ctx.UI._chansLoaded = true; return ctx.iamMeHTML({ ...ENTITY, catalogue_visibility:'public' }); }],
   ['channels — read failed is silent',    () => { ctx.UI._chans = null; ctx.UI._chansLoaded = true; return ctx.iamMeHTML(ENTITY); }],
   ['CBIdDocs.html — owner',                 () => ctx.CBIdDocs.html([], 'owner', { subject: 'act-1' })],
 ];

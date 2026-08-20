@@ -1649,7 +1649,19 @@ async function iamLoadChannels(){
   try {
     var r = await fetch(CFG.API_BASE + '/api/channels', { headers: { Authorization: 'Bearer ' + SESSION.token } });
     var j = r.ok ? await r.json() : null;
-    UI._chans = j ? (j.channels || j.rows || (Array.isArray(j) ? j : [])) : null;
+    /**
+     * ⚠️⚠️ THE BOUND ADDRESSES ARE IN channels[].bindings[], NOT channels[]. I wrote
+     *  from memory without reading lib/channels.js:  is the CATALOGUE OF
+     * CHANNEL TYPES (whatsapp · email · sms · web) and each type carries its own bindings. So the profile was
+     * rendering four type objects that have no address and no status — the same remembered-name mistake as
+     * SESSION.identity_type, applied to an API contract instead of a variable.
+     *
+     * ⭐ AN API SHAPE IS A NAME LIKE ANY OTHER: reading it costs one minute, guessing it costs a screen that
+     * silently shows nothing.
+     */
+    UI._chans = j && Array.isArray(j.channels)
+      ? j.channels.reduce(function(all, t){ return all.concat(t.bindings || []); }, [])
+      : null;
   } catch (_) { UI._chans = null; }
   renderApp(); _capShowDetail(); loadProfile();
 }
