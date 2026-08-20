@@ -101,8 +101,11 @@ var CBIdDocs = (function () {
      * missing looks like a bug rather than a rule.
      */
     var heading = function (t) {
-      return '<div style="font-size:var(--fs-1);text-transform:uppercase;letter-spacing:.05em;color:var(--grey);'
-        + 'font-weight:600;margin:0 0 6px">' + esc(t) + '</div>';
+      /* ⭐ THE SAME GROUP HEADING AS THE PROFILE — larger, ruled, rows indented beneath. Athi, 2026-08-20:
+       *"anywhere else if the treatment is different just complete those, so all looks similar."* This was the
+       old small-grey-uppercase treatment, which is what row LABELS wear. */
+    return '<div style="font-size:var(--fs-2);font-weight:700;color:var(--on-card);'
+        + 'margin:14px 0 6px;padding-bottom:4px;border-block-end:1px solid var(--line)">' + esc(t) + '</div>';
     };
 
     var rows;

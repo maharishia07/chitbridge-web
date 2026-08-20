@@ -1119,6 +1119,41 @@ function iamToggle(k){
   });
 }
 
+/**
+ * ⭐⭐ ONE ROW RENDERER FOR THE WHOLE PROFILE. Athi, 2026-08-20: *"anywhere else if the treatment is different
+ * just complete those, so all looks similar."*
+ *
+ * There were THREE shapes doing one job — idRow stacked the label above the value with a dashed rule,
+ * rowHtml put the label to the left, and each repeated the same uppercase-label styling inline. Three copies
+ * of a style is three places for it to drift, and it had: the same fact looked different depending on which
+ * section a reader was in.
+ *
+ * ⚠️ box() IS DELIBERATELY NOT FOLDED IN. Rights and Trade ready are a GRID OF INDEPENDENT FACTS — Athi asked
+ * for boxes there specifically (*"can we make it as boxes, with gaps, more presentable"*) — and a grid is a
+ * different thing from a list, not a different style for the same thing.
+ *
+ * Label left, value right, message BENEATH the value — his convention, once.
+ */
+function profRow(label, value, note, isHtml){
+  return '<div style="display:flex;gap:12px;align-items:flex-start;padding:5px 0">'
+    + '<b style="min-width:88px;flex:0 0 88px;font-size:var(--fs-1);color:var(--grey);text-transform:uppercase;'
+    + 'letter-spacing:.04em;line-height:1.7">' + esc(label) + '</b>'
+    + '<div style="flex:1;min-width:0">'
+      /* ⚠️ isHtml MEANS "THIS VALUE IS MARKUP" — the currency picker, and the employee login chip. Everything
+         else is escaped and stays escaped: raw HTML must be opted into deliberately. */
+      + '<div>' + (isHtml ? value : esc(value)) + '</div>'
+      + (note ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:1px;line-height:1.5">' + esc(note) + '</div>' : '')
+    + '</div></div>';
+}
+
+/** ⭐ And ONE group heading — larger, ruled, with its rows indented beneath it. */
+function profGroup(title, rowsHtml){
+  if (!rowsHtml) return '';
+  return '<div style="font-size:var(--fs-2);font-weight:700;color:var(--on-card);'
+    + 'margin:14px 0 6px;padding-bottom:4px;border-block-end:1px solid var(--line)">' + esc(title) + '</div>'
+    + '<div style="padding-inline-start:6px">' + rowsHtml + '</div>';
+}
+
 function iamMeHTML(e){
   var Q = String.fromCharCode(39);
   /* ⚠️ KICKED FROM THE RENDERER because this screen has no mount step — same as iamLoadDocs, same latch. */
@@ -1456,13 +1491,11 @@ function iamSelfEmployeeHTML(e){
    *
    * ⭐ THREE FACTS, ONE BLOCK, NO FORM. Nothing here is editable, so nothing here should look editable.
    */
-  var idRow = function(label, value, note){
-    return '<div style="padding:9px 0;border-bottom:1px dashed var(--line)">'
-      + '<div style="font-size:var(--fs-1);text-transform:uppercase;letter-spacing:.05em;color:var(--grey);font-weight:600">' + esc(label) + '</div>'
-      + '<div style="margin-top:2px">' + value + '</div>'
-      + (note ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px;line-height:1.5">' + esc(note) + '</div>' : '')
-      + '</div>';
-  };
+  /* ⚠️ idRow WAS ITS OWN SHAPE — label stacked ABOVE the value with a dashed rule, while Regional put the
+     label to the left. Same job, two looks, and a reader crossing between the employee profile and the
+     business profile met the same kind of fact dressed differently. It is profRow now; the value may be
+     markup here (the login chip), which is why the fourth argument is true. */
+  var idRow = function(label, value, note){ return profRow(label, value, note, true); };
 
   var who = idRow(tx('Name'), '<span style="font-size:var(--fs-3);font-weight:700">' + esc(e.display_name || '—') + '</span>',
                   tx('Set by your employer.'))
@@ -1940,18 +1973,8 @@ function iamGovernedRows(e){
  * anyway. Underneath, it costs nothing horizontally and reads in the order a person needs it: what it is,
  * then whose it is.
  */
-var rowHtml = function(x){
-  return '<div style="display:flex;gap:12px;align-items:flex-start;padding:5px 0">'
-    + '<b style="min-width:88px;flex:0 0 88px;font-size:var(--fs-1);color:var(--grey);text-transform:uppercase;'
-    + 'letter-spacing:.04em;line-height:1.7">' + esc(x[0]) + '</b>'
-    + '<div style="flex:1;min-width:0">'
-      /* ⚠️ x[3] MEANS "THIS VALUE IS MARKUP" — the currency picker, and nothing else so far. Every other row
-         is escaped and stays escaped: raw HTML must be opted into deliberately. */
-      + '<div>' + (x[3] ? x[1] : esc(x[1])) + '</div>'
-      + (x[2] ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:1px">' + esc(x[2]) + '</div>' : '')
-    + '</div>'
-    + '</div>';
-};
+/* ⭐ Regional rows go through the SAME renderer as every other profile row — see profRow. x[3] flags markup. */
+var rowHtml = function(x){ return profRow(x[0], x[1], x[2], !!x[3]); };
   /**
    * ⚠️ A HEADING MUST NOT LOOK LIKE A ROW LABEL. Athi, 2026-08-20: *"can you make indentation or size
    * difference or underline for the heading — some difference should be there between heading and text."*
@@ -1962,12 +1985,8 @@ var rowHtml = function(x){
    * are INDENTED under it. Contrast is already measured by a11y-contrast; hierarchy was not measured by
    * anything, which is why it drifted.
    */
-  var grp = function(title, list){
-    if (!list.length) return '';
-    return '<div style="font-size:var(--fs-2);font-weight:700;color:var(--on-card);'
-      + 'margin:14px 0 6px;padding-bottom:4px;border-block-end:1px solid var(--line)">' + esc(title) + '</div>'
-      + '<div style="padding-inline-start:6px">' + list.map(rowHtml).join('') + '</div>';
-  };
+  /* ⭐ and the SAME group heading — see profGroup. */
+  var grp = function(title, list){ return list.length ? profGroup(title, list.map(rowHtml).join('')) : ''; };
   return '<div>'
     /* ⚠️ THE IN-BLOCK 'Regional' HEADING WENT WITH THE PROMOTION — the section header says it now, and a
        title repeated immediately under itself reads as a rendering fault. */
