@@ -1732,7 +1732,33 @@ function iamGovernedRows(e){
     var r = CBLocale.regionInfo && CBLocale.regionInfo();
     rows.push(['Country', country || ((r && r.name) || 'Not set'), tx('Business')]);
   } catch (_) { if (country) rows.push(['Country', country, tx('Business')]); }
-  if (e && e.currency_code) rows.push(['Currency', e.currency_code, tx('Business')]);
+  /**
+   * ⚠️⚠️ CURRENCY AND TIME ZONE CAN CONTRADICT RIGHTS › BASICS, AND ATHI ASKED THE RIGHT QUESTION.
+   *
+   * Basics resolves currency, timezone and region from the INSTALLATION, bounded by the constitution
+   * (lib/govresolve.js). Regional read them from the ENTITY ROW. Two sources, one word.
+   *
+   * ⚠️ AND identities.currency_code IS  WITH NOTHING IN THE APP EVER WRITING IT — no control,
+   * no update path. So it is not the business's choice; it is an unset column showing a default. On any
+   * non-INR installation the two screens disagree TODAY: Basics says AED, Regional says INR.
+   *
+   * ⭐ THE FIX IS THE RULE THIS SCREEN ALREADY FOLLOWS — one owner per fact. The governed value is the answer
+   * unless this entity has explicitly chosen otherwise, and the message column says WHICH, so a reader is
+   * never left comparing two numbers with no way to know which governs.
+   */
+  /**
+   * ⚠️⚠️ THE GOVERNED VALUE WINS, AND MY FIRST ATTEMPT HAD IT BACKWARDS. I preferred the entity column and fell
+   * back to governance — which never fires, because identities.currency_code is . The column
+   * is ALWAYS truthy, so a UAE installation still showed INR beside Basics saying AED: the contradiction
+   * Athi asked about, with a comment on top explaining it was fixed.
+   *
+   * ⭐ THE COLUMN CANNOT EXPRESS "NOT CHOSEN" — a default that is a real value is indistinguishable from a
+   * decision. And nothing in the app ever WRITES it: there is no control, no update path. So it is not a
+   * choice today, and the governed value is the answer until something makes it one.
+   */
+  var gb = (e && e.governance && e.governance.basics) || {};
+  var curr = gb.currency || (e && e.currency_code) || null;
+  if (curr) rows.push(['Currency', curr, gb.currency ? tx('Set above you') : tx('Business')]);
   /**
    * ⚠️⚠️ THE ZONE IS THE BUSINESS'S, AND THE READER'S IS THE FALLBACK — NOT THE OTHER WAY ROUND.
    * Athi, 2026-08-20: *"how come it is mine? It is entity's timezone and currency, country, clock."* He is
@@ -1745,7 +1771,11 @@ function iamGovernedRows(e){
    */
   var bizTz = (e && e.timezone) || null;
   try {
+    /* ⚠️ SAME THREE-WAY ANSWER AS CURRENCY: the entity's own zone if b176 gave it one, else the governed zone
+       from the installation, else this device — each labelled, so Rights and Regional can never look like two
+       opinions about one fact. */
     if (bizTz) rows.push(['Time zone', bizTz, tx('Business')]);
+    else if (gb.timezone) rows.push(['Time zone', gb.timezone, tx('Set above you')]);
     else if (CBLocale.timezone) rows.push(['Time zone', CBLocale.timezone(), tx('Your device — not set for the business')]);
     /* ⚠️ A LIVE EXAMPLE, so a wrong setting is obvious rather than encoded. */
     /* ⚠️ THE TIMESTAMP FORMAT IS STILL THE READER'S, AND SAYING OTHERWISE WOULD BE A LIE. b176 stores the

@@ -102,6 +102,12 @@ const CASES = [
    */
   ['hints — closed sections still answer', () => { ctx.UI._chans = srvChannels([{channel:'whatsapp',address:'+91',label:'S',status:'verified'}]); ctx.UI._chansLoaded = true; ctx.UI._iamOpen = {}; const h = ctx.iamMeHTML({ ...ENTITY, country:'India', currency_code:'INR', catalogue_visibility:'public' }); if (h.indexOf('India · INR') < 0) throw new Error('Business hint missing country/currency'); if (h.indexOf('1 bound') < 0) throw new Error('Channels hint missing the count'); return h; }],
   ['channels — none yet still shows',      () => { ctx.UI._chans = []; ctx.UI._chansLoaded = true; ctx.UI._iamOpen = { channels: true }; const h = ctx.iamMeHTML({ ...ENTITY, catalogue_visibility:'public' }); if (h.indexOf('no channel yet') < 0) throw new Error('empty state hidden'); return h; }],
+  /**
+   * ⚠️ REGIONAL MUST NOT CONTRADICT RIGHTS › BASICS. Both name a currency and a time zone; Basics resolves
+   * them from the INSTALLATION and Regional used to read the entity column — which is DEFAULT 'INR' and never
+   * written, so a UAE installation showed AED on one section and INR on the other. The governed value wins.
+   */
+  ['regional — governed currency beats the column default', () => { ctx.UI._iamOpen = { regional: true }; const h = ctx.iamMeHTML({ ...ENTITY, country:'AE', currency_code:'INR', governance:{ basics:{ currency:'AED', timezone:'Asia/Dubai' } } }); if (h.indexOf('AED') < 0) throw new Error('governed currency did not win'); if (h.indexOf('>INR<') >= 0) throw new Error('stale column default still shown'); return h; }],
   ['iamSelfEmployeeHTML — commenter',       () => ctx.iamSelfEmployeeHTML(ACTOR)],
   ['iamSelfEmployeeHTML — editor + reach',  () => ctx.iamSelfEmployeeHTML({ ...ACTOR, access_level: 'editor', whole_entity: true, can_see_costs: true })],
   ['CBIdDocs.html — self, empty',           () => ctx.CBIdDocs.html([], 'self')],
