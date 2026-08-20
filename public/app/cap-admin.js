@@ -1692,14 +1692,49 @@ function iamGovernedRows(e){
     rows.push(['Country', country || ((r && r.name) || 'Not set'), tx('Business')]);
   } catch (_) { if (country) rows.push(['Country', country, tx('Business')]); }
   if (e && e.currency_code) rows.push(['Currency', e.currency_code, tx('Business')]);
+  /**
+   * ⚠️⚠️ THE ZONE IS THE BUSINESS'S, AND THE READER'S IS THE FALLBACK — NOT THE OTHER WAY ROUND.
+   * Athi, 2026-08-20: *"how come it is mine? It is entity's timezone and currency, country, clock."* He is
+   * right, and the code could not say so: identities had no timezone until b176. A chit is a shared record —
+   * "received 19:00" must mean one instant with one reading inside a business, or two colleagues discussing
+   * the same chit are discussing different times.
+   *
+   * ⚠️ WHEN b176 HAS NOT RUN, OR NOBODY HAS PICKED ONE, IT SAYS SO. Showing the reader's zone under a
+   * "Business" label would be the original mistake with a better label on it.
+   */
+  var bizTz = (e && e.timezone) || null;
   try {
-    if (CBLocale.timezone) rows.push(['Time zone', CBLocale.timezone(), tx('Yours')]);
+    if (bizTz) rows.push(['Time zone', bizTz, tx('Business')]);
+    else if (CBLocale.timezone) rows.push(['Time zone', CBLocale.timezone(), tx('Your device — not set for the business')]);
     /* ⚠️ A LIVE EXAMPLE, so a wrong setting is obvious rather than encoded. */
-    if (CBLocale.datetime) rows.push(['Timestamp', CBLocale.datetime(Date.now()), tx('Yours')]);
+    /* ⚠️ THE TIMESTAMP FORMAT IS STILL THE READER'S, AND SAYING OTHERWISE WOULD BE A LIE. b176 stores the
+       business's ZONE; every date on every screen still renders through CBLocale. Redirecting that is a
+       deliberate change across the whole app, not a side effect of adding a column — so the label states what
+       is true today rather than what the design intends. */
+    if (CBLocale.datetime) rows.push(['Timestamp', CBLocale.datetime(Date.now()), tx('How you read it')]);
+    /* ⭐ NUMBERS, AS AN EXAMPLE FOR THE SAME REASON AS THE TIMESTAMP. India groups 12,34,56,789 and the US
+       groups 123,456,789 — a reader recognises their own grouping instantly and would have to decode
+       'en-IN'. Athi: *"number system also."* */
+    if (CBLocale.number) rows.push(['Numbers', CBLocale.number(12345678.9), tx('How you read it')]);
+    else if (CBLocale.locale) rows.push(['Numbers', (12345678.9).toLocaleString(CBLocale.locale()), tx('How you read it')]);
   } catch (_) { /* locale layer absent — show what we have rather than nothing */ }
 
   if (!rows.length) return '';
+  /**
+   * ⭐⭐ THE GROUP IS CALLED "REGIONAL". Athi, 2026-08-20: *"that group, how do we call it? Any industry
+   * standard name for it, other than locale?"*
+   *
+   * LOCALE is the engineering word — POSIX, CLDR, ICU, Intl — and it is precise, which is why it is in the
+   * code and not on the screen. REGIONAL is what the same set is called wherever a person meets it: Windows
+   * "Region and language", macOS "Language & Region", Android "Regional preferences". A word people have
+   * already learned somewhere else costs nothing to learn here.
+   *
+   * Rejected: "Jurisdiction" (already means the governance layer in this product — a collision), "Formatting
+   * conventions" (CLDR's own phrase, and four syllables of nobody's vocabulary), "Territory" (CLDR's word
+   * for the country alone, so it under-names the group).
+   */
   return '<div style="margin-top:12px;padding-top:10px;border-block-start:1px solid var(--line)">'
+    + '<div style="font-size:var(--fs-1);text-transform:uppercase;letter-spacing:.05em;color:var(--grey);font-weight:600;margin-bottom:5px">' + tx('Regional') + '</div>'
     + rows.map(function(x){
         return '<div style="display:flex;gap:10px;align-items:baseline;padding:3px 0">'
           + '<b style="min-width:92px;font-size:var(--fs-1);color:var(--grey);text-transform:uppercase;letter-spacing:.04em">' + esc(x[0]) + '</b>'
