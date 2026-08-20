@@ -44,7 +44,10 @@ const sandbox = {
      would let the block render two rows instead of four and still pass — the test would be measuring the stub. */
   CBLocale: { region: () => 'IN', regionInfo: () => ({ name: 'India' }),
               timezone: () => 'Asia/Calcutta', datetime: () => '20 Aug 2026, 5:45 pm',
-              number: (n) => '1,23,45,678.9', locale: () => 'en-IN' },
+              number: (n) => '1,23,45,678.9', locale: () => 'en-IN',
+              /* ⚠️ langs/lang/dir ARE REQUIRED by the "How you read it" group. A stub without them renders two
+                 rows instead of five and passes — the fourth time today a test would have measured the stub. */
+              langs: () => ['ta', 'hi', 'en'], lang: () => 'ta', dir: () => 'ltr' },
   ACCESS_LABEL: { viewer: 'Viewer', commenter: 'Commenter', editor: 'Editor' },
   ACCESS_CHOICES: [['editor', 'Editor'], ['commenter', 'Commenter'], ['viewer', 'Viewer']],
   accessLevelOf: () => 'editor', hatLabel: () => 'Editor', hatAssignable: () => true,
@@ -108,6 +111,10 @@ const CASES = [
    * written, so a UAE installation showed AED on one section and INR on the other. The governed value wins.
    */
   ['regional — governed currency beats the column default', () => { ctx.UI._iamOpen = { regional: true }; const h = ctx.iamMeHTML({ ...ENTITY, country:'AE', currency_code:'INR', governance:{ basics:{ currency:'AED', timezone:'Asia/Dubai' } } }); if (h.indexOf('AED') < 0) throw new Error('governed currency did not win'); if (h.indexOf('>INR<') >= 0) throw new Error('stale column default still shown'); return h; }],
+  ['regional — two groups, language chain, derived direction', () => { ctx.UI._iamOpen = { regional: true }; const h = ctx.iamMeHTML({ ...ENTITY, country:'India', currency_code:'INR', timezone:'Asia/Kolkata' }); ['How you read it','Language','Reads','Timestamp','Numbers'].forEach(function(w){ if (h.indexOf(w) < 0) throw new Error('missing: ' + w); }); return h; }],
+  /* ⚠️ THE FLAG MUST FOLLOW THE ENTITY, NOT THE READER. The first version used regionInfo().code and showed a
+     UAE business the Indian flag. The stub reader is IN, so this case only passes if the entity wins. */
+  ['regional — flag follows the entity, not the reader', () => { ctx.UI._iamOpen = { regional: true }; const h = ctx.iamMeHTML({ ...ENTITY, country:'AE', currency_code:'AED' }); if (h.indexOf(String.fromCodePoint(127462,127466)) < 0) throw new Error('UAE flag missing'); if (h.indexOf(String.fromCodePoint(127470,127475)) >= 0) throw new Error("reader's IN flag leaked onto an AE entity"); return h; }],
   ['iamSelfEmployeeHTML — commenter',       () => ctx.iamSelfEmployeeHTML(ACTOR)],
   ['iamSelfEmployeeHTML — editor + reach',  () => ctx.iamSelfEmployeeHTML({ ...ACTOR, access_level: 'editor', whole_entity: true, can_see_costs: true })],
   ['CBIdDocs.html — self, empty',           () => ctx.CBIdDocs.html([], 'self')],

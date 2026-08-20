@@ -1724,14 +1724,64 @@ async function iamLoadChannels(){
  * ⚠️ THE TIMESTAMP IS SHOWN AS AN EXAMPLE, NOT A FORMAT CODE. "en-IN" tells a reader nothing; the current
  * moment rendered the way their chits will be is the same fact, legible.
  */
+/* ⚠️ A CODE IS NOT A LANGUAGE TO A READER. "ta" tells a person nothing; the endonym tells them everything,
+   and seeing their own script is how they confirm the setting took. */
+var _LANG_NAME = { en:'English', hi:'हिन्दी', ta:'தமிழ்', ar:'العربية', fr:'Français' };
+function _langName(l){ var n = _LANG_NAME[l]; return n ? (n + ' (' + l + ')') : String(l || ''); }
+
+/**
+ * ⭐ A FLAG AND A SYMBOL, BOTH DERIVED — no asset, no lookup table to fall out of date. Athi, 2026-08-20:
+ * *"under currency, we are not showcasing the currency symbol, country flag etc? Can we."*
+ *
+ * The flag is the ISO-3166 code as regional-indicator codepoints: IN → 🇮🇳. Any country that exists has one,
+ * automatically, including ones added after this line was written.
+ *
+ * ⚠️⚠️ AND ON WINDOWS IT WILL RENDER AS "IN", NOT A FLAG. Windows ships no colour flag glyphs, so Chrome draws
+ * the two letters — which is why this is an ADDITION beside the name and never a replacement for it. A flag
+ * that silently degrades to a country code is fine; a flag REPLACING the code would show Athi two letters
+ * where he expected a picture and nothing where he expected the code.
+ */
+function _flag(cc){
+  var c = String(cc || '').trim().toUpperCase();
+  if (!/^[A-Z]{2}$/.test(c)) return '';   // only a 2-letter ISO code makes a flag; "India" does not
+  try { return c.replace(/./g, function(ch){ return String.fromCodePoint(127397 + ch.charCodeAt(0)); }); }
+  catch (_) { return ''; }
+}
+
+/**
+ * ⚠️ NOT EVERY CURRENCY HAS A SYMBOL, and Intl says so honestly — AED formats as "AED". When the symbol IS the
+ * code there is nothing to add, so nothing is added rather than printing "AED AED".
+ */
+function _curSym(cur){
+  try {
+    var p = new Intl.NumberFormat(CBLocale.locale ? CBLocale.locale() : 'en', { style: 'currency', currency: cur }).formatToParts(1);
+    var c = p.find(function(x){ return x.type === 'currency'; });
+    return (c && c.value && c.value !== cur) ? c.value : '';
+  } catch (_) { return ''; }
+}
+
 function iamGovernedRows(e){
   var rows = [];
   var Q = String.fromCharCode(39);
   var country = (e && e.country) || null;
   try {
     var r = CBLocale.regionInfo && CBLocale.regionInfo();
-    rows.push(['Country', country || ((r && r.name) || 'Not set'), tx('Business')]);
-  } catch (_) { if (country) rows.push(['Country', country, tx('Business')]); }
+    /* ⚠️ THE FLAG IS APPENDED, NEVER SUBSTITUTED — on Windows it renders as two letters, so the name must
+       still be there. A flag that degrades to a country code is fine; one that REPLACES the name shows a
+       reader two letters where they expected a picture and nothing where they expected the name. */
+    /**
+     * ⚠️⚠️ THE ENTITY'S COUNTRY, NEVER THE READER'S REGION. My first version preferred regionInfo().code — which
+     * is the READER's region — so a UAE business showed the INDIAN flag to an Indian reader. The third time
+     * today that a reader-side locale value was used for an entity-side fact, and the most visibly wrong:
+     * currency and time zone disagree quietly, a flag disagrees in colour.
+     *
+     * ⭐ AND NO FLAG IS BETTER THAN THE WRONG FLAG. If the entity's country is stored as a NAME ("India") there
+     * is no code to derive from, so nothing is drawn — borrowing the reader's would be inventing a fact about
+     * someone else's business.
+     */
+    var _cc = (country && String(country).length === 2) ? country : null;
+    rows.push(['Country', ((country || (r && r.name) || 'Not set') + ' ' + _flag(_cc)).trim(), '']);
+  } catch (_) { if (country) rows.push(['Country', country, '']); }
   /**
    * ⚠️⚠️ CURRENCY AND TIME ZONE CAN CONTRADICT RIGHTS › BASICS, AND ATHI ASKED THE RIGHT QUESTION.
    *
@@ -1798,9 +1848,11 @@ function iamGovernedRows(e){
     /* ⚠️ LABELLED BY WHERE THE VALUE CAME FROM, not by whether a list exists. With no allowed set the governed
        value wins — and calling that "Business" was the original lie in a new place. */
     var fromGov = (curr === gb.currency && curr !== stored) || (!stored && !!gb.currency);
-    rows.push(['Currency', curr,
+    /* ⭐ SYMBOL BESIDE THE CODE — '₹ INR'. The code is what a system needs; the symbol is what a person
+       recognises. Neither replaces the other, and not every currency has one (AED formats as AED). */
+    rows.push(['Currency', ((_curSym(curr) ? _curSym(curr) + ' ' : '') + curr),
       outside ? txf('{cur} no longer permitted', { cur: stored })
-              : (fromGov ? tx('Set above you') : tx('Business'))]);
+              : (fromGov ? tx('Set above you') : '')]);   /* ⚠️ blank where the GROUP HEADING already says it — the message column is for exceptions only */
   }
   /**
    * ⚠️⚠️ THE ZONE IS THE BUSINESS'S, AND THE READER'S IS THE FALLBACK — NOT THE OTHER WAY ROUND.
@@ -1817,7 +1869,7 @@ function iamGovernedRows(e){
     /* ⚠️ SAME THREE-WAY ANSWER AS CURRENCY: the entity's own zone if b176 gave it one, else the governed zone
        from the installation, else this device — each labelled, so Rights and Regional can never look like two
        opinions about one fact. */
-    if (bizTz) rows.push(['Time zone', bizTz, tx('Business')]);
+    if (bizTz) rows.push(['Time zone', bizTz, '']);
     else if (gb.timezone) rows.push(['Time zone', gb.timezone, tx('Set above you')]);
     else if (CBLocale.timezone) rows.push(['Time zone', CBLocale.timezone(), tx('Your device — not set for the business')]);
     /* ⚠️ A LIVE EXAMPLE, so a wrong setting is obvious rather than encoded. */
@@ -1825,12 +1877,30 @@ function iamGovernedRows(e){
        business's ZONE; every date on every screen still renders through CBLocale. Redirecting that is a
        deliberate change across the whole app, not a side effect of adding a column — so the label states what
        is true today rather than what the design intends. */
-    if (CBLocale.datetime) rows.push(['Timestamp', CBLocale.datetime(Date.now()), tx('How you read it')]);
+    /**
+     * ⭐⭐ LANGUAGE AND DIRECTION JOIN THIS GROUP. Athi, 2026-08-20: *"under regional, language and read
+     * right-to-left or left-to-right settings, under 'how you read it' title — the title can be separate so it
+     * can show the preferred language, 1, 2 and 3."*
+     *
+     * ⚠️ DIRECTION IS NOT A SETTING, IT IS A CONSEQUENCE. CBLocale.dir() derives it from the language via
+     * Intl.Locale.getTextInfo — Arabic reads right-to-left because it is Arabic, not because someone ticked a
+     * box. Offering it as a choice would let a person set a combination no language on earth uses, which is
+     * the same reasoning that keeps number grouping tied to the region.
+     *
+     * ⭐ AND THE ORDER IS THE MEANING. 1, 2, 3 is a fallback chain (RFC 4647): show me Tamil, else Hindi, else
+     * English. Rendering them as an unordered list would lose the only thing that distinguishes them.
+     */
+    var _langs = (CBLocale.langs ? CBLocale.langs() : [CBLocale.lang && CBLocale.lang()]).filter(Boolean);
+    _langs.forEach(function(l, i){
+      rows.push([(i === 0 ? tx('Language') : ' ') + ' ' + (i + 1), _langName(l), (i === 0 ? tx('first choice') : tx('then')), false, 'read']);
+    });
+    if (CBLocale.dir) rows.push(['Reads', CBLocale.dir() === 'rtl' ? tx('right to left') : tx('left to right'), tx('follows the language'), false, 'read']);
+    if (CBLocale.datetime) rows.push(['Timestamp', CBLocale.datetime(Date.now()), '', false, 'read']);
     /* ⭐ NUMBERS, AS AN EXAMPLE FOR THE SAME REASON AS THE TIMESTAMP. India groups 12,34,56,789 and the US
        groups 123,456,789 — a reader recognises their own grouping instantly and would have to decode
        'en-IN'. Athi: *"number system also."* */
-    if (CBLocale.number) rows.push(['Numbers', CBLocale.number(12345678.9), tx('How you read it')]);
-    else if (CBLocale.locale) rows.push(['Numbers', (12345678.9).toLocaleString(CBLocale.locale()), tx('How you read it')]);
+    if (CBLocale.number) rows.push(['Numbers', CBLocale.number(12345678.9), '', false, 'read']);
+    else if (CBLocale.locale) rows.push(['Numbers', (12345678.9).toLocaleString(CBLocale.locale()), '', false, 'read']);
   } catch (_) { /* locale layer absent — show what we have rather than nothing */ }
 
   if (!rows.length) return '';
@@ -1849,10 +1919,19 @@ function iamGovernedRows(e){
    */
   /* ⚠️ NO TOP RULE OR MARGIN NOW — those separated it from the licence rows it used to sit under. A section
      already has its own frame, and a divider inside one reads as a second, emptier section. */
-  return '<div>'
-    /* ⚠️ THE IN-BLOCK 'Regional' HEADING WENT WITH THE PROMOTION — the section header says it now, and a
-       title repeated immediately under itself reads as a rendering fault. */
-    + rows.map(function(x){
+  /**
+   * ⭐⭐ TWO TITLED GROUPS, NOT A SOURCE COLUMN ON EVERY ROW. Athi, 2026-08-20: *"under 'how you read it'
+   * title — the title can be separate."*
+   *
+   * The message column was doing a heading's job one row at a time: "Business, Business, Business, How you
+   * read it, How you read it". A heading says it once and groups what it governs, which is what a person is
+   * actually scanning for — whose fact is this, and can I change it.
+   *
+   * ⚠️ THE PER-ROW MESSAGE SURVIVES WHERE IT SAYS SOMETHING THE HEADING CANNOT — "Set above you" on a currency
+   * the layer chose, "no longer permitted" on one it has withdrawn, "first choice / then" on the language
+   * chain. A heading cannot carry an exception.
+   */
+var rowHtml = function(x){
         return '<div style="display:flex;gap:10px;align-items:baseline;padding:3px 0">'
           + '<b style="min-width:92px;font-size:var(--fs-1);color:var(--grey);text-transform:uppercase;letter-spacing:.04em">' + esc(x[0]) + '</b>'
           /* ⚠️ x[3] MEANS "THIS VALUE IS MARKUP" — the currency picker, and nothing else so far. Every other
@@ -1861,7 +1940,18 @@ function iamGovernedRows(e){
           + '<span style="flex:1">' + (x[3] ? x[1] : esc(x[1])) + '</span>'
           + '<span style="color:var(--grey);font-size:var(--fs-1)">' + esc(x[2]) + '</span>'
           + '</div>';
-      }).join('')
+};
+  var grp = function(title, list){
+    if (!list.length) return '';
+    return '<div style="font-size:var(--fs-1);text-transform:uppercase;letter-spacing:.05em;color:var(--grey);'
+      + 'font-weight:600;margin:10px 0 4px">' + esc(title) + '</div>'
+      + list.map(rowHtml).join('');
+  };
+  return '<div>'
+    /* ⚠️ THE IN-BLOCK 'Regional' HEADING WENT WITH THE PROMOTION — the section header says it now, and a
+       title repeated immediately under itself reads as a rendering fault. */
+    + grp(tx('Business'), rows.filter(function(r){ return r[4] !== 'read'; }))
+    + grp(tx('How you read it'), rows.filter(function(r){ return r[4] === 'read'; }))
     /* ⭐ ONE LINK OUT, NOT FOUR. Athi: *"we can take them to settings to change it."* */
     + '<div style="margin-top:7px"><a href="#" onclick="navTo(' + Q + 'settings' + Q + ');setSetSec(' + Q + 'locale' + Q + ');return false"'
     +   ' style="color:var(--blue);font-size:var(--fs-1)">' + tx('Change in Localisation') + ' <span class=arw>→</span></a></div>'
