@@ -1208,7 +1208,22 @@ function iamMeHTML(e){
    * catalogue outright (IAM-SPEC §12). A backend fix that leaves a contradicting sentence on the screen has
    * moved the bug rather than fixed it.
    */
-  var live = (st !== 'closed') && vis !== 'private';
+  /**
+   * ⭐⭐ IS THERE A STOREFRONT AT ALL. Everything in this section follows from this one boolean — the link, the
+   * customer-access mode, and the network line. That is the coupling Athi named: *"both should work together —
+   * when no link, why do you need browse first?"*
+   *
+   * ⚠️⚠️ AND A NETWORK WITH NOTHING PUBLISHED UNDER IT IS NOT LIVE. *"By default it is a PRIVATE network, so no
+   * storefront. But if you have any store under you is public, then the storefront will be public."* Without
+   * this clause the screen offered a link for a network whose every member was private — a link that opens an
+   * empty shop, which is the false affordance this whole section keeps being fixed for.
+   *
+   * ⚠️ `== null` IS DELIBERATE: it catches undefined AND null — a server that could not take the count, and an
+   * older API that does not send one. Neither is evidence that the network is empty, so neither hides the
+   * link. Only a real zero does.
+   */
+  var live = (st !== 'closed') && vis !== 'private'
+          && !(vis === 'network' && e.network_public_count === 0);
 
   /**
    * ⭐⭐ TWO CONTROLS, ADJACENT, AND NOTHING ELSE. The resolved sentence is gone: it restated in prose what the
@@ -1240,15 +1255,49 @@ function iamMeHTML(e){
      * vs login-first), a real setting with no other home. Deleting the panel without carrying this across is
      * the same failure as the localisation rows an hour ago: not removed on purpose, left behind by a regroup.
      */
-    + '<label class="fl">' + tx('Customers') + '</label>'
+    /**
+     * ⚠️⚠️ THE CUSTOMER-ACCESS MODE ONLY EXISTS WHILE THERE IS A STOREFRONT. Athi, 2026-08-20: *"private, link
+     * is gone, but browse-first window is visible — both should work together. When no link, why do you need
+     * browse first?"*
+     *
+     * ⭐ THAT IS A COUPLING, AND IT IS THE ONE THE LINK ALREADY OBEYS. "Browse first or sign in first" answers
+     * a question about people arriving at a shop; with no shop nobody arrives, and the control sets a rule for
+     * a situation that cannot occur. Two controls describing one thing must appear and vanish together, or the
+     * screen says the shop is shut and in the next line asks how visitors should enter it.
+     *
+     * ⚠️ DROPPED FROM THE DOM, NOT DISABLED — which also puts it beyond PROF_FIELDS, so the per-section Save
+     * cannot send an access mode for a storefront that does not exist. Registered in C:\dev\INVARIANTS.md.
+     */
     /* ⚠️ BUILT INLINE — opt() takes a flat value list, and there is no label/value variant. I wrote `opt2(...)`
        from memory and it does not exist anywhere: the sixth invented name today, and the only one caught
        before it shipped, because I checked instead of assuming. */
-    + '<select class="inp" id="pf_sfaccess" style="max-width:320px">'
-    +   [['browse', tx('Browse first')], ['login', tx('Sign in first')]].map(function(o){
-          return '<option value="' + esc(o[0]) + '"' + ((e.storefront_access || 'browse') === o[0] ? ' selected' : '') + '>' + esc(o[1]) + '</option>';
-        }).join('')
-    + '</select>'
+    + (live
+        ? '<label class="fl">' + tx('Customers') + '</label>'
+          + '<select class="inp" id="pf_sfaccess" style="max-width:320px">'
+          +   [['browse', tx('Browse first')], ['login', tx('Sign in first')]].map(function(o){
+                return '<option value="' + esc(o[0]) + '"' + ((e.storefront_access || 'browse') === o[0] ? ' selected' : '') + '>' + esc(o[1]) + '</option>';
+              }).join('')
+          + '</select>'
+        : '')
+
+    /**
+     * ⭐ THE NETWORK ANSWER IS DERIVED, NOT STORED. Athi, 2026-08-20: *"if you change the option to network, by
+     * default it is a PRIVATE network, so no storefront. But if you have any store under you is public, then
+     * the storefront will be public. This way we are avoiding another status field."*
+     *
+     * ⭐⭐ A PRIVATE NETWORK NEEDS NO FLAG — it is a network where nobody has published. The question already
+     * has an answer in the data, and a second stored answer beside it is two facts that can disagree.
+     *
+     * ⚠️ null IS NOT ZERO. The server sends null when the count could not be taken; "nothing under you is
+     * public" is a definite statement and this is the absence of one, so the line simply does not appear.
+     */
+    + (vis === 'network' && e.network_public_count != null
+        ? '<div class="kv" style="margin-top:9px"><b>' + tx('Network') + '</b> · '
+          + (e.network_public_count > 0
+              ? esc(txf('{n} store(s) under you are public', { n: e.network_public_count }))
+              : '<span style="color:var(--grey)">' + tx('nothing under you is public') + '</span>')
+          + '</div>'
+        : '')
 
     + '<div class="kv" style="margin-top:11px"><b>' + tx('Link') + '</b> · '
     +   (live && (e.user_id || e.bridge_id)
