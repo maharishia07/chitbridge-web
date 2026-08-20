@@ -1266,57 +1266,62 @@ function iamSelfEmployeeHTML(e){
   var lvl   = accessLevelOf(e);
   var login = (e.actor_key && e.parent_user_id) ? (e.actor_key + "@" + e.parent_user_id) : null;
 
-  /* ── 1 · WHO YOU ARE ──────────────────────────────────────────────────────────────────────────────── */
-  var who = '<label class="fl">' + tx("Name") + ' <span style="color:var(--grey);font-weight:400;font-size:var(--fs-1)">— ' + tx("what colleagues see") + '</span></label>'
-    + '<input class="inp" id="pf_name" value="' + esc(e.display_name || "") + '">'
-    + '<div style="margin-top:12px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--paper);color:var(--on-bg)">'
-    +   '<div style="font-size:var(--fs-1);text-transform:uppercase;letter-spacing:.05em;color:var(--grey);font-weight:600">' + tx("Your login") + '</div>'
-    +   (login
-          ? '<div class="mono" style="font-size:var(--fs-3);color:var(--gold);margin-top:2px">' + esc(login) + '</div>'
-          : '<div class="mono" style="font-size:var(--fs-2);color:var(--grey);margin-top:2px">' + esc(e.actor_key || "—") + '</div>')
-    +   '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:5px;line-height:1.5">'
-    +     tx("Your key, then your employer's User ID. It is issued with your account and cannot be changed.")
-    +   '</div></div>'
-    + '<div class="kv" style="margin-top:10px"><b>' + tx("Bridge ID") + '</b> · <span class="mono">' + esc(e.bridge_id || "") + '</span></div>';
+  /**
+   * ── 1 · WHO YOU ARE — name, login, access level. ALL READ-ONLY. ───────────────────────────────────────
+   *
+   * ⭐⭐ Athi, 2026-08-20: *"the access the employee cannot change, it should be done by entity and it should
+   * be visible here as part of WHO YOU ARE — name, id, and access level."*
+   *
+   * ⚠️ THE NAME WAS AN EDITABLE INPUT AND IS NOT ANY MORE. It sits in the list of things Athi called visible,
+   * beside two facts nobody disputes are the entity's; and the external name a counterparty sees is
+   * key@business — Display Name, so a person who could rename themselves freely could present as someone
+   * else to the other side of a trade. ⚠️ ASSUMPTION FLAGGED: if an employee should be able to change their
+   * own display name, this is the line to change, and the API needs a matching route — /actors/:id is
+   * entity-only today, so an input here would have been refused anyway.
+   *
+   * ⭐ THREE FACTS, ONE BLOCK, NO FORM. Nothing here is editable, so nothing here should look editable.
+   */
+  var idRow = function(label, value, note){
+    return '<div style="padding:9px 0;border-bottom:1px dashed var(--line)">'
+      + '<div style="font-size:var(--fs-1);text-transform:uppercase;letter-spacing:.05em;color:var(--grey);font-weight:600">' + esc(label) + '</div>'
+      + '<div style="margin-top:2px">' + value + '</div>'
+      + (note ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px;line-height:1.5">' + esc(note) + '</div>' : '')
+      + '</div>';
+  };
 
-  /* ── 2 · YOUR ACCESS ─────────────────────────────────────────────────────────────────────────────── */
-  /* ⭐ THE OTHER LEVELS ARE SHOWN, NOT JUST YOURS. "Commenter" alone answers nothing — a level is a position
-     on a scale, and without the scale a person cannot tell whether to ask for a different one. */
-  var ladder = ACCESS_CHOICES.map(function(c){
-    var on = c[0] === lvl;
-    return '<div style="display:flex;gap:9px;align-items:flex-start;padding:8px 10px;border-radius:8px;'
-      /* ⚠️ NAMES ITS INK BECAUSE IT PAINTS ITS GROUND. A surface that sets a background and inherits its text
-         colour is the bug that made the avatar menu unreadable in every light theme; guard check 11 caught
-         this one the same way, one run after it was written. */
-      + (on ? 'background:var(--blue-tint-bg);color:var(--on-card);border:2px solid var(--blue)' : 'border:2px solid transparent') + '">'
-      + '<span style="font-size:var(--fs-2);line-height:1.4;color:' + (on ? 'var(--blue)' : 'var(--grey)') + '">' + (on ? "●" : "○") + '</span>'
-      + '<span style="font-size:var(--fs-2);line-height:1.45;font-weight:' + (on ? 700 : 400) + ';color:' + (on ? 'var(--on-card)' : 'var(--grey)') + '">'
-      + esc(c[1]) + (on ? ' <span style="font-weight:600;color:var(--blue)">— ' + tx("you") + '</span>' : '') + '</span></div>';
-  }).join("");
+  var who = idRow(tx('Name'), '<span style="font-size:var(--fs-3);font-weight:700">' + esc(e.display_name || '—') + '</span>',
+                  tx('Set by your employer.'))
+    + idRow(tx('Your login'),
+            login ? '<span class="mono" style="font-size:var(--fs-3);color:var(--gold)">' + esc(login) + '</span>'
+                  : '<span class="mono" style="color:var(--grey)">' + esc(e.actor_key || '—') + '</span>',
+            tx('Your key, then your employer\'s User ID. Issued with your account and cannot be changed.'))
+    + idRow(tx('Access'),
+            '<span class="optchip" style="background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)">'
+              + esc(ACCESS_LABEL[lvl] || lvl) + '</span>'
+            + (e.whole_entity === true  ? ' <span class="optchip">' + tx('Whole business') + '</span>' : '')
+            + (e.can_see_costs === true ? ' <span class="optchip">' + tx('Sees costs') + '</span>' : ''),
+            tx('Only your employer can change this.'))
+    + '<div class="kv" style="margin-top:9px"><b>' + tx('Bridge ID') + '</b> · <span class="mono">' + esc(e.bridge_id || '') + '</span></div>';
 
-  var flags = [];
-  if (e.whole_entity === true)  flags.push(tx("Sees the whole business"));
-  if (e.can_see_costs === true) flags.push(tx("Can see costs"));
-
-  var access = ladder
-    + (flags.length ? '<div class="kv" style="margin-top:9px"><b>' + tx("Also granted") + '</b> · ' + esc(flags.join(" · ")) + '</div>' : "")
-    + '<div class="misnote" style="margin-top:10px;line-height:1.5">'
-    +   tx("Only the account owner can change this. Ask them if you need different access.")
-    + '</div>';
-
-  /* ── 3 · YOUR IDENTITY RECORD ────────────────────────────────────────────────────────────────────────
+  /**
+   * ── 2 · YOUR IDENTITY RECORD ─────────────────────────────────────────────────────────────────────────
+   *
    * ⭐ RENDERED BY THE SHARED MODULE, NOT BY THIS FILE. Athi: *"as a separate module to update."* The same
-   * block appears on the Co-assists form; two copies would drift, and the copy that lost the Aadhaar sentence
-   * would be the one that mattered. UI._idocs is filled by iamLoadDocs() below. */
+   * block appears on the Co-assists form; two copies would drift, and the copy that lost the Aadhaar
+   * sentence would be the one that mattered. In 'self' mode it splits itself into what this person may add
+   * and what their employer recorded. UI._idocs is filled by iamLoadDocs().
+   *
+   * ⚠️ THE SEPARATE "YOUR ACCESS" SECTION IS GONE. The ladder of three levels was a good way to show a level
+   * in isolation and the wrong answer to what Athi actually asked for — access belongs *"as part of who you
+   * are, name, id, and access level"*. One line in the identity block beats a section a reader must open to
+   * learn one word, and this product's measured problem is that 56% of its on-screen words are explanation.
+   */
   var docs = (typeof CBIdDocs !== 'undefined')
     ? CBIdDocs.html(UI._idocs || [], 'self')
-    : '<div class="misnote">Loading…</div>';
+    : '<div class="misnote">' + tx('Loading…') + '</div>';
 
-  return iamSection("ident", tx("Who you are"), who, { openByDefault: true })
-    + iamSection("access", tx("Your access"), access, { hint: ACCESS_LABEL[lvl] || "" })
-    + iamSection("docs", tx("Your identity record"), docs, { hint: iamDocsHint() })
-    + '<div class="err" id="pf_err"></div>'
-    + '<button class="composebtn" style="margin-top:4px" onclick="saveProfile()">' + tx("Save") + '</button>';
+  return iamSection("ident", tx("Who you are"), who, { openByDefault: true, hint: ACCESS_LABEL[lvl] || '' })
+    + iamSection("docs", tx("Your identity record"), docs, { hint: iamDocsHint() });
 }
 
 /** "2 of 6 verified" — the summary an owner or an employee reads before opening the section. */
@@ -1613,11 +1618,14 @@ async function saveStorefront(){ var x=document.getElementById('pf_err2'); if(x)
  * therefore costs one round trip, and that is the correct price for the answer being current.
  */
 async function loadActorProfile(h){
-  const pinCard = `<div style="${_CARD}"><div class="sec" style="margin:0 0 8px">${tx('🔑 Change your PIN')}</div>
-      <label class="fl">${tx('Current PIN')}</label><input class="inp" id="pf_cpin" inputmode="numeric" maxlength="4" style="max-width:150px" placeholder="4 digits">
+  /* ⭐ A COLLAPSIBLE SECTION LIKE THE OTHERS. Athi, 2026-08-20: *"pin number again as a collapsable stuff"* and
+     *"change your pin is fine"* — so the wording stays and only the container changes. Three sections that
+     behave the same way beat two accordions and one loose card sitting under them. */
+  const pinBody = `<label class="fl">${tx('Current PIN')}</label><input class="inp" id="pf_cpin" inputmode="numeric" maxlength="4" style="max-width:150px" placeholder="4 digits">
       <label class="fl">${tx('New PIN')}</label><input class="inp" id="pf_npin" inputmode="numeric" maxlength="4" style="max-width:150px" placeholder="4 digits">
       <label class="fl">${tx('Confirm new PIN')}</label><input class="inp" id="pf_npin2" inputmode="numeric" maxlength="4" style="max-width:150px" placeholder="4 digits">
-      <div class="err" id="pf_err"></div><button class="composebtn" style="margin-top:9px" onclick="saveActorPin()">${tx('Change PIN')}</button></div>`;
+      <div class="err" id="pf_err"></div><button class="composebtn" style="margin-top:9px" onclick="saveActorPin()">${tx('Change PIN')}</button>`;
+  const pinCard = iamSection('pin', tx('Change your PIN'), pinBody, { hint: tx('4 digits') });
 
   /* Paint immediately from the token so the screen is never blank, then replace once /me lands. */
   const p = (typeof jwtPayload === 'function' && jwtPayload(SESSION.token)) || {};

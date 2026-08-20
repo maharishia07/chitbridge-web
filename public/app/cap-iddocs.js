@@ -19,13 +19,26 @@ var CBIdDocs = (function () {
 
   /* Mirrors the server catalogue in routes/identity-docs.js. ⚠️ The SERVER is authoritative — it revalidates
      every value. This exists so a field can say what is wrong before a round trip, never instead of one. */
+  /**
+   * ⭐⭐ selfServe DIVIDES THE CATALOGUE, AND THE REASON IS THE RULE. Athi, 2026-08-20: *"mobile number and
+   * email id, he can add here, rest everything only the business set and he can see here BECAUSE OTHER ITEMS
+   * SOMEONE SHOULD VERIFY BY SEEING THE PHYSICAL RECORD."*
+   *
+   * A phone and an address VERIFY THEMSELVES — send a code, possession is the proof, nobody looks at anything.
+   * A PAN, voter ID, Aadhaar or licence is verified by a person holding the document. So an employee may add
+   * the first two and only READ the rest.
+   *
+   * ⚠️ Mirrored from the server, never authoritative: routes/identity-docs.js refuses a non-selfServe scheme
+   * from an actor with 403 IDOC_EMPLOYER_ONLY whatever this file draws. Omitting an input is a courtesy; the
+   * route is the rule.
+   */
   var HINT = {
-    PHONE:    { label: 'Mobile',          eg: '9876543210' },
-    EMAIL:    { label: 'Email',           eg: 'name@example.com' },
-    PAN:      { label: 'PAN',             eg: 'ABCDE1234F' },
-    VOTER_ID: { label: 'Voter ID',        eg: 'ABC1234567' },
-    DL:       { label: 'Driving licence', eg: 'TN0120110001234' },
-    AADHAAR:  { label: 'Aadhaar',         eg: '12 digits' }
+    PHONE:    { label: 'Mobile',          eg: '9876543210',       self: true  },
+    EMAIL:    { label: 'Email',           eg: 'name@example.com', self: true  },
+    PAN:      { label: 'PAN',             eg: 'ABCDE1234F',       self: false },
+    VOTER_ID: { label: 'Voter ID',        eg: 'ABC1234567',       self: false },
+    DL:       { label: 'Driving licence', eg: 'TN0120110001234',  self: false },
+    AADHAAR:  { label: 'Aadhaar',         eg: '12 digits',        self: false }
   };
   var ORDER = ['PHONE', 'EMAIL', 'PAN', 'VOTER_ID', 'DL', 'AADHAAR'];
 
@@ -49,7 +62,13 @@ var CBIdDocs = (function () {
     (docs || []).forEach(function (d) { byScheme[d.scheme] = d; });
     var self = mode !== 'owner';
 
-    var rows = ORDER.map(function (sc) {
+    /**
+     * One row. `editable` decides whether it carries an input or is simply stated.
+     *
+     * ⭐ A READ-ONLY ROW IS NOT A DISABLED INPUT. A greyed-out box invites a click and then refuses it, which
+     * reads as a fault. Stating the value says "this is a record, not a form" without anyone having to try.
+     */
+    function row(sc, editable) {
       var h = HINT[sc], d = byScheme[sc];
       var st = STATUS[(d && d.status) || 'unverified'];
       /* ⚠️ NAMES ITS INK — this surface paints a ground, and guard check 11 exists because one that did not
@@ -66,12 +85,46 @@ var CBIdDocs = (function () {
                     + (d.submitted_by && d.submitted_by !== 'self' ? ' · entered by your employer' : '')
                   + '</div>'
                 : '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:1px">'
-                  + esc(self ? 'Not added' : 'Nothing on file') + '</div>')
+                  + esc(editable ? 'Not added' : 'Nothing on file yet') + '</div>')
         +   '</div>'
-        +   '<input class="inp" id="idoc_' + sc + '" placeholder="' + esc(h.eg) + '" autocapitalize="characters"'
-        +     ' spellcheck="false" style="flex:0 0 180px;max-width:180px;margin:0">'
+        +   (editable
+              ? '<input class="inp" id="idoc_' + sc + '" placeholder="' + esc(h.eg) + '" autocapitalize="characters"'
+                + ' spellcheck="false" style="flex:0 0 180px;max-width:180px;margin:0">'
+              : '')
         + '</div>';
-    }).join('');
+    }
+
+    /**
+     * ⭐⭐ TWO GROUPS FOR AN EMPLOYEE, ONE FOR AN OWNER. Athi, 2026-08-20: *"so add section, view section,
+     * however you want to split."* The split is not cosmetic — it is the permission, drawn. What you may add
+     * and what you may only read are different kinds of thing, and putting them in one list with some inputs
+     * missing looks like a bug rather than a rule.
+     */
+    var heading = function (t) {
+      return '<div style="font-size:var(--fs-1);text-transform:uppercase;letter-spacing:.05em;color:var(--grey);'
+        + 'font-weight:600;margin:0 0 6px">' + esc(t) + '</div>';
+    };
+
+    var rows;
+    if (self) {
+      var addable  = ORDER.filter(function (sc) { return HINT[sc].self; });
+      var readonly = ORDER.filter(function (sc) { return !HINT[sc].self; });
+      /* ⭐ VIEW FIRST, THEN UPDATE. Athi, 2026-08-20: *"view section, next update section."* The record is
+         what you came to read; the fields are what you may do about it. Putting the inputs first makes a page
+         that is mostly a statement look like a form. */
+      rows = heading('On file')
+           + readonly.map(function (sc) { return row(sc, false); }).join('')
+           + '<div class="misnote" style="margin:6px 0 14px;line-height:1.5">'
+           +   'Checked against the document itself, so your employer records these.'
+           + '</div>'
+           + heading('You can update')
+           + addable.map(function (sc) { return row(sc, true); }).join('')
+           + '<div class="misnote" style="margin-top:6px;line-height:1.5">'
+           +   'Confirmed by a code sent to them.'
+           + '</div>';
+    } else {
+      rows = ORDER.map(function (sc) { return row(sc, true); }).join('');
+    }
 
     /* ⚠️⚠️ THE AADHAAR SENTENCE IS NOT REASSURANCE, IT IS THE DESIGN. The Aadhaar Act restricts a private body
        from holding the number at all, so "we keep it safe" would be the wrong claim AND the wrong build. What
@@ -93,8 +146,14 @@ var CBIdDocs = (function () {
       + (o.subject ? (Q + esc(o.subject) + Q) : 'null') + ')">'
       + (self ? 'Submit for verification' : 'Save documents') + '</button>';
 
-    return rows + aadhaarNote + consent
-      + '<div class="err" id="idoc_err" style="margin-top:6px"></div>' + btn;
+    /* ⚠️ THE AADHAAR SENTENCE ONLY WHERE AN AADHAAR CAN BE TYPED. On the employee's own screen the field is
+       read-only, so "the number is never stored" answers a question nobody is being asked and adds a line to a
+       product whose measured problem is that 56% of its words are explanation. */
+    return rows + (self ? '' : aadhaarNote) + consent
+      + '<div class="err" id="idoc_err" style="margin-top:6px"></div>'
+      /* ⭐ NO SAVE BUTTON WHEN THERE IS NOTHING TO SAVE — an employee with no addable field left blank would
+         otherwise get a button that can only ever report "nothing to save". */
+      + btn;
   }
 
   /** Load — returns [] rather than throwing when b174 has not been run, so the block still renders. */
