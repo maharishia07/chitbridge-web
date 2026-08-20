@@ -1630,7 +1630,7 @@ async function loadActorProfile(h){
   /* Paint immediately from the token so the screen is never blank, then replace once /me lands. */
   const p = (typeof jwtPayload === 'function' && jwtPayload(SESSION.token)) || {};
   if (!UI._me) {
-    h.innerHTML = `${menuAssist('profile')}<div class="sec">${tx('Your profile')}</div>`
+    h.innerHTML = `<div class="sec">${tx('Your profile')}</div>`
       + `<div class="misnote">${esc(SESSION.name || p.display_name || '')} — loading your access…</div>` + pinCard;
   }
 
@@ -1642,7 +1642,7 @@ async function loadActorProfile(h){
   /* ⚠️ RE-QUERY AFTER THE AWAIT — renderApp rebuilds the shell, so the node captured above may be detached.
      Every await in this file followed by a DOM write has the same hazard. */
   const h2 = document.getElementById('profbody'); if (!h2) return;
-  h2.innerHTML = `${menuAssist('profile')}<div class="sec">${tx('Your profile')}</div>`
+  h2.innerHTML = `<div class="sec">${tx('Your profile')}</div>`
     + iamSelfEmployeeHTML(e)
     + pinCard
     + `<div style="font-size:var(--fs-1);color:var(--grey);margin-top:8px;line-height:1.5">Set your <b>${tx('Duty / Break')}</b> from the top bar.</div>`;

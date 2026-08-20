@@ -3238,9 +3238,22 @@ const PURPOSE = {
   /* ⚠️ ROLE-DEPENDENT. One blurb served both, and it was written for the ACTOR — so an OWNER opening their
      business identity, storefront and governance was told "Your shift and assignment." menuAssist resolves it
      per role rather than describing one of the two screens and hoping. */
-  profile:(typeof SESSION!=='undefined'&&SESSION&&SESSION.role==='actor')
-    ? "Your shift and assignment."
-    : "Your business identity, your storefront, and the rights you hold.",
+  /**
+   * ⚠️⚠️ A GETTER, BECAUSE THE TERNARY RAN ONCE AND WAS ALWAYS FALSE. This was written as a plain property, so
+   * it was evaluated when this const literal was parsed — line 3217, with SESSION declared at 1560 as
+   * `{role:null}` and nobody signed in yet. `SESSION.role==='actor'` could therefore never be true, and EVERY
+   * employee was told "Your business identity, your storefront, and the rights you hold" on a screen that is
+   * none of those things. Athi: *"the message on top not required I guess, our business identity."*
+   *
+   * ⭐ The comment above described the bug being fixed while the fix did not work — the same shape as
+   * SESSION.identity_type earlier today. A value that depends on session state cannot be computed at parse
+   * time; a getter defers it to the moment it is read.
+   */
+  get profile(){
+    return (typeof SESSION !== 'undefined' && SESSION && SESSION.role === 'actor')
+      ? "Your shift and assignment."
+      : "Your business identity, your storefront, and the rights you hold.";
+  },
 };
 
 /* ── Capability loader (progressive load) ── each capability is an independently-loaded
