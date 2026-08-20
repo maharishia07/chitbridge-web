@@ -1190,7 +1190,10 @@ function iamMeHTML(e){
      * ("From your installation. Your own reading language and formats are separate…") is gone: the rows are
      * read-only, which says the same thing by being true.
      */
-    + iamGovernedRows(e);
+    ;   /* ⚠️ REGIONAL LEFT THIS SECTION. Athi, 2026-08-20: *"can we keep regional as a separate collapsable
+           unit — it is under business, I was searching for something on its own."* He went looking for it as a
+           thing and found it as a footnote. A block a person searches FOR is a section; a block they read in
+           passing is a row. Which it is was decided by how he tried to use it, not by where the data lives. */
 
   /* ── 3 · PRESENCE & GOVERNANCE ─────────────────────────────────────────────────────────────────────────
    * Read-only rows come from the constitution and the operator; the editable one is trading status. */
@@ -1309,7 +1312,11 @@ function iamMeHTML(e){
     + '</div>'
     /* ⭐ THE OTHER HALF OF "how is this store reached" — the link answers the catalogue, these answer the
        messages. Both are outward facts; neither is configured here. */
-    + iamChannelRows();
+    ;   /* ⚠️ CHANNELS LEFT THIS SECTION, for the same reason Regional did. Athi: *"same way, the channel under
+           storefront, can we keep it separate as Channel? And point to channel settings?"* Both were things he
+           went LOOKING for and found buried — and the test is not where the data belongs but how a person
+           reaches for it. The storefront link answers "can customers see my catalogue"; the channels answer
+           "where does work arrive". Related, and not the same question. */
 
   /**
    * ⭐⭐ FIVE SECTIONS, ONE SCREEN, NO RAIL. Athi, 2026-08-20: *"we have other three panel in profile —
@@ -1337,14 +1344,20 @@ function iamMeHTML(e){
    * ANSWER so the section need not be opened. A reader who wants "public · open · 2 channels" now has it
    * without a click, and opens the section only to change something.
    */
+  var _regHint = [ (e.country || null), (e.currency_code || null), (e.timezone || null) ]
+                 .filter(Boolean).join(' · ') || tx('not set');
   var _chanN = Array.isArray(UI._chans) ? UI._chans.length : null;
-  var _sfHint = [ (e.catalogue_visibility || 'private'), (e.business_status || 'open'),
-                  (_chanN === null ? null : (_chanN + ' ' + (_chanN === 1 ? tx('channel') : tx('channels')))) ]
-                .filter(Boolean).join(' · ');
+  /* ⚠️ AFTER _chanN, NOT BEFORE.  hoists the NAME and not the VALUE, so reading it one line earlier gave
+     undefined — falsy — and the hint would have said "none yet" for every entity, always. A silent
+     always-wrong, and the third this session that only a check for declaration order would find. */
+  /* ⚠️ null (not read / failed) IS NOT ZERO — the hint stays empty rather than claiming none. */
+  var _chanHint = (_chanN === null) ? '' : (_chanN ? (_chanN + ' ' + (_chanN === 1 ? tx('bound') : tx('bound'))) : tx('none yet'));
+  var _sfHint = [ (e.catalogue_visibility || 'private'), (e.business_status || 'open') ].join(' · ');
   /* ⭐ COUNTRY AND CURRENCY IN THE HINT — the two Regional facts a reader is most likely to be checking, and
      the reason they open this section at all. */
-  var _licHint = [ (e.country || null), (e.currency_code || null),
-                   (e.gstn ? licLabel : null), (e.address ? 'address' : null) ].filter(Boolean).join(' · ')
+  /* ⭐ country and currency moved OUT of this hint with the block they describe — a hint must summarise its
+     own section, or the closed screen answers the wrong question. */
+  var _licHint = [ (e.gstn ? licLabel : null), (e.address ? 'address' : null) ].filter(Boolean).join(' · ')
                  || tx('not set');
 
   /* ⭐ EACH SECTION CARRIES ITS OWN SAVE — and Rights carries none, because nothing in it is yours to set.
@@ -1352,6 +1365,8 @@ function iamMeHTML(e){
   return iamSection('ident', tx('Identity'), ident + profSaveBtn('ident'), { openByDefault: true,
              hint: [e.user_id, e.bridge_id].filter(Boolean).join(' · ') })
     + iamSection('profile', tx('Business'), profile + profSaveBtn('profile'), { hint: _licHint })
+    + iamSection('regional', tx('Regional'), iamGovernedRows(e), { hint: _regHint })
+    + iamSection('channels', tx('Channels'), iamChannelRows(), { hint: _chanHint })
     + iamSection('governed', tx('Storefront'), governed + profSaveBtn('governed'), { hint: _sfHint })
     /* ⭐ TRADE READY SITS BESIDE RIGHTS, not among the editable sections — both answer "what may this
        business do", one from the platform and one from the world. Neither takes a Save. */
@@ -1648,12 +1663,14 @@ function iamChannelRows(){
    * channel, applied to the empty case: I reasoned that a business with no channels "has nothing to say here",
    * which is true of the DATA and false of the PERSON, who needs to know the row exists and how to fill it.
    */
-  if (!cs.length) return '<div class="kv" style="margin-top:11px"><b>' + tx('Reached at') + '</b> · '
+  if (!cs.length) return '<div class="kv" style="margin-top:2px">'
     + '<span style="color:var(--grey)">' + tx('no channel yet') + '</span>'
     + ' <a href="#" onclick="navTo(' + Q0 + 'settings' + Q0 + ');setSetSec(' + Q0 + 'channels' + Q0 + ');return false" style="color:var(--blue);font-size:var(--fs-1);margin-inline-start:6px">'
-    + tx('Add one') + ' <span class=arw>→</span></a></div>';
+    + tx('Add one in Channel settings') + ' <span class=arw>→</span></a></div>';
   var Q = String.fromCharCode(39);
-  return '<div class="kv" style="margin-top:11px"><b>' + tx('Reached at') + '</b></div>'
+  /* ⚠️ NO INNER HEADING. The section is called Channels; repeating it one line down reads as a rendering
+     fault — the same reason the Regional block lost its own title when it was promoted. */
+  return ''
     + cs.map(function(c){
         var ok = c.status === 'verified';
         return '<div class="kv" style="margin-top:3px">'
@@ -1663,7 +1680,7 @@ function iamChannelRows(){
           + (ok ? '' : ' · ' + tx('not receiving yet')) + '</span></div>';
       }).join('')
     + '<div class="kv" style="margin-top:6px"><a href="#" onclick="navTo(' + Q + 'settings' + Q + ');setSetSec(' + Q + 'channels' + Q + ');return false" style="color:var(--blue);font-size:var(--fs-1)">'
-    + tx('Channels') + ' <span class=arw>→</span></a></div>';
+    + tx('Channel settings') + ' <span class=arw>→</span></a></div>';
 }
 
 /** ⚠️ Latched, like the identity record and the trade summary — this repaints, and the renderer reads it. */
@@ -1757,8 +1774,11 @@ function iamGovernedRows(e){
    * conventions" (CLDR's own phrase, and four syllables of nobody's vocabulary), "Territory" (CLDR's word
    * for the country alone, so it under-names the group).
    */
-  return '<div style="margin-top:12px;padding-top:10px;border-block-start:1px solid var(--line)">'
-    + '<div style="font-size:var(--fs-1);text-transform:uppercase;letter-spacing:.05em;color:var(--grey);font-weight:600;margin-bottom:5px">' + tx('Regional') + '</div>'
+  /* ⚠️ NO TOP RULE OR MARGIN NOW — those separated it from the licence rows it used to sit under. A section
+     already has its own frame, and a divider inside one reads as a second, emptier section. */
+  return '<div>'
+    /* ⚠️ THE IN-BLOCK 'Regional' HEADING WENT WITH THE PROMOTION — the section header says it now, and a
+       title repeated immediately under itself reads as a rendering fault. */
     + rows.map(function(x){
         return '<div style="display:flex;gap:10px;align-items:baseline;padding:3px 0">'
           + '<b style="min-width:92px;font-size:var(--fs-1);color:var(--grey);text-transform:uppercase;letter-spacing:.04em">' + esc(x[0]) + '</b>'
