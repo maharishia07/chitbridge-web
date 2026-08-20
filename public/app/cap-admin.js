@@ -884,7 +884,16 @@ function iamHTML(e){
    * Splitting by PARTY means each tab shows one thing and needs no sentence saying so — which is the point:
    * *"we do not need any explanation."*
    */
-  var seg = [['me','Business'],['emp','Employee'],['node','Network'],['cust','Customer']].map(function(x){
+    /**
+   * ⭐⭐ TWO TABS. Athi, 2026-08-20: *"only two tabs, others are variation of the same."*
+   *
+   * NETWORK went because a network node IS an entity — *"there is nothing called network tab"* — and the
+   * Business tab already says whether you are part of one. CUSTOMER went because there is no customer
+   * profile in this app at all: a customer token is accepted only by middleware/customer-auth and can never
+   * reach app.html, so their profile lives on the STOREFRONT. Four tabs implied four places to manage
+   * people; there are two.
+   */
+  var seg = [['me','Business'],['emp','Employee']].map(function(x){
     var on = tab === x[0];
     return '<button type="button" data-testid="iam-tab-' + x[0] + '" onclick="setIamTab(' + Q + x[0] + Q + ')"'
       + ' aria-pressed="' + (on ? 'true' : 'false') + '"'
@@ -1006,88 +1015,176 @@ function iamPartyHTML(key, e) {
  * about their own business. Two tabs of other people's rows in front of that is a screen that makes you scroll
  * past everyone else to reach yourself.
  */
+/**
+ * ⭐⭐ THREE COLLAPSIBLE SECTIONS, GROUPED BY WHO OWNS THE ROW. Athi, 2026-08-20: *"Maybe three different
+ * sections, clearly laid out what we are showcasing, as collapsible… if we have to bring a bit more, we have
+ * to categorise and showcase accordingly."*
+ *
+ * ⭐ AND NAMED BY CONCERN, which answers the question he asked in the critique — *"have we worked as per IAM
+ * definition or have we mixed up?"* We had. Roughly half of this tab is not identity or access at all: a
+ * licence number is business profile, a storefront is commerce presence. Naming the boxes says so on the
+ * screen, so a reader knows when they have left IAM:
+ *
+ *     Identity & access      ← IAM proper. Always open: opening your own profile, this is what you came for.
+ *     Business profile       ← licence, address. Collapsed.
+ *     Presence & governance  ← constitution, trading, storefront. Collapsed — reference, rarely acted on.
+ *
+ * ⚠️ EVERY INPUT ID IS UNCHANGED — pf_name, pf_uid, pf_gstn, pf_addr, pf_bs. saveProfile() reads them by id,
+ * and a restructure that quietly renamed one would break saving in a way no parse check catches.
+ */
+function iamSection(key, title, body, opts){
+  var o = opts || {};
+  var open = (UI._iamOpen && Object.prototype.hasOwnProperty.call(UI._iamOpen, key))
+    ? UI._iamOpen[key] : !!o.openByDefault;
+  var Q = String.fromCharCode(39);
+  return '<div style="border:1px solid var(--line);border-radius:11px;margin-bottom:9px;background:var(--card);color:var(--on-card);overflow:hidden">'
+    + '<button type="button" data-testid="iam-sec-' + key + '" aria-expanded="' + (open ? 'true' : 'false') + '"'
+    +   ' onclick="iamToggle(' + Q + key + Q + ')"'
+    +   ' style="width:100%;display:flex;align-items:center;gap:8px;cursor:pointer;font:inherit;text-align:start;'
+    +   'border:0;background:var(--paper);color:var(--on-bg);padding:10px 13px;font-weight:700;font-size:var(--fs-2)">'
+    +   '<span style="font-size:11px;color:var(--grey)">' + (open ? '▾' : '<span class=arw>▸</span>') + '</span>'
+    +   esc(title)
+    +   (o.hint ? '<span style="margin-inline-start:auto;font-weight:400;font-size:var(--fs-1);color:var(--grey)">' + esc(o.hint) + '</span>' : '')
+    + '</button>'
+    + (open ? '<div style="padding:11px 13px 14px">' + body + '</div>' : '')
+    + '</div>';
+}
+
+function iamToggle(k){
+  UI._iamOpen = UI._iamOpen || {};
+  /* the default for a key that has never been touched is whatever the section declared, so the first click
+     must flip THAT, not flip an assumed-false */
+  var cur = Object.prototype.hasOwnProperty.call(UI._iamOpen, k) ? UI._iamOpen[k] : (k === 'ident');
+  UI._iamOpen[k] = !cur;
+  renderApp(); _capShowDetail(); loadProfile();
+}
+
 function iamMeHTML(e){
   var Q = String.fromCharCode(39);
-  return '<div style="' + _CARD + '">'
-    + '<label class="fl">' + tx('This business') + '</label>'
-    /**
-     * ⚠️⚠️ THIS WAS EXACTLY REVERSED, and the app's own naming table said so. Athi, 2026-08-19: *"if they are
-     * different, we should be providing an option to change the name here. Not the user id."* … *"and it looks
-     * reverse. That is the problem."*
-     *
-     * NAMING[0] reads: *"Change it any time — nothing cites it, everything cites your ID."* The screen made the
-     * NAME read-only text and the USER ID an editable input — the mutable fact fixed, the load-bearing one
-     * loose. And PATCH /profile had no display_name validator at all, so the name could not be changed even by
-     * the API. Both ends fixed.
-     */
-    + '<label class="fl">' + tx('Name') + '</label>'
-    + '<input class="inp" id="pf_name" value="' + esc(e.display_name || '') + '">'
-    + '<div class="kv" style="margin-top:9px"><b>' + tx('Bridge ID') + '</b> · ' + esc(e.bridge_id || '') + '</div>'
-    /**
-     * ⭐⭐ THE USER ID IS THE ROOT OF EVERY OTHER NAME, and until now it was one field among five with a short
-     * hint. Athi, 2026-08-19: *"user id is the one under which the registration happens in the platform as
-     * entity identification. User name is their literal name… user name can be duplicated also, but user id
-     * cannot be duplicated."*
-     *
-     * ⚠️ HE HAD TO EXPLAIN THAT TO ME, which means the screen was not explaining it to anyone. Three things
-     * derive from this one value — a co-assist's login, a network root, and how another business finds you —
-     * and none of them said so where it is typed.
-     */
-    /* ⚠️ ONCE SET, THE USER ID IS SHOWN, NOT EDITED. Everything else derives from it — a co-assist's login, a
-       network root, how another business finds you — so it is not a field to retype in passing. It stays an
-       input only while UNSET, because it has to be chosen once. */
-    + (e.user_id
-        /* ⚠️ SAY IT IS THE LOGIN. Athi, 2026-08-19: *"user id is the one, used for login purpose."* Confirmed:
-           entity sign-in resolves on LOWER(user_id) first (routes/entities.js). The profile showed the value
-           and never said what it was FOR — so the one field you type to get in read like a reference number. */
-        /**
-         * ⭐⭐ READ-ONLY. NO CHANGE, NO EDIT, NO AFFORDANCE. Athi, 2026-08-19:
-         *
-         *   *"the registered user id cannot be changed. Are you able to change your Gmail id? The same way here."*
-         *
-         * ⚠️ I HAD SHIPPED A "Change" LINK HERE AND IT WAS WRONG. The reasoning was that a value claimed for you is
-         * not a value you chose, so you must be able to correct it — but that premise died the moment registration
-         * started ASKING for it. It is chosen, once, deliberately, on the screen that says it cannot be changed.
-         *
-         * ⭐ AND THE MUTABLE FIELD IS RIGHT ABOVE IT. The Name input takes anything, any format, any time. That
-         * pairing is the whole model on one screen: one identifier that everything cites and therefore cannot move,
-         * one label that nothing cites and therefore can.
-         */
-        ? '<div class="kv" style="margin-top:9px"><b>' + tx('User ID') + '</b> · <span class="mono">' + esc(e.user_id) + '</span>'
-          + ' <span style="color:var(--grey);font-size:var(--fs-1)">— you sign in with this · cannot be changed</span></div>'
-        : '<label class="fl">User ID <span style="color:var(--grey);font-weight:400;font-size:var(--fs-1)">— you will sign in with this</span></label>'
-          + '<input class="inp" id="pf_uid" value="">')
-    /**
-     * ⚠️ NO EXPLANATION HERE. Athi, 2026-08-19: *"i don't want that text… this will be known in that tab."*
-     *
-     * The paragraph that used to sit under this field spelt out that co-assists sign in as key@user-id, that a
-     * network root is named from it, and that it is unique unlike a name. All true — and all of it is now SHOWN
-     * as a row on the Employee and Network tabs, where the reader is looking at that party anyway.
-     *
-     * ⭐ Saying it twice is not emphasis, it is noise: the tab that owns the fact states it in place, and this
-     * field goes back to being a field. The only thing kept is the one-line warning when NOTHING is set, because
-     * an empty User ID is not a preference — other screens fill the hole with a guess.
-     */
-    + (e.user_id ? ''
-        : '<div style="font-size:var(--fs-1);color:var(--warn-2);background:var(--warn-tint);border-radius:8px;'
-          + 'padding:7px 9px;margin-top:5px;line-height:1.5">'
-          + '⚠️ <b>Not set.</b> Until you choose one, other screens show a suggestion made from your business name.'
-          + '</div>')
-    + '<label class="fl">GSTIN <span style="color:var(--grey);font-weight:400;font-size:var(--fs-1)">— 15 characters</span></label>'
-    + '<input class="inp" id="pf_gstn" value="' + esc(e.gstn || '') + '">'
-    + '<label class="fl">' + tx('Address') + '</label><input class="inp" id="pf_addr" value="' + esc(e.address || '') + '">'
-    /* ⚠️ "Are you trading?" IS NOT A VISIBILITY SETTING. Athi read the two as contradictory because they sat
-       together: business_status answers ARE YOU TRADING, catalogue_visibility answers WHO MAY SEE YOUR
-       CATALOGUE. Different questions, similar words — so the note names both and points at the other. */
-    + '<label class="fl">Are you trading? <span style="color:var(--grey);font-weight:400;font-size:var(--fs-1)">— open, closed or away</span></label>'
-    + '<select class="inp" id="pf_bs">' + opt(['open','closed','away'], e.business_status) + '</select>'
-    + '<div class="misnote" style="margin-top:5px">⚠️ This is <b>whether you are trading</b> — nothing to do with who may '
-    + '<b>see</b> your catalogue. That is <b onclick="profSetSec(' + Q + 'storefront' + Q + ')" style="cursor:pointer;color:var(--blue)">' + tx('Storefront') + '</b>.</div>'
-    + '<div class="err" id="pf_err"></div>'
-    + '<button class="composebtn" style="margin-top:11px" onclick="saveProfile()">' + tx('Save profile') + '</button>'
-  + '</div>'
 
+  /* ── 1 · IDENTITY & ACCESS ─────────────────────────────────────────────────────────────────────────────
+   * ⚠️⚠️ NAME EDITABLE, USER ID FIXED — and it was exactly reversed before. This app's own naming table says
+   * display_name is *"change it any time — nothing cites it, everything cites your ID"*, and the screen had
+   * made the NAME read-only text and the USER ID an editable input. The mutable fact was pinned and the
+   * load-bearing one was loose. */
+  var ident = '<label class="fl">' + tx('Name') + '</label>'
+    + '<input class="inp" id="pf_name" value="' + esc(e.display_name || '') + '">'
+
+    /* ⭐ THE USER ID GETS ITS OWN BLOCK, WITH ITS NOTE BENEATH IT. Athi, 2026-08-19: *"user id has to be
+       separate and the note should be below the user id."* It was one row among five with a hint beside it —
+       and three things derive from it (a co-assist login, a network root, how another business finds you). */
+    /* ⚠️ NAMES ITS TEXT COLOUR. A surface that sets a background and inherits its ink is the bug that made the
+       avatar menu unreadable in every light theme — guard check 11 catches it, and caught this one. */
+    + '<div style="margin-top:12px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--paper);color:var(--on-bg)">'
+    + (e.user_id
+        ? '<div style="font-size:var(--fs-1);text-transform:uppercase;letter-spacing:.05em;color:var(--grey);font-weight:600">' + tx('User ID') + '</div>'
+          + '<div class="mono" style="font-size:var(--fs-3);color:var(--gold);margin-top:2px">' + esc(e.user_id) + '</div>'
+          /* ⚠️ NO CHANGE AFFORDANCE. Athi: *"are you able to change your Gmail id? The same way here."* I had
+             shipped a Change link and it was wrong — it is chosen once, on the screen that says so. */
+          + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:5px;line-height:1.5">'
+          +   'You sign in with this. Co-assists sign in as <span class="mono">key@' + esc(e.user_id) + '</span>, '
+          +   'and other businesses add you by it. <b>It cannot be changed.</b></div>'
+        : '<label class="fl" style="margin-top:0">' + tx('User ID') + '</label>'
+          + '<input class="inp" id="pf_uid" value="" autocapitalize="off" spellcheck="false">'
+          + '<div style="font-size:var(--fs-1);color:var(--warn-2);margin-top:5px;line-height:1.5">'
+          +   '⚠️ <b>Not set.</b> 8 characters or more, letters, numbers and dashes, no <b>@</b> or <b>.</b> — '
+          +   'those make an employee or a network store. <b>Once saved it is permanent.</b></div>')
+    + '</div>'
+
+    + '<div class="kv" style="margin-top:10px"><b>' + tx('Bridge ID') + '</b> · <span class="mono">' + esc(e.bridge_id || '') + '</span>'
+    +   ' <span style="color:var(--grey);font-size:var(--fs-1)">— minted, never typed</span></div>';
+
+  /* ── 2 · BUSINESS PROFILE ──────────────────────────────────────────────────────────────────────────────
+   * ⚠️ GSTIN IS INDIA-ONLY AND THIS IS THE HALF-STEP. Athi, 2026-08-19: *"GSTIN is for India — if it is for
+   * any other country, how do they do? We may have to ask licence name and licence number… possibly we
+   * provide suggestion based on country."* The full (scheme, value) pair needs a column and a country
+   * catalogue; until then the label says what it is and where the name comes from, so the field stops
+   * asserting that every business on earth is Indian. */
+  var licLabel = (function(){
+    try {
+      var r = CBLocale.region && CBLocale.region();
+      return ({ IN:'GSTIN', AE:'TRN', SA:'VAT number', GB:'VAT / company number', DE:'USt-IdNr.', FR:'SIRET', SG:'UEN', US:'EIN' })[r] || 'Licence number';
+    } catch (_) { return 'Licence number'; }
+  })();
+  var profile = '<label class="fl">' + esc(licLabel)
+    +   ' <span style="color:var(--grey);font-weight:400;font-size:var(--fs-1)">— your business registration</span></label>'
+    + '<input class="inp" id="pf_gstn" value="' + esc(e.gstn || '') + '">'
+    + '<label class="fl">' + tx('Address') + '</label>'
+    + '<input class="inp" id="pf_addr" value="' + esc(e.address || '') + '">';
+
+  /* ── 3 · PRESENCE & GOVERNANCE ─────────────────────────────────────────────────────────────────────────
+   * Read-only rows come from the constitution and the operator; the editable one is trading status. */
+  var vis = e.catalogue_visibility || 'private';
+  var st  = e.business_status || 'open';
+  /**
+   * ⭐⭐ ONE RESOLVED SENTENCE, NOT TWO FACTS TO JOIN. Athi, 2026-08-19: *"we have to state explicitly that your
+   * storefront is visible to public — that depends on the open, close, away status."*
+   *
+   * ⚠️⚠️ AND THE OLD NOTE HERE IS NOW FALSE. It read *"this is whether you are trading — nothing to do with who
+   * may see your catalogue"*, which was TRUE of the old code and is not true of the new: `closed` now hides the
+   * catalogue outright (IAM-SPEC §12). A backend fix that leaves a contradicting sentence on the screen has
+   * moved the bug rather than fixed it.
+   */
+  var live = (st !== 'closed') && vis !== 'private';
+  var sentence = (vis === 'private')
+      ? 'You have no public storefront.'
+      : (st === 'closed')
+        ? 'Closed — your catalogue is hidden from everyone, including your network. Reopening restores it.'
+        : (vis === 'network')
+          ? ('Visible to your network only, and accepting orders.' + (st === 'away' ? ' Nobody is at the counter.' : ''))
+          : ('Visible to anyone, and accepting orders.' + (st === 'away' ? ' Nobody is at the counter.' : ''));
+
+  var governed = '<label class="fl">Are you trading?</label>'
+    + '<select class="inp" id="pf_bs">' + opt(['open','away','closed'], st) + '</select>'
+    + '<div class="misnote" style="margin-top:6px;line-height:1.5">' + esc(sentence) + '</div>'
+
+    + '<div class="kv" style="margin-top:11px"><b>Who may see your catalogue</b> · ' + esc(vis)
+    +   ' <a href="#" onclick="profSetSec(' + Q + 'storefront' + Q + ');return false" style="color:var(--blue);font-size:var(--fs-1);margin-inline-start:6px">Change in Storefront</a></div>'
+
+    /* ⚠️ THE STOREFRONT LINK OPENS IN A NEW WINDOW — and that does NOT protect the session, which was the
+       stated reason for it. Same origin means the same localStorage. We are safe today because shop.html
+       holds no session at all; the rule to keep is that a customer token must never be written to cb_sess. */
+    + (live && e.bridge_id
+        ? '<div class="kv" style="margin-top:9px"><b>Storefront</b> · '
+          + '<a href="/shop.html?s=' + encodeURIComponent(e.user_id || e.bridge_id) + '" target="_blank" rel="noopener noreferrer"'
+          + ' style="color:var(--blue)">open it <span class=arw>↗</span></a></div>'
+        : '<div class="kv" style="margin-top:9px"><b>Storefront</b> · <span style="color:var(--grey)">not visible right now</span></div>')
+
+    + iamGovernedRows();
+
+  return iamSection('ident', 'Identity & access', ident, { openByDefault: true })
+    + iamSection('profile', 'Business profile', profile, { hint: 'licence · address' })
+    + iamSection('governed', 'Presence & governance', governed, { hint: 'set above you' })
+    + '<div class="err" id="pf_err"></div>'
+    + '<button class="composebtn" style="margin-top:4px" onclick="saveProfile()">' + tx('Save profile') + '</button>'
     + namingRulesHTML();
+}
+
+/**
+ * The constitutional facts — read-only here by design. Athi, 2026-08-19: *"in my eyes this would be coming
+ * from constitution based on the installation, so it should be read only."*
+ *
+ * ⚠️ AND THE LABEL HAS TO SAY WHOSE THEY ARE, or "read-only" reads as "you cannot change your language" —
+ * which is false. There are TWO locale concepts sharing words: the ENTITY's (country of business, the
+ * currency it trades in — a fact about the business) and the PERSON's (what THIS reader reads, editable in
+ * Settings). This block is the entity's.
+ */
+function iamGovernedRows(){
+  var rows = [];
+  try {
+    var r = CBLocale.regionInfo && CBLocale.regionInfo();
+    rows.push(['Country of business', (r && r.name) || 'Not set']);
+    rows.push(['Time zone', CBLocale.timezone ? CBLocale.timezone() : '—']);
+    rows.push(['Number format', CBLocale.locale ? CBLocale.locale() : '—']);
+  } catch (_) { /* locale layer absent — show nothing rather than a guess */ }
+  if (!rows.length) return '';
+  return '<div style="margin-top:12px;padding-top:10px;border-block-start:1px solid var(--line)">'
+    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:5px">'
+    +   'From your installation. Your own reading language and formats are separate — '
+    +   '<a href="#" onclick="navTo(' + String.fromCharCode(39) + 'settings' + String.fromCharCode(39) + ');setSetSec(' + String.fromCharCode(39) + 'locale' + String.fromCharCode(39) + ');return false" style="color:var(--blue)">Settings › Localisation</a>.'
+    + '</div>'
+    + rows.map(function(x){ return '<div class="kv"><b>' + esc(x[0]) + '</b> · ' + esc(x[1]) + '</div>'; }).join('')
+    + '</div>';
 }
 
 /** The boundary badge. ⚠️ Same three words everywhere, so the spine is learnable in one read. */
