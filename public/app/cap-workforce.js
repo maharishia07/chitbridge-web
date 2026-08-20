@@ -71,7 +71,11 @@ async function acLoadDocs(id){
   } catch (_) { /* additive — its absence must not take the edit form down */ }
 }
 
-function _aiPolKey(){ return 'cb_aipolicy_'+((typeof SESSION!=='undefined'&&(SESSION.name||SESSION.entity_id))||'me'); }
+/* ⚠️ `SESSION.entityId`, NOT `entity_id` — the snake_case name is never set anywhere, so this fallback was
+   dead and the key silently collapsed to 'cb_aipolicy_me' whenever SESSION.name was absent. Two entities on
+   one browser would then have shared one AI-policy store. Found by the read-but-never-written sweep in
+   e2e/session-keys.cjs, which was written to catch the same mistake I had just made in cap-admin.js. */
+function _aiPolKey(){ return 'cb_aipolicy_'+((typeof SESSION!=='undefined'&&(SESSION.name||SESSION.entityId))||'me'); }
 function aiPolicy(){ try{ return JSON.parse(localStorage.getItem(_aiPolKey())||'{}')||{}; }catch(_){ return {}; } }
 function _aiPolSet(key,patch){ var p=aiPolicy(); p[key]=Object.assign({},p[key]||{},patch); try{ localStorage.setItem(_aiPolKey(),JSON.stringify(p)); }catch(_){}
 }

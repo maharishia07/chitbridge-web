@@ -913,7 +913,7 @@ function iamHTML(e){
        address, trading status, and a User ID block that told a signed-in employee their handle was
        "Not set" and invited them to claim one permanently. They have no handle: they sign in as
        key@business. Same screen for both parties was the bug, not the layout. */
-    + (SESSION_IS_ACTOR() ? iamSelfEmployeeHTML(e)
+    + (SESSION_IS_ACTOR(e) ? iamSelfEmployeeHTML(e)
         : tab === 'emp' ? iamPartyHTML('emp', e) : iamMeHTML(e));
 }
 
@@ -1233,14 +1233,27 @@ function iamMeHTML(e){
 /**
  * SESSION_IS_ACTOR — is the person reading this screen an employee rather than the business?
  *
- * ⚠️ ASKS THE PROFILE, THEN THE SESSION, IN THAT ORDER. /entities/me now stamps identity_type on the row it
- * returns (it reads req.identity, which auth resolved FROM THE DATABASE this request). The session token is
- * the fallback for the moment before the profile has loaded.
+ * ⚠️⚠️ THE FIRST VERSION OF THIS READ TWO THINGS THAT DO NOT EXIST, so it returned false for everyone and the
+ * whole employee profile was unreachable — built, shipped, served, and never once rendered. Athi asked "is it
+ * reflecting in localhost? I am there as an employee" and the honest answer was no.
+ *
+ *   · `SESSION.identity_type` is NEVER SET. Nothing in this codebase assigns it; my line was the only reader.
+ *   · `UI.profile` already belongs to cap-readiness.js — the TRADE DECLARATION (trade_mode, markets, sectors).
+ *     Reading identity_type off it is not merely wrong, it reaches into another capability's state and would
+ *     have been a genuine collision had the names lined up.
+ *
+ * ⭐ THE REAL SIGNAL IS SESSION.actorId — app.html's setSession derives it from the JWT payload when
+ * identity_type is 'actor'. It exists from the moment the token does, with no round trip and nothing to wait
+ * for. `e` is preferred when present because the server states it outright (b174), and a value the server
+ * asserts beats one the client infers.
+ *
+ * ⚠️ THE LESSON: a helper written against a REMEMBERED variable name compiles, runs, throws nothing, and is
+ * silently always-false. Check the name exists before building a screen on top of it.
  */
-function SESSION_IS_ACTOR(){
+function SESSION_IS_ACTOR(e){
   try {
-    if (UI.profile && UI.profile.identity_type) return UI.profile.identity_type === "actor";
-    return !!(SESSION && SESSION.identity_type === "actor");
+    if (e && e.identity_type) return e.identity_type === 'actor';
+    return !!(typeof SESSION !== 'undefined' && SESSION && SESSION.actorId);
   } catch (_) { return false; }
 }
 
