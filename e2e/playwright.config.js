@@ -85,7 +85,11 @@ module.exports = defineConfig({
         /[\\/]signed-out\.spec\.js$/, /[\\/]currency-matrix\.spec\.js$/, /[\\/]mode-survives-order\.spec\.js$/,
         /[\\/]variants\.spec\.js$/, /[\\/]network-cascade\.spec\.js$/, /[\\/]render-smoke\.spec\.js$/,
         /[\\/]enquiry\.spec\.js$/, /[\\/]message-privacy\.spec\.js$/, /[\\/]dispute-privacy\.spec\.js$/,
-        /[\\/]shop-publish\.spec\.js$/, /[\\/]notif-clear\.spec\.js$/],
+        /[\\/]shop-publish\.spec\.js$/, /[\\/]notif-clear\.spec\.js$/,
+        /* iam.spec.js writes its own cb_sess for a FRESH entity — a saved session would be the wrong one, and
+           its assertions are about the entity it just created. Added to the noauth testMatch in the same
+           commit, per the warning above. */
+        /[\\/]iam\.spec\.js$/],
     },
     // 3 · flows that must start LOGGED OUT (they test onboarding itself / the welcome screen)
     {
@@ -102,6 +106,9 @@ module.exports = defineConfig({
         /network-cascade\.spec\.js/,
         // signed-out is the definition of a noauth test: it asserts that no session means no app, over time
         /signed-out\.spec\.js/,
+        // IAM arranges a FRESH entity through the API and writes its own cb_sess — it must not inherit a saved
+        // one, because every assertion is about the entity it just created. See the ignore list above.
+        /[\\/]iam\.spec\.js$/,
         // ⚠️ THE PRE-PUSH GATE. Seconds, no login, no data: did the page BOOT without throwing? Five defects in the
         // 2026-08-09 cart integration were invisible to node -c and to the unit tests, and twice took the public
         // storefront down. Run before pushing anything touching app.html, shop.html or app/*.js.

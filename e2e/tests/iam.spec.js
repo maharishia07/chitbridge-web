@@ -1,66 +1,150 @@
-// iam.spec.js — IAM: who can act, and what they may do.
+// iam.spec.js — the IAM screen, driven in a real browser.
 //
-// ⚠️ THE SCREEN ONLY BECAME HONEST TODAY. Before the hat gate shipped, "View-only" was a label the product
-// displayed and did not apply, so a page saying "cannot create or change records" would have been a lie in the
-// product's own voice. These tests hold that sentence to the enforcement behind it.
+// IAM-SPEC.md §10 (three sections), §12 (trading status resolves the storefront sentence), §26.3 (two tabs).
+//
+// ⚠️ THE VALUE HERE IS THE SENTENCE, NOT THE LAYOUT. Every other check in this repo can prove a section exists.
+// Only a browser can prove that setting "closed" changes what the screen SAYS about who can see your catalogue
+// — and that sentence was wrong in the product for as long as `closed` only blocked orders while leaving the
+// catalogue public. A person read a true-sounding note and drew a false conclusion about their own privacy.
+//
+// ⚠️ IT SIGNS IN AS A FRESH ENTITY. Athi, 2026-08: a shared account ACCUMULATES, so any assertion about counts
+// or lists is sound alone and unsound in a batch. This asserts only about the entity it just created.
+//
+//   npx playwright test iam --project=noauth
 
 const { test, expect } = require('@playwright/test');
-const { mintEntity } = require('../fixtures');
 
-const openIam = async (page, tab) => {
-  await page.evaluate(() => window.navTo('profile'));
-  await page.waitForTimeout(1500);
-  await page.evaluate(() => window.profSetSec('identity'));
-  await page.waitForFunction(() => !!document.querySelector('[data-testid="iam-tab-me"]'), null, { timeout: 20_000 });
-  if (tab) { await page.getByTestId('iam-tab-' + tab).click(); await page.waitForTimeout(900); }
-};
+const API = process.env.CB_API || 'https://chitbridge-api-production.up.railway.app';
+const OTP = process.env.DEV_OTP || '123456';
 
-test.describe('IAM · identity and access', () => {
-  test.describe.configure({ timeout: 240_000 });
+async function api(path, { method = 'GET', token, body } = {}) {
+  const res = await fetch(API + path, {
+    method,
+    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  let json = null; try { json = await res.json(); } catch (_) {}
+  return { status: res.status, json };
+}
 
-  test('[IAM-01] the section is named IAM and carries both tabs', async ({ page }) => {
-    await mintEntity(page);
-    await openIam(page);
-    /* ⚠️ THREE tabs now, and "My profile" is the DEFAULT — the only one that acts. The other two are a map. */
+async function freshEntity() {
+  const stamp = Date.now() + '' + Math.floor(Math.random() * 1e5);
+  const email = 'iam-' + stamp + '@test-cb.com';
+  const user_id = 'iamtest' + stamp;
+  const reg = await api('/api/entities/register', {
+    method: 'POST', body: { email, display_name: 'IAM Test ' + stamp, user_id },
+  });
+  expect(reg.status, 'register: ' + JSON.stringify(reg.json)).toBe(200);
+  const v = await api('/api/entities/verify', { method: 'POST', body: { email, otp: reg.json.dev_otp || OTP } });
+  expect(v.status, 'verify: ' + JSON.stringify(v.json)).toBe(200);
+  return { token: v.json.token, entity: v.json.entity, user_id };
+}
+
+async function openIam(page, sess) {
+  await page.goto('/app.html');
+  await page.evaluate((s) => {
+    /**
+     * ⚠️⚠️ POINT THE APP AT THE API THE TOKEN CAME FROM. A fresh browser context has no `cb_api_base`, so the
+     * app falls back to its own stage default — and the token this test minted against CB_API is valid nowhere
+     * the app looks. GET /me then fails, UI._me stays null, the profile body renders nothing, and the failure
+     * surfaces as "iam-sec-ident not found": a rendering symptom for an authentication cause.
+     *
+     * This is the same shape as the hash-change problem above. Both times the test reported the LAST thing that
+     * did not appear rather than the first thing that went wrong.
+     */
+    localStorage.setItem('cb_api_base', s.api);
+    localStorage.setItem('cb_sess', JSON.stringify({
+      token: s.token, role: 'entity', name: s.entity.display_name,
+      entity: s.entity.display_name, bridgeId: s.entity.bridge_id, shop: 'open',
+    }));
+  }, { ...sess, api: API });
+  /**
+   * ⚠️⚠️ A HASH CHANGE IS NOT A RELOAD. `goto('/app.html')` then `goto('/app.html#/app')` is the SAME document
+   * — Playwright changes the fragment and the app never re-boots, so it never reads the session I just wrote,
+   * never signs in, and never lazy-loads cap-admin. The symptom was `profSetSec` timing out as undefined,
+   * which reads like a missing function and is actually a page that was still sitting on the login screen.
+   */
+  await page.reload();
+  await page.goto('/app.html#/app');
+
+  /**
+   * ⚠️ WAIT FOR THE APP TO EXIST BEFORE DRIVING IT. My first version called navTo() straight after goto and all
+   * three tests failed with "element not found" — which reads exactly like a missing feature and was in fact a
+   * race: cap-admin.js is loaded lazily by ensureCap(), so for the first few hundred milliseconds navTo is not
+   * defined and the evaluate throws into the void.
+   *
+   * A test that fails for a timing reason but reports a rendering one costs more than no test at all: it sends
+   * you to read the renderer.
+   */
+  await page.waitForFunction(() => typeof navTo === 'function', null, { timeout: 20000 });
+  await page.evaluate(() => navTo('profile'));
+  await page.waitForFunction(() => typeof profSetSec === 'function', null, { timeout: 20000 });
+  await page.evaluate(() => { profSetSec('identity'); });
+  await expect(page.getByTestId('iam-sec-ident')).toBeVisible({ timeout: 20000 });
+}
+
+test.describe('IAM', () => {
+  test('two tabs, three sections, and Identity opens by default', async ({ page }) => {
+    const sess = await freshEntity();
+    await openIam(page, sess);
+
+    // §26.3 — Network and Customer are gone: a network node IS an entity, and a customer never reaches this app.
     await expect(page.getByTestId('iam-tab-me')).toBeVisible();
     await expect(page.getByTestId('iam-tab-emp')).toBeVisible();
-    await expect(page.getByTestId('iam-tab-cust')).toBeVisible();
-    /* the editable form lives in "My profile" and must live nowhere else — one control, one home */
-    await expect(page.locator('#pf_uid'), 'the form is on the default tab').toBeVisible();
-    const rail = await page.locator('#prof_rail, .rows').first().textContent();
-    expect(rail, 'the rail row says IAM, not Identity').toContain('IAM');
+    await expect(page.getByTestId('iam-tab-node')).toHaveCount(0);
+    await expect(page.getByTestId('iam-tab-cust')).toHaveCount(0);
+
+    // §10 — three sections, and only the first is open.
+    await expect(page.getByTestId('iam-sec-ident')).toHaveAttribute('aria-expanded', 'true');
+    await expect(page.getByTestId('iam-sec-profile')).toHaveAttribute('aria-expanded', 'false');
+    await expect(page.getByTestId('iam-sec-governed')).toHaveAttribute('aria-expanded', 'false');
+
+    // the User ID is present and is NOT an input — it is chosen once, at registration.
+    await expect(page.locator('#pf_name')).toBeVisible();
+    await expect(page.locator('#pf_uid')).toHaveCount(0);
+    await expect(page.getByText(sess.user_id, { exact: false }).first()).toBeVisible();
   });
 
-  test('[IAM-02] ⭐ the spine is the BOUNDARY, not a flat list of classes', async ({ page }) => {
-    await mintEntity(page);
-    await openIam(page, 'who');
-    const body = await page.locator('#profbody').textContent();
-    /* ⚠️ Five classes with an Access column would imply this business grants access to all five. It
-       administers two. The boundary is what makes three empty columns honest rather than unfinished. */
-    /* ⚠️ The boundary is now carried by the TABS themselves — one per party — rather than by three headings
-       on one page. The assertion follows the design: each tab shows one kind of thing. */
-    expect(body, 'the employee tab names the sign-in format').toMatch(/key@/);
-    expect(body, 'and says what is unique about it').toMatch(/Unique inside your business/i);
+  test('a section opens on click and stays open across a re-render', async ({ page }) => {
+    const sess = await freshEntity();
+    await openIam(page, sess);
+
+    await page.getByTestId('iam-sec-profile').click();
+    await expect(page.getByTestId('iam-sec-profile')).toHaveAttribute('aria-expanded', 'true');
+    await expect(page.locator('#pf_gstn')).toBeVisible();
+
+    // ⚠️ the toggle writes to UI and re-renders; a naive implementation loses the state on the next paint
+    await page.evaluate(() => { renderApp(); try { _capShowDetail(); loadProfile(); } catch (_) {} });
+    await expect(page.getByTestId('iam-sec-profile')).toHaveAttribute('aria-expanded', 'true');
   });
 
-  test('[IAM-03] ⭐⭐ every access row names its PROVENANCE', async ({ page }) => {
-    await mintEntity(page);
-    await openIam(page, 'access');
-    const body = await page.locator('#profbody').textContent();
-    /* "Why can't I do this?" is the real question. DERIVED and CAPPED are the two answers no other screen
-       gives — nothing else says "this is true because of where you sit in the tree". */
-    /* The customer tab must say the two things that are true of no other party. */
-    expect(body, 'a customer key is scoped to this shop').toMatch(/.cr/);
-    expect(body, 'and a customer has no hat').toMatch(/Not staff/i);
-  });
+  test('§12 — closing the shop changes what the screen SAYS about visibility', async ({ page }) => {
+    const sess = await freshEntity();
+    await openIam(page, sess);
+    await page.getByTestId('iam-sec-governed').click();
 
-  test('[IAM-04] ⚠️ the heading renders as text, not as its own markup', async ({ page }) => {
-    await mintEntity(page);
-    await openIam(page);
-    const body = await page.locator('#profbody').textContent();
-    /* ⚠️ _misHead escapes both arguments. Passing HTML printed a literal "&amp;" and a raw <b> tag on the
-       screen — the kind of defect that only a human looking at it catches, so it is asserted now. */
-    expect(body, 'no escaped entity leaked into the heading').not.toMatch(/&amp;|&lt;/);
-    expect(body, 'and no raw tag').not.toMatch(/<b>/);
+    await expect(page.locator('body')).toContainText(/accepting orders|no public storefront/i);
+
+    /**
+     * ⚠️ SAVE IT, DO NOT JUST SELECT IT. My first version changed the dropdown and re-rendered, then asserted
+     * the sentence had changed — and it had not, correctly: the sentence reads the SAVED status from UI._me,
+     * not the value sitting unsaved in a <select>. The test was asserting a behaviour nobody asked for (a live
+     * preview of an unsaved change) and reporting its absence as a bug in the feature.
+     *
+     * Going through the API is also the truer test: it proves what a reader sees after the change LANDS.
+     */
+    await api('/api/entities/profile', {
+      method: 'PATCH', token: sess.token,
+      body: { business_status: 'closed', catalogue_visibility: 'public' },
+    });
+    await page.reload();
+    await page.waitForFunction(() => typeof profSetSec === 'function', null, { timeout: 20000 });
+    await page.evaluate(() => { navTo('profile'); profSetSec('identity'); });
+    await expect(page.getByTestId('iam-sec-governed')).toBeVisible({ timeout: 20000 });
+    await page.getByTestId('iam-sec-governed').click();
+
+    // ⚠️ THE ASSERTION THAT MATTERS: the sentence must say the catalogue is HIDDEN. For as long as `closed`
+    // only blocked orders, a shopkeeper read a reassuring note and stayed fully public.
+    await expect(page.locator('body')).toContainText(/hidden from everyone/i, { timeout: 15000 });
   });
 });
