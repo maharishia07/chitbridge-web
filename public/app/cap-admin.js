@@ -1329,8 +1329,22 @@ function iamMeHTML(e){
    * ⭐ THE HINT CARRIES THE ANSWER SO THE SECTION NEED NOT BE OPENED. That is what replaces the prose: a
    * reader learns "private · open" from the closed header, and opens it only to change something.
    */
-  var _sfHint = [ (e.catalogue_visibility || 'private'), (e.business_status || 'open') ].join(' · ');
-  var _licHint = [ (e.gstn ? licLabel : null), (e.address ? 'address' : null) ].filter(Boolean).join(' · ')
+  /**
+   * ⚠️⚠️ THE HINT IS WHY THESE SECTIONS EXIST CLOSED. Athi could not find the channels or the Regional block —
+   * both sit inside sections that default to collapsed, so the feature was shipped, correct, and invisible.
+   *
+   * ⭐ THE FIX IS NOT TO OPEN EVERYTHING. It is the rule this screen already follows: the hint carries the
+   * ANSWER so the section need not be opened. A reader who wants "public · open · 2 channels" now has it
+   * without a click, and opens the section only to change something.
+   */
+  var _chanN = Array.isArray(UI._chans) ? UI._chans.length : null;
+  var _sfHint = [ (e.catalogue_visibility || 'private'), (e.business_status || 'open'),
+                  (_chanN === null ? null : (_chanN + ' ' + (_chanN === 1 ? tx('channel') : tx('channels')))) ]
+                .filter(Boolean).join(' · ');
+  /* ⭐ COUNTRY AND CURRENCY IN THE HINT — the two Regional facts a reader is most likely to be checking, and
+     the reason they open this section at all. */
+  var _licHint = [ (e.country || null), (e.currency_code || null),
+                   (e.gstn ? licLabel : null), (e.address ? 'address' : null) ].filter(Boolean).join(' · ')
                  || tx('not set');
 
   /* ⭐ EACH SECTION CARRIES ITS OWN SAVE — and Rights carries none, because nothing in it is yours to set.
@@ -1624,10 +1638,20 @@ async function iamLoadDocs(){
  * rather than hidden: hiding it would leave an owner wondering where their number went.
  */
 function iamChannelRows(){
+  var Q0 = String.fromCharCode(39);
   var cs = UI._chans;
   if (cs === undefined) return '';                    // not read yet — say nothing rather than "none"
   if (cs === null) return '';                         // the read failed — same rule as the network count
-  if (!cs.length) return '';
+  /**
+   * ⚠️⚠️ AN EMPTY LIST STILL RENDERS. It used to return nothing, so an owner who had not bound a number saw no
+   * trace of the feature — indistinguishable from "not built". That is the same mistake as hiding a declared
+   * channel, applied to the empty case: I reasoned that a business with no channels "has nothing to say here",
+   * which is true of the DATA and false of the PERSON, who needs to know the row exists and how to fill it.
+   */
+  if (!cs.length) return '<div class="kv" style="margin-top:11px"><b>' + tx('Reached at') + '</b> · '
+    + '<span style="color:var(--grey)">' + tx('no channel yet') + '</span>'
+    + ' <a href="#" onclick="navTo(' + Q0 + 'settings' + Q0 + ');setSetSec(' + Q0 + 'channels' + Q0 + ');return false" style="color:var(--blue);font-size:var(--fs-1);margin-inline-start:6px">'
+    + tx('Add one') + ' <span class=arw>→</span></a></div>';
   var Q = String.fromCharCode(39);
   return '<div class="kv" style="margin-top:11px"><b>' + tx('Reached at') + '</b></div>'
     + cs.map(function(c){

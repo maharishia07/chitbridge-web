@@ -95,6 +95,13 @@ const CASES = [
   /* the four facts in one block — two the business's, two the reader's, told apart by the message column */
   ['iamMeHTML — business timezone set',    () => { ctx.UI._iamOpen.profile = true; const h = ctx.iamMeHTML({ ...ENTITY, country: 'India', currency_code: 'INR', timezone: 'Asia/Kolkata' }); ctx.UI._iamOpen.profile = false; if (h.indexOf('Asia/Kolkata') < 0) throw new Error('entity zone not shown'); return h; }],
   ['iamMeHTML — country/currency/tz/timestamp', () => { ctx.UI._iamOpen.profile = true; const h = ctx.iamMeHTML({ ...ENTITY, country: 'India', currency_code: 'INR' }); ctx.UI._iamOpen.profile = false; if (!/Timestamp/.test(h) || !/Currency/.test(h)) throw new Error('block incomplete'); return h; }],
+  /**
+   * ⚠️ THE HINTS ARE THE FEATURE WHEN A SECTION IS CLOSED. Athi could not find channels or Regional because
+   * both live inside sections that default to collapsed — shipped, correct, invisible. These assert the
+   * answer is readable WITHOUT opening anything, which is the only state most readers ever see.
+   */
+  ['hints — closed sections still answer', () => { ctx.UI._chans = srvChannels([{channel:'whatsapp',address:'+91',label:'S',status:'verified'}]); ctx.UI._chansLoaded = true; ctx.UI._iamOpen = {}; const h = ctx.iamMeHTML({ ...ENTITY, country:'India', currency_code:'INR', catalogue_visibility:'public' }); if (h.indexOf('India · INR') < 0) throw new Error('Business hint missing country/currency'); if (h.indexOf('1 channel') < 0) throw new Error('Storefront hint missing the channel count'); return h; }],
+  ['channels — none yet still shows',      () => { ctx.UI._chans = []; ctx.UI._chansLoaded = true; ctx.UI._iamOpen = { governed: true }; const h = ctx.iamMeHTML({ ...ENTITY, catalogue_visibility:'public' }); if (h.indexOf('no channel yet') < 0) throw new Error('empty state hidden'); return h; }],
   ['iamSelfEmployeeHTML — commenter',       () => ctx.iamSelfEmployeeHTML(ACTOR)],
   ['iamSelfEmployeeHTML — editor + reach',  () => ctx.iamSelfEmployeeHTML({ ...ACTOR, access_level: 'editor', whole_entity: true, can_see_costs: true })],
   ['CBIdDocs.html — self, empty',           () => ctx.CBIdDocs.html([], 'self')],
