@@ -5892,7 +5892,7 @@ function supCartOpts(x){
            onChange:function(){ if(UI._supFlow) UI._supFlow.paintFoot(); } };
 }
 async function selectSupplier(id, silent){
-  UI.supSel=id; UI.supMode='view';
+  UI.supSel=id;
   /**
    * ⚠️ SELECTING DOES NOT OPEN THE RECORD PANEL. It did, and that was wrong twice over: the slide-over covers the
    * list, so after picking one supplier you could not click the next without pressing back first — and the e2e
@@ -6144,7 +6144,10 @@ async function viewSupplierPassport(bridge, name){
     if(b2) b2.innerHTML = '<div style="font-size:var(--fs-2);color:var(--disp)">'+esc((e&&e.message)||'Could not read their passport.')+'</div>';
   }
 }
-function setSupMode(m){ UI.supMode=m; paintSupDetail(); }
+/* ⚠️ setSupMode AND UI.supMode REMOVED 2026-08-20. The setter had no caller, and the value it set was READ BY
+   NOTHING — no branch anywhere tested it. Two writes and a setter maintaining a variable that decided nothing.
+   Verified before deleting: grep for 'supMode ===' returns empty. The writes go too; leaving them would keep
+   the next reader looking for the thing they configure. */
 function supDetailHTML(){
   const d=UI.supDet, x=d&&d.supplier;
   /**
@@ -6274,7 +6277,7 @@ async function toggleSupPref(id){ const x=(UI.sups||[]).find(s=>s.supplier_list_
   catch(e){ toast(MSG.fail("update the supplier", e)+" — needs the Stage-B migration"); } }
 async function saveSupplier(id){ const err=document.getElementById("sp_ederr"); if(err)err.textContent="";
   const body={ nickname:val("sp_nick")||null, category:val("sp_cat")||null, notes:val("sp_notes")||null };
-  try{ await api("supPatch",{params:{id},body}); const x=(UI.sups||[]).find(s=>s.supplier_list_id===id); if(x){ x.nickname=body.nickname; x.category=body.category; x.notes=body.notes; } if(UI.supDet&&UI.supDet.supplier)Object.assign(UI.supDet.supplier, body); UI.supMode='view';
+  try{ await api("supPatch",{params:{id},body}); const x=(UI.sups||[]).find(s=>s.supplier_list_id===id); if(x){ x.nickname=body.nickname; x.category=body.category; x.notes=body.notes; } if(UI.supDet&&UI.supDet.supplier)Object.assign(UI.supDet.supplier, body);
     closeModal();   /* the form is a modal now, not a mode on the right pane */
     paintSupList(); paintSupDetail(); toast("Supplier updated ✓"); }
   catch(e){ if(err)err.textContent=((e&&e.message)||"Failed")+" — this needs the Stage-B migration applied."; } }
