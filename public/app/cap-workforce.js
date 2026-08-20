@@ -447,7 +447,7 @@ function acDetailHTML(){ const x=UI.acDet;
   if(UI.acMode==='edit'){
     body=`<div class="sec">${tx('Edit — co-assist profile')}</div>
       <label class="fl">${tx('Display name')}</label><input class="inp" id="ac_ename" value="${esc(x.name)}">
-      <label class="fl">${tx('Role')}</label><input class="inp" id="ac_erole" value="${esc(x.role||'')}" placeholder="e.g. Dispatch, Accounts">
+      <label class="fl">${tx('Role')} <span style="color:var(--grey);font-weight:400;font-size:var(--fs-1)">— ${tx('a label; it grants nothing')}</span></label><input class="inp" id="ac_erole" value="${esc(x.role||'')}" placeholder="e.g. Dispatch, Accounts">
       <label class="fl">Access <span style="color:var(--grey);font-weight:400;font-size:var(--fs-1)">— only an Editor can be assigned work</span></label>
       <select class="inp" id="ac_ehat" style="max-width:320px">${ACCESS_CHOICES.map(c=>'<option value="'+c[0]+'"'+(accessLevelOf(x)===c[0]?' selected':'')+'>'+esc(c[1])+'</option>').join('')}</select>
       ${/* ⭐ REACH IS A SEPARATE SWITCH, NOT A LEVEL. Five hat names could never express "an editor who

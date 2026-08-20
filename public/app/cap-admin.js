@@ -829,7 +829,7 @@ async function loadProfile(){ const h=document.getElementById("profbody"); if(!h
  * you sit". Naming the provenance is what makes this page answer the question people actually ask.
  */
 function iamTab(){ return UI.iamTab || 'me'; }
-function setIamTab(t){ UI.iamTab = t; renderApp(); _capShowDetail(); loadProfile(); }
+/* setIamTab removed with the tab strip it drove — see iamHTML. */
 
 /* ⚠️ SAME API AS CO-ASSISTS — Athi: "assume we need to have it in another place, then that has to be the same
    api and should behave the same way." This is `api('actors')`, the endpoint cap-workforce already uses, cached
@@ -884,14 +884,14 @@ function iamHTML(e){
    * reach app.html, so their profile lives on the STOREFRONT. Four tabs implied four places to manage
    * people; there are two.
    */
-  var seg = [['me','Business'],['emp','Employee']].map(function(x){
-    var on = tab === x[0];
-    return '<button type="button" data-testid="iam-tab-' + x[0] + '" onclick="setIamTab(' + Q + x[0] + Q + ')"'
-      + ' aria-pressed="' + (on ? 'true' : 'false') + '"'
-      + ' style="flex:1;cursor:pointer;font:inherit;padding:7px 8px;font-size:var(--fs-2);font-weight:' + (on ? 800 : 500) + ';'
-      + 'border:2px solid ' + (on ? 'var(--blue)' : 'var(--line)') + ';border-radius:9px;'
-      + 'background:' + (on ? 'var(--blue-tint-bg)' : 'var(--card)') + ';color:var(--on-card)">' + x[1] + '</button>';
-  }).join('');
+  /* ⚠️⚠️ THE TAB STRIP IS GONE. Athi, 2026-08-20: *"remove the employee tab, move what matters beside the
+     picker."* The Employee tab was 195 words of reference prose describing the access model — on a screen
+     where nobody chooses an access level. The two facts worth keeping moved to where the choice is made:
+     "cannot raise a dispute" into the Commenter option (ACCESS_CHOICES, app.html) and "a label; it grants
+     nothing" beside the Role field (cap-workforce). Everything else described what the other screen does.
+
+     ⭐ AND ONE TAB IS NOT A TAB. With Employee gone the strip would have offered a single choice, which is a
+     control that cannot be used — the same false affordance as a disabled input or a link to a closed shop. */
 
   /* ⚠️ _misHead ESCAPES BOTH ARGUMENTS — it takes text, not markup. I passed HTML and it printed a literal
      "&amp;" and a raw <b> tag on Athi's screen. Plain text only here. */
@@ -910,7 +910,6 @@ function iamHTML(e){
    * cannot — they ARE the screen.
    */
   return _misHead('IAM · Identity and Access Management', '')
-    + '<div style="display:flex;gap:7px;margin-bottom:11px">' + seg + '</div>'
     /* ⚠️ TWO BRANCHES, BECAUSE THERE ARE TWO TABS. 'node' and 'cust' were still routed here after their tabs
        were removed — unreachable, and exactly the kind of leftover that makes the next reader believe a
        Network tab exists somewhere they have not looked. */
@@ -919,7 +918,7 @@ function iamHTML(e){
        cannot reach iamHTML at all. The employee's own screen is rendered THERE — one place, see the note on
        loadActorProfile. A branch here would be unreachable and would read to the next person as though this
        screen served both parties. */
-    + (tab === 'emp' ? iamPartyHTML('emp', e) : iamMeHTML(e));
+    + iamMeHTML(e);
 }
 
 /* ══ shared pieces ══════════════════════════════════════════════════════════════════════════════════════════ */
@@ -1060,27 +1059,6 @@ var IAM_PARTY = {
   }
 };
 
-function iamPartyHTML(key, e) {
-  var P = IAM_PARTY[key];
-  if (!P) return '';
-  var acts = UI._iamActors || [];
-  var rows = P.rows(e, acts).map(function (r) {
-    return '<div style="padding:9px 0;border-block-start:1px solid var(--line)">'
-      + '<div style="font-size:var(--fs-1);color:var(--grey);font-weight:600">' + esc(r[0]) + '</div>'
-      /* the design's one rule: identifiers are monospace and gold, names are neither */
-      + '<div style="font-size:var(--fs-2);color:' + (r[2] ? 'var(--gold)' : 'var(--on-card)') + ';margin-top:2px'
-      +   (r[2] ? ";font-family:'Space Mono',ui-monospace,monospace" : '') + '">' + esc(r[1]) + '</div>'
-      + (r[3] ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px;line-height:1.45">' + esc(r[3]) + '</div>' : '')
-      + '</div>';
-  }).join('');
-
-  return '<div style="' + _CARD + '">'
-    + '<div class="sec" style="margin:0 0 2px">' + esc(P.title) + '</div>'
-    + '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.45">' + esc(P.who) + '</div>'
-    + rows
-    + '<button class="composebtn" style="margin-top:11px" onclick="' + P.nav[0] + '">Manage in ' + esc(P.nav[1]) + ' <span class=arw>→</span></button>'
-    + '</div>';
-}
 
 /**
  * ⭐ MY PROFILE — the only tab on this screen that ACTS. Everything else is a map.
@@ -1795,9 +1773,70 @@ async function saveProfile(sec){
   catch (e) { if (x) x.textContent = e.message; }
 }
 // 🛍️ Customer storefront — the shareable public shop link + the browse-first / login-first access mode.
-function sfCopy(){ var u=document.getElementById('sf_url'); if(!u)return; var t=u.textContent;
-  if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(t).then(function(){toast('Storefront link copied ✓');}).catch(function(){toast(t);}); }
-  else toast(t); }
+/* sfCopy removed with storefrontCardHTML, the card whose copy button called it. */
+/**
+ * ⚠️⚠️ THIS FUNCTION WAS DELETED BY ACCIDENT AND RESTORED FROM GIT (commit a823180).
+ *
+ * A scripted cut() removing storefrontCardHTML and saveStorefront over-reached and took loadActorProfile with
+ * it. Nothing complained: the file parsed, every gate passed, and render-smoke kept reporting 9/9 — because it
+ * calls iamSelfEmployeeHTML directly and never goes through loadProfile. The ONLY symptom would have been an
+ * employee opening Profile and getting a blank pane from a ReferenceError.
+ *
+ * ⭐ FOUND BY dead-surface REPORTING iamSelfEmployeeHTML AND saveActorPin AS ORPHANS — not by any test, and not
+ * by reading the diff. A function with no callers is usually dead code; twice today it has instead meant that
+ * something which SHOULD call it has gone missing. The orphan count going UP after a deletion is the signal.
+ */
+/**
+ * loadActorProfile — THE employee's own profile. There is exactly one, and finding that out was the whole
+ * problem.
+ *
+ * ⚠️⚠️ I BUILT A SECOND ONE AND IT WAS UNREACHABLE. Athi asked why his access level was not shown; I added an
+ * employee branch inside iamHTML and shipped it. But loadProfile() short-circuits three lines in —
+ * `if(SESSION.role==='actor') return loadActorProfile(h)` — so iamHTML is NEVER CALLED for an employee and
+ * the new screen could not render for anyone. Two renderers for one screen, and the one I wrote was the dead
+ * one. Athi's report, twice, was simply "still not rendering".
+ *
+ * ⭐ THE STANDING RULE EXISTS FOR EXACTLY THIS: a second call site means find the first one. I searched for
+ * where the IAM screen renders instead of where an EMPLOYEE's profile renders, found iamHTML, and built
+ * beside a function I never looked for. The content below is the same iamSelfEmployeeHTML — now called from
+ * the one place that actually runs.
+ *
+ * ⚠️ AND IT NEEDS /me, NOT THE TOKEN. The old version read everything from jwtPayload, which is why it could
+ * only say "your hat is managed by your entity" without naming it: the level deliberately is NOT in the JWT,
+ * so that an owner demoting someone takes effect immediately rather than at token expiry. Naming the level
+ * therefore costs one round trip, and that is the correct price for the answer being current.
+ */
+async function loadActorProfile(h){
+  /* ⭐ A COLLAPSIBLE SECTION LIKE THE OTHERS. Athi, 2026-08-20: *"pin number again as a collapsable stuff"* and
+     *"change your pin is fine"* — so the wording stays and only the container changes. Three sections that
+     behave the same way beat two accordions and one loose card sitting under them. */
+  const pinBody = `<label class="fl">${tx('Current PIN')}</label><input class="inp" id="pf_cpin" inputmode="numeric" maxlength="4" style="max-width:150px" placeholder="4 digits">
+      <label class="fl">${tx('New PIN')}</label><input class="inp" id="pf_npin" inputmode="numeric" maxlength="4" style="max-width:150px" placeholder="4 digits">
+      <label class="fl">${tx('Confirm new PIN')}</label><input class="inp" id="pf_npin2" inputmode="numeric" maxlength="4" style="max-width:150px" placeholder="4 digits">
+      <div class="err" id="pf_err"></div><button class="composebtn" style="margin-top:9px" onclick="saveActorPin()">${tx('Change PIN')}</button>`;
+  const pinCard = iamSection('pin', tx('Change your PIN'), pinBody, { hint: tx('4 digits') });
+
+  /* Paint immediately from the token so the screen is never blank, then replace once /me lands. */
+  const p = (typeof jwtPayload === 'function' && jwtPayload(SESSION.token)) || {};
+  if (!UI._me) {
+    h.innerHTML = `<div class="sec">${tx('Your profile')}</div>`
+      + `<div class="misnote">${esc(SESSION.name || p.display_name || '')} — loading your access…</div>` + pinCard;
+  }
+
+  let e = UI._me;
+  if (!e) {
+    try { e = (await api('me')) || {}; UI._me = e; }
+    catch (err) { e = { display_name: SESSION.name || p.display_name, actor_key: p.actor_key, identity_type: 'actor' }; }
+  }
+  /* ⚠️ RE-QUERY AFTER THE AWAIT — renderApp rebuilds the shell, so the node captured above may be detached.
+     Every await in this file followed by a DOM write has the same hazard. */
+  const h2 = document.getElementById('profbody'); if (!h2) return;
+  h2.innerHTML = `<div class="sec">${tx('Your profile')}</div>`
+    + iamSelfEmployeeHTML(e)
+    + pinCard
+    + `<div style="font-size:var(--fs-1);color:var(--grey);margin-top:8px;line-height:1.5">Set your <b>${tx('Duty / Break')}</b> from the top bar.</div>`;
+}
+
 async function saveActorPin(){ const x=document.getElementById("pf_err"); if(x)x.textContent="";
   const c=val("pf_cpin"), n=val("pf_npin"), n2=val("pf_npin2");
   if(!/^\d{4}$/.test(n)){ if(x)x.textContent="New PIN must be 4 digits."; return; }

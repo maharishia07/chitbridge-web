@@ -7310,9 +7310,21 @@ function hatLabel(x){ return ACCESS_LABEL[accessLevelOf(x)] || tx('Editor'); }
 function hatAssignable(x){ return accessLevelOf(x) === 'editor'; }
 
 /** What an owner picks. The two flags are separate controls — they are not levels. */
+/**
+ * ⭐⭐ THE OPTION TEXT IS THE WHOLE EXPLANATION, AND IT LIVES AT THE POINT OF CHOOSING. Athi, 2026-08-20:
+ * *"remove the employee tab, move what matters beside the picker."*
+ *
+ * The IAM screen carried a 195-word reference table describing these three levels — on a screen where nobody
+ * chooses one. Two facts from it were not already here and were worth keeping; both are now in the option a
+ * person is actually reading when they decide:
+ *
+ * ⚠️ "cannot raise a dispute" IS A REAL CONSEQUENCE, not a nicety. lib/access.js canRaiseDispute === canEdit,
+ * so a Commenter cannot open a dispute — and an owner appointing an auditor needs to know that BEFORE they
+ * pick, not when the auditor cannot act. It was buried in a paragraph on another screen.
+ */
 const ACCESS_CHOICES = [
   ['editor',    tx('Editor') + ' — ' + tx('changes records, messages anyone')],
-  ['commenter', tx('Commenter') + ' — ' + tx('reads, replies internally only')],
+  ['commenter', tx('Commenter') + ' — ' + tx('reads and replies internally; cannot answer the other party or raise a dispute')],
   ['viewer',    tx('Viewer') + ' — ' + tx('reads, and says nothing')],
 ];
 function acType(t){ return AC_TYPE[t]||esc(t||'human'); }
