@@ -909,12 +909,12 @@ function iamHTML(e){
     /* ⚠️ TWO BRANCHES, BECAUSE THERE ARE TWO TABS. 'node' and 'cust' were still routed here after their tabs
        were removed — unreachable, and exactly the kind of leftover that makes the next reader believe a
        Network tab exists somewhere they have not looked. */
-    /* ⭐⭐ AN EMPLOYEE IS NOT LOOKING AT A BUSINESS. iamMeHTML renders the ENTITY's profile — licence,
-       address, trading status, and a User ID block that told a signed-in employee their handle was
-       "Not set" and invited them to claim one permanently. They have no handle: they sign in as
-       key@business. Same screen for both parties was the bug, not the layout. */
-    + (SESSION_IS_ACTOR(e) ? iamSelfEmployeeHTML(e)
-        : tab === 'emp' ? iamPartyHTML('emp', e) : iamMeHTML(e));
+    /* ⚠️ NO EMPLOYEE BRANCH HERE, AND THERE MUST NOT BE ONE. I put one here and it was dead code:
+       loadProfile() routes an actor to loadActorProfile() before this function is ever called, so an employee
+       cannot reach iamHTML at all. The employee's own screen is rendered THERE — one place, see the note on
+       loadActorProfile. A branch here would be unreachable and would read to the next person as though this
+       screen served both parties. */
+    + (tab === 'emp' ? iamPartyHTML('emp', e) : iamMeHTML(e));
 }
 
 /* ══ shared pieces ══════════════════════════════════════════════════════════════════════════════════════════ */
@@ -1231,31 +1231,20 @@ function iamMeHTML(e){
 
 
 /**
- * SESSION_IS_ACTOR — is the person reading this screen an employee rather than the business?
+ * ⚠️⚠️ SESSION_IS_ACTOR LIVED HERE AND IS GONE, IN TWO STAGES, BOTH WORTH RECORDING.
  *
- * ⚠️⚠️ THE FIRST VERSION OF THIS READ TWO THINGS THAT DO NOT EXIST, so it returned false for everyone and the
- * whole employee profile was unreachable — built, shipped, served, and never once rendered. Athi asked "is it
- * reflecting in localhost? I am there as an employee" and the honest answer was no.
+ * It first read `SESSION.identity_type` (never set anywhere — my line was the only reader in the repo) and
+ * `UI.profile.identity_type` (UI.profile belongs to cap-readiness.js: the TRADE DECLARATION). So it returned
+ * false for everyone: not a crash, a silent always-false. e2e/session-keys.cjs now catches that class.
  *
- *   · `SESSION.identity_type` is NEVER SET. Nothing in this codebase assigns it; my line was the only reader.
- *   · `UI.profile` already belongs to cap-readiness.js — the TRADE DECLARATION (trade_mode, markets, sectors).
- *     Reading identity_type off it is not merely wrong, it reaches into another capability's state and would
- *     have been a genuine collision had the names lined up.
+ * Then it turned out not to be needed at all. loadProfile() already routes an actor to loadActorProfile()
+ * before iamHTML runs, so the branch it gated was unreachable no matter what it returned. The right question
+ * was never "is this reader an actor" — it was "where does an employee's profile already render", and that
+ * had an answer before I started.
  *
- * ⭐ THE REAL SIGNAL IS SESSION.actorId — app.html's setSession derives it from the JWT payload when
- * identity_type is 'actor'. It exists from the moment the token does, with no round trip and nothing to wait
- * for. `e` is preferred when present because the server states it outright (b174), and a value the server
- * asserts beats one the client infers.
- *
- * ⚠️ THE LESSON: a helper written against a REMEMBERED variable name compiles, runs, throws nothing, and is
- * silently always-false. Check the name exists before building a screen on top of it.
+ * ⭐ TWO BUGS, ONE CAUSE: I searched for where the IAM SCREEN renders instead of where an EMPLOYEE'S PROFILE
+ * renders, and built beside a function I never looked for.
  */
-function SESSION_IS_ACTOR(e){
-  try {
-    if (e && e.identity_type) return e.identity_type === 'actor';
-    return !!(typeof SESSION !== 'undefined' && SESSION && SESSION.actorId);
-  } catch (_) { return false; }
-}
 
 /**
  * ⭐⭐ THE EMPLOYEE'S OWN PROFILE. Athi, 2026-08-20: *"in the employee profile, there is nothing mentioned
@@ -1351,7 +1340,10 @@ async function iamLoadDocs(){
   try {
     await ensureCap('iddocs');
     UI._idocs = await CBIdDocs.load();
-    renderApp(); _capShowDetail();
+    /* ⚠️ loadProfile() TOO — the employee screen is painted by loadActorProfile, which renderApp alone does
+       not re-run. Without it the documents arrive, sit in UI._idocs, and the section keeps showing "Loading…"
+       until something else happens to repaint. Same trio iamToggle uses; anything less is a half-repaint. */
+    renderApp(); _capShowDetail(); loadProfile();
   } catch (_) { /* the record is additive — its absence must not take the profile down */ }
 }
 
@@ -1600,23 +1592,52 @@ async function saveStorefront(){ var x=document.getElementById('pf_err2'); if(x)
 
 // Actor's own profile — their identity (from the JWT) + self-service Change PIN. Hat/shift/access are set by
 // the entity; the actor sets Duty/Break from the top bar.
-function loadActorProfile(h){
-  const p=(typeof jwtPayload==='function'&&jwtPayload(SESSION.token))||{};
-  const login=(p.actor_key&&p.parent_entity_name)?(p.actor_key+'@'+p.parent_entity_name):(SESSION.name||'');
-  const kv=(l,v)=>`<div style="display:flex;gap:10px;padding:9px 13px;border-bottom:1px dashed var(--line);font-size:13px;align-items:baseline"><b style="min-width:104px;color:var(--grey);font-weight:600;font-size:var(--fs-1);text-transform:uppercase;letter-spacing:.4px">${l}</b><span style="font-weight:600;flex:1">${(v==null||v==='')?'—':v}</span></div>`;
-  h.innerHTML=`${menuAssist('profile')}<div class="sec">${tx('Your profile')}</div>
-    <div class="itab" style="border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:10px">
-      ${kv('Name',esc(SESSION.name||p.display_name||''))}
-      ${kv('Login','<span class="mono">'+esc(login)+'</span>')}
-      ${kv('Role',esc(p.actor_role||''))}
-      ${kv('Works for',esc(p.parent_entity_name||SESSION.entity||''))}
-      ${kv('Status',SESSION.duty==='break'?'On break':'On duty')}</div>
-    <div style="${_CARD}"><div class="sec" style="margin:0 0 8px">${tx('🔑 Change your PIN')}</div>
+/**
+ * loadActorProfile — THE employee's own profile. There is exactly one, and finding that out was the whole
+ * problem.
+ *
+ * ⚠️⚠️ I BUILT A SECOND ONE AND IT WAS UNREACHABLE. Athi asked why his access level was not shown; I added an
+ * employee branch inside iamHTML and shipped it. But loadProfile() short-circuits three lines in —
+ * `if(SESSION.role==='actor') return loadActorProfile(h)` — so iamHTML is NEVER CALLED for an employee and
+ * the new screen could not render for anyone. Two renderers for one screen, and the one I wrote was the dead
+ * one. Athi's report, twice, was simply "still not rendering".
+ *
+ * ⭐ THE STANDING RULE EXISTS FOR EXACTLY THIS: a second call site means find the first one. I searched for
+ * where the IAM screen renders instead of where an EMPLOYEE's profile renders, found iamHTML, and built
+ * beside a function I never looked for. The content below is the same iamSelfEmployeeHTML — now called from
+ * the one place that actually runs.
+ *
+ * ⚠️ AND IT NEEDS /me, NOT THE TOKEN. The old version read everything from jwtPayload, which is why it could
+ * only say "your hat is managed by your entity" without naming it: the level deliberately is NOT in the JWT,
+ * so that an owner demoting someone takes effect immediately rather than at token expiry. Naming the level
+ * therefore costs one round trip, and that is the correct price for the answer being current.
+ */
+async function loadActorProfile(h){
+  const pinCard = `<div style="${_CARD}"><div class="sec" style="margin:0 0 8px">${tx('🔑 Change your PIN')}</div>
       <label class="fl">${tx('Current PIN')}</label><input class="inp" id="pf_cpin" inputmode="numeric" maxlength="4" style="max-width:150px" placeholder="4 digits">
       <label class="fl">${tx('New PIN')}</label><input class="inp" id="pf_npin" inputmode="numeric" maxlength="4" style="max-width:150px" placeholder="4 digits">
       <label class="fl">${tx('Confirm new PIN')}</label><input class="inp" id="pf_npin2" inputmode="numeric" maxlength="4" style="max-width:150px" placeholder="4 digits">
-      <div class="err" id="pf_err"></div><button class="composebtn" style="margin-top:9px" onclick="saveActorPin()">${tx('Change PIN')}</button></div>
-    <div style="font-size:var(--fs-1);color:var(--grey);margin-top:8px;line-height:1.5">Your <b>hat</b>, shift and access are managed by your entity. Set your <b>${tx('Duty / Break')}</b> from the top bar.</div>`;
+      <div class="err" id="pf_err"></div><button class="composebtn" style="margin-top:9px" onclick="saveActorPin()">${tx('Change PIN')}</button></div>`;
+
+  /* Paint immediately from the token so the screen is never blank, then replace once /me lands. */
+  const p = (typeof jwtPayload === 'function' && jwtPayload(SESSION.token)) || {};
+  if (!UI._me) {
+    h.innerHTML = `${menuAssist('profile')}<div class="sec">${tx('Your profile')}</div>`
+      + `<div class="misnote">${esc(SESSION.name || p.display_name || '')} — loading your access…</div>` + pinCard;
+  }
+
+  let e = UI._me;
+  if (!e) {
+    try { e = (await api('me')) || {}; UI._me = e; }
+    catch (err) { e = { display_name: SESSION.name || p.display_name, actor_key: p.actor_key, identity_type: 'actor' }; }
+  }
+  /* ⚠️ RE-QUERY AFTER THE AWAIT — renderApp rebuilds the shell, so the node captured above may be detached.
+     Every await in this file followed by a DOM write has the same hazard. */
+  const h2 = document.getElementById('profbody'); if (!h2) return;
+  h2.innerHTML = `${menuAssist('profile')}<div class="sec">${tx('Your profile')}</div>`
+    + iamSelfEmployeeHTML(e)
+    + pinCard
+    + `<div style="font-size:var(--fs-1);color:var(--grey);margin-top:8px;line-height:1.5">Set your <b>${tx('Duty / Break')}</b> from the top bar.</div>`;
 }
 async function saveActorPin(){ const x=document.getElementById("pf_err"); if(x)x.textContent="";
   const c=val("pf_cpin"), n=val("pf_npin"), n2=val("pf_npin2");
