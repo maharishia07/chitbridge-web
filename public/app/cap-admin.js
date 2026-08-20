@@ -3558,6 +3558,19 @@ function paintSettings(s, _daOpts){ const h=document.getElementById("setbody"); 
     }
     else if (k === "work") out = _misHead('Work', '')
       + `<div style="${_CARD}">${notYet}
+      ${/**
+         * ⭐⭐ THE SAME CONTROL, NOT A SECOND ONE. Athi, 2026-08-20: *"in the settings, we have to include to
+         * change the type, either goods or service, in the settings so the type of work it takes care of."*
+         *
+         * ⚠️ IT WRITES THE SAME COLUMN AND READS THE SAME VALUE as the Business section on the profile. Two
+         * pickers for one fact is how a screen comes to disagree with itself — the thing this whole day has
+         * been removing. Here it is a POINTER, not a copy: it states what is set and sends the reader to the
+         * one place that sets it. Settings › Work is where a person asks "what kind of work do we do", so the
+         * answer belongs on it; the CONTROL does not have to.
+         */''}
+      <div class="kv" style="margin-bottom:9px"><b>${tx('Supplies')}</b> · ${esc((UI._me && UI._me.supplies) || 'goods')}
+        <a href="#" onclick="navTo('profile');profSetSec('identity');UI._iamOpen=Object.assign(UI._iamOpen||{},{profile:true});return false"
+           style="color:var(--blue);font-size:var(--fs-1);margin-inline-start:6px">${tx('Change in Business')} <span class=arw>→</span></a></div>
       <label class="fl">${tx('Task assignment')}${helpQ('work.assignment', 'How tasks reach people')}</label><select class="inp" id="st_am">${opt(["pull","push","both"],s.assignment_model||"both")}</select>
       <label class="fl">${tx('Default max tasks per')} ${TERM.coassist}</label><input class="inp" id="st_mt" inputmode="numeric" value="${esc(s.default_max_tasks||10)}">
       <label class="fl" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="st_av" ${s.all_task_visible?'checked':''}> All tasks visible to all co-assists</label>
