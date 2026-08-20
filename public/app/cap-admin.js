@@ -2214,7 +2214,7 @@ const GOV=[
     ['ERP adapter','—','free'],['Sync mode','—','free'] ] },
   { n:'7 · Consolidation', tag:'→ boilerplate the entity inherits', desc:'The 7 layers consolidate into the Boilerplate every entity copies at registration; the locale below is inherited from Constitution.', rows:[
     ['Assignment model', govAssignModel, 'entity'],
-    ['Default max tasks / actor','10 · entity setting','entity'] ] }
+    ['Default max tasks / co-assist','10 · entity setting','entity'] ] }   /* ⚠️ the SECOND site of this label — the reason TERM exists */
 ];
 /**
  * ⚠️ REWRITTEN FOR A READER, NOT A DEVELOPER. These were 9.5px Space Mono chips reading "advisory · mutable",
@@ -2550,7 +2550,20 @@ function settingsScreen(){
 // AI assists settings = a REDIRECT to Co-assists (the enable + rule live WITH the actor, next to Human/IoT/ERP —
 // a lit AI slot is an actor whose actions are disputable chits, so its control belongs where it's held accountable).
 function aiSettingsCard(){ return '<div style="'+_CARD+'"><div class="sec" style="margin:0 0 6px">🤖 AI assists <span style="font-size:var(--fs-1);font-family:\'Space Mono\';background:var(--warn-tint);color:var(--warn-3);border-radius:5px;padding:1px 6px">governed</span></div>'
-  +'<div style="font-size:12px;color:var(--grey);line-height:1.55">Turn AI helpers on or off and set each one\'s rule — the human gate, bounded by the rung floor (you can only tighten). They live with your other co-assists, because a lit AI slot is an <b>actor</b> whose every action is a chit you can dispute.</div>'
+  /**
+   * ⭐ SIMPLIFIED, NOT MERELY SHORTENED. Athi, 2026-08-20: *"this text has to be simplified, no one understands
+   * rung floor etc."*
+   *
+   * Three pieces of jargon carried the old sentence — "the human gate", "bounded by the rung floor (you can
+   * only tighten)", and "a lit AI slot is an actor" — and none of them is needed to understand what the button
+   * underneath does. The two facts a reader actually needs are that an AI assist is governed like a person,
+   * and that what it does is disputable.
+   *
+   * ⚠️ "actor" WENT TOO. It is the database's word (identity_type='actor'), never the product's — TERM.coassist
+   * is what a person reads.
+   */
+  +'<div style="font-size:12px;color:var(--grey);line-height:1.55">An AI assist is a ' + TERM.coassist + '. '
+  +'It works to a rule you set, and everything it does is a chit you can dispute.</div>'
   +'<button class="composebtn" style="margin-top:10px" onclick="goCoassistAI()">Configure AI assists in Co-assists <span class=arw>→</span></button></div>'; }
 function goCoassistAI(){ try{ if(typeof UI!=='undefined') UI.acTypeF='ai'; }catch(_){}
   if(typeof navTo==='function') navTo('coassists'); else if(typeof go==='function') go('#/coassists'); }
@@ -3149,8 +3162,8 @@ function paintSettings(s, _daOpts){ const h=document.getElementById("setbody"); 
     }
     else if (k === "work") out = _misHead('Work', '')
       + `<div style="${_CARD}">${notYet}
-      <label class="fl">${tx('Assignment model')}</label><select class="inp" id="st_am">${opt(["pull","push","both"],s.assignment_model||"both")}</select>
-      <label class="fl">${tx('Default max tasks per actor')}</label><input class="inp" id="st_mt" inputmode="numeric" value="${esc(s.default_max_tasks||10)}">
+      <label class="fl">${tx('Task assignment')}${helpQ('work.assignment', 'How tasks reach people')}</label><select class="inp" id="st_am">${opt(["pull","push","both"],s.assignment_model||"both")}</select>
+      <label class="fl">${tx('Default max tasks per')} ${TERM.coassist}</label><input class="inp" id="st_mt" inputmode="numeric" value="${esc(s.default_max_tasks||10)}">
       <label class="fl" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="st_av" ${s.all_task_visible?'checked':''}> All tasks visible to all co-assists</label>
       <label class="fl" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="st_ar" ${s.auto_return_on_short_break?'checked':''}> Auto-return tasks on short break</label>
       <div class="err" id="st_err"></div><button class="composebtn" style="margin-top:9px" onclick="saveSettings()">${tx('Save settings')}</button></div>`
@@ -3457,13 +3470,20 @@ function policyFlagsInner(){
 }
 function autoAssignCard(s, daOpts){ const m=s.auto_assign_mode||'off';
   return `<div style="${_CARD};margin-top:10px"><div class="sec" style="margin:0 0 6px">🧭 Auto-assign on receipt <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--ok-tint);color:var(--ok-2);border-radius:5px;padding:1px 6px">active</span></div>
-    <label class="fl">${tx('Mode')}</label><select class="inp" id="st_aam">
+    <label class="fl">${tx('Mode')}${helpQ('work.autoassign', 'How auto-assign picks someone')}</label><select class="inp" id="st_aam">
       <option value="off"${m==='off'?' selected':''}>${tx('Off — received chits wait in the pool')}</option>
       <option value="default_assignee"${m==='default_assignee'?' selected':''}>${tx('Default assignee — all to one person')}</option>
       <option value="least_loaded"${m==='least_loaded'?' selected':''}>${tx('Least-loaded — balance across the team')}</option>
     </select>
     <label class="fl">${tx('Default / overflow assignee')}</label><select class="inp" id="st_ada">${daOpts}</select>
-    <div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px;line-height:1.55">Only <b>${tx('Editor')}</b> co-assists can be assigned. In <b>least-loaded</b>, ties break to whoever went longest without a new task; when everyone is at capacity it overflows to the default assignee. Anyone <b>on leave</b> routes to their delegate.</div>
+    ${/* ⚠️⚠️ THE PARAGRAPH THAT WAS HERE IS NOW BEHIND THE "?". Athi, 2026-08-20: *"do we need this message —
+          again a ? can take it to assistant and can answer the same."* It explained three separate rules at once:
+          who may be assigned, how least-loaded breaks ties and overflows, and what happens on leave. None of them
+          is needed to CHOOSE a mode; all of them are needed if you ask why. That is exactly the split the
+          assistant exists for — the screen states, the assistant explains.
+
+          ⚠️ IT WAS ALSO WRONG UNTIL AN HOUR AGO: it said "Act / Manager", two levels retired in b173. A
+          paragraph nobody re-reads is a paragraph nobody corrects, which is its own argument for moving it. */''}
     <div class="err" id="st_aerr"></div><button class="composebtn" style="margin-top:9px" onclick="saveAutoAssign()">${tx('Save auto-assign')}</button></div>`;
 }
 async function saveAutoAssign(){ const x=document.getElementById("st_aerr"); if(x)x.textContent="";

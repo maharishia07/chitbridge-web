@@ -5041,6 +5041,70 @@ function scr(title,id,helpKey){
   const hint = helpKey?`<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:10px">Explore <b onclick="openAssist('${helpKey}')" style="cursor:pointer;color:var(--blue)">?</b> to know more about this screen.</div>`:'';
   return `<div style="flex:1;min-height:0;overflow-y:auto"><div style="padding:14px 14px var(--scroll-tail);max-width:640px;margin:0 auto"><div class="sec" style="font-size:15px;margin-bottom:${helpKey?'3px':'10px'};display:flex;align-items:center;gap:9px">${title}${q}</div>${hint}<div id="${id}"><div class="loadwrap"><span class="spin"></span> loading…</div></div></div></div>`;
 }
+/**
+ * ⭐⭐ helpQ — a SECTION-level "?" that answers on the spot. Athi, 2026-08-20: *"a question mark can answer
+ * that section."*
+ *
+ * ⭐ THIS IS THE ANSWER TO "WE DON'T NEED LOT OF TEXT" THAT DOES NOT LOSE THE TEXT. The explanation moves
+ * rather than disappearing: the screen STATES, the "?" EXPLAINS, and the reader who needs the detail
+ * asks for it. scr() already does this for a whole screen; a paragraph inside one section needed the same
+ * affordance at a smaller size.
+ *
+ * ⚠️⚠️ IT ANSWERS DIRECTLY — IT DOES NOT OPEN THE ASSISTANT. Athi, 2026-08-20: *"if it is ?, we don't need to
+ * invoke AI, directly can answer."* Routing a "?" through openAssist() would work today only because
+ * CFG.ASSIST_LLM is false; answer() calls the model the day that flag flips, and a question mark beside a
+ * label would silently become an AI request. These answers are FIXED TEXT: instant, offline, identical every
+ * time, and impossible to bill.
+ *
+ * ⭐ HELP_TEXT is also the one place those explanations live, so a paragraph removed from a screen is not
+ * lost — it is filed where the reader who wants it can find it.
+ */
+const HELP_TEXT = {
+  'work.assignment': {
+    t: 'Task assignment',
+    b: '<b>Pull</b> — people take work from the pool.<br>'
+     + '<b>Push</b> — work is assigned to them.<br>'
+     + '<b>Both</b> — either.'
+  },
+  'work.autoassign': {
+    t: 'Auto-assign',
+    b: 'Only an <b>Editor</b> can be assigned.<br><br>'
+     + '<b>Least-loaded</b> — ties go to whoever went longest without a new task. '
+     + 'When everyone is at capacity it overflows to the default assignee.<br><br>'
+     + 'Anyone on leave routes to their delegate.'
+  },
+};
+
+function helpQ(key, title){
+  return '<button type="button" data-testid="help-q-' + key + '" onclick="showHelp(\'' + key + '\')"'
+    + ' title="' + esc(title || 'Explain this') + '" aria-label="' + esc(title || 'Explain this') + '"'
+    + ' style="border:1px solid var(--line);background:var(--card);color:var(--grey);border-radius:50%;'
+    + 'width:18px;height:18px;line-height:1;font-size:11px;font-weight:700;cursor:pointer;padding:0;'
+    + 'margin-inline-start:6px;vertical-align:middle">?</button>';
+}
+
+/* ⚠️ AN UNKNOWN KEY SAYS SO rather than opening an empty box — a "?" that explains nothing is worse than none. */
+function showHelp(key){
+  const h = HELP_TEXT[key];
+  if (!h) { toast('No note for "' + key + '" yet.'); return; }
+  modal('<div class="mhd"><div class="t">' + esc(h.t) + '</div></div>'
+    + '<div class="mbody"><div style="font-size:13px;line-height:1.6;color:var(--ink)">' + h.b + '</div></div>'
+    + '<div class="mfoot"><button class="pri" onclick="closeModal()">Close</button></div>');
+}
+
+/**
+ * ⭐⭐ TERM — the words the product calls things, in ONE place. Athi, 2026-08-20: *"we call coassist, keep it
+ * coassist, and if we change the name it will be easier to change everywhere."*
+ *
+ * ⚠️ "actor" WAS ALREADY IN TWO FILES saying what "co-assist" says everywhere else — a word repeated is a word
+ * that gets renamed in one place. ActorKey and identity_type='actor' stay INTERNAL (the database and the API
+ * are not user copy); this constant governs what a person reads.
+ */
+const TERM = {
+  coassist:  'co-assist',
+  coassists: 'co-assists',
+};
+
 /* esc + opt + scrErr → app/helpers.js */
 const _CARD='border:1px solid var(--line);border-radius:12px;padding:13px;margin-bottom:9px';
 const _BTN='border:0;border-radius:9px;padding:0 14px;color:#fff;background:var(--blue);font-weight:700;cursor:pointer';
