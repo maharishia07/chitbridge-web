@@ -165,14 +165,34 @@ function coassistsScreen(){
  *    result. Panel top is MEASURED from .topbar at render (not hardcoded 52px) so it fits any device/font;
  *    content sits in a centred ≤560px column so 4"/6"/tablet/desktop all read right. Ready types create for
  *    real (Human→addActor · IoT→connectorCreate); explore types walk to a "how it works" preview. */
-var AW_STEPS={ human:['who','hat'], iot:['gw','mode'], erp:['sys','conn'], ai:['agent','guard'] };
+/* ⭐ 'docs' is a THIRD step on the human path only. Athi, 2026-08-20: *"yes, add it to the create form too."*
+   A machine has no PAN, so IoT/ERP/AI keep two steps — the wizard already branches by type, and adding the
+   step to all four would have asked a Raspberry Pi for its Aadhaar. */
+var AW_STEPS={ human:['who','hat','docs'], iot:['gw','mode'], erp:['sys','conn'], ai:['agent','guard'] };
 function _awCap(k){ return ((typeof SESSION!=='undefined'&&SESSION.capabilities)||[]).indexOf(k)>=0; }
 function _awReady(t){ return t==='human'?true:(t==='ai'?_awCap('ai'):_awCap('connector')); }
-function openActorWiz(){ UI.awType=null; UI.awStep=0; UI.awData={}; UI.awErr=null; UI.awResult=null; awRender(); }
+function openActorWiz(){ UI.awType=null; UI.awStep=0; UI.awData={}; UI.awErr=null; UI.awResult=null;
+  /* ⚠️ CLEARED ON OPEN. Held documents surviving into the NEXT person's creation would file one employee's
+     PAN against another — the single worst outcome this screen has available to it. */
+  UI.awDocs=null;
+  if (typeof ensureCap==='function') ensureCap('iddocs').then(awRender).catch(function(){});
+  awRender(); }
 function awClose(){ var h=document.getElementById('actorwiz'); if(h)h.remove(); }
 function awDownloadPkg(){ try{ if(UI.awInstaller && typeof _download==='function') _download('chitbridge-install.sh', UI.awInstaller); else if(typeof toast==='function') toast('Package not ready — open the gateway and hit 📦 Create package (it re-creates the same installer).'); }catch(_){ } }
 function awHost(){ var h=document.getElementById('actorwiz'); if(!h){ h=document.createElement('div'); h.id='actorwiz'; document.body.appendChild(h); } return h; }
-function awCapture(){ UI.awData=UI.awData||{}; ['aw_name','aw_key','aw_hat','aw_site','aw_mode','aw_baseurl','aw_authref','aw_role','aw_under'].forEach(function(id){ var el=document.getElementById(id); if(el) UI.awData[id]=el.value; }); }
+function awCapture(){ UI.awData=UI.awData||{};
+  ['aw_name','aw_key','aw_hat','aw_site','aw_mode','aw_baseurl','aw_authref','aw_role','aw_under'].forEach(function(id){ var el=document.getElementById(id); if(el) UI.awData[id]=el.value; });
+  /* ⚠️⚠️ THE DOCUMENT FIELDS MUST BE CAPTURED HERE OR THEY ARE LOST. awRender rebuilds the whole wizard body
+     on every step change, so anything typed and not lifted into UI.awData is destroyed by pressing Back —
+     silently, with the field simply empty on return. Same failure the compose modal had. */
+  try {
+    if (typeof CBIdDocs !== 'undefined') {
+      UI.awDocs = UI.awDocs || {};
+      CBIdDocs.ORDER.forEach(function(sc){ var el=document.getElementById('idoc_'+sc); if(el) UI.awDocs[sc]=el.value; });
+      var c=document.getElementById('idoc_consent'); if(c) UI.awDocs._consent=!!c.checked;
+    }
+  } catch(_) {}
+}
 function awPick(t){ UI.awType=t; UI.awStep=0; UI.awErr=null; awRender(); }
 function awNext(){ awCapture(); var s=AW_STEPS[UI.awType]||[]; if(UI.awStep>=s.length-1){ awFinish(); } else { UI.awStep++; UI.awErr=null; awRender(); } }
 function awBack(){ awCapture(); UI.awErr=null; if(UI.awStep==='done'){ UI.awStep=(AW_STEPS[UI.awType]||[]).length-1; UI.awResult=null; } else if(UI.awStep===0){ UI.awType=null; } else { UI.awStep--; } awRender(); }
@@ -195,6 +215,37 @@ async function awFinish(){
       var lf=(r&&(r.login_format||(r.actor&&r.actor.login_format)))||(typeof coId==='function'?coId(key):key);
       var otp=(r&&(r.otp||r.dev_otp))||'';
       UI.awResult='<div style="text-align:center"><div style="font-size:34px;margin:8px 0 6px">✉️</div><div style="font-weight:700;font-size:var(--fs-4)">' + tx('Invite ready') + '</div><div style="font-size:13px;color:var(--ink-2);line-height:1.7;margin-top:10px">User ID <b>'+esc(lf)+'</b><br>one-time code <b>'+esc(otp||'—')+'</b><br><br>Share these — they set a PIN and start on shift.</div></div>';
+      /**
+       * ⭐⭐ TWO STEPS, AND THEY CANNOT BE ONE. A document is filed AGAINST an identity, and the identity does
+       * not exist until addActor returns — so the fields are held client-side through the wizard and posted
+       * once there is an id to attach them to.
+       *
+       * ⚠️ AND A FAILURE HERE MUST NOT READ AS A FAILED HIRE. The co-assist is already created and their
+       * invite is already valid; a document that did not save is a correction, not a rollback. So it is
+       * reported as an addendum on the success screen rather than thrown, and the person can be fixed up
+       * from the edit form.
+       */
+      var _newId = r && r.actor && r.actor.identity_id;
+      if (_newId && UI.awDocs) {
+        try {
+          await ensureCap('iddocs');
+          var _sent = 0, _bad = [];
+          for (var _i = 0; _i < CBIdDocs.ORDER.length; _i++) {
+            var _sc = CBIdDocs.ORDER[_i], _v = (UI.awDocs[_sc] || '').trim();
+            if (!_v) continue;
+            var _res = await fetch(CFG.API_BASE + '/api/identity/documents/' + _sc, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + SESSION.token },
+              body: JSON.stringify({ value: _v, consent: !!UI.awDocs._consent, identity_id: _newId })
+            });
+            if (_res.ok) _sent++;
+            else { var _j = await _res.json().catch(function(){ return {}; }); _bad.push(_sc + ' — ' + (_j.message || _res.status)); }
+          }
+          if (_sent) UI.awResult += '<div class="misnote" style="margin-top:10px">' + _sent + ' document(s) submitted for verification.</div>';
+          if (_bad.length) UI.awResult += '<div class="misnote" style="margin-top:8px;color:var(--warn-3)">Not saved: ' + esc(_bad.join(' · ')) + '. The co-assist WAS created — add these from their profile.</div>';
+        } catch (_) { /* the hire stands; the documents are a correction */ }
+        UI.awDocs = null;
+      }
       UI.awStep='done'; UI.awErr=null; awRender();
       if(UI.nav==='coassists' && typeof loadCoassists==='function') loadCoassists();
     }catch(e){ UI.awErr=(e&&e.message)||'Create failed'; awRender(); }
@@ -266,6 +317,12 @@ function awRender(){
       /* ⭐ b173 — three levels from ACCESS_CHOICES (app.html), not five hats hardcoded here. This list lived
          in two screens and a reference tab; it now lives once, beside the function that reads it. */
       else if(sk==='hat') body=selF('aw_hat','Access',ACCESS_CHOICES)+how('Only an Editor can be assigned work.');
+      /* ⭐ THE SHARED MODULE AGAIN — third surface, still one implementation. Empty docs because the person
+         does not exist yet; noButton because the wizard's own Next/Finish drives the submit. */
+      else if(sk==='docs') body=(typeof CBIdDocs!=='undefined'
+          ? CBIdDocs.html([], 'owner', {noButton:true})
+          : '<div class="misnote">Loading…</div>')
+        + how('Optional now — they can add or correct these themselves later.');
       else if(sk==='gw') body=fld('aw_name','Gateway name','Line-1 Gateway')+fld('aw_site','Site','Chennai')+how('One Pi = one gateway; its sensors are connections (BridgeIds) under it.');
       else if(sk==='mode') body=selF('aw_mode','What is sending the data?',[['push','📟 A Pi / edge box I will set up — recommended'],['pull','🔌 My existing MQTT broker / cloud — coming soon']])+how('Push: we generate a one-line installer to flash on the Pi. Pull (we subscribe to your broker) is on the roadmap — not live yet.');
       else if(sk==='sys') body=fld('aw_name','System name','Acme SAP')+fld('aw_site','Site','HQ')+how('One system = one co-assist; its endpoints are connections under it.');
