@@ -941,7 +941,17 @@ var IAM_PARTY = {
       var uid = e.user_id || 'your-user-id';
       var n = acts.filter(function (a) { return !a.actor_type || a.actor_type === 'human'; }).length;
       var costs = acts.filter(function (a) { return a.can_see_costs; }).length;
-      var writes = acts.filter(function (a) { return ['act','manager'].indexOf(a.hat || 'act') >= 0; }).length;
+      /**
+       * ⚠️ THIS COUNTED WRONG THE MOMENT b173 LANDED. It read (a.hat || 'act'), so an actor carrying the new
+       * access_level and no hat defaulted to 'act' and was counted as a writer — the tab cheerfully reported
+       * "3 people, 3 can write" for one editor and two who cannot. A fallback chain has to be read in the same
+       * order everywhere, and lib/access.js is the order: level first, hat only when the level is absent.
+       */
+      var LEVEL_OF = { act:'editor', manager:'editor', audit:'commenter', mis:'commenter', view_only:'commenter' };
+      var writes = acts.filter(function (a) {
+        var lvl = a.access_level || LEVEL_OF[a.hat] || 'editor';
+        return lvl === 'editor';
+      }).length;
       return [
         /**
          * ⭐⭐ TWO NAMES, AND BOTH TRAVEL OUTWARD. Athi, 2026-08-20: *"Display Name — this can be visible in
@@ -970,14 +980,28 @@ var IAM_PARTY = {
          * row now states the two access levels that exist, and lists the five names as what they map to.
          * The person who would otherwise discover this is an employee who asked for a hat that changed nothing.
          */
-        ['Access', 'Editable — or read-only', 0, 'Two levels, not five. The names below map onto these.'],
-        ['Editable', 'Act · Manager', 0, 'Writes records. Messages anyone, inside or outside.'],
-        ['Read-only', 'Audit · MIS · View-only', 0,
-          'Reads everything including external threads, and may reply INTERNALLY. Cannot answer the other party, and cannot raise a dispute — an auditor who participates is not auditing.'],
-        ['Who can change it', 'Their manager, never themselves', 0, 'Every change is recorded — who, when, and from what.'],
+        /**
+         * ⭐⭐ VIEWER · COMMENTER · EDITOR — adopted from Google Workspace, not invented. Athi, 2026-08-20:
+         * *"if at all any standards to follow or how other platform quotes… then follow that."*
+         *
+         * ⚠️ HE HAD ALREADY DESCRIBED "COMMENTER" WITHOUT A NAME FOR IT — *"read only is internal messaging
+         * only, not external messaging."* When a description lands on a standard's definition unprompted, the
+         * standard is the right one. Google's three are also pure CAPABILITY words with no job title in them,
+         * which is the property that matters: what this replaces was five ROLE words posing as permissions.
+         *
+         * ⭐ AND TWO FLAGS CARRY WHAT THE NAMES USED TO SMUGGLE. Five hats could never express "an editor who
+         * sees every branch" — there was no sixth name, and adding one is how five becomes eight.
+         */
+        ['Access', 'Viewer · Commenter · Editor', 0, 'Three levels. Google Workspace’s, so nobody has to learn ours.'],
+        ['Viewer', 'Reads', 0, 'Looks, and says nothing.'],
+        ['Commenter', 'Reads · replies INTERNALLY', 0,
+          'Sees everything including external threads, and may reply to colleagues. Cannot answer the other party, and cannot raise a dispute — someone auditing who participates is not auditing.'],
+        ['Editor', 'Changes records · messages anyone', 0, 'Inside or outside.'],
+        ['Sees the whole business', 'A separate switch', 0, 'Reach normally follows their node. This lifts it — inside this entity only.'],
+        ['Can see costs', costs + ' of ' + acts.length, 0, 'Buying price and margin. Also a separate switch.'],
+        ['Who can change it', 'The account owner, never themselves', 0, 'Every change is recorded — who, when, from what, and why.'],
 
         ['Role', 'Free text', 0, 'A label. It grants nothing — access does that.'],
-        ['Can see costs', costs + ' of ' + acts.length, 0, 'Buying price and margin.'],
         ['Where they sit', 'A node in your structure', 0, 'Their reach follows the node, not the job title.'],
         ['How many', n + (n === 1 ? ' person' : ' people') + ' · ' + writes + ' can write', 0, '']
       ];
