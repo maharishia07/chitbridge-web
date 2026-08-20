@@ -1489,7 +1489,10 @@ const EP = {
   /* ⚠️ ok:"y" — NEW, and the client falls back to the per-supplier fan-out when it 404s. Web and API deploy
      separately, so "the endpoint is not there yet" is a normal state, not an error. */
   supAvailability: {m:"GET",   p:"/api/relationships/suppliers/availability",    ok:"y"},   // one query, every supplier
-  readinessOf:     {m:"GET",   p:"/api/governance/readiness/:bridge_id", ok:"y"},// their catalogue → compose line items
+  readinessOf:     {m:"GET",   p:"/api/governance/readiness/:bridge_id", ok:"y"},
+  /* b177 — the MECHANISM without the rule: show a supplier's readiness, record that a named person accepted it. */
+  supAcceptGet:    {m:"GET",   p:"/api/governance/supplier-acceptance/:handle", ok:"y"},
+  supAcceptPost:   {m:"POST",  p:"/api/governance/supplier-acceptance",         ok:"y"},// their catalogue → compose line items
   /* DEFINITIONS (b160) — the entity's own named things. Loose while referenced, FROZEN BY VALUE when stamped. */
   /**
    * ⚠️⚠️ THE QUERY IS IN THE PATH, NOT IN `params`. api() substitutes `:id`-style PATH tokens; it does not append
@@ -6052,11 +6055,47 @@ function loadSupplierConfidence(bridge){
  * Now it stays where you are, opens over the top, and names the business in the title, the subtitle and every count.
  * Leaving the supplier's page to read the supplier's passport was always the wrong shape.
  */
+/**
+ * The passport footer: what was accepted before, and the button to accept now.
+ *
+ * ⚠️ THE SNAPSHOT IS TAKEN ON THE SERVER, NOT POSTED FROM HERE. The whole value of an acceptance is that it
+ * is evidence of what was true at that moment — a summary supplied by the browser would be a claim about
+ * what someone says they saw. routes/governance.js re-resolves it at the instant of the write.
+ */
+async function ppAcceptFoot(handle, label){
+  var foot = document.getElementById('pp_foot'); if(!foot) return;
+  var prior = null;
+  try { var r = await api('supAcceptGet', { params: { handle: handle } }); prior = r && r.acceptance; } catch(_){ }
+  var f2 = document.getElementById('pp_foot'); if(!f2) return;   // modal may have closed during the read
+  var Q = String.fromCharCode(39);
+  var was = prior
+    ? '<span style="font-size:var(--fs-1);color:var(--grey);margin-inline-end:auto">'
+      + 'Accepted ' + esc(String(prior.accepted_at).slice(0,10))
+      + (prior.accepted_by_name ? ' by ' + esc(prior.accepted_by_name) : '')
+      + ' · ' + esc((prior.summary && prior.summary.met) || 0) + '/' + esc((prior.summary && prior.summary.total) || 0)
+      + ' then</span>'
+    : '';
+  f2.innerHTML = was
+    + '<button onclick="closeModal()">' + tx('Close') + '</button>'
+    + '<button class="pri" data-testid="sup-accept" onclick="ppAccept(' + Q + esc(handle) + Q + ')">'
+    + (prior ? tx('Accept again') : tx('Accept')) + '</button>';
+}
+
+/** ⚠️ Accepting twice is a NEW row, not an update — "accepted again in March" is a different fact. */
+async function ppAccept(handle){
+  try {
+    var r = await api('supAcceptPost', { body: { supplier: handle } });
+    toast(tx('Accepted') + ' — ' + ((r.summary && r.summary.met) || 0) + '/' + ((r.summary && r.summary.total) || 0));
+    ppAcceptFoot(handle);
+  } catch (e) { toast((e && e.message) || 'Could not record that'); }
+}
+
 async function viewSupplierPassport(bridge, name){
   var who = name || bridge;
   modal('<div class="mhd">🛂 '+esc(who)+' — trade readiness</div><div class="mbody" id="pp_body">'
     + '<div class="loadwrap"><span class="spin"></span> reading their passport…</div></div>'
-    + '<div class="mfoot"><button class="pri" onclick="closeModal()">' + tx('Close') + '</button></div>', true);
+    + '<div class="mfoot" id="pp_foot"><button onclick="closeModal()">' + tx('Close') + '</button></div>', true);
+  UI._ppHandle = bridge;   /* remembered for the Accept post — the modal outlives this scope */
   try{
     var d = await api('readinessOf', { params: { bridge_id: bridge } });
     var body = document.getElementById('pp_body'); if(!body) return;
@@ -6089,6 +6128,17 @@ async function viewSupplierPassport(bridge, name){
       + '<div style="font-size:11.5px;color:var(--grey);margin-top:12px;border-top:1px solid var(--line);padding-top:8px">'
       + 'Status and validity only — the documents themselves stay with '+label+'. Nothing here is your own readiness; '
       + 'for that, open <b>' + tx('Trade readiness') + '</b> from the menu.</div>';
+
+    /**
+     * ⭐⭐ THE MECHANISM, NOT THE RULE. Athi, 2026-08-20: *"when supplier is selected, its trade ready can be
+     * showcased and ask for acceptance — that is all, enough now."* No requirement list, no matching, no
+     * refusal: the readiness is shown, and a named person records that they looked and accepted.
+     *
+     * ⚠️ THE PRIOR ACCEPTANCE LOADS SEPARATELY AND MUST NOT DELAY THE PASSPORT. If it fails or the migration
+     * has not run, the modal is unchanged — an acceptance history is additive, and its absence must never
+     * hide the readiness a person opened this to read.
+     */
+    ppAcceptFoot(bridge, label);
   }catch(e){
     var b2 = document.getElementById('pp_body');
     if(b2) b2.innerHTML = '<div style="font-size:var(--fs-2);color:var(--disp)">'+esc((e&&e.message)||'Could not read their passport.')+'</div>';
