@@ -166,7 +166,15 @@ async function awFinish(){
     var name=(d.aw_name||'').trim(), key=(d.aw_key||'').toLowerCase().trim();
     if(!name||key.length<4){ UI.awErr='A display name and a User ID of 4+ characters are required.'; awRender(); return; }
     if(!/^[a-z0-9]+$/.test(key)){ UI.awErr='User ID: lowercase letters and numbers only.'; awRender(); return; }
-    try{ var r=await api('addActor',{body:{display_name:name,actor_key:key,hat:d.aw_hat||'act'}});
+    /**
+     * ⚠️ SENDS access_level AND `hat` TOGETHER until b173 is run. The API accepts both and prefers the level;
+     * sending only the level against a pre-b173 database would write NULL into a column that does not exist
+     * yet and leave every check falling back to the default. Belt and braces for exactly the window between
+     * deploy and migration — which is always non-zero here, because Athi runs migrations by hand.
+     */
+    var _lvl = d.aw_hat || 'editor';
+    var _hatCompat = { editor:'act', commenter:'audit', viewer:'view_only' }[_lvl] || 'act';
+    try{ var r=await api('addActor',{body:{display_name:name,actor_key:key,access_level:_lvl,hat:_hatCompat}});
       var lf=(r&&(r.login_format||(r.actor&&r.actor.login_format)))||(typeof coId==='function'?coId(key):key);
       var otp=(r&&(r.otp||r.dev_otp))||'';
       UI.awResult='<div style="text-align:center"><div style="font-size:34px;margin:8px 0 6px">✉️</div><div style="font-weight:700;font-size:var(--fs-4)">' + tx('Invite ready') + '</div><div style="font-size:13px;color:var(--ink-2);line-height:1.7;margin-top:10px">User ID <b>'+esc(lf)+'</b><br>one-time code <b>'+esc(otp||'—')+'</b><br><br>Share these — they set a PIN and start on shift.</div></div>';
@@ -238,7 +246,9 @@ function awRender(){
     } else {
       var sk=steps[UI.awStep];
       if(sk==='who') body=fld('aw_name','Display name','Anitha')+fld('aw_key','User ID (sign-in)','anitha')+how('They sign in with this User ID under your entity + a one-time code, then set a PIN.');
-      else if(sk==='hat') body=selF('aw_hat','Hat (what they do)',[['act','Act — does the work'],['manager','Manager — acts + assigns'],['audit','Audit — review only'],['mis','MIS — reports'],['view_only','View-only']])+how('Only Act / Manager hats can be assigned work.');
+      /* ⭐ b173 — three levels from ACCESS_CHOICES (app.html), not five hats hardcoded here. This list lived
+         in two screens and a reference tab; it now lives once, beside the function that reads it. */
+      else if(sk==='hat') body=selF('aw_hat','Access',ACCESS_CHOICES)+how('Only an Editor can be assigned work.');
       else if(sk==='gw') body=fld('aw_name','Gateway name','Line-1 Gateway')+fld('aw_site','Site','Chennai')+how('One Pi = one gateway; its sensors are connections (BridgeIds) under it.');
       else if(sk==='mode') body=selF('aw_mode','What is sending the data?',[['push','📟 A Pi / edge box I will set up — recommended'],['pull','🔌 My existing MQTT broker / cloud — coming soon']])+how('Push: we generate a one-line installer to flash on the Pi. Pull (we subscribe to your broker) is on the roadmap — not live yet.');
       else if(sk==='sys') body=fld('aw_name','System name','Acme SAP')+fld('aw_site','Site','HQ')+how('One system = one co-assist; its endpoints are connections under it.');
@@ -360,7 +370,14 @@ function acDetailHTML(){ const x=UI.acDet;
     body=`<div class="sec">${tx('Edit — co-assist profile')}</div>
       <label class="fl">${tx('Display name')}</label><input class="inp" id="ac_ename" value="${esc(x.name)}">
       <label class="fl">${tx('Role')}</label><input class="inp" id="ac_erole" value="${esc(x.role||'')}" placeholder="e.g. Dispatch, Accounts">
-      <label class="fl">Hat (only Act / Manager can be assigned work)</label><select class="inp" id="ac_ehat" style="max-width:240px">${['act','manager','audit','mis','view_only'].map(h=>'<option value="'+h+'"'+(x.hat===h?' selected':'')+'>'+hatLabel(h)+'</option>').join('')}</select>
+      <label class="fl">Access <span style="color:var(--grey);font-weight:400;font-size:var(--fs-1)">— only an Editor can be assigned work</span></label>
+      <select class="inp" id="ac_ehat" style="max-width:320px">${ACCESS_CHOICES.map(c=>'<option value="'+c[0]+'"'+(accessLevelOf(x)===c[0]?' selected':'')+'>'+esc(c[1])+'</option>').join('')}</select>
+      ${/* ⭐ REACH IS A SEPARATE SWITCH, NOT A LEVEL. Five hat names could never express "an editor who
+            sees every branch" — there was no sixth name, and adding one is how five becomes eight. */''}
+      <label class="fl" style="display:flex;align-items:center;gap:7px;cursor:pointer">
+        <input type="checkbox" id="ac_ewhole" ${x.whole_entity?'checked':''} style="width:auto;margin:0">
+        <span>Sees the whole business <span style="color:var(--grey);font-weight:400;font-size:var(--fs-1)">— reach ignores their node</span></span>
+      </label>
       <label class="fl">${tx('Leave-cover delegate (covers auto-assigned work while on leave)')}</label><select class="inp" id="ac_edel" style="max-width:240px"><option value="">— none —</option>${(UI.acts||[]).filter(a=>a.id!==x.id && hatAssignable(a.hat)).map(a=>'<option value="'+esc(a.id)+'"'+(x.del===a.id?' selected':'')+'>'+esc(a.name)+'</option>').join('')}</select>
       <label class="fl">${tx('Max concurrent tasks')}</label><input class="inp" id="ac_emax" inputmode="numeric" value="${x.max||''}" style="width:120px">
       <label class="fl">${tx('Phone')}</label><input class="inp" id="ac_ephone" value="${esc(x.phone||'')}" placeholder="optional">
@@ -440,7 +457,20 @@ function acStatus(id, action){ const x=(UI.acts||[]).find(a=>a.id===id); if(!x)r
   'Remove', run, true);
   else run(); }
 async function saveActor(id){ const err=document.getElementById("ac_ederr"); if(err)err.textContent="";
-  const body={ display_name:val("ac_ename")||undefined, actor_role:val("ac_erole")||null, max_tasks:(+val("ac_emax")||undefined), phone:val("ac_ephone")||null, hat:val("ac_ehat")||undefined };
+  /**
+   * ⚠️ ac_ehat NOW HOLDS A LEVEL, NOT A HAT — the id is unchanged so every other reference to it still works,
+   * but the VALUE it carries changed with b173. Sending it as `hat` would have posted 'editor' into a column
+   * whose CHECK allows only the old five, and the PATCH would 400 with a validation error nobody could read.
+   *
+   * ⚠️ `hat` IS SENT ALONGSIDE, mapped back, until b173 is run. The API prefers access_level; against a
+   * pre-migration database the level column does not exist and only the hat lands. The window between deploy
+   * and migration is always non-zero here, because migrations are run by hand.
+   */
+  const _lvl = val("ac_ehat") || undefined;
+  const _hatCompat = _lvl ? ({ editor:'act', commenter:'audit', viewer:'view_only' }[_lvl] || 'act') : undefined;
+  const _whole = (function(){ const el = document.getElementById('ac_ewhole'); return el ? !!el.checked : undefined; })();
+  const body={ display_name:val("ac_ename")||undefined, actor_role:val("ac_erole")||null, max_tasks:(+val("ac_emax")||undefined), phone:val("ac_ephone")||null,
+    access_level:_lvl, hat:_hatCompat, whole_entity:_whole };
   try{ await api("actorEdit",{params:{id},body}); const x=(UI.acts||[]).find(a=>a.id===id);
     const delEl=document.getElementById("ac_edel");
     if(delEl && delEl.value!==((x&&x.del)||'')){ await api("actorDelegate",{params:{id},body:{delegate_actor_id:delEl.value||null}}); if(x)x.del=delEl.value||null; }

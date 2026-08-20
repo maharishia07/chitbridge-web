@@ -959,7 +959,7 @@
   .raidtoggle{padding:9px 12px;border-top:1px solid var(--line);font-size:var(--fs-1);font-weight:700;color:var(--ink);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
   .raidtoggle button{border:1px solid var(--line);background:var(--card);border-radius:6px;font-size:var(--fs-1);font-weight:700;padding:4px 9px;color:var(--grey);cursor:pointer}
   .raidtoggle button.on{background:var(--blue);color:var(--on-accent);border-color:var(--blue)}
-  .raidtoggle .hint{flex-basis:100%;font-weight:400;color:var(--grey);font-size:var(--fs-1)}
+  .raidtoggle .hint{flex-basis:100%;font-weight:400;color:var(--grey);font-size:var(--fs-1)}
   .prichip{}
   .prichip.pri-urgent{background:var(--danger-tint);color:var(--disp-2)}.prichip.pri-low{background:var(--warn-tint);color:var(--warn-3)}
   .dchips{display:flex;gap:8px;align-items:center;margin-top:8px}
@@ -7265,9 +7265,39 @@ async function _delProduct(id){ try{ await api("prodDel",{params:{id}}); UI.prod
  * UI: two-sided master/detail (same skeleton as task/order/suppliers — draggable divider + mobile collapse).
  * ============================================================================================ */
 const AC_TYPE={human:'🧑 human', iot_device:'⚙️ device', connector:'🔌 connector', ai_agent:'🤖 AI', process_rule:'📋 rule'};
-const HAT_LABEL={view_only:tx('View-only'), act:tx('Act'), audit:tx('Audit'), mis:tx('MIS'), manager:tx('Manager')};
-function hatLabel(h){ return HAT_LABEL[h]||h||'Act'; }
-function hatAssignable(h){ return h==='act'||h==='manager'; }
+/* ⚠️ The old name still has call sites elsewhere — ONE object, aliased, never two that can drift. */
+/**
+ * ⭐⭐ THREE LEVELS, MIRRORING lib/access.js ON THE SERVER — b173. Viewer · Commenter · Editor, adopted from
+ * Google Workspace rather than invented.
+ *
+ * ⚠️ THE OLD FIVE ARE STILL MAPPED, and must be: an actor row fetched before b173 runs carries a `hat` and no
+ * `access_level`. The server falls back the same way, in the same order — level first, hat only when the level
+ * is absent. A fallback chain read in two different orders is exactly how the two ends come to disagree about
+ * who may do what, with neither side reporting anything.
+ *
+ * ⚠️ THE FUNCTION NAMES ARE KEPT DELIBERATELY. hatLabel and hatAssignable have call sites across three
+ * capabilities; renaming them in the same change that alters their meaning would turn every one of those into
+ * a place to check twice. They now accept an ACTOR ROW or a bare string, and answer about the LEVEL either way.
+ */
+const ACCESS_LABEL   = { viewer: tx('Viewer'), commenter: tx('Commenter'), editor: tx('Editor') };
+const LEVEL_FROM_HAT = { act:'editor', manager:'editor', audit:'commenter', mis:'commenter', view_only:'commenter' };
+
+/* ⚠️ Absent means EDITOR, matching the server and what POST /actors writes when no level is given. A default
+   that silently demoted existing staff would be an outage, not a hardening. */
+function accessLevelOf(x){
+  if (!x) return 'editor';
+  if (typeof x === 'string') return ACCESS_LABEL[x] ? x : (LEVEL_FROM_HAT[x] || 'editor');
+  return x.access_level || LEVEL_FROM_HAT[x.hat] || 'editor';
+}
+function hatLabel(x){ return ACCESS_LABEL[accessLevelOf(x)] || tx('Editor'); }
+function hatAssignable(x){ return accessLevelOf(x) === 'editor'; }
+
+/** What an owner picks. The two flags are separate controls — they are not levels. */
+const ACCESS_CHOICES = [
+  ['editor',    tx('Editor') + ' — ' + tx('changes records, messages anyone')],
+  ['commenter', tx('Commenter') + ' — ' + tx('reads, replies internally only')],
+  ['viewer',    tx('Viewer') + ' — ' + tx('reads, and says nothing')],
+];
 function acType(t){ return AC_TYPE[t]||esc(t||'human'); }
 function acShc(sh){ return sh==='on_shift'?'on':sh==='on_break'?'brk':'off'; }
 function acShLabel(sh){ return sh==='on_shift'?'on shift':sh==='on_break'?'on break':'off'; }
