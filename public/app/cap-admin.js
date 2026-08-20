@@ -3463,7 +3463,7 @@ function autoAssignCard(s, daOpts){ const m=s.auto_assign_mode||'off';
       <option value="least_loaded"${m==='least_loaded'?' selected':''}>${tx('Least-loaded — balance across the team')}</option>
     </select>
     <label class="fl">${tx('Default / overflow assignee')}</label><select class="inp" id="st_ada">${daOpts}</select>
-    <div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px;line-height:1.55">Only <b>${tx('Act / Manager')}</b> co-assists can be assigned. In <b>least-loaded</b>, ties break to whoever went longest without a new task; when everyone is at capacity it overflows to the default assignee. Anyone <b>on leave</b> routes to their delegate.</div>
+    <div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px;line-height:1.55">Only <b>${tx('Editor')}</b> co-assists can be assigned. In <b>least-loaded</b>, ties break to whoever went longest without a new task; when everyone is at capacity it overflows to the default assignee. Anyone <b>on leave</b> routes to their delegate.</div>
     <div class="err" id="st_aerr"></div><button class="composebtn" style="margin-top:9px" onclick="saveAutoAssign()">${tx('Save auto-assign')}</button></div>`;
 }
 async function saveAutoAssign(){ const x=document.getElementById("st_aerr"); if(x)x.textContent="";

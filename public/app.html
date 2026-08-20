@@ -4929,7 +4929,7 @@ function addActorModal(){
      <div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px">Lowercase letters/numbers, min 4 — a short handle.</div>
      <div style="background:var(--blue-tint);border:1px solid var(--blue-tint-line);border-radius:9px;padding:9px 11px;margin-top:9px;font-size:12px;color:var(--blue-d)">Signs in as&nbsp; <span id="ac_idprev" style="font-family:'Space Mono';font-weight:700;font-size:var(--fs-2)">${esc('…@'+entBiz())}</span></div>
      <label class="fl" style="margin-top:11px">Hat (what they do)</label><select class="inp" id="ac_hat"><option value="act">Act — does the work (assignable)</option><option value="manager">Manager — acts + assigns/manages</option><option value="audit">Audit — review only</option><option value="mis">MIS — reports only</option><option value="view_only">View-only</option></select>
-     <div style="font-size:11.5px;color:var(--grey);margin-top:8px;line-height:1.5">They sign in with this <b>User ID</b> under <b>${esc(ent)}</b> + a one-time code, then set their own PIN. Starts <b>on shift</b>. Only <b>Act / Manager</b> hats can be assigned work.</div>
+     <div style="font-size:11.5px;color:var(--grey);margin-top:8px;line-height:1.5">They sign in with this <b>User ID</b> under <b>${esc(ent)}</b> + a one-time code, then set their own PIN. Starts <b>on shift</b>. Only an <b>Editor</b> can be assigned work.</div>
      <div class="err" id="ac_err"></div></div>
    <div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="pri" onclick="submitActor()">Create</button></div>`);
 }
