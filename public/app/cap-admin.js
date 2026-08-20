@@ -1365,7 +1365,7 @@ function iamMeHTML(e){
   return iamSection('ident', tx('Identity'), ident + profSaveBtn('ident'), { openByDefault: true,
              hint: [e.user_id, e.bridge_id].filter(Boolean).join(' · ') })
     + iamSection('profile', tx('Business'), profile + profSaveBtn('profile'), { hint: _licHint })
-    + iamSection('regional', tx('Regional'), iamGovernedRows(e), { hint: _regHint })
+    + iamSection('regional', tx('Regional'), iamGovernedRows(e) + (Array.isArray(((e.governance||{}).allowed||{}).currencies) && ((e.governance||{}).allowed||{}).currencies.length > 1 ? profSaveBtn('regional') : ''), { hint: _regHint })
     + iamSection('channels', tx('Channels'), iamChannelRows(), { hint: _chanHint })
     + iamSection('governed', tx('Storefront'), governed + profSaveBtn('governed'), { hint: _sfHint })
     /* ⭐ TRADE READY SITS BESIDE RIGHTS, not among the editable sections — both answer "what may this
@@ -1756,9 +1756,52 @@ function iamGovernedRows(e){
    * decision. And nothing in the app ever WRITES it: there is no control, no update path. So it is not a
    * choice today, and the governed value is the answer until something makes it one.
    */
-  var gb = (e && e.governance && e.governance.basics) || {};
-  var curr = gb.currency || (e && e.currency_code) || null;
-  if (curr) rows.push(['Currency', curr, gb.currency ? tx('Set above you') : tx('Business')]);
+  /**
+   * ⭐⭐ REGION BOUNDS THE SET; THE ENTITY PICKS ONE. Athi, 2026-08-20: *"if the region changes, can it have
+   * different currency? Under region there can be MULTIPLE currencies, one of the currency will be chosen."*
+   *
+   * ⚠️ I HAD THIS WRONG TWICE. First the entity column won — which never fires, because currency_code is
+   * DEFAULT INR and always truthy. Then governance won — which removes the choice Athi is describing. The
+   * model is neither: the CONSTITUTION names what is permitted, and the entity picks from inside it.
+   *
+   * ⭐ SO THE ROW IS A CONTROL ONLY WHEN THERE IS A CHOICE. One permitted currency is a fact and renders as a
+   * fact; two or more is a decision and renders as a picker. A select with one option is a control that
+   * cannot be used — the same false affordance as a link to a closed shop.
+   */
+  var gb  = (e && e.governance && e.governance.basics) || {};
+  var gal = (e && e.governance && e.governance.allowed) || {};
+  var perm = Array.isArray(gal.currencies) ? gal.currencies : null;
+  /**
+   * ⚠️⚠️ PRECEDENCE FOLLOWS WHETHER A CHOICE EXISTS AT ALL — that is the piece both my earlier attempts missed.
+   *   · the layer permits SEVERAL  → the entity's pick wins; it is a decision
+   *   · the layer permits ONE      → that one; there is nothing to decide
+   *   · the layer permits NOTHING EXPLICIT → the governed value wins, because the column is DEFAULT INR and
+   *     never written, so it is not a choice — it is a default masquerading as one. This is the case that
+   *     made Rights say AED and Regional say INR on the same screen.
+   */
+  var hasChoice = !!(perm && perm.length > 1);
+  var curr = hasChoice ? ((e && e.currency_code) || gb.currency || null)
+                       : (gb.currency || (e && e.currency_code) || null);
+  /* ⚠️ A STORED VALUE OUTSIDE THE ENVELOPE IS NOT SILENTLY SUBSTITUTED — it is named, because a business
+     trading in a currency its layer no longer permits needs to know, not to have it quietly corrected. */
+  /* ⚠️ THE STORED VALUE, NOT THE RESOLVED ONE. Checking  could never fire once governance won the
+     precedence — so a business whose saved currency is no longer permitted would have been silently shown the
+     permitted one and never told. The question is about what THEY hold, not what we chose to display. */
+  var stored  = (e && e.currency_code) || null;
+  var outside = !!(perm && perm.length && stored && perm.indexOf(stored) < 0);
+  if (hasChoice) {
+    rows.push(['Currency',
+      '<select class="inp" id="pf_cur" style="margin:0;max-width:140px;display:inline-block">'
+        + perm.map(function(c){ return '<option value="' + esc(c) + '"' + (c === curr ? ' selected' : '') + '>' + esc(c) + '</option>'; }).join('')
+        + '</select>', tx('Choose'), true]);
+  } else if (curr) {
+    /* ⚠️ LABELLED BY WHERE THE VALUE CAME FROM, not by whether a list exists. With no allowed set the governed
+       value wins — and calling that "Business" was the original lie in a new place. */
+    var fromGov = (curr === gb.currency && curr !== stored) || (!stored && !!gb.currency);
+    rows.push(['Currency', curr,
+      outside ? txf('{cur} no longer permitted', { cur: stored })
+              : (fromGov ? tx('Set above you') : tx('Business'))]);
+  }
   /**
    * ⚠️⚠️ THE ZONE IS THE BUSINESS'S, AND THE READER'S IS THE FALLBACK — NOT THE OTHER WAY ROUND.
    * Athi, 2026-08-20: *"how come it is mine? It is entity's timezone and currency, country, clock."* He is
@@ -1812,7 +1855,10 @@ function iamGovernedRows(e){
     + rows.map(function(x){
         return '<div style="display:flex;gap:10px;align-items:baseline;padding:3px 0">'
           + '<b style="min-width:92px;font-size:var(--fs-1);color:var(--grey);text-transform:uppercase;letter-spacing:.04em">' + esc(x[0]) + '</b>'
-          + '<span style="flex:1">' + esc(x[1]) + '</span>'
+          /* ⚠️ x[3] MEANS "THIS VALUE IS MARKUP" — the currency picker, and nothing else so far. Every other
+             row is escaped, which is the default and stays the default: a fourth element must be added
+             deliberately, so raw HTML can never arrive here by accident. */
+          + '<span style="flex:1">' + (x[3] ? x[1] : esc(x[1])) + '</span>'
           + '<span style="color:var(--grey);font-size:var(--fs-1)">' + esc(x[2]) + '</span>'
           + '</div>';
       }).join('')
@@ -1939,6 +1985,7 @@ var PROF_FIELDS = {
   ident:    [['pf_name', 'display_name'], ['pf_uid', 'user_id']],
   profile:  [['pf_gstn', 'gstn'], ['pf_addr', 'address']],
   governed: [['pf_bs', 'business_status'], ['pf_vis', 'catalogue_visibility'], ['pf_sfaccess', 'storefront_access']],
+  regional: [['pf_cur', 'currency_code']],
 };
 
 /**
