@@ -1189,7 +1189,7 @@ function iamMeHTML(e){
      * ("From your installation. Your own reading language and formats are separate…") is gone: the rows are
      * read-only, which says the same thing by being true.
      */
-    + iamGovernedRows();
+    + iamGovernedRows(e);
 
   /* ── 3 · PRESENCE & GOVERNANCE ─────────────────────────────────────────────────────────────────────────
    * Read-only rows come from the constitution and the operator; the editable one is trading status. */
@@ -1590,20 +1590,32 @@ async function iamLoadDocs(){
  * currency it trades in — a fact about the business) and the PERSON's (what THIS reader reads, editable in
  * Settings). This block is the entity's.
  */
-function iamGovernedRows(){
+/**
+ * ⚠️⚠️ TWO CONCEPTS WERE SHARING ONE VALUE, AND MY OWN TEXT TRIM MADE IT WORSE.
+ *
+ * These rows read Time zone and Number format out of CBLocale — which is the READER's setting, written by the
+ * picker in Settings › Localisation. Under a heading called Business, beside Country of business, they said a
+ * personal display preference was a fact about the company. The row that used to distinguish them was the
+ * sentence *"From your installation. Your own reading language and formats are separate…"* — and I deleted it
+ * an hour ago as explanation, which removed the only thing holding the two apart.
+ *
+ * ⭐ THE FIX IS NOT TO PUT THE SENTENCE BACK. It is to show the facts that ARE the business's, from the
+ * ENTITY record: country and trading currency, both already on /entities/me. Time zone and number format
+ * belong to the reader and live in Settings, where they can be changed — one owner per fact.
+ *
+ * ⚠️ AND THIS IS WHAT PASS 3 IS FOR. The duplication was not two labels saying the same thing; it was one
+ * value answering two different questions, which no label-comparison would have found.
+ */
+function iamGovernedRows(e){
   var rows = [];
+  var country = (e && e.country) || null;
   try {
     var r = CBLocale.regionInfo && CBLocale.regionInfo();
-    rows.push(['Country of business', (r && r.name) || 'Not set']);
-    rows.push(['Time zone', CBLocale.timezone ? CBLocale.timezone() : '—']);
-    rows.push(['Number format', CBLocale.locale ? CBLocale.locale() : '—']);
-  } catch (_) { /* locale layer absent — show nothing rather than a guess */ }
+    rows.push(['Country of business', country || ((r && r.name) || 'Not set')]);
+  } catch (_) { if (country) rows.push(['Country of business', country]); }
+  if (e && e.currency_code) rows.push(['Trades in', e.currency_code]);
   if (!rows.length) return '';
   return '<div style="margin-top:12px;padding-top:10px;border-block-start:1px solid var(--line)">'
-    /* ⚠️ THE INTRO SENTENCE IS GONE. It said these come from your installation and that your own reading
-       language is separate — two facts a reader learns faster from the rows being read-only and from
-       Settings having its own Localisation section. Explaining where a value came from, above the value,
-       is the shape of text this product carries too much of. */
     + rows.map(function(x){ return '<div class="kv"><b>' + esc(x[0]) + '</b> · ' + esc(x[1]) + '</div>'; }).join('')
     + '</div>';
 }
@@ -3429,7 +3441,10 @@ function policyFlagsCard(){ loadPolicy(); return '<div style="'+_CARD+';margin-t
 function policyFlagsInner(){
   var rows=POLICY_FLAGS.map(function(def){ return '<div style="display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)">'
     +'<div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap"><span style="font-weight:600;font-size:var(--fs-2)">'+esc(def.label)+'</span>'+govKlass(def.gov)+'<span style="font-size:var(--fs-1);font-family:\'Space Mono\';background:var(--neutral-tint);color:var(--grey-2);border-radius:5px;padding:1px 6px">'+esc(def.level)+'</span></div>'
-    +'<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px;line-height:1.45">'+esc(def.help)+'</div></div>'
+    /* ⚠️ AN EMPTY help RENDERS NOTHING, NOT AN EMPTY DIV. Four of these were trimmed to direction today and
+       one removed outright; without this each would leave a 2px-margined empty element under its control —
+       a gap that reads as a rendering fault. Same fix as _misHead when its subtitle went. */
+    +(def.help ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px;line-height:1.45">'+esc(def.help)+'</div>' : '')+'</div>'
     +'<div style="flex:none;text-align:end;min-width:120px">'+_polControl(def)+'</div></div>'; }).join('');
   /* A setting that cannot be stored must SAY so rather than accept a change it will lose — that is the whole
      failure this card is being rebuilt out of. */
