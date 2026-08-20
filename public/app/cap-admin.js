@@ -1214,6 +1214,23 @@ function iamMeHTML(e){
     + '<label class="fl">' + tx('Address') + '</label>'
     + '<input class="inp" id="pf_addr" value="' + esc(e.address || '') + '">'
     /**
+     * ⭐⭐ GOODS · SERVICES · BOTH — the GST and WTO vocabulary, not "sales vs service". Athi, 2026-08-20:
+     * *"does this business do sales or service?… any generic standard term available that has to be used."*
+     *
+     * A SALE is the transaction, and a service is sold too; goods and services are the two kinds of THING
+     * supplied, which is the distinction actually being drawn. Every Indian GST return says "supply of goods
+     * or services or BOTH" — so the words cost a reader nothing to learn.
+     *
+     * ⚠️ AND "BOTH" IS THE COMMON CASE, not a convenience. A garage sells a part and fits it. Two options
+     * would make half the market describe itself wrongly on the first screen it meets.
+     */
+    + '<label class="fl">' + tx('Supplies') + '</label>'
+    + '<select class="inp" id="pf_sup" style="max-width:220px">'
+    +   [['goods', tx('Goods')], ['services', tx('Services')], ['both', tx('Both')]].map(function(o){
+          return '<option value="' + esc(o[0]) + '"' + ((e.supplies || 'goods') === o[0] ? ' selected' : '') + '>' + esc(o[1]) + '</option>';
+        }).join('')
+    + '</select>'
+    /**
      * ⚠️⚠️ COUNTRY · TIME ZONE · NUMBER FORMAT MOVED HERE, AND I ALMOST LOST THEM. They sat under "Presence &
      * governance"; rewriting that section as Storefront dropped the iamGovernedRows() call and nothing on
      * screen said so — e2e/dead-surface.cjs caught it by reporting the function newly orphaned. Athi's line
@@ -1392,7 +1409,7 @@ function iamMeHTML(e){
      the reason they open this section at all. */
   /* ⭐ country and currency moved OUT of this hint with the block they describe — a hint must summarise its
      own section, or the closed screen answers the wrong question. */
-  var _licHint = [ (e.gstn ? licLabel : null), (e.address ? 'address' : null) ].filter(Boolean).join(' · ')
+  var _licHint = [ (e.supplies || 'goods'), (e.gstn ? licLabel : null), (e.address ? 'address' : null) ].filter(Boolean).join(' · ')
                  || tx('not set');
 
   /* ⭐ EACH SECTION CARRIES ITS OWN SAVE — and Rights carries none, because nothing in it is yours to set.
@@ -2113,7 +2130,7 @@ function govCardHTML(g){
  */
 var PROF_FIELDS = {
   ident:    [['pf_name', 'display_name'], ['pf_uid', 'user_id']],
-  profile:  [['pf_gstn', 'gstn'], ['pf_addr', 'address']],
+  profile:  [['pf_gstn', 'gstn'], ['pf_addr', 'address'], ['pf_sup', 'supplies']],
   governed: [['pf_bs', 'business_status'], ['pf_vis', 'catalogue_visibility'], ['pf_sfaccess', 'storefront_access']],
   regional: [['pf_cur', 'currency_code']],
 };

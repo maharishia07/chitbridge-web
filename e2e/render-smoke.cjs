@@ -115,6 +115,10 @@ const CASES = [
   /* ⚠️ THE FLAG MUST FOLLOW THE ENTITY, NOT THE READER. The first version used regionInfo().code and showed a
      UAE business the Indian flag. The stub reader is IN, so this case only passes if the entity wins. */
   ['regional — flag follows the entity, not the reader', () => { ctx.UI._iamOpen = { regional: true }; const h = ctx.iamMeHTML({ ...ENTITY, country:'AE', currency_code:'AED' }); if (h.indexOf(String.fromCodePoint(127462,127466)) < 0) throw new Error('UAE flag missing'); if (h.indexOf(String.fromCodePoint(127470,127475)) >= 0) throw new Error("reader's IN flag leaked onto an AE entity"); return h; }],
+  /* ⚠️ GOODS is the DEFAULT and must stay so — every existing entity behaves as a seller of goods today, and
+     a migration must not silently re-classify a live business. */
+  ['business — supplies defaults to goods',  () => { ctx.UI._iamOpen = { profile: true }; const h = ctx.iamMeHTML({ ...ENTITY, gstn:'X' }); if (h.indexOf('value="goods" selected') < 0) throw new Error('goods is not the default'); return h; }],
+  ['business — supplies both is offered',    () => { ctx.UI._iamOpen = { profile: true }; const h = ctx.iamMeHTML({ ...ENTITY, gstn:'X', supplies:'both' }); if (h.indexOf('value="both" selected') < 0) throw new Error('both not selectable'); return h; }],
   ['iamSelfEmployeeHTML — commenter',       () => ctx.iamSelfEmployeeHTML(ACTOR)],
   ['iamSelfEmployeeHTML — editor + reach',  () => ctx.iamSelfEmployeeHTML({ ...ACTOR, access_level: 'editor', whole_entity: true, can_see_costs: true })],
   ['CBIdDocs.html — self, empty',           () => ctx.CBIdDocs.html([], 'self')],
