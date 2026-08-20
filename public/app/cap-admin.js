@@ -906,10 +906,10 @@ function iamHTML(e){
      "&amp;" and a raw <b> tag on Athi's screen. Plain text only here. */
   return _misHead('IAM · Identity and Access Management', 'Who can act for this business, and what they may do.')
     + '<div style="display:flex;gap:7px;margin-bottom:11px">' + seg + '</div>'
-    + (tab === 'me'   ? iamMeHTML(e)
-     : tab === 'emp'  ? iamPartyHTML('emp', e)
-     : tab === 'node' ? iamPartyHTML('node', e)
-     :                  iamPartyHTML('cust', e));
+    /* ⚠️ TWO BRANCHES, BECAUSE THERE ARE TWO TABS. 'node' and 'cust' were still routed here after their tabs
+       were removed — unreachable, and exactly the kind of leftover that makes the next reader believe a
+       Network tab exists somewhere they have not looked. */
+    + (tab === 'emp' ? iamPartyHTML('emp', e) : iamMeHTML(e));
 }
 
 /* ══ shared pieces ══════════════════════════════════════════════════════════════════════════════════════════ */
@@ -941,17 +941,57 @@ var IAM_PARTY = {
       var uid = e.user_id || 'your-user-id';
       var n = acts.filter(function (a) { return !a.actor_type || a.actor_type === 'human'; }).length;
       var costs = acts.filter(function (a) { return a.can_see_costs; }).length;
+      var writes = acts.filter(function (a) { return ['act','manager'].indexOf(a.hat || 'act') >= 0; }).length;
       return [
-        ['Name', 'Their own', 0, 'May repeat'],
-        ['Sign-in', 'key@' + uid, 1, 'Unique inside your business'],
-        ['Hat', 'Act · Manager · Audit · MIS · View-only', 0, 'What they may do — enforced on every write'],
-        ['Role', 'Free text', 0, 'A label, not a permission'],
-        ['Can see costs', costs + ' of ' + acts.length, 0, 'Buying price and margin'],
-        ['Where they sit', 'A node in your network', 0, 'Their reach follows it'],
-        ['How many', n + (n === 1 ? ' person' : ' people'), 0, '']
+        /**
+         * ⭐⭐ TWO NAMES, AND BOTH TRAVEL OUTWARD. Athi, 2026-08-20: *"Display Name — this can be visible in
+         * internal conversation, his employee records etc. External name: employee@entity - Display name.
+         * Need to distinguish and both should be there in external conversation."*
+         *
+         * The PAIR is the point. `ravi@acmetraders` alone is machine-shaped and says nothing about who a
+         * person is; "Ravi Kumar" alone is ambiguous — several businesses have a Ravi. A counterparty needs
+         * WHICH BUSINESS and WHICH PERSON, so outward they go together.
+         */
+        ['Display name', 'Their own — used inside', 0, 'May repeat. Internal conversation and their record.'],
+        ['External name', 'ravi@' + uid + ' — Ravi Kumar', 1, 'Both halves travel: which business, and which person.'],
+
+        /**
+         * ⚠️⚠️ THIS ROW USED TO ADVERTISE FIVE PERMISSIONS AND THERE ARE TWO. It read
+         * "Act · Manager · Audit · MIS · View-only — what they may do, enforced on every write", and a manager
+         * reading that reasonably concluded the five differed. They do not: `act` and `manager` behave
+         * IDENTICALLY, and `audit`, `mis` and `view_only` behave identically to each other.
+         *
+         * ⭐ Athi, 2026-08-20, diagnosing it better than I had: *"we are talking about two different things
+         * here. One is role and another one is access. Here the access is nothing but editable or read only…
+         * the role is multiple level in the organisation. Here we are not building multiple level of
+         * organisation structure — that is out of scope."*
+         *
+         * So the CODE is right and the VOCABULARY was wrong: it presented role-words as permission-words. The
+         * row now states the two access levels that exist, and lists the five names as what they map to.
+         * The person who would otherwise discover this is an employee who asked for a hat that changed nothing.
+         */
+        ['Access', 'Editable — or read-only', 0, 'Two levels, not five. The names below map onto these.'],
+        ['Editable', 'Act · Manager', 0, 'Writes records. Messages anyone, inside or outside.'],
+        ['Read-only', 'Audit · MIS · View-only', 0,
+          'Reads everything including external threads, and may reply INTERNALLY. Cannot answer the other party, and cannot raise a dispute — an auditor who participates is not auditing.'],
+        ['Who can change it', 'Their manager, never themselves', 0, 'Every change is recorded — who, when, and from what.'],
+
+        ['Role', 'Free text', 0, 'A label. It grants nothing — access does that.'],
+        ['Can see costs', costs + ' of ' + acts.length, 0, 'Buying price and margin.'],
+        ['Where they sit', 'A node in your structure', 0, 'Their reach follows the node, not the job title.'],
+        ['How many', n + (n === 1 ? ' person' : ' people') + ' · ' + writes + ' can write', 0, '']
       ];
     }
   },
+  /**
+   * ⚠️ DEAD SINCE 2026-08-20 — kept, not deleted, per Athi's rule: *"mark it as dead and later if it is not
+   * accessed at all, then remove."* The Network and Customer TABS are gone (IAM-SPEC §26.3): a network node IS
+   * an entity, and a customer never reaches this app at all. Nothing routes here any more.
+   *
+   * The content is not worthless — it is the clearest statement of how a node and a customer are NAMED — which
+   * is why it waits for a home rather than a delete. Network naming belongs on the Business tab; customer
+   * naming belongs on the storefront.
+   */
   node: {
     title: 'Network node',
     who: 'A branch, unit or counter. Its own entity, under yours.',
