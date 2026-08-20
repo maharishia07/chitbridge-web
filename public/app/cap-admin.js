@@ -703,8 +703,9 @@ function profSec(){ return UI.profSec || 'identity'; }
  * the document, so loadProfile's `if(!h) return` bailed and every section sat on the spinner forever. It worked on
  * FIRST entry only, because arriving at the screen triggers a second render that the section switch does not.
  */
-function profSetSec(k){ UI.profSec = k; renderApp(); _capShowDetail(); if (UI._me) { const h=document.getElementById('profbody');
-  if (h){ h.innerHTML = profSecHTML(k, UI._me); if (k === 'vault') loadVault(); } } else { loadProfile(); } }
+/* ⚠️ THE OLD profSetSec LIVED HERE — it switched PANES. The rail it drove is gone (see profileScreen), so the
+   pane-switching version was dead the moment the sections absorbed it, and a duplicate definition means the
+   earlier one silently never runs. The surviving shim, below, opens the matching accordion instead. */
 
 /**
  * ⚠️ THE TWO-SIDED PANEL IS THE SHAPE, AND IT IS NOT NEGOTIABLE PER SCREEN (Athi, 2026-08-16: *"it has to be
@@ -713,21 +714,32 @@ function profSetSec(k){ UI.profSec = k; renderApp(); _capShowDetail(); if (UI._m
  * every screen behaving the same way, and list→tap→detail→back being the mobile pattern throughout. A screen
  * that is uniform everywhere beats a screen that is optimal once. Density is fixed by the pane, not by the shape.
  */
-function profileScreen(){
-  if (SESSION.role === 'actor') return scr('👤 Profile', 'profbody', 'profile');   // actors keep the simple card
-  var e = UI._me || {};
-  var rail = PROF_SECS.map(function(s){
-    return '<div class="row misrow' + (profSec() === s.key ? ' sel' : '') + '" data-testid="prof-sec-' + s.key + '" onclick="profSetSec(\'' + s.key + '\')">'
-      + '<div class="main2"><div class="l1"><span class="code">' + esc(s.name) + '</span></div><div class="l2">' + esc(s.q) + '</div></div></div>';
-  }).join('');
-  var list = '<div class="list"><div class="lh" style="padding:0"><div class="misbar"><span class="misttl">' + tx('👤 Profile') + '</span>'
-    + '<span class="misbar-r"><span class="misasof">' + esc(e.display_name || '') + '</span></span></div></div>'
-    + '<div class="rows" id="prof_rail">' + rail + '</div></div>';
-  var detail = '<div class="detail" id="detailpane"><div id="profbody"><button class="dback" data-testid="cap-back" onclick="backToList()">‹ Back</button></div></div>';
-  var divider = '<div class="divider" id="divider" onmousedown="startDrag(event)" ontouchstart="startDrag(event)" role="separator" aria-label="Resize panes"><span class="grip"></span></div>';
-  if (UI.misLw == null) UI.misLw = 320;
-  var lw = Math.min(UI.misLw, Math.max(260, Math.round((window.innerWidth || 1200) * 0.42)));
-  return '<div class="panel' + ((UI.vp === 'mob' && UI.mdetail) ? ' showdetail' : '') + '" id="panel" style="--lw:' + lw + 'px;--lh:' + (UI.lh || 300) + 'px">' + list + divider + detail + '</div>';
+/**
+ * ⚠️⚠️ THE RAIL IS GONE, AND KEEPING IT WOULD HAVE BEEN THE VERY DUPLICATION ATHI ASKED ME TO REMOVE.
+ *
+ * He said the other three panels *"can come over to the first page itself"*, and I folded Storefront, Rights
+ * and Documents into iamHTML as sections — while leaving the left rail still listing those same four names.
+ * The screen would have offered every one of them twice, in two different interaction styles, which is worse
+ * than the repetition I was sent to remove. Found by reviewing my own change rather than by anyone seeing it.
+ *
+ * ⭐ ONE PANE FOR EVERYONE NOW — the same shape an actor already had. loadProfile fills #profbody, and the
+ * sections inside it are the navigation.
+ */
+function profileScreen(){ return scr('👤 Profile', 'profbody', 'profile'); }
+
+/**
+ * ⚠️ profSetSec SURVIVES AS A SHIM, because four call sites still ask for a section by name — a nav link, the
+ * storefront cross-reference, and the naming-rules pointer. With the rail gone the honest translation is to
+ * OPEN the matching accordion rather than to switch panes, so an old link still lands the reader on the thing
+ * it promised. Deleting it would have left four dead links pointing at nothing.
+ */
+var _SEC_TO_ACCORDION = { identity:'ident', storefront:'governed', governance:'rights', vault:'docs' };
+function profSetSec(k){
+  var key = _SEC_TO_ACCORDION[k] || 'ident';
+  UI._iamOpen = UI._iamOpen || {};
+  UI._iamOpen[key] = true;
+  UI.nav = 'profile';
+  renderApp(); _capShowDetail(); loadProfile();
 }
 
 /**
@@ -1222,8 +1234,24 @@ function iamMeHTML(e){
     /* ⚠️ THE STOREFRONT LINK OPENS IN A NEW WINDOW — and that does NOT protect the session, which was the
        stated reason for it. Same origin means the same localStorage. We are safe today because shop.html
        holds no session at all; the rule to keep is that a customer token must never be written to cb_sess. */
+    /**
+     * ⚠️⚠️ THE CUSTOMER-ACCESS MODE CAME WITH IT, OR IT WOULD HAVE BEEN LOST. Folding the Storefront panel into
+     * this section made storefrontCardHTML unreachable — and that card held `storefront_access` (browse-first
+     * vs login-first), a real setting with no other home. Deleting the panel without carrying this across is
+     * the same failure as the localisation rows an hour ago: not removed on purpose, left behind by a regroup.
+     */
+    + '<label class="fl">' + tx('Customers') + '</label>'
+    /* ⚠️ BUILT INLINE — opt() takes a flat value list, and there is no label/value variant. I wrote `opt2(...)`
+       from memory and it does not exist anywhere: the sixth invented name today, and the only one caught
+       before it shipped, because I checked instead of assuming. */
+    + '<select class="inp" id="pf_sfaccess" style="max-width:320px">'
+    +   [['browse', tx('Browse first')], ['login', tx('Sign in first')]].map(function(o){
+          return '<option value="' + esc(o[0]) + '"' + ((e.storefront_access || 'browse') === o[0] ? ' selected' : '') + '>' + esc(o[1]) + '</option>';
+        }).join('')
+    + '</select>'
+
     + '<div class="kv" style="margin-top:11px"><b>' + tx('Link') + '</b> · '
-    +   (live && e.bridge_id
+    +   (live && (e.user_id || e.bridge_id)
           ? '<a href="/shop.html?s=' + encodeURIComponent(e.user_id || e.bridge_id) + '" target="_blank" rel="noopener noreferrer"'
             + ' style="color:var(--blue)">' + esc(location.host + '/shop.html?s=' + (e.user_id || e.bridge_id)) + ' <span class=arw>↗</span></a>'
           : '<span style="color:var(--grey)">' + tx('nothing to show while private or closed') + '</span>')
@@ -1469,26 +1497,18 @@ function _profSecBody(k, e){
      which is precisely the information Athi asked to stop showing anywhere: *"in fact this information
      should not be appearing anywhere."* Removing a dead branch and finding it was the last thing keeping a
      whole explanatory table alive is the same cascade dead-surface caught on 2026-08-19. */
-  if (k === 'storefront') return _misHead('Storefront', 'What customers see when they open your link.')
-    + storefrontCardHTML(e);
-  if (k === 'governance') return _misHead('Your rights', 'What this entity may do — resolved from the layers above it.')
-    + (govCardHTML(e.governance) || '<div class="misnote">No governance resolved for this entity yet.</div>')
-    /**
-     * ⭐ ONE QUESTION, TWO DEPTHS, AND A ROUTE BETWEEN THEM. This card is the RESOLVED answer; Settings ›
-     * Governance layers is the seven-layer model it descended through. Neither is a duplicate of the other, but
-     * a reader who wants to know WHY their rights are what they are had no way to get from one to the other —
-     * so the two screens read like two unrelated opinions rather than an answer and its derivation.
-     */
-    + '<div style="' + _CARD + ';margin-top:10px">'
-    +   '<div style="font-size:var(--fs-2);line-height:1.6;color:var(--on-card)">'
-    +   'This is the <b>answer</b>. To see <b>where each part of it came from</b> — which layer set it, and '
-    +   'whether you can change it — open the seven layers it descended through.'
-    +   '</div>'
-    +   '<button class="composebtn" style="margin-top:9px" data-testid="gov-to-layers" '
-    +     'onclick="navTo(\'settings\');setSetSec(\'governance\')">The seven layers <span class=arw>→</span></button>'
-    + '</div>';
-  if (k === 'vault') return _misHead('Trade documents', 'Provide these once — every authority form is then pre-filled.')
-    + '<div id="vaulthost"><div class="loadwrap"><span class="spin"></span> loading…</div></div>';
+  /**
+   * ⚠️⚠️ THE storefront / governance / vault BRANCHES WERE DELETED HERE — all three unreachable.
+   *
+   * profSec() only ever returns 'identity' now: the rail that set it is gone and its four panels live as
+   * sections inside iamHTML. Leaving the branches would have left THREE renderers for three screens that are
+   * rendered elsewhere, and the next person to change the Storefront would have had even odds of editing the
+   * dead one.
+   *
+   * ⚠️ THE CUSTOMER-ACCESS MODE WAS CARRIED ACROSS FIRST. storefrontCardHTML held 
+   * (browse-first vs login-first) and nothing else did — deleting this branch before moving that control
+   * would have removed a real setting silently, which is exactly how the localisation rows nearly went.
+   */
   return '';
 }
 // "Your governance" — the entity's resolved governance (from attributes): where it's minted, its platform, its basics
@@ -1566,7 +1586,7 @@ function govCardHTML(g){
 var PROF_FIELDS = {
   ident:    [['pf_name', 'display_name'], ['pf_uid', 'user_id']],
   profile:  [['pf_gstn', 'gstn'], ['pf_addr', 'address']],
-  governed: [['pf_bs', 'business_status'], ['pf_vis', 'catalogue_visibility']],
+  governed: [['pf_bs', 'business_status'], ['pf_vis', 'catalogue_visibility'], ['pf_sfaccess', 'storefront_access']],
 };
 
 /**
@@ -1705,171 +1725,9 @@ async function saveProfile(sec){
   catch (e) { if (x) x.textContent = e.message; }
 }
 // 🛍️ Customer storefront — the shareable public shop link + the browse-first / login-first access mode.
-function storefrontCardHTML(e){
-  /**
-   * ⭐⭐ THE STATE LEADS, AND EVERYTHING ELSE FOLLOWS FROM IT.
-   *
-   * Athi, 2026-08-18: *"Are you trading / Shop Open, close parameter in top is no connection with what is there
-   * in this page. It has to be tidy up. Also if the shop is private, it cannot have storefront, if it is
-   * network, then it should be visible to network shops only. This page has to be fully reworked based on the
-   * entities status. Also need to answer is it independent of catalogue status."*
-   *
-   * ⚠️ THE ORDER WAS INVERTED, WHICH IS WHY IT READ AS INCOHERENT. The card opened with the shareable link and
-   * two buttons, and only THEN — twelve lines down — offered the setting that decides whether that link does
-   * anything at all. So the first thing a reader saw was an invitation to share something that, for a private
-   * catalogue, showed nothing to anyone including them.
-   *
-   * ⭐ Now: WHO CAN SEE IT first, then what follows from that. The link, the buttons and the customer-access
-   * choice are all downstream of one fact, and they now render as downstream of it.
-   *
-   * ⚠️ NOTHING IS HIDDEN WHEN CLOSED, and that is deliberate. Hiding the link and the access mode would remove
-   * the reader's ability to understand what turning it on would GIVE them — and the control that lifts it lives
-   * in this very card, so a hidden section would be a dead end. They are shown INERT and labelled, which is the
-   * honest third option between offering a broken thing and pretending it does not exist.
-   *
-   * ⚠️ AND IT ANSWERS HIS LAST QUESTION DIRECTLY. "Is it independent of catalogue status" — no. The storefront
-   * IS the catalogue's public face; there is no separate storefront switch, and pretending there was one is what
-   * made the two look unrelated.
-   */
-  var url = location.origin + '/shop.html?bridge=' + encodeURIComponent(e.bridge_id || '');
-  var acc = e.storefront_access || 'browse';
-  var vis = e.catalogue_visibility || 'private';   // b114 — absent means not published (EFFECTIVE, cap applied)
-  var cap = e.visibility_cap || { max: 'public', by: null, reason: '' };
-  var capped = (cap.max === 'private');
-  var live = (vis === 'public');                   // the only state in which a stranger's link opens
-  var sfopts = [['browse', 'Browse first — catalogue is open; sign in only to order'],
-                ['login',  'Login first — customer signs in before browsing']]
-    .map(function(o){ return '<option value="' + esc(o[0]) + '"' + (acc === o[0] ? ' selected' : '') + '>' + esc(o[1]) + '</option>'; }).join('');
-
-  /* The one-line answer to "what is my storefront right now", in the reader's terms rather than the value's. */
-  var STATE = {
-    public:  ['var(--ok-tint)', 'var(--ok-2)', 'Open', 'Anyone with the link can see your catalogue and order.'],
-    network: ['var(--purple-tint)', 'var(--purple-2)', 'Network only',
-              'The other businesses in your network can see it. The public link shows nothing.'],
-    private: ['var(--danger-tint)', 'var(--disp)', 'Closed',
-              'Nobody can see it — the link shows nothing, to anyone, including you.']
-  }[vis] || ['var(--danger-tint)', 'var(--disp)', 'Closed', 'Nobody can see it.'];
-
-  return '<div style="' + _CARD + ';margin-top:10px">'
-    + '<div class="sec" style="margin:0 0 8px">' + tx('🛍️ Customer storefront') + '</div>'
-
-    /* ── 1 · THE STATE ─────────────────────────────────────────────────────────────────────────────────── */
-    + '<div data-testid="sf-state" style="background:' + STATE[0] + ';color:' + STATE[1] + ';border-radius:9px;'
-    +   'padding:9px 11px;font-size:var(--fs-2);line-height:1.55">'
-    +   '<b>' + esc(STATE[2]) + '</b> — ' + esc(STATE[3])
-    +   (capped ? '<br>⚠️ Capped at <b>' + tx('Closed') + '</b> by ' + esc(cap.by || 'your network operator')
-                 + '. A store can be no more open than the thing it sits inside.' : '')
-    + '</div>'
-
-    /* ── 2 · THE CONTROL THAT SETS IT ──────────────────────────────────────────────────────────────────── */
-    /* ⚠️ NOT "Is your shop open?". That is the same English question as IAM's "Are you trading?" and a DIFFERENT
-       FACT — this one is public/network/private VISIBILITY, that one is open/closed/away TRADING. The screen once
-       read "Shop status: open" above "Is your shop open?: Closed", which is two names for one question even when
-       both values are correct. */
-    + '<label class="fl" style="margin-top:12px">Who can see your catalogue</label>'
-    + '<select class="inp" id="pf_catvis" data-testid="pf-catvis" style="max-width:340px"' + (capped ? ' disabled' : '') + '>'
-    +   (capped
-          ? '<option value="private" selected>' + tx('Closed — set by your network operator') + '</option>'
-          : '<option value="public"' + (vis === 'public' ? ' selected' : '') + '>Open — anyone with the link can see your catalogue</option>'
-          + '<option value="network"' + (vis === 'network' ? ' selected' : '') + '>Network only — the other businesses in your network can see it; the public link shows nothing</option>'
-          + '<option value="private"' + (vis === 'private' || !vis ? ' selected' : '') + '>Closed — the link shows nothing, to anyone</option>')
-    + '</select>'
-    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:5px;line-height:1.55">'
-    +   '⚠️ This is <b>not</b> whether you are trading — that is <b onclick="profSetSec(&#39;identity&#39;)" '
-    +   'style="cursor:pointer;color:var(--blue)">IAM › Are you trading?</b>, and the two are unrelated. '
-    +   'Your storefront <b>is</b> your catalogue&rsquo;s public face; there is no separate storefront switch.'
-    + '</div>'
-
-    /* ── 3 · THE LINK — downstream of the state, and inert unless it can open ───────────────────────────── */
-    + '<label class="fl" style="margin-top:14px">' + tx('Your storefront link') + '</label>'
-    + (live
-        ? '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5;margin-bottom:6px">'
-          + 'Share this — anyone can open it and order from your catalogue.</div>'
-        : '<div style="font-size:var(--fs-1);color:var(--warn-2);background:var(--warn-tint);border-radius:8px;'
-          + 'padding:7px 9px;margin-bottom:6px;line-height:1.55">'
-          + '⚠️ <b>This link will not open while your catalogue is ' + esc(STATE[2].toLowerCase()) + '.</b> '
-          + 'Anyone following it — including you — sees &ldquo;Shop not found&rdquo;. That wording is deliberately '
-          + 'vague to strangers, so that walking the id space tells them nothing; here is the real reason.'
-          + (capped ? '' : ' Set <b>' + tx('Open') + '</b> above and it starts working immediately.')
-          + '</div>')
-    + '<div style="background:var(--card);border:1px solid var(--line);border-radius:9px;padding:8px 10px;'
-    +   'color:var(--on-card);opacity:' + (live ? '1' : '.55') + '"><span class="mono" id="sf_url">' + esc(url) + '</span></div>'
-    + '<div style="display:flex;gap:8px;margin-top:8px">'
-    +   '<button class="composebtn" onclick="sfCopy()"' + (live ? '' : ' disabled title="Your catalogue is not open"') + '>' + tx('📋 Copy link') + '</button>'
-    +   '<button class="composebtn ghost" onclick="window.open(document.getElementById(&#39;sf_url&#39;).textContent,&#39;_blank&#39;)"'
-    +     (live ? '' : ' disabled title="Your catalogue is not open"') + '>' + tx('↗ Open') + '</button>'
-    + '</div>'
-
-    /* ── 4 · CUSTOMER ACCESS — only meaningful once there is a storefront ───────────────────────────────── */
-    + '<label class="fl" style="margin-top:14px">Customer access'
-    +   (live ? '' : ' <span style="color:var(--grey);font-weight:400;font-size:var(--fs-1)">— takes effect when your catalogue is open</span>')
-    + '</label>'
-    + '<select class="inp" id="pf_sfaccess" style="max-width:340px;opacity:' + (live ? '1' : '.7') + '">' + sfopts + '</select>'
-
-    + '<div class="err" id="pf_err2"></div>'
-    + '<button class="composebtn" style="margin-top:9px" onclick="saveStorefront()">' + tx('Save storefront') + '</button>'
-  + '</div>';
-}
 function sfCopy(){ var u=document.getElementById('sf_url'); if(!u)return; var t=u.textContent;
   if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(t).then(function(){toast('Storefront link copied ✓');}).catch(function(){toast(t);}); }
   else toast(t); }
-async function saveStorefront(){ var x=document.getElementById('pf_err2'); if(x)x.textContent='';
-  try{ await api('saveProfile',{body:{storefront_access:val('pf_sfaccess'), catalogue_visibility:(document.getElementById('pf_catvis')&&document.getElementById('pf_catvis').disabled)?undefined:val('pf_catvis')}});
-    toast(val('pf_catvis')==='public' ? 'Shop is OPEN — your link works now ✓' : 'Shop is CLOSED — the link shows nothing');
-    if(typeof loadProfile==='function') loadProfile(); }catch(e){ if(x)x.textContent=e.message; } }
-
-// Actor's own profile — their identity (from the JWT) + self-service Change PIN. Hat/shift/access are set by
-// the entity; the actor sets Duty/Break from the top bar.
-/**
- * loadActorProfile — THE employee's own profile. There is exactly one, and finding that out was the whole
- * problem.
- *
- * ⚠️⚠️ I BUILT A SECOND ONE AND IT WAS UNREACHABLE. Athi asked why his access level was not shown; I added an
- * employee branch inside iamHTML and shipped it. But loadProfile() short-circuits three lines in —
- * `if(SESSION.role==='actor') return loadActorProfile(h)` — so iamHTML is NEVER CALLED for an employee and
- * the new screen could not render for anyone. Two renderers for one screen, and the one I wrote was the dead
- * one. Athi's report, twice, was simply "still not rendering".
- *
- * ⭐ THE STANDING RULE EXISTS FOR EXACTLY THIS: a second call site means find the first one. I searched for
- * where the IAM screen renders instead of where an EMPLOYEE's profile renders, found iamHTML, and built
- * beside a function I never looked for. The content below is the same iamSelfEmployeeHTML — now called from
- * the one place that actually runs.
- *
- * ⚠️ AND IT NEEDS /me, NOT THE TOKEN. The old version read everything from jwtPayload, which is why it could
- * only say "your hat is managed by your entity" without naming it: the level deliberately is NOT in the JWT,
- * so that an owner demoting someone takes effect immediately rather than at token expiry. Naming the level
- * therefore costs one round trip, and that is the correct price for the answer being current.
- */
-async function loadActorProfile(h){
-  /* ⭐ A COLLAPSIBLE SECTION LIKE THE OTHERS. Athi, 2026-08-20: *"pin number again as a collapsable stuff"* and
-     *"change your pin is fine"* — so the wording stays and only the container changes. Three sections that
-     behave the same way beat two accordions and one loose card sitting under them. */
-  const pinBody = `<label class="fl">${tx('Current PIN')}</label><input class="inp" id="pf_cpin" inputmode="numeric" maxlength="4" style="max-width:150px" placeholder="4 digits">
-      <label class="fl">${tx('New PIN')}</label><input class="inp" id="pf_npin" inputmode="numeric" maxlength="4" style="max-width:150px" placeholder="4 digits">
-      <label class="fl">${tx('Confirm new PIN')}</label><input class="inp" id="pf_npin2" inputmode="numeric" maxlength="4" style="max-width:150px" placeholder="4 digits">
-      <div class="err" id="pf_err"></div><button class="composebtn" style="margin-top:9px" onclick="saveActorPin()">${tx('Change PIN')}</button>`;
-  const pinCard = iamSection('pin', tx('Change your PIN'), pinBody, { hint: tx('4 digits') });
-
-  /* Paint immediately from the token so the screen is never blank, then replace once /me lands. */
-  const p = (typeof jwtPayload === 'function' && jwtPayload(SESSION.token)) || {};
-  if (!UI._me) {
-    h.innerHTML = `<div class="sec">${tx('Your profile')}</div>`
-      + `<div class="misnote">${esc(SESSION.name || p.display_name || '')} — loading your access…</div>` + pinCard;
-  }
-
-  let e = UI._me;
-  if (!e) {
-    try { e = (await api('me')) || {}; UI._me = e; }
-    catch (err) { e = { display_name: SESSION.name || p.display_name, actor_key: p.actor_key, identity_type: 'actor' }; }
-  }
-  /* ⚠️ RE-QUERY AFTER THE AWAIT — renderApp rebuilds the shell, so the node captured above may be detached.
-     Every await in this file followed by a DOM write has the same hazard. */
-  const h2 = document.getElementById('profbody'); if (!h2) return;
-  h2.innerHTML = `<div class="sec">${tx('Your profile')}</div>`
-    + iamSelfEmployeeHTML(e)
-    + pinCard
-    + `<div style="font-size:var(--fs-1);color:var(--grey);margin-top:8px;line-height:1.5">Set your <b>${tx('Duty / Break')}</b> from the top bar.</div>`;
-}
 async function saveActorPin(){ const x=document.getElementById("pf_err"); if(x)x.textContent="";
   const c=val("pf_cpin"), n=val("pf_npin"), n2=val("pf_npin2");
   if(!/^\d{4}$/.test(n)){ if(x)x.textContent="New PIN must be 4 digits."; return; }
@@ -3389,3 +3247,9 @@ async function publishAnswer(){ const x=document.getElementById("kb_err"); if(x)
   if(!q||!a){ if(x)x.textContent="Question and answer are both required."; return; }
   try{ await api("assistPublish",{body:{question:q, answer:a, context:c, qa_id:_kbEditId||undefined}}); toast(_kbEditId?"Updated ✓ — live":"Published ✓ — live in the assistant"); kbNew(); loadGaps(); }
   catch(e){ if(x)x.textContent=(e&&e.message)||"Could not publish"; } }
+
+
+/* ⚠️ storefrontCardHTML and saveStorefront were removed on 2026-08-20. The Storefront PANEL they drew was
+   folded into iamHTML as a section, which made both unreachable; their one irreplaceable control
+   (storefront_access) was carried across FIRST, then the pair deleted. Two renderers for one screen is
+   how the next person edits the dead one. */
