@@ -86,6 +86,11 @@ const CASES = [
   ['trade — all clean',                   () => { ctx.UI._rdSum = {total:7,met:7,verified:5,attested:2,documented:0,pending:0,expiring:0,expired:0}; return ctx.iamTradeBody(); }],
   ['trade — expiring and expired',        () => { ctx.UI._rdSum = {total:7,met:4,verified:2,attested:1,documented:1,pending:2,expiring:1,expired:1}; return ctx.iamTradeBody(); }],
   ['trade — read failed is not zero',     () => { ctx.UI._rdSum = null; return ctx.iamTradeBody(); }],
+  /* Channels on the profile — the OTHER half of "how is this store reached". A declared channel receives
+     nothing, so it must never render as a working contact route. */
+  ['channels — one verified',             () => { ctx.UI._chans = [{channel:'whatsapp',address:'+919876543210',label:'Shop',status:'verified'}]; ctx.UI._chansLoaded = true; return ctx.iamMeHTML({ ...ENTITY, catalogue_visibility:'public' }); }],
+  ['channels — declared says so',         () => { ctx.UI._chans = [{channel:'whatsapp',address:'+919876543210',label:'Shop',status:'declared'}]; ctx.UI._chansLoaded = true; return ctx.iamMeHTML({ ...ENTITY, catalogue_visibility:'public' }); }],
+  ['channels — read failed is silent',    () => { ctx.UI._chans = null; ctx.UI._chansLoaded = true; return ctx.iamMeHTML(ENTITY); }],
   ['CBIdDocs.html — owner',                 () => ctx.CBIdDocs.html([], 'owner', { subject: 'act-1' })],
 ];
 

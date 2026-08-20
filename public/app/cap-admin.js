@@ -1123,6 +1123,7 @@ function iamMeHTML(e){
   var Q = String.fromCharCode(39);
   /* ⚠️ KICKED FROM THE RENDERER because this screen has no mount step — same as iamLoadDocs, same latch. */
   iamLoadTrade();
+  iamLoadChannels();
 
   /* ── 1 · IDENTITY & ACCESS ─────────────────────────────────────────────────────────────────────────────
    * ⚠️⚠️ NAME EDITABLE, USER ID FIXED — and it was exactly reversed before. This app's own naming table says
@@ -1305,7 +1306,10 @@ function iamMeHTML(e){
           ? '<a href="/shop.html?s=' + encodeURIComponent(e.user_id || e.bridge_id) + '" target="_blank" rel="noopener noreferrer"'
             + ' style="color:var(--blue)">' + esc(location.host + '/shop.html?s=' + (e.user_id || e.bridge_id)) + ' <span class=arw>↗</span></a>'
           : '<span style="color:var(--grey)">' + tx('nothing to show while private or closed') + '</span>')
-    + '</div>';
+    + '</div>'
+    /* ⭐ THE OTHER HALF OF "how is this store reached" — the link answers the catalogue, these answer the
+       messages. Both are outward facts; neither is configured here. */
+    + iamChannelRows();
 
   /**
    * ⭐⭐ FIVE SECTIONS, ONE SCREEN, NO RAIL. Athi, 2026-08-20: *"we have other three panel in profile —
@@ -1606,6 +1610,50 @@ async function iamLoadDocs(){
  * ⚠️ AND THIS IS WHAT PASS 3 IS FOR. The duplication was not two labels saying the same thing; it was one
  * value answering two different questions, which no label-comparison would have found.
  */
+/**
+ * ⭐⭐ HOW THIS BUSINESS IS REACHED, ON THE SCREEN THAT ANSWERS THAT. Athi, 2026-08-20: *"channels, we setup in
+ * settings, but it has to be exposed as the channel in profile? This is how this store is accessed."*
+ *
+ * ⭐ SAME TEST AS TRADE READY, SAME ANSWER. Settings › Channels is where you BIND a number and verify it — a
+ * workbench. What belongs on a profile is the outward fact: the addresses a counterparty can actually reach.
+ * The storefront link was already here answering half that question; the channels are the other half.
+ *
+ * ⚠️⚠️ A DECLARED CHANNEL IS NOT A WAY TO REACH ANYONE. status is declared|verified, and Settings already says
+ * it plainly — "not confirmed yet: messages sent to this number reach nobody". Listing one here as though it
+ * worked would put a false contact route on the screen a counterparty trusts, so it is shown as inactive
+ * rather than hidden: hiding it would leave an owner wondering where their number went.
+ */
+function iamChannelRows(){
+  var cs = UI._chans;
+  if (cs === undefined) return '';                    // not read yet — say nothing rather than "none"
+  if (cs === null) return '';                         // the read failed — same rule as the network count
+  if (!cs.length) return '';
+  var Q = String.fromCharCode(39);
+  return '<div class="kv" style="margin-top:11px"><b>' + tx('Reached at') + '</b></div>'
+    + cs.map(function(c){
+        var ok = c.status === 'verified';
+        return '<div class="kv" style="margin-top:3px">'
+          + '<span style="color:' + (ok ? 'var(--ok-3)' : 'var(--grey)') + '">' + (ok ? '✓' : '○') + '</span> '
+          + '<span class="mono">' + esc(c.address || '') + '</span>'
+          + '<span style="color:var(--grey);font-size:var(--fs-1)"> · ' + esc(c.label || c.channel || '')
+          + (ok ? '' : ' · ' + tx('not receiving yet')) + '</span></div>';
+      }).join('')
+    + '<div class="kv" style="margin-top:6px"><a href="#" onclick="navTo(' + Q + 'settings' + Q + ');setSetSec(' + Q + 'channels' + Q + ');return false" style="color:var(--blue);font-size:var(--fs-1)">'
+    + tx('Channels') + ' <span class=arw>→</span></a></div>';
+}
+
+/** ⚠️ Latched, like the identity record and the trade summary — this repaints, and the renderer reads it. */
+async function iamLoadChannels(){
+  if (UI._chansLoaded) return;
+  UI._chansLoaded = true;
+  try {
+    var r = await fetch(CFG.API_BASE + '/api/channels', { headers: { Authorization: 'Bearer ' + SESSION.token } });
+    var j = r.ok ? await r.json() : null;
+    UI._chans = j ? (j.channels || j.rows || (Array.isArray(j) ? j : [])) : null;
+  } catch (_) { UI._chans = null; }
+  renderApp(); _capShowDetail(); loadProfile();
+}
+
 function iamGovernedRows(e){
   var rows = [];
   var country = (e && e.country) || null;
