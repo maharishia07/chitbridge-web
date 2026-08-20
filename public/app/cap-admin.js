@@ -1931,21 +1931,42 @@ function iamGovernedRows(e){
    * the layer chose, "no longer permitted" on one it has withdrawn, "first choice / then" on the language
    * chain. A heading cannot carry an exception.
    */
+/**
+ * One Regional row. Athi, 2026-08-20: *"if the comment takes space bring it underneath."*
+ *
+ * ⭐⭐ THAT IS HIS OWN CONVENTION, APPLIED CONSISTENTLY — value first, message beneath it, settled on the
+ * governance boxes ("base@v1" then "Platform set"). Here the message sat in a right-hand column instead,
+ * competing with the value for width on a narrow screen and pushing "no longer permitted" onto its own line
+ * anyway. Underneath, it costs nothing horizontally and reads in the order a person needs it: what it is,
+ * then whose it is.
+ */
 var rowHtml = function(x){
-        return '<div style="display:flex;gap:10px;align-items:baseline;padding:3px 0">'
-          + '<b style="min-width:92px;font-size:var(--fs-1);color:var(--grey);text-transform:uppercase;letter-spacing:.04em">' + esc(x[0]) + '</b>'
-          /* ⚠️ x[3] MEANS "THIS VALUE IS MARKUP" — the currency picker, and nothing else so far. Every other
-             row is escaped, which is the default and stays the default: a fourth element must be added
-             deliberately, so raw HTML can never arrive here by accident. */
-          + '<span style="flex:1">' + (x[3] ? x[1] : esc(x[1])) + '</span>'
-          + '<span style="color:var(--grey);font-size:var(--fs-1)">' + esc(x[2]) + '</span>'
-          + '</div>';
+  return '<div style="display:flex;gap:12px;align-items:flex-start;padding:5px 0">'
+    + '<b style="min-width:88px;flex:0 0 88px;font-size:var(--fs-1);color:var(--grey);text-transform:uppercase;'
+    + 'letter-spacing:.04em;line-height:1.7">' + esc(x[0]) + '</b>'
+    + '<div style="flex:1;min-width:0">'
+      /* ⚠️ x[3] MEANS "THIS VALUE IS MARKUP" — the currency picker, and nothing else so far. Every other row
+         is escaped and stays escaped: raw HTML must be opted into deliberately. */
+      + '<div>' + (x[3] ? x[1] : esc(x[1])) + '</div>'
+      + (x[2] ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:1px">' + esc(x[2]) + '</div>' : '')
+    + '</div>'
+    + '</div>';
 };
+  /**
+   * ⚠️ A HEADING MUST NOT LOOK LIKE A ROW LABEL. Athi, 2026-08-20: *"can you make indentation or size
+   * difference or underline for the heading — some difference should be there between heading and text."*
+   *
+   * It was uppercase-small-grey — the SAME treatment as the row labels beside it — so "BUSINESS" and
+   * "COUNTRY" read as two items in one list rather than a group and its contents. Three differences now,
+   * because on a dense screen one is easy to miss: it is LARGER, it carries a RULE beneath it, and the rows
+   * are INDENTED under it. Contrast is already measured by a11y-contrast; hierarchy was not measured by
+   * anything, which is why it drifted.
+   */
   var grp = function(title, list){
     if (!list.length) return '';
-    return '<div style="font-size:var(--fs-1);text-transform:uppercase;letter-spacing:.05em;color:var(--grey);'
-      + 'font-weight:600;margin:10px 0 4px">' + esc(title) + '</div>'
-      + list.map(rowHtml).join('');
+    return '<div style="font-size:var(--fs-2);font-weight:700;color:var(--on-card);'
+      + 'margin:14px 0 6px;padding-bottom:4px;border-block-end:1px solid var(--line)">' + esc(title) + '</div>'
+      + '<div style="padding-inline-start:6px">' + list.map(rowHtml).join('') + '</div>';
   };
   return '<div>'
     /* ⚠️ THE IN-BLOCK 'Regional' HEADING WENT WITH THE PROMOTION — the section header says it now, and a
