@@ -80,6 +80,12 @@ const CASES = [
   ['iamSelfEmployeeHTML — editor + reach',  () => ctx.iamSelfEmployeeHTML({ ...ACTOR, access_level: 'editor', whole_entity: true, can_see_costs: true })],
   ['CBIdDocs.html — self, empty',           () => ctx.CBIdDocs.html([], 'self')],
   ['CBIdDocs.html — self, with rows',       () => ctx.CBIdDocs.html([{ scheme: 'PAN', value_masked: 'ABC••••34F', status: 'verified', submitted_by: 'x' }], 'self')],
+  /* Trade ready — the OUTWARD answer on the profile. Every state, because the difference between "nothing
+     recorded" and "could not read" is a claim about a business that a counterparty will act on. */
+  ['trade — nothing recorded',            () => { ctx.UI._rdSum = {total:0,met:0,verified:0,attested:0,documented:0,pending:0,expiring:0,expired:0}; return ctx.iamTradeBody(); }],
+  ['trade — all clean',                   () => { ctx.UI._rdSum = {total:7,met:7,verified:5,attested:2,documented:0,pending:0,expiring:0,expired:0}; return ctx.iamTradeBody(); }],
+  ['trade — expiring and expired',        () => { ctx.UI._rdSum = {total:7,met:4,verified:2,attested:1,documented:1,pending:2,expiring:1,expired:1}; return ctx.iamTradeBody(); }],
+  ['trade — read failed is not zero',     () => { ctx.UI._rdSum = null; return ctx.iamTradeBody(); }],
   ['CBIdDocs.html — owner',                 () => ctx.CBIdDocs.html([], 'owner', { subject: 'act-1' })],
 ];
 

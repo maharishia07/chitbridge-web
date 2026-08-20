@@ -1121,6 +1121,8 @@ function iamToggle(k){
 
 function iamMeHTML(e){
   var Q = String.fromCharCode(39);
+  /* ⚠️ KICKED FROM THE RENDERER because this screen has no mount step — same as iamLoadDocs, same latch. */
+  iamLoadTrade();
 
   /* ── 1 · IDENTITY & ACCESS ─────────────────────────────────────────────────────────────────────────────
    * ⚠️⚠️ NAME EDITABLE, USER ID FIXED — and it was exactly reversed before. This app's own naming table says
@@ -1333,6 +1335,9 @@ function iamMeHTML(e){
              hint: [e.user_id, e.bridge_id].filter(Boolean).join(' · ') })
     + iamSection('profile', tx('Business'), profile + profSaveBtn('profile'), { hint: _licHint })
     + iamSection('governed', tx('Storefront'), governed + profSaveBtn('governed'), { hint: _sfHint })
+    /* ⭐ TRADE READY SITS BESIDE RIGHTS, not among the editable sections — both answer "what may this
+       business do", one from the platform and one from the world. Neither takes a Save. */
+    + iamSection('trade', tx('Trade ready'), iamTradeBody(), { hint: iamTradeHint() })
     + iamSection('rights', tx('Rights'), iamRightsBody(e), { hint: tx('resolved') })
     + iamSection('docs', tx('Documents'), iamVaultBody(), { hint: UI._vaultHint || '' });
 }
@@ -1469,6 +1474,91 @@ function iamDocsHint(){
   if (!d.length) return '';
   var ok = d.filter(function(x){ return x.status === 'verified'; }).length;
   return ok + ' of ' + (CBIdDocs ? CBIdDocs.ORDER.length : 6) + ' verified';
+}
+
+/**
+ * ⭐⭐ TRADE READY, AS THE OUTWARD ANSWER — not the workbench.
+ *
+ * Athi, 2026-08-20: *"Trade ready — I guess that also, if we make it crisp, then it can get into profile.
+ * That is how other suppliers will view this person."*
+ *
+ * ⚠️ SO THE 535-LINE SCREEN DOES NOT MOVE. cap-readiness is a workbench — lanes, destinations, AI drafting,
+ * registry verification — and a person goes there to DO something. What belongs on a profile is the thing a
+ * counterparty reads: how much is proved, and how well. Copying the workbench here would have given the app a
+ * second place to work on the same records, which is the duplication this whole day removed.
+ *
+ * ⭐ THE RUNGS ARE THE CONTENT, and they are already the product's own vocabulary — verified beats attested
+ * beats documented ([[project-attestation-layer]]). A supplier asking "can I trade with them" is asking which
+ * rung, not how many rows.
+ */
+function iamTradeHint(){
+  var s = UI._rdSum;
+  if (!s) return '';
+  if (!s.total) return tx('not started');
+  return s.verified + ' ' + tx('verified') + ' · ' + s.met + '/' + s.total;
+}
+
+function iamTradeBody(){
+  var s = UI._rdSum;
+  if (s === undefined) return '<div class="misnote">' + tx('Loading…') + '</div>';
+  /* ⚠️ null means the read FAILED. That is not "nothing is ready" — a definite claim from an absent answer is
+     the mistake the network count already avoids. */
+  if (s === null) return '<div class="misnote">' + tx('Could not read your trade record.') + '</div>';
+  if (!s.total)  return '<div class="misnote">' + tx('Nothing recorded yet.') + '</div>'
+    + iamTradeLink();
+
+  var box = function(label, value, sub, tone){
+    return '<div style="flex:1 1 130px;min-width:0;padding:10px 12px;border:1px solid var(--line);border-radius:11px;'
+      + 'background:var(--paper);color:var(--on-bg)">'
+      + '<div style="font-size:var(--fs-1);text-transform:uppercase;letter-spacing:.05em;color:var(--grey);font-weight:600">' + esc(label) + '</div>'
+      + '<div style="margin-top:3px;font-size:var(--fs-4);font-weight:700' + (tone ? ';color:' + tone : '') + '">' + esc(value) + '</div>'
+      + (sub ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">' + esc(sub) + '</div>' : '')
+      + '</div>';
+  };
+
+  /* The trust ladder, highest rung first — that is the order a counterparty reads it in. */
+  var rungs = '<div style="display:flex;flex-wrap:wrap;gap:9px">'
+    + box(tx('Verified'),   String(s.verified),   tx('checked at source'), 'var(--ok-3)')
+    + box(tx('Attested'),   String(s.attested),   tx('third party'), '')
+    + box(tx('Documented'), String(s.documented), tx('self-declared'), '')
+    + '</div>';
+
+  /* ⚠️ ONLY WHAT NEEDS ACTION APPEARS. A row reading "expired: 0" is a fact nobody needs; the absence of the
+     row is the same answer and costs no attention. */
+  var flags = [];
+  if (s.expiring) flags.push(['⚠️', s.expiring + ' ' + tx('expiring'), 'var(--warn-3)']);
+  if (s.expired)  flags.push(['✕',  s.expired  + ' ' + tx('expired'),  'var(--bad-3)']);
+  if (s.pending)  flags.push(['○',  s.pending  + ' ' + tx('not started'), 'var(--grey)']);
+
+  return rungs
+    + (flags.length
+        ? '<div class="kv" style="margin-top:10px">'
+          + flags.map(function(f){ return '<span style="color:' + f[2] + ';margin-inline-end:12px">' + f[0] + ' ' + esc(f[1]) + '</span>'; }).join('')
+          + '</div>'
+        : '')
+    + iamTradeLink();
+}
+
+/* ⭐ THE WORK HAPPENS ON THE OTHER SCREEN, and the button is the whole instruction. */
+function iamTradeLink(){
+  var Q = String.fromCharCode(39);
+  return '<button class="composebtn" style="margin-top:10px" data-testid="prof-to-readiness" '
+    + 'onclick="navTo(' + Q + 'readiness' + Q + ')">' + tx('Trade readiness') + ' <span class=arw>→</span></button>';
+}
+
+/**
+ * ⚠️ LATCHED, like the identity record — this sets UI._rdSum and then repaints, and the renderer reads
+ * UI._rdSum. Without the latch that is a cycle which pins a core and looks like a slow screen.
+ */
+async function iamLoadTrade(){
+  if (UI._rdSumLoaded) return;
+  UI._rdSumLoaded = true;
+  try {
+    var r = await fetch(CFG.API_BASE + '/api/governance/readiness',
+      { headers: { Authorization: 'Bearer ' + SESSION.token } });
+    UI._rdSum = r.ok ? ((await r.json()).summary || null) : null;
+  } catch (_) { UI._rdSum = null; }
+  renderApp(); _capShowDetail(); loadProfile();
 }
 
 /**
