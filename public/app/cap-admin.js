@@ -909,7 +909,12 @@ function iamHTML(e){
     /* ⚠️ TWO BRANCHES, BECAUSE THERE ARE TWO TABS. 'node' and 'cust' were still routed here after their tabs
        were removed — unreachable, and exactly the kind of leftover that makes the next reader believe a
        Network tab exists somewhere they have not looked. */
-    + (tab === 'emp' ? iamPartyHTML('emp', e) : iamMeHTML(e));
+    /* ⭐⭐ AN EMPLOYEE IS NOT LOOKING AT A BUSINESS. iamMeHTML renders the ENTITY's profile — licence,
+       address, trading status, and a User ID block that told a signed-in employee their handle was
+       "Not set" and invited them to claim one permanently. They have no handle: they sign in as
+       key@business. Same screen for both parties was the bug, not the layout. */
+    + (SESSION_IS_ACTOR() ? iamSelfEmployeeHTML(e)
+        : tab === 'emp' ? iamPartyHTML('emp', e) : iamMeHTML(e));
 }
 
 /* ══ shared pieces ══════════════════════════════════════════════════════════════════════════════════════════ */
@@ -1222,6 +1227,82 @@ function iamMeHTML(e){
     + '<div class="err" id="pf_err"></div>'
     + '<button class="composebtn" style="margin-top:4px" onclick="saveProfile()">' + tx('Save profile') + '</button>'
     + namingRulesHTML();
+}
+
+
+/**
+ * SESSION_IS_ACTOR — is the person reading this screen an employee rather than the business?
+ *
+ * ⚠️ ASKS THE PROFILE, THEN THE SESSION, IN THAT ORDER. /entities/me now stamps identity_type on the row it
+ * returns (it reads req.identity, which auth resolved FROM THE DATABASE this request). The session token is
+ * the fallback for the moment before the profile has loaded.
+ */
+function SESSION_IS_ACTOR(){
+  try {
+    if (UI.profile && UI.profile.identity_type) return UI.profile.identity_type === "actor";
+    return !!(SESSION && SESSION.identity_type === "actor");
+  } catch (_) { return false; }
+}
+
+/**
+ * ⭐⭐ THE EMPLOYEE'S OWN PROFILE. Athi, 2026-08-20: *"in the employee profile, there is nothing mentioned
+ * about his access level, like reviewer, edit and the other one, which one he belongs to."*
+ *
+ * Three things an employee needs about themselves, and the screen showed none of them:
+ *   1. WHO they are here      — the login they type, which is key@business and is not theirs to change
+ *   2. WHAT THEY MAY DO       — the access level, with the other levels visible so the answer has a scale
+ *   3. HOW TO CHANGE IT       — they cannot; the owner can. Said plainly rather than left to be discovered.
+ *
+ * ⚠️ ALL THREE ARE READ-ONLY BY DESIGN. Athi, on the walk: *"current hat, display below what other hats are
+ * possible. Request your manager to modify if required."* An editable control here would be a lie — the API
+ * refuses it (routes/actors.js is entity-only), so the screen must not offer what the server will decline.
+ */
+function iamSelfEmployeeHTML(e){
+  var lvl   = accessLevelOf(e);
+  var login = (e.actor_key && e.parent_user_id) ? (e.actor_key + "@" + e.parent_user_id) : null;
+
+  /* ── 1 · WHO YOU ARE ──────────────────────────────────────────────────────────────────────────────── */
+  var who = '<label class="fl">' + tx("Name") + ' <span style="color:var(--grey);font-weight:400;font-size:var(--fs-1)">— ' + tx("what colleagues see") + '</span></label>'
+    + '<input class="inp" id="pf_name" value="' + esc(e.display_name || "") + '">'
+    + '<div style="margin-top:12px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--paper);color:var(--on-bg)">'
+    +   '<div style="font-size:var(--fs-1);text-transform:uppercase;letter-spacing:.05em;color:var(--grey);font-weight:600">' + tx("Your login") + '</div>'
+    +   (login
+          ? '<div class="mono" style="font-size:var(--fs-3);color:var(--gold);margin-top:2px">' + esc(login) + '</div>'
+          : '<div class="mono" style="font-size:var(--fs-2);color:var(--grey);margin-top:2px">' + esc(e.actor_key || "—") + '</div>')
+    +   '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:5px;line-height:1.5">'
+    +     tx("Your key, then your employer's User ID. It is issued with your account and cannot be changed.")
+    +   '</div></div>'
+    + '<div class="kv" style="margin-top:10px"><b>' + tx("Bridge ID") + '</b> · <span class="mono">' + esc(e.bridge_id || "") + '</span></div>';
+
+  /* ── 2 · YOUR ACCESS ─────────────────────────────────────────────────────────────────────────────── */
+  /* ⭐ THE OTHER LEVELS ARE SHOWN, NOT JUST YOURS. "Commenter" alone answers nothing — a level is a position
+     on a scale, and without the scale a person cannot tell whether to ask for a different one. */
+  var ladder = ACCESS_CHOICES.map(function(c){
+    var on = c[0] === lvl;
+    return '<div style="display:flex;gap:9px;align-items:flex-start;padding:8px 10px;border-radius:8px;'
+      /* ⚠️ NAMES ITS INK BECAUSE IT PAINTS ITS GROUND. A surface that sets a background and inherits its text
+         colour is the bug that made the avatar menu unreadable in every light theme; guard check 11 caught
+         this one the same way, one run after it was written. */
+      + (on ? 'background:var(--blue-tint-bg);color:var(--on-card);border:2px solid var(--blue)' : 'border:2px solid transparent') + '">'
+      + '<span style="font-size:var(--fs-2);line-height:1.4;color:' + (on ? 'var(--blue)' : 'var(--grey)') + '">' + (on ? "●" : "○") + '</span>'
+      + '<span style="font-size:var(--fs-2);line-height:1.45;font-weight:' + (on ? 700 : 400) + ';color:' + (on ? 'var(--on-card)' : 'var(--grey)') + '">'
+      + esc(c[1]) + (on ? ' <span style="font-weight:600;color:var(--blue)">— ' + tx("you") + '</span>' : '') + '</span></div>';
+  }).join("");
+
+  var flags = [];
+  if (e.whole_entity === true)  flags.push(tx("Sees the whole business"));
+  if (e.can_see_costs === true) flags.push(tx("Can see costs"));
+
+  var access = ladder
+    + (flags.length ? '<div class="kv" style="margin-top:9px"><b>' + tx("Also granted") + '</b> · ' + esc(flags.join(" · ")) + '</div>' : "")
+    + '<div class="misnote" style="margin-top:10px;line-height:1.5">'
+    +   tx("Only the account owner can change this. Ask them if you need different access.")
+    + '</div>';
+
+  return iamSection("ident", tx("Who you are"), who, { openByDefault: true })
+    + iamSection("access", tx("Your access"), access, { hint: ACCESS_LABEL[lvl] || "" })
+    + '<div class="err" id="pf_err"></div>'
+    + '<button class="composebtn" style="margin-top:4px" onclick="saveProfile()">' + tx("Save") + '</button>';
 }
 
 /**
