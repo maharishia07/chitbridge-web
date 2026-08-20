@@ -78,5 +78,25 @@ eq('a capped/disabled field still reports dirty (it IS different)…', ctx.profD
 /* …but saveProfile skips disabled controls, which is the half that matters — a capped value must never be
    sent back as though the person chose it. Asserted at the call boundary rather than here. */
 
+/**
+ * ── THE SAME HELPERS, DRIVING SETTINGS ─────────────────────────────────────────────────────────────────────
+ *
+ * ⭐ Settings reuses profSnapshot / profDirtySections with its OWN field map rather than copying them — a
+ * second pair would drift from the first the moment either changed. These assertions exist to prove the two
+ * maps stay INDEPENDENT: a Settings edit must never report a Profile section dirty, or the guard would offer
+ * to save the wrong screen.
+ */
+console.log('\n── the same helpers, driven by SET_FIELDS ──');
+mk('st_am', 'least'); mk('st_mt', '10'); mk('st_aam', 'off'); mk('st_ada', '');
+ctx.setSnapshot();
+eq('settings clean after snapshot',    ctx.profDirtySections(ctx.SET_FIELDS), []);
+fields.st_mt.value = '25';
+eq('editing max tasks dirties Work',   ctx.profDirtySections(ctx.SET_FIELDS), ['work']);
+fields.st_aam.value = 'round';
+eq('…and the mode adds Auto-assign',   ctx.profDirtySections(ctx.SET_FIELDS), ['work', 'assign']);
+eq('the PROFILE map stays clean',      ctx.profDirtySections(ctx.PROF_FIELDS), []);
+ctx.setSnapshot();
+eq('settings clean after re-snapshot', ctx.profDirtySections(ctx.SET_FIELDS), []);
+
 console.log(`\n══ ${pass} passed · ${fail} failed ══\n`);
 process.exit(fail ? 1 : 0);

@@ -519,7 +519,7 @@ function misOverview(m){
     return '<div class="misov"><div class="misovh"><span class="misovn">' + esc(name) + '</span><span class="misnote">' + esc(q) + '</span></div>' + inner + '</div>';
   };
   var tot = m.committed + m.forecast, pct = tot ? Math.round(m.committed / tot * 100) : 0;
-  return _misHead('Overview', 'All four bands at once — open one on the left for its detail.')
+  return _misHead('Overview', '')
     + sec('Position', 'How much of the pipeline is real?',
         '<div class="mistwo"><div><div class="mishero" style="font-size:30px">' + inr(m.committed) + '</div>'
         + '<div class="misnote">committed · ' + pct + '% of the book</div></div><div>' + _misSplitBar(m) + '</div></div>')
@@ -1760,11 +1760,31 @@ function profSaveBtn(sec){
  */
 var _profSnap = {};
 
+/**
+ * ⭐⭐ SETTINGS GETS THE SAME GUARD, FROM THE SAME FUNCTIONS. Profile lost work silently until today; Settings
+ * still can — three of its sections need a Save (Work, Auto-assign, Documents) and clicking another rail row
+ * discards whatever was typed. The policy flags and channels apply on change and have nothing to lose, so
+ * they are deliberately not listed: a guard that fires for controls which cannot lose work would be the same
+ * false affordance as a link to a closed shop.
+ *
+ * ⚠️ THE HELPERS TAKE A FIELD MAP RATHER THAN BEING COPIED. A second snapshot/dirty pair would drift from the
+ * first the moment either changed — the standing rule, and the reason Profile and Settings can now never
+ * disagree about what unsaved means.
+ */
+var SET_FIELDS = {
+  work:   [['st_am', 'assignment_model'], ['st_mt', 'default_max_tasks']],
+  assign: [['st_aam', 'mode'], ['st_ada', 'default_assignee']],
+};
+
+function setSnapshot(){ profSnapshot(SET_FIELDS); }
+function setGuard(go){ return profGuard(go, SET_FIELDS, { work: tx('Work'), assign: tx('Auto-assign') }); }
+
 /** Re-read every profile field currently on screen. Called after each paint. */
-function profSnapshot(){
+function profSnapshot(map){
+  map = map || PROF_FIELDS;
   _profSnap = {};
-  Object.keys(PROF_FIELDS).forEach(function(s){
-    PROF_FIELDS[s].forEach(function(pair){
+  Object.keys(map).forEach(function(s){
+    map[s].forEach(function(pair){
       var el = document.getElementById(pair[0]);
       if (el) _profSnap[pair[0]] = el.value;
     });
@@ -1772,10 +1792,11 @@ function profSnapshot(){
 }
 
 /** Which sections have an on-screen field whose value differs from the snapshot. */
-function profDirtySections(){
+function profDirtySections(map){
+  map = map || PROF_FIELDS;
   var out = [];
-  Object.keys(PROF_FIELDS).forEach(function(s){
-    var dirty = PROF_FIELDS[s].some(function(pair){
+  Object.keys(map).forEach(function(s){
+    var dirty = map[s].some(function(pair){
       var el = document.getElementById(pair[0]);
       /* ⚠️ A FIELD NOT ON SCREEN IS NOT DIRTY. A collapsed section cannot have been edited, and treating its
          absence as a change would prompt on every single navigation. */
@@ -1796,11 +1817,14 @@ function profDirtySections(){
  * often wants neither. A two-button dialog forces a decision about the data in order to answer a question
  * about the navigation.
  */
-function profGuard(go){
-  var dirty = profDirtySections();
+function profGuard(go, map, nameMap){
+  /* ⚠️ THE MAP IS REMEMBERED FOR profGuardDo — it saves the dirty sections after the person chooses, and
+     without this it would save PROFILE fields when the prompt came from Settings. */
+  UI._guardMap = map || PROF_FIELDS;
+  var dirty = profDirtySections(UI._guardMap);
   if (!dirty.length) return go();
   var Q = String.fromCharCode(39);
-  var names = { ident: tx('Identity'), profile: tx('Business'), governed: tx('Storefront') };
+  var names = nameMap || { ident: tx('Identity'), profile: tx('Business'), governed: tx('Storefront') };
   var what  = dirty.map(function(s){ return names[s] || s; }).join(', ');
 
   UI._profGo = go;
@@ -1830,12 +1854,19 @@ async function profGuardDo(which){
   var go = UI._profGo; UI._profGo = null;
   if (typeof closeModal === 'function') closeModal();
   if (which === 'stay') { toast(tx('Staying — nothing was changed.')); return; }
+  var map = UI._guardMap || PROF_FIELDS;
   if (which === 'save') {
-    var secs = profDirtySections();
-    for (var i = 0; i < secs.length; i++) await saveProfile(secs[i]);
+    var secs = profDirtySections(map);
+    /* ⚠️ WHICH SAVER DEPENDS ON WHICH SCREEN ASKED. A single saveProfile() here would have written Profile
+       fields in response to a Settings prompt — the map is what tells them apart. */
+    for (var i = 0; i < secs.length; i++) {
+      if (map === PROF_FIELDS) await saveProfile(secs[i]);
+      else if (secs[i] === 'work')   await saveSettings();
+      else if (secs[i] === 'assign') await saveAutoAssign();
+    }
     toast(tx('Saved.'));
   } else {
-    profSnapshot();                 // whatever is on screen becomes the new baseline
+    profSnapshot(map);              // whatever is on screen becomes the new baseline
     toast(tx('Changes discarded.'));
   }
   if (typeof go === 'function') go();
@@ -2465,7 +2496,14 @@ var SET_SECS = [
 ];
 function setSec(){ return UI.setSec || 'work'; }
 /* Same reason as profSetSec — the hook fires before #setbody exists, so drive the load explicitly. */
-function setSetSec(k){ UI.setSec = k; renderApp(); _capShowDetail(); loadSettings(); }
+/**
+ * ⚠️ SWITCHING SECTIONS IS AN EXIT, and it discards whatever was typed. Three Settings sections need a Save
+ * (Work, Auto-assign, Documents); clicking another rail row threw that away silently, which is the exact loss
+ * Athi asked to be warned about on Profile. Same guard, same three outcomes, same functions.
+ */
+function setSetSec(k){
+  setGuard(function(){ UI.setSec = k; renderApp(); _capShowDetail(); loadSettings(); });
+}
 
 function settingsScreen(){
   /**
@@ -2510,12 +2548,15 @@ function goCoassistAI(){ try{ if(typeof UI!=='undefined') UI.acTypeF='ai'; }catc
  * for data it already had.
  */
 async function loadSettings(){ const h=document.getElementById("setbody"); if(!h)return;
-  if (UI._set){ return paintSettings(UI._set.s, UI._set.daOpts); }
+  if (UI._set){ return (function(){ var r = paintSettings(UI._set.s, UI._set.daOpts); setSnapshot(); return r; })(); }
   try{ const [s,_acts]=await Promise.all([api("getSettings").then(r=>r||{}), api("actors").then(r=>(r||[]).map(mapApiActor)).catch(()=>[])]);
     const _assign=_acts.filter(a=>hatAssignable(a.hat));
     const _daOpts='<option value="">— none (leave in pool) —</option>'+_assign.map(a=>`<option value="${a.id}"${s.default_assignee_actor_id===a.id?' selected':''}>${esc(a.name)}</option>`).join('');
     UI._set={ s:s, daOpts:_daOpts };
     paintSettings(s, _daOpts);
+    /* ⚠️ THE BASELINE IS TAKEN AFTER EVERY PAINT — one captured at load goes stale the first time a
+       section changes, and every later edit then reads as clean. Same rule as Profile. */
+    setSnapshot();
   }catch(e){ h.innerHTML=scrErr(e); } }
 /**
  * ⭐⭐ THE LOCALISATION SCREEN.
@@ -2721,7 +2762,7 @@ function standardsSettingsHTML(){
         + 'here rather than left for someone to discover in a dispute.</div>');
   }
 
-  return _misHead('Standards', 'What this platform follows, what you follow, and what your trade follows.')
+  return _misHead('Standards', '')
     + '<div style="display:flex;gap:7px;margin-bottom:10px">' + seg + '</div>'
     + body;
 }
@@ -2760,7 +2801,7 @@ function appearanceSettingsHTML(){
     return pill('ap-motion-' + x[0], mot === x[0], 'motionSet(' + Q + x[0] + Q + ')', x[1], x[2]);
   }).join('');
 
-  return _misHead('Appearance', 'How this looks and moves. Every accessibility claim here is measured, not asserted.')
+  return _misHead('Appearance', '')
 
     + card('<label class="fl">' + tx('Theme') + '</label>'
         + '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5;margin:0 0 8px">'
@@ -2922,7 +2963,7 @@ function localeSettingsHTML(){
       + esc(CBLocale.langName(code)) + '</button>';
   }).join('');
 
-  return _misHead('Localisation', 'Presentation and language are separate choices — and content is never converted.')
+  return _misHead('Localisation', '')
 
     /* ── 1 · PRESENTATION ───────────────────────────────────────────────────────────────────────────────── */
     + card('<label class="fl">Presentation <span style="font-weight:400;color:var(--grey)">— how figures are written</span></label>'
@@ -3088,26 +3129,28 @@ function paintSettings(s, _daOpts){ const h=document.getElementById("setbody"); 
        * which reads as "we follow no standards", the worst possible failure for this particular screen.
        */
       if (typeof STANDARDS === 'undefined') {
-        out = _misHead('Standards', 'What this platform follows, what you follow, and what your trade follows.')
+        out = _misHead('Standards', '')
             + '<div style="' + _CARD + ';color:var(--grey);font-size:var(--fs-2)">' + tx('Loading the register…') + '</div>';
         ensureCap('standards').then(function(){ if (setSec() === 'standards') { _capShowDetail(); loadSettings(); } })
           .catch(function(e){ var h=document.getElementById('setbody'); if(h) h.innerHTML = scrErr(e); });
       } else out = standardsSettingsHTML();
     }
-    else if (k === "work") out = _misHead('Work', 'How tasks reach the people and co-assists who do them.')
+    else if (k === "work") out = _misHead('Work', '')
       + `<div style="${_CARD}">${notYet}
       <label class="fl">${tx('Assignment model')}</label><select class="inp" id="st_am">${opt(["pull","push","both"],s.assignment_model||"both")}</select>
       <label class="fl">${tx('Default max tasks per actor')}</label><input class="inp" id="st_mt" inputmode="numeric" value="${esc(s.default_max_tasks||10)}">
       <label class="fl" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="st_av" ${s.all_task_visible?'checked':''}> All tasks visible to all co-assists</label>
       <label class="fl" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="st_ar" ${s.auto_return_on_short_break?'checked':''}> Auto-return tasks on short break</label>
       <div class="err" id="st_err"></div><button class="composebtn" style="margin-top:9px" onclick="saveSettings()">${tx('Save settings')}</button></div>`
-      /* Model A: co-assist naming is DECLARED in Profile → Identity (NAMING). This is a pointer, never a copy. */
-      + '<div class="misnote" style="margin-top:10px">What to call a co-assist — what is required, and why the '
-      + 'sign-in key is stricter than a User ID — is set out under '
-      + '<a href="#" onclick="navTo(\'profile\');profSetSec(\'identity\');UI._namingOpen=true;return false">'
-      + 'Profile <span class=arw>→</span> Identity</a>.</div>'
+      /* ⚠️ A DEAD CROSS-REFERENCE LIVED HERE. It sent a reader to "Profile → Identity" for the naming rules,
+         set UI._namingOpen to expand them, and pointed at NAMING — a table deleted earlier today with its only
+         renderer. The link would have opened the right screen and shown nothing.
+
+         ⭐ A POINTER IS A DEPENDENCY. It survived because deleting the target did not touch the file that
+         pointed at it, which is the same drift as a subtitle nobody owns. The naming rules still exist in
+         NAMING.md and are enforced by the API; a screen does not need to say so. */
       + autoAssignCard(s,_daOpts) + aiSettingsCard();
-    else if (k === "policy") out = _misHead('Policy', 'Rules that govern your own records.')
+    else if (k === "policy") out = _misHead('Policy', '')
       + policyFlagsCard()
       /**
        * ⚠️ THIS CARD USED TO RE-DECLARE THE ATTACHMENT RULES. It carried its own `<input>`s pre-filled with
@@ -3125,14 +3168,14 @@ function paintSettings(s, _daOpts){ const h=document.getElementById("setbody"); 
         + '<div class="misnote" style="margin-bottom:9px">Declared once, in the governance layers. Shown here so you can see what applies.</div>'
         + govRefHTML('Attachment types') + govRefHTML('Attachment max size')
       + '</div>';
-    else if (k === "channels"){ out = _misHead('Channels', 'The inbound numbers and addresses that become chits.') + channelsCard();
+    else if (k === "channels"){ out = _misHead('Channels', '') + channelsCard();
       loadChannels();   // async — the card paints itself in when the read lands
     }
     /* ⚠️ NO SECTION HEADING HERE (Athi: *"governance, the layers your entity minted under, not required.. just
        1. Constitution under Governance"*). The rail row already says Governance and the selected layer is the
        subject — repeating the section name above it pushed the actual content down for no information. */
     else if (k === "governance") out = _misBack() + govLayersBlock();
-    else if (k === "blueprints") out = _misHead('Work patterns', 'Each action is a governed pattern — what is sealed, and what you may set.') + blueprintSettingsHTML();
+    else if (k === "blueprints") out = _misHead('Work patterns', '') + blueprintSettingsHTML();
     /* One assignment, so the end marker is appended in one place rather than five — and cannot be forgotten on a
        branch added later. */
     h.innerHTML = out + (out ? _capEnd() : '');
@@ -3166,10 +3209,10 @@ var POLICY_FLAGS = [
    */
   { key:'self_copy_pref',    label:'Self-chit copy',        type:'enum',   options:['received','both','sent'],
     labels:{ received:'Task only', both:'Both Task and Order', sent:'Order only' },
-    def:'received', level:'entity',        gov:'entity',   help:'A chit to yourself is usually work you gave yourself, so it lands in Task. Change it if you also want it filed under Order.' },
-  { key:'chit_expiry_days',  label:'Chit expiry (days)',    type:'number', def:0,  level:'work-pattern', gov:'chosen',   help:'0 = no expiry. Auto-closes a chit after N days. Tighten-only, per work pattern.' },
-  { key:'retention_days',    label:'Retention (days)',      type:'number', def:0,  level:'entity',        gov:'chosen',   help:'0 = keep. Per-copy retention; governed auto-purge is destructive → human-gated.' },
-  { key:'dispute_scope',     label:'Dispute messages',      type:'enum',   options:['per-party','shared'],          def:'per-party', level:'platform', gov:'bound', help:'Per-party confidential scoping is the USP — platform-bound, cannot be relaxed.' },
+    def:'received', level:'entity',        gov:'entity',   help:'' },
+  { key:'chit_expiry_days',  label:'Chit expiry (days)',    type:'number', def:0,  level:'work-pattern', gov:'chosen',   help:'0 = no expiry' },
+  { key:'retention_days',    label:'Retention (days)',      type:'number', def:0,  level:'entity',        gov:'chosen',   help:'0 = keep' },
+  { key:'dispute_scope',     label:'Dispute messages',      type:'enum',   options:['per-party','shared'],          def:'per-party', level:'platform', gov:'bound', help:'Set by the platform' },
 ];
 var _POL = { flags:null, busy:false, err:null, migrated:true };
 function _polVal(def){ var o=_POL.flags||{}; return (o[def.key]!==undefined)?o[def.key]:def.def; }
