@@ -54,6 +54,23 @@ window.AI_SLOTS = window.AI_SLOTS || [
     desc:'Sorts the inbox and flags likely disputes — surfaces, never decides.',
     gates:['recommend-only','autonomous'], defGate:'recommend-only' },
 ];
+/**
+ * Fetch ONE co-assist's identity record for the edit form.
+ *
+ * ⚠️ Keyed by subject id. See the note at the call site: a boolean latch here would render the previously
+ * opened person's documents under the current person's name, and nothing on screen would say so.
+ */
+async function acLoadDocs(id){
+  if (UI._idocsForId === id) return;
+  UI._idocsForId = id;
+  UI._idocsFor = [];
+  try {
+    await ensureCap('iddocs');
+    UI._idocsFor = await CBIdDocs.load(id);
+    renderApp(); _capShowDetail();
+  } catch (_) { /* additive — its absence must not take the edit form down */ }
+}
+
 function _aiPolKey(){ return 'cb_aipolicy_'+((typeof SESSION!=='undefined'&&(SESSION.name||SESSION.entity_id))||'me'); }
 function aiPolicy(){ try{ return JSON.parse(localStorage.getItem(_aiPolKey())||'{}')||{}; }catch(_){ return {}; } }
 function _aiPolSet(key,patch){ var p=aiPolicy(); p[key]=Object.assign({},p[key]||{},patch); try{ localStorage.setItem(_aiPolKey(),JSON.stringify(p)); }catch(_){}
@@ -388,8 +405,21 @@ function acDetailHTML(){ const x=UI.acDet;
       <label class="fl">${tx('Leave-cover delegate (covers auto-assigned work while on leave)')}</label><select class="inp" id="ac_edel" style="max-width:240px"><option value="">— none —</option>${(UI.acts||[]).filter(a=>a.id!==x.id && hatAssignable(a.hat)).map(a=>'<option value="'+esc(a.id)+'"'+(x.del===a.id?' selected':'')+'>'+esc(a.name)+'</option>').join('')}</select>
       <label class="fl">${tx('Max concurrent tasks')}</label><input class="inp" id="ac_emax" inputmode="numeric" value="${x.max||''}" style="width:120px">
       <label class="fl">${tx('Phone')}</label><input class="inp" id="ac_ephone" value="${esc(x.phone||'')}" placeholder="optional">
+      ${/* ⭐⭐ THE IDENTITY RECORD, FROM THE SHARED MODULE. Athi, 2026-08-20: *"we have to add as part of
+            coassist registration and it has to be visible here… as a separate module to update." The very same
+            block renders on the employee's own profile — one implementation, two audiences, because a second
+            copy is a second place for the Aadhaar sentence to go missing.
+
+            ⚠️ mode is 'owner' here: it names who filed each document and ASKS for consent, which self-service
+            does not need because submitting your own IS consenting. */''}
+      <div class="sec" style="margin-top:14px">${tx('Identity record')}</div>
+      ${typeof CBIdDocs!=='undefined' ? CBIdDocs.html(UI._idocsFor||[], 'owner', {subject:x.id}) : '<div class="misnote">Loading…</div>'}
       <div class="err" id="ac_ederr" style="margin-top:8px"></div>
       <div style="font-size:var(--fs-1);color:var(--warn-3);background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;margin-top:10px;line-height:1.5"><b>${tx('Stage B')}</b> — profile edit needs <span class="mono">${tx('PATCH /api/actors/:id')}</span> (no migration). Save shows an error until that endpoint is deployed.</div>`;
+    /* ⚠️ LATCHED PER SUBJECT, not a plain boolean — opening Ravi then Priya must refetch, and a single
+       "already loaded" flag would show Ravi's record under Priya's name. That is the worst possible failure
+       for this particular screen. */
+    acLoadDocs(x.id);
     bar=`<button class="pri" onclick="saveActor('${x.id}')">${tx('Save')}</button><button onclick="setAcMode('view')">${tx('Cancel')}</button>`;
   } else {
     const pct=x.max?Math.min(100,Math.round(x.load/x.max*100)):0;

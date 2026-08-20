@@ -1258,6 +1258,9 @@ function SESSION_IS_ACTOR(){
  * refuses it (routes/actors.js is entity-only), so the screen must not offer what the server will decline.
  */
 function iamSelfEmployeeHTML(e){
+  /* ⚠️ KICKED OFF FROM THE RENDERER because there is no other hook — this screen has no mount step. The latch
+     inside iamLoadDocs is what keeps that from being a render loop. */
+  iamLoadDocs();
   var lvl   = accessLevelOf(e);
   var login = (e.actor_key && e.parent_user_id) ? (e.actor_key + "@" + e.parent_user_id) : null;
 
@@ -1299,10 +1302,44 @@ function iamSelfEmployeeHTML(e){
     +   tx("Only the account owner can change this. Ask them if you need different access.")
     + '</div>';
 
+  /* ── 3 · YOUR IDENTITY RECORD ────────────────────────────────────────────────────────────────────────
+   * ⭐ RENDERED BY THE SHARED MODULE, NOT BY THIS FILE. Athi: *"as a separate module to update."* The same
+   * block appears on the Co-assists form; two copies would drift, and the copy that lost the Aadhaar sentence
+   * would be the one that mattered. UI._idocs is filled by iamLoadDocs() below. */
+  var docs = (typeof CBIdDocs !== 'undefined')
+    ? CBIdDocs.html(UI._idocs || [], 'self')
+    : '<div class="misnote">Loading…</div>';
+
   return iamSection("ident", tx("Who you are"), who, { openByDefault: true })
     + iamSection("access", tx("Your access"), access, { hint: ACCESS_LABEL[lvl] || "" })
+    + iamSection("docs", tx("Your identity record"), docs, { hint: iamDocsHint() })
     + '<div class="err" id="pf_err"></div>'
     + '<button class="composebtn" style="margin-top:4px" onclick="saveProfile()">' + tx("Save") + '</button>';
+}
+
+/** "2 of 6 verified" — the summary an owner or an employee reads before opening the section. */
+function iamDocsHint(){
+  var d = UI._idocs || [];
+  if (!d.length) return '';
+  var ok = d.filter(function(x){ return x.status === 'verified'; }).length;
+  return ok + ' of ' + (CBIdDocs ? CBIdDocs.ORDER.length : 6) + ' verified';
+}
+
+/**
+ * Fetch the record once, then re-render.
+ *
+ * ⚠️ GUARDED AGAINST A RENDER LOOP. It sets UI._idocs and calls renderApp, and renderApp calls the renderer
+ * that reads UI._idocs — so without the _idocsLoaded latch this is an infinite cycle that pins a CPU core and
+ * looks, from the outside, exactly like a slow screen.
+ */
+async function iamLoadDocs(){
+  if (UI._idocsLoaded) return;
+  UI._idocsLoaded = true;
+  try {
+    await ensureCap('iddocs');
+    UI._idocs = await CBIdDocs.load();
+    renderApp(); _capShowDetail();
+  } catch (_) { /* the record is additive — its absence must not take the profile down */ }
 }
 
 /**
