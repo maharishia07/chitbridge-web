@@ -738,7 +738,9 @@ function profileScreen(){
 let _profBusy = false;
 async function loadProfile(){ const h=document.getElementById("profbody"); if(!h)return;
   if(SESSION.role==='actor') return loadActorProfile(h);   // actors get their own profile, not the entity's
-  if(UI._me){ h.innerHTML = profSecHTML(profSec(), UI._me); if(profSec()==='vault') loadVault(); return; }
+  /* ⚠️ THE SNAPSHOT IS RE-TAKEN AFTER EVERY PAINT. A baseline captured once at load goes stale the first time
+     a section is collapsed, and every later edit then reads as clean. See profSnapshot. */
+  if(UI._me){ h.innerHTML = profSecHTML(profSec(), UI._me); if(profSec()==='vault') loadVault(); profSnapshot(); return; }
   if(_profBusy) return;
   _profBusy = true;
   try{ const e=(await api("me"))||{}; UI._me=e;
@@ -748,6 +750,7 @@ async function loadProfile(){ const h=document.getElementById("profbody"); if(!h
        with no error anywhere. Every await in this file that is followed by a DOM write has the same hazard. */
     const h2=document.getElementById("profbody"); if(!h2) return;
     h2.innerHTML = profSecHTML(profSec(), e);
+    profSnapshot();
     if (profSec() === 'vault') loadVault();   // the trade documents vault (async — pre-fills authority forms)
   }catch(e){ const h3=document.getElementById("profbody"); if(h3) h3.innerHTML=scrErr(e); }
   finally { _profBusy = false; } }
@@ -1119,13 +1122,21 @@ function iamSection(key, title, body, opts){
     + '</div>';
 }
 
+/**
+ * ⚠️ COLLAPSING A SECTION DESTROYS ITS INPUTS, so this is a real exit and is guarded like one. iamSection
+ * renders its body only when open — closing a section with an edit in it discards that edit silently, which is
+ * the exact loss Athi asked to be asked about. Guarding only page navigation would have missed the click
+ * people make most often.
+ */
 function iamToggle(k){
-  UI._iamOpen = UI._iamOpen || {};
-  /* the default for a key that has never been touched is whatever the section declared, so the first click
-     must flip THAT, not flip an assumed-false */
-  var cur = Object.prototype.hasOwnProperty.call(UI._iamOpen, k) ? UI._iamOpen[k] : (k === 'ident');
-  UI._iamOpen[k] = !cur;
-  renderApp(); _capShowDetail(); loadProfile();
+  profGuard(function(){
+    UI._iamOpen = UI._iamOpen || {};
+    /* the default for a key that has never been touched is whatever the section declared, so the first click
+       must flip THAT, not flip an assumed-false */
+    var cur = Object.prototype.hasOwnProperty.call(UI._iamOpen, k) ? UI._iamOpen[k] : (k === 'ident');
+    UI._iamOpen[k] = !cur;
+    renderApp(); _capShowDetail(); loadProfile();
+  });
 }
 
 function iamMeHTML(e){
@@ -1185,6 +1196,11 @@ function iamMeHTML(e){
    * Read-only rows come from the constitution and the operator; the editable one is trading status. */
   var vis = e.catalogue_visibility || 'private';
   var st  = e.business_status || 'open';
+  /* ⚠️ DECLARED HERE, NOT BORROWED. I first wrote the capped-visibility branch below using `cap` and `capped`
+     from storefrontCardHTML — variables in a different function, which is a ReferenceError at render time and
+     invisible to node --check. Third time today that a remembered name compiled and would not have run. */
+  var cap    = e.visibility_cap || { max: 'public', by: null, reason: '' };
+  var capped = (cap.max === 'private');
   /**
    * ⭐⭐ ONE RESOLVED SENTENCE, NOT TWO FACTS TO JOIN. Athi, 2026-08-19: *"we have to state explicitly that your
    * storefront is visible to public — that depends on the open, close, away status."*
@@ -1195,38 +1211,97 @@ function iamMeHTML(e){
    * moved the bug rather than fixed it.
    */
   var live = (st !== 'closed') && vis !== 'private';
-  var sentence = (vis === 'private')
-      ? 'You have no public storefront.'
-      : (st === 'closed')
-        ? 'Closed — your catalogue is hidden from everyone, including your network. Reopening restores it.'
-        : (vis === 'network')
-          ? ('Visible to your network only, and accepting orders.' + (st === 'away' ? ' Nobody is at the counter.' : ''))
-          : ('Visible to anyone, and accepting orders.' + (st === 'away' ? ' Nobody is at the counter.' : ''));
 
-  var governed = '<label class="fl">Are you trading?</label>'
-    + '<select class="inp" id="pf_bs">' + opt(['open','away','closed'], st) + '</select>'
-    + '<div class="misnote" style="margin-top:6px;line-height:1.5">' + esc(sentence) + '</div>'
-
-    + '<div class="kv" style="margin-top:11px"><b>Who may see your catalogue</b> · ' + esc(vis)
-    +   ' <a href="#" onclick="profSetSec(' + Q + 'storefront' + Q + ');return false" style="color:var(--blue);font-size:var(--fs-1);margin-inline-start:6px">Change in Storefront</a></div>'
+  /**
+   * ⭐⭐ TWO CONTROLS, ADJACENT, AND NOTHING ELSE. The resolved sentence is gone: it restated in prose what the
+   * two selects say in two words, and it was the third of four places this screen named the same fact.
+   *
+   * ⚠️ THE CONTROL ITSELF MOVED HERE FROM THE STOREFRONT PANEL. Visibility was read-only here with a link
+   * saying "Change in Storefront", which is a screen telling you to go to another screen to change something
+   * it is already showing you. If it can display it, it can set it.
+   */
+  var governed = '<div style="display:flex;gap:11px;flex-wrap:wrap">'
+    +   '<div style="flex:1 1 150px"><label class="fl" style="margin-top:0">' + tx('Trading') + '</label>'
+    +     '<select class="inp" id="pf_bs" style="margin:0">' + opt(['open','away','closed'], st) + '</select></div>'
+    /* ⚠️ THE CAP IS HONOURED HERE OR THE CONTROL LIES. visibility_cap can pin an entity to private from a layer
+       above it; offering "public" in that state would be a choice the server refuses. Disabled, and the reason
+       is the only sentence in this section — because a control that cannot be used and does not say why is the
+       one place where removing the explanation would remove the information. */
+    +   '<div style="flex:1 1 150px"><label class="fl" style="margin-top:0">' + tx('Visible to') + '</label>'
+    +     '<select class="inp" id="pf_vis" style="margin:0"' + (capped ? ' disabled' : '') + '>'
+    +     opt(capped ? ['private'] : ['public','network','private'], vis) + '</select></div>'
+    + '</div>'
+    + (capped ? '<div class="misnote" style="margin-top:6px">' + esc(cap.reason || tx('Set above you.')) + '</div>' : '')
 
     /* ⚠️ THE STOREFRONT LINK OPENS IN A NEW WINDOW — and that does NOT protect the session, which was the
        stated reason for it. Same origin means the same localStorage. We are safe today because shop.html
        holds no session at all; the rule to keep is that a customer token must never be written to cb_sess. */
-    + (live && e.bridge_id
-        ? '<div class="kv" style="margin-top:9px"><b>Storefront</b> · '
-          + '<a href="/shop.html?s=' + encodeURIComponent(e.user_id || e.bridge_id) + '" target="_blank" rel="noopener noreferrer"'
-          + ' style="color:var(--blue)">open it <span class=arw>↗</span></a></div>'
-        : '<div class="kv" style="margin-top:9px"><b>Storefront</b> · <span style="color:var(--grey)">not visible right now</span></div>')
+    + '<div class="kv" style="margin-top:11px"><b>' + tx('Link') + '</b> · '
+    +   (live && e.bridge_id
+          ? '<a href="/shop.html?s=' + encodeURIComponent(e.user_id || e.bridge_id) + '" target="_blank" rel="noopener noreferrer"'
+            + ' style="color:var(--blue)">' + esc(location.host + '/shop.html?s=' + (e.user_id || e.bridge_id)) + ' <span class=arw>↗</span></a>'
+          : '<span style="color:var(--grey)">' + tx('nothing to show while private or closed') + '</span>')
+    + '</div>';
 
-    + iamGovernedRows();
+  /**
+   * ⭐⭐ FIVE SECTIONS, ONE SCREEN, NO RAIL. Athi, 2026-08-20: *"we have other three panel in profile —
+   * storefront, your rights and documents — it can come over to the first page itself… see what we have
+   * repeated… no explanatory text, the details have to be intuitive and information should not be missed."*
+   *
+   * ⚠️⚠️ CATALOGUE VISIBILITY WAS STATED FOUR TIMES. "You have no public storefront", "Who may see your
+   * catalogue · private", "Storefront · not visible right now" — three read-only restatements on THIS screen —
+   * and then the Storefront panel, which owns the actual control. Three of the four were echoes.
+   *
+   * ⚠️⚠️ AND TRADING STATUS SAT APART FROM VISIBILITY WITH EACH PANEL APOLOGISING FOR THE SPLIT. This screen
+   * carried "⚠️ Separate from who can see your catalogue — that lives under Storefront" and Storefront carried
+   * "⚠️ This is not whether you are trading — that is under Identity". Two panels explaining why they are not
+   * each other is the split being wrong, not the labels. They are one subject — `closed` already hides the
+   * catalogue outright (§12) — so they now sit together and both disclaimers deleted themselves.
+   *
+   * ⭐ THE HINT CARRIES THE ANSWER SO THE SECTION NEED NOT BE OPENED. That is what replaces the prose: a
+   * reader learns "private · open" from the closed header, and opens it only to change something.
+   */
+  var _sfHint = [ (e.catalogue_visibility || 'private'), (e.business_status || 'open') ].join(' · ');
+  var _licHint = [ (e.gstn ? licLabel : null), (e.address ? 'address' : null) ].filter(Boolean).join(' · ')
+                 || tx('not set');
 
-  return iamSection('ident', 'Identity & access', ident, { openByDefault: true })
-    + iamSection('profile', 'Business profile', profile, { hint: 'licence · address' })
-    + iamSection('governed', 'Presence & governance', governed, { hint: 'set above you' })
-    + '<div class="err" id="pf_err"></div>'
-    + '<button class="composebtn" style="margin-top:4px" onclick="saveProfile()">' + tx('Save profile') + '</button>'
-    + namingRulesHTML();
+  /* ⭐ EACH SECTION CARRIES ITS OWN SAVE — and Rights carries none, because nothing in it is yours to set.
+     A Save button on a read-only card is the same false affordance as a disabled input. */
+  return iamSection('ident', tx('Identity'), ident + profSaveBtn('ident'), { openByDefault: true,
+             hint: [e.user_id, e.bridge_id].filter(Boolean).join(' · ') })
+    + iamSection('profile', tx('Business'), profile + profSaveBtn('profile'), { hint: _licHint })
+    + iamSection('governed', tx('Storefront'), governed + profSaveBtn('governed'), { hint: _sfHint })
+    + iamSection('rights', tx('Rights'), iamRightsBody(e), { hint: tx('resolved') })
+    + iamSection('docs', tx('Documents'), iamVaultBody(), { hint: UI._vaultHint || '' });
+}
+
+/**
+ * The resolved-rights card, moved off its own panel.
+ *
+ * ⚠️ THE PARAGRAPH THAT USED TO SIT UNDER IT IS GONE — three sentences explaining that this is the answer and
+ * the seven layers are the derivation. The button says "The seven layers →", which is the same information in
+ * four words, and the reader who does not care never reads a paragraph telling them they might.
+ */
+function iamRightsBody(e){
+  var Q = String.fromCharCode(39);
+  return (govCardHTML(e.governance) || '<div class="misnote">' + tx('Nothing resolved yet.') + '</div>')
+    + '<button class="composebtn" style="margin-top:9px" data-testid="gov-to-layers" '
+    +   'onclick="navTo(' + Q + 'settings' + Q + ');setSetSec(' + Q + 'governance' + Q + ')">'
+    +   tx('The seven layers') + ' <span class=arw>→</span></button>';
+}
+
+/**
+ * The trade-documents vault, moved off its own panel.
+ *
+ * ⚠️ IT LOADS ASYNCHRONOUSLY AND MUST ONLY DO SO WHEN THE SECTION IS OPEN. The vault was a whole panel a
+ * person navigated to deliberately; as a collapsed section it would otherwise fetch on every profile paint for
+ * every reader who never opens it — the on-demand rule exactly.
+ */
+function iamVaultBody(){
+  var open = UI._iamOpen && UI._iamOpen.docs;
+  if (!open) return '';
+  setTimeout(function(){ if (typeof loadVault === 'function') loadVault(); }, 0);
+  return '<div id="vaulthost"><div class="loadwrap"><span class="spin"></span> ' + tx('loading…') + '</div></div>';
 }
 
 
@@ -1475,12 +1550,160 @@ function govCardHTML(g){
     +(j.disclaimer?('<div style="font-size:var(--fs-1);color:var(--grey);margin-top:7px;line-height:1.5"><b>' + tx('Jurisdiction') + '</b> — '+esc(j.mode||'')+(j.custodian===false?' · provider, not custodian':'')+'<br>'+esc(j.disclaimer)+'</div>'):'')
     +'</div>';
 }
-async function saveProfile(){ const x=document.getElementById("pf_err"); if(x)x.textContent="";
-  /* ⚠️ pf_uid only EXISTS while the User ID is unset. val() on a missing element must not send an empty
-     string, or COALESCE would be handed '' and blank a set handle. */
-  try{ var _b={display_name:val("pf_name")||null,gstn:val("pf_gstn")||null,address:val("pf_addr")||null,business_status:val("pf_bs")};
-       if(document.getElementById("pf_uid")) _b.user_id=val("pf_uid")||null;
-       await api("saveProfile",{body:_b}); toast(MSG.profileSaved()); }catch(e){ if(x)x.textContent=e.message; } }
+/**
+ * ⭐⭐ ONE SAVE PER SECTION. Athi, 2026-08-20: *"if each section has to have a separate save button to do so."*
+ *
+ * ⚠️⚠️ AND IT FIXES A LIVE BUG STRUCTURALLY RATHER THAN DEFENSIVELY. One button at the bottom read fields from
+ * every section — but iamSection renders its body ONLY WHEN OPEN, and val() returns "" for a missing element.
+ * The API declares `business_status: optional().isIn(['open','closed','away'])`, and "" is not undefined, so
+ * .optional() does not skip it and isIn rejects it: collapse Storefront, edit your name, press Save → 400
+ * Validation failed, on a field the person never touched and could not see. gstn and address escaped only
+ * because the UPDATE happens to COALESCE them.
+ *
+ * ⭐ A save that belongs to a section can only ever send that section's fields — the whole class of bug goes
+ * away rather than being guarded against, and the button now sits where the reader's attention already is.
+ */
+var PROF_FIELDS = {
+  ident:    [['pf_name', 'display_name'], ['pf_uid', 'user_id']],
+  profile:  [['pf_gstn', 'gstn'], ['pf_addr', 'address']],
+  governed: [['pf_bs', 'business_status'], ['pf_vis', 'catalogue_visibility']],
+};
+
+/**
+ * ⚠️ ACCESS-AWARE. Athi: *"it should work perfectly for each different access."* Only the business itself may
+ * write its own profile — routes/entities.js writes req.identity.identity_id, so a co-assist saving here would
+ * quietly write gstn and address onto their OWN actor row, where nothing reads them. An employee cannot reach
+ * this screen today (loadProfile routes them to loadActorProfile), but a button that would silently misfile
+ * data must not exist on the strength of a route that might change.
+ */
+function profCanEdit(){ return !(typeof SESSION !== 'undefined' && SESSION && SESSION.actorId); }
+
+function profSaveBtn(sec){
+  if (!profCanEdit()) return '';
+  var Q = String.fromCharCode(39);
+  return '<div class="err" id="pf_err_' + sec + '" style="margin-top:8px"></div>'
+    + '<button class="composebtn" data-testid="prof-save-' + sec + '" style="margin-top:6px" '
+    +   'onclick="saveProfile(' + Q + sec + Q + ')">' + tx('Save') + '</button>';
+}
+
+/* ════ UNSAVED CHANGES ════════════════════════════════════════════════════════════════════════════════════
+ *
+ * Athi, 2026-08-20: *"if the user edit something and came out without saving, we have to ask confirmation —
+ * you have edited but not saved — and a confirmation message for both save and cancel."*
+ *
+ * ⭐⭐ THE SNAPSHOT IS TAKEN FROM THE DOM AT RENDER, NOT FROM THE SERVER PAYLOAD. Comparing against `e` would
+ * call a field dirty whenever the server normalised it — an address the API trimmed, a status it defaulted —
+ * so a person who typed nothing would be asked to save nothing. What was ON THE SCREEN is the only honest
+ * baseline for "did you change it".
+ *
+ * ⚠️ AND IT MUST SURVIVE A REPAINT. iamToggle re-renders the whole panel, so the snapshot is re-taken after
+ * every paint; a snapshot captured once at load would go stale on the first collapse and report every
+ * subsequent edit as clean.
+ */
+var _profSnap = {};
+
+/** Re-read every profile field currently on screen. Called after each paint. */
+function profSnapshot(){
+  _profSnap = {};
+  Object.keys(PROF_FIELDS).forEach(function(s){
+    PROF_FIELDS[s].forEach(function(pair){
+      var el = document.getElementById(pair[0]);
+      if (el) _profSnap[pair[0]] = el.value;
+    });
+  });
+}
+
+/** Which sections have an on-screen field whose value differs from the snapshot. */
+function profDirtySections(){
+  var out = [];
+  Object.keys(PROF_FIELDS).forEach(function(s){
+    var dirty = PROF_FIELDS[s].some(function(pair){
+      var el = document.getElementById(pair[0]);
+      /* ⚠️ A FIELD NOT ON SCREEN IS NOT DIRTY. A collapsed section cannot have been edited, and treating its
+         absence as a change would prompt on every single navigation. */
+      return el && Object.prototype.hasOwnProperty.call(_profSnap, pair[0]) && el.value !== _profSnap[pair[0]];
+    });
+    if (dirty) out.push(s);
+  });
+  return out;
+}
+
+/**
+ * profGuard(go) — run `go`, or ask first if something is unsaved.
+ *
+ * ⚠️ THE PROMPT NAMES WHAT IS UNSAVED. "You have unsaved changes" makes a person hunt through five collapsed
+ * sections for something they may not have touched; naming the section turns the question into an answer.
+ *
+ * ⚠️ THREE OUTCOMES, NOT TWO. Save-and-go, discard-and-go, and STAY — because a person interrupted mid-edit
+ * often wants neither. A two-button dialog forces a decision about the data in order to answer a question
+ * about the navigation.
+ */
+function profGuard(go){
+  var dirty = profDirtySections();
+  if (!dirty.length) return go();
+  var Q = String.fromCharCode(39);
+  var names = { ident: tx('Identity'), profile: tx('Business'), governed: tx('Storefront') };
+  var what  = dirty.map(function(s){ return names[s] || s; }).join(', ');
+
+  UI._profGo = go;
+  /**
+   * ⚠️ modal() TAKES ONE HTML STRING, NOT (title, body, buttons). I wrote the three-argument call from memory
+   * and only the first would have rendered — the fourth remembered-signature mistake today, after
+   * SESSION.identity_type, PURPOSE.profile and the borrowed `capped`. The house markup is mhd / mbody / mfoot,
+   * as confirmAsk builds it; confirmAsk itself is two-button and this needs three.
+   */
+  modal('<div class="mhd"><div class="t">' + esc(tx('Not saved')) + '</div></div>'
+    + '<div class="mbody"><div style="font-size:13px;line-height:1.55;color:var(--ink)">'
+    +   tx('You changed') + ' <b>' + esc(what) + '</b> ' + tx('and have not saved it.')
+    + '</div></div>'
+    + '<div class="mfoot">'
+    +   '<button data-testid="prof-guard-stay" onclick="profGuardDo(' + Q + 'stay' + Q + ')">' + esc(tx('Stay here')) + '</button>'
+    +   '<button data-testid="prof-guard-discard" onclick="profGuardDo(' + Q + 'discard' + Q + ')">' + esc(tx('Discard')) + '</button>'
+    +   '<button class="pri" data-testid="prof-guard-save" onclick="profGuardDo(' + Q + 'save' + Q + ')">' + esc(tx('Save and continue')) + '</button>'
+    + '</div>');
+  /* ⚠️ ESCAPE AND THE BACKDROP MEAN STAY, NOT DISCARD. A dialog dismissed by accident must never be the thing
+     that throws away work — the safe default is the one that changes nothing. */
+  UI._modalDismiss = function(){ UI._profGo = null; };
+}
+
+/** ⭐ EVERY OUTCOME CONFIRMS ITSELF. Athi: *"a confirmation message for both save and cancel."* Silence after
+ *  discarding is indistinguishable from silence after saving, and the difference is the person's work. */
+async function profGuardDo(which){
+  var go = UI._profGo; UI._profGo = null;
+  if (typeof closeModal === 'function') closeModal();
+  if (which === 'stay') { toast(tx('Staying — nothing was changed.')); return; }
+  if (which === 'save') {
+    var secs = profDirtySections();
+    for (var i = 0; i < secs.length; i++) await saveProfile(secs[i]);
+    toast(tx('Saved.'));
+  } else {
+    profSnapshot();                 // whatever is on screen becomes the new baseline
+    toast(tx('Changes discarded.'));
+  }
+  if (typeof go === 'function') go();
+}
+
+async function saveProfile(sec){
+  /* ⚠️ DEFAULTS TO EVERY SECTION so an older call site (or a test) that calls saveProfile() with no argument
+     still saves what is on screen rather than silently saving nothing. */
+  var secs = sec ? [sec] : Object.keys(PROF_FIELDS);
+  var x = document.getElementById('pf_err_' + (sec || secs[0])) || document.getElementById('pf_err');
+  if (x) x.textContent = '';
+
+  var _b = {};
+  secs.forEach(function(s){
+    (PROF_FIELDS[s] || []).forEach(function(pair){
+      var el = document.getElementById(pair[0]);
+      if (!el || el.disabled) return;          // not rendered, or capped → not this person's to send
+      var v = val(pair[0]);
+      if (v !== '') _b[pair[1]] = v;
+    });
+  });
+
+  if (!Object.keys(_b).length) { if (x) x.textContent = tx('Nothing to save.'); return; }
+  try { await api('saveProfile', { body: _b }); toast(MSG.profileSaved()); UI._me = null; loadProfile(); }
+  catch (e) { if (x) x.textContent = e.message; }
+}
 // 🛍️ Customer storefront — the shareable public shop link + the browse-first / login-first access mode.
 function storefrontCardHTML(e){
   /**
