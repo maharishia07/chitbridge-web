@@ -764,41 +764,10 @@ async function loadProfile(){ const h=document.getElementById("profbody"); if(!h
  * `routes/catalogue.js` (the customer row). If a validator changes and this text does not, this becomes the stale
  * copy the rest of today was spent removing. **Cite the file when you edit it.**
  */
-var NAMING = [
-  { who:'Your business', what:'Entity name', field:'display_name', must:'optional',
-    rule:'2–255 characters. Anything you like.',
-    why:'What counterparties see on a chit. Change it any time — nothing cites it, everything cites your ID.',
-    src:'routes/entities.js:34' },
-  { who:'Your business', what:'Bridge ID', field:'bridge_id', must:'given to you',
-    rule:'CB + 8 characters. Generated, never chosen.',
-    why:'Your permanent public address on the rail. ⚠️ The alphabet leaves out I, O, 0 and 1 on purpose — a '
-       + 'bridge ID has to survive being read aloud down a phone.',
-    src:'lib/bridgeid.js' },
-  { who:'Your business', what:'User ID', field:'user_id', must:'optional, but this is how people add you',
-    rule:'An email address, OR: at least 8 characters, letters/numbers/dots/dashes, no spaces. '
-       + 'Case-insensitive and unique across the platform.',
-    why:'The handle you give someone so they can add you as a supplier. Without one they need your Bridge ID.',
-    src:'routes/entities.js:452' },
-  { who:'Your people', what:'Co-assist name', field:'display_name', must:'REQUIRED',
-    rule:'At least 2 characters.',
-    why:'The name that appears against work they do — on an assignment, in a timeline, on a dispute.',
-    src:'routes/actors.js:120' },
-  { who:'Your people', what:'Co-assist key', field:'actor_key', must:'REQUIRED',
-    rule:'At least 4 characters, LOWERCASE LETTERS AND NUMBERS ONLY — no spaces, dots or dashes.',
-    why:'What they sign in with. Stricter than a User ID because it is typed at a counter, often in a hurry, '
-       + 'sometimes on a phone.',
-    src:'routes/actors.js:121' },
-  { who:'Your people', what:'Role', field:'actor_role', must:'optional',
-    rule:'Up to 100 characters. Free text — "counter", "driver", "accounts".',
-    why:'⚠️ A label, not a permission. What they may DO is the hat (view_only · act · audit · mis · manager), '
-       + 'set separately.',
-    src:'routes/actors.js:123' },
-  { who:'Your customers', what:'Customer name', field:'display_name', must:'as they give it',
-    rule:'No format rule — a customer types their own name at checkout.',
-    why:'They are identified by the phone or email they confirm with a one-time code, not by the name. '
-       + '⚠️ Two customers may share a name; they are still two records.',
-    src:'routes/catalogue.js:585' }
-];
+/* ⚠️ NAMING lived here — the table that explained Bridge ID, User ID and the rest. Its only renderer
+   (namingRulesHTML) went with the dead __iam_old branch, leaving it unreferenced data. Athi: *"in fact this
+   information should not be appearing anywhere."* One reference survives at line ~3050 and it is a COMMENT
+   pointing here — left deliberately, because the naming rules still exist, in NAMING.md and the API. */
 /**
  * ⭐⭐ IAM — who can act for this business, and what each of them may do.
  *
@@ -1147,32 +1116,36 @@ function iamMeHTML(e){
    * display_name is *"change it any time — nothing cites it, everything cites your ID"*, and the screen had
    * made the NAME read-only text and the USER ID an editable input. The mutable fact was pinned and the
    * load-bearing one was loose. */
-  var ident = '<label class="fl">' + tx('Name') + '</label>'
+  /**
+   * ⭐ THE PENCIL IS THE AFFORDANCE, NOT A SENTENCE. Athi, 2026-08-20: *"in the name field show editable
+   * icon."* Two rows sit together — one editable, one fixed — and the difference now shows in the row itself
+   * rather than being inferred from the fact that one is an <input>.
+   */
+  var ident = '<label class="fl">' + tx('Name') + ' <span style="color:var(--grey);font-weight:400" title="' + esc(tx('You can change this')) + '">✎</span></label>'
     + '<input class="inp" id="pf_name" value="' + esc(e.display_name || '') + '">'
 
-    /* ⭐ THE USER ID GETS ITS OWN BLOCK, WITH ITS NOTE BENEATH IT. Athi, 2026-08-19: *"user id has to be
-       separate and the note should be below the user id."* It was one row among five with a hint beside it —
-       and three things derive from it (a co-assist login, a network root, how another business finds you). */
-    /* ⚠️ NAMES ITS TEXT COLOUR. A surface that sets a background and inherits its ink is the bug that made the
-       avatar menu unreadable in every light theme — guard check 11 catches it, and caught this one. */
+    /* ⚠️⚠️ THE THREE-LINE EXPLANATION IS GONE. Athi: *"we don't want this info — that is what we are showcasing
+       in employee."* It said co-assists sign in as key@handle, which the EMPLOYEE's own screen already shows
+       them as their actual login. Explaining someone else's screen on yours is the definition of the text this
+       product carries too much of; the 🔒 says the one thing left that is not visible from the value. */
     + '<div style="margin-top:12px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--paper);color:var(--on-bg)">'
     + (e.user_id
-        ? '<div style="font-size:var(--fs-1);text-transform:uppercase;letter-spacing:.05em;color:var(--grey);font-weight:600">' + tx('User ID') + '</div>'
+        ? '<div style="font-size:var(--fs-1);text-transform:uppercase;letter-spacing:.05em;color:var(--grey);font-weight:600">'
+          +   tx('User ID') + ' <span title="' + esc(tx('Cannot be changed')) + '">🔒</span></div>'
           + '<div class="mono" style="font-size:var(--fs-3);color:var(--gold);margin-top:2px">' + esc(e.user_id) + '</div>'
-          /* ⚠️ NO CHANGE AFFORDANCE. Athi: *"are you able to change your Gmail id? The same way here."* I had
-             shipped a Change link and it was wrong — it is chosen once, on the screen that says so. */
-          + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:5px;line-height:1.5">'
-          +   'You sign in with this. Co-assists sign in as <span class="mono">key@' + esc(e.user_id) + '</span>, '
-          +   'and other businesses add you by it. <b>It cannot be changed.</b></div>'
         : '<label class="fl" style="margin-top:0">' + tx('User ID') + '</label>'
           + '<input class="inp" id="pf_uid" value="" autocapitalize="off" spellcheck="false">'
+          /* ⚠️ THIS ONE STAYS. It is not explanation — it is the rule you must satisfy to fill the box, and it
+             is unrecoverable if you get it wrong. Set-once means there is no second attempt to learn from. */
           + '<div style="font-size:var(--fs-1);color:var(--warn-2);margin-top:5px;line-height:1.5">'
-          +   '⚠️ <b>Not set.</b> 8 characters or more, letters, numbers and dashes, no <b>@</b> or <b>.</b> — '
-          +   'those make an employee or a network store. <b>Once saved it is permanent.</b></div>')
-    + '</div>'
+          +   '8+ characters · letters, numbers, dashes · no <b>@</b> or <b>.</b> · <b>' + tx('permanent') + '</b></div>')
+    + '</div>';
 
-    + '<div class="kv" style="margin-top:10px"><b>' + tx('Bridge ID') + '</b> · <span class="mono">' + esc(e.bridge_id || '') + '</span>'
-    +   ' <span style="color:var(--grey);font-size:var(--fs-1)">— minted, never typed</span></div>';
+  /* ⚠️⚠️ THE BRIDGE ID ROW IS GONE, AND NOT ONLY FROM HERE. Athi: *"we don't need to say minted, never typed —
+     in fact this information should not be appearing anywhere."* A bridge_id is a PRIMARY KEY: it exists so
+     rows can reference each other without depending on anything a person may change. Putting it on screen
+     asks someone to know an implementation detail, and — worse — two supplier screens were labelling it
+     "User ID", so a person could read it and quote it to a supplier as their handle. See e2e/bridge-id-audit. */
 
   /* ── 2 · BUSINESS PROFILE ──────────────────────────────────────────────────────────────────────────────
    * ⚠️ GSTIN IS INDIA-ONLY AND THIS IS THE HALF-STEP. Athi, 2026-08-19: *"GSTIN is for India — if it is for
@@ -1190,7 +1163,20 @@ function iamMeHTML(e){
     +   ' <span style="color:var(--grey);font-weight:400;font-size:var(--fs-1)">— your business registration</span></label>'
     + '<input class="inp" id="pf_gstn" value="' + esc(e.gstn || '') + '">'
     + '<label class="fl">' + tx('Address') + '</label>'
-    + '<input class="inp" id="pf_addr" value="' + esc(e.address || '') + '">';
+    + '<input class="inp" id="pf_addr" value="' + esc(e.address || '') + '">'
+    /**
+     * ⚠️⚠️ COUNTRY · TIME ZONE · NUMBER FORMAT MOVED HERE, AND I ALMOST LOST THEM. They sat under "Presence &
+     * governance"; rewriting that section as Storefront dropped the iamGovernedRows() call and nothing on
+     * screen said so — e2e/dead-surface.cjs caught it by reporting the function newly orphaned. Athi's line
+     * was *"information should not be missed"*, and this is exactly how it goes missing: not deleted on
+     * purpose, but left behind by a regroup.
+     *
+     * ⭐ AND BUSINESS IS WHERE THEY BELONG. They are facts about the business — where it trades, in what
+     * currency, how it writes numbers — not about its presence. The sentence that used to introduce them
+     * ("From your installation. Your own reading language and formats are separate…") is gone: the rows are
+     * read-only, which says the same thing by being true.
+     */
+    + iamGovernedRows();
 
   /* ── 3 · PRESENCE & GOVERNANCE ─────────────────────────────────────────────────────────────────────────
    * Read-only rows come from the constitution and the operator; the editable one is trading status. */
@@ -1376,7 +1362,9 @@ function iamSelfEmployeeHTML(e){
             + (e.whole_entity === true  ? ' <span class="optchip">' + tx('Whole business') + '</span>' : '')
             + (e.can_see_costs === true ? ' <span class="optchip">' + tx('Sees costs') + '</span>' : ''),
             tx('Only your employer can change this.'))
-    + '<div class="kv" style="margin-top:9px"><b>' + tx('Bridge ID') + '</b> · <span class="mono">' + esc(e.bridge_id || '') + '</span></div>';
+    /* ⚠️ NO BRIDGE ID ROW. Athi: *"this information should not be appearing anywhere."* An employee has a
+       login they type and a name colleagues read; the internal key is neither, and showing it here would
+       invite them to quote it to someone. e2e/bridge-id-audit.cjs holds the line. */;
 
   /**
    * ── 2 · YOUR IDENTITY RECORD ─────────────────────────────────────────────────────────────────────────
@@ -1446,10 +1434,10 @@ function iamGovernedRows(){
   } catch (_) { /* locale layer absent — show nothing rather than a guess */ }
   if (!rows.length) return '';
   return '<div style="margin-top:12px;padding-top:10px;border-block-start:1px solid var(--line)">'
-    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:5px">'
-    +   'From your installation. Your own reading language and formats are separate — '
-    +   '<a href="#" onclick="navTo(' + String.fromCharCode(39) + 'settings' + String.fromCharCode(39) + ');setSetSec(' + String.fromCharCode(39) + 'locale' + String.fromCharCode(39) + ');return false" style="color:var(--blue)">Settings › Localisation</a>.'
-    + '</div>'
+    /* ⚠️ THE INTRO SENTENCE IS GONE. It said these come from your installation and that your own reading
+       language is separate — two facts a reader learns faster from the rows being read-only and from
+       Settings having its own Localisation section. Explaining where a value came from, above the value,
+       is the shape of text this product carries too much of. */
     + rows.map(function(x){ return '<div class="kv"><b>' + esc(x[0]) + '</b> · ' + esc(x[1]) + '</div>'; }).join('')
     + '</div>';
 }
@@ -1463,32 +1451,8 @@ function iamGovernedRows(){
  * act" and "what access" panes, which the four IAM tabs replaced — orphaned by my own restructure, and
  * found by e2e/dead-surface.cjs rather than by me remembering.
  */
-function namingRulesHTML(){
-  var open = !!UI._namingOpen;
-  var rows = NAMING.map(function(n){
-    var tone = /REQUIRED/.test(n.must) ? 'req' : /given to you/.test(n.must) ? 'auto' : 'opt';
-    return '<div class="namerow">'
-      + '<div class="namehd"><span class="namewhat">' + esc(n.what) + '</span>'
-      +   '<code class="namefield">' + esc(n.field) + '</code>'
-      +   '<span class="namemust ' + tone + '">' + esc(n.must) + '</span></div>'
-      + '<div class="namerule">' + esc(n.rule) + '</div>'
-      + '<div class="namewhy">' + n.why + '</div></div>';
-  });
-  /* Grouped by WHOSE name it is — the question is never "what is display_name", it is "what do I call my staff". */
-  var out = '', last = '';
-  NAMING.forEach(function(n, i){
-    if (n.who !== last){ out += '<div class="namegrp">' + esc(n.who) + '</div>'; last = n.who; }
-    out += rows[i];
-  });
-  return '<div class="namebox">'
-    + '<button class="namehead" data-testid="naming-toggle" onclick="UI._namingOpen=!UI._namingOpen;loadProfile()">'
-    +   '<span>' + (open ? '▾' : '<span class=arw>▸</span>') + '</span> What these names mean, and which are compulsory</button>'
-    + (open ? ('<div class="namebody">' + out
-    +   '<div class="misnote" style="margin-top:10px">⚠️ Names are labels; <b>' + tx('IDs are identity') + '</b>. Everything the '
-    +   'system stores points at an ID, so renaming is always safe — a chit, a supplier link or an adopted '
-    +   'definition follows the rename rather than breaking.</div></div>') : '')
-    + '</div>';
-}
+/* namingRulesHTML lived here — removed with its only caller (the dead __iam_old branch). It was the table
+ * that explained what a Bridge ID is, and that is the explanation Athi asked to remove everywhere. */
 /* ⚠️ AN ASYNC SECTION PAINTS ITS OWN END MARKER. "— end —" says the panel is complete; appended here it landed
    directly under the vault's "loading…", telling the reader they had seen everything while nothing had arrived.
    The vault is the only section whose body is a placeholder rather than its content — see loadVault(). */
@@ -1499,16 +1463,12 @@ function profSecHTML(k, e){
 }
 function _profSecBody(k, e){
   if (k === 'identity') return iamHTML(e);
-  if (k === '__iam_old') return _misHead('Identity', 'Who you are on the rail — and how others find you.')
-    + `<div class="${_CARD}"><div class="kv"><b>${tx('Name')}</b> · ${esc(e.display_name)}</div><div class="kv"><b>${tx('Bridge ID')}</b> · ${esc(e.bridge_id)}</div><div class="kv"><b>${tx('Email')}</b> · ${esc(e.email)}</div></div>
-      <label class="fl">User ID <span style="color:var(--grey);font-size:var(--fs-1)">— others add you with this</span></label><input class="inp" id="pf_uid" value="${esc(e.user_id||'')}" placeholder="e.g. yourname or you@email.com">
-      <label class="fl">GSTIN <span style="color:var(--grey);font-size:var(--fs-1)">— 15 characters</span></label><input class="inp" id="pf_gstn" value="${esc(e.gstn)}" placeholder="15-char">
-      <label class="fl">${tx('Address')}</label><input class="inp" id="pf_addr" value="${esc(e.address)}">
-      <label class="fl">Are you trading? <span style="color:var(--grey);font-size:var(--fs-1)">— whether you are open for business</span></label>
-      <select class="inp" id="pf_bs">${opt(["open","closed","away"],e.business_status)}</select>
-      <div class="misnote" style="margin-top:5px">⚠️ Separate from who can <b>see</b> your catalogue — that lives under <b onclick="profSetSec('storefront')" style="cursor:pointer;color:var(--blue)">${tx('Storefront')}</b>.</div>
-      <div class="err" id="pf_err"></div><button class="composebtn" style="margin-top:11px" onclick="saveProfile()">${tx('Save profile')}</button>`
-    + namingRulesHTML();
+  /* ⚠️⚠️ THE __iam_old BRANCH WAS DELETED HERE, AND IT TOOK namingRulesHTML WITH IT.
+     No section key is ever '__iam_old' — PROF_SECS has identity/storefront/governance/vault — so this was
+     unreachable, and it was the ONLY caller of namingRulesHTML. That table explained what a Bridge ID is,
+     which is precisely the information Athi asked to stop showing anywhere: *"in fact this information
+     should not be appearing anywhere."* Removing a dead branch and finding it was the last thing keeping a
+     whole explanatory table alive is the same cascade dead-surface caught on 2026-08-19. */
   if (k === 'storefront') return _misHead('Storefront', 'What customers see when they open your link.')
     + storefrontCardHTML(e);
   if (k === 'governance') return _misHead('Your rights', 'What this entity may do — resolved from the layers above it.')
@@ -1533,6 +1493,20 @@ function _profSecBody(k, e){
 }
 // "Your governance" — the entity's resolved governance (from attributes): where it's minted, its platform, its basics
 // (with provenance ⟵ platform), rights + allowances + jurisdiction. Entity-simple; honest "minted, not enforced yet".
+/**
+ * The resolved-governance card — as BOXES, not a stack of key-value lines.
+ *
+ * Athi, 2026-08-20: *"your governance, can we make it as boxes, with gaps, more presentable."*
+ *
+ * ⭐⭐ AND THE GRID IS NOT DECORATION — IT IS THE CONTENT. These are five independent facts that happen to
+ * arrive together: who governs you, where you run, what you may do, how much, and under whose law. Stacked as
+ *  rows they read as one paragraph with bold bits, and a reader scanning for their
+ * rights has to read the allowances to get there. One box per fact makes them separately findable, which is
+ * what a person actually does with this card.
+ *
+ * ⚠️ EMPTY BOXES ARE NOT RENDERED. A grid of "—" would be a promise of five facts and delivery of two; a box
+ * appears only when there is something in it, so the card is honest about how much is resolved.
+ */
 function govCardHTML(g){
   if(!g) return '';
   var inst=g.installation||{}, b=g.basics||{}, j=g.jurisdiction||{};
@@ -1540,15 +1514,41 @@ function govCardHTML(g){
   var allow=(g.allowances||[]).map(function(a){return esc(a.limit+' '+a.resource);}).join(' · ');
   var langs=(b.languages||[]).join(', ');
   var loc=[inst.cloud,inst.region,inst.zone].filter(Boolean).join(' · ');
-  return '<div style="'+_CARD+';margin-top:10px">'
-    +'<div class="sec" style="margin:0 0 8px">🏛️ Your governance <span style="font-size:var(--fs-1);font-family:\'Space Mono\';background:var(--warn-tint);color:var(--warn-3);border-radius:5px;padding:1px 6px">minted · not enforced yet</span></div>'
-    +'<div class="kv"><b>' + tx('Governed by') + '</b> · '+esc(g.constitution||'—')+' <span style="color:var(--grey);font-size:var(--fs-1)">' + tx('🔒 platform-set') + '</span></div>'
-    +'<div class="kv"><b>' + tx('Installation') + '</b> · '+esc(inst.label||inst.key||'—')+(loc?(' <span style="color:var(--grey);font-size:var(--fs-1)">'+esc(loc)+'</span>'):'')+'</div>'
-    +'<div class="kv"><b>' + tx('Basics') + '</b> <span style="color:var(--grey);font-size:var(--fs-1)">⟵ from your platform</span> · '+esc(b.currency||'—')+' · '+esc(b.timezone||'—')+' · '+esc(b.region||'—')+(langs?(' · '+esc(langs)):'')+'</div>'
-    +'<div style="margin:7px 0 2px;font-size:var(--fs-2)"><b>' + tx('Rights') + '</b> '+(caps||'<span style="color:var(--grey);font-size:var(--fs-1)">—</span>')+'</div>'
-    +(allow?('<div class="kv"><b>' + tx('Allowances') + '</b> · '+allow+'</div>'):'')
-    +(j.disclaimer?('<div style="font-size:var(--fs-1);color:var(--grey);margin-top:7px;line-height:1.5"><b>' + tx('Jurisdiction') + '</b> — '+esc(j.mode||'')+(j.custodian===false?' · provider, not custodian':'')+'<br>'+esc(j.disclaimer)+'</div>'):'')
-    +'</div>';
+
+  /* ⚠️ EACH BOX NAMES ITS INK BECAUSE IT PAINTS ITS GROUND — guard check 11. */
+  var box=function(label, value, sub){
+    if(!value) return '';
+    return '<div style="flex:1 1 200px;min-width:0;padding:11px 13px;border:1px solid var(--line);border-radius:11px;'
+      + 'background:var(--paper);color:var(--on-bg)">'
+      + '<div style="font-size:var(--fs-1);text-transform:uppercase;letter-spacing:.05em;color:var(--grey);font-weight:600">' + esc(label) + '</div>'
+      + '<div style="margin-top:4px;font-size:var(--fs-2);line-height:1.5">' + value + '</div>'
+      + (sub ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px">' + esc(sub) + '</div>' : '')
+      + '</div>';
+  };
+
+  var boxes = [
+    /**
+     * ⭐⭐ THE VALUE FIRST, THE MESSAGE UNDER IT. Athi, 2026-08-20: *"any message you want to provide, that has
+     * to be below the value — base@v1, and then platform set. It has to be shown separately as a message… in
+     * principle we settle this way."*
+     *
+     * ⚠️ SO THE VERSION IS PART OF THE VALUE, NOT THE MESSAGE. "base@v1" is one identifier — splitting the @v1
+     * into the grey line below would make the version look like commentary about the constitution rather than
+     * part of its name, and a rights question is always about a specific version. The message line is reserved
+     * for WHERE IT CAME FROM, which is the only thing a reader cannot see by looking at the value.
+     */
+    box(tx('Governed by'),
+        esc(g.constitution || '') + (g.constitution_version ? esc('@' + g.constitution_version) : ''),
+        tx('Platform set')),
+    box(tx('Installation'), esc(inst.label||inst.key||''), loc),
+    box(tx('Basics'), [b.currency, b.timezone, langs].filter(Boolean).map(esc).join(' · '), tx('Platform set')),
+    box(tx('Rights'), caps, tx('Cascaded to you')),
+    box(tx('Allowances'), allow ? esc(allow) : '', tx('Cascaded to you')),
+  ].filter(Boolean).join('');
+
+  if(!boxes) return '';
+  return '<div style="display:flex;flex-wrap:wrap;gap:9px">' + boxes + '</div>'
+    + (j.disclaimer ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:9px;line-height:1.5">' + esc(j.disclaimer) + '</div>' : '');
 }
 /**
  * ⭐⭐ ONE SAVE PER SECTION. Athi, 2026-08-20: *"if each section has to have a separate save button to do so."*

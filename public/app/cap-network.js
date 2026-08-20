@@ -843,7 +843,7 @@ function netMintGo(){
       + (created.length ? '<div style="padding:11px 16px;border-bottom:1px solid var(--line);font-size:var(--fs-2);line-height:1.6"><b>' + created.length + ' store' + (created.length === 1 ? '' : 's') + ' created.</b> Each signs in at the login page with the <b>handle</b> and the <b>code</b> below. Codes last 7 days.<br><span style="color:var(--disp-2)">This is the only time these codes are shown.</span></div>' : '')
       + created.map(function(c){
           return '<div style="padding:10px 16px;border-bottom:1px solid var(--line)">'
-            + '<div style="font-size:13px"><b>' + esc(c.name) + '</b> <span style="font-size:var(--fs-1);color:var(--grey)">' + esc(c.bridge_id) + '</span></div>'
+            + '<div style="font-size:13px"><b>' + esc(c.name) + '</b> <span style="font-size:var(--fs-1);color:var(--grey)">' + esc(c.user_id||c.bridge_id) + '</span></div>'
             + '<div style="display:flex;gap:14px;align-items:center;margin-top:5px;flex-wrap:wrap">'
             + '<span style="font-family:ui-monospace,Menlo,monospace;font-size:13px;color:var(--blue-2)">' + esc(c.handle) + '</span>'
             + '<span style="font-family:ui-monospace,Menlo,monospace;font-size:15px;font-weight:700;letter-spacing:.08em;background:var(--card);border:1px solid var(--line);border-radius:6px;padding:2px 10px;color:var(--on-card)">' + esc(c.claim_code) + '</span>'
@@ -1405,7 +1405,7 @@ function _netStepReview(){
     + (edit != null ? '<span style="margin-inline-start:auto;color:var(--blue);cursor:pointer;text-transform:none;letter-spacing:0;font-size:11.5px" onclick="UI._netFlow.go(' + edit + ')">' + tx('Change') + '</span>' : '')
     + '</div>' + inner + '</div>'; };
   return card('To<span style="margin-inline-start:auto;font-weight:400;text-transform:none;letter-spacing:0">fixed — this is their request</span>',
-        '<div style="padding:8px 12px;font-size:13px"><b>' + esc(s.name || '') + '</b> <span style="color:var(--grey);font-size:11.5px">' + esc(s.bridge_id || '') + '</span></div>')
+        '<div style="padding:8px 12px;font-size:13px"><b>' + esc(s.name || '') + '</b> <span style="color:var(--grey);font-size:11.5px">' + esc(s.user_id||s.bridge_id || '') + '</span></div>')
     + card('Items · ' + sel.length, sel.map(function(l){
         return row(l.qty + ' × ' + esc(l.unit), '<span style="flex:1">' + esc(l.name) + '</span>'
           + '<b style="float:inline-end">' + (l.line_total == null ? '—' : esc(String(l.line_total))) + '</b>'); }).join('')
@@ -1519,7 +1519,7 @@ function _netBrowseBody(){
       + '<span onclick="netBrowseBack()" style="cursor:pointer;color:var(--blue);font-size:var(--fs-2)">‹ all stores</span>'
       + '<div data-testid="net-chip" style="display:inline-flex;align-items:center;gap:9px;border:1px solid var(--line);border-radius:22px;padding:6px 13px;background:var(--card);margin-inline-start:8px;color:var(--on-card)">'
       + '<b style="font-size:13.5px">' + esc(s.name) + '</b>'
-      + (s.bridge_id ? '<span style="font-family:ui-monospace,Menlo,monospace;font-size:var(--fs-1);color:var(--grey)">' + esc(s.bridge_id) + '</span>' : '')
+      + (s.user_id||s.bridge_id ? '<span style="font-family:ui-monospace,Menlo,monospace;font-size:var(--fs-1);color:var(--grey)">' + esc(s.user_id||s.bridge_id) + '</span>' : '')
       + (netIsMe() ? '<span style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:20px;padding:2px 9px;font-size:var(--fs-1);color:var(--warn-2);font-weight:700">⚠ this is your own store</span>' : '')
       + '</div></div>';
     if (UI._brBusy) return head + '<div style="padding:20px 2px;color:var(--grey);font-size:13px">' + tx('Reading their catalogue…') + '</div>';

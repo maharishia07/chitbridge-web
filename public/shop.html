@@ -43,7 +43,19 @@
 <script src="app/step-flow.js"></script>
 <script>
 var API = (new URLSearchParams(location.search).get('api')) || 'https://chitbridge-api-production.up.railway.app';
-var BRIDGE = (new URLSearchParams(location.search).get('bridge') || '').trim();
+/**
+ * ⭐⭐ ?s= IS THE PUBLIC HANDLE (a User ID); ?bridge= IS THE OLD INTERNAL KEY, KEPT SO EXISTING LINKS STILL OPEN.
+ *
+ * ⚠️⚠️ THE APP HAS BEEN BUILDING LINKS AS /shop.html?s=<user_id> WHILE THIS READ ONLY ?bridge=. Every one of
+ * those links landed on "No shop specified" — a dead link with a perfectly plausible shape, which is exactly
+ * why it survived: the storefront row rendered, the URL looked right, and the failure was on a page nobody
+ * opens while working on the app.
+ *
+ * The server resolves either form (resolveEntity in routes/catalogue.js), so this variable stays the one
+ * "who is this shop" value and nothing downstream changes.
+ */
+var BRIDGE = (new URLSearchParams(location.search).get('s')
+           || new URLSearchParams(location.search).get('bridge') || '').trim();
 var _FIN=[]; var _ord=null; var _lg={}; var _SHOPDATA=null;
 // SPEC-negotiation-position — how this shop takes orders, from the API (never assumed). Decides what the customer is
 // asked for and therefore what data the business gets back. Unknown/absent → 'cart' (every existing shop unchanged).
@@ -416,7 +428,7 @@ function render(data){
   if(s.order_input&&typeof s.order_input==='object') _OI=s.order_input;   // the declared contract, from the API
   _METHOD=_OI.preset||'cart';
   var statusBadge = s.business_status==='closed' ? '<span class="badge b-closed">Closed</span>' : (s.business_status==='away'?'<span class="badge b-away">Away</span>':'<span class="badge b-open">Open</span>');
-  var head='<div class="hd"><div class="logo">🎨</div><div style="flex:1"><div class="shopname sg">'+esc(s.display_name||'Shop')+'</div><div class="meta">'+esc(s.bridge_id||'')+(s.address?(' · '+esc(s.address)):'')+'</div></div>'+(s.is_verified?'<span class="badge b-ver">✓ Verified</span>':'')+' '+statusBadge+'</div>';
+  var head='<div class="hd"><div class="logo">🎨</div><div style="flex:1"><div class="shopname sg">'+esc(s.display_name||'Shop')+'</div><div class="meta">'+esc(s.user_id||s.bridge_id||'')+(s.address?(' · '+esc(s.address)):'')+'</div></div>'+(s.is_verified?'<span class="badge b-ver">✓ Verified</span>':'')+' '+statusBadge+'</div>';
   var finishes=(data.finishes||[]);
   var finHtml=''; _FIN=[];
   finishes.forEach(function(f){
@@ -433,7 +445,7 @@ function render(data){
 // ── Login-first gate (storefront_access==='login'): customer signs in (phone/email + OTP) before browsing. ──
 function renderLoginGate(shop){
   var otpStep=(_lg.step==='otp'), fld='style="width:100%;padding:9px;border:1px solid #e7e3d8;border-radius:8px;margin-bottom:10px;font-size:14px"';
-  el('app').innerHTML='<div class="hd"><div class="logo">🎨</div><div style="flex:1"><div class="shopname sg">'+esc(shop.display_name||'Shop')+'</div><div class="meta">'+esc(shop.bridge_id||'')+'</div></div></div>'
+  el('app').innerHTML='<div class="hd"><div class="logo">🎨</div><div style="flex:1"><div class="shopname sg">'+esc(shop.display_name||'Shop')+'</div><div class="meta">'+esc(shop.user_id||shop.bridge_id||'')+'</div></div></div>'
     +'<div class="card" style="max-width:420px;margin:26px auto"><div class="sg" style="font-weight:800;font-size:16px;margin-bottom:4px">Sign in to view this shop</div>'
     +'<div class="meta" style="margin-bottom:12px">This shop asks customers to sign in first. Enter your phone or email — we\'ll text/email a one-time code.</div>'
     +'<input id="lg_contact" placeholder="9876543210 or you@email.com" '+(otpStep?'disabled':'')+' value="'+esc(_lg.contact||'')+'" '+fld+'>'
@@ -787,7 +799,7 @@ function vizDraw(combo){ var cv=el('viz_canvas'); if(!cv||!_VIZ.img)return; var 
 }
 function vizToOrder(){ var idx=_VIZ.idx, comboName=_VIZ.combo&&_VIZ.combo.name; vizClose(); _ord={idx:idx, step:'contact', combo:comboName}; orderRender(); }
 (function(){
-  if(!BRIDGE){ el('app').innerHTML='<div class="msg">No shop specified. Use a link like <b>shop.html?bridge=CBXXXXXXXX</b></div>'; return; }
+  if(!BRIDGE){ el('app').innerHTML='<div class="msg">No shop specified.</div>'; return; }
   // load the region layers first (for the spin-the-globe switcher), then the shop
   fetch(API+'/api/assist/regions').then(function(r){return r.json();}).then(function(j){ _REGIONS=(j&&j.regions)||[]; if(_REGIONS.length && !_REGIONS.find(function(x){return x.region_code===_REGION;})) _REGION=_REGIONS[0].region_code; }).catch(function(){}).then(function(){
     fetch(API+'/api/catalogue/'+encodeURIComponent(BRIDGE)).then(function(r){ return r.json().then(function(j){ return {status:r.status, j:j}; }); })

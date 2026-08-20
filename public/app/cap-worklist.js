@@ -579,7 +579,7 @@ function wlParties(det){
           + '<span style="color:var(--grey);text-transform:uppercase;font-size:var(--fs-1);font-weight:800;letter-spacing:.06em">' + esc(p.role || '') + '</span> '
           + '<b>' + esc(p.display_name || '—') + '</b>'
           + (mine(p) ? ' <span style="color:var(--grey)">(you)</span>' : '')
-          + (p.bridge_id ? ' <span style="color:var(--grey);font-family:ui-monospace,monospace;font-size:var(--fs-1)">' + esc(p.bridge_id) + '</span>' : '')
+          + (p.user_id||p.bridge_id ? ' <span style="color:var(--grey);font-family:ui-monospace,monospace;font-size:var(--fs-1)">' + esc(p.user_id||p.bridge_id) + '</span>' : '')
           + '</div>';
       }).join('')
     + (everyoneIsMe ? '<div style="font-size:11.5px;color:var(--warn-2);font-weight:600">⚠️ this chit has no other party — an external message would come back to you</div>' : '')

@@ -4570,7 +4570,7 @@ function ccIsSelf(name){ const n=String(name||"").trim().toLowerCase(); if(!n)re
 function ccRoleCount(role){ return CC.rcpts.filter(r=>r.role===role).length; }
 let _ccSearchT=null;
 function ccRcptSearch(q){ clearTimeout(_ccSearchT); q=(q||'').trim(); if(q.length<2){ ccClearSugg(); return; } _ccSearchT=setTimeout(async function(){ try{ const r=await api("entitySearch",{query:{q:q}}); ccRenderSugg(Array.isArray(r)?r:((r&&r.results)||[])); }catch(_){ ccClearSugg(); } }, 250); }
-function ccRenderSugg(list){ UI._ccSugg=list||[]; const h=document.getElementById("cc_sugg"); if(!h)return; if(!UI._ccSugg.length){ h.innerHTML='<div class="ccsugg-empty">' + tx('No matching business found') + '</div>'; return; } h.innerHTML=UI._ccSugg.map(function(e,i){ return '<div class="ccsugg-item" data-testid="chit-recipient-suggest" onclick="ccPickRcptIdx('+i+')"><span class="ccsugg-nm">'+esc(e.display_name||'')+'</span><span class="ccsugg-id">'+esc(e.bridge_id||'')+'</span></div>'; }).join(''); }
+function ccRenderSugg(list){ UI._ccSugg=list||[]; const h=document.getElementById("cc_sugg"); if(!h)return; if(!UI._ccSugg.length){ h.innerHTML='<div class="ccsugg-empty">' + tx('No matching business found') + '</div>'; return; } h.innerHTML=UI._ccSugg.map(function(e,i){ return '<div class="ccsugg-item" data-testid="chit-recipient-suggest" onclick="ccPickRcptIdx('+i+')"><span class="ccsugg-nm">'+esc(e.display_name||'')+'</span><span class="ccsugg-id">'+esc(e.user_id||e.bridge_id||'')+'</span></div>'; }).join(''); }
 function ccClearSugg(){ const h=document.getElementById("cc_sugg"); if(h)h.innerHTML=''; }
 function ccPickRcptIdx(i){ const e=(UI._ccSugg||[])[i]; if(!e)return; const role=val("cc_rrole")||"to"; const er=document.getElementById("cc_err"); if(er)er.textContent=""; if(ccDupeRcpt(e.display_name, e.bridge_id)){ if(er)er.textContent=e.display_name+" is already a recipient."; ccClearSugg(); return; } if(ccRoleCount(role)>=(LIMITS[role]||99)){ if(er)er.textContent=role.toUpperCase()+" is capped at "+LIMITS[role]+"."; return; } CC.rcpts.push({name:e.display_name, role:role, self:ccIsSelf(e.display_name), bridge:e.bridge_id||null}); const ne=document.getElementById("cc_rname"); if(ne)ne.value=""; ccClearSugg(); ccRenderRcpts(); }
 function ccDupeRcpt(name, bridge){ var nm=String(name||'').trim().toLowerCase(); return (CC.rcpts||[]).some(function(r){ if(bridge&&r.bridge) return r.bridge===bridge; return String(r.name||'').trim().toLowerCase()===nm; }); }
@@ -5125,7 +5125,7 @@ const NET_MODEL_NOTE = {
   b2c:"A single shopfront (b2c) with internal counters. Customers buy directly; no upstream distribution."
 };
 function netView(self, tree, edges){
-  const nodes = tree.map(n=>`<div style="padding:3px 0 3px ${(n.depth||0)*20}px;font-size:13.5px">${n.depth>0?'<span style="color:var(--grey)">└ </span>':''}<b>${esc(n.name)}</b> <span style="font-family:'Space Mono';font-size:var(--fs-1);color:var(--grey)">${esc(n.bridge_id||'')}</span>${n.act!=null?` <span class="optchip" style="background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)">👥 ${n.act}</span>`:''}${n.mode==='b2c'?` <span class="optchip" style="background:var(--gold-soft);color:var(--warn-3);border-color:var(--gold-line);font-size:var(--fs-1)">b2c</span>`:''}${n.demo?` <span class="optchip" style="font-size:var(--fs-1)">demo</span>`:''}${n.isnew?` <span class="optchip" style="font-size:var(--fs-1);background:var(--ok-tint);color:var(--ok-3);border-color:var(--ok-2)">new</span>`:''}</div>`).join("");
+  const nodes = tree.map(n=>`<div style="padding:3px 0 3px ${(n.depth||0)*20}px;font-size:13.5px">${n.depth>0?'<span style="color:var(--grey)">└ </span>':''}<b>${esc(n.name)}</b> <span style="font-family:'Space Mono';font-size:var(--fs-1);color:var(--grey)">${esc((n.user_id||n.bridge_id)||'')}</span>${n.act!=null?` <span class="optchip" style="background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)">👥 ${n.act}</span>`:''}${n.mode==='b2c'?` <span class="optchip" style="background:var(--gold-soft);color:var(--warn-3);border-color:var(--gold-line);font-size:var(--fs-1)">b2c</span>`:''}${n.demo?` <span class="optchip" style="font-size:var(--fs-1)">demo</span>`:''}${n.isnew?` <span class="optchip" style="font-size:var(--fs-1);background:var(--ok-tint);color:var(--ok-3);border-color:var(--ok-2)">new</span>`:''}</div>`).join("");
   const edgeRows = edges.map(e=>{
     const a = e.state==='requested' ? `<button class="composebtn pri" onclick="netApprove('${e.id}')">${tx('Approve')}</button> <button class="composebtn" onclick="netDecline('${e.id}')">${tx('Decline')}</button>`
       : e.state==='active' ? `<button class="composebtn" onclick="netSuspend('${e.id}')">${tx('Suspend')}</button> <button class="composebtn" style="color:var(--disp)" onclick="netDisconnect('${e.id}')">${tx('Disconnect')}</button>`
@@ -5224,7 +5224,7 @@ function supRowHTML(x){
   return `<div class="row ${id===UI.supSel?'sel':''}" data-testid="sup-row-${id}" onclick="selectSupplier('${id}')">
     <button title="Preferred — tap to toggle" onclick="event.stopPropagation();toggleSupPref('${id}')" style="background:none;border:0;font-size:15px;line-height:1;padding:0;color:${x.preferred?'var(--warn-2)':'var(--grey-2)'};flex:0 0 auto;margin-top:1px">${x.preferred?'★':'☆'}</button>
     <div class="main2"><div class="l1"><span class="code">${esc(label)}</span>${x.category?`<span class="optchip" style="background:var(--gold-soft);color:var(--warn-3);border-color:var(--gold-line)">${esc(x.category)}</span>`:''}<span class="amt">${cat}</span></div>
-      <div class="l2">${esc(sub)}${x.nickname?` · <span class="mono">${esc(x.bridge_id||'')}</span>`:''}</div></div>
+      <div class="l2">${esc(sub)}${x.nickname?` · <span class="mono">${esc(x.user_id||x.bridge_id||'')}</span>`:''}</div></div>
     <button class="rowinfo" data-testid="sup-details-${id}" title="Their full record" onclick="event.stopPropagation();supOpenPanel('${id}')">ⓘ</button>
     <div class="rowgo" aria-hidden="true">›</div></div>`;
 }
@@ -5275,7 +5275,11 @@ function supInfoCardHTML(x){
   return '<div class="supinfo" data-testid="sup-info">'
     + kv('Legal name', esc(x.display_name||'—')+(shop&&shop.is_verified?' <span title="Verified business" style="color:var(--ok-2)">✓</span>':''))
     + kv('Your name', esc(x.nickname||'—'))
-    + kv('User ID', esc(x.bridge_id||'—'), true)
+    /* ⚠️⚠️ WAS LABELLED 'User ID' AND SHOWED A bridge_id — the label was right and the value was wrong,
+       which is worse than an honest key: a person reads it and quotes it to a supplier as their handle.
+       The API now returns user_id (routes/relationships.js). bridge_id remains the FALLBACK because many
+       entities predate the handle and have none — showing a dash there would hide a real identifier. */
+    + kv('User ID', esc(x.user_id||x.bridge_id||'—'), true)
     + (shop? kv('GSTN', shop.gstn?('<span class="mono">'+esc(shop.gstn)+'</span>'):'<span style="color:var(--grey)">not published</span>') : '')
     + (shop? kv('Address', esc(shop.address||'—')) : '')
     + kv('Category', esc(x.category||'—'))
@@ -5619,7 +5623,7 @@ function custDetailHTML(){ var c=(UI.custs||[]).find(function(x){return x.custom
         +kv('Contact',mono(contact))
         +(c.phone?kv('Phone',mono(c.phone)):'')
         +kv('Under-shop id',mono(c.email))
-        +kv('Bridge id',mono(c.bridge_id)))
+        +kv('User ID',mono(c.user_id||c.bridge_id)))
     + grp('Activity',
         kv('Orders',(c.txn_count||0)+'')
         +kv('Last order',c.last_txn_at?esc(custDate(c.last_txn_at)):'—')
@@ -5737,7 +5741,7 @@ function supStepReview(x){
     + (edit!=null?'<span style="margin-inline-start:auto;color:var(--blue);cursor:pointer;text-transform:none;letter-spacing:0;font-size:11.5px" onclick="UI._supFlow.go('+edit+')">' + tx('Change') + '</span>':'')
     + '</div>'+inner+'</div>'; };
   return card('To<span style="margin-inline-start:auto;font-weight:400;text-transform:none;letter-spacing:0">fixed — this is their order</span>',
-        '<div style="padding:8px 12px;font-size:13px"><b>'+esc(supName(x))+'</b> <span class="mono" style="color:var(--grey);font-size:11.5px">'+esc(x.bridge_id||'')+'</span></div>')
+        '<div style="padding:8px 12px;font-size:13px"><b>'+esc(supName(x))+'</b> <span class="mono" style="color:var(--grey);font-size:11.5px">'+esc(x.user_id||x.bridge_id||'')+'</span></div>')
     + card('Items · '+sel.length, sel.map(function(l){
         return row(l.qty+' × '+esc(l.unit), '<span style="flex:1">'+esc(l.name)+'</span>'
           + (l.offered?'<span style="color:var(--grey);font-size:11.5px"> · your offer</span>':'')
@@ -6011,7 +6015,7 @@ async function viewSupplierPassport(bridge, name){
       + txf('This is <b>{supplier}</b>&rsquo;s readiness — the supplier you are looking at. <b>Not yours.</b>',
       { supplier: label })
 + ' '
-      + '<span style="color:var(--grey)">User ID '+esc(sup.bridge_id||bridge)+'</span></div>'
+      + '<span style="color:var(--grey)">User ID '+esc(sup.user_id||sup.bridge_id||bridge)+'</span></div>'
       + '<div style="display:flex;gap:10px;align-items:center;margin-bottom:12px">'
       + '<div style="width:38px;height:38px;border-radius:50%;background:'+(ready?'var(--ok-3)':'var(--warn-2)')+';color:#fff;display:grid;place-items:center;font-size:18px">'+(ready?'✓':'!')+'</div>'
       + '<div><div style="font-weight:700;font-size:13.5px">'+(ready?(label+' is import-ready'):(label+' has '+((sm.total||0)-(sm.met||0))+' clearance(s) outstanding'))+'</div>'
@@ -6127,12 +6131,12 @@ function supDetailHTML(){
 }
 let _spSearchT=null;
 function supSearch(q){ clearTimeout(_spSearchT); q=(q||'').trim(); const h=document.getElementById('sp_sugg'); if(q.length<2){ if(h)h.innerHTML=''; return; } _spSearchT=setTimeout(async function(){ try{ const r=await api("entitySearch",{query:{q:q}}); supRenderSugg(Array.isArray(r)?r:((r&&r.results)||[])); }catch(_){ const hh=document.getElementById('sp_sugg'); if(hh)hh.innerHTML=''; } }, 250); }
-function supRenderSugg(list){ UI._supSugg=list||[]; const h=document.getElementById('sp_sugg'); if(!h)return; if(!UI._supSugg.length){ h.innerHTML='<div class="ccsugg-empty">' + tx('No matching business found') + '</div>'; return; } h.innerHTML=UI._supSugg.slice(0,8).map(function(e,i){ return '<div class="ccsugg-item" onclick="supPick('+i+')"><span class="ccsugg-nm">'+esc(e.display_name||'')+'</span><span class="ccsugg-id">'+esc(e.bridge_id||'')+'</span></div>'; }).join(''); }
+function supRenderSugg(list){ UI._supSugg=list||[]; const h=document.getElementById('sp_sugg'); if(!h)return; if(!UI._supSugg.length){ h.innerHTML='<div class="ccsugg-empty">' + tx('No matching business found') + '</div>'; return; } h.innerHTML=UI._supSugg.slice(0,8).map(function(e,i){ return '<div class="ccsugg-item" onclick="supPick('+i+')"><span class="ccsugg-nm">'+esc(e.display_name||'')+'</span><span class="ccsugg-id">'+esc(e.user_id||e.bridge_id||'')+'</span></div>'; }).join(''); }
 async function supPick(i){ const e=(UI._supSugg||[])[i]; if(!e)return; const h=document.getElementById('sp_sugg'); if(h)h.innerHTML=''; const err=document.getElementById('sp_err'); if(err)err.textContent=''; const a=document.getElementById('sp_add'); if(a)a.value=e.display_name||'';
   /* ⚠️ confirmAsk, NOT a second confirm helper — this file already had one (line ~2885), and I very nearly wrote
      a parallel Promise-based twin before spotting it. Callback style is what it offers, so the work moves inside. */
   confirmAsk('Add '+(e.display_name||e.bridge_id)+' as your supplier?',
-    '<b>'+esc(e.bridge_id||'')+'</b><br><br>They are <b>not asked and are not notified</b> — this is your own list. You will see what their public storefront shows.',
+    '<b>'+esc(e.user_id||e.bridge_id||'')+'</b><br><br>They are <b>not asked and are not notified</b> — this is your own list. You will see what their public storefront shows.',
     'Add supplier', async function(){
       try{ await api("supAdd",{body:{supplier_bridge_id:e.bridge_id}}); toast('Supplier added ✓'); if(a)a.value=''; await loadSuppliers(); }
       catch(ex){ if(err)err.textContent=ex.message; }
