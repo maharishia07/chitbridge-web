@@ -1666,17 +1666,50 @@ async function iamLoadChannels(){
   renderApp(); _capShowDetail(); loadProfile();
 }
 
+/**
+ * ⭐⭐ COUNTRY · CURRENCY · TIME ZONE · TIMESTAMP, IN ONE PLACE. Athi, 2026-08-20: *"country, currency,
+ * timezone, timestamp — if all in one place in profile that would be great. We can take them to settings to
+ * change it."*
+ *
+ * ⚠️⚠️ TWO OF THESE ARE THE BUSINESS'S AND TWO ARE THE READER'S, AND THAT IS WHY THEY WERE SPLIT AN HOUR AGO.
+ * Country and currency come from the ENTITY record; time zone and timestamp format come from CBLocale, which
+ * is this reader's own setting. Putting them together is right — a person wants to see the four facts at once
+ * — but presenting them as one KIND of fact is what made Profile claim a personal preference was a company
+ * fact in the first place.
+ *
+ * ⭐ SO THE MESSAGE LINE CARRIES THE DIFFERENCE, WHICH IS ATHI'S OWN CONVENTION: value first, message under it.
+ * "Business" and "Yours" are two words that do what a paragraph did, and they are true at a glance.
+ *
+ * ⚠️ THE TIMESTAMP IS SHOWN AS AN EXAMPLE, NOT A FORMAT CODE. "en-IN" tells a reader nothing; the current
+ * moment rendered the way their chits will be is the same fact, legible.
+ */
 function iamGovernedRows(e){
   var rows = [];
+  var Q = String.fromCharCode(39);
   var country = (e && e.country) || null;
   try {
     var r = CBLocale.regionInfo && CBLocale.regionInfo();
-    rows.push(['Country of business', country || ((r && r.name) || 'Not set')]);
-  } catch (_) { if (country) rows.push(['Country of business', country]); }
-  if (e && e.currency_code) rows.push(['Trades in', e.currency_code]);
+    rows.push(['Country', country || ((r && r.name) || 'Not set'), tx('Business')]);
+  } catch (_) { if (country) rows.push(['Country', country, tx('Business')]); }
+  if (e && e.currency_code) rows.push(['Currency', e.currency_code, tx('Business')]);
+  try {
+    if (CBLocale.timezone) rows.push(['Time zone', CBLocale.timezone(), tx('Yours')]);
+    /* ⚠️ A LIVE EXAMPLE, so a wrong setting is obvious rather than encoded. */
+    if (CBLocale.datetime) rows.push(['Timestamp', CBLocale.datetime(Date.now()), tx('Yours')]);
+  } catch (_) { /* locale layer absent — show what we have rather than nothing */ }
+
   if (!rows.length) return '';
   return '<div style="margin-top:12px;padding-top:10px;border-block-start:1px solid var(--line)">'
-    + rows.map(function(x){ return '<div class="kv"><b>' + esc(x[0]) + '</b> · ' + esc(x[1]) + '</div>'; }).join('')
+    + rows.map(function(x){
+        return '<div style="display:flex;gap:10px;align-items:baseline;padding:3px 0">'
+          + '<b style="min-width:92px;font-size:var(--fs-1);color:var(--grey);text-transform:uppercase;letter-spacing:.04em">' + esc(x[0]) + '</b>'
+          + '<span style="flex:1">' + esc(x[1]) + '</span>'
+          + '<span style="color:var(--grey);font-size:var(--fs-1)">' + esc(x[2]) + '</span>'
+          + '</div>';
+      }).join('')
+    /* ⭐ ONE LINK OUT, NOT FOUR. Athi: *"we can take them to settings to change it."* */
+    + '<div style="margin-top:7px"><a href="#" onclick="navTo(' + Q + 'settings' + Q + ');setSetSec(' + Q + 'locale' + Q + ');return false"'
+    +   ' style="color:var(--blue);font-size:var(--fs-1)">' + tx('Change in Localisation') + ' <span class=arw>→</span></a></div>'
     + '</div>';
 }
 

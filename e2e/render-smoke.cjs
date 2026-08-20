@@ -40,7 +40,10 @@ const sandbox = {
   toast(){}, renderApp(){}, loadProfile(){}, loadVault(){}, ensureCap: async () => {}, api: async () => ({}),
   _capShowDetail(){}, _capEnd: () => '', menuAssist: () => '', navTo(){}, setSetSec(){}, profSetSec(){},
   jwtPayload: () => ({}), MSG: { profileSaved: () => 'saved' },
-  CBLocale: { region: () => 'IN', regionInfo: () => ({ name: 'India' }) },
+  /* ⚠️ timezone + datetime ARE REQUIRED by the Country/Currency/Time zone/Timestamp block. A stub missing them
+     would let the block render two rows instead of four and still pass — the test would be measuring the stub. */
+  CBLocale: { region: () => 'IN', regionInfo: () => ({ name: 'India' }),
+              timezone: () => 'Asia/Calcutta', datetime: () => '20 Aug 2026, 5:45 pm', locale: () => 'en-IN' },
   ACCESS_LABEL: { viewer: 'Viewer', commenter: 'Commenter', editor: 'Editor' },
   ACCESS_CHOICES: [['editor', 'Editor'], ['commenter', 'Commenter'], ['viewer', 'Viewer']],
   accessLevelOf: () => 'editor', hatLabel: () => 'Editor', hatAssignable: () => true,
@@ -88,6 +91,8 @@ const CASES = [
   ['iamMeHTML — public + away',             () => ctx.iamMeHTML({ ...ENTITY, catalogue_visibility: 'public', business_status: 'away' })],
   ['iamMeHTML — capped to private',         () => ctx.iamMeHTML({ ...ENTITY, visibility_cap: { max: 'private', reason: 'Set by your network.' } })],
   ['iamMeHTML — no user_id yet',            () => ctx.iamMeHTML({ ...ENTITY, user_id: null })],
+  /* the four facts in one block — two the business's, two the reader's, told apart by the message column */
+  ['iamMeHTML — country/currency/tz/timestamp', () => { ctx.UI._iamOpen.profile = true; const h = ctx.iamMeHTML({ ...ENTITY, country: 'India', currency_code: 'INR' }); ctx.UI._iamOpen.profile = false; if (!/Timestamp/.test(h) || !/Currency/.test(h)) throw new Error('block incomplete'); return h; }],
   ['iamSelfEmployeeHTML — commenter',       () => ctx.iamSelfEmployeeHTML(ACTOR)],
   ['iamSelfEmployeeHTML — editor + reach',  () => ctx.iamSelfEmployeeHTML({ ...ACTOR, access_level: 'editor', whole_entity: true, can_see_costs: true })],
   ['CBIdDocs.html — self, empty',           () => ctx.CBIdDocs.html([], 'self')],
