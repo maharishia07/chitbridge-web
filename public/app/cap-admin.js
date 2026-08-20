@@ -310,8 +310,15 @@ function misBandHTML(k, m){
 /* ⚠️ The back button is separable from the title, because Governance drops the title (the rail already names it)
    but still needs a way back on mobile. Losing it with the heading is exactly the dead-end fixed earlier. */
 function _misBack(){ return '<button class="dback" data-testid="cap-back" onclick="backToList()">‹ Back</button>'; }
+/**
+ * ⚠️ AN ABSENT SUBTITLE TAKES NO SPACE. Passing '' used to emit an empty `<div class="ds">` carrying a 14px
+ * bottom margin — a gap under the heading with nothing in it, which reads as a rendering fault rather than as
+ * a screen that simply needs no strapline. Now that a subtitle is optional (the IAM one was removed because it
+ * had gone stale), omitting it has to look deliberate.
+ */
 function _misHead(t, s){
-  return _misBack() + '<div class="dh">' + esc(t) + '</div><div class="ds" style="margin-bottom:14px">' + esc(s) + '</div>'; }
+  return _misBack() + '<div class="dh">' + esc(t) + '</div>'
+    + (s ? '<div class="ds" style="margin-bottom:14px">' + esc(s) + '</div>' : '<div style="margin-bottom:11px"></div>'); }
 function _misSplitBar(m){
   var tot = m.committed + m.forecast;
   if (!tot) return '<div class="misnote">No value on any chit yet.</div>';
@@ -888,7 +895,21 @@ function iamHTML(e){
 
   /* ⚠️ _misHead ESCAPES BOTH ARGUMENTS — it takes text, not markup. I passed HTML and it printed a literal
      "&amp;" and a raw <b> tag on Athi's screen. Plain text only here. */
-  return _misHead('IAM · Identity and Access Management', 'Who can act for this business, and what they may do.')
+  /**
+   * ⚠️⚠️ THE SUBTITLE IS GONE BECAUSE IT HAD BECOME FALSE, WHICH IS WORSE THAN REDUNDANT. Athi, 2026-08-20:
+   * *"do we really need this statement — Who can act for this business, and what they may do — in IAM screen?"*
+   *
+   * It described the screen as it was when co-assists were managed here. They are not: this screen now holds
+   * Identity, Business, Storefront, Rights and Documents, and the people live under Co-assists. So the one
+   * sentence at the top of the screen was telling a reader the screen was about something it no longer
+   * contains — a sentence nobody updated because nobody owns a subtitle.
+   *
+   * ⭐ AND THE HEADING ALONE ANSWERS IT. Five named sections say what is here better than a sentence
+   * generalising over them, and this is the fourth explanatory line removed from this screen today. The
+   * pattern is consistent: a description of a screen ages the moment the screen changes, while the sections
+   * cannot — they ARE the screen.
+   */
+  return _misHead('IAM · Identity and Access Management', '')
     + '<div style="display:flex;gap:7px;margin-bottom:11px">' + seg + '</div>'
     /* ⚠️ TWO BRANCHES, BECAUSE THERE ARE TWO TABS. 'node' and 'cust' were still routed here after their tabs
        were removed — unreachable, and exactly the kind of leftover that makes the next reader believe a
