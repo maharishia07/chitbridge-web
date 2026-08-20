@@ -373,10 +373,17 @@ function acDetailHTML(){ const x=UI.acDet;
       <label class="fl">Access <span style="color:var(--grey);font-weight:400;font-size:var(--fs-1)">— only an Editor can be assigned work</span></label>
       <select class="inp" id="ac_ehat" style="max-width:320px">${ACCESS_CHOICES.map(c=>'<option value="'+c[0]+'"'+(accessLevelOf(x)===c[0]?' selected':'')+'>'+esc(c[1])+'</option>').join('')}</select>
       ${/* ⭐ REACH IS A SEPARATE SWITCH, NOT A LEVEL. Five hat names could never express "an editor who
-            sees every branch" — there was no sixth name, and adding one is how five becomes eight. */''}
+            sees every branch" — there was no sixth name, and adding one is how five becomes eight.
+
+            ⚠️⚠️ AND IT IS NOT ENFORCED YET, SO THE LABEL MUST NOT CLAIM IT IS. Nothing filters chits by
+            placement node today — RLS scopes on entity_id alone, so EVERY co-assist already sees every
+            chit in the business. There is no restriction for this flag to lift. It records the intent
+            and is the right shape for when node-scoped reading arrives; until then it changes nothing,
+            and "reach ignores their node" would sell an owner a control that does not act. IAM-SPEC §32.
+            Same failure mode as self_copy_pref: declared, visible, inert. */''}
       <label class="fl" style="display:flex;align-items:center;gap:7px;cursor:pointer">
         <input type="checkbox" id="ac_ewhole" ${x.whole_entity?'checked':''} style="width:auto;margin:0">
-        <span>Sees the whole business <span style="color:var(--grey);font-weight:400;font-size:var(--fs-1)">— reach ignores their node</span></span>
+        <span>Sees the whole business <span style="color:var(--grey);font-weight:400;font-size:var(--fs-1)">— everyone does today; recorded for when branches are scoped</span></span>
       </label>
       <label class="fl">${tx('Leave-cover delegate (covers auto-assigned work while on leave)')}</label><select class="inp" id="ac_edel" style="max-width:240px"><option value="">— none —</option>${(UI.acts||[]).filter(a=>a.id!==x.id && hatAssignable(a.hat)).map(a=>'<option value="'+esc(a.id)+'"'+(x.del===a.id?' selected':'')+'>'+esc(a.name)+'</option>').join('')}</select>
       <label class="fl">${tx('Max concurrent tasks')}</label><input class="inp" id="ac_emax" inputmode="numeric" value="${x.max||''}" style="width:120px">
