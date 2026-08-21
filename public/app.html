@@ -3697,6 +3697,24 @@ function autoRefresh(){
     // repainted the app shell over the login screen every 20 seconds.
     if(!SESSION.token){ stopAutoRefresh(); return; }
     if(document.hidden || UI.nav==='compose') return;
+    /**
+     * ⭐⭐ OFFLINE, DO NOT POLL. Athi, 2026-08-21: *"the screen keeps refreshing — even if net is not there, it
+     * is refreshing and stating reading data."*
+     *
+     * ⚠⚠ THIS FUNCTION HAD SIX GUARDS AND NOT ONE OF THEM WAS "is there a network". No token, hidden tab,
+     * compose open, modal open, lightbox open, a focused input, an open detail — every one about whether the
+     * refresh would DISTURB someone, none about whether it could SUCCEED. So on a dead connection it fired every
+     * 20 seconds, failed, fell back to the service-worker cache and repainted the same rows, with the busy
+     * indicator flashing each time. The app looked like it was working and was doing nothing.
+     *
+     * ⚠️ IT IS NOT ONLY COSMETIC. Each cycle wakes the radio on a phone that has no signal, which is exactly
+     * when battery matters most.
+     *
+     * ⚠️ AND navigator.onLine IS A WEAK SIGNAL — it reports the ADAPTER, not reachability, so a captive wifi
+     * portal still reads "online". That is fine here: this guard only has to catch the case it can be sure
+     * about. When onLine lies, the poll runs and fails exactly as it did before, no worse.
+     */
+    if(window.CBOffline && !CBOffline.online()) return;
     loadNotifs();   // keep the bell badge current (no-op in demo)
     const mh=document.getElementById('modalhost'); if(mh && mh.innerHTML.trim()) return;
     const lb=document.getElementById('lbhost');    if(lb && lb.innerHTML.trim()) return;
@@ -3708,7 +3726,20 @@ function autoRefresh(){
     // while viewing someone). It reloads on navigation and after an add/deactivate action, which is enough.
   }catch(e){}
 }
-function startAutoRefresh(sec){ if(_autoRefreshTimer) clearInterval(_autoRefreshTimer); _autoRefreshTimer=setInterval(autoRefresh,(sec||20)*1000); if(CFG.MODE!=='demo') loadNotifs(); }
+/**
+ * ⭐ AND CATCH UP THE MOMENT THE CONNECTION RETURNS, rather than sitting idle for up to 20 seconds after the
+ * signal is back. CBOffline already replays QUEUED WRITES on this event; the reads had no equivalent, so the
+ * screen a person was staring at when the tunnel ended stayed stale until the next tick.
+ *
+ * ⚠️ REGISTERED ONCE. startAutoRefresh runs on every sign-in, and a listener added each time would fire N
+ * refreshes on the Nth reconnect — the exact multiplication this whole change exists to remove.
+ */
+var _onlineHooked = false;
+function hookOnlineRefresh(){
+  if(_onlineHooked) return; _onlineHooked = true;
+  try{ window.addEventListener('online', function(){ if(SESSION.token) autoRefresh(); }); }catch(_){}
+}
+function startAutoRefresh(sec){ hookOnlineRefresh(); if(_autoRefreshTimer) clearInterval(_autoRefreshTimer); _autoRefreshTimer=setInterval(autoRefresh,(sec||20)*1000); if(CFG.MODE!=='demo') loadNotifs(); }
 // Logout never stopped the timer, so a signed-out tab kept polling and repainting. A thing that starts on sign-in
 // must have a way to stop on sign-out, or it outlives the session that justified it.
 function stopAutoRefresh(){ if(_autoRefreshTimer){ clearInterval(_autoRefreshTimer); _autoRefreshTimer=null; } }
