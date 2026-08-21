@@ -3262,10 +3262,12 @@ function appearanceSettingsHTML(){
 
     + card('<label class="fl">' + tx('Text size') + '</label>'
         + '<div style="display:flex;gap:7px;margin:5px 0 7px">' + sizes + '</div>'
-        /* ⚠️ SAYING WHAT IT DOES *NOT* DO. The six size tokens are multiplied together, so headings stay bigger
-           than captions — a single flat font size would make every screen legible and structureless at once. */
+        /* ⚠️ THE SENTENCE THAT WAS HERE IS GONE — "the whole type scale moves together, so headings stay
+           larger than captions" is a description of the implementation, and the line BELOW it demonstrates
+           the same thing by being rendered at the chosen size. A demonstration outlives an explanation:
+           this text is showing at 115% is checkable by looking at it. Athi: *"if some adjustment needed in
+           settings, please do so."* */
         + '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5">'
-        + 'The whole type scale moves together, so headings stay larger than captions. '
         + '<b>This text is showing at ' + esc(String(Math.round(((TEXT_SIZES.filter(function(x){return x[0]===cur;})[0]||[0,0,1])[2]) * 100))) + '%.</b>'
         + '</div>')
 

@@ -2882,11 +2882,23 @@ function themeApply(key){
  * make every screen legible and structureless at the same time.
  */
 var FS_BASE = { '--fs-1':11, '--fs-2':12.5, '--fs-3':14, '--fs-4':16, '--fs-5':20, '--fs-6':28 };
+/**
+ * ⭐⭐ SMALL · MEDIUM · LARGE · EXTRA LARGE. Athi, 2026-08-21: *"large, medium, small — people understand it
+ * quickly."*
+ *
+ * ⚠️ "DEFAULT" DESCRIBES A ROLE, NOT A SIZE, and "Larger" is a comparative with no referent — larger than
+ * what? Beside each other they read as four unrelated words. Small/Medium/Large/Extra large is the scale
+ * everyone already owns, from clothing to coffee, and it costs nobody a moment.
+ *
+ * ⚠️⚠️ THE KEYS DO NOT CHANGE. 's', 'm', 'l', 'xl' are what is stored in cb_fs and synced to the server
+ * (b166). Renaming a key would silently reset the preference of everyone who had set one — a label is free
+ * to change, a stored value is not.
+ */
 var TEXT_SIZES = [
-  ['s',  'Small',   0.92],
-  ['m',  'Default', 1],
-  ['l',  'Large',   1.15],
-  ['xl', 'Larger',  1.32]
+  ['s',  'Small',       0.92],
+  ['m',  'Medium',      1],
+  ['l',  'Large',       1.15],
+  ['xl', 'Extra large', 1.32]
 ];
 
 function apGet(k, d){ try{ return localStorage.getItem(k) || d; }catch(_){ return d; } }
