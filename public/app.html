@@ -5583,7 +5583,7 @@ function paintCustList(){ var b=document.getElementById('cu_rows'); if(b)b.inner
 function paintCustDetail(){ var dp=document.getElementById('detailpane'); if(dp){ dp.className='detail'; dp.innerHTML=custDetailHTML(); } }
 function selectCust(id){ UI.custSel=id; if(UI.vp==='mob'){ UI.mdetail=true; var p=document.getElementById('panel'); if(p)p.classList.add('showdetail'); } paintCustList(); paintCustDetail(); }
 function custDetailHTML(){ var c=(UI.custs||[]).find(function(x){return x.customer_identity_id===UI.custSel;});
-  if(!c) return '<div class="empty"><div class="big">🛍️</div><div class="t">' + tx('Select a customer') + '</div><div>Your storefront customers — locked under your shop, yours alone.</div></div>';
+  if(!c) return emptyState('🛍️', tx('Select a customer'), tx('Your storefront customers — locked under your shop, yours alone.'));
   var kv=function(l,v){return '<div class="kv" style="display:flex;gap:8px;padding:9px 13px;border-bottom:1px dashed var(--line);font-size:13px"><b style="min-width:112px;color:var(--grey);font-weight:600;font-size:var(--fs-1);text-transform:uppercase">'+l+'</b><span style="font-weight:600;flex:1">'+(v==null||v===''?'—':v)+'</span></div>';};
   var mono=function(v){return '<span class="mono" style="font-size:var(--fs-1)">'+esc(v||'')+'</span>';};
   var grp=function(t,rows){return '<div class="sec">'+t+'</div><div class="itab" style="border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:12px">'+rows+'</div>';};
@@ -6065,9 +6065,11 @@ function supDetailHTML(){
    * from Alpha appeared beside a catalogue headed Gamma. Two panes answering different questions with no sign
    * that they are unrelated is worse than one pane saying nothing.
    */
-  if(UI.supFind) return `<div class="empty"><div class="big">🔎</div><div class="t">${tx('Searching every supplier')}</div>`
+  /* ⚠️ loader(), NOT emptyState. "Searching" is work in progress, not an absence — dressing it as an empty
+     state told the reader there was nothing to find at the exact moment we were finding it. */
+  if(UI.supFind) return loader(tx('Searching every supplier'))
     + `<div>Results are on the left, grouped by who stocks it. Pick <b>Open <span class=arw>→</span></b> on one to bring their catalogue back here.</div></div>`;
-  if(!x) return `<div class="empty"><div class="big">🏭</div><div class="t">${tx('Select a supplier')}</div><div>Pick one to see their profile and catalogue, then compose an order.</div></div>`;
+  if(!x) return emptyState('🏭', tx('Select a supplier'), tx('Pick one to see their profile and catalogue, then compose an order.'));
   const back=`<button class="dback" onclick="backToList()">‹ Suppliers</button>`;
   /* ⚠️ NO View/Edit TOGGLE HERE ANY MORE — this pane is the products. The record and its Edit button live on the
      left card (supInfoCardHTML). The heading keeps only what names the catalogue you are looking at. */
@@ -6520,7 +6522,7 @@ async function loadCatalogue(){
     UI._prodLoading=false; paintProdList();
     if(UI.prodSel && !UI.prods.some(p=>prodId(p)===UI.prodSel)){ UI.prodSel=null; }
     if(UI.prodMode!=='new'){ if(!UI.prodSel && UI.prods.length && UI.vp!=='mob'){ selectProduct(prodId(UI.prods[0]), true); } else paintProdDetail(); }
-  }catch(e){ UI._prodLoading=false; const rb2=document.getElementById('ct_rows'); if(rb2)rb2.innerHTML=`<div class="empty"><div class="t">${tx('Couldn\'t load')}</div><div>${esc(e.message)}</div></div>`; }
+  }catch(e){ UI._prodLoading=false; const rb2=document.getElementById('ct_rows'); if(rb2)rb2.innerHTML=scrErr(e, tx('the catalogue'), 'loadCatalogue()'); }
 }
 function selectProduct(id, silent){ UI.refSel=null; UI.prodSel=id; UI.prodMode='view';
   if((UI.vp==='mob') && !silent){ UI.mdetail=true; const p=document.getElementById('panel'); if(p)p.classList.add('showdetail'); }
@@ -7242,7 +7244,10 @@ function prodDetailHTML(){
   if(UI.refSel!=null && (UI.refCat||[])[UI.refSel]) return refFinishDetail(UI.refCat[UI.refSel]);   // BRIDGE: rich finish showcase
   if(UI.prodMode==='new'){ return `<div class="dh"><button class="dback" onclick="backToList()">‹ Catalogue</button><div class="dt">${tx('New product')}</div><div class="ds">add to your catalogue</div></div><div class="db"><div class="sec">${tx('Product details')}</div>${prodEditForm({})}<div class="err" id="ct_err" style="margin-top:8px"></div></div><div class="actbar"><button class="pri" data-testid="cat-add" onclick="saveNewProduct()">${tx('Add product')}</button><button onclick="backToList()">${tx('Cancel')}</button></div>`; }
   const p=(UI.prods||[]).find(x=>prodId(x)===UI.prodSel);
-  if(!p) return `<div class="empty"><div class="big">🗂️</div><div class="t">${tx('Select a product')}</div><div>Pick one to view or edit — or add a new one.</div></div>`;
+  /* ⭐ THE PROSE SAID "or add a new one" AND MADE THEM GO FIND THE BUTTON. That is the one thing an empty
+     state must not do — it is the moment the app knows exactly what the person should do next. */
+  if(!p) return emptyState('🗂️', tx('Select a product'), tx('Pick one to view or edit.'),
+    { label: tx('+ New product'), onclick: 'newProduct()' });
   const d=pData(p), id=prodId(p);
   const back=`<button class="dback" onclick="backToList()">‹ Catalogue</button>`;
   /* ⚠️ THIS SAID `background:var(--ink)`. `--ink` is the BODY TEXT colour — near-black on a light theme, which is
@@ -8097,7 +8102,7 @@ async function loadList(silent){
     // full-set per-state rollup (true counts + sums) — independent enrichment; repaint counts when it lands.
     if(["task","order"].includes(UI.folder) && SESSION.role!=="customer"){ try{ const rl=await api("rollup",{query:rollupQuery()}); UI.rollup=(rl&&rl.groups)||[]; UI.disputeOpen=(rl&&rl.dispute_open)||0; paintRowsOnly(); }catch(_){ UI.rollup=[]; UI.disputeOpen=0; } } else { UI.rollup=[]; UI.disputeOpen=0; }
     if(SESSION.role==="actor" && CFG.MODE!=='demo'){ try{ const u=await api("unread"); const set=new Set((u&&u.unread)||[]); UI.rows.forEach(r=>{ r.unread=set.has(r.id); }); paintRowsOnly(); }catch(_){} }
-  }catch(e){ UI.loading=false; if(!silent){ const b=document.getElementById("rows"); if(b)b.innerHTML=`<div class="empty"><div class="big">⚠</div><div class="t">${tx('Couldn\'t load')}</div><div>${e.message}</div><div style="font-size:var(--fs-1)">Check mode/endpoint, then retry.</div></div>`; } }
+  }catch(e){ UI.loading=false; if(!silent){ const b=document.getElementById("rows"); if(b)b.innerHTML=scrErr(e, '', 'loadList()'); } }
 }
 function paintRowsOnly(){const b=document.getElementById("rows"); if(b)b.innerHTML=renderRows(); document.querySelectorAll(".statetabs .n").forEach((el,i)=>{el.textContent=stCount(["open","act","close"][i]);}); pgPaintTotal(); applyColTpl();}
 function visibleRows(){
@@ -8390,7 +8395,7 @@ function _emptyHint(){
 }
 function renderRows(){
   const rows=visibleRows();
-  if(!rows.length) return listHeader()+`<div class="empty"><div class="big">📭</div><div class="t">Nothing in ${esc(_emptyWhere())}</div><div>${esc(_emptyHint())}</div></div>`+(pgDone('list')?'':pgFooter('list'));
+  if(!rows.length) return listHeader()+emptyState('📭', txf('Nothing in {where}', { where: _emptyWhere() }), esc(_emptyHint()))+(pgDone('list')?'':pgFooter('list'));
   return listHeader() + rows.map(rowGrid).join("") + pgFooter('list');
 }
 function toggleSel(id){UI.selected.has(id)?UI.selected.delete(id):UI.selected.add(id);paintRowsOnly();updateSelBar();}
@@ -8488,7 +8493,7 @@ async function openChit(id, silent){
         } else { UI.detail=r; }
         UI.openLines=new Set(); const fi=(UI.detail.items||[]).findIndex(it=>attsVis(it[2]).length); if(fi>=0)UI.openLines.add('line'+fi);
         paintDetail(); paintRowsOnly(); }
-  catch(e){ const dp=document.getElementById("detailpane"); if(dp)dp.innerHTML=`<div class="empty"><div class="big">⚠</div><div>${e.message}</div></div>`; }
+  catch(e){ const dp=document.getElementById("detailpane"); if(dp)dp.innerHTML=scrErr(e, tx('this chit'), 'openChit(' + JSON.stringify(String(id)) + ')'); }
 }
 function paintDetail(){const dp=document.getElementById("detailpane");if(dp){dp.className="detail";dp.innerHTML=detailInner();}}
 function backToList(){UI.mdetail=false;const p=document.getElementById("panel");if(p)p.classList.remove("showdetail");}
@@ -8728,9 +8733,12 @@ function _aiRunPdf(){
 }
 function detailInner(){
   const c=UI.detail;
+  /* ⭐ THE SECOND BRANCH IS THE FIRST SCREEN ANYONE EVER SEES — an account with no chits at all. It named
+     Compose in bold prose and then made them go find it. Now it offers it. */
   if(!c) return (UI.rows && UI.rows.length)
-    ? `<div class="empty"><div class="big">🧾</div><div class="t">${tx('Select a chit')}</div><div>Pick one from the list to see its content, status and summary.</div></div>`
-    : `<div class="empty"><div class="big">🚃</div><div class="t">Your bogie is empty</div><div>Nothing on your rail yet — use <b>${tx('Compose')}</b> to add your first chit.</div></div>`;
+    ? emptyState('🧾', tx('Select a chit'), tx('Pick one from the list to see its content, status and summary.'))
+    : emptyState('🚃', tx('Your bogie is empty'), tx('Nothing on your rail yet.'),
+        { label: tx('Compose'), onclick: 'compose()' });
   const back="";
   const proof = c.proof==='ok' ? `<span class="parity">⚖️ Two-sided proof: both parties hold matching, co-signed records.</span>` : `<span class="parity" style="background:var(--gold-soft);border-color:var(--gold-line);color:var(--warn-3)">⚖️ Awaiting counter-signature — one side hasn't co-signed yet.</span>`;
   buildAttGroups(c);

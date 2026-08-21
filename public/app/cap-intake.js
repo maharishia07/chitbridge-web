@@ -83,10 +83,18 @@ function intakeBodyHTML(){
     + 'The intake queue is not migrated on this environment (b104). The screen is here; the table is not.</div>';
   if(_INTAKE.err) return intakeSimHTML()+'<div style="background:var(--danger-tint);border:1px solid #f0c9c6;border-radius:9px;padding:11px 13px;font-size:var(--fs-2);color:var(--disp)">'+esc(_INTAKE.err)+'</div>';
   var L=_INTAKE.list||[];
+  /**
+   * ⚠️⚠️ THIS WORE `class="empty"` AND USED NONE OF IT. Every measurement — padding, alignment, the icon's
+   * font-size, both text colours — was re-specified inline, so the class was decoration on a private
+   * implementation. That is worse than an honest hand-roll: it reads as "uses the shared empty state" to anyone
+   * scanning, and it drifts from the real one silently, because nothing connects them.
+   *
+   * ⚠️ NO ACTION OFFERED, DELIBERATELY. Nothing arrives here because someone pressed a button — a message lands
+   * from WhatsApp or email or the web. The next step belongs to the sender, so there is none to put here.
+   */
   if(!L.length) return intakeSimHTML()
-    + '<div class="empty" style="padding:36px 12px;text-align:center;color:var(--grey)"><div style="font-size:34px">📥</div>'
-    + '<div style="font-weight:700;color:var(--ink);margin-top:8px">' + tx('Nothing waiting') + '</div>'
-    + '<div style="font-size:var(--fs-2);margin-top:5px">Messages from WhatsApp, email and the web land here — raw, until you turn one into a chit.</div></div>';
+    + emptyState('📥', tx('Nothing waiting'),
+        tx('Messages from WhatsApp, email and the web land here — raw, until you turn one into a chit.'));
   return intakeSimHTML() + L.map(intakeCardHTML).join('');
 }
 function intakeCardHTML(c){

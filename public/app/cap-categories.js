@@ -286,11 +286,13 @@ function cbcatRowsHTML(){
   if (CBCAT_UI.err) return '<div class="cbcat-err">' + esc(CBCAT_UI.err) + '</div>';
   var rows = cbcatVisible();
   if (!rows.length) {
-    return '<div class="empty"><div class="big">🏷️</div><div class="t">'
-      + (CBCAT_UI.q ? 'Nothing matches that' : 'No categories yet')
-      + '</div><div>' + (CBCAT_UI.q ? 'Try a different word.'
-          : 'A category is how a shelf gets sorted. Make one, then attach products to it from the Catalogue.')
-      + '</div></div>';
+    /* ⚠️ A SEARCH THAT FOUND NOTHING IS NOT AN EMPTY SHELF, so no action is offered in that branch —
+       'make a category' is the wrong next step when the real one is 'type a different word'. */
+    return CBCAT_UI.q
+      ? emptyState('🏷️', tx('Nothing matches that'), tx('Try a different word.'))
+      : emptyState('🏷️', tx('No categories yet'),
+          tx('A category is how a shelf gets sorted. Attach products to it from the Catalogue.'),
+          { label: tx('+ New category'), onclick: 'cbcatNew()' });
   }
   return rows.map(function(c){
     var n = (CBCAT_UI.counts && CBCAT_UI.counts.by[c.id]) || 0;
@@ -340,8 +342,10 @@ function cbcatDetailHTML(){
   if (!c) {
     /* ⚠️ THE SCHEMES SHOW HERE TOO. They describe classification in general, not one category — so hanging them
        only off a selected row meant they were invisible on the screen someone lands on. */
-    return '<div class="db"><div class="empty"><div class="big">🏷️</div><div class="t">' + tx('Pick a category') + '</div>'
-      + '<div>Or make a new one. Categories sort your catalogue and give buyers a way to narrow it.</div></div>'
+    /* ⭐ 'Or make a new one' was prose pointing at a button elsewhere. It is the button now. */
+    return '<div class="db">' + emptyState('🏷️', tx('Pick a category'),
+        tx('Categories sort your catalogue and give buyers a way to narrow it.'),
+        { label: tx('+ New category'), onclick: 'cbcatNew()' })
       + cbcatSchemesHTML() + '</div>';
   }
   var n = (CBCAT_UI.counts && CBCAT_UI.counts.by[c.id]) || 0;

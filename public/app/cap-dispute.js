@@ -260,7 +260,7 @@ async function loadDisputes(){
     };
     host.innerHTML = menuAssist('disputes')+'<div class="sec" style="font-size:12px;color:var(--grey);margin:4px 0">Raised by you ('+mine.length+')</div>'+lazyWrap('dm', mine, function(d){return card(d,true);}, '<div style="color:var(--grey);font-size:13px;padding:6px">None.</div>')
       +'<div class="sec" style="font-size:12px;color:var(--grey);margin:14px 0 4px">Against you / awaiting ('+other.length+')</div>'+lazyWrap('do', other, function(d){return card(d,false);}, '<div style="color:var(--grey);font-size:13px;padding:6px">None.</div>');
-  }catch(e){ host.innerHTML='<div class="empty"><div class="t">Couldn\'t load disputes</div><div>'+esc(e.message)+'</div></div>'; }
+  }catch(e){ host.innerHTML=scrErr(e, tx('disputes'), 'loadDisputes()'); }
 }
 
 /* ── Raise flow (FR-D1): candidates = everyone on the chit except me (chitIsSelf); ticking parties makes

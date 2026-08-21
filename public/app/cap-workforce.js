@@ -96,7 +96,10 @@ function aiSlotInfo(key){ var s=(window.AI_SLOTS||[]).find(function(x){return x.
 function aiRowsHTML(){
   var slots=window.AI_SLOTS||[];
   var intro='<div style="padding:11px 13px;font-size:11.5px;color:var(--grey-2);line-height:1.5;border-bottom:1px solid var(--line)">🤖 AI assists act for you as governed co-assists — each is one <b>slot</b>. Turn one on and set its rule; every action it takes is a chit you can see and dispute. <span style="color:var(--grey-4)">Rung sets the floor — you can only tighten the human gate.</span></div>';
-  if(!slots.length) return intro+'<div class="empty"><div class="big">🤖</div><div class="t">' + tx('No AI assists yet') + '</div><div>They light up as slots are enabled.</div></div>';
+  /* ⚠️ NO ACTION. A slot is minted by the governance layer, not created from this screen — offering a button
+     here would promise a power this reader does not have. */
+  if(!slots.length) return intro + emptyState('🤖', tx('No AI assists yet'),
+    tx('They light up as slots are enabled.'));
   return intro+slots.map(function(s){ var st=aiSlotState(s), live=s.status==='live', on=st.enabled;
     var dot=on?(live?'var(--ok-3)':'var(--warn-2)'):'var(--grey-2)';
     var gateOpts=(s.gates||[]).map(function(g){ return '<option value="'+g+'"'+(st.gate===g?' selected':'')+'>'+g+'</option>'; }).join('');
@@ -385,7 +388,19 @@ function acRowHTML(x){ if(typeof acTypeOf==='function'){ var _ct=acTypeOf(x); if
     <div class="main2"><div class="l1"><span class="code">${esc(x.name)}</span><span class="optchip" style="background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)">${hatLabel(x.hat)}</span>${x.pinSet?'':(x.otp?'<span class="optchip" style="background:var(--warn-tint);color:var(--warn-3);border-color:var(--warn-3)">' + tx('⏳ invite') + '</span>':'')}<span class="amt" style="margin-inline-start:auto;font-size:11.5px;color:var(--grey)">${x.load}/${x.max||'∞'}</span></div>
       <div class="l2">${esc(x.role||'—')} · <span class="mono">${acLogin(x)}</span> <span class="optchip ${acShc(x.shift)}">${acShLabel(x.shift)}</span>${x.status!=='active'?'<span class="optchip off">'+esc(x.status)+'</span>':''}${(x.shift!=='on_shift'&&x.returnDate)?' · returns '+acDate(x.returnDate):''}</div>${coverLines}</div>
     <div class="rowgo" aria-hidden="true">›</div></div>`; }
-function acRowsHTML(){ if((UI.acTypeF||'all')==='ai') return aiRowsHTML(); const r=acVisible(); if(!r.length){ const _tf=UI.acTypeF||'all'; const _reg=(window.ACTOR_TYPES||{})[_tf]; if(_reg&&_reg.comingSoon) return '<div class="empty"><div class="big">'+(_reg.icon||'✨')+'</div><div class="t">'+esc(_reg.label)+' — coming soon</div><div>This capability is not enabled yet. When it is, you will add '+esc(_reg.label)+' co-assists right here — same flow, new type. <span style="color:var(--blue);font-weight:600">Notify me <span class=arw>→</span></span></div></div>'; if(_tf==='iot') return '<div class="empty"><div class="big">🛰️</div><div class="t">' + tx('No IoT devices yet') + '</div><div>A Pi on the rail in one drop — <a href="#" onclick="openShowcase(\'/iot-howitworks.html\',\'How IoT works\');return false" style="color:var(--blue);font-weight:600">see how it works <span class=arw>→</span></a><br>then add one with <b>+ New</b> above.</div></div>'; return emptyState('🧑‍🤝‍🧑','No co-assists','People, devices and AI that work alongside you.',{label:'+ New co-assist',onclick:'openActorWiz()'}); }
+function acRowsHTML(){ if((UI.acTypeF||'all')==='ai') return aiRowsHTML(); const r=acVisible(); if(!r.length){ const _tf=UI.acTypeF||'all'; const _reg=(window.ACTOR_TYPES||{})[_tf];     /**
+     * ⚠️⚠️ "NOTIFY ME →" WAS A FAKE. Blue, bold, with an arrow — every signal of a link — and no onclick at
+     * all. A reader on a coming-soon screen clicks the one thing offered, nothing happens, and they learn the
+     * app's affordances cannot be trusted. There is no notify mechanism to wire it to, so it is gone: saying
+     * less is honest, and looking clickable while being inert is not.
+     */
+    if(_reg&&_reg.comingSoon) return emptyState(_reg.icon||'✨', esc(_reg.label)+' — '+tx('coming soon'),
+      txf('This capability is not enabled yet. When it is, you will add {label} co-assists right here — same flow, new type.', { label: esc(_reg.label) }));
+    /* ⭐ THE SUB MAY CARRY HTML (see emptyState) so the how-it-works link survives — and "then add one with
+       + New above" stops pointing at a button elsewhere, because the action is now on this card. */
+    if(_tf==='iot') return emptyState('🛰️', tx('No IoT devices yet'),
+      tx('A Pi on the rail in one drop.') + ' <a href="#" onclick="openShowcase(\'/iot-howitworks.html\',\'How IoT works\');return false" style="color:var(--blue);font-weight:600">' + tx('see how it works') + ' <span class=arw>→</span></a>',
+      { label: tx('+ New co-assist'), onclick: 'openActorWiz()' }); return emptyState('🧑‍🤝‍🧑','No co-assists','People, devices and AI that work alongside you.',{label:'+ New co-assist',onclick:'openActorWiz()'}); }
   const cc={},cn={},nm={}; (UI.acts||[]).forEach(a=>{ const _l=acLbl(a); nm[a.id]=_l; if(a.del){ cc[a.del]=(cc[a.del]||0)+1; (cn[a.del]=cn[a.del]||[]).push(_l); } }); UI._coversCount=cc; UI._coversNames=cn; UI._acNames=nm;   // reverse-delegate maps (name+userid labels), once
   return r.map(acRowHTML).join(''); }
 function paintAcList(){ const b=document.getElementById('ac_rows'); if(b)b.innerHTML=acRowsHTML(); const c=document.getElementById('ac_count'); if(c)c.textContent=acCount(); }
@@ -434,7 +449,8 @@ function _acTierLoader(x){
     +(UI.acManageErr?('<div style="color:var(--disp);margin-top:12px;font-size:var(--fs-2)">'+esc(UI.acManageErr)+' <button class="composebtn" style="padding:2px 9px;font-size:var(--fs-1);margin-inline-start:6px" onclick="acOpenManage(\''+x.id+'\')">' + tx('Retry') + '</button></div>'):'')+'</div></div>';
 }
 function acDetailHTML(){ const x=UI.acDet;
-  if(!x) return `<div class="empty"><div class="big">🧑‍🤝‍🧑</div><div class="t">${tx('Select a co-assist')}</div><div>Pick one to see their profile, shift and access — or manage them.</div></div>`;
+  if(!x) return emptyState('🧑‍🤝‍🧑', tx('Select a co-assist'),
+    tx('Pick one to see their profile, shift and access — or manage them.'));
   var _dt=(typeof acTypeOf==='function'?acTypeOf(x):'human'); var _dreg=(window.ACTOR_TYPES||{})[_dt]||{};
   if(_dreg.capability){ if(!(UI.acManageOpen && UI.acSel===x.id)) return _acTierSummary(x); var _mh=(window.ACTOR_MANAGE||{})[_dt]; if(UI.acManageLoading || typeof _mh!=='function') return _acTierLoader(x); return _mh(x); }   // TWO-TIER: instant summary, management loads on drill
   const back=`<button class="dback" onclick="backToList()">‹ Co-assists</button>`;
