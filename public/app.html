@@ -8553,7 +8553,21 @@ function todo(k){ const t=PENDING[k]||{label:k,ref:""}; toast(MSG.comingSoon(t.l
 function selBar(){const ids=UI.selected;const all=`<button onclick="selectAllRows()">${tx('☑ All')}</button>`;const clr=`<button onclick="UI.selected.clear();renderApp()">${tx('Clear')}</button>`;
   if(UI.folder==='trash'){ return `<div class="selbar" id="selbar">☑ ${ids.size} selected<span class="sp">${all}<button class="pri" onclick="bulkRestore()">${tx('↩ Restore')}</button><button onclick="bulkPurge()">${tx('🗑 Delete forever')}</button>${clr}</span></div>`; }
   if(UI.folder==='archive'){ return `<div class="selbar" id="selbar">☑ ${ids.size} selected<span class="sp">${all}<button class="pri" onclick="bulkUnarchive()">${tx('↩ Unarchive')}</button>${clr}</span></div>`; }
-  const sum=UI.rows.filter(c=>ids.has(c.id)).reduce((a,c)=>a+c.amt,0);const rb=rollupBuckets();const ticked=hasRollup()?[...UI.aggStates].reduce((a,s)=>a+((rb[s]&&rb[s].s)||0),0):UI.rows.filter(c=>UI.aggStates.has(c.state)).reduce((a,c)=>a+c.amt,0);const lbl=ids.size?`☑ ${ids.size} selected · Σ ${inr(sum)}`:`states ✓ ${[...UI.aggStates].map(cap).join(" · ")||'none'} · Σ(all) ${inr(ticked)}`;return `<div class="selbar" id="selbar">${lbl}<span class="sp">${all}<button onclick="sumScope()">Sum <span class=arw>→</span></button>${ids.size?`<button onclick="groupSumSelected()" title="Quantity per item across the ticked chits — what you actually need to buy">${tx('🧮 Group sum')}</button>`:``}<button onclick="quickStatus()">${tx('Status')}</button><button class="pri" onclick="quickAssign()">${tx('Assign')}</button>${clr}</span></div>`;}
+  /**
+   * ⚠⚠ PER CURRENCY, NEVER ACROSS. This was `reduce((a,c) => a + c.amt, 0)` rendered with `inr(...)`, which
+   * formats in the READER's currency — so ticking a ₹500 chit and a $2,000 chit produced one tidy figure in a
+   * currency belonging to neither. `lib/money.js` THROWS on mixed currencies and cap-folders' own group sum
+   * renders them side by side for exactly this reason; this one call site had never been told.
+   *
+   * ⚠️ The rows carry their currency already (see the mapper: `currency: sum.currency_code || 'INR'`), so
+   * nothing new had to be fetched — the information was there and was being discarded one line before use.
+   */
+  const sumBy=cbSumByCurrency(UI.rows.filter(c=>ids.has(c.id)),'amt','currency');const rb=rollupBuckets();/* ⚠️ THE ROLLUP BRANCH STAYS A SINGLE NUMBER — the server groups by STATE, not by currency, so there is no
+     per-currency breakdown to render here and inventing one would be a claim the endpoint never made. The
+     client-side branch, which does have the rows, is grouped properly. */
+  const ticked=hasRollup()?[...UI.aggStates].reduce((a,s)=>a+((rb[s]&&rb[s].s)||0),0):null;
+  const tickedBy=hasRollup()?null:cbSumByCurrency(UI.rows.filter(c=>UI.aggStates.has(c.state)),'amt','currency');  const lbl=ids.size?`☑ ${ids.size} selected · Σ ${cbMoneyList(sumBy)}`
+    :`states ✓ ${[...UI.aggStates].map(cap).join(" · ")||'none'} · Σ(all) ${tickedBy?cbMoneyList(tickedBy):inr(ticked)}`;return `<div class="selbar" id="selbar">${lbl}<span class="sp">${all}<button onclick="sumScope()">Sum <span class=arw>→</span></button>${ids.size?`<button onclick="groupSumSelected()" title="Quantity per item across the ticked chits — what you actually need to buy">${tx('🧮 Group sum')}</button>`:``}<button onclick="quickStatus()">${tx('Status')}</button><button class="pri" onclick="quickAssign()">${tx('Assign')}</button>${clr}</span></div>`;}
 function updateSelBar(){const el=document.getElementById("selbar");if(el)el.outerHTML=selBar();}
 /**
  * ⭐ 🧮 GROUP SUM OVER THE TICKED CHITS (backlog 31). Athi: *"is the group sum happens for multiselect chit?"*
@@ -8580,8 +8594,20 @@ function sumScope(){
   const sel=UI.rows.filter(c=>UI.selected.has(c.id));
   if(sel.length){ // explicit picks → exact sum of the selected (loaded) records
     const kinds=[...new Set(sel.map(c=>c.kind))];
-    if(kinds.length>1){ const lines=kinds.map(k=>k+": "+inr(sel.filter(c=>c.kind===k).reduce((a,c)=>a+c.amt,0))); toast("Selected "+sel.length+" · mixed kinds — "+lines.join(" · ")); }
-    else toast("Selected · "+sel.length+" chit(s) · Σ "+inr(sel.reduce((a,c)=>a+c.amt,0)));
+    /**
+     * ⚠⚠ THE SAME CROSS-CURRENCY FAULT AS THE SELECT BAR, AND FOUND BY ITS GUARD RATHER THAN BY READING. Both
+     * lines here did `reduce((a,c) => a + c.amt, 0)` and rendered with `inr()`, which formats in the READER's
+     * currency — so a mixed selection produced one tidy figure labelled with a currency belonging to none of
+     * the rows. Fixing the select bar alone would have left the button beside it still wrong.
+     *
+     * ⭐ A TOAST NEEDS PLAIN TEXT, so cbMoneyList's markup is stripped rather than a second renderer written.
+     * One rule, one place; only the wrapper differs.
+     */
+    var _plain = function(rows){ return String(cbMoneyList(cbSumByCurrency(rows, "amt", "currency")))
+      .replace(/<[^>]+>/g, " ").replace(/s+/g, " ").trim(); };
+    if(kinds.length>1){ const lines=kinds.map(k=>k+": "+_plain(sel.filter(c=>c.kind===k)));
+      toast("Selected "+sel.length+" · mixed kinds — "+lines.join(" · ")); }
+    else toast("Selected · "+sel.length+" chit(s) · Σ "+_plain(sel));
     return;
   }
   // no explicit picks → full-set roll-up over the ticked state groups (server totals, not just the loaded page)

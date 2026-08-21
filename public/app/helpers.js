@@ -27,6 +27,50 @@ function scrErr(e, subject, retry){
 
 function cap(s){ return s[0].toUpperCase()+s.slice(1); }
 function inr_(v){ return fmtMoney(v,'INR'); }   /* R1: one money formatter — alias to fmtMoney (currency-aware) */
+
+/**
+ * ⭐⭐ ONE GROUP SUM — TOTALLED PER CURRENCY, NEVER ACROSS. Athi, 2026-08-21: *"we have a couple of places
+ * sum is there; what I want is a single group sum, gold standard."*
+ *
+ * ⚠⚠ THE PLATFORM ALREADY HAD THIS RULE IN TWO PLACES AND BROKE IT IN A THIRD. `lib/money.js` THROWS on mixed
+ * currencies rather than adding them; `_gsMoney` in cap-folders renders them side by side and says *"a figure
+ * spanning two currencies means nothing, most convincingly when it looks tidy"*. The select bar did
+ * `rows.reduce((a,c) => a + c.amt, 0)` and labelled the result with the READER's currency — so ticking a
+ * ₹500 chit and a $2,000 chit read as one tidy total in a currency belonging to neither.
+ *
+ * ⚠️ IT IS THE TIDINESS THAT MAKES IT DANGEROUS. A wrong number that looks broken gets questioned; a wrong
+ * number that looks like a total gets used.
+ *
+ * ⚠️ MISSING CURRENCY FALLS BACK TO THE READER'S, and that is a real decision rather than a shrug: a row
+ * with no currency is almost always the reader's own, and grouping it under 'unknown' would split one honest
+ * total into two for a field nobody filled in.
+ */
+function cbSumByCurrency(rows, amtKey, curKey){
+  var by = {};
+  (rows || []).forEach(function(r){
+    var v = Number((r || {})[amtKey || 'amt'] || 0);
+    if (!v) return;
+    var c = ((r || {})[curKey || 'currency']) || (typeof myCur === 'function' ? myCur() : 'INR');
+    by[c] = (by[c] || 0) + v;
+  });
+  /* ⚠️ ORDERED BIGGEST FIRST, so the figure a reader is most likely to want is the one they read first. */
+  return Object.keys(by).map(function(c){ return { currency: c, total: by[c] }; })
+    .sort(function(a, b){ return b.total - a.total; });
+}
+
+/**
+ * Render what cbSumByCurrency returns. One currency prints as a plain amount; several print side by side with
+ * the reason stated, because a reader seeing two figures will otherwise wonder which one is the answer.
+ */
+function cbMoneyList(list, opts){
+  opts = opts || {};
+  if (!list || !list.length) return opts.empty || '—';
+  var body = list.map(function(x){ return fmtMoney(x.total, x.currency); })
+    .join('<span style="color:var(--grey)"> + </span>');
+  if (list.length < 2 || opts.quiet) return body;
+  return body + '<span style="color:var(--grey);font-size:var(--fs-1)"> · '
+    + (typeof tx === 'function' ? tx('not added together') : 'not added together') + '</span>';
+}
 function nm(v, fb){ return esc(v||fb||'—'); }   /* R3: one name-with-fallback — esc(display_name || fallback) */
 /**
  * ⚠️ THE en-IN PIN IS GONE. It was deliberate and its reason was good — "so time is deterministic across

@@ -319,12 +319,20 @@ async function loadGroupSum(){
 function gsScope(all){ _FLD.gsAll = !!all; _FLD.gs = null; loadGroupSum(); }
 function gsToggle(i){ _FLD.gsOpen = _FLD.gsOpen || {}; _FLD.gsOpen[i] = !_FLD.gsOpen[i]; _fldPaint(); }
 
+/**
+ * ⚠️ DELEGATES NOW — this WAS the gold standard and the select bar had never been told about it. The rule
+ * (side by side, never summed) and the rendering both live in `cbMoneyList` in helpers.js, which is loaded
+ * eagerly and so is reachable from app.html too. Two renderings of one rule is how they drift.
+ *
+ * ⚠️ THE SERVER ALREADY GROUPS BY CURRENCY here, so the shape only needs renaming — `{currency, total}` is
+ * exactly what cbSumByCurrency produces, which is why one renderer can serve both.
+ */
 function _gsMoney(v, mixed){
   if (!v || !v.length) return '<span style="color:var(--grey)">—</span>';
-  /* ⚠️ SIDE BY SIDE, NEVER SUMMED. A figure spanning two currencies means nothing, most convincingly when tidy. */
-  return v.map(function(x){ return '<b>' + esc(x.currency) + ' ' + esc(String(x.total)) + '</b>'; }).join('<span style="color:var(--grey)"> + </span>')
-    + (mixed ? '<div style="font-size:var(--fs-1);color:var(--warn-2)">not added together</div>' : '');
+  return cbMoneyList(v.map(function(x){ return { currency: x.currency, total: x.total }; }),
+    { quiet: !mixed });
 }
+
 function _groupSumPane(){
   if (_FLD.busy && !_FLD.gs) return '<div style="padding:18px;color:var(--grey);font-size:var(--fs-2)"><span class="spin"></span> adding it up…</div>';
   if (_FLD.err) return '<div style="padding:18px;color:var(--disp);font-size:var(--fs-2)">' + esc(_FLD.err) + '</div>';
