@@ -1,4 +1,13 @@
-/* cap-catalogue.js — CATALOGUE SETUP capability (⚙ Set up (new)). LIVE in prod (main). Lazy-loaded. Gate: `npm run check`.
+/* cap-catalogue.js — CATALOGUE SETUP capability (⚙ Set up (new)). LIVE in prod (main). Gate: `npm run check`.
+ *
+ * ⚠⚠ THIS SAID "Lazy-loaded" AND IT IS NOT — app.html has `<script src="/app/cap-catalogue.js">`, and
+ * `catalogue` is not a key in CAP_OF, so ensureCap never fetches it. Found on 2026-08-21 by GENERATING the
+ * module map from the directory: the generator read the shell and disagreed with the comment.
+ *
+ * ⚠️ THE NAME IS THE OTHER HALF OF THE CONFUSION. `cap-` reads as "a lazy capability" everywhere else in
+ * this folder, and this one is an eager module wearing the prefix. Left as-is deliberately: renaming a file
+ * every screen loads is a change with real blast radius and no behavioural benefit, and the comment now says
+ * what is true. Whether it SHOULD be lazy is a performance question, not a documentation one.
  *
  * MODEL: ONE "face" per catalogue (not per item) — purpose · one storefront method · units (multi) · facets. Currency +
  * country inherited from entity Settings. Items conform to the face. Built on catalogue-model.js (CBCatalogue): JSON
