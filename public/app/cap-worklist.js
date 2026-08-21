@@ -239,7 +239,7 @@ function wlRow(r, ctx, depth){
      * make, on every row.
      */
     +   '<span data-testid="wl-done" title="Open this line — history, delivery, cost, who has it" onclick="event.stopPropagation();wlLine(&quot;' + r.line_id + '&quot;)"'
-    +     ' style="cursor:pointer;font-size:13px;padding:2px 9px;border-radius:6px;color:var(--blue-2);background:var(--blue-tint-bg);font-weight:800">⋯</span>'
+    +     ' style="cursor:pointer;font-size:var(--fs-2);padding:2px 9px;border-radius:6px;color:var(--blue-2);background:var(--blue-tint-bg);font-weight:800">⋯</span>'
     +   '<span style="color:var(--grey);font-size:var(--fs-2);padding-inline-start:3px">›</span></span></div>'
     /* ⚠️ WHICH ORDER IT CAME FROM. A line without its chit is an instruction with no context — you cannot ring the
        customer, check the rest of the order, or know who is waiting. */
@@ -830,7 +830,7 @@ function wlThreadSec(k, title, list, err, o){
   else if (err) out += '<div style="font-size:var(--fs-2);color:var(--disp)">Could not read these just now — this does NOT mean there are none.</div>';
   else if (!n) out += '<div style="font-size:var(--fs-2);color:var(--grey)">Checked — ' + esc(o.empty) + '.</div>';
   else out += list.map(function(m){
-    return '<div style="padding:6px 0;border-bottom:1px solid var(--line-soft,#f0efec);font-size:13px">'
+    return '<div style="padding:6px 0;border-bottom:1px solid var(--line-soft,#f0efec);font-size:var(--fs-2)">'
       + '<div style="display:flex;gap:8px;align-items:baseline">'
       +   '<b style="font-size:var(--fs-2)">' + esc(m.sender_display_name || '—') + '</b>'
       +   '<span style="margin-inline-start:auto;color:var(--grey);font-size:var(--fs-1)">' + esc(String(m.created_at || '').slice(0, 10)) + '</span></div>'
@@ -900,8 +900,8 @@ function wlLineHTML(loading){
   var bar = '<div style="display:flex;gap:18px;align-items:baseline;font-variant-numeric:tabular-nums;padding-bottom:4px;flex-wrap:wrap">'
     + '<div style="white-space:nowrap"><span style="font-size:26px;font-weight:800;color:' + (over ? 'var(--disp)' : left === 0 ? 'var(--ok-2)' : 'var(--warn-2)') + '">' + esc(big) + '</span>'
     +   '<span style="font-size:var(--fs-2);font-weight:700;color:' + (over ? 'var(--disp)' : 'var(--grey)') + ';margin-inline-start:4px">' + esc(r.unit || '') + (over ? ' over' : ' left') + '</span></div>'
-    + '<div style="font-size:13px;color:var(--grey);white-space:nowrap">' + esc(String(got)) + ' delivered of ' + esc(String(ordered == null ? '—' : ordered)) + ' ' + esc(r.unit || '') + '</div>'
-    + (prog.charged ? '<div style="margin-inline-start:auto;font-size:13px;color:#2c5d7c;font-weight:700">' + esc(wlMoney(prog.charged)) + ' <span style="font-weight:400;color:var(--grey)">charged</span></div>' : '')
+    + '<div style="font-size:var(--fs-2);color:var(--grey);white-space:nowrap">' + esc(String(got)) + ' delivered of ' + esc(String(ordered == null ? '—' : ordered)) + ' ' + esc(r.unit || '') + '</div>'
+    + (prog.charged ? '<div style="margin-inline-start:auto;font-size:var(--fs-2);color:#2c5d7c;font-weight:700">' + esc(wlMoney(prog.charged)) + ' <span style="font-weight:400;color:var(--grey)">charged</span></div>' : '')
     + '</div>';
 
   /* ── a heading: caret · name · a hint of what is inside, so you can choose without opening ───────────────── */
@@ -920,14 +920,14 @@ function wlLineHTML(loading){
     else if (!nEv) body += '<div style="font-size:var(--fs-2);color:var(--grey)">Checked — nothing has been recorded against this line yet.</div>';
     else {
       body += events.map(function(e){
-        return '<div style="display:flex;gap:10px;align-items:baseline;padding:5px 0;border-bottom:1px solid var(--line-soft,#f0efec);font-size:13px">'
+        return '<div style="display:flex;gap:10px;align-items:baseline;padding:5px 0;border-bottom:1px solid var(--line-soft,#f0efec);font-size:var(--fs-2)">'
           + '<span style="font-weight:700;font-variant-numeric:tabular-nums;min-width:72px;color:' + (e.quantity < 0 ? 'var(--disp)' : 'var(--ink)') + '">'
           +   (e.quantity < 0 ? '' : '+') + esc(String(e.quantity)) + ' ' + esc(e.unit || '') + '</span>'
           + '<span style="color:var(--grey);font-size:var(--fs-2);flex:1">' + esc(e.reference || e.note || '') + '</span>'
           + '<span style="color:var(--grey);font-size:var(--fs-1)">' + esc(String(e.at || '').slice(0, 10)) + ' · ' + esc(e.by_actor || e.by || '') + '</span></div>';
       }).join('')
       + added.map(function(a){
-        return '<div style="display:flex;gap:10px;align-items:baseline;padding:5px 0;border-bottom:1px solid var(--line-soft,#f0efec);font-size:13px">'
+        return '<div style="display:flex;gap:10px;align-items:baseline;padding:5px 0;border-bottom:1px solid var(--line-soft,#f0efec);font-size:var(--fs-2)">'
           + '<span style="color:#2c5d7c;font-weight:700;min-width:82px">' + esc(wlMoney(a.amount)) + '</span>'
           + '<span style="flex:1">' + esc(a.particulars || '') + (a.quantity ? ' <span style="color:var(--grey)">· ' + esc(String(a.quantity)) + ' ' + esc(a.unit || '') + '</span>' : '') + '</span>'
           + '<span style="color:var(--grey);font-size:var(--fs-1)">' + esc(String(a.at || '').slice(0, 10)) + '</span></div>';
@@ -955,7 +955,7 @@ function wlLineHTML(loading){
       + wlFieldRow(
           wlInput('wl_qty', { testid: 'wl-qty', type: 'number', big: true, grow: 2,
                               value: over ? -over : (left == null ? '' : left) })
-          + '<span style="flex:0 0 auto;align-self:center;font-size:13px;color:var(--grey);font-weight:700">' + esc(r.unit || '') + '</span>',
+          + '<span style="flex:0 0 auto;align-self:center;font-size:var(--fs-2);color:var(--grey);font-weight:700">' + esc(r.unit || '') + '</span>',
           wlBtn('Record', 'wl-record', 'wlActSave(&quot;done&quot;)', true))
       + '<div style="margin-top:8px">' + wlInput('wl_ref', { placeholder: 'docket number, or a note' }) + '</div>'
       + '<div style="margin-top:7px;font-size:var(--fs-1);color:var(--grey);line-height:1.5">'
@@ -1060,7 +1060,7 @@ function wlLineHTML(loading){
      will not. It is short, so it costs almost nothing to leave in view. */
   var asked = '';
   if (r.raw_phrase || r.asked_as || r.comment || r.needs_human) {
-    asked = '<div style="margin-top:12px;background:var(--warn-tint);border-inline-start:3px solid #b0641c;border-radius:0 7px 7px 0;padding:9px 12px;font-size:13px;line-height:1.55;color:var(--on-card)">'
+    asked = '<div style="margin-top:12px;background:var(--warn-tint);border-inline-start:3px solid #b0641c;border-radius:0 7px 7px 0;padding:9px 12px;font-size:var(--fs-2);line-height:1.55;color:var(--on-card)">'
       + (r.raw_phrase ? '<div style="font-style:italic;color:var(--warn-3)">“' + esc(r.raw_phrase) + '”</div>' : '')
       + (r.asked_as ? '<div style="font-size:var(--fs-2);color:var(--grey)">asked as <b>' + esc(r.asked_as) + '</b></div>' : '')
       + (r.comment ? '<div style="color:#2c5d7c">' + esc(r.comment) + '</div>' : '')
@@ -1068,7 +1068,7 @@ function wlLineHTML(loading){
       + '</div>';
   }
 
-  return '<div class="mhd"><div class="t">' + esc(r.particulars || 'Line') + (done ? ' <span style="font-size:13px;color:#3d7a4e">' + tx('✓ done') + '</span>' : '') + '</div>'
+  return '<div class="mhd"><div class="t">' + esc(r.particulars || 'Line') + (done ? ' <span style="font-size:var(--fs-2);color:#3d7a4e">' + tx('✓ done') + '</span>' : '') + '</div>'
     + '<div class="s">' + esc(r.subject || 'chit') + '</div></div>'
     + '<div class="mbody">' + bar + wlParties(WLL.det) + asked + body + '</div>'
     + '<div class="mfoot"><button onclick="closeModal()">' + tx('Close') + '</button>'

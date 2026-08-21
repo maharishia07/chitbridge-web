@@ -361,7 +361,7 @@ function netSetPartnerRef(key, val){ var n = _netNode(key); if (!n) return; n.pa
    slip of paper — would be permanently unreachable, which is the review's §4 lesson in a new costume. */
 function netReissueKey(userId){
   api('netReissue', { body: { user_id: userId } }).then(function(r){
-    var body = '<div style="padding:16px 20px;font-size:13px;line-height:1.7">'
+    var body = '<div style="padding:16px 20px;font-size:var(--fs-2);line-height:1.7">'
       + 'New sign-in code for <b style="font-family:ui-monospace,Menlo,monospace">' + esc(r.user_id) + '</b>:'
       + '<div style="margin:11px 0;font-family:ui-monospace,Menlo,monospace;font-size:var(--fs-5);font-weight:700;letter-spacing:.1em;text-align:center;background:var(--card);border:1px solid var(--line);border-radius:9px;padding:10px;color:var(--on-card)">' + esc(r.claim_code) + '</div>'
       + '<div style="color:var(--grey);font-size:var(--fs-2)">Expires in 7 days. The previous code no longer works.</div>'
@@ -549,7 +549,7 @@ function _netConfirmNarrow(title, lead, changes, apply){
   UI._netApply = apply;
   var names = changes.map(function(c){ return c.name; });
   var body = '<div style="padding:14px 16px;max-height:66vh;overflow:auto">'
-    + '<div style="font-size:13px;line-height:1.6;margin-bottom:11px">' + lead + '</div>'
+    + '<div style="font-size:var(--fs-2);line-height:1.6;margin-bottom:11px">' + lead + '</div>'
     + '<div style="font-size:var(--fs-2);line-height:1.6;margin-bottom:11px"><b>' + names.length + ' store'
     + (names.length === 1 ? '' : 's') + '</b> will change: ' + esc(names.join(', ')) + '.</div>'
     + _netChangeMap(changes)
@@ -754,13 +754,13 @@ function netBuild(){
     var rows = p.lines.map(function(l){ return '<div style="font-size:var(--fs-2);color:var(--ink-2);line-height:1.55;padding:1px 0">' + (l.indexOf('·') === 0 ? '<span style="color:var(--grey);padding-inline-start:12px">' + l + '</span>' : '<span class=arw>▸</span> ' + l) + '</div>'; }).join('');
     var w = p.warns.length ? '<div style="margin-top:6px;padding:6px 9px;border:1px solid #e6c4bf;border-radius:6px;background:var(--danger-tint);font-size:var(--fs-1);color:var(--disp-2)">' + p.warns.map(function(x){ return '⚠ ' + x; }).join('<br>') + '</div>' : '';
     return '<div style="padding:11px 16px;border-bottom:1px solid var(--line)">'
-      + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:2px"><b style="font-size:13px">' + esc(n.name) + '</b><span style="font-size:var(--fs-1);font-weight:700;letter-spacing:.03em;color:' + bcol + ';border:1px solid ' + bcol + '55;border-radius:4px;padding:1px 5px">' + badge + '</span></div>'
+      + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:2px"><b style="font-size:var(--fs-2)">' + esc(n.name) + '</b><span style="font-size:var(--fs-1);font-weight:700;letter-spacing:.03em;color:' + bcol + ';border:1px solid ' + bcol + '55;border-radius:4px;padding:1px 5px">' + badge + '</span></div>'
       + (hnd ? '<div style="font-family:ui-monospace,Menlo,monospace;font-size:var(--fs-1);color:var(--blue-2);margin-bottom:4px">' + esc(hnd) + '</div>' : '')
       + rows + w + '</div>';
   }).join('');
   var gate = '<div style="padding:13px 16px">'
     + '<div style="padding:11px 13px;border:1px solid #b7a3d6;border-radius:9px;background:var(--purple-tint);font-size:var(--fs-2);color:var(--purple-2);line-height:1.6">🔒 <b>Nothing has been created yet.</b> This is the wiring plan for the capabilities each node holds. The next step names the actual stores and asks before creating anything.</div>'
-    + '<button class="pri" onclick="netMint()" style="margin-top:11px;width:100%;padding:10px;font-size:13px">🔨 Name the stores and create them <span class=arw>→</span></button>'
+    + '<button class="pri" onclick="netMint()" style="margin-top:11px;width:100%;padding:10px;font-size:var(--fs-2)">🔨 Name the stores and create them <span class=arw>→</span></button>'
     + '</div>';
   var body = '<div style="max-height:66vh;overflow:auto">' + totals + blocks + gate + '</div>';
   if (typeof modal === 'function') modal('<div class="mhd"><div class="t">' + tx('🔨 Build plan — nothing created yet') + '</div></div><div class="mbody" style="padding:0">' + body + '</div>', true);
@@ -777,7 +777,7 @@ function netBuild(){
 function _mintRow(c){
   var vis = { 'public': ['🌐 public', 'var(--ok-2)'], 'network': ['🔒 network only', 'var(--warn-2)'], 'private': ['— private', 'var(--blue-2)'] }[c.visibility] || ['—', 'var(--blue-2)'];
   return '<div style="display:flex;align-items:center;gap:10px;padding:8px 16px;border-bottom:1px solid var(--line)">'
-    + '<div style="flex:1;min-width:0"><b style="font-size:13px">' + esc(c.name) + '</b>'
+    + '<div style="flex:1;min-width:0"><b style="font-size:var(--fs-2)">' + esc(c.name) + '</b>'
     + '<div style="font-family:ui-monospace,Menlo,monospace;font-size:var(--fs-2);color:var(--blue-2);margin-top:2px">' + esc(c.handle) + '</div></div>'
     + '<span style="font-size:var(--fs-1);color:' + vis[1] + '">' + vis[0] + '</span></div>';
 }
@@ -802,7 +802,7 @@ function netMint(){
       // as a from → to so nobody discovers after the fact that a live shop changed who can see it.
       + (update.length ? '<div style="padding:9px 16px 4px;font-size:var(--fs-1);font-weight:700;letter-spacing:.04em;color:var(--warn-2)">WILL BE CHANGED — ' + update.length + '</div>'
           + update.map(function(u){ return '<div style="padding:8px 16px;border-bottom:1px solid var(--line)">'
-              + '<b style="font-size:13px">' + esc(u.name) + '</b>'
+              + '<b style="font-size:var(--fs-2)">' + esc(u.name) + '</b>'
               + '<div style="font-family:ui-monospace,Menlo,monospace;font-size:var(--fs-2);color:var(--blue-2);margin-top:2px">' + esc(u.handle) + '</div>'
               + '<div style="font-size:var(--fs-2);color:var(--warn-2);margin-top:3px">who can see it: <b>' + esc(u.from) + '</b> <span class=arw>→</span> <b>' + esc(u.to) + '</b></div></div>'; }).join('') : '')
       + (invite.length ? '<div style="padding:9px 16px 4px;font-size:var(--fs-1);font-weight:700;letter-spacing:.04em;color:var(--grey)">WILL BE INVITED — ' + invite.length + '</div>'
@@ -814,7 +814,7 @@ function netMint(){
       + '<div style="padding:13px 16px">'
       + (create.length || update.length || invite.length
           ? (create.length ? '<div style="padding:10px 13px;border:1px solid #e0d3b0;border-radius:9px;background:var(--warn-tint);font-size:var(--fs-2);color:var(--warn-3);line-height:1.6">Each new store gets a <b>sign-in code shown once</b> on the next screen. Write them down or hand them over then — you can issue a fresh one later, but you cannot look this one up again.</div>' : '')
-            + '<button class="pri" onclick="netMintGo()" style="margin-top:11px;width:100%;padding:10px;font-size:13px">'
+            + '<button class="pri" onclick="netMintGo()" style="margin-top:11px;width:100%;padding:10px;font-size:var(--fs-2)">'
             + [create.length ? 'Create ' + create.length + ' store' + (create.length === 1 ? '' : 's') : '',
                update.length ? 'change ' + update.length : '',
                invite.length ? 'send ' + invite.length + ' invitation' + (invite.length === 1 ? '' : 's') : '']
@@ -845,9 +845,9 @@ function netMintGo(){
       + (created.length ? '<div style="padding:11px 16px;border-bottom:1px solid var(--line);font-size:var(--fs-2);line-height:1.6"><b>' + created.length + ' store' + (created.length === 1 ? '' : 's') + ' created.</b> Each signs in at the login page with the <b>handle</b> and the <b>code</b> below. Codes last 7 days.<br><span style="color:var(--disp-2)">This is the only time these codes are shown.</span></div>' : '')
       + created.map(function(c){
           return '<div style="padding:10px 16px;border-bottom:1px solid var(--line)">'
-            + '<div style="font-size:13px"><b>' + esc(c.name) + '</b> <span style="font-size:var(--fs-1);color:var(--grey)">' + esc(c.user_id||c.bridge_id) + '</span></div>'
+            + '<div style="font-size:var(--fs-2)"><b>' + esc(c.name) + '</b> <span style="font-size:var(--fs-1);color:var(--grey)">' + esc(c.user_id||c.bridge_id) + '</span></div>'
             + '<div style="display:flex;gap:14px;align-items:center;margin-top:5px;flex-wrap:wrap">'
-            + '<span style="font-family:ui-monospace,Menlo,monospace;font-size:13px;color:var(--blue-2)">' + esc(c.handle) + '</span>'
+            + '<span style="font-family:ui-monospace,Menlo,monospace;font-size:var(--fs-2);color:var(--blue-2)">' + esc(c.handle) + '</span>'
             + '<span style="font-family:ui-monospace,Menlo,monospace;font-size:15px;font-weight:700;letter-spacing:.08em;background:var(--card);border:1px solid var(--line);border-radius:6px;padding:2px 10px;color:var(--on-card)">' + esc(c.claim_code) + '</span>'
             + '<button onclick="netCopyKey(\'' + esc(c.handle) + '\',\'' + esc(c.claim_code) + '\')" style="padding:4px 10px;font-size:var(--fs-1)">' + tx('Copy') + '</button>'
             + '</div></div>'; }).join('')
@@ -856,7 +856,7 @@ function netMintGo(){
       + (invited.length ? '<div style="padding:9px 16px 4px;font-size:var(--fs-1);font-weight:700;letter-spacing:.04em;color:var(--grey)">' + tx('INVITED — awaiting their acceptance') + '</div>'
           + invited.map(function(i){ return '<div style="padding:7px 16px;font-size:var(--fs-2);border-bottom:1px solid var(--line)">🤝 ' + esc(i.name) + ' <span style="color:var(--grey)">' + esc(i.handle || '') + ' · ' + esc(i.status || '') + '</span></div>'; }).join('') : '')
       + (probs.length ? probs.map(function(x){ return '<div style="padding:7px 16px;font-size:var(--fs-2);color:var(--disp-2)"><b>' + esc(x.name || '—') + '</b> — ' + esc(x.reason) + '</div>'; }).join('') : '')
-      + '<div style="padding:13px 16px"><button class="pri" onclick="netMintDone()" style="width:100%;padding:10px;font-size:13px">I have the codes — done</button></div>'
+      + '<div style="padding:13px 16px"><button class="pri" onclick="netMintDone()" style="width:100%;padding:10px;font-size:var(--fs-2)">I have the codes — done</button></div>'
       + '</div>';
     if (typeof modal === 'function') modal('<div class="mhd"><div class="t">✅ ' + esc(r.message || 'Built') + '</div></div><div class="mbody" style="padding:0">' + body + '</div>', true);
   }).catch(function(e){
@@ -1009,7 +1009,7 @@ function _netMemberScreen(){
     var bid = String(n.bridgeId || n.bridge_id || '');
     var depth = Math.max(0, String(n.path || '').split('.').length - 1);
     var isMe = bid === mine;
-    return '<div style="padding:8px 10px 8px ' + (12 + depth * 18) + 'px;font-size:13px;border-bottom:1px solid var(--line);'
+    return '<div style="padding:8px 10px 8px ' + (12 + depth * 18) + 'px;font-size:var(--fs-2);border-bottom:1px solid var(--line);'
       + (isMe ? 'background:var(--purple-tint);border-inline-start:3px solid var(--purple-2);' : '') + ';color:var(--on-card)">'
       + (depth ? '<span style="color:var(--grey)">└ </span>' : '◆ ')
       + (isMe ? '<b>' + esc(n.name || bid) + '</b> <span style="font-size:var(--fs-1);color:var(--purple-2);font-weight:700"><span class=arw>←</span> you</span>'
@@ -1028,7 +1028,7 @@ function _netMemberScreen(){
   var rootName = (rows[0] && (rows[0].name || rows[0].bridge_id)) || 'the network operator';
   return '<div style="padding:22px;max-width:640px">'
     + '<div style="font-size:19px;font-weight:800">' + tx('🔗 Your network') + '</div>'
-    + '<div style="font-size:13px;color:var(--grey);margin:8px 0 14px;line-height:1.6">You are part of <b>' + esc(rootName)
+    + '<div style="font-size:var(--fs-2);color:var(--grey);margin:8px 0 14px;line-height:1.6">You are part of <b>' + esc(rootName)
     + '</b>. The structure is set by the network operator — you can see it here, and you look after your own store, its catalogue and its people.</div>'
     + '<div style="border:1px solid var(--line);border-radius:12px;background:var(--card);overflow:hidden;color:var(--on-card)">' + list + '</div>'
     + '<div style="margin-top:14px;padding:11px 13px;border:1px solid var(--line);border-radius:9px;background:var(--card);font-size:var(--fs-2);color:var(--grey);line-height:1.6">'
@@ -1072,23 +1072,23 @@ function _netPaintAvail(){
 function _netAvailBody(){
   var q = String(UI._avQ || '').trim();
   if (q.length < 2) {
-    return '<div style="padding:26px 4px;color:var(--grey);font-size:13px;line-height:1.7">'
+    return '<div style="padding:26px 4px;color:var(--grey);font-size:var(--fs-2);line-height:1.7">'
       + 'Type a product name or code. Every store in your network is asked, and each answers with what it has, '
       + '<b>where the number came from</b> and <b>when it was last true</b>.'
       + '<div style="margin-top:10px;font-size:var(--fs-2)">A store that has never reported comes back as <b>unknown</b> — '
       + 'not as zero. The two are different, and only one of them can be fixed by asking.</div></div>';
   }
-  if (UI._avBusy) return '<div style="padding:22px 4px;color:var(--grey);font-size:13px">' + tx('Asking every store…') + '</div>';
+  if (UI._avBusy) return '<div style="padding:22px 4px;color:var(--grey);font-size:var(--fs-2)">' + tx('Asking every store…') + '</div>';
   var R = UI._avRes;
   if (!R) return '';
-  if (R.error) return '<div style="padding:20px 4px;color:var(--disp-2);font-size:13px">' + esc(R.error) + '</div>';
+  if (R.error) return '<div style="padding:20px 4px;color:var(--disp-2);font-size:var(--fs-2)">' + esc(R.error) + '</div>';
   if (R.not_in_network) {
-    return '<div style="padding:22px 4px;color:var(--grey);font-size:13px">This business is not part of a network, '
+    return '<div style="padding:22px 4px;color:var(--grey);font-size:var(--fs-2)">This business is not part of a network, '
       + 'so there is nobody else to ask.</div>';
   }
   var rows = R.rows || [];
   if (!rows.length) {
-    return '<div style="padding:22px 4px;color:var(--grey);font-size:13px">No store in your network carries anything '
+    return '<div style="padding:22px 4px;color:var(--grey);font-size:var(--fs-2)">No store in your network carries anything '
       + 'matching “' + esc(q) + '”.</div>';
   }
   /**
@@ -1400,14 +1400,14 @@ function _netStepDetails(){
 function _netStepReview(){
   var o = _netOrderState(), c = UI._netCart, T = c ? c.total() : { amount:0 }, sel = c ? c.selected() : [];
   var s = UI._brSel || {};
-  var row = function(k, v){ return '<div style="display:flex;gap:10px;padding:8px 12px;border-top:1px solid var(--line);font-size:13px">'
+  var row = function(k, v){ return '<div style="display:flex;gap:10px;padding:8px 12px;border-top:1px solid var(--line);font-size:var(--fs-2)">'
     + '<span style="min-width:96px;color:var(--grey);font-size:var(--fs-1)">' + k + '</span><span style="flex:1">' + v + '</span></div>'; };
   var card = function(h, inner, edit){ return '<div style="border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-top:8px">'
     + '<div style="background:var(--paper);padding:8px 12px;font-size:var(--fs-1);font-weight:800;color:var(--grey);text-transform:uppercase;letter-spacing:.05em;display:flex">' + h
     + (edit != null ? '<span style="margin-inline-start:auto;color:var(--blue);cursor:pointer;text-transform:none;letter-spacing:0;font-size:var(--fs-1)" onclick="UI._netFlow.go(' + edit + ')">' + tx('Change') + '</span>' : '')
     + '</div>' + inner + '</div>'; };
   return card('To<span style="margin-inline-start:auto;font-weight:400;text-transform:none;letter-spacing:0">fixed — this is their request</span>',
-        '<div style="padding:8px 12px;font-size:13px"><b>' + esc(s.name || '') + '</b> <span style="color:var(--grey);font-size:var(--fs-1)">' + esc(s.user_id||s.bridge_id || '') + '</span></div>')
+        '<div style="padding:8px 12px;font-size:var(--fs-2)"><b>' + esc(s.name || '') + '</b> <span style="color:var(--grey);font-size:var(--fs-1)">' + esc(s.user_id||s.bridge_id || '') + '</span></div>')
     + card('Items · ' + sel.length, sel.map(function(l){
         return row(l.qty + ' × ' + esc(l.unit), '<span style="flex:1">' + esc(l.name) + '</span>'
           + '<b style="float:inline-end">' + (l.line_total == null ? '—' : esc(String(l.line_total))) + '</b>'); }).join('')
@@ -1524,10 +1524,10 @@ function _netBrowseBody(){
       + (s.user_id||s.bridge_id ? '<span style="font-family:ui-monospace,Menlo,monospace;font-size:var(--fs-1);color:var(--grey)">' + esc(s.user_id||s.bridge_id) + '</span>' : '')
       + (netIsMe() ? '<span style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:20px;padding:2px 9px;font-size:var(--fs-1);color:var(--warn-2);font-weight:700">⚠ this is your own store</span>' : '')
       + '</div></div>';
-    if (UI._brBusy) return head + '<div style="padding:20px 2px;color:var(--grey);font-size:13px">' + tx('Reading their catalogue…') + '</div>';
+    if (UI._brBusy) return head + '<div style="padding:20px 2px;color:var(--grey);font-size:var(--fs-2)">' + tx('Reading their catalogue…') + '</div>';
     var items = UI._brItems || [];
     if (!items.length) {
-      return head + '<div style="padding:20px 2px;color:var(--grey);font-size:13px">'
+      return head + '<div style="padding:20px 2px;color:var(--grey);font-size:var(--fs-2)">'
         + (UI._brErr ? esc(UI._brErr) : 'Nothing in this catalogue that you can see.') + '</div>';
     }
     /**
@@ -1542,7 +1542,7 @@ function _netBrowseBody(){
      * about what a variant is, which is the divergence the shared walk was written to end.
      */
     var c = UI._netCart, f = UI._netFlow;
-    if (!c || !f) return head + '<div style="padding:20px 2px;color:var(--grey);font-size:13px">' + tx('Reading their catalogue…') + '</div>';
+    if (!c || !f) return head + '<div style="padding:20px 2px;color:var(--grey);font-size:var(--fs-2)">' + tx('Reading their catalogue…') + '</div>';
     return head
       + '<div id="net_rail">' + f.railHTML() + '</div>'
       + '<div id="net_sub" style="font-size:var(--fs-1);color:var(--grey);margin:0 0 8px">' + esc(f.steps()[f.index()].t || '') + '</div>'
@@ -1553,11 +1553,11 @@ function _netBrowseBody(){
   }
 
   var L = UI._brStores;
-  if (L === undefined) return '<div style="padding:20px 2px;color:var(--grey);font-size:13px">' + tx('Loading the network…') + '</div>';
-  if (L === null) return '<div style="padding:20px 2px;color:var(--disp-2);font-size:13px">Could not load the network.</div>';
-  if (L.not_in_network) return '<div style="padding:20px 2px;color:var(--grey);font-size:13px">This business is not part of a network.</div>';
+  if (L === undefined) return '<div style="padding:20px 2px;color:var(--grey);font-size:var(--fs-2)">' + tx('Loading the network…') + '</div>';
+  if (L === null) return '<div style="padding:20px 2px;color:var(--disp-2);font-size:var(--fs-2)">Could not load the network.</div>';
+  if (L.not_in_network) return '<div style="padding:20px 2px;color:var(--grey);font-size:var(--fs-2)">This business is not part of a network.</div>';
   var stores = L.stores || [];
-  if (!stores.length) return '<div style="padding:20px 2px;color:var(--grey);font-size:13px">No store in this network is visible to you.</div>';
+  if (!stores.length) return '<div style="padding:20px 2px;color:var(--grey);font-size:var(--fs-2)">No store in this network is visible to you.</div>';
   return stores.map(function(st){
     return '<div onclick="netBrowse(\'' + esc(st.entity_id) + '\',\'' + esc(String(st.name).replace(/'/g, '')) + '\',\'' + esc(st.bridge_id || '') + '\')"'
       + ' style="cursor:pointer;padding:11px 2px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:baseline;flex-wrap:wrap">'
@@ -1602,7 +1602,7 @@ function _netModeStrip(){
   var tab = function(k, icon, label){
     var on = m === k;
     return '<span onclick="netMode(\'' + k + '\')" style="cursor:pointer;display:inline-flex;align-items:center;gap:8px;'
-      + 'padding:8px 13px;border-radius:9px;font-size:13px;font-weight:' + (on ? '700' : '500') + ';'
+      + 'padding:8px 13px;border-radius:9px;font-size:var(--fs-2);font-weight:' + (on ? '700' : '500') + ';'
       + 'background:' + (on ? 'var(--blue)' : 'transparent') + ';color:' + (on ? 'var(--on-accent)' : 'var(--ink-2)') + ';'
       + 'border:1px solid ' + (on ? 'var(--blue)' : 'var(--line)') + '">'
       + '<span style="width:16px;text-align:center;font-size:var(--fs-3)">' + icon + '</span>' + label + '</span>';
@@ -1628,16 +1628,16 @@ function networkScreen(){
   // ⚠️ While the role is UNKNOWN, offer nothing. Painting "Design your network" first and correcting it a moment
   // later is how a store that IS in a network gets invited to draw a second one — which is exactly what happened.
   if (UI._netRole === undefined || UI._netRole === null) {
-    return '<div style="padding:44px 22px;color:var(--grey);font-size:13px">' + tx('Checking your place in the network…') + '</div>';
+    return '<div style="padding:44px 22px;color:var(--grey);font-size:var(--fs-2)">' + tx('Checking your place in the network…') + '</div>';
   }
   if (!UI.net) {
     var ent = SESSION.entity || SESSION.name || 'your entity';
     return '<div style="padding:44px 22px;max-width:580px"><div style="font-size:19px;font-weight:800">' + tx('🔗 Design your network') + '</div>'
-      + '<div style="font-size:13px;color:var(--grey);margin:8px 0 8px;line-height:1.6">Draw your structure first — <b>' + esc(ent) + '</b> is the top node. Add <b>owned</b> nodes (branches, units, depots) beneath it, or bring in a <b>partner</b> business. For each: a purpose, and tick <b>what it holds</b> (catalogue, storefront…) to fill in its spec. This is a <b>design</b>: it saves here and survives closing the app. <b>' + tx('Nothing is created') + '</b> until you choose to Build.</div>'
+      + '<div style="font-size:var(--fs-2);color:var(--grey);margin:8px 0 8px;line-height:1.6">Draw your structure first — <b>' + esc(ent) + '</b> is the top node. Add <b>owned</b> nodes (branches, units, depots) beneath it, or bring in a <b>partner</b> business. For each: a purpose, and tick <b>what it holds</b> (catalogue, storefront…) to fill in its spec. This is a <b>design</b>: it saves here and survives closing the app. <b>' + tx('Nothing is created') + '</b> until you choose to Build.</div>'
       + '<button class="pri" onclick="netNewNetwork()" style="padding:10px 16px;margin-top:10px">＋ Start designing</button></div>';
   }
   var sel = UI.net.sel ? _netNode(UI.net.sel) : null;
-  var right = sel ? _netNodeView(sel) : '<div style="padding:24px;color:var(--grey);font-size:13px">Select a node to edit it, or add a child under it.</div>';
+  var right = sel ? _netNodeView(sel) : '<div style="padding:24px;color:var(--grey);font-size:var(--fs-2)">Select a node to edit it, or add a child under it.</div>';
   /**
    * ⚠️⚠️ THE APP'S TWO-PANE LAYOUT, NOT A SECOND ONE (Athi, 2026-08-17: *"the network screen is not following
    * the two sided panel principle so the middle screen is not adjustable and the right hand side looks
@@ -2049,7 +2049,7 @@ function _chitPreview(n){
   var stateFlow = st.length ? '<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:3px;align-items:center">' + st.map(function(x, i){ return (i ? '<span style="color:var(--faint,var(--grey-3));font-size:var(--fs-1)"><span class=arw>→</span></span>' : '') + '<span style="font-size:var(--fs-1);font-weight:600;color:var(--ink-2);background:var(--blue-tint-bg);border-radius:4px;padding:1px 6px">' + esc(x.name) + '</span>'; }).join('') + '</div>' : '';
   return '<div style="margin-top:12px;border-top:1px solid var(--line);padding-top:9px"><div style="font-size:var(--fs-1);font-weight:800;color:var(--ok-2);letter-spacing:.05em">' + tx('🧾 CHIT — what the customer sees') + '</div>'
     + '<div style="margin-top:7px;max-width:290px;border:1px solid var(--line);border-top:3px solid var(--blue-2);border-radius:12px;box-shadow:0 1px 3px rgba(20,30,45,.08);padding:12px 13px;background:var(--card);color:var(--on-card)">'
-      + '<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-weight:700;font-size:13px">' + esc(name) + '</span>' + expBadge + '</div>'
+      + '<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-weight:700;font-size:var(--fs-2)">' + esc(name) + '</span>' + expBadge + '</div>'
       + '<div style="margin-top:6px">' + specRows + '</div>'
       + '<div style="margin-top:9px">' + _methodControl(o.method, (n.place && n.place.currency) || (typeof SESSION !== 'undefined' && SESSION.currency) || '') + '</div>'
       + collectLine
@@ -2678,7 +2678,7 @@ function _netNodeView(n){
     + '<div style="font-size:18px;font-weight:800">' + (isRoot ? '◆ ' : '') + esc(n.name) + badge + '</div>'
     // The handle, directly under the name: the network prefix is not a detail, it IS the store's identity on the
     // platform, and it is what gets typed into "add a supplier" or a login box.
-    + (_netHandleOf(n) ? '<div style="font-family:ui-monospace,Menlo,monospace;font-size:13px;color:var(--blue-2);margin-top:3px">' + esc(_netHandleOf(n))
+    + (_netHandleOf(n) ? '<div style="font-family:ui-monospace,Menlo,monospace;font-size:var(--fs-2);color:var(--blue-2);margin-top:3px">' + esc(_netHandleOf(n))
         + (n.built ? '' : '<span style="font-family:inherit;font-size:var(--fs-1);color:var(--grey);margin-inline-start:7px">— the name it will be given</span>') + '</div>' : '')
     // The network name, said out loud and CHANGEABLE. It is the most consequential name on the page — every store
     // carries it — and it used to be derived from the display name without anyone being asked.
@@ -2768,7 +2768,7 @@ function _netTabStrip(n){
         var on = c.k === cur;
         var yes = c.k !== 'general' && (n.holds || []).indexOf(c.k) >= 0;
         return '<span onclick="netPickTab(\'' + c.k + '\')" style="cursor:pointer;display:inline-flex;align-items:center;gap:8px;'
-          + 'flex:0 0 auto;scroll-snap-align:start;padding:8px 12px;border-radius:9px;font-size:13px;white-space:nowrap;'
+          + 'flex:0 0 auto;scroll-snap-align:start;padding:8px 12px;border-radius:9px;font-size:var(--fs-2);white-space:nowrap;'
           + 'background:' + (on ? 'var(--blue)' : 'transparent') + ';'
           + 'border:1px solid ' + (on ? 'var(--blue)' : 'var(--line)') + ';'
           + 'color:' + (on ? 'var(--on-accent)' : (yes || c.k === 'general' ? 'var(--blue-2)' : 'var(--blue-2)')) + ';'
@@ -2800,7 +2800,7 @@ function _netGeneralTab(n){
     // reported as un-buildable rather than guessed at, and this is where that gets fixed.
     + (n.owned || isRoot ? '' :
         '<div style="margin-top:16px"><label style="font-size:var(--fs-1);font-weight:800;color:var(--grey);letter-spacing:.05em">' + tx('THEIR USER ID') + '</label>'
-        + '<input value="' + esc(n.partner_ref || '') + '" oninput="netSetPartnerRef(\'' + n.key + '\', this.value)" placeholder="e.g. ravi.timbers — ask them for it" style="width:100%;margin-top:6px;padding:8px 10px;border:1px solid var(--line);border-radius:9px;font-size:13px;box-sizing:border-box">'
+        + '<input value="' + esc(n.partner_ref || '') + '" oninput="netSetPartnerRef(\'' + n.key + '\', this.value)" placeholder="e.g. ravi.timbers — ask them for it" style="width:100%;margin-top:6px;padding:8px 10px;border:1px solid var(--line);border-radius:9px;font-size:var(--fs-2);box-sizing:border-box">'
         + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:5px;line-height:1.5">Build sends them an invitation. <b>They have to accept it</b> — you cannot add another business to your network on your own.</div>'
         + (n.invited ? '<div style="font-size:var(--fs-1);color:var(--ok-2);margin-top:6px">✓ invited · ' + esc(n.invited.status || 'pending') + '</div>' : '')
         + '</div>')
@@ -2809,7 +2809,7 @@ function _netGeneralTab(n){
         '<div style="margin-top:16px"><label style="font-size:var(--fs-1);font-weight:800;color:var(--grey);letter-spacing:.05em">' + tx('PURPOSE') + '</label>'
         // oninput saves without re-rendering (typing must not fight the cursor); onchange fires on blur and
         // redraws, so the line the person just wrote appears under the store in the tree.
-        + '<input value="' + esc(n.purpose || '') + '" oninput="netSetPurpose(\'' + n.key + '\', this.value)" onchange="_netRerender()" placeholder="what is this store for? one line — it shows under the name in the map" style="width:100%;margin-top:6px;padding:8px 10px;border:1px solid var(--line);border-radius:9px;font-size:13px;box-sizing:border-box"></div>')
+        + '<input value="' + esc(n.purpose || '') + '" oninput="netSetPurpose(\'' + n.key + '\', this.value)" onchange="_netRerender()" placeholder="what is this store for? one line — it shows under the name in the map" style="width:100%;margin-top:6px;padding:8px 10px;border:1px solid var(--line);border-radius:9px;font-size:var(--fs-2);box-sizing:border-box"></div>')
     // ── THE ONE DECISION ────────────────────────────────────────────────────────────────────────────────────
     // Athi, 2026-08-07: *"we keep the catalogue setting simple — here we have to decide only the visibility part
     // and nothing else."* Exposure used to live INSIDE the storefront capability panel, three clicks down, which

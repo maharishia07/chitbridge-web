@@ -368,7 +368,7 @@ function _groupSumPane(){
     out += req.map(function(l, i){
       var open = !!(_FLD.gsOpen || {})[i];
       var name = esc(l.item) + (l.variant ? ' <span style="color:var(--grey);font-weight:600">· ' + esc(l.variant) + '</span>' : '');
-      var head = '<div onclick="gsToggle(' + i + ')" style="display:flex;align-items:center;cursor:pointer;padding:7px 0;border-top:1px solid var(--line);font-size:13px">'
+      var head = '<div onclick="gsToggle(' + i + ')" style="display:flex;align-items:center;cursor:pointer;padding:7px 0;border-top:1px solid var(--line);font-size:var(--fs-2)">'
         + '<span style="flex:1;min-width:0">' + (open ? '▾' : '<span class=arw>▸</span>') + ' ' + name
         + (l.matched_by_spelling ? ' <span title="matched through a misspelling" style="font-size:var(--fs-1);color:var(--warn-2)">≈</span>' : '') + '</span>'
         /**
@@ -481,7 +481,7 @@ function _reconStrip(){
 
   return '<div style="border:1px solid var(--line);border-radius:9px;padding:11px 13px;margin-bottom:12px;background:var(--card);color:var(--on-card)">'
     + '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey)">Does it add up?</div>'
-    + '<div style="font-size:13px;margin-top:3px">' + sums + ' &nbsp; ' + verdict + '</div>'
+    + '<div style="font-size:var(--fs-2);margin-top:3px">' + sums + ' &nbsp; ' + verdict + '</div>'
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">' + (r.overall || {}).assigned + ' assigned · ' + (r.overall || {}).unassigned + ' unassigned — a chit can be open and unassigned, and that is the pile worth seeing.</div>'
     + '<div style="margin-top:8px">' + rows + '</div>'
     + (r.reconciles ? '' : '<div style="font-size:var(--fs-1);color:var(--disp);margin-top:7px">⚠️ Filed count and the sum of the folders disagree. A chit is filed into a folder this login cannot see.</div>')
@@ -599,7 +599,7 @@ function _ruleRow(r, i, n){
         + mvBtn('↑', i > 0,     'Run earlier — this rule will beat the one above it', 'ruleMove(\'' + esc(r.rule_id) + '\',-1)')
         + mvBtn('↓', i < n - 1, 'Run later — the rule below will beat this one',      'ruleMove(\'' + esc(r.rule_id) + '\',1)')
         + '</span>' : '')
-    + '<label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" data-testid="rule-enabled" ' + (r.enabled ? 'checked' : '') + ' onchange="ruleToggle(\'' + esc(r.rule_id) + '\',this.checked)"><span style="font-weight:700;font-size:13px">' + esc(r.name || 'Rule') + '</span></label>'
+    + '<label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" data-testid="rule-enabled" ' + (r.enabled ? 'checked' : '') + ' onchange="ruleToggle(\'' + esc(r.rule_id) + '\',this.checked)"><span style="font-weight:700;font-size:var(--fs-2)">' + esc(r.name || 'Rule') + '</span></label>'
     + '<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--disp);cursor:pointer" onclick="ruleDelete(\'' + esc(r.rule_id) + '\')">' + tx('Delete') + '</span></div>'
     /* ⚠️ AT TRACK LEVEL A RULE MUST NAME ITS DESTINATION. "file here" is only meaningful standing inside the
        folder; in the all-rules list it would read as if every rule filed into the same place, which is the exact
@@ -657,9 +657,9 @@ function _folderRulesPane(){
          Two conditions = two rules, in order — which is legible. */
       + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px">One condition per rule. Need two? Make two rules — they run in order, and the first match wins.</div>'
       + '<div style="display:flex;gap:8px;margin-top:10px">'
-      + '<button data-testid="rule-preview" onclick="rulePreview()" style="border:1px solid var(--line);background:var(--card);border-radius:9px;padding:9px 15px;font-size:13px;font-weight:700;cursor:pointer;color:var(--on-card)">🔎 What would this catch?</button>'
+      + '<button data-testid="rule-preview" onclick="rulePreview()" style="border:1px solid var(--line);background:var(--card);border-radius:9px;padding:9px 15px;font-size:var(--fs-2);font-weight:700;cursor:pointer;color:var(--on-card)">🔎 What would this catch?</button>'
       + '<button class="composebtn" data-testid="rule-save" onclick="ruleSave()">' + tx('Save rule') + '</button>'
-      + '<button onclick="ruleDraftCancel()" style="border:1px solid var(--line);background:var(--card);border-radius:9px;padding:9px 15px;font-size:13px;cursor:pointer;color:var(--grey)">' + tx('Cancel') + '</button></div>';
+      + '<button onclick="ruleDraftCancel()" style="border:1px solid var(--line);background:var(--card);border-radius:9px;padding:9px 15px;font-size:var(--fs-2);cursor:pointer;color:var(--grey)">' + tx('Cancel') + '</button></div>';
 
     if (_FLD.preview) {
       var p = _FLD.preview;

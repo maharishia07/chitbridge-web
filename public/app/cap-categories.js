@@ -481,7 +481,7 @@ function cbcatCss(){
     '.cbcat-stat .v{font-size:26px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}',
     '.cbcat-stat .k{font-size:var(--fs-2);color:var(--grey)}',
     '.cbcat-plist{border:1px solid var(--line);border-radius:9px;overflow:hidden}',
-    '.cbcat-prow{display:flex;gap:9px;align-items:baseline;padding:7px 11px;font-size:13px;border-bottom:1px dashed var(--line)}',
+    '.cbcat-prow{display:flex;gap:9px;align-items:baseline;padding:7px 11px;font-size:var(--fs-2);border-bottom:1px dashed var(--line)}',
     '.cbcat-prow:last-child{border-bottom:0}',
     '.cbcat-also{margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey);white-space:nowrap}',
     '.cbcat-none{font-size:var(--fs-2);color:var(--grey);line-height:1.6}'

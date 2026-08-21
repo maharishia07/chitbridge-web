@@ -103,7 +103,7 @@ function svcPauseRow(p){
     ? '<button class="btn" style="width:100%;margin-top:7px;font-size:var(--fs-2)" onclick="svcEndPause(\'' + esc(p.pause_id) + '\')">' + tx('End this pause') + '</button>' : '';
   return '<div style="border-top:1px solid var(--line);padding:10px 0">'
     + '<div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline">'
-    + '<span style="font-size:13px;font-weight:700">' + esc(String(p.reason || '').replace(/_/g, ' ')) + '</span>'
+    + '<span style="font-size:var(--fs-2);font-weight:700">' + esc(String(p.reason || '').replace(/_/g, ' ')) + '</span>'
     + '<span style="display:flex;gap:5px">' + (open ? svcChip('running', 'warn') : '') + state + '</span></div>'
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">'
     + esc(CBLocale.datetime(p.paused_from)) + (p.paused_to ? ' → ' + esc(CBLocale.datetime(p.paused_to)) : ' → still paused')

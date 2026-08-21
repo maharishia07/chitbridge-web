@@ -587,7 +587,7 @@ function catsetCss(){
   s.textContent = [
     '.catset-card{border:1px solid var(--line);border-radius:12px;background:var(--card);margin-bottom:12px;overflow:hidden}',
     '.catset-ct{font-size:13.5px;font-weight:700;padding:11px 14px 0}',
-    '.catset-cb{font-size:13px;line-height:1.6;color:var(--ink);padding:6px 14px 12px}',
+    '.catset-cb{font-size:var(--fs-2);line-height:1.6;color:var(--ink);padding:6px 14px 12px}',
     /* The standards note is set apart because it explains the WHY, which a person reads once and then never
        again — it must be skippable without losing the instruction above it. */
     '.catset-std{font-size:var(--fs-2);line-height:1.6;color:var(--grey);background:var(--paper);border:1px solid var(--line);',
@@ -596,7 +596,7 @@ function catsetCss(){
     '.catset-ca .composebtn{width:auto;padding:8px 14px}',
     '.catset-load,.catset-none{font-size:var(--fs-2);color:var(--grey);padding:2px 0 4px}',
     '.catset-dlist{border:1px solid var(--line);border-radius:9px;overflow:hidden}',
-    '.catset-drow{display:flex;align-items:center;gap:9px;padding:8px 11px;font-size:13px;',
+    '.catset-drow{display:flex;align-items:center;gap:9px;padding:8px 11px;font-size:var(--fs-2);',
     'border-bottom:1px dashed var(--line);flex-wrap:wrap}',
     '.catset-drow:last-child{border-bottom:0}',
     '.catset-drow.ret{opacity:.72}',

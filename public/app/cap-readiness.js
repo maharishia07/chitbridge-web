@@ -226,7 +226,7 @@ function _rdRow(it, selKey){
     +_rdRungChip(it)+'</div>';
 }
 function _rdDetailPane(it){
-  if(!it) return '<div style="color:var(--grey);font-size:13px;padding:24px;text-align:center">Select a clearance on the left to see its lifecycle.</div>';
+  if(!it) return '<div style="color:var(--grey);font-size:var(--fs-2);padding:24px;text-align:center">Select a clearance on the left to see its lifecycle.</div>';
   var m=_rdStatus(it.status), rung = it.rung ? _rungBadge(it.rung) : '';
   var idType = _rdIdType(it);
   var verifyBtn = (idType && it.rung!=='verified')
@@ -407,7 +407,7 @@ function _rdComSteps(life){
   }).join('');
 }
 function _rdComDetail(g){
-  if(!g) return '<div style="color:var(--grey);font-size:13px;padding:24px;text-align:center">Select a commercial area on the left.</div>';
+  if(!g) return '<div style="color:var(--grey);font-size:var(--fs-2);padding:24px;text-align:center">Select a commercial area on the left.</div>';
   var m=COMMETA[g.label]||{};
   var names=(g.instruments||[]).map(function(i){return esc(i.name);}).join(' · ');
   var draftBtn = (m.ai&&m.ai.skill)
@@ -427,8 +427,8 @@ function _rdComDetail(g){
   +'</div>';
 }
 function _rdComTwoPane(){
-  if(UI.commerce===undefined){ if(!UI.commerceLoading){ UI.commerceLoading=true; loadCommerce(); } return '<div style="flex:1;display:grid;place-items:center;color:var(--grey);font-size:13px">' + tx('Loading commercial cover…') + '</div>'; }
-  if(UI.commerce.error || !UI.commerce.cluster) return '<div style="flex:1;padding:20px;color:var(--grey);font-size:13px">Could not load commercial cover'+(UI.commerce.error?(' — '+esc(UI.commerce.error)):'')+'.</div>';
+  if(UI.commerce===undefined){ if(!UI.commerceLoading){ UI.commerceLoading=true; loadCommerce(); } return '<div style="flex:1;display:grid;place-items:center;color:var(--grey);font-size:var(--fs-2)">' + tx('Loading commercial cover…') + '</div>'; }
+  if(UI.commerce.error || !UI.commerce.cluster) return '<div style="flex:1;padding:20px;color:var(--grey);font-size:var(--fs-2)">Could not load commercial cover'+(UI.commerce.error?(' — '+esc(UI.commerce.error)):'')+'.</div>';
   var list=UI.commerce.cluster, sel=(UI.comSel!=null && UI.comSel<list.length)?UI.comSel:0; UI.comSel=sel;
   var left=list.map(function(g,i){return _rdComRow(g,i,sel);}).join('');
   return '<div class="rdpanes'+(UI.rdMDetail?' showdetail':'')+'" style="flex:1;display:flex;min-height:0;overflow:hidden">'
@@ -438,7 +438,7 @@ function _rdComTwoPane(){
 }
 // a two-pane (list ↔ detail) for one tab's set of items
 function _rdTwoPane(list){
-  if(!list.length) return '<div style="flex:1;display:grid;place-items:center;color:var(--grey);font-size:13px;padding:20px">Nothing required for this lane.</div>';
+  if(!list.length) return '<div style="flex:1;display:grid;place-items:center;color:var(--grey);font-size:var(--fs-2);padding:20px">Nothing required for this lane.</div>';
   if(!UI.rdSel || !list.some(function(i){return i.standard+'|'+i.doc===UI.rdSel;})) UI.rdSel = list[0].standard+'|'+list[0].doc;
   var sel=list.filter(function(i){return i.standard+'|'+i.doc===UI.rdSel;})[0];
   var left=list.map(function(i){return _rdRow(i,UI.rdSel);}).join('');
@@ -459,7 +459,7 @@ function readinessScreen(){
     return shell(_rdComTwoPane());
   }
   var dest=UI.laneDest||'EU';
-  if(UI.laneRd===undefined){ if(typeof loadLaneReadiness==='function') loadLaneReadiness(dest); return shell('<div style="flex:1;display:grid;place-items:center;color:var(--grey);font-size:13px">'+(typeof loader==='function'?loader('Resolving clearances…'):'Loading…')+'</div>'); }
+  if(UI.laneRd===undefined){ if(typeof loadLaneReadiness==='function') loadLaneReadiness(dest); return shell('<div style="flex:1;display:grid;place-items:center;color:var(--grey);font-size:var(--fs-2)">'+(typeof loader==='function'?loader('Resolving clearances…'):'Loading…')+'</div>'); }
   var rd=UI.laneRd;
   if(rd.error) return shell('<div style="padding:20px">'+(typeof emptyState==='function'?emptyState('⚠️','Could not load', esc(rd.error)):esc(rd.error))+'</div>');
   var items=(rd.clearances)||[];
@@ -468,7 +468,7 @@ function readinessScreen(){
 }
 function verifyReadiness(standard, doc, id_type){
   UI.rdVerify = { standard:standard, doc:doc, id_type:id_type };
-  var inS='width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:13px;margin:5px 0 13px;box-sizing:border-box';
+  var inS='width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:var(--fs-2);margin:5px 0 13px;box-sizing:border-box';
   var body = '<div class="mbody" style="padding:16px 18px">'
     +'<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:12px">Check your <b>'+id_type.toUpperCase()+'</b>. When a registry is connected this confirms it against the source of truth — the top <b>verified</b> rung. Until then it validates the format and records a <b>declared</b> claim (never a false “verified”).</div>'
     +'<label style="font-size:var(--fs-1);font-weight:700;color:var(--grey)">'+id_type.toUpperCase()+' number</label>'
@@ -496,7 +496,7 @@ function gatherReadiness(standard, doc){
   var it = ((UI.readiness&&UI.readiness.clearances)||[]).filter(function(c){ return c.standard===standard && c.doc===doc; })[0];
   UI.rdGather = { standard:standard, doc:doc, title:(it&&it.title)||doc };
   var far = new Date(Date.now()+365*86400000).toISOString().slice(0,10);
-  var inS = 'width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:13px;margin:5px 0 13px;box-sizing:border-box';
+  var inS = 'width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:var(--fs-2);margin:5px 0 13px;box-sizing:border-box';
   var lbl = 'font-size:var(--fs-1);font-weight:700;color:var(--grey)';
   var body = '<div class="mbody" style="padding:16px 18px">'
     +'<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:13px">This records the clearance as a <b>chit on the rail</b> that carries your document — provenanced &amp; private. Buyers see only that it\'s met + its validity.</div>'

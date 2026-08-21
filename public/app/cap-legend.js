@@ -351,11 +351,11 @@ function _foundTabHtml(){
   const lvlBadge=(l,t)=>{ const tt=(t&&t>l)?('<span class=arw>→</span>L'+t):''; return '<span title="Foundation maturity — L1 exists · L2 clean mechanism · L3 enforced+isolated · L4 governed+provable · L5 audited/certified" style="font-size:var(--fs-1);font-weight:800;color:var(--ok-2);background:var(--ok-tint);border:1px solid #bfe0cf;border-radius:6px;padding:1px 7px">L'+l+tt+'</span>'; };
   const card=(f)=>'<div style="border:1px solid var(--line);border-radius:12px;padding:11px 13px;margin-bottom:10px">'
     +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><span style="font-size:15px">'+f.icon+'</span><span style="font-family:\'Space Grotesk\';font-weight:700;font-size:13.5px">'+esc(f.name)+'</span><span style="margin-inline-start:auto">'+lvlBadge(f.level,f.target)+'</span></div>'
-    +'<div style="font-size:13px;color:var(--ink);line-height:1.5;margin-bottom:6px">'+esc(f.what)+'</div>'
+    +'<div style="font-size:var(--fs-2);color:var(--ink);line-height:1.5;margin-bottom:6px">'+esc(f.what)+'</div>'
     +'<div style="font-size:var(--fs-2);color:var(--grey);line-height:1.5;background:var(--card);border:1px solid var(--line);border-radius:9px;padding:8px 10px"><b style="color:var(--ok-3)">PROOF:</b> '+esc(f.proof)+'</div>'
   +'</div>';
   return '<div style="padding:12px 13px;overflow:visible">'
-    +'<div style="font-size:13px;color:var(--grey);margin-bottom:10px">What the <b>subject</b> stands on — the trust floor. A capability needs only to WORK; a <b>foundation needs EVIDENCE</b>, so each carries the PROOF that makes its level evident, not asserted. Ladder: L1 exists · L2 clean mechanism · L3 enforced &amp; isolated · L4 governed &amp; provable · L5 audited/certified.</div>'
+    +'<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:10px">What the <b>subject</b> stands on — the trust floor. A capability needs only to WORK; a <b>foundation needs EVIDENCE</b>, so each carries the PROOF that makes its level evident, not asserted. Ladder: L1 exists · L2 clean mechanism · L3 enforced &amp; isolated · L4 governed &amp; provable · L5 audited/certified.</div>'
     +FOUNDATION_CATALOGUE.map(card).join('')
     +'<div style="font-size:var(--fs-1);color:var(--grey);text-align:center;padding-top:2px">Security foundations are honestly capped <b>' + tx('≤ L4') + '</b> until an external pen-test exists — that’s the L5 gate.</div>'
   +'</div>';
@@ -383,7 +383,7 @@ function _lifeTabHtml(){
   const row=(r)=>{ const [c,ic]=SS[r.st]||SS.todo;
     return `<div style="display:flex;gap:8px;align-items:flex-start;font-size:var(--fs-1);padding:3px 0;border-bottom:1px dashed var(--line)"><span style="color:${c};flex:none">${ic}</span><span class="mono" style="flex:none;color:var(--grey);width:46px">${esc(r.id)}</span><span style="flex:1">${esc(r.fr)}</span><span style="flex:1;color:var(--grey)">${esc(r.test)}</span></div>`; };
   const grp=(g)=>`<div style="border:1px solid var(--line);border-radius:12px;padding:12px 13px;margin-bottom:11px">
-      <div style="font-family:'Space Grotesk';font-weight:700;font-size:13px;margin-bottom:4px">${esc(g.area)}</div>
+      <div style="font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-2);margin-bottom:4px">${esc(g.area)}</div>
       <div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:2px"><b>BR:</b> ${esc(g.br)}</div>
       <div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:8px"><b>SR:</b> ${esc(g.sr)}</div>
       <div style="display:flex;gap:8px;font-size:var(--fs-1);color:var(--grey);font-weight:700;padding-bottom:2px"><span style="width:54px">&nbsp;</span><span style="flex:1">${tx('FUNCTIONAL (FR)')}</span><span style="flex:1">${tx('TEST')}</span></div>
@@ -417,7 +417,7 @@ function _secTabHtml(){
   const LV={ strong:['var(--ok-3)','✓ strong'], partial:['var(--warn-2)','◐ partial'], gap:['var(--disp)','○ gap'] };
   const row=(s)=>{ const [c,lbl]=LV[s.lvl]||LV.gap;
     return `<div style="border:1px solid var(--line);border-radius:12px;padding:11px 13px;margin-bottom:9px">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:13px">${esc(s.area)}</span><span style="margin-inline-start:auto;font-size:var(--fs-1);font-weight:800;color:${c}">${lbl}</span></div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-2)">${esc(s.area)}</span><span style="margin-inline-start:auto;font-size:var(--fs-1);font-weight:800;color:${c}">${lbl}</span></div>
       <div style="font-size:var(--fs-1);color:var(--ink);line-height:1.45;margin-bottom:4px">${esc(s.what)}</div>
       <div style="font-size:var(--fs-1);color:var(--grey);line-height:1.4"><b>Raise it:</b> ${esc(s.raise)}</div>
     </div>`; };
@@ -543,7 +543,7 @@ function _workTabHtml(){
       <span style="font-family:'Space Mono';font-size:var(--fs-1);color:${R};background:var(--blue-tint);border:1px solid var(--line);border-radius:6px;padding:1px 6px">${esc(o.pid)}</span>
       <span style="margin-inline-start:auto;font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:${o.live?'var(--ok-3)':'var(--grey-2)'};border:1px ${o.live?'solid #bfe0cf':'dashed #c2c6cc'};border-radius:5px;padding:1px 6px">${o.live?'Live':'Designed'}</span>
     </div>
-    <div style="font-size:13px;color:var(--ink);background:var(--blue-tint);border-inline-start:3px solid ${R};border-radius:0 8px 8px 0;padding:7px 11px;margin:9px 0 8px;line-height:1.5"><b style="font-family:'Space Mono';font-size:var(--fs-1);letter-spacing:.08em;text-transform:uppercase;color:${R};margin-inline-end:7px">${tx('Achieves')}</b>${o.obj}</div>
+    <div style="font-size:var(--fs-2);color:var(--ink);background:var(--blue-tint);border-inline-start:3px solid ${R};border-radius:0 8px 8px 0;padding:7px 11px;margin:9px 0 8px;line-height:1.5"><b style="font-family:'Space Mono';font-size:var(--fs-1);letter-spacing:.08em;text-transform:uppercase;color:${R};margin-inline-end:7px">${tx('Achieves')}</b>${o.obj}</div>
     <div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:8px;line-height:1.55">${o.flow}</div>
     <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">${o.chips.join('')}</div>
   </div>`;
@@ -565,7 +565,7 @@ function _workTabHtml(){
       flow:'order <span class=arw>→</span> delivery_note <span class=arw>→</span> invoice <span class=arw>→</span> payment <span class=arw>→</span> receipt — each hop\'s <b>output is the next hop\'s input</b>',
       chips:[chain('Purposes today · pattern-ize next')] },
   ];
-  const spine=[['Constitution','base@v1'],['↳ Capability','connector@v1'],['↳ Work-pattern','iot-signal@v1'],['↳ Chit','stamped']].map((s,i)=>`<div style="flex:1 1 118px;min-width:110px;padding:9px 11px;${i?'border-inline-start:1px solid var(--line)':''};${i===3?'background:var(--blue-tint)':''};color:var(--on-card)"><div style="font-family:'Space Mono';font-size:var(--fs-1);letter-spacing:.07em;text-transform:uppercase;color:var(--grey)">${s[0]}</div><div style="font-weight:700;font-size:13px;${i===3?'color:'+R:''}">${s[1]}</div></div>`).join('');
+  const spine=[['Constitution','base@v1'],['↳ Capability','connector@v1'],['↳ Work-pattern','iot-signal@v1'],['↳ Chit','stamped']].map((s,i)=>`<div style="flex:1 1 118px;min-width:110px;padding:9px 11px;${i?'border-inline-start:1px solid var(--line)':''};${i===3?'background:var(--blue-tint)':''};color:var(--on-card)"><div style="font-family:'Space Mono';font-size:var(--fs-1);letter-spacing:.07em;text-transform:uppercase;color:var(--grey)">${s[0]}</div><div style="font-weight:700;font-size:var(--fs-2);${i===3?'color:'+R:''}">${s[1]}</div></div>`).join('');
   const notif=[
     ['🏢 Entity','a copy delivered to Task / Order','mailbox lists; entity-scoped RLS'],
     ['🧑 Actor','assigned / visible change — delivery·status·message·dispute','per-actor <b>unread</b> + bell + message centre'],
@@ -580,7 +580,7 @@ function _workTabHtml(){
     ${lines.map(line).join('')}
     <div style="border:1px solid ${R};background:linear-gradient(180deg,var(--blue-tint),var(--bg,#fff));border-radius:13px;padding:14px 16px;margin:6px 0 16px">
       <div style="font-family:'Space Grotesk';font-weight:800;font-size:15px;color:${R}">A catalogue is a contract, not a list</div>
-      <div style="font-size:13px;color:var(--ink);background:var(--card);border-inline-start:3px solid ${R};border-radius:0 8px 8px 0;padding:7px 11px;margin:9px 0;line-height:1.5"><b style="font-family:'Space Mono';font-size:var(--fs-1);letter-spacing:.08em;text-transform:uppercase;color:${R};margin-inline-end:7px">${tx('Achieves')}</b>Extends a <b>brand's governance to every customer through any distributor</b> — control without custody.</div>
+      <div style="font-size:var(--fs-2);color:var(--ink);background:var(--card);border-inline-start:3px solid ${R};border-radius:0 8px 8px 0;padding:7px 11px;margin:9px 0;line-height:1.5"><b style="font-family:'Space Mono';font-size:var(--fs-1);letter-spacing:.08em;text-transform:uppercase;color:${R};margin-inline-end:7px">${tx('Achieves')}</b>Extends a <b>brand's governance to every customer through any distributor</b> — control without custody.</div>
       <div style="font-size:var(--fs-2);color:var(--ink);line-height:1.55">The source's governance amalgamated into one construct that <b>travels</b>: the order runs under the source's minted rules wherever served, the distributor <b>can't override</b>, and the chit <b>freezes the exact version</b> seen. Bogie line-up public (browse), cargo private (order), source rules = the sealed wagon-spec that binds every yard.</div>
     </div>
     <div style="font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3);margin:14px 0 8px">${tx('The journeys that travel')}</div>
@@ -622,12 +622,12 @@ function _workTabHtml(){
 function _stdTabHtml(){
   if (typeof stdWhyHTML !== 'function') {
     ensureCap('standards').then(function(){ _openLegendImpl(); }).catch(function(){});
-    return '<div style="padding:16px;color:var(--grey);font-size:13px">' + tx('Loading…') + '</div>';
+    return '<div style="padding:16px;color:var(--grey);font-size:var(--fs-2)">' + tx('Loading…') + '</div>';
   }
   var n = stdCounts();
   return '<div style="padding:14px 16px">'
     + '<div style="font-size:var(--fs-5);font-weight:800;color:var(--ink);margin-bottom:2px">' + tx('Why we follow standards') + '</div>'
-    + '<div style="font-size:13px;color:var(--grey);line-height:1.55;margin-bottom:12px">'
+    + '<div style="font-size:var(--fs-2);color:var(--grey);line-height:1.55;margin-bottom:12px">'
     +   '<b style="color:var(--ok-2)">' + n.live + ' in force</b> · '
     +   '<b style="color:var(--warn-2)">' + n.part + ' partly</b> · ' + n.plan + ' planned. '
     +   'Every one is listed with its status in <b>' + tx('Settings › Standards') + '</b>, and the partial ones say what is '
@@ -658,7 +658,7 @@ function _openLegendImpl(){
   };
   const matBadge=(c)=>{ if(!c.maturity) return ''; const t=(c.target&&c.target>c.maturity)?`<span class=arw>→</span>L${c.target}`:''; return `<span title="Capability maturity — 1 Proven · 2 Packaged · 3 Itemised · 4 Governed · 5 Productized" style="font-size:var(--fs-1);font-weight:800;color:var(--purple-2);background:var(--purple-tint);border:1px solid #cabdf0;border-radius:6px;padding:1px 7px">L${c.maturity}${t}</span>`; };
   const featRow=(f)=>{ const [col,ic]=SC[f.s]||SC.backlog;
-    return `<div style="display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--ink);padding:4px 0;line-height:1.45"><span style="color:${col};flex:none">${ic}</span><span>${esc(f.n)}</span></div>`; };
+    return `<div style="display:flex;gap:8px;align-items:flex-start;font-size:var(--fs-2);color:var(--ink);padding:4px 0;line-height:1.45"><span style="color:${col};flex:none">${ic}</span><span>${esc(f.n)}</span></div>`; };
   // GOVERNANCE BAND — the SECOND axis: gov maturity + what governs it + the L4 gap (SPEC-governance-in-legend.md).
   const govChips=(arr,col,bg,bd)=>(arr||[]).map(x=>`<span style="font-size:var(--fs-1);color:${col};background:${bg};border:1px solid ${bd};border-radius:5px;padding:1px 6px">${esc(x)}</span>`).join(' ');
   const govBand=(c)=>{

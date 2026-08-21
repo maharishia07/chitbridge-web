@@ -469,7 +469,7 @@ function misTrust(m){
         + '<div class="misnote">' + (m.partyNames.length ? esc(m.partyNames.slice(0, 3).join(' · ')) : 'no counterparties yet') + '</div></div>'
       + '<div><div class="mislbl">' + tx('Suppliers on your list') + '</div><div class="misbig" style="font-size:24px">' + m.suppliers + '</div>'
         + '<div class="misnote">' + m.co_assists + ' co-assist' + (m.co_assists === 1 ? '' : 's') + ' working the rail</div></div>'
-      + '<div><div class="mislbl">' + tx('How work arrives') + '</div><div class="misbig" style="font-size:24px">' + m.captured + ' <span style="font-size:13px;color:var(--grey)">of ' + m.chits + '</span></div>'
+      + '<div><div class="mislbl">' + tx('How work arrives') + '</div><div class="misbig" style="font-size:24px">' + m.captured + ' <span style="font-size:var(--fs-2);color:var(--grey)">of ' + m.chits + '</span></div>'
         + '<div class="misnote">' + chanTxt + '</div></div>'
     + '</div>'
     /* ⚠️ The band I most want and have NOT verified is computable. Say so rather than show a score I cannot stand behind. */
@@ -2599,7 +2599,7 @@ function profGuard(go, map, nameMap){
    * as confirmAsk builds it; confirmAsk itself is two-button and this needs three.
    */
   modal('<div class="mhd"><div class="t">' + esc(tx('Not saved')) + '</div></div>'
-    + '<div class="mbody"><div style="font-size:13px;line-height:1.55;color:var(--ink)">'
+    + '<div class="mbody"><div style="font-size:var(--fs-2);line-height:1.55;color:var(--ink)">'
     +   tx('You changed') + ' <b>' + esc(what) + '</b> ' + tx('and have not saved it.')
     + '</div></div>'
     + '<div class="mfoot">'

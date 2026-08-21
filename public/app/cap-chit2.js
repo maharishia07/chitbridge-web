@@ -91,7 +91,7 @@ var c2n = function(v){ return (v === null || v === undefined || v === '') ? null
 var c2q = function(l){ return [l.quantity, l.unit].filter(function(x){ return x !== null && x !== undefined && x !== ''; }).join(' '); };
 function c2Money(v){ return (v === null || v === undefined) ? '—' : (typeof inr_ === 'function' ? inr_(v) : ('₹' + v)); }
 function c2Head(t, s){ return '<div style="padding:11px 16px;border-bottom:1px solid var(--line)"><div style="font-weight:600;font-size:15px">' + t + '</div>' + (s ? '<div style="color:var(--grey);font-size:var(--fs-2);margin-top:2px">' + s + '</div>' : '') + '</div>'; }
-function c2Grp(d, s){ return '<div style="padding:13px 16px 5px;display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:var(--fs-1);letter-spacing:.09em;text-transform:uppercase;color:var(--grey);font-weight:600">' + d + '</span><span style="font-size:13px;color:var(--grey)">' + (s || '') + '</span></div>'; }
+function c2Grp(d, s){ return '<div style="padding:13px 16px 5px;display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:var(--fs-1);letter-spacing:.09em;text-transform:uppercase;color:var(--grey);font-weight:600">' + d + '</span><span style="font-size:var(--fs-2);color:var(--grey)">' + (s || '') + '</span></div>'; }
 
 /* ⚠️ THE GREYING RULE. Athi asked whether the other lines are greyed — yes, and greyed beats hidden.
    Murugan packing onions needs to know potatoes are on the same Friday trip even though they are Selvam's;
@@ -146,7 +146,7 @@ function c2PaneMsg(d){
       out += '<div style="margin-top:8px"><span onclick="openLightbox(\'chit2\',' + atts.indexOf(origin[0]) + ')" style="cursor:pointer;color:var(--blue);font-size:var(--fs-2)">' + tx('📄 open the full original') + '</span></div>';
     }
   } else {
-    out += '<div style="color:var(--grey);font-size:13px">No original message on this chit — it was composed here rather than received.</div>';
+    out += '<div style="color:var(--grey);font-size:var(--fs-2)">No original message on this chit — it was composed here rather than received.</div>';
   }
   out += (raw.from ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:12px;padding-top:10px;border-top:1px solid var(--line)">from ' + esc(raw.from) + (raw.from_name ? ' · ' + esc(raw.from_name) : '') + '</div>' : '')
     + '</div>';
@@ -163,7 +163,7 @@ function c2PaneMsg(d){
   if (extras.length) {
     out += c2Grp('From the message', '')
       + extras.map(function(x){
-          return '<div style="padding:8px 16px;border-bottom:1px solid var(--line);display:flex;gap:9px;font-size:13px">'
+          return '<div style="padding:8px 16px;border-bottom:1px solid var(--line);display:flex;gap:9px;font-size:var(--fs-2)">'
             + '<span style="width:16px">' + x[0] + '</span>'
             + '<span style="flex:1"><span style="color:var(--grey);font-size:var(--fs-1);display:block">' + esc(x[1]) + '</span>' + esc(x[2]) + '</span></div>';
         }).join('');
@@ -337,7 +337,7 @@ function c2RepricePaint(){
   body += will.length
     ? '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin-bottom:4px">Will change (' + will.length + ')</div>'
       + will.map(function(w){
-          return '<div style="display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-top:1px solid var(--line);font-size:13px">'
+          return '<div style="display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-top:1px solid var(--line);font-size:var(--fs-2)">'
             + '<span style="flex:1;min-width:0"><b>' + esc(w.particulars || '') + '</b>'
             + '<div style="font-size:var(--fs-1);color:var(--grey)"><span class=arw>→</span> ' + esc(w.matched) + (w.matched_by_spelling ? ' <span style="color:var(--warn-2)">' + tx('≈ matched by spelling') + '</span>' : '') + '</div>'
             /* ⚠️ REPLACING A STATED FIGURE IS CALLED OUT. Filling an empty price and overwriting one the customer
@@ -381,7 +381,7 @@ function c2PaneDel(d){
   var prog = d.line_delivery || {};
   var sum = d.delivery_summary || null;
   var lines = (d.live_set || []).filter(function(e){ return !e.removed; });
-  if (!sum) return c2Head('Delivered & paid') + '<div style="padding:16px;color:var(--grey);font-size:13px">Nothing delivered yet.</div>';
+  if (!sum) return c2Head('Delivered & paid') + '<div style="padding:16px;color:var(--grey);font-size:var(--fs-2)">Nothing delivered yet.</div>';
 
   var out = c2Head('Delivered & paid', sum.complete + ' of ' + sum.lines + ' complete'
     + (sum.divergent ? ' · <span style="color:var(--warn-2)">' + sum.divergent + ' disagreed</span>' : ''));
@@ -410,9 +410,9 @@ function c2PaneDel(d){
          delivery but never make one, which meant the whole tab was a demo. Recording is the point; it is the
          action he performs twenty times a day, so it is one tap from the line rather than behind a menu. */
       + '<div style="margin-top:9px;display:flex;gap:7px;align-items:center;flex-wrap:wrap">'
-      + '<input id="c2dq_' + e.line_id + '" inputmode="decimal" placeholder="' + (p.pending ? String(p.pending) : 'qty') + '" style="width:74px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:13px">'
+      + '<input id="c2dq_' + e.line_id + '" inputmode="decimal" placeholder="' + (p.pending ? String(p.pending) : 'qty') + '" style="width:74px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2)">'
       + '<span style="font-size:var(--fs-2);color:var(--grey)">' + esc(l.unit || '') + '</span>'
-      + '<input id="c2dr_' + e.line_id + '" placeholder="reference (optional)" style="flex:1;min-width:110px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:13px">'
+      + '<input id="c2dr_' + e.line_id + '" placeholder="reference (optional)" style="flex:1;min-width:110px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2)">'
       + '<button class="btn pri" onclick="c2Deliver(\'' + e.line_id + '\',\'' + esc(l.unit || '') + '\')">' + tx('Delivered') + '</button>'
       + (p.delivered ? '<button class="btn" title="Record a correcting entry — the original claim stays on the record" onclick="c2Deliver(\'' + e.line_id + '\',\'' + esc(l.unit || '') + '\',true)">' + tx('Take back') + '</button>' : '')
       + '</div>'
@@ -697,7 +697,7 @@ function c2AssignOpen(line_id){
   }
   var opts = roster.map(function(x){ return '<option value="' + esc(x.id) + '"' + (a.assignee_actor_id === x.id ? ' selected' : '') + '>' + esc(x.name) + '</option>'; }).join('');
   modal('<h3 style="margin:0 0 3px">' + tx('Assign this line') + '</h3>'
-    + '<div style="font-size:13px;color:var(--grey);margin-bottom:14px">' + esc(l.particulars || '') + ' · ' + esc(c2q(l)) + '</div>'
+    + '<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:14px">' + esc(l.particulars || '') + ' · ' + esc(c2q(l)) + '</div>'
     + '<label style="display:block;font-size:var(--fs-1);color:var(--grey);margin-bottom:3px">' + tx('ASSIGN TO') + '</label>'
     + '<select id="c2a_' + line_id + '" style="width:100%;box-sizing:border-box;padding:9px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-3);margin-bottom:10px"><option value="">' + tx('Unassigned') + '</option>' + opts + '</select>'
     + '<div style="display:flex;gap:9px;margin-bottom:14px">'
@@ -735,7 +735,7 @@ function c2PaneNotes(d){
     + (msgs.length ? msgs.map(function(m){
         return '<div style="padding:10px 16px;border-bottom:1px solid var(--line)"><div style="font-size:var(--fs-1);color:var(--grey)">' + esc(m.author || '') + ' · ' + esc(m.at || '') + '</div><div style="font-size:13.5px;margin-top:2px">' + esc(m.body || '') + '</div></div>';
       }).join('')
-      : '<div style="padding:16px;color:var(--grey);font-size:13px">No internal notes yet.</div>');
+      : '<div style="padding:16px;color:var(--grey);font-size:var(--fs-2)">No internal notes yet.</div>');
 }
 
 /* ── US · cost ─────────────────────────────────────────────────────────────────────────────────────────────── */
@@ -763,7 +763,7 @@ function c2PaneCost(d){
 
   out += c2Grp(c.can_see_totals ? 'Every cost' : 'What you recorded', String((c.costs || []).length));
   out += (c.costs || []).length ? c.costs.map(function(x){
-    return '<div style="padding:9px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;font-size:13px">'
+    return '<div style="padding:9px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;font-size:var(--fs-2)">'
       + '<span>' + esc(x.kind) + (x.note ? ' <span style="color:var(--grey)">· ' + esc(x.note) + '</span>' : '')
       + (x.minutes ? '<div style="font-size:var(--fs-1);color:var(--grey)">' + x.minutes + ' min × ' + c2Money(x.rate_per_hour) + '/hr</div>' : '')
       + (x.recorded_by_actor_name ? '<div style="font-size:var(--fs-1);color:var(--grey)">' + esc(x.recorded_by_actor_name) + '</div>' : '')
@@ -771,11 +771,11 @@ function c2PaneCost(d){
   }).join('') : '<div style="padding:14px 16px;color:var(--grey);font-size:var(--fs-2)">Nothing recorded yet.</div>';
 
   out += '<div style="padding:12px 16px;display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">'
-    + '<select id="c2ck" style="padding:7px 9px;border:1px solid var(--line);border-radius:6px;font-size:13px"><option value="labour">labour</option><option value="goods">goods</option><option value="transport">transport</option><option value="other">other</option></select>'
-    + '<input id="c2cm" placeholder="minutes" style="width:80px;padding:7px 9px;border:1px solid var(--line);border-radius:6px;font-size:13px">'
-    + '<input id="c2cr" placeholder="₹/hr" style="width:70px;padding:7px 9px;border:1px solid var(--line);border-radius:6px;font-size:13px">'
-    + '<input id="c2ca" placeholder="or amount" style="width:90px;padding:7px 9px;border:1px solid var(--line);border-radius:6px;font-size:13px">'
-    + '<input id="c2cn" placeholder="note" style="flex:1;min-width:110px;padding:7px 9px;border:1px solid var(--line);border-radius:6px;font-size:13px">'
+    + '<select id="c2ck" style="padding:7px 9px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2)"><option value="labour">labour</option><option value="goods">goods</option><option value="transport">transport</option><option value="other">other</option></select>'
+    + '<input id="c2cm" placeholder="minutes" style="width:80px;padding:7px 9px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2)">'
+    + '<input id="c2cr" placeholder="₹/hr" style="width:70px;padding:7px 9px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2)">'
+    + '<input id="c2ca" placeholder="or amount" style="width:90px;padding:7px 9px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2)">'
+    + '<input id="c2cn" placeholder="note" style="flex:1;min-width:110px;padding:7px 9px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2)">'
     + '<button class="btn pri" onclick="c2AddCost()">' + tx('Add') + '</button></div>';
   return out;
 }
@@ -806,7 +806,7 @@ function chit2Screen(){
 
   var tabs = C2_TABS[C2.side].map(function(t){
     var on = C2.tab === t[0];
-    return '<button onclick="c2Tab(\'' + t[0] + '\')" style="flex:1;background:none;border:0;border-bottom:2px solid ' + (on ? 'var(--ink,#1c1a17)' : 'transparent') + ';font:inherit;font-size:13px;color:' + (on ? 'var(--ink)' : 'var(--grey)') + ';padding:10px 4px;cursor:pointer;font-weight:' + (on ? '600' : '400') + '">' + t[1] + '</button>';
+    return '<button onclick="c2Tab(\'' + t[0] + '\')" style="flex:1;background:none;border:0;border-bottom:2px solid ' + (on ? 'var(--ink,#1c1a17)' : 'transparent') + ';font:inherit;font-size:var(--fs-2);color:' + (on ? 'var(--ink)' : 'var(--grey)') + ';padding:10px 4px;cursor:pointer;font-weight:' + (on ? '600' : '400') + '">' + t[1] + '</button>';
   }).join('');
 
   var pane = { msg: c2PaneMsg, ord: c2PaneOrd, del: c2PaneDel, work: c2PaneWork, notes: c2PaneNotes, cost: c2PaneCost }[C2.tab];
@@ -826,7 +826,7 @@ function chit2Screen(){
   return '<div style="flex:1;min-height:0;display:flex;flex-direction:column;background:var(--card);color:var(--on-card)">'
     + '<div style="flex:none">'                                                   // ← the frozen part
     + '<div style="padding:10px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px">'
-    + '<span onclick="c2Back()" style="cursor:pointer;color:var(--blue);font-size:13px">‹ Back</span>'
+    + '<span onclick="c2Back()" style="cursor:pointer;color:var(--blue);font-size:var(--fs-2)">‹ Back</span>'
     + '<span style="font-weight:600;font-size:15px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(h.manual_subject || h.auto_subject || 'Chit') + '</span>'
     + '<span style="font-size:var(--fs-1);color:var(--grey)">design 2</span></div>'
     + '<div style="padding:10px 16px 0;display:flex">' + side + '</div>'

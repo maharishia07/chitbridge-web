@@ -33,7 +33,7 @@ function traceabilityScreen(){
     + '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px">'
       + '<input id="traceIdIn" value="' + esc(id) + '" placeholder="Paste a batch / chit id" '
         + 'oninput="UI.traceId=this.value" onkeydown="if(event.key===\'Enter\')runTrace(\'forward\')" '
-        + 'style="flex:1;min-width:220px;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:13px;font-family:monospace">'
+        + 'style="flex:1;min-width:220px;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:var(--fs-2);font-family:monospace">'
       + '<button class="pri" onclick="runTrace(\'forward\')" style="padding:9px 14px">🚨 Recall set <span class=arw>▸</span></button>'
       + '<button onclick="runTrace(\'backward\')" style="padding:9px 14px"><span class=arw>◂</span> To source</button>'
     + '</div>'
@@ -48,14 +48,14 @@ function traceabilityScreen(){
       + '<span style="font-size:var(--fs-2);color:var(--grey)">or reconstruct from shared data (no links):</span>'
       + '<input id="traceBatchIn" value="' + esc(UI.traceBatchQ || '') + '" placeholder="batch number, e.g. FG-PC-6621" '
         + 'oninput="UI.traceBatchQ=this.value" onkeydown="if(event.key===\'Enter\')runTraceByBatch()" '
-        + 'style="flex:1;min-width:180px;padding:8px 11px;border:1px solid var(--line);border-radius:9px;font-size:13px;font-family:monospace">'
+        + 'style="flex:1;min-width:180px;padding:8px 11px;border:1px solid var(--line);border-radius:9px;font-size:var(--fs-2);font-family:monospace">'
       + '<button onclick="runTraceByBatch()" style="padding:8px 13px">' + tx('🔎 Trace by batch #') + '</button>'
     + '</div>'
     + '</div>';
 
   var body;
   if (UI.traceLoading) body = loader('Walking the chain…');
-  else if (res && res.error) body = '<div style="margin:22px 18px;padding:14px 16px;border:1px solid #f0c9c4;background:var(--danger-tint);border-radius:9px;font-size:13px;color:var(--disp-2)">' + esc(res.error) + '</div>';
+  else if (res && res.error) body = '<div style="margin:22px 18px;padding:14px 16px;border:1px solid #f0c9c4;background:var(--danger-tint);border-radius:9px;font-size:var(--fs-2);color:var(--disp-2)">' + esc(res.error) + '</div>';
   else if (res && res.dir === 'forward') body = _traceFwd(res);
   else if (res && res.dir === 'backward') body = _traceBwd(res);
   else body = emptyState('🧭', 'Flag a batch to trace it', 'Paste a batch or chit id above, then Recall set ▸ (who it reached) or ◂ To source (where it came from).');
@@ -79,7 +79,7 @@ function _traceBatchPicker(){
     var meta = [ (b.qty != null ? (esc(String(b.qty)) + esc(b.unit ? (' ' + b.unit) : '')) : ''), (b.sender_name ? ('from ' + esc(b.sender_name)) : '') ].filter(Boolean).join(' · ');
     return '<div onclick="UI.traceId=\'' + b.chit_id + '\';runTrace(\'forward\')" title="Click to trace this batch" '
       + 'style="cursor:pointer;padding:9px 11px;border:1px solid var(--line);border-radius:9px;background:var(--card);display:flex;flex-direction:column;gap:2px;color:var(--on-card)">'
-      + '<div style="display:flex;align-items:center;gap:7px"><b style="font-size:13px">' + name + '</b>'
+      + '<div style="display:flex;align-items:center;gap:7px"><b style="font-size:var(--fs-2)">' + name + '</b>'
         + (b.is_origin ? '<span style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);background:var(--blue-tint-bg);border-radius:5px;padding:1px 5px">' + tx('ORIGIN') + '</span>' : '') + '</div>'
       + (meta ? '<div style="font-size:var(--fs-1);color:var(--grey)">' + meta + '</div>' : '')
       + '<div style="font-family:monospace;font-size:var(--fs-1);color:var(--grey-3);word-break:break-all">' + esc(b.chit_id) + '</div>'
@@ -115,7 +115,7 @@ function _traceFwd(r){
       + (r.terminals || []).length + ' exposed endpoint' + ((r.terminals || []).length === 1 ? '' : 's') + '</div>'
     + '<div style="margin-top:11px;font-size:var(--fs-3);font-weight:800;color:var(--ok-2)">' + _traceRs(saved) + ' saved'
       + '<span style="font-weight:600;color:var(--grey);font-size:var(--fs-2)"> — recall these ' + targeted + ', not a blanket ~' + blanket + '</span></div>'
-    + ((r.flagged || 0) > 0 ? '<div style="margin-top:11px;font-size:13px;font-weight:800;color:#fff;background:#c0453b;border-radius:9px;padding:7px 12px;display:inline-block">⚠ ' + r.flagged + ' node' + (r.flagged === 1 ? '' : 's') + ' fail mass-balance — more went OUT than came IN</div>' : '')
+    + ((r.flagged || 0) > 0 ? '<div style="margin-top:11px;font-size:var(--fs-2);font-weight:800;color:#fff;background:#c0453b;border-radius:9px;padding:7px 12px;display:inline-block">⚠ ' + r.flagged + ' node' + (r.flagged === 1 ? '' : 's') + ' fail mass-balance — more went OUT than came IN</div>' : '')
     + '</div>';
 
   return banner

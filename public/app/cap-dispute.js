@@ -138,7 +138,7 @@ function disputeBanner(c){
   if(!open.length && !closed.length) return '';
   var proof=c.proof==='ok'?'<span class="db-proof">' + tx('⚖️ both-signed record') + '</span>':'';
   var head='<div class="db-row"><span class="db-tag">⚑ '+(open.length?open.length+' dispute'+(open.length>1?'s':'')+' open on this record':'Disputes (resolved)')+'</span>'+proof+'</div>';
-  var dd='<select onchange="disputeSelect(this.value)" style="width:100%;margin-top:9px;padding:10px 12px;border:1px solid #e5c9c6;border-radius:9px;font-size:13px;background:var(--card);color:var(--on-card);cursor:pointer">'
+  var dd='<select onchange="disputeSelect(this.value)" style="width:100%;margin-top:9px;padding:10px 12px;border:1px solid #e5c9c6;border-radius:9px;font-size:var(--fs-2);background:var(--card);color:var(--on-card);cursor:pointer">'
     +'<option value="">— select a dispute to open —</option>'+dispOptGroup(open,'OPEN')+dispOptGroup(closed,'CLOSED')+'</select>';
   var sel=UI.dispSel?all.filter(function(d){ return String(d.dispute_id)===String(UI.dispSel); })[0]:null;   // stale id (other chit) → no overlay
   return '<div class="dispbanner">'+head+dd+'</div>'+(sel?disputeOverlay(c, sel, open, closed):'');
@@ -212,7 +212,7 @@ function disputeRoomBox(c, d){
 function disputeComposeBox(c, d, to){
   return '<div style="border:1px solid #e5c9c6;border-radius:9px;padding:9px;margin-bottom:10px;background:var(--danger-tint);color:var(--on-card)">'
     +'<div style="font-size:var(--fs-1);color:var(--disp);font-weight:700;margin-bottom:6px">New message to '+to+'</div>'
-    +'<textarea id="droom-'+d.dispute_id+'" data-testid="dispute-room-input" oninput="window.CBOffline&&CBOffline.saveDraft(\'disp.room.'+d.dispute_id+'\',this.value)" placeholder="Message — '+to+' will see this" style="width:100%;box-sizing:border-box;min-height:46px;border:1px solid var(--line);border-radius:9px;padding:7px;font:inherit;font-size:13px;resize:vertical">'+esc((window.CBOffline&&CBOffline.loadDraft('disp.room.'+d.dispute_id))||'')+'</textarea>'
+    +'<textarea id="droom-'+d.dispute_id+'" data-testid="dispute-room-input" oninput="window.CBOffline&&CBOffline.saveDraft(\'disp.room.'+d.dispute_id+'\',this.value)" placeholder="Message — '+to+' will see this" style="width:100%;box-sizing:border-box;min-height:46px;border:1px solid var(--line);border-radius:9px;padding:7px;font:inherit;font-size:var(--fs-2);resize:vertical">'+esc((window.CBOffline&&CBOffline.loadDraft('disp.room.'+d.dispute_id))||'')+'</textarea>'
     +'<div style="display:flex;align-items:center;gap:8px;margin-top:7px;flex-wrap:wrap">'
       +'<label style="border:1px solid var(--line);background:var(--card);border-radius:9px;padding:6px 11px;font-size:var(--fs-2);cursor:pointer;color:var(--on-card)">' + tx('📎 Attach') + '<input type="file" multiple style="display:none" onchange="disputeAddFiles(this.files);this.value=\'\'"></label>'
       +'<span id="dispfiles">'+disputeFileChips()+'</span>'
@@ -254,12 +254,12 @@ async function loadDisputes(){
       var resolveRow=btns?'<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">'+btns+'</div>':'';
       return '<div class="card" style="border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:9px">'
         +'<div style="display:flex;justify-content:space-between;gap:8px"><b>'+esc(d.auto_subject||d.purpose||'chit')+'</b><span class="optchip '+(d.status==='open'?'brk':'on')+'">'+esc(d.status)+'</span></div>'
-        +'<div style="font-size:13px;color:var(--ink);margin:5px 0"><b>'+esc(cap(d.category||''))+'</b> — '+esc(d.reason||'')+'</div>'
+        +'<div style="font-size:var(--fs-2);color:var(--ink);margin:5px 0"><b>'+esc(cap(d.category||''))+'</b> — '+esc(d.reason||'')+'</div>'
         +'<div style="font-size:var(--fs-1);color:var(--grey)">raised by '+nm(d.raised_by_display_name,'—')+' · '+esc(d.scope||'')+(d.resolution_note?(' · ✓ '+esc(d.resolution_note)):'')+'</div>'
         +roster+resolveRow+'</div>';
     };
-    host.innerHTML = menuAssist('disputes')+'<div class="sec" style="font-size:var(--fs-2);color:var(--grey);margin:4px 0">Raised by you ('+mine.length+')</div>'+lazyWrap('dm', mine, function(d){return card(d,true);}, '<div style="color:var(--grey);font-size:13px;padding:6px">None.</div>')
-      +'<div class="sec" style="font-size:var(--fs-2);color:var(--grey);margin:14px 0 4px">Against you / awaiting ('+other.length+')</div>'+lazyWrap('do', other, function(d){return card(d,false);}, '<div style="color:var(--grey);font-size:13px;padding:6px">None.</div>');
+    host.innerHTML = menuAssist('disputes')+'<div class="sec" style="font-size:var(--fs-2);color:var(--grey);margin:4px 0">Raised by you ('+mine.length+')</div>'+lazyWrap('dm', mine, function(d){return card(d,true);}, '<div style="color:var(--grey);font-size:var(--fs-2);padding:6px">None.</div>')
+      +'<div class="sec" style="font-size:var(--fs-2);color:var(--grey);margin:14px 0 4px">Against you / awaiting ('+other.length+')</div>'+lazyWrap('do', other, function(d){return card(d,false);}, '<div style="color:var(--grey);font-size:var(--fs-2);padding:6px">None.</div>');
   }catch(e){ host.innerHTML=scrErr(e, tx('disputes'), 'loadDisputes()'); }
 }
 
@@ -272,7 +272,7 @@ async function quickDispute(){ var ids=(typeof needTarget==='function'?needTarge
   try{ var r=await api("chit",{params:{id}}); var h=(r&&r.header)||r||{}; var seen={};
     var parties=(h.all_recipients||[]).filter(function(x){ return x&&x.entity_id&&!chitIsSelf(x.entity_id,x.display_name)&&!seen[x.entity_id]&&(seen[x.entity_id]=1); });
     MODALS.disp.parties=parties;
-    if(parties.length){ partyRows='<div style="font-size:var(--fs-2);color:var(--grey);margin:9px 0 3px">Between which parties? <span style="color:#9aa3ad">(none ticked = everyone involved)</span></div>'+parties.map(function(p){ return '<label style="display:flex;gap:8px;align-items:center;padding:3px 0;font-size:13px;cursor:pointer"><input type="checkbox" class="dispparty" value="'+p.entity_id+'"> '+nm(p.display_name,'party')+' <span style="font-size:var(--fs-1);color:var(--grey);text-transform:uppercase">'+esc(p.role||'')+'</span></label>'; }).join(''); }
+    if(parties.length){ partyRows='<div style="font-size:var(--fs-2);color:var(--grey);margin:9px 0 3px">Between which parties? <span style="color:#9aa3ad">(none ticked = everyone involved)</span></div>'+parties.map(function(p){ return '<label style="display:flex;gap:8px;align-items:center;padding:3px 0;font-size:var(--fs-2);cursor:pointer"><input type="checkbox" class="dispparty" value="'+p.entity_id+'"> '+nm(p.display_name,'party')+' <span style="font-size:var(--fs-1);color:var(--grey);text-transform:uppercase">'+esc(p.role||'')+'</span></label>'; }).join(''); }
   }catch(_){}
   modal('<div class="mhd"><div class="t">' + tx('⚑ Raise dispute') + '</div></div><div class="mbody"><div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:7px">Pick a category and give a reason (min 10 characters). The parties you select are notified and carry the dispute status.</div><select id="dispcat" data-testid="dispute-category" style="width:100%;margin-bottom:8px;padding:8px;border:1px solid var(--line);border-radius:6px"><option value="quality">' + tx('Quality') + '</option><option value="quantity">' + tx('Quantity') + '</option><option value="delivery">' + tx('Delivery') + '</option><option value="payment">' + tx('Payment') + '</option><option value="docs">' + tx('Docs') + '</option><option value="other" selected>' + tx('Other') + '</option></select>'+partyRows+'<textarea id="dispreason" data-testid="dispute-reason" oninput="window.CBOffline&&CBOffline.saveDraft(\'disp.reason.'+id+'\',this.value)" placeholder="e.g. Quantity short by 2 units — please replace">'+esc((window.CBOffline&&CBOffline.loadDraft('disp.reason.'+id))||'')+'</textarea></div><div class="mfoot"><button onclick="closeModal()">' + tx('Cancel') + '</button><button class="danger" data-testid="dispute-raise" onclick="confirmDispute()">' + tx('Raise dispute') + '</button></div>');
 }

@@ -779,7 +779,7 @@
       'place-items:center;cursor:pointer;font-family:inherit;flex:none}',
       '.cbcat-add{background:var(--blue,var(--blue));color:#fff}',
       '.cbcat-stp input{width:52px;height:30px;border:1px solid var(--line,var(--line));border-radius:9px;',
-      'text-align:center;font-size:13px;font-variant-numeric:tabular-nums;font-family:inherit}',
+      'text-align:center;font-size:var(--fs-2);font-variant-numeric:tabular-nums;font-family:inherit}',
       /* Sits INSIDE the price column, so it must not widen it — hence the same 78px the column is. */
       '.cbcat-offer{display:block;width:100%;height:28px;border:1px solid var(--blue,var(--blue));border-radius:6px;',
       'padding:0 7px;font-size:var(--fs-2);text-align:end;font-family:inherit;margin-top:2px;',
@@ -788,7 +788,7 @@
       'font-size:var(--fs-2);font-weight:700;color:var(--ink,var(--ink));cursor:pointer;font-family:inherit;',
       'white-space:nowrap}',
       '.cbcat-pick.on{background:var(--blue,var(--blue));border-color:var(--blue,var(--blue));color:#fff}',
-      '.cbcat-grp{padding:11px 2px 3px;display:flex;align-items:center;gap:9px;font-size:13px}',
+      '.cbcat-grp{padding:11px 2px 3px;display:flex;align-items:center;gap:9px;font-size:var(--fs-2)}',
       '.cbcat-cnt{font-size:var(--fs-1);color:var(--grey-2)}',
       '.cbcat-all{font-size:var(--fs-1);color:var(--blue,var(--blue));font-weight:700;cursor:pointer;margin-inline-start:auto}',
       '.cbcat-empty{padding:30px 8px;color:var(--grey-2);font-size:13.5px;text-align:center}',
@@ -824,7 +824,7 @@
       'font-size:var(--fs-2);color:var(--warn-3);box-shadow:0 -6px 12px -10px rgba(15,46,61,.45)}',
       '.cbcat-commit b{color:var(--ink,var(--ink))}',
       '.cbcat-commit button{margin-inline-start:auto;background:var(--blue,var(--blue));color:#fff;',
-      'border:1px solid var(--blue,var(--blue));border-radius:9px;padding:9px 15px;font-weight:700;font-size:13px;',
+      'border:1px solid var(--blue,var(--blue));border-radius:9px;padding:9px 15px;font-weight:700;font-size:var(--fs-2);',
       'white-space:nowrap;cursor:pointer;font-family:inherit}',
 
       '.cbcat-onchit{padding:10px 12px;margin-bottom:9px;background:var(--blue-tint-bg);border:1px solid #d8e4f3;',
@@ -852,7 +852,7 @@
       '.cbcat-noteread{font-size:var(--fs-2);color:#4a6b8a;padding:1px 0 4px}',
       '.cbcat-attrow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:0 0 4px}',
       '.cbcat-clip{cursor:pointer;border:1px solid var(--line,var(--line));border-radius:9px;padding:3px 8px;',
-      'font-size:13px;background:var(--card);flex:none;line-height:1.4}',
+      'font-size:var(--fs-2);background:var(--card);flex:none;line-height:1.4}',
       '.cbcat-clip:hover{border-color:var(--blue,var(--blue))}',
       '.cbcat-chips{display:inline-flex;flex-wrap:wrap;gap:2px;align-items:center}'
     ].join('');

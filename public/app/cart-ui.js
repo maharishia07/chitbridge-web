@@ -618,12 +618,12 @@
       off = '<input placeholder="your price" value="' + esc(os.value == null ? '' : String(os.value)) + '" inputmode="decimal"'
         + ' onchange="CBCart.setOffer(\'' + esc(ns) + '\',\'' + esc(id) + '\',this.value)"'
         + ' style="width:78px;padding:5px;border:1.5px solid ' + (os.value != null && !os.ok ? 'var(--disp)' : 'var(--line)')
-        + ';border-radius:6px;font-size:13px;text-align:end">';
+        + ';border-radius:6px;font-size:var(--fs-2);text-align:end">';
     }
     return '<span style="display:inline-flex;align-items:center;gap:8px" onclick="event.stopPropagation()">' + off
       + '<button style="' + rnd + '" onclick="CBCart.dec(\'' + esc(ns) + '\',\'' + esc(id) + '\')">−</button>'
       + '<input value="' + esc(String(q)) + '" inputmode="decimal" onchange="CBCart.setQty(\'' + esc(ns) + '\',\'' + esc(id) + '\',this.value)"'
-      + ' style="width:52px;padding:5px;border:1px solid var(--line);border-radius:6px;font-size:13px;text-align:center">'
+      + ' style="width:52px;padding:5px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2);text-align:center">'
       + '<button data-testid="cart-add" style="' + rnd + ';background:' + a + ';color:#fff" onclick="CBCart.add(\'' + esc(ns) + '\',\'' + esc(id) + '\')">+</button></span>';
   }
   /**
