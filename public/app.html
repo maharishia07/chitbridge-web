@@ -1452,6 +1452,7 @@ const EP = {
      existed at runtime. Both pointed at the same path so nothing broke — but the same class of silent shadowing
      is what made a finished screen render as a stub earlier today. One key, one definition. */
   purgeChit:       {m:"DELETE", p:"/api/chits/:id/purge",        ok:"✓"},  // permanent hard-delete of a DRAFT only
+  pulse:           {m:"GET",   p:"/api/chits/pulse",             ok:"y"},   // has anything changed? one cheap watermark
   unread:          {m:"GET",  p:"/api/chits/unread",             ok:"✓"},  // per-actor unread chit_ids — baseline-11
   assignBulk:      {m:"POST", p:"/api/chits/assign-bulk",        ok:"✓"},  // built (baseline-4); frontend wire pending — panel-fixes #2
   filters:         {m:"GET",  p:"/api/chits/inbox?kind&dispute&sort", ok:"◐"}, // inbox exists; query-param support unverified
@@ -3691,7 +3692,9 @@ function _renderApp(){
 var _autoRefreshTimer = null;
 // Auto-refresh the active list so new chits appear without a manual reload.
 // Skips while you're typing, reading a chit, composing, in a modal, or the tab is hidden.
-function autoRefresh(){
+/* ⚠️ async now — the pulse is awaited before the list is read. setInterval does not wait on the promise, and
+   nothing else calls this expecting a return value, so the change is contained to this function. */
+async function autoRefresh(){
   try{
     // A signed-out tab must go quiet. Without this the timer kept polling with no token, and its callbacks
     // repainted the app shell over the login screen every 20 seconds.
@@ -3720,7 +3723,30 @@ function autoRefresh(){
     const lb=document.getElementById('lbhost');    if(lb && lb.innerHTML.trim()) return;
     const ae=document.activeElement; if(ae && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) return;
     if(UI.detail || UI.mdetail) return;
-    if(['task','order','drafts','trash','archive'].includes(UI.nav)) loadList(true);   // silent background refresh — no spinner flash
+    /**
+     * ⭐⭐ ASK WHETHER ANYTHING CHANGED BEFORE READING THE LIST. Athi, 2026-08-21: *"can we change the model
+     * from reading the data to push data, which avoids the read continuously?"*
+     *
+     * This is the stepping stone to push, and most of its benefit for one cheap query. `/chits/pulse` returns a
+     * WATERMARK built from three indexed reads; if it has not moved, the list has not moved, and the cycle ends
+     * here — no fetch, no repaint, no flash. The 20-second tick becomes invisible instead of merely quiet.
+     *
+     * ⚠️ A NULL WATERMARK MEANS "CANNOT TELL", NOT "NOTHING CHANGED". The server answers null when the pulse
+     * query itself failed; treating that as unchanged would freeze the screen indefinitely on a fault nobody
+     * can see. Unknown falls through to the refresh — exactly today's behaviour.
+     *
+     * ⚠️ AND THE FIRST TICK ALWAYS REFRESHES, because there is nothing to compare against yet. Storing the
+     * watermark without acting on it would skip the first real change of every session.
+     */
+    if(['task','order','drafts','trash','archive'].includes(UI.nav)){
+      let _moved = true;
+      try{
+        const _p = await api('pulse');
+        const _w = _p && _p.w;
+        if(_w){ _moved = (UI._pulse !== _w); UI._pulse = _w; }
+      }catch(_){ /* the pulse is an optimisation; a failure must never cost the refresh it guards */ }
+      if(_moved) loadList(true);   // silent background refresh — no spinner flash
+    }
     else if(UI.nav==='disputes') loadDisputes();
     // Co-assist roster is NOT real-time — no auto-poll. It refreshed the whole left panel on a timer (disruptive
     // while viewing someone). It reloads on navigation and after an add/deactivate action, which is enough.
