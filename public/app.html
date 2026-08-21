@@ -8185,8 +8185,26 @@ async function loadList(silent){
     }
     paintRowsOnly();
     // full-set per-state rollup (true counts + sums) — independent enrichment; repaint counts when it lands.
-    if(["task","order"].includes(UI.folder) && SESSION.role!=="customer"){ try{ const rl=await api("rollup",{query:rollupQuery()}); UI.rollup=(rl&&rl.groups)||[]; UI.disputeOpen=(rl&&rl.dispute_open)||0; paintRowsOnly(); }catch(_){ UI.rollup=[]; UI.disputeOpen=0; } } else { UI.rollup=[]; UI.disputeOpen=0; }
-    if(SESSION.role==="actor" && CFG.MODE!=='demo'){ try{ const u=await api("unread"); const set=new Set((u&&u.unread)||[]); UI.rows.forEach(r=>{ r.unread=set.has(r.id); }); paintRowsOnly(); }catch(_){} }
+    /**
+     * ⭐⭐ STARTED TOGETHER, AWAITED SEPARATELY — they were awaited ON THE SPOT, one after the other, so a
+     * co-assist paid TWO full round trips of enrichment in sequence. Neither depends on the other: `rollup` is
+     * per-state counts and sums, `unread` is a set of ids. The list is already painted by this point (see
+     * paintRowsOnly above), so this is not first-paint latency — but it is the counts and the unread dots
+     * arriving one wave later than they need to, for exactly the people with the most rows.
+     *
+     * ⚠️ THIS IS THE IDIOM openChit ALREADY USES three lines from here — `const chitP = api(...)` started,
+     * awaited later. Two GETs in flight is nothing for a browser (six connections per origin) and, unlike the
+     * server-side pool, there is no connection budget to blow.
+     *
+     * ⚠️ EACH STILL REPAINTS AND FAILS ON ITS OWN. Sharing a start must not share a fate: rollup failing
+     * must not cost the unread dots, and neither must cost the list that is already on screen.
+     */
+    const _rollupP = (["task","order"].includes(UI.folder) && SESSION.role!=="customer")
+      ? api("rollup",{query:rollupQuery()}).catch(function(){ return null; }) : null;
+    const _unreadP = (SESSION.role==="actor" && CFG.MODE!=='demo')
+      ? api("unread").catch(function(){ return null; }) : null;
+    if(_rollupP){ try{ const rl=await _rollupP; UI.rollup=(rl&&rl.groups)||[]; UI.disputeOpen=(rl&&rl.dispute_open)||0; paintRowsOnly(); }catch(_){ UI.rollup=[]; UI.disputeOpen=0; } } else { UI.rollup=[]; UI.disputeOpen=0; }
+    if(_unreadP){ try{ const u=await _unreadP; const set=new Set((u&&u.unread)||[]); UI.rows.forEach(r=>{ r.unread=set.has(r.id); }); paintRowsOnly(); }catch(_){} }
   }catch(e){ UI.loading=false; if(!silent){ const b=document.getElementById("rows"); if(b)b.innerHTML=scrErr(e, '', 'loadList()'); } }
 }
 function paintRowsOnly(){const b=document.getElementById("rows"); if(b)b.innerHTML=renderRows(); document.querySelectorAll(".statetabs .n").forEach((el,i)=>{el.textContent=stCount(["open","act","close"][i]);}); pgPaintTotal(); applyColTpl();}
