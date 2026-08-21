@@ -20,6 +20,49 @@ const { mintEntity, clickNav, openAvatarItem } = require('../fixtures');
 const fontOf = (page, sel) => page.locator(sel).first()
   .evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
 
+/**
+ * ⭐ REACHING A SETTINGS SECTION, AND ASSERTING YOU ARRIVED.
+ *
+ * ⚠⚠ I BRIEFLY "FIXED" THIS INTO BEING WRONG. Reading `SET_SECS` through a truncated range showed six keys
+ * and no `appearance`, so I concluded Appearance had no rail entry and routed this through a link inside
+ * Governance. A probe against the live DOM says the rail carries EIGHT: work · policy · channels · governance
+ * · blueprints · locale · appearance · standards. `set-sec-appearance` was there all along.
+ *
+ * ⚠️ READING PART OF A LIST AND CONCLUDING SOMETHING ABOUT THE WHOLE is the same mistake as a scan that
+ * under-matches: both report their own blindness as a fact about the code. The probe took forty seconds and
+ * settled it; three rounds of reasoning from an artefact did not.
+ *
+ * ⚠️ THE ARRIVAL ASSERTION STAYS — it is what turned "timeout on ap-fs-m" into "the pane did not open",
+ * which is the difference between blaming a control and blaming the navigation.
+ */
+/**
+ * ⚠️⚠️ OPEN, AND NOT A TEST BUG: A SETTINGS SECTION INTERMITTENTLY FAILS TO PAINT.
+ *
+ * Across two identical full runs the SAME three checks failed — but not the same three. Run one lost
+ * Localisation; run two lost Appearance and kept Localisation. A locator that is wrong is wrong every time;
+ * one that fails on a different section each run is reporting a RACE, not a bad selector.
+ *
+ * What was ruled out, each by measurement rather than by reasoning:
+ *   · the rail item        — `set-sec-locale` is present, and its click does set `setSec()` to 'locale'
+ *   · the renderer         — `localeSettingsHTML()` called by hand returns 52,000 characters
+ *   · the dispatch         — `paintSettings` has `if (k === "locale") out = localeSettingsHTML()`
+ *   · a missing dependency — locale.js is a plain synchronous script, so CBLocale is never late
+ *
+ * ⭐ WHAT A PERSON SEES WHEN IT HAPPENS is the part worth attention: not a blank pane and not an error, but
+ * the CHIT LIST'S empty state — "Your bogie is empty · Compose" — rendered inside Settings. Someone who
+ * clicked Localisation is told their rail is empty. ⚠️ `paintSettings` swallows a render throw into
+ * `scrErr`, so nothing reaches the console; that is why this has never surfaced as an error report.
+ *
+ * ⚠️ NOT FIXED HERE. The settings screen is Athi's, the failure is intermittent, and a fix aimed at a
+ * mechanism I have not identified would be a guess dressed as a repair. The checklist is left FAILING on
+ * purpose — a red check that names a real race is worth more than a green one that waits it out.
+ */
+async function openSettingsSection(page, key, expect1) {
+  await openAvatarItem(page, 'nav-settings');
+  await page.getByTestId('set-sec-' + key).click();
+  if (expect1) await expect(page.getByTestId(expect1), 'the ' + key + ' pane did not open').toBeVisible();
+}
+
 test.describe('Live checks · 2026-08-21/22', () => {
 
   /**
@@ -33,12 +76,7 @@ test.describe('Live checks · 2026-08-21/22', () => {
   test('[LIVE-01] text actually resizes with the setting — the whole screen, together', async ({ page }) => {
     await mintEntity(page);
     await openAvatarItem(page, 'nav-settings');
-    /* ⚠⚠ `set-sec-<key>` IS THE SETTINGS RAIL, and it is the reliable way in. My first version clicked
-       `gov-to-appearance` — a shortcut link that only exists INSIDE the Governance section — with a
-       `.catch(() => {})` on it. So when it was not there the navigation silently did nothing and the test
-       failed fifteen seconds later on `ap-fs-m`, blaming a control that was simply on another screen.
-       Swallowing the failure of the step that GETS you somewhere is how a test lies about where it is. */
-    await page.getByTestId('set-sec-appearance').click();
+    await openSettingsSection(page, 'appearance', 'ap-fs-m');
 
     const sample = '.topbar .b';   // present on every screen, and tokenised
     await page.getByTestId('ap-fs-m').click();
@@ -65,8 +103,7 @@ test.describe('Live checks · 2026-08-21/22', () => {
    */
   test('[LIVE-02] nothing overflows sideways at Extra large', async ({ page }) => {
     await mintEntity(page);
-    await openAvatarItem(page, 'nav-settings');
-    await page.getByTestId('set-sec-appearance').click();
+    await openSettingsSection(page, 'appearance', 'ap-fs-m');
     await page.getByTestId('ap-fs-xl').click();
 
     /**
@@ -85,8 +122,7 @@ test.describe('Live checks · 2026-08-21/22', () => {
         document.documentElement.scrollWidth - document.documentElement.clientWidth);
       expect(over, nav + ' scrolls sideways at Extra large — something is wider than the screen').toBeLessThanOrEqual(1);
     }
-    await openAvatarItem(page, 'nav-settings');
-    await page.getByTestId('set-sec-appearance').click();
+    await openSettingsSection(page, 'appearance', 'ap-fs-m');
     await page.getByTestId('ap-fs-m').click();
   });
 
@@ -97,8 +133,8 @@ test.describe('Live checks · 2026-08-21/22', () => {
    */
   test('[LIVE-03] every calendar option shows the date it would produce', async ({ page }) => {
     await mintEntity(page);
-    await openAvatarItem(page, 'nav-settings');
-    await page.getByTestId('set-sec-locale').click();
+    await openSettingsSection(page, 'locale', 'loc-ca');
+    await expect(page.getByTestId('loc-ca'), 'the Localisation pane did not open').toBeVisible();
     const opts = await page.getByTestId('loc-ca').locator('option').allTextContents();
     expect(opts.length, 'the calendar picker should offer several calendars').toBeGreaterThan(2);
     /* ⚠️ "Follow the format" has no effect of its own, so it is the one option with nothing to show. */
@@ -112,9 +148,9 @@ test.describe('Live checks · 2026-08-21/22', () => {
    */
   test('[LIVE-04] a settings change stages, and Discard undoes it', async ({ page }) => {
     await mintEntity(page);
-    await openAvatarItem(page, 'nav-settings');
-    await page.getByTestId('set-sec-locale').click();
+    await openSettingsSection(page, 'locale', 'loc-ca');
 
+    await expect(page.getByTestId('loc-ca'), 'the Localisation pane did not open').toBeVisible();
     await page.getByTestId('loc-ca').selectOption('indian');
     await expect(page.getByTestId('loc-pending'),
       'choosing an option must raise the Not-saved-yet bar').toBeVisible();
