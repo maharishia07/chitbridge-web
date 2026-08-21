@@ -1992,6 +1992,71 @@ function iamGovernedRows(e){
      */
     var _readTz = (CBLocale.timezone && CBLocale.timezone()) || null;
     var _bizTz2 = (e && e.timezone) || null;
+    /**
+     * ⭐⭐ THE REGION THE SAMPLES ARE WRITTEN FOR, NAMED. Athi, 2026-08-21, holding the two screens side by
+     * side: *"still looks different — one from profile and another one from settings?"* Profile said COUNTRY:
+     * IN; Settings said PRESENTATION: United States. Both correct, and together they read as a bug.
+     *
+     * ⚠⚠ THEY ARE TWO DIFFERENT FACTS WEARING SIMILAR NAMES. `Country` is identities.country — where the
+     * BUSINESS is. `Region` is cb_region — how THIS READER wants figures written. A business in India read by
+     * someone on a US-configured device is a perfectly ordinary state, and nothing on the profile said so: the
+     * only evidence was 12,345,678.9 grouping the American way under a row that said IN.
+     *
+     * ⚠️ I HAD ALREADY FIXED THIS EXACT SHAPE FOR THE TIME ZONE and did not generalise it. The timestamp
+     * names its zone when it differs from the business's; the number format named nothing at all. My own
+     * alignment guard called Region 'demonstrated — drives every sample', which is too weak a standard: a
+     * sample proves the EFFECT and never lets a reader check the SETTING. It is NAMED now, and the guard says so.
+     *
+     * ⚠️ THE NOTE APPEARS ONLY WHEN THEY DIFFER. When the reader's region and the business's country agree
+     * there is nothing to disambiguate, and a permanent line explaining a non-difference is the text budget
+     * being spent on nobody.
+     */
+    try {
+      var _fr   = CBLocale.region && CBLocale.region();
+      var _fri  = CBLocale.regionInfo && CBLocale.regionInfo();
+      var _ftag = CBLocale.tag ? CBLocale.tag() : (CBLocale.locale && CBLocale.locale());
+      /* ⚠️ THE BASE TAG ONLY. en-IN-u-fw-sun-nu-deva is a machine's answer to a human's question; every -u-
+         extension is spelled out in the note beside it, so showing both would be the same fact twice, once
+         illegibly. split('-u-')[0] rather than a regex — the separator is literal and fixed by BCP 47. */
+      if (_ftag) _ftag = String(_ftag).split('-u-')[0];
+      if (_fr || _ftag) {
+        var _fname = (_fri && _fri.name) || _fr || '';
+        /**
+         * ⭐⭐ AND THE THREE SETTINGS THAT HAD NO NAME ANYWHERE RIDE HERE. Athi, 2026-08-21: *"even the
+         * numbering system etc shows wrong."* They were not wrong — measured, `nu=deva` really does render
+         * १,२३,४५,६७८.९ and `ca=indian` really does render 30 Sravana. They were UNNAMED: a reader who chose
+         * Devanagari digits saw them under a row called NUMBERS with nothing saying which setting did that.
+         *
+         * ⚠️ ONE LINE, NOT THREE ROWS. Numbering system, hour cycle and calendar are each a rarely-touched
+         * refinement of the same question this row already answers. Three permanent rows would spend the text
+         * budget on settings almost nobody changes and push the group past six; one note, listing only what was
+         * actually overridden, costs nothing when nothing was.
+         *
+         * ⚠️ AND ONLY OVERRIDES — the region's own defaults are already visible in the samples below. Naming
+         * a default is not information, it is noise that makes the real choices harder to spot.
+         */
+        var _ov = [];
+        try {
+          if (CBLocale.getExt) {
+            var _nu = CBLocale.getExt('nu'), _hc = CBLocale.getExt('hc'), _ca = CBLocale.getExt('ca');
+            if (_nu) _ov.push(_locName(NUMERALS, _nu));
+            if (_hc) _ov.push(_locName(HOURS, _hc));
+            if (_ca) _ov.push(_locName(CALS, _ca));
+            /* ⚠️ FIRST DAY OF WEEK WAS 'NAMED' ONLY AS THE SUBTAG -u-fw-sun INSIDE en-IN-u-fw-sun. That is
+               named the way a licence plate names a car: technically identifying, unreadable by the person
+               who set it. It says 'Week starts Sunday' now, and the tag below drops its -u- extensions. */
+            var _fw = CBLocale.getExt('fw');
+            if (_fw) _ov.push(txf('week starts {d}', { d: _locName(WEEK, _fw) }));
+          }
+        } catch (_) { /* no ext layer — the row still names the region */ }
+        var _diff = (_fr && country && String(_fr).toUpperCase() !== String(country).toUpperCase())
+          ? txf('your device — the business is in {c}', { c: country }) : '';
+        rows.push(['Format',
+          (_fname ? _fname + (_ftag ? ' (' + _ftag + ')' : '') : _ftag),
+          [_diff].concat(_ov).filter(Boolean).join(' · '),
+          false, 'fmt']);
+      }
+    } catch (_) { /* absent locale layer — the samples below still speak for themselves */ }
     if (CBLocale.datetime) rows.push(['Timestamp', CBLocale.datetime(Date.now()),
       /**
        * ⚠️ THE COMPARISON IS THE CLOCK, NOT THE NAME. Asia/Calcutta and Asia/Kolkata are THE SAME ZONE under a
@@ -3405,6 +3470,30 @@ function appearanceSettingsHTML(){
 }
 
 /**
+ * ⭐ THE LOCALE LABEL TABLES, AT MODULE SCOPE — they were `var`s INSIDE localeSettingsHTML, which made them
+ * invisible to the profile. Writing 'Devanagari' a second time over in iamGovernedRows is how the Settings
+ * picker and the Profile note start disagreeing about what a code is called: two tables, one meaning, no force
+ * keeping them equal. The pickers still read these; nothing else changed for them.
+ */
+var NUMERALS = [['', 'Follow the format'], ['latn', 'Western — 123'], ['arab', 'Eastern Arabic — ١٢٣'], ['deva', 'Devanagari — १२३']];
+var HOURS    = [['', 'Follow the format'], ['h12', '12-hour — 09:15 pm'], ['h23', '24-hour — 21:15']];
+var CALS     = [['', 'Follow the format'], ['gregory', 'Gregorian'], ['islamic-umalqura', 'Hijri (Umm al-Qura)'], ['indian', 'Indian national'], ['buddhist', 'Buddhist']];
+var WEEK     = [['', 'Follow the format'], ['mon', 'Monday'], ['sun', 'Sunday'], ['sat', 'Saturday']];
+
+/**
+ * The short name for a stored code — 'deva' → 'Devanagari'. The tables carry a sample after an em dash
+ * ('Devanagari — १२३') because a PICKER should show one; a note beside the value should not repeat digits the
+ * reader can already see, so the sample is trimmed here rather than kept in a second table.
+ *
+ * ⚠️ .find() ON AN ARRAY, not a bracket lookup on an object — no prototype chain to walk past, so an unknown
+ * code returns the code itself instead of something truthy from Object.prototype.
+ */
+function _locName(table, code) {
+  var row = table.find(function (t) { return t[0] === code; });
+  return row ? String(row[1]).split(' — ')[0] : code;
+}
+
+/**
  * ⭐ THE CURRENCY MENU — the region's answer alone at the top, every ISO 4217 code below it.
  *
  * ⚠️ A SUGGESTION IS NOT A FILTER, and the difference is the bug this replaced. Athi, 2026-08-21: *"if the
@@ -3489,10 +3578,6 @@ function localeSettingsHTML(){
     ['ar-EG', 'Egypt — Arabic, Eastern digits ١٢٣'],
     ['ja-JP', 'Japan — 123,456,789.50']
   ];
-  var NUMERALS = [['', 'Follow the format'], ['latn', 'Western — 123'], ['arab', 'Eastern Arabic — ١٢٣'], ['deva', 'Devanagari — १२३']];
-  var HOURS    = [['', 'Follow the format'], ['h12', '12-hour — 09:15 pm'], ['h23', '24-hour — 21:15']];
-  var CALS     = [['', 'Follow the format'], ['gregory', 'Gregorian'], ['islamic-umalqura', 'Hijri (Umm al-Qura)'], ['indian', 'Indian national'], ['buddhist', 'Buddhist']];
-  var WEEK     = [['', 'Follow the format'], ['mon', 'Monday'], ['sun', 'Sunday'], ['sat', 'Saturday']];
 
   var cur = (function(){ try { return localStorage.getItem('cb_locale') || ''; } catch(_) { return ''; } })();
   var sel = function(id, list, val, fn){

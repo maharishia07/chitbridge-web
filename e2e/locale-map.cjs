@@ -1,0 +1,195 @@
+/**
+ * e2e/locale-map.cjs — the two-way map between Settings controls and Profile rows, MEASURED.
+ *
+ * Athi, 2026-08-21: *"each one in profile needs to be mapped vice versa. Create a checklist for the profile
+ * controls and what is being referred in settings, so it will be easier that we have not missed any."*
+ *
+ * ⭐⭐ SO IT DRIVES EACH CONTROL AND WATCHES WHAT MOVES. The guard this replaces held a hand-written table
+ * saying which profile row reflected which setter — and a declared mapping is exactly as trustworthy as the
+ * person who last edited it. This one sets a real value through the real locale layer, re-renders the real
+ * profile, and diffs the rows. Nothing is claimed; everything is observed.
+ *
+ * TWO DIRECTIONS, TWO FAILURES:
+ *   Settings → Profile   a control that moves NO row is invisible: changed, saved, and unconfirmable.
+ *   Profile  → Settings  a row no control moves must be a BUSINESS fact (it comes from the entity record).
+ *                        Anything else is an orphan — a value with no way to change it and no owner.
+ *
+ * ⚠️ "DEMONSTRATED" IS NOT GOOD ENOUGH ON ITS OWN, which is what this whole exercise proved. Athi held the two
+ * screens side by side: Profile said COUNTRY: IN while Settings said PRESENTATION: United States, and the only
+ * trace of the setting anywhere was that 12,345,678.9 grouped the American way. A sample shows a setting's
+ * EFFECT and never lets a reader CHECK it. So a row moving is necessary — and the row that moves must NAME it.
+ */
+const fs = require('fs');
+const vm = require('vm');
+const path = require('path');
+
+const W = path.join(__dirname, '..', 'public');
+const store = {};
+const sb = {
+  console, Intl,
+  localStorage: {
+    getItem: (k) => (k in store ? store[k] : null),
+    setItem: (k, v) => { store[k] = String(v); },
+    removeItem: (k) => { delete store[k]; },
+  },
+  document: {
+    getElementById: () => null,
+    documentElement: { style: { setProperty(){}, removeProperty(){} }, setAttribute(){}, removeAttribute(){}, classList: { add(){}, remove(){} } },
+    body: { classList: { add(){}, remove(){} }, setAttribute(){} },
+    createElement: () => ({ style: {}, setAttribute(){}, appendChild(){} }),
+    head: { appendChild(){} },
+    querySelector: () => null, querySelectorAll: () => [],
+  },
+  setTimeout: () => 0, clearTimeout(){}, fetch: async () => ({ ok: false }),
+  navigator: { language: 'en-IN', languages: ['en-IN'] },
+  location: { origin: '', host: 'h', search: '' },
+};
+sb.window = sb; sb.globalThis = sb;
+const ctx = vm.createContext(sb);
+vm.runInContext(fs.readFileSync(path.join(W, 'app', 'locale.js'), 'utf8'), ctx, { filename: 'locale.js' });
+Object.assign(sb, {
+  esc: (x) => String(x == null ? '' : x), tx: (x) => x,
+  txf: (t, v) => String(t).replace(/\{(\w+)\}/g, (m, k) => v[k]),
+  UI: { _iamOpen: { regional: 1 } }, SESSION: { token: 't', currency: 'INR' }, val: () => '',
+  opt: (l) => l.map((o) => '<option>' + o + '</option>').join(''),
+  toast(){}, renderApp(){}, loadProfile(){}, _capShowDetail(){}, api: async () => ({}),
+  MSG: { profileSaved: () => '' }, navTo(){}, setSetSec(){}, helpQ: () => '', _CARD: '',
+  govCardHTML: () => '', menuAssist: () => '', _misHead: () => '', _capEnd: () => '',
+  THEMES: { cream: { name: 'Cream', a11y: { level: 'AA' } } }, themeGet: () => 'cream',
+  TEXT_SIZES: [['s','Small',0.92],['m','Medium',1],['l','Large',1.15],['xl','Extra large',1.32]],
+  textSize: () => 'm', motionPref: () => 'auto', apGet: (k, d) => (k in store ? store[k] : d),
+  STANDARDS: [], GOV: [],
+});
+vm.runInContext(fs.readFileSync(path.join(W, 'app', 'cap-admin.js'), 'utf8'), ctx, { filename: 'cap-admin.js' });
+
+const ENTITY = {
+  identity_id: 'e', bridge_id: 'B', display_name: 'mystorex', user_id: 'mystorex',
+  identity_type: 'entity', country: 'IN', currency_code: 'INR', timezone: 'Asia/Kolkata', governance: {},
+};
+
+/**
+ * Every profile row as label -> "value [note]".
+ *
+ * ⚠️ THE NOTE IS PART OF THE VALUE HERE. For the time zone and the format, the note is where the setting is
+ * actually named — a diff that compared only the value would miss the exact fix this guard exists to protect.
+ */
+function rows() {
+  const html = ctx.iamMeHTML(ENTITY);
+  const seg = html.slice(html.indexOf('iam-sec-regional'));
+  const re = /letter-spacing:\.04em;line-height:1\.7">([^<]+)<\/b><div style="flex:1;min-width:0"><div>([\s\S]*?)<\/div>(?:<div style="font-size:var\(--fs-1\);color:var\(--grey\);margin-top:1px;line-height:1\.5">([^<]*)<\/div>)?/g;
+  const out = {}; let m;
+  while ((m = re.exec(seg))) {
+    out[m[1].trim()] = String(m[2]).replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim()
+      + (m[3] ? '  [' + m[3].trim() + ']' : '');
+  }
+  return out;
+}
+const diff = (a, b) => Object.keys(Object.assign({}, a, b)).filter((k) => a[k] !== b[k]);
+
+const C = ctx.CBLocale;
+function reset() {
+  C.setRegion('IN'); C.setLangs(['en']);
+  ['nu', 'hc', 'ca', 'fw'].forEach((k) => C.setExt(k, ''));
+  C.setWorkdays([]); C.setTimezone('');
+}
+
+/**
+ * Each Settings control, and a value that must visibly change something.
+ *
+ * ⚠️ THE VALUE HAS TO BE A REAL ALTERNATIVE, not merely a different string. Setting nu=latn against an en-IN
+ * baseline changes nothing — latn is ALREADY what en-IN uses — so the guard would report an invisible control
+ * when the truth is "already applied". Every value below is chosen to differ from the IN baseline.
+ */
+const CONTROLS = [
+  { setter: 'localeSetRegion',     what: 'Region',            run: () => C.setRegion('US') },
+  { setter: 'localeSetFormat',     what: 'Format',            run: () => C.setLocale('de-DE') },
+  { setter: 'localeToggleLang',    what: 'Languages',         run: () => C.setLangs(['ar', 'en']) /* ⚠ ARABIC, NOT TAMIL. Tamil is LTR, so a Tamil test left 'Reads' unchanged and this guard called it an ORPHAN. The value must exercise the consequence, not just the setting. */ },
+  { setter: 'localeSetNu',         what: 'Numbering system',  run: () => C.setExt('nu', 'deva') },
+  { setter: 'localeSetHc',         what: 'Hour cycle',        run: () => C.setExt('hc', 'h23') },
+  { setter: 'localeSetCa',         what: 'Calendar',          run: () => C.setExt('ca', 'indian') },
+  { setter: 'localeSetFw',         what: 'First day of week', run: () => C.setExt('fw', 'sun') },
+  { setter: 'localeToggleWorkday', what: 'Working days',      run: () => C.setWorkdays([1, 2, 3]) },
+  { setter: 'localeSetTz',         what: 'Time zone',         run: () => C.setTimezone('Europe/London') },
+  /* ⚠️ NOT DRIVEN, AND THE REASON IS THE POINT. Currency is the only control on that screen which PATCHes the
+     BUSINESS record rather than this browser's storage, so driving it would need a server. Its row is asserted
+     to exist instead — which is the whole claim being made about it: that it is NAMED on the profile. */
+  { setter: 'localeSetCurrency',   what: 'Currency',          expectRow: 'Currency' },
+];
+
+/* ⚠️ A NEW CONTROL MUST NOT SLIP IN UNLISTED — and the scan is over the whole FILE, not one function. When the
+   currency menu moved into its own _curPicker() helper, a scan limited to localeSettingsHTML went blind and
+   reported "aligned" with a completely unreflected control sitting on the screen. */
+const admin = fs.readFileSync(path.join(W, 'app', 'cap-admin.js'), 'utf8');
+const found = [...new Set([...admin.matchAll(/\b(localeSet[A-Za-z]+|localeToggle[A-Za-z]+)\b/g)].map((m) => m[1]))]
+  .filter((n) => n !== 'localeSettingsHTML');
+const known = new Set(CONTROLS.map((c) => c.setter));
+
+let fail = 0;
+const movedBy = {};
+
+reset();
+const BASE = rows();
+
+console.log('\n  SETTINGS → PROFILE   (what each control visibly moves)\n');
+for (const c of CONTROLS) {
+  if (!c.run) {
+    if (!Object.prototype.hasOwnProperty.call(BASE, c.expectRow)) {
+      fail++; console.error('  ✗ ' + c.what.padEnd(18) + 'no "' + c.expectRow + '" row on the profile');
+    } else {
+      console.log('  ✓ ' + c.what.padEnd(18) + c.expectRow + '   (server-side — row asserted, not driven)');
+      (movedBy[c.expectRow] = movedBy[c.expectRow] || []).push(c.what);
+    }
+    continue;
+  }
+  reset();
+  c.run();
+  const moved = diff(BASE, rows());
+  moved.forEach((r) => { (movedBy[r] = movedBy[r] || []).push(c.what); });
+  if (!moved.length) {
+    fail++;
+    console.error('  ✗ ' + c.what.padEnd(18) + 'moves NOTHING — it can be changed and never confirmed');
+  } else {
+    console.log('  ✓ ' + c.what.padEnd(18) + moved.join(' · '));
+  }
+}
+reset();
+
+/**
+ * ⚠️ THESE THREE COME FROM THE ENTITY RECORD, NOT FROM THIS BROWSER, which is why no locale control moves them.
+ * Country and Currency are columns on `identities`; Time zone is the BUSINESS's zone (b176) — the reader's own
+ * zone appears only as a NOTE on the timestamp. A locale setter that ever started moving one of these would
+ * mean a reader's preference had begun overwriting a fact about the business.
+ */
+const BUSINESS_FACTS = {
+  'Country':   'identities.country',
+  'Currency':  'identities.currency_code',
+  'Time zone': 'identities.timezone (b176)',
+};
+/* Theme and text size are real settings with a real owner — just a different screen. */
+const ELSEWHERE = { 'Theme': 'Settings › Appearance', 'Text size': 'Settings › Appearance' };
+
+console.log('\n  PROFILE → SETTINGS   (what governs each row)\n');
+for (const row of Object.keys(BASE)) {
+  const by = movedBy[row];
+  if (by && by.length) { console.log('  ✓ ' + row.padEnd(18) + by.join(' + ')); continue; }
+  if (Object.prototype.hasOwnProperty.call(BUSINESS_FACTS, row)) {
+    console.log('  · ' + row.padEnd(18) + BUSINESS_FACTS[row] + '   (business fact — no locale control)'); continue;
+  }
+  if (Object.prototype.hasOwnProperty.call(ELSEWHERE, row)) {
+    console.log('  · ' + row.padEnd(18) + ELSEWHERE[row]); continue;
+  }
+  fail++;
+  console.error('  ✗ ' + row.padEnd(18) + 'ORPHAN — no control moves it and it is not a declared business fact');
+}
+
+const unlisted = found.filter((n) => !known.has(n));
+const stale = CONTROLS.filter((c) => !found.includes(c.setter)).map((c) => c.setter);
+if (unlisted.length) {
+  fail++;
+  console.error('\n  ✗ Settings has a control this map does not know: ' + unlisted.join(', ')
+    + '\n    Add it above WITH a value that visibly changes the profile.');
+}
+if (stale.length) console.log('\n  ⚠ listed here but no longer in Settings: ' + stale.join(', '));
+
+console.log('\n  ══ ' + (fail ? fail + ' UNMAPPED' : 'every control moves a row, every row has an owner') + ' ══\n');
+process.exit(fail ? 1 : 0);
