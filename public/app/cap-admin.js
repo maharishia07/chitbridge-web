@@ -167,10 +167,16 @@ async function loadVault(){
   var host=document.getElementById('vaulthost'); if(!host) return;
   /* ⚠️ THE END MARKER IS PAINTED HERE, NOT BY profSecHTML — it is a claim that you have seen everything, so it
      must not appear beside a spinner. Appended synchronously with the content it terminates, on both paths. */
-  try{ var p=(await api('vaultGet'))||{};
-    /* The server normalises legacy group-shaped vaults to {sections} on read, so there is exactly one shape here. */
-    UI._vault={sections:((p.vault||{}).sections)||[]}; UI._vaultEnc=!!p.vault_encrypted;
-  }catch(e){ UI._vault={sections:[]}; UI._vaultEnc=false; }
+  /* ⭐ ALREADY IN HAND — /entities/me?include=vault brought it with the profile, so the vault section paints
+     without a second round trip. The fetch below still runs on every other path: a direct open, a refresh after
+     a save, an actor profile. See _profSeedIncluded. */
+  if (UI._vaultSeeded) { UI._vaultSeeded = false; }
+  else {
+    try{ var p=(await api('vaultGet'))||{};
+      /* The server normalises legacy group-shaped vaults to {sections} on read, so there is exactly one shape here. */
+      UI._vault={sections:((p.vault||{}).sections)||[]}; UI._vaultEnc=!!p.vault_encrypted;
+    }catch(e){ UI._vault={sections:[]}; UI._vaultEnc=false; }
+  }
   var h2=document.getElementById('vaulthost'); if(!h2) return;   // ⚠️ re-query: a repaint may have landed mid-fetch
   h2.innerHTML=vaultCardHTML(null,UI._vaultEnc)+vaultDatalists()+_capEnd();
   if(window.CBOffline)CBOffline.autodraft(h2,'app.vault',{overwrite:true});   // restore unsaved edits over the server copy
@@ -755,6 +761,42 @@ function profSetSec(k){
  * pane sat on its spinner behind all of them. The in-flight guard makes the extra renders free.
  */
 let _profBusy = false;
+/**
+ * ⭐ SEED THE THREE SUB-LOADERS FROM THE ONE RESPONSE, and set their latches so they do not fetch again.
+ *
+ * ⚠⚠ EACH SHAPE IS TAKEN FROM ITS OWN LOADER, NOT GUESSED. The channels one especially: the bound addresses
+ * live in `channels[].bindings[]`, NOT in `channels[]` — that array is the CATALOGUE OF TYPES (whatsapp · email
+ * · sms · web) and each type carries its own bindings. Guessing it once already produced a profile that
+ * rendered four type objects with no address and no status, and a test fixture built on the same guess so it
+ * passed while the screen was blank. Copied from the loader, deliberately, rather than re-derived.
+ *
+ * ⚠️ A FAILED INCLUDE MUST NOT LATCH. The server reports a broken part as `{ error }` in place, so the
+ * profile still paints without it — but leaving the latch UNSET means the section's own loader will try again
+ * when it renders. Bundling must not turn a retryable gap into a permanent one.
+ */
+function _profSeedIncluded(e){
+  var inc = e && e.included; if (!inc) return;
+  var ok = function(v){ return v && !v.error; };
+
+  if (ok(inc.readiness)) { UI._rdSum = inc.readiness.summary || null; UI._rdSumLoaded = true; }
+
+  if (ok(inc.channels)) {
+    UI._chans = Array.isArray(inc.channels.channels)
+      ? inc.channels.channels.reduce(function(all, t){ return all.concat(t.bindings || []); }, [])
+      : null;
+    UI._chansLoaded = true;
+  }
+
+  /* ⚠️ THE VAULT IS NOT LATCHED THE SAME WAY — loadVault() paints a host element as well as fetching, so it
+     still runs when the vault section opens. Seeding the DATA means it paints immediately instead of showing
+     a spinner for a round trip it no longer needs. */
+  if (ok(inc.vault)) {
+    UI._vault = { sections: ((inc.vault.vault || {}).sections) || [] };
+    UI._vaultEnc = !!inc.vault.vault_encrypted;
+    UI._vaultSeeded = true;
+  }
+}
+
 async function loadProfile(){ const h=document.getElementById("profbody"); if(!h)return;
   if(SESSION.role==='actor') return loadActorProfile(h);   // actors get their own profile, not the entity's
   /* ⚠️ THE SNAPSHOT IS RE-TAKEN AFTER EVERY PAINT. A baseline captured once at load goes stale the first time
@@ -762,7 +804,23 @@ async function loadProfile(){ const h=document.getElementById("profbody"); if(!h
   if(UI._me){ h.innerHTML = profSecHTML(profSec(), UI._me); if(profSec()==='vault') loadVault(); profSnapshot(); return; }
   if(_profBusy) return;
   _profBusy = true;
-  try{ const e=(await api("me"))||{}; UI._me=e;
+  /**
+   * ⭐⭐ ONE HTTP ROUND TRIP INSTEAD OF FOUR. Athi, 2026-08-21: *"why do we need a round trip, can't the js send
+   * all the required information in one shot? We have built most of the stuff as lazy load, and for each lazy
+   * load if we have to do a round trip, that will feel like waiting forever."*
+   *
+   * ⚠️⚠️ THIS SCREEN MADE FOUR SEPARATE FETCHES — /entities/me, /governance/readiness, /channels and
+   * /governance/profile — because each was added by whoever needed it, in its own loader, each with its own
+   * latch. Nothing was wrong with any one of them. From India to Railway that is 200–400ms EACH, so over a
+   * second of network before the profile is complete, and the sections arrive one at a time in front of you.
+   *
+   * ⭐ THE SUB-LOADERS ARE NOT DELETED, and that is deliberate. iamLoadTrade / iamLoadChannels / loadVault stay
+   * exactly as they are for every path that does not come through here — a section opened directly, a refresh
+   * after a save, an actor profile. What changes is that their LATCHES are set from this response, so on the
+   * common path they find the work already done and return without fetching.
+   */
+  try{ const e=(await api("me", { query: { include: 'readiness,channels,vault' } }))||{}; UI._me=e;
+    _profSeedIncluded(e);
     /* ⚠️ RE-QUERY THE HOST AFTER THE AWAIT. renderApp() rebuilds the screen wholesale, so a repaint that lands
        while this fetch is in flight — switching viewport, opening the menu — detaches the node captured above.
        Writing to that stale reference paints into a node no longer in the document and the panel stays blank
