@@ -6,6 +6,28 @@ const DEV_OTP = process.env.CB_DEV_OTP || '123456';   // relies on DEV_OTP set o
 function uniqueEmail(prefix) {
   return (prefix || 'e2e') + '.' + Date.now() + '.' + Math.floor(Math.random() * 1e4) + '@test.example';
 }
+/**
+ * ⭐⭐ A USER ID, NOT A DISPLAY NAME — the registration screen changed under this fixture and it took the whole
+ * suite down without saying so.
+ *
+ * ⚠⚠ `reg-name` USED TO BE THE BUSINESS NAME AND IS NOW THE USER ID. Athi, 2026-08-19: *"the user id
+ * registered cannot be changed — through IAM they can change the display name."* So the field now runs through
+ * lib/handle.checkRoot: 8+ characters, lowercase letters, numbers and dashes, and no `@` or `.` because those
+ * separators mean an EMPLOYEE and a NETWORK STORE. `uniqueName()` returns 'E2E Co 341383' — spaces and
+ * capitals — so registration was refused, the form never advanced, and every spec in the suite failed at
+ * auth.setup with "still on #/register".
+ *
+ * ⚠️ THE SUITE REPORTED IT AS A TIMEOUT, which is why it went undiagnosed for days: `toHaveURL(/#/app/)`
+ * polled 23 times and gave up. A screen that refuses your input looks exactly like a screen that is slow.
+ *
+ * ⚠️ AND IT MUST BE UNIQUE PLATFORM-WIDE, not merely per run — user_id carries a UNIQUE index across ALL
+ * identities and is SET ONCE, so a fixed handle works exactly once and 409s forever after.
+ */
+function uniqueHandle(prefix) {
+  return ((prefix || 'e2eco') + '-' + Date.now().toString(36) + Math.floor(Math.random() * 1e3))
+    .toLowerCase().replace(/[^a-z0-9-]/g, '');
+}
+
 function uniqueName(prefix) {
   return (prefix || 'E2E Co') + ' ' + Date.now().toString().slice(-6);
 }
@@ -56,7 +78,10 @@ async function mintEntity(page, { role = 'business', email, name } = {}) {
   await page.getByTestId(`onb-role-${role}`).click();
   await page.locator('[data-testid^="onb-bp-"]').first().click();   // pick the first vertical/blueprint
   await page.getByTestId('onb-continue').click();
-  await page.getByTestId('reg-name').fill(name);
+  /* ⚠️ reg-name IS THE USER ID FIELD — see uniqueHandle. Filling it with a display name is what broke the
+     whole suite: spaces and capitals fail checkRoot, the form refuses, and every spec times out on #/register. */
+  const handle = uniqueHandle();
+  await page.getByTestId('reg-name').fill(handle);
   await page.getByTestId('reg-email').fill(email);
   await page.getByTestId('reg-submit').click();                     // → create → verify (OTP) step
   // Verify step: pick a vertical IF offered, enter the dev OTP, submit. Tolerant — the vertical is often already
@@ -238,4 +263,4 @@ async function poolContext(browser, i) {
   return { context, page, email: p.email, name: p.name, key: p.key };
 }
 
-module.exports = { DEV_OTP, useApiBase, uniqueEmail, uniqueName, mintEntity, composeSelfChit, composeChit, composeStepNext, clickNav, stableClick, clickInModal, HAS_RCPT, HAS_TOTAL, mintInContext, addRecipientByName, settle, dismissModal, POOL, poolContext };
+module.exports = { DEV_OTP, useApiBase, uniqueEmail, uniqueName, uniqueHandle, mintEntity, composeSelfChit, composeChit, composeStepNext, clickNav, stableClick, clickInModal, HAS_RCPT, HAS_TOTAL, mintInContext, addRecipientByName, settle, dismissModal, POOL, poolContext };
