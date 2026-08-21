@@ -1951,6 +1951,28 @@ function iamGovernedRows(e){
        'en-IN'. Athi: *"number system also."* */
     if (CBLocale.number) rows.push(['Numbers', CBLocale.number(12345678.9), '', false, 'read']);
     else if (CBLocale.locale) rows.push(['Numbers', (12345678.9).toLocaleString(CBLocale.locale()), '', false, 'read']);
+    /**
+     * ⭐⭐ THEME AND TEXT SIZE JOIN "HOW YOU READ IT" — because that is literally what they are. Athi,
+     * 2026-08-21: *"under profile, personal preference the colour scheme and the size of the char, say 75%,
+     * 100% etc. can be shown, set? That brings all in one place."*
+     *
+     * ⚠️ THE CONTROLS ALREADY EXIST — Settings › Appearance has both, and the size is already expressed as a
+     * percentage. So this is not a second control; it is the same answer, shown where a person is already
+     * reading their other reading preferences. Two pickers for one setting is how a screen disagrees with
+     * itself, which is what the goods/services pointer avoided an hour ago.
+     *
+     * ⭐ AND THE PERCENTAGE IS THE USEFUL PART. "Large" means nothing next to "Default"; 115% says how much.
+     */
+    try {
+      if (typeof THEMES !== 'undefined' && typeof themeGet === 'function') {
+        var _th = THEMES[themeGet()] || {};
+        rows.push(['Theme', _th.name || themeGet(), _th.a11y ? txf('meets WCAG {level}', { level: _th.a11y.level }) : '', false, 'read']);
+      }
+      if (typeof TEXT_SIZES !== 'undefined' && typeof textSize === 'function') {
+        var _ts = TEXT_SIZES.filter(function(x){ return x[0] === textSize(); })[0];
+        if (_ts) rows.push(['Text size', _ts[1] + ' · ' + Math.round(_ts[2] * 100) + '%', '', false, 'read']);
+      }
+    } catch (_) { /* appearance layer absent — show what we have rather than nothing */ }
   } catch (_) { /* locale layer absent — show what we have rather than nothing */ }
 
   if (!rows.length) return '';
@@ -2010,8 +2032,15 @@ var rowHtml = function(x){ return profRow(x[0], x[1], x[2], !!x[3]); };
     + grp(tx('Business'), rows.filter(function(r){ return r[4] !== 'read'; }))
     + grp(tx('How you read it'), rows.filter(function(r){ return r[4] === 'read'; }))
     /* ⭐ ONE LINK OUT, NOT FOUR. Athi: *"we can take them to settings to change it."* */
-    + '<div style="margin-top:7px"><a href="#" onclick="navTo(' + Q + 'settings' + Q + ');setSetSec(' + Q + 'locale' + Q + ');return false"'
-    +   ' style="color:var(--blue);font-size:var(--fs-1)">' + tx('Change in Localisation') + ' <span class=arw>→</span></a></div>'
+    /* ⚠️ TWO DESTINATIONS, BECAUSE THE GROUP HAS TWO OWNERS. Language and formats are set in Localisation;
+       theme and text size in Appearance. One link would send half the readers to the wrong screen, and a
+       link that lands you somewhere without the control you came for is worse than no link. */
+    + '<div style="margin-top:9px;display:flex;gap:14px;flex-wrap:wrap">'
+    +   '<a href="#" onclick="navTo(' + Q + 'settings' + Q + ');setSetSec(' + Q + 'locale' + Q + ');return false" style="color:var(--blue);font-size:var(--fs-1)">'
+    +   tx('Language and formats') + ' <span class=arw>→</span></a>'
+    +   '<a href="#" onclick="navTo(' + Q + 'settings' + Q + ');setSetSec(' + Q + 'appearance' + Q + ');return false" style="color:var(--blue);font-size:var(--fs-1)">'
+    +   tx('Theme and text size') + ' <span class=arw>→</span></a>'
+    + '</div>'
     + '</div>';
 }
 

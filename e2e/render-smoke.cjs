@@ -48,6 +48,10 @@ const sandbox = {
               /* ⚠️ langs/lang/dir ARE REQUIRED by the "How you read it" group. A stub without them renders two
                  rows instead of five and passes — the fourth time today a test would have measured the stub. */
               langs: () => ['ta', 'hi', 'en'], lang: () => 'ta', dir: () => 'ltr' },
+  /* ⚠️ THEMES + TEXT_SIZES ARE REQUIRED by "How you read it". A stub without them renders two fewer rows and
+     still passes — the FIFTH time a test would have measured the stub rather than the code. */
+  THEMES: { cream: { name: 'Cream', a11y: { level: 'AA' } } }, themeGet: () => 'cream',
+  TEXT_SIZES: [['s','Small',0.92],['m','Default',1],['l','Large',1.15]], textSize: () => 'l',
   ACCESS_LABEL: { viewer: 'Viewer', commenter: 'Commenter', editor: 'Editor' },
   ACCESS_CHOICES: [['editor', 'Editor'], ['commenter', 'Commenter'], ['viewer', 'Viewer']],
   accessLevelOf: () => 'editor', hatLabel: () => 'Editor', hatAssignable: () => true,
@@ -119,6 +123,7 @@ const CASES = [
      a migration must not silently re-classify a live business. */
   ['business — supplies defaults to goods',  () => { ctx.UI._iamOpen = { profile: true }; const h = ctx.iamMeHTML({ ...ENTITY, gstn:'X' }); if (h.indexOf('value="goods" selected') < 0) throw new Error('goods is not the default'); return h; }],
   ['business — supplies both is offered',    () => { ctx.UI._iamOpen = { profile: true }; const h = ctx.iamMeHTML({ ...ENTITY, gstn:'X', supplies:'both' }); if (h.indexOf('value="both" selected') < 0) throw new Error('both not selectable'); return h; }],
+  ['regional — theme and text size, with the percentage', () => { ctx.UI._iamOpen = { regional: true }; const h = ctx.iamMeHTML({ ...ENTITY, country:'IN', currency_code:'INR' }); if (h.indexOf('115%') < 0) throw new Error('the percentage is the useful part and it is missing'); if (h.indexOf('Cream') < 0) throw new Error('theme missing'); if (h.indexOf('Theme and text size') < 0) throw new Error('no link to the screen that SETS them'); return h; }],
   ['iamSelfEmployeeHTML — commenter',       () => ctx.iamSelfEmployeeHTML(ACTOR)],
   ['iamSelfEmployeeHTML — editor + reach',  () => ctx.iamSelfEmployeeHTML({ ...ACTOR, access_level: 'editor', whole_entity: true, can_see_costs: true })],
   ['CBIdDocs.html — self, empty',           () => ctx.CBIdDocs.html([], 'self')],
