@@ -148,7 +148,7 @@ function c2PaneMsg(d){
   } else {
     out += '<div style="color:var(--grey);font-size:13px">No original message on this chit — it was composed here rather than received.</div>';
   }
-  out += (raw.from ? '<div style="font-size:11.5px;color:var(--grey);margin-top:12px;padding-top:10px;border-top:1px solid var(--line)">from ' + esc(raw.from) + (raw.from_name ? ' · ' + esc(raw.from_name) : '') + '</div>' : '')
+  out += (raw.from ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:12px;padding-top:10px;border-top:1px solid var(--line)">from ' + esc(raw.from) + (raw.from_name ? ' · ' + esc(raw.from_name) : '') + '</div>' : '')
     + '</div>';
 
   /**
@@ -165,7 +165,7 @@ function c2PaneMsg(d){
       + extras.map(function(x){
           return '<div style="padding:8px 16px;border-bottom:1px solid var(--line);display:flex;gap:9px;font-size:13px">'
             + '<span style="width:16px">' + x[0] + '</span>'
-            + '<span style="flex:1"><span style="color:var(--grey);font-size:11.5px;display:block">' + esc(x[1]) + '</span>' + esc(x[2]) + '</span></div>';
+            + '<span style="flex:1"><span style="color:var(--grey);font-size:var(--fs-1);display:block">' + esc(x[1]) + '</span>' + esc(x[2]) + '</span></div>';
         }).join('');
   }
 
@@ -191,7 +191,7 @@ function c2PaneOrd(d){
     + (unpriced ? ' · <span style="color:var(--warn-2)">' + unpriced + ' with no price</span>' : ''));
   out += '<div style="padding:9px 16px;border-bottom:1px solid var(--line)">'
     + '<button class="btn" onclick="c2RepricePreview()">₹ Price from catalogue</button>'
-    + '<span style="font-size:11.5px;color:var(--grey);margin-inline-start:9px">shows what would change before anything is written</span></div>';
+    + '<span style="font-size:var(--fs-1);color:var(--grey);margin-inline-start:9px">shows what would change before anything is written</span></div>';
 
   out += lines.map(function(e, i){
     var l = e.live || e.original || {};
@@ -248,8 +248,8 @@ function c2PaneOrd(d){
          THIS line's own words and disagreed, so it was nulled rather than shown. */
       + (l.qty_rejected ? '<div style="margin-top:5px;font-size:var(--fs-1);color:var(--disp)">⚠️ quantity rejected — ' + esc(l.qty_rejected) + '. Fix it on the line.</div>' : '')
       /* ⭐ b141 — their own words for THIS line. The only thing on the row a machine did not produce. */
-      + (l.raw_phrase ? '<div style="margin-top:5px;font-size:11.5px;color:var(--grey);font-style:italic">they wrote “' + esc(l.raw_phrase) + '”</div>'
-          : (l.asked_as ? '<div style="margin-top:4px;font-size:11.5px;color:var(--grey)">they wrote “' + esc(l.asked_as) + '”</div>' : ''))
+      + (l.raw_phrase ? '<div style="margin-top:5px;font-size:var(--fs-1);color:var(--grey);font-style:italic">they wrote “' + esc(l.raw_phrase) + '”</div>'
+          : (l.asked_as ? '<div style="margin-top:4px;font-size:var(--fs-1);color:var(--grey)">they wrote “' + esc(l.asked_as) + '”</div>' : ''))
       + '</div>';
   }).join('');
   return out;
@@ -339,7 +339,7 @@ function c2RepricePaint(){
       + will.map(function(w){
           return '<div style="display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-top:1px solid var(--line);font-size:13px">'
             + '<span style="flex:1;min-width:0"><b>' + esc(w.particulars || '') + '</b>'
-            + '<div style="font-size:11.5px;color:var(--grey)"><span class=arw>→</span> ' + esc(w.matched) + (w.matched_by_spelling ? ' <span style="color:var(--warn-2)">' + tx('≈ matched by spelling') + '</span>' : '') + '</div>'
+            + '<div style="font-size:var(--fs-1);color:var(--grey)"><span class=arw>→</span> ' + esc(w.matched) + (w.matched_by_spelling ? ' <span style="color:var(--warn-2)">' + tx('≈ matched by spelling') + '</span>' : '') + '</div>'
             /* ⚠️ REPLACING A STATED FIGURE IS CALLED OUT. Filling an empty price and overwriting one the customer
                wrote are different acts, and only a person can say whether the second is right. */
             + (w.replaces_stated_price ? '<div style="font-size:var(--fs-1);color:var(--warn-2)">replaces the price on the chit</div>' : '')
@@ -359,7 +359,7 @@ function c2RepricePaint(){
   }
 
   modal('<h3 style="margin:0 0 4px">₹ Price from catalogue</h3>'
-    + '<div style="font-size:11.5px;color:var(--grey);margin-bottom:12px">Nothing is written until you confirm. Each change is recorded as an amendment — the old price stays struck through.</div>'
+    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:12px">Nothing is written until you confirm. Each change is recorded as an amendment — the old price stays struck through.</div>'
     + body
     + '<div style="display:flex;gap:8px;margin-top:16px">'
     + '<button class="btn" style="flex:1" onclick="closeModal()">' + tx('Cancel') + '</button>'
@@ -400,10 +400,10 @@ function c2PaneDel(d){
       + '<div style="margin-top:6px;height:4px;background:var(--line);border-radius:2px;overflow:hidden"><i style="display:block;height:100%;width:' + pct + '%;background:#2f6b4f"></i></div>'
       /* ⚠️ THE THREE STATES ARE KEPT APART. "They have not confirmed yet" is the NORMAL case and must not wear the
          same badge as a real disagreement, or the badge stops being read. */
-      + (p.both_agree ? '<div style="margin-top:6px;font-size:11.5px;color:#2f6b4f">' + tx('✓ both of you recorded the same') + '</div>' : '')
-      + (p.divergent ? '<div style="margin-top:6px;font-size:11.5px;color:var(--warn-2)">⚠️ you recorded ' + p.delivered + ', they recorded ' + p.theirs + ' — both are shown, neither is corrected</div>' : '')
-      + (p.unacknowledged ? '<div style="margin-top:6px;font-size:11.5px;color:var(--grey)">they have not confirmed this yet</div>' : '')
-      + ((p.events || []).length ? '<div style="margin-top:7px;font-size:11.5px;color:var(--grey)">' + p.events.map(function(v){
+      + (p.both_agree ? '<div style="margin-top:6px;font-size:var(--fs-1);color:#2f6b4f">' + tx('✓ both of you recorded the same') + '</div>' : '')
+      + (p.divergent ? '<div style="margin-top:6px;font-size:var(--fs-1);color:var(--warn-2)">⚠️ you recorded ' + p.delivered + ', they recorded ' + p.theirs + ' — both are shown, neither is corrected</div>' : '')
+      + (p.unacknowledged ? '<div style="margin-top:6px;font-size:var(--fs-1);color:var(--grey)">they have not confirmed this yet</div>' : '')
+      + ((p.events || []).length ? '<div style="margin-top:7px;font-size:var(--fs-1);color:var(--grey)">' + p.events.map(function(v){
             return (v.quantity > 0 ? '+' : '') + v.quantity + ' ' + esc(v.unit || '') + ' · ' + esc(v.mine ? 'you' : (v.by || 'them')) + (v.reference ? ' · ' + esc(v.reference) : '');
           }).join('<br>') + '</div>' : '')
       /* ⚠️ RECORDING LIVES ON THE LINE ITSELF. The first version of this pane was read-only — you could watch a
@@ -604,7 +604,7 @@ function c2PaneWork(d){
            It still carries its own roll-up: a breakdown that only totals at the top is a total, not a breakdown. */
         : '<div style="padding:6px 16px 2px;display:flex;justify-content:space-between;align-items:baseline">'
           + '<span style="font-size:var(--fs-2);font-weight:700;color:var(--grey)">' + g.label(k) + '</span>'
-          + '<span style="font-size:11.5px;color:var(--grey)">' + roll + '</span></div>';
+          + '<span style="font-size:var(--fs-1);color:var(--grey)">' + roll + '</span></div>';
       return head + renderGroup(buckets[k], rest, depth + 1);
     }).join('');
   }
@@ -705,7 +705,7 @@ function c2AssignOpen(line_id){
     + '<input id="c2t_' + line_id + '" value="' + esc(a.task || '') + '" placeholder="packing" style="width:100%;box-sizing:border-box;padding:9px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-3)"></div>'
     + '<div style="flex:1"><label style="display:block;font-size:var(--fs-1);color:var(--grey);margin-bottom:3px">DUE</label>'
     + '<input id="c2d_' + line_id + '" type="date" value="' + esc(a.due_date ? String(a.due_date).slice(0, 10) : '') + '" style="width:100%;box-sizing:border-box;padding:9px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-3)"></div></div>'
-    + ((a.history || []).length ? '<div style="font-size:11.5px;color:var(--grey);margin-bottom:12px">previously ' + esc(a.history.map(function(h){ return h.assignee_name || 'unassigned'; }).join(' <span class=arw>→</span> ')) + '</div>' : '')
+    + ((a.history || []).length ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:12px">previously ' + esc(a.history.map(function(h){ return h.assignee_name || 'unassigned'; }).join(' <span class=arw>→</span> ')) + '</div>' : '')
     + '<div style="display:flex;gap:8px"><button class="btn" style="flex:1" onclick="closeModal()">' + tx('Cancel') + '</button>'
     + '<button class="btn pri" style="flex:1" onclick="c2Assign(\'' + line_id + '\')">' + tx('Assign') + '</button></div>');
 }
@@ -733,7 +733,7 @@ function c2PaneNotes(d){
   var msgs = (d.msgs || []).filter(function(m){ return (m.scope || 'internal') === 'internal'; });
   return '<div style="padding:9px 16px;background:var(--warn-tint);color:var(--warn-3);font-size:var(--fs-2);border-bottom:1px solid var(--line)">◍ Internal notes — never shared with the other party.</div>'
     + (msgs.length ? msgs.map(function(m){
-        return '<div style="padding:10px 16px;border-bottom:1px solid var(--line)"><div style="font-size:11.5px;color:var(--grey)">' + esc(m.author || '') + ' · ' + esc(m.at || '') + '</div><div style="font-size:13.5px;margin-top:2px">' + esc(m.body || '') + '</div></div>';
+        return '<div style="padding:10px 16px;border-bottom:1px solid var(--line)"><div style="font-size:var(--fs-1);color:var(--grey)">' + esc(m.author || '') + ' · ' + esc(m.at || '') + '</div><div style="font-size:13.5px;margin-top:2px">' + esc(m.body || '') + '</div></div>';
       }).join('')
       : '<div style="padding:16px;color:var(--grey);font-size:13px">No internal notes yet.</div>');
 }
@@ -765,7 +765,7 @@ function c2PaneCost(d){
   out += (c.costs || []).length ? c.costs.map(function(x){
     return '<div style="padding:9px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;font-size:13px">'
       + '<span>' + esc(x.kind) + (x.note ? ' <span style="color:var(--grey)">· ' + esc(x.note) + '</span>' : '')
-      + (x.minutes ? '<div style="font-size:11.5px;color:var(--grey)">' + x.minutes + ' min × ' + c2Money(x.rate_per_hour) + '/hr</div>' : '')
+      + (x.minutes ? '<div style="font-size:var(--fs-1);color:var(--grey)">' + x.minutes + ' min × ' + c2Money(x.rate_per_hour) + '/hr</div>' : '')
       + (x.recorded_by_actor_name ? '<div style="font-size:var(--fs-1);color:var(--grey)">' + esc(x.recorded_by_actor_name) + '</div>' : '')
       + '</span><span style="font-variant-numeric:tabular-nums">' + c2Money(Number(x.amount)) + '</span></div>';
   }).join('') : '<div style="padding:14px 16px;color:var(--grey);font-size:var(--fs-2)">Nothing recorded yet.</div>';
@@ -830,7 +830,7 @@ function chit2Screen(){
     + '<span style="font-weight:600;font-size:15px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(h.manual_subject || h.auto_subject || 'Chit') + '</span>'
     + '<span style="font-size:var(--fs-1);color:var(--grey)">design 2</span></div>'
     + '<div style="padding:10px 16px 0;display:flex">' + side + '</div>'
-    + '<div style="padding:7px 16px 0;font-size:11.5px;color:var(--grey);text-align:center">'
+    + '<div style="padding:7px 16px 0;font-size:var(--fs-1);color:var(--grey);text-align:center">'
     + (C2.side === 'them' ? 'Both parties hold everything on this side' : 'Assignment, notes and cost — they never see this') + '</div>'
     /**
      * ⭐ THE DOOR TO THE SERVICE CLOCK — and until now there wasn't one.

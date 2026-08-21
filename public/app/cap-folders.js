@@ -68,7 +68,7 @@ function _folderView(){
   var arch=!!UI.folderArch;
   var tab=function(on,label,onclick){ return '<span onclick="'+onclick+'" style="cursor:pointer;font-size:12px;font-weight:700;padding:5px 13px;border-radius:16px;'+(on?'background:var(--blue);color:var(--on-accent)':'border:1px solid var(--line);color:var(--grey-2)')+'">'+label+'</span>'; };
   var head='<div style="padding:14px 18px;border-bottom:1px solid var(--line)"><div style="font-size:17px;font-weight:800">📁 '+esc(f.name)+'</div>'
-    +'<div style="font-size:11.5px;color:var(--grey);margin-top:2px">source = the sender / co-assist · destination = this folder</div>'
+    +'<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">source = the sender / co-assist · destination = this folder</div>'
     +'<div style="display:flex;gap:6px;margin-top:11px;align-items:center">'+tab(!arch,'Current','setFolderArch(false)')+tab(arch,'Archive','setFolderArch(true)')
     +'<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--blue);cursor:pointer" onclick="renameFolder(\''+UI.folderSel+'\')">' + tx('Rename') + '</span>'
     +'<span style="font-size:var(--fs-1);color:var(--disp);cursor:pointer;margin-inline-start:14px" onclick="deleteFolder(\''+UI.folderSel+'\')">' + tx('Delete') + '</span></div>'
@@ -86,7 +86,7 @@ function _folderView(){
     var line2 = isDev ? ('🛰️ '+esc(bj.sub_type||bj.signal||'signal')+((bj.value!=null&&bj.value!=='')?(' = '+esc(String(bj.value))+esc(bj.unit||'')):'')+' · raised by <b>'+raiser+'</b>') : ('from '+esc(c.sender_entity_display_name||raiser));
     var when=(typeof fmtAt==='function'?esc(fmtAt(c.created_at)):'');
     var openA=(typeof openChit==='function')?('openChit(\''+c.chit_id+'\')'):'';
-    return '<div style="display:flex;gap:11px;padding:12px 18px;border-bottom:1px solid #f0f2f4;cursor:pointer" onclick="'+openA+'"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13.5px">'+(isDev?'🛢️ ':'')+subj+'</div><div style="font-size:11.5px;color:var(--grey);margin-top:2px">'+line2+'</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex:0 0 auto"><span style="font-size:var(--fs-1);color:var(--grey)">'+when+'</span><span style="font-size:var(--fs-1);color:var(--blue);border:1px solid var(--blue-tint-line);background:var(--blue-tint-bg);border-radius:9px;padding:2px 8px" onclick="event.stopPropagation();moveChit(\''+c.chit_id+'\')">' + tx('📁 Move') + '</span></div></div>';
+    return '<div style="display:flex;gap:11px;padding:12px 18px;border-bottom:1px solid #f0f2f4;cursor:pointer" onclick="'+openA+'"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13.5px">'+(isDev?'🛢️ ':'')+subj+'</div><div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">'+line2+'</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex:0 0 auto"><span style="font-size:var(--fs-1);color:var(--grey)">'+when+'</span><span style="font-size:var(--fs-1);color:var(--blue);border:1px solid var(--blue-tint-line);background:var(--blue-tint-bg);border-radius:9px;padding:2px 8px" onclick="event.stopPropagation();moveChit(\''+c.chit_id+'\')">' + tx('📁 Move') + '</span></div></div>';
   }).join('');
   // The chit list is now ONE of three panes; metrics and rules render themselves.
   if(_FLD.tab==='metrics') return head+_folderMetricsPane();
@@ -340,22 +340,22 @@ function _groupSumPane(){
      for a question they did not ask. Seen live while building this. So the claim is checked against the reply:
      we asked for a selection, and if the server did not confirm one, say the selection was ignored. */
   if (_FLD.gsIds && _FLD.gsIds.length && !g.selected) {
-    out += '<div style="background:var(--danger-tint);border:1px solid #f0c9c6;border-radius:9px;padding:8px 11px;font-size:11.5px;color:var(--disp-2);margin-bottom:10px">'
+    out += '<div style="background:var(--danger-tint);border:1px solid #f0c9c6;border-radius:9px;padding:8px 11px;font-size:var(--fs-1);color:var(--disp-2);margin-bottom:10px">'
       + '⚠️ <b>Your selection was ignored.</b> This server does not support totalling a ticked set yet, so the figures below are for the <b>whole track</b>, not your ' + _FLD.gsIds.length + ' chits.</div>';
   } else if (g.selected) {
     var miss = (g.selection_requested || 0) - (g.chits || 0);
-    out += '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:8px 11px;font-size:11.5px;color:var(--warn-3);margin-bottom:10px">'
+    out += '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:8px 11px;font-size:var(--fs-1);color:var(--warn-3);margin-bottom:10px">'
       + '☑ <b>' + (g.chits || 0) + ' ticked chit' + ((g.chits === 1) ? '' : 's') + '</b> — not this folder or the whole track.'
       + (miss > 0 ? ' ⚠️ ' + miss + ' of the ' + g.selection_requested + ' you ticked are not on this track and were left out.' : '')
       + '</div>';
   } else if (UI.folderSel) {
-    var b = function(on, lbl, arg){ return '<span onclick="gsScope(' + arg + ')" style="cursor:pointer;border:1px solid var(--line);border-radius:9px;padding:3px 10px;font-size:11.5px;margin-inline-end:6px;' + (on ? 'background:var(--blue);color:var(--on-accent);border-color:var(--blue);font-weight:700' : 'background:var(--card)') + '">' + lbl + '</span>'; };
+    var b = function(on, lbl, arg){ return '<span onclick="gsScope(' + arg + ')" style="cursor:pointer;border:1px solid var(--line);border-radius:9px;padding:3px 10px;font-size:var(--fs-1);margin-inline-end:6px;' + (on ? 'background:var(--blue);color:var(--on-accent);border-color:var(--blue);font-weight:700' : 'background:var(--card)') + '">' + lbl + '</span>'; };
     out += '<div style="margin-bottom:10px">' + b(!_FLD.gsAll, 'This folder', 'false') + b(!!_FLD.gsAll, 'Whole track — every folder', 'true') + '</div>';
   }
 
   /* ⚠️ SAID FIRST, NOT BURIED. A pile of 47 chits where only 9 carry line items produces a requirement built from
      9 — and without this line that total reads as though it covered all 47. */
-  out += '<div style="font-size:11.5px;color:var(--grey);margin-bottom:10px">'
+  out += '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:10px">'
     + '<b style="color:var(--ink)">' + g.chits + '</b> chit' + (g.chits === 1 ? '' : 's')
     + ' · <b style="color:var(--ink)">' + g.chits_with_lines + '</b> carry line items'
     + (g.chits_without_lines ? ' · <span style="color:var(--warn-2)">' + g.chits_without_lines + ' have none and contribute nothing</span>' : '')
@@ -389,7 +389,7 @@ function _groupSumPane(){
             : esc(String(l.total)) + ' ' + esc(l.canonical_unit || ''))
         + '</span>'
         + '<span style="width:130px;text-align:end">' + _gsMoney(l.value, l.value_mixed) + '</span>'
-        + '<span style="width:74px;text-align:end;color:var(--grey);font-size:11.5px">' + l.stores + '</span></div>';
+        + '<span style="width:74px;text-align:end;color:var(--grey);font-size:var(--fs-1)">' + l.stores + '</span></div>';
       /* THE DRILLDOWN — Athi: "on click the down below need to know who are all asked". The roster comes straight
          from consolidate()'s attribution; nothing is recomputed to render it. */
       var rows = open ? '<div style="padding:2px 0 8px 16px;background:var(--card);color:var(--on-card)">'
@@ -424,7 +424,7 @@ function _groupSumPane(){
   blocks.forEach(function(bk){
     var arr = bk[2] || []; if (!arr.length) return;
     out += '<div style="margin-top:12px"><div style="font-size:var(--fs-1);font-weight:800;color:var(--warn-2);margin-bottom:3px">' + bk[1] + ' (' + arr.length + ')</div>'
-      + arr.slice(0, 25).map(function(x){ return '<div style="font-size:11.5px;color:var(--grey);padding:2px 0">· ' + bk[3](x) + '</div>'; }).join('')
+      + arr.slice(0, 25).map(function(x){ return '<div style="font-size:var(--fs-1);color:var(--grey);padding:2px 0">· ' + bk[3](x) + '</div>'; }).join('')
       + (arr.length > 25 ? '<div style="font-size:var(--fs-1);color:var(--grey)">…and ' + (arr.length - 25) + ' more</div>' : '') + '</div>';
   });
 
@@ -477,14 +477,14 @@ function _reconStrip(){
       + '<span style="font-weight:800;min-width:34px;text-align:end">' + f.own + '</span>'
       + (f.tree !== f.own ? '<span style="color:var(--grey);font-size:var(--fs-1);min-width:52px;text-align:end">' + f.tree + ' w/ sub</span>' : '<span style="min-width:52px"></span>')
       + '</div>';
-  }).join('') : '<div style="font-size:11.5px;color:var(--grey);padding:5px 0">No folders on this track yet — everything is unfiled, which is why the two numbers match trivially.</div>';
+  }).join('') : '<div style="font-size:var(--fs-1);color:var(--grey);padding:5px 0">No folders on this track yet — everything is unfiled, which is why the two numbers match trivially.</div>';
 
   return '<div style="border:1px solid var(--line);border-radius:9px;padding:11px 13px;margin-bottom:12px;background:var(--card);color:var(--on-card)">'
     + '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey)">Does it add up?</div>'
     + '<div style="font-size:13px;margin-top:3px">' + sums + ' &nbsp; ' + verdict + '</div>'
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">' + (r.overall || {}).assigned + ' assigned · ' + (r.overall || {}).unassigned + ' unassigned — a chit can be open and unassigned, and that is the pile worth seeing.</div>'
     + '<div style="margin-top:8px">' + rows + '</div>'
-    + (r.reconciles ? '' : '<div style="font-size:11.5px;color:var(--disp);margin-top:7px">⚠️ Filed count and the sum of the folders disagree. A chit is filed into a folder this login cannot see.</div>')
+    + (r.reconciles ? '' : '<div style="font-size:var(--fs-1);color:var(--disp);margin-top:7px">⚠️ Filed count and the sum of the folders disagree. A chit is filed into a folder this login cannot see.</div>')
     + '</div>';
 }
 function _folderMetricsPane(){
@@ -588,7 +588,7 @@ function _fldFolderName(id){ var f = (UI.folders || []).find(function(x){ return
    who can see that rule 1 beats rule 3 can fix the conflict by rewriting a condition, which they cannot do while
    the precedence is guesswork. */
 function _ruleRow(r, i, n){
-  var terms = Object.keys(r.when || {}).map(function(k){ return '<span style="font-family:ui-monospace,Menlo,monospace;font-size:11.5px">' + esc(k) + '</span> <b>' + esc(String(r.when[k])) + '</b>'; }).join(' <span style="color:var(--grey)">and</span> ');
+  var terms = Object.keys(r.when || {}).map(function(k){ return '<span style="font-family:ui-monospace,Menlo,monospace;font-size:var(--fs-1)">' + esc(k) + '</span> <b>' + esc(String(r.when[k])) + '</b>'; }).join(' <span style="color:var(--grey)">and</span> ');
   return '<div style="border:1px solid var(--line);border-radius:9px;padding:11px 13px;margin-bottom:8px;background:var(--card);color:var(--on-card)">'
     + '<div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap">'
     + '<span title="Runs ' + (i === 0 ? 'first' : 'after the ' + i + ' above') + '" style="flex:0 0 auto;min-width:20px;height:20px;border-radius:5px;background:var(--paper);border:1px solid var(--line);color:var(--grey);font-size:var(--fs-1);font-weight:700;display:inline-flex;align-items:center;justify-content:center;font-variant-numeric:tabular-nums">' + (i + 1) + '</span>'
@@ -620,7 +620,7 @@ function _folderRulesPane(){
   var out = '<div style="padding:14px 18px">';
 
   var _trk = _fldTrack();
-  out += '<div style="font-size:11.5px;color:var(--grey);line-height:1.55;margin-bottom:10px">'
+  out += '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.55;margin-bottom:10px">'
     + (_trk
        ? ('Every rule on <b>' + (_trk === 'order' ? 'Order' : 'Task') + '</b>, in the order they run. '
           + '⚠️ Rules only conflict with <b>each other</b> — two folders both claiming supplier invoices is invisible from inside either one, which is why they are listed together here.')
@@ -629,7 +629,7 @@ function _folderRulesPane(){
     + (rules.length > 1 ? ' They run <b>in the numbered order</b> and the first one that matches wins — the rest never see that chit. Use ↑ ↓ to change which rule gets first refusal.' : '')
     + '</div>';
 
-  if (_FLD.rulesNote) out += '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;font-size:11.5px;color:var(--warn-3);margin-bottom:9px">' + esc(_FLD.rulesNote) + '</div>';
+  if (_FLD.rulesNote) out += '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;font-size:var(--fs-1);color:var(--warn-3);margin-bottom:9px">' + esc(_FLD.rulesNote) + '</div>';
   if (_FLD.err) out += '<div style="color:var(--disp);font-size:12px;margin-bottom:8px">' + esc(_FLD.err) + '</div>';
 
   out += rules.length ? rules.map(function(r, i){ return _ruleRow(r, i, rules.length); }).join('') : '<div style="color:var(--grey);font-size:var(--fs-2);padding:6px 0 12px">No rules yet. Everything arrives unfiled until you add one.</div>';
@@ -638,7 +638,7 @@ function _folderRulesPane(){
      definition is "file into THIS folder", so from the track there is no destination to write down. Offering the
      button here would mean inventing a target folder on the user's behalf. Say where it lives instead. */
   if (_trk) {
-    out += '<div style="font-size:11.5px;color:var(--grey);padding:4px 0 2px">To add one, open the folder it should file into — a rule is defined by its destination, so there is nothing to write down from here.</div>';
+    out += '<div style="font-size:var(--fs-1);color:var(--grey);padding:4px 0 2px">To add one, open the folder it should file into — a rule is defined by its destination, so there is nothing to write down from here.</div>';
   } else if (!d) {
     out += '<button class="composebtn" data-testid="rule-new" onclick="ruleDraftNew()">+ Add a rule</button>';
   } else {
@@ -666,9 +666,9 @@ function _folderRulesPane(){
       out += '<div style="margin-top:11px;border-top:1px dashed var(--line);padding-top:9px">'
         + '<div style="font-size:var(--fs-2);font-weight:700">' + p.matched + ' of your last ' + p.scanned + ' chits would have been filed here</div>'
         + (p.matched ? '<div style="margin-top:5px">' + p.sample.map(function(s){
-            return '<div style="font-size:11.5px;padding:3px 0;border-top:1px solid #f0f2f4"><b>' + esc(s.subject || '(no subject)') + '</b> <span style="color:var(--grey)">· ' + esc(s.counterparty || '—') + ' · ' + esc(String(s.created_at || '').slice(0, 10)) + '</span></div>'; }).join('')
+            return '<div style="font-size:var(--fs-1);padding:3px 0;border-top:1px solid #f0f2f4"><b>' + esc(s.subject || '(no subject)') + '</b> <span style="color:var(--grey)">· ' + esc(s.counterparty || '—') + ' · ' + esc(String(s.created_at || '').slice(0, 10)) + '</span></div>'; }).join('')
           + (p.matched > p.sample.length ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">…and ' + (p.matched - p.sample.length) + ' more</div>' : '') + '</div>'
-          : '<div style="font-size:11.5px;color:var(--warn-2);margin-top:4px">⚠️ Nothing matched. A rule that catches nothing looks enabled and does nothing — check the term before saving.</div>')
+          : '<div style="font-size:var(--fs-1);color:var(--warn-2);margin-top:4px">⚠️ Nothing matched. A rule that catches nothing looks enabled and does nothing — check the term before saving.</div>')
         + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">This is a preview only. Saving affects <b>new arrivals</b>; nothing already filed moves.</div></div>';
     }
     out += '</div>';

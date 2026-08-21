@@ -70,7 +70,7 @@ function svcClockBlock(c, r){
   /* ⭐ The case this whole module exists for: the two parties' arithmetic disagrees. */
   return agreed
     + '<div style="margin-top:12px;border:1.5px solid #c98b2f;border-radius:9px;overflow:hidden">'
-    + '<div style="background:var(--warn-tint);padding:8px 12px;font-size:11.5px;font-weight:700;color:var(--warn-3)">'
+    + '<div style="background:var(--warn-tint);padding:8px 12px;font-size:var(--fs-1);font-weight:700;color:var(--warn-3)">'
     + '⚖️ The two sides do not agree — ' + esc(svcDur(c.disputed_pause_ms)) + ' of paused time is rejected</div>'
     + '<div style="display:flex;gap:0;flex-wrap:wrap">'
     + '<div style="flex:1;min-width:150px;padding:11px 13px;border-inline-end:1px solid var(--line)">'
@@ -82,7 +82,7 @@ function svcClockBlock(c, r){
     +   '<div style="font-size:19px;font-weight:800;font-variant-numeric:tabular-nums;color:' + (c.contested.resolve_breached ? 'var(--disp)' : 'var(--ok-2)') + '">' + esc(svcDur(c.contested.resolve_ms)) + '</div>'
     +   '<div style="margin-top:3px">' + (c.contested.resolve_breached ? svcChip('breached', 'bad') : svcChip('within target', 'ok')) + '</div></div>'
     + '</div>'
-    + '<div style="padding:9px 12px;font-size:11.5px;color:var(--grey);border-top:1px solid var(--line);line-height:1.5">'
+    + '<div style="padding:9px 12px;font-size:var(--fs-1);color:var(--grey);border-top:1px solid var(--line);line-height:1.5">'
     + 'Both figures come from the same record. Neither side is being overruled — the pause below is what has to be settled.</div>'
     + '</div>';
 }
@@ -105,7 +105,7 @@ function svcPauseRow(p){
     + '<div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline">'
     + '<span style="font-size:13px;font-weight:700">' + esc(String(p.reason || '').replace(/_/g, ' ')) + '</span>'
     + '<span style="display:flex;gap:5px">' + (open ? svcChip('running', 'warn') : '') + state + '</span></div>'
-    + '<div style="font-size:11.5px;color:var(--grey);margin-top:2px">'
+    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">'
     + esc(CBLocale.datetime(p.paused_from)) + (p.paused_to ? ' → ' + esc(CBLocale.datetime(p.paused_to)) : ' → still paused')
     + ' · claimed by ' + esc(p.mine ? 'you' : (p.claimed_by_name || 'the other party')) + '</div>'
     + (p.note ? '<div style="font-size:12px;margin-top:3px">' + esc(p.note) + '</div>' : '')
@@ -134,7 +134,7 @@ function svcPaint(){
 
   modal('<h3 style="margin:0 0 3px">Service clock'
     + (c.priority ? ' <span style="font-size:12px;color:#245a9e;font-weight:800">' + esc(c.priority) + '</span>' : '') + '</h3>'
-    + '<div style="font-size:11.5px;color:var(--grey);margin-bottom:12px">'
+    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:12px">'
     + (r.impact ? esc(r.impact) + ' impact · ' + esc(r.urgency) + ' urgency · ' : '')
     + (c.resolved ? 'resolved' : (c.paused_now ? 'paused' : 'running')) + '</div>'
     + svcClockBlock(c, r)

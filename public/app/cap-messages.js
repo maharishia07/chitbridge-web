@@ -210,13 +210,13 @@ function messagesScreen(){
           +       '<b style="font-size:13.5px' + (isNew ? ';font-weight:800' : '') + '">' + what + '</b>'
           /* ⚠️ A CLOSED CHIT IS MARKED, NEVER HIDDEN — a complaint about a closed order arrives exactly here. */
           +       (closed ? '<span style="font-size:var(--fs-1);font-weight:700;color:var(--warn-2);background:var(--warn-tint);border-radius:4px;padding:1px 5px">' + esc(m.chit_status) + '</span>' : '')
-          +       '<span style="font-size:11.5px;color:var(--grey);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + sub + '</span>'
+          +       '<span style="font-size:var(--fs-1);color:var(--grey);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + sub + '</span>'
           /* ⚠️ THE FULL COUNT ONCE IT IS KNOWN. The inbox only returns unread-or-kept, so this said "3 msgs" over
              a conversation that turned out to hold 5 — a number that disagreed with the thread it labelled the
              moment you opened it. Once the thread is fetched, its own length is the truthful one. */
           +       (function(){ var n = (RPL.full[t.key] || t.msgs).length;
                     return n > 1 ? '<span style="font-size:var(--fs-1);color:var(--grey);flex:none">' + n + ' msgs</span>' : ''; })()
-          +       '<span style="font-size:11.5px;color:var(--grey);flex:none">' + esc(msgWhen(m.created_at)) + '</span>'
+          +       '<span style="font-size:var(--fs-1);color:var(--grey);flex:none">' + esc(msgWhen(m.created_at)) + '</span>'
           +     '</div>'
           +     '<div style="font-size:13px;color:var(--ink-2,#41474e);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'
           +       '<b style="font-weight:600">' + esc(m.sender_display_name || '—') + ':</b> ' + esc(m.message_text || '') + '</div>'
@@ -254,7 +254,7 @@ function messagesScreen(){
               + '<textarea id="msg_reply_' + rid + '" data-testid="msg-reply" rows="2" placeholder="Reply to ' + esc(m.sender_display_name || 'them') + '…"'
               +   ' style="width:100%;box-sizing:border-box;font:inherit;font-size:var(--fs-3);line-height:1.5;padding:9px 11px;border:1px solid var(--line);border-radius:9px;resize:vertical"></textarea>'
               + '<div style="display:flex;gap:10px;align-items:center;margin-top:7px">'
-              +   '<span style="font-size:11.5px;color:var(--warn-2)">📤 The other party sees this, on their own copy.</span>'
+              +   '<span style="font-size:var(--fs-1);color:var(--warn-2)">📤 The other party sees this, on their own copy.</span>'
               +   '<button class="btn pri" data-testid="msg-send" onclick="msgSend(&quot;' + t.key + '&quot;)"'
               +     ' style="width:auto;flex:0 0 auto;margin:0 0 0 auto;padding:8px 16px">' + (RPL.sending[t.key] ? 'Sending…' : 'Reply') + '</button>'
               + '</div>'
@@ -274,7 +274,7 @@ function messagesScreen(){
                      return '<div style="margin:6px 0;padding:8px 11px;border-radius:9px;font-size:13px;line-height:1.5;'
                        + (mine ? 'background:var(--blue-tint-bg);margin-inline-start:28px' : 'background:var(--warn-tint);margin-inline-end:28px') + ';color:var(--on-card)">'
                        + '<div style="display:flex;gap:8px;align-items:baseline;margin-bottom:2px">'
-                       +   '<b style="font-size:11.5px;color:' + (mine ? 'var(--blue-2)' : 'var(--warn-2)') + '">' + esc(mine ? 'You' : (x.sender_display_name || '—')) + '</b>'
+                       +   '<b style="font-size:var(--fs-1);color:' + (mine ? 'var(--blue-2)' : 'var(--warn-2)') + '">' + esc(mine ? 'You' : (x.sender_display_name || '—')) + '</b>'
                        +   '<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey)">' + esc(msgWhen(x.created_at)) + '</span></div>'
                        + '<div style="white-space:pre-wrap">' + esc(x.message_text || '') + '</div></div>';
                    }).join(''))
@@ -304,7 +304,7 @@ function messagesScreen(){
             + (on ? 'background:var(--blue);color:var(--on-accent);font-weight:700;' : '') + 'border-radius:9px;padding:3px 10px">'
             + lbl + (n ? ' <span style="opacity:.7">' + n + '</span>' : '') + '</span>';
         }).join('')
-    +   '<span style="margin-inline-start:auto;font-size:11.5px;color:var(--grey)">📌 keeps a conversation here after you read it</span>'
+    +   '<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey)">📌 keeps a conversation here after you read it</span>'
     + '</div>'
     + '<div style="display:flex;gap:14px;align-items:center;padding:8px 16px;border-bottom:1px solid var(--line)">'
     +   '<label style="display:inline-flex;align-items:center;gap:5px;font-size:var(--fs-2);cursor:pointer">'

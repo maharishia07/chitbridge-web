@@ -246,9 +246,9 @@ function _rdDetailPane(it){
       ? '<div style="margin:10px 16px 0;font-size:12px;color:var(--warn-2);background:var(--warn-tint);border:1px solid #f0dcae;border-radius:9px;padding:9px 12px">⚠ <b>' + tx('Declared only') + '</b> — a bare claim, <b>not evidenced</b>. Attach a document (Gather) or <b>' + tx('Verify at source') + '</b> to make it count. Buyers do NOT treat a bare claim as met.</div>'
       : '<div style="margin:10px 16px 0;font-size:12px;color:var(--grey);background:var(--card);border:1px solid var(--line);border-radius:9px;padding:9px 12px">☐ <b>Not held.</b> Provide evidence (Gather or Verify) to check it — it stays checked only while the evidence is valid.</div>';
   var vmode = idType
-    ? '<div style="margin:8px 16px 0;font-size:11.5px;color:var(--ok-2);background:var(--ok-tint);border:1px solid #bfe3cb;border-radius:9px;padding:8px 11px">🔗 <b>' + tx('Live source-check') + '</b> — the platform verifies this '+idType.toUpperCase()+' against the <b>source registry</b>, invoked live. Confirmed at source, not your word for it.</div>'
-    : '<div style="margin:8px 16px 0;font-size:11.5px;color:var(--grey);background:var(--card);border:1px solid var(--line);border-radius:9px;padding:8px 11px">📄 <b>' + tx('Document evidence') + '</b> — your certificate + issuer link. A <b>live source-check is not wired for this standard yet</b> (it needs the issuing body’s registry).</div>';
-  return '<div style="padding:14px 16px 0"><div style="display:flex;align-items:flex-start;gap:10px"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:15px">'+esc(it.title||it.doc)+rung+'</div><div style="font-size:11.5px;color:var(--grey);margin-top:2px">from <span class="mono" style="color:var(--blue)">'+esc(it.standard)+'</span></div></div><div style="flex:0 0 auto;display:flex;gap:6px;align-items:center">'+draftBtn+verifyBtn+actBtn+'</div></div></div>'
+    ? '<div style="margin:8px 16px 0;font-size:var(--fs-1);color:var(--ok-2);background:var(--ok-tint);border:1px solid #bfe3cb;border-radius:9px;padding:8px 11px">🔗 <b>' + tx('Live source-check') + '</b> — the platform verifies this '+idType.toUpperCase()+' against the <b>source registry</b>, invoked live. Confirmed at source, not your word for it.</div>'
+    : '<div style="margin:8px 16px 0;font-size:var(--fs-1);color:var(--grey);background:var(--card);border:1px solid var(--line);border-radius:9px;padding:8px 11px">📄 <b>' + tx('Document evidence') + '</b> — your certificate + issuer link. A <b>live source-check is not wired for this standard yet</b> (it needs the issuing body’s registry).</div>';
+  return '<div style="padding:14px 16px 0"><div style="display:flex;align-items:flex-start;gap:10px"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:15px">'+esc(it.title||it.doc)+rung+'</div><div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">from <span class="mono" style="color:var(--blue)">'+esc(it.standard)+'</span></div></div><div style="flex:0 0 auto;display:flex;gap:6px;align-items:center">'+draftBtn+verifyBtn+actBtn+'</div></div></div>'
     + banner + vmode + _rdExpand(it);
 }
 // ── COMMERCIAL COVER (live /instruments) — the invariant spine beneath the industry-variable compliance ──
@@ -286,7 +286,7 @@ function _rdTabInfo(tab){
           clearance:'Per-shipment clearances gathered for each order into the chosen destination.',
           commercial:'Commercial cover for the deal — payment, transit, currency & financing risk (FRM). The same in every sector.' };
   var t=m[tab]; if(!t) return '';
-  return '<div style="flex:none;font-size:11.5px;color:var(--grey);padding:8px 14px;border-bottom:1px solid var(--line);background:var(--card)"><span style="color:var(--blue);font-weight:800">ⓘ</span> '+t+' <span style="color:var(--on-card)">· sector-generic — switch the sector to see it re-resolve.</span></div>';
+  return '<div style="flex:none;font-size:var(--fs-1);color:var(--grey);padding:8px 14px;border-bottom:1px solid var(--line);background:var(--card)"><span style="color:var(--blue);font-weight:800">ⓘ</span> '+t+' <span style="color:var(--on-card)">· sector-generic — switch the sector to see it re-resolve.</span></div>';
 }
 // ── CHECK A SUPPLIER (buyer) ──
 // compact spin-the-globe: origin → destination selectors (shown in the Clearances tab header).
@@ -304,10 +304,10 @@ function _rdDestSelectors(){
   var oName=({IN:'India',US:'United States',EU:'European Union',GULF:'Gulf (GCC)'})[origin]||origin;
   var ss='font-size:12px;font-weight:700;border:1px solid var(--line);border-radius:9px;padding:5px 8px;background:var(--card);color:var(--ink)';
   var opt=function(list,v){return list.map(function(x){return '<option value="'+x[0]+'"'+(x[0]===v?' selected':'')+'>'+x[1]+'</option>';}).join('');};
-  var rd=UI.laneRd, s=(rd&&rd.summary)||{}, cnt=(rd&&!rd.error&&s.total!=null)?('<span style="font-size:11.5px;color:var(--grey)">'+(s.met||0)+' of '+(s.total||0)+' met</span>'):'';
-  return '<span style="font-size:11.5px;color:var(--grey)">sector</span><select onchange="setLaneVertical(this.value)" style="'+ss+'">'+opt(vOpts,vert)+'</select>'
-    +'<span style="font-size:11.5px;color:var(--grey)" title="Your registered country (fixed)">🌍 from <b style="color:var(--ink)">'+esc(oName)+'</b></span>'
-    +'<span style="font-size:11.5px;color:var(--grey)">ship to</span><select onchange="setLaneDest(this.value)" style="'+ss+'">'+opt(dOpts,dest)+'</select>'+cnt;
+  var rd=UI.laneRd, s=(rd&&rd.summary)||{}, cnt=(rd&&!rd.error&&s.total!=null)?('<span style="font-size:var(--fs-1);color:var(--grey)">'+(s.met||0)+' of '+(s.total||0)+' met</span>'):'';
+  return '<span style="font-size:var(--fs-1);color:var(--grey)">sector</span><select onchange="setLaneVertical(this.value)" style="'+ss+'">'+opt(vOpts,vert)+'</select>'
+    +'<span style="font-size:var(--fs-1);color:var(--grey)" title="Your registered country (fixed)">🌍 from <b style="color:var(--ink)">'+esc(oName)+'</b></span>'
+    +'<span style="font-size:var(--fs-1);color:var(--grey)">ship to</span><select onchange="setLaneDest(this.value)" style="'+ss+'">'+opt(dOpts,dest)+'</select>'+cnt;
 }
 // header: tabs (Clearances | Commercial cover) within Trade ready + the spin-the-globe selectors on the Clearances tab.
 function _rdHeader(){
@@ -316,8 +316,8 @@ function _rdHeader(){
   return '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex:none;padding:0 12px;border-bottom:1px solid var(--line);background:var(--card);color:var(--on-card)">'
     +'<div style="display:flex;gap:2px">'+tb('certification','Certification')+tb('clearance','Clearance')+tb('commercial','Commercial')+'</div>'
     +'<div style="margin-inline-start:auto;display:flex;align-items:center;gap:8px;padding:6px 0;flex-wrap:wrap">'+(tab!=='commercial'?_rdDestSelectors():'')
-      +'<button onclick="aiSuggestStandards()" title="AI suggests the standards you likely need for this sector + market" style="font-size:11.5px;font-weight:700;border:1px solid var(--purple);background:var(--purple-tint);color:var(--purple);border-radius:9px;padding:6px 10px;cursor:pointer">' + tx('✨ Standards') + '</button>'
-      +'<button onclick="openSectorMatrix()" title="Common vs sector-specific — the sector × standard matrix" style="font-size:11.5px;font-weight:700;border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:9px;padding:6px 10px;cursor:pointer">' + tx('🧮 Matrix') + '</button></div>'
+      +'<button onclick="aiSuggestStandards()" title="AI suggests the standards you likely need for this sector + market" style="font-size:var(--fs-1);font-weight:700;border:1px solid var(--purple);background:var(--purple-tint);color:var(--purple);border-radius:9px;padding:6px 10px;cursor:pointer">' + tx('✨ Standards') + '</button>'
+      +'<button onclick="openSectorMatrix()" title="Common vs sector-specific — the sector × standard matrix" style="font-size:var(--fs-1);font-weight:700;border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:9px;padding:6px 10px;cursor:pointer">' + tx('🧮 Matrix') + '</button></div>'
   +'</div>';
 }
 // STANDARD display names for the matrix (fallback = the key)
@@ -343,13 +343,13 @@ async function openSectorMatrix(){
   var rowH=function(r){ var common=r.n===secs.length; return '<tr'+(common?' style="background:var(--ok-tint);color:var(--on-card)"':'')+'><td style="padding:8px 6px;font-weight:600;font-size:12px;border-bottom:1px solid var(--line);color:'+(common?'var(--ok-3)':'var(--ink)')+'">'+esc(r.name)+'</td>'+r.on.map(function(v,i){return _mtxCell(v,common,secs[i][3]);}).join('')+'</tr>'; };
   var band=function(t){return '<tr><td colspan="'+(secs.length+1)+'" style="padding:11px 6px 3px;font-size:var(--fs-1);font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--grey)">'+t+'</td></tr>';};
   var common=list.filter(function(r){return r.n===secs.length;}), spec=list.filter(function(r){return r.n!==secs.length;});
-  var html='<div style="font-size:11.5px;color:var(--grey);margin-bottom:9px">Lane held constant ('+esc(origin)+' <span class=arw>→</span> '+esc(dest)+') — only the sector changes. A full row is the <b>common backbone</b>; a single ✓ is <b>sector-specific</b>.</div>'
+  var html='<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:9px">Lane held constant ('+esc(origin)+' <span class=arw>→</span> '+esc(dest)+') — only the sector changes. A full row is the <b>common backbone</b>; a single ✓ is <b>sector-specific</b>.</div>'
     +'<div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%;min-width:430px">'+head
     +band('● Common — every sector')+common.map(rowH).join('')
     +band('◆ Sector-specific')+spec.map(rowH).join('')
     +'</table></div>'
     +'<div style="margin-top:12px;font-size:var(--fs-1);color:var(--grey)">required = <b>common backbone</b> ∪ <b>sector-specific</b> ∪ <b>destination-specific</b> — derived, never enumerated.</div>'
-    +'<div style="margin-top:12px;text-align:center;font-family:\'Space Grotesk\',system-ui;font-weight:700;font-size:11.5px;color:var(--blue);letter-spacing:.04em">Chit &amp; Bridge</div>';
+    +'<div style="margin-top:12px;text-align:center;font-family:\'Space Grotesk\',system-ui;font-weight:700;font-size:var(--fs-1);color:var(--blue);letter-spacing:.04em">Chit &amp; Bridge</div>';
   var el=document.getElementById('mtxbody'); if(el) el.innerHTML=html;
 }
 // ── COMMERCIAL two-pane — the invariant spine gets the SAME treatment as clearances. Left = the cover areas (live from
@@ -415,7 +415,7 @@ function _rdComDetail(g){
   var partner = m.partner ? '<div style="margin-top:11px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--warn-tint);color:var(--on-card)"><span style="font-size:var(--fs-1);font-weight:800;color:var(--warn-3);text-transform:uppercase;letter-spacing:.05em">' + tx('Or hand it to a partner') + '</span><div style="font-size:var(--fs-2);margin-top:3px;font-weight:600">'+esc(m.partner)+'</div></div>' : '';
   var ai=m.ai||{};
   var aiLine = '<b style="color:var(--blue)">'+esc(ai.lvl||'L2')+'</b> · gate: '+esc(ai.gate||'confirm')+' — '+esc(ai.t||'AI role to be defined.')+(ai.skill?'':' <i style="color:#8a94a6">(skill coming)</i>');
-  return '<div style="padding:14px 16px 0"><div style="display:flex;align-items:flex-start;gap:10px"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:15px">'+esc(g.label)+'</div><div style="font-size:11.5px;color:var(--grey);margin-top:4px;display:flex;align-items:center;gap:7px;flex-wrap:wrap">'+_frmBadge(g.frm_class)+(g.covered_onrail?'<span style="color:var(--ok-3);font-weight:700;font-size:var(--fs-1)">' + tx('● already on rail') + '</span>':'')+'</div></div><div style="flex:0 0 auto">'+draftBtn+'</div></div></div>'
+  return '<div style="padding:14px 16px 0"><div style="display:flex;align-items:flex-start;gap:10px"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:15px">'+esc(g.label)+'</div><div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px;display:flex;align-items:center;gap:7px;flex-wrap:wrap">'+_frmBadge(g.frm_class)+(g.covered_onrail?'<span style="color:var(--ok-3);font-weight:700;font-size:var(--fs-1)">' + tx('● already on rail') + '</span>':'')+'</div></div><div style="flex:0 0 auto">'+draftBtn+'</div></div></div>'
     +'<div style="border-top:1px solid var(--line);margin:12px 0 0;padding:2px 16px 16px">'
     + _rdSub('Instruments')+'<div style="font-size:var(--fs-2);color:var(--ink)">'+(names||'—')+'</div>'
     + _rdSub('Advice')+'<div style="font-size:var(--fs-2);color:var(--ink);line-height:1.5">'+esc(m.advice||'—')+'</div>'

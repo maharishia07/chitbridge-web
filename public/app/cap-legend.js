@@ -381,7 +381,7 @@ function lbFont(d){ _lbFontScale=Math.max(0.85,Math.min(1.6,(_lbFontScale||1)+d*
 function _lifeTabHtml(){
   const SS={ ok:['var(--ok-3)','✅'], built:['var(--warn-2)','◐'], todo:['var(--grey-4)','○'] };
   const row=(r)=>{ const [c,ic]=SS[r.st]||SS.todo;
-    return `<div style="display:flex;gap:8px;align-items:flex-start;font-size:11.5px;padding:3px 0;border-bottom:1px dashed var(--line)"><span style="color:${c};flex:none">${ic}</span><span class="mono" style="flex:none;color:var(--grey);width:46px">${esc(r.id)}</span><span style="flex:1">${esc(r.fr)}</span><span style="flex:1;color:var(--grey)">${esc(r.test)}</span></div>`; };
+    return `<div style="display:flex;gap:8px;align-items:flex-start;font-size:var(--fs-1);padding:3px 0;border-bottom:1px dashed var(--line)"><span style="color:${c};flex:none">${ic}</span><span class="mono" style="flex:none;color:var(--grey);width:46px">${esc(r.id)}</span><span style="flex:1">${esc(r.fr)}</span><span style="flex:1;color:var(--grey)">${esc(r.test)}</span></div>`; };
   const grp=(g)=>`<div style="border:1px solid var(--line);border-radius:12px;padding:12px 13px;margin-bottom:11px">
       <div style="font-family:'Space Grotesk';font-weight:700;font-size:13px;margin-bottom:4px">${esc(g.area)}</div>
       <div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:2px"><b>BR:</b> ${esc(g.br)}</div>
@@ -390,7 +390,7 @@ function _lifeTabHtml(){
       ${g.rows.map(row).join('')}
     </div>`;
   return `<div style="padding:12px 13px;overflow:visible">
-    <div style="font-size:11.5px;color:var(--grey);margin-bottom:10px">How we work the lifecycle: every behaviour traces <b>Business <span class=arw>→</span> System <span class=arw>→</span> Functional <span class=arw>→</span> Test</b>. <span style="color:var(--ok-3)">${tx('✅ verified-live')}</span> · <span style="color:#a9791f">◐ built, needs a live run</span> · <span style="color:var(--grey-4)">${tx('○ backlog')}</span>.</div>
+    <div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:10px">How we work the lifecycle: every behaviour traces <b>Business <span class=arw>→</span> System <span class=arw>→</span> Functional <span class=arw>→</span> Test</b>. <span style="color:var(--ok-3)">${tx('✅ verified-live')}</span> · <span style="color:#a9791f">◐ built, needs a live run</span> · <span style="color:var(--grey-4)">${tx('○ backlog')}</span>.</div>
     ${TRACE_MATRIX.map(grp).join('')}
     <div style="font-size:var(--fs-1);color:var(--grey);text-align:center;padding-top:2px">Most rows are ◐ — built + parse/boot-checked; each ✅ needed a human live-run or a script. Automated tests turn ◐ <span class=arw>→</span> ✅ at scale.</div>
   </div>`;
@@ -407,7 +407,7 @@ function _storiesTabHtml(){
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:5px"><span style="font-size:19px">${x.icon}</span><span style="font-family:'Space Grotesk';font-weight:700;font-size:15px;color:var(--ink)">${esc(x.name)}</span><span style="margin-inline-start:auto;font-size:12px;color:var(--accent,var(--blue));font-weight:700">${tx('Open ↗')}</span></div>
     <div style="font-size:var(--fs-2);color:var(--grey);line-height:1.5">${esc(x.blurb)}</div></a>`;
   return `<div style="padding:12px 13px;overflow:visible">
-    <div style="font-size:11.5px;color:var(--grey);margin-bottom:12px">The <b>business narratives</b> — the product told from the value side, followable end-to-end (not feature ads). Open each in a new tab.</div>
+    <div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:12px">The <b>business narratives</b> — the product told from the value side, followable end-to-end (not feature ads). Open each in a new tab.</div>
     ${S.map(card).join('')}
     <div style="font-size:var(--fs-1);color:var(--grey);text-align:center;padding-top:2px">Companion set to the ⬢ Capabilities map — the “what it feels like” beside the “what’s built”.</div>
   </div>`;
@@ -418,11 +418,11 @@ function _secTabHtml(){
   const row=(s)=>{ const [c,lbl]=LV[s.lvl]||LV.gap;
     return `<div style="border:1px solid var(--line);border-radius:12px;padding:11px 13px;margin-bottom:9px">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:13px">${esc(s.area)}</span><span style="margin-inline-start:auto;font-size:var(--fs-1);font-weight:800;color:${c}">${lbl}</span></div>
-      <div style="font-size:11.5px;color:var(--ink);line-height:1.45;margin-bottom:4px">${esc(s.what)}</div>
+      <div style="font-size:var(--fs-1);color:var(--ink);line-height:1.45;margin-bottom:4px">${esc(s.what)}</div>
       <div style="font-size:var(--fs-1);color:var(--grey);line-height:1.4"><b>Raise it:</b> ${esc(s.raise)}</div>
     </div>`; };
   return `<div style="padding:12px 13px;overflow:visible">
-    <div style="font-size:11.5px;color:var(--grey);margin-bottom:10px">What protects your data today (verified from code, 2026-07-05). Honest levels: <span style="color:var(--ok-3)">${tx('✓ strong')}</span> · <span style="color:#a9791f">${tx('◐ partial')}</span> · <span style="color:var(--disp)">${tx('○ gap')}</span>.</div>
+    <div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:10px">What protects your data today (verified from code, 2026-07-05). Honest levels: <span style="color:var(--ok-3)">${tx('✓ strong')}</span> · <span style="color:#a9791f">${tx('◐ partial')}</span> · <span style="color:var(--disp)">${tx('○ gap')}</span>.</div>
     ${SEC_POSTURE.map(row).join('')}
     <div style="font-size:var(--fs-1);color:var(--grey);text-align:center;padding-top:2px">Encryption in transit (TLS) is solid; at-rest is provider disk-level (not per-column) and there is no external pen-test yet — so security is honestly capped ≤ L4 until audited.</div>
   </div>`;
@@ -442,7 +442,7 @@ function _edgeTabHtml(){
   const _mk=(v)=>{ const m={y:['var(--ok-3)','✓'],p:['var(--warn-2)','~'],n:['var(--disp)','✗']}, c=m[v]||m.n; return '<span style="color:'+c[0]+';font-weight:700">'+c[1]+'</span>'; };
   const crow=(n,a,b,c,d,hl)=>'<tr style="'+(hl?'background:var(--blue-tint);':'')+'border-top:1px solid var(--line);color:var(--on-card)"><td style="text-align:start;padding:4px;font-weight:'+(hl?'700':'500')+';color:'+(hl?'var(--blue-2)':'var(--ink)')+'">'+n+'</td><td style="text-align:center;padding:4px">'+_mk(a)+'</td><td style="text-align:center;padding:4px">'+_mk(b)+'</td><td style="text-align:center;padding:4px">'+_mk(c)+'</td><td style="text-align:center;padding:4px">'+_mk(d)+'</td></tr>';
   return '<div style="padding:14px 16px;overflow:visible">'
-    +'<div style="font-size:11.5px;color:var(--grey);margin-bottom:8px">Where we aim vs the alternatives. <b>This is a positioning hypothesis</b> — our dot is a <b>target</b> (we are early/unproven); the others are established.</div>'
+    +'<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:8px">Where we aim vs the alternatives. <b>This is a positioning hypothesis</b> — our dot is a <b>target</b> (we are early/unproven); the others are established.</div>'
     +'<div style="position:relative;height:270px;margin:22px 34px 30px;border-inline-start:1.5px solid var(--line);border-bottom:1.5px solid var(--line)">'
       +'<div style="position:absolute;inset-inline-start:50%;top:0;bottom:0;border-inline-start:1px dashed var(--line)"></div>'
       +'<div style="position:absolute;top:50%;inset-inline-start:0;inset-inline-end:0;border-top:1px dashed var(--line)"></div>'
@@ -509,7 +509,7 @@ function _realTabHtml(){
       +'<div style="font-size:var(--fs-1);color:var(--ink);line-height:1.45;margin-bottom:3px"><b>Now:</b> '+esc(now)+'</div>'
       +'<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.4"><b>To earn it:</b> '+esc(earn)+'</div></div>'; };
   return '<div style="padding:14px 16px;overflow:visible">'
-    +'<div style="font-size:11.5px;color:var(--grey);margin-bottom:10px">Full honesty — for each edge, where we genuinely stand and what it takes to <b>earn</b> that level. Nothing counts as done until a human proved it (our review-gate rule).</div>'
+    +'<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:10px">Full honesty — for each edge, where we genuinely stand and what it takes to <b>earn</b> that level. Nothing counts as done until a human proved it (our review-gate rule).</div>'
     + row('Governed peer two-way (the communication edge)','built','Per-entity co-held copies, messages both ways, per-party dispute threads — ALL replicated per-copy (nothing shared), proven by the regression suite.','Run one live A↔B loop with a real user; then volume-test it.')
     + row('Multitenant isolation (RLS)','real','Live in prod, PER-COPY across ALL entity tables — cb_app cannot bypass RLS; the regression suite proves a non-participant reads 0 (100+ assertions).','Commission an external pen-test to move from self-verified to attested (the L5 gate).')
     + row('Sealed co-held record + provenance','part','Freeze-at-send + an append-only state log exist.','Add an immutability / tamper test proving history cannot be rewritten.')
@@ -544,7 +544,7 @@ function _workTabHtml(){
       <span style="margin-inline-start:auto;font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:${o.live?'var(--ok-3)':'var(--grey-2)'};border:1px ${o.live?'solid #bfe0cf':'dashed #c2c6cc'};border-radius:5px;padding:1px 6px">${o.live?'Live':'Designed'}</span>
     </div>
     <div style="font-size:13px;color:var(--ink);background:var(--blue-tint);border-inline-start:3px solid ${R};border-radius:0 8px 8px 0;padding:7px 11px;margin:9px 0 8px;line-height:1.5"><b style="font-family:'Space Mono';font-size:var(--fs-1);letter-spacing:.08em;text-transform:uppercase;color:${R};margin-inline-end:7px">${tx('Achieves')}</b>${o.obj}</div>
-    <div style="font-size:11.5px;color:var(--grey);margin-bottom:8px;line-height:1.55">${o.flow}</div>
+    <div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:8px;line-height:1.55">${o.flow}</div>
     <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">${o.chips.join('')}</div>
   </div>`;
   const lines=[
@@ -598,7 +598,7 @@ function _workTabHtml(){
       stage('Pin','the chit records schema@version — verifiable forever'),
     ])}
     <div style="font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3);margin:16px 0 7px">${tx('Notifications — who gets told, and how')}</div>
-    <div style="overflow-x:auto;border:1px solid var(--line);border-radius:12px"><table style="width:100%;border-collapse:collapse;font-size:11.5px;min-width:520px"><tr style="background:var(--blue-tint);color:var(--on-card)"><td style="padding:6px 9px;font-family:'Space Mono';font-size:var(--fs-1);letter-spacing:.06em;text-transform:uppercase;color:var(--grey)">${tx('Crew')}</td><td style="padding:6px 9px;font-family:'Space Mono';font-size:var(--fs-1);letter-spacing:.06em;text-transform:uppercase;color:var(--grey)">${tx('Notified by')}</td><td style="padding:6px 9px;font-family:'Space Mono';font-size:var(--fs-1);letter-spacing:.06em;text-transform:uppercase;color:var(--grey)">${tx('Handled')}</td></tr>${notif}</table></div>
+    <div style="overflow-x:auto;border:1px solid var(--line);border-radius:12px"><table style="width:100%;border-collapse:collapse;font-size:var(--fs-1);min-width:520px"><tr style="background:var(--blue-tint);color:var(--on-card)"><td style="padding:6px 9px;font-family:'Space Mono';font-size:var(--fs-1);letter-spacing:.06em;text-transform:uppercase;color:var(--grey)">${tx('Crew')}</td><td style="padding:6px 9px;font-family:'Space Mono';font-size:var(--fs-1);letter-spacing:.06em;text-transform:uppercase;color:var(--grey)">${tx('Notified by')}</td><td style="padding:6px 9px;font-family:'Space Mono';font-size:var(--fs-1);letter-spacing:.06em;text-transform:uppercase;color:var(--grey)">${tx('Handled')}</td></tr>${notif}</table></div>
     <div style="font-size:var(--fs-1);color:var(--grey);line-height:1.55;margin-top:11px">Mechanism: per-actor unread = <b>chit_reads</b> vs <b>chit_status.updated_at</b>; bell + centre from the append-only <b>state_log</b>; cross-entity delivery only via the SECURITY DEFINER fns. · <b>Honest:</b> 3 patterns minted+live; the commercial run is real as purposes (not pattern-ized); AI &amp; customer rows are designed.</div>
   </div>`;
 }
@@ -683,7 +683,7 @@ function _openLegendImpl(){
     ${c.features.map(featRow).join('')}
   </div>`;
   const capBody=`
-    <div style="padding:11px 13px 6px;font-size:11.5px;color:var(--grey);border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+    <div style="padding:11px 13px 6px;font-size:var(--fs-1);color:var(--grey);border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;gap:10px;align-items:center">
       <span><b style="color:var(--ink)">${built}</b> live capabilities · <b style="color:var(--ink)">${nf}</b> features</span>
       <span style="margin-inline-start:auto">Status: <span style="color:var(--ok-3)">✅ done ${d}</span> · <span style="color:#a9791f">◐ partial ${p}</span> · <span style="color:var(--grey-4)">○ backlog ${b}</span></span>
     </div>

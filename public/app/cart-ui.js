@@ -714,7 +714,7 @@
       return '<div style="display:flex;align-items:center;gap:10px;padding:8px 2px 8px ' + (r.variant ? '20px' : '2px')
         + ';border-bottom:1px dashed var(--line);' + (q ? 'background:' + soft(ns) : '') + '">'
         + '<span style="flex:1"><b style="font-size:13.5px">' + esc(r.variant || d.name || d.product || 'item') + '</b>'
-        + (d.unit ? ' <span style="color:var(--grey-2);font-size:11.5px">' + esc(d.unit) + '</span>' : '')
+        + (d.unit ? ' <span style="color:var(--grey-2);font-size:var(--fs-1)">' + esc(d.unit) + '</span>' : '')
         + '<div style="font-size:12px;color:var(--grey-2);margin-top:1px">'
         // An offer REPLACES the asking price in the maths, so it must replace it on screen too — with the asking
         // price still shown, struck through, because hiding what they asked for is its own dishonesty.
@@ -754,7 +754,7 @@
             var p = l.unit_price;
             return '<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px dashed var(--line)">'
               + '<span style="flex:1"><b style="font-size:13.5px">' + esc(l.name) + '</b>'
-              + ' <span style="color:var(--grey-2);font-size:11.5px">' + esc(l.unit) + '</span>'
+              + ' <span style="color:var(--grey-2);font-size:var(--fs-1)">' + esc(l.unit) + '</span>'
               + '<div style="font-size:12px;color:var(--grey-2)">'
               + (l.offered ? '<span style="text-decoration:line-through;opacity:.55">' + esc(fmt(ns, l.asking_price)) + '</span> ' : '')
               + (isFinite(p) ? esc(fmt(ns, p)) : 'no price') + (l.offered ? ' <span style="font-size:var(--fs-1)">your offer</span>' : '')
@@ -766,7 +766,7 @@
           + '<div style="display:flex;padding:11px 2px;border-top:2px solid var(--line);font-size:var(--fs-3);font-weight:800">'
           + '<span style="flex:1">' + (T.offered ? 'Total at your offer' : 'Total') + '</span>'
           + '<span>' + (T.amount ? esc(fmt(ns, T.amount)) + (T.partial ? '+' : '') : '—') + '</span></div>'
-          + (T.partial ? '<div style="color:var(--warn-2);font-size:11.5px">Some lines have no price — the total covers only the priced ones.</div>' : '')
+          + (T.partial ? '<div style="color:var(--warn-2);font-size:var(--fs-1)">Some lines have no price — the total covers only the priced ones.</div>' : '')
         // Emptying the cart from inside it must not leave someone facing a blank box with no way back.
         : '<div style="padding:26px 8px;color:var(--grey-2);font-size:13.5px;text-align:center">Nothing in the cart yet.</div>')
       + '<div style="display:flex;gap:9px;margin-top:15px">'
@@ -1007,7 +1007,7 @@
         + '.cbcart-sum{font-size:var(--fs-2);font-weight:800}'
         + '.cbcart-x{font-size:12px;font-weight:800;opacity:.75;cursor:pointer;padding:0 1px}'
         + '.cbcart-x:hover{opacity:1}'
-        + '.cbcart-partial{color:var(--warn-2);font-size:11.5px;max-width:190px;line-height:1.3;white-space:normal}'
+        + '.cbcart-partial{color:var(--warn-2);font-size:var(--fs-1);max-width:190px;line-height:1.3;white-space:normal}'
         /**
          * ⚠️ MOBILE: THE MONEY GOES, THE COUNT STAYS. Below 520px the summary would push the search box down to a
          * second row, which costs more than it tells you — so it is the summary that yields, never the badge or the

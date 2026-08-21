@@ -35,10 +35,10 @@ function intakeScreen(){
     + '<div class="lh"><div style="display:flex;align-items:center;gap:8px;margin-bottom:9px">'
     + '<span style="font-family:\'Space Grotesk\';font-weight:700;font-size:var(--fs-3)">' + tx('📥 Intake') + '</span>'
     + '<button onclick="openAssist(\'intake\')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button>'
-    + '<button data-testid="intake-refresh" onclick="loadIntake()" style="margin-inline-start:auto;border:1px solid var(--line);background:var(--paper);border-radius:9px;padding:4px 9px;font-size:11.5px;cursor:pointer;color:var(--on-bg)">' + tx('↻ Refresh') + '</button>'
-    + '<button data-testid="intake-simulate-open" onclick="intakeToggleSim()" style="border:1px solid var(--line);background:var(--paper);border-radius:9px;padding:4px 9px;font-size:11.5px;cursor:pointer;color:var(--on-bg)">' + tx('✚ Record a message') + '</button>'
+    + '<button data-testid="intake-refresh" onclick="loadIntake()" style="margin-inline-start:auto;border:1px solid var(--line);background:var(--paper);border-radius:9px;padding:4px 9px;font-size:var(--fs-1);cursor:pointer;color:var(--on-bg)">' + tx('↻ Refresh') + '</button>'
+    + '<button data-testid="intake-simulate-open" onclick="intakeToggleSim()" style="border:1px solid var(--line);background:var(--paper);border-radius:9px;padding:4px 9px;font-size:var(--fs-1);cursor:pointer;color:var(--on-bg)">' + tx('✚ Record a message') + '</button>'
     + '</div>'
-    + '<div style="font-size:11.5px;color:var(--grey);line-height:1.5">A message is a <b>notice</b>; a chit is an <b>obligation</b>. Nothing here becomes a chit until you confirm it.</div>'
+    + '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5">A message is a <b>notice</b>; a chit is an <b>obligation</b>. Nothing here becomes a chit until you confirm it.</div>'
     /**
      * ⚠️ WHICH SIDE OF THE TRADE THIS ENTITY IS ON LIVES IN SETTINGS, NOT HERE.
      *
@@ -66,7 +66,7 @@ function intakeSimHTML(){
   if(!_INTAKE.sim) return '';
   return '<div style="border:1px solid var(--line);border-radius:12px;padding:12px 13px;margin-bottom:12px;background:var(--paper);color:var(--on-bg)">'
     + '<div style="font-weight:700;font-size:var(--fs-2);margin-bottom:6px">' + tx('Record an inbound message') + '</div>'
-    + '<div style="font-size:11.5px;color:var(--grey);margin-bottom:8px">The WhatsApp and email webhooks exist but are not connected to a provider yet, so this is how a message gets onto the queue today. It goes through the SAME capture the webhook uses — nothing is faked.</div>'
+    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:8px">The WhatsApp and email webhooks exist but are not connected to a provider yet, so this is how a message gets onto the queue today. It goes through the SAME capture the webhook uses — nothing is faked.</div>'
     + '<div style="display:flex;gap:8px;flex-wrap:wrap">'
     + '<select class="inp" id="in_ch" data-testid="intake-sim-channel" style="max-width:130px"><option value="whatsapp">' + tx('WhatsApp') + '</option><option value="email">' + tx('Email') + '</option><option value="web">' + tx('Web') + '</option><option value="sms">SMS</option></select>'
     + '<input class="inp" id="in_from" data-testid="intake-sim-from" placeholder="from — phone or email" style="flex:1;min-width:150px">'
@@ -101,7 +101,7 @@ function intakeCardHTML(c){
   var w=_INTAKE.working[c.id]||{}, s=c.structured||w.structured;
   return '<div class="cap" data-testid="intake-row" style="border:1px solid var(--line);border-radius:12px;padding:12px 13px;margin-bottom:10px;background:var(--card);color:var(--on-card)">'
     + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">' + _chn(c.channel)
-    + '<span style="font-size:11.5px;color:var(--grey)">' + esc(c.sender_name||c.sender_ref||'unknown sender') + '</span>'
+    + '<span style="font-size:var(--fs-1);color:var(--grey)">' + esc(c.sender_name||c.sender_ref||'unknown sender') + '</span>'
     + (c.sender_name&&c.sender_ref?'<span style="font-size:var(--fs-1);color:var(--grey);font-family:ui-monospace,Menlo,monospace">'+esc(c.sender_ref)+'</span>':'')
     + '<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey)">' + esc(String(c.created_at||'').slice(0,16).replace('T',' ')) + '</span></div>'
     /* ⚠️ THE RAW TEXT IS UNTRUSTED and is shown as TEXT, never as markup. esc() is the whole guard: a capture is a
@@ -342,7 +342,7 @@ async function intakeShowJson(id){
         ? _note('3 · WHAT THE CHIT WOULD CARRY \u2014 refused: '+payErr)
         : _jsonBlock('3 · WHAT THE CHIT WOULD CARRY — after the catalogue is applied',
             payload||'(only available once it has been read)'))
-    + '<div style="padding:10px 14px;font-size:11.5px;color:var(--grey);line-height:1.6;border-top:1px solid var(--line)">'
+    + '<div style="padding:10px 14px;font-size:var(--fs-1);color:var(--grey);line-height:1.6;border-top:1px solid var(--line)">'
     + '\u26A0\uFE0F <b>Read stage 2 against stage 3.</b> A qualifier the sender wrote should appear as <b>comment</b> on its line; '
     + 'a size like &ldquo;periya&rdquo; or &ldquo;500ml&rdquo; as <b>unit_size</b>; a stated price as <b>unit_price</b>. '
     + 'Anything the reader could not place lands in <b>unplaced</b> \u2014 if that is empty and something is still missing from '

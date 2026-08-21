@@ -149,7 +149,7 @@ function cbAttachList(atts, opts){
   var rows = (atts || []).map(cbAttachNorm).filter(Boolean);
   if (!rows.length) {
     return opts.empty
-      ? '<div style="font-size:11.5px;color:var(--grey);padding:2px 0">' + esc(opts.empty) + '</div>'
+      ? '<div style="font-size:var(--fs-1);color:var(--grey);padding:2px 0">' + esc(opts.empty) + '</div>'
       : '';
   }
   var pad = opts.compact === false ? '5px 10px' : '3px 8px';
@@ -161,14 +161,14 @@ function cbAttachList(atts, opts){
     return '<span data-testid="cb-attach-item" onclick="cbAttachOpen(\'' + cbAttachSafe(a.id) + '\')"'
       + ' title="' + esc(a.name + ' — ' + meta) + '"'
       + ' style="display:inline-flex;align-items:center;gap:5px;cursor:pointer;border:1px solid var(--line);'
-      + 'border-radius:6px;padding:' + pad + ';margin:0 5px 5px 0;font-size:11.5px;background:var(--card);max-width:100%;color:var(--on-card)">'
+      + 'border-radius:6px;padding:' + pad + ';margin:0 5px 5px 0;font-size:var(--fs-1);background:var(--card);max-width:100%;color:var(--on-card)">'
       +   '<span style="font-size:12px;flex:none">' + cbAttachIcon(a.t) + '</span>'
       +   '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(short) + '</span>'
       +   '<span style="font-size:var(--fs-1);color:var(--grey);flex:none">' + esc(meta) + '</span>'
       + '</span>';
   }).join('');
 
-  return (opts.title ? '<div style="font-size:11.5px;color:var(--grey);margin:6px 0 4px">' + esc(opts.title)
+  return (opts.title ? '<div style="font-size:var(--fs-1);color:var(--grey);margin:6px 0 4px">' + esc(opts.title)
                        + ' · ' + rows.length + '</div>' : '')
     + '<div data-testid="cb-attach-list" style="display:flex;flex-wrap:wrap;align-items:center">' + html + '</div>'
     + (opts.note ? '<div style="font-size:var(--fs-1);color:var(--warn-2);margin-top:2px">' + esc(opts.note) + '</div>' : '');
@@ -202,7 +202,7 @@ function cbAttachButton(ctx){
   return '<button type="button" class="btn" data-testid="cb-attach-btn"'
     + ' onclick="cbAttachPick(\'' + arg + '\')"'
     + ' title="' + esc(ctx.title || 'Attach a file (max 6 MB)') + '"'
-    + ' style="width:auto;flex:0 0 auto;margin:0;padding:6px 12px;font-size:11.5px;font-weight:700;'
+    + ' style="width:auto;flex:0 0 auto;margin:0;padding:6px 12px;font-size:var(--fs-1);font-weight:700;'
     + 'border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink);cursor:pointer">'
     + esc(ctx.label || '📎 Attach a file') + '</button>'
     + (ctx.note ? '<span style="font-size:var(--fs-1);color:var(--warn-2);margin-inline-start:8px">' + esc(ctx.note) + '</span>' : '');
@@ -363,7 +363,7 @@ function cbAttachCss(){
   var s = document.createElement('style');
   s.id = 'cbatt_css';
   s.textContent = '.cbatt-chip{display:inline-flex;align-items:center;gap:5px;border:1px dashed var(--gold);'
-    + 'border-radius:9px;padding:3px 8px;margin:2px 5px 2px 0;font-size:11.5px;background:var(--warn-tint);'
+    + 'border-radius:9px;padding:3px 8px;margin:2px 5px 2px 0;font-size:var(--fs-1);background:var(--warn-tint);'
     + 'color:var(--ink,var(--ink));max-width:100%}'
     + '.cbatt-chip.sent{border-style:solid;border-color:#e3e6ea;background:var(--card)}';
   (document.head || document.documentElement).appendChild(s);

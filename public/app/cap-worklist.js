@@ -243,7 +243,7 @@ function wlRow(r, ctx, depth){
     +   '<span style="color:var(--grey);font-size:12px;padding-inline-start:3px">›</span></span></div>'
     /* ⚠️ WHICH ORDER IT CAME FROM. A line without its chit is an instruction with no context — you cannot ring the
        customer, check the rest of the order, or know who is waiting. */
-    + (named || ordered ? '' : '<div style="font-size:11.5px;color:var(--grey);margin-top:3px">' + order + '</div>')
+    + (named || ordered ? '' : '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px">' + order + '</div>')
     + (bits.length ? '<div style="margin-top:4px;font-size:12px;color:var(--warn-2);background:var(--warn-tint);border-radius:5px;padding:3px 8px;display:inline-block">◍ ' + bits.join(' · ') + '</div>' : '')
     + '</div>';
 }
@@ -360,7 +360,7 @@ function worklistScreen(){
     + '<div style="display:flex;gap:14px;align-items:center;padding:8px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap">'
     +   '<span style="font-size:var(--fs-1);font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--grey)">then split by</span>'
     +   KEYS.map(function(x){ return box(x[0], x[1]); }).join('')
-    +   (sec ? '' : '<span style="font-size:11.5px;color:var(--grey);font-style:italic">not split — every line under its ' + esc(prim === 'who' ? 'person' : prim === 'date' ? 'date' : prim === 'item' ? 'product' : 'order') + '</span>')
+    +   (sec ? '' : '<span style="font-size:var(--fs-1);color:var(--grey);font-style:italic">not split — every line under its ' + esc(prim === 'who' ? 'person' : prim === 'date' ? 'date' : prim === 'item' ? 'product' : 'order') + '</span>')
     /* ⭐ THE PIVOT SWITCH. Off, you get the raw lines; on, the same product merges and its quantity totals — the
        answer to "what is my demand for that product", which is a sum you should never be doing by eye. */
     +   (prim === 'item' ? '' : '<label style="display:inline-flex;align-items:center;gap:5px;font-size:var(--fs-2);color:var(--ink-2,#41474e);cursor:pointer">'
@@ -507,7 +507,7 @@ function wlRender(rows, keys, depth, path){
       : '<div onclick="wlToggle(&quot;' + esc(id) + '&quot;)" style="cursor:pointer;padding:7px ' + (ind - 2) + 'px 2px ' + ind + 'px;'
         + 'display:flex;justify-content:space-between;align-items:baseline;gap:10px">'
         + '<span style="font-size:' + lv.size + ';font-weight:' + lv.weight + ';color:' + (tone || lv.color) + '">' + caret + title + '</span>'
-        + '<span style="font-size:11.5px;color:var(--grey);text-align:end;flex:none">' + wlRollupText(rs) + '</span></div>';
+        + '<span style="font-size:var(--fs-1);color:var(--grey);text-align:end;flex:none">' + wlRollupText(rs) + '</span></div>';
     return head + (isOpen ? wlRender(rs, rest, depth + 1, path.concat([key, k])) : '');
   }).join('');
   return html;
@@ -582,7 +582,7 @@ function wlParties(det){
           + (p.user_id||p.bridge_id ? ' <span style="color:var(--grey);font-family:ui-monospace,monospace;font-size:var(--fs-1)">' + esc(p.user_id||p.bridge_id) + '</span>' : '')
           + '</div>';
       }).join('')
-    + (everyoneIsMe ? '<div style="font-size:11.5px;color:var(--warn-2);font-weight:600">⚠️ this chit has no other party — an external message would come back to you</div>' : '')
+    + (everyoneIsMe ? '<div style="font-size:var(--fs-1);color:var(--warn-2);font-weight:600">⚠️ this chit has no other party — an external message would come back to you</div>' : '')
     + '</div>';
 }
 /**
@@ -833,7 +833,7 @@ function wlThreadSec(k, title, list, err, o){
     return '<div style="padding:6px 0;border-bottom:1px solid var(--line-soft,#f0efec);font-size:13px">'
       + '<div style="display:flex;gap:8px;align-items:baseline">'
       +   '<b style="font-size:var(--fs-2)">' + esc(m.sender_display_name || '—') + '</b>'
-      +   '<span style="margin-inline-start:auto;color:var(--grey);font-size:11.5px">' + esc(String(m.created_at || '').slice(0, 10)) + '</span></div>'
+      +   '<span style="margin-inline-start:auto;color:var(--grey);font-size:var(--fs-1)">' + esc(String(m.created_at || '').slice(0, 10)) + '</span></div>'
       /* pre-wrap, because the box is three lines tall now and people use them. */
       + '<div style="margin-top:2px;line-height:1.5;white-space:pre-wrap">' + esc(m.message_text || '') + '</div></div>';
   }).join('');
@@ -843,7 +843,7 @@ function wlThreadSec(k, title, list, err, o){
     +   wlBtn(o.verb, 'wl-' + k + '-add', 'wlMsgSave(&quot;' + k + '&quot;)', true) + '</div></div>'
     /* ⚠️ SAID PLAINLY, EVERY TIME, IN BOTH PANELS. A person deciding whether to write "customer is difficult, do
        not promise Friday" must not have to remember which box they are in. */
-    + '<div style="margin-top:7px;font-size:11.5px;color:' + (o.tone || 'var(--grey)') + ';line-height:1.5">' + o.foot + '</div>'
+    + '<div style="margin-top:7px;font-size:var(--fs-1);color:' + (o.tone || 'var(--grey)') + ';line-height:1.5">' + o.foot + '</div>'
     + '</div>';
   return out;
 }
@@ -924,13 +924,13 @@ function wlLineHTML(loading){
           + '<span style="font-weight:700;font-variant-numeric:tabular-nums;min-width:72px;color:' + (e.quantity < 0 ? 'var(--disp)' : 'var(--ink)') + '">'
           +   (e.quantity < 0 ? '' : '+') + esc(String(e.quantity)) + ' ' + esc(e.unit || '') + '</span>'
           + '<span style="color:var(--grey);font-size:12px;flex:1">' + esc(e.reference || e.note || '') + '</span>'
-          + '<span style="color:var(--grey);font-size:11.5px">' + esc(String(e.at || '').slice(0, 10)) + ' · ' + esc(e.by_actor || e.by || '') + '</span></div>';
+          + '<span style="color:var(--grey);font-size:var(--fs-1)">' + esc(String(e.at || '').slice(0, 10)) + ' · ' + esc(e.by_actor || e.by || '') + '</span></div>';
       }).join('')
       + added.map(function(a){
         return '<div style="display:flex;gap:10px;align-items:baseline;padding:5px 0;border-bottom:1px solid var(--line-soft,#f0efec);font-size:13px">'
           + '<span style="color:#2c5d7c;font-weight:700;min-width:82px">' + esc(wlMoney(a.amount)) + '</span>'
           + '<span style="flex:1">' + esc(a.particulars || '') + (a.quantity ? ' <span style="color:var(--grey)">· ' + esc(String(a.quantity)) + ' ' + esc(a.unit || '') + '</span>' : '') + '</span>'
-          + '<span style="color:var(--grey);font-size:11.5px">' + esc(String(a.at || '').slice(0, 10)) + '</span></div>';
+          + '<span style="color:var(--grey);font-size:var(--fs-1)">' + esc(String(a.at || '').slice(0, 10)) + '</span></div>';
       }).join('');
     }
     body += '</div>';
@@ -958,7 +958,7 @@ function wlLineHTML(loading){
           + '<span style="flex:0 0 auto;align-self:center;font-size:13px;color:var(--grey);font-weight:700">' + esc(r.unit || '') + '</span>',
           wlBtn('Record', 'wl-record', 'wlActSave(&quot;done&quot;)', true))
       + '<div style="margin-top:8px">' + wlInput('wl_ref', { placeholder: 'docket number, or a note' }) + '</div>'
-      + '<div style="margin-top:7px;font-size:11.5px;color:var(--grey);line-height:1.5">'
+      + '<div style="margin-top:7px;font-size:var(--fs-1);color:var(--grey);line-height:1.5">'
       +   (over ? '<b style="color:var(--disp)">Already ' + esc(String(over)) + ' ' + esc(r.unit || '') + ' over — the negative figure above returns it.</b>'
              : 'Pre-filled with what is left. A negative figure corrects an earlier delivery; nothing is deleted.')
       + '</div></div>';
@@ -982,7 +982,7 @@ function wlLineHTML(loading){
       + '</div>'
       /* ⚠️ Its own quantity field, never the delivery one: 2 hours of labour typed into the goods box is exactly
          the confusion merging the windows was meant to end. */
-      + '<div style="margin-top:7px;font-size:11.5px;color:var(--grey);line-height:1.5">This adds to the line, it does not deliver it. Units are never added together — only the money totals.</div>'
+      + '<div style="margin-top:7px;font-size:var(--fs-1);color:var(--grey);line-height:1.5">This adds to the line, it does not deliver it. Units are never added together — only the money totals.</div>'
       + '</div>';
   }
 
@@ -1022,7 +1022,7 @@ function wlLineHTML(loading){
          width:100% is right here. Kept explicit so it reads as a choice rather than the bug the others had. */
       + '<div style="margin-top:8px"><button class="btn" data-testid="wl-mark-done" onclick="wlSetState(' + (done ? '&quot;open&quot;' : '&quot;done&quot;') + ')" style="width:100%;margin:0;padding:11px">'
       +   (done ? '↩ Reopen this subtask' : '✓ Mark this subtask done') + '</button></div>'
-      + '<div style="margin-top:7px;font-size:11.5px;color:var(--grey);line-height:1.5">Handing it on keeps the old assignment as history. Marking it done takes it off the work list — it does not mean the goods went out.</div>'
+      + '<div style="margin-top:7px;font-size:var(--fs-1);color:var(--grey);line-height:1.5">Handing it on keeps the old assignment as history. Marking it done takes it off the work list — it does not mean the goods went out.</div>'
       + '</div>';
   }
 

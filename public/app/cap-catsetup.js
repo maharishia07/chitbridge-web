@@ -117,7 +117,7 @@ function catsetDefListHTML(kind, one){
     var orph = meth ? CBCatalogue.orphanModels(meth, used) : [];
     if (orph.length) {
       var uniq = orph.filter(function(v, i){ return orph.indexOf(v) === i; });
-      orphanNote = '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;font-size:11.5px;color:var(--warn-3);margin-bottom:9px">'
+      orphanNote = '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;font-size:var(--fs-1);color:var(--warn-3);margin-bottom:9px">'
         + '⚠️ <b>' + uniq.length + ' order model' + (uniq.length === 1 ? '' : 's') + ' this catalogue can no longer sell</b> — '
         + uniq.map(function(x){ return '<code>' + esc(x) + '</code>'; }).join(' · ')
         + '. A <b>' + esc(meth) + '</b> catalogue does not support ' + (uniq.length === 1 ? 'it' : 'them') + '. '
@@ -549,7 +549,7 @@ function catsetRowsHTML(){
       + '<div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:8px">'
       +   '<span style="font-size:var(--fs-3)">' + s.icon + '</span>'
       +   '<b style="font-size:13.5px">' + esc(s.name) + '</b></div>'
-      + '<div style="font-size:11.5px;color:var(--grey);margin-top:1px;padding-inline-start:22px">' + esc(s.q) + '</div></div>'
+      + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:1px;padding-inline-start:22px">' + esc(s.q) + '</div></div>'
       + '<div class="rowgo" aria-hidden="true">›</div></div>';
   }).join('');
 }
@@ -558,7 +558,7 @@ function catalogueSetupHubScreen(){
   var list = '<div class="list"><div class="lh">'
     + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'
     +   '<span style="font-family:\'Space Grotesk\';font-weight:700;font-size:var(--fs-3)">' + tx('⚙️ Catalogue setup') + '</span></div>'
-    + '<div style="font-size:11.5px;color:var(--grey);line-height:1.5">How your catalogue is <b>shaped</b>. '
+    + '<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5">How your catalogue is <b>shaped</b>. '
     + 'The products themselves live in <span onclick="navTo(\'catalogue\')" style="color:var(--blue);font-weight:600;cursor:pointer">' + tx('Catalogue') + '</span>, '
     + 'and how they are sorted in <span onclick="navTo(\'categories\')" style="color:var(--blue);font-weight:600;cursor:pointer">' + tx('Categories') + '</span>.</div>'
     + '</div><div class="rows" id="catset_rows">' + catsetRowsHTML() + '</div></div>';
@@ -608,7 +608,7 @@ function catsetCss(){
     '.catset-drow .dst.live{background:var(--ok-tint);color:var(--ok-2)}',
     '.catset-drow .dst.draft{background:var(--warn-tint);color:var(--warn-2)}',
     '.catset-drow .dst.retired{background:var(--neutral-tint);color:var(--ink-2)}',
-    '.catset-drow .da{font-size:11.5px;color:var(--blue);cursor:pointer;font-weight:600}',
+    '.catset-drow .da{font-size:var(--fs-1);color:var(--blue);cursor:pointer;font-weight:600}',
     '.catset-drow .da:hover{text-decoration:underline}',
     /* The vocabulary blocks. Quieter than the controls above them — this is reference, not something to act on. */
     '.catset-reg{border:1px solid var(--line);border-radius:12px;background:var(--paper);margin-bottom:12px;overflow:hidden}',
@@ -630,7 +630,7 @@ function catsetCss(){
     '.catset-regrow.pick:hover{background:var(--paper)}',
     /* ⚠️ Unticked stays READABLE — you have to be able to read a thing to decide you want it back. */
     '.catset-regrow.off code,.catset-regrow.off .rl{color:var(--grey)}',
-    '.catset-regrow code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11.5px;color:var(--ink)}',
+    '.catset-regrow code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:var(--fs-1);color:var(--ink)}',
     '.catset-regrow .rl{color:var(--ink)}',
     /**
      * ⭐⭐ THE NOTE TAKES THE FULL STRETCH, IN A BOX (Athi, 2026-08-17: *"under pricing, fixed, range underneath
@@ -648,7 +648,7 @@ function catsetCss(){
      * a rule down the left say "this belongs to the row above" without spending any horizontal space to say it.
      */
     '.catset-regrow .rn{margin-top:5px;padding:5px 9px;background:var(--neutral-tint);color:var(--note);'
-      + 'border-inline-start:2px solid var(--line);border-radius:0 6px 6px 0;font-size:11.5px;line-height:1.45}',
+      + 'border-inline-start:2px solid var(--line);border-radius:0 6px 6px 0;font-size:var(--fs-1);line-height:1.45}',
     '.catset-regrow.nocode .rn{padding-inline-start:0}',
     /* ⚠️ A LIST OF BARE WORDS IS NOT A TABLE. When a registry's rows carry no code and no note — units are the
        case: fifteen entries, one short word each — stacking them full-width spends fifteen rows and most of the
@@ -668,15 +668,15 @@ function catsetCss(){
     '.uom-row{display:block;border-bottom:1px solid var(--line);cursor:pointer;font-size:var(--fs-2);padding:6px 13px}',
     '.uom-row .ur1{display:grid;grid-template-columns:22px 76px minmax(0,1fr);align-items:center;gap:10px}',
     '.uom-row:hover{background:var(--paper)}',
-    '.uom-row code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11.5px;color:var(--ink)}',
+    '.uom-row code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:var(--fs-1);color:var(--ink)}',
     '.uom-row .un{color:var(--ink)}',
     /* The spellings, indented to sit under the NAME so the eye reads down one edge. */
-    '.uom-row .ua{margin-top:3px;padding-inline-start:108px;color:var(--note);font-size:11.5px;line-height:1.5}',
+    '.uom-row .ua{margin-top:3px;padding-inline-start:108px;color:var(--note);font-size:var(--fs-1);line-height:1.5}',
     '.uom-row .ua .sep{color:var(--line);padding:0 5px}',
     '.lang-bar{border:1px solid var(--line);border-radius:9px;padding:8px 10px;margin:2px 0 10px;background:var(--paper)}',
     '.lang-g{display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin-bottom:5px}',
     '.lang-gh{font-size:10.5px;font-weight:800;color:var(--grey);text-transform:uppercase;letter-spacing:.05em;min-width:62px}',
-    '.lang-chip{font-size:11.5px;border:1px solid var(--line);border-radius:999px;padding:2px 10px;background:var(--card);cursor:pointer;white-space:nowrap}',
+    '.lang-chip{font-size:var(--fs-1);border:1px solid var(--line);border-radius:999px;padding:2px 10px;background:var(--card);cursor:pointer;white-space:nowrap}',
     '.lang-chip:hover{border-color:var(--blue)}',
     '.lang-chip.on{background:var(--blue-tint-bg);border-color:var(--blue);color:var(--blue);font-weight:700}',
     /* ⚠️ English reads as fixed, not disabled — a greyed chip invites clicking to find out why. */
@@ -689,7 +689,7 @@ function catsetCss(){
     '.uom-g{margin-top:9px}',
     '.uom-gh{font-size:var(--fs-1);font-weight:800;color:var(--grey);text-transform:uppercase;letter-spacing:.05em;padding:4px 13px 3px;background:var(--paper);border-bottom:1px solid var(--line)}',
     '.catset-regrows.chips{display:flex;flex-direction:row;flex-wrap:wrap;gap:6px;background:none;border:0;padding:2px 13px 4px}',
-    '.catset-regrows.chips .catset-regrow{background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:3px 11px;font-size:11.5px}',
+    '.catset-regrows.chips .catset-regrow{background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:3px 11px;font-size:var(--fs-1)}',
     '.catset-regsrc{font-size:var(--fs-1);color:var(--grey);padding:7px 13px}',
     '.catset-regsrc code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:var(--fs-1)}'
   ].join('');

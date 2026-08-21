@@ -188,7 +188,7 @@ function disputeRoomBox(c, d){
   var readonly=d.status!=='open';
   var mine=chitIsSelf(d.raised_by_entity_id, d.raised_by_display_name);
   var parties=disputeParties(d);
-  var st=readonly?'<span style="color:var(--ok-2);font-size:11.5px;font-weight:700">' + tx('✓ resolved') + '</span>':'<span style="color:var(--disp);font-size:11.5px;font-weight:700">' + tx('● open') + '</span>';
+  var st=readonly?'<span style="color:var(--ok-2);font-size:var(--fs-1);font-weight:700">' + tx('✓ resolved') + '</span>':'<span style="color:var(--disp);font-size:var(--fs-1);font-weight:700">' + tx('● open') + '</span>';
   var resolve=readonly?'':disputeResolveBtns(parties, c.id, d.dispute_id, mine, 'db-res');
   var suggestBtn=(readonly||typeof aiRun!=='function')?'':'<button onclick="aiResolutionSuggest(\''+c.id+'\',\''+d.dispute_id+'\')" title="AI suggests neutral resolution wording — you decide whether to resolve" style="font-size:var(--fs-1);font-weight:700;border:1px solid var(--purple);background:var(--purple-tint);color:var(--purple);border-radius:6px;padding:5px 10px;cursor:pointer">' + tx('✨ Suggest wording') + '</button>';
   var resolveWrap=(resolve||suggestBtn)?'<span style="display:inline-flex;gap:6px;flex-wrap:wrap">'+suggestBtn+resolve+'</span>':'';
@@ -255,7 +255,7 @@ async function loadDisputes(){
       return '<div class="card" style="border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:9px">'
         +'<div style="display:flex;justify-content:space-between;gap:8px"><b>'+esc(d.auto_subject||d.purpose||'chit')+'</b><span class="optchip '+(d.status==='open'?'brk':'on')+'">'+esc(d.status)+'</span></div>'
         +'<div style="font-size:13px;color:var(--ink);margin:5px 0"><b>'+esc(cap(d.category||''))+'</b> — '+esc(d.reason||'')+'</div>'
-        +'<div style="font-size:11.5px;color:var(--grey)">raised by '+nm(d.raised_by_display_name,'—')+' · '+esc(d.scope||'')+(d.resolution_note?(' · ✓ '+esc(d.resolution_note)):'')+'</div>'
+        +'<div style="font-size:var(--fs-1);color:var(--grey)">raised by '+nm(d.raised_by_display_name,'—')+' · '+esc(d.scope||'')+(d.resolution_note?(' · ✓ '+esc(d.resolution_note)):'')+'</div>'
         +roster+resolveRow+'</div>';
     };
     host.innerHTML = menuAssist('disputes')+'<div class="sec" style="font-size:12px;color:var(--grey);margin:4px 0">Raised by you ('+mine.length+')</div>'+lazyWrap('dm', mine, function(d){return card(d,true);}, '<div style="color:var(--grey);font-size:13px;padding:6px">None.</div>')

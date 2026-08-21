@@ -28,7 +28,7 @@ function traceabilityScreen(){
   var controls =
     '<div style="padding:14px 18px;border-bottom:1px solid var(--line)">'
     + '<div style="font-size:17px;font-weight:800">🧭 Traceability — recall &amp; provenance</div>'
-    + '<div style="font-size:11.5px;color:var(--grey);margin-top:2px">Flag a batch to see exactly who it reached; trace any node back to its source. '
+    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">Flag a batch to see exactly who it reached; trace any node back to its source. '
       + 'You see topology + product only — <b>commercial terms stay per-party</b>.</div>'
     + '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px">'
       + '<input id="traceIdIn" value="' + esc(id) + '" placeholder="Paste a batch / chit id" '
@@ -37,7 +37,7 @@ function traceabilityScreen(){
       + '<button class="pri" onclick="runTrace(\'forward\')" style="padding:9px 14px">🚨 Recall set <span class=arw>▸</span></button>'
       + '<button onclick="runTrace(\'backward\')" style="padding:9px 14px"><span class=arw>◂</span> To source</button>'
     + '</div>'
-    + '<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-top:10px;font-size:11.5px;color:var(--grey)">'
+    + '<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-top:10px;font-size:var(--fs-1);color:var(--grey)">'
       + '<label>₹ / node&nbsp;<input value="' + cost + '" oninput="UI.traceCost=_traceNum(this.value,5000)" '
         + 'style="width:80px;padding:4px 7px;border:1px solid var(--line);border-radius:6px;font-size:12px"></label>'
       + '<label>blanket-recall size&nbsp;<input value="' + blanket + '" oninput="UI.traceBlanket=_traceNum(this.value,200)" '
@@ -148,7 +148,7 @@ function _traceNode(n, isTerm){
     + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap' + (isRed ? ';padding-inline-start:6px' : '') + '">'
       + '<span style="width:9px;height:9px;border-radius:50%;background:' + dot + ';flex:0 0 auto"></span>'
       + '<span style="font-weight:700;font-size:13.5px' + (isRed ? ';color:var(--disp-2)' : '') + '">' + who + '</span>' + badge + '</div>'
-    + '<div style="font-size:11.5px;color:var(--grey);margin-inline-start:17px;margin-top:1px' + (isRed ? ';padding-inline-start:6px' : '') + '">' + bits.join(' · ') + '</div>'
+    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-inline-start:17px;margin-top:1px' + (isRed ? ';padding-inline-start:6px' : '') + '">' + bits.join(' · ') + '</div>'
     + balLine
     + '</div>';
 }

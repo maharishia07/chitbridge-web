@@ -309,7 +309,7 @@
   .welbtns{display:flex;gap:10px;justify-content:center;margin-top:16px;flex-wrap:wrap}
   .welwrap .btn.ghost{background:transparent;color:var(--blue);border:1px solid var(--line)}
   .welwrap .btn:disabled{background:var(--blue-tint-bg);cursor:not-allowed}
-  .welfoot{color:var(--grey);font-size:11.5px;margin-top:20px;text-align:center;border-top:1px solid var(--line);padding-top:12px}
+  .welfoot{color:var(--grey);font-size:var(--fs-1);margin-top:20px;text-align:center;border-top:1px solid var(--line);padding-top:12px}
   .rchosen{background:var(--card);border:1px solid #d7e2f1;border-radius:12px;padding:10px 13px;font-size:13px;margin-bottom:14px}
   .welpips{display:flex;justify-content:center;gap:7px;flex-wrap:wrap;margin:8px 0 2px}
   .welpip{font-size:var(--fs-1);font-family:'Space Mono';color:var(--grey);background:var(--card);border:1px solid var(--line);border-radius:999px;padding:4px 11px}
@@ -540,7 +540,7 @@
   .misbar{display:flex;align-items:center;gap:9px;padding:9px 12px;flex-wrap:wrap;border-bottom:1px solid var(--line)}
   .misttl{font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3)}
   .misbar .seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
-  .misbar .seg button{border:0;background:var(--card);color:var(--grey);font-size:11.5px;font-weight:700;padding:5px 11px;cursor:pointer}
+  .misbar .seg button{border:0;background:var(--card);color:var(--grey);font-size:var(--fs-1);font-weight:700;padding:5px 11px;cursor:pointer}
   .misbar .seg button.on{background:var(--chrome);color:var(--chrome-on)}
   .misbar-r{margin-inline-start:auto;display:flex;align-items:center;gap:8px}
   .misasof{font-size:var(--fs-1);color:var(--grey);font-family:'Space Mono'}
@@ -550,7 +550,7 @@
   /* Governance rows grouped by who controls them — the group heading answers "what can I change?" before you
      read a single row, so the per-row class chip becomes confirmation rather than the only signal. */
   .govtitle{font-family:'Space Grotesk';font-weight:700;font-size:19px;letter-spacing:-.01em;color:var(--ink)}
-  .govsub{font-size:11.5px;color:var(--grey);margin:3px 0 0;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .govsub{font-size:var(--fs-1);color:var(--grey);margin:3px 0 0;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
   .govdesc{font-size:var(--fs-2);color:var(--ink-2);line-height:1.55;margin:8px 0 4px}
   .govgrp{margin-top:10px;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:var(--card)}
   /* The whole header is the hit target — a chevron alone is a 12px tap area, which on a phone is a miss. */
@@ -593,7 +593,7 @@
   .govtag{display:inline-block;font-size:var(--fs-1);line-height:1.35;border-radius:6px;padding:2px 8px;
           font-weight:600;max-width:100%;overflow-wrap:anywhere}
   /* Why a cap reads the way it does — the server's own explanation, kept out of the value so neither is truncated. */
-  .govwhy{font-size:11.5px;color:var(--grey);line-height:1.5;padding:0 0 9px;margin-top:-4px;
+  .govwhy{font-size:var(--fs-1);color:var(--grey);line-height:1.5;padding:0 0 9px;margin-top:-4px;
           border-bottom:1px solid var(--line)}
   .govref{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:3px 12px;align-items:center;
           padding:9px 0;border-bottom:1px solid var(--line)}
@@ -707,7 +707,7 @@
   .ctpick{display:flex;align-items:center;gap:9px;margin-top:8px;padding:7px 9px;background:var(--blue-tint-bg);
           border:1px solid #d5e2f7;border-radius:9px}
   .ctpick button{border:1px solid var(--line);background:var(--card);border-radius:9px;padding:4px 10px;
-                 font-size:11.5px;cursor:pointer;color:var(--ink)}
+                 font-size:var(--fs-1);cursor:pointer;color:var(--ink)}
   .ctpick button.pri{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:700}
   .ctpick button:disabled{opacity:.5;cursor:default}
   /* The bulk dialog: one row per category, attach and remove as separate explicit choices. */
@@ -717,7 +717,7 @@
   .bulkrow .bn{font-size:13px;font-weight:600;flex:1;min-width:0}
   .bulkrow .bh{font-size:var(--fs-1);color:var(--grey);white-space:nowrap}
   .bulkrow button{border:1px solid var(--line);background:var(--card);border-radius:20px;padding:3px 10px;
-                  font-size:11.5px;cursor:pointer;color:var(--ink);white-space:nowrap}
+                  font-size:var(--fs-1);cursor:pointer;color:var(--ink);white-space:nowrap}
   .bulkrow .badd.on{background:var(--blue-tint-bg);border-color:var(--blue);color:var(--blue);font-weight:700}
   .bulkrow .brem.on{background:var(--danger-tint);border-color:var(--disp);color:var(--disp);font-weight:700}
   .bulkrow button:disabled{opacity:.4;cursor:default}
@@ -777,7 +777,7 @@
   .rowinfo:hover{background:var(--paper)}
   .sfhit{border:1px solid var(--line);border-radius:9px;padding:8px 11px;margin-bottom:8px;background:var(--card)}
   .sfhit-h{display:flex;align-items:center;gap:7px;font-size:13px;margin-bottom:5px}
-  .sfhit-h button{margin-inline-start:auto;border:1px solid var(--line);background:var(--card);border-radius:6px;padding:3px 9px;font-size:11.5px;font-weight:700;color:var(--blue);cursor:pointer}
+  .sfhit-h button{margin-inline-start:auto;border:1px solid var(--line);background:var(--card);border-radius:6px;padding:3px 9px;font-size:var(--fs-1);font-weight:700;color:var(--blue);cursor:pointer}
   .sfline{display:flex;gap:9px;justify-content:space-between;font-size:var(--fs-2);padding:3px 0;border-top:1px dashed var(--line)}
   .sfnote{font-size:12px;line-height:1.6;color:var(--warn-3);background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:7px 10px;margin-top:8px}
   .sfnote.quiet{background:var(--paper);border-color:var(--line);color:var(--grey)}
@@ -910,7 +910,7 @@
   .composer .send.int{background:#5f7682}.composer .send.ext{background:var(--blue)}
   .msghd{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
   .msghd .mh-t{font-size:12px;font-weight:700;color:var(--ink)}
-  .composebtn{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--blue);background:var(--blue);color:var(--on-accent);font-size:11.5px;font-weight:700;border-radius:9px;padding:5px 11px;cursor:pointer}
+  .composebtn{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--blue);background:var(--blue);color:var(--on-accent);font-size:var(--fs-1);font-weight:700;border-radius:9px;padding:5px 11px;cursor:pointer}
   /* ⚠️ THE SECONDARY VARIANT MUST BE A CLASS, NOT AN INLINE background OVERRIDE. .composebtn pairs a blue fill
      with color:#fff; overriding only the background to white leaves WHITE TEXT ON WHITE — the button renders as
      an empty outlined pill. That shipped twice (storefront "Open ↗", assistant "New"), because the pairing is
@@ -967,11 +967,11 @@
   .prichip-btn.pri-urgent{background:var(--danger-tint);color:var(--disp-2);border-color:var(--disp)}.prichip-btn.pri-low{background:var(--warn-tint);color:var(--warn-3)}
   .custflag-tag{font-size:var(--fs-1);font-weight:700;color:var(--disp-2);background:var(--danger-tint);border-radius:6px;padding:3px 8px}
   .prisel{display:flex;gap:6px;margin:4px 0 2px}
-  .prisel button{flex:1;border:1px solid var(--line);background:var(--card);border-radius:9px;font-size:11.5px;font-weight:700;padding:6px 0;color:var(--grey);cursor:pointer}
+  .prisel button{flex:1;border:1px solid var(--line);background:var(--card);border-radius:9px;font-size:var(--fs-1);font-weight:700;padding:6px 0;color:var(--grey);cursor:pointer}
   .prisel button.on.pri-urgent{background:var(--danger-tint);color:var(--disp-2);border-color:var(--disp)}.prisel button.on.pri-normal{background:var(--blue-tint-bg);color:var(--blue);border-color:var(--blue)}.prisel button.on.pri-low{background:var(--warn-tint);color:var(--warn-3);border-color:#B4B2A9}
   .msec{font-size:var(--fs-1);font-weight:700;color:var(--ink);margin:11px 0 4px}.msec .rh{font-weight:400;color:var(--grey)}
   .mreason{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:9px;padding:8px;font:inherit;font-size:13px;min-height:46px;resize:vertical}
-  .custreq{font-size:11.5px;font-weight:700;color:var(--disp-2);background:var(--danger-tint);border-radius:9px;padding:7px 10px;margin-bottom:8px}
+  .custreq{font-size:var(--fs-1);font-weight:700;color:var(--disp-2);background:var(--danger-tint);border-radius:9px;padding:7px 10px;margin-bottom:8px}
   .rows{flex:1;overflow-y:auto;padding-bottom:var(--scroll-tail)}
   .row{padding:11px 13px;border-bottom:1px solid var(--line);cursor:pointer;display:flex;gap:9px}
   /**
@@ -997,7 +997,7 @@
   .row .cbx{margin-top:2px}
   .row .main2{flex:1;min-width:0}
   .row .l1{display:flex;align-items:center;gap:7px}.row .code{font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-2)}
-  .row .party{font-size:11.5px;color:#42525a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .row .party{font-size:var(--fs-1);color:#42525a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .row .amt{margin-inline-start:auto;font-family:'Space Grotesk';font-weight:700;font-size:12px}
   .row .l2{font-size:var(--fs-1);color:var(--grey);margin-top:3px;display:flex;align-items:center;gap:7px}
   .proof{font-size:var(--fs-1);font-weight:700;border-radius:5px;padding:1px 5px}
@@ -1007,7 +1007,7 @@
   .rowacts{display:flex;gap:6px;margin-top:8px}
   .rowacts button{flex:1;font-size:var(--fs-1);font-weight:700;border:1px solid var(--line);background:var(--card);border-radius:6px;padding:5px;color:var(--ink)}
   .rowacts button.go{border:0;background:var(--blue);color:var(--on-accent)}
-  .selbar{display:flex;align-items:center;gap:8px;background:var(--blue-tint-bg);color:var(--on-card);border:1px solid #cfe0ec;border-radius:9px;padding:7px 10px;margin-top:8px;font-size:11.5px;font-weight:600}
+  .selbar{display:flex;align-items:center;gap:8px;background:var(--blue-tint-bg);color:var(--on-card);border:1px solid #cfe0ec;border-radius:9px;padding:7px 10px;margin-top:8px;font-size:var(--fs-1);font-weight:600}
   .selbar .sp{margin-inline-start:auto;display:flex;gap:6px}.selbar .sp button{border:1px solid #cfe0ec;background:var(--card);border-radius:6px;font-size:var(--fs-1);font-weight:700;padding:5px 9px;color:var(--blue)}
   .selbar .sp button.pri{border:0;background:var(--blue);color:var(--on-accent)}
 
@@ -1027,7 +1027,7 @@
   .tl{position:relative;padding-inline-start:15px}.tl .ev{position:relative;padding:0 0 12px}
   .tl .ev::before{content:"";position:absolute;inset-inline-start:-13px;top:3px;width:8px;height:8px;border-radius:50%;background:var(--blue)}
   .tl .ev::after{content:"";position:absolute;inset-inline-start:-10px;top:11px;bottom:-2px;width:1.5px;background:var(--line)}.tl .ev:last-child::after{display:none}
-  .tl .ea{font-family:'Space Grotesk';font-weight:600;font-size:13px}.tl .em{font-size:11.5px;color:var(--grey)}
+  .tl .ea{font-family:'Space Grotesk';font-weight:600;font-size:13px}.tl .em{font-size:var(--fs-1);color:var(--grey)}
   .parity{display:flex;align-items:center;gap:8px;background:var(--ok-tint);border:1px solid #bfe0cd;border-radius:9px;padding:10px 12px;font-size:12px;color:var(--ok-2)}
   .actbar{display:flex;gap:8px;padding:10px 16px;border-top:1px solid var(--line);flex-wrap:wrap;background:var(--card)}
   .actbar button{font-size:12px;font-weight:700;border:1px solid var(--line);background:var(--card);border-radius:9px;padding:8px 12px;color:var(--ink)}
@@ -1105,7 +1105,7 @@
   .attTile{border:1px solid var(--line);border-radius:9px;background:var(--card);padding:12px 8px;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;text-align:center}
   .attTile:hover{background:var(--card);border-color:var(--blue)}
   .attTileIcon{font-size:30px;line-height:1}
-  .attTileName{font-size:11.5px;color:var(--ink);font-weight:600;word-break:break-word;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .attTileName{font-size:var(--fs-1);color:var(--ink);font-weight:600;word-break:break-word;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
   .attTileMeta{font-size:var(--fs-1);color:var(--grey);text-transform:uppercase;letter-spacing:.04em}
   .attImg .vlen{position:absolute;bottom:4px;inset-inline-end:6px;font-size:var(--fs-1);background:rgba(0,0,0,.45);color:#fff;border-radius:4px;padding:0 4px}
   .attNote{font-size:var(--fs-1);color:var(--grey);margin-top:8px;line-height:1.5}
@@ -1177,7 +1177,7 @@ img.attImg{object-fit:cover;display:block}
 .keypanel{position:absolute;inset-inline-end:0;top:26px;z-index:30;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:12px;width:520px;max-width:88vw;max-height:70vh;overflow-y:auto}
 .keypanel h4{font-family:'Space Grotesk';font-size:var(--fs-1);margin:0 0 8px;text-transform:uppercase;letter-spacing:.4px;color:var(--grey)}
 .keygrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.kbox{border:1px solid var(--line);border-radius:9px;padding:9px 11px;font-size:11.5px;line-height:1.5}
+.kbox{border:1px solid var(--line);border-radius:9px;padding:9px 11px;font-size:var(--fs-1);line-height:1.5}
 .kbox .kt{font-family:'Space Grotesk';font-weight:700;margin-bottom:3px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .kbox .kd{color:var(--grey)}
 .lcell{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -1201,7 +1201,7 @@ img.attImg{object-fit:cover;display:block}
 .colmhd{font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);
         margin:2px 0 1px;position:sticky;top:-8px;background:var(--card);padding:4px 0 2px}
 .colmhd:first-child{margin-top:0}
-.colmnone{font-size:11.5px;color:var(--grey);padding:2px 0}
+.colmnone{font-size:var(--fs-1);color:var(--grey);padding:2px 0}
 .colrow{display:flex;align-items:center;gap:8px}
 .colrow label{flex:1;min-width:0;display:flex;align-items:center;gap:6px;cursor:pointer}
 /* ⚠️ 24px, not the 16px these would naturally be — they are pressed repeatedly while arranging, which is exactly
@@ -1239,7 +1239,7 @@ img.attImg{object-fit:cover;display:block}
 .advbtn.on{background:var(--blue-tint-bg);color:var(--blue);border-color:var(--blue)}
 .advpanel{position:absolute;inset-inline-end:0;top:34px;z-index:7;background:var(--card);border:1px solid var(--line);border-radius:9px;box-shadow:0 8px 26px rgba(0,0,0,.16);padding:11px 13px;width:300px;display:flex;flex-direction:column;gap:8px}
 .advttl{font-size:var(--fs-1);font-weight:700;color:var(--grey);text-transform:uppercase;letter-spacing:.3px}.advttl span{font-weight:400;text-transform:none;font-size:var(--fs-1);color:var(--grey-4)}
-.advrow{display:flex;align-items:center;gap:6px}.advrow>label{width:60px;flex:0 0 60px;font-size:11.5px;color:var(--grey);font-weight:600}
+.advrow{display:flex;align-items:center;gap:6px}.advrow>label{width:60px;flex:0 0 60px;font-size:var(--fs-1);color:var(--grey);font-weight:600}
 .advchk{flex:1;min-width:0;display:flex;align-items:center;gap:7px;font-size:12px;color:var(--disp);cursor:pointer;line-height:1.25;font-weight:600}
 .advchk input{flex:0 0 auto}
 .advin{flex:1;border:1px solid var(--line);border-radius:6px;padding:4px 7px;font-size:12px;min-width:0;font-family:inherit}
@@ -1263,7 +1263,7 @@ img.attImg{object-fit:cover;display:block}
 .msgfilters .msgfilter + .msgfilter{margin-inline-start:10px}
 .msgfilters .msgfilter + .msgfilter::before{content:"|";color:var(--line);font-weight:700;margin-inline-end:10px;align-self:center}
 .msgss{display:inline-flex;align-items:center;gap:6px;margin-inline-start:auto}
-.msgsi{border:1px solid var(--line);border-radius:6px;padding:3px 8px;font-size:11.5px;min-width:120px;font-family:inherit}
+.msgsi{border:1px solid var(--line);border-radius:6px;padding:3px 8px;font-size:var(--fs-1);min-width:120px;font-family:inherit}
 .msgord{border:1px solid var(--line);background:var(--card);border-radius:6px;padding:3px 8px;font-size:var(--fs-1);cursor:pointer;color:var(--blue);font-weight:600;white-space:nowrap}
 </style>
 </head>
@@ -1692,10 +1692,10 @@ function blueprintCardHTML(id){
   return '<div style="padding:2px 2px">'
     +'<div style="display:flex;align-items:center;gap:9px;margin-bottom:2px"><span style="font-size:22px">'+wp.icon+'</span><div><div style="font-family:\'Space Grotesk\';font-weight:800;font-size:var(--fs-4)">'+esc(wp.label)+'</div><div style="font-size:var(--fs-1);color:var(--grey)">what governs this work pattern</div></div></div>'
     +'<div style="background:var(--blue-tint-bg);border:1px solid var(--blue-tint-line);border-radius:9px;padding:8px 11px;margin:10px 0;font-size:var(--fs-2);color:var(--blue)">🎫 <b>' + tx('Licence') + '</b> · '+esc(wp.licence)+'</div>'
-    +'<div style="font-size:11.5px;font-weight:800;color:var(--warn-2);margin:8px 0 2px">🔒 SEALED — governed, cannot change</div>'+_bpRows(wp.sealed,'sealed')
-    +'<div style="font-size:11.5px;font-weight:800;color:#1f7a3d;margin:14px 0 2px">' + tx('✎ OPEN — yours to set, within bounds') + '</div>'+_bpRows(wp.open,'open')
-    +'<div style="font-size:11.5px;font-weight:800;color:#2b4a72;margin:14px 0 2px">↑ REPORTS UP — health &amp; events to governance</div><div style="font-size:var(--fs-2);color:var(--ink);padding-top:4px">'+wp.reportsUp.map(esc).join(' · ')+'</div>'
-    +(wp.workflow?('<div style="font-size:11.5px;font-weight:800;color:#5a3fa0;margin:16px 0 4px">🔀 WORKFLOW — how deep this can reach</div>'
+    +'<div style="font-size:var(--fs-1);font-weight:800;color:var(--warn-2);margin:8px 0 2px">🔒 SEALED — governed, cannot change</div>'+_bpRows(wp.sealed,'sealed')
+    +'<div style="font-size:var(--fs-1);font-weight:800;color:#1f7a3d;margin:14px 0 2px">' + tx('✎ OPEN — yours to set, within bounds') + '</div>'+_bpRows(wp.open,'open')
+    +'<div style="font-size:var(--fs-1);font-weight:800;color:#2b4a72;margin:14px 0 2px">↑ REPORTS UP — health &amp; events to governance</div><div style="font-size:var(--fs-2);color:var(--ink);padding-top:4px">'+wp.reportsUp.map(esc).join(' · ')+'</div>'
+    +(wp.workflow?('<div style="font-size:var(--fs-1);font-weight:800;color:#5a3fa0;margin:16px 0 4px">🔀 WORKFLOW — how deep this can reach</div>'
       +wp.workflow.map(function(st,i){ return '<div style="display:flex;gap:9px;align-items:flex-start;padding:5px 0'+(i?';border-top:1px dashed var(--line)':'')+'"><span style="flex:none;width:20px;height:20px;border-radius:50%;background:'+(st.done?'var(--ok-tint)':'var(--purple-tint)')+';color:'+(st.done?'var(--ok-3)':'var(--purple-2)')+';font-size:var(--fs-1);font-weight:800;display:flex;align-items:center;justify-content:center">'+(i+1)+'</span><div style="flex:1"><span style="font-size:var(--fs-2);font-weight:700;color:var(--ink)">'+esc(st.t)+'</span> <span style="font-size:var(--fs-1);font-weight:800;color:'+(st.done?'var(--ok-3)':'var(--purple-2)')+'"> '+(st.done?'✅ built':'○ extensible')+'</span><div style="color:var(--grey);font-size:var(--fs-1);line-height:1.4">'+esc(st.d)+'</div></div></div>'; }).join('')
       +'<div style="font-size:var(--fs-1);color:var(--grey);margin-top:9px;line-height:1.5">The first steps are built today; the rest are the <b>same shape</b> — a resolved knob or a chained mode (SMS · AI · robot · escalation). The workflow reaches <b>as deep as you declare it</b> — this is the depth, in one place.</div>'):'')
     +'<div style="font-size:var(--fs-1);color:var(--grey);margin-top:13px;line-height:1.5">Read-only showcase — the governance cascade for this mode, earmarked by the layer that set it. Enforcement + editable knobs come next.</div>'
@@ -1704,7 +1704,7 @@ function blueprintCardHTML(id){
 function openBlueprint(id){ if(typeof modal!=='function')return; modal(blueprintCardHTML(id)+'<div style="display:flex;margin-top:14px"><button class="composebtn pri" style="flex:1" onclick="closeModal()">' + tx('Close') + '</button></div>', false); }
 function blueprintSettingsHTML(){
   return '<div class="sec" style="margin-top:18px">' + tx('⚙ Governed by work pattern') + '</div>'
-    +'<div style="font-size:11.5px;color:var(--grey);margin-bottom:9px;line-height:1.5">Each action is a governed <b>work pattern</b>. Open one to see its cascade — 🎫 licence · 🔒 sealed (and which layer sealed it) · ✎ open knobs · ↑ what it reports up. <i>Read-only showcase.</i></div>'
+    +'<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:9px;line-height:1.5">Each action is a governed <b>work pattern</b>. Open one to see its cascade — 🎫 licence · 🔒 sealed (and which layer sealed it) · ✎ open knobs · ↑ what it reports up. <i>Read-only showcase.</i></div>'
     +Object.keys(WORK_PATTERNS).map(function(id){ var wp=WORK_PATTERNS[id];
       return '<button class="composebtn" style="display:flex;align-items:center;gap:10px;width:100%;text-align:start;margin-bottom:7px;padding:10px 12px" onclick="openBlueprint(\''+id+'\')"><span style="font-size:var(--fs-4)">'+wp.icon+'</span><span style="flex:1"><b>'+esc(wp.label)+'</b><div style="font-size:var(--fs-1);color:var(--grey)">'+wp.sealed.length+' sealed · '+wp.open.length+' open · 🎫 '+esc(wp.licence)+'</div></span><span style="color:var(--grey);font-size:15px">ℹ️</span></button>';
     }).join('');
@@ -1801,7 +1801,7 @@ async function askHelpDesk(){ const q=(_assistPending||'').trim(); if(!q) return
     _assistPending=''; renderAssist("Sent to the help desk ✓ — their answer comes back on this chit's messages (find it in your Order list).");
   }catch(e){ renderAssist("Couldn't reach the help desk: "+esc((e&&e.message)||'please try again')); } }
 function renderAssist(ans){ const h=document.getElementById("assisthost"); if(!h||!_assistOpen) return; const pre=!(typeof SESSION!=="undefined" && SESSION.token); const sugg=assistSuggest();
-  const _pb=(typeof PURPOSE!=='undefined'&&PURPOSE[curScreen()])?PURPOSE[curScreen()]:''; const purposeHTML=_pb?`<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:8px 10px;font-size:11.5px;color:var(--warn-3);line-height:1.5;margin-bottom:9px">${esc(_pb)}</div>`:'';
+  const _pb=(typeof PURPOSE!=='undefined'&&PURPOSE[curScreen()])?PURPOSE[curScreen()]:''; const purposeHTML=_pb?`<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:8px 10px;font-size:var(--fs-1);color:var(--warn-3);line-height:1.5;margin-bottom:9px">${esc(_pb)}</div>`:'';
   h.innerHTML=`<div style="position:fixed;inset-inline-end:16px;bottom:70px;z-index:301;width:360px;max-width:92vw;background:var(--card);border:1px solid #e3e0d8;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.22);overflow:hidden;color:var(--on-card)">
     <div style="display:flex;align-items:center;gap:8px;padding:11px 13px;border-bottom:1px solid #e3e0d8;font-family:'Space Grotesk';font-weight:700;font-size:13px">💬 Assistant <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--warn-tint);color:var(--warn-3);border-radius:5px;padding:1px 6px">${pre?"fit check":"help"}</span><button data-testid="assist-close" onclick="closeAssist()" style="margin-inline-start:auto;border:0;background:none;cursor:pointer;color:var(--grey-4);font-size:15px">✕</button></div>
     <div style="padding:11px 13px;max-height:52vh;overflow:auto">
@@ -1809,7 +1809,7 @@ function renderAssist(ans){ const h=document.getElementById("assisthost"); if(!h
       <div id="assist_ans" style="font-size:var(--fs-2);color:#222;line-height:1.55;margin-bottom:10px">${ans||""}</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">${(_assistLoading && !sugg.length)?'<span style="font-size:var(--fs-1);color:var(--grey-4)">loading questions…</span>':sugg.map(e=>`<button data-testid="assist-suggest-${e.id}" onclick="assistPick('${e.id}')" style="border:0.5px solid #e3e0d8;border-radius:9px;padding:3px 8px;font-size:var(--fs-1);background:var(--card);cursor:pointer;color:var(--on-card)">${esc(e.q)}</button>`).join("")}</div>
       <div style="display:flex;gap:7px"><input id="assist_in" data-testid="assist-input" placeholder="${pre?"e.g. I run a timber yard…":"e.g. how do I assign a task?"}" style="flex:1;border:1px solid #e3e0d8;border-radius:9px;padding:7px 9px;font-size:var(--fs-2)" onkeydown="if(event.key==='Enter')assistAsk()"><button data-testid="assist-ask" onclick="assistAsk()" style="border:0;border-radius:9px;padding:0 12px;background:var(--blue);color:var(--on-accent);font-weight:700;cursor:pointer">Ask</button></div>
-      ${pre?'':'<div style="margin-top:9px;text-align:center"><button data-testid="assist-compliance" onclick="checkCompliance()" style="border:0.5px solid #e3e0d8;border-radius:9px;padding:6px 10px;font-size:11.5px;background:var(--card);cursor:pointer;color:var(--on-card)">' + tx('🛡️ Check compliance') + '</button></div>'}
+      ${pre?'':'<div style="margin-top:9px;text-align:center"><button data-testid="assist-compliance" onclick="checkCompliance()" style="border:0.5px solid #e3e0d8;border-radius:9px;padding:6px 10px;font-size:var(--fs-1);background:var(--card);cursor:pointer;color:var(--on-card)">' + tx('🛡️ Check compliance') + '</button></div>'}
     </div>
     <div style="padding:7px 13px;font-size:var(--fs-1);color:var(--grey-4);background:var(--card)">Honest by design · sample answers from the library · richer AI coming.</div>
   </div>`;
@@ -1830,15 +1830,15 @@ function _ccRuleHint(r){ r=r||{}; if(r.max!=null) return "must be ≤ "+r.max; i
 function _ccField(p){ const r=p.rule||{}; const id="cc_"+p.key;
   if(r.equals===true||r.equals===false) return `<label style="display:flex;align-items:center;gap:8px;font-size:var(--fs-2)"><input type="checkbox" id="${id}"> ${esc(p.label)}</label>`;
   const t=(r.max!=null||r.min!=null)?"number":"text";
-  return `<div style="display:flex;flex-direction:column;gap:3px"><label for="${id}" style="font-size:11.5px;color:var(--grey-2)">${esc(p.label)} <span style="color:var(--grey-4)">· ${esc(_ccRuleHint(r))}${p.obligation==='must'?' · required':''}</span></label><input id="${id}" type="${t}" ${t==='number'?'step="any"':''} style="border:1px solid #e3e0d8;border-radius:9px;padding:7px 9px;font-size:var(--fs-2)"></div>`;
+  return `<div style="display:flex;flex-direction:column;gap:3px"><label for="${id}" style="font-size:var(--fs-1);color:var(--grey-2)">${esc(p.label)} <span style="color:var(--grey-4)">· ${esc(_ccRuleHint(r))}${p.obligation==='must'?' · required':''}</span></label><input id="${id}" type="${t}" ${t==='number'?'step="any"':''} style="border:1px solid #e3e0d8;border-radius:9px;padding:7px 9px;font-size:var(--fs-2)"></div>`;
 }
 function ccRender(res){
   const std=_ccStds.find(s=>s.standard===_ccPick)||_ccStds[0]; if(!std) return;
   const opts=_ccStds.map(s=>`<option value="${esc(s.standard)}" ${s.standard===_ccPick?'selected':''}>${esc(s.title)} (${esc(s.standard)})</option>`).join("");
   const fields=(std.points||[]).map(_ccField).join('<div style="height:9px"></div>');
   modal(`<div style="font-family:'Space Grotesk';font-weight:700;font-size:15px;margin-bottom:3px">🛡️ Compliance check <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--warn-tint);color:var(--warn-3);border-radius:5px;padding:1px 6px;vertical-align:middle">first light</span></div>
-    <div style="font-size:11.5px;color:var(--warn-3);margin-bottom:11px">Check a transaction's data against a standard. The verdict is computed from the rules — the AI only explains it.</div>
-    <label style="font-size:11.5px;color:var(--grey-2)">Standard</label>
+    <div style="font-size:var(--fs-1);color:var(--warn-3);margin-bottom:11px">Check a transaction's data against a standard. The verdict is computed from the rules — the AI only explains it.</div>
+    <label style="font-size:var(--fs-1);color:var(--grey-2)">Standard</label>
     <select onchange="ccPickStd(this.value)" style="width:100%;border:1px solid #e3e0d8;border-radius:9px;padding:7px 9px;font-size:var(--fs-2);margin:3px 0 12px">${opts}</select>
     <div>${fields}</div>
     <button onclick="ccRun()" style="width:100%;margin-top:14px;border:0;border-radius:9px;padding:10px;background:var(--blue);color:var(--on-accent);font-weight:700;font-size:13px;cursor:pointer">Check compliance</button>
@@ -1871,7 +1871,7 @@ async function openCatalogueBuilder(){
   cbRenderCatalogue(v);
 }
 function _swatch(c){ return '<span title="'+esc(c.name+' '+c.hex)+'" style="display:inline-block;width:20px;height:20px;border-radius:50%;background:'+esc(c.hex)+';border:1px solid rgba(0,0,0,.15);vertical-align:middle"></span>'; }
-function _combo(cm){ return '<div style="display:flex;align-items:center;gap:7px;margin-top:5px"><span style="display:inline-flex;gap:3px">'+((cm.colours||[]).map(_swatch).join(''))+'</span><span style="font-size:11.5px;color:var(--ink-2);font-weight:600">'+esc(cm.name)+'</span><span style="font-size:var(--fs-1);color:var(--grey-4)">'+((cm.colours||[]).map(function(c){return esc(c.name);}).join(' + '))+'</span></div>'; }
+function _combo(cm){ return '<div style="display:flex;align-items:center;gap:7px;margin-top:5px"><span style="display:inline-flex;gap:3px">'+((cm.colours||[]).map(_swatch).join(''))+'</span><span style="font-size:var(--fs-1);color:var(--ink-2);font-weight:600">'+esc(cm.name)+'</span><span style="font-size:var(--fs-1);color:var(--grey-4)">'+((cm.colours||[]).map(function(c){return esc(c.name);}).join(' + '))+'</span></div>'; }
 // the source's own unit, read off its commercials_fields label ("Price / kg" → "kg"). No vertical assumed.
 function _cardUnit(v){ var cf=(v&&v.commercials_fields)||[];
   for(var i=0;i<cf.length;i++){ var m=/\/\s*(.+)$/.exec(cf[i].label||''); if(m) return m[1].trim(); }
@@ -1886,7 +1886,7 @@ function _finishCard(it,i,unit){
     +'<div style="display:flex;align-items:center;gap:8px">'+_refPhoto(it,30)+'<span style="font-weight:800;font-size:15px">'+esc(it.name)+'</span>'+(sub?'<span style="font-size:var(--fs-1);color:var(--grey-4)">'+sub+'</span>':'')+'</div>'
     +(it.inspiration?'<div style="font-size:12px;color:var(--grey-2);margin:4px 0 7px;line-height:1.5">'+esc(it.inspiration)+'</div>':'')
     +(chips?'<div style="display:flex;gap:5px;flex-wrap:wrap;margin:6px 0">'+chips+'</div>':'')
-    +(facts.length?'<div style="font-size:11.5px;color:var(--ink-2);margin:5px 0;line-height:1.55">'+facts.join(' · ')+'</div>':'')
+    +(facts.length?'<div style="font-size:var(--fs-1);color:var(--ink-2);margin:5px 0;line-height:1.55">'+facts.join(' · ')+'</div>':'')
     +(combos.length?'<div style="font-size:var(--fs-1);color:var(--grey-4);text-transform:uppercase;letter-spacing:.4px;font-weight:700;margin-top:6px">' + tx('Colour combinations') + '</div>'+combos.map(_combo).join(''):'')
     +(applied.length?'<div style="font-size:var(--fs-1);color:var(--grey-4);margin-top:7px">'+applied.join(' · ')+'</div>':'')
     +'<div style="margin-top:8px;display:flex;align-items:center;gap:6px;background:var(--ok-tint);border:1px solid #cfe6cf;border-radius:9px;padding:6px 9px;color:var(--on-card)"><span style="font-size:var(--fs-1);color:var(--ok-2);font-weight:700">Your price'+(u?' / '+esc(u):'')+'</span><span style="font-size:var(--fs-1);color:var(--grey-4)">₹</span><input id="com_'+i+'" inputmode="decimal" value="'+esc(price)+'" placeholder="e.g. 850" style="width:88px;border:1px solid #cfe6cf;border-radius:6px;padding:4px 7px;font-size:12px"></div>'
@@ -1897,9 +1897,9 @@ function cbRenderCatalogue(v){
     +'<div style="font-size:var(--fs-1);color:var(--purple-2);font-family:\'Space Mono\',monospace;margin-bottom:8px">structured by ai:catalogue-structure@v1 · source '+esc(v.source||'')+'</div>';
   var intro=v.intro?'<div style="font-size:var(--fs-2);color:var(--ink-2);line-height:1.55;background:var(--warn-tint);border:1px solid #e7e3d8;border-radius:9px;padding:9px 11px;margin-bottom:10px">'+esc(v.intro)+'</div>':'';
   var layers='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:11px">'
-    +'<div style="flex:1;min-width:180px;background:var(--blue-tint-bg);border:1px solid var(--blue-tint-line);border-radius:9px;padding:9px 11px;color:var(--on-card)"><div style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);text-transform:uppercase;letter-spacing:.4px">' + tx('Shared · minted once') + '</div><div style="font-size:11.5px;color:var(--ink-2);margin-top:3px">Schema + design + colour + images. Inherited by <b>reference</b> — Beta stores no copy.</div></div>'
-    +'<div style="flex:1;min-width:180px;background:var(--ok-tint);border:1px solid #cfe6cf;border-radius:9px;padding:9px 11px;color:var(--on-card)"><div style="font-size:var(--fs-1);font-weight:800;color:var(--ok-2);text-transform:uppercase;letter-spacing:.4px">' + tx('Beta fills · per-entity') + '</div><div style="font-size:11.5px;color:var(--ink-2);margin-top:3px">Only commercials: '+((v.commercials_fields||[]).map(function(f){return esc(f.label);}).join(' · '))+'.</div></div></div>';
-  var counts=v.counts?'<div style="font-size:11.5px;color:var(--grey-2);margin-bottom:9px">'
+    +'<div style="flex:1;min-width:180px;background:var(--blue-tint-bg);border:1px solid var(--blue-tint-line);border-radius:9px;padding:9px 11px;color:var(--on-card)"><div style="font-size:var(--fs-1);font-weight:800;color:var(--blue-2);text-transform:uppercase;letter-spacing:.4px">' + tx('Shared · minted once') + '</div><div style="font-size:var(--fs-1);color:var(--ink-2);margin-top:3px">Schema + design + colour + images. Inherited by <b>reference</b> — Beta stores no copy.</div></div>'
+    +'<div style="flex:1;min-width:180px;background:var(--ok-tint);border:1px solid #cfe6cf;border-radius:9px;padding:9px 11px;color:var(--on-card)"><div style="font-size:var(--fs-1);font-weight:800;color:var(--ok-2);text-transform:uppercase;letter-spacing:.4px">' + tx('Beta fills · per-entity') + '</div><div style="font-size:var(--fs-1);color:var(--ink-2);margin-top:3px">Only commercials: '+((v.commercials_fields||[]).map(function(f){return esc(f.label);}).join(' · '))+'.</div></div></div>';
+  var counts=v.counts?'<div style="font-size:var(--fs-1);color:var(--grey-2);margin-bottom:9px">'
   + [ txn('{count} finish',       '{count} finishes',      v.counts.finishes),
       txn('{count} combination',  '{count} combinations',  v.counts.combinations),
       txn('{count} colour',       '{count} colours',       v.counts.colours),
@@ -1940,7 +1940,7 @@ function renderMsgConsole(){ const host=document.getElementById("lbhost"); if(!h
   host.innerHTML=`<div class="notifover" onclick="closeMsgConsole()"><div class="notifpanel" style="max-width:560px;width:94vw" onclick="event.stopPropagation()">
     <div class="notifhd">🧪 Message log<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--grey)">${rows.length}/${all.length}</span></div>
     <div style="display:flex;gap:5px;padding:8px 13px;flex-wrap:wrap;align-items:center">${chip('all','All')}${chip('info','Info')}${chip('warn','Warning')}${chip('error','Critical')}${chip('debug','Requests')}<button onclick="clearMsgLog()" style="margin-inline-start:auto;border:0.5px solid var(--line);border-radius:6px;padding:2px 8px;font-size:var(--fs-1);background:var(--card);cursor:pointer;color:var(--on-card)">Clear</button></div>
-    <div style="max-height:52vh;overflow:auto">${rows.length?rows.map(e=>`<div style="display:flex;gap:8px;padding:6px 13px;border-top:1px solid var(--line);font-size:11.5px;align-items:baseline"><span style="color:var(--grey);font-family:'Space Mono';font-size:var(--fs-1);white-space:nowrap">${new Date(e.t).toLocaleTimeString()}</span><span style="color:${COL[e.level]||'var(--blue)'};font-weight:800;font-size:var(--fs-1);text-transform:uppercase;white-space:nowrap">${esc(e.level)}</span><span style="color:var(--ink);word-break:break-word">${esc(e.text)}</span></div>`).join(""):'<div style="padding:16px;color:var(--grey);font-size:var(--fs-2)">No messages yet — interact with the app and they appear here.</div>'}</div>
+    <div style="max-height:52vh;overflow:auto">${rows.length?rows.map(e=>`<div style="display:flex;gap:8px;padding:6px 13px;border-top:1px solid var(--line);font-size:var(--fs-1);align-items:baseline"><span style="color:var(--grey);font-family:'Space Mono';font-size:var(--fs-1);white-space:nowrap">${new Date(e.t).toLocaleTimeString()}</span><span style="color:${COL[e.level]||'var(--blue)'};font-weight:800;font-size:var(--fs-1);text-transform:uppercase;white-space:nowrap">${esc(e.level)}</span><span style="color:var(--ink);word-break:break-word">${esc(e.text)}</span></div>`).join(""):'<div style="padding:16px;color:var(--grey);font-size:var(--fs-2)">No messages yet — interact with the app and they appear here.</div>'}</div>
     <div class="notiffoot">Tester view · captures every toast + API call. Not shown in production.</div>
   </div></div>`;
 }
@@ -2076,9 +2076,9 @@ function cbKeysOverlay(show) {
   d.innerHTML = '<div style="background:var(--card);color:var(--on-card);border:1px solid var(--line);'
     + 'border-radius:14px;box-shadow:var(--shadow);padding:18px 20px;max-width:420px;width:100%">'
     + '<div style="font-family:\'Space Grotesk\';font-weight:800;font-size:15px;margin-bottom:4px">' + tx('Keyboard') + '</div>'
-    + '<div style="font-size:11.5px;color:var(--grey);margin-bottom:10px">Shortcuts do nothing while you are typing.</div>'
+    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:10px">Shortcuts do nothing while you are typing.</div>'
     + rows
-    + '<div style="font-size:11.5px;color:var(--grey);margin-top:12px">Press <b>' + tx('Esc') + '</b> to close.</div></div>';
+    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:12px">Press <b>' + tx('Esc') + '</b> to close.</div></div>';
   (document.body || document.documentElement).appendChild(d);
 }
 
@@ -3517,7 +3517,7 @@ function _renderApp(){
            * it stops being part of its parent's surface, and any colour still arriving from that parent is a
            * colour chosen for a different background. A surface must name its own text — every time.
            */''}${UI.avMenu?`<div class="avmenu" data-testid="avatar-menu" style="position:absolute;top:calc(100% + 6px);inset-inline-end:0;z-index:60;background:var(--card);color:var(--on-card);border:1px solid var(--line);border-radius:9px;box-shadow:var(--shadow);overflow:hidden;/* ⚠️ WIDER ONLY WHILE A SECTION IS OPEN. A permanent 320px dropdown for two lines of menu is heavy; a 180px one cannot hold a palette. It sizes to what it is currently showing. */min-width:${UI.avSection === 'theme' ? '380px' : (UI.avSection ? '320px' : '190px')};max-width:min(400px,94vw)">
-          <div style="padding:9px 13px;border-bottom:1px solid var(--line)"><div style="font-weight:700;font-size:13px">${esc(SESSION.name||'')}</div><div style="font-size:11.5px;color:var(--grey)">${esc(role)} · ${esc(SESSION.entity||'')}</div></div>
+          <div style="padding:9px 13px;border-bottom:1px solid var(--line)"><div style="font-weight:700;font-size:13px">${esc(SESSION.name||'')}</div><div style="font-size:var(--fs-1);color:var(--grey)">${esc(role)} · ${esc(SESSION.entity||'')}</div></div>
           <button data-testid="nav-profile" onclick="UI.avMenu=false;navTo('profile')" style="display:block;width:100%;text-align:start;border:0;background:none;padding:10px 13px;font-size:13.5px;cursor:pointer">👤 Profile</button>
           <!-- ⚠️ SETTINGS IS ENTITY ADMINISTRATION, NOT A PERSONAL SCREEN. Moving Profile behind the avatar put
                Settings there too, and the avatar renders for every role — so a co-assist would have found the
@@ -3545,7 +3545,7 @@ function _renderApp(){
                 background:${open?'var(--sel-2)':'none'};color:var(--on-card);padding:10px 13px;font-size:13.5px;cursor:pointer">
                 <span style="width:17px;text-align:center">${icon}</span><span>${label}</span>
                 <span style="margin-inline-start:auto;display:flex;align-items:center;gap:7px">
-                  <span style="font-size:11.5px;color:var(--grey)">${esc(value)}</span>
+                  <span style="font-size:var(--fs-1);color:var(--grey)">${esc(value)}</span>
                   <span style="font-size:10px;color:var(--grey);transform:rotate(${open?90:0}deg);display:inline-block"><span class=arw>▸</span></span>
                 </span></button>`;
             };
@@ -3600,7 +3600,7 @@ function _renderApp(){
                       style="border:1px solid ${on ? 'var(--blue)' : 'var(--line)'};
                       background:${on ? 'var(--blue-tint-bg)' : 'var(--card)'};
                       color:${on ? 'var(--blue)' : 'var(--on-card)'};border-radius:9px;padding:4px 10px;
-                      font-size:11.5px;font-weight:${on ? 700 : 500};cursor:pointer;margin:0 5px 5px 0">${LANGS[code]}</button>`;
+                      font-size:var(--fs-1);font-weight:${on ? 700 : 500};cursor:pointer;margin:0 5px 5px 0">${LANGS[code]}</button>`;
                   }).join("")
                 + `<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5;margin-top:2px">The rail is
                    translated so far — the rest of the app is still English.</div></div>`;
@@ -4636,7 +4636,7 @@ function ccStepTo(){
 }
 function ccStepDetails(){
   return `<div style="font-family:'Space Grotesk';font-weight:600;font-size:12px;color:var(--grey);margin:2px 0 2px">Chit fields · from your <b>${esc((STORE.chitSchema||{schema_name:"Order"}).schema_name)}</b> schema</div>
-     ${!STORE.chitSchema?`<div style="background:var(--danger-tint);border:1px solid #f0c9c6;border-radius:9px;padding:7px 10px;font-size:11.5px;color:var(--disp);margin-bottom:6px">${esc(MSG.schemaDefault())}</div>`:''}
+     ${!STORE.chitSchema?`<div style="background:var(--danger-tint);border:1px solid #f0c9c6;border-radius:9px;padding:7px 10px;font-size:var(--fs-1);color:var(--disp);margin-bottom:6px">${esc(MSG.schemaDefault())}</div>`:''}
      ${ccSchema().map(cfField).join("")}
      <div style="font-family:'Space Grotesk';font-weight:600;font-size:12px;color:var(--grey);margin:14px 0 4px">Attachments · <span style="font-weight:400">co-signed (use 📎 on a line for item-specific files)</span></div>
      <label class="composebtn" style="cursor:pointer">📎 Attach files<input type="file" multiple style="display:none" onchange="ccAddFiles(this.files);this.value=''"></label>
@@ -4646,10 +4646,10 @@ function ccStepReview(){
   var sum=(CC.items||[]).reduce(function(s,it){return s+ccLineTotal(it);},0);
   var nAtt=(CC.files||[]).length+(CC.items||[]).reduce(function(a,it){return a+((it.files||[]).length);},0);
   var row=function(k,v){ return '<div style="display:flex;gap:10px;padding:8px 12px;border-top:1px solid var(--line);font-size:13px">'
-    + '<span style="min-width:104px;color:var(--grey);font-size:11.5px">'+k+'</span><span style="flex:1">'+v+'</span></div>'; };
+    + '<span style="min-width:104px;color:var(--grey);font-size:var(--fs-1)">'+k+'</span><span style="flex:1">'+v+'</span></div>'; };
   var card=function(h,inner,edit){ return '<div style="border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-top:8px">'
     + '<div style="background:var(--paper);padding:8px 12px;font-size:var(--fs-1);font-weight:800;color:var(--grey);text-transform:uppercase;letter-spacing:.05em;display:flex">'+h
-    + (edit!=null?'<span style="margin-inline-start:auto;color:var(--blue);cursor:pointer;text-transform:none;letter-spacing:0;font-size:11.5px" onclick="UI._ccFlow.go('+edit+')">' + tx('Change') + '</span>':'')
+    + (edit!=null?'<span style="margin-inline-start:auto;color:var(--blue);cursor:pointer;text-transform:none;letter-spacing:0;font-size:var(--fs-1)" onclick="UI._ccFlow.go('+edit+')">' + tx('Change') + '</span>':'')
     + '</div>'+inner+'</div>'; };
   return card('Lines · '+(CC.items||[]).length,
         (CC.items||[]).map(function(l){ return row((l.qty||1)+' × '+esc(l.unit||'unit'),
@@ -4685,7 +4685,7 @@ function ccFlipRcpt(i){ const order=["to","cc","for"]; const r=CC.rcpts[i]; if(!
 function ccRenderRcpts(){ const h=document.getElementById("cc_rcpts");
   if(h){ h.innerHTML = CC.rcpts.length ? CC.rcpts.map((r,i)=>{ const col=r.role==="to"?"var(--blue)":r.role==="cc"?"var(--warn-3)":"var(--grey-2)"; const bg=r.role==="to"?"var(--blue-tint)":r.role==="cc"?"var(--warn-tint)":"var(--warn-tint)";
     if(UI._supplier){ return `<span style="display:inline-flex;align-items:center;gap:5px;border:0.5px solid var(--blue-tint-line);background:var(--blue-tint);border-radius:9px;padding:4px 9px;margin:0 5px 5px 0;font-size:12px;font-weight:600;color:var(--blue)">🏭 ${esc(r.name)}${r.bridge?'<span style="font-family:monospace;font-size:var(--fs-1);opacity:.8"> · '+esc(r.bridge)+'</span>':''} <span style="font-weight:400;color:var(--grey)">· locked</span></span>`; }
-    return `<span style="display:inline-flex;align-items:center;gap:5px;border:0.5px solid var(--line);border-radius:9px;padding:3px 7px;margin:0 5px 5px 0;font-size:11.5px"><span onclick="ccFlipRcpt(${i})" title="Flip role (To/CC/For)" style="cursor:pointer;font-family:'Space Mono';font-size:var(--fs-1);background:${bg};color:${col};border-radius:5px;padding:1px 5px">${r.role.toUpperCase()}</span>${esc(r.name)}${r.bridge?'<span style="font-family:monospace;font-size:var(--fs-1);color:var(--grey-4)"> · '+esc(r.bridge)+'</span>':''}${r.self?'<span style="color:var(--blue);font-size:var(--fs-1)"> · self</span>':''}<span onclick="ccDelRcpt(${i})" style="cursor:pointer;color:var(--grey-4)">✕</span></span>`; }).join("") : `<div style="font-size:12px;color:var(--grey)">No recipients yet — add To / CC / For above.</div>`; }
+    return `<span style="display:inline-flex;align-items:center;gap:5px;border:0.5px solid var(--line);border-radius:9px;padding:3px 7px;margin:0 5px 5px 0;font-size:var(--fs-1)"><span onclick="ccFlipRcpt(${i})" title="Flip role (To/CC/For)" style="cursor:pointer;font-family:'Space Mono';font-size:var(--fs-1);background:${bg};color:${col};border-radius:5px;padding:1px 5px">${r.role.toUpperCase()}</span>${esc(r.name)}${r.bridge?'<span style="font-family:monospace;font-size:var(--fs-1);color:var(--grey-4)"> · '+esc(r.bridge)+'</span>':''}${r.self?'<span style="color:var(--blue);font-size:var(--fs-1)"> · self</span>':''}<span onclick="ccDelRcpt(${i})" style="cursor:pointer;color:var(--grey-4)">✕</span></span>`; }).join("") : `<div style="font-size:12px;color:var(--grey)">No recipients yet — add To / CC / For above.</div>`; }
   if(UI._ccFlow) UI._ccFlow.paintFoot();   // a recipient added or removed changes whether To can be left
   const capEl=document.getElementById("cc_rcap"); if(capEl) capEl.textContent="To "+ccRoleCount("to")+"/"+LIMITS.to+" · CC "+ccRoleCount("cc")+"/"+LIMITS.cc+" · For "+ccRoleCount("for")+"/"+LIMITS.for+" — tap a role chip to flip"; }
 async function ccAiFill(){
@@ -4724,7 +4724,7 @@ function ccQty(i,v){ if(CC.items[i])CC.items[i].qty=Math.max(0,+v||0);
   ccRenderTotal(); }
 function ccLineTotal(it){ return (+it.qty||0)*(+it.price||0); }
 function ccRenderItems(){ const h=document.getElementById("cc_items"); if(!h)return;
-  h.innerHTML = CC.items.length ? CC.items.map((it,i)=>`<div style="display:flex;gap:6px;align-items:center;margin-bottom:2px"><span style="flex:1;font-size:var(--fs-2)">${esc(it.particulars)}</span><input class="inp" style="width:60px" inputmode="numeric" value="${it.qty}" oninput="ccQty(${i},this.value)"><span style="font-size:11.5px;color:var(--grey);width:64px;text-align:end">${inr(it.price)}</span><span id="cc_lt_${i}" style="font-size:12px;width:80px;text-align:end;font-family:'Space Mono'">${inr(ccLineTotal(it))}</span><label class="composebtn" title="Attach to this item" style="cursor:pointer;padding:4px 7px">📎<input type="file" multiple style="display:none" onchange="ccAddItemFiles(${i},this.files);this.value=''"></label><button class="composebtn" onclick="ccDelItem(${i})">✕</button></div><div id="cc_itf_${i}" style="margin:1px 0 7px 0">${ccItemChips(i)}</div>`).join("")
+  h.innerHTML = CC.items.length ? CC.items.map((it,i)=>`<div style="display:flex;gap:6px;align-items:center;margin-bottom:2px"><span style="flex:1;font-size:var(--fs-2)">${esc(it.particulars)}</span><input class="inp" style="width:60px" inputmode="numeric" value="${it.qty}" oninput="ccQty(${i},this.value)"><span style="font-size:var(--fs-1);color:var(--grey);width:64px;text-align:end">${inr(it.price)}</span><span id="cc_lt_${i}" style="font-size:12px;width:80px;text-align:end;font-family:'Space Mono'">${inr(ccLineTotal(it))}</span><label class="composebtn" title="Attach to this item" style="cursor:pointer;padding:4px 7px">📎<input type="file" multiple style="display:none" onchange="ccAddItemFiles(${i},this.files);this.value=''"></label><button class="composebtn" onclick="ccDelItem(${i})">✕</button></div><div id="cc_itf_${i}" style="margin:1px 0 7px 0">${ccItemChips(i)}</div>`).join("")
     : `<div style="font-size:12px;color:var(--grey);padding:4px 0">No items yet — pick from the catalogue or type one above.</div>`;
   ccRenderTotal();
 }
@@ -5035,7 +5035,7 @@ const ASSIST_PAGES = {
 };
 function assistPage(key){ const p=ASSIST_PAGES[key]; if(!p) return menuAssist(key);
   const groups=p.groups.map(g=>`<div style="${_CARD}"><div style="font-family:'Space Grotesk';font-weight:600;font-size:var(--fs-2);color:var(--ink);display:flex;align-items:center;gap:7px;margin-bottom:6px"><span style="color:var(--blue)"><span class=arw>▸</span></span>${esc(g.title)}</div>${g.rows.map((r,i)=>`<div style="display:flex;gap:9px;align-items:baseline;padding:4px 0;${i?'border-top:0.5px solid #F0ECE2':''}"><span style="font-family:'Space Mono';font-size:var(--fs-1);color:var(--blue);min-width:118px;flex-shrink:0">${esc(r[0])}</span><span style="font-size:12px;color:var(--ink);line-height:1.5">${esc(r[1])}</span></div>`).join("")}</div>`).join("");
-  return `<div style="background:var(--gold-soft);border:0.5px solid var(--gold-line);border-radius:12px;padding:9px 11px;font-size:12px;color:var(--warn-3);line-height:1.5;margin-bottom:9px"><b style="font-family:'Space Grotesk'">${key==='order'?'Order':'Task'} — what it is &amp; how to use it</b> <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--card);color:var(--warn-3);border:0.5px solid var(--gold-line);border-radius:5px;padding:1px 6px">assistance page</span><div style="margin-top:4px">${esc(p.intro)}</div></div>${groups}<div style="${_CARD}"><div style="font-size:11.5px;color:var(--grey);margin-bottom:6px">Ask the assistant <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--gold-soft);color:var(--warn-3);border-radius:5px;padding:1px 6px">web demo</span></div><div style="display:flex;gap:8px"><input class="inp" id="m_in_${key}" placeholder="Ask about ${esc(key)}…"><button style="${_BTN}" onclick="mAskFree('${key}')">${tx('Ask')}</button></div><div id="m_ans_${key}" style="font-size:13px;color:var(--ink);margin-top:9px;line-height:1.55"></div></div>`;
+  return `<div style="background:var(--gold-soft);border:0.5px solid var(--gold-line);border-radius:12px;padding:9px 11px;font-size:12px;color:var(--warn-3);line-height:1.5;margin-bottom:9px"><b style="font-family:'Space Grotesk'">${key==='order'?'Order':'Task'} — what it is &amp; how to use it</b> <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--card);color:var(--warn-3);border:0.5px solid var(--gold-line);border-radius:5px;padding:1px 6px">assistance page</span><div style="margin-top:4px">${esc(p.intro)}</div></div>${groups}<div style="${_CARD}"><div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:6px">Ask the assistant <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--gold-soft);color:var(--warn-3);border-radius:5px;padding:1px 6px">web demo</span></div><div style="display:flex;gap:8px"><input class="inp" id="m_in_${key}" placeholder="Ask about ${esc(key)}…"><button style="${_BTN}" onclick="mAskFree('${key}')">${tx('Ask')}</button></div><div id="m_ans_${key}" style="font-size:13px;color:var(--ink);margin-top:9px;line-height:1.55"></div></div>`;
 }
 function addActorModal(){
   const ent=(typeof SESSION!=="undefined"&&SESSION.entity)||"";
@@ -5046,7 +5046,7 @@ function addActorModal(){
      <div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px">Lowercase letters/numbers, min 4 — a short handle.</div>
      <div style="background:var(--blue-tint);border:1px solid var(--blue-tint-line);border-radius:9px;padding:9px 11px;margin-top:9px;font-size:12px;color:var(--blue-d)">Signs in as&nbsp; <span id="ac_idprev" style="font-family:'Space Mono';font-weight:700;font-size:var(--fs-2)">${esc('…@'+entBiz())}</span></div>
      <label class="fl" style="margin-top:11px">Hat (what they do)</label><select class="inp" id="ac_hat"><option value="act">Act — does the work (assignable)</option><option value="manager">Manager — acts + assigns/manages</option><option value="audit">Audit — review only</option><option value="mis">MIS — reports only</option><option value="view_only">View-only</option></select>
-     <div style="font-size:11.5px;color:var(--grey);margin-top:8px;line-height:1.5">They sign in with this <b>User ID</b> under <b>${esc(ent)}</b> + a one-time code, then set their own PIN. Starts <b>on shift</b>. Only an <b>Editor</b> can be assigned work.</div>
+     <div style="font-size:var(--fs-1);color:var(--grey);margin-top:8px;line-height:1.5">They sign in with this <b>User ID</b> under <b>${esc(ent)}</b> + a one-time code, then set their own PIN. Starts <b>on shift</b>. Only an <b>Editor</b> can be assigned work.</div>
      <div class="err" id="ac_err"></div></div>
    <div class="mfoot"><button onclick="closeModal()">Cancel</button><button class="pri" onclick="submitActor()">Create</button></div>`);
 }
@@ -5073,7 +5073,7 @@ function actorInviteModal(head, name, login, otp){
    <div class="mbody">
      <div style="${_CARD};margin-bottom:8px"><div style="font-size:var(--fs-1);color:var(--grey);text-transform:uppercase;letter-spacing:.4px">User ID</div><div style="font-family:'Space Mono';font-weight:700;font-size:var(--fs-3);margin-top:2px;word-break:break-all">${esc(login||'—')}</div></div>
      <div style="${_CARD};background:var(--blue-tint);border-color:var(--blue-tint-line);margin-bottom:8px;color:var(--on-card)"><div style="font-size:var(--fs-1);color:var(--blue-d);text-transform:uppercase;letter-spacing:.4px">One-time code</div><div style="font-family:'Space Mono';font-weight:800;font-size:24px;color:var(--blue-d);margin-top:2px;letter-spacing:3px">${esc(otp||'—')}</div></div>
-     <div style="font-size:11.5px;color:var(--grey);line-height:1.5">They sign in at the login screen with the <b>User ID</b> + this <b>one-time code</b>, then set their own PIN. Lost it? Use <b>Re-invite</b> on their card for a fresh code.</div>
+     <div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5">They sign in at the login screen with the <b>User ID</b> + this <b>one-time code</b>, then set their own PIN. Lost it? Use <b>Re-invite</b> on their card for a fresh code.</div>
    </div>
    <div class="mfoot"><button class="pri" onclick="closeModal()">Got it</button></div>`);
 }
@@ -5105,7 +5105,7 @@ function promptAsk(title, opts, onOk, extra){
      ${opts.label?`<label class="fl">${esc(opts.label)}</label>`:''}
      <input class="inp" id="_pmpt" data-testid="prompt-input" value="${esc(val)}" placeholder="${esc(ph)}"
             maxlength="${Number(opts.maxlength)||120}" autocomplete="off">
-     ${hint?`<div style="font-size:11.5px;color:var(--grey);margin-top:7px;line-height:1.5">${hint}</div>`:''}
+     ${hint?`<div style="font-size:var(--fs-1);color:var(--grey);margin-top:7px;line-height:1.5">${hint}</div>`:''}
    </div>
    <div class="mfoot"><button data-testid="prompt-cancel" onclick="closeModal()">Cancel</button>${extra.extraLabel?`<button id="_pmptx" data-testid="prompt-extra">${esc(extra.extraLabel)}</button>`:''}<button class="pri" id="_pmptok" data-testid="prompt-ok">${esc(ok)}</button></div>`);
   UI._modalDismiss = extra.onCancel || null;                 // Cancel, Escape or the backdrop — see closeModal
@@ -5502,7 +5502,7 @@ function supFindBodyHTML(){
     const nocat=res.filter(function(r){return r.state==='nocat';});
     const miss=res.filter(function(r){return r.state==='miss';});
     const err=res.filter(function(r){return r.state==='err';});
-    const prog=UI._sfBusy?('<div style="font-size:11.5px;color:var(--grey);padding:5px 0"><span class="spin"></span> asking '+(UI._sfDone||0)+' of '+(UI._sfTotal||0)+'…</div>'):'';
+    const prog=UI._sfBusy?('<div style="font-size:var(--fs-1);color:var(--grey);padding:5px 0"><span class="spin"></span> asking '+(UI._sfDone||0)+' of '+(UI._sfTotal||0)+'…</div>'):'';
     const card=function(r){
       return '<div class="sfhit"><div class="sfhit-h"><b>'+esc(supName(r.sup))+'</b>'
         +(r.sup.preferred?'<span style="color:#e0a92b">★</span>':'')
@@ -5569,7 +5569,7 @@ function enquiryPaint(){
      between the code deploy and that run, an empty list would read as "no one has asked" — which is a different
      and misleading fact. */
   if (_ENQ.migrated === false) {
-    out += '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;font-size:11.5px;color:var(--warn-3);margin-bottom:9px">'
+    out += '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;font-size:var(--fs-1);color:var(--warn-3);margin-bottom:9px">'
       + '⚠️ Product enquiries are not enabled on this deployment yet (needs b162). Nothing has been lost — there is simply nowhere to put the question.</div>';
   }
   var msgs = _ENQ.msgs || [];
@@ -5645,7 +5645,7 @@ function supReqHTML(){
     <div style="font-size:var(--fs-2);line-height:1.6;color:var(--ink);margin-bottom:10px">
       What <b>you</b> require of a supplier before trading. Declare it once and every supplier is measured against
       your list instead of against every standard in the system.
-      <div style="font-size:11.5px;color:var(--grey);margin-top:6px">⚠️ It scopes what you are <b>shown</b>. It
+      <div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">⚠️ It scopes what you are <b>shown</b>. It
       cannot waive a rule the destination or the product imposes — those are not yours to drop.</div>
     </div>
     <button class="composebtn" style="width:100%;justify-content:center" data-testid="sup-req-new"
@@ -5670,7 +5670,7 @@ function custSeg(s){ var col={new:'var(--blue-d)',regular:'var(--ok-2)',inactive
 function customersScreen(){
   const list=`<div class="list"><div class="lh">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3)">🛍️ Customers</span><button onclick="openAssist('customers')" title="Ask the assistant about this screen" style="border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:50%;width:20px;height:20px;font-weight:800;cursor:pointer;font-size:12px;line-height:1;flex:none">?</button></div>
-    <div style="font-size:11.5px;color:var(--grey);line-height:1.5">Your CRM — everyone who ordered from your storefront. They live <b>only under your shop</b>.</div>
+    <div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5">Your CRM — everyone who ordered from your storefront. They live <b>only under your shop</b>.</div>
     <div style="margin-top:7px;font-size:var(--fs-1);color:var(--grey)" id="cu_count">${(UI.custs||[]).length} customer(s)</div></div>
     <div class="rows" id="cu_rows">${UI._custLoading?'<div class="loadwrap"><span class="spin"></span> loading…</div>':custRowsHTML()}</div></div>`;
   const detail=`<div class="detail" id="detailpane">${custDetailHTML()}</div>`;
@@ -5783,7 +5783,7 @@ function supStepsFor(x){
 function supDefaultSubject(x){ return 'Order — '+supName(x); }
 function supStepItems(){
   return supCartHTML()
-    + '<div style="margin-top:9px;font-size:11.5px;color:var(--grey)">'
+    + '<div style="margin-top:9px;font-size:var(--fs-1);color:var(--grey)">'
     + '<span data-testid="sup-add-all" onclick="supAddAll()" style="cursor:pointer;color:var(--blue);font-weight:600">' + tx('Add everything to the cart') + '</span>'
     + ' — for a short catalogue where ticking each line is the long way round.</div>';
 }
@@ -5812,16 +5812,16 @@ function supStepDetails(x){
 function supStepReview(x){
   var o=supOrderState(), c=UI._supCart, T=c?c.total():{amount:0}, sel=c?c.selected():[];
   var row=function(k,v){ return '<div style="display:flex;gap:10px;padding:8px 12px;border-top:1px solid var(--line);font-size:13px">'
-    + '<span style="min-width:96px;color:var(--grey);font-size:11.5px">'+k+'</span><span style="flex:1">'+v+'</span></div>'; };
+    + '<span style="min-width:96px;color:var(--grey);font-size:var(--fs-1)">'+k+'</span><span style="flex:1">'+v+'</span></div>'; };
   var card=function(h,inner,edit){ return '<div style="border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-top:8px">'
     + '<div style="background:var(--paper);padding:8px 12px;font-size:var(--fs-1);font-weight:800;color:var(--grey);text-transform:uppercase;letter-spacing:.05em;display:flex">'+h
-    + (edit!=null?'<span style="margin-inline-start:auto;color:var(--blue);cursor:pointer;text-transform:none;letter-spacing:0;font-size:11.5px" onclick="UI._supFlow.go('+edit+')">' + tx('Change') + '</span>':'')
+    + (edit!=null?'<span style="margin-inline-start:auto;color:var(--blue);cursor:pointer;text-transform:none;letter-spacing:0;font-size:var(--fs-1)" onclick="UI._supFlow.go('+edit+')">' + tx('Change') + '</span>':'')
     + '</div>'+inner+'</div>'; };
   return card('To<span style="margin-inline-start:auto;font-weight:400;text-transform:none;letter-spacing:0">fixed — this is their order</span>',
-        '<div style="padding:8px 12px;font-size:13px"><b>'+esc(supName(x))+'</b> <span class="mono" style="color:var(--grey);font-size:11.5px">'+esc(x.user_id||x.bridge_id||'')+'</span></div>')
+        '<div style="padding:8px 12px;font-size:13px"><b>'+esc(supName(x))+'</b> <span class="mono" style="color:var(--grey);font-size:var(--fs-1)">'+esc(x.user_id||x.bridge_id||'')+'</span></div>')
     + card('Items · '+sel.length, sel.map(function(l){
         return row(l.qty+' × '+esc(l.unit), '<span style="flex:1">'+esc(l.name)+'</span>'
-          + (l.offered?'<span style="color:var(--grey);font-size:11.5px"> · your offer</span>':'')
+          + (l.offered?'<span style="color:var(--grey);font-size:var(--fs-1)"> · your offer</span>':'')
           + '<b style="float:inline-end">'+(l.line_total==null?'—':esc(String(l.line_total)))+'</b>'); }).join('')
         + '<div style="display:flex;padding:10px 12px;border-top:2px solid var(--line);font-size:var(--fs-3);font-weight:800">'
         + '<span style="flex:1">'+(T.offered?'Total at your offer':'Total')+'</span>'
@@ -5837,7 +5837,7 @@ function supStepReview(x){
      * supplier orders altogether — a quiet capability loss traded for a click count. So the fast path is the
      * default and the full one is one link away, carrying everything already entered.
      */
-    + '<div style="font-size:11.5px;color:var(--grey);margin-top:6px">Need CC, attachments or a line they do not list? '
+    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">Need CC, attachments or a line they do not list? '
     + '<span data-testid="sup-open-compose" onclick="composeFromSupplier(\''+esc(x.supplier_list_id)+'\')" style="cursor:pointer;color:var(--blue);font-weight:600">Open in compose <span class=arw>→</span></span></div>';
 }
 /**
@@ -6132,10 +6132,10 @@ async function viewSupplierPassport(bridge, name){
       + '<div style="display:flex;gap:10px;align-items:center;margin-bottom:12px">'
       + '<div style="width:38px;height:38px;border-radius:50%;background:'+(ready?'var(--ok-3)':'var(--warn-2)')+';color:#fff;display:grid;place-items:center;font-size:18px">'+(ready?'✓':'!')+'</div>'
       + '<div><div style="font-weight:700;font-size:13.5px">'+(ready?(label+' is import-ready'):(label+' has '+((sm.total||0)-(sm.met||0))+' clearance(s) outstanding'))+'</div>'
-      + '<div style="font-size:11.5px;color:var(--grey)">'+(sm.met||0)+' of '+(sm.total||0)+' met'+(sm.expiring?' · '+sm.expiring+' expiring':'')+(sm.expired?' · '+sm.expired+' expired':'')+'</div></div></div>'
+      + '<div style="font-size:var(--fs-1);color:var(--grey)">'+(sm.met||0)+' of '+(sm.total||0)+' met'+(sm.expiring?' · '+sm.expiring+' expiring':'')+(sm.expired?' · '+sm.expired+' expired':'')+'</div></div></div>'
       + (rows ? '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">'+rows+'</table></div>'
               : '<div style="font-size:var(--fs-2);color:var(--grey)">They have no clearances recorded yet.</div>')
-      + '<div style="font-size:11.5px;color:var(--grey);margin-top:12px;border-top:1px solid var(--line);padding-top:8px">'
+      + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:12px;border-top:1px solid var(--line);padding-top:8px">'
       + 'Status and validity only — the documents themselves stay with '+label+'. Nothing here is your own readiness; '
       + 'for that, open <b>' + tx('Trade readiness') + '</b> from the menu.</div>';
 
@@ -6237,8 +6237,8 @@ function supDetailHTML(){
       : `⚠ ${esc(who)}: ${(c.total||0)-(c.met||0)} certificate${((c.total||0)-(c.met||0))===1?'':'s'} still to come`;
     /* The chip is a CERTIFICATES warning, so it opens the certificates — the passport — not the profile. */
     const chip=`<div style="padding:2px 0 0"><div data-testid="sup-chip" onclick="viewSupplierPassport('${esc(x.bridge_id)}','${String(supName(x)).replace(/[\\']/g,'')}')" style="display:inline-flex;align-items:center;gap:9px;border:1px solid ${bad?'var(--gold-line)':'var(--line)'};border-radius:22px;padding:6px 8px 6px 13px;background:${bad?'var(--gold-soft)':'var(--card)'};color:${bad ? 'var(--on-card)' : 'var(--on-card)'};cursor:pointer">`
-      + `<span style="font-size:11.5px;color:${bad?'var(--warn-2)':'var(--ok-2)'};font-weight:700">${warnTxt}</span>`
-      + `<span style="background:var(--paper);border-radius:20px;padding:3px 10px;font-size:11.5px;color:var(--blue);font-weight:700">${tx('Details ›')}</span></div></div>`;
+      + `<span style="font-size:var(--fs-1);color:${bad?'var(--warn-2)':'var(--ok-2)'};font-weight:700">${warnTxt}</span>`
+      + `<span style="background:var(--paper);border-radius:20px;padding:3px 10px;font-size:var(--fs-1);color:var(--blue);font-weight:700">${tx('Details ›')}</span></div></div>`;
     let catcard;
     if(!x.has_catalogue) catcard=`<div class="sec">${tx('Order from them')}</div><div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;font-size:12px;color:var(--warn-3)">No catalogue published yet — nothing to order.</div>`;
     else if(d.loading) catcard=`<div class="sec">${tx('Order from them')}</div><div class="loadwrap" style="justify-content:flex-start;padding:6px 0"><span class="spin"></span> loading catalogue…</div>`;
@@ -6247,7 +6247,7 @@ function supDetailHTML(){
     else catcard=`<div class="sec">${tx('Order from them')}</div><div style="background:var(--danger-tint);border:1px solid #f0c9c6;border-radius:9px;padding:9px 11px;font-size:12px;color:var(--disp)">${esc(d.err||'Could not read their catalogue.')} <span onclick="selectSupplier('${x.supplier_list_id}')" style="cursor:pointer;color:var(--blue);font-weight:600">${tx('Try again')}</span></div>`;
     const stepped = x.has_catalogue && !d.loading && UI._supFlow;
     body = chip + (stepped
-      ? `<div id="sup_rail">${UI._supFlow.railHTML()}</div><div style="font-size:11.5px;color:var(--grey);margin:0 0 8px" id="sup_sub">${esc(UI._supFlow.steps()[UI._supFlow.index()].t||'')}</div>`
+      ? `<div id="sup_rail">${UI._supFlow.railHTML()}</div><div style="font-size:var(--fs-1);color:var(--grey);margin:0 0 8px" id="sup_sub">${esc(UI._supFlow.steps()[UI._supFlow.index()].t||'')}</div>`
         + `<div id="sup_body">${UI._supFlow.bodyHTML()}</div>`
       : catcard);
     /* ⚠️ "Remove from list" USED TO LIVE HERE and is gone. Managing the relationship is not product information,
@@ -6332,9 +6332,9 @@ function catalogueScreen(){
       <div style="margin-top:8px;display:flex;align-items:center;gap:8px">
         <span style="font-size:var(--fs-1);color:var(--grey)" id="ct_count">${prodVisible().length} product(s)</span>
         <button data-testid="cat-select" onclick="prodPickMode(!UI.prodPick)" title="Tick several products, then attach them to a category at once"
-          style="border:1px solid var(--line);background:${UI.prodPick?'var(--blue)':'var(--paper)'};color:${UI.prodPick?'var(--on-accent)':'var(--ink)'};border-radius:9px;padding:4px 9px;font-size:11.5px;cursor:pointer">☑ Select</button>
+          style="border:1px solid var(--line);background:${UI.prodPick?'var(--blue)':'var(--paper)'};color:${UI.prodPick?'var(--on-accent)':'var(--ink)'};border-radius:9px;padding:4px 9px;font-size:var(--fs-1);cursor:pointer">☑ Select</button>
         <button data-testid="cat-setup" onclick="navTo('catsetup')" title="Columns, variants, import and export, storefront"
-          style="margin-inline-start:auto;border:1px solid var(--line);background:var(--paper);border-radius:9px;padding:4px 9px;font-size:11.5px;color:var(--ink);cursor:pointer">⚙️ Setup</button>
+          style="margin-inline-start:auto;border:1px solid var(--line);background:var(--paper);border-radius:9px;padding:4px 9px;font-size:var(--fs-1);color:var(--ink);cursor:pointer">⚙️ Setup</button>
       </div>
     </div>
     <div class="rows" id="ct_rows">${UI._prodLoading?'<div class="loadwrap"><span class="spin"></span> loading…</div>':prodRowsHTML()}</div>
@@ -6579,7 +6579,7 @@ function refFinishRow(it,i){
       +'<span style="margin-inline-start:auto;font-weight:800;font-size:var(--fs-3)">'+_refPriceHTML(p)+'</span></div>'
     +(it.inspiration?'<div style="font-size:12px;color:var(--grey-2);margin:4px 0 7px;line-height:1.5">'+esc(it.inspiration)+'</div>':'')
     +(chips?'<div style="display:flex;gap:5px;flex-wrap:wrap;margin:6px 0 7px">'+chips+'</div>':'')
-    +(facts.length?'<div style="font-size:11.5px;color:var(--ink-2);margin:5px 0 2px;line-height:1.55">'+facts.join(' · ')+'</div>':'')
+    +(facts.length?'<div style="font-size:var(--fs-1);color:var(--ink-2);margin:5px 0 2px;line-height:1.55">'+facts.join(' · ')+'</div>':'')
     +(combos.length?'<div style="font-size:var(--fs-1);color:var(--grey-4);text-transform:uppercase;letter-spacing:.4px;font-weight:700;margin-bottom:2px">' + tx('Colour combinations') + '</div>'+combos.map(_combo).join(''):'')
     +'<div style="font-size:var(--fs-1);color:var(--grey-4);margin-top:7px">'+(applied.length?applied.join(' · ')+' · ':'')+'<span style="color:var(--purple-2)">' + tx('🎨 referenced') + '</span></div>'
   +'</div>'; }
@@ -6609,7 +6609,7 @@ function refFinishDetail(it){
     +(chips?'<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px">'+chips+'</div>':'')
     +(facts.length?'<div class="sec">' + tx('Details') + '</div><div style="font-size:var(--fs-2);color:var(--ink-2);line-height:1.8;margin-bottom:4px">'+facts.join('<br>')+'</div>':'')
     +(combos.length?'<div class="sec">' + tx('Colour combinations') + '</div>'+combos.map(_combo).join(''):'')
-    +(applied.length?'<div style="font-size:11.5px;color:var(--grey-4);margin-top:10px">'+applied.join(' · ')+'</div>':'')
+    +(applied.length?'<div style="font-size:var(--fs-1);color:var(--grey-4);margin-top:10px">'+applied.join(' · ')+'</div>':'')
     +'<div class="sec" style="margin-top:14px">' + tx('Price') + '</div><div style="font-size:17px;font-weight:800">'+(p?(esc(inr(p.v))+(p.u?' <span style="font-size:12px;color:var(--grey-4);font-weight:400">/ '+esc(p.u)+'</span>':'')):'<span style="color:var(--grey-4);font-size:13px">not priced yet</span>')+'</div>'
     +'<div style="font-size:var(--fs-1);color:var(--grey-4);margin-top:12px;font-family:\'Space Mono\'">🎨 referenced from the shared source · no copy · <span style="color:var(--blue);cursor:pointer" onclick="UI.nav=\'cataloguesetup\';renderApp()">manage prices</span></div>'
   +'</div>';
@@ -6698,7 +6698,7 @@ async function downloadCatalogueTemplate(btn){
 
     const cols = (t.columns||[]).map(function(c){
       const opt = (t.optional||[]).indexOf(c) >= 0;
-      return '<span style="display:inline-block;border:1px solid var(--line);border-radius:6px;padding:2px 7px;margin:0 4px 4px 0;font-size:11.5px;font-family:ui-monospace,monospace;'
+      return '<span style="display:inline-block;border:1px solid var(--line);border-radius:6px;padding:2px 7px;margin:0 4px 4px 0;font-size:var(--fs-1);font-family:ui-monospace,monospace;'
         + (opt ? 'color:var(--grey);border-style:dashed' : 'font-weight:600') + '">' + esc(c) + '</span>';
     }).join('');
     modal('<div class="mhd">' + tx('📄 Catalogue template') + '</div><div class="mbody">'
@@ -6878,7 +6878,7 @@ async function _cfRun(btn){
       var h = HOW[m.how] || ['?','var(--grey-2)',m.how];
       var control;
       if(m.how === 'blocked' || m.how === 'empty'){
-        control = '<span style="font-size:11.5px;color:'+h[1]+'">not importable</span>';
+        control = '<span style="font-size:var(--fs-1);color:'+h[1]+'">not importable</span>';
       } else {
         var opts = ['<option value="ignore">' + tx('Leave it out') + '</option>'];
         accepted.forEach(function(f){
@@ -6894,17 +6894,17 @@ async function _cfRun(btn){
         + '<td style="padding:5px 8px;border-bottom:1px dashed var(--line);font-family:ui-monospace,monospace;font-size:12px">'+esc(m.incoming||'(blank)')+'</td>'
         + '<td style="padding:5px 8px;border-bottom:1px dashed var(--line);color:'+h[1]+';font-weight:700;text-align:center">'+h[0]+'</td>'
         + '<td style="padding:5px 8px;border-bottom:1px dashed var(--line);min-width:150px">'+control+'</td>'
-        + '<td style="padding:5px 8px;border-bottom:1px dashed var(--line);font-size:11.5px;color:var(--grey)">'+esc(m.conflict||m.why||h[2])+'</td>'
+        + '<td style="padding:5px 8px;border-bottom:1px dashed var(--line);font-size:var(--fs-1);color:var(--grey)">'+esc(m.conflict||m.why||h[2])+'</td>'
         + '</tr>';
     }).join('');
 
     var s = r.summary || {};
     var blocking = (s.errors || 0) > 0;
     var badge = blocking
-      ? '<span style="background:var(--danger-tint);color:var(--disp);border-radius:6px;padding:3px 9px;font-size:11.5px;font-weight:700">'+s.errors+' row problem(s) — fix the file first</span>'
+      ? '<span style="background:var(--danger-tint);color:var(--disp);border-radius:6px;padding:3px 9px;font-size:var(--fs-1);font-weight:700">'+s.errors+' row problem(s) — fix the file first</span>'
       : (r.ready
-        ? '<span style="background:var(--ok-tint);color:var(--disp);border-radius:6px;padding:3px 9px;font-size:11.5px;font-weight:700">Every column is placed</span>'
-        : '<span style="background:var(--warn-tint);color:var(--warn-3);border-radius:6px;padding:3px 9px;font-size:11.5px;font-weight:700">' + tx('Check the choices below, then import') + '</span>');
+        ? '<span style="background:var(--ok-tint);color:var(--disp);border-radius:6px;padding:3px 9px;font-size:var(--fs-1);font-weight:700">Every column is placed</span>'
+        : '<span style="background:var(--warn-tint);color:var(--warn-3);border-radius:6px;padding:3px 9px;font-size:var(--fs-1);font-weight:700">' + tx('Check the choices below, then import') + '</span>');
     var issues = (r.issues||[]).slice(0,25).map(function(i){
       var c = i.severity==='error' ? 'var(--disp)' : (i.severity==='info' ? 'var(--grey-2)' : 'var(--warn-2)');
       return '<li style="color:'+c+'">line '+i.row+' · <b>'+esc(i.column)+'</b> — '+esc(i.message)+'</li>';
@@ -6917,8 +6917,8 @@ async function _cfRun(btn){
       + '</tr></thead><tbody>'+rowsHtml+'</tbody></table></div>'
       + ((r.notes||[]).length ? '<ul style="font-size:12px;line-height:1.6;padding-inline-start:18px;margin:10px 0 0">'+r.notes.map(function(n){ return '<li>'+esc(n)+'</li>'; }).join('')+'</ul>' : '')
       + (issues ? '<div style="font-size:var(--fs-1);text-transform:uppercase;color:var(--grey);margin:10px 0 4px">' + tx('Rows') + '</div><ul style="font-size:12px;line-height:1.6;padding-inline-start:18px;margin:0">'+issues+'</ul>'
-          + ((r.issues||[]).length>25 ? '<div style="font-size:11.5px;color:var(--grey);margin-top:5px">…and '+((r.issues||[]).length-25)+' more.</div>' : '') : '')
-      + '<div style="font-size:11.5px;color:var(--grey);margin-top:11px;border-top:1px solid var(--line);padding-top:8px">Reading the file changed nothing. <b>' + tx('Import') + '</b> applies the choices above — it adds and updates products, and never deletes one.</div>';
+          + ((r.issues||[]).length>25 ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:5px">…and '+((r.issues||[]).length-25)+' more.</div>' : '') : '')
+      + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:11px;border-top:1px solid var(--line);padding-top:8px">Reading the file changed nothing. <b>' + tx('Import') + '</b> applies the choices above — it adds and updates products, and never deletes one.</div>';
 
     // The Import button is enabled only when the file itself is sound. Row errors are not a warning to click past:
     // the server refuses them too, and offering the button anyway teaches people to ignore it.
@@ -6966,7 +6966,7 @@ async function _cfImportRun(btn, decisions, out){
           return '<li style="color:'+c+'">line '+o.line+' · '+esc(o.name||'')+' — '+esc(o.action)+(o.message?': '+esc(o.message):'')+'</li>';
         }).join('')
       + '</ul>'
-      + ((r.outcome||[]).length>40 ? '<div style="font-size:11.5px;color:var(--grey);margin-top:5px">…and '+((r.outcome||[]).length-40)+' more.</div>' : '');
+      + ((r.outcome||[]).length>40 ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:5px">…and '+((r.outcome||[]).length-40)+' more.</div>' : '');
     btn.disabled = true; btn.style.opacity = '.5';
     if(typeof loadProducts === 'function') loadProducts();
   }catch(e){
@@ -7023,7 +7023,7 @@ function ctCategoryField(d){
     +   '<button type="button" class="ctcatg add" data-testid="cat-category-new" onclick="ctNewCategory()">＋ New</button>'
     + '</div>'
     + (orphans.length
-        ? '<div style="font-size:11.5px;color:var(--warn-2);margin-top:5px">⚠ '+orphans.length+' of these '
+        ? '<div style="font-size:var(--fs-1);color:var(--warn-2);margin-top:5px">⚠ '+orphans.length+' of these '
           + (orphans.length===1?'is':'are')+' no longer live. Kept as-is — tap to detach.</div>'
         : '');
 }
@@ -7097,12 +7097,12 @@ function catFieldVal(k, v){
     /* Synonyms are the field Athi could not see, so they get chips rather than a comma soup — the count is the
        thing you actually want to read at a glance. */
     return '<div style="display:flex;flex-wrap:wrap;gap:4px">' + v.map(function(x){
-      return '<span style="border:1px solid var(--line);border-radius:9px;padding:1px 8px;font-size:11.5px;background:var(--card);color:var(--on-card)">' + esc(String(x)) + '</span>';
+      return '<span style="border:1px solid var(--line);border-radius:9px;padding:1px 8px;font-size:var(--fs-1);background:var(--card);color:var(--on-card)">' + esc(String(x)) + '</span>';
     }).join('') + '</div>';
   }
   if (typeof v === 'object') {
     if (typeof cbAmount === 'function' && v.amount !== undefined) return esc(String(v.currency || '') + ' ' + v.amount);
-    return '<span style="font-family:ui-monospace,Menlo,monospace;font-size:11.5px">' + esc(JSON.stringify(v)) + '</span>';
+    return '<span style="font-family:ui-monospace,Menlo,monospace;font-size:var(--fs-1)">' + esc(JSON.stringify(v)) + '</span>';
   }
   return esc(String(v));
 }
@@ -7159,7 +7159,7 @@ function catUnusedRow(k, label, why, required){
     + esc(String(label || k).replace(/_/g, ' ')) + '</b>'
     + '<span style="flex:1;min-width:0;color:' + (required ? 'var(--warn-2)' : 'var(--grey)') + ';font-style:italic;font-weight:' + (required ? '700' : '400') + '">'
     + (required ? 'required — not set' : 'not set')
-    + '<span style="font-style:normal;font-weight:400;color:var(--grey);font-size:11.5px"> · ' + esc(why) + '</span>'
+    + '<span style="font-style:normal;font-weight:400;color:var(--grey);font-size:var(--fs-1)"> · ' + esc(why) + '</span>'
     + '<span style="font-style:normal;font-weight:400">' + catStdLine(k) + '</span></span></div>';
 }
 async function prodAllFields(id){
@@ -7230,7 +7230,7 @@ async function prodAllFields(id){
   modal('<h3 style="margin:0 0 3px">' + esc(pName(d)) + (d.variant ? ' <span style="color:var(--grey);font-weight:500">· ' + esc(d.variant) + '</span>' : '') + '</h3>'
     + '<div style="font-size:12px;margin-bottom:4px"><span style="color:' + stCol + ';font-weight:700">' + esc(st) + '</span>'
     + '<span style="color:var(--grey)"> · ' + Object.keys(d).length + ' fields on this item</span>' + compl + '</div>'
-    + '<div style="font-size:11.5px;color:var(--grey);margin-bottom:6px">🔒 marks a field written by another system or stamped by an event — shown, never edited. <i>' + tx('Not set') + '</i> marks a field this catalogue has and this item leaves blank.</div>'
+    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:6px">🔒 marks a field written by another system or stamped by an event — shown, never edited. <i>' + tx('Not set') + '</i> marks a field this catalogue has and this item leaves blank.</div>'
     + '<div style="max-height:52vh;overflow-y:auto">' + body + '</div>'
     + '<div style="display:flex;gap:8px;margin-top:14px">'
     + '<button class="btn" style="flex:1" onclick="closeModal()">' + tx('Close') + '</button>'
@@ -7248,7 +7248,7 @@ function prodStatusPick(id){
       + esc(label) + '<div style="font-size:var(--fs-1);color:var(--grey);font-weight:400">' + esc(why) + '</div></button>';
   };
   modal('<h3 style="margin:0 0 4px">Status · ' + esc(pName(d)) + '</h3>'
-    + '<div style="font-size:11.5px;color:var(--grey);margin-bottom:12px">The row is never deleted — only the flag changes.</div>'
+    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:12px">The row is never deleted — only the flag changes.</div>'
     + opt('available', 'Available', 'normal — matches orders and prices')
     + opt('unavailable', 'Not available (for now)', 'still matches, so the order records what they asked for — flagged as unable to ship')
     + opt('retired', 'Retired', 'no longer sold. New orders stop resolving to it; old chits are untouched')
@@ -7368,7 +7368,7 @@ function prodDetailHTML(){
     const nfields = Object.keys(d).length;
     body = `<div class="sec">${tx('Product')}</div>${prodViewFields(d)}`
       + `<div style="padding:9px 12px"><button class="composebtn" data-testid="cat-all-fields" onclick="prodAllFields('${id}')">🗂️ All ${nfields} fields</button>`
-      + `<span style="font-size:11.5px;color:var(--grey);margin-inline-start:9px">synonyms, status, and anything imported</span></div>`
+      + `<span style="font-size:var(--fs-1);color:var(--grey);margin-inline-start:9px">synonyms, status, and anything imported</span></div>`
       + prodAvailBlock(d,id);
     bar=`<button class="pri" data-testid="cat-edit" onclick="setProdMode('edit')">${tx('✎ Edit')}</button><button data-testid="cat-status" onclick="prodStatusPick('${id}')">${tx('◍ Status')}</button><button class="warn" data-testid="cat-delete" onclick="delProduct('${id}')">${tx('Delete')}</button>`;
   }
@@ -7560,15 +7560,15 @@ function taskPanel(){
   const _tdesc = {order:tx("chits you've sent"), task:tx('chits received'), drafts:tx('unsent chits'), trash:tx('deleted chits'), archive:tx('archived chits')}[UI.folder] || tx('chits received');
   /* ⚠️ THE DESCRIPTION STAYS THE TRACK'S, inside a folder too. A folder is that list FILTERED — the chits in
      "Needs attention" are still chits received, and relabelling per folder would imply otherwise. */
-  const _btns = _isTrack ? `<button type="button" data-testid="folder-metrics-btn" onclick="openFolderPane('metrics')" title="${_fsel?'Metrics for this folder':'Metrics for this whole track — and whether the folders add up'}" style="margin-inline-start:auto;cursor:pointer;border:1px solid var(--line);border-radius:9px;padding:0 11px;min-height:28px;display:inline-flex;align-items:center;gap:5px;font-size:11.5px;background:var(--card);color:var(--on-card)">${tx('📊 Metrics')}</button>
-      <button type="button" data-testid="folder-groupsum-btn" onclick="openFolderPane('groupsum')" title="What does this pile add up to — quantity per item, cost, and who asked" style="cursor:pointer;border:1px solid var(--line);border-radius:9px;padding:0 11px;min-height:28px;display:inline-flex;align-items:center;gap:5px;font-size:11.5px;background:var(--card);color:var(--on-card)">🧮 Group sum</button>
-      <button type="button" data-testid="folder-rules-btn" onclick="openFolderPane('rules')" title="${_fsel?'Rules that file into this folder':'Every rule on this track, and where each one files'}" style="cursor:pointer;border:1px solid var(--line);border-radius:9px;padding:0 11px;min-height:28px;display:inline-flex;align-items:center;gap:5px;font-size:11.5px;background:var(--card);color:var(--on-card)">⚙️ Rules</button>` : '';
+  const _btns = _isTrack ? `<button type="button" data-testid="folder-metrics-btn" onclick="openFolderPane('metrics')" title="${_fsel?'Metrics for this folder':'Metrics for this whole track — and whether the folders add up'}" style="margin-inline-start:auto;cursor:pointer;border:1px solid var(--line);border-radius:9px;padding:0 11px;min-height:28px;display:inline-flex;align-items:center;gap:5px;font-size:var(--fs-1);background:var(--card);color:var(--on-card)">${tx('📊 Metrics')}</button>
+      <button type="button" data-testid="folder-groupsum-btn" onclick="openFolderPane('groupsum')" title="What does this pile add up to — quantity per item, cost, and who asked" style="cursor:pointer;border:1px solid var(--line);border-radius:9px;padding:0 11px;min-height:28px;display:inline-flex;align-items:center;gap:5px;font-size:var(--fs-1);background:var(--card);color:var(--on-card)">🧮 Group sum</button>
+      <button type="button" data-testid="folder-rules-btn" onclick="openFolderPane('rules')" title="${_fsel?'Rules that file into this folder':'Every rule on this track, and where each one files'}" style="cursor:pointer;border:1px solid var(--line);border-radius:9px;padding:0 11px;min-height:28px;display:inline-flex;align-items:center;gap:5px;font-size:var(--fs-1);background:var(--card);color:var(--on-card)">⚙️ Rules</button>` : '';
   const helpStrip = isCust ? "" : `<div style="display:flex;align-items:center;gap:7px;padding:8px 12px;border-bottom:1px solid var(--line);background:var(--gold-soft);font-size:12px;color:var(--warn-3);flex-wrap:wrap">
       <b style="font-family:'Space Grotesk';font-size:13px;display:flex;align-items:center;gap:6px;min-width:0">
         ${_fsel ? `<span data-testid="crumb-track" onclick="clearFolder()" title="Back to all of ${esc(_tname.slice(2))}" style="cursor:pointer;color:var(--blue)">${_tname}</span><span style="color:var(--grey);font-weight:400">/</span><span data-testid="crumb-folder" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📁 ${esc(_fsel.name)}</span>`
                 : `<span data-testid="crumb-track">${_tname}</span>`}
       </b><span style="color:var(--warn-3)">— ${_tdesc}</span>${/* was #8a7c58 — 3.65:1 on the gold-soft band; 5.09 now */''}
-      ${_fsel?`<span data-testid="folder-rename" onclick="renameFolder('${esc(_fsel.folder_id)}')" title="Rename this folder" style="cursor:pointer;color:var(--blue);font-size:11.5px;margin-inline-start:2px">${tx('Rename')}</span><span data-testid="folder-delete" onclick="deleteFolder('${esc(_fsel.folder_id)}')" title="Delete this folder — the chits inside are NOT deleted" style="cursor:pointer;color:var(--disp);font-size:11.5px">${tx('Delete')}</span>`:''}
+      ${_fsel?`<span data-testid="folder-rename" onclick="renameFolder('${esc(_fsel.folder_id)}')" title="Rename this folder" style="cursor:pointer;color:var(--blue);font-size:var(--fs-1);margin-inline-start:2px">${tx('Rename')}</span><span data-testid="folder-delete" onclick="deleteFolder('${esc(_fsel.folder_id)}')" title="Delete this folder — the chits inside are NOT deleted" style="cursor:pointer;color:var(--disp);font-size:var(--fs-1)">${tx('Delete')}</span>`:''}
       ${_btns}<button class="composebtn" style="${_isTrack?'':'margin-inline-start:auto'}" onclick="toggleListHelp()">${UI.listHelp?'✕ Close':'❓ Help'}</button>
     </div>${UI.listHelp?`<div style="padding:11px 12px;border-bottom:1px solid var(--line);overflow-y:auto;max-height:52%">${assistPage(_ak)}</div>`:''}`;
   /**
@@ -7962,7 +7962,7 @@ async function openNotifications(repaint){
       + (pick ? '<span class="cbx ' + (on ? 'on' : '') + '" style="flex:0 0 auto;margin-inline-end:2px">' + (on ? '✓' : '') + '</span>' : '')
       + '<span class="ni">' + x.i + '</span><div style="min-width:0">'
       + '<div class="nt">' + x.t + '</div>'
-      + (x.d ? '<div style="font-size:11.5px;color:var(--ink-2,#5b6470);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + x.d + '</div>' : '')
+      + (x.d ? '<div style="font-size:var(--fs-1);color:var(--ink-2,#5b6470);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + x.d + '</div>' : '')
       + '<div class="ns">' + x.s + '</div></div></div>';
   };
   const nhead = function(t){
@@ -8666,7 +8666,7 @@ function _viaExtras(v){
   if(v.unplaced) out.push(['⚠️ Not placed anywhere', v.unplaced, 'var(--disp)']);
   if(!out.length) return '';
   return '<div style="margin-top:7px">'+out.map(function(r){
-    return '<div style="display:flex;gap:8px;font-size:11.5px;padding:2px 0"><span style="color:var(--grey);min-width:120px">'+esc(r[0])+'</span><span style="color:'+r[2]+'">'+esc(r[1])+'</span></div>';
+    return '<div style="display:flex;gap:8px;font-size:var(--fs-1);padding:2px 0"><span style="color:var(--grey);min-width:120px">'+esc(r[0])+'</span><span style="color:'+r[2]+'">'+esc(r[1])+'</span></div>';
   }).join('')+'</div>';
 }
 /* How the lines on a raised request got their prices — and, more usefully, how they did NOT. */
@@ -8753,7 +8753,7 @@ function _aiMd(md){
   }
   return o.join('');
 }
-var _AI_MDCSS='.amddoc{color:#1e2530;font-size:var(--fs-2);line-height:1.55;font-family:-apple-system,Segoe UI,Roboto,sans-serif}.amddoc h1,.amddoc h2,.amddoc h3,.amddoc h4{margin:16px 0 7px;font-weight:700;line-height:1.25;color:#141a22}.amddoc h1{font-size:17px;padding-bottom:6px;border-bottom:2px solid #e6eaf0}.amddoc h2{font-size:14.5px}.amddoc h3,.amddoc h4{font-size:12px;text-transform:uppercase;letter-spacing:.03em;color:#5a6472}.amddoc p{margin:8px 0}.amddoc ul,.amddoc ol{margin:8px 0 8px 20px;padding:0}.amddoc li{margin:3px 0}.amddoc hr{border:0;border-top:1px solid #e6eaf0;margin:14px 0}.amddoc table.amdt{border-collapse:collapse;width:100%;margin:11px 0;font-size:11.5px}.amddoc .amdt th,.amddoc .amdt td{border:1px solid #dfe4ec;padding:7px 9px;text-align:start;vertical-align:top}.amddoc .amdt th{background:var(--card);font-weight:700;color:var(--on-card)}.amddoc .amdt tr:nth-child(even) td{background:var(--card)}.amddoc code{background:var(--blue-tint-bg);padding:1px 5px;border-radius:4px;font-size:var(--fs-1)}.amddoc strong{color:#141a22}';
+var _AI_MDCSS='.amddoc{color:#1e2530;font-size:var(--fs-2);line-height:1.55;font-family:-apple-system,Segoe UI,Roboto,sans-serif}.amddoc h1,.amddoc h2,.amddoc h3,.amddoc h4{margin:16px 0 7px;font-weight:700;line-height:1.25;color:#141a22}.amddoc h1{font-size:17px;padding-bottom:6px;border-bottom:2px solid #e6eaf0}.amddoc h2{font-size:14.5px}.amddoc h3,.amddoc h4{font-size:12px;text-transform:uppercase;letter-spacing:.03em;color:#5a6472}.amddoc p{margin:8px 0}.amddoc ul,.amddoc ol{margin:8px 0 8px 20px;padding:0}.amddoc li{margin:3px 0}.amddoc hr{border:0;border-top:1px solid #e6eaf0;margin:14px 0}.amddoc table.amdt{border-collapse:collapse;width:100%;margin:11px 0;font-size:var(--fs-1)}.amddoc .amdt th,.amddoc .amdt td{border:1px solid #dfe4ec;padding:7px 9px;text-align:start;vertical-align:top}.amddoc .amdt th{background:var(--card);font-weight:700;color:var(--on-card)}.amddoc .amdt tr:nth-child(even) td{background:var(--card)}.amddoc code{background:var(--blue-tint-bg);padding:1px 5px;border-radius:4px;font-size:var(--fs-1)}.amddoc strong{color:#141a22}';
 async function askAiOrder(){
   var c=UI.detail; if(!c){ if(typeof toast==='function')toast('Open an order first'); return; }
   var ctx={ subject:c.code, from:(c.sender||c.party||''), amount:c.amt, currency:c.currency,
@@ -9240,7 +9240,7 @@ function buildAttGroups(c){
    asked for something; deleting it from the screen would make the chit disagree with the message it came from. */
 function lineWas(h){
   return (h||[]).map(function(v){
-    return '<div style="opacity:.5;font-size:11.5px"><s>'+esc([v.particulars, v.quantity, v.unit].filter(function(x){return x!=null&&x!=='';}).join(' '))+'</s></div>';
+    return '<div style="opacity:.5;font-size:var(--fs-1)"><s>'+esc([v.particulars, v.quantity, v.unit].filter(function(x){return x!=null&&x!=='';}).join(' '))+'</s></div>';
   }).join('');
 }
 /* items table — each line shows a clip + expandable image strip scoped to that line */
@@ -9285,7 +9285,7 @@ function contentItems(c){
     /* ⭐ THE CUSTOMER'S OWN WORDS, under the line (b141). Athi: *"this will give confidence to the person; the
        right message is interpreted."* Everything else on the row came out of a machine — this is the only part
        that did not, so it is the only part that can settle whether the machine read it right. */
-    const rawp=li0.raw_phrase?`<div class="ir" style="border-top:0;padding-top:0;padding-bottom:8px"><span class="nm" style="font-size:11.5px;color:var(--grey)">they wrote “${esc(li0.raw_phrase)}”${li0.phrase_says!=null?` · <b style="color:var(--disp)">reads as ${esc(String(li0.phrase_says))}</b>`:''}</span></div>`:'';
+    const rawp=li0.raw_phrase?`<div class="ir" style="border-top:0;padding-top:0;padding-bottom:8px"><span class="nm" style="font-size:var(--fs-1);color:var(--grey)">they wrote “${esc(li0.raw_phrase)}”${li0.phrase_says!=null?` · <b style="color:var(--disp)">reads as ${esc(String(li0.phrase_says))}</b>`:''}</span></div>`:'';
     /**
      * ⭐ AN UNPRICED LINE MUST SAY SO ON THE ROW, and offer the fix there.
      *
@@ -9552,7 +9552,7 @@ function amdShortlistHTML(cands, cat, totalItems){
   const l = AMD.line || {};
   const head = '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--warn-2);margin-bottom:5px">'
     + (cands.length===1 ? 'closest match' : 'which of these ' + cands.length + '?') + '</div>'
-    + '<div style="font-size:11.5px;color:var(--grey);margin-bottom:9px;line-height:1.45">“'
+    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:9px;line-height:1.45">“'
     + esc(AMD.raw || l.particulars || '') + '” answers to '
     + (cat && cat.ambiguous ? ('<b>' + cat.ambiguous + '</b> catalogue names') : 'more than one grade')
     + ' — the prices differ, so nothing was picked for you.</div>';
@@ -9577,7 +9577,7 @@ function amdShortlistHTML(cands, cat, totalItems){
      not arrived yet. Offering a list of nothing is worse than saying it is still coming. */
   const all = totalItems
     ? '<button class="btn" style="width:100%;margin:2px 0 4px;font-size:13px" onclick="amdView(\'itemall\')">none of these — show all ' + totalItems + ' items</button>'
-    : '<div style="font-size:11.5px;color:var(--grey);text-align:center;padding:6px 0">loading the rest of the catalogue…</div>';
+    : '<div style="font-size:var(--fs-1);color:var(--grey);text-align:center;padding:6px 0">loading the rest of the catalogue…</div>';
   return head + rows + all;
 }
 function amendPaint(){
@@ -9605,7 +9605,7 @@ function amendPaint(){
     const _dead = cands.length ? `
       <div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--warn-2);margin-bottom:5px">
         ${cands.length===1?'closest match':'which of these '+cands.length+'?'}</div>
-      <div style="font-size:11.5px;color:var(--grey);margin-bottom:9px;line-height:1.45">
+      <div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:9px;line-height:1.45">
         “${esc(AMD.raw||l.particulars||'')}” answers to ${cat.ambiguous?('<b>'+cat.ambiguous+'</b> catalogue names'):'more than one grade'} — the prices differ, so nothing was picked for you.</div>
       ${cands.map((x,i)=>{
         const on = AMD.pickedKey===x.key;
@@ -9627,7 +9627,7 @@ function amendPaint(){
              none of these — show all ${items.length} items</button>`
         /* ⚠️ NOT "show all 0 items". On the first paint the shortlist comes from the LINE and the full catalogue has
            not arrived yet — offering a list of nothing would be worse than saying it is still coming. */
-        : `<div style="font-size:11.5px;color:var(--grey);text-align:center;padding:6px 0">loading the rest of the catalogue…</div>`}` : '';
+        : `<div style="font-size:var(--fs-1);color:var(--grey);text-align:center;padding:6px 0">loading the rest of the catalogue…</div>`}` : '';
 
     if(cands.length) return _amdSheet('Which one did they mean?', '<div data-testid="amd-picker">'+shortlist+'</div>');
     return _amdSheet('Which item?', items.length
@@ -9695,7 +9695,7 @@ function amendPaint(){
 
     <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:3px">
       <div style="font-size:18px;font-weight:800;flex:1;min-width:0">${esc(l.particulars||'—')}</div>
-      ${items0.length||cands0.length ? `<span onclick="amdView('itemall')" style="cursor:pointer;font-size:11.5px;color:var(--blue);font-weight:700;white-space:nowrap">change item</span>` : ''}
+      ${items0.length||cands0.length ? `<span onclick="amdView('itemall')" style="cursor:pointer;font-size:var(--fs-1);color:var(--blue);font-weight:700;white-space:nowrap">change item</span>` : ''}
     </div>
     <div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:12px">${AMD.picked?'from your catalogue':'as the reader read it'}</div>
 
@@ -9709,7 +9709,7 @@ function amendPaint(){
       <input inputmode="decimal" data-testid="amd-price" value="${esc(money(l.price))}" oninput="amdSetPrice(this.value)" placeholder="price"
              style="width:84px;text-align:center;font-size:17px;font-weight:700;padding:8px;border:1px solid var(--line);border-radius:9px">
     </div>
-    <div style="font-size:11.5px;color:var(--grey);margin-bottom:12px">quantity · unit · price${total}</div>
+    <div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:12px">quantity · unit · price${total}</div>
 
     <input value="${esc(l.comment||'')}" oninput="amdSetNote(this.value)" placeholder="note for this line (optional)"
            style="width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:13.5px;margin-bottom:12px">

@@ -218,7 +218,7 @@ function cbcatSeedAsk(){
     + '<div class="mbody"><div style="font-size:var(--fs-2);line-height:1.6;color:var(--ink);margin-bottom:10px">'
     + 'Pick the trade you are in and its usual categories are added, nested as the standard nests them. '
     + '<b>Nothing you already have is changed</b> — names that already exist are skipped.'
-    + '<div style="font-size:11.5px;color:var(--grey);margin-top:6px">⚠️ These are a starting point, not a '
+    + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">⚠️ These are a starting point, not a '
     + 'ceiling. Rename, retire or add your own afterwards — they are ordinary categories from the moment they '
     + 'land.</div></div>'
     + '<div class="bulklist">' + opts + '</div></div>'
@@ -304,7 +304,7 @@ function cbcatRowsHTML(){
       +     '<b style="font-size:13.5px' + (ret ? ';text-decoration:line-through' : '') + '">' + esc(c.name) + '</b>'
       +     (ret ? '<span class="cbcat-badge ret">retired</span>' : '')
       +   '</div>'
-      +   (c.note ? '<div style="font-size:11.5px;color:var(--grey);margin-top:1px">' + esc(c.note) + '</div>' : '')
+      +   (c.note ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:1px">' + esc(c.note) + '</div>' : '')
       + '</div>'
       /* The count is the reason to look at this list at all — which shelves are actually carrying anything. */
       + '<span class="cbcat-n" title="products in this category">' + n + '</span>'
@@ -384,7 +384,7 @@ function cbcatStatsHTML(){
     /* ⭐ The uncategorised count is a to-do list, so it is a BUTTON — it takes you to the products it is
        counting rather than merely reporting a number you then have to go and find by hand. */
     + ((CBCAT_UI.counts && CBCAT_UI.counts.none)
-        ? '<button data-testid="catg-uncat" onclick="cbcatGoUncategorised()" style="margin-inline-start:auto;border:1px solid var(--gold-line);background:var(--gold-soft);border-radius:9px;padding:4px 9px;font-size:11.5px;color:var(--warn-3);cursor:pointer">'
+        ? '<button data-testid="catg-uncat" onclick="cbcatGoUncategorised()" style="margin-inline-start:auto;border:1px solid var(--gold-line);background:var(--gold-soft);border-radius:9px;padding:4px 9px;font-size:var(--fs-1);color:var(--warn-3);cursor:pointer">'
           + CBCAT_UI.counts.none + ' uncategorised <span class=arw>→</span></button>'
         : '');
 }
@@ -414,7 +414,7 @@ function cbcatSchemesHTML(){
     + '<div class="cbcat-note" style="margin-bottom:8px">' + esc(s.blurb) + '</div>'
     + '<div class="cbcat-plist">'
     + s.rows.map(function(r){
-        return '<div class="cbcat-prow"><code style="font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11.5px">'
+        return '<div class="cbcat-prow"><code style="font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:var(--fs-1)">'
           + esc(r.code) + '</code><span style="margin-inline-start:8px">' + esc(r.label || '') + '</span>'
           + (r.note ? '<span class="cbcat-also">' + esc(r.note) + '</span>' : '') + '</div>';
       }).join('')
@@ -470,7 +470,7 @@ function cbcatCss(){
   if (document.getElementById('cbcat_css')) return;
   var s = document.createElement('style'); s.id = 'cbcat_css';
   s.textContent = [
-    '.cbcat-n{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11.5px;color:var(--grey);',
+    '.cbcat-n{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:var(--fs-1);color:var(--grey);',
     'background:var(--paper);border:1px solid var(--line);border-radius:20px;padding:1px 9px;flex:0 0 auto}',
     '.cbcat-badge{font-size:var(--fs-1);font-weight:700;border-radius:6px;padding:1px 7px;text-transform:uppercase;letter-spacing:.04em}',
     '.cbcat-badge.ret{background:var(--neutral-tint);color:var(--ink-2)}',

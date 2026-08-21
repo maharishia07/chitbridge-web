@@ -263,7 +263,7 @@
       + 'border:1px solid #e3e6ea;background:var(--card)}'
       + '.cbst-foot button.pri{flex:1;background:var(--cbst-accent,var(--blue));color:#fff;border-color:var(--cbst-accent,var(--blue))}'
       + '.cbst-foot button:disabled{opacity:.45;cursor:not-allowed}'
-      + '.cbst-why{flex-basis:100%;font-size:11.5px;color:var(--warn-2)}';
+      + '.cbst-why{flex-basis:100%;font-size:var(--fs-1);color:var(--warn-2)}';
     (document.head || document.documentElement).appendChild(st);
   }
   var _create = create;
