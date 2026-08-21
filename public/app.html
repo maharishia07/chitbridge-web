@@ -2464,6 +2464,27 @@ function meTake(){
   return p || api('me', { query: { include: 'readiness,channels,vault' } });
 }
 
+/**
+ * ⭐⭐ WHAT WE ALREADY KNOW, BEFORE ASKING AGAIN. `/me` was fetched in FIVE places across FOUR files — the
+ * profile, the actor profile, two spots in the network builder, and the readiness screen — and three of those
+ * had built their OWN "ask once" latch (`UI._netRootAsked`, `if(!SESSION.bridgeId)`, `if(!UI._me)`). Four
+ * private caches of one thing, because there was no shared one to reach for.
+ *
+ * ⚠️ THIS INTRODUCES NO NEW STALENESS, and that is why it is safe where a /me CACHE would not be. `UI._me` is
+ * already the app's copy of this response, and its invalidation is already written and already relied upon:
+ * every save does `UI._me = null; loadProfile()`. Reading it here reuses that contract instead of inventing a
+ * second one with its own rules to get wrong.
+ *
+ * ⚠️ AND IT IS THE CALLER'S OWN ROW EITHER WAY. /me answers for `req.identity.identity_id`, so for a co-assist
+ * both `UI._me` and a fresh fetch return the ACTOR's record — not the employer's. A caller that wants the
+ * business must ask for the business; swapping the source here cannot change which subject it gets, which is
+ * the one thing that would have made this a silent bug rather than a saving.
+ */
+function meNow(){
+  if (typeof UI !== 'undefined' && UI && UI._me) return Promise.resolve(UI._me);
+  return meTake();
+}
+
 function setSession(s){ SESSION={...SESSION,...s};
   // Live tokens are JWTs — derive the REAL actor/entity id from the token so the UI never hardcodes ids.
   const p=jwtPayload(SESSION.token);

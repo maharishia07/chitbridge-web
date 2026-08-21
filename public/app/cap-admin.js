@@ -2710,7 +2710,10 @@ async function loadActorProfile(h){
 
   let e = UI._me;
   if (!e) {
-    try { e = (await api('me')) || {}; UI._me = e; }
+      /* ⭐ meNow() — the warm request started at sign-in, or a fetch. An actor never passes through
+         loadProfile (it returns here first), so before this the co-assist path always paid a full round
+         trip while a perfectly good one was already in flight. */
+    try { e = (await meNow()) || {}; UI._me = e; }
     catch (err) { e = { display_name: SESSION.name || p.display_name, actor_key: p.actor_key, identity_type: 'actor' }; }
   }
   /* ⚠️ RE-QUERY AFTER THE AWAIT — renderApp rebuilds the shell, so the node captured above may be detached.

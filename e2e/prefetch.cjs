@@ -37,7 +37,8 @@ const ctx = vm.createContext({
   SESSION: { token: 't', role: 'entity' },
   api: (key, opts) => { calls.push(key + ':' + JSON.stringify((opts || {}).query || {})); return Promise.resolve({ marker: calls.length }); },
 });
-vm.runInContext('var _mePrefetch = null;\n' + grab('mePrefetchStart') + '\n' + grab('meTake'), ctx);
+ctx.UI = {};
+vm.runInContext('var _mePrefetch = null;\n' + grab('mePrefetchStart') + '\n' + grab('meTake') + '\n' + grab('meNow'), ctx);
 
 let pass = 0, fail = 0;
 const t = (name, cond, extra) => {
@@ -97,6 +98,45 @@ const t = (name, cond, extra) => {
   ctx.api = (key) => { calls.push(key); return Promise.resolve({ marker: 'recovered' }); };
   const after = await ctx.meTake();
   t('the consumer fetches for itself and succeeds', after && after.marker === 'recovered');
+
+  /**
+   * ⭐⭐ meNow() — WHAT WE ALREADY KNOW, BEFORE ASKING AGAIN. /me was fetched in FIVE places across FOUR files,
+   * and three of them had built their own "ask once" latch because there was no shared one to reach for.
+   *
+   * ⚠️ IT IS SAFE WHERE A /me CACHE WOULD NOT BE, and the distinction is worth keeping straight: `UI._me` is
+   * already the app's copy of this response, and its invalidation is already written and relied upon — every
+   * save does `UI._me = null; loadProfile()`. This reuses that contract rather than inventing a second one.
+   */
+  console.log('\n── meNow: use what is already held ──');
+  calls = [];
+  ctx.UI = { _me: { display_name: 'held', identity_id: 'e1' } };
+  ctx._mePrefetch = null;
+  ctx.api = (key) => { calls.push(key); return Promise.resolve({ marker: 'fetched' }); };
+  const held = await ctx.meNow();
+  t('returns the held record without a request', calls.length === 0 && held.display_name === 'held');
+
+  calls = [];
+  ctx.UI = {};
+  const fetched = await ctx.meNow();
+  t('falls through to a request when nothing is held', calls.length === 1 && fetched.marker === 'fetched');
+
+  /**
+   * ⚠️⚠️ THE TRAP THIS ASSERTION EXISTS FOR. /me answers for `req.identity.identity_id`, so for a co-assist BOTH
+   * `UI._me` and a fresh fetch return the ACTOR's record — not the employer's. If meNow() ever returned a
+   * different SUBJECT than the fetch it replaces, four call sites would silently start reading the wrong
+   * business, and nothing on screen would look broken. Swapping the source must not swap the subject.
+   */
+  calls = [];
+  ctx.UI = { _me: { identity_id: 'actor-1', identity_type: 'actor' } };
+  const asActor = await ctx.meNow();
+  t('an actor gets the ACTOR record — the source changed, the subject did not',
+    asActor.identity_id === 'actor-1' && asActor.identity_type === 'actor');
+
+  /* ⚠️ A cleared _me must go back to the network — that is how every save invalidates. */
+  calls = [];
+  ctx.UI = { _me: null };
+  await ctx.meNow();
+  t('a cleared UI._me fetches again — the existing invalidation still works', calls.length === 1);
 
   console.log('\n  ══ ' + pass + ' passed · ' + fail + ' failed ══\n');
   process.exit(fail ? 1 : 0);

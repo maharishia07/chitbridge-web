@@ -230,7 +230,9 @@ async function netWhereAmI(){
     // which is the worst possible failure here: indistinguishable from the truth, and it hands a member of a
     // network the Design-your-network screen. If the session does not have it, ask /me once and cache it.
     if(!SESSION.bridgeId){
-      try{ var r0 = await api('me'); var e0 = (r0 && (r0.entity || r0)) || {};
+      /* ⭐ meNow() — this already had its own ask-once gate (`if(!SESSION.bridgeId)`); now the answer can
+         come from what the app already holds instead of a fourth private cache of /me. */
+      try{ var r0 = await meNow(); var e0 = (r0 && (r0.entity || r0)) || {};
            if(e0.bridge_id){ SESSION.bridgeId = e0.bridge_id; if(typeof setSession==='function') setSession({bridgeId:e0.bridge_id}); } }catch(_){}
     }
     if(!SESSION.bridgeId){ UI._netRole = null; UI._netPlaceBusy = false; host.innerHTML = ''; return; }   // unknown ≠ alone: say nothing
@@ -2397,7 +2399,8 @@ function _netRootHandle(){
   if (UI._netRootHandle) return UI._netRootHandle;
   if (!UI._netRootAsked && _netLoggedIn()) {
     UI._netRootAsked = true;                       // once per session; a failed read simply keeps the fallback
-    try { api('me').then(function(r){
+    /* ⭐ meNow() — UI._netRootAsked was the third private ask-once latch for one endpoint. */
+    try { meNow().then(function(r){
       var e = (r && (r.entity || r)) || {};
       var h = e.user_id || e.handle;
       // The NETWORK's own visibility, which caps every store under it (see netMaxExposure).

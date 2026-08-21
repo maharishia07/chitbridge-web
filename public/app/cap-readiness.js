@@ -143,7 +143,9 @@ async function rdLoadDeclaration(){
     if(!UI.laneVertical && L.vert) UI.laneVertical=L.vert;
     if(!UI.laneDest && L.dest){ UI.laneDest=L.dest; UI.laneRd=undefined; } } }catch(_){}
   // ORIGIN = the entity's registered country (not a choice) — fixed home jurisdiction
-  try{ var me=await api('me'); if(me && me.country){ var o=_mapOrigin(me.country); if(o!==UI.laneOrigin){ UI.laneOrigin=o; UI.laneRd=undefined; } } }catch(_){ if(!UI.laneOrigin) UI.laneOrigin='IN'; }
+  /* ⭐ meNow() — the entity's country is almost always already in UI._me by the time the readiness screen
+     opens, and this only wants that one field. */
+  try{ var me=await meNow(); if(me && me.country){ var o=_mapOrigin(me.country); if(o!==UI.laneOrigin){ UI.laneOrigin=o; UI.laneRd=undefined; } } }catch(_){ if(!UI.laneOrigin) UI.laneOrigin='IN'; }
   if(typeof renderApp==='function') renderApp();
 }
   // has evidence + not expired
