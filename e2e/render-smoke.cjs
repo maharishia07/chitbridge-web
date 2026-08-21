@@ -37,6 +37,10 @@ const sandbox = {
   tx: (s) => s, txf: (s) => s,
   val: () => '',
   opt: (list, sel) => list.map(o => '<option' + (o === sel ? ' selected' : '') + '>' + o + '</option>').join(''),
+  /* ⚠️ apGet/apSet ARE REAL GLOBALS FROM app.html, and their absence here was not caught until a render
+     started using one. A harness missing a global the app always has does not fail honestly — it fails as a
+     ReferenceError in twenty unrelated cases and looks like the feature broke. */
+  apGet: (k, d) => d, apSet(){},
   toast(){}, renderApp(){}, loadProfile(){}, loadVault(){}, ensureCap: async () => {}, api: async () => ({}),
   _capShowDetail(){}, _capEnd: () => '', menuAssist: () => '', navTo(){}, setSetSec(){}, profSetSec(){},
   jwtPayload: () => ({}), MSG: { profileSaved: () => 'saved' },

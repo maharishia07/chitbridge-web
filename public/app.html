@@ -5126,129 +5126,25 @@ const _BTN='border:0;border-radius:9px;padding:0 14px;color:#fff;background:var(
 /* PROFILE → app/cap-admin.js */
 /* SETTINGS + governance (7-layer stub) → app/cap-admin.js */
 /* settingsScreen/loadSettings/saveSettings/autoAssignCard/saveAutoAssign → app/cap-admin.js */
-/* NETWORK */
-function networkScreen(){ return scr("🔗 Network — internal architecture","netbody","network"); }
-async function loadNetwork(){ const h=document.getElementById("netbody"); if(!h)return;
-  try{
-    const self = await api("netLookup",{query:{bridgeId:SESSION.bridgeId||""}}).catch(()=>null);
-    if(!self || !self.id){ h.innerHTML = netNotInModel(SESSION.bridgeId); return; }
-    const [tree,edges] = await Promise.all([ api("netSubtree",{params:{id:self.id}}), api("netConnections",{params:{id:self.id}}) ]);
-    h.innerHTML = netView(self, tree||[], edges||[]);
-  }catch(e){ h.innerHTML=scrErr(e); }
-}
-const ORG_HELP = [
-  {q:"I have multiple branches", a:"Model each branch as a sub-entity: register it, then from your head office use Connect a sub-entity with the branch's bridge id, and have the branch approve. Each branch can have its own counters beneath it — a tree, not a flat list."},
-  {q:"What's the lead node?", a:"Your lead node is the top of your tree — usually your head office. Everything links upward to it, and a node can have only one live parent (tree-only)."},
-  {q:"Where do I set co-assists?", a:"Co-assists belong to a node — your head office or a branch. Add them in Co-assists and they're scoped to that node here. A branch can have many co-assists; each works within their node."},
-  {q:"What access do co-assists get?", a:"A co-assist acts FOR the owner — the owner stays the party. Their access is a scoped grant: a capacity (e.g. create chits, edit catalogue) and how deep in the tree it reaches. Default-deny — they only get what you grant, checked live on every action."},
-  {q:"How do branches & co-assists coordinate?", a:"Each branch runs its own chits with its own co-assists. A head-office co-assist can be granted down across branches; a branch co-assist stays scoped to their branch. You can only delegate access you hold."},
-  {q:"If a branch leaves?", a:"On Disconnect, any access granted from outside that branch is cascade-revoked, and the paths and grant scopes re-stamp in one transaction. Open chits settle first."},
-  {q:"Branch or supplier?", a:"A branch is part of YOUR business — Network. A supplier is a different business you buy from — Connections. Same language, different relationship."},
-  {q:"How do I create a branch?", a:"Create branches one at a time: name the branch (we register it as a sub-entity), link it to its parent, then approve. You can't build the whole tree at once — each node is created, then connected, in order. Repeat down the tree."},
-  {q:"Build a whole new structure?", a:"Starting from scratch? List your branches and their levels, and we can register and link them in order automatically — that's an upcoming automation. For now, add them one at a time with Create branch."},
-  {q:"Internal or customer-facing?", a:"Every node is internal-B2B by default (mode b2b). A node turns customer-facing (b2c) only when its mode is b2c — which needs a customer-facing plan — plus a public catalogue and the shop's open sign on. One network runs one shape: you don't mix business and consumer in the same network."},
-];
-function orgBanner(){ return `<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:12px;padding:12px 14px;margin-bottom:12px;font-size:13px;color:var(--warn-3);line-height:1.5"><b style="font-family:'Space Grotesk'">Design your organisation here.</b> Add your own branches, units and counters as sub-entities, up to your lead node — your <b>internal</b> structure. Place your <b>actors (Co-Assist)</b> at each node; their access flows through the tree. To deal with other businesses, use <b>${tx('Connections')}</b>.</div>${orgHelpBox()}`; }
-function orgHelpBox(){ return `<div style="${_CARD}"><div style="font-family:'Space Grotesk';font-weight:600;font-size:13px;margin-bottom:2px">Structure &amp; access assistant <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--gold-soft);color:var(--warn-3);border-radius:5px;padding:1px 7px">${tx('Web Demo · sample answers')}</span></div><div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:10px">How your branches and actors coordinate — where to set actors, and what access they get. (Real version: an AI handler that reads your structure, employees and grants.)</div><div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px">${ORG_HELP.map((f,i)=>`<button class="composebtn" onclick="orgAsk(${i})">${esc(f.q)}</button>`).join("")}</div><div style="display:flex;gap:8px"><input class="inp" id="org_in" placeholder="e.g. where do my branch managers fit?"><button style="${_BTN}" onclick="orgAskFree()">${tx('Ask')}</button></div><div id="org_ans" style="font-size:13px;color:var(--ink);margin-top:10px;line-height:1.55"></div></div>`; }
-function orgAsk(i){ const f=ORG_HELP[i]; const inp=document.getElementById("org_in"); if(inp)inp.value=f.q; const o=document.getElementById("org_ans"); if(o)o.innerHTML="<b>"+esc(f.q)+"</b><br>"+esc(f.a); }
-function orgAskFree(){ const q=(val("org_in")||"").toLowerCase(); let a;
-  if(/scratch|whole|automate|auto.?build|all at once|bulk|entire/.test(q))a=ORG_HELP[8].a;
-  else if(/create|add a branch|register|how.*(create|add)|set up a branch/.test(q))a=ORG_HELP[7].a;
-  else if(/coordinate|together|across branch|delegate|head office.*branch|branch.*head/.test(q))a=ORG_HELP[4].a;
-  else if(/actor|staff|employee|manager|co.?assist|who works|where.*(set|put|place)/.test(q))a=ORG_HELP[2].a;
-  else if(/access|privilege|grant|permission|capacity|can do|allowed|rights/.test(q))a=ORG_HELP[3].a;
-  else if(/leave|remove|disconnect|detach|exit|revoke/.test(q))a=ORG_HELP[5].a;
-  else if(/b2c|customer.?facing|internal.?b2b|storefront|consumer|public catalogue|open sign|sell.*customer/.test(q))a=ORG_HELP[9].a;
-  else if(/supplier|customer|external|connection/.test(q))a=ORG_HELP[6].a;
-  else if(/branch|multiple|location|outlet|sub.?entity/.test(q))a=ORG_HELP[0].a;
-  else if(/lead|head|top|root|parent/.test(q))a=ORG_HELP[1].a;
-  else if(q.trim())a="Tell me how your business is laid out and who works where, and I'll show how to model it — and remember, branches are added one at a time.";
-  else a="Ask me how to structure your organisation, create branches, set co-assists, and what access they get.";
-  const o=document.getElementById("org_ans"); if(o)o.innerHTML=esc(a); }
-function netStChip(s){ return `<span class="optchip ${s==='active'?'on':(s==='suspended'?'brk':'')}">${esc(s)}</span>`; }
-const NET_MODELS = {
-  sample:{ self:{id:"e_self", bridgeId:"head.office", name:"Head Office", mode:"b2b", claimed:true}, reg:{},
-    nodes:[ {id:"e_self",bridge_id:"head.office",name:"Head Office",depth:0,act:1,cap:"owner"},
-            {id:"b1",bridge_id:"north.branch",name:"North Branch",depth:1,act:2,cap:"chit.create"},
-            {id:"b2",bridge_id:"south.branch",name:"South Branch",depth:1,act:1,cap:"chit.create"} ],
-    edges:[ {id:"e1",parent_name:"Head Office",child_name:"North Branch",state:"active"},
-            {id:"e2",parent_name:"Head Office",child_name:"South Branch",state:"active"} ] },
-  b2b:{ self:{id:"e_self", bridgeId:"agg.main", name:"Aggregator", mode:"b2b", claimed:true}, reg:{},
-    nodes:[ {id:"e_self",bridge_id:"agg.main",name:"Aggregator",depth:0,act:1,cap:"owner"},
-            {id:"d1",bridge_id:"distrib.one",name:"Distributor",depth:1,act:2,cap:"chit.create"},
-            {id:"r1",bridge_id:"retail.one",name:"Retailer",depth:2,act:1,cap:"chit.create"} ],
-    edges:[ {id:"m1",parent_name:"Aggregator",child_name:"Distributor",state:"active"},
-            {id:"m2",parent_name:"Distributor",child_name:"Retailer",state:"active"} ] },
-  b2b2c:{ self:{id:"e_self", bridgeId:"factory.main", name:"Iron-Gate Factory", mode:"b2b", claimed:true}, reg:{},
-    nodes:[ {id:"e_self",bridge_id:"factory.main",name:"Iron-Gate Factory",depth:0,act:1,cap:"owner"},
-            {id:"sf",bridge_id:"shop@irongate.com",name:"Storefront",depth:1,act:1,cap:"catalogue.write",mode:"b2c"},
-            {id:"cut",bridge_id:"cutting.unit",name:"Cutting",depth:1,act:2,cap:"chit.create"},
-            {id:"weld",bridge_id:"welding.unit",name:"Welding",depth:1,act:2,cap:"chit.create"},
-            {id:"paint",bridge_id:"painting.unit",name:"Painting",depth:1,act:1,cap:"chit.create"},
-            {id:"disp",bridge_id:"dispatch.unit",name:"Dispatch",depth:1,act:1,cap:"chit.create"} ],
-    edges:[ {id:"f1",parent_name:"Iron-Gate Factory",child_name:"Storefront",state:"active"},
-            {id:"f2",parent_name:"Iron-Gate Factory",child_name:"Cutting",state:"active"},
-            {id:"f3",parent_name:"Iron-Gate Factory",child_name:"Welding",state:"active"},
-            {id:"f4",parent_name:"Iron-Gate Factory",child_name:"Painting",state:"active"} ] },
-  b2c:{ self:{id:"e_self", bridgeId:"shop@retail.com", name:"Retail Shop", mode:"b2c", claimed:true}, reg:{},
-    nodes:[ {id:"e_self",bridge_id:"shop@retail.com",name:"Retail Shop",depth:0,act:1,cap:"owner",mode:"b2c"},
-            {id:"c1",bridge_id:"counter.one",name:"Counter 1",depth:1,act:1,cap:"chit.create"},
-            {id:"c2",bridge_id:"counter.two",name:"Counter 2",depth:1,act:1,cap:"chit.create"} ],
-    edges:[ {id:"s1",parent_name:"Retail Shop",child_name:"Counter 1",state:"active"},
-            {id:"s2",parent_name:"Retail Shop",child_name:"Counter 2",state:"active"} ] }
-};
-const NET_MODEL_NOTE = {
-  sample:"A generic org tree — head office, branches, a counter. Build it with the create flow below.",
-  b2b:"Distribution chain: aggregator \u2192 distributor \u2192 retailer. All internal-B2B; a chit routes down one chain (NET-02).",
-  b2b2c:"Storefront (b2c) on a b2b make tree \u2014 the iron-gate case. Orders land at the Storefront and fan out to internal units; the fan-out is a future shape (ATH-116).",
-  b2c:"A single shopfront (b2c) with internal counters. Customers buy directly; no upstream distribution."
-};
-function netView(self, tree, edges){
-  const nodes = tree.map(n=>`<div style="padding:3px 0 3px ${(n.depth||0)*20}px;font-size:13.5px">${n.depth>0?'<span style="color:var(--grey)">└ </span>':''}<b>${esc(n.name)}</b> <span style="font-family:'Space Mono';font-size:var(--fs-1);color:var(--grey)">${esc((n.user_id||n.bridge_id)||'')}</span>${n.act!=null?` <span class="optchip" style="background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)">👥 ${n.act}</span>`:''}${n.mode==='b2c'?` <span class="optchip" style="background:var(--gold-soft);color:var(--warn-3);border-color:var(--gold-line);font-size:var(--fs-1)">b2c</span>`:''}${n.demo?` <span class="optchip" style="font-size:var(--fs-1)">demo</span>`:''}${n.isnew?` <span class="optchip" style="font-size:var(--fs-1);background:var(--ok-tint);color:var(--ok-3);border-color:var(--ok-2)">new</span>`:''}</div>`).join("");
-  const edgeRows = edges.map(e=>{
-    const a = e.state==='requested' ? `<button class="composebtn pri" onclick="netApprove('${e.id}')">${tx('Approve')}</button> <button class="composebtn" onclick="netDecline('${e.id}')">${tx('Decline')}</button>`
-      : e.state==='active' ? `<button class="composebtn" onclick="netSuspend('${e.id}')">${tx('Suspend')}</button> <button class="composebtn" style="color:var(--disp)" onclick="netDisconnect('${e.id}')">${tx('Disconnect')}</button>`
-      : e.state==='suspended' ? `<button class="composebtn" onclick="netResume('${e.id}')">${tx('Resume')}</button> <button class="composebtn" style="color:var(--disp)" onclick="netDisconnect('${e.id}')">${tx('Disconnect')}</button>` : '';
-    return `<div style="${_CARD}"><div style="display:flex;justify-content:space-between;align-items:center"><span><b>${esc(e.parent_name)}</b> <span style="color:var(--grey)">&rarr;</span> <b>${esc(e.child_name)}</b></span>${netStChip(e.state)}</div>${a?`<div style="margin-top:8px;display:flex;gap:6px">${a}</div>`:''}</div>`;
-  }).join("")||'<div style="color:var(--grey);font-size:13px;padding:6px">No connections.</div>';
-  return `${orgBanner()}<div style="${_CARD}"><div style="display:flex;justify-content:space-between;align-items:center"><span><b>${esc(self.name)}</b> · <span style="font-family:\'Space Mono\';font-size:12px">${esc(self.bridgeId||self.bridge_id||'')}</span></span><span class="optchip ${self.claimed?'on':'brk'}">${self.claimed?'claimed':'unclaimed'}</span></div><div style="font-size:11.5px;color:var(--grey);margin-top:4px">mode ${esc(self.mode||'b2b')} · ${self.mode==='b2c'?'customer-facing':'internal-B2B'} · NET-01 Spine · /api/network (preview — editing not yet live)</div></div>
-    <div class="sec" style="font-size:12px;color:var(--grey);margin:10px 0 4px">Your network — entities under you (up to the lead node)</div>
-    <div style="${_CARD}">${nodes||'<div style="color:var(--grey);font-size:13px;padding:4px">Just you so far.</div>'}</div>
-    <div style="font-size:11.5px;color:var(--grey);margin:-2px 0 10px;line-height:1.5">👥 = co-assists at that node. Set them in <b>Co-assists</b>. <i>Per-node access grants that cascade down the tree are planned — not enforced yet.</i></div>
-    <div style="${_CARD}"><div style="font-family:'Space Grotesk';font-weight:600;font-size:13px;margin-bottom:8px">➕ Create a branch</div>
-      <label class="fl">Branch name</label><input class="inp" id="nb_name" placeholder="e.g. Branch C">
-      <label class="fl" style="margin-top:8px">Under which node</label><select class="inp" id="nb_parent">${tree.map(n=>`<option value="${n.id}">${'— '.repeat(n.depth||0)}${esc(n.name)}</option>`).join("")}</select>
-      <div style="margin-top:10px"><button style="${_BTN}" onclick="netCreateBranch()">➕ Create branch</button></div>
-      <div id="nb_status" style="font-size:12px;color:var(--blue);margin-top:8px"></div><div class="err" id="nb_err"></div>
-      <div style="font-size:11.5px;color:var(--grey);margin-top:8px;line-height:1.5">Branches are created <b>one at a time</b> — register <span class=arw>→</span> link <span class=arw>→</span> approve. Building a whole new structure? <i>Auto-build (create &amp; link the tree in order) is coming.</i></div></div>
-    <div style="${_CARD}"><label class="fl">Or connect an entity that already exists (User ID)</label><div style="display:flex;gap:8px"><input class="inp" id="net_child" placeholder="User ID or email"><button class="composebtn" onclick="netConnect('${self.id}')">🔗 Request link</button></div><div class="err" id="net_err"></div></div>
-    <div class="sec" style="font-size:12px;color:var(--grey);margin:12px 0 4px">Connections / edges (${edges.length})</div>${edgeRows}`;
-}
-function netNotInModel(bid){ return `<div style="${_CARD}"><div style="font-family:\'Space Grotesk\';font-weight:600;margin-bottom:6px">${tx('Not in the network model yet')}</div><div style="font-size:13px;color:var(--grey);line-height:1.6">Your entity ${bid?('('+esc(bid)+') '):''}isn't in the <b>cb_*</b> network tree yet — the production backfill (legacy &rarr; cb_entity) hasn't run for it, so the live tree is empty here. Register it into the network now, or it lights up after backfill.</div><button class="composebtn pri" style="margin-top:10px" onclick="netRegisterSelf()">${tx('Register into network')}</button></div>`; }
-async function netCreateBranch(){
-  const x=document.getElementById("nb_err"); if(x)x.textContent="";
-  const name=val("nb_name"); const parentId=val("nb_parent");
-  if(!name){ if(x)x.textContent="Enter a branch name."; return; }
-  const st=document.getElementById("nb_status");
-  try{
-    if(st)st.textContent="1/3 · Registering the branch…";
-    const ent=await api("netRegister",{body:{name}});
-    if(st)st.textContent="2/3 · Requesting the link…";
-    const edge=await api("netConnect",{body:{parentId, childId:ent.id}});
-    if(st)st.textContent="3/3 · Approving the link…";
-    await api("netApprove",{params:{id:edge.id},body:{actingEntityId:ent.id}});
-    toast("Branch created & linked ✓"); loadNetwork();
-  }catch(e){ if(st)st.textContent=""; if(x)x.textContent=e.message; }
-}
-async function netConnect(parentId){ const x=document.getElementById("net_err"); if(x)x.textContent=""; const bid=val("net_child"); if(!bid){ if(x)x.textContent="Enter the sub-entity's User ID."; return; } if(!isUserId(bid)){ if(x)x.textContent="User ID must be at least 8 characters, or an email."; return; }
-  try{ await api("netConnect",{body:{parentId, childBridgeId:bid}}); toast(MSG.linkRequested()); loadNetwork(); }catch(e){ if(x)x.textContent=e.message; } }
-async function netApprove(id){ try{ await api("netApprove",{params:{id},body:{}}); toast(MSG.netApproved()); loadNetwork(); }catch(e){ toast(MSG.fail("approve", e)); } }
-async function netDecline(id){ try{ await api("netDecline",{params:{id},body:{}}); toast(MSG.netDeclined()); loadNetwork(); }catch(e){ toast(MSG.fail("decline", e)); } }
-async function netSuspend(id){ try{ await api("netSuspend",{params:{id}}); toast(MSG.netSuspended()); loadNetwork(); }catch(e){ toast(MSG.fail("suspend", e)); } }
-async function netResume(id){ try{ await api("netResume",{params:{id}}); toast(MSG.netResumed()); loadNetwork(); }catch(e){ toast(MSG.fail("resume", e)); } }
-function netDisconnect(id){ confirmAsk('Disconnect this edge?','The child subtree <b>detaches to its own root</b>. Nothing is deleted — it stops hanging from here.','Disconnect',function(){ _netDisconnect(id); },true); }
-async function _netDisconnect(id){ try{ await api("netDisconnect",{params:{id},body:{settle:false}}); toast(MSG.netDisconnected()); loadNetwork(); }catch(e){ toast(/settle/.test(e.message)?MSG.settleFirst():MSG.fail("disconnect", e)); } }
-async function netRegisterSelf(){ try{ await api("netRegister",{body:{name:SESSION.entity||SESSION.name||"My entity", businessType:"Aggregator"}}); toast(MSG.netRegistered()); loadNetwork(); }catch(e){ toast(MSG.fail("register", e)); } }
+/* ⚠️⚠️ THE OLD NETWORK SCREEN LIVED HERE — 123 lines removed 2026-08-21, and it was not merely dead.
+   app.html declared networkScreen() and loadNetwork(); app/cap-network.js declares them AGAIN. The later
+   script wins, so the design-first builder is what ran — but two live declarations of one name is a coin
+   toss decided by load order, and guard-static had been warning about it since the builder shipped.
+
+   ⚠️ IT WAS SAFE TO REMOVE ONLY BECAUSE THE ROUTER NEVER REACHES IT. renderApp() does not await ensureCap;
+   it renders a loading placeholder and dispatches the screen only once the capability has landed (see
+   _capLoading). So by the time networkScreen() is called, cap-network.js has already overwritten both names.
+   Without that placeholder this deletion would have turned a stale-screen flash into a crash.
+
+   ⚠️ THE WHOLE ISLAND WENT, not just the two duplicates: orgBanner · orgHelpBox · orgAsk · orgAskFree ·
+   netStChip · netView · netNotInModel · netCreateBranch · netConnect · netApprove · netDecline · netSuspend ·
+   netResume · netDisconnect · netRegisterSelf. Checked one by one — every reference was inside the block, and
+   cap-network.js names none of them.
+
+   ⭐ THE api() REGISTRY KEYS netConnect/netApprove/… AT THE TOP OF THIS FILE ARE A DIFFERENT NAMESPACE AND
+   STAY. They are endpoint descriptors, not functions; cap-network.js calls api('netApprove', …) through them.
+   Deleting them because the name matched would have broken the live builder. Backlog M7a. */
+
 /* SUPPLIERS */
 /* SUPPLIERS — two-sided master/detail (Stage A). Same .panel/.list/.divider/.detail skeleton as task/order,
    so it inherits the draggable divider (startDrag/UI.lw) and the mobile collapse (.appwrap.m + UI.mdetail). */

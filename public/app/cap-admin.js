@@ -1159,7 +1159,39 @@ var PROF_SRC = {
   def: ['Default',  'nobody chose — following your region'],
 };
 
+/**
+ * ⭐⭐ THE MARKS ARE OPT-IN. Athi, 2026-08-21: *"in the profile screen you can have a toggle button to see the
+ * source if required."* — *if required* is the operative half.
+ *
+ * ⚠️ I HAD SHIPPED THEM ALWAYS-ON, WHICH SPENDS THE TEXT BUDGET ON THE WRONG READER. Where a value came from
+ * is a question people ask when something looks WRONG — rarely, and deliberately. Eleven permanent chips make
+ * every reader pay, every visit, for an answer almost none of them wanted, on a screen already measured at 56%
+ * explanation. Off by default; one click when the question arises.
+ *
+ * ⚠️ THE NOTES STAY VISIBLE EITHER WAY. '{cur} no longer permitted' and 'your device — the business is in IN'
+ * are exceptions a reader must see unprompted; only the routine provenance chip hides.
+ */
+/* ⚠️ typeof-GUARDED, LIKE ITS NEIGHBOURS. apGet lives in app.html; this file is a lazily-loaded capability,
+   and a render that throws because an OPTIONAL affordance could not read a preference would blank the whole
+   profile to hide a chip nobody asked for. The same shape as the themeGet/TEXT_SIZES guards above. */
+function profSrcOn(){
+  try { return typeof apGet === 'function' && apGet('cb_prof_src', '') === '1'; } catch (_) { return false; }
+}
+function profSrcToggle(){
+  apSet('cb_prof_src', profSrcOn() ? '' : '1');
+  loadProfile();
+}
+
+/** The control itself — a quiet line, not a switch competing with the content. */
+function profSrcBtn(){
+  var on = profSrcOn();
+  return '<a href="#" data-testid="prof-src-toggle" onclick="profSrcToggle();return false" '
+    + 'style="color:var(--blue);font-size:var(--fs-1);text-decoration:none">'
+    + (on ? tx('Hide where these come from') : tx('Show where these come from')) + '</a>';
+}
+
 function _srcMark(src) {
+  if (!profSrcOn()) return '';               /* opt-in — see the note above */
   var s = Object.prototype.hasOwnProperty.call(PROF_SRC, src) ? PROF_SRC[src] : null;
   if (!s) return '';
   /* ⚠️ COLOUR CARRIES NOTHING HERE. Every mark is the same grey: making 'Governed' red would read as a
@@ -2266,6 +2298,10 @@ var rowHtml = function(x){ return profRow(x[0], x[1], x[2], !!x[3], x[5]); };
     +   tx('Language and formats') + ' <span class=arw>→</span></a>'
     +   '<a href="#" onclick="navTo(' + Q + 'settings' + Q + ');setSetSec(' + Q + 'appearance' + Q + ');return false" style="color:var(--blue);font-size:var(--fs-1)">'
     +   tx('Theme and text size') + ' <span class=arw>→</span></a>'
+    /* ⚠️ WITH THE TWO LINKS, NOT ABOVE THE ROWS. This line answers a question about the rows rather than
+       being one of them; putting it at the top would make every reader step over it to reach the content they
+       came for, which is the cost the opt-in exists to avoid. */
+    +   profSrcBtn()
     + '</div>'
     + '</div>';
 }
