@@ -819,7 +819,10 @@ async function loadProfile(){ const h=document.getElementById("profbody"); if(!h
    * after a save, an actor profile. What changes is that their LATCHES are set from this response, so on the
    * common path they find the work already done and return without fetching.
    */
-  try{ const e=(await api("me", { query: { include: 'readiness,channels,vault' } }))||{}; UI._me=e;
+  /* ⭐ meTake() HANDS BACK THE REQUEST THAT WAS ALREADY IN FLIGHT, started at sign-in before this screen
+     existed. If none is waiting it fetches exactly as before — the include list is identical, so the two paths
+     cannot return different shapes. See mePrefetchStart in app.html. */
+  try{ const e=(await meTake())||{}; UI._me=e;
     _profSeedIncluded(e);
     /* ⚠️ RE-QUERY THE HOST AFTER THE AWAIT. renderApp() rebuilds the screen wholesale, so a repaint that lands
        while this fetch is in flight — switching viewport, opening the menu — detaches the node captured above.

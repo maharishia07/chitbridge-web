@@ -2429,6 +2429,41 @@ async function doLogin(){
 }
 
 /* jwtPayload → app/helpers.js */
+/**
+ * ⭐⭐ PREFETCH ON SIGN-IN — the first screen should not be the first request. Athi, 2026-08-21, after the
+ * profile went from four HTTP calls to one: *"go ahead with prefetch on sign-in."*
+ *
+ * The session is established, then the app renders, then whichever screen you land on asks for /me and waits
+ * 200–400ms for it. That wait is avoidable: nothing about /me depends on which screen you chose, so the
+ * request can be in flight while the shell is still painting.
+ *
+ * ⚠⚠ A WARM START, NOT A CACHE, AND THE DIFFERENCE IS THE WHOLE DESIGN. A cache of /me would need
+ * invalidating on every profile save, every currency change, every capability grant — and a MISSED
+ * invalidation shows someone stale facts about their own business, which is far worse than a slow screen.
+ * This promise is consumed ONCE by the first reader and then discarded, so there is no staleness class to get
+ * wrong: every later read fetches exactly as it does today.
+ *
+ * ⚠️ IT MUST NEVER REJECT UNHANDLED. Started without an awaiter, a failed prefetch would surface as an
+ * unhandled rejection in the console of an app that is working perfectly — the consumer re-fetches on its own.
+ */
+var _mePrefetch = null;
+function mePrefetchStart(){
+  /* only for a real signed-in session; the customer storefront token has no /me to fetch */
+  if (!SESSION.token || SESSION.role === 'customer') return;
+  if (_mePrefetch) return;
+  try {
+    _mePrefetch = api('me', { query: { include: 'readiness,channels,vault' } });
+    _mePrefetch.catch(function(){ _mePrefetch = null; });   /* see the note above */
+  } catch (_) { _mePrefetch = null; }
+}
+
+/** Take the warm result if one is waiting, else fetch. Consumed once — the holder is cleared either way. */
+function meTake(){
+  var p = _mePrefetch;
+  _mePrefetch = null;
+  return p || api('me', { query: { include: 'readiness,channels,vault' } });
+}
+
 function setSession(s){ SESSION={...SESSION,...s};
   // Live tokens are JWTs — derive the REAL actor/entity id from the token so the UI never hardcodes ids.
   const p=jwtPayload(SESSION.token);
@@ -2438,6 +2473,9 @@ function setSession(s){ SESSION={...SESSION,...s};
   // (netLookup, "your place in the network") asked with an empty id and got back "not part of a network". A store
   // that IS in a network was shown the Design-your-network screen instead of its own tree.
   try{ if(SESSION.token) localStorage.setItem('cb_sess', JSON.stringify({token:SESSION.token, role:SESSION.role, name:SESSION.name, entity:SESSION.entity, bridgeId:SESSION.bridgeId, duty:SESSION.duty, shop:SESSION.shop})); }catch(_){}
+  /* ⭐ THE ONE CHOKE POINT — sign-in AND restoreSession() both land here, so a browser refresh gets the warm
+     start too. Not awaited: the shell paints while it flies. */
+  try { mePrefetchStart(); } catch (_) {}
 }
 // Restore a persisted session on boot so a browser refresh stays signed-in. Drops an expired token.
 function restoreSession(){ try{ if(SESSION.token) return; const raw=localStorage.getItem('cb_sess'); if(!raw) return; const s=JSON.parse(raw); if(!s||!s.token) return; const p=jwtPayload(s.token); if(p&&p.exp&&(p.exp*1000)<Date.now()){ localStorage.removeItem('cb_sess'); return; } setSession(s); }catch(_){ } }
