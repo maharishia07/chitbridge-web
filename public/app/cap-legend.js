@@ -626,7 +626,7 @@ function _stdTabHtml(){
   }
   var n = stdCounts();
   return '<div style="padding:14px 16px">'
-    + '<div style="font-size:20px;font-weight:800;color:var(--ink);margin-bottom:2px">' + tx('Why we follow standards') + '</div>'
+    + '<div style="font-size:var(--fs-5);font-weight:800;color:var(--ink);margin-bottom:2px">' + tx('Why we follow standards') + '</div>'
     + '<div style="font-size:13px;color:var(--grey);line-height:1.55;margin-bottom:12px">'
     +   '<b style="color:var(--ok-2)">' + n.live + ' in force</b> · '
     +   '<b style="color:var(--warn-2)">' + n.part + ' partly</b> · ' + n.plan + ' planned. '

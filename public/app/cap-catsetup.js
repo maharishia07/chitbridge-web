@@ -664,7 +664,7 @@ function catsetCss(){
        near-black name, so the two never blur, while still clearly secondary. */
     ':root{--note:#5a7290}',
     '.uom-hd{display:grid;grid-template-columns:22px 76px minmax(0,1fr);align-items:center;gap:10px;padding:5px 13px;font-size:11px;color:var(--grey);text-transform:uppercase;letter-spacing:.04em;border-bottom:1px solid var(--line)}',
-    '.uom-hd code,.uom-hd .un{font-size:11px;color:var(--grey)}',
+    '.uom-hd code,.uom-hd .un{font-size:var(--fs-1);color:var(--grey)}',
     '.uom-row{display:block;border-bottom:1px solid var(--line);cursor:pointer;font-size:var(--fs-2);padding:6px 13px}',
     '.uom-row .ur1{display:grid;grid-template-columns:22px 76px minmax(0,1fr);align-items:center;gap:10px}',
     '.uom-row:hover{background:var(--paper)}',
@@ -682,12 +682,12 @@ function catsetCss(){
     /* ⚠️ English reads as fixed, not disabled — a greyed chip invites clicking to find out why. */
     '.lang-chip.fixed{cursor:default;opacity:.9}',
     '.lang-chip .lang-none{color:var(--grey);font-size:10px;margin-inline-start:5px;font-weight:400}',
-    '.lang-note{font-size:11px;color:var(--note);line-height:1.5;margin-top:4px}',
+    '.lang-note{font-size:var(--fs-1);color:var(--note);line-height:1.5;margin-top:4px}',
     /* ⚠️ Unticked stays READABLE, not greyed to the floor — you have to be able to read a unit to decide you
        want it back, and a list where half the rows are illegible is a list you cannot choose from. */
     '.uom-row.off code,.uom-row.off .un{color:var(--grey)}',
     '.uom-g{margin-top:9px}',
-    '.uom-gh{font-size:11px;font-weight:800;color:var(--grey);text-transform:uppercase;letter-spacing:.05em;padding:4px 13px 3px;background:var(--paper);border-bottom:1px solid var(--line)}',
+    '.uom-gh{font-size:var(--fs-1);font-weight:800;color:var(--grey);text-transform:uppercase;letter-spacing:.05em;padding:4px 13px 3px;background:var(--paper);border-bottom:1px solid var(--line)}',
     '.catset-regrows.chips{display:flex;flex-direction:row;flex-wrap:wrap;gap:6px;background:none;border:0;padding:2px 13px 4px}',
     '.catset-regrows.chips .catset-regrow{background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:3px 11px;font-size:11.5px}',
     '.catset-regsrc{font-size:var(--fs-1);color:var(--grey);padding:7px 13px}',
