@@ -102,6 +102,18 @@
   /** How many languages a reader may declare. More than three is a list nobody maintains and nothing matches. */
   var MAX_LANGS = 3;
 
+  /**
+   * ⚠⚠ A PREVIEW MUST NOT REACH THE SERVER. Settings now STAGES changes and shows what they would look like
+   * before you press Save — which means the real setters run, on real storage, and are then rolled back. Every
+   * one of them ends in L.push(), so without this counter a preview would sync a value nobody chose to the
+   * account, to every other device, and then roll it back locally only. The rollback would be the one thing
+   * that did not travel.
+   *
+   * ⚠️ A COUNTER, NOT A BOOLEAN — setRegion() calls setLangs(), so the quiet windows nest. A flag would be
+   * cleared by the inner call and the outer one would push after all.
+   */
+  var quiet = 0;
+
   var LANG_NAMES = {
     en: 'English', hi: 'हिन्दी', ta: 'தமிழ்', te: 'తెలుగు', bn: 'বাংলা', mr: 'मराठी', gu: 'ગુજરાતી',
     kn: 'ಕನ್ನಡ', ml: 'മലയാളം', pa: 'ਪੰਜਾਬੀ', ar: 'العربية', ur: 'اردو', fr: 'Français', de: 'Deutsch',
@@ -291,6 +303,46 @@
      */
     KEYS: ['lang', 'langs', 'region', 'locale', 'nu', 'hc', 'ca', 'fw', 'tz', 'workdays'],
 
+    /**
+     * ⭐⭐ EVERY KEY, EMPTIES INCLUDED — the pair that makes UNDO possible. Athi, 2026-08-21: *"in settings we
+     * do not have a save button, we just change it — what if by mistake someone changed without knowing?"*
+     *
+     * ⚠⚠ RESTORING ONE KEY WOULD NOT UNDO ONE CHANGE, and that is why this is not just prefs(). setRegion()
+     * PRUNES the language list as a side effect — choose Germany and Tamil silently leaves, because Germany does
+     * not admit it. Putting the region back does not bring Tamil back. An undo that restores only the control
+     * the reader touched would quietly keep the collateral damage, which is worse than no undo: it claims the
+     * change was reversed.
+     *
+     * ⚠️ AND EMPTIES ARE VALUES HERE, unlike in prefs(). '' means "follow the region" — a real state a reader
+     * can return to. Skipping empty keys on restore would leave an override standing that the snapshot says was
+     * never set, so undo would half-work in exactly the case it is needed.
+     */
+    /** Run fn with server sync suppressed. Local storage still moves; nothing is told about it. */
+    quietly: function (fn) {
+      quiet++;
+      try { return fn(); } finally { quiet--; }   /* ⚠️ finally — a throw inside a preview must not leave the
+                                                     whole app permanently unable to save a preference. */
+    },
+
+    snapshot: function () {
+      var out = {};
+      L.KEYS.forEach(function (k) { out[k] = get('cb_' + k, ''); });
+      return out;
+    },
+
+    restore: function (snap) {
+      if (!snap || typeof snap !== 'object') return false;
+      var changed = false;
+      L.KEYS.forEach(function (k) {
+        /* ⚠️ hasOwnProperty — a snapshot is a plain object and `k in snap` would find 'constructor' on the
+           prototype and write it as a value. */
+        var now = Object.prototype.hasOwnProperty.call(snap, k) ? String(snap[k] || '') : '';
+        if (get('cb_' + k, '') !== now) { set('cb_' + k, now); changed = true; }
+      });
+      if (changed) { L.apply(); L.push(); }
+      return changed;
+    },
+
     /** Read the local answer as the object the API stores. Absent values stay absent — '' means "use default". */
     prefs: function () {
       var out = {};
@@ -330,6 +382,7 @@
      * drift apart the day one of them gains a retry.
      */
     push: function () {
+      if (quiet) return;                       /* previewing — see `quiet` above */
       try { if (root.CBPrefs) root.CBPrefs.push('locale', L.prefs()); } catch (_) {}
     },
 

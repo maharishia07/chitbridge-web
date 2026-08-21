@@ -1134,15 +1134,55 @@ function iamToggle(k){
  *
  * Label left, value right, message BENEATH the value — his convention, once.
  */
-function profRow(label, value, note, isHtml){
+/**
+ * ⭐⭐ WHERE THIS VALUE CAME FROM, MARKED THE SAME WAY EVERY TIME. Athi, 2026-08-21: *"these settings can fall
+ * from governance layer / blueprint / user selected — do we make a mark, how it is derived?"*
+ *
+ * ⚠⚠ THE VOCABULARY ALREADY EXISTED AND WAS AD HOC, which is the actual defect. Different rows said 'Set
+ * above you', 'from your region', 'you set this', 'your device — not set for the business' — four phrasings for
+ * three ideas, each invented at the moment its row was written. A reader could not tell whether two rows
+ * saying different things meant different things.
+ *
+ * ⚠️ BLUEPRINT IS DELIBERATELY ABSENT. Athi's model has three sources and the code has three too, but they
+ * are not the same three: nothing in the codebase lets a blueprint or work pattern supply a locale value —
+ * checked, not assumed. Adding a label that can never appear would document an intention as if it were a
+ * behaviour, which is the failure mode this whole table exists to end. When a blueprint does supply one, it
+ * gets a row here and the mark starts firing on its own.
+ *
+ * ⚠️ DEFAULT IS A REAL SOURCE, NOT AN ABSENCE. 'Nobody chose this' is the single most useful thing a reader
+ * can learn about a setting that looks wrong — it says the fix is to choose, not to hunt for who overrode you.
+ */
+var PROF_SRC = {
+  gov: ['Governed', 'decided above you — not yours to change'],
+  biz: ['Business', 'set on the business record'],
+  you: ['You',      'your own choice, on this account'],
+  def: ['Default',  'nobody chose — following your region'],
+};
+
+function _srcMark(src) {
+  var s = Object.prototype.hasOwnProperty.call(PROF_SRC, src) ? PROF_SRC[src] : null;
+  if (!s) return '';
+  /* ⚠️ COLOUR CARRIES NOTHING HERE. Every mark is the same grey: making 'Governed' red would read as a
+     warning, and being governed is not a problem. The word is the information. */
+  return '<span title="' + esc(s[1]) + '" style="font-size:var(--fs-1);font-weight:700;letter-spacing:.04em;'
+    + 'text-transform:uppercase;color:var(--grey);border:1px solid var(--line);border-radius:4px;'
+    + 'padding:0 4px;white-space:nowrap">' + esc(s[0]) + '</span>';
+}
+
+function profRow(label, value, note, isHtml, src){
+  var mark = _srcMark(src);
   return '<div style="display:flex;gap:12px;align-items:flex-start;padding:5px 0">'
     + '<b style="min-width:88px;flex:0 0 88px;font-size:var(--fs-1);color:var(--grey);text-transform:uppercase;'
     + 'letter-spacing:.04em;line-height:1.7">' + esc(label) + '</b>'
     + '<div style="flex:1;min-width:0">'
-      /* ⚠️ isHtml MEANS "THIS VALUE IS MARKUP" — the currency picker, and the employee login chip. Everything
-         else is escaped and stays escaped: raw HTML must be opted into deliberately. */
+      /* ⚠️ isHtml MEANS "THIS VALUE IS MARKUP" — the jump-to-control arrow, the employee login chip.
+         Everything else is escaped and stays escaped: raw HTML must be opted into deliberately. */
       + '<div>' + (isHtml ? value : esc(value)) + '</div>'
-      + (note ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:1px;line-height:1.5">' + esc(note) + '</div>' : '')
+      /* ⚠️ THE MARK SHARES THE NOTE LINE rather than taking a row of its own. Every row gaining a third line
+         would add eleven lines to this section for information most readers need once. */
+      + ((mark || note) ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px;line-height:1.5;'
+          + 'display:flex;gap:6px;align-items:baseline;flex-wrap:wrap">' + mark
+          + (note ? '<span>' + esc(note) + '</span>' : '') + '</div>' : '')
     + '</div></div>';
 }
 
@@ -1851,8 +1891,8 @@ function iamGovernedRows(e){
      * someone else's business.
      */
     var _cc = (country && String(country).length === 2) ? country : null;
-    rows.push(['Country', ((country || (r && r.name) || 'Not set') + ' ' + _flag(_cc)).trim(), '']);
-  } catch (_) { if (country) rows.push(['Country', country, '']); }
+    rows.push(['Country', ((country || (r && r.name) || 'Not set') + ' ' + _flag(_cc)).trim(), '', false, 'biz', country ? 'biz' : 'def']);
+  } catch (_) { if (country) rows.push(['Country', country, '', false, 'biz', 'biz']); }
   /**
    * ⚠️⚠️ CURRENCY AND TIME ZONE CAN CONTRADICT RIGHTS › BASICS, AND ATHI ASKED THE RIGHT QUESTION.
    *
@@ -1931,9 +1971,9 @@ function iamGovernedRows(e){
     var fromGov = (curr === gb.currency && curr !== stored) || (!stored && !!gb.currency);
     /* ⭐ SYMBOL BESIDE THE CODE — '₹ INR'. The code is what a system needs; the symbol is what a person
        recognises. Neither replaces the other, and not every currency has one (AED formats as AED). */
-    rows.push(['Currency', ((_curSym(curr) ? _curSym(curr) + ' ' : '') + curr),
-      outside ? txf('{cur} no longer permitted', { cur: stored })
-              : (fromGov ? tx('Set above you') : '')]);   /* ⚠️ blank where the GROUP HEADING already says it — the message column is for exceptions only */
+    rows.push(['Currency', esc((_curSym(curr) ? _curSym(curr) + ' ' : '') + curr) + _locLink(tx('Currency'), 'loc-currency'),
+      outside ? txf('{cur} no longer permitted', { cur: stored }) : '',
+      true, 'biz', fromGov ? 'gov' : 'biz']);   /* ⚠️ blank where the GROUP HEADING already says it — the message column is for exceptions only */
   }
   /**
    * ⚠️⚠️ THE ZONE IS THE BUSINESS'S, AND THE READER'S IS THE FALLBACK — NOT THE OTHER WAY ROUND.
@@ -1950,9 +1990,9 @@ function iamGovernedRows(e){
     /* ⚠️ SAME THREE-WAY ANSWER AS CURRENCY: the entity's own zone if b176 gave it one, else the governed zone
        from the installation, else this device — each labelled, so Rights and Regional can never look like two
        opinions about one fact. */
-    if (bizTz) rows.push(['Time zone', bizTz, '']);
-    else if (gb.timezone) rows.push(['Time zone', gb.timezone, tx('Set above you')]);
-    else if (CBLocale.timezone) rows.push(['Time zone', CBLocale.timezone(), tx('Your device — not set for the business')]);
+    if (bizTz) rows.push(['Time zone', bizTz, '', false, 'biz', 'biz']);
+    else if (gb.timezone) rows.push(['Time zone', gb.timezone, '', false, 'biz', 'gov']);
+    else if (CBLocale.timezone) rows.push(['Time zone', CBLocale.timezone(), tx('your device — not set for the business'), false, 'biz', 'def']);
     /* ⚠️ A LIVE EXAMPLE, so a wrong setting is obvious rather than encoded. */
     /* ⚠️ THE TIMESTAMP FORMAT IS STILL THE READER'S, AND SAYING OTHERWISE WOULD BE A LIE. b176 stores the
        business's ZONE; every date on every screen still renders through CBLocale. Redirecting that is a
@@ -1973,9 +2013,22 @@ function iamGovernedRows(e){
      */
     var _langs = (CBLocale.langs ? CBLocale.langs() : [CBLocale.lang && CBLocale.lang()]).filter(Boolean);
     _langs.forEach(function(l, i){
-      rows.push([(i === 0 ? tx('Language') : ' ') + ' ' + (i + 1), _langName(l), (i === 0 ? tx('first choice') : tx('then')), false, 'read']);
+      rows.push([(i === 0 ? tx('Language') : ' ') + ' ' + (i + 1), _langName(l), (i === 0 ? tx('first choice') : tx('then')), false, 'read',
+        /**
+         * ⚠⚠ 'IS cb_langs SET' IS NOT 'DID YOU CHOOSE IT'. setRegion() WRITES the language list as a side
+         * effect — pick India and cb_langs becomes ['en'] without anyone touching a language control. Testing
+         * for the key's presence therefore marked every reader's languages as their own choice, which is the
+         * precise lie this mark exists to prevent: it would send someone hunting for a decision they never made.
+         *
+         * ⭐ SO IT IS DERIVED BY COMPARISON, not by a flag. Still the region's own first language, alone? That
+         * is the default. Anything else — a second language, a different first — required a human to act.
+         */
+        _langsAreDefault() ? 'def' : 'you']);
     });
-    if (CBLocale.dir) rows.push(['Reads', CBLocale.dir() === 'rtl' ? tx('right to left') : tx('left to right'), tx('follows the language'), false, 'read']);
+    if (CBLocale.dir) /* ⚠️ NO MARK. Direction is not derived from a SOURCE, it is derived from the language — there is no layer
+       that could have set it and no choice a reader could make. Marking it 'Default' would invite someone to
+       look for the control that overrides it. */
+    rows.push(['Reads', CBLocale.dir() === 'rtl' ? tx('right to left') : tx('left to right'), tx('follows the language'), false, 'read']);
     /**
      * ⚠️⚠️ THE READER'S ZONE BELONGS IN THIS GROUP, and leaving it out is what made Settings look broken.
      * Athi, 2026-08-21: *"when I click the language and formats hyperlink it goes to settings, but it shows
@@ -2051,13 +2104,16 @@ function iamGovernedRows(e){
         } catch (_) { /* no ext layer — the row still names the region */ }
         var _diff = (_fr && country && String(_fr).toUpperCase() !== String(country).toUpperCase())
           ? txf('your device — the business is in {c}', { c: country }) : '';
-        rows.push(['Format',
-          (_fname ? _fname + (_ftag ? ' (' + _ftag + ')' : '') : _ftag),
+        /* ⚠️ THE ARROW POINTS AT THE REGION PICKER, the control that decides most of this row — and the
+           override names in the note each carry their own, so 'Devanagari →' lands on the numeral picker
+           rather than making the reader guess which of six controls produced it. */
+        var _fval = esc(_fname ? _fname + (_ftag ? ' (' + _ftag + ')' : '') : _ftag) + _locLink(tx('Region'), 'loc-region');
+        rows.push(['Format', _fval,
           [_diff].concat(_ov).filter(Boolean).join(' · '),
-          false, 'fmt']);
+          true, 'fmt', (CBLocale.region() || (CBLocale.getExt && CBLocale.getExt('locale'))) ? 'you' : 'def']);
       }
     } catch (_) { /* absent locale layer — the samples below still speak for themselves */ }
-    if (CBLocale.datetime) rows.push(['Timestamp', CBLocale.datetime(Date.now()),
+    if (CBLocale.datetime) rows.push(['Timestamp', esc(CBLocale.datetime(Date.now())) + _locLink(tx('Time zone'), 'loc-tz'),
       /**
        * ⚠️ THE COMPARISON IS THE CLOCK, NOT THE NAME. Asia/Calcutta and Asia/Kolkata are THE SAME ZONE under a
        * legacy alias, and a string compare called them different — so the note claimed a reader was on another
@@ -2065,12 +2121,12 @@ function iamGovernedRows(e){
        * the same instant identically there is nothing to explain, whatever they are called.
        */
       _tzDiffers(_readTz, _bizTz2) ? txf('shown in {tz} — your device', { tz: _readTz }) : '',
-      false, 'fmt']);
+      true, 'fmt']);   /* ⚠️ isHtml — the value now carries the jump-to-control arrow */
     /* ⭐ NUMBERS, AS AN EXAMPLE FOR THE SAME REASON AS THE TIMESTAMP. India groups 12,34,56,789 and the US
        groups 123,456,789 — a reader recognises their own grouping instantly and would have to decode
        'en-IN'. Athi: *"number system also."* */
-    if (CBLocale.number) rows.push(['Numbers', CBLocale.number(12345678.9), '', false, 'fmt']);
-    else if (CBLocale.locale) rows.push(['Numbers', (12345678.9).toLocaleString(CBLocale.locale()), '', false, 'fmt']);
+    if (CBLocale.number) rows.push(['Numbers', esc(CBLocale.number(12345678.9)) + _locLink(tx('Numbering system'), 'loc-nu'), '', true, 'fmt']);
+    else if (CBLocale.locale) rows.push(['Numbers', esc((12345678.9).toLocaleString(CBLocale.locale())) + _locLink(tx('Numbering system'), 'loc-nu'), '', true, 'fmt']);
     /**
      * ⭐⭐ THEME AND TEXT SIZE JOIN "HOW YOU READ IT" — because that is literally what they are. Athi,
      * 2026-08-21: *"under profile, personal preference the colour scheme and the size of the char, say 75%,
@@ -2100,20 +2156,20 @@ function iamGovernedRows(e){
       if (CBLocale.workdays) {
         var _D = { 1:'Mon', 2:'Tue', 3:'Wed', 4:'Thu', 5:'Fri', 6:'Sat', 7:'Sun' };
         var _wd = CBLocale.workdays() || [];
-        if (_wd.length) rows.push(['Working week', _wd.map(function(d){ return _D[d] || d; }).join(' '),
-          (CBLocale.hasWorkdayOverride && CBLocale.hasWorkdayOverride()) ? tx('you set this') : tx('from your region'),
-          false, 'fmt']);
+        if (_wd.length) rows.push(['Working week', esc(_wd.map(function(d){ return _D[d] || d; }).join(' ')) + _locLink(tx('Working days'), 'loc-workdays'),
+          '',
+          true, 'fmt', (CBLocale.hasWorkdayOverride && CBLocale.hasWorkdayOverride()) ? 'you' : 'def']);
       }
     } catch (_) { /* absent locale layer — show what we have */ }
 
     try {
       if (typeof THEMES !== 'undefined' && typeof themeGet === 'function') {
         var _th = THEMES[themeGet()] || {};
-        rows.push(['Theme', _th.name || themeGet(), _th.a11y ? txf('meets WCAG {level}', { level: _th.a11y.level }) : '', false, 'look']);
+        rows.push(['Theme', esc(_th.name || themeGet()) + _locLink(tx('Theme'), 'theme-' + themeGet(), 'appearance'), _th.a11y ? txf('meets WCAG {level}', { level: _th.a11y.level }) : '', true, 'look', 'you']);
       }
       if (typeof TEXT_SIZES !== 'undefined' && typeof textSize === 'function') {
         var _ts = TEXT_SIZES.filter(function(x){ return x[0] === textSize(); })[0];
-        if (_ts) rows.push(['Text size', _ts[1] + ' · ' + Math.round(_ts[2] * 100) + '%', '', false, 'look']);
+        if (_ts) rows.push(['Text size', esc(_ts[1] + ' · ' + Math.round(_ts[2] * 100) + '%') + _locLink(tx('Text size'), 'ap-fs-' + textSize(), 'appearance'), '', true, 'look', 'you']);
       }
     } catch (_) { /* appearance layer absent — show what we have rather than nothing */ }
   } catch (_) { /* locale layer absent — show what we have rather than nothing */ }
@@ -2156,7 +2212,10 @@ function iamGovernedRows(e){
  * then whose it is.
  */
 /* ⭐ Regional rows go through the SAME renderer as every other profile row — see profRow. x[3] flags markup. */
-var rowHtml = function(x){ return profRow(x[0], x[1], x[2], !!x[3]); };
+/* ⚠️ x[4] IS THE GROUP, x[5] THE SOURCE — positional, because these rows are built by twenty push() calls
+   across three hundred lines and converting them all to objects is a change with no test behind it. The
+   cost is that a row written with four elements gets no mark, which _srcMark answers with silence. */
+var rowHtml = function(x){ return profRow(x[0], x[1], x[2], !!x[3], x[5]); };
   /**
    * ⚠️ A HEADING MUST NOT LOOK LIKE A ROW LABEL. Athi, 2026-08-20: *"can you make indentation or size
    * difference or underline for the heading — some difference should be there between heading and text."*
@@ -3475,8 +3534,8 @@ function appearanceSettingsHTML(){
  * picker and the Profile note start disagreeing about what a code is called: two tables, one meaning, no force
  * keeping them equal. The pickers still read these; nothing else changed for them.
  */
-var NUMERALS = [['', 'Follow the format'], ['latn', 'Western — 123'], ['arab', 'Eastern Arabic — ١٢٣'], ['deva', 'Devanagari — १२३']];
-var HOURS    = [['', 'Follow the format'], ['h12', '12-hour — 09:15 pm'], ['h23', '24-hour — 21:15']];
+var NUMERALS = [['', 'Follow the format'], ['latn', 'Western'], ['arab', 'Eastern Arabic'], ['deva', 'Devanagari']];
+var HOURS    = [['', 'Follow the format'], ['h12', '12-hour'], ['h23', '24-hour']];
 var CALS     = [['', 'Follow the format'], ['gregory', 'Gregorian'], ['islamic-umalqura', 'Hijri (Umm al-Qura)'], ['indian', 'Indian national'], ['buddhist', 'Buddhist']];
 var WEEK     = [['', 'Follow the format'], ['mon', 'Monday'], ['sun', 'Sunday'], ['sat', 'Saturday']];
 
@@ -3488,11 +3547,131 @@ var WEEK     = [['', 'Follow the format'], ['mon', 'Monday'], ['sun', 'Sunday'],
  * ⚠️ .find() ON AN ARRAY, not a bracket lookup on an object — no prototype chain to walk past, so an unknown
  * code returns the code itself instead of something truthy from Object.prototype.
  */
+/**
+ * ⭐⭐ WHAT THIS OPTION WOULD ACTUALLY DO, RENDERED. Athi, 2026-08-21: *"I changed to Indian calendar and the
+ * result was Sravana, but I was not aware what Indian calendar means until I saw the result. If you change
+ * this control, this is the effect — that has to be spelt then and there explicitly."*
+ *
+ * ⚠️ 'Indian national' NAMES A STANDARD AND DESCRIBES NOTHING. Nobody picks a calendar from its title; they
+ * pick it from the date it produces. Numerals and hour cycle already carried a sample and the calendar list —
+ * the one whose options are genuinely unguessable — was the single list without one.
+ *
+ * ⚠⚠ GENERATED, NOT TYPED, AND THAT IS THE REAL CHANGE. The samples that did exist were hand-written strings:
+ * 'Devanagari — १२३' was a CLAIM about what Intl does, maintained by whoever last remembered. These are
+ * produced by the same engine that will render the app, against today's date, in the reader's own base locale,
+ * so a sample can never promise something the setting does not deliver.
+ */
+function _locSample(kind, code) {
+  if (!code) return '';                       /* 'Follow the format' has no effect of its own to show */
+  var base = String((CBLocale.tag ? CBLocale.tag() : 'en') || 'en').split('-u-')[0];
+  var now  = new Date();
+  try {
+    if (kind === 'nu') return new Intl.NumberFormat(base + '-u-nu-' + code).format(12345678.9);
+    if (kind === 'hc') return new Intl.DateTimeFormat(base + '-u-hc-' + code,
+      { hour: '2-digit', minute: '2-digit' }).format(now);
+    if (kind === 'ca') return new Intl.DateTimeFormat(base + '-u-ca-' + code,
+      { day: 'numeric', month: 'long', year: 'numeric' }).format(now);
+  } catch (_) { /* ⚠️ an engine that does not know this extension shows the NAME alone rather than a wrong
+                    sample — silence is honest here, a guess is not. */ }
+  return '';
+}
+
+/** [code, name] → [code, 'name — sample'], for the pickers. One place, so every list gets the same treatment. */
+function _locWithSamples(table, kind) {
+  return table.map(function (t) {
+    var s = _locSample(kind, t[0]);
+    return [t[0], s ? t[1] + ' — ' + s : t[1]];
+  });
+}
+
+/**
+ * ⭐⭐ TAKE ME TO THE CONTROL THAT DECIDES THIS. Athi, 2026-08-21: *"bringing the format together, that is
+ * good — but if we can see the place where the control is changing, that would be great."*
+ *
+ * ⚠️ THE TWO LINKS AT THE FOOT OF THE SECTION WERE NOT ENOUGH. 'Language and formats →' lands you on a screen
+ * with ten controls on it and leaves you to work out which one produced 30 Sravana. A link that gets you to
+ * the right SCREEN has done half the job and taken credit for all of it.
+ *
+ * ⚠️ THE HIGHLIGHT IS THE POINT, NOT THE NAVIGATION. Scrolling to an element that looks like its nine
+ * neighbours leaves the reader hunting anyway, so the control is outlined for a moment when it arrives — long
+ * enough to find, short enough not to become part of the design.
+ *
+ * ⚠️ AFTER A PAINT, NOT BEFORE. setSetSec() re-renders; querying for the element in the same tick finds the
+ * OLD screen, or nothing. requestAnimationFrame twice — one to let the render commit, one to let layout settle,
+ * because scrollIntoView on an element the browser has not measured yet scrolls to the wrong place.
+ */
+function _locGoto(testid, sec) {
+  navTo('settings');
+  setSetSec(sec || 'locale');
+  var tries = 0;
+  var find = function () {
+    var el = document.querySelector('[data-testid="' + testid + '"]');
+    /* ⚠️ A BOUNDED RETRY, NOT A LOOP. The settings body paints asynchronously; if the element never appears
+       (a control removed, a testid renamed) this must give up quietly rather than spin — the reader is already
+       on the right screen, which is the fallback the old links offered. */
+    if (!el) { if (++tries < 20) requestAnimationFrame(find); return; }
+    requestAnimationFrame(function () {
+      try { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch (_) { el.scrollIntoView(); }
+      var prev = el.style.outline, prevOff = el.style.outlineOffset;
+      el.style.outline = '2px solid var(--blue)';
+      el.style.outlineOffset = '3px';
+      setTimeout(function () { el.style.outline = prev; el.style.outlineOffset = prevOff; }, 2200);
+    });
+  };
+  requestAnimationFrame(find);
+  return false;
+}
+
+/**
+ * The little arrow beside a value: where this one is decided.
+ *
+ * ⚠️ AN ARROW, NOT A SENTENCE. 'You can change this in Settings › Localisation › Calendar' is eleven words
+ * per row on a screen that already measured 56% explanation. The affordance carries the meaning; the title
+ * attribute carries the name for anyone who wants it.
+ */
+function _locLink(label, testid, sec) {
+  var Q = String.fromCharCode(39);
+  return ' <a href="#" title="' + esc(label) + '" onclick="return _locGoto(' + Q + testid + Q
+    + (sec ? ', ' + Q + sec + Q : '') + ')" style="color:var(--blue);text-decoration:none;font-size:var(--fs-1)">→</a>';
+}
+
+/** Are the reader's languages simply what their region hands out, untouched? See the note at its call site. */
+function _langsAreDefault() {
+  try {
+    var mine = (CBLocale.langs && CBLocale.langs()) || [];
+    var ri   = CBLocale.regionInfo && CBLocale.regionInfo();
+    if (!ri || !ri.langs || !ri.langs.length) return !mine.length;
+    return mine.length === 1 && mine[0] === ri.langs[0];
+  } catch (_) { return true; }   /* ⚠️ unknown → 'Default'. Claiming a choice nobody made is the worse error. */
+}
+
 function _locName(table, code) {
   var row = table.find(function (t) { return t[0] === code; });
   return row ? String(row[1]).split(' — ')[0] : code;
 }
 
+/**
+ * ⭐⭐ SETTINGS STAGES, IT NO LONGER APPLIES. Athi, 2026-08-21: *"can we create a save button for each section
+ * if they are going to change? So it is a deliberate change per item. This will not happen every day, but I
+ * believe this will have a larger impact."*
+ *
+ * ⚠⚠ HE IS RIGHT AND MY FIRST ANSWER WAS TOO NARROW. I had reasoned that these are reader preferences in
+ * this browser, instantly visible and instantly reversible, so a Save button would make you commit before you
+ * could see the result. The part I left out: every one of them is PUSHED to the account through CBPrefs, so a
+ * mis-click does not stay in this browser — it follows the person to every device they sign in on. That is the
+ * larger impact, and it makes deliberateness worth more than immediacy.
+ *
+ * ⭐ SO BOTH, RATHER THAN A TRADE: the card previews the pending choice live, and nothing leaves until Save.
+ * The preview works by REPLAYING the staged calls against real storage, rendering, and rolling back — the same
+ * code path a save takes, so what you see is what you get rather than a second implementation's guess.
+ *
+ * ⚠️ AND THE REST OF THE APP KEEPS THE SAVED FORMAT while you are choosing. Only this card previews. A whole
+ * screen lurching into Devanagari on the way past a dropdown is the mis-click Athi is describing, not the cure.
+ */
+/**
+ * The pending bar — what is waiting, and the two ways out of it. Absent entirely when nothing is staged, so
+ * the screen a reader normally sees is unchanged.
+ */
 /**
  * ⭐ THE CURRENCY MENU — the region's answer alone at the top, every ISO 4217 code below it.
  *
@@ -3558,7 +3737,51 @@ async function localeSetCurrency(code) {
   }
 }
 
+function _locPendingBar() {
+  var st = UI._locStage || [];
+  if (!st.length) return '';
+  var Q = String.fromCharCode(39);
+  var rowOf = function (o) {
+    /* ⚠️ THE VALUE AS THE PICKER SHOWS IT, not the raw code. 'ca=indian' is the thing Athi could not read;
+       repeating it in the confirmation would repeat the problem at the moment it matters most. */
+    var v = o.args[o.args.length - 1];
+    var shown = Array.isArray(v) ? (v.length ? v.join(', ') : tx('follow the region'))
+      : (o.fn === 'setExt'
+          ? (_locName(o.args[0] === 'nu' ? NUMERALS : o.args[0] === 'hc' ? HOURS : o.args[0] === 'ca' ? CALS : WEEK, v)
+             + (_locSample(o.args[0], v) ? ' — ' + _locSample(o.args[0], v) : ''))
+          : (v || tx('follow the region')));
+    return '<div style="display:flex;gap:8px;padding:2px 0">'
+      + '<b style="min-width:132px;font-size:var(--fs-1);color:var(--grey);text-transform:uppercase;letter-spacing:.04em">'
+      + esc(o.what) + '</b><div style="flex:1;min-width:0">' + esc(shown) + '</div></div>';
+  };
+  return /* ⚠️ A SURFACE MUST NAME ITS TEXT COLOUR. guard-static flagged this: painting a background and letting
+       the text inherit means the two themes can disagree — warn-tint is light in both, so dark-mode inherited
+       ink would be pale text on a pale panel. */
+    '<div data-testid="loc-pending" style="position:sticky;top:0;z-index:3;background:var(--warn-tint);color:var(--on-card);'
+    + 'border:1px solid var(--warn-2);border-radius:9px;padding:10px 12px;margin-bottom:10px">'
+    + '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;'
+    + 'color:var(--on-card);margin-bottom:6px">' + tx('Not saved yet') + '</div>'
+    + st.map(rowOf).join('')
+    + '<div style="display:flex;gap:8px;margin-top:9px">'
+    +   '<button class="btn pri" style="flex:1" onclick="localeSaveLocale()">' + tx('Save') + '</button>'
+    +   '<button class="btn" style="flex:1" onclick="localeDiscardLocale()">' + tx('Discard') + '</button>'
+    + '</div></div>';
+}
+
 function localeSettingsHTML(){
+  if (!UI._locStage || !UI._locStage.length) return _localeSettingsBody();
+  var snap = CBLocale.snapshot();
+  /* ⚠️ QUIETLY — a preview that pushed would sync a value nobody chose, and the rollback would be the only
+     part that stayed local. See CBLocale.quietly. */
+  return CBLocale.quietly(function(){
+    /* ⚠️ THE BAR IS BUILT INSIDE THE PREVIEW, so its sample renders in the pending calendar too — a
+       confirmation showing today's date in the OLD calendar would be describing what you are leaving. */
+    try { _locReplay(); return _locPendingBar() + _localeSettingsBody(); }
+    finally { CBLocale.restore(snap); }
+  });
+}
+
+function _localeSettingsBody(){
   /* ⚠️ THE QUOTE IS BUILT HERE, NOT IN THE SCRIPT THAT WROTE THIS FILE. Third time: BT, then Q in the palette,
      now Q again. A generator-only constant emitted into shipped code PARSES fine and dies at render. The only
      check that catches it is running the function — which is what caught this one, before it shipped. */
@@ -3714,13 +3937,13 @@ function localeSettingsHTML(){
     + '</div>'
 
     + card('<label class="fl">Numbering system <span style="font-weight:400;color:var(--grey)">— <code>-u-nu-</code></span></label>'
-        + sel('loc-nu', NUMERALS, CBLocale.getExt('nu'), 'localeSetNu'))
+        + sel('loc-nu', _locWithSamples(NUMERALS, 'nu'), CBLocale.getExt('nu'), 'localeSetNu'))
 
     + card('<label class="fl">Hour cycle <span style="font-weight:400;color:var(--grey)">— <code>-u-hc-</code></span></label>'
-        + sel('loc-hc', HOURS, CBLocale.getExt('hc'), 'localeSetHc'))
+        + sel('loc-hc', _locWithSamples(HOURS, 'hc'), CBLocale.getExt('hc'), 'localeSetHc'))
 
     + card('<label class="fl">Calendar <span style="font-weight:400;color:var(--grey)">— <code>-u-ca-</code></span></label>'
-        + sel('loc-ca', CALS, CBLocale.getExt('ca'), 'localeSetCa'))
+        + sel('loc-ca', _locWithSamples(CALS, 'ca'), CBLocale.getExt('ca'), 'localeSetCa'))
 
     + card('<label class="fl">First day of week <span style="font-weight:400;color:var(--grey)">— <code>-u-fw-</code></span></label>'
         + sel('loc-fw', WEEK, CBLocale.getExt('fw'), 'localeSetFw')
@@ -3800,20 +4023,108 @@ function localeSettingsHTML(){
         + '<b>' + tx('A chit is a shared record') + '</b> — one that read differently to each party would not be a record.</div>');
 }
 /** Choosing a region sets the format AND prunes languages it does not admit — see the note in locale.js. */
-function localeSetTz(v){ CBLocale.setTimezone(v); renderApp(); _capShowDetail(); loadSettings(); }
+/**
+ * ⭐⭐ NOTHING APPLIES UNTIL SAVE. Athi, 2026-08-21: *"can we create a save button for each section if they
+ * are going to change? So it is a deliberate change per item. This will not happen every day, but I believe
+ * this will have a larger impact."*
+ *
+ * ⚠⚠ I FIRST ARGUED AGAINST THIS AND THE ARGUMENT HAD A HOLE. My reasoning was that these are reader
+ * preferences in this browser — instantly visible, instantly reversible — so a Save button would make you
+ * commit before you could see the result. What I left out is that every one of them is PUSHED to the account
+ * through CBPrefs. A mis-click does not stay in this browser; it follows the person to every device they sign
+ * in on. That is the larger impact, and it outweighs immediacy.
+ *
+ * ⭐ SO BOTH, RATHER THAN A TRADE. The card previews the pending choice live — you still see the date before
+ * you keep it — and nothing leaves until Save.
+ *
+ * ⚠️ ONE BAR NAMING EVERY PENDING ITEM, NOT ONE BUTTON PER CARD. These controls are not independent:
+ * choosing a region PRUNES languages it does not admit. A Save button on the Region card that committed only
+ * the region would be claiming a separation the data does not have — and one that committed the language loss
+ * too would be doing something its label did not say. The bar lists each pending change by name, which is the
+ * per-item deliberateness Athi asked for, without inventing an independence these settings do not have.
+ */
+/**
+ * ⭐ ONE STAGED CHANGE. The control does not apply — it records what it WOULD do, and the card repaints
+ * showing that. Nothing reaches storage or the account until Save.
+ *
+ * ⚠️ OPERATIONS, NOT VALUES. setRegion() prunes languages the region does not admit; setWorkdays() refuses
+ * to empty the week. Staging the VALUE and writing it at Save would skip those rules, so the preview would
+ * show one outcome and the save produce another. Replaying the CALL is the only way the two agree.
+ *
+ * ⚠️ LAST WRITE PER CONTROL WINS. Picking three regions in a row must stage one change, not three — and a
+ * replay of all three would be slower and, for setRegion, would prune against the intermediate ones.
+ */
+function _locStage(what, fn, args) {
+  UI._locStage = (UI._locStage || []).filter(function (o) {
+    /* setExt is four controls sharing one function — they are the same control only if the subtag matches. */
+    return o.fn !== fn || (fn === 'setExt' && o.args[0] !== args[0]);
+  });
+  UI._locStage.push({ what: what, fn: fn, args: args });
+  loadSettings();          /* ⚠️ the CARD repaints; renderApp() deliberately does not run — see the wrapper. */
+}
+
+function _locReplay() {
+  (UI._locStage || []).forEach(function (o) { CBLocale[o.fn].apply(CBLocale, o.args); });
+}
+
+/** What is waiting, named — so the Save button can say what it is about to do. */
+function _locPending() {
+  var seen = [];
+  (UI._locStage || []).forEach(function (o) { if (seen.indexOf(o.what) < 0) seen.push(o.what); });
+  return seen;
+}
+
+/**
+ * ⚠️ UNDO SURVIVES THE SAVE, and it is not redundant with staging. Staging stops the ACCIDENT — a stray
+ * click on a dropdown. Undo covers the DELIBERATE change that turned out wrong once you saw the whole app in
+ * it. Different mistakes, different moments.
+ */
+function localeSaveLocale() {
+  var pending = _locPending();
+  if (!pending.length) return;
+  var before = CBLocale.snapshot();
+  _locReplay();
+  UI._locStage = [];
+  renderApp(); _capShowDetail(); loadSettings();
+  toast(txf('{what} saved', { what: pending.join(', ') }), function () {
+    CBLocale.restore(before);
+    renderApp(); _capShowDetail(); loadSettings();
+    toast(txf('{what} put back', { what: pending.join(', ') }));
+  });
+}
+
+function localeDiscardLocale() {
+  if (!(UI._locStage || []).length) return;
+  UI._locStage = [];
+  loadSettings();
+  toast(tx('Nothing was changed.'));
+}
+
+function localeSetTz(v){ _locStage(tx('Time zone'), 'setTimezone', [v]); }
 /**
  * ⚠️ THE LAST WORKING DAY CANNOT BE REMOVED. A business with no working days has no due dates at all, and every
  * SLA calculation would divide by an empty week — a state the UI should refuse rather than the maths discover.
  */
+/**
+ * ⚠⚠ A TOGGLE READS BEFORE IT WRITES, SO IT MUST READ THE STAGED LIST. CBLocale.workdays() and .langs()
+ * return what is SAVED. Untick Saturday, then untick Friday: the second call would still see Saturday and
+ * hand it back, so the first click would silently undo itself. The single-value pickers escape this because
+ * they overwrite; a toggle accumulates, and accumulating onto a stale base loses every click but the last.
+ */
+function _locStaged(fn, live) {
+  var last = null;
+  (UI._locStage || []).forEach(function (o) { if (o.fn === fn) last = o; });
+  return last ? last.args[0].slice() : live();
+}
+
 function localeToggleWorkday(n){
-  var cur = CBLocale.workdays(), at = cur.indexOf(n);
+  var cur = _locStaged('setWorkdays', function(){ return CBLocale.workdays(); }), at = cur.indexOf(n);
   if (at >= 0) { if (cur.length > 1) cur.splice(at, 1); } else cur.push(n);
-  CBLocale.setWorkdays(cur);
-  renderApp(); _capShowDetail(); loadSettings();
+  _locStage(tx('Working days'), 'setWorkdays', [cur]);
 }
 /** Clearing the override returns to CLDR's answer for the region — not to a hardcoded Mon–Fri. */
-function localeResetWorkdays(){ CBLocale.setWorkdays([]); renderApp(); _capShowDetail(); loadSettings(); }
-function localeSetRegion(v){ CBLocale.setRegion(v); renderApp(); _capShowDetail(); loadSettings(); }
+function localeResetWorkdays(){ _locStage(tx('Working days'), 'setWorkdays', [[]]); }
+function localeSetRegion(v){ _locStage(tx('Region'), 'setRegion', [v]); }
 /**
  * ⚠️ APPEND, DO NOT REPLACE — the list is ORDERED and the order is the feature. Toggling a language on puts it
  * last (lowest priority); toggling it off closes the gap. Reordering by re-selecting is a smaller, separate
@@ -3821,18 +4132,17 @@ function localeSetRegion(v){ CBLocale.setRegion(v); renderApp(); _capShowDetail(
  * ⚠️ The last remaining language cannot be removed: a reader with no languages matches nothing at all.
  */
 function localeToggleLang(code){
-  var cur = CBLocale.langs(), at = cur.indexOf(code);
+  var cur = _locStaged('setLangs', function(){ return CBLocale.langs(); }), at = cur.indexOf(code);
   if (at >= 0) { if (cur.length > 1) cur.splice(at, 1); }
   else if (cur.length < CBLocale.MAX_LANGS) cur.push(code);
-  CBLocale.setLangs(cur);
-  renderApp(); _capShowDetail(); loadSettings();
+  _locStage(tx('Languages'), 'setLangs', [cur]);
 }
-function localeSetFormat(v){ CBLocale.setLocale(v); renderApp(); _capShowDetail(); loadSettings(); }
+function localeSetFormat(v){ _locStage(tx('Format'), 'setLocale', [v]); }
 /* One handler shape per subtag — each re-renders so the preview above moves with the choice. */
-function localeSetNu(v){ CBLocale.setExt('nu', v); renderApp(); _capShowDetail(); loadSettings(); }
-function localeSetHc(v){ CBLocale.setExt('hc', v); renderApp(); _capShowDetail(); loadSettings(); }
-function localeSetCa(v){ CBLocale.setExt('ca', v); renderApp(); _capShowDetail(); loadSettings(); }
-function localeSetFw(v){ CBLocale.setExt('fw', v); renderApp(); _capShowDetail(); loadSettings(); }
+function localeSetNu(v){ _locStage(tx('Numbering system'), 'setExt', ['nu', v]); }
+function localeSetHc(v){ _locStage(tx('Hour cycle'), 'setExt', ['hc', v]); }
+function localeSetCa(v){ _locStage(tx('Calendar'), 'setExt', ['ca', v]); }
+function localeSetFw(v){ _locStage(tx('First day of week'), 'setExt', ['fw', v]); }
 
 
 function paintSettings(s, _daOpts){ const h=document.getElementById("setbody"); if(!h)return;

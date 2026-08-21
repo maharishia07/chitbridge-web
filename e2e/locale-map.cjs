@@ -76,11 +76,31 @@ const ENTITY = {
 function rows() {
   const html = ctx.iamMeHTML(ENTITY);
   const seg = html.slice(html.indexOf('iam-sec-regional'));
-  const re = /letter-spacing:\.04em;line-height:1\.7">([^<]+)<\/b><div style="flex:1;min-width:0"><div>([\s\S]*?)<\/div>(?:<div style="font-size:var\(--fs-1\);color:var\(--grey\);margin-top:1px;line-height:1\.5">([^<]*)<\/div>)?/g;
-  const out = {}; let m;
-  while ((m = re.exec(seg))) {
-    out[m[1].trim()] = String(m[2]).replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim()
-      + (m[3] ? '  [' + m[3].trim() + ']' : '');
+  /* ⚠⚠ MATCH THE STRUCTURE, NOT THE EXACT PIXELS. This pinned margin-top:1px, and adding the source mark
+     changed it to 2px — so the guard silently stopped capturing NOTES, and reported 'First day of week moves
+     nothing' when the note was the only place it appears. A guard that goes half-blind still prints a verdict,
+     which is worse than one that crashes. The row label and the flex value box are the load-bearing shapes;
+     the note is now taken as whatever grey block follows, whatever its spacing. */
+  const LBL  = 'letter-spacing:.04em;line-height:1.7">';
+  const NOTE = 'color:var(--grey);margin-top:';
+  const out = {}; let i = 0;
+  while (true) {
+    const a = seg.indexOf(LBL, i); if (a < 0) break;
+    const le = seg.indexOf('<', a + LBL.length);
+    const label = seg.slice(a + LBL.length, le).trim();
+    const vs = seg.indexOf('<div>', le); if (vs < 0) break;
+    const ve = seg.indexOf('</div>', vs);
+    let val = seg.slice(vs + 5, ve).replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+    /* the note is the grey block immediately after, if there is one before the next row starts */
+    const nxt = seg.indexOf(LBL, ve);
+    const ns = seg.indexOf(NOTE, ve);
+    if (ns >= 0 && (nxt < 0 || ns < nxt)) {
+      const gs = seg.indexOf('>', ns);
+      const ge = seg.indexOf('</div></div>', gs);
+      if (ge > gs) val += '  [' + seg.slice(gs + 1, ge).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() + ']';
+    }
+    out[label] = val;
+    i = ve;
   }
   return out;
 }
@@ -100,28 +120,61 @@ function reset() {
  * baseline changes nothing — latn is ALREADY what en-IN uses — so the guard would report an invisible control
  * when the truth is "already applied". Every value below is chosen to differ from the IN baseline.
  */
+/**
+ * ⭐⭐ DRIVEN THROUGH THE REAL HANDLERS, THEN SAVED — not through CBLocale directly. Settings now STAGES:
+ * clicking a picker records the change and nothing applies until Save. Calling CBLocale.setExt() here would
+ * bypass the staging entirely and test a path no person can take, so the guard would stay green even if the
+ * Save button were wired to nothing.
+ */
 const CONTROLS = [
-  { setter: 'localeSetRegion',     what: 'Region',            run: () => C.setRegion('US') },
-  { setter: 'localeSetFormat',     what: 'Format',            run: () => C.setLocale('de-DE') },
-  { setter: 'localeToggleLang',    what: 'Languages',         run: () => C.setLangs(['ar', 'en']) /* ⚠ ARABIC, NOT TAMIL. Tamil is LTR, so a Tamil test left 'Reads' unchanged and this guard called it an ORPHAN. The value must exercise the consequence, not just the setting. */ },
-  { setter: 'localeSetNu',         what: 'Numbering system',  run: () => C.setExt('nu', 'deva') },
-  { setter: 'localeSetHc',         what: 'Hour cycle',        run: () => C.setExt('hc', 'h23') },
-  { setter: 'localeSetCa',         what: 'Calendar',          run: () => C.setExt('ca', 'indian') },
-  { setter: 'localeSetFw',         what: 'First day of week', run: () => C.setExt('fw', 'sun') },
-  { setter: 'localeToggleWorkday', what: 'Working days',      run: () => C.setWorkdays([1, 2, 3]) },
-  { setter: 'localeSetTz',         what: 'Time zone',         run: () => C.setTimezone('Europe/London') },
+  { setter: 'localeSetRegion',      what: 'Region',            run: () => ctx.localeSetRegion('US') },
+  { setter: 'localeSetFormat',      what: 'Format',            run: () => ctx.localeSetFormat('de-DE') },
+  /* ⚠⚠ TWO CLICKS, BECAUSE THE TOGGLE APPENDS. My earlier version called setLangs(['ar','en']) directly and
+     put Arabic FIRST; the real control adds it LAST, since the list is a priority order and a toggle cannot
+     express rank. So one click leaves Language 1 as English and direction as LTR, and this guard called both
+     rows orphans. Adding Arabic and then removing English is what a person actually does, and it is the only
+     sequence that reaches the state the earlier test had assumed. */
+  { setter: 'localeToggleLang',     what: 'Languages',         run: () => { ctx.localeToggleLang('ar'); ctx.localeToggleLang('en'); } },
+  { setter: 'localeSetNu',          what: 'Numbering system',  run: () => ctx.localeSetNu('deva') },
+  { setter: 'localeSetHc',          what: 'Hour cycle',        run: () => ctx.localeSetHc('h23') },
+  { setter: 'localeSetCa',          what: 'Calendar',          run: () => ctx.localeSetCa('indian') },
+  { setter: 'localeSetFw',          what: 'First day of week', run: () => ctx.localeSetFw('sun') },
+  { setter: 'localeToggleWorkday',  what: 'Working days',      run: () => ctx.localeToggleWorkday(6) },
+  /* ⚠⚠ THE TENTH CONTROL, INVISIBLE TO THIS GUARD UNTIL TODAY — the scan pattern was localeSet*|localeToggle*,
+     so a function named localeReset* was never looked for.
+     ⚠️ AND IT IS MEASURED AGAINST THE STATE IT UNDOES, NOT AGAINST BASE. Its whole job is to return to the
+     region's answer, so comparing it to base correctly finds no difference — a true observation answering the
+     wrong question. `against: 'pre'` asks the question that means something: did clearing the override move
+     the screen back? */
+  { setter: 'localeResetWorkdays',  what: 'Working days',      against: 'pre',
+    pre: () => { ctx.localeToggleWorkday(6); ctx.localeSaveLocale(); },
+    run: () => ctx.localeResetWorkdays() },
+  { setter: 'localeSetTz',          what: 'Time zone',         run: () => ctx.localeSetTz('Europe/London') },
   /* ⚠️ NOT DRIVEN, AND THE REASON IS THE POINT. Currency is the only control on that screen which PATCHes the
      BUSINESS record rather than this browser's storage, so driving it would need a server. Its row is asserted
      to exist instead — which is the whole claim being made about it: that it is NAMED on the profile. */
-  { setter: 'localeSetCurrency',   what: 'Currency',          expectRow: 'Currency' },
+  { setter: 'localeSetCurrency',    what: 'Currency',          expectRow: 'Currency' },
 ];
 
 /* ⚠️ A NEW CONTROL MUST NOT SLIP IN UNLISTED — and the scan is over the whole FILE, not one function. When the
    currency menu moved into its own _curPicker() helper, a scan limited to localeSettingsHTML went blind and
-   reported "aligned" with a completely unreflected control sitting on the screen. */
+   reported "aligned" with a completely unreflected control sitting on the screen.
+
+   ⚠️⚠️ AND IT MATCHES DECLARATIONS, NOT A NAMING CONVENTION. The pattern was localeSet*|localeToggle*, so
+   localeResetWorkdays — a real control with a real button — was invisible to this guard from the day it was
+   written. A guard that finds controls by guessing their verb finds only the verbs you thought of. Every
+   function declared as locale<Something> is a candidate now, and the renderer is the one named exception.
+
+   ⚠️ THE PATTERN CARRIES NO BACKSLASHES ON PURPOSE. [(] rather than an escaped paren, a space class rather
+   than the whitespace escape: six separate times this session a generated edit has eaten one backslash out of
+   a regex, and a regex that silently matches nothing is a guard that silently passes. Nothing here to eat. */
 const admin = fs.readFileSync(path.join(W, 'app', 'cap-admin.js'), 'utf8');
-const found = [...new Set([...admin.matchAll(/\b(localeSet[A-Za-z]+|localeToggle[A-Za-z]+)\b/g)].map((m) => m[1]))]
-  .filter((n) => n !== 'localeSettingsHTML');
+const found = [...new Set([...admin.matchAll(/function (locale[A-Z][A-Za-z]*)[ ]*[(]/g)].map((m) => m[1]))]
+  /* ⚠️ THE RENDERER AND THE TWO COMMIT ACTIONS ARE NOT SETTINGS. Save and Discard do not change a value;
+     they decide the fate of values already staged, so demanding that each 'moves a profile row' would be
+     asking the wrong thing of them. Named individually rather than pattern-matched away, so a real control
+     cannot hide behind a loose exception. */
+  .filter((n) => ['localeSettingsHTML', 'localeSaveLocale', 'localeDiscardLocale'].indexOf(n) < 0);
 const known = new Set(CONTROLS.map((c) => c.setter));
 
 let fail = 0;
@@ -142,8 +195,13 @@ for (const c of CONTROLS) {
     continue;
   }
   reset();
+  var basis = BASE;
+  if (c.pre) { c.pre(); if (c.against === 'pre') basis = rows(); }
   c.run();
-  const moved = diff(BASE, rows());
+  /* ⚠️ AND SAVE — staging alone moves nothing on the profile, by design. A guard that stopped at run() would
+     now report every control as invisible, which is the correct answer to the wrong question. */
+  ctx.localeSaveLocale();
+  const moved = diff(basis, rows());
   moved.forEach((r) => { (movedBy[r] = movedBy[r] || []).push(c.what); });
   if (!moved.length) {
     fail++;
