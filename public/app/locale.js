@@ -73,17 +73,30 @@
    * Modelling direction on the region would have made "UAE + English" render right-to-left, which is exactly the
    * contradiction this feature exists to prevent — arriving from the fix rather than the bug.
    */
+  /**
+   * ⭐ EACH REGION NAMES ITS CURRENCY — AS A SUGGESTION, NEVER AS A LIMIT. Athi, 2026-08-21: *"if the region
+   * selected, the currency should be filtered for that region, but otherwise they should be able to set for any
+   * currency — the entire table of currency can be showcased."*
+   *
+   * ⚠️ THE DISTINCTION DECIDES WHETHER THIS SHORT MAP IS HONEST. A list that SUGGESTS may be incomplete
+   * without harming anyone: a business in a region we have not mapped gets no suggestion and picks from the full
+   * table. A list that LIMITS must be complete, or it silently forbids real trade. The four-currency envelope
+   * that prompted this was the second kind wearing the first kind's clothes.
+   *
+   * ⚠️ AN ARRAY, NOT A SCALAR, because a region can honestly have more than one — and because a scalar
+   * would have to be defended the day someone adds the second.
+   */
   var REGIONS = {
-    IN: { name: 'India',                format: 'en-IN', langs: ['en', 'hi', 'ta', 'te', 'bn', 'mr', 'gu', 'kn', 'ml', 'pa'] },
-    AE: { name: 'United Arab Emirates', format: 'ar-AE', langs: ['ar', 'en', 'hi', 'ur', 'ml'] },
-    SA: { name: 'Saudi Arabia',         format: 'ar-SA', langs: ['ar', 'en', 'ur'] },
-    GB: { name: 'United Kingdom',       format: 'en-GB', langs: ['en'] },
-    US: { name: 'United States',        format: 'en-US', langs: ['en', 'es'] },
-    DE: { name: 'Germany',              format: 'de-DE', langs: ['de', 'en', 'tr'] },
-    FR: { name: 'France',               format: 'fr-FR', langs: ['fr', 'en', 'ar'] },
-    SG: { name: 'Singapore',            format: 'en-SG', langs: ['en', 'zh', 'ms', 'ta'] },
-    JP: { name: 'Japan',                format: 'ja-JP', langs: ['ja', 'en'] },
-    LK: { name: 'Sri Lanka',            format: 'si-LK', langs: ['si', 'ta', 'en'] }
+    IN: { name: 'India',                format: 'en-IN', cur: ['INR'], langs: ['en', 'hi', 'ta', 'te', 'bn', 'mr', 'gu', 'kn', 'ml', 'pa'] },
+    AE: { name: 'United Arab Emirates', format: 'ar-AE', cur: ['AED'], langs: ['ar', 'en', 'hi', 'ur', 'ml'] },
+    SA: { name: 'Saudi Arabia',         format: 'ar-SA', cur: ['SAR'], langs: ['ar', 'en', 'ur'] },
+    GB: { name: 'United Kingdom',       format: 'en-GB', cur: ['GBP'], langs: ['en'] },
+    US: { name: 'United States',        format: 'en-US', cur: ['USD'], langs: ['en', 'es'] },
+    DE: { name: 'Germany',              format: 'de-DE', cur: ['EUR'], langs: ['de', 'en', 'tr'] },
+    FR: { name: 'France',               format: 'fr-FR', cur: ['EUR'], langs: ['fr', 'en', 'ar'] },
+    SG: { name: 'Singapore',            format: 'en-SG', cur: ['SGD'], langs: ['en', 'zh', 'ms', 'ta'] },
+    JP: { name: 'Japan',                format: 'ja-JP', cur: ['JPY'], langs: ['ja', 'en'] },
+    LK: { name: 'Sri Lanka',            format: 'si-LK', cur: ['LKR'], langs: ['si', 'ta', 'en'] }
   };
 
   /** How many languages a reader may declare. More than three is a list nobody maintains and nothing matches. */
@@ -523,7 +536,7 @@
 
     /**
      * ⚠️ CURRENCY FROM THE MONEY, LOCALE FROM THE READER. The whole point of the file.
-     * `narrowSymbol` keeps "$1,234" rather than "US$1,234" where the locale allows it.
+     * The symbol form is chosen below, and it is not the obvious one — see symbol().
      */
     /**
      * The currency SYMBOL alone, in the reader's locale — extracted from Intl rather than kept in a table.
@@ -533,18 +546,73 @@
      * US answer for a symbol the layer was supposed to own. Falling back to the CODE is correct, not a failure:
      * AED genuinely displays as "AED" in most locales.
      */
+    /**
+     * ⚠⚠ 'symbol', NOT 'narrowSymbol' — AND THE DIFFERENCE IS A CORRECTNESS BUG, NOT A STYLE PREFERENCE.
+     * narrowSymbol renders USD, SGD, AUD and CAD ALL as '$', and CNY and JPY both as '¥' — measured, in every
+     * locale tried (en-IN, en-SG, en-US, ja-JP, de-DE). So an SGD 500 quote and a USD 500 quote printed
+     * IDENTICALLY.
+     *
+     * ⚠️ ON THIS PLATFORM THAT IS THE WORST POSSIBLE AMBIGUITY, because the money rule is that amounts are
+     * never converted: 'you always see the currency the price was written in'. Two currencies sharing one glyph
+     * breaks that promise more quietly than converting would — a converted number at least looks different.
+     *
+     * ⭐ 'symbol' is CLDR's disambiguating form and it is locale-aware in exactly the right way: in en-SG the
+     * local dollar stays '$' and the foreign one becomes 'US$'; in en-IN the same pair is '$' and 'SGD'. It only
+     * spends characters where there is something to confuse.
+     *
+     * ⚠️ IT SURFACED BECAUSE THE CURRENCY LIST WIDENED FROM FOUR TO 162. INR/USD/MXN/EUR never collide — the
+     * demo envelope was hiding this. Every list that grows tests something that was never true, only untested.
+     */
     symbol: function (code) {
       var c = code || 'INR';
       try {
-        var pt = new Intl.NumberFormat(L.tag(), { style: 'currency', currency: c, currencyDisplay: 'narrowSymbol' })
+        var pt = new Intl.NumberFormat(L.tag(), { style: 'currency', currency: c, currencyDisplay: 'symbol' })
           .formatToParts(0).find(function (x) { return x.type === 'currency'; });
         return (pt && pt.value) || c;
       } catch (_) { return c; }
     },
 
+    /**
+     * ⭐⭐ THE WHOLE ISO 4217 TABLE, FROM THE ENGINE. Athi, 2026-08-21: *"we are showcasing only a few
+     * currencies — does it mean it cannot work for any other currency? Singapore dollar, yuan and other things
+     * are not here. It should work for any currency, correct?"* Correct, and it did not.
+     *
+     * ⚠⚠ WHY IT DID NOT IS THE INTERESTING PART, AND IT WAS NEVER A DESIGN LIMIT. b74_platform_governance.sql
+     * seeded the base constitution with {"currencies":["INR","USD","MXN","EUR"]} — four codes typed into a
+     * bootstrap row to make a demo work. The profile picker read that envelope, so four is what every business
+     * on the platform could ever price in. A demo fixture had quietly become policy.
+     *
+     * ⭐ SO THE LIST COMES FROM Intl, NOT FROM US. 162 codes the browser already maintains against CLDR — no
+     * table to update when a currency is added, redenominated or withdrawn, and no second place to forget.
+     * The old fallback is not a shorter list: on an engine without supportedValuesOf we cannot enumerate, so we
+     * return what is in play and let the person type. Guessing a subset is how we got here.
+     */
+    currencies: function () {
+      try {
+        if (typeof Intl.supportedValuesOf === 'function') return Intl.supportedValuesOf('currency');
+      } catch (_) { /* older engine — fall through */ }
+      return null;
+    },
+
+    /**
+     * The currency a region trades in — a SUGGESTION for the picker to float to the top, never a filter that
+     * removes the rest. Unknown region → no suggestion, which is the honest answer, not an empty list.
+     */
+    regionCurrencies: function (code) {
+      var r = REGIONS[String(code || L.region() || '').toUpperCase()];
+      return (r && r.cur) ? r.cur.slice() : [];
+    },
+
+    /** ⭐ 'Singapore Dollar', in the reader's language. A code is what a system needs; a name is what a person
+     *  recognises, and a picker of 162 codes without names is a lookup table, not a choice. */
+    currencyName: function (code) {
+      try { return new Intl.DisplayNames([L.tag()], { type: 'currency' }).of(String(code).toUpperCase()) || code; }
+      catch (_) { return code; }
+    },
+
     money: function (amount, code) {
       var n = Number(amount || 0), c = code || 'INR', loc = L.tag();
-      try { return new Intl.NumberFormat(loc, { style: 'currency', currency: c, currencyDisplay: 'narrowSymbol' }).format(n); }
+      try { return new Intl.NumberFormat(loc, { style: 'currency', currency: c, currencyDisplay: 'symbol' }).format(n); }
       catch (e) {
         try { return new Intl.NumberFormat(loc, { style: 'currency', currency: c }).format(n); }
         catch (_) { return c + ' ' + n.toLocaleString(); }   /* an unknown currency code must still print */

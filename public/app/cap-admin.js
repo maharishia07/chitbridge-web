@@ -1417,7 +1417,11 @@ function iamMeHTML(e){
   return iamSection('ident', tx('Identity'), ident + profSaveBtn('ident'), { openByDefault: true,
              hint: [e.user_id, e.bridge_id].filter(Boolean).join(' · ') })
     + iamSection('profile', tx('Business'), profile + profSaveBtn('profile'), { hint: _licHint })
-    + iamSection('regional', tx('Regional'), iamGovernedRows(e) + (Array.isArray(((e.governance||{}).allowed||{}).currencies) && ((e.governance||{}).allowed||{}).currencies.length > 1 ? profSaveBtn('regional') : ''), { hint: _regHint })
+    /* ⚠️ THE SAVE BUTTON WENT WITH THE PICKER. It was rendered when the constitution permitted more than one
+       currency — the section's only writable control. With the picker in Settings, a Save here would submit an
+       empty section: a button that does nothing is worse than no button, because a reader who presses it and
+       sees 'saved' believes something was written. */
+    + iamSection('regional', tx('Regional'), iamGovernedRows(e), { hint: _regHint })
     + iamSection('channels', tx('Channels'), iamChannelRows(), { hint: _chanHint })
     + iamSection('governed', tx('Storefront'), governed + profSaveBtn('governed'), { hint: _sfHint })
     /* ⭐ TRADE READY SITS BESIDE RIGHTS, not among the editable sections — both answer "what may this
@@ -1906,12 +1910,22 @@ function iamGovernedRows(e){
      permitted one and never told. The question is about what THEY hold, not what we chose to display. */
   var stored  = (e && e.currency_code) || null;
   var outside = !!(perm && perm.length && stored && perm.indexOf(stored) < 0);
-  if (hasChoice) {
-    rows.push(['Currency',
-      '<select class="inp" id="pf_cur" style="margin:0;max-width:140px;display:inline-block">'
-        + perm.map(function(c){ return '<option value="' + esc(c) + '"' + (c === curr ? ' selected' : '') + '>' + esc(c) + '</option>'; }).join('')
-        + '</select>', tx('Choose'), true]);
-  } else if (curr) {
+  /**
+   * ⭐⭐ A FACT, NOT A CONTROL — THE PICKER THAT WAS HERE IS NOW IN SETTINGS. Athi, 2026-08-21: *"why have we
+   * brought the currency to choose here? Let it be in settings only."*
+   *
+   * ⚠️ HE HAD ALREADY GIVEN THE RULE AND THIS ROW BROKE IT: *"settings is where we can change the value,
+   * profile is the personal preference — settings snapshot."* One editable <select> in a column of read-only
+   * rows also reads as an accident, because the eye takes a control as permission and every neighbour said no.
+   *
+   * ⚠️ AND IT WAS WRITING TO THE WRONG ROW ANYWAY. PATCH /profile writes req.identity.identity_id — the
+   * CALLER'S record — so a co-assist changing 'the business currency' landed it on their own actor row, where
+   * nothing reads it. The screen said saved, the business still priced in the old currency. Same shape as the
+   * user_id theft, minus the global name: the API now refuses it outright (CURRENCY_ENTITY_ONLY).
+   */
+  var stored  = (e && e.currency_code) || null;
+  var outside = !!(perm && perm.length && stored && perm.indexOf(stored) < 0);
+  if (curr) {
     /* ⚠️ LABELLED BY WHERE THE VALUE CAME FROM, not by whether a list exists. With no allowed set the governed
        value wins — and calling that "Business" was the original lie in a new place. */
     var fromGov = (curr === gb.currency && curr !== stored) || (!stored && !!gb.currency);
@@ -1986,12 +2000,12 @@ function iamGovernedRows(e){
        * the same instant identically there is nothing to explain, whatever they are called.
        */
       _tzDiffers(_readTz, _bizTz2) ? txf('shown in {tz} — your device', { tz: _readTz }) : '',
-      false, 'read']);
+      false, 'fmt']);
     /* ⭐ NUMBERS, AS AN EXAMPLE FOR THE SAME REASON AS THE TIMESTAMP. India groups 12,34,56,789 and the US
        groups 123,456,789 — a reader recognises their own grouping instantly and would have to decode
        'en-IN'. Athi: *"number system also."* */
-    if (CBLocale.number) rows.push(['Numbers', CBLocale.number(12345678.9), '', false, 'read']);
-    else if (CBLocale.locale) rows.push(['Numbers', (12345678.9).toLocaleString(CBLocale.locale()), '', false, 'read']);
+    if (CBLocale.number) rows.push(['Numbers', CBLocale.number(12345678.9), '', false, 'fmt']);
+    else if (CBLocale.locale) rows.push(['Numbers', (12345678.9).toLocaleString(CBLocale.locale()), '', false, 'fmt']);
     /**
      * ⭐⭐ THEME AND TEXT SIZE JOIN "HOW YOU READ IT" — because that is literally what they are. Athi,
      * 2026-08-21: *"under profile, personal preference the colour scheme and the size of the char, say 75%,
@@ -2023,18 +2037,18 @@ function iamGovernedRows(e){
         var _wd = CBLocale.workdays() || [];
         if (_wd.length) rows.push(['Working week', _wd.map(function(d){ return _D[d] || d; }).join(' '),
           (CBLocale.hasWorkdayOverride && CBLocale.hasWorkdayOverride()) ? tx('you set this') : tx('from your region'),
-          false, 'read']);
+          false, 'fmt']);
       }
     } catch (_) { /* absent locale layer — show what we have */ }
 
     try {
       if (typeof THEMES !== 'undefined' && typeof themeGet === 'function') {
         var _th = THEMES[themeGet()] || {};
-        rows.push(['Theme', _th.name || themeGet(), _th.a11y ? txf('meets WCAG {level}', { level: _th.a11y.level }) : '', false, 'read']);
+        rows.push(['Theme', _th.name || themeGet(), _th.a11y ? txf('meets WCAG {level}', { level: _th.a11y.level }) : '', false, 'look']);
       }
       if (typeof TEXT_SIZES !== 'undefined' && typeof textSize === 'function') {
         var _ts = TEXT_SIZES.filter(function(x){ return x[0] === textSize(); })[0];
-        if (_ts) rows.push(['Text size', _ts[1] + ' · ' + Math.round(_ts[2] * 100) + '%', '', false, 'read']);
+        if (_ts) rows.push(['Text size', _ts[1] + ' · ' + Math.round(_ts[2] * 100) + '%', '', false, 'look']);
       }
     } catch (_) { /* appearance layer absent — show what we have rather than nothing */ }
   } catch (_) { /* locale layer absent — show what we have rather than nothing */ }
@@ -2093,8 +2107,32 @@ var rowHtml = function(x){ return profRow(x[0], x[1], x[2], !!x[3]); };
   return '<div>'
     /* ⚠️ THE IN-BLOCK 'Regional' HEADING WENT WITH THE PROMOTION — the section header says it now, and a
        title repeated immediately under itself reads as a rendering fault. */
-    + grp(tx('Business'), rows.filter(function(r){ return r[4] !== 'read'; }))
-    + grp(tx('How you read it'), rows.filter(function(r){ return r[4] === 'read'; }))
+    /**
+     * ⭐⭐ FOUR SMALL GROUPS, NOT TWO WITH ONE OF THEM SEVEN ROWS LONG. Athi, 2026-08-21: *"a small list is
+     * always good, human brain cannot take multiple things in one go — so small groups like identity, business;
+     * if too many in one single group, split it with a subgroup."*
+     *
+     * ⚠️ 'How you read it' HAD BECOME A DRAWER. It started as language and direction — two rows that genuinely
+     * belong together — and then timestamp, numbers, working week, theme and text size were each added to it
+     * because it was the group that existed. Seven unrelated rows under one heading is a list, which is the
+     * thing the heading was there to prevent.
+     *
+     * ⚠️ THE SPLIT IS BY QUESTION ANSWERED, NOT BY ROW COUNT. Cutting seven at the midpoint would produce two
+     * groups nobody could name; the test of a real group is that its heading is a question a reader would ask —
+     * where are you · what language · how are values written · how does it look.
+     *
+     * ⚠️ ONE TABLE DRIVES IT, so a fifth group is a line here plus a key on the row — not a fourth copy of
+     * .filter(r[4] === '…'), which is how the drawer formed in the first place.
+     */
+    + [['biz',  tx('Business')],
+       ['read', tx('How you read it')],
+       ['fmt',  tx('How values are written')],
+       ['look', tx('How it looks')]]
+      .map(function(g){
+        /* ⚠️ 'biz' MATCHES AN ABSENT KEY TOO — a row pushed without a group must land somewhere visible,
+           not vanish because a five-element array was written with four. */
+        return grp(g[1], rows.filter(function(r){ return (r[4] || 'biz') === g[0]; }));
+      }).join('')
     /* ⭐ ONE LINK OUT, NOT FOUR. Athi: *"we can take them to settings to change it."* */
     /* ⚠️ TWO DESTINATIONS, BECAUSE THE GROUP HAS TWO OWNERS. Language and formats are set in Localisation;
        theme and text size in Appearance. One link would send half the readers to the wrong screen, and a
@@ -2225,7 +2263,11 @@ var PROF_FIELDS = {
   ident:    [['pf_name', 'display_name'], ['pf_uid', 'user_id']],
   profile:  [['pf_gstn', 'gstn'], ['pf_addr', 'address'], ['pf_sup', 'supplies']],
   governed: [['pf_bs', 'business_status'], ['pf_vis', 'catalogue_visibility'], ['pf_sfaccess', 'storefront_access']],
-  regional: [['pf_cur', 'currency_code']],
+  /* ⚠️ REGIONAL SAVES NOTHING NOW, AND THE EMPTY ARRAY IS THE POINT. Its one control (pf_cur) moved to
+     Settings; leaving ['pf_cur','currency_code'] here would make profDirtySections read an element that no
+     longer exists, and the section would offer a Save button with nothing behind it. A read-only section is
+     an honest one — it says the value is decided elsewhere. */
+  regional: [],
 };
 
 /**
@@ -3362,6 +3404,71 @@ function appearanceSettingsHTML(){
     + '</div>';
 }
 
+/**
+ * ⭐ THE CURRENCY MENU — the region's answer alone at the top, every ISO 4217 code below it.
+ *
+ * ⚠️ A SUGGESTION IS NOT A FILTER, and the difference is the bug this replaced. Athi, 2026-08-21: *"if the
+ * region is selected the currency should be filtered for that region, but otherwise they should be able to set
+ * for any currency — the entire table can be showcased."* Both halves matter: floating SGD to the top for a
+ * Singapore business saves a scroll through 162 rows; REMOVING the other 161 would recreate the four-currency
+ * cap in a nicer costume.
+ *
+ * ⚠️ THE CURRENT VALUE IS ALWAYS IN THE LIST even when it is neither suggested nor enumerable — an engine
+ * without Intl.supportedValuesOf returns null, and a <select> that silently drops what is saved would show the
+ * business a currency it does not use and write it on the next save.
+ */
+function _curPicker(cur) {
+  var all  = (CBLocale.currencies && CBLocale.currencies()) || null;
+  var mine = (CBLocale.regionCurrencies && CBLocale.regionCurrencies()) || [];
+  var top  = mine.slice();
+  if (cur && top.indexOf(cur) < 0) top.unshift(cur);        /* what you use is never buried */
+  var rest = (all || []).filter(function (c) { return top.indexOf(c) < 0; });
+  if (!all) rest = [];                                      /* cannot enumerate → offer what we know, say nothing false */
+
+  var label = function (c) {
+    var nm = (CBLocale.currencyName && CBLocale.currencyName(c)) || c;
+    return esc(c) + (nm && nm !== c ? ' — ' + esc(nm) : '');
+  };
+  var optsOf = function (list) {
+    return list.map(function (c) {
+      return '<option value="' + esc(c) + '"' + (c === cur ? ' selected' : '') + '>' + label(c) + '</option>';
+    }).join('');
+  };
+
+  /* ⚠️ regionInfo(), NOT a regionName() I remembered writing — it does not exist. locale.js exposes the
+     whole record; the name is a field on it. */
+  var _ri = CBLocale.regionInfo && CBLocale.regionInfo();
+  var regionName = (_ri && _ri.name) || CBLocale.region();
+  return '<select class="inp" id="loc-cur" style="margin:0;max-width:320px" onchange="localeSetCurrency(this.value)">'
+    + (top.length ? '<optgroup label="' + esc(regionName ? tx('Used in') + ' ' + regionName : tx('In use')) + '">'
+                    + optsOf(top) + '</optgroup>' : '')
+    + (rest.length ? '<optgroup label="' + esc(tx('All currencies')) + '">' + optsOf(rest) + '</optgroup>' : '')
+    + '</select>';
+}
+
+/**
+ * ⚠⚠ THIS ONE WRITES TO THE SERVER, unlike every other setter on this screen — so it must survive a refusal.
+ * The API bounds the value by the constitution and answers CURRENCY_NOT_ALLOWED with the permitted set named;
+ * showing that message beats a silent revert, which is what a fire-and-forget save would have produced.
+ */
+async function localeSetCurrency(code) {
+  var want = String(code || '').toUpperCase();
+  if (!want) return;
+  try {
+    /* ⚠️ api() TAKES A REGISTERED KEY, NOT A PATH — api('saveProfile', {body}) is the house call; a raw path
+       with {method} is a shape this codebase does not have. */
+    await api('saveProfile', { body: { currency_code: want } });
+    if (typeof SESSION !== 'undefined' && SESSION) SESSION.currency = want;
+    UI._me = null; loadProfile();                       /* re-read, exactly as saveProfile does */
+    toast(txf('Prices are now written in {cur}', { cur: want }));
+  } catch (err) {
+    /* ⚠️ PUT THE OLD VALUE BACK ON THE SCREEN. A <select> that keeps showing the refused choice tells the
+       reader it was accepted. */
+    toast((err && err.message) || tx('That currency could not be set.'), 'err');
+    UI._me = null; loadProfile();
+  }
+}
+
 function localeSettingsHTML(){
   /* ⚠️ THE QUOTE IS BUILT HERE, NOT IN THE SCRIPT THAT WROTE THIS FILE. Third time: BT, then Q in the palette,
      now Q again. A generator-only constant emitted into shipped code PARSES fine and dies at render. The only
@@ -3562,20 +3669,31 @@ function localeSettingsHTML(){
         + 'answers. Leave this on your device unless you want your <i>business\'s</i> clock wherever you are.'
         + '</div>')
 
-    /* ══ CURRENCY ═══════════════════════════════════════════════════════════════════════════════════════════
-     * ⭐⭐ THE SAME RULE AS LANGUAGE, AND SAYING SO IS THE POINT OF THIS CARD. There is no "show me everything in
-     * rupees", because converting AED 500 to rupees means inventing a rate, a date for that rate, and a number
-     * nobody agreed to — exactly as translating a product name invents words nobody wrote. A price is money in
-     * a stated currency; the reader chooses how DIGITS are grouped, never what the money is. */
+    /* ══ CURRENCY ═══════════════════════════════════════════════════════════════════════════
+     * ⭐⭐ THE CONTROL LIVES HERE NOW — IT USED TO POINT AT THE PROFILE, AND THE PROFILE POINTED BACK. Athi,
+     * 2026-08-21: *"why have we brought the currency to choose in profile? Let it be in settings only."* His
+     * rule from the day before decides it: Settings changes, Profile shows.
+     *
+     * ⚠️ THIS IS THE ONE CONTROL ON THIS SCREEN THAT IS NOT YOURS. Everything else in Localisation is a reader
+     * preference in this browser's storage; currency is a column on the business and changes what every
+     * colleague and every counterparty sees. So it is gated to the entity and says whose it is — an employee
+     * reads it, and reading is the correct amount of power over a company's trading currency.
+     *
+     * ⚠️ THE LIST IS GROUPED, NOT DUMPED. Athi, 2026-08-21: *"a small list is always good, human brain
+     * cannot take multiple things in one go."* 162 codes in one flat menu is the failure he is describing, so
+     * the region's own currency sits alone at the top and the rest are one <optgroup> below it — a list of one
+     * for the answer that is almost always right, with everything still reachable.
+     */
     + card('<label class="fl">' + tx('Currency') + '</label>'
         + '<div data-testid="loc-currency" style="font-size:var(--fs-2);line-height:1.6;color:var(--on-card)">'
-        + 'Your business prices in <b>' + esc(myCurCode) + ' ' + esc(CBLocale.symbol(myCurCode)) + '</b>. '
-        + '<span style="color:var(--grey)">' + tx('Change that in Profile — it is a fact about your business, not about you as a reader.') + '</span>'
-        + '<div style="margin-top:7px">Formatted for you: <b>' + esc(CBLocale.money(123456.5, myCurCode)) + '</b> '
-        + '<span style="color:var(--grey)">· a supplier quoting in USD still shows as ' + esc(CBLocale.money(123456.5, 'USD')) + '</span></div>'
-        + '<div style="margin-top:7px;color:var(--warn-2)">⚠️ <b>' + tx('Amounts are never converted.') + '</b> Converting a price '
-        + 'would mean inventing an exchange rate and a date for it — a number no party agreed to. You always see '
-        + 'the currency the price was written in.</div>'
+        + (profCanEdit() ? _curPicker(myCurCode)
+           : '<b>' + esc(myCurCode) + ' ' + esc(CBLocale.symbol(myCurCode)) + '</b> · '
+             + '<span style="color:var(--grey)">' + tx('set by the business') + '</span>')
+        + '<div style="margin-top:7px;color:var(--grey)">' + tx('Your prices are written in this.') + ' '
+        + esc(CBLocale.money(123456.5, myCurCode)) + '</div>'
+        + '<div style="margin-top:7px;color:var(--warn-2)">⚠️ ' + tx('Amounts are never converted.') + ' '
+        + '<span style="color:var(--grey)">' + tx('A supplier quoting in USD stays') + ' '
+        + esc(CBLocale.money(123456.5, 'USD')) + '.</span></div>'
         + '</div>')
 
     /* THE PREVIEW — see the note on this function. Every control above is an abstraction; this is the only place

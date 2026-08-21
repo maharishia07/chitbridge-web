@@ -30,12 +30,20 @@ const SETTINGS = [
   { setter: 'localeSetFw',        what: 'First day of week',via: 'named',        by: 'Working week' },
   { setter: 'localeToggleWorkday',what: 'Working days',     via: 'named',        by: 'Working week' },
   { setter: 'localeSetTz',        what: 'Time zone',        via: 'named',        by: 'Timestamp note when it differs' },
+  /* ⚠️ THE ODD ONE OUT, AND IT SAYS SO. Every other setter here writes this browser's storage; this one
+     PATCHes the business record, so it is entity-only and its reflection is a value, not a sample. */
+  { setter: 'localeSetCurrency', what: 'Currency',         via: 'named',        by: 'Currency' },
 ];
 
 /* ── 1 · has Settings grown a setter this list does not know about? ────────────────────────────────────── */
 const admin = fs.readFileSync(path.join(W, 'app', 'cap-admin.js'), 'utf8');
-const i = admin.indexOf('function localeSettingsHTML');
-const seg = admin.slice(i, admin.indexOf('\nfunction ', i + 50));
+/* ⚠⚠ THE WHOLE FILE, NOT ONE FUNCTION — AND THIS GUARD FALSELY PASSED UNTIL IT WAS. It used to scan only
+   the body of localeSettingsHTML, on the assumption that every locale control is written inline there. The
+   moment the currency menu was factored into its own _curPicker() helper, its setter moved outside that
+   window and the guard reported 'aligned' while a brand-new, entirely unreflected control sat on the screen.
+   A guard whose scope is an assumption about where code lives fails exactly when someone refactors — which is
+   when you most want it. Scanning the file has no such assumption. */
+const seg = admin;
 /* ⚠️ NO TRAILING PAREN IN THE PATTERN. The pickers pass their setter BY NAME to a helper —
    sel('loc-tz', opts, cur, 'localeSetTz') — so requiring "(" found none of them and this guard reported
    seven live controls as stale. A name is not always a call site. */
