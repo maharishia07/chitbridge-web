@@ -301,7 +301,7 @@ function cbcatRowsHTML(){
       + ' onclick="cbcatSelect(\'' + esc(c.id) + '\')"' + (ret ? ' style="opacity:.72"' : '') + '>'
       + '<div style="flex:1;min-width:0;padding-inline-start:' + ((c.depth||0)*16) + 'px">'
       +   '<div style="display:flex;align-items:center;gap:7px">'
-      +     '<b style="font-size:13.5px' + (ret ? ';text-decoration:line-through' : '') + '">' + esc(c.name) + '</b>'
+      +     '<b style="font-size:var(--fs-3)' + (ret ? ';text-decoration:line-through' : '') + '">' + esc(c.name) + '</b>'
       +     (ret ? '<span class="cbcat-badge ret">retired</span>' : '')
       +   '</div>'
       +   (c.note ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:1px">' + esc(c.note) + '</div>' : '')
@@ -478,7 +478,7 @@ function cbcatCss(){
     '.cbcat-note{font-size:var(--fs-2);line-height:1.55;color:var(--warn-3);background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;margin-bottom:11px}',
     '.cbcat-note.warn{color:var(--warn-2)}',
     '.cbcat-stat{display:flex;align-items:baseline;gap:9px;margin-bottom:4px}',
-    '.cbcat-stat .v{font-size:26px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}',
+    '.cbcat-stat .v{font-size:var(--fs-6);font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}',
     '.cbcat-stat .k{font-size:var(--fs-2);color:var(--grey)}',
     '.cbcat-plist{border:1px solid var(--line);border-radius:9px;overflow:hidden}',
     '.cbcat-prow{display:flex;gap:9px;align-items:baseline;padding:7px 11px;font-size:var(--fs-2);border-bottom:1px dashed var(--line)}',

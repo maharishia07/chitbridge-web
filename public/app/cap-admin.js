@@ -465,11 +465,11 @@ function misTrust(m){
     : 'none captured — everything entered by hand';
   return _misHead('Trust', 'Who you deal with, and how the work reaches you.')
     + '<div class="mistrust">'
-      + '<div><div class="mislbl">' + tx('Counterparties') + '</div><div class="misbig" style="font-size:24px">' + m.parties + '</div>'
+      + '<div><div class="mislbl">' + tx('Counterparties') + '</div><div class="misbig" style="font-size:var(--fs-5)">' + m.parties + '</div>'
         + '<div class="misnote">' + (m.partyNames.length ? esc(m.partyNames.slice(0, 3).join(' · ')) : 'no counterparties yet') + '</div></div>'
-      + '<div><div class="mislbl">' + tx('Suppliers on your list') + '</div><div class="misbig" style="font-size:24px">' + m.suppliers + '</div>'
+      + '<div><div class="mislbl">' + tx('Suppliers on your list') + '</div><div class="misbig" style="font-size:var(--fs-5)">' + m.suppliers + '</div>'
         + '<div class="misnote">' + m.co_assists + ' co-assist' + (m.co_assists === 1 ? '' : 's') + ' working the rail</div></div>'
-      + '<div><div class="mislbl">' + tx('How work arrives') + '</div><div class="misbig" style="font-size:24px">' + m.captured + ' <span style="font-size:var(--fs-2);color:var(--grey)">of ' + m.chits + '</span></div>'
+      + '<div><div class="mislbl">' + tx('How work arrives') + '</div><div class="misbig" style="font-size:var(--fs-5)">' + m.captured + ' <span style="font-size:var(--fs-2);color:var(--grey)">of ' + m.chits + '</span></div>'
         + '<div class="misnote">' + chanTxt + '</div></div>'
     + '</div>'
     /* ⚠️ The band I most want and have NOT verified is computable. Say so rather than show a score I cannot stand behind. */

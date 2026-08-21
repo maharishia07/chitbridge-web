@@ -224,7 +224,7 @@ function wlRow(r, ctx, depth){
     + ' style="padding:9px 16px 9px ' + (ind + 13) + 'px;border-bottom:1px solid var(--line);cursor:pointer'
     + (done ? ';opacity:.5' : '') + '">'
     + '<div style="display:flex;align-items:baseline;gap:8px">'
-    + '<span style="flex:1;font-weight:500;font-size:13.5px;color:var(--ink-2,#41474e)' + (done ? ';text-decoration:line-through' : '') + '">'
+    + '<span style="flex:1;font-weight:500;font-size:var(--fs-3);color:var(--ink-2,#41474e)' + (done ? ';text-decoration:line-through' : '') + '">'
     + (done ? '<span style="color:#3d7a4e;font-weight:800;text-decoration:none">✓ </span>' : '') + lead
     + (tail ? '<span style="color:var(--grey);font-weight:400;font-size:var(--fs-2)">' + tail + '</span>' : '') + '</span>'
     /* ⚠️ event.stopPropagation() ON BOTH — without it the row's own handler also fires and the chit opens behind
@@ -898,7 +898,7 @@ function wlLineHTML(loading){
   /* ⚠️ nowrap ON THE HEADLINE FIGURE. At 360px "0 kg left" folded onto two lines — the number on one, "left" on
      the next — which reads as two separate facts for a moment. A figure and its unit are one token. */
   var bar = '<div style="display:flex;gap:18px;align-items:baseline;font-variant-numeric:tabular-nums;padding-bottom:4px;flex-wrap:wrap">'
-    + '<div style="white-space:nowrap"><span style="font-size:26px;font-weight:800;color:' + (over ? 'var(--disp)' : left === 0 ? 'var(--ok-2)' : 'var(--warn-2)') + '">' + esc(big) + '</span>'
+    + '<div style="white-space:nowrap"><span style="font-size:var(--fs-6);font-weight:800;color:' + (over ? 'var(--disp)' : left === 0 ? 'var(--ok-2)' : 'var(--warn-2)') + '">' + esc(big) + '</span>'
     +   '<span style="font-size:var(--fs-2);font-weight:700;color:' + (over ? 'var(--disp)' : 'var(--grey)') + ';margin-inline-start:4px">' + esc(r.unit || '') + (over ? ' over' : ' left') + '</span></div>'
     + '<div style="font-size:var(--fs-2);color:var(--grey);white-space:nowrap">' + esc(String(got)) + ' delivered of ' + esc(String(ordered == null ? '—' : ordered)) + ' ' + esc(r.unit || '') + '</div>'
     + (prog.charged ? '<div style="margin-inline-start:auto;font-size:var(--fs-2);color:#2c5d7c;font-weight:700">' + esc(wlMoney(prog.charged)) + ' <span style="font-weight:400;color:var(--grey)">charged</span></div>' : '')
@@ -1011,11 +1011,11 @@ function wlLineHTML(loading){
          default, which is what pushed Save past the card edge — the row could not give way, so the button went
          over the side. With wrapping above and this here, the pair shrinks first and Save drops to its own line
          only when it genuinely cannot fit. */
-      +   '<select id="wl_who" data-testid="wl-who-sel" style="flex:1 1 40%;min-width:0;font-size:14.5px;padding:9px 11px;border:1px solid var(--line);border-radius:9px">' + opts + '</select>'
+      +   '<select id="wl_who" data-testid="wl-who-sel" style="flex:1 1 40%;min-width:0;font-size:var(--fs-3);padding:9px 11px;border:1px solid var(--line);border-radius:9px">' + opts + '</select>'
       /* ⚠️ A DATE FIELD HAS A FLOOR, unlike the name beside it. Shrunk to 125px it rendered "11-08-202" — the
          YEAR cut off, which is the one part of a due date you cannot guess from context. min-width holds it at a
          readable size and the row wraps instead; a truncated date is worse than a second line. */
-      +   '<input id="wl_due" data-testid="wl-due-inp" type="date" value="' + esc(String(r.due_date || '').slice(0, 10)) + '" style="flex:1 1 145px;min-width:145px;font-size:14.5px;padding:9px 8px;border:1px solid var(--line);border-radius:9px">'
+      +   '<input id="wl_due" data-testid="wl-due-inp" type="date" value="' + esc(String(r.due_date || '').slice(0, 10)) + '" style="flex:1 1 145px;min-width:145px;font-size:var(--fs-3);padding:9px 8px;border:1px solid var(--line);border-radius:9px">'
       +   wlBtn('Save', 'wl-line-save', 'wlLineSave()', true)
       + '</div>'
       /* ⚠️ THIS ONE IS DELIBERATELY FULL WIDTH — it is the section's own verb, not a field's companion, so .btn's

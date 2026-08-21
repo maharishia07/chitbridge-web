@@ -207,7 +207,7 @@ function messagesScreen(){
              list that has not told you anything yet. */
           +       '<span title="' + esc((RPLTRACK[m.track] || {}).hint || '') + '" style="flex:none;font-size:var(--fs-1);color:var(--grey)">'
           +         esc((RPLTRACK[m.track] || {}).icon || '') + '</span>'
-          +       '<b style="font-size:13.5px' + (isNew ? ';font-weight:800' : '') + '">' + what + '</b>'
+          +       '<b style="font-size:var(--fs-3)' + (isNew ? ';font-weight:800' : '') + '">' + what + '</b>'
           /* ⚠️ A CLOSED CHIT IS MARKED, NEVER HIDDEN — a complaint about a closed order arrives exactly here. */
           +       (closed ? '<span style="font-size:var(--fs-1);font-weight:700;color:var(--warn-2);background:var(--warn-tint);border-radius:4px;padding:1px 5px">' + esc(m.chit_status) + '</span>' : '')
           +       '<span style="font-size:var(--fs-1);color:var(--grey);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + sub + '</span>'

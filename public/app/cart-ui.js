@@ -691,7 +691,7 @@
               : s.catg ? 'Nothing in ' + esc(catgName(ns, s.catg)) + ' yet.'
               : s.q ? 'Nothing matches that.'
               : esc(opt(ns, 'noCatalogue', 'Nothing published yet.'));
-      return '<div style="padding:34px 8px;color:var(--grey-2);font-size:13.5px;text-align:center">' + why
+      return '<div style="padding:34px 8px;color:var(--grey-2);font-size:var(--fs-3);text-align:center">' + why
         + (s.catg ? '<div style="margin-top:8px"><button type="button" class="cbpick-chip"'
             + ' onclick="CBCart.category(\'' + esc(ns) + '\',\'\')">' + tx('Show everything') + '</button></div>' : '')
         + '</div>';
@@ -702,7 +702,7 @@
         for (var k = i + 1; k < rs.length && rs[k].type === 'line' && rs[k].gid === r.gid; k++) ids.push(rs[k].item_id);
         var inCart = ids.filter(function (id) { return s.sel[id]; }).length;
         return '<div style="padding:10px 2px 3px;display:flex;align-items:center;gap:8px">'
-          + '<b style="font-size:13.5px">' + esc(r.label) + '</b>'
+          + '<b style="font-size:var(--fs-3)">' + esc(r.label) + '</b>'
           + '<span style="font-size:var(--fs-1);color:var(--grey-2)">' + r.count + ' options</span>'
           + (inCart ? '<span style="font-size:var(--fs-1);color:' + a + ';font-weight:700">' + inCart + ' in cart</span>' : '')
           + '<span onclick="CBCart.group(\'' + esc(ns) + '\',' + i + ')" style="cursor:pointer;font-size:var(--fs-1);color:' + a + '">'
@@ -713,7 +713,7 @@
       var d = dataOf(r), q = qtyOf(ns, r.item_id), u = unitPrice(ns, r), p = u.amount;
       return '<div style="display:flex;align-items:center;gap:10px;padding:8px 2px 8px ' + (r.variant ? '20px' : '2px')
         + ';border-bottom:1px dashed var(--line);' + (q ? 'background:' + soft(ns) : '') + '">'
-        + '<span style="flex:1"><b style="font-size:13.5px">' + esc(r.variant || d.name || d.product || 'item') + '</b>'
+        + '<span style="flex:1"><b style="font-size:var(--fs-3)">' + esc(r.variant || d.name || d.product || 'item') + '</b>'
         + (d.unit ? ' <span style="color:var(--grey-2);font-size:var(--fs-1)">' + esc(d.unit) + '</span>' : '')
         + '<div style="font-size:var(--fs-2);color:var(--grey-2);margin-top:1px">'
         // An offer REPLACES the asking price in the maths, so it must replace it on screen too — with the asking
@@ -742,10 +742,10 @@
   function popupHTML(ns) {
     var s = C[ns]; if (!s) return '';
     var sel = selected(ns), T = total(ns), a = accent(ns);
-    var btn = 'flex:1;height:40px;border-radius:9px;font-size:13.5px;font-weight:700;cursor:pointer;border:1.5px solid ' + a;
+    var btn = 'flex:1;height:40px;border-radius:9px;font-size:var(--fs-3);font-weight:700;cursor:pointer;border:1.5px solid ' + a;
     return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">'
-      + '<b style="font-size:17px;flex:1">🛒 ' + esc(opt(ns, 'cartTitle', 'Your cart')) + '</b>'
-      + '<button onclick="CBCart.close(\'' + esc(ns) + '\')" style="border:0;background:none;font-size:22px;color:#8a949c;cursor:pointer">×</button></div>'
+      + '<b style="font-size:var(--fs-4);flex:1">🛒 ' + esc(opt(ns, 'cartTitle', 'Your cart')) + '</b>'
+      + '<button onclick="CBCart.close(\'' + esc(ns) + '\')" style="border:0;background:none;font-size:var(--fs-5);color:#8a949c;cursor:pointer">×</button></div>'
       + '<div style="font-size:var(--fs-2);color:var(--grey-2);margin-bottom:10px">'
       + (opt(ns, 'from') ? 'from <b>' + esc(opt(ns, 'from')) + '</b> · ' : '')
       + sel.length + ' line' + (sel.length === 1 ? '' : 's') + ' · ' + units(ns) + ' units</div>'
@@ -753,7 +753,7 @@
         ? sel.map(function (l) {
             var p = l.unit_price;
             return '<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px dashed var(--line)">'
-              + '<span style="flex:1"><b style="font-size:13.5px">' + esc(l.name) + '</b>'
+              + '<span style="flex:1"><b style="font-size:var(--fs-3)">' + esc(l.name) + '</b>'
               + ' <span style="color:var(--grey-2);font-size:var(--fs-1)">' + esc(l.unit) + '</span>'
               + '<div style="font-size:var(--fs-2);color:var(--grey-2)">'
               + (l.offered ? '<span style="text-decoration:line-through;opacity:.55">' + esc(fmt(ns, l.asking_price)) + '</span> ' : '')
@@ -768,7 +768,7 @@
           + '<span>' + (T.amount ? esc(fmt(ns, T.amount)) + (T.partial ? '+' : '') : '—') + '</span></div>'
           + (T.partial ? '<div style="color:var(--warn-2);font-size:var(--fs-1)">Some lines have no price — the total covers only the priced ones.</div>' : '')
         // Emptying the cart from inside it must not leave someone facing a blank box with no way back.
-        : '<div style="padding:26px 8px;color:var(--grey-2);font-size:13.5px;text-align:center">Nothing in the cart yet.</div>')
+        : '<div style="padding:26px 8px;color:var(--grey-2);font-size:var(--fs-3);text-align:center">Nothing in the cart yet.</div>')
       + '<div style="display:flex;gap:9px;margin-top:15px">'
       + '<button style="' + btn + ';background:var(--card);color:' + a + '" onclick="CBCart.close(\'' + esc(ns) + '\')">'
       + (sel.length ? 'Keep shopping' : 'Browse the catalogue') + '</button>'

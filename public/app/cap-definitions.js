@@ -1045,7 +1045,7 @@ function cbDefCss(){
     '.cbdef-new{margin-inline-start:10px;border:1px solid var(--blue,var(--blue));background:var(--blue,var(--blue));color:#fff;border-radius:9px;padding:4px 11px;font-size:var(--fs-2);font-weight:700;cursor:pointer;font-family:inherit;flex:none}',
     '.cbdef-mine-row{display:flex;align-items:center;gap:9px;padding:8px 0;border-bottom:1px dashed #eee9e0;flex-wrap:wrap}',
     '.cbdef-mine-row:last-child{border-bottom:0}',
-    '.cbdef-mine-n{font-size:13.5px;font-weight:700}',
+    '.cbdef-mine-n{font-size:var(--fs-3);font-weight:700}',
     '.cbdef-badge{font-size:var(--fs-1);font-weight:700;border-radius:6px;padding:1px 7px;text-transform:uppercase;letter-spacing:.04em}',
     '.cbdef-badge.live{background:var(--ok-tint);color:var(--ok-2)}',
     '.cbdef-badge.draft{background:var(--warn-tint);color:var(--warn-2)}',

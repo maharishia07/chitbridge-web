@@ -90,7 +90,7 @@ function c2Paint(){ var el = document.getElementById('mainbody'); if (el) el.inn
 var c2n = function(v){ return (v === null || v === undefined || v === '') ? null : Number(v); };
 var c2q = function(l){ return [l.quantity, l.unit].filter(function(x){ return x !== null && x !== undefined && x !== ''; }).join(' '); };
 function c2Money(v){ return (v === null || v === undefined) ? '—' : (typeof inr_ === 'function' ? inr_(v) : ('₹' + v)); }
-function c2Head(t, s){ return '<div style="padding:11px 16px;border-bottom:1px solid var(--line)"><div style="font-weight:600;font-size:15px">' + t + '</div>' + (s ? '<div style="color:var(--grey);font-size:var(--fs-2);margin-top:2px">' + s + '</div>' : '') + '</div>'; }
+function c2Head(t, s){ return '<div style="padding:11px 16px;border-bottom:1px solid var(--line)"><div style="font-weight:600;font-size:var(--fs-3)">' + t + '</div>' + (s ? '<div style="color:var(--grey);font-size:var(--fs-2);margin-top:2px">' + s + '</div>' : '') + '</div>'; }
 function c2Grp(d, s){ return '<div style="padding:13px 16px 5px;display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:var(--fs-1);letter-spacing:.09em;text-transform:uppercase;color:var(--grey);font-weight:600">' + d + '</span><span style="font-size:var(--fs-2);color:var(--grey)">' + (s || '') + '</span></div>'; }
 
 /* ⚠️ THE GREYING RULE. Athi asked whether the other lines are greyed — yes, and greyed beats hidden.
@@ -141,7 +141,7 @@ function c2PaneMsg(d){
   out += '<div style="padding:16px">';
   if (text) {
     out += '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin-bottom:6px">what they wrote</div>'
-      + '<div style="font-size:15px;line-height:1.9">' + esc(text) + (text.length >= 400 ? '<span style="color:var(--grey)"> … </span>' : '') + '</div>';
+      + '<div style="font-size:var(--fs-3);line-height:1.9">' + esc(text) + (text.length >= 400 ? '<span style="color:var(--grey)"> … </span>' : '') + '</div>';
     if (origin.length) {
       out += '<div style="margin-top:8px"><span onclick="openLightbox(\'chit2\',' + atts.indexOf(origin[0]) + ')" style="cursor:pointer;color:var(--blue);font-size:var(--fs-2)">' + tx('📄 open the full original') + '</span></div>';
     }
@@ -211,7 +211,7 @@ function c2PaneOrd(d){
     /* Emphasis, not exclusion: mine sits at full weight, everyone else's is dimmed but perfectly readable. */
     return '<div style="padding:11px 16px;border-bottom:1px solid var(--line);' + (mine ? 'background:var(--card)' : 'opacity:.62') + ';color:var(--on-card)">'
       + '<div style="display:flex;justify-content:space-between;gap:10px">'
-      + '<span style="font-weight:' + (mine ? '700' : '500') + ';font-size:14.5px">' + esc(l.particulars || 'Item') + (mine ? ' <span style="font-size:var(--fs-1);color:var(--blue);font-weight:800">' + tx('YOURS') + '</span>' : '') + '</span>'
+      + '<span style="font-weight:' + (mine ? '700' : '500') + ';font-size:var(--fs-3)">' + esc(l.particulars || 'Item') + (mine ? ' <span style="font-size:var(--fs-1);color:var(--blue);font-weight:800">' + tx('YOURS') + '</span>' : '') + '</span>'
       /* ⭐ THE CORRECTION AFFORDANCE. Athi, 2026-08-13: *"maybe a html line with edit icon would be useful"* — and
          he was righter than that. This screen had NO way to open the correction card at all, so an unpriced or
          misread line was a dead end by construction: the reader's refusal was visible and unanswerable. */
@@ -239,9 +239,9 @@ function c2PaneOrd(d){
            + (((d.line_delivery||{})[e.line_id]||{}).delivered) + ' out</span>'
          : '')
       + '<span data-testid="amend-line" onclick="event.stopPropagation();c2AmendLine(' + i + ')" title="Fix this line"'
-        + ' style="cursor:pointer;font-size:15px;color:var(--grey);padding:0 2px">✎</span>'
+        + ' style="cursor:pointer;font-size:var(--fs-3);color:var(--grey);padding:0 2px">✎</span>'
       + '</span></div>'
-      + '<div style="margin-top:3px;font-size:13.5px;color:var(--ink-2,#6b665e);font-variant-numeric:tabular-nums">' + was + esc(c2q(l)) + (l.price != null ? ' × ' + c2Money(l.price) : '') + '</div>'
+      + '<div style="margin-top:3px;font-size:var(--fs-3);color:var(--ink-2,#6b665e);font-variant-numeric:tabular-nums">' + was + esc(c2q(l)) + (l.price != null ? ' × ' + c2Money(l.price) : '') + '</div>'
       + (l.comment ? '<div style="margin-top:5px;font-size:var(--fs-2);color:var(--blue-2);background:var(--blue-tint-bg);border-radius:5px;padding:4px 8px;display:inline-block">' + esc(l.comment) + '</div>' : '')
       + (l.qty_unverified ? '<div style="margin-top:5px;font-size:var(--fs-1);color:var(--warn-2)">⚠️ this number does not appear in their message — check it</div>' : '')
       /* ⚠️ REJECTED IS LOUDER THAN UNVERIFIED, because it is a stronger claim: the quantity was compared against
@@ -652,8 +652,8 @@ function c2WorkRow(e, asg, prog, ctx){
   return '<div onclick="c2AssignOpen(\'' + e.line_id + '\')" style="padding:11px 16px;border-bottom:1px solid var(--line);cursor:pointer">'
       + '<div style="display:flex;align-items:baseline;gap:8px">'
       + '<span style="flex:1;font-weight:500">' + esc(l.particulars || '') + '<span style="color:var(--grey);font-weight:400;font-size:var(--fs-2)"> · ' + esc(c2q(l)) + '</span></span>'
-      + '<span style="width:62px;text-align:end;font-variant-numeric:tabular-nums;font-size:13.5px">' + got + '</span>'
-      + '<span style="width:62px;text-align:end;font-variant-numeric:tabular-nums;font-size:13.5px;font-weight:' + (done ? '400' : '700') + ';color:' + (done ? 'var(--ok-2)' : 'var(--ink)') + '">' + (left === null ? '—' : (done ? '✓' : left)) + '</span>'
+      + '<span style="width:62px;text-align:end;font-variant-numeric:tabular-nums;font-size:var(--fs-3)">' + got + '</span>'
+      + '<span style="width:62px;text-align:end;font-variant-numeric:tabular-nums;font-size:var(--fs-3);font-weight:' + (done ? '400' : '700') + ';color:' + (done ? 'var(--ok-2)' : 'var(--ink)') + '">' + (left === null ? '—' : (done ? '✓' : left)) + '</span>'
       + '<span style="color:var(--grey);width:12px;text-align:end;font-size:var(--fs-2)">✎</span></div>'
       /* Who has it and when it is due — the two things that turn "what is left" into "who do I chase". */
       + (function(){
@@ -733,7 +733,7 @@ function c2PaneNotes(d){
   var msgs = (d.msgs || []).filter(function(m){ return (m.scope || 'internal') === 'internal'; });
   return '<div style="padding:9px 16px;background:var(--warn-tint);color:var(--warn-3);font-size:var(--fs-2);border-bottom:1px solid var(--line)">◍ Internal notes — never shared with the other party.</div>'
     + (msgs.length ? msgs.map(function(m){
-        return '<div style="padding:10px 16px;border-bottom:1px solid var(--line)"><div style="font-size:var(--fs-1);color:var(--grey)">' + esc(m.author || '') + ' · ' + esc(m.at || '') + '</div><div style="font-size:13.5px;margin-top:2px">' + esc(m.body || '') + '</div></div>';
+        return '<div style="padding:10px 16px;border-bottom:1px solid var(--line)"><div style="font-size:var(--fs-1);color:var(--grey)">' + esc(m.author || '') + ' · ' + esc(m.at || '') + '</div><div style="font-size:var(--fs-3);margin-top:2px">' + esc(m.body || '') + '</div></div>';
       }).join('')
       : '<div style="padding:16px;color:var(--grey);font-size:var(--fs-2)">No internal notes yet.</div>');
 }
@@ -800,7 +800,7 @@ function chit2Screen(){
 
   var side = ['them', 'us'].map(function(s){
     var on = C2.side === s;
-    return '<button onclick="c2Side(\'' + s + '\')" style="flex:1;border:1px solid ' + (on ? 'var(--accent)' : 'var(--line)') + ';background:' + (on ? 'var(--accent)' : 'transparent') + ';color:' + (on ? 'var(--on-accent)' : 'var(--grey)') + ';font:inherit;font-size:13.5px;padding:9px 0;cursor:pointer;font-weight:' + (on ? '600' : '400') + ';border-radius:' + (s === 'them' ? '8px 0 0 8px' : '0 8px 8px 0') + '">'
+    return '<button onclick="c2Side(\'' + s + '\')" style="flex:1;border:1px solid ' + (on ? 'var(--accent)' : 'var(--line)') + ';background:' + (on ? 'var(--accent)' : 'transparent') + ';color:' + (on ? 'var(--on-accent)' : 'var(--grey)') + ';font:inherit;font-size:var(--fs-3);padding:9px 0;cursor:pointer;font-weight:' + (on ? '600' : '400') + ';border-radius:' + (s === 'them' ? '8px 0 0 8px' : '0 8px 8px 0') + '">'
       + (s === 'them' ? 'Them' : 'Us') + '<span style="display:block;font-size:var(--fs-1);opacity:.72;font-weight:400">' + (s === 'them' ? 'the shared record' : 'our side only') + '</span></button>';
   }).join('');
 
@@ -827,7 +827,7 @@ function chit2Screen(){
     + '<div style="flex:none">'                                                   // ← the frozen part
     + '<div style="padding:10px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px">'
     + '<span onclick="c2Back()" style="cursor:pointer;color:var(--blue);font-size:var(--fs-2)">‹ Back</span>'
-    + '<span style="font-weight:600;font-size:15px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(h.manual_subject || h.auto_subject || 'Chit') + '</span>'
+    + '<span style="font-weight:600;font-size:var(--fs-3);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(h.manual_subject || h.auto_subject || 'Chit') + '</span>'
     + '<span style="font-size:var(--fs-1);color:var(--grey)">design 2</span></div>'
     + '<div style="padding:10px 16px 0;display:flex">' + side + '</div>'
     + '<div style="padding:7px 16px 0;font-size:var(--fs-1);color:var(--grey);text-align:center">'

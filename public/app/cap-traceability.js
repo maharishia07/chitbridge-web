@@ -27,7 +27,7 @@ function traceabilityScreen(){
 
   var controls =
     '<div style="padding:14px 18px;border-bottom:1px solid var(--line)">'
-    + '<div style="font-size:17px;font-weight:800">🧭 Traceability — recall &amp; provenance</div>'
+    + '<div style="font-size:var(--fs-4);font-weight:800">🧭 Traceability — recall &amp; provenance</div>'
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">Flag a batch to see exactly who it reached; trace any node back to its source. '
       + 'You see topology + product only — <b>commercial terms stay per-party</b>.</div>'
     + '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px">'
@@ -147,7 +147,7 @@ function _traceNode(n, isTerm){
   return '<div style="padding:6px 0' + (isRed ? ';background:var(--danger-tint);border-radius:9px' : '') + ';color:var(--on-card)">'
     + '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap' + (isRed ? ';padding-inline-start:6px' : '') + '">'
       + '<span style="width:9px;height:9px;border-radius:50%;background:' + dot + ';flex:0 0 auto"></span>'
-      + '<span style="font-weight:700;font-size:13.5px' + (isRed ? ';color:var(--disp-2)' : '') + '">' + who + '</span>' + badge + '</div>'
+      + '<span style="font-weight:700;font-size:var(--fs-3)' + (isRed ? ';color:var(--disp-2)' : '') + '">' + who + '</span>' + badge + '</div>'
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin-inline-start:17px;margin-top:1px' + (isRed ? ';padding-inline-start:6px' : '') + '">' + bits.join(' · ') + '</div>'
     + balLine
     + '</div>';
@@ -176,7 +176,7 @@ function _traceBwd(r){
   var path = r.path || [], nodes = r.nodes || [];
   var byId = {}; nodes.forEach(function(n){ byId[n.chit_id] = n; });
   var head = '<div style="margin:16px 18px;padding:14px 18px;border:1px solid #a9c6ef;background:var(--blue-tint-bg);border-radius:12px;color:var(--on-card)">'
-    + '<div style="font-size:18px;font-weight:800;color:var(--blue-2)"><span class=arw>◂</span> Provenance — to source</div>'
+    + '<div style="font-size:var(--fs-4);font-weight:800;color:var(--blue-2)"><span class=arw>◂</span> Provenance — to source</div>'
     + '<div style="font-size:var(--fs-2);color:var(--blue);margin-top:2px">' + r.hops + ' hop' + (r.hops === 1 ? '' : 's') + ' from the flagged node back to origin</div></div>';
   var steps = path.map(function(cid, i){
     var n = byId[cid] || { chit_id: cid };

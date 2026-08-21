@@ -30,7 +30,7 @@ window.AC_TYPE_HOW = window.AC_TYPE_HOW || {
 function acTypeInfo(t){ var reg=(window.ACTOR_TYPES||{})[t]||{}, h=(window.AC_TYPE_HOW||{})[t]; if(!h||typeof modal!=='function')return;
   var lbl=(reg.label||t).split(/[ \/]/)[0];
   var extra=(t==='iot')?'<div style="margin-top:12px"><button class="composebtn" onclick="closeModal();openShowcase(\'/iot-howitworks.html\',\'How IoT works\')">See the full walkthrough <span class=arw>→</span></button></div>':'';
-  modal('<div style="padding:2px 2px"><div style="font-size:26px">'+(reg.icon||'')+'</div><div style="font-weight:800;font-size:var(--fs-4);margin-top:4px">'+esc(lbl)+' — as a co-assist</div><div style="font-size:var(--fs-2);color:var(--ink-2);line-height:1.6;margin-top:8px">'+esc(h.how)+'</div>'+extra+'<div style="display:flex;margin-top:16px"><button class="composebtn pri" style="flex:1" onclick="closeModal()">' + tx('Got it') + '</button></div></div>', false);
+  modal('<div style="padding:2px 2px"><div style="font-size:var(--fs-6)">'+(reg.icon||'')+'</div><div style="font-weight:800;font-size:var(--fs-4);margin-top:4px">'+esc(lbl)+' — as a co-assist</div><div style="font-size:var(--fs-2);color:var(--ink-2);line-height:1.6;margin-top:8px">'+esc(h.how)+'</div>'+extra+'<div style="display:flex;margin-top:16px"><button class="composebtn pri" style="flex:1" onclick="closeModal()">' + tx('Got it') + '</button></div></div>', false);
 }
 // GOVERNANCE hook (invisible to end users): merge governed type defs (with their constraints) into the registry — no core change.
 function acMergeTypes(defs){ if(defs&&typeof defs==='object'){ Object.keys(defs).forEach(function(k){ window.ACTOR_TYPES[k]=Object.assign({},window.ACTOR_TYPES[k]||{},defs[k]); }); if(typeof paintAcList==='function')paintAcList(); if(typeof renderApp==='function')renderApp(); } }
@@ -84,7 +84,7 @@ function aiToggle(key){ var s=(window.AI_SLOTS||[]).find(function(x){return x.ke
 function aiSetGate(key,g){ _aiPolSet(key,{gate:g}); if(typeof paintAcList==='function')paintAcList(); }
 function acCount(){ return ((UI.acTypeF||'all')==='ai') ? (window.AI_SLOTS||[]).length : acVisible().length; }
 function aiSlotInfo(key){ var s=(window.AI_SLOTS||[]).find(function(x){return x.key===key;}); if(!s||typeof modal!=='function')return; var st=aiSlotState(s);
-  modal('<div style="padding:2px 2px"><div style="font-size:26px">🤖</div><div style="font-weight:800;font-size:var(--fs-4);margin-top:4px">'+esc(s.name)+'</div>'
+  modal('<div style="padding:2px 2px"><div style="font-size:var(--fs-6)">🤖</div><div style="font-weight:800;font-size:var(--fs-4);margin-top:4px">'+esc(s.name)+'</div>'
     +'<div style="font-size:var(--fs-1);color:var(--purple-2);font-family:\'Space Mono\',monospace;margin-top:2px">ai:'+esc(s.key)+' · '+esc(s.status)+' · '+(st.enabled?'enabled':'off')+'</div>'
     +'<div style="font-size:var(--fs-2);color:var(--ink-2);line-height:1.6;margin-top:8px">'+esc(s.desc)+'</div>'
     +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">'
@@ -139,7 +139,7 @@ function openShowcase(url, title){
   var host=document.getElementById('showcaseHost')||document.createElement('div'); host.id='showcaseHost';
   host.innerHTML='<div style="position:fixed;inset:0;background:rgba(15,22,32,.45);z-index:600" onclick="closeShowcase()"></div>'
     +'<div style="position:fixed;'+f.css+';border-radius:'+f.radius+';background:var(--card);z-index:601;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.3);display:flex;flex-direction:column;color:var(--on-card)">'
-    +'<div style="display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line);flex:none"><b style="font-size:15px">'+esc(title||'How it works')+'</b><button onclick="closeShowcase()" title="Close" style="margin-inline-start:auto;border:0;background:transparent;font-size:22px;line-height:1;cursor:pointer;color:var(--grey)">×</button></div>'
+    +'<div style="display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line);flex:none"><b style="font-size:var(--fs-3)">'+esc(title||'How it works')+'</b><button onclick="closeShowcase()" title="Close" style="margin-inline-start:auto;border:0;background:transparent;font-size:22px;line-height:1;cursor:pointer;color:var(--grey)">×</button></div>'
     +'<iframe src="'+esc(url)+'" title="'+esc(title||'')+'" style="flex:1;width:100%;border:0;display:block;background:var(--card);color:var(--on-card)"></iframe></div>';
   document.body.appendChild(host);
 }
@@ -304,7 +304,7 @@ function awRender(){
     title='Add a co-assist'; sub='What kind of co-assist? People, devices, systems and agents can all act for you.';
     var types=[['human','👤','Human','A person who acts for you'],['iot','🛰️','IoT device','A Pi / gateway that sends signals'],['erp','🔌','ERP / API','Connect a business system'],['ai','🤖','AI agent','An autonomous co-assist']];
     body='<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">'+types.map(function(t){ var rdy=_awReady(t[0]);
-      return '<div data-testid="coassist-type-'+t[0]+'" onclick="awPick(\''+t[0]+'\')" onmouseover="this.style.borderColor=\'var(--blue)\'" onmouseout="this.style.borderColor=\'#e5e2dd\'" style="border:1px solid #e5e2dd;border-radius:14px;padding:14px;cursor:pointer;'+(rdy?'':'opacity:.72')+'"><div style="font-size:24px">'+t[1]+'</div><div style="font-weight:700;font-size:var(--fs-3);margin-top:6px">'+t[2]+'</div><div style="font-size:var(--fs-1);color:var(--grey-2);margin-top:2px;line-height:1.35">'+t[3]+'</div><span style="display:inline-block;margin-top:9px;font-size:var(--fs-1);font-weight:700;border-radius:20px;padding:1px 9px;'+(rdy?'background:var(--ok-tint);color:var(--ok-2)':'background:var(--blue-tint);color:var(--blue-2)')+'">'+(rdy?'ready':'explore')+'</span></div>';
+      return '<div data-testid="coassist-type-'+t[0]+'" onclick="awPick(\''+t[0]+'\')" onmouseover="this.style.borderColor=\'var(--blue)\'" onmouseout="this.style.borderColor=\'#e5e2dd\'" style="border:1px solid #e5e2dd;border-radius:14px;padding:14px;cursor:pointer;'+(rdy?'':'opacity:.72')+'"><div style="font-size:var(--fs-5)">'+t[1]+'</div><div style="font-weight:700;font-size:var(--fs-3);margin-top:6px">'+t[2]+'</div><div style="font-size:var(--fs-1);color:var(--grey-2);margin-top:2px;line-height:1.35">'+t[3]+'</div><span style="display:inline-block;margin-top:9px;font-size:var(--fs-1);font-weight:700;border-radius:20px;padding:1px 9px;'+(rdy?'background:var(--ok-tint);color:var(--ok-2)':'background:var(--blue-tint);color:var(--blue-2)')+'">'+(rdy?'ready':'explore')+'</span></div>';
     }).join('')+'</div>';
     foot='<button class="composebtn" style="flex:1" onclick="awClose()">' + tx('Cancel') + '</button>';
   } else {
@@ -345,7 +345,7 @@ function awRender(){
   // RESPONSIVE placement: FULL-SCREEN on mobile (fill · generous gaps · buttons in a bottom bar — like the
   // co-assist screens), a comfortable CENTRED CARD on laptop (not a full-bleed sheet). Below the measured bar.
   var host=awHost(), mob=((UI.vp==='mob')||(typeof window!=='undefined'&&window.innerWidth<640)), barH=((document.querySelector('.topbar')||{}).offsetHeight)||52;
-  var head='<div style="padding:16px 18px;border-bottom:1px solid #f0efec"><div style="max-width:520px;margin:0 auto;display:flex;align-items:flex-start;gap:10px"><div style="flex:1"><div style="font-size:17px;font-weight:700">'+title+'</div>'+(sub?'<div style="font-size:var(--fs-2);color:var(--grey);margin-top:3px">'+sub+'</div>':'')+'</div><button onclick="awClose()" style="border:1px solid var(--line);background:var(--card);border-radius:9px;width:32px;height:32px;cursor:pointer;flex:none;color:var(--on-card)">✕</button></div>'+(dots?'<div style="max-width:520px;margin:0 auto">'+dots+'</div>':'')+'</div>';
+  var head='<div style="padding:16px 18px;border-bottom:1px solid #f0efec"><div style="max-width:520px;margin:0 auto;display:flex;align-items:flex-start;gap:10px"><div style="flex:1"><div style="font-size:var(--fs-4);font-weight:700">'+title+'</div>'+(sub?'<div style="font-size:var(--fs-2);color:var(--grey);margin-top:3px">'+sub+'</div>':'')+'</div><button onclick="awClose()" style="border:1px solid var(--line);background:var(--card);border-radius:9px;width:32px;height:32px;cursor:pointer;flex:none;color:var(--on-card)">✕</button></div>'+(dots?'<div style="max-width:520px;margin:0 auto">'+dots+'</div>':'')+'</div>';
   var mid='<div style="flex:1;overflow:auto;padding:22px 18px"><div style="max-width:520px;margin:0 auto">'+body+'</div></div>';
   var footbar='<div style="border-top:1px solid #f0efec;padding:14px 18px"><div style="max-width:520px;margin:0 auto;display:flex;gap:12px">'+foot+'</div></div>';
   // ONE comfortable centred card, both mobile & laptop: sized to its content (never a full-screen sheet), dim
@@ -432,14 +432,14 @@ function _acTierSummary(x){
   var hc=healthColor(h); var cnt=(info.count!=null?info.count:0);
   return '<div style="padding:16px">'
     +'<button class="dback" onclick="backToList()">‹ Co-assists</button>'
-    +'<div style="display:flex;align-items:center;gap:11px;margin-top:8px"><span style="font-size:26px">'+(reg.icon||'🔌')+'</span>'
-      +'<div style="min-width:0"><div style="font-size:17px;font-weight:800">'+esc(x.name)+'</div><div style="font-size:var(--fs-2);color:var(--grey)">'+esc(reg.label||'')+' · 📍 '+esc(info.site||x.site||'no site')+'</div></div>'
+    +'<div style="display:flex;align-items:center;gap:11px;margin-top:8px"><span style="font-size:var(--fs-6)">'+(reg.icon||'🔌')+'</span>'
+      +'<div style="min-width:0"><div style="font-size:var(--fs-4);font-weight:800">'+esc(x.name)+'</div><div style="font-size:var(--fs-2);color:var(--grey)">'+esc(reg.label||'')+' · 📍 '+esc(info.site||x.site||'no site')+'</div></div>'
       +'<span style="margin-inline-start:auto;display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:var(--fs-2);color:'+hc+'"><span style="width:9px;height:9px;border-radius:50%;background:'+hc+';display:inline-block"></span>'+esc(h)+'</span></div>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:15px 0">'
       +'<div style="background:var(--card);border:1px solid var(--line);border-radius:12px;padding:11px 12px;color:var(--on-card)"><div style="font-size:var(--fs-1);color:var(--grey);text-transform:uppercase;letter-spacing:.03em">' + tx('Devices') + '</div><div style="font-size:var(--fs-5);font-weight:800;margin-top:2px">'+cnt+'</div></div>'
       +'<div style="background:var(--card);border:1px solid var(--line);border-radius:12px;padding:11px 12px;color:var(--on-card)"><div style="font-size:var(--fs-1);color:var(--grey);text-transform:uppercase;letter-spacing:.03em">' + tx('Health') + '</div><div style="font-size:var(--fs-4);font-weight:800;margin-top:4px;color:'+hc+'">'+esc(h)+'</div></div>'
     +'</div>'
-    +'<button class="composebtn pri" style="width:100%;padding:13px;font-size:13.5px;display:flex;align-items:center;justify-content:center;gap:8px" onclick="acOpenManage(\''+x.id+'\')"><span style="font-size:var(--fs-4)">🛠️</span> Click to open the '+esc(reg.label||'')+' cockpit <span style="opacity:.85"><span class=arw>→</span></span></button>'
+    +'<button class="composebtn pri" style="width:100%;padding:13px;font-size:var(--fs-3);display:flex;align-items:center;justify-content:center;gap:8px" onclick="acOpenManage(\''+x.id+'\')"><span style="font-size:var(--fs-4)">🛠️</span> Click to open the '+esc(reg.label||'')+' cockpit <span style="opacity:.85"><span class=arw>→</span></span></button>'
     +'<div style="font-size:var(--fs-1);color:var(--grey);margin-top:8px;text-align:center">👆 Opens its devices, connection string &amp; package — loaded on click.</div></div>';
 }
 function _acTierLoader(x){

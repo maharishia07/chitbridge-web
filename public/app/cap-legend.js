@@ -312,7 +312,7 @@ function _subjectTabHtml(){
     // RAIL — the hero picture (public asset; scalable vector)
     +'<img src="/rail-metaphor.svg" alt="Chit &amp; Bridge — a governed rail: two tracks (Task, Order), wagon = your business, private yards, dispute siding, network" loading="lazy" style="width:100%;height:auto;display:block;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--on-card)"/>'
     +'<div style="border:1px solid #cbd8ec;background:linear-gradient(180deg,#f6f9fe,#fff);border-radius:13px;padding:14px 16px;margin:10px 0 14px">'
-      +'<div style="font-family:\'Space Grotesk\';font-weight:800;font-size:18px;color:var(--ink)">Chit &amp; Bridge is a governed rail</div>'
+      +'<div style="font-family:\'Space Grotesk\';font-weight:800;font-size:var(--fs-4);color:var(--ink)">Chit &amp; Bridge is a governed rail</div>'
       +'<div style="font-size:var(--fs-2);color:var(--ink);line-height:1.55;margin-top:6px"><b>Content-neutral, governance-absolute.</b> You decide <b>what</b> moves between two entities — the business defines that; we guarantee that <b>whatever moves is governed</b>. A train can\'t leave the track.</div>'
       +'<div style="font-size:var(--fs-2);color:var(--blue-2);background:var(--blue-tint);border:1px solid var(--blue-tint-line);border-radius:9px;padding:8px 11px;margin-top:10px">🧭 <b>' + tx('As easy as a mailbox') + '</b> for the end user — zero learning curve. The mailbox is how it <i>feels</i>; the rail is what it <i>is</i>.</div>'
     +'</div>'
@@ -350,7 +350,7 @@ function _subjectTabHtml(){
 function _foundTabHtml(){
   const lvlBadge=(l,t)=>{ const tt=(t&&t>l)?('<span class=arw>→</span>L'+t):''; return '<span title="Foundation maturity — L1 exists · L2 clean mechanism · L3 enforced+isolated · L4 governed+provable · L5 audited/certified" style="font-size:var(--fs-1);font-weight:800;color:var(--ok-2);background:var(--ok-tint);border:1px solid #bfe0cf;border-radius:6px;padding:1px 7px">L'+l+tt+'</span>'; };
   const card=(f)=>'<div style="border:1px solid var(--line);border-radius:12px;padding:11px 13px;margin-bottom:10px">'
-    +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><span style="font-size:15px">'+f.icon+'</span><span style="font-family:\'Space Grotesk\';font-weight:700;font-size:13.5px">'+esc(f.name)+'</span><span style="margin-inline-start:auto">'+lvlBadge(f.level,f.target)+'</span></div>'
+    +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><span style="font-size:var(--fs-3)">'+f.icon+'</span><span style="font-family:\'Space Grotesk\';font-weight:700;font-size:var(--fs-3)">'+esc(f.name)+'</span><span style="margin-inline-start:auto">'+lvlBadge(f.level,f.target)+'</span></div>'
     +'<div style="font-size:var(--fs-2);color:var(--ink);line-height:1.5;margin-bottom:6px">'+esc(f.what)+'</div>'
     +'<div style="font-size:var(--fs-2);color:var(--grey);line-height:1.5;background:var(--card);border:1px solid var(--line);border-radius:9px;padding:8px 10px"><b style="color:var(--ok-3)">PROOF:</b> '+esc(f.proof)+'</div>'
   +'</div>';
@@ -371,7 +371,7 @@ function _stackTabHtml(){
 
 function _lbTabBar(){
   const tab=(typeof _lbTab!=='undefined')?_lbTab:'subject';
-  const btn=(id,label)=>`<button onclick="setLbTab('${id}')" style="border:0;background:none;cursor:pointer;padding:8px 15px;font-size:13.5px;font-weight:${tab===id?'700':'500'};color:${tab===id?'var(--ink)':'var(--grey)'};border-bottom:2px solid ${tab===id?'var(--accent,var(--blue))':'transparent'}">${label}</button>`;
+  const btn=(id,label)=>`<button onclick="setLbTab('${id}')" style="border:0;background:none;cursor:pointer;padding:8px 15px;font-size:var(--fs-3);font-weight:${tab===id?'700':'500'};color:${tab===id?'var(--ink)':'var(--grey)'};border-bottom:2px solid ${tab===id?'var(--accent,var(--blue))':'transparent'}">${label}</button>`;
   return `<div style="display:flex;gap:2px;border-bottom:1px solid var(--line);padding:0 8px;flex-wrap:wrap">${btn('subject','📜 The subject')}${btn('stories','📖 The Life of…')}${btn('found','🧱 Foundations')}${btn('stack','🏛️ Governance stack')}${btn('work','⬡ Work patterns')}${btn('std','📐 Standards')}${btn('cap','⬢ Capabilities')}${btn('edge','🎯 The edge')}${btn('life','🔀 Lifecycle')}${btn('sec','🔒 Security')}${btn('real','🔬 Reality')}</div>`;
 }
 function setLbTab(t){ _lbTab=t; _openLegendImpl(); }
@@ -404,7 +404,7 @@ function _storiesTabHtml(){
     { icon:'🌍', name:'The Life of a Trade', blurb:'One chemical shipment, buyer → seller: real template evidence moving across the engine. Swap the industry and the standards change; the commercial spine and the rail do not.', url:'/docs/life-of-a-trade.html' },
   ];
   const card=(x)=>`<a href="${x.url}" target="_blank" rel="noopener" style="display:block;text-decoration:none;border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:11px;background:var(--card);color:var(--on-card)">
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:5px"><span style="font-size:19px">${x.icon}</span><span style="font-family:'Space Grotesk';font-weight:700;font-size:15px;color:var(--ink)">${esc(x.name)}</span><span style="margin-inline-start:auto;font-size:var(--fs-2);color:var(--accent,var(--blue));font-weight:700">${tx('Open ↗')}</span></div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:5px"><span style="font-size:var(--fs-5)">${x.icon}</span><span style="font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3);color:var(--ink)">${esc(x.name)}</span><span style="margin-inline-start:auto;font-size:var(--fs-2);color:var(--accent,var(--blue));font-weight:700">${tx('Open ↗')}</span></div>
     <div style="font-size:var(--fs-2);color:var(--grey);line-height:1.5">${esc(x.blurb)}</div></a>`;
   return `<div style="padding:12px 13px;overflow:visible">
     <div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:12px">The <b>business narratives</b> — the product told from the value side, followable end-to-end (not feature ads). Open each in a new tab.</div>
@@ -539,7 +539,7 @@ function _workTabHtml(){
   const line=o=>`<div style="border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:11px">
     <div style="display:flex;align-items:center;gap:9px">
       <span style="width:30px;height:30px;border-radius:9px;display:grid;place-items:center;font-size:15px;background:var(--blue-tint);border:1px solid var(--line);color:var(--on-card)">${o.icon}</span>
-      <span style="font-family:'Space Grotesk';font-weight:700;font-size:14.5px">${esc(o.name)}</span>
+      <span style="font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3)">${esc(o.name)}</span>
       <span style="font-family:'Space Mono';font-size:var(--fs-1);color:${R};background:var(--blue-tint);border:1px solid var(--line);border-radius:6px;padding:1px 6px">${esc(o.pid)}</span>
       <span style="margin-inline-start:auto;font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:${o.live?'var(--ok-3)':'var(--grey-2)'};border:1px ${o.live?'solid #bfe0cf':'dashed #c2c6cc'};border-radius:5px;padding:1px 6px">${o.live?'Live':'Designed'}</span>
     </div>
@@ -579,7 +579,7 @@ function _workTabHtml(){
     <div style="display:flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:16px">${spine}</div>
     ${lines.map(line).join('')}
     <div style="border:1px solid ${R};background:linear-gradient(180deg,var(--blue-tint),var(--bg,#fff));border-radius:13px;padding:14px 16px;margin:6px 0 16px">
-      <div style="font-family:'Space Grotesk';font-weight:800;font-size:15px;color:${R}">A catalogue is a contract, not a list</div>
+      <div style="font-family:'Space Grotesk';font-weight:800;font-size:var(--fs-3);color:${R}">A catalogue is a contract, not a list</div>
       <div style="font-size:var(--fs-2);color:var(--ink);background:var(--card);border-inline-start:3px solid ${R};border-radius:0 8px 8px 0;padding:7px 11px;margin:9px 0;line-height:1.5"><b style="font-family:'Space Mono';font-size:var(--fs-1);letter-spacing:.08em;text-transform:uppercase;color:${R};margin-inline-end:7px">${tx('Achieves')}</b>Extends a <b>brand's governance to every customer through any distributor</b> — control without custody.</div>
       <div style="font-size:var(--fs-2);color:var(--ink);line-height:1.55">The source's governance amalgamated into one construct that <b>travels</b>: the order runs under the source's minted rules wherever served, the distributor <b>can't override</b>, and the chit <b>freezes the exact version</b> seen. Bogie line-up public (browse), cargo private (order), source rules = the sealed wagon-spec that binds every yard.</div>
     </div>
@@ -677,7 +677,7 @@ function _openLegendImpl(){
     </div>`;
   };
   const card=(c)=>`<div style="border:1px solid var(--line);border-radius:12px;padding:11px 13px;margin-bottom:10px;background:${c.load==='planned'?'var(--card)':'var(--card)'};color:${c.load==='planned' ? 'var(--on-card)' : 'var(--on-card)'}">
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px"><span style="font-size:15px">${c.icon}</span><span style="font-family:'Space Grotesk';font-weight:700;font-size:13.5px">${esc(c.name)}</span><span style="margin-inline-start:auto;display:flex;gap:6px;align-items:center">${matBadge(c)}${loadBadge(c)}</span></div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px"><span style="font-size:var(--fs-3)">${c.icon}</span><span style="font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3)">${esc(c.name)}</span><span style="margin-inline-start:auto;display:flex;gap:6px;align-items:center">${matBadge(c)}${loadBadge(c)}</span></div>
     <div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:8px;line-height:1.5">${esc(c.blurb)}</div>
     ${govBand(c)}
     ${c.features.map(featRow).join('')}
@@ -695,11 +695,11 @@ function _openLegendImpl(){
   const titles = { subject:'the subject — the sealed co-held record', stories:'the Life of… — business narratives', found:'foundations — the trust floor + proof', stack:'the governance stack — universe → chit', cap:'capabilities &amp; features', life:'lifecycle &amp; traceability', sec:'security posture', edge:'positioning &amp; edge', real:'reality &amp; how we earn it', work:'work patterns — the governed journeys' };
   host.innerHTML=`<div class="notifover" onclick="closeLegend()"><div class="notifpanel" style="position:fixed;inset:0;width:100vw;height:100vh;max-width:none;max-height:none;border-radius:0;overflow:hidden;display:flex;flex-direction:column;background:var(--card);color:var(--on-card)" onclick="event.stopPropagation()">
     <div style="display:flex;align-items:center;gap:12px;padding:16px 20px;background:linear-gradient(180deg,#f7f9fc,#fff);border-bottom:1px solid var(--line);flex:none">
-      <span style="font-size:22px">🔑</span>
-      <div style="line-height:1.15"><div style="font-family:'Space Grotesk';font-weight:700;font-size:19px;color:var(--ink)">${tx('What we serve')}</div><div style="font-size:var(--fs-2);color:var(--grey)">${titles[_lbTab]||titles.cap}</div></div>
+      <span style="font-size:var(--fs-5)">🔑</span>
+      <div style="line-height:1.15"><div style="font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-5);color:var(--ink)">${tx('What we serve')}</div><div style="font-size:var(--fs-2);color:var(--grey)">${titles[_lbTab]||titles.cap}</div></div>
       <div style="margin-inline-start:auto;display:flex;align-items:center;gap:6px">
         <button onclick="lbFont(-1)" title="Smaller text" style="border:1px solid var(--line);background:none;cursor:pointer;font-size:var(--fs-2);font-weight:700;color:var(--grey);border-radius:6px;width:27px;height:27px;line-height:1;padding:0">A−</button>
-        <button onclick="lbFont(1)" title="Larger text" style="border:1px solid var(--line);background:none;cursor:pointer;font-size:15px;font-weight:700;color:var(--ink);border-radius:6px;width:27px;height:27px;line-height:1;padding:0">A+</button>
+        <button onclick="lbFont(1)" title="Larger text" style="border:1px solid var(--line);background:none;cursor:pointer;font-size:var(--fs-3);font-weight:700;color:var(--ink);border-radius:6px;width:27px;height:27px;line-height:1;padding:0">A+</button>
         <button onclick="closeLegend()" style="border:0;background:none;cursor:pointer;font-size:26px;line-height:1;color:var(--grey);margin-inline-start:4px" aria-label="Close">✕</button>
       </div>
     </div>

@@ -290,13 +290,13 @@
   .weltop{display:flex;align-items:center;justify-content:space-between;padding:10px 0 6px}
   .welsignin{font-size:var(--fs-2);color:var(--blue);border:1px solid var(--line);border-radius:9px;padding:7px 13px;background:var(--card);cursor:pointer}
   .welhero{text-align:center;padding:14px 0 6px}
-  .welhero h1{font-family:'Space Grotesk';font-size:26px;font-weight:600;letter-spacing:-.02em;margin:6px auto;line-height:1.15;max-width:24ch}
-  .welhero p{color:var(--grey);font-size:14.5px;max-width:60ch;margin:0 auto}
+  .welhero h1{font-family:'Space Grotesk';font-size:var(--fs-6);font-weight:600;letter-spacing:-.02em;margin:6px auto;line-height:1.15;max-width:24ch}
+  .welhero p{color:var(--grey);font-size:var(--fs-3);max-width:60ch;margin:0 auto}
 .welhero-cta{display:flex;flex-direction:column;align-items:center;gap:6px;margin-top:18px}
 .welhero-cta-sub{color:var(--grey);font-size:var(--fs-2)}
   .welcaps{display:flex;gap:12px;flex-wrap:wrap;margin:20px 0}
   .welcap{flex:1;min-width:200px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:15px}
-  .welcap .ci{font-size:var(--fs-5)}.welcap .cn{font-family:'Space Grotesk';font-weight:600;font-size:14.5px;margin:7px 0 3px}.welcap .cd{font-size:var(--fs-2);color:var(--grey)}
+  .welcap .ci{font-size:var(--fs-5)}.welcap .cn{font-family:'Space Grotesk';font-weight:600;font-size:var(--fs-3);margin:7px 0 3px}.welcap .cd{font-size:var(--fs-2);color:var(--grey)}
   .welsec{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;margin:14px 0}
   .welh2{font-family:'Space Grotesk';font-size:var(--fs-2);text-transform:uppercase;letter-spacing:.5px;color:var(--grey);font-weight:700;margin-bottom:4px}
   .welsub{font-size:var(--fs-2);color:var(--grey);margin-bottom:12px}
@@ -304,7 +304,7 @@
   .welrole,.welbp{flex:1;min-width:220px;border:1.5px solid var(--line);border-radius:13px;padding:15px;cursor:pointer;transition:.15s;background:var(--card)}
   .welrole:hover,.welbp:hover{border-color:var(--blue);transform:translateY(-1px)}
   .welrole.sel,.welbp.sel{border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,168,106,.22)}
-  .welrole .ci{font-size:21px}.welrole .cn,.welbp .cn{font-family:'Space Grotesk';font-weight:600;font-size:15px;margin:5px 0 2px}
+  .welrole .ci{font-size:var(--fs-5)}.welrole .cn,.welbp .cn{font-family:'Space Grotesk';font-weight:600;font-size:var(--fs-3);margin:5px 0 2px}
   .welrole .cd,.welbp .cd{font-size:var(--fs-2);color:var(--grey)}.welbp .bt{font-size:var(--fs-1);color:var(--grey);font-family:'Space Mono'}
   .welbtns{display:flex;gap:10px;justify-content:center;margin-top:16px;flex-wrap:wrap}
   .welwrap .btn.ghost{background:transparent;color:var(--blue);border:1px solid var(--line)}
@@ -334,7 +334,7 @@
   .auth{flex:1;display:flex;align-items:center;justify-content:center;padding:24px;overflow-y:auto;background:linear-gradient(160deg,var(--chrome),#143b4e 60%,#1d4d61)}
   .card{width:440px;max-width:100%;background:var(--card);border-radius:18px;box-shadow:var(--shadow);overflow:hidden}
   .card .top{padding:22px 26px 8px;text-align:center}
-  .brand{display:inline-flex;align-items:center;gap:10px;font-family:'Space Grotesk';font-weight:700;font-size:18px}
+  .brand{display:inline-flex;align-items:center;gap:10px;font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-4)}
   .card h1{font-family:'Space Grotesk';font-size:var(--fs-5);margin:14px 0 4px}.card .sub{font-size:var(--fs-2);color:var(--grey);margin:0}
   .card .body{padding:8px 26px 24px}
   .tabs{display:flex;gap:4px;background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:4px;margin:14px 0}
@@ -549,7 +549,7 @@
      so the hierarchy is visible without a second control. */
   /* Governance rows grouped by who controls them — the group heading answers "what can I change?" before you
      read a single row, so the per-row class chip becomes confirmation rather than the only signal. */
-  .govtitle{font-family:'Space Grotesk';font-weight:700;font-size:19px;letter-spacing:-.01em;color:var(--ink)}
+  .govtitle{font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-5);letter-spacing:-.01em;color:var(--ink)}
   .govsub{font-size:var(--fs-1);color:var(--grey);margin:3px 0 0;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
   .govdesc{font-size:var(--fs-2);color:var(--ink-2);line-height:1.55;margin:8px 0 4px}
   .govgrp{margin-top:10px;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:var(--card)}
@@ -605,13 +605,13 @@
   .misrow.sub{padding-inline-start:26px;background:var(--paper)}
   .misrow.sub .code{font-weight:600;font-size:var(--fs-2)}
   .misrow.sub.sel{background:var(--blue-tint-bg)}
-  .misval{font-family:'Space Mono';font-size:15px;font-weight:700;text-align:end;white-space:nowrap;line-height:1.2}
+  .misval{font-family:'Space Mono';font-size:var(--fs-3);font-weight:700;text-align:end;white-space:nowrap;line-height:1.2}
   .misval small{display:block;font-family:inherit;font-size:var(--fs-1);font-weight:600;color:var(--grey)}
   .misval.ok{color:var(--ok)} .misval.warn{color:var(--prog)}
   .mislbl{font-size:var(--fs-1);font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--grey)}
   .mishero{font-family:'Space Mono';font-size:38px;font-weight:700;letter-spacing:-.03em;line-height:1.05;margin:3px 0 2px}
-  .misfore{font-family:'Space Mono';font-size:22px;font-weight:600;color:var(--grey)}
-  .misbig{font-family:'Space Mono';font-size:26px;font-weight:700}
+  .misfore{font-family:'Space Mono';font-size:var(--fs-5);font-weight:600;color:var(--grey)}
+  .misbig{font-family:'Space Mono';font-size:var(--fs-6);font-weight:700}
   .misdelta{font-size:var(--fs-2);font-weight:600;color:var(--ok)}
   .misnote{font-size:var(--fs-2);color:var(--grey);line-height:1.55}
   .miswarn{font-size:var(--fs-2);color:var(--warn-2);background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:6px 9px;margin-top:9px}
@@ -641,7 +641,7 @@
   .misagebar{height:44px;background:var(--paper);border:1px solid var(--line);border-radius:6px;display:flex;align-items:flex-end;overflow:hidden}
   .misagebar i{display:block;width:100%;background:var(--blue);border-radius:0 0 6px 6px}
   .misage.warn .misagebar i{background:var(--prog)}
-  .misagen{font-family:'Space Mono';font-size:15px;font-weight:700;margin-top:4px}
+  .misagen{font-family:'Space Mono';font-size:var(--fs-3);font-weight:700;margin-top:4px}
   .misage.warn .misagen{color:var(--prog)}
   .misagek{font-size:var(--fs-1);color:var(--grey)}
   .misunatt{margin-top:7px}
@@ -811,7 +811,7 @@
   .notifpanel{position:absolute;top:54px;inset-inline-end:14px;width:300px;max-width:88vw;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);overflow:hidden}
   .notifhd{display:flex;align-items:center;font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-2);color:var(--ink);padding:11px 13px;border-bottom:1px solid var(--line)}
   .notifrow{display:flex;gap:10px;padding:10px 13px;border-bottom:1px solid var(--line)}
-  .notifrow .ni{font-size:15px}.notifrow .nt{font-size:var(--fs-2);color:var(--ink);line-height:1.35}.notifrow .ns{font-size:var(--fs-1);color:var(--grey);margin-top:2px}
+  .notifrow .ni{font-size:var(--fs-3)}.notifrow .nt{font-size:var(--fs-2);color:var(--ink);line-height:1.35}.notifrow .ns{font-size:var(--fs-1);color:var(--grey);margin-top:2px}
   .notiffoot{padding:8px 13px;font-size:var(--fs-1);color:var(--grey);background:var(--paper)}
   .mover{position:fixed;inset:0;z-index:280;background:rgba(8,24,32,.45);display:flex;align-items:flex-start;justify-content:center;padding:56px 16px;overflow-y:auto}
   .composepill{position:fixed;inset-inline-start:calc(16px + env(safe-area-inset-left,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:300;background:var(--blue);color:var(--on-accent);border-radius:999px;padding:9px 15px;font-size:var(--fs-2);font-weight:700;box-shadow:0 8px 22px rgba(0,0,0,.28);display:flex;align-items:center;gap:10px}
@@ -838,7 +838,7 @@
    * shared edge that carries the alignment, not equal boxes.
    */
   .modal .mhd{padding:13px 16px;border-bottom:1px solid var(--line)}
-  .modal .mhd .t{font-family:'Space Grotesk';font-weight:700;font-size:15px;color:var(--ink)}
+  .modal .mhd .t{font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3);color:var(--ink)}
   .modal .mhd .s{font-size:var(--fs-2);color:var(--grey);margin-top:2px}
   .modal .mbody{padding:12px 16px;max-height:54vh;overflow-y:auto}
   .modal .mfoot{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--line)}
@@ -927,7 +927,7 @@
   .composeov-bar{display:flex;align-items:center;justify-content:flex-end;padding:0 0 4px}
   .composeov-x{border:1px solid var(--line);background:var(--card);color:var(--grey);width:28px;height:28px;border-radius:50%;font-size:var(--fs-3);font-weight:800;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center}
   .busyov{position:fixed;inset:0;background:rgba(20,30,40,.30);display:flex;align-items:center;justify-content:center;z-index:9999}
-  .busybox{background:var(--card);border-radius:12px;padding:15px 22px;display:flex;align-items:center;gap:12px;font-size:13.5px;font-weight:700;color:var(--ink);box-shadow:0 14px 36px rgba(0,0,0,.24)}
+  .busybox{background:var(--card);border-radius:12px;padding:15px 22px;display:flex;align-items:center;gap:12px;font-size:var(--fs-3);font-weight:700;color:var(--ink);box-shadow:0 14px 36px rgba(0,0,0,.24)}
   .bspin{width:18px;height:18px;border:3px solid #D8E4F4;border-top-color:var(--blue);border-radius:50%;animation:bspin .7s linear infinite;flex:none}
   @keyframes bspin{to{transform:rotate(360deg)}}
   .topbar .msgc{position:relative;border:0;background:none;color:#cfe0e8;font-size:15px;cursor:pointer;padding:2px 4px;line-height:1}
@@ -1035,8 +1035,8 @@
   .actbar button.pend{border-style:dashed;border-color:var(--gold-line);color:var(--warn-3);background:var(--gold-soft)}
   .dback{display:none;align-items:center;gap:4px;border:0;background:none;color:var(--blue);font-weight:700;font-size:var(--fs-2);margin-bottom:8px;padding:5px 0;cursor:pointer}
   .empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:var(--grey);padding:30px;gap:8px}
-  .empty .big{font-size:34px}.empty .t{font-family:'Space Grotesk';font-weight:700;font-size:15px;color:var(--ink)}
-  .stub{padding:34px;text-align:center;color:var(--grey)}.stub .t{font-family:'Space Grotesk';font-weight:700;font-size:17px;color:var(--ink);margin-bottom:6px}
+  .empty .big{font-size:34px}.empty .t{font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3);color:var(--ink)}
+  .stub{padding:34px;text-align:center;color:var(--grey)}.stub .t{font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-4);color:var(--ink);margin-bottom:6px}
   .toast{position:fixed;inset-inline-start:50%;top:64px;transform:translateX(-50%);max-width:min(560px,92vw);background:var(--chrome);color:var(--chrome-on);border-radius:12px;padding:12px 18px;font-size:var(--fs-2);font-weight:600;line-height:1.4;box-shadow:0 12px 34px rgba(8,24,32,.30);display:flex;align-items:center;gap:14px;z-index:9999;animation:toastIn .18s ease-out}
   @keyframes toastIn{from{opacity:0;transform:translate(-50%,-8px)}to{opacity:1;transform:translate(-50%,0)}}
   .toast.err{background:var(--disp);color:var(--on-danger)}
@@ -1120,7 +1120,7 @@
   .lbstage{background:#0a1b24;display:flex;align-items:center;justify-content:center}
   .lbstage .attImg{height:300px}
   .lbnav{display:flex;align-items:center;gap:12px;padding:10px 14px}
-  .lbnav button{border:0;background:none;color:#cfe0e8;font-size:22px;cursor:pointer}
+  .lbnav button{border:0;background:none;color:#cfe0e8;font-size:var(--fs-5);cursor:pointer}
   .lbdots{flex:1;display:flex;gap:6px;justify-content:center}.lbdots span{width:7px;height:7px;border-radius:50%;background:#3a4d57}.lbdots span.on{background:var(--gold)}
 /* D2 press/focus feedback + D4 modal close X */
 .composebtn,.pri,.mfoot button,.btn{transition:transform .06s ease, filter .12s ease}
@@ -1690,7 +1690,7 @@ function _bpRows(items, kind){
 function blueprintCardHTML(id){
   var wp = WORK_PATTERNS[id]; if(!wp) return '<div style="padding:12px">Unknown work pattern.</div>';
   return '<div style="padding:2px 2px">'
-    +'<div style="display:flex;align-items:center;gap:9px;margin-bottom:2px"><span style="font-size:22px">'+wp.icon+'</span><div><div style="font-family:\'Space Grotesk\';font-weight:800;font-size:var(--fs-4)">'+esc(wp.label)+'</div><div style="font-size:var(--fs-1);color:var(--grey)">what governs this work pattern</div></div></div>'
+    +'<div style="display:flex;align-items:center;gap:9px;margin-bottom:2px"><span style="font-size:var(--fs-5)">'+wp.icon+'</span><div><div style="font-family:\'Space Grotesk\';font-weight:800;font-size:var(--fs-4)">'+esc(wp.label)+'</div><div style="font-size:var(--fs-1);color:var(--grey)">what governs this work pattern</div></div></div>'
     +'<div style="background:var(--blue-tint-bg);border:1px solid var(--blue-tint-line);border-radius:9px;padding:8px 11px;margin:10px 0;font-size:var(--fs-2);color:var(--blue)">🎫 <b>' + tx('Licence') + '</b> · '+esc(wp.licence)+'</div>'
     +'<div style="font-size:var(--fs-1);font-weight:800;color:var(--warn-2);margin:8px 0 2px">🔒 SEALED — governed, cannot change</div>'+_bpRows(wp.sealed,'sealed')
     +'<div style="font-size:var(--fs-1);font-weight:800;color:#1f7a3d;margin:14px 0 2px">' + tx('✎ OPEN — yours to set, within bounds') + '</div>'+_bpRows(wp.open,'open')
@@ -1706,7 +1706,7 @@ function blueprintSettingsHTML(){
   return '<div class="sec" style="margin-top:18px">' + tx('⚙ Governed by work pattern') + '</div>'
     +'<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:9px;line-height:1.5">Each action is a governed <b>work pattern</b>. Open one to see its cascade — 🎫 licence · 🔒 sealed (and which layer sealed it) · ✎ open knobs · ↑ what it reports up. <i>Read-only showcase.</i></div>'
     +Object.keys(WORK_PATTERNS).map(function(id){ var wp=WORK_PATTERNS[id];
-      return '<button class="composebtn" style="display:flex;align-items:center;gap:10px;width:100%;text-align:start;margin-bottom:7px;padding:10px 12px" onclick="openBlueprint(\''+id+'\')"><span style="font-size:var(--fs-4)">'+wp.icon+'</span><span style="flex:1"><b>'+esc(wp.label)+'</b><div style="font-size:var(--fs-1);color:var(--grey)">'+wp.sealed.length+' sealed · '+wp.open.length+' open · 🎫 '+esc(wp.licence)+'</div></span><span style="color:var(--grey);font-size:15px">ℹ️</span></button>';
+      return '<button class="composebtn" style="display:flex;align-items:center;gap:10px;width:100%;text-align:start;margin-bottom:7px;padding:10px 12px" onclick="openBlueprint(\''+id+'\')"><span style="font-size:var(--fs-4)">'+wp.icon+'</span><span style="flex:1"><b>'+esc(wp.label)+'</b><div style="font-size:var(--fs-1);color:var(--grey)">'+wp.sealed.length+' sealed · '+wp.open.length+' open · 🎫 '+esc(wp.licence)+'</div></span><span style="color:var(--grey);font-size:var(--fs-3)">ℹ️</span></button>';
     }).join('');
 }
 /* ── Floating AI assistant — context-sensitive, library-backed, pre + post auth, honest (no overselling). ──
@@ -1803,7 +1803,7 @@ async function askHelpDesk(){ const q=(_assistPending||'').trim(); if(!q) return
 function renderAssist(ans){ const h=document.getElementById("assisthost"); if(!h||!_assistOpen) return; const pre=!(typeof SESSION!=="undefined" && SESSION.token); const sugg=assistSuggest();
   const _pb=(typeof PURPOSE!=='undefined'&&PURPOSE[curScreen()])?PURPOSE[curScreen()]:''; const purposeHTML=_pb?`<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:8px 10px;font-size:var(--fs-1);color:var(--warn-3);line-height:1.5;margin-bottom:9px">${esc(_pb)}</div>`:'';
   h.innerHTML=`<div style="position:fixed;inset-inline-end:16px;bottom:70px;z-index:301;width:360px;max-width:92vw;background:var(--card);border:1px solid #e3e0d8;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.22);overflow:hidden;color:var(--on-card)">
-    <div style="display:flex;align-items:center;gap:8px;padding:11px 13px;border-bottom:1px solid #e3e0d8;font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-2)">💬 Assistant <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--warn-tint);color:var(--warn-3);border-radius:5px;padding:1px 6px">${pre?"fit check":"help"}</span><button data-testid="assist-close" onclick="closeAssist()" style="margin-inline-start:auto;border:0;background:none;cursor:pointer;color:var(--grey-4);font-size:15px">✕</button></div>
+    <div style="display:flex;align-items:center;gap:8px;padding:11px 13px;border-bottom:1px solid #e3e0d8;font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-2)">💬 Assistant <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--warn-tint);color:var(--warn-3);border-radius:5px;padding:1px 6px">${pre?"fit check":"help"}</span><button data-testid="assist-close" onclick="closeAssist()" style="margin-inline-start:auto;border:0;background:none;cursor:pointer;color:var(--grey-4);font-size:var(--fs-3)">✕</button></div>
     <div style="padding:11px 13px;max-height:52vh;overflow:auto">
       ${purposeHTML}<div style="font-size:var(--fs-2);color:#777;margin-bottom:8px">${pre?"Tell me your business and I will be honest about whether this fits.":"Describe what you are trying to do."}</div>
       <div id="assist_ans" style="font-size:var(--fs-2);color:#222;line-height:1.55;margin-bottom:10px">${ans||""}</div>
@@ -1836,7 +1836,7 @@ function ccRender(res){
   const std=_ccStds.find(s=>s.standard===_ccPick)||_ccStds[0]; if(!std) return;
   const opts=_ccStds.map(s=>`<option value="${esc(s.standard)}" ${s.standard===_ccPick?'selected':''}>${esc(s.title)} (${esc(s.standard)})</option>`).join("");
   const fields=(std.points||[]).map(_ccField).join('<div style="height:9px"></div>');
-  modal(`<div style="font-family:'Space Grotesk';font-weight:700;font-size:15px;margin-bottom:3px">🛡️ Compliance check <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--warn-tint);color:var(--warn-3);border-radius:5px;padding:1px 6px;vertical-align:middle">first light</span></div>
+  modal(`<div style="font-family:'Space Grotesk';font-weight:700;font-size:var(--fs-3);margin-bottom:3px">🛡️ Compliance check <span style="font-size:var(--fs-1);font-family:'Space Mono';background:var(--warn-tint);color:var(--warn-3);border-radius:5px;padding:1px 6px;vertical-align:middle">first light</span></div>
     <div style="font-size:var(--fs-1);color:var(--warn-3);margin-bottom:11px">Check a transaction's data against a standard. The verdict is computed from the rules — the AI only explains it.</div>
     <label style="font-size:var(--fs-1);color:var(--grey-2)">Standard</label>
     <select onchange="ccPickStd(this.value)" style="width:100%;border:1px solid #e3e0d8;border-radius:9px;padding:7px 9px;font-size:var(--fs-2);margin:3px 0 12px">${opts}</select>
@@ -1883,7 +1883,7 @@ function _finishCard(it,i,unit){
   var sub=[it.scale,it.sheen].filter(Boolean).map(esc).join(' · ');
   var p=_refPrice(it), price=p?p.v:'';
   return '<div style="border:1px solid #e7e3d8;border-radius:12px;padding:12px;margin-bottom:10px">'
-    +'<div style="display:flex;align-items:center;gap:8px">'+_refPhoto(it,30)+'<span style="font-weight:800;font-size:15px">'+esc(it.name)+'</span>'+(sub?'<span style="font-size:var(--fs-1);color:var(--grey-4)">'+sub+'</span>':'')+'</div>'
+    +'<div style="display:flex;align-items:center;gap:8px">'+_refPhoto(it,30)+'<span style="font-weight:800;font-size:var(--fs-3)">'+esc(it.name)+'</span>'+(sub?'<span style="font-size:var(--fs-1);color:var(--grey-4)">'+sub+'</span>':'')+'</div>'
     +(it.inspiration?'<div style="font-size:var(--fs-2);color:var(--grey-2);margin:4px 0 7px;line-height:1.5">'+esc(it.inspiration)+'</div>':'')
     +(chips?'<div style="display:flex;gap:5px;flex-wrap:wrap;margin:6px 0">'+chips+'</div>':'')
     +(facts.length?'<div style="font-size:var(--fs-1);color:var(--ink-2);margin:5px 0;line-height:1.55">'+facts.join(' · ')+'</div>':'')
@@ -1893,7 +1893,7 @@ function _finishCard(it,i,unit){
     +'</div>';
 }
 function cbRenderCatalogue(v){
-  var head='<div style="font-family:\'Space Grotesk\';font-weight:700;font-size:15px;margin-bottom:2px">🎨 '+esc(v.title||'Catalogue')+'</div>'
+  var head='<div style="font-family:\'Space Grotesk\';font-weight:700;font-size:var(--fs-3);margin-bottom:2px">🎨 '+esc(v.title||'Catalogue')+'</div>'
     +'<div style="font-size:var(--fs-1);color:var(--purple-2);font-family:\'Space Mono\',monospace;margin-bottom:8px">structured by ai:catalogue-structure@v1 · source '+esc(v.source||'')+'</div>';
   var intro=v.intro?'<div style="font-size:var(--fs-2);color:var(--ink-2);line-height:1.55;background:var(--warn-tint);border:1px solid #e7e3d8;border-radius:9px;padding:9px 11px;margin-bottom:10px">'+esc(v.intro)+'</div>':'';
   var layers='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:11px">'
@@ -2075,7 +2075,7 @@ function cbKeysOverlay(show) {
   d.onclick = function (e) { if (e.target === d) d.remove(); };
   d.innerHTML = '<div style="background:var(--card);color:var(--on-card);border:1px solid var(--line);'
     + 'border-radius:14px;box-shadow:var(--shadow);padding:18px 20px;max-width:420px;width:100%">'
-    + '<div style="font-family:\'Space Grotesk\';font-weight:800;font-size:15px;margin-bottom:4px">' + tx('Keyboard') + '</div>'
+    + '<div style="font-family:\'Space Grotesk\';font-weight:800;font-size:var(--fs-3);margin-bottom:4px">' + tx('Keyboard') + '</div>'
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:10px">Shortcuts do nothing while you are typing.</div>'
     + rows
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:12px">Press <b>' + tx('Esc') + '</b> to close.</div></div>';
@@ -2352,7 +2352,7 @@ function renderLogin(){
       ${L.err?`<div class="err">${L.err}</div>`:""}
       <div class="hint"><b>${STAGES[CFG.STAGE].label}</b> — real OTP/PIN against the API.</div>
       ${L.cust?"":`<div class="swap">New here? <a onclick="go('#/welcome')">${tx('Create an entity')}</a> · <a onclick="setLoginCust(true)">Have a shop link?</a></div>`}
-      <div style="text-align:center;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)"><button onclick="openLegend()" title="See what we serve — no login" style="border:0;background:linear-gradient(180deg,#4a72b0,var(--blue));color:#fff;border-radius:22px;padding:11px 22px;cursor:pointer;font-size:13.5px;font-weight:700;box-shadow:0 3px 12px rgba(63,102,166,.32)">🔑 See what we serve — no sign-in</button><div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">A 60-second look at where we&rsquo;re different.</div></div>
+      <div style="text-align:center;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)"><button onclick="openLegend()" title="See what we serve — no login" style="border:0;background:linear-gradient(180deg,#4a72b0,var(--blue));color:#fff;border-radius:22px;padding:11px 22px;cursor:pointer;font-size:var(--fs-3);font-weight:700;box-shadow:0 3px 12px rgba(63,102,166,.32)">🔑 See what we serve — no sign-in</button><div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">A 60-second look at where we&rsquo;re different.</div></div>
     </div>
   </div></div>`;
   const b=document.getElementById("l_go"); if(b) b.onclick=doLogin;
@@ -3518,12 +3518,12 @@ function _renderApp(){
            * colour chosen for a different background. A surface must name its own text — every time.
            */''}${UI.avMenu?`<div class="avmenu" data-testid="avatar-menu" style="position:absolute;top:calc(100% + 6px);inset-inline-end:0;z-index:60;background:var(--card);color:var(--on-card);border:1px solid var(--line);border-radius:9px;box-shadow:var(--shadow);overflow:hidden;/* ⚠️ WIDER ONLY WHILE A SECTION IS OPEN. A permanent 320px dropdown for two lines of menu is heavy; a 180px one cannot hold a palette. It sizes to what it is currently showing. */min-width:${UI.avSection === 'theme' ? '380px' : (UI.avSection ? '320px' : '190px')};max-width:min(400px,94vw)">
           <div style="padding:9px 13px;border-bottom:1px solid var(--line)"><div style="font-weight:700;font-size:var(--fs-2)">${esc(SESSION.name||'')}</div><div style="font-size:var(--fs-1);color:var(--grey)">${esc(role)} · ${esc(SESSION.entity||'')}</div></div>
-          <button data-testid="nav-profile" onclick="UI.avMenu=false;navTo('profile')" style="display:block;width:100%;text-align:start;border:0;background:none;padding:10px 13px;font-size:13.5px;cursor:pointer">👤 Profile</button>
+          <button data-testid="nav-profile" onclick="UI.avMenu=false;navTo('profile')" style="display:block;width:100%;text-align:start;border:0;background:none;padding:10px 13px;font-size:var(--fs-3);cursor:pointer">👤 Profile</button>
           <!-- ⚠️ SETTINGS IS ENTITY ADMINISTRATION, NOT A PERSONAL SCREEN. Moving Profile behind the avatar put
                Settings there too, and the avatar renders for every role — so a co-assist would have found the
                business's policy flags and channel bindings one click from their own name. The rail never offered
                it to them; the avatar menu must not either. -->
-          ${isEntityUser?`<button data-testid="nav-settings" onclick="UI.avMenu=false;navTo('settings')" style="display:block;width:100%;text-align:start;border:0;background:none;padding:10px 13px;font-size:13.5px;cursor:pointer">${tx('⚙️ Settings')}</button>`:''}
+          ${isEntityUser?`<button data-testid="nav-settings" onclick="UI.avMenu=false;navTo('settings')" style="display:block;width:100%;text-align:start;border:0;background:none;padding:10px 13px;font-size:var(--fs-3);cursor:pointer">${tx('⚙️ Settings')}</button>`:''}
           <!--
             ⭐⭐ COLLAPSED BY DEFAULT (Athi, 2026-08-18: *"if you click the theme, possibly a dropdown or
             collapsible menu — language similarly"*).
@@ -3542,7 +3542,7 @@ function _renderApp(){
               var open = sec === key;
               return `<button data-testid="avsec-${key}" onclick="UI.avSection = (UI.avSection==='${key}'?'':'${key}'); renderApp()"
                 style="display:flex;align-items:center;gap:9px;width:100%;text-align:start;border:0;
-                background:${open?'var(--sel-2)':'none'};color:var(--on-card);padding:10px 13px;font-size:13.5px;cursor:pointer">
+                background:${open?'var(--sel-2)':'none'};color:var(--on-card);padding:10px 13px;font-size:var(--fs-3);cursor:pointer">
                 <span style="width:17px;text-align:center">${icon}</span><span>${label}</span>
                 <span style="margin-inline-start:auto;display:flex;align-items:center;gap:7px">
                   <span style="font-size:var(--fs-1);color:var(--grey)">${esc(value)}</span>
@@ -3607,7 +3607,7 @@ function _renderApp(){
             }
             return out;
           })()}
-          <button onclick="UI.avMenu=false;logout()" style="display:block;width:100%;text-align:start;border:0;background:none;padding:10px 13px;font-size:13.5px;cursor:pointer;border-top:1px solid var(--line);color:var(--disp)">↩ Sign out</button>
+          <button onclick="UI.avMenu=false;logout()" style="display:block;width:100%;text-align:start;border:0;background:none;padding:10px 13px;font-size:var(--fs-3);cursor:pointer;border-top:1px solid var(--line);color:var(--disp)">↩ Sign out</button>
         </div>`:''}
         </div>
         <button class="so" data-testid="icon-logout" onclick="logout()" title="Sign out" aria-label="Sign out"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button></div>
@@ -5072,7 +5072,7 @@ function actorInviteModal(head, name, login, otp){
   modal(`<div class="mhd"><div class="t">${esc(head)}</div><div class="s">share these so ${esc(name||'they')} can sign in</div></div>
    <div class="mbody">
      <div style="${_CARD};margin-bottom:8px"><div style="font-size:var(--fs-1);color:var(--grey);text-transform:uppercase;letter-spacing:.4px">User ID</div><div style="font-family:'Space Mono';font-weight:700;font-size:var(--fs-3);margin-top:2px;word-break:break-all">${esc(login||'—')}</div></div>
-     <div style="${_CARD};background:var(--blue-tint);border-color:var(--blue-tint-line);margin-bottom:8px;color:var(--on-card)"><div style="font-size:var(--fs-1);color:var(--blue-d);text-transform:uppercase;letter-spacing:.4px">One-time code</div><div style="font-family:'Space Mono';font-weight:800;font-size:24px;color:var(--blue-d);margin-top:2px;letter-spacing:3px">${esc(otp||'—')}</div></div>
+     <div style="${_CARD};background:var(--blue-tint);border-color:var(--blue-tint-line);margin-bottom:8px;color:var(--on-card)"><div style="font-size:var(--fs-1);color:var(--blue-d);text-transform:uppercase;letter-spacing:.4px">One-time code</div><div style="font-family:'Space Mono';font-weight:800;font-size:var(--fs-5);color:var(--blue-d);margin-top:2px;letter-spacing:3px">${esc(otp||'—')}</div></div>
      <div style="font-size:var(--fs-1);color:var(--grey);line-height:1.5">They sign in at the login screen with the <b>User ID</b> + this <b>one-time code</b>, then set their own PIN. Lost it? Use <b>Re-invite</b> on their card for a fresh code.</div>
    </div>
    <div class="mfoot"><button class="pri" onclick="closeModal()">Got it</button></div>`);
@@ -5156,7 +5156,7 @@ function lazyAttach(id){ const s=LAZY[id]; if(!s || s.shown>=s.total) return; co
 function scr(title,id,helpKey){
   const q = helpKey?`<button data-testid="icon-help-${helpKey}" onclick="openAssist('${helpKey}')" title="About this screen" style="border:1px solid var(--line);background:var(--card);color:var(--blue);border-radius:50%;width:22px;height:22px;font-weight:800;cursor:pointer;font-size:13px;line-height:1;flex:none">?</button>`:'';
   const hint = helpKey?`<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:10px">Explore <b onclick="openAssist('${helpKey}')" style="cursor:pointer;color:var(--blue)">?</b> to know more about this screen.</div>`:'';
-  return `<div style="flex:1;min-height:0;overflow-y:auto"><div style="padding:14px 14px var(--scroll-tail);max-width:640px;margin:0 auto"><div class="sec" style="font-size:15px;margin-bottom:${helpKey?'3px':'10px'};display:flex;align-items:center;gap:9px">${title}${q}</div>${hint}<div id="${id}"><div class="loadwrap"><span class="spin"></span> loading…</div></div></div></div>`;
+  return `<div style="flex:1;min-height:0;overflow-y:auto"><div style="padding:14px 14px var(--scroll-tail);max-width:640px;margin:0 auto"><div class="sec" style="font-size:var(--fs-3);margin-bottom:${helpKey?'3px':'10px'};display:flex;align-items:center;gap:9px">${title}${q}</div>${hint}<div id="${id}"><div class="loadwrap"><span class="spin"></span> loading…</div></div></div></div>`;
 }
 /**
  * ⭐⭐ helpQ — a SECTION-level "?" that answers on the spot. Athi, 2026-08-20: *"a question mark can answer
@@ -6130,8 +6130,8 @@ async function viewSupplierPassport(bridge, name){
 + ' '
       + '<span style="color:var(--grey)">User ID '+esc(sup.user_id||sup.bridge_id||bridge)+'</span></div>'
       + '<div style="display:flex;gap:10px;align-items:center;margin-bottom:12px">'
-      + '<div style="width:38px;height:38px;border-radius:50%;background:'+(ready?'var(--ok-3)':'var(--warn-2)')+';color:#fff;display:grid;place-items:center;font-size:18px">'+(ready?'✓':'!')+'</div>'
-      + '<div><div style="font-weight:700;font-size:13.5px">'+(ready?(label+' is import-ready'):(label+' has '+((sm.total||0)-(sm.met||0))+' clearance(s) outstanding'))+'</div>'
+      + '<div style="width:38px;height:38px;border-radius:50%;background:'+(ready?'var(--ok-3)':'var(--warn-2)')+';color:#fff;display:grid;place-items:center;font-size:var(--fs-4)">'+(ready?'✓':'!')+'</div>'
+      + '<div><div style="font-weight:700;font-size:var(--fs-3)">'+(ready?(label+' is import-ready'):(label+' has '+((sm.total||0)-(sm.met||0))+' clearance(s) outstanding'))+'</div>'
       + '<div style="font-size:var(--fs-1);color:var(--grey)">'+(sm.met||0)+' of '+(sm.total||0)+' met'+(sm.expiring?' · '+sm.expiring+' expiring':'')+(sm.expired?' · '+sm.expired+' expired':'')+'</div></div></div>'
       + (rows ? '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">'+rows+'</table></div>'
               : '<div style="font-size:var(--fs-2);color:var(--grey)">They have no clearances recorded yet.</div>')
@@ -6574,7 +6574,7 @@ function refFinishRow(it,i){
   var applied=[]; if((it.tools||[]).length) applied.push('Applied with '+esc(it.tools.join(', '))); if(it.coats) applied.push(esc(it.coats));
   var sub=[it.scale,it.sheen].filter(Boolean).map(esc).join(' · ');
   return '<div style="cursor:pointer;padding:12px 14px;border-bottom:1px solid var(--line)'+(UI.refSel===i?';background:var(--card)':'')+';color:var(--on-card)" onclick="selectRefFinish('+i+')">'
-    +'<div style="display:flex;align-items:center;gap:8px">'+_refPhoto(it,30)+'<span style="font-weight:800;font-size:15px">'+esc(it.name)+'</span>'
+    +'<div style="display:flex;align-items:center;gap:8px">'+_refPhoto(it,30)+'<span style="font-weight:800;font-size:var(--fs-3)">'+esc(it.name)+'</span>'
       +(sub?'<span style="font-size:var(--fs-1);color:var(--grey-4)">'+sub+'</span>':'')
       +'<span style="margin-inline-start:auto;font-weight:800;font-size:var(--fs-3)">'+_refPriceHTML(p)+'</span></div>'
     +(it.inspiration?'<div style="font-size:var(--fs-2);color:var(--grey-2);margin:4px 0 7px;line-height:1.5">'+esc(it.inspiration)+'</div>':'')
@@ -6610,7 +6610,7 @@ function refFinishDetail(it){
     +(facts.length?'<div class="sec">' + tx('Details') + '</div><div style="font-size:var(--fs-2);color:var(--ink-2);line-height:1.8;margin-bottom:4px">'+facts.join('<br>')+'</div>':'')
     +(combos.length?'<div class="sec">' + tx('Colour combinations') + '</div>'+combos.map(_combo).join(''):'')
     +(applied.length?'<div style="font-size:var(--fs-1);color:var(--grey-4);margin-top:10px">'+applied.join(' · ')+'</div>':'')
-    +'<div class="sec" style="margin-top:14px">' + tx('Price') + '</div><div style="font-size:17px;font-weight:800">'+(p?(esc(inr(p.v))+(p.u?' <span style="font-size:var(--fs-2);color:var(--grey-4);font-weight:400">/ '+esc(p.u)+'</span>':'')):'<span style="color:var(--grey-4);font-size:var(--fs-2)">not priced yet</span>')+'</div>'
+    +'<div class="sec" style="margin-top:14px">' + tx('Price') + '</div><div style="font-size:var(--fs-4);font-weight:800">'+(p?(esc(inr(p.v))+(p.u?' <span style="font-size:var(--fs-2);color:var(--grey-4);font-weight:400">/ '+esc(p.u)+'</span>':'')):'<span style="color:var(--grey-4);font-size:var(--fs-2)">not priced yet</span>')+'</div>'
     +'<div style="font-size:var(--fs-1);color:var(--grey-4);margin-top:12px;font-family:\'Space Mono\'">🎨 referenced from the shared source · no copy · <span style="color:var(--blue);cursor:pointer" onclick="UI.nav=\'cataloguesetup\';renderApp()">manage prices</span></div>'
   +'</div>';
   return head+body;
@@ -7061,7 +7061,7 @@ function ctNewCategory(){
     })
     .catch(function(){ toast('Could not open that — categories are also under Definitions → Categories.', true); });
 }
-function prodEditForm(d){ return ctField('name','Name',d.name||'')+`<div style="display:flex;gap:10px"><div style="flex:1">`+ctField('unit','Unit',d.unit||'',"placeholder=\"piece / kg / tonne\"")+`</div><div style="flex:1"><label class="fl">${tx('Price')}</label><div style="display:flex;align-items:stretch"><span style="display:flex;align-items:center;padding:0 11px;border:1px solid var(--line);border-inline-end:0;border-radius:9px 0 0 10px;background:var(--warn-tint);color:var(--warn-3);font-weight:700;font-size:13.5px;white-space:nowrap" title="${myCur()} — your business currency">${esc(curSym())}</span><input class="inp" id="ct_price" data-testid="cat-field-price" inputmode="numeric" style="border-radius:0 10px 10px 0" value="${cbHasPrice(d.price)?cbAmount(d.price):''}"></div></div></div>`+ctField('code','Code / HSN',pCode(d))+ctCategoryField(d)+`<label class="fl">${tx('Description')}</label><textarea class="inp" id="ct_desc" data-testid="cat-field-desc" style="width:100%;border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:13.5px;min-height:58px;resize:vertical;background:var(--paper);color:var(--on-bg)">${esc(pDesc(d))}</textarea>`; }
+function prodEditForm(d){ return ctField('name','Name',d.name||'')+`<div style="display:flex;gap:10px"><div style="flex:1">`+ctField('unit','Unit',d.unit||'',"placeholder=\"piece / kg / tonne\"")+`</div><div style="flex:1"><label class="fl">${tx('Price')}</label><div style="display:flex;align-items:stretch"><span style="display:flex;align-items:center;padding:0 11px;border:1px solid var(--line);border-inline-end:0;border-radius:9px 0 0 10px;background:var(--warn-tint);color:var(--warn-3);font-weight:700;font-size:var(--fs-3);white-space:nowrap" title="${myCur()} — your business currency">${esc(curSym())}</span><input class="inp" id="ct_price" data-testid="cat-field-price" inputmode="numeric" style="border-radius:0 10px 10px 0" value="${cbHasPrice(d.price)?cbAmount(d.price):''}"></div></div></div>`+ctField('code','Code / HSN',pCode(d))+ctCategoryField(d)+`<label class="fl">${tx('Description')}</label><textarea class="inp" id="ct_desc" data-testid="cat-field-desc" style="width:100%;border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:var(--fs-3);min-height:58px;resize:vertical;background:var(--paper);color:var(--on-bg)">${esc(pDesc(d))}</textarea>`; }
 /* ═══ EVERY FIELD THIS ITEM CARRIES ════════════════════════════════════════════════════════════════════════════
  * Athi, 2026-08-13: *"the other information like synonym etc are not visible… clicking one item possibly bring
  * the field name and its item vertically as an overlay showcasing all the fields but graying the field which
@@ -8753,7 +8753,7 @@ function _aiMd(md){
   }
   return o.join('');
 }
-var _AI_MDCSS='.amddoc{color:#1e2530;font-size:var(--fs-2);line-height:1.55;font-family:-apple-system,Segoe UI,Roboto,sans-serif}.amddoc h1,.amddoc h2,.amddoc h3,.amddoc h4{margin:16px 0 7px;font-weight:700;line-height:1.25;color:#141a22}.amddoc h1{font-size:17px;padding-bottom:6px;border-bottom:2px solid #e6eaf0}.amddoc h2{font-size:14.5px}.amddoc h3,.amddoc h4{font-size:var(--fs-2);text-transform:uppercase;letter-spacing:.03em;color:#5a6472}.amddoc p{margin:8px 0}.amddoc ul,.amddoc ol{margin:8px 0 8px 20px;padding:0}.amddoc li{margin:3px 0}.amddoc hr{border:0;border-top:1px solid #e6eaf0;margin:14px 0}.amddoc table.amdt{border-collapse:collapse;width:100%;margin:11px 0;font-size:var(--fs-1)}.amddoc .amdt th,.amddoc .amdt td{border:1px solid #dfe4ec;padding:7px 9px;text-align:start;vertical-align:top}.amddoc .amdt th{background:var(--card);font-weight:700;color:var(--on-card)}.amddoc .amdt tr:nth-child(even) td{background:var(--card)}.amddoc code{background:var(--blue-tint-bg);padding:1px 5px;border-radius:4px;font-size:var(--fs-1)}.amddoc strong{color:#141a22}';
+var _AI_MDCSS='.amddoc{color:#1e2530;font-size:var(--fs-2);line-height:1.55;font-family:-apple-system,Segoe UI,Roboto,sans-serif}.amddoc h1,.amddoc h2,.amddoc h3,.amddoc h4{margin:16px 0 7px;font-weight:700;line-height:1.25;color:#141a22}.amddoc h1{font-size:var(--fs-4);padding-bottom:6px;border-bottom:2px solid #e6eaf0}.amddoc h2{font-size:var(--fs-3)}.amddoc h3,.amddoc h4{font-size:var(--fs-2);text-transform:uppercase;letter-spacing:.03em;color:#5a6472}.amddoc p{margin:8px 0}.amddoc ul,.amddoc ol{margin:8px 0 8px 20px;padding:0}.amddoc li{margin:3px 0}.amddoc hr{border:0;border-top:1px solid #e6eaf0;margin:14px 0}.amddoc table.amdt{border-collapse:collapse;width:100%;margin:11px 0;font-size:var(--fs-1)}.amddoc .amdt th,.amddoc .amdt td{border:1px solid #dfe4ec;padding:7px 9px;text-align:start;vertical-align:top}.amddoc .amdt th{background:var(--card);font-weight:700;color:var(--on-card)}.amddoc .amdt tr:nth-child(even) td{background:var(--card)}.amddoc code{background:var(--blue-tint-bg);padding:1px 5px;border-radius:4px;font-size:var(--fs-1)}.amddoc strong{color:#141a22}';
 async function askAiOrder(){
   var c=UI.detail; if(!c){ if(typeof toast==='function')toast('Open an order first'); return; }
   var ctx={ subject:c.code, from:(c.sender||c.party||''), amount:c.amt, currency:c.currency,
@@ -8775,7 +8775,7 @@ async function askAiOrder(){
 }
 function _aiOrderPdf(){
   var d=UI._aiOrder||{}; if(!d.draft)return; var w=window.open('','_blank'); if(!w){ if(typeof toast==='function')toast('Allow pop-ups to export the PDF'); return; }
-  var css='@page{size:A4;margin:18mm}body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#1e2530;margin:0}.pg{max-width:760px;margin:0 auto;padding:22px}.hd{border-bottom:2px solid var(--purple);padding-bottom:12px;margin-bottom:18px}.brand{font-weight:800;letter-spacing:.05em;color:var(--purple);font-size:var(--fs-2)}.tt{font-size:21px;font-weight:800;margin-top:4px}.meta{font-size:var(--fs-1);color:#7a8494;margin-top:5px}'+_AI_MDCSS;
+  var css='@page{size:A4;margin:18mm}body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#1e2530;margin:0}.pg{max-width:760px;margin:0 auto;padding:22px}.hd{border-bottom:2px solid var(--purple);padding-bottom:12px;margin-bottom:18px}.brand{font-weight:800;letter-spacing:.05em;color:var(--purple);font-size:var(--fs-2)}.tt{font-size:var(--fs-5);font-weight:800;margin-top:4px}.meta{font-size:var(--fs-1);color:#7a8494;margin-top:5px}'+_AI_MDCSS;
   w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>'+esc(d.label||'Order review')+'</title><style>'+css+'</style></head><body><div class="pg"><div class="hd"><div class="brand">CHIT &amp; BRIDGE</div><div class="tt">'+esc(d.label||'Order review')+'</div><div class="meta">AI buyer-side review · '+esc(new Date().toLocaleString())+(d.cost!=null?' · est. $'+d.cost:'')+' · informational, not a commitment</div></div><div class="amddoc">'+_aiMd(d.draft||'')+'</div></div></body></html>');
   w.document.close(); w.focus(); setTimeout(function(){try{w.print();}catch(_){}}, 350);
 }
@@ -8823,7 +8823,7 @@ async function _aiOrderDocAccept(){
 }
 function _aiOrderDocPdf(){
   var d=UI._aiOrderDoc||{}; if(!d.draft)return; var w=window.open('','_blank'); if(!w){ if(typeof toast==='function')toast('Allow pop-ups to export the PDF'); return; }
-  var css='@page{size:A4;margin:18mm}body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#1e2530;margin:0}.pg{max-width:760px;margin:0 auto;padding:22px}.hd{border-bottom:2px solid var(--purple);padding-bottom:12px;margin-bottom:18px}.brand{font-weight:800;letter-spacing:.05em;color:var(--purple);font-size:var(--fs-2)}.tt{font-size:21px;font-weight:800;margin-top:4px}.meta{font-size:var(--fs-1);color:#7a8494;margin-top:5px}'+(typeof _AI_MDCSS!=='undefined'?_AI_MDCSS:'');
+  var css='@page{size:A4;margin:18mm}body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;color:#1e2530;margin:0}.pg{max-width:760px;margin:0 auto;padding:22px}.hd{border-bottom:2px solid var(--purple);padding-bottom:12px;margin-bottom:18px}.brand{font-weight:800;letter-spacing:.05em;color:var(--purple);font-size:var(--fs-2)}.tt{font-size:var(--fs-5);font-weight:800;margin-top:4px}.meta{font-size:var(--fs-1);color:#7a8494;margin-top:5px}'+(typeof _AI_MDCSS!=='undefined'?_AI_MDCSS:'');
   w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>'+esc(d.label||'Document')+'</title><style>'+css+'</style></head><body><div class="pg"><div class="hd"><div class="brand">CHIT &amp; BRIDGE</div><div class="tt">'+esc(d.label||'Document')+'</div><div class="meta">AI-drafted for '+esc(d.orderSubject||'order')+' · '+esc(new Date().toLocaleString())+(d.cost!=null?' · est. $'+d.cost:'')+' · review &amp; confirm</div></div><div class="amddoc">'+_aiMd(d.draft||'')+'</div></div></body></html>');
   w.document.close(); w.focus(); setTimeout(function(){try{w.print();}catch(_){}}, 350);
 }
@@ -8871,8 +8871,8 @@ function detailInner(){
   if(UI.dtab==="messages") body=messagesTab(c);
   if(UI.dtab==="status") body=statusTabHtml(c);
   if(UI.dtab==="summary") body=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:9px">
-     <div class="itab" style="padding:10px"><div class="sec" style="margin:0">Value</div><div class="disp" style="font-size:17px;font-weight:700">${inr(c.amt)}</div></div>
-     <div class="itab" style="padding:10px"><div class="sec" style="margin:0">State</div><div class="disp" style="font-size:15px;font-weight:700">${c.state.toUpperCase()}</div></div></div>
+     <div class="itab" style="padding:10px"><div class="sec" style="margin:0">Value</div><div class="disp" style="font-size:var(--fs-4);font-weight:700">${inr(c.amt)}</div></div>
+     <div class="itab" style="padding:10px"><div class="sec" style="margin:0">State</div><div class="disp" style="font-size:var(--fs-3);font-weight:700">${c.state.toUpperCase()}</div></div></div>
      <div style="margin-top:10px">${proof}</div>${clearancesBlock(c)}${commercialBlock(c)}`;
   if(c._loading){ body=`<div class="dbload"><span class="spin"></span> loading details…</div>`; }
   const actbar = (UI.folder==='drafts') ? `<button class="pri" onclick="resumeDraft('${c.id}')">✏️ Resume &amp; edit</button>` : (UI.folder==='trash') ? `<button class="pri" onclick="restoreChit('${c.id}')">${tx('↩ Restore')}</button>${c.isDraft?`<button class="pri" style="background:var(--disp);border-color:var(--disp);margin-inline-start:8px;color:var(--on-danger)" onclick="purgeChit('${c.id}')">${tx('🗑 Delete forever')}</button>`:''}` : (UI.folder==='archive') ? `<button class="pri" onclick="unarchiveChit('${c.id}')">${tx('↩ Unarchive')}</button>` : SESSION.role==="customer"
@@ -9564,7 +9564,7 @@ function amdShortlistHTML(cands, cat, totalItems){
       + '<input type="radio" name="amdcand" ' + (on?'checked':'') + ' onchange="amdPickCand(' + i + ')" '
       + 'style="width:19px;height:19px;flex:none;accent-color:var(--blue)">'
       + '<span style="flex:1;min-width:0">'
-      + '<span style="font-size:15px;font-weight:700">' + esc(x.name || x.label || '') + '</span>'
+      + '<span style="font-size:var(--fs-3);font-weight:700">' + esc(x.name || x.label || '') + '</span>'
       + (x.variant ? '<span style="font-size:var(--fs-2);color:#245a9e;font-weight:700"> · ' + esc(x.variant) + '</span>' : '')
       + (st ? '<div style="font-size:var(--fs-1);color:var(--warn-2);margin-top:1px">⚠️ ' + esc(x.status_text || x.status) + '</div>' : '')
       + '</span>'
@@ -9614,7 +9614,7 @@ function amendPaint(){
              border:1.5px solid ${on?'var(--blue)':'var(--line)'};border-radius:12px;background:${on?'var(--blue-tint-bg)':'var(--card)'};color:${on ? 'var(--on-card)' : 'var(--on-card)'}">
           <input type="radio" name="amdcand" ${on?'checked':''} onchange="amdPickCand(${i})" style="width:19px;height:19px;flex:none;accent-color:var(--blue)">
           <span style="flex:1;min-width:0">
-            <span style="font-size:15px;font-weight:700">${esc(x.name||x.label)}</span>
+            <span style="font-size:var(--fs-3);font-weight:700">${esc(x.name||x.label)}</span>
             ${x.variant?`<span style="font-size:var(--fs-2);color:#245a9e;font-weight:700"> · ${esc(x.variant)}</span>`:''}
             ${st?`<div style="font-size:var(--fs-1);color:var(--warn-2);margin-top:1px">⚠️ ${esc(x.status_text||x.status)}</div>`:''}
           </span>
@@ -9631,29 +9631,29 @@ function amendPaint(){
 
     if(cands.length) return _amdSheet('Which one did they mean?', '<div data-testid="amd-picker">'+shortlist+'</div>');
     return _amdSheet('Which item?', items.length
-      ? items.map((x,i)=>`<button class="btn" style="width:100%;margin-bottom:6px;text-align:start;font-size:15px" onclick="amdPickItem(${i})">${esc(x.label)}${x.unit?` <span style="color:var(--grey);font-size:var(--fs-2)">· ${esc(x.unit)}</span>`:''}</button>`).join('')
+      ? items.map((x,i)=>`<button class="btn" style="width:100%;margin-bottom:6px;text-align:start;font-size:var(--fs-3)" onclick="amdPickItem(${i})">${esc(x.label)}${x.unit?` <span style="color:var(--grey);font-size:var(--fs-2)">· ${esc(x.unit)}</span>`:''}</button>`).join('')
       : '<div style="font-size:var(--fs-2);color:var(--grey);padding:6px 0">No catalogue yet — the name stays as written.</div>');
   }
   /* The full list, reached only by rejecting the shortlist — so "none of these" stays one tap, not a hunt. */
   if(AMD.view==='itemall'){
     const items=(cat&&cat.items)||[];
     return _amdSheet('All catalogue items', (items.length
-      ? items.map((x,i)=>`<button class="btn" style="width:100%;margin-bottom:6px;text-align:start;font-size:15px" onclick="amdPickItem(${i})">${esc(x.label)}${x.unit?` <span style="color:var(--grey);font-size:var(--fs-2)">· ${esc(x.unit)}</span>`:''}</button>`).join('')
+      ? items.map((x,i)=>`<button class="btn" style="width:100%;margin-bottom:6px;text-align:start;font-size:var(--fs-3)" onclick="amdPickItem(${i})">${esc(x.label)}${x.unit?` <span style="color:var(--grey);font-size:var(--fs-2)">· ${esc(x.unit)}</span>`:''}</button>`).join('')
       : '<div style="font-size:var(--fs-2);color:var(--grey);padding:6px 0">No catalogue yet — the name stays as written.</div>'), 'item');
   }
   if(AMD.view==='unit'){
     const units=[...new Set([].concat(l.unit?[l.unit]:[], ((cat&&cat.items)||[]).map(x=>x.unit).filter(Boolean), AMD_UNITS))].slice(0,10);
-    return _amdSheet('Which unit?', `<div style="display:flex;gap:7px;flex-wrap:wrap">${units.map(u=>`<span onclick="amdPickUnit('${esc(u)}')" style="cursor:pointer;border:1px solid ${u===l.unit?'var(--blue)':'var(--line)'};${u===l.unit?'background:var(--blue);color:var(--on-accent);font-weight:700;':''}border-radius:18px;padding:9px 18px;font-size:15px">${esc(u)}</span>`).join('')}</div>`);
+    return _amdSheet('Which unit?', `<div style="display:flex;gap:7px;flex-wrap:wrap">${units.map(u=>`<span onclick="amdPickUnit('${esc(u)}')" style="cursor:pointer;border:1px solid ${u===l.unit?'var(--blue)':'var(--line)'};${u===l.unit?'background:var(--blue);color:var(--on-accent);font-weight:700;':''}border-radius:18px;padding:9px 18px;font-size:var(--fs-3)">${esc(u)}</span>`).join('')}</div>`);
   }
   if(AMD.view==='note'){
-    return _amdSheet('Note for this line', `<input value="${esc(l.comment||'')}" oninput="amdSetNote(this.value)" placeholder="extra spicy, deliver 7 PM…" style="width:100%;box-sizing:border-box;padding:11px;border:1px solid var(--line);border-radius:9px;font-size:15px">`);
+    return _amdSheet('Note for this line', `<input value="${esc(l.comment||'')}" oninput="amdSetNote(this.value)" placeholder="extra spicy, deliver 7 PM…" style="width:100%;box-sizing:border-box;padding:11px;border:1px solid var(--line);border-radius:9px;font-size:var(--fs-3)">`);
   }
   if(AMD.view==='remove'){
     /* ⚠️ REMOVING ASKS WHY, and it is not bookkeeping. "They never asked for this" and "not available" produce an
        identical empty line and mean opposite things — the second leaves a customer expecting a delivery. */
     return modal(`<h3 style="margin:0 0 4px">Remove this line?</h3>
       <div style="font-size:var(--fs-2);color:var(--grey);margin:0 0 12px">It stays on the chit so you can see it was asked for. It just stops counting.</div>
-      ${AMD_REASONS.map(r=>`<button class="btn" style="width:100%;margin-bottom:7px;text-align:start;font-size:15px" onclick="amendSave(null,'${r[0]}')">${esc(r[1])}</button>`).join('')}
+      ${AMD_REASONS.map(r=>`<button class="btn" style="width:100%;margin-bottom:7px;text-align:start;font-size:var(--fs-3)" onclick="amendSave(null,'${r[0]}')">${esc(r[1])}</button>`).join('')}
       <button class="btn" style="width:100%;margin-top:4px" onclick="amdView('main')"><span class=arw>←</span> back</button>`);
   }
 
@@ -9665,7 +9665,7 @@ function amendPaint(){
   const diff=changed?`<div style="font-size:var(--fs-2);text-align:center;margin-bottom:12px">
       <s style="opacity:.5">${esc([o.particulars,o.quantity,o.unit].filter(Boolean).join(' '))}</s>
       &nbsp;<span class=arw>→</span>&nbsp;<b style="color:#245a9e">${esc([l.particulars,l.quantity,l.unit].filter(Boolean).join(' '))}</b></div>`:'';
-  const ic=(g,t,fn,col)=>`<button class="btn" data-testid="amd-${String(t).toLowerCase().split(' ')[0]}" title="${t}" onclick="${fn}" style="flex:1;height:50px;font-size:21px;${col||''}">${g}</button>`;
+  const ic=(g,t,fn,col)=>`<button class="btn" data-testid="amd-${String(t).toLowerCase().split(' ')[0]}" title="${t}" onclick="${fn}" style="flex:1;height:50px;font-size:var(--fs-5);${col||''}">${g}</button>`;
 
   /**
    * ── ⭐ ONE OVERLAY, THE WHOLE LINE ────────────────────────────────────────────────────────────────────────────
@@ -9694,7 +9694,7 @@ function amendPaint(){
     ${showCands ? `<div style="margin-bottom:14px">${amdShortlistHTML(cands0, cat, items0.length)}</div>` : ''}
 
     <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:3px">
-      <div style="font-size:18px;font-weight:800;flex:1;min-width:0">${esc(l.particulars||'—')}</div>
+      <div style="font-size:var(--fs-4);font-weight:800;flex:1;min-width:0">${esc(l.particulars||'—')}</div>
       ${items0.length||cands0.length ? `<span onclick="amdView('itemall')" style="cursor:pointer;font-size:var(--fs-1);color:var(--blue);font-weight:700;white-space:nowrap">change item</span>` : ''}
     </div>
     <div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:12px">${AMD.picked?'from your catalogue':'as the reader read it'}</div>
@@ -9702,21 +9702,21 @@ function amendPaint(){
     <div style="display:flex;align-items:center;gap:9px;margin-bottom:4px">
       <button class="btn" onclick="amdStep(-1)" style="width:46px;height:46px;font-size:24px;border-radius:23px;flex:none">−</button>
       <input inputmode="decimal" value="${esc(String(l.quantity??''))}" oninput="amdSetQty(this.value)"
-             style="width:74px;text-align:center;font-size:21px;font-weight:800;padding:8px;border:1px solid var(--line);border-radius:9px">
-      <span onclick="amdView('unit')" style="cursor:pointer;font-size:15px;font-weight:700;min-width:52px;text-align:center;border-bottom:2px dotted var(--line)">${esc(l.unit||'unit')}</span>
+             style="width:74px;text-align:center;font-size:var(--fs-5);font-weight:800;padding:8px;border:1px solid var(--line);border-radius:9px">
+      <span onclick="amdView('unit')" style="cursor:pointer;font-size:var(--fs-3);font-weight:700;min-width:52px;text-align:center;border-bottom:2px dotted var(--line)">${esc(l.unit||'unit')}</span>
       <button class="btn" onclick="amdStep(1)" style="width:46px;height:46px;font-size:24px;border-radius:23px;flex:none">+</button>
-      <span style="color:var(--grey);font-size:15px">×</span>
+      <span style="color:var(--grey);font-size:var(--fs-3)">×</span>
       <input inputmode="decimal" data-testid="amd-price" value="${esc(money(l.price))}" oninput="amdSetPrice(this.value)" placeholder="price"
-             style="width:84px;text-align:center;font-size:17px;font-weight:700;padding:8px;border:1px solid var(--line);border-radius:9px">
+             style="width:84px;text-align:center;font-size:var(--fs-4);font-weight:700;padding:8px;border:1px solid var(--line);border-radius:9px">
     </div>
     <div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:12px">quantity · unit · price${total}</div>
 
     <input value="${esc(l.comment||'')}" oninput="amdSetNote(this.value)" placeholder="note for this line (optional)"
-           style="width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:13.5px;margin-bottom:12px">
+           style="width:100%;box-sizing:border-box;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:var(--fs-3);margin-bottom:12px">
     ${diff}
     <div style="display:flex;gap:8px">
-      ${ic('✓ Save','Save','amendSave()','background:var(--blue);color:var(--on-accent);font-weight:800;font-size:15px')}
-      ${ic('🗑 Remove','Remove this line',"amdView('remove')",'color:var(--disp);font-size:15px')}
+      ${ic('✓ Save','Save','amendSave()','background:var(--blue);color:var(--on-accent);font-weight:800;font-size:var(--fs-3)')}
+      ${ic('🗑 Remove','Remove this line',"amdView('remove')",'color:var(--disp);font-size:var(--fs-3)')}
       ${ic('✕','Cancel','closeModal()','flex:0 0 58px')}
     </div>`);
 }

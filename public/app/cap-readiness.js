@@ -104,7 +104,7 @@ function _aiPdf(){
     +'.pg{max-width:760px;margin:0 auto;padding:22px}'
     +'.hd{border-bottom:2px solid var(--purple);padding-bottom:12px;margin-bottom:18px}'
     +'.brand{font-weight:800;letter-spacing:.05em;color:var(--purple);font-size:var(--fs-2)}'
-    +'.doctitle{font-size:22px;font-weight:800;margin-top:4px;color:#141a22}'
+    +'.doctitle{font-size:var(--fs-5);font-weight:800;margin-top:4px;color:#141a22}'
     +'.meta{font-size:var(--fs-1);color:#7a8494;margin-top:5px}'
     +'.stamp{display:inline-block;margin-top:9px;font-size:var(--fs-1);font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--warn-2);background:var(--warn-tint);border:1px solid #f0dcae;border-radius:5px;padding:3px 8px}'
     +'.foot{margin-top:26px;padding-top:10px;border-top:1px solid #e6eaf0;font-size:var(--fs-1);color:#9aa3b0;text-align:center}'
@@ -248,7 +248,7 @@ function _rdDetailPane(it){
   var vmode = idType
     ? '<div style="margin:8px 16px 0;font-size:var(--fs-1);color:var(--ok-2);background:var(--ok-tint);border:1px solid #bfe3cb;border-radius:9px;padding:8px 11px">🔗 <b>' + tx('Live source-check') + '</b> — the platform verifies this '+idType.toUpperCase()+' against the <b>source registry</b>, invoked live. Confirmed at source, not your word for it.</div>'
     : '<div style="margin:8px 16px 0;font-size:var(--fs-1);color:var(--grey);background:var(--card);border:1px solid var(--line);border-radius:9px;padding:8px 11px">📄 <b>' + tx('Document evidence') + '</b> — your certificate + issuer link. A <b>live source-check is not wired for this standard yet</b> (it needs the issuing body’s registry).</div>';
-  return '<div style="padding:14px 16px 0"><div style="display:flex;align-items:flex-start;gap:10px"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:15px">'+esc(it.title||it.doc)+rung+'</div><div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">from <span class="mono" style="color:var(--blue)">'+esc(it.standard)+'</span></div></div><div style="flex:0 0 auto;display:flex;gap:6px;align-items:center">'+draftBtn+verifyBtn+actBtn+'</div></div></div>'
+  return '<div style="padding:14px 16px 0"><div style="display:flex;align-items:flex-start;gap:10px"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:var(--fs-3)">'+esc(it.title||it.doc)+rung+'</div><div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">from <span class="mono" style="color:var(--blue)">'+esc(it.standard)+'</span></div></div><div style="flex:0 0 auto;display:flex;gap:6px;align-items:center">'+draftBtn+verifyBtn+actBtn+'</div></div></div>'
     + banner + vmode + _rdExpand(it);
 }
 // ── COMMERCIAL COVER (live /instruments) — the invariant spine beneath the industry-variable compliance ──
@@ -415,7 +415,7 @@ function _rdComDetail(g){
   var partner = m.partner ? '<div style="margin-top:11px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--warn-tint);color:var(--on-card)"><span style="font-size:var(--fs-1);font-weight:800;color:var(--warn-3);text-transform:uppercase;letter-spacing:.05em">' + tx('Or hand it to a partner') + '</span><div style="font-size:var(--fs-2);margin-top:3px;font-weight:600">'+esc(m.partner)+'</div></div>' : '';
   var ai=m.ai||{};
   var aiLine = '<b style="color:var(--blue)">'+esc(ai.lvl||'L2')+'</b> · gate: '+esc(ai.gate||'confirm')+' — '+esc(ai.t||'AI role to be defined.')+(ai.skill?'':' <i style="color:#8a94a6">(skill coming)</i>');
-  return '<div style="padding:14px 16px 0"><div style="display:flex;align-items:flex-start;gap:10px"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:15px">'+esc(g.label)+'</div><div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px;display:flex;align-items:center;gap:7px;flex-wrap:wrap">'+_frmBadge(g.frm_class)+(g.covered_onrail?'<span style="color:var(--ok-3);font-weight:700;font-size:var(--fs-1)">' + tx('● already on rail') + '</span>':'')+'</div></div><div style="flex:0 0 auto">'+draftBtn+'</div></div></div>'
+  return '<div style="padding:14px 16px 0"><div style="display:flex;align-items:flex-start;gap:10px"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:var(--fs-3)">'+esc(g.label)+'</div><div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px;display:flex;align-items:center;gap:7px;flex-wrap:wrap">'+_frmBadge(g.frm_class)+(g.covered_onrail?'<span style="color:var(--ok-3);font-weight:700;font-size:var(--fs-1)">' + tx('● already on rail') + '</span>':'')+'</div></div><div style="flex:0 0 auto">'+draftBtn+'</div></div></div>'
     +'<div style="border-top:1px solid var(--line);margin:12px 0 0;padding:2px 16px 16px">'
     + _rdSub('Instruments')+'<div style="font-size:var(--fs-2);color:var(--ink)">'+(names||'—')+'</div>'
     + _rdSub('Advice')+'<div style="font-size:var(--fs-2);color:var(--ink);line-height:1.5">'+esc(m.advice||'—')+'</div>'

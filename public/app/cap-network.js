@@ -848,7 +848,7 @@ function netMintGo(){
             + '<div style="font-size:var(--fs-2)"><b>' + esc(c.name) + '</b> <span style="font-size:var(--fs-1);color:var(--grey)">' + esc(c.user_id||c.bridge_id) + '</span></div>'
             + '<div style="display:flex;gap:14px;align-items:center;margin-top:5px;flex-wrap:wrap">'
             + '<span style="font-family:ui-monospace,Menlo,monospace;font-size:var(--fs-2);color:var(--blue-2)">' + esc(c.handle) + '</span>'
-            + '<span style="font-family:ui-monospace,Menlo,monospace;font-size:15px;font-weight:700;letter-spacing:.08em;background:var(--card);border:1px solid var(--line);border-radius:6px;padding:2px 10px;color:var(--on-card)">' + esc(c.claim_code) + '</span>'
+            + '<span style="font-family:ui-monospace,Menlo,monospace;font-size:var(--fs-3);font-weight:700;letter-spacing:.08em;background:var(--card);border:1px solid var(--line);border-radius:6px;padding:2px 10px;color:var(--on-card)">' + esc(c.claim_code) + '</span>'
             + '<button onclick="netCopyKey(\'' + esc(c.handle) + '\',\'' + esc(c.claim_code) + '\')" style="padding:4px 10px;font-size:var(--fs-1)">' + tx('Copy') + '</button>'
             + '</div></div>'; }).join('')
       + (updated.length ? '<div style="padding:9px 16px 4px;font-size:var(--fs-1);font-weight:700;letter-spacing:.04em;color:var(--warn-2)">CHANGED — ' + updated.length + '</div>'
@@ -1027,7 +1027,7 @@ function _netMemberScreen(){
   }).join('');
   var rootName = (rows[0] && (rows[0].name || rows[0].bridge_id)) || 'the network operator';
   return '<div style="padding:22px;max-width:640px">'
-    + '<div style="font-size:19px;font-weight:800">' + tx('🔗 Your network') + '</div>'
+    + '<div style="font-size:var(--fs-5);font-weight:800">' + tx('🔗 Your network') + '</div>'
     + '<div style="font-size:var(--fs-2);color:var(--grey);margin:8px 0 14px;line-height:1.6">You are part of <b>' + esc(rootName)
     + '</b>. The structure is set by the network operator — you can see it here, and you look after your own store, its catalogue and its people.</div>'
     + '<div style="border:1px solid var(--line);border-radius:12px;background:var(--card);overflow:hidden;color:var(--on-card)">' + list + '</div>'
@@ -1142,11 +1142,11 @@ function _netAvailBody(){
     var qtyCol = unknown ? 'var(--blue-2)' : (none ? 'var(--disp-2)' : 'var(--ok-2)');
     return '<div style="padding:11px 2px;border-bottom:1px solid var(--line);' + (unknown || none ? 'opacity:.75;' : '') + '">'
       + '<div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap">'
-      + '<b style="font-size:13.5px">' + esc(r.store) + '</b>'
+      + '<b style="font-size:var(--fs-3)">' + esc(r.store) + '</b>'
       + (r.is_me ? '<span style="font-size:var(--fs-1);font-weight:800;color:var(--purple-2);background:var(--purple-tint);border-radius:5px;padding:1px 6px">YOU</span>' : '')
       + (r.city ? '<span style="font-size:var(--fs-2);color:var(--grey)">' + esc(r.city) + '</span>' : '')
       + '<span style="font-size:var(--fs-2);color:var(--grey)">' + (r.km === null || r.km === undefined ? 'distance unknown' : r.km + ' km') + '</span>'
-      + '<b style="margin-inline-start:auto;font-size:15px;color:' + qtyCol + '">' + qtyTxt + '</b></div>'
+      + '<b style="margin-inline-start:auto;font-size:var(--fs-3);color:' + qtyCol + '">' + qtyTxt + '</b></div>'
       // WHEN, next to how many — the question was never just "who has it".
       + (function(){
           var e = r.eta || {};
@@ -1520,7 +1520,7 @@ function _netBrowseBody(){
     var head = '<div style="padding-bottom:10px;border-bottom:1px solid var(--line)">'
       + '<span onclick="netBrowseBack()" style="cursor:pointer;color:var(--blue);font-size:var(--fs-2)">‹ all stores</span>'
       + '<div data-testid="net-chip" style="display:inline-flex;align-items:center;gap:9px;border:1px solid var(--line);border-radius:22px;padding:6px 13px;background:var(--card);margin-inline-start:8px;color:var(--on-card)">'
-      + '<b style="font-size:13.5px">' + esc(s.name) + '</b>'
+      + '<b style="font-size:var(--fs-3)">' + esc(s.name) + '</b>'
       + (s.user_id||s.bridge_id ? '<span style="font-family:ui-monospace,Menlo,monospace;font-size:var(--fs-1);color:var(--grey)">' + esc(s.user_id||s.bridge_id) + '</span>' : '')
       + (netIsMe() ? '<span style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:20px;padding:2px 9px;font-size:var(--fs-1);color:var(--warn-2);font-weight:700">⚠ this is your own store</span>' : '')
       + '</div></div>';
@@ -1561,7 +1561,7 @@ function _netBrowseBody(){
   return stores.map(function(st){
     return '<div onclick="netBrowse(\'' + esc(st.entity_id) + '\',\'' + esc(String(st.name).replace(/'/g, '')) + '\',\'' + esc(st.bridge_id || '') + '\')"'
       + ' style="cursor:pointer;padding:11px 2px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:baseline;flex-wrap:wrap">'
-      + '<b style="font-size:13.5px">' + esc(st.name) + '</b>'
+      + '<b style="font-size:var(--fs-3)">' + esc(st.name) + '</b>'
       + (st.is_me ? '<span style="font-size:var(--fs-1);font-weight:800;color:var(--purple-2);background:var(--purple-tint);border-radius:5px;padding:1px 6px">YOU</span>' : '')
       + (st.city ? '<span style="font-size:var(--fs-2);color:var(--grey)">' + esc(st.city) + '</span>' : '')
       + (st.km !== null && st.km !== undefined ? '<span style="font-size:var(--fs-2);color:var(--grey)">' + st.km + ' km</span>' : '')
@@ -1579,7 +1579,7 @@ function _netBrowseScreen(){
       .catch(function(){ UI._brStores = null; UI._brBusyList = false; _netPaintBrowse(); });
   }
   return '<div style="padding:18px 22px;max-width:760px">'
-    + '<div style="font-size:19px;font-weight:800">' + tx('🗂️ Store catalogues') + '</div>'
+    + '<div style="font-size:var(--fs-5);font-weight:800">' + tx('🗂️ Store catalogues') + '</div>'
     + '<div style="font-size:var(--fs-2);color:var(--grey);margin-top:4px;line-height:1.6">Open any store in your network '
     + 'and see what it sells — the same reader the Suppliers screen uses, so the same one call and the same speed.</div>'
     + '<div id="netBrowseBody" style="margin-top:14px">' + _netBrowseBody() + '</div></div>';
@@ -1587,7 +1587,7 @@ function _netBrowseScreen(){
 
 function _netAvailScreen(){
   return '<div style="padding:18px 22px;max-width:760px">'
-    + '<div style="font-size:19px;font-weight:800">🔎 Where is it?</div>'
+    + '<div style="font-size:var(--fs-5);font-weight:800">🔎 Where is it?</div>'
     + '<div style="font-size:var(--fs-2);color:var(--grey);margin-top:4px;line-height:1.6">Ask every store in your network '
     + 'what it has. The answer carries the quantity, the system it came from and when it was last true.</div>'
     + '<input value="' + esc(UI._avQ || '') + '" oninput="netAvailSearch(this.value)" placeholder="a product name or code — e.g. impeller, IMP-90"'
@@ -1632,7 +1632,7 @@ function networkScreen(){
   }
   if (!UI.net) {
     var ent = SESSION.entity || SESSION.name || 'your entity';
-    return '<div style="padding:44px 22px;max-width:580px"><div style="font-size:19px;font-weight:800">' + tx('🔗 Design your network') + '</div>'
+    return '<div style="padding:44px 22px;max-width:580px"><div style="font-size:var(--fs-5);font-weight:800">' + tx('🔗 Design your network') + '</div>'
       + '<div style="font-size:var(--fs-2);color:var(--grey);margin:8px 0 8px;line-height:1.6">Draw your structure first — <b>' + esc(ent) + '</b> is the top node. Add <b>owned</b> nodes (branches, units, depots) beneath it, or bring in a <b>partner</b> business. For each: a purpose, and tick <b>what it holds</b> (catalogue, storefront…) to fill in its spec. This is a <b>design</b>: it saves here and survives closing the app. <b>' + tx('Nothing is created') + '</b> until you choose to Build.</div>'
       + '<button class="pri" onclick="netNewNetwork()" style="padding:10px 16px;margin-top:10px">＋ Start designing</button></div>';
   }
@@ -2675,7 +2675,7 @@ function _netNodeView(n){
     : (n.owned ? 'An owned node — at Build it becomes a real entity with a login key <b>you hold</b>.'
                : 'An independent business — at Build it\'s a <b>handshake</b> (no key held). Its catalogue is visible here.');
   return '<div style="padding:16px 20px;max-width:560px">'
-    + '<div style="font-size:18px;font-weight:800">' + (isRoot ? '◆ ' : '') + esc(n.name) + badge + '</div>'
+    + '<div style="font-size:var(--fs-4);font-weight:800">' + (isRoot ? '◆ ' : '') + esc(n.name) + badge + '</div>'
     // The handle, directly under the name: the network prefix is not a detail, it IS the store's identity on the
     // platform, and it is what gets typed into "add a supplier" or a login box.
     + (_netHandleOf(n) ? '<div style="font-family:ui-monospace,Menlo,monospace;font-size:var(--fs-2);color:var(--blue-2);margin-top:3px">' + esc(_netHandleOf(n))
@@ -2928,7 +2928,7 @@ function _netInheritBlock(n){
   var row = function(label, value, note){
     return '<div style="padding:9px 0;border-bottom:1px solid var(--line)">'
       + '<div style="font-size:var(--fs-1);font-weight:700;letter-spacing:.04em;color:var(--grey)">' + label + '</div>'
-      + '<div style="display:flex;align-items:center;gap:9px;margin-top:3px;flex-wrap:wrap"><span style="font-size:13.5px">' + esc(value) + '</span>'
+      + '<div style="display:flex;align-items:center;gap:9px;margin-top:3px;flex-wrap:wrap"><span style="font-size:var(--fs-3)">' + esc(value) + '</span>'
       + chip('FROM NETWORK · AT BUILD', 'var(--blue-tint-bg)', 'var(--blue-2)') + '</div>'
       + (note ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px;line-height:1.5">' + note + '</div>' : '')
       + '</div>';

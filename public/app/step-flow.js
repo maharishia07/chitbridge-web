@@ -259,7 +259,7 @@
        */
       + '.cbst-foot{display:flex;gap:10px;align-items:center;flex-wrap:wrap;width:100%}'
       + '.cbst-foot button{white-space:nowrap}'
-      + '.cbst-foot button{border-radius:9px;padding:11px 16px;font-size:13.5px;font-weight:700;cursor:pointer;'
+      + '.cbst-foot button{border-radius:9px;padding:11px 16px;font-size:var(--fs-3);font-weight:700;cursor:pointer;'
       + 'border:1px solid #e3e6ea;background:var(--card)}'
       + '.cbst-foot button.pri{flex:1;background:var(--cbst-accent,var(--blue));color:#fff;border-color:var(--cbst-accent,var(--blue))}'
       + '.cbst-foot button:disabled{opacity:.45;cursor:not-allowed}'

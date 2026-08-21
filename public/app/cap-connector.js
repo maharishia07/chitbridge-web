@@ -76,7 +76,7 @@ function _erpReceiptsHTML(){
 }
 function _hdot(h){ return healthDot(h); }   // shared: helpers.js healthDot/sigLabel
 function _sig(s){ return sigLabel(s); }
-function _tile(k,v){ return '<div style="background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 11px;min-width:0;color:var(--on-card)"><div style="font-size:var(--fs-1);color:var(--grey);text-transform:uppercase;letter-spacing:.03em">'+k+'</div><div style="font-size:19px;font-weight:800;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+v+'</div></div>'; }
+function _tile(k,v){ return '<div style="background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 11px;min-width:0;color:var(--on-card)"><div style="font-size:var(--fs-1);color:var(--grey);text-transform:uppercase;letter-spacing:.03em">'+k+'</div><div style="font-size:var(--fs-5);font-weight:800;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+v+'</div></div>'; }
 function piCockpit(x){
   var iot=acTypeOf(x)==='iot', health=UI.acHealth||'offline';
   var tchip=iot?'<span class="optchip" style="background:var(--blue-tint-bg);color:var(--blue-2);border-color:var(--blue-tint-line)">' + tx('🛰️ IoT') + '</span>':'<span class="optchip" style="background:var(--purple-tint);color:var(--blue);border-color:#ddcff2">' + tx('🔌 ERP') + '</span>';

@@ -67,7 +67,7 @@ function _folderView(){
   var f=(UI.folders||[]).find(function(x){return x.folder_id===UI.folderSel;})||{name:'Folder'};
   var arch=!!UI.folderArch;
   var tab=function(on,label,onclick){ return '<span onclick="'+onclick+'" style="cursor:pointer;font-size:var(--fs-2);font-weight:700;padding:5px 13px;border-radius:16px;'+(on?'background:var(--blue);color:var(--on-accent)':'border:1px solid var(--line);color:var(--grey-2)')+'">'+label+'</span>'; };
-  var head='<div style="padding:14px 18px;border-bottom:1px solid var(--line)"><div style="font-size:17px;font-weight:800">📁 '+esc(f.name)+'</div>'
+  var head='<div style="padding:14px 18px;border-bottom:1px solid var(--line)"><div style="font-size:var(--fs-4);font-weight:800">📁 '+esc(f.name)+'</div>'
     +'<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">source = the sender / co-assist · destination = this folder</div>'
     +'<div style="display:flex;gap:6px;margin-top:11px;align-items:center">'+tab(!arch,'Current','setFolderArch(false)')+tab(arch,'Archive','setFolderArch(true)')
     +'<span style="margin-inline-start:auto;font-size:var(--fs-1);color:var(--blue);cursor:pointer" onclick="renameFolder(\''+UI.folderSel+'\')">' + tx('Rename') + '</span>'
@@ -86,7 +86,7 @@ function _folderView(){
     var line2 = isDev ? ('🛰️ '+esc(bj.sub_type||bj.signal||'signal')+((bj.value!=null&&bj.value!=='')?(' = '+esc(String(bj.value))+esc(bj.unit||'')):'')+' · raised by <b>'+raiser+'</b>') : ('from '+esc(c.sender_entity_display_name||raiser));
     var when=(typeof fmtAt==='function'?esc(fmtAt(c.created_at)):'');
     var openA=(typeof openChit==='function')?('openChit(\''+c.chit_id+'\')'):'';
-    return '<div style="display:flex;gap:11px;padding:12px 18px;border-bottom:1px solid #f0f2f4;cursor:pointer" onclick="'+openA+'"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:13.5px">'+(isDev?'🛢️ ':'')+subj+'</div><div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">'+line2+'</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex:0 0 auto"><span style="font-size:var(--fs-1);color:var(--grey)">'+when+'</span><span style="font-size:var(--fs-1);color:var(--blue);border:1px solid var(--blue-tint-line);background:var(--blue-tint-bg);border-radius:9px;padding:2px 8px" onclick="event.stopPropagation();moveChit(\''+c.chit_id+'\')">' + tx('📁 Move') + '</span></div></div>';
+    return '<div style="display:flex;gap:11px;padding:12px 18px;border-bottom:1px solid #f0f2f4;cursor:pointer" onclick="'+openA+'"><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:var(--fs-3)">'+(isDev?'🛢️ ':'')+subj+'</div><div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">'+line2+'</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex:0 0 auto"><span style="font-size:var(--fs-1);color:var(--grey)">'+when+'</span><span style="font-size:var(--fs-1);color:var(--blue);border:1px solid var(--blue-tint-line);background:var(--blue-tint-bg);border-radius:9px;padding:2px 8px" onclick="event.stopPropagation();moveChit(\''+c.chit_id+'\')">' + tx('📁 Move') + '</span></div></div>';
   }).join('');
   // The chit list is now ONE of three panes; metrics and rules render themselves.
   if(_FLD.tab==='metrics') return head+_folderMetricsPane();
@@ -443,7 +443,7 @@ function _mBox(label, value, hint, tone){
   var col = tone === 'bad' ? 'var(--disp)' : tone === 'warn' ? 'var(--warn-2)' : 'var(--ink)';
   return '<div style="flex:1;min-width:104px;border:1px solid var(--line);border-radius:9px;padding:10px 12px;background:var(--card);color:var(--on-card)">'
     + '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey)">' + esc(label) + '</div>'
-    + '<div style="font-size:19px;font-weight:800;margin-top:3px;color:' + col + '">' + esc(String(value)) + '</div>'
+    + '<div style="font-size:var(--fs-5);font-weight:800;margin-top:3px;color:' + col + '">' + esc(String(value)) + '</div>'
     + (hint ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">' + esc(hint) + '</div>' : '') + '</div>';
 }
 /**

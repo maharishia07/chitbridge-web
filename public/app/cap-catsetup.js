@@ -548,7 +548,7 @@ function catsetRowsHTML(){
       + ' onclick="catsetSetSec(\'' + s.key + '\')">'
       + '<div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:8px">'
       +   '<span style="font-size:var(--fs-3)">' + s.icon + '</span>'
-      +   '<b style="font-size:13.5px">' + esc(s.name) + '</b></div>'
+      +   '<b style="font-size:var(--fs-3)">' + esc(s.name) + '</b></div>'
       + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:1px;padding-inline-start:22px">' + esc(s.q) + '</div></div>'
       + '<div class="rowgo" aria-hidden="true">›</div></div>';
   }).join('');
@@ -586,7 +586,7 @@ function catsetCss(){
   var s = document.createElement('style'); s.id = 'catset_css';
   s.textContent = [
     '.catset-card{border:1px solid var(--line);border-radius:12px;background:var(--card);margin-bottom:12px;overflow:hidden}',
-    '.catset-ct{font-size:13.5px;font-weight:700;padding:11px 14px 0}',
+    '.catset-ct{font-size:var(--fs-3);font-weight:700;padding:11px 14px 0}',
     '.catset-cb{font-size:var(--fs-2);line-height:1.6;color:var(--ink);padding:6px 14px 12px}',
     /* The standards note is set apart because it explains the WHY, which a person reads once and then never
        again — it must be skippable without losing the instruction above it. */
