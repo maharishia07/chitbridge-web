@@ -96,11 +96,11 @@ function svcPauseRow(p){
      always errors is worse than not offering one. */
   var answer = (!p.mine && p.accepted === null && !open)
     ? '<div style="display:flex;gap:6px;margin-top:7px">'
-      + '<button class="btn" style="flex:1;font-size:12px" onclick="svcAnswer(\'' + esc(p.pause_id) + '\',true)">' + tx('Accept this pause') + '</button>'
-      + '<button class="btn" style="flex:1;font-size:12px;color:var(--disp)" onclick="svcAnswer(\'' + esc(p.pause_id) + '\',false)">' + tx('Reject — the clock kept running') + '</button></div>'
+      + '<button class="btn" style="flex:1;font-size:var(--fs-2)" onclick="svcAnswer(\'' + esc(p.pause_id) + '\',true)">' + tx('Accept this pause') + '</button>'
+      + '<button class="btn" style="flex:1;font-size:var(--fs-2);color:var(--disp)" onclick="svcAnswer(\'' + esc(p.pause_id) + '\',false)">' + tx('Reject — the clock kept running') + '</button></div>'
     : '';
   var endBtn = (p.mine && open)
-    ? '<button class="btn" style="width:100%;margin-top:7px;font-size:12px" onclick="svcEndPause(\'' + esc(p.pause_id) + '\')">' + tx('End this pause') + '</button>' : '';
+    ? '<button class="btn" style="width:100%;margin-top:7px;font-size:var(--fs-2)" onclick="svcEndPause(\'' + esc(p.pause_id) + '\')">' + tx('End this pause') + '</button>' : '';
   return '<div style="border-top:1px solid var(--line);padding:10px 0">'
     + '<div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline">'
     + '<span style="font-size:13px;font-weight:700">' + esc(String(p.reason || '').replace(/_/g, ' ')) + '</span>'
@@ -108,7 +108,7 @@ function svcPauseRow(p){
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">'
     + esc(CBLocale.datetime(p.paused_from)) + (p.paused_to ? ' → ' + esc(CBLocale.datetime(p.paused_to)) : ' → still paused')
     + ' · claimed by ' + esc(p.mine ? 'you' : (p.claimed_by_name || 'the other party')) + '</div>'
-    + (p.note ? '<div style="font-size:12px;margin-top:3px">' + esc(p.note) + '</div>' : '')
+    + (p.note ? '<div style="font-size:var(--fs-2);margin-top:3px">' + esc(p.note) + '</div>' : '')
     + answer + endBtn + '</div>';
 }
 
@@ -133,7 +133,7 @@ function svcPaint(){
   var iPaused = pauses.some(function(p){ return p.mine && !p.paused_to; });
 
   modal('<h3 style="margin:0 0 3px">Service clock'
-    + (c.priority ? ' <span style="font-size:12px;color:#245a9e;font-weight:800">' + esc(c.priority) + '</span>' : '') + '</h3>'
+    + (c.priority ? ' <span style="font-size:var(--fs-2);color:#245a9e;font-weight:800">' + esc(c.priority) + '</span>' : '') + '</h3>'
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:12px">'
     + (r.impact ? esc(r.impact) + ' impact · ' + esc(r.urgency) + ' urgency · ' : '')
     + (c.resolved ? 'resolved' : (c.paused_now ? 'paused' : 'running')) + '</div>'

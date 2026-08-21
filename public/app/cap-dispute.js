@@ -171,9 +171,9 @@ async function aiDisputeSummary(chitId, disputeId){
     var html='<style>'+(typeof _AI_MDCSS!=='undefined'?_AI_MDCSS:'')+'</style>'
       +'<div style="font-size:var(--fs-1);color:var(--purple);background:var(--blue-tint-bg);border:1px solid #ddd4f5;border-radius:9px;padding:8px 11px;margin-bottom:12px;line-height:1.5">🤖 <b>AI summary — neutral, informational.</b> It does not decide the dispute. '+(j.usage?('<span style="color:var(--grey)">· $'+j.usage.est_cost_usd+'</span>'):'')+'</div>'
       +'<div class="amddoc" style="background:var(--card);border:1px solid var(--line);border-radius:9px;padding:15px 17px;max-height:56vh;overflow:auto;color:var(--on-card)">'+_aiMd(j.draft)+'</div>'
-      +'<div style="margin-top:12px;text-align:end"><button onclick="closeModal()" style="font-size:12px;font-weight:700;border:1px solid var(--line);background:var(--card);border-radius:9px;padding:9px 16px;cursor:pointer;color:var(--on-card)">' + tx('Done') + '</button></div>';
+      +'<div style="margin-top:12px;text-align:end"><button onclick="closeModal()" style="font-size:var(--fs-2);font-weight:700;border:1px solid var(--line);background:var(--card);border-radius:9px;padding:9px 16px;cursor:pointer;color:var(--on-card)">' + tx('Done') + '</button></div>';
     var b=document.getElementById('adbody'); if(b)b.innerHTML=html;
-  }catch(e){ var b2=document.getElementById('adbody'); if(b2)b2.innerHTML='<div style="font-size:12px;color:var(--warn-2);background:var(--warn-tint);border:1px solid #f0dcae;border-radius:9px;padding:10px 12px">'+esc((e&&e.message)||'Summary failed')+'</div>'; }
+  }catch(e){ var b2=document.getElementById('adbody'); if(b2)b2.innerHTML='<div style="font-size:var(--fs-2);color:var(--warn-2);background:var(--warn-tint);border:1px solid #f0dcae;border-radius:9px;padding:10px 12px">'+esc((e&&e.message)||'Summary failed')+'</div>'; }
 }
 // AI resolution wording — invoked, neutral DRAFT; the raiser still decides whether to resolve (human gate holds). Reuses global aiRun.
 function aiResolutionSuggest(chitId, disputeId){
@@ -196,16 +196,16 @@ function disputeRoomBox(c, d){
   var msgs=(typeof disputeFilterMsgs==='function')?(disputeFilterMsgs((c.msgs||[]),'dispute',d.dispute_id)||[]):[];
   msgs=msgs.slice().reverse();   // latest first (the wall)
   var thread=msgs.length?msgs.map(function(m){ return (typeof msgBubble==='function')?msgBubble(m):''; }).join('')
-    :'<div style="font-size:12px;color:var(--grey);padding:6px 2px">No messages in this dispute yet.</div>';
+    :'<div style="font-size:var(--fs-2);color:var(--grey);padding:6px 2px">No messages in this dispute yet.</div>';
   var to=parties.length?esc(parties.map(function(p){ return p.display_name||'party'; }).join(", ")):'participants';
-  var newBtn=readonly?'':'<button onclick="disputeToggleCompose()" style="margin-inline-start:auto;border:1px solid var(--line);background:var(--card);border-radius:9px;padding:5px 11px;font-size:12px;cursor:pointer;color:var(--on-card)">'+(UI.dispCompose?'✕ Cancel':'✏️ New message')+'</button>';
+  var newBtn=readonly?'':'<button onclick="disputeToggleCompose()" style="margin-inline-start:auto;border:1px solid var(--line);background:var(--card);border-radius:9px;padding:5px 11px;font-size:var(--fs-2);cursor:pointer;color:var(--on-card)">'+(UI.dispCompose?'✕ Cancel':'✏️ New message')+'</button>';
   var compose=(!readonly&&UI.dispCompose)?disputeComposeBox(c,d,to):'';
   return '<div style="border:1px solid #f0c9c6;border-radius:12px;padding:13px 14px">'
     +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="db-cat">'+esc(cap(d.category||''))+'</span>'
-      +(parties.length?'<span style="font-size:12px;color:var(--grey)">with '+disputeChips(parties,'dpchip')+'</span>':'')
+      +(parties.length?'<span style="font-size:var(--fs-2);color:var(--grey)">with '+disputeChips(parties,'dpchip')+'</span>':'')
       +'<span style="margin-inline-start:auto;display:inline-flex;gap:9px;align-items:center">'+st+resolveWrap+'</span></div>'
-    +'<div style="font-size:12px;color:#5a6066;margin:10px 0 2px">Participants: <b>'+esc(roster)+'</b></div>'
-    +'<div style="display:flex;align-items:center;margin:13px 0 7px"><span style="font-size:12px;font-weight:700;color:#5a6066">' + tx('Messages · latest first') + '</span>'+newBtn+'</div>'
+    +'<div style="font-size:var(--fs-2);color:#5a6066;margin:10px 0 2px">Participants: <b>'+esc(roster)+'</b></div>'
+    +'<div style="display:flex;align-items:center;margin:13px 0 7px"><span style="font-size:var(--fs-2);font-weight:700;color:#5a6066">' + tx('Messages · latest first') + '</span>'+newBtn+'</div>'
     +compose
     +'<div style="border:1px solid var(--line);border-radius:9px;background:var(--card);padding:6px;max-height:340px;overflow:auto;color:var(--on-card)">'+thread+'</div></div>';
 }
@@ -214,7 +214,7 @@ function disputeComposeBox(c, d, to){
     +'<div style="font-size:var(--fs-1);color:var(--disp);font-weight:700;margin-bottom:6px">New message to '+to+'</div>'
     +'<textarea id="droom-'+d.dispute_id+'" data-testid="dispute-room-input" oninput="window.CBOffline&&CBOffline.saveDraft(\'disp.room.'+d.dispute_id+'\',this.value)" placeholder="Message — '+to+' will see this" style="width:100%;box-sizing:border-box;min-height:46px;border:1px solid var(--line);border-radius:9px;padding:7px;font:inherit;font-size:13px;resize:vertical">'+esc((window.CBOffline&&CBOffline.loadDraft('disp.room.'+d.dispute_id))||'')+'</textarea>'
     +'<div style="display:flex;align-items:center;gap:8px;margin-top:7px;flex-wrap:wrap">'
-      +'<label style="border:1px solid var(--line);background:var(--card);border-radius:9px;padding:6px 11px;font-size:12px;cursor:pointer;color:var(--on-card)">' + tx('📎 Attach') + '<input type="file" multiple style="display:none" onchange="disputeAddFiles(this.files);this.value=\'\'"></label>'
+      +'<label style="border:1px solid var(--line);background:var(--card);border-radius:9px;padding:6px 11px;font-size:var(--fs-2);cursor:pointer;color:var(--on-card)">' + tx('📎 Attach') + '<input type="file" multiple style="display:none" onchange="disputeAddFiles(this.files);this.value=\'\'"></label>'
       +'<span id="dispfiles">'+disputeFileChips()+'</span>'
       +'<button data-testid="dispute-room-send" onclick="sendDisputeMsg(\''+c.id+'\',\''+d.dispute_id+'\')" style="margin-inline-start:auto;background:var(--disp);color:var(--on-danger);border:none;border-radius:9px;padding:7px 14px;font-weight:600;cursor:pointer">' + tx('Send ↔') + '</button></div></div>';
 }
@@ -258,8 +258,8 @@ async function loadDisputes(){
         +'<div style="font-size:var(--fs-1);color:var(--grey)">raised by '+nm(d.raised_by_display_name,'—')+' · '+esc(d.scope||'')+(d.resolution_note?(' · ✓ '+esc(d.resolution_note)):'')+'</div>'
         +roster+resolveRow+'</div>';
     };
-    host.innerHTML = menuAssist('disputes')+'<div class="sec" style="font-size:12px;color:var(--grey);margin:4px 0">Raised by you ('+mine.length+')</div>'+lazyWrap('dm', mine, function(d){return card(d,true);}, '<div style="color:var(--grey);font-size:13px;padding:6px">None.</div>')
-      +'<div class="sec" style="font-size:12px;color:var(--grey);margin:14px 0 4px">Against you / awaiting ('+other.length+')</div>'+lazyWrap('do', other, function(d){return card(d,false);}, '<div style="color:var(--grey);font-size:13px;padding:6px">None.</div>');
+    host.innerHTML = menuAssist('disputes')+'<div class="sec" style="font-size:var(--fs-2);color:var(--grey);margin:4px 0">Raised by you ('+mine.length+')</div>'+lazyWrap('dm', mine, function(d){return card(d,true);}, '<div style="color:var(--grey);font-size:13px;padding:6px">None.</div>')
+      +'<div class="sec" style="font-size:var(--fs-2);color:var(--grey);margin:14px 0 4px">Against you / awaiting ('+other.length+')</div>'+lazyWrap('do', other, function(d){return card(d,false);}, '<div style="color:var(--grey);font-size:13px;padding:6px">None.</div>');
   }catch(e){ host.innerHTML=scrErr(e, tx('disputes'), 'loadDisputes()'); }
 }
 
@@ -272,9 +272,9 @@ async function quickDispute(){ var ids=(typeof needTarget==='function'?needTarge
   try{ var r=await api("chit",{params:{id}}); var h=(r&&r.header)||r||{}; var seen={};
     var parties=(h.all_recipients||[]).filter(function(x){ return x&&x.entity_id&&!chitIsSelf(x.entity_id,x.display_name)&&!seen[x.entity_id]&&(seen[x.entity_id]=1); });
     MODALS.disp.parties=parties;
-    if(parties.length){ partyRows='<div style="font-size:12px;color:var(--grey);margin:9px 0 3px">Between which parties? <span style="color:#9aa3ad">(none ticked = everyone involved)</span></div>'+parties.map(function(p){ return '<label style="display:flex;gap:8px;align-items:center;padding:3px 0;font-size:13px;cursor:pointer"><input type="checkbox" class="dispparty" value="'+p.entity_id+'"> '+nm(p.display_name,'party')+' <span style="font-size:var(--fs-1);color:var(--grey);text-transform:uppercase">'+esc(p.role||'')+'</span></label>'; }).join(''); }
+    if(parties.length){ partyRows='<div style="font-size:var(--fs-2);color:var(--grey);margin:9px 0 3px">Between which parties? <span style="color:#9aa3ad">(none ticked = everyone involved)</span></div>'+parties.map(function(p){ return '<label style="display:flex;gap:8px;align-items:center;padding:3px 0;font-size:13px;cursor:pointer"><input type="checkbox" class="dispparty" value="'+p.entity_id+'"> '+nm(p.display_name,'party')+' <span style="font-size:var(--fs-1);color:var(--grey);text-transform:uppercase">'+esc(p.role||'')+'</span></label>'; }).join(''); }
   }catch(_){}
-  modal('<div class="mhd"><div class="t">' + tx('⚑ Raise dispute') + '</div></div><div class="mbody"><div style="font-size:12px;color:var(--grey);margin-bottom:7px">Pick a category and give a reason (min 10 characters). The parties you select are notified and carry the dispute status.</div><select id="dispcat" data-testid="dispute-category" style="width:100%;margin-bottom:8px;padding:8px;border:1px solid var(--line);border-radius:6px"><option value="quality">' + tx('Quality') + '</option><option value="quantity">' + tx('Quantity') + '</option><option value="delivery">' + tx('Delivery') + '</option><option value="payment">' + tx('Payment') + '</option><option value="docs">' + tx('Docs') + '</option><option value="other" selected>' + tx('Other') + '</option></select>'+partyRows+'<textarea id="dispreason" data-testid="dispute-reason" oninput="window.CBOffline&&CBOffline.saveDraft(\'disp.reason.'+id+'\',this.value)" placeholder="e.g. Quantity short by 2 units — please replace">'+esc((window.CBOffline&&CBOffline.loadDraft('disp.reason.'+id))||'')+'</textarea></div><div class="mfoot"><button onclick="closeModal()">' + tx('Cancel') + '</button><button class="danger" data-testid="dispute-raise" onclick="confirmDispute()">' + tx('Raise dispute') + '</button></div>');
+  modal('<div class="mhd"><div class="t">' + tx('⚑ Raise dispute') + '</div></div><div class="mbody"><div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:7px">Pick a category and give a reason (min 10 characters). The parties you select are notified and carry the dispute status.</div><select id="dispcat" data-testid="dispute-category" style="width:100%;margin-bottom:8px;padding:8px;border:1px solid var(--line);border-radius:6px"><option value="quality">' + tx('Quality') + '</option><option value="quantity">' + tx('Quantity') + '</option><option value="delivery">' + tx('Delivery') + '</option><option value="payment">' + tx('Payment') + '</option><option value="docs">' + tx('Docs') + '</option><option value="other" selected>' + tx('Other') + '</option></select>'+partyRows+'<textarea id="dispreason" data-testid="dispute-reason" oninput="window.CBOffline&&CBOffline.saveDraft(\'disp.reason.'+id+'\',this.value)" placeholder="e.g. Quantity short by 2 units — please replace">'+esc((window.CBOffline&&CBOffline.loadDraft('disp.reason.'+id))||'')+'</textarea></div><div class="mfoot"><button onclick="closeModal()">' + tx('Cancel') + '</button><button class="danger" data-testid="dispute-raise" onclick="confirmDispute()">' + tx('Raise dispute') + '</button></div>');
 }
 async function confirmDispute(){ var id=MODALS.disp.id; var el=document.getElementById('dispreason'); var reason=(el?el.value:"").trim(); var cat=(document.getElementById('dispcat')||{}).value||'other';
   if(reason.length<10){ toast("Reason must be at least 10 characters"); return; }
@@ -289,7 +289,7 @@ async function confirmDispute(){ var id=MODALS.disp.id; var el=document.getEleme
 /* ── Resolve flow (BR-D3): raiser-only; per party (partyId) or chit-wide (no partyId). */
 function resolveDispute(chitId, disputeId, partyId, partyNameEnc){
   var partyName=partyNameEnc?decodeURIComponent(partyNameEnc):'';
-  var who=partyName?'<div style="font-size:12px;color:var(--grey);margin-bottom:8px">Resolving with <b>'+esc(partyName)+'</b>. Any other parties stay open until you resolve them too.</div>':'';
+  var who=partyName?'<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:8px">Resolving with <b>'+esc(partyName)+'</b>. Any other parties stay open until you resolve them too.</div>':'';
   modal('<div class="mhd"><div class="t">Resolve dispute'+(partyName?' — '+esc(partyName):'')+'</div></div><div class="mbody">'+who+'<label class="fl">' + tx('Resolution note (required)') + '</label><textarea id="resnote" data-testid="dispute-resolve-note" oninput="window.CBOffline&&CBOffline.saveDraft(\'disp.resolve.'+disputeId+'\',this.value)" placeholder="How was this resolved…">'+esc((window.CBOffline&&CBOffline.loadDraft('disp.resolve.'+disputeId))||'')+'</textarea><div class="err" id="res_err"></div></div><div class="mfoot"><button onclick="closeModal()">' + tx('Cancel') + '</button><button class="pri" data-testid="dispute-resolve-submit" onclick="submitResolve(\''+chitId+'\',\''+disputeId+'\',\''+(partyId||'')+'\')">' + tx('Resolve') + '</button></div>');
 }
 async function submitResolve(chitId, disputeId, partyId){

@@ -240,11 +240,11 @@ function wlRow(r, ctx, depth){
      */
     +   '<span data-testid="wl-done" title="Open this line — history, delivery, cost, who has it" onclick="event.stopPropagation();wlLine(&quot;' + r.line_id + '&quot;)"'
     +     ' style="cursor:pointer;font-size:13px;padding:2px 9px;border-radius:6px;color:var(--blue-2);background:var(--blue-tint-bg);font-weight:800">⋯</span>'
-    +   '<span style="color:var(--grey);font-size:12px;padding-inline-start:3px">›</span></span></div>'
+    +   '<span style="color:var(--grey);font-size:var(--fs-2);padding-inline-start:3px">›</span></span></div>'
     /* ⚠️ WHICH ORDER IT CAME FROM. A line without its chit is an instruction with no context — you cannot ring the
        customer, check the rest of the order, or know who is waiting. */
     + (named || ordered ? '' : '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:3px">' + order + '</div>')
-    + (bits.length ? '<div style="margin-top:4px;font-size:12px;color:var(--warn-2);background:var(--warn-tint);border-radius:5px;padding:3px 8px;display:inline-block">◍ ' + bits.join(' · ') + '</div>' : '')
+    + (bits.length ? '<div style="margin-top:4px;font-size:var(--fs-2);color:var(--warn-2);background:var(--warn-tint);border-radius:5px;padding:3px 8px;display:inline-block">◍ ' + bits.join(' · ') + '</div>' : '')
     + '</div>';
 }
 
@@ -346,15 +346,15 @@ function worklistScreen(){
   return '<div style="flex:1;min-height:0;overflow-y:auto;padding-bottom:var(--scroll-tail)">'
     + '<div style="padding:13px 16px;border-bottom:1px solid var(--line)">'
     +   '<div style="font-weight:700;font-size:var(--fs-4)">' + (mine2 ? 'My work' : 'Everyone\'s work') + '</div>'
-    +   '<div style="font-size:12px;color:var(--grey);margin-top:2px">Every line assigned to '
+    +   '<div style="font-size:var(--fs-2);color:var(--grey);margin-top:2px">Every line assigned to '
     +   (mine2 ? 'you' : 'your team') + ', across every chit.</div></div>'
     /* ── group by ──────────────────────────────────────────────────────────────────────────────────────────── */
     + '<div style="display:flex;gap:6px;align-items:center;padding:9px 16px;border-bottom:1px solid var(--line-soft,#eee);flex-wrap:wrap">'
     +   '<span style="font-size:var(--fs-1);font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--grey);margin-inline-end:2px">group by</span>'
     +   KEYS.map(function(x){ return chip(x[0], x[1], prim === x[0], 'wlPrimary(&quot;' + x[0] + '&quot;)', 'wl-view-' + x[0]); }).join('')
     +   '<input type="date" value="' + esc(WL.due || '') + '" onchange="wlDue(this.value)" '
-    +     'style="margin-inline-start:auto;font-size:12px;padding:3px 7px;border:1px solid var(--line);border-radius:9px">'
-    +   (WL.due ? '<span onclick="wlDue(\'\')" style="cursor:pointer;font-size:12px;color:var(--blue);padding:4px">clear</span>' : '')
+    +     'style="margin-inline-start:auto;font-size:var(--fs-2);padding:3px 7px;border:1px solid var(--line);border-radius:9px">'
+    +   (WL.due ? '<span onclick="wlDue(\'\')" style="cursor:pointer;font-size:var(--fs-2);color:var(--blue);padding:4px">clear</span>' : '')
     + '</div>'
     /* ── then split by · and the disclosure controls ────────────────────────────────────────────────────────── */
     + '<div style="display:flex;gap:14px;align-items:center;padding:8px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap">'
@@ -372,8 +372,8 @@ function worklistScreen(){
     +     '<input type="checkbox" data-testid="wl-showdone" ' + (WL.showDone ? 'checked' : '')
     +     ' onchange="wlDone()" style="width:15px;height:15px;accent-color:var(--blue)">show ' + wlDoneCount(d2) + ' done</label>' : '')
     +   '<span style="margin-inline-start:auto;display:flex;gap:10px">'
-    +     '<span data-testid="wl-expand-all" onclick="wlAll(true)" style="cursor:pointer;font-size:12px;color:var(--blue)">expand all</span>'
-    +     '<span data-testid="wl-collapse-all" onclick="wlAll(false)" style="cursor:pointer;font-size:12px;color:var(--blue)">collapse all</span>'
+    +     '<span data-testid="wl-expand-all" onclick="wlAll(true)" style="cursor:pointer;font-size:var(--fs-2);color:var(--blue)">expand all</span>'
+    +     '<span data-testid="wl-collapse-all" onclick="wlAll(false)" style="cursor:pointer;font-size:var(--fs-2);color:var(--blue)">collapse all</span>'
     +   '</span>'
     + '</div>'
     + body + '</div>';
@@ -805,7 +805,7 @@ function wlSecHead(k, name, hint, tone){
     + 'padding:11px 2px;border-top:1px solid var(--line)">'
     + '<span style="width:12px;color:var(--grey);font-size:var(--fs-1)">' + (on ? '▾' : '<span class=arw>▸</span>') + '</span>'
     + '<span style="font-weight:700;font-size:var(--fs-3);color:' + (on ? 'var(--ink,#1c2128)' : 'var(--ink-2,#41474e)') + '">' + name + '</span>'
-    + '<span style="margin-inline-start:auto;font-size:12px;color:' + (tone || 'var(--grey)') + '">' + (hint || '') + '</span></div>';
+    + '<span style="margin-inline-start:auto;font-size:var(--fs-2);color:' + (tone || 'var(--grey)') + '">' + (hint || '') + '</span></div>';
 }
 
 /** ⚠️ THE ONE PLACE THE TWO THREADS DIFFER. Everything else about them is shared, deliberately. */
@@ -923,7 +923,7 @@ function wlLineHTML(loading){
         return '<div style="display:flex;gap:10px;align-items:baseline;padding:5px 0;border-bottom:1px solid var(--line-soft,#f0efec);font-size:13px">'
           + '<span style="font-weight:700;font-variant-numeric:tabular-nums;min-width:72px;color:' + (e.quantity < 0 ? 'var(--disp)' : 'var(--ink)') + '">'
           +   (e.quantity < 0 ? '' : '+') + esc(String(e.quantity)) + ' ' + esc(e.unit || '') + '</span>'
-          + '<span style="color:var(--grey);font-size:12px;flex:1">' + esc(e.reference || e.note || '') + '</span>'
+          + '<span style="color:var(--grey);font-size:var(--fs-2);flex:1">' + esc(e.reference || e.note || '') + '</span>'
           + '<span style="color:var(--grey);font-size:var(--fs-1)">' + esc(String(e.at || '').slice(0, 10)) + ' · ' + esc(e.by_actor || e.by || '') + '</span></div>';
       }).join('')
       + added.map(function(a){

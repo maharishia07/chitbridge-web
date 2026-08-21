@@ -90,7 +90,7 @@ function c2Paint(){ var el = document.getElementById('mainbody'); if (el) el.inn
 var c2n = function(v){ return (v === null || v === undefined || v === '') ? null : Number(v); };
 var c2q = function(l){ return [l.quantity, l.unit].filter(function(x){ return x !== null && x !== undefined && x !== ''; }).join(' '); };
 function c2Money(v){ return (v === null || v === undefined) ? '—' : (typeof inr_ === 'function' ? inr_(v) : ('₹' + v)); }
-function c2Head(t, s){ return '<div style="padding:11px 16px;border-bottom:1px solid var(--line)"><div style="font-weight:600;font-size:15px">' + t + '</div>' + (s ? '<div style="color:var(--grey);font-size:12px;margin-top:2px">' + s + '</div>' : '') + '</div>'; }
+function c2Head(t, s){ return '<div style="padding:11px 16px;border-bottom:1px solid var(--line)"><div style="font-weight:600;font-size:15px">' + t + '</div>' + (s ? '<div style="color:var(--grey);font-size:var(--fs-2);margin-top:2px">' + s + '</div>' : '') + '</div>'; }
 function c2Grp(d, s){ return '<div style="padding:13px 16px 5px;display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:var(--fs-1);letter-spacing:.09em;text-transform:uppercase;color:var(--grey);font-weight:600">' + d + '</span><span style="font-size:13px;color:var(--grey)">' + (s || '') + '</span></div>'; }
 
 /* ⚠️ THE GREYING RULE. Athi asked whether the other lines are greyed — yes, and greyed beats hidden.
@@ -134,7 +134,7 @@ function c2PaneMsg(d){
   /* ⚠️ NOT A VERIFIED PARTY, said on the screen where their words are read. A phone number that messaged a
      business is not a counterparty, and nothing else here would distinguish the two six weeks later. */
   if (raw.sender_verified === false) {
-    out += '<div style="padding:9px 16px;background:var(--warn-tint);color:var(--warn-2);font-size:12px;border-bottom:1px solid var(--line)">'
+    out += '<div style="padding:9px 16px;background:var(--warn-tint);color:var(--warn-2);font-size:var(--fs-2);border-bottom:1px solid var(--line)">'
       + '⚠️ Not a verified party — a phone number wrote in, and the lines were read from those words by a co-assist.</div>';
   }
 
@@ -330,8 +330,8 @@ function c2RepricePaint(){
 
   var will = p.will_price || [], need = p.needs_price || [];
   var body = '<div style="display:flex;gap:6px;margin-bottom:12px">'
-    + ['<span onclick="c2RepriceScope(false)" style="cursor:pointer;border:1px solid ' + (C2R.only_unpriced ? 'var(--line)' : 'var(--blue)') + ';' + (C2R.only_unpriced ? '' : 'background:var(--blue);color:var(--on-accent);font-weight:700;') + 'border-radius:9px;padding:4px 11px;font-size:12px">' + tx('Every line') + '</span>',
-       '<span onclick="c2RepriceScope(true)" style="cursor:pointer;border:1px solid ' + (C2R.only_unpriced ? 'var(--blue)' : 'var(--line)') + ';' + (C2R.only_unpriced ? 'background:var(--blue);color:var(--on-accent);font-weight:700;' : '') + 'border-radius:9px;padding:4px 11px;font-size:12px">' + tx('Only lines with no price') + '</span>'].join('')
+    + ['<span onclick="c2RepriceScope(false)" style="cursor:pointer;border:1px solid ' + (C2R.only_unpriced ? 'var(--line)' : 'var(--blue)') + ';' + (C2R.only_unpriced ? '' : 'background:var(--blue);color:var(--on-accent);font-weight:700;') + 'border-radius:9px;padding:4px 11px;font-size:var(--fs-2)">' + tx('Every line') + '</span>',
+       '<span onclick="c2RepriceScope(true)" style="cursor:pointer;border:1px solid ' + (C2R.only_unpriced ? 'var(--blue)' : 'var(--line)') + ';' + (C2R.only_unpriced ? 'background:var(--blue);color:var(--on-accent);font-weight:700;' : '') + 'border-radius:9px;padding:4px 11px;font-size:var(--fs-2)">' + tx('Only lines with no price') + '</span>'].join('')
     + '</div>';
 
   body += will.length
@@ -581,7 +581,7 @@ function c2PaneWork(d){
       label: function(k){
         if (!k) return 'No date';
         var b = c2DueBucket(k);
-        return esc(c2DateLabel(k)) + ' <span style="font-size:12px;font-weight:600;color:'
+        return esc(c2DateLabel(k)) + ' <span style="font-size:var(--fs-2);font-weight:600;color:'
           + (b.label === 'Overdue' ? 'var(--disp)' : 'var(--grey)') + '">· ' + b.label + '</span>';
       },
       /* Undated last: it is the only work nobody is waiting for on a particular day. */
@@ -654,7 +654,7 @@ function c2WorkRow(e, asg, prog, ctx){
       + '<span style="flex:1;font-weight:500">' + esc(l.particulars || '') + '<span style="color:var(--grey);font-weight:400;font-size:var(--fs-2)"> · ' + esc(c2q(l)) + '</span></span>'
       + '<span style="width:62px;text-align:end;font-variant-numeric:tabular-nums;font-size:13.5px">' + got + '</span>'
       + '<span style="width:62px;text-align:end;font-variant-numeric:tabular-nums;font-size:13.5px;font-weight:' + (done ? '400' : '700') + ';color:' + (done ? 'var(--ok-2)' : 'var(--ink)') + '">' + (left === null ? '—' : (done ? '✓' : left)) + '</span>'
-      + '<span style="color:var(--grey);width:12px;text-align:end;font-size:12px">✎</span></div>'
+      + '<span style="color:var(--grey);width:12px;text-align:end;font-size:var(--fs-2)">✎</span></div>'
       /* Who has it and when it is due — the two things that turn "what is left" into "who do I chase". */
       + (function(){
           /* Each view puts what it groups by in the HEADING, so the row shows only what is left to say.
@@ -662,9 +662,9 @@ function c2WorkRow(e, asg, prog, ctx){
           var who = (ctx === 'person' || ctx === 'date') ? '' : esc(a.assignee_name || '');   // both group by who
           var when = (ctx === 'date') ? '' : (a.due_date ? 'due ' + esc(String(a.due_date).slice(0, 10)) : '');
           var bits = [who, a.task ? esc(a.task) : '', when].filter(Boolean);
-          if (!a.assignee_name) return '<div style="margin-top:4px;font-size:12px;color:var(--grey)">unassigned' + (left ? ' · nobody is doing this' : '') + '</div>';
+          if (!a.assignee_name) return '<div style="margin-top:4px;font-size:var(--fs-2);color:var(--grey)">unassigned' + (left ? ' · nobody is doing this' : '') + '</div>';
           if (!bits.length) return '';
-          return '<div style="margin-top:4px;font-size:12px;color:var(--warn-2);background:var(--warn-tint);border-radius:5px;padding:3px 8px;display:inline-block">◍ ' + bits.join(' · ') + '</div>';
+          return '<div style="margin-top:4px;font-size:var(--fs-2);color:var(--warn-2);background:var(--warn-tint);border-radius:5px;padding:3px 8px;display:inline-block">◍ ' + bits.join(' · ') + '</div>';
         })()
       + (ctx === 'line' && (a.history || []).length ? '<div style="margin-top:4px;font-size:var(--fs-1);color:var(--grey)">was ' + esc(a.history.map(function(h){ return h.assignee_name || 'unassigned'; }).join(' <span class=arw>→</span> ')) + '</div>' : '')
       /* ⚠️ SURFACED HERE TOO. A line the two parties disagree about is a line you cannot call finished, and this
@@ -849,8 +849,8 @@ function chit2Screen(){
      */
     + (C2.side === 'us' ? '<div style="padding:6px 16px 0;text-align:center">'
         + '<span data-testid="c2-service-clock" onclick="openServiceClock(\'' + C2.id + '\')"'
-        + ' style="cursor:pointer;font-size:12px;color:var(--blue)">⏱ Service clock &amp; SLA</span></div>' : '')
-    + (sum ? '<div style="padding:6px 16px 0;font-size:12px;color:var(--grey);text-align:center">' + sum.complete + ' of ' + sum.lines + ' lines delivered</div>' : '')
+        + ' style="cursor:pointer;font-size:var(--fs-2);color:var(--blue)">⏱ Service clock &amp; SLA</span></div>' : '')
+    + (sum ? '<div style="padding:6px 16px 0;font-size:var(--fs-2);color:var(--grey);text-align:center">' + sum.complete + ' of ' + sum.lines + ' lines delivered</div>' : '')
     + '<div style="display:flex;border-bottom:1px solid var(--line);margin-top:10px">' + tabs + '</div>'
     + '</div>'
     + '<div style="flex:1;min-height:0;overflow-y:auto;padding-bottom:var(--scroll-tail)">' + pane(d) + '</div>'   // ← the only thing that rolls

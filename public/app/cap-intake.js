@@ -124,7 +124,7 @@ function intakeCardHTML(c){
        difference between tuning a prompt and guessing at one. */
     + '<button data-testid="intake-json" onclick="intakeShowJson(\''+esc(c.id)+'\')" title="See exactly what was read, and what the chit would carry" style="border:1px solid var(--line);background:var(--card);border-radius:9px;padding:9px 13px;font-size:var(--fs-2);font-weight:700;cursor:pointer;font-family:ui-monospace,Menlo,monospace;color:var(--on-card)">{ } JSON</button>'
     + '</div>'
-    + (w.err?'<div style="color:var(--disp);font-size:12px;margin-top:6px">'+esc(w.err)+'</div>':'')
+    + (w.err?'<div style="color:var(--disp);font-size:var(--fs-2);margin-top:6px">'+esc(w.err)+'</div>':'')
     + '</div>';
 }
 function intakeDraftHTML(c, s){
@@ -132,7 +132,7 @@ function intakeDraftHTML(c, s){
   return '<div style="background:var(--blue-tint-bg);border:1px solid #e4dff6;border-radius:9px;padding:10px 12px;margin-top:8px;font-size:var(--fs-2);color:var(--on-card)">'
     + '<div style="font-weight:700;margin-bottom:4px">✨ AI draft <span style="font-weight:400;color:var(--grey)">— proposed, not evidence. You confirm.</span></div>'
     + (s.subject?'<div style="margin-bottom:4px"><b>Subject:</b> '+esc(s.subject)+'</div>':'')
-    + li.map(function(l){ return '<div style="display:flex;justify-content:space-between;padding:3px 0;border-top:1px dashed var(--line);font-size:12px">'
+    + li.map(function(l){ return '<div style="display:flex;justify-content:space-between;padding:3px 0;border-top:1px dashed var(--line);font-size:var(--fs-2)">'
         /**
          * ⚠️ THE QUALIFIERS RENDER WITH THE LINE. This showed only particulars + qty + unit, so "konjam spiciya"
          * and "periya bottle" were invisible whether the reader had captured them or not — at exactly the moment a
@@ -362,7 +362,7 @@ function _jsonBlock(title, obj){
     + '<pre id="'+id+'" style="margin:0;padding:0 14px 12px;font:11.5px/1.55 ui-monospace,Menlo,Consolas,monospace;'
     +   'white-space:pre-wrap;word-break:break-word;max-height:46vh;overflow:auto;color:var(--on-card)">'+esc(txt)+'</pre></div>';
 }
-function _note(t){ return '<div style="padding:11px 14px;font-size:12px;color:var(--warn-2);background:var(--gold-soft);border-bottom:1px solid var(--line)">'+esc(t)+'</div>'; }
+function _note(t){ return '<div style="padding:11px 14px;font-size:var(--fs-2);color:var(--warn-2);background:var(--gold-soft);border-bottom:1px solid var(--line)">'+esc(t)+'</div>'; }
 function _copyJson(id){
   var el=document.getElementById(id); if(!el) return;
   try{ navigator.clipboard.writeText(el.textContent); if(typeof toast==='function') toast('copied'); }catch(_){}

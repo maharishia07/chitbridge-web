@@ -314,10 +314,10 @@ function _subjectTabHtml(){
     +'<div style="border:1px solid #cbd8ec;background:linear-gradient(180deg,#f6f9fe,#fff);border-radius:13px;padding:14px 16px;margin:10px 0 14px">'
       +'<div style="font-family:\'Space Grotesk\';font-weight:800;font-size:18px;color:var(--ink)">Chit &amp; Bridge is a governed rail</div>'
       +'<div style="font-size:var(--fs-2);color:var(--ink);line-height:1.55;margin-top:6px"><b>Content-neutral, governance-absolute.</b> You decide <b>what</b> moves between two entities — the business defines that; we guarantee that <b>whatever moves is governed</b>. A train can\'t leave the track.</div>'
-      +'<div style="font-size:12px;color:var(--blue-2);background:var(--blue-tint);border:1px solid var(--blue-tint-line);border-radius:9px;padding:8px 11px;margin-top:10px">🧭 <b>' + tx('As easy as a mailbox') + '</b> for the end user — zero learning curve. The mailbox is how it <i>feels</i>; the rail is what it <i>is</i>.</div>'
+      +'<div style="font-size:var(--fs-2);color:var(--blue-2);background:var(--blue-tint);border:1px solid var(--blue-tint-line);border-radius:9px;padding:8px 11px;margin-top:10px">🧭 <b>' + tx('As easy as a mailbox') + '</b> for the end user — zero learning curve. The mailbox is how it <i>feels</i>; the rail is what it <i>is</i>.</div>'
     +'</div>'
     +'<div style="font-size:var(--fs-1);font-weight:700;color:var(--ink);margin-bottom:5px">The subject — the sealed, co-held record <span style="color:var(--grey);font-weight:600">(the &ldquo;chit&rdquo;)</span></div>'
-    +'<div style="font-size:12px;color:var(--ink);line-height:1.55;margin-bottom:11px">Each item is a <b>governed obligation, replicated per party</b> — your own sealed copy, disputable on divergence. It is the <b>noun</b> everything else acts on; the capabilities are the <b>verbs</b>. Two tracks — <b>' + tx('Task') + '</b> (coming to you) and <b>' + tx('Order') + '</b> (going from you) — carry it; the <b>wagon is your business</b>, and the rail never opens it.</div>'
+    +'<div style="font-size:var(--fs-2);color:var(--ink);line-height:1.55;margin-bottom:11px">Each item is a <b>governed obligation, replicated per party</b> — your own sealed copy, disputable on divergence. It is the <b>noun</b> everything else acts on; the capabilities are the <b>verbs</b>. Two tracks — <b>' + tx('Task') + '</b> (coming to you) and <b>' + tx('Order') + '</b> (going from you) — carry it; the <b>wagon is your business</b>, and the rail never opens it.</div>'
     +'<div style="font-size:var(--fs-1);font-weight:700;color:var(--ink);margin-bottom:5px">Why it isn&rsquo;t just email — or a shared workspace</div>'
     +'<table style="width:100%;border-collapse:collapse;font-size:var(--fs-1);border:1px solid var(--line);border-radius:9px;overflow:hidden">'
       +'<tr style="background:var(--neutral-tint);color:var(--grey);font-weight:700;font-size:var(--fs-1)"><td style="padding:6px 9px">' + tx('Them') + '</td><td style="padding:6px 9px">Chit &amp; Bridge — the governed rail</td></tr>'
@@ -352,7 +352,7 @@ function _foundTabHtml(){
   const card=(f)=>'<div style="border:1px solid var(--line);border-radius:12px;padding:11px 13px;margin-bottom:10px">'
     +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><span style="font-size:15px">'+f.icon+'</span><span style="font-family:\'Space Grotesk\';font-weight:700;font-size:13.5px">'+esc(f.name)+'</span><span style="margin-inline-start:auto">'+lvlBadge(f.level,f.target)+'</span></div>'
     +'<div style="font-size:13px;color:var(--ink);line-height:1.5;margin-bottom:6px">'+esc(f.what)+'</div>'
-    +'<div style="font-size:12px;color:var(--grey);line-height:1.5;background:var(--card);border:1px solid var(--line);border-radius:9px;padding:8px 10px"><b style="color:var(--ok-3)">PROOF:</b> '+esc(f.proof)+'</div>'
+    +'<div style="font-size:var(--fs-2);color:var(--grey);line-height:1.5;background:var(--card);border:1px solid var(--line);border-radius:9px;padding:8px 10px"><b style="color:var(--ok-3)">PROOF:</b> '+esc(f.proof)+'</div>'
   +'</div>';
   return '<div style="padding:12px 13px;overflow:visible">'
     +'<div style="font-size:13px;color:var(--grey);margin-bottom:10px">What the <b>subject</b> stands on — the trust floor. A capability needs only to WORK; a <b>foundation needs EVIDENCE</b>, so each carries the PROOF that makes its level evident, not asserted. Ladder: L1 exists · L2 clean mechanism · L3 enforced &amp; isolated · L4 governed &amp; provable · L5 audited/certified.</div>'
@@ -364,7 +364,7 @@ function _foundTabHtml(){
 /* ── GOVERNANCE STACK tab — the full architecture, universe → chit (the governance-stack.svg). ── */
 function _stackTabHtml(){
   return '<div style="padding:12px 13px">'
-    +'<div style="font-size:12px;color:var(--grey);margin-bottom:9px;line-height:1.55">The full governance stack — <b>universe <span class=arw>→</span> chit</b>, one spine. Every value is an <b>attribute (data)</b> the engine reads; nothing governance lives in code. Colour: <span style="color:var(--ok-3);font-weight:700">proven live</span> · <span style="color:var(--warn-2);font-weight:700">vision / design</span>. Spinning a new platform (e.g. AWS · Mexico · service-desk) = one row.</div>'
+    +'<div style="font-size:var(--fs-2);color:var(--grey);margin-bottom:9px;line-height:1.55">The full governance stack — <b>universe <span class=arw>→</span> chit</b>, one spine. Every value is an <b>attribute (data)</b> the engine reads; nothing governance lives in code. Colour: <span style="color:var(--ok-3);font-weight:700">proven live</span> · <span style="color:var(--warn-2);font-weight:700">vision / design</span>. Spinning a new platform (e.g. AWS · Mexico · service-desk) = one row.</div>'
     +'<img src="/governance-stack.svg" alt="Chit &amp; Bridge governance stack — universe to chit" loading="lazy" style="width:100%;height:auto;border:1px solid var(--line);border-radius:12px;background:var(--card);color:var(--on-card)"/>'
   +'</div>';
 }
@@ -404,7 +404,7 @@ function _storiesTabHtml(){
     { icon:'🌍', name:'The Life of a Trade', blurb:'One chemical shipment, buyer → seller: real template evidence moving across the engine. Swap the industry and the standards change; the commercial spine and the rail do not.', url:'/docs/life-of-a-trade.html' },
   ];
   const card=(x)=>`<a href="${x.url}" target="_blank" rel="noopener" style="display:block;text-decoration:none;border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:11px;background:var(--card);color:var(--on-card)">
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:5px"><span style="font-size:19px">${x.icon}</span><span style="font-family:'Space Grotesk';font-weight:700;font-size:15px;color:var(--ink)">${esc(x.name)}</span><span style="margin-inline-start:auto;font-size:12px;color:var(--accent,var(--blue));font-weight:700">${tx('Open ↗')}</span></div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:5px"><span style="font-size:19px">${x.icon}</span><span style="font-family:'Space Grotesk';font-weight:700;font-size:15px;color:var(--ink)">${esc(x.name)}</span><span style="margin-inline-start:auto;font-size:var(--fs-2);color:var(--accent,var(--blue));font-weight:700">${tx('Open ↗')}</span></div>
     <div style="font-size:var(--fs-2);color:var(--grey);line-height:1.5">${esc(x.blurb)}</div></a>`;
   return `<div style="padding:12px 13px;overflow:visible">
     <div style="font-size:var(--fs-1);color:var(--grey);margin-bottom:12px">The <b>business narratives</b> — the product told from the value side, followable end-to-end (not feature ads). Open each in a new tab.</div>
@@ -505,7 +505,7 @@ function _realTabHtml(){
   const S={ real:['var(--ok-3)','LIVE'], built:['var(--warn-2)','BUILT · unverified'], part:['var(--warn-2)','PARTIAL'], aim:['var(--disp)','ASPIRATION'] };
   const row=(claim,st,now,earn)=>{ const [c,lbl]=S[st]||S.aim;
     return '<div style="border:1px solid var(--line);border-radius:9px;padding:11px 12px;margin-bottom:9px">'
-      +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:3px"><span style="font-size:12px;font-weight:700">'+esc(claim)+'</span><span style="margin-inline-start:auto;font-size:var(--fs-1);font-weight:800;color:'+c+';white-space:nowrap">'+lbl+'</span></div>'
+      +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:3px"><span style="font-size:var(--fs-2);font-weight:700">'+esc(claim)+'</span><span style="margin-inline-start:auto;font-size:var(--fs-1);font-weight:800;color:'+c+';white-space:nowrap">'+lbl+'</span></div>'
       +'<div style="font-size:var(--fs-1);color:var(--ink);line-height:1.45;margin-bottom:3px"><b>Now:</b> '+esc(now)+'</div>'
       +'<div style="font-size:var(--fs-1);color:var(--grey);line-height:1.4"><b>To earn it:</b> '+esc(earn)+'</div></div>'; };
   return '<div style="padding:14px 16px;overflow:visible">'
@@ -698,7 +698,7 @@ function _openLegendImpl(){
       <span style="font-size:22px">🔑</span>
       <div style="line-height:1.15"><div style="font-family:'Space Grotesk';font-weight:700;font-size:19px;color:var(--ink)">${tx('What we serve')}</div><div style="font-size:var(--fs-2);color:var(--grey)">${titles[_lbTab]||titles.cap}</div></div>
       <div style="margin-inline-start:auto;display:flex;align-items:center;gap:6px">
-        <button onclick="lbFont(-1)" title="Smaller text" style="border:1px solid var(--line);background:none;cursor:pointer;font-size:12px;font-weight:700;color:var(--grey);border-radius:6px;width:27px;height:27px;line-height:1;padding:0">A−</button>
+        <button onclick="lbFont(-1)" title="Smaller text" style="border:1px solid var(--line);background:none;cursor:pointer;font-size:var(--fs-2);font-weight:700;color:var(--grey);border-radius:6px;width:27px;height:27px;line-height:1;padding:0">A−</button>
         <button onclick="lbFont(1)" title="Larger text" style="border:1px solid var(--line);background:none;cursor:pointer;font-size:15px;font-weight:700;color:var(--ink);border-radius:6px;width:27px;height:27px;line-height:1;padding:0">A+</button>
         <button onclick="closeLegend()" style="border:0;background:none;cursor:pointer;font-size:26px;line-height:1;color:var(--grey);margin-inline-start:4px" aria-label="Close">✕</button>
       </div>

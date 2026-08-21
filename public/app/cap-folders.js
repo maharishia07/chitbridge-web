@@ -46,13 +46,13 @@ function _folderTree(parentId, depth){
 }
 function foldersScreen(){
   if(UI.folders===undefined){ loadFolders(); return loader('Loading folders…'); }
-  var tree=_folderTree(null,0)||'<div style="color:var(--grey);font-size:12px;padding:8px 6px">No folders yet — create one below.</div>';
+  var tree=_folderTree(null,0)||'<div style="color:var(--grey);font-size:var(--fs-2);padding:8px 6px">No folders yet — create one below.</div>';
   var right= UI.folderSel ? _folderView() : emptyState('📁','Pick a folder','Or create one, then file chits into it with 📁 Move.');
   return '<div style="display:flex;height:100%;min-height:0">'
     +'<div style="width:250px;border-inline-end:1px solid var(--line);overflow:auto;padding:12px 8px;flex:0 0 auto">'
       +'<div style="font-size:var(--fs-1);font-weight:800;color:var(--grey);letter-spacing:.05em;padding:2px 8px 8px">' + tx('FOLDERS') + '</div>'
       +tree
-      +'<div style="font-size:12px;color:var(--blue);padding:9px 8px 4px;cursor:pointer" onclick="newFolder()">＋ New folder</div></div>'
+      +'<div style="font-size:var(--fs-2);color:var(--blue);padding:9px 8px 4px;cursor:pointer" onclick="newFolder()">＋ New folder</div></div>'
     +'<div style="flex:1;overflow:auto;min-width:0" id="detailpane">'+right+'</div></div>';
 }
 function selectFolder(id){ UI.folderSel=id; UI.folderArch=false; UI.folderChits=undefined; if(typeof renderApp==='function')renderApp(); loadFolderChits(); }
@@ -66,7 +66,7 @@ async function loadFolderChits(){
 function _folderView(){
   var f=(UI.folders||[]).find(function(x){return x.folder_id===UI.folderSel;})||{name:'Folder'};
   var arch=!!UI.folderArch;
-  var tab=function(on,label,onclick){ return '<span onclick="'+onclick+'" style="cursor:pointer;font-size:12px;font-weight:700;padding:5px 13px;border-radius:16px;'+(on?'background:var(--blue);color:var(--on-accent)':'border:1px solid var(--line);color:var(--grey-2)')+'">'+label+'</span>'; };
+  var tab=function(on,label,onclick){ return '<span onclick="'+onclick+'" style="cursor:pointer;font-size:var(--fs-2);font-weight:700;padding:5px 13px;border-radius:16px;'+(on?'background:var(--blue);color:var(--on-accent)':'border:1px solid var(--line);color:var(--grey-2)')+'">'+label+'</span>'; };
   var head='<div style="padding:14px 18px;border-bottom:1px solid var(--line)"><div style="font-size:17px;font-weight:800">📁 '+esc(f.name)+'</div>'
     +'<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">source = the sender / co-assist · destination = this folder</div>'
     +'<div style="display:flex;gap:6px;margin-top:11px;align-items:center">'+tab(!arch,'Current','setFolderArch(false)')+tab(arch,'Archive','setFolderArch(true)')
@@ -96,7 +96,7 @@ function _folderView(){
 /* A tab in the folder header. Same pill shape as Current/Archive above it, so the two rows read as one control. */
 function _ftab(k,label){
   var on=(_FLD.tab||'chits')===k;
-  return '<span data-testid="folder-tab-'+k+'" onclick="setFolderTab(\''+k+'\')" style="cursor:pointer;font-size:12px;font-weight:700;padding:5px 13px;border-radius:16px;'
+  return '<span data-testid="folder-tab-'+k+'" onclick="setFolderTab(\''+k+'\')" style="cursor:pointer;font-size:var(--fs-2);font-weight:700;padding:5px 13px;border-radius:16px;'
     +(on?'background:var(--chrome);color:var(--chrome-on)':'border:1px solid var(--line);color:var(--grey-2)')+'">'+label+'</span>';
 }
 function newFolder(){
@@ -122,7 +122,7 @@ function deleteFolder(id){
 async function moveChit(chitId){
   if(UI.folders===undefined){ try{ var rr=await api('foldersList'); UI.folders=(rr&&rr.folders)||[]; }catch(e){ UI.folders=[]; } }   // self-load so Move works from Task, not just the Folders screen
   var opts=(UI.folders||[]).map(function(f){ return '<div style="padding:9px 12px;border-bottom:1px solid #f0f2f4;cursor:pointer" onclick="_doMove(\''+chitId+'\',\''+f.folder_id+'\')">📁 '+esc(f.name)+'</div>'; }).join('');
-  var body='<div style="max-height:320px;overflow:auto">'+(opts||'<div style="padding:12px;color:var(--grey);font-size:12px">No folders yet — create one first.</div>')+'<div style="padding:10px 12px;color:var(--disp);cursor:pointer;border-top:1px solid var(--line)" onclick="_doMove(\''+chitId+'\',null)">' + tx('↩ Remove from folder (back to mailbox)') + '</div></div>';
+  var body='<div style="max-height:320px;overflow:auto">'+(opts||'<div style="padding:12px;color:var(--grey);font-size:var(--fs-2)">No folders yet — create one first.</div>')+'<div style="padding:10px 12px;color:var(--disp);cursor:pointer;border-top:1px solid var(--line)" onclick="_doMove(\''+chitId+'\',null)">' + tx('↩ Remove from folder (back to mailbox)') + '</div></div>';
   if(typeof modal==='function') modal('<div class="mhd"><div class="t">' + tx('📁 Move to folder') + '</div></div><div class="mbody" style="padding:0">'+body+'</div>');
 }
 async function _doMove(chitId, folderId){
@@ -394,7 +394,7 @@ function _groupSumPane(){
          from consolidate()'s attribution; nothing is recomputed to render it. */
       var rows = open ? '<div style="padding:2px 0 8px 16px;background:var(--card);color:var(--on-card)">'
         + (l.breakdown || []).map(function(s){
-            return '<div style="display:flex;align-items:center;font-size:12px;padding:3px 0">'
+            return '<div style="display:flex;align-items:center;font-size:var(--fs-2);padding:3px 0">'
               + '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(s.store_name)
               /* ⚠️ WHAT THEY ACTUALLY WROTE, when it differs from the canonical name. "thakkali → Tomato" is the
                  single most useful thing to see when checking whether a total is right. */
@@ -431,7 +431,7 @@ function _groupSumPane(){
   var mo = g.money || {};
   out += '<div style="margin-top:16px;border-top:1px solid var(--line);padding-top:10px">'
     + '<div style="font-size:var(--fs-1);font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--grey);margin-bottom:4px">' + tx('Agreed value of these chits') + '</div>'
-    + ((mo.by_currency || []).length ? (mo.by_currency || []).map(function(x){ return '<span style="display:inline-block;border:1px solid var(--line);border-radius:9px;padding:3px 9px;margin:0 6px 6px 0;font-size:12px"><b>' + esc(x.currency) + '</b> ' + esc(String(x.total)) + ' <span style="color:var(--grey)">· ' + x.chits + ' chit' + (x.chits === 1 ? '' : 's') + '</span></span>'; }).join('') : '<span style="font-size:12px;color:var(--grey)">nothing with an agreed value</span>')
+    + ((mo.by_currency || []).length ? (mo.by_currency || []).map(function(x){ return '<span style="display:inline-block;border:1px solid var(--line);border-radius:9px;padding:3px 9px;margin:0 6px 6px 0;font-size:var(--fs-2)"><b>' + esc(x.currency) + '</b> ' + esc(String(x.total)) + ' <span style="color:var(--grey)">· ' + x.chits + ' chit' + (x.chits === 1 ? '' : 's') + '</span></span>'; }).join('') : '<span style="font-size:var(--fs-2);color:var(--grey)">nothing with an agreed value</span>')
     + (((mo.excluded || {}).awaiting_agreement) ? '<div style="font-size:var(--fs-1);color:var(--grey)">' + mo.excluded.awaiting_agreement + ' chit(s) have no agreed value yet and are excluded — not counted as zero.</div>' : '')
     + '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:4px">⚠️ This is the <b>agreed value of the chits</b>, which is a different question from the <b>cost of the requirement</b> above — a chit can carry priced lines and no agreed total, or the reverse.</div>'
     + '</div></div>';
@@ -471,7 +471,7 @@ function _reconStrip(){
      branches; showing only the roll-up makes a parent look full when everything is actually one level down. */
   var rows = fs.length ? fs.map(function(f){
     var s = f.segments || {};
-    return '<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-top:1px solid var(--line);font-size:12px">'
+    return '<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-top:1px solid var(--line);font-size:var(--fs-2)">'
       + '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📁 ' + esc(f.name) + '</span>'
       + '<span style="color:var(--grey);font-size:var(--fs-1)">' + (s.open || 0) + ' open · ' + (s.unassigned || 0) + ' unassigned</span>'
       + '<span style="font-weight:800;min-width:34px;text-align:end">' + f.own + '</span>'
@@ -494,8 +494,8 @@ function _folderMetricsPane(){
   var dash = function(v, suffix){ return (v === null || v === undefined) ? '—' : (v + (suffix || '')); };
 
   var money = (mo.by_currency || []).length
-    ? (mo.by_currency || []).map(function(b){ return '<span style="display:inline-block;border:1px solid var(--line);border-radius:9px;padding:3px 9px;margin:0 6px 6px 0;font-size:12px"><b>' + esc(b.currency) + '</b> ' + esc(String(b.total)) + ' <span style="color:var(--grey)">· ' + b.chits + ' chit' + (b.chits === 1 ? '' : 's') + '</span></span>'; }).join('')
-    : '<span style="font-size:12px;color:var(--grey)">nothing with an agreed value</span>';
+    ? (mo.by_currency || []).map(function(b){ return '<span style="display:inline-block;border:1px solid var(--line);border-radius:9px;padding:3px 9px;margin:0 6px 6px 0;font-size:var(--fs-2)"><b>' + esc(b.currency) + '</b> ' + esc(String(b.total)) + ' <span style="color:var(--grey)">· ' + b.chits + ' chit' + (b.chits === 1 ? '' : 's') + '</span></span>'; }).join('')
+    : '<span style="font-size:var(--fs-2);color:var(--grey)">nothing with an agreed value</span>';
   /* ⚠️ NEVER ONE TOTAL ACROSS CURRENCIES, and the reason is said on screen rather than left as a design note. */
   var moneyNote = (mo.mixed ? '<div style="font-size:var(--fs-1);color:var(--warn-2);margin-top:2px">⚠️ More than one currency — these are <b>not</b> added together. A single total across currencies is a number that means nothing.</div>' : '')
     + (((mo.excluded || {}).awaiting_agreement) ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:2px">' + mo.excluded.awaiting_agreement + ' chit(s) have no agreed value yet and are excluded — they are not counted as zero.</div>' : '');
@@ -630,7 +630,7 @@ function _folderRulesPane(){
     + '</div>';
 
   if (_FLD.rulesNote) out += '<div style="background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;font-size:var(--fs-1);color:var(--warn-3);margin-bottom:9px">' + esc(_FLD.rulesNote) + '</div>';
-  if (_FLD.err) out += '<div style="color:var(--disp);font-size:12px;margin-bottom:8px">' + esc(_FLD.err) + '</div>';
+  if (_FLD.err) out += '<div style="color:var(--disp);font-size:var(--fs-2);margin-bottom:8px">' + esc(_FLD.err) + '</div>';
 
   out += rules.length ? rules.map(function(r, i){ return _ruleRow(r, i, rules.length); }).join('') : '<div style="color:var(--grey);font-size:var(--fs-2);padding:6px 0 12px">No rules yet. Everything arrives unfiled until you add one.</div>';
 

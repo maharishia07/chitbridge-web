@@ -235,8 +235,8 @@ function messagesScreen(){
                */
               + '<div style="display:flex;gap:10px;align-items:center;padding:2px 0 8px;border-bottom:1px solid var(--line-soft,#f0efec);margin-bottom:6px">'
               +   (t.line_id ? '<span data-testid="msg-open-line" onclick="rplOpenLine(&quot;' + t.chit_id + '&quot;,&quot;' + t.line_id + '&quot;)"'
-                    + ' style="cursor:pointer;font-size:12px;color:var(--blue);font-weight:700">' + tx('↗ Open the line') + '</span>' : '')
-              +   '<span data-testid="msg-open-chit" onclick="rplOpenChit(&quot;' + t.chit_id + '&quot;)" style="cursor:pointer;font-size:12px;color:var(--blue)">↗ Open the '
+                    + ' style="cursor:pointer;font-size:var(--fs-2);color:var(--blue);font-weight:700">' + tx('↗ Open the line') + '</span>' : '')
+              +   '<span data-testid="msg-open-chit" onclick="rplOpenChit(&quot;' + t.chit_id + '&quot;)" style="cursor:pointer;font-size:var(--fs-2);color:var(--blue)">↗ Open the '
               +     ((RPLTRACK[m.track] || {}).label || 'order').toLowerCase() + '</span>'
               /* ⚠️ NO SECOND COUNT HERE. This said "2 in this conversation" beside a row reading "3 msgs" — two
                  numbers for one fact, from two different sources, disagreeing in plain sight. The row already
@@ -288,7 +288,7 @@ function messagesScreen(){
   return '<div style="flex:1;min-height:0;overflow-y:auto;padding-bottom:var(--scroll-tail)">'
     + '<div style="padding:13px 16px;border-bottom:1px solid var(--line)">'
     +   '<div style="font-weight:700;font-size:var(--fs-4)">Messages' + (n ? ' <span style="font-size:var(--fs-2);color:var(--blue-2)">· ' + n + ' new</span>' : '') + '</div>'
-    +   '<div style="font-size:12px;color:var(--grey);margin-top:2px">One conversation per line, across every chit. Read and reply here.</div>'
+    +   '<div style="font-size:var(--fs-2);color:var(--grey);margin-top:2px">One conversation per line, across every chit. Read and reply here.</div>'
     + '</div>'
     /* ── segregate by track ─────────────────────────────────────────────────────────────────────────────────
        ⚠️ THE COUNTS ARE ON THE CHIPS. A filter that does not say how much is behind it makes you click it to find

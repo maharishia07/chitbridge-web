@@ -427,7 +427,7 @@ function cbcatSchemesHTML(){
  */
 function cbcatParentPickHTML(f){
   var opts = cbcatParentOptions(f.id);
-  if (!opts.length) return '<div style="font-size:12px;color:var(--grey);margin:2px 0 4px">Nothing to sit under yet — this will be a top-level category.</div>';
+  if (!opts.length) return '<div style="font-size:var(--fs-2);color:var(--grey);margin:2px 0 4px">Nothing to sit under yet — this will be a top-level category.</div>';
   return '<select class="inp" data-testid="catg-parent" onchange="cbcatField(\'parent\', this.value || null)">'
     + '<option value="">— top level —</option>'
     + opts.map(function(c){
@@ -475,7 +475,7 @@ function cbcatCss(){
     '.cbcat-badge{font-size:var(--fs-1);font-weight:700;border-radius:6px;padding:1px 7px;text-transform:uppercase;letter-spacing:.04em}',
     '.cbcat-badge.ret{background:var(--neutral-tint);color:var(--ink-2)}',
     '.cbcat-err{font-size:var(--fs-2);color:var(--disp);background:var(--danger-tint);border:1px solid #f0c9c6;border-radius:9px;padding:8px 11px;margin:8px 0}',
-    '.cbcat-note{font-size:12px;line-height:1.55;color:var(--warn-3);background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;margin-bottom:11px}',
+    '.cbcat-note{font-size:var(--fs-2);line-height:1.55;color:var(--warn-3);background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;margin-bottom:11px}',
     '.cbcat-note.warn{color:var(--warn-2)}',
     '.cbcat-stat{display:flex;align-items:baseline;gap:9px;margin-bottom:4px}',
     '.cbcat-stat .v{font-size:26px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}',

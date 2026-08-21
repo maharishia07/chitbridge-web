@@ -39,13 +39,13 @@ function traceabilityScreen(){
     + '</div>'
     + '<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-top:10px;font-size:var(--fs-1);color:var(--grey)">'
       + '<label>₹ / node&nbsp;<input value="' + cost + '" oninput="UI.traceCost=_traceNum(this.value,5000)" '
-        + 'style="width:80px;padding:4px 7px;border:1px solid var(--line);border-radius:6px;font-size:12px"></label>'
+        + 'style="width:80px;padding:4px 7px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2)"></label>'
       + '<label>blanket-recall size&nbsp;<input value="' + blanket + '" oninput="UI.traceBlanket=_traceNum(this.value,200)" '
-        + 'style="width:70px;padding:4px 7px;border:1px solid var(--line);border-radius:6px;font-size:12px"></label>'
+        + 'style="width:70px;padding:4px 7px;border:1px solid var(--line);border-radius:6px;font-size:var(--fs-2)"></label>'
       + '<span>— the ₹ saved is targeted recall vs a blanket recall of your whole network.</span>'
     + '</div>'
     + '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px;padding-top:11px;border-top:1px dashed var(--line)">'
-      + '<span style="font-size:12px;color:var(--grey)">or reconstruct from shared data (no links):</span>'
+      + '<span style="font-size:var(--fs-2);color:var(--grey)">or reconstruct from shared data (no links):</span>'
       + '<input id="traceBatchIn" value="' + esc(UI.traceBatchQ || '') + '" placeholder="batch number, e.g. FG-PC-6621" '
         + 'oninput="UI.traceBatchQ=this.value" onkeydown="if(event.key===\'Enter\')runTraceByBatch()" '
         + 'style="flex:1;min-width:180px;padding:8px 11px;border:1px solid var(--line);border-radius:9px;font-size:13px;font-family:monospace">'
@@ -72,8 +72,8 @@ async function loadTraceBatches(){
   if (typeof renderApp === 'function') renderApp();
 }
 function _traceBatchPicker(){
-  if (UI.traceBatches === undefined){ loadTraceBatches(); return '<div style="padding:12px 20px;color:var(--grey);font-size:12px">' + tx('Loading your batches…') + '</div>'; }
-  if (!UI.traceBatches.length) return '<div style="padding:12px 20px;color:var(--grey);font-size:12px">No traceable batches yet — seed a chain, then reload.</div>';
+  if (UI.traceBatches === undefined){ loadTraceBatches(); return '<div style="padding:12px 20px;color:var(--grey);font-size:var(--fs-2)">' + tx('Loading your batches…') + '</div>'; }
+  if (!UI.traceBatches.length) return '<div style="padding:12px 20px;color:var(--grey);font-size:var(--fs-2)">No traceable batches yet — seed a chain, then reload.</div>';
   var rows = UI.traceBatches.map(function(b){
     var name = esc(b.product || b.to_name || 'batch');
     var meta = [ (b.qty != null ? (esc(String(b.qty)) + esc(b.unit ? (' ' + b.unit) : '')) : ''), (b.sender_name ? ('from ' + esc(b.sender_name)) : '') ].filter(Boolean).join(' · ');
@@ -97,7 +97,7 @@ function _traceChip(n, isTerm){
             : (isTerm ? '<span style="font-size:var(--fs-1);font-weight:800;color:var(--disp-2);background:var(--danger-tint);border-radius:6px;padding:1px 5px;margin-inline-start:6px">' + tx('EXPOSED') + '</span>' : '');
   var bd = isTerm ? 'var(--disp)' : (n.is_origin ? 'var(--blue-tint-bg)' : 'var(--line)');
   var bg = isTerm ? 'var(--danger-tint)' : (n.is_origin ? 'var(--blue-tint-bg)' : '#fff');
-  return '<span style="display:inline-flex;align-items:center;border:1px solid ' + bd + ';background:' + bg + ';border-radius:9px;padding:5px 9px;font-size:12px;margin:3px 5px 3px 0">'
+  return '<span style="display:inline-flex;align-items:center;border:1px solid ' + bd + ';background:' + bg + ';border-radius:9px;padding:5px 9px;font-size:var(--fs-2);margin:3px 5px 3px 0">'
     + '<b style="font-weight:700">' + label + '</b>' + qty
     + '<span style="color:var(--grey);font-family:monospace;font-size:var(--fs-1);margin-inline-start:7px">' + _traceShort(n.chit_id) + '</span>' + badge + '</span>';
 }
@@ -114,7 +114,7 @@ function _traceFwd(r){
     + '<div style="font-size:var(--fs-2);color:#7a4139;margin-top:3px">' + (r.depth_max || 0) + ' hop' + ((r.depth_max || 0) === 1 ? '' : 's') + ' deep · '
       + (r.terminals || []).length + ' exposed endpoint' + ((r.terminals || []).length === 1 ? '' : 's') + '</div>'
     + '<div style="margin-top:11px;font-size:var(--fs-3);font-weight:800;color:var(--ok-2)">' + _traceRs(saved) + ' saved'
-      + '<span style="font-weight:600;color:var(--grey);font-size:12px"> — recall these ' + targeted + ', not a blanket ~' + blanket + '</span></div>'
+      + '<span style="font-weight:600;color:var(--grey);font-size:var(--fs-2)"> — recall these ' + targeted + ', not a blanket ~' + blanket + '</span></div>'
     + ((r.flagged || 0) > 0 ? '<div style="margin-top:11px;font-size:13px;font-weight:800;color:#fff;background:#c0453b;border-radius:9px;padding:7px 12px;display:inline-block">⚠ ' + r.flagged + ' node' + (r.flagged === 1 ? '' : 's') + ' fail mass-balance — more went OUT than came IN</div>' : '')
     + '</div>';
 

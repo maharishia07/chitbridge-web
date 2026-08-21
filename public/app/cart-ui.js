@@ -715,7 +715,7 @@
         + ';border-bottom:1px dashed var(--line);' + (q ? 'background:' + soft(ns) : '') + '">'
         + '<span style="flex:1"><b style="font-size:13.5px">' + esc(r.variant || d.name || d.product || 'item') + '</b>'
         + (d.unit ? ' <span style="color:var(--grey-2);font-size:var(--fs-1)">' + esc(d.unit) + '</span>' : '')
-        + '<div style="font-size:12px;color:var(--grey-2);margin-top:1px">'
+        + '<div style="font-size:var(--fs-2);color:var(--grey-2);margin-top:1px">'
         // An offer REPLACES the asking price in the maths, so it must replace it on screen too — with the asking
         // price still shown, struck through, because hiding what they asked for is its own dishonesty.
         + (u.offered
@@ -746,7 +746,7 @@
     return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">'
       + '<b style="font-size:17px;flex:1">🛒 ' + esc(opt(ns, 'cartTitle', 'Your cart')) + '</b>'
       + '<button onclick="CBCart.close(\'' + esc(ns) + '\')" style="border:0;background:none;font-size:22px;color:#8a949c;cursor:pointer">×</button></div>'
-      + '<div style="font-size:12px;color:var(--grey-2);margin-bottom:10px">'
+      + '<div style="font-size:var(--fs-2);color:var(--grey-2);margin-bottom:10px">'
       + (opt(ns, 'from') ? 'from <b>' + esc(opt(ns, 'from')) + '</b> · ' : '')
       + sel.length + ' line' + (sel.length === 1 ? '' : 's') + ' · ' + units(ns) + ' units</div>'
       + (sel.length
@@ -755,7 +755,7 @@
             return '<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px dashed var(--line)">'
               + '<span style="flex:1"><b style="font-size:13.5px">' + esc(l.name) + '</b>'
               + ' <span style="color:var(--grey-2);font-size:var(--fs-1)">' + esc(l.unit) + '</span>'
-              + '<div style="font-size:12px;color:var(--grey-2)">'
+              + '<div style="font-size:var(--fs-2);color:var(--grey-2)">'
               + (l.offered ? '<span style="text-decoration:line-through;opacity:.55">' + esc(fmt(ns, l.asking_price)) + '</span> ' : '')
               + (isFinite(p) ? esc(fmt(ns, p)) : 'no price') + (l.offered ? ' <span style="font-size:var(--fs-1)">your offer</span>' : '')
               + (isFinite(p) ? ' <span style="color:#1d2530;font-weight:800">· ' + esc(fmt(ns, p * l.qty)) + '</span>' : '') + '</div></span>'
@@ -985,7 +985,7 @@
         /* ⚠️ THE SURFACE AND ITS TEXT MOVE TOGETHER. This set `background:var(--card)` with a hardcoded
            `color:var(--ink-2)`, so in a dark theme the chip went dark and the letters stayed dark — 1.63:1,
            invisible. `--on-card` is the partner of `--card`; using anything else here is the bug. */
-        + 'height:28px;padding:0 12px;font:inherit;font-size:12px;color:var(--on-card);cursor:pointer;white-space:nowrap}'
+        + 'height:28px;padding:0 12px;font:inherit;font-size:var(--fs-2);color:var(--on-card);cursor:pointer;white-space:nowrap}'
         + '.cbpick-chip:hover{border-color:var(--accent)}'
         /* ⭐ SELECTED IS A SURFACE CHANGE, NOT JUST BOLDER TEXT (Athi: the letters were unreadable when picked).
            Weight alone is a weak signal and it was carrying the whole job; now the chip takes the accent and its
@@ -1005,7 +1005,7 @@
            carry on a phone (the money hides below 520px), so it is the last thing that should be squinted at. */
         + 'height:18px;padding:0 4px;font-size:var(--fs-1);font-weight:800;line-height:18px;text-align:center}'
         + '.cbcart-sum{font-size:var(--fs-2);font-weight:800}'
-        + '.cbcart-x{font-size:12px;font-weight:800;opacity:.75;cursor:pointer;padding:0 1px}'
+        + '.cbcart-x{font-size:var(--fs-2);font-weight:800;opacity:.75;cursor:pointer;padding:0 1px}'
         + '.cbcart-x:hover{opacity:1}'
         + '.cbcart-partial{color:var(--warn-2);font-size:var(--fs-1);max-width:190px;line-height:1.3;white-space:normal}'
         /**

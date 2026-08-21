@@ -111,13 +111,13 @@ function aiRowsHTML(){
         +'<span class="amt" style="margin-inline-start:auto;font-size:var(--fs-1);color:'+(on?(live?'var(--ok-3)':'var(--warn-2)'):'var(--grey)')+';font-weight:600">'+(on?(live?'enabled · live':'enabled · shaped'):'off')+'</span></div>'
         +'<div class="l2">'+esc(s.desc)+'</div>'
         +'<div style="display:flex;gap:7px;flex-wrap:wrap;align-items:center;margin-top:8px">'
-          +'<button class="composebtn'+(on?' pri':'')+'" style="padding:5px 12px;font-size:12px" onclick="aiToggle(\''+esc(s.key)+'\')">'+(on?'✓ Enabled':'Enable')+'</button>'
+          +'<button class="composebtn'+(on?' pri':'')+'" style="padding:5px 12px;font-size:var(--fs-2)" onclick="aiToggle(\''+esc(s.key)+'\')">'+(on?'✓ Enabled':'Enable')+'</button>'
           +'<span class="optchip" style="background:var(--blue-tint);color:var(--blue-d);border-color:var(--blue-tint-line)">rung · '+esc(s.rung)+'</span>'
           +'<label style="font-size:var(--fs-1);color:var(--grey);display:inline-flex;align-items:center;gap:5px">human gate <select onchange="aiSetGate(\''+esc(s.key)+'\',this.value)" style="border:1px solid var(--line);border-radius:6px;padding:3px 6px;font-size:var(--fs-1)"'+(on?'':' disabled')+'>'+gateOpts+'</select></label>'
         +'</div>'
         +'<div style="margin-top:8px;display:flex;gap:6px;align-items:center">'
-          +(canInvoke?('<button class="composebtn pri" style="padding:6px 12px;font-size:12px" onclick="'+esc(s.invoke)+'()">' + tx('▶ Invoke') + '</button>'):('<button class="composebtn" style="padding:6px 12px;font-size:12px;opacity:.55;cursor:not-allowed" disabled title="'+(!on?'Enable it first':(!live?'Shaped — not runnable yet':'Not invokable'))+'">' + tx('▶ Invoke') + '</button>'))
-          +'<button class="composebtn" style="padding:6px 10px;font-size:12px" onclick="aiSlotInfo(\''+esc(s.key)+'\')">' + tx('How it works') + '</button>'
+          +(canInvoke?('<button class="composebtn pri" style="padding:6px 12px;font-size:var(--fs-2)" onclick="'+esc(s.invoke)+'()">' + tx('▶ Invoke') + '</button>'):('<button class="composebtn" style="padding:6px 12px;font-size:var(--fs-2);opacity:.55;cursor:not-allowed" disabled title="'+(!on?'Enable it first':(!live?'Shaped — not runnable yet':'Not invokable'))+'">' + tx('▶ Invoke') + '</button>'))
+          +'<button class="composebtn" style="padding:6px 10px;font-size:var(--fs-2)" onclick="aiSlotInfo(\''+esc(s.key)+'\')">' + tx('How it works') + '</button>'
         +'</div>'
       +'</div></div>';
   }).join('');
@@ -298,7 +298,7 @@ function awRender(){
   var d=UI.awData||{};   // render THROUGH the app's shared modal() → same placement/backdrop/responsive as every other dialog
   function fld(id,label,ph){ return '<div style="margin-bottom:20px"><label class="fl" style="display:block;margin-bottom:5px">'+label+'</label><input class="inp" id="'+id+'" data-testid="'+id+'" placeholder="'+ph+'" value="'+esc(d[id]||'')+'" style="width:100%"></div>'; }
   function selF(id,label,opts){ return '<div style="margin-bottom:20px"><label class="fl" style="display:block;margin-bottom:5px">'+label+'</label><select class="inp" id="'+id+'" style="width:100%">'+opts.map(function(o){ return '<option value="'+o[0]+'"'+(String(d[id])===o[0]?' selected':'')+'>'+o[1]+'</option>'; }).join('')+'</select></div>'; }
-  function how(x){ return '<div style="font-size:12px;color:var(--grey);background:var(--card);border:1px solid var(--line);border-radius:9px;padding:10px 12px;line-height:1.5;margin-top:12px">'+x+'</div>'; }
+  function how(x){ return '<div style="font-size:var(--fs-2);color:var(--grey);background:var(--card);border:1px solid var(--line);border-radius:9px;padding:10px 12px;line-height:1.5;margin-top:12px">'+x+'</div>'; }
   var body='', title='', sub='', dots='', foot='';
   if(UI.awType===null){
     title='Add a co-assist'; sub='What kind of co-assist? People, devices, systems and agents can all act for you.';
@@ -433,7 +433,7 @@ function _acTierSummary(x){
   return '<div style="padding:16px">'
     +'<button class="dback" onclick="backToList()">‹ Co-assists</button>'
     +'<div style="display:flex;align-items:center;gap:11px;margin-top:8px"><span style="font-size:26px">'+(reg.icon||'🔌')+'</span>'
-      +'<div style="min-width:0"><div style="font-size:17px;font-weight:800">'+esc(x.name)+'</div><div style="font-size:12px;color:var(--grey)">'+esc(reg.label||'')+' · 📍 '+esc(info.site||x.site||'no site')+'</div></div>'
+      +'<div style="min-width:0"><div style="font-size:17px;font-weight:800">'+esc(x.name)+'</div><div style="font-size:var(--fs-2);color:var(--grey)">'+esc(reg.label||'')+' · 📍 '+esc(info.site||x.site||'no site')+'</div></div>'
       +'<span style="margin-inline-start:auto;display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:var(--fs-2);color:'+hc+'"><span style="width:9px;height:9px;border-radius:50%;background:'+hc+';display:inline-block"></span>'+esc(h)+'</span></div>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:15px 0">'
       +'<div style="background:var(--card);border:1px solid var(--line);border-radius:12px;padding:11px 12px;color:var(--on-card)"><div style="font-size:var(--fs-1);color:var(--grey);text-transform:uppercase;letter-spacing:.03em">' + tx('Devices') + '</div><div style="font-size:var(--fs-5);font-weight:800;margin-top:2px">'+cnt+'</div></div>'
@@ -456,7 +456,7 @@ function acDetailHTML(){ const x=UI.acDet;
   const back=`<button class="dback" onclick="backToList()">‹ Co-assists</button>`;
   /* ⚠️ `--ink` IS TEXT, NOT A SURFACE — same bug as the catalogue View/Edit segment. In dark it inverts to
      near-white and the selected segment becomes white-on-white (1.21:1). Selected = --accent + --on-accent. */
-  const seg=(m,l)=>`<button onclick="setAcMode('${m}')" style="border:0;background:${(UI.acMode==='edit'?'edit':'view')===m?'var(--accent)':'var(--card)'};color:${(UI.acMode==='edit'?'edit':'view')===m?'var(--on-accent)':'var(--grey)'};font-size:12px;font-weight:700;padding:6px 15px">${l}</button>`;
+  const seg=(m,l)=>`<button onclick="setAcMode('${m}')" style="border:0;background:${(UI.acMode==='edit'?'edit':'view')===m?'var(--accent)':'var(--card)'};color:${(UI.acMode==='edit'?'edit':'view')===m?'var(--on-accent)':'var(--grey)'};font-size:var(--fs-2);font-weight:700;padding:6px 15px">${l}</button>`;
   const toggle=`<div style="display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-top:10px">${seg('view','View')}${seg('edit','Edit')}</div>`;
   const head=`<div class="dh">${back}<div class="dt">${esc(x.name)} <span class="optchip ${acShc(x.shift)}">${acShLabel(x.shift)}</span></div><div class="ds">${esc(x.role||'—')} · <span class="mono">${acLogin(x)}</span></div>${toggle}</div>`;
   let body, bar;
@@ -515,7 +515,7 @@ function acDetailHTML(){ const x=UI.acDet;
       ${kv('Joined',acDate(x.created))}
       ${kv('Last active',acDate(x.last))}</div>`;
     const work=`<div class="sec">Shift &amp; load</div><div class="itab" style="padding:11px 12px">
-      <div style="display:flex;align-items:center;gap:8px"><span class="optchip ${acShc(x.shift)}">${acShLabel(x.shift)}</span><span style="font-size:12px;color:var(--grey)">${x.status==='active'?'active':esc(x.status)}</span></div>
+      <div style="display:flex;align-items:center;gap:8px"><span class="optchip ${acShc(x.shift)}">${acShLabel(x.shift)}</span><span style="font-size:var(--fs-2);color:var(--grey)">${x.status==='active'?'active':esc(x.status)}</span></div>
       ${(x.shift!=='on_shift' && (x.breakSince||x.returnDate)) ? '<div style="font-size:var(--fs-1);color:var(--grey);margin-top:6px">'+(x.breakSince?('On break since '+acDate(x.breakSince)):'')+(x.returnDate?((x.breakSince?' · ':'')+'returns '+acDate(x.returnDate)):'')+'</div>' : ''}
       <div style="font-size:var(--fs-2);margin-top:9px">Load · <b>${x.load}</b> / ${x.max||'∞'} tasks</div><div style="height:8px;background:var(--blue-tint-bg);border-radius:5px;overflow:hidden;margin-top:6px;color:var(--on-card)"><span style="display:block;height:100%;background:var(--blue);border-radius:5px;width:${pct}%;color:var(--on-accent)"></span></div></div>`;
     const eng=`<div class="sec">${tx('Access / engagement')}</div><div style="font-size:var(--fs-1);color:var(--warn-3);background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:9px;padding:9px 11px;line-height:1.5">Per-co-assist engagement (view-only · act · audit · MIS) is <b>planned, not enforced yet</b> — today a co-assist acts within the entity's scope. Default-deny per node is the roadmap.</div>`;

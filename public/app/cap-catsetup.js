@@ -590,7 +590,7 @@ function catsetCss(){
     '.catset-cb{font-size:13px;line-height:1.6;color:var(--ink);padding:6px 14px 12px}',
     /* The standards note is set apart because it explains the WHY, which a person reads once and then never
        again — it must be skippable without losing the instruction above it. */
-    '.catset-std{font-size:12px;line-height:1.6;color:var(--grey);background:var(--paper);border:1px solid var(--line);',
+    '.catset-std{font-size:var(--fs-2);line-height:1.6;color:var(--grey);background:var(--paper);border:1px solid var(--line);',
     'border-radius:9px;padding:9px 11px;margin-top:10px}',
     '.catset-ca{display:flex;flex-wrap:wrap;gap:8px;padding:0 14px 13px}',
     '.catset-ca .composebtn{width:auto;padding:8px 14px}',
@@ -615,7 +615,7 @@ function catsetCss(){
     '.catset-regh{display:flex;align-items:center;gap:8px;padding:10px 13px 0;font-size:var(--fs-2);font-weight:700}',
     '.catset-regn{margin-inline-start:auto;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:var(--fs-1);',
     'color:var(--grey);background:var(--card);border:1px solid var(--line);border-radius:20px;padding:1px 8px}',
-    '.catset-regb{font-size:12px;line-height:1.55;color:var(--grey);padding:4px 13px 9px}',
+    '.catset-regb{font-size:var(--fs-2);line-height:1.55;color:var(--grey);padding:4px 13px 9px}',
     '.catset-regrows{display:flex;flex-direction:column;gap:1px;background:var(--line);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}',
     /* Two lines: identity, then explanation. See the note where the markup is built. */
     '.catset-regrow{display:block;background:var(--card);padding:7px 13px;font-size:var(--fs-2)}',
