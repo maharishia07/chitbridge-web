@@ -120,6 +120,24 @@ async function dismissModal(page) {
 // the nav items sit off-screen (translateX(-100%)) behind the ☰ (nav-drawer) button, so a direct nav click can't
 // land. On desktop the ☰ is display:none. So: if ☰ is showing and the menu isn't open, tap it first, then click.
 // Viewport-agnostic — a no-op on the counter/laptop projects, the drawer-opener on mobile.
+/**
+ * ⭐⭐ PROFILE AND SETTINGS ARE BEHIND THE AVATAR, NOT IN THE RAIL. They were *"the two least-visited screens
+ * in the rail and were holding prime space in it"*, so they moved into the avatar menu — which means
+ * `getByTestId('nav-settings')` finds nothing until the menu is open, and a spec written against the old route
+ * fails as a 15-second TIMEOUT rather than as "that is not there any more".
+ *
+ * ⚠️ FOUR SPECS ALREADY CLICK `icon-avatar` INLINE (i18n, smoke, theme-picker ×2). This is the fifth caller,
+ * which by the standing rule is where the helper gets written rather than copied again. The four are left
+ * alone deliberately: they pass today, and rewriting green tests to tidy them is churn with a real chance of
+ * breaking something for no behavioural gain. They are candidates, not debt.
+ */
+async function openAvatarItem(page, testid) {
+  const item = page.getByTestId(testid);
+  /* the menu may already be open from a previous step — opening it twice closes it */
+  if (!(await item.isVisible().catch(() => false))) await page.getByTestId('icon-avatar').click();
+  await item.click();
+}
+
 async function clickNav(page, key) {
   const ham = page.getByTestId('nav-drawer');
   if (await ham.isVisible().catch(() => false)) {                       // mobile mode — nav is behind the drawer
@@ -263,4 +281,4 @@ async function poolContext(browser, i) {
   return { context, page, email: p.email, name: p.name, key: p.key };
 }
 
-module.exports = { DEV_OTP, useApiBase, uniqueEmail, uniqueName, uniqueHandle, mintEntity, composeSelfChit, composeChit, composeStepNext, clickNav, stableClick, clickInModal, HAS_RCPT, HAS_TOTAL, mintInContext, addRecipientByName, settle, dismissModal, POOL, poolContext };
+module.exports = { DEV_OTP, useApiBase, uniqueEmail, uniqueName, uniqueHandle, openAvatarItem, mintEntity, composeSelfChit, composeChit, composeStepNext, clickNav, stableClick, clickInModal, HAS_RCPT, HAS_TOTAL, mintInContext, addRecipientByName, settle, dismissModal, POOL, poolContext };
