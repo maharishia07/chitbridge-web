@@ -389,6 +389,25 @@
   .topbar .who .av{width:30px;height:30px;border-radius:50%;background:var(--gold);color:var(--on-gold);display:flex;align-items:center;justify-content:center;font-weight:700;font-family:'Space Grotesk';border:0;padding:0;font-size:var(--fs-2);cursor:pointer}
   .topbar .so{border:1px solid rgba(255,255,255,.25);background:none;color:#cfe0e8;border-radius:9px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
   .topbar .so:hover{background:rgba(255,255,255,.08)}
+  /**
+   * ⭐⭐ SIGN OUT IS HIDDEN ON MOBILE BECAUSE IT IS A DUPLICATE, not because there is no room — and that
+   * distinction is why this is a fix rather than a workaround. Athi, 2026-08-21: *"sign out has gone away from
+   * the screen in mobile mode, can you bring it inside."*
+   *
+   * ⚠️ IT WAS ALREADY INSIDE. The avatar became a menu carrying Profile, Settings, the theme picker AND Sign
+   * out; this standalone button is the SAME action a few pixels to its right. On a 393px screen the topbar
+   * holds a hamburger, four icons, a three-state status toggle (~170px), the avatar and this — more than fits,
+   * so flex pushed the LAST child off the edge. Hiding a duplicate costs nothing; shrinking the status toggle
+   * or wrapping the bar would both cost something real.
+   *
+   * ⚠️ DESKTOP KEEPS IT. There is room, and a visible sign-out is worth having when the pointer is a mouse.
+   */
+  .appwrap.m .topbar .so{display:none}
+  /* ⚠️ AND NOTHING MAY PUSH THE AVATAR OFF EITHER. The topbar is a flex row with no shrink control, so the
+     last children lose. These two are the way OUT of the app — they never shrink and never overflow. */
+  .topbar .who .av,.topbar .so{flex:0 0 auto}
+  .topbar .who{min-width:0}
+  .topbar .who .dutytog,.topbar .who .shoptog{min-width:0;flex:0 1 auto}
   .dutytog,.shoptog{display:flex;border-radius:9px;overflow:hidden;border:1px solid rgba(255,255,255,.18)}
   .dutytog button,.shoptog button{border:0;background:rgba(255,255,255,.05);color:#bcccd6;font-size:var(--fs-1);font-weight:700;padding:6px 10px;display:flex;align-items:center;gap:5px;cursor:pointer;white-space:nowrap}
   .dutytog button.on.duty,.shoptog button.on.open{background:#1f7a4d;color:#fff}
