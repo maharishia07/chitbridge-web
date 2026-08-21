@@ -4952,7 +4952,24 @@ async function sendChit(v){
     return r;
   }catch(e){ busyHide(); fail((e&&e.message)||"Something went wrong — please try again."); return null; }
 }
-function ccAddFiles(files){ CC.files=CC.files||[]; for(var k=0;k<files.length;k++){ var f=files[k]; if(f.size>6*1024*1024){ toast(f.name+' is over 6MB — skipped.'); continue; } CC.files.push(f); } ccRenderFiles(); }
+/**
+ * ⚠️⚠️ THE 6 MB CAP WAS WRITTEN IN THREE PLACES — `MAX_BYTES` in routes/attachments.js, `CBATT.maxBytes` in
+ * app/attach-ui.js (which documents itself as matching the server), and a bare `6*1024*1024` right here.
+ *
+ * ⚠️ THE THIRD COPY IS THE DANGEROUS ONE, and attach-ui's own header says why: *"discovering it at flush would
+ * mean the chit has ALREADY BEEN SENT and the evidence silently did not go with it — the worst possible moment
+ * to find out."* Raise the server's cap and compose keeps refusing at the old one; LOWER it and compose accepts
+ * a file the server will reject after the chit is gone. Neither is visible until it happens to someone.
+ *
+ * ⭐ One number, read from the shared surface. Falls back to the literal only if attach-ui has not loaded —
+ * it is a `<script src>` in this file, so that is a defensive branch, not an expected one.
+ */
+function ccAddFiles(files){ CC.files=CC.files||[];
+  var cap=(typeof CBATT!=='undefined'&&CBATT.maxBytes)||6*1024*1024;
+  for(var k=0;k<files.length;k++){ var f=files[k];
+    if(f.size>cap){ toast(f.name+' is over '+Math.round(cap/1024/1024)+'MB — skipped.'); continue; }
+    CC.files.push(f); }
+  ccRenderFiles(); }
 function ccDelFile(i){ (CC.files||[]).splice(i,1); ccRenderFiles(); }
 function ccRenderFiles(){ var h=document.getElementById('cc_files'); if(!h)return; var fs=CC.files||[]; h.innerHTML=fs.length?fs.map(function(f,i){ return '<span style="display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:6px;padding:2px 7px;margin:0 5px 5px 0;font-size:var(--fs-1);background:var(--card);color:var(--on-card)">'+attIcon(cbAttachType(f.type,f.name))+' '+esc(f.name.length>26?f.name.slice(0,26)+'…':f.name)+' <span onclick="ccDelFile('+i+')" style="cursor:pointer;color:var(--grey-4)">✕</span></span>'; }).join(''):''; }
 /* Compose embedded assistant (ATH-117 pattern) */
