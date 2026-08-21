@@ -84,15 +84,31 @@ async function openIam(page, sess) {
 }
 
 test.describe('IAM', () => {
-  test('two tabs, three sections, and Identity opens by default', async ({ page }) => {
+  test('no tab bar, sections, and Identity opens by default', async ({ page }) => {
     const sess = await freshEntity();
     await openIam(page, sess);
 
-    // §26.3 — Network and Customer are gone: a network node IS an entity, and a customer never reaches this app.
-    await expect(page.getByTestId('iam-tab-me')).toBeVisible();
-    await expect(page.getByTestId('iam-tab-emp')).toBeVisible();
-    await expect(page.getByTestId('iam-tab-node')).toHaveCount(0);
-    await expect(page.getByTestId('iam-tab-cust')).toHaveCount(0);
+    /**
+     * ⚠️⚠️ THIS ASSERTED A TAB BAR THAT WAS REMOVED ON 2026-08-19, and the two halves failed differently —
+     * which is why nobody noticed.
+     *
+     *   iam-tab-me / iam-tab-emp   toBeVisible()   → TIMEOUT, reported as the IAM screen being slow
+     *   iam-tab-node / iam-tab-cust toHaveCount(0) → PASSED, VACUOUSLY
+     *
+     * ⚠️ THE VACUOUS HALF IS THE WORSE ONE. Those two lines were written to prove Network and Customer had been
+     * removed — and they now pass because EVERYTHING has count 0. They would go on passing if the whole profile
+     * failed to render. A green assertion that cannot fail is not coverage; it is a claim with nothing behind it.
+     *
+     * ⭐ THE SCREEN IS SECTIONS NOW, not tabs — iamSection('ident'|'profile'|'regional'|…). So the honest
+     * version of "there are two tabs" is "there is no tab bar", asserted once, plus the sections below which
+     * were already here and are what actually carries the structure.
+     *
+     * ⚠️ Found by e2e/locators.cjs, which reads every literal getByTestId in every spec and checks the app has
+     * ever heard of the name — no browser, no API, no OTP. This spec had been walking a screen that no longer
+     * existed and reporting it as a timeout.
+     */
+    await expect(page.locator('[data-testid^="iam-tab-"]'),
+      'the tab bar was replaced by sections in §26.3 — no tab should render at all').toHaveCount(0);
 
     // §10 — three sections, and only the first is open.
     await expect(page.getByTestId('iam-sec-ident')).toHaveAttribute('aria-expanded', 'true');

@@ -20,7 +20,22 @@ test.describe('Module · Catalogue (full CRUD)', () => {
     });
 
     await test.step('READ', async () => {
-      await expect(page.getByText('250', { exact: false }).first()).toBeVisible();   // view pane shows the price
+      /**
+       * ⚠️⚠️ THIS WAS getByText('250', { exact:false }).first() — AND THAT MATCHES ANY TEXT CONTAINING "250"
+       * ANYWHERE ON THE PAGE. A row count, an id, a timestamp, another product's price. The shared `authed`
+       * entity accumulates through a batch, so by the time this ran the catalogue held other people's products
+       * and "250" was liable to be found somewhere that had nothing to do with this test — passing for the wrong
+       * reason on a good day and failing on a bad one. Same class as CHIT-01: asserting against a SCREEN.
+       *
+       * ⚠️ AND `.first()` MADE IT WORSE, not safer. It silences the strict-mode error that would have said "23
+       * elements matched" — the one signal that the locator was wrong.
+       *
+       * ⭐ THE VIEW PANE HAD NO HANDLE ON ITS PRICE, which is WHY the spec was reduced to hunting text. It has
+       * one now (`cat-view-price`, the detail header) so the question can be asked of the element that answers
+       * it. A feature that cannot be addressed precisely will always be tested imprecisely.
+       */
+      await expect(page.getByTestId('cat-view-price'),
+        'the view pane shows the price it was created with').toContainText('250');
     });
 
     await test.step('UPDATE', async () => {
@@ -31,7 +46,13 @@ test.describe('Module · Catalogue (full CRUD)', () => {
       await expect(price).toHaveValue('999');   // guard: the edit form actually holds the new value before saving
       await page.getByTestId('cat-save').click();
       await settle(page);
-      await expect(page.getByText('999', { exact: false }).first()).toBeVisible();
+      /* ⭐ AND THE UPDATE IS ASSERTED THE SAME WAY — on the element, not on the page. §37 proved the feature
+         healthy end to end (saveProduct → loadCatalogue → paintProdDetail all fine); what was failing was how
+         the SPEC read the result. */
+      await expect(page.getByTestId('cat-view-price'),
+        'the view pane shows the edited price, not the old one').toContainText('999');
+      await expect(page.getByTestId('cat-view-price'),
+        'and the old price is gone — a repaint that appended would pass a contains-check').not.toContainText('250');
     });
 
     await test.step('DELETE', async () => {
