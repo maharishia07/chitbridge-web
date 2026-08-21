@@ -124,6 +124,12 @@ const CASES = [
   ['business — supplies defaults to goods',  () => { ctx.UI._iamOpen = { profile: true }; const h = ctx.iamMeHTML({ ...ENTITY, gstn:'X' }); if (h.indexOf('value="goods" selected') < 0) throw new Error('goods is not the default'); return h; }],
   ['business — supplies both is offered',    () => { ctx.UI._iamOpen = { profile: true }; const h = ctx.iamMeHTML({ ...ENTITY, gstn:'X', supplies:'both' }); if (h.indexOf('value="both" selected') < 0) throw new Error('both not selectable'); return h; }],
   ['regional — theme and text size, with the percentage', () => { ctx.UI._iamOpen = { regional: true }; const h = ctx.iamMeHTML({ ...ENTITY, country:'IN', currency_code:'INR' }); if (h.indexOf('115%') < 0) throw new Error('the percentage is the useful part and it is missing'); if (h.indexOf('Cream') < 0) throw new Error('theme missing'); if (h.indexOf('Theme and text size') < 0) throw new Error('no link to the screen that SETS them'); return h; }],
+  /**
+   * ⚠️ A ZONE ALIAS IS NOT A DIFFERENT ZONE. Asia/Calcutta === Asia/Kolkata. The note that explains a shifted
+   * timestamp must stay SILENT when the two clocks agree, or it tells a reader they are somewhere they are
+   * not — which is exactly what a string compare did.
+   */
+  ['regional — zone alias is not a difference', () => { ctx.UI._iamOpen = { regional: true }; const h = ctx.iamMeHTML({ ...ENTITY, timezone: 'Asia/Kolkata' }); if (h.indexOf('your device') >= 0 && ctx.CBLocale.timezone() === 'Asia/Calcutta') throw new Error('claimed a difference between two names for one zone'); return h; }],
   ['iamSelfEmployeeHTML — commenter',       () => ctx.iamSelfEmployeeHTML(ACTOR)],
   ['iamSelfEmployeeHTML — editor + reach',  () => ctx.iamSelfEmployeeHTML({ ...ACTOR, access_level: 'editor', whole_entity: true, can_see_costs: true })],
   ['CBIdDocs.html — self, empty',           () => ctx.CBIdDocs.html([], 'self')],

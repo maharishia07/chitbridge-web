@@ -1810,6 +1810,23 @@ function _curSym(cur){
   } catch (_) { return ''; }
 }
 
+/**
+ * Do these two zones actually put the clock in a different place right now?
+ *
+ * ⭐ COMPARING NAMES IS WRONG — Asia/Calcutta === Asia/Kolkata, Europe/Kiev === Europe/Kyiv, and a dozen more
+ * aliases besides. Comparing the RENDERED INSTANT answers the only question a reader has: will my timestamps
+ * read differently from the business's? Two names for one zone answer "no", which is correct.
+ */
+function _tzDiffers(a, b){
+  if (!a || !b) return false;
+  if (a === b) return false;
+  try {
+    var t = Date.now();
+    var f = function(z){ return new Intl.DateTimeFormat('en-GB', { timeZone: z, dateStyle: 'short', timeStyle: 'short' }).format(t); };
+    return f(a) !== f(b);
+  } catch (_) { return false; }   /* an unknown zone is not evidence of a difference */
+}
+
 function iamGovernedRows(e){
   var rows = [];
   var Q = String.fromCharCode(39);
@@ -1945,7 +1962,31 @@ function iamGovernedRows(e){
       rows.push([(i === 0 ? tx('Language') : ' ') + ' ' + (i + 1), _langName(l), (i === 0 ? tx('first choice') : tx('then')), false, 'read']);
     });
     if (CBLocale.dir) rows.push(['Reads', CBLocale.dir() === 'rtl' ? tx('right to left') : tx('left to right'), tx('follows the language'), false, 'read']);
-    if (CBLocale.datetime) rows.push(['Timestamp', CBLocale.datetime(Date.now()), '', false, 'read']);
+    /**
+     * ⚠️⚠️ THE READER'S ZONE BELONGS IN THIS GROUP, and leaving it out is what made Settings look broken.
+     * Athi, 2026-08-21: *"when I click the language and formats hyperlink it goes to settings, but it shows
+     * something different from what is there in the profile."*
+     *
+     * Measured: changing the zone in Settings moved the profile TIMESTAMP (07:11 → 02:41, the same instant in
+     * London) while the row labelled TIME ZONE went on saying Asia/Kolkata. Both were correct — that row is
+     * the BUSINESS's clock (b176) and the picker sets the READER's device — but a person who changes a
+     * setting called Time zone and watches a row called Time zone not move concludes the save failed.
+     *
+     * ⭐ SO THE TIMESTAMP NAMES THE ZONE IT IS RENDERED IN, and only when it differs from the business's.
+     * When they agree there is nothing to disambiguate and a second zone row would be noise; when they differ,
+     * that difference is the explanation for a timestamp that just moved.
+     */
+    var _readTz = (CBLocale.timezone && CBLocale.timezone()) || null;
+    var _bizTz2 = (e && e.timezone) || null;
+    if (CBLocale.datetime) rows.push(['Timestamp', CBLocale.datetime(Date.now()),
+      /**
+       * ⚠️ THE COMPARISON IS THE CLOCK, NOT THE NAME. Asia/Calcutta and Asia/Kolkata are THE SAME ZONE under a
+       * legacy alias, and a string compare called them different — so the note claimed a reader was on another
+       * clock when they were not. The note exists to explain a timestamp that DIFFERS; if the two zones render
+       * the same instant identically there is nothing to explain, whatever they are called.
+       */
+      _tzDiffers(_readTz, _bizTz2) ? txf('shown in {tz} — your device', { tz: _readTz }) : '',
+      false, 'read']);
     /* ⭐ NUMBERS, AS AN EXAMPLE FOR THE SAME REASON AS THE TIMESTAMP. India groups 12,34,56,789 and the US
        groups 123,456,789 — a reader recognises their own grouping instantly and would have to decode
        'en-IN'. Athi: *"number system also."* */
@@ -1963,6 +2004,29 @@ function iamGovernedRows(e){
      *
      * ⭐ AND THE PERCENTAGE IS THE USEFUL PART. "Large" means nothing next to "Default"; 115% says how much.
      */
+    /**
+     * ⭐⭐ THE SNAPSHOT MUST COVER EVERY SETTING, OR IT IS NOT A SNAPSHOT. Athi, 2026-08-21: *"settings is where
+     * we can change the value, profile is the personal preference — settings snapshot, and it has to be
+     * aligned. Check for all the values in settings."*
+     *
+     * ⚠️ SETTINGS CAN CHANGE NINE THINGS; THIS NAMED FOUR. Region, format, languages, numbering system, hour
+     * cycle, calendar, first day of week, working days, time zone. Numbering, hour cycle and calendar are
+     * DEMONSTRATED by the Timestamp and Numbers samples — a reader sees ١٢٣ or a 24-hour clock without being
+     * told the setting's name. But WORKING WEEK appears in no sample at all, so a person could set it and
+     * find no trace of it here.
+     *
+     * ⭐ SO: demonstrated is enough for a format; invisible is not. The working week gets a row.
+     */
+    try {
+      if (CBLocale.workdays) {
+        var _D = { 1:'Mon', 2:'Tue', 3:'Wed', 4:'Thu', 5:'Fri', 6:'Sat', 7:'Sun' };
+        var _wd = CBLocale.workdays() || [];
+        if (_wd.length) rows.push(['Working week', _wd.map(function(d){ return _D[d] || d; }).join(' '),
+          (CBLocale.hasWorkdayOverride && CBLocale.hasWorkdayOverride()) ? tx('you set this') : tx('from your region'),
+          false, 'read']);
+      }
+    } catch (_) { /* absent locale layer — show what we have */ }
+
     try {
       if (typeof THEMES !== 'undefined' && typeof themeGet === 'function') {
         var _th = THEMES[themeGet()] || {};
